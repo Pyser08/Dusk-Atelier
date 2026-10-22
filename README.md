@@ -171,9 +171,9 @@ RisuBard(RisuAI 포크)용 모듈·캐릭터 관리·업데이트 플러그인�
 
 ## 개발
 ```
-node tools/build.mjs           # dist/ 빌드
-node tools/test.mjs            # 빌드 + 린트 + 단위 테스트
-node tools/test.mjs --browser  # + 브라우저 테스트 (Playwright, Chromium)
+npm install                    # esbuild 설치
+node tools/build.mjs           # src/ → dusk-atelier.js (버전은 package.json)
+node tools/build.mjs --check   # 빌드 결과가 저장소의 dusk-atelier.js와 같은지 확인
 ```
 
 | 폴더 | 내용 |
