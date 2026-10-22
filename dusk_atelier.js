@@ -9886,6 +9886,11 @@ ${patch.note}` : "",
     st.plugUpd ??= {};
     ctx.setNavCount("plugins", st.plugins.length);
     draw2(ctx);
+    const due = st.plugins.filter((p) => p.updateURL && !(Date.now() - (st.plugUpd[p.name]?.at ?? 0) < 6 * 36e5));
+    if (due.length) {
+      await Promise.all(due.map((p) => checkOne(ctx, p)));
+      if (st.tab === "plugins") draw2(ctx);
+    }
   }
   function draw2(ctx) {
     const st = ctx.state, list = st.plugins;
@@ -9964,7 +9969,7 @@ ${patch.note}` : "",
           "div",
           { class: "rb-kv" },
           h("span", null, !cur ? "아직 확인하지 않았어요" : cur.error ? `확인 실패: ${cur.error}` : cur.newer ? `새 버전 ${cur.version}이 있어요` : `최신이에요${cur.version ? ` (${cur.version})` : ""}`),
-          cur?.newer ? btn("새 버전 파일 받기", { size: "sm", kind: "primary", icon: "download", onClick: async () => {
+          cur?.newer && !isDev(ctx) ? null : cur?.newer ? btn("새 버전 파일 받기", { size: "sm", icon: "download", onClick: async () => {
             try {
               const code = await fetchText(ctx, p.updateURL, false);
               const m = readHeader(code);
@@ -9979,7 +9984,8 @@ ${patch.note}` : "",
             paintUpd();
             draw2(ctx);
           } })
-        ) : null
+        ) : null,
+        cur?.newer ? h("div", { class: "rb-kv" }, h("span", { class: "rb-muted", style: "font-size:12.5px" }, "RisuAI 설정 → 플러그인에서 이 플러그인 옆 초록색 + 버튼을 누르면 업데이트돼요. 업데이트하면 설정값이 처음 값으로 돌아가니, 아래 설정값을 먼저 복사해 두세요.")) : null
       );
     };
     paintUpd();
@@ -10007,9 +10013,9 @@ ${patch.note}` : "",
         ),
         h("div", { class: "rb-card", style: "max-height:220px;overflow:auto" }, args.length ? args.map(([k, v]) => h("div", { class: "rb-kv" }, h("span", null, k), h("small", { class: "rb-muted", style: "word-break:break-all;text-align:right;max-width:60%" }, String(v) === "" ? "(비어 있음)" : String(v)))) : h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "설정값이 없어요")))
       ),
-      note("info", "RisuAI는 플러그인이 다른 플러그인을 직접 바꾸지 못하게 막아 두었어요. 여기서 고친 코드나 새 버전은 파일로 받아서 설정 → 플러그인에서 추가하면 교체돼요."),
+      p.updateURL ? null : note("info", "업데이트 주소가 없는 플러그인이라 새 버전을 확인할 수 없어요. 새 버전은 만든 사람이 알려 주는 곳에서 받아 설정 → 플러그인에 추가하세요."),
       h("div", { style: "flex:1" }),
-      h(
+      !isDev(ctx) ? null : h(
         "div",
         { style: "display:flex;gap:8px;flex-wrap:wrap" },
         btn("코드 편집", { kind: "primary", size: "lg", icon: "edit", onClick: () => openCodeEditor(ctx, p) }),

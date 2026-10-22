@@ -100,6 +100,24 @@ await page.waitForTimeout(500);
 const argText = await frame.textContent('.rb-detail');
 check('설정값(my-setting)이 보임', argText.includes('my-setting'));
 await page.screenshot({ path: `${OUT}/1-plugin-tab.png` });
+check('일반 모드에서는 코드 편집 버튼이 숨겨짐', await frame.locator('.rb-detail .rb-btn', { hasText: '코드 편집' }).count() === 0);
+// 개발자 모드를 켜고 다시 연다 (코드 편집은 개발자 모드 기능)
+await page.evaluate(async () => {
+  const S = await import('/src/ts/stores.svelte.ts');
+  const cs = S.DBState.db.pluginCustomStorage ??= {};
+  cs['rbm:ui:v1'] = JSON.stringify({ ...JSON.parse(cs['rbm:ui:v1'] || '{}'), devMode: true });
+});
+await frame.click('#rb-close');
+await page.waitForTimeout(500);
+await page.evaluate(async () => {
+  const S = await import('/src/ts/stores.svelte.ts');
+  S.additionalHamburgerMenu.find((m) => m.name === 'Dusk Atelier').callback();
+});
+await frame.waitForSelector('.rb-root:not([hidden]) .rb-nav');
+await frame.click('.rb-nav a[data-tab=plugins]');
+await frame.waitForSelector('.rb-row[data-id=other]');
+await frame.click('.rb-row[data-id=other] .name');
+await page.waitForTimeout(500);
 await frame.locator('.rb-detail .rb-btn', { hasText: '코드 편집' }).click();
 await frame.waitForSelector('.rb-full textarea');
 const edited = otherV1.replace('0.1.0', '0.1.1').replace("v1 loaded", "EDITED by Dusk Atelier");
