@@ -55,17 +55,27 @@ await page.evaluate(async () => {
 const alerts = async () => page.evaluate(() => window.__alerts.splice(0));
 const plugins = async () => page.evaluate(async () => {
   const S = await import('/src/ts/stores.svelte.ts');
-  return (S.DBState.db.plugins ?? []).map((p) => ({ name: p.name, version: p.versionOfPlugin, script: p.script, realArg: { ...(p.realArg ?? {}) }, enabled: p.enabled }));
+  return (S.DBState.db?.plugins ?? []).map((p) => ({ name: p.name, version: p.versionOfPlugin, script: p.script, realArg: { ...(p.realArg ?? {}) }, enabled: p.enabled }));
 });
 const importCode = async (code) => page.evaluate(async (c) => {
   const P = await import('/src/ts/plugins/plugins.svelte.ts');
   await P.importPlugin(c);
 }, code);
 
+// 첫 실행 직후에는 RisuAI가 저장 데이터를 다시 읽으면서 방금 넣은 플러그인이 사라질 수 있어 확인하며 넣는다
+const ensure = async (code, name) => {
+  for (let i = 0; i < 5; i++) {
+    if ((await plugins()).some((p) => p.name === name)) return true;
+    await importCode(code);
+    await page.waitForTimeout(4000);
+  }
+  return (await plugins()).some((p) => p.name === name);
+};
 // 1. 설치: 다른 플러그인(v1)과 Dusk Atelier
-await importCode(otherV1);
-await importCode(dusk);
-await page.waitForTimeout(3000);
+await page.waitForTimeout(7000);
+await ensure(otherV1, 'other');
+await ensure(dusk, 'dusk_atelier');
+await ensure(otherV1, 'other');
 let ps = await plugins();
 check('플러그인 2개 설치', ps.some((p) => p.name === 'other') && ps.some((p) => p.name === 'dusk_atelier'), ps.map((p) => p.name).join(', '));
 // 사용자가 설정값을 바꿔 둔 상태를 만든다
