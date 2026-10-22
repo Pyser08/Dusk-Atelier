@@ -382,10 +382,10 @@ export function spinner() {
 }
 
 // ── 펼침 버튼 + 펼침 줄 ── 누르면 바로 아래에 선택지가 촤라락 펼쳐진다. 접힌 상태에서는 지금 고른 값을 보여 준다
-export function trayBtn(label, { value, open, icon: ic, onClick, active } = {}) {
+export function trayBtn(label, { value, open, icon: ic, onClick, active, title } = {}) {
   return h(
     "button",
-    { type: "button", class: ["rb-traybtn", active && "on"], "aria-expanded": open ? "true" : "false", onClick },
+    { type: "button", class: ["rb-traybtn", active && "on"], "aria-expanded": open ? "true" : "false", title, onClick },
     ic ? icon(ic, 15) : null,
     h("span", null, label),
     value ? h("b", null, value) : null,
@@ -421,4 +421,8 @@ export function sortBy(list, cur, nameOf, sizeOf) {
 }
 export function fmtSize(n) {
   return n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(n < 10240 ? 1 : 0)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+}
+export function sortShort(cur) {
+  if (!cur) return "";
+  return `${cur.key === "size" ? "크기" : "이름"} ${cur.dir > 0 ? "↓" : "↑"}`;
 }

@@ -6,7 +6,7 @@ import { Busy, isGenerating } from '../../engine/safety.js';
 import { loadCharacters } from '../../data/modules.js';
 import { fmtWhen, h, replace, vanish } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, trayBtn, tray, sortChips, sortLabel, sortBy, fmtSize, confirmDialog, loading, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog } from '../kit.js';
+import { badge, btn, trayBtn, tray, sortChips, sortLabel, sortShort, sortBy, fmtSize, confirmDialog, loading, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog } from '../kit.js';
 import { createMulti } from '../multiselect.js';
 import { dragBadge, gripDrag } from '../sortable.js';
 import { openCharAssets, openCharEditor } from './chareditor.js';
@@ -218,7 +218,7 @@ export async function renderCharacters(ctx) {
   replace(ctx.main, h(
     "div",
     { class: "rb-chips" },
-    trayBtn("정렬", { icon: "preset", value: sortLabel(sort), open: !!st.charTray, active: !!sort, onClick: openTray }),
+    trayBtn("정렬", { icon: "preset", value: sortShort(sort), title: sortLabel(sort), open: !!st.charTray, active: !!sort, onClick: openTray }),
     h("span", { class: "rb-muted", style: "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto" }, `캐릭터 ${st.chars.length}명${list.length > 600 ? " · 앞쪽 600명만 표시 (검색으로 좁혀 보세요)" : ""}${st.charsUnloaded ? ` · 앱이 아직 불러오는 중인 봇 ${st.charsUnloaded}명은 빠져 있어요` : ""}`),
     st.charsUnloaded ? btn("새로 고침", { size: "sm", icon: "refresh", onClick: () => {
       st.charsDirty = true;

@@ -3264,10 +3264,10 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
   function spinner() {
     return h("span", { class: "rb-spin", "aria-hidden": "true" });
   }
-  function trayBtn(label, { value, open, icon: ic, onClick, active } = {}) {
+  function trayBtn(label, { value, open, icon: ic, onClick, active, title } = {}) {
     return h(
       "button",
-      { type: "button", class: ["rb-traybtn", active && "on"], "aria-expanded": open ? "true" : "false", onClick },
+      { type: "button", class: ["rb-traybtn", active && "on"], "aria-expanded": open ? "true" : "false", title, onClick },
       ic ? icon(ic, 15) : null,
       h("span", null, label),
       value ? h("b", null, value) : null,
@@ -3300,6 +3300,10 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
   }
   function fmtSize(n) {
     return n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(n < 10240 ? 1 : 0)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+  }
+  function sortShort(cur) {
+    if (!cur) return "";
+    return `${cur.key === "size" ? "크기" : "이름"} ${cur.dir > 0 ? "↓" : "↑"}`;
   }
 
   // src/ui/styles.js
@@ -8148,50 +8152,52 @@ ${patch.note}` : "",
     if (!st.modSel || !entries.some((e) => e.module.id === st.modSel)) st.modSel = shown[0]?.module.id ?? null;
     const sort = ctx.prefs.ui?.modSort ?? null;
     st.modSorted = !!sort;
-    const inFolder2 = (id) => entries.filter((e) => (meta.mapping[e.module.id] ?? "") === id).length;
-    const setView = (v) => {
-      st.modFolder = v;
-      draw(ctx);
-    };
-    const openTray = (k) => {
-      st.modTray = st.modTray === k ? null : k;
-      draw(ctx);
-    };
-    const folderName = fv === void 0 ? "전체" : fv === "" ? "폴더 없음" : meta.folders.find((f) => f.id === fv)?.name || "(이름 없음)";
     const toolbar = h(
       "div",
-      { class: "rb-chips", role: "toolbar", "aria-label": "보기" },
-      trayBtn("필터", { icon: "check", value: `${FILTERS.find(([id]) => id === st.modFilter)?.[1] ?? "전체"} ${count(st.modFilter)}`, open: st.modTray === "filter", active: st.modFilter !== "all", onClick: () => openTray("filter") }),
-      trayBtn("정렬", { icon: "preset", value: sortLabel(sort), open: st.modTray === "sort", active: !!sort, onClick: () => openTray("sort") }),
-      trayBtn("폴더", { icon: "folder", value: folderName, open: st.modTray === "folder", active: fv !== void 0, onClick: () => openTray("folder") }),
+      { class: "rb-chips", role: "toolbar", "aria-label": "필터" },
+      FILTERS.map(([id, label]) => chip(label, { pressed: st.modFilter === id, count: count(id), onClick: () => {
+        st.modFilter = id;
+        draw(ctx);
+      } })),
+      trayBtn("정렬", { icon: "preset", value: sortShort(sort), title: sortLabel(sort), open: !!st.modTray, active: !!sort, onClick: () => {
+        st.modTray = !st.modTray;
+        draw(ctx);
+      } }),
       h("div", { class: "rb-spacer" }),
       filtering ? null : btn(multiOf(ctx).active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => {
         const mu2 = multiOf(ctx);
         mu2.setMode(!mu2.active);
       } }),
+      btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolder(ctx) }),
       btn("새 모듈", { size: "sm", kind: "primary", icon: "plus", onClick: () => newModule(ctx) })
     );
-    const folderBar = st.modTray === "filter" ? tray(FILTERS.map(([id, label]) => chip(label, { pressed: st.modFilter === id, count: count(id), onClick: () => {
-      st.modFilter = id;
-      draw(ctx);
-    } }))) : st.modTray === "sort" ? tray(
+    const sortTray = st.modTray ? tray(
       ...sortChips(sort, (next) => {
         ctx.prefs.saveUi({ modSort: next }).catch(() => {
         });
         draw(ctx);
       }),
       h("span", { class: "rb-muted", style: "font-size:12px;white-space:nowrap" }, sort ? "폴더마다 따로 정렬해요 · 끌어서 순서 바꾸기는 원래대로에서" : "끌어서 정한 순서예요")
-    ) : st.modTray === "folder" ? tray(
+    ) : null;
+    const inFolder2 = (id) => entries.filter((e) => (meta.mapping[e.module.id] ?? "") === id).length;
+    const setView = (v) => {
+      st.modFolder = v;
+      draw(ctx);
+    };
+    const folderBar = meta.folders.length ? h(
+      "div",
+      { class: "rb-chips rb-fchips", role: "toolbar", "aria-label": "폴더별 보기" },
       chip("모든 폴더", { pressed: fv === void 0, onClick: () => setView(void 0) }),
       meta.folders.map((f) => {
         const tint = folderTint(f.color, st.mode);
-        return chip(
+        const c = chip(
           h("span", { style: "display:inline-flex;align-items:center;gap:6px" }, h("span", { style: { color: tint?.stroke ?? "var(--rb-sub)", display: "flex" } }, icon("folder", 14)), f.name || "(이름 없음)"),
           { pressed: fv === f.id, count: inFolder2(f.id), onClick: () => setView(fv === f.id ? void 0 : f.id) }
         );
+        c.dataset.folderView = f.id;
+        return c;
       }),
-      meta.folders.length ? chip("폴더 없음", { pressed: fv === "", count: inFolder2(""), onClick: () => setView(fv === "" ? void 0 : "") }) : null,
-      btn("새 폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolder(ctx) })
+      chip("폴더 없음", { pressed: fv === "", count: inFolder2(""), onClick: () => setView(fv === "" ? void 0 : "") })
     ) : null;
     const list = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "모듈 목록" });
     const grouped = groupByFolder(shown, meta);
@@ -8236,7 +8242,7 @@ ${patch.note}` : "",
     if (!shown.length) list.appendChild(h("div", { class: "rb-empty" }, fv !== void 0 && !filtering ? '이 폴더에 모듈이 없어요. 폴더 메뉴의 "넣을 모듈 고르기"로 넣을 수 있어요.' : entries.length ? "조건에 맞는 모듈이 없어요." : '설치된 모듈이 없어요. 위의 "가져오기"나 파일을 창에 끌어 놓아서 추가하세요.'));
     const scroll = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
     const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 모듈" });
-    replace(ctx.main, toolbar, folderBar, bar, list);
+    replace(ctx.main, toolbar, sortTray, folderBar, bar, list);
     list.scrollTop = scroll;
     ctx.state.justOpened = null;
     ctx.state.justMoved = null;
@@ -9728,7 +9734,7 @@ ${patch.note}` : "",
     replace(ctx.main, h(
       "div",
       { class: "rb-chips" },
-      trayBtn("정렬", { icon: "preset", value: sortLabel(sort), open: !!st.charTray, active: !!sort, onClick: openTray }),
+      trayBtn("정렬", { icon: "preset", value: sortShort(sort), title: sortLabel(sort), open: !!st.charTray, active: !!sort, onClick: openTray }),
       h("span", { class: "rb-muted", style: "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto" }, `캐릭터 ${st.chars.length}명${list.length > 600 ? " · 앞쪽 600명만 표시 (검색으로 좁혀 보세요)" : ""}${st.charsUnloaded ? ` · 앱이 아직 불러오는 중인 봇 ${st.charsUnloaded}명은 빠져 있어요` : ""}`),
       st.charsUnloaded ? btn("새로 고침", { size: "sm", icon: "refresh", onClick: () => {
         st.charsDirty = true;
