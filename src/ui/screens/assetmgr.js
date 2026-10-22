@@ -19,45 +19,71 @@ var COARSE = typeof matchMedia === "function" && matchMedia("(pointer: coarse)")
 // 에셋 이름 끝의 파일 확장자. 아는 확장자만 떼서 "kami.happy"의 ".happy"를 확장자로 오해하지 않는다.
 var MEDIA_EXT = /\.(png|jpe?g|webp|gif|avif|bmp|svg|ico|mp3|ogg|wav|flac|m4a|aac|opus|mp4|webm|mov|m4v)$/i;
 export var stripMediaExt = (name) => String(name ?? "").replace(MEDIA_EXT, "");
-// 캐릭터 이름: 확장자를 뗀 뒤 첫 '.'이나 '_' 앞부분 (kami.happy.webp, kami_happy.webp, kami_happy → kami). 없으면 null
-export function charOfAsset(name) {
-  const m = /^\s*([^._]+?)\s*[._]/.exec(stripMediaExt(name));
-  return m && m[1] ? m[1] : null;
+// 에셋 이름 나누기 → { char: 캐릭터 이름, rest: 그 뒤 부분들 }
+// - '.'이나 '_'가 있으면 첫 구분자 앞이 캐릭터 (kami.happy.webp, kami_casual_happy, Ahn Do-hyun_happy)
+// - 공백만 있으면 마지막 단어가 표정, 그 앞이 캐릭터 (Ahn Do-hyun annoyed → Ahn Do-hyun)
+// - 구분자가 없으면 캐릭터 없음
+export function parseAssetName(name) {
+  const base = stripMediaExt(name).trim();
+  const m = /^([^._]+?)\s*[._]\s*(.*)$/.exec(base);
+  if (m && m[1].trim()) return { char: m[1].trim(), rest: m[2].split(/[._]/).map((x) => x.trim()).filter(Boolean), spaced: false };
+  const words = base.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return { char: words.slice(0, -1).join(" "), rest: [words.at(-1)], spaced: true };
+  return { char: null, rest: [], spaced: false };
 }
+export var charOfAsset = (name) => parseAssetName(name).char;
 // 목록 보기용 묶음: 같은 캐릭터 이름(대소문자 무시)끼리. 하나뿐인 이름과 구분자가 없는 것은 "기타"로
 export function groupAssetsByChar(list) {
-  const groups = new Map();
-  for (const a of list) {
-    const c = charOfAsset(a[0]);
-    const key = c ? c.toLowerCase() : "";
-    if (!groups.has(key)) groups.set(key, { key, label: c ?? "기타", items: [] });
-    groups.get(key).items.push(a);
+  const parsed = list.map((a) => ({ a, ...parseAssetName(a[0]) }));
+  // 공백으로만 나뉜 이름은 이미 있는 더 짧은 캐릭터 이름으로 맞춘다
+  // (Ahn Do-hyun annoyed가 있으면 Ahn Do-hyun casual annoyed → Ahn Do-hyun · 의상 casual)
+  const known = new Set(parsed.filter((p) => p.char).map((p) => p.char.toLowerCase()));
+  for (const p of parsed) {
+    if (!p.spaced || !p.char) continue;
+    const words = p.char.split(/\s+/);
+    for (let k = 1; k < words.length; k++) {
+      const pre = words.slice(0, k).join(" ");
+      if (known.has(pre.toLowerCase()) && pre.toLowerCase() !== p.char.toLowerCase()) {
+        p.rest = [words.slice(k).join(" "), ...p.rest];
+        p.char = pre;
+      }
+    }
   }
-  const etc = groups.get("") ?? { key: "", label: "기타", items: [] };
+  const groups = new Map();
+  for (const p of parsed) {
+    const key = p.char ? p.char.toLowerCase() : "";
+    if (!groups.has(key)) groups.set(key, { key, label: p.char ?? "기타", items: [], parsed: [] });
+    const g = groups.get(key);
+    g.items.push(p.a);
+    g.parsed.push(p);
+  }
+  const etc = groups.get("") ?? { key: "", label: "기타", items: [], parsed: [] };
   groups.delete("");
   const out = [];
   for (const g of groups.values()) {
-    if (g.items.length < 2) etc.items.push(...g.items);
-    else out.push(g);
+    if (g.items.length < 2) {
+      etc.items.push(...g.items);
+      etc.parsed.push(...g.parsed);
+    } else out.push(g);
   }
   out.sort((x, y) => x.label.localeCompare(y.label, "ko"));
   if (etc.items.length) out.push(etc);
-  for (const g of out) g.subs = g.key ? outfitGroups(g.items) : null;
+  for (const g of out) g.subs = g.key ? outfitGroups(g.parsed) : null;
   return out;
 }
-// 의상: 세 부분 이상인 이름의 두 번째 부분 (kami_casual_happy → casual). 두 부분뿐이면 의상 없음(기본)
-export function outfitOfAsset(name) {
-  const parts = stripMediaExt(name).split(/[._]/).map((x) => x.trim()).filter(Boolean);
-  return parts.length >= 3 ? parts[1] : null;
-}
+// 의상: 캐릭터 뒤 부분이 둘 이상이면 첫 부분 (kami_casual_happy → casual). 하나뿐이면 의상 없음(기본)
+export var outfitOfAsset = (name) => {
+  const p = parseAssetName(name);
+  return p.char && p.rest.length >= 2 ? p.rest[0] : null;
+};
 // 캐릭터 안의 의상 묶음. 2장 이상인 의상만 따로, 나머지는 "기본". 나눌 의상이 없으면 null
-function outfitGroups(items) {
+function outfitGroups(parsed) {
   const m = new Map();
-  for (const a of items) {
-    const o = outfitOfAsset(a[0]);
+  for (const p of parsed) {
+    const o = p.rest.length >= 2 ? p.rest[0] : null;
     const key = o ? o.toLowerCase() : "";
     if (!m.has(key)) m.set(key, { key, label: o ?? "기본", items: [] });
-    m.get(key).items.push(a);
+    m.get(key).items.push(p.a);
   }
   const base = m.get("") ?? { key: "", label: "기본", items: [] };
   m.delete("");
