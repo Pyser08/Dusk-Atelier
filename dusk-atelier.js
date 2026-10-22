@@ -1,10 +1,10 @@
 //@name dusk_atelier
 //@display-name Dusk Atelier
 //@api 3.0
-//@version 1.0.1
+//@version 1.0.0
 //@link https://github.com/Pyser08/Dusk-Atelier 저장소
 
-/* Dusk Atelier v1.0.0 — 소스: https://github.com/Pyser08/Dusk-Atelier. (src/ 폴더). 이 파일은 빌드 결과물입니다. */
+/* Dusk Atelier v1.0.0 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
 (() => {
   var __defProp = Object.defineProperty;
   var __export = (target, all) => {
@@ -3009,8 +3009,13 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       );
     });
   }
-  function folderDialog(host, { title, name = "", items, checked = [], ok = "만들기", withName = true, noun = "항목" }) {
+  function folderDialog(host, { title, name = "", items, checked = [], ok = "만들기", withName = true, noun = "항목", current = null, othersMode = "hide", onOthersMode }) {
     const sel = new Set(checked);
+    const isOther = (it) => !!it.folder && it.folder !== current;
+    let others = othersMode === "pick" ? "pick" : "hide";
+    if (others === "pick") {
+      for (const it of items) if (isOther(it)) sel.add(it.id);
+    }
     return modal(host, (done) => {
       const nameInput = withName ? h("input", { class: "rb-input", value: name, placeholder: "폴더 이름", "aria-label": "폴더 이름", "data-autofocus": "1" }) : null;
       const q = h("input", { class: "rb-input", type: "search", placeholder: `${noun} 찾기`, "aria-label": `${noun} 찾기`, style: "height:38px" });
@@ -3032,6 +3037,7 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
         r.dataset.q = `${it.label ?? ""} ${it.sub ?? ""}`.toLowerCase();
         r._cb = cb;
         r._id = it.id;
+        r._other = isOther(it);
         return r;
       });
       list.append(...rows);
@@ -3050,10 +3056,29 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
         }
         paintCount();
       } });
-      q.addEventListener("input", () => {
+      const filter = () => {
         const v = q.value.trim().toLowerCase();
-        for (const r of rows) r.hidden = !!v && !r.dataset.q.includes(v);
-      });
+        for (const r of rows) r.hidden = others === "hide" && r._other || !!v && !r.dataset.q.includes(v);
+      };
+      q.addEventListener("input", filter);
+      const otherCount = rows.filter((r) => r._other).length;
+      const othersCtl = otherCount ? h(
+        "div",
+        { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" },
+        h("span", { class: "rb-muted", style: "flex:1;min-width:140px" }, `다른 폴더에 든 ${noun} ${otherCount}개`),
+        h("div", { class: "rb-seg-nowrap", style: "flex:1 1 300px" }, segmented([["pick", "선택된 채로 보이기"], ["hide", "숨기기"]], others, (v) => {
+          others = v;
+          for (const r of rows) if (r._other) {
+            r._cb.checked = v === "pick";
+            if (v === "pick") sel.add(r._id);
+            else sel.delete(r._id);
+          }
+          filter();
+          paintCount();
+          onOthersMode?.(v);
+        }, `다른 폴더에 든 ${noun}`))
+      ) : null;
+      filter();
       paintCount();
       const submit = () => {
         const n = nameInput ? nameInput.value.trim() : name;
@@ -3075,6 +3100,7 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
         h("h3", { class: "rb-h3" }, title),
         nameInput ? h("label", { class: "rb-field" }, h("span", { class: "rb-label" }, "이름"), nameInput) : null,
         h("div", { style: "display:flex;gap:8px;align-items:center" }, h("span", { class: "rb-label", style: "flex:1" }, `넣을 ${noun} 고르기 (나중에 바꿀 수 있어요)`), count),
+        othersCtl,
         h("div", { style: "display:flex;gap:8px" }, h("div", { style: "flex:1" }, q), all),
         list,
         h("div", { class: "btns" }, btn("취소", { onClick: () => done(null) }), btn(ok, { kind: "primary", onClick: submit }))
@@ -3170,6 +3196,14 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
     }, 0);
     return { close };
   }
+  function folderPickPrefs(ctx) {
+    return { othersMode: ctx.prefs.meta.folderPickOthers === "pick" ? "pick" : "hide", onOthersMode: (v) => {
+      ctx.svc.meta((m) => {
+        m.folderPickOthers = v;
+      }).catch(() => {
+      });
+    } };
+  }
   function segmented(options, value, onChange, label) {
     const el = h("div", { class: "rb-seg", role: "radiogroup", "aria-label": label });
     const paint = (v) => el.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", b.dataset.v === v ? "true" : "false"));
@@ -3261,6 +3295,17 @@ html,body{margin:0;height:100%;background:transparent}
 .rb-row .name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rb-row .meta{font-size:12px;color:var(--rb-mute)}
 .rb-row.off .name{color:var(--rb-mute)}
+.rb-row{-webkit-touch-callout:none}
+.rb-mcb{display:none;flex-shrink:0;width:22px;height:22px;border-radius:7px;border:1.5px solid var(--rb-grip);align-items:center;justify-content:center;cursor:pointer;color:#fff;margin:-4px -2px}
+.rb-mcb::after{content:'';width:10px;height:6px;border:2.5px solid currentColor;border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px);opacity:0}
+.picking .rb-mcb{display:flex}
+.picking .rb-row{user-select:none;-webkit-user-select:none}
+.rb-row.picked{background:var(--rb-acc-soft);box-shadow:inset 0 0 0 1px var(--rb-sel-ring)}
+.rb-row.picked .rb-mcb{background:var(--rb-acc-grad);border-color:transparent}
+.rb-row.picked .rb-mcb::after{opacity:1}
+.rb-pickbar{display:flex;flex-shrink:0;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px;margin:0 12px 6px;border-radius:12px;background:var(--rb-sel-bg);border:1px solid var(--rb-sel-ring)}
+.rb-pickbar b{font-size:13px;margin-right:auto}
+.rb-pickbar[hidden]{display:none}
 .rb-folder{height:40px;display:flex;align-items:center;gap:10px;padding:0 10px;margin-top:6px;border:0;border-radius:10px;background:transparent;color:var(--rb-text);cursor:pointer;text-align:left;width:100%}
 @media (hover: hover){.rb-folder:hover{background:var(--rb-hover)}}
 .rb-folder .chev{color:var(--rb-sub);transition:transform .15s;display:flex}
@@ -3294,6 +3339,7 @@ html,body{margin:0;height:100%;background:transparent}
 .rb-field{display:flex;flex-direction:column;gap:6px}
 .rb-seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);padding:4px;border-radius:12px;background:var(--rb-surf)}
 .rb-seg button{height:36px;border:0;border-radius:9px;background:transparent;color:var(--rb-sub);font-size:13px;cursor:pointer}
+.rb-seg-nowrap .rb-seg button{white-space:nowrap;padding:0 10px}
 .rb-seg button[aria-checked=true]{background:var(--rb-line);color:var(--rb-text);font-weight:600}
 .rb-empty{padding:40px 20px;text-align:center;color:var(--rb-mute);font-size:13px;line-height:1.7}
 .rb-section{padding:20px;display:flex;flex-direction:column;gap:20px}
@@ -3688,7 +3734,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
   async function writeJson(api, key, value) {
     await api.pluginStorage.setItem(key, JSON.stringify(value));
   }
-  var defaultsMeta = () => ({ v: 1, folders: [], mapping: {}, nameColors: {}, links: {}, charAssetFolders: {}, charFoldersCollapsed: {}, moduleAssetFolders: {} });
+  var defaultsMeta = () => ({ v: 1, folders: [], mapping: {}, nameColors: {}, links: {}, charAssetFolders: {}, charFoldersCollapsed: {}, moduleAssetFolders: {}, folderPickOthers: "hide" });
   function createPrefs(api) {
     let ui = null, meta = null;
     return {
@@ -3723,9 +3769,195 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     };
   }
 
+  // src/ui/multiselect.js
+  var LONG_MS = 450;
+  var SLOP = 8;
+  function createMulti({ onChange }) {
+    const sel = /* @__PURE__ */ new Set();
+    let anchor = null, mode = false, suppressAt = 0, list = null, painting = null;
+    const changed = () => {
+      decorate();
+      onChange?.();
+    };
+    const order = () => list ? [...list.querySelectorAll("[data-pick]")].map((r) => r.dataset.pick) : [];
+    function decorate() {
+      if (!list) return;
+      list.classList.toggle("picking", api.active);
+      for (const r of list.querySelectorAll("[data-pick]")) {
+        const on = sel.has(r.dataset.pick);
+        r.classList.toggle("picked", on);
+        r.querySelector(":scope > .rb-mcb")?.setAttribute("aria-checked", on ? "true" : "false");
+      }
+    }
+    function at(x, y) {
+      const doc = list.ownerDocument;
+      const r = doc.elementFromPoint(x, y)?.closest?.("[data-pick]");
+      if (r && list.contains(r) && sel.has(r.dataset.pick) !== painting.on) api.toggle(r.dataset.pick, painting.on);
+      const lr = list.getBoundingClientRect();
+      if (y < lr.top + 36) list.scrollTop -= 14;
+      else if (y > lr.bottom - 36) list.scrollTop += 14;
+    }
+    const api = {
+      sel,
+      get active() {
+        return mode || sel.size > 0;
+      },
+      setMode(on) {
+        mode = on;
+        if (!on) {
+          sel.clear();
+          anchor = null;
+        }
+        changed();
+      },
+      has: (id) => sel.has(id),
+      clear() {
+        if (!sel.size && !mode) return;
+        sel.clear();
+        anchor = null;
+        mode = false;
+        changed();
+      },
+      set(ids) {
+        sel.clear();
+        for (const id of ids) sel.add(id);
+        mode = true;
+        changed();
+      },
+      // 지금 화면 순서대로 고른 id(화면에 없는 것은 뒤에)
+      ordered() {
+        const out = order().filter((id) => sel.has(id));
+        for (const id of sel) if (!out.includes(id)) out.push(id);
+        return out;
+      },
+      // 끌 때 함께 옮길 것: 고른 줄을 잡았으면 고른 전부, 아니면 그 줄 하나
+      dragIds: (id) => sel.has(id) && sel.size > 1 ? api.ordered() : [id],
+      toggle(id, on = !sel.has(id)) {
+        if (on) sel.add(id);
+        else sel.delete(id);
+        anchor = id;
+        changed();
+      },
+      range(id, current) {
+        const o = order();
+        let a = o.indexOf(anchor ?? current ?? id), b = o.indexOf(id);
+        if (a < 0) a = b;
+        if (a > b) [a, b] = [b, a];
+        for (const x of o.slice(a, b + 1)) sel.add(x);
+        changed();
+      },
+      // 줄 클릭을 여기서 처리했으면 true. current: 지금 열려 있는(하나 고른) 항목
+      click(ev, id, current) {
+        if (suppressAt && Date.now() - suppressAt < 700) {
+          suppressAt = 0;
+          return true;
+        }
+        if (ev.shiftKey) {
+          if (!sel.size && current) sel.add(current);
+          api.range(id, current);
+          return true;
+        }
+        if (ev.ctrlKey || ev.metaKey) {
+          if (!sel.size && current && current !== id) sel.add(current);
+          api.toggle(id);
+          return true;
+        }
+        if (api.active) {
+          api.toggle(id);
+          return true;
+        }
+        anchor = id;
+        return false;
+      },
+      // 목록을 새로 그릴 때마다 한 번: 줄에는 data-pick="<id>"와 체크 칸(.rb-mcb)이 있어야 한다
+      attach(el) {
+        list = el;
+        let timer = 0, x0 = 0, y0 = 0;
+        el.addEventListener("touchstart", (ev) => {
+          const t = ev.touches[0];
+          if (ev.touches.length !== 1 || ev.target.closest("button,input,a,.grip,.rb-mcb")) return;
+          const r = ev.target.closest("[data-pick]");
+          if (!r) return;
+          x0 = t.clientX;
+          y0 = t.clientY;
+          timer = setTimeout(() => {
+            timer = 0;
+            suppressAt = Date.now();
+            navigator.vibrate?.(15);
+            const on = !sel.has(r.dataset.pick);
+            painting = { on };
+            api.toggle(r.dataset.pick, on);
+          }, LONG_MS);
+        }, { passive: true });
+        el.addEventListener("touchmove", (ev) => {
+          const t = ev.touches[0];
+          if (timer && Math.hypot(t.clientX - x0, t.clientY - y0) > SLOP) {
+            clearTimeout(timer);
+            timer = 0;
+          }
+          if (painting) {
+            ev.preventDefault();
+            at(t.clientX, t.clientY);
+          }
+        }, { passive: false });
+        const end = () => {
+          if (timer) clearTimeout(timer);
+          timer = 0;
+          painting = null;
+        };
+        el.addEventListener("touchend", end);
+        el.addEventListener("touchcancel", end);
+        el.addEventListener("contextmenu", (ev) => {
+          if (suppressAt && Date.now() - suppressAt < 1500) ev.preventDefault();
+        });
+        el.addEventListener("pointerdown", (ev) => {
+          const box = ev.target.closest(".rb-mcb");
+          if (!box || ev.button !== 0) return;
+          const r = box.closest("[data-pick]");
+          ev.preventDefault();
+          ev.stopPropagation();
+          const on = !sel.has(r.dataset.pick);
+          painting = { on, pointer: ev.pointerId };
+          api.toggle(r.dataset.pick, on);
+          try {
+            box.setPointerCapture(ev.pointerId);
+          } catch {
+          }
+          const mv = (e) => {
+            if (e.pointerId === ev.pointerId && painting) at(e.clientX, e.clientY);
+          };
+          const up = (e) => {
+            if (e.pointerId !== ev.pointerId) return;
+            painting = null;
+            box.removeEventListener("pointermove", mv);
+            box.removeEventListener("pointerup", up);
+            box.removeEventListener("pointercancel", up);
+          };
+          box.addEventListener("pointermove", mv);
+          box.addEventListener("pointerup", up);
+          box.addEventListener("pointercancel", up);
+        });
+        el.addEventListener("click", (ev) => {
+          if (ev.target.closest(".rb-mcb")) {
+            ev.stopPropagation();
+            ev.preventDefault();
+          }
+        }, true);
+        el.addEventListener("keydown", (ev) => {
+          if (ev.key === "Escape" && api.active) {
+            ev.stopPropagation();
+            api.clear();
+          }
+        });
+        decorate();
+      }
+    };
+    return api;
+  }
+
   // src/ui/sortable.js
   var EDGE = 48;
-  function gripDrag({ grip, row: row2, root, scroller, onDrop, mouse = true }) {
+  function gripDrag({ grip, row: row2, root, scroller, onDrop, mouse = true, count, skip }) {
     grip.style.touchAction = "none";
     grip.addEventListener("pointerdown", (ev) => {
       if (ev.button !== 0) return;
@@ -3751,8 +3983,12 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         margin: "0"
       });
       ghost.setAttribute("aria-hidden", "true");
+      const n = count?.() ?? 1;
+      if (n > 1) ghost.appendChild(dragBadge(doc, n));
       host.appendChild(ghost);
-      row2.style.opacity = "0.35";
+      const dim = n > 1 ? [...root.querySelectorAll(".picked")] : [row2];
+      if (!dim.includes(row2)) dim.push(row2);
+      for (const d of dim) d.style.opacity = "0.35";
       try {
         grip.setPointerCapture(ev.pointerId);
       } catch {
@@ -3767,7 +4003,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       const pick = (x, y) => {
         const under = doc.elementFromPoint(x, y);
         const el = under?.closest?.("[data-drop-row],[data-drop-folder]");
-        if (!el || !root.contains(el) || el === row2) {
+        if (!el || !root.contains(el) || el === row2 || skip?.(el)) {
           clear2();
           return;
         }
@@ -3806,7 +4042,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         grip.removeEventListener("pointercancel", cancel);
         if (raf) win.cancelAnimationFrame(raf);
         ghost.remove();
-        row2.style.opacity = "";
+        for (const d of dim) d.style.opacity = "";
         const t = target;
         clear2();
         if (!t || e.type === "pointercancel") return;
@@ -3819,10 +4055,17 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       grip.addEventListener("pointercancel", cancel);
     });
   }
-  function placeId(ids, id, beforeId, after) {
-    const out = ids.filter((x) => x !== id);
+  function dragBadge(doc, n) {
+    const b = doc.createElement("span");
+    b.textContent = `${n}개`;
+    Object.assign(b.style, { position: "absolute", top: "-8px", right: "-6px", padding: "2px 9px", borderRadius: "999px", background: "var(--rb-acc-grad, #5b5bd6)", color: "#fff", fontSize: "12px", fontWeight: "700", boxShadow: "0 4px 12px rgba(0,0,0,.3)" });
+    return b;
+  }
+  function placeIds(ids, moving, beforeId, after) {
+    const set = new Set(moving);
+    const out = ids.filter((x) => !set.has(x));
     const at = out.indexOf(beforeId);
-    out.splice(at < 0 ? out.length : at + (after ? 1 : 0), 0, id);
+    out.splice(at < 0 ? out.length : at + (after ? 1 : 0), 0, ...moving);
     return out;
   }
 
@@ -4054,7 +4297,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       });
       return p;
     };
-    let cache = null, presetQ = Promise.resolve();
+    let cache = null, presetQ = Promise.resolve(), pendingOrder = null, orderQueued = null;
     onCommitted((st) => {
       cache = { t: Date.now(), state: { entries: st.entries.map((e) => ({ module: e.module, enabled: e.enabled })), globalOn: new Set(st.enabledModules), charUse: cache?.state.charUse ?? /* @__PURE__ */ new Map(), characters: [] } };
       presetQ = presetQ.then(() => recordActive(api, st.entries, st.enabledModules)).catch(() => {
@@ -4096,11 +4339,26 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         return { id: newId(), name, description: "", lorebook: [], regex: [], trigger: [], assets: [] };
       },
       // ---- 폴더·이름 색 (모듈 데이터는 건드리지 않음) ----
-      async meta(fn) {
+      // fn이 동기면 prefs.meta가 바로 바뀐다(화면을 먼저 그리고 저장은 뒤에서 끝남)
+      meta(fn) {
         const m = structuredClone(prefs.meta);
-        const r = await fn(m);
-        await prefs.saveMeta(m);
-        return r;
+        const r = fn(m);
+        if (r && typeof r.then === "function") return r.then(async (v) => {
+          await prefs.saveMeta(m);
+          return v;
+        });
+        return prefs.saveMeta(m).then(() => r);
+      },
+      // 순서만 바꿀 때: 연달아 끌어도 저장은 한 줄로 모아서(마지막 순서만) 한 번씩
+      queueOrder(getIds) {
+        pendingOrder = getIds;
+        if (orderQueued) return orderQueued;
+        orderQueued = serial2(async () => {
+          const ids = pendingOrder();
+          orderQueued = null;
+          await ops.reorder(api, ids);
+        });
+        return orderQueued;
       },
       createFolder: (name, color) => svc.meta((m) => {
         const f = { id: "f_" + newId().slice(0, 8), name, color: color || "", collapsed: false };
@@ -4702,6 +4960,10 @@ ${patch.note}` : "",
         draw(ctx);
       } })),
       h("div", { class: "rb-spacer" }),
+      filtering ? null : btn(multiOf(ctx).active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => {
+        const mu2 = multiOf(ctx);
+        mu2.setMode(!mu2.active);
+      } }),
       btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolder(ctx) }),
       btn("새 모듈", { size: "sm", kind: "primary", icon: "plus", onClick: () => newModule(ctx) })
     );
@@ -4718,7 +4980,9 @@ ${patch.note}` : "",
         h(
           "button",
           { type: "button", class: "rb-folder", "aria-expanded": open ? "true" : "false", dataset: { folder: f.id }, onClick: () => {
-            if (!filtering) ctx.svc.toggleFolder(f.id).then(() => draw(ctx));
+            if (filtering) return;
+            ctx.svc.toggleFolder(f.id).catch((err) => ctx.toast(err?.message ?? String(err), { error: true }));
+            draw(ctx);
           } },
           h("span", { class: "chev" }, icon("chevron", 14)),
           h("span", { style: { color: tint.stroke, display: "flex" } }, icon("folder", 16)),
@@ -4741,9 +5005,57 @@ ${patch.note}` : "",
     if (folders.length) dropTarget(ctx, list, { folderId: null, onlySelf: true });
     if (!shown.length) list.appendChild(h("div", { class: "rb-empty" }, entries.length ? "조건에 맞는 모듈이 없어요." : '설치된 모듈이 없어요. 위의 "가져오기"나 파일을 창에 끌어 놓아서 추가하세요.'));
     const scroll = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
-    replace(ctx.main, toolbar, list);
+    const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 모듈" });
+    replace(ctx.main, toolbar, bar, list);
     list.scrollTop = scroll;
+    const mu = multiOf(ctx);
+    if (filtering) mu.clear();
+    mu.bar = bar;
+    mu.ctx = ctx;
+    mu.attach(list);
+    paintBar(ctx);
     showDetail(ctx);
+  }
+  function multiOf(ctx) {
+    const st = ctx.state;
+    st.modMulti ??= createMulti({ onChange: () => paintBar(ctx) });
+    return st.modMulti;
+  }
+  function paintBar(ctx) {
+    const mu = multiOf(ctx), bar = mu.bar;
+    if (!bar) return;
+    const tb = ctx.main.querySelector("#rb-pick-toggle");
+    if (tb) tb.lastChild.textContent = mu.active ? "선택 끝" : "선택";
+    bar.hidden = !mu.active;
+    if (!mu.active) {
+      bar.replaceChildren();
+      return;
+    }
+    const n = mu.sel.size;
+    const visible = () => [...ctx.main.querySelectorAll(".rb-list [data-pick]")].map((r) => r.dataset.pick);
+    bar.replaceChildren(
+      h("b", null, n ? `${n}개 고름` : "고를 모듈을 누르세요"),
+      btn("폴더로", { size: "sm", icon: "folder", disabled: !n, onClick: (ev) => pickFolderFor(ctx, mu.ordered(), ev.currentTarget) }),
+      btn("폴더 밖으로", { size: "sm", disabled: !n, onClick: () => applyDrop(ctx, mu.ordered(), { folderId: null }) }),
+      btn("보이는 것 모두", { size: "sm", onClick: () => {
+        const v = visible();
+        mu.set(v.every((id) => mu.has(id)) ? [] : v);
+      } }),
+      iconBtn("x", "고르기 끝내기", { onClick: () => mu.clear() })
+    );
+  }
+  function pickFolderFor(ctx, ids, anchor) {
+    const meta = ctx.prefs.meta;
+    openMenu(ctx.win, anchor, [
+      ...meta.folders.map((f) => ({ label: f.name || "(이름 없는 폴더)", icon: "folder", onClick: () => applyDrop(ctx, ids, { folderId: f.id }) })),
+      meta.folders.length ? "sep" : null,
+      { label: "새 폴더…", icon: "folderPlus", onClick: async () => {
+        const n = await promptDialog(ctx.win, { title: "새 폴더", label: `고른 모듈 ${ids.length}개를 넣어요`, placeholder: "폴더 이름" });
+        if (!n?.trim()) return;
+        const f = await ctx.svc.createFolder(n.trim(), FOLDER_SWATCHES[meta.folders.length % FOLDER_SWATCHES.length]);
+        await applyDrop(ctx, ids, { folderId: f.id });
+      } }
+    ].filter(Boolean));
   }
   function row(ctx, e, filtering) {
     const st = ctx.state, m = e.module, c = moduleCounts(m), f = moduleFlags(m, st.modData.globalOn);
@@ -4753,6 +5065,7 @@ ${patch.note}` : "",
     if (!e.enabled && !hasAssets(m)) sw.title = "켜기";
     else if (hasAssets(m)) sw.title = "에셋이 있는 모듈은 끌 수 없어요";
     let grip = null;
+    const mu = multiOf(ctx);
     const el = h(
       "div",
       {
@@ -4760,9 +5073,12 @@ ${patch.note}` : "",
         role: "option",
         tabindex: "0",
         "aria-selected": st.modSel === m.id ? "true" : "false",
-        dataset: filtering ? { id: m.id } : { id: m.id, dropRow: m.id },
+        dataset: filtering ? { id: m.id } : { id: m.id, dropRow: m.id, pick: m.id },
         draggable: filtering || COARSE ? "false" : "true",
-        onClick: () => select(ctx, m.id, el),
+        onClick: (ev) => {
+          if (!filtering && mu.click(ev, m.id, st.modSel)) return;
+          select(ctx, m.id, el);
+        },
         onKeydown: (ev) => {
           if (ev.target !== el) return;
           if (ev.key === "Enter" || ev.key === " ") {
@@ -4780,7 +5096,8 @@ ${patch.note}` : "",
           }
         }
       },
-      filtering ? null : grip = h("span", { class: "grip", title: "끌어서 순서 바꾸기 (Alt+↑↓)", "aria-hidden": "true" }, icon("grip", 14)),
+      filtering ? null : h("span", { class: "rb-mcb", role: "checkbox", "aria-checked": "false", "aria-label": `${m.name} 고르기` }),
+      filtering ? null : grip = h("span", { class: "grip", title: "끌어서 순서 바꾸기 (Alt+↑↓) · Ctrl/⌘·Shift+클릭으로 여러 개", "aria-hidden": "true" }, icon("grip", 14)),
       h(
         "div",
         { class: "txt" },
@@ -4806,7 +5123,7 @@ ${patch.note}` : "",
       dropTarget(ctx, el, { beforeId: m.id });
       queueMicrotask(() => {
         const list = el.closest(".rb-list");
-        if (list && grip) gripDrag({ grip, row: el, root: list, scroller: list, mouse: false, onDrop: (d) => applyDrop(ctx, m.id, d) });
+        if (list && grip) gripDrag({ grip, row: el, root: list, scroller: list, mouse: false, count: () => mu.dragIds(m.id).length, skip: (t) => mu.dragIds(m.id).includes(t.getAttribute("data-drop-row")), onDrop: (d) => applyDrop(ctx, mu.dragIds(m.id), d) });
       });
     }
     return el;
@@ -4836,17 +5153,30 @@ ${patch.note}` : "",
     ctx.state.modDirty = false;
     if (ctx.state.tab === "modules") draw(ctx);
   }
-  var dragId = null;
+  var dragIds = null;
   function dragSource(ctx, el, id) {
     el.addEventListener("dragstart", (ev) => {
-      dragId = id;
+      dragIds = multiOf(ctx).dragIds(id);
       ev.dataTransfer.effectAllowed = "move";
-      ev.dataTransfer.setData("text/x-rbm-module", id);
+      ev.dataTransfer.setData("text/x-rbm-module", dragIds.join("\n"));
+      if (dragIds.length > 1) {
+        const g = el.cloneNode(true);
+        Object.assign(g.style, { position: "absolute", top: "-1000px", left: "0", width: `${el.offsetWidth}px`, background: "var(--rb-surf2)", borderRadius: "12px" });
+        g.appendChild(dragBadge(el.ownerDocument, dragIds.length));
+        ctx.win.appendChild(g);
+        ev.dataTransfer.setDragImage(g, 24, 20);
+        setTimeout(() => g.remove(), 0);
+        ctx.main.querySelectorAll(".rb-row.picked").forEach((r) => {
+          r.style.opacity = "0.5";
+        });
+      }
       el.style.opacity = "0.5";
     });
     el.addEventListener("dragend", () => {
-      dragId = null;
-      el.style.opacity = "";
+      dragIds = null;
+      ctx.main.querySelectorAll(".rb-row").forEach((r) => {
+        r.style.opacity = "";
+      });
       ctx.main.querySelectorAll("[data-drop]").forEach((x) => {
         x.removeAttribute("data-drop");
         x.style.boxShadow = "";
@@ -4854,43 +5184,55 @@ ${patch.note}` : "",
     });
   }
   function dropTarget(ctx, el, { beforeId, folderId, onlySelf }) {
-    const ok = (ev) => dragId && [...ev.dataTransfer?.types ?? []].includes("text/x-rbm-module") && (!onlySelf || ev.target === el);
+    const ok = (ev) => dragIds && [...ev.dataTransfer?.types ?? []].includes("text/x-rbm-module") && (!onlySelf || ev.target === el) && !(beforeId && dragIds.includes(beforeId));
     el.addEventListener("dragover", (ev) => {
       if (!ok(ev)) return;
       ev.preventDefault();
       ev.stopPropagation();
       const after = beforeId && ev.offsetY > el.clientHeight / 2;
-      el.dataset.drop = after ? "after" : "before";
+      const d = after ? "after" : "before";
+      if (el.dataset.drop === d) return;
+      el.dataset.drop = d;
       el.style.boxShadow = beforeId ? after ? "inset 0 -2px 0 var(--rb-acc-text)" : "inset 0 2px 0 var(--rb-acc-text)" : "inset 0 0 0 2px var(--rb-sel-ring)";
     });
-    el.addEventListener("dragleave", () => {
+    el.addEventListener("dragleave", (ev) => {
+      if (el.contains(ev.relatedTarget)) return;
       el.style.boxShadow = "";
       el.removeAttribute("data-drop");
     });
-    el.addEventListener("drop", async (ev) => {
+    el.addEventListener("drop", (ev) => {
       if (!ok(ev)) return;
       ev.preventDefault();
       ev.stopPropagation();
-      const id = dragId, after = el.dataset.drop === "after";
+      const ids = dragIds, after = el.dataset.drop === "after";
       el.style.boxShadow = "";
-      if (!id || id === beforeId) return;
-      await applyDrop(ctx, id, { beforeId, after, folderId });
+      el.removeAttribute("data-drop");
+      if (!ids?.length) return;
+      applyDrop(ctx, ids, { beforeId, after, folderId });
     });
   }
-  async function applyDrop(ctx, id, { beforeId, after, folderId }) {
-    if (id === beforeId) return;
-    try {
-      const meta = ctx.prefs.meta;
-      if (beforeId) {
-        const ids = placeId(ctx.state.modData.entries.map((e) => e.module.id), id, beforeId, after);
-        const targetFolder = meta.mapping[beforeId] ?? null;
-        if ((meta.mapping[id] ?? null) !== targetFolder) await ctx.svc.setFolder(id, targetFolder);
-        await ctx.svc.run("reorder", ids);
-      } else await ctx.svc.setFolder(id, folderId ?? null);
-      await reload(ctx);
-    } catch (err) {
-      ctx.toast(err?.message ?? String(err), { error: true });
+  function applyDrop(ctx, ids, { beforeId, after, folderId }) {
+    ids = [].concat(ids);
+    if (beforeId && ids.includes(beforeId)) return;
+    const st = ctx.state, meta = ctx.prefs.meta;
+    const fail = (err) => {
+      ctx.toast(`옮기지 못했어요: ${err?.message ?? err}`, { error: true });
+      reload(ctx);
+    };
+    const target = beforeId ? meta.mapping[beforeId] ?? null : folderId ?? null;
+    const moveFolder2 = ids.filter((id) => (meta.mapping[id] ?? null) !== target);
+    if (moveFolder2.length) ctx.svc.setFolder(moveFolder2, target).catch(fail);
+    if (beforeId) {
+      const before = st.modData.entries.map((e) => e.module.id);
+      const next = placeIds(before, ids, beforeId, after);
+      if (next.join("\n") !== before.join("\n")) {
+        const pos = new Map(next.map((id, i) => [id, i]));
+        st.modData.entries.sort((a, b) => pos.get(a.module.id) - pos.get(b.module.id));
+        ctx.svc.queueOrder(() => ctx.state.modData.entries.map((e) => e.module.id)).catch(fail);
+      }
     }
+    if (ids.length > 1) ctx.toast(target ? `모듈 ${ids.length}개를 '${meta.folders.find((f) => f.id === target)?.name ?? "폴더"}'(으)로 옮겼어요` : `모듈 ${ids.length}개를 옮겼어요`);
+    draw(ctx);
   }
   async function move(ctx, id, dir) {
     const meta = ctx.prefs.meta;
@@ -4967,11 +5309,12 @@ ${patch.note}` : "",
     return ctx.state.modData.entries.map((e) => ({
       id: e.module.id,
       label: e.module.name,
+      folder: meta.mapping[e.module.id] ?? null,
       sub: [meta.mapping[e.module.id] ? `지금: ${names.get(meta.mapping[e.module.id]) ?? "폴더"}` : "폴더 없음", !e.enabled && "꺼짐"].filter(Boolean).join(" · ")
     }));
   }
   async function newFolder(ctx) {
-    const r = await folderDialog(ctx.win, { title: "새 폴더", items: moduleItems(ctx), noun: "모듈" });
+    const r = await folderDialog(ctx.win, { title: "새 폴더", items: moduleItems(ctx), noun: "모듈", ...folderPickPrefs(ctx) });
     if (!r) return;
     const f = await ctx.svc.createFolder(r.name, FOLDER_SWATCHES[ctx.prefs.meta.folders.length % FOLDER_SWATCHES.length]);
     if (r.ids.length) await ctx.svc.setFolder(r.ids, f.id);
@@ -4980,7 +5323,7 @@ ${patch.note}` : "",
   }
   async function pickFolderMembers(ctx, f) {
     const before = Object.entries(ctx.prefs.meta.mapping).filter(([, v]) => v === f.id).map(([k]) => k);
-    const r = await folderDialog(ctx.win, { title: `'${f.name}' 폴더에 넣을 모듈`, items: moduleItems(ctx), checked: before, ok: "저장", withName: false, noun: "모듈" });
+    const r = await folderDialog(ctx.win, { title: `'${f.name}' 폴더에 넣을 모듈`, items: moduleItems(ctx), checked: before, ok: "저장", withName: false, noun: "모듈", current: f.id, ...folderPickPrefs(ctx) });
     if (!r) return;
     const out = before.filter((id) => !r.ids.includes(id));
     if (out.length) await ctx.svc.setFolder(out, null);
@@ -5916,31 +6259,34 @@ ${patch.note}` : "",
     return o;
   }
   function moveChar(order, id, { beforeId, after, folderId }) {
-    let o = take(clone(order ?? []), id);
+    const ids = [].concat(id);
+    if (beforeId && ids.includes(beforeId)) return clone(order ?? []);
+    let o = clone(order ?? []);
+    for (const c of ids) o = take(o, c);
     if (beforeId) {
       const top = o.indexOf(beforeId);
       if (top >= 0) {
-        o.splice(top + (after ? 1 : 0), 0, id);
+        o.splice(top + (after ? 1 : 0), 0, ...ids);
         return o;
       }
       for (const x of o) if (isFolder(x)) {
         const i = x.data.indexOf(beforeId);
         if (i >= 0) {
-          x.data.splice(i + (after ? 1 : 0), 0, id);
+          x.data.splice(i + (after ? 1 : 0), 0, ...ids);
           return o;
         }
       }
-      o.push(id);
+      o.push(...ids);
       return o;
     }
     if (folderId) {
       const f = o.find((x) => isFolder(x) && x.id === folderId);
       if (f) {
-        f.data.push(id);
+        f.data.push(...ids);
         return o;
       }
     }
-    o.push(id);
+    o.push(...ids);
     return o;
   }
   function createFolder(order, { id, name, color = "default", ids = [] }) {
@@ -6482,9 +6828,9 @@ ${patch.note}` : "",
         }
         replace(items, out.length ? out : h("div", { class: "rb-empty" }, list.length ? "찾는 항목이 없어요" : '항목이 없어요. "추가"를 눌러 만드세요.'));
       }
-      const loreItems = () => list.filter((x) => x.mode !== "folder").map((x) => ({ id: idOf(x), label: x.comment || x.key || "(이름 없음)", sub: x.folder ? `지금: ${list.find((f) => f.mode === "folder" && f.key === x.folder)?.comment ?? "폴더"}` : "폴더 없음" }));
+      const loreItems = () => list.filter((x) => x.mode !== "folder").map((x) => ({ id: idOf(x), label: x.comment || x.key || "(이름 없음)", folder: x.folder || null, sub: x.folder ? `지금: ${list.find((f) => f.mode === "folder" && f.key === x.folder)?.comment ?? "폴더"}` : "폴더 없음" }));
       async function newFolderPicked() {
-        const r = await folderDialog(ctx.win, { title: "새 로어북 폴더", items: loreItems(), noun: "항목" });
+        const r = await folderDialog(ctx.win, { title: "새 로어북 폴더", items: loreItems(), noun: "항목", ...folderPickPrefs(ctx) });
         if (!r) return;
         const keepSel = selObj();
         const f = { ...newLoreFolder(), comment: r.name };
@@ -6501,7 +6847,7 @@ ${patch.note}` : "",
       function folderMenuLore(f, anchor) {
         openMenu(ctx.win, anchor, [
           { label: "넣을 항목 고르기…", icon: "plus", onClick: async () => {
-            const r = await folderDialog(ctx.win, { title: `'${f.comment}' 폴더에 넣을 항목`, items: loreItems(), checked: list.filter((x) => x.folder === f.key).map(idOf), ok: "저장", withName: false, noun: "항목" });
+            const r = await folderDialog(ctx.win, { title: `'${f.comment}' 폴더에 넣을 항목`, items: loreItems(), checked: list.filter((x) => x.folder === f.key).map(idOf), ok: "저장", withName: false, noun: "항목", current: f.key, ...folderPickPrefs(ctx) });
             if (!r) return;
             const keepSel = selObj();
             for (const x of list) if (x.folder === f.key && !r.ids.includes(idOf(x))) delete x.folder;
@@ -6916,9 +7262,15 @@ ${patch.note}` : "",
       }, { root, rootMargin: "300px 0px" }) : null;
       return {
         observe(img) {
+          const u = thumbs.get(img.dataset.path);
+          if (u) {
+            img.src = u;
+            img.dataset.loaded = "1";
+            return;
+          }
           if (io) io.observe(img);
-          else thumb(img.dataset.path, img.dataset.ext).then((u) => {
-            if (u) img.src = u;
+          else thumb(img.dataset.path, img.dataset.ext).then((u2) => {
+            if (u2) img.src = u2;
           });
         },
         disconnect() {
@@ -6938,7 +7290,7 @@ ${patch.note}` : "",
         bytes.delete(path);
       }
     }
-    return { read, thumb, fullUrl, lazy, forget, stats: () => ({ active, queued: queue.length, cachedBytes, thumbs: thumbs.size }) };
+    return { read, thumb, fullUrl, lazy, forget, peek: (p) => thumbs.get(p), stats: () => ({ active, queued: queue.length, cachedBytes, thumbs: thumbs.size }) };
   }
 
   // src/data/assetfolders.js
@@ -7298,7 +7650,7 @@ ${patch.note}` : "",
     };
     function paint() {
       paintFolders();
-      paintBar();
+      paintBar3();
       paintGrid();
       paintInfo();
       subT.textContent = `${src.label ?? "에셋 관리"} · ${assets.length}개${as.sel.size ? ` · ${as.sel.size}개 선택` : ""}`;
@@ -7366,7 +7718,7 @@ ${patch.note}` : "",
         ]) }) : null
       );
     }
-    function paintBar() {
+    function paintBar3() {
       const search = h("input", { class: "rb-input", style: "height:36px;flex:1;min-width:140px;max-width:320px", placeholder: "이름으로 찾기", value: as.q, "aria-label": "에셋 찾기" });
       search.addEventListener("input", () => {
         as.q = search.value;
@@ -7446,7 +7798,7 @@ ${patch.note}` : "",
             }
             as.focus = k;
             lastClicked = k;
-            paintBar();
+            paintBar3();
             paintInfo();
             subT.textContent = `${src.label ?? "에셋 관리"} · ${assets.length}개${as.sel.size ? ` · ${as.sel.size}개 선택` : ""}`;
             grid.querySelectorAll(".rb-tile").forEach((t) => t.setAttribute("aria-selected", "false"));
@@ -8188,9 +8540,12 @@ ${patch.note}` : "",
     const lazy = ctx.assets.lazy(box);
     const byId = new Map(st.chars.map((c) => [c.chaId, c]));
     const collapsed = ctx.prefs.meta.charFoldersCollapsed ?? {};
+    const mu = multiOf2(ctx);
+    if (filtering) mu.clear();
     const rowOf = (c) => {
       const img = c.image ? h("img", { alt: "", dataset: { path: c.image, ext: "png" }, style: "width:40px;height:40px;border-radius:12px;object-fit:cover;background:var(--rb-surf2);flex-shrink:0" }) : h("span", { style: "width:40px;height:40px;border-radius:12px;background:var(--rb-surf2);display:flex;align-items:center;justify-content:center;color:var(--rb-mute);flex-shrink:0" }, icon("character", 18));
-      const grip = filtering ? null : h("span", { class: "grip", title: "끌어서 순서 바꾸기·폴더에 넣기", "aria-hidden": "true" }, icon("grip", 14));
+      const grip = filtering ? null : h("span", { class: "grip", title: "끌어서 순서 바꾸기·폴더에 넣기 · Ctrl/⌘·Shift+클릭으로 여러 개", "aria-hidden": "true" }, icon("grip", 14));
+      const mcb = filtering ? null : h("span", { class: "rb-mcb", role: "checkbox", "aria-checked": "false", "aria-label": `${c.name} 고르기` });
       const row2 = h(
         "div",
         {
@@ -8198,8 +8553,9 @@ ${patch.note}` : "",
           role: "option",
           tabindex: "0",
           "aria-selected": st.charSel === c.chaId ? "true" : "false",
-          dataset: filtering ? { id: c.chaId } : { id: c.chaId, dropRow: c.chaId },
-          onClick: () => {
+          dataset: filtering ? { id: c.chaId } : { id: c.chaId, dropRow: c.chaId, pick: c.chaId },
+          onClick: (ev) => {
+            if (!filtering && mu.click(ev, c.chaId, st.charSel)) return;
             st.charSel = c.chaId;
             box.querySelectorAll(".rb-row").forEach((r) => r.setAttribute("aria-selected", "false"));
             row2.setAttribute("aria-selected", "true");
@@ -8213,6 +8569,7 @@ ${patch.note}` : "",
             }
           }
         },
+        mcb,
         grip,
         img,
         h(
@@ -8222,7 +8579,18 @@ ${patch.note}` : "",
           h("span", { class: "meta" }, [c.creator && `제작자 ${c.creator}`, `로어 ${c.lore}`, `에셋 ${c.assets}`, `채팅 ${c.chats}`].filter(Boolean).join(" · "))
         )
       );
-      if (grip) gripDrag({ grip, row: row2, root: box, scroller: box, onDrop: (d) => saveOrder(ctx, (o) => moveChar(o, c.chaId, d)) });
+      if (grip) gripDrag({
+        grip,
+        row: row2,
+        root: box,
+        scroller: box,
+        count: () => mu.dragIds(c.chaId).length,
+        skip: (t) => mu.dragIds(c.chaId).includes(t.getAttribute("data-drop-row")),
+        onDrop: (d) => {
+          const ids = mu.dragIds(c.chaId);
+          return saveOrder(ctx, (o) => moveChar(o, ids, d), ids.length > 1 ? `봇 ${ids.length}개를 옮겼어요` : null);
+        }
+      });
       if (img.tagName === "IMG") lazy.observe(img);
       return row2;
     };
@@ -8249,11 +8617,15 @@ ${patch.note}` : "",
           { style: "display:flex;align-items:center;gap:4px", dataset: { dropFolder: f.id } },
           h(
             "button",
-            { type: "button", class: "rb-folder", "aria-expanded": open ? "true" : "false", onClick: () => ctx.svc.meta((m) => {
-              m.charFoldersCollapsed ??= {};
-              if (open) m.charFoldersCollapsed[f.id] = true;
-              else delete m.charFoldersCollapsed[f.id];
-            }).then(() => renderCharacters(ctx)) },
+            { type: "button", class: "rb-folder", "aria-expanded": open ? "true" : "false", onClick: () => {
+              ctx.svc.meta((m) => {
+                m.charFoldersCollapsed ??= {};
+                if (open) m.charFoldersCollapsed[f.id] = true;
+                else delete m.charFoldersCollapsed[f.id];
+              }).catch(() => {
+              });
+              renderCharacters(ctx);
+            } },
             h("span", { class: "chev" }, icon("chevron", 14)),
             h("span", { style: { color, display: "flex" } }, icon("folder", 16)),
             h("b", null, f.name || "(이름 없는 폴더)"),
@@ -8279,6 +8651,7 @@ ${patch.note}` : "",
     }
     if (!list.length) box.appendChild(h("div", { class: "rb-empty" }, st.chars.length ? "찾는 캐릭터가 없어요." : "캐릭터가 없어요."));
     const keep = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
+    const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 봇" });
     replace(ctx.main, h(
       "div",
       { class: "rb-chips" },
@@ -8288,41 +8661,103 @@ ${patch.note}` : "",
         renderCharacters(ctx);
       } }) : null,
       h("div", { class: "rb-spacer" }),
+      filtering ? null : btn(mu.active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => mu.setMode(!mu.active) }),
       btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newCharFolder(ctx) }),
       btn("업데이트·새로 넣기", { size: "sm", kind: "primary", icon: "upload", onClick: () => ctx.legacy.open() })
-    ), box);
+    ), bar, box);
     box.scrollTop = keep;
+    mu.bar = bar;
+    mu.attach(box);
+    paintBar2(ctx);
     const sel = st.chars.find((c) => c.chaId === st.charSel);
     if (sel) detail(ctx, sel);
     else ctx.showDetail(h("div", { class: "rb-empty" }, "캐릭터를 고르면 여기에 자세히 보여요."));
   }
-  async function saveOrder(ctx, fn) {
-    try {
+  var orderQ = Promise.resolve();
+  function saveOrder(ctx, fn, done) {
+    const st = ctx.state;
+    const next = fn(st.charOrder ?? []);
+    st.charOrder = next;
+    renderCharacters(ctx);
+    if (done) ctx.toast(done);
+    const p = orderQ.then(async () => {
       const fresh = (await ctx.api.getDatabase(["characterOrder"]))?.characterOrder;
-      const next = fn(Array.isArray(fresh) ? fresh : ctx.state.charOrder ?? []);
-      await ctx.api.setDatabaseLite({ characterOrder: next });
-      ctx.state.charOrder = next;
-      renderCharacters(ctx);
-    } catch (e) {
+      const out = Array.isArray(fresh) ? fn(fresh) : st.charOrder;
+      await ctx.api.setDatabaseLite({ characterOrder: out });
+      if (JSON.stringify(out) !== JSON.stringify(st.charOrder)) {
+        st.charOrder = out;
+        if (st.tab === "characters") renderCharacters(ctx);
+      }
+    }).catch(async (e) => {
       ctx.toast(`순서를 저장하지 못했어요: ${e?.message ?? e}`, { error: true });
+      try {
+        const cur = (await ctx.api.getDatabase(["characterOrder"]))?.characterOrder;
+        if (Array.isArray(cur)) {
+          st.charOrder = cur;
+          renderCharacters(ctx);
+        }
+      } catch {
+      }
+    });
+    orderQ = p;
+    return p;
+  }
+  function multiOf2(ctx) {
+    ctx.state.charMulti ??= createMulti({ onChange: () => paintBar2(ctx) });
+    return ctx.state.charMulti;
+  }
+  function paintBar2(ctx) {
+    const mu = multiOf2(ctx), bar = mu.bar;
+    if (!bar) return;
+    const tb = ctx.main.querySelector("#rb-pick-toggle");
+    if (tb) tb.lastChild.textContent = mu.active ? "선택 끝" : "선택";
+    bar.hidden = !mu.active;
+    if (!mu.active) {
+      bar.replaceChildren();
+      return;
     }
+    const n = mu.sel.size;
+    const visible = () => [...ctx.main.querySelectorAll(".rb-list [data-pick]")].map((r) => r.dataset.pick);
+    bar.replaceChildren(
+      h("b", null, n ? `${n}개 고름` : "고를 봇을 누르세요"),
+      btn("폴더로", { size: "sm", icon: "folder", disabled: !n, onClick: (ev) => {
+        const ids = mu.ordered();
+        const folders = (ctx.state.charOrder ?? []).filter((x) => x && typeof x === "object" && Array.isArray(x.data));
+        openMenu(ctx.win, ev.currentTarget, [
+          ...folders.map((f) => ({ label: f.name || "(이름 없는 폴더)", icon: "folder", onClick: () => saveOrder(ctx, (o) => moveChar(o, ids, { folderId: f.id }), `봇 ${ids.length}개를 '${f.name}'(으)로 옮겼어요`) })),
+          folders.length ? "sep" : null,
+          { label: "새 폴더…", icon: "folderPlus", onClick: async () => {
+            const name = await promptDialog(ctx.win, { title: "새 봇 폴더", label: `고른 봇 ${ids.length}개를 넣어요`, placeholder: "폴더 이름" });
+            if (name?.trim()) saveOrder(ctx, (o) => createFolder(o, { id: "df_" + newId().slice(0, 10), name: name.trim(), ids }), `'${name.trim()}' 폴더를 만들었어요 (봇 ${ids.length}개)`);
+          } }
+        ].filter(Boolean));
+      } }),
+      btn("폴더 밖으로", { size: "sm", disabled: !n, onClick: () => {
+        const ids = mu.ordered();
+        saveOrder(ctx, (o) => moveChar(o, ids, { folderId: null }));
+      } }),
+      btn("보이는 것 모두", { size: "sm", onClick: () => {
+        const v = visible();
+        mu.set(v.every((id) => mu.has(id)) ? [] : v);
+      } }),
+      iconBtn("x", "고르기 끝내기", { onClick: () => mu.clear() })
+    );
   }
   function charItems(ctx) {
     return ctx.state.chars.map((c) => {
       const f = folderOf(ctx.state.charOrder, c.chaId);
-      return { id: c.chaId, label: c.name, sub: [f ? `지금: ${f.name}` : "폴더 없음", c.creator && `제작자 ${c.creator}`].filter(Boolean).join(" · ") };
+      return { id: c.chaId, label: c.name, folder: f?.id ?? null, sub: [f ? `지금: ${f.name}` : "폴더 없음", c.creator && `제작자 ${c.creator}`].filter(Boolean).join(" · ") };
     });
   }
   async function newCharFolder(ctx) {
-    const r = await folderDialog(ctx.win, { title: "새 봇 폴더", items: charItems(ctx), noun: "봇" });
+    const r = await folderDialog(ctx.win, { title: "새 봇 폴더", items: charItems(ctx), noun: "봇", ...folderPickPrefs(ctx) });
     if (!r) return;
-    await saveOrder(ctx, (o) => createFolder(o, { id: "df_" + newId().slice(0, 10), name: r.name, ids: r.ids }));
-    ctx.toast(`'${r.name}' 폴더를 만들었어요${r.ids.length ? ` (봇 ${r.ids.length}개)` : ""}. RisuAI 사이드바에도 같은 폴더가 생겨요.`);
+    await saveOrder(ctx, (o) => createFolder(o, { id: "df_" + newId().slice(0, 10), name: r.name, ids: r.ids }), `'${r.name}' 폴더를 만들었어요${r.ids.length ? ` (봇 ${r.ids.length}개)` : ""}. RisuAI 사이드바에도 같은 폴더가 생겨요.`);
   }
   function charFolderMenu(ctx, f, anchor) {
     openMenu(ctx.win, anchor, [
       { label: "넣을 봇 고르기…", icon: "plus", onClick: async () => {
-        const r = await folderDialog(ctx.win, { title: `'${f.name}' 폴더에 넣을 봇`, items: charItems(ctx), checked: [...f.data], ok: "저장", withName: false, noun: "봇" });
+        const r = await folderDialog(ctx.win, { title: `'${f.name}' 폴더에 넣을 봇`, items: charItems(ctx), checked: [...f.data], ok: "저장", withName: false, noun: "봇", current: f.id, ...folderPickPrefs(ctx) });
         if (r) await saveOrder(ctx, (o) => setMembers(o, f.id, r.ids));
       } },
       { label: "이름 바꾸기", icon: "edit", onClick: async () => {
