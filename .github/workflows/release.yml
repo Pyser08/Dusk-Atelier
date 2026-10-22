@@ -3,6 +3,7 @@ name: 릴리스
 # main에 올라온 package.json 버전(vX.Y.Z)의 릴리스가 아직 없으면, 또는 v로 시작하는 태그를 푸시하면:
 #   src/를 빌드해 저장소의 dusk_atelier.js와 같은지 확인하고,
 #   CHANGELOG.md의 해당 버전 항목을 설명으로 넣어 릴리스(와 태그)를 만들고 dusk_atelier.js를 첨부한다.
+# 같은 버전의 릴리스가 이미 있으면 첨부 파일(dusk_atelier.js)과 설명만 새것으로 바꾼다.
 # 수동 실행(fix-asset-name): 기존 릴리스의 dusk-atelier.js를 dusk_atelier.js로 바꿔 올린다.
 on:
   push:
@@ -35,21 +36,23 @@ jobs:
           v="v$(node -p "require('./package.json').version")"
           if [ "${{ github.ref_type }}" = "tag" ] && [ "$v" != "${{ github.ref_name }}" ]; then echo "package.json 버전 $v 와 태그 ${{ github.ref_name }} 가 다릅니다"; exit 1; fi
           echo "TAG=$v" >> "$GITHUB_ENV"
-          if gh release view "$v" >/dev/null 2>&1; then echo "$v 릴리스가 이미 있어요"; echo "skip=1" >> "$GITHUB_OUTPUT"; fi
-      - if: steps.ver.outputs.skip != '1'
-        run: npm install --no-audit --no-fund
+          if gh release view "$v" >/dev/null 2>&1; then echo "$v 릴리스가 이미 있어요 → 파일만 교체"; echo "exists=1" >> "$GITHUB_OUTPUT"; fi
+      - run: npm install --no-audit --no-fund
       - name: 빌드 결과가 저장소 파일과 같은지 확인
-        if: steps.ver.outputs.skip != '1'
         run: node tools/build.mjs --check
       - name: 릴리스 설명 만들기
-        if: steps.ver.outputs.skip != '1'
         run: |
           awk -v h="## $TAG" 'index($0,h)==1{f=1;next} f&&/^## /{exit} f' CHANGELOG.md > notes.md
           test -s notes.md || echo "Dusk Atelier $TAG" > notes.md
       - name: 릴리스 만들기
-        if: steps.ver.outputs.skip != '1'
+        if: steps.ver.outputs.exists != '1'
         run: |
           gh release create "$TAG" dusk_atelier.js --target "$GITHUB_SHA" --title "Dusk Atelier $TAG" --notes-file notes.md --latest
+      - name: 기존 릴리스 파일 교체
+        if: steps.ver.outputs.exists == '1'
+        run: |
+          gh release upload "$TAG" dusk_atelier.js --clobber
+          gh release edit "$TAG" --notes-file notes.md
 
   fix-asset-name:
     if: github.event_name == 'workflow_dispatch'
