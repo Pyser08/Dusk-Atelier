@@ -1,10 +1,10 @@
 //@name dusk_atelier
 //@display-name Dusk Atelier
 //@api 3.0
-//@version 1.0.3
-//@link https://github.com/Pyser08/Dusk-Atelier/releases/latest 저장소
+//@version 1.1.0
+//@link https://github.com/Pyser08/Dusk-Atelier 저장소
 
-/* Dusk Atelier v1.0.3 — 소스: https://github.com/Pyser08/Dusk-Atelier/releases/latest (src/ 폴더). 이 파일은 빌드 결과물입니다. */
+/* Dusk Atelier v1.1.0 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
 (() => {
   var __defProp = Object.defineProperty;
   var __export = (target, all) => {
@@ -459,8 +459,8 @@
     }
     return out;
   }
-  function cardToModule(card, md, assetRef) {
-    const data = card.data ?? {};
+  function cardToModule(card2, md, assetRef) {
+    const data = card2.data ?? {};
     const risuext = data.extensions?.risuai;
     const assets = [];
     let icon2 = null;
@@ -519,8 +519,8 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
     const byName = new Map(entries.map((e) => [e.name, e]));
     const cardEntry = byName.get("card.json");
     if (!cardEntry) throw new Error("charx 안에 card.json이 없습니다");
-    const card = JSON.parse(new TextDecoder().decode(await readZipEntry(blob, cardEntry)));
-    if (card?.spec !== "chara_card_v3") throw new Error("charx의 card.json이 V3 카드가 아닙니다");
+    const card2 = JSON.parse(new TextDecoder().decode(await readZipEntry(blob, cardEntry)));
+    if (card2?.spec !== "chara_card_v3") throw new Error("charx의 card.json이 V3 카드가 아닙니다");
     let md = null;
     const mdEntry = byName.get("module.risum");
     if (mdEntry) {
@@ -528,7 +528,7 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       md = (await scanRisum(new Blob([bytes]))).module;
     }
     const wanted = /* @__PURE__ */ new Set();
-    for (const a of card.data?.assets ?? []) {
+    for (const a of card2.data?.assets ?? []) {
       const uri = String(a.uri ?? "");
       if (uri.startsWith("embeded://")) wanted.add(uri.slice(10));
       else if (uri.startsWith("__asset:")) wanted.add(uri.slice(8));
@@ -556,9 +556,9 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       if (!dataRefs.has(key)) dataRefs.set(key, inlineRef(mode === false ? key.split(",")[1] ?? "" : key));
       return dataRefs.get(key);
     };
-    const { mod, assets, icon: icon2, bardExtension } = cardToModule(card, md, assetRef);
+    const { mod, assets, icon: icon2, bardExtension } = cardToModule(card2, md, assetRef);
     const list = assets.map((a, index) => ({ ...a, index }));
-    const character = cardToCharacter(card, md, assetRef, null);
+    const character = cardToCharacter(card2, md, assetRef, null);
     return {
       kind: "charx",
       module: mod,
@@ -569,8 +569,8 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
     };
   }
   var nullish = (v) => v === null || v === void 0;
-  function cardToCharacter(card, md, assetRef, mainRef) {
-    const data = card.data ?? {};
+  function cardToCharacter(card2, md, assetRef, mainRef) {
+    const data = card2.data ?? {};
     const risuext = data.extensions?.risuai ? JSON.parse(JSON.stringify(data.extensions.risuai)) : void 0;
     if (md && risuext) {
       risuext.triggerscript = md.trigger ?? [];
@@ -578,7 +578,7 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
     }
     const refs = { emotions: [], additional: [], cc: [], icon: mainRef ?? null, vits: null };
     const v2Ref = (val) => String(val ?? "").startsWith("__asset:") ? assetRef(String(val).slice(8), true) : assetRef(String(val ?? ""), "b64");
-    if (risuext && card.spec === "chara_card_v2") {
+    if (risuext && card2.spec === "chara_card_v2") {
       for (const e of risuext.emotions ?? []) {
         const r = v2Ref(e[1]);
         if (r) refs.emotions.push({ ...r, name: String(e[0] ?? "") });
@@ -590,7 +590,7 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       const vk = Object.keys(risuext.vits ?? {});
       if (vk.length) refs.vits = vk.map((k) => ({ ...v2Ref(risuext.vits[k]), name: k }));
     }
-    for (const a of card.spec === "chara_card_v3" ? data.assets ?? [] : []) {
+    for (const a of card2.spec === "chara_card_v3" ? data.assets ?? [] : []) {
       const uri = String(a.uri ?? "");
       let ref = null;
       if (uri.startsWith("__asset:")) ref = assetRef(uri.slice(8), true);
@@ -802,12 +802,12 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
     }
     const mainRef = { source: "mem", bytes: img, size: img.length, hash: await sha256(img) };
     let raw = ccv3 || chara;
-    let card;
-    if (raw.startsWith("rcc||")) card = await decryptRcc(raw, hooks);
+    let card2;
+    if (raw.startsWith("rcc||")) card2 = await decryptRcc(raw, hooks);
     else {
       const text = new TextDecoder().decode(b64bytes(raw));
-      card = JSON.parse(text);
-      if (typeof card?.data?.character_version === "number") card.data.character_version = card.data.character_version.toString();
+      card2 = JSON.parse(text);
+      if (typeof card2?.data?.character_version === "number") card2.data.character_version = card2.data.character_version.toString();
     }
     const assetRef = (key, mode) => {
       if (mode === true) {
@@ -818,8 +818,8 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       if (!key) return null;
       return inlineRef(mode === false ? key.split(",")[1] ?? "" : key);
     };
-    const character = card?.spec === "chara_card_v2" || card?.spec === "chara_card_v3" ? cardToCharacter(card, null, assetRef, mainRef) : offSpecToCharacter(card, mainRef);
-    return { kind: "png", assets: [], character, notes: card?.data?.extensions?.risubard ? ["RisuBard 전용 확장(bardLore 등)이 있는 카드입니다. 로어북 처리 결과가 기본 임포트와 조금 다를 수 있습니다."] : [] };
+    const character = card2?.spec === "chara_card_v2" || card2?.spec === "chara_card_v3" ? cardToCharacter(card2, null, assetRef, mainRef) : offSpecToCharacter(card2, mainRef);
+    return { kind: "png", assets: [], character, notes: card2?.data?.extensions?.risubard ? ["RisuBard 전용 확장(bardLore 등)이 있는 카드입니다. 로어북 처리 결과가 기본 임포트와 조금 다를 수 있습니다."] : [] };
   }
   async function decryptRcc(raw, hooks) {
     const parts = raw.split("||");
@@ -1092,10 +1092,10 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
   function characterView(ch) {
     return { name: ch?.name, namespace: ch?.moduleNamespace || void 0, assets: characterAssetKeys(ch).map((k) => ["", k, ""]) };
   }
-  function mergeNamedList(oldList, incoming, keyOf2, keepExistingOnly) {
+  function mergeNamedList(oldList, incoming, keyOf3, keepExistingOnly) {
     const oldBy = /* @__PURE__ */ new Map();
     for (const o of oldList ?? []) {
-      const k = keyOf2(o);
+      const k = keyOf3(o);
       if (!oldBy.has(k)) oldBy.set(k, o);
     }
     const incKeys = new Set(incoming.map((i) => i.key));
@@ -1108,7 +1108,7 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
     }
     const extra = [];
     for (const o of oldList ?? []) {
-      if (incKeys.has(keyOf2(o))) continue;
+      if (incKeys.has(keyOf3(o))) continue;
       if (keepExistingOnly) {
         extra.push(o);
         stat.keptExistingOnly++;
@@ -2167,17 +2167,17 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
         go(e.dataTransfer?.files);
       });
     }
-    function renderProgress(title, pct, detail2) {
+    function renderProgress(title, pct, detail3) {
       frame(`<div class="card"><div>${esc(title)}</div>
             <div class="bar"><i style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></i></div>
-            <div class="muted" id="detail">${esc(detail2 ?? "")}</div></div>
+            <div class="muted" id="detail">${esc(detail3 ?? "")}</div></div>
           <div class="row"><button id="close" class="danger">취소</button></div>`);
     }
-    function updateProgress(pct, detail2) {
+    function updateProgress(pct, detail3) {
       const bar = root?.querySelector(".bar>i");
       if (!bar) return;
       bar.style.width = `${Math.max(0, Math.min(100, pct)).toFixed(1)}%`;
-      if (!stopRequested) root.querySelector("#detail").textContent = detail2 ?? "";
+      if (!stopRequested) root.querySelector("#detail").textContent = detail3 ?? "";
     }
     function askPassword() {
       return new Promise((resolve) => {
@@ -2326,7 +2326,7 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       const p = (n) => String(n).padStart(2, "0");
       return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
     };
-    const KIND_KO = { update: "새 버전 적용", mine: "내 수정 유지", conflict: "충돌", added: "추가", removed: "삭제", kept: "기존 유지" };
+    const KIND_KO2 = { update: "새 버전 적용", mine: "내 수정 유지", conflict: "충돌", added: "추가", removed: "삭제", kept: "기존 유지" };
     function mergeBox(m, choices, keepExistingOnly) {
       const s = summarize(m.items);
       const conflicts = m.items.filter((i) => i.kind === "conflict");
@@ -3166,6 +3166,7 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       }
     };
     for (const it of items) {
+      if (!it) continue;
       if (it === "sep") {
         menu.appendChild(h("hr"));
         continue;
@@ -3456,6 +3457,7 @@ select.rb-input{appearance:auto}
 
 /* 모바일: 아래 탭 바, 상세는 시트 */
 .rb-tabbar{display:none}
+.rb-nav a[hidden],.rb-tabbar a[hidden]{display:none!important}
 .rb-mobile-search{display:none !important}
 .rb-win.rb-nosearch .rb-head .rb-search{visibility:hidden}
 .rb-sheet-back{display:none}
@@ -3470,7 +3472,7 @@ select.rb-input{appearance:auto}
   .rb-nav{display:none}
   .rb-mobile-search{display:flex !important;flex:0 0 auto;height:44px;margin:12px 16px 0;max-width:none}
   .rb-win.rb-nosearch .rb-mobile-search{display:none !important}
-  .rb-tabbar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));height:68px;flex-shrink:0;border-top:1px solid var(--rb-line2);background:var(--rb-win)}
+  .rb-tabbar{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);height:68px;flex-shrink:0;border-top:1px solid var(--rb-line2);background:var(--rb-win)}
   .rb-tabbar a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-decoration:none;color:var(--rb-sub);font-size:11px;cursor:pointer}
   .rb-tabbar a[aria-current=page]{color:var(--rb-acc-text);font-weight:600}
   .rb-chips{flex-wrap:nowrap;overflow-x:auto;padding:12px 16px 8px}
@@ -4556,1812 +4558,159 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     return { result: applyView(target, r.view, { userKeys: patch.kind === "character" ? USER_KEYS : [] }), items: r.items, summary: r.summary, uploaded: remap.size };
   }
 
-  // src/ui/screens/devtools.js
-  var isDev = (ctx) => !!ctx.prefs.ui?.devMode;
-  var SKIP_CHAR = ["loreCache", "lowLevelHistory", "chatPage", "chats"];
-  function baseViewOf(kind, obj) {
-    const v = pickView(obj, viewKeys(kind, kind === "module" ? null : obj));
-    if (kind === "character") for (const k of SKIP_CHAR) delete v[k];
-    return v;
+  // src/engine/devcheck.js
+  function projView(kind, obj) {
+    if (kind === "module") return { name: obj?.name ?? "", lore: obj?.lorebook ?? [], regex: obj?.regex ?? [], trigger: obj?.trigger ?? [] };
+    return { name: obj?.name ?? "", lore: obj?.globalLore ?? [], regex: obj?.customscript ?? [], trigger: obj?.triggerscript ?? [] };
   }
-  var GROUP = { field: "정보", lorebook: "로어북", regex: "정규식", trigger: "트리거", assets: "에셋", globalLore: "로어북", customscript: "정규식", triggerscript: "트리거", emotionImages: "감정 이미지", additionalAssets: "에셋" };
-  var KIND = { update: ["수정", "acc"], added: ["추가", "ok"], removed: ["삭제", "danger"], conflict: ["수정", "acc"], mine: ["수정", "acc"] };
-  function devToggleCard(ctx, onChange) {
-    const on = isDev(ctx);
-    return h(
-      "div",
-      { class: "rb-card pad bordered", style: "display:flex;gap:14px;align-items:center;margin-bottom:14px", id: "rb-devmode" },
-      h("span", { style: "width:40px;height:40px;border-radius:12px;background:var(--rb-acc-soft);color:var(--rb-acc-text);display:flex;align-items:center;justify-content:center;flex-shrink:0" }, icon("code", 20)),
-      h(
-        "div",
-        { style: "flex:1;min-width:0;display:flex;flex-direction:column;gap:2px" },
-        h("b", null, "개발자 모드"),
-        h("span", { class: "rb-muted", style: "white-space:normal" }, "모듈·봇 제작자를 위한 기능이에요. 수정한 부분만 담은 업데이트 패치를 쉽게 만들어 배포할 수 있어요.")
-      ),
-      switchEl(on, { label: "개발자 모드", onChange: async (v) => {
-        await ctx.prefs.saveUi({ devMode: v });
-        ctx.toast(v ? "개발자 모드를 켰어요" : "개발자 모드를 껐어요");
-        onChange?.();
-      } })
-    );
-  }
-  async function loadTargets(ctx) {
-    const { entries } = await ctx.svc.load();
-    const mods = entries.map((e) => ({ kind: "module", key: `m:${e.module.id}`, id: e.module.id, name: e.module.name ?? "", sub: e.module.namespace || "" }));
-    const db = await ctx.api.getDatabase(["characters"]);
-    db.characters = (await loadCharacters(ctx.api, db?.characters)).list;
-    const chars = (db?.characters ?? []).map((c, i) => c && !c.trashTime && c.type !== "group" ? { kind: "character", key: `c:${c.chaId}`, i, chaId: c.chaId, name: c.name ?? "", sub: c.creator ? `제작자 ${c.creator}` : "" } : null).filter(Boolean);
-    return { mods, chars };
-  }
-  async function currentOf(ctx, t) {
-    if (t.kind === "module") {
-      const m = (await ctx.svc.load({ fresh: true })).entries.find((e) => e.module.id === t.id)?.module;
-      if (!m) throw new Error("모듈을 다시 찾지 못했어요");
-      return m;
+  function parseDecorators(content) {
+    const decos = [], body = [];
+    for (const line of String(content ?? "").split("\n")) {
+      const m = /^@@([a-z_]+)(?:\s+(.*))?$/.exec(line.trim());
+      if (m) decos.push({ name: m[1], args: (m[2] ?? "").split(",").map((s) => s.trim()).filter(Boolean) });
+      else body.push(line);
     }
-    const c = await ctx.api.getCharacterFromIndex(t.i);
-    if (!c || c.chaId !== t.chaId) throw new Error("봇을 다시 찾지 못했어요. 목록을 새로 고쳐 주세요.");
-    return c;
+    return { decos, body: body.join("\n") };
   }
-  async function renderPatchMaker(ctx) {
-    const st = ctx.state;
-    st.pm ??= { kind: "module", target: null, q: "" };
-    const pm = st.pm;
-    replace(ctx.main, h("div", { class: "rb-empty" }, "불러오는 중…"));
-    const { mods, chars } = await loadTargets(ctx);
-    const store = createStore(ctx.api);
-    const back = btn("도구", { size: "sm", icon: "back", onClick: () => {
-      ctx.go("tools");
-    } });
-    const pickBox = h("div", { class: "rb-list", style: "max-height:260px;overflow:auto;border:1px solid var(--rb-line);border-radius:14px;padding:6px" });
-    const work = h("div", { style: "display:flex;flex-direction:column;gap:14px" });
-    const search = h("input", { class: "rb-input", type: "search", placeholder: "이름으로 찾기", value: pm.q, "aria-label": "대상 찾기" });
-    const paintList = () => {
-      const list = (pm.kind === "module" ? mods : chars).filter((t) => !pm.q || t.name.toLowerCase().includes(pm.q.toLowerCase()));
-      replace(
-        pickBox,
-        ...list.slice(0, 300).map((t) => h(
-          "button",
-          { type: "button", class: "rb-row", "aria-selected": pm.target?.key === t.key ? "true" : "false", onClick: () => {
-            pm.target = t;
-            paintList();
-            paintWork();
-          } },
-          h("span", { style: "display:flex;color:var(--rb-sub)" }, icon(t.kind === "module" ? "module" : "character", 18)),
-          h("div", { class: "txt" }, h("span", { class: "name" }, t.name || "(이름 없음)"), t.sub && h("span", { class: "meta" }, t.sub))
-        )),
-        !list.length && h("div", { class: "rb-empty" }, "없어요")
-      );
-    };
-    search.addEventListener("input", () => {
-      pm.q = search.value;
-      paintList();
-    });
-    let token = 0;
-    async function paintWork() {
-      const my = ++token;
-      const t = pm.target;
-      if (!t) {
-        replace(work, h("div", { class: "rb-empty" }, "위에서 패치를 만들 모듈이나 봇을 고르세요."));
-        return;
-      }
-      replace(work, h("div", { class: "rb-empty" }, "비교하는 중…"));
-      let cur, info, base, backups;
-      try {
-        [cur, info, backups] = await Promise.all([currentOf(ctx, t), store.baselineInfo(t.key), store.listBackups()]);
-        base = pm.baseFrom?.key === t.key ? pm.baseFrom.view : info ? await store.getBaseline(t.key) : null;
-      } catch (e) {
-        if (my === token) replace(work, note("err", e?.message ?? String(e)));
-        return;
-      }
-      if (my !== token) return;
-      const targetId = t.kind === "module" ? t.id : t.chaId;
-      const mineBackups = backups.filter((b) => b.target === targetId && b.path);
-      const setBaseNow = async () => {
-        if (base && !await confirmDialog(ctx.win, { title: "지금 상태를 배포 기준으로 할까요?", body: '지금 상태를 "배포한 버전"으로 기록해요. 이후 고친 부분만 패치에 들어가요.', ok: "기준으로 표시" })) return;
-        await store.setBaseline(t.key, baseViewOf(t.kind, cur));
-        pm.baseFrom = null;
-        ctx.toast("지금 상태를 배포 기준으로 기록했어요");
-        paintWork();
-      };
-      const baseCard = h(
-        "div",
-        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:10px" },
-        h(
-          "div",
-          { style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap" },
-          h("b", null, "① 배포한 버전 (기준)"),
-          base ? badge(pm.baseFrom?.key === t.key ? `기록에서 고름 · ${fmtWhen(pm.baseFrom.t)}` : `기록됨 · ${fmtWhen(info?.t)}`, "ok") : badge("없음", "warn")
-        ),
-        h("span", { class: "rb-muted", style: "white-space:normal" }, base ? "사람들에게 마지막으로 배포한 상태예요. 이 상태와 지금을 비교해서 바뀐 부분만 패치에 담아요." : '아직 기준이 없어요. 배포한 파일 그대로인 지금 "기준으로 표시"를 누르고, 그다음에 수정하세요. 이미 수정했다면 아래 기록에서 수정 전 상태를 고를 수 있어요.'),
-        h(
-          "div",
-          { style: "display:flex;gap:8px;flex-wrap:wrap" },
-          btn("지금 상태를 기준으로 표시", { size: "sm", icon: "check", onClick: setBaseNow, id: "rb-pm-setbase" }),
-          mineBackups.length ? (() => {
-            const sel = h(
-              "select",
-              { class: "rb-input", style: "height:36px;width:auto;max-width:100%", "aria-label": "기록에서 기준 고르기" },
-              h("option", { value: "" }, "기록에서 기준 고르기…"),
-              ...mineBackups.map((b) => h("option", { value: b.id }, `${new Date(b.t).toLocaleString()} · ${b.note || "백업"}`))
-            );
-            sel.addEventListener("change", async () => {
-              const rec = mineBackups.find((b) => b.id === sel.value);
-              if (!rec) return;
-              try {
-                const snap = await store.loadBackup(rec);
-                pm.baseFrom = { key: t.key, t: rec.t, view: baseViewOf(t.kind, snap) };
-                paintWork();
-              } catch (e) {
-                ctx.toast(`기록을 읽지 못했어요: ${e?.message ?? e}`, { error: true });
-              }
-            });
-            return sel;
-          })() : null
-        )
-      );
-      if (!base) {
-        replace(work, baseCard);
-        return;
-      }
-      const preview = await buildPatch({ kind: t.kind, name: cur.name, namespace: cur.namespace ?? cur.moduleNamespace, base, current: cur, readAsset: async () => null, includeAssets: false });
-      if (my !== token) return;
-      const items = preview ? planPatch(preview, base).items : [];
-      const newAssets = preview?.changes ? [...changedAssetPaths(preview.changes)].length : 0;
-      const groups = /* @__PURE__ */ new Map();
-      for (const it of items) {
-        const g = GROUP[it.group] ?? it.group;
-        if (!groups.has(g)) groups.set(g, []);
-        groups.get(g).push(it);
-      }
-      const changeCard = h(
-        "div",
-        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:10px", id: "rb-pm-changes" },
-        h(
-          "div",
-          { style: "display:flex;align-items:center;gap:8px" },
-          h("b", null, "② 바뀐 내용"),
-          badge(`${items.length}곳`, items.length ? "acc" : "mute"),
-          preview ? h("span", { class: "rb-muted", style: "margin-left:auto", id: "rb-pm-size" }, `패치 크기 약 ${fmtBytes(new Blob([JSON.stringify(preview)]).size)}${newAssets ? ` + 바뀐 에셋 ${newAssets}개` : ""}`) : null
-        ),
-        items.length ? h(
-          "div",
-          { style: "display:flex;flex-direction:column;gap:10px;max-height:320px;overflow:auto" },
-          ...[...groups].map(([g, list]) => h(
-            "div",
-            { style: "display:flex;flex-direction:column;gap:4px" },
-            h("span", { class: "rb-label" }, `${g} (${list.length})`),
-            ...list.slice(0, 200).map((it) => h("div", { style: "display:flex;gap:8px;align-items:center;min-width:0" }, badge(...KIND[it.kind] ?? [it.kind, "mute"]), h("span", { style: "overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, String(it.label ?? it.id)))),
-            list.length > 200 ? h("span", { class: "rb-muted" }, `외 ${list.length - 200}곳`) : null
-          ))
-        ) : h("span", { class: "rb-muted" }, "기준과 달라진 내용이 없어요. 수정한 다음 다시 열어 보세요.")
-      );
-      if (!items.length) {
-        replace(work, baseCard, changeCard);
-        return;
-      }
-      const ver = h("input", { class: "rb-input", value: pm.version ?? "", placeholder: "예: 1.1", "aria-label": "버전" });
-      const who = h("input", { class: "rb-input", value: pm.author ?? (cur.creator ?? ""), placeholder: "제작자 이름", "aria-label": "제작자" });
-      const memo = h("textarea", { class: "rb-textarea", placeholder: "받는 사람에게 보여 줄 변경 내용 (적용 전에 보여요)", style: "min-height:90px;font-family:inherit", "aria-label": "변경 내용" });
-      memo.value = pm.note ?? "";
-      ver.addEventListener("input", () => {
-        pm.version = ver.value;
-        fname.textContent = fileName();
-      });
-      who.addEventListener("input", () => {
-        pm.author = who.value;
-      });
-      memo.addEventListener("input", () => {
-        pm.note = memo.value;
-      });
-      let withAssets = pm.withAssets ?? true, moveBase = pm.moveBase ?? true;
-      const fileName = () => `${safeFileName(cur.name)}${ver.value.trim() ? `_v${safeFileName(ver.value.trim())}` : ""}.rbupatch`;
-      const fname = h("code", null, fileName());
-      const row2 = (label, desc, on, set) => h(
-        "div",
-        { style: "display:flex;gap:12px;align-items:center" },
-        h("div", { style: "flex:1;min-width:0;display:flex;flex-direction:column" }, h("span", null, label), h("span", { class: "rb-muted", style: "white-space:normal" }, desc)),
-        switchEl(on, { label, onChange: (v) => set(v) })
-      );
-      const make = btn("패치 파일 만들기", { kind: "primary", size: "lg", icon: "download", id: "rb-pm-make", onClick: async () => {
-        make.disabled = true;
-        const tt = ctx.toast("패치 만드는 중…", { seconds: 120 });
+  function keyMatch(text, keys, { regex, fullWord }) {
+    if (regex) {
+      for (const k of keys) {
+        const p = /^\/([\s\S]*)\/([dgimsuvy]*)$/.exec(k);
+        if (!p) return null;
         try {
-          const fresh = await currentOf(ctx, t);
-          const patch = await buildPatch({ kind: t.kind, name: fresh.name, namespace: fresh.namespace ?? fresh.moduleNamespace, base, current: fresh, readAsset: (p) => ctx.assets.read(p), includeAssets: withAssets, version: ver.value.trim(), note: memo.value.trim(), author: who.value.trim() });
-          tt.close();
-          if (!patch) {
-            ctx.toast("기준과 달라진 내용이 없어요");
-            return;
-          }
-          const text = JSON.stringify(patch);
-          download(fileName(), text, "application/json");
-          if (moveBase) {
-            await store.setBaseline(t.key, baseViewOf(t.kind, fresh));
-            pm.baseFrom = null;
-          }
-          pm.version = "";
-          pm.note = "";
-          ctx.toast(`패치를 만들었어요 (${fmtBytes(text.length)})${moveBase ? " · 지금 상태가 새 기준이에요" : ""}`);
-          paintWork();
-        } catch (e) {
-          tt.close();
-          ctx.toast(`만들지 못했어요: ${e?.message ?? e}`, { error: true });
-        } finally {
-          make.disabled = false;
+          if (new RegExp(p[1], p[2]).test(text)) return k;
+        } catch {
+          return null;
         }
-      } });
-      const outCard = h(
-        "div",
-        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:12px" },
-        h("b", null, "③ 패치 정보"),
-        h(
-          "div",
-          { class: "rb-form" },
-          h("label", { class: "rb-field" }, h("span", { class: "rb-label" }, "버전"), ver),
-          h("label", { class: "rb-field" }, h("span", { class: "rb-label" }, "제작자"), who),
-          h("label", { class: "rb-field wide" }, h("span", { class: "rb-label" }, "변경 내용"), memo)
-        ),
-        row2("바뀐 에셋 넣기", "받는 사람이 이미지를 따로 구하지 않아도 돼요. 파일이 커질 수 있어요.", withAssets, (v) => {
-          withAssets = pm.withAssets = v;
-        }),
-        row2("만든 뒤 지금 상태를 새 기준으로", "다음 패치에는 이번 이후에 고친 것만 들어가요. 끄면 기준이 그대로라 누적 패치가 돼요.", moveBase, (v) => {
-          moveBase = pm.moveBase = v;
-        }),
-        h("div", { class: "rb-muted" }, "파일 이름: ", fname),
-        h("div", null, make),
-        note("info", '받는 사람은 모듈 메뉴나 봇 상세에서 "패치 적용"을 눌러 이 파일을 고르면 돼요. 받는 사람이 직접 고친 부분은 그대로 남아요.')
-      );
-      replace(work, baseCard, changeCard, outCard);
-    }
-    replace(ctx.main, h(
-      "div",
-      { class: "rb-section rb-scroll", style: "flex:1;display:flex;flex-direction:column;gap:14px" },
-      h("div", null, back),
-      h("div", null, h("h2", { class: "rb-h2" }, "패치 만들기"), h("p", { class: "rb-p" }, "배포한 버전과 지금을 비교해서 바뀐 부분만 담은 업데이트 파일(.rbupatch)을 만들어요.")),
-      segmented([["module", "모듈"], ["character", "봇"]], pm.kind, (v) => {
-        pm.kind = v;
-        if (pm.target?.kind !== v) pm.target = null;
-        paintList();
-        paintWork();
-      }, "종류"),
-      search,
-      pickBox,
-      work
-    ));
-    paintList();
-    paintWork();
-  }
-  function openPatchMaker(ctx, target) {
-    ctx.state.pm = { ...ctx.state.pm ?? {}, kind: target.kind, target, q: "" };
-    ctx.go("tools", "patchmaker");
-  }
-
-  // src/ui/screens/patchui.js
-  var keyOf = (kind, obj) => kind === "module" ? `m:${obj.id}` : `c:${obj.chaId}`;
-  async function exportMyChanges(ctx, kind, obj) {
-    const store = createStore(ctx.api);
-    const base = await store.getBaseline(keyOf(kind, obj));
-    if (!base) {
-      const ok = await confirmDialog(ctx.win, { title: "원본 기록이 없어요", body: '이 플러그인으로 가져오거나 업데이트한 적이 없어서 "제작자 원본"을 몰라요.\n지금 상태를 원본으로 기록해 둘까요? 그 뒤에 고친 것부터 내보낼 수 있어요.', ok: "지금 상태로 기록 시작" });
-      if (ok) {
-        await store.setBaseline(keyOf(kind, obj), baseViewOf(kind, obj));
-        ctx.toast("기록을 시작했어요. 이제부터 고친 내용을 내보낼 수 있어요.");
       }
-      return;
+      return null;
     }
-    const includeAssets = await confirmDialog(ctx.win, { title: "바꾼 에셋도 넣을까요?", body: "넣으면 받는 사람이 같은 이미지를 따로 구하지 않아도 돼요. 파일이 커질 수 있어요.", ok: "에셋 넣기", cancel: "글자만" });
-    const t = ctx.toast("패치 만드는 중…", { seconds: 120 });
-    try {
-      const patch = await buildPatch({ kind, name: obj.name, namespace: obj.namespace ?? obj.moduleNamespace, base, current: obj, readAsset: (p) => ctx.assets.read(p), includeAssets });
-      t.close();
-      if (!patch) {
-        ctx.toast("원본과 달라진 내용이 없어요");
-        return;
-      }
-      download(`${safeFileName(obj.name)}.rbupatch`, JSON.stringify(patch), "application/json");
-      ctx.toast("내 수정 패치를 내보냈어요");
-    } catch (e) {
-      t.close();
-      ctx.toast(`만들지 못했어요: ${e?.message ?? e}`, { error: true });
+    const low = text.toLocaleLowerCase();
+    if (fullWord) {
+      const words = low.split(" ");
+      for (const k of keys) if (words.includes(k.toLocaleLowerCase())) return k;
+      return null;
     }
+    const flat = low.replace(/ /g, "");
+    for (const k of keys) if (flat.includes(k.toLocaleLowerCase().replace(/ /g, ""))) return k;
+    return null;
   }
-  async function applyPatchFile(ctx, kind, getTarget, save) {
-    const [f] = await pickFiles({ accept: ".rbupatch,application/json" });
-    if (!f) return;
-    let patch;
-    try {
-      patch = parsePatch(await f.text());
-    } catch (e) {
-      ctx.toast(e?.message ?? String(e), { error: true });
-      return;
+  function loreActivation(lore, text, { recursive = false } = {}) {
+    const out = [], on = /* @__PURE__ */ new Set();
+    let scan = String(text ?? "");
+    for (let round = 0; round < (recursive ? 10 : 1); round++) {
+      let added = false;
+      (lore ?? []).forEach((l, i) => {
+        if (on.has(i) || !l || l.mode === "folder") return;
+        const { decos, body } = parseDecorators(l.content);
+        const has2 = (n) => decos.find((d) => d.name === n);
+        if (has2("dont_activate")) return;
+        const hit = (r) => {
+          on.add(i);
+          added = true;
+          out.push({ index: i, entry: l, reason: r, body });
+        };
+        if (has2("activate")) return hit("@@activate");
+        if (l.alwaysActive || l.mode === "constant") return hit("항상 켜짐");
+        if (!String(l.key ?? "")) return;
+        const opt = { regex: !!l.useRegex, fullWord: !!has2("match_full_word") };
+        const first = keyMatch(scan, String(l.key).split(","), opt);
+        if (first === null) return;
+        if (l.selective && l.secondkey && keyMatch(scan, String(l.secondkey).split(","), opt) === null) return;
+        for (const d of decos) {
+          if (d.name === "additional_keys" && keyMatch(scan, d.args, opt) === null) return;
+          if (d.name === "exclude_keys" && keyMatch(scan, d.args, opt) !== null) return;
+        }
+        hit(first === "" ? "빈 키(쉼표 끝)라서 늘 켜짐" : `키 "${first.trim()}"`);
+      });
+      if (!recursive || !added) break;
+      scan = [String(text ?? ""), ...out.map((o) => o.body)].join("\n");
     }
-    if (patch.kind !== kind) {
-      ctx.toast(`${patch.kind === "module" ? "모듈" : "캐릭터"}용 패치예요`, { error: true });
-      return;
-    }
-    const target = await getTarget();
-    const plan = planPatch(patch, target);
-    const s = plan.summary;
-    const lines = [
-      `패치: ${patch.name}${patch.version ? ` v${patch.version}` : ""}${patch.name !== target.name ? ` → 적용 대상: ${target.name}` : ""}`,
-      patch.author ? `제작자: ${patch.author}` : "",
-      patch.note ? `변경 내용:
-${patch.note}` : "",
-      `패치의 수정 ${s.update ?? 0} · 내 수정 유지 ${s.mine ?? 0} · 충돌 ${s.conflict ?? 0}(패치 쪽으로) · 추가 ${s.added ?? 0} · 삭제 ${s.removed ?? 0}`,
-      Object.keys(patch.assets ?? {}).length ? `에셋 ${Object.keys(patch.assets).length}개를 올려요` : "",
-      "적용하기 전 상태는 백업해요."
-    ].filter(Boolean);
-    if (!plan.items.length) {
-      ctx.toast("적용할 내용이 없어요 (이미 같아요)");
-      return;
-    }
-    if (!await confirmDialog(ctx.win, { title: "패치를 적용할까요?", body: lines.join("\n"), ok: "적용" })) return;
-    try {
-      const cur = await getTarget();
-      if (kind === "character" && isGenerating(cur)) throw new Busy();
-      await createStore(ctx.api).addBackup({ kind, target: kind === "module" ? cur.id : cur.chaId, name: cur.name, snapshot: backupSnapshot(kind, cur), note: "패치 적용 전", summary: `${f.name}` });
-      const r = await applyPatch(patch, cur, { saveAsset: (d) => ctx.api.saveAsset(d) });
-      await save(r.result, cur);
-      ctx.toast("패치를 적용했어요");
-    } catch (e) {
-      ctx.toast(`적용하지 못했어요: ${e?.message ?? e}`, { error: true });
-    }
-  }
-  function changedKeys(before, after) {
-    const out = {};
-    for (const k of /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])) if (k !== "id" && stableJson(before[k] ?? null) !== stableJson(after[k] ?? null)) out[k] = after[k];
     return out;
   }
-
-  // src/ui/screens/modules.js
-  var FILTERS = [["all", "전체"], ["on", "켜짐"], ["off", "꺼짐"], ["global", "전역"], ["lla", "LLA"], ["mcp", "MCP"]];
-  function searchText(m) {
-    const parts = [m.name, m.namespace, m.description];
-    for (const l of m.lorebook ?? []) parts.push(l?.comment, l?.key, l?.secondkey);
-    for (const r of m.regex ?? []) parts.push(r?.comment);
-    for (const r of m.trigger ?? []) parts.push(r?.comment);
-    return parts.filter(Boolean).join("\n").toLowerCase();
-  }
-  var COARSE = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
-  async function renderModules(ctx) {
-    const st = ctx.state;
-    st.modFilter ??= "all";
-    if (!st.modData || st.modDirty) {
-      if (!st.modData) replace(ctx.main, h("div", { class: "rb-empty" }, "모듈을 불러오는 중…"));
-      st.modData = await ctx.svc.load();
-      st.modDirty = false;
-      st.modIndex = new Map(st.modData.entries.map((e) => [e.module.id, searchText(e.module)]));
-    }
-    draw(ctx);
-  }
-  function draw(ctx) {
-    const st = ctx.state;
-    const { entries, globalOn } = st.modData;
-    const meta = ctx.prefs.meta;
-    ctx.setNavCount("modules", entries.length);
-    const q = st.search.trim().toLowerCase();
-    const filtering = !!q || st.modFilter !== "all";
-    if (st.modFolder && !meta.folders.some((f) => f.id === st.modFolder)) st.modFolder = void 0;
-    const fv = st.modFolder;
-    const inView = (e) => fv === void 0 || (meta.mapping[e.module.id] ?? "") === fv;
-    const pass = (e) => {
-      if (!inView(e)) return false;
-      const f = moduleFlags(e.module, globalOn);
-      if (st.modFilter === "on" && !e.enabled) return false;
-      if (st.modFilter === "off" && e.enabled) return false;
-      if (["global", "lla", "mcp"].includes(st.modFilter) && !f[st.modFilter]) return false;
-      return !q || st.modIndex.get(e.module.id)?.includes(q);
-    };
-    const count = (id) => entries.filter((e) => inView(e)).filter((e) => id === "all" || id === "on" && e.enabled || id === "off" && !e.enabled || moduleFlags(e.module, globalOn)[id]).length;
-    const shown = entries.filter(pass);
-    if (!st.modSel || !entries.some((e) => e.module.id === st.modSel)) st.modSel = shown[0]?.module.id ?? null;
-    const toolbar = h(
-      "div",
-      { class: "rb-chips", role: "toolbar", "aria-label": "필터" },
-      FILTERS.map(([id, label]) => chip(label, { pressed: st.modFilter === id, count: count(id), onClick: () => {
-        st.modFilter = id;
-        draw(ctx);
-      } })),
-      h("div", { class: "rb-spacer" }),
-      filtering ? null : btn(multiOf(ctx).active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => {
-        const mu2 = multiOf(ctx);
-        mu2.setMode(!mu2.active);
-      } }),
-      btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolder(ctx) }),
-      btn("새 모듈", { size: "sm", kind: "primary", icon: "plus", onClick: () => newModule(ctx) })
-    );
-    const inFolder2 = (id) => entries.filter((e) => (meta.mapping[e.module.id] ?? "") === id).length;
-    const setView = (v) => {
-      st.modFolder = v;
-      draw(ctx);
-    };
-    const folderBar = meta.folders.length ? h(
-      "div",
-      { class: "rb-chips rb-fchips", role: "toolbar", "aria-label": "폴더별 보기" },
-      chip("모든 폴더", { pressed: fv === void 0, onClick: () => setView(void 0) }),
-      meta.folders.map((f) => {
-        const tint = folderTint(f.color, st.mode);
-        const c = chip(
-          h("span", { style: "display:inline-flex;align-items:center;gap:6px" }, h("span", { style: { color: tint?.stroke ?? "var(--rb-sub)", display: "flex" } }, icon("folder", 14)), f.name || "(이름 없음)"),
-          { pressed: fv === f.id, count: inFolder2(f.id), onClick: () => setView(fv === f.id ? void 0 : f.id) }
-        );
-        c.dataset.folderView = f.id;
-        return c;
-      }),
-      chip("폴더 없음", { pressed: fv === "", count: inFolder2(""), onClick: () => setView(fv === "" ? void 0 : "") })
-    ) : null;
-    const list = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "모듈 목록" });
-    const grouped = groupByFolder(shown, meta);
-    const folders = fv === void 0 ? grouped.folders : [];
-    const loose = fv === void 0 ? grouped.loose : shown;
-    for (const g of folders) {
-      if (filtering && !g.items.length) continue;
-      const f = g.folder;
-      const tint = folderTint(f.color, ctx.state.mode) ?? { stroke: "var(--rb-sub)", fill: "transparent" };
-      const open = filtering || !f.collapsed;
-      const head = h(
-        "div",
-        { style: "display:flex;align-items:center;gap:4px", dataset: filtering ? {} : { dropFolder: f.id } },
-        h(
-          "button",
-          { type: "button", class: "rb-folder", "aria-expanded": open ? "true" : "false", dataset: { folder: f.id }, onClick: () => {
-            if (filtering) return;
-            ctx.svc.toggleFolder(f.id).catch((err) => ctx.toast(err?.message ?? String(err), { error: true }));
-            draw(ctx);
-          } },
-          h("span", { class: "chev" }, icon("chevron", 14)),
-          h("span", { style: { color: tint.stroke, display: "flex" } }, icon("folder", 16)),
-          h("b", null, f.name),
-          h("small", null, String(g.items.length))
-        ),
-        iconBtn("more", `${f.name} 폴더 메뉴`, { onClick: (e) => folderMenu(ctx, f, e.currentTarget) })
-      );
-      dropTarget(ctx, head, { folderId: f.id });
-      list.appendChild(head);
-      if (open) {
-        const body = h("div", { class: "rb-folder-body" });
-        for (const e of g.items) body.appendChild(row(ctx, e, filtering));
-        if (!g.items.length) body.appendChild(h("div", { class: "rb-muted", style: "padding:8px 10px" }, "모듈을 여기로 끌어다 놓으세요"));
-        list.appendChild(body);
-      }
-    }
-    if (fv !== void 0 && !filtering) list.dataset.dropFolder = fv;
-    if (folders.length) list.appendChild(h("div", { class: "rb-label", style: "padding:14px 12px 6px;border-radius:10px", dataset: filtering ? {} : { dropFolder: "" } }, "폴더 없음"));
-    for (const e of loose) list.appendChild(row(ctx, e, filtering));
-    if (folders.length) dropTarget(ctx, list, { folderId: null, onlySelf: true });
-    if (!shown.length) list.appendChild(h("div", { class: "rb-empty" }, fv !== void 0 && !filtering ? '이 폴더에 모듈이 없어요. 폴더 메뉴의 "넣을 모듈 고르기"로 넣을 수 있어요.' : entries.length ? "조건에 맞는 모듈이 없어요." : '설치된 모듈이 없어요. 위의 "가져오기"나 파일을 창에 끌어 놓아서 추가하세요.'));
-    const scroll = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
-    const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 모듈" });
-    replace(ctx.main, toolbar, folderBar, bar, list);
-    list.scrollTop = scroll;
-    const mu = multiOf(ctx);
-    if (filtering) mu.clear();
-    mu.bar = bar;
-    mu.ctx = ctx;
-    mu.attach(list);
-    paintBar(ctx);
-    showDetail(ctx);
-  }
-  function multiOf(ctx) {
-    const st = ctx.state;
-    st.modMulti ??= createMulti({ onChange: () => paintBar(ctx) });
-    return st.modMulti;
-  }
-  function paintBar(ctx) {
-    const mu = multiOf(ctx), bar = mu.bar;
-    if (!bar) return;
-    const tb = ctx.main.querySelector("#rb-pick-toggle");
-    if (tb) tb.lastChild.textContent = mu.active ? "선택 끝" : "선택";
-    bar.hidden = !mu.active;
-    if (!mu.active) {
-      bar.replaceChildren();
-      return;
-    }
-    const n = mu.sel.size;
-    const visible = () => [...ctx.main.querySelectorAll(".rb-list [data-pick]")].map((r) => r.dataset.pick);
-    bar.replaceChildren(
-      h("b", null, n ? `${n}개 고름` : "고를 모듈을 누르세요"),
-      btn("폴더로", { size: "sm", icon: "folder", disabled: !n, onClick: (ev) => pickFolderFor(ctx, mu.ordered(), ev.currentTarget) }),
-      btn("폴더 밖으로", { size: "sm", disabled: !n, onClick: () => applyDrop(ctx, mu.ordered(), { folderId: null }) }),
-      btn("보이는 것 모두", { size: "sm", onClick: () => {
-        const v = visible();
-        mu.set(v.every((id) => mu.has(id)) ? [] : v);
-      } }),
-      iconBtn("x", "고르기 끝내기", { onClick: () => mu.clear() })
-    );
-  }
-  function pickFolderFor(ctx, ids, anchor) {
-    const meta = ctx.prefs.meta;
-    openMenu(ctx.win, anchor, [
-      ...meta.folders.map((f) => ({ label: f.name || "(이름 없는 폴더)", icon: "folder", onClick: () => applyDrop(ctx, ids, { folderId: f.id }) })),
-      meta.folders.length ? "sep" : null,
-      { label: "새 폴더…", icon: "folderPlus", onClick: async () => {
-        const n = await promptDialog(ctx.win, { title: "새 폴더", label: `고른 모듈 ${ids.length}개를 넣어요`, placeholder: "폴더 이름" });
-        if (!n?.trim()) return;
-        const f = await ctx.svc.createFolder(n.trim(), FOLDER_SWATCHES[meta.folders.length % FOLDER_SWATCHES.length]);
-        await applyDrop(ctx, ids, { folderId: f.id });
-      } }
-    ].filter(Boolean));
-  }
-  function row(ctx, e, filtering) {
-    const st = ctx.state, m = e.module, c = moduleCounts(m), f = moduleFlags(m, st.modData.globalOn);
-    const meta = [c.lore && `로어 ${c.lore}`, c.regex && `정규식 ${c.regex}`, c.trigger && `트리거 ${c.trigger}`, c.assets && `에셋 ${c.assets}`].filter(Boolean).join(" · ") || "비어 있음";
-    const color = readableName(ctx.prefs.meta.nameColors?.[m.id], st.mode);
-    const sw = switchEl(e.enabled, { label: `${m.name} ${e.enabled ? "끄기" : "켜기"}`, onChange: (on) => toggleEnabled(ctx, e, on, sw) });
-    if (!e.enabled && !hasAssets(m)) sw.title = "켜기";
-    else if (hasAssets(m)) sw.title = "에셋이 있는 모듈은 끌 수 없어요";
-    let grip = null;
-    const mu = multiOf(ctx);
-    const el = h(
-      "div",
-      {
-        class: ["rb-row", !e.enabled && "off"],
-        role: "option",
-        tabindex: "0",
-        "aria-selected": st.modSel === m.id ? "true" : "false",
-        dataset: filtering ? { id: m.id } : { id: m.id, dropRow: m.id, pick: m.id },
-        draggable: filtering || COARSE ? "false" : "true",
-        onClick: (ev) => {
-          if (!filtering && mu.click(ev, m.id, st.modSel)) return;
-          select(ctx, m.id, el);
-        },
-        onKeydown: (ev) => {
-          if (ev.target !== el) return;
-          if (ev.key === "Enter" || ev.key === " ") {
-            ev.preventDefault();
-            select(ctx, m.id, el);
-          }
-          if (ev.altKey && (ev.key === "ArrowUp" || ev.key === "ArrowDown")) {
-            ev.preventDefault();
-            move(ctx, m.id, ev.key === "ArrowUp" ? -1 : 1);
-          }
-          if (!ev.altKey && (ev.key === "ArrowDown" || ev.key === "ArrowUp")) {
-            ev.preventDefault();
-            const rows = [...ctx.main.querySelectorAll(".rb-row")];
-            rows[rows.indexOf(el) + (ev.key === "ArrowDown" ? 1 : -1)]?.focus();
-          }
-        }
-      },
-      filtering ? null : h("span", { class: "rb-mcb", role: "checkbox", "aria-checked": "false", "aria-label": `${m.name} 고르기` }),
-      filtering ? null : grip = h("span", { class: "grip", title: "끌어서 순서 바꾸기 (Alt+↑↓) · Ctrl/⌘·Shift+클릭으로 여러 개", "aria-hidden": "true" }, icon("grip", 14)),
-      h(
-        "div",
-        { class: "txt" },
-        h(
-          "div",
-          { class: "ttl" },
-          h("span", { class: "name", style: color && e.enabled ? { color } : null }, m.name || "(이름 없음)"),
-          f.global && badge("전역", "acc"),
-          f.lla && badge("LLA", "warn"),
-          f.mcp && badge("MCP", "ok"),
-          !e.enabled && badge("꺼짐", "mute")
-        ),
-        h("span", { class: "meta" }, meta)
-      ),
-      sw,
-      iconBtn("more", `${m.name} 메뉴`, { onClick: (ev) => {
-        ev.stopPropagation();
-        moduleMenu(ctx, e, ev.currentTarget);
-      } })
-    );
-    if (!filtering) {
-      dragSource(ctx, el, m.id);
-      dropTarget(ctx, el, { beforeId: m.id });
-      queueMicrotask(() => {
-        const list = el.closest(".rb-list");
-        if (list && grip) gripDrag({ grip, row: el, root: list, scroller: list, mouse: false, count: () => mu.dragIds(m.id).length, skip: (t) => mu.dragIds(m.id).includes(t.getAttribute("data-drop-row")), onDrop: (d) => applyDrop(ctx, mu.dragIds(m.id), d) });
-      });
-    }
-    return el;
-  }
-  function select(ctx, id, el) {
-    ctx.state.modSel = id;
-    ctx.main.querySelectorAll(".rb-row[aria-selected=true]").forEach((r) => r.setAttribute("aria-selected", "false"));
-    el?.setAttribute("aria-selected", "true");
-    showDetail(ctx);
-    if (ctx.isMobile()) ctx.openSheet();
-  }
-  async function toggleEnabled(ctx, e, on, sw) {
-    setSwitch(sw, on);
-    try {
-      await ctx.svc.run("setEnabled", e.module.id, on);
-      ctx.toast(on ? `'${e.module.name}'을(를) 켰어요` : `'${e.module.name}'을(를) 껐어요`, on ? {} : { action: { label: "되돌리기", run: () => ctx.svc.run("setEnabled", e.module.id, true).then(() => reload(ctx)) }, seconds: 8 });
-      await reload(ctx);
-    } catch (err) {
-      setSwitch(sw, !on);
-      ctx.toast(err?.message ?? String(err), { error: true });
-    }
-  }
-  async function reload(ctx) {
-    ctx.state.modDirty = true;
-    ctx.state.modData = await ctx.svc.load();
-    ctx.state.modIndex = new Map(ctx.state.modData.entries.map((e) => [e.module.id, searchText(e.module)]));
-    ctx.state.modDirty = false;
-    if (ctx.state.tab === "modules") draw(ctx);
-  }
-  var dragIds = null;
-  function dragSource(ctx, el, id) {
-    el.addEventListener("dragstart", (ev) => {
-      dragIds = multiOf(ctx).dragIds(id);
-      ev.dataTransfer.effectAllowed = "move";
-      ev.dataTransfer.setData("text/x-rbm-module", dragIds.join("\n"));
-      if (dragIds.length > 1) {
-        const g = el.cloneNode(true);
-        Object.assign(g.style, { position: "absolute", top: "-1000px", left: "0", width: `${el.offsetWidth}px`, background: "var(--rb-surf2)", borderRadius: "12px" });
-        g.appendChild(dragBadge(el.ownerDocument, dragIds.length));
-        ctx.win.appendChild(g);
-        ev.dataTransfer.setDragImage(g, 24, 20);
-        setTimeout(() => g.remove(), 0);
-        ctx.main.querySelectorAll(".rb-row.picked").forEach((r) => {
-          r.style.opacity = "0.5";
-        });
-      }
-      el.style.opacity = "0.5";
-    });
-    el.addEventListener("dragend", () => {
-      dragIds = null;
-      ctx.main.querySelectorAll(".rb-row").forEach((r) => {
-        r.style.opacity = "";
-      });
-      ctx.main.querySelectorAll("[data-drop]").forEach((x) => {
-        x.removeAttribute("data-drop");
-        x.style.boxShadow = "";
-      });
-    });
-  }
-  function dropTarget(ctx, el, { beforeId, folderId, onlySelf }) {
-    const ok = (ev) => dragIds && [...ev.dataTransfer?.types ?? []].includes("text/x-rbm-module") && (!onlySelf || ev.target === el) && !(beforeId && dragIds.includes(beforeId));
-    el.addEventListener("dragover", (ev) => {
-      if (!ok(ev)) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      const after = beforeId && ev.offsetY > el.clientHeight / 2;
-      const d = after ? "after" : "before";
-      if (el.dataset.drop === d) return;
-      el.dataset.drop = d;
-      el.style.boxShadow = beforeId ? after ? "inset 0 -2px 0 var(--rb-acc-text)" : "inset 0 2px 0 var(--rb-acc-text)" : "inset 0 0 0 2px var(--rb-sel-ring)";
-    });
-    el.addEventListener("dragleave", (ev) => {
-      if (el.contains(ev.relatedTarget)) return;
-      el.style.boxShadow = "";
-      el.removeAttribute("data-drop");
-    });
-    el.addEventListener("drop", (ev) => {
-      if (!ok(ev)) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      const ids = dragIds, after = el.dataset.drop === "after";
-      el.style.boxShadow = "";
-      el.removeAttribute("data-drop");
-      if (!ids?.length) return;
-      applyDrop(ctx, ids, { beforeId, after, folderId });
-    });
-  }
-  function applyDrop(ctx, ids, { beforeId, after, folderId }) {
-    ids = [].concat(ids);
-    if (beforeId && ids.includes(beforeId)) return;
-    const st = ctx.state, meta = ctx.prefs.meta;
-    const fail = (err) => {
-      ctx.toast(`옮기지 못했어요: ${err?.message ?? err}`, { error: true });
-      reload(ctx);
-    };
-    const target = beforeId ? meta.mapping[beforeId] ?? null : folderId ?? null;
-    const moveFolder2 = ids.filter((id) => (meta.mapping[id] ?? null) !== target);
-    if (moveFolder2.length) ctx.svc.setFolder(moveFolder2, target).catch(fail);
-    if (beforeId) {
-      const before = st.modData.entries.map((e) => e.module.id);
-      const next = placeIds(before, ids, beforeId, after);
-      if (next.join("\n") !== before.join("\n")) {
-        const pos = new Map(next.map((id, i) => [id, i]));
-        st.modData.entries.sort((a, b) => pos.get(a.module.id) - pos.get(b.module.id));
-        ctx.svc.queueOrder(() => ctx.state.modData.entries.map((e) => e.module.id)).catch(fail);
-      }
-    }
-    if (ids.length > 1) ctx.toast(target ? `모듈 ${ids.length}개를 '${meta.folders.find((f) => f.id === target)?.name ?? "폴더"}'(으)로 옮겼어요` : `모듈 ${ids.length}개를 옮겼어요`);
-    draw(ctx);
-  }
-  async function move(ctx, id, dir) {
-    const meta = ctx.prefs.meta;
-    const entries = ctx.state.modData.entries;
-    const group = entries.filter((e) => (meta.mapping[e.module.id] ?? null) === (meta.mapping[id] ?? null)).map((e) => e.module.id);
-    const i = group.indexOf(id), j = i + dir;
-    if (j < 0 || j >= group.length) return;
-    const ids = entries.map((e) => e.module.id).filter((x) => x !== id);
-    const at = ids.indexOf(group[j]) + (dir > 0 ? 1 : 0);
-    ids.splice(at, 0, id);
-    await ctx.svc.run("reorder", ids);
-    await reload(ctx);
-    ctx.main.querySelector(`.rb-row[data-id="${CSS.escape(id)}"]`)?.focus();
-  }
-  function moduleMenu(ctx, e, anchor) {
-    const m = e.module;
-    openMenu(ctx.win, anchor, [
-      { label: "편집", icon: "edit", onClick: () => ctx.openEditor(m.id) },
-      { label: "에셋 관리", icon: "image", onClick: () => ctx.openAssets(m.id) },
-      "sep",
-      { label: "이름 색", icon: "palette", onClick: () => pickNameColor(ctx, m) },
-      { label: "폴더로 옮기기", icon: "folder", onClick: () => pickFolder(ctx, m) },
-      { label: "위로", icon: "up", onClick: () => move(ctx, m.id, -1) },
-      { label: "아래로", icon: "down", onClick: () => move(ctx, m.id, 1) },
-      "sep",
-      { label: ".risum으로 내보내기", icon: "download", onClick: () => exportRisum(ctx, m) },
-      isDev(ctx) ? { label: "패치 만들기 (개발자)", icon: "code", onClick: () => openPatchMaker(ctx, { kind: "module", key: `m:${m.id}`, id: m.id, name: m.name ?? "" }) } : { label: "내 수정만 내보내기 (.rbupatch)", icon: "download", onClick: () => exportMyChanges(ctx, "module", m) },
-      { label: "패치 적용…", icon: "upload", onClick: () => applyPatchFile(ctx, "module", async () => (await ctx.svc.load()).entries.find((x) => x.module.id === m.id)?.module ?? m, async (res, cur) => {
-        await ctx.svc.run("update", m.id, changedKeys(cur, res));
-        await reload(ctx);
-      }) },
-      { label: "JSON 복사", icon: "link", onClick: async () => ctx.toast(await copyText(moduleJson(m)) ? "JSON을 복사했어요" : "복사하지 못했어요", { error: false }) },
-      { label: "이름 바꾸기", icon: "edit", onClick: () => renameModule(ctx, m) },
-      "sep",
-      { label: "삭제", icon: "trash", danger: true, onClick: () => removeModule(ctx, m) }
-    ]);
-  }
-  function folderMenu(ctx, f, anchor) {
-    openMenu(ctx.win, anchor, [
-      { label: "넣을 모듈 고르기…", icon: "plus", onClick: () => pickFolderMembers(ctx, f) },
-      { label: "이름 바꾸기", icon: "edit", onClick: async () => {
-        const n = await promptDialog(ctx.win, { title: "폴더 이름", value: f.name });
-        if (n?.trim()) {
-          await ctx.svc.renameFolder(f.id, n.trim());
-          draw(ctx);
-        }
-      } },
-      { label: "폴더 색", icon: "palette", onClick: async () => {
-        const c = await colorDialog(ctx.win, { title: "폴더 색", swatches: FOLDER_SWATCHES, value: f.color, previewText: f.name });
-        if (c !== null) {
-          await ctx.svc.colorFolder(f.id, c);
-          draw(ctx);
-        }
-      } },
-      { label: "위로", icon: "up", onClick: async () => {
-        await ctx.svc.moveFolder(f.id, -1);
-        draw(ctx);
-      } },
-      { label: "아래로", icon: "down", onClick: async () => {
-        await ctx.svc.moveFolder(f.id, 1);
-        draw(ctx);
-      } },
-      "sep",
-      { label: "폴더 삭제 (모듈은 남음)", icon: "trash", danger: true, onClick: async () => {
-        if (await confirmDialog(ctx.win, { title: `'${f.name}' 폴더를 지울까요?`, body: '안에 있던 모듈은 지워지지 않고 "폴더 없음"으로 옮겨져요.', ok: "폴더 삭제", danger: true })) {
-          await ctx.svc.deleteFolder(f.id);
-          draw(ctx);
-        }
-      } }
-    ]);
-  }
-  function moduleItems(ctx) {
-    const meta = ctx.prefs.meta, names = new Map(meta.folders.map((f) => [f.id, f.name]));
-    return ctx.state.modData.entries.map((e) => ({
-      id: e.module.id,
-      label: e.module.name,
-      folder: meta.mapping[e.module.id] ?? null,
-      sub: [meta.mapping[e.module.id] ? `지금: ${names.get(meta.mapping[e.module.id]) ?? "폴더"}` : "폴더 없음", !e.enabled && "꺼짐"].filter(Boolean).join(" · ")
-    }));
-  }
-  async function newFolder(ctx) {
-    const r = await folderDialog(ctx.win, { title: "새 폴더", items: moduleItems(ctx), noun: "모듈", ...folderPickPrefs(ctx) });
-    if (!r) return;
-    const f = await ctx.svc.createFolder(r.name, FOLDER_SWATCHES[ctx.prefs.meta.folders.length % FOLDER_SWATCHES.length]);
-    if (r.ids.length) await ctx.svc.setFolder(r.ids, f.id);
-    draw(ctx);
-    ctx.toast(`'${r.name}' 폴더를 만들었어요${r.ids.length ? ` (모듈 ${r.ids.length}개)` : ""}`);
-  }
-  async function pickFolderMembers(ctx, f) {
-    const before = Object.entries(ctx.prefs.meta.mapping).filter(([, v]) => v === f.id).map(([k]) => k);
-    const r = await folderDialog(ctx.win, { title: `'${f.name}' 폴더에 넣을 모듈`, items: moduleItems(ctx), checked: before, ok: "저장", withName: false, noun: "모듈", current: f.id, ...folderPickPrefs(ctx) });
-    if (!r) return;
-    const out = before.filter((id) => !r.ids.includes(id));
-    if (out.length) await ctx.svc.setFolder(out, null);
-    if (r.ids.length) await ctx.svc.setFolder(r.ids, f.id);
-    draw(ctx);
-  }
-  async function newModule(ctx) {
-    const n = await promptDialog(ctx.win, { title: "새 모듈", label: "모듈 이름", placeholder: "예: 내 로어북" });
-    if (!n?.trim()) return;
-    const m = ctx.svc.newModule(n.trim());
-    await ctx.svc.run("create", m);
-    ctx.state.modSel = m.id;
-    await reload(ctx);
-    ctx.toast(`'${m.name}' 모듈을 만들었어요`);
-  }
-  async function renameModule(ctx, m) {
-    const n = await promptDialog(ctx.win, { title: "모듈 이름", value: m.name });
-    if (!n?.trim() || n.trim() === m.name) return;
-    await ctx.svc.run("update", m.id, { name: n.trim() });
-    await reload(ctx);
-  }
-  async function pickNameColor(ctx, m) {
-    const c = await colorDialog(ctx.win, { title: "이름 색", swatches: NAME_SWATCHES, value: ctx.prefs.meta.nameColors?.[m.id] ?? "", previewText: m.name });
-    if (c === null) return;
-    await ctx.svc.setNameColor(m.id, c);
-    draw(ctx);
-  }
-  async function pickFolder(ctx, m) {
-    const meta = ctx.prefs.meta;
-    if (!meta.folders.length) {
-      await newFolder(ctx);
-      if (!ctx.prefs.meta.folders.length) return;
-    }
-    const anchor = ctx.main.querySelector(`.rb-row[data-id="${CSS.escape(m.id)}"] .rb-icon-btn`) ?? ctx.main;
-    openMenu(ctx.win, anchor, [
-      ...ctx.prefs.meta.folders.map((f) => ({ label: (meta.mapping[m.id] === f.id ? "✓ " : "") + f.name, icon: "folder", onClick: async () => {
-        await ctx.svc.setFolder(m.id, f.id);
-        draw(ctx);
-      } })),
-      "sep",
-      { label: "폴더에서 빼기", icon: "x", onClick: async () => {
-        await ctx.svc.setFolder(m.id, null);
-        draw(ctx);
-      } },
-      { label: "새 폴더…", icon: "folderPlus", onClick: async () => {
-        const n = await promptDialog(ctx.win, { title: "새 폴더", label: "폴더 이름" });
-        if (n?.trim()) {
-          const f = await ctx.svc.createFolder(n.trim(), FOLDER_SWATCHES[meta.folders.length % FOLDER_SWATCHES.length]);
-          await ctx.svc.setFolder(m.id, f.id);
-          draw(ctx);
-        }
-      } }
-    ]);
-  }
-  async function removeModule(ctx, m) {
-    const ok = await confirmDialog(ctx.win, { title: `'${m.name}'을(를) 지울까요?`, body: '모든 캐릭터·채팅·페르소나 연결에서도 빠져요. 지우기 전 상태는 백업해 두니 "기록" 탭에서 되살릴 수 있어요.', ok: "삭제", danger: true });
-    if (!ok) return;
-    try {
-      await createStore(ctx.api).addBackup({ kind: "module", target: m.id, name: m.name, snapshot: m, note: "삭제 전" });
-    } catch (err) {
-      if (!await confirmDialog(ctx.win, { title: "백업을 만들지 못했어요", body: `${err?.message ?? err}
-그래도 지울까요?`, ok: "그래도 삭제", danger: true })) return;
-    }
-    await ctx.svc.run("remove", m.id);
-    await reload(ctx);
-    ctx.toast(`'${m.name}'을(를) 지웠어요`);
-  }
-  async function exportRisum(ctx, m) {
-    const t = ctx.toast(`'${m.name}' 내보내는 중…`, { seconds: 60 });
-    try {
-      const blob = await buildRisum(m, (p) => ctx.assets.read(p));
-      download(`${safeFileName(m.name)}.risum`, blob);
-      t.close();
-      ctx.toast("내보냈어요");
-    } catch (err) {
-      t.close();
-      ctx.toast(`내보내지 못했어요: ${err?.message ?? err}`, { error: true });
-    }
-  }
-  async function showDetail(ctx) {
-    const st = ctx.state, data = st.modData;
-    const e = data?.entries.find((x) => x.module.id === st.modSel);
-    if (!e) {
-      ctx.showDetail(h("div", { class: "rb-empty" }, "모듈을 고르면 여기에 자세히 보여요."));
-      return;
-    }
-    const m = e.module, c = moduleCounts(m), f = moduleFlags(m, data.globalOn);
-    const stat = (label, v) => h("div", { class: "rb-stat" }, h("small", null, label), h("b", null, String(v)));
-    const globalSw = switchEl(f.global, { label: "글로벌 활성화", disabled: !e.enabled, onChange: async (on) => {
-      setSwitch(globalSw, on);
-      try {
-        await ctx.svc.run("setGlobal", m.id, on);
-        await reload(ctx);
-      } catch (err) {
-        setSwitch(globalSw, !on);
-        ctx.toast(err?.message ?? String(err), { error: true });
-      }
-    } });
-    const links = h(
-      "div",
-      { class: "rb-card" },
-      h("div", { class: "rb-kv" }, h("span", null, "글로벌 활성화", h("br"), h("small", { class: "rb-muted" }, "모든 캐릭터·채팅에서 켜짐")), globalSw)
-    );
-    const personaBox = h("div", { class: "rb-card" }, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "불러오는 중…")));
-    const charBox = h("div", { class: "rb-card" });
-    const chatBox = h("div", { class: "rb-card" });
-    const timeline = h("div", { style: "display:flex;flex-direction:column" });
-    ctx.showDetail(
-      h(
-        "div",
-        { style: "display:flex;flex-direction:column;gap:6px" },
-        m.namespace ? h("span", { style: "font-size:12px;color:var(--rb-acc-text)" }, m.namespace) : null,
-        h("h2", { class: "rb-h2", style: readableName(ctx.prefs.meta.nameColors?.[m.id], st.mode) ? { color: readableName(ctx.prefs.meta.nameColors[m.id], st.mode) } : null }, m.name || "(이름 없음)"),
-        m.description ? h("p", { class: "rb-p", style: "white-space:pre-line;max-height:120px;overflow:auto" }, m.description) : null,
-        !e.enabled ? note("info", "꺼진 모듈이에요. 켜면 다시 연결할 수 있어요.") : null
-      ),
-      h("div", { class: "rb-stats" }, stat("로어북", c.lore), stat("정규식", c.regex), stat("트리거", c.trigger), stat("에셋", c.assets)),
-      h(
-        "div",
-        { class: "rb-field" },
-        h("span", { class: "rb-label" }, "연결"),
-        links,
-        h("span", { class: "rb-label", style: "margin-top:6px" }, "페르소나 — 그 페르소나를 쓰는 동안 자동으로 켜짐"),
-        personaBox,
-        h("span", { class: "rb-label", style: "margin-top:6px" }, "캐릭터 — 그 캐릭터의 모든 채팅에서 켜짐"),
-        charBox,
-        h("span", { class: "rb-label", style: "margin-top:6px" }, "지금 채팅"),
-        chatBox
-      ),
-      h("div", { class: "rb-field" }, h(
-        "div",
-        { style: "display:flex;align-items:center" },
-        h("span", { class: "rb-label", style: "flex:1" }, "버전 타임라인"),
-        h("a", { href: "#", style: "font-size:12px;color:var(--rb-acc-text)", onClick: (ev) => {
-          ev.preventDefault();
-          ctx.state.histTarget = m.id;
-          ctx.go("history");
-        } }, "전체 보기")
-      ), timeline),
-      h("div", { style: "flex:1" }),
-      h(
-        "div",
-        { style: "display:flex;gap:8px;flex-wrap:wrap" },
-        btn("편집", { kind: "primary", size: "lg", icon: "edit", onClick: () => ctx.openEditor(m.id) }),
-        btn("에셋", { size: "lg", icon: "image", onClick: () => ctx.openAssets(m.id) }),
-        btn("내보내기", { size: "lg", icon: "download", onClick: () => exportRisum(ctx, m) })
-      )
-    );
-    (async () => {
-      const [db, pm] = await Promise.all([ctx.api.getDatabase(["personas"]), loadPersonaMap(ctx.api)]);
-      const personas = (db?.personas ?? []).filter((p) => p?.id);
-      const linked = (p) => (pm.map[p.id] ?? []).includes(m.id);
-      personas.sort((a, b) => Number(linked(b)) - Number(linked(a)));
-      const box = h("div", { class: "rb-scroll", style: "max-height:232px;overflow:auto;overscroll-behavior:contain", id: "rb-persona-box" });
-      const q = personas.length > 6 ? h("input", { class: "rb-input", type: "search", placeholder: `페르소나 ${personas.length}개에서 찾기`, "aria-label": "페르소나 찾기", style: "height:36px;border-radius:0;border-width:0 0 1px 0" }) : null;
-      const rows = personas.length ? personas.map((p) => {
-        const on = (pm.map[p.id] ?? []).includes(m.id);
-        const sw = switchEl(on, { label: `${p.name} 페르소나에 연결`, disabled: !e.enabled, onChange: async (v) => {
-          setSwitch(sw, v);
-          try {
-            await setPersonaLink(ctx.api, p.id, m.id, v, data.entries.map((x) => x.module.id));
-            ctx.onPersonaChanged?.();
-            ctx.toast(v ? `'${p.name}' 페르소나를 쓰면 켜져요` : `'${p.name}' 연결을 풀었어요`);
-          } catch (err) {
-            setSwitch(sw, !v);
-            ctx.toast(err?.message ?? String(err), { error: true });
-          }
-        } });
-        const r = h("div", { class: "rb-kv" }, h("span", null, p.name || "(이름 없음)"), sw);
-        r.dataset.name = String(p.name ?? "").toLowerCase();
-        return r;
-      }) : [h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "페르소나가 없어요"))];
-      box.append(...rows);
-      q?.addEventListener("input", () => {
-        const v = q.value.trim().toLowerCase();
-        for (const r of rows) r.hidden = !!v && !r.dataset.name?.includes(v);
-      });
-      replace(personaBox, q, box);
-    })().catch(() => replace(personaBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "페르소나를 읽지 못했어요"))));
-    const loadChars = async () => {
-      replace(charBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "캐릭터 불러오는 중…")));
-      const db = await ctx.api.getDatabase(["characters"]);
-      db.characters = (await loadCharacters(ctx.api, db?.characters)).list;
-      const chars = (db?.characters ?? []).map((ch, i) => ({ ch, i })).filter((x) => x.ch && !x.ch.trashTime && x.ch.type !== "group");
-      const linked = chars.filter((x) => x.ch.modules?.includes(m.id));
-      const filterBox = h("input", { class: "rb-input", style: "height:36px;margin:8px 14px;width:calc(100% - 28px)", placeholder: "캐릭터 검색", "aria-label": "캐릭터 검색" });
-      const listEl = h("div", { class: "rb-scroll", style: "max-height:240px" });
-      const paint = () => {
-        const q = filterBox.value.trim().toLowerCase();
-        replace(listEl, chars.filter((x) => !q || String(x.ch.name ?? "").toLowerCase().includes(q)).slice(0, 200).map(({ ch, i }) => {
-          const on = ch.modules?.includes(m.id) ?? false;
-          const sw = switchEl(on, { label: `${ch.name}에 연결`, disabled: !e.enabled, onChange: async (v) => {
-            setSwitch(sw, v);
-            try {
-              await ctx.svc.run("setCharacterLink", i, m.id, v);
-              ch.modules = v ? [...ch.modules ?? [], m.id] : (ch.modules ?? []).filter((x) => x !== m.id);
-            } catch (err) {
-              setSwitch(sw, !v);
-              ctx.toast(err?.message ?? String(err), { error: true });
-            }
-          } });
-          return h("div", { class: "rb-kv" }, h("span", null, ch.name || "(이름 없음)"), sw);
-        }));
-      };
-      filterBox.addEventListener("input", paint);
-      replace(charBox, h("div", { class: "rb-kv" }, h("span", null, `연결된 캐릭터 ${linked.length}명`), h("span", null, linked.slice(0, 3).map((x) => x.ch.name).join(", ") + (linked.length > 3 ? " 외" : ""))), filterBox, listEl);
-      paint();
-    };
-    replace(charBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "캐릭터 목록은 눌러서 불러와요"), btn("불러오기", { size: "sm", onClick: () => loadChars().catch((err) => ctx.toast(err?.message ?? String(err), { error: true })) })));
-    (async () => {
-      const ci = await ctx.api.getCurrentCharacterIndex(), chi = await ctx.api.getCurrentChatIndex?.();
-      if (ci < 0 || chi === void 0 || chi < 0) {
-        replace(chatBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "열린 채팅이 없어요")));
+  function regexRun(scripts, text, mode = "editoutput") {
+    let data = String(text ?? "");
+    const steps = [];
+    (scripts ?? []).forEach((s, i) => {
+      if (!s || s.type !== mode || !s.in) return;
+      const step = { index: i, comment: s.comment || `#${i + 1}`, matched: 0 };
+      let flag = s.ableFlag ? s.flag || "g" : "g";
+      flag = [...new Set(flag.trim().replace(/[^dgimsuvy]/g, ""))].join("") || "u";
+      const outScript = String(s.out ?? "").replaceAll("$n", "\n");
+      if (String(s.in).includes("{{")) {
+        step.skipped = "CBS가 들어간 패턴은 실행할 때 바뀌어서 건너뜀";
+        steps.push(step);
         return;
       }
-      const chat = await ctx.api.getChatFromIndex(ci, chi);
-      const on = chat?.modules?.includes(m.id);
-      replace(chatBox, h(
-        "div",
-        { class: "rb-kv" },
-        h("span", null, on ? "이 채팅에서 켜짐" : "이 채팅에는 따로 연결 안 됨", h("br"), h("small", { class: "rb-muted" }, "채팅 연결 추가는 RisuAI 채팅 화면에서 해요")),
-        on ? btn("이 채팅에서 해제", { size: "sm", onClick: async () => {
-          await ctx.svc.run("unlinkChat", ci, chi, m.id);
-          ctx.toast("이 채팅에서 해제했어요");
-          showDetail(ctx);
-        } }) : null
-      ));
-    })().catch(() => replace(chatBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "채팅 정보를 읽지 못했어요"))));
-    (async () => {
-      const list = (await createStore(ctx.api).listBackups()).filter((b) => b.target === m.id).slice(0, 3);
-      replace(timeline, list.length ? list.map((b, i) => h(
-        "div",
-        { style: "display:flex;gap:12px" },
-        h(
-          "div",
-          { style: "display:flex;flex-direction:column;align-items:center;width:12px" },
-          h("span", { style: `width:12px;height:12px;border-radius:999px;margin-top:3px;flex-shrink:0;${i === 0 ? "background:var(--rb-deco-grad)" : "box-shadow:inset 0 0 0 2px var(--rb-line3)"}` }),
-          h("span", { style: "width:2px;flex:1;background:var(--rb-line)" })
-        ),
-        h(
-          "div",
-          { style: "flex:1;padding-bottom:14px;display:flex;flex-direction:column;gap:2px" },
-          h("div", { style: "display:flex;gap:8px;align-items:baseline" }, h("span", { style: "font-size:13px;font-weight:600" }, b.note || "업데이트 전"), h("span", { class: "rb-muted" }, fmtWhen(b.t))),
-          b.summary ? h("span", { class: "rb-muted" }, b.summary) : null
-        )
-      )) : h("div", { class: "rb-muted", style: "padding:12px 14px;border-radius:12px;border:1px dashed var(--rb-line)" }, "아직 기록이 없어요. 이 플러그인으로 업데이트하거나 편집하면 쌓여요."));
-    })().catch(() => {
-    });
-  }
-
-  // src/ui/screens/settings.js
-  function renderSettings(ctx) {
-    const { prefs } = ctx;
-    let theme = { ...prefs.ui.theme };
-    let saveTimer = null;
-    const saved = h("span", { class: "rb-muted", "aria-live": "polite" });
-    const persist = () => {
-      clearTimeout(saveTimer);
-      saved.textContent = "저장하는 중…";
-      saveTimer = setTimeout(async () => {
-        try {
-          await prefs.saveUi({ theme });
-          saved.textContent = "저장했어요";
-        } catch (e) {
-          saved.textContent = `저장하지 못했어요: ${e?.message ?? e}`;
-        }
-      }, 300);
-    };
-    const update = (patch) => {
-      theme = { ...theme, ...patch };
-      prefs.ui.theme = theme;
-      ctx.applyTheme();
-      paint();
-      persist();
-    };
-    const presetBtns = PRESETS.map((p) => h(
-      "button",
-      { type: "button", class: "rb-preset", dataset: { id: p.id }, onClick: () => update({ preset: p.id, a: p.a, b: p.b }) },
-      h("i", { style: { background: `linear-gradient(135deg, ${p.a}, ${p.b})` } }),
-      h("span", { style: "font-size:13px;font-weight:500" }, p.name)
-    ));
-    const colorField = (key, label) => {
-      const input = h("input", { type: "color", "aria-label": label });
-      const code = h("small");
-      input.addEventListener("input", () => update({ [key]: input.value, preset: "custom" }));
-      const el = h("label", { class: "rb-color" }, input, h("span", null, label), code);
-      el.sync = () => {
-        input.value = theme[key];
-        code.textContent = theme[key];
-      };
-      return el;
-    };
-    const fa = colorField("a", "시작 색"), fb = colorField("b", "끝 색");
-    const contrastNote = h("span", { class: "rb-muted" });
-    const modeNotes = { auto: "창을 열 때마다 RisuAI 테마의 밝기에 맞춰요.", dark: "RisuAI 설정과 상관없이 항상 다크로 열려요.", light: "RisuAI 설정과 상관없이 항상 라이트로 열려요." };
-    const modeNote = h("span", { class: "rb-muted" });
-    const modeSeg = segmented([["auto", "RisuAI 따라가기"], ["dark", "다크 고정"], ["light", "라이트 고정"]], theme.mode, (v) => update({ mode: v }), "밝기");
-    function paint() {
-      presetBtns.forEach((b) => b.setAttribute("aria-pressed", b.dataset.id === theme.preset ? "true" : "false"));
-      fa.sync();
-      fb.sync();
-      const r = themeVars(theme, ctx.state.mode);
-      const fgName = r.vars["--rb-on-acc"] === "#ffffff" ? "흰 글자" : "검은 글자";
-      contrastNote.textContent = `버튼 글자색은 대비를 계산해서 자동으로 정해요. 지금: ${fgName} · 대비 ${r.onAccentRatio.toFixed(1)}:1` + (r.onAccentRatio < 4.5 ? " — 낮아요. 색을 조금 더 진하게 하면 잘 읽혀요." : "");
-      modeNote.textContent = modeNotes[theme.mode] + (theme.mode === "auto" ? ` (지금 RisuAI: ${ctx.state.risuScheme === "light" ? "라이트" : "다크"})` : "");
-    }
-    const left = h(
-      "div",
-      { class: "rb-section", style: "flex:1;min-width:300px;max-width:600px" },
-      h(
-        "div",
-        { style: "display:flex;align-items:center;gap:10px" },
-        iconBtn("back", "도구로 돌아가기", { onClick: () => ctx.go("tools") }),
-        h("div", null, h("span", { class: "rb-muted" }, "도구 · 설정"), h("h2", { class: "rb-h2" }, "색 바꾸기"))
-      ),
-      h("div", { class: "rb-field" }, h("span", { class: "rb-label" }, "테마"), h("div", { class: "rb-presets" }, presetBtns)),
-      h(
-        "div",
-        { class: "rb-field" },
-        h("span", { class: "rb-label" }, "직접 고르기"),
-        h("div", { style: "display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px" }, fa, fb),
-        contrastNote
-      ),
-      h("div", { class: "rb-field" }, h("span", { class: "rb-label" }, "밝기"), modeSeg, modeNote),
-      h(
-        "div",
-        { style: "display:flex;align-items:center;gap:12px;flex-wrap:wrap" },
-        btn("기본값으로", { onClick: () => {
-          update({ ...DEFAULT_THEME, mode: theme.mode });
-        } }),
-        saved
-      )
-    );
-    const demoSwitch = switchEl(true, { label: "미리보기 스위치", onChange: (on, el) => el.setAttribute("aria-checked", on ? "true" : "false") });
-    const preview = h(
-      "div",
-      { class: "rb-section", style: "flex:1;min-width:280px" },
-      h("span", { class: "rb-label" }, "미리보기"),
-      h(
-        "div",
-        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:14px" },
-        h(
-          "div",
-          { style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap" },
-          btn("적용하기", { kind: "primary" }),
-          btn("보조 버튼"),
-          chip("선택된 필터", { pressed: true, count: 12 }),
-          demoSwitch
-        ),
-        h(
-          "div",
-          { class: "rb-row", "aria-selected": "true", style: "cursor:default" },
-          h("span", { class: "grip" }, icon("grip", 14)),
-          h("div", { class: "txt" }, h("div", { class: "ttl" }, h("span", { class: "name" }, "예시 모듈"), badge("페르소나", "acc2")), h("span", { class: "meta" }, "로어 12 · 에셋 34"))
-        ),
-        h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, badge("제작자 수정", "acc"), badge("내 수정", "acc2"), badge("충돌", "warn"), badge("추가", "ok"), badge("삭제", "danger")),
-        progressBar(61)
-      ),
-      h("p", { class: "rb-muted" }, "모듈 이름 색과 폴더 색은 모듈 목록에서 각 모듈의 ⋯ 메뉴로 바꿔요. 어떤 밝기에서도 읽히도록 자동으로 진하기를 맞춰요.")
-    );
-    replace(ctx.main, h("div", { class: "rb-scroll", style: "flex:1;display:flex;flex-wrap:wrap;align-content:flex-start" }, left, preview));
-    paint();
-  }
-
-  // src/ui/screens/tools.js
-  function tile(ic, title, desc, onClick, id) {
-    return h(
-      "button",
-      { type: "button", class: "rb-row", style: "background:var(--rb-surf);padding:16px", onClick, id },
-      h("span", { style: "width:40px;height:40px;border-radius:12px;background:var(--rb-acc-soft);color:var(--rb-acc-text);display:flex;align-items:center;justify-content:center;flex-shrink:0" }, icon(ic, 20)),
-      h("span", { class: "txt" }, h("span", { class: "name" }, title), h("span", { class: "meta", style: "white-space:normal" }, desc)),
-      h("span", { style: "color:var(--rb-mute);display:flex" }, icon("chevron", 16))
-    );
-  }
-  function renderTools(ctx) {
-    if (ctx.state.sub === "inspector") return renderInspector(ctx);
-    if (ctx.state.sub === "cleanup") return renderCleanup(ctx);
-    if (ctx.state.sub === "patchmaker") return renderPatchMaker(ctx);
-    const dev = isDev(ctx);
-    replace(ctx.main, h(
-      "div",
-      { class: "rb-section rb-scroll", style: "flex:1" },
-      h("h2", { class: "rb-h2" }, "도구"),
-      devToggleCard(ctx, () => renderTools(ctx)),
-      dev && h(
-        "div",
-        { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin-bottom:10px" },
-        tile("code", "패치 만들기 (개발자)", "배포한 버전과 비교해 바뀐 부분만 담은 업데이트 파일(.rbupatch)을 만들기", () => ctx.go("tools", "patchmaker"), "rb-tool-patchmaker")
-      ),
-      h(
-        "div",
-        { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px" },
-        tile("palette", "색 바꾸기", "테마 색, 직접 고른 색, 밝기(RisuAI 따라가기/다크/라이트)", () => ctx.go("tools", "settings"), "rb-tool-settings"),
-        tile("upload", "업데이트 가져오기", "모듈·캐릭터 파일로 기존 항목을 업데이트하거나 새로 넣기 (여러 파일 가능)", () => ctx.legacy.open(), "rb-tool-import"),
-        tile("undo", "백업·되돌리기", "업데이트하기 전 상태로 되돌리기 (채팅은 그대로)", () => ctx.go("history"), "rb-tool-backups"),
-        tile("download", "전체 백업", "모든 모듈(꺼진 것 포함)·에셋·프리셋·폴더·색 설정을 zip 한 파일로", () => fullBackup(ctx), "rb-tool-fullbackup"),
-        tile("upload", "전체 복원", "전체 백업 zip에서 모듈과 설정을 되살리기", () => fullRestore(ctx), "rb-tool-restore"),
-        tile("info", ".risum 인스펙터", "모듈 파일 안을 열어 보기: 필드별 크기, 압축률, 에셋 목록, ZIP 추출", () => ctx.go("tools", "inspector"), "rb-tool-inspector"),
-        tile("trash", "설정 정리", "이 플러그인이 저장한 순서·폴더·프리셋·연결 정보를 골라서 지우기", () => ctx.go("tools", "cleanup"), "rb-tool-cleanup")
-      )
-    ));
-  }
-  async function fullBackup(ctx) {
-    const db = await readDb(ctx.api, ["modules", "pluginCustomStorage", "enabledModules"]);
-    const on = db.modules ?? [], off = db.pluginCustomStorage?.[DISABLED_KEY] ?? [];
-    const paths = /* @__PURE__ */ new Map();
-    for (const m of [...on, ...off]) {
-      for (const a of m.assets ?? []) if (a?.[1]) paths.set(a[1], a[2]);
-      if (m.icon) paths.set(m.icon, "png");
-    }
-    const mode = await new Promise((resolve) => {
-      const back2 = h("div", { class: "rb-modal" });
-      const done = (v) => {
-        back2.remove();
-        resolve(v);
-      };
-      back2.appendChild(h(
-        "div",
-        { class: "rb-dialog", role: "dialog", "aria-label": "전체 백업" },
-        h("h3", { class: "rb-h3" }, "전체 백업"),
-        h("p", { class: "rb-p" }, `모듈 ${on.length + off.length}개 · 에셋 ${paths.size}개`),
-        h("div", { class: "rb-card pad", style: "display:flex;flex-direction:column;gap:6px" }, h("b", null, "빠른 백업 — 몇 초"), h("span", { class: "rb-muted" }, "모듈 내용·켜짐·순서·프리셋·폴더·색 설정만 담아요. 에셋 파일은 서버에 그대로 있으니 같은 서버에서 되살릴 때 충분해요.")),
-        h("div", { class: "rb-card pad", style: "display:flex;flex-direction:column;gap:6px" }, h("b", null, "에셋까지 — 시간이 걸려요"), h("span", { class: "rb-muted" }, "에셋 파일도 모두 담아요. 다른 서버로 옮기거나 서버 정리에 대비할 때 쓰세요.")),
-        h("div", { class: "btns" }, btn("취소", { onClick: () => done(null) }), btn("빠른 백업", { kind: "primary", onClick: () => done("quick") }), btn("에셋까지", { onClick: () => done("full") }))
-      ));
-      ctx.win.appendChild(back2);
-    });
-    if (!mode) return;
-    if (mode === "quick") paths.clear();
-    const bar = progressBar(0), txt = h("span", { class: "rb-muted" }, "준비 중…");
-    const back = h("div", { class: "rb-modal" }, h("div", { class: "rb-dialog" }, h("h3", { class: "rb-h3" }, "전체 백업 만드는 중"), bar, txt));
-    ctx.win.appendChild(back);
-    try {
-      const zip = createZip();
-      const [presets, persona] = await Promise.all([loadPresets(ctx.api), loadPersonaMap(ctx.api)]);
-      zip.add("manifest.json", JSON.stringify({
-        type: "rbm-backup",
-        v: 1,
-        created: Date.now(),
-        withAssets: mode === "full",
-        modules: on,
-        disabledModules: off,
-        enabledModules: db.enabledModules ?? [],
-        prefs: { ui: ctx.prefs.ui, meta: ctx.prefs.meta, presets, persona: persona.map }
-      }, null, 1));
-      const list = [...paths.keys()];
-      let done = 0, missing = 0, i = 0;
-      const started = Date.now();
-      await Promise.all(Array.from({ length: Math.min(16, list.length) }, async () => {
-        while (i < list.length) {
-          const p = list[i++];
-          const d = await ctx.assets.read(p).catch(() => null);
-          if (d?.length) zip.add(`files/${p}`, d);
-          else missing++;
-          done++;
-          bar.set(done / list.length * 100);
-          const per = (Date.now() - started) / done;
-          txt.textContent = `에셋 ${done}/${list.length} · ${fmtBytes(zip.size)} · 남은 시간 약 ${Math.ceil(per * (list.length - done) / 1e3)}초`;
-        }
-      }));
-      const stamp = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      download(`dusk-atelier-backup-${stamp}${mode === "quick" ? "-quick" : ""}.zip`, zip.blob());
-      back.remove();
-      ctx.toast(`전체 백업을 내려받았어요${missing ? ` (읽지 못한 에셋 ${missing}개)` : ""}`);
-    } catch (e) {
-      back.remove();
-      ctx.toast(`백업하지 못했어요: ${e?.message ?? e}`, { error: true });
-    }
-  }
-  async function fullRestore(ctx) {
-    const [f] = await pickFiles({ accept: ".zip,application/zip" });
-    if (!f) return;
-    let entries, man;
-    try {
-      entries = await readZipDirectory(f);
-      const me = entries.find((e) => e.name === "manifest.json");
-      if (!me) throw new Error("전체 백업 파일이 아니에요 (manifest.json 없음)");
-      man = JSON.parse(new TextDecoder().decode(await readZipEntry(f, me)));
-      if (man?.type !== "rbm-backup") throw new Error("전체 백업 파일이 아니에요");
-    } catch (e) {
-      ctx.toast(e?.message ?? String(e), { error: true });
-      return;
-    }
-    const mods = [...(man.modules ?? []).map((m) => ({ m, on: true })), ...(man.disabledModules ?? []).map((m) => ({ m, on: false }))];
-    const mode = await new Promise((resolve) => {
-      const back2 = h("div", { class: "rb-modal" });
-      const done = (v) => {
-        back2.remove();
-        resolve(v);
-      };
-      back2.appendChild(h(
-        "div",
-        { class: "rb-dialog", role: "dialog", "aria-label": "전체 복원" },
-        h("h3", { class: "rb-h3" }, "전체 복원"),
-        h("p", { class: "rb-p" }, `${new Date(man.created).toLocaleString()} 백업 · 모듈 ${mods.length}개 · 파일 ${entries.length - 1}개`),
-        h("label", { class: "rb-check" }, h("input", { type: "radio", name: "m", value: "merge", checked: true }), h("span", null, "합치기 — 없는 모듈은 추가, 같은 id는 백업 것으로")),
-        h("label", { class: "rb-check" }, h("input", { type: "radio", name: "m", value: "add" }), h("span", null, "없는 것만 추가 — 지금 있는 모듈은 그대로")),
-        h("label", { class: "rb-check" }, h("input", { type: "radio", name: "m", value: "replace" }), h("span", null, "통째로 바꾸기 — 지금 모듈 목록을 백업 것으로")),
-        h("label", { class: "rb-check" }, h("input", { type: "checkbox", name: "prefs", checked: true }), h("span", null, "프리셋·폴더·색·페르소나 연결도 되살리기")),
-        h("div", { class: "btns" }, btn("취소", { onClick: () => done(null) }), btn("복원", { kind: "primary", onClick: () => done({ mode: back2.querySelector("input[name=m]:checked").value, prefs: back2.querySelector("input[name=prefs]").checked }) }))
-      ));
-      ctx.win.appendChild(back2);
-    });
-    if (!mode) return;
-    if (mode.mode === "replace" && !await confirmDialog(ctx.win, { title: "지금 모듈 목록을 바꿀까요?", body: "백업에 없는 모듈은 목록에서 빠져요.", ok: "바꾸기", danger: true })) return;
-    const bar = progressBar(0), txt = h("span", { class: "rb-muted" }, "파일 올리는 중…");
-    const back = h("div", { class: "rb-modal" }, h("div", { class: "rb-dialog" }, h("h3", { class: "rb-h3" }, "복원하는 중"), bar, txt));
-    ctx.win.appendChild(back);
-    try {
-      const files = entries.filter((e) => e.name.startsWith("files/"));
-      const remap = /* @__PURE__ */ new Map();
-      let i = 0, done = 0;
-      await Promise.all(Array.from({ length: Math.min(12, files.length) }, async () => {
-        while (i < files.length) {
-          const e = files[i++];
-          let key = null, err;
-          for (let a = 0; a < 3 && !key; a++) {
-            try {
-              key = await ctx.api.saveAsset(await readAssetBytes(f, { source: "zip", entry: e }));
-            } catch (x) {
-              err = x;
-              await new Promise((r) => setTimeout(r, 600 * (a + 1)));
-            }
-          }
-          if (!key) throw new Error(`파일을 올리지 못했어요: ${e.name} (${err?.message ?? err})`);
-          remap.set(e.name.slice(6), key);
-          done++;
-          bar.set(done / files.length * 100);
-          txt.textContent = `파일 ${done}/${files.length}`;
-        }
-      }));
-      const fix = (m) => JSON.parse(JSON.stringify(m), (k, v) => typeof v === "string" && remap.has(v) ? remap.get(v) : v);
-      txt.textContent = "모듈 저장 중…";
-      await commit(ctx.api, (d) => {
-        if (mode.mode === "replace") d.entries = [];
-        for (const { m, on } of mods) {
-          const mm = fix(m);
-          const e = d.entries.find((x) => x.module.id === mm.id);
-          if (e) {
-            if (mode.mode !== "add") {
-              e.module = mm;
-              e.enabled = on || mm.assets?.length > 0;
-            }
-          } else d.entries.push({ module: mm, enabled: on || mm.assets?.length > 0 });
-        }
-        if (mode.mode === "replace" || mode.mode === "merge") d.enabledModules = [.../* @__PURE__ */ new Set([...mode.mode === "merge" ? d.enabledModules : [], ...man.enabledModules ?? []])];
-      }, { chars: mode.mode === "replace" });
-      if (mode.prefs && man.prefs) {
-        if (man.prefs.meta) await ctx.prefs.saveMeta({ ...defaultsMeta(), ...man.prefs.meta });
-        if (man.prefs.ui?.theme) {
-          await ctx.prefs.saveUi({ theme: man.prefs.ui.theme });
-          ctx.applyTheme();
-        }
-        if (man.prefs.presets?.presets) await savePresets(ctx.api, man.prefs.presets);
-        if (man.prefs.persona) {
-          const p = await loadPersonaMap(ctx.api);
-          p.map = man.prefs.persona;
-          await savePersonaMap(ctx.api, p);
-          ctx.onPersonaChanged?.();
-        }
-      }
-      back.remove();
-      await reload(ctx).catch(() => {
-      });
-      ctx.toast(`복원했어요 (모듈 ${mods.length}개, 파일 ${files.length}개)`);
-    } catch (e) {
-      back.remove();
-      ctx.toast(`복원하지 못했어요: ${e?.message ?? e}`, { error: true });
-    }
-  }
-  async function renderInspector(ctx) {
-    const st = ctx.state;
-    const pick = async () => {
-      const [f] = await pickFiles({ accept: ".risum" });
-      if (!f) return;
+      let reg;
       try {
-        st.insp = { file: f, scan: await scanRisum(f), mainSize: null };
+        reg = new RegExp(s.in, flag);
       } catch (e) {
-        ctx.toast(`분석하지 못했어요: ${e?.message ?? e}`, { error: true });
+        step.error = e.message;
+        steps.push(step);
         return;
       }
-      renderInspector(ctx);
-    };
-    const back = h("div", { style: "display:flex;align-items:center;gap:10px" }, btn("", { kind: "ghost", icon: "back", onClick: () => ctx.go("tools") }), h("div", null, h("span", { class: "rb-muted" }, "도구"), h("h2", { class: "rb-h2" }, ".risum 인스펙터")));
-    back.querySelector("button").setAttribute("aria-label", "도구로 돌아가기");
-    if (!st.insp) {
-      replace(ctx.main, h(
-        "div",
-        { class: "rb-section rb-scroll", style: "flex:1" },
-        back,
-        h("p", { class: "rb-p" }, ".risum 파일을 고르면 설치하지 않고 안을 보여 줘요. 무엇이 파일을 크게 만드는지 찾을 때 좋아요."),
-        btn(".risum 파일 고르기", { kind: "primary", icon: "upload", onClick: pick })
-      ));
-      return;
-    }
-    const { file, scan } = st.insp;
-    const m = scan.module;
-    const json = JSON.stringify({ module: m, type: "risuModule" });
-    const fields = Object.keys(m).map((k) => [k, new TextEncoder().encode(JSON.stringify(m[k]) ?? "").length]).sort((a, b) => b[1] - a[1]);
-    const assetBytes = scan.assets.reduce((s, a) => s + a.size, 0);
-    const big = fields[0]?.[1] || 1;
-    const kv = (k, v) => h("div", { class: "rb-kv" }, h("span", null, k), h("span", null, v));
-    const extract = async () => {
-      const zip = createZip();
-      zip.add("module.json", JSON.stringify({ ...m, type: "risuModule" }, null, 2));
-      for (const a of scan.assets) zip.add(`assets/${safeFileName(a.name || String(a.index))}.${a.ext || "png"}`, await readAssetBytes(file, { ...a, source: void 0 }));
-      download(`${safeFileName(m.name)}-extracted.zip`, zip.blob());
-    };
-    replace(ctx.main, h(
-      "div",
-      { class: "rb-section rb-scroll", style: "flex:1" },
-      back,
-      h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, btn("다른 파일", { icon: "upload", onClick: pick }), btn("ZIP으로 풀기", { kind: "primary", icon: "download", onClick: () => extract().catch((e) => ctx.toast(e.message, { error: true })) })),
-      h(
-        "div",
-        { style: "display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px" },
-        h("div", { class: "rb-field" }, h("span", { class: "rb-label" }, "파일 정보"), h(
-          "div",
-          { class: "rb-card" },
-          kv("파일명", file.name),
-          kv("파일 크기", fmtBytes(file.size)),
-          kv("모듈 이름", m.name ?? ""),
-          kv("형식", ".risum v0 (유효)"),
-          kv("모듈 JSON", fmtBytes(json.length)),
-          kv("에셋", `${scan.assets.length}개 · ${fmtBytes(assetBytes)}`),
-          kv("로어북 · 정규식 · 트리거", `${m.lorebook?.length ?? 0} · ${m.regex?.length ?? 0} · ${m.trigger?.length ?? 0}`),
-          kv("저수준 접근", m.lowLevelAccess ? "사용" : "없음")
-        )),
-        h("div", { class: "rb-field" }, h("span", { class: "rb-label" }, "필드별 크기 (큰 순)"), h(
-          "div",
-          { class: "rb-card pad", style: "display:flex;flex-direction:column;gap:8px" },
-          fields.slice(0, 14).map(([k, n]) => h(
-            "div",
-            { style: "display:flex;flex-direction:column;gap:4px" },
-            h("div", { style: "display:flex;font-size:13px" }, h("span", { style: "flex:1" }, k), h("span", { class: "rb-muted" }, fmtBytes(n))),
-            h("div", { class: "rb-progress", style: "height:6px" }, h("i", { style: { width: `${Math.max(2, n / big * 100)}%` } }))
-          ))
-        ))
-      ),
-      h(
-        "div",
-        { class: "rb-field" },
-        h("span", { class: "rb-label" }, `에셋 (${scan.assets.length}개, 큰 순)`),
-        h("div", { class: "rb-card" }, [...scan.assets].sort((a, b) => b.size - a.size).slice(0, 200).map((a) => kv(`${a.name || "(이름 없음)"}.${a.ext}`, fmtBytes(a.size))))
-      )
-    ));
-  }
-  async function renderCleanup(ctx) {
-    const db = await readDb(ctx.api, ["modules", "pluginCustomStorage"]);
-    const presets = await loadPresets(ctx.api), persona = await loadPersonaMap(ctx.api);
-    const meta = ctx.prefs.meta;
-    const opts = [
-      ["order", "정렬 순서 초기화", `이 플러그인이 기억한 모듈 순서(${(db.pluginCustomStorage?.[ORDER_KEY] ?? []).length}개)를 지워요`],
-      ["enableAll", "꺼진 모듈 모두 켜기", `꺼짐 보관함의 ${(db.pluginCustomStorage?.[DISABLED_KEY] ?? []).length}개를 다시 켜요 (이 플러그인을 지우기 전에 하세요. 꺼진 모듈은 이 플러그인 보관함에만 있어요)`],
-      ["assetFolders", "에셋 폴더 정보 지우기", `${Object.keys(meta.moduleAssetFolders ?? {}).length}개 모듈의 에셋 폴더 구분을 지워요 (에셋은 남아요)`],
-      ["presets", "프리셋 초기화", `${Object.keys(presets.presets).length}개 프리셋과 디바이스 페어를 지워요`],
-      ["persona", "페르소나 연결 초기화", `${Object.values(persona.map).reduce((s, x) => s + x.length, 0)}개 연결을 지워요`],
-      ["charLinks", "캐릭터 연결 초기화", "모든 캐릭터·채팅에 연결된 모듈 목록을 비워요 (캐릭터를 다 읽어서 시간이 걸려요)"],
-      ["folders", "모듈 목록 폴더·이름 색 지우기", `폴더 ${meta.folders.length}개, 이름 색 ${Object.keys(meta.nameColors).length}개`]
-    ];
-    const checks = /* @__PURE__ */ new Map();
-    const back = h("div", { style: "display:flex;align-items:center;gap:10px" }, btn("", { kind: "ghost", icon: "back", onClick: () => ctx.go("tools") }), h("div", null, h("span", { class: "rb-muted" }, "도구"), h("h2", { class: "rb-h2" }, "설정 정리")));
-    back.querySelector("button").setAttribute("aria-label", "도구로 돌아가기");
-    replace(ctx.main, h(
-      "div",
-      { class: "rb-section rb-scroll", style: "flex:1" },
-      back,
-      note("warn", "골라서 지운 정보는 되돌릴 수 없어요. 모듈 내용(로어북·에셋)은 지우지 않아요."),
-      h("div", { class: "rb-card" }, opts.map(([k, label, desc]) => {
-        const c = h("input", { type: "checkbox" });
-        checks.set(k, c);
-        return h("label", { class: "rb-kv", style: "cursor:pointer" }, c, h("span", null, label, h("br"), h("small", { class: "rb-muted" }, desc)));
-      })),
-      h("div", null, btn("정리 실행", { kind: "danger", icon: "trash", onClick: async () => {
-        const sel = [...checks].filter(([, c]) => c.checked).map(([k]) => k);
-        if (!sel.length) {
-          ctx.toast("정리할 항목을 골라 주세요");
-          return;
-        }
-        if (!await confirmDialog(ctx.win, { title: `${sel.length}가지를 정리할까요?`, body: sel.map((k) => "• " + opts.find((o) => o[0] === k)[1]).join("\n"), ok: "정리", danger: true })) return;
-        try {
-          if (sel.some((k) => ["order", "enableAll", "charLinks"].includes(k))) {
-            await commit(ctx.api, (d) => {
-              for (const e of d.entries) {
-                if (sel.includes("enableAll")) e.enabled = true;
-              }
-              if (sel.includes("charLinks")) d.characters.forEach((c, i) => {
-                if (!c) return;
-                if (c.modules?.length) {
-                  c.modules = [];
-                  d.changedChars.add(i);
-                }
-                for (const ch of c.chats ?? []) if (ch?.modules?.length) {
-                  ch.modules = [];
-                  d.changedChars.add(i);
-                }
-              });
-            }, { chars: sel.includes("charLinks") });
-            if (sel.includes("order")) await ctx.api.setDatabaseLite({ [ORDER_KEY]: [] });
-          }
-          if (sel.includes("assetFolders")) await ctx.prefs.saveMeta({ ...ctx.prefs.meta, moduleAssetFolders: {} });
-          if (sel.includes("presets")) await ctx.api.pluginStorage.setItem(PRESET_KEY, JSON.stringify({ active: "기본", presets: {} }));
-          if (sel.includes("persona")) {
-            await savePersonaMap(ctx.api, { map: {}, injectedIndex: {} });
-            await ctx.api.setDatabaseLite({ [INJECTED_KEY]: {} });
-            ctx.onPersonaChanged?.();
-          }
-          if (sel.includes("folders")) await ctx.prefs.saveMeta({ ...ctx.prefs.meta, folders: [], mapping: {}, nameColors: {} });
-          ctx.toast("정리했어요");
-          await reload(ctx).catch(() => {
-          });
-          renderCleanup(ctx);
-        } catch (e) {
-          ctx.toast(`정리하지 못했어요: ${e?.message ?? e}`, { error: true });
-        }
-      } }))
-    ));
-  }
-
-  // src/ui/screens/placeholder.js
-  var PLAN = {
-    characters: ["캐릭터", "캐릭터 업데이트·새로 넣기 화면이 들어올 자리예요. (5단계)", '지금은 도구 탭의 "업데이트 가져오기"에서 캐릭터 파일을 넣을 수 있어요.'],
-    presets: ["프리셋", "모듈 켜기/끄기 묶음과 디바이스 페어가 들어올 자리예요. (1단계)", ""],
-    history: ["기록", "버전 타임라인이 들어올 자리예요. (5단계)", '지금은 도구 탭의 "백업·되돌리기"에서 업데이트 전 상태로 되돌릴 수 있어요.']
-  };
-  function renderPlaceholder(ctx) {
-    const [title, what, now] = PLAN[ctx.state.tab] ?? ["준비 중", "", ""];
-    const t = ctx.tabs.find((x) => x.id === ctx.state.tab);
-    replace(ctx.main, h(
-      "div",
-      { class: "rb-empty", style: "margin:auto;max-width:420px" },
-      h("div", { style: "color:var(--rb-acc-text);display:flex;justify-content:center;margin-bottom:12px" }, icon(t?.icon ?? "info", 32)),
-      h("h2", { class: "rb-h2", style: "color:var(--rb-text);margin-bottom:6px" }, title),
-      h("p", { class: "rb-p" }, what),
-      now ? h("p", { class: "rb-muted", style: "margin-top:8px" }, now) : null
-    ));
-  }
-
-  // src/ui/screens/presets.js
-  async function renderPresets(ctx) {
-    const data = await loadPresets(ctx.api);
-    const st = await ctx.svc.load();
-    if (!data.presets[DEFAULT_PRESET] && !Object.keys(data.presets).length) {
-      data.presets[DEFAULT_PRESET] = snapshotOf(st.entries, [...st.globalOn]);
-      data.active = DEFAULT_PRESET;
-      await savePresets(ctx.api, data);
-    }
-    const names = Object.keys(data.presets);
-    const device = isMobileDevice() ? "mobile" : "desktop";
-    const summary = (p) => {
-      const states = Object.values(p.moduleStates ?? {});
-      return `켜짐 ${states.filter((s) => s.enabled).length} · 꺼짐 ${states.filter((s) => !s.enabled).length} · 글로벌 ${(p.globalEnabledIds ?? []).length}`;
-    };
-    const list = h("div", { style: "display:flex;flex-direction:column;gap:6px" }, names.map((name) => {
-      const p = data.presets[name], active = data.active === name;
-      return h(
-        "div",
-        { class: "rb-row", "aria-selected": active ? "true" : "false", style: "cursor:default" },
-        h("span", { style: `display:flex;color:${active ? "var(--rb-acc-text)" : "var(--rb-sub)"}` }, icon("preset", 18)),
-        h(
-          "div",
-          { class: "txt" },
-          h(
-            "div",
-            { class: "ttl" },
-            h("span", { class: "name" }, name),
-            active && badge("사용 중", "acc"),
-            data.defaultMobile === name && badge("모바일 기본", "acc2"),
-            data.defaultDesktop === name && badge("데스크탑 기본", "acc2")
-          ),
-          h("span", { class: "meta" }, summary(p))
-        ),
-        active ? null : btn("전환", { size: "sm", kind: "primary", onClick: () => switchTo(ctx, name) }),
-        iconBtn("more", `${name} 메뉴`, { onClick: (ev) => presetMenu(ctx, data, name, ev.currentTarget) })
-      );
-    }));
-    const pairSel = (key, label) => {
-      const sel = h("select", { class: "rb-input", "aria-label": label, onChange: async (ev) => {
-        const d = await loadPresets(ctx.api);
-        d[key] = ev.target.value || void 0;
-        if (!d.lastDeviceType) d.lastDeviceType = device;
-        if (d.defaultMobile && d.defaultMobile === d.defaultDesktop) {
-          ctx.toast("모바일과 데스크탑에 서로 다른 프리셋을 골라 주세요", { error: true });
-          ev.target.value = data[key] ?? "";
-          return;
-        }
-        await savePresets(ctx.api, d);
-        ctx.toast("디바이스 페어를 저장했어요");
-        renderPresets(ctx);
-      } }, h("option", { value: "" }, "지정 안 함"), names.map((n) => h("option", { value: n, selected: data[key] === n }, n)));
-      return h("label", { class: "rb-field", style: "flex:1;min-width:200px" }, h("span", { class: "rb-label" }, label), sel);
-    };
-    replace(ctx.main, h(
-      "div",
-      { class: "rb-section rb-scroll", style: "flex:1" },
-      h(
-        "div",
-        { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
-        h("div", { style: "flex:1" }, h("h2", { class: "rb-h2" }, "프리셋"), h("p", { class: "rb-p" }, "어떤 모듈을 켜고 끌지, 순서, 글로벌 활성화를 묶어서 저장해요. 지금 상태는 사용 중인 프리셋에 자동으로 저장돼요.")),
-        btn("가져오기", { icon: "upload", onClick: () => importPresets(ctx) }),
-        btn("새 프리셋", { kind: "primary", icon: "plus", onClick: () => newPreset(ctx) })
-      ),
-      list,
-      h(
-        "div",
-        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:12px" },
-        h("h3", { class: "rb-h3" }, "디바이스 페어"),
-        h("p", { class: "rb-p" }, `모바일과 데스크탑에서 쓸 프리셋을 정해 두면, 기기가 바뀔 때 자동으로 전환해요. 지금 기기: ${device === "mobile" ? "모바일" : "데스크탑"}`),
-        h("div", { style: "display:flex;gap:12px;flex-wrap:wrap" }, pairSel("defaultMobile", "모바일 프리셋"), pairSel("defaultDesktop", "데스크탑 프리셋")),
-        note("info", "페어로 지정한 프리셋을 쓰고 있을 때만 자동 전환돼요. 다른 프리셋을 직접 골랐다면 그대로 둬요.")
-      )
-    ));
-  }
-  async function switchTo(ctx, name) {
-    try {
-      const r = await ctx.svc.serial(() => applyPreset(ctx.api, name));
-      ctx.toast(`'${name}' 프리셋으로 바꿨어요` + (r.skipped ? ` (에셋 모듈 ${r.skipped}개는 켜 둠)` : ""));
-      await reload(ctx);
-      renderPresets(ctx);
-    } catch (err) {
-      ctx.toast(err?.message ?? String(err), { error: true });
-    }
-  }
-  async function newPreset(ctx) {
-    const data = await loadPresets(ctx.api);
-    const n = await promptDialog(ctx.win, { title: "새 프리셋", label: "지금 상태를 새 프리셋으로 저장해요", placeholder: "예: 가볍게" });
-    if (!n?.trim()) return;
-    const name = uniquePresetName(data, n);
-    const st = await ctx.svc.load();
-    data.presets[name] = snapshotOf(st.entries, [...st.globalOn]);
-    data.active = name;
-    await savePresets(ctx.api, data);
-    ctx.toast(`'${name}' 프리셋을 만들었어요`);
-    renderPresets(ctx);
-  }
-  function presetMenu(ctx, data, name, anchor) {
-    const isDefault = name === DEFAULT_PRESET;
-    openMenu(ctx.win, anchor, [
-      { label: "지금 상태로 덮어쓰기", icon: "refresh", onClick: async () => {
-        if (!await confirmDialog(ctx.win, { title: `'${name}'을(를) 지금 상태로 바꿀까요?`, ok: "덮어쓰기" })) return;
-        const d = await loadPresets(ctx.api);
-        const st = await ctx.svc.load();
-        d.presets[name] = snapshotOf(st.entries, [...st.globalOn]);
-        await savePresets(ctx.api, d);
-        ctx.toast("덮어썼어요");
-        renderPresets(ctx);
-      } },
-      isDefault ? null : { label: "이름 바꾸기", icon: "edit", onClick: async () => {
-        const n = await promptDialog(ctx.win, { title: "프리셋 이름", value: name });
-        if (!n?.trim() || n.trim() === name) return;
-        const d = await loadPresets(ctx.api);
-        if (d.presets[n.trim()]) {
-          ctx.toast("같은 이름이 있어요", { error: true });
-          return;
-        }
-        d.presets[n.trim()] = d.presets[name];
-        delete d.presets[name];
-        for (const k of ["active", "defaultMobile", "defaultDesktop"]) if (d[k] === name) d[k] = n.trim();
-        await savePresets(ctx.api, d);
-        renderPresets(ctx);
-      } },
-      { label: "내보내기 (파일)", icon: "download", onClick: () => download(`preset-${name}.json`, JSON.stringify({ type: "rbm-presets", presets: { [name]: data.presets[name] } }, null, 2), "application/json") },
-      { label: "전체 내보내기", icon: "download", onClick: () => download("presets.json", JSON.stringify({ type: "rbm-presets", presets: data.presets }, null, 2), "application/json") },
-      isDefault ? null : "sep",
-      isDefault ? null : { label: "삭제", icon: "trash", danger: true, onClick: async () => {
-        if (!await confirmDialog(ctx.win, { title: `'${name}' 프리셋을 지울까요?`, body: "모듈은 바뀌지 않아요.", ok: "삭제", danger: true })) return;
-        const d = await loadPresets(ctx.api);
-        delete d.presets[name];
-        for (const k of ["defaultMobile", "defaultDesktop"]) if (d[k] === name) delete d[k];
-        if (d.active === name) d.active = DEFAULT_PRESET;
-        await savePresets(ctx.api, d);
-        renderPresets(ctx);
-      } }
-    ].filter(Boolean));
-  }
-  async function importPresets(ctx) {
-    const [f] = await pickFiles({ accept: ".json,application/json" });
-    if (!f) return;
-    try {
-      const j = JSON.parse(await f.text());
-      const src = j?.presets && typeof j.presets === "object" ? j.presets : null;
-      if (!src) throw new Error("프리셋 파일이 아니에요");
-      const d = await loadPresets(ctx.api);
-      let n = 0;
-      for (const [name, p] of Object.entries(src)) {
-        if (!p?.moduleStates) continue;
-        d.presets[d.presets[name] ? uniquePresetName(d, name) : name] = p;
-        n++;
+      const all = flag.includes("g") ? [...data.matchAll(new RegExp(s.in, flag))] : data.match(reg) ? [data.match(reg)] : [];
+      step.matched = all.length;
+      if (!all.length) {
+        steps.push(step);
+        return;
       }
-      await savePresets(ctx.api, d);
-      ctx.toast(`프리셋 ${n}개를 가져왔어요`);
-      renderPresets(ctx);
-    } catch (err) {
-      ctx.toast(`가져오지 못했어요: ${err?.message ?? err}`, { error: true });
-    }
+      if (outScript.startsWith("@@")) {
+        step.skipped = `특수 동작(${outScript.split(/\s/)[0]})은 테스트에서 실행하지 않음`;
+        steps.push(step);
+        return;
+      }
+      data = data.replace(reg, outScript);
+      steps.push(step);
+    });
+    return { out: data, steps };
   }
-
-  // src/data/charorder.js
-  var FOLDER_COLORS = ["default", "red", "yellow", "green", "blue", "indigo", "purple", "pink"];
-  var FOLDER_COLOR_CSS = { default: null, red: "#f87171", yellow: "#facc15", green: "#4ade80", blue: "#60a5fa", indigo: "#818cf8", purple: "#c084fc", pink: "#f472b6" };
-  var FOLDER_COLOR_KO = { default: "기본", red: "빨강", yellow: "노랑", green: "초록", blue: "파랑", indigo: "남색", purple: "보라", pink: "분홍" };
-  var isFolder = (x) => x && typeof x === "object" && Array.isArray(x.data);
-  var clone = (o) => o.map((x) => isFolder(x) ? { ...x, data: [...x.data] } : x);
-  function layout(order, chars) {
-    const live = new Set(chars.filter((c) => c && !c.trashTime).map((c) => c.chaId));
-    const seen = /* @__PURE__ */ new Set();
+  function devLint(view) {
     const out = [];
-    for (const x of order ?? []) {
-      if (typeof x === "string") {
-        if (live.has(x) && !seen.has(x)) {
-          seen.add(x);
-          out.push({ type: "char", id: x });
-        }
-      } else if (isFolder(x)) {
-        const ids = x.data.filter((id) => live.has(id) && !seen.has(id));
-        ids.forEach((id) => seen.add(id));
-        out.push({ type: "folder", folder: x, ids });
+    const keyOwners = /* @__PURE__ */ new Map();
+    view.lore.forEach((l, i) => {
+      if (!l || l.mode === "folder") return;
+      const name = l.comment || `#${i + 1}`;
+      const keys = String(l.key ?? "").split(",");
+      if (!l.useRegex && String(l.key ?? "").trim() && keys.some((k) => k === "" || !k.trim()) && !l.alwaysActive)
+        out.push({ level: "warn", tab: "lorebook", index: i, msg: `로어북 '${name}': 키 끝에 빈 칸(쉼표)이 있어서 대화와 상관없이 늘 켜져요` });
+      if (!l.useRegex) for (const k of keys.map((x) => x.trim().toLowerCase()).filter(Boolean)) {
+        if (!keyOwners.has(k)) keyOwners.set(k, []);
+        keyOwners.get(k).push(name);
       }
-    }
-    for (const c of chars) if (c && !c.trashTime && !seen.has(c.chaId)) {
-      seen.add(c.chaId);
-      out.push({ type: "char", id: c.chaId });
-    }
+      if (l.selective && !String(l.secondkey ?? "").trim()) out.push({ level: "info", tab: "lorebook", index: i, msg: `로어북 '${name}': 보조 키 사용이 켜져 있는데 보조 키가 비어 있어요(보조 키 없이 켜져요)` });
+      if ((l.alwaysActive || l.mode === "constant") && String(l.content ?? "").length > 4e3) out.push({ level: "info", tab: "lorebook", index: i, msg: `로어북 '${name}': 항상 켜진 항목이 ${String(l.content).length.toLocaleString()}자예요(매 응답에 들어가요)` });
+    });
+    for (const [k, names] of keyOwners) if (names.length > 2) out.push({ level: "info", tab: "lorebook", msg: `키 "${k}"가 항목 ${names.length}개에 함께 쓰여요: ${names.slice(0, 4).join(", ")}${names.length > 4 ? " …" : ""}` });
+    const dup = /* @__PURE__ */ new Map();
+    view.regex.forEach((r, i) => {
+      if (r?.in) {
+        const k = `${r.type}\0${r.in}`;
+        if (dup.has(k)) out.push({ level: "info", tab: "regex", index: i, msg: `정규식 '${r.comment || i + 1}': '${dup.get(k)}'와 같은 패턴·종류예요` });
+        else dup.set(k, r.comment || `#${i + 1}`);
+      }
+    });
     return out;
   }
-  function take(order, id) {
-    const o = [];
-    for (const x of order) {
-      if (x === id) continue;
-      if (isFolder(x)) o.push({ ...x, data: x.data.filter((d) => d !== id) });
-      else o.push(x);
-    }
-    return o;
+  function devStats(view) {
+    const loreChars = view.lore.reduce((n, l) => n + (l?.mode === "folder" ? 0 : String(l?.content ?? "").length), 0);
+    const alwaysChars = view.lore.reduce((n, l) => n + (l?.alwaysActive || l?.mode === "constant" ? String(l?.content ?? "").length : 0), 0);
+    return {
+      lore: view.lore.filter((l) => l && l.mode !== "folder").length,
+      regex: view.regex.length,
+      trigger: view.trigger.length,
+      loreChars,
+      alwaysChars,
+      alwaysTokens: Math.round(alwaysChars / 2.5)
+    };
   }
-  function moveChar(order, id, { beforeId, after, folderId }) {
-    const ids = [].concat(id);
-    if (beforeId && ids.includes(beforeId)) return clone(order ?? []);
-    let o = clone(order ?? []);
-    for (const c of ids) o = take(o, c);
-    if (beforeId) {
-      const top = o.indexOf(beforeId);
-      if (top >= 0) {
-        o.splice(top + (after ? 1 : 0), 0, ...ids);
-        return o;
-      }
-      for (const x of o) if (isFolder(x)) {
-        const i = x.data.indexOf(beforeId);
-        if (i >= 0) {
-          x.data.splice(i + (after ? 1 : 0), 0, ...ids);
-          return o;
-        }
-      }
-      o.push(...ids);
-      return o;
-    }
-    if (folderId) {
-      const f = o.find((x) => isFolder(x) && x.id === folderId);
-      if (f) {
-        f.data.push(...ids);
-        return o;
-      }
-    }
-    o.push(...ids);
-    return o;
+  function nextVersion(v) {
+    const s = String(v ?? "").trim();
+    const m = /^(.*?)(\d+)(\D*)$/.exec(s);
+    if (!m) return s ? `${s}.1` : "1.0";
+    return `${m[1]}${Number(m[2]) + 1}${m[3]}`;
   }
-  function createFolder(order, { id, name, color = "default", ids = [] }) {
-    let o = clone(order ?? []);
-    let at = o.length;
-    if (ids.length) {
-      const first = o.findIndex((x) => x === ids[0] || isFolder(x) && x.data.includes(ids[0]));
-      if (first >= 0) at = first;
-    }
-    for (const c of ids) o = take(o, c);
-    at = Math.min(at, o.length);
-    o.splice(at, 0, { id, name, color, data: [...ids] });
-    return o;
-  }
-  function setMembers(order, folderId, ids) {
-    let o = clone(order ?? []);
-    const f = o.find((x) => isFolder(x) && x.id === folderId);
-    if (!f) return o;
-    const out = f.data.filter((d) => !ids.includes(d));
-    for (const c of ids) o = take(o, c);
-    const g = o.find((x) => isFolder(x) && x.id === folderId);
-    g.data = [...ids];
-    const at = o.indexOf(g) + 1;
-    o.splice(at, 0, ...out);
-    return o;
-  }
-  function renameFolder(order, folderId, name) {
-    return clone(order ?? []).map((x) => isFolder(x) && x.id === folderId ? { ...x, name } : x);
-  }
-  function colorFolder(order, folderId, color) {
-    return clone(order ?? []).map((x) => isFolder(x) && x.id === folderId ? { ...x, color } : x);
-  }
-  function deleteFolder(order, folderId) {
-    const o = [];
-    for (const x of clone(order ?? [])) {
-      if (isFolder(x) && x.id === folderId) o.push(...x.data);
-      else o.push(x);
-    }
-    return o;
-  }
-  function moveFolder(order, folderId, dir) {
-    const o = clone(order ?? []);
-    const i = o.findIndex((x) => isFolder(x) && x.id === folderId), j = i + dir;
-    if (i < 0 || j < 0 || j >= o.length) return o;
-    [o[i], o[j]] = [o[j], o[i]];
-    return o;
-  }
-  var folderOf = (order, id) => (order ?? []).find((x) => isFolder(x) && x.data.includes(id)) ?? null;
 
   // src/ui/cbs.js
   var CBS = [
@@ -7337,7 +5686,7 @@ ${patch.note}` : "",
     const parts = f.name.split("/");
     return parts.map((_, i) => fd._folders.find((x) => x.name === parts.slice(0, i + 1).join("/"))).filter(Boolean);
   }
-  function createFolder2(fd, name, parentId) {
+  function createFolder(fd, name, parentId) {
     const clean = String(name).replace(/\//g, "／").trim();
     if (!clean) throw new Error("폴더 이름을 입력해 주세요");
     const parent = parentId ? fd._folders.find((f2) => f2.id === parentId) : null;
@@ -7348,7 +5697,7 @@ ${patch.note}` : "",
     fd._folders.push(f);
     return f;
   }
-  function renameFolder2(fd, id, name) {
+  function renameFolder(fd, id, name) {
     const f = fd._folders.find((x) => x.id === id);
     if (!f) return;
     const clean = String(name).replace(/\//g, "／").trim();
@@ -7358,7 +5707,7 @@ ${patch.note}` : "",
     for (const x of fd._folders) if (x === f) x.name = next;
     else if (x.name.startsWith(old + "/")) x.name = next + x.name.slice(old.length);
   }
-  function deleteFolder2(fd, id) {
+  function deleteFolder(fd, id) {
     const f = fd._folders.find((x) => x.id === id);
     if (!f) return;
     const gone = new Set(fd._folders.filter((x) => x === f || x.name.startsWith(f.name + "/")).map((x) => x.id));
@@ -7569,7 +5918,7 @@ ${patch.note}` : "",
     return m ? m[1].toLowerCase().replace("jpeg", "jpg") : "png";
   };
   var stemOf = (name) => name.replace(/\.[a-z0-9]+$/i, "");
-  var COARSE2 = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+  var COARSE = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
   async function openAssets(ctx, id) {
     const data = await ctx.svc.load({ fresh: true });
     const entry2 = data.entries.find((e) => e.module.id === id);
@@ -7605,7 +5954,7 @@ ${patch.note}` : "",
     let assets = src.assets;
     let fd = src.folders;
     const as = { folder: null, q: "", sel: /* @__PURE__ */ new Set(), focus: null, shown: PAGE, busy: false };
-    const keyOf2 = (a) => a[1] + "\0" + a[0];
+    const keyOf3 = (a) => a[1] + "\0" + a[0];
     const panel = h("div", { class: "rb-full", role: "dialog", "aria-label": `${mod.name} 에셋` });
     const titleB = h("b", null, mod.name);
     const subT = h("small", null, src.label ?? "에셋 관리");
@@ -7651,7 +6000,7 @@ ${patch.note}` : "",
       }
       if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "a" && ev.target.tagName !== "INPUT") {
         ev.preventDefault();
-        visible().forEach((a) => as.sel.add(keyOf2(a)));
+        visible().forEach((a) => as.sel.add(keyOf3(a)));
         paint();
       }
       if (ev.key === "Delete" && as.sel.size && ev.target.tagName !== "INPUT") removeSelected();
@@ -7660,7 +6009,7 @@ ${patch.note}` : "",
       const q = as.q.trim().toLowerCase();
       return assets.filter((a) => inFolder(fd, a[0], as.folder) && (!q || a[0].toLowerCase().includes(q)));
     };
-    const selected = () => assets.filter((a) => as.sel.has(keyOf2(a)));
+    const selected = () => assets.filter((a) => as.sel.has(keyOf3(a)));
     async function save(nextAssets, nextFd, note2) {
       as.busy = true;
       try {
@@ -7716,7 +6065,7 @@ ${patch.note}` : "",
           if (!n?.trim()) return;
           try {
             const next = structuredClone(fd);
-            createFolder2(next, n, cur);
+            createFolder(next, n, cur);
             await saveFolders(next);
           } catch (e) {
             ctx.toast(e.message, { error: true });
@@ -7729,7 +6078,7 @@ ${patch.note}` : "",
             if (!n?.trim()) return;
             try {
               const next = structuredClone(fd);
-              renameFolder2(next, cur, n);
+              renameFolder(next, cur, n);
               await saveFolders(next);
             } catch (e) {
               ctx.toast(e.message, { error: true });
@@ -7738,7 +6087,7 @@ ${patch.note}` : "",
           { label: "폴더 삭제 (에셋은 남음)", icon: "trash", danger: true, onClick: async () => {
             if (!await confirmDialog(ctx.win, { title: "이 폴더를 지울까요?", body: '하위 폴더도 함께 지워지고, 안의 에셋은 "미분류"로 가요.', ok: "삭제", danger: true })) return;
             const next = structuredClone(fd);
-            deleteFolder2(next, cur);
+            deleteFolder(next, cur);
             as.folder = null;
             await saveFolders(next);
           } }
@@ -7758,7 +6107,7 @@ ${patch.note}` : "",
         search,
         btn(n ? "선택 해제" : "모두 선택", { size: "sm", onClick: () => {
           if (n) as.sel.clear();
-          else visible().forEach((a) => as.sel.add(keyOf2(a)));
+          else visible().forEach((a) => as.sel.add(keyOf3(a)));
           paint();
         } }),
         h("div", { class: "rb-spacer" }),
@@ -7804,7 +6153,7 @@ ${patch.note}` : "",
     }
     let lastClicked = null;
     function tile2(a) {
-      const k = keyOf2(a), isSel = as.sel.has(k);
+      const k = keyOf3(a), isSel = as.sel.has(k);
       const img = isImageExt(a[2]) ? h("img", { alt: "", loading: "lazy", decoding: "async", dataset: { path: a[1], ext: a[2] }, draggable: "false" }) : null;
       const el = h(
         "button",
@@ -7813,12 +6162,12 @@ ${patch.note}` : "",
           class: "rb-tile",
           "aria-selected": isSel ? "true" : "false",
           title: a[0],
-          draggable: COARSE2 ? "false" : "true",
+          draggable: COARSE ? "false" : "true",
           onClick: (ev) => {
             if (ev.shiftKey && lastClicked) {
               const list = visible();
-              const i = list.findIndex((x) => keyOf2(x) === lastClicked), j = list.findIndex((x) => keyOf2(x) === k);
-              for (let x = Math.min(i, j); x <= Math.max(i, j); x++) as.sel.add(keyOf2(list[x]));
+              const i = list.findIndex((x) => keyOf3(x) === lastClicked), j = list.findIndex((x) => keyOf3(x) === k);
+              for (let x = Math.min(i, j); x <= Math.max(i, j); x++) as.sel.add(keyOf3(list[x]));
             } else if (ev.ctrlKey || ev.metaKey || as.sel.size || ev.target.closest?.(".sel")) {
               if (as.sel.has(k)) as.sel.delete(k);
               else as.sel.add(k);
@@ -7885,7 +6234,7 @@ ${patch.note}` : "",
     }
     async function paintInfo() {
       const sel = selected();
-      const a = sel.length === 1 ? sel[0] : !sel.length && as.focus ? assets.find((x) => keyOf2(x) === as.focus) : null;
+      const a = sel.length === 1 ? sel[0] : !sel.length && as.focus ? assets.find((x) => keyOf3(x) === as.focus) : null;
       info.classList.toggle("none", !a && !sel.length);
       if (!a) {
         const total = sel.length ? sel : visible();
@@ -7912,7 +6261,7 @@ ${patch.note}` : "",
           btn("교체", { size: "sm", icon: "refresh", onClick: () => replaceOne(a) }),
           btn("받기", { size: "sm", icon: "download", onClick: () => downloadAssets([a]) }),
           btn("삭제", { size: "sm", kind: "danger", icon: "trash", onClick: () => {
-            as.sel = /* @__PURE__ */ new Set([keyOf2(a)]);
+            as.sel = /* @__PURE__ */ new Set([keyOf3(a)]);
             removeSelected();
           } })
         )
@@ -7938,7 +6287,7 @@ ${patch.note}` : "",
             h("summary", { class: "rb-muted", style: "cursor:pointer;padding:6px 0" }, "자세히 보기"),
             md.map((m) => h("div", { style: "font-size:12px;padding:6px 0;border-top:1px solid var(--rb-line2)" }, h("b", null, `${m.kind} · ${m.key}`), h("div", { style: "white-space:pre-wrap;word-break:break-all;color:var(--rb-sub);max-height:160px;overflow:auto" }, m.value))),
             btn("메타데이터 지우기", { size: "sm", onClick: () => {
-              as.sel = /* @__PURE__ */ new Set([keyOf2(a)]);
+              as.sel = /* @__PURE__ */ new Set([keyOf3(a)]);
               stripSelected();
             } })
           ) : null
@@ -8018,7 +6367,7 @@ ${patch.note}` : "",
       renameMapping(nextFd, a[0], name);
       const next = assets.map((x) => x === a ? [name, x[1], x[2]] : x);
       await save(next, nextFd, "이름 바꾸기 전");
-      as.focus = keyOf2([name, a[1]]);
+      as.focus = keyOf3([name, a[1]]);
       paint();
     }
     async function replaceOne(a) {
@@ -8029,7 +6378,7 @@ ${patch.note}` : "",
         const next = assets.map((x) => x === a ? [x[0], up.path, extOf(f.name)] : x);
         await save(next, fd, "이미지 교체 전");
         ctx.assets.forget(a[1]);
-        as.focus = keyOf2([a[0], up.path]);
+        as.focus = keyOf3([a[0], up.path]);
         as.sel.clear();
         ctx.toast("바꿨어요", { action: { label: "되돌리기", run: () => undoTo(a, (x) => x[0] === a[0] && x[1] === up.path) }, seconds: 10 });
         paint();
@@ -8047,10 +6396,10 @@ ${patch.note}` : "",
       if (!sel.length) return;
       if (!await confirmDialog(ctx.win, { title: `에셋 ${sel.length}개를 지울까요?`, body: "모듈 목록에서 빠져요. 바꾸기 전 상태는 백업돼요.", ok: "삭제", danger: true })) return;
       const before = assets, beforeFd = fd;
-      const gone = new Set(sel.map(keyOf2));
+      const gone = new Set(sel.map(keyOf3));
       const nextFd = structuredClone(fd);
-      for (const a of sel) if (!assets.some((x) => !gone.has(keyOf2(x)) && x[0] === a[0])) delete nextFd._mapping[a[0]];
-      await save(assets.filter((a) => !gone.has(keyOf2(a))), nextFd, "에셋 삭제 전");
+      for (const a of sel) if (!assets.some((x) => !gone.has(keyOf3(x)) && x[0] === a[0])) delete nextFd._mapping[a[0]];
+      await save(assets.filter((a) => !gone.has(keyOf3(a))), nextFd, "에셋 삭제 전");
       as.sel.clear();
       as.focus = null;
       ctx.toast(`${sel.length}개를 지웠어요`, { action: { label: "되돌리기", run: async () => {
@@ -8269,7 +6618,7 @@ ${patch.note}` : "",
     }
     function lightbox(a) {
       const list = visible().filter((x) => isImageExt(x[2]));
-      let i = Math.max(0, list.findIndex((x) => keyOf2(x) === keyOf2(a)));
+      let i = Math.max(0, list.findIndex((x) => keyOf3(x) === keyOf3(a)));
       const img = h("img", { alt: "" });
       const cap = h("span");
       let url = null;
@@ -8529,6 +6878,2307 @@ ${patch.note}` : "",
     });
   }
 
+  // src/ui/screens/dev.js
+  var KIND_KO = { module: "모듈", character: "봇" };
+  var keyOf = (p) => p.kind === "module" ? `m:${p.id}` : `c:${p.id}`;
+  var projects = (ctx) => ctx.prefs.meta.devProjects ?? [];
+  var findProject = (ctx, kind, id) => projects(ctx).find((p) => p.kind === kind && p.id === id) ?? null;
+  function saveProjects(ctx, fn) {
+    return ctx.svc.meta((m) => {
+      m.devProjects ??= [];
+      return fn(m.devProjects, m);
+    });
+  }
+  function addProjects(ctx, list) {
+    return saveProjects(ctx, (ps) => {
+      let n = 0;
+      for (const x of list) if (!ps.some((p) => p.kind === x.kind && p.id === x.id)) {
+        ps.push({ kind: x.kind, id: x.id, addedAt: Date.now(), version: "", releases: [] });
+        n++;
+      }
+      return n;
+    });
+  }
+  function recordRelease(ctx, kind, id, rel) {
+    return saveProjects(ctx, (ps) => {
+      let p = ps.find((x) => x.kind === kind && x.id === id);
+      if (!p) {
+        p = { kind, id, addedAt: Date.now(), version: "", releases: [] };
+        ps.push(p);
+      }
+      p.releases = [{ t: Date.now(), ...rel }, ...p.releases ?? []].slice(0, 100);
+      if (rel.version) p.version = rel.version;
+    });
+  }
+  async function loadAll(ctx, fresh) {
+    const st = ctx.state;
+    if (!fresh && st.devAll && Date.now() - st.devAll.t < 3e4) return st.devAll;
+    const { entries } = await ctx.svc.load(fresh ? { fresh: true } : void 0);
+    const db = await ctx.api.getDatabase(["characters"]);
+    const lc = await loadCharacters(ctx.api, db?.characters);
+    const mods = new Map(entries.map((e) => [e.module.id, { kind: "module", id: e.module.id, name: e.module.name ?? "", enabled: e.enabled, module: e.module }]));
+    const chars = /* @__PURE__ */ new Map();
+    lc.list.forEach((c, i) => {
+      if (c && !c.trashTime && c.type !== "group") chars.set(c.chaId, { kind: "character", id: c.chaId, i, name: c.name ?? "", image: c.image, creator: c.creator });
+    });
+    st.devAll = { t: Date.now(), mods, chars, unloaded: lc.unloaded };
+    return st.devAll;
+  }
+  var targetOf = (all, p) => (p.kind === "module" ? all.mods.get(p.id) : all.chars.get(p.id)) ?? null;
+  async function fullOf(ctx, all, p) {
+    const t = targetOf(all, p);
+    if (!t) throw new Error("찾을 수 없어요. 지워졌거나 아직 불러오는 중이에요.");
+    if (p.kind === "module") return (await ctx.svc.load({ fresh: true })).entries.find((e) => e.module.id === p.id)?.module ?? t.module;
+    const c = await ctx.api.getCharacterFromIndex(t.i);
+    if (!c || c.chaId !== p.id) throw new Error("봇을 다시 찾지 못했어요. 새로 고침을 눌러 주세요.");
+    return c;
+  }
+  async function renderDev(ctx) {
+    const st = ctx.state;
+    if (st.sub === "patchmaker") return renderPatchMaker(ctx, { backTo: "dev", backLabel: "개발" });
+    if (!st.devAll) replace(ctx.main, h("div", { class: "rb-empty" }, "개발 목록을 불러오는 중…"));
+    const all = await loadAll(ctx);
+    const ps = projects(ctx);
+    ctx.setNavCount("dev", ps.length || void 0);
+    if (!st.devSel || !ps.some((p) => keyOf(p) === st.devSel)) st.devSel = ps[0] ? keyOf(ps[0]) : null;
+    const list = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "개발 목록" });
+    const lazy = ctx.assets.lazy(list);
+    const row2 = (p) => {
+      const t = targetOf(all, p);
+      const meta = rowMeta(p);
+      const pic = p.kind === "character" && t?.image ? h("img", { alt: "", dataset: { path: t.image, ext: "png" }, style: "width:36px;height:36px;border-radius:10px;object-fit:cover;background:var(--rb-surf2);flex-shrink:0" }) : h("span", { style: "width:36px;height:36px;border-radius:10px;background:var(--rb-acc-soft);color:var(--rb-acc-text);display:flex;align-items:center;justify-content:center;flex-shrink:0" }, icon(p.kind === "module" ? "module" : "character", 18));
+      if (pic.tagName === "IMG") lazy.observe(pic);
+      const r = h(
+        "div",
+        {
+          class: ["rb-row", !t && "off"],
+          role: "option",
+          tabindex: "0",
+          "aria-selected": st.devSel === keyOf(p) ? "true" : "false",
+          dataset: { id: keyOf(p) },
+          onClick: () => {
+            st.devSel = keyOf(p);
+            list.querySelectorAll(".rb-row").forEach((x) => x.setAttribute("aria-selected", "false"));
+            r.setAttribute("aria-selected", "true");
+            detail(ctx, all, p);
+            if (ctx.isMobile()) ctx.openSheet();
+          },
+          onKeydown: (ev) => {
+            if (ev.target === r && (ev.key === "Enter" || ev.key === " ")) {
+              ev.preventDefault();
+              r.click();
+            }
+          }
+        },
+        pic,
+        h(
+          "div",
+          { class: "txt" },
+          h("div", { class: "ttl" }, h("span", { class: "name" }, t?.name || "(찾을 수 없음)"), !t && badge("없음", "warn"), t && p.kind === "module" && !t.enabled && badge("꺼짐", "mute")),
+          h("span", { class: "meta" }, meta)
+        )
+      );
+      return r;
+    };
+    for (const kind of ["module", "character"]) {
+      const mine = ps.filter((p) => p.kind === kind);
+      if (!mine.length) continue;
+      list.appendChild(h("div", { class: "rb-label", style: "padding:12px 12px 4px" }, `${KIND_KO[kind]} ${mine.length}`));
+      for (const p of mine) list.appendChild(row2(p));
+    }
+    if (!ps.length) list.appendChild(h(
+      "div",
+      { class: "rb-card pad bordered", style: "margin:12px;display:flex;flex-direction:column;gap:10px" },
+      h("b", null, "개발 중인 모듈·봇을 모아 두는 곳이에요"),
+      h("span", { class: "rb-muted", style: "white-space:normal" }, '"추가"로 이미 있는 모듈·봇을 고르거나, "새 모듈"·"새 봇"으로 바로 만들어요. 여기 넣은 것만 모아서 버전·배포 기준·검사·테스트·패치를 관리해요. 목록에서 빼도 모듈·봇은 그대로예요.'),
+      h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, btn("추가", { size: "sm", icon: "plus", onClick: () => pickProjects(ctx) }), btn("새 모듈", { size: "sm", icon: "module", onClick: () => newDevModule(ctx) }), btn("새 봇", { size: "sm", icon: "character", onClick: () => newDevBot(ctx) }))
+    ));
+    const keep = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
+    replace(
+      ctx.main,
+      h(
+        "div",
+        { class: "rb-chips", role: "toolbar", "aria-label": "개발" },
+        h("span", { class: "rb-muted", style: "white-space:nowrap;flex-shrink:0" }, `개발 중 ${ps.length}개${all.unloaded ? ` · 앱이 아직 불러오는 중인 봇 ${all.unloaded}명` : ""}`),
+        h("div", { class: "rb-spacer" }),
+        btn("추가", { size: "sm", icon: "plus", onClick: () => pickProjects(ctx), id: "rb-dev-add" }),
+        btn("새로 만들기", { size: "sm", icon: "plus", onClick: (e) => openMenu(ctx.win, e.currentTarget, [
+          { label: "새 모듈", icon: "module", onClick: () => newDevModule(ctx) },
+          { label: "새 봇", icon: "character", onClick: () => newDevBot(ctx) }
+        ]), id: "rb-dev-new" }),
+        btn("패치 만들기", { size: "sm", kind: "primary", icon: "code", onClick: () => ctx.go("dev", "patchmaker"), id: "rb-dev-pm" }),
+        iconBtn("refresh", "새로 고침", { onClick: async () => {
+          await loadAll(ctx, true);
+          renderDev(ctx);
+        } })
+      ),
+      list
+    );
+    list.scrollTop = keep;
+    const sel = ps.find((p) => keyOf(p) === st.devSel);
+    if (sel) detail(ctx, all, sel);
+    else ctx.showDetail(h("div", { class: "rb-empty" }, "개발 중인 모듈·봇을 고르면 여기에 도구가 나와요."));
+  }
+  async function pickProjects(ctx) {
+    const all = await loadAll(ctx, true);
+    const mine = new Set(projects(ctx).map(keyOf));
+    const items = [
+      ...[...all.mods.values()].map((m) => ({ id: `m:${m.id}`, label: m.name, sub: `모듈${m.enabled ? "" : " · 꺼짐"}` })),
+      ...[...all.chars.values()].map((c) => ({ id: `c:${c.id}`, label: c.name, sub: `봇${c.creator ? ` · 제작자 ${c.creator}` : ""}` }))
+    ].filter((x) => !mine.has(x.id));
+    const r = await folderDialog(ctx.win, { title: "개발 목록에 넣기", items, ok: "넣기", withName: false, noun: "모듈·봇" });
+    if (!r?.ids.length) return;
+    const n = await addProjects(ctx, r.ids.map((k) => ({ kind: k.startsWith("m:") ? "module" : "character", id: k.slice(2) })));
+    ctx.state.devSel = r.ids[0];
+    ctx.toast(`${n}개를 개발 목록에 넣었어요`);
+    renderDev(ctx);
+  }
+  async function newDevModule(ctx) {
+    const n = await promptDialog(ctx.win, { title: "새 개발 모듈", label: "모듈 이름", placeholder: "예: 내 세계관" });
+    if (!n?.trim()) return;
+    const m = ctx.svc.newModule(n.trim());
+    try {
+      await ctx.svc.run("create", m);
+      await addProjects(ctx, [{ kind: "module", id: m.id }]);
+      ctx.state.modDirty = true;
+      ctx.state.devSel = `m:${m.id}`;
+      await loadAll(ctx, true);
+      ctx.toast(`'${m.name}' 모듈을 만들고 개발 목록에 넣었어요`);
+      renderDev(ctx);
+    } catch (e) {
+      ctx.toast(`만들지 못했어요: ${e?.message ?? e}`, { error: true });
+    }
+  }
+  async function newDevBot(ctx) {
+    const n = await promptDialog(ctx.win, { title: "새 개발 봇", label: "봇 이름", placeholder: "예: 테스트 봇" });
+    if (!n?.trim()) return;
+    try {
+      const db = await ctx.api.getDatabase(["characters"]);
+      const chars = db?.characters;
+      if (!Array.isArray(chars)) throw new Error("앱이 아직 봇 목록을 불러오는 중이에요. 잠시 뒤 다시 해 주세요.");
+      if (chars.some(isGenerating)) throw new Busy();
+      const c = newCharacterBase({});
+      c.name = uniqueDisplayName(n.trim(), chars);
+      c.firstMessage = "";
+      c.desc = "";
+      c.image = "";
+      chars.push(c);
+      await ctx.api.setDatabaseLite({ characters: chars });
+      try {
+        await ctx.api.checkCharOrder();
+      } catch {
+      }
+      await addProjects(ctx, [{ kind: "character", id: c.chaId }]);
+      ctx.state.charsDirty = true;
+      ctx.state.devSel = `c:${c.chaId}`;
+      await loadAll(ctx, true);
+      ctx.toast(`'${c.name}' 봇을 만들고 개발 목록에 넣었어요`);
+      renderDev(ctx);
+    } catch (e) {
+      ctx.toast(e instanceof Busy ? "다른 봇이 응답을 생성하는 중이에요. 끝난 뒤 다시 해 주세요." : `만들지 못했어요: ${e?.message ?? e}`, { error: true });
+    }
+  }
+  function card(title, ...children) {
+    return h("div", { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:10px" }, typeof title === "string" ? h("b", null, title) : title, ...children);
+  }
+  function detail(ctx, all, p) {
+    const st = ctx.state;
+    const t = targetOf(all, p);
+    const remove = btn("개발 목록에서 빼기", { size: "sm", icon: "x", onClick: async () => {
+      await saveProjects(ctx, (ps) => {
+        const i = ps.findIndex((x) => x.kind === p.kind && x.id === p.id);
+        if (i >= 0) ps.splice(i, 1);
+      });
+      ctx.toast(`개발 목록에서 뺐어요. ${KIND_KO[p.kind]}은(는) 그대로예요.`);
+      renderDev(ctx);
+    } });
+    if (!t) {
+      ctx.showDetail(h("h2", { class: "rb-h2" }, "(찾을 수 없음)"), note("warn", `이 ${KIND_KO[p.kind]}을(를) 찾지 못했어요. 지워졌거나 앱이 아직 불러오는 중이에요.`), h("div", null, remove));
+      return;
+    }
+    const body = h("div", { style: "display:flex;flex-direction:column;gap:12px" }, h("div", { class: "rb-empty" }, "불러오는 중…"));
+    ctx.showDetail(
+      h("div", { style: "display:flex;flex-direction:column;gap:4px" }, h("span", { style: "font-size:12px;color:var(--rb-acc-text)" }, `개발 중인 ${KIND_KO[p.kind]}`), h("h2", { class: "rb-h2" }, t.name || "(이름 없음)")),
+      body
+    );
+    const my = st.devToken = (st.devToken ?? 0) + 1;
+    (async () => {
+      const obj = await fullOf(ctx, all, p);
+      if (my !== st.devToken) return;
+      const view = projView(p.kind, obj);
+      const s = devStats(view);
+      const stat = (label, v) => h("div", { class: "rb-stat" }, h("small", null, label), h("b", null, String(v)));
+      replace(
+        body,
+        versionCard(ctx, p),
+        h("div", { class: "rb-stats" }, stat("로어북", s.lore), stat("정규식", s.regex), stat("트리거", s.trigger), stat("항상 켜짐", `약 ${s.alwaysTokens.toLocaleString()} 토큰`)),
+        actions(ctx, all, p, obj),
+        baseCard(ctx, all, p, obj),
+        lintCard(ctx, p, obj, view),
+        testCard(ctx, p, view),
+        releaseCard(ctx, p, t),
+        h("div", null, remove)
+      );
+    })().catch((e) => {
+      if (my === st.devToken) replace(body, note("err", e?.message ?? String(e)), h("div", null, remove));
+    });
+  }
+  function versionCard(ctx, p) {
+    const inp = h("input", { class: "rb-input", value: p.version ?? "", placeholder: "예: 1.0", "aria-label": "개발 버전", id: "rb-dev-version", style: "height:38px" });
+    const last2 = p.releases?.[0]?.version;
+    const suggest = () => nextVersion(last2 || inp.value.trim() || p.version);
+    const nextBtn = btn("", { size: "sm", onClick: () => {
+      inp.value = suggest();
+      save();
+      ctx.toast(`버전을 ${inp.value}(으)로 바꿨어요`);
+    } });
+    const paintNext = () => {
+      const v = suggest();
+      nextBtn.textContent = `다음: ${v}`;
+      nextBtn.hidden = v === inp.value.trim();
+    };
+    const save = () => {
+      const v = inp.value.trim();
+      p.version = v;
+      paintNext();
+      const meta = ctx.main.querySelector(`.rb-row[data-id="${CSS.escape(keyOf(p))}"] .meta`);
+      if (meta) meta.textContent = rowMeta(p);
+      return saveProjects(ctx, (ps) => {
+        const x = ps.find((y) => y.kind === p.kind && y.id === p.id);
+        if (x) x.version = v;
+      });
+    };
+    inp.addEventListener("change", save);
+    inp.addEventListener("input", paintNext);
+    paintNext();
+    return card(
+      h("div", { style: "display:flex;align-items:center;gap:8px" }, h("b", { style: "flex:1" }, "개발 버전"), last2 ? h("span", { class: "rb-muted" }, `마지막 배포 v${last2}`) : null),
+      h("div", { style: "display:flex;gap:8px" }, h("div", { style: "flex:1" }, inp), nextBtn),
+      h("span", { class: "rb-muted", style: "white-space:normal" }, "패치를 만들 때 이 버전이 미리 채워지고, 만든 뒤에는 릴리스 기록에 남아요.")
+    );
+  }
+  var rowMeta = (p) => {
+    const rel = p.releases?.[0];
+    return [p.version ? `v${p.version}` : "버전 없음", rel ? `패치 ${p.releases.length}번 · 최근 ${fmtWhen(rel.t)}` : "아직 패치 없음"].join(" · ");
+  };
+  function actions(ctx, all, p, obj) {
+    const t = targetOf(all, p);
+    const edit = () => (p.kind === "module" ? ctx.openEditor(p.id) : openCharEditor(ctx, t.i, p.id)).catch?.((e) => ctx.toast(e?.message ?? String(e), { error: true }));
+    const assets = () => (p.kind === "module" ? ctx.openAssets(p.id) : openCharAssets(ctx, t.i, p.id)).catch?.((e) => ctx.toast(e?.message ?? String(e), { error: true }));
+    const checkpoint = async () => {
+      const n = await promptDialog(ctx.win, { title: "체크포인트 저장", label: "메모 (기록 탭에 보여요)", value: p.version ? `v${p.version} 작업 중` : "작업 중", ok: "저장" });
+      if (n === null) return;
+      try {
+        const fresh = await fullOf(ctx, all, p);
+        await createStore(ctx.api).addBackup({ kind: p.kind, target: p.id, name: fresh.name, snapshot: p.kind === "module" ? fresh : backupSnapshot("character", fresh), note: `체크포인트${n.trim() ? ` · ${n.trim()}` : ""}` });
+        ctx.toast("체크포인트를 저장했어요. 기록 탭에서 언제든 이 상태로 되돌릴 수 있어요.");
+      } catch (e) {
+        ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
+      }
+    };
+    const exportFull = async () => {
+      const tt = ctx.toast(".risum 만드는 중…", { seconds: 120 });
+      try {
+        const m = await fullOf(ctx, all, p);
+        const bytes = await buildRisum(m, (path) => ctx.assets.read(path));
+        tt.close();
+        download(`${safeFileName(m.name)}${p.version ? `_v${safeFileName(p.version)}` : ""}.risum`, bytes, "application/octet-stream");
+        ctx.toast(`전체 파일을 만들었어요 (${fmtBytes(bytes.size)})`);
+      } catch (e) {
+        tt.close();
+        ctx.toast(`만들지 못했어요: ${e?.message ?? e}`, { error: true });
+      }
+    };
+    return h(
+      "div",
+      { style: "display:flex;gap:8px;flex-wrap:wrap" },
+      btn("편집", { kind: "primary", icon: "edit", onClick: edit, id: "rb-dev-edit" }),
+      btn("에셋", { icon: "image", onClick: assets }),
+      btn("체크포인트", { icon: "check", onClick: checkpoint, id: "rb-dev-checkpoint" }),
+      p.kind === "module" ? btn(".risum 전체", { icon: "download", onClick: exportFull }) : null
+    );
+  }
+  function baseCard(ctx, all, p, obj) {
+    const store = createStore(ctx.api);
+    const st = h("div", { class: "rb-muted" }, "배포 기준과 비교하는 중…");
+    const head = h("div", { style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap" }, h("b", { style: "flex:1" }, "배포 기준"));
+    const go = () => {
+      const t = targetOf(all, p);
+      ctx.state.pm = { ...ctx.state.pm ?? {}, kind: p.kind, target: p.kind === "module" ? { kind: "module", key: keyOf(p), id: p.id, name: t.name } : { kind: "character", key: keyOf(p), i: t.i, chaId: p.id, name: t.name }, q: "", version: p.version || nextVersion(p.releases?.[0]?.version) };
+      ctx.go("dev", "patchmaker");
+    };
+    const btns = h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" });
+    (async () => {
+      const [info, base] = await Promise.all([store.baselineInfo(keyOf(p)), store.getBaseline(keyOf(p))]);
+      const setBase = btn(base ? "지금 상태를 새 기준으로" : "지금 상태를 기준으로 표시", { size: "sm", icon: "check", id: "rb-dev-setbase", onClick: async () => {
+        if (base && !await confirmDialog(ctx.win, { title: "지금 상태를 배포 기준으로 할까요?", body: "이후 고친 부분만 다음 패치에 들어가요. 아직 패치로 내보내지 않은 변경은 기준에 묻혀요.", ok: "기준으로 표시" })) return;
+        await store.setBaseline(keyOf(p), baseViewOf(p.kind, await fullOf(ctx, all, p)));
+        ctx.toast("지금 상태를 배포 기준으로 기록했어요");
+        renderDev(ctx);
+      } });
+      if (!base) {
+        head.appendChild(badge("없음", "warn"));
+        replace(st, "아직 배포 기준이 없어요. 사람들에게 올린 파일과 같은 상태일 때 기준으로 표시해 두면, 그 뒤에 고친 것만 패치로 만들 수 있어요.");
+        replace(btns, setBase);
+        return;
+      }
+      head.appendChild(badge(`기록됨 · ${fmtWhen(info?.t)}`, "ok"));
+      const patch = await buildPatch({ kind: p.kind, name: obj.name, namespace: obj.namespace ?? obj.moduleNamespace, base, current: obj, readAsset: async () => null, includeAssets: false });
+      const n = patch ? planPatch(patch, base).items.length : 0;
+      head.appendChild(badge(n ? `바뀐 곳 ${n}` : "바뀐 곳 없음", n ? "acc" : "mute"));
+      replace(st, n ? `기준 뒤로 ${n}곳을 고쳤어요. 패치 크기 약 ${fmtBytes(new Blob([JSON.stringify(patch)]).size)} (에셋 제외).` : "기준과 같아요. 고친 뒤 다시 보면 바뀐 곳이 나와요.");
+      replace(btns, n ? btn("패치 만들기", { size: "sm", kind: "primary", icon: "code", onClick: go, id: "rb-dev-makepatch" }) : null, setBase);
+    })().catch((e) => replace(st, `비교하지 못했어요: ${e?.message ?? e}`));
+    return card(head, st, btns);
+  }
+  function lintCard(ctx, p, obj, view) {
+    const base = validateModule({ name: view.name, lorebook: view.lore, regex: view.regex, trigger: view.trigger, mcp: obj.mcp });
+    const items = [...base, ...devLint(view)];
+    const lv = { err: ["오류", "danger"], warn: ["주의", "warn"], info: ["참고", "mute"] };
+    const errs = items.filter((x) => x.level === "err").length, warns = items.filter((x) => x.level === "warn").length;
+    const head = h(
+      "div",
+      { style: "display:flex;align-items:center;gap:8px" },
+      h("b", { style: "flex:1" }, "검사"),
+      items.length ? badge(`오류 ${errs} · 주의 ${warns} · 참고 ${items.length - errs - warns}`, errs ? "danger" : warns ? "warn" : "mute") : badge("문제 없음", "ok")
+    );
+    return card(
+      head,
+      items.length ? h(
+        "div",
+        { id: "rb-dev-lint", style: "display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto" },
+        ...items.slice(0, 120).map((x) => h("div", { style: "display:flex;gap:8px;align-items:flex-start" }, badge(...lv[x.level]), h("span", { style: "white-space:normal;font-size:13px" }, x.msg)))
+      ) : h("span", { class: "rb-muted" }, "빈 키, 정규식 오류, 쓰이지 않는 항목, 늘 켜지는 실수 키 같은 문제가 없어요."),
+      h("span", { class: "rb-muted", style: "white-space:normal" }, "편집기에서 저장할 때도 같은 검사를 해요.")
+    );
+  }
+  function testCard(ctx, p, view) {
+    const st = ctx.state;
+    st.devTest ??= { tab: "lore", text: "", mode: "editoutput", recursive: false };
+    const T = st.devTest;
+    const input = h("textarea", { class: "rb-textarea", style: "min-height:90px", placeholder: "", "aria-label": "테스트 문장", id: "rb-dev-test-input" });
+    input.value = T.text;
+    const out = h("div", { style: "display:flex;flex-direction:column;gap:6px", id: "rb-dev-test-out" });
+    const opts = h("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" });
+    const run = () => {
+      T.text = input.value;
+      if (T.tab === "lore") {
+        input.placeholder = "최근 대화를 붙여 넣으면 켜지는 로어북 항목을 보여 줘요";
+        const res = loreActivation(view.lore, input.value, { recursive: T.recursive });
+        const chars = res.reduce((n, r) => n + String(r.entry.content ?? "").length, 0);
+        replace(
+          out,
+          h("span", { class: "rb-muted" }, `켜지는 항목 ${res.length}개 · 약 ${Math.round(chars / 2.5).toLocaleString()} 토큰`),
+          ...res.slice(0, 80).map((r) => h(
+            "div",
+            { style: "display:flex;gap:8px;align-items:center;min-width:0" },
+            badge(r.reason, r.reason.startsWith("빈 키") ? "warn" : r.reason.startsWith("키") ? "acc" : "mute"),
+            h("span", { style: "overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, r.entry.comment || r.entry.key || `#${r.index + 1}`)
+          ))
+        );
+      } else {
+        input.placeholder = "응답 예시를 넣으면 정규식을 순서대로 적용한 결과를 보여 줘요";
+        const res = regexRun(view.regex, input.value, T.mode);
+        replace(
+          out,
+          h("span", { class: "rb-muted" }, `적용된 스크립트 ${res.steps.filter((s) => s.matched && !s.skipped && !s.error).length}개 / 이 종류 ${res.steps.length}개`),
+          ...res.steps.filter((s) => s.matched || s.error || s.skipped).slice(0, 60).map((s) => h(
+            "div",
+            { style: "display:flex;gap:8px;align-items:flex-start" },
+            badge(s.error ? "오류" : s.skipped ? "건너뜀" : `${s.matched}곳`, s.error ? "danger" : s.skipped ? "mute" : "acc"),
+            h("span", { style: "white-space:normal;font-size:13px" }, s.comment, s.error || s.skipped ? h("small", { class: "rb-muted" }, ` — ${s.error ?? s.skipped}`) : null)
+          )),
+          h("span", { class: "rb-label" }, "결과"),
+          h("pre", { style: "margin:0;padding:10px 12px;border-radius:10px;background:var(--rb-surf);white-space:pre-wrap;word-break:break-word;font-size:12px;max-height:200px;overflow:auto" }, res.out || " ")
+        );
+      }
+    };
+    const paintOpts = () => {
+      if (T.tab === "lore") {
+        const cb = h("input", { type: "checkbox", checked: T.recursive });
+        cb.addEventListener("change", () => {
+          T.recursive = cb.checked;
+          run();
+        });
+        replace(opts, h("label", { class: "rb-check", style: "display:flex;gap:6px;align-items:center" }, cb, "재귀 검색 (켜진 항목 내용으로 다시 찾기)"));
+      } else {
+        replace(opts, segmented([["editinput", "입력"], ["editoutput", "출력"], ["editprocess", "요청"], ["editdisplay", "표시"]], T.mode, (v) => {
+          T.mode = v;
+          run();
+        }, "정규식 종류"));
+      }
+    };
+    let timer = 0;
+    input.addEventListener("input", () => {
+      clearTimeout(timer);
+      timer = setTimeout(run, 120);
+    });
+    paintOpts();
+    run();
+    return card(
+      h("div", { style: "display:flex;align-items:center;gap:8px" }, h("b", { style: "flex:1" }, "테스트")),
+      segmented([["lore", "로어북 활성"], ["regex", "정규식"]], T.tab, (v) => {
+        T.tab = v;
+        paintOpts();
+        run();
+      }, "테스트 종류"),
+      opts,
+      input,
+      out,
+      h("span", { class: "rb-muted", style: "white-space:normal" }, "RisuAI 규칙대로 미리 돌려 봐요. CBS({{…}})·트리거·확률처럼 채팅 중에만 정해지는 것은 계산하지 않아요.")
+    );
+  }
+  function releaseCard(ctx, p, t) {
+    const rels = p.releases ?? [];
+    const md = () => rels.map((r) => `## v${r.version || "?"} (${new Date(r.t).toLocaleDateString()})
+${(r.note || "").trim() || "- (변경 내용 없음)"}`).join("\n\n");
+    return card(
+      h("div", { style: "display:flex;align-items:center;gap:8px" }, h("b", { style: "flex:1" }, "릴리스 기록"), badge(`${rels.length}번`, rels.length ? "acc" : "mute")),
+      rels.length ? h(
+        "div",
+        { style: "display:flex;flex-direction:column;gap:8px;max-height:240px;overflow:auto", id: "rb-dev-releases" },
+        ...rels.slice(0, 30).map((r) => h(
+          "div",
+          { style: "display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:var(--rb-surf)" },
+          h("div", { style: "display:flex;gap:8px;align-items:center" }, h("b", null, `v${r.version || "?"}`), h("span", { class: "rb-muted" }, fmtWhen(r.t)), r.size ? h("span", { class: "rb-muted", style: "margin-left:auto" }, fmtBytes(r.size)) : null),
+          r.note ? h("span", { style: "white-space:pre-line;font-size:13px" }, r.note) : null
+        ))
+      ) : h("span", { class: "rb-muted", style: "white-space:normal" }, "패치를 만들면 버전·변경 내용·크기가 여기에 쌓여요."),
+      rels.length ? h(
+        "div",
+        { style: "display:flex;gap:8px;flex-wrap:wrap" },
+        btn("변경 기록 복사", { size: "sm", icon: "link", onClick: async () => ctx.toast(await copyText(md()) ? "마크다운으로 복사했어요. 배포글에 붙여 넣으세요." : "복사하지 못했어요") }),
+        btn("CHANGELOG.md", { size: "sm", icon: "download", onClick: () => download(`${safeFileName(t.name)}_CHANGELOG.md`, `# ${t.name} 변경 기록
+
+${md()}
+`, "text/markdown") })
+      ) : null
+    );
+  }
+
+  // src/ui/screens/devtools.js
+  var isDev = (ctx) => !!ctx.prefs.ui?.devMode;
+  var SKIP_CHAR = ["loreCache", "lowLevelHistory", "chatPage", "chats"];
+  function baseViewOf(kind, obj) {
+    const v = pickView(obj, viewKeys(kind, kind === "module" ? null : obj));
+    if (kind === "character") for (const k of SKIP_CHAR) delete v[k];
+    return v;
+  }
+  var GROUP = { field: "정보", lorebook: "로어북", regex: "정규식", trigger: "트리거", assets: "에셋", globalLore: "로어북", customscript: "정규식", triggerscript: "트리거", emotionImages: "감정 이미지", additionalAssets: "에셋" };
+  var KIND = { update: ["수정", "acc"], added: ["추가", "ok"], removed: ["삭제", "danger"], conflict: ["수정", "acc"], mine: ["수정", "acc"] };
+  function devToggleCard(ctx, onChange) {
+    const on = isDev(ctx);
+    return h(
+      "div",
+      { class: "rb-card pad bordered", style: "display:flex;gap:14px;align-items:center;margin-bottom:14px", id: "rb-devmode" },
+      h("span", { style: "width:40px;height:40px;border-radius:12px;background:var(--rb-acc-soft);color:var(--rb-acc-text);display:flex;align-items:center;justify-content:center;flex-shrink:0" }, icon("code", 20)),
+      h(
+        "div",
+        { style: "flex:1;min-width:0;display:flex;flex-direction:column;gap:2px" },
+        h("b", null, "개발자 모드"),
+        h("span", { class: "rb-muted", style: "white-space:normal" }, "모듈·봇 제작자를 위한 기능이에요. 켜면 옆에 개발 탭이 생겨서, 개발 중인 모듈·봇을 모아 두고 검사·테스트·패치 배포를 한곳에서 할 수 있어요.")
+      ),
+      switchEl(on, { label: "개발자 모드", onChange: async (v) => {
+        await ctx.prefs.saveUi({ devMode: v });
+        ctx.toast(v ? "개발자 모드를 켰어요" : "개발자 모드를 껐어요");
+        onChange?.();
+      } })
+    );
+  }
+  async function loadTargets(ctx) {
+    const { entries } = await ctx.svc.load();
+    const mods = entries.map((e) => ({ kind: "module", key: `m:${e.module.id}`, id: e.module.id, name: e.module.name ?? "", sub: e.module.namespace || "" }));
+    const db = await ctx.api.getDatabase(["characters"]);
+    db.characters = (await loadCharacters(ctx.api, db?.characters)).list;
+    const chars = (db?.characters ?? []).map((c, i) => c && !c.trashTime && c.type !== "group" ? { kind: "character", key: `c:${c.chaId}`, i, chaId: c.chaId, name: c.name ?? "", sub: c.creator ? `제작자 ${c.creator}` : "" } : null).filter(Boolean);
+    return { mods, chars };
+  }
+  async function currentOf(ctx, t) {
+    if (t.kind === "module") {
+      const m = (await ctx.svc.load({ fresh: true })).entries.find((e) => e.module.id === t.id)?.module;
+      if (!m) throw new Error("모듈을 다시 찾지 못했어요");
+      return m;
+    }
+    const c = await ctx.api.getCharacterFromIndex(t.i);
+    if (!c || c.chaId !== t.chaId) throw new Error("봇을 다시 찾지 못했어요. 목록을 새로 고쳐 주세요.");
+    return c;
+  }
+  async function renderPatchMaker(ctx, { backTo = "dev", backLabel = "개발" } = {}) {
+    const st = ctx.state;
+    st.pm ??= { kind: "module", target: null, q: "" };
+    const pm = st.pm;
+    replace(ctx.main, h("div", { class: "rb-empty" }, "불러오는 중…"));
+    const { mods, chars } = await loadTargets(ctx);
+    const store = createStore(ctx.api);
+    const back = btn(backLabel, { size: "sm", icon: "back", onClick: () => {
+      ctx.go(backTo);
+    } });
+    const pickBox = h("div", { class: "rb-list", style: "max-height:260px;overflow:auto;border:1px solid var(--rb-line);border-radius:14px;padding:6px" });
+    const work = h("div", { style: "display:flex;flex-direction:column;gap:14px" });
+    const search = h("input", { class: "rb-input", type: "search", placeholder: "이름으로 찾기", value: pm.q, "aria-label": "대상 찾기" });
+    const paintList = () => {
+      const list = (pm.kind === "module" ? mods : chars).filter((t) => !pm.q || t.name.toLowerCase().includes(pm.q.toLowerCase()));
+      replace(
+        pickBox,
+        ...list.slice(0, 300).map((t) => h(
+          "button",
+          { type: "button", class: "rb-row", "aria-selected": pm.target?.key === t.key ? "true" : "false", onClick: () => {
+            pm.target = t;
+            paintList();
+            paintWork();
+          } },
+          h("span", { style: "display:flex;color:var(--rb-sub)" }, icon(t.kind === "module" ? "module" : "character", 18)),
+          h("div", { class: "txt" }, h("span", { class: "name" }, t.name || "(이름 없음)"), t.sub && h("span", { class: "meta" }, t.sub))
+        )),
+        !list.length && h("div", { class: "rb-empty" }, "없어요")
+      );
+    };
+    search.addEventListener("input", () => {
+      pm.q = search.value;
+      paintList();
+    });
+    let token = 0;
+    async function paintWork() {
+      const my = ++token;
+      const t = pm.target;
+      if (!t) {
+        replace(work, h("div", { class: "rb-empty" }, "위에서 패치를 만들 모듈이나 봇을 고르세요."));
+        return;
+      }
+      replace(work, h("div", { class: "rb-empty" }, "비교하는 중…"));
+      let cur, info, base, backups;
+      try {
+        [cur, info, backups] = await Promise.all([currentOf(ctx, t), store.baselineInfo(t.key), store.listBackups()]);
+        base = pm.baseFrom?.key === t.key ? pm.baseFrom.view : info ? await store.getBaseline(t.key) : null;
+      } catch (e) {
+        if (my === token) replace(work, note("err", e?.message ?? String(e)));
+        return;
+      }
+      if (my !== token) return;
+      const targetId = t.kind === "module" ? t.id : t.chaId;
+      const mineBackups = backups.filter((b) => b.target === targetId && b.path);
+      const setBaseNow = async () => {
+        if (base && !await confirmDialog(ctx.win, { title: "지금 상태를 배포 기준으로 할까요?", body: '지금 상태를 "배포한 버전"으로 기록해요. 이후 고친 부분만 패치에 들어가요.', ok: "기준으로 표시" })) return;
+        await store.setBaseline(t.key, baseViewOf(t.kind, cur));
+        pm.baseFrom = null;
+        ctx.toast("지금 상태를 배포 기준으로 기록했어요");
+        paintWork();
+      };
+      const baseCard2 = h(
+        "div",
+        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:10px" },
+        h(
+          "div",
+          { style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap" },
+          h("b", null, "① 배포한 버전 (기준)"),
+          base ? badge(pm.baseFrom?.key === t.key ? `기록에서 고름 · ${fmtWhen(pm.baseFrom.t)}` : `기록됨 · ${fmtWhen(info?.t)}`, "ok") : badge("없음", "warn")
+        ),
+        h("span", { class: "rb-muted", style: "white-space:normal" }, base ? "사람들에게 마지막으로 배포한 상태예요. 이 상태와 지금을 비교해서 바뀐 부분만 패치에 담아요." : '아직 기준이 없어요. 배포한 파일 그대로인 지금 "기준으로 표시"를 누르고, 그다음에 수정하세요. 이미 수정했다면 아래 기록에서 수정 전 상태를 고를 수 있어요.'),
+        h(
+          "div",
+          { style: "display:flex;gap:8px;flex-wrap:wrap" },
+          btn("지금 상태를 기준으로 표시", { size: "sm", icon: "check", onClick: setBaseNow, id: "rb-pm-setbase" }),
+          mineBackups.length ? (() => {
+            const sel = h(
+              "select",
+              { class: "rb-input", style: "height:36px;width:auto;max-width:100%", "aria-label": "기록에서 기준 고르기" },
+              h("option", { value: "" }, "기록에서 기준 고르기…"),
+              ...mineBackups.map((b) => h("option", { value: b.id }, `${new Date(b.t).toLocaleString()} · ${b.note || "백업"}`))
+            );
+            sel.addEventListener("change", async () => {
+              const rec = mineBackups.find((b) => b.id === sel.value);
+              if (!rec) return;
+              try {
+                const snap = await store.loadBackup(rec);
+                pm.baseFrom = { key: t.key, t: rec.t, view: baseViewOf(t.kind, snap) };
+                paintWork();
+              } catch (e) {
+                ctx.toast(`기록을 읽지 못했어요: ${e?.message ?? e}`, { error: true });
+              }
+            });
+            return sel;
+          })() : null
+        )
+      );
+      if (!base) {
+        replace(work, baseCard2);
+        return;
+      }
+      const preview = await buildPatch({ kind: t.kind, name: cur.name, namespace: cur.namespace ?? cur.moduleNamespace, base, current: cur, readAsset: async () => null, includeAssets: false });
+      if (my !== token) return;
+      const items = preview ? planPatch(preview, base).items : [];
+      const newAssets = preview?.changes ? [...changedAssetPaths(preview.changes)].length : 0;
+      const groups = /* @__PURE__ */ new Map();
+      for (const it of items) {
+        const g = GROUP[it.group] ?? it.group;
+        if (!groups.has(g)) groups.set(g, []);
+        groups.get(g).push(it);
+      }
+      const changeCard = h(
+        "div",
+        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:10px", id: "rb-pm-changes" },
+        h(
+          "div",
+          { style: "display:flex;align-items:center;gap:8px" },
+          h("b", null, "② 바뀐 내용"),
+          badge(`${items.length}곳`, items.length ? "acc" : "mute"),
+          preview ? h("span", { class: "rb-muted", style: "margin-left:auto", id: "rb-pm-size" }, `패치 크기 약 ${fmtBytes(new Blob([JSON.stringify(preview)]).size)}${newAssets ? ` + 바뀐 에셋 ${newAssets}개` : ""}`) : null
+        ),
+        items.length ? h(
+          "div",
+          { style: "display:flex;flex-direction:column;gap:10px;max-height:320px;overflow:auto" },
+          ...[...groups].map(([g, list]) => h(
+            "div",
+            { style: "display:flex;flex-direction:column;gap:4px" },
+            h("span", { class: "rb-label" }, `${g} (${list.length})`),
+            ...list.slice(0, 200).map((it) => h("div", { style: "display:flex;gap:8px;align-items:center;min-width:0" }, badge(...KIND[it.kind] ?? [it.kind, "mute"]), h("span", { style: "overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, String(it.label ?? it.id)))),
+            list.length > 200 ? h("span", { class: "rb-muted" }, `외 ${list.length - 200}곳`) : null
+          ))
+        ) : h("span", { class: "rb-muted" }, "기준과 달라진 내용이 없어요. 수정한 다음 다시 열어 보세요.")
+      );
+      if (!items.length) {
+        replace(work, baseCard2, changeCard);
+        return;
+      }
+      const proj = findProject(ctx, t.kind, t.kind === "module" ? t.id : t.chaId);
+      if (!pm.version && proj) pm.version = proj.version && proj.version !== proj.releases?.[0]?.version ? proj.version : nextVersion(proj.releases?.[0]?.version || proj.version);
+      const ver = h("input", { class: "rb-input", value: pm.version ?? "", placeholder: "예: 1.1", "aria-label": "버전" });
+      const who = h("input", { class: "rb-input", value: pm.author ?? (cur.creator ?? ""), placeholder: "제작자 이름", "aria-label": "제작자" });
+      const memo = h("textarea", { class: "rb-textarea", placeholder: "받는 사람에게 보여 줄 변경 내용 (적용 전에 보여요)", style: "min-height:90px;font-family:inherit", "aria-label": "변경 내용" });
+      memo.value = pm.note ?? "";
+      ver.addEventListener("input", () => {
+        pm.version = ver.value;
+        fname.textContent = fileName();
+      });
+      who.addEventListener("input", () => {
+        pm.author = who.value;
+      });
+      memo.addEventListener("input", () => {
+        pm.note = memo.value;
+      });
+      let withAssets = pm.withAssets ?? true, moveBase = pm.moveBase ?? true;
+      const fileName = () => `${safeFileName(cur.name)}${ver.value.trim() ? `_v${safeFileName(ver.value.trim())}` : ""}.rbupatch`;
+      const fname = h("code", null, fileName());
+      const row2 = (label, desc, on, set) => h(
+        "div",
+        { style: "display:flex;gap:12px;align-items:center" },
+        h("div", { style: "flex:1;min-width:0;display:flex;flex-direction:column" }, h("span", null, label), h("span", { class: "rb-muted", style: "white-space:normal" }, desc)),
+        switchEl(on, { label, onChange: (v) => set(v) })
+      );
+      const make = btn("패치 파일 만들기", { kind: "primary", size: "lg", icon: "download", id: "rb-pm-make", onClick: async () => {
+        make.disabled = true;
+        const tt = ctx.toast("패치 만드는 중…", { seconds: 120 });
+        try {
+          const fresh = await currentOf(ctx, t);
+          const patch = await buildPatch({ kind: t.kind, name: fresh.name, namespace: fresh.namespace ?? fresh.moduleNamespace, base, current: fresh, readAsset: (p) => ctx.assets.read(p), includeAssets: withAssets, version: ver.value.trim(), note: memo.value.trim(), author: who.value.trim() });
+          tt.close();
+          if (!patch) {
+            ctx.toast("기준과 달라진 내용이 없어요");
+            return;
+          }
+          const text = JSON.stringify(patch);
+          download(fileName(), text, "application/json");
+          if (moveBase) {
+            await store.setBaseline(t.key, baseViewOf(t.kind, fresh));
+            pm.baseFrom = null;
+          }
+          const items2 = planPatch(patch, base).items.length;
+          await recordRelease(ctx, t.kind, t.kind === "module" ? t.id : t.chaId, { version: ver.value.trim(), note: memo.value.trim(), size: text.length, items: items2, cumulative: !moveBase }).catch(() => {
+          });
+          pm.version = "";
+          pm.note = "";
+          ctx.toast(`패치를 만들었어요 (${fmtBytes(text.length)})${moveBase ? " · 지금 상태가 새 기준이에요" : ""}`);
+          paintWork();
+        } catch (e) {
+          tt.close();
+          ctx.toast(`만들지 못했어요: ${e?.message ?? e}`, { error: true });
+        } finally {
+          make.disabled = false;
+        }
+      } });
+      const outCard = h(
+        "div",
+        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:12px" },
+        h("b", null, "③ 패치 정보"),
+        h(
+          "div",
+          { class: "rb-form" },
+          h("label", { class: "rb-field" }, h("span", { class: "rb-label" }, "버전"), ver),
+          h("label", { class: "rb-field" }, h("span", { class: "rb-label" }, "제작자"), who),
+          h("label", { class: "rb-field wide" }, h("span", { class: "rb-label" }, "변경 내용"), memo)
+        ),
+        row2("바뀐 에셋 넣기", "받는 사람이 이미지를 따로 구하지 않아도 돼요. 파일이 커질 수 있어요.", withAssets, (v) => {
+          withAssets = pm.withAssets = v;
+        }),
+        row2("만든 뒤 지금 상태를 새 기준으로", "다음 패치에는 이번 이후에 고친 것만 들어가요. 끄면 기준이 그대로라 누적 패치가 돼요.", moveBase, (v) => {
+          moveBase = pm.moveBase = v;
+        }),
+        h("div", { class: "rb-muted" }, "파일 이름: ", fname),
+        h("div", null, make),
+        note("info", '받는 사람은 모듈 메뉴나 봇 상세에서 "패치 적용"을 눌러 이 파일을 고르면 돼요. 받는 사람이 직접 고친 부분은 그대로 남아요.')
+      );
+      replace(work, baseCard2, changeCard, outCard);
+    }
+    replace(ctx.main, h(
+      "div",
+      { class: "rb-section rb-scroll", style: "flex:1;display:flex;flex-direction:column;gap:14px" },
+      h("div", null, back),
+      h("div", null, h("h2", { class: "rb-h2" }, "패치 만들기"), h("p", { class: "rb-p" }, "배포한 버전과 지금을 비교해서 바뀐 부분만 담은 업데이트 파일(.rbupatch)을 만들어요.")),
+      segmented([["module", "모듈"], ["character", "봇"]], pm.kind, (v) => {
+        pm.kind = v;
+        if (pm.target?.kind !== v) pm.target = null;
+        paintList();
+        paintWork();
+      }, "종류"),
+      search,
+      pickBox,
+      work
+    ));
+    paintList();
+    paintWork();
+  }
+  function openPatchMaker(ctx, target) {
+    ctx.state.pm = { ...ctx.state.pm ?? {}, kind: target.kind, target, q: "" };
+    ctx.go("dev", "patchmaker");
+  }
+
+  // src/ui/screens/patchui.js
+  var keyOf2 = (kind, obj) => kind === "module" ? `m:${obj.id}` : `c:${obj.chaId}`;
+  async function exportMyChanges(ctx, kind, obj) {
+    const store = createStore(ctx.api);
+    const base = await store.getBaseline(keyOf2(kind, obj));
+    if (!base) {
+      const ok = await confirmDialog(ctx.win, { title: "원본 기록이 없어요", body: '이 플러그인으로 가져오거나 업데이트한 적이 없어서 "제작자 원본"을 몰라요.\n지금 상태를 원본으로 기록해 둘까요? 그 뒤에 고친 것부터 내보낼 수 있어요.', ok: "지금 상태로 기록 시작" });
+      if (ok) {
+        await store.setBaseline(keyOf2(kind, obj), baseViewOf(kind, obj));
+        ctx.toast("기록을 시작했어요. 이제부터 고친 내용을 내보낼 수 있어요.");
+      }
+      return;
+    }
+    const includeAssets = await confirmDialog(ctx.win, { title: "바꾼 에셋도 넣을까요?", body: "넣으면 받는 사람이 같은 이미지를 따로 구하지 않아도 돼요. 파일이 커질 수 있어요.", ok: "에셋 넣기", cancel: "글자만" });
+    const t = ctx.toast("패치 만드는 중…", { seconds: 120 });
+    try {
+      const patch = await buildPatch({ kind, name: obj.name, namespace: obj.namespace ?? obj.moduleNamespace, base, current: obj, readAsset: (p) => ctx.assets.read(p), includeAssets });
+      t.close();
+      if (!patch) {
+        ctx.toast("원본과 달라진 내용이 없어요");
+        return;
+      }
+      download(`${safeFileName(obj.name)}.rbupatch`, JSON.stringify(patch), "application/json");
+      ctx.toast("내 수정 패치를 내보냈어요");
+    } catch (e) {
+      t.close();
+      ctx.toast(`만들지 못했어요: ${e?.message ?? e}`, { error: true });
+    }
+  }
+  async function applyPatchFile(ctx, kind, getTarget, save) {
+    const [f] = await pickFiles({ accept: ".rbupatch,application/json" });
+    if (!f) return;
+    let patch;
+    try {
+      patch = parsePatch(await f.text());
+    } catch (e) {
+      ctx.toast(e?.message ?? String(e), { error: true });
+      return;
+    }
+    if (patch.kind !== kind) {
+      ctx.toast(`${patch.kind === "module" ? "모듈" : "캐릭터"}용 패치예요`, { error: true });
+      return;
+    }
+    const target = await getTarget();
+    const plan = planPatch(patch, target);
+    const s = plan.summary;
+    const lines = [
+      `패치: ${patch.name}${patch.version ? ` v${patch.version}` : ""}${patch.name !== target.name ? ` → 적용 대상: ${target.name}` : ""}`,
+      patch.author ? `제작자: ${patch.author}` : "",
+      patch.note ? `변경 내용:
+${patch.note}` : "",
+      `패치의 수정 ${s.update ?? 0} · 내 수정 유지 ${s.mine ?? 0} · 충돌 ${s.conflict ?? 0}(패치 쪽으로) · 추가 ${s.added ?? 0} · 삭제 ${s.removed ?? 0}`,
+      Object.keys(patch.assets ?? {}).length ? `에셋 ${Object.keys(patch.assets).length}개를 올려요` : "",
+      "적용하기 전 상태는 백업해요."
+    ].filter(Boolean);
+    if (!plan.items.length) {
+      ctx.toast("적용할 내용이 없어요 (이미 같아요)");
+      return;
+    }
+    if (!await confirmDialog(ctx.win, { title: "패치를 적용할까요?", body: lines.join("\n"), ok: "적용" })) return;
+    try {
+      const cur = await getTarget();
+      if (kind === "character" && isGenerating(cur)) throw new Busy();
+      await createStore(ctx.api).addBackup({ kind, target: kind === "module" ? cur.id : cur.chaId, name: cur.name, snapshot: backupSnapshot(kind, cur), note: "패치 적용 전", summary: `${f.name}` });
+      const r = await applyPatch(patch, cur, { saveAsset: (d) => ctx.api.saveAsset(d) });
+      await save(r.result, cur);
+      ctx.toast("패치를 적용했어요");
+    } catch (e) {
+      ctx.toast(`적용하지 못했어요: ${e?.message ?? e}`, { error: true });
+    }
+  }
+  function changedKeys(before, after) {
+    const out = {};
+    for (const k of /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])) if (k !== "id" && stableJson(before[k] ?? null) !== stableJson(after[k] ?? null)) out[k] = after[k];
+    return out;
+  }
+
+  // src/ui/screens/modules.js
+  var FILTERS = [["all", "전체"], ["on", "켜짐"], ["off", "꺼짐"], ["global", "전역"], ["lla", "LLA"], ["mcp", "MCP"]];
+  function searchText(m) {
+    const parts = [m.name, m.namespace, m.description];
+    for (const l of m.lorebook ?? []) parts.push(l?.comment, l?.key, l?.secondkey);
+    for (const r of m.regex ?? []) parts.push(r?.comment);
+    for (const r of m.trigger ?? []) parts.push(r?.comment);
+    return parts.filter(Boolean).join("\n").toLowerCase();
+  }
+  var COARSE2 = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+  async function renderModules(ctx) {
+    const st = ctx.state;
+    st.modFilter ??= "all";
+    if (!st.modData || st.modDirty) {
+      if (!st.modData) replace(ctx.main, h("div", { class: "rb-empty" }, "모듈을 불러오는 중…"));
+      st.modData = await ctx.svc.load();
+      st.modDirty = false;
+      st.modIndex = new Map(st.modData.entries.map((e) => [e.module.id, searchText(e.module)]));
+    }
+    draw(ctx);
+  }
+  function draw(ctx) {
+    const st = ctx.state;
+    const { entries, globalOn } = st.modData;
+    const meta = ctx.prefs.meta;
+    ctx.setNavCount("modules", entries.length);
+    const q = st.search.trim().toLowerCase();
+    const filtering = !!q || st.modFilter !== "all";
+    if (st.modFolder && !meta.folders.some((f) => f.id === st.modFolder)) st.modFolder = void 0;
+    const fv = st.modFolder;
+    const inView = (e) => fv === void 0 || (meta.mapping[e.module.id] ?? "") === fv;
+    const pass = (e) => {
+      if (!inView(e)) return false;
+      const f = moduleFlags(e.module, globalOn);
+      if (st.modFilter === "on" && !e.enabled) return false;
+      if (st.modFilter === "off" && e.enabled) return false;
+      if (["global", "lla", "mcp"].includes(st.modFilter) && !f[st.modFilter]) return false;
+      return !q || st.modIndex.get(e.module.id)?.includes(q);
+    };
+    const count = (id) => entries.filter((e) => inView(e)).filter((e) => id === "all" || id === "on" && e.enabled || id === "off" && !e.enabled || moduleFlags(e.module, globalOn)[id]).length;
+    const shown = entries.filter(pass);
+    if (!st.modSel || !entries.some((e) => e.module.id === st.modSel)) st.modSel = shown[0]?.module.id ?? null;
+    const toolbar = h(
+      "div",
+      { class: "rb-chips", role: "toolbar", "aria-label": "필터" },
+      FILTERS.map(([id, label]) => chip(label, { pressed: st.modFilter === id, count: count(id), onClick: () => {
+        st.modFilter = id;
+        draw(ctx);
+      } })),
+      h("div", { class: "rb-spacer" }),
+      filtering ? null : btn(multiOf(ctx).active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => {
+        const mu2 = multiOf(ctx);
+        mu2.setMode(!mu2.active);
+      } }),
+      btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolder(ctx) }),
+      btn("새 모듈", { size: "sm", kind: "primary", icon: "plus", onClick: () => newModule(ctx) })
+    );
+    const inFolder2 = (id) => entries.filter((e) => (meta.mapping[e.module.id] ?? "") === id).length;
+    const setView = (v) => {
+      st.modFolder = v;
+      draw(ctx);
+    };
+    const folderBar = meta.folders.length ? h(
+      "div",
+      { class: "rb-chips rb-fchips", role: "toolbar", "aria-label": "폴더별 보기" },
+      chip("모든 폴더", { pressed: fv === void 0, onClick: () => setView(void 0) }),
+      meta.folders.map((f) => {
+        const tint = folderTint(f.color, st.mode);
+        const c = chip(
+          h("span", { style: "display:inline-flex;align-items:center;gap:6px" }, h("span", { style: { color: tint?.stroke ?? "var(--rb-sub)", display: "flex" } }, icon("folder", 14)), f.name || "(이름 없음)"),
+          { pressed: fv === f.id, count: inFolder2(f.id), onClick: () => setView(fv === f.id ? void 0 : f.id) }
+        );
+        c.dataset.folderView = f.id;
+        return c;
+      }),
+      chip("폴더 없음", { pressed: fv === "", count: inFolder2(""), onClick: () => setView(fv === "" ? void 0 : "") })
+    ) : null;
+    const list = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "모듈 목록" });
+    const grouped = groupByFolder(shown, meta);
+    const folders = fv === void 0 ? grouped.folders : [];
+    const loose = fv === void 0 ? grouped.loose : shown;
+    for (const g of folders) {
+      if (filtering && !g.items.length) continue;
+      const f = g.folder;
+      const tint = folderTint(f.color, ctx.state.mode) ?? { stroke: "var(--rb-sub)", fill: "transparent" };
+      const open = filtering || !f.collapsed;
+      const head = h(
+        "div",
+        { style: "display:flex;align-items:center;gap:4px", dataset: filtering ? {} : { dropFolder: f.id } },
+        h(
+          "button",
+          { type: "button", class: "rb-folder", "aria-expanded": open ? "true" : "false", dataset: { folder: f.id }, onClick: () => {
+            if (filtering) return;
+            ctx.svc.toggleFolder(f.id).catch((err) => ctx.toast(err?.message ?? String(err), { error: true }));
+            draw(ctx);
+          } },
+          h("span", { class: "chev" }, icon("chevron", 14)),
+          h("span", { style: { color: tint.stroke, display: "flex" } }, icon("folder", 16)),
+          h("b", null, f.name),
+          h("small", null, String(g.items.length))
+        ),
+        iconBtn("more", `${f.name} 폴더 메뉴`, { onClick: (e) => folderMenu(ctx, f, e.currentTarget) })
+      );
+      dropTarget(ctx, head, { folderId: f.id });
+      list.appendChild(head);
+      if (open) {
+        const body = h("div", { class: "rb-folder-body" });
+        for (const e of g.items) body.appendChild(row(ctx, e, filtering));
+        if (!g.items.length) body.appendChild(h("div", { class: "rb-muted", style: "padding:8px 10px" }, "모듈을 여기로 끌어다 놓으세요"));
+        list.appendChild(body);
+      }
+    }
+    if (fv !== void 0 && !filtering) list.dataset.dropFolder = fv;
+    if (folders.length) list.appendChild(h("div", { class: "rb-label", style: "padding:14px 12px 6px;border-radius:10px", dataset: filtering ? {} : { dropFolder: "" } }, "폴더 없음"));
+    for (const e of loose) list.appendChild(row(ctx, e, filtering));
+    if (folders.length) dropTarget(ctx, list, { folderId: null, onlySelf: true });
+    if (!shown.length) list.appendChild(h("div", { class: "rb-empty" }, fv !== void 0 && !filtering ? '이 폴더에 모듈이 없어요. 폴더 메뉴의 "넣을 모듈 고르기"로 넣을 수 있어요.' : entries.length ? "조건에 맞는 모듈이 없어요." : '설치된 모듈이 없어요. 위의 "가져오기"나 파일을 창에 끌어 놓아서 추가하세요.'));
+    const scroll = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
+    const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 모듈" });
+    replace(ctx.main, toolbar, folderBar, bar, list);
+    list.scrollTop = scroll;
+    const mu = multiOf(ctx);
+    if (filtering) mu.clear();
+    mu.bar = bar;
+    mu.ctx = ctx;
+    mu.attach(list);
+    paintBar(ctx);
+    showDetail(ctx);
+  }
+  function multiOf(ctx) {
+    const st = ctx.state;
+    st.modMulti ??= createMulti({ onChange: () => paintBar(ctx) });
+    return st.modMulti;
+  }
+  function paintBar(ctx) {
+    const mu = multiOf(ctx), bar = mu.bar;
+    if (!bar) return;
+    const tb = ctx.main.querySelector("#rb-pick-toggle");
+    if (tb) tb.lastChild.textContent = mu.active ? "선택 끝" : "선택";
+    bar.hidden = !mu.active;
+    if (!mu.active) {
+      bar.replaceChildren();
+      return;
+    }
+    const n = mu.sel.size;
+    const visible = () => [...ctx.main.querySelectorAll(".rb-list [data-pick]")].map((r) => r.dataset.pick);
+    bar.replaceChildren(
+      h("b", null, n ? `${n}개 고름` : "고를 모듈을 누르세요"),
+      btn("폴더로", { size: "sm", icon: "folder", disabled: !n, onClick: (ev) => pickFolderFor(ctx, mu.ordered(), ev.currentTarget) }),
+      btn("폴더 밖으로", { size: "sm", disabled: !n, onClick: () => applyDrop(ctx, mu.ordered(), { folderId: null }) }),
+      btn("보이는 것 모두", { size: "sm", onClick: () => {
+        const v = visible();
+        mu.set(v.every((id) => mu.has(id)) ? [] : v);
+      } }),
+      iconBtn("x", "고르기 끝내기", { onClick: () => mu.clear() })
+    );
+  }
+  function pickFolderFor(ctx, ids, anchor) {
+    const meta = ctx.prefs.meta;
+    openMenu(ctx.win, anchor, [
+      ...meta.folders.map((f) => ({ label: f.name || "(이름 없는 폴더)", icon: "folder", onClick: () => applyDrop(ctx, ids, { folderId: f.id }) })),
+      meta.folders.length ? "sep" : null,
+      { label: "새 폴더…", icon: "folderPlus", onClick: async () => {
+        const n = await promptDialog(ctx.win, { title: "새 폴더", label: `고른 모듈 ${ids.length}개를 넣어요`, placeholder: "폴더 이름" });
+        if (!n?.trim()) return;
+        const f = await ctx.svc.createFolder(n.trim(), FOLDER_SWATCHES[meta.folders.length % FOLDER_SWATCHES.length]);
+        await applyDrop(ctx, ids, { folderId: f.id });
+      } }
+    ].filter(Boolean));
+  }
+  function row(ctx, e, filtering) {
+    const st = ctx.state, m = e.module, c = moduleCounts(m), f = moduleFlags(m, st.modData.globalOn);
+    const meta = [c.lore && `로어 ${c.lore}`, c.regex && `정규식 ${c.regex}`, c.trigger && `트리거 ${c.trigger}`, c.assets && `에셋 ${c.assets}`].filter(Boolean).join(" · ") || "비어 있음";
+    const color = readableName(ctx.prefs.meta.nameColors?.[m.id], st.mode);
+    const sw = switchEl(e.enabled, { label: `${m.name} ${e.enabled ? "끄기" : "켜기"}`, onChange: (on) => toggleEnabled(ctx, e, on, sw) });
+    if (!e.enabled && !hasAssets(m)) sw.title = "켜기";
+    else if (hasAssets(m)) sw.title = "에셋이 있는 모듈은 끌 수 없어요";
+    let grip = null;
+    const mu = multiOf(ctx);
+    const el = h(
+      "div",
+      {
+        class: ["rb-row", !e.enabled && "off"],
+        role: "option",
+        tabindex: "0",
+        "aria-selected": st.modSel === m.id ? "true" : "false",
+        dataset: filtering ? { id: m.id } : { id: m.id, dropRow: m.id, pick: m.id },
+        draggable: filtering || COARSE2 ? "false" : "true",
+        onClick: (ev) => {
+          if (!filtering && mu.click(ev, m.id, st.modSel)) return;
+          select(ctx, m.id, el);
+        },
+        onKeydown: (ev) => {
+          if (ev.target !== el) return;
+          if (ev.key === "Enter" || ev.key === " ") {
+            ev.preventDefault();
+            select(ctx, m.id, el);
+          }
+          if (ev.altKey && (ev.key === "ArrowUp" || ev.key === "ArrowDown")) {
+            ev.preventDefault();
+            move(ctx, m.id, ev.key === "ArrowUp" ? -1 : 1);
+          }
+          if (!ev.altKey && (ev.key === "ArrowDown" || ev.key === "ArrowUp")) {
+            ev.preventDefault();
+            const rows = [...ctx.main.querySelectorAll(".rb-row")];
+            rows[rows.indexOf(el) + (ev.key === "ArrowDown" ? 1 : -1)]?.focus();
+          }
+        }
+      },
+      filtering ? null : h("span", { class: "rb-mcb", role: "checkbox", "aria-checked": "false", "aria-label": `${m.name} 고르기` }),
+      filtering ? null : grip = h("span", { class: "grip", title: "끌어서 순서 바꾸기 (Alt+↑↓) · Ctrl/⌘·Shift+클릭으로 여러 개", "aria-hidden": "true" }, icon("grip", 14)),
+      h(
+        "div",
+        { class: "txt" },
+        h(
+          "div",
+          { class: "ttl" },
+          h("span", { class: "name", style: color && e.enabled ? { color } : null }, m.name || "(이름 없음)"),
+          f.global && badge("전역", "acc"),
+          f.lla && badge("LLA", "warn"),
+          f.mcp && badge("MCP", "ok"),
+          !e.enabled && badge("꺼짐", "mute")
+        ),
+        h("span", { class: "meta" }, meta)
+      ),
+      sw,
+      iconBtn("more", `${m.name} 메뉴`, { onClick: (ev) => {
+        ev.stopPropagation();
+        moduleMenu(ctx, e, ev.currentTarget);
+      } })
+    );
+    if (!filtering) {
+      dragSource(ctx, el, m.id);
+      dropTarget(ctx, el, { beforeId: m.id });
+      queueMicrotask(() => {
+        const list = el.closest(".rb-list");
+        if (list && grip) gripDrag({ grip, row: el, root: list, scroller: list, mouse: false, count: () => mu.dragIds(m.id).length, skip: (t) => mu.dragIds(m.id).includes(t.getAttribute("data-drop-row")), onDrop: (d) => applyDrop(ctx, mu.dragIds(m.id), d) });
+      });
+    }
+    return el;
+  }
+  function select(ctx, id, el) {
+    ctx.state.modSel = id;
+    ctx.main.querySelectorAll(".rb-row[aria-selected=true]").forEach((r) => r.setAttribute("aria-selected", "false"));
+    el?.setAttribute("aria-selected", "true");
+    showDetail(ctx);
+    if (ctx.isMobile()) ctx.openSheet();
+  }
+  async function toggleEnabled(ctx, e, on, sw) {
+    setSwitch(sw, on);
+    try {
+      await ctx.svc.run("setEnabled", e.module.id, on);
+      ctx.toast(on ? `'${e.module.name}'을(를) 켰어요` : `'${e.module.name}'을(를) 껐어요`, on ? {} : { action: { label: "되돌리기", run: () => ctx.svc.run("setEnabled", e.module.id, true).then(() => reload(ctx)) }, seconds: 8 });
+      await reload(ctx);
+    } catch (err) {
+      setSwitch(sw, !on);
+      ctx.toast(err?.message ?? String(err), { error: true });
+    }
+  }
+  async function reload(ctx) {
+    ctx.state.modDirty = true;
+    ctx.state.modData = await ctx.svc.load();
+    ctx.state.modIndex = new Map(ctx.state.modData.entries.map((e) => [e.module.id, searchText(e.module)]));
+    ctx.state.modDirty = false;
+    if (ctx.state.tab === "modules") draw(ctx);
+  }
+  var dragIds = null;
+  function dragSource(ctx, el, id) {
+    el.addEventListener("dragstart", (ev) => {
+      dragIds = multiOf(ctx).dragIds(id);
+      ev.dataTransfer.effectAllowed = "move";
+      ev.dataTransfer.setData("text/x-rbm-module", dragIds.join("\n"));
+      if (dragIds.length > 1) {
+        const g = el.cloneNode(true);
+        Object.assign(g.style, { position: "absolute", top: "-1000px", left: "0", width: `${el.offsetWidth}px`, background: "var(--rb-surf2)", borderRadius: "12px" });
+        g.appendChild(dragBadge(el.ownerDocument, dragIds.length));
+        ctx.win.appendChild(g);
+        ev.dataTransfer.setDragImage(g, 24, 20);
+        setTimeout(() => g.remove(), 0);
+        ctx.main.querySelectorAll(".rb-row.picked").forEach((r) => {
+          r.style.opacity = "0.5";
+        });
+      }
+      el.style.opacity = "0.5";
+    });
+    el.addEventListener("dragend", () => {
+      dragIds = null;
+      ctx.main.querySelectorAll(".rb-row").forEach((r) => {
+        r.style.opacity = "";
+      });
+      ctx.main.querySelectorAll("[data-drop]").forEach((x) => {
+        x.removeAttribute("data-drop");
+        x.style.boxShadow = "";
+      });
+    });
+  }
+  function dropTarget(ctx, el, { beforeId, folderId, onlySelf }) {
+    const ok = (ev) => dragIds && [...ev.dataTransfer?.types ?? []].includes("text/x-rbm-module") && (!onlySelf || ev.target === el) && !(beforeId && dragIds.includes(beforeId));
+    el.addEventListener("dragover", (ev) => {
+      if (!ok(ev)) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const after = beforeId && ev.offsetY > el.clientHeight / 2;
+      const d = after ? "after" : "before";
+      if (el.dataset.drop === d) return;
+      el.dataset.drop = d;
+      el.style.boxShadow = beforeId ? after ? "inset 0 -2px 0 var(--rb-acc-text)" : "inset 0 2px 0 var(--rb-acc-text)" : "inset 0 0 0 2px var(--rb-sel-ring)";
+    });
+    el.addEventListener("dragleave", (ev) => {
+      if (el.contains(ev.relatedTarget)) return;
+      el.style.boxShadow = "";
+      el.removeAttribute("data-drop");
+    });
+    el.addEventListener("drop", (ev) => {
+      if (!ok(ev)) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const ids = dragIds, after = el.dataset.drop === "after";
+      el.style.boxShadow = "";
+      el.removeAttribute("data-drop");
+      if (!ids?.length) return;
+      applyDrop(ctx, ids, { beforeId, after, folderId });
+    });
+  }
+  function applyDrop(ctx, ids, { beforeId, after, folderId }) {
+    ids = [].concat(ids);
+    if (beforeId && ids.includes(beforeId)) return;
+    const st = ctx.state, meta = ctx.prefs.meta;
+    const fail = (err) => {
+      ctx.toast(`옮기지 못했어요: ${err?.message ?? err}`, { error: true });
+      reload(ctx);
+    };
+    const target = beforeId ? meta.mapping[beforeId] ?? null : folderId ?? null;
+    const moveFolder2 = ids.filter((id) => (meta.mapping[id] ?? null) !== target);
+    if (moveFolder2.length) ctx.svc.setFolder(moveFolder2, target).catch(fail);
+    if (beforeId) {
+      const before = st.modData.entries.map((e) => e.module.id);
+      const next = placeIds(before, ids, beforeId, after);
+      if (next.join("\n") !== before.join("\n")) {
+        const pos = new Map(next.map((id, i) => [id, i]));
+        st.modData.entries.sort((a, b) => pos.get(a.module.id) - pos.get(b.module.id));
+        ctx.svc.queueOrder(() => ctx.state.modData.entries.map((e) => e.module.id)).catch(fail);
+      }
+    }
+    if (ids.length > 1) ctx.toast(target ? `모듈 ${ids.length}개를 '${meta.folders.find((f) => f.id === target)?.name ?? "폴더"}'(으)로 옮겼어요` : `모듈 ${ids.length}개를 옮겼어요`);
+    draw(ctx);
+  }
+  async function move(ctx, id, dir) {
+    const meta = ctx.prefs.meta;
+    const entries = ctx.state.modData.entries;
+    const group = entries.filter((e) => (meta.mapping[e.module.id] ?? null) === (meta.mapping[id] ?? null)).map((e) => e.module.id);
+    const i = group.indexOf(id), j = i + dir;
+    if (j < 0 || j >= group.length) return;
+    const ids = entries.map((e) => e.module.id).filter((x) => x !== id);
+    const at = ids.indexOf(group[j]) + (dir > 0 ? 1 : 0);
+    ids.splice(at, 0, id);
+    await ctx.svc.run("reorder", ids);
+    await reload(ctx);
+    ctx.main.querySelector(`.rb-row[data-id="${CSS.escape(id)}"]`)?.focus();
+  }
+  function moduleMenu(ctx, e, anchor) {
+    const m = e.module;
+    openMenu(ctx.win, anchor, [
+      { label: "편집", icon: "edit", onClick: () => ctx.openEditor(m.id) },
+      { label: "에셋 관리", icon: "image", onClick: () => ctx.openAssets(m.id) },
+      "sep",
+      { label: "이름 색", icon: "palette", onClick: () => pickNameColor(ctx, m) },
+      { label: "폴더로 옮기기", icon: "folder", onClick: () => pickFolder(ctx, m) },
+      { label: "위로", icon: "up", onClick: () => move(ctx, m.id, -1) },
+      { label: "아래로", icon: "down", onClick: () => move(ctx, m.id, 1) },
+      "sep",
+      { label: ".risum으로 내보내기", icon: "download", onClick: () => exportRisum(ctx, m) },
+      isDev(ctx) && !findProject(ctx, "module", m.id) ? { label: "개발 목록에 넣기", icon: "code", onClick: async () => {
+        await addProjects(ctx, [{ kind: "module", id: m.id }]);
+        ctx.state.devSel = `m:${m.id}`;
+        ctx.toast(`'${m.name}'을(를) 개발 목록에 넣었어요`, { action: { label: "개발 탭", run: () => ctx.go("dev") } });
+      } } : null,
+      isDev(ctx) ? { label: "패치 만들기 (개발자)", icon: "code", onClick: () => openPatchMaker(ctx, { kind: "module", key: `m:${m.id}`, id: m.id, name: m.name ?? "" }) } : { label: "내 수정만 내보내기 (.rbupatch)", icon: "download", onClick: () => exportMyChanges(ctx, "module", m) },
+      { label: "패치 적용…", icon: "upload", onClick: () => applyPatchFile(ctx, "module", async () => (await ctx.svc.load()).entries.find((x) => x.module.id === m.id)?.module ?? m, async (res, cur) => {
+        await ctx.svc.run("update", m.id, changedKeys(cur, res));
+        await reload(ctx);
+      }) },
+      { label: "JSON 복사", icon: "link", onClick: async () => ctx.toast(await copyText(moduleJson(m)) ? "JSON을 복사했어요" : "복사하지 못했어요", { error: false }) },
+      { label: "이름 바꾸기", icon: "edit", onClick: () => renameModule(ctx, m) },
+      "sep",
+      { label: "삭제", icon: "trash", danger: true, onClick: () => removeModule(ctx, m) }
+    ]);
+  }
+  function folderMenu(ctx, f, anchor) {
+    openMenu(ctx.win, anchor, [
+      { label: "넣을 모듈 고르기…", icon: "plus", onClick: () => pickFolderMembers(ctx, f) },
+      { label: "이름 바꾸기", icon: "edit", onClick: async () => {
+        const n = await promptDialog(ctx.win, { title: "폴더 이름", value: f.name });
+        if (n?.trim()) {
+          await ctx.svc.renameFolder(f.id, n.trim());
+          draw(ctx);
+        }
+      } },
+      { label: "폴더 색", icon: "palette", onClick: async () => {
+        const c = await colorDialog(ctx.win, { title: "폴더 색", swatches: FOLDER_SWATCHES, value: f.color, previewText: f.name });
+        if (c !== null) {
+          await ctx.svc.colorFolder(f.id, c);
+          draw(ctx);
+        }
+      } },
+      { label: "위로", icon: "up", onClick: async () => {
+        await ctx.svc.moveFolder(f.id, -1);
+        draw(ctx);
+      } },
+      { label: "아래로", icon: "down", onClick: async () => {
+        await ctx.svc.moveFolder(f.id, 1);
+        draw(ctx);
+      } },
+      "sep",
+      { label: "폴더 삭제 (모듈은 남음)", icon: "trash", danger: true, onClick: async () => {
+        if (await confirmDialog(ctx.win, { title: `'${f.name}' 폴더를 지울까요?`, body: '안에 있던 모듈은 지워지지 않고 "폴더 없음"으로 옮겨져요.', ok: "폴더 삭제", danger: true })) {
+          await ctx.svc.deleteFolder(f.id);
+          draw(ctx);
+        }
+      } }
+    ]);
+  }
+  function moduleItems(ctx) {
+    const meta = ctx.prefs.meta, names = new Map(meta.folders.map((f) => [f.id, f.name]));
+    return ctx.state.modData.entries.map((e) => ({
+      id: e.module.id,
+      label: e.module.name,
+      folder: meta.mapping[e.module.id] ?? null,
+      sub: [meta.mapping[e.module.id] ? `지금: ${names.get(meta.mapping[e.module.id]) ?? "폴더"}` : "폴더 없음", !e.enabled && "꺼짐"].filter(Boolean).join(" · ")
+    }));
+  }
+  async function newFolder(ctx) {
+    const r = await folderDialog(ctx.win, { title: "새 폴더", items: moduleItems(ctx), noun: "모듈", ...folderPickPrefs(ctx) });
+    if (!r) return;
+    const f = await ctx.svc.createFolder(r.name, FOLDER_SWATCHES[ctx.prefs.meta.folders.length % FOLDER_SWATCHES.length]);
+    if (r.ids.length) await ctx.svc.setFolder(r.ids, f.id);
+    draw(ctx);
+    ctx.toast(`'${r.name}' 폴더를 만들었어요${r.ids.length ? ` (모듈 ${r.ids.length}개)` : ""}`);
+  }
+  async function pickFolderMembers(ctx, f) {
+    const before = Object.entries(ctx.prefs.meta.mapping).filter(([, v]) => v === f.id).map(([k]) => k);
+    const r = await folderDialog(ctx.win, { title: `'${f.name}' 폴더에 넣을 모듈`, items: moduleItems(ctx), checked: before, ok: "저장", withName: false, noun: "모듈", current: f.id, ...folderPickPrefs(ctx) });
+    if (!r) return;
+    const out = before.filter((id) => !r.ids.includes(id));
+    if (out.length) await ctx.svc.setFolder(out, null);
+    if (r.ids.length) await ctx.svc.setFolder(r.ids, f.id);
+    draw(ctx);
+  }
+  async function newModule(ctx) {
+    const n = await promptDialog(ctx.win, { title: "새 모듈", label: "모듈 이름", placeholder: "예: 내 로어북" });
+    if (!n?.trim()) return;
+    const m = ctx.svc.newModule(n.trim());
+    await ctx.svc.run("create", m);
+    ctx.state.modSel = m.id;
+    await reload(ctx);
+    ctx.toast(`'${m.name}' 모듈을 만들었어요`);
+  }
+  async function renameModule(ctx, m) {
+    const n = await promptDialog(ctx.win, { title: "모듈 이름", value: m.name });
+    if (!n?.trim() || n.trim() === m.name) return;
+    await ctx.svc.run("update", m.id, { name: n.trim() });
+    await reload(ctx);
+  }
+  async function pickNameColor(ctx, m) {
+    const c = await colorDialog(ctx.win, { title: "이름 색", swatches: NAME_SWATCHES, value: ctx.prefs.meta.nameColors?.[m.id] ?? "", previewText: m.name });
+    if (c === null) return;
+    await ctx.svc.setNameColor(m.id, c);
+    draw(ctx);
+  }
+  async function pickFolder(ctx, m) {
+    const meta = ctx.prefs.meta;
+    if (!meta.folders.length) {
+      await newFolder(ctx);
+      if (!ctx.prefs.meta.folders.length) return;
+    }
+    const anchor = ctx.main.querySelector(`.rb-row[data-id="${CSS.escape(m.id)}"] .rb-icon-btn`) ?? ctx.main;
+    openMenu(ctx.win, anchor, [
+      ...ctx.prefs.meta.folders.map((f) => ({ label: (meta.mapping[m.id] === f.id ? "✓ " : "") + f.name, icon: "folder", onClick: async () => {
+        await ctx.svc.setFolder(m.id, f.id);
+        draw(ctx);
+      } })),
+      "sep",
+      { label: "폴더에서 빼기", icon: "x", onClick: async () => {
+        await ctx.svc.setFolder(m.id, null);
+        draw(ctx);
+      } },
+      { label: "새 폴더…", icon: "folderPlus", onClick: async () => {
+        const n = await promptDialog(ctx.win, { title: "새 폴더", label: "폴더 이름" });
+        if (n?.trim()) {
+          const f = await ctx.svc.createFolder(n.trim(), FOLDER_SWATCHES[meta.folders.length % FOLDER_SWATCHES.length]);
+          await ctx.svc.setFolder(m.id, f.id);
+          draw(ctx);
+        }
+      } }
+    ]);
+  }
+  async function removeModule(ctx, m) {
+    const ok = await confirmDialog(ctx.win, { title: `'${m.name}'을(를) 지울까요?`, body: '모든 캐릭터·채팅·페르소나 연결에서도 빠져요. 지우기 전 상태는 백업해 두니 "기록" 탭에서 되살릴 수 있어요.', ok: "삭제", danger: true });
+    if (!ok) return;
+    try {
+      await createStore(ctx.api).addBackup({ kind: "module", target: m.id, name: m.name, snapshot: m, note: "삭제 전" });
+    } catch (err) {
+      if (!await confirmDialog(ctx.win, { title: "백업을 만들지 못했어요", body: `${err?.message ?? err}
+그래도 지울까요?`, ok: "그래도 삭제", danger: true })) return;
+    }
+    await ctx.svc.run("remove", m.id);
+    await reload(ctx);
+    ctx.toast(`'${m.name}'을(를) 지웠어요`);
+  }
+  async function exportRisum(ctx, m) {
+    const t = ctx.toast(`'${m.name}' 내보내는 중…`, { seconds: 60 });
+    try {
+      const blob = await buildRisum(m, (p) => ctx.assets.read(p));
+      download(`${safeFileName(m.name)}.risum`, blob);
+      t.close();
+      ctx.toast("내보냈어요");
+    } catch (err) {
+      t.close();
+      ctx.toast(`내보내지 못했어요: ${err?.message ?? err}`, { error: true });
+    }
+  }
+  async function showDetail(ctx) {
+    const st = ctx.state, data = st.modData;
+    const e = data?.entries.find((x) => x.module.id === st.modSel);
+    if (!e) {
+      ctx.showDetail(h("div", { class: "rb-empty" }, "모듈을 고르면 여기에 자세히 보여요."));
+      return;
+    }
+    const m = e.module, c = moduleCounts(m), f = moduleFlags(m, data.globalOn);
+    const stat = (label, v) => h("div", { class: "rb-stat" }, h("small", null, label), h("b", null, String(v)));
+    const globalSw = switchEl(f.global, { label: "글로벌 활성화", disabled: !e.enabled, onChange: async (on) => {
+      setSwitch(globalSw, on);
+      try {
+        await ctx.svc.run("setGlobal", m.id, on);
+        await reload(ctx);
+      } catch (err) {
+        setSwitch(globalSw, !on);
+        ctx.toast(err?.message ?? String(err), { error: true });
+      }
+    } });
+    const links = h(
+      "div",
+      { class: "rb-card" },
+      h("div", { class: "rb-kv" }, h("span", null, "글로벌 활성화", h("br"), h("small", { class: "rb-muted" }, "모든 캐릭터·채팅에서 켜짐")), globalSw)
+    );
+    const personaBox = h("div", { class: "rb-card" }, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "불러오는 중…")));
+    const charBox = h("div", { class: "rb-card" });
+    const chatBox = h("div", { class: "rb-card" });
+    const timeline = h("div", { style: "display:flex;flex-direction:column" });
+    ctx.showDetail(
+      h(
+        "div",
+        { style: "display:flex;flex-direction:column;gap:6px" },
+        m.namespace ? h("span", { style: "font-size:12px;color:var(--rb-acc-text)" }, m.namespace) : null,
+        h("h2", { class: "rb-h2", style: readableName(ctx.prefs.meta.nameColors?.[m.id], st.mode) ? { color: readableName(ctx.prefs.meta.nameColors[m.id], st.mode) } : null }, m.name || "(이름 없음)"),
+        m.description ? h("p", { class: "rb-p", style: "white-space:pre-line;max-height:120px;overflow:auto" }, m.description) : null,
+        !e.enabled ? note("info", "꺼진 모듈이에요. 켜면 다시 연결할 수 있어요.") : null
+      ),
+      h("div", { class: "rb-stats" }, stat("로어북", c.lore), stat("정규식", c.regex), stat("트리거", c.trigger), stat("에셋", c.assets)),
+      h(
+        "div",
+        { class: "rb-field" },
+        h("span", { class: "rb-label" }, "연결"),
+        links,
+        h("span", { class: "rb-label", style: "margin-top:6px" }, "페르소나 — 그 페르소나를 쓰는 동안 자동으로 켜짐"),
+        personaBox,
+        h("span", { class: "rb-label", style: "margin-top:6px" }, "캐릭터 — 그 캐릭터의 모든 채팅에서 켜짐"),
+        charBox,
+        h("span", { class: "rb-label", style: "margin-top:6px" }, "지금 채팅"),
+        chatBox
+      ),
+      h("div", { class: "rb-field" }, h(
+        "div",
+        { style: "display:flex;align-items:center" },
+        h("span", { class: "rb-label", style: "flex:1" }, "버전 타임라인"),
+        h("a", { href: "#", style: "font-size:12px;color:var(--rb-acc-text)", onClick: (ev) => {
+          ev.preventDefault();
+          ctx.state.histTarget = m.id;
+          ctx.go("history");
+        } }, "전체 보기")
+      ), timeline),
+      h("div", { style: "flex:1" }),
+      h(
+        "div",
+        { style: "display:flex;gap:8px;flex-wrap:wrap" },
+        btn("편집", { kind: "primary", size: "lg", icon: "edit", onClick: () => ctx.openEditor(m.id) }),
+        btn("에셋", { size: "lg", icon: "image", onClick: () => ctx.openAssets(m.id) }),
+        btn("내보내기", { size: "lg", icon: "download", onClick: () => exportRisum(ctx, m) })
+      )
+    );
+    (async () => {
+      const [db, pm] = await Promise.all([ctx.api.getDatabase(["personas"]), loadPersonaMap(ctx.api)]);
+      const personas = (db?.personas ?? []).filter((p) => p?.id);
+      const linked = (p) => (pm.map[p.id] ?? []).includes(m.id);
+      personas.sort((a, b) => Number(linked(b)) - Number(linked(a)));
+      const box = h("div", { class: "rb-scroll", style: "max-height:232px;overflow:auto;overscroll-behavior:contain", id: "rb-persona-box" });
+      const q = personas.length > 6 ? h("input", { class: "rb-input", type: "search", placeholder: `페르소나 ${personas.length}개에서 찾기`, "aria-label": "페르소나 찾기", style: "height:36px;border-radius:0;border-width:0 0 1px 0" }) : null;
+      const rows = personas.length ? personas.map((p) => {
+        const on = (pm.map[p.id] ?? []).includes(m.id);
+        const sw = switchEl(on, { label: `${p.name} 페르소나에 연결`, disabled: !e.enabled, onChange: async (v) => {
+          setSwitch(sw, v);
+          try {
+            await setPersonaLink(ctx.api, p.id, m.id, v, data.entries.map((x) => x.module.id));
+            ctx.onPersonaChanged?.();
+            ctx.toast(v ? `'${p.name}' 페르소나를 쓰면 켜져요` : `'${p.name}' 연결을 풀었어요`);
+          } catch (err) {
+            setSwitch(sw, !v);
+            ctx.toast(err?.message ?? String(err), { error: true });
+          }
+        } });
+        const r = h("div", { class: "rb-kv" }, h("span", null, p.name || "(이름 없음)"), sw);
+        r.dataset.name = String(p.name ?? "").toLowerCase();
+        return r;
+      }) : [h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "페르소나가 없어요"))];
+      box.append(...rows);
+      q?.addEventListener("input", () => {
+        const v = q.value.trim().toLowerCase();
+        for (const r of rows) r.hidden = !!v && !r.dataset.name?.includes(v);
+      });
+      replace(personaBox, q, box);
+    })().catch(() => replace(personaBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "페르소나를 읽지 못했어요"))));
+    const loadChars = async () => {
+      replace(charBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "캐릭터 불러오는 중…")));
+      const db = await ctx.api.getDatabase(["characters"]);
+      db.characters = (await loadCharacters(ctx.api, db?.characters)).list;
+      const chars = (db?.characters ?? []).map((ch, i) => ({ ch, i })).filter((x) => x.ch && !x.ch.trashTime && x.ch.type !== "group");
+      const linked = chars.filter((x) => x.ch.modules?.includes(m.id));
+      const filterBox = h("input", { class: "rb-input", style: "height:36px;margin:8px 14px;width:calc(100% - 28px)", placeholder: "캐릭터 검색", "aria-label": "캐릭터 검색" });
+      const listEl = h("div", { class: "rb-scroll", style: "max-height:240px" });
+      const paint = () => {
+        const q = filterBox.value.trim().toLowerCase();
+        replace(listEl, chars.filter((x) => !q || String(x.ch.name ?? "").toLowerCase().includes(q)).slice(0, 200).map(({ ch, i }) => {
+          const on = ch.modules?.includes(m.id) ?? false;
+          const sw = switchEl(on, { label: `${ch.name}에 연결`, disabled: !e.enabled, onChange: async (v) => {
+            setSwitch(sw, v);
+            try {
+              await ctx.svc.run("setCharacterLink", i, m.id, v);
+              ch.modules = v ? [...ch.modules ?? [], m.id] : (ch.modules ?? []).filter((x) => x !== m.id);
+            } catch (err) {
+              setSwitch(sw, !v);
+              ctx.toast(err?.message ?? String(err), { error: true });
+            }
+          } });
+          return h("div", { class: "rb-kv" }, h("span", null, ch.name || "(이름 없음)"), sw);
+        }));
+      };
+      filterBox.addEventListener("input", paint);
+      replace(charBox, h("div", { class: "rb-kv" }, h("span", null, `연결된 캐릭터 ${linked.length}명`), h("span", null, linked.slice(0, 3).map((x) => x.ch.name).join(", ") + (linked.length > 3 ? " 외" : ""))), filterBox, listEl);
+      paint();
+    };
+    replace(charBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "캐릭터 목록은 눌러서 불러와요"), btn("불러오기", { size: "sm", onClick: () => loadChars().catch((err) => ctx.toast(err?.message ?? String(err), { error: true })) })));
+    (async () => {
+      const ci = await ctx.api.getCurrentCharacterIndex(), chi = await ctx.api.getCurrentChatIndex?.();
+      if (ci < 0 || chi === void 0 || chi < 0) {
+        replace(chatBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "열린 채팅이 없어요")));
+        return;
+      }
+      const chat = await ctx.api.getChatFromIndex(ci, chi);
+      const on = chat?.modules?.includes(m.id);
+      replace(chatBox, h(
+        "div",
+        { class: "rb-kv" },
+        h("span", null, on ? "이 채팅에서 켜짐" : "이 채팅에는 따로 연결 안 됨", h("br"), h("small", { class: "rb-muted" }, "채팅 연결 추가는 RisuAI 채팅 화면에서 해요")),
+        on ? btn("이 채팅에서 해제", { size: "sm", onClick: async () => {
+          await ctx.svc.run("unlinkChat", ci, chi, m.id);
+          ctx.toast("이 채팅에서 해제했어요");
+          showDetail(ctx);
+        } }) : null
+      ));
+    })().catch(() => replace(chatBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "채팅 정보를 읽지 못했어요"))));
+    (async () => {
+      const list = (await createStore(ctx.api).listBackups()).filter((b) => b.target === m.id).slice(0, 3);
+      replace(timeline, list.length ? list.map((b, i) => h(
+        "div",
+        { style: "display:flex;gap:12px" },
+        h(
+          "div",
+          { style: "display:flex;flex-direction:column;align-items:center;width:12px" },
+          h("span", { style: `width:12px;height:12px;border-radius:999px;margin-top:3px;flex-shrink:0;${i === 0 ? "background:var(--rb-deco-grad)" : "box-shadow:inset 0 0 0 2px var(--rb-line3)"}` }),
+          h("span", { style: "width:2px;flex:1;background:var(--rb-line)" })
+        ),
+        h(
+          "div",
+          { style: "flex:1;padding-bottom:14px;display:flex;flex-direction:column;gap:2px" },
+          h("div", { style: "display:flex;gap:8px;align-items:baseline" }, h("span", { style: "font-size:13px;font-weight:600" }, b.note || "업데이트 전"), h("span", { class: "rb-muted" }, fmtWhen(b.t))),
+          b.summary ? h("span", { class: "rb-muted" }, b.summary) : null
+        )
+      )) : h("div", { class: "rb-muted", style: "padding:12px 14px;border-radius:12px;border:1px dashed var(--rb-line)" }, "아직 기록이 없어요. 이 플러그인으로 업데이트하거나 편집하면 쌓여요."));
+    })().catch(() => {
+    });
+  }
+
+  // src/ui/screens/settings.js
+  function renderSettings(ctx) {
+    const { prefs } = ctx;
+    let theme = { ...prefs.ui.theme };
+    let saveTimer = null;
+    const saved = h("span", { class: "rb-muted", "aria-live": "polite" });
+    const persist = () => {
+      clearTimeout(saveTimer);
+      saved.textContent = "저장하는 중…";
+      saveTimer = setTimeout(async () => {
+        try {
+          await prefs.saveUi({ theme });
+          saved.textContent = "저장했어요";
+        } catch (e) {
+          saved.textContent = `저장하지 못했어요: ${e?.message ?? e}`;
+        }
+      }, 300);
+    };
+    const update = (patch) => {
+      theme = { ...theme, ...patch };
+      prefs.ui.theme = theme;
+      ctx.applyTheme();
+      paint();
+      persist();
+    };
+    const presetBtns = PRESETS.map((p) => h(
+      "button",
+      { type: "button", class: "rb-preset", dataset: { id: p.id }, onClick: () => update({ preset: p.id, a: p.a, b: p.b }) },
+      h("i", { style: { background: `linear-gradient(135deg, ${p.a}, ${p.b})` } }),
+      h("span", { style: "font-size:13px;font-weight:500" }, p.name)
+    ));
+    const colorField = (key, label) => {
+      const input = h("input", { type: "color", "aria-label": label });
+      const code = h("small");
+      input.addEventListener("input", () => update({ [key]: input.value, preset: "custom" }));
+      const el = h("label", { class: "rb-color" }, input, h("span", null, label), code);
+      el.sync = () => {
+        input.value = theme[key];
+        code.textContent = theme[key];
+      };
+      return el;
+    };
+    const fa = colorField("a", "시작 색"), fb = colorField("b", "끝 색");
+    const contrastNote = h("span", { class: "rb-muted" });
+    const modeNotes = { auto: "창을 열 때마다 RisuAI 테마의 밝기에 맞춰요.", dark: "RisuAI 설정과 상관없이 항상 다크로 열려요.", light: "RisuAI 설정과 상관없이 항상 라이트로 열려요." };
+    const modeNote = h("span", { class: "rb-muted" });
+    const modeSeg = segmented([["auto", "RisuAI 따라가기"], ["dark", "다크 고정"], ["light", "라이트 고정"]], theme.mode, (v) => update({ mode: v }), "밝기");
+    function paint() {
+      presetBtns.forEach((b) => b.setAttribute("aria-pressed", b.dataset.id === theme.preset ? "true" : "false"));
+      fa.sync();
+      fb.sync();
+      const r = themeVars(theme, ctx.state.mode);
+      const fgName = r.vars["--rb-on-acc"] === "#ffffff" ? "흰 글자" : "검은 글자";
+      contrastNote.textContent = `버튼 글자색은 대비를 계산해서 자동으로 정해요. 지금: ${fgName} · 대비 ${r.onAccentRatio.toFixed(1)}:1` + (r.onAccentRatio < 4.5 ? " — 낮아요. 색을 조금 더 진하게 하면 잘 읽혀요." : "");
+      modeNote.textContent = modeNotes[theme.mode] + (theme.mode === "auto" ? ` (지금 RisuAI: ${ctx.state.risuScheme === "light" ? "라이트" : "다크"})` : "");
+    }
+    const left = h(
+      "div",
+      { class: "rb-section", style: "flex:1;min-width:300px;max-width:600px" },
+      h(
+        "div",
+        { style: "display:flex;align-items:center;gap:10px" },
+        iconBtn("back", "도구로 돌아가기", { onClick: () => ctx.go("tools") }),
+        h("div", null, h("span", { class: "rb-muted" }, "도구 · 설정"), h("h2", { class: "rb-h2" }, "색 바꾸기"))
+      ),
+      h("div", { class: "rb-field" }, h("span", { class: "rb-label" }, "테마"), h("div", { class: "rb-presets" }, presetBtns)),
+      h(
+        "div",
+        { class: "rb-field" },
+        h("span", { class: "rb-label" }, "직접 고르기"),
+        h("div", { style: "display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px" }, fa, fb),
+        contrastNote
+      ),
+      h("div", { class: "rb-field" }, h("span", { class: "rb-label" }, "밝기"), modeSeg, modeNote),
+      h(
+        "div",
+        { style: "display:flex;align-items:center;gap:12px;flex-wrap:wrap" },
+        btn("기본값으로", { onClick: () => {
+          update({ ...DEFAULT_THEME, mode: theme.mode });
+        } }),
+        saved
+      )
+    );
+    const demoSwitch = switchEl(true, { label: "미리보기 스위치", onChange: (on, el) => el.setAttribute("aria-checked", on ? "true" : "false") });
+    const preview = h(
+      "div",
+      { class: "rb-section", style: "flex:1;min-width:280px" },
+      h("span", { class: "rb-label" }, "미리보기"),
+      h(
+        "div",
+        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:14px" },
+        h(
+          "div",
+          { style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap" },
+          btn("적용하기", { kind: "primary" }),
+          btn("보조 버튼"),
+          chip("선택된 필터", { pressed: true, count: 12 }),
+          demoSwitch
+        ),
+        h(
+          "div",
+          { class: "rb-row", "aria-selected": "true", style: "cursor:default" },
+          h("span", { class: "grip" }, icon("grip", 14)),
+          h("div", { class: "txt" }, h("div", { class: "ttl" }, h("span", { class: "name" }, "예시 모듈"), badge("페르소나", "acc2")), h("span", { class: "meta" }, "로어 12 · 에셋 34"))
+        ),
+        h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, badge("제작자 수정", "acc"), badge("내 수정", "acc2"), badge("충돌", "warn"), badge("추가", "ok"), badge("삭제", "danger")),
+        progressBar(61)
+      ),
+      h("p", { class: "rb-muted" }, "모듈 이름 색과 폴더 색은 모듈 목록에서 각 모듈의 ⋯ 메뉴로 바꿔요. 어떤 밝기에서도 읽히도록 자동으로 진하기를 맞춰요.")
+    );
+    replace(ctx.main, h("div", { class: "rb-scroll", style: "flex:1;display:flex;flex-wrap:wrap;align-content:flex-start" }, left, preview));
+    paint();
+  }
+
+  // src/ui/screens/tools.js
+  function tile(ic, title, desc, onClick, id) {
+    return h(
+      "button",
+      { type: "button", class: "rb-row", style: "background:var(--rb-surf);padding:16px", onClick, id },
+      h("span", { style: "width:40px;height:40px;border-radius:12px;background:var(--rb-acc-soft);color:var(--rb-acc-text);display:flex;align-items:center;justify-content:center;flex-shrink:0" }, icon(ic, 20)),
+      h("span", { class: "txt" }, h("span", { class: "name" }, title), h("span", { class: "meta", style: "white-space:normal" }, desc)),
+      h("span", { style: "color:var(--rb-mute);display:flex" }, icon("chevron", 16))
+    );
+  }
+  function renderTools(ctx) {
+    if (ctx.state.sub === "inspector") return renderInspector(ctx);
+    if (ctx.state.sub === "cleanup") return renderCleanup(ctx);
+    if (ctx.state.sub === "patchmaker") {
+      ctx.go("dev", "patchmaker");
+      return;
+    }
+    const dev = isDev(ctx);
+    replace(ctx.main, h(
+      "div",
+      { class: "rb-section rb-scroll", style: "flex:1" },
+      h("h2", { class: "rb-h2" }, "도구"),
+      devToggleCard(ctx, () => {
+        ctx.refreshTabs();
+        renderTools(ctx);
+      }),
+      dev && h(
+        "div",
+        { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin-bottom:10px" },
+        tile("code", "개발 탭 열기", "개발 중인 모듈·봇 모음, 검사·테스트, 패치 만들기·릴리스 기록", () => ctx.go("dev"), "rb-tool-dev")
+      ),
+      h(
+        "div",
+        { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px" },
+        tile("palette", "색 바꾸기", "테마 색, 직접 고른 색, 밝기(RisuAI 따라가기/다크/라이트)", () => ctx.go("tools", "settings"), "rb-tool-settings"),
+        tile("upload", "업데이트 가져오기", "모듈·캐릭터 파일로 기존 항목을 업데이트하거나 새로 넣기 (여러 파일 가능)", () => ctx.legacy.open(), "rb-tool-import"),
+        tile("undo", "백업·되돌리기", "업데이트하기 전 상태로 되돌리기 (채팅은 그대로)", () => ctx.go("history"), "rb-tool-backups"),
+        tile("download", "전체 백업", "모든 모듈(꺼진 것 포함)·에셋·프리셋·폴더·색 설정을 zip 한 파일로", () => fullBackup(ctx), "rb-tool-fullbackup"),
+        tile("upload", "전체 복원", "전체 백업 zip에서 모듈과 설정을 되살리기", () => fullRestore(ctx), "rb-tool-restore"),
+        tile("info", ".risum 인스펙터", "모듈 파일 안을 열어 보기: 필드별 크기, 압축률, 에셋 목록, ZIP 추출", () => ctx.go("tools", "inspector"), "rb-tool-inspector"),
+        tile("trash", "설정 정리", "이 플러그인이 저장한 순서·폴더·프리셋·연결 정보를 골라서 지우기", () => ctx.go("tools", "cleanup"), "rb-tool-cleanup")
+      )
+    ));
+  }
+  async function fullBackup(ctx) {
+    const db = await readDb(ctx.api, ["modules", "pluginCustomStorage", "enabledModules"]);
+    const on = db.modules ?? [], off = db.pluginCustomStorage?.[DISABLED_KEY] ?? [];
+    const paths = /* @__PURE__ */ new Map();
+    for (const m of [...on, ...off]) {
+      for (const a of m.assets ?? []) if (a?.[1]) paths.set(a[1], a[2]);
+      if (m.icon) paths.set(m.icon, "png");
+    }
+    const mode = await new Promise((resolve) => {
+      const back2 = h("div", { class: "rb-modal" });
+      const done = (v) => {
+        back2.remove();
+        resolve(v);
+      };
+      back2.appendChild(h(
+        "div",
+        { class: "rb-dialog", role: "dialog", "aria-label": "전체 백업" },
+        h("h3", { class: "rb-h3" }, "전체 백업"),
+        h("p", { class: "rb-p" }, `모듈 ${on.length + off.length}개 · 에셋 ${paths.size}개`),
+        h("div", { class: "rb-card pad", style: "display:flex;flex-direction:column;gap:6px" }, h("b", null, "빠른 백업 — 몇 초"), h("span", { class: "rb-muted" }, "모듈 내용·켜짐·순서·프리셋·폴더·색 설정만 담아요. 에셋 파일은 서버에 그대로 있으니 같은 서버에서 되살릴 때 충분해요.")),
+        h("div", { class: "rb-card pad", style: "display:flex;flex-direction:column;gap:6px" }, h("b", null, "에셋까지 — 시간이 걸려요"), h("span", { class: "rb-muted" }, "에셋 파일도 모두 담아요. 다른 서버로 옮기거나 서버 정리에 대비할 때 쓰세요.")),
+        h("div", { class: "btns" }, btn("취소", { onClick: () => done(null) }), btn("빠른 백업", { kind: "primary", onClick: () => done("quick") }), btn("에셋까지", { onClick: () => done("full") }))
+      ));
+      ctx.win.appendChild(back2);
+    });
+    if (!mode) return;
+    if (mode === "quick") paths.clear();
+    const bar = progressBar(0), txt = h("span", { class: "rb-muted" }, "준비 중…");
+    const back = h("div", { class: "rb-modal" }, h("div", { class: "rb-dialog" }, h("h3", { class: "rb-h3" }, "전체 백업 만드는 중"), bar, txt));
+    ctx.win.appendChild(back);
+    try {
+      const zip = createZip();
+      const [presets, persona] = await Promise.all([loadPresets(ctx.api), loadPersonaMap(ctx.api)]);
+      zip.add("manifest.json", JSON.stringify({
+        type: "rbm-backup",
+        v: 1,
+        created: Date.now(),
+        withAssets: mode === "full",
+        modules: on,
+        disabledModules: off,
+        enabledModules: db.enabledModules ?? [],
+        prefs: { ui: ctx.prefs.ui, meta: ctx.prefs.meta, presets, persona: persona.map }
+      }, null, 1));
+      const list = [...paths.keys()];
+      let done = 0, missing = 0, i = 0;
+      const started = Date.now();
+      await Promise.all(Array.from({ length: Math.min(16, list.length) }, async () => {
+        while (i < list.length) {
+          const p = list[i++];
+          const d = await ctx.assets.read(p).catch(() => null);
+          if (d?.length) zip.add(`files/${p}`, d);
+          else missing++;
+          done++;
+          bar.set(done / list.length * 100);
+          const per = (Date.now() - started) / done;
+          txt.textContent = `에셋 ${done}/${list.length} · ${fmtBytes(zip.size)} · 남은 시간 약 ${Math.ceil(per * (list.length - done) / 1e3)}초`;
+        }
+      }));
+      const stamp = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      download(`dusk-atelier-backup-${stamp}${mode === "quick" ? "-quick" : ""}.zip`, zip.blob());
+      back.remove();
+      ctx.toast(`전체 백업을 내려받았어요${missing ? ` (읽지 못한 에셋 ${missing}개)` : ""}`);
+    } catch (e) {
+      back.remove();
+      ctx.toast(`백업하지 못했어요: ${e?.message ?? e}`, { error: true });
+    }
+  }
+  async function fullRestore(ctx) {
+    const [f] = await pickFiles({ accept: ".zip,application/zip" });
+    if (!f) return;
+    let entries, man;
+    try {
+      entries = await readZipDirectory(f);
+      const me = entries.find((e) => e.name === "manifest.json");
+      if (!me) throw new Error("전체 백업 파일이 아니에요 (manifest.json 없음)");
+      man = JSON.parse(new TextDecoder().decode(await readZipEntry(f, me)));
+      if (man?.type !== "rbm-backup") throw new Error("전체 백업 파일이 아니에요");
+    } catch (e) {
+      ctx.toast(e?.message ?? String(e), { error: true });
+      return;
+    }
+    const mods = [...(man.modules ?? []).map((m) => ({ m, on: true })), ...(man.disabledModules ?? []).map((m) => ({ m, on: false }))];
+    const mode = await new Promise((resolve) => {
+      const back2 = h("div", { class: "rb-modal" });
+      const done = (v) => {
+        back2.remove();
+        resolve(v);
+      };
+      back2.appendChild(h(
+        "div",
+        { class: "rb-dialog", role: "dialog", "aria-label": "전체 복원" },
+        h("h3", { class: "rb-h3" }, "전체 복원"),
+        h("p", { class: "rb-p" }, `${new Date(man.created).toLocaleString()} 백업 · 모듈 ${mods.length}개 · 파일 ${entries.length - 1}개`),
+        h("label", { class: "rb-check" }, h("input", { type: "radio", name: "m", value: "merge", checked: true }), h("span", null, "합치기 — 없는 모듈은 추가, 같은 id는 백업 것으로")),
+        h("label", { class: "rb-check" }, h("input", { type: "radio", name: "m", value: "add" }), h("span", null, "없는 것만 추가 — 지금 있는 모듈은 그대로")),
+        h("label", { class: "rb-check" }, h("input", { type: "radio", name: "m", value: "replace" }), h("span", null, "통째로 바꾸기 — 지금 모듈 목록을 백업 것으로")),
+        h("label", { class: "rb-check" }, h("input", { type: "checkbox", name: "prefs", checked: true }), h("span", null, "프리셋·폴더·색·페르소나 연결도 되살리기")),
+        h("div", { class: "btns" }, btn("취소", { onClick: () => done(null) }), btn("복원", { kind: "primary", onClick: () => done({ mode: back2.querySelector("input[name=m]:checked").value, prefs: back2.querySelector("input[name=prefs]").checked }) }))
+      ));
+      ctx.win.appendChild(back2);
+    });
+    if (!mode) return;
+    if (mode.mode === "replace" && !await confirmDialog(ctx.win, { title: "지금 모듈 목록을 바꿀까요?", body: "백업에 없는 모듈은 목록에서 빠져요.", ok: "바꾸기", danger: true })) return;
+    const bar = progressBar(0), txt = h("span", { class: "rb-muted" }, "파일 올리는 중…");
+    const back = h("div", { class: "rb-modal" }, h("div", { class: "rb-dialog" }, h("h3", { class: "rb-h3" }, "복원하는 중"), bar, txt));
+    ctx.win.appendChild(back);
+    try {
+      const files = entries.filter((e) => e.name.startsWith("files/"));
+      const remap = /* @__PURE__ */ new Map();
+      let i = 0, done = 0;
+      await Promise.all(Array.from({ length: Math.min(12, files.length) }, async () => {
+        while (i < files.length) {
+          const e = files[i++];
+          let key = null, err;
+          for (let a = 0; a < 3 && !key; a++) {
+            try {
+              key = await ctx.api.saveAsset(await readAssetBytes(f, { source: "zip", entry: e }));
+            } catch (x) {
+              err = x;
+              await new Promise((r) => setTimeout(r, 600 * (a + 1)));
+            }
+          }
+          if (!key) throw new Error(`파일을 올리지 못했어요: ${e.name} (${err?.message ?? err})`);
+          remap.set(e.name.slice(6), key);
+          done++;
+          bar.set(done / files.length * 100);
+          txt.textContent = `파일 ${done}/${files.length}`;
+        }
+      }));
+      const fix = (m) => JSON.parse(JSON.stringify(m), (k, v) => typeof v === "string" && remap.has(v) ? remap.get(v) : v);
+      txt.textContent = "모듈 저장 중…";
+      await commit(ctx.api, (d) => {
+        if (mode.mode === "replace") d.entries = [];
+        for (const { m, on } of mods) {
+          const mm = fix(m);
+          const e = d.entries.find((x) => x.module.id === mm.id);
+          if (e) {
+            if (mode.mode !== "add") {
+              e.module = mm;
+              e.enabled = on || mm.assets?.length > 0;
+            }
+          } else d.entries.push({ module: mm, enabled: on || mm.assets?.length > 0 });
+        }
+        if (mode.mode === "replace" || mode.mode === "merge") d.enabledModules = [.../* @__PURE__ */ new Set([...mode.mode === "merge" ? d.enabledModules : [], ...man.enabledModules ?? []])];
+      }, { chars: mode.mode === "replace" });
+      if (mode.prefs && man.prefs) {
+        if (man.prefs.meta) await ctx.prefs.saveMeta({ ...defaultsMeta(), ...man.prefs.meta });
+        if (man.prefs.ui?.theme) {
+          await ctx.prefs.saveUi({ theme: man.prefs.ui.theme });
+          ctx.applyTheme();
+        }
+        if (man.prefs.presets?.presets) await savePresets(ctx.api, man.prefs.presets);
+        if (man.prefs.persona) {
+          const p = await loadPersonaMap(ctx.api);
+          p.map = man.prefs.persona;
+          await savePersonaMap(ctx.api, p);
+          ctx.onPersonaChanged?.();
+        }
+      }
+      back.remove();
+      await reload(ctx).catch(() => {
+      });
+      ctx.toast(`복원했어요 (모듈 ${mods.length}개, 파일 ${files.length}개)`);
+    } catch (e) {
+      back.remove();
+      ctx.toast(`복원하지 못했어요: ${e?.message ?? e}`, { error: true });
+    }
+  }
+  async function renderInspector(ctx) {
+    const st = ctx.state;
+    const pick = async () => {
+      const [f] = await pickFiles({ accept: ".risum" });
+      if (!f) return;
+      try {
+        st.insp = { file: f, scan: await scanRisum(f), mainSize: null };
+      } catch (e) {
+        ctx.toast(`분석하지 못했어요: ${e?.message ?? e}`, { error: true });
+        return;
+      }
+      renderInspector(ctx);
+    };
+    const back = h("div", { style: "display:flex;align-items:center;gap:10px" }, btn("", { kind: "ghost", icon: "back", onClick: () => ctx.go("tools") }), h("div", null, h("span", { class: "rb-muted" }, "도구"), h("h2", { class: "rb-h2" }, ".risum 인스펙터")));
+    back.querySelector("button").setAttribute("aria-label", "도구로 돌아가기");
+    if (!st.insp) {
+      replace(ctx.main, h(
+        "div",
+        { class: "rb-section rb-scroll", style: "flex:1" },
+        back,
+        h("p", { class: "rb-p" }, ".risum 파일을 고르면 설치하지 않고 안을 보여 줘요. 무엇이 파일을 크게 만드는지 찾을 때 좋아요."),
+        btn(".risum 파일 고르기", { kind: "primary", icon: "upload", onClick: pick })
+      ));
+      return;
+    }
+    const { file, scan } = st.insp;
+    const m = scan.module;
+    const json = JSON.stringify({ module: m, type: "risuModule" });
+    const fields = Object.keys(m).map((k) => [k, new TextEncoder().encode(JSON.stringify(m[k]) ?? "").length]).sort((a, b) => b[1] - a[1]);
+    const assetBytes = scan.assets.reduce((s, a) => s + a.size, 0);
+    const big = fields[0]?.[1] || 1;
+    const kv = (k, v) => h("div", { class: "rb-kv" }, h("span", null, k), h("span", null, v));
+    const extract = async () => {
+      const zip = createZip();
+      zip.add("module.json", JSON.stringify({ ...m, type: "risuModule" }, null, 2));
+      for (const a of scan.assets) zip.add(`assets/${safeFileName(a.name || String(a.index))}.${a.ext || "png"}`, await readAssetBytes(file, { ...a, source: void 0 }));
+      download(`${safeFileName(m.name)}-extracted.zip`, zip.blob());
+    };
+    replace(ctx.main, h(
+      "div",
+      { class: "rb-section rb-scroll", style: "flex:1" },
+      back,
+      h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, btn("다른 파일", { icon: "upload", onClick: pick }), btn("ZIP으로 풀기", { kind: "primary", icon: "download", onClick: () => extract().catch((e) => ctx.toast(e.message, { error: true })) })),
+      h(
+        "div",
+        { style: "display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px" },
+        h("div", { class: "rb-field" }, h("span", { class: "rb-label" }, "파일 정보"), h(
+          "div",
+          { class: "rb-card" },
+          kv("파일명", file.name),
+          kv("파일 크기", fmtBytes(file.size)),
+          kv("모듈 이름", m.name ?? ""),
+          kv("형식", ".risum v0 (유효)"),
+          kv("모듈 JSON", fmtBytes(json.length)),
+          kv("에셋", `${scan.assets.length}개 · ${fmtBytes(assetBytes)}`),
+          kv("로어북 · 정규식 · 트리거", `${m.lorebook?.length ?? 0} · ${m.regex?.length ?? 0} · ${m.trigger?.length ?? 0}`),
+          kv("저수준 접근", m.lowLevelAccess ? "사용" : "없음")
+        )),
+        h("div", { class: "rb-field" }, h("span", { class: "rb-label" }, "필드별 크기 (큰 순)"), h(
+          "div",
+          { class: "rb-card pad", style: "display:flex;flex-direction:column;gap:8px" },
+          fields.slice(0, 14).map(([k, n]) => h(
+            "div",
+            { style: "display:flex;flex-direction:column;gap:4px" },
+            h("div", { style: "display:flex;font-size:13px" }, h("span", { style: "flex:1" }, k), h("span", { class: "rb-muted" }, fmtBytes(n))),
+            h("div", { class: "rb-progress", style: "height:6px" }, h("i", { style: { width: `${Math.max(2, n / big * 100)}%` } }))
+          ))
+        ))
+      ),
+      h(
+        "div",
+        { class: "rb-field" },
+        h("span", { class: "rb-label" }, `에셋 (${scan.assets.length}개, 큰 순)`),
+        h("div", { class: "rb-card" }, [...scan.assets].sort((a, b) => b.size - a.size).slice(0, 200).map((a) => kv(`${a.name || "(이름 없음)"}.${a.ext}`, fmtBytes(a.size))))
+      )
+    ));
+  }
+  async function renderCleanup(ctx) {
+    const db = await readDb(ctx.api, ["modules", "pluginCustomStorage"]);
+    const presets = await loadPresets(ctx.api), persona = await loadPersonaMap(ctx.api);
+    const meta = ctx.prefs.meta;
+    const opts = [
+      ["order", "정렬 순서 초기화", `이 플러그인이 기억한 모듈 순서(${(db.pluginCustomStorage?.[ORDER_KEY] ?? []).length}개)를 지워요`],
+      ["enableAll", "꺼진 모듈 모두 켜기", `꺼짐 보관함의 ${(db.pluginCustomStorage?.[DISABLED_KEY] ?? []).length}개를 다시 켜요 (이 플러그인을 지우기 전에 하세요. 꺼진 모듈은 이 플러그인 보관함에만 있어요)`],
+      ["assetFolders", "에셋 폴더 정보 지우기", `${Object.keys(meta.moduleAssetFolders ?? {}).length}개 모듈의 에셋 폴더 구분을 지워요 (에셋은 남아요)`],
+      ["presets", "프리셋 초기화", `${Object.keys(presets.presets).length}개 프리셋과 디바이스 페어를 지워요`],
+      ["persona", "페르소나 연결 초기화", `${Object.values(persona.map).reduce((s, x) => s + x.length, 0)}개 연결을 지워요`],
+      ["charLinks", "캐릭터 연결 초기화", "모든 캐릭터·채팅에 연결된 모듈 목록을 비워요 (캐릭터를 다 읽어서 시간이 걸려요)"],
+      ["folders", "모듈 목록 폴더·이름 색 지우기", `폴더 ${meta.folders.length}개, 이름 색 ${Object.keys(meta.nameColors).length}개`]
+    ];
+    const checks = /* @__PURE__ */ new Map();
+    const back = h("div", { style: "display:flex;align-items:center;gap:10px" }, btn("", { kind: "ghost", icon: "back", onClick: () => ctx.go("tools") }), h("div", null, h("span", { class: "rb-muted" }, "도구"), h("h2", { class: "rb-h2" }, "설정 정리")));
+    back.querySelector("button").setAttribute("aria-label", "도구로 돌아가기");
+    replace(ctx.main, h(
+      "div",
+      { class: "rb-section rb-scroll", style: "flex:1" },
+      back,
+      note("warn", "골라서 지운 정보는 되돌릴 수 없어요. 모듈 내용(로어북·에셋)은 지우지 않아요."),
+      h("div", { class: "rb-card" }, opts.map(([k, label, desc]) => {
+        const c = h("input", { type: "checkbox" });
+        checks.set(k, c);
+        return h("label", { class: "rb-kv", style: "cursor:pointer" }, c, h("span", null, label, h("br"), h("small", { class: "rb-muted" }, desc)));
+      })),
+      h("div", null, btn("정리 실행", { kind: "danger", icon: "trash", onClick: async () => {
+        const sel = [...checks].filter(([, c]) => c.checked).map(([k]) => k);
+        if (!sel.length) {
+          ctx.toast("정리할 항목을 골라 주세요");
+          return;
+        }
+        if (!await confirmDialog(ctx.win, { title: `${sel.length}가지를 정리할까요?`, body: sel.map((k) => "• " + opts.find((o) => o[0] === k)[1]).join("\n"), ok: "정리", danger: true })) return;
+        try {
+          if (sel.some((k) => ["order", "enableAll", "charLinks"].includes(k))) {
+            await commit(ctx.api, (d) => {
+              for (const e of d.entries) {
+                if (sel.includes("enableAll")) e.enabled = true;
+              }
+              if (sel.includes("charLinks")) d.characters.forEach((c, i) => {
+                if (!c) return;
+                if (c.modules?.length) {
+                  c.modules = [];
+                  d.changedChars.add(i);
+                }
+                for (const ch of c.chats ?? []) if (ch?.modules?.length) {
+                  ch.modules = [];
+                  d.changedChars.add(i);
+                }
+              });
+            }, { chars: sel.includes("charLinks") });
+            if (sel.includes("order")) await ctx.api.setDatabaseLite({ [ORDER_KEY]: [] });
+          }
+          if (sel.includes("assetFolders")) await ctx.prefs.saveMeta({ ...ctx.prefs.meta, moduleAssetFolders: {} });
+          if (sel.includes("presets")) await ctx.api.pluginStorage.setItem(PRESET_KEY, JSON.stringify({ active: "기본", presets: {} }));
+          if (sel.includes("persona")) {
+            await savePersonaMap(ctx.api, { map: {}, injectedIndex: {} });
+            await ctx.api.setDatabaseLite({ [INJECTED_KEY]: {} });
+            ctx.onPersonaChanged?.();
+          }
+          if (sel.includes("folders")) await ctx.prefs.saveMeta({ ...ctx.prefs.meta, folders: [], mapping: {}, nameColors: {} });
+          ctx.toast("정리했어요");
+          await reload(ctx).catch(() => {
+          });
+          renderCleanup(ctx);
+        } catch (e) {
+          ctx.toast(`정리하지 못했어요: ${e?.message ?? e}`, { error: true });
+        }
+      } }))
+    ));
+  }
+
+  // src/ui/screens/placeholder.js
+  var PLAN = {
+    characters: ["캐릭터", "캐릭터 업데이트·새로 넣기 화면이 들어올 자리예요. (5단계)", '지금은 도구 탭의 "업데이트 가져오기"에서 캐릭터 파일을 넣을 수 있어요.'],
+    presets: ["프리셋", "모듈 켜기/끄기 묶음과 디바이스 페어가 들어올 자리예요. (1단계)", ""],
+    history: ["기록", "버전 타임라인이 들어올 자리예요. (5단계)", '지금은 도구 탭의 "백업·되돌리기"에서 업데이트 전 상태로 되돌릴 수 있어요.']
+  };
+  function renderPlaceholder(ctx) {
+    const [title, what, now] = PLAN[ctx.state.tab] ?? ["준비 중", "", ""];
+    const t = ctx.tabs.find((x) => x.id === ctx.state.tab);
+    replace(ctx.main, h(
+      "div",
+      { class: "rb-empty", style: "margin:auto;max-width:420px" },
+      h("div", { style: "color:var(--rb-acc-text);display:flex;justify-content:center;margin-bottom:12px" }, icon(t?.icon ?? "info", 32)),
+      h("h2", { class: "rb-h2", style: "color:var(--rb-text);margin-bottom:6px" }, title),
+      h("p", { class: "rb-p" }, what),
+      now ? h("p", { class: "rb-muted", style: "margin-top:8px" }, now) : null
+    ));
+  }
+
+  // src/ui/screens/presets.js
+  async function renderPresets(ctx) {
+    const data = await loadPresets(ctx.api);
+    const st = await ctx.svc.load();
+    if (!data.presets[DEFAULT_PRESET] && !Object.keys(data.presets).length) {
+      data.presets[DEFAULT_PRESET] = snapshotOf(st.entries, [...st.globalOn]);
+      data.active = DEFAULT_PRESET;
+      await savePresets(ctx.api, data);
+    }
+    const names = Object.keys(data.presets);
+    const device = isMobileDevice() ? "mobile" : "desktop";
+    const summary = (p) => {
+      const states = Object.values(p.moduleStates ?? {});
+      return `켜짐 ${states.filter((s) => s.enabled).length} · 꺼짐 ${states.filter((s) => !s.enabled).length} · 글로벌 ${(p.globalEnabledIds ?? []).length}`;
+    };
+    const list = h("div", { style: "display:flex;flex-direction:column;gap:6px" }, names.map((name) => {
+      const p = data.presets[name], active = data.active === name;
+      return h(
+        "div",
+        { class: "rb-row", "aria-selected": active ? "true" : "false", style: "cursor:default" },
+        h("span", { style: `display:flex;color:${active ? "var(--rb-acc-text)" : "var(--rb-sub)"}` }, icon("preset", 18)),
+        h(
+          "div",
+          { class: "txt" },
+          h(
+            "div",
+            { class: "ttl" },
+            h("span", { class: "name" }, name),
+            active && badge("사용 중", "acc"),
+            data.defaultMobile === name && badge("모바일 기본", "acc2"),
+            data.defaultDesktop === name && badge("데스크탑 기본", "acc2")
+          ),
+          h("span", { class: "meta" }, summary(p))
+        ),
+        active ? null : btn("전환", { size: "sm", kind: "primary", onClick: () => switchTo(ctx, name) }),
+        iconBtn("more", `${name} 메뉴`, { onClick: (ev) => presetMenu(ctx, data, name, ev.currentTarget) })
+      );
+    }));
+    const pairSel = (key, label) => {
+      const sel = h("select", { class: "rb-input", "aria-label": label, onChange: async (ev) => {
+        const d = await loadPresets(ctx.api);
+        d[key] = ev.target.value || void 0;
+        if (!d.lastDeviceType) d.lastDeviceType = device;
+        if (d.defaultMobile && d.defaultMobile === d.defaultDesktop) {
+          ctx.toast("모바일과 데스크탑에 서로 다른 프리셋을 골라 주세요", { error: true });
+          ev.target.value = data[key] ?? "";
+          return;
+        }
+        await savePresets(ctx.api, d);
+        ctx.toast("디바이스 페어를 저장했어요");
+        renderPresets(ctx);
+      } }, h("option", { value: "" }, "지정 안 함"), names.map((n) => h("option", { value: n, selected: data[key] === n }, n)));
+      return h("label", { class: "rb-field", style: "flex:1;min-width:200px" }, h("span", { class: "rb-label" }, label), sel);
+    };
+    replace(ctx.main, h(
+      "div",
+      { class: "rb-section rb-scroll", style: "flex:1" },
+      h(
+        "div",
+        { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
+        h("div", { style: "flex:1" }, h("h2", { class: "rb-h2" }, "프리셋"), h("p", { class: "rb-p" }, "어떤 모듈을 켜고 끌지, 순서, 글로벌 활성화를 묶어서 저장해요. 지금 상태는 사용 중인 프리셋에 자동으로 저장돼요.")),
+        btn("가져오기", { icon: "upload", onClick: () => importPresets(ctx) }),
+        btn("새 프리셋", { kind: "primary", icon: "plus", onClick: () => newPreset(ctx) })
+      ),
+      list,
+      h(
+        "div",
+        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:12px" },
+        h("h3", { class: "rb-h3" }, "디바이스 페어"),
+        h("p", { class: "rb-p" }, `모바일과 데스크탑에서 쓸 프리셋을 정해 두면, 기기가 바뀔 때 자동으로 전환해요. 지금 기기: ${device === "mobile" ? "모바일" : "데스크탑"}`),
+        h("div", { style: "display:flex;gap:12px;flex-wrap:wrap" }, pairSel("defaultMobile", "모바일 프리셋"), pairSel("defaultDesktop", "데스크탑 프리셋")),
+        note("info", "페어로 지정한 프리셋을 쓰고 있을 때만 자동 전환돼요. 다른 프리셋을 직접 골랐다면 그대로 둬요.")
+      )
+    ));
+  }
+  async function switchTo(ctx, name) {
+    try {
+      const r = await ctx.svc.serial(() => applyPreset(ctx.api, name));
+      ctx.toast(`'${name}' 프리셋으로 바꿨어요` + (r.skipped ? ` (에셋 모듈 ${r.skipped}개는 켜 둠)` : ""));
+      await reload(ctx);
+      renderPresets(ctx);
+    } catch (err) {
+      ctx.toast(err?.message ?? String(err), { error: true });
+    }
+  }
+  async function newPreset(ctx) {
+    const data = await loadPresets(ctx.api);
+    const n = await promptDialog(ctx.win, { title: "새 프리셋", label: "지금 상태를 새 프리셋으로 저장해요", placeholder: "예: 가볍게" });
+    if (!n?.trim()) return;
+    const name = uniquePresetName(data, n);
+    const st = await ctx.svc.load();
+    data.presets[name] = snapshotOf(st.entries, [...st.globalOn]);
+    data.active = name;
+    await savePresets(ctx.api, data);
+    ctx.toast(`'${name}' 프리셋을 만들었어요`);
+    renderPresets(ctx);
+  }
+  function presetMenu(ctx, data, name, anchor) {
+    const isDefault = name === DEFAULT_PRESET;
+    openMenu(ctx.win, anchor, [
+      { label: "지금 상태로 덮어쓰기", icon: "refresh", onClick: async () => {
+        if (!await confirmDialog(ctx.win, { title: `'${name}'을(를) 지금 상태로 바꿀까요?`, ok: "덮어쓰기" })) return;
+        const d = await loadPresets(ctx.api);
+        const st = await ctx.svc.load();
+        d.presets[name] = snapshotOf(st.entries, [...st.globalOn]);
+        await savePresets(ctx.api, d);
+        ctx.toast("덮어썼어요");
+        renderPresets(ctx);
+      } },
+      isDefault ? null : { label: "이름 바꾸기", icon: "edit", onClick: async () => {
+        const n = await promptDialog(ctx.win, { title: "프리셋 이름", value: name });
+        if (!n?.trim() || n.trim() === name) return;
+        const d = await loadPresets(ctx.api);
+        if (d.presets[n.trim()]) {
+          ctx.toast("같은 이름이 있어요", { error: true });
+          return;
+        }
+        d.presets[n.trim()] = d.presets[name];
+        delete d.presets[name];
+        for (const k of ["active", "defaultMobile", "defaultDesktop"]) if (d[k] === name) d[k] = n.trim();
+        await savePresets(ctx.api, d);
+        renderPresets(ctx);
+      } },
+      { label: "내보내기 (파일)", icon: "download", onClick: () => download(`preset-${name}.json`, JSON.stringify({ type: "rbm-presets", presets: { [name]: data.presets[name] } }, null, 2), "application/json") },
+      { label: "전체 내보내기", icon: "download", onClick: () => download("presets.json", JSON.stringify({ type: "rbm-presets", presets: data.presets }, null, 2), "application/json") },
+      isDefault ? null : "sep",
+      isDefault ? null : { label: "삭제", icon: "trash", danger: true, onClick: async () => {
+        if (!await confirmDialog(ctx.win, { title: `'${name}' 프리셋을 지울까요?`, body: "모듈은 바뀌지 않아요.", ok: "삭제", danger: true })) return;
+        const d = await loadPresets(ctx.api);
+        delete d.presets[name];
+        for (const k of ["defaultMobile", "defaultDesktop"]) if (d[k] === name) delete d[k];
+        if (d.active === name) d.active = DEFAULT_PRESET;
+        await savePresets(ctx.api, d);
+        renderPresets(ctx);
+      } }
+    ].filter(Boolean));
+  }
+  async function importPresets(ctx) {
+    const [f] = await pickFiles({ accept: ".json,application/json" });
+    if (!f) return;
+    try {
+      const j = JSON.parse(await f.text());
+      const src = j?.presets && typeof j.presets === "object" ? j.presets : null;
+      if (!src) throw new Error("프리셋 파일이 아니에요");
+      const d = await loadPresets(ctx.api);
+      let n = 0;
+      for (const [name, p] of Object.entries(src)) {
+        if (!p?.moduleStates) continue;
+        d.presets[d.presets[name] ? uniquePresetName(d, name) : name] = p;
+        n++;
+      }
+      await savePresets(ctx.api, d);
+      ctx.toast(`프리셋 ${n}개를 가져왔어요`);
+      renderPresets(ctx);
+    } catch (err) {
+      ctx.toast(`가져오지 못했어요: ${err?.message ?? err}`, { error: true });
+    }
+  }
+
+  // src/data/charorder.js
+  var FOLDER_COLORS = ["default", "red", "yellow", "green", "blue", "indigo", "purple", "pink"];
+  var FOLDER_COLOR_CSS = { default: null, red: "#f87171", yellow: "#facc15", green: "#4ade80", blue: "#60a5fa", indigo: "#818cf8", purple: "#c084fc", pink: "#f472b6" };
+  var FOLDER_COLOR_KO = { default: "기본", red: "빨강", yellow: "노랑", green: "초록", blue: "파랑", indigo: "남색", purple: "보라", pink: "분홍" };
+  var isFolder = (x) => x && typeof x === "object" && Array.isArray(x.data);
+  var clone = (o) => o.map((x) => isFolder(x) ? { ...x, data: [...x.data] } : x);
+  function layout(order, chars) {
+    const live = new Set(chars.filter((c) => c && !c.trashTime).map((c) => c.chaId));
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const x of order ?? []) {
+      if (typeof x === "string") {
+        if (live.has(x) && !seen.has(x)) {
+          seen.add(x);
+          out.push({ type: "char", id: x });
+        }
+      } else if (isFolder(x)) {
+        const ids = x.data.filter((id) => live.has(id) && !seen.has(id));
+        ids.forEach((id) => seen.add(id));
+        out.push({ type: "folder", folder: x, ids });
+      }
+    }
+    for (const c of chars) if (c && !c.trashTime && !seen.has(c.chaId)) {
+      seen.add(c.chaId);
+      out.push({ type: "char", id: c.chaId });
+    }
+    return out;
+  }
+  function take(order, id) {
+    const o = [];
+    for (const x of order) {
+      if (x === id) continue;
+      if (isFolder(x)) o.push({ ...x, data: x.data.filter((d) => d !== id) });
+      else o.push(x);
+    }
+    return o;
+  }
+  function moveChar(order, id, { beforeId, after, folderId }) {
+    const ids = [].concat(id);
+    if (beforeId && ids.includes(beforeId)) return clone(order ?? []);
+    let o = clone(order ?? []);
+    for (const c of ids) o = take(o, c);
+    if (beforeId) {
+      const top = o.indexOf(beforeId);
+      if (top >= 0) {
+        o.splice(top + (after ? 1 : 0), 0, ...ids);
+        return o;
+      }
+      for (const x of o) if (isFolder(x)) {
+        const i = x.data.indexOf(beforeId);
+        if (i >= 0) {
+          x.data.splice(i + (after ? 1 : 0), 0, ...ids);
+          return o;
+        }
+      }
+      o.push(...ids);
+      return o;
+    }
+    if (folderId) {
+      const f = o.find((x) => isFolder(x) && x.id === folderId);
+      if (f) {
+        f.data.push(...ids);
+        return o;
+      }
+    }
+    o.push(...ids);
+    return o;
+  }
+  function createFolder2(order, { id, name, color = "default", ids = [] }) {
+    let o = clone(order ?? []);
+    let at = o.length;
+    if (ids.length) {
+      const first = o.findIndex((x) => x === ids[0] || isFolder(x) && x.data.includes(ids[0]));
+      if (first >= 0) at = first;
+    }
+    for (const c of ids) o = take(o, c);
+    at = Math.min(at, o.length);
+    o.splice(at, 0, { id, name, color, data: [...ids] });
+    return o;
+  }
+  function setMembers(order, folderId, ids) {
+    let o = clone(order ?? []);
+    const f = o.find((x) => isFolder(x) && x.id === folderId);
+    if (!f) return o;
+    const out = f.data.filter((d) => !ids.includes(d));
+    for (const c of ids) o = take(o, c);
+    const g = o.find((x) => isFolder(x) && x.id === folderId);
+    g.data = [...ids];
+    const at = o.indexOf(g) + 1;
+    o.splice(at, 0, ...out);
+    return o;
+  }
+  function renameFolder2(order, folderId, name) {
+    return clone(order ?? []).map((x) => isFolder(x) && x.id === folderId ? { ...x, name } : x);
+  }
+  function colorFolder(order, folderId, color) {
+    return clone(order ?? []).map((x) => isFolder(x) && x.id === folderId ? { ...x, color } : x);
+  }
+  function deleteFolder2(order, folderId) {
+    const o = [];
+    for (const x of clone(order ?? [])) {
+      if (isFolder(x) && x.id === folderId) o.push(...x.data);
+      else o.push(x);
+    }
+    return o;
+  }
+  function moveFolder(order, folderId, dir) {
+    const o = clone(order ?? []);
+    const i = o.findIndex((x) => isFolder(x) && x.id === folderId), j = i + dir;
+    if (i < 0 || j < 0 || j >= o.length) return o;
+    [o[i], o[j]] = [o[j], o[i]];
+    return o;
+  }
+  var folderOf = (order, id) => (order ?? []).find((x) => isFolder(x) && x.data.includes(id)) ?? null;
+
   // src/ui/screens/characters.js
   async function renderCharacters(ctx) {
     const st = ctx.state;
@@ -8586,7 +9236,7 @@ ${patch.note}` : "",
             st.charSel = c.chaId;
             box.querySelectorAll(".rb-row").forEach((r) => r.setAttribute("aria-selected", "false"));
             row2.setAttribute("aria-selected", "true");
-            detail(ctx, c);
+            detail2(ctx, c);
             if (ctx.isMobile()) ctx.openSheet();
           },
           onKeydown: (ev) => {
@@ -8697,7 +9347,7 @@ ${patch.note}` : "",
     mu.attach(box);
     paintBar2(ctx);
     const sel = st.chars.find((c) => c.chaId === st.charSel);
-    if (sel) detail(ctx, sel);
+    if (sel) detail2(ctx, sel);
     else ctx.showDetail(h("div", { class: "rb-empty" }, "캐릭터를 고르면 여기에 자세히 보여요."));
   }
   var orderQ = Promise.resolve();
@@ -8755,7 +9405,7 @@ ${patch.note}` : "",
           folders.length ? "sep" : null,
           { label: "새 폴더…", icon: "folderPlus", onClick: async () => {
             const name = await promptDialog(ctx.win, { title: "새 봇 폴더", label: `고른 봇 ${ids.length}개를 넣어요`, placeholder: "폴더 이름" });
-            if (name?.trim()) saveOrder(ctx, (o) => createFolder(o, { id: "df_" + newId().slice(0, 10), name: name.trim(), ids }), `'${name.trim()}' 폴더를 만들었어요 (봇 ${ids.length}개)`);
+            if (name?.trim()) saveOrder(ctx, (o) => createFolder2(o, { id: "df_" + newId().slice(0, 10), name: name.trim(), ids }), `'${name.trim()}' 폴더를 만들었어요 (봇 ${ids.length}개)`);
           } }
         ].filter(Boolean));
       } }),
@@ -8779,7 +9429,7 @@ ${patch.note}` : "",
   async function newCharFolder(ctx) {
     const r = await folderDialog(ctx.win, { title: "새 봇 폴더", items: charItems(ctx), noun: "봇", ...folderPickPrefs(ctx) });
     if (!r) return;
-    await saveOrder(ctx, (o) => createFolder(o, { id: "df_" + newId().slice(0, 10), name: r.name, ids: r.ids }), `'${r.name}' 폴더를 만들었어요${r.ids.length ? ` (봇 ${r.ids.length}개)` : ""}. RisuAI 사이드바에도 같은 폴더가 생겨요.`);
+    await saveOrder(ctx, (o) => createFolder2(o, { id: "df_" + newId().slice(0, 10), name: r.name, ids: r.ids }), `'${r.name}' 폴더를 만들었어요${r.ids.length ? ` (봇 ${r.ids.length}개)` : ""}. RisuAI 사이드바에도 같은 폴더가 생겨요.`);
   }
   function charFolderMenu(ctx, f, anchor) {
     openMenu(ctx.win, anchor, [
@@ -8789,7 +9439,7 @@ ${patch.note}` : "",
       } },
       { label: "이름 바꾸기", icon: "edit", onClick: async () => {
         const n = await promptDialog(ctx.win, { title: "폴더 이름", value: f.name });
-        if (n?.trim()) await saveOrder(ctx, (o) => renameFolder(o, f.id, n.trim()));
+        if (n?.trim()) await saveOrder(ctx, (o) => renameFolder2(o, f.id, n.trim()));
       } },
       { label: "폴더 색", icon: "palette", onClick: async () => {
         const c = await new Promise((res) => openMenu(ctx.win, anchor, FOLDER_COLORS.map((k) => ({ label: FOLDER_COLOR_KO[k], icon: "folder", onClick: () => res(k) }))));
@@ -8799,11 +9449,11 @@ ${patch.note}` : "",
       { label: "아래로", icon: "down", onClick: () => saveOrder(ctx, (o) => moveFolder(o, f.id, 1)) },
       "sep",
       { label: "폴더 삭제 (봇은 남음)", icon: "trash", danger: true, onClick: async () => {
-        if (await confirmDialog(ctx.win, { title: `'${f.name}' 폴더를 지울까요?`, body: "안에 있던 봇은 폴더 밖으로 나와요. 봇은 지워지지 않아요.", ok: "폴더 삭제", danger: true })) await saveOrder(ctx, (o) => deleteFolder(o, f.id));
+        if (await confirmDialog(ctx.win, { title: `'${f.name}' 폴더를 지울까요?`, body: "안에 있던 봇은 폴더 밖으로 나와요. 봇은 지워지지 않아요.", ok: "폴더 삭제", danger: true })) await saveOrder(ctx, (o) => deleteFolder2(o, f.id));
       } }
     ]);
   }
-  function detail(ctx, c) {
+  function detail2(ctx, c) {
     const st = ctx.state;
     const stat = (label, v) => h("div", { class: "rb-stat" }, h("small", null, label), h("b", null, String(v)));
     const timeline = h("div", { style: "display:flex;flex-direction:column;gap:8px" });
@@ -8858,6 +9508,11 @@ ${patch.note}` : "",
         "div",
         { style: "display:flex;gap:8px;flex-wrap:wrap" },
         btn("업데이트 가져오기", { size: "lg", icon: "upload", onClick: () => ctx.legacy.open() }),
+        isDev(ctx) ? btn(findProject(ctx, "character", c.chaId) ? "개발 탭에서 보기" : "개발 목록에 넣기", { size: "lg", icon: "code", onClick: async () => {
+          await addProjects(ctx, [{ kind: "character", id: c.chaId }]);
+          ctx.state.devSel = `c:${c.chaId}`;
+          ctx.go("dev");
+        } }) : null,
         isDev(ctx) ? btn("패치 만들기", { size: "lg", icon: "code", onClick: () => openPatchMaker(ctx, { kind: "character", key: `c:${c.chaId}`, i: c.i, chaId: c.chaId, name: c.name }) }) : btn("내 수정 내보내기", { size: "lg", icon: "download", onClick: async () => {
           try {
             await exportMyChanges(ctx, "character", await full());
@@ -9023,7 +9678,8 @@ ${patch.note}` : "",
     { id: "characters", label: "캐릭터", icon: "character" },
     { id: "presets", label: "프리셋", icon: "preset" },
     { id: "history", label: "기록", icon: "history" },
-    { id: "tools", label: "도구", icon: "tools" }
+    { id: "tools", label: "도구", icon: "tools" },
+    { id: "dev", label: "개발", icon: "code", dev: true }
   ];
   function createApp(api, { legacy, version, onPersonaChanged }) {
     const doc = document;
@@ -9085,9 +9741,9 @@ ${patch.note}` : "",
     const navFoot = h("div", { style: "margin-top:auto;display:flex;flex-direction:column" });
     nav.appendChild(navFoot);
     const main = h("section", { class: "rb-main", "aria-live": "polite" });
-    const detail2 = h("aside", { class: "rb-detail rb-scroll", "aria-label": "상세" });
+    const detail3 = h("aside", { class: "rb-detail rb-scroll", "aria-label": "상세" });
     const sheetBack = h("div", { class: "rb-sheet-back", onClick: () => ctx.closeSheet() });
-    const body = h("div", { class: "rb-body" }, nav, main, sheetBack, detail2);
+    const body = h("div", { class: "rb-body" }, nav, main, sheetBack, detail3);
     win.append(head, h("label", { class: "rb-search rb-mobile-search" }, icon("search", 16), mobileSearchInput), body, tabbar);
     let dragDepth = 0, dropEl = null;
     const hasFiles = (e) => [...e.dataTransfer?.types ?? []].includes("Files");
@@ -9122,7 +9778,7 @@ ${patch.note}` : "",
     doc.addEventListener("keydown", (e) => {
       if (root.hidden) return;
       if (e.key === "Escape" && !win.querySelector(".rb-modal, .rb-menu, .rb-full, .rb-lightbox")) {
-        if (detail2.classList.contains("open")) ctx.closeSheet();
+        if (detail3.classList.contains("open")) ctx.closeSheet();
         else close();
       }
       if (e.key === "/" && doc.activeElement?.tagName !== "INPUT" && doc.activeElement?.tagName !== "TEXTAREA") {
@@ -9145,12 +9801,26 @@ ${patch.note}` : "",
         mobileSearchInput.value = "";
       }
       if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsDirty = true;
+      if (tab === "dev" && !prefs.ui?.devMode) {
+        tab = "tools";
+        sub = null;
+      }
       state.tab = tab;
       state.sub = sub;
       ctx.closeSheet();
       render();
     }
+    function refreshTabs() {
+      const on = !!prefs.ui?.devMode;
+      for (const links of [navLinks, barLinks]) {
+        const a = links.get("dev");
+        if (a) a.hidden = !on;
+      }
+      win.classList.toggle("rb-has-dev", on);
+      if (!on && state.tab === "dev") go("tools");
+    }
     function render() {
+      refreshTabs();
       for (const links of [navLinks, barLinks]) for (const [id, a] of links) {
         if (id === state.tab) a.setAttribute("aria-current", "page");
         else a.removeAttribute("aria-current");
@@ -9163,9 +9833,9 @@ ${patch.note}` : "",
       const showSearch = ["modules", "characters", "history"].includes(state.tab);
       searchInput.placeholder = { modules: "모듈 이름, 로어북 키워드 검색", characters: "캐릭터 이름, 제작자 검색", history: "기록에서 이름 찾기" }[state.tab] ?? "검색";
       win.classList.toggle("rb-nosearch", !showSearch);
-      replace(detail2);
-      detail2.hidden = true;
-      const screen = { modules: renderModules, characters: renderCharacters, presets: renderPresets, history: renderHistory, tools: state.sub === "settings" ? renderSettings : renderTools }[state.tab] ?? renderPlaceholder;
+      replace(detail3);
+      detail3.hidden = true;
+      const screen = { modules: renderModules, characters: renderCharacters, presets: renderPresets, history: renderHistory, tools: state.sub === "settings" ? renderSettings : renderTools, dev: renderDev }[state.tab] ?? renderPlaceholder;
       Promise.resolve(screen(ctx)).catch((err) => {
         replace(main, h("div", { class: "rb-section" }, h("div", { class: "rb-note err", role: "alert" }, icon("alert", 18), h("span", null, `화면을 열지 못했어요: ${err?.message ?? err}`))));
       });
@@ -9202,7 +9872,7 @@ ${patch.note}` : "",
       root,
       win,
       main,
-      detail: detail2,
+      detail: detail3,
       version,
       legacy,
       onPersonaChanged,
@@ -9213,22 +9883,23 @@ ${patch.note}` : "",
       go,
       refresh: () => render(),
       applyTheme,
+      refreshTabs: () => refreshTabs(),
       setNavCount(tab, n) {
         const s = navLinks.get(tab)?.querySelector("small");
         if (s) s.textContent = n === void 0 ? "" : String(n);
       },
       openSheet() {
-        detail2.hidden = false;
-        detail2.classList.add("open");
+        detail3.hidden = false;
+        detail3.classList.add("open");
         sheetBack.classList.add("open");
       },
       closeSheet() {
-        detail2.classList.remove("open");
+        detail3.classList.remove("open");
         sheetBack.classList.remove("open");
       },
       showDetail(...children) {
-        replace(detail2, h("div", { class: "rb-sheet-head" }, iconBtn("x", "상세 닫기", { onClick: () => ctx.closeSheet() })), ...children);
-        detail2.hidden = false;
+        replace(detail3, h("div", { class: "rb-sheet-head" }, iconBtn("x", "상세 닫기", { onClick: () => ctx.closeSheet() })), ...children);
+        detail3.hidden = false;
       },
       toast: (text, opts) => toast(win, text, opts),
       isMobile: () => (win.clientWidth || 1e3) <= 760
@@ -9238,7 +9909,7 @@ ${patch.note}` : "",
   }
 
   // src/main.js
-  var VERSION = true ? "1.0.3" : "dev";
+  var VERSION = true ? "1.1.0" : "dev";
   var TITLE = "Dusk Atelier";
   async function start() {
     const raw = globalThis.risuai ?? globalThis.Risuai;
