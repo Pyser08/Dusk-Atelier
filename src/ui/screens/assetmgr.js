@@ -267,13 +267,7 @@ export async function openAssetsCore(ctx, src) {
         ctx.toast(await copyText(names.join("\n")) ? `이름 ${names.length}개를 복사했어요` : "복사하지 못했어요", { error: false });
       } }),
       btn("확장자 제거", { size: "sm", icon: "edit", title: n ? "고른 에셋 이름에서 .png·.webp 같은 확장자를 뺌" : "보이는 에셋 이름에서 .png·.webp 같은 확장자를 뺌", onClick: () => stripExtNames(n ? selected() : visible()) }),
-      btn(as.view === "list" ? "격자로 보기" : "목록으로 보기", { size: "sm", icon: as.view === "list" ? "image" : "preset", onClick: () => {
-        as.view = as.view === "list" ? "grid" : "list";
-        ctx.prefs.saveUi({ assetView: as.view }).catch(() => {
-        });
-        as.shown = PAGE;
-        paint();
-      } }),
+      viewToggle(),
       h("div", { class: "rb-spacer" }),
       n ? [
         btn("폴더로", { size: "sm", icon: "folder", onClick: (ev) => moveMenu(ev.currentTarget) }),
@@ -289,6 +283,26 @@ export async function openAssetsCore(ctx, src) {
         btn("ZIP 받기", { size: "sm", icon: "download", onClick: () => downloadAssets(visible()) })
       ]
     );
+  }
+  // 격자 ↔ 목록 토글: 둘 중 켜진 쪽에 강조색 칸이 미끄러지듯 옮겨 간다
+  function viewToggle() {
+    const set = (v) => {
+      if (v === as.view) return;
+      as.view = v;
+      el.dataset.v = v;
+      for (const b of el.querySelectorAll("button")) b.setAttribute("aria-checked", b.dataset.v === v ? "true" : "false");
+      ctx.prefs.saveUi({ assetView: v }).catch(() => {
+      });
+      as.shown = PAGE;
+      paintGrid();
+    };
+    const el = h(
+      "div",
+      { class: "rb-viewtoggle", role: "radiogroup", "aria-label": "보기 방식", dataset: { v: as.view } },
+      h("i", { "aria-hidden": "true" }),
+      ...[["grid", "격자", "image"], ["list", "목록", "preset"]].map(([v, label, ic]) => h("button", { type: "button", role: "radio", "aria-checked": as.view === v ? "true" : "false", dataset: { v }, title: `${label}로 보기`, onClick: () => set(v) }, icon(ic, 15), h("span", null, label)))
+    );
+    return el;
   }
   function paintGrid() {
     lazy.disconnect();

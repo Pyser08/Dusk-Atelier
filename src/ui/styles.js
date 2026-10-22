@@ -237,6 +237,11 @@ select.rb-input{appearance:auto}
 .rb-tile[aria-selected=true] .sel{background:var(--rb-acc-grad);border:0}
 /* 에셋 목록 보기: 캐릭터별 묶음 */
 .rb-grid.list{display:flex;flex-direction:column;gap:4px}
+.rb-viewtoggle{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:12px;background:var(--rb-surf);border:1px solid var(--rb-line3);flex-shrink:0}
+.rb-viewtoggle>i{position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:9px;background:var(--rb-acc-grad);box-shadow:0 2px 8px rgba(0,0,0,.25);transition:transform .2s cubic-bezier(.2,.7,.2,1)}
+.rb-viewtoggle[data-v=list]>i{transform:translateX(100%)}
+.rb-viewtoggle button{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 14px;border:0;background:transparent;color:var(--rb-sub);font-size:13px;font-weight:500;cursor:pointer;transition:color .15s}
+.rb-viewtoggle button[aria-checked=true]{color:var(--rb-on-acc);font-weight:600}
 .rb-am-group{margin-top:6px}
 .rb-am-group.sub{margin-top:2px;min-height:36px;font-size:13px}
 .rb-am-group[aria-expanded=true] .chev{transform:rotate(90deg)}

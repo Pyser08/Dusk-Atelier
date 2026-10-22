@@ -3505,6 +3505,11 @@ select.rb-input{appearance:auto}
 .rb-tile[aria-selected=true] .sel{background:var(--rb-acc-grad);border:0}
 /* 에셋 목록 보기: 캐릭터별 묶음 */
 .rb-grid.list{display:flex;flex-direction:column;gap:4px}
+.rb-viewtoggle{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:12px;background:var(--rb-surf);border:1px solid var(--rb-line3);flex-shrink:0}
+.rb-viewtoggle>i{position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:9px;background:var(--rb-acc-grad);box-shadow:0 2px 8px rgba(0,0,0,.25);transition:transform .2s cubic-bezier(.2,.7,.2,1)}
+.rb-viewtoggle[data-v=list]>i{transform:translateX(100%)}
+.rb-viewtoggle button{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 14px;border:0;background:transparent;color:var(--rb-sub);font-size:13px;font-weight:500;cursor:pointer;transition:color .15s}
+.rb-viewtoggle button[aria-checked=true]{color:var(--rb-on-acc);font-weight:600}
 .rb-am-group{margin-top:6px}
 .rb-am-group.sub{margin-top:2px;min-height:36px;font-size:13px}
 .rb-am-group[aria-expanded=true] .chev{transform:rotate(90deg)}
@@ -6284,13 +6289,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
           ctx.toast(await copyText(names.join("\n")) ? `이름 ${names.length}개를 복사했어요` : "복사하지 못했어요", { error: false });
         } }),
         btn("확장자 제거", { size: "sm", icon: "edit", title: n ? "고른 에셋 이름에서 .png·.webp 같은 확장자를 뺌" : "보이는 에셋 이름에서 .png·.webp 같은 확장자를 뺌", onClick: () => stripExtNames(n ? selected() : visible()) }),
-        btn(as.view === "list" ? "격자로 보기" : "목록으로 보기", { size: "sm", icon: as.view === "list" ? "image" : "preset", onClick: () => {
-          as.view = as.view === "list" ? "grid" : "list";
-          ctx.prefs.saveUi({ assetView: as.view }).catch(() => {
-          });
-          as.shown = PAGE;
-          paint();
-        } }),
+        viewToggle(),
         h("div", { class: "rb-spacer" }),
         n ? [
           btn("폴더로", { size: "sm", icon: "folder", onClick: (ev) => moveMenu(ev.currentTarget) }),
@@ -6306,6 +6305,25 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
           btn("ZIP 받기", { size: "sm", icon: "download", onClick: () => downloadAssets(visible()) })
         ]
       );
+    }
+    function viewToggle() {
+      const set = (v) => {
+        if (v === as.view) return;
+        as.view = v;
+        el.dataset.v = v;
+        for (const b of el.querySelectorAll("button")) b.setAttribute("aria-checked", b.dataset.v === v ? "true" : "false");
+        ctx.prefs.saveUi({ assetView: v }).catch(() => {
+        });
+        as.shown = PAGE;
+        paintGrid();
+      };
+      const el = h(
+        "div",
+        { class: "rb-viewtoggle", role: "radiogroup", "aria-label": "보기 방식", dataset: { v: as.view } },
+        h("i", { "aria-hidden": "true" }),
+        ...[["grid", "격자", "image"], ["list", "목록", "preset"]].map(([v, label, ic]) => h("button", { type: "button", role: "radio", "aria-checked": as.view === v ? "true" : "false", dataset: { v }, title: `${label}로 보기`, onClick: () => set(v) }, icon(ic, 15), h("span", null, label)))
+      );
+      return el;
     }
     function paintGrid() {
       lazy.disconnect();
