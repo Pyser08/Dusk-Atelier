@@ -116,7 +116,6 @@ function draw(ctx) {
       ),
       iconBtn("more", `${f.name} 폴더 메뉴`, { onClick: (e) => folderMenu(ctx, f, e.currentTarget) })
     );
-    dropTarget(ctx, head, { folderId: f.id });
     list.appendChild(head);
     if (open) {
       const body = h("div", { class: ["rb-folder-body", ctx.state.justOpened === f.id && "just-opened"] });
@@ -128,7 +127,6 @@ function draw(ctx) {
   if (fv !== void 0 && !filtering) list.dataset.dropFolder = fv;
   if (folders.length) list.appendChild(h("div", { class: "rb-label", style: "padding:14px 12px 6px;border-radius:10px", dataset: filtering ? {} : { dropFolder: "" } }, "폴더 없음"));
   for (const e of loose) list.appendChild(row(ctx, e, filtering));
-  if (folders.length) dropTarget(ctx, list, { folderId: null, onlySelf: true });
   if (!shown.length) list.appendChild(h("div", { class: "rb-empty" }, fv !== void 0 && !filtering ? '이 폴더에 모듈이 없어요. 폴더 메뉴의 "넣을 모듈 고르기"로 넣을 수 있어요.' : entries.length ? "조건에 맞는 모듈이 없어요." : '설치된 모듈이 없어요. 위의 "가져오기"나 파일을 창에 끌어 놓아서 추가하세요.'));
   const scroll = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
   const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 모듈" });
@@ -202,7 +200,6 @@ function row(ctx, e, filtering) {
       tabindex: "0",
       "aria-selected": st.modSel === m.id ? "true" : "false",
       dataset: filtering ? { id: m.id } : { id: m.id, dropRow: m.id, pick: m.id },
-      draggable: filtering || COARSE2 ? "false" : "true",
       onClick: (ev) => {
         if (!filtering && mu.click(ev, m.id, st.modSel)) return;
         select(ctx, m.id, el);
@@ -247,11 +244,9 @@ function row(ctx, e, filtering) {
     } })
   );
   if (!filtering) {
-    dragSource(ctx, el, m.id);
-    dropTarget(ctx, el, { beforeId: m.id });
     queueMicrotask(() => {
       const list = el.closest(".rb-list");
-      if (list && grip) gripDrag({ grip, row: el, root: list, scroller: list, mouse: false, count: () => mu.dragIds(m.id).length, skip: (t) => mu.dragIds(m.id).includes(t.getAttribute("data-drop-row")), onDrop: (d) => applyDrop(ctx, mu.dragIds(m.id), d) });
+      if (list) gripDrag({ grip, row: el, root: list, scroller: list, count: () => mu.dragIds(m.id).length, skip: (t) => mu.dragIds(m.id).includes(t.getAttribute("data-drop-row")), onDrop: (d) => applyDrop(ctx, mu.dragIds(m.id), d) });
     });
   }
   return el;

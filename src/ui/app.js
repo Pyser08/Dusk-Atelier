@@ -152,6 +152,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       mobileSearchInput.value = "";
     }
     if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsDirty = true;
+    if (tab === "characters") state.charOrderStale = true;
     if (tab === "dev" && !prefs.ui?.devMode) {
       tab = "tools";
       sub = null;
@@ -203,6 +204,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     if (!prefs.ui) await prefs.load();
     else await prefs.reloadMeta();
     state.modDirty = true;
+    state.charOrderStale = true;
     svc.invalidate();
     applyTheme();
     root.hidden = false;

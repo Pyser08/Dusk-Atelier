@@ -1,13 +1,53 @@
 var EDGE = 48;
-export function gripDrag({ grip, row: row2, root, scroller, onDrop, mouse = true, count, skip }) {
-  grip.style.touchAction = "none";
-  grip.addEventListener("pointerdown", (ev) => {
-    if (ev.button !== 0) return;
-    if (ev.pointerType === "mouse" && !mouse) return;
-    ev.preventDefault();
-    ev.stopPropagation();
-    const doc = grip.ownerDocument, win = doc.defaultView;
-    const host = root.closest(".rb-win") ?? doc.body;
+var START_PX = 5;
+// 마우스·펜: 줄 어디를 잡아도 5px 움직이면 끌기 시작 (클릭은 그대로 클릭).
+// 터치: 손잡이(grip)로만 끈다. 줄을 길게 누르는 건 여러 개 고르기에 쓰인다.
+// 브라우저 기본 끌기(draggable)는 RisuAI 플러그인 창 안에서 막힐 수 있어 포인터 이벤트로만 처리한다.
+var SKIP = "button:not(.rb-item),input,textarea,select,a,[role=switch],.rb-mcb,[contenteditable=true],.rb-icon-btn";
+export function gripDrag({ grip, row: row2, root, scroller, onDrop, mouse = true, count, skip, whole = true }) {
+  if (grip) {
+    grip.style.touchAction = "none";
+    grip.addEventListener("pointerdown", (ev) => {
+      if (ev.button !== 0) return;
+      if (ev.pointerType === "mouse" && !mouse && !whole) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      begin(ev, grip);
+    });
+  }
+  if (whole) {
+    row2.addEventListener("pointerdown", (ev) => {
+      if (ev.button !== 0 || ev.pointerType === "touch") return;
+      if (ev.target.closest(SKIP) || ev.target.closest(".grip")) return;
+      const doc = row2.ownerDocument;
+      const x0 = ev.clientX, y0 = ev.clientY;
+      const move = (e) => {
+        if (e.pointerId !== ev.pointerId) return;
+        if (Math.hypot(e.clientX - x0, e.clientY - y0) < START_PX) return;
+        stop();
+        doc.defaultView.getSelection?.()?.removeAllRanges();
+        // 끌기가 끝난 뒤 따라오는 클릭 한 번은 무시 (줄 선택이 바뀌지 않게)
+        const eat = (c) => {
+          c.stopPropagation();
+          c.preventDefault();
+        };
+        row2.addEventListener("click", eat, { capture: true, once: true });
+        setTimeout(() => row2.removeEventListener("click", eat, { capture: true }), 400);
+        begin(ev, row2, e);
+      };
+      const stop = () => {
+        doc.removeEventListener("pointermove", move);
+        doc.removeEventListener("pointerup", stop);
+        doc.removeEventListener("pointercancel", stop);
+      };
+      doc.addEventListener("pointermove", move);
+      doc.addEventListener("pointerup", stop);
+      doc.addEventListener("pointercancel", stop);
+    });
+  }
+  function begin(ev, capture, firstMove) {
+    const doc = row2.ownerDocument, win = doc.defaultView;
+    const host = root.closest(".rb-win") ?? root.closest(".rb-full") ?? doc.body;
     const r = row2.getBoundingClientRect(), hr = host.getBoundingClientRect();
     const dy = ev.clientY - r.top;
     const ghost = row2.cloneNode(true);
@@ -22,7 +62,9 @@ export function gripDrag({ grip, row: row2, root, scroller, onDrop, mouse = true
       boxShadow: "0 12px 30px rgba(0,0,0,.35)",
       background: "var(--rb-surf2)",
       borderRadius: "12px",
-      margin: "0"
+      margin: "0",
+      transform: "scale(1.01)",
+      transition: "transform .12s"
     });
     ghost.setAttribute("aria-hidden", "true");
     const n = count?.() ?? 1;
@@ -31,8 +73,10 @@ export function gripDrag({ grip, row: row2, root, scroller, onDrop, mouse = true
     const dim = n > 1 ? [...root.querySelectorAll(".picked")] : [row2];
     if (!dim.includes(row2)) dim.push(row2);
     for (const d of dim) d.style.opacity = "0.35";
+    const prevSel = doc.body.style.userSelect;
+    doc.body.style.userSelect = "none";
     try {
-      grip.setPointerCapture(ev.pointerId);
+      capture.setPointerCapture(ev.pointerId);
     } catch {
     }
     let target = null, lastY = ev.clientY, raf = 0;
@@ -79,23 +123,24 @@ export function gripDrag({ grip, row: row2, root, scroller, onDrop, mouse = true
     };
     const end = async (e) => {
       if (e.pointerId !== ev.pointerId) return;
-      grip.removeEventListener("pointermove", move2);
-      grip.removeEventListener("pointerup", end);
-      grip.removeEventListener("pointercancel", cancel);
+      capture.removeEventListener("pointermove", move2);
+      capture.removeEventListener("pointerup", end);
+      capture.removeEventListener("pointercancel", end);
       if (raf) win.cancelAnimationFrame(raf);
       ghost.remove();
       for (const d of dim) d.style.opacity = "";
+      doc.body.style.userSelect = prevSel;
       const t = target;
       clear2();
       if (!t || e.type === "pointercancel") return;
       if (t.isRow) await onDrop({ beforeId: t.id, after: t.after, folderId: void 0 });
       else await onDrop({ beforeId: null, after: false, folderId: t.folder || null });
     };
-    const cancel = (e) => end(e);
-    grip.addEventListener("pointermove", move2);
-    grip.addEventListener("pointerup", end);
-    grip.addEventListener("pointercancel", cancel);
-  });
+    capture.addEventListener("pointermove", move2);
+    capture.addEventListener("pointerup", end);
+    capture.addEventListener("pointercancel", end);
+    if (firstMove) move2(firstMove);
+  }
 }
 export function dragBadge(doc, n) {
   const b = doc.createElement("span");

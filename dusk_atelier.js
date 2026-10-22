@@ -4026,15 +4026,51 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 
   // src/ui/sortable.js
   var EDGE = 48;
-  function gripDrag({ grip, row: row2, root, scroller, onDrop, mouse = true, count, skip }) {
-    grip.style.touchAction = "none";
-    grip.addEventListener("pointerdown", (ev) => {
-      if (ev.button !== 0) return;
-      if (ev.pointerType === "mouse" && !mouse) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      const doc = grip.ownerDocument, win = doc.defaultView;
-      const host = root.closest(".rb-win") ?? doc.body;
+  var START_PX = 5;
+  var SKIP = "button:not(.rb-item),input,textarea,select,a,[role=switch],.rb-mcb,[contenteditable=true],.rb-icon-btn";
+  function gripDrag({ grip, row: row2, root, scroller, onDrop, mouse = true, count, skip, whole = true }) {
+    if (grip) {
+      grip.style.touchAction = "none";
+      grip.addEventListener("pointerdown", (ev) => {
+        if (ev.button !== 0) return;
+        if (ev.pointerType === "mouse" && !mouse && !whole) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        begin(ev, grip);
+      });
+    }
+    if (whole) {
+      row2.addEventListener("pointerdown", (ev) => {
+        if (ev.button !== 0 || ev.pointerType === "touch") return;
+        if (ev.target.closest(SKIP) || ev.target.closest(".grip")) return;
+        const doc = row2.ownerDocument;
+        const x0 = ev.clientX, y0 = ev.clientY;
+        const move2 = (e) => {
+          if (e.pointerId !== ev.pointerId) return;
+          if (Math.hypot(e.clientX - x0, e.clientY - y0) < START_PX) return;
+          stop();
+          doc.defaultView.getSelection?.()?.removeAllRanges();
+          const eat = (c) => {
+            c.stopPropagation();
+            c.preventDefault();
+          };
+          row2.addEventListener("click", eat, { capture: true, once: true });
+          setTimeout(() => row2.removeEventListener("click", eat, { capture: true }), 400);
+          begin(ev, row2, e);
+        };
+        const stop = () => {
+          doc.removeEventListener("pointermove", move2);
+          doc.removeEventListener("pointerup", stop);
+          doc.removeEventListener("pointercancel", stop);
+        };
+        doc.addEventListener("pointermove", move2);
+        doc.addEventListener("pointerup", stop);
+        doc.addEventListener("pointercancel", stop);
+      });
+    }
+    function begin(ev, capture, firstMove) {
+      const doc = row2.ownerDocument, win = doc.defaultView;
+      const host = root.closest(".rb-win") ?? root.closest(".rb-full") ?? doc.body;
       const r = row2.getBoundingClientRect(), hr = host.getBoundingClientRect();
       const dy = ev.clientY - r.top;
       const ghost = row2.cloneNode(true);
@@ -4049,7 +4085,9 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         boxShadow: "0 12px 30px rgba(0,0,0,.35)",
         background: "var(--rb-surf2)",
         borderRadius: "12px",
-        margin: "0"
+        margin: "0",
+        transform: "scale(1.01)",
+        transition: "transform .12s"
       });
       ghost.setAttribute("aria-hidden", "true");
       const n = count?.() ?? 1;
@@ -4058,8 +4096,10 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       const dim = n > 1 ? [...root.querySelectorAll(".picked")] : [row2];
       if (!dim.includes(row2)) dim.push(row2);
       for (const d of dim) d.style.opacity = "0.35";
+      const prevSel = doc.body.style.userSelect;
+      doc.body.style.userSelect = "none";
       try {
-        grip.setPointerCapture(ev.pointerId);
+        capture.setPointerCapture(ev.pointerId);
       } catch {
       }
       let target = null, lastY = ev.clientY, raf = 0;
@@ -4106,23 +4146,24 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       };
       const end = async (e) => {
         if (e.pointerId !== ev.pointerId) return;
-        grip.removeEventListener("pointermove", move2);
-        grip.removeEventListener("pointerup", end);
-        grip.removeEventListener("pointercancel", cancel);
+        capture.removeEventListener("pointermove", move2);
+        capture.removeEventListener("pointerup", end);
+        capture.removeEventListener("pointercancel", end);
         if (raf) win.cancelAnimationFrame(raf);
         ghost.remove();
         for (const d of dim) d.style.opacity = "";
+        doc.body.style.userSelect = prevSel;
         const t = target;
         clear2();
         if (!t || e.type === "pointercancel") return;
         if (t.isRow) await onDrop({ beforeId: t.id, after: t.after, folderId: void 0 });
         else await onDrop({ beforeId: null, after: false, folderId: t.folder || null });
       };
-      const cancel = (e) => end(e);
-      grip.addEventListener("pointermove", move2);
-      grip.addEventListener("pointerup", end);
-      grip.addEventListener("pointercancel", cancel);
-    });
+      capture.addEventListener("pointermove", move2);
+      capture.addEventListener("pointerup", end);
+      capture.addEventListener("pointercancel", end);
+      if (firstMove) move2(firstMove);
+    }
   }
   function dragBadge(doc, n) {
     const b = doc.createElement("span");
@@ -6767,7 +6808,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 
   // src/ui/screens/chareditor.js
   var MAP = { lorebook: "globalLore", regex: "customscript", trigger: "triggerscript" };
-  var SKIP = /* @__PURE__ */ new Set([...USER_KEYS, "emotionImages", "additionalAssets", "ccAssets", "image", "vits", "chats", "chatFolders", "chatPage", "loreCache", "lowLevelHistory"]);
+  var SKIP2 = /* @__PURE__ */ new Set([...USER_KEYS, "emotionImages", "additionalAssets", "ccAssets", "image", "vits", "chats", "chatFolders", "chatPage", "loreCache", "lowLevelHistory"]);
   var CHAR_INFO_LABELS = {
     name: "이름",
     nickname: "별명",
@@ -6794,7 +6835,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
   };
   function charToView(ch) {
     const v = {};
-    for (const [k, val] of Object.entries(ch)) if (!SKIP.has(k)) v[k] = val;
+    for (const [k, val] of Object.entries(ch)) if (!SKIP2.has(k)) v[k] = val;
     v.chaId = ch.chaId;
     for (const [vk, ck] of Object.entries(MAP)) {
       v[vk] = Array.isArray(ch[ck]) ? ch[ck] : [];
@@ -6815,7 +6856,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     };
     const want = unmap(view), before = unmap(original);
     for (const k of /* @__PURE__ */ new Set([...Object.keys(want), ...Object.keys(before)])) {
-      if (SKIP.has(k)) continue;
+      if (SKIP2.has(k)) continue;
       if (stableJson(want[k] ?? null) === stableJson(before[k] ?? null)) continue;
       if (want[k] === void 0) delete out[k];
       else out[k] = want[k];
@@ -7890,7 +7931,6 @@ ${patch.note}` : "",
         ),
         iconBtn("more", `${f.name} 폴더 메뉴`, { onClick: (e) => folderMenu(ctx, f, e.currentTarget) })
       );
-      dropTarget(ctx, head, { folderId: f.id });
       list.appendChild(head);
       if (open) {
         const body = h("div", { class: ["rb-folder-body", ctx.state.justOpened === f.id && "just-opened"] });
@@ -7902,7 +7942,6 @@ ${patch.note}` : "",
     if (fv !== void 0 && !filtering) list.dataset.dropFolder = fv;
     if (folders.length) list.appendChild(h("div", { class: "rb-label", style: "padding:14px 12px 6px;border-radius:10px", dataset: filtering ? {} : { dropFolder: "" } }, "폴더 없음"));
     for (const e of loose) list.appendChild(row(ctx, e, filtering));
-    if (folders.length) dropTarget(ctx, list, { folderId: null, onlySelf: true });
     if (!shown.length) list.appendChild(h("div", { class: "rb-empty" }, fv !== void 0 && !filtering ? '이 폴더에 모듈이 없어요. 폴더 메뉴의 "넣을 모듈 고르기"로 넣을 수 있어요.' : entries.length ? "조건에 맞는 모듈이 없어요." : '설치된 모듈이 없어요. 위의 "가져오기"나 파일을 창에 끌어 놓아서 추가하세요.'));
     const scroll = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
     const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 모듈" });
@@ -7976,7 +8015,6 @@ ${patch.note}` : "",
         tabindex: "0",
         "aria-selected": st.modSel === m.id ? "true" : "false",
         dataset: filtering ? { id: m.id } : { id: m.id, dropRow: m.id, pick: m.id },
-        draggable: filtering || COARSE2 ? "false" : "true",
         onClick: (ev) => {
           if (!filtering && mu.click(ev, m.id, st.modSel)) return;
           select(ctx, m.id, el);
@@ -8021,11 +8059,9 @@ ${patch.note}` : "",
       } })
     );
     if (!filtering) {
-      dragSource(ctx, el, m.id);
-      dropTarget(ctx, el, { beforeId: m.id });
       queueMicrotask(() => {
         const list = el.closest(".rb-list");
-        if (list && grip) gripDrag({ grip, row: el, root: list, scroller: list, mouse: false, count: () => mu.dragIds(m.id).length, skip: (t) => mu.dragIds(m.id).includes(t.getAttribute("data-drop-row")), onDrop: (d) => applyDrop(ctx, mu.dragIds(m.id), d) });
+        if (list) gripDrag({ grip, row: el, root: list, scroller: list, count: () => mu.dragIds(m.id).length, skip: (t) => mu.dragIds(m.id).includes(t.getAttribute("data-drop-row")), onDrop: (d) => applyDrop(ctx, mu.dragIds(m.id), d) });
       });
     }
     return el;
@@ -8054,64 +8090,6 @@ ${patch.note}` : "",
     ctx.state.modIndex = new Map(ctx.state.modData.entries.map((e) => [e.module.id, searchText(e.module)]));
     ctx.state.modDirty = false;
     if (ctx.state.tab === "modules") draw(ctx);
-  }
-  var dragIds = null;
-  function dragSource(ctx, el, id) {
-    el.addEventListener("dragstart", (ev) => {
-      dragIds = multiOf(ctx).dragIds(id);
-      ev.dataTransfer.effectAllowed = "move";
-      ev.dataTransfer.setData("text/x-rbm-module", dragIds.join("\n"));
-      if (dragIds.length > 1) {
-        const g = el.cloneNode(true);
-        Object.assign(g.style, { position: "absolute", top: "-1000px", left: "0", width: `${el.offsetWidth}px`, background: "var(--rb-surf2)", borderRadius: "12px" });
-        g.appendChild(dragBadge(el.ownerDocument, dragIds.length));
-        ctx.win.appendChild(g);
-        ev.dataTransfer.setDragImage(g, 24, 20);
-        setTimeout(() => g.remove(), 0);
-        ctx.main.querySelectorAll(".rb-row.picked").forEach((r) => {
-          r.style.opacity = "0.5";
-        });
-      }
-      el.style.opacity = "0.5";
-    });
-    el.addEventListener("dragend", () => {
-      dragIds = null;
-      ctx.main.querySelectorAll(".rb-row").forEach((r) => {
-        r.style.opacity = "";
-      });
-      ctx.main.querySelectorAll("[data-drop]").forEach((x) => {
-        x.removeAttribute("data-drop");
-        x.style.boxShadow = "";
-      });
-    });
-  }
-  function dropTarget(ctx, el, { beforeId, folderId, onlySelf }) {
-    const ok = (ev) => dragIds && [...ev.dataTransfer?.types ?? []].includes("text/x-rbm-module") && (!onlySelf || ev.target === el) && !(beforeId && dragIds.includes(beforeId));
-    el.addEventListener("dragover", (ev) => {
-      if (!ok(ev)) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      const after = beforeId && ev.offsetY > el.clientHeight / 2;
-      const d = after ? "after" : "before";
-      if (el.dataset.drop === d) return;
-      el.dataset.drop = d;
-      el.style.boxShadow = beforeId ? after ? "inset 0 -2px 0 var(--rb-acc-text)" : "inset 0 2px 0 var(--rb-acc-text)" : "inset 0 0 0 2px var(--rb-sel-ring)";
-    });
-    el.addEventListener("dragleave", (ev) => {
-      if (el.contains(ev.relatedTarget)) return;
-      el.style.boxShadow = "";
-      el.removeAttribute("data-drop");
-    });
-    el.addEventListener("drop", (ev) => {
-      if (!ok(ev)) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      const ids = dragIds, after = el.dataset.drop === "after";
-      el.style.boxShadow = "";
-      el.removeAttribute("data-drop");
-      if (!ids?.length) return;
-      applyDrop(ctx, ids, { beforeId, after, folderId });
-    });
   }
   function applyDrop(ctx, ids, { beforeId, after, folderId }) {
     ids = [].concat(ids);
@@ -9281,6 +9259,15 @@ ${patch.note}` : "",
       st.charModNames = new Map((db?.modules ?? []).map((m) => [m.id, m.name]));
       st.charsDirty = false;
       st.charsAt = Date.now();
+      st.charOrderStale = false;
+    }
+    if (st.charOrderStale) {
+      st.charOrderStale = false;
+      try {
+        const o = (await ctx.api.getDatabase(["characterOrder"]))?.characterOrder;
+        if (Array.isArray(o)) st.charOrder = o;
+      } catch {
+      }
     }
     const q = st.search.trim().toLowerCase();
     const filtering = !!q;
@@ -9305,7 +9292,6 @@ ${patch.note}` : "",
           tabindex: "0",
           "aria-selected": st.charSel === c.chaId ? "true" : "false",
           dataset: filtering ? { id: c.chaId } : { id: c.chaId, dropRow: c.chaId, pick: c.chaId },
-          draggable: filtering || COARSE3 ? "false" : "true",
           onClick: (ev) => {
             if (!filtering && mu.click(ev, c.chaId, st.charSel)) return;
             st.charSel = c.chaId;
@@ -9335,16 +9321,11 @@ ${patch.note}` : "",
           charMenu(ctx, c, ev.currentTarget);
         } })
       );
-      if (!filtering) {
-        charDragSource(ctx, row2, c.chaId);
-        charDropTarget(ctx, row2, { beforeId: c.chaId });
-      }
       if (grip) gripDrag({
         grip,
         row: row2,
         root: box,
         scroller: box,
-        mouse: false,
         count: () => mu.dragIds(c.chaId).length,
         skip: (t) => mu.dragIds(c.chaId).includes(t.getAttribute("data-drop-row")),
         onDrop: (d) => {
@@ -9396,7 +9377,6 @@ ${patch.note}` : "",
           ),
           iconBtn("more", `${f.name} 폴더 메뉴`, { onClick: (e) => charFolderMenu(ctx, f, e.currentTarget) })
         );
-        charDropTarget(ctx, head, { folderId: f.id });
         box.appendChild(head);
         if (open) {
           const body = h("div", { class: ["rb-folder-body", st.justOpened === f.id && "just-opened"] });
@@ -9413,7 +9393,6 @@ ${patch.note}` : "",
       }
       if (hasFolders) {
         const outside = h("div", { class: "rb-label", style: "padding:14px 12px 6px;border-radius:10px", dataset: { dropFolder: "" } }, "여기에 놓으면 폴더 밖으로");
-        charDropTarget(ctx, outside, { folderId: null });
         box.appendChild(outside);
       }
     }
@@ -9444,15 +9423,18 @@ ${patch.note}` : "",
     else ctx.showDetail(h("div", { class: "rb-empty" }, "캐릭터를 고르면 여기에 자세히 보여요."));
   }
   var orderQ = Promise.resolve();
+  var dropEmpty = (o) => o.filter((x) => !(x && typeof x === "object" && Array.isArray(x.data) && x.data.length === 0));
   function saveOrder(ctx, fn, done) {
     const st = ctx.state;
-    const next = fn(st.charOrder ?? []);
+    const raw = fn(st.charOrder ?? []);
+    const next = dropEmpty(raw);
+    if (next.length !== raw.length) done = "봇이 없는 폴더는 RisuAI 규칙에 따라 없어졌어요";
     st.charOrder = next;
     renderCharacters(ctx);
     if (done) ctx.toast(done);
     const p = orderQ.then(async () => {
       const fresh = (await ctx.api.getDatabase(["characterOrder"]))?.characterOrder;
-      const out = Array.isArray(fresh) ? fn(fresh) : st.charOrder;
+      const out = Array.isArray(fresh) ? dropEmpty(fn(fresh)) : st.charOrder;
       await ctx.api.setDatabaseLite({ characterOrder: out });
       if (JSON.stringify(out) !== JSON.stringify(st.charOrder)) {
         st.charOrder = out;
@@ -9522,6 +9504,10 @@ ${patch.note}` : "",
   async function newCharFolder(ctx) {
     const r = await folderDialog(ctx.win, { title: "새 봇 폴더", items: charItems(ctx), noun: "봇", ...folderPickPrefs(ctx) });
     if (!r) return;
+    if (!r.ids.length) {
+      ctx.toast("RisuAI는 봇이 없는 폴더를 지워요. 넣을 봇을 하나 이상 골라 주세요.", { error: true, seconds: 6 });
+      return;
+    }
     await saveOrder(ctx, (o) => createFolder2(o, { id: "df_" + newId().slice(0, 10), name: r.name, ids: r.ids }), `'${r.name}' 폴더를 만들었어요${r.ids.length ? ` (봇 ${r.ids.length}개)` : ""}. RisuAI 사이드바에도 같은 폴더가 생겨요.`);
   }
   function charFolderMenu(ctx, f, anchor) {
@@ -9627,66 +9613,6 @@ ${patch.note}` : "",
       const list = (await createStore(ctx.api).listBackups()).filter((b) => b.target === c.chaId).slice(0, 3);
       replace(timeline, list.length ? list.map((b) => h("div", { class: "rb-card pad", style: "padding:10px 14px" }, h("div", { style: "display:flex;gap:8px" }, h("b", { style: "font-size:13px" }, b.note || "업데이트 전"), h("span", { class: "rb-muted" }, fmtWhen(b.t))), b.summary ? h("div", { class: "rb-muted" }, b.summary) : null)) : h("div", { class: "rb-muted", style: "padding:12px 14px;border-radius:12px;border:1px dashed var(--rb-line)" }, "아직 기록이 없어요."));
     })().catch(() => {
-    });
-  }
-  var charDragIds = null;
-  function charDragSource(ctx, el, id) {
-    el.addEventListener("dragstart", (ev) => {
-      charDragIds = multiOf2(ctx).dragIds(id);
-      ev.dataTransfer.effectAllowed = "move";
-      ev.dataTransfer.setData("text/x-rbm-char", charDragIds.join("\n"));
-      if (charDragIds.length > 1) {
-        const g = el.cloneNode(true);
-        Object.assign(g.style, { position: "absolute", top: "-1000px", left: "0", width: `${el.offsetWidth}px`, background: "var(--rb-surf2)", borderRadius: "12px" });
-        g.appendChild(dragBadge(el.ownerDocument, charDragIds.length));
-        ctx.win.appendChild(g);
-        ev.dataTransfer.setDragImage(g, 24, 20);
-        setTimeout(() => g.remove(), 0);
-        ctx.main.querySelectorAll(".rb-row.picked").forEach((r) => {
-          r.style.opacity = "0.5";
-        });
-      }
-      el.style.opacity = "0.5";
-    });
-    el.addEventListener("dragend", () => {
-      charDragIds = null;
-      ctx.main.querySelectorAll(".rb-row").forEach((r) => {
-        r.style.opacity = "";
-      });
-      ctx.main.querySelectorAll("[data-drop]").forEach((x) => {
-        x.removeAttribute("data-drop");
-        x.style.boxShadow = "";
-      });
-    });
-  }
-  function charDropTarget(ctx, el, { beforeId, folderId }) {
-    const ok = (ev) => charDragIds && [...ev.dataTransfer?.types ?? []].includes("text/x-rbm-char") && !(beforeId && charDragIds.includes(beforeId));
-    el.addEventListener("dragover", (ev) => {
-      if (!ok(ev)) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      const after = beforeId && ev.offsetY > el.clientHeight / 2;
-      const d = after ? "after" : "before";
-      if (el.dataset.drop === d) return;
-      el.dataset.drop = d;
-      el.style.boxShadow = beforeId ? after ? "inset 0 -2px 0 var(--rb-acc-text)" : "inset 0 2px 0 var(--rb-acc-text)" : "inset 0 0 0 2px var(--rb-sel-ring)";
-    });
-    el.addEventListener("dragleave", (ev) => {
-      if (el.contains(ev.relatedTarget)) return;
-      el.style.boxShadow = "";
-      el.removeAttribute("data-drop");
-    });
-    el.addEventListener("drop", (ev) => {
-      if (!ok(ev)) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      const ids = charDragIds, after = el.dataset.drop === "after";
-      el.style.boxShadow = "";
-      el.removeAttribute("data-drop");
-      if (!ids?.length) return;
-      const d = beforeId ? { beforeId, after, folderId: void 0 } : { beforeId: null, after: false, folderId: folderId || null };
-      ctx.state.justMoved = ids;
-      saveOrder(ctx, (o) => moveChar(o, ids, d), ids.length > 1 ? `봇 ${ids.length}개를 옮겼어요` : null);
     });
   }
   async function fullChar(ctx, c) {
@@ -10027,6 +9953,7 @@ ${patch.note}` : "",
         mobileSearchInput.value = "";
       }
       if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsDirty = true;
+      if (tab === "characters") state.charOrderStale = true;
       if (tab === "dev" && !prefs.ui?.devMode) {
         tab = "tools";
         sub = null;
@@ -10078,6 +10005,7 @@ ${patch.note}` : "",
       if (!prefs.ui) await prefs.load();
       else await prefs.reloadMeta();
       state.modDirty = true;
+      state.charOrderStale = true;
       svc.invalidate();
       applyTheme();
       root.hidden = false;
