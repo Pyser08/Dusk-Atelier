@@ -4,9 +4,9 @@ import { characterAssetKeys } from '../../engine/character.js';
 import { createStore } from '../../engine/store.js';
 import { Busy, isGenerating } from '../../engine/safety.js';
 import { loadCharacters } from '../../data/modules.js';
-import { fmtWhen, h, replace } from '../dom.js';
+import { fmtWhen, h, replace, vanish } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog } from '../kit.js';
+import { badge, btn, confirmDialog, loading, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog } from '../kit.js';
 import { createMulti } from '../multiselect.js';
 import { dragBadge, gripDrag } from '../sortable.js';
 import { openCharAssets, openCharEditor } from './chareditor.js';
@@ -18,7 +18,7 @@ var COARSE = typeof matchMedia === "function" && matchMedia("(pointer: coarse)")
 export async function renderCharacters(ctx) {
   const st = ctx.state;
   if (!st.chars || st.charsDirty) {
-    replace(ctx.main, h("div", { class: "rb-empty" }, "캐릭터를 불러오는 중…"));
+    replace(ctx.main, loading("캐릭터를 불러오는 중", { rows: 7 }));
     const db = await ctx.api.getDatabase(["characters", "modules", "characterOrder"]);
     st.charOrder = Array.isArray(db?.characterOrder) ? db.characterOrder : [];
     const lc = await loadCharacters(ctx.api, db?.characters);
@@ -61,7 +61,7 @@ export async function renderCharacters(ctx) {
     const row2 = h(
       "div",
       {
-        class: "rb-row",
+        class: ["rb-row", st.justMoved?.includes(c.chaId) && "just-moved"],
         role: "option",
         tabindex: "0",
         "aria-selected": st.charSel === c.chaId ? "true" : "false",
@@ -110,6 +110,7 @@ export async function renderCharacters(ctx) {
       skip: (t) => mu.dragIds(c.chaId).includes(t.getAttribute("data-drop-row")),
       onDrop: (d) => {
         const ids = mu.dragIds(c.chaId);
+        st.justMoved = ids;
         return saveOrder(ctx, (o) => moveChar(o, ids, d), ids.length > 1 ? `봇 ${ids.length}개를 옮겼어요` : null);
       }
     });
@@ -146,6 +147,7 @@ export async function renderCharacters(ctx) {
               else delete m.charFoldersCollapsed[f.id];
             }).catch(() => {
             });
+            if (!open) st.justOpened = f.id;
             renderCharacters(ctx);
           } },
           h("span", { class: "chev" }, icon("chevron", 14)),
@@ -158,7 +160,7 @@ export async function renderCharacters(ctx) {
       charDropTarget(ctx, head, { folderId: f.id });
       box.appendChild(head);
       if (open) {
-        const body = h("div", { class: "rb-folder-body" });
+        const body = h("div", { class: ["rb-folder-body", st.justOpened === f.id && "just-opened"] });
         for (const id of it.ids) {
           const c = byId.get(id);
           if (c) {
@@ -193,6 +195,8 @@ export async function renderCharacters(ctx) {
     btn("업데이트·새로 넣기", { size: "sm", kind: "primary", icon: "upload", onClick: () => ctx.legacy.open() })
   ), bar, box);
   box.scrollTop = keep;
+  st.justOpened = null;
+  st.justMoved = null;
   mu.bar = bar;
   mu.attach(box);
   paintBar2(ctx);
@@ -444,6 +448,7 @@ function charDropTarget(ctx, el, { beforeId, folderId }) {
     el.removeAttribute("data-drop");
     if (!ids?.length) return;
     const d = beforeId ? { beforeId, after, folderId: void 0 } : { beforeId: null, after: false, folderId: folderId || null };
+    ctx.state.justMoved = ids;
     saveOrder(ctx, (o) => moveChar(o, ids, d), ids.length > 1 ? `봇 ${ids.length}개를 옮겼어요` : null);
   });
 }
@@ -504,6 +509,7 @@ async function removeCharacter(ctx, c) {
     if (!ok) return;
     const again = await fullChar(ctx, c);
     if (isGenerating(again)) throw new Busy();
+    await vanish(ctx.main.querySelector(`.rb-row[data-id="${CSS.escape(c.chaId)}"]`));
     await ctx.api.setCharacterToIndex(c.i, { ...again, trashTime: Date.now() });
     if (ctx.state.charMulti?.has?.(c.chaId)) ctx.state.charMulti.set([...ctx.state.charMulti.sel].filter((x) => x !== c.chaId));
     ctx.state.charsDirty = true;

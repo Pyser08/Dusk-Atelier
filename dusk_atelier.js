@@ -2815,6 +2815,35 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       input.click();
     });
   }
+  var EASE = "cubic-bezier(.2,.7,.2,1)";
+  function reduceMotion() {
+    try {
+      return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch {
+      return false;
+    }
+  }
+  function motion(el, frames, opts = {}) {
+    if (!el?.animate || reduceMotion()) return null;
+    try {
+      return el.animate(frames, { duration: 160, easing: EASE, ...opts });
+    } catch {
+      return null;
+    }
+  }
+  var fadeUp = (el, opts) => motion(el, [{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], opts);
+  function vanish(el, ms = 170) {
+    if (!el?.isConnected) return Promise.resolve();
+    const hgt = el.offsetHeight;
+    const a = motion(el, [
+      { opacity: 1, height: `${hgt}px`, transform: "none" },
+      { opacity: 0, height: "0px", paddingTop: "0px", paddingBottom: "0px", marginTop: "0px", marginBottom: "0px", transform: "translateX(-8px)" }
+    ], { duration: ms, fill: "forwards" });
+    if (!a) return Promise.resolve();
+    el.style.overflow = "hidden";
+    return a.finished.catch(() => {
+    });
+  }
 
   // src/ui/icons.js
   var P = {
@@ -2921,9 +2950,14 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       actBtn
     );
     let timer = null;
+    let closing = false;
     const close = () => {
       clearInterval(timer);
-      el.remove();
+      if (closing) return;
+      closing = true;
+      const out = motion(el, [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(6px) scale(.98)" }], { duration: 140, fill: "forwards" });
+      if (out) out.finished.then(() => el.remove(), () => el.remove());
+      else el.remove();
     };
     const paint = () => {
       if (actBtn) actBtn.textContent = `${action.label} · ${left}초`;
@@ -3214,6 +3248,22 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
     paint(value);
     return el;
   }
+  function loading(label = "불러오는 중", { rows = 0 } = {}) {
+    const box = h("div", { class: "rb-loading", role: "status", "aria-label": label });
+    for (let i = 0; i < rows; i++) {
+      box.appendChild(h(
+        "div",
+        { class: "rb-skel-row", style: { "--d": `${i * 60}ms` } },
+        h("i", { class: "rb-skel", style: "width:40px;height:40px;border-radius:12px;flex-shrink:0" }),
+        h("div", { style: "flex:1;display:flex;flex-direction:column;gap:8px" }, h("i", { class: "rb-skel", style: `height:12px;width:${38 + i * 7 % 24}%` }), h("i", { class: "rb-skel", style: `height:10px;width:${22 + i * 5 % 16}%` }))
+      ));
+    }
+    box.appendChild(h("div", { class: "rb-loading-label" }, spinner(), h("span", null, label)));
+    return box;
+  }
+  function spinner() {
+    return h("span", { class: "rb-spin", "aria-hidden": "true" });
+  }
 
   // src/ui/styles.js
   var FONT_LINK = "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap";
@@ -3244,7 +3294,7 @@ html,body{margin:0;height:100%;background:transparent}
 
 /* 버튼 */
 .rb-btn{height:40px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;border-radius:12px;border:1px solid var(--rb-line3);
-  background:var(--rb-surf);color:var(--rb-text);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,filter .15s}
+  background:var(--rb-surf);color:var(--rb-text);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,filter .15s,transform .08s}
 @media (hover: hover){.rb-btn:hover{background:var(--rb-hover)}}
 .rb-btn:focus-visible,.rb-chip:focus-visible,.rb-nav a:focus-visible,.rb-switch:focus-visible,.rb-icon-btn:focus-visible{outline:2px solid var(--rb-focus);outline-offset:2px}
 .rb-row:focus-visible{outline:2px solid var(--rb-focus);outline-offset:-2px}
@@ -3256,7 +3306,7 @@ html,body{margin:0;height:100%;background:transparent}
 .rb-btn.lg{height:44px;padding:0 20px}
 .rb-btn.sm{height:32px;padding:0 12px;border-radius:10px;font-size:13px}
 .rb-btn[disabled]{opacity:.5;cursor:not-allowed;filter:none}
-.rb-icon-btn{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;border:0;background:transparent;color:var(--rb-sub);cursor:pointer;flex-shrink:0}
+.rb-icon-btn{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;border:0;background:transparent;color:var(--rb-sub);cursor:pointer;flex-shrink:0;transition:background .15s,color .15s,transform .08s}
 @media (hover: hover){.rb-icon-btn:hover{background:var(--rb-hover);color:var(--rb-text)}}
 .rb-icon-btn.boxed{border:1px solid var(--rb-line3);background:var(--rb-surf)}
 
@@ -3288,7 +3338,7 @@ html,body{margin:0;height:100%;background:transparent}
 
 /* 목록 줄 */
 .rb-list{flex:1;padding:0 12px 16px;display:flex;flex-direction:column;gap:4px}
-.rb-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;cursor:pointer;border:0;background:transparent;text-align:left;width:100%;color:inherit}
+.rb-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;cursor:pointer;border:0;background:transparent;text-align:left;width:100%;color:inherit;transition:background .15s,box-shadow .15s,opacity .15s}
 @media (hover: hover){.rb-row:hover{background:var(--rb-hover)}}
 .rb-row[aria-selected=true]{background:var(--rb-sel-bg);box-shadow:inset 0 0 0 1px var(--rb-sel-ring)}
 .rb-row .grip{color:var(--rb-grip);cursor:grab;flex-shrink:0;display:flex}
@@ -3364,12 +3414,28 @@ html,body{margin:0;height:100%;background:transparent}
 .rb-drop{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:var(--rb-backdrop);border-radius:18px}
 .rb-drop>div{display:flex;align-items:center;gap:12px;padding:28px 36px;border-radius:18px;border:1.5px dashed var(--rb-sel-ring);background:var(--rb-win);color:var(--rb-acc-text);font-size:15px;font-weight:600}
 @keyframes rb-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes rb-fade{from{opacity:0}to{opacity:1}}
+@keyframes rb-pop{from{opacity:0;transform:scale(.96) translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes rb-rot{to{transform:rotate(360deg)}}
+@keyframes rb-shimmer{from{background-position:100% 0}to{background-position:-100% 0}}
+@keyframes rb-flash{from{background:var(--rb-acc-soft);box-shadow:inset 0 0 0 1px var(--rb-sel-ring)}}
+@keyframes rb-expand{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+/* 움직임: 로딩 · 강조 */
+.rb-loading{display:flex;flex-direction:column;gap:4px;padding:12px 4px;animation:rb-fade .2s ease-out .12s both}
+.rb-skel-row{display:flex;align-items:center;gap:12px;padding:12px 14px;animation:rb-in .25s ease-out var(--d,0ms) both}
+.rb-skel{display:block;border-radius:8px;background:linear-gradient(90deg,var(--rb-surf) 25%,var(--rb-surf2) 50%,var(--rb-surf) 75%);background-size:200% 100%;animation:rb-shimmer 1.3s linear infinite}
+.rb-loading-label{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px 0 4px;color:var(--rb-mute);font-size:13px}
+.rb-spin{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--rb-line3);border-top-color:var(--rb-acc-text);animation:rb-rot .7s linear infinite;vertical-align:-2px;flex-shrink:0}
+.rb-row.just-moved{animation:rb-flash .7s ease-out}
+.rb-folder-body.just-opened{animation:rb-expand .16s ease-out}
+.rb-btn:active:not([disabled]),.rb-icon-btn:active:not([disabled]){transform:translateY(1px)}
 
 /* 대화상자 · 시트 · 메뉴 */
-.rb-modal{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--rb-backdrop)}
+.rb-modal{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--rb-backdrop);animation:rb-fade .15s ease-out}
 .rb-dialog{width:100%;max-width:440px;border-radius:18px;background:var(--rb-win);border:1px solid var(--rb-line3);box-shadow:var(--rb-shadow);padding:22px;display:flex;flex-direction:column;gap:14px;animation:rb-in .15s ease-out}
 .rb-dialog .btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
-.rb-menu{position:absolute;z-index:60;min-width:200px;padding:6px;border-radius:14px;background:var(--rb-win);border:1px solid var(--rb-line3);box-shadow:var(--rb-shadow-sm);display:flex;flex-direction:column}
+.rb-menu{position:absolute;z-index:60;min-width:200px;padding:6px;border-radius:14px;background:var(--rb-win);border:1px solid var(--rb-line3);box-shadow:var(--rb-shadow-sm);display:flex;flex-direction:column;animation:rb-pop .13s cubic-bezier(.2,.7,.2,1);transform-origin:top right}
 .rb-menu button{height:40px;display:flex;align-items:center;gap:10px;padding:0 12px;border:0;border-radius:10px;background:transparent;color:var(--rb-text);font-size:13px;cursor:pointer;text-align:left}
 .rb-menu button:focus-visible{background:var(--rb-hover);outline:none}
 @media (hover: hover){.rb-menu button:hover{background:var(--rb-hover)}}
@@ -6937,7 +7003,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
   async function renderDev(ctx) {
     const st = ctx.state;
     if (st.sub === "patchmaker") return renderPatchMaker(ctx, { backTo: "dev", backLabel: "개발" });
-    if (!st.devAll) replace(ctx.main, h("div", { class: "rb-empty" }, "개발 목록을 불러오는 중…"));
+    if (!st.devAll) replace(ctx.main, loading("개발 목록을 불러오는 중", { rows: 5 }));
     const all = await loadAll(ctx);
     const ps = projects(ctx);
     ctx.setNavCount("dev", ps.length || void 0);
@@ -7097,7 +7163,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       ctx.showDetail(h("h2", { class: "rb-h2" }, "(찾을 수 없음)"), note("warn", `이 ${KIND_KO[p.kind]}을(를) 찾지 못했어요. 지워졌거나 앱이 아직 불러오는 중이에요.`), h("div", null, remove));
       return;
     }
-    const body = h("div", { style: "display:flex;flex-direction:column;gap:12px" }, h("div", { class: "rb-empty" }, "불러오는 중…"));
+    const body = h("div", { style: "display:flex;flex-direction:column;gap:12px" }, loading("불러오는 중"));
     ctx.showDetail(
       h("div", { style: "display:flex;flex-direction:column;gap:4px" }, h("span", { style: "font-size:12px;color:var(--rb-acc-text)" }, `개발 중인 ${KIND_KO[p.kind]}`), h("h2", { class: "rb-h2" }, t.name || "(이름 없음)")),
       body
@@ -7408,7 +7474,7 @@ ${md()}
     const st = ctx.state;
     st.pm ??= { kind: "module", target: null, q: "" };
     const pm = st.pm;
-    replace(ctx.main, h("div", { class: "rb-empty" }, "불러오는 중…"));
+    replace(ctx.main, loading("불러오는 중"));
     const { mods, chars } = await loadTargets(ctx);
     const store = createStore(ctx.api);
     const back = btn(backLabel, { size: "sm", icon: "back", onClick: () => {
@@ -7734,7 +7800,7 @@ ${patch.note}` : "",
     const st = ctx.state;
     st.modFilter ??= "all";
     if (!st.modData || st.modDirty) {
-      if (!st.modData) replace(ctx.main, h("div", { class: "rb-empty" }, "모듈을 불러오는 중…"));
+      if (!st.modData) replace(ctx.main, loading("모듈을 불러오는 중", { rows: 7 }));
       st.modData = await ctx.svc.load();
       st.modDirty = false;
       st.modIndex = new Map(st.modData.entries.map((e) => [e.module.id, searchText(e.module)]));
@@ -7814,6 +7880,7 @@ ${patch.note}` : "",
           { type: "button", class: "rb-folder", "aria-expanded": open ? "true" : "false", dataset: { folder: f.id }, onClick: () => {
             if (filtering) return;
             ctx.svc.toggleFolder(f.id).catch((err) => ctx.toast(err?.message ?? String(err), { error: true }));
+            if (!open) ctx.state.justOpened = f.id;
             draw(ctx);
           } },
           h("span", { class: "chev" }, icon("chevron", 14)),
@@ -7826,7 +7893,7 @@ ${patch.note}` : "",
       dropTarget(ctx, head, { folderId: f.id });
       list.appendChild(head);
       if (open) {
-        const body = h("div", { class: "rb-folder-body" });
+        const body = h("div", { class: ["rb-folder-body", ctx.state.justOpened === f.id && "just-opened"] });
         for (const e of g.items) body.appendChild(row(ctx, e, filtering));
         if (!g.items.length) body.appendChild(h("div", { class: "rb-muted", style: "padding:8px 10px" }, "모듈을 여기로 끌어다 놓으세요"));
         list.appendChild(body);
@@ -7841,6 +7908,8 @@ ${patch.note}` : "",
     const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 모듈" });
     replace(ctx.main, toolbar, folderBar, bar, list);
     list.scrollTop = scroll;
+    ctx.state.justOpened = null;
+    ctx.state.justMoved = null;
     const mu = multiOf(ctx);
     if (filtering) mu.clear();
     mu.bar = bar;
@@ -7902,7 +7971,7 @@ ${patch.note}` : "",
     const el = h(
       "div",
       {
-        class: ["rb-row", !e.enabled && "off"],
+        class: ["rb-row", !e.enabled && "off", st.justMoved?.includes(m.id) && "just-moved"],
         role: "option",
         tabindex: "0",
         "aria-selected": st.modSel === m.id ? "true" : "false",
@@ -8064,6 +8133,7 @@ ${patch.note}` : "",
         ctx.svc.queueOrder(() => ctx.state.modData.entries.map((e) => e.module.id)).catch(fail);
       }
     }
+    st.justMoved = ids;
     if (ids.length > 1) ctx.toast(target ? `모듈 ${ids.length}개를 '${meta.folders.find((f) => f.id === target)?.name ?? "폴더"}'(으)로 옮겼어요` : `모듈 ${ids.length}개를 옮겼어요`);
     draw(ctx);
   }
@@ -8225,6 +8295,7 @@ ${patch.note}` : "",
       if (!await confirmDialog(ctx.win, { title: "백업을 만들지 못했어요", body: `${err?.message ?? err}
 그래도 지울까요?`, ok: "그래도 삭제", danger: true })) return;
     }
+    await vanish(ctx.main.querySelector(`.rb-row[data-id="${CSS.escape(m.id)}"]`));
     await ctx.svc.run("remove", m.id);
     await reload(ctx);
     ctx.toast(`'${m.name}'을(를) 지웠어요`);
@@ -8265,7 +8336,7 @@ ${patch.note}` : "",
       { class: "rb-card" },
       h("div", { class: "rb-kv" }, h("span", null, "글로벌 활성화", h("br"), h("small", { class: "rb-muted" }, "모든 캐릭터·채팅에서 켜짐")), globalSw)
     );
-    const personaBox = h("div", { class: "rb-card" }, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "불러오는 중…")));
+    const personaBox = h("div", { class: "rb-card" }, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted", style: "display:flex;align-items:center;gap:8px" }, spinner(), "불러오는 중")));
     const charBox = h("div", { class: "rb-card" });
     const chatBox = h("div", { class: "rb-card" });
     const timeline = h("div", { style: "display:flex;flex-direction:column" });
@@ -8343,7 +8414,7 @@ ${patch.note}` : "",
       replace(personaBox, q, box);
     })().catch(() => replace(personaBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "페르소나를 읽지 못했어요"))));
     const loadChars = async () => {
-      replace(charBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "캐릭터 불러오는 중…")));
+      replace(charBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted", style: "display:flex;align-items:center;gap:8px" }, spinner(), "캐릭터 불러오는 중")));
       const db = await ctx.api.getDatabase(["characters"]);
       db.characters = (await loadCharacters(ctx.api, db?.characters)).list;
       const chars = (db?.characters ?? []).map((ch, i) => ({ ch, i })).filter((x) => x.ch && !x.ch.trashTime && x.ch.type !== "group");
@@ -9186,7 +9257,7 @@ ${patch.note}` : "",
   async function renderCharacters(ctx) {
     const st = ctx.state;
     if (!st.chars || st.charsDirty) {
-      replace(ctx.main, h("div", { class: "rb-empty" }, "캐릭터를 불러오는 중…"));
+      replace(ctx.main, loading("캐릭터를 불러오는 중", { rows: 7 }));
       const db = await ctx.api.getDatabase(["characters", "modules", "characterOrder"]);
       st.charOrder = Array.isArray(db?.characterOrder) ? db.characterOrder : [];
       const lc = await loadCharacters(ctx.api, db?.characters);
@@ -9229,7 +9300,7 @@ ${patch.note}` : "",
       const row2 = h(
         "div",
         {
-          class: "rb-row",
+          class: ["rb-row", st.justMoved?.includes(c.chaId) && "just-moved"],
           role: "option",
           tabindex: "0",
           "aria-selected": st.charSel === c.chaId ? "true" : "false",
@@ -9278,6 +9349,7 @@ ${patch.note}` : "",
         skip: (t) => mu.dragIds(c.chaId).includes(t.getAttribute("data-drop-row")),
         onDrop: (d) => {
           const ids = mu.dragIds(c.chaId);
+          st.justMoved = ids;
           return saveOrder(ctx, (o) => moveChar(o, ids, d), ids.length > 1 ? `봇 ${ids.length}개를 옮겼어요` : null);
         }
       });
@@ -9314,6 +9386,7 @@ ${patch.note}` : "",
                 else delete m.charFoldersCollapsed[f.id];
               }).catch(() => {
               });
+              if (!open) st.justOpened = f.id;
               renderCharacters(ctx);
             } },
             h("span", { class: "chev" }, icon("chevron", 14)),
@@ -9326,7 +9399,7 @@ ${patch.note}` : "",
         charDropTarget(ctx, head, { folderId: f.id });
         box.appendChild(head);
         if (open) {
-          const body = h("div", { class: "rb-folder-body" });
+          const body = h("div", { class: ["rb-folder-body", st.justOpened === f.id && "just-opened"] });
           for (const id of it.ids) {
             const c = byId.get(id);
             if (c) {
@@ -9361,6 +9434,8 @@ ${patch.note}` : "",
       btn("업데이트·새로 넣기", { size: "sm", kind: "primary", icon: "upload", onClick: () => ctx.legacy.open() })
     ), bar, box);
     box.scrollTop = keep;
+    st.justOpened = null;
+    st.justMoved = null;
     mu.bar = bar;
     mu.attach(box);
     paintBar2(ctx);
@@ -9610,6 +9685,7 @@ ${patch.note}` : "",
       el.removeAttribute("data-drop");
       if (!ids?.length) return;
       const d = beforeId ? { beforeId, after, folderId: void 0 } : { beforeId: null, after: false, folderId: folderId || null };
+      ctx.state.justMoved = ids;
       saveOrder(ctx, (o) => moveChar(o, ids, d), ids.length > 1 ? `봇 ${ids.length}개를 옮겼어요` : null);
     });
   }
@@ -9669,6 +9745,7 @@ ${patch.note}` : "",
       if (!ok) return;
       const again = await fullChar(ctx, c);
       if (isGenerating(again)) throw new Busy();
+      await vanish(ctx.main.querySelector(`.rb-row[data-id="${CSS.escape(c.chaId)}"]`));
       await ctx.api.setCharacterToIndex(c.i, { ...again, trashTime: Date.now() });
       if (ctx.state.charMulti?.has?.(c.chaId)) ctx.state.charMulti.set([...ctx.state.charMulti.sel].filter((x) => x !== c.chaId));
       ctx.state.charsDirty = true;
@@ -9887,6 +9964,12 @@ ${patch.note}` : "",
     const detail3 = h("aside", { class: "rb-detail rb-scroll", "aria-label": "상세" });
     const sheetBack = h("div", { class: "rb-sheet-back", onClick: () => ctx.closeSheet() });
     const body = h("div", { class: "rb-body" }, nav, main, sheetBack, detail3);
+    let wasLoading = false;
+    new MutationObserver(() => {
+      const now = !!main.querySelector(":scope > .rb-loading");
+      if (wasLoading && !now) for (const el of main.children) motion(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 180 });
+      wasLoading = now;
+    }).observe(main, { childList: true });
     win.append(head, h("label", { class: "rb-search rb-mobile-search" }, icon("search", 16), mobileSearchInput), body, tabbar);
     let dragDepth = 0, dropEl = null;
     const hasFiles = (e) => [...e.dataTransfer?.types ?? []].includes("Files");
@@ -9948,10 +10031,12 @@ ${patch.note}` : "",
         tab = "tools";
         sub = null;
       }
+      const changed = tab !== state.tab || sub !== state.sub;
       state.tab = tab;
       state.sub = sub;
       ctx.closeSheet();
       render();
+      if (changed) fadeUp(main, { duration: 180 });
     }
     function refreshTabs() {
       const on = !!prefs.ui?.devMode;
@@ -9998,14 +10083,25 @@ ${patch.note}` : "",
       root.hidden = false;
       await api.showContainer("fullscreen");
       render();
+      motion(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
+      motion(win, [{ opacity: 0, transform: "translateY(12px) scale(.985)" }, { opacity: 1, transform: "none" }], { duration: 220 });
       state.opened = true;
       setTimeout(() => (win.querySelector(".rb-row") ?? searchInput).focus?.(), 50);
     }
+    let closing = false;
     async function close() {
-      if (legacy.busy) return;
+      if (legacy.busy || closing) return;
+      closing = true;
+      const out = motion(win, [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(8px) scale(.99)" }], { duration: 130, fill: "forwards" });
+      motion(root, [{ opacity: 1 }, { opacity: 0 }], { duration: 130, fill: "forwards" });
+      if (out) await out.finished.catch(() => {
+      });
       root.hidden = true;
+      for (const a of [...win.getAnimations(), ...root.getAnimations()]) a.cancel();
+      closing = false;
       await api.hideContainer();
     }
+    let lastDetail = "";
     const ctx = {
       api,
       prefs,
@@ -10043,6 +10139,11 @@ ${patch.note}` : "",
       showDetail(...children) {
         replace(detail3, h("div", { class: "rb-sheet-head" }, iconBtn("x", "상세 닫기", { onClick: () => ctx.closeSheet() })), ...children);
         detail3.hidden = false;
+        const key = state.tab + "|" + (detail3.querySelector("h2")?.textContent ?? detail3.textContent.slice(0, 40));
+        if (key !== lastDetail) {
+          lastDetail = key;
+          if (!ctx.isMobile()) motion(detail3, [{ opacity: 0, transform: "translateX(6px)" }, { opacity: 1, transform: "none" }], { duration: 170 });
+        }
       },
       toast: (text, opts) => toast(win, text, opts),
       isMobile: () => (win.clientWidth || 1e3) <= 760

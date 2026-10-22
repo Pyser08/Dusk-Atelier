@@ -7,7 +7,7 @@ import { safeFileName } from '../../engine/export.js';
 import { loadCharacters } from '../../data/modules.js';
 import { download, fmtBytes, fmtWhen, h, replace } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, confirmDialog, note, segmented, switchEl } from '../kit.js';
+import { badge, btn, confirmDialog, loading, note, segmented, switchEl } from '../kit.js';
 
 export var isDev = (ctx) => !!ctx.prefs.ui?.devMode;
 var SKIP_CHAR = ["loreCache", "lowLevelHistory", "chatPage", "chats"];
@@ -59,7 +59,7 @@ export async function renderPatchMaker(ctx, { backTo = "dev", backLabel = "개�
   const st = ctx.state;
   st.pm ??= { kind: "module", target: null, q: "" };
   const pm = st.pm;
-  replace(ctx.main, h("div", { class: "rb-empty" }, "불러오는 중…"));
+  replace(ctx.main, loading("불러오는 중"));
   const { mods, chars } = await loadTargets(ctx);
   const store = createStore(ctx.api);
   const back = btn(backLabel, { size: "sm", icon: "back", onClick: () => {

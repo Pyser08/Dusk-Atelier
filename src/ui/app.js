@@ -10,7 +10,7 @@ import { renderPresets } from './screens/presets.js';
 import { renderCharacters } from './screens/characters.js';
 import { renderHistory } from './screens/history.js';
 import { onNotice } from '../data/modules.js';
-import { h, replace } from './dom.js';
+import { fadeUp, h, motion, replace } from './dom.js';
 import { icon } from './icons.js';
 import { createService } from '../data/service.js';
 import { openEditor } from './screens/editor.js';
@@ -89,6 +89,12 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const detail3 = h("aside", { class: "rb-detail rb-scroll", "aria-label": "상세" });
   const sheetBack = h("div", { class: "rb-sheet-back", onClick: () => ctx.closeSheet() });
   const body = h("div", { class: "rb-body" }, nav, main, sheetBack, detail3);
+  let wasLoading = false;
+  new MutationObserver(() => {
+    const now = !!main.querySelector(":scope > .rb-loading");
+    if (wasLoading && !now) for (const el of main.children) motion(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 180 });
+    wasLoading = now;
+  }).observe(main, { childList: true });
   win.append(head, h("label", { class: "rb-search rb-mobile-search" }, icon("search", 16), mobileSearchInput), body, tabbar);
   let dragDepth = 0, dropEl = null;
   const hasFiles = (e) => [...e.dataTransfer?.types ?? []].includes("Files");
@@ -150,10 +156,12 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       tab = "tools";
       sub = null;
     }
+    const changed = tab !== state.tab || sub !== state.sub;
     state.tab = tab;
     state.sub = sub;
     ctx.closeSheet();
     render();
+    if (changed) fadeUp(main, { duration: 180 });
   }
   function refreshTabs() {
     const on = !!prefs.ui?.devMode;
@@ -200,14 +208,25 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     root.hidden = false;
     await api.showContainer("fullscreen");
     render();
+    motion(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
+    motion(win, [{ opacity: 0, transform: "translateY(12px) scale(.985)" }, { opacity: 1, transform: "none" }], { duration: 220 });
     state.opened = true;
     setTimeout(() => (win.querySelector(".rb-row") ?? searchInput).focus?.(), 50);
   }
+  let closing = false;
   async function close() {
-    if (legacy.busy) return;
+    if (legacy.busy || closing) return;
+    closing = true;
+    const out = motion(win, [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(8px) scale(.99)" }], { duration: 130, fill: "forwards" });
+    motion(root, [{ opacity: 1 }, { opacity: 0 }], { duration: 130, fill: "forwards" });
+    if (out) await out.finished.catch(() => {
+    });
     root.hidden = true;
+    for (const a of [...win.getAnimations(), ...root.getAnimations()]) a.cancel();
+    closing = false;
     await api.hideContainer();
   }
+  let lastDetail = "";
   const ctx = {
     api,
     prefs,
@@ -245,6 +264,11 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     showDetail(...children) {
       replace(detail3, h("div", { class: "rb-sheet-head" }, iconBtn("x", "상세 닫기", { onClick: () => ctx.closeSheet() })), ...children);
       detail3.hidden = false;
+      const key = state.tab + "|" + (detail3.querySelector("h2")?.textContent ?? detail3.textContent.slice(0, 40));
+      if (key !== lastDetail) {
+        lastDetail = key;
+        if (!ctx.isMobile()) motion(detail3, [{ opacity: 0, transform: "translateX(6px)" }, { opacity: 1, transform: "none" }], { duration: 170 });
+      }
     },
     toast: (text, opts) => toast(win, text, opts),
     isMobile: () => (win.clientWidth || 1e3) <= 760

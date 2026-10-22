@@ -6,9 +6,9 @@ import { applyPatchFile, changedKeys, exportMyChanges } from './patchui.js';
 import { createStore } from '../../engine/store.js';
 import { buildRisum, moduleJson, safeFileName } from '../../engine/export.js';
 import { hasAssets, loadCharacters, moduleCounts, moduleFlags } from '../../data/modules.js';
-import { copyText, download, fmtWhen, h, replace } from '../dom.js';
+import { copyText, download, fmtWhen, h, replace, vanish } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, chip, colorDialog, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog, setSwitch, switchEl } from '../kit.js';
+import { badge, btn, chip, colorDialog, loading, spinner, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog, setSwitch, switchEl } from '../kit.js';
 import { FOLDER_SWATCHES, NAME_SWATCHES, folderTint, readableName } from '../theme.js';
 import { loadPersonaMap, setPersonaLink } from '../../data/persona.js';
 import { addProjects, findProject } from './dev.js';
@@ -26,7 +26,7 @@ export async function renderModules(ctx) {
   const st = ctx.state;
   st.modFilter ??= "all";
   if (!st.modData || st.modDirty) {
-    if (!st.modData) replace(ctx.main, h("div", { class: "rb-empty" }, "모듈을 불러오는 중…"));
+    if (!st.modData) replace(ctx.main, loading("모듈을 불러오는 중", { rows: 7 }));
     st.modData = await ctx.svc.load();
     st.modDirty = false;
     st.modIndex = new Map(st.modData.entries.map((e) => [e.module.id, searchText(e.module)]));
@@ -106,6 +106,7 @@ function draw(ctx) {
         { type: "button", class: "rb-folder", "aria-expanded": open ? "true" : "false", dataset: { folder: f.id }, onClick: () => {
           if (filtering) return;
           ctx.svc.toggleFolder(f.id).catch((err) => ctx.toast(err?.message ?? String(err), { error: true }));
+          if (!open) ctx.state.justOpened = f.id;
           draw(ctx);
         } },
         h("span", { class: "chev" }, icon("chevron", 14)),
@@ -118,7 +119,7 @@ function draw(ctx) {
     dropTarget(ctx, head, { folderId: f.id });
     list.appendChild(head);
     if (open) {
-      const body = h("div", { class: "rb-folder-body" });
+      const body = h("div", { class: ["rb-folder-body", ctx.state.justOpened === f.id && "just-opened"] });
       for (const e of g.items) body.appendChild(row(ctx, e, filtering));
       if (!g.items.length) body.appendChild(h("div", { class: "rb-muted", style: "padding:8px 10px" }, "모듈을 여기로 끌어다 놓으세요"));
       list.appendChild(body);
@@ -133,6 +134,8 @@ function draw(ctx) {
   const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 모듈" });
   replace(ctx.main, toolbar, folderBar, bar, list);
   list.scrollTop = scroll;
+  ctx.state.justOpened = null;
+  ctx.state.justMoved = null;
   const mu = multiOf(ctx);
   if (filtering) mu.clear();
   mu.bar = bar;
@@ -194,7 +197,7 @@ function row(ctx, e, filtering) {
   const el = h(
     "div",
     {
-      class: ["rb-row", !e.enabled && "off"],
+      class: ["rb-row", !e.enabled && "off", st.justMoved?.includes(m.id) && "just-moved"],
       role: "option",
       tabindex: "0",
       "aria-selected": st.modSel === m.id ? "true" : "false",
@@ -356,6 +359,7 @@ function applyDrop(ctx, ids, { beforeId, after, folderId }) {
       ctx.svc.queueOrder(() => ctx.state.modData.entries.map((e) => e.module.id)).catch(fail);
     }
   }
+  st.justMoved = ids;
   if (ids.length > 1) ctx.toast(target ? `모듈 ${ids.length}개를 '${meta.folders.find((f) => f.id === target)?.name ?? "폴더"}'(으)로 옮겼어요` : `모듈 ${ids.length}개를 옮겼어요`);
   draw(ctx);
 }
@@ -517,6 +521,7 @@ async function removeModule(ctx, m) {
     if (!await confirmDialog(ctx.win, { title: "백업을 만들지 못했어요", body: `${err?.message ?? err}
 그래도 지울까요?`, ok: "그래도 삭제", danger: true })) return;
   }
+  await vanish(ctx.main.querySelector(`.rb-row[data-id="${CSS.escape(m.id)}"]`));
   await ctx.svc.run("remove", m.id);
   await reload(ctx);
   ctx.toast(`'${m.name}'을(를) 지웠어요`);
@@ -557,7 +562,7 @@ async function showDetail(ctx) {
     { class: "rb-card" },
     h("div", { class: "rb-kv" }, h("span", null, "글로벌 활성화", h("br"), h("small", { class: "rb-muted" }, "모든 캐릭터·채팅에서 켜짐")), globalSw)
   );
-  const personaBox = h("div", { class: "rb-card" }, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "불러오는 중…")));
+  const personaBox = h("div", { class: "rb-card" }, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted", style: "display:flex;align-items:center;gap:8px" }, spinner(), "불러오는 중")));
   const charBox = h("div", { class: "rb-card" });
   const chatBox = h("div", { class: "rb-card" });
   const timeline = h("div", { style: "display:flex;flex-direction:column" });
@@ -635,7 +640,7 @@ async function showDetail(ctx) {
     replace(personaBox, q, box);
   })().catch(() => replace(personaBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "페르소나를 읽지 못했어요"))));
   const loadChars = async () => {
-    replace(charBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "캐릭터 불러오는 중…")));
+    replace(charBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted", style: "display:flex;align-items:center;gap:8px" }, spinner(), "캐릭터 불러오는 중")));
     const db = await ctx.api.getDatabase(["characters"]);
     db.characters = (await loadCharacters(ctx.api, db?.characters)).list;
     const chars = (db?.characters ?? []).map((ch, i) => ({ ch, i })).filter((x) => x.ch && !x.ch.trashTime && x.ch.type !== "group");

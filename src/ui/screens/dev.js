@@ -7,7 +7,7 @@ import { buildRisum, safeFileName } from '../../engine/export.js';
 import { loadCharacters } from '../../data/modules.js';
 import { copyText, download, fmtBytes, fmtWhen, h, replace } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, confirmDialog, folderDialog, iconBtn, note, openMenu, promptDialog, segmented } from '../kit.js';
+import { badge, btn, confirmDialog, loading, folderDialog, iconBtn, note, openMenu, promptDialog, segmented } from '../kit.js';
 import { buildPatch, planPatch } from '../../engine/patch.js';
 import { devLint, devStats, loreActivation, nextVersion, projView, regexRun } from '../../engine/devcheck.js';
 import { baseViewOf, renderPatchMaker } from './devtools.js';
@@ -69,7 +69,7 @@ async function fullOf(ctx, all, p) {
 export async function renderDev(ctx) {
   const st = ctx.state;
   if (st.sub === "patchmaker") return renderPatchMaker(ctx, { backTo: "dev", backLabel: "개발" });
-  if (!st.devAll) replace(ctx.main, h("div", { class: "rb-empty" }, "개발 목록을 불러오는 중…"));
+  if (!st.devAll) replace(ctx.main, loading("개발 목록을 불러오는 중", { rows: 5 }));
   const all = await loadAll(ctx);
   const ps = projects(ctx);
   ctx.setNavCount("dev", ps.length || void 0);
@@ -229,7 +229,7 @@ function detail(ctx, all, p) {
     ctx.showDetail(h("h2", { class: "rb-h2" }, "(찾을 수 없음)"), note("warn", `이 ${KIND_KO[p.kind]}을(를) 찾지 못했어요. 지워졌거나 앱이 아직 불러오는 중이에요.`), h("div", null, remove));
     return;
   }
-  const body = h("div", { style: "display:flex;flex-direction:column;gap:12px" }, h("div", { class: "rb-empty" }, "불러오는 중…"));
+  const body = h("div", { style: "display:flex;flex-direction:column;gap:12px" }, loading("불러오는 중"));
   ctx.showDetail(
     h("div", { style: "display:flex;flex-direction:column;gap:4px" }, h("span", { style: "font-size:12px;color:var(--rb-acc-text)" }, `개발 중인 ${KIND_KO[p.kind]}`), h("h2", { class: "rb-h2" }, t.name || "(이름 없음)")),
     body

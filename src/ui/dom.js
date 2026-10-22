@@ -99,3 +99,34 @@ export function pickFiles({ accept = "", multiple = false } = {}) {
     input.click();
   });
 }
+// ── 움직임 ── 빠르고 짧게. 움직임 줄이기 설정이면 건너뛴다.
+export var EASE = "cubic-bezier(.2,.7,.2,1)";
+export function reduceMotion() {
+  try {
+    return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
+export function motion(el, frames, opts = {}) {
+  if (!el?.animate || reduceMotion()) return null;
+  try {
+    return el.animate(frames, { duration: 160, easing: EASE, ...opts });
+  } catch {
+    return null;
+  }
+}
+export var fadeUp = (el, opts) => motion(el, [{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], opts);
+// 줄을 접으며 사라지게 한다 (지우기 전에). 끝나면 resolve.
+export function vanish(el, ms = 170) {
+  if (!el?.isConnected) return Promise.resolve();
+  const hgt = el.offsetHeight;
+  const a = motion(el, [
+    { opacity: 1, height: `${hgt}px`, transform: "none" },
+    { opacity: 0, height: "0px", paddingTop: "0px", paddingBottom: "0px", marginTop: "0px", marginBottom: "0px", transform: "translateX(-8px)" }
+  ], { duration: ms, fill: "forwards" });
+  if (!a) return Promise.resolve();
+  el.style.overflow = "hidden";
+  return a.finished.catch(() => {
+  });
+}

@@ -26,7 +26,7 @@ html,body{margin:0;height:100%;background:transparent}
 
 /* 버튼 */
 .rb-btn{height:40px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;border-radius:12px;border:1px solid var(--rb-line3);
-  background:var(--rb-surf);color:var(--rb-text);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,filter .15s}
+  background:var(--rb-surf);color:var(--rb-text);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,filter .15s,transform .08s}
 @media (hover: hover){.rb-btn:hover{background:var(--rb-hover)}}
 .rb-btn:focus-visible,.rb-chip:focus-visible,.rb-nav a:focus-visible,.rb-switch:focus-visible,.rb-icon-btn:focus-visible{outline:2px solid var(--rb-focus);outline-offset:2px}
 .rb-row:focus-visible{outline:2px solid var(--rb-focus);outline-offset:-2px}
@@ -38,7 +38,7 @@ html,body{margin:0;height:100%;background:transparent}
 .rb-btn.lg{height:44px;padding:0 20px}
 .rb-btn.sm{height:32px;padding:0 12px;border-radius:10px;font-size:13px}
 .rb-btn[disabled]{opacity:.5;cursor:not-allowed;filter:none}
-.rb-icon-btn{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;border:0;background:transparent;color:var(--rb-sub);cursor:pointer;flex-shrink:0}
+.rb-icon-btn{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;border:0;background:transparent;color:var(--rb-sub);cursor:pointer;flex-shrink:0;transition:background .15s,color .15s,transform .08s}
 @media (hover: hover){.rb-icon-btn:hover{background:var(--rb-hover);color:var(--rb-text)}}
 .rb-icon-btn.boxed{border:1px solid var(--rb-line3);background:var(--rb-surf)}
 
@@ -70,7 +70,7 @@ html,body{margin:0;height:100%;background:transparent}
 
 /* 목록 줄 */
 .rb-list{flex:1;padding:0 12px 16px;display:flex;flex-direction:column;gap:4px}
-.rb-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;cursor:pointer;border:0;background:transparent;text-align:left;width:100%;color:inherit}
+.rb-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;cursor:pointer;border:0;background:transparent;text-align:left;width:100%;color:inherit;transition:background .15s,box-shadow .15s,opacity .15s}
 @media (hover: hover){.rb-row:hover{background:var(--rb-hover)}}
 .rb-row[aria-selected=true]{background:var(--rb-sel-bg);box-shadow:inset 0 0 0 1px var(--rb-sel-ring)}
 .rb-row .grip{color:var(--rb-grip);cursor:grab;flex-shrink:0;display:flex}
@@ -146,12 +146,28 @@ html,body{margin:0;height:100%;background:transparent}
 .rb-drop{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:var(--rb-backdrop);border-radius:18px}
 .rb-drop>div{display:flex;align-items:center;gap:12px;padding:28px 36px;border-radius:18px;border:1.5px dashed var(--rb-sel-ring);background:var(--rb-win);color:var(--rb-acc-text);font-size:15px;font-weight:600}
 @keyframes rb-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes rb-fade{from{opacity:0}to{opacity:1}}
+@keyframes rb-pop{from{opacity:0;transform:scale(.96) translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes rb-rot{to{transform:rotate(360deg)}}
+@keyframes rb-shimmer{from{background-position:100% 0}to{background-position:-100% 0}}
+@keyframes rb-flash{from{background:var(--rb-acc-soft);box-shadow:inset 0 0 0 1px var(--rb-sel-ring)}}
+@keyframes rb-expand{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+/* 움직임: 로딩 · 강조 */
+.rb-loading{display:flex;flex-direction:column;gap:4px;padding:12px 4px;animation:rb-fade .2s ease-out .12s both}
+.rb-skel-row{display:flex;align-items:center;gap:12px;padding:12px 14px;animation:rb-in .25s ease-out var(--d,0ms) both}
+.rb-skel{display:block;border-radius:8px;background:linear-gradient(90deg,var(--rb-surf) 25%,var(--rb-surf2) 50%,var(--rb-surf) 75%);background-size:200% 100%;animation:rb-shimmer 1.3s linear infinite}
+.rb-loading-label{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px 0 4px;color:var(--rb-mute);font-size:13px}
+.rb-spin{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--rb-line3);border-top-color:var(--rb-acc-text);animation:rb-rot .7s linear infinite;vertical-align:-2px;flex-shrink:0}
+.rb-row.just-moved{animation:rb-flash .7s ease-out}
+.rb-folder-body.just-opened{animation:rb-expand .16s ease-out}
+.rb-btn:active:not([disabled]),.rb-icon-btn:active:not([disabled]){transform:translateY(1px)}
 
 /* 대화상자 · 시트 · 메뉴 */
-.rb-modal{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--rb-backdrop)}
+.rb-modal{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--rb-backdrop);animation:rb-fade .15s ease-out}
 .rb-dialog{width:100%;max-width:440px;border-radius:18px;background:var(--rb-win);border:1px solid var(--rb-line3);box-shadow:var(--rb-shadow);padding:22px;display:flex;flex-direction:column;gap:14px;animation:rb-in .15s ease-out}
 .rb-dialog .btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
-.rb-menu{position:absolute;z-index:60;min-width:200px;padding:6px;border-radius:14px;background:var(--rb-win);border:1px solid var(--rb-line3);box-shadow:var(--rb-shadow-sm);display:flex;flex-direction:column}
+.rb-menu{position:absolute;z-index:60;min-width:200px;padding:6px;border-radius:14px;background:var(--rb-win);border:1px solid var(--rb-line3);box-shadow:var(--rb-shadow-sm);display:flex;flex-direction:column;animation:rb-pop .13s cubic-bezier(.2,.7,.2,1);transform-origin:top right}
 .rb-menu button{height:40px;display:flex;align-items:center;gap:10px;padding:0 12px;border:0;border-radius:10px;background:transparent;color:var(--rb-text);font-size:13px;cursor:pointer;text-align:left}
 .rb-menu button:focus-visible{background:var(--rb-hover);outline:none}
 @media (hover: hover){.rb-menu button:hover{background:var(--rb-hover)}}

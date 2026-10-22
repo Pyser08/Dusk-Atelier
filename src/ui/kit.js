@@ -1,4 +1,4 @@
-import { h } from './dom.js';
+import { h, motion } from './dom.js';
 import { icon } from './icons.js';
 
 export function btn(label, { kind = "", size = "", icon: ic, onClick, title, disabled, id, labelClass } = {}) {
@@ -63,9 +63,14 @@ export function toast(host, text, { action, seconds = 4, error = false } = {}) {
     actBtn
   );
   let timer = null;
+  let closing = false;
   const close = () => {
     clearInterval(timer);
-    el.remove();
+    if (closing) return;
+    closing = true;
+    const out = motion(el, [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(6px) scale(.98)" }], { duration: 140, fill: "forwards" });
+    if (out) out.finished.then(() => el.remove(), () => el.remove());
+    else el.remove();
   };
   const paint = () => {
     if (actBtn) actBtn.textContent = `${action.label} · ${left}초`;
@@ -355,4 +360,23 @@ export function segmented(options, value, onChange, label) {
   } }, text));
   paint(value);
   return el;
+}
+
+// 불러오는 동안 보여 줄 자리표시. 목록 모양(rows)이면 줄 모양이 반짝이고, 아니면 작은 원이 돈다.
+// 짧게 끝나는 로딩에서 깜빡이지 않도록 0.12초 뒤에 나타난다.
+export function loading(label = "불러오는 중", { rows = 0 } = {}) {
+  const box = h("div", { class: "rb-loading", role: "status", "aria-label": label });
+  for (let i = 0; i < rows; i++) {
+    box.appendChild(h(
+      "div",
+      { class: "rb-skel-row", style: { "--d": `${i * 60}ms` } },
+      h("i", { class: "rb-skel", style: "width:40px;height:40px;border-radius:12px;flex-shrink:0" }),
+      h("div", { style: "flex:1;display:flex;flex-direction:column;gap:8px" }, h("i", { class: "rb-skel", style: `height:12px;width:${38 + i * 7 % 24}%` }), h("i", { class: "rb-skel", style: `height:10px;width:${22 + i * 5 % 16}%` }))
+    ));
+  }
+  box.appendChild(h("div", { class: "rb-loading-label" }, spinner(), h("span", null, label)));
+  return box;
+}
+export function spinner() {
+  return h("span", { class: "rb-spin", "aria-hidden": "true" });
 }
