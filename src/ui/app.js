@@ -62,16 +62,37 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0);
     return false;
   };
+  // 응답 앞부분만 읽고 끊는다 (Range가 무시돼 파일 전체가 와도 다 받지 않게)
+  async function headText(res) {
+    const rd = res.body?.getReader?.();
+    if (!rd) return (await res.text()).slice(0, 2048);
+    let out = "";
+    const dec = new TextDecoder();
+    try {
+      while (out.length < 512) {
+        const { done, value } = await rd.read();
+        if (done) break;
+        out += dec.decode(value, { stream: true });
+      }
+    } finally {
+      rd.cancel().catch(() => {
+      });
+    }
+    return out;
+  }
   async function checkUpdate() {
     // 열 때마다 확인하되 10분에 한 번까지. 주소 뒤에 시각을 붙여 GitHub 쪽 캐시(약 5분)를 피한다
     if (version === "dev" || Date.now() - updAt < 10 * 60e3) return;
     updAt = Date.now();
     const url = `${UPDATE_URL}?t=${Math.floor(Date.now() / 60e3)}`;
-    const opts = { headers: { Range: "bytes=0-512" }, cache: "no-store" };
-    let res = await fetch(url, opts).catch(() => null);
-    if ((!res || !res.ok) && typeof api.nativeFetch === "function") res = await api.nativeFetch(url, { headers: opts.headers }).catch(() => null);
+    const headers = { Range: "bytes=0-512" };
+    // 플러그인 창은 보안 설정(CSP) 때문에 직접 fetch가 막혀 있어 RisuAI의 nativeFetch를 먼저 쓴다.
+    // nativeFetch는 method를 안 주면 POST로 보내서 실패하므로 GET을 꼭 적는다
+    let res = null;
+    if (typeof api.nativeFetch === "function") res = await Promise.resolve().then(() => api.nativeFetch(url, { method: "GET", headers })).catch(() => null);
+    if (!res || !(res.status >= 200 && res.status < 300)) res = await fetch(url, { headers, cache: "no-store" }).catch(() => null);
     if (!res || !(res.status >= 200 && res.status < 300)) return;
-    const v = /\/\/@version\s+(\S+)/.exec(await res.text())?.[1];
+    const v = /\/\/@version\s+(\S+)/.exec(await headText(res))?.[1];
     if (!v || !newer(v, version)) return;
     const first = latest !== v;
     latest = v;

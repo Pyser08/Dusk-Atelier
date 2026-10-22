@@ -10216,15 +10216,33 @@ ${patch.note}` : "",
       for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0);
       return false;
     };
+    async function headText(res) {
+      const rd = res.body?.getReader?.();
+      if (!rd) return (await res.text()).slice(0, 2048);
+      let out = "";
+      const dec = new TextDecoder();
+      try {
+        while (out.length < 512) {
+          const { done, value } = await rd.read();
+          if (done) break;
+          out += dec.decode(value, { stream: true });
+        }
+      } finally {
+        rd.cancel().catch(() => {
+        });
+      }
+      return out;
+    }
     async function checkUpdate() {
       if (version === "dev" || Date.now() - updAt < 10 * 6e4) return;
       updAt = Date.now();
       const url = `${UPDATE_URL}?t=${Math.floor(Date.now() / 6e4)}`;
-      const opts = { headers: { Range: "bytes=0-512" }, cache: "no-store" };
-      let res = await fetch(url, opts).catch(() => null);
-      if ((!res || !res.ok) && typeof api.nativeFetch === "function") res = await api.nativeFetch(url, { headers: opts.headers }).catch(() => null);
+      const headers = { Range: "bytes=0-512" };
+      let res = null;
+      if (typeof api.nativeFetch === "function") res = await Promise.resolve().then(() => api.nativeFetch(url, { method: "GET", headers })).catch(() => null);
+      if (!res || !(res.status >= 200 && res.status < 300)) res = await fetch(url, { headers, cache: "no-store" }).catch(() => null);
       if (!res || !(res.status >= 200 && res.status < 300)) return;
-      const v = /\/\/@version\s+(\S+)/.exec(await res.text())?.[1];
+      const v = /\/\/@version\s+(\S+)/.exec(await headText(res))?.[1];
       if (!v || !newer(v, version)) return;
       const first = latest !== v;
       latest = v;
