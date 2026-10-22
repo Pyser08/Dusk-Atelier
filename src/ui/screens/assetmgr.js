@@ -25,6 +25,12 @@ export var stripMediaExt = (name) => String(name ?? "").replace(MEDIA_EXT, "");
 // - 구분자가 없으면 캐릭터 없음
 export function parseAssetName(name) {
   const base = stripMediaExt(name).trim();
+  // 점(.)이 있으면 점이 구분자: 캐릭터.의상.표정 — 각 부분 안의 밑줄은 이름의 일부
+  // (Alisa_Mikhailovna_Kujou.school_uniform.hug_from_behind → Alisa_Mikhailovna_Kujou · school_uniform · hug_from_behind)
+  if (base.includes(".")) {
+    const seg = base.split(".").map((x) => x.trim()).filter(Boolean);
+    if (seg.length >= 2) return { char: seg[0], rest: seg.slice(1), spaced: false, dotted: true };
+  }
   const m = /^([^._]+?)\s*[._]\s*(.*)$/.exec(base);
   if (m && m[1].trim()) return { char: m[1].trim(), rest: m[2].split(/[._]/).map((x) => x.trim()).filter(Boolean), spaced: false };
   const words = base.split(/\s+/).filter(Boolean);
@@ -38,6 +44,20 @@ export function groupAssetsByChar(list) {
   // 공백으로만 나뉜 이름은 이미 있는 더 짧은 캐릭터 이름으로 맞춘다
   // (Ahn Do-hyun annoyed가 있으면 Ahn Do-hyun casual annoyed → Ahn Do-hyun · 의상 casual)
   const known = new Set(parsed.filter((p) => p.char).map((p) => p.char.toLowerCase()));
+  // 밑줄로만 나뉜 이름은 이미 있는 더 긴 캐릭터 이름(점 구분 이름 등)에 맞춘다
+  // (Alisa_Mikhailovna_Kujou.happy가 있으면 Alisa_Mikhailovna_Kujou_sad → Alisa_Mikhailovna_Kujou · sad)
+  for (const p of parsed) {
+    if (p.dotted || p.spaced || !p.char || !p.rest.length) continue;
+    const words = [p.char, ...p.rest];
+    for (let k = words.length - 1; k >= 2; k--) {
+      const pre = words.slice(0, k).join("_");
+      if (known.has(pre.toLowerCase())) {
+        p.char = pre;
+        p.rest = words.slice(k);
+        break;
+      }
+    }
+  }
   for (const p of parsed) {
     if (!p.spaced || !p.char) continue;
     const words = p.char.split(/\s+/);
@@ -74,7 +94,13 @@ export function groupAssetsByChar(list) {
 // 의상 판단: 이름 하나만 보지 않고 같은 캐릭터의 이름들을 함께 본다.
 // 캐릭터 뒤 첫 부분 t가 의상이려면, t 뒤에 오는 표정이 다른 곳에서도 표정으로 쓰이거나(boreum_happy ↔ boreum_sportswear_happy),
 // 다른 의상과 같은 표정을 공유해야 한다(casual_happy ↔ school_happy). 아니면 전체가 표정(boreum_anal_creampie, boreum_happy_2).
+function outfitOf(p, keys) {
+  if (p.rest.length < 2) return null;
+  if (p.dotted) return p.rest.slice(0, -1).join(".");
+  return keys.has(p.rest[0].toLowerCase()) ? p.rest[0] : null;
+}
 function outfitKeys(parsed) {
+  parsed = parsed.filter((p) => !p.dotted);
   const full = new Set(parsed.map((p) => p.rest.join("_").toLowerCase()));
   const rem = new Map();
   for (const p of parsed) {
@@ -97,14 +123,14 @@ export var outfitOfAsset = (name, siblings) => {
   const p = parseAssetName(name);
   if (!p.char || p.rest.length < 2) return null;
   const keys = outfitKeys((siblings ?? [name]).map(parseAssetName).filter((x) => x.char?.toLowerCase() === p.char.toLowerCase()));
-  return keys.has(p.rest[0].toLowerCase()) ? p.rest[0] : null;
+  return outfitOf(p, keys);
 };
 // 캐릭터 안의 의상 묶음. 2장 이상인 의상만 따로, 나머지는 "기본". 나눌 의상이 없으면 null
 function outfitGroups(parsed) {
   const keys = outfitKeys(parsed);
   const m = new Map();
   for (const p of parsed) {
-    const o = p.rest.length >= 2 && keys.has(p.rest[0].toLowerCase()) ? p.rest[0] : null;
+    const o = outfitOf(p, keys);
     const key = o ? o.toLowerCase() : "";
     if (!m.has(key)) m.set(key, { key, label: o ?? "기본", items: [] });
     m.get(key).items.push(p.a);

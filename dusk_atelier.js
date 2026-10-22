@@ -6104,6 +6104,10 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
   var stripMediaExt = (name) => String(name ?? "").replace(MEDIA_EXT, "");
   function parseAssetName(name) {
     const base = stripMediaExt(name).trim();
+    if (base.includes(".")) {
+      const seg = base.split(".").map((x) => x.trim()).filter(Boolean);
+      if (seg.length >= 2) return { char: seg[0], rest: seg.slice(1), spaced: false, dotted: true };
+    }
     const m = /^([^._]+?)\s*[._]\s*(.*)$/.exec(base);
     if (m && m[1].trim()) return { char: m[1].trim(), rest: m[2].split(/[._]/).map((x) => x.trim()).filter(Boolean), spaced: false };
     const words = base.split(/\s+/).filter(Boolean);
@@ -6113,6 +6117,18 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
   function groupAssetsByChar(list) {
     const parsed = list.map((a) => ({ a, ...parseAssetName(a[0]) }));
     const known = new Set(parsed.filter((p) => p.char).map((p) => p.char.toLowerCase()));
+    for (const p of parsed) {
+      if (p.dotted || p.spaced || !p.char || !p.rest.length) continue;
+      const words = [p.char, ...p.rest];
+      for (let k = words.length - 1; k >= 2; k--) {
+        const pre = words.slice(0, k).join("_");
+        if (known.has(pre.toLowerCase())) {
+          p.char = pre;
+          p.rest = words.slice(k);
+          break;
+        }
+      }
+    }
     for (const p of parsed) {
       if (!p.spaced || !p.char) continue;
       const words = p.char.split(/\s+/);
@@ -6146,7 +6162,13 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     for (const g of out) g.subs = g.key ? outfitGroups(g.parsed) : null;
     return out;
   }
+  function outfitOf(p, keys) {
+    if (p.rest.length < 2) return null;
+    if (p.dotted) return p.rest.slice(0, -1).join(".");
+    return keys.has(p.rest[0].toLowerCase()) ? p.rest[0] : null;
+  }
   function outfitKeys(parsed) {
+    parsed = parsed.filter((p) => !p.dotted);
     const full = new Set(parsed.map((p) => p.rest.join("_").toLowerCase()));
     const rem = /* @__PURE__ */ new Map();
     for (const p of parsed) {
@@ -6169,7 +6191,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     const keys = outfitKeys(parsed);
     const m = /* @__PURE__ */ new Map();
     for (const p of parsed) {
-      const o = p.rest.length >= 2 && keys.has(p.rest[0].toLowerCase()) ? p.rest[0] : null;
+      const o = outfitOf(p, keys);
       const key = o ? o.toLowerCase() : "";
       if (!m.has(key)) m.set(key, { key, label: o ?? "기본", items: [] });
       m.get(key).items.push(p.a);
