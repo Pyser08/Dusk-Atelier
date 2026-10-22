@@ -22,8 +22,8 @@ import { renderPlugins } from './screens/plugins.js';
 var TABS = [
   { id: "modules", label: "모듈", icon: "module" },
   { id: "characters", label: "캐릭터", icon: "character" },
-  { id: "presets", label: "프리셋", icon: "preset" },
   { id: "plugins", label: "플러그인", icon: "plug" },
+  { id: "presets", label: "프리셋", icon: "preset" },
   { id: "history", label: "기록", icon: "history" },
   { id: "tools", label: "도구", icon: "tools" },
   { id: "dev", label: "개발", icon: "code", dev: true }

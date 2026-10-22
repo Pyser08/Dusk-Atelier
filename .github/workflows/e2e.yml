@@ -1,0 +1,53 @@
+name: 원본 RisuAI 테스트
+
+# 최신 원본 RisuAI(kwaroran/RisuAI)를 개발 서버로 띄우고 Dusk Atelier를 설치해 시험한다.
+on:
+  workflow_dispatch:
+    inputs:
+      risu_ref:
+        description: 'RisuAI 브랜치나 커밋 (비우면 기본 브랜치 최신)'
+        required: false
+
+jobs:
+  plugin-edit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: kwaroran/RisuAI
+          ref: ${{ inputs.risu_ref }}
+          path: risuai
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: risuai/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: RisuAI 설치
+        working-directory: risuai
+        run: |
+          git log -1 --format='RisuAI %h %cd %s'
+          pnpm install --frozen-lockfile
+      - name: 테스트 도구 설치
+        run: |
+          npm install --no-save --no-audit --no-fund playwright esbuild
+          npx playwright install --with-deps chromium
+      - name: Dusk Atelier 빌드 확인
+        run: node tools/build.mjs --check
+      - name: RisuAI 개발 서버 켜기
+        working-directory: risuai
+        run: |
+          nohup pnpm exec vite --port 5174 --strictPort > ../vite.log 2>&1 &
+          for i in $(seq 1 90); do curl -sf http://localhost:5174 >/dev/null && break; sleep 2; done
+          curl -sf http://localhost:5174 >/dev/null
+      - name: 테스트
+        run: RISU_URL=http://localhost:5174 OUT_DIR=e2e-out node tests/e2e/plugin-edit.mjs
+      - if: always()
+        run: tail -40 vite.log || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-out
+          path: e2e-out
