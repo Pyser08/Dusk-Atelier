@@ -721,14 +721,14 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       offSpec: true
     };
   }
-  function b64bytes(b642) {
-    const bin = atob(String(b642).replace(/\s+/g, ""));
+  function b64bytes(b6422) {
+    const bin = atob(String(b6422).replace(/\s+/g, ""));
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     return bytes;
   }
-  function inlineRef(b642) {
-    const bytes = b64bytes(b642);
+  function inlineRef(b6422) {
+    const bytes = b64bytes(b6422);
     return { source: "mem", bytes, size: bytes.length, hash: sha256js(bytes) };
   }
   function missingRef(key, mode) {
@@ -1528,6 +1528,1002 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
     return s;
   }
 
+  // src/tide/characterUpdateOnboarding.ts
+  function normalizeCardOnboarding(raw, newId2 = () => "") {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return void 0;
+    const data = raw, str = (value) => typeof value === "string" ? value : "";
+    return {
+      ...data,
+      enabled: data.enabled === true,
+      mode: data.mode === "html" ? "html" : "form",
+      title: str(data.title),
+      description: str(data.description),
+      html: str(data.html),
+      floatingButton: data.floatingButton === true,
+      questions: (Array.isArray(data.questions) ? data.questions : []).filter((q) => q && typeof q === "object" && !Array.isArray(q)).map((q) => ({
+        ...q,
+        id: str(q.id) || newId2(),
+        title: str(q.title),
+        description: str(q.description),
+        type: q.type === "multiple" || q.type === "text" ? q.type : "single",
+        varName: str(q.varName),
+        required: q.required === true,
+        placeholder: str(q.placeholder),
+        options: (Array.isArray(q.options) ? q.options : []).filter((o) => o && typeof o === "object" && !Array.isArray(o)).map((o) => ({ ...o, label: str(o.label), value: str(o.value) }))
+      }))
+    };
+  }
+  function onboardingContent(raw) {
+    const normalized = normalizeCardOnboarding(raw);
+    if (!normalized) return null;
+    return { ...normalized, questions: normalized.questions.map(({ id: _id, ...question }) => question) };
+  }
+
+  // src/tide/characterUpdateTargets.ts
+  function normalizeName2(name) {
+    return (name ?? "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+  }
+
+  // src/tide/characterUpdate.ts
+  var USER_SETTINGS_FIELDS = /* @__PURE__ */ new Set([
+    "oaiTTSConfig",
+    "oaiVoice",
+    "voicevoxConfig",
+    "naittsConfig",
+    "gptSoVitsConfig",
+    "fishSpeechConfig",
+    "elevenLabsConfig",
+    "hfTTS",
+    "ttsReadOnlyQuoted",
+    "translatorNote",
+    "doNotChangeSeperateModels",
+    "escapeOutput",
+    "coldstorage",
+    "coldStoragedChats"
+  ]);
+  var KEPT_FIELDS = /* @__PURE__ */ new Set([
+    "type",
+    "chaId",
+    "chats",
+    "chatFolders",
+    "chatPage",
+    "firstMsgIndex",
+    "notes",
+    "ttsMode",
+    "ttsSpeech",
+    "removedQuotes",
+    // Legacy import slot: characterFormatUpdate appends it to the open chat's
+    // note once and nulls it, so taking a new card's value would stack a
+    // second copy into the user's chat note.
+    "postHistoryInstructions",
+    "imported",
+    "lastInteraction",
+    "trashTime",
+    "modules",
+    "memoryPresetId",
+    "supaMemory",
+    "realmId",
+    "scriptstate",
+    "reloadKeys",
+    "chatImageGenRefs",
+    "chatImageGenRefsVersion",
+    "chatImageGenGroups",
+    "chatImageGenStyleGroups",
+    "chatImageGenAppearance",
+    "additionalAssetManifest",
+    ...USER_SETTINGS_FIELDS
+  ]);
+  var PREFERENCE_FIELDS = ["loreSettings", "viewScreen", "largePortrait", "inlayViewScreen", "hideChatIcon", "vits", "virtualscript"];
+  var isCredentialKey = (key) => /(?:apikey|token|secret|password|authorization|credentials?)$/i.test(key.replace(/[_-]/g, ""));
+  var isUserOwnedCardField = (key) => KEPT_FIELDS.has(key) || isCredentialKey(key);
+  function isUnsafeCardKey(key) {
+    return key === "__proto__" || key === "constructor" || key === "prototype";
+  }
+  function sanitizeCardValue(value) {
+    if (value === null || typeof value !== "object" && typeof value !== "function" && typeof value !== "symbol") return value;
+    const copy = structuredClone(value);
+    const clean = (item) => {
+      if (!item || typeof item !== "object") return;
+      for (const key of Object.keys(item)) {
+        if (isUnsafeCardKey(key)) delete item[key];
+        else clean(item[key]);
+      }
+    };
+    clean(copy);
+    return copy;
+  }
+  function cardFieldsOf(incoming) {
+    const fields = {};
+    for (const key of Object.keys(incoming)) {
+      if (!isUserOwnedCardField(key) && !isUnsafeCardKey(key) && incoming[key] !== void 0) fields[key] = sanitizeCardValue(incoming[key]);
+    }
+    if (!incoming.image) delete fields.image;
+    return fields;
+  }
+  var TEXT_FIELDS = [
+    "name",
+    "image",
+    "desc",
+    "firstMessage",
+    "alternateGreetings",
+    "personality",
+    "scenario",
+    "exampleMessage",
+    "systemPrompt",
+    "replaceGlobalNote",
+    "creatorNotes",
+    "backgroundHTML",
+    "defaultVariables",
+    "additionalText",
+    "emotionImages"
+  ];
+  var SUMMARIZED_FIELDS = /* @__PURE__ */ new Set([
+    ...TEXT_FIELDS,
+    "globalLore",
+    "customscript",
+    "triggerscript",
+    "additionalAssets",
+    "characterVersion",
+    "additionalData",
+    "modification_date"
+  ]);
+  var same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  function diffByLabel(from, to, label, body) {
+    const pending = /* @__PURE__ */ new Map();
+    for (const item of from ?? []) {
+      const key = label(item);
+      const queue = pending.get(key);
+      if (queue) queue.push(item);
+      else pending.set(key, [item]);
+    }
+    for (const queue of pending.values()) queue.reverse();
+    const diff = { added: [], removed: [], changed: [] };
+    for (const item of to ?? []) {
+      const key = label(item);
+      const match = pending.get(key)?.pop();
+      if (match === void 0) diff.added.push(key);
+      else if (!same(body(match), body(item))) diff.changed.push(key);
+    }
+    for (const [key, rest] of pending) {
+      for (let i = 0; i < rest.length; i++) diff.removed.push(key);
+    }
+    return diff;
+  }
+  var keyList = (keys) => (keys ?? "").split(",").map((k) => k.trim()).filter(Boolean).join(",");
+  var loreLabel = (entry2) => entry2.comment || entry2.key || "-";
+  var loreBody = (entry2) => [
+    keyList(entry2.key),
+    entry2.selective ? keyList(entry2.secondkey) : "",
+    entry2.content,
+    entry2.mode ?? "normal",
+    !!entry2.alwaysActive,
+    !!entry2.selective,
+    entry2.insertorder,
+    !!entry2.useRegex,
+    entry2.activationPercent ?? null
+  ];
+  function normalizeLoreExtra(value) {
+    if (value === void 0 || value === null || value === false || value === "") return void 0;
+    if (Array.isArray(value)) {
+      const out = value.map(normalizeLoreExtra).filter((v) => v !== void 0);
+      return out.length ? out : void 0;
+    }
+    if (typeof value === "object") {
+      const out = {};
+      for (const key of Object.keys(value).sort()) {
+        if (isUnsafeCardKey(key)) continue;
+        const normalized = normalizeLoreExtra(value[key]);
+        if (normalized !== void 0) out[key] = normalized;
+      }
+      return Object.keys(out).length ? out : void 0;
+    }
+    return value;
+  }
+  function loreExtraBody(entry2) {
+    const { risu_activationPercent: _probability, risu_loreCache: _cache, ...extensions } = entry2.extentions ?? {};
+    return [normalizeLoreExtra(extensions) ?? null, entry2.folder || null];
+  }
+  var regexLabel = (script) => script.comment || script.in || "-";
+  var regexBody = (script) => [script.in, script.out, script.type, script.flag, script.ableFlag];
+  function summarizeCharacterUpdate(current, incoming, currentAssets) {
+    const fields = cardFieldsOf(incoming);
+    const differs = (key) => key in fields && !same(key === "onboarding" ? onboardingContent(current[key]) : current[key], key === "onboarding" ? onboardingContent(fields[key]) : fields[key]);
+    const texts = TEXT_FIELDS.filter(differs);
+    const others = Object.keys(fields).filter((key) => !SUMMARIZED_FIELDS.has(key) && differs(key));
+    const toAssets = fields.additionalAssets ?? currentAssets;
+    const toLore = fields.globalLore ?? current.globalLore ?? [];
+    const toRegex = fields.customscript ?? current.customscript ?? [];
+    const lore = diffByLabel(current.globalLore ?? [], toLore, loreLabel, loreBody);
+    const regex = diffByLabel(current.customscript ?? [], toRegex, regexLabel, regexBody);
+    for (const [key, before, after, diff] of [["globalLoreOrder", current.globalLore ?? [], toLore, lore], ["customscriptOrder", current.customscript ?? [], toRegex, regex]]) {
+      if (!same(before, after) && !diff.added.length && !diff.removed.length && !diff.changed.length) others.push(key);
+    }
+    const assets = diffByLabel(currentAssets, toAssets, (a) => a[0], (a) => a[1]);
+    return {
+      nameFrom: current.name ?? "",
+      nameTo: incoming.name ?? current.name ?? "",
+      versionFrom: current.characterVersion ?? "",
+      versionTo: incoming.characterVersion ?? current.characterVersion ?? "",
+      nameMismatch: normalizeName2(current.name) !== normalizeName2(incoming.name ?? current.name),
+      texts,
+      others,
+      lore,
+      regex,
+      triggersChanged: "triggerscript" in fields && !same(current.triggerscript, fields.triggerscript),
+      assets: {
+        from: currentAssets.length,
+        to: toAssets.length,
+        added: assets.added.length,
+        removed: assets.removed.length,
+        changed: assets.changed.length
+      },
+      chats: current.chats?.length ?? 0
+    };
+  }
+
+  // src/tide/characterMerge/mediaLabels.ts
+  var mediaLabelStem = (label) => label.replace(/\.(?:webp|png|jpg|jpeg|gif|avif|bmp|mp4|webm|mp3|ogg|wav)$/i, "");
+  function mediaLabelRenames(current, incoming, base = []) {
+    const counts = (labels) => {
+      const out = /* @__PURE__ */ new Map();
+      for (const label of labels) out.set(label, (out.get(label) ?? 0) + 1);
+      return out;
+    };
+    const old = counts(base), live = counts(current), next = counts(incoming);
+    for (const [label, count] of live) old.set(label, Math.max(count, old.get(label) ?? 0));
+    const byStem = (labels, reserved) => {
+      const out = /* @__PURE__ */ new Map();
+      for (const [label, count] of labels) {
+        if (reserved.has(label)) continue;
+        const stem = mediaLabelStem(label);
+        out.set(stem, count === 1 && !out.has(stem) ? label : null);
+      }
+      return out;
+    };
+    const before = byStem(old, next), after = byStem(next, old), result = /* @__PURE__ */ new Map();
+    for (const [stem, label] of after) {
+      const previous = before.get(stem);
+      if (label != null && previous != null) result.set(label, previous);
+    }
+    return result;
+  }
+
+  // src/tide/characterUpdateMerge.ts
+  var LISTS = [
+    { unit: "lore", field: "globalLore" },
+    { unit: "regex", field: "customscript" },
+    { unit: "trigger", field: "triggerscript" },
+    { unit: "asset", field: "additionalAssets" },
+    { unit: "emotion", field: "emotionImages" }
+  ];
+  var FINGERPRINT_KEY = {
+    lore: "lore",
+    regex: "regex",
+    trigger: "triggers",
+    asset: "assets",
+    emotion: "emotions"
+  };
+  var clone = (v) => sanitizeCardValue(v);
+  function canonical(value) {
+    if (value === void 0 || value === null || value === "" || Array.isArray(value) && value.length === 0) return null;
+    if (Array.isArray(value)) return value.map(canonical);
+    if (typeof value === "object") {
+      const out = {};
+      for (const key of Object.keys(value).sort()) {
+        if (isUnsafeCardKey(key)) continue;
+        const v = value[key];
+        if (v !== void 0) out[key] = canonical(v);
+      }
+      return out;
+    }
+    return value;
+  }
+  function cyrb53(str, seed = 0) {
+    let h1 = 3735928559 ^ seed, h2 = 1103547991 ^ seed;
+    for (let i = 0, ch; i < str.length; i++) {
+      ch = str.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ h1 >>> 16, 2246822507) ^ Math.imul(h2 ^ h2 >>> 13, 3266489909);
+    h2 = Math.imul(h2 ^ h2 >>> 16, 2246822507) ^ Math.imul(h1 ^ h1 >>> 13, 3266489909);
+    return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+  }
+  function hashValue(value) {
+    return cyrb53(JSON.stringify(canonical(value)), 0).toString(16).padStart(14, "0");
+  }
+  function assetContentId(path) {
+    return /(?:^|\/)assets\/([0-9a-f]{64})\.[^/]+$/.exec(path)?.[1] ?? path;
+  }
+  var defaultContentId = assetContentId;
+  function labelBody(unit, item, contentIdOf) {
+    const x = item;
+    switch (unit) {
+      case "lore":
+        return { label: String(x.comment ?? "").trim() || keyList(x.key) || "-", body: loreBody(x) };
+      case "regex":
+        return { label: String(x.comment ?? "") || String(x.in ?? "") || "-", body: regexBody(x) };
+      case "trigger":
+        return { label: String(x.comment ?? "").trim() || `${x.type}:${x.effect?.[0]?.type ?? ""}`, body: x };
+      case "asset":
+      case "emotion":
+        return { label: String(x?.[0] ?? ""), body: contentIdOf(x?.[1]) };
+      default:
+        return { label: "", body: x };
+    }
+  }
+  function pairs(card2, unit, field, contentIdOf, hashBody = true) {
+    const counts = /* @__PURE__ */ new Map();
+    const list = card2[field] ?? [];
+    return list.map((item) => {
+      const { label, body } = labelBody(unit, item, contentIdOf);
+      const occurrence = counts.get(label) ?? 0;
+      counts.set(label, occurrence + 1);
+      return { label, hash: hashBody ? hashValue(body) : "", item, id: `${unit}:${label}#${occurrence}` };
+    });
+  }
+  function alignPairs(unit, base, current, incoming) {
+    const groups = /* @__PURE__ */ new Map();
+    const group = (label) => {
+      let g = groups.get(label);
+      if (!g) {
+        g = { slots: [], current: [], incoming: [] };
+        groups.set(label, g);
+      }
+      return g;
+    };
+    for (const [label, hash] of base) {
+      const g = group(label);
+      g.slots.push({ id: `${unit}:${label}#${g.slots.length}`, hash });
+    }
+    for (const p of current) group(p.label).current.push(p);
+    for (const p of incoming) group(p.label).incoming.push(p);
+    const bMap = /* @__PURE__ */ new Map();
+    for (const [label, g] of groups) {
+      const baseSlots = [...g.slots];
+      for (const slot of baseSlots) bMap.set(slot.id, slot.hash);
+      const assigned = /* @__PURE__ */ new Set();
+      const assign = (slot, side, p) => {
+        slot[side] = p;
+        p.id = slot.id;
+        assigned.add(p);
+      };
+      const matchKeys = [(hash) => hash, (hash) => hash.split(":")[0]];
+      for (const matchKey of matchKeys) for (const side of ["current", "incoming"]) {
+        const byHash = /* @__PURE__ */ new Map();
+        for (const slot of baseSlots) if (!slot[side]) {
+          const key = matchKey(slot.hash);
+          const queue = byHash.get(key) ?? [];
+          queue.push(slot);
+          byHash.set(key, queue);
+        }
+        for (const queue of byHash.values()) queue.reverse();
+        for (const p of g[side]) if (!assigned.has(p)) {
+          const slot = byHash.get(matchKey(p.hash))?.pop();
+          if (slot) assign(slot, side, p);
+        }
+      }
+      for (const matchKey of matchKeys) {
+        const byHash = /* @__PURE__ */ new Map();
+        for (const p of g.incoming) if (!assigned.has(p)) {
+          const key = matchKey(p.hash);
+          const queue = byHash.get(key) ?? [];
+          queue.push(p);
+          byHash.set(key, queue);
+        }
+        for (const queue of byHash.values()) queue.reverse();
+        const empty = baseSlots.filter((slot) => !slot.current && !slot.incoming).reverse();
+        for (const p of g.current) if (!assigned.has(p)) {
+          const n = byHash.get(matchKey(p.hash))?.pop();
+          if (!n) continue;
+          let slot = empty.pop();
+          if (!slot) {
+            slot = { id: `${unit}:${label}#${g.slots.length}` };
+            g.slots.push(slot);
+          }
+          assign(slot, "current", p);
+          assign(slot, "incoming", n);
+        }
+      }
+      for (const side of ["current", "incoming"]) {
+        const vacant2 = baseSlots.filter((slot) => !slot[side]).reverse();
+        for (const p of g[side]) if (!assigned.has(p)) {
+          const slot = vacant2.pop();
+          if (!slot) break;
+          assign(slot, side, p);
+        }
+      }
+      for (const p of g.current) if (!assigned.has(p)) {
+        const slot = { id: `${unit}:${label}#${g.slots.length}` };
+        g.slots.push(slot);
+        assign(slot, "current", p);
+      }
+      const vacant = g.slots.filter((slot) => slot.hash === void 0 && !slot.incoming).reverse();
+      for (const p of g.incoming) if (!assigned.has(p)) {
+        let slot = vacant.pop();
+        if (!slot) {
+          slot = { id: `${unit}:${label}#${g.slots.length}` };
+          g.slots.push(slot);
+        }
+        assign(slot, "incoming", p);
+      }
+    }
+    return bMap;
+  }
+  function fieldHash(key, value, contentIdOf) {
+    return hashValue(key === "onboarding" ? onboardingContent(value) : key === "image" && typeof value === "string" && value ? contentIdOf(value) : value);
+  }
+  function fingerprintCard(card2, contentIdOf = defaultContentId, now = Date.now()) {
+    const fields = {};
+    for (const key of Object.keys(card2).filter((key2) => !isUserOwnedCardField(key2) && !isUnsafeCardKey(key2) && !LISTS.some((spec) => spec.field === key2))) if (key in card2) fields[key] = fieldHash(key, card2[key], contentIdOf);
+    const output = { v: 1, savedAt: now, version: String(card2.characterVersion ?? ""), fields };
+    for (const { unit, field } of LISTS) {
+      output[FINGERPRINT_KEY[unit]] = pairs(card2, unit, field, contentIdOf).map((p) => [p.label, p.hash]);
+    }
+    output.loreExtra = (card2.globalLore ?? []).map((entry2) => hashValue(loreExtraBody(entry2)));
+    return output;
+  }
+  function isFingerprintV1(value) {
+    if (!value || typeof value !== "object") return false;
+    const x = value;
+    return x.v === 1 && typeof x.savedAt === "number" && typeof x.version === "string" && !!x.fields && typeof x.fields === "object" && ["lore", "regex", "triggers", "assets", "emotions"].every((k) => Array.isArray(x[k]) && x[k].every((p) => Array.isArray(p) && p.length === 2 && p.every((v) => typeof v === "string"))) && (x.loreExtra === void 0 || Array.isArray(x.loreExtra) && x.loreExtra.length === x.lore.length && x.loreExtra.every((h2) => typeof h2 === "string"));
+  }
+  function classify(b, c, n, hasBase) {
+    if (!hasBase) {
+      if (c !== void 0 && n !== void 0 && c !== n) return { kind: "unknownDiff", keep: false };
+      if (c !== void 0 && n === void 0) return { kind: "unknownExtra", keep: false };
+      return null;
+    }
+    if (c !== void 0 && n !== void 0) {
+      if (c === n || c === b && n !== b) return null;
+      if (n === b && c !== b) return { kind: "mineEdited", keep: true };
+      return { kind: "conflict", keep: false };
+    }
+    if (c !== void 0) {
+      if (b === void 0) return { kind: "mineAdded", keep: true };
+      if (c === b) return null;
+      return { kind: "conflict", keep: false };
+    }
+    if (n !== void 0) {
+      if (b === void 0) return null;
+      if (n === b) return { kind: "mineDeleted", keep: true };
+      return { kind: "conflict", keep: false };
+    }
+    return null;
+  }
+  function indexed(p) {
+    return new Map(p.map((x) => [x.id, x]));
+  }
+  function planCharacterUpdate(args) {
+    const { current } = args;
+    const incomingFields = Object.fromEntries(Object.entries(args.incomingFields).filter(([, value]) => value !== void 0));
+    const contentIdOf = args.contentIdOf ?? defaultContentId;
+    const hasBase = !!args.base && isFingerprintV1(args.base);
+    const items = [];
+    const silent = { authorChanged: 0, authorAdded: 0, authorRemoved: 0 };
+    const listIds = {};
+    for (const key of Object.keys(incomingFields).filter((key2) => !isUserOwnedCardField(key2) && !isUnsafeCardKey(key2) && !LISTS.some((spec) => spec.field === key2))) {
+      if (!(key in incomingFields)) continue;
+      const c = fieldHash(key, current[key], contentIdOf);
+      const n = fieldHash(key, incomingFields[key], contentIdOf);
+      const b = hasBase ? args.base.fields[key] ?? fieldHash(key, void 0, contentIdOf) : void 0;
+      const result = classify(b, c, n, hasBase);
+      if (result && hasBase && PREFERENCE_FIELDS.includes(key) && (b === void 0 ? current[key] !== void 0 : c !== b)) result.keep = true;
+      if (result) items.push({ id: `field:${key}`, unit: "field", label: key, kind: result.kind, keepByDefault: result.keep, current: clone(current[key]), incoming: clone(incomingFields[key]) });
+      else if (hasBase && c === b && n !== b) {
+        silent.authorChanged++;
+        items.push({ id: `field:${key}`, unit: "field", label: key, kind: "authorChanged", keepByDefault: false, current: clone(current[key]), incoming: clone(incomingFields[key]) });
+      }
+    }
+    for (const spec of LISTS) {
+      if (!(spec.field in incomingFields)) continue;
+      const cp = pairs(current, spec.unit, spec.field, contentIdOf), np = pairs(incomingFields, spec.unit, spec.field, contentIdOf);
+      let bpairs = hasBase ? args.base[FINGERPRINT_KEY[spec.unit]] : [];
+      if (spec.unit === "lore" && (!hasBase || args.base.loreExtra !== void 0)) {
+        for (const p of [...cp, ...np]) p.hash += ":" + hashValue(loreExtraBody(p.item));
+        bpairs = bpairs.map(([label, hash], i) => [label, hash + ":" + args.base.loreExtra[i]]);
+      }
+      const renames = [];
+      const mediaRenames = /* @__PURE__ */ new Set();
+      const mediaStems = /* @__PURE__ */ new Set();
+      if (spec.unit === "asset" || spec.unit === "emotion") {
+        for (const label of [...cp.map((p) => p.label), ...bpairs.map(([label2]) => label2)]) mediaStems.add(mediaLabelStem(label));
+        const labels = mediaLabelRenames(cp.map((p) => p.label), np.map((p) => p.label), bpairs.map(([label]) => label));
+        for (const n of np) {
+          const previous = labels.get(n.label);
+          if (previous !== void 0) {
+            renames.push([n, n.label]);
+            mediaRenames.add(n);
+            n.label = previous;
+          }
+        }
+      }
+      const currentLabels = new Set(cp.map((p) => p.label)), baseLabels = new Set(bpairs.map(([label]) => label));
+      const incomingLabels = /* @__PURE__ */ new Map(), unmatchedHashes = /* @__PURE__ */ new Map();
+      const count = (map, key, delta) => map.set(key, (map.get(key) ?? 0) + delta);
+      for (const n of np) {
+        count(incomingLabels, n.label, 1);
+        if (!currentLabels.has(n.label)) count(unmatchedHashes, n.hash, 1);
+      }
+      const baseHashes = /* @__PURE__ */ new Map(), byHash = /* @__PURE__ */ new Map();
+      for (const [label, hash] of bpairs) {
+        if (!baseHashes.has(label)) baseHashes.set(label, /* @__PURE__ */ new Set());
+        baseHashes.get(label).add(hash);
+      }
+      for (const c of cp) for (const hash of /* @__PURE__ */ new Set([c.hash, ...baseHashes.get(c.label) ?? []])) {
+        if (!byHash.has(hash)) byHash.set(hash, /* @__PURE__ */ new Set());
+        byHash.get(hash).add(c);
+      }
+      const ambiguous = /* @__PURE__ */ new Set();
+      for (const n of np) {
+        if (currentLabels.has(n.label) || baseLabels.has(n.label)) continue;
+        if (mediaStems.has(mediaLabelStem(n.label))) continue;
+        const triggerHashes = /* @__PURE__ */ new Map();
+        const renameHash = (c) => {
+          if (spec.unit !== "trigger") return n.hash;
+          const comment = c.item.comment;
+          if (!triggerHashes.has(comment)) triggerHashes.set(comment, hashValue({ ...n.item, comment }));
+          return triggerHashes.get(comment);
+        };
+        const candidates = spec.unit === "trigger" ? cp.filter((c) => !incomingLabels.get(c.label) && (c.hash === renameHash(c) || baseHashes.get(c.label)?.has(renameHash(c)))) : [...byHash.get(n.hash) ?? []].filter((c) => !incomingLabels.get(c.label));
+        if (candidates.length === 1 && unmatchedHashes.get(n.hash) === 1) {
+          renames.push([n, n.label]);
+          count(incomingLabels, n.label, -1);
+          count(unmatchedHashes, n.hash, -1);
+          n.hash = renameHash(candidates[0]);
+          n.label = candidates[0].label;
+          count(incomingLabels, n.label, 1);
+        } else if (candidates.length) {
+          ambiguous.add(n);
+          candidates.forEach((c) => ambiguous.add(c));
+        }
+      }
+      const bMap = alignPairs(spec.unit, bpairs, cp, np);
+      for (const [n, label] of renames) n.label = label;
+      if (hasBase && ["lore", "regex", "trigger"].includes(spec.unit)) {
+        const counts = /* @__PURE__ */ new Map();
+        const baseIds = bpairs.map(([label]) => {
+          const i = counts.get(label) ?? 0;
+          counts.set(label, i + 1);
+          return `${spec.unit}:${label}#${i}`;
+        });
+        const currentIds = new Set(cp.map((p) => p.id)), incomingIds = new Set(np.map((p) => p.id));
+        const shared = new Set(baseIds.filter((id) => currentIds.has(id) && incomingIds.has(id)));
+        const order = (ids2) => ids2.filter((id) => shared.has(id));
+        const co = order(cp.map((p) => p.id)), no = order(np.map((p) => p.id)), bo = order(baseIds);
+        if (JSON.stringify(co) !== JSON.stringify(bo) && JSON.stringify(co) !== JSON.stringify(no)) {
+          const conflict = JSON.stringify(no) !== JSON.stringify(bo);
+          items.push({ id: `order:${spec.unit}`, unit: spec.unit, label: `order:${spec.unit}`, kind: conflict ? "conflict" : "mineEdited", keepByDefault: !conflict, current: co, incoming: no });
+        }
+      }
+      listIds[spec.unit] = { current: cp.map((p) => p.id), incoming: np.map((p) => p.id) };
+      const cm = indexed(cp), nm = indexed(np), ids = /* @__PURE__ */ new Set([...bMap.keys(), ...cm.keys(), ...nm.keys()]);
+      for (const id of ids) {
+        const c = cm.get(id), n = nm.get(id), b = bMap.get(id);
+        const result = ambiguous.has(c) || ambiguous.has(n) ? { kind: "conflict", keep: false } : classify(b, c?.hash, n?.hash, hasBase);
+        if (result) items.push({ id, unit: spec.unit, label: ambiguous.has(c) || ambiguous.has(n) ? `ambiguous:${(c ?? n)?.label ?? id}` : c && n && mediaRenames.has(n) && c.label !== n.label ? `${c.label} → ${n.label}` : (c ?? n)?.label ?? id, kind: result.kind, keepByDefault: result.keep, ...ambiguous.has(c) || ambiguous.has(n) ? { mineChanged: hasBase && b !== void 0 && c?.hash !== b } : {}, ...c ? { current: clone(c.item) } : {}, ...n ? { incoming: clone(n.item) } : {} });
+        else if (c && n && c.label !== n.label || hasBase && c && n && c.hash === b && n.hash !== b || n && !c && b === void 0 || hasBase && !n && b !== void 0 && (!c || c.hash === b)) {
+          items.push({ id, unit: spec.unit, label: c && n && c.label !== n.label ? `${c.label} → ${n.label}` : (c ?? n)?.label ?? id, kind: "authorChanged", keepByDefault: false, ...c ? { current: clone(c.item) } : {}, ...n ? { incoming: clone(n.item) } : {} });
+          if (c && n) silent.authorChanged++;
+        }
+      }
+      if (hasBase) {
+        for (const id of nm.keys()) if (!bMap.has(id) && !cm.has(id)) silent.authorAdded++;
+        for (const [id, hash] of bMap) if (!nm.has(id) && (!cm.has(id) || cm.get(id).hash === hash)) silent.authorRemoved++;
+      } else {
+        for (const id of nm.keys()) if (!cm.has(id)) silent.authorAdded++;
+      }
+    }
+    return { hasBase, items, silent, listIds };
+  }
+  function applyUpdatePlan(args) {
+    const { current, plan } = args;
+    const keep = /* @__PURE__ */ new Set([...args.keep, ...(plan.imageProtection ?? []).flatMap((group) => !group.sync || !group.canSync ? group.rowIds : group.ambiguousRowIds ?? [])]);
+    const incomingFields = Object.fromEntries(Object.entries(args.incomingFields).filter(([, value]) => value !== void 0));
+    const out = mergePresentFields(current, incomingFields);
+    if ("onboarding" in incomingFields && hashValue(onboardingContent(current.onboarding)) === hashValue(onboardingContent(incomingFields.onboarding))) out.onboarding = clone(current.onboarding);
+    for (const key of /* @__PURE__ */ new Set([...KEPT_FIELDS, ...Object.keys(out).filter(isUserOwnedCardField)])) {
+      if (key in current) out[key] = clone(current[key]);
+      else delete out[key];
+    }
+    const itemMap = new Map(plan.items.map((x) => [x.id, x]));
+    for (const key of /* @__PURE__ */ new Set([...Object.keys(current), ...plan.items.filter((item) => item.unit === "field").map((item) => item.label)])) {
+      if (isUnsafeCardKey(key)) continue;
+      const id = `field:${key}`;
+      if (keep.has(id)) out[key] = clone(current[key]);
+    }
+    for (const spec of LISTS) {
+      if (!(spec.field in incomingFields)) continue;
+      const cp = pairs(current, spec.unit, spec.field, defaultContentId, false), np = pairs(incomingFields, spec.unit, spec.field, defaultContentId, false);
+      const ids = plan.listIds?.[spec.unit];
+      if (ids) {
+        if (ids.current.length !== cp.length || ids.incoming.length !== np.length) throw new Error("Update plan is stale: rebuild it from the current character");
+        cp.forEach((p, i) => {
+          p.id = ids.current[i];
+        });
+        np.forEach((p, i) => {
+          p.id = ids.incoming[i];
+        });
+      }
+      const cMap = indexed(cp), nMap = indexed(np);
+      const dropped = new Set([...nMap.keys()].filter((id) => keep.has(id) && itemMap.has(id) && !cMap.has(id)));
+      const entries = np.filter((p) => !dropped.has(p.id)).map((p) => {
+        const mine = keep.has(p.id) && itemMap.has(p.id) ? cMap.get(p.id) : void 0;
+        return { id: p.id, item: clone(mine ? mine.item : p.item) };
+      });
+      const present = new Set(entries.map((x) => x.id));
+      const after = /* @__PURE__ */ new Map();
+      let anchor = null;
+      for (const p of cp) {
+        if (keep.has(p.id) && itemMap.has(p.id) && !nMap.has(p.id)) {
+          const queue = after.get(anchor);
+          if (queue) queue.push(p);
+          else after.set(anchor, [p]);
+          anchor = p.id;
+        } else if (present.has(p.id)) {
+          anchor = p.id;
+        }
+      }
+      const result = [];
+      const resultIds = /* @__PURE__ */ new Map();
+      const emitAfter = (id) => {
+        const stack = [...after.get(id) ?? []].reverse();
+        while (stack.length > 0) {
+          const p = stack.pop();
+          const value = clone(p.item);
+          result.push(value);
+          resultIds.set(value, p.id);
+          const next = after.get(p.id);
+          if (next) for (let i = next.length - 1; i >= 0; i--) stack.push(next[i]);
+        }
+      };
+      emitAfter(null);
+      for (const entry2 of entries) {
+        result.push(entry2.item);
+        resultIds.set(entry2.item, entry2.id);
+        emitAfter(entry2.id);
+      }
+      if (keep.has(`order:${spec.unit}`)) {
+        const resultRank = new Map(cp.map((p, i) => [p.id, i]));
+        result.sort((a, b) => (resultRank.get(resultIds.get(a)) ?? Infinity) - (resultRank.get(resultIds.get(b)) ?? Infinity));
+      }
+      out[spec.field] = result;
+    }
+    const lore = out.globalLore ?? [];
+    const folderKeys = new Set(lore.filter((x) => x.mode === "folder").map((x) => x.key));
+    for (const entry2 of lore) if (entry2.folder && !folderKeys.has(entry2.folder)) delete entry2.folder;
+    return out;
+  }
+  function mergePresentFields(current, incoming) {
+    const out = clone(current);
+    for (const [key, value] of Object.entries(incoming)) {
+      if (isUnsafeCardKey(key) || value === void 0) continue;
+      const before = current[key];
+      out[key] = value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length > 0 && before && typeof before === "object" && !Array.isArray(before) ? mergePresentFields(before, value) : clone(value);
+    }
+    return out;
+  }
+
+  // src/tide/characterUpdateGreetings.ts
+  function isUnverifiableGreetingChat(chat) {
+    return chat._placeholder === true || chat._stub === true && (!Array.isArray(chat.message) || chat.message.length === 0);
+  }
+  function greetingRemap(current, fields, chats, appendMissing = true) {
+    const old = current.alternateGreetings ?? [];
+    let next = [...fields.alternateGreetings ?? old];
+    const unverifiableCount = chats.filter(isUnverifiableGreetingChat).length;
+    if (unverifiableCount && old.some((text, index) => next[index] !== text)) {
+      const incoming = next;
+      next = [...old];
+      for (const text of incoming) if (!next.includes(text)) next.push(text);
+    }
+    const chosen = (chat) => isUnverifiableGreetingChat(chat) ? void 0 : chat.fmIndex === -1 ? current.firstMessage : old[chat.fmIndex];
+    const missingChats = chats.filter((chat) => chosen(chat) !== void 0 && chosen(chat) !== fields.firstMessage && !next.includes(chosen(chat)));
+    if (!appendMissing && missingChats.length && !unverifiableCount) next = [...old];
+    for (const chat of chats) {
+      const text = chosen(chat);
+      if (text !== void 0 && text !== fields.firstMessage && !next.includes(text)) next.push(text);
+    }
+    return { unverifiableCount, missingCount: missingChats.length, alternateGreetings: next, indexes: chats.map((chat) => {
+      if (isUnverifiableGreetingChat(chat)) return void 0;
+      const text = chosen(chat);
+      if (text === void 0) return chat.fmIndex;
+      return text === fields.firstMessage ? -1 : next.indexOf(text);
+    }) };
+  }
+
+  // src/tide/characterMerge/wordDiff.ts
+  function tokens(text) {
+    return text.match(/\s+|[\p{L}\p{N}\p{M}_]+|[^\s]/gu) ?? [];
+  }
+  function scores(a, b) {
+    const row2 = new Uint32Array(b.length + 1);
+    for (const token of a) {
+      let diagonal = 0;
+      for (let j = 1; j <= b.length; j++) {
+        const previous = row2[j];
+        row2[j] = token === b[j - 1] ? diagonal + 1 : Math.max(row2[j], row2[j - 1]);
+        diagonal = previous;
+      }
+    }
+    return row2;
+  }
+  function lcs(a, b) {
+    if (!a.length || !b.length) return [];
+    if (a.length === 1) return b.includes(a[0]) ? [a[0]] : [];
+    const middle = Math.floor(a.length / 2);
+    const left = scores(a.slice(0, middle), b);
+    const right = scores(a.slice(middle).reverse(), [...b].reverse());
+    let split = 0, best = -1;
+    for (let j = 0; j <= b.length; j++) {
+      const score = left[j] + right[b.length - j];
+      if (score > best) {
+        best = score;
+        split = j;
+      }
+    }
+    return [...lcs(a.slice(0, middle), b.slice(0, split)), ...lcs(a.slice(middle), b.slice(split))];
+  }
+  function wordDiff(a, b) {
+    const original = tokens(a), proposed = tokens(b), result = [];
+    let start2 = 0, endA = original.length, endB = proposed.length;
+    while (start2 < endA && start2 < endB && original[start2] === proposed[start2]) {
+      result.push({ op: "same", text: original[start2++] });
+    }
+    while (endA > start2 && endB > start2 && original[endA - 1] === proposed[endB - 1]) {
+      endA--;
+      endB--;
+    }
+    let i = start2, j = start2;
+    for (const common of lcs(original.slice(start2, endA), proposed.slice(start2, endB))) {
+      while (original[i] !== common) result.push({ op: "del", text: original[i++] });
+      while (proposed[j] !== common) result.push({ op: "add", text: proposed[j++] });
+      result.push({ op: "same", text: common });
+      i++;
+      j++;
+    }
+    while (i < endA) result.push({ op: "del", text: original[i++] });
+    while (j < endB) result.push({ op: "add", text: proposed[j++] });
+    while (i < original.length) result.push({ op: "same", text: original[i++] });
+    return result;
+  }
+
+  // src/engine/tideplan.js
+  var DUSK_USER = ["bardLore", "bardPainter"];
+  var isUserField = (k) => KEPT_FIELDS.has(k) || isCredentialKey(k) || DUSK_USER.includes(k);
+  function charFields(obj) {
+    const out = {};
+    for (const [k, v] of Object.entries(obj ?? {})) {
+      if (isUserField(k) || isUnsafeCardKey(k) || v === void 0) continue;
+      out[k] = v;
+    }
+    return out;
+  }
+  var MOD_MAP = { name: "name", description: "desc", lorebook: "globalLore", regex: "customscript", trigger: "triggerscript", assets: "additionalAssets", backgroundEmbedding: "backgroundHTML", lowLevelAccess: "lowLevelAccess" };
+  var MOD_BACK = Object.fromEntries(Object.entries(MOD_MAP).map(([a, b]) => [b, a]));
+  function modFields(view) {
+    const out = {};
+    for (const [k, v] of Object.entries(view ?? {})) {
+      if (k === "id" || isUnsafeCardKey(k) || v === void 0) continue;
+      out[MOD_MAP[k] ?? `moduleField:${k}:value`] = v;
+    }
+    return out;
+  }
+  function fieldsToMod(fields) {
+    const out = {};
+    for (const [k, v] of Object.entries(fields)) {
+      const name = MOD_BACK[k] ?? (k.startsWith("moduleField:") ? k.slice(12, -6) : void 0);
+      if (name) out[name] = v;
+    }
+    return out;
+  }
+  function modHash(fields) {
+    return Array.isArray(fields.additionalAssets) ? { ...fields, additionalAssets: fields.additionalAssets.map((r) => [r[0], `module-asset:${assetContentId(r[1])}:${JSON.stringify(r.slice(2))}`]) } : fields;
+  }
+  var modFingerprint = (fields) => fingerprintCard(modHash(fields));
+  function makePlan(kind, current, incoming, base) {
+    const b = isFingerprintV1(base) ? base : null;
+    if (kind === "c") return planCharacterUpdate({ current, incomingFields: incoming, base: b });
+    const plan = planCharacterUpdate({ current: modHash(current), incomingFields: modHash(incoming), base: b });
+    for (const it of plan.items) if (it.unit === "asset") {
+      const ci = plan.listIds?.asset?.current.indexOf(it.id) ?? -1, ni = plan.listIds?.asset?.incoming.indexOf(it.id) ?? -1;
+      it.current = ci < 0 ? void 0 : structuredClone(current.additionalAssets[ci]);
+      it.incoming = ni < 0 ? void 0 : structuredClone(incoming.additionalAssets[ni]);
+    }
+    return plan;
+  }
+  function keepSet(plan, choices, keepExistingOnly) {
+    const keep = /* @__PURE__ */ new Set();
+    for (const it of plan.items) {
+      const c = choices.get(it.id);
+      const def = it.keepByDefault || !plan.hasBase && keepExistingOnly && it.kind === "unknownExtra";
+      if (c ? c === "cur" : def) keep.add(it.id);
+    }
+    return keep;
+  }
+  function applyPlan(current, incoming, plan, keep) {
+    return applyUpdatePlan({ current, incomingFields: incoming, plan, keep });
+  }
+  function writeCharFields(fresh, before, fields) {
+    const out = { ...fresh };
+    for (const k of /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(fields)])) {
+      if (isUserField(k) || isUnsafeCardKey(k)) continue;
+      if (fields[k] === void 0) delete out[k];
+      else out[k] = sanitizeCardValue(fields[k]);
+    }
+    if ("additionalAssets" in fields) delete out.additionalAssetManifest;
+    return out;
+  }
+  function remapGreetings(merged, before, fields) {
+    if (!("alternateGreetings" in fields) && !("firstMessage" in fields)) return 0;
+    const chats = merged.chats ?? [];
+    const r = greetingRemap(before, fields, chats, true);
+    if ("alternateGreetings" in fields || r.missingCount) merged.alternateGreetings = r.alternateGreetings;
+    let n = 0;
+    merged.chats = chats.map((c, i) => {
+      const v = r.indexes[i];
+      if (v === void 0 || v === c.fmIndex) return c;
+      n++;
+      return { ...c, fmIndex: v };
+    });
+    return n;
+  }
+  var KIND_KO = {
+    authorChanged: "새 버전 적용",
+    mineEdited: "내가 고침",
+    mineAdded: "내가 추가",
+    mineDeleted: "내가 지움",
+    conflict: "충돌",
+    unknownDiff: "다름",
+    unknownExtra: "새 버전에 없음"
+  };
+  function groupOf(it) {
+    if (it.kind === "conflict") return "conflict";
+    if (it.kind.startsWith("mine")) return "mine";
+    if (it.kind === "unknownExtra") return "extra";
+    return "update";
+  }
+  function changeOf(it) {
+    if (it.current === void 0 && it.incoming !== void 0) return "added";
+    if (it.current !== void 0 && it.incoming === void 0) return "removed";
+    return "changed";
+  }
+  var UNIT_KO = { lore: "로어북", regex: "정규식", trigger: "트리거", asset: "에셋", emotion: "감정 이미지" };
+  function itemLabel(it, fieldLabel) {
+    if (it.id.startsWith("order:")) return `${UNIT_KO[it.unit] ?? it.unit} 순서`;
+    if (it.unit === "field") {
+      const k = it.label.startsWith("moduleField:") ? it.label.slice(12, -6) : it.label;
+      return fieldLabel(k);
+    }
+    const name = String(it.label).replace(/^ambiguous:/, "");
+    return `${UNIT_KO[it.unit] ?? it.unit}: ${name || "(이름 없음)"}`;
+  }
+  function textOf(it, v) {
+    if (v === void 0 || v === null) return "";
+    if (typeof v === "string") return v;
+    if (it.unit === "lore") return `${v.key ?? ""}
+${v.content ?? ""}`;
+    if (it.unit === "regex") return `${v.in ?? ""}
+→ ${v.out ?? ""}`;
+    if (Array.isArray(v) && (it.unit === "asset" || it.unit === "emotion")) return String(v[1] ?? "");
+    try {
+      return JSON.stringify(v, null, 1);
+    } catch {
+      return String(v);
+    }
+  }
+
+  // src/engine/tidestore.js
+  var localP = null;
+  function localStore(api) {
+    localP ??= Promise.resolve().then(() => api.getLocalPluginStorage?.()).catch(() => null);
+    return localP;
+  }
+  async function keysOf(s) {
+    try {
+      return await s?.keys?.() ?? [];
+    } catch {
+      return [];
+    }
+  }
+  async function getOf(s, k) {
+    try {
+      return await s.getItem(k) ?? null;
+    } catch {
+      return null;
+    }
+  }
+  async function readMirrored(api, key, valid2) {
+    const local = await localStore(api);
+    const stores = [local, api.pluginStorage].filter(Boolean);
+    const prefix = `risutide-mirror/${encodeURIComponent(key)}/`;
+    const cands = [];
+    for (const s of stores) for (const k of await keysOf(s)) if (k.startsWith(prefix)) cands.push({ s, k });
+    cands.sort((a, b) => b.k.localeCompare(a.k));
+    for (const { s, k } of cands) {
+      const rec = await getOf(s, k);
+      if (rec?.v === 1 && valid2(rec.value)) return rec.value;
+    }
+    for (const s of stores) {
+      const v = await getOf(s, key);
+      if (valid2(v)) return v;
+    }
+    return null;
+  }
+  async function tideBase(api, kind, id) {
+    try {
+      return await readMirrored(api, kind === "c" ? `base/${id}` : `base/module/${encodeURIComponent(id)}`, isFingerprintV1);
+    } catch {
+      return null;
+    }
+  }
+  function b64(s) {
+    const bin = atob(s), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  }
+  async function gunzip(u8) {
+    return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
+  }
+  async function sha(u8) {
+    return [...new Uint8Array(await crypto.subtle.digest("SHA-256", u8))].map((n) => n.toString(16).padStart(2, "0")).join("");
+  }
+  async function readPart(local, key) {
+    const part = await getOf(local, key);
+    if (part?.codec !== "gzip" || typeof part.data !== "string") throw new Error("RisuTide 백업 조각이 없어요");
+    const raw = await gunzip(b64(part.data));
+    if (await sha(raw) !== key.split("/")[1]) throw new Error("RisuTide 백업 조각이 손상됐어요");
+    return JSON.parse(new TextDecoder().decode(raw));
+  }
+  async function listTideBackups(api) {
+    const local = await localStore(api);
+    if (!local) return [];
+    const keys = await keysOf(local);
+    const deleted = new Set(keys.filter((k) => k.startsWith("backup-deleted/")).map((k) => k.slice(15)));
+    const latest = /* @__PURE__ */ new Map();
+    for (const k of keys) {
+      if (!k.startsWith("backup-cas/")) continue;
+      const [, chaId, id, ver = ""] = k.split("/");
+      if (!chaId || !id || deleted.has(`${chaId}/${id}`)) continue;
+      const key2 = `${chaId}/${id}`, cur = latest.get(key2);
+      const t = Number(ver.split("-")[0]) || 0;
+      if (!cur || t > cur.t) latest.set(key2, { k, t });
+    }
+    const out = [];
+    for (const { k } of latest.values()) {
+      const man = await getOf(local, k);
+      const hd = man?.header;
+      if (!hd || man.v !== 4 && man.v !== 5) continue;
+      const isMod = hd.targetKind === "module";
+      out.push({
+        id: `tide:${hd.chaId}/${hd.id}`,
+        src: "tide",
+        kind: isMod ? "module" : "character",
+        target: isMod ? hd.moduleId : hd.chaId,
+        name: hd.name || "(이름 없음)",
+        t: hd.savedAt ?? 0,
+        size: hd.bytes ?? 0,
+        note: "RisuTide 백업",
+        summary: [hd.versionFrom && hd.versionTo && hd.versionFrom !== hd.versionTo ? `v${hd.versionFrom} → v${hd.versionTo}` : "", hd.source].filter(Boolean).join(" · "),
+        tideKey: k
+      });
+    }
+    return out.sort((a, b) => b.t - a.t);
+  }
+  async function loadTideBackup(api, rec) {
+    const local = await localStore(api);
+    const man = await getOf(local, rec.tideKey);
+    if (!man?.header || !Array.isArray(man.fields)) throw new Error("RisuTide 백업을 읽지 못했어요");
+    const fields = {};
+    for (const [k, ref] of man.fields) fields[k] = await readPart(local, ref);
+    const base = man.base ? await readPart(local, man.base).catch(() => null) : null;
+    if (rec.kind === "module") {
+      if (!fields.moduleSnapshot) throw new Error("RisuTide 모듈 백업 형식이 달라요");
+      return { module: fields.moduleSnapshot, base: isFingerprintV1(base) ? base : null };
+    }
+    return { fields, keys: Array.isArray(man.header.keys) ? man.header.keys : Object.keys(fields), base: isFingerprintV1(base) ? base : null };
+  }
+
   // src/engine/store.js
   async function gzip(bytes) {
     if (typeof CompressionStream !== "function") return bytes;
@@ -1537,7 +2533,7 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       return bytes;
     }
   }
-  async function gunzip(bytes) {
+  async function gunzip2(bytes) {
     return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
   }
   var locks = /* @__PURE__ */ new WeakMap();
@@ -1585,16 +2581,88 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       if (typeof path !== "string" || !path) throw new Error("기록을 저장하지 못했습니다");
       return { path, size };
     };
+    const PART = "rbm:part:", MAN = "rbm:man:", FP = "rbm:fp:", FPBK = "rbm:fpbk:";
+    const ps = api.pluginStorage;
+    const hex = (u8) => [...u8].map((n) => n.toString(16).padStart(2, "0")).join("");
+    const toB64 = (u8) => {
+      let bin = "";
+      for (let i = 0; i < u8.length; i += 8192) bin += String.fromCharCode(...u8.subarray(i, i + 8192));
+      return btoa(bin);
+    };
+    const fromB64 = (s2) => {
+      const bin = atob(s2), u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      return u8;
+    };
+    const putParts = async (obj) => {
+      let have;
+      try {
+        have = new Set(await ps.keys());
+      } catch {
+        have = /* @__PURE__ */ new Set();
+      }
+      const fields = [];
+      let size = 0;
+      for (const [k, v] of Object.entries(obj)) {
+        if (v === void 0) continue;
+        const raw = new TextEncoder().encode(JSON.stringify(v));
+        const h2 = await sha256(raw);
+        if (!have.has(PART + h2)) {
+          const gz = await gzip(raw);
+          await ps.setItem(PART + h2, JSON.stringify({ z: gz !== raw, d: toB64(gz) }));
+          have.add(PART + h2);
+          size += gz.length;
+        }
+        fields.push([k, h2]);
+      }
+      return { fields, size };
+    };
+    const readPart2 = async (h2) => {
+      const raw0 = await ps.getItem(PART + h2);
+      if (!raw0) throw new Error("백업 조각을 찾지 못했어요");
+      const j = JSON.parse(raw0);
+      let u8 = fromB64(j.d);
+      if (j.z) u8 = await gunzip2(u8);
+      if (await sha256(u8) !== h2) throw new Error("백업 조각이 손상됐어요");
+      return JSON.parse(new TextDecoder().decode(u8));
+    };
+    const readManifest = async (id) => {
+      const raw0 = await ps.getItem(MAN + id);
+      const m = raw0 ? JSON.parse(raw0) : null;
+      if (!m || !Array.isArray(m.fields)) throw new Error("백업 기록을 찾지 못했어요");
+      return m;
+    };
+    const sweep = async (idx) => {
+      try {
+        const keys = await ps.keys();
+        const live = /* @__PURE__ */ new Set();
+        const alive = new Set(idx.backups.filter((b) => b.cas).map((b) => b.id));
+        for (const k of keys) {
+          if (!k.startsWith(MAN)) continue;
+          const id = k.slice(MAN.length);
+          if (!alive.has(id)) {
+            await ps.removeItem(k);
+            await ps.removeItem(FPBK + id).catch(() => {
+            });
+            continue;
+          }
+          const m = await readManifest(id);
+          for (const [, h2] of m.fields) live.add(h2);
+        }
+        for (const k of keys) if (k.startsWith(PART) && !live.has(k.slice(PART.length))) await ps.removeItem(k);
+      } catch {
+      }
+    };
     const getJson = async (path) => {
       const bytes = await api.readImage(path);
       if (!bytes) throw new Error("저장된 기록 파일을 찾지 못했습니다(에셋 정리로 지워졌을 수 있습니다)");
       let u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-      if (u8[0] === 31 && u8[1] === 139) u8 = await gunzip(u8);
+      if (u8[0] === 31 && u8[1] === 139) u8 = await gunzip2(u8);
       const j = JSON.parse(new TextDecoder().decode(u8));
       if (j?.rbu !== 1) throw new Error("기록 파일 형식이 올바르지 않습니다");
       return j.data;
     };
-    return {
+    const self = {
       async getBaseline(key) {
         const idx = await readIndex();
         const b = idx.baselines[key];
@@ -1620,12 +2688,16 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
         });
       },
       async addBackup({ kind, target, name, snapshot, note: note2, summary }) {
-        const { raw, hash } = await encode(snapshot);
-        const last2 = (await readIndex()).backups.find((b) => b.target === target);
-        const file = last2?.hash === hash ? { path: last2.path, size: last2.size } : await upload(raw);
+        const { hash } = await encode(snapshot);
+        const id0 = newId();
+        const fpNow = await self.getFingerprint(kind === "character" ? "c" : "m", target).catch(() => null);
         return serial(api, async () => {
+          const { fields, size } = await putParts(snapshot);
+          await ps.setItem(MAN + id0, JSON.stringify({ v: 2, fields }));
+          if (fpNow) await ps.setItem(FPBK + id0, JSON.stringify(fpNow)).catch(() => {
+          });
           const idx = await readIndex();
-          const rec = { id: newId(), kind, target, name, t: Date.now(), path: file.path, size: file.size, hash, note: note2 ?? "", summary: summary ?? "", basePath: idx.baselines[`${kind === "character" ? "c" : "m"}:${target}`]?.path ?? null };
+          const rec = { id: id0, kind, target, name, t: Date.now(), cas: true, size, hash, note: note2 ?? "", summary: summary ?? "", hasFp: !!fpNow };
           idx.backups.unshift(rec);
           const keep = await keepPerTarget();
           const per = /* @__PURE__ */ new Map();
@@ -1638,6 +2710,7 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
           idx.history = [...dropped.map(({ id, kind: kind2, target: target2, name: name2, t, note: note3, summary: summary2 }) => ({ id, kind: kind2, target: target2, name: name2, t, note: note3, summary: summary2 })), ...idx.history ?? []].slice(0, 400);
           idx.backups = kept;
           await writeIndex(idx);
+          if (dropped.some((b) => b.cas)) await sweep(idx);
           return rec;
         });
       },
@@ -1651,20 +2724,75 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
           }
         });
       },
-      async listBackups() {
-        return (await readIndex()).backups;
+      async listBackups({ tide = true } = {}) {
+        const own = (await readIndex()).backups;
+        if (!tide) return own;
+        const t = await listTideBackups(api).catch(() => []);
+        return [...own, ...t].sort((a, b) => b.t - a.t);
       },
       async listHistory() {
         return (await readIndex()).history ?? [];
       },
       async loadBackup(rec) {
+        if (rec.src === "tide") {
+          const t = await loadTideBackup(api, rec);
+          return rec.kind === "module" ? t.module : { ...t.fields, __tide: t.keys };
+        }
+        if (rec.cas) {
+          const m = await readManifest(rec.id);
+          const out = {};
+          for (const [k, h2] of m.fields) out[k] = await readPart2(h2);
+          return out;
+        }
         return getJson(rec.path);
+      },
+      /** 백업 시점의 비교 기준 (없으면 null) */
+      async backupFingerprint(rec) {
+        if (rec.src === "tide") return (await loadTideBackup(api, rec)).base;
+        if (rec.hasFp) {
+          try {
+            const j = JSON.parse(await ps.getItem(FPBK + rec.id));
+            return isFingerprintV1(j) ? j : null;
+          } catch {
+            return null;
+          }
+        }
+        if (rec.basePath) {
+          try {
+            const v = await getJson(rec.basePath);
+            return rec.kind === "character" ? fingerprintCard(charFields(v)) : modFingerprint(modFields(v));
+          } catch {
+            return null;
+          }
+        }
+        return null;
+      },
+      // ---- 비교 기준(지문). kind: "c" | "m" ----
+      // 순서: Dusk 지문 → Dusk 예전 기준(전체 내용) → RisuTide 기준
+      async getFingerprint(kind, id) {
+        try {
+          const raw0 = await ps.getItem(FP + kind + ":" + id);
+          if (raw0) {
+            const j = JSON.parse(raw0);
+            if (j === null) return null;
+            if (isFingerprintV1(j)) return j;
+          }
+        } catch {
+        }
+        const old = await self.getBaseline(`${kind}:${id}`);
+        if (old) return kind === "c" ? fingerprintCard(charFields(old)) : modFingerprint(modFields(old));
+        return tideBase(api, kind, id);
+      },
+      async setFingerprint(kind, id, fp) {
+        await ps.setItem(FP + kind + ":" + id, JSON.stringify(fp ?? null));
       },
       async removeBackup(id) {
         return serial(api, async () => {
           const idx = await readIndex();
+          const gone = idx.backups.find((b) => b.id === id);
           idx.backups = idx.backups.filter((b) => b.id !== id);
           await writeIndex(idx);
+          if (gone?.cas) await sweep(idx);
         });
       },
       async restoreBaseline(key, path) {
@@ -1676,6 +2804,7 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
         });
       }
     };
+    return self;
   }
 
   // src/engine/safety.js
@@ -1687,8 +2816,23 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
     }
   };
   function restoreFromBackup(kind, current, snapshot) {
-    if (kind === "character") return applyView(current, Object.fromEntries(Object.keys({ ...current, ...snapshot }).filter((k) => !USER_KEYS.includes(k)).map((k) => [k, snapshot[k]])), { userKeys: USER_KEYS });
-    return { ...snapshot, id: current.id };
+    if (kind !== "character") {
+      const { __tide, ...m } = snapshot;
+      return { ...m, id: current.id };
+    }
+    let snap = snapshot;
+    if (Array.isArray(snapshot.__tide)) {
+      snap = { ...current };
+      for (const k of Object.keys(current)) if (!isUserField(k) && !snapshot.__tide.includes(k)) delete snap[k];
+      for (const k of snapshot.__tide) snap[k] = snapshot[k];
+    }
+    const out = { ...current };
+    for (const k of /* @__PURE__ */ new Set([...Object.keys(current), ...Object.keys(snap)])) {
+      if (k === "__tide" || isUserField(k)) continue;
+      if (snap[k] === void 0) delete out[k];
+      else out[k] = snap[k];
+    }
+    return out;
   }
   var backupSnapshot = (kind, obj) => kind === "character" ? Object.fromEntries(Object.entries(obj).filter(([k]) => !["chats"].includes(k))) : obj;
 
@@ -2098,6 +3242,21 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
     #rbu-overlay select{font:inherit;background:var(--rb-surf,#1c1f33);color:var(--rb-text,#e9eaf6);border:1px solid var(--rb-line,#2a2d47);border-radius:12px;height:42px;padding:0 10px;width:100%;margin-top:8px}
     #rbu-overlay details summary{cursor:pointer;color:var(--rb-sub,#a4a7c9)}
     #rbu-overlay details[open] summary{margin-bottom:6px}
+    #rbu-overlay .rv-tools{position:sticky;top:-22px;z-index:2;background:var(--rb-surf,#1c1f33);padding:8px 0;display:flex;flex-direction:column;gap:8px}
+    #rbu-overlay .rv-tools input{margin-top:0;height:40px}
+    #rbu-overlay .rv-chips,#rbu-overlay .rv-bulk{display:flex;gap:6px;flex-wrap:wrap}
+    #rbu-overlay .rv-chip{min-height:32px;padding:4px 12px;border-radius:999px;font-size:12.5px}
+    #rbu-overlay .rv-chip.on{background:var(--rb-acc-soft,rgba(79,99,224,.16));border-color:var(--rb-sel-ring,rgba(142,162,255,.45));color:var(--rb-acc-text,#8ea2ff)}
+    #rbu-overlay .rv-bulk button{min-height:34px;padding:4px 12px;font-size:12.5px}
+    #rbu-overlay .rv-row .row{margin-top:6px}
+    #rbu-overlay .rv-row .row>button,#rbu-overlay .rv-diff{flex:0 0 auto;min-height:30px;padding:2px 10px;font-size:12px}
+    #rbu-overlay .rv-row label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+    #rbu-overlay .opt.rv-row:has(input){border-color:var(--rb-line,#2a2d47);background:var(--rb-win,#151726)}
+    #rbu-overlay .rv-conflict{box-shadow:inset 3px 0 0 var(--rb-warn,#f5c26b)}
+    #rbu-overlay .kind.rv-c{background:var(--rb-warn-soft,rgba(245,194,107,.13));color:var(--rb-warn,#f5c26b)}
+    #rbu-overlay .rv-diffbox{margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--rb-win,#151726);font-size:12.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;max-height:320px;overflow:auto}
+    #rbu-overlay .rv-diffbox ins{text-decoration:none;background:var(--rb-ok-soft,rgba(95,211,181,.18));color:var(--rb-ok,#5fd3b5);border-radius:3px}
+    #rbu-overlay .rv-diffbox del{background:var(--rb-danger-soft,rgba(242,122,147,.15));color:var(--rb-danger,#f27a93);border-radius:3px}
     @media (max-width:760px){#rbu-overlay{padding:0;align-items:stretch}#rbu-overlay .win{max-width:none;border-radius:0;border:0;padding:18px 16px}}
     `;
     document.head.insertAdjacentHTML("beforeend", `<style>${css}</style>`);
@@ -2327,80 +3486,204 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       const p = (n) => String(n).padStart(2, "0");
       return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
     };
-    const KIND_KO2 = { update: "새 버전 적용", mine: "내 수정 유지", conflict: "충돌", added: "추가", removed: "삭제", kept: "기존 유지" };
-    function mergeBox(m, choices, keepExistingOnly) {
-      const s = summarize(m.items);
-      const conflicts = m.items.filter((i) => i.kind === "conflict");
-      const mine = m.items.filter((i) => i.kind === "mine");
-      const short = (v) => {
-        const t = typeof v === "string" ? v : v === void 0 ? "(없음)" : JSON.stringify(v);
-        return esc(t.length > 140 ? t.slice(0, 140) + "…" : t);
-      };
-      const preview = (v) => Array.isArray(v) ? short(v[1] ?? v) : v && typeof v === "object" && "content" in v ? short(v.content) : short(v);
-      return `<div class="grid" style="margin-top:6px">
-              <b>바뀌는 것</b><span>새 버전 적용 ${s.update} · 추가 ${s.added} · 삭제 ${s.removed}${s.kept ? ` · 기존 유지 ${s.kept}` : ""}</span>
-              ${m.hasBase ? `<b>내 수정</b><span>유지 ${s.mine}</span><b>충돌</b><span>${s.conflict ? `<b class="hl">${s.conflict}개</b> (아래에서 고르기)` : "없음"}</span>` : ""}
-            </div>
-            ${m.hasBase ? "" : `<div class="warn">이 항목은 처음 받았을 때의 기록이 없어 <b>지금 내용과 새 버전만</b> 비교합니다. 직접 고친 내용도 새 버전으로 바뀔 수 있어요. 이번 업데이트부터 기록이 남아, 다음 업데이트부터는 내 수정을 구분해 지킵니다.</div>
-              <label class="chk"><input type="checkbox" id="keep" ${keepExistingOnly ? "checked" : ""}><span>새 버전에 없는 기존 로어북·에셋 유지<br><span class="muted">직접 추가한 항목을 지킵니다. 제작자가 지운 항목도 남을 수 있습니다.</span></span></label>`}
-            ${conflicts.length ? `<details open style="margin-top:10px"><summary style="cursor:pointer">충돌 ${conflicts.length}개 — 나도 고치고 제작자도 바꾼 항목</summary>
-              ${conflicts.map((c) => `<div class="opt" style="display:block;cursor:default">
-                <div style="margin-bottom:4px">${esc(c.label)}</div>
-                <div class="muted">지금: ${preview(c.cur)}</div><div class="muted">새 버전: ${preview(c.inc)}</div>
-                <div class="row" style="margin-top:6px">
-                  <label><input type="radio" name="c:${esc(c.id)}" data-cid="${esc(c.id)}" value="inc" ${(choices.get(c.id) ?? "inc") === "inc" ? "checked" : ""}> 새 버전</label>
-                  <label><input type="radio" name="c:${esc(c.id)}" data-cid="${esc(c.id)}" value="cur" ${choices.get(c.id) === "cur" ? "checked" : ""}> 내 것 유지</label>
-                </div></div>`).join("")}</details>` : ""}
-            ${mine.length ? `<details style="margin-top:8px"><summary class="muted" style="cursor:pointer">그대로 두는 내 수정 ${mine.length}개</summary>
-              <div class="muted" style="margin-top:6px">${mine.slice(0, 60).map((i) => esc(i.label)).join("<br>")}${mine.length > 60 ? "<br>…" : ""}</div></details>` : ""}`;
+    const GROUP_KO = { conflict: "충돌", mine: "내 수정", update: "새 버전", extra: "새 버전에 없음" };
+    const CHANGE_KO = { added: "추가", removed: "삭제", changed: "변경" };
+    const MOD_FIELD = { desc: "description", globalLore: "lorebook", customscript: "regex", triggerscript: "trigger", backgroundHTML: "backgroundEmbedding", additionalAssets: "assets" };
+    function reviewState(choices) {
+      choices.ui ??= { q: "", f: "all", open: false };
+      return choices.ui;
     }
-    function bindMergeBox(rerender, choices) {
-      root.querySelectorAll("input[data-cid]").forEach((el) => el.addEventListener("change", () => {
-        choices.set(el.dataset.cid, el.value);
-        rerender();
-      }));
-    }
-    async function withPreparing(fn) {
-      renderProgress("비교 준비 중…", 100, "원본 기록을 읽는 중");
-      try {
-        await fn();
-      } catch (err) {
-        renderResult(null, null, err?.message ?? String(err));
+    function countPlan(plan, keep) {
+      const s = { update: 0, added: 0, removed: 0, mine: 0, conflict: 0, extra: 0, keptMine: 0 };
+      for (const it of plan.items) {
+        const g = groupOf(it), takeNew = !keep.has(it.id);
+        if (g === "conflict") s.conflict++;
+        if (g === "mine") s.mine++;
+        if (g === "extra") s.extra++;
+        if (!takeNew) {
+          if (g !== "update") s.keptMine++;
+          continue;
+        }
+        const c = changeOf(it);
+        if (g === "extra" || c === "removed") s.removed++;
+        else if (c === "added") s.added++;
+        else s.update++;
       }
+      return s;
+    }
+    function summaryHtml(plan, keep, sum0, fieldLabel) {
+      const s = countPlan(plan, keep);
+      const applied = new Set(plan.items.filter((it) => it.unit === "field" && !keep.has(it.id)).map((it) => it.label));
+      const sum = sum0 && { ...sum0, texts: sum0.texts.filter((k) => applied.has(k)), others: sum0.others.filter((k) => applied.has(k)) };
+      const diff = (d) => [d.added.length && `+${d.added.length}`, d.removed.length && `−${d.removed.length}`, d.changed.length && `~${d.changed.length}`].filter(Boolean).join(" ") || "그대로";
+      const a = sum?.assets;
+      const lines = sum ? [
+        sum.texts.length ? `<b>바뀌는 글</b><span>${sum.texts.slice(0, 8).map((k) => esc(fieldLabel(k))).join(", ")}${sum.texts.length > 8 ? ` 외 ${sum.texts.length - 8}개` : ""}</span>` : "",
+        `<b>로어북</b><span>${diff(sum.lore)}</span>`,
+        sum.regex.added.length + sum.regex.removed.length + sum.regex.changed.length ? `<b>정규식</b><span>${diff(sum.regex)}</span>` : "",
+        sum.triggersChanged ? `<b>트리거</b><span>바뀜</span>` : "",
+        a && a.added + a.removed + a.changed ? `<b>에셋</b><span>${[a.added && `+${a.added}`, a.removed && `−${a.removed}`, a.changed && `~${a.changed}`].filter(Boolean).join(" ")} (${a.from} → ${a.to}개)</span>` : "",
+        sum.others.length ? `<b>그 밖의 설정</b><span>${sum.others.slice(0, 6).map((k) => esc(fieldLabel(k.replace(/^moduleField:(.*):value$/, "$1")))).join(", ")}${sum.others.length > 6 ? ` 외 ${sum.others.length - 6}개` : ""}</span>` : ""
+      ].join("") : "";
+      return `<div class="grid" style="margin-top:6px">
+              <b>바뀌는 것</b><span>새 버전 적용 ${s.update} · 추가 ${s.added} · 삭제 ${s.removed}</span>
+              ${plan.hasBase ? `<b>내 수정</b><span>유지 ${s.keptMine}${s.mine ? ` (찾은 내 수정 ${s.mine})` : ""}</span><b>충돌</b><span>${s.conflict ? `<b class="hl">${s.conflict}개</b> (자세히 보기에서 고르기)` : "없음"}</span>` : ""}
+              ${lines}
+              ${sum?.chats ? `<b>채팅</b><span>${sum.chats}개 그대로</span>` : ""}
+            </div>`;
+    }
+    function reviewBox(plan, choices, keepExistingOnly, keep, sum, fieldLabel) {
+      const ui = reviewState(choices);
+      const n = (g) => plan.items.filter((it) => g === "all" || groupOf(it) === g).length;
+      const chips = ["all", "conflict", "mine", "update", "extra"].filter((g) => g === "all" || n(g)).map((g) => `<button class="rv-chip${ui.f === g ? " on" : ""}" data-f="${g}">${g === "all" ? "전체" : GROUP_KO[g]} ${n(g)}</button>`).join("");
+      return `<div id="rv-sum">${summaryHtml(plan, keep, sum, fieldLabel)}</div>
+            ${plan.hasBase ? "" : `<div class="warn">처음 받았을 때의 기록이 없어 <b>지금 내용과 새 버전만</b> 비교합니다. 직접 고친 내용도 새 버전으로 바뀔 수 있어요. 이번 업데이트부터 기록이 남아, 다음 업데이트부터는 내 수정을 구분해 지킵니다.</div>
+              <label class="chk"><input type="checkbox" id="keep" ${keepExistingOnly ? "checked" : ""}><span>새 버전에 없는 기존 로어북·에셋 유지<br><span class="muted">직접 추가한 항목을 지킵니다. 제작자가 지운 항목도 남을 수 있습니다.</span></span></label>`}
+            ${plan.items.length ? `<details id="rv-details" style="margin-top:10px" ${ui.open ? "open" : ""}><summary>자세히 보기 — 항목 ${plan.items.length}개를 하나씩 고르기</summary>
+              <div class="rv-tools">
+                <input type="text" id="rvq" placeholder="이름·내용 검색" value="${esc(ui.q)}">
+                <div class="rv-chips">${chips}</div>
+                <div class="rv-bulk"><button id="rv-new">보이는 것 모두 새 버전</button><button id="rv-mine">보이는 것 모두 내 것</button>${n("conflict") ? '<button id="rv-next">다음 충돌</button>' : ""}</div>
+              </div>
+              <div id="rv-list"></div></details>` : `<div class="muted" style="margin-top:8px">바뀌는 항목이 없어요.</div>`}`;
+    }
+    function bindReview(plan, choices, keepExistingOnly, current, fieldLabel, onChange) {
+      const ui = reviewState(choices);
+      const list = root.querySelector("#rv-list");
+      if (!list) return;
+      const det = root.querySelector("#rv-details");
+      det.addEventListener("toggle", () => ui.open = det.open);
+      const preview = (it, v) => {
+        const t = textOf(it, v).replace(/\s+/g, " ").trim();
+        return esc(t.length > 120 ? t.slice(0, 120) + "…" : t || "(없음)");
+      };
+      const shown = () => {
+        const q2 = ui.q.trim().toLowerCase();
+        return plan.items.filter((it) => (ui.f === "all" || groupOf(it) === ui.f) && (!q2 || itemLabel(it, fieldLabel).toLowerCase().includes(q2) || textOf(it, it.current).toLowerCase().includes(q2) || textOf(it, it.incoming).toLowerCase().includes(q2)));
+      };
+      const keepNow = () => keepSet(plan, choices, keepExistingOnly);
+      const paint = () => {
+        const keep = keepNow();
+        const items = shown();
+        list.innerHTML = items.length ? items.slice(0, 300).map((it) => {
+          const i = plan.items.indexOf(it), g = groupOf(it), mine = keep.has(it.id);
+          return `<div class="opt rv-row${g === "conflict" ? " rv-conflict" : ""}" data-i="${i}" style="display:block;cursor:default">
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="kind${g === "conflict" ? " rv-c" : g === "mine" ? " mod" : ""}">${KIND_KO[it.kind] ?? it.kind}</span><b style="font-weight:600">${esc(itemLabel(it, fieldLabel))}</b><span class="muted">${it.id.startsWith("order:") ? "" : CHANGE_KO[changeOf(it)]}</span></div>
+                <div class="muted" style="margin-top:4px">지금: ${preview(it, it.current)}</div><div class="muted">새 버전: ${preview(it, it.incoming)}</div>
+                <div class="row" style="margin-top:6px;gap:16px">
+                  <label><input type="radio" name="rv${i}" data-i="${i}" value="inc" ${mine ? "" : "checked"}> 새 버전</label>
+                  <label><input type="radio" name="rv${i}" data-i="${i}" value="cur" ${mine ? "checked" : ""}> 내 것 유지</label>
+                  ${typeof it.current === "string" || typeof it.incoming === "string" || it.unit === "lore" || it.unit === "regex" ? `<button class="rv-diff" data-i="${i}">바뀐 곳 보기</button>` : ""}
+                </div><div class="rv-diffbox" hidden></div></div>`;
+        }).join("") + (items.length > 300 ? `<div class="muted">앞쪽 300개만 보여요. 검색으로 좁혀 보세요.</div>` : "") : `<div class="muted">해당하는 항목이 없어요.</div>`;
+      };
+      const refreshSum = () => {
+        const box = root.querySelector("#rv-sum");
+        if (box) box.innerHTML = onChange(keepNow());
+      };
+      list.addEventListener("change", (e) => {
+        const el = e.target.closest("input[data-i]");
+        if (!el) return;
+        choices.set(plan.items[+el.dataset.i].id, el.value);
+        refreshSum();
+      });
+      list.addEventListener("click", (e) => {
+        const b = e.target.closest(".rv-diff");
+        if (!b) return;
+        const it = plan.items[+b.dataset.i], box = b.closest(".rv-row").querySelector(".rv-diffbox");
+        if (!box.hidden) {
+          box.hidden = true;
+          return;
+        }
+        const parts = wordDiff(textOf(it, it.current), textOf(it, it.incoming));
+        box.innerHTML = parts.map((p) => p.op === "same" ? esc(p.text) : p.op === "add" ? `<ins>${esc(p.text)}</ins>` : `<del>${esc(p.text)}</del>`).join("");
+        box.hidden = false;
+      });
+      const q = root.querySelector("#rvq");
+      q.addEventListener("input", () => {
+        ui.q = q.value;
+        paint();
+      });
+      root.querySelectorAll(".rv-chip").forEach((b) => b.addEventListener("click", () => {
+        ui.f = b.dataset.f;
+        root.querySelectorAll(".rv-chip").forEach((x) => x.classList.toggle("on", x === b));
+        paint();
+      }));
+      const bulk = (v) => {
+        for (const it of shown()) choices.set(it.id, v);
+        paint();
+        refreshSum();
+      };
+      root.querySelector("#rv-new").addEventListener("click", () => bulk("inc"));
+      root.querySelector("#rv-mine").addEventListener("click", () => bulk("cur"));
+      root.querySelector("#rv-next")?.addEventListener("click", () => {
+        if (ui.f !== "all" && ui.f !== "conflict") {
+          ui.f = "all";
+          root.querySelectorAll(".rv-chip").forEach((x) => x.classList.toggle("on", x.dataset.f === "all"));
+          paint();
+        }
+        const rows = [...list.querySelectorAll(".rv-conflict")];
+        if (!rows.length) return;
+        const top = root.scrollTop, next = rows.find((r) => r.offsetTop > ui.lastConflict) ?? rows[0];
+        ui.lastConflict = next === rows[0] && rows.length > 1 && rows[0].offsetTop <= (ui.lastConflict ?? -1) ? -1 : next.offsetTop;
+        next.scrollIntoView({ block: "center", behavior: "smooth" });
+        next.animate?.([{ boxShadow: "0 0 0 2px var(--rb-warn,#f5c26b)" }, { boxShadow: "none" }], { duration: 900 });
+        void top;
+      });
+      paint();
+    }
+    function withPreparing(fn) {
+      renderProgress("비교 준비 중…", 100, "원본 기록을 읽는 중");
+      return fn().catch((err) => renderResult(null, null, err?.message ?? String(err)));
+    }
+    const MOD_KEYS = [...MOD_SPEC.scalars, ...Object.keys(MOD_SPEC.lists)];
+    const modLabel = (k) => MOD_SPEC.label(MOD_FIELD[k] ?? k);
+    function modWarnings(target, inc) {
+      const same2 = (a, b) => stableJson(a ?? null) === stableJson(b ?? null);
+      return [
+        target && inc.mcp !== void 0 && !same2(target.mcp, inc.mcp) ? "이 모듈의 MCP 연결 설정이 바뀌어요." : "",
+        target && inc.namespace !== void 0 && !same2(target.namespace, inc.namespace) ? "이 모듈의 네임스페이스가 바뀌어요. 연결된 봇의 동작을 확인해 주세요." : ""
+      ].filter(Boolean).map((w) => `<div class="warn">${esc(w)}</div>`).join("");
     }
     function renderModPlan(file, incoming, db, targetIndex, keepExistingOnly, choices = /* @__PURE__ */ new Map(), base) {
       const target = targetIndex === null ? null : db.modules[targetIndex];
-      if (target && base === void 0) return withPreparing(async () => renderModPlan(file, incoming, db, targetIndex, keepExistingOnly, choices, await store.getBaseline(`m:${target.id}`)));
+      if (target && base === void 0) return withPreparing(async () => renderModPlan(file, incoming, db, targetIndex, keepExistingOnly, choices, await store.getFingerprint("m", target.id)));
       const knownKeys = knownKeysOf(db);
       const plan = planAssets(target, incoming.assets, knownKeys, false, incoming.icon);
       const incView = modIncomingView(incoming, plan, /* @__PURE__ */ new Map(), knownKeys);
-      const spec = MOD_SPEC;
-      const m = target ? merge3(base, pickView(target, [...spec.scalars, ...Object.keys(spec.lists)]), incView, spec, { choices, keepExistingOnly }) : null;
+      const curF = target ? modFields(pickView(target, MOD_KEYS)) : null, incF = modFields(incView);
+      const p = target ? makePlan("m", curF, incF, base) : null;
+      const sumOf = (keep) => summarizeCharacterUpdate(curF, applyPlan(curF, incF, p, keep), curF.additionalAssets ?? []);
+      const keep0 = p ? keepSet(p, choices, keepExistingOnly) : null;
       const s = plan.stat;
       frame(`<div class="card">
             <div style="margin-bottom:8px">${kindTag("module")}${target ? `<b>${esc(target.name)}</b> 업데이트${target.name !== incoming.module.name ? ` → 이름이 <b>${esc(incoming.module.name)}</b>(으)로 바뀝니다` : ""}` : `새 모듈 <b>${esc(incoming.module.name)}</b> 추가`}</div>
             <div class="grid"><b>올릴 에셋</b><span><b>${s.upload}개</b> (${fmtBytes2(s.uploadBytes)})${s.reused ? ` · 서버에 이미 있음 ${s.reused}` : ""}</span>
               ${target ? "" : `<b>에셋</b><span>${incoming.assets.length}개</span><b>로어북</b><span>${(incoming.module.lorebook ?? []).length}개</span>`}</div>
-            ${m ? mergeBox(m, choices, keepExistingOnly) : ""}
-            ${notes(incoming, incoming.module.lowLevelAccess && !target?.lowLevelAccess, s.upload)}
+            ${p ? reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), modLabel) : ""}
+            ${notes(incoming, incoming.module.lowLevelAccess && !target?.lowLevelAccess, s.upload)}${modWarnings(target, incoming.module)}
             <p class="muted" style="margin:10px 0 0">모듈 연결(활성 상태)은 바뀌지 않습니다.${target ? " 바꾸기 전 상태를 백업하므로 [백업·되돌리기]에서 되돌릴 수 있어요." : ""}</p>
           </div>${planFooter(target ? "업데이트" : "추가")}`);
-      bindMergeBox(() => renderModPlan(file, incoming, db, targetIndex, keepExistingOnly, choices, base), choices);
+      if (p) bindReview(p, choices, keepExistingOnly, curF, modLabel, (keep) => summaryHtml(p, keep, sumOf(keep), modLabel));
       bindPlan(file, incoming, db, (keep) => renderModPlan(file, incoming, db, targetIndex, keep, choices, base), async () => {
         const early = target ? store.addBackup({ kind: "module", target: target.id, name: target.name, snapshot: backupSnapshot("module", target), note: "업데이트 전" }).catch(() => null) : null;
         const uploaded = await uploadWithProgress(file, plan.toUpload);
         updateProgress(100, "모듈 저장 중…");
         const known2 = /* @__PURE__ */ new Set([...knownKeys, ...uploaded.values()]);
         const inc = modIncomingView(incoming, plan, uploaded, known2);
+        const inc2 = modFields(inc);
         let merged, note2 = "", backupRec = null, summary = "";
         await commit(api, async (d) => {
           if (target) {
             const e = d.entries.find((x) => x.module?.id === target.id);
             if (!e) throw new Error("업데이트할 모듈이 그 사이 삭제되었습니다. 저장하지 않았습니다.");
             const cur = e.module;
-            const r = merge3(base, pickView(cur, [...spec.scalars, ...Object.keys(spec.lists)]), inc, spec, { choices, keepExistingOnly });
-            const sm = summarize(r.items);
-            summary = [sm.update && `제작자 수정 ${sm.update}`, sm.mine && `내 수정 유지 ${sm.mine}`, sm.conflict && `충돌 ${sm.conflict}`, sm.added && `추가 ${sm.added}`, sm.removed && `삭제 ${sm.removed}`, uploaded.size && `에셋 ${uploaded.size}개 올림`].filter(Boolean).join(" · ");
+            const cur2 = modFields(pickView(cur, MOD_KEYS));
+            const p2 = makePlan("m", cur2, inc2, base);
+            const keep = keepSet(p2, choices, keepExistingOnly);
+            const fields = applyPlan(cur2, inc2, p2, keep);
+            const sm = countPlan(p2, keep);
+            summary = [sm.update && `제작자 수정 ${sm.update}`, sm.keptMine && `내 것 유지 ${sm.keptMine}`, sm.conflict && `충돌 ${sm.conflict}`, sm.added && `추가 ${sm.added}`, sm.removed && `삭제 ${sm.removed}`, uploaded.size && `에셋 ${uploaded.size}개 올림`].filter(Boolean).join(" · ");
             const sumText = `${file.name} → ${summary || "변화 없음"}`;
             const pre = await early;
             if (pre && stableJson(cur) === stableJson(target)) {
@@ -2416,7 +3699,9 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
                 throw new Error(`백업을 만들지 못해 아무것도 바꾸지 않았습니다: ${err?.message ?? err}`);
               }
             }
-            merged = applyView(cur, r.view);
+            merged = { ...cur };
+            for (const k of MOD_KEYS) delete merged[k];
+            for (const [k, v] of Object.entries(fieldsToMod(fields))) if (v !== void 0) merged[k] = v;
             merged.id = cur.id;
             e.module = merged;
           } else {
@@ -2427,7 +3712,9 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
         });
         links?.set(linkKey(incoming), merged.id);
         try {
-          await store.setBaseline(`m:${merged.id}`, inc);
+          await store.setFingerprint("m", merged.id, modFingerprint(inc2));
+          await store.setBaseline(`m:${merged.id}`, inc).catch(() => {
+          });
         } catch {
           note2 = "다음 업데이트용 원본 기록을 저장하지 못했어요. 다음엔 2방향으로 비교합니다.";
         }
@@ -2437,24 +3724,26 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
     }
     function renderCharPlan(file, incoming, db, index, keepExistingOnly, choices = /* @__PURE__ */ new Map(), base) {
       const target = db.characters[index];
-      if (base === void 0) return withPreparing(async () => renderCharPlan(file, incoming, db, index, keepExistingOnly, choices, await store.getBaseline(`c:${target.chaId}`)));
+      if (base === void 0) return withPreparing(async () => renderCharPlan(file, incoming, db, index, keepExistingOnly, choices, await store.getFingerprint("c", target.chaId)));
       const ch = incoming.character;
       const knownKeys = knownKeysOf(db);
       const plan = planCharacter(target, ch, knownKeys, false);
       const spec = charSpec(ch);
-      const keys = [...spec.scalars, ...Object.keys(spec.lists)];
-      const m = merge3(base, pickView(target, keys), charIncomingView(ch, plan, /* @__PURE__ */ new Map()), spec, { choices, keepExistingOnly });
+      const curF = charFields(target), incF = charFields(charIncomingView(ch, plan, /* @__PURE__ */ new Map()));
+      const p = makePlan("c", curF, incF, base);
+      const sumOf = (keep) => summarizeCharacterUpdate(target, applyPlan(curF, incF, p, keep), target.additionalAssets ?? []);
+      const keep0 = keepSet(p, choices, keepExistingOnly);
       const s = plan.stat;
       const generating = isGenerating(target);
       frame(`<div class="card">
             <div style="margin-bottom:8px">${kindTag("character")}<b>${esc(target.name)}</b> 업데이트${target.name !== ch.fields.name ? ` → 이름이 <b>${esc(ch.fields.name)}</b>(으)로 바뀝니다` : ""}</div>
             <div class="grid"><b>올릴 에셋</b><span><b>${s.upload}개</b> (${fmtBytes2(s.uploadBytes)})${s.reused ? ` · 서버에 이미 있음 ${s.reused}` : ""}</span></div>
-            ${mergeBox(m, choices, keepExistingOnly)}
+            ${reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), spec.label)}
             ${notes(incoming, ch.risuFields.lowLevelAccess && !target.lowLevelAccess, s.upload)}
             ${generating ? `<div class="err">이 캐릭터가 지금 응답을 생성하는 중이에요. 생성이 끝난 뒤 업데이트해 주세요.</div>` : ""}
-            <p class="muted" style="margin:10px 0 0">채팅·채팅 폴더·메모는 그대로 둡니다. 바꾸기 전 상태를 백업하므로 [백업·되돌리기]에서 되돌릴 수 있어요. 저장 직전에 응답 생성 중인지 다시 확인합니다.</p>
+            <p class="muted" style="margin:10px 0 0">채팅·메모·TTS·메모리 같은 내 설정은 그대로 둡니다. 추가 인사말 순서가 바뀌어도 채팅마다 고른 인사말을 그대로 가리켜요. 바꾸기 전 상태를 백업하므로 [백업·되돌리기]에서 되돌릴 수 있어요.</p>
           </div>${planFooter("업데이트")}`);
-      bindMergeBox(() => renderCharPlan(file, incoming, db, index, keepExistingOnly, choices, base), choices);
+      bindReview(p, choices, keepExistingOnly, curF, spec.label, (keep) => summaryHtml(p, keep, sumOf(keep), spec.label));
       bindPlan(file, incoming, db, (keep) => renderCharPlan(file, incoming, db, index, keep, choices, base), async () => {
         const uploaded = await uploadWithProgress(file, plan.toUpload);
         updateProgress(100, "캐릭터 저장 중…");
@@ -2468,26 +3757,33 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
           if (!fresh || fresh.chaId !== target.chaId) throw new Error("캐릭터를 다시 찾지 못했습니다. 저장하지 않았습니다.");
         }
         if (isGenerating(fresh)) throw new Busy();
-        const inc = charIncomingView(ch, plan, uploaded);
-        const r = merge3(base, pickView(fresh, keys), inc, spec, { choices, keepExistingOnly });
-        const sm = summarize(r.items);
-        const summary = [sm.update && `제작자 수정 ${sm.update}`, sm.mine && `내 수정 유지 ${sm.mine}`, sm.conflict && `충돌 ${sm.conflict}`, sm.added && `추가 ${sm.added}`, sm.removed && `삭제 ${sm.removed}`, uploaded.size && `에셋 ${uploaded.size}개 올림`].filter(Boolean).join(" · ");
+        const incView = charIncomingView(ch, plan, uploaded);
+        const inc2 = charFields(incView), cur2 = charFields(fresh);
+        const p2 = makePlan("c", cur2, inc2, base);
+        const keep = keepSet(p2, choices, keepExistingOnly);
+        const fields = applyPlan(cur2, inc2, p2, keep);
+        const sm = countPlan(p2, keep);
+        const merged = writeCharFields(fresh, cur2, fields);
+        if (merged.vits && !merged.vits.id) merged.vits.id = fresh.vits?.id ?? newId().replace(/-/g, "");
+        const greet = remapGreetings(merged, cur2, fields);
+        const summary = [sm.update && `제작자 수정 ${sm.update}`, sm.keptMine && `내 것 유지 ${sm.keptMine}`, sm.conflict && `충돌 ${sm.conflict}`, sm.added && `추가 ${sm.added}`, sm.removed && `삭제 ${sm.removed}`, greet && `인사말 번호 맞춤 ${greet}`, uploaded.size && `에셋 ${uploaded.size}개 올림`].filter(Boolean).join(" · ");
         let backupRec;
         try {
           backupRec = await store.addBackup({ kind: "character", target: fresh.chaId, name: fresh.name, snapshot: backupSnapshot("character", fresh), note: "업데이트 전", summary: `${file.name} → ${summary || "변화 없음"}` });
         } catch (e) {
           throw new Error(`백업을 만들지 못해 아무것도 바꾸지 않았습니다: ${e?.message ?? e}`);
         }
-        const merged = applyView(fresh, r.view, { userKeys: USER_KEYS });
-        if (merged.vits && !merged.vits.id) merged.vits.id = fresh.vits?.id ?? newId().replace(/-/g, "");
         const last2 = await api.getCharacterFromIndex(idx);
         if (isGenerating(last2) || (last2?.chats ?? []).length !== (fresh.chats ?? []).length) throw new Busy();
+        if (stableJson(charFields(last2)) !== stableJson(cur2)) throw new Error("검토하는 사이 이 캐릭터가 바뀌었어요. 다시 업데이트해 주세요. (바뀐 것은 없어요)");
         await api.setCharacterToIndex(idx, merged);
         const check = await api.getCharacterFromIndex(idx);
         if (check?.chaId !== target.chaId || (check.chats ?? []).length !== (fresh.chats ?? []).length) throw new Error("저장 후 확인에서 캐릭터가 예상과 다릅니다. [백업·되돌리기]에서 되돌릴 수 있어요.");
         let note2 = "";
         try {
-          await store.setBaseline(`c:${fresh.chaId}`, inc);
+          await store.setFingerprint("c", fresh.chaId, fingerprintCard(inc2));
+          await store.setBaseline(`c:${fresh.chaId}`, incView).catch(() => {
+          });
         } catch {
           note2 = "다음 업데이트용 원본 기록을 저장하지 못했어요. 다음엔 2방향으로 비교합니다.";
         }
@@ -2549,7 +3845,10 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
         }
         let note2 = "";
         try {
-          await store.setBaseline(`c:${created.chaId}`, charIncomingView(ch, plan, uploaded));
+          const v0 = charIncomingView(ch, plan, uploaded);
+          await store.setFingerprint("c", created.chaId, fingerprintCard(charFields(v0)));
+          await store.setBaseline(`c:${created.chaId}`, v0).catch(() => {
+          });
         } catch {
           note2 = "다음 업데이트용 원본 기록을 저장하지 못했어요.";
         }
@@ -2571,9 +3870,9 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
           <div class="card"><div style="margin-bottom:6px">업데이트 전 백업 (항목마다 최근 ${5}개)</div>
             ${list.length ? list.map((b) => `<div class="opt" style="cursor:default;align-items:center">
                 <div style="flex:1">${kindTag(b.kind)}<b>${esc(b.name)}</b><div class="muted">${fmtDate(b.t)} · ${esc(b.note || "")} · ${fmtBytes2(b.size ?? 0)}</div></div>
-                <button data-restore="${esc(b.id)}">되돌리기</button><button class="danger" data-del="${esc(b.id)}">삭제</button></div>`).join("") : '<div class="muted">아직 백업이 없어요. 업데이트할 때마다 바꾸기 전 상태가 자동으로 저장됩니다.</div>'}
+                <button data-restore="${esc(b.id)}">되돌리기</button>${b.src === "tide" ? "" : `<button class="danger" data-del="${esc(b.id)}">삭제</button>`}</div>`).join("") : '<div class="muted">아직 백업이 없어요. 업데이트할 때마다 바꾸기 전 상태가 자동으로 저장됩니다.</div>'}
           </div>
-          <p class="muted">백업은 서버에 파일로 저장돼 다른 기기에서도 보입니다. RisuAI의 "사용하지 않는 에셋 정리"를 하면 백업 기록이나 옛 이미지가 지워질 수 있어요.</p>
+          <p class="muted">백업은 플러그인 저장소에 조각으로 압축해 저장하고, 같은 내용은 한 번만 저장해요. 이미지 파일은 백업에 복사하지 않으니 앱 저장소에 남아 있어야 되돌릴 때 보여요. RisuTide에서 만든 백업도 이 기기에 있으면 함께 보여요(여기서는 지우지 않아요).</p>
           <div class="row"><button id="back">뒤로</button>${closeBtn()}</div>`);
       root.querySelector("#back").addEventListener("click", () => renderStart());
       root.querySelectorAll("[data-del]").forEach((el) => el.addEventListener("click", async () => {
@@ -2599,10 +3898,12 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
         if (isGenerating(cur)) throw new Busy();
         await store.addBackup({ kind: "character", target: cur.chaId, name: cur.name, snapshot: backupSnapshot("character", cur), note: "되돌리기 전" });
         const restored = restoreFromBackup("character", cur, snap);
+        remapGreetings(restored, charFields(cur), charFields(restored));
         await api.setCharacterToIndex(idx, restored);
         const check = await api.getCharacterFromIndex(idx);
         if (check?.chaId !== rec.target || (check.chats ?? []).length !== (cur.chats ?? []).length) throw new Error("되돌린 뒤 확인에서 캐릭터가 예상과 다릅니다.");
-        await store.restoreBaseline(`c:${rec.target}`, rec.basePath);
+        await store.setFingerprint("c", rec.target, await store.backupFingerprint(rec)).catch(() => {
+        });
       } else {
         await commit(api, async (d) => {
           const e = d.entries.find((x) => x.module?.id === rec.target);
@@ -2613,7 +3914,8 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
           await store.addBackup({ kind: "module", target: e.module.id, name: e.module.name, snapshot: backupSnapshot("module", e.module), note: "되돌리기 전" });
           e.module = restoreFromBackup("module", e.module, snap);
         });
-        await store.restoreBaseline(`m:${rec.target}`, rec.basePath);
+        await store.setFingerprint("m", rec.target, await store.backupFingerprint(rec)).catch(() => {
+        });
       }
       busy = false;
       renderBackups(`${rec.name}을(를) ${fmtDate(rec.t)} 상태로 되돌렸어요. 채팅은 그대로예요.`);
@@ -4594,7 +5896,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
   }
 
   // src/engine/patch.js
-  var b64 = (u8) => {
+  var b642 = (u8) => {
     let s = "";
     for (let i = 0; i < u8.length; i += 32768) s += String.fromCharCode(...u8.subarray(i, i + 32768));
     return btoa(s);
@@ -4636,7 +5938,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       for (const p of changedAssetPaths(changes)) {
         if (before.has(p)) continue;
         const d = await readAsset(p);
-        if (d?.length) patch.assets[p] = b64(d instanceof Uint8Array ? d : new Uint8Array(d));
+        if (d?.length) patch.assets[p] = b642(d instanceof Uint8Array ? d : new Uint8Array(d));
       }
     }
     return patch;
@@ -5715,8 +7017,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     function read(path, { prio = 0, signal } = {}) {
       if (!path) return Promise.resolve(null);
       if (path.startsWith("data:")) {
-        const b642 = path.split(",")[1] ?? "";
-        const bin = atob(b642);
+        const b6422 = path.split(",")[1] ?? "";
+        const bin = atob(b6422);
         const u8 = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
         return Promise.resolve(u8);
@@ -7283,7 +8585,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
   }
 
   // src/ui/screens/dev.js
-  var KIND_KO = { module: "모듈", character: "봇" };
+  var KIND_KO2 = { module: "모듈", character: "봇" };
   var keyOf = (p) => p.kind === "module" ? `m:${p.id}` : `c:${p.id}`;
   var projects = (ctx) => ctx.prefs.meta.devProjects ?? [];
   var findProject = (ctx, kind, id) => projects(ctx).find((p) => p.kind === kind && p.id === id) ?? null;
@@ -7387,7 +8689,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     for (const kind of ["module", "character"]) {
       const mine = ps.filter((p) => p.kind === kind);
       if (!mine.length) continue;
-      list.appendChild(h("div", { class: "rb-label", style: "padding:12px 12px 4px" }, `${KIND_KO[kind]} ${mine.length}`));
+      list.appendChild(h("div", { class: "rb-label", style: "padding:12px 12px 4px" }, `${KIND_KO2[kind]} ${mine.length}`));
       for (const p of mine) list.appendChild(row2(p));
     }
     if (!ps.length) list.appendChild(h(
@@ -7493,16 +8795,16 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         const i = ps.findIndex((x) => x.kind === p.kind && x.id === p.id);
         if (i >= 0) ps.splice(i, 1);
       });
-      ctx.toast(`개발 목록에서 뺐어요. ${KIND_KO[p.kind]}은(는) 그대로예요.`);
+      ctx.toast(`개발 목록에서 뺐어요. ${KIND_KO2[p.kind]}은(는) 그대로예요.`);
       renderDev(ctx);
     } });
     if (!t) {
-      ctx.showDetail(h("h2", { class: "rb-h2" }, "(찾을 수 없음)"), note("warn", `이 ${KIND_KO[p.kind]}을(를) 찾지 못했어요. 지워졌거나 앱이 아직 불러오는 중이에요.`), h("div", null, remove));
+      ctx.showDetail(h("h2", { class: "rb-h2" }, "(찾을 수 없음)"), note("warn", `이 ${KIND_KO2[p.kind]}을(를) 찾지 못했어요. 지워졌거나 앱이 아직 불러오는 중이에요.`), h("div", null, remove));
       return;
     }
     const body = h("div", { style: "display:flex;flex-direction:column;gap:12px" }, loading("불러오는 중"));
     ctx.showDetail(
-      h("div", { style: "display:flex;flex-direction:column;gap:4px" }, h("span", { style: "font-size:12px;color:var(--rb-acc-text)" }, `개발 중인 ${KIND_KO[p.kind]}`), h("h2", { class: "rb-h2" }, t.name || "(이름 없음)")),
+      h("div", { style: "display:flex;flex-direction:column;gap:4px" }, h("span", { style: "font-size:12px;color:var(--rb-acc-text)" }, `개발 중인 ${KIND_KO2[p.kind]}`), h("h2", { class: "rb-h2" }, t.name || "(이름 없음)")),
       body
     );
     const my = st.devToken = (st.devToken ?? 0) + 1;
@@ -9449,7 +10751,7 @@ ${patch.note}` : "",
   var FOLDER_COLOR_CSS = { default: null, red: "#f87171", yellow: "#facc15", green: "#4ade80", blue: "#60a5fa", indigo: "#818cf8", purple: "#c084fc", pink: "#f472b6" };
   var FOLDER_COLOR_KO = { default: "기본", red: "빨강", yellow: "노랑", green: "초록", blue: "파랑", indigo: "남색", purple: "보라", pink: "분홍" };
   var isFolder = (x) => x && typeof x === "object" && Array.isArray(x.data);
-  var clone = (o) => o.map((x) => isFolder(x) ? { ...x, data: [...x.data] } : x);
+  var clone2 = (o) => o.map((x) => isFolder(x) ? { ...x, data: [...x.data] } : x);
   function layout(order, chars) {
     const live = new Set(chars.filter((c) => c && !c.trashTime).map((c) => c.chaId));
     const seen = /* @__PURE__ */ new Set();
@@ -9483,8 +10785,8 @@ ${patch.note}` : "",
   }
   function moveChar(order, id, { beforeId, after, folderId }) {
     const ids = [].concat(id);
-    if (beforeId && ids.includes(beforeId)) return clone(order ?? []);
-    let o = clone(order ?? []);
+    if (beforeId && ids.includes(beforeId)) return clone2(order ?? []);
+    let o = clone2(order ?? []);
     for (const c of ids) o = take(o, c);
     if (beforeId) {
       const top = o.indexOf(beforeId);
@@ -9513,7 +10815,7 @@ ${patch.note}` : "",
     return o;
   }
   function createFolder2(order, { id, name, color = "default", ids = [] }) {
-    let o = clone(order ?? []);
+    let o = clone2(order ?? []);
     let at = o.length;
     if (ids.length) {
       const first = o.findIndex((x) => x === ids[0] || isFolder(x) && x.data.includes(ids[0]));
@@ -9525,7 +10827,7 @@ ${patch.note}` : "",
     return o;
   }
   function setMembers(order, folderId, ids) {
-    let o = clone(order ?? []);
+    let o = clone2(order ?? []);
     const f = o.find((x) => isFolder(x) && x.id === folderId);
     if (!f) return o;
     const out = f.data.filter((d) => !ids.includes(d));
@@ -9537,21 +10839,21 @@ ${patch.note}` : "",
     return o;
   }
   function renameFolder2(order, folderId, name) {
-    return clone(order ?? []).map((x) => isFolder(x) && x.id === folderId ? { ...x, name } : x);
+    return clone2(order ?? []).map((x) => isFolder(x) && x.id === folderId ? { ...x, name } : x);
   }
   function colorFolder(order, folderId, color) {
-    return clone(order ?? []).map((x) => isFolder(x) && x.id === folderId ? { ...x, color } : x);
+    return clone2(order ?? []).map((x) => isFolder(x) && x.id === folderId ? { ...x, color } : x);
   }
   function deleteFolder2(order, folderId) {
     const o = [];
-    for (const x of clone(order ?? [])) {
+    for (const x of clone2(order ?? [])) {
       if (isFolder(x) && x.id === folderId) o.push(...x.data);
       else o.push(x);
     }
     return o;
   }
   function moveFolder(order, folderId, dir) {
-    const o = clone(order ?? []);
+    const o = clone2(order ?? []);
     const i = o.findIndex((x) => isFolder(x) && x.id === folderId), j = i + dir;
     if (i < 0 || j < 0 || j >= o.length) return o;
     [o[i], o[j]] = [o[j], o[i]];
@@ -10141,7 +11443,8 @@ ${patch.note}` : "",
           badge(b.kind === "character" ? "캐릭터" : "모듈", b.kind === "character" ? "acc" : "acc2"),
           h("span", { class: "rb-muted" }, fmtWhen(b.t)),
           b.hasFile && b.size ? h("span", { class: "rb-muted" }, fmtBytes(b.size)) : null,
-          !b.hasFile ? badge("요약만 남음", "mute") : null
+          !b.hasFile ? badge("요약만 남음", "mute") : null,
+          b.src === "tide" ? badge("RisuTide", "mute") : null
         ),
         b.summary ? h("span", { class: "rb-muted" }, b.summary) : null,
         b.hasFile ? h(
@@ -10161,7 +11464,7 @@ ${patch.note}` : "",
               ctx.toast(e?.message ?? String(e), { error: true });
             }
           } }) : null,
-          btn("지우기", { size: "sm", kind: "ghost", icon: "trash", onClick: async () => {
+          b.src === "tide" ? null : btn("지우기", { size: "sm", kind: "ghost", icon: "trash", onClick: async () => {
             if (!await confirmDialog(ctx.win, { title: "이 백업을 지울까요?", body: "지우면 이 시점으로 되돌릴 수 없어요.", ok: "삭제", danger: true })) return;
             await createStore(ctx.api).removeBackup(b.id);
             renderHistory(ctx);
@@ -10232,6 +11535,19 @@ ${patch.note}` : "",
         });
       }
       return out;
+    }
+    let tideChecked = false;
+    function checkTide() {
+      if (tideChecked) return;
+      tideChecked = true;
+      setTimeout(async () => {
+        try {
+          const db = await api.getDatabase(["plugins"]);
+          const on = (db?.plugins ?? []).some((p) => /^risutide$/i.test(String(p?.name ?? "")) && p.enabled !== false);
+          if (on) ctx.toast("RisuTide의 업데이트·백업 기능이 Dusk Atelier로 옮겨왔어요. RisuTide 백업과 기준은 Dusk에서 그대로 보여요. 둘이 함께 켜져 있으면 기록이 꼬일 수 있으니 RisuTide는 꺼 주세요.", { seconds: 14 });
+        } catch {
+        }
+      }, 1500);
     }
     async function checkUpdate() {
       if (version === "dev" || Date.now() - updAt < 10 * 6e4) return;
@@ -10413,6 +11729,7 @@ ${patch.note}` : "",
       render();
       checkUpdate().catch(() => {
       });
+      checkTide();
       motion(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
       motion(win, [{ opacity: 0, transform: "translateY(12px) scale(.985)" }, { opacity: 1, transform: "none" }], { duration: 220 });
       state.opened = true;

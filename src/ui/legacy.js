@@ -4,7 +4,8 @@ import { findCandidates, normalizeName } from '../engine/match.js';
 import { collectKnownKeys, planAssets } from '../engine/module.js';
 import { buildNewCharacter, characterAssetKeys, characterView, planCharacter, uniqueDisplayName } from '../engine/character.js';
 import { uploadAssets } from '../engine/upload.js';
-import { MOD_SPEC, USER_KEYS, applyView, charIncomingView, charSpec, merge3, modIncomingView, pickView, summarize } from '../engine/merge3.js';
+import { MOD_SPEC, applyView, charIncomingView, charSpec, modIncomingView, pickView } from '../engine/merge3.js';
+import { KIND_KO, applyPlan, changeOf, charFields, fieldsToMod, fingerprintCard, groupOf, itemLabel, keepSet, makePlan, modFields, modFingerprint, remapGreetings, summarizeCharacterUpdate, textOf, wordDiff, writeCharFields } from '../engine/tideplan.js';
 import { createStore } from '../engine/store.js';
 import { Busy, backupSnapshot, isGenerating, restoreFromBackup } from '../engine/safety.js';
 import { commit, entriesOf, readDb } from '../data/modules.js';
@@ -66,6 +67,21 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
     #rbu-overlay select{font:inherit;background:var(--rb-surf,#1c1f33);color:var(--rb-text,#e9eaf6);border:1px solid var(--rb-line,#2a2d47);border-radius:12px;height:42px;padding:0 10px;width:100%;margin-top:8px}
     #rbu-overlay details summary{cursor:pointer;color:var(--rb-sub,#a4a7c9)}
     #rbu-overlay details[open] summary{margin-bottom:6px}
+    #rbu-overlay .rv-tools{position:sticky;top:-22px;z-index:2;background:var(--rb-surf,#1c1f33);padding:8px 0;display:flex;flex-direction:column;gap:8px}
+    #rbu-overlay .rv-tools input{margin-top:0;height:40px}
+    #rbu-overlay .rv-chips,#rbu-overlay .rv-bulk{display:flex;gap:6px;flex-wrap:wrap}
+    #rbu-overlay .rv-chip{min-height:32px;padding:4px 12px;border-radius:999px;font-size:12.5px}
+    #rbu-overlay .rv-chip.on{background:var(--rb-acc-soft,rgba(79,99,224,.16));border-color:var(--rb-sel-ring,rgba(142,162,255,.45));color:var(--rb-acc-text,#8ea2ff)}
+    #rbu-overlay .rv-bulk button{min-height:34px;padding:4px 12px;font-size:12.5px}
+    #rbu-overlay .rv-row .row{margin-top:6px}
+    #rbu-overlay .rv-row .row>button,#rbu-overlay .rv-diff{flex:0 0 auto;min-height:30px;padding:2px 10px;font-size:12px}
+    #rbu-overlay .rv-row label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+    #rbu-overlay .opt.rv-row:has(input){border-color:var(--rb-line,#2a2d47);background:var(--rb-win,#151726)}
+    #rbu-overlay .rv-conflict{box-shadow:inset 3px 0 0 var(--rb-warn,#f5c26b)}
+    #rbu-overlay .kind.rv-c{background:var(--rb-warn-soft,rgba(245,194,107,.13));color:var(--rb-warn,#f5c26b)}
+    #rbu-overlay .rv-diffbox{margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--rb-win,#151726);font-size:12.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;max-height:320px;overflow:auto}
+    #rbu-overlay .rv-diffbox ins{text-decoration:none;background:var(--rb-ok-soft,rgba(95,211,181,.18));color:var(--rb-ok,#5fd3b5);border-radius:3px}
+    #rbu-overlay .rv-diffbox del{background:var(--rb-danger-soft,rgba(242,122,147,.15));color:var(--rb-danger,#f27a93);border-radius:3px}
     @media (max-width:760px){#rbu-overlay{padding:0;align-items:stretch}#rbu-overlay .win{max-width:none;border-radius:0;border:0;padding:18px 16px}}
     `;
   document.head.insertAdjacentHTML("beforeend", `<style>${css}</style>`);
@@ -295,80 +311,207 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
     const p = (n) => String(n).padStart(2, "0");
     return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
   };
-  const KIND_KO2 = { update: "새 버전 적용", mine: "내 수정 유지", conflict: "충돌", added: "추가", removed: "삭제", kept: "기존 유지" };
-  function mergeBox(m, choices, keepExistingOnly) {
-    const s = summarize(m.items);
-    const conflicts = m.items.filter((i) => i.kind === "conflict");
-    const mine = m.items.filter((i) => i.kind === "mine");
-    const short = (v) => {
-      const t = typeof v === "string" ? v : v === void 0 ? "(없음)" : JSON.stringify(v);
-      return esc(t.length > 140 ? t.slice(0, 140) + "…" : t);
-    };
-    const preview = (v) => Array.isArray(v) ? short(v[1] ?? v) : v && typeof v === "object" && "content" in v ? short(v.content) : short(v);
-    return `<div class="grid" style="margin-top:6px">
-              <b>바뀌는 것</b><span>새 버전 적용 ${s.update} · 추가 ${s.added} · 삭제 ${s.removed}${s.kept ? ` · 기존 유지 ${s.kept}` : ""}</span>
-              ${m.hasBase ? `<b>내 수정</b><span>유지 ${s.mine}</span><b>충돌</b><span>${s.conflict ? `<b class="hl">${s.conflict}개</b> (아래에서 고르기)` : "없음"}</span>` : ""}
-            </div>
-            ${m.hasBase ? "" : `<div class="warn">이 항목은 처음 받았을 때의 기록이 없어 <b>지금 내용과 새 버전만</b> 비교합니다. 직접 고친 내용도 새 버전으로 바뀔 수 있어요. 이번 업데이트부터 기록이 남아, 다음 업데이트부터는 내 수정을 구분해 지킵니다.</div>
-              <label class="chk"><input type="checkbox" id="keep" ${keepExistingOnly ? "checked" : ""}><span>새 버전에 없는 기존 로어북·에셋 유지<br><span class="muted">직접 추가한 항목을 지킵니다. 제작자가 지운 항목도 남을 수 있습니다.</span></span></label>`}
-            ${conflicts.length ? `<details open style="margin-top:10px"><summary style="cursor:pointer">충돌 ${conflicts.length}개 — 나도 고치고 제작자도 바꾼 항목</summary>
-              ${conflicts.map((c) => `<div class="opt" style="display:block;cursor:default">
-                <div style="margin-bottom:4px">${esc(c.label)}</div>
-                <div class="muted">지금: ${preview(c.cur)}</div><div class="muted">새 버전: ${preview(c.inc)}</div>
-                <div class="row" style="margin-top:6px">
-                  <label><input type="radio" name="c:${esc(c.id)}" data-cid="${esc(c.id)}" value="inc" ${(choices.get(c.id) ?? "inc") === "inc" ? "checked" : ""}> 새 버전</label>
-                  <label><input type="radio" name="c:${esc(c.id)}" data-cid="${esc(c.id)}" value="cur" ${choices.get(c.id) === "cur" ? "checked" : ""}> 내 것 유지</label>
-                </div></div>`).join("")}</details>` : ""}
-            ${mine.length ? `<details style="margin-top:8px"><summary class="muted" style="cursor:pointer">그대로 두는 내 수정 ${mine.length}개</summary>
-              <div class="muted" style="margin-top:6px">${mine.slice(0, 60).map((i) => esc(i.label)).join("<br>")}${mine.length > 60 ? "<br>…" : ""}</div></details>` : ""}`;
+  // ---- 검토 화면: 위에 요약, "자세히 보기"를 펼치면 항목별로 고르기 (판단 로직은 RisuTide) ----
+  const GROUP_KO = { conflict: "충돌", mine: "내 수정", update: "새 버전", extra: "새 버전에 없음" };
+  const CHANGE_KO = { added: "추가", removed: "삭제", changed: "변경" };
+  const MOD_FIELD = { desc: "description", globalLore: "lorebook", customscript: "regex", triggerscript: "trigger", backgroundHTML: "backgroundEmbedding", additionalAssets: "assets" };
+  function reviewState(choices) {
+    choices.ui ??= { q: "", f: "all", open: false };
+    return choices.ui;
   }
-  function bindMergeBox(rerender, choices) {
-    root.querySelectorAll("input[data-cid]").forEach((el) => el.addEventListener("change", () => {
-      choices.set(el.dataset.cid, el.value);
-      rerender();
-    }));
-  }
-  async function withPreparing(fn) {
-    renderProgress("비교 준비 중…", 100, "원본 기록을 읽는 중");
-    try {
-      await fn();
-    } catch (err) {
-      renderResult(null, null, err?.message ?? String(err));
+  // 고른 상태에서의 개수
+  function countPlan(plan, keep) {
+    const s = { update: 0, added: 0, removed: 0, mine: 0, conflict: 0, extra: 0, keptMine: 0 };
+    for (const it of plan.items) {
+      const g = groupOf(it), takeNew = !keep.has(it.id);
+      if (g === "conflict") s.conflict++;
+      if (g === "mine") s.mine++;
+      if (g === "extra") s.extra++;
+      if (!takeNew) {
+        if (g !== "update") s.keptMine++;
+        continue;
+      }
+      const c = changeOf(it);
+      if (g === "extra" || c === "removed") s.removed++;
+      else if (c === "added") s.added++;
+      else s.update++;
     }
+    return s;
+  }
+  function summaryHtml(plan, keep, sum0, fieldLabel) {
+    const s = countPlan(plan, keep);
+    // 요약의 "바뀌는 글/설정"은 실제로 적용되는 항목만 (빈 값 ↔ 없음 같은 차이는 빼고)
+    const applied = new Set(plan.items.filter((it) => it.unit === "field" && !keep.has(it.id)).map((it) => it.label));
+    const sum = sum0 && { ...sum0, texts: sum0.texts.filter((k) => applied.has(k)), others: sum0.others.filter((k) => applied.has(k)) };
+    const diff = (d) => [d.added.length && `+${d.added.length}`, d.removed.length && `−${d.removed.length}`, d.changed.length && `~${d.changed.length}`].filter(Boolean).join(" ") || "그대로";
+    const a = sum?.assets;
+    const lines = sum ? [
+      sum.texts.length ? `<b>바뀌는 글</b><span>${sum.texts.slice(0, 8).map((k) => esc(fieldLabel(k))).join(", ")}${sum.texts.length > 8 ? ` 외 ${sum.texts.length - 8}개` : ""}</span>` : "",
+      `<b>로어북</b><span>${diff(sum.lore)}</span>`,
+      sum.regex.added.length + sum.regex.removed.length + sum.regex.changed.length ? `<b>정규식</b><span>${diff(sum.regex)}</span>` : "",
+      sum.triggersChanged ? `<b>트리거</b><span>바뀜</span>` : "",
+      a && a.added + a.removed + a.changed ? `<b>에셋</b><span>${[a.added && `+${a.added}`, a.removed && `−${a.removed}`, a.changed && `~${a.changed}`].filter(Boolean).join(" ")} (${a.from} → ${a.to}개)</span>` : "",
+      sum.others.length ? `<b>그 밖의 설정</b><span>${sum.others.slice(0, 6).map((k) => esc(fieldLabel(k.replace(/^moduleField:(.*):value$/, "$1")))).join(", ")}${sum.others.length > 6 ? ` 외 ${sum.others.length - 6}개` : ""}</span>` : ""
+    ].join("") : "";
+    return `<div class="grid" style="margin-top:6px">
+              <b>바뀌는 것</b><span>새 버전 적용 ${s.update} · 추가 ${s.added} · 삭제 ${s.removed}</span>
+              ${plan.hasBase ? `<b>내 수정</b><span>유지 ${s.keptMine}${s.mine ? ` (찾은 내 수정 ${s.mine})` : ""}</span><b>충돌</b><span>${s.conflict ? `<b class="hl">${s.conflict}개</b> (자세히 보기에서 고르기)` : "없음"}</span>` : ""}
+              ${lines}
+              ${sum?.chats ? `<b>채팅</b><span>${sum.chats}개 그대로</span>` : ""}
+            </div>`;
+  }
+  function reviewBox(plan, choices, keepExistingOnly, keep, sum, fieldLabel) {
+    const ui = reviewState(choices);
+    const n = (g) => plan.items.filter((it) => g === "all" || groupOf(it) === g).length;
+    const chips = ["all", "conflict", "mine", "update", "extra"].filter((g) => g === "all" || n(g)).map((g) => `<button class="rv-chip${ui.f === g ? " on" : ""}" data-f="${g}">${g === "all" ? "전체" : GROUP_KO[g]} ${n(g)}</button>`).join("");
+    return `<div id="rv-sum">${summaryHtml(plan, keep, sum, fieldLabel)}</div>
+            ${plan.hasBase ? "" : `<div class="warn">처음 받았을 때의 기록이 없어 <b>지금 내용과 새 버전만</b> 비교합니다. 직접 고친 내용도 새 버전으로 바뀔 수 있어요. 이번 업데이트부터 기록이 남아, 다음 업데이트부터는 내 수정을 구분해 지킵니다.</div>
+              <label class="chk"><input type="checkbox" id="keep" ${keepExistingOnly ? "checked" : ""}><span>새 버전에 없는 기존 로어북·에셋 유지<br><span class="muted">직접 추가한 항목을 지킵니다. 제작자가 지운 항목도 남을 수 있습니다.</span></span></label>`}
+            ${plan.items.length ? `<details id="rv-details" style="margin-top:10px" ${ui.open ? "open" : ""}><summary>자세히 보기 — 항목 ${plan.items.length}개를 하나씩 고르기</summary>
+              <div class="rv-tools">
+                <input type="text" id="rvq" placeholder="이름·내용 검색" value="${esc(ui.q)}">
+                <div class="rv-chips">${chips}</div>
+                <div class="rv-bulk"><button id="rv-new">보이는 것 모두 새 버전</button><button id="rv-mine">보이는 것 모두 내 것</button>${n("conflict") ? '<button id="rv-next">다음 충돌</button>' : ""}</div>
+              </div>
+              <div id="rv-list"></div></details>` : `<div class="muted" style="margin-top:8px">바뀌는 항목이 없어요.</div>`}`;
+  }
+  function bindReview(plan, choices, keepExistingOnly, current, fieldLabel, onChange) {
+    const ui = reviewState(choices);
+    const list = root.querySelector("#rv-list");
+    if (!list) return;
+    const det = root.querySelector("#rv-details");
+    det.addEventListener("toggle", () => ui.open = det.open);
+    const preview = (it, v) => {
+      const t = textOf(it, v).replace(/\s+/g, " ").trim();
+      return esc(t.length > 120 ? t.slice(0, 120) + "…" : t || "(없음)");
+    };
+    const shown = () => {
+      const q = ui.q.trim().toLowerCase();
+      return plan.items.filter((it) => (ui.f === "all" || groupOf(it) === ui.f) && (!q || itemLabel(it, fieldLabel).toLowerCase().includes(q) || textOf(it, it.current).toLowerCase().includes(q) || textOf(it, it.incoming).toLowerCase().includes(q)));
+    };
+    const keepNow = () => keepSet(plan, choices, keepExistingOnly);
+    const paint = () => {
+      const keep = keepNow();
+      const items = shown();
+      list.innerHTML = items.length ? items.slice(0, 300).map((it) => {
+        const i = plan.items.indexOf(it), g = groupOf(it), mine = keep.has(it.id);
+        return `<div class="opt rv-row${g === "conflict" ? " rv-conflict" : ""}" data-i="${i}" style="display:block;cursor:default">
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="kind${g === "conflict" ? " rv-c" : g === "mine" ? " mod" : ""}">${KIND_KO[it.kind] ?? it.kind}</span><b style="font-weight:600">${esc(itemLabel(it, fieldLabel))}</b><span class="muted">${it.id.startsWith("order:") ? "" : CHANGE_KO[changeOf(it)]}</span></div>
+                <div class="muted" style="margin-top:4px">지금: ${preview(it, it.current)}</div><div class="muted">새 버전: ${preview(it, it.incoming)}</div>
+                <div class="row" style="margin-top:6px;gap:16px">
+                  <label><input type="radio" name="rv${i}" data-i="${i}" value="inc" ${mine ? "" : "checked"}> 새 버전</label>
+                  <label><input type="radio" name="rv${i}" data-i="${i}" value="cur" ${mine ? "checked" : ""}> 내 것 유지</label>
+                  ${typeof it.current === "string" || typeof it.incoming === "string" || it.unit === "lore" || it.unit === "regex" ? `<button class="rv-diff" data-i="${i}">바뀐 곳 보기</button>` : ""}
+                </div><div class="rv-diffbox" hidden></div></div>`;
+      }).join("") + (items.length > 300 ? `<div class="muted">앞쪽 300개만 보여요. 검색으로 좁혀 보세요.</div>` : "") : `<div class="muted">해당하는 항목이 없어요.</div>`;
+    };
+    const refreshSum = () => {
+      const box = root.querySelector("#rv-sum");
+      if (box) box.innerHTML = onChange(keepNow());
+    };
+    list.addEventListener("change", (e) => {
+      const el = e.target.closest("input[data-i]");
+      if (!el) return;
+      choices.set(plan.items[+el.dataset.i].id, el.value);
+      refreshSum();
+    });
+    list.addEventListener("click", (e) => {
+      const b = e.target.closest(".rv-diff");
+      if (!b) return;
+      const it = plan.items[+b.dataset.i], box = b.closest(".rv-row").querySelector(".rv-diffbox");
+      if (!box.hidden) {
+        box.hidden = true;
+        return;
+      }
+      const parts = wordDiff(textOf(it, it.current), textOf(it, it.incoming));
+      box.innerHTML = parts.map((p) => p.op === "same" ? esc(p.text) : p.op === "add" ? `<ins>${esc(p.text)}</ins>` : `<del>${esc(p.text)}</del>`).join("");
+      box.hidden = false;
+    });
+    const q = root.querySelector("#rvq");
+    q.addEventListener("input", () => {
+      ui.q = q.value;
+      paint();
+    });
+    root.querySelectorAll(".rv-chip").forEach((b) => b.addEventListener("click", () => {
+      ui.f = b.dataset.f;
+      root.querySelectorAll(".rv-chip").forEach((x) => x.classList.toggle("on", x === b));
+      paint();
+    }));
+    const bulk = (v) => {
+      for (const it of shown()) choices.set(it.id, v);
+      paint();
+      refreshSum();
+    };
+    root.querySelector("#rv-new").addEventListener("click", () => bulk("inc"));
+    root.querySelector("#rv-mine").addEventListener("click", () => bulk("cur"));
+    root.querySelector("#rv-next")?.addEventListener("click", () => {
+      if (ui.f !== "all" && ui.f !== "conflict") {
+        ui.f = "all";
+        root.querySelectorAll(".rv-chip").forEach((x) => x.classList.toggle("on", x.dataset.f === "all"));
+        paint();
+      }
+      const rows = [...list.querySelectorAll(".rv-conflict")];
+      if (!rows.length) return;
+      const top = root.scrollTop, next = rows.find((r) => r.offsetTop > ui.lastConflict) ?? rows[0];
+      ui.lastConflict = next === rows[0] && rows.length > 1 && rows[0].offsetTop <= (ui.lastConflict ?? -1) ? -1 : next.offsetTop;
+      next.scrollIntoView({ block: "center", behavior: "smooth" });
+      next.animate?.([{ boxShadow: "0 0 0 2px var(--rb-warn,#f5c26b)" }, { boxShadow: "none" }], { duration: 900 });
+      void top;
+    });
+    paint();
+  }
+  function withPreparing(fn) {
+    renderProgress("비교 준비 중…", 100, "원본 기록을 읽는 중");
+    return fn().catch((err) => renderResult(null, null, err?.message ?? String(err)));
+  }
+  const MOD_KEYS = [...MOD_SPEC.scalars, ...Object.keys(MOD_SPEC.lists)];
+  const modLabel = (k) => MOD_SPEC.label(MOD_FIELD[k] ?? k);
+  function modWarnings(target, inc) {
+    const same = (a, b) => stableJson(a ?? null) === stableJson(b ?? null);
+    return [
+      target && inc.mcp !== void 0 && !same(target.mcp, inc.mcp) ? "이 모듈의 MCP 연결 설정이 바뀌어요." : "",
+      target && inc.namespace !== void 0 && !same(target.namespace, inc.namespace) ? "이 모듈의 네임스페이스가 바뀌어요. 연결된 봇의 동작을 확인해 주세요." : ""
+    ].filter(Boolean).map((w) => `<div class="warn">${esc(w)}</div>`).join("");
   }
   function renderModPlan(file, incoming, db, targetIndex, keepExistingOnly, choices = /* @__PURE__ */ new Map(), base) {
     const target = targetIndex === null ? null : db.modules[targetIndex];
-    if (target && base === void 0) return withPreparing(async () => renderModPlan(file, incoming, db, targetIndex, keepExistingOnly, choices, await store.getBaseline(`m:${target.id}`)));
+    if (target && base === void 0) return withPreparing(async () => renderModPlan(file, incoming, db, targetIndex, keepExistingOnly, choices, await store.getFingerprint("m", target.id)));
     const knownKeys = knownKeysOf(db);
     const plan = planAssets(target, incoming.assets, knownKeys, false, incoming.icon);
     const incView = modIncomingView(incoming, plan, /* @__PURE__ */ new Map(), knownKeys);
-    const spec = MOD_SPEC;
-    const m = target ? merge3(base, pickView(target, [...spec.scalars, ...Object.keys(spec.lists)]), incView, spec, { choices, keepExistingOnly }) : null;
+    const curF = target ? modFields(pickView(target, MOD_KEYS)) : null, incF = modFields(incView);
+    const p = target ? makePlan("m", curF, incF, base) : null;
+    const sumOf = (keep) => summarizeCharacterUpdate(curF, applyPlan(curF, incF, p, keep), curF.additionalAssets ?? []);
+    const keep0 = p ? keepSet(p, choices, keepExistingOnly) : null;
     const s = plan.stat;
     frame(`<div class="card">
             <div style="margin-bottom:8px">${kindTag("module")}${target ? `<b>${esc(target.name)}</b> 업데이트${target.name !== incoming.module.name ? ` → 이름이 <b>${esc(incoming.module.name)}</b>(으)로 바뀝니다` : ""}` : `새 모듈 <b>${esc(incoming.module.name)}</b> 추가`}</div>
             <div class="grid"><b>올릴 에셋</b><span><b>${s.upload}개</b> (${fmtBytes2(s.uploadBytes)})${s.reused ? ` · 서버에 이미 있음 ${s.reused}` : ""}</span>
               ${target ? "" : `<b>에셋</b><span>${incoming.assets.length}개</span><b>로어북</b><span>${(incoming.module.lorebook ?? []).length}개</span>`}</div>
-            ${m ? mergeBox(m, choices, keepExistingOnly) : ""}
-            ${notes(incoming, incoming.module.lowLevelAccess && !target?.lowLevelAccess, s.upload)}
+            ${p ? reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), modLabel) : ""}
+            ${notes(incoming, incoming.module.lowLevelAccess && !target?.lowLevelAccess, s.upload)}${modWarnings(target, incoming.module)}
             <p class="muted" style="margin:10px 0 0">모듈 연결(활성 상태)은 바뀌지 않습니다.${target ? " 바꾸기 전 상태를 백업하므로 [백업·되돌리기]에서 되돌릴 수 있어요." : ""}</p>
           </div>${planFooter(target ? "업데이트" : "추가")}`);
-    bindMergeBox(() => renderModPlan(file, incoming, db, targetIndex, keepExistingOnly, choices, base), choices);
+    if (p) bindReview(p, choices, keepExistingOnly, curF, modLabel, (keep) => summaryHtml(p, keep, sumOf(keep), modLabel));
     bindPlan(file, incoming, db, (keep) => renderModPlan(file, incoming, db, targetIndex, keep, choices, base), async () => {
       const early = target ? store.addBackup({ kind: "module", target: target.id, name: target.name, snapshot: backupSnapshot("module", target), note: "업데이트 전" }).catch(() => null) : null;
       const uploaded = await uploadWithProgress(file, plan.toUpload);
       updateProgress(100, "모듈 저장 중…");
       const known2 = /* @__PURE__ */ new Set([...knownKeys, ...uploaded.values()]);
       const inc = modIncomingView(incoming, plan, uploaded, known2);
+      const inc2 = modFields(inc);
       let merged, note2 = "", backupRec = null, summary = "";
       await commit(api, async (d) => {
         if (target) {
           const e = d.entries.find((x) => x.module?.id === target.id);
           if (!e) throw new Error("업데이트할 모듈이 그 사이 삭제되었습니다. 저장하지 않았습니다.");
           const cur = e.module;
-          const r = merge3(base, pickView(cur, [...spec.scalars, ...Object.keys(spec.lists)]), inc, spec, { choices, keepExistingOnly });
-          const sm = summarize(r.items);
-          summary = [sm.update && `제작자 수정 ${sm.update}`, sm.mine && `내 수정 유지 ${sm.mine}`, sm.conflict && `충돌 ${sm.conflict}`, sm.added && `추가 ${sm.added}`, sm.removed && `삭제 ${sm.removed}`, uploaded.size && `에셋 ${uploaded.size}개 올림`].filter(Boolean).join(" · ");
+          const cur2 = modFields(pickView(cur, MOD_KEYS));
+          const p2 = makePlan("m", cur2, inc2, base);
+          const keep = keepSet(p2, choices, keepExistingOnly);
+          const fields = applyPlan(cur2, inc2, p2, keep);
+          const sm = countPlan(p2, keep);
+          summary = [sm.update && `제작자 수정 ${sm.update}`, sm.keptMine && `내 것 유지 ${sm.keptMine}`, sm.conflict && `충돌 ${sm.conflict}`, sm.added && `추가 ${sm.added}`, sm.removed && `삭제 ${sm.removed}`, uploaded.size && `에셋 ${uploaded.size}개 올림`].filter(Boolean).join(" · ");
           const sumText = `${file.name} → ${summary || "변화 없음"}`;
           const pre = await early;
           if (pre && stableJson(cur) === stableJson(target)) {
@@ -384,7 +527,9 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
               throw new Error(`백업을 만들지 못해 아무것도 바꾸지 않았습니다: ${err?.message ?? err}`);
             }
           }
-          merged = applyView(cur, r.view);
+          merged = { ...cur };
+          for (const k of MOD_KEYS) delete merged[k];
+          for (const [k, v] of Object.entries(fieldsToMod(fields))) if (v !== void 0) merged[k] = v;
           merged.id = cur.id;
           e.module = merged;
         } else {
@@ -395,7 +540,9 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
       });
       links?.set(linkKey(incoming), merged.id);
       try {
-        await store.setBaseline(`m:${merged.id}`, inc);
+        await store.setFingerprint("m", merged.id, modFingerprint(inc2));
+        await store.setBaseline(`m:${merged.id}`, inc).catch(() => {
+        });
       } catch {
         note2 = "다음 업데이트용 원본 기록을 저장하지 못했어요. 다음엔 2방향으로 비교합니다.";
       }
@@ -405,24 +552,26 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
   }
   function renderCharPlan(file, incoming, db, index, keepExistingOnly, choices = /* @__PURE__ */ new Map(), base) {
     const target = db.characters[index];
-    if (base === void 0) return withPreparing(async () => renderCharPlan(file, incoming, db, index, keepExistingOnly, choices, await store.getBaseline(`c:${target.chaId}`)));
+    if (base === void 0) return withPreparing(async () => renderCharPlan(file, incoming, db, index, keepExistingOnly, choices, await store.getFingerprint("c", target.chaId)));
     const ch = incoming.character;
     const knownKeys = knownKeysOf(db);
     const plan = planCharacter(target, ch, knownKeys, false);
     const spec = charSpec(ch);
-    const keys = [...spec.scalars, ...Object.keys(spec.lists)];
-    const m = merge3(base, pickView(target, keys), charIncomingView(ch, plan, /* @__PURE__ */ new Map()), spec, { choices, keepExistingOnly });
+    const curF = charFields(target), incF = charFields(charIncomingView(ch, plan, /* @__PURE__ */ new Map()));
+    const p = makePlan("c", curF, incF, base);
+    const sumOf = (keep) => summarizeCharacterUpdate(target, applyPlan(curF, incF, p, keep), target.additionalAssets ?? []);
+    const keep0 = keepSet(p, choices, keepExistingOnly);
     const s = plan.stat;
     const generating = isGenerating(target);
     frame(`<div class="card">
             <div style="margin-bottom:8px">${kindTag("character")}<b>${esc(target.name)}</b> 업데이트${target.name !== ch.fields.name ? ` → 이름이 <b>${esc(ch.fields.name)}</b>(으)로 바뀝니다` : ""}</div>
             <div class="grid"><b>올릴 에셋</b><span><b>${s.upload}개</b> (${fmtBytes2(s.uploadBytes)})${s.reused ? ` · 서버에 이미 있음 ${s.reused}` : ""}</span></div>
-            ${mergeBox(m, choices, keepExistingOnly)}
+            ${reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), spec.label)}
             ${notes(incoming, ch.risuFields.lowLevelAccess && !target.lowLevelAccess, s.upload)}
             ${generating ? `<div class="err">이 캐릭터가 지금 응답을 생성하는 중이에요. 생성이 끝난 뒤 업데이트해 주세요.</div>` : ""}
-            <p class="muted" style="margin:10px 0 0">채팅·채팅 폴더·메모는 그대로 둡니다. 바꾸기 전 상태를 백업하므로 [백업·되돌리기]에서 되돌릴 수 있어요. 저장 직전에 응답 생성 중인지 다시 확인합니다.</p>
+            <p class="muted" style="margin:10px 0 0">채팅·메모·TTS·메모리 같은 내 설정은 그대로 둡니다. 추가 인사말 순서가 바뀌어도 채팅마다 고른 인사말을 그대로 가리켜요. 바꾸기 전 상태를 백업하므로 [백업·되돌리기]에서 되돌릴 수 있어요.</p>
           </div>${planFooter("업데이트")}`);
-    bindMergeBox(() => renderCharPlan(file, incoming, db, index, keepExistingOnly, choices, base), choices);
+    bindReview(p, choices, keepExistingOnly, curF, spec.label, (keep) => summaryHtml(p, keep, sumOf(keep), spec.label));
     bindPlan(file, incoming, db, (keep) => renderCharPlan(file, incoming, db, index, keep, choices, base), async () => {
       const uploaded = await uploadWithProgress(file, plan.toUpload);
       updateProgress(100, "캐릭터 저장 중…");
@@ -436,26 +585,33 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
         if (!fresh || fresh.chaId !== target.chaId) throw new Error("캐릭터를 다시 찾지 못했습니다. 저장하지 않았습니다.");
       }
       if (isGenerating(fresh)) throw new Busy();
-      const inc = charIncomingView(ch, plan, uploaded);
-      const r = merge3(base, pickView(fresh, keys), inc, spec, { choices, keepExistingOnly });
-      const sm = summarize(r.items);
-      const summary = [sm.update && `제작자 수정 ${sm.update}`, sm.mine && `내 수정 유지 ${sm.mine}`, sm.conflict && `충돌 ${sm.conflict}`, sm.added && `추가 ${sm.added}`, sm.removed && `삭제 ${sm.removed}`, uploaded.size && `에셋 ${uploaded.size}개 올림`].filter(Boolean).join(" · ");
+      const incView = charIncomingView(ch, plan, uploaded);
+      const inc2 = charFields(incView), cur2 = charFields(fresh);
+      const p2 = makePlan("c", cur2, inc2, base);
+      const keep = keepSet(p2, choices, keepExistingOnly);
+      const fields = applyPlan(cur2, inc2, p2, keep);
+      const sm = countPlan(p2, keep);
+      const merged = writeCharFields(fresh, cur2, fields);
+      if (merged.vits && !merged.vits.id) merged.vits.id = fresh.vits?.id ?? newId().replace(/-/g, "");
+      const greet = remapGreetings(merged, cur2, fields);
+      const summary = [sm.update && `제작자 수정 ${sm.update}`, sm.keptMine && `내 것 유지 ${sm.keptMine}`, sm.conflict && `충돌 ${sm.conflict}`, sm.added && `추가 ${sm.added}`, sm.removed && `삭제 ${sm.removed}`, greet && `인사말 번호 맞춤 ${greet}`, uploaded.size && `에셋 ${uploaded.size}개 올림`].filter(Boolean).join(" · ");
       let backupRec;
       try {
         backupRec = await store.addBackup({ kind: "character", target: fresh.chaId, name: fresh.name, snapshot: backupSnapshot("character", fresh), note: "업데이트 전", summary: `${file.name} → ${summary || "변화 없음"}` });
       } catch (e) {
         throw new Error(`백업을 만들지 못해 아무것도 바꾸지 않았습니다: ${e?.message ?? e}`);
       }
-      const merged = applyView(fresh, r.view, { userKeys: USER_KEYS });
-      if (merged.vits && !merged.vits.id) merged.vits.id = fresh.vits?.id ?? newId().replace(/-/g, "");
       const last2 = await api.getCharacterFromIndex(idx);
       if (isGenerating(last2) || (last2?.chats ?? []).length !== (fresh.chats ?? []).length) throw new Busy();
+      if (stableJson(charFields(last2)) !== stableJson(cur2)) throw new Error("검토하는 사이 이 캐릭터가 바뀌었어요. 다시 업데이트해 주세요. (바뀐 것은 없어요)");
       await api.setCharacterToIndex(idx, merged);
       const check = await api.getCharacterFromIndex(idx);
       if (check?.chaId !== target.chaId || (check.chats ?? []).length !== (fresh.chats ?? []).length) throw new Error("저장 후 확인에서 캐릭터가 예상과 다릅니다. [백업·되돌리기]에서 되돌릴 수 있어요.");
       let note2 = "";
       try {
-        await store.setBaseline(`c:${fresh.chaId}`, inc);
+        await store.setFingerprint("c", fresh.chaId, fingerprintCard(inc2));
+        await store.setBaseline(`c:${fresh.chaId}`, incView).catch(() => {
+        });
       } catch {
         note2 = "다음 업데이트용 원본 기록을 저장하지 못했어요. 다음엔 2방향으로 비교합니다.";
       }
@@ -517,7 +673,10 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
       }
       let note2 = "";
       try {
-        await store.setBaseline(`c:${created.chaId}`, charIncomingView(ch, plan, uploaded));
+        const v0 = charIncomingView(ch, plan, uploaded);
+        await store.setFingerprint("c", created.chaId, fingerprintCard(charFields(v0)));
+        await store.setBaseline(`c:${created.chaId}`, v0).catch(() => {
+        });
       } catch {
         note2 = "다음 업데이트용 원본 기록을 저장하지 못했어요.";
       }
@@ -539,9 +698,9 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
           <div class="card"><div style="margin-bottom:6px">업데이트 전 백업 (항목마다 최근 ${5}개)</div>
             ${list.length ? list.map((b) => `<div class="opt" style="cursor:default;align-items:center">
                 <div style="flex:1">${kindTag(b.kind)}<b>${esc(b.name)}</b><div class="muted">${fmtDate(b.t)} · ${esc(b.note || "")} · ${fmtBytes2(b.size ?? 0)}</div></div>
-                <button data-restore="${esc(b.id)}">되돌리기</button><button class="danger" data-del="${esc(b.id)}">삭제</button></div>`).join("") : '<div class="muted">아직 백업이 없어요. 업데이트할 때마다 바꾸기 전 상태가 자동으로 저장됩니다.</div>'}
+                <button data-restore="${esc(b.id)}">되돌리기</button>${b.src === "tide" ? "" : `<button class="danger" data-del="${esc(b.id)}">삭제</button>`}</div>`).join("") : '<div class="muted">아직 백업이 없어요. 업데이트할 때마다 바꾸기 전 상태가 자동으로 저장됩니다.</div>'}
           </div>
-          <p class="muted">백업은 서버에 파일로 저장돼 다른 기기에서도 보입니다. RisuAI의 "사용하지 않는 에셋 정리"를 하면 백업 기록이나 옛 이미지가 지워질 수 있어요.</p>
+          <p class="muted">백업은 플러그인 저장소에 조각으로 압축해 저장하고, 같은 내용은 한 번만 저장해요. 이미지 파일은 백업에 복사하지 않으니 앱 저장소에 남아 있어야 되돌릴 때 보여요. RisuTide에서 만든 백업도 이 기기에 있으면 함께 보여요(여기서는 지우지 않아요).</p>
           <div class="row"><button id="back">뒤로</button>${closeBtn()}</div>`);
     root.querySelector("#back").addEventListener("click", () => renderStart());
     root.querySelectorAll("[data-del]").forEach((el) => el.addEventListener("click", async () => {
@@ -567,10 +726,12 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
       if (isGenerating(cur)) throw new Busy();
       await store.addBackup({ kind: "character", target: cur.chaId, name: cur.name, snapshot: backupSnapshot("character", cur), note: "되돌리기 전" });
       const restored = restoreFromBackup("character", cur, snap);
+      remapGreetings(restored, charFields(cur), charFields(restored));
       await api.setCharacterToIndex(idx, restored);
       const check = await api.getCharacterFromIndex(idx);
       if (check?.chaId !== rec.target || (check.chats ?? []).length !== (cur.chats ?? []).length) throw new Error("되돌린 뒤 확인에서 캐릭터가 예상과 다릅니다.");
-      await store.restoreBaseline(`c:${rec.target}`, rec.basePath);
+      await store.setFingerprint("c", rec.target, await store.backupFingerprint(rec)).catch(() => {
+      });
     } else {
       await commit(api, async (d) => {
         const e = d.entries.find((x) => x.module?.id === rec.target);
@@ -581,7 +742,8 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
         await store.addBackup({ kind: "module", target: e.module.id, name: e.module.name, snapshot: backupSnapshot("module", e.module), note: "되돌리기 전" });
         e.module = restoreFromBackup("module", e.module, snap);
       });
-      await store.restoreBaseline(`m:${rec.target}`, rec.basePath);
+      await store.setFingerprint("m", rec.target, await store.backupFingerprint(rec)).catch(() => {
+      });
     }
     busy = false;
     renderBackups(`${rec.name}을(를) ${fmtDate(rec.t)} 상태로 되돌렸어요. 채팅은 그대로예요.`);

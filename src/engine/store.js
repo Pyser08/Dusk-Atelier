@@ -1,5 +1,7 @@
 import { sha256 } from './hash.js';
 import { newId } from './util.js';
+import { charFields, fingerprintCard, isFingerprintV1, modFields, modFingerprint } from './tideplan.js';
+import { listTideBackups, loadTideBackup, tideBase } from './tidestore.js';
 
 async function gzip(bytes) {
   if (typeof CompressionStream !== "function") return bytes;
@@ -57,6 +59,81 @@ export function createStore(api) {
     if (typeof path !== "string" || !path) throw new Error("기록을 저장하지 못했습니다");
     return { path, size };
   };
+  // ---- 조각 저장(RisuTide 방식): 백업을 필드마다 압축해 플러그인 저장소에 두고, 같은 내용은 한 번만 저장한다.
+  // 에셋 저장소를 쓰지 않아 에셋 정리에 지워지지 않고, 읽을 때 해시로 손상 여부를 확인한다.
+  const PART = "rbm:part:", MAN = "rbm:man:", FP = "rbm:fp:", FPBK = "rbm:fpbk:";
+  const ps = api.pluginStorage;
+  const hex = (u8) => [...u8].map((n) => n.toString(16).padStart(2, "0")).join("");
+  const toB64 = (u8) => {
+    let bin = "";
+    for (let i = 0; i < u8.length; i += 8192) bin += String.fromCharCode(...u8.subarray(i, i + 8192));
+    return btoa(bin);
+  };
+  const fromB64 = (s2) => {
+    const bin = atob(s2), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  };
+  const putParts = async (obj) => {
+    let have;
+    try {
+      have = new Set(await ps.keys());
+    } catch {
+      have = /* @__PURE__ */ new Set();
+    }
+    const fields = [];
+    let size = 0;
+    for (const [k, v] of Object.entries(obj)) {
+      if (v === void 0) continue;
+      const raw = new TextEncoder().encode(JSON.stringify(v));
+      const h = await sha256(raw);
+      if (!have.has(PART + h)) {
+        const gz = await gzip(raw);
+        await ps.setItem(PART + h, JSON.stringify({ z: gz !== raw, d: toB64(gz) }));
+        have.add(PART + h);
+        size += gz.length;
+      }
+      fields.push([k, h]);
+    }
+    return { fields, size };
+  };
+  const readPart = async (h) => {
+    const raw0 = await ps.getItem(PART + h);
+    if (!raw0) throw new Error("백업 조각을 찾지 못했어요");
+    const j = JSON.parse(raw0);
+    let u8 = fromB64(j.d);
+    if (j.z) u8 = await gunzip(u8);
+    if (await sha256(u8) !== h) throw new Error("백업 조각이 손상됐어요");
+    return JSON.parse(new TextDecoder().decode(u8));
+  };
+  const readManifest = async (id) => {
+    const raw0 = await ps.getItem(MAN + id);
+    const m = raw0 ? JSON.parse(raw0) : null;
+    if (!m || !Array.isArray(m.fields)) throw new Error("백업 기록을 찾지 못했어요");
+    return m;
+  };
+  // 남은 백업이 쓰지 않는 조각을 지운다 (백업이 지워졌을 때만)
+  const sweep = async (idx) => {
+    try {
+      const keys = await ps.keys();
+      const live = /* @__PURE__ */ new Set();
+      const alive = new Set(idx.backups.filter((b) => b.cas).map((b) => b.id));
+      for (const k of keys) {
+        if (!k.startsWith(MAN)) continue;
+        const id = k.slice(MAN.length);
+        if (!alive.has(id)) {
+          await ps.removeItem(k);
+          await ps.removeItem(FPBK + id).catch(() => {
+          });
+          continue;
+        }
+        const m = await readManifest(id);
+        for (const [, h] of m.fields) live.add(h);
+      }
+      for (const k of keys) if (k.startsWith(PART) && !live.has(k.slice(PART.length))) await ps.removeItem(k);
+    } catch {
+    }
+  };
   const getJson = async (path) => {
     const bytes = await api.readImage(path);
     if (!bytes) throw new Error("저장된 기록 파일을 찾지 못했습니다(에셋 정리로 지워졌을 수 있습니다)");
@@ -66,7 +143,7 @@ export function createStore(api) {
     if (j?.rbu !== 1) throw new Error("기록 파일 형식이 올바르지 않습니다");
     return j.data;
   };
-  return {
+  const self = {
     async getBaseline(key) {
       const idx = await readIndex();
       const b = idx.baselines[key];
@@ -92,12 +169,18 @@ export function createStore(api) {
       });
     },
     async addBackup({ kind, target, name, snapshot, note: note2, summary }) {
-      const { raw, hash } = await encode(snapshot);
-      const last2 = (await readIndex()).backups.find((b) => b.target === target);
-      const file = last2?.hash === hash ? { path: last2.path, size: last2.size } : await upload(raw);
+      const { hash } = await encode(snapshot);
+      const id0 = newId();
+      // 되돌릴 때 비교 기준도 그 시점으로 돌리려고, 지금 기준을 함께 남긴다
+      const fpNow = await self.getFingerprint(kind === "character" ? "c" : "m", target).catch(() => null);
       return serial(api, async () => {
+        // 조각 쓰기부터 목록 반영까지 한 줄로 (정리와 겹치지 않게)
+        const { fields, size } = await putParts(snapshot);
+        await ps.setItem(MAN + id0, JSON.stringify({ v: 2, fields }));
+        if (fpNow) await ps.setItem(FPBK + id0, JSON.stringify(fpNow)).catch(() => {
+        });
         const idx = await readIndex();
-        const rec = { id: newId(), kind, target, name, t: Date.now(), path: file.path, size: file.size, hash, note: note2 ?? "", summary: summary ?? "", basePath: idx.baselines[`${kind === "character" ? "c" : "m"}:${target}`]?.path ?? null };
+        const rec = { id: id0, kind, target, name, t: Date.now(), cas: true, size, hash, note: note2 ?? "", summary: summary ?? "", hasFp: !!fpNow };
         idx.backups.unshift(rec);
         const keep = await keepPerTarget();
         const per = /* @__PURE__ */ new Map();
@@ -110,6 +193,7 @@ export function createStore(api) {
         idx.history = [...dropped.map(({ id, kind: kind2, target: target2, name: name2, t, note: note3, summary: summary2 }) => ({ id, kind: kind2, target: target2, name: name2, t, note: note3, summary: summary2 })), ...idx.history ?? []].slice(0, 400);
         idx.backups = kept;
         await writeIndex(idx);
+        if (dropped.some((b) => b.cas)) await sweep(idx);
         return rec;
       });
     },
@@ -123,20 +207,75 @@ export function createStore(api) {
         }
       });
     },
-    async listBackups() {
-      return (await readIndex()).backups;
+    async listBackups({ tide = true } = {}) {
+      const own = (await readIndex()).backups;
+      if (!tide) return own;
+      const t = await listTideBackups(api).catch(() => []);
+      return [...own, ...t].sort((a, b) => b.t - a.t);
     },
     async listHistory() {
       return (await readIndex()).history ?? [];
     },
     async loadBackup(rec) {
+      if (rec.src === "tide") {
+        const t = await loadTideBackup(api, rec);
+        return rec.kind === "module" ? t.module : { ...t.fields, __tide: t.keys };
+      }
+      if (rec.cas) {
+        const m = await readManifest(rec.id);
+        const out = {};
+        for (const [k, h] of m.fields) out[k] = await readPart(h);
+        return out;
+      }
       return getJson(rec.path);
+    },
+    /** 백업 시점의 비교 기준 (없으면 null) */
+    async backupFingerprint(rec) {
+      if (rec.src === "tide") return (await loadTideBackup(api, rec)).base;
+      if (rec.hasFp) {
+        try {
+          const j = JSON.parse(await ps.getItem(FPBK + rec.id));
+          return isFingerprintV1(j) ? j : null;
+        } catch {
+          return null;
+        }
+      }
+      if (rec.basePath) {
+        try {
+          const v = await getJson(rec.basePath);
+          return rec.kind === "character" ? fingerprintCard(charFields(v)) : modFingerprint(modFields(v));
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    },
+    // ---- 비교 기준(지문). kind: "c" | "m" ----
+    // 순서: Dusk 지문 → Dusk 예전 기준(전체 내용) → RisuTide 기준
+    async getFingerprint(kind, id) {
+      try {
+        const raw0 = await ps.getItem(FP + kind + ":" + id);
+        if (raw0) {
+          const j = JSON.parse(raw0);
+          if (j === null) return null;
+          if (isFingerprintV1(j)) return j;
+        }
+      } catch {
+      }
+      const old = await self.getBaseline(`${kind}:${id}`);
+      if (old) return kind === "c" ? fingerprintCard(charFields(old)) : modFingerprint(modFields(old));
+      return tideBase(api, kind, id);
+    },
+    async setFingerprint(kind, id, fp) {
+      await ps.setItem(FP + kind + ":" + id, JSON.stringify(fp ?? null));
     },
     async removeBackup(id) {
       return serial(api, async () => {
         const idx = await readIndex();
+        const gone = idx.backups.find((b) => b.id === id);
         idx.backups = idx.backups.filter((b) => b.id !== id);
         await writeIndex(idx);
+        if (gone?.cas) await sweep(idx);
       });
     },
     async restoreBaseline(key, path) {
@@ -148,4 +287,5 @@ export function createStore(api) {
       });
     }
   };
+  return self;
 }

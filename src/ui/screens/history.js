@@ -108,7 +108,8 @@ function entry(ctx, b, first, showName) {
         badge(b.kind === "character" ? "캐릭터" : "모듈", b.kind === "character" ? "acc" : "acc2"),
         h("span", { class: "rb-muted" }, fmtWhen(b.t)),
         b.hasFile && b.size ? h("span", { class: "rb-muted" }, fmtBytes(b.size)) : null,
-        !b.hasFile ? badge("요약만 남음", "mute") : null
+        !b.hasFile ? badge("요약만 남음", "mute") : null,
+        b.src === "tide" ? badge("RisuTide", "mute") : null
       ),
       b.summary ? h("span", { class: "rb-muted" }, b.summary) : null,
       b.hasFile ? h(
@@ -128,7 +129,7 @@ function entry(ctx, b, first, showName) {
             ctx.toast(e?.message ?? String(e), { error: true });
           }
         } }) : null,
-        btn("지우기", { size: "sm", kind: "ghost", icon: "trash", onClick: async () => {
+        b.src === "tide" ? null : btn("지우기", { size: "sm", kind: "ghost", icon: "trash", onClick: async () => {
           if (!await confirmDialog(ctx.win, { title: "이 백업을 지울까요?", body: "지우면 이 시점으로 되돌릴 수 없어요.", ok: "삭제", danger: true })) return;
           await createStore(ctx.api).removeBackup(b.id);
           renderHistory(ctx);

@@ -80,6 +80,20 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     }
     return out;
   }
+  // RisuTide가 켜져 있으면 한 번 알려 준다 (둘이 동시에 업데이트·백업 기록을 쓰면 꼬일 수 있음)
+  let tideChecked = false;
+  function checkTide() {
+    if (tideChecked) return;
+    tideChecked = true;
+    setTimeout(async () => {
+      try {
+        const db = await api.getDatabase(["plugins"]);
+        const on = (db?.plugins ?? []).some((p) => /^risutide$/i.test(String(p?.name ?? "")) && p.enabled !== false);
+        if (on) ctx.toast("RisuTide의 업데이트·백업 기능이 Dusk Atelier로 옮겨왔어요. RisuTide 백업과 기준은 Dusk에서 그대로 보여요. 둘이 함께 켜져 있으면 기록이 꼬일 수 있으니 RisuTide는 꺼 주세요.", { seconds: 14 });
+      } catch {
+      }
+    }, 1500);
+  }
   async function checkUpdate() {
     // 열 때마다 확인하되 10분에 한 번까지. 주소 뒤에 시각을 붙여 GitHub 쪽 캐시(약 5분)를 피한다
     if (version === "dev" || Date.now() - updAt < 10 * 60e3) return;
@@ -263,6 +277,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     render();
     checkUpdate().catch(() => {
     });
+    checkTide();
     motion(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
     motion(win, [{ opacity: 0, transform: "translateY(12px) scale(.985)" }, { opacity: 1, transform: "none" }], { duration: 220 });
     state.opened = true;
