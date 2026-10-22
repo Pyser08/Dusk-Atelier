@@ -181,3 +181,7 @@ node tools/build.mjs --check   # 빌드 결과가 저장소의 dusk_atelier.js�
 | `src/engine/` | 파일 읽기·쓰기(risum·charx·png·jpeg·zip), 매칭, 3방향 병합, 업로드, 백업, 패치, 이미지 도구 |
 | `src/data/` | 모듈·프리셋·페르소나·캐릭터 순서 저장 |
 | `src/ui/` | 테마, 공용 부품, 화면(`screens/`), 가져오기 화면(`legacy.js`) |
+| `src/tide/` | RisuTide에서 가져온 업데이트 판단 로직(세 방향 비교·필드 소유권·인사말 보호) |
+
+## Special thanks
+- **RisuTide** 개발자님 — 업데이트 판단 로직, 인사말 보호, 백업 방식을 Dusk Atelier로 이어 개발하도록 허락해 주셨어요.

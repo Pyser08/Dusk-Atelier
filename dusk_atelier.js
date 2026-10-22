@@ -1,11 +1,11 @@
 //@name dusk_atelier
 //@display-name Dusk Atelier
 //@api 3.0
-//@version 1.2.1
+//@version 1.3.0
 //@update-url https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js
 //@link https://github.com/Pyser08/Dusk-Atelier 저장소
 
-/* Dusk Atelier v1.2.1 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
+/* Dusk Atelier v1.3.0 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
 (() => {
   var __defProp = Object.defineProperty;
   var __export = (target, all) => {
@@ -11937,7 +11937,7 @@ ${patch.note}` : "",
   }
 
   // src/main.js
-  var VERSION = true ? "1.2.1" : "dev";
+  var VERSION = true ? "1.3.0" : "dev";
   var TITLE = "Dusk Atelier";
   async function start() {
     const raw = globalThis.risuai ?? globalThis.Risuai;
