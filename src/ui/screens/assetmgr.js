@@ -4,7 +4,7 @@ import { canEncode, convertImage, formatOf, imageSize, readMetadata, stripMetada
 import { createStore } from '../../engine/store.js';
 import { safeFileName } from '../../engine/export.js';
 import { createZip } from '../../engine/zipwrite.js';
-import { download, fmtBytes, h, pickFiles, replace } from '../dom.js';
+import { copyText, download, fmtBytes, h, pickFiles, replace } from '../dom.js';
 import { icon } from '../icons.js';
 import { btn, confirmDialog, iconBtn, note, openMenu, progressBar, promptDialog, segmented } from '../kit.js';
 import { reload } from './modules.js';
@@ -16,6 +16,34 @@ var extOf = (name) => {
 };
 var stemOf = (name) => name.replace(/\.[a-z0-9]+$/i, "");
 var COARSE = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+// 에셋 이름 끝의 파일 확장자. 아는 확장자만 떼서 "kami.happy"의 ".happy"를 확장자로 오해하지 않는다.
+var MEDIA_EXT = /\.(png|jpe?g|webp|gif|avif|bmp|svg|ico|mp3|ogg|wav|flac|m4a|aac|opus|mp4|webm|mov|m4v)$/i;
+export var stripMediaExt = (name) => String(name ?? "").replace(MEDIA_EXT, "");
+// 캐릭터 이름: 확장자를 뗀 뒤 첫 '.'이나 '_' 앞부분 (kami.happy.webp, kami_happy.webp, kami_happy → kami). 없으면 null
+export function charOfAsset(name) {
+  const m = /^\s*([^._]+?)\s*[._]/.exec(stripMediaExt(name));
+  return m && m[1] ? m[1] : null;
+}
+// 목록 보기용 묶음: 같은 캐릭터 이름(대소문자 무시)끼리. 하나뿐인 이름과 구분자가 없는 것은 "기타"로
+export function groupAssetsByChar(list) {
+  const groups = new Map();
+  for (const a of list) {
+    const c = charOfAsset(a[0]);
+    const key = c ? c.toLowerCase() : "";
+    if (!groups.has(key)) groups.set(key, { key, label: c ?? "기타", items: [] });
+    groups.get(key).items.push(a);
+  }
+  const etc = groups.get("") ?? { key: "", label: "기타", items: [] };
+  groups.delete("");
+  const out = [];
+  for (const g of groups.values()) {
+    if (g.items.length < 2) etc.items.push(...g.items);
+    else out.push(g);
+  }
+  out.sort((x, y) => x.label.localeCompare(y.label, "ko"));
+  if (etc.items.length) out.push(etc);
+  return out;
+}
 export async function openAssets(ctx, id) {
   const data = await ctx.svc.load({ fresh: true });
   const entry2 = data.entries.find((e) => e.module.id === id);
@@ -50,7 +78,7 @@ export async function openAssetsCore(ctx, src) {
   const mod = { name: src.name };
   let assets = src.assets;
   let fd = src.folders;
-  const as = { folder: null, q: "", sel: /* @__PURE__ */ new Set(), focus: null, shown: PAGE, busy: false };
+  const as = { folder: null, q: "", sel: /* @__PURE__ */ new Set(), focus: null, shown: PAGE, busy: false, view: ctx.prefs.ui?.assetView === "list" ? "list" : "grid", closed: /* @__PURE__ */ new Set() };
   const keyOf3 = (a) => a[1] + "\0" + a[0];
   const panel = h("div", { class: "rb-full", role: "dialog", "aria-label": `${mod.name} 에셋` });
   const titleB = h("b", null, mod.name);
@@ -207,6 +235,18 @@ export async function openAssetsCore(ctx, src) {
         else visible().forEach((a) => as.sel.add(keyOf3(a)));
         paint();
       } }),
+      btn("이름 복사", { size: "sm", icon: "link", title: n ? "고른 에셋 이름을 한 줄에 하나씩 복사" : "보이는 에셋 이름을 한 줄에 하나씩 복사", onClick: async () => {
+        const names = (n ? selected() : visible()).map((a) => a[0]);
+        ctx.toast(await copyText(names.join("\n")) ? `이름 ${names.length}개를 복사했어요` : "복사하지 못했어요", { error: false });
+      } }),
+      btn("확장자 제거", { size: "sm", icon: "edit", title: n ? "고른 에셋 이름에서 .png·.webp 같은 확장자를 뺌" : "보이는 에셋 이름에서 .png·.webp 같은 확장자를 뺌", onClick: () => stripExtNames(n ? selected() : visible()) }),
+      btn(as.view === "list" ? "격자로 보기" : "목록으로 보기", { size: "sm", icon: as.view === "list" ? "image" : "preset", onClick: () => {
+        as.view = as.view === "list" ? "grid" : "list";
+        ctx.prefs.saveUi({ assetView: as.view }).catch(() => {
+        });
+        as.shown = PAGE;
+        paint();
+      } }),
       h("div", { class: "rb-spacer" }),
       n ? [
         btn("폴더로", { size: "sm", icon: "folder", onClick: (ev) => moveMenu(ev.currentTarget) }),
@@ -227,8 +267,33 @@ export async function openAssetsCore(ctx, src) {
     lazy.disconnect();
     lazy = ctx.assets.lazy(gridWrap);
     const list = visible();
-    const tiles = list.slice(0, as.shown).map((a) => tile2(a));
-    replace(grid, tiles);
+    grid.classList.toggle("list", as.view === "list");
+    if (as.view === "list") {
+      // 목록 보기: 에셋 이름의 캐릭터별로 자동 묶음 (에셋 폴더와는 별개, 데이터는 바꾸지 않음)
+      let left = as.shown;
+      const out = [];
+      for (const g of groupAssetsByChar(list)) {
+        if (left <= 0) break;
+        const open = !as.closed.has(g.key);
+        out.push(h(
+          "button",
+          { type: "button", class: "rb-folder rb-am-group", "aria-expanded": open ? "true" : "false", onClick: () => {
+            if (open) as.closed.add(g.key);
+            else as.closed.delete(g.key);
+            paintGrid();
+          } },
+          h("span", { class: "chev" }, icon("chevron", 14)),
+          h("span", { style: "display:flex;color:var(--rb-sub)" }, icon(g.key ? "character" : "folder", 16)),
+          h("b", null, g.label),
+          h("small", null, String(g.items.length))
+        ));
+        if (!open) continue;
+        const take = g.items.slice(0, left);
+        left -= take.length;
+        out.push(h("div", { class: "rb-am-group-body" }, take.map((a) => tile2(a))));
+      }
+      replace(grid, out);
+    } else replace(grid, list.slice(0, as.shown).map((a) => tile2(a)));
     if (!list.length) grid.appendChild(h("div", { class: "rb-empty", style: "grid-column:1/-1" }, assets.length ? "이 폴더에 에셋이 없어요." : '에셋이 없어요. 이미지를 끌어다 놓거나 "이미지 추가"를 누르세요.'));
     if (list.length > as.shown) {
       const more = h("div", { style: "grid-column:1/-1;display:flex;justify-content:center;padding:12px" }, btn(`더 보기 (${list.length - as.shown}개 남음)`, { size: "sm", onClick: () => {
@@ -453,6 +518,42 @@ export async function openAssetsCore(ctx, src) {
     } catch (e) {
       ctx.toast(e?.message ?? String(e), { error: true });
     }
+  }
+  // 확장자만 뺀다. 이미 같은 이름이 있거나 한 번에 같은 이름이 둘 이상 생기면 그 에셋은 건너뛴다(겹치면 하나만 불러와져서)
+  async function stripExtNames(list) {
+    const want = list.map((a) => [a, stripMediaExt(a[0]).trim()]).filter(([a, nn]) => nn && nn !== a[0]);
+    if (!want.length) {
+      ctx.toast("뺄 확장자가 있는 이름이 없어요");
+      return;
+    }
+    const changing = new Set(want.map(([a]) => a));
+    const taken = new Map();
+    for (const x of assets) if (!changing.has(x)) taken.set(x[0].toLowerCase(), true);
+    const ok = [], skip = [];
+    const count = new Map();
+    for (const [, nn] of want) count.set(nn.toLowerCase(), (count.get(nn.toLowerCase()) ?? 0) + 1);
+    for (const [a, nn] of want) {
+      if (taken.has(nn.toLowerCase()) || count.get(nn.toLowerCase()) > 1) skip.push(a[0]);
+      else ok.push([a, nn]);
+    }
+    if (!ok.length) {
+      ctx.toast(`확장자를 빼면 이름이 겹쳐서 하나도 바꾸지 않았어요 (${skip.length}개)`, { error: true, seconds: 6 });
+      return;
+    }
+    const ex = ok.slice(0, 3).map(([a, nn]) => `${a[0]} → ${nn}`).join("\n");
+    if (!await confirmDialog(ctx.win, { title: `에셋 ${ok.length}개 이름에서 확장자를 뺄까요?`, body: `${ex}${ok.length > 3 ? `\n… 외 ${ok.length - 3}개` : ""}${skip.length ? `\n\n이름이 겹치는 ${skip.length}개는 그대로 둬요.` : ""}\n\n로어북·정규식 등에서 예전 이름으로 부르고 있었다면 함께 고쳐야 해요. 바꾸기 전 상태는 백업돼요.`, ok: "확장자 제거" })) return;
+    const nextFd = structuredClone(fd);
+    const map = new Map(ok);
+    for (const [a, nn] of ok) renameMapping(nextFd, a[0], nn);
+    const next = assets.map((x) => map.has(x) ? [map.get(x), x[1], x[2]] : x);
+    const selKeys = new Set([...as.sel]);
+    await save(next, nextFd, "확장자 제거 전");
+    as.sel = new Set([...selKeys].map((k) => {
+      const hit = ok.find(([a]) => keyOf3(a) === k);
+      return hit ? keyOf3([hit[1], hit[0][1]]) : k;
+    }));
+    paint();
+    ctx.toast(`${ok.length}개 이름에서 확장자를 뺐어요${skip.length ? ` · 겹치는 ${skip.length}개는 그대로` : ""}`);
   }
   async function renameAsset(a) {
     const n = await promptDialog(ctx.win, { title: "에셋 이름", label: "{{asset::이름}}처럼 이 이름으로 불러와요", value: a[0] });

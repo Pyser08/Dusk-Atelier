@@ -235,6 +235,16 @@ select.rb-input{appearance:auto}
 .rb-tile .cap small{display:block;color:var(--rb-mute);font-size:11px}
 .rb-tile .sel{position:absolute;top:6px;left:6px;width:22px;height:22px;border-radius:7px;background:var(--rb-win);border:1px solid var(--rb-line3);display:flex;align-items:center;justify-content:center;color:var(--rb-on-acc)}
 .rb-tile[aria-selected=true] .sel{background:var(--rb-acc-grad);border:0}
+/* 에셋 목록 보기: 캐릭터별 묶음 */
+.rb-grid.list{display:flex;flex-direction:column;gap:4px}
+.rb-am-group{margin-top:6px}
+.rb-am-group[aria-expanded=true] .chev{transform:rotate(90deg)}
+.rb-am-group-body{display:flex;flex-direction:column;gap:4px;padding-left:14px;animation:rb-expand .16s ease-out}
+.rb-grid.list .rb-tile{flex-direction:row;align-items:center;gap:10px;padding:6px 10px 6px 40px;min-height:52px}
+.rb-grid.list .rb-tile .img{width:40px;height:40px;aspect-ratio:auto;flex-shrink:0;border-radius:8px;overflow:hidden}
+.rb-grid.list .rb-tile .cap{flex:1;min-width:0;padding:0;font-size:13px}
+.rb-grid.list .rb-tile .cap small{display:inline;margin-left:8px}
+.rb-grid.list .rb-tile .sel{top:50%;left:10px;transform:translateY(-50%)}
 .rb-folders{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .rb-lightbox{position:absolute;inset:0;z-index:55;background:rgba(5,6,12,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px}
 .rb-lightbox img{max-width:100%;max-height:calc(100% - 80px);object-fit:contain;border-radius:8px}
