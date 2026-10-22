@@ -414,10 +414,17 @@ export function sortChips(cur, onPick) {
 }
 var collator = typeof Intl !== "undefined" ? new Intl.Collator("ko", { numeric: true, sensitivity: "base" }) : null;
 // 이름: 가나다·숫자 자연순. 크기: 기본은 큰 것부터
+// 이름 정렬용: 이모지(ZWJ·피부색·국기·변형 선택자 포함)는 모두 빼고 앞뒤 공백도 무시
+var EMOJI_RE = /(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|\p{Emoji_Modifier}|[\u200d\ufe0e\ufe0f\u20e3\u{E0020}-\u{E007F}])/gu;
+export function sortKeyName(name) {
+  return String(name ?? "").replace(EMOJI_RE, "").trim();
+}
 export function sortBy(list, cur, nameOf, sizeOf) {
   if (!cur) return list;
-  const cmp = cur.key === "size" ? (a, b) => (sizeOf(b) - sizeOf(a)) * cur.dir : (a, b) => (collator ? collator.compare(nameOf(a), nameOf(b)) : String(nameOf(a)).localeCompare(nameOf(b))) * cur.dir;
-  return [...list].sort(cmp);
+  if (cur.key === "size") return [...list].sort((a, b) => (sizeOf(b) - sizeOf(a)) * cur.dir);
+  const keys = new Map(list.map((x) => [x, sortKeyName(nameOf(x))]));
+  const cmp2 = collator ? collator.compare : (x, y) => x.localeCompare(y);
+  return [...list].sort((a, b) => cmp2(keys.get(a), keys.get(b)) * cur.dir);
 }
 export function fmtSize(n) {
   return n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(n < 10240 ? 1 : 0)} KB` : `${(n / 1048576).toFixed(1)} MB`;
