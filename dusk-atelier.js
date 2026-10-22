@@ -1,7 +1,7 @@
 //@name dusk_atelier
 //@display-name Dusk Atelier
 //@api 3.0
-//@version 1.0.2
+//@version 1.0.3
 //@link https://github.com/Pyser08/Dusk-Atelier/releases/latest 저장소
 
 /* Dusk Atelier v1.0.0 — 소스: https://github.com/Pyser08/Dusk-Atelier/releases/latest (src/ 폴더). 이 파일은 빌드 결과물입니다. */
@@ -3012,10 +3012,7 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
   function folderDialog(host, { title, name = "", items, checked = [], ok = "만들기", withName = true, noun = "항목", current = null, othersMode = "hide", onOthersMode }) {
     const sel = new Set(checked);
     const isOther = (it) => !!it.folder && it.folder !== current;
-    let others = othersMode === "pick" ? "pick" : "hide";
-    if (others === "pick") {
-      for (const it of items) if (isOther(it)) sel.add(it.id);
-    }
+    let others = othersMode === "hide" ? "hide" : "show";
     return modal(host, (done) => {
       const nameInput = withName ? h("input", { class: "rb-input", value: name, placeholder: "폴더 이름", "aria-label": "폴더 이름", "data-autofocus": "1" }) : null;
       const q = h("input", { class: "rb-input", type: "search", placeholder: `${noun} 찾기`, "aria-label": `${noun} 찾기`, style: "height:38px" });
@@ -3065,13 +3062,14 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       const othersCtl = otherCount ? h(
         "div",
         { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" },
-        h("span", { class: "rb-muted", style: "flex:1;min-width:140px" }, `다른 폴더에 든 ${noun} ${otherCount}개`),
-        h("div", { class: "rb-seg-nowrap", style: "flex:1 1 300px" }, segmented([["pick", "선택된 채로 보이기"], ["hide", "숨기기"]], others, (v) => {
+        h("span", { class: "rb-muted", style: "flex:1;min-width:140px" }, `다른 폴더에 든 ${noun} ${otherCount}개 (고르면 이 폴더로 옮겨져요)`),
+        h("div", { class: "rb-seg-nowrap", style: "flex:1 1 300px" }, segmented([["show", "보이기 (골라서 옮기기)"], ["hide", "숨기기"]], others, (v) => {
           others = v;
-          for (const r of rows) if (r._other) {
-            r._cb.checked = v === "pick";
-            if (v === "pick") sel.add(r._id);
-            else sel.delete(r._id);
+          if (v === "hide") {
+            for (const r of rows) if (r._other) {
+              r._cb.checked = false;
+              sel.delete(r._id);
+            }
           }
           filter();
           paintCount();
@@ -3197,7 +3195,7 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
     return { close };
   }
   function folderPickPrefs(ctx) {
-    return { othersMode: ctx.prefs.meta.folderPickOthers === "pick" ? "pick" : "hide", onOthersMode: (v) => {
+    return { othersMode: ctx.prefs.meta.folderPickOthers === "hide" ? "hide" : ctx.prefs.meta.folderPickOthers ? "show" : "hide", onOthersMode: (v) => {
       ctx.svc.meta((m) => {
         m.folderPickOthers = v;
       }).catch(() => {
@@ -3275,6 +3273,8 @@ html,body{margin:0;height:100%;background:transparent}
 
 /* 칩·배지 */
 .rb-chips{display:flex;align-items:center;gap:8px;padding:16px 20px 12px;flex-wrap:wrap}
+.rb-chips.rb-fchips{padding-top:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+.rb-chips.rb-fchips .rb-chip{flex-shrink:0}
 .rb-chip{height:34px;padding:0 14px;border-radius:999px;border:1px solid var(--rb-line);background:transparent;color:var(--rb-sub);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 @media (hover: hover){.rb-chip:hover{color:var(--rb-text);border-color:var(--rb-line3)}}
 .rb-chip[aria-pressed=true]{border-color:var(--rb-sel-ring);background:var(--rb-acc-soft);color:var(--rb-text);font-weight:600}
@@ -4942,14 +4942,18 @@ ${patch.note}` : "",
     ctx.setNavCount("modules", entries.length);
     const q = st.search.trim().toLowerCase();
     const filtering = !!q || st.modFilter !== "all";
+    if (st.modFolder && !meta.folders.some((f) => f.id === st.modFolder)) st.modFolder = void 0;
+    const fv = st.modFolder;
+    const inView = (e) => fv === void 0 || (meta.mapping[e.module.id] ?? "") === fv;
     const pass = (e) => {
+      if (!inView(e)) return false;
       const f = moduleFlags(e.module, globalOn);
       if (st.modFilter === "on" && !e.enabled) return false;
       if (st.modFilter === "off" && e.enabled) return false;
       if (["global", "lla", "mcp"].includes(st.modFilter) && !f[st.modFilter]) return false;
       return !q || st.modIndex.get(e.module.id)?.includes(q);
     };
-    const count = (id) => entries.filter((e) => id === "all" || id === "on" && e.enabled || id === "off" && !e.enabled || moduleFlags(e.module, globalOn)[id]).length;
+    const count = (id) => entries.filter((e) => inView(e)).filter((e) => id === "all" || id === "on" && e.enabled || id === "off" && !e.enabled || moduleFlags(e.module, globalOn)[id]).length;
     const shown = entries.filter(pass);
     if (!st.modSel || !entries.some((e) => e.module.id === st.modSel)) st.modSel = shown[0]?.module.id ?? null;
     const toolbar = h(
@@ -4967,8 +4971,30 @@ ${patch.note}` : "",
       btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolder(ctx) }),
       btn("새 모듈", { size: "sm", kind: "primary", icon: "plus", onClick: () => newModule(ctx) })
     );
+    const inFolder2 = (id) => entries.filter((e) => (meta.mapping[e.module.id] ?? "") === id).length;
+    const setView = (v) => {
+      st.modFolder = v;
+      draw(ctx);
+    };
+    const folderBar = meta.folders.length ? h(
+      "div",
+      { class: "rb-chips rb-fchips", role: "toolbar", "aria-label": "폴더별 보기" },
+      chip("모든 폴더", { pressed: fv === void 0, onClick: () => setView(void 0) }),
+      meta.folders.map((f) => {
+        const tint = folderTint(f.color, st.mode);
+        const c = chip(
+          h("span", { style: "display:inline-flex;align-items:center;gap:6px" }, h("span", { style: { color: tint?.stroke ?? "var(--rb-sub)", display: "flex" } }, icon("folder", 14)), f.name || "(이름 없음)"),
+          { pressed: fv === f.id, count: inFolder2(f.id), onClick: () => setView(fv === f.id ? void 0 : f.id) }
+        );
+        c.dataset.folderView = f.id;
+        return c;
+      }),
+      chip("폴더 없음", { pressed: fv === "", count: inFolder2(""), onClick: () => setView(fv === "" ? void 0 : "") })
+    ) : null;
     const list = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "모듈 목록" });
-    const { folders, loose } = groupByFolder(shown, meta);
+    const grouped = groupByFolder(shown, meta);
+    const folders = fv === void 0 ? grouped.folders : [];
+    const loose = fv === void 0 ? grouped.loose : shown;
     for (const g of folders) {
       if (filtering && !g.items.length) continue;
       const f = g.folder;
@@ -5000,13 +5026,14 @@ ${patch.note}` : "",
         list.appendChild(body);
       }
     }
+    if (fv !== void 0 && !filtering) list.dataset.dropFolder = fv;
     if (folders.length) list.appendChild(h("div", { class: "rb-label", style: "padding:14px 12px 6px;border-radius:10px", dataset: filtering ? {} : { dropFolder: "" } }, "폴더 없음"));
     for (const e of loose) list.appendChild(row(ctx, e, filtering));
     if (folders.length) dropTarget(ctx, list, { folderId: null, onlySelf: true });
-    if (!shown.length) list.appendChild(h("div", { class: "rb-empty" }, entries.length ? "조건에 맞는 모듈이 없어요." : '설치된 모듈이 없어요. 위의 "가져오기"나 파일을 창에 끌어 놓아서 추가하세요.'));
+    if (!shown.length) list.appendChild(h("div", { class: "rb-empty" }, fv !== void 0 && !filtering ? '이 폴더에 모듈이 없어요. 폴더 메뉴의 "넣을 모듈 고르기"로 넣을 수 있어요.' : entries.length ? "조건에 맞는 모듈이 없어요." : '설치된 모듈이 없어요. 위의 "가져오기"나 파일을 창에 끌어 놓아서 추가하세요.'));
     const scroll = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
     const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 모듈" });
-    replace(ctx.main, toolbar, bar, list);
+    replace(ctx.main, toolbar, folderBar, bar, list);
     list.scrollTop = scroll;
     const mu = multiOf(ctx);
     if (filtering) mu.clear();
