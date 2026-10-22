@@ -71,16 +71,40 @@ export function groupAssetsByChar(list) {
   for (const g of out) g.subs = g.key ? outfitGroups(g.parsed) : null;
   return out;
 }
-// 의상: 캐릭터 뒤 부분이 둘 이상이면 첫 부분 (kami_casual_happy → casual). 하나뿐이면 의상 없음(기본)
-export var outfitOfAsset = (name) => {
+// 의상 판단: 이름 하나만 보지 않고 같은 캐릭터의 이름들을 함께 본다.
+// 캐릭터 뒤 첫 부분 t가 의상이려면, t 뒤에 오는 표정이 다른 곳에서도 표정으로 쓰이거나(boreum_happy ↔ boreum_sportswear_happy),
+// 다른 의상과 같은 표정을 공유해야 한다(casual_happy ↔ school_happy). 아니면 전체가 표정(boreum_anal_creampie, boreum_happy_2).
+function outfitKeys(parsed) {
+  const full = new Set(parsed.map((p) => p.rest.join("_").toLowerCase()));
+  const rem = new Map();
+  for (const p of parsed) {
+    if (p.rest.length < 2) continue;
+    const t = p.rest[0].toLowerCase();
+    if (!rem.has(t)) rem.set(t, new Set());
+    rem.get(t).add(p.rest.slice(1).join("_").toLowerCase());
+  }
+  const out = new Set();
+  for (const [t, rs] of rem) {
+    if ([...rs].some((r) => full.has(r))) out.add(t);
+    else for (const [t2, rs2] of rem) if (t2 !== t && [...rs].some((r) => rs2.has(r))) {
+      out.add(t);
+      break;
+    }
+  }
+  return out;
+}
+export var outfitOfAsset = (name, siblings) => {
   const p = parseAssetName(name);
-  return p.char && p.rest.length >= 2 ? p.rest[0] : null;
+  if (!p.char || p.rest.length < 2) return null;
+  const keys = outfitKeys((siblings ?? [name]).map(parseAssetName).filter((x) => x.char?.toLowerCase() === p.char.toLowerCase()));
+  return keys.has(p.rest[0].toLowerCase()) ? p.rest[0] : null;
 };
 // 캐릭터 안의 의상 묶음. 2장 이상인 의상만 따로, 나머지는 "기본". 나눌 의상이 없으면 null
 function outfitGroups(parsed) {
+  const keys = outfitKeys(parsed);
   const m = new Map();
   for (const p of parsed) {
-    const o = p.rest.length >= 2 ? p.rest[0] : null;
+    const o = p.rest.length >= 2 && keys.has(p.rest[0].toLowerCase()) ? p.rest[0] : null;
     const key = o ? o.toLowerCase() : "";
     if (!m.has(key)) m.set(key, { key, label: o ?? "기본", items: [] });
     m.get(key).items.push(p.a);

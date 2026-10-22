@@ -6089,10 +6089,30 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     for (const g of out) g.subs = g.key ? outfitGroups(g.parsed) : null;
     return out;
   }
+  function outfitKeys(parsed) {
+    const full = new Set(parsed.map((p) => p.rest.join("_").toLowerCase()));
+    const rem = /* @__PURE__ */ new Map();
+    for (const p of parsed) {
+      if (p.rest.length < 2) continue;
+      const t = p.rest[0].toLowerCase();
+      if (!rem.has(t)) rem.set(t, /* @__PURE__ */ new Set());
+      rem.get(t).add(p.rest.slice(1).join("_").toLowerCase());
+    }
+    const out = /* @__PURE__ */ new Set();
+    for (const [t, rs] of rem) {
+      if ([...rs].some((r) => full.has(r))) out.add(t);
+      else for (const [t2, rs2] of rem) if (t2 !== t && [...rs].some((r) => rs2.has(r))) {
+        out.add(t);
+        break;
+      }
+    }
+    return out;
+  }
   function outfitGroups(parsed) {
+    const keys = outfitKeys(parsed);
     const m = /* @__PURE__ */ new Map();
     for (const p of parsed) {
-      const o = p.rest.length >= 2 ? p.rest[0] : null;
+      const o = p.rest.length >= 2 && keys.has(p.rest[0].toLowerCase()) ? p.rest[0] : null;
       const key = o ? o.toLowerCase() : "";
       if (!m.has(key)) m.set(key, { key, label: o ?? "기본", items: [] });
       m.get(key).items.push(p.a);
