@@ -1,0 +1,13 @@
+  로그인: 200
+  비밀번호 입력
+  비밀번호 입력
+  화면 글자: Loading... Loading Local Save File... Error Password incorrect Show Error Details Confirm
+file:///home/runner/work/Dusk-Atelier/Dusk-Atelier/tests/e2e/folders.mjs:54
+  throw new Error('앱이 로딩을 끝내지 않았어요');
+        ^
+
+Error: 앱이 로딩을 끝내지 않았어요
+    at waitLoaded (file:///home/runner/work/Dusk-Atelier/Dusk-Atelier/tests/e2e/folders.mjs:54:9)
+    at async file:///home/runner/work/Dusk-Atelier/Dusk-Atelier/tests/e2e/folders.mjs:56:1
+
+Node.js v22.23.3

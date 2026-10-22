@@ -1,0 +1,20 @@
+[33m(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - import "./vite.config" without a file extension (vite.e2e.config.ts:2:18). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.[39m
+12:30:43 PM [vite-plugin-svelte] no Svelte config found at /home/runner/work/Dusk-Atelier/Dusk-Atelier/host - using default configuration.
+[2m12:30:43 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Forced re-optimization of dependencies
+
+  [32m[1mVITE[22m v8.3.4[39m  [2mready in [0m[1m724[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.1.0.252:[1m5174[22m/[39m  [2meth0[22m
+[2m12:30:47 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [optimizer] bundling dependencies...
+12:30:55 PM [vite-plugin-svelte] src/lib/ChatScreens/DefaultChatScreen.svelte:1136:20 Visible, non-interactive element `<div>` with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events
+12:30:55 PM [vite-plugin-svelte] src/lib/ChatScreens/DefaultChatScreen.svelte:1136:20 `<div>` with a click handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions
+12:30:55 PM [vite-plugin-svelte] src/lib/ChatScreens/DefaultChatScreen.svelte:1150:20 Visible, non-interactive element `<div>` with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events
+12:30:55 PM [vite-plugin-svelte] src/lib/ChatScreens/DefaultChatScreen.svelte:1150:20 `<div>` with a click handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions
+[2m12:30:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [optimizer] bundling dependencies...
