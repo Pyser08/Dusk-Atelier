@@ -10217,11 +10217,12 @@ ${patch.note}` : "",
       return false;
     };
     async function checkUpdate() {
-      if (version === "dev" || Date.now() - updAt < 3 * 36e5) return;
+      if (version === "dev" || Date.now() - updAt < 10 * 6e4) return;
       updAt = Date.now();
-      const opts = { headers: { Range: "bytes=0-512" } };
-      let res = await fetch(UPDATE_URL, opts).catch(() => null);
-      if ((!res || !res.ok) && typeof api.nativeFetch === "function") res = await api.nativeFetch(UPDATE_URL, opts).catch(() => null);
+      const url = `${UPDATE_URL}?t=${Math.floor(Date.now() / 6e4)}`;
+      const opts = { headers: { Range: "bytes=0-512" }, cache: "no-store" };
+      let res = await fetch(url, opts).catch(() => null);
+      if ((!res || !res.ok) && typeof api.nativeFetch === "function") res = await api.nativeFetch(url, { headers: opts.headers }).catch(() => null);
       if (!res || !(res.status >= 200 && res.status < 300)) return;
       const v = /\/\/@version\s+(\S+)/.exec(await res.text())?.[1];
       if (!v || !newer(v, version)) return;

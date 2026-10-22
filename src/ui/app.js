@@ -63,11 +63,13 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     return false;
   };
   async function checkUpdate() {
-    if (version === "dev" || Date.now() - updAt < 3 * 3600e3) return;
+    // 열 때마다 확인하되 10분에 한 번까지. 주소 뒤에 시각을 붙여 GitHub 쪽 캐시(약 5분)를 피한다
+    if (version === "dev" || Date.now() - updAt < 10 * 60e3) return;
     updAt = Date.now();
-    const opts = { headers: { Range: "bytes=0-512" } };
-    let res = await fetch(UPDATE_URL, opts).catch(() => null);
-    if ((!res || !res.ok) && typeof api.nativeFetch === "function") res = await api.nativeFetch(UPDATE_URL, opts).catch(() => null);
+    const url = `${UPDATE_URL}?t=${Math.floor(Date.now() / 60e3)}`;
+    const opts = { headers: { Range: "bytes=0-512" }, cache: "no-store" };
+    let res = await fetch(url, opts).catch(() => null);
+    if ((!res || !res.ok) && typeof api.nativeFetch === "function") res = await api.nativeFetch(url, { headers: opts.headers }).catch(() => null);
     if (!res || !(res.status >= 200 && res.status < 300)) return;
     const v = /\/\/@version\s+(\S+)/.exec(await res.text())?.[1];
     if (!v || !newer(v, version)) return;
