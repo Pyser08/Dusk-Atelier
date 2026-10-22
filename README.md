@@ -1,4 +1,4 @@
-# Dusk Atelier v1.0.0
+# Dusk Atelier
 
 RisuBard(RisuAI 포크)용 모듈·캐릭터 관리·업데이트 플러그인입니다.
 - 모듈 켜기·끄기, 폴더, 순서, 연결, 프리셋, 편집, 에셋 관리
