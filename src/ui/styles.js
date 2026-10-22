@@ -238,6 +238,7 @@ select.rb-input{appearance:auto}
 /* 에셋 목록 보기: 캐릭터별 묶음 */
 .rb-grid.list{display:flex;flex-direction:column;gap:4px}
 .rb-am-group{margin-top:6px}
+.rb-am-group.sub{margin-top:2px;min-height:36px;font-size:13px}
 .rb-am-group[aria-expanded=true] .chev{transform:rotate(90deg)}
 .rb-am-group-body{display:flex;flex-direction:column;gap:4px;padding-left:14px;animation:rb-expand .16s ease-out}
 .rb-grid.list .rb-tile{flex-direction:row;align-items:center;gap:10px;padding:6px 10px 6px 40px;min-height:52px}

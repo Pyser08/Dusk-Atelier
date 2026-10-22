@@ -42,7 +42,34 @@ export function groupAssetsByChar(list) {
   }
   out.sort((x, y) => x.label.localeCompare(y.label, "ko"));
   if (etc.items.length) out.push(etc);
+  for (const g of out) g.subs = g.key ? outfitGroups(g.items) : null;
   return out;
+}
+// 의상: 세 부분 이상인 이름의 두 번째 부분 (kami_casual_happy → casual). 두 부분뿐이면 의상 없음(기본)
+export function outfitOfAsset(name) {
+  const parts = stripMediaExt(name).split(/[._]/).map((x) => x.trim()).filter(Boolean);
+  return parts.length >= 3 ? parts[1] : null;
+}
+// 캐릭터 안의 의상 묶음. 2장 이상인 의상만 따로, 나머지는 "기본". 나눌 의상이 없으면 null
+function outfitGroups(items) {
+  const m = new Map();
+  for (const a of items) {
+    const o = outfitOfAsset(a[0]);
+    const key = o ? o.toLowerCase() : "";
+    if (!m.has(key)) m.set(key, { key, label: o ?? "기본", items: [] });
+    m.get(key).items.push(a);
+  }
+  const base = m.get("") ?? { key: "", label: "기본", items: [] };
+  m.delete("");
+  const subs = [];
+  for (const g of m.values()) {
+    if (g.items.length < 2) base.items.push(...g.items);
+    else subs.push(g);
+  }
+  if (!subs.length) return null;
+  subs.sort((x, y) => x.label.localeCompare(y.label, "ko"));
+  if (base.items.length) subs.unshift(base);
+  return subs;
 }
 export async function openAssets(ctx, id) {
   const data = await ctx.svc.load({ fresh: true });
@@ -288,9 +315,35 @@ export async function openAssetsCore(ctx, src) {
           h("small", null, String(g.items.length))
         ));
         if (!open) continue;
-        const take = g.items.slice(0, left);
-        left -= take.length;
-        out.push(h("div", { class: "rb-am-group-body" }, take.map((a) => tile2(a))));
+        if (!g.subs) {
+          const take = g.items.slice(0, left);
+          left -= take.length;
+          out.push(h("div", { class: "rb-am-group-body" }, take.map((a) => tile2(a))));
+          continue;
+        }
+        const body = h("div", { class: "rb-am-group-body" });
+        for (const sg of g.subs) {
+          if (left <= 0) break;
+          const sk = g.key + "/" + sg.key;
+          const sOpen = !as.closed.has(sk);
+          body.appendChild(h(
+            "button",
+            { type: "button", class: "rb-folder rb-am-group sub", "aria-expanded": sOpen ? "true" : "false", onClick: () => {
+              if (sOpen) as.closed.add(sk);
+              else as.closed.delete(sk);
+              paintGrid();
+            } },
+            h("span", { class: "chev" }, icon("chevron", 14)),
+            h("span", { style: "display:flex;color:var(--rb-sub)" }, icon("folder", 15)),
+            h("b", null, sg.label),
+            h("small", null, String(sg.items.length))
+          ));
+          if (!sOpen) continue;
+          const take = sg.items.slice(0, left);
+          left -= take.length;
+          body.appendChild(h("div", { class: "rb-am-group-body" }, take.map((a) => tile2(a))));
+        }
+        out.push(body);
       }
       replace(grid, out);
     } else replace(grid, list.slice(0, as.shown).map((a) => tile2(a)));

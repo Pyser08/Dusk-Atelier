@@ -3506,6 +3506,7 @@ select.rb-input{appearance:auto}
 /* 에셋 목록 보기: 캐릭터별 묶음 */
 .rb-grid.list{display:flex;flex-direction:column;gap:4px}
 .rb-am-group{margin-top:6px}
+.rb-am-group.sub{margin-top:2px;min-height:36px;font-size:13px}
 .rb-am-group[aria-expanded=true] .chev{transform:rotate(90deg)}
 .rb-am-group-body{display:flex;flex-direction:column;gap:4px;padding-left:14px;animation:rb-expand .16s ease-out}
 .rb-grid.list .rb-tile{flex-direction:row;align-items:center;gap:10px;padding:6px 10px 6px 40px;min-height:52px}
@@ -6060,7 +6061,32 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     }
     out.sort((x, y) => x.label.localeCompare(y.label, "ko"));
     if (etc.items.length) out.push(etc);
+    for (const g of out) g.subs = g.key ? outfitGroups(g.items) : null;
     return out;
+  }
+  function outfitOfAsset(name) {
+    const parts = stripMediaExt(name).split(/[._]/).map((x) => x.trim()).filter(Boolean);
+    return parts.length >= 3 ? parts[1] : null;
+  }
+  function outfitGroups(items) {
+    const m = /* @__PURE__ */ new Map();
+    for (const a of items) {
+      const o = outfitOfAsset(a[0]);
+      const key = o ? o.toLowerCase() : "";
+      if (!m.has(key)) m.set(key, { key, label: o ?? "기본", items: [] });
+      m.get(key).items.push(a);
+    }
+    const base = m.get("") ?? { key: "", label: "기본", items: [] };
+    m.delete("");
+    const subs = [];
+    for (const g of m.values()) {
+      if (g.items.length < 2) base.items.push(...g.items);
+      else subs.push(g);
+    }
+    if (!subs.length) return null;
+    subs.sort((x, y) => x.label.localeCompare(y.label, "ko"));
+    if (base.items.length) subs.unshift(base);
+    return subs;
   }
   async function openAssets(ctx, id) {
     const data = await ctx.svc.load({ fresh: true });
@@ -6305,9 +6331,35 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
             h("small", null, String(g.items.length))
           ));
           if (!open) continue;
-          const take2 = g.items.slice(0, left);
-          left -= take2.length;
-          out.push(h("div", { class: "rb-am-group-body" }, take2.map((a) => tile2(a))));
+          if (!g.subs) {
+            const take2 = g.items.slice(0, left);
+            left -= take2.length;
+            out.push(h("div", { class: "rb-am-group-body" }, take2.map((a) => tile2(a))));
+            continue;
+          }
+          const body = h("div", { class: "rb-am-group-body" });
+          for (const sg of g.subs) {
+            if (left <= 0) break;
+            const sk = g.key + "/" + sg.key;
+            const sOpen = !as.closed.has(sk);
+            body.appendChild(h(
+              "button",
+              { type: "button", class: "rb-folder rb-am-group sub", "aria-expanded": sOpen ? "true" : "false", onClick: () => {
+                if (sOpen) as.closed.add(sk);
+                else as.closed.delete(sk);
+                paintGrid();
+              } },
+              h("span", { class: "chev" }, icon("chevron", 14)),
+              h("span", { style: "display:flex;color:var(--rb-sub)" }, icon("folder", 15)),
+              h("b", null, sg.label),
+              h("small", null, String(sg.items.length))
+            ));
+            if (!sOpen) continue;
+            const take2 = sg.items.slice(0, left);
+            left -= take2.length;
+            body.appendChild(h("div", { class: "rb-am-group-body" }, take2.map((a) => tile2(a))));
+          }
+          out.push(body);
         }
         replace(grid, out);
       } else replace(grid, list.slice(0, as.shown).map((a) => tile2(a)));
