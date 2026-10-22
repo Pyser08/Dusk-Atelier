@@ -206,19 +206,15 @@ export async function renderCharacters(ctx) {
   else ctx.showDetail(h("div", { class: "rb-empty" }, "캐릭터를 고르면 여기에 자세히 보여요."));
 }
 var orderQ = Promise.resolve();
-// RisuAI는 저장할 때 봇이 없는 폴더를 지운다(checkCharOrder). 같은 규칙으로 맞춰서 양쪽이 어긋나지 않게 한다.
-var dropEmpty = (o) => o.filter((x) => !(x && typeof x === "object" && Array.isArray(x.data) && x.data.length === 0));
 function saveOrder(ctx, fn, done) {
   const st = ctx.state;
-  const raw = fn(st.charOrder ?? []);
-  const next = dropEmpty(raw);
-  if (next.length !== raw.length) done = "봇이 없는 폴더는 RisuAI 규칙에 따라 없어졌어요";
+  const next = fn(st.charOrder ?? []);
   st.charOrder = next;
   renderCharacters(ctx);
   if (done) ctx.toast(done);
   const p = orderQ.then(async () => {
     const fresh = (await ctx.api.getDatabase(["characterOrder"]))?.characterOrder;
-    const out = Array.isArray(fresh) ? dropEmpty(fn(fresh)) : st.charOrder;
+    const out = Array.isArray(fresh) ? fn(fresh) : st.charOrder;
     await ctx.api.setDatabaseLite({ characterOrder: out });
     if (JSON.stringify(out) !== JSON.stringify(st.charOrder)) {
       st.charOrder = out;
@@ -288,10 +284,6 @@ function charItems(ctx) {
 async function newCharFolder(ctx) {
   const r = await folderDialog(ctx.win, { title: "새 봇 폴더", items: charItems(ctx), noun: "봇", ...folderPickPrefs(ctx) });
   if (!r) return;
-  if (!r.ids.length) {
-    ctx.toast("RisuAI는 봇이 없는 폴더를 지워요. 넣을 봇을 하나 이상 골라 주세요.", { error: true, seconds: 6 });
-    return;
-  }
   await saveOrder(ctx, (o) => createFolder2(o, { id: "df_" + newId().slice(0, 10), name: r.name, ids: r.ids }), `'${r.name}' 폴더를 만들었어요${r.ids.length ? ` (봇 ${r.ids.length}개)` : ""}. RisuAI 사이드바에도 같은 폴더가 생겨요.`);
 }
 function charFolderMenu(ctx, f, anchor) {

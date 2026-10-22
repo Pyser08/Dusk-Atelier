@@ -6286,7 +6286,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         } }),
         btn("이름 복사", { size: "sm", icon: "link", title: n ? "고른 에셋 이름을 한 줄에 하나씩 복사" : "보이는 에셋 이름을 한 줄에 하나씩 복사", onClick: async () => {
           const names = (n ? selected() : visible()).map((a) => a[0]);
-          ctx.toast(await copyText(names.join("\n")) ? `이름 ${names.length}개를 복사했어요` : "복사하지 못했어요", { error: false });
+          ctx.toast(await copyText(names.join("\r\n") + "\r\n") ? `이름 ${names.length}개를 복사했어요` : "복사하지 못했어요", { error: false });
         } }),
         btn("확장자 제거", { size: "sm", icon: "edit", title: n ? "고른 에셋 이름에서 .png·.webp 같은 확장자를 뺌" : "보이는 에셋 이름에서 .png·.webp 같은 확장자를 뺌", onClick: () => stripExtNames(n ? selected() : visible()) }),
         viewToggle(),
@@ -9604,18 +9604,15 @@ ${patch.note}` : "",
     else ctx.showDetail(h("div", { class: "rb-empty" }, "캐릭터를 고르면 여기에 자세히 보여요."));
   }
   var orderQ = Promise.resolve();
-  var dropEmpty = (o) => o.filter((x) => !(x && typeof x === "object" && Array.isArray(x.data) && x.data.length === 0));
   function saveOrder(ctx, fn, done) {
     const st = ctx.state;
-    const raw = fn(st.charOrder ?? []);
-    const next = dropEmpty(raw);
-    if (next.length !== raw.length) done = "봇이 없는 폴더는 RisuAI 규칙에 따라 없어졌어요";
+    const next = fn(st.charOrder ?? []);
     st.charOrder = next;
     renderCharacters(ctx);
     if (done) ctx.toast(done);
     const p = orderQ.then(async () => {
       const fresh = (await ctx.api.getDatabase(["characterOrder"]))?.characterOrder;
-      const out = Array.isArray(fresh) ? dropEmpty(fn(fresh)) : st.charOrder;
+      const out = Array.isArray(fresh) ? fn(fresh) : st.charOrder;
       await ctx.api.setDatabaseLite({ characterOrder: out });
       if (JSON.stringify(out) !== JSON.stringify(st.charOrder)) {
         st.charOrder = out;
@@ -9685,10 +9682,6 @@ ${patch.note}` : "",
   async function newCharFolder(ctx) {
     const r = await folderDialog(ctx.win, { title: "새 봇 폴더", items: charItems(ctx), noun: "봇", ...folderPickPrefs(ctx) });
     if (!r) return;
-    if (!r.ids.length) {
-      ctx.toast("RisuAI는 봇이 없는 폴더를 지워요. 넣을 봇을 하나 이상 골라 주세요.", { error: true, seconds: 6 });
-      return;
-    }
     await saveOrder(ctx, (o) => createFolder2(o, { id: "df_" + newId().slice(0, 10), name: r.name, ids: r.ids }), `'${r.name}' 폴더를 만들었어요${r.ids.length ? ` (봇 ${r.ids.length}개)` : ""}. RisuAI 사이드바에도 같은 폴더가 생겨요.`);
   }
   function charFolderMenu(ctx, f, anchor) {
@@ -10033,6 +10026,32 @@ ${patch.note}` : "",
     };
     searchInput.addEventListener("input", onSearch);
     mobileSearchInput.addEventListener("input", onSearch);
+    const UPDATE_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js";
+    const UPDATE_HOW = "RisuAI 설정 → 플러그인에서 Dusk Atelier 옆 초록색 + 버튼을 누르면 업데이트돼요.";
+    let latest = null, updAt = 0;
+    const updBtn = btn("업데이트", { size: "sm", kind: "primary", icon: "download", labelClass: "lbl", onClick: () => ctx.toast(`새 버전 v${latest}이 있어요. ${UPDATE_HOW}`, { seconds: 12 }) });
+    updBtn.hidden = true;
+    const newer = (a, b) => {
+      const x = String(a).split(".").map((n) => parseInt(n, 10) || 0), y = String(b).split(".").map((n) => parseInt(n, 10) || 0);
+      for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0);
+      return false;
+    };
+    async function checkUpdate() {
+      if (version === "dev" || Date.now() - updAt < 3 * 36e5) return;
+      updAt = Date.now();
+      const opts = { headers: { Range: "bytes=0-512" } };
+      let res = await fetch(UPDATE_URL, opts).catch(() => null);
+      if ((!res || !res.ok) && typeof api.nativeFetch === "function") res = await api.nativeFetch(UPDATE_URL, opts).catch(() => null);
+      if (!res || !(res.status >= 200 && res.status < 300)) return;
+      const v = /\/\/@version\s+(\S+)/.exec(await res.text())?.[1];
+      if (!v || !newer(v, version)) return;
+      const first = latest !== v;
+      latest = v;
+      updBtn.querySelector("span").textContent = `v${v} 업데이트`;
+      updBtn.title = `새 버전 v${v}`;
+      updBtn.hidden = false;
+      if (first) ctx.toast(`새 버전 v${v}이 나왔어요. ${UPDATE_HOW}`, { seconds: 12 });
+    }
     const head = h(
       "header",
       { class: "rb-head" },
@@ -10044,6 +10063,7 @@ ${patch.note}` : "",
       ),
       h("label", { class: "rb-search" }, icon("search", 16), searchInput, h("span", { class: "rb-kbd", "aria-hidden": "true" }, "/")),
       h("div", { class: "rb-spacer" }),
+      updBtn,
       btn("가져오기", { icon: "upload", labelClass: "lbl", onClick: () => legacy.open(), id: "rb-import" }),
       iconBtn("palette", "색 바꾸기", { onClick: () => go("tools", "settings") }),
       iconBtn("x", "닫기", { onClick: () => close(), id: "rb-close" })
@@ -10192,6 +10212,8 @@ ${patch.note}` : "",
       root.hidden = false;
       await api.showContainer("fullscreen");
       render();
+      checkUpdate().catch(() => {
+      });
       motion(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
       motion(win, [{ opacity: 0, transform: "translateY(12px) scale(.985)" }, { opacity: 1, transform: "none" }], { duration: 220 });
       state.opened = true;

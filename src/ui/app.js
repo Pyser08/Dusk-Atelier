@@ -51,6 +51,33 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   };
   searchInput.addEventListener("input", onSearch);
   mobileSearchInput.addEventListener("input", onSearch);
+  // 새 버전 알림: 열 때 업데이트 주소의 머리말(앞 512바이트)만 읽어 버전을 비교한다
+  const UPDATE_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js";
+  const UPDATE_HOW = "RisuAI 설정 → 플러그인에서 Dusk Atelier 옆 초록색 + 버튼을 누르면 업데이트돼요.";
+  let latest = null, updAt = 0;
+  const updBtn = btn("업데이트", { size: "sm", kind: "primary", icon: "download", labelClass: "lbl", onClick: () => ctx.toast(`새 버전 v${latest}이 있어요. ${UPDATE_HOW}`, { seconds: 12 }) });
+  updBtn.hidden = true;
+  const newer = (a, b) => {
+    const x = String(a).split(".").map((n) => parseInt(n, 10) || 0), y = String(b).split(".").map((n) => parseInt(n, 10) || 0);
+    for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0);
+    return false;
+  };
+  async function checkUpdate() {
+    if (version === "dev" || Date.now() - updAt < 3 * 3600e3) return;
+    updAt = Date.now();
+    const opts = { headers: { Range: "bytes=0-512" } };
+    let res = await fetch(UPDATE_URL, opts).catch(() => null);
+    if ((!res || !res.ok) && typeof api.nativeFetch === "function") res = await api.nativeFetch(UPDATE_URL, opts).catch(() => null);
+    if (!res || !(res.status >= 200 && res.status < 300)) return;
+    const v = /\/\/@version\s+(\S+)/.exec(await res.text())?.[1];
+    if (!v || !newer(v, version)) return;
+    const first = latest !== v;
+    latest = v;
+    updBtn.querySelector("span").textContent = `v${v} 업데이트`;
+    updBtn.title = `새 버전 v${v}`;
+    updBtn.hidden = false;
+    if (first) ctx.toast(`새 버전 v${v}이 나왔어요. ${UPDATE_HOW}`, { seconds: 12 });
+  }
   const head = h(
     "header",
     { class: "rb-head" },
@@ -62,6 +89,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     ),
     h("label", { class: "rb-search" }, icon("search", 16), searchInput, h("span", { class: "rb-kbd", "aria-hidden": "true" }, "/")),
     h("div", { class: "rb-spacer" }),
+    updBtn,
     btn("가져오기", { icon: "upload", labelClass: "lbl", onClick: () => legacy.open(), id: "rb-import" }),
     iconBtn("palette", "색 바꾸기", { onClick: () => go("tools", "settings") }),
     iconBtn("x", "닫기", { onClick: () => close(), id: "rb-close" })
@@ -210,6 +238,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     root.hidden = false;
     await api.showContainer("fullscreen");
     render();
+    checkUpdate().catch(() => {
+    });
     motion(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
     motion(win, [{ opacity: 0, transform: "translateY(12px) scale(.985)" }, { opacity: 1, transform: "none" }], { duration: 220 });
     state.opened = true;

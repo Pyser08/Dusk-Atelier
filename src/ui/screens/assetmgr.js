@@ -264,7 +264,7 @@ export async function openAssetsCore(ctx, src) {
       } }),
       btn("이름 복사", { size: "sm", icon: "link", title: n ? "고른 에셋 이름을 한 줄에 하나씩 복사" : "보이는 에셋 이름을 한 줄에 하나씩 복사", onClick: async () => {
         const names = (n ? selected() : visible()).map((a) => a[0]);
-        ctx.toast(await copyText(names.join("\n")) ? `이름 ${names.length}개를 복사했어요` : "복사하지 못했어요", { error: false });
+        ctx.toast(await copyText(names.join("\r\n") + "\r\n") ? `이름 ${names.length}개를 복사했어요` : "복사하지 못했어요", { error: false });
       } }),
       btn("확장자 제거", { size: "sm", icon: "edit", title: n ? "고른 에셋 이름에서 .png·.webp 같은 확장자를 뺌" : "보이는 에셋 이름에서 .png·.webp 같은 확장자를 뺌", onClick: () => stripExtNames(n ? selected() : visible()) }),
       viewToggle(),
