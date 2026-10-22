@@ -3496,6 +3496,9 @@ ${v.content ?? ""}`;
     #rbu-overlay .rv-cap{font-size:12px;font-weight:600;color:var(--rb-sub,#a4a7c9);display:flex;gap:8px;align-items:center}
     #rbu-overlay .rv-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     #rbu-overlay .rv-col{display:flex;flex-direction:column;gap:6px;min-width:0;padding:10px;border-radius:12px;border:1px solid var(--rb-line2,#22253b);opacity:.7}
+    #rbu-overlay .rv-col{cursor:pointer;transition:opacity .15s,border-color .15s,background .15s}
+    #rbu-overlay .rv-col:hover{opacity:.95;border-color:var(--rb-line3,#343857)}
+    #rbu-overlay .rv-col.pick:hover{border-color:var(--rb-sel-ring,rgba(142,162,255,.45))}
     #rbu-overlay .rv-col.pick{opacity:1;border-color:var(--rb-sel-ring,rgba(142,162,255,.45));background:var(--rb-sel-bg,rgba(79,99,224,.06))}
     #rbu-overlay .rv-text,#rbu-overlay .rv-diffbox{font-size:12.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;max-height:300px;overflow:auto;scrollbar-width:thin}
     #rbu-overlay .rv-diffbox{padding:10px 12px;border-radius:12px;background:var(--rb-surf,#1c1f33)}
@@ -3851,8 +3854,8 @@ ${v.content ?? ""}`;
         <div class="rv-seg"><button data-pick="inc" class="${mine ? "" : "on"}">${ic("refresh", 15)} 새 버전 적용</button><button data-pick="cur" class="${mine ? "on" : ""}">${ic("shield", 15)} 내 것 유지</button></div>
         ${diff ? `<div class="rv-cap">바뀐 곳 <span class="muted">— <del>지운 글</del> <ins>새 글</ins></span></div><div class="rv-diffbox">${diff}</div>` : ""}
         <div class="rv-cols">
-          <div class="rv-col${mine ? " pick" : ""}"><div class="rv-cap">지금 ${mine ? `<span class="tg mine">남김</span>` : ""}</div><div class="rv-text">${full(it, it.current)}</div></div>
-          <div class="rv-col${mine ? "" : " pick"}"><div class="rv-cap">새 버전 ${mine ? "" : `<span class="tg update">적용</span>`}</div><div class="rv-text">${full(it, it.incoming)}</div></div>
+          <div class="rv-col${mine ? " pick" : ""}" data-pick="cur" role="button" tabindex="0" title="눌러서 지금 것 유지"><div class="rv-cap">지금 ${mine ? `<span class="tg mine">남김</span>` : ""}</div><div class="rv-text">${full(it, it.current)}</div></div>
+          <div class="rv-col${mine ? "" : " pick"}" data-pick="inc" role="button" tabindex="0" title="눌러서 새 버전 적용"><div class="rv-cap">새 버전 ${mine ? "" : `<span class="tg update">적용</span>`}</div><div class="rv-text">${full(it, it.incoming)}</div></div>
         </div>`;
       };
       const paintPane = () => {
