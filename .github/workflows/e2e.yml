@@ -40,10 +40,24 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Dusk Atelier 빌드 확인
         run: node tools/build.mjs --check
-      - name: 앱 개발 서버 켜기
+      - name: 앱 서버 켜기 (노드 서버가 있는 앱이면 데이터는 노드 서버, 화면은 개발 서버)
         working-directory: host
         run: |
-          nohup pnpm exec vite --port 5174 --strictPort > ../vite.log 2>&1 &
+          if [ -f server/node/server.cjs ]; then
+            mkdir -p save
+            PORT=6001 nohup node server/node/server.cjs > ../node.log 2>&1 &
+            for i in $(seq 1 60); do curl -sf http://localhost:6001/api/test_auth >/dev/null && break; sleep 2; done
+            cat > vite.e2e.config.ts <<'CFG'
+          import { mergeConfig } from 'vite'
+          import base from './vite.config'
+          export default async (env) => mergeConfig(typeof base === 'function' ? await base(env) : base, {
+            server: { proxy: Object.fromEntries(['/api', '/proxy', '/proxy2', '/hub-proxy', '/proxy-stream-jobs'].map((p) => [p, 'http://localhost:6001'])) },
+            plugins: [{ name: 'e2e-node-flag', transformIndexHtml: (html) => html.replace('<head>', '<head><script>globalThis.__NODE__ = true; globalThis.__PATCH_SYNC__ = false</script>') }],
+          })
+          CFG
+            CONFIG="--config vite.e2e.config.ts"
+          fi
+          nohup pnpm exec vite $CONFIG --port 5174 --strictPort > ../vite.log 2>&1 &
           for i in $(seq 1 120); do curl -sf http://localhost:5174 >/dev/null && break; sleep 2; done
       - name: 테스트
         run: |
@@ -54,6 +68,7 @@ jobs:
         if: always()
         run: |
           tail -80 vite.log > e2e-out/vite.log 2>/dev/null || true
+          tail -80 node.log > e2e-out/node.log 2>/dev/null || true
           (cd host && git log -1 --format='${{ inputs.host }} %H %cd %s') > e2e-out/host.txt
           cd e2e-out
           git init -q -b e2e-results
