@@ -600,7 +600,8 @@ async function showDetail(ctx) {
       btn("편집", { kind: "primary", size: "lg", icon: "edit", onClick: () => ctx.openEditor(m.id) }),
       btn("에셋", { size: "lg", icon: "image", onClick: () => ctx.openAssets(m.id) }),
       btn("내보내기", { size: "lg", icon: "download", onClick: () => exportRisum(ctx, m) })
-    )
+    ),
+    h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, btn("삭제", { kind: "danger", size: "lg", icon: "trash", onClick: () => removeModule(ctx, m) }))
   );
   (async () => {
     const [db, pm] = await Promise.all([ctx.api.getDatabase(["personas"]), loadPersonaMap(ctx.api)]);

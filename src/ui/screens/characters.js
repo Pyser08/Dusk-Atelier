@@ -8,12 +8,13 @@ import { fmtWhen, h, replace } from '../dom.js';
 import { icon } from '../icons.js';
 import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog } from '../kit.js';
 import { createMulti } from '../multiselect.js';
-import { gripDrag } from '../sortable.js';
+import { dragBadge, gripDrag } from '../sortable.js';
 import { openCharAssets, openCharEditor } from './chareditor.js';
 import { addProjects, findProject } from './dev.js';
 import { isDev, openPatchMaker } from './devtools.js';
 import { applyPatchFile, exportMyChanges } from './patchui.js';
 
+var COARSE = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
 export async function renderCharacters(ctx) {
   const st = ctx.state;
   if (!st.chars || st.charsDirty) {
@@ -65,6 +66,7 @@ export async function renderCharacters(ctx) {
         tabindex: "0",
         "aria-selected": st.charSel === c.chaId ? "true" : "false",
         dataset: filtering ? { id: c.chaId } : { id: c.chaId, dropRow: c.chaId, pick: c.chaId },
+        draggable: filtering || COARSE ? "false" : "true",
         onClick: (ev) => {
           if (!filtering && mu.click(ev, c.chaId, st.charSel)) return;
           st.charSel = c.chaId;
@@ -88,13 +90,22 @@ export async function renderCharacters(ctx) {
         { class: "txt" },
         h("div", { class: "ttl" }, h("span", { class: "name" }, c.name || "(이름 없음)"), c.type === "group" && badge("그룹", "mute"), c.streaming && badge("응답 생성 중", "warn")),
         h("span", { class: "meta" }, [c.creator && `제작자 ${c.creator}`, `로어 ${c.lore}`, `에셋 ${c.assets}`, `채팅 ${c.chats}`].filter(Boolean).join(" · "))
-      )
+      ),
+      iconBtn("more", `${c.name} 메뉴`, { onClick: (ev) => {
+        ev.stopPropagation();
+        charMenu(ctx, c, ev.currentTarget);
+      } })
     );
+    if (!filtering) {
+      charDragSource(ctx, row2, c.chaId);
+      charDropTarget(ctx, row2, { beforeId: c.chaId });
+    }
     if (grip) gripDrag({
       grip,
       row: row2,
       root: box,
       scroller: box,
+      mouse: false,
       count: () => mu.dragIds(c.chaId).length,
       skip: (t) => mu.dragIds(c.chaId).includes(t.getAttribute("data-drop-row")),
       onDrop: (d) => {
@@ -144,6 +155,7 @@ export async function renderCharacters(ctx) {
         ),
         iconBtn("more", `${f.name} 폴더 메뉴`, { onClick: (e) => charFolderMenu(ctx, f, e.currentTarget) })
       );
+      charDropTarget(ctx, head, { folderId: f.id });
       box.appendChild(head);
       if (open) {
         const body = h("div", { class: "rb-folder-body" });
@@ -158,7 +170,11 @@ export async function renderCharacters(ctx) {
         box.appendChild(body);
       }
     }
-    if (hasFolders) box.appendChild(h("div", { class: "rb-label", style: "padding:14px 12px 6px;border-radius:10px", dataset: { dropFolder: "" } }, "여기에 놓으면 폴더 밖으로"));
+    if (hasFolders) {
+      const outside = h("div", { class: "rb-label", style: "padding:14px 12px 6px;border-radius:10px", dataset: { dropFolder: "" } }, "여기에 놓으면 폴더 밖으로");
+      charDropTarget(ctx, outside, { folderId: null });
+      box.appendChild(outside);
+    }
   }
   if (!list.length) box.appendChild(h("div", { class: "rb-empty" }, st.chars.length ? "찾는 캐릭터가 없어요." : "캐릭터가 없어요."));
   const keep = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
@@ -336,7 +352,8 @@ function detail2(ctx, c) {
       "div",
       { style: "display:flex;gap:8px;flex-wrap:wrap" },
       btn("편집", { kind: "primary", size: "lg", icon: "edit", onClick: () => openCharEditor(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) }),
-      btn("에셋", { size: "lg", icon: "image", onClick: () => openCharAssets(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) })
+      btn("에셋", { size: "lg", icon: "image", onClick: () => openCharAssets(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) }),
+      btn("삭제", { kind: "danger", size: "lg", icon: "trash", onClick: () => removeCharacter(ctx, c) })
     ),
     h(
       "div",
@@ -368,4 +385,131 @@ function detail2(ctx, c) {
     replace(timeline, list.length ? list.map((b) => h("div", { class: "rb-card pad", style: "padding:10px 14px" }, h("div", { style: "display:flex;gap:8px" }, h("b", { style: "font-size:13px" }, b.note || "업데이트 전"), h("span", { class: "rb-muted" }, fmtWhen(b.t))), b.summary ? h("div", { class: "rb-muted" }, b.summary) : null)) : h("div", { class: "rb-muted", style: "padding:12px 14px;border-radius:12px;border:1px dashed var(--rb-line)" }, "아직 기록이 없어요."));
   })().catch(() => {
   });
+}
+
+// 행 아무 곳이나 잡고 끌기 (마우스). 터치는 손잡이(gripDrag)로.
+var charDragIds = null;
+function charDragSource(ctx, el, id) {
+  el.addEventListener("dragstart", (ev) => {
+    charDragIds = multiOf2(ctx).dragIds(id);
+    ev.dataTransfer.effectAllowed = "move";
+    ev.dataTransfer.setData("text/x-rbm-char", charDragIds.join("\n"));
+    if (charDragIds.length > 1) {
+      const g = el.cloneNode(true);
+      Object.assign(g.style, { position: "absolute", top: "-1000px", left: "0", width: `${el.offsetWidth}px`, background: "var(--rb-surf2)", borderRadius: "12px" });
+      g.appendChild(dragBadge(el.ownerDocument, charDragIds.length));
+      ctx.win.appendChild(g);
+      ev.dataTransfer.setDragImage(g, 24, 20);
+      setTimeout(() => g.remove(), 0);
+      ctx.main.querySelectorAll(".rb-row.picked").forEach((r) => {
+        r.style.opacity = "0.5";
+      });
+    }
+    el.style.opacity = "0.5";
+  });
+  el.addEventListener("dragend", () => {
+    charDragIds = null;
+    ctx.main.querySelectorAll(".rb-row").forEach((r) => {
+      r.style.opacity = "";
+    });
+    ctx.main.querySelectorAll("[data-drop]").forEach((x) => {
+      x.removeAttribute("data-drop");
+      x.style.boxShadow = "";
+    });
+  });
+}
+function charDropTarget(ctx, el, { beforeId, folderId }) {
+  const ok = (ev) => charDragIds && [...ev.dataTransfer?.types ?? []].includes("text/x-rbm-char") && !(beforeId && charDragIds.includes(beforeId));
+  el.addEventListener("dragover", (ev) => {
+    if (!ok(ev)) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const after = beforeId && ev.offsetY > el.clientHeight / 2;
+    const d = after ? "after" : "before";
+    if (el.dataset.drop === d) return;
+    el.dataset.drop = d;
+    el.style.boxShadow = beforeId ? after ? "inset 0 -2px 0 var(--rb-acc-text)" : "inset 0 2px 0 var(--rb-acc-text)" : "inset 0 0 0 2px var(--rb-sel-ring)";
+  });
+  el.addEventListener("dragleave", (ev) => {
+    if (el.contains(ev.relatedTarget)) return;
+    el.style.boxShadow = "";
+    el.removeAttribute("data-drop");
+  });
+  el.addEventListener("drop", (ev) => {
+    if (!ok(ev)) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const ids = charDragIds, after = el.dataset.drop === "after";
+    el.style.boxShadow = "";
+    el.removeAttribute("data-drop");
+    if (!ids?.length) return;
+    const d = beforeId ? { beforeId, after, folderId: void 0 } : { beforeId: null, after: false, folderId: folderId || null };
+    saveOrder(ctx, (o) => moveChar(o, ids, d), ids.length > 1 ? `봇 ${ids.length}개를 옮겼어요` : null);
+  });
+}
+async function fullChar(ctx, c) {
+  const cur = await ctx.api.getCharacterFromIndex(c.i);
+  if (!cur || cur.chaId !== c.chaId) throw new Error("캐릭터를 다시 찾지 못했어요. 목록을 새로 고쳐 주세요.");
+  return cur;
+}
+function charMenu(ctx, c, anchor) {
+  const err = (e) => ctx.toast(e?.message ?? String(e), { error: true });
+  const folders = (ctx.state.charOrder ?? []).filter((x) => x && typeof x === "object" && Array.isArray(x.data));
+  const cur = folderOf(ctx.state.charOrder, c.chaId);
+  openMenu(ctx.win, anchor, [
+    { label: "편집", icon: "edit", onClick: () => openCharEditor(ctx, c.i, c.chaId).catch(err) },
+    { label: "에셋 관리", icon: "image", onClick: () => openCharAssets(ctx, c.i, c.chaId).catch(err) },
+    "sep",
+    { label: "폴더로 옮기기", icon: "folder", onClick: () => openMenu(ctx.win, anchor, [
+      ...folders.map((f) => ({ label: (cur?.id === f.id ? "✓ " : "") + (f.name || "(이름 없는 폴더)"), icon: "folder", onClick: () => saveOrder(ctx, (o) => moveChar(o, [c.chaId], { folderId: f.id })) })),
+      folders.length ? "sep" : null,
+      cur ? { label: "폴더에서 빼기", icon: "x", onClick: () => saveOrder(ctx, (o) => moveChar(o, [c.chaId], { folderId: null })) } : null,
+      { label: "새 폴더…", icon: "folderPlus", onClick: async () => {
+        const name = await promptDialog(ctx.win, { title: "새 봇 폴더", label: "폴더 이름" });
+        if (name?.trim()) saveOrder(ctx, (o) => createFolder2(o, { id: "df_" + newId().slice(0, 10), name: name.trim(), ids: [c.chaId] }));
+      } }
+    ].filter(Boolean)) },
+    { label: "업데이트 가져오기", icon: "upload", onClick: () => ctx.legacy.open() },
+    isDev(ctx) ? { label: "패치 만들기 (개발자)", icon: "code", onClick: () => openPatchMaker(ctx, { kind: "character", key: `c:${c.chaId}`, i: c.i, chaId: c.chaId, name: c.name }) } : { label: "내 수정만 내보내기 (.rbupatch)", icon: "download", onClick: async () => {
+      try {
+        await exportMyChanges(ctx, "character", await fullChar(ctx, c));
+      } catch (e) {
+        err(e);
+      }
+    } },
+    { label: "패치 적용…", icon: "refresh", onClick: () => applyPatchFile(ctx, "character", () => fullChar(ctx, c), async (res) => {
+      if (isGenerating(await fullChar(ctx, c))) throw new Busy();
+      await ctx.api.setCharacterToIndex(c.i, res);
+      ctx.state.charsDirty = true;
+      renderCharacters(ctx);
+    }) },
+    { label: "기록 보기", icon: "refresh", onClick: () => {
+      ctx.state.histTarget = c.chaId;
+      ctx.go("history");
+    } },
+    "sep",
+    { label: "삭제", icon: "trash", danger: true, onClick: () => removeCharacter(ctx, c) }
+  ]);
+}
+// RisuAI와 같은 방식으로 휴지통에 넣는다 (trashTime). 휴지통에서 3일 안에 되살릴 수 있다.
+async function removeCharacter(ctx, c) {
+  try {
+    if (await ctx.api.getCurrentCharacterIndex() === c.i) {
+      ctx.toast("지금 열려 있는 봇은 지울 수 없어요. 다른 봇을 연 뒤 지워 주세요.", { error: true });
+      return;
+    }
+    const cur = await fullChar(ctx, c);
+    if (isGenerating(cur)) throw new Busy();
+    const ok = await confirmDialog(ctx.win, { title: `'${c.name}'을(를) 지울까요?`, body: `RisuAI 휴지통으로 옮겨요. 채팅 ${c.chats}개도 함께 옮겨지고, 휴지통에서 3일 안에 되살릴 수 있어요.`, ok: "삭제", danger: true });
+    if (!ok) return;
+    const again = await fullChar(ctx, c);
+    if (isGenerating(again)) throw new Busy();
+    await ctx.api.setCharacterToIndex(c.i, { ...again, trashTime: Date.now() });
+    if (ctx.state.charMulti?.has?.(c.chaId)) ctx.state.charMulti.set([...ctx.state.charMulti.sel].filter((x) => x !== c.chaId));
+    ctx.state.charsDirty = true;
+    await renderCharacters(ctx);
+    ctx.toast(`'${c.name}'을(를) 휴지통으로 옮겼어요`);
+  } catch (e) {
+    ctx.toast(e instanceof Busy ? "응답을 생성하는 중이라 지금은 지울 수 없어요." : `지우지 못했어요: ${e?.message ?? e}`, { error: true });
+  }
 }
