@@ -1,0 +1,64 @@
+name: 앱 호환 테스트
+
+# 앱(기본 PocketRisu)을 개발 서버로 띄우고 Dusk Atelier를 설치해 tests/e2e의 테스트를 돌린다.
+# 결과(로그·스크린샷)는 e2e-results 브랜치에 올린다.
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        description: '앱 저장소'
+        default: 'PocketRisu/PocketRisu'
+      test:
+        description: '테스트 파일'
+        default: 'tests/e2e/folders.mjs'
+
+permissions:
+  contents: write
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.host }}
+          path: host
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: host/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 앱 설치
+        working-directory: host
+        run: pnpm install --frozen-lockfile
+      - name: 테스트 도구 설치
+        run: |
+          npm install --no-save --no-audit --no-fund playwright esbuild
+          npx playwright install --with-deps chromium
+      - name: Dusk Atelier 빌드 확인
+        run: node tools/build.mjs --check
+      - name: 앱 개발 서버 켜기
+        working-directory: host
+        run: |
+          nohup pnpm exec vite --port 5174 --strictPort > ../vite.log 2>&1 &
+          for i in $(seq 1 120); do curl -sf http://localhost:5174 >/dev/null && break; sleep 2; done
+      - name: 테스트
+        run: |
+          mkdir -p e2e-out
+          set -o pipefail
+          RISU_URL=http://localhost:5174 OUT_DIR=e2e-out node ${{ inputs.test }} 2>&1 | tee e2e-out/test.log
+      - name: 결과 올리기
+        if: always()
+        run: |
+          tail -80 vite.log > e2e-out/vite.log 2>/dev/null || true
+          (cd host && git log -1 --format='${{ inputs.host }} %H %cd %s') > e2e-out/host.txt
+          cd e2e-out
+          git init -q -b e2e-results
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git add -A
+          git commit -q -m "E2E ${{ github.run_id }}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" HEAD:refs/heads/e2e-results
