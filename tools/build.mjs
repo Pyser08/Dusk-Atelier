@@ -16,6 +16,7 @@ const banner = [
   '//@display-name Dusk Atelier',
   '//@api 3.0',
   `//@version ${version}`,
+  '//@update-url https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js',
   '//@link https://github.com/Pyser08/Dusk-Atelier 저장소',
   '',
   `/* Dusk Atelier v${version} — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */`
