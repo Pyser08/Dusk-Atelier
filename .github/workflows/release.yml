@@ -1,0 +1,56 @@
+name: 릴리스
+
+# v로 시작하는 태그(v1.2.0 등)를 푸시하면:
+#   src/를 빌드해 저장소의 dusk_atelier.js와 같은지 확인하고,
+#   CHANGELOG.md의 해당 버전 항목을 설명으로 넣어 릴리스를 만들고 dusk_atelier.js를 첨부한다.
+# 수동 실행(fix-asset-name): 기존 릴리스의 dusk-atelier.js를 dusk_atelier.js로 바꿔 올린다.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '파일 이름을 바꿀 릴리스 태그'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: 버전 확인
+        run: |
+          v=$(node -p "require('./package.json').version")
+          test "v$v" = "$TAG" || { echo "package.json 버전 v$v 와 태그 $TAG 가 다릅니다"; exit 1; }
+      - name: 빌드 결과가 저장소 파일과 같은지 확인
+        run: node tools/build.mjs --check
+      - name: 릴리스 설명 만들기
+        run: |
+          awk -v h="## $TAG" 'index($0,h)==1{f=1;next} f&&/^## /{exit} f' CHANGELOG.md > notes.md
+          test -s notes.md || echo "Dusk Atelier $TAG" > notes.md
+      - name: 릴리스 만들기
+        run: |
+          gh release create "$TAG" dusk_atelier.js --title "Dusk Atelier $TAG" --notes-file notes.md --latest
+
+  fix-asset-name:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - run: |
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p dusk-atelier.js -O dusk_atelier.js
+          gh release upload "$TAG" dusk_atelier.js -R "$GITHUB_REPOSITORY" --clobber
+          gh release delete-asset "$TAG" dusk-atelier.js -R "$GITHUB_REPOSITORY" -y

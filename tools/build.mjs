@@ -1,4 +1,4 @@
-// Dusk Atelier 빌드: src/main.js → dusk-atelier.js (한 파일, IIFE)
+// Dusk Atelier 빌드: src/main.js → dusk_atelier.js (한 파일, IIFE)
 // 사용: node tools/build.mjs            (package.json의 version 사용)
 //       node tools/build.mjs --check    (빌드 결과를 저장소 파일과 비교만 함)
 import fs from 'node:fs';
@@ -9,7 +9,7 @@ import { build } from 'esbuild';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const version = pkg.version;
-const outFile = path.join(root, 'dusk-atelier.js');
+const outFile = path.join(root, 'dusk_atelier.js');
 
 const banner = [
   '//@name dusk_atelier',
@@ -41,4 +41,4 @@ if (process.argv.includes('--check')) {
   console.log('다름'); process.exit(1);
 }
 fs.writeFileSync(outFile, code);
-console.log(`dusk-atelier.js v${version} (${(code.length / 1024).toFixed(1)} KB)`);
+console.log(`dusk_atelier.js v${version} (${(code.length / 1024).toFixed(1)} KB)`);

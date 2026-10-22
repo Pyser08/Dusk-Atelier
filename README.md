@@ -6,8 +6,8 @@ RisuBard(RisuAI 포크)용 모듈·캐릭터 관리·업데이트 플러그인�
 - 다른 관리 플러그인과 저장 칸을 나눠 쓰지 않습니다. 함께 설치해도 서로의 설정·꺼진 모듈·순서를 건드리지 않습니다.
 
 ## 설치와 이전
-1. RisuAI 설정 → 플러그인에서 `dusk-atelier.js`를 추가합니다. API 3.0을 씁니다.
-2. 예전 이름(**Dusk Manager**)으로 설치했다면 그 플러그인은 지우고 `dusk-atelier.js`를 새로 추가하세요. 설정·폴더·백업 기록은 같은 저장소를 쓰므로 그대로 이어집니다.
+1. RisuAI 설정 → 플러그인에서 `dusk_atelier.js`를 추가합니다. API 3.0을 씁니다.
+2. 예전 이름(**Dusk Manager**)으로 설치했다면 그 플러그인은 지우고 `dusk_atelier.js`를 새로 추가하세요. 설정·폴더·백업 기록은 같은 저장소를 쓰므로 그대로 이어집니다.
 
 ## 열기
 - 왼쪽 사이드바(햄버거 메뉴)의 **Dusk Atelier**를 누릅니다.
@@ -172,8 +172,8 @@ RisuBard(RisuAI 포크)용 모듈·캐릭터 관리·업데이트 플러그인�
 ## 개발
 ```
 npm install                    # esbuild 설치
-node tools/build.mjs           # src/ → dusk-atelier.js (버전은 package.json)
-node tools/build.mjs --check   # 빌드 결과가 저장소의 dusk-atelier.js와 같은지 확인
+node tools/build.mjs           # src/ → dusk_atelier.js (버전은 package.json)
+node tools/build.mjs --check   # 빌드 결과가 저장소의 dusk_atelier.js와 같은지 확인
 ```
 
 | 폴더 | 내용 |
