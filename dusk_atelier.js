@@ -1,11 +1,11 @@
 //@name dusk_atelier
 //@display-name Dusk Atelier
 //@api 3.0
-//@version 1.1.0
+//@version 1.1.1
 //@update-url https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js
 //@link https://github.com/Pyser08/Dusk-Atelier 저장소
 
-/* Dusk Atelier v1.1.0 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
+/* Dusk Atelier v1.1.1 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
 (() => {
   var __defProp = Object.defineProperty;
   var __export = (target, all) => {
@@ -2168,17 +2168,17 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
         go(e.dataTransfer?.files);
       });
     }
-    function renderProgress(title, pct, detail32) {
+    function renderProgress(title, pct, detail3) {
       frame(`<div class="card"><div>${esc(title)}</div>
             <div class="bar"><i style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></i></div>
-            <div class="muted" id="detail">${esc(detail32 ?? "")}</div></div>
+            <div class="muted" id="detail">${esc(detail3 ?? "")}</div></div>
           <div class="row"><button id="close" class="danger">취소</button></div>`);
     }
-    function updateProgress(pct, detail32) {
+    function updateProgress(pct, detail3) {
       const bar = root?.querySelector(".bar>i");
       if (!bar) return;
       bar.style.width = `${Math.max(0, Math.min(100, pct)).toFixed(1)}%`;
-      if (!stopRequested) root.querySelector("#detail").textContent = detail32 ?? "";
+      if (!stopRequested) root.querySelector("#detail").textContent = detail3 ?? "";
     }
     function askPassword() {
       return new Promise((resolve) => {
@@ -2845,7 +2845,6 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
     trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
     undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
     refresh: '<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/>',
-    plug: '<path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v4a6 6 0 0 1-12 0Z"/><path d="M12 18v4"/>',
     code: '<path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/><path d="m13.5 4-3 16"/>',
     link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
     globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18Z"/>',
@@ -7550,7 +7549,7 @@ ${md()}
       memo.value = pm.note ?? "";
       ver.addEventListener("input", () => {
         pm.version = ver.value;
-        fname.textContent = fileName2();
+        fname.textContent = fileName();
       });
       who.addEventListener("input", () => {
         pm.author = who.value;
@@ -7559,8 +7558,8 @@ ${md()}
         pm.note = memo.value;
       });
       let withAssets = pm.withAssets ?? true, moveBase = pm.moveBase ?? true;
-      const fileName2 = () => `${safeFileName(cur.name)}${ver.value.trim() ? `_v${safeFileName(ver.value.trim())}` : ""}.rbupatch`;
-      const fname = h("code", null, fileName2());
+      const fileName = () => `${safeFileName(cur.name)}${ver.value.trim() ? `_v${safeFileName(ver.value.trim())}` : ""}.rbupatch`;
+      const fname = h("code", null, fileName());
       const row2 = (label, desc, on, set) => h(
         "div",
         { style: "display:flex;gap:12px;align-items:center" },
@@ -7579,7 +7578,7 @@ ${md()}
             return;
           }
           const text = JSON.stringify(patch);
-          download(fileName2(), text, "application/json");
+          download(fileName(), text, "application/json");
           if (moveBase) {
             await store.setBaseline(t.key, baseViewOf(t.kind, fresh));
             pm.baseFrom = null;
@@ -9521,9 +9520,9 @@ ${patch.note}` : "",
         "div",
         { style: "display:flex;gap:8px;flex-wrap:wrap" },
         btn("편집", { kind: "primary", size: "lg", icon: "edit", onClick: () => openCharEditor(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) }),
-        btn("에셋", { size: "lg", icon: "image", onClick: () => openCharAssets(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) })
+        btn("에셋", { size: "lg", icon: "image", onClick: () => openCharAssets(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) }),
+        btn("삭제", { kind: "danger", size: "lg", icon: "trash", onClick: () => removeCharacter(ctx, c) })
       ),
-      h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, btn("삭제", { kind: "danger", size: "lg", icon: "trash", onClick: () => removeCharacter(ctx, c) })),
       h(
         "div",
         { style: "display:flex;gap:8px;flex-wrap:wrap" },
@@ -9816,304 +9815,10 @@ ${patch.note}` : "",
     );
   }
 
-  // src/ui/screens/plugins.js
-  var SELF = "dusk_atelier";
-  function compareVersions(a, b) {
-    const pa = String(a ?? "0").split(".").map((x) => parseInt(x, 10) || 0);
-    const pb = String(b ?? "0").split(".").map((x) => parseInt(x, 10) || 0);
-    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-      if ((pa[i] ?? 0) > (pb[i] ?? 0)) return 1;
-      if ((pa[i] ?? 0) < (pb[i] ?? 0)) return -1;
-    }
-    return 0;
-  }
-  function readHeader(code) {
-    const meta = { name: "", displayName: "", api: "", version: "", updateURL: "" };
-    for (const line of String(code ?? "").split("\n").slice(0, 80)) {
-      const t = line.trim();
-      if (t.startsWith("//@name")) meta.name ||= t.slice(7).trim();
-      else if (t.startsWith("//@display-name")) meta.displayName ||= t.slice(15).trim();
-      else if (t.startsWith("//@api")) meta.api ||= t.slice(6).trim();
-      else if (t.startsWith("//@version")) meta.version ||= t.slice(10).trim();
-      else if (t.startsWith("//@update-url")) meta.updateURL ||= t.split(/\s+/)[1] ?? "";
-    }
-    return meta;
-  }
-  async function fetchText(ctx, url, head) {
-    const opts = head ? { headers: { Range: "bytes=0-512" } } : {};
-    let res = null;
-    try {
-      res = await fetch(url, opts);
-    } catch {
-      res = null;
-    }
-    if ((!res || !res.ok) && typeof ctx.api.nativeFetch === "function") {
-      try {
-        res = await ctx.api.nativeFetch(url, opts);
-      } catch {
-        res = null;
-      }
-    }
-    if (!res || !(res.status >= 200 && res.status < 300)) throw new Error(`주소를 열지 못했어요${res ? ` (${res.status})` : ""}`);
-    return await res.text();
-  }
-  async function checkOne(ctx, p) {
-    const st = ctx.state;
-    st.plugUpd ??= {};
-    if (!p.updateURL) return null;
-    try {
-      const head = await fetchText(ctx, p.updateURL, true);
-      const v = /\/\/@version\s+([^\s]+)/.exec(head)?.[1] ?? "";
-      st.plugUpd[p.name] = { version: v, newer: !!v && compareVersions(v, p.versionOfPlugin || "0.0.0") > 0, at: Date.now() };
-    } catch (e) {
-      st.plugUpd[p.name] = { error: e?.message ?? String(e), at: Date.now() };
-    }
-    return st.plugUpd[p.name];
-  }
-  function fileName(p) {
-    return `${String(p.name || "plugin").replace(/[\\/:*?"<>|\s]+/g, "_")}.js`;
-  }
-  var GUIDE = "RisuAI 설정 → 플러그인에서 이 파일을 추가하세요. 이름이 같으면 리스가 교체할지 물어봐요. 교체하면 설정값(인자)이 처음 값으로 돌아가니, 플러그인 탭의 설정값을 보고 다시 넣어 주세요.";
-  function sizeLabel(n) {
-    return n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(n < 10240 ? 1 : 0)} KB` : `${(n / 1048576).toFixed(1)} MB`;
-  }
-  async function renderPlugins(ctx) {
-    const st = ctx.state;
-    replace(ctx.main, h("div", { class: "rb-empty" }, "플러그인을 불러오는 중…"));
-    const db = await ctx.api.getDatabase(["plugins"]);
-    st.plugins = (Array.isArray(db?.plugins) ? db.plugins : []).filter(Boolean);
-    st.plugDrafts ??= {};
-    st.plugUpd ??= {};
-    ctx.setNavCount("plugins", st.plugins.length);
-    draw2(ctx);
-    const due = st.plugins.filter((p) => p.updateURL && !(Date.now() - (st.plugUpd[p.name]?.at ?? 0) < 6 * 36e5));
-    if (due.length) {
-      await Promise.all(due.map((p) => checkOne(ctx, p)));
-      if (st.tab === "plugins") draw2(ctx);
-    }
-  }
-  function draw2(ctx) {
-    const st = ctx.state, list = st.plugins;
-    if (!st.plugSel || !list.some((p) => p.name === st.plugSel)) st.plugSel = list[0]?.name ?? null;
-    const box = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "플러그인 목록", style: "padding-top:12px" });
-    for (const p of list) {
-      const u = st.plugUpd[p.name];
-      const row2 = h(
-        "div",
-        {
-          class: ["rb-row", p.enabled === false && "off"],
-          role: "option",
-          tabindex: "0",
-          "aria-selected": st.plugSel === p.name ? "true" : "false",
-          dataset: { id: p.name },
-          onClick: () => {
-            st.plugSel = p.name;
-            box.querySelectorAll(".rb-row").forEach((r) => r.setAttribute("aria-selected", "false"));
-            row2.setAttribute("aria-selected", "true");
-            detail3(ctx, p);
-            if (ctx.isMobile()) ctx.openSheet();
-          },
-          onKeydown: (ev) => {
-            if (ev.target === row2 && (ev.key === "Enter" || ev.key === " ")) {
-              ev.preventDefault();
-              row2.click();
-            }
-          }
-        },
-        h("span", { style: "width:40px;height:40px;border-radius:12px;background:var(--rb-surf2);display:flex;align-items:center;justify-content:center;color:var(--rb-sub);flex-shrink:0" }, icon("plug", 18)),
-        h(
-          "div",
-          { class: "txt" },
-          h(
-            "div",
-            { class: "ttl" },
-            h("span", { class: "name" }, p.displayName || p.name),
-            p.name === SELF && badge("이 플러그인", "acc"),
-            p.enabled === false && badge("꺼짐", "mute"),
-            u?.newer && badge(`새 버전 ${u.version}`, "ok"),
-            st.plugDrafts[p.name] != null && badge("수정 중", "warn")
-          ),
-          h("span", { class: "meta" }, [p.versionOfPlugin ? `v${p.versionOfPlugin}` : "버전 없음", `API ${p.version ?? "?"}`, sizeLabel(p.script?.length ?? 0), p.updateURL ? "업데이트 주소 있음" : null].filter(Boolean).join(" · "))
-        )
-      );
-      box.appendChild(row2);
-    }
-    if (!list.length) box.appendChild(h("div", { class: "rb-empty" }, "설치된 플러그인이 없어요."));
-    const withUrl = list.filter((p) => p.updateURL).length;
-    const checkBtn = btn("업데이트 확인", { size: "sm", icon: "refresh", disabled: !withUrl, onClick: async () => {
-      checkBtn.disabled = true;
-      await Promise.all(list.filter((p) => p.updateURL).map((p) => checkOne(ctx, p)));
-      const n = list.filter((p) => st.plugUpd[p.name]?.newer).length;
-      ctx.toast(n ? `새 버전이 있는 플러그인 ${n}개` : "모두 최신이에요");
-      draw2(ctx);
-    } });
-    replace(
-      ctx.main,
-      h("div", { class: "rb-chips" }, h("span", { class: "rb-muted" }, `플러그인 ${list.length}개 · 업데이트 주소 있음 ${withUrl}개`), h("div", { class: "rb-spacer" }), checkBtn),
-      box
-    );
-    const sel = list.find((p) => p.name === st.plugSel);
-    if (sel) detail3(ctx, sel);
-    else ctx.showDetail(h("div", { class: "rb-empty" }, "플러그인을 고르면 여기에 자세히 보여요."));
-  }
-  function detail3(ctx, p) {
-    const st = ctx.state, u = st.plugUpd[p.name];
-    const args = Object.entries(p.realArg ?? {});
-    const updBox = h("div", { class: "rb-card" });
-    const paintUpd = () => {
-      const cur = st.plugUpd[p.name];
-      replace(
-        updBox,
-        h("div", { class: "rb-kv" }, h("span", null, "업데이트 주소"), h("small", { class: "rb-muted", style: "word-break:break-all;text-align:right;max-width:70%" }, p.updateURL || "없음")),
-        p.updateURL ? h(
-          "div",
-          { class: "rb-kv" },
-          h("span", null, !cur ? "아직 확인하지 않았어요" : cur.error ? `확인 실패: ${cur.error}` : cur.newer ? `새 버전 ${cur.version}이 있어요` : `최신이에요${cur.version ? ` (${cur.version})` : ""}`),
-          cur?.newer && !isDev(ctx) ? null : cur?.newer ? btn("새 버전 파일 받기", { size: "sm", icon: "download", onClick: async () => {
-            try {
-              const code = await fetchText(ctx, p.updateURL, false);
-              const m = readHeader(code);
-              if (m.name && m.name !== p.name) throw new Error(`받은 파일의 이름(${m.name})이 지금 플러그인(${p.name})과 달라요`);
-              download(fileName(p), code, "text/javascript");
-              ctx.toast("새 버전 파일을 받았어요. 설정 → 플러그인에서 추가하면 교체돼요.", { seconds: 8 });
-            } catch (e) {
-              ctx.toast(`받지 못했어요: ${e?.message ?? e}`, { error: true });
-            }
-          } }) : btn("확인", { size: "sm", icon: "refresh", onClick: async () => {
-            await checkOne(ctx, p);
-            paintUpd();
-            draw2(ctx);
-          } })
-        ) : null,
-        cur?.newer ? h("div", { class: "rb-kv" }, h("span", { class: "rb-muted", style: "font-size:12.5px" }, "RisuAI 설정 → 플러그인에서 이 플러그인 옆 초록색 + 버튼을 누르면 업데이트돼요. 업데이트하면 설정값이 처음 값으로 돌아가니, 아래 설정값을 먼저 복사해 두세요.")) : null
-      );
-    };
-    paintUpd();
-    ctx.showDetail(
-      h(
-        "div",
-        { style: "display:flex;flex-direction:column;gap:6px" },
-        h("span", { style: "font-size:12px;color:var(--rb-acc-text)" }, [p.name, p.versionOfPlugin && `v${p.versionOfPlugin}`, `API ${p.version ?? "?"}`].filter(Boolean).join(" · ")),
-        h("h2", { class: "rb-h2" }, p.displayName || p.name),
-        p.enabled === false ? note("info", "꺼진 플러그인이에요. 켜고 끄는 것은 RisuAI 설정 → 플러그인에서 해요.") : null,
-        st.plugDrafts[p.name] != null ? note("warn", "편집하던 내용이 있어요. 파일로 저장해서 설정에서 추가해야 반영돼요.") : null
-      ),
-      h("div", { class: "rb-field" }, h("span", { class: "rb-label" }, "업데이트"), updBox),
-      h(
-        "div",
-        { class: "rb-field" },
-        h(
-          "div",
-          { style: "display:flex;align-items:center" },
-          h("span", { class: "rb-label", style: "flex:1" }, `설정값 (인자 ${args.length}개)`),
-          args.length ? h("a", { href: "#", style: "font-size:12px;color:var(--rb-acc-text)", onClick: async (ev) => {
-            ev.preventDefault();
-            ctx.toast(await copyText(args.map(([k, v]) => `${k} = ${v}`).join("\n")) ? "설정값을 복사했어요" : "복사하지 못했어요");
-          } }, "복사") : null
-        ),
-        h("div", { class: "rb-card", style: "max-height:220px;overflow:auto" }, args.length ? args.map(([k, v]) => h("div", { class: "rb-kv" }, h("span", null, k), h("small", { class: "rb-muted", style: "word-break:break-all;text-align:right;max-width:60%" }, String(v) === "" ? "(비어 있음)" : String(v)))) : h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "설정값이 없어요")))
-      ),
-      p.updateURL ? null : note("info", "업데이트 주소가 없는 플러그인이라 새 버전을 확인할 수 없어요. 새 버전은 만든 사람이 알려 주는 곳에서 받아 설정 → 플러그인에 추가하세요."),
-      h("div", { style: "flex:1" }),
-      !isDev(ctx) ? null : h(
-        "div",
-        { style: "display:flex;gap:8px;flex-wrap:wrap" },
-        btn("코드 편집", { kind: "primary", size: "lg", icon: "edit", onClick: () => openCodeEditor(ctx, p) }),
-        btn("파일로 받기", { size: "lg", icon: "download", onClick: () => {
-          download(fileName(p), p.script ?? "", "text/javascript");
-          ctx.toast("지금 설치된 코드를 받았어요");
-        } })
-      )
-    );
-  }
-  function openCodeEditor(ctx, p) {
-    const st = ctx.state;
-    const original = p.script ?? "";
-    const ta = h("textarea", { class: "rb-textarea", spellcheck: "false", "aria-label": `${p.name} 코드`, style: "flex:1;min-height:0;height:100%;resize:none;border-radius:0;border:0;white-space:pre;overflow:auto" });
-    ta.value = st.plugDrafts[p.name] ?? original;
-    const titleB = h("b", null, p.displayName || p.name);
-    const warnEl = h("div", { style: "padding:0 16px" });
-    const panel = h("div", { class: "rb-full", role: "dialog", "aria-label": `${p.name} 코드 편집` });
-    const dirty = () => ta.value !== original;
-    const check = () => {
-      const m = readHeader(ta.value);
-      const errs = [];
-      if (m.name !== p.name) errs.push(m.name ? `//@name이 '${m.name}'(으)로 바뀌어서 교체가 아니라 새 플러그인으로 들어가요.` : "//@name 줄이 없어요. 리스가 파일을 받지 않아요.");
-      if (m.api !== "3.0") errs.push("//@api 3.0 줄이 없어요. 원본 RisuAI는 3.0만 받아요.");
-      if (m.updateURL && !m.version) errs.push("업데이트 주소가 있으면 //@version도 있어야 해요.");
-      if (m.version && new TextEncoder().encode(ta.value.slice(0, ta.value.indexOf("//@version"))).length > 480) errs.push("//@version은 파일 앞 512바이트 안에 있어야 해요.");
-      replace(warnEl, errs.length ? errs.map((e) => note("warn", e)) : null);
-      titleB.textContent = (p.displayName || p.name) + (dirty() ? " •" : "");
-      return errs;
-    };
-    let t = null;
-    ta.addEventListener("input", () => {
-      st.plugDrafts[p.name] = ta.value;
-      clearTimeout(t);
-      t = setTimeout(check, 200);
-    });
-    ta.addEventListener("keydown", (ev) => {
-      if (ev.key === "Tab" && !ev.shiftKey) {
-        ev.preventDefault();
-        const s = ta.selectionStart, e = ta.selectionEnd;
-        ta.setRangeText("	", s, e, "end");
-        ta.dispatchEvent(new Event("input"));
-      }
-    });
-    const save = () => {
-      const errs = check();
-      const go = () => {
-        download(fileName(p), ta.value, "text/javascript");
-        ctx.toast(GUIDE, { seconds: 12 });
-      };
-      if (errs.length) confirmDialog(ctx.win, { title: "그래도 저장할까요?", body: errs.join("\n"), ok: "저장" }).then((ok) => ok && go());
-      else go();
-    };
-    const close = async () => {
-      if (dirty() && !await confirmDialog(ctx.win, { title: "편집기를 닫을까요?", body: "고친 내용은 이 창을 다시 열 때까지 남아 있어요. 반영하려면 파일로 저장해서 설정에서 추가하세요.", ok: "닫기" })) return;
-      if (!dirty()) delete st.plugDrafts[p.name];
-      panel.remove();
-      draw2(ctx);
-    };
-    panel.addEventListener("keydown", (ev) => {
-      if (ev.key === "Escape" && !ctx.win.querySelector(".rb-modal, .rb-menu")) {
-        ev.stopPropagation();
-        close();
-      }
-      if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "s") {
-        ev.preventDefault();
-        save();
-      }
-    });
-    panel.append(
-      h(
-        "div",
-        { class: "rb-full-head" },
-        iconBtn("back", "닫기", { onClick: () => close() }),
-        h("div", { class: "ttl" }, h("small", null, "플러그인 코드"), titleB),
-        btn("처음 코드로", { size: "sm", kind: "ghost", onClick: async () => {
-          if (!dirty() || await confirmDialog(ctx.win, { title: "고친 내용을 버릴까요?", body: "설치된 코드로 되돌려요.", ok: "되돌리기", danger: true })) {
-            ta.value = original;
-            delete st.plugDrafts[p.name];
-            check();
-          }
-        } }),
-        btn("복사", { size: "sm", onClick: async () => ctx.toast(await copyText(ta.value) ? "코드를 복사했어요" : "복사하지 못했어요") }),
-        btn("파일로 저장", { kind: "primary", icon: "download", onClick: save })
-      ),
-      warnEl,
-      h("div", { style: "flex:1;min-height:0;display:flex;padding:0" }, ta)
-    );
-    ctx.win.appendChild(panel);
-    check();
-    ta.focus();
-  }
-
   // src/ui/app.js
   var TABS = [
     { id: "modules", label: "모듈", icon: "module" },
     { id: "characters", label: "캐릭터", icon: "character" },
-    { id: "plugins", label: "플러그인", icon: "plug" },
     { id: "presets", label: "프리셋", icon: "preset" },
     { id: "history", label: "기록", icon: "history" },
     { id: "tools", label: "도구", icon: "tools" },
@@ -10179,9 +9884,9 @@ ${patch.note}` : "",
     const navFoot = h("div", { style: "margin-top:auto;display:flex;flex-direction:column" });
     nav.appendChild(navFoot);
     const main = h("section", { class: "rb-main", "aria-live": "polite" });
-    const detail32 = h("aside", { class: "rb-detail rb-scroll", "aria-label": "상세" });
+    const detail3 = h("aside", { class: "rb-detail rb-scroll", "aria-label": "상세" });
     const sheetBack = h("div", { class: "rb-sheet-back", onClick: () => ctx.closeSheet() });
-    const body = h("div", { class: "rb-body" }, nav, main, sheetBack, detail32);
+    const body = h("div", { class: "rb-body" }, nav, main, sheetBack, detail3);
     win.append(head, h("label", { class: "rb-search rb-mobile-search" }, icon("search", 16), mobileSearchInput), body, tabbar);
     let dragDepth = 0, dropEl = null;
     const hasFiles = (e) => [...e.dataTransfer?.types ?? []].includes("Files");
@@ -10216,7 +9921,7 @@ ${patch.note}` : "",
     doc.addEventListener("keydown", (e) => {
       if (root.hidden) return;
       if (e.key === "Escape" && !win.querySelector(".rb-modal, .rb-menu, .rb-full, .rb-lightbox")) {
-        if (detail32.classList.contains("open")) ctx.closeSheet();
+        if (detail3.classList.contains("open")) ctx.closeSheet();
         else close();
       }
       if (e.key === "/" && doc.activeElement?.tagName !== "INPUT" && doc.activeElement?.tagName !== "TEXTAREA") {
@@ -10271,9 +9976,9 @@ ${patch.note}` : "",
       const showSearch = ["modules", "characters", "history"].includes(state.tab);
       searchInput.placeholder = { modules: "모듈 이름, 로어북 키워드 검색", characters: "캐릭터 이름, 제작자 검색", history: "기록에서 이름 찾기" }[state.tab] ?? "검색";
       win.classList.toggle("rb-nosearch", !showSearch);
-      replace(detail32);
-      detail32.hidden = true;
-      const screen = { modules: renderModules, characters: renderCharacters, presets: renderPresets, plugins: renderPlugins, history: renderHistory, tools: state.sub === "settings" ? renderSettings : renderTools, dev: renderDev }[state.tab] ?? renderPlaceholder;
+      replace(detail3);
+      detail3.hidden = true;
+      const screen = { modules: renderModules, characters: renderCharacters, presets: renderPresets, history: renderHistory, tools: state.sub === "settings" ? renderSettings : renderTools, dev: renderDev }[state.tab] ?? renderPlaceholder;
       Promise.resolve(screen(ctx)).catch((err) => {
         replace(main, h("div", { class: "rb-section" }, h("div", { class: "rb-note err", role: "alert" }, icon("alert", 18), h("span", null, `화면을 열지 못했어요: ${err?.message ?? err}`))));
       });
@@ -10310,7 +10015,7 @@ ${patch.note}` : "",
       root,
       win,
       main,
-      detail: detail32,
+      detail: detail3,
       version,
       legacy,
       onPersonaChanged,
@@ -10327,17 +10032,17 @@ ${patch.note}` : "",
         if (s) s.textContent = n === void 0 ? "" : String(n);
       },
       openSheet() {
-        detail32.hidden = false;
-        detail32.classList.add("open");
+        detail3.hidden = false;
+        detail3.classList.add("open");
         sheetBack.classList.add("open");
       },
       closeSheet() {
-        detail32.classList.remove("open");
+        detail3.classList.remove("open");
         sheetBack.classList.remove("open");
       },
       showDetail(...children) {
-        replace(detail32, h("div", { class: "rb-sheet-head" }, iconBtn("x", "상세 닫기", { onClick: () => ctx.closeSheet() })), ...children);
-        detail32.hidden = false;
+        replace(detail3, h("div", { class: "rb-sheet-head" }, iconBtn("x", "상세 닫기", { onClick: () => ctx.closeSheet() })), ...children);
+        detail3.hidden = false;
       },
       toast: (text, opts) => toast(win, text, opts),
       isMobile: () => (win.clientWidth || 1e3) <= 760
@@ -10347,7 +10052,7 @@ ${patch.note}` : "",
   }
 
   // src/main.js
-  var VERSION = true ? "1.1.0" : "dev";
+  var VERSION = true ? "1.1.1" : "dev";
   var TITLE = "Dusk Atelier";
   async function start() {
     const raw = globalThis.risuai ?? globalThis.Risuai;

@@ -352,9 +352,9 @@ function detail2(ctx, c) {
       "div",
       { style: "display:flex;gap:8px;flex-wrap:wrap" },
       btn("편집", { kind: "primary", size: "lg", icon: "edit", onClick: () => openCharEditor(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) }),
-      btn("에셋", { size: "lg", icon: "image", onClick: () => openCharAssets(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) })
+      btn("에셋", { size: "lg", icon: "image", onClick: () => openCharAssets(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) }),
+      btn("삭제", { kind: "danger", size: "lg", icon: "trash", onClick: () => removeCharacter(ctx, c) })
     ),
-    h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, btn("삭제", { kind: "danger", size: "lg", icon: "trash", onClick: () => removeCharacter(ctx, c) })),
     h(
       "div",
       { style: "display:flex;gap:8px;flex-wrap:wrap" },
