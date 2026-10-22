@@ -7,6 +7,7 @@ import { uploadAssets } from '../engine/upload.js';
 import { MOD_SPEC, applyView, charIncomingView, charSpec, modIncomingView, pickView } from '../engine/merge3.js';
 import { KIND_KO, applyPlan, changeOf, charFields, fieldsToMod, fingerprintCard, groupOf, itemLabel, keepSet, makePlan, modFields, modFingerprint, remapGreetings, summarizeCharacterUpdate, textOf, wordDiff, writeCharFields } from '../engine/tideplan.js';
 import { createStore } from '../engine/store.js';
+import { iconMarkup } from './icons.js';
 import { Busy, backupSnapshot, isGenerating, restoreFromBackup } from '../engine/safety.js';
 import { commit, entriesOf, readDb } from '../data/modules.js';
 
@@ -67,21 +68,91 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
     #rbu-overlay select{font:inherit;background:var(--rb-surf,#1c1f33);color:var(--rb-text,#e9eaf6);border:1px solid var(--rb-line,#2a2d47);border-radius:12px;height:42px;padding:0 10px;width:100%;margin-top:8px}
     #rbu-overlay details summary{cursor:pointer;color:var(--rb-sub,#a4a7c9)}
     #rbu-overlay details[open] summary{margin-bottom:6px}
-    #rbu-overlay .rv-tools{position:sticky;top:-22px;z-index:2;background:var(--rb-surf,#1c1f33);padding:8px 0;display:flex;flex-direction:column;gap:8px}
-    #rbu-overlay .rv-tools input{margin-top:0;height:40px}
-    #rbu-overlay .rv-chips,#rbu-overlay .rv-bulk{display:flex;gap:6px;flex-wrap:wrap}
-    #rbu-overlay .rv-chip{min-height:32px;padding:4px 12px;border-radius:999px;font-size:12.5px}
+    #rbu-overlay .win{transition:max-width .28s cubic-bezier(.2,.8,.2,1)}
+    #rbu-overlay .win.wide{max-width:min(1180px,96vw);animation:rbu-wide .28s cubic-bezier(.2,.8,.2,1)}
+    @keyframes rbu-wide{from{max-width:620px}to{max-width:min(1180px,96vw)}}
+    #rbu-overlay .rv-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin:12px 0 4px}
+    #rbu-overlay .st{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:var(--rb-win,#151726);border:1px solid var(--rb-line2,#22253b);--c:var(--rb-acc-text,#8ea2ff)}
+    #rbu-overlay .st .si{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent);margin-bottom:4px}
+    #rbu-overlay .st b{font-size:20px;font-weight:700;line-height:1.1}
+    #rbu-overlay .st>span:last-child{font-size:12px;color:var(--rb-sub,#a4a7c9)}
+    #rbu-overlay .st.zero{opacity:.45}
+    #rbu-overlay .st.add{--c:var(--rb-ok,#5fd3b5)}#rbu-overlay .st.del{--c:var(--rb-danger,#f27a93)}#rbu-overlay .st.mine{--c:var(--rb-acc2-text,#c4b1ff)}#rbu-overlay .st.cf{--c:var(--rb-warn,#f5c26b)}
+    #rbu-overlay .st.cf:not(.zero){border-color:color-mix(in srgb,var(--rb-warn,#f5c26b) 55%,transparent);background:color-mix(in srgb,var(--rb-warn,#f5c26b) 8%,var(--rb-win,#151726))}
+    #rbu-overlay .rv-rows{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+    #rbu-overlay .rr{display:flex;align-items:center;gap:10px;padding:6px 4px;border-bottom:1px dashed var(--rb-line2,#22253b);font-size:13px}
+    #rbu-overlay .rr:last-child{border-bottom:0}
+    #rbu-overlay .ri{width:26px;height:26px;flex-shrink:0;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--rb-win,#151726);color:var(--rb-sub,#a4a7c9)}
+    #rbu-overlay .ri.big{width:36px;height:36px;border-radius:11px;color:var(--rb-acc-text,#8ea2ff);background:var(--rb-acc-soft,rgba(79,99,224,.16))}
+    #rbu-overlay .rl{width:64px;flex-shrink:0;color:var(--rb-sub,#a4a7c9)}
+    #rbu-overlay .rv{display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-width:0}
+    #rbu-overlay i.pl,#rbu-overlay i.nm{font-style:normal;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:4px}
+    #rbu-overlay i.nm{font-weight:500;background:var(--rb-win,#151726);border:1px solid var(--rb-line2,#22253b)}
+    #rbu-overlay i.pl.add{background:var(--rb-ok-soft,rgba(95,211,181,.13));color:var(--rb-ok,#5fd3b5)}
+    #rbu-overlay i.pl.del{background:var(--rb-danger-soft,rgba(242,122,147,.13));color:var(--rb-danger,#f27a93)}
+    #rbu-overlay i.pl.chg{background:var(--rb-acc-soft,rgba(79,99,224,.16));color:var(--rb-acc-text,#8ea2ff)}
+    #rbu-overlay i.pl.ok{background:var(--rb-ok-soft,rgba(95,211,181,.13));color:var(--rb-ok,#5fd3b5)}
+    #rbu-overlay .rv-open{width:100%;display:flex;align-items:center;gap:14px;text-align:left;margin-top:12px;padding:12px 14px;min-height:60px;border-radius:14px;border:1px solid var(--rb-sel-ring,rgba(142,162,255,.45));background:linear-gradient(135deg,color-mix(in srgb,var(--rb-acc-a,#4f63e0) 18%,transparent),color-mix(in srgb,var(--rb-acc-b,#7c4fe0) 12%,transparent));transition:transform .15s,filter .15s}
+    #rbu-overlay .rv-open:hover{filter:brightness(1.12);background:linear-gradient(135deg,color-mix(in srgb,var(--rb-acc-a,#4f63e0) 26%,transparent),color-mix(in srgb,var(--rb-acc-b,#7c4fe0) 18%,transparent))}
+    #rbu-overlay .rv-open:active{transform:scale(.99)}
+    #rbu-overlay .rv-open .oi{width:38px;height:38px;flex-shrink:0;border-radius:11px;display:flex;align-items:center;justify-content:center;background:var(--rb-acc-grad,linear-gradient(135deg,#4f63e0,#7c4fe0));color:var(--rb-on-acc,#fff)}
+    #rbu-overlay .rv-open .ot{flex:1;display:flex;flex-direction:column;gap:2px}
+    #rbu-overlay .rv-open .ot span{font-size:12.5px;color:var(--rb-sub,#a4a7c9)}
+    #rbu-overlay .rv-open .oc{color:var(--rb-acc-text,#8ea2ff);display:flex}
+    #rbu-overlay .rv-split{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:12px;margin-top:12px;height:min(62vh,640px);animation:rbu-in .2s ease-out}
+    #rbu-overlay .rv-left{display:flex;flex-direction:column;min-height:0;border:1px solid var(--rb-line2,#22253b);border-radius:14px;background:var(--rb-win,#151726);overflow:hidden}
+    #rbu-overlay .rv-tools{padding:10px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--rb-line2,#22253b)}
+    #rbu-overlay .rv-search{display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;border-radius:10px;border:1px solid var(--rb-line,#2a2d47);background:var(--rb-surf,#1c1f33);color:var(--rb-sub,#a4a7c9)}
+    #rbu-overlay .rv-search input{all:unset;flex:1;min-width:0;color:var(--rb-text,#e9eaf6);font-size:13px}
+    #rbu-overlay .rv-chips,#rbu-overlay .rv-bulk{display:flex;gap:5px;flex-wrap:wrap}
+    #rbu-overlay .rv-chip{min-height:28px;padding:2px 10px;border-radius:999px;font-size:12px}
+    #rbu-overlay .rv-chip b{font-weight:700;margin-left:2px}
     #rbu-overlay .rv-chip.on{background:var(--rb-acc-soft,rgba(79,99,224,.16));border-color:var(--rb-sel-ring,rgba(142,162,255,.45));color:var(--rb-acc-text,#8ea2ff)}
-    #rbu-overlay .rv-bulk button{min-height:34px;padding:4px 12px;font-size:12.5px}
-    #rbu-overlay .rv-row .row{margin-top:6px}
-    #rbu-overlay .rv-row .row>button,#rbu-overlay .rv-diff{flex:0 0 auto;min-height:30px;padding:2px 10px;font-size:12px}
-    #rbu-overlay .rv-row label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
-    #rbu-overlay .opt.rv-row:has(input){border-color:var(--rb-line,#2a2d47);background:var(--rb-win,#151726)}
-    #rbu-overlay .rv-conflict{box-shadow:inset 3px 0 0 var(--rb-warn,#f5c26b)}
-    #rbu-overlay .kind.rv-c{background:var(--rb-warn-soft,rgba(245,194,107,.13));color:var(--rb-warn,#f5c26b)}
-    #rbu-overlay .rv-diffbox{margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--rb-win,#151726);font-size:12.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;max-height:320px;overflow:auto}
+    #rbu-overlay .rv-chip.conflict.on{background:var(--rb-warn-soft,rgba(245,194,107,.13));border-color:var(--rb-warn,#f5c26b);color:var(--rb-warn,#f5c26b)}
+    #rbu-overlay .rv-bulk button{min-height:28px;padding:2px 10px;font-size:12px;display:inline-flex;gap:5px;align-items:center}
+    #rbu-overlay #rv-list{flex:1;overflow-y:auto;padding:6px;scrollbar-width:thin}
+    #rbu-overlay .rv-row{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;cursor:pointer;border:1px solid transparent;transition:background .12s}
+    #rbu-overlay .rv-row:hover{background:var(--rb-hover,#20233a)}
+    #rbu-overlay .rv-row.sel{background:var(--rb-sel-bg,rgba(79,99,224,.12));border-color:var(--rb-sel-ring,rgba(142,162,255,.45))}
+    #rbu-overlay .rv-row.conflict .ri{color:var(--rb-warn,#f5c26b);background:var(--rb-warn-soft,rgba(245,194,107,.13))}
+    #rbu-overlay .rv-row .rt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+    #rbu-overlay .rv-row .rt b{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #rbu-overlay .rv-row .rt>span{font-size:11.5px;color:var(--rb-mute,#8487ab);display:flex;gap:6px;align-items:center}
+    #rbu-overlay .tg{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;background:var(--rb-surf2,#262a44);color:var(--rb-sub,#a4a7c9)}
+    #rbu-overlay .tg.update{background:var(--rb-acc-soft,rgba(79,99,224,.16));color:var(--rb-acc-text,#8ea2ff)}
+    #rbu-overlay .tg.mine{background:var(--rb-acc2-soft,rgba(124,79,224,.16));color:var(--rb-acc2-text,#c4b1ff)}
+    #rbu-overlay .tg.conflict{background:var(--rb-warn-soft,rgba(245,194,107,.13));color:var(--rb-warn,#f5c26b)}
+    #rbu-overlay .tg.extra{background:var(--rb-danger-soft,rgba(242,122,147,.13));color:var(--rb-danger,#f27a93)}
+    #rbu-overlay .rv-mini{display:flex;border-radius:9px;overflow:hidden;border:1px solid var(--rb-line,#2a2d47);flex-shrink:0}
+    #rbu-overlay .rv-mini button{min-height:28px;width:32px;padding:0;border:0;border-radius:0;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--rb-mute,#8487ab)}
+    #rbu-overlay .rv-mini button.on[data-v=inc]{background:var(--rb-acc-soft,rgba(79,99,224,.2));color:var(--rb-acc-text,#8ea2ff)}
+    #rbu-overlay .rv-mini button.on[data-v=cur]{background:var(--rb-acc2-soft,rgba(124,79,224,.2));color:var(--rb-acc2-text,#c4b1ff)}
+    #rbu-overlay .rv-right{min-height:0;overflow-y:auto;border:1px solid var(--rb-line2,#22253b);border-radius:14px;background:var(--rb-win,#151726);padding:16px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin}
+    #rbu-overlay .rv-empty{margin:auto;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--rb-mute,#8487ab);text-align:center;font-size:13px}
+    #rbu-overlay .rv-dh{display:flex;gap:12px;align-items:center}
+    #rbu-overlay .rv-dh b{font-size:15px}
+    #rbu-overlay .rv-tags{display:flex;gap:6px;margin-top:4px}
+    #rbu-overlay .rv-seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;border-radius:12px;background:var(--rb-surf,#1c1f33)}
+    #rbu-overlay .rv-seg button{min-height:38px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--rb-sub,#a4a7c9);border-radius:9px}
+    #rbu-overlay .rv-seg button.on[data-pick=inc]{background:var(--rb-acc-grad,linear-gradient(135deg,#4f63e0,#7c4fe0));color:var(--rb-on-acc,#fff);font-weight:600}
+    #rbu-overlay .rv-seg button.on[data-pick=cur]{background:var(--rb-acc2-soft,rgba(124,79,224,.3));color:var(--rb-text,#e9eaf6);font-weight:600;box-shadow:inset 0 0 0 1px var(--rb-acc2-text,#c4b1ff)}
+    #rbu-overlay .rv-cap{font-size:12px;font-weight:600;color:var(--rb-sub,#a4a7c9);display:flex;gap:8px;align-items:center}
+    #rbu-overlay .rv-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    #rbu-overlay .rv-col{display:flex;flex-direction:column;gap:6px;min-width:0;padding:10px;border-radius:12px;border:1px solid var(--rb-line2,#22253b);opacity:.7}
+    #rbu-overlay .rv-col.pick{opacity:1;border-color:var(--rb-sel-ring,rgba(142,162,255,.45));background:var(--rb-sel-bg,rgba(79,99,224,.06))}
+    #rbu-overlay .rv-text,#rbu-overlay .rv-diffbox{font-size:12.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;max-height:300px;overflow:auto;scrollbar-width:thin}
+    #rbu-overlay .rv-diffbox{padding:10px 12px;border-radius:12px;background:var(--rb-surf,#1c1f33)}
     #rbu-overlay .rv-diffbox ins{text-decoration:none;background:var(--rb-ok-soft,rgba(95,211,181,.18));color:var(--rb-ok,#5fd3b5);border-radius:3px}
-    #rbu-overlay .rv-diffbox del{background:var(--rb-danger-soft,rgba(242,122,147,.15));color:var(--rb-danger,#f27a93);border-radius:3px}
+    #rbu-overlay .rv-diffbox del,#rbu-overlay .rv-cap del{background:var(--rb-danger-soft,rgba(242,122,147,.15));color:var(--rb-danger,#f27a93);border-radius:3px}
+    #rbu-overlay .rv-cap ins{text-decoration:none;background:var(--rb-ok-soft,rgba(95,211,181,.18));color:var(--rb-ok,#5fd3b5);border-radius:3px}
+    #rbu-overlay .rv-inline{margin:4px 2px 10px;padding:12px;border-radius:12px;background:var(--rb-surf,#1c1f33);display:flex;flex-direction:column;gap:10px}
+    @media (max-width:760px){
+      #rbu-overlay .rv-split{grid-template-columns:1fr;height:auto}
+      #rbu-overlay .rv-left{overflow:visible}
+      #rbu-overlay #rv-list{overflow:visible}
+      #rbu-overlay .rv-cols{grid-template-columns:1fr}
+      #rbu-overlay .win.wide{max-width:none}
+    }
     @media (max-width:760px){#rbu-overlay{padding:0;align-items:stretch}#rbu-overlay .win{max-width:none;border-radius:0;border:0;padding:18px 16px}}
     `;
   document.head.insertAdjacentHTML("beforeend", `<style>${css}</style>`);
@@ -311,12 +382,14 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
     const p = (n) => String(n).padStart(2, "0");
     return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
   };
-  // ---- 검토 화면: 위에 요약, "자세히 보기"를 펼치면 항목별로 고르기 (판단 로직은 RisuTide) ----
+  // ---- 검토 화면: 위에 아이콘 요약, "자세히 보기"를 누르면 창이 넓어지며 왼쪽 목록 · 오른쪽 비교 (판단 로직은 RisuTide) ----
   const GROUP_KO = { conflict: "충돌", mine: "내 수정", update: "새 버전", extra: "새 버전에 없음" };
   const CHANGE_KO = { added: "추가", removed: "삭제", changed: "변경" };
   const MOD_FIELD = { desc: "description", globalLore: "lorebook", customscript: "regex", triggerscript: "trigger", backgroundHTML: "backgroundEmbedding", additionalAssets: "assets" };
+  const UNIT_ICON = { field: "text", lore: "book", regex: "code", trigger: "zap", asset: "image", emotion: "image" };
+  const ic = (n, s = 16) => iconMarkup(n, s);
   function reviewState(choices) {
-    choices.ui ??= { q: "", f: "all", open: false };
+    choices.ui ??= { q: "", f: "all", open: false, sel: null };
     return choices.ui;
   }
   // 고른 상태에서의 개수
@@ -328,7 +401,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
       if (g === "mine") s.mine++;
       if (g === "extra") s.extra++;
       if (!takeNew) {
-        if (g !== "update") s.keptMine++;
+        s.keptMine++;
         continue;
       }
       const c = changeOf(it);
@@ -338,94 +411,151 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
     }
     return s;
   }
-  function summaryHtml(plan, keep, sum0, fieldLabel) {
+  const pills = (d) => {
+    const out = [d.added && `<i class="pl add">+${d.added}</i>`, d.removed && `<i class="pl del">−${d.removed}</i>`, d.changed && `<i class="pl chg">~${d.changed}</i>`].filter(Boolean).join("");
+    return out || `<span class="muted">그대로</span>`;
+  };
+  const names = (list, label, max = 6) => `${list.slice(0, max).map((k) => `<i class="nm">${esc(label(k))}</i>`).join("")}${list.length > max ? `<span class="muted">외 ${list.length - max}개</span>` : ""}`;
+  function summaryHtml(plan, keep, sum0, fieldLabel, compact) {
     const s = countPlan(plan, keep);
-    // 요약의 "바뀌는 글/설정"은 실제로 적용되는 항목만 (빈 값 ↔ 없음 같은 차이는 빼고)
+    // "바뀌는 글/설정"은 실제로 적용되는 항목만 (빈 값 ↔ 없음 같은 차이는 빼고)
     const applied = new Set(plan.items.filter((it) => it.unit === "field" && !keep.has(it.id)).map((it) => it.label));
     const sum = sum0 && { ...sum0, texts: sum0.texts.filter((k) => applied.has(k)), others: sum0.others.filter((k) => applied.has(k)) };
-    const diff = (d) => [d.added.length && `+${d.added.length}`, d.removed.length && `−${d.removed.length}`, d.changed.length && `~${d.changed.length}`].filter(Boolean).join(" ") || "그대로";
-    const a = sum?.assets;
-    const lines = sum ? [
-      sum.texts.length ? `<b>바뀌는 글</b><span>${sum.texts.slice(0, 8).map((k) => esc(fieldLabel(k))).join(", ")}${sum.texts.length > 8 ? ` 외 ${sum.texts.length - 8}개` : ""}</span>` : "",
-      `<b>로어북</b><span>${diff(sum.lore)}</span>`,
-      sum.regex.added.length + sum.regex.removed.length + sum.regex.changed.length ? `<b>정규식</b><span>${diff(sum.regex)}</span>` : "",
-      sum.triggersChanged ? `<b>트리거</b><span>바뀜</span>` : "",
-      a && a.added + a.removed + a.changed ? `<b>에셋</b><span>${[a.added && `+${a.added}`, a.removed && `−${a.removed}`, a.changed && `~${a.changed}`].filter(Boolean).join(" ")} (${a.from} → ${a.to}개)</span>` : "",
-      sum.others.length ? `<b>그 밖의 설정</b><span>${sum.others.slice(0, 6).map((k) => esc(fieldLabel(k.replace(/^moduleField:(.*):value$/, "$1")))).join(", ")}${sum.others.length > 6 ? ` 외 ${sum.others.length - 6}개` : ""}</span>` : ""
-    ].join("") : "";
-    return `<div class="grid" style="margin-top:6px">
-              <b>바뀌는 것</b><span>새 버전 적용 ${s.update} · 추가 ${s.added} · 삭제 ${s.removed}</span>
-              ${plan.hasBase ? `<b>내 수정</b><span>유지 ${s.keptMine}${s.mine ? ` (찾은 내 수정 ${s.mine})` : ""}</span><b>충돌</b><span>${s.conflict ? `<b class="hl">${s.conflict}개</b> (자세히 보기에서 고르기)` : "없음"}</span>` : ""}
-              ${lines}
-              ${sum?.chats ? `<b>채팅</b><span>${sum.chats}개 그대로</span>` : ""}
-            </div>`;
+    const tile = (cls, icn, n, label, on = n > 0) => `<div class="st ${cls}${on ? "" : " zero"}"><span class="si">${ic(icn, 18)}</span><b>${n}</b><span>${label}</span></div>`;
+    const tiles = `<div class="rv-tiles">
+        ${tile("upd", "refresh", s.update, "새 버전 적용")}${tile("add", "plus", s.added, "추가")}${tile("del", "trash", s.removed, "삭제")}
+        ${tile("mine", "shield", s.keptMine, "내 것 유지")}${plan.hasBase ? tile("cf", "alert", s.conflict, "충돌") : ""}
+      </div>`;
+    if (compact || !sum) return tiles;
+    const a = sum.assets, lf = (k) => fieldLabel(k.replace(/^moduleField:(.*):value$/, "$1"));
+    const row = (icn, label, val) => `<div class="rr"><span class="ri">${ic(icn, 15)}</span><span class="rl">${label}</span><span class="rv">${val}</span></div>`;
+    const rows = [
+      sum.texts.length ? row("text", "글", names(sum.texts, lf)) : "",
+      row("book", "로어북", pills(sum.lore)),
+      sum.regex.added.length + sum.regex.removed.length + sum.regex.changed.length ? row("code", "정규식", pills({ added: sum.regex.added.length, removed: sum.regex.removed.length, changed: sum.regex.changed.length })) : "",
+      sum.triggersChanged ? row("zap", "트리거", `<i class="pl chg">바뀜</i>`) : "",
+      a && a.added + a.removed + a.changed ? row("image", "에셋", `${pills(a)}<span class="muted">${a.from} → ${a.to}개</span>`) : "",
+      sum.others.length ? row("sliders", "설정", names(sum.others, lf, 5)) : "",
+      sum.chats ? row("message", "채팅", `<i class="pl ok">${ic("check", 12)} ${sum.chats}개 그대로</i>`) : ""
+    ].join("");
+    return `${tiles}<div class="rv-rows">${rows}</div>`;
   }
+  // .pl 항목 수 표시를 위해 lore/regex 차이를 개수로
+  const asCounts = (d) => ({ added: d.added.length, removed: d.removed.length, changed: d.changed.length });
+  const sumFix = (sum) => sum && { ...sum, lore: asCounts(sum.lore) };
   function reviewBox(plan, choices, keepExistingOnly, keep, sum, fieldLabel) {
     const ui = reviewState(choices);
-    const n = (g) => plan.items.filter((it) => g === "all" || groupOf(it) === g).length;
-    const chips = ["all", "conflict", "mine", "update", "extra"].filter((g) => g === "all" || n(g)).map((g) => `<button class="rv-chip${ui.f === g ? " on" : ""}" data-f="${g}">${g === "all" ? "전체" : GROUP_KO[g]} ${n(g)}</button>`).join("");
-    return `<div id="rv-sum">${summaryHtml(plan, keep, sum, fieldLabel)}</div>
+    const sum2 = sum && { ...sum, lore: asCounts(sum.lore) };
+    const head = `<div id="rv-sum">${summaryHtml(plan, keep, sum2, fieldLabel, ui.open)}</div>
             ${plan.hasBase ? "" : `<div class="warn">처음 받았을 때의 기록이 없어 <b>지금 내용과 새 버전만</b> 비교합니다. 직접 고친 내용도 새 버전으로 바뀔 수 있어요. 이번 업데이트부터 기록이 남아, 다음 업데이트부터는 내 수정을 구분해 지킵니다.</div>
-              <label class="chk"><input type="checkbox" id="keep" ${keepExistingOnly ? "checked" : ""}><span>새 버전에 없는 기존 로어북·에셋 유지<br><span class="muted">직접 추가한 항목을 지킵니다. 제작자가 지운 항목도 남을 수 있습니다.</span></span></label>`}
-            ${plan.items.length ? `<details id="rv-details" style="margin-top:10px" ${ui.open ? "open" : ""}><summary>자세히 보기 — 항목 ${plan.items.length}개를 하나씩 고르기</summary>
-              <div class="rv-tools">
-                <input type="text" id="rvq" placeholder="이름·내용 검색" value="${esc(ui.q)}">
-                <div class="rv-chips">${chips}</div>
-                <div class="rv-bulk"><button id="rv-new">보이는 것 모두 새 버전</button><button id="rv-mine">보이는 것 모두 내 것</button>${n("conflict") ? '<button id="rv-next">다음 충돌</button>' : ""}</div>
-              </div>
-              <div id="rv-list"></div></details>` : `<div class="muted" style="margin-top:8px">바뀌는 항목이 없어요.</div>`}`;
+              <label class="chk"><input type="checkbox" id="keep" ${keepExistingOnly ? "checked" : ""}><span>새 버전에 없는 기존 로어북·에셋 유지<br><span class="muted">직접 추가한 항목을 지킵니다. 제작자가 지운 항목도 남을 수 있습니다.</span></span></label>`}`;
+    if (!plan.items.length) return `${head}<div class="muted" style="margin-top:8px">바뀌는 항목이 없어요.</div>`;
+    const conflicts = plan.items.filter((it) => groupOf(it) === "conflict").length;
+    const openBtn = `<button class="rv-open${ui.open ? " on" : ""}" id="rv-toggle">
+        <span class="oi">${ic(ui.open ? "list" : "split", 20)}</span>
+        <span class="ot"><b>${ui.open ? "간단히 보기" : "자세히 보기"}</b><span>${ui.open ? "요약만 보기로 돌아가요" : `항목 ${plan.items.length}개를 나란히 비교하며 고르기${conflicts ? ` · 충돌 ${conflicts}개` : ""}`}</span></span>
+        <span class="oc">${ic(ui.open ? "back" : "chevron", 18)}</span></button>`;
+    if (!ui.open) return head + openBtn;
+    const n = (g) => plan.items.filter((it) => g === "all" || groupOf(it) === g).length;
+    const chips = ["all", "conflict", "mine", "update", "extra"].filter((g) => g === "all" || n(g)).map((g) => `<button class="rv-chip ${g}${ui.f === g ? " on" : ""}" data-f="${g}">${g === "all" ? "전체" : GROUP_KO[g]} <b>${n(g)}</b></button>`).join("");
+    return `${head}${openBtn}
+      <div class="rv-split">
+        <div class="rv-left">
+          <div class="rv-tools">
+            <label class="rv-search">${ic("search", 15)}<input type="text" id="rvq" placeholder="이름·내용 검색" value="${esc(ui.q)}"></label>
+            <div class="rv-chips">${chips}</div>
+            <div class="rv-bulk"><button id="rv-new">${ic("refresh", 13)} 보이는 것 모두 새 버전</button><button id="rv-mine">${ic("shield", 13)} 모두 내 것</button>${conflicts ? `<button id="rv-next">${ic("alert", 13)} 다음 충돌</button>` : ""}</div>
+          </div>
+          <div id="rv-list"></div>
+        </div>
+        <div class="rv-right" id="rv-pane"></div>
+      </div>`;
   }
-  function bindReview(plan, choices, keepExistingOnly, current, fieldLabel, onChange) {
+  function bindReview(plan, choices, keepExistingOnly, current, fieldLabel, onChange, rerender) {
     const ui = reviewState(choices);
-    const list = root.querySelector("#rv-list");
+    root.classList.toggle("wide", !!ui.open);
+    root.querySelector("#rv-toggle")?.addEventListener("click", () => {
+      ui.open = !ui.open;
+      rerender();
+      root.querySelector("#rv-toggle")?.scrollIntoView({ block: "start" });
+    });
+    const list = root.querySelector("#rv-list"), pane = root.querySelector("#rv-pane");
     if (!list) return;
-    const det = root.querySelector("#rv-details");
-    det.addEventListener("toggle", () => ui.open = det.open);
-    const preview = (it, v) => {
-      const t = textOf(it, v).replace(/\s+/g, " ").trim();
-      return esc(t.length > 120 ? t.slice(0, 120) + "…" : t || "(없음)");
-    };
+    // 창이 넓어지는 애니메이션 도중에도 맞게, 창 크기가 아니라 화면 너비로 판단
+    const narrow = () => (root.ownerDocument.defaultView?.innerWidth ?? 1e4) <= 760;
+    const full = (it, v) => esc(textOf(it, v)) || `<span class="muted">(없음)</span>`;
     const shown = () => {
       const q = ui.q.trim().toLowerCase();
       return plan.items.filter((it) => (ui.f === "all" || groupOf(it) === ui.f) && (!q || itemLabel(it, fieldLabel).toLowerCase().includes(q) || textOf(it, it.current).toLowerCase().includes(q) || textOf(it, it.incoming).toLowerCase().includes(q)));
     };
     const keepNow = () => keepSet(plan, choices, keepExistingOnly);
+    const detail = (it) => {
+      if (!it) return `<div class="rv-empty">${ic("split", 28)}<span>왼쪽에서 항목을 고르면 지금과 새 버전을 나란히 보여 드려요.</span></div>`;
+      const keep = keepNow(), mine = keep.has(it.id), g = groupOf(it);
+      const canDiff = it.current !== void 0 && it.incoming !== void 0 && (typeof it.current === "string" || typeof it.incoming === "string" || it.unit === "lore" || it.unit === "regex");
+      const diff = canDiff ? wordDiff(textOf(it, it.current), textOf(it, it.incoming)).map((p) => p.op === "same" ? esc(p.text) : p.op === "add" ? `<ins>${esc(p.text)}</ins>` : `<del>${esc(p.text)}</del>`).join("") : "";
+      return `<div class="rv-dh"><span class="ri big">${ic(it.id.startsWith("order:") ? "list" : UNIT_ICON[it.unit] ?? "text", 18)}</span>
+          <div><b>${esc(itemLabel(it, fieldLabel))}</b><div class="rv-tags"><span class="tg ${g}">${KIND_KO[it.kind] ?? it.kind}</span>${it.id.startsWith("order:") ? "" : `<span class="tg">${CHANGE_KO[changeOf(it)]}</span>`}</div></div></div>
+        <div class="rv-seg"><button data-pick="inc" class="${mine ? "" : "on"}">${ic("refresh", 15)} 새 버전 적용</button><button data-pick="cur" class="${mine ? "on" : ""}">${ic("shield", 15)} 내 것 유지</button></div>
+        ${diff ? `<div class="rv-cap">바뀐 곳 <span class="muted">— <del>지운 글</del> <ins>새 글</ins></span></div><div class="rv-diffbox">${diff}</div>` : ""}
+        <div class="rv-cols">
+          <div class="rv-col${mine ? " pick" : ""}"><div class="rv-cap">지금 ${mine ? `<span class="tg mine">남김</span>` : ""}</div><div class="rv-text">${full(it, it.current)}</div></div>
+          <div class="rv-col${mine ? "" : " pick"}"><div class="rv-cap">새 버전 ${mine ? "" : `<span class="tg update">적용</span>`}</div><div class="rv-text">${full(it, it.incoming)}</div></div>
+        </div>`;
+    };
+    const paintPane = () => {
+      const it = plan.items.find((x) => x.id === ui.sel);
+      if (narrow()) {
+        list.querySelectorAll(".rv-inline").forEach((x) => x.remove());
+        const row = it && list.querySelector(`.rv-row[data-i="${plan.items.indexOf(it)}"]`);
+        if (row) row.insertAdjacentHTML("afterend", `<div class="rv-inline">${detail(it)}</div>`);
+        pane.hidden = true;
+      } else {
+        pane.hidden = false;
+        pane.innerHTML = detail(it);
+      }
+    };
     const paint = () => {
       const keep = keepNow();
       const items = shown();
+      if (!ui.sel || !plan.items.some((x) => x.id === ui.sel)) ui.sel = (plan.items.find((x) => groupOf(x) === "conflict") ?? plan.items[0])?.id ?? null;
       list.innerHTML = items.length ? items.slice(0, 300).map((it) => {
         const i = plan.items.indexOf(it), g = groupOf(it), mine = keep.has(it.id);
-        return `<div class="opt rv-row${g === "conflict" ? " rv-conflict" : ""}" data-i="${i}" style="display:block;cursor:default">
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="kind${g === "conflict" ? " rv-c" : g === "mine" ? " mod" : ""}">${KIND_KO[it.kind] ?? it.kind}</span><b style="font-weight:600">${esc(itemLabel(it, fieldLabel))}</b><span class="muted">${it.id.startsWith("order:") ? "" : CHANGE_KO[changeOf(it)]}</span></div>
-                <div class="muted" style="margin-top:4px">지금: ${preview(it, it.current)}</div><div class="muted">새 버전: ${preview(it, it.incoming)}</div>
-                <div class="row" style="margin-top:6px;gap:16px">
-                  <label><input type="radio" name="rv${i}" data-i="${i}" value="inc" ${mine ? "" : "checked"}> 새 버전</label>
-                  <label><input type="radio" name="rv${i}" data-i="${i}" value="cur" ${mine ? "checked" : ""}> 내 것 유지</label>
-                  ${typeof it.current === "string" || typeof it.incoming === "string" || it.unit === "lore" || it.unit === "regex" ? `<button class="rv-diff" data-i="${i}">바뀐 곳 보기</button>` : ""}
-                </div><div class="rv-diffbox" hidden></div></div>`;
-      }).join("") + (items.length > 300 ? `<div class="muted">앞쪽 300개만 보여요. 검색으로 좁혀 보세요.</div>` : "") : `<div class="muted">해당하는 항목이 없어요.</div>`;
+        return `<div class="rv-row ${g}${ui.sel === it.id ? " sel" : ""}" data-i="${i}" tabindex="0">
+              <span class="ri">${ic(it.id.startsWith("order:") ? "list" : UNIT_ICON[it.unit] ?? "text", 15)}</span>
+              <div class="rt"><b>${esc(itemLabel(it, fieldLabel))}</b><span><span class="tg ${g}">${KIND_KO[it.kind] ?? it.kind}</span>${it.id.startsWith("order:") ? "" : CHANGE_KO[changeOf(it)]}</span></div>
+              <span class="rv-mini" title="${mine ? "내 것 유지" : "새 버전 적용"}"><button data-v="inc" data-i="${i}" class="${mine ? "" : "on"}" aria-label="새 버전">${ic("refresh", 13)}</button><button data-v="cur" data-i="${i}" class="${mine ? "on" : ""}" aria-label="내 것 유지">${ic("shield", 13)}</button></span>
+            </div>`;
+      }).join("") + (items.length > 300 ? `<div class="muted" style="padding:8px">앞쪽 300개만 보여요. 검색으로 좁혀 보세요.</div>` : "") : `<div class="muted" style="padding:12px">해당하는 항목이 없어요.</div>`;
+      paintPane();
     };
     const refreshSum = () => {
       const box = root.querySelector("#rv-sum");
-      if (box) box.innerHTML = onChange(keepNow());
+      if (box) box.innerHTML = onChange(keepNow(), ui.open);
     };
-    list.addEventListener("change", (e) => {
-      const el = e.target.closest("input[data-i]");
-      if (!el) return;
-      choices.set(plan.items[+el.dataset.i].id, el.value);
+    const pick = (id, v) => {
+      choices.set(id, v);
+      paint();
       refreshSum();
-    });
+    };
     list.addEventListener("click", (e) => {
-      const b = e.target.closest(".rv-diff");
-      if (!b) return;
-      const it = plan.items[+b.dataset.i], box = b.closest(".rv-row").querySelector(".rv-diffbox");
-      if (!box.hidden) {
-        box.hidden = true;
-        return;
+      const b = e.target.closest("[data-v]");
+      if (b) {
+        e.stopPropagation();
+        return pick(plan.items[+b.dataset.i].id, b.dataset.v);
       }
-      const parts = wordDiff(textOf(it, it.current), textOf(it, it.incoming));
-      box.innerHTML = parts.map((p) => p.op === "same" ? esc(p.text) : p.op === "add" ? `<ins>${esc(p.text)}</ins>` : `<del>${esc(p.text)}</del>`).join("");
-      box.hidden = false;
+      const seg = e.target.closest(".rv-inline [data-pick]");
+      if (seg) return pick(ui.sel, seg.dataset.pick);
+      const row = e.target.closest(".rv-row");
+      if (!row) return;
+      const id = plan.items[+row.dataset.i].id;
+      ui.sel = narrow() && ui.sel === id ? null : id;
+      list.querySelectorAll(".rv-row").forEach((r) => r.classList.toggle("sel", r === row && !!ui.sel));
+      paintPane();
+    });
+    pane.addEventListener("click", (e) => {
+      const seg = e.target.closest("[data-pick]");
+      if (seg) pick(ui.sel, seg.dataset.pick);
     });
     const q = root.querySelector("#rvq");
     q.addEventListener("input", () => {
@@ -445,18 +575,16 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
     root.querySelector("#rv-new").addEventListener("click", () => bulk("inc"));
     root.querySelector("#rv-mine").addEventListener("click", () => bulk("cur"));
     root.querySelector("#rv-next")?.addEventListener("click", () => {
+      const cf = plan.items.filter((x) => groupOf(x) === "conflict");
+      if (!cf.length) return;
       if (ui.f !== "all" && ui.f !== "conflict") {
         ui.f = "all";
         root.querySelectorAll(".rv-chip").forEach((x) => x.classList.toggle("on", x.dataset.f === "all"));
-        paint();
       }
-      const rows = [...list.querySelectorAll(".rv-conflict")];
-      if (!rows.length) return;
-      const top = root.scrollTop, next = rows.find((r) => r.offsetTop > ui.lastConflict) ?? rows[0];
-      ui.lastConflict = next === rows[0] && rows.length > 1 && rows[0].offsetTop <= (ui.lastConflict ?? -1) ? -1 : next.offsetTop;
-      next.scrollIntoView({ block: "center", behavior: "smooth" });
-      next.animate?.([{ boxShadow: "0 0 0 2px var(--rb-warn,#f5c26b)" }, { boxShadow: "none" }], { duration: 900 });
-      void top;
+      const at = cf.findIndex((x) => x.id === ui.sel);
+      ui.sel = cf[(at + 1) % cf.length].id;
+      paint();
+      list.querySelector(".rv-row.sel")?.scrollIntoView({ block: "center", behavior: "smooth" });
     });
     paint();
   }
@@ -492,7 +620,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
             ${notes(incoming, incoming.module.lowLevelAccess && !target?.lowLevelAccess, s.upload)}${modWarnings(target, incoming.module)}
             <p class="muted" style="margin:10px 0 0">모듈 연결(활성 상태)은 바뀌지 않습니다.${target ? " 바꾸기 전 상태를 백업하므로 [백업·되돌리기]에서 되돌릴 수 있어요." : ""}</p>
           </div>${planFooter(target ? "업데이트" : "추가")}`);
-    if (p) bindReview(p, choices, keepExistingOnly, curF, modLabel, (keep) => summaryHtml(p, keep, sumOf(keep), modLabel));
+    if (p) bindReview(p, choices, keepExistingOnly, curF, modLabel, (keep, compact) => summaryHtml(p, keep, sumFix(sumOf(keep)), modLabel, compact), () => renderModPlan(file, incoming, db, targetIndex, keepExistingOnly, choices, base));
     bindPlan(file, incoming, db, (keep) => renderModPlan(file, incoming, db, targetIndex, keep, choices, base), async () => {
       const early = target ? store.addBackup({ kind: "module", target: target.id, name: target.name, snapshot: backupSnapshot("module", target), note: "업데이트 전" }).catch(() => null) : null;
       const uploaded = await uploadWithProgress(file, plan.toUpload);
@@ -571,7 +699,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
             ${generating ? `<div class="err">이 캐릭터가 지금 응답을 생성하는 중이에요. 생성이 끝난 뒤 업데이트해 주세요.</div>` : ""}
             <p class="muted" style="margin:10px 0 0">채팅·메모·TTS·메모리 같은 내 설정은 그대로 둡니다. 추가 인사말 순서가 바뀌어도 채팅마다 고른 인사말을 그대로 가리켜요. 바꾸기 전 상태를 백업하므로 [백업·되돌리기]에서 되돌릴 수 있어요.</p>
           </div>${planFooter("업데이트")}`);
-    bindReview(p, choices, keepExistingOnly, curF, spec.label, (keep) => summaryHtml(p, keep, sumOf(keep), spec.label));
+    bindReview(p, choices, keepExistingOnly, curF, spec.label, (keep, compact) => summaryHtml(p, keep, sumFix(sumOf(keep)), spec.label, compact), () => renderCharPlan(file, incoming, db, index, keepExistingOnly, choices, base));
     bindPlan(file, incoming, db, (keep) => renderCharPlan(file, incoming, db, index, keep, choices, base), async () => {
       const uploaded = await uploadWithProgress(file, plan.toUpload);
       updateProgress(100, "캐릭터 저장 중…");
