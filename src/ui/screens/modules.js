@@ -8,7 +8,7 @@ import { buildRisum, moduleJson, safeFileName } from '../../engine/export.js';
 import { hasAssets, loadCharacters, moduleCounts, moduleFlags } from '../../data/modules.js';
 import { copyText, download, fmtWhen, h, replace, vanish } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, chip, colorDialog, loading, spinner, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog, setSwitch, switchEl } from '../kit.js';
+import { badge, btn, chip, trayBtn, tray, sortChips, sortLabel, sortBy, fmtSize, colorDialog, loading, spinner, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog, setSwitch, switchEl } from '../kit.js';
 import { FOLDER_SWATCHES, NAME_SWATCHES, folderTint, readableName } from '../theme.js';
 import { loadPersonaMap, setPersonaLink } from '../../data/persona.js';
 import { addProjects, findProject } from './dev.js';
@@ -22,6 +22,20 @@ function searchText(m) {
   return parts.filter(Boolean).join("\n").toLowerCase();
 }
 var COARSE2 = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+// 모듈 크기: 글자 데이터(로어·정규식·트리거 등)의 크기. 에셋 파일 자체는 포함하지 않는다
+var sizeCache = /* @__PURE__ */ new WeakMap();
+function moduleSize(m) {
+  let n = sizeCache.get(m);
+  if (n === void 0) {
+    try {
+      n = new TextEncoder().encode(JSON.stringify(m)).length;
+    } catch {
+      n = 0;
+    }
+    sizeCache.set(m, n);
+  }
+  return n;
+}
 export async function renderModules(ctx) {
   const st = ctx.state;
   st.modFilter ??= "all";
@@ -54,45 +68,60 @@ function draw(ctx) {
   const count = (id) => entries.filter((e) => inView(e)).filter((e) => id === "all" || id === "on" && e.enabled || id === "off" && !e.enabled || moduleFlags(e.module, globalOn)[id]).length;
   const shown = entries.filter(pass);
   if (!st.modSel || !entries.some((e) => e.module.id === st.modSel)) st.modSel = shown[0]?.module.id ?? null;
-  const toolbar = h(
-    "div",
-    { class: "rb-chips", role: "toolbar", "aria-label": "필터" },
-    FILTERS.map(([id, label]) => chip(label, { pressed: st.modFilter === id, count: count(id), onClick: () => {
-      st.modFilter = id;
-      draw(ctx);
-    } })),
-    h("div", { class: "rb-spacer" }),
-    filtering ? null : btn(multiOf(ctx).active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => {
-      const mu2 = multiOf(ctx);
-      mu2.setMode(!mu2.active);
-    } }),
-    btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolder(ctx) }),
-    btn("새 모듈", { size: "sm", kind: "primary", icon: "plus", onClick: () => newModule(ctx) })
-  );
+  // 위쪽 바: 필터·정렬·폴더는 각각 버튼 하나. 누르면 바로 아래 줄에 선택지가 펼쳐진다
+  const sort = ctx.prefs.ui?.modSort ?? null;
+  st.modSorted = !!sort;
   const inFolder2 = (id) => entries.filter((e) => (meta.mapping[e.module.id] ?? "") === id).length;
   const setView = (v) => {
     st.modFolder = v;
     draw(ctx);
   };
-  const folderBar = meta.folders.length ? h(
+  const openTray = (k) => {
+    st.modTray = st.modTray === k ? null : k;
+    draw(ctx);
+  };
+  const folderName = fv === void 0 ? "전체" : fv === "" ? "폴더 없음" : meta.folders.find((f) => f.id === fv)?.name || "(이름 없음)";
+  const toolbar = h(
     "div",
-    { class: "rb-chips rb-fchips", role: "toolbar", "aria-label": "폴더별 보기" },
+    { class: "rb-chips", role: "toolbar", "aria-label": "보기" },
+    trayBtn("필터", { icon: "check", value: `${FILTERS.find(([id]) => id === st.modFilter)?.[1] ?? "전체"} ${count(st.modFilter)}`, open: st.modTray === "filter", active: st.modFilter !== "all", onClick: () => openTray("filter") }),
+    trayBtn("정렬", { icon: "preset", value: sortLabel(sort), open: st.modTray === "sort", active: !!sort, onClick: () => openTray("sort") }),
+    trayBtn("폴더", { icon: "folder", value: folderName, open: st.modTray === "folder", active: fv !== void 0, onClick: () => openTray("folder") }),
+    h("div", { class: "rb-spacer" }),
+    filtering ? null : btn(multiOf(ctx).active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => {
+      const mu2 = multiOf(ctx);
+      mu2.setMode(!mu2.active);
+    } }),
+    btn("새 모듈", { size: "sm", kind: "primary", icon: "plus", onClick: () => newModule(ctx) })
+  );
+  const folderBar = st.modTray === "filter" ? tray(FILTERS.map(([id, label]) => chip(label, { pressed: st.modFilter === id, count: count(id), onClick: () => {
+    st.modFilter = id;
+    draw(ctx);
+  } }))) : st.modTray === "sort" ? tray(
+    ...sortChips(sort, (next) => {
+      ctx.prefs.saveUi({ modSort: next }).catch(() => {
+      });
+      draw(ctx);
+    }),
+    h("span", { class: "rb-muted", style: "font-size:12px;white-space:nowrap" }, sort ? "폴더마다 따로 정렬해요 · 끌어서 순서 바꾸기는 원래대로에서" : "끌어서 정한 순서예요")
+  ) : st.modTray === "folder" ? tray(
     chip("모든 폴더", { pressed: fv === void 0, onClick: () => setView(void 0) }),
     meta.folders.map((f) => {
       const tint = folderTint(f.color, st.mode);
-      const c = chip(
+      return chip(
         h("span", { style: "display:inline-flex;align-items:center;gap:6px" }, h("span", { style: { color: tint?.stroke ?? "var(--rb-sub)", display: "flex" } }, icon("folder", 14)), f.name || "(이름 없음)"),
         { pressed: fv === f.id, count: inFolder2(f.id), onClick: () => setView(fv === f.id ? void 0 : f.id) }
       );
-      c.dataset.folderView = f.id;
-      return c;
     }),
-    chip("폴더 없음", { pressed: fv === "", count: inFolder2(""), onClick: () => setView(fv === "" ? void 0 : "") })
+    meta.folders.length ? chip("폴더 없음", { pressed: fv === "", count: inFolder2(""), onClick: () => setView(fv === "" ? void 0 : "") }) : null,
+    btn("새 폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolder(ctx) })
   ) : null;
   const list = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "모듈 목록" });
   const grouped = groupByFolder(shown, meta);
+  const srt = (arr) => sortBy(arr, sort, (e) => e.module.name ?? "", (e) => moduleSize(e.module));
+  for (const g of grouped.folders) g.items = srt(g.items);
   const folders = fv === void 0 ? grouped.folders : [];
-  const loose = fv === void 0 ? grouped.loose : shown;
+  const loose = srt(fv === void 0 ? grouped.loose : shown);
   for (const g of folders) {
     if (filtering && !g.items.length) continue;
     const f = g.folder;
@@ -185,7 +214,7 @@ function pickFolderFor(ctx, ids, anchor) {
 }
 function row(ctx, e, filtering) {
   const st = ctx.state, m = e.module, c = moduleCounts(m), f = moduleFlags(m, st.modData.globalOn);
-  const meta = [c.lore && `로어 ${c.lore}`, c.regex && `정규식 ${c.regex}`, c.trigger && `트리거 ${c.trigger}`, c.assets && `에셋 ${c.assets}`].filter(Boolean).join(" · ") || "비어 있음";
+  const meta = [c.lore && `로어 ${c.lore}`, c.regex && `정규식 ${c.regex}`, c.trigger && `트리거 ${c.trigger}`, c.assets && `에셋 ${c.assets}`, ctx.prefs.ui?.modSort?.key === "size" && fmtSize(moduleSize(m))].filter(Boolean).join(" · ") || "비어 있음";
   const color = readableName(ctx.prefs.meta.nameColors?.[m.id], st.mode);
   const sw = switchEl(e.enabled, { label: `${m.name} ${e.enabled ? "끄기" : "켜기"}`, onChange: (on) => toggleEnabled(ctx, e, on, sw) });
   if (!e.enabled && !hasAssets(m)) sw.title = "켜기";
@@ -199,7 +228,7 @@ function row(ctx, e, filtering) {
       role: "option",
       tabindex: "0",
       "aria-selected": st.modSel === m.id ? "true" : "false",
-      dataset: filtering ? { id: m.id } : { id: m.id, dropRow: m.id, pick: m.id },
+      dataset: filtering ? { id: m.id } : st.modSorted ? { id: m.id, pick: m.id } : { id: m.id, dropRow: m.id, pick: m.id },
       onClick: (ev) => {
         if (!filtering && mu.click(ev, m.id, st.modSel)) return;
         select(ctx, m.id, el);
@@ -359,6 +388,10 @@ function applyDrop(ctx, ids, { beforeId, after, folderId }) {
   draw(ctx);
 }
 async function move(ctx, id, dir) {
+  if (ctx.state.modSorted) {
+    ctx.toast("정렬 중이라 순서를 바꿀 수 없어요. 정렬에서 원래대로를 누른 뒤 바꿔 주세요.");
+    return;
+  }
   const meta = ctx.prefs.meta;
   const entries = ctx.state.modData.entries;
   const group = entries.filter((e) => (meta.mapping[e.module.id] ?? null) === (meta.mapping[id] ?? null)).map((e) => e.module.id);

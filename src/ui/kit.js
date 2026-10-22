@@ -380,3 +380,45 @@ export function loading(label = "불러오는 중", { rows = 0 } = {}) {
 export function spinner() {
   return h("span", { class: "rb-spin", "aria-hidden": "true" });
 }
+
+// ── 펼침 버튼 + 펼침 줄 ── 누르면 바로 아래에 선택지가 촤라락 펼쳐진다. 접힌 상태에서는 지금 고른 값을 보여 준다
+export function trayBtn(label, { value, open, icon: ic, onClick, active } = {}) {
+  return h(
+    "button",
+    { type: "button", class: ["rb-traybtn", active && "on"], "aria-expanded": open ? "true" : "false", onClick },
+    ic ? icon(ic, 15) : null,
+    h("span", null, label),
+    value ? h("b", null, value) : null,
+    h("span", { class: "chev" }, icon("down", 14))
+  );
+}
+export function tray(...children) {
+  return h("div", { class: "rb-tray", role: "toolbar" }, ...children);
+}
+// ── 정렬 ── { key: "name" | "size", dir: 1 | -1 } 또는 null(원래 순서)
+var SORTS = [["name", "이름순"], ["size", "크기순"]];
+export function sortLabel(cur) {
+  if (!cur) return "원래 순서";
+  const name = cur.key === "size" ? "크기" : "이름";
+  return `${name} ${cur.key === "size" ? cur.dir > 0 ? "큰 것부터" : "작은 것부터" : cur.dir > 0 ? "가→하" : "하→가"}`;
+}
+// 같은 걸 다시 누르면 역순, 다른 걸 누르면 그 기준의 기본 방향
+export function sortChips(cur, onPick) {
+  return [
+    ...SORTS.map(([key, label]) => chip(
+      h("span", { style: "display:inline-flex;align-items:center;gap:6px" }, label, cur?.key === key ? icon(cur.dir > 0 ? "down" : "up", 13) : null),
+      { pressed: cur?.key === key, onClick: () => onPick(cur?.key === key ? { key, dir: -cur.dir } : { key, dir: 1 }) }
+    )),
+    chip(h("span", { style: "display:inline-flex;align-items:center;gap:6px" }, icon("undo", 13), "원래대로"), { pressed: !cur, onClick: () => onPick(null) })
+  ];
+}
+var collator = typeof Intl !== "undefined" ? new Intl.Collator("ko", { numeric: true, sensitivity: "base" }) : null;
+// 이름: 가나다·숫자 자연순. 크기: 기본은 큰 것부터
+export function sortBy(list, cur, nameOf, sizeOf) {
+  if (!cur) return list;
+  const cmp = cur.key === "size" ? (a, b) => (sizeOf(b) - sizeOf(a)) * cur.dir : (a, b) => (collator ? collator.compare(nameOf(a), nameOf(b)) : String(nameOf(a)).localeCompare(nameOf(b))) * cur.dir;
+  return [...list].sort(cmp);
+}
+export function fmtSize(n) {
+  return n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(n < 10240 ? 1 : 0)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+}

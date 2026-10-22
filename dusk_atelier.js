@@ -3264,6 +3264,43 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
   function spinner() {
     return h("span", { class: "rb-spin", "aria-hidden": "true" });
   }
+  function trayBtn(label, { value, open, icon: ic, onClick, active } = {}) {
+    return h(
+      "button",
+      { type: "button", class: ["rb-traybtn", active && "on"], "aria-expanded": open ? "true" : "false", onClick },
+      ic ? icon(ic, 15) : null,
+      h("span", null, label),
+      value ? h("b", null, value) : null,
+      h("span", { class: "chev" }, icon("down", 14))
+    );
+  }
+  function tray(...children) {
+    return h("div", { class: "rb-tray", role: "toolbar" }, ...children);
+  }
+  var SORTS = [["name", "이름순"], ["size", "크기순"]];
+  function sortLabel(cur) {
+    if (!cur) return "원래 순서";
+    const name = cur.key === "size" ? "크기" : "이름";
+    return `${name} ${cur.key === "size" ? cur.dir > 0 ? "큰 것부터" : "작은 것부터" : cur.dir > 0 ? "가→하" : "하→가"}`;
+  }
+  function sortChips(cur, onPick) {
+    return [
+      ...SORTS.map(([key, label]) => chip(
+        h("span", { style: "display:inline-flex;align-items:center;gap:6px" }, label, cur?.key === key ? icon(cur.dir > 0 ? "down" : "up", 13) : null),
+        { pressed: cur?.key === key, onClick: () => onPick(cur?.key === key ? { key, dir: -cur.dir } : { key, dir: 1 }) }
+      )),
+      chip(h("span", { style: "display:inline-flex;align-items:center;gap:6px" }, icon("undo", 13), "원래대로"), { pressed: !cur, onClick: () => onPick(null) })
+    ];
+  }
+  var collator = typeof Intl !== "undefined" ? new Intl.Collator("ko", { numeric: true, sensitivity: "base" }) : null;
+  function sortBy(list, cur, nameOf, sizeOf) {
+    if (!cur) return list;
+    const cmp = cur.key === "size" ? (a, b) => (sizeOf(b) - sizeOf(a)) * cur.dir : (a, b) => (collator ? collator.compare(nameOf(a), nameOf(b)) : String(nameOf(a)).localeCompare(nameOf(b))) * cur.dir;
+    return [...list].sort(cmp);
+  }
+  function fmtSize(n) {
+    return n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(n < 10240 ? 1 : 0)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+  }
 
   // src/ui/styles.js
   var FONT_LINK = "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap";
@@ -3331,6 +3368,15 @@ html,body{margin:0;height:100%;background:transparent}
 @media (hover: hover){.rb-chip:hover{color:var(--rb-text);border-color:var(--rb-line3)}}
 .rb-chip[aria-pressed=true]{border-color:var(--rb-sel-ring);background:var(--rb-acc-soft);color:var(--rb-text);font-weight:600}
 .rb-chip small{opacity:.75;font-size:inherit}
+.rb-traybtn{height:34px;padding:0 10px 0 12px;border-radius:999px;border:1px solid var(--rb-line);background:transparent;color:var(--rb-sub);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
+@media (hover: hover){.rb-traybtn:hover{color:var(--rb-text);border-color:var(--rb-line3)}}
+.rb-traybtn b{font-weight:600;color:var(--rb-text)}
+.rb-traybtn.on{border-color:var(--rb-sel-ring);background:var(--rb-acc-soft)}
+.rb-traybtn[aria-expanded=true]{border-color:var(--rb-sel-ring);color:var(--rb-text)}
+.rb-traybtn .chev{display:flex;transition:transform .18s}
+.rb-traybtn[aria-expanded=true] .chev{transform:rotate(180deg)}
+.rb-tray{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 20px 12px;animation:rb-expand .18s ease-out;transform-origin:top}
+.rb-tray .rb-chip{flex-shrink:0}
 .rb-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:500;border-radius:999px;padding:2px 8px;white-space:nowrap;flex-shrink:0}
 .k-acc{color:var(--rb-acc-text);background:var(--rb-acc-soft)}.k-acc2{color:var(--rb-acc2-text);background:var(--rb-acc2-soft)}
 .k-warn{color:var(--rb-warn);background:var(--rb-warn-soft)}.k-ok{color:var(--rb-teal);background:var(--rb-teal-soft)}
@@ -3560,6 +3606,7 @@ select.rb-input{appearance:auto}
   .rb-tabbar a[aria-current=page]{color:var(--rb-acc-text);font-weight:600}
   .rb-chips{flex-wrap:nowrap;overflow-x:auto;padding:12px 16px 8px}
   .rb-chip{flex-shrink:0}
+  .rb-tray{flex-wrap:nowrap;overflow-x:auto;padding:0 16px 10px}
   .rb-detail{position:absolute;left:0;right:0;bottom:68px;width:auto;max-height:72%;border-left:0;border-radius:22px 22px 0 0;background:var(--rb-win);box-shadow:var(--rb-shadow);z-index:20;overflow:auto;transform:translateY(105%);visibility:hidden;pointer-events:none;transition:transform .2s ease-out,visibility 0s linear .2s}
   .rb-detail.open{transform:none;visibility:visible;pointer-events:auto;transition:transform .2s ease-out}
   .rb-detail::before{content:'';display:block;width:40px;height:5px;border-radius:999px;background:var(--rb-line3);margin:-8px auto 4px}
@@ -8054,6 +8101,19 @@ ${patch.note}` : "",
     return parts.filter(Boolean).join("\n").toLowerCase();
   }
   var COARSE2 = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+  var sizeCache = /* @__PURE__ */ new WeakMap();
+  function moduleSize(m) {
+    let n = sizeCache.get(m);
+    if (n === void 0) {
+      try {
+        n = new TextEncoder().encode(JSON.stringify(m)).length;
+      } catch {
+        n = 0;
+      }
+      sizeCache.set(m, n);
+    }
+    return n;
+  }
   async function renderModules(ctx) {
     const st = ctx.state;
     st.modFilter ??= "all";
@@ -8086,45 +8146,59 @@ ${patch.note}` : "",
     const count = (id) => entries.filter((e) => inView(e)).filter((e) => id === "all" || id === "on" && e.enabled || id === "off" && !e.enabled || moduleFlags(e.module, globalOn)[id]).length;
     const shown = entries.filter(pass);
     if (!st.modSel || !entries.some((e) => e.module.id === st.modSel)) st.modSel = shown[0]?.module.id ?? null;
-    const toolbar = h(
-      "div",
-      { class: "rb-chips", role: "toolbar", "aria-label": "필터" },
-      FILTERS.map(([id, label]) => chip(label, { pressed: st.modFilter === id, count: count(id), onClick: () => {
-        st.modFilter = id;
-        draw(ctx);
-      } })),
-      h("div", { class: "rb-spacer" }),
-      filtering ? null : btn(multiOf(ctx).active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => {
-        const mu2 = multiOf(ctx);
-        mu2.setMode(!mu2.active);
-      } }),
-      btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolder(ctx) }),
-      btn("새 모듈", { size: "sm", kind: "primary", icon: "plus", onClick: () => newModule(ctx) })
-    );
+    const sort = ctx.prefs.ui?.modSort ?? null;
+    st.modSorted = !!sort;
     const inFolder2 = (id) => entries.filter((e) => (meta.mapping[e.module.id] ?? "") === id).length;
     const setView = (v) => {
       st.modFolder = v;
       draw(ctx);
     };
-    const folderBar = meta.folders.length ? h(
+    const openTray = (k) => {
+      st.modTray = st.modTray === k ? null : k;
+      draw(ctx);
+    };
+    const folderName = fv === void 0 ? "전체" : fv === "" ? "폴더 없음" : meta.folders.find((f) => f.id === fv)?.name || "(이름 없음)";
+    const toolbar = h(
       "div",
-      { class: "rb-chips rb-fchips", role: "toolbar", "aria-label": "폴더별 보기" },
+      { class: "rb-chips", role: "toolbar", "aria-label": "보기" },
+      trayBtn("필터", { icon: "check", value: `${FILTERS.find(([id]) => id === st.modFilter)?.[1] ?? "전체"} ${count(st.modFilter)}`, open: st.modTray === "filter", active: st.modFilter !== "all", onClick: () => openTray("filter") }),
+      trayBtn("정렬", { icon: "preset", value: sortLabel(sort), open: st.modTray === "sort", active: !!sort, onClick: () => openTray("sort") }),
+      trayBtn("폴더", { icon: "folder", value: folderName, open: st.modTray === "folder", active: fv !== void 0, onClick: () => openTray("folder") }),
+      h("div", { class: "rb-spacer" }),
+      filtering ? null : btn(multiOf(ctx).active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => {
+        const mu2 = multiOf(ctx);
+        mu2.setMode(!mu2.active);
+      } }),
+      btn("새 모듈", { size: "sm", kind: "primary", icon: "plus", onClick: () => newModule(ctx) })
+    );
+    const folderBar = st.modTray === "filter" ? tray(FILTERS.map(([id, label]) => chip(label, { pressed: st.modFilter === id, count: count(id), onClick: () => {
+      st.modFilter = id;
+      draw(ctx);
+    } }))) : st.modTray === "sort" ? tray(
+      ...sortChips(sort, (next) => {
+        ctx.prefs.saveUi({ modSort: next }).catch(() => {
+        });
+        draw(ctx);
+      }),
+      h("span", { class: "rb-muted", style: "font-size:12px;white-space:nowrap" }, sort ? "폴더마다 따로 정렬해요 · 끌어서 순서 바꾸기는 원래대로에서" : "끌어서 정한 순서예요")
+    ) : st.modTray === "folder" ? tray(
       chip("모든 폴더", { pressed: fv === void 0, onClick: () => setView(void 0) }),
       meta.folders.map((f) => {
         const tint = folderTint(f.color, st.mode);
-        const c = chip(
+        return chip(
           h("span", { style: "display:inline-flex;align-items:center;gap:6px" }, h("span", { style: { color: tint?.stroke ?? "var(--rb-sub)", display: "flex" } }, icon("folder", 14)), f.name || "(이름 없음)"),
           { pressed: fv === f.id, count: inFolder2(f.id), onClick: () => setView(fv === f.id ? void 0 : f.id) }
         );
-        c.dataset.folderView = f.id;
-        return c;
       }),
-      chip("폴더 없음", { pressed: fv === "", count: inFolder2(""), onClick: () => setView(fv === "" ? void 0 : "") })
+      meta.folders.length ? chip("폴더 없음", { pressed: fv === "", count: inFolder2(""), onClick: () => setView(fv === "" ? void 0 : "") }) : null,
+      btn("새 폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolder(ctx) })
     ) : null;
     const list = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "모듈 목록" });
     const grouped = groupByFolder(shown, meta);
+    const srt = (arr) => sortBy(arr, sort, (e) => e.module.name ?? "", (e) => moduleSize(e.module));
+    for (const g of grouped.folders) g.items = srt(g.items);
     const folders = fv === void 0 ? grouped.folders : [];
-    const loose = fv === void 0 ? grouped.loose : shown;
+    const loose = srt(fv === void 0 ? grouped.loose : shown);
     for (const g of folders) {
       if (filtering && !g.items.length) continue;
       const f = g.folder;
@@ -8217,7 +8291,7 @@ ${patch.note}` : "",
   }
   function row(ctx, e, filtering) {
     const st = ctx.state, m = e.module, c = moduleCounts(m), f = moduleFlags(m, st.modData.globalOn);
-    const meta = [c.lore && `로어 ${c.lore}`, c.regex && `정규식 ${c.regex}`, c.trigger && `트리거 ${c.trigger}`, c.assets && `에셋 ${c.assets}`].filter(Boolean).join(" · ") || "비어 있음";
+    const meta = [c.lore && `로어 ${c.lore}`, c.regex && `정규식 ${c.regex}`, c.trigger && `트리거 ${c.trigger}`, c.assets && `에셋 ${c.assets}`, ctx.prefs.ui?.modSort?.key === "size" && fmtSize(moduleSize(m))].filter(Boolean).join(" · ") || "비어 있음";
     const color = readableName(ctx.prefs.meta.nameColors?.[m.id], st.mode);
     const sw = switchEl(e.enabled, { label: `${m.name} ${e.enabled ? "끄기" : "켜기"}`, onChange: (on) => toggleEnabled(ctx, e, on, sw) });
     if (!e.enabled && !hasAssets(m)) sw.title = "켜기";
@@ -8231,7 +8305,7 @@ ${patch.note}` : "",
         role: "option",
         tabindex: "0",
         "aria-selected": st.modSel === m.id ? "true" : "false",
-        dataset: filtering ? { id: m.id } : { id: m.id, dropRow: m.id, pick: m.id },
+        dataset: filtering ? { id: m.id } : st.modSorted ? { id: m.id, pick: m.id } : { id: m.id, dropRow: m.id, pick: m.id },
         onClick: (ev) => {
           if (!filtering && mu.click(ev, m.id, st.modSel)) return;
           select(ctx, m.id, el);
@@ -8333,6 +8407,10 @@ ${patch.note}` : "",
     draw(ctx);
   }
   async function move(ctx, id, dir) {
+    if (ctx.state.modSorted) {
+      ctx.toast("정렬 중이라 순서를 바꿀 수 없어요. 정렬에서 원래대로를 누른 뒤 바꿔 주세요.");
+      return;
+    }
     const meta = ctx.prefs.meta;
     const entries = ctx.state.modData.entries;
     const group = entries.filter((e) => (meta.mapping[e.module.id] ?? null) === (meta.mapping[id] ?? null)).map((e) => e.module.id);
@@ -9449,6 +9527,14 @@ ${patch.note}` : "",
 
   // src/ui/screens/characters.js
   var COARSE3 = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+  function cardSize(c) {
+    try {
+      const { chats, ...rest } = c;
+      return new TextEncoder().encode(JSON.stringify(rest)).length;
+    } catch {
+      return 0;
+    }
+  }
   async function renderCharacters(ctx) {
     const st = ctx.state;
     if (!st.chars || st.charsDirty) {
@@ -9471,7 +9557,8 @@ ${patch.note}` : "",
         chats: (c.chats ?? []).length,
         modules: c.modules ?? [],
         streaming: isGenerating(c),
-        desc: (c.creatorNotes || c.desc || "").slice(0, 400)
+        desc: (c.creatorNotes || c.desc || "").slice(0, 400),
+        size: cardSize(c)
       } : null).filter(Boolean);
       st.charModNames = new Map((db?.modules ?? []).map((m) => [m.id, m.name]));
       st.charsDirty = false;
@@ -9488,7 +9575,10 @@ ${patch.note}` : "",
     }
     const q = st.search.trim().toLowerCase();
     const filtering = !!q;
-    const list = st.chars.filter((c) => !q || c.name.toLowerCase().includes(q) || String(c.creator ?? "").toLowerCase().includes(q));
+    const sort = ctx.prefs.ui?.charSort ?? null;
+    st.charSorted = !!sort;
+    const srt = (arr, get) => sortBy(arr, sort, (x) => get(x)?.name ?? "", (x) => get(x)?.size ?? 0);
+    const list = srt(st.chars, (c) => c).filter((c) => !q || c.name.toLowerCase().includes(q) || String(c.creator ?? "").toLowerCase().includes(q));
     ctx.setNavCount("characters", st.chars.length);
     if (!st.charSel || !st.chars.some((c) => c.chaId === st.charSel)) st.charSel = list[0]?.chaId ?? null;
     const box = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "캐릭터 목록", style: "padding-top:12px" });
@@ -9508,7 +9598,7 @@ ${patch.note}` : "",
           role: "option",
           tabindex: "0",
           "aria-selected": st.charSel === c.chaId ? "true" : "false",
-          dataset: filtering ? { id: c.chaId } : { id: c.chaId, dropRow: c.chaId, pick: c.chaId },
+          dataset: filtering ? { id: c.chaId } : sort ? { id: c.chaId, pick: c.chaId } : { id: c.chaId, dropRow: c.chaId, pick: c.chaId },
           onClick: (ev) => {
             if (!filtering && mu.click(ev, c.chaId, st.charSel)) return;
             st.charSel = c.chaId;
@@ -9531,7 +9621,7 @@ ${patch.note}` : "",
           "div",
           { class: "txt" },
           h("div", { class: "ttl" }, h("span", { class: "name" }, c.name || "(이름 없음)"), c.type === "group" && badge("그룹", "mute"), c.streaming && badge("응답 생성 중", "warn")),
-          h("span", { class: "meta" }, [c.creator && `제작자 ${c.creator}`, `로어 ${c.lore}`, `에셋 ${c.assets}`, `채팅 ${c.chats}`].filter(Boolean).join(" · "))
+          h("span", { class: "meta" }, [c.creator && `제작자 ${c.creator}`, `로어 ${c.lore}`, `에셋 ${c.assets}`, `채팅 ${c.chats}`, sort?.key === "size" && fmtSize(c.size)].filter(Boolean).join(" · "))
         ),
         iconBtn("more", `${c.name} 메뉴`, { onClick: (ev) => {
           ev.stopPropagation();
@@ -9559,6 +9649,13 @@ ${patch.note}` : "",
     } else {
       let shown = 0;
       const items = layout(st.charOrder, st.chars.map((c) => ({ chaId: c.chaId })));
+      if (sort) {
+        const get = (id) => byId.get(id);
+        for (const it of items) if (it.type === "folder") it.ids = srt(it.ids, get);
+        const top = srt(items.filter((x) => x.type === "char").map((x) => x.id), get);
+        let k = 0;
+        for (const it of items) if (it.type === "char") it.id = top[k++];
+      }
       const hasFolders = items.some((x) => x.type === "folder");
       for (const it of items) {
         if (shown > 600) break;
@@ -9616,10 +9713,23 @@ ${patch.note}` : "",
     if (!list.length) box.appendChild(h("div", { class: "rb-empty" }, st.chars.length ? "찾는 캐릭터가 없어요." : "캐릭터가 없어요."));
     const keep = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
     const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 봇" });
+    const openTray = () => {
+      st.charTray = !st.charTray;
+      renderCharacters(ctx);
+    };
+    const sortTray = st.charTray ? tray(
+      ...sortChips(sort, (next) => {
+        ctx.prefs.saveUi({ charSort: next }).catch(() => {
+        });
+        renderCharacters(ctx);
+      }),
+      h("span", { class: "rb-muted", style: "font-size:12px;white-space:nowrap" }, sort ? "폴더마다 따로 정렬해요 · 끌어서 순서 바꾸기는 원래대로에서" : "끌어서 정한 순서예요")
+    ) : null;
     replace(ctx.main, h(
       "div",
       { class: "rb-chips" },
-      h("span", { class: "rb-muted" }, `캐릭터 ${st.chars.length}명${list.length > 600 ? " · 앞쪽 600명만 표시 (검색으로 좁혀 보세요)" : ""}${st.charsUnloaded ? ` · 앱이 아직 불러오는 중인 봇 ${st.charsUnloaded}명은 빠져 있어요` : ""}`),
+      trayBtn("정렬", { icon: "preset", value: sortLabel(sort), open: !!st.charTray, active: !!sort, onClick: openTray }),
+      h("span", { class: "rb-muted", style: "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto" }, `캐릭터 ${st.chars.length}명${list.length > 600 ? " · 앞쪽 600명만 표시 (검색으로 좁혀 보세요)" : ""}${st.charsUnloaded ? ` · 앱이 아직 불러오는 중인 봇 ${st.charsUnloaded}명은 빠져 있어요` : ""}`),
       st.charsUnloaded ? btn("새로 고침", { size: "sm", icon: "refresh", onClick: () => {
         st.charsDirty = true;
         renderCharacters(ctx);
@@ -9628,7 +9738,7 @@ ${patch.note}` : "",
       filtering ? null : btn(mu.active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => mu.setMode(!mu.active) }),
       btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newCharFolder(ctx) }),
       btn("업데이트·새로 넣기", { size: "sm", kind: "primary", icon: "upload", onClick: () => ctx.legacy.open() })
-    ), bar, box);
+    ), sortTray, bar, box);
     box.scrollTop = keep;
     st.justOpened = null;
     st.justMoved = null;

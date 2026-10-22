@@ -6,7 +6,7 @@ import { Busy, isGenerating } from '../../engine/safety.js';
 import { loadCharacters } from '../../data/modules.js';
 import { fmtWhen, h, replace, vanish } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, confirmDialog, loading, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog } from '../kit.js';
+import { badge, btn, trayBtn, tray, sortChips, sortLabel, sortBy, fmtSize, confirmDialog, loading, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog } from '../kit.js';
 import { createMulti } from '../multiselect.js';
 import { dragBadge, gripDrag } from '../sortable.js';
 import { openCharAssets, openCharEditor } from './chareditor.js';
@@ -15,6 +15,15 @@ import { isDev, openPatchMaker } from './devtools.js';
 import { applyPatchFile, exportMyChanges } from './patchui.js';
 
 var COARSE = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+// 카드 크기: 채팅 기록을 뺀 캐릭터 데이터의 크기 (에셋 파일 자체는 포함하지 않음)
+function cardSize(c) {
+  try {
+    const { chats, ...rest } = c;
+    return new TextEncoder().encode(JSON.stringify(rest)).length;
+  } catch {
+    return 0;
+  }
+}
 export async function renderCharacters(ctx) {
   const st = ctx.state;
   if (!st.chars || st.charsDirty) {
@@ -37,7 +46,8 @@ export async function renderCharacters(ctx) {
       chats: (c.chats ?? []).length,
       modules: c.modules ?? [],
       streaming: isGenerating(c),
-      desc: (c.creatorNotes || c.desc || "").slice(0, 400)
+      desc: (c.creatorNotes || c.desc || "").slice(0, 400),
+      size: cardSize(c)
     } : null).filter(Boolean);
     st.charModNames = new Map((db?.modules ?? []).map((m) => [m.id, m.name]));
     st.charsDirty = false;
@@ -54,7 +64,10 @@ export async function renderCharacters(ctx) {
   }
   const q = st.search.trim().toLowerCase();
   const filtering = !!q;
-  const list = st.chars.filter((c) => !q || c.name.toLowerCase().includes(q) || String(c.creator ?? "").toLowerCase().includes(q));
+  const sort = ctx.prefs.ui?.charSort ?? null;
+  st.charSorted = !!sort;
+  const srt = (arr, get) => sortBy(arr, sort, (x) => get(x)?.name ?? "", (x) => get(x)?.size ?? 0);
+  const list = srt(st.chars, (c) => c).filter((c) => !q || c.name.toLowerCase().includes(q) || String(c.creator ?? "").toLowerCase().includes(q));
   ctx.setNavCount("characters", st.chars.length);
   if (!st.charSel || !st.chars.some((c) => c.chaId === st.charSel)) st.charSel = list[0]?.chaId ?? null;
   const box = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "캐릭터 목록", style: "padding-top:12px" });
@@ -74,7 +87,7 @@ export async function renderCharacters(ctx) {
         role: "option",
         tabindex: "0",
         "aria-selected": st.charSel === c.chaId ? "true" : "false",
-        dataset: filtering ? { id: c.chaId } : { id: c.chaId, dropRow: c.chaId, pick: c.chaId },
+        dataset: filtering ? { id: c.chaId } : sort ? { id: c.chaId, pick: c.chaId } : { id: c.chaId, dropRow: c.chaId, pick: c.chaId },
         onClick: (ev) => {
           if (!filtering && mu.click(ev, c.chaId, st.charSel)) return;
           st.charSel = c.chaId;
@@ -97,7 +110,7 @@ export async function renderCharacters(ctx) {
         "div",
         { class: "txt" },
         h("div", { class: "ttl" }, h("span", { class: "name" }, c.name || "(이름 없음)"), c.type === "group" && badge("그룹", "mute"), c.streaming && badge("응답 생성 중", "warn")),
-        h("span", { class: "meta" }, [c.creator && `제작자 ${c.creator}`, `로어 ${c.lore}`, `에셋 ${c.assets}`, `채팅 ${c.chats}`].filter(Boolean).join(" · "))
+        h("span", { class: "meta" }, [c.creator && `제작자 ${c.creator}`, `로어 ${c.lore}`, `에셋 ${c.assets}`, `채팅 ${c.chats}`, sort?.key === "size" && fmtSize(c.size)].filter(Boolean).join(" · "))
       ),
       iconBtn("more", `${c.name} 메뉴`, { onClick: (ev) => {
         ev.stopPropagation();
@@ -125,6 +138,14 @@ export async function renderCharacters(ctx) {
   } else {
     let shown = 0;
     const items = layout(st.charOrder, st.chars.map((c) => ({ chaId: c.chaId })));
+    if (sort) {
+      // 폴더 안은 폴더 안끼리, 폴더 밖은 밖끼리. 폴더 자리는 그대로 두고 봇 자리만 다시 채운다
+      const get = (id) => byId.get(id);
+      for (const it of items) if (it.type === "folder") it.ids = srt(it.ids, get);
+      const top = srt(items.filter((x) => x.type === "char").map((x) => x.id), get);
+      let k = 0;
+      for (const it of items) if (it.type === "char") it.id = top[k++];
+    }
     const hasFolders = items.some((x) => x.type === "folder");
     for (const it of items) {
       if (shown > 600) break;
@@ -182,10 +203,23 @@ export async function renderCharacters(ctx) {
   if (!list.length) box.appendChild(h("div", { class: "rb-empty" }, st.chars.length ? "찾는 캐릭터가 없어요." : "캐릭터가 없어요."));
   const keep = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
   const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 봇" });
+  const openTray = () => {
+    st.charTray = !st.charTray;
+    renderCharacters(ctx);
+  };
+  const sortTray = st.charTray ? tray(
+    ...sortChips(sort, (next) => {
+      ctx.prefs.saveUi({ charSort: next }).catch(() => {
+      });
+      renderCharacters(ctx);
+    }),
+    h("span", { class: "rb-muted", style: "font-size:12px;white-space:nowrap" }, sort ? "폴더마다 따로 정렬해요 · 끌어서 순서 바꾸기는 원래대로에서" : "끌어서 정한 순서예요")
+  ) : null;
   replace(ctx.main, h(
     "div",
     { class: "rb-chips" },
-    h("span", { class: "rb-muted" }, `캐릭터 ${st.chars.length}명${list.length > 600 ? " · 앞쪽 600명만 표시 (검색으로 좁혀 보세요)" : ""}${st.charsUnloaded ? ` · 앱이 아직 불러오는 중인 봇 ${st.charsUnloaded}명은 빠져 있어요` : ""}`),
+    trayBtn("정렬", { icon: "preset", value: sortLabel(sort), open: !!st.charTray, active: !!sort, onClick: openTray }),
+    h("span", { class: "rb-muted", style: "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto" }, `캐릭터 ${st.chars.length}명${list.length > 600 ? " · 앞쪽 600명만 표시 (검색으로 좁혀 보세요)" : ""}${st.charsUnloaded ? ` · 앱이 아직 불러오는 중인 봇 ${st.charsUnloaded}명은 빠져 있어요` : ""}`),
     st.charsUnloaded ? btn("새로 고침", { size: "sm", icon: "refresh", onClick: () => {
       st.charsDirty = true;
       renderCharacters(ctx);
@@ -194,7 +228,7 @@ export async function renderCharacters(ctx) {
     filtering ? null : btn(mu.active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => mu.setMode(!mu.active) }),
     btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newCharFolder(ctx) }),
     btn("업데이트·새로 넣기", { size: "sm", kind: "primary", icon: "upload", onClick: () => ctx.legacy.open() })
-  ), bar, box);
+  ), sortTray, bar, box);
   box.scrollTop = keep;
   st.justOpened = null;
   st.justMoved = null;

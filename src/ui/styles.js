@@ -63,6 +63,15 @@ html,body{margin:0;height:100%;background:transparent}
 @media (hover: hover){.rb-chip:hover{color:var(--rb-text);border-color:var(--rb-line3)}}
 .rb-chip[aria-pressed=true]{border-color:var(--rb-sel-ring);background:var(--rb-acc-soft);color:var(--rb-text);font-weight:600}
 .rb-chip small{opacity:.75;font-size:inherit}
+.rb-traybtn{height:34px;padding:0 10px 0 12px;border-radius:999px;border:1px solid var(--rb-line);background:transparent;color:var(--rb-sub);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
+@media (hover: hover){.rb-traybtn:hover{color:var(--rb-text);border-color:var(--rb-line3)}}
+.rb-traybtn b{font-weight:600;color:var(--rb-text)}
+.rb-traybtn.on{border-color:var(--rb-sel-ring);background:var(--rb-acc-soft)}
+.rb-traybtn[aria-expanded=true]{border-color:var(--rb-sel-ring);color:var(--rb-text)}
+.rb-traybtn .chev{display:flex;transition:transform .18s}
+.rb-traybtn[aria-expanded=true] .chev{transform:rotate(180deg)}
+.rb-tray{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 20px 12px;animation:rb-expand .18s ease-out;transform-origin:top}
+.rb-tray .rb-chip{flex-shrink:0}
 .rb-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:500;border-radius:999px;padding:2px 8px;white-space:nowrap;flex-shrink:0}
 .k-acc{color:var(--rb-acc-text);background:var(--rb-acc-soft)}.k-acc2{color:var(--rb-acc2-text);background:var(--rb-acc2-soft)}
 .k-warn{color:var(--rb-warn);background:var(--rb-warn-soft)}.k-ok{color:var(--rb-teal);background:var(--rb-teal-soft)}
@@ -292,6 +301,7 @@ select.rb-input{appearance:auto}
   .rb-tabbar a[aria-current=page]{color:var(--rb-acc-text);font-weight:600}
   .rb-chips{flex-wrap:nowrap;overflow-x:auto;padding:12px 16px 8px}
   .rb-chip{flex-shrink:0}
+  .rb-tray{flex-wrap:nowrap;overflow-x:auto;padding:0 16px 10px}
   .rb-detail{position:absolute;left:0;right:0;bottom:68px;width:auto;max-height:72%;border-left:0;border-radius:22px 22px 0 0;background:var(--rb-win);box-shadow:var(--rb-shadow);z-index:20;overflow:auto;transform:translateY(105%);visibility:hidden;pointer-events:none;transition:transform .2s ease-out,visibility 0s linear .2s}
   .rb-detail.open{transform:none;visibility:visible;pointer-events:auto;transition:transform .2s ease-out}
   .rb-detail::before{content:'';display:block;width:40px;height:5px;border-radius:999px;background:var(--rb-line3);margin:-8px auto 4px}
