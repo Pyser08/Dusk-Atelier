@@ -33,10 +33,13 @@ await page.goto(URL0, { waitUntil: 'domcontentloaded' });
 await page.waitForFunction(async () => {
   try {
     const S = await import('/src/ts/stores.svelte.ts');
-    return !!S.DBState?.db && Array.isArray(S.DBState.db.characters);
+    let loaded = false;
+    S.loadedStore.subscribe((v) => { loaded = v; })();
+    return loaded && !!S.DBState?.db && Array.isArray(S.DBState.db.characters);
   } catch { return false; }
 }, null, { timeout: 180000, polling: 1000 });
 console.log('RisuAI 준비됨');
+await page.waitForTimeout(3000);
 
 // 확인창 자동 응답("예")과 기록
 await page.evaluate(async () => {
