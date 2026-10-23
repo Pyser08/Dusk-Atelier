@@ -17745,8 +17745,8 @@ ${md()}
 
   // src/data/plugins.js
   var SELF_NAME = "dusk_atelier";
-  var REG = "da_interop_registry";
-  var PATCH = "da_interop_patch";
+  var REG = "da_interop:reg:";
+  var PATCH = "da_interop:patch:";
   var KEYS2 = { cats: "rbm:pluginCats:v1", backups: "rbm:pluginBackups:v1" };
   var MAX_BACKUPS2 = 5;
   var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -17765,23 +17765,16 @@ ${md()}
     const db = await api.getDatabase(["plugins"]);
     return Array.isArray(db?.plugins) ? db.plugins : null;
   }
-  async function readEtc(api) {
-    const db = await api.getDatabase(["etcData"]);
-    return db?.etcData && typeof db.etcData === "object" ? db.etcData : {};
-  }
-  async function writeEtcEntry(api, bucket, id, value) {
-    for (let i2 = 0; i2 < 4; i2++) {
-      const etc = { ...await readEtc(api) };
-      const b = { ...etc[bucket] ?? {} };
-      if (value === void 0) delete b[id];
-      else b[id] = value;
-      etc[bucket] = b;
-      await api.setDatabaseLite({ etcData: etc });
-      await sleep(120);
-      const now = (await readEtc(api))[bucket]?.[id];
-      if (value === void 0 ? now === void 0 : now?.rev === value.rev && now?.updatedAt === value.updatedAt) return true;
+  async function storageKeys(api) {
+    const ps = api.pluginStorage;
+    if (typeof ps.keys === "function") return await ps.keys() ?? [];
+    if (typeof ps.key === "function") {
+      const n = typeof ps.length === "function" ? await ps.length() : ps.length ?? 0;
+      const out = [];
+      for (let i2 = 0; i2 < n; i2++) out.push(await ps.key(i2));
+      return out;
     }
-    return false;
+    return [];
   }
   async function detectEnv(api) {
     const env = { pluginsReadable: false, pluginsWritable: false, reason: "" };
@@ -17815,23 +17808,27 @@ ${md()}
     }
   }
   async function listInterop(api, installedNames) {
-    const etc = await readEtc(api);
-    const reg = etc[REG] ?? {}, patches = etc[PATCH] ?? {};
-    return Object.values(reg).filter((e) => e && e.spec === 1 && e.id).map((e) => {
-      const p = patches[e.id];
-      return {
+    const keys = (await storageKeys(api)).filter((k) => typeof k === "string" && k.startsWith(REG));
+    const out = [];
+    for (const k of keys) {
+      const e = await readJson3(api, k, null);
+      if (!e || e.spec !== 1 || !e.id) continue;
+      const p = await readJson3(api, PATCH + e.id, null);
+      out.push({
         ...e,
         fields: Array.isArray(e.fields) ? e.fields : [],
         presets: Array.isArray(e.presets) ? e.presets : [],
         pendingRev: p && p.rev > (e.appliedRev ?? 0) ? p.rev : 0,
         installed: installedNames && e.pluginName ? installedNames.has(e.pluginName) : null
-      };
-    }).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+      });
+    }
+    return out.sort((a, b) => String(a.name).localeCompare(String(b.name)));
   }
   async function sendPatch(api, id, values, preset = null) {
-    const etc = await readEtc(api);
-    const rev2 = Math.max(etc[PATCH]?.[id]?.rev ?? 0, etc[REG]?.[id]?.appliedRev ?? 0) + 1;
-    if (!await writeEtcEntry(api, PATCH, id, { rev: rev2, values: clone5(values), preset, updatedAt: Date.now() })) throw new Error("값을 저장하지 못했어요");
+    const prev = await readJson3(api, PATCH + id, null);
+    const reg = await readJson3(api, REG + id, null);
+    const rev2 = Math.max(prev?.rev ?? 0, reg?.appliedRev ?? 0) + 1;
+    await writeJson2(api, PATCH + id, { rev: rev2, values: clone5(values), preset, updatedAt: Date.now() });
     return rev2;
   }
   function presetValues(entry2, name) {
@@ -17842,15 +17839,15 @@ ${md()}
   async function waitAck(api, id, rev2, timeoutMs = 1e4) {
     const end = Date.now() + timeoutMs;
     while (Date.now() < end) {
-      const e = (await readEtc(api))[REG]?.[id];
+      const e = await readJson3(api, REG + id, null);
       if ((e?.appliedRev ?? 0) >= rev2) return { ok: !e.lastError, error: e.lastError ?? null };
       await sleep(700);
     }
     return { ok: false, error: "timeout" };
   }
   async function pruneInterop(api, id) {
-    await writeEtcEntry(api, REG, id, void 0);
-    await writeEtcEntry(api, PATCH, id, void 0);
+    await api.pluginStorage.removeItem(REG + id);
+    await api.pluginStorage.removeItem(PATCH + id);
   }
   async function loadCategories(api) {
     const v = await readJson3(api, KEYS2.cats, {});
@@ -17982,16 +17979,9 @@ ${md()}
     return out;
   }
   async function storageDump(api) {
-    const ps = api.pluginStorage;
-    let keys = [];
-    if (typeof ps.keys === "function") keys = await ps.keys();
-    else if (typeof ps.key === "function") {
-      const n = typeof ps.length === "function" ? await ps.length() : ps.length ?? 0;
-      for (let i2 = 0; i2 < n; i2++) keys.push(await ps.key(i2));
-    }
     const out = [];
-    for (const k of keys ?? []) {
-      const v = await ps.getItem(k);
+    for (const k of await storageKeys(api)) {
+      const v = await api.pluginStorage.getItem(k);
       out.push({ key: k, value: v, size: typeof v === "string" ? v.length : JSON.stringify(v ?? null).length });
     }
     return out.sort((a, b) => a.key.localeCompare(b.key));
@@ -17999,14 +17989,15 @@ ${md()}
   var storageAvailable = (api) => typeof api.pluginStorage?.keys === "function" || typeof api.pluginStorage?.key === "function";
   async function exportAll(api) {
     const plugins = await readPlugins(api).catch(() => null);
-    const etc = await readEtc(api).catch(() => ({}));
+    const interop = {};
+    for (const k of await storageKeys(api).catch(() => [])) if (k.startsWith("da_interop:")) interop[k] = await readJson3(api, k, null);
     return JSON.stringify({
       format: "dusk-atelier-plugins",
       v: 1,
       at: (/* @__PURE__ */ new Date()).toISOString(),
       plugins,
       categories: await loadCategories(api),
-      interop: { registry: etc[REG] ?? {}, patch: etc[PATCH] ?? {} }
+      interop
     }, null, 2);
   }
 
@@ -18306,7 +18297,7 @@ ${md()}
     return h(
       "div",
       { style: "display:flex;flex-direction:column;gap:6px" },
-      h("p", { class: "rb-muted" }, `Dusk Atelier가 저장한 값 ${items.length}개 · ${fmtBytes(total)} (플러그인 저장소는 플러그인마다 따로라 다른 플러그인 것은 볼 수 없어요)`),
+      h("p", { class: "rb-muted" }, `플러그인 저장소 값 ${items.length}개 · ${fmtBytes(total)} (모든 플러그인이 함께 쓰는 저장소예요. 다른 플러그인 값을 지우면 그 플러그인 설정이 사라질 수 있어요)`),
       items.map((it) => h(
         "button",
         { type: "button", class: "rb-row", onClick: () => {
@@ -18322,7 +18313,7 @@ ${md()}
               { style: "display:flex;gap:8px" },
               btn("내려받기", { size: "sm", icon: "download", onClick: () => download(`${it.key.replace(/[^\w.-]+/g, "_")}.json`, text, "application/json") }),
               btn("지우기", { size: "sm", kind: "danger", icon: "trash", onClick: async () => {
-                if (!await confirmDialog(ctx.win, { title: `'${it.key}'을(를) 지울까요?`, body: "Dusk Atelier 설정이나 기록이 사라질 수 있어요.", ok: "지우기", danger: true })) return;
+                if (!await confirmDialog(ctx.win, { title: `'${it.key}'을(를) 지울까요?`, body: "이 값을 쓰는 플러그인의 설정이나 기록이 사라질 수 있어요.", ok: "지우기", danger: true })) return;
                 await ctx.api.pluginStorage.removeItem(it.key);
                 ctx.closeSheet();
                 renderPlugins(ctx);
