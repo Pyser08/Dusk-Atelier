@@ -8,6 +8,7 @@ import { createHostToast } from './ui/toast.js';
 import { createWatcher } from './ui/watch.js';
 import { CSS2 } from './ui/styles.js';
 import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets } from './data/presets.js';
+import { createLoreRuntime } from './data/lorerules.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
 
 var VERSION = typeof __VERSION__ !== "undefined" ? __VERSION__ : "dev";
@@ -92,6 +93,9 @@ async function start() {
   hooks.created = (id) => watcher.markKnown(id);
   hooks.modulesChanged = () => watcher.snapshotModules();
   watcher.start().catch((e) => console.log(`[${TITLE}] 새 봇 감지 시작 실패: ${e?.message ?? e}`));
+  // 로어북 규칙(조건·확률·중복 금지·연쇄): 관리 항목이 있는 봇에서만 요청 훅을 건다
+  const loreRuntime = createLoreRuntime(api);
+  loreRuntime.start().catch((e) => console.log(`[${TITLE}] 로어북 규칙 시작 실패: ${e?.message ?? e}`));
   let handlers = null, timer = null;
   const sync = () => app?.ctx.svc.serial(() => syncPersonaModules(api)).catch((e) => console.log("[Dusk Atelier] 페르소나 동기화 실패", e?.message ?? e));
   const onInput = async (text) => {
@@ -124,6 +128,7 @@ async function start() {
   app = createApp(api, { legacy, version: VERSION, onPersonaChanged: () => refreshPersonaHandlers().catch(() => {
   }) });
   app.ctx.watcher = watcher;
+  app.ctx.loreRuntime = loreRuntime;
   refreshPersonaHandlers().catch(() => {
   });
   (async () => {

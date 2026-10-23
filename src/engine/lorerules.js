@@ -1,0 +1,387 @@
+// Dusk 로어북 규칙 (DA Lore Rules v1)
+// 규칙은 각 로어북 항목의 extentions에 들어간다. 카드(.charx·PNG)와 .risum으로 내보내도 그대로 따라간다.
+//   extentions.da_rid  : 항목 식별자 (연쇄·조건이 서로를 가리킬 때 씀. 이름이 바뀌어도 유지)
+//   extentions.da_rule : 규칙 객체 (아래 defaultRule 모양)
+// 동작 방식 (리스 엔진을 그대로 쓴다):
+//   관리 항목의 내용은 '@@activate' + 'CBS 문' 모양으로 맞춘다.
+//     @@activate
+//     @@unrecursive
+//     {{#if {{getvar::da_xxxx}}}}
+//     본문 (작성자의 CBS·변수·#if 그대로)
+//     {{/if}}
+//   사용자가 입력하면(프롬프트 조립 전) Dusk가 규칙을 평가해 채팅 변수 da_xxxx를 1/0으로 쓴다.
+//   그러면 리스가 평소처럼 CBS를 파싱하고 배치·토큰 계산까지 한다. 꺼진 항목은 빈 내용이라 토큰을 안 먹는다.
+//   플러그인이 없는 사용자에게는 변수가 비어 있어 이 항목들이 꺼진 것처럼 보일 뿐, 봇이 깨지지 않는다.
+
+export const RULE_VERSION = 1;
+export const DONT_ACTIVATE = "@@dont_activate";
+export const STATE_VAR = "da_state";
+export const gateVar = (rid) => "da_" + String(rid ?? "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 12);
+const GATE_OPEN = /^\{\{#if \{\{getvar::da_[a-zA-Z0-9]+\}\}\}\}$/;
+const GATE_CLOSE = "{{/if}}";
+// Dusk가 관리하는 머리 장식 줄 (배치는 규칙에서 정한다)
+const OWNED_DECO = /^@@(activate|dont_activate|unrecursive|depth|reverse_depth|role)(\s|$)/;
+
+export const COND_TYPES = [
+  ["keys", "이 항목의 키가 최근 대화에 있음"],
+  ["text", "특정 단어가 최근 대화에 있음"],
+  ["var", "채팅 변수 비교"],
+  ["turn", "턴 범위"],
+  ["with", "다른 항목이 이번 턴에 켜짐"],
+  ["without", "다른 항목이 이번 턴에 안 켜짐"]
+];
+export const VAR_OPS = ["=", "!=", ">", "<", ">=", "<=", "있음", "없음"];
+
+export function defaultRule() {
+  return { v: RULE_VERSION, on: true, mode: "all", cond: [{ t: "keys" }], prob: 100, once: "none", cool: 3, group: "", at: "top", depth: 4, role: "system", scan: 4, chain: [] };
+}
+
+export function ruleOf(entry) {
+  const r = entry?.extentions?.da_rule;
+  if (!r || typeof r !== "object") return null;
+  return { ...defaultRule(), ...r, cond: Array.isArray(r.cond) ? r.cond : [], chain: Array.isArray(r.chain) ? r.chain : [] };
+}
+export const ridOf = (entry) => entry?.extentions?.da_rid || null;
+export const isManaged = (entry) => !!ruleOf(entry) && ruleOf(entry).on !== false;
+
+// ---------- 내용의 @@dont_activate 다루기 ----------
+const DECO_LINE = /^@@@?[a-z_]+(?:\s.*)?$/;
+export function hasDontActivate(content) {
+  for (const line of String(content ?? "").split("\n")) {
+    const t = line.trim();
+    if (!t) continue;
+    if (!DECO_LINE.test(t)) return false;
+    if (t === DONT_ACTIVATE) return true;
+  }
+  return false;
+}
+export function addDontActivate(content) {
+  return hasDontActivate(content) ? content : `${DONT_ACTIVATE}\n${content ?? ""}`;
+}
+export function removeDontActivate(content) {
+  const lines = String(content ?? "").split("\n");
+  const i = lines.findIndex((l) => l.trim() === DONT_ACTIVATE);
+  if (i < 0) return content;
+  // 머리 장식 줄 안에 있을 때만 지운다
+  if (lines.slice(0, i).some((l) => l.trim() && !DECO_LINE.test(l.trim()))) return content;
+  lines.splice(i, 1);
+  return lines.join("\n");
+}
+// 프롬프트에 넣을 본문: 머리의 @@ 장식 줄은 뺀다
+function splitHead(content) {
+  const lines = String(content ?? "").split("\n");
+  let i = 0;
+  while (i < lines.length && (!lines[i].trim() || DECO_LINE.test(lines[i].trim()))) i++;
+  return { head: lines.slice(0, i).map((l) => l.trim()).filter(Boolean), rest: lines.slice(i) };
+}
+function unwrap(rest) {
+  const r = [...rest];
+  while (r.length && !r[r.length - 1].trim()) r.pop();
+  if (r.length >= 2 && GATE_OPEN.test(r[0].trim()) && r[r.length - 1].trim() === GATE_CLOSE) return { gated: true, body: r.slice(1, -1).join("\n") };
+  return { gated: false, body: r.join("\n") };
+}
+export function bodyOf(content) {
+  return unwrap(splitHead(content).rest).body.trim();
+}
+// 규칙에 맞게 내용 머리와 CBS 문을 다시 만든다. 본문과 작성자의 다른 장식(@@probability 등)은 그대로 둔다.
+export function nativeContent(content, rule, rid) {
+  const { head, rest } = splitHead(content);
+  const body = unwrap(rest).body;
+  const keep = head.filter((l) => !OWNED_DECO.test(l));
+  const place = [];
+  if (rule.at === "depth") place.push(`@@depth ${Math.max(0, Number(rule.depth) || 0)}`);
+  else if (rule.at === "bottom") place.push("@@depth 0");
+  if (rule.role && rule.role !== "system") place.push(`@@role ${rule.role}`);
+  return ["@@activate", "@@unrecursive", ...place, ...keep, `{{#if {{getvar::${gateVar(rid)}}}}}`, body, GATE_CLOSE].join("\n");
+}
+// 규칙을 끌 때: Dusk가 붙인 머리·CBS 문을 걷어 낸다
+export function plainContent(content) {
+  const { head, rest } = splitHead(content);
+  const { gated, body } = unwrap(rest);
+  if (!gated) return content;
+  const keep = head.filter((l) => !/^@@(activate|unrecursive)(\s|$)/.test(l));
+  return [...keep, body].join("\n");
+}
+export const isNativeSynced = (entry) => {
+  const r = ruleOf(entry);
+  return !r || entry.content === nativeContent(entry.content, r, ridOf(entry));
+};
+// 평가 결과 → 채팅 변수 (관리 항목 전부를 1/0으로)
+export function gateValues(items, fired) {
+  const on = new Set(fired.map((a) => a.rid));
+  return Object.fromEntries(items.map((it) => [gateVar(it.rid), on.has(it.rid) ? "1" : "0"]));
+}
+// 간단한 CBS: {{char}}·{{bot}}·{{user}}·{{// 주석}}만 바꾼다
+export function cbsLite(text, { char = "", user = "" } = {}) {
+  return String(text ?? "")
+    .replace(/\{\{\/\/[\s\S]*?\}\}/g, "")
+    .replace(/\{\{comment:[\s\S]*?\}\}/gi, "")
+    .replace(/\{\{(char|bot)\}\}/gi, char)
+    .replace(/\{\{user\}\}/gi, user);
+}
+
+// ---------- 매칭 ----------
+const norm = (s) => String(s ?? "").toLowerCase().replace(/\{\{\/\/[\s\S]*?\}\}/g, "");
+function splitKeys(s) {
+  return String(s ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+}
+// 이름 경계: '김민'이 '김민수'에는 안 걸리고 '김민이·김민에게'에는 걸린다
+const PARTICLE = "(?:으로|이랑|에게|한테|께서|에서|부터|까지|처럼|보다|은|는|이|가|을|를|의|에|와|과|도|로|만|께|랑|야|아|님|씨|서)";
+const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function wholeRe(k) {
+  return new RegExp(`(?<![가-힣A-Za-z0-9])${escRe(k)}(?=$|[^가-힣A-Za-z0-9]|${PARTICLE}{1,2}(?![가-힣]))`, "i");
+}
+function keyHit(keys, texts, { regex = false, all = false, whole = false } = {}) {
+  if (!keys.length) return false;
+  const test = (k) => {
+    if (whole && !regex) {
+      const re = wholeRe(k.trim());
+      return texts.some((t) => re.test(String(t ?? "")));
+    }
+    if (regex) {
+      const m = /^\/(.*)\/([a-z]*)$/s.exec(k);
+      if (!m) return false;
+      try {
+        const re = new RegExp(m[1], m[2]);
+        return texts.some((t) => {
+          re.lastIndex = 0;
+          return re.test(t);
+        });
+      } catch {
+        return false;
+      }
+    }
+    const kk = norm(k).replace(/ /g, "");
+    return kk && texts.some((t) => norm(t).replace(/ /g, "").includes(kk));
+  };
+  return all ? keys.every(test) : keys.some(test);
+}
+function cmp(a, op, b) {
+  if (op === "있음") return a !== void 0 && a !== null && String(a) !== "" && String(a) !== "null";
+  if (op === "없음") return a === void 0 || a === null || String(a) === "" || String(a) === "null";
+  const na = Number(a), nb = Number(b);
+  const numeric = String(a ?? "").trim() !== "" && String(b ?? "").trim() !== "" && !isNaN(na) && !isNaN(nb);
+  switch (op) {
+    case "=": return numeric ? na === nb : String(a ?? "") === String(b ?? "");
+    case "!=": return numeric ? na !== nb : String(a ?? "") !== String(b ?? "");
+    case ">": return numeric && na > nb;
+    case "<": return numeric && na < nb;
+    case ">=": return numeric && na >= nb;
+    case "<=": return numeric && na <= nb;
+  }
+  return false;
+}
+
+// ---------- 모으기 ----------
+// 여러 출처(캐릭터·채팅·모듈)의 로어북에서 관리 항목만 모은다. 같은 rid가 여럿이면 먼저 나온 것을 쓴다.
+export function collectManaged(entries) {
+  const out = [];
+  const seen = new Set();
+  for (const e of entries ?? []) {
+    if (!e || e.mode === "folder" || e.enabled === false) continue;
+    const rule = ruleOf(e);
+    if (!rule || rule.on === false) continue;
+    const rid = ridOf(e) || `name:${e.comment ?? ""}`;
+    if (seen.has(rid)) continue;
+    seen.add(rid);
+    out.push({ rid, entry: e, rule });
+  }
+  return out;
+}
+
+// ---------- 평가 ----------
+// messages: [{ role: 'user'|'char', data }] (채팅 순서). turn: 사용자 메시지 수.
+// state: { f: { rid: [turn, ...] } } 이전 턴 발동 기록. 현재 턴 이상 기록은 무시(다시 생성·되돌리기 대응).
+// 반환: { fired: [{ rid, entry, rule, why }], state(새 기록) }
+export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}, rng = Math.random, ignoreProb = false }) {
+  const hist = {};
+  for (const [rid, turns] of Object.entries(state?.f ?? {})) {
+    const t = (Array.isArray(turns) ? turns : []).filter((x) => typeof x === "number" && x < turn);
+    if (t.length) hist[rid] = t;
+  }
+  const byRid = new Map(items.map((x) => [x.rid, x]));
+  const textsFor = (scan, who = "any") => {
+    const n = Math.max(1, Number(scan) || 4);
+    return messages.slice(-n).filter((m) => who === "any" || m.role === who).map((m) => m.data ?? "");
+  };
+  const blocked = (it) => {
+    const h = hist[it.rid];
+    if (!h?.length) return false;
+    if (it.rule.once === "chat") return true;
+    if (it.rule.once === "cooldown") return turn - Math.max(...h) <= Math.max(1, Number(it.rule.cool) || 1);
+    return false;
+  };
+  const roll = (p) => ignoreProb || rng() * 100 < (p === void 0 || p === "" ? 100 : Number(p));
+  const active = new Map();
+  const rolled = new Map();
+  const condOk = (it, c) => {
+    switch (c.t) {
+      case "keys": {
+        const e = it.entry;
+        const texts = textsFor(it.rule.scan);
+        const o = { regex: !!e.useRegex, whole: !!it.rule.whole };
+        if (!keyHit(splitKeys(e.key), texts, o)) return false;
+        if (e.selective && splitKeys(e.secondkey).length) return keyHit(splitKeys(e.secondkey), texts, o);
+        return true;
+      }
+      case "text":
+        return keyHit(splitKeys(c.keys), textsFor(c.scan ?? it.rule.scan, c.in || "any"), { regex: !!c.regex, all: !!c.all, whole: !!it.rule.whole });
+      case "var":
+        return cmp(vars[c.name] ?? vars["$" + c.name], c.op || "=", c.val);
+      case "turn":
+        return (c.min === void 0 || c.min === "" || turn >= Number(c.min)) && (c.max === void 0 || c.max === "" || turn <= Number(c.max));
+      case "with":
+        return active.has(c.rid);
+      case "without":
+        return !active.has(c.rid);
+    }
+    return true;
+  };
+  const condsOk = (it) => {
+    const cs = it.rule.cond ?? [];
+    if (!cs.length) return true;
+    return it.rule.mode === "any" ? cs.some((c) => condOk(it, c)) : cs.every((c) => condOk(it, c));
+  };
+  const add = (it, why) => {
+    active.set(it.rid, { ...it, why });
+    return true;
+  };
+  for (let pass = 0; pass < 8; pass++) {
+    let changed = false;
+    for (const it of items) {
+      if (active.has(it.rid) || blocked(it) || !condsOk(it)) continue;
+      if (!rolled.has(it.rid)) rolled.set(it.rid, roll(it.rule.prob));
+      if (rolled.get(it.rid)) changed = add(it, "조건") || changed;
+    }
+    for (const a of [...active.values()]) {
+      for (const c of a.rule.chain ?? []) {
+        const tgt = byRid.get(c.rid);
+        if (!tgt || active.has(tgt.rid) || blocked(tgt)) continue;
+        const key = `${a.rid}>${tgt.rid}`;
+        if (rolled.has(key)) continue;
+        rolled.set(key, roll(c.prob));
+        if (rolled.get(key)) changed = add(tgt, `연쇄: ${a.entry.comment || a.rid}`) || changed;
+      }
+    }
+    if (!changed) break;
+  }
+  // 'without' 조건은 최종 결과로 다시 확인 (나중에 켜진 항목 때문에 무효가 된 경우)
+  for (const a of [...active.values()]) {
+    if (a.why !== "조건") continue;
+    if ((a.rule.cond ?? []).some((c) => c.t === "without") && !condsOk(a)) active.delete(a.rid);
+  }
+  // 그룹: 같은 그룹은 한 턴에 하나만 (삽입 순서가 큰 것, 같으면 먼저 나온 것)
+  const groups = new Map();
+  for (const a of active.values()) {
+    const g = String(a.rule.group ?? "").trim();
+    if (!g) continue;
+    const cur = groups.get(g);
+    if (!cur || (Number(a.entry.insertorder) || 0) > (Number(cur.entry.insertorder) || 0)) groups.set(g, a);
+  }
+  const fired = [...active.values()].filter((a) => {
+    const g = String(a.rule.group ?? "").trim();
+    return !g || groups.get(g) === a;
+  });
+  const f = { ...hist };
+  for (const a of fired) f[a.rid] = [...(f[a.rid] ?? []), turn].slice(-20);
+  return { fired, state: { f } };
+}
+
+// ---------- 배치 ----------
+// formated: 리스가 보내려는 메시지 배열(OpenAIChat[]). fired의 내용을 규칙의 위치에 넣는다.
+export function inject(formated, fired, { char = "", user = "" } = {}) {
+  const out = [...formated];
+  if (!fired.length) return out;
+  const firstChat = (() => {
+    const i = out.findIndex((m) => m.role !== "system");
+    return i < 0 ? out.length : i;
+  })();
+  let end = out.length;
+  if (end > firstChat && out[end - 1].role === "assistant" && end - 1 > firstChat) {
+    // 마지막이 미리 채우기(prefill)면 그 앞까지를 대화 끝으로 본다
+    const prev = out[end - 2];
+    if (prev?.role === "user") end -= 1;
+  }
+  const slots = new Map();
+  for (const a of fired) {
+    const r = a.rule;
+    let idx;
+    if (r.at === "bottom") idx = end;
+    else if (r.at === "depth") idx = Math.max(firstChat, end - Math.max(0, Number(r.depth) || 0));
+    else idx = firstChat;
+    const role = ["system", "user", "assistant"].includes(r.role) ? r.role : "system";
+    const k = `${idx}|${role}`;
+    if (!slots.has(k)) slots.set(k, { idx, role, parts: [] });
+    slots.get(k).parts.push({ order: Number(a.entry.insertorder) || 0, text: cbsLite(bodyOf(a.entry.content), { char, user }) });
+  }
+  const list = [...slots.values()].sort((a, b) => b.idx - a.idx);
+  for (const s of list) {
+    const content = s.parts.sort((a, b) => b.order - a.order).map((p) => p.text).filter(Boolean).join("\n\n");
+    if (!content) continue;
+    out.splice(s.idx, 0, { role: s.role, content, memo: "dusk-lore" });
+  }
+  return out;
+}
+
+// ---------- 검증 ----------
+// lorebook 배열을 보고 문제 목록을 돌려준다: [{ level: 'err'|'warn', index, msg }]
+export function validateRules(lorebook) {
+  const out = [];
+  const list = lorebook ?? [];
+  const rids = new Map();
+  list.forEach((l, i) => {
+    const rid = ridOf(l);
+    if (!rid) return;
+    if (rids.has(rid)) out.push({ level: "err", index: i, msg: `로어북 '${l.comment || i + 1}': 규칙 식별자가 '${list[rids.get(rid)].comment || rids.get(rid) + 1}'와 같아요 (복제한 항목이면 규칙을 껐다 켜 주세요)` });
+    else rids.set(rid, i);
+  });
+  const name = (l, i) => `로어북 '${l.comment || i + 1}'`;
+  list.forEach((l, i) => {
+    const r = ruleOf(l);
+    if (!r || r.on === false || l.mode === "folder") return;
+    const n = name(l, i);
+    if (!isNativeSynced(l)) out.push({ level: "warn", index: i, msg: `${n}: 내용 머리(@@activate·{{#if}})가 규칙과 달라요. 저장하면 자동으로 맞춰져요` });
+    if (!bodyOf(l.content)) out.push({ level: "warn", index: i, msg: `${n}: 넣을 내용이 비어 있어요` });
+    const p = Number(r.prob);
+    if (isNaN(p) || p < 0 || p > 100) out.push({ level: "err", index: i, msg: `${n}: 확률은 0~100이어야 해요` });
+    if (r.once === "cooldown" && !(Number(r.cool) >= 1)) out.push({ level: "err", index: i, msg: `${n}: 쿨다운 턴 수는 1 이상이어야 해요` });
+    if (r.at === "depth" && !(Number(r.depth) >= 0)) out.push({ level: "err", index: i, msg: `${n}: 깊이는 0 이상이어야 해요` });
+    if (!(r.cond ?? []).length && !(r.chain ?? []).length && p >= 100 && r.once === "none") out.push({ level: "warn", index: i, msg: `${n}: 조건이 없어 매 턴 켜져요` });
+    for (const c of r.cond ?? []) {
+      if (c.t === "keys" && !splitKeys(l.key).length) out.push({ level: "warn", index: i, msg: `${n}: '키' 조건이 있지만 활성화 키가 비어 있어요` });
+      if (c.t === "text" && !splitKeys(c.keys).length) out.push({ level: "warn", index: i, msg: `${n}: 단어 조건에 단어가 없어요` });
+      if (c.t === "var" && !String(c.name ?? "").trim()) out.push({ level: "err", index: i, msg: `${n}: 변수 조건에 변수 이름이 없어요` });
+      if ((c.t === "with" || c.t === "without") && !rids.has(c.rid)) out.push({ level: "err", index: i, msg: `${n}: 조건이 가리키는 항목이 없어요 (규칙이 꺼졌거나 지워짐)` });
+      if ((c.t === "with" || c.t === "without") && c.rid === ridOf(l)) out.push({ level: "err", index: i, msg: `${n}: 조건이 자기 자신을 가리켜요` });
+      if ((c.t === "text" && c.regex) || (c.t === "keys" && l.useRegex)) {
+        for (const k of splitKeys(c.t === "text" ? c.keys : l.key)) {
+          const m = /^\/(.*)\/([a-z]*)$/s.exec(k);
+          try {
+            if (!m) throw new Error("/패턴/플래그 모양이어야 해요");
+            new RegExp(m[1], m[2]);
+          } catch (e) {
+            out.push({ level: "err", index: i, msg: `${n}: 정규식 '${k}' 오류 — ${e.message}` });
+          }
+        }
+      }
+    }
+    for (const c of r.chain ?? []) {
+      const ti = rids.get(c.rid);
+      if (ti === undefined) out.push({ level: "err", index: i, msg: `${n}: 연쇄 대상 항목이 없어요` });
+      else if (!isManaged(list[ti])) out.push({ level: "warn", index: i, msg: `${n}: 연쇄 대상 '${list[ti].comment || ti + 1}'은 규칙이 꺼져 있어 켜지지 않아요` });
+      if (c.rid === ridOf(l)) out.push({ level: "err", index: i, msg: `${n}: 연쇄가 자기 자신을 가리켜요` });
+      const cp = Number(c.prob);
+      if (isNaN(cp) || cp < 0 || cp > 100) out.push({ level: "err", index: i, msg: `${n}: 연쇄 확률은 0~100이어야 해요` });
+    }
+  });
+  // 키 중복: 관리 항목끼리 같은 키
+  const keyOwner = new Map();
+  list.forEach((l, i) => {
+    if (!isManaged(l)) return;
+    for (const k of splitKeys(l.key).map((x) => x.toLowerCase())) {
+      if (keyOwner.has(k) && keyOwner.get(k) !== i) out.push({ level: "warn", index: i, msg: `${name(l, i)}: 키 '${k}'를 '${list[keyOwner.get(k)].comment || keyOwner.get(k) + 1}'도 써요 (그룹으로 묶으면 하나만 켜져요)` });
+      else keyOwner.set(k, i);
+    }
+  });
+  return out;
+}

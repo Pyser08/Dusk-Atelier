@@ -8,6 +8,14 @@ import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note
 import { gripDrag } from '../sortable.js';
 import { reload } from './modules.js';
 import { attachUndo } from '../undo.js';
+import { COND_TYPES, VAR_OPS, bodyOf, collectManaged, defaultRule, evaluate, gateVar, isManaged, nativeContent, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
+// 관리 항목의 내용 머리(@@activate·{{#if}})를 규칙에 맞춘다
+export function syncRuleContent(lorebook) {
+  for (const l of lorebook ?? []) {
+    const r = ruleOf(l);
+    if (r && r.on !== false && ridOf(l)) l.content = nativeContent(l.content, r, ridOf(l));
+  }
+}
 
 var LORE_MODES = [["normal", "일반"], ["constant", "항상 켜짐"], ["multiple", "여러 키"], ["child", "하위"], ["folder", "폴더"]];
 var REGEX_TYPES = [["editinput", "입력 수정"], ["editoutput", "출력 수정"], ["editprocess", "요청 데이터 수정"], ["editdisplay", "화면 표시 수정"], ["edittrans", "번역 표시 수정"], ["disabled", "사용 안 함"]];
@@ -57,6 +65,7 @@ export function validateModule(m) {
     if (!Array.isArray(t.conditions)) out.push({ level: "err", tab: "trigger", index: i, msg: `트리거 '${t.comment || i + 1}': conditions가 배열이 아니에요` });
     if (!Array.isArray(t.effect)) out.push({ level: "err", tab: "trigger", index: i, msg: `트리거 '${t.comment || i + 1}': effect가 배열이 아니에요` });
   });
+  for (const x of validateRules(m.lorebook)) out.push({ ...x, tab: "lorebook" });
   if (m.mcp !== void 0 && m.mcp !== null && typeof m.mcp !== "object") out.push({ level: "err", tab: "info", msg: "MCP 설정은 객체여야 해요" });
   return out;
 }
@@ -328,7 +337,8 @@ export async function openEditorCore(ctx, cfg) {
       { class: "rb-side-tools" },
       search,
       btn("추가", { size: "sm", icon: "plus", onClick: () => add(kind === "lorebook" ? newLore : kind === "regex" ? newRegex : newTrigger) }),
-      kind === "lorebook" ? btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolderPicked() }) : null
+      kind === "lorebook" ? btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolderPicked() }) : null,
+      kind === "lorebook" && draft.lorebook.some((x) => isManaged(x)) ? btn("규칙 시험", { size: "sm", onClick: () => ruleTester() }) : null
     );
     const items = h("div", { class: "rb-side-list", role: "listbox", "aria-label": "항목" });
     const uid = /* @__PURE__ */ new WeakMap();
@@ -387,7 +397,8 @@ export async function openEditorCore(ctx, cfg) {
           render();
         } },
         h("span", { class: "t" }, label),
-        kind === "lorebook" && !divider && (it2.alwaysActive || it2.mode === "constant") ? badge("항상", "acc") : null,
+        kind === "lorebook" && !divider && (it2.alwaysActive || it2.mode === "constant") && !isManaged(it2) ? badge("항상", "acc") : null,
+        kind === "lorebook" && isManaged(it2) ? badge("규칙", "acc") : null,
         kind === "trigger" ? badge(TRIGGER_TYPES.find((x) => x[0] === it2.type)?.[1] ?? it2.type, "mute") : null
       );
       if (!grip) return b;
@@ -515,6 +526,7 @@ export async function openEditorCore(ctx, cfg) {
         const c = structuredClone(it);
         if (c.mode === "folder") c.key = "folder:" + newId();
         delete c.id;
+        if (c.extentions?.da_rid) c.extentions.da_rid = newId();
         c.comment = (c.comment || "") + " (복사)";
         list.splice(i + 1, 0, c);
         es.sel[kind] = i + 1;
@@ -582,8 +594,156 @@ export async function openEditorCore(ctx, cfg) {
       field("보조 키", text(l, "secondkey", { placeholder: "보조 키 사용을 켜면 둘 다 있어야 켜짐" })),
       field("삽입 순서", num(l, "insertorder")),
       field("켜질 확률 (%)", num(l, "activationPercent")),
-      field("폴더", folderSel)
+      field("폴더", folderSel),
+      ruleSection(l)
     );
+  }
+  // ---------- Dusk 규칙 (조건부 발동·중복 금지·연쇄 확률·배치) ----------
+  function ruleSection(l) {
+    const rule = ruleOf(l);
+    const wrap = h("div", { class: "wide rb-da-rule", style: "border-top:1px solid var(--rb-line,rgba(127,127,127,.25));margin-top:6px;padding-top:12px;display:flex;flex-direction:column;gap:10px" });
+    const redraw = () => render();
+    const toggle = h("input", { type: "checkbox", checked: !!rule && rule.on !== false });
+    toggle.addEventListener("change", () => {
+      l.extentions = { ...(l.extentions ?? {}) };
+      if (toggle.checked) {
+        l.extentions.da_rid ||= newId();
+        const nr = { ...(ruleOf(l) ?? defaultRule()), on: true };
+        // 원래 항상 켜짐이던 항목은 키 조건 없이 시작
+        if (l.alwaysActive || l.mode === "constant") nr.cond = [];
+        l.extentions.da_rule = nr;
+        l.content = nativeContent(l.content, nr, l.extentions.da_rid);
+      } else {
+        delete l.extentions.da_rule;
+        l.content = plainContent(l.content);
+      }
+      changed();
+      redraw();
+    });
+    wrap.appendChild(h("label", { class: "rb-check" }, toggle, h("span", null, h("b", null, "Dusk 규칙으로 발동"), " — 조건·확률·중복 금지·연쇄·배치를 Dusk가 처리")));
+    if (!rule || rule.on === false) {
+      wrap.appendChild(h("p", { class: "rb-muted", style: "margin:0" }, "켜면 내용이 '@@activate + {{#if 변수}}'로 감싸져요. 입력할 때 Dusk가 규칙을 계산해 변수를 켜고 끄면, 리스가 평소처럼 CBS·변수·#if까지 처리해서 넣어요. Dusk가 없는 사용자에게는 꺼진 항목으로 보여요."));
+      return wrap;
+    }
+    // 규칙 객체는 항목 안에 바로 저장 (모양 맞추기)
+    const r = l.extentions.da_rule = rule;
+    const others = draft.lorebook.filter((x) => x !== l && x.mode !== "folder" && ridOf(x));
+    const pickEntry = (obj, key) => {
+      const el = h("select", { class: "rb-input" }, h("option", { value: "" }, "(항목 고르기)"), others.map((x) => h("option", { value: ridOf(x), selected: obj[key] === ridOf(x) }, (x.comment || "(이름 없음)") + (isManaged(x) ? "" : " · 규칙 꺼짐"))));
+      el.addEventListener("change", () => {
+        obj[key] = el.value;
+        changed();
+      });
+      return el;
+    };
+    const row = (...kids) => h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center" }, ...kids);
+    const small = (el, w = "110px") => {
+      el.style.width = w;
+      el.style.flex = "0 0 auto";
+      return el;
+    };
+    // 조건
+    const condBox = h("div", { style: "display:flex;flex-direction:column;gap:6px" });
+    (r.cond ?? []).forEach((c, ci) => {
+      const typeSel = select2(c, "t", COND_TYPES, () => {
+        for (const k of Object.keys(c)) if (k !== "t") delete c[k];
+        redraw();
+      });
+      typeSel.style.maxWidth = "260px";
+      const del = iconBtn("trash", "조건 지우기", { onClick: () => {
+        r.cond.splice(ci, 1);
+        changed();
+        redraw();
+      } });
+      let params = null;
+      if (c.t === "text") params = [small(text(c, "keys", { placeholder: "단어1, 단어2" }), "200px"), small(select2(c, "in", [["any", "누구 말이든"], ["user", "사용자 말"], ["char", "봇 말"]]), "130px"), check(c, "all", "모두 있어야"), check(c, "regex", "정규식")];
+      else if (c.t === "var") params = [small(text(c, "name", { placeholder: "변수 이름" }), "140px"), small(select2(c, "op", VAR_OPS.map((o) => [o, o])), "80px"), c.op === "있음" || c.op === "없음" ? null : small(text(c, "val", { placeholder: "값" }), "110px")];
+      else if (c.t === "turn") params = [h("span", { class: "rb-muted" }, "턴"), small(num(c, "min"), "80px"), h("span", { class: "rb-muted" }, "~"), small(num(c, "max"), "80px")];
+      else if (c.t === "with" || c.t === "without") params = [small(pickEntry(c, "rid"), "220px")];
+      condBox.appendChild(row(typeSel, ...(params ?? []), del));
+    });
+    const addCond = btn("조건 추가", { size: "sm", icon: "plus", onClick: () => {
+      r.cond.push({ t: "text" });
+      changed();
+      redraw();
+    } });
+    // 연쇄
+    const chainBox = h("div", { style: "display:flex;flex-direction:column;gap:6px" });
+    (r.chain ?? []).forEach((c, ci) => {
+      chainBox.appendChild(row(h("span", { class: "rb-muted" }, "켜지면"), small(pickEntry(c, "rid"), "220px"), h("span", { class: "rb-muted" }, "도"), small(num(c, "prob"), "80px"), h("span", { class: "rb-muted" }, "% 확률로 켬"), iconBtn("trash", "연쇄 지우기", { onClick: () => {
+        r.chain.splice(ci, 1);
+        changed();
+        redraw();
+      } })));
+    });
+    const addChain = btn("연쇄 추가", { size: "sm", icon: "plus", onClick: () => {
+      r.chain.push({ rid: "", prob: 50 });
+      changed();
+      redraw();
+    } });
+    wrap.append(
+      h("span", { class: "rb-label" }, "조건"),
+      h("p", { class: "rb-muted", style: "margin:0" }, `변수 ${gateVar(ridOf(l))} · 내용 머리는 저장할 때 규칙에 맞게 자동으로 고쳐져요. 리스 활성화 키 대신 아래 조건으로 켜져요.`),
+      row(h("span", { class: "rb-muted" }, "아래 조건을"), small(select2(r, "mode", [["all", "모두 만족"], ["any", "하나라도 만족"]]), "140px"), h("span", { class: "rb-muted" }, "하면 켜요. 조건이 없으면 매 턴 후보.")),
+      condBox,
+      row(addCond),
+      h(
+        "div",
+        { class: "rb-form", style: "padding:0" },
+        field("켜질 확률 (%)", num(r, "prob")),
+        field("최근 몇 개 메시지에서 찾을지", num(r, "scan")),
+        h("div", { class: "wide" }, check(r, "whole", "이름 경계로 찾기 ('김민'이 '김민수'에는 안 걸리고 '김민이·김민에게'에는 걸림)")),
+        field("반복", select2(r, "once", [["none", "제한 없음"], ["chat", "채팅에서 한 번만"], ["cooldown", "켜진 뒤 N턴 쉬기"]], redraw)),
+        r.once === "cooldown" ? field("쉬는 턴 수", num(r, "cool")) : null,
+        field("중복 금지 그룹 (같은 그룹은 한 턴에 하나만)", text(r, "group", { placeholder: "예) 날씨" })),
+        field("넣을 위치", select2(r, "at", [["top", "로어북 자리 (기본)"], ["depth", "대화 끝에서 N개 위"], ["bottom", "대화 맨 끝"]], redraw)),
+        r.at === "depth" ? field("깊이 (메시지 수)", num(r, "depth")) : null,
+        field("역할", select2(r, "role", [["system", "system"], ["user", "user"], ["assistant", "assistant"]]))
+      ),
+      h("span", { class: "rb-label" }, "연쇄 (이 항목이 켜지면 다른 항목도 확률로)"),
+      chainBox,
+      row(addChain),
+      others.length ? null : h("p", { class: "rb-muted", style: "margin:0" }, "다른 항목도 규칙을 켜야 조건·연쇄 대상으로 고를 수 있어요.")
+    );
+    return wrap;
+  }
+  function ruleTester() {
+    const back = h("div", { class: "rb-modal", onMousedown: (ev) => {
+      if (ev.target === back) back.remove();
+    } });
+    const input = h("textarea", { class: "rb-textarea", spellcheck: "false", style: "min-height:140px", placeholder: "한 줄에 메시지 하나. '나:'로 시작하면 사용자, 아니면 봇.\n예)\n나: 사과 먹을래?\n봇: 좋아!" });
+    const turnIn = h("input", { class: "rb-input", type: "number", value: "1", style: "width:90px" });
+    const varsIn = h("input", { class: "rb-input", placeholder: "변수 (예: hp=5, mood=angry)", style: "flex:1;min-width:160px" });
+    const noProb = h("input", { type: "checkbox" });
+    const outEl = h("div", { class: "rb-issues rb-scroll", style: "max-height:36vh" });
+    let st = {};
+    const run = (keep) => {
+      const msgs = input.value.split("\n").map((x) => x.trim()).filter(Boolean).map((x) => /^(나|user|유저)\s*[:：]/i.test(x) ? { role: "user", data: x.replace(/^[^:：]*[:：]\s*/, "") } : { role: "char", data: x.replace(/^(봇|char|bot)\s*[:：]\s*/i, "") });
+      const vars = Object.fromEntries(varsIn.value.split(",").map((x) => x.split("=").map((y) => y.trim())).filter((x) => x[0]).map(([k, v]) => ["$" + k, v ?? ""]));
+      const turn = Number(turnIn.value) || 0;
+      const res = evaluate({ items: collectManaged(draft.lorebook), messages: msgs, turn, state: keep ? st : {}, vars, ignoreProb: noProb.checked });
+      st = res.state;
+      replace(outEl, res.fired.length ? res.fired.map((a) => h("div", { class: "rb-issue" }, icon("check", 14), h("span", null, `${a.entry.comment || a.rid} — ${a.why}`))) : h("p", { class: "rb-muted" }, "켜진 항목이 없어요."), res.fired.length ? h("details", null, h("summary", { class: "rb-muted" }, "켜진 항목 내용 보기 (CBS는 리스가 처리)"), h("pre", { style: "white-space:pre-wrap;font-size:12px" }, res.fired.map((a) => `[${a.entry.comment || a.rid}]\n${bodyOf(a.entry.content)}`).join("\n\n"))) : null);
+    };
+    back.appendChild(h(
+      "div",
+      { class: "rb-dialog", role: "dialog", "aria-label": "규칙 시험", style: "max-width:640px" },
+      h("h3", { class: "rb-h3" }, "규칙 시험"),
+      h("p", { class: "rb-muted" }, "지금 편집 중인 로어북으로 어떤 항목이 켜지는지 봐요. '다음 턴'은 기록(한 번만·쿨다운)을 이어서 계산해요."),
+      input,
+      h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center" }, h("span", { class: "rb-muted" }, "턴"), turnIn, varsIn, h("label", { class: "rb-check" }, noProb, h("span", null, "확률 무시"))),
+      h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, btn("시험", { kind: "primary", size: "sm", onClick: () => {
+        st = {};
+        run(false);
+      } }), btn("다음 턴", { size: "sm", onClick: () => {
+        turnIn.value = String((Number(turnIn.value) || 0) + 1);
+        run(true);
+      } })),
+      outEl,
+      h("div", { class: "btns" }, btn("닫기", { onClick: () => back.remove() }))
+    ));
+    ctx.win.appendChild(back);
+    input.focus();
   }
   function regexForm(r) {
     const flags = h("div", { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap;align-items:center" }, check(r, "ableFlag", "플래그 직접 지정"));
@@ -746,6 +906,7 @@ export async function openEditorCore(ctx, cfg) {
     ctx.win.appendChild(back);
   }
   async function apply() {
+    syncRuleContent(draft.lorebook);
     if (!dirty()) return;
     const iss = cfg.validate(draft);
     const errs = iss.filter((x) => x.level === "err");
