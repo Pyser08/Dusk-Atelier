@@ -29,8 +29,6 @@ const result = await build({
   target: 'es2022',
   charset: 'utf8',
   legalComments: 'none',
-  // 자동 업데이트는 파일 크기 제한(약 1MB)에 걸려 실패하므로 주석·공백을 줄여 크기를 낮춘다
-  minify: true,
   define: { __VERSION__: JSON.stringify(version) },
   alias: { fflate: path.join(root, 'src/vendor/fflate.js') },
   banner: { js: banner },
