@@ -45,7 +45,7 @@ export async function renderHistory(ctx) {
   const timeline = h("div", { style: "display:flex;flex-direction:column" }, items.map((b, i) => entry(ctx, b, i === 0 && !!cur, !cur)));
   const pane = h(
     "div",
-    { class: "rb-section rb-scroll", style: "flex:1" },
+    { class: "rb-section rb-scroll rb-hist-pane", style: "flex:1;min-height:0" },
     h(
       "div",
       { style: "display:flex;align-items:center;gap:12px;flex-wrap:wrap" },
@@ -83,7 +83,7 @@ export async function renderHistory(ctx) {
     } })),
     side
   );
-  replace(ctx.main, h("div", { style: "flex:1;display:flex;min-height:0;flex-wrap:wrap" }, ctx.isMobile() ? null : left, pane));
+  replace(ctx.main, h("div", { class: "rb-hist-root", style: "flex:1;display:flex;min-height:0;flex-wrap:wrap" }, ctx.isMobile() ? null : left, pane));
   ctx.setNavCount("history", all.length || void 0);
 }
 function entry(ctx, b, first, showName) {

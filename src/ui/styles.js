@@ -275,6 +275,8 @@ select.rb-input{appearance:auto}
   .rb-split.m-list>.side{max-height:none;flex:1;border-bottom:0}
   .rb-split.m-list>.pane{display:none}
   .rb-split.m-item>.side{display:none}
+  .rb-hist-root{flex-direction:column;flex-wrap:nowrap}
+  .rb-hist-pane{min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 }
 .rb-mobile-only{display:none}
 @media (max-width: 760px){ .rb-mobile-only{display:block} }
