@@ -1,11 +1,11 @@
 //@name dusk_atelier
 //@display-name Dusk Atelier
 //@api 3.0
-//@version 1.3.6
+//@version 1.4.0
 //@update-url https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js
 //@link https://github.com/Pyser08/Dusk-Atelier 저장소
 
-/* Dusk Atelier v1.3.6 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
+/* Dusk Atelier v1.4.0 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
 (() => {
   var __defProp = Object.defineProperty;
   var __export = (target, all) => {
@@ -12585,7 +12585,34 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     }
     return out;
   }
-  var TOKENIZERS = { js: tokJs, regex: tokRegex, replace: tokReplace };
+  var LUA_KW = /* @__PURE__ */ new Set(["and", "break", "do", "else", "elseif", "end", "for", "function", "goto", "if", "in", "local", "not", "or", "repeat", "return", "then", "until", "while"]);
+  var LUA_LIT = /* @__PURE__ */ new Set(["true", "false", "nil"]);
+  var LUA_TOKEN = /(--\[(=*)\[[\s\S]*?(?:\]\2\]|$)|--[^\n]*)|(\[(=*)\[[\s\S]*?(?:\]\4\]|$)|'(?:\\.|[^'\\\n])*'?|"(?:\\.|[^"\\\n])*"?)|(\b0x[\da-fA-F]+\b|\b\d+(?:\.\d+)?\b)|([A-Za-z_][\w]*)/g;
+  function tokLua(code) {
+    const out = [];
+    let m;
+    LUA_TOKEN.lastIndex = 0;
+    while (m = LUA_TOKEN.exec(code)) {
+      const [tok, com, , str, , num, id] = m;
+      const s = m.index, e = s + tok.length;
+      let cls;
+      if (com) cls = "com";
+      else if (str) cls = "str";
+      else if (num) cls = "num";
+      else if (id) {
+        const before = code[s - 1];
+        const after = code.slice(e, e + 20).match(/^\s*(\S)/)?.[1];
+        if (LUA_KW.has(id)) cls = id === "function" || id === "local" ? "decl" : "kw";
+        else if (LUA_LIT.has(id)) cls = "lit";
+        else if (after === "(" || after === '"' || after === "'" || after === "{") cls = "fn";
+        else if (before === "." || before === ":") cls = "prop";
+        else if (/^[A-Z]/.test(id)) cls = "type";
+      }
+      if (cls) out.push([s, e, cls, !!(com || str)]);
+    }
+    return out;
+  }
+  var TOKENIZERS = { js: tokJs, regex: tokRegex, replace: tokReplace, lua: tokLua };
   var OPEN = { "(": ")", "[": "]", "{": "}" };
   var CLOSE = { ")": "(", "]": "[", "}": "{" };
   function skipMask(n, tokens2) {
@@ -12697,10 +12724,11 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         e.preventDefault();
         ta.setRangeText(tab, s, t, "end");
         ta.dispatchEvent(new Event("input"));
-      } else if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && lang === "js") {
+      } else if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && (lang === "js" || lang === "lua")) {
         const lineStart = v.lastIndexOf("\n", s - 1) + 1;
         let indent = v.slice(lineStart).match(/^[ \t]*/)[0];
-        if (/[{[(]\s*$/.test(v.slice(lineStart, s))) indent += tab;
+        const cur = v.slice(lineStart, s);
+        if (/[{[(]\s*$/.test(cur) || lang === "lua" && /(\bthen|\bdo|\bfunction\b.*\)|\brepeat|\belse)\s*$/.test(cur)) indent += tab;
         e.preventDefault();
         ta.setRangeText("\n" + indent, s, t, "end");
         ta.dispatchEvent(new Event("input"));
@@ -13327,7 +13355,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         field("이름", text(t, "comment")),
         field("실행 시점", select2(t, "type", TRIGGER_TYPES)),
         h("div", { class: "wide", style: "display:flex;gap:16px" }, check(t, "lowLevelAccess", "저수준 접근")),
-        lua ? field(lua.type === "triggerlua" ? "Lua 코드" : "트리거 코드", area(lua, "code", { tall: true }), true) : null,
+        lua ? field(lua.type === "triggerlua" ? "Lua 코드" : "트리거 코드", lua.type === "triggerlua" ? codeArea(lua, "code", { lang: "lua", tall: true }) : area(lua, "code", { tall: true }), true) : null,
         field("조건 (conditions, JSON)", jsonArea(t, "conditions"), true),
         lua ? null : field("효과 (effect, JSON)", jsonArea(t, "effect", { tall: true }), true)
       );
@@ -19327,7 +19355,7 @@ ${code}
   }
 
   // src/main.js
-  var VERSION = true ? "1.3.6" : "dev";
+  var VERSION = true ? "1.4.0" : "dev";
   var TITLE = "Dusk Atelier";
   async function start() {
     const raw = globalThis.risuai ?? globalThis.Risuai;
