@@ -4,7 +4,7 @@ import { newId, stableJson } from '../../engine/util.js';
 import { createStore } from '../../engine/store.js';
 import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog } from '../kit.js';
+import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog, segmented, switchEl } from '../kit.js';
 import { gripDrag } from '../sortable.js';
 import { reload } from './modules.js';
 import { attachUndo } from '../undo.js';
@@ -120,11 +120,14 @@ export async function openEditor(ctx, id) {
     idKey: "id",
     validate: validateModule,
     async save(draft, original) {
-      await createStore(ctx.api).addBackup({ kind: "module", target: original.id, name: original.name, snapshot: original, note: "편집 전" }).catch(() => null);
+      // 백업은 저장과 함께 진행 (편집 전 상태는 이미 메모리에 있다)
+      const backup = createStore(ctx.api).addBackup({ kind: "module", target: original.id, name: original.name, snapshot: structuredClone(original), note: "편집 전" }).catch(() => null);
       const patch = {};
       for (const k of /* @__PURE__ */ new Set([...Object.keys(original), ...Object.keys(draft)])) if (k !== "id" && stableJson(original[k] ?? null) !== stableJson(draft[k] ?? null)) patch[k] = draft[k];
       await ctx.svc.run("update", original.id, patch);
       reload(ctx).catch(() => {
+      });
+      backup.catch(() => {
       });
     }
   });
@@ -616,12 +619,12 @@ export async function openEditorCore(ctx, cfg) {
   // ---------- Dusk 규칙 (조건부 발동·중복 금지·연쇄 확률·배치) ----------
   function ruleSection(l) {
     const rule = ruleOf(l);
-    const wrap = h("div", { class: "wide rb-da-rule", style: "border-top:1px solid var(--rb-line,rgba(127,127,127,.25));margin-top:6px;padding-top:12px;display:flex;flex-direction:column;gap:10px" });
+    const on = !!rule && rule.on !== false;
     const redraw = () => render();
-    const toggle = h("input", { type: "checkbox", checked: !!rule && rule.on !== false });
-    toggle.addEventListener("change", () => {
+    const wrap = h("div", { class: ["wide", "rb-da", on && "on"] });
+    const setOn = (v) => {
       l.extentions = { ...(l.extentions ?? {}) };
-      if (toggle.checked) {
+      if (v) {
         l.extentions.da_rid ||= newId();
         if (draft.lorebook.some((x) => x !== l && ridOf(x) === l.extentions.da_rid)) l.extentions.da_rid = newId();
         const nr = { ...(ruleOf(l) ?? defaultRule()), on: true };
@@ -639,18 +642,23 @@ export async function openEditorCore(ctx, cfg) {
       }
       changed();
       redraw();
-    });
-    wrap.appendChild(h("label", { class: "rb-check" }, toggle, h("span", null, h("b", null, "Dusk 규칙으로 발동"), " — 조건·확률·중복 금지·연쇄·배치를 Dusk가 처리")));
-    if (!rule || rule.on === false) {
-      wrap.appendChild(h("p", { class: "rb-muted", style: "margin:0" }, "켜면 내용이 '@@activate + {{#if 변수}}'로 감싸져요. 입력할 때 Dusk가 규칙을 계산해 변수를 켜고 끄면, 리스가 평소처럼 CBS·변수·#if까지 처리해서 넣어요. Dusk가 없는 사용자에게는 꺼진 항목으로 보여요."));
+    };
+    const head = h(
+      "div",
+      { class: "rb-da-head" },
+      h("span", { class: "rb-da-ico" }, icon("zap", 18)),
+      h("div", { class: "rb-da-ttl" }, h("b", null, "Dusk 규칙"), h("small", null, on ? summary(rule) : "조건·확률·연쇄로 이 항목을 켜고 꺼요")),
+      switchEl(on, { label: "Dusk 규칙 사용", onChange: (v) => setOn(v) })
+    );
+    wrap.appendChild(head);
+    if (!on) {
+      wrap.appendChild(h("p", { class: "rb-da-hint" }, "켜면 리스 활성화 키 대신 Dusk 규칙이 이 항목을 켜요. CBS·변수·#if는 리스가 그대로 처리하고, Dusk가 없는 사용자에게는 꺼진 항목으로 보여요."));
       return wrap;
     }
-    // 규칙 객체는 항목 안에 바로 저장 (모양 맞추기)
     const r = l.extentions.da_rule = rule;
-    // 규칙을 아직 안 켠 항목도 고를 수 있다 (고르면 식별자만 먼저 붙인다. 규칙이 꺼져 있으면 검증에서 알려 준다)
     const others = draft.lorebook.filter((x) => x !== l && x.mode !== "folder" && !isLoreDivider(x));
     const pickEntry = (obj, key) => {
-      const el = h("select", { class: "rb-input" }, h("option", { value: "" }, "(항목 고르기)"), others.map((x, xi) => h("option", { value: String(xi), selected: !!ridOf(x) && obj[key] === ridOf(x) }, (x.comment || "(이름 없음)") + (isManaged(x) ? "" : " · 규칙 꺼짐"))));
+      const el = h("select", { class: "rb-input" }, h("option", { value: "" }, "항목 고르기"), others.map((x, xi) => h("option", { value: String(xi), selected: !!ridOf(x) && obj[key] === ridOf(x) }, (x.comment || "(이름 없음)") + (isManaged(x) ? "" : " · 규칙 꺼짐"))));
       el.addEventListener("change", () => {
         const t = el.value === "" ? null : others[Number(el.value)];
         if (t) {
@@ -663,76 +671,130 @@ export async function openEditorCore(ctx, cfg) {
       });
       return el;
     };
-    const row = (...kids) => h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center" }, ...kids);
-    const small = (el, w = "110px") => {
-      el.style.width = w;
-      el.style.flex = "0 0 auto";
+    const set = (key, v, re = true) => {
+      r[key] = v;
+      changed();
+      if (re) redraw();
+    };
+    const numIn = (obj, key, { min = 0, max, w = "72px", onSet } = {}) => {
+      const el = h("input", { class: "rb-input rb-da-num", type: "number", min, max, value: obj[key] ?? "", style: `width:${w}` });
+      el.addEventListener("input", () => {
+        obj[key] = el.value === "" ? void 0 : Number(el.value);
+        onSet?.();
+        changed();
+      });
       return el;
     };
-    // 조건
-    const condBox = h("div", { style: "display:flex;flex-direction:column;gap:6px" });
-    (r.cond ?? []).forEach((c, ci) => {
+    const card = (ic, title, sub, ...kids) => h("section", { class: "rb-da-card" }, h("header", null, icon(ic, 16), h("b", null, title), sub ? h("small", null, sub) : null), ...kids);
+    const line = (...kids) => h("div", { class: "rb-da-line" }, ...kids);
+    const lab = (t) => h("span", { class: "rb-da-lab" }, t);
+    const trash = (fn, label) => iconBtn("trash", label, { onClick: fn });
+
+    // 1) 언제 켜질까
+    const condRows = (r.cond ?? []).map((c, ci) => {
       const typeSel = select2(c, "t", COND_TYPES, () => {
         for (const k of Object.keys(c)) if (k !== "t") delete c[k];
         redraw();
       });
-      typeSel.style.maxWidth = "260px";
-      const del = iconBtn("trash", "조건 지우기", { onClick: () => {
+      typeSel.classList.add("rb-da-type");
+      let params = [];
+      if (c.t === "keys") params = [h("span", { class: "rb-da-note" }, String(l.key ?? "").trim() ? `키: ${l.key}` : "활성화 키 칸이 비어 있어요")];
+      else if (c.t === "text" || c.t === "notext") params = [text(c, "keys", { placeholder: "단어1, 단어2" }), select2(c, "in", [["any", "누구 말이든"], ["user", "사용자 말"], ["char", "봇 말"]]), h("span", { class: "rb-da-opts" }, check(c, "all", "모두 있어야"), check(c, "regex", "정규식"))];
+      else if (c.t === "var") params = [text(c, "name", { placeholder: "변수 이름" }), select2(c, "op", VAR_OPS.map((o) => [o, o]), redraw), c.op === "있음" || c.op === "없음" ? null : text(c, "val", { placeholder: "값" })];
+      else if (c.t === "turn") params = [numIn(c, "min", { w: "70px" }), h("span", { class: "rb-da-note" }, "턴부터"), numIn(c, "max", { w: "70px" }), h("span", { class: "rb-da-note" }, "턴까지")];
+      else if (c.t === "with" || c.t === "without") params = [pickEntry(c, "rid")];
+      return h("div", { class: "rb-da-cond" }, h("span", { class: "rb-da-idx" }, String(ci + 1)), typeSel, h("div", { class: "rb-da-params" }, ...params.filter(Boolean)), trash(() => {
         r.cond.splice(ci, 1);
         changed();
         redraw();
-      } });
-      let params = null;
-      if (c.t === "text" || c.t === "notext") params = [small(text(c, "keys", { placeholder: "단어1, 단어2" }), "200px"), small(select2(c, "in", [["any", "누구 말이든"], ["user", "사용자 말"], ["char", "봇 말"]]), "130px"), check(c, "all", "모두 있어야"), check(c, "regex", "정규식")];
-      else if (c.t === "var") params = [small(text(c, "name", { placeholder: "변수 이름" }), "140px"), small(select2(c, "op", VAR_OPS.map((o) => [o, o])), "80px"), c.op === "있음" || c.op === "없음" ? null : small(text(c, "val", { placeholder: "값" }), "110px")];
-      else if (c.t === "turn") params = [h("span", { class: "rb-muted" }, "턴"), small(num(c, "min"), "80px"), h("span", { class: "rb-muted" }, "~"), small(num(c, "max"), "80px")];
-      else if (c.t === "with" || c.t === "without") params = [small(pickEntry(c, "rid"), "220px")];
-      condBox.appendChild(row(typeSel, ...(params ?? []), del));
+      }, "조건 지우기"));
     });
-    const addCond = btn("조건 추가", { size: "sm", icon: "plus", onClick: () => {
-      r.cond.push({ t: "text" });
+    const addCondBtn = btn("조건 추가", { size: "sm", icon: "plus", onClick: (ev) => openMenu(ctx.win, ev.currentTarget, COND_TYPES.map(([t, label]) => ({ label, onClick: () => {
+      r.cond.push({ t });
       changed();
       redraw();
-    } });
-    // 연쇄
-    const chainBox = h("div", { style: "display:flex;flex-direction:column;gap:6px" });
-    (r.chain ?? []).forEach((c, ci) => {
-      chainBox.appendChild(row(h("span", { class: "rb-muted" }, "켜지면"), small(pickEntry(c, "rid"), "220px"), h("span", { class: "rb-muted" }, "도"), small(num(c, "prob"), "80px"), h("span", { class: "rb-muted" }, "% 확률로 켬"), iconBtn("trash", "연쇄 지우기", { onClick: () => {
-        r.chain.splice(ci, 1);
-        changed();
-        redraw();
-      } })));
-    });
-    const addChain = btn("연쇄 추가", { size: "sm", icon: "plus", onClick: () => {
-      r.chain.push({ rid: "", prob: 50 });
-      changed();
-      redraw();
-    } });
-    wrap.append(
-      h("span", { class: "rb-label" }, "조건"),
-      h("p", { class: "rb-muted", style: "margin:0" }, `변수 ${gateVar(ridOf(l))} · 내용 머리는 저장할 때 규칙에 맞게 자동으로 고쳐져요. 리스 활성화 키 대신 아래 조건으로 켜져요.`),
-      row(h("span", { class: "rb-muted" }, "아래 조건을"), small(select2(r, "mode", [["all", "모두 만족"], ["any", "하나라도 만족"]]), "140px"), h("span", { class: "rb-muted" }, "하면 켜요. 조건이 없으면 매 턴 후보.")),
-      condBox,
-      row(addCond),
+    } }))) });
+    const whenCard = card(
+      "search",
+      "언제 켜질까",
+      "조건이 없으면 매 턴 켜질 후보가 돼요",
+      (r.cond ?? []).length > 1 ? line(lab("조건을"), segmented([["all", "모두 만족"], ["any", "하나라도 만족"]], r.mode === "any" ? "any" : "all", (v) => set("mode", v, false), "조건 묶음")) : null,
+      condRows.length ? h("div", { class: "rb-da-conds" }, ...condRows) : h("p", { class: "rb-da-empty" }, "조건 없음 — 확률과 반복 설정만 적용돼요"),
+      line(addCondBtn),
       h(
         "div",
-        { class: "rb-form", style: "padding:0" },
-        field("켜질 확률 (%)", num(r, "prob")),
-        field("최근 몇 개 메시지에서 찾을지", num(r, "scan")),
-        h("div", { class: "wide" }, check(r, "whole", "이름 경계로 찾기 ('김민'이 '김민수'에는 안 걸리고 '김민이·김민에게'에는 걸림)")),
-        field("반복", select2(r, "once", [["none", "제한 없음"], ["chat", "채팅에서 한 번만"], ["cooldown", "켜진 뒤 N턴 쉬기"]], redraw)),
-        r.once === "cooldown" ? field("쉬는 턴 수", num(r, "cool")) : null,
-        field("중복 금지 그룹 (같은 그룹은 한 턴에 하나만)", text(r, "group", { placeholder: "예) 날씨" })),
-        field("넣을 위치", select2(r, "at", [["top", "로어북 자리 (기본)"], ["depth", "대화 끝에서 N개 위"], ["bottom", "대화 맨 끝"]], redraw)),
-        r.at === "depth" ? field("깊이 (메시지 수)", num(r, "depth")) : null,
-        field("역할", select2(r, "role", [["system", "system"], ["user", "user"], ["assistant", "assistant"]]))
-      ),
-      h("span", { class: "rb-label" }, "연쇄 (이 항목이 켜지면 다른 항목도 확률로)"),
-      chainBox,
-      row(addChain),
-      others.length ? null : h("p", { class: "rb-muted", style: "margin:0" }, "다른 항목도 규칙을 켜야 조건·연쇄 대상으로 고를 수 있어요.")
+        { class: "rb-da-sub" },
+        line(lab("찾는 범위"), h("span", { class: "rb-da-note" }, "최근"), numIn(r, "scan", { min: 1, w: "64px" }), h("span", { class: "rb-da-note" }, "개 메시지")),
+        line(switchEl(!!r.whole, { label: "이름 경계", onChange: (v) => set("whole", v) }), h("span", null, "이름 경계"), h("span", { class: "rb-da-note" }, "'김민'이 '김민수'엔 안 걸리고 '김민이·김민에게'엔 걸려요"))
+      )
+    );
+
+    // 2) 얼마나 자주
+    const probNum = numIn(r, "prob", { min: 0, max: 100, w: "64px", onSet: () => {
+      range.value = String(r.prob ?? 100);
+    } });
+    const range = h("input", { type: "range", min: 0, max: 100, step: 1, value: String(r.prob ?? 100), class: "rb-da-range", "aria-label": "켜질 확률" });
+    range.addEventListener("input", () => {
+      r.prob = Number(range.value);
+      probNum.value = range.value;
+      changed();
+    });
+    const oftenCard = card(
+      "refresh",
+      "얼마나 자주",
+      null,
+      line(lab("켜질 확률"), range, probNum, h("span", { class: "rb-da-note" }, "%")),
+      line(lab("반복"), segmented([["none", "제한 없음"], ["chat", "채팅에서 한 번"], ["cooldown", "쉬었다가"]], r.once || "none", (v) => set("once", v), "반복")),
+      r.once === "cooldown" ? line(lab(""), h("span", { class: "rb-da-note" }, "켜진 뒤"), numIn(r, "cool", { min: 1, w: "64px" }), h("span", { class: "rb-da-note" }, "턴 쉬기")) : null,
+      line(lab("중복 금지 그룹"), text(r, "group", { placeholder: "예) 날씨 — 같은 그룹은 한 턴에 하나만" }))
+    );
+
+    // 3) 같이 켜기
+    const chainRows = (r.chain ?? []).map((c, ci) => h("div", { class: "rb-da-cond" }, h("span", { class: "rb-da-arrow" }, "→"), pickEntry(c, "rid"), numIn(c, "prob", { min: 0, max: 100, w: "64px" }), h("span", { class: "rb-da-note" }, "% 확률"), trash(() => {
+      r.chain.splice(ci, 1);
+      changed();
+      redraw();
+    }, "연쇄 지우기")));
+    const chainCard = card(
+      "link",
+      "같이 켜기",
+      "이 항목이 켜지면 다른 항목도 확률로 켜요 (대상도 규칙이 켜져 있어야 해요)",
+      chainRows.length ? h("div", { class: "rb-da-conds" }, ...chainRows) : null,
+      line(btn("연쇄 추가", { size: "sm", icon: "plus", onClick: () => {
+        r.chain.push({ rid: "", prob: 100 });
+        changed();
+        redraw();
+      } }))
+    );
+
+    // 4) 어디에 넣을까
+    const placeCard = card(
+      "split",
+      "어디에 넣을까",
+      null,
+      line(lab("위치"), segmented([["top", "로어북 자리"], ["depth", "대화 사이"], ["bottom", "대화 맨 끝"]], r.at || "top", (v) => set("at", v), "위치")),
+      r.at === "depth" ? line(lab(""), h("span", { class: "rb-da-note" }, "끝에서"), numIn(r, "depth", { min: 0, w: "64px" }), h("span", { class: "rb-da-note" }, "개 메시지 위")) : null,
+      line(lab("역할"), segmented([["system", "system"], ["user", "user"], ["assistant", "assistant"]], r.role || "system", (v) => set("role", v, false), "역할"))
+    );
+
+    wrap.append(
+      h("div", { class: "rb-da-grid" }, whenCard, oftenCard, chainCard, placeCard),
+      h("p", { class: "rb-da-foot" }, `변수 ${gateVar(ridOf(l))} · 내용의 @@activate·{{#if}} 줄은 저장할 때 자동으로 맞춰져요. 본문은 {{#if}}와 {{/if}} 사이만 고치세요.`)
     );
     return wrap;
+  }
+  // 규칙 한 줄 요약 (머리에 표시)
+  function summary(r) {
+    const parts = [];
+    const cn = (r.cond ?? []).length;
+    parts.push(cn ? (cn === 1 ? COND_TYPES.find((x) => x[0] === r.cond[0].t)?.[1].replace(/이 항목의 |최근 대화에 /g, "") ?? "조건 1개" : `조건 ${cn}개 ${r.mode === "any" ? "중 하나" : "모두"}`) : "매 턴");
+    if (Number(r.prob ?? 100) < 100) parts.push(`${r.prob}%`);
+    if (r.once === "chat") parts.push("한 번만");
+    if (r.once === "cooldown") parts.push(`${r.cool ?? 1}턴 쉼`);
+    if (String(r.group ?? "").trim()) parts.push(`그룹 ${r.group}`);
+    if ((r.chain ?? []).length) parts.push(`연쇄 ${r.chain.length}`);
+    if (r.whole) parts.push("이름 경계");
+    return parts.join(" · ");
   }
   function ruleTester() {
     const back = h("div", { class: "rb-modal", onMousedown: (ev) => {

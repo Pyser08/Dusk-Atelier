@@ -178,15 +178,15 @@ export async function openCharEditor(ctx, index, chaId) {
       ];
     },
     async save(draft, original) {
+      // 빠른 저장: 봇을 한 번만 읽고 곧바로 쓴다 (읽기와 쓰기 사이에 기다리는 일이 없어 두 번 읽어 확인할 필요가 없다).
+      // 편집 전 백업은 읽은 그 상태로 뒤에서 남긴다.
       const fresh = await freshChar(ctx, index, chaId);
       if (isGenerating(fresh)) throw new Busy();
-      await createStore(ctx.api).addBackup({ kind: "character", target: chaId, name: fresh.name, snapshot: backupSnapshot("character", fresh), note: "편집 전" });
+      const snap = backupSnapshot("character", fresh);
       const merged = viewToChar(fresh, draft, original);
-      const last2 = await freshChar(ctx, index, chaId);
-      if (isGenerating(last2) || (last2.chats ?? []).length !== (fresh.chats ?? []).length) throw new Busy();
-      merged.chats = last2.chats;
       await ctx.api.setCharacterToIndex(index, merged);
       patchSavedChar(ctx, index, merged);
+      createStore(ctx.api).addBackup({ kind: "character", target: chaId, name: fresh.name, snapshot: snap, note: "편집 전" }).catch((e) => ctx.toast(`편집 전 백업을 남기지 못했어요: ${e?.message ?? e}`, { error: true }));
     }
   });
 }
