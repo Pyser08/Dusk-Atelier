@@ -935,6 +935,24 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
       }
     });
   }
+  // 새로 넣은 봇이 사이드바(캐릭터 순서)에 꼭 들어가게: 리스의 checkCharOrder를 부른 뒤에도 빠져 있으면 직접 넣는다
+  // (PocketRisu·RisuBard에서는 플러그인이 캐릭터를 추가한 직후 순서 갱신이 늦거나 빠지는 경우가 있음)
+  async function ensureInOrder(chaId) {
+    try {
+      await api.checkCharOrder();
+    } catch {
+    }
+    try {
+      for (let i = 0; i < 3; i++) {
+        const order = (await api.getDatabase(["characterOrder"]))?.characterOrder ?? [];
+        const has = order.some((x) => x === chaId || Array.isArray(x?.data) && x.data.includes(chaId));
+        if (has) return;
+        if (i === 0) await new Promise((r) => setTimeout(r, 300));
+        else await api.setDatabaseLite({ characterOrder: [...order, chaId] });
+      }
+    } catch {
+    }
+  }
   // ==== 합치기 (RisuTide): 다른 봇·모듈에서 인물·세계관 가져오기, 전체 합치기, 출처별 업데이트, 떼어내기 ====
   const KIND_PART = { lore: "로어북", loreFolder: "로어 폴더", regex: "정규식", trigger: "트리거", luaTrigger: "Lua 트리거", css: "CSS", variable: "기본 변수", asset: "에셋", emotion: "감정 이미지", greeting: "인사말", textField: "글", imageGenSetting: "이미지 생성 설정", loreSettings: "로어북 설정", extension: "확장" };
   const PART_ICON = { lore: "book", loreFolder: "folder", regex: "code", trigger: "zap", luaTrigger: "zap", css: "palette", variable: "sliders", asset: "image", emotion: "image", greeting: "message", textField: "text", imageGenSetting: "image", loreSettings: "sliders", extension: "sliders" };
@@ -1412,10 +1430,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
       await hooks.created?.(created.chaId);
       fresh.push(created);
       await api.setDatabaseLite({ characters: fresh });
-      try {
-        await api.checkCharOrder();
-      } catch {
-      }
+      await ensureInOrder(created.chaId);
       const idx = fresh.length - 1;
       const check = await api.getCharacterFromIndex(idx);
       if (check?.chaId !== created.chaId) throw new Error("추가 후 확인에서 캐릭터를 찾지 못했습니다. 캐릭터 목록을 확인해 주세요.");
@@ -1488,10 +1503,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
         await hooks.created?.(created.chaId);
         fresh.push(created);
         await api.setDatabaseLite({ characters: fresh });
-        try {
-          await api.checkCharOrder();
-        } catch {
-        }
+        await ensureInOrder(created.chaId);
         await store.setFingerprint("c", created.chaId, await store.backupFingerprint(rec)).catch(() => {
         });
         busy = false;

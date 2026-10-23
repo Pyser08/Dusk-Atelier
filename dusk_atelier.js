@@ -9254,6 +9254,22 @@ ${registrationRow.content}`;
         }
       });
     }
+    async function ensureInOrder(chaId) {
+      try {
+        await api.checkCharOrder();
+      } catch {
+      }
+      try {
+        for (let i2 = 0; i2 < 3; i2++) {
+          const order = (await api.getDatabase(["characterOrder"]))?.characterOrder ?? [];
+          const has2 = order.some((x2) => x2 === chaId || Array.isArray(x2?.data) && x2.data.includes(chaId));
+          if (has2) return;
+          if (i2 === 0) await new Promise((r) => setTimeout(r, 300));
+          else await api.setDatabaseLite({ characterOrder: [...order, chaId] });
+        }
+      } catch {
+      }
+    }
     const KIND_PART = { lore: "로어북", loreFolder: "로어 폴더", regex: "정규식", trigger: "트리거", luaTrigger: "Lua 트리거", css: "CSS", variable: "기본 변수", asset: "에셋", emotion: "감정 이미지", greeting: "인사말", textField: "글", imageGenSetting: "이미지 생성 설정", loreSettings: "로어북 설정", extension: "확장" };
     const PART_ICON = { lore: "book", loreFolder: "folder", regex: "code", trigger: "zap", luaTrigger: "zap", css: "palette", variable: "sliders", asset: "image", emotion: "image", greeting: "message", textField: "text", imageGenSetting: "image", loreSettings: "sliders", extension: "sliders" };
     const ROLE_KO = { status: "상태창", imageDisplay: "이미지 표시", imageGen: "이미지 생성", events: "이벤트", firstMessage: "첫 메시지", other: "기타" };
@@ -9727,10 +9743,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
         await hooks.created?.(created.chaId);
         fresh.push(created);
         await api.setDatabaseLite({ characters: fresh });
-        try {
-          await api.checkCharOrder();
-        } catch {
-        }
+        await ensureInOrder(created.chaId);
         const idx = fresh.length - 1;
         const check = await api.getCharacterFromIndex(idx);
         if (check?.chaId !== created.chaId) throw new Error("추가 후 확인에서 캐릭터를 찾지 못했습니다. 캐릭터 목록을 확인해 주세요.");
@@ -9802,10 +9815,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
           await hooks.created?.(created.chaId);
           fresh.push(created);
           await api.setDatabaseLite({ characters: fresh });
-          try {
-            await api.checkCharOrder();
-          } catch {
-          }
+          await ensureInOrder(created.chaId);
           await store.setFingerprint("c", created.chaId, await store.backupFingerprint(rec)).catch(() => {
           });
           busy = false;
