@@ -270,6 +270,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     else await prefs.reloadMeta();
     state.modDirty = true;
     state.charOrderStale = true;
+    if (state.chars) state.charsBg = true;
     svc.invalidate();
     applyTheme();
     root.hidden = false;

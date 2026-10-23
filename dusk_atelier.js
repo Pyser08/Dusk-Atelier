@@ -14531,6 +14531,720 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     } };
   }
 
+  // src/data/charorder.js
+  var FOLDER_COLORS = ["default", "red", "yellow", "green", "blue", "indigo", "purple", "pink"];
+  var FOLDER_COLOR_CSS = { default: null, red: "#f87171", yellow: "#facc15", green: "#4ade80", blue: "#60a5fa", indigo: "#818cf8", purple: "#c084fc", pink: "#f472b6" };
+  var FOLDER_COLOR_KO = { default: "기본", red: "빨강", yellow: "노랑", green: "초록", blue: "파랑", indigo: "남색", purple: "보라", pink: "분홍" };
+  var isFolder = (x2) => x2 && typeof x2 === "object" && Array.isArray(x2.data);
+  var clone4 = (o) => o.map((x2) => isFolder(x2) ? { ...x2, data: [...x2.data] } : x2);
+  function layout(order, chars) {
+    const live = new Set(chars.filter((c) => c && !c.trashTime).map((c) => c.chaId));
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const x2 of order ?? []) {
+      if (typeof x2 === "string") {
+        if (live.has(x2) && !seen.has(x2)) {
+          seen.add(x2);
+          out.push({ type: "char", id: x2 });
+        }
+      } else if (isFolder(x2)) {
+        const ids = x2.data.filter((id) => live.has(id) && !seen.has(id));
+        ids.forEach((id) => seen.add(id));
+        out.push({ type: "folder", folder: x2, ids });
+      }
+    }
+    for (const c of chars) if (c && !c.trashTime && !seen.has(c.chaId)) {
+      seen.add(c.chaId);
+      out.push({ type: "char", id: c.chaId });
+    }
+    return out;
+  }
+  function take(order, id) {
+    const o = [];
+    for (const x2 of order) {
+      if (x2 === id) continue;
+      if (isFolder(x2)) o.push({ ...x2, data: x2.data.filter((d) => d !== id) });
+      else o.push(x2);
+    }
+    return o;
+  }
+  function moveChar(order, id, { beforeId, after, folderId: folderId2 }) {
+    const ids = [].concat(id);
+    if (beforeId && ids.includes(beforeId)) return clone4(order ?? []);
+    let o = clone4(order ?? []);
+    for (const c of ids) o = take(o, c);
+    if (beforeId) {
+      const top = o.indexOf(beforeId);
+      if (top >= 0) {
+        o.splice(top + (after ? 1 : 0), 0, ...ids);
+        return o;
+      }
+      for (const x2 of o) if (isFolder(x2)) {
+        const i2 = x2.data.indexOf(beforeId);
+        if (i2 >= 0) {
+          x2.data.splice(i2 + (after ? 1 : 0), 0, ...ids);
+          return o;
+        }
+      }
+      o.push(...ids);
+      return o;
+    }
+    if (folderId2) {
+      const f = o.find((x2) => isFolder(x2) && x2.id === folderId2);
+      if (f) {
+        f.data.push(...ids);
+        return o;
+      }
+    }
+    o.push(...ids);
+    return o;
+  }
+  function createFolder2(order, { id, name, color = "default", ids = [] }) {
+    let o = clone4(order ?? []);
+    let at = o.length;
+    if (ids.length) {
+      const first = o.findIndex((x2) => x2 === ids[0] || isFolder(x2) && x2.data.includes(ids[0]));
+      if (first >= 0) at = first;
+    }
+    for (const c of ids) o = take(o, c);
+    at = Math.min(at, o.length);
+    o.splice(at, 0, { id, name, color, data: [...ids] });
+    return o;
+  }
+  function setMembers(order, folderId2, ids) {
+    let o = clone4(order ?? []);
+    const f = o.find((x2) => isFolder(x2) && x2.id === folderId2);
+    if (!f) return o;
+    const out = f.data.filter((d) => !ids.includes(d));
+    for (const c of ids) o = take(o, c);
+    const g = o.find((x2) => isFolder(x2) && x2.id === folderId2);
+    g.data = [...ids];
+    const at = o.indexOf(g) + 1;
+    o.splice(at, 0, ...out);
+    return o;
+  }
+  function renameFolder2(order, folderId2, name) {
+    return clone4(order ?? []).map((x2) => isFolder(x2) && x2.id === folderId2 ? { ...x2, name } : x2);
+  }
+  function colorFolder(order, folderId2, color) {
+    return clone4(order ?? []).map((x2) => isFolder(x2) && x2.id === folderId2 ? { ...x2, color } : x2);
+  }
+  function deleteFolder2(order, folderId2) {
+    const o = [];
+    for (const x2 of clone4(order ?? [])) {
+      if (isFolder(x2) && x2.id === folderId2) o.push(...x2.data);
+      else o.push(x2);
+    }
+    return o;
+  }
+  function moveFolder(order, folderId2, dir) {
+    const o = clone4(order ?? []);
+    const i2 = o.findIndex((x2) => isFolder(x2) && x2.id === folderId2), j = i2 + dir;
+    if (i2 < 0 || j < 0 || j >= o.length) return o;
+    [o[i2], o[j]] = [o[j], o[i2]];
+    return o;
+  }
+  var folderOf = (order, id) => (order ?? []).find((x2) => isFolder(x2) && x2.data.includes(id)) ?? null;
+
+  // src/ui/screens/patchui.js
+  var keyOf2 = (kind, obj) => kind === "module" ? `m:${obj.id}` : `c:${obj.chaId}`;
+  async function exportMyChanges(ctx, kind, obj) {
+    const store = createStore(ctx.api);
+    const base = await store.getBaseline(keyOf2(kind, obj));
+    if (!base) {
+      const ok = await confirmDialog(ctx.win, { title: "원본 기록이 없어요", body: '이 플러그인으로 가져오거나 업데이트한 적이 없어서 "제작자 원본"을 몰라요.\n지금 상태를 원본으로 기록해 둘까요? 그 뒤에 고친 것부터 내보낼 수 있어요.', ok: "지금 상태로 기록 시작" });
+      if (ok) {
+        await store.setBaseline(keyOf2(kind, obj), baseViewOf(kind, obj));
+        ctx.toast("기록을 시작했어요. 이제부터 고친 내용을 내보낼 수 있어요.");
+      }
+      return;
+    }
+    const includeAssets = await confirmDialog(ctx.win, { title: "바꾼 에셋도 넣을까요?", body: "넣으면 받는 사람이 같은 이미지를 따로 구하지 않아도 돼요. 파일이 커질 수 있어요.", ok: "에셋 넣기", cancel: "글자만" });
+    const t = ctx.toast("패치 만드는 중…", { seconds: 120 });
+    try {
+      const patch = await buildPatch({ kind, name: obj.name, namespace: obj.namespace ?? obj.moduleNamespace, base, current: obj, readAsset: (p) => ctx.assets.read(p), includeAssets });
+      t.close();
+      if (!patch) {
+        ctx.toast("원본과 달라진 내용이 없어요");
+        return;
+      }
+      download(`${safeFileName(obj.name)}.rbupatch`, JSON.stringify(patch), "application/json");
+      ctx.toast("내 수정 패치를 내보냈어요");
+    } catch (e) {
+      t.close();
+      ctx.toast(`만들지 못했어요: ${e?.message ?? e}`, { error: true });
+    }
+  }
+  async function applyPatchFile(ctx, kind, getTarget, save) {
+    const [f] = await pickFiles({ accept: ".rbupatch,application/json" });
+    if (!f) return;
+    let patch;
+    try {
+      patch = parsePatch(await f.text());
+    } catch (e) {
+      ctx.toast(e?.message ?? String(e), { error: true });
+      return;
+    }
+    if (patch.kind !== kind) {
+      ctx.toast(`${patch.kind === "module" ? "모듈" : "캐릭터"}용 패치예요`, { error: true });
+      return;
+    }
+    const target = await getTarget();
+    const plan = planPatch(patch, target);
+    const s = plan.summary;
+    const lines = [
+      `패치: ${patch.name}${patch.version ? ` v${patch.version}` : ""}${patch.name !== target.name ? ` → 적용 대상: ${target.name}` : ""}`,
+      patch.author ? `제작자: ${patch.author}` : "",
+      patch.note ? `변경 내용:
+${patch.note}` : "",
+      `패치의 수정 ${s.update ?? 0} · 내 수정 유지 ${s.mine ?? 0} · 충돌 ${s.conflict ?? 0}(패치 쪽으로) · 추가 ${s.added ?? 0} · 삭제 ${s.removed ?? 0}`,
+      Object.keys(patch.assets ?? {}).length ? `에셋 ${Object.keys(patch.assets).length}개를 올려요` : "",
+      "적용하기 전 상태는 백업해요."
+    ].filter(Boolean);
+    if (!plan.items.length) {
+      ctx.toast("적용할 내용이 없어요 (이미 같아요)");
+      return;
+    }
+    if (!await confirmDialog(ctx.win, { title: "패치를 적용할까요?", body: lines.join("\n"), ok: "적용" })) return;
+    try {
+      const cur = await getTarget();
+      if (kind === "character" && isGenerating(cur)) throw new Busy();
+      await createStore(ctx.api).addBackup({ kind, target: kind === "module" ? cur.id : cur.chaId, name: cur.name, snapshot: backupSnapshot(kind, cur), note: "패치 적용 전", summary: `${f.name}` });
+      const r = await applyPatch(patch, cur, { saveAsset: (d) => ctx.api.saveAsset(d) });
+      await save(r.result, cur);
+      ctx.toast("패치를 적용했어요");
+    } catch (e) {
+      ctx.toast(`적용하지 못했어요: ${e?.message ?? e}`, { error: true });
+    }
+  }
+  function changedKeys(before, after) {
+    const out = {};
+    for (const k of /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])) if (k !== "id" && stableJson(before[k] ?? null) !== stableJson(after[k] ?? null)) out[k] = after[k];
+    return out;
+  }
+
+  // src/ui/screens/characters.js
+  var COARSE2 = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+  function cardSize(c) {
+    try {
+      const { chats, ...rest } = c;
+      return new TextEncoder().encode(JSON.stringify(rest)).length;
+    } catch {
+      return 0;
+    }
+  }
+  function charSummary(c, i2) {
+    return {
+      i: i2,
+      chaId: c.chaId,
+      name: c.name ?? "",
+      type: c.type,
+      image: c.image,
+      creator: c.creator,
+      version: c.characterVersion,
+      lore: (c.globalLore ?? []).length,
+      assets: characterAssetKeys(c).length,
+      chats: (c.chats ?? []).length,
+      modules: c.modules ?? [],
+      streaming: isGenerating(c),
+      desc: (c.creatorNotes || c.desc || "").slice(0, 400),
+      size: cardSize(c)
+    };
+  }
+  function patchSavedChar(ctx, index, saved) {
+    const st = ctx.state;
+    if (!st.chars || !saved || saved.trashTime) {
+      st.charsDirty = true;
+    } else {
+      const next = charSummary(saved, index);
+      const at = st.chars.findIndex((c) => c.chaId === next.chaId);
+      if (at >= 0) st.chars[at] = next;
+      else st.charsDirty = true;
+    }
+    if (ctx.state.tab === "characters") ctx.refresh();
+  }
+  async function renderCharacters(ctx) {
+    const st = ctx.state;
+    if (st.chars && !st.charsDirty && st.charsBg) {
+      st.charsBg = false;
+      const sig = (l) => l.map((c) => [c.chaId, c.name, c.chats, c.modules.join(","), c.streaming].join("")).join("");
+      const before = sig(st.chars);
+      const at = st.charsAt;
+      setTimeout(async () => {
+        try {
+          const { lc: lc2, db } = await fetchChars(ctx);
+          if (st.charsAt !== at || st.charsDirty) return;
+          applyChars(ctx, db, lc2);
+          if (ctx.state.tab === "characters" && sig(st.chars) !== before) renderCharacters(ctx);
+        } catch {
+        }
+      }, 0);
+    }
+    if (!st.chars || st.charsDirty) {
+      replace(ctx.main, loading("캐릭터를 불러오는 중", { rows: 7 }));
+      const { lc: lc2, db } = await fetchChars(ctx);
+      applyChars(ctx, db, lc2);
+    }
+    return drawCharacters(ctx);
+  }
+  async function fetchChars(ctx) {
+    const db = await ctx.api.getDatabase(["characters", "modules", "characterOrder"]);
+    const lc2 = await loadCharacters(ctx.api, db?.characters);
+    return { lc: lc2, db };
+  }
+  function applyChars(ctx, db, lc2) {
+    const st = ctx.state;
+    {
+      st.charOrder = Array.isArray(db?.characterOrder) ? db.characterOrder : [];
+      db.characters = lc2.list;
+      st.charsUnloaded = lc2.unloaded;
+      st.chars = (db?.characters ?? []).map((c, i2) => c && !c.trashTime ? charSummary(c, i2) : null).filter(Boolean);
+      st.charModNames = new Map((db?.modules ?? []).map((m) => [m.id, m.name]));
+      st.charsDirty = false;
+      st.charsAt = Date.now();
+      st.charOrderStale = false;
+    }
+  }
+  async function drawCharacters(ctx) {
+    const st = ctx.state;
+    if (st.charOrderStale) {
+      st.charOrderStale = false;
+      try {
+        const o = (await ctx.api.getDatabase(["characterOrder"]))?.characterOrder;
+        if (Array.isArray(o)) st.charOrder = o;
+      } catch {
+      }
+    }
+    const q = st.search.trim().toLowerCase();
+    const filtering = !!q;
+    const sort = ctx.prefs.ui?.charSort ?? null;
+    st.charSorted = !!sort;
+    const srt = (arr, get) => sortBy(arr, sort, (x2) => get(x2)?.name ?? "", (x2) => get(x2)?.size ?? 0);
+    const list = srt(st.chars, (c) => c).filter((c) => !q || c.name.toLowerCase().includes(q) || String(c.creator ?? "").toLowerCase().includes(q));
+    ctx.setNavCount("characters", st.chars.length);
+    if (!st.charSel || !st.chars.some((c) => c.chaId === st.charSel)) st.charSel = list[0]?.chaId ?? null;
+    const box = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "캐릭터 목록", style: "padding-top:12px" });
+    const lazy = ctx.assets.lazy(box);
+    const byId = new Map(st.chars.map((c) => [c.chaId, c]));
+    const collapsed = ctx.prefs.meta.charFoldersCollapsed ?? {};
+    const mu = multiOf2(ctx);
+    if (filtering) mu.clear();
+    const rowOf = (c) => {
+      const img = c.image ? h("img", { alt: "", dataset: { path: c.image, ext: "png" }, style: "width:40px;height:40px;border-radius:12px;object-fit:cover;background:var(--rb-surf2);flex-shrink:0" }) : h("span", { style: "width:40px;height:40px;border-radius:12px;background:var(--rb-surf2);display:flex;align-items:center;justify-content:center;color:var(--rb-mute);flex-shrink:0" }, icon("character", 18));
+      const grip = filtering ? null : h("span", { class: "grip", title: "끌어서 순서 바꾸기·폴더에 넣기 · Ctrl/⌘·Shift+클릭으로 여러 개", "aria-hidden": "true" }, icon("grip", 14));
+      const mcb = filtering ? null : h("span", { class: "rb-mcb", role: "checkbox", "aria-checked": "false", "aria-label": `${c.name} 고르기` });
+      const row2 = h(
+        "div",
+        {
+          class: ["rb-row", st.justMoved?.includes(c.chaId) && "just-moved"],
+          role: "option",
+          tabindex: "0",
+          "aria-selected": st.charSel === c.chaId ? "true" : "false",
+          dataset: filtering ? { id: c.chaId } : sort ? { id: c.chaId, pick: c.chaId } : { id: c.chaId, dropRow: c.chaId, pick: c.chaId },
+          onClick: (ev) => {
+            if (!filtering && mu.click(ev, c.chaId, st.charSel)) return;
+            st.charSel = c.chaId;
+            box.querySelectorAll(".rb-row").forEach((r) => r.setAttribute("aria-selected", "false"));
+            row2.setAttribute("aria-selected", "true");
+            detail2(ctx, c);
+            if (ctx.isMobile()) ctx.openSheet();
+          },
+          onKeydown: (ev) => {
+            if (ev.target === row2 && (ev.key === "Enter" || ev.key === " ")) {
+              ev.preventDefault();
+              row2.click();
+            }
+          }
+        },
+        mcb,
+        grip,
+        img,
+        h(
+          "div",
+          { class: "txt" },
+          h("div", { class: "ttl" }, h("span", { class: "name" }, c.name || "(이름 없음)"), c.type === "group" && badge("그룹", "mute"), c.streaming && badge("응답 생성 중", "warn")),
+          h("span", { class: "meta" }, [c.creator && `제작자 ${c.creator}`, `로어 ${c.lore}`, `에셋 ${c.assets}`, `채팅 ${c.chats}`, sort?.key === "size" && fmtSize(c.size)].filter(Boolean).join(" · "))
+        ),
+        iconBtn("more", `${c.name} 메뉴`, { onClick: (ev) => {
+          ev.stopPropagation();
+          charMenu(ctx, c, ev.currentTarget);
+        } })
+      );
+      if (grip) gripDrag({
+        grip,
+        row: row2,
+        root: box,
+        scroller: box,
+        count: () => mu.dragIds(c.chaId).length,
+        skip: (t) => mu.dragIds(c.chaId).includes(t.getAttribute("data-drop-row")),
+        onDrop: (d) => {
+          const ids = mu.dragIds(c.chaId);
+          st.justMoved = ids;
+          return saveOrder(ctx, (o) => moveChar(o, ids, d), ids.length > 1 ? `봇 ${ids.length}개를 옮겼어요` : null);
+        }
+      });
+      if (img.tagName === "IMG") lazy.observe(img);
+      return row2;
+    };
+    if (filtering) {
+      for (const c of list.slice(0, 600)) box.appendChild(rowOf(c));
+    } else {
+      let shown = 0;
+      const items = layout(st.charOrder, st.chars.map((c) => ({ chaId: c.chaId })));
+      if (sort) {
+        const get = (id) => byId.get(id);
+        for (const it of items) if (it.type === "folder") it.ids = srt(it.ids, get);
+        const top = srt(items.filter((x2) => x2.type === "char").map((x2) => x2.id), get);
+        let k = 0;
+        for (const it of items) if (it.type === "char") it.id = top[k++];
+      }
+      const hasFolders = items.some((x2) => x2.type === "folder");
+      for (const it of items) {
+        if (shown > 600) break;
+        if (it.type === "char") {
+          const c = byId.get(it.id);
+          if (c) {
+            box.appendChild(rowOf(c));
+            shown++;
+          }
+          continue;
+        }
+        const f = it.folder, open = !collapsed[f.id];
+        const color = FOLDER_COLOR_CSS[f.color] ?? "var(--rb-sub)";
+        const head = h(
+          "div",
+          { style: "display:flex;align-items:center;gap:4px", dataset: { dropFolder: f.id } },
+          h(
+            "button",
+            { type: "button", class: "rb-folder", "aria-expanded": open ? "true" : "false", onClick: () => {
+              ctx.svc.meta((m) => {
+                m.charFoldersCollapsed ??= {};
+                if (open) m.charFoldersCollapsed[f.id] = true;
+                else delete m.charFoldersCollapsed[f.id];
+              }).catch(() => {
+              });
+              if (!open) st.justOpened = f.id;
+              renderCharacters(ctx);
+            } },
+            h("span", { class: "chev" }, icon("chevron", 14)),
+            h("span", { style: { color, display: "flex" } }, icon("folder", 16)),
+            h("b", null, f.name || "(이름 없는 폴더)"),
+            h("small", null, String(it.ids.length))
+          ),
+          iconBtn("more", `${f.name} 폴더 메뉴`, { onClick: (e) => charFolderMenu(ctx, f, e.currentTarget) })
+        );
+        box.appendChild(head);
+        if (open) {
+          const body = h("div", { class: ["rb-folder-body", st.justOpened === f.id && "just-opened"] });
+          for (const id of it.ids) {
+            const c = byId.get(id);
+            if (c) {
+              body.appendChild(rowOf(c));
+              shown++;
+            }
+          }
+          if (!it.ids.length) body.appendChild(h("div", { class: "rb-muted", style: "padding:8px 10px" }, "봇을 여기로 끌어다 놓으세요"));
+          box.appendChild(body);
+        }
+      }
+      if (hasFolders) {
+        const outside = h("div", { class: "rb-label", style: "padding:14px 12px 6px;border-radius:10px", dataset: { dropFolder: "" } }, "여기에 놓으면 폴더 밖으로");
+        box.appendChild(outside);
+      }
+    }
+    if (!list.length) box.appendChild(h("div", { class: "rb-empty" }, st.chars.length ? "찾는 캐릭터가 없어요." : "캐릭터가 없어요."));
+    const keep = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
+    const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 봇" });
+    const openTray = () => {
+      st.charTray = !st.charTray;
+      renderCharacters(ctx);
+    };
+    const sortTray = st.charTray ? tray(
+      ...sortChips(sort, (next) => {
+        ctx.prefs.saveUi({ charSort: next }).catch(() => {
+        });
+        renderCharacters(ctx);
+      }),
+      h("span", { class: "rb-muted", style: "font-size:12px;white-space:nowrap" }, sort ? "폴더마다 따로 정렬해요 · 끌어서 순서 바꾸기는 원래대로에서" : "끌어서 정한 순서예요")
+    ) : null;
+    replace(ctx.main, h(
+      "div",
+      { class: "rb-chips" },
+      trayBtn("정렬", { icon: "preset", value: sortShort(sort), title: sortLabel(sort), open: !!st.charTray, active: !!sort, onClick: openTray }),
+      h("span", { class: "rb-muted", style: "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto" }, `캐릭터 ${st.chars.length}명${list.length > 600 ? " · 앞쪽 600명만 표시 (검색으로 좁혀 보세요)" : ""}${st.charsUnloaded ? ` · 앱이 아직 불러오는 중인 봇 ${st.charsUnloaded}명은 빠져 있어요` : ""}`),
+      st.charsUnloaded ? btn("새로 고침", { size: "sm", icon: "refresh", onClick: () => {
+        st.charsDirty = true;
+        renderCharacters(ctx);
+      } }) : null,
+      h("div", { class: "rb-spacer" }),
+      filtering ? null : btn(mu.active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => mu.setMode(!mu.active) }),
+      btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newCharFolder(ctx) }),
+      btn("업데이트·새로 넣기", { size: "sm", kind: "primary", icon: "upload", onClick: () => ctx.legacy.open() })
+    ), sortTray, bar, box);
+    box.scrollTop = keep;
+    st.justOpened = null;
+    st.justMoved = null;
+    mu.bar = bar;
+    mu.attach(box);
+    paintBar2(ctx);
+    const sel = st.chars.find((c) => c.chaId === st.charSel);
+    if (sel) detail2(ctx, sel);
+    else ctx.showDetail(h("div", { class: "rb-empty" }, "캐릭터를 고르면 여기에 자세히 보여요."));
+  }
+  var orderQ = Promise.resolve();
+  function saveOrder(ctx, fn, done) {
+    const st = ctx.state;
+    const next = fn(st.charOrder ?? []);
+    st.charOrder = next;
+    renderCharacters(ctx);
+    if (done) ctx.toast(done);
+    const p = orderQ.then(async () => {
+      const fresh = (await ctx.api.getDatabase(["characterOrder"]))?.characterOrder;
+      const out = Array.isArray(fresh) ? fn(fresh) : st.charOrder;
+      await ctx.api.setDatabaseLite({ characterOrder: out });
+      if (JSON.stringify(out) !== JSON.stringify(st.charOrder)) {
+        st.charOrder = out;
+        if (st.tab === "characters") renderCharacters(ctx);
+      }
+    }).catch(async (e) => {
+      ctx.toast(`순서를 저장하지 못했어요: ${e?.message ?? e}`, { error: true });
+      try {
+        const cur = (await ctx.api.getDatabase(["characterOrder"]))?.characterOrder;
+        if (Array.isArray(cur)) {
+          st.charOrder = cur;
+          renderCharacters(ctx);
+        }
+      } catch {
+      }
+    });
+    orderQ = p;
+    return p;
+  }
+  function multiOf2(ctx) {
+    ctx.state.charMulti ??= createMulti({ onChange: () => paintBar2(ctx) });
+    return ctx.state.charMulti;
+  }
+  function paintBar2(ctx) {
+    const mu = multiOf2(ctx), bar = mu.bar;
+    if (!bar) return;
+    const tb = ctx.main.querySelector("#rb-pick-toggle");
+    if (tb) tb.lastChild.textContent = mu.active ? "선택 끝" : "선택";
+    bar.hidden = !mu.active;
+    if (!mu.active) {
+      bar.replaceChildren();
+      return;
+    }
+    const n = mu.sel.size;
+    const visible = () => [...ctx.main.querySelectorAll(".rb-list [data-pick]")].map((r) => r.dataset.pick);
+    bar.replaceChildren(
+      h("b", null, n ? `${n}개 고름` : "고를 봇을 누르세요"),
+      btn("폴더로", { size: "sm", icon: "folder", disabled: !n, onClick: (ev) => {
+        const ids = mu.ordered();
+        const folders = (ctx.state.charOrder ?? []).filter((x2) => x2 && typeof x2 === "object" && Array.isArray(x2.data));
+        openMenu(ctx.win, ev.currentTarget, [
+          ...folders.map((f) => ({ label: f.name || "(이름 없는 폴더)", icon: "folder", onClick: () => saveOrder(ctx, (o) => moveChar(o, ids, { folderId: f.id }), `봇 ${ids.length}개를 '${f.name}'(으)로 옮겼어요`) })),
+          folders.length ? "sep" : null,
+          { label: "새 폴더…", icon: "folderPlus", onClick: async () => {
+            const name = await promptDialog(ctx.win, { title: "새 봇 폴더", label: `고른 봇 ${ids.length}개를 넣어요`, placeholder: "폴더 이름" });
+            if (name?.trim()) saveOrder(ctx, (o) => createFolder2(o, { id: "df_" + newId().slice(0, 10), name: name.trim(), ids }), `'${name.trim()}' 폴더를 만들었어요 (봇 ${ids.length}개)`);
+          } }
+        ].filter(Boolean));
+      } }),
+      btn("폴더 밖으로", { size: "sm", disabled: !n, onClick: () => {
+        const ids = mu.ordered();
+        saveOrder(ctx, (o) => moveChar(o, ids, { folderId: null }));
+      } }),
+      btn("보이는 것 모두", { size: "sm", onClick: () => {
+        const v = visible();
+        mu.set(v.every((id) => mu.has(id)) ? [] : v);
+      } }),
+      iconBtn("x", "고르기 끝내기", { onClick: () => mu.clear() })
+    );
+  }
+  function charItems(ctx) {
+    return ctx.state.chars.map((c) => {
+      const f = folderOf(ctx.state.charOrder, c.chaId);
+      return { id: c.chaId, label: c.name, folder: f?.id ?? null, sub: [f ? `지금: ${f.name}` : "폴더 없음", c.creator && `제작자 ${c.creator}`].filter(Boolean).join(" · ") };
+    });
+  }
+  async function newCharFolder(ctx) {
+    const r = await folderDialog(ctx.win, { title: "새 봇 폴더", items: charItems(ctx), noun: "봇", ...folderPickPrefs(ctx) });
+    if (!r) return;
+    await saveOrder(ctx, (o) => createFolder2(o, { id: "df_" + newId().slice(0, 10), name: r.name, ids: r.ids }), `'${r.name}' 폴더를 만들었어요${r.ids.length ? ` (봇 ${r.ids.length}개)` : ""}. RisuAI 사이드바에도 같은 폴더가 생겨요.`);
+  }
+  function charFolderMenu(ctx, f, anchor) {
+    openMenu(ctx.win, anchor, [
+      { label: "넣을 봇 고르기…", icon: "plus", onClick: async () => {
+        const r = await folderDialog(ctx.win, { title: `'${f.name}' 폴더에 넣을 봇`, items: charItems(ctx), checked: [...f.data], ok: "저장", withName: false, noun: "봇", current: f.id, ...folderPickPrefs(ctx) });
+        if (r) await saveOrder(ctx, (o) => setMembers(o, f.id, r.ids));
+      } },
+      { label: "이름 바꾸기", icon: "edit", onClick: async () => {
+        const n = await promptDialog(ctx.win, { title: "폴더 이름", value: f.name });
+        if (n?.trim()) await saveOrder(ctx, (o) => renameFolder2(o, f.id, n.trim()));
+      } },
+      { label: "폴더 색", icon: "palette", onClick: async () => {
+        const c = await new Promise((res) => openMenu(ctx.win, anchor, FOLDER_COLORS.map((k) => ({ label: FOLDER_COLOR_KO[k], icon: "folder", onClick: () => res(k) }))));
+        if (c) await saveOrder(ctx, (o) => colorFolder(o, f.id, c));
+      } },
+      { label: "위로", icon: "up", onClick: () => saveOrder(ctx, (o) => moveFolder(o, f.id, -1)) },
+      { label: "아래로", icon: "down", onClick: () => saveOrder(ctx, (o) => moveFolder(o, f.id, 1)) },
+      "sep",
+      { label: "폴더 삭제 (봇은 남음)", icon: "trash", danger: true, onClick: async () => {
+        if (await confirmDialog(ctx.win, { title: `'${f.name}' 폴더를 지울까요?`, body: "안에 있던 봇은 폴더 밖으로 나와요. 봇은 지워지지 않아요.", ok: "폴더 삭제", danger: true })) await saveOrder(ctx, (o) => deleteFolder2(o, f.id));
+      } }
+    ]);
+  }
+  function detail2(ctx, c) {
+    const st = ctx.state;
+    const stat = (label3, v) => h("div", { class: "rb-stat" }, h("small", null, label3), h("b", null, String(v)));
+    const timeline = h("div", { style: "display:flex;flex-direction:column;gap:8px" });
+    const full = async () => {
+      const cur = await ctx.api.getCharacterFromIndex(c.i);
+      if (!cur || cur.chaId !== c.chaId) throw new Error("캐릭터를 다시 찾지 못했어요. 목록을 새로 고쳐 주세요.");
+      return cur;
+    };
+    ctx.showDetail(
+      h(
+        "div",
+        { style: "display:flex;flex-direction:column;gap:6px" },
+        c.creator ? h("span", { style: "font-size:12px;color:var(--rb-acc-text)" }, c.creator + (c.version ? ` · ${c.version}` : "")) : null,
+        h("h2", { class: "rb-h2" }, c.name || "(이름 없음)"),
+        c.desc ? h("p", { class: "rb-p", style: "white-space:pre-line;max-height:120px;overflow:auto" }, c.desc) : null,
+        c.streaming ? note("warn", "지금 응답을 생성하는 중이에요. 끝난 뒤에 업데이트할 수 있어요.") : null
+      ),
+      h("div", { class: "rb-stats" }, stat("로어북", c.lore), stat("에셋", c.assets), stat("채팅", c.chats), stat("연결 모듈", c.modules.length)),
+      h(
+        "div",
+        { class: "rb-field" },
+        h("span", { class: "rb-label" }, "연결된 모듈"),
+        h("div", { class: "rb-card" }, c.modules.length ? c.modules.map((id) => h(
+          "div",
+          { class: "rb-kv" },
+          h("span", null, st.charModNames.get(id) ?? "(꺼졌거나 없는 모듈)"),
+          h("a", { href: "#", style: "font-size:12px;color:var(--rb-acc-text)", onClick: (ev) => {
+            ev.preventDefault();
+            st.modSel = id;
+            ctx.go("modules");
+          } }, "열기")
+        )) : h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "연결된 모듈이 없어요")))
+      ),
+      h("div", { class: "rb-field" }, h(
+        "div",
+        { style: "display:flex;align-items:center" },
+        h("span", { class: "rb-label", style: "flex:1" }, "버전 타임라인"),
+        h("a", { href: "#", style: "font-size:12px;color:var(--rb-acc-text)", onClick: (ev) => {
+          ev.preventDefault();
+          st.histTarget = c.chaId;
+          ctx.go("history");
+        } }, "전체 보기")
+      ), timeline),
+      h("div", { style: "flex:1" }),
+      h(
+        "div",
+        { style: "display:flex;gap:8px;flex-wrap:wrap" },
+        btn("편집", { kind: "primary", size: "lg", icon: "edit", onClick: () => openCharEditor(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) }),
+        btn("에셋", { size: "lg", icon: "image", onClick: () => openCharAssets(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) }),
+        btn("삭제", { kind: "danger", size: "lg", icon: "trash", onClick: () => removeCharacter(ctx, c) })
+      ),
+      h(
+        "div",
+        { style: "display:flex;gap:8px;flex-wrap:wrap" },
+        btn("업데이트 가져오기", { size: "lg", icon: "upload", onClick: () => ctx.legacy.open() }),
+        isDev(ctx) ? btn(findProject(ctx, "character", c.chaId) ? "개발 탭에서 보기" : "개발 목록에 넣기", { size: "lg", icon: "code", onClick: async () => {
+          await addProjects(ctx, [{ kind: "character", id: c.chaId }]);
+          ctx.state.devSel = `c:${c.chaId}`;
+          ctx.go("dev");
+        } }) : null,
+        isDev(ctx) ? btn("패치 만들기", { size: "lg", icon: "code", onClick: () => openPatchMaker(ctx, { kind: "character", key: `c:${c.chaId}`, i: c.i, chaId: c.chaId, name: c.name }) }) : btn("내 수정 내보내기", { size: "lg", icon: "download", onClick: async () => {
+          try {
+            await exportMyChanges(ctx, "character", await full());
+          } catch (e) {
+            ctx.toast(e.message, { error: true });
+          }
+        } }),
+        btn("패치 적용", { size: "lg", icon: "refresh", onClick: () => applyPatchFile(ctx, "character", full, async (res) => {
+          const last2 = await full();
+          if (isGenerating(last2)) throw new Busy();
+          await ctx.api.setCharacterToIndex(c.i, res);
+          st.charsDirty = true;
+          renderCharacters(ctx);
+        }) })
+      )
+    );
+    (async () => {
+      const list = (await createStore(ctx.api).listBackups()).filter((b) => b.target === c.chaId).slice(0, 3);
+      replace(timeline, list.length ? list.map((b) => h("div", { class: "rb-card pad", style: "padding:10px 14px" }, h("div", { style: "display:flex;gap:8px" }, h("b", { style: "font-size:13px" }, b.note || "업데이트 전"), h("span", { class: "rb-muted" }, fmtWhen(b.t))), b.summary ? h("div", { class: "rb-muted" }, b.summary) : null)) : h("div", { class: "rb-muted", style: "padding:12px 14px;border-radius:12px;border:1px dashed var(--rb-line)" }, "아직 기록이 없어요."));
+    })().catch(() => {
+    });
+  }
+  async function fullChar(ctx, c) {
+    const cur = await ctx.api.getCharacterFromIndex(c.i);
+    if (!cur || cur.chaId !== c.chaId) throw new Error("캐릭터를 다시 찾지 못했어요. 목록을 새로 고쳐 주세요.");
+    return cur;
+  }
+  function charMenu(ctx, c, anchor) {
+    const err2 = (e) => ctx.toast(e?.message ?? String(e), { error: true });
+    const folders = (ctx.state.charOrder ?? []).filter((x2) => x2 && typeof x2 === "object" && Array.isArray(x2.data));
+    const cur = folderOf(ctx.state.charOrder, c.chaId);
+    openMenu(ctx.win, anchor, [
+      { label: "편집", icon: "edit", onClick: () => openCharEditor(ctx, c.i, c.chaId).catch(err2) },
+      { label: "에셋 관리", icon: "image", onClick: () => openCharAssets(ctx, c.i, c.chaId).catch(err2) },
+      "sep",
+      { label: "폴더로 옮기기", icon: "folder", onClick: () => openMenu(ctx.win, anchor, [
+        ...folders.map((f) => ({ label: (cur?.id === f.id ? "✓ " : "") + (f.name || "(이름 없는 폴더)"), icon: "folder", onClick: () => saveOrder(ctx, (o) => moveChar(o, [c.chaId], { folderId: f.id })) })),
+        folders.length ? "sep" : null,
+        cur ? { label: "폴더에서 빼기", icon: "x", onClick: () => saveOrder(ctx, (o) => moveChar(o, [c.chaId], { folderId: null })) } : null,
+        { label: "새 폴더…", icon: "folderPlus", onClick: async () => {
+          const name = await promptDialog(ctx.win, { title: "새 봇 폴더", label: "폴더 이름" });
+          if (name?.trim()) saveOrder(ctx, (o) => createFolder2(o, { id: "df_" + newId().slice(0, 10), name: name.trim(), ids: [c.chaId] }));
+        } }
+      ].filter(Boolean)) },
+      { label: "업데이트 가져오기", icon: "upload", onClick: () => ctx.legacy.open() },
+      { label: "다른 봇에서 가져오기·합치기", icon: "link", onClick: () => ctx.legacy.openMerge(c.chaId) },
+      isDev(ctx) ? { label: "패치 만들기 (개발자)", icon: "code", onClick: () => openPatchMaker(ctx, { kind: "character", key: `c:${c.chaId}`, i: c.i, chaId: c.chaId, name: c.name }) } : { label: "내 수정만 내보내기 (.rbupatch)", icon: "download", onClick: async () => {
+        try {
+          await exportMyChanges(ctx, "character", await fullChar(ctx, c));
+        } catch (e) {
+          err2(e);
+        }
+      } },
+      { label: "패치 적용…", icon: "refresh", onClick: () => applyPatchFile(ctx, "character", () => fullChar(ctx, c), async (res) => {
+        if (isGenerating(await fullChar(ctx, c))) throw new Busy();
+        await ctx.api.setCharacterToIndex(c.i, res);
+        ctx.state.charsDirty = true;
+        renderCharacters(ctx);
+      }) },
+      { label: "기록 보기", icon: "refresh", onClick: () => {
+        ctx.state.histTarget = c.chaId;
+        ctx.go("history");
+      } },
+      "sep",
+      { label: "삭제", icon: "trash", danger: true, onClick: () => removeCharacter(ctx, c) }
+    ]);
+  }
+  async function removeCharacter(ctx, c) {
+    try {
+      if (await ctx.api.getCurrentCharacterIndex() === c.i) {
+        ctx.toast("지금 열려 있는 봇은 지울 수 없어요. 다른 봇을 연 뒤 지워 주세요.", { error: true });
+        return;
+      }
+      const cur = await fullChar(ctx, c);
+      if (isGenerating(cur)) throw new Busy();
+      const ok = await confirmDialog(ctx.win, { title: `'${c.name}'을(를) 지울까요?`, body: `RisuAI 휴지통으로 옮겨요. 채팅 ${c.chats}개도 함께 옮겨지고, 휴지통에서 3일 안에 되살릴 수 있어요.`, ok: "삭제", danger: true });
+      if (!ok) return;
+      const again = await fullChar(ctx, c);
+      if (isGenerating(again)) throw new Busy();
+      await vanish(ctx.main.querySelector(`.rb-row[data-id="${CSS.escape(c.chaId)}"]`));
+      await ctx.api.setCharacterToIndex(c.i, { ...again, trashTime: Date.now() });
+      if (ctx.state.charMulti?.has?.(c.chaId)) ctx.state.charMulti.set([...ctx.state.charMulti.sel].filter((x2) => x2 !== c.chaId));
+      ctx.state.charsDirty = true;
+      await renderCharacters(ctx);
+      ctx.toast(`'${c.name}'을(를) 휴지통으로 옮겼어요`);
+    } catch (e) {
+      ctx.toast(e instanceof Busy ? "응답을 생성하는 중이라 지금은 지울 수 없어요." : `지우지 못했어요: ${e?.message ?? e}`, { error: true });
+    }
+  }
+
   // src/ui/screens/chareditor.js
   var MAP = { lorebook: "globalLore", regex: "customscript", trigger: "triggerscript" };
   var SKIP2 = /* @__PURE__ */ new Set([...USER_KEYS, "emotionImages", "additionalAssets", "ccAssets", "image", "vits", "chats", "chatFolders", "chatPage", "loreCache", "lowLevelHistory"]);
@@ -14673,8 +15387,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         if (isGenerating(last2) || (last2.chats ?? []).length !== (fresh.chats ?? []).length) throw new Busy();
         merged.chats = last2.chats;
         await ctx.api.setCharacterToIndex(index, merged);
-        ctx.state.charsDirty = true;
-        if (ctx.state.tab === "characters") ctx.refresh();
+        patchSavedChar(ctx, index, merged);
       }
     });
   }
@@ -14697,6 +15410,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         }
         fresh.additionalAssets = nextAssets.map((a) => [...a]);
         await ctx.api.setCharacterToIndex(index, fresh);
+        patchSavedChar(ctx, index, fresh);
         const empty = !nextFd._folders.length && !Object.keys(nextFd._mapping).length;
         if (stableJson(ctx.prefs.meta.charAssetFolders?.[folderKey] ?? null) !== stableJson(empty ? null : nextFd)) {
           await ctx.svc.meta((m) => {
@@ -14705,8 +15419,6 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
             else m.charAssetFolders[folderKey] = nextFd;
           });
         }
-        ctx.state.charsDirty = true;
-        if (ctx.state.tab === "characters") ctx.refresh();
       }
     });
   }
@@ -15475,83 +16187,6 @@ ${md()}
     ctx.go("dev", "patchmaker");
   }
 
-  // src/ui/screens/patchui.js
-  var keyOf2 = (kind, obj) => kind === "module" ? `m:${obj.id}` : `c:${obj.chaId}`;
-  async function exportMyChanges(ctx, kind, obj) {
-    const store = createStore(ctx.api);
-    const base = await store.getBaseline(keyOf2(kind, obj));
-    if (!base) {
-      const ok = await confirmDialog(ctx.win, { title: "원본 기록이 없어요", body: '이 플러그인으로 가져오거나 업데이트한 적이 없어서 "제작자 원본"을 몰라요.\n지금 상태를 원본으로 기록해 둘까요? 그 뒤에 고친 것부터 내보낼 수 있어요.', ok: "지금 상태로 기록 시작" });
-      if (ok) {
-        await store.setBaseline(keyOf2(kind, obj), baseViewOf(kind, obj));
-        ctx.toast("기록을 시작했어요. 이제부터 고친 내용을 내보낼 수 있어요.");
-      }
-      return;
-    }
-    const includeAssets = await confirmDialog(ctx.win, { title: "바꾼 에셋도 넣을까요?", body: "넣으면 받는 사람이 같은 이미지를 따로 구하지 않아도 돼요. 파일이 커질 수 있어요.", ok: "에셋 넣기", cancel: "글자만" });
-    const t = ctx.toast("패치 만드는 중…", { seconds: 120 });
-    try {
-      const patch = await buildPatch({ kind, name: obj.name, namespace: obj.namespace ?? obj.moduleNamespace, base, current: obj, readAsset: (p) => ctx.assets.read(p), includeAssets });
-      t.close();
-      if (!patch) {
-        ctx.toast("원본과 달라진 내용이 없어요");
-        return;
-      }
-      download(`${safeFileName(obj.name)}.rbupatch`, JSON.stringify(patch), "application/json");
-      ctx.toast("내 수정 패치를 내보냈어요");
-    } catch (e) {
-      t.close();
-      ctx.toast(`만들지 못했어요: ${e?.message ?? e}`, { error: true });
-    }
-  }
-  async function applyPatchFile(ctx, kind, getTarget, save) {
-    const [f] = await pickFiles({ accept: ".rbupatch,application/json" });
-    if (!f) return;
-    let patch;
-    try {
-      patch = parsePatch(await f.text());
-    } catch (e) {
-      ctx.toast(e?.message ?? String(e), { error: true });
-      return;
-    }
-    if (patch.kind !== kind) {
-      ctx.toast(`${patch.kind === "module" ? "모듈" : "캐릭터"}용 패치예요`, { error: true });
-      return;
-    }
-    const target = await getTarget();
-    const plan = planPatch(patch, target);
-    const s = plan.summary;
-    const lines = [
-      `패치: ${patch.name}${patch.version ? ` v${patch.version}` : ""}${patch.name !== target.name ? ` → 적용 대상: ${target.name}` : ""}`,
-      patch.author ? `제작자: ${patch.author}` : "",
-      patch.note ? `변경 내용:
-${patch.note}` : "",
-      `패치의 수정 ${s.update ?? 0} · 내 수정 유지 ${s.mine ?? 0} · 충돌 ${s.conflict ?? 0}(패치 쪽으로) · 추가 ${s.added ?? 0} · 삭제 ${s.removed ?? 0}`,
-      Object.keys(patch.assets ?? {}).length ? `에셋 ${Object.keys(patch.assets).length}개를 올려요` : "",
-      "적용하기 전 상태는 백업해요."
-    ].filter(Boolean);
-    if (!plan.items.length) {
-      ctx.toast("적용할 내용이 없어요 (이미 같아요)");
-      return;
-    }
-    if (!await confirmDialog(ctx.win, { title: "패치를 적용할까요?", body: lines.join("\n"), ok: "적용" })) return;
-    try {
-      const cur = await getTarget();
-      if (kind === "character" && isGenerating(cur)) throw new Busy();
-      await createStore(ctx.api).addBackup({ kind, target: kind === "module" ? cur.id : cur.chaId, name: cur.name, snapshot: backupSnapshot(kind, cur), note: "패치 적용 전", summary: `${f.name}` });
-      const r = await applyPatch(patch, cur, { saveAsset: (d) => ctx.api.saveAsset(d) });
-      await save(r.result, cur);
-      ctx.toast("패치를 적용했어요");
-    } catch (e) {
-      ctx.toast(`적용하지 못했어요: ${e?.message ?? e}`, { error: true });
-    }
-  }
-  function changedKeys(before, after) {
-    const out = {};
-    for (const k of /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])) if (k !== "id" && stableJson(before[k] ?? null) !== stableJson(after[k] ?? null)) out[k] = after[k];
-    return out;
-  }
-
   // src/ui/screens/modules.js
   var FILTERS = [["all", "전체"], ["on", "켜짐"], ["off", "꺼짐"], ["global", "전역"], ["lla", "LLA"], ["mcp", "MCP"]];
   function searchText(m) {
@@ -15561,7 +16196,7 @@ ${patch.note}` : "",
     for (const r of m.trigger ?? []) parts.push(r?.comment);
     return parts.filter(Boolean).join("\n").toLowerCase();
   }
-  var COARSE2 = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+  var COARSE22 = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
   var sizeCache = /* @__PURE__ */ new WeakMap();
   function moduleSize(m) {
     let n = sizeCache.get(m);
@@ -16970,628 +17605,6 @@ ${patch.note}` : "",
     }
   }
 
-  // src/data/charorder.js
-  var FOLDER_COLORS = ["default", "red", "yellow", "green", "blue", "indigo", "purple", "pink"];
-  var FOLDER_COLOR_CSS = { default: null, red: "#f87171", yellow: "#facc15", green: "#4ade80", blue: "#60a5fa", indigo: "#818cf8", purple: "#c084fc", pink: "#f472b6" };
-  var FOLDER_COLOR_KO = { default: "기본", red: "빨강", yellow: "노랑", green: "초록", blue: "파랑", indigo: "남색", purple: "보라", pink: "분홍" };
-  var isFolder = (x2) => x2 && typeof x2 === "object" && Array.isArray(x2.data);
-  var clone4 = (o) => o.map((x2) => isFolder(x2) ? { ...x2, data: [...x2.data] } : x2);
-  function layout(order, chars) {
-    const live = new Set(chars.filter((c) => c && !c.trashTime).map((c) => c.chaId));
-    const seen = /* @__PURE__ */ new Set();
-    const out = [];
-    for (const x2 of order ?? []) {
-      if (typeof x2 === "string") {
-        if (live.has(x2) && !seen.has(x2)) {
-          seen.add(x2);
-          out.push({ type: "char", id: x2 });
-        }
-      } else if (isFolder(x2)) {
-        const ids = x2.data.filter((id) => live.has(id) && !seen.has(id));
-        ids.forEach((id) => seen.add(id));
-        out.push({ type: "folder", folder: x2, ids });
-      }
-    }
-    for (const c of chars) if (c && !c.trashTime && !seen.has(c.chaId)) {
-      seen.add(c.chaId);
-      out.push({ type: "char", id: c.chaId });
-    }
-    return out;
-  }
-  function take(order, id) {
-    const o = [];
-    for (const x2 of order) {
-      if (x2 === id) continue;
-      if (isFolder(x2)) o.push({ ...x2, data: x2.data.filter((d) => d !== id) });
-      else o.push(x2);
-    }
-    return o;
-  }
-  function moveChar(order, id, { beforeId, after, folderId: folderId2 }) {
-    const ids = [].concat(id);
-    if (beforeId && ids.includes(beforeId)) return clone4(order ?? []);
-    let o = clone4(order ?? []);
-    for (const c of ids) o = take(o, c);
-    if (beforeId) {
-      const top = o.indexOf(beforeId);
-      if (top >= 0) {
-        o.splice(top + (after ? 1 : 0), 0, ...ids);
-        return o;
-      }
-      for (const x2 of o) if (isFolder(x2)) {
-        const i2 = x2.data.indexOf(beforeId);
-        if (i2 >= 0) {
-          x2.data.splice(i2 + (after ? 1 : 0), 0, ...ids);
-          return o;
-        }
-      }
-      o.push(...ids);
-      return o;
-    }
-    if (folderId2) {
-      const f = o.find((x2) => isFolder(x2) && x2.id === folderId2);
-      if (f) {
-        f.data.push(...ids);
-        return o;
-      }
-    }
-    o.push(...ids);
-    return o;
-  }
-  function createFolder2(order, { id, name, color = "default", ids = [] }) {
-    let o = clone4(order ?? []);
-    let at = o.length;
-    if (ids.length) {
-      const first = o.findIndex((x2) => x2 === ids[0] || isFolder(x2) && x2.data.includes(ids[0]));
-      if (first >= 0) at = first;
-    }
-    for (const c of ids) o = take(o, c);
-    at = Math.min(at, o.length);
-    o.splice(at, 0, { id, name, color, data: [...ids] });
-    return o;
-  }
-  function setMembers(order, folderId2, ids) {
-    let o = clone4(order ?? []);
-    const f = o.find((x2) => isFolder(x2) && x2.id === folderId2);
-    if (!f) return o;
-    const out = f.data.filter((d) => !ids.includes(d));
-    for (const c of ids) o = take(o, c);
-    const g = o.find((x2) => isFolder(x2) && x2.id === folderId2);
-    g.data = [...ids];
-    const at = o.indexOf(g) + 1;
-    o.splice(at, 0, ...out);
-    return o;
-  }
-  function renameFolder2(order, folderId2, name) {
-    return clone4(order ?? []).map((x2) => isFolder(x2) && x2.id === folderId2 ? { ...x2, name } : x2);
-  }
-  function colorFolder(order, folderId2, color) {
-    return clone4(order ?? []).map((x2) => isFolder(x2) && x2.id === folderId2 ? { ...x2, color } : x2);
-  }
-  function deleteFolder2(order, folderId2) {
-    const o = [];
-    for (const x2 of clone4(order ?? [])) {
-      if (isFolder(x2) && x2.id === folderId2) o.push(...x2.data);
-      else o.push(x2);
-    }
-    return o;
-  }
-  function moveFolder(order, folderId2, dir) {
-    const o = clone4(order ?? []);
-    const i2 = o.findIndex((x2) => isFolder(x2) && x2.id === folderId2), j = i2 + dir;
-    if (i2 < 0 || j < 0 || j >= o.length) return o;
-    [o[i2], o[j]] = [o[j], o[i2]];
-    return o;
-  }
-  var folderOf = (order, id) => (order ?? []).find((x2) => isFolder(x2) && x2.data.includes(id)) ?? null;
-
-  // src/ui/screens/characters.js
-  var COARSE3 = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
-  function cardSize(c) {
-    try {
-      const { chats, ...rest } = c;
-      return new TextEncoder().encode(JSON.stringify(rest)).length;
-    } catch {
-      return 0;
-    }
-  }
-  async function renderCharacters(ctx) {
-    const st = ctx.state;
-    if (st.chars && !st.charsDirty && st.charsBg) {
-      st.charsBg = false;
-      const sig = (l) => l.map((c) => [c.chaId, c.name, c.chats, c.modules.join(","), c.streaming].join("")).join("");
-      const before = sig(st.chars);
-      const at = st.charsAt;
-      setTimeout(async () => {
-        try {
-          const { lc: lc2, db } = await fetchChars(ctx);
-          if (st.charsAt !== at || st.charsDirty) return;
-          applyChars(ctx, db, lc2);
-          if (ctx.state.tab === "characters" && sig(st.chars) !== before) renderCharacters(ctx);
-        } catch {
-        }
-      }, 0);
-    }
-    if (!st.chars || st.charsDirty) {
-      replace(ctx.main, loading("캐릭터를 불러오는 중", { rows: 7 }));
-      const { lc: lc2, db } = await fetchChars(ctx);
-      applyChars(ctx, db, lc2);
-    }
-    return drawCharacters(ctx);
-  }
-  async function fetchChars(ctx) {
-    const db = await ctx.api.getDatabase(["characters", "modules", "characterOrder"]);
-    const lc2 = await loadCharacters(ctx.api, db?.characters);
-    return { lc: lc2, db };
-  }
-  function applyChars(ctx, db, lc2) {
-    const st = ctx.state;
-    {
-      st.charOrder = Array.isArray(db?.characterOrder) ? db.characterOrder : [];
-      db.characters = lc2.list;
-      st.charsUnloaded = lc2.unloaded;
-      st.chars = (db?.characters ?? []).map((c, i2) => c && !c.trashTime ? {
-        i: i2,
-        chaId: c.chaId,
-        name: c.name ?? "",
-        type: c.type,
-        image: c.image,
-        creator: c.creator,
-        version: c.characterVersion,
-        lore: (c.globalLore ?? []).length,
-        assets: characterAssetKeys(c).length,
-        chats: (c.chats ?? []).length,
-        modules: c.modules ?? [],
-        streaming: isGenerating(c),
-        desc: (c.creatorNotes || c.desc || "").slice(0, 400),
-        size: cardSize(c)
-      } : null).filter(Boolean);
-      st.charModNames = new Map((db?.modules ?? []).map((m) => [m.id, m.name]));
-      st.charsDirty = false;
-      st.charsAt = Date.now();
-      st.charOrderStale = false;
-    }
-  }
-  async function drawCharacters(ctx) {
-    const st = ctx.state;
-    if (st.charOrderStale) {
-      st.charOrderStale = false;
-      try {
-        const o = (await ctx.api.getDatabase(["characterOrder"]))?.characterOrder;
-        if (Array.isArray(o)) st.charOrder = o;
-      } catch {
-      }
-    }
-    const q = st.search.trim().toLowerCase();
-    const filtering = !!q;
-    const sort = ctx.prefs.ui?.charSort ?? null;
-    st.charSorted = !!sort;
-    const srt = (arr, get) => sortBy(arr, sort, (x2) => get(x2)?.name ?? "", (x2) => get(x2)?.size ?? 0);
-    const list = srt(st.chars, (c) => c).filter((c) => !q || c.name.toLowerCase().includes(q) || String(c.creator ?? "").toLowerCase().includes(q));
-    ctx.setNavCount("characters", st.chars.length);
-    if (!st.charSel || !st.chars.some((c) => c.chaId === st.charSel)) st.charSel = list[0]?.chaId ?? null;
-    const box = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "캐릭터 목록", style: "padding-top:12px" });
-    const lazy = ctx.assets.lazy(box);
-    const byId = new Map(st.chars.map((c) => [c.chaId, c]));
-    const collapsed = ctx.prefs.meta.charFoldersCollapsed ?? {};
-    const mu = multiOf2(ctx);
-    if (filtering) mu.clear();
-    const rowOf = (c) => {
-      const img = c.image ? h("img", { alt: "", dataset: { path: c.image, ext: "png" }, style: "width:40px;height:40px;border-radius:12px;object-fit:cover;background:var(--rb-surf2);flex-shrink:0" }) : h("span", { style: "width:40px;height:40px;border-radius:12px;background:var(--rb-surf2);display:flex;align-items:center;justify-content:center;color:var(--rb-mute);flex-shrink:0" }, icon("character", 18));
-      const grip = filtering ? null : h("span", { class: "grip", title: "끌어서 순서 바꾸기·폴더에 넣기 · Ctrl/⌘·Shift+클릭으로 여러 개", "aria-hidden": "true" }, icon("grip", 14));
-      const mcb = filtering ? null : h("span", { class: "rb-mcb", role: "checkbox", "aria-checked": "false", "aria-label": `${c.name} 고르기` });
-      const row2 = h(
-        "div",
-        {
-          class: ["rb-row", st.justMoved?.includes(c.chaId) && "just-moved"],
-          role: "option",
-          tabindex: "0",
-          "aria-selected": st.charSel === c.chaId ? "true" : "false",
-          dataset: filtering ? { id: c.chaId } : sort ? { id: c.chaId, pick: c.chaId } : { id: c.chaId, dropRow: c.chaId, pick: c.chaId },
-          onClick: (ev) => {
-            if (!filtering && mu.click(ev, c.chaId, st.charSel)) return;
-            st.charSel = c.chaId;
-            box.querySelectorAll(".rb-row").forEach((r) => r.setAttribute("aria-selected", "false"));
-            row2.setAttribute("aria-selected", "true");
-            detail2(ctx, c);
-            if (ctx.isMobile()) ctx.openSheet();
-          },
-          onKeydown: (ev) => {
-            if (ev.target === row2 && (ev.key === "Enter" || ev.key === " ")) {
-              ev.preventDefault();
-              row2.click();
-            }
-          }
-        },
-        mcb,
-        grip,
-        img,
-        h(
-          "div",
-          { class: "txt" },
-          h("div", { class: "ttl" }, h("span", { class: "name" }, c.name || "(이름 없음)"), c.type === "group" && badge("그룹", "mute"), c.streaming && badge("응답 생성 중", "warn")),
-          h("span", { class: "meta" }, [c.creator && `제작자 ${c.creator}`, `로어 ${c.lore}`, `에셋 ${c.assets}`, `채팅 ${c.chats}`, sort?.key === "size" && fmtSize(c.size)].filter(Boolean).join(" · "))
-        ),
-        iconBtn("more", `${c.name} 메뉴`, { onClick: (ev) => {
-          ev.stopPropagation();
-          charMenu(ctx, c, ev.currentTarget);
-        } })
-      );
-      if (grip) gripDrag({
-        grip,
-        row: row2,
-        root: box,
-        scroller: box,
-        count: () => mu.dragIds(c.chaId).length,
-        skip: (t) => mu.dragIds(c.chaId).includes(t.getAttribute("data-drop-row")),
-        onDrop: (d) => {
-          const ids = mu.dragIds(c.chaId);
-          st.justMoved = ids;
-          return saveOrder(ctx, (o) => moveChar(o, ids, d), ids.length > 1 ? `봇 ${ids.length}개를 옮겼어요` : null);
-        }
-      });
-      if (img.tagName === "IMG") lazy.observe(img);
-      return row2;
-    };
-    if (filtering) {
-      for (const c of list.slice(0, 600)) box.appendChild(rowOf(c));
-    } else {
-      let shown = 0;
-      const items = layout(st.charOrder, st.chars.map((c) => ({ chaId: c.chaId })));
-      if (sort) {
-        const get = (id) => byId.get(id);
-        for (const it of items) if (it.type === "folder") it.ids = srt(it.ids, get);
-        const top = srt(items.filter((x2) => x2.type === "char").map((x2) => x2.id), get);
-        let k = 0;
-        for (const it of items) if (it.type === "char") it.id = top[k++];
-      }
-      const hasFolders = items.some((x2) => x2.type === "folder");
-      for (const it of items) {
-        if (shown > 600) break;
-        if (it.type === "char") {
-          const c = byId.get(it.id);
-          if (c) {
-            box.appendChild(rowOf(c));
-            shown++;
-          }
-          continue;
-        }
-        const f = it.folder, open = !collapsed[f.id];
-        const color = FOLDER_COLOR_CSS[f.color] ?? "var(--rb-sub)";
-        const head = h(
-          "div",
-          { style: "display:flex;align-items:center;gap:4px", dataset: { dropFolder: f.id } },
-          h(
-            "button",
-            { type: "button", class: "rb-folder", "aria-expanded": open ? "true" : "false", onClick: () => {
-              ctx.svc.meta((m) => {
-                m.charFoldersCollapsed ??= {};
-                if (open) m.charFoldersCollapsed[f.id] = true;
-                else delete m.charFoldersCollapsed[f.id];
-              }).catch(() => {
-              });
-              if (!open) st.justOpened = f.id;
-              renderCharacters(ctx);
-            } },
-            h("span", { class: "chev" }, icon("chevron", 14)),
-            h("span", { style: { color, display: "flex" } }, icon("folder", 16)),
-            h("b", null, f.name || "(이름 없는 폴더)"),
-            h("small", null, String(it.ids.length))
-          ),
-          iconBtn("more", `${f.name} 폴더 메뉴`, { onClick: (e) => charFolderMenu(ctx, f, e.currentTarget) })
-        );
-        box.appendChild(head);
-        if (open) {
-          const body = h("div", { class: ["rb-folder-body", st.justOpened === f.id && "just-opened"] });
-          for (const id of it.ids) {
-            const c = byId.get(id);
-            if (c) {
-              body.appendChild(rowOf(c));
-              shown++;
-            }
-          }
-          if (!it.ids.length) body.appendChild(h("div", { class: "rb-muted", style: "padding:8px 10px" }, "봇을 여기로 끌어다 놓으세요"));
-          box.appendChild(body);
-        }
-      }
-      if (hasFolders) {
-        const outside = h("div", { class: "rb-label", style: "padding:14px 12px 6px;border-radius:10px", dataset: { dropFolder: "" } }, "여기에 놓으면 폴더 밖으로");
-        box.appendChild(outside);
-      }
-    }
-    if (!list.length) box.appendChild(h("div", { class: "rb-empty" }, st.chars.length ? "찾는 캐릭터가 없어요." : "캐릭터가 없어요."));
-    const keep = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
-    const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 봇" });
-    const openTray = () => {
-      st.charTray = !st.charTray;
-      renderCharacters(ctx);
-    };
-    const sortTray = st.charTray ? tray(
-      ...sortChips(sort, (next) => {
-        ctx.prefs.saveUi({ charSort: next }).catch(() => {
-        });
-        renderCharacters(ctx);
-      }),
-      h("span", { class: "rb-muted", style: "font-size:12px;white-space:nowrap" }, sort ? "폴더마다 따로 정렬해요 · 끌어서 순서 바꾸기는 원래대로에서" : "끌어서 정한 순서예요")
-    ) : null;
-    replace(ctx.main, h(
-      "div",
-      { class: "rb-chips" },
-      trayBtn("정렬", { icon: "preset", value: sortShort(sort), title: sortLabel(sort), open: !!st.charTray, active: !!sort, onClick: openTray }),
-      h("span", { class: "rb-muted", style: "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto" }, `캐릭터 ${st.chars.length}명${list.length > 600 ? " · 앞쪽 600명만 표시 (검색으로 좁혀 보세요)" : ""}${st.charsUnloaded ? ` · 앱이 아직 불러오는 중인 봇 ${st.charsUnloaded}명은 빠져 있어요` : ""}`),
-      st.charsUnloaded ? btn("새로 고침", { size: "sm", icon: "refresh", onClick: () => {
-        st.charsDirty = true;
-        renderCharacters(ctx);
-      } }) : null,
-      h("div", { class: "rb-spacer" }),
-      filtering ? null : btn(mu.active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => mu.setMode(!mu.active) }),
-      btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newCharFolder(ctx) }),
-      btn("업데이트·새로 넣기", { size: "sm", kind: "primary", icon: "upload", onClick: () => ctx.legacy.open() })
-    ), sortTray, bar, box);
-    box.scrollTop = keep;
-    st.justOpened = null;
-    st.justMoved = null;
-    mu.bar = bar;
-    mu.attach(box);
-    paintBar2(ctx);
-    const sel = st.chars.find((c) => c.chaId === st.charSel);
-    if (sel) detail2(ctx, sel);
-    else ctx.showDetail(h("div", { class: "rb-empty" }, "캐릭터를 고르면 여기에 자세히 보여요."));
-  }
-  var orderQ = Promise.resolve();
-  function saveOrder(ctx, fn, done) {
-    const st = ctx.state;
-    const next = fn(st.charOrder ?? []);
-    st.charOrder = next;
-    renderCharacters(ctx);
-    if (done) ctx.toast(done);
-    const p = orderQ.then(async () => {
-      const fresh = (await ctx.api.getDatabase(["characterOrder"]))?.characterOrder;
-      const out = Array.isArray(fresh) ? fn(fresh) : st.charOrder;
-      await ctx.api.setDatabaseLite({ characterOrder: out });
-      if (JSON.stringify(out) !== JSON.stringify(st.charOrder)) {
-        st.charOrder = out;
-        if (st.tab === "characters") renderCharacters(ctx);
-      }
-    }).catch(async (e) => {
-      ctx.toast(`순서를 저장하지 못했어요: ${e?.message ?? e}`, { error: true });
-      try {
-        const cur = (await ctx.api.getDatabase(["characterOrder"]))?.characterOrder;
-        if (Array.isArray(cur)) {
-          st.charOrder = cur;
-          renderCharacters(ctx);
-        }
-      } catch {
-      }
-    });
-    orderQ = p;
-    return p;
-  }
-  function multiOf2(ctx) {
-    ctx.state.charMulti ??= createMulti({ onChange: () => paintBar2(ctx) });
-    return ctx.state.charMulti;
-  }
-  function paintBar2(ctx) {
-    const mu = multiOf2(ctx), bar = mu.bar;
-    if (!bar) return;
-    const tb = ctx.main.querySelector("#rb-pick-toggle");
-    if (tb) tb.lastChild.textContent = mu.active ? "선택 끝" : "선택";
-    bar.hidden = !mu.active;
-    if (!mu.active) {
-      bar.replaceChildren();
-      return;
-    }
-    const n = mu.sel.size;
-    const visible = () => [...ctx.main.querySelectorAll(".rb-list [data-pick]")].map((r) => r.dataset.pick);
-    bar.replaceChildren(
-      h("b", null, n ? `${n}개 고름` : "고를 봇을 누르세요"),
-      btn("폴더로", { size: "sm", icon: "folder", disabled: !n, onClick: (ev) => {
-        const ids = mu.ordered();
-        const folders = (ctx.state.charOrder ?? []).filter((x2) => x2 && typeof x2 === "object" && Array.isArray(x2.data));
-        openMenu(ctx.win, ev.currentTarget, [
-          ...folders.map((f) => ({ label: f.name || "(이름 없는 폴더)", icon: "folder", onClick: () => saveOrder(ctx, (o) => moveChar(o, ids, { folderId: f.id }), `봇 ${ids.length}개를 '${f.name}'(으)로 옮겼어요`) })),
-          folders.length ? "sep" : null,
-          { label: "새 폴더…", icon: "folderPlus", onClick: async () => {
-            const name = await promptDialog(ctx.win, { title: "새 봇 폴더", label: `고른 봇 ${ids.length}개를 넣어요`, placeholder: "폴더 이름" });
-            if (name?.trim()) saveOrder(ctx, (o) => createFolder2(o, { id: "df_" + newId().slice(0, 10), name: name.trim(), ids }), `'${name.trim()}' 폴더를 만들었어요 (봇 ${ids.length}개)`);
-          } }
-        ].filter(Boolean));
-      } }),
-      btn("폴더 밖으로", { size: "sm", disabled: !n, onClick: () => {
-        const ids = mu.ordered();
-        saveOrder(ctx, (o) => moveChar(o, ids, { folderId: null }));
-      } }),
-      btn("보이는 것 모두", { size: "sm", onClick: () => {
-        const v = visible();
-        mu.set(v.every((id) => mu.has(id)) ? [] : v);
-      } }),
-      iconBtn("x", "고르기 끝내기", { onClick: () => mu.clear() })
-    );
-  }
-  function charItems(ctx) {
-    return ctx.state.chars.map((c) => {
-      const f = folderOf(ctx.state.charOrder, c.chaId);
-      return { id: c.chaId, label: c.name, folder: f?.id ?? null, sub: [f ? `지금: ${f.name}` : "폴더 없음", c.creator && `제작자 ${c.creator}`].filter(Boolean).join(" · ") };
-    });
-  }
-  async function newCharFolder(ctx) {
-    const r = await folderDialog(ctx.win, { title: "새 봇 폴더", items: charItems(ctx), noun: "봇", ...folderPickPrefs(ctx) });
-    if (!r) return;
-    await saveOrder(ctx, (o) => createFolder2(o, { id: "df_" + newId().slice(0, 10), name: r.name, ids: r.ids }), `'${r.name}' 폴더를 만들었어요${r.ids.length ? ` (봇 ${r.ids.length}개)` : ""}. RisuAI 사이드바에도 같은 폴더가 생겨요.`);
-  }
-  function charFolderMenu(ctx, f, anchor) {
-    openMenu(ctx.win, anchor, [
-      { label: "넣을 봇 고르기…", icon: "plus", onClick: async () => {
-        const r = await folderDialog(ctx.win, { title: `'${f.name}' 폴더에 넣을 봇`, items: charItems(ctx), checked: [...f.data], ok: "저장", withName: false, noun: "봇", current: f.id, ...folderPickPrefs(ctx) });
-        if (r) await saveOrder(ctx, (o) => setMembers(o, f.id, r.ids));
-      } },
-      { label: "이름 바꾸기", icon: "edit", onClick: async () => {
-        const n = await promptDialog(ctx.win, { title: "폴더 이름", value: f.name });
-        if (n?.trim()) await saveOrder(ctx, (o) => renameFolder2(o, f.id, n.trim()));
-      } },
-      { label: "폴더 색", icon: "palette", onClick: async () => {
-        const c = await new Promise((res) => openMenu(ctx.win, anchor, FOLDER_COLORS.map((k) => ({ label: FOLDER_COLOR_KO[k], icon: "folder", onClick: () => res(k) }))));
-        if (c) await saveOrder(ctx, (o) => colorFolder(o, f.id, c));
-      } },
-      { label: "위로", icon: "up", onClick: () => saveOrder(ctx, (o) => moveFolder(o, f.id, -1)) },
-      { label: "아래로", icon: "down", onClick: () => saveOrder(ctx, (o) => moveFolder(o, f.id, 1)) },
-      "sep",
-      { label: "폴더 삭제 (봇은 남음)", icon: "trash", danger: true, onClick: async () => {
-        if (await confirmDialog(ctx.win, { title: `'${f.name}' 폴더를 지울까요?`, body: "안에 있던 봇은 폴더 밖으로 나와요. 봇은 지워지지 않아요.", ok: "폴더 삭제", danger: true })) await saveOrder(ctx, (o) => deleteFolder2(o, f.id));
-      } }
-    ]);
-  }
-  function detail2(ctx, c) {
-    const st = ctx.state;
-    const stat = (label3, v) => h("div", { class: "rb-stat" }, h("small", null, label3), h("b", null, String(v)));
-    const timeline = h("div", { style: "display:flex;flex-direction:column;gap:8px" });
-    const full = async () => {
-      const cur = await ctx.api.getCharacterFromIndex(c.i);
-      if (!cur || cur.chaId !== c.chaId) throw new Error("캐릭터를 다시 찾지 못했어요. 목록을 새로 고쳐 주세요.");
-      return cur;
-    };
-    ctx.showDetail(
-      h(
-        "div",
-        { style: "display:flex;flex-direction:column;gap:6px" },
-        c.creator ? h("span", { style: "font-size:12px;color:var(--rb-acc-text)" }, c.creator + (c.version ? ` · ${c.version}` : "")) : null,
-        h("h2", { class: "rb-h2" }, c.name || "(이름 없음)"),
-        c.desc ? h("p", { class: "rb-p", style: "white-space:pre-line;max-height:120px;overflow:auto" }, c.desc) : null,
-        c.streaming ? note("warn", "지금 응답을 생성하는 중이에요. 끝난 뒤에 업데이트할 수 있어요.") : null
-      ),
-      h("div", { class: "rb-stats" }, stat("로어북", c.lore), stat("에셋", c.assets), stat("채팅", c.chats), stat("연결 모듈", c.modules.length)),
-      h(
-        "div",
-        { class: "rb-field" },
-        h("span", { class: "rb-label" }, "연결된 모듈"),
-        h("div", { class: "rb-card" }, c.modules.length ? c.modules.map((id) => h(
-          "div",
-          { class: "rb-kv" },
-          h("span", null, st.charModNames.get(id) ?? "(꺼졌거나 없는 모듈)"),
-          h("a", { href: "#", style: "font-size:12px;color:var(--rb-acc-text)", onClick: (ev) => {
-            ev.preventDefault();
-            st.modSel = id;
-            ctx.go("modules");
-          } }, "열기")
-        )) : h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "연결된 모듈이 없어요")))
-      ),
-      h("div", { class: "rb-field" }, h(
-        "div",
-        { style: "display:flex;align-items:center" },
-        h("span", { class: "rb-label", style: "flex:1" }, "버전 타임라인"),
-        h("a", { href: "#", style: "font-size:12px;color:var(--rb-acc-text)", onClick: (ev) => {
-          ev.preventDefault();
-          st.histTarget = c.chaId;
-          ctx.go("history");
-        } }, "전체 보기")
-      ), timeline),
-      h("div", { style: "flex:1" }),
-      h(
-        "div",
-        { style: "display:flex;gap:8px;flex-wrap:wrap" },
-        btn("편집", { kind: "primary", size: "lg", icon: "edit", onClick: () => openCharEditor(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) }),
-        btn("에셋", { size: "lg", icon: "image", onClick: () => openCharAssets(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) }),
-        btn("삭제", { kind: "danger", size: "lg", icon: "trash", onClick: () => removeCharacter(ctx, c) })
-      ),
-      h(
-        "div",
-        { style: "display:flex;gap:8px;flex-wrap:wrap" },
-        btn("업데이트 가져오기", { size: "lg", icon: "upload", onClick: () => ctx.legacy.open() }),
-        isDev(ctx) ? btn(findProject(ctx, "character", c.chaId) ? "개발 탭에서 보기" : "개발 목록에 넣기", { size: "lg", icon: "code", onClick: async () => {
-          await addProjects(ctx, [{ kind: "character", id: c.chaId }]);
-          ctx.state.devSel = `c:${c.chaId}`;
-          ctx.go("dev");
-        } }) : null,
-        isDev(ctx) ? btn("패치 만들기", { size: "lg", icon: "code", onClick: () => openPatchMaker(ctx, { kind: "character", key: `c:${c.chaId}`, i: c.i, chaId: c.chaId, name: c.name }) }) : btn("내 수정 내보내기", { size: "lg", icon: "download", onClick: async () => {
-          try {
-            await exportMyChanges(ctx, "character", await full());
-          } catch (e) {
-            ctx.toast(e.message, { error: true });
-          }
-        } }),
-        btn("패치 적용", { size: "lg", icon: "refresh", onClick: () => applyPatchFile(ctx, "character", full, async (res) => {
-          const last2 = await full();
-          if (isGenerating(last2)) throw new Busy();
-          await ctx.api.setCharacterToIndex(c.i, res);
-          st.charsDirty = true;
-          renderCharacters(ctx);
-        }) })
-      )
-    );
-    (async () => {
-      const list = (await createStore(ctx.api).listBackups()).filter((b) => b.target === c.chaId).slice(0, 3);
-      replace(timeline, list.length ? list.map((b) => h("div", { class: "rb-card pad", style: "padding:10px 14px" }, h("div", { style: "display:flex;gap:8px" }, h("b", { style: "font-size:13px" }, b.note || "업데이트 전"), h("span", { class: "rb-muted" }, fmtWhen(b.t))), b.summary ? h("div", { class: "rb-muted" }, b.summary) : null)) : h("div", { class: "rb-muted", style: "padding:12px 14px;border-radius:12px;border:1px dashed var(--rb-line)" }, "아직 기록이 없어요."));
-    })().catch(() => {
-    });
-  }
-  async function fullChar(ctx, c) {
-    const cur = await ctx.api.getCharacterFromIndex(c.i);
-    if (!cur || cur.chaId !== c.chaId) throw new Error("캐릭터를 다시 찾지 못했어요. 목록을 새로 고쳐 주세요.");
-    return cur;
-  }
-  function charMenu(ctx, c, anchor) {
-    const err2 = (e) => ctx.toast(e?.message ?? String(e), { error: true });
-    const folders = (ctx.state.charOrder ?? []).filter((x2) => x2 && typeof x2 === "object" && Array.isArray(x2.data));
-    const cur = folderOf(ctx.state.charOrder, c.chaId);
-    openMenu(ctx.win, anchor, [
-      { label: "편집", icon: "edit", onClick: () => openCharEditor(ctx, c.i, c.chaId).catch(err2) },
-      { label: "에셋 관리", icon: "image", onClick: () => openCharAssets(ctx, c.i, c.chaId).catch(err2) },
-      "sep",
-      { label: "폴더로 옮기기", icon: "folder", onClick: () => openMenu(ctx.win, anchor, [
-        ...folders.map((f) => ({ label: (cur?.id === f.id ? "✓ " : "") + (f.name || "(이름 없는 폴더)"), icon: "folder", onClick: () => saveOrder(ctx, (o) => moveChar(o, [c.chaId], { folderId: f.id })) })),
-        folders.length ? "sep" : null,
-        cur ? { label: "폴더에서 빼기", icon: "x", onClick: () => saveOrder(ctx, (o) => moveChar(o, [c.chaId], { folderId: null })) } : null,
-        { label: "새 폴더…", icon: "folderPlus", onClick: async () => {
-          const name = await promptDialog(ctx.win, { title: "새 봇 폴더", label: "폴더 이름" });
-          if (name?.trim()) saveOrder(ctx, (o) => createFolder2(o, { id: "df_" + newId().slice(0, 10), name: name.trim(), ids: [c.chaId] }));
-        } }
-      ].filter(Boolean)) },
-      { label: "업데이트 가져오기", icon: "upload", onClick: () => ctx.legacy.open() },
-      { label: "다른 봇에서 가져오기·합치기", icon: "link", onClick: () => ctx.legacy.openMerge(c.chaId) },
-      isDev(ctx) ? { label: "패치 만들기 (개발자)", icon: "code", onClick: () => openPatchMaker(ctx, { kind: "character", key: `c:${c.chaId}`, i: c.i, chaId: c.chaId, name: c.name }) } : { label: "내 수정만 내보내기 (.rbupatch)", icon: "download", onClick: async () => {
-        try {
-          await exportMyChanges(ctx, "character", await fullChar(ctx, c));
-        } catch (e) {
-          err2(e);
-        }
-      } },
-      { label: "패치 적용…", icon: "refresh", onClick: () => applyPatchFile(ctx, "character", () => fullChar(ctx, c), async (res) => {
-        if (isGenerating(await fullChar(ctx, c))) throw new Busy();
-        await ctx.api.setCharacterToIndex(c.i, res);
-        ctx.state.charsDirty = true;
-        renderCharacters(ctx);
-      }) },
-      { label: "기록 보기", icon: "refresh", onClick: () => {
-        ctx.state.histTarget = c.chaId;
-        ctx.go("history");
-      } },
-      "sep",
-      { label: "삭제", icon: "trash", danger: true, onClick: () => removeCharacter(ctx, c) }
-    ]);
-  }
-  async function removeCharacter(ctx, c) {
-    try {
-      if (await ctx.api.getCurrentCharacterIndex() === c.i) {
-        ctx.toast("지금 열려 있는 봇은 지울 수 없어요. 다른 봇을 연 뒤 지워 주세요.", { error: true });
-        return;
-      }
-      const cur = await fullChar(ctx, c);
-      if (isGenerating(cur)) throw new Busy();
-      const ok = await confirmDialog(ctx.win, { title: `'${c.name}'을(를) 지울까요?`, body: `RisuAI 휴지통으로 옮겨요. 채팅 ${c.chats}개도 함께 옮겨지고, 휴지통에서 3일 안에 되살릴 수 있어요.`, ok: "삭제", danger: true });
-      if (!ok) return;
-      const again = await fullChar(ctx, c);
-      if (isGenerating(again)) throw new Busy();
-      await vanish(ctx.main.querySelector(`.rb-row[data-id="${CSS.escape(c.chaId)}"]`));
-      await ctx.api.setCharacterToIndex(c.i, { ...again, trashTime: Date.now() });
-      if (ctx.state.charMulti?.has?.(c.chaId)) ctx.state.charMulti.set([...ctx.state.charMulti.sel].filter((x2) => x2 !== c.chaId));
-      ctx.state.charsDirty = true;
-      await renderCharacters(ctx);
-      ctx.toast(`'${c.name}'을(를) 휴지통으로 옮겼어요`);
-    } catch (e) {
-      ctx.toast(e instanceof Busy ? "응답을 생성하는 중이라 지금은 지울 수 없어요." : `지우지 못했어요: ${e?.message ?? e}`, { error: true });
-    }
-  }
-
   // src/ui/screens/history.js
   async function renderHistory(ctx) {
     const st = ctx.state;
@@ -17976,6 +17989,7 @@ ${patch.note}` : "",
       else await prefs.reloadMeta();
       state.modDirty = true;
       state.charOrderStale = true;
+      if (state.chars) state.charsBg = true;
       svc.invalidate();
       applyTheme();
       root.hidden = false;

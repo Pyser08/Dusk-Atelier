@@ -24,6 +24,37 @@ function cardSize(c) {
     return 0;
   }
 }
+function charSummary(c, i) {
+  return {
+    i,
+    chaId: c.chaId,
+    name: c.name ?? "",
+    type: c.type,
+    image: c.image,
+    creator: c.creator,
+    version: c.characterVersion,
+    lore: (c.globalLore ?? []).length,
+    assets: characterAssetKeys(c).length,
+    chats: (c.chats ?? []).length,
+    modules: c.modules ?? [],
+    streaming: isGenerating(c),
+    desc: (c.creatorNotes || c.desc || "").slice(0, 400),
+    size: cardSize(c)
+  };
+}
+/** 봇 하나를 저장한 뒤: 전체를 다시 읽지 않고 그 봇만 목록에 바로 반영한다 */
+export function patchSavedChar(ctx, index, saved) {
+  const st = ctx.state;
+  if (!st.chars || !saved || saved.trashTime) {
+    st.charsDirty = true;
+  } else {
+    const next = charSummary(saved, index);
+    const at = st.chars.findIndex((c) => c.chaId === next.chaId);
+    if (at >= 0) st.chars[at] = next;
+    else st.charsDirty = true;
+  }
+  if (ctx.state.tab === "characters") ctx.refresh();
+}
 export async function renderCharacters(ctx) {
   const st = ctx.state;
   // 오래된 목록: 먼저 있는 걸로 그리고, 뒤에서 새로 읽어 바뀌었으면 다시 그린다
@@ -61,22 +92,7 @@ function applyChars(ctx, db, lc) {
     st.charOrder = Array.isArray(db?.characterOrder) ? db.characterOrder : [];
     db.characters = lc.list;
     st.charsUnloaded = lc.unloaded;
-    st.chars = (db?.characters ?? []).map((c, i) => c && !c.trashTime ? {
-      i,
-      chaId: c.chaId,
-      name: c.name ?? "",
-      type: c.type,
-      image: c.image,
-      creator: c.creator,
-      version: c.characterVersion,
-      lore: (c.globalLore ?? []).length,
-      assets: characterAssetKeys(c).length,
-      chats: (c.chats ?? []).length,
-      modules: c.modules ?? [],
-      streaming: isGenerating(c),
-      desc: (c.creatorNotes || c.desc || "").slice(0, 400),
-      size: cardSize(c)
-    } : null).filter(Boolean);
+    st.chars = (db?.characters ?? []).map((c, i) => c && !c.trashTime ? charSummary(c, i) : null).filter(Boolean);
     st.charModNames = new Map((db?.modules ?? []).map((m) => [m.id, m.name]));
     st.charsDirty = false;
     st.charsAt = Date.now();

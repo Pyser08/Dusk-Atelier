@@ -6,6 +6,7 @@ import { Busy, backupSnapshot, isGenerating } from '../../engine/safety.js';
 import { h } from '../dom.js';
 import { btn, iconBtn, note } from '../kit.js';
 import { openEditorCore, validateModule } from './editor.js';
+import { patchSavedChar } from './characters.js';
 
 var MAP = { lorebook: "globalLore", regex: "customscript", trigger: "triggerscript" };
 var SKIP = /* @__PURE__ */ new Set([...USER_KEYS, "emotionImages", "additionalAssets", "ccAssets", "image", "vits", "chats", "chatFolders", "chatPage", "loreCache", "lowLevelHistory"]);
@@ -149,8 +150,7 @@ export async function openCharEditor(ctx, index, chaId) {
       if (isGenerating(last2) || (last2.chats ?? []).length !== (fresh.chats ?? []).length) throw new Busy();
       merged.chats = last2.chats;
       await ctx.api.setCharacterToIndex(index, merged);
-      ctx.state.charsDirty = true;
-      if (ctx.state.tab === "characters") ctx.refresh();
+      patchSavedChar(ctx, index, merged);
     }
   });
 }
@@ -173,6 +173,7 @@ export async function openCharAssets(ctx, index, chaId) {
       }
       fresh.additionalAssets = nextAssets.map((a) => [...a]);
       await ctx.api.setCharacterToIndex(index, fresh);
+      patchSavedChar(ctx, index, fresh);
       const empty = !nextFd._folders.length && !Object.keys(nextFd._mapping).length;
       if (stableJson(ctx.prefs.meta.charAssetFolders?.[folderKey] ?? null) !== stableJson(empty ? null : nextFd)) {
         await ctx.svc.meta((m) => {
@@ -181,8 +182,6 @@ export async function openCharAssets(ctx, index, chaId) {
           else m.charAssetFolders[folderKey] = nextFd;
         });
       }
-      ctx.state.charsDirty = true;
-      if (ctx.state.tab === "characters") ctx.refresh();
     }
   });
 }
