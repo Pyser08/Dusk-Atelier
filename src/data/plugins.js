@@ -1,13 +1,12 @@
 // 플러그인 탭 데이터 계층 — DA Interop v1 호스트 + 플러그인 관리
 // 규격: https://github.com/Pyser08/dusk-atelier-interop
 // 공식 API(getDatabase / setDatabaseLite / pluginStorage / nativeFetch)만 쓴다.
-// plugins 필드 쓰기는 detectEnv()로 되는 환경인지 확인한 뒤에만 한다 (RisuAI PR #1572 이후 막힌 곳이 많음).
+// plugins 필드는 읽기만 한다 (RisuAI PR #1572 이후 플러그인이 플러그인 목록을 바꿀 수 없음).
 
 export var SELF_NAME = "dusk_atelier";
 var REG = "da_interop:reg:";
 var PATCH = "da_interop:patch:";
-var KEYS = { cats: "rbm:pluginCats:v1", backups: "rbm:pluginBackups:v1" };
-var MAX_BACKUPS = 5;
+var KEYS = { cats: "rbm:pluginCats:v1" };
 var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 var clone = (v) => JSON.parse(JSON.stringify(v ?? null));
 
@@ -38,40 +37,6 @@ async function storageKeys(api) {
     return out;
   }
   return [];
-}
-
-// ── 환경 감지 ──
-// 자기 자신의 versionOfPlugin을 잠깐 바꿔 쓰고 다시 읽어 본다. 바뀌었으면 원래대로 돌려놓는다
-export async function detectEnv(api) {
-  const env = { pluginsReadable: false, pluginsWritable: false, reason: "" };
-  let list;
-  try {
-    list = await readPlugins(api);
-  } catch {
-    list = null;
-  }
-  if (!list) return { ...env, reason: "plugins-hidden" };
-  env.pluginsReadable = true;
-  const me = list.find((p) => p?.name === SELF_NAME);
-  if (!me) return { ...env, reason: "self-not-found" };
-  const orig = me.versionOfPlugin;
-  const probe = `${orig ?? ""}+probe${Date.now().toString(36)}`;
-  const withVer = (arr, v) => arr.map((p) => {
-    if (p?.name !== SELF_NAME) return p;
-    const q = { ...p };
-    if (v === void 0) delete q.versionOfPlugin;
-    else q.versionOfPlugin = v;
-    return q;
-  });
-  try {
-    await api.setDatabaseLite({ plugins: withVer(list, probe) });
-    const after = await readPlugins(api);
-    const ok = after?.find((p) => p?.name === SELF_NAME)?.versionOfPlugin === probe;
-    if (ok) await api.setDatabaseLite({ plugins: withVer(after, orig) });
-    return { ...env, pluginsWritable: ok, reason: ok ? "ok" : "blocked" };
-  } catch (e) {
-    return { ...env, reason: "blocked" };
-  }
 }
 
 // ── 인터롭 레지스트리 ──
@@ -150,69 +115,11 @@ export async function listPlugins(api) {
   }));
 }
 
-// ── 플러그인 바꾸기 (plugins 쓰기 되는 환경에서만) ──
-async function writePlugins(api, next, label) {
-  const cur = await readPlugins(api);
-  if (!cur) throw new Error("플러그인 목록을 읽을 수 없어요");
-  const list = await readJson(api, KEYS.backups, []);
-  const backups = Array.isArray(list) ? list : [];
-  backups.unshift({ id: Date.now().toString(36), label, at: Date.now(), plugins: cur });
-  await writeJson(api, KEYS.backups, backups.slice(0, MAX_BACKUPS));
-  await api.setDatabaseLite({ plugins: next });
-  const after = await readPlugins(api);
-  if (JSON.stringify(after?.map((p) => [p.name, p.enabled, p.versionOfPlugin])) !== JSON.stringify(next.map((p) => [p.name, p.enabled, p.versionOfPlugin]))) {
-    throw new Error("이 환경에서는 플러그인 목록이 바뀌지 않았어요");
-  }
-}
-export async function setEnabled(api, name, on) {
-  if (name === SELF_NAME && !on) throw new Error("Dusk Atelier 자신은 끌 수 없어요");
-  const cur = await readPlugins(api);
-  await writePlugins(api, cur.map((p) => p.name === name ? { ...p, enabled: on } : p), `${on ? "켜기" : "끄기"}: ${name}`);
-}
-export async function move(api, name, where) {
-  const cur = [...await readPlugins(api)];
-  const i = cur.findIndex((p) => p.name === name);
-  if (i < 0) return;
-  const [p] = cur.splice(i, 1);
-  const to = where === "top" ? 0 : where === "bottom" ? cur.length : where === "up" ? Math.max(0, i - 1) : Math.min(cur.length, i + 1);
-  cur.splice(to, 0, p);
-  await writePlugins(api, cur, `순서: ${name}`);
-}
 export function parseHeader(script) {
   const head = String(script).slice(0, 4096);
   const get = (k) => new RegExp(`^//@${k}[ \\t]+(.+)$`, "m").exec(head)?.[1]?.trim();
   return { name: get("name"), displayName: get("display-name"), version: get("version"), api: get("api"), updateURL: get("update-url") };
 }
-export async function replaceCode(api, name, script) {
-  const hd = parseHeader(script);
-  if (hd.name && hd.name !== name) throw new Error(`파일의 이름(${hd.name})이 '${name}'과 달라요`);
-  const cur = await readPlugins(api);
-  if (!cur.some((p) => p.name === name)) throw new Error(`플러그인이 없어요: ${name}`);
-  await writePlugins(api, cur.map((p) => p.name !== name ? p : {
-    ...p,
-    script,
-    ...hd.version ? { versionOfPlugin: hd.version } : {},
-    ...hd.displayName ? { displayName: hd.displayName } : {},
-    ...hd.updateURL ? { updateURL: hd.updateURL } : {}
-  }), `코드 교체: ${name}`);
-}
-export async function dedupe(api) {
-  const cur = await readPlugins(api);
-  const last = new Map(cur.map((p, i) => [p.name, i]));
-  const next = cur.filter((p, i) => last.get(p.name) === i);
-  if (next.length !== cur.length) await writePlugins(api, next, "중복 정리");
-  return cur.length - next.length;
-}
-export async function listBackups(api) {
-  const list = await readJson(api, KEYS.backups, []);
-  return (Array.isArray(list) ? list : []).map(({ plugins, ...b }) => ({ ...b, count: plugins?.length ?? 0 }));
-}
-export async function restoreBackup(api, id) {
-  const b = (await readJson(api, KEYS.backups, [])).find((x) => x.id === id);
-  if (!b) throw new Error("백업이 없어요");
-  await writePlugins(api, b.plugins, "복원 직전 상태");
-}
-
 // ── 업데이트 확인 (각 플러그인의 update-url 머리말에서 //@version 읽기) ──
 async function headText(res) {
   const rd = res.body?.getReader?.();

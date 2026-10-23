@@ -63,13 +63,13 @@ export function highlight(code) {
   return out + esc(code.slice(last)) + "\n";
 }
 
-export function codeEditor(value, { onChange, label = "코드" } = {}) {
+export function codeEditor(value, { onChange, label = "코드", minHeight, maxHeight } = {}) {
   if (!document.getElementById("rb-code-style")) document.head.appendChild(h("style", { id: "rb-code-style" }, CSS));
   const pre = h("pre", { "aria-hidden": "true" });
   const gut = h("div", { class: "rb-code-gut", "aria-hidden": "true" });
   const ta = h("textarea", { spellcheck: "false", autocapitalize: "off", autocomplete: "off", "aria-label": label, wrap: "off" });
   ta.value = value;
-  const el = h("div", { class: "rb-code" }, h("div", { class: "rb-code-in" }, gut, h("div", { class: "rb-code-area" }, pre, ta)));
+  const el = h("div", { class: "rb-code", style: { minHeight, maxHeight } }, h("div", { class: "rb-code-in" }, gut, h("div", { class: "rb-code-area" }, pre, ta)));
   let raf = 0, lines = 0;
   const paint = () => {
     raf = 0;

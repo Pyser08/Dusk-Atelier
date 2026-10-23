@@ -1,72 +1,90 @@
-// 플러그인 탭 — 목록·카테고리·업데이트 확인 / DA Interop 연동 설정 / 저장소 보기 / 백업
-import { download, fmtBytes, fmtWhen, h, pickFiles, replace } from '../dom.js';
+// 플러그인 탭 — 목록·카테고리·업데이트 확인 / DA Interop 연동 설정 / 플러그인 만들기 / 저장소 보기
+import { download, fmtBytes, fmtWhen, h, replace } from '../dom.js';
 import { icon } from '../icons.js';
 import { badge, btn, confirmDialog, iconBtn, loading, note, openMenu, promptDialog, segmented, switchEl } from '../kit.js';
 import * as P from '../../data/plugins.js';
 import * as T from '../../data/pluginTemplate.js';
 import { codeEditor, highlight } from '../codeedit.js';
 
-var VIEWS = [["list", "목록"], ["interop", "연동 설정"], ["create", "만들기"], ["storage", "저장소"], ["backup", "백업"]];
+var VIEWS = [["list", "목록"], ["interop", "연동 설정"], ["create", "만들기"], ["storage", "저장소"]];
 var INTEROP_URL = "https://pyser08.github.io/dusk-atelier-interop/";
+var PLUGINS_TTL = 6e4;
 
-export async function renderPlugins(ctx) {
+// ── 캐시 ── 탭을 오갈 때마다 DB를 다시 읽지 않게 한다 (plugins는 코드까지 들어 있어 큼)
+var memo = (ctx) => ctx.state.pluginCache ??= {};
+async function getPlugins(ctx, fresh) {
+  const c = memo(ctx);
+  if (fresh || !c.plugins || Date.now() - c.pluginsAt > PLUGINS_TTL) {
+    c.plugins = await P.listPlugins(ctx.api).catch(() => []);
+    c.pluginsAt = Date.now();
+    ctx.setNavCount("plugins", c.plugins.length || void 0);
+  }
+  return c.plugins;
+}
+async function getInterop(ctx, fresh) {
+  const c = memo(ctx);
+  // 연동 값은 다른 플러그인이 바꾸므로 짧게만 기억한다
+  if (fresh || !c.interop || Date.now() - c.interopAt > 3e3) {
+    const names = c.plugins ? new Set(c.plugins.map((p) => p.name)) : null;
+    c.interop = await P.listInterop(ctx.api, names).catch(() => []);
+    c.interopAt = Date.now();
+  }
+  return c.interop;
+}
+
+// ── 화면 틀 ── 머리글과 보기 전환 버튼은 한 번만 만들고, 아래 내용만 바꾼다
+var LOADERS = { list: viewList, interop: viewInterop, create: viewCreate, storage: viewStorage };
+
+export async function renderPlugins(ctx, { fresh = false } = {}) {
   const st = ctx.state;
-  st.pluginView ??= "list";
-  if (!st.pluginEnv) {
-    replace(ctx.main, loading("플러그인 환경 확인 중"));
-    st.pluginEnv = await ctx.svc.serial(() => P.detectEnv(ctx.api)).catch(() => ({ pluginsReadable: false, pluginsWritable: false, reason: "error" }));
-  }
-  const plugins = st.pluginEnv.pluginsReadable ? await P.listPlugins(ctx.api) : [];
-  const interop = await P.listInterop(ctx.api, new Set(plugins.map((p) => p.name))).catch(() => []);
-  ctx.setNavCount("plugins", plugins.length || void 0);
-  const view = { list: viewList, interop: viewInterop, create: viewCreate, storage: viewStorage, backup: viewBackup }[st.pluginView] ?? viewList;
-  replace(ctx.main, h(
-    "div",
-    { class: "rb-section rb-scroll", style: "flex:1" },
-    h(
-      "div",
-      { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
-      h("div", { style: "flex:1;min-width:200px" }, h("h2", { class: "rb-h2" }, "플러그인"), h("p", { class: "rb-p" }, "설치한 플러그인을 묶어 보고, 연동한 플러그인의 설정을 여기서 바꿔요.")),
-      segmented(VIEWS, st.pluginView, (v) => {
-        st.pluginView = v;
-        ctx.closeSheet();
-        renderPlugins(ctx);
-      }, "보기")
-    ),
-    envNote(ctx),
-    await view(ctx, plugins, interop)
-  ));
-}
-
-function envNote(ctx) {
-  const env = ctx.state.pluginEnv;
-  if (env.pluginsWritable) return null;
-  const text = !env.pluginsReadable ? "이 RisuAI에서는 플러그인 목록을 읽을 수 없어요. 연동 설정과 저장소 보기만 쓸 수 있어요." : "이 RisuAI에서는 다른 플러그인을 켜고 끄거나 순서·코드를 바꿀 수 없어요 (보안 제한). 보기, 카테고리, 업데이트 확인, 연동 설정은 그대로 쓸 수 있어요.";
-  return h(
-    "div",
-    { style: "display:flex;gap:8px;align-items:flex-start" },
-    h("div", { style: "flex:1" }, note("info", text)),
-    btn("다시 확인", { size: "sm", icon: "refresh", onClick: () => {
-      ctx.state.pluginEnv = null;
+  if (!LOADERS[st.pluginView]) st.pluginView = "list";
+  let shell = ctx.main.querySelector(":scope > .rb-plugins");
+  if (!shell) {
+    const seg = segmented(VIEWS, st.pluginView, (v) => {
+      if (v === st.pluginView) return;
+      st.pluginView = v;
+      ctx.closeSheet();
       renderPlugins(ctx);
-    } })
-  );
-}
-
-var writable = (ctx) => !!ctx.state.pluginEnv?.pluginsWritable;
-async function run(ctx, fn, ok) {
-  try {
-    const r = await ctx.svc.serial(fn);
-    if (ok) ctx.toast(typeof ok === "function" ? ok(r) : ok);
-  } catch (err) {
-    ctx.toast(err?.message ?? String(err), { error: true });
+    }, "보기");
+    shell = h(
+      "div",
+      { class: "rb-section rb-scroll rb-plugins", style: "flex:1" },
+      h(
+        "div",
+        { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
+        h("div", { style: "flex:1;min-width:200px" }, h("h2", { class: "rb-h2" }, "플러그인"), h("p", { class: "rb-p" }, "설치한 플러그인을 묶어 보고, 연동한 플러그인의 설정을 바꾸거나 새로 만들어요.")),
+        seg
+      ),
+      h("div", { class: "rb-plugins-body", style: "display:flex;flex-direction:column;gap:14px;transition:opacity .12s" })
+    );
+    replace(ctx.main, shell);
   }
-  renderPlugins(ctx);
+  shell.querySelectorAll(".rb-seg button").forEach((b) => b.setAttribute("aria-checked", b.dataset.v === st.pluginView ? "true" : "false"));
+  const body = shell.querySelector(".rb-plugins-body");
+  const view = st.pluginView;
+  // 마지막 요청만 화면에 반영한다 (빠르게 연달아 눌러도 늦게 끝난 이전 탭이 덮어쓰지 않게)
+  const token = st.pluginToken = (st.pluginToken ?? 0) + 1;
+  const slow = setTimeout(() => {
+    if (token === st.pluginToken) replace(body, loading("불러오는 중", { rows: view === "list" ? 4 : 0 }));
+  }, 150);
+  body.style.opacity = ".55";
+  try {
+    const node = await LOADERS[view](ctx, { fresh });
+    if (token !== st.pluginToken) return;
+    if (body.firstElementChild !== node) replace(body, node);
+  } catch (err) {
+    if (token === st.pluginToken) replace(body, note("err", `화면을 열지 못했어요: ${err?.message ?? err}`));
+  } finally {
+    clearTimeout(slow);
+    if (token === st.pluginToken) body.style.opacity = "";
+  }
 }
+var refresh = (ctx) => renderPlugins(ctx, { fresh: true });
 
 // ── 목록 ──
-async function viewList(ctx, plugins, interop) {
-  if (!ctx.state.pluginEnv.pluginsReadable) return h("div", { class: "rb-empty" }, "플러그인 목록을 볼 수 없는 환경이에요.");
+async function viewList(ctx, { fresh }) {
+  const plugins = await getPlugins(ctx, fresh);
+  const interop = await getInterop(ctx, fresh);
   const upd = ctx.state.pluginUpd ?? {};
   const linked = new Map(interop.filter((e) => e.pluginName).map((e) => [e.pluginName, e]));
   const q = (ctx.state.search ?? "").trim().toLowerCase();
@@ -78,15 +96,9 @@ async function viewList(ctx, plugins, interop) {
     groups.get(g).push(p);
   }
   const keys = [...groups.keys()].sort((a, b) => a === "미분류" ? 1 : b === "미분류" ? -1 : a.localeCompare(b));
-  const dupCount = plugins.filter((p) => p.dup).length;
   const updCount = Object.values(upd).filter((u) => u.hasUpdate).length;
   const row = (p) => {
     const u = upd[p.name];
-    const sw = switchEl(p.enabled, {
-      label: `${p.displayName} 켜기`,
-      disabled: !writable(ctx) || p.self,
-      onChange: (on) => run(ctx, () => P.setEnabled(ctx.api, p.name, on), on ? "켰어요" : "껐어요")
-    });
     return h(
       "div",
       { class: ["rb-row", !p.enabled && "off"], style: "cursor:default" },
@@ -99,13 +111,13 @@ async function viewList(ctx, plugins, interop) {
           { class: "ttl" },
           h("span", { class: "name" }, p.displayName),
           p.self && badge("이 플러그인", "acc"),
+          !p.enabled && badge("꺼짐", "mute"),
           linked.has(p.name) && badge("연동", "acc2"),
           u?.hasUpdate && badge(`v${u.latest} 있음`, "acc"),
           p.dup && badge("중복", "warn")
         ),
         h("span", { class: "meta" }, [p.name, p.version && `v${p.version}`, fmtBytes(p.size)].filter(Boolean).join(" · "))
       ),
-      sw,
       iconBtn("more", `${p.displayName} 메뉴`, { onClick: (ev) => rowMenu(ctx, p, linked.get(p.name), ev.currentTarget) })
     );
   };
@@ -122,10 +134,7 @@ async function viewList(ctx, plugins, interop) {
         ctx.toast(n ? `새 버전이 있는 플러그인 ${n}개` : "모두 최신이에요 (업데이트 주소가 있는 것만 확인)");
         renderPlugins(ctx);
       } }),
-      dupCount && writable(ctx) ? btn(`중복 정리 (${dupCount})`, { size: "sm", icon: "trash", onClick: async () => {
-        if (!await confirmDialog(ctx.win, { title: "중복된 플러그인을 정리할까요?", body: "같은 이름이 여러 개면 가장 나중에 추가된 것만 남겨요. 정리 전 상태는 백업에 남아요.", ok: "정리" })) return;
-        run(ctx, () => P.dedupe(ctx.api), (n) => `${n}개를 정리했어요`);
-      } }) : null,
+      btn("새로고침", { size: "sm", icon: "refresh", onClick: () => refresh(ctx) }),
       btn("내보내기", { size: "sm", icon: "upload", onClick: async () => download(`dusk-plugins-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, await P.exportAll(ctx.api), "application/json") })
     ),
     shown.length ? null : h("div", { class: "rb-empty" }, q ? "찾는 플러그인이 없어요." : "플러그인이 없어요."),
@@ -139,7 +148,6 @@ async function viewList(ctx, plugins, interop) {
 }
 
 function rowMenu(ctx, p, entry, anchor) {
-  const w = writable(ctx);
   openMenu(ctx.win, anchor, [
     entry && { label: "연동 설정 열기", icon: "sliders", onClick: () => {
       ctx.state.pluginView = "interop";
@@ -150,27 +158,16 @@ function rowMenu(ctx, p, entry, anchor) {
       const c = await promptDialog(ctx.win, { title: "카테고리", label: "비우면 미분류로 돌아가요", value: p.category, placeholder: "예: 번역, UI" });
       if (c === null) return;
       await P.setCategory(ctx.api, p.name, c.trim());
+      p.category = c.trim();
       renderPlugins(ctx);
-    } },
-    w && "sep",
-    w && { label: "맨 위로", icon: "up", onClick: () => run(ctx, () => P.move(ctx.api, p.name, "top")) },
-    w && { label: "위로", icon: "up", onClick: () => run(ctx, () => P.move(ctx.api, p.name, "up")) },
-    w && { label: "아래로", icon: "down", onClick: () => run(ctx, () => P.move(ctx.api, p.name, "down")) },
-    w && { label: "맨 아래로", icon: "down", onClick: () => run(ctx, () => P.move(ctx.api, p.name, "bottom")) },
-    w && "sep",
-    w && { label: "코드 교체 (.js 파일)", icon: "code", onClick: async () => {
-      const [f] = await pickFiles({ accept: ".js,text/javascript" });
-      if (!f) return;
-      const script = await f.text();
-      const hd = P.parseHeader(script);
-      if (!await confirmDialog(ctx.win, { title: `'${p.displayName}' 코드를 바꿀까요?`, body: `${f.name}${hd.version ? ` (v${hd.version})` : ""}\n바꾸기 전 상태는 백업에 남아요. 적용하려면 RisuAI를 새로고침해야 할 수 있어요.`, ok: "바꾸기" })) return;
-      run(ctx, () => P.replaceCode(ctx.api, p.name, script), "코드를 바꿨어요");
     } }
   ]);
 }
 
 // ── 연동 설정 ──
-async function viewInterop(ctx, plugins, interop) {
+async function viewInterop(ctx, { fresh }) {
+  if (!memo(ctx).plugins) await getPlugins(ctx).catch(() => []);
+  const interop = await getInterop(ctx, true);
   const open = ctx.state.pluginOpen && interop.find((e) => e.id === ctx.state.pluginOpen);
   if (open) setTimeout(() => showInterop(ctx, open), 0);
   ctx.state.pluginOpen = null;
@@ -259,6 +256,7 @@ function showInterop(ctx, e) {
     }
     const fresh = (await P.listInterop(ctx.api).catch(() => [])).find((x) => x.id === e.id);
     if (fresh && ctx.state.pluginView === "interop") showInterop(ctx, fresh);
+    if (ctx.state.pluginView === "interop") refresh(ctx);
   };
   const readAll = () => {
     const out = { ...e.values };
@@ -298,50 +296,61 @@ function showInterop(ctx, e) {
       if (!await confirmDialog(ctx.win, { title: `${e.name} 연동 정보를 지울까요?`, body: "플러그인을 지웠을 때 정리용이에요. 플러그인이 켜져 있으면 다음 실행 때 다시 등록돼요.", ok: "지우기", danger: true })) return;
       await ctx.svc.serial(() => P.pruneInterop(ctx.api, e.id)).catch((err) => ctx.toast(err?.message ?? String(err), { error: true }));
       ctx.closeSheet();
-      renderPlugins(ctx);
+      refresh(ctx);
     } })
   ));
   ctx.openSheet();
 }
 
-// ── 저장소 (Dusk Atelier 자신의 pluginStorage) ──
-async function viewStorage(ctx) {
+// ── 저장소 (모든 플러그인이 함께 쓰는 pluginStorage) ──
+async function viewStorage(ctx, { fresh }) {
   if (!P.storageAvailable(ctx.api)) return note("info", "이 RisuAI에서는 저장소 목록을 볼 수 없어요.");
-  const items = await P.storageDump(ctx.api).catch(() => []);
+  const c = memo(ctx);
+  if (fresh || !c.storage || Date.now() - c.storageAt > 1e4) {
+    c.storage = await P.storageDump(ctx.api).catch(() => []);
+    c.storageAt = Date.now();
+  }
+  const items = c.storage;
   const total = items.reduce((s, x) => s + x.size, 0);
   return h(
     "div",
     { style: "display:flex;flex-direction:column;gap:6px" },
-    h("p", { class: "rb-muted" }, `플러그인 저장소 값 ${items.length}개 · ${fmtBytes(total)} (모든 플러그인이 함께 쓰는 저장소예요. 다른 플러그인 값을 지우면 그 플러그인 설정이 사라질 수 있어요)`),
+    h(
+      "div",
+      { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" },
+      h("p", { class: "rb-muted", style: "flex:1;min-width:200px" }, `플러그인 저장소 값 ${items.length}개 · ${fmtBytes(total)} (모든 플러그인이 함께 쓰는 저장소예요. 다른 플러그인 값을 지우면 그 플러그인 설정이 사라질 수 있어요)`),
+      btn("새로고침", { size: "sm", icon: "refresh", onClick: () => refresh(ctx) })
+    ),
     items.map((it) => h(
       "button",
-      { type: "button", class: "rb-row", onClick: () => {
-        const text = typeof it.value === "string" ? prettyJson(it.value) : JSON.stringify(it.value, null, 2);
-        ctx.showDetail(h(
-          "div",
-          { class: "rb-section", style: "gap:10px" },
-          h("h2", { class: "rb-h2", style: "word-break:break-all" }, it.key),
-          h("p", { class: "rb-muted" }, fmtBytes(it.size)),
-          h("pre", { class: "rb-card pad bordered rb-scroll", style: "margin:0;max-height:60vh;overflow:auto;font-size:12px;white-space:pre-wrap;word-break:break-all" }, text.length > 2e5 ? text.slice(0, 2e5) + "\n…(잘림)" : text),
-          h(
-            "div",
-            { style: "display:flex;gap:8px" },
-            btn("내려받기", { size: "sm", icon: "download", onClick: () => download(`${it.key.replace(/[^\w.-]+/g, "_")}.json`, text, "application/json") }),
-            btn("지우기", { size: "sm", kind: "danger", icon: "trash", onClick: async () => {
-              if (!await confirmDialog(ctx.win, { title: `'${it.key}'을(를) 지울까요?`, body: "이 값을 쓰는 플러그인의 설정이나 기록이 사라질 수 있어요.", ok: "지우기", danger: true })) return;
-              await ctx.api.pluginStorage.removeItem(it.key);
-              ctx.closeSheet();
-              renderPlugins(ctx);
-            } })
-          )
-        ));
-        ctx.openSheet();
-      } },
+      { type: "button", class: "rb-row", onClick: () => showStorageItem(ctx, it) },
       h("span", { style: "display:flex;color:var(--rb-sub)" }, icon("text", 18)),
       h("div", { class: "txt" }, h("div", { class: "ttl" }, h("span", { class: "name" }, it.key)), h("span", { class: "meta" }, fmtBytes(it.size))),
       icon("chevron", 16)
     ))
   );
+}
+function showStorageItem(ctx, it) {
+  const text = typeof it.value === "string" ? prettyJson(it.value) : JSON.stringify(it.value, null, 2);
+  ctx.showDetail(h(
+    "div",
+    { class: "rb-section", style: "gap:10px" },
+    h("h2", { class: "rb-h2", style: "word-break:break-all" }, it.key),
+    h("p", { class: "rb-muted" }, fmtBytes(it.size)),
+    h("pre", { class: "rb-card pad bordered rb-scroll", style: "margin:0;max-height:60vh;overflow:auto;font-size:12px;white-space:pre-wrap;word-break:break-all" }, text.length > 2e5 ? text.slice(0, 2e5) + "\n…(잘림)" : text),
+    h(
+      "div",
+      { style: "display:flex;gap:8px" },
+      btn("내려받기", { size: "sm", icon: "download", onClick: () => download(`${it.key.replace(/[^\w.-]+/g, "_")}.json`, text, "application/json") }),
+      btn("지우기", { size: "sm", kind: "danger", icon: "trash", onClick: async () => {
+        if (!await confirmDialog(ctx.win, { title: `'${it.key}'을(를) 지울까요?`, body: "이 값을 쓰는 플러그인의 설정이나 기록이 사라질 수 있어요.", ok: "지우기", danger: true })) return;
+        await ctx.api.pluginStorage.removeItem(it.key);
+        ctx.closeSheet();
+        refresh(ctx);
+      } })
+    )
+  ));
+  ctx.openSheet();
 }
 function prettyJson(s) {
   try {
@@ -349,36 +358,6 @@ function prettyJson(s) {
   } catch {
     return s;
   }
-}
-
-// ── 백업 ──
-async function viewBackup(ctx) {
-  const list = await P.listBackups(ctx.api);
-  const w = writable(ctx);
-  return h(
-    "div",
-    { style: "display:flex;flex-direction:column;gap:10px" },
-    h(
-      "div",
-      { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:8px" },
-      h("h3", { class: "rb-h3" }, "파일로 내보내기"),
-      h("p", { class: "rb-p" }, "플러그인 목록(코드 포함), 카테고리, 연동 설정을 JSON 파일 하나로 받아요."),
-      h("div", null, btn("내보내기", { icon: "download", onClick: async () => download(`dusk-plugins-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, await P.exportAll(ctx.api), "application/json") }))
-    ),
-    h("h3", { class: "rb-h3" }, "자동 백업"),
-    h("p", { class: "rb-muted" }, "플러그인을 켜고 끄거나 순서·코드를 바꾸기 직전 상태를 최근 5개까지 남겨요."),
-    list.length ? null : h("div", { class: "rb-empty" }, "아직 백업이 없어요."),
-    list.map((b) => h(
-      "div",
-      { class: "rb-row", style: "cursor:default" },
-      h("span", { style: "display:flex;color:var(--rb-sub)" }, icon("history", 18)),
-      h("div", { class: "txt" }, h("div", { class: "ttl" }, h("span", { class: "name" }, b.label)), h("span", { class: "meta" }, `${fmtWhen(b.at)} · 플러그인 ${b.count}개`)),
-      w ? btn("복원", { size: "sm", onClick: async () => {
-        if (!await confirmDialog(ctx.win, { title: "이 상태로 되돌릴까요?", body: `${b.label} 직전 상태로 플러그인 목록을 되돌려요. 지금 상태도 백업에 남아요.`, ok: "되돌리기" })) return;
-        run(ctx, () => P.restoreBackup(ctx.api, b.id), "되돌렸어요");
-      } }) : null
-    ))
-  );
 }
 
 // ── 만들기 ──
@@ -415,6 +394,9 @@ function showHelp(ctx, key, editor) {
 }
 
 async function viewCreate(ctx) {
+  // 만들기 화면은 한 번 만든 것을 그대로 다시 붙인다 (탭을 오가도 바로 뜨고, 쓰던 코드·커서가 그대로)
+  const kept = memo(ctx).createNode;
+  if (kept) return kept;
   if (!document.getElementById("rb-help-style")) document.head.appendChild(h("style", { id: "rb-help-style" }, `.rb-help-q{width:20px;height:20px;border-radius:50%;border:1px solid var(--rb-line);background:var(--rb-surf);color:var(--rb-acc-text);font-size:12px;font-weight:700;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:0}.rb-help-q:hover{background:var(--rb-acc-soft)}.rb-sec-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;border:1px solid var(--rb-line);font-size:12px;color:var(--rb-sub);cursor:pointer;background:transparent}.rb-sec-chip:hover{background:var(--rb-hover)}`));
   const saved = await (async () => {
     try {
@@ -431,7 +413,7 @@ async function viewCreate(ctx) {
     saveTimer = setTimeout(() => ctx.api.pluginStorage.setItem(T.DRAFT_KEY, JSON.stringify({ v: 1, meta, code: editor.value, at: Date.now() })).catch(() => {
     }), 600);
   };
-  const editor = codeEditor(saved?.code || T.buildTemplate(meta), { label: "플러그인 코드", onChange: saveDraft });
+  const editor = codeEditor(saved?.code || T.buildTemplate(meta), { label: "플러그인 코드", onChange: saveDraft, minHeight: "62vh", maxHeight: "82vh" });
   const results = h("div", { style: "display:flex;flex-direction:column;gap:6px" });
   const runCheck = () => {
     const r = T.checkCode(editor.value, meta);
@@ -449,10 +431,11 @@ async function viewCreate(ctx) {
   };
   const sec = (key, label) => h("span", { class: "rb-sec-chip", role: "button", tabindex: "0", onClick: () => editor.reveal(FIND[key]) }, label, helpBtn(ctx, key, editor));
   const fileName = () => `${(meta.name || "plugin").replace(/[^\w.-]+/g, "_")}.js`;
-  return h(
+  const node = h(
     "div",
     { style: "display:flex;flex-direction:column;gap:14px" },
     h("p", { class: "rb-p" }, "DA Interop이 들어간 플러그인을 바로 만들어요. 맨 위에는 스니펫, 맨 아래에는 등록 코드가 들어 있어요. ? 를 누르면 어디에 무엇을 넣는지 볼 수 있어요."),
+    h("h3", { class: "rb-h3" }, "기본 정보"),
     h(
       "div",
       { class: "rb-card pad bordered", style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px" },
@@ -462,18 +445,24 @@ async function viewCreate(ctx) {
       field("id", "연동 id", "my-plugin"),
       h("div", { style: "grid-column:1/-1" }, field("description", "설명", "Dusk Atelier에 보일 한 줄 설명"))
     ),
+    // 코드 칸: 위아래로 넉넉히 띄우고 선으로 구분해 스크롤하다가 바로 찾을 수 있게
     h(
       "div",
-      { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" },
-      h("span", { class: "rb-muted", style: "font-size:12px" }, "구역"),
-      sec("header", "① 머리말"),
-      sec("snippet", "② 스니펫"),
-      sec("body", "③ 본체"),
-      sec("fields", "④ fields"),
-      sec("presets", "presets"),
-      sec("apply", "apply")
+      { class: "rb-create-code", style: "display:flex;flex-direction:column;gap:12px;margin:26px 0;padding:22px 0;border-top:1px solid var(--rb-line);border-bottom:1px solid var(--rb-line)" },
+      h(
+        "div",
+        { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" },
+        h("h3", { class: "rb-h3", style: "display:flex;align-items:center;gap:6px;margin-right:6px" }, icon("code", 18), "플러그인 코드"),
+        sec("header", "① 머리말"),
+        sec("snippet", "② 스니펫"),
+        sec("body", "③ 본체"),
+        sec("fields", "④ fields"),
+        sec("presets", "presets"),
+        sec("apply", "apply")
+      ),
+      editor.el
     ),
-    editor.el,
+    h("h3", { class: "rb-h3" }, "검사·설치"),
     results,
     h(
       "div",
@@ -494,6 +483,8 @@ async function viewCreate(ctx) {
       } })
     )
   );
+  memo(ctx).createNode = node;
+  return node;
 }
 
 async function installDraft(ctx, code, meta, runCheck) {
@@ -512,5 +503,6 @@ async function installDraft(ctx, code, meta, runCheck) {
   const after = (await ctx.api.getDatabase(["plugins"]).catch(() => null))?.plugins ?? [];
   if (after.some((p) => p.name === obj.name && p.script === obj.script)) {
     ctx.toast(`'${obj.displayName}'을(를) 설치했어요. 실행되지 않으면 새로고침해 주세요.`, { seconds: 8 });
+    memo(ctx).pluginsAt = 0;
   } else ctx.toast("설치되지 않았어요. 확인 창에서 취소했거나, 같은 코드가 이미 설치돼 있어요.", { error: true, seconds: 8 });
 }
