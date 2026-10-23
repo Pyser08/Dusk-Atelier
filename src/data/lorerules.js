@@ -12,6 +12,22 @@ import { STATE_VAR, collectManaged, evaluate, gateValues } from '../engine/lorer
 
 const sv = (k) => "$" + k;
 
+// 설정 (설정 탭에서 바꿈): reroll = "new"(리롤 때 확률 새로 굴리기) | "keep"(입력 때 결정 그대로)
+export const LORE_SETTINGS_KEY = "dusk-lore-settings";
+export const LORE_DEFAULTS = { reroll: "new" };
+export async function loadLoreSettings(api) {
+  try {
+    const raw = await api.pluginStorage.getItem(LORE_SETTINGS_KEY);
+    const v = typeof raw === "string" ? JSON.parse(raw) : raw;
+    return { ...LORE_DEFAULTS, ...(v && typeof v === "object" ? v : {}) };
+  } catch {
+    return { ...LORE_DEFAULTS };
+  }
+}
+export async function saveLoreSettings(api, v) {
+  await api.pluginStorage.setItem(LORE_SETTINGS_KEY, JSON.stringify({ ...LORE_DEFAULTS, ...v }));
+}
+
 export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규칙]", ...a) } = {}) {
   let lastFired = [];
   let prepTimer = null;
@@ -132,9 +148,13 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
   const sig = (chat) => `${chat?.id ?? ""}|${chat?.message?.length ?? 0}|${chat?.message?.at?.(-1)?.data?.length ?? 0}|${chat?.message?.at?.(-1)?.time ?? ""}`;
 
   // 응답이 끝나 화면이 잠잠해지면 리롤용 결정을 미리 써 둔다
+  let settings = null;
   async function prepareReroll() {
     if (busy) return;
     try {
+      settings ??= await loadLoreSettings(api);
+      // '이전 결과 유지'면 리롤 때도 입력 때 결정을 그대로 쓴다
+      if (settings.reroll === "keep") return;
       const charIdx = await api.getCurrentCharacterIndex();
       const chatIdx = await api.getCurrentChatIndex();
       if (!(charIdx >= 0) || !(chatIdx >= 0)) return;
@@ -171,7 +191,9 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
     await api.addRisuScriptHandler("display", onDisplay);
   }
 
-  return { start, decide, prepare, onInput, prepareReroll, get lastFired() {
+  return { setSettings(v) {
+    settings = { ...LORE_DEFAULTS, ...v };
+  }, start, decide, prepare, onInput, prepareReroll, get lastFired() {
     return lastFired;
   } };
 }

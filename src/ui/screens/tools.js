@@ -10,11 +10,11 @@ import { btn, confirmDialog, note, progressBar } from '../kit.js';
 import { defaultsMeta } from '../prefs.js';
 import { PRESET_KEY, loadPresets, savePresets } from '../../data/presets.js';
 import { INJECTED_KEY, loadPersonaMap, savePersonaMap } from '../../data/persona.js';
-import { devToggleCard, isDev } from './devtools.js';
+import { isDev } from './devtools.js';
 import { reload } from './modules.js';
-import { renderUpdateSettings } from './updsettings.js';
+import { renderPresets } from './presets.js';
 
-function tile(ic, title, desc, onClick, id) {
+export function tile(ic, title, desc, onClick, id) {
   return h(
     "button",
     { type: "button", class: "rb-row", style: "background:var(--rb-surf);padding:16px", onClick, id },
@@ -47,8 +47,7 @@ function thanksCard() {
 }
 export function renderTools(ctx) {
   if (ctx.state.sub === "inspector") return renderInspector(ctx);
-  if (ctx.state.sub === "cleanup") return renderCleanup(ctx);
-  if (ctx.state.sub === "updset") return renderUpdateSettings(ctx);
+  if (ctx.state.sub === "presets") return renderPresets(ctx);
   if (ctx.state.sub === "patchmaker") {
     ctx.go("dev", "patchmaker");
     return;
@@ -58,10 +57,6 @@ export function renderTools(ctx) {
     "div",
     { class: "rb-section rb-scroll", style: "flex:1" },
     h("h2", { class: "rb-h2" }, "도구"),
-    devToggleCard(ctx, () => {
-      ctx.refreshTabs();
-      renderTools(ctx);
-    }),
     dev && h(
       "div",
       { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin-bottom:10px" },
@@ -70,15 +65,13 @@ export function renderTools(ctx) {
     h(
       "div",
       { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px" },
-      tile("palette", "색 바꾸기", "테마 색, 직접 고른 색, 밝기(RisuAI 따라가기/다크/라이트)", () => ctx.go("tools", "settings"), "rb-tool-settings"),
+      tile("preset", "프리셋", "켜고 끌 모듈 조합·순서를 묶어 저장하고 버튼 하나로 바꾸기, 모바일·PC 자동 전환, 공유 코드", () => ctx.go("tools", "presets"), "rb-tool-presets"),
       tile("upload", "업데이트 가져오기", "모듈·캐릭터 파일로 기존 항목을 업데이트하거나 새로 넣기 (여러 파일 가능)", () => ctx.legacy.open(), "rb-tool-import"),
       tile("link", "다른 봇에서 가져오기 · 합치기", "다른 봇·모듈의 인물과 세계관을 가져오거나 두 봇을 합치기, 합친 출처만 업데이트·떼어내기 (AI 다듬기)", () => ctx.legacy.openMerge(), "rb-tool-merge"),
-      tile("refresh", "업데이트 설정", "새로 가져온 봇 자동 감지, 받은 사본 정리, 채팅 백업", () => ctx.go("tools", "updset"), "rb-tool-updset"),
       tile("history", "기록 · 되돌리기", `업데이트·편집·삭제 전 상태 보기와 되돌리기 (채팅은 그대로)${ctx.state.histCount ? ` · ${ctx.state.histCount}개` : ""}`, () => ctx.go("tools", "history"), "rb-tool-backups"),
       tile("download", "전체 백업", "모든 모듈(꺼진 것 포함)·에셋·프리셋·폴더·색 설정을 zip 한 파일로", () => fullBackup(ctx), "rb-tool-fullbackup"),
       tile("upload", "전체 복원", "전체 백업 zip에서 모듈과 설정을 되살리기", () => fullRestore(ctx), "rb-tool-restore"),
-      tile("info", ".risum 인스펙터", "모듈 파일 안을 열어 보기: 필드별 크기, 압축률, 에셋 목록, ZIP 추출", () => ctx.go("tools", "inspector"), "rb-tool-inspector"),
-      tile("trash", "설정 정리", "이 플러그인이 저장한 순서·폴더·프리셋·연결 정보를 골라서 지우기", () => ctx.go("tools", "cleanup"), "rb-tool-cleanup")
+      tile("info", ".risum 인스펙터", "모듈 파일 안을 열어 보기: 필드별 크기, 압축률, 에셋 목록, ZIP 추출", () => ctx.go("tools", "inspector"), "rb-tool-inspector")
     ),
     thanksCard()
   ));
@@ -328,7 +321,7 @@ async function renderInspector(ctx) {
     )
   ));
 }
-async function renderCleanup(ctx) {
+export async function renderCleanup(ctx) {
   const db = await readDb(ctx.api, ["modules", "pluginCustomStorage"]);
   const presets = await loadPresets(ctx.api), persona = await loadPersonaMap(ctx.api);
   const meta = ctx.prefs.meta;
@@ -342,7 +335,7 @@ async function renderCleanup(ctx) {
     ["folders", "모듈 목록 폴더·이름 색 지우기", `폴더 ${meta.folders.length}개, 이름 색 ${Object.keys(meta.nameColors).length}개`]
   ];
   const checks = /* @__PURE__ */ new Map();
-  const back = h("div", { style: "display:flex;align-items:center;gap:10px" }, btn("", { kind: "ghost", icon: "back", onClick: () => ctx.go("tools") }), h("div", null, h("span", { class: "rb-muted" }, "도구"), h("h2", { class: "rb-h2" }, "설정 정리")));
+  const back = h("div", { style: "display:flex;align-items:center;gap:10px" }, btn("", { kind: "ghost", icon: "back", onClick: () => ctx.go("settings") }), h("div", null, h("span", { class: "rb-muted" }, "설정"), h("h2", { class: "rb-h2" }, "설정 정리")));
   back.querySelector("button").setAttribute("aria-label", "도구로 돌아가기");
   replace(ctx.main, h(
     "div",

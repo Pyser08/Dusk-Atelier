@@ -64,7 +64,7 @@ export function renderSettings(ctx) {
     h(
       "div",
       { style: "display:flex;align-items:center;gap:10px" },
-      iconBtn("back", "도구로 돌아가기", { onClick: () => ctx.go("tools") }),
+      iconBtn("back", "설정으로 돌아가기", { onClick: () => ctx.go("settings") }),
       h("div", null, h("span", { class: "rb-muted" }, "도구 · 설정"), h("h2", { class: "rb-h2" }, "색 바꾸기"))
     ),
     h("div", { class: "rb-field" }, h("span", { class: "rb-label" }, "테마"), h("div", { class: "rb-presets" }, presetBtns)),

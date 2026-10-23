@@ -62,7 +62,7 @@ export async function renderUpdateSettings(ctx) {
   replace(ctx.main, h(
     "div",
     { class: "rb-section rb-scroll", style: "flex:1;max-width:760px" },
-    h("div", { style: "display:flex;align-items:center;gap:10px" }, iconBtn("back", "도구로 돌아가기", { onClick: () => ctx.go("tools") }), h("div", null, h("span", { class: "rb-muted" }, "도구"), h("h2", { class: "rb-h2" }, "업데이트 설정"))),
+    h("div", { style: "display:flex;align-items:center;gap:10px" }, iconBtn("back", "설정으로 돌아가기", { onClick: () => ctx.go("settings") }), h("div", null, h("span", { class: "rb-muted" }, "설정"), h("h2", { class: "rb-h2" }, "업데이트 설정"))),
     h(
       "div",
       { style: "display:flex;flex-direction:column;gap:10px" },

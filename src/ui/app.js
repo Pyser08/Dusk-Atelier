@@ -18,13 +18,14 @@ import { createAssetLoader } from './assets.js';
 import { openAssets } from './screens/assetmgr.js';
 import { renderDev } from './screens/dev.js';
 import { renderPlugins } from './screens/plugins.js';
+import { renderSettingsTab } from './screens/settingstab.js';
 
 var TABS = [
   { id: "modules", label: "모듈", icon: "module" },
   { id: "plugins", label: "플러그인", icon: "plugin" },
   { id: "characters", label: "캐릭터", icon: "character" },
-  { id: "presets", label: "프리셋", icon: "preset" },
   { id: "tools", label: "도구", icon: "tools" },
+  { id: "settings", label: "설정", icon: "sliders" },
   { id: "dev", label: "개발", icon: "code", dev: true }
 ];
 export function createApp(api, { legacy, version, onPersonaChanged }) {
@@ -129,7 +130,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     h("div", { class: "rb-spacer" }),
     updBtn,
     btn("가져오기", { icon: "upload", labelClass: "lbl", onClick: () => legacy.open(), id: "rb-import" }),
-    iconBtn("palette", "색 바꾸기", { onClick: () => go("tools", "settings") }),
+    iconBtn("palette", "색 바꾸기", { onClick: () => go("settings", "theme") }),
     iconBtn("x", "닫기", { onClick: () => close(), id: "rb-close" })
   );
   const nav = h("nav", { class: "rb-nav", "aria-label": "탭" });
@@ -217,6 +218,15 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       tab = "tools";
       sub = "history";
     }
+    // 1.5.0: 프리셋은 도구 안으로, 색·업데이트 설정·설정 정리는 설정 탭으로
+    if (tab === "presets") {
+      tab = "tools";
+      sub = "presets";
+    }
+    if (tab === "tools" && ["settings", "updset", "cleanup"].includes(sub)) {
+      tab = "settings";
+      sub = sub === "settings" ? "theme" : sub;
+    }
     if (tab !== state.tab || (sub === "history") !== (state.sub === "history")) {
       state.search = "";
       searchInput.value = "";
@@ -261,7 +271,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     win.classList.toggle("rb-nosearch", !showSearch);
     replace(detail3);
     detail3.hidden = true;
-    const screen = { modules: renderModules, plugins: renderPlugins, characters: renderCharacters, presets: renderPresets, tools: state.sub === "settings" ? renderSettings : state.sub === "history" ? renderHistory : renderTools, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { modules: renderModules, plugins: renderPlugins, characters: renderCharacters, presets: renderPresets, tools: state.sub === "history" ? renderHistory : renderTools, settings: renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
     Promise.resolve(screen(ctx)).catch((err) => {
       replace(main, h("div", { class: "rb-section" }, h("div", { class: "rb-note err", role: "alert" }, icon("alert", 18), h("span", null, `화면을 열지 못했어요: ${err?.message ?? err}`))));
     });

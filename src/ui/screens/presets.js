@@ -63,7 +63,8 @@ export async function renderPresets(ctx) {
     h(
       "div",
       { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
-      h("div", { style: "flex:1" }, h("h2", { class: "rb-h2" }, "프리셋"), h("p", { class: "rb-p" }, "어떤 모듈을 켜고 끌지, 순서, 글로벌 활성화를 묶어서 저장해요. 지금 상태는 사용 중인 프리셋에 자동으로 저장돼요.")),
+      iconBtn("back", "도구로 돌아가기", { onClick: () => ctx.go("tools") }),
+      h("div", { style: "flex:1" }, h("span", { class: "rb-muted" }, "도구"), h("h2", { class: "rb-h2" }, "프리셋"), h("p", { class: "rb-p" }, "어떤 모듈을 켜고 끌지, 순서, 글로벌 활성화를 묶어서 저장해요. 지금 상태는 사용 중인 프리셋에 자동으로 저장돼요.")),
       btn("가져오기", { icon: "upload", onClick: (ev) => openMenu(ctx.win, ev.currentTarget, [
         { label: "파일에서", icon: "upload", onClick: () => importPresets(ctx) },
         { label: "공유 코드 붙여넣기", icon: "link", onClick: () => importPresetCode(ctx) }
