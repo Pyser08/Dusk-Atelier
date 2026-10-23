@@ -1300,11 +1300,11 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
           const a = pick();
           active++;
           inflight += a.size ?? 0;
-          run(a);
+          run2(a);
         }
         finish();
       };
-      const run = async (a) => {
+      const run2 = async (a) => {
         let ok = false;
         try {
           const data = await readAssetBytes(blob, a);
@@ -3609,10 +3609,10 @@ ${v.content ?? ""}`;
   }
   function requiredRuns(pattern2) {
     const runs = [];
-    let depth = 0, inClass = false, run = "", mandatory = false;
+    let depth = 0, inClass = false, run2 = "", mandatory = false;
     const flush = () => {
-      if (mandatory) runs.push(run);
-      run = "";
+      if (mandatory) runs.push(run2);
+      run2 = "";
       mandatory = false;
     };
     for (let i2 = 0; i2 < pattern2.length; ) {
@@ -3685,7 +3685,7 @@ ${v.content ?? ""}`;
         }
       }
       if (!mandatory && literal && !optional) mandatory = true;
-      if (mandatory) run += pattern2.slice(start2, i2);
+      if (mandatory) run2 += pattern2.slice(start2, i2);
     }
     flush();
     return runs;
@@ -3712,10 +3712,10 @@ ${v.content ?? ""}`;
     const breaks = [];
     if (minimumPipes) {
       let previous = "", end = 0;
-      for (const run of text.matchAll(/\S+/g)) {
-        if (previous && /[\n\r\u2028\u2029]/.test(text.slice(end, run.index)) && !"[|:#".includes(previous) && !"|:]".includes(run[0][0])) breaks.push(run.index);
-        previous = run[0].at(-1);
-        end = run.index + run[0].length;
+      for (const run2 of text.matchAll(/\S+/g)) {
+        if (previous && /[\n\r\u2028\u2029]/.test(text.slice(end, run2.index)) && !"[|:#".includes(previous) && !"|:]".includes(run2[0][0])) breaks.push(run2.index);
+        previous = run2[0].at(-1);
+        end = run2.index + run2[0].length;
       }
     }
     const starts = [];
@@ -3741,7 +3741,7 @@ ${v.content ?? ""}`;
       const cached = patterns.get(key);
       if (cached) return cached;
       const regex = new RegExp(String(r.in ?? ""), flags);
-      const required = regex.flags.includes("v") ? [] : requiredRuns(regex.source).map((run) => new RegExp(run, regex.flags.replace("y", "") + "g"));
+      const required = regex.flags.includes("v") ? [] : requiredRuns(regex.source).map((run2) => new RegExp(run2, regex.flags.replace("y", "") + "g"));
       const statusPrefix = "\\[\\s*(.*?)\\s*\\|";
       const statusSearch = required.length && !/[sy]/.test(regex.flags) && regex.source.startsWith(statusPrefix) && !/^(?:[?*]|\{0(?:,|\}))/.test(regex.source.slice(statusPrefix.length)) ? new RegExp(regex.source, regex.flags + "y") : null;
       const minimumPipes = statusSearch ? statusPipeCount(regex.source) : 0;
@@ -3764,11 +3764,11 @@ ${v.content ?? ""}`;
         if (cache && hits.has(text)) return hits.get(text);
         regex.lastIndex = 0;
         let offset = 0;
-        const hit = required.every((run) => {
-          run.lastIndex = offset;
-          const match = run.exec(text);
+        const hit = required.every((run2) => {
+          run2.lastIndex = offset;
+          const match = run2.exec(text);
           if (!match) return false;
-          offset = run.lastIndex;
+          offset = run2.lastIndex;
           return true;
         }) && matches(text);
         if (cache) {
@@ -4918,6 +4918,7 @@ ${v.content ?? ""}`;
     trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
     undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
     refresh: '<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/>',
+    plugin: '<path d="M9 3h6v3a2 2 0 1 0 4 0V3"/><path d="M5 7h14v4h-2a2 2 0 1 0 0 4h2v6H5v-6h2a2 2 0 1 0 0-4H5Z"/>',
     code: '<path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/><path d="m13.5 4-3 16"/>',
     link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
     globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18Z"/>',
@@ -6277,8 +6278,8 @@ __load_source("${blockId}", ${longBracket(code)}${shared ? ", true" : ""})
       const source = moves.get(b.sourceId);
       source.set(b.selector, { anchor: b, property, offset: Math.max(offset, source.get(b.selector)?.offset ?? 0) });
     }
-    for (const source of moves.values()) for (const move2 of source.values()) {
-      move2.offset = Math.max(...[...source.values()].filter((other) => other.property === move2.property && other.anchor.horizontal === move2.anchor.horizontal && other.anchor.vertical === move2.anchor.vertical).map((other) => other.offset));
+    for (const source of moves.values()) for (const move3 of source.values()) {
+      move3.offset = Math.max(...[...source.values()].filter((other) => other.property === move3.property && other.anchor.horizontal === move3.anchor.horizontal && other.anchor.vertical === move3.anchor.vertical).map((other) => other.offset));
     }
     return parts.map((part) => {
       const selected = moves.get(part.sourceId);
@@ -6296,17 +6297,17 @@ __load_source("${blockId}", ${longBracket(code)}${shared ? ", true" : ""})
           }
           return { header: untouched, body, after: shifted };
         }
-        const move2 = moved.find(Boolean);
-        if (!move2) return { header, body };
-        const property = move2.property;
+        const move3 = moved.find(Boolean);
+        if (!move3) return { header, body };
+        const property = move3.property;
         const pattern2 = new RegExp(`(^|;)\\s*${property}\\s*:\\s*([^;]+)`, "gi");
         const dimension = property === "top" || property === "bottom" ? "100vh" : "100vw";
-        const size = property === "top" || property === "bottom" ? move2.anchor.height : move2.anchor.width;
+        const size = property === "top" || property === "bottom" ? move3.anchor.height : move3.anchor.width;
         const changed = body.replace(pattern2, (whole, delimiter, value2) => {
           const important = /!important\s*$/i.test(value2) ? " !important" : "";
           const original = value2.replace(/\s*!important\s*$/i, "").trim();
           if (original === "auto") return whole;
-          return `${delimiter}${property}:min(calc(${original} + ${move2.offset}px), max(0px, calc(${dimension} - ${size + 12}px)))${important}`;
+          return `${delimiter}${property}:min(calc(${original} + ${move3.offset}px), max(0px, calc(${dimension} - ${size + 12}px)))${important}`;
         });
         return { header, body: changed };
       });
@@ -8886,10 +8887,10 @@ ${registrationRow.content}`;
     function planFooter(goLabel) {
       return `<div class="row"><button class="primary" id="go">${goLabel}</button><button id="back">뒤로</button>${closeBtn("취소")}</div>`;
     }
-    function bindPlan(file, incoming, db, rerender, run) {
+    function bindPlan(file, incoming, db, rerender, run2) {
       root.querySelector("#keep")?.addEventListener("change", (e) => rerender(e.target.checked));
       root.querySelector("#back").addEventListener("click", () => renderChoose(file, incoming, db));
-      root.querySelector("#go").addEventListener("click", () => run().catch((err2) => {
+      root.querySelector("#go").addEventListener("click", () => run2().catch((err2) => {
         busy = false;
         if (err2 instanceof Cancelled) return renderResult(null, "취소했습니다. 기존 항목은 바뀌지 않았습니다.");
         if (err2 instanceof Busy) return renderResult(null, null, err2.message);
@@ -10094,10 +10095,10 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       }));
       root.querySelectorAll("[data-restore]").forEach((el) => el.addEventListener("click", () => {
         const rec = list.find((b) => b.id === el.dataset.restore);
-        restoreBackup(rec).catch((err2) => renderResult(null, null, err2 instanceof Busy ? err2.message : `되돌리지 못했어요: ${err2?.message ?? err2}`));
+        restoreBackup2(rec).catch((err2) => renderResult(null, null, err2 instanceof Busy ? err2.message : `되돌리지 못했어요: ${err2?.message ?? err2}`));
       }));
     }
-    async function restoreBackup(rec) {
+    async function restoreBackup2(rec) {
       busy = true;
       renderProgress(`되돌리는 중: ${rec.name}`, 100, "백업 읽는 중…");
       const { __chats: savedChats, ...snap } = await store.loadBackup(rec);
@@ -10194,7 +10195,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       pendingOfferCard();
       root.querySelector("#nextq")?.addEventListener("click", () => runQueue());
       root.querySelector("#tobk")?.addEventListener("click", () => renderBackups());
-      root.querySelector("#undo")?.addEventListener("click", () => restoreBackup(res.backupRec).catch((err2) => renderResult(null, null, err2 instanceof Busy ? err2.message : `되돌리지 못했어요: ${err2?.message ?? err2}`)));
+      root.querySelector("#undo")?.addEventListener("click", () => restoreBackup2(res.backupRec).catch((err2) => renderResult(null, null, err2 instanceof Busy ? err2.message : `되돌리지 못했어요: ${err2?.message ?? err2}`)));
     }
     async function syncColorScheme() {
       let type = "dark";
@@ -10230,7 +10231,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       async restore(rec) {
         if (busy) return show();
         await show();
-        return restoreBackup(rec).catch((err2) => renderResult(null, null, err2 instanceof Busy ? err2.message : `되돌리지 못했어요: ${err2?.message ?? err2}`));
+        return restoreBackup2(rec).catch((err2) => renderResult(null, null, err2 instanceof Busy ? err2.message : `되돌리지 못했어요: ${err2?.message ?? err2}`));
       },
       async startWithFile(file) {
         return this.startWithFiles([file]);
@@ -11531,7 +11532,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         if (ev.target.closest(SKIP) || ev.target.closest(".grip")) return;
         const doc = row2.ownerDocument;
         const x0 = ev.clientX, y0 = ev.clientY;
-        const move2 = (e) => {
+        const move3 = (e) => {
           if (e.pointerId !== ev.pointerId) return;
           if (Math.hypot(e.clientX - x0, e.clientY - y0) < START_PX) return;
           stop();
@@ -11545,11 +11546,11 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
           begin(ev, row2, e);
         };
         const stop = () => {
-          doc.removeEventListener("pointermove", move2);
+          doc.removeEventListener("pointermove", move3);
           doc.removeEventListener("pointerup", stop);
           doc.removeEventListener("pointercancel", stop);
         };
-        doc.addEventListener("pointermove", move2);
+        doc.addEventListener("pointermove", move3);
         doc.addEventListener("pointerup", stop);
         doc.addEventListener("pointercancel", stop);
       });
@@ -11622,7 +11623,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
           raf = win.requestAnimationFrame(tick);
         }
       };
-      const move2 = (e) => {
+      const move22 = (e) => {
         if (e.pointerId !== ev.pointerId) return;
         e.preventDefault();
         lastY = e.clientY;
@@ -11632,7 +11633,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       };
       const end = async (e) => {
         if (e.pointerId !== ev.pointerId) return;
-        capture.removeEventListener("pointermove", move2);
+        capture.removeEventListener("pointermove", move22);
         capture.removeEventListener("pointerup", end);
         capture.removeEventListener("pointercancel", end);
         if (raf) win.cancelAnimationFrame(raf);
@@ -11645,10 +11646,10 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         if (t.isRow) await onDrop({ beforeId: t.id, after: t.after, folderId: void 0 });
         else await onDrop({ beforeId: null, after: false, folderId: t.folder || null });
       };
-      capture.addEventListener("pointermove", move2);
+      capture.addEventListener("pointermove", move22);
       capture.addEventListener("pointerup", end);
       capture.addEventListener("pointercancel", end);
-      if (firstMove) move2(firstMove);
+      if (firstMove) move22(firstMove);
     }
   }
   function dragBadge(doc, n) {
@@ -14320,8 +14321,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
           back.remove();
           resolve(v);
         };
-        const run = btn("미리 계산", { kind: "primary", onClick: async () => {
-          run.disabled = true;
+        const run2 = btn("미리 계산", { kind: "primary", onClick: async () => {
+          run2.disabled = true;
           prepared = [];
           let before = 0, after = 0, skipped = 0, i2 = 0;
           for (const a of list) {
@@ -14347,8 +14348,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
           }
           result.textContent = `${fmtBytes(before)} → ${fmtBytes(after)} (${before ? Math.round((1 - after / before) * 100) : 0}% 줄어듦) · 바꿀 것 ${prepared.length}개${skipped ? ` · 그대로 ${skipped}개(더 커지거나 못 읽음)` : ""}`;
           apply.disabled = !prepared.length;
-          run.disabled = false;
-          run.querySelector("span").textContent = "다시 계산";
+          run2.disabled = false;
+          run2.querySelector("span").textContent = "다시 계산";
         } });
         const apply = btn("적용", { kind: "primary", disabled: true, onClick: () => done(true) });
         back.appendChild(h(
@@ -14371,7 +14372,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
           bar2,
           result,
           h("p", { class: "rb-muted" }, "더 작아지는 것만 바꿔요. 바꾸기 전 모듈은 백업되고, 원래 파일은 서버에 남아 있어요."),
-          h("div", { class: "btns" }, btn("취소", { onClick: () => done(false) }), run, apply)
+          h("div", { class: "btns" }, btn("취소", { onClick: () => done(false) }), run2, apply)
         ));
         ctx.win.appendChild(back);
       });
@@ -15805,7 +15806,7 @@ ${patch.note}` : "",
     input.value = T.text;
     const out = h("div", { style: "display:flex;flex-direction:column;gap:6px", id: "rb-dev-test-out" });
     const opts = h("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" });
-    const run = () => {
+    const run2 = () => {
       T.text = input.value;
       if (T.tab === "lore") {
         input.placeholder = "최근 대화를 붙여 넣으면 켜지는 로어북 항목을 보여 줘요";
@@ -15843,29 +15844,29 @@ ${patch.note}` : "",
         const cb = h("input", { type: "checkbox", checked: T.recursive });
         cb.addEventListener("change", () => {
           T.recursive = cb.checked;
-          run();
+          run2();
         });
         replace(opts, h("label", { class: "rb-check", style: "display:flex;gap:6px;align-items:center" }, cb, "재귀 검색 (켜진 항목 내용으로 다시 찾기)"));
       } else {
         replace(opts, segmented([["editinput", "입력"], ["editoutput", "출력"], ["editprocess", "요청"], ["editdisplay", "표시"]], T.mode, (v) => {
           T.mode = v;
-          run();
+          run2();
         }, "정규식 종류"));
       }
     };
     let timer = 0;
     input.addEventListener("input", () => {
       clearTimeout(timer);
-      timer = setTimeout(run, 120);
+      timer = setTimeout(run2, 120);
     });
     paintOpts();
-    run();
+    run2();
     return card(
       h("div", { style: "display:flex;align-items:center;gap:8px" }, h("b", { style: "flex:1" }, "테스트")),
       segmented([["lore", "로어북 활성"], ["regex", "정규식"]], T.tab, (v) => {
         T.tab = v;
         paintOpts();
-        run();
+        run2();
       }, "테스트 종류"),
       opts,
       input,
@@ -17742,9 +17743,640 @@ ${md()}
     );
   }
 
+  // src/data/plugins.js
+  var SELF_NAME = "dusk_atelier";
+  var REG = "da_interop_registry";
+  var PATCH = "da_interop_patch";
+  var KEYS2 = { cats: "rbm:pluginCats:v1", backups: "rbm:pluginBackups:v1" };
+  var MAX_BACKUPS2 = 5;
+  var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  var clone5 = (v) => JSON.parse(JSON.stringify(v ?? null));
+  async function readJson3(api, key, fallback) {
+    try {
+      const raw = await api.pluginStorage.getItem(key);
+      if (raw === null || raw === void 0 || raw === "") return fallback;
+      return typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      return fallback;
+    }
+  }
+  var writeJson2 = (api, key, v) => api.pluginStorage.setItem(key, JSON.stringify(v));
+  async function readPlugins(api) {
+    const db = await api.getDatabase(["plugins"]);
+    return Array.isArray(db?.plugins) ? db.plugins : null;
+  }
+  async function readEtc(api) {
+    const db = await api.getDatabase(["etcData"]);
+    return db?.etcData && typeof db.etcData === "object" ? db.etcData : {};
+  }
+  async function writeEtcEntry(api, bucket, id, value) {
+    for (let i2 = 0; i2 < 4; i2++) {
+      const etc = { ...await readEtc(api) };
+      const b = { ...etc[bucket] ?? {} };
+      if (value === void 0) delete b[id];
+      else b[id] = value;
+      etc[bucket] = b;
+      await api.setDatabaseLite({ etcData: etc });
+      await sleep(120);
+      const now = (await readEtc(api))[bucket]?.[id];
+      if (value === void 0 ? now === void 0 : now?.rev === value.rev && now?.updatedAt === value.updatedAt) return true;
+    }
+    return false;
+  }
+  async function detectEnv(api) {
+    const env = { pluginsReadable: false, pluginsWritable: false, reason: "" };
+    let list;
+    try {
+      list = await readPlugins(api);
+    } catch {
+      list = null;
+    }
+    if (!list) return { ...env, reason: "plugins-hidden" };
+    env.pluginsReadable = true;
+    const me = list.find((p) => p?.name === SELF_NAME);
+    if (!me) return { ...env, reason: "self-not-found" };
+    const orig = me.versionOfPlugin;
+    const probe = `${orig ?? ""}+probe${Date.now().toString(36)}`;
+    const withVer = (arr, v) => arr.map((p) => {
+      if (p?.name !== SELF_NAME) return p;
+      const q = { ...p };
+      if (v === void 0) delete q.versionOfPlugin;
+      else q.versionOfPlugin = v;
+      return q;
+    });
+    try {
+      await api.setDatabaseLite({ plugins: withVer(list, probe) });
+      const after = await readPlugins(api);
+      const ok = after?.find((p) => p?.name === SELF_NAME)?.versionOfPlugin === probe;
+      if (ok) await api.setDatabaseLite({ plugins: withVer(after, orig) });
+      return { ...env, pluginsWritable: ok, reason: ok ? "ok" : "blocked" };
+    } catch (e) {
+      return { ...env, reason: "blocked" };
+    }
+  }
+  async function listInterop(api, installedNames) {
+    const etc = await readEtc(api);
+    const reg = etc[REG] ?? {}, patches = etc[PATCH] ?? {};
+    return Object.values(reg).filter((e) => e && e.spec === 1 && e.id).map((e) => {
+      const p = patches[e.id];
+      return {
+        ...e,
+        fields: Array.isArray(e.fields) ? e.fields : [],
+        presets: Array.isArray(e.presets) ? e.presets : [],
+        pendingRev: p && p.rev > (e.appliedRev ?? 0) ? p.rev : 0,
+        installed: installedNames && e.pluginName ? installedNames.has(e.pluginName) : null
+      };
+    }).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  }
+  async function sendPatch(api, id, values, preset = null) {
+    const etc = await readEtc(api);
+    const rev2 = Math.max(etc[PATCH]?.[id]?.rev ?? 0, etc[REG]?.[id]?.appliedRev ?? 0) + 1;
+    if (!await writeEtcEntry(api, PATCH, id, { rev: rev2, values: clone5(values), preset, updatedAt: Date.now() })) throw new Error("값을 저장하지 못했어요");
+    return rev2;
+  }
+  function presetValues(entry2, name) {
+    const p = entry2.presets.find((x2) => x2.name === name);
+    if (!p) throw new Error(`프리셋이 없어요: ${name}`);
+    return { ...entry2.values, ...p.values };
+  }
+  async function waitAck(api, id, rev2, timeoutMs = 1e4) {
+    const end = Date.now() + timeoutMs;
+    while (Date.now() < end) {
+      const e = (await readEtc(api))[REG]?.[id];
+      if ((e?.appliedRev ?? 0) >= rev2) return { ok: !e.lastError, error: e.lastError ?? null };
+      await sleep(700);
+    }
+    return { ok: false, error: "timeout" };
+  }
+  async function pruneInterop(api, id) {
+    await writeEtcEntry(api, REG, id, void 0);
+    await writeEtcEntry(api, PATCH, id, void 0);
+  }
+  async function loadCategories(api) {
+    const v = await readJson3(api, KEYS2.cats, {});
+    return v && typeof v === "object" ? v : {};
+  }
+  async function setCategory(api, name, cat) {
+    const cats = await loadCategories(api);
+    if (cat) cats[name] = cat;
+    else delete cats[name];
+    await writeJson2(api, KEYS2.cats, cats);
+  }
+  async function listPlugins(api) {
+    const list = await readPlugins(api) ?? [];
+    const cats = await loadCategories(api);
+    const count = /* @__PURE__ */ new Map();
+    for (const p of list) count.set(p?.name, (count.get(p?.name) ?? 0) + 1);
+    return list.map((p, i2) => ({
+      name: p?.name ?? "",
+      displayName: p?.displayName || p?.name || "(이름 없음)",
+      version: p?.versionOfPlugin ?? "",
+      apiVersion: p?.version,
+      updateURL: p?.updateURL ?? "",
+      enabled: p?.enabled !== false,
+      size: String(p?.script ?? "").length,
+      order: i2,
+      dup: (count.get(p?.name) ?? 0) > 1,
+      category: cats[p?.name] ?? "",
+      self: p?.name === SELF_NAME
+    }));
+  }
+  async function writePlugins(api, next, label3) {
+    const cur = await readPlugins(api);
+    if (!cur) throw new Error("플러그인 목록을 읽을 수 없어요");
+    const list = await readJson3(api, KEYS2.backups, []);
+    const backups = Array.isArray(list) ? list : [];
+    backups.unshift({ id: Date.now().toString(36), label: label3, at: Date.now(), plugins: cur });
+    await writeJson2(api, KEYS2.backups, backups.slice(0, MAX_BACKUPS2));
+    await api.setDatabaseLite({ plugins: next });
+    const after = await readPlugins(api);
+    if (JSON.stringify(after?.map((p) => [p.name, p.enabled, p.versionOfPlugin])) !== JSON.stringify(next.map((p) => [p.name, p.enabled, p.versionOfPlugin]))) {
+      throw new Error("이 환경에서는 플러그인 목록이 바뀌지 않았어요");
+    }
+  }
+  async function setEnabled(api, name, on) {
+    if (name === SELF_NAME && !on) throw new Error("Dusk Atelier 자신은 끌 수 없어요");
+    const cur = await readPlugins(api);
+    await writePlugins(api, cur.map((p) => p.name === name ? { ...p, enabled: on } : p), `${on ? "켜기" : "끄기"}: ${name}`);
+  }
+  async function move2(api, name, where) {
+    const cur = [...await readPlugins(api)];
+    const i2 = cur.findIndex((p2) => p2.name === name);
+    if (i2 < 0) return;
+    const [p] = cur.splice(i2, 1);
+    const to = where === "top" ? 0 : where === "bottom" ? cur.length : where === "up" ? Math.max(0, i2 - 1) : Math.min(cur.length, i2 + 1);
+    cur.splice(to, 0, p);
+    await writePlugins(api, cur, `순서: ${name}`);
+  }
+  function parseHeader(script) {
+    const head = String(script).slice(0, 4096);
+    const get = (k) => new RegExp(`^//@${k}\\s+(.+)$`, "m").exec(head)?.[1]?.trim();
+    return { name: get("name"), displayName: get("display-name"), version: get("version"), api: get("api"), updateURL: get("update-url") };
+  }
+  async function replaceCode(api, name, script) {
+    const hd = parseHeader(script);
+    if (hd.name && hd.name !== name) throw new Error(`파일의 이름(${hd.name})이 '${name}'과 달라요`);
+    const cur = await readPlugins(api);
+    if (!cur.some((p) => p.name === name)) throw new Error(`플러그인이 없어요: ${name}`);
+    await writePlugins(api, cur.map((p) => p.name !== name ? p : {
+      ...p,
+      script,
+      ...hd.version ? { versionOfPlugin: hd.version } : {},
+      ...hd.displayName ? { displayName: hd.displayName } : {},
+      ...hd.updateURL ? { updateURL: hd.updateURL } : {}
+    }), `코드 교체: ${name}`);
+  }
+  async function dedupe(api) {
+    const cur = await readPlugins(api);
+    const last2 = new Map(cur.map((p, i2) => [p.name, i2]));
+    const next = cur.filter((p, i2) => last2.get(p.name) === i2);
+    if (next.length !== cur.length) await writePlugins(api, next, "중복 정리");
+    return cur.length - next.length;
+  }
+  async function listBackups(api) {
+    const list = await readJson3(api, KEYS2.backups, []);
+    return (Array.isArray(list) ? list : []).map(({ plugins, ...b }) => ({ ...b, count: plugins?.length ?? 0 }));
+  }
+  async function restoreBackup(api, id) {
+    const b = (await readJson3(api, KEYS2.backups, [])).find((x2) => x2.id === id);
+    if (!b) throw new Error("백업이 없어요");
+    await writePlugins(api, b.plugins, "복원 직전 상태");
+  }
+  async function headText(res) {
+    const rd = res.body?.getReader?.();
+    if (!rd) return (await res.text()).slice(0, 4096);
+    let out = "";
+    const dec = new TextDecoder();
+    try {
+      while (out.length < 1024) {
+        const { done, value } = await rd.read();
+        if (done) break;
+        out += dec.decode(value, { stream: true });
+      }
+    } finally {
+      rd.cancel().catch(() => {
+      });
+    }
+    return out;
+  }
+  function newer(a, b) {
+    const x2 = String(a).split(".").map((n) => parseInt(n, 10) || 0), y = String(b).split(".").map((n) => parseInt(n, 10) || 0);
+    for (let i2 = 0; i2 < Math.max(x2.length, y.length); i2++) if ((x2[i2] ?? 0) !== (y[i2] ?? 0)) return (x2[i2] ?? 0) > (y[i2] ?? 0);
+    return false;
+  }
+  async function checkUpdates(api, plugins) {
+    const out = {};
+    await Promise.all(plugins.filter((p) => /^https:\/\//.test(p.updateURL)).map(async (p) => {
+      const url = `${p.updateURL}${p.updateURL.includes("?") ? "&" : "?"}t=${Math.floor(Date.now() / 6e4)}`;
+      const headers = { Range: "bytes=0-1024" };
+      let res = null;
+      if (typeof api.nativeFetch === "function") res = await Promise.resolve().then(() => api.nativeFetch(url, { method: "GET", headers })).catch(() => null);
+      if (!res || !(res.status >= 200 && res.status < 300)) res = await fetch(url, { headers, cache: "no-store" }).catch(() => null);
+      if (!res || !(res.status >= 200 && res.status < 300)) {
+        out[p.name] = { error: true };
+        return;
+      }
+      const v = /\/\/@version\s+(\S+)/.exec(await headText(res))?.[1];
+      out[p.name] = { latest: v ?? null, hasUpdate: !!v && !!p.version && newer(v, p.version) };
+    }));
+    return out;
+  }
+  async function storageDump(api) {
+    const ps = api.pluginStorage;
+    let keys = [];
+    if (typeof ps.keys === "function") keys = await ps.keys();
+    else if (typeof ps.key === "function") {
+      const n = typeof ps.length === "function" ? await ps.length() : ps.length ?? 0;
+      for (let i2 = 0; i2 < n; i2++) keys.push(await ps.key(i2));
+    }
+    const out = [];
+    for (const k of keys ?? []) {
+      const v = await ps.getItem(k);
+      out.push({ key: k, value: v, size: typeof v === "string" ? v.length : JSON.stringify(v ?? null).length });
+    }
+    return out.sort((a, b) => a.key.localeCompare(b.key));
+  }
+  var storageAvailable = (api) => typeof api.pluginStorage?.keys === "function" || typeof api.pluginStorage?.key === "function";
+  async function exportAll(api) {
+    const plugins = await readPlugins(api).catch(() => null);
+    const etc = await readEtc(api).catch(() => ({}));
+    return JSON.stringify({
+      format: "dusk-atelier-plugins",
+      v: 1,
+      at: (/* @__PURE__ */ new Date()).toISOString(),
+      plugins,
+      categories: await loadCategories(api),
+      interop: { registry: etc[REG] ?? {}, patch: etc[PATCH] ?? {} }
+    }, null, 2);
+  }
+
+  // src/ui/screens/plugins.js
+  var VIEWS = [["list", "목록"], ["interop", "연동 설정"], ["storage", "저장소"], ["backup", "백업"]];
+  var INTEROP_URL = "https://pyser08.github.io/dusk-atelier-interop/";
+  async function renderPlugins(ctx) {
+    const st = ctx.state;
+    st.pluginView ??= "list";
+    if (!st.pluginEnv) {
+      replace(ctx.main, loading("플러그인 환경 확인 중"));
+      st.pluginEnv = await ctx.svc.serial(() => detectEnv(ctx.api)).catch(() => ({ pluginsReadable: false, pluginsWritable: false, reason: "error" }));
+    }
+    const plugins = st.pluginEnv.pluginsReadable ? await listPlugins(ctx.api) : [];
+    const interop = await listInterop(ctx.api, new Set(plugins.map((p) => p.name))).catch(() => []);
+    ctx.setNavCount("plugins", plugins.length || void 0);
+    const view = { list: viewList, interop: viewInterop, storage: viewStorage, backup: viewBackup }[st.pluginView] ?? viewList;
+    replace(ctx.main, h(
+      "div",
+      { class: "rb-section rb-scroll", style: "flex:1" },
+      h(
+        "div",
+        { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
+        h("div", { style: "flex:1;min-width:200px" }, h("h2", { class: "rb-h2" }, "플러그인"), h("p", { class: "rb-p" }, "설치한 플러그인을 묶어 보고, 연동한 플러그인의 설정을 여기서 바꿔요.")),
+        segmented(VIEWS, st.pluginView, (v) => {
+          st.pluginView = v;
+          ctx.closeSheet();
+          renderPlugins(ctx);
+        }, "보기")
+      ),
+      envNote(ctx),
+      await view(ctx, plugins, interop)
+    ));
+  }
+  function envNote(ctx) {
+    const env = ctx.state.pluginEnv;
+    if (env.pluginsWritable) return null;
+    const text = !env.pluginsReadable ? "이 RisuAI에서는 플러그인 목록을 읽을 수 없어요. 연동 설정과 저장소 보기만 쓸 수 있어요." : "이 RisuAI에서는 다른 플러그인을 켜고 끄거나 순서·코드를 바꿀 수 없어요 (보안 제한). 보기, 카테고리, 업데이트 확인, 연동 설정은 그대로 쓸 수 있어요.";
+    return h(
+      "div",
+      { style: "display:flex;gap:8px;align-items:flex-start" },
+      h("div", { style: "flex:1" }, note("info", text)),
+      btn("다시 확인", { size: "sm", icon: "refresh", onClick: () => {
+        ctx.state.pluginEnv = null;
+        renderPlugins(ctx);
+      } })
+    );
+  }
+  var writable = (ctx) => !!ctx.state.pluginEnv?.pluginsWritable;
+  async function run(ctx, fn, ok) {
+    try {
+      const r = await ctx.svc.serial(fn);
+      if (ok) ctx.toast(typeof ok === "function" ? ok(r) : ok);
+    } catch (err2) {
+      ctx.toast(err2?.message ?? String(err2), { error: true });
+    }
+    renderPlugins(ctx);
+  }
+  async function viewList(ctx, plugins, interop) {
+    if (!ctx.state.pluginEnv.pluginsReadable) return h("div", { class: "rb-empty" }, "플러그인 목록을 볼 수 없는 환경이에요.");
+    const upd = ctx.state.pluginUpd ?? {};
+    const linked = new Map(interop.filter((e) => e.pluginName).map((e) => [e.pluginName, e]));
+    const q = (ctx.state.search ?? "").trim().toLowerCase();
+    const shown = q ? plugins.filter((p) => `${p.displayName} ${p.name} ${p.category}`.toLowerCase().includes(q)) : plugins;
+    const groups = /* @__PURE__ */ new Map();
+    for (const p of shown) {
+      const g = p.category || "미분류";
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push(p);
+    }
+    const keys = [...groups.keys()].sort((a, b) => a === "미분류" ? 1 : b === "미분류" ? -1 : a.localeCompare(b));
+    const dupCount = plugins.filter((p) => p.dup).length;
+    const updCount = Object.values(upd).filter((u) => u.hasUpdate).length;
+    const row2 = (p) => {
+      const u = upd[p.name];
+      const sw = switchEl(p.enabled, {
+        label: `${p.displayName} 켜기`,
+        disabled: !writable(ctx) || p.self,
+        onChange: (on) => run(ctx, () => setEnabled(ctx.api, p.name, on), on ? "켰어요" : "껐어요")
+      });
+      return h(
+        "div",
+        { class: ["rb-row", !p.enabled && "off"], style: "cursor:default" },
+        h("span", { style: "display:flex;color:var(--rb-sub)" }, icon("plugin", 18)),
+        h(
+          "div",
+          { class: "txt" },
+          h(
+            "div",
+            { class: "ttl" },
+            h("span", { class: "name" }, p.displayName),
+            p.self && badge("이 플러그인", "acc"),
+            linked.has(p.name) && badge("연동", "acc2"),
+            u?.hasUpdate && badge(`v${u.latest} 있음`, "acc"),
+            p.dup && badge("중복", "warn")
+          ),
+          h("span", { class: "meta" }, [p.name, p.version && `v${p.version}`, fmtBytes(p.size)].filter(Boolean).join(" · "))
+        ),
+        sw,
+        iconBtn("more", `${p.displayName} 메뉴`, { onClick: (ev) => rowMenu(ctx, p, linked.get(p.name), ev.currentTarget) })
+      );
+    };
+    return h(
+      "div",
+      { style: "display:flex;flex-direction:column;gap:14px" },
+      h(
+        "div",
+        { style: "display:flex;gap:8px;flex-wrap:wrap" },
+        btn(updCount ? `업데이트 ${updCount}개` : "업데이트 확인", { size: "sm", icon: "download", onClick: async () => {
+          ctx.toast("업데이트를 확인하고 있어요");
+          ctx.state.pluginUpd = await checkUpdates(ctx.api, plugins).catch(() => ({}));
+          const n = Object.values(ctx.state.pluginUpd).filter((x2) => x2.hasUpdate).length;
+          ctx.toast(n ? `새 버전이 있는 플러그인 ${n}개` : "모두 최신이에요 (업데이트 주소가 있는 것만 확인)");
+          renderPlugins(ctx);
+        } }),
+        dupCount && writable(ctx) ? btn(`중복 정리 (${dupCount})`, { size: "sm", icon: "trash", onClick: async () => {
+          if (!await confirmDialog(ctx.win, { title: "중복된 플러그인을 정리할까요?", body: "같은 이름이 여러 개면 가장 나중에 추가된 것만 남겨요. 정리 전 상태는 백업에 남아요.", ok: "정리" })) return;
+          run(ctx, () => dedupe(ctx.api), (n) => `${n}개를 정리했어요`);
+        } }) : null,
+        btn("내보내기", { size: "sm", icon: "upload", onClick: async () => download(`dusk-plugins-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, await exportAll(ctx.api), "application/json") })
+      ),
+      shown.length ? null : h("div", { class: "rb-empty" }, q ? "찾는 플러그인이 없어요." : "플러그인이 없어요."),
+      keys.map((g) => h(
+        "div",
+        { style: "display:flex;flex-direction:column;gap:4px" },
+        h("h3", { class: "rb-h3", style: "display:flex;gap:6px;align-items:center" }, icon("folder", 16), g, h("small", { class: "rb-muted" }, String(groups.get(g).length))),
+        groups.get(g).map(row2)
+      ))
+    );
+  }
+  function rowMenu(ctx, p, entry2, anchor) {
+    const w = writable(ctx);
+    openMenu(ctx.win, anchor, [
+      entry2 && { label: "연동 설정 열기", icon: "sliders", onClick: () => {
+        ctx.state.pluginView = "interop";
+        ctx.state.pluginOpen = entry2.id;
+        renderPlugins(ctx);
+      } },
+      { label: p.category ? `카테고리: ${p.category}` : "카테고리 지정", icon: "folder", onClick: async () => {
+        const c = await promptDialog(ctx.win, { title: "카테고리", label: "비우면 미분류로 돌아가요", value: p.category, placeholder: "예: 번역, UI" });
+        if (c === null) return;
+        await setCategory(ctx.api, p.name, c.trim());
+        renderPlugins(ctx);
+      } },
+      w && "sep",
+      w && { label: "맨 위로", icon: "up", onClick: () => run(ctx, () => move2(ctx.api, p.name, "top")) },
+      w && { label: "위로", icon: "up", onClick: () => run(ctx, () => move2(ctx.api, p.name, "up")) },
+      w && { label: "아래로", icon: "down", onClick: () => run(ctx, () => move2(ctx.api, p.name, "down")) },
+      w && { label: "맨 아래로", icon: "down", onClick: () => run(ctx, () => move2(ctx.api, p.name, "bottom")) },
+      w && "sep",
+      w && { label: "코드 교체 (.js 파일)", icon: "code", onClick: async () => {
+        const [f] = await pickFiles({ accept: ".js,text/javascript" });
+        if (!f) return;
+        const script = await f.text();
+        const hd = parseHeader(script);
+        if (!await confirmDialog(ctx.win, { title: `'${p.displayName}' 코드를 바꿀까요?`, body: `${f.name}${hd.version ? ` (v${hd.version})` : ""}
+바꾸기 전 상태는 백업에 남아요. 적용하려면 RisuAI를 새로고침해야 할 수 있어요.`, ok: "바꾸기" })) return;
+        run(ctx, () => replaceCode(ctx.api, p.name, script), "코드를 바꿨어요");
+      } }
+    ]);
+  }
+  async function viewInterop(ctx, plugins, interop) {
+    const open = ctx.state.pluginOpen && interop.find((e) => e.id === ctx.state.pluginOpen);
+    if (open) setTimeout(() => showInterop(ctx, open), 0);
+    ctx.state.pluginOpen = null;
+    return h(
+      "div",
+      { style: "display:flex;flex-direction:column;gap:6px" },
+      interop.length ? null : h(
+        "div",
+        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:8px" },
+        h("h3", { class: "rb-h3" }, "연동한 플러그인이 아직 없어요"),
+        h("p", { class: "rb-p" }, "DA Interop 스니펫을 넣은 플러그인은 여기에 설정 화면이 자동으로 생겨요. 플러그인 제작자라면 생성기에서 스니펫을 만들 수 있어요."),
+        h("p", { class: "rb-muted", style: "user-select:all;word-break:break-all" }, INTEROP_URL)
+      ),
+      interop.map((e) => h(
+        "button",
+        { type: "button", class: "rb-row", onClick: () => showInterop(ctx, e) },
+        h("span", { style: "display:flex;color:var(--rb-acc-text)" }, icon("sliders", 18)),
+        h(
+          "div",
+          { class: "txt" },
+          h(
+            "div",
+            { class: "ttl" },
+            h("span", { class: "name" }, e.name),
+            e.pendingRev ? badge("적용 대기", "warn") : null,
+            e.lastError ? badge("오류", "danger") : null,
+            e.installed === false ? badge("설치 안 됨", "mute") : null
+          ),
+          h("span", { class: "meta" }, [e.version && `v${e.version}`, `항목 ${e.fields.length}`, e.presets.length && `프리셋 ${e.presets.length}`, e.updatedAt && fmtWhen(e.updatedAt)].filter(Boolean).join(" · "))
+        ),
+        icon("chevron", 16)
+      ))
+    );
+  }
+  function fieldInput(f, v) {
+    const t = f.type;
+    if (t === "toggle") {
+      const el2 = switchEl(!!v, { label: f.label ?? f.key, onChange: (on) => el2.setAttribute("aria-checked", on ? "true" : "false") });
+      return { el: el2, read: () => el2.getAttribute("aria-checked") === "true" };
+    }
+    if (t === "select") {
+      const opts = (f.options ?? []).map((o) => typeof o === "object" ? o : { value: o, label: o });
+      const el2 = h("select", { class: "rb-input" }, opts.map((o) => h("option", { value: String(o.value), selected: String(o.value) === String(v) }, o.label ?? o.value)));
+      return { el: el2, read: () => opts.find((o) => String(o.value) === el2.value)?.value ?? el2.value };
+    }
+    if (t === "number" || t === "slider") {
+      const el2 = h("input", { class: "rb-input", type: t === "slider" ? "range" : "number", min: f.min, max: f.max, step: f.step ?? "any" });
+      el2.value = String(v ?? 0);
+      if (t !== "slider") return { el: el2, read: () => el2.value === "" ? null : Number(el2.value) };
+      const out = h("b", { style: "min-width:48px;text-align:right" }, String(el2.value));
+      el2.style.cssText = "height:auto;padding:0;border:0;background:transparent";
+      el2.addEventListener("input", () => out.textContent = el2.value);
+      return { el: h("div", { style: "display:flex;gap:10px;align-items:center" }, el2, out), read: () => Number(el2.value) };
+    }
+    if (t === "textarea") {
+      const el2 = h("textarea", { class: "rb-input", rows: 4, style: "height:auto;padding:10px 14px;resize:vertical" });
+      el2.value = v ?? "";
+      return { el: el2, read: () => el2.value };
+    }
+    if (t === "color") {
+      const el2 = h("input", { class: "rb-input", type: "color", value: v || "#000000", style: "padding:4px;width:64px" });
+      return { el: el2, read: () => el2.value };
+    }
+    const el = h("input", { class: "rb-input", type: "text", value: v ?? "" });
+    return { el, read: () => el.value };
+  }
+  function showInterop(ctx, e) {
+    const inputs = {};
+    const groups = /* @__PURE__ */ new Map();
+    for (const f of e.fields) {
+      const g = f.group ?? "";
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push(f);
+    }
+    const apply = async (values, preset = null) => {
+      try {
+        const rev2 = await ctx.svc.serial(() => sendPatch(ctx.api, e.id, values, preset));
+        ctx.toast(preset ? `'${preset}' 프리셋을 보냈어요` : "설정을 보냈어요");
+        const r = await waitAck(ctx.api, e.id, rev2);
+        if (r.ok) ctx.toast(`${e.name}에 적용됐어요`);
+        else ctx.toast(r.error === "timeout" ? `${e.name}이(가) 아직 응답하지 않아요. 켜져 있는지 확인해 주세요` : `적용 중 오류: ${r.error}`, { error: true, seconds: 8 });
+      } catch (err2) {
+        ctx.toast(err2?.message ?? String(err2), { error: true });
+      }
+      const fresh = (await listInterop(ctx.api).catch(() => [])).find((x2) => x2.id === e.id);
+      if (fresh && ctx.state.pluginView === "interop") showInterop(ctx, fresh);
+    };
+    const readAll = () => {
+      const out = { ...e.values };
+      for (const [k, r] of Object.entries(inputs)) out[k] = r.read();
+      return out;
+    };
+    ctx.showDetail(h(
+      "div",
+      { class: "rb-section", style: "gap:14px" },
+      h("div", null, h("h2", { class: "rb-h2" }, e.name), h("p", { class: "rb-p" }, e.description || `id: ${e.id}`)),
+      e.lastError ? note("err", `마지막 적용 오류: ${e.lastError}`) : null,
+      e.pendingRev ? note("warn", "보낸 설정을 아직 적용하지 않았어요. 해당 플러그인이 켜져 있어야 적용돼요.") : null,
+      e.presets.length ? h(
+        "div",
+        { style: "display:flex;flex-direction:column;gap:6px" },
+        h("span", { class: "rb-label" }, "프리셋"),
+        h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, e.presets.map((p) => btn(p.name, { size: "sm", onClick: () => apply(presetValues(e, p.name), p.name) })))
+      ) : null,
+      [...groups].map(([g, fields3]) => h(
+        "div",
+        { class: g ? "rb-card pad bordered" : "", style: "display:flex;flex-direction:column;gap:12px" },
+        g ? h("h3", { class: "rb-h3" }, g) : null,
+        fields3.map((f) => {
+          const r = fieldInput(f, e.values?.[f.key] ?? f.default);
+          inputs[f.key] = r;
+          return h(
+            "label",
+            { class: "rb-field", style: f.type === "toggle" ? "display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:10px" : "" },
+            h("span", { style: "display:flex;flex-direction:column;gap:2px" }, h("span", { class: "rb-label" }, f.label ?? f.key), f.description ? h("small", { class: "rb-muted" }, f.description) : null),
+            r.el
+          );
+        })
+      )),
+      e.fields.length ? h("div", { style: "display:flex;gap:8px" }, btn("적용", { kind: "primary", icon: "check", onClick: () => apply(readAll()) })) : note("info", "바꿀 수 있는 항목이 없어요."),
+      h("hr", { style: "border:0;border-top:1px solid var(--rb-line);width:100%" }),
+      btn("연동 정보 지우기", { size: "sm", kind: "danger", icon: "trash", onClick: async () => {
+        if (!await confirmDialog(ctx.win, { title: `${e.name} 연동 정보를 지울까요?`, body: "플러그인을 지웠을 때 정리용이에요. 플러그인이 켜져 있으면 다음 실행 때 다시 등록돼요.", ok: "지우기", danger: true })) return;
+        await ctx.svc.serial(() => pruneInterop(ctx.api, e.id)).catch((err2) => ctx.toast(err2?.message ?? String(err2), { error: true }));
+        ctx.closeSheet();
+        renderPlugins(ctx);
+      } })
+    ));
+    ctx.openSheet();
+  }
+  async function viewStorage(ctx) {
+    if (!storageAvailable(ctx.api)) return note("info", "이 RisuAI에서는 저장소 목록을 볼 수 없어요.");
+    const items = await storageDump(ctx.api).catch(() => []);
+    const total = items.reduce((s, x2) => s + x2.size, 0);
+    return h(
+      "div",
+      { style: "display:flex;flex-direction:column;gap:6px" },
+      h("p", { class: "rb-muted" }, `Dusk Atelier가 저장한 값 ${items.length}개 · ${fmtBytes(total)} (플러그인 저장소는 플러그인마다 따로라 다른 플러그인 것은 볼 수 없어요)`),
+      items.map((it) => h(
+        "button",
+        { type: "button", class: "rb-row", onClick: () => {
+          const text = typeof it.value === "string" ? prettyJson(it.value) : JSON.stringify(it.value, null, 2);
+          ctx.showDetail(h(
+            "div",
+            { class: "rb-section", style: "gap:10px" },
+            h("h2", { class: "rb-h2", style: "word-break:break-all" }, it.key),
+            h("p", { class: "rb-muted" }, fmtBytes(it.size)),
+            h("pre", { class: "rb-card pad bordered rb-scroll", style: "margin:0;max-height:60vh;overflow:auto;font-size:12px;white-space:pre-wrap;word-break:break-all" }, text.length > 2e5 ? text.slice(0, 2e5) + "\n…(잘림)" : text),
+            h(
+              "div",
+              { style: "display:flex;gap:8px" },
+              btn("내려받기", { size: "sm", icon: "download", onClick: () => download(`${it.key.replace(/[^\w.-]+/g, "_")}.json`, text, "application/json") }),
+              btn("지우기", { size: "sm", kind: "danger", icon: "trash", onClick: async () => {
+                if (!await confirmDialog(ctx.win, { title: `'${it.key}'을(를) 지울까요?`, body: "Dusk Atelier 설정이나 기록이 사라질 수 있어요.", ok: "지우기", danger: true })) return;
+                await ctx.api.pluginStorage.removeItem(it.key);
+                ctx.closeSheet();
+                renderPlugins(ctx);
+              } })
+            )
+          ));
+          ctx.openSheet();
+        } },
+        h("span", { style: "display:flex;color:var(--rb-sub)" }, icon("text", 18)),
+        h("div", { class: "txt" }, h("div", { class: "ttl" }, h("span", { class: "name" }, it.key)), h("span", { class: "meta" }, fmtBytes(it.size))),
+        icon("chevron", 16)
+      ))
+    );
+  }
+  function prettyJson(s) {
+    try {
+      return JSON.stringify(JSON.parse(s), null, 2);
+    } catch {
+      return s;
+    }
+  }
+  async function viewBackup(ctx) {
+    const list = await listBackups(ctx.api);
+    const w = writable(ctx);
+    return h(
+      "div",
+      { style: "display:flex;flex-direction:column;gap:10px" },
+      h(
+        "div",
+        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:8px" },
+        h("h3", { class: "rb-h3" }, "파일로 내보내기"),
+        h("p", { class: "rb-p" }, "플러그인 목록(코드 포함), 카테고리, 연동 설정을 JSON 파일 하나로 받아요."),
+        h("div", null, btn("내보내기", { icon: "download", onClick: async () => download(`dusk-plugins-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, await exportAll(ctx.api), "application/json") }))
+      ),
+      h("h3", { class: "rb-h3" }, "자동 백업"),
+      h("p", { class: "rb-muted" }, "플러그인을 켜고 끄거나 순서·코드를 바꾸기 직전 상태를 최근 5개까지 남겨요."),
+      list.length ? null : h("div", { class: "rb-empty" }, "아직 백업이 없어요."),
+      list.map((b) => h(
+        "div",
+        { class: "rb-row", style: "cursor:default" },
+        h("span", { style: "display:flex;color:var(--rb-sub)" }, icon("history", 18)),
+        h("div", { class: "txt" }, h("div", { class: "ttl" }, h("span", { class: "name" }, b.label)), h("span", { class: "meta" }, `${fmtWhen(b.at)} · 플러그인 ${b.count}개`)),
+        w ? btn("복원", { size: "sm", onClick: async () => {
+          if (!await confirmDialog(ctx.win, { title: "이 상태로 되돌릴까요?", body: `${b.label} 직전 상태로 플러그인 목록을 되돌려요. 지금 상태도 백업에 남아요.`, ok: "되돌리기" })) return;
+          run(ctx, () => restoreBackup(ctx.api, b.id), "되돌렸어요");
+        } }) : null
+      ))
+    );
+  }
+
   // src/ui/app.js
   var TABS = [
     { id: "modules", label: "모듈", icon: "module" },
+    { id: "plugins", label: "플러그인", icon: "plugin" },
     { id: "characters", label: "캐릭터", icon: "character" },
     { id: "presets", label: "프리셋", icon: "preset" },
     { id: "history", label: "기록", icon: "history" },
@@ -17781,12 +18413,12 @@ ${md()}
     let latest = null, updAt = 0;
     const updBtn = btn("업데이트", { size: "sm", kind: "primary", icon: "download", labelClass: "lbl", onClick: () => ctx.toast(`새 버전 v${latest}이 있어요. ${UPDATE_HOW}`, { seconds: 12 }) });
     updBtn.hidden = true;
-    const newer = (a, b) => {
+    const newer2 = (a, b) => {
       const x2 = String(a).split(".").map((n) => parseInt(n, 10) || 0), y = String(b).split(".").map((n) => parseInt(n, 10) || 0);
       for (let i2 = 0; i2 < Math.max(x2.length, y.length); i2++) if ((x2[i2] ?? 0) !== (y[i2] ?? 0)) return (x2[i2] ?? 0) > (y[i2] ?? 0);
       return false;
     };
-    async function headText(res) {
+    async function headText2(res) {
       const rd = res.body?.getReader?.();
       if (!rd) return (await res.text()).slice(0, 2048);
       let out = "";
@@ -17825,8 +18457,8 @@ ${md()}
       if (typeof api.nativeFetch === "function") res = await Promise.resolve().then(() => api.nativeFetch(url, { method: "GET", headers })).catch(() => null);
       if (!res || !(res.status >= 200 && res.status < 300)) res = await fetch(url, { headers, cache: "no-store" }).catch(() => null);
       if (!res || !(res.status >= 200 && res.status < 300)) return;
-      const v = /\/\/@version\s+(\S+)/.exec(await headText(res))?.[1];
-      if (!v || !newer(v, version)) return;
+      const v = /\/\/@version\s+(\S+)/.exec(await headText2(res))?.[1];
+      if (!v || !newer2(v, version)) return;
       const first = latest !== v;
       latest = v;
       updBtn.querySelector("span").textContent = `v${v} 업데이트`;
@@ -17968,12 +18600,12 @@ ${md()}
         h("div", { class: "rb-nav-hint" }, "파일을 창 어디에 끌어다 놓아도 바로 가져와요"),
         h("div", { class: "rb-nav-hint", style: "padding-top:4px" }, `v${version}`)
       );
-      const showSearch = ["modules", "characters", "history"].includes(state.tab);
-      searchInput.placeholder = { modules: "모듈 이름, 로어북 키워드 검색", characters: "캐릭터 이름, 제작자 검색", history: "기록에서 이름 찾기" }[state.tab] ?? "검색";
+      const showSearch = ["modules", "plugins", "characters", "history"].includes(state.tab);
+      searchInput.placeholder = { modules: "모듈 이름, 로어북 키워드 검색", plugins: "플러그인 이름, 카테고리 검색", characters: "캐릭터 이름, 제작자 검색", history: "기록에서 이름 찾기" }[state.tab] ?? "검색";
       win.classList.toggle("rb-nosearch", !showSearch);
       replace(detail3);
       detail3.hidden = true;
-      const screen = { modules: renderModules, characters: renderCharacters, presets: renderPresets, history: renderHistory, tools: state.sub === "settings" ? renderSettings : renderTools, dev: renderDev }[state.tab] ?? renderPlaceholder;
+      const screen = { modules: renderModules, plugins: renderPlugins, characters: renderCharacters, presets: renderPresets, history: renderHistory, tools: state.sub === "settings" ? renderSettings : renderTools, dev: renderDev }[state.tab] ?? renderPlaceholder;
       Promise.resolve(screen(ctx)).catch((err2) => {
         replace(main, h("div", { class: "rb-section" }, h("div", { class: "rb-note err", role: "alert" }, icon("alert", 18), h("span", null, `화면을 열지 못했어요: ${err2?.message ?? err2}`))));
       });
