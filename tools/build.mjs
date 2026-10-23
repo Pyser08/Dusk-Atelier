@@ -30,6 +30,7 @@ const result = await build({
   charset: 'utf8',
   legalComments: 'none',
   define: { __VERSION__: JSON.stringify(version) },
+  alias: { fflate: path.join(root, 'src/vendor/fflate.js') },
   banner: { js: banner },
   write: false,
   logLevel: 'warning'

@@ -2,16 +2,19 @@ import { Cancelled, newId, stableJson } from '../engine/util.js';
 import { readIncoming } from '../engine/formats/index.js';
 import { findCandidates, normalizeName } from '../engine/match.js';
 import { collectKnownKeys, planAssets } from '../engine/module.js';
-import { buildNewCharacter, characterAssetKeys, characterView, planCharacter, uniqueDisplayName } from '../engine/character.js';
+import { buildNewCharacter, characterAssetKeys, characterView, newCharacterBase, planCharacter, uniqueDisplayName } from '../engine/character.js';
 import { uploadAssets } from '../engine/upload.js';
 import { MOD_SPEC, applyView, charIncomingView, charSpec, modIncomingView, pickView } from '../engine/merge3.js';
 import { KIND_KO, applyPlan, changeOf, charFields, fieldsToMod, fingerprintCard, groupOf, itemLabel, keepSet, makePlan, modFields, modFingerprint, remapGreetings, summarizeCharacterUpdate, textOf, wordDiff, writeCharFields } from '../engine/tideplan.js';
 import { createStore } from '../engine/store.js';
 import { iconMarkup } from './icons.js';
+import { persistentWrites, queueTrash, readUi, trashCopy, watchDefaults } from './watch.js';
+import { AI_MODES, MergeSelfCheckError, adaptCharacterPrompt, applyPartialUpdatePlan, applyPreparedDetach, applyScopedSelection, conflictTidyPrompt, detectCharacters, encodeCardProvenance, mergeInput, moduleToMergeInput, partField, planSourceUpdate, prepareDetach, prepareScopedSelection, preserveTargetLicense, protectSourceImages, protectedImageIds, runAI, selfCheck, suggestWorld } from '../engine/merge.js';
+import { loadProvenance } from '../engine/tidestore.js';
 import { Busy, backupSnapshot, isGenerating, restoreFromBackup } from '../engine/safety.js';
 import { commit, entriesOf, readDb } from '../data/modules.js';
 
-export async function createLegacy(api, { onExit, zIndex = 100, host, links } = {}) {
+export async function createLegacy(api, { onExit, zIndex = 100, host, links, hooks = {} } = {}) {
   let queue = [];
   const TITLE2 = "업데이트 가져오기";
   const css = `
@@ -149,6 +152,23 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
     #rbu-overlay .rv-diffbox del,#rbu-overlay .rv-cap del{background:var(--rb-danger-soft,rgba(242,122,147,.15));color:var(--rb-danger,#f27a93);border-radius:3px}
     #rbu-overlay .rv-cap ins{text-decoration:none;background:var(--rb-ok-soft,rgba(95,211,181,.18));color:var(--rb-ok,#5fd3b5);border-radius:3px}
     #rbu-overlay .rv-inline{margin:4px 2px 10px;padding:12px;border-radius:12px;background:var(--rb-surf,#1c1f33);display:flex;flex-direction:column;gap:10px}
+    #rbu-overlay .mg-scope,#rbu-overlay .mg-chars,#rbu-overlay .mg-world{display:flex;flex-direction:column;gap:6px}
+    #rbu-overlay .mg-scope .opt,#rbu-overlay .mg-chars .opt{align-items:center}
+    #rbu-overlay .mg-world{max-height:260px;overflow:auto;margin-top:6px}
+    #rbu-overlay .mg-list{display:flex;flex-direction:column;gap:6px;max-height:min(56vh,560px);overflow:auto;padding-right:4px;scrollbar-width:thin}
+    #rbu-overlay .mg-part{border:1px solid var(--rb-line2,#22253b);border-radius:12px;padding:8px 10px;background:var(--rb-win,#151726);transition:opacity .15s}
+    #rbu-overlay .mg-part.off{opacity:.5}
+    #rbu-overlay .mg-ph{display:flex;align-items:center;gap:10px;cursor:pointer}
+    #rbu-overlay .mg-ph input,#rbu-overlay .mg-part>input{width:18px;height:18px;accent-color:var(--rb-acc-a,#4f63e0)}
+    #rbu-overlay .mg-part .rt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+    #rbu-overlay .mg-part .rt b{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #rbu-overlay .mg-part .rt>span{font-size:11.5px;color:var(--rb-mute,#8487ab)}
+    #rbu-overlay .mg-act{display:flex;gap:6px;margin:6px 0 0 54px}
+    #rbu-overlay .mg-act button{min-height:28px;padding:2px 10px;font-size:12px;display:inline-flex;gap:5px;align-items:center}
+    #rbu-overlay .mg-body{margin:8px 0 2px}
+    #rbu-overlay .mg-ta{width:100%;min-height:140px;font:inherit;font-size:13px;line-height:1.6;padding:10px 12px;border-radius:10px;border:1px solid var(--rb-line,#2a2d47);background:var(--rb-surf,#1c1f33);color:var(--rb-text,#e9eaf6);resize:vertical}
+    #rbu-overlay .rb-spin-s{width:16px;height:16px;border-radius:50%;border:2px solid var(--rb-line3,#343857);border-top-color:var(--rb-acc-text,#8ea2ff);animation:rb-rot .8s linear infinite;flex-shrink:0}
+    @keyframes rb-rot{to{transform:rotate(360deg)}}
     @media (max-width:760px){
       #rbu-overlay .rv-split{grid-template-columns:1fr;height:auto}
       #rbu-overlay .rv-left{overflow:visible}
@@ -174,10 +194,11 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
     return s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초` : `${s}초`;
   };
   const kindTag = (k) => k === "character" ? '<span class="kind">캐릭터</span>' : '<span class="kind mod">모듈</span>';
+  let heading = TITLE2;
   function frame(body) {
     overlay.innerHTML = `<div class="win" role="dialog" aria-modal="true">
-            <div class="head"><h1>${ICON}${TITLE2}</h1><button class="x" id="x" title="${busy ? "취소" : "닫기"}">${X}</button></div>
-            <p class="sub">캐릭터·모듈을 가져옵니다. 이미 있는 항목의 새 버전이면 바뀐 것만 올려 덮어쓰고, 채팅과 모듈 연결은 그대로 둡니다.</p>
+            <div class="head"><h1>${heading === TITLE2 ? ICON : iconMarkup("link", 20)}${heading}</h1><button class="x" id="x" title="${busy ? "취소" : "닫기"}">${X}</button></div>
+            ${heading === TITLE2 ? `<p class="sub">캐릭터·모듈을 가져옵니다. 이미 있는 항목의 새 버전이면 바뀐 것만 올려 덮어쓰고, 채팅과 모듈 연결은 그대로 둡니다.</p>` : ""}
             ${body}</div>`;
     root = overlay.querySelector(".win");
     overlay.querySelector("#x").addEventListener("click", onClose);
@@ -196,6 +217,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
   }
   const closeBtn = (label = "닫기") => `<button id="close">${label}</button>`;
   function renderStart(errorText) {
+    heading = TITLE2;
     busy = false;
     stopRequested = false;
     frame(`<div class="card"><div class="drop" id="drop"><b>파일을 여기로 끌어 놓거나 아래에서 고르세요</b> (여러 개도 돼요)<br>
@@ -681,6 +703,93 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
       renderResult({ kind: "module", name: merged.name, updated: !!target, uploadedCount: uploaded.size, assets: (merged.assets ?? []).length, lore: (merged.lorebook ?? []).length, backup: !!target, backupRec, summary, note: note2 });
     });
   }
+  // 업데이트 전 채팅 백업 (설정에서 켠 경우). 열지 않아 내용을 알 수 없는 채팅은 건너뛴다.
+  async function captureChats(idx, fresh) {
+    if (!watchDefaults(await readUi(api)).chatBackup) return null;
+    const out = [];
+    let skipped = 0;
+    const slots = fresh.chats ?? [];
+    for (let i = 0; i < slots.length; i++) {
+      let chat = null;
+      try {
+        chat = await api.getChatFromIndex(idx, i);
+      } catch {
+      }
+      if (!chat || chat._placeholder || chat._stub || !Array.isArray(chat.message)) {
+        skipped++;
+        continue;
+      }
+      const { message, ...header } = chat;
+      const chunks = [];
+      for (let s = 0; s < message.length; s += 32) chunks.push(message.slice(s, s + 32));
+      out.push({ header: JSON.parse(JSON.stringify(header)), chunks: JSON.parse(JSON.stringify(chunks)) });
+    }
+    return { chats: out, skipped };
+  }
+  // 백업에만 있는 채팅을 새 채팅으로 덧붙인다 (지금 채팅은 지우거나 바꾸지 않음, 같은 id는 건너뜀)
+  function appendBackupChats(target, saved) {
+    const have = new Set((target.chats ?? []).map((c) => c?.id).filter(Boolean));
+    const add = [];
+    for (const s of saved ?? []) {
+      if (s.header?.id && have.has(s.header.id)) continue;
+      const chat = { ...structuredClone(s.header), message: s.chunks.flat() };
+      if (!chat.id) chat.id = newId();
+      add.push(chat);
+    }
+    if (add.length) target.chats = [...target.chats ?? [], ...add];
+    return add.length;
+  }
+  /**
+   * 캐릭터 업데이트를 실제로 쓴다 (파일·받은 사본 공통).
+   * incFields: 새 버전의 카드 필드(에셋 경로까지 확정된 것)
+   */
+  async function commitChar({ index, chaId, incFields, incView, base, choices, keepExistingOnly, source, uploaded = 0 }) {
+    let idx = index;
+    let fresh = await api.getCharacterFromIndex(idx);
+    if (!fresh || fresh.chaId !== chaId) {
+      const all = (await loadDb(true)).characters;
+      idx = all.findIndex((c) => c?.chaId === chaId);
+      if (idx < 0) throw new Error("업데이트할 캐릭터가 그 사이 삭제되었습니다. 저장하지 않았습니다.");
+      fresh = await api.getCharacterFromIndex(idx);
+      if (!fresh || fresh.chaId !== chaId) throw new Error("캐릭터를 다시 찾지 못했습니다. 저장하지 않았습니다.");
+    }
+    if (isGenerating(fresh)) throw new Busy();
+    const cur2 = charFields(fresh);
+    const p2 = makePlan("c", cur2, incFields, base);
+    const keep = keepSet(p2, choices, keepExistingOnly);
+    const fields = applyPlan(cur2, incFields, p2, keep);
+    const sm = countPlan(p2, keep);
+    const merged = writeCharFields(fresh, cur2, fields);
+    if (merged.vits && !merged.vits.id) merged.vits.id = fresh.vits?.id ?? newId().replace(/-/g, "");
+    const greet = remapGreetings(merged, cur2, fields);
+    const summary = [sm.update && `제작자 수정 ${sm.update}`, sm.keptMine && `내 것 유지 ${sm.keptMine}`, sm.conflict && `충돌 ${sm.conflict}`, sm.added && `추가 ${sm.added}`, sm.removed && `삭제 ${sm.removed}`, greet && `인사말 번호 맞춤 ${greet}`, uploaded && `에셋 ${uploaded}개 올림`].filter(Boolean).join(" · ");
+    updateProgress(100, "바꾸기 전 상태를 백업하는 중…");
+    const chatPack = await captureChats(idx, fresh);
+    let backupRec;
+    try {
+      const snapshot = backupSnapshot("character", fresh);
+      if (chatPack?.chats.length) snapshot.__chats = chatPack.chats;
+      backupRec = await store.addBackup({ kind: "character", target: fresh.chaId, name: fresh.name, snapshot, note: "업데이트 전", summary: `${source} → ${summary || "변화 없음"}` });
+    } catch (e) {
+      throw new Error(`백업을 만들지 못해 아무것도 바꾸지 않았습니다: ${e?.message ?? e}`);
+    }
+    updateProgress(100, "캐릭터 저장 중…");
+    const last2 = await api.getCharacterFromIndex(idx);
+    if (isGenerating(last2) || (last2?.chats ?? []).length !== (fresh.chats ?? []).length) throw new Busy();
+    if (stableJson(charFields(last2)) !== stableJson(cur2)) throw new Error("검토하는 사이 이 캐릭터가 바뀌었어요. 다시 업데이트해 주세요. (바뀐 것은 없어요)");
+    await api.setCharacterToIndex(idx, merged);
+    const check = await api.getCharacterFromIndex(idx);
+    if (check?.chaId !== chaId || (check.chats ?? []).length !== (fresh.chats ?? []).length) throw new Error("저장 후 확인에서 캐릭터가 예상과 다릅니다. [백업·되돌리기]에서 되돌릴 수 있어요.");
+    let note2 = chatPack?.skipped ? `열어 보지 않아 내용을 확인할 수 없는 채팅 ${chatPack.skipped}개는 백업하지 못했어요.` : "";
+    try {
+      await store.setFingerprint("c", chaId, fingerprintCard(incFields));
+      if (incView) await store.setBaseline(`c:${chaId}`, incView).catch(() => {
+      });
+    } catch {
+      note2 = [note2, "다음 업데이트용 원본 기록을 저장하지 못했어요. 다음엔 2방향으로 비교합니다."].filter(Boolean).join(" ");
+    }
+    return { merged, summary, backupRec, note: note2, chatsBacked: chatPack?.chats.length ?? 0 };
+  }
   function renderCharPlan(file, incoming, db, index, keepExistingOnly, choices = /* @__PURE__ */ new Map(), base) {
     const target = db.characters[index];
     if (base === void 0) return withPreparing(async () => renderCharPlan(file, incoming, db, index, keepExistingOnly, choices, await store.getFingerprint("c", target.chaId)));
@@ -700,67 +809,578 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
             ${reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), spec.label)}
             ${notes(incoming, ch.risuFields.lowLevelAccess && !target.lowLevelAccess, s.upload)}
             ${generating ? `<div class="err">이 캐릭터가 지금 응답을 생성하는 중이에요. 생성이 끝난 뒤 업데이트해 주세요.</div>` : ""}
+            <div id="open-warn"></div>
             <p class="muted" style="margin:10px 0 0">채팅·메모·TTS·메모리 같은 내 설정은 그대로 둡니다. 추가 인사말 순서가 바뀌어도 채팅마다 고른 인사말을 그대로 가리켜요. 바꾸기 전 상태를 백업하므로 [백업·되돌리기]에서 되돌릴 수 있어요.</p>
           </div>${planFooter("업데이트")}`);
     bindReview(p, choices, keepExistingOnly, curF, spec.label, (keep, compact) => summaryHtml(p, keep, sumFix(sumOf(keep)), spec.label, compact), () => renderCharPlan(file, incoming, db, index, keepExistingOnly, choices, base));
+    guardOpenTarget(index, target.name);
     bindPlan(file, incoming, db, (keep) => renderCharPlan(file, incoming, db, index, keep, choices, base), async () => {
       const uploaded = await uploadWithProgress(file, plan.toUpload);
       updateProgress(100, "캐릭터 저장 중…");
-      let idx = index;
-      let fresh = await api.getCharacterFromIndex(idx);
-      if (!fresh || fresh.chaId !== target.chaId) {
-        const all = (await loadDb(true)).characters;
-        idx = all.findIndex((c) => c?.chaId === target.chaId);
-        if (idx < 0) throw new Error("업데이트할 캐릭터가 그 사이 삭제되었습니다. 저장하지 않았습니다.");
-        fresh = await api.getCharacterFromIndex(idx);
-        if (!fresh || fresh.chaId !== target.chaId) throw new Error("캐릭터를 다시 찾지 못했습니다. 저장하지 않았습니다.");
-      }
-      if (isGenerating(fresh)) throw new Busy();
       const incView = charIncomingView(ch, plan, uploaded);
-      const inc2 = charFields(incView), cur2 = charFields(fresh);
-      const p2 = makePlan("c", cur2, inc2, base);
-      const keep = keepSet(p2, choices, keepExistingOnly);
-      const fields = applyPlan(cur2, inc2, p2, keep);
-      const sm = countPlan(p2, keep);
-      const merged = writeCharFields(fresh, cur2, fields);
-      if (merged.vits && !merged.vits.id) merged.vits.id = fresh.vits?.id ?? newId().replace(/-/g, "");
-      const greet = remapGreetings(merged, cur2, fields);
-      const summary = [sm.update && `제작자 수정 ${sm.update}`, sm.keptMine && `내 것 유지 ${sm.keptMine}`, sm.conflict && `충돌 ${sm.conflict}`, sm.added && `추가 ${sm.added}`, sm.removed && `삭제 ${sm.removed}`, greet && `인사말 번호 맞춤 ${greet}`, uploaded.size && `에셋 ${uploaded.size}개 올림`].filter(Boolean).join(" · ");
-      let backupRec;
-      try {
-        backupRec = await store.addBackup({ kind: "character", target: fresh.chaId, name: fresh.name, snapshot: backupSnapshot("character", fresh), note: "업데이트 전", summary: `${file.name} → ${summary || "변화 없음"}` });
-      } catch (e) {
-        throw new Error(`백업을 만들지 못해 아무것도 바꾸지 않았습니다: ${e?.message ?? e}`);
-      }
-      const last2 = await api.getCharacterFromIndex(idx);
-      if (isGenerating(last2) || (last2?.chats ?? []).length !== (fresh.chats ?? []).length) throw new Busy();
-      if (stableJson(charFields(last2)) !== stableJson(cur2)) throw new Error("검토하는 사이 이 캐릭터가 바뀌었어요. 다시 업데이트해 주세요. (바뀐 것은 없어요)");
-      await api.setCharacterToIndex(idx, merged);
-      const check = await api.getCharacterFromIndex(idx);
-      if (check?.chaId !== target.chaId || (check.chats ?? []).length !== (fresh.chats ?? []).length) throw new Error("저장 후 확인에서 캐릭터가 예상과 다릅니다. [백업·되돌리기]에서 되돌릴 수 있어요.");
-      let note2 = "";
-      try {
-        await store.setFingerprint("c", fresh.chaId, fingerprintCard(inc2));
-        await store.setBaseline(`c:${fresh.chaId}`, incView).catch(() => {
-        });
-      } catch {
-        note2 = "다음 업데이트용 원본 기록을 저장하지 못했어요. 다음엔 2방향으로 비교합니다.";
-      }
+      const r = await commitChar({ index, chaId: target.chaId, incFields: charFields(incView), incView, base, choices, keepExistingOnly, source: file.name, uploaded: uploaded.size });
       busy = false;
-      links?.set(linkKey(incoming), fresh.chaId);
-      renderResult({
-        kind: "character",
-        name: merged.name,
-        updated: true,
-        uploadedCount: uploaded.size,
-        assets: characterAssetKeys(merged).length,
-        lore: (merged.globalLore ?? []).length,
-        chats: (merged.chats ?? []).length,
-        backup: true,
-        backupRec,
-        summary,
-        note: note2
+      links?.set(linkKey(incoming), target.chaId);
+      renderResult({ kind: "character", name: r.merged.name, updated: true, uploadedCount: uploaded.size, assets: characterAssetKeys(r.merged).length, lore: (r.merged.globalLore ?? []).length, chats: (r.merged.chats ?? []).length, backup: true, backupRec: r.backupRec, summary: r.summary, note: r.note });
+    });
+  }
+  // 원본 RisuAI(웹·데스크톱)는 열린 봇만 저장한다 → 업데이트할 봇이 열려 있는지 확인하고 안내
+  async function guardOpenTarget(index, name) {
+    if (await persistentWrites(api)) return;
+    const box = root.querySelector("#open-warn");
+    const go = root.querySelector("#go");
+    if (!box || !go) return;
+    let cur = -1;
+    try {
+      cur = await api.getCurrentCharacterIndex();
+    } catch {
+    }
+    if (cur === index) return;
+    box.innerHTML = `<div class="warn"><b>${esc(name)}</b>을(를) 먼저 열어 주세요. 이 앱(원본 RisuAI)은 열려 있는 봇의 변경만 저장해요. 봇을 연 뒤 [다시 확인]을 눌러 주세요.<div class="row" style="margin-top:8px"><button id="recheck">다시 확인</button></div></div>`;
+    go.disabled = true;
+    box.querySelector("#recheck").addEventListener("click", async () => {
+      let c2 = -1;
+      try {
+        c2 = await api.getCurrentCharacterIndex();
+      } catch {
+      }
+      if (c2 === index) {
+        box.innerHTML = "";
+        go.disabled = false;
+      } else box.querySelector(".warn").animate?.([{ transform: "translateX(-4px)" }, { transform: "translateX(4px)" }, { transform: "none" }], { duration: 220 });
+    });
+  }
+  // ---- 받은 사본(리스에서 가져온 새 버전 봇)으로 기존 봇 업데이트 ----
+  let copyQueue = [];
+  function renderCopyOffer() {
+    heading = TITLE2;
+    const it = copyQueue[0];
+    if (!it) return renderStart();
+    frame(`<div class="card">
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px"><span class="ri big">${ic("refresh", 18)}</span>
+            <div><b>새로 가져온 봇이 기존 봇의 새 버전 같아요</b><div class="muted">'${esc(it.copyName)}'을(를) 기존 봇에 이어 붙이면 채팅·내 수정은 그대로 두고 내용만 새 버전으로 바꿔요.</div></div></div>
+          <div style="margin:4px 0 6px">어느 봇에 이어 붙일까요?</div>
+          ${it.targets.map((t, i) => `<label class="opt"><input type="radio" name="tg" value="${i}" ${i === 0 ? "checked" : ""}><div><b>${esc(t.name || "(이름 없음)")}</b><div class="muted">${{ realm: "같은 RisuRealm 봇", name: "이름이 같음", content: "제작자·내용이 비슷함", similar: "이름이 비슷함" }[t.reason] ?? ""}</div></div></label>`).join("")}
+          ${copyQueue.length > 1 ? `<div class="muted" style="margin-top:6px">대기 중 ${copyQueue.length - 1}개 더</div>` : ""}
+        </div>
+        <div class="row"><button class="primary" id="attach">이어 붙이기</button><button id="skip">새 봇으로 둘게요</button>${closeBtn("나중에")}</div>`);
+    root.querySelector("#skip").addEventListener("click", () => {
+      copyQueue.shift();
+      copyQueue.length ? renderCopyOffer() : onClose();
+    });
+    root.querySelector("#attach").addEventListener("click", () => {
+      const t = it.targets[Number(root.querySelector("input[name=tg]:checked")?.value ?? 0)];
+      renderCopyPlan(it, t.chaId, true).catch((err) => renderResult(null, null, err?.message ?? String(err)));
+    });
+  }
+  async function renderCopyPlan(it, targetId, keepExistingOnly, choices = /* @__PURE__ */ new Map(), base) {
+    renderProgress("비교 준비 중…", 100, "봇을 읽는 중");
+    const db = await loadDb(true);
+    const ti = db.characters.findIndex((c) => c?.chaId === targetId), ci = db.characters.findIndex((c) => c?.chaId === it.copyId);
+    if (ti < 0 || ci < 0) throw new Error("봇을 찾지 못했어요. 그 사이 지워졌을 수 있어요.");
+    const target = await api.getCharacterFromIndex(ti), copy = await api.getCharacterFromIndex(ci);
+    if (base === void 0) base = await store.getFingerprint("c", targetId);
+    const spec = charSpec({ fields: {}, risuFields: {}, refs: {} });
+    const curF = charFields(target), incF = charFields(copy);
+    const p = makePlan("c", curF, incF, base);
+    const sumOf = (keep) => summarizeCharacterUpdate(target, applyPlan(curF, incF, p, keep), target.additionalAssets ?? []);
+    const keep0 = keepSet(p, choices, keepExistingOnly);
+    const rerender = (keep = keepExistingOnly) => renderCopyPlan(it, targetId, keep, choices, base).catch((err) => renderResult(null, null, err?.message ?? String(err)));
+    frame(`<div class="card">
+          <div style="margin-bottom:8px">${kindTag("character")}<b>${esc(target.name)}</b> 업데이트 <span class="muted">← 새로 가져온 '${esc(copy.name)}'</span></div>
+          ${reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), spec.label)}
+          ${copy.lowLevelAccess && !target.lowLevelAccess ? `<div class="warn">이 버전은 <b>저수준 접근(lowLevelAccess)</b>을 사용합니다. 믿을 수 있는 봇인지 확인하세요.</div>` : ""}
+          <div id="open-warn"></div>
+          <p class="muted" style="margin:10px 0 0">채팅·메모·TTS·메모리 같은 내 설정은 그대로 둡니다. 바꾸기 전 상태를 백업해요. 업데이트가 끝나면 새로 가져온 사본은 ${(await persistentWrites(api)) && watchDefaults(await readUi(api)).trashCopies ? "휴지통으로 옮겨요(휴지통에서 되살릴 수 있어요)" : "그대로 남으니 필요 없으면 직접 지워 주세요"}.</p>
+        </div>
+        <div class="row"><button class="primary" id="go">업데이트</button><button id="back">뒤로</button>${closeBtn("취소")}</div>`);
+    bindReview(p, choices, keepExistingOnly, curF, spec.label, (keep, compact) => summaryHtml(p, keep, sumFix(sumOf(keep)), spec.label, compact), () => rerender());
+    guardOpenTarget(ti, target.name);
+    root.querySelector("#keep")?.addEventListener("change", (e) => rerender(e.target.checked));
+    root.querySelector("#back").addEventListener("click", () => renderCopyOffer());
+    root.querySelector("#go").addEventListener("click", async () => {
+      try {
+        busy = true;
+        renderProgress(`업데이트 중: ${target.name}`, 100, "준비 중…");
+        const fresh = await api.getCharacterFromIndex(ci);
+        if (fresh?.chaId !== it.copyId) throw new Error("새로 가져온 봇이 그 사이 바뀌었어요.");
+        const r = await commitChar({ index: ti, chaId: targetId, incFields: charFields(fresh), incView: null, base, choices, keepExistingOnly, source: `가져온 봇 '${fresh.name}'` });
+        let trashNote = "";
+        const ui = watchDefaults(await readUi(api));
+        if (!await persistentWrites(api)) trashNote = `새로 가져온 '${fresh.name}'은(는) 그대로 남아 있어요. 필요 없으면 직접 지워 주세요.`;
+        else if (ui.trashCopies) {
+          const t = await trashCopy(api, it.copyId).catch(() => ({ ok: false, reason: "error" }));
+          if (t.ok) trashNote = `새로 가져온 '${fresh.name}'은(는) 휴지통으로 옮겼어요.`;
+          else if (t.reason === "open") {
+            await queueTrash(api, it.copyId);
+            trashNote = `새로 가져온 '${fresh.name}'이(가) 열려 있어서, 다른 봇으로 옮기면 휴지통으로 옮길게요.`;
+          } else if (t.reason === "conversation") trashNote = `새로 가져온 '${fresh.name}'에 대화가 있어 지우지 않았어요.`;
+          else trashNote = `새로 가져온 '${fresh.name}'을(를) 정리하지 못했어요. 필요 없으면 직접 지워 주세요.`;
+        }
+        copyQueue.shift();
+        busy = false;
+        renderResult({ kind: "character", name: r.merged.name, updated: true, uploadedCount: 0, assets: characterAssetKeys(r.merged).length, lore: (r.merged.globalLore ?? []).length, chats: (r.merged.chats ?? []).length, backup: true, backupRec: r.backupRec, summary: r.summary, note: [r.note, trashNote].filter(Boolean).join(" ") });
+        if (copyQueue.length) {
+          const nx = root.querySelector("#again");
+          if (nx) {
+            nx.textContent = `다음 봇 (${copyQueue.length}개 남음)`;
+            nx.replaceWith(nx.cloneNode(true));
+            root.querySelector("#again").addEventListener("click", () => renderCopyOffer());
+          }
+        }
+      } catch (err) {
+        busy = false;
+        if (err instanceof Busy) return renderResult(null, null, err.message);
+        renderResult(null, null, err?.message ?? String(err));
+      }
+    });
+  }
+  // ==== 합치기 (RisuTide): 다른 봇·모듈에서 인물·세계관 가져오기, 전체 합치기, 출처별 업데이트, 떼어내기 ====
+  const KIND_PART = { lore: "로어북", loreFolder: "로어 폴더", regex: "정규식", trigger: "트리거", luaTrigger: "Lua 트리거", css: "CSS", variable: "기본 변수", asset: "에셋", emotion: "감정 이미지", greeting: "인사말", textField: "글", imageGenSetting: "이미지 생성 설정", loreSettings: "로어북 설정", extension: "확장" };
+  const PART_ICON = { lore: "book", loreFolder: "folder", regex: "code", trigger: "zap", luaTrigger: "zap", css: "palette", variable: "sliders", asset: "image", emotion: "image", greeting: "message", textField: "text", imageGenSetting: "image", loreSettings: "sliders", extension: "sliders" };
+  const ROLE_KO = { status: "상태창", imageDisplay: "이미지 표시", imageGen: "이미지 생성", events: "이벤트", firstMessage: "첫 메시지", other: "기타" };
+  let mg = null;
+  const nameOf = (c) => c?.name || "(이름 없음)";
+  async function mergeData() {
+    const db = await loadDb(true);
+    const chars = db.characters.map((c, i) => c && c.type !== "group" && !c.trashTime ? { i, c } : null).filter(Boolean).sort((a, b) => nameOf(a.c).localeCompare(nameOf(b.c), "ko"));
+    return { db, chars, modules: db.modules };
+  }
+  function partText(p) {
+    const v = p.value;
+    if (typeof v === "string") return v;
+    if (p.kind === "lore") return String(v?.content ?? "");
+    if (p.kind === "regex") return `${v?.in ?? ""} → ${v?.out ?? ""}`;
+    if (Array.isArray(v)) return String(v[0] ?? "");
+    try {
+      return JSON.stringify(v);
+    } catch {
+      return "";
+    }
+  }
+  const partLabel = (p) => {
+    const v = p.value;
+    if (p.kind === "lore" || p.kind === "loreFolder") return v?.comment || v?.key || "(이름 없음)";
+    if (p.kind === "regex" || p.kind === "trigger" || p.kind === "luaTrigger") return v?.comment || "(이름 없음)";
+    if (p.kind === "asset" || p.kind === "emotion") return String(v?.[0] ?? "");
+    return MOD_FIELD_LABEL(partField(p));
+  };
+  const MOD_FIELD_LABEL = (f) => charSpec({ fields: {}, risuFields: {}, refs: {} }).label(f);
+  const editable = (p) => typeof p.value === "string" || p.kind === "lore";
+
+  async function renderMergeStart(targetId) {
+    heading = "다른 봇에서 가져오기 · 합치기";
+    busy = false;
+    renderProgress("합치기 준비 중…", 100, "봇 목록을 읽는 중");
+    const { chars, modules } = await mergeData();
+    mg = { targetId: targetId ?? mg?.targetId ?? chars[0]?.c.chaId, src: mg?.src ?? null, scope: mg?.scope ?? "characters" };
+    const target = chars.find((x) => x.c.chaId === mg.targetId)?.c;
+    const prov = target ? await loadProvenance(api, target) : null;
+    const extra = prov?.sources.slice(1) ?? [];
+    const opts = (sel) => chars.map(({ c }) => `<option value="c:${esc(c.chaId)}" ${sel === "c:" + c.chaId ? "selected" : ""}>${esc(nameOf(c))}</option>`).join("");
+    frame(`<div class="card">
+        <div class="rv-dh" style="margin-bottom:10px"><span class="ri big">${ic("link", 18)}</span><div><b>다른 봇에서 가져오기 · 합치기</b><div class="muted">다른 봇이나 모듈의 인물·세계관을 이 봇에 넣어요. 채팅과 내 설정은 그대로이고, 바꾸기 전에 백업해요.</div></div></div>
+        <div class="rr"><span class="rl" style="width:76px">넣을 봇</span><select id="mg-target" style="margin-top:0">${chars.map(({ c }) => `<option value="${esc(c.chaId)}" ${c.chaId === mg.targetId ? "selected" : ""}>${esc(nameOf(c))}</option>`).join("")}</select></div>
+        <div class="rr"><span class="rl" style="width:76px">가져올 곳</span><select id="mg-src" style="margin-top:0"><option value="">— 고르기 —</option>
+          <optgroup label="봇">${opts(mg.src)}</optgroup>
+          ${modules.length ? `<optgroup label="모듈">${modules.map((m) => `<option value="m:${esc(m.id)}" ${mg.src === "m:" + m.id ? "selected" : ""}>${esc(m.name || "(이름 없음)")}</option>`).join("")}</optgroup>` : ""}
+        </select></div>
+        <div style="margin:12px 0 6px">무엇을 가져올까요?</div>
+        <div class="mg-scope">
+          ${[["characters", "character", "인물만", "고른 인물의 로어·이미지를 가져와요"], ["world", "globe", "인물 + 세계관", "인물과 관련된 장소·설정 로어도 함께"], ["full", "split", "전체 합치기", "두 봇을 하나로 합쳐요 (상태창 등 겹치는 기능은 고르기)"]].map(([v, icn, t, d]) => `<label class="opt"><input type="radio" name="scope" value="${v}" ${mg.scope === v ? "checked" : ""}><span class="ri">${ic(icn, 15)}</span><div><b>${t}</b><div class="muted">${d}</div></div></label>`).join("")}
+        </div>
+      </div>
+      ${extra.length ? `<div class="card"><div class="rv-dh" style="margin-bottom:6px"><span class="ri">${ic("history", 15)}</span><b>이 봇에 합쳐진 출처</b></div>
+        ${extra.map((s) => `<div class="rr"><span class="rl" style="flex:1;width:auto;color:var(--rb-text)">${esc(s.name)} <span class="muted">${s.kind === "module" ? "모듈" : s.kind === "import" || s.importMode ? "가져오기" : "합치기"}</span></span><button data-supd="${esc(s.id)}">${ic("refresh", 13)} 새 버전으로</button><button data-sdet="${esc(s.id)}">${ic("trash", 13)} 떼어내기</button></div>`).join("")}
+        <p class="muted" style="margin:6px 0 0">출처 하나만 새 버전으로 바꾸거나, 가져온 자료를 다시 떼어낼 수 있어요.</p></div>` : ""}
+      <div class="row"><button class="primary" id="mg-next">다음</button>${closeBtn("닫기")}</div>`);
+    root.querySelector("#mg-target").addEventListener("change", (e) => renderMergeStart(e.target.value).catch((err) => renderResult(null, null, err?.message ?? String(err))));
+    root.querySelector("#mg-src").addEventListener("change", (e) => mg.src = e.target.value || null);
+    root.querySelectorAll("input[name=scope]").forEach((el) => el.addEventListener("change", () => mg.scope = el.value));
+    root.querySelectorAll("[data-supd]").forEach((b) => b.addEventListener("click", () => renderSourceUpdatePick(b.dataset.supd).catch((err) => renderResult(null, null, err?.message ?? String(err)))));
+    root.querySelectorAll("[data-sdet]").forEach((b) => b.addEventListener("click", () => renderDetach(b.dataset.sdet).catch((err) => renderResult(null, null, err?.message ?? String(err)))));
+    root.querySelector("#mg-next").addEventListener("click", () => {
+      if (!mg.src) return root.querySelector("#mg-src").animate?.([{ boxShadow: "0 0 0 2px var(--rb-warn,#f5c26b)" }, { boxShadow: "none" }], { duration: 900 });
+      if (mg.src === "c:" + mg.targetId) return renderResult(null, null, "같은 봇끼리는 합칠 수 없어요.");
+      renderMergePick().catch((err) => renderResult(null, null, err?.message ?? String(err)));
+    });
+  }
+  async function mergeInputs() {
+    const { db } = await mergeData();
+    const ti = db.characters.findIndex((c) => c?.chaId === mg.targetId);
+    if (ti < 0) throw new Error("넣을 봇을 찾지 못했어요.");
+    const target = await api.getCharacterFromIndex(ti);
+    let S, srcName, srcLow = false;
+    if (mg.src.startsWith("c:")) {
+      const si = db.characters.findIndex((c) => c?.chaId === mg.src.slice(2));
+      const sc = await api.getCharacterFromIndex(si);
+      if (!sc) throw new Error("가져올 봇을 찾지 못했어요.");
+      S = mergeInput(sc, sc.chaId);
+      srcName = nameOf(sc);
+      srcLow = !!sc.lowLevelAccess;
+    } else {
+      const m = db.modules.find((x) => x.id === mg.src.slice(2));
+      if (!m) throw new Error("가져올 모듈을 찾지 못했어요.");
+      S = moduleToMergeInput(m);
+      srcName = m.name;
+      srcLow = !!m.lowLevelAccess;
+    }
+    return { ti, target, T: mergeInput(target, target.chaId || "target"), S, srcName, srcLow };
+  }
+  async function renderMergePick() {
+    heading = "다른 봇에서 가져오기 · 합치기";
+    renderProgress("인물을 찾는 중…", 100, "");
+    const inp = await mergeInputs();
+    const { S, T } = inp;
+    const chars = detectCharacters(S);
+    const targetNames = new Set(detectCharacters(T).flatMap((c) => c.aliases).map((n) => n.toLocaleLowerCase()));
+    mg.picked ??= new Set(chars.filter((c) => c.defaultSelected !== false && !c.aliases.some((a) => targetNames.has(a.toLocaleLowerCase()))).map((c) => c.key));
+    if (mg.scope === "full") mg.picked = new Set(chars.map((c) => c.key));
+    mg.bridge ??= "visitor";
+    const pickedChars = chars.filter((c) => mg.picked.has(c.key));
+    const world = mg.scope === "world" ? suggestWorld(S, pickedChars) : [];
+    mg.world ??= new Set(world);
+    const charKeys = new Set(chars.flatMap((c) => c.loreKeys));
+    const worldParts = S.parts.filter((p) => p.kind === "lore" && !charKeys.has(p.key));
+    frame(`<div class="card">
+        <div style="margin-bottom:8px">${kindTag("character")}<b>${esc(nameOf(inp.target))}</b> <span class="muted">← ${esc(inp.srcName)}</span></div>
+        ${mg.scope === "full" ? `<div class="rr"><span class="ri">${ic("split", 15)}</span><span>두 봇을 전체 합쳐요. 인물 ${chars.length}명과 모든 로어·스크립트·이미지를 가져오고, 겹치는 기능은 다음 화면에서 골라요.</span></div>` : `
+        <div style="margin:4px 0 6px">가져올 인물 <span class="muted">${chars.length ? `${chars.length}명 찾음` : "찾지 못했어요 — 아래 '전체 합치기'를 써 보세요"}</span></div>
+        <div class="mg-chars">${chars.map((c) => `<label class="opt"><input type="checkbox" data-ch="${esc(c.key)}" ${mg.picked.has(c.key) ? "checked" : ""}><div><b>${esc(c.displayName ?? c.name)}</b><div class="muted">로어 ${c.loreKeys.length}개${c.assetNames.length + c.emotionNames.length ? ` · 이미지 ${c.assetNames.length + c.emotionNames.length}장` : ""}${c.aliases.some((a) => targetNames.has(a.toLocaleLowerCase())) ? " · <span class='hl'>이 봇에도 같은 이름이 있어요</span>" : ""}</div></div></label>`).join("")}</div>`}
+        ${mg.scope === "world" ? `<details open style="margin-top:10px"><summary>함께 가져올 세계관 로어 <span class="muted">(인물과 관련된 것을 미리 골라 뒀어요)</span></summary>
+          <div class="mg-world">${worldParts.map((p) => `<label class="opt" style="padding:8px 12px"><input type="checkbox" data-w="${esc(p.key)}" ${mg.world.has(p.key) ? "checked" : ""}><div><b style="font-weight:500">${esc(partLabel(p))}</b><div class="muted">${esc(partText(p).slice(0, 80))}</div></div></label>`).join("") || '<div class="muted">세계관 로어가 없어요.</div>'}</div></details>` : ""}
+        ${mg.scope !== "full" ? `<div class="rr" style="margin-top:8px"><span class="ri">${ic("globe", 15)}</span><span class="rl" style="width:auto">이 세계에서</span><div class="rv-seg" style="flex:1;max-width:360px"><button data-bridge="visitor" class="${mg.bridge === "visitor" ? "on" : ""}">다른 세계에서 온 사람</button><button data-bridge="native" class="${mg.bridge === "native" ? "on" : ""}">원래 이 세계 사람</button></div></div>` : ""}
+      </div>
+      <div class="row"><button class="primary" id="mg-next">다음</button><button id="mg-back">뒤로</button>${closeBtn("취소")}</div>`);
+    root.querySelectorAll("[data-ch]").forEach((el) => el.addEventListener("change", () => {
+      el.checked ? mg.picked.add(el.dataset.ch) : mg.picked.delete(el.dataset.ch);
+      if (mg.scope === "world") {
+        mg.world = new Set(suggestWorld(S, chars.filter((c) => mg.picked.has(c.key))));
+        renderMergePick();
+      }
+    }));
+    root.querySelectorAll("[data-w]").forEach((el) => el.addEventListener("change", () => el.checked ? mg.world.add(el.dataset.w) : mg.world.delete(el.dataset.w)));
+    root.querySelectorAll("[data-bridge]").forEach((b) => b.addEventListener("click", () => {
+      mg.bridge = b.dataset.bridge;
+      root.querySelectorAll("[data-bridge]").forEach((x) => x.classList.toggle("on", x === b));
+    }));
+    root.querySelector("#mg-back").addEventListener("click", () => {
+      mg.picked = mg.world = null;
+      renderMergeStart(mg.targetId);
+    });
+    root.querySelector("#mg-next").addEventListener("click", () => {
+      if (mg.scope !== "full" && !mg.picked.size) return renderResult(null, null, "가져올 인물을 하나 이상 골라 주세요.");
+      renderMergeReview(inp).catch((err) => renderResult(null, null, err?.message ?? String(err)));
+    });
+  }
+  async function renderMergeReview(inp, keepState) {
+    heading = "다른 봇에서 가져오기 · 합치기";
+    const { S, T } = inp;
+    const picks = { characters: [...mg.picked], world: mg.scope === "world" ? [...mg.world] : [], bridge: mg.bridge, renames: {} };
+    const overrides = mg.scope === "full" ? new Map(S.parts.map((p) => [p.key, true])) : /* @__PURE__ */ new Map();
+    const existing = await loadProvenance(api, inp.target);
+    const sel = prepareScopedSelection(T, S, picks, overrides, existing ?? void 0);
+    const st = keepState ?? { exclude: new Set(sel.importPlan?.exclude ?? []), edits: {}, roles: Object.fromEntries(sel.plan.roles.map((r, i) => [i, r.default])), lowLevel: false, open: null, q: "" };
+    mg.review = { inp, sel, st };
+    const srcParts = sel.plan.parts.filter((p) => p.sourceId === S.meta.id);
+    const chosen = srcParts.filter((p) => !st.exclude.has(p.key));
+    const counts = {};
+    for (const p of chosen) counts[p.kind] = (counts[p.kind] ?? 0) + 1;
+    const renames = sel.plan.renames.filter((r) => r.sourceId === S.meta.id);
+    const needLow = (sel.plan.needsLowLevel || chosen.some((p) => p.kind === "luaTrigger" || p.kind === "trigger")) && inp.srcLow && !inp.target.lowLevelAccess;
+    const ai = watchAi();
+    const tile = (icn, n, label, cls = "upd") => `<div class="st ${cls}${n ? "" : " zero"}"><span class="si">${ic(icn, 18)}</span><b>${n}</b><span>${label}</span></div>`;
+    const q = st.q.trim().toLowerCase();
+    const shown = srcParts.filter((p) => !q || partLabel(p).toLowerCase().includes(q) || partText(p).toLowerCase().includes(q)).sort((a, b) => Number(st.exclude.has(a.key)) - Number(st.exclude.has(b.key)));
+    frame(`<div class="card">
+        <div style="margin-bottom:8px">${kindTag("character")}<b>${esc(nameOf(inp.target))}</b> <span class="muted">← ${esc(inp.srcName)} · ${{ characters: "인물만", world: "인물 + 세계관", full: "전체 합치기" }[mg.scope]}</span></div>
+        <div class="rv-tiles">${tile("book", (counts.lore ?? 0) + (counts.loreFolder ?? 0), "로어북")}${tile("image", (counts.asset ?? 0) + (counts.emotion ?? 0), "이미지", "add")}${tile("code", (counts.regex ?? 0) + (counts.trigger ?? 0) + (counts.luaTrigger ?? 0) + (counts.css ?? 0), "스크립트", "mine")}${tile("edit", renames.length, "이름 바꿈", "cf")}</div>
+        ${renames.length ? `<details style="margin-top:8px"><summary>겹치는 이름 ${renames.length}개는 자동으로 바꿔요</summary><div class="rv-rows">${renames.slice(0, 40).map((r) => `<div class="rr"><span class="rl" style="width:auto">${esc(r.from)}</span><span class="muted">→</span><span>${esc(r.to)}</span></div>`).join("")}</div></details>` : ""}
+        ${sel.plan.roles.length ? `<div style="margin:12px 0 6px">겹치는 기능 고르기</div>${sel.plan.roles.map((r, i) => `<div class="rr"><span class="ri">${ic("sliders", 15)}</span><span class="rl" style="width:96px">${esc(r.label || ROLE_KO[r.kind] || r.kind)}</span><select data-role="${i}" style="margin-top:0;flex:1">${[[T.meta.id, `${nameOf(inp.target)} 것`], [S.meta.id, `${inp.srcName} 것`], ["both", "둘 다"]].map(([v, l]) => `<option value="${esc(v)}" ${String(st.roles[i]) === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div>`).join("")}` : ""}
+        ${(sel.plan.warnings ?? []).length ? `<div class="warn">${sel.plan.warnings.slice(0, 4).map((w) => esc(w.detail)).join("<br>")}</div>` : ""}
+        ${needLow ? `<label class="chk"><input type="checkbox" id="mg-low" ${st.lowLevel ? "checked" : ""}><span>가져오는 스크립트가 <b>저수준 접근(lowLevelAccess)</b>을 써요. 이 봇에도 허용하기<br><span class="muted">믿을 수 있는 봇일 때만 켜 주세요. 끄면 해당 스크립트가 동작하지 않을 수 있어요.</span></span></label>` : ""}
+        <details id="mg-parts" style="margin-top:12px" ${st.open ? "open" : ""}><summary>가져올 항목 ${chosen.length}/${srcParts.length}개 — 하나씩 고르기·고치기${ai.on ? "·AI로 다듬기" : ""}</summary>
+          <div class="rv-tools" style="border:0;padding:8px 0">
+            <label class="rv-search">${ic("search", 15)}<input type="text" id="mg-q" placeholder="이름·내용 검색" value="${esc(st.q)}"></label>
+            <div class="rv-bulk"><button id="mg-all">${ic("check", 13)} 보이는 것 모두 넣기</button><button id="mg-none">${ic("x", 13)} 모두 빼기</button></div>
+            <div class="rr" style="border:0"><span class="ri">${ic("zap", 15)}</span><span class="rl" style="width:auto">AI 다듬기 모델</span><select id="mg-ai" style="margin-top:0;flex:1">${AI_MODES.map(([v, l]) => `<option value="${v}" ${ai.mode === v ? "selected" : ""}>${l}</option>`).join("")}</select>${ai.mode === "static" ? `<input type="text" id="mg-ai-id" placeholder="모델 ID (예: gpt-4o)" value="${esc(ai.staticModel ?? "")}" style="margin-top:0;flex:1">` : ""}</div>
+          </div>
+          <div class="mg-list">${shown.slice(0, 250).map((p) => {
+            const on = !st.exclude.has(p.key), ed = st.edits[p.key];
+            return `<div class="mg-part${on ? "" : " off"}" data-k="${esc(p.key)}">
+              <label class="mg-ph"><input type="checkbox" data-pk="${esc(p.key)}" ${on ? "checked" : ""}><span class="ri">${ic(PART_ICON[p.kind] ?? "text", 14)}</span><span class="rt"><b>${esc(partLabel(p))}</b><span>${KIND_PART[p.kind] ?? p.kind}${ed !== void 0 ? " · <span class='hl'>고침</span>" : ""}</span></span></label>
+              ${editable(p) && on ? `<div class="mg-act"><button data-edit="${esc(p.key)}">${ic("edit", 13)} 고치기</button><button data-ai="${esc(p.key)}">${ic("zap", 13)} AI로 다듬기</button></div>` : ""}
+              <div class="mg-body" hidden></div></div>`;
+          }).join("")}${shown.length > 250 ? '<div class="muted">앞쪽 250개만 보여요. 검색으로 좁혀 보세요.</div>' : ""}</div>
+        </details>
+        <p class="muted" style="margin:10px 0 0">채팅과 내 설정은 그대로예요. 바꾸기 전 상태를 백업해요. 나중에 '이 봇에 합쳐진 출처'에서 이 출처만 새 버전으로 바꾸거나 떼어낼 수 있어요.</p>
+      </div>
+      <div class="row"><button class="primary" id="mg-go">${mg.scope === "full" ? "합치기" : "가져오기"} · ${chosen.length}개</button><button id="mg-back">뒤로</button>${closeBtn("취소")}</div>`);
+    // 다시 그려도 목록·창 스크롤 위치는 그대로
+    const rer = () => {
+      const ls = root.querySelector(".mg-list")?.scrollTop ?? 0, ws = root.scrollTop;
+      return renderMergeReview(inp, st).then(() => {
+        const l2 = root.querySelector(".mg-list");
+        if (l2) l2.scrollTop = ls;
+        root.scrollTop = ws;
+      }).catch((err) => renderResult(null, null, err?.message ?? String(err)));
+    };
+    root.querySelector("#mg-parts").addEventListener("toggle", (e) => st.open = e.target.open);
+    root.querySelectorAll("[data-role]").forEach((s) => s.addEventListener("change", () => st.roles[s.dataset.role] = s.value));
+    root.querySelector("#mg-low")?.addEventListener("change", (e) => st.lowLevel = e.target.checked);
+    root.querySelectorAll("[data-pk]").forEach((c) => c.addEventListener("change", () => {
+      c.checked ? st.exclude.delete(c.dataset.pk) : st.exclude.add(c.dataset.pk);
+      rer();
+    }));
+    const qEl = root.querySelector("#mg-q");
+    let qt = null;
+    qEl.addEventListener("input", () => {
+      st.q = qEl.value;
+      clearTimeout(qt);
+      qt = setTimeout(() => rer().then(() => {
+        const e2 = root.querySelector("#mg-q");
+        e2?.focus();
+        e2?.setSelectionRange(e2.value.length, e2.value.length);
+      }), 250);
+    });
+    root.querySelector("#mg-all").addEventListener("click", () => {
+      for (const p of shown) st.exclude.delete(p.key);
+      rer();
+    });
+    root.querySelector("#mg-none").addEventListener("click", () => {
+      for (const p of shown) st.exclude.add(p.key);
+      rer();
+    });
+    root.querySelector("#mg-ai").addEventListener("change", (e) => {
+      saveAi({ ...ai, mode: e.target.value });
+      rer();
+    });
+    root.querySelector("#mg-ai-id")?.addEventListener("change", (e) => saveAi({ ...ai, staticModel: e.target.value.trim() }));
+    const partOf = (k) => srcParts.find((p) => p.key === k);
+    const bodyOf = (k) => root.querySelector(`.mg-part[data-k="${CSS.escape(k)}"] .mg-body`);
+    root.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => {
+      const k = b.dataset.edit, box = bodyOf(k), p = partOf(k);
+      if (!box.hidden && box.dataset.mode === "edit") return box.hidden = true;
+      box.dataset.mode = "edit";
+      box.hidden = false;
+      box.innerHTML = `<textarea class="mg-ta">${esc(st.edits[k] ?? partText(p))}</textarea><div class="row" style="margin-top:6px"><button class="primary" data-save>저장</button><button data-reset>원래대로</button></div>`;
+      box.querySelector("[data-save]").addEventListener("click", () => {
+        st.edits[k] = box.querySelector("textarea").value;
+        rer();
       });
+      box.querySelector("[data-reset]").addEventListener("click", () => {
+        delete st.edits[k];
+        rer();
+      });
+    }));
+    root.querySelectorAll("[data-ai]").forEach((b) => b.addEventListener("click", async () => {
+      const k = b.dataset.ai, box = bodyOf(k), p = partOf(k);
+      const pick = watchAi();
+      if (pick.mode === "static" && !pick.staticModel) return renderAiNote(box, "모델 ID를 먼저 적어 주세요.");
+      const ctrl = new AbortController();
+      box.dataset.mode = "ai";
+      box.hidden = false;
+      box.innerHTML = `<div class="rr" style="border:0"><span class="rb-spin-s"></span><span>AI가 다듬는 중… (${esc(AI_MODES.find(([v]) => v === pick.mode)?.[1] ?? "")})</span><button data-stop>${ic("x", 13)} 그만</button></div>`;
+      box.querySelector("[data-stop]").addEventListener("click", () => {
+        ctrl.abort();
+        box.hidden = true;
+      });
+      const original = st.edits[k] ?? partText(p);
+      const world = [String(T.card.desc ?? ""), ...T.parts.filter((x) => x.kind === "lore").slice(0, 12).map((x) => `${partLabel(x)}: ${partText(x).slice(0, 300)}`)].join("\n").slice(0, 4e3);
+      const isChar = detectCharacters(S).some((c) => c.loreKeys.includes(k));
+      try {
+        const out = await runAI(api, isChar ? adaptCharacterPrompt({ targetWorld: world, character: original }) : conflictTidyPrompt({ a: world, b: original }), pick, ctrl.signal);
+        if (ctrl.signal.aborted) return;
+        const parts = wordDiff(original, out).map((d) => d.op === "same" ? esc(d.text) : d.op === "add" ? `<ins>${esc(d.text)}</ins>` : `<del>${esc(d.text)}</del>`).join("");
+        box.innerHTML = `<div class="rv-cap">AI 제안 <span class="muted">— <del>원래 글</del> <ins>AI가 바꾼 글</ins></span></div><div class="rv-diffbox">${parts}</div>
+          <div class="row" style="margin-top:6px"><button class="primary" data-use>AI 버전 쓰기</button><button data-tweak>고쳐서 쓰기</button><button data-keep>원래대로</button></div>`;
+        box.querySelector("[data-use]").addEventListener("click", () => {
+          st.edits[k] = out;
+          rer();
+        });
+        box.querySelector("[data-keep]").addEventListener("click", () => box.hidden = true);
+        box.querySelector("[data-tweak]").addEventListener("click", () => {
+          box.dataset.mode = "edit";
+          box.innerHTML = `<textarea class="mg-ta">${esc(out)}</textarea><div class="row" style="margin-top:6px"><button class="primary" data-save>저장</button></div>`;
+          box.querySelector("[data-save]").addEventListener("click", () => {
+            st.edits[k] = box.querySelector("textarea").value;
+            rer();
+          });
+        });
+      } catch (err) {
+        if (!ctrl.signal.aborted) renderAiNote(box, `AI 다듬기 실패: ${err?.message ?? err}`);
+      }
+    }));
+    root.querySelector("#mg-back").addEventListener("click", () => renderMergePick());
+    root.querySelector("#mg-go").addEventListener("click", () => commitMerge().catch((err) => {
+      busy = false;
+      if (err instanceof MergeSelfCheckError || err?.name === "MergeSelfCheckError") return renderResult(null, null, `합친 결과를 검사하다 문제를 찾아서 저장하지 않았어요:\n${(err.problems ?? []).slice(0, 6).map((x) => `· ${x.reason}`).join("\n") || err.message}\n문제가 되는 항목을 빼고 다시 해 보세요.`);
+      if (err instanceof Busy) return renderResult(null, null, err.message);
+      renderResult(null, null, err?.message ?? String(err));
+    }));
+  }
+  function renderAiNote(box, msg) {
+    box.hidden = false;
+    box.innerHTML = `<div class="err" style="margin:0">${esc(msg)}</div>`;
+  }
+  let aiPick = null;
+  function watchAi() {
+    return aiPick ?? { mode: "submodel" };
+  }
+  function saveAi(p) {
+    aiPick = p;
+    api.pluginStorage.setItem("rbm:aiModel:v1", JSON.stringify(p)).catch(() => {
+    });
+  }
+  api.pluginStorage.getItem("rbm:aiModel:v1").then((raw) => {
+    try {
+      const j = raw ? JSON.parse(raw) : null;
+      if (j?.mode) aiPick = j;
+    } catch {
+    }
+  }).catch(() => {
+  });
+  // 합친 결과를 실제로 쓴다: 백업 → 다시 확인 → 저장 → 확인. 출처 기록은 카드 안에 넣어 RisuTide와 같은 형식으로
+  async function writeMerged(ti, chaId, before, card, provenance, source) {
+    busy = true;
+    renderProgress("저장하는 중…", 100, "바꾸기 전 상태를 백업하는 중…");
+    let fresh = await api.getCharacterFromIndex(ti);
+    if (fresh?.chaId !== chaId) {
+      const all = (await loadDb(true)).characters;
+      ti = all.findIndex((c) => c?.chaId === chaId);
+      fresh = ti < 0 ? null : await api.getCharacterFromIndex(ti);
+    }
+    if (!fresh) throw new Error("봇을 찾지 못했어요. 저장하지 않았어요.");
+    if (isGenerating(fresh)) throw new Busy();
+    if (stableJson(charFields(fresh)) !== stableJson(charFields(before))) throw new Error("검토하는 사이 봇이 바뀌었어요. 다시 해 주세요. (바뀐 것은 없어요)");
+    preserveTargetLicense(card, fresh);
+    card.extentions = { ...card.extentions ?? {}, risutide: { ...card.extentions?.risutide ?? {}, merge: encodeCardProvenance(provenance) } };
+    const merged = writeCharFields(fresh, charFields(fresh), card);
+    const chatPack = await captureChats(ti, fresh);
+    const snapshot = backupSnapshot("character", fresh);
+    if (chatPack?.chats.length) snapshot.__chats = chatPack.chats;
+    const backupRec = await store.addBackup({ kind: "character", target: chaId, name: fresh.name, snapshot, note: "합치기 전", summary: source }).catch((e) => {
+      throw new Error(`백업을 만들지 못해 아무것도 바꾸지 않았어요: ${e?.message ?? e}`);
+    });
+    updateProgress(100, "봇 저장 중…");
+    const last = await api.getCharacterFromIndex(ti);
+    if (isGenerating(last) || (last?.chats ?? []).length !== (fresh.chats ?? []).length) throw new Busy();
+    await api.setCharacterToIndex(ti, merged);
+    const check = await api.getCharacterFromIndex(ti);
+    if (check?.chaId !== chaId) throw new Error("저장 후 확인에서 봇이 예상과 달라요. [백업·되돌리기]에서 되돌릴 수 있어요.");
+    busy = false;
+    return { merged, backupRec };
+  }
+  async function commitMerge() {
+    const { inp, sel, st } = mg.review;
+    const choices = { roles: st.roles, composites: {}, edits: st.edits, lowLevel: !!st.lowLevel, name: sel.plan.name, exclude: [...st.exclude] };
+    const res = applyScopedSelection(sel, choices);
+    const problems = selfCheck(res.card, []).problems;
+    if (problems.length) {
+      const e = new Error("self check");
+      e.name = "MergeSelfCheckError";
+      e.problems = problems;
+      throw e;
+    }
+    if (st.lowLevel) res.card.lowLevelAccess = true;
+    const chosen = sel.plan.parts.filter((p) => p.sourceId === inp.S.meta.id && !st.exclude.has(p.key)).length;
+    const { merged, backupRec } = await writeMerged(inp.ti, inp.target.chaId, inp.target, res.card, res.provenance, `${inp.srcName}에서 ${mg.scope === "full" ? "합치기" : "가져오기"} · ${chosen}개`);
+    mg.picked = mg.world = null;
+    renderResult({ kind: "character", name: merged.name, updated: true, uploadedCount: 0, assets: characterAssetKeys(merged).length, lore: (merged.globalLore ?? []).length, chats: (merged.chats ?? []).length, backup: true, backupRec, summary: `${inp.srcName}에서 ${chosen}개를 ${mg.scope === "full" ? "합쳤어요" : "가져왔어요"}`, note: sel.plan.detachModuleAfter ? "가져온 모듈은 이제 이 봇 안에 들어 있어요. 같은 모듈이 따로 켜져 있으면 겹칠 수 있으니 확인해 주세요." : "" });
+  }
+  // ---- 출처 하나만 새 버전으로 ----
+  async function renderSourceUpdatePick(sourceId) {
+    heading = "다른 봇에서 가져오기 · 합치기";
+    const { db, chars, modules } = await mergeData();
+    const ti = db.characters.findIndex((c) => c?.chaId === mg.targetId);
+    const target = await api.getCharacterFromIndex(ti);
+    const prov = await loadProvenance(api, target);
+    const src = prov?.sources.find((s) => s.id === sourceId);
+    if (!src) throw new Error("출처 기록을 찾지 못했어요.");
+    const same = (n) => String(n ?? "").replace(/\s+/g, "").toLowerCase() === String(src.name).replace(/\s+/g, "").toLowerCase();
+    const list = src.kind === "module" ? modules.map((m) => ({ v: "m:" + m.id, n: m.name, hit: m.id === src.moduleId || same(m.name) })) : chars.filter(({ c }) => c.chaId !== mg.targetId).map(({ c }) => ({ v: "c:" + c.chaId, n: nameOf(c), hit: c.chaId === sourceId || same(c.name) }));
+    list.sort((a, b) => b.hit - a.hit);
+    frame(`<div class="card"><div class="rv-dh" style="margin-bottom:10px"><span class="ri big">${ic("refresh", 18)}</span><div><b>'${esc(src.name)}' 새 버전으로 업데이트</b><div class="muted">${esc(nameOf(target))}에 합쳐진 이 출처의 자료만 새 버전으로 바꿔요. 다른 출처와 내 수정은 그대로예요.</div></div></div>
+        <div class="muted" style="margin-bottom:6px">새 버전을 먼저 리스에 가져온 뒤 여기서 골라 주세요.</div>
+        <select id="su-src" style="margin-top:0">${list.map((x) => `<option value="${esc(x.v)}">${esc(x.n || "(이름 없음)")}${x.hit ? " ✓" : ""}</option>`).join("")}</select></div>
+      <div class="row"><button class="primary" id="su-next">비교하기</button><button id="mg-back">뒤로</button>${closeBtn("취소")}</div>`);
+    root.querySelector("#mg-back").addEventListener("click", () => renderMergeStart(mg.targetId));
+    root.querySelector("#su-next").addEventListener("click", async () => {
+      try {
+        const v = root.querySelector("#su-src").value;
+        let incoming;
+        if (v.startsWith("m:")) incoming = moduleToMergeInput(modules.find((m) => m.id === v.slice(2))).card;
+        else incoming = await api.getCharacterFromIndex(db.characters.findIndex((c) => c?.chaId === v.slice(2)));
+        await renderSourceUpdate(ti, target, prov, sourceId, incoming, v);
+      } catch (err) {
+        renderResult(null, null, err?.message ?? String(err));
+      }
+    });
+  }
+  async function renderSourceUpdate(ti, target, prov, sourceId, incoming, pickedValue, choices = /* @__PURE__ */ new Map()) {
+    heading = "다른 봇에서 가져오기 · 합치기";
+    const cur = charFields(target);
+    const { plan, nextProvenance } = planSourceUpdate(target, prov, sourceId, incoming);
+    protectSourceImages(plan, cur, charFields(incoming), prov, sourceId, [], true);
+    const prot = protectedImageIds(plan.imageProtection);
+    const spec = charSpec({ fields: {}, risuFields: {}, refs: {} });
+    const keepOf = (keep) => new Set([...keep, ...prot]);
+    const sumOf = (keep) => summarizeCharacterUpdate(target, applyPartialUpdatePlan({ current: cur, plan, keep: keepOf(keep) }), target.additionalAssets ?? []);
+    const keep0 = keepSet(plan, choices, true);
+    const src = prov.sources.find((s) => s.id === sourceId);
+    frame(`<div class="card">
+        <div style="margin-bottom:8px">${kindTag("character")}<b>${esc(nameOf(target))}</b> <span class="muted">· '${esc(src.name)}' 출처만 새 버전으로</span></div>
+        ${plan.items.length ? reviewBox(plan, choices, true, keep0, sumOf(keep0), spec.label) : '<div class="ok">이 출처는 바뀐 게 없어요.</div>'}
+        ${prot.size ? `<div class="muted" style="margin-top:6px">다른 출처의 이미지 ${prot.size}개는 그대로 둬요.</div>` : ""}
+      </div>
+      <div class="row">${plan.items.length ? '<button class="primary" id="go">업데이트</button>' : ""}<button id="back">뒤로</button>${closeBtn("취소")}</div>`);
+    if (plan.items.length) bindReview(plan, choices, true, cur, spec.label, (keep, compact) => summaryHtml(plan, keep, sumFix(sumOf(keep)), spec.label, compact), () => renderSourceUpdate(ti, target, prov, sourceId, incoming, pickedValue, choices));
+    root.querySelector("#back").addEventListener("click", () => renderSourceUpdatePick(sourceId));
+    root.querySelector("#go")?.addEventListener("click", async () => {
+      try {
+        const keep = keepOf(keepSet(plan, choices, true));
+        const card = applyPartialUpdatePlan({ current: cur, plan, keep });
+        const { merged, backupRec } = await writeMerged(ti, target.chaId, target, card, nextProvenance, `'${src.name}' 출처 업데이트`);
+        renderResult({ kind: "character", name: merged.name, updated: true, uploadedCount: 0, assets: characterAssetKeys(merged).length, lore: (merged.globalLore ?? []).length, chats: (merged.chats ?? []).length, backup: true, backupRec, summary: `'${src.name}' 출처를 새 버전으로 바꿨어요`, note: "" });
+      } catch (err) {
+        busy = false;
+        renderResult(null, null, err instanceof Busy ? err.message : err?.message ?? String(err));
+      }
+    });
+  }
+  // ---- 가져온 자료 떼어내기 ----
+  async function renderDetach(sourceId) {
+    heading = "다른 봇에서 가져오기 · 합치기";
+    const { db } = await mergeData();
+    const ti = db.characters.findIndex((c) => c?.chaId === mg.targetId);
+    const target = await api.getCharacterFromIndex(ti);
+    const prov = await loadProvenance(api, target);
+    const src = prov?.sources.find((s) => s.id === sourceId);
+    if (!src) throw new Error("출처 기록을 찾지 못했어요.");
+    const det = prepareDetach(target, prov, sourceId);
+    const items = det.prepared.plan.items;
+    const reasons = det.prepared.plan.detachReasons ?? {};
+    const keep = new Set(items.filter((it) => it.keepByDefault).map((it) => it.id));
+    const spec = charSpec({ fields: {}, risuFields: {}, refs: {} });
+    frame(`<div class="card">
+        <div class="rv-dh" style="margin-bottom:10px"><span class="ri big">${ic("trash", 18)}</span><div><b>'${esc(src.name)}'에서 가져온 자료 떼어내기</b><div class="muted">기록과 같아 안전하게 뗄 수 있는 것만 미리 골라 뒀어요. 고쳤거나 다른 출처와 함께 쓰는 자료는 남겨 둬요.</div></div></div>
+        ${items.length ? `<div class="mg-list">${items.map((it) => `<label class="mg-part${keep.has(it.id) ? " off" : ""}" style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" data-d="${esc(it.id)}" ${keep.has(it.id) ? "" : "checked"}><span class="ri">${ic(it.id.startsWith("order:") ? "list" : { field: "text", lore: "book", regex: "code", trigger: "zap", asset: "image", emotion: "image" }[it.unit] ?? "text", 14)}</span><span class="rt"><b>${esc(itemLabel(it, spec.label))}</b><span>${esc(reasons[it.id] ?? (keep.has(it.id) ? "남겨 둠" : "떼어냄"))}</span></span></label>`).join("")}</div>` : '<div class="ok">떼어낼 자료가 없어요.</div>'}
+      </div>
+      <div class="row">${items.length ? '<button class="primary danger" id="dt-go">떼어내기</button>' : ""}<button id="mg-back">뒤로</button>${closeBtn("취소")}</div>`);
+    root.querySelectorAll("[data-d]").forEach((c) => c.addEventListener("change", () => {
+      c.checked ? keep.delete(c.dataset.d) : keep.add(c.dataset.d);
+      c.closest(".mg-part").classList.toggle("off", !c.checked);
+    }));
+    root.querySelector("#mg-back").addEventListener("click", () => renderMergeStart(mg.targetId));
+    root.querySelector("#dt-go")?.addEventListener("click", async () => {
+      try {
+        const res = applyPreparedDetach(det, keep);
+        const { merged, backupRec } = await writeMerged(ti, target.chaId, target, res.card, res.provenance, `'${src.name}' 떼어내기`);
+        renderResult({ kind: "character", name: merged.name, updated: true, uploadedCount: 0, assets: characterAssetKeys(merged).length, lore: (merged.globalLore ?? []).length, chats: (merged.chats ?? []).length, backup: true, backupRec, summary: `'${src.name}'에서 가져온 자료 ${items.length - keep.size}개를 떼어냈어요`, note: "" });
+      } catch (err) {
+        busy = false;
+        renderResult(null, null, err instanceof Busy ? err.message : err?.message ?? String(err));
+      }
     });
   }
   function renderNewCharPlan(file, incoming, db) {
@@ -789,6 +1409,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
       const fresh = (await loadDb(true)).characters;
       if (fresh.some(isGenerating)) throw new Busy();
       const created = buildNewCharacter(ch, plan, uploaded, fresh);
+      await hooks.created?.(created.chaId);
       fresh.push(created);
       await api.setDatabaseLite({ characters: fresh });
       try {
@@ -828,7 +1449,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
     frame(`${msg ? `<div class="ok">${esc(msg)}</div>` : ""}
           <div class="card"><div style="margin-bottom:6px">업데이트 전 백업 (항목마다 최근 ${5}개)</div>
             ${list.length ? list.map((b) => `<div class="opt" style="cursor:default;align-items:center">
-                <div style="flex:1">${kindTag(b.kind)}<b>${esc(b.name)}</b><div class="muted">${fmtDate(b.t)} · ${esc(b.note || "")} · ${fmtBytes2(b.size ?? 0)}</div></div>
+                <div style="flex:1">${kindTag(b.kind)}<b>${esc(b.name)}</b><div class="muted">${fmtDate(b.t)} · ${esc(b.note || "")} · ${fmtBytes2(b.size ?? 0)}${b.chatCount ? ` · 채팅 ${b.chatCount}개` : ""}</div></div>
                 <button data-restore="${esc(b.id)}">되돌리기</button>${b.src === "tide" ? "" : `<button class="danger" data-del="${esc(b.id)}">삭제</button>`}</div>`).join("") : '<div class="muted">아직 백업이 없어요. 업데이트할 때마다 바꾸기 전 상태가 자동으로 저장됩니다.</div>'}
           </div>
           <p class="muted">백업은 플러그인 저장소에 조각으로 압축해 저장하고, 같은 내용은 한 번만 저장해요. 이미지 파일은 백업에 복사하지 않으니 앱 저장소에 남아 있어야 되돌릴 때 보여요. RisuTide에서 만든 백업도 이 기기에 있으면 함께 보여요(여기서는 지우지 않아요).</p>
@@ -847,20 +1468,46 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
   async function restoreBackup(rec) {
     busy = true;
     renderProgress(`되돌리는 중: ${rec.name}`, 100, "백업 읽는 중…");
-    const snap = await store.loadBackup(rec);
+    const { __chats: savedChats, ...snap } = await store.loadBackup(rec);
+    let extra = "";
     if (rec.kind === "character") {
       const all = (await loadDb(true)).characters;
-      const idx = all.findIndex((c) => c?.chaId === rec.target);
-      if (idx < 0) throw new Error("이 백업의 캐릭터를 지금 목록에서 찾지 못했어요.");
+      const idx = all.findIndex((c) => c?.chaId === rec.target && !c.trashTime);
+      if (idx < 0) {
+        // 지운 봇: 백업으로 새로 되살린다 (에셋 파일이 앱 저장소에 남아 있어야 이미지가 보여요)
+        const fresh = all.filter(Boolean);
+        if (fresh.some(isGenerating)) throw new Busy();
+        const base0 = newCharacterBase({ fields: {}, risuFields: {}, refs: {} });
+        const body = Array.isArray(snap.__tide) ? Object.fromEntries(snap.__tide.map((k) => [k, snap[k]])) : snap;
+        const { __tide, ...card } = body;
+        const created = { ...base0, ...card, chaId: newId(), chats: [], trashTime: void 0 };
+        delete created.trashTime;
+        const n = appendBackupChats(created, savedChats);
+        if (!created.chats.length) created.chats = base0.chats ?? [{ message: [], note: "", name: "Chat 1", localLore: [], fmIndex: -1, id: newId() }];
+        created.name = uniqueDisplayName(created.name || rec.name, fresh.filter((c) => !c.trashTime));
+        await hooks.created?.(created.chaId);
+        fresh.push(created);
+        await api.setDatabaseLite({ characters: fresh });
+        try {
+          await api.checkCharOrder();
+        } catch {
+        }
+        await store.setFingerprint("c", created.chaId, await store.backupFingerprint(rec)).catch(() => {
+        });
+        busy = false;
+        return renderBackups(`지운 봇 '${created.name}'을(를) 백업에서 되살렸어요${n ? ` (채팅 ${n}개 포함)` : ""}. 이미지 파일이 앱 저장소에 없으면 일부 이미지가 안 보일 수 있어요.`);
+      }
       const cur = await api.getCharacterFromIndex(idx);
       if (!cur || cur.chaId !== rec.target) throw new Error("캐릭터를 다시 찾지 못했어요.");
       if (isGenerating(cur)) throw new Busy();
       await store.addBackup({ kind: "character", target: cur.chaId, name: cur.name, snapshot: backupSnapshot("character", cur), note: "되돌리기 전" });
       const restored = restoreFromBackup("character", cur, snap);
       remapGreetings(restored, charFields(cur), charFields(restored));
+      const n = appendBackupChats(restored, savedChats);
+      if (n) extra = ` 백업에만 있던 채팅 ${n}개를 새 채팅으로 되살렸어요.`;
       await api.setCharacterToIndex(idx, restored);
       const check = await api.getCharacterFromIndex(idx);
-      if (check?.chaId !== rec.target || (check.chats ?? []).length !== (cur.chats ?? []).length) throw new Error("되돌린 뒤 확인에서 캐릭터가 예상과 다릅니다.");
+      if (check?.chaId !== rec.target || (check.chats ?? []).length !== (restored.chats ?? []).length) throw new Error("되돌린 뒤 확인에서 캐릭터가 예상과 다릅니다.");
       await store.setFingerprint("c", rec.target, await store.backupFingerprint(rec)).catch(() => {
       });
     } else {
@@ -877,7 +1524,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
       });
     }
     busy = false;
-    renderBackups(`${rec.name}을(를) ${fmtDate(rec.t)} 상태로 되돌렸어요. 채팅은 그대로예요.`);
+    renderBackups(`${rec.name}을(를) ${fmtDate(rec.t)} 상태로 되돌렸어요. 지금 채팅은 그대로예요.${extra}`);
   }
   function keepBox(on) {
     return `<label class="chk"><input type="checkbox" id="keep" ${on ? "checked" : ""}>
@@ -967,6 +1614,20 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links } = 
       renderStart();
       await show();
       runQueue();
+    },
+    /** 합치기 화면 (넣을 봇을 미리 고를 수 있음) */
+    async openMerge(chaId) {
+      if (busy) return show();
+      if (chaId) mg = { targetId: chaId, src: null, scope: "characters" };
+      await show();
+      return renderMergeStart(chaId).catch((err) => renderResult(null, null, err?.message ?? String(err)));
+    },
+    /** 감지된 받은 사본들을 "이어 붙일까요?"로 물어본다 */
+    async offerCopies(items) {
+      for (const it of items) if (!copyQueue.some((x) => x.copyId === it.copyId)) copyQueue.push(it);
+      if (busy) return;
+      renderCopyOffer();
+      await show();
     },
     get busy() {
       return busy;

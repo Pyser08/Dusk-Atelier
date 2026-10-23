@@ -129,6 +129,10 @@ export function createStore(api) {
         }
         const m = await readManifest(id);
         for (const [, h] of m.fields) live.add(h);
+        for (const c of m.chats ?? []) {
+          live.add(c.h);
+          for (const h of c.c) live.add(h);
+        }
       }
       for (const k of keys) if (k.startsWith(PART) && !live.has(k.slice(PART.length))) await ps.removeItem(k);
     } catch {
@@ -175,12 +179,29 @@ export function createStore(api) {
       const fpNow = await self.getFingerprint(kind === "character" ? "c" : "m", target).catch(() => null);
       return serial(api, async () => {
         // 조각 쓰기부터 목록 반영까지 한 줄로 (정리와 겹치지 않게)
-        const { fields, size } = await putParts(snapshot);
-        await ps.setItem(MAN + id0, JSON.stringify({ v: 2, fields }));
+        const { __chats, ...card } = snapshot;
+        const { fields, size: s1 } = await putParts(card);
+        // 채팅은 32개 메시지씩 나눠 저장해, 다음 백업에서 같은 부분을 다시 저장하지 않는다
+        let size = s1, chats;
+        if (Array.isArray(__chats) && __chats.length) {
+          chats = [];
+          for (const c of __chats) {
+            const hp = await putParts({ h: c.header });
+            const parts = [];
+            for (const ch of c.chunks) {
+              const r = await putParts({ c: ch });
+              parts.push(r.fields[0][1]);
+              size += r.size;
+            }
+            size += hp.size;
+            chats.push({ h: hp.fields[0][1], c: parts });
+          }
+        }
+        await ps.setItem(MAN + id0, JSON.stringify({ v: 2, fields, ...chats ? { chats } : {} }));
         if (fpNow) await ps.setItem(FPBK + id0, JSON.stringify(fpNow)).catch(() => {
         });
         const idx = await readIndex();
-        const rec = { id: id0, kind, target, name, t: Date.now(), cas: true, size, hash, note: note2 ?? "", summary: summary ?? "", hasFp: !!fpNow };
+        const rec = { id: id0, kind, target, name, t: Date.now(), cas: true, size, hash, note: note2 ?? "", summary: summary ?? "", hasFp: !!fpNow, ...chats ? { chatCount: chats.length } : {} };
         idx.backups.unshift(rec);
         const keep = await keepPerTarget();
         const per = /* @__PURE__ */ new Map();
@@ -219,12 +240,16 @@ export function createStore(api) {
     async loadBackup(rec) {
       if (rec.src === "tide") {
         const t = await loadTideBackup(api, rec);
-        return rec.kind === "module" ? t.module : { ...t.fields, __tide: t.keys };
+        return rec.kind === "module" ? t.module : { ...t.fields, __tide: t.keys, ...t.chats?.length ? { __chats: t.chats } : {} };
       }
       if (rec.cas) {
         const m = await readManifest(rec.id);
         const out = {};
         for (const [k, h] of m.fields) out[k] = await readPart(h);
+        if (m.chats?.length) {
+          out.__chats = [];
+          for (const c of m.chats) out.__chats.push({ header: await readPart(c.h), chunks: await Promise.all(c.c.map(readPart)) });
+        }
         return out;
       }
       return getJson(rec.path);

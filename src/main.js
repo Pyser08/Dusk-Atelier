@@ -4,6 +4,7 @@ import { createLegacy } from './ui/legacy.js';
 import { h } from './ui/dom.js';
 import { iconMarkup } from './ui/icons.js';
 import { createApp } from './ui/app.js';
+import { createWatcher } from './ui/watch.js';
 import { CSS2 } from './ui/styles.js';
 import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets } from './data/presets.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
@@ -37,7 +38,9 @@ async function start() {
     return;
   }
   let app = null;
+  const hooks = {};
   const legacy = await createLegacy(api, {
+    hooks,
     onExit: () => {
       if (app) {
         app.ctx.state.modDirty = true;
@@ -104,6 +107,17 @@ async function start() {
   const open = () => app.open().catch((e) => console.log(`[${TITLE}] 열기 실패: ${e?.message ?? e}`));
   await api.registerButton({ name: TITLE, icon: ICON, iconType: "html", location: "hamburger" }, open);
   await api.registerSetting(TITLE, open, ICON, "html");
+  // 새로 가져온 봇 감지 (+ 메뉴 버튼 포함). 설정에서 끌 수 있다.
+  const watcher = createWatcher(api, {
+    onDetected: (items) => legacy.offerCopies(items).catch(() => {
+    }),
+    onOpenUpdater: () => legacy.open().catch(() => {
+    }),
+    isBusy: () => legacy.busy
+  });
+  app.ctx.watcher = watcher;
+  hooks.created = (id) => watcher.markKnown(id);
+  watcher.start().catch((e) => console.log(`[${TITLE}] 새 봇 감지 시작 실패: ${e?.message ?? e}`));
 }
 if (typeof globalThis.__RBU_TEST__ !== "undefined") globalThis.__RBU_TEST__.RBU = { ...engine_exports };
 else start().catch((e) => console.log(`[${TITLE}] 초기화 실패: ${e?.message ?? e}`));

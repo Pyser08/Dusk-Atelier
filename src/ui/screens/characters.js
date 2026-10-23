@@ -510,6 +510,7 @@ function charMenu(ctx, c, anchor) {
       } }
     ].filter(Boolean)) },
     { label: "업데이트 가져오기", icon: "upload", onClick: () => ctx.legacy.open() },
+    { label: "다른 봇에서 가져오기·합치기", icon: "link", onClick: () => ctx.legacy.openMerge(c.chaId) },
     isDev(ctx) ? { label: "패치 만들기 (개발자)", icon: "code", onClick: () => openPatchMaker(ctx, { kind: "character", key: `c:${c.chaId}`, i: c.i, chaId: c.chaId, name: c.name }) } : { label: "내 수정만 내보내기 (.rbupatch)", icon: "download", onClick: async () => {
       try {
         await exportMyChanges(ctx, "character", await fullChar(ctx, c));

@@ -2,6 +2,7 @@
 // 리스의 플러그인 저장소(pluginStorage)와 기기 저장소(getLocalPluginStorage)는 플러그인끼리 공간이 나뉘지 않아서
 // 같은 기기라면 RisuTide의 기준·백업을 그대로 읽을 수 있다. RisuTide 쪽 기록은 고치거나 지우지 않는다.
 import { isFingerprintV1 } from '../tide/characterUpdateMerge.ts';
+import { decodeCardProvenance } from '../tide/characterMerge/provenance.ts';
 
 let localP = null;
 export function localStore(api) {
@@ -99,6 +100,7 @@ export async function listTideBackups(api) {
       t: hd.savedAt ?? 0,
       size: hd.bytes ?? 0,
       note: "RisuTide 백업",
+      ...man.chats?.length ? { chatCount: man.chats.length } : {},
       summary: [hd.versionFrom && hd.versionTo && hd.versionFrom !== hd.versionTo ? `v${hd.versionFrom} → v${hd.versionTo}` : "", hd.source].filter(Boolean).join(" · "),
       tideKey: k
     });
@@ -118,5 +120,26 @@ export async function loadTideBackup(api, rec) {
     if (!fields.moduleSnapshot) throw new Error("RisuTide 모듈 백업 형식이 달라요");
     return { module: fields.moduleSnapshot, base: isFingerprintV1(base) ? base : null };
   }
-  return { fields, keys: Array.isArray(man.header.keys) ? man.header.keys : Object.keys(fields), base: isFingerprintV1(base) ? base : null };
+  // v5: 채팅 백업 (머리 + 32개씩 나눈 메시지)
+  const chats = [];
+  for (const c of man.chats ?? []) {
+    try {
+      chats.push({ header: await readPart(local, c.header), chunks: await Promise.all(c.chunks.map((k) => readPart(local, k))) });
+    } catch {
+    }
+  }
+  return { fields, keys: Array.isArray(man.header.keys) ? man.header.keys : Object.keys(fields), base: isFingerprintV1(base) ? base : null, chats };
+}
+
+/** 합친 봇의 출처 기록: 카드 안(extentions.risutide.merge) → RisuTide 기록(merge/<chaId>) 순서로 */
+export async function loadProvenance(api, ch) {
+  const inCard = ch?.extentions?.risutide?.merge;
+  const fromCard = typeof inCard === "string" ? decodeCardProvenance(inCard) : null;
+  if (fromCard) return fromCard;
+  try {
+    const s = await readMirrored(api, `merge/${ch?.chaId}`, (v) => typeof v === "string" && !!decodeCardProvenance(v));
+    return s ? decodeCardProvenance(s) : null;
+  } catch {
+    return null;
+  }
 }

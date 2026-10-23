@@ -12,6 +12,7 @@ import { PRESET_KEY, loadPresets, savePresets } from '../../data/presets.js';
 import { INJECTED_KEY, loadPersonaMap, savePersonaMap } from '../../data/persona.js';
 import { devToggleCard, isDev } from './devtools.js';
 import { reload } from './modules.js';
+import { renderUpdateSettings } from './updsettings.js';
 
 function tile(ic, title, desc, onClick, id) {
   return h(
@@ -25,6 +26,7 @@ function tile(ic, title, desc, onClick, id) {
 export function renderTools(ctx) {
   if (ctx.state.sub === "inspector") return renderInspector(ctx);
   if (ctx.state.sub === "cleanup") return renderCleanup(ctx);
+  if (ctx.state.sub === "updset") return renderUpdateSettings(ctx);
   if (ctx.state.sub === "patchmaker") {
     ctx.go("dev", "patchmaker");
     return;
@@ -48,6 +50,8 @@ export function renderTools(ctx) {
       { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px" },
       tile("palette", "색 바꾸기", "테마 색, 직접 고른 색, 밝기(RisuAI 따라가기/다크/라이트)", () => ctx.go("tools", "settings"), "rb-tool-settings"),
       tile("upload", "업데이트 가져오기", "모듈·캐릭터 파일로 기존 항목을 업데이트하거나 새로 넣기 (여러 파일 가능)", () => ctx.legacy.open(), "rb-tool-import"),
+      tile("link", "다른 봇에서 가져오기 · 합치기", "다른 봇·모듈의 인물과 세계관을 가져오거나 두 봇을 합치기, 합친 출처만 업데이트·떼어내기 (AI 다듬기)", () => ctx.legacy.openMerge(), "rb-tool-merge"),
+      tile("refresh", "업데이트 설정", "새로 가져온 봇 자동 감지, 받은 사본 정리, 채팅 백업", () => ctx.go("tools", "updset"), "rb-tool-updset"),
       tile("undo", "백업·되돌리기", "업데이트하기 전 상태로 되돌리기 (채팅은 그대로)", () => ctx.go("history"), "rb-tool-backups"),
       tile("download", "전체 백업", "모든 모듈(꺼진 것 포함)·에셋·프리셋·폴더·색 설정을 zip 한 파일로", () => fullBackup(ctx), "rb-tool-fullbackup"),
       tile("upload", "전체 복원", "전체 백업 zip에서 모듈과 설정을 되살리기", () => fullRestore(ctx), "rb-tool-restore"),

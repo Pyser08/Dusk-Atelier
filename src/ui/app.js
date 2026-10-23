@@ -278,6 +278,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     checkUpdate().catch(() => {
     });
     checkTide();
+    ctx.watcher?.check();
     motion(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
     motion(win, [{ opacity: 0, transform: "translateY(12px) scale(.985)" }, { opacity: 1, transform: "none" }], { duration: 220 });
     state.opened = true;
