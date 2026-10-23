@@ -335,7 +335,8 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
       if (typeof document !== "undefined") document.addEventListener("visibilitychange", () => {
         if (visible()) check(true);
       });
-      setTimeout(() => check(true), 2500);
+      // 리스는 DB를 다 읽은 뒤 플러그인을 켜므로 곧바로 첫 확인을 한다 (예전 2.5초 대기 제거)
+      setTimeout(() => check(true), 300);
       schedule();
     },
     async setEnabled(on) {

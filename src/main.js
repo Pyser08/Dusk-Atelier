@@ -61,6 +61,37 @@ async function start() {
       }
     }
   });
+  // 새로 가져온 봇 감지 (+ 메뉴 버튼 포함). 설정에서 끌 수 있다.
+  // 리스에서 가져오자마자 잡히도록 다른 준비(화면·버튼 등록·프리셋)보다 먼저 시작한다. 콜백은 감지될 때 불리므로 app은 그때 쓴다.
+  const toast = createHostToast(() => watcher.doc);
+  const watcher = createWatcher(api, {
+    // 리스 쪽에서 모듈이 바뀌면 목록 캐시를 비운다
+    onModChanged: () => app?.ctx.svc.invalidate(),
+    onDetected: (items) => legacy.offerCopies(items).catch(() => {
+    }),
+    onModules: (items) => legacy.offerModules(items).catch(() => {
+    }),
+    // 새 봇(업데이트 후보는 아님): 메인 화면 오른쪽 위 알림 → 누르면 합칠 봇 고르기. 권한이 없으면 바로 창으로
+    onNew: async (items) => {
+      const n = legacy.queueNew(items);
+      const first = items[0]?.copyName || "새 봇";
+      const shown = await toast.show({
+        title: n > 1 ? `새 봇 ${n}개를 가져왔어요` : `새 봇 '${first}'`,
+        text: "다른 봇과 합칠까요? 그냥 두셔도 돼요.",
+        action: "합칠 봇 고르기",
+        onClick: () => legacy.openNew().catch(() => {
+        })
+      });
+      if (!shown) legacy.openNew().catch(() => {
+      });
+    },
+    onOpenUpdater: () => legacy.open().catch(() => {
+    }),
+    isBusy: () => legacy.busy
+  });
+  hooks.created = (id) => watcher.markKnown(id);
+  hooks.modulesChanged = () => watcher.snapshotModules();
+  watcher.start().catch((e) => console.log(`[${TITLE}] 새 봇 감지 시작 실패: ${e?.message ?? e}`));
   let handlers = null, timer = null;
   const sync = () => app?.ctx.svc.serial(() => syncPersonaModules(api)).catch((e) => console.log("[Dusk Atelier] 페르소나 동기화 실패", e?.message ?? e));
   const onInput = async (text) => {
@@ -92,6 +123,7 @@ async function start() {
   }
   app = createApp(api, { legacy, version: VERSION, onPersonaChanged: () => refreshPersonaHandlers().catch(() => {
   }) });
+  app.ctx.watcher = watcher;
   refreshPersonaHandlers().catch(() => {
   });
   (async () => {
@@ -109,37 +141,6 @@ async function start() {
   const open = () => app.open().catch((e) => console.log(`[${TITLE}] 열기 실패: ${e?.message ?? e}`));
   await api.registerButton({ name: TITLE, icon: ICON, iconType: "html", location: "hamburger" }, open);
   await api.registerSetting(TITLE, open, ICON, "html");
-  // 새로 가져온 봇 감지 (+ 메뉴 버튼 포함). 설정에서 끌 수 있다.
-  const toast = createHostToast(() => watcher.doc);
-  const watcher = createWatcher(api, {
-    // 리스 쪽에서 모듈이 바뀌면 목록 캐시를 비운다
-    onModChanged: () => app?.ctx.svc.invalidate(),
-    onDetected: (items) => legacy.offerCopies(items).catch(() => {
-    }),
-    onModules: (items) => legacy.offerModules(items).catch(() => {
-    }),
-    // 새 봇(업데이트 후보는 아님): 메인 화면 오른쪽 위 알림 → 누르면 합칠 봇 고르기. 권한이 없으면 바로 창으로
-    onNew: async (items) => {
-      const n = legacy.queueNew(items);
-      const first = items[0]?.copyName || "새 봇";
-      const shown = await toast.show({
-        title: n > 1 ? `새 봇 ${n}개를 가져왔어요` : `새 봇 '${first}'`,
-        text: "다른 봇과 합칠까요? 그냥 두셔도 돼요.",
-        action: "합칠 봇 고르기",
-        onClick: () => legacy.openNew().catch(() => {
-        })
-      });
-      if (!shown) legacy.openNew().catch(() => {
-      });
-    },
-    onOpenUpdater: () => legacy.open().catch(() => {
-    }),
-    isBusy: () => legacy.busy
-  });
-  app.ctx.watcher = watcher;
-  hooks.created = (id) => watcher.markKnown(id);
-  hooks.modulesChanged = () => watcher.snapshotModules();
-  watcher.start().catch((e) => console.log(`[${TITLE}] 새 봇 감지 시작 실패: ${e?.message ?? e}`));
 }
 if (typeof globalThis.__RBU_TEST__ !== "undefined") globalThis.__RBU_TEST__.RBU = { ...engine_exports };
 else start().catch((e) => console.log(`[${TITLE}] 초기화 실패: ${e?.message ?? e}`));
