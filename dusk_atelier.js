@@ -18012,10 +18012,8 @@ ${md()}
   var q = (s) => `'${String(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
   function buildTemplate(meta = DEFAULT_META) {
     const m = { ...DEFAULT_META, ...meta };
-    return `//@name ${m.name}
-//@display-name ${m.displayName}
-//@api 3.0
-//@version ${m.version}
+    const header = ["//@name " + m.name, "//@display-name " + m.displayName, "//@api 3.0", "//@version " + m.version].join("\n");
+    return header + `
 
 ${INTEROP_SNIPPET}
 ${BODY_MARK}
