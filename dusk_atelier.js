@@ -12439,6 +12439,9 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-code .t-attr{color:#9cdcfe}
 .rb-code .t-cbsk{color:#ff79c6;font-weight:700}
 .rb-code.wrap .rb-code-in{width:100%}
+.rb-code.wrap .rb-code-gut{position:relative;white-space:pre}
+.rb-code.wrap .rb-code-gut i{position:absolute;right:10px;font-style:normal}
+.rb-code.wrap .rb-code-gut b{visibility:hidden;font-weight:inherit}
 .rb-code.wrap pre,.rb-code.wrap textarea{white-space:pre-wrap;overflow-wrap:anywhere}
 .rb-code.prose{--c-bg:var(--rb-surf);--c-fg:var(--rb-text);font-size:14px;line-height:1.7;font-family:inherit;tab-size:4}
 .rb-code.prose textarea{caret-color:var(--rb-text)}
@@ -12765,7 +12768,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       }
       lastPair = pair ? pair.join(",") : "";
       pre.innerHTML = paintHtml(v, tokens2, marks);
-      if (gut) {
+      if (gut && wrap) placeGutter(v);
+      else if (gut) {
         const n = v.split("\n").length;
         if (n !== lines) {
           lines = n;
@@ -12773,7 +12777,45 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         }
       }
     };
+    let gutKey = "";
+    function placeGutter(v) {
+      const width = pre.clientWidth;
+      const key = width + "|" + v;
+      if (key === gutKey) return;
+      gutKey = key;
+      const starts = [0];
+      for (let i2 = 0; i2 < v.length; i2++) if (v.charCodeAt(i2) === 10) starts.push(i2 + 1);
+      const base = pre.getBoundingClientRect().top;
+      const lh = parseFloat(getComputedStyle(pre).lineHeight) || 0;
+      const rg = document.createRange();
+      const walk = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT);
+      let node2 = walk.nextNode(), nodeStart = 0, html = "";
+      for (let k = 0; k < starts.length; k++) {
+        const s = starts[k];
+        while (node2 && nodeStart + node2.data.length <= s) {
+          nodeStart += node2.data.length;
+          node2 = walk.nextNode();
+        }
+        if (!node2) break;
+        rg.setStart(node2, s - nodeStart);
+        rg.setEnd(node2, s - nodeStart + 1);
+        const r = rg.getClientRects()[0] ?? rg.getBoundingClientRect();
+        const top = r.top - base - (lh && r.height ? (lh - r.height) / 2 : 0);
+        html += `<i style="top:${Math.round(top)}px">${k + 1}</i>`;
+      }
+      gut.innerHTML = `<b>${starts.length}</b>` + html;
+    }
     const schedule = () => raf ||= requestAnimationFrame(paint);
+    if (wrap && gut && typeof ResizeObserver === "function") {
+      let lastW = 0;
+      new ResizeObserver(() => {
+        const w = pre.clientWidth;
+        if (w && w !== lastW) {
+          lastW = w;
+          schedule();
+        }
+      }).observe(el);
+    }
     ta.addEventListener("input", () => {
       schedule();
       onChange?.(ta.value);
@@ -13042,6 +13084,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     const codeArea = (obj, key, { lang, tall, placeholder } = {}) => {
       const ed = codeEditor(obj[key] ?? "", {
         lang,
+        // 정규식 IN/OUT은 긴 줄을 칸 너비에서 줄바꿈 (Lua는 코드답게 가로로)
+        wrap: lang === "regex" || lang === "replace",
         tab: "	",
         placeholder,
         label: key,
@@ -15774,7 +15818,7 @@ ${patch.note}` : "",
           label: label3,
           tab: "	",
           gutter: mode === "code",
-          wrap: mode !== "code",
+          wrap: true,
           prose: mode !== "code",
           minHeight: tall ? "max(300px,46vh)" : "96px",
           maxHeight: tall ? "70vh" : "50vh",
@@ -15801,7 +15845,7 @@ ${patch.note}` : "",
             "div",
             { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
             modeSeg,
-            h("span", { class: "rb-muted", style: "font-size:12px;word-break:keep-all" }, "일반은 글 쓰듯 줄바꿈, 코드는 줄 번호와 고정폭 글꼴이에요. 둘 다 {{CBS}}·<img=…>·태그에 색이 들어가요. 추가 인사말도 같이 바뀌어요.")
+            h("span", { class: "rb-muted", style: "font-size:12px;word-break:keep-all" }, "일반은 글 쓰는 칸, 코드는 줄 번호와 고정폭 글꼴이에요. 긴 줄은 둘 다 자동으로 줄바꿈돼요. 둘 다 {{CBS}}·<img=…>·태그에 색이 들어가요. 추가 인사말도 같이 바뀌어요.")
           ),
           fmHolder
         );
