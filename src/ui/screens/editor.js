@@ -1,4 +1,5 @@
 import { CBS } from '../cbs.js';
+import { codeEditor } from '../codeedit.js';
 import { newId, stableJson } from '../../engine/util.js';
 import { createStore } from '../../engine/store.js';
 import { h, replace } from '../dom.js';
@@ -210,6 +211,22 @@ export async function openEditorCore(ctx, cfg) {
       }
     });
     return el;
+  };
+  // 코드 편집기 모양의 칸 (정규식 IN/OUT): 색 입히기 + 괄호 짝 표시
+  const codeArea = (obj, key, { lang, tall, placeholder } = {}) => {
+    const ed = codeEditor(obj[key] ?? "", {
+      lang,
+      tab: "\t",
+      placeholder,
+      label: key,
+      minHeight: tall ? "max(300px,46vh)" : "96px",
+      maxHeight: tall ? "70vh" : "40vh",
+      onChange: (v) => {
+        obj[key] = v;
+        changed();
+      }
+    });
+    return ed.el;
   };
   const check = (obj, key, label) => {
     const el = h("input", { type: "checkbox", checked: !!obj[key] });
@@ -571,8 +588,8 @@ export async function openEditorCore(ctx, cfg) {
       { class: "rb-form" },
       field("이름", text(r, "comment")),
       field("적용 시점", select2(r, "type", REGEX_TYPES)),
-      field("찾을 패턴 (IN)", area(r, "in"), true),
-      field("바꿀 내용 (OUT)", area(r, "out", { tall: true }), true),
+      field("찾을 패턴 (IN)", codeArea(r, "in", { lang: "regex" }), true),
+      field("바꿀 내용 (OUT)", codeArea(r, "out", { lang: "replace", tall: true }), true),
       flags
     );
   }
