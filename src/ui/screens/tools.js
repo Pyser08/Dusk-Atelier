@@ -13,6 +13,7 @@ import { INJECTED_KEY, loadPersonaMap, savePersonaMap } from '../../data/persona
 import { isDev } from './devtools.js';
 import { reload } from './modules.js';
 import { renderPresets } from './presets.js';
+import { renderLoreLog } from './lorelog.js';
 
 export function tile(ic, title, desc, onClick, id) {
   return h(
@@ -48,6 +49,7 @@ function thanksCard() {
 export function renderTools(ctx) {
   if (ctx.state.sub === "inspector") return renderInspector(ctx);
   if (ctx.state.sub === "presets") return renderPresets(ctx);
+  if (ctx.state.sub === "lorelog") return renderLoreLog(ctx);
   if (ctx.state.sub === "patchmaker") {
     ctx.go("dev", "patchmaker");
     return;
@@ -69,6 +71,7 @@ export function renderTools(ctx) {
       tile("upload", "업데이트 가져오기", "모듈·캐릭터 파일로 기존 항목을 업데이트하거나 새로 넣기 (여러 파일 가능)", () => ctx.legacy.open(), "rb-tool-import"),
       tile("link", "다른 봇에서 가져오기 · 합치기", "다른 봇·모듈의 인물과 세계관을 가져오거나 두 봇을 합치기, 합친 출처만 업데이트·떼어내기 (AI 다듬기)", () => ctx.legacy.openMerge(), "rb-tool-merge"),
       tile("history", "기록 · 되돌리기", `업데이트·편집·삭제 전 상태 보기와 되돌리기 (채팅은 그대로)${ctx.state.histCount ? ` · ${ctx.state.histCount}개` : ""}`, () => ctx.go("tools", "history"), "rb-tool-backups"),
+      tile("book", "로어북 로그", "응답마다 어떤 로어북이 들어갔는지 보기 (AI 응답 아래 버튼으로도)", () => ctx.go("tools", "lorelog"), "rb-tool-lorelog"),
       tile("download", "전체 백업", "모든 모듈(꺼진 것 포함)·에셋·프리셋·폴더·색 설정을 zip 한 파일로", () => fullBackup(ctx), "rb-tool-fullbackup"),
       tile("upload", "전체 복원", "전체 백업 zip에서 모듈과 설정을 되살리기", () => fullRestore(ctx), "rb-tool-restore"),
       tile("info", ".risum 인스펙터", "모듈 파일 안을 열어 보기: 필드별 크기, 압축률, 에셋 목록, ZIP 추출", () => ctx.go("tools", "inspector"), "rb-tool-inspector")

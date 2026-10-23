@@ -14,7 +14,8 @@ const sv = (k) => "$" + k;
 
 // 설정 (설정 탭에서 바꿈): reroll = "new"(리롤 때 확률 새로 굴리기) | "keep"(입력 때 결정 그대로)
 export const LORE_SETTINGS_KEY = "dusk-lore-settings";
-export const LORE_DEFAULTS = { reroll: "new" };
+// log: 로어북 로그 남기기, button: AI 응답 아래 '📖 로어북' 버튼
+export const LORE_DEFAULTS = { reroll: "new", log: true, button: true };
 export async function loadLoreSettings(api) {
   try {
     const raw = await api.pluginStorage.getItem(LORE_SETTINGS_KEY);
@@ -170,6 +171,8 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
       const d = prepare(entries, chat);
       prepKey = key;
       if (!d) return;
+      // 리롤하면 이 결정이 쓰이므로 로그용 이유도 바꿔 둔다 (다음 입력 때 다시 정해짐)
+      lastFired = d.fired.map((a) => ({ name: a.entry.comment || a.rid, why: a.why }));
       const ss = chat.scriptstate ?? {};
       const gatesSame = Object.entries(d.patch).every(([k, v]) => k === sv(STATE_VAR) || String(ss[k] ?? "") === v);
       // 확률이 없고 변수도 그대로면 쓸 필요 없음 (채팅을 건드리지 않는다)

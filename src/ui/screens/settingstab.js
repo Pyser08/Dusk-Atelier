@@ -19,6 +19,7 @@ export async function renderSettingsTab(ctx) {
     try {
       await saveLoreSettings(ctx.api, lore);
       ctx.loreRuntime?.setSettings?.(lore);
+      ctx.loreLog?.setSettings?.(lore);
       saved.textContent = "저장했어요";
       setTimeout(() => saved.textContent = "", 1500);
     } catch (e) {
@@ -32,20 +33,26 @@ export async function renderSettingsTab(ctx) {
     ...kids
   );
   const rerollSeg = segmented([["new", "새로 굴리기"], ["keep", "이전 결과 유지"]], lore.reroll === "keep" ? "keep" : "new", (v) => setLore({ reroll: v }), "리롤 때 확률");
+  const logSeg = segmented([["on", "켜기"], ["off", "끄기"]], lore.log === false ? "off" : "on", (v) => setLore({ log: v === "on" }), "로어북 로그");
+  const btnSeg = segmented([["on", "보이기"], ["off", "숨기기"]], lore.button === false ? "off" : "on", (v) => setLore({ button: v === "on" }), "응답 아래 로어북 버튼");
+  const row = (label, seg) => h("div", { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" }, h("b", { style: "font-size:13.5px;min-width:120px" }, label), h("div", { style: "flex:1;min-width:240px" }, seg));
   replace(ctx.main, h(
     "div",
     { class: "rb-section rb-scroll", style: "flex:1;max-width:820px" },
     h("h2", { class: "rb-h2" }, "설정"),
     section(
       "zap",
-      "로어북 규칙",
-      "로어북 항목에 Dusk 규칙을 켠 봇에서 쓰는 설정이에요.",
+      "로어북",
+      "로어북 규칙과 로어북 로그 설정이에요.",
       h("div", { style: "display:flex;flex-direction:column;gap:8px" }, h("div", { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" }, h("b", { style: "font-size:13.5px;min-width:120px" }, "다시 생성(리롤) 때"), h("div", { style: "flex:1;min-width:240px" }, rerollSeg), saved), h(
         "div",
         { class: "rb-muted", style: "font-size:12.5px;line-height:1.7;word-break:keep-all" },
         h("div", null, "· 새로 굴리기: 응답이 끝나면 같은 턴을 미리 다시 계산해 두어, 리롤할 때마다 확률·연쇄가 새로 정해져요."),
         h("div", null, "· 이전 결과 유지: 리롤해도 입력할 때 정한 항목이 그대로 들어가요. 확률이 없는 규칙은 어느 쪽이든 같아요.")
-      ))
+      )),
+      row("로어북 로그", logSeg),
+      row("응답 아래 버튼", btnSeg),
+      h("div", { class: "rb-muted", style: "font-size:12.5px;line-height:1.7;word-break:keep-all" }, "응답마다 들어간 로어북(Dusk 규칙이 없는 봇도)을 남겨요. 도구 → 로어북 로그에서 보고, AI 응답 아래 [📖 로어북] 버튼으로도 바로 봐요. 채팅 내용은 바꾸지 않아요.")
     ),
     h(
       "div",
