@@ -16,6 +16,8 @@
 export const RULE_VERSION = 1;
 export const DONT_ACTIVATE = "@@dont_activate";
 export const STATE_VAR = "da_state";
+export const SET_OPS = [["=", "로 정하기"], ["+", "더하기"], ["-", "빼기"]];
+export const MAX_HIST = 50;
 export const gateVar = (rid) => "da_" + String(rid ?? "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 12);
 const GATE_OPEN = /^\{\{#if \{\{getvar::da_[a-zA-Z0-9]+\}\}\}\}$/;
 const GATE_CLOSE = "{{/if}}";
@@ -28,19 +30,21 @@ export const COND_TYPES = [
   ["notext", "특정 단어가 최근 대화에 없음"],
   ["var", "채팅 변수 비교"],
   ["turn", "턴 범위"],
+  ["count", "단어가 대화 전체에 N번 이상 나옴 (누적)"],
+  ["times", "항목이 지금까지 N번 이상 켜짐 (누적)"],
   ["with", "다른 항목이 이번 턴에 켜짐"],
   ["without", "다른 항목이 이번 턴에 안 켜짐"]
 ];
 export const VAR_OPS = ["=", "!=", ">", "<", ">=", "<=", "있음", "없음"];
 
 export function defaultRule() {
-  return { v: RULE_VERSION, on: true, mode: "all", cond: [{ t: "keys" }], prob: 100, once: "none", cool: 3, group: "", at: "top", depth: 4, role: "system", scan: 4, chain: [] };
+  return { v: RULE_VERSION, on: true, mode: "all", cond: [{ t: "keys" }], prob: 100, once: "none", cool: 3, group: "", at: "top", depth: 4, role: "system", scan: 4, hold: 0, set: [], chain: [] };
 }
 
 export function ruleOf(entry) {
   const r = entry?.extentions?.da_rule;
   if (!r || typeof r !== "object") return null;
-  return { ...defaultRule(), ...r, cond: Array.isArray(r.cond) ? r.cond : [], chain: Array.isArray(r.chain) ? r.chain : [] };
+  return { ...defaultRule(), ...r, cond: Array.isArray(r.cond) ? r.cond : [], chain: Array.isArray(r.chain) ? r.chain : [], set: Array.isArray(r.set) ? r.set : [] };
 }
 export const ridOf = (entry) => entry?.extentions?.da_rid || null;
 export const isManaged = (entry) => !!ruleOf(entry) && ruleOf(entry).on !== false;
@@ -190,21 +194,51 @@ export function collectManaged(entries) {
   return out;
 }
 
+// ---------- 켜질 때 변수 ----------
+// 규칙의 set: [{ name, op: '='|'+'|'-', val }]. 새로 켜진 항목(지속으로 이어진 것은 제외)이 순서대로 채팅 변수를 바꾼다.
+export const setTargets = (items) => [...new Set(items.flatMap((it) => (it.rule.set ?? []).map((x) => String(x.name ?? "").trim()).filter(Boolean)))];
+// vars: scriptstate 모양({ '$이름': 값 }). 반환: { 이름: 새 값(문자열) } (바뀐 것만)
+export function applySets(fired, vars) {
+  const out = {};
+  const get = (n) => n in out ? out[n] : vars?.["$" + n];
+  for (const a of fired) {
+    if (a.why === "지속") continue;
+    for (const x of a.rule.set ?? []) {
+      const n = String(x.name ?? "").trim();
+      if (!n) continue;
+      const cur = get(n);
+      if (x.op === "+" || x.op === "-") {
+        const base = Number(cur ?? 0), d = Number(x.val ?? 0);
+        const v = (isNaN(base) ? 0 : base) + (x.op === "+" ? 1 : -1) * (isNaN(d) ? 0 : d);
+        out[n] = String(Math.round(v * 1e6) / 1e6);
+      } else out[n] = String(x.val ?? "");
+    }
+  }
+  return out;
+}
+
 // ---------- 평가 ----------
 // messages: [{ role: 'user'|'char', data }] (채팅 순서). turn: 사용자 메시지 수.
-// state: { f: { rid: [turn, ...] } } 이전 턴 발동 기록. 현재 턴 이상 기록은 무시(다시 생성·되돌리기 대응).
-// 반환: { fired: [{ rid, entry, rule, why }], state(새 기록) }
+// state: { f: { rid: [turn, ...] } 켜진 턴 기록, t: { rid: [turn, ...] } 새로 켜진(지속 제외) 턴 기록 }. 현재 턴 이상 기록은 무시(다시 생성·되돌리기 대응).
+// 반환: { fired: [{ rid, entry, rule, why }], state(새 기록), trace(항목별 왜 켜지고 안 켜졌는지) }
 export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}, rng = Math.random, ignoreProb = false }) {
-  const hist = {};
-  for (const [rid, turns] of Object.entries(state?.f ?? {})) {
-    const t = (Array.isArray(turns) ? turns : []).filter((x) => typeof x === "number" && x < turn);
-    if (t.length) hist[rid] = t;
-  }
+  const pick = (src) => {
+    const o = {};
+    for (const [rid, turns] of Object.entries(src ?? {})) {
+      const t = (Array.isArray(turns) ? turns : []).filter((x) => typeof x === "number" && x < turn);
+      if (t.length) o[rid] = t;
+    }
+    return o;
+  };
+  const hist = pick(state?.f);
+  const trig = pick(state?.t);
   const byRid = new Map(items.map((x) => [x.rid, x]));
+  const nameOf = (rid) => byRid.get(rid)?.entry.comment || rid || "?";
   const textsFor = (scan, who = "any") => {
     const n = Math.max(1, Number(scan) || 4);
     return messages.slice(-n).filter((m) => who === "any" || m.role === who).map((m) => m.data ?? "");
   };
+  const holdOf = (it) => Math.max(0, Math.floor(Number(it.rule.hold) || 0));
   const blocked = (it) => {
     const h = hist[it.rid];
     if (!h?.length) return false;
@@ -215,6 +249,16 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
   const roll = (p) => ignoreProb || rng() * 100 < (p === void 0 || p === "" ? 100 : Number(p));
   const active = new Map();
   const rolled = new Map();
+  // 지속: 새로 켜진 뒤 N턴 동안(켜진 턴 포함) 조건·확률 없이 계속 켜 둔다
+  for (const it of items) {
+    const n = holdOf(it);
+    if (n > 1 && (trig[it.rid] ?? []).some((t) => turn - t < n)) active.set(it.rid, { ...it, why: "지속" });
+  }
+  const countHits = (it, c) => {
+    const who = c.in || "any", keys = splitKeys(c.keys);
+    return messages.filter((m) => who === "any" || m.role === who).filter((m) => keyHit(keys, [m.data ?? ""], { regex: !!c.regex, whole: !!it.rule.whole })).length;
+  };
+  const inRange = (n, c) => n >= (c.min === void 0 || c.min === "" ? 1 : Number(c.min)) && (c.max === void 0 || c.max === "" || n <= Number(c.max));
   const condOk = (it, c) => {
     switch (c.t) {
       case "keys": {
@@ -233,6 +277,10 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
         return cmp(vars[c.name] ?? vars["$" + c.name], c.op || "=", c.val);
       case "turn":
         return (c.min === void 0 || c.min === "" || turn >= Number(c.min)) && (c.max === void 0 || c.max === "" || turn <= Number(c.max));
+      case "count":
+        return splitKeys(c.keys).length > 0 && inRange(countHits(it, c), c);
+      case "times":
+        return inRange((hist[c.rid || it.rid] ?? []).length, c);
       case "with":
         return active.has(c.rid);
       case "without":
@@ -252,7 +300,9 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
   for (let pass = 0; pass < 8; pass++) {
     let changed = false;
     for (const it of items) {
-      if (active.has(it.rid) || blocked(it) || !condsOk(it)) continue;
+      const cur = active.get(it.rid);
+      if (cur && cur.why !== "지속") continue;
+      if (blocked(it) || !condsOk(it)) continue;
       if (!rolled.has(it.rid)) rolled.set(it.rid, roll(it.rule.prob));
       if (rolled.get(it.rid)) changed = add(it, "조건") || changed;
     }
@@ -285,9 +335,41 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     const g = String(a.rule.group ?? "").trim();
     return !g || groups.get(g) === a;
   });
-  const f = { ...hist };
-  for (const a of fired) f[a.rid] = [...(f[a.rid] ?? []), turn].slice(-20);
-  return { fired, state: { f } };
+  const f = { ...hist }, t = { ...trig };
+  for (const a of fired) {
+    f[a.rid] = [...(f[a.rid] ?? []), turn].slice(-MAX_HIST);
+    if (a.why !== "지속") t[a.rid] = [...(t[a.rid] ?? []), turn].slice(-MAX_HIST);
+  }
+  // 시험·로그용: 항목마다 왜 켜졌고 왜 안 켜졌는지
+  const label = (it, c) => {
+    switch (c.t) {
+      case "keys": return `키 일치(${String(it.entry.key ?? "").trim() || "키 없음"})`;
+      case "text": return `'${c.keys ?? ""}' 있음`;
+      case "notext": return `'${c.keys ?? ""}' 없음`;
+      case "var": return `변수 ${c.name ?? "?"} ${c.op || "="} ${c.val ?? ""}`.trim() + ` (지금 ${vars[c.name] ?? vars["$" + c.name] ?? "없음"})`;
+      case "turn": return `턴 ${c.min ?? ""}~${c.max ?? ""} (지금 ${turn}턴)`;
+      case "count": return `'${c.keys ?? ""}' ${c.min || 1}번 이상 (지금 ${countHits(it, c)}번)`;
+      case "times": return `'${c.rid ? nameOf(c.rid) : "이 항목"}' ${c.min || 1}번 이상 켜짐 (지금 ${(hist[c.rid || it.rid] ?? []).length}번)`;
+      case "with": return `'${nameOf(c.rid)}' 켜짐`;
+      case "without": return `'${nameOf(c.rid)}' 안 켜짐`;
+    }
+    return c.t;
+  };
+  const firedSet = new Set(fired.map((a) => a.rid));
+  const trace = items.map((it) => {
+    const name = it.entry.comment || it.rid;
+    if (firedSet.has(it.rid)) return { rid: it.rid, name, on: true, why: active.get(it.rid).why };
+    let why;
+    if (active.has(it.rid)) why = `같은 그룹 '${String(it.rule.group).trim()}'의 다른 항목이 먼저 켜졌어요`;
+    else if (blocked(it)) why = it.rule.once === "chat" ? "이미 켜져서 쉬는 중 (채팅에서 한 번만)" : `쿨다운 중 (${Math.max(1, Number(it.rule.cool) || 1)}턴 쉬기)`;
+    else if (!condsOk(it)) {
+      const bad = (it.rule.cond ?? []).filter((c) => !condOk(it, c)).map((c) => label(it, c));
+      why = `${it.rule.mode === "any" ? "맞는 조건이 없어요" : "안 맞는 조건"}: ${bad.join(" / ")}`;
+    } else if (rolled.get(it.rid) === false) why = `조건은 맞았지만 확률 ${it.rule.prob}%에서 안 켜졌어요`;
+    else why = "다른 항목이 바뀌어 조건이 맞지 않게 됐어요";
+    return { rid: it.rid, name, on: false, why };
+  });
+  return { fired, state: { f, t }, trace };
 }
 
 // ---------- 배치 ----------
@@ -354,6 +436,9 @@ export function validateRules(lorebook) {
       if (c.t === "keys" && !splitKeys(l.key).length) out.push({ level: "warn", index: i, msg: `${n}: '키' 조건이 있지만 활성화 키가 비어 있어요` });
       if ((c.t === "text" || c.t === "notext") && !splitKeys(c.keys).length) out.push({ level: "warn", index: i, msg: `${n}: 단어 조건에 단어가 없어요` });
       if (c.t === "var" && !String(c.name ?? "").trim()) out.push({ level: "err", index: i, msg: `${n}: 변수 조건에 변수 이름이 없어요` });
+      if (c.t === "count" && !splitKeys(c.keys).length) out.push({ level: "warn", index: i, msg: `${n}: 누적 단어 조건에 단어가 없어요` });
+      if (c.t === "times" && c.rid && !rids.has(c.rid)) out.push({ level: "err", index: i, msg: `${n}: '켜진 횟수' 조건이 가리키는 항목이 없어요` });
+      if ((c.t === "count" || c.t === "times") && c.min !== void 0 && c.min !== "" && !(Number(c.min) >= 0)) out.push({ level: "err", index: i, msg: `${n}: 횟수는 0 이상이어야 해요` });
       if ((c.t === "with" || c.t === "without") && !rids.has(c.rid)) out.push({ level: "err", index: i, msg: `${n}: 조건이 가리키는 항목이 없어요 (규칙이 꺼졌거나 지워짐)` });
       if ((c.t === "with" || c.t === "without") && c.rid === ridOf(l)) out.push({ level: "err", index: i, msg: `${n}: 조건이 자기 자신을 가리켜요` });
       if (((c.t === "text" || c.t === "notext") && c.regex) || (c.t === "keys" && l.useRegex)) {
@@ -367,6 +452,12 @@ export function validateRules(lorebook) {
           }
         }
       }
+    }
+    if (r.hold !== void 0 && r.hold !== "" && !(Number(r.hold) >= 0)) out.push({ level: "err", index: i, msg: `${n}: 유지 턴 수는 0 이상이어야 해요` });
+    for (const x of r.set ?? []) {
+      if (!String(x.name ?? "").trim()) out.push({ level: "err", index: i, msg: `${n}: '켜질 때' 변수 이름이 비어 있어요` });
+      if ((x.op === "+" || x.op === "-") && isNaN(Number(x.val ?? 0))) out.push({ level: "err", index: i, msg: `${n}: '${x.name}' 더하기·빼기 값은 숫자여야 해요` });
+      if (String(x.name ?? "").startsWith("da_")) out.push({ level: "warn", index: i, msg: `${n}: 변수 '${x.name}'는 Dusk가 쓰는 이름(da_)이에요. 다른 이름을 쓰세요` });
     }
     for (const c of r.chain ?? []) {
       const ti = rids.get(c.rid);

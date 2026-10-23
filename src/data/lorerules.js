@@ -8,7 +8,7 @@
 //   → 리롤하면 확률이 새로 굴려진 결정이 쓰이고, 그냥 다음 입력을 하면 입력 때 다시 계산한다.
 //   리롤이 실제로 일어났는지는 다음 입력 때 마지막 응답 시각으로 판단해 기록(한 번만·쿨다운)에 반영한다.
 // 발동 기록은 채팅 변수 da_state에 둔다 (채팅 복사·분기에 따라감, 현재 턴 이상 기록은 무시하므로 되돌리기에도 맞다).
-import { STATE_VAR, collectManaged, evaluate, gateValues } from '../engine/lorerules.js';
+import { STATE_VAR, MAX_HIST, applySets, collectManaged, evaluate, gateValues, setTargets } from '../engine/lorerules.js';
 
 const sv = (k) => "$" + k;
 
@@ -70,6 +70,13 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
   const turnOf = (msgs) => msgs.filter((m) => m.role === "user").length;
   const hasRandom = (items) => items.some((it) => Number(it.rule.prob ?? 100) < 100 || (it.rule.chain ?? []).some((c) => Number(c.prob ?? 100) < 100));
 
+  // 변수 값 읽기·쓰기 보조 (scriptstate 키는 '$이름')
+  const finalVars = (base, targets, out) => {
+    const v = { ...base };
+    for (const n of targets) if (n in out) v[sv(n)] = out[n];
+    return v;
+  };
+
   // 순수 계산: 입력 때. 바뀔 scriptstate 조각을 돌려준다
   function decide(entries, chat, input) {
     const items = collectManaged(entries);
@@ -77,23 +84,43 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
     const msgs = toMsgs(chat);
     if (input !== void 0 && input !== null) msgs.push({ role: "user", data: String(input) });
     const turn = turnOf(msgs);
-    const st = readState(chat?.scriptstate);
+    const ss = chat?.scriptstate ?? {};
+    const st = readState(ss);
+    const targets = setTargets(items);
     // 직전 턴에 리롤이 있었으면(미리 계산한 결정이 쓰였으면) 그 결정을 기록으로 확정
-    const f = { ...(st.f ?? {}) };
+    const f = { ...(st.f ?? {}) }, t = { ...(st.t ?? {}) };
+    const vars = { ...ss };
     const p = st.p;
     const lastChar = [...(chat?.message ?? [])].reverse().find((m) => m.role !== "user");
-    if (p && p.turn === turn - 1 && typeof lastChar?.time === "number" && lastChar.time > p.at) {
-      for (const k of Object.keys(f)) f[k] = f[k].filter((t) => t !== p.turn);
-      for (const rid of p.fired ?? []) f[rid] = [...(f[rid] ?? []), p.turn].slice(-20);
+    if (p && p.turn === turn - 1) {
+      if (typeof lastChar?.time === "number" && lastChar.time > p.at) {
+        for (const k of Object.keys(f)) f[k] = f[k].filter((x) => x !== p.turn);
+        for (const k of Object.keys(t)) t[k] = t[k].filter((x) => x !== p.turn);
+        for (const rid of p.fired ?? []) f[rid] = [...(f[rid] ?? []), p.turn].slice(-MAX_HIST);
+        for (const rid of p.trig ?? []) t[rid] = [...(t[rid] ?? []), p.turn].slice(-MAX_HIST);
+      } else if (p.vars && st.b?.turn === p.turn) {
+        // 리롤이 없었으면 대비로 써 둔 변수를 입력 때 결과로 되돌린다 (그 사이 다른 곳에서 바뀌지 않은 것만)
+        for (const [n, v] of Object.entries(p.vars)) {
+          if (n in (st.b.out ?? {}) && String(vars[sv(n)] ?? "") === String(v)) vars[sv(n)] = st.b.out[n];
+        }
+      }
     }
-    const res = evaluate({ items, messages: msgs, turn, state: { f }, vars: chat?.scriptstate ?? {} });
-    const patch = { [sv(STATE_VAR)]: JSON.stringify(res.state) };
+    const res = evaluate({ items, messages: msgs, turn, state: { f, t }, vars });
+    const out = applySets(res.fired, vars);
+    const after = finalVars(vars, targets, out);
+    const patch = { [sv(STATE_VAR)]: "" };
     for (const [k, v] of Object.entries(gateValues(items, res.fired))) patch[sv(k)] = v;
-    return { patch, fired: res.fired, turn };
+    for (const n of targets) {
+      const nv = after[sv(n)];
+      if (nv !== void 0 && String(nv) !== String(ss[sv(n)] ?? "")) patch[sv(n)] = String(nv);
+    }
+    const b = targets.length ? { turn, base: Object.fromEntries(targets.map((n) => [n, vars[sv(n)] ?? null])), out: Object.fromEntries(targets.map((n) => [n, String(after[sv(n)] ?? "")])) } : void 0;
+    patch[sv(STATE_VAR)] = JSON.stringify({ ...res.state, ...b ? { b } : {} });
+    return { patch, fired: res.fired, turn, trace: res.trace, sets: out };
   }
 
   // 순수 계산: 응답이 끝난 뒤, 리롤 대비. 마지막 사용자 메시지까지로 같은 턴을 다시 계산한다.
-  // 기록(f)은 건드리지 않고 미리 계산한 결정(p)과 변수만 바꾼다.
+  // 기록(f·t)은 건드리지 않고 미리 계산한 결정(p)과 변수만 바꾼다.
   function prepare(entries, chat, now = Date.now()) {
     const items = collectManaged(entries);
     if (!items.length) return null;
@@ -103,11 +130,27 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
     if (!end || end === all.length) return null; // 아직 응답이 없음
     const msgs = all.slice(0, end);
     const turn = turnOf(msgs);
-    const st = readState(chat?.scriptstate);
-    const res = evaluate({ items, messages: msgs, turn, state: { f: st.f ?? {} }, vars: chat?.scriptstate ?? {} });
-    const p = { turn, fired: res.fired.map((a) => a.rid), at: now };
-    const patch = { [sv(STATE_VAR)]: JSON.stringify({ f: st.f ?? {}, p }) };
+    const ss = chat?.scriptstate ?? {};
+    const st = readState(ss);
+    const targets = setTargets(items);
+    const vars = { ...ss };
+    // 입력 때 바꾸기 전 값으로 돌려 놓고 같은 턴을 다시 계산한다
+    if (st.b?.turn === turn) {
+      for (const n of targets) {
+        const v = st.b.base?.[n];
+        if (v === null || v === void 0) delete vars[sv(n)];
+        else vars[sv(n)] = v;
+      }
+    }
+    const res = evaluate({ items, messages: msgs, turn, state: { f: st.f ?? {}, t: st.t ?? {} }, vars });
+    const out = applySets(res.fired, vars);
+    const after = finalVars(vars, targets, out);
+    const pv = Object.fromEntries(targets.map((n) => [n, String(after[sv(n)] ?? "")]));
+    const p = { turn, fired: res.fired.map((a) => a.rid), trig: res.fired.filter((a) => a.why !== "지속").map((a) => a.rid), at: now };
+    if (targets.length) p.vars = pv;
+    const patch = { [sv(STATE_VAR)]: JSON.stringify({ f: st.f ?? {}, t: st.t ?? {}, p, ...st.b ? { b: st.b } : {} }) };
     for (const [k, v] of Object.entries(gateValues(items, res.fired))) patch[sv(k)] = v;
+    for (const n of targets) patch[sv(n)] = pv[n];
     return { patch, fired: res.fired, turn, random: hasRandom(items) };
   }
 
