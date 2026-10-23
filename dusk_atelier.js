@@ -18240,13 +18240,14 @@ ${md()}
     }));
     return out;
   }
-  async function storageDump(api) {
-    const out = [];
-    for (const k of await storageKeys(api)) {
-      const v = await api.pluginStorage.getItem(k);
-      out.push({ key: k, value: v, size: typeof v === "string" ? v.length : JSON.stringify(v ?? null).length });
-    }
-    return out.sort((a, b) => a.key.localeCompare(b.key));
+  var withTimeout = (p, ms, msg) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(msg)), ms))]);
+  async function storageKeyList(api) {
+    const keys = await withTimeout(storageKeys(api), 8e3, "저장소 목록을 읽는 데 너무 오래 걸려요");
+    return (keys ?? []).filter((k) => typeof k === "string").sort((a, b) => a.localeCompare(b));
+  }
+  async function storageGet(api, key) {
+    const v = await withTimeout(api.pluginStorage.getItem(key), 15e3, "값을 읽는 데 너무 오래 걸려요");
+    return { key, value: v, size: v == null ? 0 : typeof v === "string" ? v.length : JSON.stringify(v).length };
   }
   var storageAvailable = (api) => typeof api.pluginStorage?.keys === "function" || typeof api.pluginStorage?.key === "function";
   async function exportAll(api) {
@@ -18721,32 +18722,58 @@ ${code}
   async function viewStorage(ctx, { fresh }) {
     if (!storageAvailable(ctx.api)) return note("info", "이 RisuAI에서는 저장소 목록을 볼 수 없어요.");
     const c = memo(ctx);
-    if (fresh || !c.storage || Date.now() - c.storageAt > 1e4) {
-      c.storage = await storageDump(ctx.api).catch(() => []);
+    if (fresh || !c.storageKeys || Date.now() - c.storageAt > 1e4) {
+      c.storageKeys = await storageKeyList(ctx.api);
       c.storageAt = Date.now();
     }
-    const items = c.storage;
-    const total = items.reduce((s, x2) => s + x2.size, 0);
+    const keys = c.storageKeys;
+    const q2 = (ctx.state.search ?? "").trim().toLowerCase();
+    const shown = q2 ? keys.filter((k) => k.toLowerCase().includes(q2)) : keys;
+    const groups = /* @__PURE__ */ new Map();
+    for (const k of shown) {
+      const g = k.includes(":") ? k.slice(0, k.indexOf(":")) : "(기타)";
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push(k);
+    }
+    const label3 = (g) => ({ rbm: "Dusk Atelier", da_interop: "DA Interop 연동" })[g] ?? g;
     return h(
       "div",
-      { style: "display:flex;flex-direction:column;gap:6px" },
+      { style: "display:flex;flex-direction:column;gap:12px" },
       h(
         "div",
         { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" },
-        h("p", { class: "rb-muted", style: "flex:1;min-width:200px" }, `플러그인 저장소 값 ${items.length}개 · ${fmtBytes(total)} (모든 플러그인이 함께 쓰는 저장소예요. 다른 플러그인 값을 지우면 그 플러그인 설정이 사라질 수 있어요)`),
+        h("p", { class: "rb-muted", style: "flex:1;min-width:200px" }, `플러그인 저장소 키 ${keys.length}개. 모든 플러그인이 함께 쓰는 저장소예요. 누르면 값을 읽어요. 다른 플러그인 값을 지우면 그 플러그인 설정이 사라질 수 있어요.`),
         btn("새로고침", { size: "sm", icon: "refresh", onClick: () => refresh(ctx) })
       ),
-      items.map((it) => h(
-        "button",
-        { type: "button", class: "rb-row", onClick: () => showStorageItem(ctx, it) },
-        h("span", { style: "display:flex;color:var(--rb-sub)" }, icon("text", 18)),
-        h("div", { class: "txt" }, h("div", { class: "ttl" }, h("span", { class: "name" }, it.key)), h("span", { class: "meta" }, fmtBytes(it.size))),
-        icon("chevron", 16)
+      shown.length ? null : h("div", { class: "rb-empty" }, q2 ? "찾는 키가 없어요." : "저장된 값이 없어요."),
+      [...groups].map(([g, list]) => h(
+        "div",
+        { style: "display:flex;flex-direction:column;gap:2px" },
+        h("h3", { class: "rb-h3", style: "display:flex;gap:6px;align-items:center" }, icon("folder", 16), label3(g), h("small", { class: "rb-muted" }, String(list.length))),
+        list.map((k) => h(
+          "button",
+          { type: "button", class: "rb-row", style: "padding:9px 14px", onClick: () => openStorageItem(ctx, k) },
+          h("span", { style: "display:flex;color:var(--rb-sub)" }, icon("text", 16)),
+          h("div", { class: "txt" }, h("div", { class: "ttl" }, h("span", { class: "name", style: "font-weight:500" }, k))),
+          icon("chevron", 16)
+        ))
       ))
     );
   }
+  async function openStorageItem(ctx, key) {
+    const token = ctx.state.storageOpen = /* @__PURE__ */ Symbol();
+    ctx.showDetail(h("div", { class: "rb-section" }, h("h2", { class: "rb-h2", style: "word-break:break-all" }, key), loading("값 읽는 중")));
+    ctx.openSheet();
+    try {
+      const it = await storageGet(ctx.api, key);
+      if (ctx.state.storageOpen === token) showStorageItem(ctx, it);
+    } catch (err2) {
+      if (ctx.state.storageOpen === token) ctx.showDetail(h("div", { class: "rb-section" }, h("h2", { class: "rb-h2", style: "word-break:break-all" }, key), note("err", err2?.message ?? String(err2))));
+    }
+  }
   function showStorageItem(ctx, it) {
-    const text = typeof it.value === "string" ? prettyJson(it.value) : JSON.stringify(it.value, null, 2);
+    const raw = typeof it.value === "string" ? it.value : JSON.stringify(it.value, null, 2) ?? "";
+    const text = raw.length > 2e5 ? raw : typeof it.value === "string" ? prettyJson(raw) : raw;
     ctx.showDetail(h(
       "div",
       { class: "rb-section", style: "gap:10px" },
