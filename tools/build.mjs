@@ -29,6 +29,8 @@ const result = await build({
   target: 'es2022',
   charset: 'utf8',
   legalComments: 'none',
+  // 자동 업데이트는 파일 크기 제한(약 1MB)에 걸려 실패하므로 주석·공백을 줄여 크기를 낮춘다
+  minify: true,
   define: { __VERSION__: JSON.stringify(version) },
   alias: { fflate: path.join(root, 'src/vendor/fflate.js') },
   banner: { js: banner },
@@ -36,6 +38,12 @@ const result = await build({
   logLevel: 'warning'
 });
 const code = result.outputFiles[0].text;
+// 1MB를 넘으면 RisuAI 자동 업데이트가 받지 못하므로 빌드를 막는다
+const MAX_BYTES = 1024 * 1024 - 64 * 1024;
+if (Buffer.byteLength(code, 'utf8') > MAX_BYTES) {
+  console.error(`빌드 중단: 결과가 ${(Buffer.byteLength(code, 'utf8') / 1024).toFixed(0)} KB로 너무 커요 (한도 ${(MAX_BYTES / 1024).toFixed(0)} KB). 자동 업데이트가 실패해요.`);
+  process.exit(1);
+}
 
 // RisuAI는 파일 전체에서 줄 맨 앞의 //@ 줄을 머리말로 읽는다 (같은 이름이면 뒤쪽 값이 이김).
 // 문자열 안에 줄 맨 앞 //@ 가 들어가면 버전이 엉뚱하게 바뀌므로 머리말 밖의 그런 줄은 빌드를 막는다.
