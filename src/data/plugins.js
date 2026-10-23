@@ -4,8 +4,8 @@
 // plugins 필드 쓰기는 detectEnv()로 되는 환경인지 확인한 뒤에만 한다 (RisuAI PR #1572 이후 막힌 곳이 많음).
 
 export var SELF_NAME = "dusk_atelier";
-var REG = "da_interop_registry";
-var PATCH = "da_interop_patch";
+var REG = "da_interop:reg:";
+var PATCH = "da_interop:patch:";
 var KEYS = { cats: "rbm:pluginCats:v1", backups: "rbm:pluginBackups:v1" };
 var MAX_BACKUPS = 5;
 var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -26,24 +26,18 @@ async function readPlugins(api) {
   const db = await api.getDatabase(["plugins"]);
   return Array.isArray(db?.plugins) ? db.plugins : null;
 }
-async function readEtc(api) {
-  const db = await api.getDatabase(["etcData"]);
-  return db?.etcData && typeof db.etcData === "object" ? db.etcData : {};
-}
-// etcData[bucket][id] 하나만 바꾼다. 다른 플러그인이 동시에 써서 사라지면 다시 쓴다
-async function writeEtcEntry(api, bucket, id, value) {
-  for (let i = 0; i < 4; i++) {
-    const etc = { ...await readEtc(api) };
-    const b = { ...etc[bucket] ?? {} };
-    if (value === void 0) delete b[id];
-    else b[id] = value;
-    etc[bucket] = b;
-    await api.setDatabaseLite({ etcData: etc });
-    await sleep(120);
-    const now = (await readEtc(api))[bucket]?.[id];
-    if (value === void 0 ? now === void 0 : now?.rev === value.rev && now?.updatedAt === value.updatedAt) return true;
+// 연동 데이터는 pluginStorage(모든 플러그인 공용)에 플러그인마다 키 하나씩 둔다.
+// (getDatabase는 허용된 필드만 주므로 etcData는 못 씀)
+async function storageKeys(api) {
+  const ps = api.pluginStorage;
+  if (typeof ps.keys === "function") return await ps.keys() ?? [];
+  if (typeof ps.key === "function") {
+    const n = typeof ps.length === "function" ? await ps.length() : ps.length ?? 0;
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(await ps.key(i));
+    return out;
   }
-  return false;
+  return [];
 }
 
 // ── 환경 감지 ──
@@ -82,23 +76,27 @@ export async function detectEnv(api) {
 
 // ── 인터롭 레지스트리 ──
 export async function listInterop(api, installedNames) {
-  const etc = await readEtc(api);
-  const reg = etc[REG] ?? {}, patches = etc[PATCH] ?? {};
-  return Object.values(reg).filter((e) => e && e.spec === 1 && e.id).map((e) => {
-    const p = patches[e.id];
-    return {
+  const keys = (await storageKeys(api)).filter((k) => typeof k === "string" && k.startsWith(REG));
+  const out = [];
+  for (const k of keys) {
+    const e = await readJson(api, k, null);
+    if (!e || e.spec !== 1 || !e.id) continue;
+    const p = await readJson(api, PATCH + e.id, null);
+    out.push({
       ...e,
       fields: Array.isArray(e.fields) ? e.fields : [],
       presets: Array.isArray(e.presets) ? e.presets : [],
       pendingRev: p && p.rev > (e.appliedRev ?? 0) ? p.rev : 0,
       installed: installedNames && e.pluginName ? installedNames.has(e.pluginName) : null
-    };
-  }).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    });
+  }
+  return out.sort((a, b) => String(a.name).localeCompare(String(b.name)));
 }
 export async function sendPatch(api, id, values, preset = null) {
-  const etc = await readEtc(api);
-  const rev = Math.max(etc[PATCH]?.[id]?.rev ?? 0, etc[REG]?.[id]?.appliedRev ?? 0) + 1;
-  if (!await writeEtcEntry(api, PATCH, id, { rev, values: clone(values), preset, updatedAt: Date.now() })) throw new Error("값을 저장하지 못했어요");
+  const prev = await readJson(api, PATCH + id, null);
+  const reg = await readJson(api, REG + id, null);
+  const rev = Math.max(prev?.rev ?? 0, reg?.appliedRev ?? 0) + 1;
+  await writeJson(api, PATCH + id, { rev, values: clone(values), preset, updatedAt: Date.now() });
   return rev;
 }
 export function presetValues(entry, name) {
@@ -110,15 +108,15 @@ export function presetValues(entry, name) {
 export async function waitAck(api, id, rev, timeoutMs = 1e4) {
   const end = Date.now() + timeoutMs;
   while (Date.now() < end) {
-    const e = (await readEtc(api))[REG]?.[id];
+    const e = await readJson(api, REG + id, null);
     if ((e?.appliedRev ?? 0) >= rev) return { ok: !e.lastError, error: e.lastError ?? null };
     await sleep(700);
   }
   return { ok: false, error: "timeout" };
 }
 export async function pruneInterop(api, id) {
-  await writeEtcEntry(api, REG, id, void 0);
-  await writeEtcEntry(api, PATCH, id, void 0);
+  await api.pluginStorage.removeItem(REG + id);
+  await api.pluginStorage.removeItem(PATCH + id);
 }
 
 // ── 플러그인 목록 (읽기) ──
@@ -258,16 +256,9 @@ export async function checkUpdates(api, plugins) {
 
 // ── pluginStorage 보기 ──
 export async function storageDump(api) {
-  const ps = api.pluginStorage;
-  let keys = [];
-  if (typeof ps.keys === "function") keys = await ps.keys();
-  else if (typeof ps.key === "function") {
-    const n = typeof ps.length === "function" ? await ps.length() : ps.length ?? 0;
-    for (let i = 0; i < n; i++) keys.push(await ps.key(i));
-  }
   const out = [];
-  for (const k of keys ?? []) {
-    const v = await ps.getItem(k);
+  for (const k of await storageKeys(api)) {
+    const v = await api.pluginStorage.getItem(k);
     out.push({ key: k, value: v, size: typeof v === "string" ? v.length : JSON.stringify(v ?? null).length });
   }
   return out.sort((a, b) => a.key.localeCompare(b.key));
@@ -277,13 +268,14 @@ export var storageAvailable = (api) => typeof api.pluginStorage?.keys === "funct
 // ── 백업 내보내기 ──
 export async function exportAll(api) {
   const plugins = await readPlugins(api).catch(() => null);
-  const etc = await readEtc(api).catch(() => ({}));
+  const interop = {};
+  for (const k of await storageKeys(api).catch(() => [])) if (k.startsWith("da_interop:")) interop[k] = await readJson(api, k, null);
   return JSON.stringify({
     format: "dusk-atelier-plugins",
     v: 1,
     at: (/* @__PURE__ */ new Date()).toISOString(),
     plugins,
     categories: await loadCategories(api),
-    interop: { registry: etc[REG] ?? {}, patch: etc[PATCH] ?? {} }
+    interop
   }, null, 2);
 }

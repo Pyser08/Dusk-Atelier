@@ -310,7 +310,7 @@ async function viewStorage(ctx) {
   return h(
     "div",
     { style: "display:flex;flex-direction:column;gap:6px" },
-    h("p", { class: "rb-muted" }, `Dusk Atelier가 저장한 값 ${items.length}개 · ${fmtBytes(total)} (플러그인 저장소는 플러그인마다 따로라 다른 플러그인 것은 볼 수 없어요)`),
+    h("p", { class: "rb-muted" }, `플러그인 저장소 값 ${items.length}개 · ${fmtBytes(total)} (모든 플러그인이 함께 쓰는 저장소예요. 다른 플러그인 값을 지우면 그 플러그인 설정이 사라질 수 있어요)`),
     items.map((it) => h(
       "button",
       { type: "button", class: "rb-row", onClick: () => {
@@ -326,7 +326,7 @@ async function viewStorage(ctx) {
             { style: "display:flex;gap:8px" },
             btn("내려받기", { size: "sm", icon: "download", onClick: () => download(`${it.key.replace(/[^\w.-]+/g, "_")}.json`, text, "application/json") }),
             btn("지우기", { size: "sm", kind: "danger", icon: "trash", onClick: async () => {
-              if (!await confirmDialog(ctx.win, { title: `'${it.key}'을(를) 지울까요?`, body: "Dusk Atelier 설정이나 기록이 사라질 수 있어요.", ok: "지우기", danger: true })) return;
+              if (!await confirmDialog(ctx.win, { title: `'${it.key}'을(를) 지울까요?`, body: "이 값을 쓰는 플러그인의 설정이나 기록이 사라질 수 있어요.", ok: "지우기", danger: true })) return;
               await ctx.api.pluginStorage.removeItem(it.key);
               ctx.closeSheet();
               renderPlugins(ctx);
