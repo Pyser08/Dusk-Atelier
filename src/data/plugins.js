@@ -162,13 +162,15 @@ export async function checkUpdates(api, plugins) {
 }
 
 // ── pluginStorage 보기 ──
-export async function storageDump(api) {
-  const out = [];
-  for (const k of await storageKeys(api)) {
-    const v = await api.pluginStorage.getItem(k);
-    out.push({ key: k, value: v, size: typeof v === "string" ? v.length : JSON.stringify(v ?? null).length });
-  }
-  return out.sort((a, b) => a.key.localeCompare(b.key));
+// 저장소 목록은 키 이름만 읽는다 (값은 클 수 있어서 누를 때 하나씩 읽음)
+var withTimeout = (p, ms, msg) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(msg)), ms))]);
+export async function storageKeyList(api) {
+  const keys = await withTimeout(storageKeys(api), 8e3, "저장소 목록을 읽는 데 너무 오래 걸려요");
+  return (keys ?? []).filter((k) => typeof k === "string").sort((a, b) => a.localeCompare(b));
+}
+export async function storageGet(api, key) {
+  const v = await withTimeout(api.pluginStorage.getItem(key), 15e3, "값을 읽는 데 너무 오래 걸려요");
+  return { key, value: v, size: v == null ? 0 : typeof v === "string" ? v.length : JSON.stringify(v).length };
 }
 export var storageAvailable = (api) => typeof api.pluginStorage?.keys === "function" || typeof api.pluginStorage?.key === "function";
 
