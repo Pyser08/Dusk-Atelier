@@ -37,6 +37,15 @@ const result = await build({
 });
 const code = result.outputFiles[0].text;
 
+// RisuAI는 파일 전체에서 줄 맨 앞의 //@ 줄을 머리말로 읽는다 (같은 이름이면 뒤쪽 값이 이김).
+// 문자열 안에 줄 맨 앞 //@ 가 들어가면 버전이 엉뚱하게 바뀌므로 머리말 밖의 그런 줄은 빌드를 막는다.
+const stray = code.split('\n').slice(banner.split('\n').length).filter((l) => /^\s*\/\/@/.test(l));
+if (stray.length) {
+  console.error('빌드 중단: 머리말 밖에 //@ 로 시작하는 줄이 있어요 (RisuAI가 버전 등으로 잘못 읽어요):');
+  for (const l of stray.slice(0, 5)) console.error('  ' + l.slice(0, 80));
+  process.exit(1);
+}
+
 if (process.argv.includes('--check')) {
   const cur = fs.existsSync(outFile) ? fs.readFileSync(outFile, 'utf8') : '';
   if (cur === code) { console.log(`동일함 (v${version})`); process.exit(0); }

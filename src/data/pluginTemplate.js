@@ -12,10 +12,10 @@ var q = (s) => `'${String(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
 
 export function buildTemplate(meta = DEFAULT_META) {
   const m = { ...DEFAULT_META, ...meta };
-  return `//@name ${m.name}
-//@display-name ${m.displayName}
-//@api 3.0
-//@version ${m.version}
+  // 주의: 이 파일의 문자열 안에서도 "//@"로 시작하는 줄을 쓰면 RisuAI가 번들 전체에서 머리말로 읽어요.
+  // 그래서 머리말은 이어 붙여서 만듭니다.
+  const header = ["//@name " + m.name, "//@display-name " + m.displayName, "//@api 3.0", "//@version " + m.version].join("\n");
+  return header + `
 
 ${INTEROP_SNIPPET}
 ${BODY_MARK}
