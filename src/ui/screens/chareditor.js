@@ -157,7 +157,8 @@ export async function openCharEditor(ctx, index, chaId) {
           field("버전", text(draft, "characterVersion")),
           field("태그", tags, true),
           field("설명", area(draft, "desc", { tall: true, ...prose }), true),
-          field("첫 메시지", fmBox, true),
+          // label로 감싸면 안내 글을 눌러도 '일반' 버튼이 눌리므로 div로 감싼다
+          h("div", { class: "rb-field wide" }, h("span", { class: "rb-label" }, "첫 메시지"), fmBox),
           greets,
           field("성격", area(draft, "personality", prose), true),
           field("시나리오", area(draft, "scenario", prose), true),
