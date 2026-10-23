@@ -68,6 +68,10 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
     #rbu-overlay .hl{color:var(--rb-warn,#f5c26b)}
     #rbu-overlay label.chk{display:flex;gap:10px;align-items:flex-start;margin-top:12px;font-size:13.5px;cursor:pointer}
     #rbu-overlay label.chk input{width:18px;height:18px;margin-top:2px;accent-color:var(--rb-acc-a,#4f63e0)}
+    #rbu-overlay .srch{display:flex;align-items:center;gap:10px;height:42px;padding:0 14px;margin:4px 0 8px;border-radius:12px;background:var(--rb-surf,#1c1f33);border:1px solid var(--rb-line,#2a2d47);color:var(--rb-sub,#a4a7c9)}
+    #rbu-overlay .srch:focus-within{border-color:var(--rb-sel-ring,#5b6bff);box-shadow:0 0 0 3px var(--rb-acc-soft,rgba(91,107,255,.18))}
+    #rbu-overlay .srch input{flex:1;min-width:0;height:100%;background:transparent;border:0;outline:none;font:inherit;font-size:14px;color:var(--rb-text,#e9eaf6)}
+    #rbu-overlay .srch input::placeholder{color:var(--rb-mute,#6f7396)}
     #rbu-overlay select{font:inherit;background:var(--rb-surf,#1c1f33);color:var(--rb-text,#e9eaf6);border:1px solid var(--rb-line,#2a2d47);border-radius:12px;height:42px;padding:0 10px;width:100%;margin-top:8px}
     #rbu-overlay details summary{cursor:pointer;color:var(--rb-sub,#a4a7c9)}
     #rbu-overlay details[open] summary{margin-bottom:6px}
@@ -969,28 +973,53 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
   // ---- 새로 가져온 봇(업데이트 후보는 아님): 다른 봇과 합칠지 물어본다 ----
   let newQueue = [];
   async function renderNewOffer() {
-    heading = TITLE2;
+    heading = "다른 봇과 합치기";
     const it = newQueue[0];
     if (!it) return renderStart();
     const { chars } = await mergeData();
+    if (!chars.some(({ c }) => c.chaId === it.copyId)) {
+      newQueue.shift();
+      return newQueue.length ? renderNewOffer() : renderStart();
+    }
     const targets = chars.filter(({ c }) => c.chaId !== it.copyId);
+    // 검색용: 이모티콘·기호 빼고 비교
+    const key = (s) => String(s ?? "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+    let pick = null;
     frame(`<div class="card">
           <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px"><span class="ri big">${ic("link", 18)}</span>
-            <div><b>새 봇을 가져왔어요</b><div class="muted">'${esc(it.copyName)}'을(를) 다른 봇과 합칠까요? 그냥 새 봇으로 두셔도 돼요.</div></div></div>
-          ${targets.length ? `<div class="rr"><span class="rl" style="width:76px">합칠 봇</span><select id="new-tg" style="margin-top:0">${targets.map(({ c }) => `<option value="${esc(c.chaId)}">${esc(nameOf(c))}</option>`).join("")}</select></div>` : ""}
+            <div><b>새 봇 '${esc(it.copyName)}'</b><div class="muted">다른 봇과 합칠까요? 합칠 봇을 고르면 합치기 화면으로 이어져요. 그냥 새 봇으로 두셔도 돼요.</div></div></div>
+          ${targets.length ? `<div class="srch">${ic("search", 16)}<input id="new-q" type="search" placeholder="합칠 봇 이름 검색" autocomplete="off"></div>
+          <div id="new-list" style="max-height:min(46vh,420px);overflow:auto;padding-right:2px">${targets.map(({ c }) => `<label class="opt" data-k="${esc(key(nameOf(c)))}" style="padding:9px 12px;margin:4px 0;align-items:center"><input type="radio" name="ntg" value="${esc(c.chaId)}"><div style="flex:1;min-width:0"><b style="font-weight:600">${esc(nameOf(c))}</b></div></label>`).join("")}
+          <div id="new-empty" class="muted" style="display:none;padding:10px 4px">찾는 봇이 없어요.</div></div>` : `<div class="muted">합칠 다른 봇이 없어요.</div>`}
           ${newQueue.length > 1 ? `<div class="muted" style="margin-top:6px">대기 중 ${newQueue.length - 1}개 더</div>` : ""}
         </div>
-        <div class="row">${targets.length ? `<button class="primary" id="merge-go">합치기</button>` : ""}<button id="skip">새 봇으로 둘게요</button>${closeBtn("나중에")}</div>`);
+        <div class="row">${targets.length ? `<button class="primary" id="merge-go" disabled>합치기</button>` : ""}<button id="skip">그냥 둘게요</button>${closeBtn("나중에")}</div>`);
+    const q = root.querySelector("#new-q");
+    q?.addEventListener("input", () => {
+      const k = key(q.value);
+      let shown = 0;
+      root.querySelectorAll("#new-list .opt").forEach((el) => {
+        const on = !k || el.dataset.k.includes(k);
+        el.style.display = on ? "" : "none";
+        if (on) shown++;
+      });
+      root.querySelector("#new-empty").style.display = shown ? "none" : "";
+    });
+    root.querySelectorAll("input[name=ntg]").forEach((el) => el.addEventListener("change", () => {
+      pick = el.value;
+      root.querySelector("#merge-go").disabled = false;
+    }));
     root.querySelector("#skip").addEventListener("click", () => {
       newQueue.shift();
       newQueue.length ? renderNewOffer() : onClose();
     });
     root.querySelector("#merge-go")?.addEventListener("click", () => {
-      const targetId = root.querySelector("#new-tg").value;
-      mg = { targetId, src: "c:" + it.copyId, scope: "characters" };
+      if (!pick) return;
+      mg = { targetId: pick, src: "c:" + it.copyId, scope: "characters" };
       newQueue.shift();
-      renderMergeStart(targetId).catch((err) => renderResult(null, null, err?.message ?? String(err)));
+      renderMergeStart(pick).catch((err) => renderResult(null, null, err?.message ?? String(err)));
     });
+    setTimeout(() => q?.focus(), 50);
   }
   // ---- 받은 모듈(리스에 새로 가져온 .risum)로 기존 모듈 업데이트 ----
   let modQueue = [];
@@ -1775,13 +1804,17 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
       renderCopyOffer();
       await show();
     },
-    /** 새로 가져온 봇(업데이트 후보는 아님)을 "합칠까요?"로 물어본다 */
-    async offerNew(items) {
+    /** 새로 가져온 봇(업데이트 후보는 아님): 대기열에만 넣는다 (알림은 따로) */
+    queueNew(items) {
       for (const it of items) if (!newQueue.some((x) => x.copyId === it.copyId)) newQueue.push(it);
-      if (busy) return;
-      renderNewOffer().catch(() => {
-      });
+      return newQueue.length;
+    },
+    /** 대기 중인 새 봇 "합칠까요?" 창 열기 */
+    async openNew() {
+      if (busy) return show();
+      if (!newQueue.length) return;
       await show();
+      return renderNewOffer().catch((err) => renderResult(null, null, err?.message ?? String(err)));
     },
     get busy() {
       return busy;

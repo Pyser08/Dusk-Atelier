@@ -4,6 +4,7 @@ import { createLegacy } from './ui/legacy.js';
 import { h } from './ui/dom.js';
 import { iconMarkup } from './ui/icons.js';
 import { createApp } from './ui/app.js';
+import { createHostToast } from './ui/toast.js';
 import { createWatcher } from './ui/watch.js';
 import { CSS2 } from './ui/styles.js';
 import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets } from './data/presets.js';
@@ -109,13 +110,26 @@ async function start() {
   await api.registerButton({ name: TITLE, icon: ICON, iconType: "html", location: "hamburger" }, open);
   await api.registerSetting(TITLE, open, ICON, "html");
   // 새로 가져온 봇 감지 (+ 메뉴 버튼 포함). 설정에서 끌 수 있다.
+  const toast = createHostToast(() => watcher.doc);
   const watcher = createWatcher(api, {
     onDetected: (items) => legacy.offerCopies(items).catch(() => {
     }),
     onModules: (items) => legacy.offerModules(items).catch(() => {
     }),
-    onNew: (items) => legacy.offerNew(items).catch(() => {
-    }),
+    // 새 봇(업데이트 후보는 아님): 메인 화면 오른쪽 위 알림 → 누르면 합칠 봇 고르기. 권한이 없으면 바로 창으로
+    onNew: async (items) => {
+      const n = legacy.queueNew(items);
+      const first = items[0]?.copyName || "새 봇";
+      const shown = await toast.show({
+        title: n > 1 ? `새 봇 ${n}개를 가져왔어요` : `새 봇 '${first}'`,
+        text: "다른 봇과 합칠까요? 그냥 두셔도 돼요.",
+        action: "합칠 봇 고르기",
+        onClick: () => legacy.openNew().catch(() => {
+        })
+      });
+      if (!shown) legacy.openNew().catch(() => {
+      });
+    },
     onOpenUpdater: () => legacy.open().catch(() => {
     }),
     isBusy: () => legacy.busy

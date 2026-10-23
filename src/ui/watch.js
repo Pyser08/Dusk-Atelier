@@ -266,7 +266,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
         const kids = await box.getChildren();
         const count = await kids.length();
         if (count < 4 || count > 8) continue;
-        if (await box.querySelector(`#${MENU_BTN_ID}`)) return;
+        if (await box.querySelector(`[x-dusk="${MENU_BTN_ID}"]`)) return;
         // 가져오기 버튼들(RisuRealm·캐릭터 임포트·패키지 임포트)을 누르면 잠깐 자주 확인
         for (const j of [0, 1, count - 2]) {
           const b = await kids.at(j);
@@ -276,7 +276,8 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
         const ref = await kids.at(1);
         const cls = await ref.getClassName();
         const btn = await doc.createElement("button");
-        await btn.setAttribute("id", MENU_BTN_ID);
+        // 리스 샌드박스는 x- 로 시작하는 속성만 허락한다 (id 는 막힘)
+        await btn.setAttribute("x-dusk", MENU_BTN_ID);
         await btn.setClassName(cls);
         await btn.setInnerHTML(`<div class="flex flex-col justify-start items-start"><span>Dusk Atelier로 업데이트</span><span class="text-textcolor2 text-sm">새 버전 파일로 기존 봇·모듈을 업데이트해요 (채팅·내 수정 유지)</span></div>`);
         await btn.addEventListener("click", () => onOpenUpdater());
@@ -354,6 +355,10 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
     },
     get mode() {
       return mode;
+    },
+    /** 메인 화면 문서 (권한이 있을 때만) */
+    get doc() {
+      return doc;
     }
   };
 }
