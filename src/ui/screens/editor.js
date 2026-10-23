@@ -108,7 +108,7 @@ export async function openEditorCore(ctx, cfg) {
   const original = structuredClone(cfg.view);
   let draft = structuredClone(cfg.view);
   for (const k of ["lorebook", "regex", "trigger"]) if (!Array.isArray(draft[k])) draft[k] = [];
-  const es = { tab: "lorebook", sel: { lorebook: 0, regex: 0, trigger: 0 }, q: { lorebook: "", regex: "", trigger: "" }, lastField: null, mItem: false };
+  const es = { tab: "lorebook", sel: { lorebook: 0, regex: 0, trigger: 0 }, q: { lorebook: "", regex: "", trigger: "" }, lastField: null, mItem: false, listScroll: { lorebook: 0, regex: 0, trigger: 0 }, itemView: /* @__PURE__ */ new WeakMap(), shown: null };
   const dirty = () => stableJson(draft) !== stableJson(original);
   const panel = h("div", { class: "rb-full", role: "dialog", "aria-label": `${original.name} 편집` });
   const titleB = h("b", null, original.name || "(이름 없음)");
@@ -543,6 +543,8 @@ export async function openEditorCore(ctx, cfg) {
     if (!it) pane.appendChild(h("div", { class: "rb-empty" }, "왼쪽에서 항목을 고르세요."));
     else pane.append(itemTools, kind === "lorebook" ? loreForm(it) : kind === "regex" ? regexForm(it) : triggerForm(it));
     replace(body, h("div", { class: "side" }, tools, items), pane);
+    es.shown = { kind, items, pane, item: it };
+    restoreView(kind, items, pane, it);
   }
   function loreForm(l) {
     const folders = draft.lorebook.filter((x) => x.mode === "folder");
@@ -631,7 +633,60 @@ export async function openEditorCore(ctx, cfg) {
     } });
     replace(body, h("div", { class: "pane" }, h("div", { style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap" }, msg, h("div", { class: "rb-spacer" }), applyJson), el));
   }
+  // 항목을 바꾸거나 다시 그려도 목록 스크롤·항목별 스크롤·마지막 커서 위치를 지킨다
+  function saveView() {
+    const v = es.shown;
+    es.shown = null;
+    if (!v || !v.items.isConnected) return;
+    es.listScroll[v.kind] = v.items.scrollTop;
+    if (!v.item) return;
+    const all = [...v.pane.querySelectorAll("*")];
+    const scrolls = [];
+    all.forEach((el, n) => {
+      if (el.scrollTop || el.scrollLeft) scrolls.push([n, el.scrollTop, el.scrollLeft]);
+    });
+    const f = es.lastField && v.pane.contains(es.lastField) ? es.lastField : null;
+    es.itemView.set(v.item, { top: v.pane.scrollTop, scrolls, field: f ? all.indexOf(f) : -1, ss: f?.selectionStart ?? 0, se: f?.selectionEnd ?? 0, focused: !!f && f === f.ownerDocument.activeElement });
+  }
+  function restoreView(kind, items, pane, item) {
+    items.scrollTop = es.listScroll[kind] ?? 0;
+    const sv = item && es.itemView.get(item);
+    const apply2 = () => {
+      if (!pane.isConnected) return;
+      items.scrollTop = es.listScroll[kind] ?? 0;
+      // 고른 항목(새로 추가·이동한 것 포함)이 목록 밖이면 그만큼만 스크롤
+      const row = items.querySelector('[aria-selected="true"]');
+      if (row) {
+        const r = row.getBoundingClientRect(), b = items.getBoundingClientRect();
+        if (r.top < b.top) items.scrollTop -= b.top - r.top + 4;
+        else if (r.bottom > b.bottom) items.scrollTop += r.bottom - b.bottom + 4;
+      }
+      if (!sv) return;
+      const all = [...pane.querySelectorAll("*")];
+      for (const [n, t, l] of sv.scrolls) {
+        if (all[n]) {
+          all[n].scrollTop = t;
+          all[n].scrollLeft = l;
+        }
+      }
+      const f = all[sv.field];
+      if (f && "selectionStart" in f && typeof f.setSelectionRange === "function") {
+        try {
+          f.setSelectionRange(sv.ss, sv.se);
+        } catch {
+        }
+        es.lastField = f;
+        // 모바일에서 키보드가 튀어나오지 않게, 데스크톱에서 그 칸을 보고 있었을 때만 포커스
+        if (sv.focused && f.ownerDocument.defaultView?.matchMedia?.("(pointer:fine)").matches) f.focus({ preventScroll: true });
+      }
+      pane.scrollTop = sv.top;
+    };
+    apply2();
+    // 코드 편집기는 다음 프레임에 높이가 잡히므로 한 번 더
+    requestAnimationFrame(apply2);
+  }
   function render() {
+    saveView();
     paintTabs();
     paintHead();
     if (es.tab === "info" || es.tab === "json") body.classList.remove("m-item", "m-list");
