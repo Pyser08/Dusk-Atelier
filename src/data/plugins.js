@@ -180,7 +180,7 @@ export async function move(api, name, where) {
 }
 export function parseHeader(script) {
   const head = String(script).slice(0, 4096);
-  const get = (k) => new RegExp(`^//@${k}\\s+(.+)$`, "m").exec(head)?.[1]?.trim();
+  const get = (k) => new RegExp(`^//@${k}[ \\t]+(.+)$`, "m").exec(head)?.[1]?.trim();
   return { name: get("name"), displayName: get("display-name"), version: get("version"), api: get("api"), updateURL: get("update-url") };
 }
 export async function replaceCode(api, name, script) {
