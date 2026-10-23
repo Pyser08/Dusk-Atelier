@@ -1,0 +1,29 @@
+name: 브랜치 빌드
+
+# feat/* 브랜치에 src/가 바뀌어 푸시되면 dusk_atelier.js를 다시 빌드해 같은 브랜치에 커밋한다 (테스트용 배포 파일)
+on:
+  push:
+    branches: ['feat/**']
+    paths: ['src/**', 'tools/**', 'package.json']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: node tools/build.mjs
+      - name: 빌드 결과 커밋
+        run: |
+          if git diff --quiet -- dusk_atelier.js; then echo "변경 없음"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add dusk_atelier.js
+          git commit -m "빌드: dusk_atelier.js"
+          git push
