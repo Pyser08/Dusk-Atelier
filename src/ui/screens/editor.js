@@ -21,7 +21,14 @@ export function syncRuleContent(lorebook) {
   }
   for (const l of lorebook ?? []) {
     const r = ruleOf(l);
-    if (r && r.on !== false && ridOf(l)) l.content = nativeContent(l.content, r, ridOf(l));
+    if (r && r.on !== false && ridOf(l)) {
+      l.content = nativeContent(l.content, r, ridOf(l));
+      // 리스는 키가 비어 있고 '항상 켜짐'도 아닌 항목을 @@ 장식을 읽기 전에 건너뛴다. 키 없는 관리 항목은 항상 켜짐으로 둔다(켜질지는 {{#if}}가 정함)
+      if (!String(l.key ?? "").trim() && !l.alwaysActive && l.mode !== "constant") {
+        l.alwaysActive = true;
+        l.extentions = { ...l.extentions, da_aa: true };
+      }
+    }
   }
 }
 
@@ -619,11 +626,15 @@ export async function openEditorCore(ctx, cfg) {
         if (draft.lorebook.some((x) => x !== l && ridOf(x) === l.extentions.da_rid)) l.extentions.da_rid = newId();
         const nr = { ...(ruleOf(l) ?? defaultRule()), on: true };
         // 원래 항상 켜짐이던 항목은 키 조건 없이 시작
-        if (l.alwaysActive || l.mode === "constant") nr.cond = [];
+        if ((l.alwaysActive && !l.extentions?.da_aa) || l.mode === "constant") nr.cond = [];
         l.extentions.da_rule = nr;
         l.content = nativeContent(l.content, nr, l.extentions.da_rid);
       } else {
         delete l.extentions.da_rule;
+        if (l.extentions.da_aa) {
+          l.alwaysActive = false;
+          delete l.extentions.da_aa;
+        }
         l.content = plainContent(l.content);
       }
       changed();
