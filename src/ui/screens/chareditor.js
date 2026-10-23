@@ -4,7 +4,8 @@ import { USER_KEYS } from '../../engine/merge3.js';
 import { createStore } from '../../engine/store.js';
 import { Busy, backupSnapshot, isGenerating } from '../../engine/safety.js';
 import { h } from '../dom.js';
-import { btn, iconBtn, note } from '../kit.js';
+import { btn, iconBtn, note, segmented } from '../kit.js';
+import { codeEditor } from '../codeedit.js';
 import { openEditorCore, validateModule } from './editor.js';
 import { patchSavedChar } from './characters.js';
 
@@ -80,18 +81,51 @@ export async function openCharEditor(ctx, index, chaId) {
     infoTitle: "봇 정보",
     validate: (v) => validateModule(v),
     renderInfo: ({ draft, field, text, area, check, changed }) => {
+      // 첫 메시지·추가 인사말: 일반(글 쓰듯, 줄바꿈) / 코드(줄 번호·고정폭). 두 모드 모두 {{CBS}}·<img=…>·태그에 색을 입힌다
+      let mode = ctx.prefs?.ui?.textMode === "code" ? "code" : "text";
+      const rich = (get, set, { tall, label }) => codeEditor(get() ?? "", {
+        lang: "text",
+        label,
+        tab: "\t",
+        gutter: mode === "code",
+        wrap: mode !== "code",
+        prose: mode !== "code",
+        minHeight: tall ? "max(300px,46vh)" : "96px",
+        maxHeight: tall ? "70vh" : "50vh",
+        onChange: (v) => {
+          set(v);
+          changed();
+        }
+      }).el;
+      const fmHolder = h("div");
+      const paintFm = () => fmHolder.replaceChildren(rich(() => draft.firstMessage, (v) => draft.firstMessage = v, { tall: true, label: "첫 메시지" }));
+      const modeSeg = segmented([["text", "일반"], ["code", "코드"]], mode, (v) => {
+        if (v === mode) return;
+        mode = v;
+        ctx.prefs?.saveUi?.({ textMode: v })?.catch?.(() => {
+        });
+        paintFm();
+        paintGreets();
+      }, "첫 메시지 입력 모드");
+      modeSeg.style.width = "160px";
+      const fmBox = h(
+        "div",
+        { style: "display:flex;flex-direction:column;gap:8px" },
+        h(
+          "div",
+          { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
+          modeSeg,
+          h("span", { class: "rb-muted", style: "font-size:12px;word-break:keep-all" }, "일반은 글 쓰듯 줄바꿈, 코드는 줄 번호와 고정폭 글꼴이에요. 둘 다 {{CBS}}·<img=…>·태그에 색이 들어가요. 추가 인사말도 같이 바뀌어요.")
+        ),
+        fmHolder
+      );
       const greets = h("div", { class: "wide", style: "display:flex;flex-direction:column;gap:8px" });
       const paintGreets = () => {
         if (!Array.isArray(draft.alternateGreetings)) draft.alternateGreetings = [];
         greets.replaceChildren(
           h("span", { class: "rb-label" }, `추가 인사말 (${draft.alternateGreetings.length})`),
           ...draft.alternateGreetings.map((g, i) => {
-            const ta = h("textarea", { class: "rb-textarea", spellcheck: "false", style: "font-family:inherit;font-size:14px;min-height:90px" });
-            ta.value = g ?? "";
-            ta.addEventListener("input", () => {
-              draft.alternateGreetings[i] = ta.value;
-              changed();
-            });
+            const ta = h("div", { style: "flex:1;min-width:0" }, rich(() => draft.alternateGreetings[i], (v) => draft.alternateGreetings[i] = v, { label: `추가 인사말 ${i + 1}` }));
             return h("div", { style: "display:flex;gap:6px;align-items:flex-start" }, ta, iconBtn("trash", `추가 인사말 ${i + 1} 지우기`, { onClick: () => {
               draft.alternateGreetings.splice(i, 1);
               changed();
@@ -105,8 +139,9 @@ export async function openCharEditor(ctx, index, chaId) {
           } }))
         );
       };
+      paintFm();
       paintGreets();
-      const tags = h("input", { class: "rb-input", value: (draft.tags ?? []).join(", "), placeholder: "쉼표로 구분" });
+      const tags =h("input", { class: "rb-input", value: (draft.tags ?? []).join(", "), placeholder: "쉼표로 구분" });
       tags.addEventListener("input", () => {
         draft.tags = tags.value.split(",").map((s) => s.trim()).filter(Boolean);
         changed();
@@ -122,7 +157,7 @@ export async function openCharEditor(ctx, index, chaId) {
           field("버전", text(draft, "characterVersion")),
           field("태그", tags, true),
           field("설명", area(draft, "desc", { tall: true, ...prose }), true),
-          field("첫 메시지", area(draft, "firstMessage", { tall: true, ...prose }), true),
+          field("첫 메시지", fmBox, true),
           greets,
           field("성격", area(draft, "personality", prose), true),
           field("시나리오", area(draft, "scenario", prose), true),

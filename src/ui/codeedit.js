@@ -1,5 +1,5 @@
 // 가벼운 코드 편집기: 투명한 textarea 뒤에 색을 입힌 pre를 겹쳐 VS Code처럼 보이게 한다
-// lang: "js"(기본) · "regex"(정규식 패턴) · "replace"(정규식 바꿀 내용: $1, {{CBS}}, HTML)
+// lang: "js"(기본) · "regex"(정규식 패턴) · "replace"(정규식 바꿀 내용: $1, {{CBS}}, HTML) · "lua" · "text"(글: {{CBS}}, <img=…>, HTML)
 // 커서가 괄호 옆에 있으면 짝 괄호를 함께 표시한다
 import { h } from './dom.js';
 
@@ -39,6 +39,21 @@ var CSS = `
 .rb-code .t-cbsn{color:#dcdcaa;font-weight:600}
 .rb-code .t-tag{color:#569cd6}
 .rb-code .t-attr{color:#9cdcfe}
+.rb-code .t-cbsk{color:#ff79c6;font-weight:700}
+.rb-code.wrap .rb-code-in{width:100%}
+.rb-code.wrap pre,.rb-code.wrap textarea{white-space:pre-wrap;overflow-wrap:anywhere}
+.rb-code.prose{--c-bg:var(--rb-surf);--c-fg:var(--rb-text);font-size:14px;line-height:1.7;font-family:inherit;tab-size:4}
+.rb-code.prose textarea{caret-color:var(--rb-text)}
+.rb-code.prose textarea::selection{background:rgba(100,140,255,.32)}
+.rb-code.prose .t-com{color:#3fa66a}
+.rb-code.prose .t-str{color:#e0607e}
+.rb-code.prose .t-cbs{color:#a46ff0;font-weight:600}
+.rb-code.prose .t-cbsn{color:#d18a1f;font-weight:600}
+.rb-code.prose .t-cbsk{color:#e0559b;font-weight:700}
+.rb-code.prose .t-tag{color:#3b82f6;font-weight:600}
+.rb-code.prose .t-attr{color:#0ea5c6}
+.rb-code.prose pre span{font-weight:inherit!important}
+.rb-code.prose .t-br{background:rgba(128,128,160,.28);box-shadow:inset 0 0 0 1px rgba(128,128,160,.7)}
 .rb-code .t-br{background:rgba(255,255,255,.24);box-shadow:inset 0 0 0 1px #b4b4b4;border-radius:2px}
 .rb-code .t-br-bad{background:rgba(255,80,80,.28);box-shadow:inset 0 0 0 1px #ff6b6b;border-radius:2px}
 `;
@@ -196,6 +211,65 @@ function tokReplace(code) {
   }
   return out;
 }
+// 글 (첫 메시지·인사말): {{CBS}}와 그 안의 ::, <img=이름> 같은 리스 정규식용 글귀, HTML 태그, <!-- 주석 -->
+var TEXT_TOKEN = /(<!--[\s\S]*?-->)|(\{\{)|(\}\})|(::)|(<[A-Za-z][\w-]*=)([^>\n]*)(>?)|(<\/?[A-Za-z][\w-]*)((?:\s+[^\s=>"'/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>"']+))?)*)(\s*\/?>)?/g;
+var cbsKind = (name) => /^[#/:]/.test(name) ? "cbsk" : "cbsn";
+// 태그 값 안: 기본은 문자열 색, {{CBS}}와 ::는 따로
+function pushVal(out, vs, val) {
+  const cb = /\{\{([#/:]?[^\s:}{]*)|\}\}|::/g;
+  let last = 0, c;
+  while (c = cb.exec(val)) {
+    if (c.index > last) out.push([vs + last, vs + c.index, "str", false]);
+    if (c[0] === "::") out.push([vs + c.index, vs + c.index + 2, "cbs", true]);
+    else {
+      out.push([vs + c.index, vs + c.index + 2, "cbs", false]);
+      if (c[1]) out.push([vs + c.index + 2, vs + c.index + 2 + c[1].length, cbsKind(c[1]), true]);
+    }
+    last = c.index + c[0].length;
+  }
+  if (val.length > last) out.push([vs + last, vs + val.length, "str", false]);
+}
+function tokText(code) {
+  const out = [];
+  let m, depth = 0;
+  TEXT_TOKEN.lastIndex = 0;
+  while (m = TEXT_TOKEN.exec(code)) {
+    const s = m.index;
+    if (m[1]) out.push([s, s + m[1].length, "com", true]);
+    else if (m[2]) {
+      depth++;
+      out.push([s, s + 2, "cbs", false]);
+      const name = /^[#/:]?[^\s:}{]*/.exec(code.slice(s + 2, s + 80))[0];
+      if (name) {
+        out.push([s + 2, s + 2 + name.length, cbsKind(name), true]);
+        TEXT_TOKEN.lastIndex = s + 2 + name.length;
+      }
+    } else if (m[3]) {
+      if (depth > 0) depth--;
+      out.push([s, s + 2, "cbs", false]);
+    } else if (m[4]) {
+      if (depth > 0) out.push([s, s + 2, "cbs", true]);
+    } else if (m[5]) {
+      out.push([s, s + m[5].length, "tag", true]);
+      pushVal(out, s + m[5].length, m[6]);
+      if (m[7]) out.push([s + m[5].length + m[6].length, s + m[0].length, "tag", true]);
+    } else if (m[8]) {
+      out.push([s, s + m[8].length, "tag", true]);
+      let k = s + m[8].length;
+      const attrs = m[9] ?? "";
+      const re = /([^\s=>"'/]+)(?:(\s*=\s*)("[^"]*"|'[^']*'|[^\s>"']+))?/g;
+      let a;
+      while (a = re.exec(attrs)) {
+        const as = k + a.index;
+        out.push([as, as + a[1].length, "attr", true]);
+        if (a[3]) pushVal(out, as + a[1].length + a[2].length, a[3]);
+      }
+      k += attrs.length;
+      if (m[10]) out.push([k, k + m[10].length, "tag", true]);
+    }
+  }
+  return out;
+}
 // Lua (트리거 코드): --주석, --[[ ]], 문자열, [[긴 문자열]], 키워드, 함수 호출
 var LUA_KW = new Set(["and", "break", "do", "else", "elseif", "end", "for", "function", "goto", "if", "in", "local", "not", "or", "repeat", "return", "then", "until", "while"]);
 var LUA_LIT = new Set(["true", "false", "nil"]);
@@ -224,7 +298,7 @@ function tokLua(code) {
   }
   return out;
 }
-var TOKENIZERS = { js: tokJs, regex: tokRegex, replace: tokReplace, lua: tokLua };
+var TOKENIZERS = { js: tokJs, regex: tokRegex, replace: tokReplace, lua: tokLua, text: tokText };
 
 // ── 괄호 짝 찾기 ──
 // {{ }}는 두 글자가 한 쌍이라 한 글자씩 세면 된다 (첫 글자끼리, 둘째 글자끼리 짝이 맞음)
@@ -282,16 +356,17 @@ export function highlight(code, lang = "js") {
 var caretHandlers = /* @__PURE__ */ new WeakMap();
 var selListening = false;
 
-export function codeEditor(value, { onChange, label = "코드", minHeight, maxHeight, lang = "js", tab = "  ", placeholder, gutter = true } = {}) {
+// wrap: 긴 줄을 칸 너비에서 줄바꿈 / prose: 일반 글꼴과 테마 색(글 쓰는 칸처럼)
+export function codeEditor(value, { onChange, label = "코드", minHeight, maxHeight, lang = "js", tab = "  ", placeholder, gutter = true, wrap = false, prose = false } = {}) {
   if (!document.getElementById("rb-code-style")) document.head.appendChild(h("style", { id: "rb-code-style" }, CSS));
   const tokenize = TOKENIZERS[lang] ?? tokJs;
   const pre = h("pre", { "aria-hidden": "true" });
   const gut = gutter ? h("div", { class: "rb-code-gut", "aria-hidden": "true" }) : null;
-  const ta = h("textarea", { spellcheck: "false", autocapitalize: "off", autocomplete: "off", "aria-label": label, wrap: "off", placeholder });
+  const ta = h("textarea", { spellcheck: "false", autocapitalize: "off", autocomplete: "off", "aria-label": label, wrap: wrap ? "soft" : "off", placeholder });
   ta.value = value ?? "";
   const el = h(
     "div",
-    { class: "rb-code", style: { minHeight, maxHeight, tabSize: tab === "\t" ? "4" : null } },
+    { class: ["rb-code", wrap && "wrap", prose && "prose"], style: { minHeight, maxHeight, tabSize: tab === "\t" ? "4" : null } },
     h("div", { class: "rb-code-in", style: gutter ? null : "grid-template-columns:1fr" }, gut, h("div", { class: "rb-code-area" }, pre, ta))
   );
   let raf = 0, lines = 0, tokens = [], lastText = null, lastPair = "";
