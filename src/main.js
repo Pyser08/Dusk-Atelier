@@ -114,6 +114,8 @@ async function start() {
     }),
     onModules: (items) => legacy.offerModules(items).catch(() => {
     }),
+    onNew: (items) => legacy.offerNew(items).catch(() => {
+    }),
     onOpenUpdater: () => legacy.open().catch(() => {
     }),
     isBusy: () => legacy.busy

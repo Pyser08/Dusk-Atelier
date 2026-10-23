@@ -92,7 +92,7 @@ export async function queueTrash(api, chaId) {
 function modKey(name) {
   return String(name ?? "").normalize("NFKC").toLowerCase().replace(/(?:\s*[-–—:]?\s*(?:v(?:er(?:sion)?)?\.?\s*)?\d+(?:\.\d+)+|\s*[([]\s*v?\d+(?:\.\d+)*\s*[)\]])\s*$/u, "").replace(/[^\p{L}\p{N}]/gu, "");
 }
-export function createWatcher(api, { onDetected, onModules, onOpenUpdater, isBusy }) {
+export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew, isBusy }) {
   let knownMods = null, lastMod = 0, charCount = null, lastOrder = null;
   let known = null, timer = null, burstUntil = 0, mode = "fast", running = false, checking = false, enabled = true;
   let doc = null, menuTimer = null;
@@ -219,12 +219,16 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, isBus
   // 새 봇 중 "기존 봇의 새 버전"으로 보이는 것만 골라 알린다
   async function inspect(added) {
     const chars = (await api.getDatabase(["characters"]))?.characters ?? [];
-    const items = [];
+    const items = [], fresh = [];
     for (const id of added) {
       const copy = chars.find((c) => c?.chaId === id);
       if (!copy || copy.type === "group" || copy.trashTime) continue;
       const cands = listUpdateCandidates(chars.filter(Boolean), copy).filter((t) => t.reason !== "other");
-      if (!cands.length) continue;
+      if (!cands.length) {
+        // 기존 봇의 새 버전으로는 안 보이지만, 다른 봇과 합칠 만한 새 봇일 수 있다
+        if (chars.some((c) => c?.chaId && c.chaId !== id && c.type !== "group" && !c.trashTime)) fresh.push({ copyId: id, copyName: copy.name ?? "" });
+        continue;
+      }
       // 리스의 "복사"로 생긴 똑같은 봇은 묻지 않는다
       const twin = chars.find((c) => c?.chaId === cands[0].chaId);
       if (twin && stableJson(charFields(twin)) === stableJson(charFields(copy))) continue;
@@ -234,6 +238,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, isBus
       stat.found += items.length;
       onDetected(items);
     }
+    if (fresh.length) onNew?.(fresh);
   }
 
   function schedule() {

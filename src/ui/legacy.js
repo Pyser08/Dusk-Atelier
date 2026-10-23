@@ -218,11 +218,14 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
   const closeBtn = (label = "닫기") => `<button id="close">${label}</button>`;
   // 다른 작업 중에 감지된 봇·모듈이 있으면 화면 아래에 이어 하기 버튼을 둔다
   function pendingOfferCard() {
-    const n = copyQueue.length + modQueue.length;
+    const n = copyQueue.length + modQueue.length + newQueue.length;
     if (!n || busy || !root || root.querySelector("#pending-offer")) return;
     const row = root.querySelector(".row:last-of-type") ?? root;
-    row.insertAdjacentHTML("beforebegin", `<div class="card" id="pending-offer" style="display:flex;gap:10px;align-items:center"><span class="ri big">${ic("refresh", 18)}</span><div style="flex:1">새로 가져온 ${copyQueue.length ? `봇 ${copyQueue.length}개` : ""}${copyQueue.length && modQueue.length ? " · " : ""}${modQueue.length ? `모듈 ${modQueue.length}개` : ""}가 기존 것의 새 버전 같아요.</div><button class="primary" id="pending-go" style="flex:none">이어서 업데이트</button></div>`);
-    root.querySelector("#pending-go").addEventListener("click", () => copyQueue.length ? renderCopyOffer() : renderModCopyOffer());
+    const parts = [copyQueue.length && `봇 ${copyQueue.length}개`, modQueue.length && `모듈 ${modQueue.length}개`].filter(Boolean);
+    const label = parts.length ? `새로 가져온 ${parts.join(" · ")}가 기존 것의 새 버전 같아요.` : `새로 가져온 봇 ${newQueue.length}개를 다른 봇과 합칠 수 있어요.`;
+    const btnLabel = parts.length ? "이어서 업데이트" : "합치기";
+    row.insertAdjacentHTML("beforebegin", `<div class="card" id="pending-offer" style="display:flex;gap:10px;align-items:center"><span class="ri big">${ic("refresh", 18)}</span><div style="flex:1">${label}</div><button class="primary" id="pending-go" style="flex:none">${btnLabel}</button></div>`);
+    root.querySelector("#pending-go").addEventListener("click", () => copyQueue.length ? renderCopyOffer() : modQueue.length ? renderModCopyOffer() : renderNewOffer());
   }
   function renderStart(errorText) {
     heading = TITLE2;
@@ -962,6 +965,32 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
       }
     } catch {
     }
+  }
+  // ---- 새로 가져온 봇(업데이트 후보는 아님): 다른 봇과 합칠지 물어본다 ----
+  let newQueue = [];
+  async function renderNewOffer() {
+    heading = TITLE2;
+    const it = newQueue[0];
+    if (!it) return renderStart();
+    const { chars } = await mergeData();
+    const targets = chars.filter(({ c }) => c.chaId !== it.copyId);
+    frame(`<div class="card">
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px"><span class="ri big">${ic("link", 18)}</span>
+            <div><b>새 봇을 가져왔어요</b><div class="muted">'${esc(it.copyName)}'을(를) 다른 봇과 합칠까요? 그냥 새 봇으로 두셔도 돼요.</div></div></div>
+          ${targets.length ? `<div class="rr"><span class="rl" style="width:76px">합칠 봇</span><select id="new-tg" style="margin-top:0">${targets.map(({ c }) => `<option value="${esc(c.chaId)}">${esc(nameOf(c))}</option>`).join("")}</select></div>` : ""}
+          ${newQueue.length > 1 ? `<div class="muted" style="margin-top:6px">대기 중 ${newQueue.length - 1}개 더</div>` : ""}
+        </div>
+        <div class="row">${targets.length ? `<button class="primary" id="merge-go">합치기</button>` : ""}<button id="skip">새 봇으로 둘게요</button>${closeBtn("나중에")}</div>`);
+    root.querySelector("#skip").addEventListener("click", () => {
+      newQueue.shift();
+      newQueue.length ? renderNewOffer() : onClose();
+    });
+    root.querySelector("#merge-go")?.addEventListener("click", () => {
+      const targetId = root.querySelector("#new-tg").value;
+      mg = { targetId, src: "c:" + it.copyId, scope: "characters" };
+      newQueue.shift();
+      renderMergeStart(targetId).catch((err) => renderResult(null, null, err?.message ?? String(err)));
+    });
   }
   // ---- 받은 모듈(리스에 새로 가져온 .risum)로 기존 모듈 업데이트 ----
   let modQueue = [];
@@ -1744,6 +1773,14 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
       for (const it of items) if (!copyQueue.some((x) => x.copyId === it.copyId)) copyQueue.push(it);
       if (busy) return;
       renderCopyOffer();
+      await show();
+    },
+    /** 새로 가져온 봇(업데이트 후보는 아님)을 "합칠까요?"로 물어본다 */
+    async offerNew(items) {
+      for (const it of items) if (!newQueue.some((x) => x.copyId === it.copyId)) newQueue.push(it);
+      if (busy) return;
+      renderNewOffer().catch(() => {
+      });
       await show();
     },
     get busy() {
