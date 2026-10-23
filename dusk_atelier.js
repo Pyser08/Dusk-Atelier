@@ -12437,6 +12437,21 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-code .t-cbsn{color:#dcdcaa;font-weight:600}
 .rb-code .t-tag{color:#569cd6}
 .rb-code .t-attr{color:#9cdcfe}
+.rb-code .t-cbsk{color:#ff79c6;font-weight:700}
+.rb-code.wrap .rb-code-in{width:100%}
+.rb-code.wrap pre,.rb-code.wrap textarea{white-space:pre-wrap;overflow-wrap:anywhere}
+.rb-code.prose{--c-bg:var(--rb-surf);--c-fg:var(--rb-text);font-size:14px;line-height:1.7;font-family:inherit;tab-size:4}
+.rb-code.prose textarea{caret-color:var(--rb-text)}
+.rb-code.prose textarea::selection{background:rgba(100,140,255,.32)}
+.rb-code.prose .t-com{color:#3fa66a}
+.rb-code.prose .t-str{color:#e0607e}
+.rb-code.prose .t-cbs{color:#a46ff0;font-weight:600}
+.rb-code.prose .t-cbsn{color:#d18a1f;font-weight:600}
+.rb-code.prose .t-cbsk{color:#e0559b;font-weight:700}
+.rb-code.prose .t-tag{color:#3b82f6;font-weight:600}
+.rb-code.prose .t-attr{color:#0ea5c6}
+.rb-code.prose pre span{font-weight:inherit!important}
+.rb-code.prose .t-br{background:rgba(128,128,160,.28);box-shadow:inset 0 0 0 1px rgba(128,128,160,.7)}
 .rb-code .t-br{background:rgba(255,255,255,.24);box-shadow:inset 0 0 0 1px #b4b4b4;border-radius:2px}
 .rb-code .t-br-bad{background:rgba(255,80,80,.28);box-shadow:inset 0 0 0 1px #ff6b6b;border-radius:2px}
 `;
@@ -12585,6 +12600,63 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     }
     return out;
   }
+  var TEXT_TOKEN = /(<!--[\s\S]*?-->)|(\{\{)|(\}\})|(::)|(<[A-Za-z][\w-]*=)([^>\n]*)(>?)|(<\/?[A-Za-z][\w-]*)((?:\s+[^\s=>"'/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>"']+))?)*)(\s*\/?>)?/g;
+  var cbsKind = (name) => /^[#/:]/.test(name) ? "cbsk" : "cbsn";
+  function pushVal(out, vs, val) {
+    const cb = /\{\{([#/:]?[^\s:}{]*)|\}\}|::/g;
+    let last2 = 0, c;
+    while (c = cb.exec(val)) {
+      if (c.index > last2) out.push([vs + last2, vs + c.index, "str", false]);
+      if (c[0] === "::") out.push([vs + c.index, vs + c.index + 2, "cbs", true]);
+      else {
+        out.push([vs + c.index, vs + c.index + 2, "cbs", false]);
+        if (c[1]) out.push([vs + c.index + 2, vs + c.index + 2 + c[1].length, cbsKind(c[1]), true]);
+      }
+      last2 = c.index + c[0].length;
+    }
+    if (val.length > last2) out.push([vs + last2, vs + val.length, "str", false]);
+  }
+  function tokText(code) {
+    const out = [];
+    let m, depth = 0;
+    TEXT_TOKEN.lastIndex = 0;
+    while (m = TEXT_TOKEN.exec(code)) {
+      const s = m.index;
+      if (m[1]) out.push([s, s + m[1].length, "com", true]);
+      else if (m[2]) {
+        depth++;
+        out.push([s, s + 2, "cbs", false]);
+        const name = /^[#/:]?[^\s:}{]*/.exec(code.slice(s + 2, s + 80))[0];
+        if (name) {
+          out.push([s + 2, s + 2 + name.length, cbsKind(name), true]);
+          TEXT_TOKEN.lastIndex = s + 2 + name.length;
+        }
+      } else if (m[3]) {
+        if (depth > 0) depth--;
+        out.push([s, s + 2, "cbs", false]);
+      } else if (m[4]) {
+        if (depth > 0) out.push([s, s + 2, "cbs", true]);
+      } else if (m[5]) {
+        out.push([s, s + m[5].length, "tag", true]);
+        pushVal(out, s + m[5].length, m[6]);
+        if (m[7]) out.push([s + m[5].length + m[6].length, s + m[0].length, "tag", true]);
+      } else if (m[8]) {
+        out.push([s, s + m[8].length, "tag", true]);
+        let k = s + m[8].length;
+        const attrs = m[9] ?? "";
+        const re = /([^\s=>"'/]+)(?:(\s*=\s*)("[^"]*"|'[^']*'|[^\s>"']+))?/g;
+        let a;
+        while (a = re.exec(attrs)) {
+          const as = k + a.index;
+          out.push([as, as + a[1].length, "attr", true]);
+          if (a[3]) pushVal(out, as + a[1].length + a[2].length, a[3]);
+        }
+        k += attrs.length;
+        if (m[10]) out.push([k, k + m[10].length, "tag", true]);
+      }
+    }
+    return out;
+  }
   var LUA_KW = /* @__PURE__ */ new Set(["and", "break", "do", "else", "elseif", "end", "for", "function", "goto", "if", "in", "local", "not", "or", "repeat", "return", "then", "until", "while"]);
   var LUA_LIT = /* @__PURE__ */ new Set(["true", "false", "nil"]);
   var LUA_TOKEN = /(--\[(=*)\[[\s\S]*?(?:\]\2\]|$)|--[^\n]*)|(\[(=*)\[[\s\S]*?(?:\]\4\]|$)|'(?:\\.|[^'\\\n])*'?|"(?:\\.|[^"\\\n])*"?)|(\b0x[\da-fA-F]+\b|\b\d+(?:\.\d+)?\b)|([A-Za-z_][\w]*)/g;
@@ -12612,7 +12684,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     }
     return out;
   }
-  var TOKENIZERS = { js: tokJs, regex: tokRegex, replace: tokReplace, lua: tokLua };
+  var TOKENIZERS = { js: tokJs, regex: tokRegex, replace: tokReplace, lua: tokLua, text: tokText };
   var OPEN = { "(": ")", "[": "]", "{": "}" };
   var CLOSE = { ")": "(", "]": "[", "}": "{" };
   function skipMask(n, tokens2) {
@@ -12661,16 +12733,16 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
   }
   var caretHandlers = /* @__PURE__ */ new WeakMap();
   var selListening = false;
-  function codeEditor(value, { onChange, label: label3 = "코드", minHeight, maxHeight, lang = "js", tab = "  ", placeholder, gutter = true } = {}) {
+  function codeEditor(value, { onChange, label: label3 = "코드", minHeight, maxHeight, lang = "js", tab = "  ", placeholder, gutter = true, wrap = false, prose = false } = {}) {
     if (!document.getElementById("rb-code-style")) document.head.appendChild(h("style", { id: "rb-code-style" }, CSS3));
     const tokenize = TOKENIZERS[lang] ?? tokJs;
     const pre = h("pre", { "aria-hidden": "true" });
     const gut = gutter ? h("div", { class: "rb-code-gut", "aria-hidden": "true" }) : null;
-    const ta = h("textarea", { spellcheck: "false", autocapitalize: "off", autocomplete: "off", "aria-label": label3, wrap: "off", placeholder });
+    const ta = h("textarea", { spellcheck: "false", autocapitalize: "off", autocomplete: "off", "aria-label": label3, wrap: wrap ? "soft" : "off", placeholder });
     ta.value = value ?? "";
     const el = h(
       "div",
-      { class: "rb-code", style: { minHeight, maxHeight, tabSize: tab === "	" ? "4" : null } },
+      { class: ["rb-code", wrap && "wrap", prose && "prose"], style: { minHeight, maxHeight, tabSize: tab === "	" ? "4" : null } },
       h("div", { class: "rb-code-in", style: gutter ? null : "grid-template-columns:1fr" }, gut, h("div", { class: "rb-code-area" }, pre, ta))
     );
     let raf = 0, lines = 0, tokens2 = [], lastText = null, lastPair = "";
@@ -15696,18 +15768,50 @@ ${patch.note}` : "",
       infoTitle: "봇 정보",
       validate: (v) => validateModule(v),
       renderInfo: ({ draft, field, text, area, check, changed }) => {
+        let mode = ctx.prefs?.ui?.textMode === "code" ? "code" : "text";
+        const rich = (get, set, { tall, label: label3 }) => codeEditor(get() ?? "", {
+          lang: "text",
+          label: label3,
+          tab: "	",
+          gutter: mode === "code",
+          wrap: mode !== "code",
+          prose: mode !== "code",
+          minHeight: tall ? "max(300px,46vh)" : "96px",
+          maxHeight: tall ? "70vh" : "50vh",
+          onChange: (v) => {
+            set(v);
+            changed();
+          }
+        }).el;
+        const fmHolder = h("div");
+        const paintFm = () => fmHolder.replaceChildren(rich(() => draft.firstMessage, (v) => draft.firstMessage = v, { tall: true, label: "첫 메시지" }));
+        const modeSeg = segmented([["text", "일반"], ["code", "코드"]], mode, (v) => {
+          if (v === mode) return;
+          mode = v;
+          ctx.prefs?.saveUi?.({ textMode: v })?.catch?.(() => {
+          });
+          paintFm();
+          paintGreets();
+        }, "첫 메시지 입력 모드");
+        modeSeg.style.width = "160px";
+        const fmBox = h(
+          "div",
+          { style: "display:flex;flex-direction:column;gap:8px" },
+          h(
+            "div",
+            { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
+            modeSeg,
+            h("span", { class: "rb-muted", style: "font-size:12px;word-break:keep-all" }, "일반은 글 쓰듯 줄바꿈, 코드는 줄 번호와 고정폭 글꼴이에요. 둘 다 {{CBS}}·<img=…>·태그에 색이 들어가요. 추가 인사말도 같이 바뀌어요.")
+          ),
+          fmHolder
+        );
         const greets = h("div", { class: "wide", style: "display:flex;flex-direction:column;gap:8px" });
         const paintGreets = () => {
           if (!Array.isArray(draft.alternateGreetings)) draft.alternateGreetings = [];
           greets.replaceChildren(
             h("span", { class: "rb-label" }, `추가 인사말 (${draft.alternateGreetings.length})`),
             ...draft.alternateGreetings.map((g, i2) => {
-              const ta = h("textarea", { class: "rb-textarea", spellcheck: "false", style: "font-family:inherit;font-size:14px;min-height:90px" });
-              ta.value = g ?? "";
-              ta.addEventListener("input", () => {
-                draft.alternateGreetings[i2] = ta.value;
-                changed();
-              });
+              const ta = h("div", { style: "flex:1;min-width:0" }, rich(() => draft.alternateGreetings[i2], (v) => draft.alternateGreetings[i2] = v, { label: `추가 인사말 ${i2 + 1}` }));
               return h("div", { style: "display:flex;gap:6px;align-items:flex-start" }, ta, iconBtn("trash", `추가 인사말 ${i2 + 1} 지우기`, { onClick: () => {
                 draft.alternateGreetings.splice(i2, 1);
                 changed();
@@ -15721,6 +15825,7 @@ ${patch.note}` : "",
             } }))
           );
         };
+        paintFm();
         paintGreets();
         const tags = h("input", { class: "rb-input", value: (draft.tags ?? []).join(", "), placeholder: "쉼표로 구분" });
         tags.addEventListener("input", () => {
@@ -15738,7 +15843,7 @@ ${patch.note}` : "",
             field("버전", text(draft, "characterVersion")),
             field("태그", tags, true),
             field("설명", area(draft, "desc", { tall: true, ...prose }), true),
-            field("첫 메시지", area(draft, "firstMessage", { tall: true, ...prose }), true),
+            field("첫 메시지", fmBox, true),
             greets,
             field("성격", area(draft, "personality", prose), true),
             field("시나리오", area(draft, "scenario", prose), true),
