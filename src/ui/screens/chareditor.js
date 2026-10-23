@@ -64,6 +64,7 @@ function viewToChar(fresh, view, original) {
   return out;
 }
 async function freshChar(ctx, index, chaId) {
+  // 편집 화면을 여는 데 필요한 봇 한 개만 읽는다 (다른 봇은 읽지 않음)
   const cur = await ctx.api.getCharacterFromIndex(index);
   if (!cur || cur.chaId !== chaId) throw new Error("캐릭터를 다시 찾지 못했어요. 목록을 새로 고쳐 주세요.");
   return cur;

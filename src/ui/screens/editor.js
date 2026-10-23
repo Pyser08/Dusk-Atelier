@@ -77,8 +77,13 @@ export function diffSummary(a, b, { infoLabels = MOD_INFO_LABELS, infoTitle = "�
   return lines;
 }
 export async function openEditor(ctx, id) {
-  const data = await ctx.svc.load({ fresh: true });
-  const entry2 = data.entries.find((e) => e.module.id === id);
+  // 목록에서 이미 읽어 둔 것을 쓴다 (저장할 때는 어차피 봇·모듈을 새로 읽어 확인한다)
+  let data = await ctx.svc.load();
+  let entry2 = data.entries.find((e) => e.module.id === id);
+  if (!entry2) {
+    data = await ctx.svc.load({ fresh: true });
+    entry2 = data.entries.find((e) => e.module.id === id);
+  }
   if (!entry2) {
     ctx.toast("모듈을 찾지 못했어요", { error: true });
     return;

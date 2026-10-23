@@ -112,6 +112,8 @@ async function start() {
   // 새로 가져온 봇 감지 (+ 메뉴 버튼 포함). 설정에서 끌 수 있다.
   const toast = createHostToast(() => watcher.doc);
   const watcher = createWatcher(api, {
+    // 리스 쪽에서 모듈이 바뀌면 목록 캐시를 비운다
+    onModChanged: () => app?.ctx.svc.invalidate(),
     onDetected: (items) => legacy.offerCopies(items).catch(() => {
     }),
     onModules: (items) => legacy.offerModules(items).catch(() => {

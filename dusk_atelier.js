@@ -1,11 +1,11 @@
 //@name dusk_atelier
 //@display-name Dusk Atelier
 //@api 3.0
-//@version 1.3.5
+//@version 1.3.6
 //@update-url https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js
 //@link https://github.com/Pyser08/Dusk-Atelier 저장소
 
-/* Dusk Atelier v1.3.5 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
+/* Dusk Atelier v1.3.6 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
 (() => {
   var __defProp = Object.defineProperty;
   var __export = (target, all) => {
@@ -5023,7 +5023,7 @@ ${v.content ?? ""}`;
   function modKey(name) {
     return String(name ?? "").normalize("NFKC").toLowerCase().replace(/(?:\s*[-–—:]?\s*(?:v(?:er(?:sion)?)?\.?\s*)?\d+(?:\.\d+)+|\s*[([]\s*v?\d+(?:\.\d+)*\s*[)\]])\s*$/u, "").replace(/[^\p{L}\p{N}]/gu, "");
   }
-  function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew, isBusy }) {
+  function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew, isBusy, onModChanged }) {
     let knownMods = null, lastMod = 0, charCount = null, lastOrder = null;
     let known = null, timer = null, burstUntil = 0, mode = "fast", running = false, checking = false, enabled = true;
     let doc = null, menuTimer = null;
@@ -5130,6 +5130,7 @@ ${v.content ?? ""}`;
       const idSet = new Set(ids2);
       const changed = added.length || [...knownMods].some((id) => !idSet.has(id));
       if (!changed) return;
+      onModChanged?.();
       knownMods = new Set(ids2);
       await api.pluginStorage.setItem(KNOWN_MOD_KEY, JSON.stringify({ v: 1, ids: ids2 })).catch(() => {
       });
@@ -11900,8 +11901,9 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       });
       return p;
     };
-    let cache = null, presetQ = Promise.resolve(), pendingOrder = null, orderQueued = null;
+    let loadSeq = 0, cache = null, presetQ = Promise.resolve(), pendingOrder = null, orderQueued = null;
     onCommitted((st) => {
+      loadSeq++;
       cache = { t: Date.now(), state: { entries: st.entries.map((e) => ({ module: e.module, enabled: e.enabled })), globalOn: new Set(st.enabledModules), charUse: cache?.state.charUse ?? /* @__PURE__ */ new Map(), characters: [] } };
       presetQ = presetQ.then(() => recordActive(api, st.entries, st.enabledModules)).catch(() => {
       });
@@ -11910,11 +11912,14 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       serial: serial2,
       async load(opts) {
         if (!opts?.fresh && cache && Date.now() - cache.t < 15e3) return cache.state;
-        cache = null;
-        return loadModuleState(api, opts);
+        const seq = ++loadSeq;
+        const state = await loadModuleState(api, opts);
+        if (seq === loadSeq) cache = { t: Date.now(), state };
+        return state;
       },
       invalidate() {
         cache = null;
+        loadSeq++;
       },
       flush: () => presetQ,
       run(name, ...args) {
@@ -12465,8 +12470,12 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     return lines;
   }
   async function openEditor(ctx, id) {
-    const data = await ctx.svc.load({ fresh: true });
-    const entry2 = data.entries.find((e) => e.module.id === id);
+    let data = await ctx.svc.load();
+    let entry2 = data.entries.find((e) => e.module.id === id);
+    if (!entry2) {
+      data = await ctx.svc.load({ fresh: true });
+      entry2 = data.entries.find((e) => e.module.id === id);
+    }
     if (!entry2) {
       ctx.toast("모듈을 찾지 못했어요", { error: true });
       return;
@@ -18104,7 +18113,7 @@ ${patch.note}` : "",
   }
 
   // src/main.js
-  var VERSION = true ? "1.3.5" : "dev";
+  var VERSION = true ? "1.3.6" : "dev";
   var TITLE = "Dusk Atelier";
   async function start() {
     const raw = globalThis.risuai ?? globalThis.Risuai;
@@ -18204,6 +18213,8 @@ ${patch.note}` : "",
     await api.registerSetting(TITLE, open, ICON, "html");
     const toast2 = createHostToast(() => watcher.doc);
     const watcher = createWatcher(api, {
+      // 리스 쪽에서 모듈이 바뀌면 목록 캐시를 비운다
+      onModChanged: () => app?.ctx.svc.invalidate(),
       onDetected: (items) => legacy.offerCopies(items).catch(() => {
       }),
       onModules: (items) => legacy.offerModules(items).catch(() => {

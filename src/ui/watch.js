@@ -97,7 +97,7 @@ export async function queueTrash(api, chaId) {
 function modKey(name) {
   return String(name ?? "").normalize("NFKC").toLowerCase().replace(/(?:\s*[-–—:]?\s*(?:v(?:er(?:sion)?)?\.?\s*)?\d+(?:\.\d+)+|\s*[([]\s*v?\d+(?:\.\d+)*\s*[)\]])\s*$/u, "").replace(/[^\p{L}\p{N}]/gu, "");
 }
-export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew, isBusy }) {
+export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew, isBusy, onModChanged }) {
   let knownMods = null, lastMod = 0, charCount = null, lastOrder = null;
   let known = null, timer = null, burstUntil = 0, mode = "fast", running = false, checking = false, enabled = true;
   let doc = null, menuTimer = null;
@@ -212,6 +212,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
     const idSet = new Set(ids);
     const changed = added.length || [...knownMods].some((id) => !idSet.has(id));
     if (!changed) return;
+    onModChanged?.();
     knownMods = new Set(ids);
     await api.pluginStorage.setItem(KNOWN_MOD_KEY, JSON.stringify({ v: 1, ids })).catch(() => {
     });

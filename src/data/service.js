@@ -11,8 +11,9 @@ export function createService(api, prefs) {
     });
     return p;
   };
-  let cache = null, presetQ = Promise.resolve(), pendingOrder = null, orderQueued = null;
+  let loadSeq = 0, cache = null, presetQ = Promise.resolve(), pendingOrder = null, orderQueued = null;
   onCommitted((st) => {
+    loadSeq++;
     cache = { t: Date.now(), state: { entries: st.entries.map((e) => ({ module: e.module, enabled: e.enabled })), globalOn: new Set(st.enabledModules), charUse: cache?.state.charUse ?? /* @__PURE__ */ new Map(), characters: [] } };
     presetQ = presetQ.then(() => recordActive(api, st.entries, st.enabledModules)).catch(() => {
     });
@@ -21,11 +22,15 @@ export function createService(api, prefs) {
     serial: serial2,
     async load(opts) {
       if (!opts?.fresh && cache && Date.now() - cache.t < 15e3) return cache.state;
-      cache = null;
-      return loadModuleState(api, opts);
+      const seq = ++loadSeq;
+      const state = await loadModuleState(api, opts);
+      // 읽는 사이 다른 쓰기가 있었으면 캐시에 넣지 않는다
+      if (seq === loadSeq) cache = { t: Date.now(), state };
+      return state;
     },
     invalidate() {
       cache = null;
+      loadSeq++;
     },
     flush: () => presetQ,
     run(name, ...args) {
