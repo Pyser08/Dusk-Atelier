@@ -9,9 +9,9 @@ import { listUpdateCandidates } from '../tide/characterUpdateTargets.ts';
 import { charFields } from '../engine/tideplan.js';
 import { stableJson } from '../engine/util.js';
 
-var KNOWN_MOD_KEY = "rbm:watchMod:v1", MOD_EVERY = 1e4;
+var KNOWN_MOD_KEY = "rbm:watchMod:v1", MOD_EVERY = 4e3;
 var KNOWN_KEY = "rbm:watch:v1", UI_KEY = "rbm:ui:v1", TRASH_KEY = "rbm:pendingTrash:v1";
-var SLOW = 1e4, FAST = 3e3, BURST = 1500, BURST_FOR = 5 * 6e4;
+var SLOW = 2e3, FAST = 2e3, BURST = 1e3, BURST_FOR = 5 * 6e4;
 var MENU_BTN_ID = "dusk-atelier-addchar";
 
 export async function readUi(api) {
@@ -93,7 +93,7 @@ function modKey(name) {
   return String(name ?? "").normalize("NFKC").toLowerCase().replace(/(?:\s*[-–—:]?\s*(?:v(?:er(?:sion)?)?\.?\s*)?\d+(?:\.\d+)+|\s*[([]\s*v?\d+(?:\.\d+)*\s*[)\]])\s*$/u, "").replace(/[^\p{L}\p{N}]/gu, "");
 }
 export function createWatcher(api, { onDetected, onModules, onOpenUpdater, isBusy }) {
-  let knownMods = null, lastMod = 0;
+  let knownMods = null, lastMod = 0, charCount = null, lastOrder = null;
   let known = null, timer = null, burstUntil = 0, mode = "fast", running = false, checking = false, enabled = true;
   let doc = null, menuTimer = null;
   const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
@@ -114,17 +114,43 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, isBus
     });
   }
 
+  // 상태 (업데이트 설정 화면에서 보여 줌)
+  const stat = { lastAt: 0, lastError: "", chars: 0, mods: 0, found: 0 };
   async function check(force = false) {
-    if (checking || !enabled || !visible() || isBusy?.()) return;
+    if (checking || !enabled || !visible()) return;
     checking = true;
     try {
-      const cur = await ids();
+      const orderDb = await api.getDatabase(["characterOrder"]);
+      // 권한 거부·읽기 실패: 기준(본 봇 목록)을 건드리지 않고 다음에 다시
+      if (!orderDb || !Array.isArray(orderDb.characterOrder)) throw new Error("캐릭터 순서를 읽지 못했어요 (데이터베이스 접근 권한을 확인해 주세요)");
+      let cur = flatten(orderDb.characterOrder);
+      // 끝자리 확인: 리스가 순서 목록에 늦게 넣어도, 봇 목록 끝에 새 봇이 생겼는지 직접 본다 (없으면 null 하나만 오가서 가볍다)
+      let tailHit = false;
+      if (charCount !== null) {
+        try {
+          tailHit = !!await api.getCharacterFromIndex(charCount);
+        } catch {
+        }
+      }
+      const orderSig = cur.join("|");
+      const orderMoved = orderSig !== lastOrder;
+      if (tailHit || orderMoved || !known || charCount === null || force) {
+        const db = await api.getDatabase(["characters"]);
+        if (!db || !Array.isArray(db.characters)) throw new Error("봇 목록을 읽지 못했어요");
+        charCount = db.characters.length;
+        const live = db.characters.filter((c) => c?.chaId && !c.trashTime && c.type !== "group").map((c) => c.chaId);
+        cur = [.../* @__PURE__ */ new Set([...cur, ...live])];
+        lastOrder = orderSig;
+      } else cur = [...known];
+      stat.chars = cur.length;
       if (!known) {
         const saved = await readJson(api, KNOWN_KEY, null);
         if (!saved?.ids) {
           // 처음 켰을 때: 지금 있는 봇은 모두 "본 것"으로
           known = new Set(cur);
           await saveKnown();
+          stat.lastAt = Date.now();
+          stat.lastError = "";
           return;
         }
         known = new Set(saved.ids);
@@ -141,7 +167,10 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, isBus
       }
       if (force || Date.now() - lastMod >= MOD_EVERY || Date.now() < burstUntil) await checkModules();
       await processTrash();
-    } catch {
+      stat.lastAt = Date.now();
+      stat.lastError = "";
+    } catch (e) {
+      stat.lastError = e?.message ?? String(e);
     } finally {
       checking = false;
     }
@@ -150,8 +179,11 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, isBus
   // 모듈: 리스에 .risum을 끌어다 놓거나 가져오면 새 id의 모듈이 생긴다 → 이름이 같은 기존 모듈이 있으면 묻는다
   async function checkModules() {
     lastMod = Date.now();
-    const mods = (await api.getDatabase(["modules"]))?.modules ?? [];
+    const mdb = await api.getDatabase(["modules"]);
+    if (!mdb || !Array.isArray(mdb.modules)) return;
+    const mods = mdb.modules;
     const ids = mods.map((m) => m?.id).filter(Boolean);
+    stat.mods = ids.length;
     if (!knownMods) {
       const saved = await readJson(api, KNOWN_MOD_KEY, null);
       if (!saved?.ids) {
@@ -179,7 +211,10 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, isBus
       if (targets.some((t) => strip(t) === strip(m))) continue;
       items.push({ copyId: m.id, copyName: m.name ?? "", targets: targets.slice(0, 6).map((t) => ({ id: t.id, name: t.name, reason: modKey(t.name) === k ? "name" : "namespace" })) });
     }
-    if (items.length) onModules?.(items);
+    if (items.length) {
+      stat.found += items.length;
+      onModules?.(items);
+    }
   }
   // 새 봇 중 "기존 봇의 새 버전"으로 보이는 것만 골라 알린다
   async function inspect(added) {
@@ -195,7 +230,10 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, isBus
       if (twin && stableJson(charFields(twin)) === stableJson(charFields(copy))) continue;
       items.push({ copyId: id, copyName: copy.name ?? "", targets: cands.slice(0, 6).map((t) => ({ chaId: t.chaId, name: t.name, reason: t.reason })) });
     }
-    if (items.length) onDetected(items);
+    if (items.length) {
+      stat.found += items.length;
+      onDetected(items);
+    }
   }
 
   function schedule() {
@@ -267,11 +305,15 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, isBus
       enabled = ui.autoDetect;
       if (!enabled) return;
       running = true;
-      mode = await startDom() ? "dom" : "fast";
+      // 메인 화면 접근 허락 창을 기다리느라 감지가 멈추지 않게, 감지부터 시작하고 버튼은 뒤에서
+      mode = "fast";
+      startDom().then((ok) => {
+        if (ok) mode = "dom";
+      });
       if (typeof document !== "undefined") document.addEventListener("visibilitychange", () => {
         if (visible()) check(true);
       });
-      setTimeout(check, 4e3);
+      setTimeout(() => check(true), 2500);
       schedule();
     },
     async setEnabled(on) {
@@ -281,6 +323,9 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, isBus
     },
     check,
     burst,
+    get status() {
+      return { ...stat, enabled, running, mode };
+    },
     /** Dusk가 모듈 목록을 바꾼 뒤: 지금 목록을 "본 것"으로 */
     async snapshotModules() {
       try {

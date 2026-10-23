@@ -42,10 +42,11 @@ async function start() {
   const legacy = await createLegacy(api, {
     hooks,
     onExit: () => {
-      if (app) {
-        app.ctx.state.modDirty = true;
-        app.ctx.refresh();
-      }
+      // Dusk 창이 닫힌 채로 감지 알림만 띄웠던 경우: 리스 화면을 가리지 않게 플러그인 화면도 닫는다
+      const r = app?.ctx.root;
+      if (!app || !r || r.hidden) return api.hideContainer();
+      app.ctx.state.modDirty = true;
+      app.ctx.refresh();
     },
     host: () => app?.ctx.root,
     links: {

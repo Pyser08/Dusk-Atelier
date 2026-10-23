@@ -23,6 +23,28 @@ function tile(ic, title, desc, onClick, id) {
     h("span", { style: "color:var(--rb-mute);display:flex" }, icon("chevron", 16))
   );
 }
+// Special thanks — RisuTide (대표 이모지: 🌊)
+function thanksCard() {
+  const wave = (o, d) => `<path d="M0 ${18 + o} C 40 ${8 + o}, 80 ${28 + o}, 120 ${18 + o} S 200 ${8 + o}, 240 ${18 + o} S 320 ${28 + o}, 360 ${18 + o} S 440 ${8 + o}, 480 ${18 + o} V 60 H 0 Z" fill="currentColor" opacity="${d}"/>`;
+  const box = h(
+    "div",
+    { class: "rb-thanks", id: "rb-thanks" },
+    h("div", { class: "rb-thanks-waves", "aria-hidden": "true", ref: (el) => el.innerHTML = `<svg viewBox="0 0 480 60" preserveAspectRatio="none">${wave(6, 0.18)}${wave(14, 0.28)}${wave(22, 0.45)}</svg>` }),
+    h(
+      "div",
+      { class: "rb-thanks-body" },
+      h("span", { class: "rb-thanks-emoji", "aria-hidden": "true" }, "🌊"),
+      h(
+        "div",
+        null,
+        h("span", { class: "rb-thanks-kicker" }, "SPECIAL THANKS"),
+        h("b", { class: "rb-thanks-title" }, "RisuTide"),
+        h("span", { class: "rb-thanks-text" }, "채팅을 지키는 업데이트, 꼼꼼한 비교 검토, 다른 봇에서 가져오기·합치기까지 — Dusk Atelier의 업데이트 기능은 RisuTide에서 이어받았어요. 기꺼이 코드를 넘겨주신 RisuTide 개발자님께 깊이 감사드려요.")
+      )
+    )
+  );
+  return box;
+}
 export function renderTools(ctx) {
   if (ctx.state.sub === "inspector") return renderInspector(ctx);
   if (ctx.state.sub === "cleanup") return renderCleanup(ctx);
@@ -57,7 +79,8 @@ export function renderTools(ctx) {
       tile("upload", "전체 복원", "전체 백업 zip에서 모듈과 설정을 되살리기", () => fullRestore(ctx), "rb-tool-restore"),
       tile("info", ".risum 인스펙터", "모듈 파일 안을 열어 보기: 필드별 크기, 압축률, 에셋 목록, ZIP 추출", () => ctx.go("tools", "inspector"), "rb-tool-inspector"),
       tile("trash", "설정 정리", "이 플러그인이 저장한 순서·폴더·프리셋·연결 정보를 골라서 지우기", () => ctx.go("tools", "cleanup"), "rb-tool-cleanup")
-    )
+    ),
+    thanksCard()
   ));
 }
 async function fullBackup(ctx) {

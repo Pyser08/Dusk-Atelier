@@ -1,11 +1,11 @@
 //@name dusk_atelier
 //@display-name Dusk Atelier
 //@api 3.0
-//@version 1.3.0
+//@version 1.3.1
 //@update-url https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js
 //@link https://github.com/Pyser08/Dusk-Atelier 저장소
 
-/* Dusk Atelier v1.3.0 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
+/* Dusk Atelier v1.3.1 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
 (() => {
   var __defProp = Object.defineProperty;
   var __export = (target, all) => {
@@ -4938,13 +4938,13 @@ ${v.content ?? ""}`;
 
   // src/ui/watch.js
   var KNOWN_MOD_KEY = "rbm:watchMod:v1";
-  var MOD_EVERY = 1e4;
+  var MOD_EVERY = 4e3;
   var KNOWN_KEY = "rbm:watch:v1";
   var UI_KEY = "rbm:ui:v1";
   var TRASH_KEY = "rbm:pendingTrash:v1";
-  var SLOW = 1e4;
-  var FAST = 3e3;
-  var BURST = 1500;
+  var SLOW = 2e3;
+  var FAST = 2e3;
+  var BURST = 1e3;
   var BURST_FOR = 5 * 6e4;
   var MENU_BTN_ID = "dusk-atelier-addchar";
   async function readUi(api) {
@@ -5016,7 +5016,7 @@ ${v.content ?? ""}`;
     return String(name ?? "").normalize("NFKC").toLowerCase().replace(/(?:\s*[-–—:]?\s*(?:v(?:er(?:sion)?)?\.?\s*)?\d+(?:\.\d+)+|\s*[([]\s*v?\d+(?:\.\d+)*\s*[)\]])\s*$/u, "").replace(/[^\p{L}\p{N}]/gu, "");
   }
   function createWatcher(api, { onDetected, onModules, onOpenUpdater, isBusy }) {
-    let knownMods = null, lastMod = 0;
+    let knownMods = null, lastMod = 0, charCount = null, lastOrder = null;
     let known = null, timer = null, burstUntil = 0, mode = "fast", running = false, checking = false, enabled = true;
     let doc = null, menuTimer = null;
     const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
@@ -5035,16 +5035,39 @@ ${v.content ?? ""}`;
       await api.pluginStorage.setItem(TRASH_KEY, JSON.stringify(keep)).catch(() => {
       });
     }
+    const stat = { lastAt: 0, lastError: "", chars: 0, mods: 0, found: 0 };
     async function check(force = false) {
-      if (checking || !enabled || !visible() || isBusy?.()) return;
+      if (checking || !enabled || !visible()) return;
       checking = true;
       try {
-        const cur = await ids();
+        const orderDb = await api.getDatabase(["characterOrder"]);
+        if (!orderDb || !Array.isArray(orderDb.characterOrder)) throw new Error("캐릭터 순서를 읽지 못했어요 (데이터베이스 접근 권한을 확인해 주세요)");
+        let cur = flatten(orderDb.characterOrder);
+        let tailHit = false;
+        if (charCount !== null) {
+          try {
+            tailHit = !!await api.getCharacterFromIndex(charCount);
+          } catch {
+          }
+        }
+        const orderSig = cur.join("|");
+        const orderMoved = orderSig !== lastOrder;
+        if (tailHit || orderMoved || !known || charCount === null || force) {
+          const db = await api.getDatabase(["characters"]);
+          if (!db || !Array.isArray(db.characters)) throw new Error("봇 목록을 읽지 못했어요");
+          charCount = db.characters.length;
+          const live = db.characters.filter((c) => c?.chaId && !c.trashTime && c.type !== "group").map((c) => c.chaId);
+          cur = [.../* @__PURE__ */ new Set([...cur, ...live])];
+          lastOrder = orderSig;
+        } else cur = [...known];
+        stat.chars = cur.length;
         if (!known) {
           const saved = await readJson(api, KNOWN_KEY, null);
           if (!saved?.ids) {
             known = new Set(cur);
             await saveKnown();
+            stat.lastAt = Date.now();
+            stat.lastError = "";
             return;
           }
           known = new Set(saved.ids);
@@ -5061,15 +5084,21 @@ ${v.content ?? ""}`;
         }
         if (force || Date.now() - lastMod >= MOD_EVERY || Date.now() < burstUntil) await checkModules();
         await processTrash();
-      } catch {
+        stat.lastAt = Date.now();
+        stat.lastError = "";
+      } catch (e) {
+        stat.lastError = e?.message ?? String(e);
       } finally {
         checking = false;
       }
     }
     async function checkModules() {
       lastMod = Date.now();
-      const mods = (await api.getDatabase(["modules"]))?.modules ?? [];
+      const mdb = await api.getDatabase(["modules"]);
+      if (!mdb || !Array.isArray(mdb.modules)) return;
+      const mods = mdb.modules;
       const ids2 = mods.map((m) => m?.id).filter(Boolean);
+      stat.mods = ids2.length;
       if (!knownMods) {
         const saved = await readJson(api, KNOWN_MOD_KEY, null);
         if (!saved?.ids) {
@@ -5096,7 +5125,10 @@ ${v.content ?? ""}`;
         if (targets.some((t) => strip2(t) === strip2(m))) continue;
         items.push({ copyId: m.id, copyName: m.name ?? "", targets: targets.slice(0, 6).map((t) => ({ id: t.id, name: t.name, reason: modKey(t.name) === k ? "name" : "namespace" })) });
       }
-      if (items.length) onModules?.(items);
+      if (items.length) {
+        stat.found += items.length;
+        onModules?.(items);
+      }
     }
     async function inspect(added) {
       const chars = (await api.getDatabase(["characters"]))?.characters ?? [];
@@ -5110,7 +5142,10 @@ ${v.content ?? ""}`;
         if (twin && stableJson(charFields(twin)) === stableJson(charFields(copy))) continue;
         items.push({ copyId: id, copyName: copy.name ?? "", targets: cands.slice(0, 6).map((t) => ({ chaId: t.chaId, name: t.name, reason: t.reason })) });
       }
-      if (items.length) onDetected(items);
+      if (items.length) {
+        stat.found += items.length;
+        onDetected(items);
+      }
     }
     function schedule() {
       clearTimeout(timer);
@@ -5176,11 +5211,14 @@ ${v.content ?? ""}`;
         enabled = ui.autoDetect;
         if (!enabled) return;
         running = true;
-        mode = await startDom() ? "dom" : "fast";
+        mode = "fast";
+        startDom().then((ok) => {
+          if (ok) mode = "dom";
+        });
         if (typeof document !== "undefined") document.addEventListener("visibilitychange", () => {
           if (visible()) check(true);
         });
-        setTimeout(check, 4e3);
+        setTimeout(() => check(true), 2500);
         schedule();
       },
       async setEnabled(on) {
@@ -5190,6 +5228,9 @@ ${v.content ?? ""}`;
       },
       check,
       burst,
+      get status() {
+        return { ...stat, enabled, running, mode };
+      },
       /** Dusk가 모듈 목록을 바꾼 뒤: 지금 목록을 "본 것"으로 */
       async snapshotModules() {
         try {
@@ -8429,7 +8470,7 @@ ${registrationRow.content}`;
     #rbu-overlay .opt{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--rb-line,#2a2d47);border-radius:12px;margin:6px 0;cursor:pointer;background:var(--rb-win,#151726);transition:border-color .15s,background .15s}
     #rbu-overlay .opt:hover{border-color:var(--rb-line3,#343857);background:var(--rb-hover,#20233a)}
     #rbu-overlay .opt:has(input:checked){border-color:var(--rb-sel-ring,rgba(142,162,255,.45));background:var(--rb-sel-bg,rgba(79,99,224,.12))}
-    #rbu-overlay .opt input{margin-top:3px;width:18px;height:18px;accent-color:var(--rb-acc-a,#4f63e0)}
+    #rbu-overlay .opt input{margin-top:3px;width:18px;height:18px;flex-shrink:0;accent-color:var(--rb-acc-a,#4f63e0)}
     #rbu-overlay .kind{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;margin-right:8px;background:var(--rb-acc-soft,rgba(79,99,224,.16));color:var(--rb-acc-text,#8ea2ff);vertical-align:1px}
     #rbu-overlay .kind.mod{background:var(--rb-acc2-soft,rgba(124,79,224,.16));color:var(--rb-acc2-text,#c4b1ff)}
     #rbu-overlay .badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;margin-left:8px;vertical-align:1px}
@@ -8596,6 +8637,13 @@ ${registrationRow.content}`;
       else await api.hideContainer();
     }
     const closeBtn = (label3 = "닫기") => `<button id="close">${label3}</button>`;
+    function pendingOfferCard() {
+      const n = copyQueue.length + modQueue.length;
+      if (!n || busy || !root || root.querySelector("#pending-offer")) return;
+      const row2 = root.querySelector(".row:last-of-type") ?? root;
+      row2.insertAdjacentHTML("beforebegin", `<div class="card" id="pending-offer" style="display:flex;gap:10px;align-items:center"><span class="ri big">${ic("refresh", 18)}</span><div style="flex:1">새로 가져온 ${copyQueue.length ? `봇 ${copyQueue.length}개` : ""}${copyQueue.length && modQueue.length ? " · " : ""}${modQueue.length ? `모듈 ${modQueue.length}개` : ""}가 기존 것의 새 버전 같아요.</div><button class="primary" id="pending-go" style="flex:none">이어서 업데이트</button></div>`);
+      root.querySelector("#pending-go").addEventListener("click", () => copyQueue.length ? renderCopyOffer() : renderModCopyOffer());
+    }
     function renderStart(errorText) {
       heading = TITLE2;
       busy = false;
@@ -8607,6 +8655,7 @@ ${registrationRow.content}`;
             ${queue.length ? `<div class="muted" style="margin-top:8px">대기 중인 파일 ${queue.length}개</div>` : ""}</div>
           <div class="row"><button id="backups">백업·되돌리기</button>${queue.length ? '<button class="primary" id="nextq">다음 파일</button>' : ""}${closeBtn()}</div>`);
       root.querySelector("#backups").addEventListener("click", () => renderBackups());
+      pendingOfferCard();
       root.querySelector("#nextq")?.addEventListener("click", () => runQueue());
       const go = (files) => {
         const list = [...files ?? []];
@@ -10019,6 +10068,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
           ${queue.length ? `<div class="card">대기 중인 파일 ${queue.length}개 — 다음: <b>${esc(queue[0].name)}</b></div>` : ""}
           <div class="row">${queue.length ? '<button class="primary" id="nextq">다음 파일</button>' : '<button class="primary" id="again">다른 파일</button>'}${res?.backupRec ? '<button id="undo">바로 되돌리기</button>' : ""}${res?.backup ? '<button id="tobk">백업·되돌리기</button>' : ""}${closeBtn()}</div>`);
       root.querySelector("#again")?.addEventListener("click", () => renderStart());
+      pendingOfferCard();
       root.querySelector("#nextq")?.addEventListener("click", () => runQueue());
       root.querySelector("#tobk")?.addEventListener("click", () => renderBackups());
       root.querySelector("#undo")?.addEventListener("click", () => restoreBackup(res.backupRec).catch((err2) => renderResult(null, null, err2 instanceof Busy ? err2.message : `되돌리지 못했어요: ${err2?.message ?? err2}`)));
@@ -10038,7 +10088,8 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       startScan(f).catch((err2) => renderStart(err2 instanceof Cancelled ? void 0 : err2?.message ?? String(err2)));
     }
     const show = async () => {
-      const hostEl = host?.();
+      let hostEl = host?.();
+      if (hostEl && (hostEl.hidden || hostEl.closest?.("[hidden]"))) hostEl = document.body;
       if (hostEl && overlay.parentNode !== hostEl) hostEl.appendChild(overlay);
       else await syncColorScheme();
       overlay.className = "";
@@ -10839,6 +10890,19 @@ select.rb-input{appearance:auto}
 button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 @media (max-width: 760px){ .rb-input,.rb-textarea,.rb-search input,select{font-size:16px !important} }
 @media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+
+.rb-thanks{position:relative;margin-top:22px;border-radius:20px;overflow:hidden;padding:22px 22px 54px;background:linear-gradient(135deg,#0d2a4a 0%,#123e66 45%,#1b5a86 100%);color:#e8f6ff;box-shadow:0 14px 40px rgba(6,30,60,.35);animation:rb-fade .4s ease-out}
+.rb-thanks-waves{position:absolute;left:0;right:0;bottom:0;height:64px;color:#7fd3ff;pointer-events:none}
+.rb-thanks-waves svg{width:200%;height:100%;animation:rb-wave 9s linear infinite}
+@keyframes rb-wave{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.rb-thanks-waves svg{animation:none}}
+.rb-thanks-body{position:relative;display:flex;gap:18px;align-items:flex-start}
+.rb-thanks-emoji{font-size:46px;line-height:1;filter:drop-shadow(0 6px 14px rgba(0,0,0,.3));animation:rb-bob 3.2s ease-in-out infinite}
+@keyframes rb-bob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-5px) rotate(4deg)}}
+.rb-thanks-body>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.rb-thanks-kicker{font-size:11px;font-weight:800;letter-spacing:.18em;color:#9fe0ff}
+.rb-thanks-title{font-size:24px;font-weight:800;letter-spacing:-.01em;background:linear-gradient(90deg,#ffffff,#9fe0ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.rb-thanks-text{font-size:13.5px;line-height:1.7;color:#cfeaff;word-break:keep-all}
 `;
 
   // src/ui/color.js
@@ -16117,6 +16181,39 @@ ${patch.note}` : "",
   }
 
   // src/ui/screens/updsettings.js
+  function statusCard(ctx) {
+    const w = ctx.watcher;
+    const txt = h("span", { class: "meta", style: "white-space:normal" });
+    const paint = () => {
+      const s = w?.status;
+      if (!s) return txt.textContent = "감지가 아직 시작되지 않았어요.";
+      if (!s.enabled) return txt.textContent = "자동 감지가 꺼져 있어요.";
+      const ago = s.lastAt ? Math.max(0, Math.round((Date.now() - s.lastAt) / 1e3)) : null;
+      txt.textContent = [
+        ago === null ? "아직 확인 전" : `마지막 확인 ${ago}초 전`,
+        `봇 ${s.chars}개 · 모듈 ${s.mods}개 지켜보는 중`,
+        s.mode === "dom" ? "+ 메뉴 버튼 켜짐" : "+ 메뉴 버튼 없음(메인 화면 접근 미허락)",
+        s.found ? `지금까지 찾은 새 버전 ${s.found}개` : "",
+        s.lastError ? `문제: ${s.lastError}` : ""
+      ].filter(Boolean).join(" · ");
+    };
+    paint();
+    const t = setInterval(() => {
+      if (!txt.isConnected) return clearInterval(t);
+      paint();
+    }, 1e3);
+    return h(
+      "div",
+      { class: "rb-row", style: "background:var(--rb-surf);padding:16px;cursor:default;align-items:center" },
+      h("span", { style: "width:40px;height:40px;border-radius:12px;background:var(--rb-ok-soft,rgba(95,211,181,.13));color:var(--rb-ok,#5fd3b5);display:flex;align-items:center;justify-content:center;flex-shrink:0" }, icon("info", 20)),
+      h("span", { class: "txt" }, h("span", { class: "name" }, "감지 상태"), txt),
+      btn("지금 확인", { size: "sm", icon: "refresh", onClick: async () => {
+        await w?.check(true);
+        paint();
+        ctx.toast(w?.status?.lastError ? `확인하지 못했어요: ${w.status.lastError}` : "확인했어요");
+      } })
+    );
+  }
   async function renderUpdateSettings(ctx) {
     const ui = watchDefaults(ctx.prefs.ui);
     const node2 = await persistentWrites(ctx.api);
@@ -16147,8 +16244,9 @@ ${patch.note}` : "",
       h(
         "div",
         { style: "display:flex;flex-direction:column;gap:10px" },
-        row2("autoDetect", "refresh", "새로 가져온 봇 자동 감지", `리스에서 봇을 가져오면 기존 봇의 새 버전인지 확인하고 "이어 붙일까요?"라고 물어요. 메인 화면 접근을 허락하면 + 메뉴에 'Dusk Atelier로 업데이트' 버튼이 생기고, 가져오기를 누를 때만 자주 확인해요(평소엔 10초마다 봇 목록만). 허락하지 않으면 3초마다 봇 목록만 비교해요.`),
+        row2("autoDetect", "refresh", "새로 가져온 봇 자동 감지", `리스에서 봇을 가져오면 기존 봇의 새 버전인지 확인하고 "이어 붙일까요?"라고 물어요. 2초마다 봇 목록과 봇 목록 끝을 확인하고, 모듈은 4초마다 확인해요. 리스 메인 화면에 끌어다 놓아 가져와도 잡혀요. 메인 화면 접근을 허락하면 + 메뉴에 'Dusk Atelier로 업데이트' 버튼도 생겨요.`),
         row2("trashCopies", "trash", "이어 붙인 뒤 받은 사본을 휴지통으로", "업데이트가 끝나면 새로 가져온 사본 봇을 휴지통으로 옮겨요. 대화가 생긴 사본은 건드리지 않아요.", node2 ? null : "이 앱(원본 RisuAI 웹·데스크톱)에서는 자동 정리가 안 돼요. 사본은 직접 지워 주세요."),
+        statusCard(ctx),
         row2("chatBackup", "message", "업데이트 전 백업에 채팅도 넣기", "바꾸기 전 백업에 채팅까지 담아요. 같은 내용은 한 번만 저장하지만 채팅이 많으면 백업이 커져요. 되돌릴 때 백업에만 있는 채팅을 새 채팅으로 덧붙여요(지금 채팅은 그대로).")
       )
     ));
@@ -16163,6 +16261,27 @@ ${patch.note}` : "",
       h("span", { class: "txt" }, h("span", { class: "name" }, title), h("span", { class: "meta", style: "white-space:normal" }, desc)),
       h("span", { style: "color:var(--rb-mute);display:flex" }, icon("chevron", 16))
     );
+  }
+  function thanksCard() {
+    const wave = (o, d) => `<path d="M0 ${18 + o} C 40 ${8 + o}, 80 ${28 + o}, 120 ${18 + o} S 200 ${8 + o}, 240 ${18 + o} S 320 ${28 + o}, 360 ${18 + o} S 440 ${8 + o}, 480 ${18 + o} V 60 H 0 Z" fill="currentColor" opacity="${d}"/>`;
+    const box = h(
+      "div",
+      { class: "rb-thanks", id: "rb-thanks" },
+      h("div", { class: "rb-thanks-waves", "aria-hidden": "true", ref: (el) => el.innerHTML = `<svg viewBox="0 0 480 60" preserveAspectRatio="none">${wave(6, 0.18)}${wave(14, 0.28)}${wave(22, 0.45)}</svg>` }),
+      h(
+        "div",
+        { class: "rb-thanks-body" },
+        h("span", { class: "rb-thanks-emoji", "aria-hidden": "true" }, "🌊"),
+        h(
+          "div",
+          null,
+          h("span", { class: "rb-thanks-kicker" }, "SPECIAL THANKS"),
+          h("b", { class: "rb-thanks-title" }, "RisuTide"),
+          h("span", { class: "rb-thanks-text" }, "채팅을 지키는 업데이트, 꼼꼼한 비교 검토, 다른 봇에서 가져오기·합치기까지 — Dusk Atelier의 업데이트 기능은 RisuTide에서 이어받았어요. 기꺼이 코드를 넘겨주신 RisuTide 개발자님께 깊이 감사드려요.")
+        )
+      )
+    );
+    return box;
   }
   function renderTools(ctx) {
     if (ctx.state.sub === "inspector") return renderInspector(ctx);
@@ -16198,7 +16317,8 @@ ${patch.note}` : "",
         tile("upload", "전체 복원", "전체 백업 zip에서 모듈과 설정을 되살리기", () => fullRestore(ctx), "rb-tool-restore"),
         tile("info", ".risum 인스펙터", "모듈 파일 안을 열어 보기: 필드별 크기, 압축률, 에셋 목록, ZIP 추출", () => ctx.go("tools", "inspector"), "rb-tool-inspector"),
         tile("trash", "설정 정리", "이 플러그인이 저장한 순서·폴더·프리셋·연결 정보를 골라서 지우기", () => ctx.go("tools", "cleanup"), "rb-tool-cleanup")
-      )
+      ),
+      thanksCard()
     ));
   }
   async function fullBackup(ctx) {
@@ -17752,7 +17872,7 @@ ${patch.note}` : "",
   }
 
   // src/main.js
-  var VERSION = true ? "1.3.0" : "dev";
+  var VERSION = true ? "1.3.1" : "dev";
   var TITLE = "Dusk Atelier";
   async function start() {
     const raw = globalThis.risuai ?? globalThis.Risuai;
@@ -17785,10 +17905,10 @@ ${patch.note}` : "",
     const legacy = await createLegacy(api, {
       hooks,
       onExit: () => {
-        if (app) {
-          app.ctx.state.modDirty = true;
-          app.ctx.refresh();
-        }
+        const r = app?.ctx.root;
+        if (!app || !r || r.hidden) return api.hideContainer();
+        app.ctx.state.modDirty = true;
+        app.ctx.refresh();
       },
       host: () => app?.ctx.root,
       links: {

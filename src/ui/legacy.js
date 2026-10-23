@@ -49,7 +49,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
     #rbu-overlay .opt{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--rb-line,#2a2d47);border-radius:12px;margin:6px 0;cursor:pointer;background:var(--rb-win,#151726);transition:border-color .15s,background .15s}
     #rbu-overlay .opt:hover{border-color:var(--rb-line3,#343857);background:var(--rb-hover,#20233a)}
     #rbu-overlay .opt:has(input:checked){border-color:var(--rb-sel-ring,rgba(142,162,255,.45));background:var(--rb-sel-bg,rgba(79,99,224,.12))}
-    #rbu-overlay .opt input{margin-top:3px;width:18px;height:18px;accent-color:var(--rb-acc-a,#4f63e0)}
+    #rbu-overlay .opt input{margin-top:3px;width:18px;height:18px;flex-shrink:0;accent-color:var(--rb-acc-a,#4f63e0)}
     #rbu-overlay .kind{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;margin-right:8px;background:var(--rb-acc-soft,rgba(79,99,224,.16));color:var(--rb-acc-text,#8ea2ff);vertical-align:1px}
     #rbu-overlay .kind.mod{background:var(--rb-acc2-soft,rgba(124,79,224,.16));color:var(--rb-acc2-text,#c4b1ff)}
     #rbu-overlay .badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;margin-left:8px;vertical-align:1px}
@@ -216,6 +216,14 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
     else await api.hideContainer();
   }
   const closeBtn = (label = "닫기") => `<button id="close">${label}</button>`;
+  // 다른 작업 중에 감지된 봇·모듈이 있으면 화면 아래에 이어 하기 버튼을 둔다
+  function pendingOfferCard() {
+    const n = copyQueue.length + modQueue.length;
+    if (!n || busy || !root || root.querySelector("#pending-offer")) return;
+    const row = root.querySelector(".row:last-of-type") ?? root;
+    row.insertAdjacentHTML("beforebegin", `<div class="card" id="pending-offer" style="display:flex;gap:10px;align-items:center"><span class="ri big">${ic("refresh", 18)}</span><div style="flex:1">새로 가져온 ${copyQueue.length ? `봇 ${copyQueue.length}개` : ""}${copyQueue.length && modQueue.length ? " · " : ""}${modQueue.length ? `모듈 ${modQueue.length}개` : ""}가 기존 것의 새 버전 같아요.</div><button class="primary" id="pending-go" style="flex:none">이어서 업데이트</button></div>`);
+    root.querySelector("#pending-go").addEventListener("click", () => copyQueue.length ? renderCopyOffer() : renderModCopyOffer());
+  }
   function renderStart(errorText) {
     heading = TITLE2;
     busy = false;
@@ -227,6 +235,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
             ${queue.length ? `<div class="muted" style="margin-top:8px">대기 중인 파일 ${queue.length}개</div>` : ""}</div>
           <div class="row"><button id="backups">백업·되돌리기</button>${queue.length ? '<button class="primary" id="nextq">다음 파일</button>' : ""}${closeBtn()}</div>`);
     root.querySelector("#backups").addEventListener("click", () => renderBackups());
+    pendingOfferCard();
     root.querySelector("#nextq")?.addEventListener("click", () => runQueue());
     const go = (files) => {
       const list = [...files ?? []];
@@ -1661,6 +1670,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
           ${queue.length ? `<div class="card">대기 중인 파일 ${queue.length}개 — 다음: <b>${esc(queue[0].name)}</b></div>` : ""}
           <div class="row">${queue.length ? '<button class="primary" id="nextq">다음 파일</button>' : '<button class="primary" id="again">다른 파일</button>'}${res?.backupRec ? '<button id="undo">바로 되돌리기</button>' : ""}${res?.backup ? '<button id="tobk">백업·되돌리기</button>' : ""}${closeBtn()}</div>`);
     root.querySelector("#again")?.addEventListener("click", () => renderStart());
+    pendingOfferCard();
     root.querySelector("#nextq")?.addEventListener("click", () => runQueue());
     root.querySelector("#tobk")?.addEventListener("click", () => renderBackups());
     root.querySelector("#undo")?.addEventListener("click", () => restoreBackup(res.backupRec).catch((err) => renderResult(null, null, err instanceof Busy ? err.message : `되돌리지 못했어요: ${err?.message ?? err}`)));
@@ -1680,7 +1690,9 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
     startScan(f).catch((err) => renderStart(err instanceof Cancelled ? void 0 : err?.message ?? String(err)));
   }
   const show = async () => {
-    const hostEl = host?.();
+    // Dusk 창이 닫혀 있으면(감지 알림 등) 창 안이 아니라 화면에 바로 띄운다
+    let hostEl = host?.();
+    if (hostEl && (hostEl.hidden || hostEl.closest?.("[hidden]"))) hostEl = document.body;
     if (hostEl && overlay.parentNode !== hostEl) hostEl.appendChild(overlay);
     else await syncColorScheme();
     overlay.className = "";
