@@ -28,7 +28,7 @@ export async function setPersonaLink(api, personaId, moduleId, on, orderIds) {
   return data;
 }
 export var hasPersonaLinks = (data) => Object.keys(data?.map ?? {}).length > 0;
-var last = "";
+var last = "", lastPre = "";
 export async function syncPersonaModules(api, { force = false } = {}) {
   const data = await loadPersonaMap(api);
   let inj = await api.pluginStorage.getItem(INJECTED_KEY);
@@ -46,10 +46,16 @@ export async function syncPersonaModules(api, { force = false } = {}) {
   const persona = db.personas?.[db.selectedPersona ?? 0];
   const want = persona?.id ? data.map[persona.id] ?? [] : [];
   const ci = await api.getCurrentCharacterIndex();
+  // 봇 데이터(채팅 포함)는 무겁다: 페르소나·봇 번호·채팅이 그대로면 읽지 않고 끝낸다
+  const pre = JSON.stringify([persona?.id, ci, [...want].sort(), Object.keys(data.chatInjected ?? {}).length ? await api.getCurrentChatIndex() : 0]);
+  if (!force && pre === lastPre && last) return { changed: false };
   const ch = ci >= 0 ? await api.getCharacterFromIndex(ci) : null;
   if (!ch?.chaId) return { changed: false };
   const key = JSON.stringify([persona?.id, ch.chaId, [...want].sort(), Object.keys(data.chatInjected ?? {}).length ? await api.getCurrentChatIndex() : 0]);
-  if (!force && key === last) return { changed: false };
+  if (!force && key === last) {
+    lastPre = pre;
+    return { changed: false };
+  }
   let changed = false;
   data.chatInjected ??= {};
   const dropFromChat = async (chaId) => {
@@ -136,8 +142,10 @@ export async function syncPersonaModules(api, { force = false } = {}) {
   await api.setDatabaseLite({ [INJECTED_KEY]: injected });
   await savePersonaMap(api, data);
   last = key;
+  lastPre = pre;
   return { changed, persona: persona?.name, count: want.length };
 }
 export var resetPersonaSyncCache = () => {
   last = "";
+  lastPre = "";
 };

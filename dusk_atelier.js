@@ -1,11 +1,11 @@
 //@name dusk_atelier
 //@display-name Dusk Atelier
 //@api 3.0
-//@version 1.3.3
+//@version 1.3.4
 //@update-url https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js
 //@link https://github.com/Pyser08/Dusk-Atelier 저장소
 
-/* Dusk Atelier v1.3.3 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
+/* Dusk Atelier v1.3.4 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
 (() => {
   var __defProp = Object.defineProperty;
   var __export = (target, all) => {
@@ -4938,14 +4938,16 @@ ${v.content ?? ""}`;
 
   // src/ui/watch.js
   var KNOWN_MOD_KEY = "rbm:watchMod:v1";
-  var MOD_EVERY = 4e3;
+  var MOD_EVERY = 2e4;
+  var MOD_BURST = 3e3;
   var KNOWN_KEY = "rbm:watch:v1";
   var UI_KEY = "rbm:ui:v1";
   var TRASH_KEY = "rbm:pendingTrash:v1";
-  var SLOW = 2e3;
-  var FAST = 2e3;
-  var BURST = 1e3;
-  var BURST_FOR = 5 * 6e4;
+  var SLOW = 8e3;
+  var FAST = 4e3;
+  var BURST = 1500;
+  var BURST_FOR = 3 * 6e4;
+  var TRASH_EVERY = 3e4;
   var MENU_BTN_ID = "dusk-atelier-addchar";
   async function readUi(api) {
     try {
@@ -5007,7 +5009,9 @@ ${v.content ?? ""}`;
       return fb;
     }
   }
+  var trashPending = null;
   async function queueTrash(api, chaId) {
+    trashPending = true;
     const list = await readJson(api, TRASH_KEY, []);
     if (!list.some((x2) => x2.chaId === chaId)) list.push({ chaId, t: Date.now() });
     await api.pluginStorage.setItem(TRASH_KEY, JSON.stringify(list));
@@ -5023,9 +5027,16 @@ ${v.content ?? ""}`;
     const ids = async () => flatten((await api.getDatabase(["characterOrder"]))?.characterOrder);
     const saveKnown = () => api.pluginStorage.setItem(KNOWN_KEY, JSON.stringify({ v: 1, ids: [...known] })).catch(() => {
     });
+    let lastTrash = 0;
     async function processTrash() {
+      if (trashPending === false) return;
+      if (trashPending && Date.now() - lastTrash < TRASH_EVERY) return;
+      lastTrash = Date.now();
       const list = await readJson(api, TRASH_KEY, []);
-      if (!list.length) return;
+      if (!list.length) {
+        trashPending = false;
+        return;
+      }
       const keep = [];
       for (const it of list) {
         if (Date.now() - it.t > 7 * 864e5) continue;
@@ -5034,6 +5045,7 @@ ${v.content ?? ""}`;
       }
       await api.pluginStorage.setItem(TRASH_KEY, JSON.stringify(keep)).catch(() => {
       });
+      trashPending = keep.length > 0;
     }
     const stat = { lastAt: 0, lastError: "", chars: 0, mods: 0, found: 0 };
     async function check(force = false) {
@@ -5073,7 +5085,8 @@ ${v.content ?? ""}`;
           known = new Set(saved.ids);
         }
         const added = cur.filter((id) => !known.has(id));
-        const removed = [...known].some((id) => !cur.includes(id));
+        const curSet = new Set(cur);
+        const removed = curSet.size !== known.size || [...known].some((id) => !curSet.has(id));
         if (added.length || removed) {
           known = new Set(cur);
           await saveKnown();
@@ -5082,7 +5095,7 @@ ${v.content ?? ""}`;
           burstUntil = 0;
           await inspect(added);
         }
-        if (force || Date.now() - lastMod >= MOD_EVERY || Date.now() < burstUntil) await checkModules();
+        if (force || Date.now() - lastMod >= (Date.now() < burstUntil ? MOD_BURST : MOD_EVERY)) await checkModules();
         await processTrash();
         stat.lastAt = Date.now();
         stat.lastError = "";
@@ -5110,7 +5123,8 @@ ${v.content ?? ""}`;
         knownMods = new Set(saved.ids);
       }
       const added = mods.filter((m) => m?.id && !knownMods.has(m.id));
-      const changed = added.length || [...knownMods].some((id) => !ids2.includes(id));
+      const idSet = new Set(ids2);
+      const changed = added.length || [...knownMods].some((id) => !idSet.has(id));
       if (!changed) return;
       knownMods = new Set(ids2);
       await api.pluginStorage.setItem(KNOWN_MOD_KEY, JSON.stringify({ v: 1, ids: ids2 })).catch(() => {
@@ -11718,6 +11732,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
   }
   var hasPersonaLinks = (data) => Object.keys(data?.map ?? {}).length > 0;
   var last = "";
+  var lastPre = "";
   async function syncPersonaModules(api, { force = false } = {}) {
     const data = await loadPersonaMap(api);
     let inj = await api.pluginStorage.getItem(INJECTED_KEY);
@@ -11735,10 +11750,15 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     const persona = db.personas?.[db.selectedPersona ?? 0];
     const want = persona?.id ? data.map[persona.id] ?? [] : [];
     const ci = await api.getCurrentCharacterIndex();
+    const pre = JSON.stringify([persona?.id, ci, [...want].sort(), Object.keys(data.chatInjected ?? {}).length ? await api.getCurrentChatIndex() : 0]);
+    if (!force && pre === lastPre && last) return { changed: false };
     const ch = ci >= 0 ? await api.getCharacterFromIndex(ci) : null;
     if (!ch?.chaId) return { changed: false };
     const key = JSON.stringify([persona?.id, ch.chaId, [...want].sort(), Object.keys(data.chatInjected ?? {}).length ? await api.getCurrentChatIndex() : 0]);
-    if (!force && key === last) return { changed: false };
+    if (!force && key === last) {
+      lastPre = pre;
+      return { changed: false };
+    }
     let changed = false;
     data.chatInjected ??= {};
     const dropFromChat = async (chaId) => {
@@ -11825,10 +11845,12 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     await api.setDatabaseLite({ [INJECTED_KEY]: injected });
     await savePersonaMap(api, data);
     last = key;
+    lastPre = pre;
     return { changed, persona: persona?.name, count: want.length };
   }
   var resetPersonaSyncCache = () => {
     last = "";
+    lastPre = "";
   };
 
   // src/data/service.js
@@ -16329,7 +16351,7 @@ ${patch.note}` : "",
       h(
         "div",
         { style: "display:flex;flex-direction:column;gap:10px" },
-        row2("autoDetect", "refresh", "새로 가져온 봇 자동 감지", `리스에서 봇을 가져오면 기존 봇의 새 버전인지 확인하고 "이어 붙일까요?"라고 물어요. 2초마다 봇 목록과 봇 목록 끝을 확인하고, 모듈은 4초마다 확인해요. 리스 메인 화면에 끌어다 놓아 가져와도 잡혀요. 메인 화면 접근을 허락하면 + 메뉴에 'Dusk Atelier로 업데이트' 버튼도 생겨요.`),
+        row2("autoDetect", "refresh", "새로 가져온 봇 자동 감지", `리스에서 봇을 가져오면 기존 봇의 새 버전인지 확인하고 "이어 붙일까요?"라고 물어요. 몇 초마다 봇 목록과 봇 목록 끝을 가볍게 확인하고, 모듈은 20초마다(가져오기 직후엔 3초마다) 확인해요. 리스 메인 화면에 끌어다 놓아 가져와도 잡혀요. 메인 화면 접근을 허락하면 + 메뉴에 'Dusk Atelier로 업데이트' 버튼도 생겨요.`),
         row2("trashCopies", "trash", "이어 붙인 뒤 받은 사본을 휴지통으로", "업데이트가 끝나면 새로 가져온 사본 봇을 휴지통으로 옮겨요. 대화가 생긴 사본은 건드리지 않아요.", node2 ? null : "이 앱(원본 RisuAI 웹·데스크톱)에서는 자동 정리가 안 돼요. 사본은 직접 지워 주세요."),
         statusCard(ctx),
         row2("chatBackup", "message", "업데이트 전 백업에 채팅도 넣기", "바꾸기 전 백업에 채팅까지 담아요. 같은 내용은 한 번만 저장하지만 채팅이 많으면 백업이 커져요. 되돌릴 때 백업에만 있는 채팅을 새 채팅으로 덧붙여요(지금 채팅은 그대로).")
@@ -18016,7 +18038,7 @@ ${patch.note}` : "",
   }
 
   // src/main.js
-  var VERSION = true ? "1.3.3" : "dev";
+  var VERSION = true ? "1.3.4" : "dev";
   var TITLE = "Dusk Atelier";
   async function start() {
     const raw = globalThis.risuai ?? globalThis.Risuai;

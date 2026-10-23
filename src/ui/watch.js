@@ -1,17 +1,19 @@
 // 새로 가져온 봇 감지 (RisuTide 기능을 Dusk 방식으로)
 // - 메인 화면 접근 권한이 있으면: + 메뉴에 "Dusk Atelier로 업데이트" 버튼을 넣고,
 //   "캐릭터 임포트 / RisuRealm / 패키지 임포트"를 누른 뒤 몇 분 동안만 자주 확인한다.
-//   파일을 끌어다 놓아 가져오는 경우를 위해 10초마다 가볍게(봇 ID 목록만) 확인한다.
-// - 권한이 없으면 3초마다 봇 ID 목록만 비교한다.
+//   파일을 끌어다 놓아 가져오는 경우를 위해 8초마다 가볍게(봇 ID 목록만) 확인한다.
+// - 권한이 없으면 4초마다 봇 ID 목록만 비교한다.
+// - 모듈 목록은 무거워서 평소 20초마다, 가져오기 직후 몇 분만 3초마다 본다.
 // - 화면이 안 보일 때는 멈추고, 다시 보이면 바로 확인한다.
 // - 확인한 봇 ID를 저장해 두어, 플러그인이 꺼져 있던 동안 생긴 봇도 다음에 켤 때 확인한다.
 import { listUpdateCandidates } from '../tide/characterUpdateTargets.ts';
 import { charFields } from '../engine/tideplan.js';
 import { stableJson } from '../engine/util.js';
 
-var KNOWN_MOD_KEY = "rbm:watchMod:v1", MOD_EVERY = 4e3;
+// 모듈 목록은 통째로 복사돼 와서 무겁다: 평소엔 가끔, 가져오기 직후(burst)에만 자주
+var KNOWN_MOD_KEY = "rbm:watchMod:v1", MOD_EVERY = 2e4, MOD_BURST = 3e3;
 var KNOWN_KEY = "rbm:watch:v1", UI_KEY = "rbm:ui:v1", TRASH_KEY = "rbm:pendingTrash:v1";
-var SLOW = 2e3, FAST = 2e3, BURST = 1e3, BURST_FOR = 5 * 6e4;
+var SLOW = 8e3, FAST = 4e3, BURST = 1500, BURST_FOR = 3 * 6e4, TRASH_EVERY = 3e4;
 var MENU_BTN_ID = "dusk-atelier-addchar";
 
 export async function readUi(api) {
@@ -82,7 +84,10 @@ async function readJson(api, key, fb) {
     return fb;
   }
 }
+// 휴지통 대기 목록: 비어 있으면 매번 저장소를 읽지 않는다 (null = 아직 모름)
+var trashPending = null;
 export async function queueTrash(api, chaId) {
+  trashPending = true;
   const list = await readJson(api, TRASH_KEY, []);
   if (!list.some((x) => x.chaId === chaId)) list.push({ chaId, t: Date.now() });
   await api.pluginStorage.setItem(TRASH_KEY, JSON.stringify(list));
@@ -101,9 +106,16 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
   const saveKnown = () => api.pluginStorage.setItem(KNOWN_KEY, JSON.stringify({ v: 1, ids: [...known] })).catch(() => {
   });
 
+  let lastTrash = 0;
   async function processTrash() {
+    if (trashPending === false) return;
+    if (trashPending && Date.now() - lastTrash < TRASH_EVERY) return;
+    lastTrash = Date.now();
     const list = await readJson(api, TRASH_KEY, []);
-    if (!list.length) return;
+    if (!list.length) {
+      trashPending = false;
+      return;
+    }
     const keep = [];
     for (const it of list) {
       if (Date.now() - it.t > 7 * 864e5) continue;
@@ -112,6 +124,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
     }
     await api.pluginStorage.setItem(TRASH_KEY, JSON.stringify(keep)).catch(() => {
     });
+    trashPending = keep.length > 0;
   }
 
   // 상태 (업데이트 설정 화면에서 보여 줌)
@@ -156,7 +169,8 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
         known = new Set(saved.ids);
       }
       const added = cur.filter((id) => !known.has(id));
-      const removed = [...known].some((id) => !cur.includes(id));
+      const curSet = new Set(cur);
+      const removed = curSet.size !== known.size || [...known].some((id) => !curSet.has(id));
       if (added.length || removed) {
         known = new Set(cur);
         await saveKnown();
@@ -165,7 +179,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
         burstUntil = 0;
         await inspect(added);
       }
-      if (force || Date.now() - lastMod >= MOD_EVERY || Date.now() < burstUntil) await checkModules();
+      if (force || Date.now() - lastMod >= (Date.now() < burstUntil ? MOD_BURST : MOD_EVERY)) await checkModules();
       await processTrash();
       stat.lastAt = Date.now();
       stat.lastError = "";
@@ -195,7 +209,8 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
       knownMods = new Set(saved.ids);
     }
     const added = mods.filter((m) => m?.id && !knownMods.has(m.id));
-    const changed = added.length || [...knownMods].some((id) => !ids.includes(id));
+    const idSet = new Set(ids);
+    const changed = added.length || [...knownMods].some((id) => !idSet.has(id));
     if (!changed) return;
     knownMods = new Set(ids);
     await api.pluginStorage.setItem(KNOWN_MOD_KEY, JSON.stringify({ v: 1, ids })).catch(() => {
