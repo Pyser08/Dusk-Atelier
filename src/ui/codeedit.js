@@ -196,7 +196,35 @@ function tokReplace(code) {
   }
   return out;
 }
-var TOKENIZERS = { js: tokJs, regex: tokRegex, replace: tokReplace };
+// Lua (트리거 코드): --주석, --[[ ]], 문자열, [[긴 문자열]], 키워드, 함수 호출
+var LUA_KW = new Set(["and", "break", "do", "else", "elseif", "end", "for", "function", "goto", "if", "in", "local", "not", "or", "repeat", "return", "then", "until", "while"]);
+var LUA_LIT = new Set(["true", "false", "nil"]);
+var LUA_TOKEN = /(--\[(=*)\[[\s\S]*?(?:\]\2\]|$)|--[^\n]*)|(\[(=*)\[[\s\S]*?(?:\]\4\]|$)|'(?:\\.|[^'\\\n])*'?|"(?:\\.|[^"\\\n])*"?)|(\b0x[\da-fA-F]+\b|\b\d+(?:\.\d+)?\b)|([A-Za-z_][\w]*)/g;
+function tokLua(code) {
+  const out = [];
+  let m;
+  LUA_TOKEN.lastIndex = 0;
+  while (m = LUA_TOKEN.exec(code)) {
+    const [tok, com, , str, , num, id] = m;
+    const s = m.index, e = s + tok.length;
+    let cls;
+    if (com) cls = "com";
+    else if (str) cls = "str";
+    else if (num) cls = "num";
+    else if (id) {
+      const before = code[s - 1];
+      const after = code.slice(e, e + 20).match(/^\s*(\S)/)?.[1];
+      if (LUA_KW.has(id)) cls = id === "function" || id === "local" ? "decl" : "kw";
+      else if (LUA_LIT.has(id)) cls = "lit";
+      else if (after === "(" || after === "\"" || after === "'" || after === "{") cls = "fn";
+      else if (before === "." || before === ":") cls = "prop";
+      else if (/^[A-Z]/.test(id)) cls = "type";
+    }
+    if (cls) out.push([s, e, cls, !!(com || str)]);
+  }
+  return out;
+}
+var TOKENIZERS = { js: tokJs, regex: tokRegex, replace: tokReplace, lua: tokLua };
 
 // ── 괄호 짝 찾기 ──
 // {{ }}는 두 글자가 한 쌍이라 한 글자씩 세면 된다 (첫 글자끼리, 둘째 글자끼리 짝이 맞음)
@@ -320,10 +348,11 @@ export function codeEditor(value, { onChange, label = "코드", minHeight, maxHe
       e.preventDefault();
       ta.setRangeText(tab, s, t, "end");
       ta.dispatchEvent(new Event("input"));
-    } else if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && lang === "js") {
+    } else if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && (lang === "js" || lang === "lua")) {
       const lineStart = v.lastIndexOf("\n", s - 1) + 1;
       let indent = v.slice(lineStart).match(/^[ \t]*/)[0];
-      if (/[{[(]\s*$/.test(v.slice(lineStart, s))) indent += tab;
+      const cur = v.slice(lineStart, s);
+      if (/[{[(]\s*$/.test(cur) || lang === "lua" && /(\bthen|\bdo|\bfunction\b.*\)|\brepeat|\belse)\s*$/.test(cur)) indent += tab;
       e.preventDefault();
       ta.setRangeText("\n" + indent, s, t, "end");
       ta.dispatchEvent(new Event("input"));

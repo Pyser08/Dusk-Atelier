@@ -601,7 +601,7 @@ export async function openEditorCore(ctx, cfg) {
       field("이름", text(t, "comment")),
       field("실행 시점", select2(t, "type", TRIGGER_TYPES)),
       h("div", { class: "wide", style: "display:flex;gap:16px" }, check(t, "lowLevelAccess", "저수준 접근")),
-      lua ? field(lua.type === "triggerlua" ? "Lua 코드" : "트리거 코드", area(lua, "code", { tall: true }), true) : null,
+      lua ? field(lua.type === "triggerlua" ? "Lua 코드" : "트리거 코드", lua.type === "triggerlua" ? codeArea(lua, "code", { lang: "lua", tall: true }) : area(lua, "code", { tall: true }), true) : null,
       field("조건 (conditions, JSON)", jsonArea(t, "conditions"), true),
       lua ? null : field("효과 (effect, JSON)", jsonArea(t, "effect", { tall: true }), true)
     );
