@@ -216,7 +216,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       searchInput.value = "";
       mobileSearchInput.value = "";
     }
-    if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsDirty = true;
+    if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsBg = true;
     if (tab === "characters") state.charOrderStale = true;
     if (tab === "dev" && !prefs.ui?.devMode) {
       tab = "tools";

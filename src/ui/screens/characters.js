@@ -26,11 +26,39 @@ function cardSize(c) {
 }
 export async function renderCharacters(ctx) {
   const st = ctx.state;
+  // 오래된 목록: 먼저 있는 걸로 그리고, 뒤에서 새로 읽어 바뀌었으면 다시 그린다
+  if (st.chars && !st.charsDirty && st.charsBg) {
+    st.charsBg = false;
+    const sig = (l) => l.map((c) => [c.chaId, c.name, c.chats, c.modules.join(","), c.streaming].join("\u0001")).join("\u0002");
+    const before = sig(st.chars);
+    const at = st.charsAt;
+    setTimeout(async () => {
+      try {
+        const { lc, db } = await fetchChars(ctx);
+        // 그 사이 다른 곳에서 새로 읽었으면 버린다
+        if (st.charsAt !== at || st.charsDirty) return;
+        applyChars(ctx, db, lc);
+        if (ctx.state.tab === "characters" && sig(st.chars) !== before) renderCharacters(ctx);
+      } catch {
+      }
+    }, 0);
+  }
   if (!st.chars || st.charsDirty) {
     replace(ctx.main, loading("캐릭터를 불러오는 중", { rows: 7 }));
-    const db = await ctx.api.getDatabase(["characters", "modules", "characterOrder"]);
+    const { lc, db } = await fetchChars(ctx);
+    applyChars(ctx, db, lc);
+  }
+  return drawCharacters(ctx);
+}
+async function fetchChars(ctx) {
+  const db = await ctx.api.getDatabase(["characters", "modules", "characterOrder"]);
+  const lc = await loadCharacters(ctx.api, db?.characters);
+  return { lc, db };
+}
+function applyChars(ctx, db, lc) {
+  const st = ctx.state;
+  {
     st.charOrder = Array.isArray(db?.characterOrder) ? db.characterOrder : [];
-    const lc = await loadCharacters(ctx.api, db?.characters);
     db.characters = lc.list;
     st.charsUnloaded = lc.unloaded;
     st.chars = (db?.characters ?? []).map((c, i) => c && !c.trashTime ? {
@@ -54,6 +82,9 @@ export async function renderCharacters(ctx) {
     st.charsAt = Date.now();
     st.charOrderStale = false;
   }
+}
+async function drawCharacters(ctx) {
+  const st = ctx.state;
   if (st.charOrderStale) {
     st.charOrderStale = false;
     try {

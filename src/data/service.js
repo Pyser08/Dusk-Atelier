@@ -20,7 +20,7 @@ export function createService(api, prefs) {
   const svc = {
     serial: serial2,
     async load(opts) {
-      if (!opts?.fresh && cache && Date.now() - cache.t < 3e3) return cache.state;
+      if (!opts?.fresh && cache && Date.now() - cache.t < 15e3) return cache.state;
       cache = null;
       return loadModuleState(api, opts);
     },

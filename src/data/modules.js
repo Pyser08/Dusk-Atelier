@@ -27,18 +27,19 @@ export async function loadCharacters(api, given) {
     }
   };
   walk(order);
+  // 봇 하나씩 차례로 읽으면 봇 수만큼 왕복이 쌓인다 → 여러 개를 한꺼번에 요청
+  const get = (i) => api.getCharacterFromIndex(i).catch(() => null);
   const list = [];
+  const N = ids.size, CH = 12;
+  for (let i = 0; i < N; i += CH) list.push(...await Promise.all(Array.from({ length: Math.min(CH, N - i) }, (_, k) => get(i + k))));
+  // 순서 목록에 늦게 들어간 봇: 끝에서 30개 연속 빌 때까지 (최대 200개)
   let miss = 0;
-  for (let i = 0; i < ids.size + 200 && miss < 30; i++) {
-    let c = null;
-    try {
-      c = await api.getCharacterFromIndex(i);
-    } catch {
-      c = null;
+  for (let i = N; i < N + 200 && miss < 30; i += 10) {
+    const batch = await Promise.all(Array.from({ length: 10 }, (_, k) => get(i + k)));
+    for (const c of batch) {
+      list.push(c);
+      miss = c ? 0 : miss + 1;
     }
-    list.push(c);
-    if (c) miss = 0;
-    else if (i >= ids.size) miss++;
   }
   while (list.length && list[list.length - 1] == null) list.pop();
   return { list, unloaded: Math.max(0, ids.size - list.filter((c) => c && ids.has(c.chaId)).length) };
@@ -116,8 +117,14 @@ function insertOrdered(ids, id, orderIds) {
   out.splice(at, 0, id);
   return out;
 }
-export async function commit(api, mutate, { chars = false } = {}) {
-  const db = await readDb(api, chars ? ["modules", "pluginCustomStorage", "enabledModules", "characters"] : ["modules", "pluginCustomStorage", "enabledModules"]);
+export async function commit(api, mutate, { chars = false, only = null } = {}) {
+  const db = await readDb(api, chars && only == null ? ["modules", "pluginCustomStorage", "enabledModules", "characters"] : ["modules", "pluginCustomStorage", "enabledModules"]);
+  // 봇 하나만 바꾸는 작업은 그 봇만 읽는다 (빈 칸은 forEach가 건너뜀)
+  if (only != null) {
+    db.characters = [];
+    const c = await api.getCharacterFromIndex(only).catch(() => null);
+    if (c) db.characters[only] = c;
+  }
   const draft = {
     entries: entriesOf(db).map((e) => ({ module: { ...e.module }, enabled: e.enabled })),
     enabledModules: [...db.enabledModules ?? []],
@@ -222,12 +229,12 @@ export var ops = {
     const cur = Array.isArray(c.modules) ? c.modules : [];
     c.modules = on ? insertOrdered(cur, id, order) : cur.filter((x) => x !== id);
     d.changedChars.add(charIndex);
-  }, { chars: true }),
+  }, { chars: true, only: charIndex }),
   // 채팅 연결 해제 (채팅 연결 추가는 RisuAI 채팅 화면에서 한다)
   unlinkChat: (api, charIndex, chatIndex, id) => commit(api, (d) => {
     const ch = d.characters[charIndex]?.chats?.[chatIndex];
     if (!ch) throw new ModuleError("채팅을 찾지 못했어요.");
     ch.modules = (ch.modules ?? []).filter((x) => x !== id);
     d.changedChars.add(charIndex);
-  }, { chars: true })
+  }, { chars: true, only: charIndex })
 };

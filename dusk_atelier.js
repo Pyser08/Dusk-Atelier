@@ -4548,18 +4548,17 @@ ${v.content ?? ""}`;
       }
     };
     walk(order);
+    const get = (i2) => api.getCharacterFromIndex(i2).catch(() => null);
     const list = [];
+    const N = ids.size, CH = 12;
+    for (let i2 = 0; i2 < N; i2 += CH) list.push(...await Promise.all(Array.from({ length: Math.min(CH, N - i2) }, (_, k) => get(i2 + k))));
     let miss = 0;
-    for (let i2 = 0; i2 < ids.size + 200 && miss < 30; i2++) {
-      let c = null;
-      try {
-        c = await api.getCharacterFromIndex(i2);
-      } catch {
-        c = null;
+    for (let i2 = N; i2 < N + 200 && miss < 30; i2 += 10) {
+      const batch = await Promise.all(Array.from({ length: 10 }, (_, k) => get(i2 + k)));
+      for (const c of batch) {
+        list.push(c);
+        miss = c ? 0 : miss + 1;
       }
-      list.push(c);
-      if (c) miss = 0;
-      else if (i2 >= ids.size) miss++;
     }
     while (list.length && list[list.length - 1] == null) list.pop();
     return { list, unloaded: Math.max(0, ids.size - list.filter((c) => c && ids.has(c.chaId)).length) };
@@ -4637,8 +4636,13 @@ ${v.content ?? ""}`;
     out.splice(at, 0, id);
     return out;
   }
-  async function commit(api, mutate, { chars = false } = {}) {
-    const db = await readDb(api, chars ? ["modules", "pluginCustomStorage", "enabledModules", "characters"] : ["modules", "pluginCustomStorage", "enabledModules"]);
+  async function commit(api, mutate, { chars = false, only = null } = {}) {
+    const db = await readDb(api, chars && only == null ? ["modules", "pluginCustomStorage", "enabledModules", "characters"] : ["modules", "pluginCustomStorage", "enabledModules"]);
+    if (only != null) {
+      db.characters = [];
+      const c = await api.getCharacterFromIndex(only).catch(() => null);
+      if (c) db.characters[only] = c;
+    }
     const draft = {
       entries: entriesOf(db).map((e) => ({ module: { ...e.module }, enabled: e.enabled })),
       enabledModules: [...db.enabledModules ?? []],
@@ -4743,14 +4747,14 @@ ${v.content ?? ""}`;
       const cur = Array.isArray(c.modules) ? c.modules : [];
       c.modules = on ? insertOrdered(cur, id, order) : cur.filter((x2) => x2 !== id);
       d.changedChars.add(charIndex);
-    }, { chars: true }),
+    }, { chars: true, only: charIndex }),
     // 채팅 연결 해제 (채팅 연결 추가는 RisuAI 채팅 화면에서 한다)
     unlinkChat: (api, charIndex, chatIndex, id) => commit(api, (d) => {
       const ch = d.characters[charIndex]?.chats?.[chatIndex];
       if (!ch) throw new ModuleError("채팅을 찾지 못했어요.");
       ch.modules = (ch.modules ?? []).filter((x2) => x2 !== id);
       d.changedChars.add(charIndex);
-    }, { chars: true })
+    }, { chars: true, only: charIndex })
   };
 
   // src/ui/dom.js
@@ -11871,7 +11875,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     const svc = {
       serial: serial2,
       async load(opts) {
-        if (!opts?.fresh && cache && Date.now() - cache.t < 3e3) return cache.state;
+        if (!opts?.fresh && cache && Date.now() - cache.t < 15e3) return cache.state;
         cache = null;
         return loadModuleState(api, opts);
       },
@@ -17050,11 +17054,37 @@ ${patch.note}` : "",
   }
   async function renderCharacters(ctx) {
     const st = ctx.state;
+    if (st.chars && !st.charsDirty && st.charsBg) {
+      st.charsBg = false;
+      const sig = (l) => l.map((c) => [c.chaId, c.name, c.chats, c.modules.join(","), c.streaming].join("")).join("");
+      const before = sig(st.chars);
+      const at = st.charsAt;
+      setTimeout(async () => {
+        try {
+          const { lc: lc2, db } = await fetchChars(ctx);
+          if (st.charsAt !== at || st.charsDirty) return;
+          applyChars(ctx, db, lc2);
+          if (ctx.state.tab === "characters" && sig(st.chars) !== before) renderCharacters(ctx);
+        } catch {
+        }
+      }, 0);
+    }
     if (!st.chars || st.charsDirty) {
       replace(ctx.main, loading("캐릭터를 불러오는 중", { rows: 7 }));
-      const db = await ctx.api.getDatabase(["characters", "modules", "characterOrder"]);
+      const { lc: lc2, db } = await fetchChars(ctx);
+      applyChars(ctx, db, lc2);
+    }
+    return drawCharacters(ctx);
+  }
+  async function fetchChars(ctx) {
+    const db = await ctx.api.getDatabase(["characters", "modules", "characterOrder"]);
+    const lc2 = await loadCharacters(ctx.api, db?.characters);
+    return { lc: lc2, db };
+  }
+  function applyChars(ctx, db, lc2) {
+    const st = ctx.state;
+    {
       st.charOrder = Array.isArray(db?.characterOrder) ? db.characterOrder : [];
-      const lc2 = await loadCharacters(ctx.api, db?.characters);
       db.characters = lc2.list;
       st.charsUnloaded = lc2.unloaded;
       st.chars = (db?.characters ?? []).map((c, i2) => c && !c.trashTime ? {
@@ -17078,6 +17108,9 @@ ${patch.note}` : "",
       st.charsAt = Date.now();
       st.charOrderStale = false;
     }
+  }
+  async function drawCharacters(ctx) {
+    const st = ctx.state;
     if (st.charOrderStale) {
       st.charOrderStale = false;
       try {
@@ -17846,7 +17879,7 @@ ${patch.note}` : "",
         searchInput.value = "";
         mobileSearchInput.value = "";
       }
-      if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsDirty = true;
+      if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsBg = true;
       if (tab === "characters") state.charOrderStale = true;
       if (tab === "dev" && !prefs.ui?.devMode) {
         tab = "tools";
