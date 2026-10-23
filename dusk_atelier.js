@@ -12400,6 +12400,341 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     ]]
   ];
 
+  // src/ui/codeedit.js
+  var CSS3 = `
+.rb-code{--c-bg:#1e1e1e;--c-fg:#d4d4d4;--c-gut:#858585;--c-line:#2b2b2b;border-radius:12px;border:1px solid var(--rb-line);background:var(--c-bg);overflow:auto;max-height:68vh;min-height:320px;position:relative;font:12.5px/1.6 ui-monospace,"Cascadia Code","D2Coding",Menlo,Consolas,monospace;tab-size:2}
+.rb-code:focus-within{border-color:var(--rb-sel-ring);box-shadow:0 0 0 3px var(--rb-acc-soft)}
+.rb-code-in{display:grid;grid-template-columns:auto 1fr;min-width:100%;width:max-content;min-height:100%}
+.rb-code-gut{position:sticky;left:0;z-index:2;background:var(--c-bg);color:var(--c-gut);text-align:right;padding:12px 10px 12px 12px;border-right:1px solid var(--c-line);user-select:none;white-space:pre}
+.rb-code-area{position:relative}
+.rb-code pre,.rb-code textarea{margin:0;padding:12px 16px;font:inherit;white-space:pre;word-wrap:normal;letter-spacing:0;tab-size:inherit}
+.rb-code pre{color:var(--c-fg);pointer-events:none;min-height:100%}
+.rb-code textarea{position:absolute;inset:0;width:100%;height:100%;resize:none;border:0;outline:none;background:transparent;color:transparent;caret-color:#aeafad;overflow:hidden;-webkit-text-fill-color:transparent}
+.rb-code textarea::selection{background:#264f78;-webkit-text-fill-color:transparent}
+.rb-code textarea::placeholder{color:#6b6b6b;-webkit-text-fill-color:#6b6b6b}
+.rb-code .t-com{color:#6a9955}
+.rb-code .t-meta{color:#c586c0;font-weight:600}
+.rb-code .t-str{color:#ce9178}
+.rb-code .t-num{color:#b5cea8}
+.rb-code .t-kw{color:#c586c0}
+.rb-code .t-decl{color:#569cd6}
+.rb-code .t-lit{color:#569cd6}
+.rb-code .t-fn{color:#dcdcaa}
+.rb-code .t-prop{color:#9cdcfe}
+.rb-code .t-key{color:#4fc1ff;font-weight:700}
+.rb-code .t-type{color:#4ec9b0}
+.rb-code .t-api{color:#ffd166;font-weight:700}
+.rb-code .t-esc{color:#d7ba7d}
+.rb-code .t-cls{color:#ce9178}
+.rb-code .t-clsb{color:#ffd700}
+.rb-code .t-grp{color:#da70d6;font-weight:600}
+.rb-code .t-q{color:#4fc1ff}
+.rb-code .t-anc{color:#c586c0;font-weight:600}
+.rb-code .t-alt{color:#ff8c69;font-weight:700}
+.rb-code .t-dot{color:#dcdcaa}
+.rb-code .t-ref{color:#4ec9b0;font-weight:700}
+.rb-code .t-cbs{color:#c586c0}
+.rb-code .t-cbsn{color:#dcdcaa;font-weight:600}
+.rb-code .t-tag{color:#569cd6}
+.rb-code .t-attr{color:#9cdcfe}
+.rb-code .t-br{background:rgba(255,255,255,.24);box-shadow:inset 0 0 0 1px #b4b4b4;border-radius:2px}
+.rb-code .t-br-bad{background:rgba(255,80,80,.28);box-shadow:inset 0 0 0 1px #ff6b6b;border-radius:2px}
+`;
+  var KW = /* @__PURE__ */ new Set(["if", "else", "return", "await", "for", "while", "do", "try", "catch", "finally", "throw", "switch", "case", "break", "continue", "of", "in", "new", "delete", "typeof", "instanceof", "default", "import", "export", "from", "yield"]);
+  var DECL = /* @__PURE__ */ new Set(["const", "let", "var", "function", "class", "async", "static", "get", "set", "extends", "this", "super"]);
+  var LIT = /* @__PURE__ */ new Set(["true", "false", "null", "undefined", "NaN", "Infinity"]);
+  var KEYS2 = /* @__PURE__ */ new Set(["id", "name", "version", "pluginName", "description", "fields", "presets", "getValues", "apply", "key", "label", "type", "options", "values", "group", "min", "max", "step", "default"]);
+  var API = /* @__PURE__ */ new Set(["registerInterop", "risuai", "Risuai", "risu", "pluginStorage"]);
+  var JS_TOKEN = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(`(?:\\[\s\S]|[^`\\])*`?|'(?:\\.|[^'\\\n])*'?|"(?:\\.|[^"\\\n])*"?)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_$][\w$]*)/g;
+  function tokJs(code) {
+    const out = [];
+    let m;
+    JS_TOKEN.lastIndex = 0;
+    while (m = JS_TOKEN.exec(code)) {
+      const [tok, com, str, num, id] = m;
+      const s = m.index, e = s + tok.length;
+      let cls;
+      if (com) cls = com.startsWith("//@") ? "meta" : "com";
+      else if (str) cls = "str";
+      else if (num) cls = "num";
+      else if (id) {
+        const before = code[s - 1];
+        const after = code.slice(e, e + 40).match(/^\s*(\S)/)?.[1];
+        if (API.has(id)) cls = "api";
+        else if (before === ".") cls = after === "(" ? "fn" : "prop";
+        else if (after === ":" && /[{,]\s*$/.test(code.slice(Math.max(0, s - 200), s))) cls = KEYS2.has(id) ? "key" : "prop";
+        else if (KW.has(id)) cls = "kw";
+        else if (DECL.has(id)) cls = "decl";
+        else if (LIT.has(id)) cls = "lit";
+        else if (after === "(") cls = "fn";
+        else if (/^[A-Z]/.test(id)) cls = "type";
+      }
+      if (cls) out.push([s, e, cls, !!(com || str)]);
+    }
+    return out;
+  }
+  function tokRegex(code) {
+    const out = [];
+    const n = code.length;
+    let i2 = 0;
+    while (i2 < n) {
+      const c = code[i2];
+      if (c === "\\" && i2 + 1 < n) {
+        out.push([i2, i2 + 2, "esc", true]);
+        i2 += 2;
+      } else if (c === "[") {
+        let j = i2 + 1;
+        if (code[j] === "^") j++;
+        if (code[j] === "]") j++;
+        const inner = [];
+        while (j < n && code[j] !== "]" && code[j] !== "\n") {
+          if (code[j] === "\\" && j + 1 < n) {
+            inner.push([j, j + 2, "esc", true]);
+            j += 2;
+          } else j++;
+        }
+        out.push([i2, i2 + 1, "clsb", false]);
+        let k = i2 + 1;
+        for (const t of inner) {
+          if (t[0] > k) out.push([k, t[0], "cls", true]);
+          out.push(t);
+          k = t[1];
+        }
+        if (j > k) out.push([k, j, "cls", true]);
+        if (j < n && code[j] === "]") {
+          out.push([j, j + 1, "clsb", false]);
+          j++;
+        }
+        i2 = j;
+      } else if (c === "(") {
+        const g = /^\(\?(?:<[A-Za-z_]\w*>|<=|<!|[:=!])?/.exec(code.slice(i2, i2 + 40));
+        const len = g ? g[0].length : 1;
+        out.push([i2, i2 + 1, "grp", false]);
+        if (len > 1) out.push([i2 + 1, i2 + len, "grp", true]);
+        i2 += len;
+      } else if (c === ")") {
+        out.push([i2, i2 + 1, "grp", false]);
+        i2++;
+      } else if (c === "{") {
+        const q2 = /^\{\d+(?:,\d*)?\}/.exec(code.slice(i2, i2 + 20));
+        if (q2) {
+          const close = i2 + q2[0].length - 1;
+          out.push([i2, i2 + 1, "q", false]);
+          if (close > i2 + 1) out.push([i2 + 1, close, "q", true]);
+          out.push([close, close + 1, "q", false]);
+          i2 = close + 1;
+          if (code[i2] === "?") out.push([i2, ++i2, "q", true]);
+        } else i2++;
+      } else if (c === "*" || c === "+" || c === "?") {
+        const len = code[i2 + 1] === "?" ? 2 : 1;
+        out.push([i2, i2 + len, "q", true]);
+        i2 += len;
+      } else if (c === "^" || c === "$") {
+        out.push([i2, i2 + 1, "anc", true]);
+        i2++;
+      } else if (c === "|") {
+        out.push([i2, i2 + 1, "alt", true]);
+        i2++;
+      } else if (c === ".") {
+        out.push([i2, i2 + 1, "dot", true]);
+        i2++;
+      } else i2++;
+    }
+    return out;
+  }
+  var REP_TOKEN = /(<!--[\s\S]*?-->)|(\$(?:\d{1,2}|&|`|'|\$|<[A-Za-z_]\w*>))|(\{\{)|(\}\})|(<\/?[A-Za-z][\w-]*)((?:\s+[^\s=>"'/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>"']+))?)*)(\s*\/?>)?/g;
+  function tokReplace(code) {
+    const out = [];
+    let m;
+    REP_TOKEN.lastIndex = 0;
+    while (m = REP_TOKEN.exec(code)) {
+      const s = m.index;
+      if (m[1]) out.push([s, s + m[1].length, "com", true]);
+      else if (m[2]) out.push([s, s + m[2].length, "ref", true]);
+      else if (m[3]) {
+        out.push([s, s + 2, "cbs", false]);
+        const name = /^[^\s:}{]+/.exec(code.slice(s + 2, s + 60));
+        if (name) out.push([s + 2, s + 2 + name[0].length, "cbsn", true]);
+        REP_TOKEN.lastIndex = s + 2 + (name ? name[0].length : 0);
+      } else if (m[4]) out.push([s, s + 2, "cbs", false]);
+      else if (m[5]) {
+        out.push([s, s + m[5].length, "tag", true]);
+        let k = s + m[5].length;
+        const attrs = m[6] ?? "";
+        const re = /([^\s=>"'/]+)(?:(\s*=\s*)("[^"]*"|'[^']*'|[^\s>"']+))?/g;
+        let a;
+        while (a = re.exec(attrs)) {
+          const as = k + a.index;
+          out.push([as, as + a[1].length, "attr", true]);
+          if (a[3]) {
+            const vs = as + a[1].length + a[2].length, val = a[3];
+            const cb = /\{\{([^\s:}{]*)|\}\}/g;
+            let last2 = 0, c;
+            while (c = cb.exec(val)) {
+              if (c.index > last2) out.push([vs + last2, vs + c.index, "str", false]);
+              out.push([vs + c.index, vs + c.index + 2, "cbs", false]);
+              if (c[1]) out.push([vs + c.index + 2, vs + c.index + 2 + c[1].length, "cbsn", true]);
+              last2 = c.index + c[0].length;
+            }
+            if (val.length > last2) out.push([vs + last2, vs + val.length, "str", false]);
+          }
+        }
+        k += attrs.length;
+        if (m[7]) out.push([k, k + m[7].length, "tag", true]);
+      }
+    }
+    return out;
+  }
+  var TOKENIZERS = { js: tokJs, regex: tokRegex, replace: tokReplace };
+  var OPEN = { "(": ")", "[": "]", "{": "}" };
+  var CLOSE = { ")": "(", "]": "[", "}": "{" };
+  function skipMask(n, tokens2) {
+    const mask = new Uint8Array(n);
+    for (const [s, e, , skip] of tokens2) if (skip) mask.fill(1, s, e);
+    return mask;
+  }
+  function matchBracket(code, caret, tokens2) {
+    const mask = skipMask(code.length, tokens2);
+    for (const p of [caret, caret - 1]) {
+      const ch = code[p];
+      if (p < 0 || p >= code.length || mask[p] || !(OPEN[ch] || CLOSE[ch])) continue;
+      const dir = OPEN[ch] ? 1 : -1;
+      const other = OPEN[ch] ?? CLOSE[ch];
+      let depth = 0;
+      for (let i2 = p; i2 >= 0 && i2 < code.length; i2 += dir) {
+        if (mask[i2]) continue;
+        if (code[i2] === ch) depth++;
+        else if (code[i2] === other && --depth === 0) return [p, i2];
+      }
+      return [p, -1];
+    }
+    return null;
+  }
+  var esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  function paintHtml(code, tokens2, marks) {
+    const cut = /* @__PURE__ */ new Set([0, code.length]);
+    for (const [s, e] of tokens2) cut.add(s), cut.add(e);
+    for (const p of marks.keys()) cut.add(p), cut.add(p + 1);
+    const pts = [...cut].filter((x2) => x2 >= 0 && x2 <= code.length).sort((a, b) => a - b);
+    let out = "", ti = 0;
+    for (let k = 0; k < pts.length - 1; k++) {
+      const s = pts[k], e = pts[k + 1];
+      while (ti < tokens2.length && tokens2[ti][1] <= s) ti++;
+      const t = tokens2[ti] && tokens2[ti][0] <= s && s < tokens2[ti][1] ? tokens2[ti][2] : null;
+      let piece = esc(code.slice(s, e));
+      if (t) piece = `<span class="t-${t}">${piece}</span>`;
+      const mk = marks.get(s);
+      if (mk && e === s + 1) piece = `<span class="${mk}">${piece}</span>`;
+      out += piece;
+    }
+    return out + "\n";
+  }
+  function highlight(code, lang = "js") {
+    return paintHtml(code, (TOKENIZERS[lang] ?? tokJs)(code), /* @__PURE__ */ new Map());
+  }
+  var caretHandlers = /* @__PURE__ */ new WeakMap();
+  var selListening = false;
+  function codeEditor(value, { onChange, label: label3 = "코드", minHeight, maxHeight, lang = "js", tab = "  ", placeholder, gutter = true } = {}) {
+    if (!document.getElementById("rb-code-style")) document.head.appendChild(h("style", { id: "rb-code-style" }, CSS3));
+    const tokenize = TOKENIZERS[lang] ?? tokJs;
+    const pre = h("pre", { "aria-hidden": "true" });
+    const gut = gutter ? h("div", { class: "rb-code-gut", "aria-hidden": "true" }) : null;
+    const ta = h("textarea", { spellcheck: "false", autocapitalize: "off", autocomplete: "off", "aria-label": label3, wrap: "off", placeholder });
+    ta.value = value ?? "";
+    const el = h(
+      "div",
+      { class: "rb-code", style: { minHeight, maxHeight, tabSize: tab === "	" ? "4" : null } },
+      h("div", { class: "rb-code-in", style: gutter ? null : "grid-template-columns:1fr" }, gut, h("div", { class: "rb-code-area" }, pre, ta))
+    );
+    let raf = 0, lines = 0, tokens2 = [], lastText = null, lastPair = "";
+    const pairNow = () => {
+      if (document.activeElement !== ta || ta.selectionStart !== ta.selectionEnd) return null;
+      return matchBracket(ta.value, ta.selectionStart, tokens2);
+    };
+    const paint = () => {
+      raf = 0;
+      const v = ta.value;
+      if (v !== lastText) {
+        tokens2 = tokenize(v);
+        lastText = v;
+      }
+      const pair = pairNow();
+      const marks = /* @__PURE__ */ new Map();
+      if (pair) {
+        if (pair[1] < 0) marks.set(pair[0], "t-br-bad");
+        else marks.set(pair[0], "t-br").set(pair[1], "t-br");
+      }
+      lastPair = pair ? pair.join(",") : "";
+      pre.innerHTML = paintHtml(v, tokens2, marks);
+      if (gut) {
+        const n = v.split("\n").length;
+        if (n !== lines) {
+          lines = n;
+          gut.textContent = Array.from({ length: n }, (_, i2) => i2 + 1).join("\n");
+        }
+      }
+    };
+    const schedule = () => raf ||= requestAnimationFrame(paint);
+    ta.addEventListener("input", () => {
+      schedule();
+      onChange?.(ta.value);
+    });
+    const onCaret = () => {
+      if (ta.value !== lastText) return schedule();
+      const pair = pairNow();
+      if ((pair ? pair.join(",") : "") !== lastPair) schedule();
+    };
+    for (const ev of ["click", "keyup", "focus", "blur", "select"]) ta.addEventListener(ev, onCaret);
+    caretHandlers.set(ta, onCaret);
+    if (!selListening) {
+      selListening = true;
+      document.addEventListener("selectionchange", () => caretHandlers.get(document.activeElement)?.());
+    }
+    ta.addEventListener("keydown", (e) => {
+      if (e.isComposing) return;
+      const { selectionStart: s, selectionEnd: t, value: v } = ta;
+      if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        ta.setRangeText(tab, s, t, "end");
+        ta.dispatchEvent(new Event("input"));
+      } else if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && lang === "js") {
+        const lineStart = v.lastIndexOf("\n", s - 1) + 1;
+        let indent = v.slice(lineStart).match(/^[ \t]*/)[0];
+        if (/[{[(]\s*$/.test(v.slice(lineStart, s))) indent += tab;
+        e.preventDefault();
+        ta.setRangeText("\n" + indent, s, t, "end");
+        ta.dispatchEvent(new Event("input"));
+      }
+    });
+    paint();
+    return {
+      el,
+      textarea: ta,
+      get value() {
+        return ta.value;
+      },
+      set value(v) {
+        if (v === ta.value) return;
+        const { scrollTop, scrollLeft } = el;
+        ta.value = v;
+        paint();
+        el.scrollTop = scrollTop;
+        el.scrollLeft = scrollLeft;
+      },
+      // 해당 글자가 처음 나오는 줄로 스크롤 (도움말에서 "코드에서 보기")
+      reveal(text) {
+        const i2 = ta.value.indexOf(text);
+        if (i2 < 0) return false;
+        const line = ta.value.slice(0, i2).split("\n").length - 1;
+        const lh = parseFloat(getComputedStyle(ta).lineHeight) || 20;
+        el.scrollTo({ top: Math.max(0, line * lh - 40), behavior: "smooth" });
+        ta.focus({ preventScroll: true });
+        ta.setSelectionRange(i2, i2 + text.length);
+        return true;
+      }
+    };
+  }
+
   // src/ui/screens/editor.js
   var LORE_MODES = [["normal", "일반"], ["constant", "항상 켜짐"], ["multiple", "여러 키"], ["child", "하위"], ["folder", "폴더"]];
   var REGEX_TYPES = [["editinput", "입력 수정"], ["editoutput", "출력 수정"], ["editprocess", "요청 데이터 수정"], ["editdisplay", "화면 표시 수정"], ["edittrans", "번역 표시 수정"], ["disabled", "사용 안 함"]];
@@ -12603,6 +12938,21 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         }
       });
       return el;
+    };
+    const codeArea = (obj, key, { lang, tall, placeholder } = {}) => {
+      const ed = codeEditor(obj[key] ?? "", {
+        lang,
+        tab: "	",
+        placeholder,
+        label: key,
+        minHeight: tall ? "max(300px,46vh)" : "96px",
+        maxHeight: tall ? "70vh" : "40vh",
+        onChange: (v) => {
+          obj[key] = v;
+          changed();
+        }
+      });
+      return ed.el;
     };
     const check = (obj, key, label3) => {
       const el = h("input", { type: "checkbox", checked: !!obj[key] });
@@ -12964,8 +13314,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         { class: "rb-form" },
         field("이름", text(r, "comment")),
         field("적용 시점", select2(r, "type", REGEX_TYPES)),
-        field("찾을 패턴 (IN)", area(r, "in"), true),
-        field("바꿀 내용 (OUT)", area(r, "out", { tall: true }), true),
+        field("찾을 패턴 (IN)", codeArea(r, "in", { lang: "regex" }), true),
+        field("바꿀 내용 (OUT)", codeArea(r, "out", { lang: "replace", tall: true }), true),
         flags
       );
     }
@@ -17747,7 +18097,7 @@ ${md()}
   var SELF_NAME = "dusk_atelier";
   var REG = "da_interop:reg:";
   var PATCH = "da_interop:patch:";
-  var KEYS2 = { cats: "rbm:pluginCats:v1" };
+  var KEYS3 = { cats: "rbm:pluginCats:v1" };
   var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   var clone5 = (v) => JSON.parse(JSON.stringify(v ?? null));
   async function readJson3(api, key, fallback) {
@@ -17818,14 +18168,14 @@ ${md()}
     await api.pluginStorage.removeItem(PATCH + id);
   }
   async function loadCategories(api) {
-    const v = await readJson3(api, KEYS2.cats, {});
+    const v = await readJson3(api, KEYS3.cats, {});
     return v && typeof v === "object" ? v : {};
   }
   async function setCategory(api, name, cat) {
     const cats = await loadCategories(api);
     if (cat) cats[name] = cat;
     else delete cats[name];
-    await writeJson2(api, KEYS2.cats, cats);
+    await writeJson2(api, KEYS3.cats, cats);
   }
   async function listPlugins(api) {
     const list = await readPlugins(api) ?? [];
@@ -18085,129 +18435,6 @@ ${code}
     install: ["설치·내려받기", "설치를 누르면 RisuAI가 설치 확인 창을 띄워요. 허락하면 플러그인 목록에 들어가요(같은 이름이면 덮어씀). 적용하려면 새로고침이 필요할 수 있어요.\n내려받기는 .js 파일로 저장해요. RisuAI 설정 → 플러그인에서 직접 가져올 수도 있어요.\n작성 중인 코드는 자동으로 임시 저장돼요.", ""]
   };
   var HELP_ORDER = ["header", "snippet", "body", "fields", "presets", "getValues", "apply", "id", "install"];
-
-  // src/ui/codeedit.js
-  var CSS3 = `
-.rb-code{--c-bg:#1e1e1e;--c-fg:#d4d4d4;--c-gut:#858585;--c-line:#2b2b2b;border-radius:12px;border:1px solid var(--rb-line);background:var(--c-bg);overflow:auto;max-height:68vh;min-height:320px;position:relative;font:12.5px/1.6 ui-monospace,"Cascadia Code","D2Coding",Menlo,Consolas,monospace;tab-size:2}
-.rb-code-in{display:grid;grid-template-columns:auto 1fr;min-width:100%;width:max-content}
-.rb-code-gut{position:sticky;left:0;z-index:2;background:var(--c-bg);color:var(--c-gut);text-align:right;padding:12px 10px 12px 12px;border-right:1px solid var(--c-line);user-select:none;white-space:pre}
-.rb-code-area{position:relative}
-.rb-code pre,.rb-code textarea{margin:0;padding:12px 16px;font:inherit;white-space:pre;word-wrap:normal;letter-spacing:0;tab-size:2}
-.rb-code pre{color:var(--c-fg);pointer-events:none;min-height:100%}
-.rb-code textarea{position:absolute;inset:0;width:100%;height:100%;resize:none;border:0;outline:none;background:transparent;color:transparent;caret-color:#aeafad;overflow:hidden;-webkit-text-fill-color:transparent}
-.rb-code textarea::selection{background:#264f78;-webkit-text-fill-color:transparent}
-.rb-code .t-com{color:#6a9955}
-.rb-code .t-meta{color:#c586c0;font-weight:600}
-.rb-code .t-str{color:#ce9178}
-.rb-code .t-num{color:#b5cea8}
-.rb-code .t-kw{color:#c586c0}
-.rb-code .t-decl{color:#569cd6}
-.rb-code .t-lit{color:#569cd6}
-.rb-code .t-fn{color:#dcdcaa}
-.rb-code .t-prop{color:#9cdcfe}
-.rb-code .t-key{color:#4fc1ff;font-weight:700}
-.rb-code .t-type{color:#4ec9b0}
-.rb-code .t-api{color:#ffd166;font-weight:700}
-`;
-  var KW = /* @__PURE__ */ new Set(["if", "else", "return", "await", "for", "while", "do", "try", "catch", "finally", "throw", "switch", "case", "break", "continue", "of", "in", "new", "delete", "typeof", "instanceof", "default", "import", "export", "from", "yield"]);
-  var DECL = /* @__PURE__ */ new Set(["const", "let", "var", "function", "class", "async", "static", "get", "set", "extends", "this", "super"]);
-  var LIT = /* @__PURE__ */ new Set(["true", "false", "null", "undefined", "NaN", "Infinity"]);
-  var KEYS3 = /* @__PURE__ */ new Set(["id", "name", "version", "pluginName", "description", "fields", "presets", "getValues", "apply", "key", "label", "type", "options", "values", "group", "min", "max", "step", "default"]);
-  var API = /* @__PURE__ */ new Set(["registerInterop", "risuai", "Risuai", "risu", "pluginStorage"]);
-  var TOKEN = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(`(?:\\[\s\S]|[^`\\])*`?|'(?:\\.|[^'\\\n])*'?|"(?:\\.|[^"\\\n])*"?)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_$][\w$]*)/g;
-  var esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  function highlight(code) {
-    let out = "", last2 = 0, m;
-    TOKEN.lastIndex = 0;
-    while (m = TOKEN.exec(code)) {
-      out += esc(code.slice(last2, m.index));
-      last2 = TOKEN.lastIndex;
-      const [tok, com, str, num, id] = m;
-      let cls;
-      if (com) cls = com.startsWith("//@") ? "meta" : "com";
-      else if (str) cls = "str";
-      else if (num) cls = "num";
-      else if (id) {
-        const before = code.slice(Math.max(0, m.index - 1), m.index);
-        const after = code.slice(last2, last2 + 40).match(/^\s*(\S)/)?.[1];
-        if (API.has(id)) cls = "api";
-        else if (before === ".") cls = after === "(" ? "fn" : "prop";
-        else if (after === ":" && /[{,]\s*$/.test(code.slice(Math.max(0, m.index - 200), m.index))) cls = KEYS3.has(id) ? "key" : "prop";
-        else if (KW.has(id)) cls = "kw";
-        else if (DECL.has(id)) cls = "decl";
-        else if (LIT.has(id)) cls = "lit";
-        else if (after === "(") cls = "fn";
-        else if (/^[A-Z]/.test(id)) cls = "type";
-      }
-      out += cls ? `<span class="t-${cls}">${esc(tok)}</span>` : esc(tok);
-    }
-    return out + esc(code.slice(last2)) + "\n";
-  }
-  function codeEditor(value, { onChange, label: label3 = "코드", minHeight, maxHeight } = {}) {
-    if (!document.getElementById("rb-code-style")) document.head.appendChild(h("style", { id: "rb-code-style" }, CSS3));
-    const pre = h("pre", { "aria-hidden": "true" });
-    const gut = h("div", { class: "rb-code-gut", "aria-hidden": "true" });
-    const ta = h("textarea", { spellcheck: "false", autocapitalize: "off", autocomplete: "off", "aria-label": label3, wrap: "off" });
-    ta.value = value;
-    const el = h("div", { class: "rb-code", style: { minHeight, maxHeight } }, h("div", { class: "rb-code-in" }, gut, h("div", { class: "rb-code-area" }, pre, ta)));
-    let raf = 0, lines = 0;
-    const paint = () => {
-      raf = 0;
-      pre.innerHTML = highlight(ta.value);
-      const n = ta.value.split("\n").length;
-      if (n !== lines) {
-        lines = n;
-        gut.textContent = Array.from({ length: n }, (_, i2) => i2 + 1).join("\n");
-      }
-    };
-    const schedule = () => raf ||= requestAnimationFrame(paint);
-    ta.addEventListener("input", () => {
-      schedule();
-      onChange?.(ta.value);
-    });
-    ta.addEventListener("keydown", (e) => {
-      if (e.isComposing) return;
-      const { selectionStart: s, selectionEnd: t, value: v } = ta;
-      if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        ta.setRangeText("  ", s, t, "end");
-        ta.dispatchEvent(new Event("input"));
-      } else if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
-        const lineStart = v.lastIndexOf("\n", s - 1) + 1;
-        let indent = v.slice(lineStart).match(/^[ \t]*/)[0];
-        if (/[{[(]\s*$/.test(v.slice(lineStart, s))) indent += "  ";
-        e.preventDefault();
-        ta.setRangeText("\n" + indent, s, t, "end");
-        ta.dispatchEvent(new Event("input"));
-      }
-    });
-    paint();
-    return {
-      el,
-      get value() {
-        return ta.value;
-      },
-      set value(v) {
-        if (v === ta.value) return;
-        const { scrollTop, scrollLeft } = el;
-        ta.value = v;
-        paint();
-        el.scrollTop = scrollTop;
-        el.scrollLeft = scrollLeft;
-      },
-      // 해당 글자가 처음 나오는 줄로 스크롤 (도움말에서 "코드에서 보기")
-      reveal(text) {
-        const i2 = ta.value.indexOf(text);
-        if (i2 < 0) return false;
-        const line = ta.value.slice(0, i2).split("\n").length - 1;
-        const lh = parseFloat(getComputedStyle(ta).lineHeight) || 20;
-        el.scrollTo({ top: Math.max(0, line * lh - 40), behavior: "smooth" });
-        ta.focus({ preventScroll: true });
-        ta.setSelectionRange(i2, i2 + text.length);
-        return true;
-      }
-    };
-  }
 
   // src/ui/screens/plugins.js
   var VIEWS = [["list", "목록"], ["interop", "연동 설정"], ["create", "만들기"], ["storage", "저장소"]];
