@@ -9,6 +9,7 @@ import { listUpdateCandidates } from '../tide/characterUpdateTargets.ts';
 import { charFields } from '../engine/tideplan.js';
 import { stableJson } from '../engine/util.js';
 
+var KNOWN_MOD_KEY = "rbm:watchMod:v1", MOD_EVERY = 1e4;
 var KNOWN_KEY = "rbm:watch:v1", UI_KEY = "rbm:ui:v1", TRASH_KEY = "rbm:pendingTrash:v1";
 var SLOW = 1e4, FAST = 3e3, BURST = 1500, BURST_FOR = 5 * 6e4;
 var MENU_BTN_ID = "dusk-atelier-addchar";
@@ -87,7 +88,12 @@ export async function queueTrash(api, chaId) {
   await api.pluginStorage.setItem(TRASH_KEY, JSON.stringify(list));
 }
 
-export function createWatcher(api, { onDetected, onOpenUpdater, isBusy }) {
+// 모듈 이름 비교용 (버전 표시·기호 빼고)
+function modKey(name) {
+  return String(name ?? "").normalize("NFKC").toLowerCase().replace(/(?:\s*[-–—:]?\s*(?:v(?:er(?:sion)?)?\.?\s*)?\d+(?:\.\d+)+|\s*[([]\s*v?\d+(?:\.\d+)*\s*[)\]])\s*$/u, "").replace(/[^\p{L}\p{N}]/gu, "");
+}
+export function createWatcher(api, { onDetected, onModules, onOpenUpdater, isBusy }) {
+  let knownMods = null, lastMod = 0;
   let known = null, timer = null, burstUntil = 0, mode = "fast", running = false, checking = false, enabled = true;
   let doc = null, menuTimer = null;
   const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
@@ -108,7 +114,7 @@ export function createWatcher(api, { onDetected, onOpenUpdater, isBusy }) {
     });
   }
 
-  async function check() {
+  async function check(force = false) {
     if (checking || !enabled || !visible() || isBusy?.()) return;
     checking = true;
     try {
@@ -133,6 +139,7 @@ export function createWatcher(api, { onDetected, onOpenUpdater, isBusy }) {
         burstUntil = 0;
         await inspect(added);
       }
+      if (force || Date.now() - lastMod >= MOD_EVERY || Date.now() < burstUntil) await checkModules();
       await processTrash();
     } catch {
     } finally {
@@ -140,6 +147,40 @@ export function createWatcher(api, { onDetected, onOpenUpdater, isBusy }) {
     }
   }
 
+  // 모듈: 리스에 .risum을 끌어다 놓거나 가져오면 새 id의 모듈이 생긴다 → 이름이 같은 기존 모듈이 있으면 묻는다
+  async function checkModules() {
+    lastMod = Date.now();
+    const mods = (await api.getDatabase(["modules"]))?.modules ?? [];
+    const ids = mods.map((m) => m?.id).filter(Boolean);
+    if (!knownMods) {
+      const saved = await readJson(api, KNOWN_MOD_KEY, null);
+      if (!saved?.ids) {
+        knownMods = new Set(ids);
+        await api.pluginStorage.setItem(KNOWN_MOD_KEY, JSON.stringify({ v: 1, ids })).catch(() => {
+        });
+        return;
+      }
+      knownMods = new Set(saved.ids);
+    }
+    const added = mods.filter((m) => m?.id && !knownMods.has(m.id));
+    const changed = added.length || [...knownMods].some((id) => !ids.includes(id));
+    if (!changed) return;
+    knownMods = new Set(ids);
+    await api.pluginStorage.setItem(KNOWN_MOD_KEY, JSON.stringify({ v: 1, ids })).catch(() => {
+    });
+    const items = [];
+    for (const m of added) {
+      const k = modKey(m.name);
+      if (!k) continue;
+      const targets = mods.filter((x) => x?.id && x.id !== m.id && !added.includes(x) && (modKey(x.name) === k || m.namespace && x.namespace === m.namespace));
+      if (!targets.length) continue;
+      // 똑같은 모듈을 또 넣은 경우는 묻지 않는다
+      const strip = ({ id, ...rest }) => stableJson(rest);
+      if (targets.some((t) => strip(t) === strip(m))) continue;
+      items.push({ copyId: m.id, copyName: m.name ?? "", targets: targets.slice(0, 6).map((t) => ({ id: t.id, name: t.name, reason: modKey(t.name) === k ? "name" : "namespace" })) });
+    }
+    if (items.length) onModules?.(items);
+  }
   // 새 봇 중 "기존 봇의 새 버전"으로 보이는 것만 골라 알린다
   async function inspect(added) {
     const chars = (await api.getDatabase(["characters"]))?.characters ?? [];
@@ -228,7 +269,7 @@ export function createWatcher(api, { onDetected, onOpenUpdater, isBusy }) {
       running = true;
       mode = await startDom() ? "dom" : "fast";
       if (typeof document !== "undefined") document.addEventListener("visibilitychange", () => {
-        if (visible()) check();
+        if (visible()) check(true);
       });
       setTimeout(check, 4e3);
       schedule();
@@ -240,6 +281,15 @@ export function createWatcher(api, { onDetected, onOpenUpdater, isBusy }) {
     },
     check,
     burst,
+    /** Dusk가 모듈 목록을 바꾼 뒤: 지금 목록을 "본 것"으로 */
+    async snapshotModules() {
+      try {
+        const ids = ((await api.getDatabase(["modules"]))?.modules ?? []).map((m) => m?.id).filter(Boolean);
+        knownMods = new Set(ids);
+        await api.pluginStorage.setItem(KNOWN_MOD_KEY, JSON.stringify({ v: 1, ids }));
+      } catch {
+      }
+    },
     /** Dusk가 직접 만든 봇은 "새로 가져온 봇"으로 보지 않는다 */
     async markKnown(id) {
       try {

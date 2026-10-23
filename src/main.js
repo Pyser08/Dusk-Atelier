@@ -111,12 +111,15 @@ async function start() {
   const watcher = createWatcher(api, {
     onDetected: (items) => legacy.offerCopies(items).catch(() => {
     }),
+    onModules: (items) => legacy.offerModules(items).catch(() => {
+    }),
     onOpenUpdater: () => legacy.open().catch(() => {
     }),
     isBusy: () => legacy.busy
   });
   app.ctx.watcher = watcher;
   hooks.created = (id) => watcher.markKnown(id);
+  hooks.modulesChanged = () => watcher.snapshotModules();
   watcher.start().catch((e) => console.log(`[${TITLE}] 새 봇 감지 시작 실패: ${e?.message ?? e}`));
 }
 if (typeof globalThis.__RBU_TEST__ !== "undefined") globalThis.__RBU_TEST__.RBU = { ...engine_exports };

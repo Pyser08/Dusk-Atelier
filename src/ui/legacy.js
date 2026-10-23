@@ -691,6 +691,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
           d.entries.push({ module: merged, enabled: true });
         }
       });
+      await hooks.modulesChanged?.();
       links?.set(linkKey(incoming), merged.id);
       try {
         await store.setFingerprint("m", merged.id, modFingerprint(inc2));
@@ -952,6 +953,91 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
       }
     } catch {
     }
+  }
+  // ---- 받은 모듈(리스에 새로 가져온 .risum)로 기존 모듈 업데이트 ----
+  let modQueue = [];
+  function renderModCopyOffer() {
+    heading = TITLE2;
+    const it = modQueue[0];
+    if (!it) return renderStart();
+    frame(`<div class="card">
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px"><span class="ri big">${ic("module", 18)}</span>
+            <div><b>새로 가져온 모듈이 기존 모듈의 새 버전 같아요</b><div class="muted">'${esc(it.copyName)}'(으)로 기존 모듈을 업데이트하면 내가 고친 부분과 모듈 연결(켜짐·봇 연결)은 그대로 두고 내용만 새 버전으로 바꿔요.</div></div></div>
+          <div style="margin:4px 0 6px">어느 모듈을 업데이트할까요?</div>
+          ${it.targets.map((t, i) => `<label class="opt"><input type="radio" name="tg" value="${i}" ${i === 0 ? "checked" : ""}><div><b>${esc(t.name || "(이름 없음)")}</b><div class="muted">${t.reason === "name" ? "이름이 같음" : "네임스페이스가 같음"}</div></div></label>`).join("")}
+          ${modQueue.length > 1 ? `<div class="muted" style="margin-top:6px">대기 중 ${modQueue.length - 1}개 더</div>` : ""}
+        </div>
+        <div class="row"><button class="primary" id="attach">업데이트</button><button id="skip">새 모듈로 둘게요</button>${closeBtn("나중에")}</div>`);
+    root.querySelector("#skip").addEventListener("click", () => {
+      modQueue.shift();
+      modQueue.length ? renderModCopyOffer() : onClose();
+    });
+    root.querySelector("#attach").addEventListener("click", () => {
+      const t = it.targets[Number(root.querySelector("input[name=tg]:checked")?.value ?? 0)];
+      renderModCopyPlan(it, t.id, true).catch((err) => renderResult(null, null, err?.message ?? String(err)));
+    });
+  }
+  async function renderModCopyPlan(it, targetId, keepExistingOnly, choices = /* @__PURE__ */ new Map(), base) {
+    renderProgress("비교 준비 중…", 100, "모듈을 읽는 중");
+    const mods = (await api.getDatabase(["modules"]))?.modules ?? [];
+    const target = mods.find((m) => m?.id === targetId), copy = mods.find((m) => m?.id === it.copyId);
+    if (!target || !copy) throw new Error("모듈을 찾지 못했어요. 그 사이 지워졌을 수 있어요.");
+    if (base === void 0) base = await store.getFingerprint("m", targetId);
+    const curF = modFields(pickView(target, MOD_KEYS)), incF = modFields(pickView(copy, MOD_KEYS));
+    const p = makePlan("m", curF, incF, base);
+    const sumOf = (keep) => summarizeCharacterUpdate(curF, applyPlan(curF, incF, p, keep), curF.additionalAssets ?? []);
+    const keep0 = keepSet(p, choices, keepExistingOnly);
+    const rerender = (keep = keepExistingOnly) => renderModCopyPlan(it, targetId, keep, choices, base).catch((err) => renderResult(null, null, err?.message ?? String(err)));
+    frame(`<div class="card">
+          <div style="margin-bottom:8px">${kindTag("module")}<b>${esc(target.name)}</b> 업데이트 <span class="muted">← 새로 가져온 '${esc(copy.name)}'</span></div>
+          ${reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), modLabel)}
+          ${copy.lowLevelAccess && !target.lowLevelAccess ? `<div class="warn">이 버전은 <b>저수준 접근(lowLevelAccess)</b>을 사용합니다. 믿을 수 있는 모듈인지 확인하세요.</div>` : ""}${modWarnings(target, copy)}
+          <p class="muted" style="margin:10px 0 0">모듈 연결(켜짐·봇 연결)은 그대로예요. 바꾸기 전 상태를 백업해요. 업데이트가 끝나면 새로 가져온 사본 모듈은 목록에서 정리해요.</p>
+        </div>
+        <div class="row"><button class="primary" id="go">업데이트</button><button id="back">뒤로</button>${closeBtn("취소")}</div>`);
+    bindReview(p, choices, keepExistingOnly, curF, modLabel, (keep, compact) => summaryHtml(p, keep, sumFix(sumOf(keep)), modLabel, compact), () => rerender());
+    root.querySelector("#keep")?.addEventListener("change", (e) => rerender(e.target.checked));
+    root.querySelector("#back").addEventListener("click", () => renderModCopyOffer());
+    root.querySelector("#go").addEventListener("click", async () => {
+      try {
+        busy = true;
+        renderProgress(`업데이트 중: ${target.name}`, 100, "바꾸기 전 상태를 백업하는 중…");
+        let merged, summary = "", backupRec = null;
+        await commit(api, async (d) => {
+          const e = d.entries.find((x) => x.module?.id === targetId);
+          const ce = d.entries.find((x) => x.module?.id === it.copyId);
+          if (!e) throw new Error("업데이트할 모듈이 그 사이 삭제되었어요. 저장하지 않았어요.");
+          if (!ce) throw new Error("새로 가져온 모듈이 그 사이 지워졌어요. 저장하지 않았어요.");
+          const cur = e.module;
+          const cur2 = modFields(pickView(cur, MOD_KEYS)), inc2 = modFields(pickView(ce.module, MOD_KEYS));
+          const p2 = makePlan("m", cur2, inc2, base);
+          const keep = keepSet(p2, choices, keepExistingOnly);
+          const fields = applyPlan(cur2, inc2, p2, keep);
+          const sm = countPlan(p2, keep);
+          summary = [sm.update && `제작자 수정 ${sm.update}`, sm.keptMine && `내 것 유지 ${sm.keptMine}`, sm.conflict && `충돌 ${sm.conflict}`, sm.added && `추가 ${sm.added}`, sm.removed && `삭제 ${sm.removed}`].filter(Boolean).join(" · ");
+          backupRec = await store.addBackup({ kind: "module", target: cur.id, name: cur.name, snapshot: backupSnapshot("module", cur), note: "업데이트 전", summary: `가져온 모듈 '${ce.module.name}' → ${summary || "변화 없음"}` }).catch((err) => {
+            throw new Error(`백업을 만들지 못해 아무것도 바꾸지 않았어요: ${err?.message ?? err}`);
+          });
+          merged = { ...cur };
+          for (const k of MOD_KEYS) delete merged[k];
+          for (const [k, v] of Object.entries(fieldsToMod(fields))) if (v !== void 0) merged[k] = v;
+          merged.id = cur.id;
+          e.module = merged;
+          // 받은 사본 모듈은 목록에서 뺀다 (에셋 파일은 업데이트된 모듈이 계속 씀)
+          d.entries = d.entries.filter((x) => x !== ce);
+          d.removedIds.add(it.copyId);
+          await store.setFingerprint("m", cur.id, modFingerprint(inc2)).catch(() => {
+          });
+        });
+        await hooks.modulesChanged?.();
+        modQueue.shift();
+        busy = false;
+        renderResult({ kind: "module", name: merged.name, updated: true, uploadedCount: 0, assets: (merged.assets ?? []).length, lore: (merged.lorebook ?? []).length, backup: true, backupRec, summary, note: `새로 가져온 '${copy.name}'은(는) 목록에서 정리했어요.` });
+      } catch (err) {
+        busy = false;
+        renderResult(null, null, err?.message ?? String(err));
+      }
+    });
   }
   // ==== 합치기 (RisuTide): 다른 봇·모듈에서 인물·세계관 가져오기, 전체 합치기, 출처별 업데이트, 떼어내기 ====
   const KIND_PART = { lore: "로어북", loreFolder: "로어 폴더", regex: "정규식", trigger: "트리거", luaTrigger: "Lua 트리거", css: "CSS", variable: "기본 변수", asset: "에셋", emotion: "감정 이미지", greeting: "인사말", textField: "글", imageGenSetting: "이미지 생성 설정", loreSettings: "로어북 설정", extension: "확장" };
@@ -1633,6 +1719,13 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
       if (chaId) mg = { targetId: chaId, src: null, scope: "characters" };
       await show();
       return renderMergeStart(chaId).catch((err) => renderResult(null, null, err?.message ?? String(err)));
+    },
+    /** 감지된 받은 모듈들을 "업데이트할까요?"로 물어본다 */
+    async offerModules(items) {
+      for (const it of items) if (!modQueue.some((x) => x.copyId === it.copyId)) modQueue.push(it);
+      if (busy) return;
+      renderModCopyOffer();
+      await show();
     },
     /** 감지된 받은 사본들을 "이어 붙일까요?"로 물어본다 */
     async offerCopies(items) {
