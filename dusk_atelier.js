@@ -17907,7 +17907,7 @@ ${md()}
   }
   function parseHeader(script) {
     const head = String(script).slice(0, 4096);
-    const get = (k) => new RegExp(`^//@${k}\\s+(.+)$`, "m").exec(head)?.[1]?.trim();
+    const get = (k) => new RegExp(`^//@${k}[ \\t]+(.+)$`, "m").exec(head)?.[1]?.trim();
     return { name: get("name"), displayName: get("display-name"), version: get("version"), api: get("api"), updateURL: get("update-url") };
   }
   async function replaceCode(api, name, script) {
@@ -18102,11 +18102,25 @@ registerInterop({
     head = head.replace(/^(const SETTINGS_KEY = )(['"`]).*?\2;/m, (_, a) => `${a}${q(meta.name + ":settings")};`);
     return head + reg;
   }
+  function isValidVersion(v) {
+    return /^\d+(\.\d+)*$/.test(String(v).trim());
+  }
+  function cmpVersion(a, b) {
+    const x2 = String(a).split(".").map((n) => parseInt(n, 10) || 0), y = String(b).split(".").map((n) => parseInt(n, 10) || 0);
+    for (let i2 = 0; i2 < Math.max(x2.length, y.length); i2++) {
+      const d = (x2[i2] ?? 0) - (y[i2] ?? 0);
+      if (d) return d;
+    }
+    return 0;
+  }
   function checkCode(code, meta) {
     const out = [];
     const hd = parseHeader(code);
     if (!hd.name) out.push({ level: "err", text: "맨 위에 //@name 줄이 없어요. RisuAI가 플러그인 이름을 모르게 돼요." });
     else if (!/^[A-Za-z0-9_-]+$/.test(hd.name)) out.push({ level: "warn", text: "//@name에는 영문·숫자·_·- 만 쓰는 게 안전해요." });
+    if (!hd.version) out.push({ level: "err", text: "//@version 줄이 없어요. 버전이 없으면 RisuAI가 설치를 거부해요." });
+    else if (!isValidVersion(hd.version)) out.push({ level: "err", text: `버전 '${hd.version}'은(는) 올바르지 않아요. 숫자와 점으로만 쓰고(예: 1.0.0) 0.0.1 이상이어야 해요.` });
+    else if (cmpVersion(hd.version, "0.0.1") < 0) out.push({ level: "err", text: `버전 '${hd.version}'은(는) 너무 낮아요. RisuAI는 0.0.1 이상만 받아요.` });
     if (hd.api !== "3.0") out.push({ level: "err", text: "//@api 3.0 줄이 필요해요. 이 화면은 API 3.0 플러그인만 만들어요." });
     const first = code.split("\n").find((l) => l.trim());
     if (first && !first.startsWith("//@")) out.push({ level: "warn", text: "//@ 머리말은 파일 맨 위에 두세요." });
