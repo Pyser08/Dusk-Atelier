@@ -11,6 +11,14 @@ import { attachUndo } from '../undo.js';
 import { COND_TYPES, VAR_OPS, bodyOf, collectManaged, defaultRule, evaluate, gateVar, isManaged, nativeContent, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
 // 관리 항목의 내용 머리(@@activate·{{#if}})를 규칙에 맞춘다
 export function syncRuleContent(lorebook) {
+  // 리스의 복제 등으로 같은 식별자가 두 항목에 있으면 뒤쪽에 새 식별자를 준다 (연쇄·조건 대상은 다시 골라야 한다)
+  const seen = new Set();
+  for (const l of lorebook ?? []) {
+    const id = ridOf(l);
+    if (!id) continue;
+    if (seen.has(id)) l.extentions = { ...l.extentions, da_rid: newId() };
+    seen.add(ridOf(l));
+  }
   for (const l of lorebook ?? []) {
     const r = ruleOf(l);
     if (r && r.on !== false && ridOf(l)) l.content = nativeContent(l.content, r, ridOf(l));
@@ -608,6 +616,7 @@ export async function openEditorCore(ctx, cfg) {
       l.extentions = { ...(l.extentions ?? {}) };
       if (toggle.checked) {
         l.extentions.da_rid ||= newId();
+        if (draft.lorebook.some((x) => x !== l && ridOf(x) === l.extentions.da_rid)) l.extentions.da_rid = newId();
         const nr = { ...(ruleOf(l) ?? defaultRule()), on: true };
         // 원래 항상 켜짐이던 항목은 키 조건 없이 시작
         if (l.alwaysActive || l.mode === "constant") nr.cond = [];
