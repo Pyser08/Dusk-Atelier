@@ -4,7 +4,7 @@ name: 브랜치 빌드
 on:
   push:
     branches: ['feat/**']
-    paths: ['src/**', 'tools/**', 'package.json']
+    paths: ['src/**', 'tools/**', 'package.json', '.github/workflows/build-branch.yml']
 
 permissions:
   contents: write
