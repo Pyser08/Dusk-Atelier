@@ -203,8 +203,99 @@ async function viewInterop(ctx, { fresh }) {
   );
 }
 
+// 목록·JSON 같은 묶음 값은 <label> 안에 두면 버튼 클릭이 엉키므로 div로 감싼다
+var BLOCK_TYPES = /* @__PURE__ */ new Set(["list", "json", "multiselect"]);
+var clone = (v) => v === void 0 ? void 0 : JSON.parse(JSON.stringify(v));
+var itemDefault = (f) => {
+  if (Array.isArray(f.itemFields)) return Object.fromEntries(f.itemFields.map((x) => [x.key, clone(x.default ?? null)]));
+  return clone(f.item?.default ?? (f.item?.type === "toggle" ? false : f.item?.type === "number" || f.item?.type === "slider" ? 0 : ""));
+};
+
+// list: 값은 배열. itemFields(객체 배열) 또는 item(값 배열) 중 하나로 항목 모양을 정한다.
+//   항목의 다른 속성(id 등 화면에 없는 값)은 그대로 보존된다.
+function listInput(f, v) {
+  const items = (Array.isArray(v) ? v : []).map((x) => ({ orig: x, read: null }));
+  const canAdd = f.addable !== false && !f.readonly, canRemove = f.removable !== false && !f.readonly, canSort = f.sortable !== false && !f.readonly;
+  const box = h("div", { style: "display:flex;flex-direction:column;gap:8px" });
+  const titleOf = (x, i) => {
+    const k = f.itemLabel ?? f.itemFields?.find((y) => y.type === "text")?.key;
+    const t = k && x && typeof x === "object" ? x[k] : typeof x !== "object" ? x : null;
+    return t != null && t !== "" ? String(t) : `#${i + 1}`;
+  };
+  const snapshot = () => items.forEach((it) => { if (it.read) it.orig = it.read(); });
+  const render = () => {
+    box.replaceChildren();
+    items.forEach((it, i) => {
+      let body, read;
+      if (Array.isArray(f.itemFields)) {
+        const subs = {};
+        body = h("div", { style: "display:flex;flex-direction:column;gap:10px" }, f.itemFields.map((sf) => {
+          const r = fieldInput(sf, it.orig?.[sf.key] ?? sf.default);
+          subs[sf.key] = r;
+          return fieldRow(sf, r);
+        }));
+        read = () => {
+          const o = it.orig && typeof it.orig === "object" ? { ...it.orig } : {};
+          for (const [k, r] of Object.entries(subs)) o[k] = r.read();
+          return o;
+        };
+      } else {
+        const r = fieldInput({ type: "text", ...f.item, readonly: f.readonly || f.item?.readonly }, it.orig);
+        body = r.el;
+        read = r.read;
+      }
+      it.read = read;
+      const tools = h(
+        "div",
+        { style: "display:flex;gap:4px;align-items:center" },
+        Array.isArray(f.itemFields) ? h("b", { style: "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, titleOf(it.orig, i)) : null,
+        canSort ? btn("", { size: "sm", icon: "up", title: "위로", disabled: i === 0, onClick: () => { snapshot(); [items[i - 1], items[i]] = [items[i], items[i - 1]]; render(); } }) : null,
+        canSort ? btn("", { size: "sm", icon: "down", title: "아래로", disabled: i === items.length - 1, onClick: () => { snapshot(); [items[i + 1], items[i]] = [items[i], items[i + 1]]; render(); } }) : null,
+        canRemove ? btn("", { size: "sm", kind: "danger", icon: "trash", title: "삭제", onClick: () => { snapshot(); items.splice(i, 1); render(); } }) : null
+      );
+      box.append(Array.isArray(f.itemFields)
+        ? h("div", { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:10px" }, tools, body)
+        : h("div", { style: "display:flex;gap:6px;align-items:center" }, h("div", { style: "flex:1;min-width:0" }, body), tools));
+    });
+    if (!items.length) box.append(h("div", { class: "rb-muted" }, "항목이 없어요."));
+    const full = f.max != null && items.length >= f.max;
+    if (canAdd) box.append(h("div", null, btn("항목 추가", { size: "sm", icon: "plus", disabled: full, onClick: () => { snapshot(); items.push({ orig: itemDefault(f), read: null }); render(); } })));
+  };
+  render();
+  return { el: box, read: () => items.map((it) => it.read ? it.read() : it.orig) };
+}
+
+function fieldRow(f, r) {
+  const head = h("span", { style: "display:flex;flex-direction:column;gap:2px" }, h("span", { class: "rb-label" }, f.label ?? f.key), f.description ? h("small", { class: "rb-muted" }, f.description) : null);
+  if (BLOCK_TYPES.has(f.type)) return h("div", { class: "rb-field" }, head, r.el);
+  return h("label", { class: "rb-field", style: f.type === "toggle" ? "display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:10px" : "" }, head, r.el);
+}
+
 function fieldInput(f, v) {
   const t = f.type;
+  if (f.readonly && !BLOCK_TYPES.has(t)) {
+    const shown = t === "select" ? ((f.options ?? []).find((o) => String(o?.value ?? o) === String(v))?.label ?? v) : typeof v === "object" ? JSON.stringify(v) : v;
+    return { el: h("span", { class: "rb-muted", style: "word-break:break-all" }, shown == null || shown === "" ? "—" : String(shown)), read: () => v };
+  }
+  if (t === "list") return listInput(f, v);
+  if (t === "multiselect") {
+    const set = new Set((Array.isArray(v) ? v : []).map(String));
+    const opts = (f.options ?? []).map((o) => typeof o === "object" ? o : { value: o, label: o });
+    const boxes = opts.map((o) => {
+      const el = h("input", { type: "checkbox", checked: set.has(String(o.value)), disabled: f.readonly });
+      return { o, el, row: h("label", { style: "display:flex;gap:6px;align-items:center" }, el, h("span", null, o.label ?? o.value)) };
+    });
+    return { el: h("div", { style: "display:flex;flex-wrap:wrap;gap:6px 14px" }, boxes.map((b) => b.row)), read: () => boxes.filter((b) => b.el.checked).map((b) => b.o.value) };
+  }
+  if (t === "json") {
+    const el = h("textarea", { class: "rb-input", rows: f.rows ?? 8, spellcheck: false, readOnly: !!f.readonly, style: "height:auto;padding:10px 14px;resize:vertical;font-family:var(--rb-mono, monospace);font-size:12px" });
+    el.value = JSON.stringify(v ?? null, null, 2);
+    const err = h("small", { style: "color:var(--rb-danger, #e5484d)" });
+    el.addEventListener("input", () => { try { JSON.parse(el.value); err.textContent = ""; } catch (e) { err.textContent = `JSON 오류: ${e.message}`; } });
+    return { el: h("div", { style: "display:flex;flex-direction:column;gap:4px" }, el, err), read: () => {
+      try { return JSON.parse(el.value); } catch (e) { throw new Error(`'${f.label ?? f.key}' JSON 형식 오류: ${e.message}`); }
+    } };
+  }
   if (t === "toggle") {
     const el = switchEl(!!v, { label: f.label ?? f.key, onChange: (on) => el.setAttribute("aria-checked", on ? "true" : "false") });
     return { el, read: () => el.getAttribute("aria-checked") === "true" };
@@ -281,16 +372,15 @@ function showInterop(ctx, e) {
       g ? h("h3", { class: "rb-h3" }, g) : null,
       fields.map((f) => {
         const r = fieldInput(f, e.values?.[f.key] ?? f.default);
-        inputs[f.key] = r;
-        return h(
-          "label",
-          { class: "rb-field", style: f.type === "toggle" ? "display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:10px" : "" },
-          h("span", { style: "display:flex;flex-direction:column;gap:2px" }, h("span", { class: "rb-label" }, f.label ?? f.key), f.description ? h("small", { class: "rb-muted" }, f.description) : null),
-          r.el
-        );
+        if (!f.readonly) inputs[f.key] = r;
+        return fieldRow(f, r);
       })
     )),
-    e.fields.length ? h("div", { style: "display:flex;gap:8px" }, btn("적용", { kind: "primary", icon: "check", onClick: () => apply(readAll()) })) : note("info", "바꿀 수 있는 항목이 없어요."),
+    e.fields.length ? h("div", { style: "display:flex;gap:8px" }, btn("적용", { kind: "primary", icon: "check", onClick: () => {
+      let v;
+      try { v = readAll(); } catch (err) { return ctx.toast(err?.message ?? String(err), { error: true, seconds: 8 }); }
+      apply(v);
+    } })) : note("info", "바꿀 수 있는 항목이 없어요."),
     h("hr", { style: "border:0;border-top:1px solid var(--rb-line);width:100%" }),
     btn("연동 정보 지우기", { size: "sm", kind: "danger", icon: "trash", onClick: async () => {
       if (!await confirmDialog(ctx.win, { title: `${e.name} 연동 정보를 지울까요?`, body: "플러그인을 지웠을 때 정리용이에요. 플러그인이 켜져 있으면 다음 실행 때 다시 등록돼요.", ok: "지우기", danger: true })) return;
