@@ -627,12 +627,19 @@ export async function openEditorCore(ctx, cfg) {
     }
     // 규칙 객체는 항목 안에 바로 저장 (모양 맞추기)
     const r = l.extentions.da_rule = rule;
-    const others = draft.lorebook.filter((x) => x !== l && x.mode !== "folder" && ridOf(x));
+    // 규칙을 아직 안 켠 항목도 고를 수 있다 (고르면 식별자만 먼저 붙인다. 규칙이 꺼져 있으면 검증에서 알려 준다)
+    const others = draft.lorebook.filter((x) => x !== l && x.mode !== "folder" && !isLoreDivider(x));
     const pickEntry = (obj, key) => {
-      const el = h("select", { class: "rb-input" }, h("option", { value: "" }, "(항목 고르기)"), others.map((x) => h("option", { value: ridOf(x), selected: obj[key] === ridOf(x) }, (x.comment || "(이름 없음)") + (isManaged(x) ? "" : " · 규칙 꺼짐"))));
+      const el = h("select", { class: "rb-input" }, h("option", { value: "" }, "(항목 고르기)"), others.map((x, xi) => h("option", { value: String(xi), selected: !!ridOf(x) && obj[key] === ridOf(x) }, (x.comment || "(이름 없음)") + (isManaged(x) ? "" : " · 규칙 꺼짐"))));
       el.addEventListener("change", () => {
-        obj[key] = el.value;
+        const t = el.value === "" ? null : others[Number(el.value)];
+        if (t) {
+          t.extentions = { ...(t.extentions ?? {}) };
+          t.extentions.da_rid ||= newId();
+        }
+        obj[key] = t ? t.extentions.da_rid : "";
         changed();
+        redraw();
       });
       return el;
     };
