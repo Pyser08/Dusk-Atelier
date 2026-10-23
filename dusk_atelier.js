@@ -1300,11 +1300,11 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
           const a = pick();
           active++;
           inflight += a.size ?? 0;
-          run2(a);
+          run(a);
         }
         finish();
       };
-      const run2 = async (a) => {
+      const run = async (a) => {
         let ok = false;
         try {
           const data = await readAssetBytes(blob, a);
@@ -3609,10 +3609,10 @@ ${v.content ?? ""}`;
   }
   function requiredRuns(pattern2) {
     const runs = [];
-    let depth = 0, inClass = false, run2 = "", mandatory = false;
+    let depth = 0, inClass = false, run = "", mandatory = false;
     const flush = () => {
-      if (mandatory) runs.push(run2);
-      run2 = "";
+      if (mandatory) runs.push(run);
+      run = "";
       mandatory = false;
     };
     for (let i2 = 0; i2 < pattern2.length; ) {
@@ -3685,7 +3685,7 @@ ${v.content ?? ""}`;
         }
       }
       if (!mandatory && literal && !optional) mandatory = true;
-      if (mandatory) run2 += pattern2.slice(start2, i2);
+      if (mandatory) run += pattern2.slice(start2, i2);
     }
     flush();
     return runs;
@@ -3712,10 +3712,10 @@ ${v.content ?? ""}`;
     const breaks = [];
     if (minimumPipes) {
       let previous = "", end = 0;
-      for (const run2 of text.matchAll(/\S+/g)) {
-        if (previous && /[\n\r\u2028\u2029]/.test(text.slice(end, run2.index)) && !"[|:#".includes(previous) && !"|:]".includes(run2[0][0])) breaks.push(run2.index);
-        previous = run2[0].at(-1);
-        end = run2.index + run2[0].length;
+      for (const run of text.matchAll(/\S+/g)) {
+        if (previous && /[\n\r\u2028\u2029]/.test(text.slice(end, run.index)) && !"[|:#".includes(previous) && !"|:]".includes(run[0][0])) breaks.push(run.index);
+        previous = run[0].at(-1);
+        end = run.index + run[0].length;
       }
     }
     const starts = [];
@@ -3741,7 +3741,7 @@ ${v.content ?? ""}`;
       const cached = patterns.get(key);
       if (cached) return cached;
       const regex = new RegExp(String(r.in ?? ""), flags);
-      const required = regex.flags.includes("v") ? [] : requiredRuns(regex.source).map((run2) => new RegExp(run2, regex.flags.replace("y", "") + "g"));
+      const required = regex.flags.includes("v") ? [] : requiredRuns(regex.source).map((run) => new RegExp(run, regex.flags.replace("y", "") + "g"));
       const statusPrefix = "\\[\\s*(.*?)\\s*\\|";
       const statusSearch = required.length && !/[sy]/.test(regex.flags) && regex.source.startsWith(statusPrefix) && !/^(?:[?*]|\{0(?:,|\}))/.test(regex.source.slice(statusPrefix.length)) ? new RegExp(regex.source, regex.flags + "y") : null;
       const minimumPipes = statusSearch ? statusPipeCount(regex.source) : 0;
@@ -3764,11 +3764,11 @@ ${v.content ?? ""}`;
         if (cache && hits.has(text)) return hits.get(text);
         regex.lastIndex = 0;
         let offset = 0;
-        const hit = required.every((run2) => {
-          run2.lastIndex = offset;
-          const match = run2.exec(text);
+        const hit = required.every((run) => {
+          run.lastIndex = offset;
+          const match = run.exec(text);
           if (!match) return false;
-          offset = run2.lastIndex;
+          offset = run.lastIndex;
           return true;
         }) && matches(text);
         if (cache) {
@@ -6278,8 +6278,8 @@ __load_source("${blockId}", ${longBracket(code)}${shared ? ", true" : ""})
       const source = moves.get(b.sourceId);
       source.set(b.selector, { anchor: b, property, offset: Math.max(offset, source.get(b.selector)?.offset ?? 0) });
     }
-    for (const source of moves.values()) for (const move3 of source.values()) {
-      move3.offset = Math.max(...[...source.values()].filter((other) => other.property === move3.property && other.anchor.horizontal === move3.anchor.horizontal && other.anchor.vertical === move3.anchor.vertical).map((other) => other.offset));
+    for (const source of moves.values()) for (const move2 of source.values()) {
+      move2.offset = Math.max(...[...source.values()].filter((other) => other.property === move2.property && other.anchor.horizontal === move2.anchor.horizontal && other.anchor.vertical === move2.anchor.vertical).map((other) => other.offset));
     }
     return parts.map((part) => {
       const selected = moves.get(part.sourceId);
@@ -6297,17 +6297,17 @@ __load_source("${blockId}", ${longBracket(code)}${shared ? ", true" : ""})
           }
           return { header: untouched, body, after: shifted };
         }
-        const move3 = moved.find(Boolean);
-        if (!move3) return { header, body };
-        const property = move3.property;
+        const move2 = moved.find(Boolean);
+        if (!move2) return { header, body };
+        const property = move2.property;
         const pattern2 = new RegExp(`(^|;)\\s*${property}\\s*:\\s*([^;]+)`, "gi");
         const dimension = property === "top" || property === "bottom" ? "100vh" : "100vw";
-        const size = property === "top" || property === "bottom" ? move3.anchor.height : move3.anchor.width;
+        const size = property === "top" || property === "bottom" ? move2.anchor.height : move2.anchor.width;
         const changed = body.replace(pattern2, (whole, delimiter, value2) => {
           const important = /!important\s*$/i.test(value2) ? " !important" : "";
           const original = value2.replace(/\s*!important\s*$/i, "").trim();
           if (original === "auto") return whole;
-          return `${delimiter}${property}:min(calc(${original} + ${move3.offset}px), max(0px, calc(${dimension} - ${size + 12}px)))${important}`;
+          return `${delimiter}${property}:min(calc(${original} + ${move2.offset}px), max(0px, calc(${dimension} - ${size + 12}px)))${important}`;
         });
         return { header, body: changed };
       });
@@ -8887,10 +8887,10 @@ ${registrationRow.content}`;
     function planFooter(goLabel) {
       return `<div class="row"><button class="primary" id="go">${goLabel}</button><button id="back">뒤로</button>${closeBtn("취소")}</div>`;
     }
-    function bindPlan(file, incoming, db, rerender, run2) {
+    function bindPlan(file, incoming, db, rerender, run) {
       root.querySelector("#keep")?.addEventListener("change", (e) => rerender(e.target.checked));
       root.querySelector("#back").addEventListener("click", () => renderChoose(file, incoming, db));
-      root.querySelector("#go").addEventListener("click", () => run2().catch((err2) => {
+      root.querySelector("#go").addEventListener("click", () => run().catch((err2) => {
         busy = false;
         if (err2 instanceof Cancelled) return renderResult(null, "취소했습니다. 기존 항목은 바뀌지 않았습니다.");
         if (err2 instanceof Busy) return renderResult(null, null, err2.message);
@@ -10095,10 +10095,10 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       }));
       root.querySelectorAll("[data-restore]").forEach((el) => el.addEventListener("click", () => {
         const rec = list.find((b) => b.id === el.dataset.restore);
-        restoreBackup2(rec).catch((err2) => renderResult(null, null, err2 instanceof Busy ? err2.message : `되돌리지 못했어요: ${err2?.message ?? err2}`));
+        restoreBackup(rec).catch((err2) => renderResult(null, null, err2 instanceof Busy ? err2.message : `되돌리지 못했어요: ${err2?.message ?? err2}`));
       }));
     }
-    async function restoreBackup2(rec) {
+    async function restoreBackup(rec) {
       busy = true;
       renderProgress(`되돌리는 중: ${rec.name}`, 100, "백업 읽는 중…");
       const { __chats: savedChats, ...snap } = await store.loadBackup(rec);
@@ -10195,7 +10195,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       pendingOfferCard();
       root.querySelector("#nextq")?.addEventListener("click", () => runQueue());
       root.querySelector("#tobk")?.addEventListener("click", () => renderBackups());
-      root.querySelector("#undo")?.addEventListener("click", () => restoreBackup2(res.backupRec).catch((err2) => renderResult(null, null, err2 instanceof Busy ? err2.message : `되돌리지 못했어요: ${err2?.message ?? err2}`)));
+      root.querySelector("#undo")?.addEventListener("click", () => restoreBackup(res.backupRec).catch((err2) => renderResult(null, null, err2 instanceof Busy ? err2.message : `되돌리지 못했어요: ${err2?.message ?? err2}`)));
     }
     async function syncColorScheme() {
       let type = "dark";
@@ -10231,7 +10231,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       async restore(rec) {
         if (busy) return show();
         await show();
-        return restoreBackup2(rec).catch((err2) => renderResult(null, null, err2 instanceof Busy ? err2.message : `되돌리지 못했어요: ${err2?.message ?? err2}`));
+        return restoreBackup(rec).catch((err2) => renderResult(null, null, err2 instanceof Busy ? err2.message : `되돌리지 못했어요: ${err2?.message ?? err2}`));
       },
       async startWithFile(file) {
         return this.startWithFiles([file]);
@@ -11532,7 +11532,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         if (ev.target.closest(SKIP) || ev.target.closest(".grip")) return;
         const doc = row2.ownerDocument;
         const x0 = ev.clientX, y0 = ev.clientY;
-        const move3 = (e) => {
+        const move2 = (e) => {
           if (e.pointerId !== ev.pointerId) return;
           if (Math.hypot(e.clientX - x0, e.clientY - y0) < START_PX) return;
           stop();
@@ -11546,11 +11546,11 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
           begin(ev, row2, e);
         };
         const stop = () => {
-          doc.removeEventListener("pointermove", move3);
+          doc.removeEventListener("pointermove", move2);
           doc.removeEventListener("pointerup", stop);
           doc.removeEventListener("pointercancel", stop);
         };
-        doc.addEventListener("pointermove", move3);
+        doc.addEventListener("pointermove", move2);
         doc.addEventListener("pointerup", stop);
         doc.addEventListener("pointercancel", stop);
       });
@@ -11623,7 +11623,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
           raf = win.requestAnimationFrame(tick);
         }
       };
-      const move22 = (e) => {
+      const move2 = (e) => {
         if (e.pointerId !== ev.pointerId) return;
         e.preventDefault();
         lastY = e.clientY;
@@ -11633,7 +11633,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       };
       const end = async (e) => {
         if (e.pointerId !== ev.pointerId) return;
-        capture.removeEventListener("pointermove", move22);
+        capture.removeEventListener("pointermove", move2);
         capture.removeEventListener("pointerup", end);
         capture.removeEventListener("pointercancel", end);
         if (raf) win.cancelAnimationFrame(raf);
@@ -11646,10 +11646,10 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         if (t.isRow) await onDrop({ beforeId: t.id, after: t.after, folderId: void 0 });
         else await onDrop({ beforeId: null, after: false, folderId: t.folder || null });
       };
-      capture.addEventListener("pointermove", move22);
+      capture.addEventListener("pointermove", move2);
       capture.addEventListener("pointerup", end);
       capture.addEventListener("pointercancel", end);
-      if (firstMove) move22(firstMove);
+      if (firstMove) move2(firstMove);
     }
   }
   function dragBadge(doc, n) {
@@ -14321,8 +14321,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
           back.remove();
           resolve(v);
         };
-        const run2 = btn("미리 계산", { kind: "primary", onClick: async () => {
-          run2.disabled = true;
+        const run = btn("미리 계산", { kind: "primary", onClick: async () => {
+          run.disabled = true;
           prepared = [];
           let before = 0, after = 0, skipped = 0, i2 = 0;
           for (const a of list) {
@@ -14348,8 +14348,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
           }
           result.textContent = `${fmtBytes(before)} → ${fmtBytes(after)} (${before ? Math.round((1 - after / before) * 100) : 0}% 줄어듦) · 바꿀 것 ${prepared.length}개${skipped ? ` · 그대로 ${skipped}개(더 커지거나 못 읽음)` : ""}`;
           apply.disabled = !prepared.length;
-          run2.disabled = false;
-          run2.querySelector("span").textContent = "다시 계산";
+          run.disabled = false;
+          run.querySelector("span").textContent = "다시 계산";
         } });
         const apply = btn("적용", { kind: "primary", disabled: true, onClick: () => done(true) });
         back.appendChild(h(
@@ -14372,7 +14372,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
           bar2,
           result,
           h("p", { class: "rb-muted" }, "더 작아지는 것만 바꿔요. 바꾸기 전 모듈은 백업되고, 원래 파일은 서버에 남아 있어요."),
-          h("div", { class: "btns" }, btn("취소", { onClick: () => done(false) }), run2, apply)
+          h("div", { class: "btns" }, btn("취소", { onClick: () => done(false) }), run, apply)
         ));
         ctx.win.appendChild(back);
       });
@@ -15806,7 +15806,7 @@ ${patch.note}` : "",
     input.value = T.text;
     const out = h("div", { style: "display:flex;flex-direction:column;gap:6px", id: "rb-dev-test-out" });
     const opts = h("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" });
-    const run2 = () => {
+    const run = () => {
       T.text = input.value;
       if (T.tab === "lore") {
         input.placeholder = "최근 대화를 붙여 넣으면 켜지는 로어북 항목을 보여 줘요";
@@ -15844,29 +15844,29 @@ ${patch.note}` : "",
         const cb = h("input", { type: "checkbox", checked: T.recursive });
         cb.addEventListener("change", () => {
           T.recursive = cb.checked;
-          run2();
+          run();
         });
         replace(opts, h("label", { class: "rb-check", style: "display:flex;gap:6px;align-items:center" }, cb, "재귀 검색 (켜진 항목 내용으로 다시 찾기)"));
       } else {
         replace(opts, segmented([["editinput", "입력"], ["editoutput", "출력"], ["editprocess", "요청"], ["editdisplay", "표시"]], T.mode, (v) => {
           T.mode = v;
-          run2();
+          run();
         }, "정규식 종류"));
       }
     };
     let timer = 0;
     input.addEventListener("input", () => {
       clearTimeout(timer);
-      timer = setTimeout(run2, 120);
+      timer = setTimeout(run, 120);
     });
     paintOpts();
-    run2();
+    run();
     return card(
       h("div", { style: "display:flex;align-items:center;gap:8px" }, h("b", { style: "flex:1" }, "테스트")),
       segmented([["lore", "로어북 활성"], ["regex", "정규식"]], T.tab, (v) => {
         T.tab = v;
         paintOpts();
-        run2();
+        run();
       }, "테스트 종류"),
       opts,
       input,
@@ -16090,8 +16090,8 @@ ${md()}
       if (!pm.version && proj) pm.version = proj.version && proj.version !== proj.releases?.[0]?.version ? proj.version : nextVersion(proj.releases?.[0]?.version || proj.version);
       const ver = h("input", { class: "rb-input", value: pm.version ?? "", placeholder: "예: 1.1", "aria-label": "버전" });
       const who = h("input", { class: "rb-input", value: pm.author ?? (cur.creator ?? ""), placeholder: "제작자 이름", "aria-label": "제작자" });
-      const memo = h("textarea", { class: "rb-textarea", placeholder: "받는 사람에게 보여 줄 변경 내용 (적용 전에 보여요)", style: "min-height:90px;font-family:inherit", "aria-label": "변경 내용" });
-      memo.value = pm.note ?? "";
+      const memo2 = h("textarea", { class: "rb-textarea", placeholder: "받는 사람에게 보여 줄 변경 내용 (적용 전에 보여요)", style: "min-height:90px;font-family:inherit", "aria-label": "변경 내용" });
+      memo2.value = pm.note ?? "";
       ver.addEventListener("input", () => {
         pm.version = ver.value;
         fname.textContent = fileName();
@@ -16099,8 +16099,8 @@ ${md()}
       who.addEventListener("input", () => {
         pm.author = who.value;
       });
-      memo.addEventListener("input", () => {
-        pm.note = memo.value;
+      memo2.addEventListener("input", () => {
+        pm.note = memo2.value;
       });
       let withAssets = pm.withAssets ?? true, moveBase = pm.moveBase ?? true;
       const fileName = () => `${safeFileName(cur.name)}${ver.value.trim() ? `_v${safeFileName(ver.value.trim())}` : ""}.rbupatch`;
@@ -16116,7 +16116,7 @@ ${md()}
         const tt = ctx.toast("패치 만드는 중…", { seconds: 120 });
         try {
           const fresh = await currentOf(ctx, t);
-          const patch = await buildPatch({ kind: t.kind, name: fresh.name, namespace: fresh.namespace ?? fresh.moduleNamespace, base, current: fresh, readAsset: (p) => ctx.assets.read(p), includeAssets: withAssets, version: ver.value.trim(), note: memo.value.trim(), author: who.value.trim() });
+          const patch = await buildPatch({ kind: t.kind, name: fresh.name, namespace: fresh.namespace ?? fresh.moduleNamespace, base, current: fresh, readAsset: (p) => ctx.assets.read(p), includeAssets: withAssets, version: ver.value.trim(), note: memo2.value.trim(), author: who.value.trim() });
           tt.close();
           if (!patch) {
             ctx.toast("기준과 달라진 내용이 없어요");
@@ -16129,7 +16129,7 @@ ${md()}
             pm.baseFrom = null;
           }
           const items2 = planPatch(patch, base).items.length;
-          await recordRelease(ctx, t.kind, t.kind === "module" ? t.id : t.chaId, { version: ver.value.trim(), note: memo.value.trim(), size: text.length, items: items2, cumulative: !moveBase }).catch(() => {
+          await recordRelease(ctx, t.kind, t.kind === "module" ? t.id : t.chaId, { version: ver.value.trim(), note: memo2.value.trim(), size: text.length, items: items2, cumulative: !moveBase }).catch(() => {
           });
           pm.version = "";
           pm.note = "";
@@ -16151,7 +16151,7 @@ ${md()}
           { class: "rb-form" },
           h("label", { class: "rb-field" }, h("span", { class: "rb-label" }, "버전"), ver),
           h("label", { class: "rb-field" }, h("span", { class: "rb-label" }, "제작자"), who),
-          h("label", { class: "rb-field wide" }, h("span", { class: "rb-label" }, "변경 내용"), memo)
+          h("label", { class: "rb-field wide" }, h("span", { class: "rb-label" }, "변경 내용"), memo2)
         ),
         row2("바뀐 에셋 넣기", "받는 사람이 이미지를 따로 구하지 않아도 돼요. 파일이 커질 수 있어요.", withAssets, (v) => {
           withAssets = pm.withAssets = v;
@@ -17747,8 +17747,7 @@ ${md()}
   var SELF_NAME = "dusk_atelier";
   var REG = "da_interop:reg:";
   var PATCH = "da_interop:patch:";
-  var KEYS2 = { cats: "rbm:pluginCats:v1", backups: "rbm:pluginBackups:v1" };
-  var MAX_BACKUPS2 = 5;
+  var KEYS2 = { cats: "rbm:pluginCats:v1" };
   var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   var clone5 = (v) => JSON.parse(JSON.stringify(v ?? null));
   async function readJson3(api, key, fallback) {
@@ -17775,37 +17774,6 @@ ${md()}
       return out;
     }
     return [];
-  }
-  async function detectEnv(api) {
-    const env = { pluginsReadable: false, pluginsWritable: false, reason: "" };
-    let list;
-    try {
-      list = await readPlugins(api);
-    } catch {
-      list = null;
-    }
-    if (!list) return { ...env, reason: "plugins-hidden" };
-    env.pluginsReadable = true;
-    const me = list.find((p) => p?.name === SELF_NAME);
-    if (!me) return { ...env, reason: "self-not-found" };
-    const orig = me.versionOfPlugin;
-    const probe = `${orig ?? ""}+probe${Date.now().toString(36)}`;
-    const withVer = (arr, v) => arr.map((p) => {
-      if (p?.name !== SELF_NAME) return p;
-      const q2 = { ...p };
-      if (v === void 0) delete q2.versionOfPlugin;
-      else q2.versionOfPlugin = v;
-      return q2;
-    });
-    try {
-      await api.setDatabaseLite({ plugins: withVer(list, probe) });
-      const after = await readPlugins(api);
-      const ok = after?.find((p) => p?.name === SELF_NAME)?.versionOfPlugin === probe;
-      if (ok) await api.setDatabaseLite({ plugins: withVer(after, orig) });
-      return { ...env, pluginsWritable: ok, reason: ok ? "ok" : "blocked" };
-    } catch (e) {
-      return { ...env, reason: "blocked" };
-    }
   }
   async function listInterop(api, installedNames) {
     const keys = (await storageKeys(api)).filter((k) => typeof k === "string" && k.startsWith(REG));
@@ -17878,66 +17846,10 @@ ${md()}
       self: p?.name === SELF_NAME
     }));
   }
-  async function writePlugins(api, next, label3) {
-    const cur = await readPlugins(api);
-    if (!cur) throw new Error("플러그인 목록을 읽을 수 없어요");
-    const list = await readJson3(api, KEYS2.backups, []);
-    const backups = Array.isArray(list) ? list : [];
-    backups.unshift({ id: Date.now().toString(36), label: label3, at: Date.now(), plugins: cur });
-    await writeJson2(api, KEYS2.backups, backups.slice(0, MAX_BACKUPS2));
-    await api.setDatabaseLite({ plugins: next });
-    const after = await readPlugins(api);
-    if (JSON.stringify(after?.map((p) => [p.name, p.enabled, p.versionOfPlugin])) !== JSON.stringify(next.map((p) => [p.name, p.enabled, p.versionOfPlugin]))) {
-      throw new Error("이 환경에서는 플러그인 목록이 바뀌지 않았어요");
-    }
-  }
-  async function setEnabled(api, name, on) {
-    if (name === SELF_NAME && !on) throw new Error("Dusk Atelier 자신은 끌 수 없어요");
-    const cur = await readPlugins(api);
-    await writePlugins(api, cur.map((p) => p.name === name ? { ...p, enabled: on } : p), `${on ? "켜기" : "끄기"}: ${name}`);
-  }
-  async function move2(api, name, where) {
-    const cur = [...await readPlugins(api)];
-    const i2 = cur.findIndex((p2) => p2.name === name);
-    if (i2 < 0) return;
-    const [p] = cur.splice(i2, 1);
-    const to = where === "top" ? 0 : where === "bottom" ? cur.length : where === "up" ? Math.max(0, i2 - 1) : Math.min(cur.length, i2 + 1);
-    cur.splice(to, 0, p);
-    await writePlugins(api, cur, `순서: ${name}`);
-  }
   function parseHeader(script) {
     const head = String(script).slice(0, 4096);
     const get = (k) => new RegExp(`^//@${k}[ \\t]+(.+)$`, "m").exec(head)?.[1]?.trim();
     return { name: get("name"), displayName: get("display-name"), version: get("version"), api: get("api"), updateURL: get("update-url") };
-  }
-  async function replaceCode(api, name, script) {
-    const hd = parseHeader(script);
-    if (hd.name && hd.name !== name) throw new Error(`파일의 이름(${hd.name})이 '${name}'과 달라요`);
-    const cur = await readPlugins(api);
-    if (!cur.some((p) => p.name === name)) throw new Error(`플러그인이 없어요: ${name}`);
-    await writePlugins(api, cur.map((p) => p.name !== name ? p : {
-      ...p,
-      script,
-      ...hd.version ? { versionOfPlugin: hd.version } : {},
-      ...hd.displayName ? { displayName: hd.displayName } : {},
-      ...hd.updateURL ? { updateURL: hd.updateURL } : {}
-    }), `코드 교체: ${name}`);
-  }
-  async function dedupe(api) {
-    const cur = await readPlugins(api);
-    const last2 = new Map(cur.map((p, i2) => [p.name, i2]));
-    const next = cur.filter((p, i2) => last2.get(p.name) === i2);
-    if (next.length !== cur.length) await writePlugins(api, next, "중복 정리");
-    return cur.length - next.length;
-  }
-  async function listBackups(api) {
-    const list = await readJson3(api, KEYS2.backups, []);
-    return (Array.isArray(list) ? list : []).map(({ plugins, ...b }) => ({ ...b, count: plugins?.length ?? 0 }));
-  }
-  async function restoreBackup(api, id) {
-    const b = (await readJson3(api, KEYS2.backups, [])).find((x2) => x2.id === id);
-    if (!b) throw new Error("백업이 없어요");
-    await writePlugins(api, b.plugins, "복원 직전 상태");
   }
   async function headText(res) {
     const rd = res.body?.getReader?.();
@@ -18002,7 +17914,7 @@ ${md()}
   }
 
   // src/data/interopSnippet.js
-  var INTEROP_SNIPPET = "/* ============================================================\n * DA Interop v1 — B 플러그인용 스니펫\n * https://github.com/Pyser08/dusk-atelier-interop\n *\n * 이 블록을 플러그인 코드 맨 아래에 붙여 넣으세요.\n * 공식 플러그인 API(pluginStorage)만 사용합니다.\n *\n * 저장 위치 (pluginStorage, 모든 플러그인 공용)\n *   da_interop:reg:<id>    ← 이 플러그인이 등록 (스키마·현재값)\n *   da_interop:patch:<id>  ← Dusk Atelier가 기록 (적용할 값)\n * ============================================================ */\nconst registerInterop = (() => {\n  const SPEC = 1;\n  const REG = 'da_interop:reg:';\n  const PATCH = 'da_interop:patch:';\n  const POLL_MS = 3000;\n  const R = globalThis.risuai ?? globalThis.Risuai;\n\n  const clone = (v) => JSON.parse(JSON.stringify(v ?? null));\n  // pluginStorage는 모든 플러그인이 함께 쓰는 저장소라 키 하나에 자기 항목만 둔다\n  async function readKey(key) {\n    try {\n      const raw = await R.pluginStorage.getItem(key);\n      return raw == null || raw === '' ? null : typeof raw === 'string' ? JSON.parse(raw) : raw;\n    } catch { return null; }\n  }\n  const writeKey = (key, value) => R.pluginStorage.setItem(key, JSON.stringify(value));\n\n  function normalize(cfg) {\n    if (!cfg || typeof cfg !== 'object') throw new Error('[DA Interop] 설정 객체가 필요합니다');\n    if (!/^[a-z0-9][a-z0-9._-]{1,63}$/.test(cfg.id ?? '')) throw new Error('[DA Interop] id 형식 오류: ' + cfg.id);\n    if (typeof cfg.apply !== 'function') throw new Error('[DA Interop] apply 함수가 필요합니다');\n    return {\n      id: cfg.id,\n      name: cfg.name ?? cfg.id,\n      version: String(cfg.version ?? ''),\n      pluginName: cfg.pluginName ?? '',\n      description: cfg.description ?? '',\n      fields: Array.isArray(cfg.fields) ? cfg.fields : [],\n      presets: Array.isArray(cfg.presets) ? cfg.presets : [],\n      apply: cfg.apply,\n      getValues: typeof cfg.getValues === 'function' ? cfg.getValues : null,\n    };\n  }\n\n  return async function registerInterop(rawCfg) {\n    if (!R?.pluginStorage?.getItem) {\n      console.warn('[DA Interop] 플러그인 API를 찾지 못해 등록을 건너뜁니다');\n      return null;\n    }\n    const cfg = normalize(rawCfg);\n    let appliedRev = 0;\n    let busy = false;\n\n    const currentValues = async () => {\n      if (cfg.getValues) {\n        try { return clone(await cfg.getValues()); } catch (e) { console.warn('[DA Interop] getValues 실패', e); }\n      }\n      return Object.fromEntries(cfg.fields.map((f) => [f.key, f.default ?? null]));\n    };\n\n    const publish = async (extra = {}) => {\n      const prev = await readKey(REG + cfg.id);\n      if (prev?.appliedRev) appliedRev = Math.max(appliedRev, prev.appliedRev);\n      return writeKey(REG + cfg.id, {\n        spec: SPEC,\n        id: cfg.id,\n        name: cfg.name,\n        version: cfg.version,\n        pluginName: cfg.pluginName,\n        description: cfg.description,\n        fields: clone(cfg.fields),\n        presets: clone(cfg.presets),\n        values: await currentValues(),\n        appliedRev,\n        lastError: null,\n        ...extra,\n        updatedAt: Date.now(),\n      });\n    };\n\n    const check = async () => {\n      if (busy) return;\n      busy = true;\n      try {\n        const patch = await readKey(PATCH + cfg.id);\n        if (!patch || !(patch.rev > appliedRev)) return;\n        let lastError = null;\n        try {\n          await cfg.apply(clone(patch.values ?? {}), { preset: patch.preset ?? null, rev: patch.rev, source: 'dusk-atelier' });\n        } catch (e) {\n          lastError = String(e?.message ?? e);\n          console.warn('[DA Interop] apply 실패', e);\n        }\n        appliedRev = patch.rev;\n        await publish({ lastError });\n      } finally {\n        busy = false;\n      }\n    };\n\n    await publish();\n    await check();\n    setInterval(() => {\n      if (typeof document === 'undefined' || document.visibilityState !== 'hidden') check().catch(() => {});\n    }, POLL_MS);\n\n    return {\n      /** 값이 플러그인 쪽에서 바뀌었을 때 호출하면 Dusk Atelier 화면도 갱신된다 */\n      refresh: () => publish(),\n    };\n  };\n})();\n";
+  var INTEROP_SNIPPET = "/* ============================================================\n * DA Interop v1 — B 플러그인용 스니펫\n * https://github.com/Pyser08/dusk-atelier-interop\n *\n * 이 블록을 플러그인 코드에 붙여 넣고, 그 아래에서 registerInterop({...})을 부르세요.\n * (registerInterop을 부르는 코드보다 반드시 위에 있어야 합니다)\n * 공식 플러그인 API(pluginStorage)만 사용합니다.\n *\n * 저장 위치 (pluginStorage, 모든 플러그인 공용)\n *   da_interop:reg:<id>    ← 이 플러그인이 등록 (스키마·현재값)\n *   da_interop:patch:<id>  ← Dusk Atelier가 기록 (적용할 값)\n * ============================================================ */\nconst registerInterop = (() => {\n  const SPEC = 1;\n  const REG = 'da_interop:reg:';\n  const PATCH = 'da_interop:patch:';\n  const POLL_MS = 3000;\n  const R = globalThis.risuai ?? globalThis.Risuai;\n\n  const clone = (v) => JSON.parse(JSON.stringify(v ?? null));\n  // pluginStorage는 모든 플러그인이 함께 쓰는 저장소라 키 하나에 자기 항목만 둔다\n  async function readKey(key) {\n    try {\n      const raw = await R.pluginStorage.getItem(key);\n      return raw == null || raw === '' ? null : typeof raw === 'string' ? JSON.parse(raw) : raw;\n    } catch { return null; }\n  }\n  const writeKey = (key, value) => R.pluginStorage.setItem(key, JSON.stringify(value));\n\n  function normalize(cfg) {\n    if (!cfg || typeof cfg !== 'object') throw new Error('[DA Interop] 설정 객체가 필요합니다');\n    if (!/^[a-z0-9][a-z0-9._-]{1,63}$/.test(cfg.id ?? '')) throw new Error('[DA Interop] id 형식 오류: ' + cfg.id);\n    if (typeof cfg.apply !== 'function') throw new Error('[DA Interop] apply 함수가 필요합니다');\n    return {\n      id: cfg.id,\n      name: cfg.name ?? cfg.id,\n      version: String(cfg.version ?? ''),\n      pluginName: cfg.pluginName ?? '',\n      description: cfg.description ?? '',\n      fields: Array.isArray(cfg.fields) ? cfg.fields : [],\n      presets: Array.isArray(cfg.presets) ? cfg.presets : [],\n      apply: cfg.apply,\n      getValues: typeof cfg.getValues === 'function' ? cfg.getValues : null,\n    };\n  }\n\n  return async function registerInterop(rawCfg) {\n    if (!R?.pluginStorage?.getItem) {\n      console.warn('[DA Interop] 플러그인 API를 찾지 못해 등록을 건너뜁니다');\n      return null;\n    }\n    const cfg = normalize(rawCfg);\n    let appliedRev = 0;\n    let busy = false;\n\n    const currentValues = async () => {\n      if (cfg.getValues) {\n        try { return clone(await cfg.getValues()); } catch (e) { console.warn('[DA Interop] getValues 실패', e); }\n      }\n      return Object.fromEntries(cfg.fields.map((f) => [f.key, f.default ?? null]));\n    };\n\n    const publish = async (extra = {}) => {\n      const prev = await readKey(REG + cfg.id);\n      if (prev?.appliedRev) appliedRev = Math.max(appliedRev, prev.appliedRev);\n      return writeKey(REG + cfg.id, {\n        spec: SPEC,\n        id: cfg.id,\n        name: cfg.name,\n        version: cfg.version,\n        pluginName: cfg.pluginName,\n        description: cfg.description,\n        fields: clone(cfg.fields),\n        presets: clone(cfg.presets),\n        values: await currentValues(),\n        appliedRev,\n        lastError: null,\n        ...extra,\n        updatedAt: Date.now(),\n      });\n    };\n\n    const check = async () => {\n      if (busy) return;\n      busy = true;\n      try {\n        const patch = await readKey(PATCH + cfg.id);\n        if (!patch || !(patch.rev > appliedRev)) return;\n        let lastError = null;\n        try {\n          await cfg.apply(clone(patch.values ?? {}), { preset: patch.preset ?? null, rev: patch.rev, source: 'dusk-atelier' });\n        } catch (e) {\n          lastError = String(e?.message ?? e);\n          console.warn('[DA Interop] apply 실패', e);\n        }\n        appliedRev = patch.rev;\n        await publish({ lastError });\n      } finally {\n        busy = false;\n      }\n    };\n\n    await publish();\n    await check();\n    setInterval(() => {\n      if (typeof document === 'undefined' || document.visibilityState !== 'hidden') check().catch(() => {});\n    }, POLL_MS);\n\n    return {\n      /** 값이 플러그인 쪽에서 바뀌었을 때 호출하면 Dusk Atelier 화면도 갱신된다 */\n      refresh: () => publish(),\n    };\n  };\n})();\n";
 
   // src/data/pluginTemplate.js
   var DRAFT_KEY = "rbm:pluginDraft:v1";
@@ -18231,13 +18143,13 @@ ${code}
     }
     return out + esc(code.slice(last2)) + "\n";
   }
-  function codeEditor(value, { onChange, label: label3 = "코드" } = {}) {
+  function codeEditor(value, { onChange, label: label3 = "코드", minHeight, maxHeight } = {}) {
     if (!document.getElementById("rb-code-style")) document.head.appendChild(h("style", { id: "rb-code-style" }, CSS3));
     const pre = h("pre", { "aria-hidden": "true" });
     const gut = h("div", { class: "rb-code-gut", "aria-hidden": "true" });
     const ta = h("textarea", { spellcheck: "false", autocapitalize: "off", autocomplete: "off", "aria-label": label3, wrap: "off" });
     ta.value = value;
-    const el = h("div", { class: "rb-code" }, h("div", { class: "rb-code-in" }, gut, h("div", { class: "rb-code-area" }, pre, ta)));
+    const el = h("div", { class: "rb-code", style: { minHeight, maxHeight } }, h("div", { class: "rb-code-in" }, gut, h("div", { class: "rb-code-area" }, pre, ta)));
     let raf = 0, lines = 0;
     const paint = () => {
       raf = 0;
@@ -18298,62 +18210,76 @@ ${code}
   }
 
   // src/ui/screens/plugins.js
-  var VIEWS = [["list", "목록"], ["interop", "연동 설정"], ["create", "만들기"], ["storage", "저장소"], ["backup", "백업"]];
+  var VIEWS = [["list", "목록"], ["interop", "연동 설정"], ["create", "만들기"], ["storage", "저장소"]];
   var INTEROP_URL = "https://pyser08.github.io/dusk-atelier-interop/";
-  async function renderPlugins(ctx) {
+  var PLUGINS_TTL = 6e4;
+  var memo = (ctx) => ctx.state.pluginCache ??= {};
+  async function getPlugins(ctx, fresh) {
+    const c = memo(ctx);
+    if (fresh || !c.plugins || Date.now() - c.pluginsAt > PLUGINS_TTL) {
+      c.plugins = await listPlugins(ctx.api).catch(() => []);
+      c.pluginsAt = Date.now();
+      ctx.setNavCount("plugins", c.plugins.length || void 0);
+    }
+    return c.plugins;
+  }
+  async function getInterop(ctx, fresh) {
+    const c = memo(ctx);
+    if (fresh || !c.interop || Date.now() - c.interopAt > 3e3) {
+      const names = c.plugins ? new Set(c.plugins.map((p) => p.name)) : null;
+      c.interop = await listInterop(ctx.api, names).catch(() => []);
+      c.interopAt = Date.now();
+    }
+    return c.interop;
+  }
+  var LOADERS = { list: viewList, interop: viewInterop, create: viewCreate, storage: viewStorage };
+  async function renderPlugins(ctx, { fresh = false } = {}) {
     const st = ctx.state;
-    st.pluginView ??= "list";
-    if (!st.pluginEnv) {
-      replace(ctx.main, loading("플러그인 환경 확인 중"));
-      st.pluginEnv = await ctx.svc.serial(() => detectEnv(ctx.api)).catch(() => ({ pluginsReadable: false, pluginsWritable: false, reason: "error" }));
-    }
-    const plugins = st.pluginEnv.pluginsReadable ? await listPlugins(ctx.api) : [];
-    const interop = await listInterop(ctx.api, new Set(plugins.map((p) => p.name))).catch(() => []);
-    ctx.setNavCount("plugins", plugins.length || void 0);
-    const view = { list: viewList, interop: viewInterop, create: viewCreate, storage: viewStorage, backup: viewBackup }[st.pluginView] ?? viewList;
-    replace(ctx.main, h(
-      "div",
-      { class: "rb-section rb-scroll", style: "flex:1" },
-      h(
-        "div",
-        { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
-        h("div", { style: "flex:1;min-width:200px" }, h("h2", { class: "rb-h2" }, "플러그인"), h("p", { class: "rb-p" }, "설치한 플러그인을 묶어 보고, 연동한 플러그인의 설정을 여기서 바꿔요.")),
-        segmented(VIEWS, st.pluginView, (v) => {
-          st.pluginView = v;
-          ctx.closeSheet();
-          renderPlugins(ctx);
-        }, "보기")
-      ),
-      envNote(ctx),
-      await view(ctx, plugins, interop)
-    ));
-  }
-  function envNote(ctx) {
-    const env = ctx.state.pluginEnv;
-    if (env.pluginsWritable) return null;
-    const text = !env.pluginsReadable ? "이 RisuAI에서는 플러그인 목록을 읽을 수 없어요. 연동 설정과 저장소 보기만 쓸 수 있어요." : "이 RisuAI에서는 다른 플러그인을 켜고 끄거나 순서·코드를 바꿀 수 없어요 (보안 제한). 보기, 카테고리, 업데이트 확인, 연동 설정은 그대로 쓸 수 있어요.";
-    return h(
-      "div",
-      { style: "display:flex;gap:8px;align-items:flex-start" },
-      h("div", { style: "flex:1" }, note("info", text)),
-      btn("다시 확인", { size: "sm", icon: "refresh", onClick: () => {
-        ctx.state.pluginEnv = null;
+    if (!LOADERS[st.pluginView]) st.pluginView = "list";
+    let shell = ctx.main.querySelector(":scope > .rb-plugins");
+    if (!shell) {
+      const seg = segmented(VIEWS, st.pluginView, (v) => {
+        if (v === st.pluginView) return;
+        st.pluginView = v;
+        ctx.closeSheet();
         renderPlugins(ctx);
-      } })
-    );
-  }
-  var writable = (ctx) => !!ctx.state.pluginEnv?.pluginsWritable;
-  async function run(ctx, fn, ok) {
-    try {
-      const r = await ctx.svc.serial(fn);
-      if (ok) ctx.toast(typeof ok === "function" ? ok(r) : ok);
-    } catch (err2) {
-      ctx.toast(err2?.message ?? String(err2), { error: true });
+      }, "보기");
+      shell = h(
+        "div",
+        { class: "rb-section rb-scroll rb-plugins", style: "flex:1" },
+        h(
+          "div",
+          { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
+          h("div", { style: "flex:1;min-width:200px" }, h("h2", { class: "rb-h2" }, "플러그인"), h("p", { class: "rb-p" }, "설치한 플러그인을 묶어 보고, 연동한 플러그인의 설정을 바꾸거나 새로 만들어요.")),
+          seg
+        ),
+        h("div", { class: "rb-plugins-body", style: "display:flex;flex-direction:column;gap:14px;transition:opacity .12s" })
+      );
+      replace(ctx.main, shell);
     }
-    renderPlugins(ctx);
+    shell.querySelectorAll(".rb-seg button").forEach((b) => b.setAttribute("aria-checked", b.dataset.v === st.pluginView ? "true" : "false"));
+    const body = shell.querySelector(".rb-plugins-body");
+    const view = st.pluginView;
+    const token = st.pluginToken = (st.pluginToken ?? 0) + 1;
+    const slow = setTimeout(() => {
+      if (token === st.pluginToken) replace(body, loading("불러오는 중", { rows: view === "list" ? 4 : 0 }));
+    }, 150);
+    body.style.opacity = ".55";
+    try {
+      const node2 = await LOADERS[view](ctx, { fresh });
+      if (token !== st.pluginToken) return;
+      if (body.firstElementChild !== node2) replace(body, node2);
+    } catch (err2) {
+      if (token === st.pluginToken) replace(body, note("err", `화면을 열지 못했어요: ${err2?.message ?? err2}`));
+    } finally {
+      clearTimeout(slow);
+      if (token === st.pluginToken) body.style.opacity = "";
+    }
   }
-  async function viewList(ctx, plugins, interop) {
-    if (!ctx.state.pluginEnv.pluginsReadable) return h("div", { class: "rb-empty" }, "플러그인 목록을 볼 수 없는 환경이에요.");
+  var refresh = (ctx) => renderPlugins(ctx, { fresh: true });
+  async function viewList(ctx, { fresh }) {
+    const plugins = await getPlugins(ctx, fresh);
+    const interop = await getInterop(ctx, fresh);
     const upd = ctx.state.pluginUpd ?? {};
     const linked = new Map(interop.filter((e) => e.pluginName).map((e) => [e.pluginName, e]));
     const q2 = (ctx.state.search ?? "").trim().toLowerCase();
@@ -18365,15 +18291,9 @@ ${code}
       groups.get(g).push(p);
     }
     const keys = [...groups.keys()].sort((a, b) => a === "미분류" ? 1 : b === "미분류" ? -1 : a.localeCompare(b));
-    const dupCount = plugins.filter((p) => p.dup).length;
     const updCount = Object.values(upd).filter((u) => u.hasUpdate).length;
     const row2 = (p) => {
       const u = upd[p.name];
-      const sw = switchEl(p.enabled, {
-        label: `${p.displayName} 켜기`,
-        disabled: !writable(ctx) || p.self,
-        onChange: (on) => run(ctx, () => setEnabled(ctx.api, p.name, on), on ? "켰어요" : "껐어요")
-      });
       return h(
         "div",
         { class: ["rb-row", !p.enabled && "off"], style: "cursor:default" },
@@ -18386,13 +18306,13 @@ ${code}
             { class: "ttl" },
             h("span", { class: "name" }, p.displayName),
             p.self && badge("이 플러그인", "acc"),
+            !p.enabled && badge("꺼짐", "mute"),
             linked.has(p.name) && badge("연동", "acc2"),
             u?.hasUpdate && badge(`v${u.latest} 있음`, "acc"),
             p.dup && badge("중복", "warn")
           ),
           h("span", { class: "meta" }, [p.name, p.version && `v${p.version}`, fmtBytes(p.size)].filter(Boolean).join(" · "))
         ),
-        sw,
         iconBtn("more", `${p.displayName} 메뉴`, { onClick: (ev) => rowMenu(ctx, p, linked.get(p.name), ev.currentTarget) })
       );
     };
@@ -18409,10 +18329,7 @@ ${code}
           ctx.toast(n ? `새 버전이 있는 플러그인 ${n}개` : "모두 최신이에요 (업데이트 주소가 있는 것만 확인)");
           renderPlugins(ctx);
         } }),
-        dupCount && writable(ctx) ? btn(`중복 정리 (${dupCount})`, { size: "sm", icon: "trash", onClick: async () => {
-          if (!await confirmDialog(ctx.win, { title: "중복된 플러그인을 정리할까요?", body: "같은 이름이 여러 개면 가장 나중에 추가된 것만 남겨요. 정리 전 상태는 백업에 남아요.", ok: "정리" })) return;
-          run(ctx, () => dedupe(ctx.api), (n) => `${n}개를 정리했어요`);
-        } }) : null,
+        btn("새로고침", { size: "sm", icon: "refresh", onClick: () => refresh(ctx) }),
         btn("내보내기", { size: "sm", icon: "upload", onClick: async () => download(`dusk-plugins-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, await exportAll(ctx.api), "application/json") })
       ),
       shown.length ? null : h("div", { class: "rb-empty" }, q2 ? "찾는 플러그인이 없어요." : "플러그인이 없어요."),
@@ -18425,7 +18342,6 @@ ${code}
     );
   }
   function rowMenu(ctx, p, entry2, anchor) {
-    const w = writable(ctx);
     openMenu(ctx.win, anchor, [
       entry2 && { label: "연동 설정 열기", icon: "sliders", onClick: () => {
         ctx.state.pluginView = "interop";
@@ -18436,26 +18352,14 @@ ${code}
         const c = await promptDialog(ctx.win, { title: "카테고리", label: "비우면 미분류로 돌아가요", value: p.category, placeholder: "예: 번역, UI" });
         if (c === null) return;
         await setCategory(ctx.api, p.name, c.trim());
+        p.category = c.trim();
         renderPlugins(ctx);
-      } },
-      w && "sep",
-      w && { label: "맨 위로", icon: "up", onClick: () => run(ctx, () => move2(ctx.api, p.name, "top")) },
-      w && { label: "위로", icon: "up", onClick: () => run(ctx, () => move2(ctx.api, p.name, "up")) },
-      w && { label: "아래로", icon: "down", onClick: () => run(ctx, () => move2(ctx.api, p.name, "down")) },
-      w && { label: "맨 아래로", icon: "down", onClick: () => run(ctx, () => move2(ctx.api, p.name, "bottom")) },
-      w && "sep",
-      w && { label: "코드 교체 (.js 파일)", icon: "code", onClick: async () => {
-        const [f] = await pickFiles({ accept: ".js,text/javascript" });
-        if (!f) return;
-        const script = await f.text();
-        const hd = parseHeader(script);
-        if (!await confirmDialog(ctx.win, { title: `'${p.displayName}' 코드를 바꿀까요?`, body: `${f.name}${hd.version ? ` (v${hd.version})` : ""}
-바꾸기 전 상태는 백업에 남아요. 적용하려면 RisuAI를 새로고침해야 할 수 있어요.`, ok: "바꾸기" })) return;
-        run(ctx, () => replaceCode(ctx.api, p.name, script), "코드를 바꿨어요");
       } }
     ]);
   }
-  async function viewInterop(ctx, plugins, interop) {
+  async function viewInterop(ctx, { fresh }) {
+    if (!memo(ctx).plugins) await getPlugins(ctx).catch(() => []);
+    const interop = await getInterop(ctx, true);
     const open = ctx.state.pluginOpen && interop.find((e) => e.id === ctx.state.pluginOpen);
     if (open) setTimeout(() => showInterop(ctx, open), 0);
     ctx.state.pluginOpen = null;
@@ -18542,6 +18446,7 @@ ${code}
       }
       const fresh = (await listInterop(ctx.api).catch(() => [])).find((x2) => x2.id === e.id);
       if (fresh && ctx.state.pluginView === "interop") showInterop(ctx, fresh);
+      if (ctx.state.pluginView === "interop") refresh(ctx);
     };
     const readAll = () => {
       const out = { ...e.values };
@@ -18581,48 +18486,59 @@ ${code}
         if (!await confirmDialog(ctx.win, { title: `${e.name} 연동 정보를 지울까요?`, body: "플러그인을 지웠을 때 정리용이에요. 플러그인이 켜져 있으면 다음 실행 때 다시 등록돼요.", ok: "지우기", danger: true })) return;
         await ctx.svc.serial(() => pruneInterop(ctx.api, e.id)).catch((err2) => ctx.toast(err2?.message ?? String(err2), { error: true }));
         ctx.closeSheet();
-        renderPlugins(ctx);
+        refresh(ctx);
       } })
     ));
     ctx.openSheet();
   }
-  async function viewStorage(ctx) {
+  async function viewStorage(ctx, { fresh }) {
     if (!storageAvailable(ctx.api)) return note("info", "이 RisuAI에서는 저장소 목록을 볼 수 없어요.");
-    const items = await storageDump(ctx.api).catch(() => []);
+    const c = memo(ctx);
+    if (fresh || !c.storage || Date.now() - c.storageAt > 1e4) {
+      c.storage = await storageDump(ctx.api).catch(() => []);
+      c.storageAt = Date.now();
+    }
+    const items = c.storage;
     const total = items.reduce((s, x2) => s + x2.size, 0);
     return h(
       "div",
       { style: "display:flex;flex-direction:column;gap:6px" },
-      h("p", { class: "rb-muted" }, `플러그인 저장소 값 ${items.length}개 · ${fmtBytes(total)} (모든 플러그인이 함께 쓰는 저장소예요. 다른 플러그인 값을 지우면 그 플러그인 설정이 사라질 수 있어요)`),
+      h(
+        "div",
+        { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" },
+        h("p", { class: "rb-muted", style: "flex:1;min-width:200px" }, `플러그인 저장소 값 ${items.length}개 · ${fmtBytes(total)} (모든 플러그인이 함께 쓰는 저장소예요. 다른 플러그인 값을 지우면 그 플러그인 설정이 사라질 수 있어요)`),
+        btn("새로고침", { size: "sm", icon: "refresh", onClick: () => refresh(ctx) })
+      ),
       items.map((it) => h(
         "button",
-        { type: "button", class: "rb-row", onClick: () => {
-          const text = typeof it.value === "string" ? prettyJson(it.value) : JSON.stringify(it.value, null, 2);
-          ctx.showDetail(h(
-            "div",
-            { class: "rb-section", style: "gap:10px" },
-            h("h2", { class: "rb-h2", style: "word-break:break-all" }, it.key),
-            h("p", { class: "rb-muted" }, fmtBytes(it.size)),
-            h("pre", { class: "rb-card pad bordered rb-scroll", style: "margin:0;max-height:60vh;overflow:auto;font-size:12px;white-space:pre-wrap;word-break:break-all" }, text.length > 2e5 ? text.slice(0, 2e5) + "\n…(잘림)" : text),
-            h(
-              "div",
-              { style: "display:flex;gap:8px" },
-              btn("내려받기", { size: "sm", icon: "download", onClick: () => download(`${it.key.replace(/[^\w.-]+/g, "_")}.json`, text, "application/json") }),
-              btn("지우기", { size: "sm", kind: "danger", icon: "trash", onClick: async () => {
-                if (!await confirmDialog(ctx.win, { title: `'${it.key}'을(를) 지울까요?`, body: "이 값을 쓰는 플러그인의 설정이나 기록이 사라질 수 있어요.", ok: "지우기", danger: true })) return;
-                await ctx.api.pluginStorage.removeItem(it.key);
-                ctx.closeSheet();
-                renderPlugins(ctx);
-              } })
-            )
-          ));
-          ctx.openSheet();
-        } },
+        { type: "button", class: "rb-row", onClick: () => showStorageItem(ctx, it) },
         h("span", { style: "display:flex;color:var(--rb-sub)" }, icon("text", 18)),
         h("div", { class: "txt" }, h("div", { class: "ttl" }, h("span", { class: "name" }, it.key)), h("span", { class: "meta" }, fmtBytes(it.size))),
         icon("chevron", 16)
       ))
     );
+  }
+  function showStorageItem(ctx, it) {
+    const text = typeof it.value === "string" ? prettyJson(it.value) : JSON.stringify(it.value, null, 2);
+    ctx.showDetail(h(
+      "div",
+      { class: "rb-section", style: "gap:10px" },
+      h("h2", { class: "rb-h2", style: "word-break:break-all" }, it.key),
+      h("p", { class: "rb-muted" }, fmtBytes(it.size)),
+      h("pre", { class: "rb-card pad bordered rb-scroll", style: "margin:0;max-height:60vh;overflow:auto;font-size:12px;white-space:pre-wrap;word-break:break-all" }, text.length > 2e5 ? text.slice(0, 2e5) + "\n…(잘림)" : text),
+      h(
+        "div",
+        { style: "display:flex;gap:8px" },
+        btn("내려받기", { size: "sm", icon: "download", onClick: () => download(`${it.key.replace(/[^\w.-]+/g, "_")}.json`, text, "application/json") }),
+        btn("지우기", { size: "sm", kind: "danger", icon: "trash", onClick: async () => {
+          if (!await confirmDialog(ctx.win, { title: `'${it.key}'을(를) 지울까요?`, body: "이 값을 쓰는 플러그인의 설정이나 기록이 사라질 수 있어요.", ok: "지우기", danger: true })) return;
+          await ctx.api.pluginStorage.removeItem(it.key);
+          ctx.closeSheet();
+          refresh(ctx);
+        } })
+      )
+    ));
+    ctx.openSheet();
   }
   function prettyJson(s) {
     try {
@@ -18630,34 +18546,6 @@ ${code}
     } catch {
       return s;
     }
-  }
-  async function viewBackup(ctx) {
-    const list = await listBackups(ctx.api);
-    const w = writable(ctx);
-    return h(
-      "div",
-      { style: "display:flex;flex-direction:column;gap:10px" },
-      h(
-        "div",
-        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:8px" },
-        h("h3", { class: "rb-h3" }, "파일로 내보내기"),
-        h("p", { class: "rb-p" }, "플러그인 목록(코드 포함), 카테고리, 연동 설정을 JSON 파일 하나로 받아요."),
-        h("div", null, btn("내보내기", { icon: "download", onClick: async () => download(`dusk-plugins-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, await exportAll(ctx.api), "application/json") }))
-      ),
-      h("h3", { class: "rb-h3" }, "자동 백업"),
-      h("p", { class: "rb-muted" }, "플러그인을 켜고 끄거나 순서·코드를 바꾸기 직전 상태를 최근 5개까지 남겨요."),
-      list.length ? null : h("div", { class: "rb-empty" }, "아직 백업이 없어요."),
-      list.map((b) => h(
-        "div",
-        { class: "rb-row", style: "cursor:default" },
-        h("span", { style: "display:flex;color:var(--rb-sub)" }, icon("history", 18)),
-        h("div", { class: "txt" }, h("div", { class: "ttl" }, h("span", { class: "name" }, b.label)), h("span", { class: "meta" }, `${fmtWhen(b.at)} · 플러그인 ${b.count}개`)),
-        w ? btn("복원", { size: "sm", onClick: async () => {
-          if (!await confirmDialog(ctx.win, { title: "이 상태로 되돌릴까요?", body: `${b.label} 직전 상태로 플러그인 목록을 되돌려요. 지금 상태도 백업에 남아요.`, ok: "되돌리기" })) return;
-          run(ctx, () => restoreBackup(ctx.api, b.id), "되돌렸어요");
-        } }) : null
-      ))
-    );
   }
   var FIND = { header: "//@name", snippet: "const registerInterop", body: "===== 플러그인 본체", fields: "fields: [", presets: "presets: [", getValues: "getValues:", apply: "apply: async", id: "id: '", name: "//@name", displayName: "//@display-name", version: "//@version", description: "description:" };
   function helpBtn(ctx, key, editor) {
@@ -18688,6 +18576,8 @@ ${code}
     ctx.openSheet();
   }
   async function viewCreate(ctx) {
+    const kept = memo(ctx).createNode;
+    if (kept) return kept;
     if (!document.getElementById("rb-help-style")) document.head.appendChild(h("style", { id: "rb-help-style" }, `.rb-help-q{width:20px;height:20px;border-radius:50%;border:1px solid var(--rb-line);background:var(--rb-surf);color:var(--rb-acc-text);font-size:12px;font-weight:700;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:0}.rb-help-q:hover{background:var(--rb-acc-soft)}.rb-sec-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;border:1px solid var(--rb-line);font-size:12px;color:var(--rb-sub);cursor:pointer;background:transparent}.rb-sec-chip:hover{background:var(--rb-hover)}`));
     const saved = await (async () => {
       try {
@@ -18704,7 +18594,7 @@ ${code}
       saveTimer = setTimeout(() => ctx.api.pluginStorage.setItem(DRAFT_KEY, JSON.stringify({ v: 1, meta, code: editor.value, at: Date.now() })).catch(() => {
       }), 600);
     };
-    const editor = codeEditor(saved?.code || buildTemplate(meta), { label: "플러그인 코드", onChange: saveDraft });
+    const editor = codeEditor(saved?.code || buildTemplate(meta), { label: "플러그인 코드", onChange: saveDraft, minHeight: "62vh", maxHeight: "82vh" });
     const results = h("div", { style: "display:flex;flex-direction:column;gap:6px" });
     const runCheck = () => {
       const r = checkCode(editor.value, meta);
@@ -18722,10 +18612,11 @@ ${code}
     };
     const sec = (key, label3) => h("span", { class: "rb-sec-chip", role: "button", tabindex: "0", onClick: () => editor.reveal(FIND[key]) }, label3, helpBtn(ctx, key, editor));
     const fileName = () => `${(meta.name || "plugin").replace(/[^\w.-]+/g, "_")}.js`;
-    return h(
+    const node2 = h(
       "div",
       { style: "display:flex;flex-direction:column;gap:14px" },
       h("p", { class: "rb-p" }, "DA Interop이 들어간 플러그인을 바로 만들어요. 맨 위에는 스니펫, 맨 아래에는 등록 코드가 들어 있어요. ? 를 누르면 어디에 무엇을 넣는지 볼 수 있어요."),
+      h("h3", { class: "rb-h3" }, "기본 정보"),
       h(
         "div",
         { class: "rb-card pad bordered", style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px" },
@@ -18735,18 +18626,24 @@ ${code}
         field("id", "연동 id", "my-plugin"),
         h("div", { style: "grid-column:1/-1" }, field("description", "설명", "Dusk Atelier에 보일 한 줄 설명"))
       ),
+      // 코드 칸: 위아래로 넉넉히 띄우고 선으로 구분해 스크롤하다가 바로 찾을 수 있게
       h(
         "div",
-        { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" },
-        h("span", { class: "rb-muted", style: "font-size:12px" }, "구역"),
-        sec("header", "① 머리말"),
-        sec("snippet", "② 스니펫"),
-        sec("body", "③ 본체"),
-        sec("fields", "④ fields"),
-        sec("presets", "presets"),
-        sec("apply", "apply")
+        { class: "rb-create-code", style: "display:flex;flex-direction:column;gap:12px;margin:26px 0;padding:22px 0;border-top:1px solid var(--rb-line);border-bottom:1px solid var(--rb-line)" },
+        h(
+          "div",
+          { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" },
+          h("h3", { class: "rb-h3", style: "display:flex;align-items:center;gap:6px;margin-right:6px" }, icon("code", 18), "플러그인 코드"),
+          sec("header", "① 머리말"),
+          sec("snippet", "② 스니펫"),
+          sec("body", "③ 본체"),
+          sec("fields", "④ fields"),
+          sec("presets", "presets"),
+          sec("apply", "apply")
+        ),
+        editor.el
       ),
-      editor.el,
+      h("h3", { class: "rb-h3" }, "검사·설치"),
       results,
       h(
         "div",
@@ -18767,6 +18664,8 @@ ${code}
         } })
       )
     );
+    memo(ctx).createNode = node2;
+    return node2;
   }
   async function installDraft(ctx, code, meta, runCheck) {
     const r = runCheck();
@@ -18784,6 +18683,7 @@ ${code}
     const after = (await ctx.api.getDatabase(["plugins"]).catch(() => null))?.plugins ?? [];
     if (after.some((p) => p.name === obj.name && p.script === obj.script)) {
       ctx.toast(`'${obj.displayName}'을(를) 설치했어요. 실행되지 않으면 새로고침해 주세요.`, { seconds: 8 });
+      memo(ctx).pluginsAt = 0;
     } else ctx.toast("설치되지 않았어요. 확인 창에서 취소했거나, 같은 코드가 이미 설치돼 있어요.", { error: true, seconds: 8 });
   }
 
