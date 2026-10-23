@@ -348,18 +348,18 @@
       while (x2 + 4 <= xEnd) {
         const id = u16(cd, x2), len = u16(cd, x2 + 2);
         if (id === 1) {
-          let q = x2 + 4;
+          let q2 = x2 + 4;
           if (size === 4294967295) {
-            size = u64(cd, q);
-            q += 8;
+            size = u64(cd, q2);
+            q2 += 8;
           }
           if (compSize === 4294967295) {
-            compSize = u64(cd, q);
-            q += 8;
+            compSize = u64(cd, q2);
+            q2 += 8;
           }
           if (localOffset === 4294967295) {
-            localOffset = u64(cd, q);
-            q += 8;
+            localOffset = u64(cd, q2);
+            q2 += 8;
           }
         }
         x2 += 4 + len;
@@ -1540,16 +1540,16 @@ ${rgn}`, mode: "constant", alwaysActive: true, selective: false });
       description: str(data.description),
       html: str(data.html),
       floatingButton: data.floatingButton === true,
-      questions: (Array.isArray(data.questions) ? data.questions : []).filter((q) => q && typeof q === "object" && !Array.isArray(q)).map((q) => ({
-        ...q,
-        id: str(q.id) || newId2(),
-        title: str(q.title),
-        description: str(q.description),
-        type: q.type === "multiple" || q.type === "text" ? q.type : "single",
-        varName: str(q.varName),
-        required: q.required === true,
-        placeholder: str(q.placeholder),
-        options: (Array.isArray(q.options) ? q.options : []).filter((o) => o && typeof o === "object" && !Array.isArray(o)).map((o) => ({ ...o, label: str(o.label), value: str(o.value) }))
+      questions: (Array.isArray(data.questions) ? data.questions : []).filter((q2) => q2 && typeof q2 === "object" && !Array.isArray(q2)).map((q2) => ({
+        ...q2,
+        id: str(q2.id) || newId2(),
+        title: str(q2.title),
+        description: str(q2.description),
+        type: q2.type === "multiple" || q2.type === "text" ? q2.type : "single",
+        varName: str(q2.varName),
+        required: q2.required === true,
+        placeholder: str(q2.placeholder),
+        options: (Array.isArray(q2.options) ? q2.options : []).filter((o) => o && typeof o === "object" && !Array.isArray(o)).map((o) => ({ ...o, label: str(o.label), value: str(o.value) }))
       }))
     };
   }
@@ -8656,7 +8656,7 @@ ${registrationRow.content}`;
     const ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>`;
     const X = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
     let busy = false, stopRequested = false, root = null;
-    const esc2 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    const esc3 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
     const fmtBytes2 = (n) => n >= 1e9 ? (n / 1e9).toFixed(2) + " GB" : n >= 1e6 ? (n / 1e6).toFixed(1) + " MB" : n >= 1e3 ? (n / 1e3).toFixed(0) + " KB" : n + " B";
     const fmtTime = (ms) => {
       const s = Math.round(ms / 1e3);
@@ -8702,7 +8702,7 @@ ${registrationRow.content}`;
       frame(`<div class="card"><div class="drop" id="drop"><b>파일을 여기로 끌어 놓거나 아래에서 고르세요</b> (여러 개도 돼요)<br>
               <span class="muted">캐릭터: .charx · .png · .jpg · 카드 .json &nbsp;|&nbsp; 모듈: .risum · .module.charx · 모듈 .json</span>
               <br><button class="primary" id="pick" style="margin-top:14px;min-width:160px">파일 고르기</button><input type="file" id="file" multiple accept=".charx,.png,.jpg,.jpeg,.risum,.json" style="display:none"></div>
-            ${errorText ? `<div class="err">${esc2(errorText)}</div>` : ""}
+            ${errorText ? `<div class="err">${esc3(errorText)}</div>` : ""}
             ${queue.length ? `<div class="muted" style="margin-top:8px">대기 중인 파일 ${queue.length}개</div>` : ""}</div>
           <div class="row"><button id="backups">백업·되돌리기</button>${queue.length ? '<button class="primary" id="nextq">다음 파일</button>' : ""}${closeBtn()}</div>`);
       root.querySelector("#backups").addEventListener("click", () => renderBackups());
@@ -8729,9 +8729,9 @@ ${registrationRow.content}`;
       });
     }
     function renderProgress(title, pct, detail3) {
-      frame(`<div class="card"><div>${esc2(title)}</div>
+      frame(`<div class="card"><div>${esc3(title)}</div>
             <div class="bar"><i style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></i></div>
-            <div class="muted" id="detail">${esc2(detail3 ?? "")}</div></div>
+            <div class="muted" id="detail">${esc3(detail3 ?? "")}</div></div>
           <div class="row"><button id="close" class="danger">취소</button></div>`);
     }
     function updateProgress(pct, detail3) {
@@ -8841,20 +8841,20 @@ ${registrationRow.content}`;
       const sizeOf = (c) => c.kind === "character" ? `에셋 ${characterAssetKeys(db.characters[c.index]).length}개 · 로어북 ${(db.characters[c.index].globalLore ?? []).length}개` : `에셋 ${(c.module.assets ?? []).length}개 · 로어북 ${(c.module.lorebook ?? []).length}개`;
       const opts = top.map((c, i2) => `
           <label class="opt"><input type="radio" name="t" value="${i2}" ${i2 === 0 ? "checked" : ""}>
-            <div><div>${kindTag(c.kind)}<b>${esc2(c.label)}</b> 업데이트<span class="badge ${c.confidence}">${{ high: "높음", medium: "보통", low: "낮음" }[c.confidence]}</span></div>
-            <div class="muted">${esc2(c.reasons.join(" · "))} · ${sizeOf(c)}</div></div></label>`).join("");
+            <div><div>${kindTag(c.kind)}<b>${esc3(c.label)}</b> 업데이트<span class="badge ${c.confidence}">${{ high: "높음", medium: "보통", low: "낮음" }[c.confidence]}</span></div>
+            <div class="muted">${esc3(c.reasons.join(" · "))} · ${sizeOf(c)}</div></div></label>`).join("");
       const ch = incoming.character, hasMod = !!incoming.module;
       const manual = [
-        ...ch ? db.characters.map((c, i2) => c && c.type !== "group" && !c.trashTime ? `<option value="character:${i2}">[캐릭터] ${esc2(c.name)}</option>` : "") : [],
-        ...hasMod ? db.modules.map((m, i2) => `<option value="module:${i2}">[모듈] ${esc2(m.name)}</option>`) : []
+        ...ch ? db.characters.map((c, i2) => c && c.type !== "group" && !c.trashTime ? `<option value="character:${i2}">[캐릭터] ${esc3(c.name)}</option>` : "") : [],
+        ...hasMod ? db.modules.map((m, i2) => `<option value="module:${i2}">[모듈] ${esc3(m.name)}</option>`) : []
       ].join("");
       const newOpts = [
         ch ? { v: "newchar", html: `${kindTag("character")}새 캐릭터로 추가`, sub: "기존 캐릭터는 건드리지 않습니다" } : null,
         hasMod ? { v: "newmod", html: `${kindTag("module")}새 모듈로 추가`, sub: "기존 모듈은 건드리지 않습니다" } : null
       ].filter(Boolean);
       if (!ch || /\.module\.charx$/i.test(file.name)) newOpts.reverse();
-      frame(`<div class="card"><div class="grid"><b>파일</b><span>${esc2(file.name)} (${fmtBytes2(file.size)})</span>
-              <b>이름</b><span>${esc2(ch ? ch.fields.name : incoming.module.name)}</span>
+      frame(`<div class="card"><div class="grid"><b>파일</b><span>${esc3(file.name)} (${fmtBytes2(file.size)})</span>
+              <b>이름</b><span>${esc3(ch ? ch.fields.name : incoming.module.name)}</span>
               <b>에셋</b><span>${ch ? ch.refs.emotions.length + ch.refs.additional.length + ch.refs.cc.length : incoming.assets.length}개</span></div></div>
           <div class="card"><div style="margin-bottom:6px">${top.length ? "어느 항목을 업데이트할까요?" : "비슷한 기존 항목이 없습니다. 새로 추가합니다."}</div>
             ${opts}
@@ -8934,7 +8934,7 @@ ${registrationRow.content}`;
       const out = [d.added && `<i class="pl add">+${d.added}</i>`, d.removed && `<i class="pl del">−${d.removed}</i>`, d.changed && `<i class="pl chg">~${d.changed}</i>`].filter(Boolean).join("");
       return out || `<span class="muted">그대로</span>`;
     };
-    const names = (list, label3, max2 = 6) => `${list.slice(0, max2).map((k) => `<i class="nm">${esc2(label3(k))}</i>`).join("")}${list.length > max2 ? `<span class="muted">외 ${list.length - max2}개</span>` : ""}`;
+    const names = (list, label3, max2 = 6) => `${list.slice(0, max2).map((k) => `<i class="nm">${esc3(label3(k))}</i>`).join("")}${list.length > max2 ? `<span class="muted">외 ${list.length - max2}개</span>` : ""}`;
     function summaryHtml(plan, keep, sum0, fieldLabel, compact) {
       const s = countPlan(plan, keep);
       const applied = new Set(plan.items.filter((it) => it.unit === "field" && !keep.has(it.id)).map((it) => it.label));
@@ -8979,7 +8979,7 @@ ${registrationRow.content}`;
       <div class="rv-split">
         <div class="rv-left">
           <div class="rv-tools">
-            <label class="rv-search">${ic("search", 15)}<input type="text" id="rvq" placeholder="이름·내용 검색" value="${esc2(ui.q)}"></label>
+            <label class="rv-search">${ic("search", 15)}<input type="text" id="rvq" placeholder="이름·내용 검색" value="${esc3(ui.q)}"></label>
             <div class="rv-chips">${chips}</div>
             <div class="rv-bulk"><button id="rv-new">${ic("refresh", 13)} 보이는 것 모두 새 버전</button><button id="rv-mine">${ic("shield", 13)} 모두 내 것</button>${conflicts ? `<button id="rv-next">${ic("alert", 13)} 다음 충돌</button>` : ""}</div>
           </div>
@@ -8999,19 +8999,19 @@ ${registrationRow.content}`;
       const list = root.querySelector("#rv-list"), pane = root.querySelector("#rv-pane");
       if (!list) return;
       const narrow = () => (root.ownerDocument.defaultView?.innerWidth ?? 1e4) <= 760;
-      const full = (it, v) => esc2(textOf(it, v)) || `<span class="muted">(없음)</span>`;
+      const full = (it, v) => esc3(textOf(it, v)) || `<span class="muted">(없음)</span>`;
       const shown = () => {
-        const q2 = ui.q.trim().toLowerCase();
-        return plan.items.filter((it) => (ui.f === "all" || groupOf(it) === ui.f) && (!q2 || itemLabel(it, fieldLabel).toLowerCase().includes(q2) || textOf(it, it.current).toLowerCase().includes(q2) || textOf(it, it.incoming).toLowerCase().includes(q2)));
+        const q3 = ui.q.trim().toLowerCase();
+        return plan.items.filter((it) => (ui.f === "all" || groupOf(it) === ui.f) && (!q3 || itemLabel(it, fieldLabel).toLowerCase().includes(q3) || textOf(it, it.current).toLowerCase().includes(q3) || textOf(it, it.incoming).toLowerCase().includes(q3)));
       };
       const keepNow = () => keepSet(plan, choices, keepExistingOnly);
       const detail3 = (it) => {
         if (!it) return `<div class="rv-empty">${ic("split", 28)}<span>왼쪽에서 항목을 고르면 지금과 새 버전을 나란히 보여 드려요.</span></div>`;
         const keep = keepNow(), mine = keep.has(it.id), g = groupOf(it);
         const canDiff = it.current !== void 0 && it.incoming !== void 0 && (typeof it.current === "string" || typeof it.incoming === "string" || it.unit === "lore" || it.unit === "regex");
-        const diff = canDiff ? wordDiff(textOf(it, it.current), textOf(it, it.incoming)).map((p) => p.op === "same" ? esc2(p.text) : p.op === "add" ? `<ins>${esc2(p.text)}</ins>` : `<del>${esc2(p.text)}</del>`).join("") : "";
+        const diff = canDiff ? wordDiff(textOf(it, it.current), textOf(it, it.incoming)).map((p) => p.op === "same" ? esc3(p.text) : p.op === "add" ? `<ins>${esc3(p.text)}</ins>` : `<del>${esc3(p.text)}</del>`).join("") : "";
         return `<div class="rv-dh"><span class="ri big">${ic(it.id.startsWith("order:") ? "list" : UNIT_ICON[it.unit] ?? "text", 18)}</span>
-          <div><b>${esc2(itemLabel(it, fieldLabel))}</b><div class="rv-tags"><span class="tg ${g}">${KIND_KO[it.kind] ?? it.kind}</span>${it.id.startsWith("order:") ? "" : `<span class="tg">${CHANGE_KO[changeOf(it)]}</span>`}</div></div></div>
+          <div><b>${esc3(itemLabel(it, fieldLabel))}</b><div class="rv-tags"><span class="tg ${g}">${KIND_KO[it.kind] ?? it.kind}</span>${it.id.startsWith("order:") ? "" : `<span class="tg">${CHANGE_KO[changeOf(it)]}</span>`}</div></div></div>
         <div class="rv-seg"><button data-pick="inc" class="${mine ? "" : "on"}">${ic("refresh", 15)} 새 버전 적용</button><button data-pick="cur" class="${mine ? "on" : ""}">${ic("shield", 15)} 내 것 유지</button></div>
         ${diff ? `<div class="rv-cap">바뀐 곳 <span class="muted">— <del>지운 글</del> <ins>새 글</ins></span></div><div class="rv-diffbox">${diff}</div>` : ""}
         <div class="rv-cols">
@@ -9039,7 +9039,7 @@ ${registrationRow.content}`;
           const i2 = plan.items.indexOf(it), g = groupOf(it), mine = keep.has(it.id);
           return `<div class="rv-row ${g}${ui.sel === it.id ? " sel" : ""}" data-i="${i2}" tabindex="0">
               <span class="ri">${ic(it.id.startsWith("order:") ? "list" : UNIT_ICON[it.unit] ?? "text", 15)}</span>
-              <div class="rt"><b>${esc2(itemLabel(it, fieldLabel))}</b><span><span class="tg ${g}">${KIND_KO[it.kind] ?? it.kind}</span>${it.id.startsWith("order:") ? "" : CHANGE_KO[changeOf(it)]}</span></div>
+              <div class="rt"><b>${esc3(itemLabel(it, fieldLabel))}</b><span><span class="tg ${g}">${KIND_KO[it.kind] ?? it.kind}</span>${it.id.startsWith("order:") ? "" : CHANGE_KO[changeOf(it)]}</span></div>
               <span class="rv-mini" title="${mine ? "내 것 유지" : "새 버전 적용"}"><button data-v="inc" data-i="${i2}" class="${mine ? "" : "on"}" aria-label="새 버전">${ic("refresh", 13)}</button><button data-v="cur" data-i="${i2}" class="${mine ? "on" : ""}" aria-label="내 것 유지">${ic("shield", 13)}</button></span>
             </div>`;
         }).join("") + (items.length > 300 ? `<div class="muted" style="padding:8px">앞쪽 300개만 보여요. 검색으로 좁혀 보세요.</div>` : "") : `<div class="muted" style="padding:12px">해당하는 항목이 없어요.</div>`;
@@ -9073,9 +9073,9 @@ ${registrationRow.content}`;
         const seg = e.target.closest("[data-pick]");
         if (seg) pick(ui.sel, seg.dataset.pick);
       });
-      const q = root.querySelector("#rvq");
-      q.addEventListener("input", () => {
-        ui.q = q.value;
+      const q2 = root.querySelector("#rvq");
+      q2.addEventListener("input", () => {
+        ui.q = q2.value;
         paint();
       });
       root.querySelectorAll(".rv-chip").forEach((b) => b.addEventListener("click", () => {
@@ -9115,7 +9115,7 @@ ${registrationRow.content}`;
       return [
         target && inc.mcp !== void 0 && !same2(target.mcp, inc.mcp) ? "이 모듈의 MCP 연결 설정이 바뀌어요." : "",
         target && inc.namespace !== void 0 && !same2(target.namespace, inc.namespace) ? "이 모듈의 네임스페이스가 바뀌어요. 연결된 봇의 동작을 확인해 주세요." : ""
-      ].filter(Boolean).map((w) => `<div class="warn">${esc2(w)}</div>`).join("");
+      ].filter(Boolean).map((w) => `<div class="warn">${esc3(w)}</div>`).join("");
     }
     function renderModPlan(file, incoming, db, targetIndex, keepExistingOnly, choices = /* @__PURE__ */ new Map(), base) {
       const target = targetIndex === null ? null : db.modules[targetIndex];
@@ -9129,7 +9129,7 @@ ${registrationRow.content}`;
       const keep0 = p ? keepSet(p, choices, keepExistingOnly) : null;
       const s = plan.stat;
       frame(`<div class="card">
-            <div style="margin-bottom:8px">${kindTag("module")}${target ? `<b>${esc2(target.name)}</b> 업데이트${target.name !== incoming.module.name ? ` → 이름이 <b>${esc2(incoming.module.name)}</b>(으)로 바뀝니다` : ""}` : `새 모듈 <b>${esc2(incoming.module.name)}</b> 추가`}</div>
+            <div style="margin-bottom:8px">${kindTag("module")}${target ? `<b>${esc3(target.name)}</b> 업데이트${target.name !== incoming.module.name ? ` → 이름이 <b>${esc3(incoming.module.name)}</b>(으)로 바뀝니다` : ""}` : `새 모듈 <b>${esc3(incoming.module.name)}</b> 추가`}</div>
             <div class="grid"><b>올릴 에셋</b><span><b>${s.upload}개</b> (${fmtBytes2(s.uploadBytes)})${s.reused ? ` · 서버에 이미 있음 ${s.reused}` : ""}</span>
               ${target ? "" : `<b>에셋</b><span>${incoming.assets.length}개</span><b>로어북</b><span>${(incoming.module.lorebook ?? []).length}개</span>`}</div>
             ${p ? reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), modLabel) : ""}
@@ -9290,7 +9290,7 @@ ${registrationRow.content}`;
       const s = plan.stat;
       const generating = isGenerating(target);
       frame(`<div class="card">
-            <div style="margin-bottom:8px">${kindTag("character")}<b>${esc2(target.name)}</b> 업데이트${target.name !== ch.fields.name ? ` → 이름이 <b>${esc2(ch.fields.name)}</b>(으)로 바뀝니다` : ""}</div>
+            <div style="margin-bottom:8px">${kindTag("character")}<b>${esc3(target.name)}</b> 업데이트${target.name !== ch.fields.name ? ` → 이름이 <b>${esc3(ch.fields.name)}</b>(으)로 바뀝니다` : ""}</div>
             <div class="grid"><b>올릴 에셋</b><span><b>${s.upload}개</b> (${fmtBytes2(s.uploadBytes)})${s.reused ? ` · 서버에 이미 있음 ${s.reused}` : ""}</span></div>
             ${reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), spec.label)}
             ${notes(incoming, ch.risuFields.lowLevelAccess && !target.lowLevelAccess, s.upload)}
@@ -9321,7 +9321,7 @@ ${registrationRow.content}`;
       } catch {
       }
       if (cur === index) return;
-      box.innerHTML = `<div class="warn"><b>${esc2(name)}</b>을(를) 먼저 열어 주세요. 이 앱(원본 RisuAI)은 열려 있는 봇의 변경만 저장해요. 봇을 연 뒤 [다시 확인]을 눌러 주세요.<div class="row" style="margin-top:8px"><button id="recheck">다시 확인</button></div></div>`;
+      box.innerHTML = `<div class="warn"><b>${esc3(name)}</b>을(를) 먼저 열어 주세요. 이 앱(원본 RisuAI)은 열려 있는 봇의 변경만 저장해요. 봇을 연 뒤 [다시 확인]을 눌러 주세요.<div class="row" style="margin-top:8px"><button id="recheck">다시 확인</button></div></div>`;
       go.disabled = true;
       box.querySelector("#recheck").addEventListener("click", async () => {
         let c2 = -1;
@@ -9342,9 +9342,9 @@ ${registrationRow.content}`;
       if (!it) return renderStart();
       frame(`<div class="card">
           <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px"><span class="ri big">${ic("refresh", 18)}</span>
-            <div><b>새로 가져온 봇이 기존 봇의 새 버전 같아요</b><div class="muted">'${esc2(it.copyName)}'을(를) 기존 봇에 이어 붙이면 채팅·내 수정은 그대로 두고 내용만 새 버전으로 바꿔요.</div></div></div>
+            <div><b>새로 가져온 봇이 기존 봇의 새 버전 같아요</b><div class="muted">'${esc3(it.copyName)}'을(를) 기존 봇에 이어 붙이면 채팅·내 수정은 그대로 두고 내용만 새 버전으로 바꿔요.</div></div></div>
           <div style="margin:4px 0 6px">어느 봇에 이어 붙일까요?</div>
-          ${it.targets.map((t, i2) => `<label class="opt"><input type="radio" name="tg" value="${i2}" ${i2 === 0 ? "checked" : ""}><div><b>${esc2(t.name || "(이름 없음)")}</b><div class="muted">${{ realm: "같은 RisuRealm 봇", name: "이름이 같음", content: "제작자·내용이 비슷함", similar: "이름이 비슷함" }[t.reason] ?? ""}</div></div></label>`).join("")}
+          ${it.targets.map((t, i2) => `<label class="opt"><input type="radio" name="tg" value="${i2}" ${i2 === 0 ? "checked" : ""}><div><b>${esc3(t.name || "(이름 없음)")}</b><div class="muted">${{ realm: "같은 RisuRealm 봇", name: "이름이 같음", content: "제작자·내용이 비슷함", similar: "이름이 비슷함" }[t.reason] ?? ""}</div></div></label>`).join("")}
           ${copyQueue.length > 1 ? `<div class="muted" style="margin-top:6px">대기 중 ${copyQueue.length - 1}개 더</div>` : ""}
         </div>
         <div class="row"><button class="primary" id="attach">이어 붙이기</button><button id="skip">새 봇으로 둘게요</button>${closeBtn("나중에")}</div>`);
@@ -9372,7 +9372,7 @@ ${registrationRow.content}`;
       const keep0 = keepSet(p, choices, keepExistingOnly);
       const rerender = (keep = keepExistingOnly) => renderCopyPlan(it, targetId, keep, choices, base).catch((err2) => renderResult(null, null, err2?.message ?? String(err2)));
       frame(`<div class="card">
-          <div style="margin-bottom:8px">${kindTag("character")}<b>${esc2(target.name)}</b> 업데이트 <span class="muted">← 새로 가져온 '${esc2(copy.name)}'</span></div>
+          <div style="margin-bottom:8px">${kindTag("character")}<b>${esc3(target.name)}</b> 업데이트 <span class="muted">← 새로 가져온 '${esc3(copy.name)}'</span></div>
           ${reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), spec.label)}
           ${copy.lowLevelAccess && !target.lowLevelAccess ? `<div class="warn">이 버전은 <b>저수준 접근(lowLevelAccess)</b>을 사용합니다. 믿을 수 있는 봇인지 확인하세요.</div>` : ""}
           <div id="open-warn"></div>
@@ -9452,16 +9452,16 @@ ${registrationRow.content}`;
       let pick = null;
       frame(`<div class="card">
           <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px"><span class="ri big">${ic("link", 18)}</span>
-            <div><b>새 봇 '${esc2(it.copyName)}'</b><div class="muted">다른 봇과 합칠까요? 합칠 봇을 고르면 합치기 화면으로 이어져요. 그냥 새 봇으로 두셔도 돼요.</div></div></div>
+            <div><b>새 봇 '${esc3(it.copyName)}'</b><div class="muted">다른 봇과 합칠까요? 합칠 봇을 고르면 합치기 화면으로 이어져요. 그냥 새 봇으로 두셔도 돼요.</div></div></div>
           ${targets.length ? `<div class="srch">${ic("search", 16)}<input id="new-q" type="search" placeholder="합칠 봇 이름 검색" autocomplete="off"></div>
-          <div id="new-list" style="max-height:min(46vh,420px);overflow:auto;padding-right:2px">${targets.map(({ c }) => `<label class="opt" data-k="${esc2(key(nameOf(c)))}" style="padding:9px 12px;margin:4px 0;align-items:center"><input type="radio" name="ntg" value="${esc2(c.chaId)}"><div style="flex:1;min-width:0"><b style="font-weight:600">${esc2(nameOf(c))}</b></div></label>`).join("")}
+          <div id="new-list" style="max-height:min(46vh,420px);overflow:auto;padding-right:2px">${targets.map(({ c }) => `<label class="opt" data-k="${esc3(key(nameOf(c)))}" style="padding:9px 12px;margin:4px 0;align-items:center"><input type="radio" name="ntg" value="${esc3(c.chaId)}"><div style="flex:1;min-width:0"><b style="font-weight:600">${esc3(nameOf(c))}</b></div></label>`).join("")}
           <div id="new-empty" class="muted" style="display:none;padding:10px 4px">찾는 봇이 없어요.</div></div>` : `<div class="muted">합칠 다른 봇이 없어요.</div>`}
           ${newQueue.length > 1 ? `<div class="muted" style="margin-top:6px">대기 중 ${newQueue.length - 1}개 더</div>` : ""}
         </div>
         <div class="row">${targets.length ? `<button class="primary" id="merge-go" disabled>합치기</button>` : ""}<button id="skip">그냥 둘게요</button>${closeBtn("나중에")}</div>`);
-      const q = root.querySelector("#new-q");
-      q?.addEventListener("input", () => {
-        const k = key(q.value);
+      const q2 = root.querySelector("#new-q");
+      q2?.addEventListener("input", () => {
+        const k = key(q2.value);
         let shown = 0;
         root.querySelectorAll("#new-list .opt").forEach((el) => {
           const on = !k || el.dataset.k.includes(k);
@@ -9484,7 +9484,7 @@ ${registrationRow.content}`;
         newQueue.shift();
         renderMergeStart(pick).catch((err2) => renderResult(null, null, err2?.message ?? String(err2)));
       });
-      setTimeout(() => q?.focus(), 50);
+      setTimeout(() => q2?.focus(), 50);
     }
     let modQueue = [];
     function renderModCopyOffer() {
@@ -9493,9 +9493,9 @@ ${registrationRow.content}`;
       if (!it) return renderStart();
       frame(`<div class="card">
           <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px"><span class="ri big">${ic("module", 18)}</span>
-            <div><b>새로 가져온 모듈이 기존 모듈의 새 버전 같아요</b><div class="muted">'${esc2(it.copyName)}'(으)로 기존 모듈을 업데이트하면 내가 고친 부분과 모듈 연결(켜짐·봇 연결)은 그대로 두고 내용만 새 버전으로 바꿔요.</div></div></div>
+            <div><b>새로 가져온 모듈이 기존 모듈의 새 버전 같아요</b><div class="muted">'${esc3(it.copyName)}'(으)로 기존 모듈을 업데이트하면 내가 고친 부분과 모듈 연결(켜짐·봇 연결)은 그대로 두고 내용만 새 버전으로 바꿔요.</div></div></div>
           <div style="margin:4px 0 6px">어느 모듈을 업데이트할까요?</div>
-          ${it.targets.map((t, i2) => `<label class="opt"><input type="radio" name="tg" value="${i2}" ${i2 === 0 ? "checked" : ""}><div><b>${esc2(t.name || "(이름 없음)")}</b><div class="muted">${t.reason === "name" ? "이름이 같음" : "네임스페이스가 같음"}</div></div></label>`).join("")}
+          ${it.targets.map((t, i2) => `<label class="opt"><input type="radio" name="tg" value="${i2}" ${i2 === 0 ? "checked" : ""}><div><b>${esc3(t.name || "(이름 없음)")}</b><div class="muted">${t.reason === "name" ? "이름이 같음" : "네임스페이스가 같음"}</div></div></label>`).join("")}
           ${modQueue.length > 1 ? `<div class="muted" style="margin-top:6px">대기 중 ${modQueue.length - 1}개 더</div>` : ""}
         </div>
         <div class="row"><button class="primary" id="attach">업데이트</button><button id="skip">새 모듈로 둘게요</button>${closeBtn("나중에")}</div>`);
@@ -9520,7 +9520,7 @@ ${registrationRow.content}`;
       const keep0 = keepSet(p, choices, keepExistingOnly);
       const rerender = (keep = keepExistingOnly) => renderModCopyPlan(it, targetId, keep, choices, base).catch((err2) => renderResult(null, null, err2?.message ?? String(err2)));
       frame(`<div class="card">
-          <div style="margin-bottom:8px">${kindTag("module")}<b>${esc2(target.name)}</b> 업데이트 <span class="muted">← 새로 가져온 '${esc2(copy.name)}'</span></div>
+          <div style="margin-bottom:8px">${kindTag("module")}<b>${esc3(target.name)}</b> 업데이트 <span class="muted">← 새로 가져온 '${esc3(copy.name)}'</span></div>
           ${reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), modLabel)}
           ${copy.lowLevelAccess && !target.lowLevelAccess ? `<div class="warn">이 버전은 <b>저수준 접근(lowLevelAccess)</b>을 사용합니다. 믿을 수 있는 모듈인지 확인하세요.</div>` : ""}${modWarnings(target, copy)}
           <p class="muted" style="margin:10px 0 0">모듈 연결(켜짐·봇 연결)은 그대로예요. 바꾸기 전 상태를 백업해요. 업데이트가 끝나면 새로 가져온 사본 모듈은 목록에서 정리해요.</p>
@@ -9610,13 +9610,13 @@ ${registrationRow.content}`;
       const target = chars.find((x2) => x2.c.chaId === mg.targetId)?.c;
       const prov = target ? await loadProvenance(api, target) : null;
       const extra = prov?.sources.slice(1) ?? [];
-      const opts = (sel) => chars.map(({ c }) => `<option value="c:${esc2(c.chaId)}" ${sel === "c:" + c.chaId ? "selected" : ""}>${esc2(nameOf(c))}</option>`).join("");
+      const opts = (sel) => chars.map(({ c }) => `<option value="c:${esc3(c.chaId)}" ${sel === "c:" + c.chaId ? "selected" : ""}>${esc3(nameOf(c))}</option>`).join("");
       frame(`<div class="card">
         <div class="rv-dh" style="margin-bottom:10px"><span class="ri big">${ic("link", 18)}</span><div><b>다른 봇에서 가져오기 · 합치기</b><div class="muted">다른 봇이나 모듈의 인물·세계관을 이 봇에 넣어요. 채팅과 내 설정은 그대로이고, 바꾸기 전에 백업해요.</div></div></div>
-        <div class="rr"><span class="rl" style="width:76px">넣을 봇</span><select id="mg-target" style="margin-top:0">${chars.map(({ c }) => `<option value="${esc2(c.chaId)}" ${c.chaId === mg.targetId ? "selected" : ""}>${esc2(nameOf(c))}</option>`).join("")}</select></div>
+        <div class="rr"><span class="rl" style="width:76px">넣을 봇</span><select id="mg-target" style="margin-top:0">${chars.map(({ c }) => `<option value="${esc3(c.chaId)}" ${c.chaId === mg.targetId ? "selected" : ""}>${esc3(nameOf(c))}</option>`).join("")}</select></div>
         <div class="rr"><span class="rl" style="width:76px">가져올 곳</span><select id="mg-src" style="margin-top:0"><option value="">— 고르기 —</option>
           <optgroup label="봇">${opts(mg.src)}</optgroup>
-          ${modules.length ? `<optgroup label="모듈">${modules.map((m) => `<option value="m:${esc2(m.id)}" ${mg.src === "m:" + m.id ? "selected" : ""}>${esc2(m.name || "(이름 없음)")}</option>`).join("")}</optgroup>` : ""}
+          ${modules.length ? `<optgroup label="모듈">${modules.map((m) => `<option value="m:${esc3(m.id)}" ${mg.src === "m:" + m.id ? "selected" : ""}>${esc3(m.name || "(이름 없음)")}</option>`).join("")}</optgroup>` : ""}
         </select></div>
         <div style="margin:12px 0 6px">무엇을 가져올까요?</div>
         <div class="mg-scope">
@@ -9624,7 +9624,7 @@ ${registrationRow.content}`;
         </div>
       </div>
       ${extra.length ? `<div class="card"><div class="rv-dh" style="margin-bottom:6px"><span class="ri">${ic("history", 15)}</span><b>이 봇에 합쳐진 출처</b></div>
-        ${extra.map((s) => `<div class="rr"><span class="rl" style="flex:1;width:auto;color:var(--rb-text)">${esc2(s.name)} <span class="muted">${s.kind === "module" ? "모듈" : s.kind === "import" || s.importMode ? "가져오기" : "합치기"}</span></span><button data-supd="${esc2(s.id)}">${ic("refresh", 13)} 새 버전으로</button><button data-sdet="${esc2(s.id)}">${ic("trash", 13)} 떼어내기</button></div>`).join("")}
+        ${extra.map((s) => `<div class="rr"><span class="rl" style="flex:1;width:auto;color:var(--rb-text)">${esc3(s.name)} <span class="muted">${s.kind === "module" ? "모듈" : s.kind === "import" || s.importMode ? "가져오기" : "합치기"}</span></span><button data-supd="${esc3(s.id)}">${ic("refresh", 13)} 새 버전으로</button><button data-sdet="${esc3(s.id)}">${ic("trash", 13)} 떼어내기</button></div>`).join("")}
         <p class="muted" style="margin:6px 0 0">출처 하나만 새 버전으로 바꾸거나, 가져온 자료를 다시 떼어낼 수 있어요.</p></div>` : ""}
       <div class="row"><button class="primary" id="mg-next">다음</button>${closeBtn("닫기")}</div>`);
       root.querySelector("#mg-target").addEventListener("change", (e) => renderMergeStart(e.target.value).catch((err2) => renderResult(null, null, err2?.message ?? String(err2))));
@@ -9676,12 +9676,12 @@ ${registrationRow.content}`;
       const charKeys = new Set(chars.flatMap((c) => c.loreKeys));
       const worldParts = S.parts.filter((p) => p.kind === "lore" && !charKeys.has(p.key));
       frame(`<div class="card">
-        <div style="margin-bottom:8px">${kindTag("character")}<b>${esc2(nameOf(inp.target))}</b> <span class="muted">← ${esc2(inp.srcName)}</span></div>
+        <div style="margin-bottom:8px">${kindTag("character")}<b>${esc3(nameOf(inp.target))}</b> <span class="muted">← ${esc3(inp.srcName)}</span></div>
         ${mg.scope === "full" ? `<div class="rr"><span class="ri">${ic("split", 15)}</span><span>두 봇을 전체 합쳐요. 인물 ${chars.length}명과 모든 로어·스크립트·이미지를 가져오고, 겹치는 기능은 다음 화면에서 골라요.</span></div>` : `
         <div style="margin:4px 0 6px">가져올 인물 <span class="muted">${chars.length ? `${chars.length}명 찾음` : "찾지 못했어요 — 아래 '전체 합치기'를 써 보세요"}</span></div>
-        <div class="mg-chars">${chars.map((c) => `<label class="opt"><input type="checkbox" data-ch="${esc2(c.key)}" ${mg.picked.has(c.key) ? "checked" : ""}><div><b>${esc2(c.displayName ?? c.name)}</b><div class="muted">로어 ${c.loreKeys.length}개${c.assetNames.length + c.emotionNames.length ? ` · 이미지 ${c.assetNames.length + c.emotionNames.length}장` : ""}${c.aliases.some((a) => targetNames.has(a.toLocaleLowerCase())) ? " · <span class='hl'>이 봇에도 같은 이름이 있어요</span>" : ""}</div></div></label>`).join("")}</div>`}
+        <div class="mg-chars">${chars.map((c) => `<label class="opt"><input type="checkbox" data-ch="${esc3(c.key)}" ${mg.picked.has(c.key) ? "checked" : ""}><div><b>${esc3(c.displayName ?? c.name)}</b><div class="muted">로어 ${c.loreKeys.length}개${c.assetNames.length + c.emotionNames.length ? ` · 이미지 ${c.assetNames.length + c.emotionNames.length}장` : ""}${c.aliases.some((a) => targetNames.has(a.toLocaleLowerCase())) ? " · <span class='hl'>이 봇에도 같은 이름이 있어요</span>" : ""}</div></div></label>`).join("")}</div>`}
         ${mg.scope === "world" ? `<details open style="margin-top:10px"><summary>함께 가져올 세계관 로어 <span class="muted">(인물과 관련된 것을 미리 골라 뒀어요)</span></summary>
-          <div class="mg-world">${worldParts.map((p) => `<label class="opt" style="padding:8px 12px"><input type="checkbox" data-w="${esc2(p.key)}" ${mg.world.has(p.key) ? "checked" : ""}><div><b style="font-weight:500">${esc2(partLabel(p))}</b><div class="muted">${esc2(partText(p).slice(0, 80))}</div></div></label>`).join("") || '<div class="muted">세계관 로어가 없어요.</div>'}</div></details>` : ""}
+          <div class="mg-world">${worldParts.map((p) => `<label class="opt" style="padding:8px 12px"><input type="checkbox" data-w="${esc3(p.key)}" ${mg.world.has(p.key) ? "checked" : ""}><div><b style="font-weight:500">${esc3(partLabel(p))}</b><div class="muted">${esc3(partText(p).slice(0, 80))}</div></div></label>`).join("") || '<div class="muted">세계관 로어가 없어요.</div>'}</div></details>` : ""}
         ${mg.scope !== "full" ? `<div class="rr" style="margin-top:8px"><span class="ri">${ic("globe", 15)}</span><span class="rl" style="width:auto">이 세계에서</span><div class="rv-seg" style="flex:1;max-width:360px"><button data-bridge="visitor" class="${mg.bridge === "visitor" ? "on" : ""}">다른 세계에서 온 사람</button><button data-bridge="native" class="${mg.bridge === "native" ? "on" : ""}">원래 이 세계 사람</button></div></div>` : ""}
       </div>
       <div class="row"><button class="primary" id="mg-next">다음</button><button id="mg-back">뒤로</button>${closeBtn("취소")}</div>`);
@@ -9723,27 +9723,27 @@ ${registrationRow.content}`;
       const needLow = (sel.plan.needsLowLevel || chosen.some((p) => p.kind === "luaTrigger" || p.kind === "trigger")) && inp.srcLow && !inp.target.lowLevelAccess;
       const ai = watchAi();
       const tile2 = (icn, n, label3, cls = "upd") => `<div class="st ${cls}${n ? "" : " zero"}"><span class="si">${ic(icn, 18)}</span><b>${n}</b><span>${label3}</span></div>`;
-      const q = st.q.trim().toLowerCase();
-      const shown = srcParts.filter((p) => !q || partLabel(p).toLowerCase().includes(q) || partText(p).toLowerCase().includes(q)).sort((a, b) => Number(st.exclude.has(a.key)) - Number(st.exclude.has(b.key)));
+      const q2 = st.q.trim().toLowerCase();
+      const shown = srcParts.filter((p) => !q2 || partLabel(p).toLowerCase().includes(q2) || partText(p).toLowerCase().includes(q2)).sort((a, b) => Number(st.exclude.has(a.key)) - Number(st.exclude.has(b.key)));
       frame(`<div class="card">
-        <div style="margin-bottom:8px">${kindTag("character")}<b>${esc2(nameOf(inp.target))}</b> <span class="muted">← ${esc2(inp.srcName)} · ${{ characters: "인물만", world: "인물 + 세계관", full: "전체 합치기" }[mg.scope]}</span></div>
+        <div style="margin-bottom:8px">${kindTag("character")}<b>${esc3(nameOf(inp.target))}</b> <span class="muted">← ${esc3(inp.srcName)} · ${{ characters: "인물만", world: "인물 + 세계관", full: "전체 합치기" }[mg.scope]}</span></div>
         <div class="rv-tiles">${tile2("book", (counts.lore ?? 0) + (counts.loreFolder ?? 0), "로어북")}${tile2("image", (counts.asset ?? 0) + (counts.emotion ?? 0), "이미지", "add")}${tile2("code", (counts.regex ?? 0) + (counts.trigger ?? 0) + (counts.luaTrigger ?? 0) + (counts.css ?? 0), "스크립트", "mine")}${tile2("edit", renames.length, "이름 바꿈", "cf")}</div>
-        ${renames.length ? `<details style="margin-top:8px"><summary>겹치는 이름 ${renames.length}개는 자동으로 바꿔요</summary><div class="rv-rows">${renames.slice(0, 40).map((r) => `<div class="rr"><span class="rl" style="width:auto">${esc2(r.from)}</span><span class="muted">→</span><span>${esc2(r.to)}</span></div>`).join("")}</div></details>` : ""}
-        ${sel.plan.roles.length ? `<div style="margin:12px 0 6px">겹치는 기능 고르기</div>${sel.plan.roles.map((r, i2) => `<div class="rr"><span class="ri">${ic("sliders", 15)}</span><span class="rl" style="width:96px">${esc2(r.label || ROLE_KO[r.kind] || r.kind)}</span><select data-role="${i2}" style="margin-top:0;flex:1">${[[T.meta.id, `${nameOf(inp.target)} 것`], [S.meta.id, `${inp.srcName} 것`], ["both", "둘 다"]].map(([v, l]) => `<option value="${esc2(v)}" ${String(st.roles[i2]) === v ? "selected" : ""}>${esc2(l)}</option>`).join("")}</select></div>`).join("")}` : ""}
-        ${(sel.plan.warnings ?? []).length ? `<div class="warn">${sel.plan.warnings.slice(0, 4).map((w) => esc2(w.detail)).join("<br>")}</div>` : ""}
+        ${renames.length ? `<details style="margin-top:8px"><summary>겹치는 이름 ${renames.length}개는 자동으로 바꿔요</summary><div class="rv-rows">${renames.slice(0, 40).map((r) => `<div class="rr"><span class="rl" style="width:auto">${esc3(r.from)}</span><span class="muted">→</span><span>${esc3(r.to)}</span></div>`).join("")}</div></details>` : ""}
+        ${sel.plan.roles.length ? `<div style="margin:12px 0 6px">겹치는 기능 고르기</div>${sel.plan.roles.map((r, i2) => `<div class="rr"><span class="ri">${ic("sliders", 15)}</span><span class="rl" style="width:96px">${esc3(r.label || ROLE_KO[r.kind] || r.kind)}</span><select data-role="${i2}" style="margin-top:0;flex:1">${[[T.meta.id, `${nameOf(inp.target)} 것`], [S.meta.id, `${inp.srcName} 것`], ["both", "둘 다"]].map(([v, l]) => `<option value="${esc3(v)}" ${String(st.roles[i2]) === v ? "selected" : ""}>${esc3(l)}</option>`).join("")}</select></div>`).join("")}` : ""}
+        ${(sel.plan.warnings ?? []).length ? `<div class="warn">${sel.plan.warnings.slice(0, 4).map((w) => esc3(w.detail)).join("<br>")}</div>` : ""}
         ${needLow ? `<label class="chk"><input type="checkbox" id="mg-low" ${st.lowLevel ? "checked" : ""}><span>가져오는 스크립트가 <b>저수준 접근(lowLevelAccess)</b>을 써요. 이 봇에도 허용하기<br><span class="muted">믿을 수 있는 봇일 때만 켜 주세요. 끄면 해당 스크립트가 동작하지 않을 수 있어요.</span></span></label>` : ""}
         <div class="rr" style="margin-top:12px;padding:12px 14px;border:1px solid var(--rb-line,#2a2d47);border-radius:12px;background:var(--rb-surf,#1c1f33);flex-wrap:wrap;gap:10px"><span class="ri big">${ic("zap", 18)}</span><div style="flex:1 1 200px;min-width:0"><b>AI로 다듬기</b><div class="muted">${ai.on ? "항목마다 'AI로 다듬기' 버튼이 생겨요. 눌러야만 AI가 쓰이고, 결과는 확인한 뒤에 넣어요." : "지금은 가져온 글을 그대로 넣어요. 켜면 가져온 글을 이 봇 세계관에 맞게 AI가 고쳐 쓸 수 있어요."}</div></div><div class="rv-seg" id="mg-aisw" style="flex:none;min-width:200px"><button data-ai-on="0" class="${ai.on ? "" : "on"}">${ic("x", 13)} 안 써요</button><button data-ai-on="1" class="${ai.on ? "on" : ""}">${ic("zap", 13)} 써요</button></div></div>
         <details id="mg-parts" style="margin-top:12px" ${st.open ? "open" : ""}><summary>가져올 항목 ${chosen.length}/${srcParts.length}개 — 하나씩 고르기·고치기${ai.on ? "·AI로 다듬기" : ""}</summary>
           <div class="rv-tools" style="border:0;padding:8px 0">
-            <label class="rv-search">${ic("search", 15)}<input type="text" id="mg-q" placeholder="이름·내용 검색" value="${esc2(st.q)}"></label>
+            <label class="rv-search">${ic("search", 15)}<input type="text" id="mg-q" placeholder="이름·내용 검색" value="${esc3(st.q)}"></label>
             <div class="rv-bulk"><button id="mg-all">${ic("check", 13)} 보이는 것 모두 넣기</button><button id="mg-none">${ic("x", 13)} 모두 빼기</button></div>
-            ${ai.on ? `<div class="rr" style="border:0"><span class="ri">${ic("zap", 15)}</span><span class="rl" style="width:auto">AI 다듬기 모델</span><select id="mg-ai" style="margin-top:0;flex:1">${AI_MODES.map(([v, l]) => `<option value="${v}" ${ai.mode === v ? "selected" : ""}>${l}</option>`).join("")}</select>${ai.mode === "static" ? `<input type="text" id="mg-ai-id" placeholder="모델 ID (예: gpt-4o)" value="${esc2(ai.staticModel ?? "")}" style="margin-top:0;flex:1">` : ""}</div>` : ""}
+            ${ai.on ? `<div class="rr" style="border:0"><span class="ri">${ic("zap", 15)}</span><span class="rl" style="width:auto">AI 다듬기 모델</span><select id="mg-ai" style="margin-top:0;flex:1">${AI_MODES.map(([v, l]) => `<option value="${v}" ${ai.mode === v ? "selected" : ""}>${l}</option>`).join("")}</select>${ai.mode === "static" ? `<input type="text" id="mg-ai-id" placeholder="모델 ID (예: gpt-4o)" value="${esc3(ai.staticModel ?? "")}" style="margin-top:0;flex:1">` : ""}</div>` : ""}
           </div>
           <div class="mg-list">${shown.slice(0, 250).map((p) => {
         const on = !st.exclude.has(p.key), ed = st.edits[p.key];
-        return `<div class="mg-part${on ? "" : " off"}" data-k="${esc2(p.key)}">
-              <label class="mg-ph"><input type="checkbox" data-pk="${esc2(p.key)}" ${on ? "checked" : ""}><span class="ri">${ic(PART_ICON[p.kind] ?? "text", 14)}</span><span class="rt"><b>${esc2(partLabel(p))}</b><span>${KIND_PART[p.kind] ?? p.kind}${ed !== void 0 ? " · <span class='hl'>고침</span>" : ""}</span></span></label>
-              ${editable(p) && on ? `<div class="mg-act"><button data-edit="${esc2(p.key)}">${ic("edit", 13)} 고치기</button>${ai.on ? `<button data-ai="${esc2(p.key)}">${ic("zap", 13)} AI로 다듬기</button>` : ""}</div>` : ""}
+        return `<div class="mg-part${on ? "" : " off"}" data-k="${esc3(p.key)}">
+              <label class="mg-ph"><input type="checkbox" data-pk="${esc3(p.key)}" ${on ? "checked" : ""}><span class="ri">${ic(PART_ICON[p.kind] ?? "text", 14)}</span><span class="rt"><b>${esc3(partLabel(p))}</b><span>${KIND_PART[p.kind] ?? p.kind}${ed !== void 0 ? " · <span class='hl'>고침</span>" : ""}</span></span></label>
+              ${editable(p) && on ? `<div class="mg-act"><button data-edit="${esc3(p.key)}">${ic("edit", 13)} 고치기</button>${ai.on ? `<button data-ai="${esc3(p.key)}">${ic("zap", 13)} AI로 다듬기</button>` : ""}</div>` : ""}
               <div class="mg-body" hidden></div></div>`;
       }).join("")}${shown.length > 250 ? '<div class="muted">앞쪽 250개만 보여요. 검색으로 좁혀 보세요.</div>' : ""}</div>
         </details>
@@ -9800,7 +9800,7 @@ ${registrationRow.content}`;
         if (!box.hidden && box.dataset.mode === "edit") return box.hidden = true;
         box.dataset.mode = "edit";
         box.hidden = false;
-        box.innerHTML = `<textarea class="mg-ta">${esc2(st.edits[k] ?? partText(p))}</textarea><div class="row" style="margin-top:6px"><button class="primary" data-save>저장</button><button data-reset>원래대로</button></div>`;
+        box.innerHTML = `<textarea class="mg-ta">${esc3(st.edits[k] ?? partText(p))}</textarea><div class="row" style="margin-top:6px"><button class="primary" data-save>저장</button><button data-reset>원래대로</button></div>`;
         box.querySelector("[data-save]").addEventListener("click", () => {
           st.edits[k] = box.querySelector("textarea").value;
           rer();
@@ -9817,7 +9817,7 @@ ${registrationRow.content}`;
         const ctrl = new AbortController();
         box.dataset.mode = "ai";
         box.hidden = false;
-        box.innerHTML = `<div class="rr" style="border:0"><span class="rb-spin-s"></span><span>AI가 다듬는 중… (${esc2(AI_MODES.find(([v]) => v === pick.mode)?.[1] ?? "")})</span><button data-stop>${ic("x", 13)} 그만</button></div>`;
+        box.innerHTML = `<div class="rr" style="border:0"><span class="rb-spin-s"></span><span>AI가 다듬는 중… (${esc3(AI_MODES.find(([v]) => v === pick.mode)?.[1] ?? "")})</span><button data-stop>${ic("x", 13)} 그만</button></div>`;
         box.querySelector("[data-stop]").addEventListener("click", () => {
           ctrl.abort();
           box.hidden = true;
@@ -9828,7 +9828,7 @@ ${registrationRow.content}`;
         try {
           const out = await runAI(api, isChar ? adaptCharacterPrompt({ targetWorld: world, character: original }) : conflictTidyPrompt({ a: world, b: original }), pick, ctrl.signal);
           if (ctrl.signal.aborted) return;
-          const parts = wordDiff(original, out).map((d) => d.op === "same" ? esc2(d.text) : d.op === "add" ? `<ins>${esc2(d.text)}</ins>` : `<del>${esc2(d.text)}</del>`).join("");
+          const parts = wordDiff(original, out).map((d) => d.op === "same" ? esc3(d.text) : d.op === "add" ? `<ins>${esc3(d.text)}</ins>` : `<del>${esc3(d.text)}</del>`).join("");
           box.innerHTML = `<div class="rv-cap">AI 제안 <span class="muted">— <del>원래 글</del> <ins>AI가 바꾼 글</ins></span></div><div class="rv-diffbox">${parts}</div>
           <div class="row" style="margin-top:6px"><button class="primary" data-use>AI 버전 쓰기</button><button data-tweak>고쳐서 쓰기</button><button data-keep>원래대로</button></div>`;
           box.querySelector("[data-use]").addEventListener("click", () => {
@@ -9838,7 +9838,7 @@ ${registrationRow.content}`;
           box.querySelector("[data-keep]").addEventListener("click", () => box.hidden = true);
           box.querySelector("[data-tweak]").addEventListener("click", () => {
             box.dataset.mode = "edit";
-            box.innerHTML = `<textarea class="mg-ta">${esc2(out)}</textarea><div class="row" style="margin-top:6px"><button class="primary" data-save>저장</button></div>`;
+            box.innerHTML = `<textarea class="mg-ta">${esc3(out)}</textarea><div class="row" style="margin-top:6px"><button class="primary" data-save>저장</button></div>`;
             box.querySelector("[data-save]").addEventListener("click", () => {
               st.edits[k] = box.querySelector("textarea").value;
               rer();
@@ -9860,7 +9860,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
     }
     function renderAiNote(box, msg) {
       box.hidden = false;
-      box.innerHTML = `<div class="err" style="margin:0">${esc2(msg)}</div>`;
+      box.innerHTML = `<div class="err" style="margin:0">${esc3(msg)}</div>`;
     }
     let aiPick = null;
     function watchAi() {
@@ -9937,9 +9937,9 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       const same2 = (n) => String(n ?? "").replace(/\s+/g, "").toLowerCase() === String(src.name).replace(/\s+/g, "").toLowerCase();
       const list = src.kind === "module" ? modules.map((m) => ({ v: "m:" + m.id, n: m.name, hit: m.id === src.moduleId || same2(m.name) })) : chars.filter(({ c }) => c.chaId !== mg.targetId).map(({ c }) => ({ v: "c:" + c.chaId, n: nameOf(c), hit: c.chaId === sourceId || same2(c.name) }));
       list.sort((a, b) => b.hit - a.hit);
-      frame(`<div class="card"><div class="rv-dh" style="margin-bottom:10px"><span class="ri big">${ic("refresh", 18)}</span><div><b>'${esc2(src.name)}' 새 버전으로 업데이트</b><div class="muted">${esc2(nameOf(target))}에 합쳐진 이 출처의 자료만 새 버전으로 바꿔요. 다른 출처와 내 수정은 그대로예요.</div></div></div>
+      frame(`<div class="card"><div class="rv-dh" style="margin-bottom:10px"><span class="ri big">${ic("refresh", 18)}</span><div><b>'${esc3(src.name)}' 새 버전으로 업데이트</b><div class="muted">${esc3(nameOf(target))}에 합쳐진 이 출처의 자료만 새 버전으로 바꿔요. 다른 출처와 내 수정은 그대로예요.</div></div></div>
         <div class="muted" style="margin-bottom:6px">새 버전을 먼저 리스에 가져온 뒤 여기서 골라 주세요.</div>
-        <select id="su-src" style="margin-top:0">${list.map((x2) => `<option value="${esc2(x2.v)}">${esc2(x2.n || "(이름 없음)")}${x2.hit ? " ✓" : ""}</option>`).join("")}</select></div>
+        <select id="su-src" style="margin-top:0">${list.map((x2) => `<option value="${esc3(x2.v)}">${esc3(x2.n || "(이름 없음)")}${x2.hit ? " ✓" : ""}</option>`).join("")}</select></div>
       <div class="row"><button class="primary" id="su-next">비교하기</button><button id="mg-back">뒤로</button>${closeBtn("취소")}</div>`);
       root.querySelector("#mg-back").addEventListener("click", () => renderMergeStart(mg.targetId));
       root.querySelector("#su-next").addEventListener("click", async () => {
@@ -9966,7 +9966,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       const keep0 = keepSet(plan, choices, true);
       const src = prov.sources.find((s) => s.id === sourceId);
       frame(`<div class="card">
-        <div style="margin-bottom:8px">${kindTag("character")}<b>${esc2(nameOf(target))}</b> <span class="muted">· '${esc2(src.name)}' 출처만 새 버전으로</span></div>
+        <div style="margin-bottom:8px">${kindTag("character")}<b>${esc3(nameOf(target))}</b> <span class="muted">· '${esc3(src.name)}' 출처만 새 버전으로</span></div>
         ${plan.items.length ? reviewBox(plan, choices, true, keep0, sumOf(keep0), spec.label) : '<div class="ok">이 출처는 바뀐 게 없어요.</div>'}
         ${prot.size ? `<div class="muted" style="margin-top:6px">다른 출처의 이미지 ${prot.size}개는 그대로 둬요.</div>` : ""}
       </div>
@@ -9999,8 +9999,8 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       const keep = new Set(items.filter((it) => it.keepByDefault).map((it) => it.id));
       const spec = charSpec({ fields: {}, risuFields: {}, refs: {} });
       frame(`<div class="card">
-        <div class="rv-dh" style="margin-bottom:10px"><span class="ri big">${ic("trash", 18)}</span><div><b>'${esc2(src.name)}'에서 가져온 자료 떼어내기</b><div class="muted">기록과 같아 안전하게 뗄 수 있는 것만 미리 골라 뒀어요. 고쳤거나 다른 출처와 함께 쓰는 자료는 남겨 둬요.</div></div></div>
-        ${items.length ? `<div class="mg-list">${items.map((it) => `<label class="mg-part${keep.has(it.id) ? " off" : ""}" style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" data-d="${esc2(it.id)}" ${keep.has(it.id) ? "" : "checked"}><span class="ri">${ic(it.id.startsWith("order:") ? "list" : { field: "text", lore: "book", regex: "code", trigger: "zap", asset: "image", emotion: "image" }[it.unit] ?? "text", 14)}</span><span class="rt"><b>${esc2(itemLabel(it, spec.label))}</b><span>${esc2(reasons[it.id] ?? (keep.has(it.id) ? "남겨 둠" : "떼어냄"))}</span></span></label>`).join("")}</div>` : '<div class="ok">떼어낼 자료가 없어요.</div>'}
+        <div class="rv-dh" style="margin-bottom:10px"><span class="ri big">${ic("trash", 18)}</span><div><b>'${esc3(src.name)}'에서 가져온 자료 떼어내기</b><div class="muted">기록과 같아 안전하게 뗄 수 있는 것만 미리 골라 뒀어요. 고쳤거나 다른 출처와 함께 쓰는 자료는 남겨 둬요.</div></div></div>
+        ${items.length ? `<div class="mg-list">${items.map((it) => `<label class="mg-part${keep.has(it.id) ? " off" : ""}" style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" data-d="${esc3(it.id)}" ${keep.has(it.id) ? "" : "checked"}><span class="ri">${ic(it.id.startsWith("order:") ? "list" : { field: "text", lore: "book", regex: "code", trigger: "zap", asset: "image", emotion: "image" }[it.unit] ?? "text", 14)}</span><span class="rt"><b>${esc3(itemLabel(it, spec.label))}</b><span>${esc3(reasons[it.id] ?? (keep.has(it.id) ? "남겨 둠" : "떼어냄"))}</span></span></label>`).join("")}</div>` : '<div class="ok">떼어낼 자료가 없어요.</div>'}
       </div>
       <div class="row">${items.length ? '<button class="primary danger" id="dt-go">떼어내기</button>' : ""}<button id="mg-back">뒤로</button>${closeBtn("취소")}</div>`);
       root.querySelectorAll("[data-d]").forEach((c) => c.addEventListener("change", () => {
@@ -10027,7 +10027,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       const s = plan.stat;
       const generating = db.characters.some(isGenerating);
       frame(`<div class="card">
-            <div style="margin-bottom:8px">${kindTag("character")}새 캐릭터 <b>${esc2(name)}</b> 추가</div>
+            <div style="margin-bottom:8px">${kindTag("character")}새 캐릭터 <b>${esc3(name)}</b> 추가</div>
             <div class="grid">
               <b>올릴 에셋</b><span><b>${s.upload}개</b> (${fmtBytes2(s.uploadBytes)})${s.reused ? ` · 서버에 이미 있음 ${s.reused}` : ""}</span>
               <b>추가 에셋</b><span>${plan.additional.length}개</span><b>감정 이미지</b><span>${plan.emotions.length}개</span>
@@ -10079,11 +10079,11 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       } catch (e) {
         return renderResult(null, null, e?.message ?? String(e));
       }
-      frame(`${msg ? `<div class="ok">${esc2(msg)}</div>` : ""}
+      frame(`${msg ? `<div class="ok">${esc3(msg)}</div>` : ""}
           <div class="card"><div style="margin-bottom:6px">업데이트 전 백업 (항목마다 최근 ${5}개)</div>
             ${list.length ? list.map((b) => `<div class="opt" style="cursor:default;align-items:center">
-                <div style="flex:1">${kindTag(b.kind)}<b>${esc2(b.name)}</b><div class="muted">${fmtDate(b.t)} · ${esc2(b.note || "")} · ${fmtBytes2(b.size ?? 0)}${b.chatCount ? ` · 채팅 ${b.chatCount}개` : ""}</div></div>
-                <button data-restore="${esc2(b.id)}">되돌리기</button>${b.src === "tide" ? "" : `<button class="danger" data-del="${esc2(b.id)}">삭제</button>`}</div>`).join("") : '<div class="muted">아직 백업이 없어요. 업데이트할 때마다 바꾸기 전 상태가 자동으로 저장됩니다.</div>'}
+                <div style="flex:1">${kindTag(b.kind)}<b>${esc3(b.name)}</b><div class="muted">${fmtDate(b.t)} · ${esc3(b.note || "")} · ${fmtBytes2(b.size ?? 0)}${b.chatCount ? ` · 채팅 ${b.chatCount}개` : ""}</div></div>
+                <button data-restore="${esc3(b.id)}">되돌리기</button>${b.src === "tide" ? "" : `<button class="danger" data-del="${esc3(b.id)}">삭제</button>`}</div>`).join("") : '<div class="muted">아직 백업이 없어요. 업데이트할 때마다 바꾸기 전 상태가 자동으로 저장됩니다.</div>'}
           </div>
           <p class="muted">백업은 플러그인 저장소에 조각으로 압축해 저장하고, 같은 내용은 한 번만 저장해요. 이미지 파일은 백업에 복사하지 않으니 앱 저장소에 남아 있어야 되돌릴 때 보여요. RisuTide에서 만든 백업도 이 기기에 있으면 함께 보여요(여기서는 지우지 않아요).</p>
           <div class="row"><button id="back">뒤로</button>${closeBtn()}</div>`);
@@ -10161,7 +10161,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
     }
     function notes(incoming, lowLevelNew, uploads) {
       return [
-        ...(incoming.notes ?? []).map((n) => `<div class="warn">${esc2(n)}</div>`),
+        ...(incoming.notes ?? []).map((n) => `<div class="warn">${esc3(n)}</div>`),
         lowLevelNew ? `<div class="warn">이 버전은 <b>저수준 접근(lowLevelAccess)</b>을 사용합니다. 믿을 수 있는 파일인지 확인하세요.</div>` : "",
         uploads > 300 ? `<div class="warn">올릴 에셋이 ${uploads}개입니다. 서버 상태에 따라 오래 걸릴 수 있습니다. 진행 중에 예상 시간이 표시됩니다.</div>` : ""
       ].join("");
@@ -10183,13 +10183,13 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
     function renderResult(res, info, error) {
       busy = false;
       const what = res ? res.kind === "character" ? "캐릭터" : "모듈" : "";
-      frame(`${res ? `<div class="ok"><b>${esc2(res.name)}</b> ${what} ${res.updated ? "업데이트" : "추가"} 완료<br>
+      frame(`${res ? `<div class="ok"><b>${esc3(res.name)}</b> ${what} ${res.updated ? "업데이트" : "추가"} 완료<br>
               <span class="muted">새로 올린 에셋 ${res.uploadedCount}개 · 전체 에셋 ${res.assets}개 · 로어북 ${res.lore}개${res.chats !== void 0 ? ` · 채팅 ${res.chats}개 유지` : ""}${res.backup ? " · 바꾸기 전 상태를 백업함" : ""}</span></div>
-              ${res.note ? `<div class="warn">${esc2(res.note)}</div>` : ""}` : ""}
-          ${info ? `<div class="card">${esc2(info)}</div>` : ""}
-          ${error ? `<div class="err">${esc2(error)}</div><p class="muted">기존 항목은 바뀌지 않았습니다. 이미 올라간 에셋은 쓰이지 않으면 서버 정리 때 지워집니다.</p>` : ""}
-          ${res?.summary ? `<div class="card"><div class="grid"><b>바뀐 내용</b><span>${esc2(res.summary)}</span></div></div>` : ""}
-          ${queue.length ? `<div class="card">대기 중인 파일 ${queue.length}개 — 다음: <b>${esc2(queue[0].name)}</b></div>` : ""}
+              ${res.note ? `<div class="warn">${esc3(res.note)}</div>` : ""}` : ""}
+          ${info ? `<div class="card">${esc3(info)}</div>` : ""}
+          ${error ? `<div class="err">${esc3(error)}</div><p class="muted">기존 항목은 바뀌지 않았습니다. 이미 올라간 에셋은 쓰이지 않으면 서버 정리 때 지워집니다.</p>` : ""}
+          ${res?.summary ? `<div class="card"><div class="grid"><b>바뀐 내용</b><span>${esc3(res.summary)}</span></div></div>` : ""}
+          ${queue.length ? `<div class="card">대기 중인 파일 ${queue.length}개 — 다음: <b>${esc3(queue[0].name)}</b></div>` : ""}
           <div class="row">${queue.length ? '<button class="primary" id="nextq">다음 파일</button>' : '<button class="primary" id="again">다른 파일</button>'}${res?.backupRec ? '<button id="undo">바로 되돌리기</button>' : ""}${res?.backup ? '<button id="tobk">백업·되돌리기</button>' : ""}${closeBtn()}</div>`);
       root.querySelector("#again")?.addEventListener("click", () => renderStart());
       pendingOfferCard();
@@ -10451,7 +10451,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
     let others = othersMode === "hide" ? "hide" : "show";
     return modal(host, (done) => {
       const nameInput = withName ? h("input", { class: "rb-input", value: name, placeholder: "폴더 이름", "aria-label": "폴더 이름", "data-autofocus": "1" }) : null;
-      const q = h("input", { class: "rb-input", type: "search", placeholder: `${noun} 찾기`, "aria-label": `${noun} 찾기`, style: "height:38px" });
+      const q2 = h("input", { class: "rb-input", type: "search", placeholder: `${noun} 찾기`, "aria-label": `${noun} 찾기`, style: "height:38px" });
       const count = h("span", { class: "rb-muted" });
       const list = h("div", { class: "rb-scroll rb-pick", role: "group", "aria-label": `넣을 ${noun}`, style: "max-height:min(46vh,380px);overflow:auto;border:1px solid var(--rb-line);border-radius:12px;padding:4px;overscroll-behavior:contain" });
       const rows = items.map((it) => {
@@ -10490,10 +10490,10 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
         paintCount();
       } });
       const filter = () => {
-        const v = q.value.trim().toLowerCase();
+        const v = q2.value.trim().toLowerCase();
         for (const r of rows) r.hidden = others === "hide" && r._other || !!v && !r.dataset.q.includes(v);
       };
-      q.addEventListener("input", filter);
+      q2.addEventListener("input", filter);
       const otherCount = rows.filter((r) => r._other).length;
       const othersCtl = otherCount ? h(
         "div",
@@ -10535,7 +10535,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
         nameInput ? h("label", { class: "rb-field" }, h("span", { class: "rb-label" }, "이름"), nameInput) : null,
         h("div", { style: "display:flex;gap:8px;align-items:center" }, h("span", { class: "rb-label", style: "flex:1" }, `넣을 ${noun} 고르기 (나중에 바꿀 수 있어요)`), count),
         othersCtl,
-        h("div", { style: "display:flex;gap:8px" }, h("div", { style: "flex:1" }, q), all),
+        h("div", { style: "display:flex;gap:8px" }, h("div", { style: "flex:1" }, q2), all),
         list,
         h("div", { class: "btns" }, btn("취소", { onClick: () => done(null) }), btn(ok, { kind: "primary", onClick: submit }))
       );
@@ -11088,13 +11088,13 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
   }
   function hslToRgb([h2, s, l]) {
     if (s === 0) return [l * 255, l * 255, l * 255];
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+    const q2 = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q2;
     const f = (t) => {
       if (t < 0) t += 1;
       if (t > 1) t -= 1;
-      if (t < 1 / 6) return p + (q - p) * 6 * t;
-      if (t < 1 / 2) return q;
-      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      if (t < 1 / 6) return p + (q2 - p) * 6 * t;
+      if (t < 1 / 2) return q2;
+      if (t < 2 / 3) return p + (q2 - p) * (2 / 3 - t) * 6;
       return p;
     };
     return [f(h2 + 1 / 3) * 255, f(h2) * 255, f(h2 - 1 / 3) * 255];
@@ -12669,8 +12669,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
     }
     function renderList(kind) {
       const list = draft[kind];
-      const q = es.q[kind].trim().toLowerCase();
-      const match = (it2) => !q || [it2.comment, it2.key, it2.secondkey, it2.content, it2.in, it2.out, JSON.stringify(it2.effect ?? "")].some((v) => String(v ?? "").toLowerCase().includes(q));
+      const q2 = es.q[kind].trim().toLowerCase();
+      const match = (it2) => !q2 || [it2.comment, it2.key, it2.secondkey, it2.content, it2.in, it2.out, JSON.stringify(it2.effect ?? "")].some((v) => String(v ?? "").toLowerCase().includes(q2));
       if (es.sel[kind] >= list.length) es.sel[kind] = list.length - 1;
       if (list[es.sel[kind]]?.mode === "folder") {
         const j = list.findIndex((x2, k) => k >= es.sel[kind] && x2.mode !== "folder");
@@ -12791,9 +12791,9 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       };
       function paintItems() {
         const out = [];
-        if (q || kind !== "lorebook") {
+        if (q2 || kind !== "lorebook") {
           list.forEach((it2, i22) => {
-            if (match(it2)) out.push(rowFor(it2, i22, { grip: !q }));
+            if (match(it2)) out.push(rowFor(it2, i22, { grip: !q2 }));
           });
         } else {
           const keys = new Set(list.filter((x2) => x2.mode === "folder").map((x2) => x2.key));
@@ -13392,10 +13392,10 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
           let value = "";
           if (type === "tEXt") value = dec.decode(data.subarray(z + 1));
           else if (type === "iTXt") {
-            let q = z + 3;
-            q = data.indexOf(0, q) + 1;
-            q = data.indexOf(0, q) + 1;
-            value = utf.decode(data.subarray(q));
+            let q2 = z + 3;
+            q2 = data.indexOf(0, q2) + 1;
+            q2 = data.indexOf(0, q2) + 1;
+            value = utf.decode(data.subarray(q2));
           } else value = "(압축된 텍스트)";
           out.push({ kind: type, key, value: value.length > 2e3 ? value.slice(0, 2e3) + "…" : value, size: len });
         } else if (type === "eXIf") out.push({ kind: "EXIF", key: "eXIf", value: `${len} 바이트`, size: len });
@@ -13725,8 +13725,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
       if (ev.key === "Delete" && as.sel.size && ev.target.tagName !== "INPUT") removeSelected();
     });
     const visible = () => {
-      const q = as.q.trim().toLowerCase();
-      return assets.filter((a) => inFolder(fd2, a[0], as.folder) && (!q || a[0].toLowerCase().includes(q)));
+      const q2 = as.q.trim().toLowerCase();
+      return assets.filter((a) => inFolder(fd2, a[0], as.folder) && (!q2 || a[0].toLowerCase().includes(q2)));
     };
     const selected = () => assets.filter((a) => as.sel.has(keyOf3(a)));
     async function save(nextAssets, nextFd, note2) {
@@ -14816,12 +14816,12 @@ ${patch.note}` : "",
       } catch {
       }
     }
-    const q = st.search.trim().toLowerCase();
-    const filtering = !!q;
+    const q2 = st.search.trim().toLowerCase();
+    const filtering = !!q2;
     const sort = ctx.prefs.ui?.charSort ?? null;
     st.charSorted = !!sort;
     const srt = (arr, get) => sortBy(arr, sort, (x2) => get(x2)?.name ?? "", (x2) => get(x2)?.size ?? 0);
-    const list = srt(st.chars, (c) => c).filter((c) => !q || c.name.toLowerCase().includes(q) || String(c.creator ?? "").toLowerCase().includes(q));
+    const list = srt(st.chars, (c) => c).filter((c) => !q2 || c.name.toLowerCase().includes(q2) || String(c.creator ?? "").toLowerCase().includes(q2));
     ctx.setNavCount("characters", st.chars.length);
     if (!st.charSel || !st.chars.some((c) => c.chaId === st.charSel)) st.charSel = list[0]?.chaId ?? null;
     const box = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "캐릭터 목록", style: "padding-top:12px" });
@@ -16227,8 +16227,8 @@ ${md()}
     const { entries, globalOn } = st.modData;
     const meta = ctx.prefs.meta;
     ctx.setNavCount("modules", entries.length);
-    const q = st.search.trim().toLowerCase();
-    const filtering = !!q || st.modFilter !== "all";
+    const q2 = st.search.trim().toLowerCase();
+    const filtering = !!q2 || st.modFilter !== "all";
     if (st.modFolder && !meta.folders.some((f) => f.id === st.modFolder)) st.modFolder = void 0;
     const fv = st.modFolder;
     const inView = (e) => fv === void 0 || (meta.mapping[e.module.id] ?? "") === fv;
@@ -16238,7 +16238,7 @@ ${md()}
       if (st.modFilter === "on" && !e.enabled) return false;
       if (st.modFilter === "off" && e.enabled) return false;
       if (["global", "lla", "mcp"].includes(st.modFilter) && !f[st.modFilter]) return false;
-      return !q || st.modIndex.get(e.module.id)?.includes(q);
+      return !q2 || st.modIndex.get(e.module.id)?.includes(q2);
     };
     const count = (id) => entries.filter((e) => inView(e)).filter((e) => id === "all" || id === "on" && e.enabled || id === "off" && !e.enabled || moduleFlags(e.module, globalOn)[id]).length;
     const shown = entries.filter(pass);
@@ -16760,7 +16760,7 @@ ${md()}
       const linked = (p) => (pm.map[p.id] ?? []).includes(m.id);
       personas.sort((a, b) => Number(linked(b)) - Number(linked(a)));
       const box = h("div", { class: "rb-scroll", style: "max-height:232px;overflow:auto;overscroll-behavior:contain", id: "rb-persona-box" });
-      const q = personas.length > 6 ? h("input", { class: "rb-input", type: "search", placeholder: `페르소나 ${personas.length}개에서 찾기`, "aria-label": "페르소나 찾기", style: "height:36px;border-radius:0;border-width:0 0 1px 0" }) : null;
+      const q2 = personas.length > 6 ? h("input", { class: "rb-input", type: "search", placeholder: `페르소나 ${personas.length}개에서 찾기`, "aria-label": "페르소나 찾기", style: "height:36px;border-radius:0;border-width:0 0 1px 0" }) : null;
       const rows = personas.length ? personas.map((p) => {
         const on = (pm.map[p.id] ?? []).includes(m.id);
         const sw = switchEl(on, { label: `${p.name} 페르소나에 연결`, disabled: !e.enabled, onChange: async (v) => {
@@ -16779,11 +16779,11 @@ ${md()}
         return r;
       }) : [h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "페르소나가 없어요"))];
       box.append(...rows);
-      q?.addEventListener("input", () => {
-        const v = q.value.trim().toLowerCase();
+      q2?.addEventListener("input", () => {
+        const v = q2.value.trim().toLowerCase();
         for (const r of rows) r.hidden = !!v && !r.dataset.name?.includes(v);
       });
-      replace(personaBox, q, box);
+      replace(personaBox, q2, box);
     })().catch(() => replace(personaBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "페르소나를 읽지 못했어요"))));
     const loadChars = async () => {
       replace(charBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted", style: "display:flex;align-items:center;gap:8px" }, spinner(), "캐릭터 불러오는 중")));
@@ -16794,8 +16794,8 @@ ${md()}
       const filterBox = h("input", { class: "rb-input", style: "height:36px;margin:8px 14px;width:calc(100% - 28px)", placeholder: "캐릭터 검색", "aria-label": "캐릭터 검색" });
       const listEl = h("div", { class: "rb-scroll", style: "max-height:240px" });
       const paint = () => {
-        const q = filterBox.value.trim().toLowerCase();
-        replace(listEl, chars.filter((x2) => !q || String(x2.ch.name ?? "").toLowerCase().includes(q)).slice(0, 200).map(({ ch, i: i2 }) => {
+        const q2 = filterBox.value.trim().toLowerCase();
+        replace(listEl, chars.filter((x2) => !q2 || String(x2.ch.name ?? "").toLowerCase().includes(q2)).slice(0, 200).map(({ ch, i: i2 }) => {
           const on = ch.modules?.includes(m.id) ?? false;
           const sw = switchEl(on, { label: `${ch.name}에 연결`, disabled: !e.enabled, onChange: async (v) => {
             setSwitch(sw, v);
@@ -17618,8 +17618,8 @@ ${md()}
     const groups = [...targets.values()];
     if (st.histTarget && !targets.has(st.histTarget)) st.histTarget = null;
     st.histKind ??= "all";
-    const q = st.search.trim().toLowerCase();
-    const shownGroups = groups.filter((g) => (st.histKind === "all" || g.kind === st.histKind) && (!q || String(g.name).toLowerCase().includes(q)));
+    const q2 = st.search.trim().toLowerCase();
+    const shownGroups = groups.filter((g) => (st.histKind === "all" || g.kind === st.histKind) && (!q2 || String(g.name).toLowerCase().includes(q2)));
     const cur = st.histTarget ? targets.get(st.histTarget) : null;
     const keep = ctx.prefs.ui?.keepBackups ?? 5;
     const side = h(
@@ -17792,10 +17792,10 @@ ${md()}
     const probe = `${orig ?? ""}+probe${Date.now().toString(36)}`;
     const withVer = (arr, v) => arr.map((p) => {
       if (p?.name !== SELF_NAME) return p;
-      const q = { ...p };
-      if (v === void 0) delete q.versionOfPlugin;
-      else q.versionOfPlugin = v;
-      return q;
+      const q2 = { ...p };
+      if (v === void 0) delete q2.versionOfPlugin;
+      else q2.versionOfPlugin = v;
+      return q2;
     });
     try {
       await api.setDatabaseLite({ plugins: withVer(list, probe) });
@@ -18001,8 +18001,292 @@ ${md()}
     }, null, 2);
   }
 
+  // src/data/interopSnippet.js
+  var INTEROP_SNIPPET = "/* ============================================================\n * DA Interop v1 — B 플러그인용 스니펫\n * https://github.com/Pyser08/dusk-atelier-interop\n *\n * 이 블록을 플러그인 코드 맨 아래에 붙여 넣으세요.\n * 공식 플러그인 API(pluginStorage)만 사용합니다.\n *\n * 저장 위치 (pluginStorage, 모든 플러그인 공용)\n *   da_interop:reg:<id>    ← 이 플러그인이 등록 (스키마·현재값)\n *   da_interop:patch:<id>  ← Dusk Atelier가 기록 (적용할 값)\n * ============================================================ */\nconst registerInterop = (() => {\n  const SPEC = 1;\n  const REG = 'da_interop:reg:';\n  const PATCH = 'da_interop:patch:';\n  const POLL_MS = 3000;\n  const R = globalThis.risuai ?? globalThis.Risuai;\n\n  const clone = (v) => JSON.parse(JSON.stringify(v ?? null));\n  // pluginStorage는 모든 플러그인이 함께 쓰는 저장소라 키 하나에 자기 항목만 둔다\n  async function readKey(key) {\n    try {\n      const raw = await R.pluginStorage.getItem(key);\n      return raw == null || raw === '' ? null : typeof raw === 'string' ? JSON.parse(raw) : raw;\n    } catch { return null; }\n  }\n  const writeKey = (key, value) => R.pluginStorage.setItem(key, JSON.stringify(value));\n\n  function normalize(cfg) {\n    if (!cfg || typeof cfg !== 'object') throw new Error('[DA Interop] 설정 객체가 필요합니다');\n    if (!/^[a-z0-9][a-z0-9._-]{1,63}$/.test(cfg.id ?? '')) throw new Error('[DA Interop] id 형식 오류: ' + cfg.id);\n    if (typeof cfg.apply !== 'function') throw new Error('[DA Interop] apply 함수가 필요합니다');\n    return {\n      id: cfg.id,\n      name: cfg.name ?? cfg.id,\n      version: String(cfg.version ?? ''),\n      pluginName: cfg.pluginName ?? '',\n      description: cfg.description ?? '',\n      fields: Array.isArray(cfg.fields) ? cfg.fields : [],\n      presets: Array.isArray(cfg.presets) ? cfg.presets : [],\n      apply: cfg.apply,\n      getValues: typeof cfg.getValues === 'function' ? cfg.getValues : null,\n    };\n  }\n\n  return async function registerInterop(rawCfg) {\n    if (!R?.pluginStorage?.getItem) {\n      console.warn('[DA Interop] 플러그인 API를 찾지 못해 등록을 건너뜁니다');\n      return null;\n    }\n    const cfg = normalize(rawCfg);\n    let appliedRev = 0;\n    let busy = false;\n\n    const currentValues = async () => {\n      if (cfg.getValues) {\n        try { return clone(await cfg.getValues()); } catch (e) { console.warn('[DA Interop] getValues 실패', e); }\n      }\n      return Object.fromEntries(cfg.fields.map((f) => [f.key, f.default ?? null]));\n    };\n\n    const publish = async (extra = {}) => {\n      const prev = await readKey(REG + cfg.id);\n      if (prev?.appliedRev) appliedRev = Math.max(appliedRev, prev.appliedRev);\n      return writeKey(REG + cfg.id, {\n        spec: SPEC,\n        id: cfg.id,\n        name: cfg.name,\n        version: cfg.version,\n        pluginName: cfg.pluginName,\n        description: cfg.description,\n        fields: clone(cfg.fields),\n        presets: clone(cfg.presets),\n        values: await currentValues(),\n        appliedRev,\n        lastError: null,\n        ...extra,\n        updatedAt: Date.now(),\n      });\n    };\n\n    const check = async () => {\n      if (busy) return;\n      busy = true;\n      try {\n        const patch = await readKey(PATCH + cfg.id);\n        if (!patch || !(patch.rev > appliedRev)) return;\n        let lastError = null;\n        try {\n          await cfg.apply(clone(patch.values ?? {}), { preset: patch.preset ?? null, rev: patch.rev, source: 'dusk-atelier' });\n        } catch (e) {\n          lastError = String(e?.message ?? e);\n          console.warn('[DA Interop] apply 실패', e);\n        }\n        appliedRev = patch.rev;\n        await publish({ lastError });\n      } finally {\n        busy = false;\n      }\n    };\n\n    await publish();\n    await check();\n    setInterval(() => {\n      if (typeof document === 'undefined' || document.visibilityState !== 'hidden') check().catch(() => {});\n    }, POLL_MS);\n\n    return {\n      /** 값이 플러그인 쪽에서 바뀌었을 때 호출하면 Dusk Atelier 화면도 갱신된다 */\n      refresh: () => publish(),\n    };\n  };\n})();\n";
+
+  // src/data/pluginTemplate.js
+  var DRAFT_KEY = "rbm:pluginDraft:v1";
+  var BODY_MARK = "// ===== 플러그인 본체 =====";
+  var REG_MARK = "// ===== DA Interop 등록 코드 =====";
+  var DEFAULT_META = { name: "my_plugin", displayName: "내 플러그인", version: "1.0.0", id: "my-plugin", description: "" };
+  var q = (s) => `'${String(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+  function buildTemplate(meta = DEFAULT_META) {
+    const m = { ...DEFAULT_META, ...meta };
+    return `//@name ${m.name}
+//@display-name ${m.displayName}
+//@api 3.0
+//@version ${m.version}
+
+${INTEROP_SNIPPET}
+${BODY_MARK}
+const risu = globalThis.risuai ?? globalThis.Risuai;
+
+// 설정은 pluginStorage에 저장해요. 다른 플러그인과 겹치지 않게 키 앞에 플러그인 이름을 붙여요
+const SETTINGS_KEY = ${q(m.name + ":settings")};
+const DEFAULTS = {
+  enabled: true,
+  strength: 0.5,
+  mode: 'normal',
+};
+
+async function loadSettings() {
+  try {
+    return { ...DEFAULTS, ...JSON.parse((await risu.pluginStorage.getItem(SETTINGS_KEY)) || '{}') };
+  } catch {
+    return { ...DEFAULTS };
+  }
+}
+
+async function saveSettings(values) {
+  await risu.pluginStorage.setItem(SETTINGS_KEY, JSON.stringify(values));
+}
+
+// TODO: 여기에 플러그인 기능을 작성하세요.
+// 설정 값이 필요할 때는 const s = await loadSettings(); 로 읽어요.
+
+${REG_MARK}
+registerInterop({
+  id: ${q(m.id)},
+  name: ${q(m.displayName)},
+  version: ${q(m.version)},
+  pluginName: ${q(m.name)},
+  description: ${q(m.description)},
+
+  // Dusk Atelier에 보일 설정 항목
+  fields: [
+    { key: 'enabled', label: '사용', type: 'toggle', default: true },
+    { key: 'strength', label: '세기', type: 'slider', default: 0.5, min: 0, max: 1, step: 0.05 },
+    { key: 'mode', label: '모드', type: 'select', default: 'normal', options: [
+      { value: 'normal', label: '보통' },
+      { value: 'strong', label: '강하게' },
+    ] },
+  ],
+
+  // 한 번에 바꿀 값 묶음
+  presets: [
+    { name: '약하게', values: { strength: 0.2 } },
+    { name: '강하게', values: { strength: 0.9, mode: 'strong' } },
+  ],
+
+  // 지금 값을 Dusk Atelier에 알려 줘요
+  getValues: loadSettings,
+
+  // Dusk Atelier에서 [적용]을 누르면 불려요
+  apply: async (values, ctx) => {
+    await saveSettings({ ...DEFAULTS, ...values });
+  },
+});
+`;
+  }
+  function syncMeta(code, meta) {
+    let out = code;
+    const setHeader = (k, v) => {
+      const re = new RegExp(`^//@${k}[ \\t].*$`, "m");
+      out = re.test(out) ? out.replace(re, `//@${k} ${v}`) : `//@${k} ${v}
+` + out;
+    };
+    setHeader("name", meta.name);
+    setHeader("display-name", meta.displayName);
+    setHeader("version", meta.version);
+    const at = out.indexOf("registerInterop({", out.indexOf(REG_MARK) >= 0 ? out.indexOf(REG_MARK) : out.lastIndexOf("registerInterop({"));
+    if (at < 0) return out;
+    let head = out.slice(0, at), reg = out.slice(at);
+    const setProp = (k, v) => {
+      reg = reg.replace(new RegExp(`^(\\s*)${k}:\\s*(['"\`]).*?\\2,`, "m"), (_, sp) => `${sp}${k}: ${q(v)},`);
+    };
+    setProp("id", meta.id);
+    setProp("name", meta.displayName);
+    setProp("version", meta.version);
+    setProp("pluginName", meta.name);
+    setProp("description", meta.description);
+    head = head.replace(/^(const SETTINGS_KEY = )(['"`]).*?\2;/m, (_, a) => `${a}${q(meta.name + ":settings")};`);
+    return head + reg;
+  }
+  function checkCode(code, meta) {
+    const out = [];
+    const hd = parseHeader(code);
+    if (!hd.name) out.push({ level: "err", text: "맨 위에 //@name 줄이 없어요. RisuAI가 플러그인 이름을 모르게 돼요." });
+    else if (!/^[A-Za-z0-9_-]+$/.test(hd.name)) out.push({ level: "warn", text: "//@name에는 영문·숫자·_·- 만 쓰는 게 안전해요." });
+    if (hd.api !== "3.0") out.push({ level: "err", text: "//@api 3.0 줄이 필요해요. 이 화면은 API 3.0 플러그인만 만들어요." });
+    const first = code.split("\n").find((l) => l.trim());
+    if (first && !first.startsWith("//@")) out.push({ level: "warn", text: "//@ 머리말은 파일 맨 위에 두세요." });
+    if (!code.includes("const registerInterop =")) out.push({ level: "warn", text: "DA Interop 스니펫이 없어요. Dusk Atelier에서 설정을 조절할 수 없어요." });
+    if (!/registerInterop\(\{/.test(code.replace(/const registerInterop =[\s\S]*?\}\)\(\);/, ""))) out.push({ level: "warn", text: "registerInterop({...}) 등록 코드가 없어요." });
+    if (!/^[a-z0-9][a-z0-9._-]{1,63}$/.test(meta.id ?? "")) out.push({ level: "err", text: "연동 id는 영소문자·숫자로 시작하고 . - _ 만 쓸 수 있어요 (2~64자)." });
+    const syntax2 = syntaxError(code);
+    if (syntax2) out.push({ level: "err", text: `문법 오류: ${syntax2}` });
+    return out;
+  }
+  function syntaxError(code) {
+    try {
+      new Function(`return async () => {
+${code}
+}`);
+      return null;
+    } catch (e) {
+      if (e instanceof SyntaxError) return e.message;
+      return null;
+    }
+  }
+  function toPluginObject(code) {
+    const hd = parseHeader(code);
+    return {
+      name: hd.name,
+      displayName: hd.displayName || hd.name,
+      script: code,
+      realArg: {},
+      arguments: {},
+      argMeta: {},
+      customLink: [],
+      version: "3.0",
+      versionOfPlugin: hd.version ?? "",
+      updateURL: hd.updateURL ?? "",
+      allowedIPC: [],
+      enabled: true
+    };
+  }
+  var HELP = {
+    name: ["플러그인 이름 (//@name)", "RisuAI가 플러그인을 구분하는 이름이에요. 같은 이름으로 설치하면 기존 플러그인을 덮어써요. 영문 소문자·숫자·_ 를 권장해요.", "//@name my_plugin"],
+    displayName: ["표시 이름 (//@display-name)", "RisuAI 설정 화면과 Dusk Atelier 연동 목록에 보이는 이름이에요. 한글을 써도 돼요.", "//@display-name 내 플러그인"],
+    version: ["버전 (//@version)", "고칠 때마다 올려 주세요. 업데이트 확인은 이 숫자를 비교해요. 점으로 나눈 숫자(1.0.0)를 권장해요.", "//@version 1.0.1"],
+    id: ["연동 id", "Dusk Atelier가 이 플러그인을 찾을 때 쓰는 이름표예요. 영소문자·숫자로 시작하고 . - _ 만 써요. 한 번 정하면 바꾸지 마세요. 바꾸면 Dusk에 새 플러그인으로 보여요.", "id: 'my-plugin',"],
+    description: ["설명", "Dusk Atelier 연동 설정 화면 위쪽에 보이는 한 줄 설명이에요. 비워도 돼요.", "description: '답변 말투를 바꿔요',"],
+    header: ["① 머리말 (맨 위 //@ 줄)", "RisuAI가 플러그인 정보를 읽는 부분이라 반드시 파일 맨 위에 있어야 해요. 위 칸의 이름·표시 이름·버전을 바꾸면 자동으로 고쳐져요. //@api 3.0은 지우지 마세요.", "//@name my_plugin\n//@display-name 내 플러그인\n//@api 3.0\n//@version 1.0.0"],
+    snippet: ["② DA Interop 스니펫", "Dusk Atelier와 값을 주고받는 공용 코드예요. 건드리지 않아도 돼요. 이 코드가 있어야 맨 아래 registerInterop을 쓸 수 있어요.", "const registerInterop = (() => { ... })();"],
+    body: ["③ 플러그인 본체", "플러그인이 실제로 할 일을 여기에 써요. 설정 값은 loadSettings()로 읽어요. 저장 키(SETTINGS_KEY)는 다른 플러그인과 겹치지 않게 '플러그인이름:' 으로 시작해요.", "const s = await loadSettings();\nif (s.enabled) {\n  // ...\n}"],
+    fields: ["④ fields — 설정 항목", "Dusk Atelier에 자동으로 만들어질 입력 칸 목록이에요. key는 DEFAULTS의 이름과 같아야 해요.\n\ntype 종류\n· toggle: 켜기/끄기 (true/false)\n· number: 숫자 칸 — min, max, step\n· slider: 슬라이더 — min, max, step\n· select: 고르기 — options: [{ value, label }]\n· text: 한 줄 글\n· textarea: 여러 줄 글\n· color: 색 (#rrggbb)\n\n공통: label(보일 이름), default(기본값), group(묶음 제목), description(작은 설명)", "{ key: 'strength', label: '세기', type: 'slider',\n  default: 0.5, min: 0, max: 1, step: 0.05, group: '생성' },"],
+    presets: ["④ presets — 프리셋", "버튼 한 번으로 여러 값을 바꾸는 묶음이에요. values에는 바꿀 key만 적으면 되고, 나머지는 지금 값 그대로예요.", "{ name: '강하게', values: { strength: 0.9, mode: 'strong' } },"],
+    getValues: ["④ getValues", "지금 저장된 값을 돌려주는 함수예요. Dusk Atelier 화면에 현재 값으로 보여요. 템플릿에서는 loadSettings를 그대로 써요.", "getValues: loadSettings,"],
+    apply: ["④ apply", "Dusk Atelier에서 [적용]이나 프리셋을 누르면 불리는 함수예요. 받은 values를 저장하고, 필요하면 바로 반영하세요. 여기서 오류가 나면 Dusk Atelier에 오류로 표시돼요.\nctx.preset: 프리셋으로 적용했으면 그 이름\nctx.rev: 몇 번째 적용인지", "apply: async (values, ctx) => {\n  await saveSettings({ ...DEFAULTS, ...values });\n},"],
+    install: ["설치·내려받기", "설치를 누르면 RisuAI가 설치 확인 창을 띄워요. 허락하면 플러그인 목록에 들어가요(같은 이름이면 덮어씀). 적용하려면 새로고침이 필요할 수 있어요.\n내려받기는 .js 파일로 저장해요. RisuAI 설정 → 플러그인에서 직접 가져올 수도 있어요.\n작성 중인 코드는 자동으로 임시 저장돼요.", ""]
+  };
+  var HELP_ORDER = ["header", "snippet", "body", "fields", "presets", "getValues", "apply", "id", "install"];
+
+  // src/ui/codeedit.js
+  var CSS3 = `
+.rb-code{--c-bg:#1e1e1e;--c-fg:#d4d4d4;--c-gut:#858585;--c-line:#2b2b2b;border-radius:12px;border:1px solid var(--rb-line);background:var(--c-bg);overflow:auto;max-height:68vh;min-height:320px;position:relative;font:12.5px/1.6 ui-monospace,"Cascadia Code","D2Coding",Menlo,Consolas,monospace;tab-size:2}
+.rb-code-in{display:grid;grid-template-columns:auto 1fr;min-width:100%;width:max-content}
+.rb-code-gut{position:sticky;left:0;z-index:2;background:var(--c-bg);color:var(--c-gut);text-align:right;padding:12px 10px 12px 12px;border-right:1px solid var(--c-line);user-select:none;white-space:pre}
+.rb-code-area{position:relative}
+.rb-code pre,.rb-code textarea{margin:0;padding:12px 16px;font:inherit;white-space:pre;word-wrap:normal;letter-spacing:0;tab-size:2}
+.rb-code pre{color:var(--c-fg);pointer-events:none;min-height:100%}
+.rb-code textarea{position:absolute;inset:0;width:100%;height:100%;resize:none;border:0;outline:none;background:transparent;color:transparent;caret-color:#aeafad;overflow:hidden;-webkit-text-fill-color:transparent}
+.rb-code textarea::selection{background:#264f78;-webkit-text-fill-color:transparent}
+.rb-code .t-com{color:#6a9955}
+.rb-code .t-meta{color:#c586c0;font-weight:600}
+.rb-code .t-str{color:#ce9178}
+.rb-code .t-num{color:#b5cea8}
+.rb-code .t-kw{color:#c586c0}
+.rb-code .t-decl{color:#569cd6}
+.rb-code .t-lit{color:#569cd6}
+.rb-code .t-fn{color:#dcdcaa}
+.rb-code .t-prop{color:#9cdcfe}
+.rb-code .t-key{color:#4fc1ff;font-weight:700}
+.rb-code .t-type{color:#4ec9b0}
+.rb-code .t-api{color:#ffd166;font-weight:700}
+`;
+  var KW = /* @__PURE__ */ new Set(["if", "else", "return", "await", "for", "while", "do", "try", "catch", "finally", "throw", "switch", "case", "break", "continue", "of", "in", "new", "delete", "typeof", "instanceof", "default", "import", "export", "from", "yield"]);
+  var DECL = /* @__PURE__ */ new Set(["const", "let", "var", "function", "class", "async", "static", "get", "set", "extends", "this", "super"]);
+  var LIT = /* @__PURE__ */ new Set(["true", "false", "null", "undefined", "NaN", "Infinity"]);
+  var KEYS3 = /* @__PURE__ */ new Set(["id", "name", "version", "pluginName", "description", "fields", "presets", "getValues", "apply", "key", "label", "type", "options", "values", "group", "min", "max", "step", "default"]);
+  var API = /* @__PURE__ */ new Set(["registerInterop", "risuai", "Risuai", "risu", "pluginStorage"]);
+  var TOKEN = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(`(?:\\[\s\S]|[^`\\])*`?|'(?:\\.|[^'\\\n])*'?|"(?:\\.|[^"\\\n])*"?)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_$][\w$]*)/g;
+  var esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  function highlight(code) {
+    let out = "", last2 = 0, m;
+    TOKEN.lastIndex = 0;
+    while (m = TOKEN.exec(code)) {
+      out += esc(code.slice(last2, m.index));
+      last2 = TOKEN.lastIndex;
+      const [tok, com, str, num, id] = m;
+      let cls;
+      if (com) cls = com.startsWith("//@") ? "meta" : "com";
+      else if (str) cls = "str";
+      else if (num) cls = "num";
+      else if (id) {
+        const before = code.slice(Math.max(0, m.index - 1), m.index);
+        const after = code.slice(last2, last2 + 40).match(/^\s*(\S)/)?.[1];
+        if (API.has(id)) cls = "api";
+        else if (before === ".") cls = after === "(" ? "fn" : "prop";
+        else if (after === ":" && /[{,]\s*$/.test(code.slice(Math.max(0, m.index - 200), m.index))) cls = KEYS3.has(id) ? "key" : "prop";
+        else if (KW.has(id)) cls = "kw";
+        else if (DECL.has(id)) cls = "decl";
+        else if (LIT.has(id)) cls = "lit";
+        else if (after === "(") cls = "fn";
+        else if (/^[A-Z]/.test(id)) cls = "type";
+      }
+      out += cls ? `<span class="t-${cls}">${esc(tok)}</span>` : esc(tok);
+    }
+    return out + esc(code.slice(last2)) + "\n";
+  }
+  function codeEditor(value, { onChange, label: label3 = "코드" } = {}) {
+    if (!document.getElementById("rb-code-style")) document.head.appendChild(h("style", { id: "rb-code-style" }, CSS3));
+    const pre = h("pre", { "aria-hidden": "true" });
+    const gut = h("div", { class: "rb-code-gut", "aria-hidden": "true" });
+    const ta = h("textarea", { spellcheck: "false", autocapitalize: "off", autocomplete: "off", "aria-label": label3, wrap: "off" });
+    ta.value = value;
+    const el = h("div", { class: "rb-code" }, h("div", { class: "rb-code-in" }, gut, h("div", { class: "rb-code-area" }, pre, ta)));
+    let raf = 0, lines = 0;
+    const paint = () => {
+      raf = 0;
+      pre.innerHTML = highlight(ta.value);
+      const n = ta.value.split("\n").length;
+      if (n !== lines) {
+        lines = n;
+        gut.textContent = Array.from({ length: n }, (_, i2) => i2 + 1).join("\n");
+      }
+    };
+    const schedule = () => raf ||= requestAnimationFrame(paint);
+    ta.addEventListener("input", () => {
+      schedule();
+      onChange?.(ta.value);
+    });
+    ta.addEventListener("keydown", (e) => {
+      if (e.isComposing) return;
+      const { selectionStart: s, selectionEnd: t, value: v } = ta;
+      if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        ta.setRangeText("  ", s, t, "end");
+        ta.dispatchEvent(new Event("input"));
+      } else if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        const lineStart = v.lastIndexOf("\n", s - 1) + 1;
+        let indent = v.slice(lineStart).match(/^[ \t]*/)[0];
+        if (/[{[(]\s*$/.test(v.slice(lineStart, s))) indent += "  ";
+        e.preventDefault();
+        ta.setRangeText("\n" + indent, s, t, "end");
+        ta.dispatchEvent(new Event("input"));
+      }
+    });
+    paint();
+    return {
+      el,
+      get value() {
+        return ta.value;
+      },
+      set value(v) {
+        if (v === ta.value) return;
+        const { scrollTop, scrollLeft } = el;
+        ta.value = v;
+        paint();
+        el.scrollTop = scrollTop;
+        el.scrollLeft = scrollLeft;
+      },
+      // 해당 글자가 처음 나오는 줄로 스크롤 (도움말에서 "코드에서 보기")
+      reveal(text) {
+        const i2 = ta.value.indexOf(text);
+        if (i2 < 0) return false;
+        const line = ta.value.slice(0, i2).split("\n").length - 1;
+        const lh = parseFloat(getComputedStyle(ta).lineHeight) || 20;
+        el.scrollTo({ top: Math.max(0, line * lh - 40), behavior: "smooth" });
+        ta.focus({ preventScroll: true });
+        ta.setSelectionRange(i2, i2 + text.length);
+        return true;
+      }
+    };
+  }
+
   // src/ui/screens/plugins.js
-  var VIEWS = [["list", "목록"], ["interop", "연동 설정"], ["storage", "저장소"], ["backup", "백업"]];
+  var VIEWS = [["list", "목록"], ["interop", "연동 설정"], ["create", "만들기"], ["storage", "저장소"], ["backup", "백업"]];
   var INTEROP_URL = "https://pyser08.github.io/dusk-atelier-interop/";
   async function renderPlugins(ctx) {
     const st = ctx.state;
@@ -18014,7 +18298,7 @@ ${md()}
     const plugins = st.pluginEnv.pluginsReadable ? await listPlugins(ctx.api) : [];
     const interop = await listInterop(ctx.api, new Set(plugins.map((p) => p.name))).catch(() => []);
     ctx.setNavCount("plugins", plugins.length || void 0);
-    const view = { list: viewList, interop: viewInterop, storage: viewStorage, backup: viewBackup }[st.pluginView] ?? viewList;
+    const view = { list: viewList, interop: viewInterop, create: viewCreate, storage: viewStorage, backup: viewBackup }[st.pluginView] ?? viewList;
     replace(ctx.main, h(
       "div",
       { class: "rb-section rb-scroll", style: "flex:1" },
@@ -18060,8 +18344,8 @@ ${md()}
     if (!ctx.state.pluginEnv.pluginsReadable) return h("div", { class: "rb-empty" }, "플러그인 목록을 볼 수 없는 환경이에요.");
     const upd = ctx.state.pluginUpd ?? {};
     const linked = new Map(interop.filter((e) => e.pluginName).map((e) => [e.pluginName, e]));
-    const q = (ctx.state.search ?? "").trim().toLowerCase();
-    const shown = q ? plugins.filter((p) => `${p.displayName} ${p.name} ${p.category}`.toLowerCase().includes(q)) : plugins;
+    const q2 = (ctx.state.search ?? "").trim().toLowerCase();
+    const shown = q2 ? plugins.filter((p) => `${p.displayName} ${p.name} ${p.category}`.toLowerCase().includes(q2)) : plugins;
     const groups = /* @__PURE__ */ new Map();
     for (const p of shown) {
       const g = p.category || "미분류";
@@ -18119,7 +18403,7 @@ ${md()}
         } }) : null,
         btn("내보내기", { size: "sm", icon: "upload", onClick: async () => download(`dusk-plugins-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, await exportAll(ctx.api), "application/json") })
       ),
-      shown.length ? null : h("div", { class: "rb-empty" }, q ? "찾는 플러그인이 없어요." : "플러그인이 없어요."),
+      shown.length ? null : h("div", { class: "rb-empty" }, q2 ? "찾는 플러그인이 없어요." : "플러그인이 없어요."),
       keys.map((g) => h(
         "div",
         { style: "display:flex;flex-direction:column;gap:4px" },
@@ -18362,6 +18646,133 @@ ${md()}
         } }) : null
       ))
     );
+  }
+  var FIND = { header: "//@name", snippet: "const registerInterop", body: "===== 플러그인 본체", fields: "fields: [", presets: "presets: [", getValues: "getValues:", apply: "apply: async", id: "id: '", name: "//@name", displayName: "//@display-name", version: "//@version", description: "description:" };
+  function helpBtn(ctx, key, editor) {
+    return h("button", { type: "button", class: "rb-help-q", "aria-label": `${HELP[key]?.[0] ?? key} 도움말`, title: "도움말", onClick: (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showHelp(ctx, key, editor);
+    } }, "?");
+  }
+  function showHelp(ctx, key, editor) {
+    const [title, desc, example] = HELP[key] ?? ["도움말", "", ""];
+    const ex = example ? h("div", { class: "rb-code", style: "min-height:0;max-height:none" }, h("pre", { style: "padding:10px 12px" })) : null;
+    if (ex) ex.firstChild.innerHTML = highlight(example);
+    ctx.showDetail(h(
+      "div",
+      { class: "rb-section", style: "gap:12px" },
+      h("h2", { class: "rb-h2" }, title),
+      h("p", { class: "rb-p", style: "white-space:pre-line" }, desc),
+      ex,
+      FIND[key] && editor ? h("div", null, btn("코드에서 보기", { size: "sm", icon: "search", onClick: () => {
+        if (!editor.reveal(FIND[key])) ctx.toast("코드에서 찾지 못했어요", { error: true });
+        else if (ctx.isMobile()) ctx.closeSheet();
+      } })) : null,
+      h("hr", { style: "border:0;border-top:1px solid var(--rb-line);width:100%" }),
+      h("span", { class: "rb-label" }, "다른 도움말"),
+      h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, HELP_ORDER.filter((k) => k !== key).map((k) => btn(HELP[k][0], { size: "sm", onClick: () => showHelp(ctx, k, editor) })))
+    ));
+    ctx.openSheet();
+  }
+  async function viewCreate(ctx) {
+    if (!document.getElementById("rb-help-style")) document.head.appendChild(h("style", { id: "rb-help-style" }, `.rb-help-q{width:20px;height:20px;border-radius:50%;border:1px solid var(--rb-line);background:var(--rb-surf);color:var(--rb-acc-text);font-size:12px;font-weight:700;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:0}.rb-help-q:hover{background:var(--rb-acc-soft)}.rb-sec-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;border:1px solid var(--rb-line);font-size:12px;color:var(--rb-sub);cursor:pointer;background:transparent}.rb-sec-chip:hover{background:var(--rb-hover)}`));
+    const saved = await (async () => {
+      try {
+        const raw = await ctx.api.pluginStorage.getItem(DRAFT_KEY);
+        return raw ? typeof raw === "string" ? JSON.parse(raw) : raw : null;
+      } catch {
+        return null;
+      }
+    })();
+    const meta = { ...DEFAULT_META, ...saved?.meta ?? {} };
+    let saveTimer = null;
+    const saveDraft = () => {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => ctx.api.pluginStorage.setItem(DRAFT_KEY, JSON.stringify({ v: 1, meta, code: editor.value, at: Date.now() })).catch(() => {
+      }), 600);
+    };
+    const editor = codeEditor(saved?.code || buildTemplate(meta), { label: "플러그인 코드", onChange: saveDraft });
+    const results = h("div", { style: "display:flex;flex-direction:column;gap:6px" });
+    const runCheck = () => {
+      const r = checkCode(editor.value, meta);
+      replace(results, r.length ? r.map((x2) => note(x2.level === "err" ? "err" : "warn", x2.text)) : note("info", "문제를 찾지 못했어요."));
+      return r;
+    };
+    const field = (key, label3, placeholder) => {
+      const input = h("input", { class: "rb-input", value: meta[key] ?? "", placeholder, "aria-label": label3 });
+      input.addEventListener("input", () => {
+        meta[key] = input.value.trim();
+        editor.value = syncMeta(editor.value, meta);
+        saveDraft();
+      });
+      return h("label", { class: "rb-field" }, h("span", { style: "display:flex;align-items:center;gap:6px" }, h("span", { class: "rb-label" }, label3), helpBtn(ctx, key, editor)), input);
+    };
+    const sec = (key, label3) => h("span", { class: "rb-sec-chip", role: "button", tabindex: "0", onClick: () => editor.reveal(FIND[key]) }, label3, helpBtn(ctx, key, editor));
+    const fileName = () => `${(meta.name || "plugin").replace(/[^\w.-]+/g, "_")}.js`;
+    return h(
+      "div",
+      { style: "display:flex;flex-direction:column;gap:14px" },
+      h("p", { class: "rb-p" }, "DA Interop이 들어간 플러그인을 바로 만들어요. 맨 위에는 스니펫, 맨 아래에는 등록 코드가 들어 있어요. ? 를 누르면 어디에 무엇을 넣는지 볼 수 있어요."),
+      h(
+        "div",
+        { class: "rb-card pad bordered", style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px" },
+        field("name", "플러그인 이름", "my_plugin"),
+        field("displayName", "표시 이름", "내 플러그인"),
+        field("version", "버전", "1.0.0"),
+        field("id", "연동 id", "my-plugin"),
+        h("div", { style: "grid-column:1/-1" }, field("description", "설명", "Dusk Atelier에 보일 한 줄 설명"))
+      ),
+      h(
+        "div",
+        { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" },
+        h("span", { class: "rb-muted", style: "font-size:12px" }, "구역"),
+        sec("header", "① 머리말"),
+        sec("snippet", "② 스니펫"),
+        sec("body", "③ 본체"),
+        sec("fields", "④ fields"),
+        sec("presets", "presets"),
+        sec("apply", "apply")
+      ),
+      editor.el,
+      results,
+      h(
+        "div",
+        { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center" },
+        btn("검사", { icon: "check", onClick: () => runCheck() }),
+        btn("설치", { kind: "primary", icon: "plus", onClick: () => installDraft(ctx, editor.value, meta, runCheck) }),
+        btn("내려받기", { icon: "download", onClick: () => {
+          if (runCheck().some((x2) => x2.level === "err")) return ctx.toast("오류를 먼저 고쳐 주세요", { error: true });
+          download(fileName(), editor.value, "text/javascript");
+        } }),
+        helpBtn(ctx, "install", editor),
+        h("span", { style: "flex:1" }),
+        btn("처음부터 다시", { size: "sm", kind: "danger", icon: "refresh", onClick: async () => {
+          if (!await confirmDialog(ctx.win, { title: "템플릿으로 되돌릴까요?", body: "지금 쓴 코드는 사라지고 위 칸의 이름으로 새 템플릿을 만들어요.", ok: "되돌리기", danger: true })) return;
+          editor.value = buildTemplate(meta);
+          saveDraft();
+          replace(results);
+        } })
+      )
+    );
+  }
+  async function installDraft(ctx, code, meta, runCheck) {
+    const r = runCheck();
+    if (r.some((x2) => x2.level === "err")) return ctx.toast("오류를 먼저 고쳐 주세요", { error: true });
+    if (typeof ctx.api.setDatabase !== "function") return ctx.toast("이 RisuAI에서는 플러그인 안에서 설치할 수 없어요. 내려받아서 설정 → 플러그인에서 가져와 주세요.", { error: true, seconds: 8 });
+    const obj = toPluginObject(code);
+    const before = (await ctx.api.getDatabase(["plugins"]).catch(() => null))?.plugins ?? [];
+    const exists = before.some((p) => p.name === obj.name);
+    if (!await confirmDialog(ctx.win, { title: `'${obj.displayName}' 플러그인을 설치할까요?`, body: `${exists ? "같은 이름의 플러그인이 있어서 덮어써요.\n" : ""}다음에 RisuAI가 한 번 더 확인 창을 띄워요. 허락해야 설치돼요.`, ok: "설치" })) return;
+    try {
+      await ctx.svc.serial(() => ctx.api.setDatabase({ plugins: [obj] }));
+    } catch (err2) {
+      return ctx.toast(err2?.message ?? String(err2), { error: true });
+    }
+    const after = (await ctx.api.getDatabase(["plugins"]).catch(() => null))?.plugins ?? [];
+    if (after.some((p) => p.name === obj.name && p.script === obj.script)) {
+      ctx.toast(`'${obj.displayName}'을(를) 설치했어요. 실행되지 않으면 새로고침해 주세요.`, { seconds: 8 });
+    } else ctx.toast("설치되지 않았어요. 확인 창에서 취소했거나, 같은 코드가 이미 설치돼 있어요.", { error: true, seconds: 8 });
   }
 
   // src/ui/app.js
@@ -18692,7 +19103,7 @@ ${md()}
   }
 
   // src/ui/toast.js
-  var esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  var esc2 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   var BOX = "position:fixed;top:16px;right:16px;z-index:2147483000;width:340px;max-width:calc(100vw - 32px);display:flex;align-items:stretch;border-radius:14px;background:linear-gradient(135deg,#1b1930,#221f3a);border:1px solid #4b4580;box-shadow:0 12px 36px rgba(0,0,0,.5),0 0 0 1px rgba(124,92,240,.25);color:#ecebf6;font:14px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;transition:opacity .25s,transform .25s;opacity:0;transform:translateY(-8px)";
   function createHostToast(getDoc) {
     let el = null, timer = null;
@@ -18724,7 +19135,7 @@ ${md()}
             main.setStyleAttribute("flex:1;min-width:0;display:flex;gap:12px;align-items:center;padding:14px 4px 14px 16px;cursor:pointer"),
             x2.setStyleAttribute("flex:none;width:36px;display:flex;align-items:flex-start;justify-content:center;padding-top:10px;cursor:pointer;color:#9d99c1;font-size:18px"),
             x2.setInnerText("×"),
-            main.setInnerHTML(`<span style="flex:none;display:inline-block;width:34px;height:34px;line-height:34px;text-align:center;border-radius:10px;background:linear-gradient(135deg,#4f7cf7,#7c5cf0);font-size:17px">🔗</span><span style="flex:1;min-width:0"><b style="display:block;font-size:14px;color:#ffffff">${esc(title)}</b><span style="display:block;font-size:13px;color:#b1aecb;word-break:keep-all">${esc(text)}</span><span style="display:block;margin-top:4px;font-size:12px;font-weight:700;color:#c4b1ff">${esc(action)} →</span></span>`),
+            main.setInnerHTML(`<span style="flex:none;display:inline-block;width:34px;height:34px;line-height:34px;text-align:center;border-radius:10px;background:linear-gradient(135deg,#4f7cf7,#7c5cf0);font-size:17px">🔗</span><span style="flex:1;min-width:0"><b style="display:block;font-size:14px;color:#ffffff">${esc2(title)}</b><span style="display:block;font-size:13px;color:#b1aecb;word-break:keep-all">${esc2(text)}</span><span style="display:block;margin-top:4px;font-size:12px;font-weight:700;color:#c4b1ff">${esc2(action)} →</span></span>`),
             main.addEventListener("click", () => {
               close();
               onClick?.();
