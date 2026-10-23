@@ -29,6 +29,10 @@ const result = await build({
   target: 'es2022',
   charset: 'utf8',
   legalComments: 'none',
+  // 1MB를 넘으면 RisuAI 자동 업데이트가 실패하므로 공백·이름만 줄인다.
+  // minifySyntax는 쓰지 않는다: 줄바꿈 든 문자열을 템플릿 문자열로 바꿔 줄 맨 앞에 //@ 가 생길 수 있다.
+  minifyWhitespace: true,
+  minifyIdentifiers: true,
   define: { __VERSION__: JSON.stringify(version) },
   alias: { fflate: path.join(root, 'src/vendor/fflate.js') },
   banner: { js: banner },
