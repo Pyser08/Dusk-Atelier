@@ -142,6 +142,9 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
     #rbu-overlay .rv-seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;border-radius:12px;background:var(--rb-surf,#1c1f33)}
     #rbu-overlay .rv-seg button{min-height:38px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--rb-sub,#a4a7c9);border-radius:9px}
     #rbu-overlay .rv-seg button.on[data-pick=inc]{background:var(--rb-acc-grad,linear-gradient(135deg,#4f63e0,#7c4fe0));color:var(--rb-on-acc,#fff);font-weight:600}
+    #rbu-overlay .rv-seg button.on[data-ai-on="1"]{background:var(--rb-acc-grad,linear-gradient(135deg,#4f63e0,#7c4fe0));color:var(--rb-on-acc,#fff);font-weight:600}
+    #rbu-overlay .rv-seg button.on[data-ai-on="0"]{background:var(--rb-hover,#20233a);color:var(--rb-text,#e9eaf6);font-weight:600;box-shadow:inset 0 0 0 1px var(--rb-line3,#343857)}
+    #rbu-overlay .rv-seg button.on[data-bridge]{background:var(--rb-acc-grad,linear-gradient(135deg,#4f63e0,#7c4fe0));color:var(--rb-on-acc,#fff);font-weight:600}
     #rbu-overlay .rv-seg button.on[data-pick=cur]{background:var(--rb-acc2-soft,rgba(124,79,224,.3));color:var(--rb-text,#e9eaf6);font-weight:600;box-shadow:inset 0 0 0 1px var(--rb-acc2-text,#c4b1ff)}
     #rbu-overlay .rv-cap{font-size:12px;font-weight:600;color:var(--rb-sub,#a4a7c9);display:flex;gap:8px;align-items:center}
     #rbu-overlay .rv-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -1142,6 +1145,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
   async function renderMergeStart(targetId) {
     heading = "다른 봇에서 가져오기 · 합치기";
     busy = false;
+    if (aiPick) aiPick.on = false; // AI 다듬기는 합칠 때마다 꺼진 상태로 시작
     renderProgress("합치기 준비 중…", 100, "봇 목록을 읽는 중");
     const { chars, modules } = await mergeData();
     mg = { targetId: targetId ?? mg?.targetId ?? chars[0]?.c.chaId, src: mg?.src ?? null, scope: mg?.scope ?? "characters" };
@@ -1270,17 +1274,18 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
         ${sel.plan.roles.length ? `<div style="margin:12px 0 6px">겹치는 기능 고르기</div>${sel.plan.roles.map((r, i) => `<div class="rr"><span class="ri">${ic("sliders", 15)}</span><span class="rl" style="width:96px">${esc(r.label || ROLE_KO[r.kind] || r.kind)}</span><select data-role="${i}" style="margin-top:0;flex:1">${[[T.meta.id, `${nameOf(inp.target)} 것`], [S.meta.id, `${inp.srcName} 것`], ["both", "둘 다"]].map(([v, l]) => `<option value="${esc(v)}" ${String(st.roles[i]) === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div>`).join("")}` : ""}
         ${(sel.plan.warnings ?? []).length ? `<div class="warn">${sel.plan.warnings.slice(0, 4).map((w) => esc(w.detail)).join("<br>")}</div>` : ""}
         ${needLow ? `<label class="chk"><input type="checkbox" id="mg-low" ${st.lowLevel ? "checked" : ""}><span>가져오는 스크립트가 <b>저수준 접근(lowLevelAccess)</b>을 써요. 이 봇에도 허용하기<br><span class="muted">믿을 수 있는 봇일 때만 켜 주세요. 끄면 해당 스크립트가 동작하지 않을 수 있어요.</span></span></label>` : ""}
+        <div class="rr" style="margin-top:12px;padding:12px 14px;border:1px solid var(--rb-line,#2a2d47);border-radius:12px;background:var(--rb-surf,#1c1f33);flex-wrap:wrap;gap:10px"><span class="ri big">${ic("zap", 18)}</span><div style="flex:1 1 200px;min-width:0"><b>AI로 다듬기</b><div class="muted">${ai.on ? "항목마다 'AI로 다듬기' 버튼이 생겨요. 눌러야만 AI가 쓰이고, 결과는 확인한 뒤에 넣어요." : "지금은 가져온 글을 그대로 넣어요. 켜면 가져온 글을 이 봇 세계관에 맞게 AI가 고쳐 쓸 수 있어요."}</div></div><div class="rv-seg" id="mg-aisw" style="flex:none;min-width:200px"><button data-ai-on="0" class="${ai.on ? "" : "on"}">${ic("x", 13)} 안 써요</button><button data-ai-on="1" class="${ai.on ? "on" : ""}">${ic("zap", 13)} 써요</button></div></div>
         <details id="mg-parts" style="margin-top:12px" ${st.open ? "open" : ""}><summary>가져올 항목 ${chosen.length}/${srcParts.length}개 — 하나씩 고르기·고치기${ai.on ? "·AI로 다듬기" : ""}</summary>
           <div class="rv-tools" style="border:0;padding:8px 0">
             <label class="rv-search">${ic("search", 15)}<input type="text" id="mg-q" placeholder="이름·내용 검색" value="${esc(st.q)}"></label>
             <div class="rv-bulk"><button id="mg-all">${ic("check", 13)} 보이는 것 모두 넣기</button><button id="mg-none">${ic("x", 13)} 모두 빼기</button></div>
-            <div class="rr" style="border:0"><span class="ri">${ic("zap", 15)}</span><span class="rl" style="width:auto">AI 다듬기 모델</span><select id="mg-ai" style="margin-top:0;flex:1">${AI_MODES.map(([v, l]) => `<option value="${v}" ${ai.mode === v ? "selected" : ""}>${l}</option>`).join("")}</select>${ai.mode === "static" ? `<input type="text" id="mg-ai-id" placeholder="모델 ID (예: gpt-4o)" value="${esc(ai.staticModel ?? "")}" style="margin-top:0;flex:1">` : ""}</div>
+            ${ai.on ? `<div class="rr" style="border:0"><span class="ri">${ic("zap", 15)}</span><span class="rl" style="width:auto">AI 다듬기 모델</span><select id="mg-ai" style="margin-top:0;flex:1">${AI_MODES.map(([v, l]) => `<option value="${v}" ${ai.mode === v ? "selected" : ""}>${l}</option>`).join("")}</select>${ai.mode === "static" ? `<input type="text" id="mg-ai-id" placeholder="모델 ID (예: gpt-4o)" value="${esc(ai.staticModel ?? "")}" style="margin-top:0;flex:1">` : ""}</div>` : ""}
           </div>
           <div class="mg-list">${shown.slice(0, 250).map((p) => {
             const on = !st.exclude.has(p.key), ed = st.edits[p.key];
             return `<div class="mg-part${on ? "" : " off"}" data-k="${esc(p.key)}">
               <label class="mg-ph"><input type="checkbox" data-pk="${esc(p.key)}" ${on ? "checked" : ""}><span class="ri">${ic(PART_ICON[p.kind] ?? "text", 14)}</span><span class="rt"><b>${esc(partLabel(p))}</b><span>${KIND_PART[p.kind] ?? p.kind}${ed !== void 0 ? " · <span class='hl'>고침</span>" : ""}</span></span></label>
-              ${editable(p) && on ? `<div class="mg-act"><button data-edit="${esc(p.key)}">${ic("edit", 13)} 고치기</button><button data-ai="${esc(p.key)}">${ic("zap", 13)} AI로 다듬기</button></div>` : ""}
+              ${editable(p) && on ? `<div class="mg-act"><button data-edit="${esc(p.key)}">${ic("edit", 13)} 고치기</button>${ai.on ? `<button data-ai="${esc(p.key)}">${ic("zap", 13)} AI로 다듬기</button>` : ""}</div>` : ""}
               <div class="mg-body" hidden></div></div>`;
           }).join("")}${shown.length > 250 ? '<div class="muted">앞쪽 250개만 보여요. 검색으로 좁혀 보세요.</div>' : ""}</div>
         </details>
@@ -1322,7 +1327,11 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
       for (const p of shown) st.exclude.add(p.key);
       rer();
     });
-    root.querySelector("#mg-ai").addEventListener("change", (e) => {
+    root.querySelectorAll("[data-ai-on]").forEach((b) => b.addEventListener("click", () => {
+      saveAi({ ...ai, on: b.dataset.aiOn === "1" });
+      rer();
+    }));
+    root.querySelector("#mg-ai")?.addEventListener("change", (e) => {
       saveAi({ ...ai, mode: e.target.value });
       rer();
     });
@@ -1396,11 +1405,11 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
   }
   let aiPick = null;
   function watchAi() {
-    return aiPick ?? { mode: "submodel" };
+    return { on: false, ...aiPick ?? { mode: "submodel" } };
   }
   function saveAi(p) {
     aiPick = p;
-    api.pluginStorage.setItem("rbm:aiModel:v1", JSON.stringify(p)).catch(() => {
+    api.pluginStorage.setItem("rbm:aiModel:v1", JSON.stringify({ mode: p.mode, staticModel: p.staticModel })).catch(() => {
     });
   }
   api.pluginStorage.getItem("rbm:aiModel:v1").then((raw) => {
