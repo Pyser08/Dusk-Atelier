@@ -3,8 +3,10 @@ import { download, fmtBytes, fmtWhen, h, pickFiles, replace } from '../dom.js';
 import { icon } from '../icons.js';
 import { badge, btn, confirmDialog, iconBtn, loading, note, openMenu, promptDialog, segmented, switchEl } from '../kit.js';
 import * as P from '../../data/plugins.js';
+import * as T from '../../data/pluginTemplate.js';
+import { codeEditor, highlight } from '../codeedit.js';
 
-var VIEWS = [["list", "목록"], ["interop", "연동 설정"], ["storage", "저장소"], ["backup", "백업"]];
+var VIEWS = [["list", "목록"], ["interop", "연동 설정"], ["create", "만들기"], ["storage", "저장소"], ["backup", "백업"]];
 var INTEROP_URL = "https://pyser08.github.io/dusk-atelier-interop/";
 
 export async function renderPlugins(ctx) {
@@ -17,7 +19,7 @@ export async function renderPlugins(ctx) {
   const plugins = st.pluginEnv.pluginsReadable ? await P.listPlugins(ctx.api) : [];
   const interop = await P.listInterop(ctx.api, new Set(plugins.map((p) => p.name))).catch(() => []);
   ctx.setNavCount("plugins", plugins.length || void 0);
-  const view = { list: viewList, interop: viewInterop, storage: viewStorage, backup: viewBackup }[st.pluginView] ?? viewList;
+  const view = { list: viewList, interop: viewInterop, create: viewCreate, storage: viewStorage, backup: viewBackup }[st.pluginView] ?? viewList;
   replace(ctx.main, h(
     "div",
     { class: "rb-section rb-scroll", style: "flex:1" },
@@ -377,4 +379,138 @@ async function viewBackup(ctx) {
       } }) : null
     ))
   );
+}
+
+// ── 만들기 ──
+// 코드에서 해당 부분을 찾을 때 쓰는 글자
+var FIND = { header: "//@name", snippet: "const registerInterop", body: "===== 플러그인 본체", fields: "fields: [", presets: "presets: [", getValues: "getValues:", apply: "apply: async", id: "id: '", name: "//@name", displayName: "//@display-name", version: "//@version", description: "description:" };
+
+function helpBtn(ctx, key, editor) {
+  return h("button", { type: "button", class: "rb-help-q", "aria-label": `${T.HELP[key]?.[0] ?? key} 도움말`, title: "도움말", onClick: (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showHelp(ctx, key, editor);
+  } }, "?");
+}
+
+function showHelp(ctx, key, editor) {
+  const [title, desc, example] = T.HELP[key] ?? ["도움말", "", ""];
+  const ex = example ? h("div", { class: "rb-code", style: "min-height:0;max-height:none" }, h("pre", { style: "padding:10px 12px" })) : null;
+  if (ex) ex.firstChild.innerHTML = highlight(example);
+  ctx.showDetail(h(
+    "div",
+    { class: "rb-section", style: "gap:12px" },
+    h("h2", { class: "rb-h2" }, title),
+    h("p", { class: "rb-p", style: "white-space:pre-line" }, desc),
+    ex,
+    FIND[key] && editor ? h("div", null, btn("코드에서 보기", { size: "sm", icon: "search", onClick: () => {
+      if (!editor.reveal(FIND[key])) ctx.toast("코드에서 찾지 못했어요", { error: true });
+      else if (ctx.isMobile()) ctx.closeSheet();
+    } })) : null,
+    h("hr", { style: "border:0;border-top:1px solid var(--rb-line);width:100%" }),
+    h("span", { class: "rb-label" }, "다른 도움말"),
+    h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, T.HELP_ORDER.filter((k) => k !== key).map((k) => btn(T.HELP[k][0], { size: "sm", onClick: () => showHelp(ctx, k, editor) })))
+  ));
+  ctx.openSheet();
+}
+
+async function viewCreate(ctx) {
+  if (!document.getElementById("rb-help-style")) document.head.appendChild(h("style", { id: "rb-help-style" }, `.rb-help-q{width:20px;height:20px;border-radius:50%;border:1px solid var(--rb-line);background:var(--rb-surf);color:var(--rb-acc-text);font-size:12px;font-weight:700;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:0}.rb-help-q:hover{background:var(--rb-acc-soft)}.rb-sec-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;border:1px solid var(--rb-line);font-size:12px;color:var(--rb-sub);cursor:pointer;background:transparent}.rb-sec-chip:hover{background:var(--rb-hover)}`));
+  const saved = await (async () => {
+    try {
+      const raw = await ctx.api.pluginStorage.getItem(T.DRAFT_KEY);
+      return raw ? typeof raw === "string" ? JSON.parse(raw) : raw : null;
+    } catch {
+      return null;
+    }
+  })();
+  const meta = { ...T.DEFAULT_META, ...saved?.meta ?? {} };
+  let saveTimer = null;
+  const saveDraft = () => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => ctx.api.pluginStorage.setItem(T.DRAFT_KEY, JSON.stringify({ v: 1, meta, code: editor.value, at: Date.now() })).catch(() => {
+    }), 600);
+  };
+  const editor = codeEditor(saved?.code || T.buildTemplate(meta), { label: "플러그인 코드", onChange: saveDraft });
+  const results = h("div", { style: "display:flex;flex-direction:column;gap:6px" });
+  const runCheck = () => {
+    const r = T.checkCode(editor.value, meta);
+    replace(results, r.length ? r.map((x) => note(x.level === "err" ? "err" : "warn", x.text)) : note("info", "문제를 찾지 못했어요."));
+    return r;
+  };
+  const field = (key, label, placeholder) => {
+    const input = h("input", { class: "rb-input", value: meta[key] ?? "", placeholder, "aria-label": label });
+    input.addEventListener("input", () => {
+      meta[key] = input.value.trim();
+      editor.value = T.syncMeta(editor.value, meta);
+      saveDraft();
+    });
+    return h("label", { class: "rb-field" }, h("span", { style: "display:flex;align-items:center;gap:6px" }, h("span", { class: "rb-label" }, label), helpBtn(ctx, key, editor)), input);
+  };
+  const sec = (key, label) => h("span", { class: "rb-sec-chip", role: "button", tabindex: "0", onClick: () => editor.reveal(FIND[key]) }, label, helpBtn(ctx, key, editor));
+  const fileName = () => `${(meta.name || "plugin").replace(/[^\w.-]+/g, "_")}.js`;
+  return h(
+    "div",
+    { style: "display:flex;flex-direction:column;gap:14px" },
+    h("p", { class: "rb-p" }, "DA Interop이 들어간 플러그인을 바로 만들어요. 맨 위에는 스니펫, 맨 아래에는 등록 코드가 들어 있어요. ? 를 누르면 어디에 무엇을 넣는지 볼 수 있어요."),
+    h(
+      "div",
+      { class: "rb-card pad bordered", style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px" },
+      field("name", "플러그인 이름", "my_plugin"),
+      field("displayName", "표시 이름", "내 플러그인"),
+      field("version", "버전", "1.0.0"),
+      field("id", "연동 id", "my-plugin"),
+      h("div", { style: "grid-column:1/-1" }, field("description", "설명", "Dusk Atelier에 보일 한 줄 설명"))
+    ),
+    h(
+      "div",
+      { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" },
+      h("span", { class: "rb-muted", style: "font-size:12px" }, "구역"),
+      sec("header", "① 머리말"),
+      sec("snippet", "② 스니펫"),
+      sec("body", "③ 본체"),
+      sec("fields", "④ fields"),
+      sec("presets", "presets"),
+      sec("apply", "apply")
+    ),
+    editor.el,
+    results,
+    h(
+      "div",
+      { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center" },
+      btn("검사", { icon: "check", onClick: () => runCheck() }),
+      btn("설치", { kind: "primary", icon: "plus", onClick: () => installDraft(ctx, editor.value, meta, runCheck) }),
+      btn("내려받기", { icon: "download", onClick: () => {
+        if (runCheck().some((x) => x.level === "err")) return ctx.toast("오류를 먼저 고쳐 주세요", { error: true });
+        download(fileName(), editor.value, "text/javascript");
+      } }),
+      helpBtn(ctx, "install", editor),
+      h("span", { style: "flex:1" }),
+      btn("처음부터 다시", { size: "sm", kind: "danger", icon: "refresh", onClick: async () => {
+        if (!await confirmDialog(ctx.win, { title: "템플릿으로 되돌릴까요?", body: "지금 쓴 코드는 사라지고 위 칸의 이름으로 새 템플릿을 만들어요.", ok: "되돌리기", danger: true })) return;
+        editor.value = T.buildTemplate(meta);
+        saveDraft();
+        replace(results);
+      } })
+    )
+  );
+}
+
+async function installDraft(ctx, code, meta, runCheck) {
+  const r = runCheck();
+  if (r.some((x) => x.level === "err")) return ctx.toast("오류를 먼저 고쳐 주세요", { error: true });
+  if (typeof ctx.api.setDatabase !== "function") return ctx.toast("이 RisuAI에서는 플러그인 안에서 설치할 수 없어요. 내려받아서 설정 → 플러그인에서 가져와 주세요.", { error: true, seconds: 8 });
+  const obj = T.toPluginObject(code);
+  const before = (await ctx.api.getDatabase(["plugins"]).catch(() => null))?.plugins ?? [];
+  const exists = before.some((p) => p.name === obj.name);
+  if (!await confirmDialog(ctx.win, { title: `'${obj.displayName}' 플러그인을 설치할까요?`, body: `${exists ? "같은 이름의 플러그인이 있어서 덮어써요.\n" : ""}다음에 RisuAI가 한 번 더 확인 창을 띄워요. 허락해야 설치돼요.`, ok: "설치" })) return;
+  try {
+    await ctx.svc.serial(() => ctx.api.setDatabase({ plugins: [obj] }));
+  } catch (err) {
+    return ctx.toast(err?.message ?? String(err), { error: true });
+  }
+  const after = (await ctx.api.getDatabase(["plugins"]).catch(() => null))?.plugins ?? [];
+  if (after.some((p) => p.name === obj.name && p.script === obj.script)) {
+    ctx.toast(`'${obj.displayName}'을(를) 설치했어요. 실행되지 않으면 새로고침해 주세요.`, { seconds: 8 });
+  } else ctx.toast("설치되지 않았어요. 확인 창에서 취소했거나, 같은 코드가 이미 설치돼 있어요.", { error: true, seconds: 8 });
 }
