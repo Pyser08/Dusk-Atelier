@@ -41,6 +41,9 @@ var CSS = `
 .rb-code .t-attr{color:#9cdcfe}
 .rb-code .t-cbsk{color:#ff79c6;font-weight:700}
 .rb-code.wrap .rb-code-in{width:100%}
+.rb-code.wrap .rb-code-gut{position:relative;white-space:pre}
+.rb-code.wrap .rb-code-gut i{position:absolute;right:10px;font-style:normal}
+.rb-code.wrap .rb-code-gut b{visibility:hidden;font-weight:inherit}
 .rb-code.wrap pre,.rb-code.wrap textarea{white-space:pre-wrap;overflow-wrap:anywhere}
 .rb-code.prose{--c-bg:var(--rb-surf);--c-fg:var(--rb-text);font-size:14px;line-height:1.7;font-family:inherit;tab-size:4}
 .rb-code.prose textarea{caret-color:var(--rb-text)}
@@ -389,7 +392,8 @@ export function codeEditor(value, { onChange, label = "코드", minHeight, maxHe
     }
     lastPair = pair ? pair.join(",") : "";
     pre.innerHTML = paintHtml(v, tokens, marks);
-    if (gut) {
+    if (gut && wrap) placeGutter(v);
+    else if (gut) {
       const n = v.split("\n").length;
       if (n !== lines) {
         lines = n;
@@ -397,7 +401,49 @@ export function codeEditor(value, { onChange, label = "코드", minHeight, maxHe
       }
     }
   };
+  // 줄바꿈 모드: 긴 줄이 여러 줄로 보여도 줄 번호는 실제 줄의 첫 칸에만 붙인다 (VS Code처럼)
+  let gutKey = "";
+  function placeGutter(v) {
+    const width = pre.clientWidth;
+    const key = width + "|" + v;
+    if (key === gutKey) return;
+    gutKey = key;
+    const starts = [0];
+    for (let i = 0; i < v.length; i++) if (v.charCodeAt(i) === 10) starts.push(i + 1);
+    const base = pre.getBoundingClientRect().top;
+    const lh = parseFloat(getComputedStyle(pre).lineHeight) || 0;
+    const rg = document.createRange();
+    const walk = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT);
+    let node = walk.nextNode(), nodeStart = 0, html = "";
+    for (let k = 0; k < starts.length; k++) {
+      const s = starts[k];
+      while (node && nodeStart + node.data.length <= s) {
+        nodeStart += node.data.length;
+        node = walk.nextNode();
+      }
+      if (!node) break;
+      // 그 줄의 첫 글자(빈 줄이면 줄바꿈 글자)의 위치
+      rg.setStart(node, s - nodeStart);
+      rg.setEnd(node, s - nodeStart + 1);
+      const r = rg.getClientRects()[0] ?? rg.getBoundingClientRect();
+      // 글자 상자는 줄 높이보다 작으므로 줄 상자의 위쪽으로 맞춘다
+      const top = r.top - base - (lh && r.height ? (lh - r.height) / 2 : 0);
+      html += `<i style="top:${Math.round(top)}px">${k + 1}</i>`;
+    }
+    gut.innerHTML = `<b>${starts.length}</b>` + html;
+  }
   const schedule = () => raf ||= requestAnimationFrame(paint);
+  // 칸 너비가 바뀌면 줄바꿈 위치도 바뀌므로 줄 번호를 다시 놓는다
+  if (wrap && gut && typeof ResizeObserver === "function") {
+    let lastW = 0;
+    new ResizeObserver(() => {
+      const w = pre.clientWidth;
+      if (w && w !== lastW) {
+        lastW = w;
+        schedule();
+      }
+    }).observe(el);
+  }
   ta.addEventListener("input", () => {
     schedule();
     onChange?.(ta.value);

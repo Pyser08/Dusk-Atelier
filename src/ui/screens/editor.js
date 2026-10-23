@@ -216,6 +216,8 @@ export async function openEditorCore(ctx, cfg) {
   const codeArea = (obj, key, { lang, tall, placeholder } = {}) => {
     const ed = codeEditor(obj[key] ?? "", {
       lang,
+      // 정규식 IN/OUT은 긴 줄을 칸 너비에서 줄바꿈 (Lua는 코드답게 가로로)
+      wrap: lang === "regex" || lang === "replace",
       tab: "\t",
       placeholder,
       label: key,

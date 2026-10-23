@@ -88,7 +88,7 @@ export async function openCharEditor(ctx, index, chaId) {
         label,
         tab: "\t",
         gutter: mode === "code",
-        wrap: mode !== "code",
+        wrap: true,
         prose: mode !== "code",
         minHeight: tall ? "max(300px,46vh)" : "96px",
         maxHeight: tall ? "70vh" : "50vh",
@@ -115,7 +115,7 @@ export async function openCharEditor(ctx, index, chaId) {
           "div",
           { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
           modeSeg,
-          h("span", { class: "rb-muted", style: "font-size:12px;word-break:keep-all" }, "일반은 글 쓰듯 줄바꿈, 코드는 줄 번호와 고정폭 글꼴이에요. 둘 다 {{CBS}}·<img=…>·태그에 색이 들어가요. 추가 인사말도 같이 바뀌어요.")
+          h("span", { class: "rb-muted", style: "font-size:12px;word-break:keep-all" }, "일반은 글 쓰는 칸, 코드는 줄 번호와 고정폭 글꼴이에요. 긴 줄은 둘 다 자동으로 줄바꿈돼요. 둘 다 {{CBS}}·<img=…>·태그에 색이 들어가요. 추가 인사말도 같이 바뀌어요.")
         ),
         fmHolder
       );
