@@ -96,7 +96,7 @@ export function toast(host, text, { action, seconds = 4, error = false } = {}) {
   box.appendChild(el);
   return { close };
 }
-function modal(host, build) {
+export function modal(host, build) {
   return new Promise((resolve) => {
     const prevFocus = host.ownerDocument.activeElement;
     const back = h("div", { class: "rb-modal" });

@@ -52,7 +52,7 @@ export async function renderHistory(ctx) {
       h(
         "div",
         { style: "flex:1;min-width:200px" },
-        h("h2", { class: "rb-h2" }, cur ? cur.name : "버전 타임라인"),
+        h("div", { style: "display:flex;align-items:center;gap:10px" }, btn("", { kind: "ghost", icon: "back", title: "도구로 돌아가기", onClick: () => ctx.go("tools") }), h("div", null, h("span", { class: "rb-muted" }, "도구 › 기록"), h("h2", { class: "rb-h2" }, cur ? cur.name : "버전 타임라인"))),
         h("p", { class: "rb-p" }, cur ? "이 항목을 업데이트·편집하기 전 상태들이에요. 되돌려도 채팅은 그대로예요." : "업데이트·편집·삭제 전에 자동으로 저장한 상태들이에요.")
       ),
       h(
@@ -84,7 +84,7 @@ export async function renderHistory(ctx) {
     side
   );
   replace(ctx.main, h("div", { class: "rb-hist-root", style: "flex:1;display:flex;min-height:0;flex-wrap:wrap" }, ctx.isMobile() ? null : left, pane));
-  ctx.setNavCount("history", all.length || void 0);
+  ctx.state.histCount = all.length;
 }
 function entry(ctx, b, first, showName) {
   const diffBox = h("div");

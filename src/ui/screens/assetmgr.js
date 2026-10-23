@@ -8,6 +8,7 @@ import { copyText, download, fmtBytes, h, pickFiles, replace } from '../dom.js';
 import { icon } from '../icons.js';
 import { btn, confirmDialog, iconBtn, note, openMenu, progressBar, promptDialog, segmented } from '../kit.js';
 import { reload } from './modules.js';
+import { openDuplicateDialog } from './assetdupes.js';
 
 var PAGE = 240;
 var extOf = (name) => {
@@ -355,6 +356,7 @@ export async function openAssetsCore(ctx, src) {
           { label: "삭제", icon: "trash", danger: true, onClick: () => removeSelected() }
         ]) })
       ] : [
+        btn("중복 찾기", { size: "sm", icon: "split", title: "내용이 똑같은 에셋을 찾아 정리", onClick: () => findDupes() }),
         btn("일괄 교체", { size: "sm", icon: "refresh", onClick: () => batchReplace(visible()) }),
         btn("ZIP 받기", { size: "sm", icon: "download", onClick: () => downloadAssets(visible()) })
       ]
@@ -548,7 +550,7 @@ export async function openAssetsCore(ctx, src) {
         h("h3", { class: "rb-h3" }, sel.length ? `${sel.length}개 선택` : "에셋"),
         h("p", { class: "rb-p" }, sel.length ? "위쪽 도구로 한꺼번에 옮기거나 내려받고, 최적화·교체·삭제할 수 있어요." : "눌러서 고르고, 두 번 누르면 크게 봐요. Ctrl·Shift로 여러 개 고를 수 있어요. 고른 것을 폴더 칩으로 끌어 옮길 수도 있어요."),
         h("div", { class: "rb-stats" }, h("div", { class: "rb-stat" }, h("small", null, "개수"), h("b", null, String(total.length))), h("div", { class: "rb-stat" }, h("small", null, "폴더"), h("b", null, String(fd._folders.length)))),
-        note("info", '바꾸면 바로 저장돼요. 바꾸기 전 상태는 "기록" 탭에 백업돼요.')
+        note("info", '바꾸면 바로 저장돼요. 바꾸기 전 상태는 도구 → 기록에 백업돼요.')
       );
       return;
     }
@@ -731,6 +733,26 @@ export async function openAssetsCore(ctx, src) {
     const next = assets.map((x) => match(x) ? [...oldAsset] : x);
     await save(next, fd, "되돌리기 전");
     paint();
+  }
+  function findDupes() {
+    if (as.busy) return;
+    if (assets.length < 2) {
+      ctx.toast("에셋이 2개 이상이어야 비교할 수 있어요");
+      return;
+    }
+    openDuplicateDialog(ctx, { assets, keyOf: keyOf3, onApply: async (gone) => {
+      const before = assets, beforeFd = fd;
+      const nextFd = structuredClone(fd);
+      for (const a of assets) if (gone.has(keyOf3(a)) && !assets.some((x) => !gone.has(keyOf3(x)) && x[0] === a[0])) delete nextFd._mapping?.[a[0]];
+      await save(assets.filter((a) => !gone.has(keyOf3(a))), nextFd, "중복 에셋 정리 전");
+      for (const k of gone) as.sel.delete(k);
+      as.focus = null;
+      ctx.toast(`중복 ${gone.size}개를 목록에서 뺐어요`, { action: { label: "되돌리기", run: async () => {
+        await save(before, beforeFd, "중복 정리 되돌리기 전");
+        paint();
+      } }, seconds: 10 });
+      paint();
+    } });
   }
   async function removeSelected() {
     const sel = selected();

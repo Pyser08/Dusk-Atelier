@@ -542,7 +542,7 @@ async function pickFolder(ctx, m) {
   ]);
 }
 async function removeModule(ctx, m) {
-  const ok = await confirmDialog(ctx.win, { title: `'${m.name}'을(를) 지울까요?`, body: '모든 캐릭터·채팅·페르소나 연결에서도 빠져요. 지우기 전 상태는 백업해 두니 "기록" 탭에서 되살릴 수 있어요.', ok: "삭제", danger: true });
+  const ok = await confirmDialog(ctx.win, { title: `'${m.name}'을(를) 지울까요?`, body: '모든 캐릭터·채팅·페르소나 연결에서도 빠져요. 지우기 전 상태는 백업해 두니 도구 → 기록에서 되살릴 수 있어요.', ok: "삭제", danger: true });
   if (!ok) return;
   try {
     await createStore(ctx.api).addBackup({ kind: "module", target: m.id, name: m.name, snapshot: m, note: "삭제 전" });

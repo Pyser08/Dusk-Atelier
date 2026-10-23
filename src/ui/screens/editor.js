@@ -7,6 +7,7 @@ import { icon } from '../icons.js';
 import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog } from '../kit.js';
 import { gripDrag } from '../sortable.js';
 import { reload } from './modules.js';
+import { attachUndo } from '../undo.js';
 
 var LORE_MODES = [["normal", "일반"], ["constant", "항상 켜짐"], ["multiple", "여러 키"], ["child", "하위"], ["folder", "폴더"]];
 var REGEX_TYPES = [["editinput", "입력 수정"], ["editoutput", "출력 수정"], ["editprocess", "요청 데이터 수정"], ["editdisplay", "화면 표시 수정"], ["edittrans", "번역 표시 수정"], ["disabled", "사용 안 함"]];
@@ -203,6 +204,7 @@ export async function openEditorCore(ctx, cfg) {
       obj[key] = el.value;
       changed();
     });
+    attachUndo(el);
     el.addEventListener("keydown", (ev) => {
       if (ev.key === "Tab" && !ev.shiftKey && !ev.ctrlKey) {
         ev.preventDefault();
@@ -748,7 +750,7 @@ export async function openEditorCore(ctx, cfg) {
     const iss = cfg.validate(draft);
     const errs = iss.filter((x) => x.level === "err");
     const lines = diffSummary(original, draft, { infoLabels: cfg.infoLabels, infoTitle: cfg.infoTitle });
-    const ok = await confirmDialog(ctx.win, { title: "바뀐 내용을 저장할까요?", body: [...lines, "", errs.length ? `⚠ 오류 ${errs.length}개가 있어요. 그대로 저장할 수도 있어요.` : "", '저장하기 전 상태는 백업해서 "기록" 탭에서 되돌릴 수 있어요.'].filter((x, i, a) => x || i && a[i - 1]).join("\n"), ok: "저장" });
+    const ok = await confirmDialog(ctx.win, { title: "바뀐 내용을 저장할까요?", body: [...lines, "", errs.length ? `⚠ 오류 ${errs.length}개가 있어요. 그대로 저장할 수도 있어요.` : "", '저장하기 전 상태는 백업해서 도구 → 기록에서 되돌릴 수 있어요.'].filter((x, i, a) => x || i && a[i - 1]).join("\n"), ok: "저장" });
     if (!ok) return;
     applyBtn.disabled = true;
     try {

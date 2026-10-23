@@ -299,12 +299,12 @@ function actions(ctx, all, p, obj) {
   const edit = () => (p.kind === "module" ? ctx.openEditor(p.id) : openCharEditor(ctx, t.i, p.id)).catch?.((e) => ctx.toast(e?.message ?? String(e), { error: true }));
   const assets = () => (p.kind === "module" ? ctx.openAssets(p.id) : openCharAssets(ctx, t.i, p.id)).catch?.((e) => ctx.toast(e?.message ?? String(e), { error: true }));
   const checkpoint = async () => {
-    const n = await promptDialog(ctx.win, { title: "체크포인트 저장", label: "메모 (기록 탭에 보여요)", value: p.version ? `v${p.version} 작업 중` : "작업 중", ok: "저장" });
+    const n = await promptDialog(ctx.win, { title: "체크포인트 저장", label: "메모 (도구 → 기록에 보여요)", value: p.version ? `v${p.version} 작업 중` : "작업 중", ok: "저장" });
     if (n === null) return;
     try {
       const fresh = await fullOf(ctx, all, p);
       await createStore(ctx.api).addBackup({ kind: p.kind, target: p.id, name: fresh.name, snapshot: p.kind === "module" ? fresh : backupSnapshot("character", fresh), note: `체크포인트${n.trim() ? ` · ${n.trim()}` : ""}` });
-      ctx.toast("체크포인트를 저장했어요. 기록 탭에서 언제든 이 상태로 되돌릴 수 있어요.");
+      ctx.toast("체크포인트를 저장했어요. 도구 → 기록에서 언제든 이 상태로 되돌릴 수 있어요.");
     } catch (e) {
       ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
     }

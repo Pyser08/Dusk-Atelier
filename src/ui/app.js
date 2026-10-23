@@ -24,7 +24,6 @@ var TABS = [
   { id: "plugins", label: "플러그인", icon: "plugin" },
   { id: "characters", label: "캐릭터", icon: "character" },
   { id: "presets", label: "프리셋", icon: "preset" },
-  { id: "history", label: "기록", icon: "history" },
   { id: "tools", label: "도구", icon: "tools" },
   { id: "dev", label: "개발", icon: "code", dev: true }
 ];
@@ -213,7 +212,12 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     win.style.colorScheme = scheme;
   }
   function go(tab, sub = null) {
-    if (tab !== state.tab) {
+    // 기록은 도구 탭 안으로 옮겼다 (1.4.6). 예전 go("history") 호출도 그대로 동작
+    if (tab === "history") {
+      tab = "tools";
+      sub = "history";
+    }
+    if (tab !== state.tab || (sub === "history") !== (state.sub === "history")) {
       state.search = "";
       searchInput.value = "";
       mobileSearchInput.value = "";
@@ -251,12 +255,13 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       h("div", { class: "rb-nav-hint" }, "파일을 창 어디에 끌어다 놓아도 바로 가져와요"),
       h("div", { class: "rb-nav-hint", style: "padding-top:4px" }, `v${version}`)
     );
-    const showSearch = ["modules", "plugins", "characters", "history"].includes(state.tab);
-    searchInput.placeholder = { modules: "모듈 이름, 로어북 키워드 검색", plugins: "플러그인 이름, 카테고리 검색", characters: "캐릭터 이름, 제작자 검색", history: "기록에서 이름 찾기" }[state.tab] ?? "검색";
+    const inHist = state.tab === "tools" && state.sub === "history";
+    const showSearch = inHist || ["modules", "plugins", "characters"].includes(state.tab);
+    searchInput.placeholder = inHist ? "기록에서 이름 찾기" : { modules: "모듈 이름, 로어북 키워드 검색", plugins: "플러그인 이름, 카테고리 검색", characters: "캐릭터 이름, 제작자 검색" }[state.tab] ?? "검색";
     win.classList.toggle("rb-nosearch", !showSearch);
     replace(detail3);
     detail3.hidden = true;
-    const screen = { modules: renderModules, plugins: renderPlugins, characters: renderCharacters, presets: renderPresets, history: renderHistory, tools: state.sub === "settings" ? renderSettings : renderTools, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { modules: renderModules, plugins: renderPlugins, characters: renderCharacters, presets: renderPresets, tools: state.sub === "settings" ? renderSettings : state.sub === "history" ? renderHistory : renderTools, dev: renderDev }[state.tab] ?? renderPlaceholder;
     Promise.resolve(screen(ctx)).catch((err) => {
       replace(main, h("div", { class: "rb-section" }, h("div", { class: "rb-note err", role: "alert" }, icon("alert", 18), h("span", null, `화면을 열지 못했어요: ${err?.message ?? err}`))));
     });

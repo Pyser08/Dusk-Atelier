@@ -13,6 +13,8 @@ import { AI_MODES, MergeSelfCheckError, adaptCharacterPrompt, applyPartialUpdate
 import { loadProvenance } from '../engine/tidestore.js';
 import { Busy, backupSnapshot, isGenerating, restoreFromBackup } from '../engine/safety.js';
 import { commit, entriesOf, readDb } from '../data/modules.js';
+import { characterImpact, impactHtml, moduleImpact } from '../engine/impact.js';
+import { loadPersonaMap } from '../data/persona.js';
 
 export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, hooks = {} } = {}) {
   let dbCache = null;
@@ -692,10 +694,12 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
             <div style="margin-bottom:8px">${kindTag("module")}${target ? `<b>${esc(target.name)}</b> 업데이트${target.name !== incoming.module.name ? ` → 이름이 <b>${esc(incoming.module.name)}</b>(으)로 바뀝니다` : ""}` : `새 모듈 <b>${esc(incoming.module.name)}</b> 추가`}</div>
             <div class="grid"><b>올릴 에셋</b><span><b>${s.upload}개</b> (${fmtBytes2(s.uploadBytes)})${s.reused ? ` · 서버에 이미 있음 ${s.reused}` : ""}</span>
               ${target ? "" : `<b>에셋</b><span>${incoming.assets.length}개</span><b>로어북</b><span>${(incoming.module.lorebook ?? []).length}개</span>`}</div>
+            ${target ? `<div id="impact"><div class="muted" style="margin:10px 0 0">영향 범위 확인 중…</div></div>` : ""}
             ${p ? reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), modLabel) : ""}
             ${notes(incoming, incoming.module.lowLevelAccess && !target?.lowLevelAccess, s.upload)}${modWarnings(target, incoming.module)}
             <p class="muted" style="margin:10px 0 0">모듈 연결(활성 상태)은 바뀌지 않습니다.${target ? " 바꾸기 전 상태를 백업하므로 [백업·되돌리기]에서 되돌릴 수 있어요." : ""}</p>
           </div>${planFooter(target ? "업데이트" : "추가")}`);
+    if (target) fillImpact("module", target);
     if (p) bindReview(p, choices, keepExistingOnly, curF, modLabel, (keep, compact) => summaryHtml(p, keep, sumFix(sumOf(keep)), modLabel, compact), () => renderModPlan(file, incoming, db, targetIndex, keepExistingOnly, choices, base));
     bindPlan(file, incoming, db, (keep) => renderModPlan(file, incoming, db, targetIndex, keep, choices, base), async () => {
       const early = target ? store.addBackup({ kind: "module", target: target.id, name: target.name, snapshot: backupSnapshot("module", target), note: "업데이트 전" }).catch(() => null) : null;
@@ -858,6 +862,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
     frame(`<div class="card">
             <div style="margin-bottom:8px">${kindTag("character")}<b>${esc(target.name)}</b> 업데이트${target.name !== ch.fields.name ? ` → 이름이 <b>${esc(ch.fields.name)}</b>(으)로 바뀝니다` : ""}</div>
             <div class="grid"><b>올릴 에셋</b><span><b>${s.upload}개</b> (${fmtBytes2(s.uploadBytes)})${s.reused ? ` · 서버에 이미 있음 ${s.reused}` : ""}</span></div>
+            <div id="impact">${impactHtml(characterImpact(target, { characters: db.characters, modules: db.modules }))}</div>
             ${reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), spec.label)}
             ${notes(incoming, ch.risuFields.lowLevelAccess && !target.lowLevelAccess, s.upload)}
             ${generating ? `<div class="err">이 캐릭터가 지금 응답을 생성하는 중이에요. 생성이 끝난 뒤 업데이트해 주세요.</div>` : ""}
@@ -875,6 +880,20 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
       links?.set(linkKey(incoming), target.chaId);
       renderResult({ kind: "character", name: r.merged.name, updated: true, uploadedCount: uploaded.size, assets: characterAssetKeys(r.merged).length, lore: (r.merged.globalLore ?? []).length, chats: (r.merged.chats ?? []).length, backup: true, backupRec: r.backupRec, summary: r.summary, note: r.note });
     });
+  }
+  // 업데이트 영향 미리보기: 모듈은 봇·채팅·페르소나 연결을 따로 읽어 채운다 (화면은 먼저 띄움)
+  async function fillImpact(kind, target) {
+    const at = root;
+    try {
+      const [db, raw, pm] = await Promise.all([loadDb(true), readDb(api, ["modules", "pluginCustomStorage", "enabledModules", "personas"]), loadPersonaMap(api)]);
+      const enabled = (raw.modules ?? []).some((m) => m?.id === target.id);
+      const html = impactHtml(moduleImpact(target.id, { characters: db.characters, enabledModules: raw.enabledModules ?? [], personaMap: pm.map, personas: raw.personas ?? [], enabled }));
+      const box = at?.isConnected ? at.querySelector("#impact") : null;
+      if (box) box.innerHTML = html;
+    } catch {
+      const box = at?.isConnected ? at.querySelector("#impact") : null;
+      if (box) box.innerHTML = "";
+    }
   }
   // 원본 RisuAI(웹·데스크톱)는 열린 봇만 저장한다 → 업데이트할 봇이 열려 있는지 확인하고 안내
   async function guardOpenTarget(index, name) {

@@ -1,3 +1,6 @@
+import { characterImpact, impactText, moduleImpact } from '../../engine/impact.js';
+import { loadPersonaMap } from '../../data/persona.js';
+import { loadCharacters } from '../../data/modules.js';
 import { stableJson } from '../../engine/util.js';
 import { createStore } from '../../engine/store.js';
 import { Busy, backupSnapshot, isGenerating } from '../../engine/safety.js';
@@ -35,6 +38,20 @@ export async function exportMyChanges(ctx, kind, obj) {
     ctx.toast(`만들지 못했어요: ${e?.message ?? e}`, { error: true });
   }
 }
+// 패치가 닿는 곳 (1.4.6). 읽지 못하면 조용히 뺀다.
+async function impactOf(ctx, kind, target) {
+  try {
+    if (kind === "module") {
+      const [db, pm] = await Promise.all([ctx.api.getDatabase(["characters", "enabledModules", "modules", "personas"]), loadPersonaMap(ctx.api)]);
+      const chars = (await loadCharacters(ctx.api, db?.characters)).list;
+      return impactText(moduleImpact(target.id, { characters: chars, enabledModules: db?.enabledModules ?? [], personaMap: pm.map, personas: db?.personas ?? [], enabled: (db?.modules ?? []).some((m) => m?.id === target.id) }));
+    }
+    const db = await ctx.api.getDatabase(["characters", "modules"]);
+    return impactText(characterImpact(target, { characters: db?.characters ?? [], modules: db?.modules ?? [] }));
+  } catch {
+    return "";
+  }
+}
 export async function applyPatchFile(ctx, kind, getTarget, save) {
   const [f] = await pickFiles({ accept: ".rbupatch,application/json" });
   if (!f) return;
@@ -59,6 +76,7 @@ export async function applyPatchFile(ctx, kind, getTarget, save) {
 ${patch.note}` : "",
     `패치의 수정 ${s.update ?? 0} · 내 수정 유지 ${s.mine ?? 0} · 충돌 ${s.conflict ?? 0}(패치 쪽으로) · 추가 ${s.added ?? 0} · 삭제 ${s.removed ?? 0}`,
     Object.keys(patch.assets ?? {}).length ? `에셋 ${Object.keys(patch.assets).length}개를 올려요` : "",
+    await impactOf(ctx, kind, target),
     "적용하기 전 상태는 백업해요."
   ].filter(Boolean);
   if (!plan.items.length) {

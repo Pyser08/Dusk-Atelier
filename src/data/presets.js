@@ -72,3 +72,68 @@ export function uniquePresetName(data, base) {
   while (data.presets[name]) name = `${base.trim() || "새 프리셋"} (${i++})`;
   return name;
 }
+// ── 프리셋 공유 (1.4.6) ──
+// 파일/코드 모두 같은 내용: { type: "rbm-presets", v: 2, presets, names: { 모듈id: 이름 } }
+// 받는 쪽에서 모듈 id가 다르면 이름으로 다시 연결한다.
+var SHARE_PREFIX = "DA-PRESET:";
+export function presetBundle(presets, modules) {
+  const used = new Set();
+  for (const p of Object.values(presets)) {
+    for (const id of Object.keys(p?.moduleStates ?? {})) used.add(id);
+    for (const id of p?.globalEnabledIds ?? []) used.add(id);
+  }
+  const names = {};
+  for (const m of modules ?? []) if (m?.id && used.has(m.id)) names[m.id] = m.name ?? "";
+  return { type: "rbm-presets", v: 2, presets, names };
+}
+export function encodePresetCode(bundle) {
+  const bytes = new TextEncoder().encode(JSON.stringify(bundle));
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 32768) bin += String.fromCharCode(...bytes.subarray(i, i + 32768));
+  return SHARE_PREFIX + btoa(bin);
+}
+// 파일 내용(JSON)이나 공유 코드를 받아 묶음으로 바꾼다
+export function parsePresetBundle(text) {
+  let t = String(text ?? "").trim();
+  let j;
+  if (t.startsWith(SHARE_PREFIX)) {
+    const bin = atob(t.slice(SHARE_PREFIX.length).replace(/\s+/g, ""));
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    j = JSON.parse(new TextDecoder().decode(u8));
+  } else j = JSON.parse(t);
+  const presets = j?.presets && typeof j.presets === "object" ? j.presets : null;
+  if (!presets) throw new Error("프리셋 파일·코드가 아니에요");
+  const valid = Object.fromEntries(Object.entries(presets).filter(([, p]) => p && typeof p.moduleStates === "object"));
+  if (!Object.keys(valid).length) throw new Error("들어 있는 프리셋이 없어요");
+  return { presets: valid, names: j.names && typeof j.names === "object" ? j.names : {} };
+}
+// 받은 프리셋의 모듈 id를 이 기기의 모듈에 맞춘다. 이름이 하나뿐인 모듈만 이름으로 연결한다.
+export function remapPreset(p, names, modules) {
+  const have = new Set((modules ?? []).map((m) => m.id));
+  const byName = new Map();
+  for (const m of modules ?? []) {
+    const k = String(m.name ?? "").trim();
+    if (!k) continue;
+    byName.set(k, byName.has(k) ? null : m.id);
+  }
+  const map = (id) => {
+    if (have.has(id)) return id;
+    const n = String(names?.[id] ?? "").trim();
+    return n && byName.get(n) || null;
+  };
+  const moduleStates = {};
+  let matched = 0, renamed = 0, missing = 0;
+  for (const [id, s] of Object.entries(p.moduleStates ?? {})) {
+    const to = map(id);
+    if (!to) {
+      missing++;
+      continue;
+    }
+    if (to !== id) renamed++;
+    matched++;
+    moduleStates[to] = s;
+  }
+  const globalEnabledIds = [...new Set((p.globalEnabledIds ?? []).map(map).filter(Boolean))];
+  return { preset: { ...p, moduleStates, globalEnabledIds }, matched, renamed, missing };
+}

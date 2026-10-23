@@ -2,6 +2,7 @@
 // lang: "js"(기본) · "regex"(정규식 패턴) · "replace"(정규식 바꿀 내용: $1, {{CBS}}, HTML) · "lua" · "text"(글: {{CBS}}, <img=…>, HTML)
 // 커서가 괄호 옆에 있으면 짝 괄호를 함께 표시한다
 import { h } from './dom.js';
+import { attachUndo } from './undo.js';
 
 var CSS = `
 .rb-code{--c-bg:#1e1e1e;--c-fg:#d4d4d4;--c-gut:#858585;--c-line:#2b2b2b;border-radius:12px;border:1px solid var(--rb-line);background:var(--c-bg);overflow:auto;max-height:68vh;min-height:320px;position:relative;font:12.5px/1.6 ui-monospace,"Cascadia Code","D2Coding",Menlo,Consolas,monospace;tab-size:2}
@@ -461,6 +462,7 @@ export function codeEditor(value, { onChange, label = "코드", minHeight, maxHe
     // 문서 전체에 하나만 걸고, 지금 초점이 있는 편집기에만 알린다 (편집기가 많이 생겨도 이벤트가 쌓이지 않게)
     document.addEventListener("selectionchange", () => caretHandlers.get(document.activeElement)?.());
   }
+  const undo = attachUndo(ta);
   // Tab은 들여쓰기, Enter는 윗줄 들여쓰기 유지
   ta.addEventListener("keydown", (e) => {
     if (e.isComposing) return;
@@ -483,6 +485,7 @@ export function codeEditor(value, { onChange, label = "코드", minHeight, maxHe
   return {
     el,
     textarea: ta,
+    undo,
     get value() {
       return ta.value;
     },
@@ -490,6 +493,7 @@ export function codeEditor(value, { onChange, label = "코드", minHeight, maxHe
       if (v === ta.value) return;
       const { scrollTop, scrollLeft } = el;
       ta.value = v;
+      undo.reset();
       paint();
       el.scrollTop = scrollTop;
       el.scrollLeft = scrollLeft;

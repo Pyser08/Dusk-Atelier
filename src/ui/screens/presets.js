@@ -1,7 +1,7 @@
-import { download, h, pickFiles, replace } from '../dom.js';
+import { copyText, download, h, pickFiles, replace } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, confirmDialog, iconBtn, note, openMenu, promptDialog } from '../kit.js';
-import { DEFAULT_PRESET, applyPreset, isMobileDevice, loadPresets, savePresets, snapshotOf, uniquePresetName } from '../../data/presets.js';
+import { badge, btn, confirmDialog, iconBtn, modal, note, openMenu, promptDialog } from '../kit.js';
+import { DEFAULT_PRESET, applyPreset, encodePresetCode, isMobileDevice, loadPresets, parsePresetBundle, presetBundle, remapPreset, savePresets, snapshotOf, uniquePresetName } from '../../data/presets.js';
 import { reload } from './modules.js';
 
 export async function renderPresets(ctx) {
@@ -64,7 +64,10 @@ export async function renderPresets(ctx) {
       "div",
       { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
       h("div", { style: "flex:1" }, h("h2", { class: "rb-h2" }, "프리셋"), h("p", { class: "rb-p" }, "어떤 모듈을 켜고 끌지, 순서, 글로벌 활성화를 묶어서 저장해요. 지금 상태는 사용 중인 프리셋에 자동으로 저장돼요.")),
-      btn("가져오기", { icon: "upload", onClick: () => importPresets(ctx) }),
+      btn("가져오기", { icon: "upload", onClick: (ev) => openMenu(ctx.win, ev.currentTarget, [
+        { label: "파일에서", icon: "upload", onClick: () => importPresets(ctx) },
+        { label: "공유 코드 붙여넣기", icon: "link", onClick: () => importPresetCode(ctx) }
+      ]) }),
       btn("새 프리셋", { kind: "primary", icon: "plus", onClick: () => newPreset(ctx) })
     ),
     list,
@@ -126,8 +129,10 @@ function presetMenu(ctx, data, name, anchor) {
       await savePresets(ctx.api, d);
       renderPresets(ctx);
     } },
-    { label: "내보내기 (파일)", icon: "download", onClick: () => download(`preset-${name}.json`, JSON.stringify({ type: "rbm-presets", presets: { [name]: data.presets[name] } }, null, 2), "application/json") },
-    { label: "전체 내보내기", icon: "download", onClick: () => download("presets.json", JSON.stringify({ type: "rbm-presets", presets: data.presets }, null, 2), "application/json") },
+    { label: "공유 코드 복사", icon: "link", onClick: () => copyShare(ctx, { [name]: data.presets[name] }) },
+    { label: "전체 공유 코드 복사", icon: "link", onClick: () => copyShare(ctx, data.presets) },
+    { label: "내보내기 (파일)", icon: "download", onClick: async () => download(`preset-${name}.json`, JSON.stringify(presetBundle({ [name]: data.presets[name] }, await modulesOf(ctx)), null, 2), "application/json") },
+    { label: "전체 내보내기", icon: "download", onClick: async () => download("presets.json", JSON.stringify(presetBundle(data.presets, await modulesOf(ctx)), null, 2), "application/json") },
     isDefault ? null : "sep",
     isDefault ? null : { label: "삭제", icon: "trash", danger: true, onClick: async () => {
       if (!await confirmDialog(ctx.win, { title: `'${name}' 프리셋을 지울까요?`, body: "모듈은 바뀌지 않아요.", ok: "삭제", danger: true })) return;
@@ -140,22 +145,69 @@ function presetMenu(ctx, data, name, anchor) {
     } }
   ].filter(Boolean));
 }
+var modulesOf = async (ctx) => (await ctx.svc.load()).entries.map((e) => e.module);
+async function copyShare(ctx, presets) {
+  const code = encodePresetCode(presetBundle(presets, await modulesOf(ctx)));
+  const n = Object.keys(presets).length;
+  ctx.toast(await copyText(code) ? `프리셋 ${n}개 공유 코드를 복사했어요. 받는 쪽에서 가져오기 → 공유 코드 붙여넣기` : "복사하지 못했어요", { error: false });
+}
 async function importPresets(ctx) {
   const [f] = await pickFiles({ accept: ".json,application/json" });
   if (!f) return;
+  await importBundleText(ctx, await f.text());
+}
+async function importPresetCode(ctx) {
+  let ta;
+  const text = await modal(ctx.win, (done) => {
+    ta = h("textarea", { class: "rb-textarea", spellcheck: "false", placeholder: "DA-PRESET:로 시작하는 코드나 프리셋 JSON", "data-autofocus": "1", style: "min-height:140px" });
+    return h(
+      "div",
+      { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": "공유 코드 붙여넣기" },
+      h("h3", { class: "rb-h3" }, "공유 코드 붙여넣기"),
+      h("p", { class: "rb-p" }, "다른 기기나 다른 사람이 복사한 프리셋 코드를 붙여 넣으세요."),
+      ta,
+      h("div", { class: "btns" }, btn("취소", { onClick: () => done(null) }), btn("가져오기", { kind: "primary", onClick: () => done(ta.value) }))
+    );
+  });
+  if (text?.trim()) await importBundleText(ctx, text);
+}
+// 같은 이름이 있을 때 한 번만 묻는다
+function askConflict(ctx, names) {
+  return modal(ctx.win, (done) => h(
+    "div",
+    { class: "rb-dialog", role: "alertdialog", "aria-modal": "true", "aria-label": "같은 이름의 프리셋" },
+    h("h3", { class: "rb-h3" }, "같은 이름의 프리셋이 있어요"),
+    h("p", { class: "rb-p" }, names.slice(0, 6).join(", ") + (names.length > 6 ? ` 외 ${names.length - 6}개` : "")),
+    h(
+      "div",
+      { class: "btns" },
+      btn("취소", { onClick: () => done(null) }),
+      btn("건너뛰기", { onClick: () => done("skip") }),
+      btn("이름 바꿔 추가", { onClick: () => done("rename") }),
+      btn("덮어쓰기", { kind: "danger", onClick: () => done("overwrite") })
+    )
+  ));
+}
+async function importBundleText(ctx, text) {
   try {
-    const j = JSON.parse(await f.text());
-    const src = j?.presets && typeof j.presets === "object" ? j.presets : null;
-    if (!src) throw new Error("프리셋 파일이 아니에요");
+    const bundle = parsePresetBundle(text);
     const d = await loadPresets(ctx.api);
-    let n = 0;
-    for (const [name, p] of Object.entries(src)) {
-      if (!p?.moduleStates) continue;
-      d.presets[d.presets[name] ? uniquePresetName(d, name) : name] = p;
+    const mods = await modulesOf(ctx);
+    const clash = Object.keys(bundle.presets).filter((n) => d.presets[n]);
+    const how = clash.length ? await askConflict(ctx, clash) : "rename";
+    if (!how) return;
+    let n = 0, renamed = 0, missing = 0;
+    for (const [name, p] of Object.entries(bundle.presets)) {
+      if (d.presets[name] && how === "skip") continue;
+      const r = remapPreset(p, bundle.names, mods);
+      renamed += r.renamed;
+      missing += r.missing;
+      d.presets[d.presets[name] && how === "rename" ? uniquePresetName(d, name) : name] = r.preset;
       n++;
     }
     await savePresets(ctx.api, d);
-    ctx.toast(`프리셋 ${n}개를 가져왔어요`);
+    const extra = [renamed && `이름으로 ${renamed}개 연결`, missing && `없는 모듈 ${missing}개는 건너뜀`].filter(Boolean).join(" · ");
+    ctx.toast(`프리셋 ${n}개를 가져왔어요${extra ? ` (${extra})` : ""}`, { seconds: missing ? 8 : 4 });
     renderPresets(ctx);
   } catch (err) {
     ctx.toast(`가져오지 못했어요: ${err?.message ?? err}`, { error: true });
