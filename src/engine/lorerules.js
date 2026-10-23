@@ -25,6 +25,7 @@ const OWNED_DECO = /^@@(activate|dont_activate|unrecursive|depth|reverse_depth|r
 export const COND_TYPES = [
   ["keys", "이 항목의 키가 최근 대화에 있음"],
   ["text", "특정 단어가 최근 대화에 있음"],
+  ["notext", "특정 단어가 최근 대화에 없음"],
   ["var", "채팅 변수 비교"],
   ["turn", "턴 범위"],
   ["with", "다른 항목이 이번 턴에 켜짐"],
@@ -224,6 +225,8 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
         if (e.selective && splitKeys(e.secondkey).length) return keyHit(splitKeys(e.secondkey), texts, o);
         return true;
       }
+      case "notext":
+        return !keyHit(splitKeys(c.keys), textsFor(c.scan ?? it.rule.scan, c.in || "any"), { regex: !!c.regex, all: !!c.all, whole: !!it.rule.whole });
       case "text":
         return keyHit(splitKeys(c.keys), textsFor(c.scan ?? it.rule.scan, c.in || "any"), { regex: !!c.regex, all: !!c.all, whole: !!it.rule.whole });
       case "var":
@@ -349,12 +352,12 @@ export function validateRules(lorebook) {
     if (!(r.cond ?? []).length && !(r.chain ?? []).length && p >= 100 && r.once === "none") out.push({ level: "warn", index: i, msg: `${n}: 조건이 없어 매 턴 켜져요` });
     for (const c of r.cond ?? []) {
       if (c.t === "keys" && !splitKeys(l.key).length) out.push({ level: "warn", index: i, msg: `${n}: '키' 조건이 있지만 활성화 키가 비어 있어요` });
-      if (c.t === "text" && !splitKeys(c.keys).length) out.push({ level: "warn", index: i, msg: `${n}: 단어 조건에 단어가 없어요` });
+      if ((c.t === "text" || c.t === "notext") && !splitKeys(c.keys).length) out.push({ level: "warn", index: i, msg: `${n}: 단어 조건에 단어가 없어요` });
       if (c.t === "var" && !String(c.name ?? "").trim()) out.push({ level: "err", index: i, msg: `${n}: 변수 조건에 변수 이름이 없어요` });
       if ((c.t === "with" || c.t === "without") && !rids.has(c.rid)) out.push({ level: "err", index: i, msg: `${n}: 조건이 가리키는 항목이 없어요 (규칙이 꺼졌거나 지워짐)` });
       if ((c.t === "with" || c.t === "without") && c.rid === ridOf(l)) out.push({ level: "err", index: i, msg: `${n}: 조건이 자기 자신을 가리켜요` });
-      if ((c.t === "text" && c.regex) || (c.t === "keys" && l.useRegex)) {
-        for (const k of splitKeys(c.t === "text" ? c.keys : l.key)) {
+      if (((c.t === "text" || c.t === "notext") && c.regex) || (c.t === "keys" && l.useRegex)) {
+        for (const k of splitKeys(c.t === "keys" ? l.key : c.keys)) {
           const m = /^\/(.*)\/([a-z]*)$/s.exec(k);
           try {
             if (!m) throw new Error("/패턴/플래그 모양이어야 해요");

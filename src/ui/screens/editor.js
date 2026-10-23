@@ -656,7 +656,7 @@ export async function openEditorCore(ctx, cfg) {
         redraw();
       } });
       let params = null;
-      if (c.t === "text") params = [small(text(c, "keys", { placeholder: "단어1, 단어2" }), "200px"), small(select2(c, "in", [["any", "누구 말이든"], ["user", "사용자 말"], ["char", "봇 말"]]), "130px"), check(c, "all", "모두 있어야"), check(c, "regex", "정규식")];
+      if (c.t === "text" || c.t === "notext") params = [small(text(c, "keys", { placeholder: "단어1, 단어2" }), "200px"), small(select2(c, "in", [["any", "누구 말이든"], ["user", "사용자 말"], ["char", "봇 말"]]), "130px"), check(c, "all", "모두 있어야"), check(c, "regex", "정규식")];
       else if (c.t === "var") params = [small(text(c, "name", { placeholder: "변수 이름" }), "140px"), small(select2(c, "op", VAR_OPS.map((o) => [o, o])), "80px"), c.op === "있음" || c.op === "없음" ? null : small(text(c, "val", { placeholder: "값" }), "110px")];
       else if (c.t === "turn") params = [h("span", { class: "rb-muted" }, "턴"), small(num(c, "min"), "80px"), h("span", { class: "rb-muted" }, "~"), small(num(c, "max"), "80px")];
       else if (c.t === "with" || c.t === "without") params = [small(pickEntry(c, "rid"), "220px")];
