@@ -1,11 +1,11 @@
 //@name dusk_atelier
 //@display-name Dusk Atelier
 //@api 3.0
-//@version 1.3.4
+//@version 1.3.5
 //@update-url https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js
 //@link https://github.com/Pyser08/Dusk-Atelier 저장소
 
-/* Dusk Atelier v1.3.4 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
+/* Dusk Atelier v1.3.5 — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */
 (() => {
   var __defProp = Object.defineProperty;
   var __export = (target, all) => {
@@ -8461,7 +8461,20 @@ ${registrationRow.content}`;
   }
 
   // src/ui/legacy.js
-  async function createLegacy(api, { onExit, zIndex = 100, host, links, hooks = {} } = {}) {
+  async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, hooks = {} } = {}) {
+    let dbCache = null;
+    const WRITES = /* @__PURE__ */ new Set(["setCharacterToIndex", "setDatabaseLite", "setDatabase", "setChatToIndex", "addCharacter", "removeCharacter"]);
+    const api = new Proxy(rawApi, { get: (t, k) => {
+      const v = t[k];
+      if (typeof v !== "function") return v;
+      return WRITES.has(k) ? async (...a) => {
+        try {
+          return await v.apply(t, a);
+        } finally {
+          dbCache = null;
+        }
+      } : v.bind(t);
+    } });
     let queue = [];
     const TITLE2 = "업데이트 가져오기";
     const css = `
@@ -8744,10 +8757,26 @@ ${registrationRow.content}`;
         root.querySelector("#pw").focus();
       });
     }
-    async function loadDb(withCharacters) {
-      const db = await readDb(api, withCharacters ? ["modules", "pluginCustomStorage", "characters"] : ["modules", "pluginCustomStorage"]);
-      return { modules: entriesOf(db).map((e) => e.module), characters: Array.isArray(db.characters) ? db.characters : [] };
+    const DB_TTL = 8e3;
+    const dropDbCache = () => {
+      dbCache = null;
+    };
+    async function loadDb(withCharacters, { fresh = false } = {}) {
+      const read = async () => {
+        const db = await readDb(api, withCharacters ? ["modules", "pluginCustomStorage", "characters"] : ["modules", "pluginCustomStorage"]);
+        return { modules: entriesOf(db).map((e) => e.module), characters: Array.isArray(db.characters) ? db.characters : [] };
+      };
+      if (!withCharacters) return read();
+      if (!fresh && dbCache && Date.now() - dbCache.t < DB_TTL) return dbCache.p;
+      const p = read();
+      const slot = { t: Date.now(), p };
+      dbCache = slot;
+      p.catch(() => {
+        if (dbCache === slot) dbCache = null;
+      });
+      return p;
     }
+    const yieldUi = () => new Promise((r) => setTimeout(r, 0));
     async function startScan(file) {
       busy = true;
       stopRequested = false;
@@ -9169,12 +9198,9 @@ ${registrationRow.content}`;
       const out = [];
       let skipped = 0;
       const slots = fresh.chats ?? [];
-      for (let i2 = 0; i2 < slots.length; i2++) {
-        let chat = null;
-        try {
-          chat = await api.getChatFromIndex(idx, i2);
-        } catch {
-        }
+      const got = [];
+      for (let i2 = 0; i2 < slots.length; i2 += 4) got.push(...await Promise.all(slots.slice(i2, i2 + 4).map((_, k) => api.getChatFromIndex(idx, i2 + k).catch(() => null))));
+      for (const chat of got) {
         if (!chat || chat._placeholder || chat._stub || !Array.isArray(chat.message)) {
           skipped++;
           continue;
@@ -9182,7 +9208,8 @@ ${registrationRow.content}`;
         const { message, ...header } = chat;
         const chunks = [];
         for (let s = 0; s < message.length; s += 32) chunks.push(message.slice(s, s + 32));
-        out.push({ header: JSON.parse(JSON.stringify(header)), chunks: JSON.parse(JSON.stringify(chunks)) });
+        out.push({ header: JSON.parse(JSON.stringify(header)), chunks });
+        await yieldUi();
       }
       return { chats: out, skipped };
     }
@@ -9209,6 +9236,8 @@ ${registrationRow.content}`;
         if (!fresh || fresh.chaId !== chaId) throw new Error("캐릭터를 다시 찾지 못했습니다. 저장하지 않았습니다.");
       }
       if (isGenerating(fresh)) throw new Busy();
+      updateProgress(100, "바뀐 곳을 비교하는 중…");
+      await yieldUi();
       const cur2 = charFields(fresh);
       const p2 = makePlan("c", cur2, incFields, base);
       const keep = keepSet(p2, choices, keepExistingOnly);
@@ -9334,6 +9363,7 @@ ${registrationRow.content}`;
       const target = await api.getCharacterFromIndex(ti), copy = await api.getCharacterFromIndex(ci);
       if (base === void 0) base = await store.getFingerprint("c", targetId);
       const spec = charSpec({ fields: {}, risuFields: {}, refs: {} });
+      await yieldUi();
       const curF = charFields(target), incF = charFields(copy);
       const p = makePlan("c", curF, incF, base);
       const sumOf = (keep) => summarizeCharacterUpdate(target, applyPlan(curF, incF, p, keep), target.additionalAssets ?? []);
@@ -9409,7 +9439,8 @@ ${registrationRow.content}`;
       heading = "다른 봇과 합치기";
       const it = newQueue[0];
       if (!it) return renderStart();
-      const { chars } = await mergeData();
+      let { chars } = await mergeData();
+      if (!chars.some(({ c }) => c.chaId === it.copyId)) ({ chars } = await mergeData(true));
       if (!chars.some(({ c }) => c.chaId === it.copyId)) {
         newQueue.shift();
         return newQueue.length ? renderNewOffer() : renderStart();
@@ -9541,8 +9572,8 @@ ${registrationRow.content}`;
     const ROLE_KO = { status: "상태창", imageDisplay: "이미지 표시", imageGen: "이미지 생성", events: "이벤트", firstMessage: "첫 메시지", other: "기타" };
     let mg = null;
     const nameOf = (c) => c?.name || "(이름 없음)";
-    async function mergeData() {
-      const db = await loadDb(true);
+    async function mergeData(fresh = false) {
+      const db = await loadDb(true, { fresh });
       const chars = db.characters.map((c, i2) => c && c.type !== "group" && !c.trashTime ? { i: i2, c } : null).filter(Boolean).sort((a, b) => nameOf(a.c).localeCompare(nameOf(b.c), "ko"));
       return { db, chars, modules: db.modules };
     }
@@ -10222,6 +10253,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       },
       /** 감지된 받은 모듈들을 "업데이트할까요?"로 물어본다 */
       async offerModules(items) {
+        dropDbCache();
         for (const it of items) if (!modQueue.some((x2) => x2.copyId === it.copyId)) modQueue.push(it);
         if (busy) return;
         renderModCopyOffer();
@@ -10229,6 +10261,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       },
       /** 감지된 받은 사본들을 "이어 붙일까요?"로 물어본다 */
       async offerCopies(items) {
+        dropDbCache();
         for (const it of items) if (!copyQueue.some((x2) => x2.copyId === it.copyId)) copyQueue.push(it);
         if (busy) return;
         renderCopyOffer();
@@ -10236,6 +10269,7 @@ ${(err2.problems ?? []).slice(0, 6).map((x2) => `· ${x2.reason}`).join("\n") ||
       },
       /** 새로 가져온 봇(업데이트 후보는 아님): 대기열에만 넣는다 (알림은 따로) */
       queueNew(items) {
+        dropDbCache();
         for (const it of items) if (!newQueue.some((x2) => x2.copyId === it.copyId)) newQueue.push(it);
         return newQueue.length;
       },
@@ -18037,22 +18071,21 @@ ${patch.note}` : "",
           await close();
           const body = await doc.querySelector("body");
           if (!body) return false;
-          const box = await doc.createElement("div");
-          await box.setAttribute("x-dusk", "toast");
-          await box.setStyleAttribute(BOX);
-          const main = await doc.createElement("div");
-          await main.setStyleAttribute("flex:1;min-width:0;display:flex;gap:12px;align-items:center;padding:14px 4px 14px 16px;cursor:pointer");
-          await main.setInnerHTML(`<span style="flex:none;display:inline-block;width:34px;height:34px;line-height:34px;text-align:center;border-radius:10px;background:linear-gradient(135deg,#4f7cf7,#7c5cf0);font-size:17px">🔗</span><span style="flex:1;min-width:0"><b style="display:block;font-size:14px;color:#ffffff">${esc(title)}</b><span style="display:block;font-size:13px;color:#b1aecb;word-break:keep-all">${esc(text)}</span><span style="display:block;margin-top:4px;font-size:12px;font-weight:700;color:#c4b1ff">${esc(action)} →</span></span>`);
-          const x2 = await doc.createElement("div");
-          await x2.setStyleAttribute("flex:none;width:36px;display:flex;align-items:flex-start;justify-content:center;padding-top:10px;cursor:pointer;color:#9d99c1;font-size:18px");
-          await x2.setInnerText("×");
-          await main.addEventListener("click", () => {
-            close();
-            onClick?.();
-          });
-          await x2.addEventListener("click", () => close());
-          await box.appendChild(main);
-          await box.appendChild(x2);
+          const [box, main, x2] = await Promise.all([doc.createElement("div"), doc.createElement("div"), doc.createElement("div")]);
+          await Promise.all([
+            box.setAttribute("x-dusk", "toast"),
+            box.setStyleAttribute(BOX),
+            main.setStyleAttribute("flex:1;min-width:0;display:flex;gap:12px;align-items:center;padding:14px 4px 14px 16px;cursor:pointer"),
+            x2.setStyleAttribute("flex:none;width:36px;display:flex;align-items:flex-start;justify-content:center;padding-top:10px;cursor:pointer;color:#9d99c1;font-size:18px"),
+            x2.setInnerText("×"),
+            main.setInnerHTML(`<span style="flex:none;display:inline-block;width:34px;height:34px;line-height:34px;text-align:center;border-radius:10px;background:linear-gradient(135deg,#4f7cf7,#7c5cf0);font-size:17px">🔗</span><span style="flex:1;min-width:0"><b style="display:block;font-size:14px;color:#ffffff">${esc(title)}</b><span style="display:block;font-size:13px;color:#b1aecb;word-break:keep-all">${esc(text)}</span><span style="display:block;margin-top:4px;font-size:12px;font-weight:700;color:#c4b1ff">${esc(action)} →</span></span>`),
+            main.addEventListener("click", () => {
+              close();
+              onClick?.();
+            }),
+            x2.addEventListener("click", () => close())
+          ]);
+          await Promise.all([box.appendChild(main), box.appendChild(x2)]);
           await body.appendChild(box);
           el = box;
           setTimeout(() => {
@@ -18071,7 +18104,7 @@ ${patch.note}` : "",
   }
 
   // src/main.js
-  var VERSION = true ? "1.3.4" : "dev";
+  var VERSION = true ? "1.3.5" : "dev";
   var TITLE = "Dusk Atelier";
   async function start() {
     const raw = globalThis.risuai ?? globalThis.Risuai;

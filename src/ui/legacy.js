@@ -14,7 +14,21 @@ import { loadProvenance } from '../engine/tidestore.js';
 import { Busy, backupSnapshot, isGenerating, restoreFromBackup } from '../engine/safety.js';
 import { commit, entriesOf, readDb } from '../data/modules.js';
 
-export async function createLegacy(api, { onExit, zIndex = 100, host, links, hooks = {} } = {}) {
+export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, hooks = {} } = {}) {
+  let dbCache = null;
+  // 봇·DB를 쓰는 호출 뒤에는 봇 목록 캐시를 비운다
+  const WRITES = /* @__PURE__ */ new Set(["setCharacterToIndex", "setDatabaseLite", "setDatabase", "setChatToIndex", "addCharacter", "removeCharacter"]);
+  const api = new Proxy(rawApi, { get: (t, k) => {
+    const v = t[k];
+    if (typeof v !== "function") return v;
+    return WRITES.has(k) ? async (...a) => {
+      try {
+        return await v.apply(t, a);
+      } finally {
+        dbCache = null;
+      }
+    } : v.bind(t);
+  } });
   let queue = [];
   const TITLE2 = "업데이트 가져오기";
   const css = `
@@ -298,10 +312,28 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
       root.querySelector("#pw").focus();
     });
   }
-  async function loadDb(withCharacters) {
-    const db = await readDb(api, withCharacters ? ["modules", "pluginCustomStorage", "characters"] : ["modules", "pluginCustomStorage"]);
-    return { modules: entriesOf(db).map((e) => e.module), characters: Array.isArray(db.characters) ? db.characters : [] };
+  // 봇 전체 읽기는 가장 무겁다 → 짧게 캐시하고, 동시에 부르면 한 번만 읽는다. 쓰기 직후·새 봇 감지 때 비운다.
+  // (저장 직전에는 항상 봇을 다시 읽어 확인하므로 목록이 잠깐 오래돼도 안전)
+  const DB_TTL = 8e3;
+  const dropDbCache = () => {
+    dbCache = null;
+  };
+  async function loadDb(withCharacters, { fresh = false } = {}) {
+    const read = async () => {
+      const db = await readDb(api, withCharacters ? ["modules", "pluginCustomStorage", "characters"] : ["modules", "pluginCustomStorage"]);
+      return { modules: entriesOf(db).map((e) => e.module), characters: Array.isArray(db.characters) ? db.characters : [] };
+    };
+    if (!withCharacters) return read();
+    if (!fresh && dbCache && Date.now() - dbCache.t < DB_TTL) return dbCache.p;
+    const p = read();
+    const slot = { t: Date.now(), p };
+    dbCache = slot;
+    p.catch(() => {
+      if (dbCache === slot) dbCache = null;
+    });
+    return p;
   }
+  const yieldUi = () => new Promise((r) => setTimeout(r, 0));
   async function startScan(file) {
     busy = true;
     stopRequested = false;
@@ -729,12 +761,9 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
     const out = [];
     let skipped = 0;
     const slots = fresh.chats ?? [];
-    for (let i = 0; i < slots.length; i++) {
-      let chat = null;
-      try {
-        chat = await api.getChatFromIndex(idx, i);
-      } catch {
-      }
+    const got = [];
+    for (let i = 0; i < slots.length; i += 4) got.push(...await Promise.all(slots.slice(i, i + 4).map((_, k) => api.getChatFromIndex(idx, i + k).catch(() => null))));
+    for (const chat of got) {
       if (!chat || chat._placeholder || chat._stub || !Array.isArray(chat.message)) {
         skipped++;
         continue;
@@ -742,7 +771,8 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
       const { message, ...header } = chat;
       const chunks = [];
       for (let s = 0; s < message.length; s += 32) chunks.push(message.slice(s, s + 32));
-      out.push({ header: JSON.parse(JSON.stringify(header)), chunks: JSON.parse(JSON.stringify(chunks)) });
+      out.push({ header: JSON.parse(JSON.stringify(header)), chunks });
+      await yieldUi();
     }
     return { chats: out, skipped };
   }
@@ -774,6 +804,8 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
       if (!fresh || fresh.chaId !== chaId) throw new Error("캐릭터를 다시 찾지 못했습니다. 저장하지 않았습니다.");
     }
     if (isGenerating(fresh)) throw new Busy();
+    updateProgress(100, "바뀐 곳을 비교하는 중…");
+    await yieldUi();
     const cur2 = charFields(fresh);
     const p2 = makePlan("c", cur2, incFields, base);
     const keep = keepSet(p2, choices, keepExistingOnly);
@@ -901,6 +933,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
     const target = await api.getCharacterFromIndex(ti), copy = await api.getCharacterFromIndex(ci);
     if (base === void 0) base = await store.getFingerprint("c", targetId);
     const spec = charSpec({ fields: {}, risuFields: {}, refs: {} });
+    await yieldUi();
     const curF = charFields(target), incF = charFields(copy);
     const p = makePlan("c", curF, incF, base);
     const sumOf = (keep) => summarizeCharacterUpdate(target, applyPlan(curF, incF, p, keep), target.additionalAssets ?? []);
@@ -979,7 +1012,9 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
     heading = "다른 봇과 합치기";
     const it = newQueue[0];
     if (!it) return renderStart();
-    const { chars } = await mergeData();
+    let { chars } = await mergeData();
+    // 방금 가져온 봇이 캐시에 없을 수 있다: 한 번 새로 읽어 본 뒤에만 버린다
+    if (!chars.some(({ c }) => c.chaId === it.copyId)) ({ chars } = await mergeData(true));
     if (!chars.some(({ c }) => c.chaId === it.copyId)) {
       newQueue.shift();
       return newQueue.length ? renderNewOffer() : renderStart();
@@ -1115,8 +1150,8 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
   const ROLE_KO = { status: "상태창", imageDisplay: "이미지 표시", imageGen: "이미지 생성", events: "이벤트", firstMessage: "첫 메시지", other: "기타" };
   let mg = null;
   const nameOf = (c) => c?.name || "(이름 없음)";
-  async function mergeData() {
-    const db = await loadDb(true);
+  async function mergeData(fresh = false) {
+    const db = await loadDb(true, { fresh });
     const chars = db.characters.map((c, i) => c && c.type !== "group" && !c.trashTime ? { i, c } : null).filter(Boolean).sort((a, b) => nameOf(a.c).localeCompare(nameOf(b.c), "ko"));
     return { db, chars, modules: db.modules };
   }
@@ -1801,6 +1836,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
     },
     /** 감지된 받은 모듈들을 "업데이트할까요?"로 물어본다 */
     async offerModules(items) {
+      dropDbCache();
       for (const it of items) if (!modQueue.some((x) => x.copyId === it.copyId)) modQueue.push(it);
       if (busy) return;
       renderModCopyOffer();
@@ -1808,6 +1844,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
     },
     /** 감지된 받은 사본들을 "이어 붙일까요?"로 물어본다 */
     async offerCopies(items) {
+      dropDbCache();
       for (const it of items) if (!copyQueue.some((x) => x.copyId === it.copyId)) copyQueue.push(it);
       if (busy) return;
       renderCopyOffer();
@@ -1815,6 +1852,7 @@ export async function createLegacy(api, { onExit, zIndex = 100, host, links, hoo
     },
     /** 새로 가져온 봇(업데이트 후보는 아님): 대기열에만 넣는다 (알림은 따로) */
     queueNew(items) {
+      dropDbCache();
       for (const it of items) if (!newQueue.some((x) => x.copyId === it.copyId)) newQueue.push(it);
       return newQueue.length;
     },
