@@ -12462,7 +12462,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
         const after = code.slice(e, e + 40).match(/^\s*(\S)/)?.[1];
         if (API.has(id)) cls = "api";
         else if (before === ".") cls = after === "(" ? "fn" : "prop";
-        else if (after === ":" && /[{,]\s*$/.test(code.slice(Math.max(0, s - 200), s))) cls = KEYS2.has(id) ? "key" : "prop";
+        else if (after === ":" && /[{,]\s*$/.test(code.slice(Math.max(0, s - 200), s).replace(/\/\/[^\n]*/g, ""))) cls = KEYS2.has(id) ? "key" : "prop";
         else if (KW.has(id)) cls = "kw";
         else if (DECL.has(id)) cls = "decl";
         else if (LIT.has(id)) cls = "lit";
