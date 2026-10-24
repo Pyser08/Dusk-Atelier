@@ -1,5 +1,5 @@
 // Dusk Atelier 파츠 목록. 파츠 자체의 설치·교체는 RisuAI 플러그인 화면에서 한다.
-var MANIFEST_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/parts/manifest.json";
+var MANIFEST_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/test/parts-updates/parts/manifest.json";
 
 async function readJsonResponse(res) {
   if (!res || !(res.status >= 200 && res.status < 300)) throw new Error(`HTTP ${res?.status ?? "?"}`);
