@@ -5,7 +5,7 @@
 ## 실행 순서
 
 1. 이 브랜치의 `manifest.json`을 열어 각 `pluginUrl`을 확인합니다. RisuAI 설정 → 플러그인에서 `host.js`, `part.js` raw URL을 각각 추가합니다. manifest는 시험 파츠의 식별자·버전·URL을 나열하는 인덱스입니다.
-2. RisuAI에서 두 플러그인을 켜고 `DA Parts Test Host`를 엽니다. [Part에 ping 보내기]를 누르면 파츠 화면으로 이동하고, [Host로 응답 보내기]를 누르면 host에 pong과 파츠 버전이 표시되는지 확인합니다.
+2. RisuAI에서 두 플러그인을 켜고 `DA Parts Test Host`를 엽니다. [Part에 ping 보내기]를 누르면 Host가 숨겨지고 파츠 화면으로 이동합니다. [Host로 돌아가기]를 누르면 Host 화면이 다시 열리는지 확인합니다.
 3. 설치된 Part의 버전이 `0.1.0`이고 `//@update-url`이 해당 `part.js` raw URL인지 확인합니다.
 4. `part.js`의 `//@version`, `VERSION`, 화면 제목을 `0.1.1`로 올리고, 응답 문구도 바꿔 브랜치에 반영합니다. RisuAI에서 플러그인 업데이트 확인을 실행해 Part만 업데이트한 뒤 `0.1.1`이 표시되는지 확인합니다.
 5. Host 버전이 `0.1.0`으로 유지되고 계속 IPC 왕복이 되는지 확인합니다. 그다음 Host 파일만 `0.1.1`로 올려 같은 절차를 별도로 확인합니다.

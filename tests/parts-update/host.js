@@ -3,10 +3,11 @@
 //@api 3.0
 //@version 0.1.0
 //@update-url https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/test/parts-updates/tests/parts-update/host.js
+//@allowed-ipc da_parts_test_part
 
 (() => {
   const PART = 'da_parts_test_part';
-  const CHANNEL = 'dusk-parts-test-host';
+  const CHANNEL = 'dusk-parts-test-v1';
   const MANIFEST_URL = 'https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/test/parts-updates/tests/parts-update/manifest.json';
   let root;
 
@@ -45,7 +46,8 @@
       root.querySelector('#ping').onclick = async () => {
         const nonce = `${Date.now()}`;
         root.querySelector('#status').textContent = `ping 전송: ${nonce}`;
-        await risuai.postPluginChannelMessage(PART, 'dusk-parts-test-part', { type: 'ping', nonce });
+        await risuai.postPluginChannelMessage(PART, CHANNEL, { protocol: 1, type: 'open', nonce });
+        await risuai.hideContainer();
       };
       root.querySelector('#close').onclick = () => risuai.hideContainer();
     }
@@ -53,10 +55,15 @@
   };
 
   (async () => {
-    await risuai.addPluginChannelListener(CHANNEL, async (message) => {
-      if (message?.type === 'pong') {
+    await risuai.addPluginChannelListener(CHANNEL, async (message, meta) => {
+      if (meta?.sender !== PART || message?.protocol !== 1) return;
+      if (message.type === 'opened' || message.type === 'pong') {
         const status = root?.querySelector('#status');
         if (status) status.textContent = `pong 수신: ${message.nonce} · Part v${message.partVersion}`;
+      } else if (message.type === 'closed') {
+        await risuai.showContainer('fullscreen');
+        const status = root?.querySelector('#status');
+        if (status) status.textContent = `Part가 닫혔습니다 · Part v${message.partVersion}`;
       }
     });
     await risuai.registerSetting('DA Parts Test Host', show, '🧩', 'html', 'da-parts-test-host-setting');
