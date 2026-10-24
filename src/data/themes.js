@@ -82,11 +82,11 @@ export var TARGETS = {
     },
     // 포켓리스 DOM은 계열마다 다를 수 있어 [셀렉터 찾기]로 확인·수정하길 권한다
     selectors: {
-      chat: ".message, .chat-message",
-      user: ".message.user, .chat-message.user, [data-role=user]",
-      bot: ".message.bot, .message.char, .chat-message.char, [data-role=char]",
-      text: ".message-text, .chattext",
-      list: ".message-list, .chat-list",
+      chat: ".risu-chat > div",
+      user: ".risu-chat > div:not(:has(.chat-width))",
+      bot: ".risu-chat > div:has(> .chat-width)",
+      text: ".chattext",
+      list: ".risu-chat",
       input: "textarea"
     },
     dbCss: "customCSS",
@@ -154,6 +154,8 @@ function normalize(t, target) {
     selectors: { ...TARGETS[target].selectors, ...t?.selectors ?? {} },
     css: String(t?.css ?? ""),
     html: String(t?.html ?? ""),
+    // 기존 테마를 붙여 넣은 경우처럼 토큰 CSS가 방해되면 끈다
+    useTokens: t?.useTokens !== false,
     updated: t?.updated ?? Date.now()
   };
 }
@@ -179,6 +181,7 @@ export function compileCss(theme) {
   const t = theme.tokens, s = theme.selectors;
   const vars = Object.entries(A.vars).map(([v, k]) => `  ${v}: ${t[k]};`).join("\n");
   const font = fontStack(t.font);
+  if (theme.useTokens === false) return [`/* Dusk Theme · ${theme.name} · ${A.label} */`, theme.css.trim()].join("\n");
   const out = [
     `/* Dusk Theme · ${theme.name} · ${A.label} */`,
     `:root {\n${vars}\n  --dusk-accent: ${t.accent};\n  --dusk-accent2: ${t.accent2};\n  --dusk-radius: ${px(t.radius)};\n}`,
@@ -187,7 +190,7 @@ export function compileCss(theme) {
     s.chat ? `${s.chat} { margin-bottom: ${px(t.gap)}; border-radius: ${px(t.radius)}; }` : "",
     s.user ? `${s.user} { background: ${t.userBubble}; }` : "",
     s.bot ? `${s.bot} { background: ${t.botBubble}; border: 1px solid ${t.border}; }` : "",
-    s.text ? `${s.text} { font-size: ${px(t.size)}; line-height: ${t.line}; color: ${t.text}; }\n${s.text} em { color: ${t.italic}; }\n${s.text} strong { color: ${t.bold}; }\n${s.text} q, ${s.text} .quote { color: ${t.quote}; }` : "",
+    s.text ? `${s.text} { font-size: ${px(t.size)}; line-height: ${t.line}; color: ${t.text}; }\n${s.text} em { color: ${t.italic}; }\n${s.text} strong { color: ${t.bold}; }\n${s.text} q, ${s.text} .quote, ${s.text} mark[risu-mark^=quote], ${s.text} mark[risu-mark^=blockquote] { color: ${t.quote}; background: transparent; }` : "",
     s.input ? `${s.input} { background: ${t.panel}; color: ${t.text}; border: 1px solid ${t.border}; border-radius: ${px(Math.max(6, t.radius - 4))}; }` : ""
   ].filter(Boolean);
   if (theme.css.trim()) out.push("/* 직접 쓴 CSS */", theme.css.trim());
@@ -230,14 +233,59 @@ export function lintCss(css) {
   return errs;
 }
 
-// HTML 템플릿에 빠진 필수 자리표시 확인
+// HTML 템플릿 검사. 리스 커스텀 HTML은 <risutextbox> 자리에 메시지가 들어간다.
+export var RISU_TAGS = [
+  ["risutextbox", "메시지 내용", true],
+  ["risuicon", "프로필 이미지", false],
+  ["risugeninfo", "생성 정보", false],
+  ["risubuttons", "메시지 버튼(편집·재생성 등)", false]
+];
 export function lintHtml(html) {
   if (!html.trim()) return [];
   const errs = [];
-  if (!/\{\{\s*(slot|chat|content)/i.test(html)) errs.push({ msg: "메시지 내용 자리({{slot}})가 없어요" });
+  for (const [tag, label, must] of RISU_TAGS) if (!new RegExp(`<${tag}\\b`, "i").test(html)) errs.push({ msg: `<${tag}> (${label})가 없어요${must ? " — 메시지가 안 보여요" : ""}`, level: must ? "err" : "warn" });
   const open = (html.match(/<(div|span|section|p)\b/gi) ?? []).length, close = (html.match(/<\/(div|span|section|p)>/gi) ?? []).length;
-  if (open !== close) errs.push({ msg: `여는 태그 ${open}개, 닫는 태그 ${close}개로 짝이 안 맞아요` });
+  if (open !== close) errs.push({ msg: `여는 태그 ${open}개, 닫는 태그 ${close}개로 짝이 안 맞아요`, level: "err" });
+  const w = (html.match(/\{\{#when\b/g) ?? []).length + (html.match(/\{\{#if\b/g) ?? []).length, we = (html.match(/\{\{\/(when|if)\}\}/g) ?? []).length;
+  if (w !== we) errs.push({ msg: `{{#when}}·{{#if}} ${w}개, 닫는 {{/when}} ${we}개로 짝이 안 맞아요`, level: "err" });
   return errs;
+}
+
+// 미리보기용: CBS 일부를 흉내 낸다 ({{role}} {{char}} {{user}} {{date}}, #when/#if ::is::, :else)
+export function renderCbs(tpl, v) {
+  let s = tpl.replace(/\{\{\s*(role|char|user|date|time)\s*\}\}/gi, (_, k) => v[k.toLowerCase()] ?? "");
+  const re = /\{\{#(?:when|if)::([^}]*?)\}\}((?:(?!\{\{#(?:when|if)::)[\s\S])*?)\{\{\/(?:when|if)\}\}/;
+  for (let i = 0; i < 50 && re.test(s); i++) s = s.replace(re, (_, cond, body) => {
+    const parts = cond.split("::");
+    let ok;
+    if (parts[1] === "is") ok = parts[0].trim() === parts.slice(2).join("::").trim();
+    else if (parts[1] === "isnot") ok = parts[0].trim() !== parts.slice(2).join("::").trim();
+    else ok = !!parts[0].trim() && parts[0].trim() !== "0" && parts[0].trim() !== "false";
+    const [yes, no = ""] = body.split(/\{\{:else\}\}/);
+    return ok ? yes : no;
+  });
+  return s;
+}
+
+// 붙여 넣은 CSS에서 조절용 변수(--이름: 값)를 찾는다 → 스튜디오에서 컬러피커·숫자로 편집
+export function parseCssVars(css) {
+  const out = [], seen = new Set();
+  for (const m of css.matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)) {
+    const [, name, raw] = m, val = raw.trim();
+    if (seen.has(name) || /^var\(/.test(val)) continue;
+    let type = null;
+    if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(val)) type = "color";
+    else if (/^-?[\d.]+(px|rem|em|%)?$/.test(val)) type = "number";
+    else if (/["']|serif|sans|mono/i.test(val)) type = "font";
+    if (!type) continue;
+    seen.add(name);
+    out.push({ name, value: val, type });
+  }
+  return out;
+}
+export function setCssVar(css, name, value) {
+  const esc = name.replace(/[-]/g, "\\-");
+  return css.replace(new RegExp(`(${esc}\\s*:\\s*)([^;{}]+)(;)`), (_, a, __, c) => a + value + c);
 }
 
 // ── 적용 ──
