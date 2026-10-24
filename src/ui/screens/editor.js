@@ -153,7 +153,11 @@ export async function openEditorCore(ctx, cfg) {
   );
   const tabsEl = h("div", { class: "rb-tabs", role: "tablist" });
   const body = h("div", { class: "rb-split" });
-  panel.append(head, tabsEl, body);
+  // 규칙 시험: 어느 탭(정보·로어북·정규식·트리거·JSON)에서든 우측 하단 버튼으로 연다
+  const testFab = btn("규칙 시험", { kind: "primary", icon: "zap", title: "가상 대화로 Dusk 규칙이 어떻게 켜지는지 시험", onClick: () => ruleTester() });
+  testFab.id = "rb-rule-test-fab";
+  testFab.style.cssText = "position:absolute;right:16px;bottom:16px;z-index:30;box-shadow:0 6px 20px rgba(0,0,0,.4);border-radius:999px";
+  panel.append(head, tabsEl, body, testFab);
   ctx.win.appendChild(panel);
   panel.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && !ctx.win.querySelector(".rb-modal, .rb-menu")) {
@@ -355,8 +359,7 @@ export async function openEditorCore(ctx, cfg) {
       { class: "rb-side-tools" },
       search,
       btn("추가", { size: "sm", icon: "plus", onClick: () => add(kind === "lorebook" ? newLore : kind === "regex" ? newRegex : newTrigger) }),
-      kind === "lorebook" ? btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolderPicked() }) : null,
-      kind === "lorebook" && draft.lorebook.some((x) => isManaged(x)) ? btn("규칙 시험", { size: "sm", onClick: () => ruleTester() }) : null
+      kind === "lorebook" ? btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolderPicked() }) : null
     );
     const items = h("div", { class: "rb-side-list", role: "listbox", "aria-label": "항목" });
     const uid = /* @__PURE__ */ new WeakMap();
