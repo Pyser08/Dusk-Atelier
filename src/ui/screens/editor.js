@@ -8,7 +8,7 @@ import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note
 import { gripDrag } from '../sortable.js';
 import { reload } from './modules.js';
 import { attachUndo } from '../undo.js';
-import { COND_TYPES, SET_OPS, VAR_OPS, applySets, bodyOf, collectManaged, defaultRule, evaluate, gateVar, isManaged, nativeContent, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
+import { COND_TYPES, SET_OPS, VAR_OPS, applySets, bodyOf, checkExpr, collectManaged, defaultRule, evaluate, gateVar, isManaged, nativeContent, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
 // 관리 항목의 내용 머리(@@activate·{{#if}})를 규칙에 맞춘다
 export function syncRuleContent(lorebook) {
   // 리스의 복제 등으로 같은 식별자가 두 항목에 있으면 뒤쪽에 새 식별자를 준다 (연쇄·조건 대상은 다시 골라야 한다)
@@ -774,23 +774,29 @@ export async function openEditorCore(ctx, cfg) {
     );
 
     // 3-2) 켜질 때 변수
-    const setRows = (r.set ?? []).map((x, xi) => h(
-      "div",
-      { class: "rb-da-cond" },
-      h("span", { class: "rb-da-idx" }, String(xi + 1)),
-      text(x, "name", { placeholder: "변수 이름" }),
-      select2(x, "op", SET_OPS.map(([o, t]) => [o, t]), redraw),
-      text(x, "val", { placeholder: x.op === "+" || x.op === "-" ? "숫자" : "값" }),
-      trash(() => {
-        r.set.splice(xi, 1);
-        changed();
-        redraw();
-      }, "변수 지우기")
-    ));
+    const setRows = (r.set ?? []).map((x, xi) => {
+      const isExpr = x.op === "expr";
+      const err = isExpr ? checkExpr(x.val) : null;
+      return h(
+        "div",
+        { class: "rb-da-cond", style: "flex-wrap:wrap" },
+        h("span", { class: "rb-da-idx" }, String(xi + 1)),
+        text(x, "name", { placeholder: "변수 이름" }),
+        select2(x, "op", SET_OPS.map(([o, t]) => [o, t]), redraw),
+        text(x, "val", { placeholder: isExpr ? "예) love*2 + hp/10" : x.op === "=" ? "값" : "숫자" }),
+        isExpr ? h("button", { type: "button", class: "rb-badge", style: "cursor:pointer;border:1px solid var(--rb-line3);background:transparent;color:var(--rb-acc-text)", title: "수식 쓰는 법", onClick: () => exprHelp() }, "?") : null,
+        trash(() => {
+          r.set.splice(xi, 1);
+          changed();
+          redraw();
+        }, "변수 지우기"),
+        err ? h("div", { class: "rb-da-note", style: "flex-basis:100%;color:var(--rb-danger,#e5484d)" }, `수식 오류 — ${err}`) : null
+      );
+    });
     const setCard = card(
       "edit",
       "켜질 때 변수",
-      "새로 켜질 때 채팅 변수를 바꿔요 (유지로 이어진 턴은 빼요). 다른 규칙의 '변수 비교' 조건이나 본문의 {{getvar::이름}}과 이어져요",
+      "새로 켜질 때 채팅 변수를 바꿔요 (유지로 이어진 턴은 빼요). 더하기·빼기·곱하기·나누기, 또는 수식으로 계산해요. 다른 규칙의 '변수 비교' 조건이나 본문의 {{getvar::이름}}과 이어져요",
       setRows.length ? h("div", { class: "rb-da-conds" }, ...setRows) : null,
       line(btn("변수 추가", { size: "sm", icon: "plus", onClick: () => {
         r.set ??= [];
@@ -831,6 +837,41 @@ export async function openEditorCore(ctx, cfg) {
     if (r.whole) parts.push("이름 경계");
     return parts.join(" · ");
   }
+  // 수식 쓰는 법 (켜질 때 변수 → 수식 옆 ? 버튼)
+  function exprHelp() {
+    const row = (a, b) => h("div", { style: "display:flex;gap:10px;padding:5px 0;border-top:1px solid var(--rb-line3)" }, h("code", { style: "flex:none;min-width:150px;color:var(--rb-acc-text)" }, a), h("span", { style: "flex:1;word-break:keep-all;font-size:13.5px" }, b));
+    const back = h("div", { class: "rb-modal", onMousedown: (ev) => {
+      if (ev.target === back) back.remove();
+    } });
+    back.appendChild(h(
+      "div",
+      { class: "rb-dialog", role: "dialog", "aria-label": "수식 쓰는 법", style: "max-width:560px;max-height:calc(100% - 40px);overflow:auto" },
+      h("h3", { class: "rb-h3" }, "수식 쓰는 법"),
+      h("p", { class: "rb-muted", style: "margin:0" }, "계산한 결과가 이 변수의 새 값이 돼요. 변수 이름을 그대로 쓰면 지금 값으로 계산해요 (숫자가 아니거나 없으면 0)."),
+      h("b", null, "부호"),
+      row("+  -  *  /", "더하기 · 빼기 · 곱하기 · 나누기"),
+      row("%", "나머지 (10 % 3 = 1)"),
+      row("^", "거듭제곱 (2 ^ 3 = 8)"),
+      row("( )", "먼저 계산할 부분 묶기"),
+      h("b", { style: "margin-top:6px" }, "함수"),
+      row("min(a, b, …)  max(a, b, …)", "가장 작은 값 · 가장 큰 값"),
+      row("abs(x)", "절댓값"),
+      row("floor(x)  ceil(x)  round(x)", "내림 · 올림 · 반올림"),
+      row("clamp(x, 최소, 최대)", "범위 안으로 맞추기"),
+      row("rand(a, b)", "a~b 사이 정수 난수 (rand()는 0~1 사이 소수)"),
+      h("b", { style: "margin-top:6px" }, "예약 이름"),
+      row("turn  또는  턴", "지금 턴 (사용자 메시지 수)"),
+      h("b", { style: "margin-top:6px" }, "예시"),
+      row("love + 5", "love를 5 올리기"),
+      row("clamp(love*1.5, 0, 100)", "1.5배로 하되 0~100 안에서"),
+      row("max(hp - 10, 0)", "10 깎되 0 아래로는 안 내려가게"),
+      row("floor(hp / 2)", "절반(소수점 버림)"),
+      row("rand(1, 6)", "주사위 한 번 굴려 저장"),
+      h("p", { class: "rb-muted", style: "margin:6px 0 0;font-size:12.5px;line-height:1.7" }, "· 0으로 나누거나 수식이 틀리면 그 항목은 건너뛰고 값을 그대로 둬요. 틀린 부분은 입력칸 아래에 빨갛게 알려 줘요.", h("br"), "· 결과가 소수면 소수 여섯째 자리까지만 남겨요.", h("br"), "· 위쪽 항목부터 차례로 계산해서, 앞에서 바꾼 값을 뒤 수식이 바로 써요."),
+      h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => back.remove() }))
+    ));
+    ctx.win.appendChild(back);
+  }
   // 규칙 시험: 가상 대화를 한 턴씩 보내 보며 어떤 규칙이 왜 켜지고 안 켜지는지, 변수가 어떻게 바뀌는지 본다
   // (저장하지 않은 편집 중인 로어북 그대로 계산. 실제 채팅·변수는 건드리지 않는다)
   function ruleTester() {
@@ -859,26 +900,30 @@ export async function openEditorCore(ctx, cfg) {
         closeTester();
       }
     });
-    const input = h("textarea", { class: "rb-textarea", spellcheck: "false", style: "min-height:58px", placeholder: "사용자 입력 (예: 사과 먹을래?)" });
-    const botIn = h("input", { class: "rb-input", placeholder: "봇 답변 (선택) — 다음 턴 조건이 '봇 말'을 볼 때 써요", style: "flex:1;min-width:200px" });
-    const varsIn = h("input", { class: "rb-input", placeholder: "시작 변수 (예: hp=5, mood=angry)", style: "flex:1;min-width:180px" });
-    const noProb = h("input", { type: "checkbox" });
-    const logEl = h("div", { class: "rb-scroll", style: "max-height:44vh;display:flex;flex-direction:column;gap:8px" });
-    const varEl = h("div", { class: "rb-muted", style: "font-size:12.5px;word-break:break-all" });
-    let hist = [], sim = {}, vars = {}, turns = [];
-    const parseVars = () => Object.fromEntries(varsIn.value.split(",").map((x) => x.split("=").map((y) => y.trim())).filter((x) => x[0]).map(([k, v]) => ["$" + k, v ?? ""]));
+    const input = h("textarea", { class: "rb-textarea", spellcheck: "false", style: "min-height:58px", placeholder: "사용자 입력 (예: 사과 먹을래?) — Enter로 보내기, Shift+Enter 줄바꿈" });
+    const botIn = h("input", { class: "rb-input", placeholder: "봇 답변 (선택) — '봇 말'을 보는 조건을 시험할 때", style: "flex:1;min-width:200px;height:38px" });
+    const priorIn = h("textarea", { class: "rb-textarea", spellcheck: "false", style: "min-height:76px", placeholder: "이미 오간 대화 (선택). 한 줄에 하나, '나:'로 시작하면 사용자, 아니면 봇.\n누적 횟수·최근 대화 조건을 시험할 때 써요" });
+    const startVars = h("input", { class: "rb-input", placeholder: "시작 변수 (예: hp=5, mood=angry)", style: "flex:1;min-width:180px" });
+    const curVars = h("input", { class: "rb-input", placeholder: "현재 변수 — 직접 고쳐도 돼요 (예: love=3, hp=10)", style: "flex:1;min-width:180px" });
+    const turnIn = h("input", { class: "rb-input", type: "number", min: 0, style: "width:84px" });
+    const probSel = h("select", { class: "rb-input", style: "width:auto", "aria-label": "확률" }, h("option", { value: "real" }, "확률 그대로"), h("option", { value: "on" }, "확률 항목 모두 켜짐"), h("option", { value: "off" }, "확률 항목 모두 안 켜짐"));
+    const logEl = h("div", { class: "rb-scroll", style: "max-height:36vh;display:flex;flex-direction:column;gap:8px" });
+    const turnBadge = h("span", { class: "rb-badge", style: "font-size:13px;padding:3px 11px;background:var(--rb-acc-soft);color:var(--rb-acc-text)" });
+    const recEl = h("div", { style: "display:flex;flex-direction:column;gap:6px" });
+    let hist = [], sim = {}, vars = {}, turns = [], base = 0;
+    const userCount = (m) => m.filter((x) => x.role === "user").length;
+    const curTurn = () => base + userCount(hist);
+    const parseVars = (txt) => Object.fromEntries(String(txt).split(",").map((x) => x.split("=").map((y) => y.trim())).filter((x) => x[0]).map(([k, ...v]) => ["$" + k, v.join("=")]));
     const items = () => collectManaged(draft.lorebook);
-    const paintVars = () => {
-      const e = Object.entries(vars);
-      varEl.textContent = e.length ? "현재 변수: " + e.map(([k, v]) => `${k.slice(1)}=${v}`).join(", ") : "현재 변수: 없음";
-    };
+    const parseMsgs = (txt) => String(txt).split("\n").map((x) => x.trim()).filter(Boolean).map((x) => /^(나|user|유저)\s*[:：]/i.test(x) ? { role: "user", data: x.replace(/^[^:：]*[:：]\s*/, "") } : { role: "char", data: x.replace(/^(봇|char|bot)\s*[:：]\s*/i, "") });
+    const rngOpts = () => ({ ignoreProb: probSel.value === "on", rng: probSel.value === "off" ? () => 0.99999 : Math.random });
     const turnCard = (t) => {
       const chip = (a) => h("div", { class: "rb-issue" }, icon("check", 14), h("span", null, `${a.entry.comment || a.rid} — ${a.why}`));
       const off = t.trace.filter((x) => !x.on);
       const diff = Object.entries(t.sets).map(([n, v]) => `${n}: ${t.prevVars["$" + n] ?? "없음"} → ${v}`);
       return h(
         "div",
-        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:6px" },
+        { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:6px;flex:none" },
         h("div", { style: "display:flex;gap:8px;align-items:baseline" }, h("span", { class: "rb-badge", style: "background:var(--rb-acc-soft);color:var(--rb-acc-text)" }, `${t.turn}턴`), h("b", { style: "word-break:break-all" }, t.input)),
         t.bot ? h("div", { class: "rb-muted", style: "font-size:12.5px" }, `봇: ${t.bot}`) : null,
         t.fired.length ? h("div", { class: "rb-issues" }, t.fired.map(chip)) : h("p", { class: "rb-muted", style: "margin:0" }, "켜진 항목이 없어요."),
@@ -887,32 +932,67 @@ export async function openEditorCore(ctx, cfg) {
         t.fired.length ? h("details", null, h("summary", { class: "rb-muted" }, "켜진 항목 내용 (CBS는 리스가 처리)"), h("pre", { style: "white-space:pre-wrap;font-size:12px" }, t.fired.map((a) => `[${a.entry.comment || a.rid}]\n${bodyOf(a.entry.content)}`).join("\n\n"))) : null
       );
     };
+    // 켜진 기록(한 번만·쿨다운·유지·'N번 이상 켜짐' 시험용): 항목마다 켜진 턴을 직접 고칠 수 있다
+    const paintRec = () => {
+      const list = items();
+      replace(recEl, list.length ? list.map((it) => {
+        const turnsOf = sim.f?.[it.rid] ?? [];
+        const el = h("input", { class: "rb-input", value: turnsOf.join(", "), placeholder: "켜진 턴 (예: 2, 5)", style: "flex:1;min-width:120px" });
+        el.addEventListener("change", () => {
+          const nums = el.value.split(/[ ,]+/).map(Number).filter((x) => x > 0 && isFinite(x));
+          sim = { f: { ...(sim.f ?? {}), [it.rid]: nums }, t: { ...(sim.t ?? {}), [it.rid]: nums } };
+          if (!nums.length) {
+            delete sim.f[it.rid];
+            delete sim.t[it.rid];
+          }
+        });
+        return h("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" }, h("span", { style: "flex:none;min-width:120px;font-size:13px;word-break:keep-all" }, it.entry.comment || it.rid), el);
+      }) : h("p", { class: "rb-muted", style: "margin:0" }, "규칙이 켜진 항목이 없어요."));
+    };
     const paint = () => {
       replace(logEl, turns.length ? turns.map(turnCard) : h("p", { class: "rb-muted", style: "margin:0" }, "아직 보낸 입력이 없어요. 아래에 입력하고 [보내기]를 누르세요. 한 번만·쿨다운·유지·누적 횟수는 보낸 순서대로 이어서 계산돼요."));
-      paintVars();
+      const c = curTurn();
+      turnBadge.textContent = `지금 ${c}턴 · 다음 입력은 ${c + 1}턴`;
+      turnIn.value = String(c);
+      curVars.value = Object.entries(vars).map(([k, v]) => `${k.slice(1)}=${v}`).join(", ");
+      paintRec();
       logEl.scrollTop = logEl.scrollHeight;
     };
+    // 환경(시작 턴·이전 대화·시작 변수)을 바꾸면 처음부터 다시
     const reset = () => {
-      hist = [];
+      hist = parseMsgs(priorIn.value);
       sim = {};
       turns = [];
-      vars = parseVars();
+      base = 0;
+      vars = parseVars(startVars.value);
       paint();
     };
+    turnIn.addEventListener("change", () => {
+      base = Math.max(0, Number(turnIn.value) || 0) - userCount(hist);
+      if (base < -userCount(hist)) base = -userCount(hist);
+      paint();
+    });
+    curVars.addEventListener("change", () => {
+      vars = parseVars(curVars.value);
+      paint();
+    });
     const send = () => {
       const text = input.value.trim();
       if (!text) return input.focus();
       const list = items();
       if (!list.length) return ctx.toast("규칙이 켜진 로어북 항목이 없어요", { error: true });
       const msgs = [...hist, { role: "user", data: text }];
-      const turn = msgs.filter((m) => m.role === "user").length;
-      const res = evaluate({ items: list, messages: msgs, turn, state: sim, vars, ignoreProb: noProb.checked });
-      const sets = applySets(res.fired, vars);
+      const turn = base + userCount(msgs);
+      const opts = rngOpts();
+      const res = evaluate({ items: list, messages: msgs, turn, state: sim, vars, ...opts });
+      const sets = applySets(res.fired, vars, { turn, rng: opts.rng });
       const prevVars = vars;
+      const prevBase = base;
       vars = { ...vars };
       for (const [n, v] of Object.entries(sets)) vars["$" + n] = v;
-      turns.push({ turn, input: text, bot: botIn.value.trim(), fired: res.fired, trace: res.trace, sets, prevVars, undo: { hist, sim, vars: prevVars } });
-      hist = botIn.value.trim() ? [...msgs, { role: "char", data: botIn.value.trim() }] : msgs;
+      const bot = botIn.value.trim();
+      turns.push({ turn, input: text, bot, fired: res.fired, trace: res.trace, sets, prevVars, undo: { hist, sim, vars: prevVars, base: prevBase } });
+      hist = bot ? [...msgs, { role: "char", data: bot }] : msgs;
       sim = res.state;
       input.value = "";
       botIn.value = "";
@@ -922,7 +1002,7 @@ export async function openEditorCore(ctx, cfg) {
     const undo = () => {
       const t = turns.pop();
       if (!t) return;
-      ({ hist, sim, vars } = t.undo);
+      ({ hist, sim, vars, base } = t.undo);
       paint();
     };
     input.addEventListener("keydown", (ev) => {
@@ -931,19 +1011,36 @@ export async function openEditorCore(ctx, cfg) {
         send();
       }
     });
+    const lab = (t) => h("span", { class: "rb-muted", style: "flex:none;min-width:84px;font-size:12.5px" }, t);
+    const env = h(
+      "details",
+      { style: "border:1px solid var(--rb-line3);border-radius:12px;padding:8px 12px" },
+      h("summary", { style: "cursor:pointer;font-weight:600" }, "시험 환경 — 턴·이전 대화·변수·기록·확률"),
+      h(
+        "div",
+        { style: "display:flex;flex-direction:column;gap:10px;padding-top:10px" },
+        h("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" }, lab("지금 턴"), turnIn, h("span", { class: "rb-muted", style: "font-size:12.5px" }, "고치면 그 턴까지 진행된 채팅처럼 계산해요 (턴 범위 조건)")),
+        h("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" }, lab("현재 변수"), curVars, h("span", { class: "rb-muted", style: "font-size:12.5px" }, "고치고 Enter (변수 비교 조건)")),
+        h("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" }, lab("확률"), probSel, h("span", { class: "rb-muted", style: "font-size:12.5px" }, "100% 미만 항목과 연쇄를 켜지게·안 켜지게 고정")),
+        h("div", { style: "display:flex;flex-direction:column;gap:4px" }, lab("켜진 기록"), recEl, h("span", { class: "rb-muted", style: "font-size:12.5px" }, "한 번만·쿨다운·유지·'N번 이상 켜짐'을 시험할 때 항목이 켜졌던 턴을 직접 넣어요")),
+        h("div", { style: "display:flex;flex-direction:column;gap:4px" }, lab("이전 대화"), priorIn),
+        h("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" }, lab("시작 변수"), startVars, btn("이 환경으로 처음부터", { size: "sm", onClick: reset }))
+      )
+    );
     reset();
     back.appendChild(h(
       "div",
       { class: "rb-dialog", role: "dialog", "aria-label": "규칙 시험", style: "max-width:none;width:100%;max-height:100%;overflow:auto;animation:none" },
-      h("h3", { class: "rb-h3" }, "규칙 시험 — 가상 대화"),
-      h("p", { class: "rb-muted", style: "margin:0" }, "지금 편집 중인 로어북으로 입력을 한 턴씩 보내 봐요. 저장하지 않은 변경도 반영되고, 실제 채팅과 변수는 건드리지 않아요."),
+      h("div", { style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap" }, h("h3", { class: "rb-h3", style: "margin:0" }, "규칙 시험 — 가상 대화"), turnBadge),
+      h("p", { class: "rb-muted", style: "margin:0" }, "지금 편집 중인 로어북(저장 전 변경 포함)으로 입력을 한 턴씩 보내 봐요. 실제 채팅과 변수는 건드리지 않아요."),
       logEl,
-      varEl,
       input,
-      h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center" }, botIn),
-      h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center" }, varsIn, h("label", { class: "rb-check" }, noProb, h("span", null, "확률 무시(항상 켜짐)"))),
+      botIn,
+      env,
       h("div", { class: "btns" }, btn("처음부터", { onClick: reset, title: "대화·기록·변수를 처음 상태로" }), btn("마지막 턴 취소", { onClick: undo }), btn("보내기", { kind: "primary", onClick: send }), btn("닫기", { onClick: closeTester }))
     ));
+    // 안쪽이 넘치면 줄어들어 잘리지 않고 스크롤되게
+    for (const c of back.firstChild.children) c.style.flexShrink = "0";
     panel.appendChild(back);
     testFab.style.visibility = "hidden";
     if (!still && back.animate) back.animate([{ transform: "scale(.1)", opacity: 0 }, { opacity: 1, offset: .35 }, { transform: "scale(1)", opacity: 1 }], { duration: 340, easing: "cubic-bezier(.2,.9,.25,1.04)" });

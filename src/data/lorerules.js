@@ -106,7 +106,7 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
       }
     }
     const res = evaluate({ items, messages: msgs, turn, state: { f, t }, vars });
-    const out = applySets(res.fired, vars);
+    const out = applySets(res.fired, vars, { turn });
     const after = finalVars(vars, targets, out);
     const patch = { [sv(STATE_VAR)]: "" };
     for (const [k, v] of Object.entries(gateValues(items, res.fired))) patch[sv(k)] = v;
@@ -143,7 +143,7 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
       }
     }
     const res = evaluate({ items, messages: msgs, turn, state: { f: st.f ?? {}, t: st.t ?? {} }, vars });
-    const out = applySets(res.fired, vars);
+    const out = applySets(res.fired, vars, { turn });
     const after = finalVars(vars, targets, out);
     const pv = Object.fromEntries(targets.map((n) => [n, String(after[sv(n)] ?? "")]));
     const p = { turn, fired: res.fired.map((a) => a.rid), trig: res.fired.filter((a) => a.why !== "지속").map((a) => a.rid), at: now };

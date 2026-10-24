@@ -16,7 +16,7 @@
 export const RULE_VERSION = 1;
 export const DONT_ACTIVATE = "@@dont_activate";
 export const STATE_VAR = "da_state";
-export const SET_OPS = [["=", "로 정하기"], ["+", "더하기"], ["-", "빼기"]];
+export const SET_OPS = [["=", "로 정하기"], ["+", "더하기"], ["-", "빼기"], ["*", "곱하기"], ["/", "나누기"], ["expr", "수식"]];
 export const MAX_HIST = 50;
 export const gateVar = (rid) => "da_" + String(rid ?? "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 12);
 const GATE_OPEN = /^\{\{#if \{\{getvar::da_[a-zA-Z0-9]+\}\}\}\}$/;
@@ -195,23 +195,139 @@ export function collectManaged(entries) {
 }
 
 // ---------- 켜질 때 변수 ----------
-// 규칙의 set: [{ name, op: '='|'+'|'-', val }]. 새로 켜진 항목(지속으로 이어진 것은 제외)이 순서대로 채팅 변수를 바꾼다.
+// 규칙의 set: [{ name, op: '='|'+'|'-'|'*'|'/'|'expr', val }]. 새로 켜진 항목(지속으로 이어진 것은 제외)이 순서대로 채팅 변수를 바꾼다.
+// expr(수식): 숫자·변수 이름·+ - * / % ^ ( )·min max abs floor ceil round clamp rand·turn(턴). eval은 쓰지 않고 직접 해석한다.
+const IDENT = /[A-Za-z_가-힣][A-Za-z0-9_가-힣]*/y;
+const NUM = /(?:\d+\.?\d*|\.\d+)/y;
+function tokenize(src) {
+  const out = [];
+  let i = 0;
+  const str = String(src ?? "");
+  while (i < str.length) {
+    const ch = str[i];
+    if (/\s/.test(ch)) { i++; continue; }
+    NUM.lastIndex = i;
+    let m = NUM.exec(str);
+    if (m) { out.push({ k: "n", v: Number(m[0]) }); i += m[0].length; continue; }
+    IDENT.lastIndex = i;
+    m = IDENT.exec(str);
+    if (m) { out.push({ k: "id", v: m[0] }); i += m[0].length; continue; }
+    if ("+-*/%^(),".includes(ch)) { out.push({ k: ch }); i++; continue; }
+    throw new Error(`'${ch}'는 수식에서 쓸 수 없어요`);
+  }
+  return out;
+}
+const FUNCS = { min: (a) => Math.min(...a), max: (a) => Math.max(...a), abs: (a) => Math.abs(a[0]), floor: (a) => Math.floor(a[0]), ceil: (a) => Math.ceil(a[0]), round: (a) => Math.round(a[0]), clamp: (a) => Math.min(Math.max(a[0], a[1]), a[2]) };
+const ARITY = { min: [1, 99], max: [1, 99], abs: [1, 1], floor: [1, 1], ceil: [1, 1], round: [1, 1], clamp: [3, 3], rand: [0, 2] };
+// 수식 계산. ctx: { get(이름) → 값, turn, rng }. 오류면 Error
+export function evalExpr(src, ctx = {}) {
+  const t = tokenize(src);
+  if (!t.length) throw new Error("수식이 비어 있어요");
+  let p = 0;
+  const peek = () => t[p]?.k;
+  const eat = (k) => {
+    if (t[p]?.k !== k) throw new Error(k === ")" ? "괄호가 닫히지 않았어요" : `'${k}'가 있어야 해요`);
+    return t[p++];
+  };
+  const num = (v) => {
+    const n = Number(v);
+    return v === void 0 || v === null || v === "" || isNaN(n) ? 0 : n;
+  };
+  const expr = () => {
+    let v = term();
+    while (peek() === "+" || peek() === "-") v = t[p++].k === "+" ? v + term() : v - term();
+    return v;
+  };
+  const term = () => {
+    let v = power();
+    while (peek() === "*" || peek() === "/" || peek() === "%") {
+      const k = t[p++].k, r = power();
+      if ((k === "/" || k === "%") && r === 0) throw new Error("0으로 나눌 수 없어요");
+      v = k === "*" ? v * r : k === "/" ? v / r : v % r;
+    }
+    return v;
+  };
+  const power = () => {
+    const b = unary();
+    return peek() === "^" ? (p++, Math.pow(b, power())) : b;
+  };
+  const unary = () => peek() === "-" ? (p++, -unary()) : peek() === "+" ? (p++, unary()) : primary();
+  const primary = () => {
+    const x = t[p];
+    if (!x) throw new Error("수식이 중간에 끝났어요");
+    if (x.k === "n") { p++; return x.v; }
+    if (x.k === "(") { p++; const v = expr(); eat(")"); return v; }
+    if (x.k === "id") {
+      p++;
+      if (peek() === "(") {
+        const name = x.v.toLowerCase();
+        if (!(name in ARITY)) throw new Error(`'${x.v}' 함수는 없어요`);
+        p++;
+        const args = [];
+        if (peek() !== ")") {
+          args.push(expr());
+          while (peek() === ",") { p++; args.push(expr()); }
+        }
+        eat(")");
+        const [lo, hi] = ARITY[name];
+        if (args.length < lo || args.length > hi) throw new Error(`${x.v}()의 값 개수가 맞지 않아요`);
+        if (name === "rand") {
+          const r = (ctx.rng ?? Math.random)();
+          if (!args.length) return r;
+          const a = Math.min(args[0], args[1] ?? args[0]), b = Math.max(args[0], args[1] ?? args[0]);
+          return a + Math.floor(r * (Math.floor(b) - Math.ceil(a) + 1));
+        }
+        return FUNCS[name](args);
+      }
+      if (x.v === "turn" || x.v === "턴") return Number(ctx.turn) || 0;
+      return num(ctx.get?.(x.v));
+    }
+    throw new Error(`'${x.k}'가 여기 올 수 없어요`);
+  };
+  const v = expr();
+  if (p < t.length) throw new Error(`'${t[p].k === "n" ? t[p].v : t[p].v ?? t[p].k}'를 해석할 수 없어요`);
+  if (!isFinite(v)) throw new Error("계산 결과가 숫자가 아니에요");
+  return v;
+}
+// 쓸 수 있는 수식인지 확인 (이름은 아무 값이나 넣어 본다). 오류 글 또는 null
+export function checkExpr(src) {
+  try {
+    evalExpr(src, { get: () => 1, turn: 1, rng: () => 0.5 });
+    return null;
+  } catch (e) {
+    return e.message;
+  }
+}
+const fmtNum = (v) => String(Math.round(v * 1e6) / 1e6);
 export const setTargets = (items) => [...new Set(items.flatMap((it) => (it.rule.set ?? []).map((x) => String(x.name ?? "").trim()).filter(Boolean)))];
-// vars: scriptstate 모양({ '$이름': 값 }). 반환: { 이름: 새 값(문자열) } (바뀐 것만)
-export function applySets(fired, vars) {
+// vars: scriptstate 모양({ '$이름': 값 }). 반환: { 이름: 새 값(문자열) } (바뀐 것만). 계산할 수 없는 항목(0으로 나누기·수식 오류)은 건너뛴다.
+export function applySets(fired, vars, { turn = 0, rng = Math.random } = {}) {
   const out = {};
   const get = (n) => n in out ? out[n] : vars?.["$" + n];
+  const asNum = (v) => {
+    const n = Number(v);
+    return v === void 0 || v === null || v === "" || isNaN(n) ? 0 : n;
+  };
   for (const a of fired) {
     if (a.why === "지속") continue;
     for (const x of a.rule.set ?? []) {
       const n = String(x.name ?? "").trim();
       if (!n) continue;
-      const cur = get(n);
-      if (x.op === "+" || x.op === "-") {
-        const base = Number(cur ?? 0), d = Number(x.val ?? 0);
-        const v = (isNaN(base) ? 0 : base) + (x.op === "+" ? 1 : -1) * (isNaN(d) ? 0 : d);
-        out[n] = String(Math.round(v * 1e6) / 1e6);
-      } else out[n] = String(x.val ?? "");
+      try {
+        const cur = asNum(get(n)), d = asNum(x.val);
+        switch (x.op) {
+          case "+": out[n] = fmtNum(cur + d); break;
+          case "-": out[n] = fmtNum(cur - d); break;
+          case "*": out[n] = fmtNum(cur * d); break;
+          case "/":
+            if (d === 0) continue;
+            out[n] = fmtNum(cur / d);
+            break;
+          case "expr": out[n] = fmtNum(evalExpr(x.val, { get, turn, rng })); break;
+          default: out[n] = String(x.val ?? "");
+        }
+      } catch {
+      }
     }
   }
   return out;
@@ -456,7 +572,12 @@ export function validateRules(lorebook) {
     if (r.hold !== void 0 && r.hold !== "" && !(Number(r.hold) >= 0)) out.push({ level: "err", index: i, msg: `${n}: 유지 턴 수는 0 이상이어야 해요` });
     for (const x of r.set ?? []) {
       if (!String(x.name ?? "").trim()) out.push({ level: "err", index: i, msg: `${n}: '켜질 때' 변수 이름이 비어 있어요` });
-      if ((x.op === "+" || x.op === "-") && isNaN(Number(x.val ?? 0))) out.push({ level: "err", index: i, msg: `${n}: '${x.name}' 더하기·빼기 값은 숫자여야 해요` });
+      if (["+", "-", "*", "/"].includes(x.op) && (String(x.val ?? "").trim() === "" || isNaN(Number(x.val)))) out.push({ level: "err", index: i, msg: `${n}: '${x.name}'의 값은 숫자여야 해요 (변수를 쓰려면 '수식'을 고르세요)` });
+      if (x.op === "/" && Number(x.val) === 0) out.push({ level: "err", index: i, msg: `${n}: '${x.name}'를 0으로 나눌 수 없어요` });
+      if (x.op === "expr") {
+        const er = checkExpr(x.val);
+        if (er) out.push({ level: "err", index: i, msg: `${n}: '${x.name}' 수식 오류 — ${er}` });
+      }
       if (String(x.name ?? "").startsWith("da_")) out.push({ level: "warn", index: i, msg: `${n}: 변수 '${x.name}'는 Dusk가 쓰는 이름(da_)이에요. 다른 이름을 쓰세요` });
     }
     for (const c of r.chain ?? []) {
