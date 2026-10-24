@@ -327,96 +327,7 @@ ${CENTER}`,
       { id: "corner", name: "모서리 장식", on: false, css: `.dt-card::after{content:"";position:absolute;right:8px;bottom:8px;width:14px;height:14px;border-right:2px solid var(--t-accent);border-bottom:2px solid var(--t-accent);border-radius:0 0 4px 0;opacity:.7}` }
     ]
   }
-,
-  {
-    id: "sky",
-    name: "창가 편지",
-    desc: "창밖 하늘이 시간(새벽·낮·노을·밤)에 따라 바뀌는 편지지. 우표 초상, 메모지 이름표",
-    mode: "light",
-    accent: "#3a6d9e",
-    vars: { radius: 18, fontSize: 16, lineHeight: 1.8, cardWidth: 1060, gap: 24, avatarSize: 72, avatarRadius: 0 },
-    font: "serif",
-    avatar: "style",
-    css: `.dt{--dt-sky:radial-gradient(ellipse 180px 34px at 14% 24%,rgb(255 255 255/.55),transparent 70%),radial-gradient(ellipse 220px 30px at 64% 4%,rgb(255 255 255/.4),transparent 70%),linear-gradient(#86b4e2,#b4d4ef 55%,#e9f2f8);--dt-star:0;--dt-sky-ink:#20385a;--dt-sky-soft:rgb(32 56 90/.7);--dt-hair:rgb(255 255 255/.6);--dt-period:"DAY";--dt-phrase:"햇살이 머무는 시간";--dt-orb:radial-gradient(circle,#fffdf0 0 45%,#ffe9a3 80%,#ffdc7e);--dt-glow:drop-shadow(0 0 14px rgb(255 226 130/.9))}
-.dt:is(.dt--h00,.dt--h01,.dt--h02,.dt--h03,.dt--h04,.dt--h05){--dt-sky:radial-gradient(ellipse 80% 35% at 30% 105%,rgb(250 196 176/.4),transparent 70%),linear-gradient(#1c2142,#393d6c 40%,#85698f 74%,#d7a59c);--dt-star:.55;--dt-sky-ink:#f5eef3;--dt-sky-soft:rgb(245 238 243/.72);--dt-hair:rgb(255 255 255/.22);--dt-period:"DAWN";--dt-phrase:"모두가 잠든 시간";--dt-orb:radial-gradient(circle at 30% 34%,transparent 0 52%,rgb(244 236 214/.85) 54%);--dt-glow:drop-shadow(0 0 8px rgb(244 236 214/.35))}
-.dt:is(.dt--h16,.dt--h17,.dt--h18,.dt--h19){--dt-sky:radial-gradient(ellipse 200px 22px at 14% 32%,rgb(255 200 186/.4),transparent 70%),linear-gradient(#44416f,#8a5a86 36%,#d88a84 68%,#f1c08a);--dt-star:.12;--dt-sky-ink:#fff6ee;--dt-sky-soft:rgb(255 246 238/.78);--dt-hair:rgb(255 255 255/.3);--dt-period:"DUSK";--dt-phrase:"노을이 물드는 시간";--dt-orb:radial-gradient(circle,#fff3d6 0 35%,#ffcf8a 70%,#ffae72);--dt-glow:drop-shadow(0 0 26px rgb(255 160 100/.85))}
-.dt:is(.dt--h20,.dt--h21,.dt--h22,.dt--h23){--dt-sky:radial-gradient(ellipse 80% 45% at 85% -5%,rgb(110 125 200/.22),transparent 70%),linear-gradient(#0d1229,#1b2450 58%,#2a3768);--dt-star:.9;--dt-sky-ink:#eceff8;--dt-sky-soft:rgb(236 239 248/.68);--dt-hair:rgb(255 255 255/.16);--dt-period:"NIGHT";--dt-phrase:"별이 깨어나는 시간";--dt-orb:radial-gradient(circle at 30% 34%,transparent 0 52%,#f4eed6 54%);--dt-glow:drop-shadow(0 0 10px rgb(244 238 214/.45))}
-.dt-card{display:grid;grid-template-columns:min(320px,34%) minmax(0,1fr);grid-template-rows:auto auto 1fr auto;padding:calc(34px*var(--t-space));border-radius:var(--t-radius);isolation:isolate;
-background:radial-gradient(circle at 6% 9%,rgb(255 255 255/var(--dt-star)) 0 1.1px,transparent 1.9px),radial-gradient(circle at 14% 34%,rgb(255 255 255/calc(var(--dt-star)*.6)) 0 .7px,transparent 1.4px),radial-gradient(circle at 22% 5%,rgb(255 255 255/calc(var(--dt-star)*.8)) 0 .9px,transparent 1.6px),radial-gradient(circle at 8% 56%,rgb(255 255 255/var(--dt-star)) 0 1.2px,transparent 2px),radial-gradient(circle at 48% 3%,rgb(255 255 255/calc(var(--dt-star)*.9)) 0 1px,transparent 1.7px),radial-gradient(circle at 77% 3.5%,rgb(255 255 255/var(--dt-star)) 0 1.1px,transparent 1.9px),radial-gradient(circle at 98% 30%,rgb(255 255 255/calc(var(--dt-star)*.7)) 0 .9px,transparent 1.6px),radial-gradient(circle at 4% 82%,rgb(255 255 255/calc(var(--dt-star)*.7)) 0 .9px,transparent 1.6px),var(--dt-sky)}
-.dt-card::after{content:"";position:absolute;inset:12px;border:1px solid var(--dt-hair);border-radius:calc(var(--t-radius) - 8px);pointer-events:none;z-index:-1}
-.dt-card::before{content:"";position:absolute;right:96px;top:20px;width:34px;height:34px;border-radius:50%;background:var(--dt-orb);filter:var(--dt-glow);pointer-events:none;z-index:-1}
-.dt-head{display:contents}
-.dt-clock::after{content:var(--dt-period) "  —  " var(--dt-phrase);display:block;margin-top:12px;font-family:var(--t-font-display);font-size:11px;letter-spacing:.3em;color:var(--dt-sky-soft);white-space:nowrap}
-.dt-clock{display:block;grid-column:1;grid-row:1;align-self:start;font-family:'Cormorant Garamond','Noto Serif KR',serif;font-size:64px;font-weight:300;line-height:.85;color:var(--dt-sky-ink);margin-bottom:8px}
-.dt-user .dt-clock{grid-column:2;justify-self:end}
-.dt-meta{grid-column:1;grid-row:4;align-self:start;color:var(--dt-sky-ink);margin-top:14px}
-.dt-name,.dt-date{display:none}
-.dt-av{grid-column:1;grid-row:2/4;align-self:start;margin-top:18px;width:100%;height:auto;aspect-ratio:4/5;padding:10px;border-radius:0;overflow:hidden;background:radial-gradient(5px,transparent 96%,#fbf9f4 100%) round -7.5px -7.5px/15px 15px,linear-gradient(#fbf9f4,#fbf9f4) no-repeat 50%/calc(100% - 15px) calc(100% - 15px);filter:drop-shadow(0 14px 18px rgb(0 0 0/.35));transform:rotate(-2deg)}
-.dt-av>*{border-radius:0!important}
-.dt-body,.dt-foot{grid-column:2;max-width:none;margin-left:-56px;position:relative;z-index:1}
-.dt-body{grid-row:1/5;margin-top:64px;padding:calc(30px*var(--t-space)) calc(36px*var(--t-space)) 64px;border-radius:12px;min-height:200px;background:var(--t-paper);box-shadow:0 1px 2px rgb(0 0 0/.06),0 22px 44px -22px rgb(0 0 0/.45)}
-.dt-foot{grid-row:4;align-self:end;z-index:2;margin-top:0;padding:10px calc(36px*var(--t-space)) 14px}
-.dt-foot::before{content:"";position:absolute;left:calc(36px*var(--t-space));right:calc(36px*var(--t-space));top:0;border-top:1px solid var(--t-line)}
-.dt-user .dt-card{grid-template-columns:minmax(0,1fr) min(320px,34%)}
-.dt-user :is(.dt-meta,.dt-av){grid-column:2}
-.dt-user .dt-meta{align-items:flex-end}
-.dt-user .dt-av{transform:rotate(2deg)}
-.dt-user :is(.dt-body,.dt-foot){grid-column:1;margin-left:0;margin-right:-56px}
-@media (max-width:700px){.dt-card,.dt-user .dt-card{grid-template-columns:96px minmax(0,1fr);grid-template-rows:auto auto auto auto;padding:20px 12px 12px}
-.dt-clock,.dt-user .dt-clock{grid-column:2;grid-row:1;justify-self:start;margin:0 0 0 10px;font-size:40px}
-.dt-meta,.dt-user .dt-meta{grid-column:2;grid-row:2;align-items:flex-start;margin:6px 0 0 10px;align-self:start}
-.dt-av,.dt-user .dt-av{grid-column:1;grid-row:1/3;padding:6px;margin-top:0}
-.dt-body,.dt-foot,.dt-user .dt-body,.dt-user .dt-foot{grid-column:1/-1;margin:0}
-.dt-body,.dt-user .dt-body{grid-row:3/5;margin-top:12px;padding:20px 16px 56px}
-.dt-foot,.dt-user .dt-foot{grid-row:4;padding:8px 16px 10px}
-.dt-card::before{right:24px;top:14px;width:26px;height:26px}}`,
-    deco: [
-      { id: "memo", name: "메모지 이름표", on: true, css: `.dt-name,.dt-date{display:block}
-.dt-meta{grid-row:4;align-self:start;margin:26px 0 0 12px;padding:16px 18px 10px;width:min(240px,calc(100% - 70px));background:repeating-linear-gradient(transparent 0 25px,rgb(60 90 140/.12) 25px 26px) 0 8px,#fffdf6;color:#26231f;box-shadow:0 1px 1px rgb(0 0 0/.08),0 10px 18px -10px rgb(0 0 0/.5);transform:rotate(2.5deg)}
-.dt-meta::before{content:"FROM";color:var(--t-accent-text);font-size:10px;letter-spacing:.3em}
-.dt-meta::after{content:"";position:absolute;top:-11px;left:50%;width:78px;height:22px;margin-left:-39px;background:color-mix(in srgb,var(--t-accent) 38%,transparent);transform:rotate(5deg);pointer-events:none}
-.dt-user .dt-meta::before{content:"TO"}
-.dt-name{font-size:22px;font-weight:500;color:#141210;margin:2px 0 4px}
-.dt-date{color:#6b655e}
-@media (max-width:700px){.dt-meta,.dt-user .dt-meta{grid-row:2;margin:8px 0 0 10px;padding:10px 12px 6px;width:auto;max-width:calc(100% - 18px);transform:rotate(1.5deg)}.dt-name{font-size:17px}}` },
-      { id: "thought", name: "생각 칸 강조", on: true, css: `.dt-body mark:is([risu-mark=quote1],[risu-mark=blockquote1]){display:inline-block;max-width:100%;padding:6px 14px;background:color-mix(in srgb,var(--t-accent) 85%,#fff)!important;color:#fffdf8;outline:1px solid rgb(255 255 255/.22);outline-offset:-4px}
-.dt-body mark:is([risu-mark=quote2],[risu-mark=blockquote2]){padding:2px 8px;background:color-mix(in srgb,var(--t-accent) 8%,transparent)!important;color:var(--t-ink)}` },
-      { id: "scroll", name: "본문 스크롤(길면)", on: false, css: `.dt-body{max-height:min(480px,65vh);overflow-y:auto;scrollbar-width:thin}` },
-      { id: "orb", name: "해·달", on: true, css: "", off: `.dt-card::before{display:none}` }
-    ]
-  },
-  {
-    id: "chatroom",
-    name: "채팅방",
-    desc: "디스코드 같은 평평한 채팅방. 둥근 프로필, 굵은 이름, 얇은 선 카드",
-    mode: "dark",
-    accent: "#5865f2",
-    vars: { radius: 12, fontSize: 16, lineHeight: 1.75, cardWidth: 1040, gap: 8, avatarSize: 40, avatarRadius: 50 },
-    font: "sans",
-    avatar: "circle",
-    css: `.dt-card{display:grid;grid-template-columns:var(--t-avatar-size) minmax(0,1fr);column-gap:16px;padding:calc(16px*var(--t-space)) calc(14px*var(--t-space)) calc(10px*var(--t-space));background:var(--t-paper);border:1px solid color-mix(in srgb,var(--t-ink) 7%,transparent);border-radius:var(--t-radius)}
-.dt-head{display:contents}
-.dt-av{grid-column:1;grid-row:1/4;background:var(--t-accent)}
-.dt-meta{grid-column:2;flex-direction:row;align-items:baseline;gap:8px;margin:-3px 0 3px}
-.dt-name{font-size:1em}
-.dt-date{font-size:.75em}
-.dt-body,.dt-foot{grid-column:2;max-width:none}
-.dt-foot{margin-top:6px}
-.dt-foot button{border-radius:4px}
-.dt-foot button:hover{background:var(--t-tint)}
-.dt-body h1{padding:6px 12px;background:var(--t-tint);border-left:3px solid var(--t-accent);border-radius:4px}
-.dt-body h2{padding-bottom:6px;border-bottom:1px solid var(--t-line)}
-.dt-body blockquote{border-left:4px solid var(--t-accent);border-radius:0 4px 4px 0;background:color-mix(in srgb,var(--t-accent) 16%,transparent)}
-@media (max-width:600px){.dt-card{column-gap:10px;padding:14px 8px 8px}
-.dt-body,.dt-foot{grid-column:1/-1;margin-top:8px}}`,
-    deco: [
-      { id: "shadow", name: "카드 그림자", on: true, css: `.dt-card{box-shadow:0 3px 12px rgb(0 0 0/calc(var(--t-shadow) + .06))}` },
-      { id: "hover", name: "올리면 밝게", on: true, css: `.dt-card{transition:background-color .15s}
-.dt-card:hover{background:color-mix(in srgb,var(--t-paper) 92%,var(--t-ink))}` },
-      { id: "scroll", name: "본문 스크롤(길면)", on: false, css: `.dt-body{max-height:min(520px,60vh);overflow-y:auto;padding-right:8px;scrollbar-gutter:stable}` },
-      { id: "badge", name: "캐릭터 BOT 배지", on: false, css: `.dt-char .dt-name::after{content:"BOT";margin-left:6px;padding:1px 5px;border-radius:3px;background:var(--t-accent);color:var(--t-on-accent);font-size:10px;vertical-align:2px}` }
-    ]
-  }
+
 ];
 export var styleById = (id) => STYLES.find((s) => s.id === id) ?? STYLES[0];
 
@@ -784,8 +695,6 @@ export function thumbHtml(styleId, P) {
   if (styleId === "letter") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box"><div style="background:${P.paper};border:1px solid ${P.line};border-radius:3px;padding:8px;position:relative"><div style="position:absolute;right:6px;top:-6px;width:14px;height:16px;border:1.5px dashed ${P.line};background:${P.tint};transform:rotate(4deg)"></div><div style="height:5px;width:40%;background:${P.ink};opacity:.8;border-radius:2px"></div>${line(90)}${line(80)}${line(60)}</div></div>`;
   if (styleId === "diary") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box"><div style="border:1px solid ${P.accent};border-radius:8px;padding:7px;background:${P.paper};position:relative"><div style="display:flex;gap:5px;align-items:center"><span style="width:14px;height:14px;border:1px dashed ${P.line};background:${P.tint}"></span><span style="height:6px;width:26px;border-radius:3px;border:1px solid ${P.line}"></span></div>${line(80)}${line(70)}</div></div>`;
   if (styleId === "novel") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box;display:flex;gap:5px;align-items:flex-end"><span style="width:20px;height:30px;border-radius:4px;background:${P.tint};border:1px solid ${P.line};flex:none"></span><div style="flex:1;position:relative;background:${P.paper};border:1px solid ${P.line};border-radius:5px;padding:9px 6px 5px"><span style="position:absolute;top:-5px;left:5px;width:22px;height:8px;border-radius:3px;background:${P.accent}"></span>${line(90)}${line(60)}</div></div>`;
-  if (styleId === "sky") return `<div style="background:linear-gradient(#86b4e2,#e9f2f8);padding:8px;height:100%;box-sizing:border-box;display:flex;gap:4px;align-items:flex-start"><span style="width:26px;height:32px;background:#fbf9f4;padding:3px;transform:rotate(-3deg);flex:none"><span style="display:block;height:100%;background:${P.tint}"></span></span><div style="flex:1;margin-top:14px;margin-left:-8px;background:${P.paper};border-radius:4px;padding:6px">${line(80)}${line(60)}</div></div>`;
-  if (styleId === "chatroom") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box"><div style="display:flex;gap:6px;background:${P.paper};border-radius:6px;padding:7px"><span style="width:14px;height:14px;border-radius:50%;background:${P.accent};flex:none"></span><div style="flex:1"><div style="height:5px;width:35%;background:${P.ink};border-radius:2px"></div>${line(90)}${line(65)}</div></div></div>`;
   if (styleId === "messenger") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:5px"><span style="width:14px;height:14px;border-radius:50%;background:${P.tint};flex:none"></span><div style="background:${P.paper};border:1px solid ${P.line};border-radius:3px 9px 9px 9px;padding:5px 7px;width:60%">${line(90)}${line(60)}</div></div><div style="align-self:flex-end;background:${P.userBubble};border-radius:9px 3px 9px 9px;padding:5px 7px;width:45%">${line(80, P.onUser)}</div></div>`;
   return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:6px"><div style="background:${P.paper};border:1px solid ${P.line};border-left:3px solid ${P.accent};border-radius:6px;padding:6px 8px">${line(30, P.accent)}${line(90)}${line(70)}</div><div style="background:${P.tint};border:1px solid ${P.line};border-left:3px solid ${P.muted};border-radius:6px;padding:6px 8px">${line(80)}</div></div>`;
 }
