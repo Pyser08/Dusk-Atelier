@@ -1,3 +1,4 @@
+import { PROB_CSS } from './probpick.js';
 export var FONT_LINK = "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap";
 export var CSS2 = `
 *{box-sizing:border-box}
@@ -369,4 +370,4 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-da-opts{display:flex;gap:12px;align-items:center;flex-wrap:nowrap}
 .rb-da-opts .rb-check{white-space:nowrap}
 @media (max-width:560px){.rb-da{padding:10px}.rb-da-lab{width:100%}.rb-da-line>.rb-seg{min-width:100%}}
-`;
+`+PROB_CSS;

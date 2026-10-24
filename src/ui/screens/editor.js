@@ -8,6 +8,7 @@ import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note
 import { gripDrag } from '../sortable.js';
 import { reload } from './modules.js';
 import { attachUndo } from '../undo.js';
+import { attachProbPick } from '../probpick.js';
 import { COND_TYPES, SET_OPS, VAR_OPS, applySets, bodyOf, checkExpr, collectManaged, defaultRule, evaluate, gateVar, isManaged, nativeContent, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
 // 관리 항목의 내용 머리(@@activate·{{#if}})를 규칙에 맞춘다
 export function syncRuleContent(lorebook) {
@@ -228,7 +229,7 @@ export async function openEditorCore(ctx, cfg) {
     });
     return el;
   };
-  const area = (obj, key, { tall, placeholder, mono = true } = {}) => {
+  const area = (obj, key, { tall, placeholder, mono = true, probPick } = {}) => {
     const el = h("textarea", { class: ["rb-textarea", tall && "tall"], spellcheck: "false", placeholder, style: mono ? null : "font-family:inherit;font-size:14px" });
     el.value = obj[key] ?? "";
     el.addEventListener("input", () => {
@@ -243,7 +244,7 @@ export async function openEditorCore(ctx, cfg) {
         el.dispatchEvent(new Event("input"));
       }
     });
-    return el;
+    return probPick ? attachProbPick(el, ctx.win) : el;
   };
   // 코드 편집기 모양의 칸 (정규식 IN/OUT): 색 입히기 + 괄호 짝 표시
   const codeArea = (obj, key, { lang, tall, placeholder } = {}) => {
@@ -603,7 +604,7 @@ export async function openEditorCore(ctx, cfg) {
       field("이름", text(l, "comment")),
       field("방식", select2(l, "mode", LORE_MODES.filter((x) => x[0] !== "folder"))),
       field("활성화 키 (쉼표로 구분)", text(l, "key"), true),
-      field("내용", area(l, "content", { tall: true, mono: false }), true),
+      field("내용", area(l, "content", { tall: true, mono: false, probPick: true }), true),
       h(
         "div",
         { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap" },
