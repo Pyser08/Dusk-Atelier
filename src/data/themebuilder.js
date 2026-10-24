@@ -97,9 +97,10 @@ function ensureBubble(accent, P, dark) {
 
 // ── 공통 HTML 틀 (모든 스타일이 같은 구조, 모양은 CSS가 맡는다) ──
 var NAME = "{{#when::{{role}}::is::char}}{{char}}{{:else}}{{user}}{{/when}}";
-export var BUILDER_HTML = `<div class="dt dt-{{role}}">
+export var BUILDER_HTML = `<div class="dt dt-{{role}} dt--h{{date::HH}}">
   <div class="dt-card">
     <div class="dt-head">
+      <span class="dt-clock">{{date::HH}}</span>
       <div class="dt-av"><risuicon></risuicon></div>
       <div class="dt-meta"><span class="dt-name">${NAME}</span><span class="dt-date">{{date}}</span></div>
     </div>
@@ -109,27 +110,72 @@ export var BUILDER_HTML = `<div class="dt dt-{{role}}">
 </div>`;
 
 // 공통 바탕: 변수 계약 + 리스 기본 요소 정리. 프로필은 캐릭터·내 글 모두 자기 카드 안(.dt-head)에 있다
-var BASE = `.dt{display:block;width:100%;max-width:var(--t-card-width);margin:0 auto var(--t-gap);padding:0 12px;box-sizing:border-box;color:var(--t-ink);font-family:var(--t-font-body);text-align:left}
-.dt *{box-sizing:border-box}
+// 리스 플랫폼 규칙(risu-theme 스킬 기준)을 반영한 공통 바탕
+// - 아바타(risuicon)는 인라인 width/height/min-width를 가진 배경 이미지 div → !important로 덮는다
+// - .chattext·편집창에는 인라인 font-size/line-height → !important로 테마 크기 고정
+// - Risu 글자색 변수(--FontColor*)·폰트(--risu-font-family)를 루트에서 연결
+// - 대사 mark[risu-mark=quote1/2·blockquote1/2], prose 코드 변수, 표·코드 가로 스크롤
+var BASE = `.dt,.dt *,.dt *::before,.dt *::after{box-sizing:border-box}
+.dt{--risu-font-family:var(--t-font-body);--FontColorStandard:var(--t-ink);--FontColorBold:var(--t-ink);--FontColorItalic:var(--t-muted);--FontColorItalicBold:var(--t-muted);--FontColorQuote1:var(--t-muted);--FontColorQuote2:var(--t-accent-text);
+position:relative;display:block;width:100%;max-width:var(--t-card-width);min-width:0;margin:0 auto var(--t-gap);color:var(--t-ink);font-family:var(--t-font-body);font-size:var(--t-font-size);line-height:var(--t-line-height);text-align:left}
 .dt-card{position:relative;width:100%;min-width:0}
 .dt-head{display:flex;align-items:center;gap:12px;min-width:0}
 .dt-av{position:relative;flex:none;width:var(--t-avatar-size);height:var(--t-avatar-size);border-radius:var(--t-avatar-radius);overflow:hidden;background:var(--t-tint)}
-.dt-av img,.dt-av>*{display:block;width:100%;height:100%;object-fit:cover}
+.dt-av>*{width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;margin:0!important;border:0!important;border-radius:inherit!important;box-shadow:none!important;background-size:cover!important;background-position:center 25%!important}
+.dt-av img{object-fit:cover!important;object-position:center 25%!important}
+.dt-clock{display:none}
 .dt-meta{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
-.dt-name{font-weight:700;color:var(--t-ink);font-family:var(--t-font-display)}
-.dt-date{font-size:.78em;color:var(--t-muted)}
-.dt-body{max-width:var(--t-text-width)}
-.dt-body,.dt-body .chattext{font-size:var(--t-font-size);line-height:var(--t-line-height);color:var(--t-ink);word-break:keep-all;overflow-wrap:anywhere}
-.dt-body p:first-child{margin-top:0}
-.dt-body p:last-child{margin-bottom:0}
+.dt-name{--risu-font-family:var(--t-font-display);font-family:var(--t-font-display);font-weight:700;color:var(--t-ink);overflow-wrap:anywhere}
+.dt-date{font-size:.78em;color:var(--t-muted);white-space:nowrap}
+.dt-body{width:100%;max-width:var(--t-text-width);min-width:0;color:var(--t-ink);overflow-wrap:anywhere;word-break:keep-all}
+.dt-body .chattext{--tw-prose-body:var(--t-ink);--tw-prose-headings:var(--t-ink);--tw-prose-bold:var(--t-ink);--tw-prose-links:var(--t-accent-text);--tw-prose-quotes:var(--t-muted);--tw-prose-bullets:var(--t-muted);--tw-prose-counters:var(--t-muted);--tw-prose-code:var(--t-ink);--tw-prose-pre-code:var(--t-ink);--tw-prose-pre-bg:var(--t-tint);max-width:none;color:var(--t-ink);font-size:var(--t-font-size)!important;line-height:var(--t-line-height)!important;word-break:keep-all}
+.dt-body :is(p,li,td,th,blockquote){font-size:var(--t-font-size);line-height:var(--t-line-height)}
+.dt-body p{margin:0 0 .9em}
+.dt-body .chattext>:first-child{margin-top:0}
+.dt-body .chattext>:last-child,.dt-body p:last-child{margin-bottom:0}
+.dt-body :is(h1,h2,h3,h4,h5,h6){--risu-font-family:var(--t-font-display);font-family:var(--t-font-display);margin:1.2em 0 .5em;color:var(--t-ink);font-weight:700;line-height:1.4}
+.dt-body h1{font-size:calc(var(--t-font-size)*1.55)}
+.dt-body h2{font-size:calc(var(--t-font-size)*1.32)}
+.dt-body h3{font-size:calc(var(--t-font-size)*1.15)}
+.dt-body :is(h4,h5,h6){font-size:var(--t-font-size)}
+.dt-body strong{color:var(--t-ink);font-weight:700}
 .dt-body em{color:var(--t-muted)}
-.dt-body strong{color:var(--t-ink)}
-.dt-body mark,.dt-body q{background:transparent;color:var(--t-accent-text)}
-.dt-body img{max-width:100%;height:auto}
-.dt-foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 10px;margin-top:8px;font-size:12px;color:var(--t-muted)}
-.dt-foot button{color:var(--t-muted)}
-.dt-foot button:hover{color:var(--t-accent-text)}
-@media (max-width:600px){.dt{padding:0 6px}}`;
+.dt-body mark[risu-mark],.dt-body mark,.dt-body q{background:transparent}
+.dt-body mark:is([risu-mark=quote2],[risu-mark=blockquote2]),.dt-body q{color:var(--t-accent-text)}
+.dt-body mark:is([risu-mark=quote1],[risu-mark=blockquote1]){color:var(--t-muted)}
+.dt-body mark:is([risu-mark=blockquote1],[risu-mark=blockquote2]){display:block;margin:.5em 0;padding:.4em .9em;border-left:2px solid var(--t-accent);background:color-mix(in srgb,var(--t-accent) 9%,transparent)}
+.dt-body a{color:var(--t-accent-text);text-decoration:underline}
+.dt-body blockquote{margin:.9em 0;padding:.4em 1em;border-left:3px solid var(--t-line);color:var(--t-muted);font-style:normal}
+.dt-body blockquote p::before,.dt-body blockquote p::after{content:none}
+.dt-body :is(ul,ol){margin:.8em 0;padding-left:1.5em}
+.dt-body li{margin:.2em 0;color:var(--t-ink)}
+.dt-body li p{margin:0}
+.dt-body li::marker{color:var(--t-accent-text)}
+.dt-body hr{height:1px;margin:1.3em 0;border:0;background:linear-gradient(90deg,transparent,var(--t-line),transparent)}
+.dt-body code{--risu-font-family:ui-monospace,Consolas,monospace;font-family:ui-monospace,Consolas,monospace;font-size:.88em;padding:.1em .35em;border-radius:4px;color:var(--t-ink);background:var(--t-tint)}
+.dt-body code::before,.dt-body code::after{content:none}
+.dt-body pre{max-width:100%;margin:.9em 0;padding:12px 14px;overflow-x:auto;border:1px solid var(--t-line);border-radius:6px;background:var(--t-tint);color:var(--t-ink);font-size:calc(var(--t-font-size)*.88);line-height:1.6}
+.dt-body pre code{padding:0;background:none;color:inherit;font-size:inherit;white-space:pre;overflow-wrap:normal}
+.dt-body table{display:block;max-width:100%;overflow-x:auto;margin:.9em 0;border-collapse:collapse}
+.dt-body :is(th,td){padding:.4em .7em;border-bottom:1px solid var(--t-line);color:var(--t-ink);text-align:left;vertical-align:top}
+.dt-body th{font-weight:700}
+.dt-body :is(img,video){display:block;max-width:100%;height:auto;margin:.6em auto;border-radius:6px}
+.dt-body textarea.message-edit-area{display:block;width:100%;max-width:100%;min-width:0;min-height:120px;padding:8px 10px;color:var(--t-ink)!important;background:color-mix(in srgb,var(--t-paper) 85%,var(--t-tint))!important;border:1px dashed var(--t-line);border-radius:6px;font:inherit;font-size:var(--t-font-size)!important;line-height:var(--t-line-height)!important}
+.dt-foot{--risu-theme-textcolor2:var(--t-muted);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 10px;width:100%;min-width:0;margin-top:10px;font-size:12px;color:var(--t-muted)}
+.dt-foot>*{min-width:0;max-width:100%}
+.dt-foot>:last-child{margin-left:auto}
+.dt-foot>:first-child>div{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;align-items:center!important;gap:4px!important;min-width:0!important}
+.dt-foot>:last-child>div,.dt-foot>:last-child>div>div{flex-wrap:wrap;gap:2px;min-width:0}
+.dt-foot button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:30px;min-height:30px;margin:0;padding:0 6px;border-radius:999px;color:var(--t-muted);background:transparent;transition:background-color .2s,color .2s}
+.dt-foot button svg{flex:none;width:15px;height:15px}
+.dt-foot button:hover{background:var(--t-tint);color:var(--t-accent-text)}
+.dt-foot .button-icon-remove:hover{color:#e5484d}
+.dt-foot .button-icon-translate.text-blue-400{background:var(--t-tint);color:var(--t-accent-text)}
+.dt :is(a,button,textarea):focus-visible{outline:2px solid var(--t-accent);outline-offset:2px}
+.dt ::selection{color:var(--t-on-accent);background:var(--t-accent)}
+@media (max-width:600px){.dt{margin-bottom:calc(var(--t-gap)*.7)}}
+@media (pointer:coarse){.dt-foot button{min-width:38px;min-height:38px}}
+@media (prefers-reduced-motion:reduce){.dt *,.dt *::before,.dt *::after{animation:none!important;transition:none!important}}`;
 
 // ── 스타일 ──
 // css: 늘 들어가는 모양 / deco: 켜고 끌 장식 / 여백은 calc(..*var(--t-space))
@@ -177,7 +223,7 @@ ${CENTER}
 .dt-meta{flex-direction:row;align-items:baseline;gap:8px}
 .dt-name{font-size:.88em;font-weight:600}
 .dt-body{max-width:min(82%,var(--t-text-width));margin-left:calc(var(--t-avatar-size) + 8px);background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(10px*var(--t-space)) calc(14px*var(--t-space))}
-.dt-foot{margin-left:calc(var(--t-avatar-size) + 8px);margin-top:4px;justify-content:flex-start}
+.dt-foot{width:auto;max-width:calc(100% - var(--t-avatar-size) - 8px);margin-left:calc(var(--t-avatar-size) + 8px);margin-top:4px;justify-content:flex-start}
 .dt-user .dt-card{align-items:flex-end}
 .dt-user .dt-head{flex-direction:row-reverse}
 .dt-user .dt-meta{flex-direction:row-reverse}
@@ -281,6 +327,96 @@ ${CENTER}`,
       { id: "corner", name: "모서리 장식", on: false, css: `.dt-card::after{content:"";position:absolute;right:8px;bottom:8px;width:14px;height:14px;border-right:2px solid var(--t-accent);border-bottom:2px solid var(--t-accent);border-radius:0 0 4px 0;opacity:.7}` }
     ]
   }
+,
+  {
+    id: "sky",
+    name: "창가 편지",
+    desc: "창밖 하늘이 시간(새벽·낮·노을·밤)에 따라 바뀌는 편지지. 우표 초상, 메모지 이름표",
+    mode: "light",
+    accent: "#3a6d9e",
+    vars: { radius: 18, fontSize: 16, lineHeight: 1.8, cardWidth: 1060, gap: 24, avatarSize: 72, avatarRadius: 0 },
+    font: "serif",
+    avatar: "style",
+    css: `.dt{--dt-sky:radial-gradient(ellipse 180px 34px at 14% 24%,rgb(255 255 255/.55),transparent 70%),radial-gradient(ellipse 220px 30px at 64% 4%,rgb(255 255 255/.4),transparent 70%),linear-gradient(#86b4e2,#b4d4ef 55%,#e9f2f8);--dt-star:0;--dt-sky-ink:#20385a;--dt-sky-soft:rgb(32 56 90/.7);--dt-hair:rgb(255 255 255/.6);--dt-period:"DAY";--dt-phrase:"햇살이 머무는 시간";--dt-orb:radial-gradient(circle,#fffdf0 0 45%,#ffe9a3 80%,#ffdc7e);--dt-glow:drop-shadow(0 0 14px rgb(255 226 130/.9))}
+.dt:is(.dt--h00,.dt--h01,.dt--h02,.dt--h03,.dt--h04,.dt--h05){--dt-sky:radial-gradient(ellipse 80% 35% at 30% 105%,rgb(250 196 176/.4),transparent 70%),linear-gradient(#1c2142,#393d6c 40%,#85698f 74%,#d7a59c);--dt-star:.55;--dt-sky-ink:#f5eef3;--dt-sky-soft:rgb(245 238 243/.72);--dt-hair:rgb(255 255 255/.22);--dt-period:"DAWN";--dt-phrase:"모두가 잠든 시간";--dt-orb:radial-gradient(circle at 30% 34%,transparent 0 52%,rgb(244 236 214/.85) 54%);--dt-glow:drop-shadow(0 0 8px rgb(244 236 214/.35))}
+.dt:is(.dt--h16,.dt--h17,.dt--h18,.dt--h19){--dt-sky:radial-gradient(ellipse 200px 22px at 14% 32%,rgb(255 200 186/.4),transparent 70%),linear-gradient(#44416f,#8a5a86 36%,#d88a84 68%,#f1c08a);--dt-star:.12;--dt-sky-ink:#fff6ee;--dt-sky-soft:rgb(255 246 238/.78);--dt-hair:rgb(255 255 255/.3);--dt-period:"DUSK";--dt-phrase:"노을이 물드는 시간";--dt-orb:radial-gradient(circle,#fff3d6 0 35%,#ffcf8a 70%,#ffae72);--dt-glow:drop-shadow(0 0 26px rgb(255 160 100/.85))}
+.dt:is(.dt--h20,.dt--h21,.dt--h22,.dt--h23){--dt-sky:radial-gradient(ellipse 80% 45% at 85% -5%,rgb(110 125 200/.22),transparent 70%),linear-gradient(#0d1229,#1b2450 58%,#2a3768);--dt-star:.9;--dt-sky-ink:#eceff8;--dt-sky-soft:rgb(236 239 248/.68);--dt-hair:rgb(255 255 255/.16);--dt-period:"NIGHT";--dt-phrase:"별이 깨어나는 시간";--dt-orb:radial-gradient(circle at 30% 34%,transparent 0 52%,#f4eed6 54%);--dt-glow:drop-shadow(0 0 10px rgb(244 238 214/.45))}
+.dt-card{display:grid;grid-template-columns:min(320px,34%) minmax(0,1fr);grid-template-rows:auto auto 1fr auto;padding:calc(34px*var(--t-space));border-radius:var(--t-radius);isolation:isolate;
+background:radial-gradient(circle at 6% 9%,rgb(255 255 255/var(--dt-star)) 0 1.1px,transparent 1.9px),radial-gradient(circle at 14% 34%,rgb(255 255 255/calc(var(--dt-star)*.6)) 0 .7px,transparent 1.4px),radial-gradient(circle at 22% 5%,rgb(255 255 255/calc(var(--dt-star)*.8)) 0 .9px,transparent 1.6px),radial-gradient(circle at 8% 56%,rgb(255 255 255/var(--dt-star)) 0 1.2px,transparent 2px),radial-gradient(circle at 48% 3%,rgb(255 255 255/calc(var(--dt-star)*.9)) 0 1px,transparent 1.7px),radial-gradient(circle at 77% 3.5%,rgb(255 255 255/var(--dt-star)) 0 1.1px,transparent 1.9px),radial-gradient(circle at 98% 30%,rgb(255 255 255/calc(var(--dt-star)*.7)) 0 .9px,transparent 1.6px),radial-gradient(circle at 4% 82%,rgb(255 255 255/calc(var(--dt-star)*.7)) 0 .9px,transparent 1.6px),var(--dt-sky)}
+.dt-card::after{content:"";position:absolute;inset:12px;border:1px solid var(--dt-hair);border-radius:calc(var(--t-radius) - 8px);pointer-events:none;z-index:-1}
+.dt-card::before{content:"";position:absolute;right:96px;top:20px;width:34px;height:34px;border-radius:50%;background:var(--dt-orb);filter:var(--dt-glow);pointer-events:none;z-index:-1}
+.dt-head{display:contents}
+.dt-clock::after{content:var(--dt-period) "  —  " var(--dt-phrase);display:block;margin-top:12px;font-family:var(--t-font-display);font-size:11px;letter-spacing:.3em;color:var(--dt-sky-soft);white-space:nowrap}
+.dt-clock{display:block;grid-column:1;grid-row:1;align-self:start;font-family:'Cormorant Garamond','Noto Serif KR',serif;font-size:64px;font-weight:300;line-height:.85;color:var(--dt-sky-ink);margin-bottom:8px}
+.dt-user .dt-clock{grid-column:2;justify-self:end}
+.dt-meta{grid-column:1;grid-row:4;align-self:start;color:var(--dt-sky-ink);margin-top:14px}
+.dt-name,.dt-date{display:none}
+.dt-av{grid-column:1;grid-row:2/4;align-self:start;margin-top:18px;width:100%;height:auto;aspect-ratio:4/5;padding:10px;border-radius:0;overflow:hidden;background:radial-gradient(5px,transparent 96%,#fbf9f4 100%) round -7.5px -7.5px/15px 15px,linear-gradient(#fbf9f4,#fbf9f4) no-repeat 50%/calc(100% - 15px) calc(100% - 15px);filter:drop-shadow(0 14px 18px rgb(0 0 0/.35));transform:rotate(-2deg)}
+.dt-av>*{border-radius:0!important}
+.dt-body,.dt-foot{grid-column:2;max-width:none;margin-left:-56px;position:relative;z-index:1}
+.dt-body{grid-row:1/5;margin-top:64px;padding:calc(30px*var(--t-space)) calc(36px*var(--t-space)) 64px;border-radius:12px;min-height:200px;background:var(--t-paper);box-shadow:0 1px 2px rgb(0 0 0/.06),0 22px 44px -22px rgb(0 0 0/.45)}
+.dt-foot{grid-row:4;align-self:end;z-index:2;margin-top:0;padding:10px calc(36px*var(--t-space)) 14px}
+.dt-foot::before{content:"";position:absolute;left:calc(36px*var(--t-space));right:calc(36px*var(--t-space));top:0;border-top:1px solid var(--t-line)}
+.dt-user .dt-card{grid-template-columns:minmax(0,1fr) min(320px,34%)}
+.dt-user :is(.dt-meta,.dt-av){grid-column:2}
+.dt-user .dt-meta{align-items:flex-end}
+.dt-user .dt-av{transform:rotate(2deg)}
+.dt-user :is(.dt-body,.dt-foot){grid-column:1;margin-left:0;margin-right:-56px}
+@media (max-width:700px){.dt-card,.dt-user .dt-card{grid-template-columns:96px minmax(0,1fr);grid-template-rows:auto auto auto auto;padding:20px 12px 12px}
+.dt-clock,.dt-user .dt-clock{grid-column:2;grid-row:1;justify-self:start;margin:0 0 0 10px;font-size:40px}
+.dt-meta,.dt-user .dt-meta{grid-column:2;grid-row:2;align-items:flex-start;margin:6px 0 0 10px;align-self:start}
+.dt-av,.dt-user .dt-av{grid-column:1;grid-row:1/3;padding:6px;margin-top:0}
+.dt-body,.dt-foot,.dt-user .dt-body,.dt-user .dt-foot{grid-column:1/-1;margin:0}
+.dt-body,.dt-user .dt-body{grid-row:3/5;margin-top:12px;padding:20px 16px 56px}
+.dt-foot,.dt-user .dt-foot{grid-row:4;padding:8px 16px 10px}
+.dt-card::before{right:24px;top:14px;width:26px;height:26px}}`,
+    deco: [
+      { id: "memo", name: "메모지 이름표", on: true, css: `.dt-name,.dt-date{display:block}
+.dt-meta{grid-row:4;align-self:start;margin:26px 0 0 12px;padding:16px 18px 10px;width:min(240px,calc(100% - 70px));background:repeating-linear-gradient(transparent 0 25px,rgb(60 90 140/.12) 25px 26px) 0 8px,#fffdf6;color:#26231f;box-shadow:0 1px 1px rgb(0 0 0/.08),0 10px 18px -10px rgb(0 0 0/.5);transform:rotate(2.5deg)}
+.dt-meta::before{content:"FROM";color:var(--t-accent-text);font-size:10px;letter-spacing:.3em}
+.dt-meta::after{content:"";position:absolute;top:-11px;left:50%;width:78px;height:22px;margin-left:-39px;background:color-mix(in srgb,var(--t-accent) 38%,transparent);transform:rotate(5deg);pointer-events:none}
+.dt-user .dt-meta::before{content:"TO"}
+.dt-name{font-size:22px;font-weight:500;color:#141210;margin:2px 0 4px}
+.dt-date{color:#6b655e}
+@media (max-width:700px){.dt-meta,.dt-user .dt-meta{grid-row:2;margin:8px 0 0 10px;padding:10px 12px 6px;width:auto;max-width:calc(100% - 18px);transform:rotate(1.5deg)}.dt-name{font-size:17px}}` },
+      { id: "thought", name: "생각 칸 강조", on: true, css: `.dt-body mark:is([risu-mark=quote1],[risu-mark=blockquote1]){display:inline-block;max-width:100%;padding:6px 14px;background:color-mix(in srgb,var(--t-accent) 85%,#fff)!important;color:#fffdf8;outline:1px solid rgb(255 255 255/.22);outline-offset:-4px}
+.dt-body mark:is([risu-mark=quote2],[risu-mark=blockquote2]){padding:2px 8px;background:color-mix(in srgb,var(--t-accent) 8%,transparent)!important;color:var(--t-ink)}` },
+      { id: "scroll", name: "본문 스크롤(길면)", on: false, css: `.dt-body{max-height:min(480px,65vh);overflow-y:auto;scrollbar-width:thin}` },
+      { id: "orb", name: "해·달", on: true, css: "", off: `.dt-card::before{display:none}` }
+    ]
+  },
+  {
+    id: "chatroom",
+    name: "채팅방",
+    desc: "디스코드 같은 평평한 채팅방. 둥근 프로필, 굵은 이름, 얇은 선 카드",
+    mode: "dark",
+    accent: "#5865f2",
+    vars: { radius: 12, fontSize: 16, lineHeight: 1.75, cardWidth: 1040, gap: 8, avatarSize: 40, avatarRadius: 50 },
+    font: "sans",
+    avatar: "circle",
+    css: `.dt-card{display:grid;grid-template-columns:var(--t-avatar-size) minmax(0,1fr);column-gap:16px;padding:calc(16px*var(--t-space)) calc(14px*var(--t-space)) calc(10px*var(--t-space));background:var(--t-paper);border:1px solid color-mix(in srgb,var(--t-ink) 7%,transparent);border-radius:var(--t-radius)}
+.dt-head{display:contents}
+.dt-av{grid-column:1;grid-row:1/4;background:var(--t-accent)}
+.dt-meta{grid-column:2;flex-direction:row;align-items:baseline;gap:8px;margin:-3px 0 3px}
+.dt-name{font-size:1em}
+.dt-date{font-size:.75em}
+.dt-body,.dt-foot{grid-column:2;max-width:none}
+.dt-foot{margin-top:6px}
+.dt-foot button{border-radius:4px}
+.dt-foot button:hover{background:var(--t-tint)}
+.dt-body h1{padding:6px 12px;background:var(--t-tint);border-left:3px solid var(--t-accent);border-radius:4px}
+.dt-body h2{padding-bottom:6px;border-bottom:1px solid var(--t-line)}
+.dt-body blockquote{border-left:4px solid var(--t-accent);border-radius:0 4px 4px 0;background:color-mix(in srgb,var(--t-accent) 16%,transparent)}
+@media (max-width:600px){.dt-card{column-gap:10px;padding:14px 8px 8px}
+.dt-body,.dt-foot{grid-column:1/-1;margin-top:8px}}`,
+    deco: [
+      { id: "shadow", name: "카드 그림자", on: true, css: `.dt-card{box-shadow:0 3px 12px rgb(0 0 0/calc(var(--t-shadow) + .06))}` },
+      { id: "hover", name: "올리면 밝게", on: true, css: `.dt-card{transition:background-color .15s}
+.dt-card:hover{background:color-mix(in srgb,var(--t-paper) 92%,var(--t-ink))}` },
+      { id: "scroll", name: "본문 스크롤(길면)", on: false, css: `.dt-body{max-height:min(520px,60vh);overflow-y:auto;padding-right:8px;scrollbar-gutter:stable}` },
+      { id: "badge", name: "캐릭터 BOT 배지", on: false, css: `.dt-char .dt-name::after{content:"BOT";margin-left:6px;padding:1px 5px;border-radius:3px;background:var(--t-accent);color:var(--t-on-accent);font-size:10px;vertical-align:2px}` }
+    ]
+  }
 ];
 export var styleById = (id) => STYLES.find((s) => s.id === id) ?? STYLES[0];
 
@@ -360,15 +496,20 @@ export function normalizeChoice(raw) {
 }
 
 // 계열별 바깥 정리 (리스 기본 말풍선·배경을 비우고 바탕색을 맞춘다)
+// 계열별 바깥 정리. 메시지 칸 폭은 risu-theme 스킬의 외곽 래퍼 보정(두 계열 공통)을 쓴다
+// 테마가 든 메시지에만 적용 (사이드바 채팅 목록 등 다른 .risu-chat은 건드리지 않음)
+var OUTER = `.risu-chat>div:has(.dt){padding:.5rem 1rem;margin:auto;display:flex;justify-content:center;align-items:center;width:100%;box-sizing:border-box}
+.risu-chat>div>div:has(>.dt),.risu-chat>div:has(.dt) div:has(>.dt){width:100%!important;max-width:100%!important;min-width:0!important;flex:1 1 0%!important;margin:auto;display:flex;justify-content:center;box-sizing:border-box}
+@media (max-width:768px){.risu-chat>div:has(.dt){padding:.25rem}}`;
 var WRAP = {
   risu: `body,.bg-bgcolor{background:var(--t-bg)!important}
 .risu-chat{background:transparent!important;border:0!important}
-.risu-chat div:has(> .dt),.risu-chat div:has(> .x-risu-dt){width:100%;max-width:none;flex:1 1 auto;min-width:0}`,
+${OUTER}`,
   pocket: `body{background:var(--t-bg)!important}
 .risu-chat,.risu-chat>div{background:transparent!important;border:0!important}
-.risu-chat .chat-width{max-width:var(--t-card-width);margin:0 auto;color:var(--t-muted);font-size:11px}
-/* 내 글 칸이 내용 너비로 줄어 한쪽에 붙지 않게: 테마가 든 칸은 줄 전체를 쓴다 */
-.risu-chat>div:has(.dt,.x-risu-dt),.risu-chat>div>div:has(.dt,.x-risu-dt),.risu-chat div:has(> .dt),.risu-chat div:has(> .x-risu-dt){width:100%!important;max-width:none!important;flex:1 1 auto!important;min-width:0!important;margin-left:0!important;margin-right:0!important;align-self:stretch!important}`
+${OUTER}
+.risu-chat>div:has(>.chat-width):has(.dt){flex-direction:column}
+.risu-chat .chat-width{width:100%;max-width:var(--t-card-width);margin:0 auto;color:var(--t-muted);font-size:11px}`
 };
 
 var scaleR = (base, round) => round <= 2 ? 0 : Math.round(clamp(Math.max(base, 2) * 2 ** ((round - 50) / 25), 0, 32));
@@ -535,6 +676,7 @@ Markup of every message (role is "char" or "user"). The avatar is INSIDE each me
   </div>
 </div>
 
+Platform facts (RisuAI): <risuicon> renders a div with INLINE width/height/min-width and a background-image; the base layer already forces it to fill .dt-av, so just size/shape .dt-av. .chattext and the edit textarea have inline font-size; the base already fixes them to the variables. Dialogue appears as mark[risu-mark="quote2"] ("…") and mark[risu-mark="quote1"] ('…'); style those for character. The root also has class dt--hHH (00~23, current hour) if you want time-of-day variations. The actions menu popup is rendered outside the card, so do not style it.
 A base layer already exists: .dt is a full-width block; .dt-head is a flex row; .dt-av sized by vars with overflow hidden; .dt-meta is a column; text color/size/line-height from vars; .dt-foot is a small muted row with space-between.
 Keep the avatar inside .dt-card. User messages must stay full width (never shrink-wrap or stick to one side unless it is a deliberate bubble layout with align-items:flex-end).
 
@@ -642,6 +784,8 @@ export function thumbHtml(styleId, P) {
   if (styleId === "letter") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box"><div style="background:${P.paper};border:1px solid ${P.line};border-radius:3px;padding:8px;position:relative"><div style="position:absolute;right:6px;top:-6px;width:14px;height:16px;border:1.5px dashed ${P.line};background:${P.tint};transform:rotate(4deg)"></div><div style="height:5px;width:40%;background:${P.ink};opacity:.8;border-radius:2px"></div>${line(90)}${line(80)}${line(60)}</div></div>`;
   if (styleId === "diary") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box"><div style="border:1px solid ${P.accent};border-radius:8px;padding:7px;background:${P.paper};position:relative"><div style="display:flex;gap:5px;align-items:center"><span style="width:14px;height:14px;border:1px dashed ${P.line};background:${P.tint}"></span><span style="height:6px;width:26px;border-radius:3px;border:1px solid ${P.line}"></span></div>${line(80)}${line(70)}</div></div>`;
   if (styleId === "novel") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box;display:flex;gap:5px;align-items:flex-end"><span style="width:20px;height:30px;border-radius:4px;background:${P.tint};border:1px solid ${P.line};flex:none"></span><div style="flex:1;position:relative;background:${P.paper};border:1px solid ${P.line};border-radius:5px;padding:9px 6px 5px"><span style="position:absolute;top:-5px;left:5px;width:22px;height:8px;border-radius:3px;background:${P.accent}"></span>${line(90)}${line(60)}</div></div>`;
+  if (styleId === "sky") return `<div style="background:linear-gradient(#86b4e2,#e9f2f8);padding:8px;height:100%;box-sizing:border-box;display:flex;gap:4px;align-items:flex-start"><span style="width:26px;height:32px;background:#fbf9f4;padding:3px;transform:rotate(-3deg);flex:none"><span style="display:block;height:100%;background:${P.tint}"></span></span><div style="flex:1;margin-top:14px;margin-left:-8px;background:${P.paper};border-radius:4px;padding:6px">${line(80)}${line(60)}</div></div>`;
+  if (styleId === "chatroom") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box"><div style="display:flex;gap:6px;background:${P.paper};border-radius:6px;padding:7px"><span style="width:14px;height:14px;border-radius:50%;background:${P.accent};flex:none"></span><div style="flex:1"><div style="height:5px;width:35%;background:${P.ink};border-radius:2px"></div>${line(90)}${line(65)}</div></div></div>`;
   if (styleId === "messenger") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:5px"><span style="width:14px;height:14px;border-radius:50%;background:${P.tint};flex:none"></span><div style="background:${P.paper};border:1px solid ${P.line};border-radius:3px 9px 9px 9px;padding:5px 7px;width:60%">${line(90)}${line(60)}</div></div><div style="align-self:flex-end;background:${P.userBubble};border-radius:9px 3px 9px 9px;padding:5px 7px;width:45%">${line(80, P.onUser)}</div></div>`;
   return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:6px"><div style="background:${P.paper};border:1px solid ${P.line};border-left:3px solid ${P.accent};border-radius:6px;padding:6px 8px">${line(30, P.accent)}${line(90)}${line(70)}</div><div style="background:${P.tint};border:1px solid ${P.line};border-left:3px solid ${P.muted};border-radius:6px;padding:6px 8px">${line(80)}</div></div>`;
 }
