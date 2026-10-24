@@ -8,6 +8,7 @@ import { renderCleanup, tile } from './tools.js';
 import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
 import { renderThemeStudio, targetToggle } from './themestudio.js';
+import { renderThemeBuilder } from './themebuilder.js';
 import { loadThemes, saveThemes, detectTarget, TARGETS } from '../../data/themes.js';
 
 export async function renderSettingsTab(ctx) {
@@ -15,6 +16,7 @@ export async function renderSettingsTab(ctx) {
   if (ctx.state.sub === "updset") return renderUpdateSettings(ctx);
   if (ctx.state.sub === "cleanup") return renderCleanup(ctx);
   if (ctx.state.sub === "themestudio") return renderThemeStudio(ctx);
+  if (ctx.state.sub === "themebuilder") return renderThemeBuilder(ctx);
   const themes = await loadThemes(ctx.api);
   const rootDoc = await ctx.api.getRootDocument?.().catch(() => null) ?? null;
   const here = await detectTarget(rootDoc);
@@ -79,7 +81,7 @@ export async function renderSettingsTab(ctx) {
       "테마 대상",
       "테마 스튜디오에서 만들 계열을 골라요. 두 계열은 구조가 달라 테마가 서로 호환되지 않아요.",
       h("div", { style: "display:flex;align-items:center;gap:12px;flex-wrap:wrap" }, tToggle, h("div", { style: "flex:1;min-width:200px" }, tInfo)),
-      h("div", null, tile("brush", "테마 스튜디오", "색·글꼴·말풍선 편집, 실시간 미리보기, CSS·채팅 HTML, 내보내기·가져오기", () => ctx.go("settings", "themestudio"), "rb-set-themestudio"))
+      h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px" }, tile("palette", "테마 빌더", "스타일과 색만 고르면 완성. 지식 없이도 예쁜 채팅 테마", () => ctx.go("settings", "themebuilder"), "rb-set-themebuilder"), tile("brush", "테마 스튜디오", "색·글꼴·말풍선 편집, 실시간 미리보기, CSS·채팅 HTML, 내보내기·가져오기", () => ctx.go("settings", "themestudio"), "rb-set-themestudio"))
     ),
     h(
       "div",

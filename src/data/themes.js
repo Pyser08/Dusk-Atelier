@@ -156,6 +156,8 @@ function normalize(t, target) {
     html: String(t?.html ?? ""),
     // 기존 테마를 붙여 넣은 경우처럼 토큰 CSS가 방해되면 끈다
     useTokens: t?.useTokens !== false,
+    // 테마 빌더로 만든 테마면 그때 고른 값 (빌더에서 다시 열기용)
+    ...t?.builder ? { builder: { ...t.builder } } : {},
     updated: t?.updated ?? Date.now()
   };
 }
