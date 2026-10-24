@@ -15,7 +15,6 @@ const banner = [
   '//@name dusk_atelier',
   '//@display-name Dusk Atelier',
   '//@api 3.0',
-  '//@allowed-ipc dusk_atelier_theme_builder',
   `//@version ${version}`,
   '//@update-url https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js',
   '//@link https://github.com/Pyser08/Dusk-Atelier 저장소',

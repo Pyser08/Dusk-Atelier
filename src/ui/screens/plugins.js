@@ -4,10 +4,9 @@ import { icon } from '../icons.js';
 import { badge, btn, confirmDialog, iconBtn, loading, note, openMenu, promptDialog, segmented, switchEl } from '../kit.js';
 import * as P from '../../data/plugins.js';
 import * as T from '../../data/pluginTemplate.js';
-import * as Parts from '../../data/parts.js';
 import { codeEditor, highlight } from '../codeedit.js';
 
-var VIEWS = [["list", "목록"], ["parts", "파츠"], ["interop", "연동 설정"], ["create", "만들기"], ["storage", "저장소"]];
+var VIEWS = [["list", "목록"], ["interop", "연동 설정"], ["create", "만들기"], ["storage", "저장소"]];
 var INTEROP_URL = "https://pyser08.github.io/dusk-atelier-interop/";
 var PLUGINS_TTL = 6e4;
 
@@ -34,7 +33,7 @@ async function getInterop(ctx, fresh) {
 }
 
 // ── 화면 틀 ── 머리글과 보기 전환 버튼은 한 번만 만들고, 아래 내용만 바꾼다
-var LOADERS = { list: viewList, parts: viewParts, interop: viewInterop, create: viewCreate, storage: viewStorage };
+var LOADERS = { list: viewList, interop: viewInterop, create: viewCreate, storage: viewStorage };
 
 export async function renderPlugins(ctx, { fresh = false } = {}) {
   const st = ctx.state;
@@ -81,25 +80,6 @@ export async function renderPlugins(ctx, { fresh = false } = {}) {
   }
 }
 var refresh = (ctx) => renderPlugins(ctx, { fresh: true });
-
-async function viewParts(ctx) {
-  const installed = await getPlugins(ctx, false);
-  let parts;
-  try {
-    parts = await Parts.loadPartManifest(ctx.api);
-  } catch (e) {
-    return h("div", { style: "display:flex;flex-direction:column;gap:12px" }, note("err", `파츠 목록을 읽지 못했어요: ${e?.message ?? e}`), btn("다시 읽기", { size: "sm", icon: "refresh", onClick: () => refresh(ctx) }));
-  }
-  return h(
-    "div", { style: "display:flex;flex-direction:column;gap:12px" },
-    h("div", { class: "rb-card pad bordered" }, h("b", null, "파츠"), h("p", { class: "rb-p" }, "파츠는 별도 RisuAI 플러그인으로 설치·업데이트됩니다. 여기서는 설치 상태와 버전을 확인합니다.")),
-    parts.length ? parts.map((part) => {
-      const s = Parts.partStatus(part, installed);
-      return h("div", { class: "rb-row" }, h("span", { style: "display:flex;color:var(--rb-sub)" }, icon("plugin", 18)), h("div", { class: "txt" }, h("div", { class: "ttl" }, h("span", { class: "name" }, part.displayName), badge(s.label, s.kind)), h("span", { class: "meta" }, [part.id, part.version && `manifest v${part.version}`].filter(Boolean).join(" · "))));
-    }) : h("div", { class: "rb-empty" }, "등록된 파츠가 아직 없어요."),
-    btn("새로고침", { size: "sm", icon: "refresh", onClick: () => refresh(ctx) })
-  );
-}
 
 // ── 목록 ──
 async function viewList(ctx, { fresh }) {
