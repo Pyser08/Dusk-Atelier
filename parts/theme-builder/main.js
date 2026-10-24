@@ -6,11 +6,17 @@
 //@allowed-ipc dusk_atelier
 
 import { renderThemeBuilder } from '../../src/ui/screens/themebuilder.js';
+import { CSS2, FONT_LINK } from '../../src/ui/styles.js';
 
 const HOST = 'dusk_atelier';
 const CHANNEL = 'dusk-atelier-parts-v1';
 const api = globalThis.risuai ?? globalThis.Risuai;
 let active = false;
+
+if (typeof document !== 'undefined') {
+  document.head.appendChild(Object.assign(document.createElement('link'), { rel: 'stylesheet', href: FONT_LINK }));
+  document.head.appendChild(Object.assign(document.createElement('style'), { textContent: CSS2 }));
+}
 
 const toast = (message) => api.log(`[Dusk Theme Builder] ${message}`).catch(() => {});
 const close = async () => {
