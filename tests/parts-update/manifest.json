@@ -11,7 +11,7 @@
     {
       "id": "da_parts_test_part",
       "displayName": "DA Parts Test Part",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "pluginUrl": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/test/parts-updates/tests/parts-update/part.js"
     }
   ]
