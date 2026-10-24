@@ -9,7 +9,7 @@ import { gripDrag } from '../sortable.js';
 import { reload } from './modules.js';
 import { attachUndo } from '../undo.js';
 import { attachProbPick } from '../probpick.js';
-import { COND_TYPES, SET_OPS, VAR_OPS, applySets, bodyOf, checkExpr, collectManaged, defaultRule, evaluate, gateVar, isManaged, nativeContent, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
+import { AFF_PREFIX, COND_TYPES, SET_OPS, VAR_OPS, affName, affOf, affsOfMember, applySets, bodyOf, checkExpr, collectManaged, defaultAff, defaultRule, evaluate, gateVar, isAff, isManaged, nativeContent, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
 // 관리 항목의 내용 머리(@@activate·{{#if}})를 규칙에 맞춘다
 export function syncRuleContent(lorebook) {
   // 리스의 복제 등으로 같은 식별자가 두 항목에 있으면 뒤쪽에 새 식별자를 준다 (연쇄·조건 대상은 다시 골라야 한다)
@@ -19,6 +19,10 @@ export function syncRuleContent(lorebook) {
     if (!id) continue;
     if (seen.has(id)) l.extentions = { ...l.extentions, da_rid: newId() };
     seen.add(ridOf(l));
+  }
+  // 소속 항목 이름 앞에는 [소속]을 붙여 둔다 (리스 기본 로어북 화면에서도 구분되게)
+  for (const l of lorebook ?? []) {
+    if (isAff(l) && !String(l.comment ?? "").startsWith(AFF_PREFIX)) l.comment = AFF_PREFIX + affName(l);
   }
   for (const l of lorebook ?? []) {
     const r = ruleOf(l);
@@ -33,6 +37,23 @@ export function syncRuleContent(lorebook) {
   }
 }
 
+// 항목에 Dusk 규칙을 켠다 (소속 구성원으로 넣을 때 등). 이미 켜져 있으면 식별자만 확인한다
+export function enableRule(l, lorebook) {
+  l.extentions = { ...(l.extentions ?? {}) };
+  l.extentions.da_rid ||= newId();
+  if ((lorebook ?? []).some((x) => x !== l && ridOf(x) === l.extentions.da_rid)) l.extentions.da_rid = newId();
+  if (isManaged(l)) return l.extentions.da_rid;
+  const nr = { ...(ruleOf(l) ?? defaultRule()), on: true };
+  if ((l.alwaysActive && !l.extentions?.da_aa) || l.mode === "constant") nr.cond = [];
+  l.extentions.da_rule = nr;
+  l.content = nativeContent(l.content, nr, l.extentions.da_rid);
+  return l.extentions.da_rid;
+}
+export function newAffEntry() {
+  const rid = newId();
+  const rule = { ...defaultRule(), on: true };
+  return { key: "", secondkey: "", insertorder: 100, comment: AFF_PREFIX + "새 소속", content: nativeContent("", rule, rid), mode: "normal", alwaysActive: false, selective: false, useRegex: false, extentions: { da_rid: rid, da_rule: rule, da_aff: defaultAff() } };
+}
 var LORE_MODES = [["normal", "일반"], ["constant", "항상 켜짐"], ["multiple", "여러 키"], ["child", "하위"], ["folder", "폴더"]];
 var REGEX_TYPES = [["editinput", "입력 수정"], ["editoutput", "출력 수정"], ["editprocess", "요청 데이터 수정"], ["editdisplay", "화면 표시 수정"], ["edittrans", "번역 표시 수정"], ["disabled", "사용 안 함"]];
 var TRIGGER_TYPES = [["start", "채팅 시작"], ["input", "입력할 때"], ["output", "출력할 때"], ["display", "화면 표시"], ["request", "요청할 때"], ["manual", "수동(버튼)"]];
@@ -137,7 +158,7 @@ export async function openEditorCore(ctx, cfg) {
   const original = structuredClone(cfg.view);
   let draft = structuredClone(cfg.view);
   for (const k of ["lorebook", "regex", "trigger"]) if (!Array.isArray(draft[k])) draft[k] = [];
-  const es = { tab: "lorebook", sel: { lorebook: 0, regex: 0, trigger: 0 }, q: { lorebook: "", regex: "", trigger: "" }, lastField: null, mItem: false, listScroll: { lorebook: 0, regex: 0, trigger: 0 }, itemView: /* @__PURE__ */ new WeakMap(), shown: null };
+  const es = { tab: "lorebook", loreTab: "all", sel: { lorebook: 0, regex: 0, trigger: 0 }, q: { lorebook: "", regex: "", trigger: "" }, lastField: null, mItem: false, listScroll: { lorebook: 0, regex: 0, trigger: 0 }, itemView: /* @__PURE__ */ new WeakMap(), shown: null };
   const dirty = () => stableJson(draft) !== stableJson(original);
   const panel = h("div", { class: "rb-full", role: "dialog", "aria-label": `${original.name} 편집` });
   const titleB = h("b", null, original.name || "(이름 없음)");
@@ -359,9 +380,14 @@ export async function openEditorCore(ctx, cfg) {
       "div",
       { class: "rb-side-tools" },
       search,
-      btn("추가", { size: "sm", icon: "plus", onClick: () => add(kind === "lorebook" ? newLore : kind === "regex" ? newRegex : newTrigger) }),
-      kind === "lorebook" ? btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolderPicked() }) : null
+      kind === "lorebook" && es.loreTab === "aff" ? btn("소속 추가", { size: "sm", icon: "plus", onClick: () => add(newAffEntry) }) : btn("추가", { size: "sm", icon: "plus", onClick: () => add(kind === "lorebook" ? newLore : kind === "regex" ? newRegex : newTrigger) }),
+      kind === "lorebook" && es.loreTab === "all" ? btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolderPicked() }) : null
     );
+    // 로어북: 전체 / 캐릭터 / 소속 탭
+    const loreTabs = kind === "lorebook" ? h("div", { class: "rb-lore-tabs", style: "padding:0 0 6px" }, segmented([["all", "전체"], ["char", "캐릭터"], ["aff", "소속"]], es.loreTab, (v) => {
+      es.loreTab = v;
+      render();
+    }, "로어북 보기")) : null;
     const items = h("div", { class: "rb-side-list", role: "listbox", "aria-label": "항목" });
     const uid = /* @__PURE__ */ new WeakMap();
     let seq = 0;
@@ -420,7 +446,11 @@ export async function openEditorCore(ctx, cfg) {
         } },
         h("span", { class: "t" }, label),
         kind === "lorebook" && !divider && (it2.alwaysActive || it2.mode === "constant") && !isManaged(it2) ? badge("항상", "acc") : null,
-        kind === "lorebook" && isManaged(it2) ? badge("규칙", "acc") : null,
+        kind === "lorebook" && isAff(it2) ? badge(`소속 ${affOf(it2).members.length}`, "acc") : kind === "lorebook" && isManaged(it2) ? badge("규칙", "acc") : null,
+        kind === "lorebook" && !child && !isAff(it2) && ridOf(it2) ? (() => {
+          const g = affsOfMember(list, ridOf(it2));
+          return g.length ? badge(affName(g[0]) + (g.length > 1 ? ` +${g.length - 1}` : ""), "mute") : null;
+        })() : null,
         kind === "trigger" ? badge(TRIGGER_TYPES.find((x) => x[0] === it2.type)?.[1] ?? it2.type, "mute") : null
       );
       if (!grip) return b;
@@ -452,7 +482,25 @@ export async function openEditorCore(ctx, cfg) {
     };
     function paintItems() {
       const out = [];
-      if (q || kind !== "lorebook") {
+      if (kind === "lorebook" && es.loreTab === "char") {
+        list.forEach((it2, i2) => {
+          if (it2.mode !== "folder" && !isAff(it2) && match(it2)) out.push(rowFor(it2, i2, { grip: false }));
+        });
+      } else if (kind === "lorebook" && es.loreTab === "aff") {
+        list.forEach((it2, i2) => {
+          if (!isAff(it2)) return;
+          const mem = affOf(it2).members.map((rid) => list.findIndex((x) => ridOf(x) === rid)).filter((k) => k >= 0);
+          if (!match(it2) && !mem.some((k) => match(list[k]))) return;
+          out.push(rowFor(it2, i2, { grip: false }));
+          const bodyEl = h("div", { class: "rb-folder-body", style: "margin-left:12px;padding-left:8px" }, ...mem.map((k) => rowFor(list[k], k, { child: true, grip: false })));
+          if (!mem.length) bodyEl.appendChild(h("div", { class: "rb-muted", style: "padding:6px 10px;font-size:12px" }, "구성원이 없어요. 소속을 눌러 구성원을 넣으세요"));
+          out.push(bodyEl);
+        });
+        if (!out.length) {
+          replace(items, h("div", { class: "rb-empty" }, list.some(isAff) ? "찾는 소속이 없어요" : '소속이 없어요. "소속 추가"를 눌러 만드세요.'));
+          return;
+        }
+      } else if (q || kind !== "lorebook") {
         list.forEach((it2, i2) => {
           if (match(it2)) out.push(rowFor(it2, i2, { grip: !q }));
         });
@@ -578,13 +626,16 @@ export async function openEditorCore(ctx, cfg) {
     } })));
     if (!it) pane.appendChild(h("div", { class: "rb-empty" }, "왼쪽에서 항목을 고르세요."));
     else pane.append(itemTools, kind === "lorebook" ? loreForm(it) : kind === "regex" ? regexForm(it) : triggerForm(it));
-    replace(body, h("div", { class: "side" }, tools, items), pane);
+    replace(body, h("div", { class: "side" }, tools, loreTabs, items), pane);
     es.shown = { kind, items, pane, item: it };
     restoreView(kind, items, pane, it);
   }
   function loreForm(l) {
     const folders = draft.lorebook.filter((x) => x.mode === "folder");
     if (l.mode === "folder") return h("div", { class: "rb-form" }, field("폴더 이름", text(l, "comment")), h("p", { class: "rb-muted wide" }, `이 폴더 안 항목 ${draft.lorebook.filter((x) => x.folder === l.key).length}개`));
+    if (isAff(l)) return affForm(l);
+    const myAffs = affsOfMember(draft.lorebook, ridOf(l));
+    const affLine = myAffs.length ? h("div", { class: "wide", style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" }, h("span", { class: "rb-muted" }, "소속"), ...myAffs.map((g) => btn(affName(g), { size: "sm", onClick: () => goEntry(g) }))) : null;
     const enabled = h("input", { type: "checkbox", checked: l.enabled !== false });
     enabled.addEventListener("change", () => {
       if (enabled.checked) delete l.enabled;
@@ -601,6 +652,7 @@ export async function openEditorCore(ctx, cfg) {
     return h(
       "div",
       { class: "rb-form" },
+      affLine,
       field("이름", text(l, "comment")),
       field("방식", select2(l, "mode", LORE_MODES.filter((x) => x[0] !== "folder"))),
       field("활성화 키 (쉼표로 구분)", text(l, "key"), true),
@@ -617,6 +669,111 @@ export async function openEditorCore(ctx, cfg) {
       field("삽입 순서", num(l, "insertorder")),
       field("켜질 확률 (%)", num(l, "activationPercent")),
       field("폴더", folderSel),
+      ruleSection(l)
+    );
+  }
+  function goEntry(x) {
+    const k = draft.lorebook.indexOf(x);
+    if (k < 0) return;
+    es.sel.lorebook = k;
+    es.mItem = true;
+    render();
+  }
+  // ---------- 소속 (구성원 연결·장소 키·확률·최대 N명) ----------
+  function affForm(l) {
+    l.extentions = { ...(l.extentions ?? {}) };
+    const a = l.extentions.da_aff = { ...defaultAff(), ...(l.extentions.da_aff ?? {}) };
+    a.prob = { ...(a.prob ?? {}) };
+    a.members = (a.members ?? []).filter(Boolean);
+    const redraw = () => render();
+    const nameIn = h("input", { class: "rb-input", value: affName(l), placeholder: "예) 모험가 길드" });
+    nameIn.addEventListener("input", () => {
+      l.comment = AFF_PREFIX + nameIn.value.trim();
+      changed();
+    });
+    const placeIn = h("input", { class: "rb-input", value: a.place ?? "", placeholder: "예) 길드 본부, 3번가 시장" });
+    placeIn.addEventListener("input", () => {
+      a.place = placeIn.value;
+      changed();
+    });
+    const numBox = (obj, key, { min = 0, max, w = "72px", ph = "" } = {}) => {
+      const el = h("input", { class: "rb-input rb-da-num", type: "number", min, max, placeholder: ph, value: obj[key] ?? "", style: `width:${w}` });
+      el.addEventListener("input", () => {
+        if (el.value === "") delete obj[key];
+        else obj[key] = Number(el.value);
+        changed();
+      });
+      return el;
+    };
+    const byRid = (rid) => draft.lorebook.find((x) => ridOf(x) === rid);
+    const rows = a.members.map((rid) => {
+      const x = byRid(rid);
+      return h(
+        "div",
+        { class: "rb-da-cond" },
+        h("button", { type: "button", class: "rb-da-lab", style: "cursor:pointer;background:none;border:0;color:var(--rb-acc-text);text-align:left;flex:1;min-width:0", onClick: () => x && goEntry(x) }, x ? x.comment || "(이름 없음)" : "(지워진 항목)"),
+        x && !isManaged(x) ? badge("규칙 꺼짐", "warn") : null,
+        numBox(a.prob, rid, { min: 0, max: 100, w: "70px", ph: String(a.def ?? 100) }),
+        h("span", { class: "rb-da-note" }, "%"),
+        iconBtn("trash", "구성원에서 빼기", { onClick: () => {
+          a.members = a.members.filter((m) => m !== rid);
+          delete a.prob[rid];
+          changed();
+          redraw();
+        } })
+      );
+    });
+    const pickMembers = async () => {
+      const cands = draft.lorebook.map((x, k) => [x, k]).filter(([x]) => x !== l && x.mode !== "folder" && !isAff(x) && !isLoreDivider(x));
+      const r = await folderDialog(ctx.win, { title: `'${affName(l) || "소속"}' 구성원`, items: cands.map(([x, k]) => ({ id: String(k), label: x.comment || x.key || "(이름 없음)", folder: null, sub: String(x.key ?? "").trim() ? `키: ${x.key}` : "키 없음" })), checked: cands.filter(([x]) => a.members.includes(ridOf(x))).map(([, k]) => String(k)), ok: "저장", withName: false, noun: "항목" });
+      if (!r) return;
+      const picked = r.ids.map((id) => draft.lorebook[Number(id)]).filter(Boolean);
+      const rids = picked.map((x) => enableRule(x, draft.lorebook));
+      for (const m of a.members) if (!rids.includes(m)) delete a.prob[m];
+      // 기존 순서를 지키고 새 구성원은 뒤에
+      a.members = [...a.members.filter((m) => rids.includes(m)), ...rids.filter((m) => !a.members.includes(m))];
+      changed();
+      redraw();
+    };
+    const card = (ic, title, sub, ...kids) => h("section", { class: "rb-da-card" }, h("header", null, icon(ic, 16), h("b", null, title), sub ? h("small", null, sub) : null), ...kids);
+    const line = (...kids) => h("div", { class: "rb-da-line" }, ...kids);
+    const lab = (t) => h("span", { class: "rb-da-lab" }, t);
+    const enabled = h("input", { type: "checkbox", checked: l.enabled !== false });
+    enabled.addEventListener("change", () => {
+      if (enabled.checked) delete l.enabled;
+      else l.enabled = false;
+      changed();
+    });
+    return h(
+      "div",
+      { class: "rb-form" },
+      field("소속 이름", nameIn),
+      h("label", { class: "rb-check" }, enabled, h("span", null, "사용")),
+      field("소속 키 (쉼표로 구분)", text(l, "key", { placeholder: "예) 길드, 길드원" }), true),
+      field("장소 키 (쉼표로 구분)", placeIn, true),
+      field("소속 설명", area(l, "content", { tall: true, mono: false }), true),
+      h(
+        "div",
+        { class: "wide rb-da on" },
+        h("div", { class: "rb-da-grid" }, card(
+          "link",
+          `구성원 ${a.members.length}명`,
+          "소속이 켜지면 구성원마다 확률을 굴려 켜요. 자기 키로 등장한 구성원은 항상 켜져요",
+          rows.length ? h("div", { class: "rb-da-conds" }, ...rows) : h("p", { class: "rb-da-empty" }, "구성원이 없어요"),
+          line(btn("구성원 고르기", { size: "sm", icon: "plus", onClick: pickMembers })),
+          h(
+            "div",
+            { class: "rb-da-sub" },
+            line(lab("기본 확률"), numBox(a, "def", { min: 0, max: 100, w: "70px", ph: "100" }), h("span", { class: "rb-da-note" }, "% (구성원 칸이 비어 있으면 이 값)")),
+            line(lab("최대 인원"), numBox(a, "max", { min: 0, w: "70px", ph: "제한 없음" }), h("span", { class: "rb-da-note" }, "명 — 확률을 통과한 사람 중 무작위로 (비우면 제한 없음)"))
+          )
+        ), card(
+          "search",
+          "언제 켜질까",
+          null,
+          h("p", { class: "rb-da-note", style: "margin:0;line-height:1.7" }, "· 소속 키나 장소 키가 최근 대화에 나오면", h("br"), "· 구성원 중 누구라도 켜지면", h("br"), "· 아래 Dusk 규칙의 조건이 맞으면 (위치·반복·확률도 아래에서 정해요)")
+        ))
+      ),
       ruleSection(l)
     );
   }

@@ -47,6 +47,33 @@ export function ruleOf(entry) {
   return { ...defaultRule(), ...r, cond: Array.isArray(r.cond) ? r.cond : [], chain: Array.isArray(r.chain) ? r.chain : [], set: Array.isArray(r.set) ? r.set : [] };
 }
 export const ridOf = (entry) => entry?.extentions?.da_rid || null;
+
+// ---------- 소속 (DA Lore Affiliation) ----------
+// 소속도 평범한 로어북 항목이다. extentions.da_aff에 구성원을 적는다.
+//   { members: [rid…], place: '장소 키(쉼표)', prob: { rid: % }, def: 기본 %, max: 최대 N명(비우면 제한 없음) }
+// 소속 켜짐: 소속 키(일반 키 조건) · 장소 키 · 구성원 하나라도 켜짐
+// 소속이 켜지면 구성원마다 확률을 굴리고, 통과한 사람 중 무작위로 최대 N명을 켠다.
+// 자기 키로 이미 켜진 구성원은 확률·N명과 상관없이 켜져 있다.
+export const AFF_PREFIX = "[소속] ";
+export function affOf(entry) {
+  const a = entry?.extentions?.da_aff;
+  if (!a || typeof a !== "object") return null;
+  return {
+    members: Array.isArray(a.members) ? a.members.filter(Boolean) : [],
+    place: String(a.place ?? ""),
+    prob: a.prob && typeof a.prob === "object" ? a.prob : {},
+    def: a.def === void 0 || a.def === "" ? 100 : Number(a.def),
+    max: a.max === void 0 || a.max === "" || a.max === null ? "" : Number(a.max)
+  };
+}
+export const isAff = (entry) => !!affOf(entry);
+export const affName = (entry) => String(entry?.comment ?? "").replace(/^\[소속\]\s*/, "");
+export const defaultAff = () => ({ members: [], place: "", prob: {}, def: 100, max: "" });
+// 이 항목(rid)이 들어 있는 소속 항목들
+export function affsOfMember(lorebook, rid) {
+  if (!rid) return [];
+  return (lorebook ?? []).filter((x) => affOf(x)?.members.includes(rid));
+}
 export const isManaged = (entry) => !!ruleOf(entry) && ruleOf(entry).on !== false;
 
 // ---------- 내용의 @@dont_activate 다루기 ----------
@@ -413,14 +440,53 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     active.set(it.rid, { ...it, why });
     return true;
   };
-  for (let pass = 0; pass < 8; pass++) {
+  // 소속: 장소 키 또는 구성원이 켜져서 켜질 때의 이유 (없으면 null)
+  const affs = new Map(items.map((it) => [it.rid, affOf(it.entry)]).filter(([, a]) => a));
+  const affTrig = (it) => {
+    const a = affs.get(it.rid);
+    if (!a) return null;
+    const place = splitKeys(a.place);
+    if (place.length && keyHit(place, textsFor(it.rule.scan), { whole: !!it.rule.whole })) return "장소 키";
+    const m = a.members.find((rid) => active.has(rid) && !String(active.get(rid).why).startsWith(`소속: ${it.entry.comment || it.rid}`));
+    return m ? `구성원 '${nameOf(m)}' 켜짐` : null;
+  };
+  const expanded = new Set();
+  const affMiss = new Map();
+  for (let pass = 0; pass < 12; pass++) {
     let changed = false;
     for (const it of items) {
       const cur = active.get(it.rid);
       if (cur && cur.why !== "지속") continue;
-      if (blocked(it) || !condsOk(it)) continue;
+      if (blocked(it)) continue;
+      const why = condsOk(it) ? "조건" : affTrig(it);
+      if (!why) continue;
       if (!rolled.has(it.rid)) rolled.set(it.rid, roll(it.rule.prob));
-      if (rolled.get(it.rid)) changed = add(it, "조건") || changed;
+      if (rolled.get(it.rid)) changed = add(it, why === "조건" ? "조건" : `소속 켜짐: ${why}`) || changed;
+    }
+    // 켜진 소속 → 구성원 (소속마다 한 번만 굴린다)
+    for (const [grid, a] of affs) {
+      const g = active.get(grid);
+      if (!g || expanded.has(grid)) continue;
+      expanded.add(grid);
+      const gname = affName(g.entry) || grid;
+      let pass2 = [];
+      for (const rid of a.members) {
+        const tgt = byRid.get(rid);
+        if (!tgt || active.has(rid) || blocked(tgt)) continue;
+        const p = a.prob[rid] === void 0 || a.prob[rid] === "" ? a.def : Number(a.prob[rid]);
+        if (roll(p)) pass2.push(tgt);
+        else affMiss.set(rid, `소속 '${gname}'에서 확률 ${p}%에 안 뽑혔어요`);
+      }
+      const max = Number(a.max);
+      if (a.max !== "" && max >= 0 && pass2.length > max) {
+        for (let i = pass2.length - 1; i > 0; i--) {
+          const j = Math.floor(rng() * (i + 1));
+          [pass2[i], pass2[j]] = [pass2[j], pass2[i]];
+        }
+        for (const x of pass2.slice(max)) affMiss.set(x.rid, `소속 '${gname}'에서 최대 ${max}명에 안 들었어요`);
+        pass2 = pass2.slice(0, max);
+      }
+      for (const tgt of pass2) changed = add(tgt, `소속: ${gname}`) || changed;
     }
     for (const a of [...active.values()]) {
       for (const c of a.rule.chain ?? []) {
@@ -478,6 +544,7 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     let why;
     if (active.has(it.rid)) why = `같은 그룹 '${String(it.rule.group).trim()}'의 다른 항목이 먼저 켜졌어요`;
     else if (blocked(it)) why = it.rule.once === "chat" ? "이미 켜져서 쉬는 중 (채팅에서 한 번만)" : `쿨다운 중 (${Math.max(1, Number(it.rule.cool) || 1)}턴 쉬기)`;
+    else if (affMiss.has(it.rid)) why = affMiss.get(it.rid);
     else if (!condsOk(it)) {
       const bad = (it.rule.cond ?? []).filter((c) => !condOk(it, c)).map((c) => label(it, c));
       why = `${it.rule.mode === "any" ? "맞는 조건이 없어요" : "안 맞는 조건"}: ${bad.join(" / ")}`;
@@ -579,6 +646,20 @@ export function validateRules(lorebook) {
         if (er) out.push({ level: "err", index: i, msg: `${n}: '${x.name}' 수식 오류 — ${er}` });
       }
       if (String(x.name ?? "").startsWith("da_")) out.push({ level: "warn", index: i, msg: `${n}: 변수 '${x.name}'는 Dusk가 쓰는 이름(da_)이에요. 다른 이름을 쓰세요` });
+    }
+    const af = affOf(l);
+    if (af) {
+      if (!af.members.length) out.push({ level: "warn", index: i, msg: `${n}: 소속에 구성원이 없어요` });
+      for (const m of af.members) {
+        const ti = rids.get(m);
+        if (ti === undefined) out.push({ level: "err", index: i, msg: `${n}: 구성원 중 지워진 항목이 있어요 (구성원 목록에서 빼 주세요)` });
+        else if (!isManaged(list[ti])) out.push({ level: "warn", index: i, msg: `${n}: 구성원 '${list[ti].comment || ti + 1}'은 규칙이 꺼져 있어 켜지지 않아요` });
+        else if (affOf(list[ti])) out.push({ level: "warn", index: i, msg: `${n}: 구성원 '${list[ti].comment || ti + 1}'도 소속이에요` });
+        const mp = af.prob[m];
+        if (mp !== void 0 && mp !== "" && (isNaN(Number(mp)) || Number(mp) < 0 || Number(mp) > 100)) out.push({ level: "err", index: i, msg: `${n}: 구성원 확률은 0~100이어야 해요` });
+      }
+      if (isNaN(af.def) || af.def < 0 || af.def > 100) out.push({ level: "err", index: i, msg: `${n}: 기본 확률은 0~100이어야 해요` });
+      if (af.max !== "" && !(af.max >= 0)) out.push({ level: "err", index: i, msg: `${n}: 최대 인원은 0 이상이어야 해요` });
     }
     for (const c of r.chain ?? []) {
       const ti = rids.get(c.rid);
