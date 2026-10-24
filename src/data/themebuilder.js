@@ -383,7 +383,39 @@ export function compileBuilder(choice, target) {
     ...c.aiCss ? ["/* AI 스타일 */", c.aiCss] : [s.css, ...s.deco.map((d) => c.deco[d.id] ? d.css : d.off ?? "")],
     c.aiCss && c.avatar === "style" ? "" : AVATAR_CSS[avatar] ?? ""
   ].filter(Boolean).join("\n");
-  return { css, html: BUILDER_HTML, palette: P };
+  return { css: dualScope(css), html: BUILDER_HTML, palette: P };
+}
+
+// 포켓 계열 등은 커스텀 HTML의 class 앞에 "x-risu-"를 붙인다 (dt-card → x-risu-dt-card).
+// 어느 쪽이든 맞도록 .dt 선택자마다 x-risu- 판을 함께 단다.
+var XR = (sel) => sel.replace(/\.dt(?=[-\w]*)/g, ".x-risu-dt");
+export function dualScope(css) {
+  let out = "", i = 0;
+  while (i < css.length) {
+    const open = css.indexOf("{", i);
+    if (open < 0) {
+      out += css.slice(i);
+      break;
+    }
+    const head = css.slice(i, open);
+    let d = 1, j = open + 1;
+    while (j < css.length && d) {
+      if (css[j] === "{") d++;
+      else if (css[j] === "}") d--;
+      j++;
+    }
+    const body = css.slice(open + 1, j - 1);
+    const h = head.trim();
+    if (/^@media|^@supports/i.test(h)) out += `${head}{${dualScope(body)}}`;
+    else if (h.startsWith("@") || !/\.dt/.test(h)) out += `${head}{${body}}`;
+    else {
+      const sels = h.split(",").map((x) => x.trim());
+      const all = [...sels, ...sels.filter((x) => /\.dt/.test(x)).map(XR)];
+      out += `${head.match(/^\s*/)[0]}${all.join(",")}{${body}}`;
+    }
+    i = j;
+  }
+  return out;
 }
 
 // 빌더 선택 → 일반 테마 (기존 테마를 넘기면 이름·id 유지하고 덮어씀)
