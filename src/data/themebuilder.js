@@ -98,35 +98,43 @@ function ensureBubble(accent, P, dark) {
 // ── 공통 HTML 틀 (모든 스타일이 같은 구조, 모양은 CSS가 맡는다) ──
 var NAME = "{{#when::{{role}}::is::char}}{{char}}{{:else}}{{user}}{{/when}}";
 export var BUILDER_HTML = `<div class="dt dt-{{role}}">
-  <div class="dt-av"><risuicon></risuicon></div>
   <div class="dt-card">
-    <div class="dt-head"><span class="dt-name">${NAME}</span><span class="dt-date">{{date}}</span></div>
+    <div class="dt-head">
+      <div class="dt-av"><risuicon></risuicon></div>
+      <div class="dt-meta"><span class="dt-name">${NAME}</span><span class="dt-date">{{date}}</span></div>
+    </div>
     <div class="dt-body"><risutextbox></risutextbox></div>
     <div class="dt-foot"><risugeninfo></risugeninfo><risubuttons></risubuttons></div>
   </div>
 </div>`;
 
-// 공통 바탕: 변수 계약 + 리스 기본 요소 정리
-var BASE = `.dt{display:flex;gap:12px;align-items:flex-start;max-width:var(--t-card-width);margin:0 auto var(--t-gap);padding:0 12px;box-sizing:border-box;color:var(--t-ink);font-family:var(--t-font-body)}
-.dt-av{flex:none;width:var(--t-avatar-size);height:var(--t-avatar-size);border-radius:var(--t-avatar-radius);overflow:hidden;background:var(--t-tint)}
-.dt-av img,.dt-av>*{width:100%;height:100%;object-fit:cover}
-.dt-card{flex:1;min-width:0;box-sizing:border-box}
-.dt-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+// 공통 바탕: 변수 계약 + 리스 기본 요소 정리. 프로필은 캐릭터·내 글 모두 자기 카드 안(.dt-head)에 있다
+var BASE = `.dt{display:block;width:100%;max-width:var(--t-card-width);margin:0 auto var(--t-gap);padding:0 12px;box-sizing:border-box;color:var(--t-ink);font-family:var(--t-font-body);text-align:left}
+.dt *{box-sizing:border-box}
+.dt-card{position:relative;width:100%;min-width:0}
+.dt-head{display:flex;align-items:center;gap:12px;min-width:0}
+.dt-av{position:relative;flex:none;width:var(--t-avatar-size);height:var(--t-avatar-size);border-radius:var(--t-avatar-radius);overflow:hidden;background:var(--t-tint)}
+.dt-av img,.dt-av>*{display:block;width:100%;height:100%;object-fit:cover}
+.dt-meta{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
 .dt-name{font-weight:700;color:var(--t-ink);font-family:var(--t-font-display)}
 .dt-date{font-size:.78em;color:var(--t-muted)}
-.dt-body{max-width:var(--t-text-width);box-sizing:border-box}
+.dt-body{max-width:var(--t-text-width)}
 .dt-body,.dt-body .chattext{font-size:var(--t-font-size);line-height:var(--t-line-height);color:var(--t-ink);word-break:keep-all;overflow-wrap:anywhere}
 .dt-body p:first-child{margin-top:0}
 .dt-body p:last-child{margin-bottom:0}
 .dt-body em{color:var(--t-muted)}
 .dt-body strong{color:var(--t-ink)}
 .dt-body mark,.dt-body q{background:transparent;color:var(--t-accent-text)}
-.dt-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;font-size:12px;color:var(--t-muted)}
+.dt-body img{max-width:100%;height:auto}
+.dt-foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 10px;margin-top:8px;font-size:12px;color:var(--t-muted)}
 .dt-foot button{color:var(--t-muted)}
-.dt-foot button:hover{color:var(--t-accent-text)}`;
+.dt-foot button:hover{color:var(--t-accent-text)}
+@media (max-width:600px){.dt{padding:0 6px}}`;
 
 // ── 스타일 ──
-// css: 늘 들어가는 모양 / deco: 켜고 끌 수 있는 장식 / 여백은 calc(..*var(--t-space))
+// css: 늘 들어가는 모양 / deco: 켜고 끌 장식 / 여백은 calc(..*var(--t-space))
+// 모든 스타일은 같은 마크업: 카드 안 머리(프로필+이름·날짜) → 본문 → 아래줄
+var CENTER = `.dt-body,.dt-foot{margin-inline:auto;max-width:var(--t-text-width)}`;
 export var STYLES = [
   {
     id: "letter",
@@ -134,24 +142,25 @@ export var STYLES = [
     desc: "종이 위에 쓴 편지. 명조, 넉넉한 여백, 우표 같은 프로필",
     mode: "light",
     accent: "#9a6b4f",
-    vars: { radius: 4, fontSize: 15.5, lineHeight: 1.95, cardWidth: 760, gap: 22, avatarSize: 52, avatarRadius: 3 },
+    vars: { radius: 4, fontSize: 15.5, lineHeight: 1.95, cardWidth: 820, gap: 26, avatarSize: 56, avatarRadius: 3 },
     font: "serif",
     avatar: "stamp",
-    css: `.dt{flex-direction:column;align-items:stretch;gap:0}
-.dt-av{position:relative;z-index:1;align-self:flex-end;margin:0 18px -26px 0}
-.dt-card{background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(26px*var(--t-space)) calc(28px*var(--t-space)) calc(18px*var(--t-space))}
-.dt-head{border-bottom:1px solid var(--t-line);padding-bottom:8px;margin-bottom:10px}
+    css: `.dt-card{background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(24px*var(--t-space)) calc(30px*var(--t-space)) calc(16px*var(--t-space))}
+.dt-head{border-bottom:1px solid var(--t-line);padding-bottom:calc(12px*var(--t-space));margin-bottom:calc(16px*var(--t-space))}
+.dt-av{order:2;margin-left:auto}
 .dt-name{font-size:1.15em;letter-spacing:.02em}
-.dt-date{margin-left:auto;font-style:italic}
+.dt-date{font-style:italic}
 .dt-user .dt-card{background-color:var(--t-tint)}
-.dt-body,.dt-foot{margin-inline:auto;max-width:var(--t-text-width)}`,
+.dt-foot{border-top:1px dotted var(--t-line);padding-top:8px}
+${CENTER}
+@media (max-width:600px){.dt-card{padding:16px 16px 12px}}`,
     deco: [
-      { id: "lines", name: "줄 노트", on: true, css: `.dt-card{background-image:repeating-linear-gradient(transparent 0 calc(var(--t-font-size)*var(--t-line-height) - 1px),var(--t-tint) 0 calc(var(--t-font-size)*var(--t-line-height)))}` },
+      { id: "lines", name: "줄 노트", on: true, css: `.dt-body{background-image:repeating-linear-gradient(transparent 0 calc(var(--t-font-size)*var(--t-line-height) - 1px),var(--t-tint) 0 calc(var(--t-font-size)*var(--t-line-height)))}
+.dt-user .dt-body{background-image:repeating-linear-gradient(transparent 0 calc(var(--t-font-size)*var(--t-line-height) - 1px),var(--t-line) 0 calc(var(--t-font-size)*var(--t-line-height)))}` },
       { id: "salute", name: "To. / From.", on: true, css: `.dt-name::before{content:"To. ";font-weight:400;color:var(--t-muted)}
 .dt-char .dt-name::before{content:"From. "}` },
-      { id: "shadow", name: "종이 그림자", on: true, css: `.dt-card{box-shadow:0 6px 22px rgb(0 0 0/var(--t-shadow))}` },
-      { id: "seal", name: "봉인 도장", on: false, css: `.dt-card{position:relative}
-.dt-char .dt-card::after{content:"";position:absolute;right:18px;bottom:-12px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--t-accent2),var(--t-accent));box-shadow:0 2px 4px rgb(0 0 0/.25)}` }
+      { id: "shadow", name: "종이 그림자", on: true, css: `.dt-card{box-shadow:0 1px 0 var(--t-line),0 8px 26px rgb(0 0 0/var(--t-shadow))}` },
+      { id: "seal", name: "봉인 도장", on: false, css: `.dt-char .dt-card::after{content:"";position:absolute;right:22px;bottom:-12px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--t-accent2),var(--t-accent));box-shadow:0 2px 4px rgb(0 0 0/.25)}` }
     ]
   },
   {
@@ -160,24 +169,26 @@ export var STYLES = [
     desc: "익숙한 메신저 말풍선. 내 말은 오른쪽, 대표색 풍선",
     mode: "dark",
     accent: "#7c5cf0",
-    vars: { radius: 18, fontSize: 15, lineHeight: 1.65, cardWidth: 860, gap: 10, avatarSize: 40, avatarRadius: 50 },
+    vars: { radius: 18, fontSize: 15, lineHeight: 1.65, cardWidth: 860, gap: 12, avatarSize: 34, avatarRadius: 50 },
     font: "sans",
     avatar: "circle",
-    css: `.dt-card{max-width:min(78%,640px)}
-.dt-head{margin:0 4px 4px}
-.dt-name{font-size:.85em;font-weight:600}
-.dt-body{background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(10px*var(--t-space)) calc(14px*var(--t-space))}
-.dt-user{flex-direction:row-reverse}
-.dt-user .dt-av{display:none}
-.dt-user .dt-card{display:flex;flex-direction:column;align-items:flex-end}
-.dt-user .dt-head{display:none}
-.dt-user .dt-body{background:var(--t-user-bubble);border-color:transparent}
-.dt-user .dt-body,.dt-user .dt-body .chattext,.dt-user .dt-body em,.dt-user .dt-body strong,.dt-user .dt-body mark{color:var(--t-on-user)}
-.dt-user .dt-foot{justify-content:flex-end}`,
+    css: `.dt-card{display:flex;flex-direction:column;align-items:flex-start}
+.dt-head{gap:8px;margin:0 0 6px}
+.dt-meta{flex-direction:row;align-items:baseline;gap:8px}
+.dt-name{font-size:.88em;font-weight:600}
+.dt-body{max-width:min(82%,var(--t-text-width));margin-left:calc(var(--t-avatar-size) + 8px);background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(10px*var(--t-space)) calc(14px*var(--t-space))}
+.dt-foot{margin-left:calc(var(--t-avatar-size) + 8px);margin-top:4px;justify-content:flex-start}
+.dt-user .dt-card{align-items:flex-end}
+.dt-user .dt-head{flex-direction:row-reverse}
+.dt-user .dt-meta{flex-direction:row-reverse}
+.dt-user .dt-body{margin-left:0;margin-right:calc(var(--t-avatar-size) + 8px);background:var(--t-user-bubble);border-color:transparent}
+.dt-user .dt-foot{margin-left:0;margin-right:calc(var(--t-avatar-size) + 8px);justify-content:flex-end}
+.dt-user .dt-body,.dt-user .dt-body .chattext,.dt-user .dt-body em,.dt-user .dt-body strong,.dt-user .dt-body mark,.dt-user .dt-body q{color:var(--t-on-user)}
+@media (max-width:600px){.dt-body{max-width:92%}}`,
     deco: [
       { id: "tail", name: "말풍선 꼬리", on: true, css: `.dt-body{border-top-left-radius:4px}
 .dt-user .dt-body{border-top-left-radius:var(--t-radius);border-top-right-radius:4px}` },
-      { id: "name", name: "이름 표시", on: true, css: "", off: `.dt-head .dt-name{display:none}` },
+      { id: "name", name: "이름 표시", on: true, css: "", off: `.dt-name{display:none}` },
       { id: "grad", name: "그라데이션 풍선", on: false, css: `.dt-user .dt-body{background:linear-gradient(135deg,var(--t-user-bubble),var(--t-user-bubble2))}` },
       { id: "shadow", name: "떠 있는 풍선", on: false, css: `.dt-body{box-shadow:0 3px 12px rgb(0 0 0/var(--t-shadow))}` }
     ]
@@ -188,71 +199,80 @@ export var STYLES = [
     desc: "군더더기 없는 카드. 얇은 선, 왼쪽 대표색 줄",
     mode: "dark",
     accent: "#4f9cf7",
-    vars: { radius: 12, fontSize: 15, lineHeight: 1.75, cardWidth: 820, gap: 14, avatarSize: 34, avatarRadius: 10 },
+    vars: { radius: 12, fontSize: 15, lineHeight: 1.75, cardWidth: 860, gap: 14, avatarSize: 36, avatarRadius: 10 },
     font: "sans",
-    avatar: "none",
+    avatar: "style",
     css: `.dt-card{background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(14px*var(--t-space)) calc(18px*var(--t-space)) calc(10px*var(--t-space))}
+.dt-head{margin-bottom:calc(10px*var(--t-space))}
+.dt-meta{flex-direction:row;align-items:center;gap:10px}
 .dt-name{font-size:.9em;letter-spacing:.03em}
-.dt-head{margin-bottom:6px}
+.dt-date{margin-left:auto}
 .dt-user .dt-card{background:var(--t-tint)}
-.dt-body,.dt-foot{margin-inline:auto;max-width:var(--t-text-width)}`,
+${CENTER}`,
     deco: [
       { id: "bar", name: "왼쪽 대표색 줄", on: true, css: `.dt-card{border-left:3px solid var(--t-accent)}
 .dt-user .dt-card{border-left-color:var(--t-muted)}` },
-      { id: "dot", name: "이름 앞 점", on: true, css: `.dt-head::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--t-accent);align-self:center}
-.dt-user .dt-head::before{background:var(--t-muted)}` },
+      { id: "dot", name: "이름 앞 점", on: true, css: `.dt-meta::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--t-accent)}
+.dt-user .dt-meta::before{background:var(--t-muted)}` },
       { id: "caps", name: "대문자 이름", on: true, css: `.dt-name{text-transform:uppercase}` },
-      { id: "glow", name: "은은한 빛", on: false, css: `.dt-char .dt-card{box-shadow:0 0 0 1px color-mix(in srgb,var(--t-accent) 25%,transparent),0 8px 28px color-mix(in srgb,var(--t-accent) calc(var(--t-shadow)*100%),transparent)}` }
+      { id: "glow", name: "은은한 빛", on: false, css: `.dt-char .dt-card{box-shadow:0 0 0 1px color-mix(in srgb,var(--t-accent) 25%,transparent),0 8px 28px color-mix(in srgb,var(--t-accent) 18%,transparent)}` }
     ]
-  }
-  ,{
+  },
+  {
     id: "diary",
     name: "밤의 일기",
-    desc: "별이 뜬 밤하늘 일기장. 그라데이션 테두리, 날짜 배지, 가운데 글줄",
+    desc: "별이 뜬 밤하늘 일기장. 우표 프로필, 날짜 배지, 점선 구분, 가운데 글줄",
     mode: "dark",
     accent: "#6a7cf0",
-    vars: { radius: 16, fontSize: 15, lineHeight: 1.85, cardWidth: 900, gap: 18, avatarSize: 64, avatarRadius: 4 },
+    vars: { radius: 14, fontSize: 15, lineHeight: 1.85, cardWidth: 960, gap: 22, avatarSize: 92, avatarRadius: 3 },
     font: "sans",
     avatar: "stamp",
-    css: `.dt{flex-direction:column;align-items:stretch;gap:0}
-.dt-card{position:relative;border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(18px*var(--t-space)) calc(22px*var(--t-space)) calc(10px*var(--t-space));background:linear-gradient(180deg,color-mix(in srgb,var(--t-accent) 10%,var(--t-paper)),var(--t-paper) 40%)}
-.dt-av{position:relative;z-index:1;margin:0 0 -40px 18px}
-.dt-head{flex-direction:column;align-items:flex-start;gap:6px;padding-left:calc(var(--t-avatar-size) + 22px);min-height:42px;border-bottom:1px dashed var(--t-line);padding-bottom:12px;margin-bottom:14px}
-.dt-name{font-size:.72em;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--t-muted)}
-.dt-date{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border:1px solid var(--t-line);border-radius:99px;font-size:.75em}
+    css: `.dt-card{border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(20px*var(--t-space)) calc(26px*var(--t-space)) calc(10px*var(--t-space));background:linear-gradient(160deg,color-mix(in srgb,var(--t-accent) 14%,var(--t-paper)),var(--t-paper) 55%)}
+.dt-head{align-items:flex-end;gap:16px;padding-bottom:calc(16px*var(--t-space));margin-bottom:calc(20px*var(--t-space));border-bottom:1px dashed var(--t-line)}
+.dt-meta{gap:8px;padding-bottom:4px}
+.dt-name{font-size:.72em;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--t-muted)}
+.dt-char .dt-name::before{content:"FROM · ";opacity:.7}
+.dt-user .dt-name::before{content:"TO · ";opacity:.7}
+.dt-date{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border:1px solid var(--t-line);border-radius:99px;font-size:.74em;color:var(--t-muted)}
 .dt-date::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--t-accent)}
-.dt-body,.dt-foot{margin-inline:auto;max-width:var(--t-text-width)}
-.dt-foot{border-top:1px dashed var(--t-line);padding-top:8px;max-width:none}
-.dt-user .dt-card{background:var(--t-tint)}
-.dt-user .dt-head{padding-left:0}
-@media (max-width:600px){.dt-av{margin-left:10px}.dt-head{padding-left:calc(var(--t-avatar-size) + 14px)}}`,
+.dt-foot{max-width:none;margin-top:calc(16px*var(--t-space));padding-top:8px;border-top:1px dashed var(--t-line)}
+.dt-body{margin-inline:auto;max-width:var(--t-text-width)}
+.dt-user .dt-card{background:linear-gradient(160deg,color-mix(in srgb,var(--t-accent2) 12%,var(--t-tint)),var(--t-tint) 55%)}
+.dt-user .dt-head{flex-direction:row-reverse}
+.dt-user .dt-meta{align-items:flex-end}
+@media (max-width:600px){.dt-card{padding:14px 14px 8px}.dt-av{width:64px;height:64px}}`,
     deco: [
-      { id: "stars", name: "별 반짝임", on: true, css: `.dt-char .dt-card::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:.6;background:radial-gradient(1px 1px at 20% 30%,var(--t-ink),transparent),radial-gradient(1px 1px at 70% 12%,var(--t-ink),transparent),radial-gradient(1.5px 1.5px at 88% 40%,var(--t-accent2),transparent),radial-gradient(1px 1px at 45% 8%,var(--t-ink),transparent)}` },
-      { id: "frame", name: "그라데이션 테두리", on: true, css: `.dt-card{border-color:transparent;background-clip:padding-box;box-shadow:0 0 0 1px color-mix(in srgb,var(--t-accent) 45%,transparent),0 0 0 2px color-mix(in srgb,var(--t-accent2) 20%,transparent)}` },
+      { id: "stars", name: "별 반짝임", on: true, css: `.dt-card::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:.55;background:radial-gradient(1px 1px at 22% 18%,var(--t-ink),transparent),radial-gradient(1px 1px at 68% 9%,var(--t-ink),transparent),radial-gradient(1.5px 1.5px at 86% 26%,var(--t-accent2),transparent),radial-gradient(1px 1px at 47% 4%,var(--t-ink),transparent),radial-gradient(1px 1px at 93% 7%,var(--t-ink),transparent)}` },
+      { id: "frame", name: "그라데이션 테두리", on: true, css: `.dt-card{border-color:color-mix(in srgb,var(--t-accent) 35%,var(--t-line))}
+.dt-card::after{content:"";position:absolute;left:18px;right:18px;top:-1px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--t-accent),var(--t-accent2),transparent)}` },
       { id: "quote", name: "대사 강조색", on: true, css: `.dt-body q,.dt-body mark{color:var(--t-accent2)}` },
-      { id: "shadow", name: "깊은 그림자", on: false, css: `.dt-card{box-shadow:0 14px 40px rgb(0 0 0/calc(var(--t-shadow)*2))}` }
+      { id: "shadow", name: "깊은 그림자", on: true, css: `.dt-card{box-shadow:0 14px 40px rgb(0 0 0/calc(var(--t-shadow)*2.2))}` }
     ]
   },
   {
     id: "novel",
     name: "비주얼 노벨",
-    desc: "게임 대사창. 이름표가 붙은 반투명 상자, 큰 초상화",
+    desc: "게임 대사창. 이름표가 붙은 반투명 상자, 상자 안 큰 초상화",
     mode: "dark",
     accent: "#e07a9a",
-    vars: { radius: 10, fontSize: 15.5, lineHeight: 1.8, cardWidth: 880, gap: 20, avatarSize: 96, avatarRadius: 10 },
+    vars: { radius: 10, fontSize: 15.5, lineHeight: 1.8, cardWidth: 900, gap: 24, avatarSize: 96, avatarRadius: 10 },
     font: "round",
     avatar: "style",
-    css: `.dt{align-items:flex-end;gap:14px}
-.dt-av{border:2px solid var(--t-line);box-shadow:0 6px 18px rgb(0 0 0/var(--t-shadow))}
-.dt-card{position:relative;margin-top:16px;background:color-mix(in srgb,var(--t-paper) 88%,transparent);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(26px*var(--t-space)) calc(20px*var(--t-space)) calc(10px*var(--t-space))}
-.dt-head{position:absolute;top:-15px;left:16px;padding:4px 14px;border-radius:calc(var(--t-radius)*.8);background:var(--t-accent);box-shadow:0 3px 10px rgb(0 0 0/var(--t-shadow))}
+    css: `.dt{padding-top:16px}
+.dt-card{display:grid;grid-template-columns:var(--t-avatar-size) minmax(0,1fr);column-gap:calc(18px*var(--t-space));align-items:start;background:color-mix(in srgb,var(--t-paper) 90%,transparent);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(24px*var(--t-space)) calc(20px*var(--t-space)) calc(10px*var(--t-space))}
+.dt-head{display:contents}
+.dt-av{grid-column:1;grid-row:1/3;border:2px solid var(--t-line);box-shadow:0 6px 18px rgb(0 0 0/var(--t-shadow))}
+.dt-meta{position:absolute;top:-15px;left:calc(var(--t-avatar-size) + 30px);flex-direction:row;align-items:center;gap:8px;padding:4px 14px;border-radius:calc(var(--t-radius)*.8);background:var(--t-accent);box-shadow:0 3px 10px rgb(0 0 0/var(--t-shadow))}
 .dt-name{color:var(--t-on-accent);font-size:.9em}
-.dt-date{display:none}
-.dt-user{flex-direction:row-reverse}
-.dt-user .dt-av{display:none}
-.dt-user .dt-head{left:auto;right:16px;background:var(--t-muted)}
-.dt-user .dt-name{color:var(--t-paper)}
-@media (max-width:600px){.dt{flex-direction:column;align-items:stretch}.dt-av{width:64px;height:64px}}`,
+.dt-date{color:var(--t-on-accent);opacity:.75;font-size:.72em}
+.dt-body{grid-column:2;grid-row:1}
+.dt-foot{grid-column:2;grid-row:2}
+.dt-user .dt-card{grid-template-columns:minmax(0,1fr) var(--t-avatar-size)}
+.dt-user .dt-av{grid-column:2}
+.dt-user .dt-body,.dt-user .dt-foot{grid-column:1}
+.dt-user .dt-meta{left:auto;right:calc(var(--t-avatar-size) + 30px);background:var(--t-muted)}
+.dt-user .dt-name,.dt-user .dt-date{color:var(--t-paper)}
+@media (max-width:600px){.dt-card{--t-avatar-size:56px;column-gap:12px;padding:22px 12px 8px}.dt-meta{left:12px}.dt-user .dt-meta{right:12px}}`,
     deco: [
       { id: "arrow", name: "다음 표시 ▼", on: true, css: `.dt-char .dt-body::after{content:"▼";display:block;text-align:right;font-size:10px;color:var(--t-accent-text);animation:dt-blink 1.4s ease-in-out infinite}
 @keyframes dt-blink{50%{opacity:.25}}` },
@@ -342,10 +362,13 @@ export function normalizeChoice(raw) {
 // 계열별 바깥 정리 (리스 기본 말풍선·배경을 비우고 바탕색을 맞춘다)
 var WRAP = {
   risu: `body,.bg-bgcolor{background:var(--t-bg)!important}
-.risu-chat{background:transparent!important;border:0!important}`,
+.risu-chat{background:transparent!important;border:0!important}
+.risu-chat div:has(> .dt),.risu-chat div:has(> .x-risu-dt){width:100%;max-width:none;flex:1 1 auto;min-width:0}`,
   pocket: `body{background:var(--t-bg)!important}
 .risu-chat,.risu-chat>div{background:transparent!important;border:0!important}
-.risu-chat .chat-width{max-width:var(--t-card-width);margin:0 auto;color:var(--t-muted);font-size:11px}`
+.risu-chat .chat-width{max-width:var(--t-card-width);margin:0 auto;color:var(--t-muted);font-size:11px}
+/* 내 글 칸이 내용 너비로 줄어 한쪽에 붙지 않게: 테마가 든 칸은 줄 전체를 쓴다 */
+.risu-chat>div:has(.dt,.x-risu-dt),.risu-chat>div>div:has(.dt,.x-risu-dt),.risu-chat div:has(> .dt),.risu-chat div:has(> .x-risu-dt){width:100%!important;max-width:none!important;flex:1 1 auto!important;min-width:0!important;margin-left:0!important;margin-right:0!important;align-self:stretch!important}`
 };
 
 var scaleR = (base, round) => round <= 2 ? 0 : Math.round(clamp(Math.max(base, 2) * 2 ** ((round - 50) / 25), 0, 32));
@@ -389,6 +412,21 @@ export function compileBuilder(choice, target) {
 // 포켓 계열 등은 커스텀 HTML의 class 앞에 "x-risu-"를 붙인다 (dt-card → x-risu-dt-card).
 // 어느 쪽이든 맞도록 .dt 선택자마다 x-risu- 판을 함께 단다.
 var XR = (sel) => sel.replace(/\.dt(?=[-\w]*)/g, ".x-risu-dt");
+// 괄호 밖 쉼표로만 나눈다 (:has(a,b) 보호)
+function splitTop(sel) {
+  const out = [];
+  let d = 0, cur = "";
+  for (const ch of sel) {
+    if (ch === "(") d++;
+    else if (ch === ")") d--;
+    if (ch === "," && d === 0) {
+      out.push(cur);
+      cur = "";
+    } else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
 export function dualScope(css) {
   let out = "", i = 0;
   while (i < css.length) {
@@ -409,9 +447,9 @@ export function dualScope(css) {
     if (/^@media|^@supports/i.test(h)) out += `${head}{${dualScope(body)}}`;
     else if (h.startsWith("@") || !/\.dt/.test(h)) out += `${head}{${body}}`;
     else {
-      const sels = h.split(",").map((x) => x.trim());
+      const sels = splitTop(h.replace(/\/\*[\s\S]*?\*\//g, "")).map((x) => x.trim()).filter(Boolean);
       const all = [...sels, ...sels.filter((x) => /\.dt/.test(x)).map(XR)];
-      out += `${head.match(/^\s*/)[0]}${all.join(",")}{${body}}`;
+      out += `\n${all.join(",")}{${body}}`;
     }
     i = j;
   }
@@ -445,7 +483,7 @@ function cleanDecl(body) {
     .replace(/[<>]/g, "")
     .trim();
 }
-var okSel = (sel) => sel.split(",").every((x) => /^\s*\.dt([-\w]*)?([\s.:>+~\[(]|$)/.test(x));
+var okSel = (sel) => splitTop(sel).every((x) => /^\s*\.dt([-\w]*)?([\s.:>+~\[(]|$)/.test(x));
 // 중괄호를 직접 세어 규칙을 나눈다. @media는 안쪽을 다시 거른다. @keyframes는 이름이 dt-로 시작할 때만
 export function sanitizeAiCss(css, depth = 0) {
   let src = String(css ?? "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/@import[^;]*;?/gi, "").replace(/@charset[^;]*;?/gi, "");
@@ -485,17 +523,20 @@ export function extractCss(text) {
 // AI가 지킬 계약: 일반 리스·포켓리스 어디서든 똑같이 보이도록
 var CONTRACT = `You write CSS for a RisuAI chat theme. The SAME CSS must work in both original RisuAI and PocketRisu-family apps (PocketRisu, RisuBard...). The app already handles the outer differences; you ONLY style the message markup below.
 
-Markup of every message (role is "char" or "user"):
-<div class="dt dt-char|dt-user">
-  <div class="dt-av"><risuicon/></div>            avatar (an <img> or div inside)
-  <div class="dt-card">
-    <div class="dt-head"><span class="dt-name"/><span class="dt-date"/></div>
+Markup of every message (role is "char" or "user"). The avatar is INSIDE each message card for both roles:
+<div class="dt dt-char|dt-user">                    full-width row (already width:100%, centered, max-width var(--t-card-width))
+  <div class="dt-card">                             the message box
+    <div class="dt-head">                           flex row: avatar + meta
+      <div class="dt-av"><risuicon/></div>          avatar (an <img> or div inside)
+      <div class="dt-meta"><span class="dt-name"/><span class="dt-date"/></div>
+    </div>
     <div class="dt-body"><risutextbox/></div>       message text: p, em, strong, mark, q, code, img, a, ul, blockquote; may be wrapped in .chattext
     <div class="dt-foot"><risugeninfo/><risubuttons/></div>   small icon buttons (regenerate, edit, delete...)
   </div>
 </div>
 
-A base layer already exists: .dt is flex row with gap; .dt-av sized by vars; .dt-card flex:1; text color/size/line-height from vars; .dt-foot is a small muted row.
+A base layer already exists: .dt is a full-width block; .dt-head is a flex row; .dt-av sized by vars with overflow hidden; .dt-meta is a column; text color/size/line-height from vars; .dt-foot is a small muted row with space-between.
+Keep the avatar inside .dt-card. User messages must stay full width (never shrink-wrap or stick to one side unless it is a deliberate bubble layout with align-items:flex-end).
 
 Variables you MUST use for all colors, sizes and fonts (never hard-code colors except transparent / rgb(0 0 0/x) for shadows):
 --t-bg --t-paper --t-tint --t-line --t-ink --t-muted --t-accent --t-accent2 --t-accent-text --t-on-accent --t-user-bubble --t-user-bubble2 --t-on-user (text on user bubble) --t-shadow (0~0.2 alpha number, use as rgb(0 0 0/var(--t-shadow)))
@@ -503,7 +544,7 @@ Variables you MUST use for all colors, sizes and fonts (never hard-code colors e
 color-mix(in srgb, var(--t-accent) 30%, transparent) is allowed.
 
 Rules (anything breaking them is deleted automatically):
-- Every selector starts with .dt, .dt-char, .dt-user, .dt-av, .dt-card, .dt-head, .dt-name, .dt-date, .dt-body, .dt-foot (descendants allowed, e.g. ".dt-user .dt-body p"). No :root, html, body, .risu-chat, or app classes.
+- Every selector starts with .dt, .dt-char, .dt-user, .dt-av, .dt-card, .dt-head, .dt-meta, .dt-name, .dt-date, .dt-body, .dt-foot (descendants allowed, e.g. ".dt-user .dt-body p"). No :root, html, body, .risu-chat, or app classes.
 - No @import, no url(), no !important, no position:fixed/sticky. position:absolute only inside an element you set position:relative on.
 - ::before/::after with text or gradients for decoration are welcome. @keyframes names must start with dt- and stay subtle.
 - Text must stay readable: text on --t-paper/--t-tint uses --t-ink/--t-muted; text on user bubble uses --t-on-user (also set it for em, strong, mark inside).
