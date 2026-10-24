@@ -16,6 +16,7 @@ import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModu
 
 var VERSION = typeof __VERSION__ !== "undefined" ? __VERSION__ : "dev";
 var TITLE = "Dusk Atelier";
+var PART_CHANNEL = "dusk-atelier-parts-v1";
 async function start() {
   const raw = globalThis.risuai ?? globalThis.Risuai;
   if (!raw) return;
@@ -34,6 +35,12 @@ async function start() {
   };
   const wrapped = { setCharacterToIndex: friendly((...a) => raw.setCharacterToIndex(...a)), setDatabaseLite: friendly((...a) => raw.setDatabaseLite(...a)) };
   const api = new Proxy(raw, { get: (t, k) => k in wrapped ? wrapped[k] : t[k] });
+  const parts = {
+    open: async (id) => {
+      await api.postPluginChannelMessage(id, PART_CHANNEL, { protocol: 1, type: "open", part: id === "dusk_atelier_theme_builder" ? "theme-builder" : id });
+      await api.hideContainer();
+    }
+  };
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {
     if (!document.getElementById("rb-style")) document.head.appendChild(h("style", { id: "rb-style" }, CSS2));
@@ -137,6 +144,15 @@ async function start() {
   }
   app = createApp(api, { legacy, version: VERSION, onPersonaChanged: () => refreshPersonaHandlers().catch(() => {
   }) });
+  app.ctx.parts = parts;
+  await api.addPluginChannelListener(PART_CHANNEL, async (message, meta) => {
+    if (!meta?.sender || message?.protocol !== 1) return;
+    if (message.type === "closed") await api.showContainer("fullscreen");
+    else if (message.type === "open-studio") {
+      await api.showContainer("fullscreen");
+      app?.ctx.go("settings", "themestudio");
+    }
+  });
   app.ctx.watcher = watcher;
   app.ctx.quickImport = quickImport;
   app.ctx.loreRuntime = loreRuntime;

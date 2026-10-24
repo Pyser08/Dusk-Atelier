@@ -1,4 +1,12 @@
 {
   "schemaVersion": 1,
-  "parts": []
+  "parts": [
+    {
+      "id": "dusk_atelier_theme_builder",
+      "displayName": "Dusk Atelier 테마 빌더",
+      "version": "0.1.0",
+      "pluginUrl": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/test/parts-updates/parts/theme-builder.js",
+      "description": "기존 테마 빌더 화면을 별도 파츠로 실행합니다."
+    }
+  ]
 }
