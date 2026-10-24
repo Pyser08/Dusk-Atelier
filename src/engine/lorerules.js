@@ -447,7 +447,8 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     if (!a) return null;
     const place = splitKeys(a.place);
     if (place.length && keyHit(place, textsFor(it.rule.scan), { whole: !!it.rule.whole })) return "장소 키";
-    const m = a.members.find((rid) => active.has(rid) && !String(active.get(rid).why).startsWith(`소속: ${it.entry.comment || it.rid}`));
+    // 다른 소속 때문에 켜진 구성원은 세지 않는다 (소속끼리 줄줄이 켜지는 것 방지)
+    const m = a.members.find((rid) => active.has(rid) && !String(active.get(rid).why).startsWith("소속"));
     return m ? `구성원 '${nameOf(m)}' 켜짐` : null;
   };
   const expanded = new Set();

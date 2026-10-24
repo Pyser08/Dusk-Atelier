@@ -8,7 +8,7 @@
 //   → 리롤하면 확률이 새로 굴려진 결정이 쓰이고, 그냥 다음 입력을 하면 입력 때 다시 계산한다.
 //   리롤이 실제로 일어났는지는 다음 입력 때 마지막 응답 시각으로 판단해 기록(한 번만·쿨다운)에 반영한다.
 // 발동 기록은 채팅 변수 da_state에 둔다 (채팅 복사·분기에 따라감, 현재 턴 이상 기록은 무시하므로 되돌리기에도 맞다).
-import { STATE_VAR, MAX_HIST, applySets, collectManaged, evaluate, gateValues, setTargets } from '../engine/lorerules.js';
+import { STATE_VAR, MAX_HIST, affOf, applySets, collectManaged, evaluate, gateValues, setTargets } from '../engine/lorerules.js';
 
 const sv = (k) => "$" + k;
 
@@ -68,7 +68,12 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
   };
   const toMsgs = (chat) => (chat?.message ?? []).map((m) => ({ role: m.role === "user" ? "user" : "char", data: m.data ?? "" }));
   const turnOf = (msgs) => msgs.filter((m) => m.role === "user").length;
-  const hasRandom = (items) => items.some((it) => Number(it.rule.prob ?? 100) < 100 || (it.rule.chain ?? []).some((c) => Number(c.prob ?? 100) < 100));
+  const hasRandom = (items) => items.some((it) => {
+    if (Number(it.rule.prob ?? 100) < 100 || (it.rule.chain ?? []).some((c) => Number(c.prob ?? 100) < 100)) return true;
+    // 소속: 구성원 확률이 100 미만이거나 최대 인원이 있으면 리롤 때 다시 뽑는다
+    const a = affOf(it.entry);
+    return !!a && (a.max !== "" || a.def < 100 || Object.values(a.prob).some((p) => p !== "" && Number(p) < 100));
+  });
 
   // 변수 값 읽기·쓰기 보조 (scriptstate 키는 '$이름')
   const finalVars = (base, targets, out) => {
