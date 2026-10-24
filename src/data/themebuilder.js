@@ -66,16 +66,18 @@ export function ensureContrast(fg, bg, min = 4.5) {
 }
 
 // 대표색 하나 + 밝기 모드 → 팔레트
-export function makePalette(accent, mode = "dark") {
-  const a = hexToOklch(accent), h = a.h, c = Math.min(a.c, 0.2);
+// vivid 0~100 (차분↔화려): 바탕 채도·대표색 채도를 함께 민다
+export function makePalette(accent, mode = "dark", vivid = 50) {
+  const f = 0.35 + 1.3 * clamp(vivid, 0, 100) / 100;
+  const a = hexToOklch(accent), h = a.h, c = Math.min(a.c * (0.55 + 0.9 * clamp(vivid, 0, 100) / 100), 0.24), cs = Math.min(a.c, 0.2) * f;
   const dark = mode === "dark";
   const P = dark ? {
-    bg: oklch(0.17, c * 0.12, h), paper: oklch(0.22, c * 0.16, h), tint: oklch(0.27, c * 0.28, h),
-    line: oklch(0.34, c * 0.22, h), ink: oklch(0.93, c * 0.05, h), muted: oklch(0.72, c * 0.12, h),
+    bg: oklch(0.17, cs * 0.12, h), paper: oklch(0.22, cs * 0.16, h), tint: oklch(0.27, cs * 0.28, h),
+    line: oklch(0.34, cs * 0.22, h), ink: oklch(0.93, cs * 0.05, h), muted: oklch(0.72, cs * 0.12, h),
     accent: oklch(clamp(a.l, 0.62, 0.8), c, h), accent2: oklch(clamp(a.l, 0.62, 0.8), c, (h + 40) % 360)
   } : {
-    bg: oklch(0.95, c * 0.08, h), paper: oklch(0.985, c * 0.04, h), tint: oklch(0.93, c * 0.2, h),
-    line: oklch(0.87, c * 0.15, h), ink: oklch(0.27, c * 0.12, h), muted: oklch(0.5, c * 0.15, h),
+    bg: oklch(0.95, cs * 0.08, h), paper: oklch(0.985, cs * 0.04, h), tint: oklch(0.93, cs * 0.2, h),
+    line: oklch(0.87, cs * 0.15, h), ink: oklch(0.27, cs * 0.12, h), muted: oklch(0.5, cs * 0.15, h),
     accent: oklch(clamp(a.l, 0.45, 0.6), c, h), accent2: oklch(clamp(a.l, 0.45, 0.6), c, (h + 40) % 360)
   };
   P.ink = ensureContrast(P.ink, P.paper, 7);
@@ -83,7 +85,9 @@ export function makePalette(accent, mode = "dark") {
   P.accentText = ensureContrast(P.accent, P.paper, 4.5);
   P.onAccent = contrast("#ffffff", P.accent) >= contrast("#111111", P.accent) ? "#ffffff" : "#111111";
   P.userBubble = ensureBubble(P.accent, P, dark);
-  P.onUser = ensureContrast(P.onAccent, P.userBubble, 4.5);
+  P.userBubble2 = oklch(hexToOklch(P.userBubble).l, hexToOklch(P.userBubble).c, (hexToOklch(P.userBubble).h + 40) % 360);
+  P.onUser = ensureContrast(ensureContrast(P.onAccent, P.userBubble, 4.5), P.userBubble2, 4.5);
+  P.shadow = (0.04 + 0.14 * clamp(vivid, 0, 100) / 100).toFixed(3);
   return P;
 }
 function ensureBubble(accent, P, dark) {
@@ -121,6 +125,7 @@ var BASE = `.dt{display:flex;gap:12px;align-items:flex-start;max-width:var(--t-c
 .dt-foot button:hover{color:var(--t-accent-text)}`;
 
 // ── 스타일 ──
+// css: 늘 들어가는 모양 / deco: 켜고 끌 수 있는 장식 / 여백은 calc(..*var(--t-space))
 export var STYLES = [
   {
     id: "letter",
@@ -129,18 +134,23 @@ export var STYLES = [
     mode: "light",
     accent: "#9a6b4f",
     vars: { radius: 4, fontSize: 15.5, lineHeight: 1.95, cardWidth: 760, gap: 22, avatarSize: 52, avatarRadius: 3 },
-    fontBody: "'Noto Serif KR','Nanum Myeongjo','Batang',serif",
-    fontDisplay: "'Noto Serif KR','Nanum Myeongjo',serif",
+    font: "serif",
+    avatar: "stamp",
     css: `.dt{flex-direction:column;align-items:stretch;gap:0}
-.dt-av{position:relative;z-index:1;align-self:flex-end;margin:0 18px -26px 0;padding:4px;background:var(--t-paper);border:2px dashed var(--t-line);border-radius:var(--t-avatar-radius);box-shadow:0 2px 6px rgb(0 0 0/.12);transform:rotate(3deg)}
-.dt-av>*{border-radius:2px}
-.dt-card{background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:26px 28px 18px;box-shadow:0 6px 22px rgb(0 0 0/.08);background-image:repeating-linear-gradient(transparent 0 calc(var(--t-font-size)*var(--t-line-height) - 1px),var(--t-tint) 0 calc(var(--t-font-size)*var(--t-line-height)))}
+.dt-av{position:relative;z-index:1;align-self:flex-end;margin:0 18px -26px 0}
+.dt-card{background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(26px*var(--t-space)) calc(28px*var(--t-space)) calc(18px*var(--t-space))}
 .dt-head{border-bottom:1px solid var(--t-line);padding-bottom:8px;margin-bottom:10px}
 .dt-name{font-size:1.15em;letter-spacing:.02em}
-.dt-name::before{content:"To. ";font-weight:400;color:var(--t-muted)}
-.dt-char .dt-name::before{content:"From. "}
 .dt-date{margin-left:auto;font-style:italic}
-.dt-user .dt-card{background-color:var(--t-tint)}`
+.dt-user .dt-card{background-color:var(--t-tint)}`,
+    deco: [
+      { id: "lines", name: "줄 노트", on: true, css: `.dt-card{background-image:repeating-linear-gradient(transparent 0 calc(var(--t-font-size)*var(--t-line-height) - 1px),var(--t-tint) 0 calc(var(--t-font-size)*var(--t-line-height)))}` },
+      { id: "salute", name: "To. / From.", on: true, css: `.dt-name::before{content:"To. ";font-weight:400;color:var(--t-muted)}
+.dt-char .dt-name::before{content:"From. "}` },
+      { id: "shadow", name: "종이 그림자", on: true, css: `.dt-card{box-shadow:0 6px 22px rgb(0 0 0/var(--t-shadow))}` },
+      { id: "seal", name: "봉인 도장", on: false, css: `.dt-card{position:relative}
+.dt-char .dt-card::after{content:"";position:absolute;right:18px;bottom:-12px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--t-accent2),var(--t-accent));box-shadow:0 2px 4px rgb(0 0 0/.25)}` }
+    ]
   },
   {
     id: "messenger",
@@ -149,19 +159,26 @@ export var STYLES = [
     mode: "dark",
     accent: "#7c5cf0",
     vars: { radius: 18, fontSize: 15, lineHeight: 1.65, cardWidth: 860, gap: 10, avatarSize: 40, avatarRadius: 50 },
-    fontBody: "'Pretendard','Noto Sans KR','Apple SD Gothic Neo',sans-serif",
-    fontDisplay: "'Pretendard','Noto Sans KR',sans-serif",
+    font: "sans",
+    avatar: "circle",
     css: `.dt-card{max-width:min(78%,640px)}
 .dt-head{margin:0 4px 4px}
 .dt-name{font-size:.85em;font-weight:600}
-.dt-body{background:var(--t-paper);border:1px solid var(--t-line);border-radius:4px var(--t-radius) var(--t-radius) var(--t-radius);padding:10px 14px}
+.dt-body{background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(10px*var(--t-space)) calc(14px*var(--t-space))}
 .dt-user{flex-direction:row-reverse}
 .dt-user .dt-av{display:none}
 .dt-user .dt-card{display:flex;flex-direction:column;align-items:flex-end}
 .dt-user .dt-head{display:none}
-.dt-user .dt-body{background:var(--t-user-bubble);border-color:transparent;border-radius:var(--t-radius) 4px var(--t-radius) var(--t-radius)}
+.dt-user .dt-body{background:var(--t-user-bubble);border-color:transparent}
 .dt-user .dt-body,.dt-user .dt-body .chattext,.dt-user .dt-body em,.dt-user .dt-body strong,.dt-user .dt-body mark{color:var(--t-on-user)}
-.dt-user .dt-foot{justify-content:flex-end}`
+.dt-user .dt-foot{justify-content:flex-end}`,
+    deco: [
+      { id: "tail", name: "말풍선 꼬리", on: true, css: `.dt-body{border-top-left-radius:4px}
+.dt-user .dt-body{border-top-left-radius:var(--t-radius);border-top-right-radius:4px}` },
+      { id: "name", name: "이름 표시", on: true, css: "", off: `.dt-head .dt-name{display:none}` },
+      { id: "grad", name: "그라데이션 풍선", on: false, css: `.dt-user .dt-body{background:linear-gradient(135deg,var(--t-user-bubble),var(--t-user-bubble2))}` },
+      { id: "shadow", name: "떠 있는 풍선", on: false, css: `.dt-body{box-shadow:0 3px 12px rgb(0 0 0/var(--t-shadow))}` }
+    ]
   },
   {
     id: "card",
@@ -170,19 +187,89 @@ export var STYLES = [
     mode: "dark",
     accent: "#4f9cf7",
     vars: { radius: 12, fontSize: 15, lineHeight: 1.75, cardWidth: 820, gap: 14, avatarSize: 34, avatarRadius: 10 },
-    fontBody: "'Pretendard','Noto Sans KR','Apple SD Gothic Neo',sans-serif",
-    fontDisplay: "'Pretendard','Noto Sans KR',sans-serif",
-    css: `.dt{flex-direction:column;gap:0}
-.dt-av{display:none}
-.dt-card{background:var(--t-paper);border:1px solid var(--t-line);border-left:3px solid var(--t-accent);border-radius:var(--t-radius);padding:14px 18px 10px}
-.dt-head::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--t-accent);align-self:center}
-.dt-name{font-size:.9em;letter-spacing:.03em;text-transform:uppercase}
+    font: "sans",
+    avatar: "none",
+    css: `.dt-card{background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(14px*var(--t-space)) calc(18px*var(--t-space)) calc(10px*var(--t-space))}
+.dt-name{font-size:.9em;letter-spacing:.03em}
 .dt-head{margin-bottom:6px}
-.dt-user .dt-card{background:var(--t-tint);border-left-color:var(--t-muted)}
-.dt-user .dt-head::before{background:var(--t-muted)}`
+.dt-user .dt-card{background:var(--t-tint)}`,
+    deco: [
+      { id: "bar", name: "왼쪽 대표색 줄", on: true, css: `.dt-card{border-left:3px solid var(--t-accent)}
+.dt-user .dt-card{border-left-color:var(--t-muted)}` },
+      { id: "dot", name: "이름 앞 점", on: true, css: `.dt-head::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--t-accent);align-self:center}
+.dt-user .dt-head::before{background:var(--t-muted)}` },
+      { id: "caps", name: "대문자 이름", on: true, css: `.dt-name{text-transform:uppercase}` },
+      { id: "glow", name: "은은한 빛", on: false, css: `.dt-char .dt-card{box-shadow:0 0 0 1px color-mix(in srgb,var(--t-accent) 25%,transparent),0 8px 28px color-mix(in srgb,var(--t-accent) calc(var(--t-shadow)*100%),transparent)}` }
+    ]
   }
 ];
 export var styleById = (id) => STYLES.find((s) => s.id === id) ?? STYLES[0];
+
+// ── 프로필 모양 ──
+export var AVATARS = [
+  ["style", "스타일 기본"],
+  ["circle", "원"],
+  ["stamp", "우표"],
+  ["polaroid", "폴라로이드"],
+  ["none", "없음"]
+];
+var AVATAR_CSS = {
+  circle: `.dt-av{display:block;border-radius:50%}`,
+  stamp: `.dt-av{display:block;padding:4px;background:var(--t-paper);border:2px dashed var(--t-line);border-radius:3px;box-shadow:0 2px 6px rgb(0 0 0/.12);transform:rotate(3deg)}
+.dt-av>*{border-radius:2px}`,
+  polaroid: `.dt-av{display:block;width:calc(var(--t-avatar-size) + 4px);height:calc(var(--t-avatar-size) + 14px);padding:4px 4px 14px;box-sizing:border-box;background:#fbfaf6;border-radius:2px;box-shadow:0 3px 10px rgb(0 0 0/.22);transform:rotate(-3deg)}
+.dt-av>*{border-radius:1px}`,
+  none: `.dt-av{display:none!important}`
+};
+
+// ── 글꼴 짝 ──
+var PRETENDARD = `@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");`;
+var gf = (q) => `@import url("https://fonts.googleapis.com/css2?${q}&display=swap");`;
+export var FONTS = [
+  { id: "style", name: "스타일 기본" },
+  { id: "serif", name: "감성 명조", imp: gf("family=Gowun+Batang:wght@400;700&family=Noto+Serif+KR:wght@600;700"), body: "'Gowun Batang','Noto Serif KR','Nanum Myeongjo',serif", display: "'Noto Serif KR','Gowun Batang',serif", size: 0.3 },
+  { id: "sans", name: "깔끔 고딕", imp: PRETENDARD, body: "'Pretendard','Noto Sans KR','Apple SD Gothic Neo',sans-serif", display: "'Pretendard','Noto Sans KR',sans-serif", size: 0 },
+  { id: "round", name: "동글 고딕", imp: gf("family=Gowun+Dodum"), body: "'Gowun Dodum','Noto Sans KR',sans-serif", display: "'Gowun Dodum','Noto Sans KR',sans-serif", size: 0.3 },
+  { id: "hand", name: "손글씨", imp: gf("family=Gaegu:wght@400;700"), body: "'Gaegu','Nanum Pen Script',cursive", display: "'Gaegu',cursive", size: 2 },
+  { id: "mono", name: "타자기", imp: gf("family=Nanum+Gothic+Coding:wght@400;700"), body: "'Nanum Gothic Coding','D2Coding',monospace", display: "'Nanum Gothic Coding',monospace", size: -0.5 }
+];
+var fontById = (id) => FONTS.find((f) => f.id === id && f.body);
+
+// ── 선택 ──
+// 다이얼 0~100: vivid 차분↔화려, round 각지게↔둥글게, space 촘촘↔여유
+export var DIALS = [
+  ["vivid", "차분", "화려"],
+  ["round", "각지게", "둥글게"],
+  ["space", "촘촘", "여유"]
+];
+export function defaultChoice(styleId = "letter") {
+  const s = styleById(styleId);
+  return { v: 2, style: s.id, accent: s.accent, mode: s.mode, vivid: 50, round: 50, space: 50, avatar: "style", font: "style", deco: Object.fromEntries(s.deco.map((d) => [d.id, d.on])) };
+}
+var HEX = /^#[0-9a-f]{6}$/i;
+var num = (x, d) => Number.isFinite(+x) ? Math.round(clamp(+x, 0, 100)) : d;
+// 아무 값이나 받아서 올바른 선택으로 (1차 저장분·AI 응답 모두 여기를 지난다)
+export function normalizeChoice(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const s = styleById(String(r.style ?? "").toLowerCase());
+  const d = defaultChoice(s.id);
+  let accent = String(r.accent ?? "").trim();
+  if (/^#?[0-9a-f]{3}$/i.test(accent)) accent = "#" + [...accent.replace("#", "")].map((c) => c + c).join("");
+  if (/^[0-9a-f]{6}$/i.test(accent)) accent = "#" + accent;
+  const deco = { ...d.deco };
+  if (Array.isArray(r.deco)) for (const k of Object.keys(deco)) deco[k] = r.deco.includes(k);
+  else if (r.deco && typeof r.deco === "object") for (const k of Object.keys(deco)) if (typeof r.deco[k] === "boolean") deco[k] = r.deco[k];
+  return {
+    v: 2,
+    style: s.id,
+    accent: HEX.test(accent) ? accent.toLowerCase() : d.accent,
+    mode: r.mode === "light" || r.mode === "dark" ? r.mode : d.mode,
+    vivid: num(r.vivid, 50), round: num(r.round, 50), space: num(r.space, 50),
+    avatar: AVATARS.some(([k]) => k === r.avatar) ? r.avatar : "style",
+    font: FONTS.some((f) => f.id === r.font) ? r.font : "style",
+    deco
+  };
+}
 
 // 계열별 바깥 정리 (리스 기본 말풍선·배경을 비우고 바탕색을 맞춘다)
 var WRAP = {
@@ -193,50 +280,102 @@ var WRAP = {
 .risu-chat .chat-width{max-width:var(--t-card-width);margin:0 auto;color:var(--t-muted);font-size:11px}`
 };
 
-export function defaultChoice(styleId = "letter") {
-  const s = styleById(styleId);
-  return { v: 1, style: s.id, accent: s.accent, mode: s.mode };
-}
-
+var scaleR = (base, round) => round <= 2 ? 0 : Math.round(clamp(Math.max(base, 2) * 2 ** ((round - 50) / 25), 0, 32));
 export function compileBuilder(choice, target) {
-  const s = styleById(choice.style);
-  const P = makePalette(choice.accent, choice.mode);
+  const c = normalizeChoice(choice);
+  const s = styleById(c.style);
+  const P = makePalette(c.accent, c.mode, c.vivid);
   const v = s.vars;
+  const sp = c.space - 50;
+  const font = fontById(c.font === "style" ? s.font : c.font) ?? fontById("sans");
+  const avatar = c.avatar === "style" ? s.avatar : c.avatar;
   const root = {
     "--t-bg": P.bg, "--t-paper": P.paper, "--t-tint": P.tint, "--t-line": P.line, "--t-ink": P.ink, "--t-muted": P.muted,
     "--t-accent": P.accent, "--t-accent2": P.accent2, "--t-accent-text": P.accentText, "--t-on-accent": P.onAccent,
-    "--t-user-bubble": P.userBubble, "--t-on-user": P.onUser,
-    "--t-radius": v.radius + "px", "--t-font-size": v.fontSize + "px", "--t-line-height": v.lineHeight,
-    "--t-card-width": v.cardWidth + "px", "--t-gap": v.gap + "px",
-    "--t-avatar-size": v.avatarSize + "px", "--t-avatar-radius": v.avatarRadius === 50 ? "50%" : v.avatarRadius + "px",
-    "--t-font-body": s.fontBody, "--t-font-display": s.fontDisplay,
+    "--t-user-bubble": P.userBubble, "--t-user-bubble2": P.userBubble2, "--t-on-user": P.onUser, "--t-shadow": P.shadow,
+    "--t-radius": scaleR(v.radius, c.round) + "px",
+    "--t-font-size": +(v.fontSize + font.size + sp / 50 * 0.6).toFixed(2) + "px",
+    "--t-line-height": +(v.lineHeight + sp / 50 * 0.2).toFixed(2),
+    "--t-space": +(1 + sp / 50 * 0.3).toFixed(2),
+    "--t-card-width": v.cardWidth + "px", "--t-gap": Math.round(v.gap * (1 + sp / 50 * 0.45)) + "px",
+    "--t-avatar-size": v.avatarSize + "px", "--t-avatar-radius": v.avatarRadius === 50 ? "50%" : scaleR(v.avatarRadius, c.round) + "px",
+    "--t-font-body": font.body, "--t-font-display": font.display,
     // 리스 기본 변수도 맞춰 둔다 (설정 화면·입력창 등)
     "--risu-theme-bgcolor": P.bg, "--risu-theme-darkbg": P.paper, "--risu-theme-borderc": P.line, "--risu-theme-darkborderc": P.line,
     "--risu-theme-selected": P.tint, "--risu-theme-textcolor": P.ink, "--risu-theme-textcolor2": P.muted, "--risu-theme-darkbutton": P.tint,
     "--FontColorStandard": P.ink, "--FontColorItalic": P.muted, "--FontColorBold": P.ink, "--FontColorQuote1": P.accentText, "--FontColorQuote2": P.accentText
   };
   const css = [
+    font.imp, // @import는 맨 앞
     `/* Dusk Theme Builder · ${s.name} · ${target} */`,
     `:root{\n${Object.entries(root).map(([k, x]) => `  ${k}: ${x};`).join("\n")}\n}`,
     WRAP[target] ?? WRAP.risu,
     BASE,
-    s.css
-  ].join("\n");
+    s.css,
+    ...s.deco.map((d) => c.deco[d.id] ? d.css : d.off ?? ""),
+    AVATAR_CSS[avatar] ?? ""
+  ].filter(Boolean).join("\n");
   return { css, html: BUILDER_HTML, palette: P };
 }
 
 // 빌더 선택 → 일반 테마 (기존 테마를 넘기면 이름·id 유지하고 덮어씀)
 export function buildTheme(choice, target, base = null) {
-  const s = styleById(choice.style);
-  const { css, html, palette: P } = compileBuilder(choice, target);
+  const c = normalizeChoice(choice);
+  const s = styleById(c.style);
+  const { css, html, palette: P } = compileBuilder(c, target);
   const t = base ?? newTheme(target, s.name + " 테마");
   t.css = css;
   t.html = html;
   t.useTokens = false;
-  t.builder = { ...choice };
+  t.builder = c;
   t.tokens = { ...t.tokens, bg: P.bg, panel: P.paper, border: P.line, accent: P.accent, accent2: P.accent2, text: P.ink, sub: P.muted, quote: P.accentText, userBubble: P.userBubble, botBubble: P.paper };
   t.updated = Date.now();
   return t;
+}
+
+// ── AI로 시작하기: AI는 CSS를 쓰지 않고 선택지 JSON만 고른다 ──
+export function aiPrompt(want) {
+  const cat = {
+    style: STYLES.map((s) => `${s.id}=${s.name}(${s.desc})`),
+    deco: Object.fromEntries(STYLES.map((s) => [s.id, s.deco.map((d) => `${d.id}=${d.name}`)])),
+    avatar: AVATARS.map(([k, l]) => `${k}=${l}`),
+    font: FONTS.map((f) => `${f.id}=${f.name}`)
+  };
+  const ex1 = { style: "letter", accent: "#8a5a44", mode: "light", vivid: 35, round: 30, space: 75, avatar: "stamp", font: "serif", deco: ["lines", "salute", "shadow"], name: "오후의 편지" };
+  const ex2 = { style: "messenger", accent: "#ff6fa8", mode: "dark", vivid: 85, round: 90, space: 40, avatar: "circle", font: "round", deco: ["tail", "name", "grad"], name: "네온 수다" };
+  return [
+    { role: "system", content: `You pick options for a chat theme builder. Reply with ONE JSON object only, no prose, no code fence.
+Keys: style (enum), accent ("#rrggbb"), mode ("light"|"dark"), vivid/round/space (integers 0-100: calm→flashy, sharp→round, dense→airy), avatar (enum), font (enum), deco (array of deco ids of the chosen style), name (short Korean title).
+Catalog: ${JSON.stringify(cat)}
+Example: ${JSON.stringify(ex1)}
+Example: ${JSON.stringify(ex2)}` },
+    { role: "user", content: String(want || "").slice(0, 600) }
+  ];
+}
+// 관대하게 꺼낸다: 코드블록·앞뒤 말·끝 쉼표·작은따옴표
+export function parseAiJson(text) {
+  let s = String(text ?? "").replace(/```(?:json)?/gi, "");
+  const a = s.indexOf("{"), b = s.lastIndexOf("}");
+  if (a < 0 || b <= a) throw new Error("JSON을 찾지 못했어요");
+  s = s.slice(a, b + 1);
+  try {
+    return JSON.parse(s);
+  } catch {
+    return JSON.parse(s.replace(/,\s*([}\]])/g, "$1").replace(/'/g, '"').replace(/([{,]\s*)([a-zA-Z_]\w*)\s*:/g, '$1"$2":'));
+  }
+}
+// 모델 호출 + 파싱, 실패하면 이유를 알려 주고 1회 재시도. 빈 칸은 기본값으로 메운다
+export async function aiChoose(want, run) {
+  const msgs = aiPrompt(want);
+  let text = await run(msgs), raw;
+  try {
+    raw = parseAiJson(text);
+  } catch (e) {
+    text = await run([...msgs, { role: "assistant", content: String(text).slice(0, 800) }, { role: "user", content: `That was not valid JSON (${e.message}). Reply with the JSON object only.` }]);
+    raw = parseAiJson(text);
+  }
+  const name = typeof raw?.name === "string" ? raw.name.trim().slice(0, 40) : "";
+  return { choice: normalizeChoice(raw), name };
 }
 
 // 썸네일 (스타일 모양을 흉내 낸 작은 그림)

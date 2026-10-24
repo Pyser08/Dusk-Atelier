@@ -1,9 +1,10 @@
 // 테마 빌더 화면: 스타일 → 대표색 → 밝기만 고르면 테마 완성. 결과는 일반 테마로 저장된다.
 import { h, replace } from '../dom.js';
-import { btn, iconBtn, segmented, note } from '../kit.js';
+import { btn, iconBtn, segmented, note, chip, switchEl } from '../kit.js';
+import { AI_MODES, runAI } from '../../engine/merge.js';
 import { ensureStudioCss, mockDoc } from './themestudio.js';
 import { TARGETS, loadThemes, saveThemes, detectTarget } from '../../data/themes.js';
-import { STYLES, styleById, defaultChoice, buildTheme, makePalette, thumbHtml, contrast, handoff } from '../../data/themebuilder.js';
+import { STYLES, styleById, defaultChoice, normalizeChoice, buildTheme, makePalette, thumbHtml, contrast, handoff, DIALS, AVATARS, FONTS, aiChoose } from '../../data/themebuilder.js';
 
 var SWATCHES = ["#9a6b4f", "#c2557a", "#e07a5f", "#d4a72c", "#5a9e6f", "#3a9ca8", "#4f9cf7", "#7c5cf0", "#8a8fa3"];
 var CSS = `
@@ -23,6 +24,14 @@ var CSS = `
 .rb-tb-pal{display:flex;height:22px;border-radius:8px;overflow:hidden;border:1px solid var(--rb-line)}
 .rb-tb-pal span{flex:1}
 .rb-tb-name{width:100%;box-sizing:border-box;height:34px;border-radius:9px;border:1px solid var(--rb-line);background:var(--rb-surf);color:var(--rb-text);padding:0 10px}
+.rb-tb-dial{display:grid;grid-template-columns:52px 1fr 52px;align-items:center;gap:8px;font-size:12px;margin-bottom:6px}
+.rb-tb-dial span:last-child{text-align:right}
+.rb-tb-dial input{width:100%;accent-color:var(--rb-accent,#7c5cf0)}
+.rb-tb-chips{display:flex;flex-wrap:wrap;gap:6px}
+.rb-tb-deco{display:flex;flex-direction:column;gap:6px}
+.rb-tb-ai{border:1px solid var(--rb-line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--rb-surf)}
+.rb-tb-ai textarea{width:100%;box-sizing:border-box;min-height:58px;resize:vertical;border-radius:9px;border:1px solid var(--rb-line);background:var(--rb-bg,transparent);color:var(--rb-text);padding:8px 10px;font:inherit;font-size:13px}
+.rb-tb-ai select,.rb-tb-ai input{height:32px;border-radius:8px;border:1px solid var(--rb-line);background:var(--rb-surf);color:var(--rb-text);padding:0 8px;min-width:0}
 @media (max-width:760px){.rb-tb{grid-template-columns:1fr}.rb-tb-side{overflow:visible}}
 `;
 var cssDone = false;
@@ -41,7 +50,7 @@ export async function renderThemeBuilder(ctx) {
   // 스튜디오에서 "빌더에서 고치기"로 왔으면 그 테마를 이어서 편집
   const editing = list.find((t) => t.id === handoff.builder && t.builder) ?? null;
   handoff.builder = null;
-  let choice = editing ? { ...defaultChoice(editing.builder.style), ...editing.builder } : defaultChoice("letter");
+  let choice = editing ? normalizeChoice(editing.builder) : defaultChoice("letter");
   let accentTouched = !!editing;
   const nameIn = h("input", { class: "rb-tb-name", type: "text", value: editing?.name ?? styleById(choice.style).name + " 테마", "aria-label": "테마 이름" });
   let nameTouched = !!editing;
@@ -55,6 +64,10 @@ export async function renderThemeBuilder(ctx) {
   const infoEl = h("div", { class: "rb-muted", style: "font-size:12px;line-height:1.6" });
   const modeEl = h("div");
   const viewEl = h("div");
+  const dialEl = h("div");
+  const decoEl = h("div", { class: "rb-tb-deco" });
+  const avEl = h("div", { class: "rb-tb-chips", role: "group", "aria-label": "프로필 모양" });
+  const fontEl = h("div", { class: "rb-tb-chips", role: "group", "aria-label": "글꼴" });
   let mobile = false;
 
   const theme = () => buildTheme(choice, target, editing ? structuredClone(editing) : null);
@@ -64,13 +77,14 @@ export async function renderThemeBuilder(ctx) {
     timer = setTimeout(() => iframe.srcdoc = mockDoc(theme()), 60);
   };
   const draw = () => {
-    const P = makePalette(choice.accent, choice.mode);
+    const P = makePalette(choice.accent, choice.mode, choice.vivid);
     replace(stylesEl, ...STYLES.map((s) => {
-      const sp = makePalette(accentTouched ? choice.accent : s.accent, accentTouched ? choice.mode : s.mode);
+      const sp = makePalette(accentTouched ? choice.accent : s.accent, accentTouched ? choice.mode : s.mode, choice.vivid);
       const th = h("div", { class: "th" });
       th.innerHTML = thumbHtml(s.id, sp);
       return h("button", { type: "button", class: "rb-tb-style", "aria-pressed": String(choice.style === s.id), title: s.desc, onClick: () => {
-        choice = accentTouched ? { ...choice, style: s.id } : defaultChoice(s.id);
+        const d = defaultChoice(s.id);
+        choice = accentTouched ? { ...choice, style: s.id, deco: d.deco } : { ...d, vivid: choice.vivid, round: choice.round, space: choice.space, avatar: choice.avatar, font: choice.font };
         if (!nameTouched) nameIn.value = s.name + " 테마";
         draw();
       } }, th, h("span", { class: "nm" }, s.name));
@@ -93,10 +107,33 @@ export async function renderThemeBuilder(ctx) {
       accentTouched = true;
       draw();
     }, "밝기"));
+    replace(dialEl, ...DIALS.map(([k, lo, hi]) => {
+      const r = h("input", { type: "range", min: "0", max: "100", step: "5", value: String(choice[k]), "aria-label": `${lo}↔${hi}` });
+      r.addEventListener("input", () => {
+        choice[k] = +r.value;
+        drawPal();
+        preview();
+      });
+      if (k === "vivid") r.addEventListener("change", draw);
+      return h("label", { class: "rb-tb-dial" }, h("span", null, lo), r, h("span", null, hi));
+    }));
+    replace(decoEl, ...styleById(choice.style).deco.map((d) => h("div", { style: "display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px" }, h("span", null, d.name), switchEl(!!choice.deco[d.id], { label: d.name, onChange: (on, el) => {
+      choice.deco = { ...choice.deco, [d.id]: on };
+      el.setAttribute("aria-checked", String(on));
+      preview();
+    } }))));
+    replace(avEl, ...AVATARS.map(([k, l]) => chip(l, { pressed: choice.avatar === k, onClick: () => {
+      choice.avatar = k;
+      draw();
+    } })));
+    replace(fontEl, ...FONTS.map((f) => chip(f.name, { pressed: choice.font === f.id, onClick: () => {
+      choice.font = f.id;
+      draw();
+    } })));
     drawPal(P);
     preview();
   };
-  const drawPal = (P = makePalette(choice.accent, choice.mode)) => {
+  const drawPal = (P = makePalette(choice.accent, choice.mode, choice.vivid)) => {
     replace(palEl, ...["bg", "paper", "tint", "line", "muted", "ink", "accent", "userBubble"].map((k) => h("span", { style: `background:${P[k]}`, title: k })));
     const cr = contrast(P.ink, P.paper);
     replace(infoEl, `${styleById(choice.style).desc}. 글자 대비 ${cr.toFixed(1)}:1 — 읽기 편하게 자동으로 맞췄어요.`);
@@ -105,6 +142,50 @@ export async function renderThemeBuilder(ctx) {
     mobile = v === "mobile";
     frame.classList.toggle("mobile", mobile);
   }, "미리보기 크기"));
+
+  // ── AI로 시작하기 (모델 설정은 합치기 AI와 같은 rbm:aiModel:v1) ──
+  let ai = { mode: "submodel", staticModel: "" };
+  try {
+    ai = { ...ai, ...JSON.parse(await ctx.api.pluginStorage.getItem("rbm:aiModel:v1") || "{}") };
+  } catch {}
+  const saveAi = () => ctx.api.pluginStorage.setItem("rbm:aiModel:v1", JSON.stringify({ mode: ai.mode, staticModel: ai.staticModel })).catch(() => {});
+  const wantIn = h("textarea", { placeholder: "예: 비 오는 밤 카페에서 쓰는 손편지 느낌, 차분한 남색", "aria-label": "원하는 분위기" });
+  const modelSel = h("select", { "aria-label": "AI 모델" }, ...AI_MODES.map(([v, l]) => h("option", { value: v, selected: ai.mode === v }, l)));
+  const modelId = h("input", { type: "text", placeholder: "모델 ID", value: ai.staticModel ?? "", style: ai.mode === "static" ? "flex:1" : "display:none" });
+  modelSel.addEventListener("change", () => {
+    ai.mode = modelSel.value;
+    modelId.style.cssText = ai.mode === "static" ? "flex:1" : "display:none";
+    saveAi();
+  });
+  modelId.addEventListener("change", () => {
+    ai.staticModel = modelId.value.trim();
+    saveAi();
+  });
+  const aiMsg = h("div", { class: "rb-muted", style: "font-size:12px" });
+  let aiBusy = false;
+  const aiBtn = btn("AI로 시작하기", { kind: "primary", size: "sm", icon: "zap", onClick: async () => {
+    if (aiBusy) return;
+    if (!wantIn.value.trim()) return wantIn.focus();
+    if (ai.mode === "static" && !ai.staticModel) return replace(aiMsg, "모델 ID를 먼저 적어 주세요.");
+    aiBusy = true;
+    aiBtn.disabled = true;
+    replace(aiMsg, "AI가 고르는 중…");
+    try {
+      const r = await aiChoose(wantIn.value, (m) => runAI(ctx.api, m, ai));
+      choice = r.choice;
+      accentTouched = true;
+      if (r.name && !nameTouched) nameIn.value = r.name;
+      draw();
+      replace(aiMsg, "골랐어요. 아래에서 마음대로 더 바꿔도 돼요.");
+    } catch (e) {
+      replace(aiMsg, `AI가 고르지 못했어요: ${e?.message ?? e}`);
+    } finally {
+      aiBusy = false;
+      aiBtn.disabled = false;
+    }
+  } });
+  const aiBox = h("div", { class: "rb-tb-ai" }, h("div", { class: "rb-tb-h", style: "margin:0" }, "✨ AI로 시작하기"), wantIn,
+    h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" }, modelSel, modelId, aiBtn), aiMsg);
 
   const save = async (thenStudio) => {
     const t = theme();
@@ -131,10 +212,15 @@ export async function renderThemeBuilder(ctx) {
     h("span", { class: "rb-muted", style: "font-size:12.5px" }, TARGETS[target].label + "용"),
     h("div", { style: "margin-left:auto" }, viewEl));
   const side = h("div", { class: "rb-tb-side" },
+    aiBox,
     h("div", null, h("div", { class: "rb-tb-h" }, "1. 스타일"), stylesEl),
     h("div", null, h("div", { class: "rb-tb-h" }, "2. 대표색"), swEl),
     h("div", null, h("div", { class: "rb-tb-h" }, "3. 밝기"), modeEl),
     h("div", { style: "display:flex;flex-direction:column;gap:6px" }, palEl, infoEl),
+    h("div", null, h("div", { class: "rb-tb-h" }, "4. 분위기"), dialEl),
+    h("div", null, h("div", { class: "rb-tb-h" }, "5. 장식"), decoEl),
+    h("div", null, h("div", { class: "rb-tb-h" }, "6. 프로필 모양"), avEl),
+    h("div", null, h("div", { class: "rb-tb-h" }, "7. 글꼴"), fontEl),
     h("div", null, h("div", { class: "rb-tb-h" }, "이름"), nameIn),
     h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" },
       btn("스튜디오에서 열기", { kind: "primary", icon: "check", onClick: () => save(true) }),
