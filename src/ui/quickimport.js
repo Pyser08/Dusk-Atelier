@@ -36,8 +36,8 @@ var INNER = {
   wide: `${ICON(42)}<span style="display:block;flex:1;min-width:0"><b style="display:block;font-size:15px;color:#ffffff">빠른 가져오기</b><span style="display:block;font-size:12.5px;color:#b1aecb;word-break:keep-all">에셋을 여러 개씩 동시에 올려서 리스 기본 가져오기보다 빨라요</span><span style="display:block;margin-top:5px;font-size:12px;font-weight:700;color:#c4b1ff;word-break:keep-all">눌러서 연 뒤 파일을 끌어 놓으세요 →</span></span>`,
   mini: ICON(40)
 };
-// 채팅 화면 감지: 채팅 입력칸·채팅 화면 요소가 있으면 채팅 중으로 본다
-var CHAT_SEL = "textarea.text-input-area, .default-chat-screen, .risu-chat";
+// 채팅 화면 감지: 리스는 봇을 골랐을 때(selectedCharID >= 0)만 .default-chat-screen·입력칸을 그린다
+var CHAT_SEL = ".default-chat-screen, textarea.text-input-area";
 var CHAT_POLL_MS = 1200;
 var num = (v, d) => Number.isFinite(v) ? v : d;
 

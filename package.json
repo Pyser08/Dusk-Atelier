@@ -1,6 +1,6 @@
 {
   "name": "dusk-atelier",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "RisuAI 플러그인 Dusk Atelier — 모듈·봇 관리와 업데이트 (RisuTide 통합 · 합치기 · 속도 개선)",
   "private": true,
   "type": "module",
