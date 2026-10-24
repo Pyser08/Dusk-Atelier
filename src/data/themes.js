@@ -95,16 +95,26 @@ export var TARGETS = {
 };
 export var TARGET_IDS = Object.keys(TARGETS);
 
-// 실행 중인 환경 추측. 확실하지 않으면 일반 리스.
-export function detectTarget(doc) {
+// 실행 중인 환경 추측. 리스 화면 문서(getRootDocument)는 비동기 래퍼라 모든 호출을 await 한다.
+// 각 계열의 메시지 셀렉터가 몇 개 잡히는지 비교하고, 못 정하면 UA·일반 리스.
+export async function detectTarget(doc) {
   try {
-    const ua = globalThis.navigator?.userAgent ?? "";
-    const host = doc?.location?.host ?? globalThis.location?.host ?? "";
-    const title = doc?.title ?? "";
-    if (/pocket/i.test(ua + host + title) || doc?.querySelector?.("[class*=pocket], #pocket-app")) return "pocket";
+    if (/pocket/i.test(globalThis.navigator?.userAgent ?? "")) return "pocket";
+    if (doc) {
+      if (await doc.querySelector("[class*=pocket], #pocket-app")) return "pocket";
+      const [r, p] = await Promise.all([countSel(doc, TARGETS.risu.selectors.chat), countSel(doc, TARGETS.pocket.selectors.chat)]);
+      if (p > 0 && r === 0) return "pocket";
+    }
   } catch {
   }
   return "risu";
+}
+async function countSel(doc, sel) {
+  if (!sel) return 0;
+  const list = await doc.querySelectorAll(sel);
+  if (!list) return 0;
+  const n = typeof list.length === "function" ? await list.length() : list.length;
+  return Number(n) || 0;
 }
 
 // ── 저장 ──
@@ -232,19 +242,29 @@ export function lintHtml(html) {
 
 // ── 적용 ──
 // 화면에 <style>로 바로 적용한다 (리스 데이터는 안 건드림). 다시 켜면 시작할 때 자동 적용.
-export function applyToDocument(doc, theme) {
-  if (!doc) return;
-  let el = doc.getElementById(STYLE_ID);
-  if (!theme) {
-    el?.remove();
-    return;
+// doc은 getRootDocument()의 비동기 래퍼.
+export async function applyToDocument(doc, theme) {
+  if (!doc) return false;
+  const old = await doc.querySelector(`[x-dusk="${STYLE_ID}"]`);
+  if (old) await old.remove();
+  if (!theme) return true;
+  const css = compileCss(theme);
+  const parent = await doc.querySelector("head") ?? await doc.querySelector("body");
+  if (!parent) return false;
+  try {
+    const el = await doc.createElement("style");
+    await el.setAttribute("x-dusk", STYLE_ID);
+    await el.setInnerText(css);
+    await parent.appendChild(el);
+  } catch {
+    // style을 못 만들면 div 안에 넣는다
+    const el = await doc.createElement("div");
+    await el.setAttribute("x-dusk", STYLE_ID);
+    await el.setStyleAttribute("display:none");
+    await el.setInnerHTML(`<style>${css.replace(/<\/style/gi, "<\\/style")}</style>`);
+    await (await doc.querySelector("body")).appendChild(el);
   }
-  if (!el) {
-    el = doc.createElement("style");
-    el.id = STYLE_ID;
-    doc.head.appendChild(el);
-  }
-  el.textContent = compileCss(theme);
+  return true;
 }
 
 // 리스 설정에 영구 저장 (커스텀 CSS / HTML). 바꾸기 전 값을 돌려줘 되돌릴 수 있게 한다.
@@ -287,14 +307,14 @@ export function parseThemeFile(text, expected) {
 }
 
 // 지금 화면에서 셀렉터가 실제로 몇 개 잡히는지 (셀렉터 찾기)
-export function probeSelectors(doc, selectors) {
+export async function probeSelectors(doc, selectors) {
   const r = {};
-  for (const [k, sel] of Object.entries(selectors)) {
+  await Promise.all(Object.entries(selectors).map(async ([k, sel]) => {
     try {
-      r[k] = sel ? doc.querySelectorAll(sel).length : 0;
+      r[k] = await countSel(doc, sel);
     } catch {
       r[k] = -1;
     }
-  }
+  }));
   return r;
 }

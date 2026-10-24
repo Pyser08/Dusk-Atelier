@@ -17,7 +17,7 @@ export async function renderSettingsTab(ctx) {
   if (ctx.state.sub === "themestudio") return renderThemeStudio(ctx);
   const themes = await loadThemes(ctx.api);
   const rootDoc = await ctx.api.getRootDocument?.().catch(() => null) ?? null;
-  const here = detectTarget(rootDoc);
+  const here = await detectTarget(rootDoc);
   const tTarget = themes.target ?? here;
   const tInfo = h("div", { class: "rb-muted", style: "font-size:12.5px;line-height:1.7;word-break:keep-all" });
   const paintInfo = (v) => {

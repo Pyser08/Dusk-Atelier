@@ -98,7 +98,8 @@ function mockDoc(theme) {
 export async function renderThemeStudio(ctx) {
   const data = await loadThemes(ctx.api);
   const rootDoc = await ctx.api.getRootDocument?.().catch(() => null) ?? null;
-  if (!data.target) data.target = detectTarget(rootDoc);
+  const here = await detectTarget(rootDoc);
+  if (!data.target) data.target = here;
   let target = data.target;
   let cur = null, dirty = false, mobile = false, tab = "tokens";
   const persist = () => saveThemes(ctx.api, data).catch((e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }));
@@ -133,8 +134,9 @@ export async function renderThemeStudio(ctx) {
   } });
   saveBtn.disabled = true;
   const applyLive = (t) => {
-    if (t && t.target !== detectTarget(rootDoc) && !data.forceApply) return false;
-    applyToDocument(rootDoc, t);
+    if (t && t.target !== here && !data.forceApply) return false;
+    applyToDocument(rootDoc, t).catch(() => {
+    });
     return true;
   };
 
@@ -190,7 +192,6 @@ export async function renderThemeStudio(ctx) {
   };
   const doApply = async (t) => {
     if (dirty) await persist(), dirty = false, saveBtn.disabled = true;
-    const here = detectTarget(rootDoc);
     if (t.target !== here) {
       const ok = await confirmDialog(ctx.win, { title: "계열이 달라요", body: `지금 화면은 ${TARGETS[here].label} 계열로 보여요. ${TARGETS[t.target].label} 테마를 켜면 모양이 깨질 수 있어요. 그래도 켤까요?`, ok: "켜기", danger: true });
       if (!ok) return;
@@ -198,11 +199,12 @@ export async function renderThemeStudio(ctx) {
     }
     data.active[target] = t.id;
     await persist();
-    applyToDocument(rootDoc, t);
+    if (!await applyToDocument(rootDoc, t).catch(() => false)) ctx.toast("리스 화면에 붙이지 못했어요. [리스 설정에 저장]을 써 주세요.", { error: true });
     ctx.toast(`'${t.name}' 테마를 켰어요`, { action: { label: "되돌리기", run: async () => {
       data.active[target] = null;
       await persist();
-      applyToDocument(rootDoc, null);
+      await applyToDocument(rootDoc, null).catch(() => {
+      });
       draw();
     } } });
     draw();
@@ -211,7 +213,8 @@ export async function renderThemeStudio(ctx) {
     data.active[target] = null;
     data.forceApply = false;
     await persist();
-    applyToDocument(rootDoc, null);
+    await applyToDocument(rootDoc, null).catch(() => {
+    });
     draw();
   };
   const doWriteDb = async (t) => {
@@ -300,9 +303,10 @@ export async function renderThemeStudio(ctx) {
       cur.selectors[k] = e.target.value;
       touch();
     } })));
-    return h("div", { style: "display:flex;flex-direction:column;gap:8px" }, note("warn", `${TARGETS[target].label} 화면에서 테마가 꾸미는 자리예요. 리스가 업데이트돼 테마가 안 먹으면 여기를 고쳐요.`), group("셀렉터", ...rows), h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, btn("지금 화면에서 찾기", { size: "sm", icon: "search", onClick: () => {
+    return h("div", { style: "display:flex;flex-direction:column;gap:8px" }, note("warn", `${TARGETS[target].label} 화면에서 테마가 꾸미는 자리예요. 리스가 업데이트돼 테마가 안 먹으면 여기를 고쳐요.`), group("셀렉터", ...rows), h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, btn("지금 화면에서 찾기", { size: "sm", icon: "search", onClick: async () => {
       if (!rootDoc) return replace(res, "리스 화면을 읽을 수 없어요.");
-      const r = probeSelectors(rootDoc, cur.selectors);
+      replace(res, "찾는 중…");
+      const r = await probeSelectors(rootDoc, cur.selectors);
       replace(res, ...Object.entries(r).map(([k, n]) => h("div", null, `${n > 0 ? "✓" : n < 0 ? "✕" : "·"} ${k}: ${n < 0 ? "셀렉터 오류" : n + "개"}`)), h("div", null, "채팅 화면을 연 상태에서 눌러야 정확해요."));
     } }), btn("기본값", { size: "sm", onClick: () => {
       cur.selectors = { ...TARGETS[target].selectors };
@@ -312,7 +316,6 @@ export async function renderThemeStudio(ctx) {
   };
 
   function draw() {
-    const here = detectTarget(rootDoc);
     const items = list();
     const listEl = h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center" }, ...items.map((t) => {
       const on = data.active[target] === t.id;
@@ -361,8 +364,8 @@ export async function restoreActiveTheme(api) {
   const data = await loadThemes(api);
   const doc = await api.getRootDocument?.().catch(() => null);
   if (!doc) return;
-  const here = detectTarget(doc);
+  const here = await detectTarget(doc);
   const pickT = data.forceApply ? data.target ?? here : here;
   const t = data.themes[pickT]?.find((x) => x.id === data.active[pickT]);
-  if (t) applyToDocument(doc, t);
+  if (t) await applyToDocument(doc, t);
 }
