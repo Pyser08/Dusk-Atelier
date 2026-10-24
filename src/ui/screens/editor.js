@@ -160,7 +160,7 @@ export async function openEditorCore(ctx, cfg) {
   panel.append(head, tabsEl, body, testFab);
   ctx.win.appendChild(panel);
   panel.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape" && !ctx.win.querySelector(".rb-modal, .rb-menu")) {
+    if (ev.key === "Escape" && !ctx.win.querySelector(".rb-modal, .rb-menu, #rb-rule-test")) {
       ev.stopPropagation();
       close();
     }
@@ -834,9 +834,31 @@ export async function openEditorCore(ctx, cfg) {
   // 규칙 시험: 가상 대화를 한 턴씩 보내 보며 어떤 규칙이 왜 켜지고 안 켜지는지, 변수가 어떻게 바뀌는지 본다
   // (저장하지 않은 편집 중인 로어북 그대로 계산. 실제 채팅·변수는 건드리지 않는다)
   function ruleTester() {
-    const back = h("div", { class: "rb-modal", onMousedown: (ev) => {
-      if (ev.target === back) back.remove();
-    } });
+    // 우측 하단 버튼에서 펼쳐지는 창 (뒤쪽 편집 화면은 그대로 쓸 수 있어서, 고치고 바로 다시 시험할 수 있다)
+    const old = panel.querySelector("#rb-rule-test");
+    if (old) return old.closeTester?.();
+    const back = h("div", { id: "rb-rule-test", style: "position:absolute;right:16px;bottom:16px;z-index:40;width:min(760px,calc(100% - 32px));max-height:calc(100% - 32px);display:flex;transform-origin:100% 100%" });
+    const still = !!globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    let closing = false;
+    const closeTester = () => {
+      if (closing) return;
+      closing = true;
+      const done = () => {
+        back.remove();
+        testFab.style.visibility = "";
+        testFab.focus?.();
+      };
+      if (still || !back.animate) return done();
+      const a = back.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(.1)", opacity: 0 }], { duration: 200, easing: "cubic-bezier(.5,0,.8,.4)", fill: "forwards" });
+      a.onfinish = done;
+    };
+    back.closeTester = closeTester;
+    back.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") {
+        ev.stopPropagation();
+        closeTester();
+      }
+    });
     const input = h("textarea", { class: "rb-textarea", spellcheck: "false", style: "min-height:58px", placeholder: "사용자 입력 (예: 사과 먹을래?)" });
     const botIn = h("input", { class: "rb-input", placeholder: "봇 답변 (선택) — 다음 턴 조건이 '봇 말'을 볼 때 써요", style: "flex:1;min-width:200px" });
     const varsIn = h("input", { class: "rb-input", placeholder: "시작 변수 (예: hp=5, mood=angry)", style: "flex:1;min-width:180px" });
@@ -912,7 +934,7 @@ export async function openEditorCore(ctx, cfg) {
     reset();
     back.appendChild(h(
       "div",
-      { class: "rb-dialog", role: "dialog", "aria-label": "규칙 시험", style: "max-width:760px;width:calc(100vw - 24px)" },
+      { class: "rb-dialog", role: "dialog", "aria-label": "규칙 시험", style: "max-width:none;width:100%;max-height:100%;overflow:auto;animation:none" },
       h("h3", { class: "rb-h3" }, "규칙 시험 — 가상 대화"),
       h("p", { class: "rb-muted", style: "margin:0" }, "지금 편집 중인 로어북으로 입력을 한 턴씩 보내 봐요. 저장하지 않은 변경도 반영되고, 실제 채팅과 변수는 건드리지 않아요."),
       logEl,
@@ -920,9 +942,11 @@ export async function openEditorCore(ctx, cfg) {
       input,
       h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center" }, botIn),
       h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center" }, varsIn, h("label", { class: "rb-check" }, noProb, h("span", null, "확률 무시(항상 켜짐)"))),
-      h("div", { class: "btns" }, btn("처음부터", { onClick: reset, title: "대화·기록·변수를 처음 상태로" }), btn("마지막 턴 취소", { onClick: undo }), btn("보내기", { kind: "primary", onClick: send }), btn("닫기", { onClick: () => back.remove() }))
+      h("div", { class: "btns" }, btn("처음부터", { onClick: reset, title: "대화·기록·변수를 처음 상태로" }), btn("마지막 턴 취소", { onClick: undo }), btn("보내기", { kind: "primary", onClick: send }), btn("닫기", { onClick: closeTester }))
     ));
-    ctx.win.appendChild(back);
+    panel.appendChild(back);
+    testFab.style.visibility = "hidden";
+    if (!still && back.animate) back.animate([{ transform: "scale(.1)", opacity: 0 }, { opacity: 1, offset: .35 }, { transform: "scale(1)", opacity: 1 }], { duration: 340, easing: "cubic-bezier(.2,.9,.25,1.04)" });
     input.focus();
   }
   function regexForm(r) {
