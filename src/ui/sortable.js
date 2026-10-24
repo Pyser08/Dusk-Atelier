@@ -94,8 +94,11 @@ export function gripDrag({ grip, row: row2, root, scroller, onDrop, mouse = true
         return;
       }
       const rr = el.getBoundingClientRect();
-      const isRow = el.hasAttribute("data-drop-row");
-      const after = isRow && y > rr.top + rr.height / 2;
+      // 폴더 줄(data-drop-row + data-drop-folder 둘 다): 위·아래 가장자리는 순서 옮기기, 가운데는 폴더 안으로
+      const both = el.hasAttribute("data-drop-row") && el.hasAttribute("data-drop-folder");
+      const rel = (y - rr.top) / Math.max(1, rr.height);
+      const isRow = both ? rel < 0.28 || rel > 0.72 : el.hasAttribute("data-drop-row");
+      const after = isRow && (both ? rel > 0.72 : y > rr.top + rr.height / 2);
       if (target?.el === el && target.after === after) return;
       clear2();
       target = { el, prev: el.style.boxShadow, isRow, after, id: el.getAttribute("data-drop-row"), folder: el.getAttribute("data-drop-folder") };

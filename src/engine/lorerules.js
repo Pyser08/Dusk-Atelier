@@ -48,32 +48,59 @@ export function ruleOf(entry) {
 }
 export const ridOf = (entry) => entry?.extentions?.da_rid || null;
 
-// ---------- 소속 (DA Lore Affiliation) ----------
-// 소속도 평범한 로어북 항목이다. extentions.da_aff에 구성원을 적는다.
-//   { members: [rid…], place: '장소 키(쉼표)', prob: { rid: % }, def: 기본 %, max: 최대 N명(비우면 제한 없음) }
-// 소속 켜짐: 소속 키(일반 키 조건) · 장소 키 · 구성원 하나라도 켜짐
-// 소속이 켜지면 구성원마다 확률을 굴리고, 통과한 사람 중 무작위로 최대 N명을 켠다.
-// 자기 키로 이미 켜진 구성원은 확률·N명과 상관없이 켜져 있다.
+// ---------- Dusk 폴더 · 소속 · 장소 ----------
+// 폴더도 로어북 항목이다 (키·내용 없음 → 리스는 건너뜀). 중첩은 Dusk 데이터로만 표현한다.
+//   extentions.da_folder = { id, color?, aff? }   폴더
+//   extentions.da_parent = 폴더 id                들어 있는 폴더 (리스 순정 폴더는 entry.folder)
+//   aff = { def: 기본 %, max: 최대 N명(''=제한 없음), prob: { rid: % } }   소속 폴더 (규칙이 켜진 관리 항목)
+//   extentions.da_place = { links: [폴더 id] }    장소 항목
+// 소속 폴더 안의 항목은 하위 폴더까지 전부 구성원이다 (게헨나 ⊃ 선도부 ⊃ 히나 → 히나는 둘 다).
+// 소속 켜짐: 소속 키(규칙 조건) · 그 안(또는 연결된) 장소가 켜짐 · 구성원이 자기 키로 켜짐
+// 소속이 켜지면 구성원마다 확률을 굴리고, 통과한 사람 중 무작위로 최대 N명을 켠다. 자기 키로 켜진 구성원은 제한 무관.
 export const AFF_PREFIX = "[소속] ";
+export const PLACE_PREFIX = "[장소] ";
+export const folderIdOf = (e) => e?.extentions?.da_folder?.id || (e?.mode === "folder" ? e.key : null);
+export const isFolder = (e) => !!folderIdOf(e);
+export const isDuskFolder = (e) => !!e?.extentions?.da_folder?.id;
+export const parentOf = (e) => e?.extentions?.da_parent || e?.folder || null;
 export function affOf(entry) {
-  const a = entry?.extentions?.da_aff;
+  const a = entry?.extentions?.da_folder?.aff;
   if (!a || typeof a !== "object") return null;
   return {
-    members: Array.isArray(a.members) ? a.members.filter(Boolean) : [],
-    place: String(a.place ?? ""),
     prob: a.prob && typeof a.prob === "object" ? a.prob : {},
-    def: a.def === void 0 || a.def === "" ? 100 : Number(a.def),
+    def: a.def === void 0 || a.def === "" || a.def === null ? 100 : Number(a.def),
     max: a.max === void 0 || a.max === "" || a.max === null ? "" : Number(a.max)
   };
 }
-export const isAff = (entry) => !!affOf(entry);
-export const affName = (entry) => String(entry?.comment ?? "").replace(/^\[소속\]\s*/, "");
-export const defaultAff = () => ({ members: [], place: "", prob: {}, def: 100, max: "" });
-// 이 항목(rid)이 들어 있는 소속 항목들
-export function affsOfMember(lorebook, rid) {
-  if (!rid) return [];
-  return (lorebook ?? []).filter((x) => affOf(x)?.members.includes(rid));
+export const isAff = (e) => !!affOf(e);
+export const isPlace = (e) => !!e?.extentions?.da_place;
+export const placeLinks = (e) => Array.isArray(e?.extentions?.da_place?.links) ? e.extentions.da_place.links.filter(Boolean) : [];
+export const affName = (e) => String(e?.comment ?? "").replace(/^\[(소속|장소)\]\s*/, "");
+export const defaultAff = () => ({ def: 100, max: "", prob: {} });
+// 폴더 id → 폴더 항목
+export function folderMap(entries) {
+  const m = new Map();
+  for (const e of entries ?? []) {
+    const id = folderIdOf(e);
+    if (id && !m.has(id)) m.set(id, e);
+  }
+  return m;
 }
+// 조상 폴더들 (가까운 것부터). 순환은 끊는다
+export function ancestorsOf(e, fmap) {
+  const out = [];
+  const seen = new Set();
+  let p = parentOf(e);
+  while (p && fmap.has(p) && !seen.has(p)) {
+    seen.add(p);
+    const f = fmap.get(p);
+    out.push(f);
+    p = parentOf(f);
+  }
+  return out;
+}
+// 이 항목이 속한 소속 폴더들 (가까운 것부터)
+export const affsOf = (e, fmap) => ancestorsOf(e, fmap).filter(isAff);
 export const isManaged = (entry) => !!ruleOf(entry) && ruleOf(entry).on !== false;
 
 // ---------- 내용의 @@dont_activate 다루기 ----------
@@ -217,6 +244,14 @@ export function collectManaged(entries) {
     if (seen.has(rid)) continue;
     seen.add(rid);
     out.push({ rid, entry: e, rule });
+  }
+  // 폴더·소속·장소 정보
+  const fmap = folderMap(entries);
+  for (const it of out) {
+    it.affs = affsOf(it.entry, fmap).map(folderIdOf);
+    it.fid = isAff(it.entry) ? folderIdOf(it.entry) : null;
+    it.aff = it.fid ? affOf(it.entry) : null;
+    it.place = isPlace(it.entry) ? placeLinks(it.entry) : null;
   }
   return out;
 }
@@ -440,16 +475,23 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     active.set(it.rid, { ...it, why });
     return true;
   };
-  // 소속: 장소 키 또는 구성원이 켜져서 켜질 때의 이유 (없으면 null)
-  const affs = new Map(items.map((it) => [it.rid, affOf(it.entry)]).filter(([, a]) => a));
+  // 소속: 장소나 구성원 때문에 켜질 때의 이유 (없으면 null)
+  const affItems = items.filter((it) => it.aff);
+  const inAff = (x, fid) => (x.affs ?? []).includes(fid);
   const affTrig = (it) => {
-    const a = affs.get(it.rid);
-    if (!a) return null;
-    const place = splitKeys(a.place);
-    if (place.length && keyHit(place, textsFor(it.rule.scan), { whole: !!it.rule.whole })) return "장소 키";
-    // 다른 소속 때문에 켜진 구성원은 세지 않는다 (소속끼리 줄줄이 켜지는 것 방지)
-    const m = a.members.find((rid) => active.has(rid) && !String(active.get(rid).why).startsWith("소속"));
-    return m ? `구성원 '${nameOf(m)}' 켜짐` : null;
+    if (!it.aff) return null;
+    for (const [rid, a] of active) {
+      const x = byRid.get(rid);
+      if (!x || rid === it.rid) continue;
+      if (x.place && (inAff(x, it.fid) || x.place.includes(it.fid))) return `장소 '${affName(x.entry) || rid}' 켜짐`;
+    }
+    for (const [rid, a] of active) {
+      const x = byRid.get(rid);
+      if (!x || x.place || rid === it.rid || !inAff(x, it.fid)) continue;
+      // 다른 소속 때문에 켜진 구성원은 세지 않는다 (소속끼리 줄줄이 켜지는 것 방지)
+      if (!String(a.why).startsWith("소속")) return `구성원 '${nameOf(rid)}' 켜짐`;
+    }
+    return null;
   };
   const expanded = new Set();
   const affMiss = new Map();
@@ -464,19 +506,19 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
       if (!rolled.has(it.rid)) rolled.set(it.rid, roll(it.rule.prob));
       if (rolled.get(it.rid)) changed = add(it, why === "조건" ? "조건" : `소속 켜짐: ${why}`) || changed;
     }
-    // 켜진 소속 → 구성원 (소속마다 한 번만 굴린다)
-    for (const [grid, a] of affs) {
-      const g = active.get(grid);
-      if (!g || expanded.has(grid)) continue;
-      expanded.add(grid);
-      const gname = affName(g.entry) || grid;
+    // 켜진 소속 → 구성원 (소속마다 한 번만 굴린다. 장소·하위 소속 폴더는 굴리지 않는다)
+    for (const g of affItems) {
+      const ga = active.get(g.rid);
+      if (!ga || expanded.has(g.rid)) continue;
+      expanded.add(g.rid);
+      const a = g.aff;
+      const gname = affName(g.entry) || g.rid;
       let pass2 = [];
-      for (const rid of a.members) {
-        const tgt = byRid.get(rid);
-        if (!tgt || active.has(rid) || blocked(tgt)) continue;
-        const p = a.prob[rid] === void 0 || a.prob[rid] === "" ? a.def : Number(a.prob[rid]);
+      for (const tgt of items) {
+        if (tgt.place || tgt.aff || !inAff(tgt, g.fid) || active.has(tgt.rid) || blocked(tgt)) continue;
+        const p = a.prob[tgt.rid] === void 0 || a.prob[tgt.rid] === "" ? a.def : Number(a.prob[tgt.rid]);
         if (roll(p)) pass2.push(tgt);
-        else affMiss.set(rid, `소속 '${gname}'에서 확률 ${p}%에 안 뽑혔어요`);
+        else affMiss.set(tgt.rid, `소속 '${gname}'에서 확률 ${p}%에 안 뽑혔어요`);
       }
       const max = Number(a.max);
       if (a.max !== "" && max >= 0 && pass2.length > max) {
@@ -488,16 +530,6 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
         pass2 = pass2.slice(0, max);
       }
       for (const tgt of pass2) changed = add(tgt, `소속: ${gname}`) || changed;
-    }
-    for (const a of [...active.values()]) {
-      for (const c of a.rule.chain ?? []) {
-        const tgt = byRid.get(c.rid);
-        if (!tgt || active.has(tgt.rid) || blocked(tgt)) continue;
-        const key = `${a.rid}>${tgt.rid}`;
-        if (rolled.has(key)) continue;
-        rolled.set(key, roll(c.prob));
-        if (rolled.get(key)) changed = add(tgt, `연쇄: ${a.entry.comment || a.rid}`) || changed;
-      }
     }
     if (!changed) break;
   }
@@ -621,7 +653,7 @@ export function validateRules(lorebook) {
     if (!r || r.on === false || l.mode === "folder") return;
     const n = name(l, i);
     if (!isNativeSynced(l)) out.push({ level: "warn", index: i, msg: `${n}: 내용 머리(@@activate·{{#if}})가 규칙과 달라요. 저장하면 자동으로 맞춰져요` });
-    if (!bodyOf(l.content)) out.push({ level: "warn", index: i, msg: `${n}: 넣을 내용이 비어 있어요` });
+    if (!bodyOf(l.content) && !isAff(l)) out.push({ level: "warn", index: i, msg: `${n}: 넣을 내용이 비어 있어요` });
     const p = Number(r.prob);
     if (isNaN(p) || p < 0 || p > 100) out.push({ level: "err", index: i, msg: `${n}: 확률은 0~100이어야 해요` });
     if (r.once === "cooldown" && !(Number(r.cool) >= 1)) out.push({ level: "err", index: i, msg: `${n}: 쿨다운 턴 수는 1 이상이어야 해요` });
@@ -661,13 +693,7 @@ export function validateRules(lorebook) {
     }
     const af = affOf(l);
     if (af) {
-      if (!af.members.length) out.push({ level: "warn", index: i, msg: `${n}: 소속에 구성원이 없어요` });
-      for (const m of af.members) {
-        const ti = rids.get(m);
-        if (ti === undefined) out.push({ level: "err", index: i, msg: `${n}: 구성원 중 지워진 항목이 있어요 (구성원 목록에서 빼 주세요)` });
-        else if (!isManaged(list[ti])) out.push({ level: "warn", index: i, msg: `${n}: 구성원 '${list[ti].comment || ti + 1}'은 규칙이 꺼져 있어 켜지지 않아요` });
-        else if (affOf(list[ti])) out.push({ level: "warn", index: i, msg: `${n}: 구성원 '${list[ti].comment || ti + 1}'도 소속이에요` });
-        const mp = af.prob[m];
+      for (const [m, mp] of Object.entries(af.prob)) {
         if (mp !== void 0 && mp !== "" && (isNaN(Number(mp)) || Number(mp) < 0 || Number(mp) > 100)) out.push({ level: "err", index: i, msg: `${n}: 구성원 확률은 0~100이어야 해요` });
       }
       if (isNaN(af.def) || af.def < 0 || af.def > 100) out.push({ level: "err", index: i, msg: `${n}: 기본 확률은 0~100이어야 해요` });
@@ -682,11 +708,27 @@ export function validateRules(lorebook) {
       if (isNaN(cp) || cp < 0 || cp > 100) out.push({ level: "err", index: i, msg: `${n}: 연쇄 확률은 0~100이어야 해요` });
     }
   });
-  // 키 중복: 관리 항목끼리 같은 키
+  // 복사본 어긋남: 이름이 같은데 내용이 다른 항목 (여러 소속에 같은 인물을 복사해 둔 경우)
+  const byName = new Map();
+  list.forEach((l, i) => {
+    if (isFolder(l) || l.mode === "folder") return;
+    const nm = String(l.comment ?? "").trim();
+    if (!nm) return;
+    if (!byName.has(nm)) byName.set(nm, []);
+    byName.get(nm).push(i);
+  });
+  for (const [nm, idx] of byName) {
+    if (idx.length < 2) continue;
+    const bodies = new Set(idx.map((k) => bodyOf(list[k].content)));
+    if (bodies.size > 1) out.push({ level: "warn", index: idx[0], sync: idx, msg: `로어북 '${nm}': 같은 이름의 항목 ${idx.length}개의 내용이 서로 달라요 (복사본이면 한쪽을 고친 뒤 '내용 맞추기'로 맞추세요)` });
+  }
+  // 키 중복: 관리 항목끼리 같은 키 (이름·내용이 같은 복사본끼리는 한 번만 들어가므로 빼요)
   const keyOwner = new Map();
+  const sameCopy = (a, b) => String(list[a].comment ?? "").trim() === String(list[b].comment ?? "").trim() && bodyOf(list[a].content) === bodyOf(list[b].content);
   list.forEach((l, i) => {
     if (!isManaged(l)) return;
     for (const k of splitKeys(l.key).map((x) => x.toLowerCase())) {
+      if (keyOwner.has(k) && keyOwner.get(k) !== i && sameCopy(keyOwner.get(k), i)) continue;
       if (keyOwner.has(k) && keyOwner.get(k) !== i) out.push({ level: "warn", index: i, msg: `${name(l, i)}: 키 '${k}'를 '${list[keyOwner.get(k)].comment || keyOwner.get(k) + 1}'도 써요 (그룹으로 묶으면 하나만 켜져요)` });
       else keyOwner.set(k, i);
     }
