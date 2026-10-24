@@ -1,10 +1,10 @@
 // 테마 빌더 화면: 스타일 → 대표색 → 밝기만 고르면 테마 완성. 결과는 일반 테마로 저장된다.
 import { h, replace } from '../dom.js';
-import { btn, iconBtn, segmented, note, chip, switchEl } from '../kit.js';
+import { btn, iconBtn, segmented, note, chip, switchEl, promptDialog } from '../kit.js';
 import { AI_MODES, runAI } from '../../engine/merge.js';
 import { ensureStudioCss, mockDoc } from './themestudio.js';
 import { TARGETS, loadThemes, saveThemes, detectTarget } from '../../data/themes.js';
-import { STYLES, styleById, defaultChoice, normalizeChoice, buildTheme, makePalette, thumbHtml, contrast, handoff, DIALS, WIDTHS, AVATARS, FONTS, aiChoose, aiStyle, aiStylePrompt, aiEditPrompt, currentStyleCss } from '../../data/themebuilder.js';
+import { STYLES, styleById, defaultChoice, normalizeChoice, buildTheme, makePalette, thumbHtml, contrast, handoff, DIALS, WIDTHS, AVATARS, FONTS, aiChoose, aiStyle, aiStylePrompt, aiEditPrompt, currentStyleCss, pickAccentFromPixels, shareCode, readShareCode } from '../../data/themebuilder.js';
 
 var SWATCHES = ["#9a6b4f", "#c2557a", "#e07a5f", "#d4a72c", "#5a9e6f", "#3a9ca8", "#4f9cf7", "#7c5cf0", "#8a8fa3"];
 var CSS = `
@@ -99,11 +99,33 @@ export async function renderThemeBuilder(ctx) {
       preview();
     });
     custom.addEventListener("change", draw);
+    const photo = h("input", { type: "file", accept: "image/*", style: "display:none" });
+    photo.addEventListener("change", async () => {
+      const f = photo.files?.[0];
+      if (!f) return;
+      try {
+        const bmp = await createImageBitmap(f);
+        const k = Math.min(1, 160 / Math.max(bmp.width, bmp.height));
+        const cv = document.createElement("canvas");
+        cv.width = Math.max(1, Math.round(bmp.width * k));
+        cv.height = Math.max(1, Math.round(bmp.height * k));
+        const g = cv.getContext("2d");
+        g.drawImage(bmp, 0, 0, cv.width, cv.height);
+        const c = pickAccentFromPixels(g.getImageData(0, 0, cv.width, cv.height).data);
+        if (!c) return ctx.toast("뚜렷한 색을 찾지 못했어요");
+        choice.accent = c;
+        accentTouched = true;
+        draw();
+      } catch (e) {
+        ctx.toast(`사진을 읽지 못했어요: ${e?.message ?? e}`, { error: true });
+      }
+    });
+    const photoBtn = btn("사진에서", { size: "sm", icon: "image", title: "캐릭터 사진에서 대표색 뽑기", onClick: () => photo.click() });
     replace(swEl, ...SWATCHES.map((c) => h("button", { type: "button", style: `background:${c}`, "aria-label": c, "aria-pressed": String(c === choice.accent), onClick: () => {
       choice.accent = c;
       accentTouched = true;
       draw();
-    } })), custom);
+    } })), custom, photoBtn, photo);
     replace(modeEl, segmented([["light", "밝게"], ["dark", "어둡게"]], choice.mode, (v) => {
       choice.mode = v;
       accentTouched = true;
@@ -288,6 +310,34 @@ export async function renderThemeBuilder(ctx) {
     h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" },
       btn("스튜디오에서 열기", { kind: "primary", icon: "check", onClick: () => save(true) }),
       btn("저장만", { icon: "check", onClick: () => save(false) })),
+    h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" },
+      btn("공유 코드 복사", { size: "sm", icon: "link", onClick: async () => {
+        const code = shareCode(choice, nameIn.value.trim());
+        try {
+          await navigator.clipboard.writeText(code);
+          ctx.toast("공유 코드를 복사했어요. 받은 사람은 '코드로 불러오기'에 붙여 넣으면 돼요");
+        } catch {
+          await promptDialog(ctx.win, { title: "공유 코드", label: "아래 글자를 복사해 주세요", value: code, ok: "닫기" });
+        }
+      } }),
+      btn("코드로 불러오기", { size: "sm", icon: "download", onClick: async () => {
+        const text = await promptDialog(ctx.win, { title: "공유 코드 불러오기", label: "DTB1: 로 시작하는 코드를 붙여 넣어요", placeholder: "DTB1:…", ok: "불러오기" });
+        if (!text) return;
+        try {
+          const r = readShareCode(text);
+          choice = r.choice;
+          accentTouched = true;
+          if (r.name) {
+            nameIn.value = r.name;
+            nameTouched = true;
+          }
+          draw();
+          drawAi();
+          ctx.toast("불러왔어요");
+        } catch (e) {
+          ctx.toast(e?.message ?? String(e), { error: true });
+        }
+      } })),
     note("info", "만든 테마는 스튜디오에서 적용하고, CSS·HTML을 직접 더 고칠 수도 있어요. 스튜디오에서 고친 뒤 빌더에서 다시 저장하면 직접 고친 부분은 덮어써져요."));
   const wrap = h("div", { class: "rb-section", style: "flex:1;display:flex;flex-direction:column;gap:12px;min-height:0" }, top, h("div", { class: "rb-tb" }, side, frame));
   replace(ctx.main, h("div", { class: "rb-scroll", style: "flex:1;display:flex;flex-direction:column;padding:4px" }, wrap));

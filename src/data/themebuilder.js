@@ -205,6 +205,62 @@ export var STYLES = [
       { id: "glow", name: "은은한 빛", on: false, css: `.dt-char .dt-card{box-shadow:0 0 0 1px color-mix(in srgb,var(--t-accent) 25%,transparent),0 8px 28px color-mix(in srgb,var(--t-accent) calc(var(--t-shadow)*100%),transparent)}` }
     ]
   }
+  ,{
+    id: "diary",
+    name: "밤의 일기",
+    desc: "별이 뜬 밤하늘 일기장. 그라데이션 테두리, 날짜 배지, 가운데 글줄",
+    mode: "dark",
+    accent: "#6a7cf0",
+    vars: { radius: 16, fontSize: 15, lineHeight: 1.85, cardWidth: 900, gap: 18, avatarSize: 64, avatarRadius: 4 },
+    font: "sans",
+    avatar: "stamp",
+    css: `.dt{flex-direction:column;align-items:stretch;gap:0}
+.dt-card{position:relative;border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(18px*var(--t-space)) calc(22px*var(--t-space)) calc(10px*var(--t-space));background:linear-gradient(180deg,color-mix(in srgb,var(--t-accent) 10%,var(--t-paper)),var(--t-paper) 40%)}
+.dt-av{position:relative;z-index:1;margin:0 0 -40px 18px}
+.dt-head{flex-direction:column;align-items:flex-start;gap:6px;padding-left:calc(var(--t-avatar-size) + 22px);min-height:42px;border-bottom:1px dashed var(--t-line);padding-bottom:12px;margin-bottom:14px}
+.dt-name{font-size:.72em;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--t-muted)}
+.dt-date{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border:1px solid var(--t-line);border-radius:99px;font-size:.75em}
+.dt-date::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--t-accent)}
+.dt-body,.dt-foot{margin-inline:auto;max-width:var(--t-text-width)}
+.dt-foot{border-top:1px dashed var(--t-line);padding-top:8px;max-width:none}
+.dt-user .dt-card{background:var(--t-tint)}
+.dt-user .dt-head{padding-left:0}
+@media (max-width:600px){.dt-av{margin-left:10px}.dt-head{padding-left:calc(var(--t-avatar-size) + 14px)}}`,
+    deco: [
+      { id: "stars", name: "별 반짝임", on: true, css: `.dt-char .dt-card::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:.6;background:radial-gradient(1px 1px at 20% 30%,var(--t-ink),transparent),radial-gradient(1px 1px at 70% 12%,var(--t-ink),transparent),radial-gradient(1.5px 1.5px at 88% 40%,var(--t-accent2),transparent),radial-gradient(1px 1px at 45% 8%,var(--t-ink),transparent)}` },
+      { id: "frame", name: "그라데이션 테두리", on: true, css: `.dt-card{border-color:transparent;background-clip:padding-box;box-shadow:0 0 0 1px color-mix(in srgb,var(--t-accent) 45%,transparent),0 0 0 2px color-mix(in srgb,var(--t-accent2) 20%,transparent)}` },
+      { id: "quote", name: "대사 강조색", on: true, css: `.dt-body q,.dt-body mark{color:var(--t-accent2)}` },
+      { id: "shadow", name: "깊은 그림자", on: false, css: `.dt-card{box-shadow:0 14px 40px rgb(0 0 0/calc(var(--t-shadow)*2))}` }
+    ]
+  },
+  {
+    id: "novel",
+    name: "비주얼 노벨",
+    desc: "게임 대사창. 이름표가 붙은 반투명 상자, 큰 초상화",
+    mode: "dark",
+    accent: "#e07a9a",
+    vars: { radius: 10, fontSize: 15.5, lineHeight: 1.8, cardWidth: 880, gap: 20, avatarSize: 96, avatarRadius: 10 },
+    font: "round",
+    avatar: "style",
+    css: `.dt{align-items:flex-end;gap:14px}
+.dt-av{border:2px solid var(--t-line);box-shadow:0 6px 18px rgb(0 0 0/var(--t-shadow))}
+.dt-card{position:relative;margin-top:16px;background:color-mix(in srgb,var(--t-paper) 88%,transparent);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(26px*var(--t-space)) calc(20px*var(--t-space)) calc(10px*var(--t-space))}
+.dt-head{position:absolute;top:-15px;left:16px;padding:4px 14px;border-radius:calc(var(--t-radius)*.8);background:var(--t-accent);box-shadow:0 3px 10px rgb(0 0 0/var(--t-shadow))}
+.dt-name{color:var(--t-on-accent);font-size:.9em}
+.dt-date{display:none}
+.dt-user{flex-direction:row-reverse}
+.dt-user .dt-av{display:none}
+.dt-user .dt-head{left:auto;right:16px;background:var(--t-muted)}
+.dt-user .dt-name{color:var(--t-paper)}
+@media (max-width:600px){.dt{flex-direction:column;align-items:stretch}.dt-av{width:64px;height:64px}}`,
+    deco: [
+      { id: "arrow", name: "다음 표시 ▼", on: true, css: `.dt-char .dt-body::after{content:"▼";display:block;text-align:right;font-size:10px;color:var(--t-accent-text);animation:dt-blink 1.4s ease-in-out infinite}
+@keyframes dt-blink{50%{opacity:.25}}` },
+      { id: "glass", name: "유리 느낌", on: true, css: `.dt-card{backdrop-filter:blur(8px)}` },
+      { id: "line", name: "윗줄 강조", on: false, css: `.dt-card{border-top:3px solid var(--t-accent)}` },
+      { id: "corner", name: "모서리 장식", on: false, css: `.dt-card::after{content:"";position:absolute;right:8px;bottom:8px;width:14px;height:14px;border-right:2px solid var(--t-accent);border-bottom:2px solid var(--t-accent);border-radius:0 0 4px 0;opacity:.7}` }
+    ]
+  }
 ];
 export var styleById = (id) => STYLES.find((s) => s.id === id) ?? STYLES[0];
 
@@ -511,8 +567,41 @@ export async function aiChoose(want, run) {
 export function thumbHtml(styleId, P) {
   const line = (w, c = P.muted) => `<div style="height:4px;width:${w}%;border-radius:2px;background:${c};opacity:.7;margin-top:4px"></div>`;
   if (styleId === "letter") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box"><div style="background:${P.paper};border:1px solid ${P.line};border-radius:3px;padding:8px;position:relative"><div style="position:absolute;right:6px;top:-6px;width:14px;height:16px;border:1.5px dashed ${P.line};background:${P.tint};transform:rotate(4deg)"></div><div style="height:5px;width:40%;background:${P.ink};opacity:.8;border-radius:2px"></div>${line(90)}${line(80)}${line(60)}</div></div>`;
+  if (styleId === "diary") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box"><div style="border:1px solid ${P.accent};border-radius:8px;padding:7px;background:${P.paper};position:relative"><div style="display:flex;gap:5px;align-items:center"><span style="width:14px;height:14px;border:1px dashed ${P.line};background:${P.tint}"></span><span style="height:6px;width:26px;border-radius:3px;border:1px solid ${P.line}"></span></div>${line(80)}${line(70)}</div></div>`;
+  if (styleId === "novel") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box;display:flex;gap:5px;align-items:flex-end"><span style="width:20px;height:30px;border-radius:4px;background:${P.tint};border:1px solid ${P.line};flex:none"></span><div style="flex:1;position:relative;background:${P.paper};border:1px solid ${P.line};border-radius:5px;padding:9px 6px 5px"><span style="position:absolute;top:-5px;left:5px;width:22px;height:8px;border-radius:3px;background:${P.accent}"></span>${line(90)}${line(60)}</div></div>`;
   if (styleId === "messenger") return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:5px"><span style="width:14px;height:14px;border-radius:50%;background:${P.tint};flex:none"></span><div style="background:${P.paper};border:1px solid ${P.line};border-radius:3px 9px 9px 9px;padding:5px 7px;width:60%">${line(90)}${line(60)}</div></div><div style="align-self:flex-end;background:${P.userBubble};border-radius:9px 3px 9px 9px;padding:5px 7px;width:45%">${line(80, P.onUser)}</div></div>`;
   return `<div style="background:${P.bg};padding:10px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:6px"><div style="background:${P.paper};border:1px solid ${P.line};border-left:3px solid ${P.accent};border-radius:6px;padding:6px 8px">${line(30, P.accent)}${line(90)}${line(70)}</div><div style="background:${P.tint};border:1px solid ${P.line};border-left:3px solid ${P.muted};border-radius:6px;padding:6px 8px">${line(80)}</div></div>`;
+}
+
+// ── 사진에서 대표색 뽑기: 채도·밝기가 적당한 픽셀을 색상환 24칸으로 모아 가장 많은 칸의 평균 ──
+export function pickAccentFromPixels(data) {
+  const bins = Array.from({ length: 24 }, () => ({ n: 0, r: 0, g: 0, b: 0 }));
+  for (let i = 0; i < data.length; i += 16) {
+    if (data[i + 3] < 128) continue;
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    if (mx < 40 || mx > 245 && d < 20 || d / (mx || 1) < 0.25) continue;
+    let hh = mx === r ? (g - b) / d % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    const bin = bins[Math.floor((hh * 60 + 360) % 360 / 15)];
+    const w = d / 255; // 채도 높은 픽셀에 가중치
+    bin.n += w; bin.r += r * w; bin.g += g * w; bin.b += b * w;
+  }
+  const best = bins.reduce((a, x) => x.n > a.n ? x : a);
+  if (best.n < 1) return null;
+  return rgbToHex([best.r / best.n / 255, best.g / best.n / 255, best.b / best.n / 255]);
+}
+
+// ── 공유 코드: 선택(AI CSS 포함)을 짧은 글자로 ──
+export function shareCode(choice, name = "") {
+  const json = JSON.stringify({ ...normalizeChoice(choice), name: String(name).slice(0, 40) });
+  const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(json)));
+  return "DTB1:" + b64;
+}
+export function readShareCode(text) {
+  const m = String(text ?? "").match(/DTB1:([A-Za-z0-9+/=]+)/);
+  if (!m) throw new Error("테마 빌더 공유 코드(DTB1:…)가 아니에요");
+  const raw = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(m[1]), (c) => c.charCodeAt(0))));
+  return { choice: normalizeChoice(raw), name: typeof raw.name === "string" ? raw.name : "" };
 }
 
 // 화면 간 넘겨주기 (빌더 → 스튜디오에서 열 테마, 스튜디오 → 빌더에서 고칠 테마)
