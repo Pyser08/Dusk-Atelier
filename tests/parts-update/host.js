@@ -15,7 +15,8 @@
     if (!area) return;
     area.textContent = 'manifest.json 불러오는 중…';
     try {
-      const response = await risuai.nativeFetch(MANIFEST_URL);
+      // RisuAI nativeFetch에서는 요청 방식을 명시해야 빈 요청 본문 오류가 나지 않는다.
+      const response = await risuai.nativeFetch(MANIFEST_URL, { method: 'GET' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const manifest = await response.json();
       area.replaceChildren();
