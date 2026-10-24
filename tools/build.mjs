@@ -22,6 +22,19 @@ const banner = [
   `/* Dusk Atelier v${version} — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */`
 ].join('\n');
 
+// 변경 기록: CHANGELOG.md의 최근 8개 버전을 번들에 넣어 업데이트 뒤 "새로 바뀐 점" 창에 보여 준다
+const changelog = (() => {
+  try {
+    const md = fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8');
+    return md.split(/^## /m).slice(1).map((sec) => {
+      const [head, ...rest] = sec.split('\n');
+      const m = /^v?(\d+(?:\.\d+)*)\s*(?:\(([^)]*)\))?/.exec(head.trim());
+      return m ? { v: m[1], date: m[2] ?? '', body: rest.join('\n').trim().slice(0, 6000) } : null;
+    }).filter(Boolean).slice(0, 8);
+  } catch {
+    return [];
+  }
+})();
 const result = await build({
   entryPoints: [path.join(root, 'src/main.js')],
   bundle: true,
@@ -33,7 +46,7 @@ const result = await build({
   // minifySyntax는 쓰지 않는다: 줄바꿈 든 문자열을 템플릿 문자열로 바꿔 줄 맨 앞에 //@ 가 생길 수 있다.
   minifyWhitespace: true,
   minifyIdentifiers: true,
-  define: { __VERSION__: JSON.stringify(version) },
+  define: { __VERSION__: JSON.stringify(version), __CHANGELOG__: JSON.stringify(changelog) },
   alias: { fflate: path.join(root, 'src/vendor/fflate.js') },
   banner: { js: banner },
   write: false,

@@ -1,3 +1,4 @@
+import { maybeShowWhatsNew, openChangelog, CHANGELOG } from './whatsnew.js';
 import { btn, iconBtn, toast } from './kit.js';
 import { CSS2, FONT_LINK } from './styles.js';
 import { resolveMode, themeVars } from './theme.js';
@@ -263,7 +264,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     replace(
       navFoot,
       h("div", { class: "rb-nav-hint" }, "파일을 창 어디에 끌어다 놓아도 바로 가져와요"),
-      h("div", { class: "rb-nav-hint", style: "padding-top:4px" }, `v${version}`)
+      h("button", { type: "button", class: "rb-nav-hint", style: "padding-top:4px;background:none;border:0;color:inherit;cursor:pointer;text-align:left", title: "변경 기록 보기", onClick: () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록") }, `v${version} · 변경 기록`)
     );
     const inHist = state.tab === "tools" && state.sub === "history";
     const showSearch = inHist || ["modules", "plugins", "characters"].includes(state.tab);
@@ -293,6 +294,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     root.hidden = false;
     await api.showContainer("fullscreen");
     render();
+    maybeShowWhatsNew(ctx).catch(() => {
+    });
     checkUpdate().catch(() => {
     });
     checkTide();
