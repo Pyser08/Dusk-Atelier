@@ -151,7 +151,7 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
     const patch = { [sv(STATE_VAR)]: JSON.stringify({ f: st.f ?? {}, t: st.t ?? {}, p, ...st.b ? { b: st.b } : {} }) };
     for (const [k, v] of Object.entries(gateValues(items, res.fired))) patch[sv(k)] = v;
     for (const n of targets) patch[sv(n)] = pv[n];
-    return { patch, fired: res.fired, turn, random: hasRandom(items) };
+    return { patch, fired: res.fired, trace: res.trace, turn, random: hasRandom(items) };
   }
 
   async function writePatch(charIdx, chatIdx, patch) {
@@ -180,6 +180,9 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
       await api.setChatToIndex(charIdx, chatIdx, chat);
       lastFired = d.fired.map((a) => ({ name: a.entry.comment || a.rid, why: a.why }));
       log(`턴 ${d.turn}: ${lastFired.length ? lastFired.map((x) => `${x.name}(${x.why})`).join(", ") : "켜진 항목 없음"}`);
+      // 확률·최대 인원으로 빠진 항목도 보여 준다 (조건이 안 맞은 항목은 너무 많아 뺀다)
+      const miss = (d.trace ?? []).filter((x) => !x.on && /확률|최대 \d+명/.test(x.why));
+      if (miss.length) log(`턴 ${d.turn} 빠짐: ${miss.map((x) => `${x.name}(${x.why})`).join(", ")}`);
     } catch (e) {
       log("규칙 적용 실패 — 이번 턴은 직전 결정을 그대로 씀", e?.message ?? e);
     } finally {
