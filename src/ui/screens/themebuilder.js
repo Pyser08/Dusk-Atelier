@@ -4,7 +4,7 @@ import { btn, iconBtn, segmented, note, chip, switchEl } from '../kit.js';
 import { AI_MODES, runAI } from '../../engine/merge.js';
 import { ensureStudioCss, mockDoc } from './themestudio.js';
 import { TARGETS, loadThemes, saveThemes, detectTarget } from '../../data/themes.js';
-import { STYLES, styleById, defaultChoice, normalizeChoice, buildTheme, makePalette, thumbHtml, contrast, handoff, DIALS, AVATARS, FONTS, aiChoose } from '../../data/themebuilder.js';
+import { STYLES, styleById, defaultChoice, normalizeChoice, buildTheme, makePalette, thumbHtml, contrast, handoff, DIALS, AVATARS, FONTS, aiChoose, aiStyle, aiStylePrompt, aiEditPrompt, currentStyleCss } from '../../data/themebuilder.js';
 
 var SWATCHES = ["#9a6b4f", "#c2557a", "#e07a5f", "#d4a72c", "#5a9e6f", "#3a9ca8", "#4f9cf7", "#7c5cf0", "#8a8fa3"];
 var CSS = `
@@ -82,8 +82,9 @@ export async function renderThemeBuilder(ctx) {
       const sp = makePalette(accentTouched ? choice.accent : s.accent, accentTouched ? choice.mode : s.mode, choice.vivid);
       const th = h("div", { class: "th" });
       th.innerHTML = thumbHtml(s.id, sp);
-      return h("button", { type: "button", class: "rb-tb-style", "aria-pressed": String(choice.style === s.id), title: s.desc, onClick: () => {
+      return h("button", { type: "button", class: "rb-tb-style", "aria-pressed": String(!choice.aiCss && choice.style === s.id), title: s.desc, onClick: () => {
         const d = defaultChoice(s.id);
+        delete choice.aiCss;
         choice = accentTouched ? { ...choice, style: s.id, deco: d.deco } : { ...d, vivid: choice.vivid, round: choice.round, space: choice.space, avatar: choice.avatar, font: choice.font };
         if (!nameTouched) nameIn.value = s.name + " 테마";
         draw();
@@ -117,7 +118,8 @@ export async function renderThemeBuilder(ctx) {
       if (k === "vivid") r.addEventListener("change", draw);
       return h("label", { class: "rb-tb-dial" }, h("span", null, lo), r, h("span", null, hi));
     }));
-    replace(decoEl, ...styleById(choice.style).deco.map((d) => h("div", { style: "display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px" }, h("span", null, d.name), switchEl(!!choice.deco[d.id], { label: d.name, onChange: (on, el) => {
+    if (choice.aiCss) replace(decoEl, h("div", { class: "rb-muted", style: "font-size:12px" }, "AI 스타일을 쓰는 중이라 장식은 AI가 정했어요. 바꾸고 싶으면 위 'AI로 고치기'에 말해 주세요."));
+    else replace(decoEl, ...styleById(choice.style).deco.map((d) => h("div", { style: "display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px" }, h("span", null, d.name), switchEl(!!choice.deco[d.id], { label: d.name, onChange: (on, el) => {
       choice.deco = { ...choice.deco, [d.id]: on };
       el.setAttribute("aria-checked", String(on));
       preview();
@@ -161,31 +163,86 @@ export async function renderThemeBuilder(ctx) {
     ai.staticModel = modelId.value.trim();
     saveAi();
   });
-  const aiMsg = h("div", { class: "rb-muted", style: "font-size:12px" });
+  const aiMsg = h("div", { class: "rb-muted", style: "font-size:12px;line-height:1.6" });
+  let aiMode = "new";
+  const modeSeg = h("div");
+  const aiStatus = h("div");
+  const undo = [];
   let aiBusy = false;
-  const aiBtn = btn("AI로 시작하기", { kind: "primary", size: "sm", icon: "zap", onClick: async () => {
+  const runBusy = async (label, fn) => {
     if (aiBusy) return;
-    if (!wantIn.value.trim()) return wantIn.focus();
     if (ai.mode === "static" && !ai.staticModel) return replace(aiMsg, "모델 ID를 먼저 적어 주세요.");
     aiBusy = true;
-    aiBtn.disabled = true;
-    replace(aiMsg, "AI가 고르는 중…");
+    aiBox.querySelectorAll("button").forEach((b) => b.disabled = true);
+    replace(aiMsg, label);
     try {
-      const r = await aiChoose(wantIn.value, (m) => runAI(ctx.api, m, ai));
-      choice = r.choice;
+      undo.push(structuredClone(choice));
+      if (undo.length > 10) undo.shift();
+      await fn((m) => runAI(ctx.api, m, ai));
       accentTouched = true;
-      if (r.name && !nameTouched) nameIn.value = r.name;
       draw();
-      replace(aiMsg, "골랐어요. 아래에서 마음대로 더 바꿔도 돼요.");
     } catch (e) {
-      replace(aiMsg, `AI가 고르지 못했어요: ${e?.message ?? e}`);
+      undo.pop();
+      replace(aiMsg, `AI가 하지 못했어요: ${e?.message ?? e}`);
     } finally {
       aiBusy = false;
-      aiBtn.disabled = false;
+      aiBox.querySelectorAll("button").forEach((b) => b.disabled = false);
+      drawAi();
     }
+  };
+  const aiBtn = btn("AI로 만들기", { kind: "primary", size: "sm", icon: "zap", onClick: () => {
+    if (!wantIn.value.trim()) return wantIn.focus();
+    if (aiMode === "pick") return runBusy("AI가 고르는 중…", async (run) => {
+      const r = await aiChoose(wantIn.value, run);
+      choice = r.choice;
+      if (r.name && !nameTouched) nameIn.value = r.name;
+      replace(aiMsg, "골랐어요. 아래에서 마음대로 더 바꿔도 돼요.");
+    });
+    return runBusy("AI가 새 스타일을 디자인하는 중… (큰 모델일수록 좋아요)", async (run) => {
+      // 색·밝기·글꼴은 먼저 고르게 하고, 모양은 새로 쓴다
+      const r = await aiChoose(wantIn.value, run).catch(() => null);
+      const base = r ? { ...r.choice, avatar: "style" } : { ...choice };
+      const css = await aiStyle(aiStylePrompt(wantIn.value, base), run);
+      choice = { ...base, aiCss: css };
+      if (r?.name && !nameTouched) nameIn.value = r.name;
+      replace(aiMsg, "새 스타일을 만들었어요. 일반 리스·포켓 계열 모두 같은 규칙으로 보여요. 고치고 싶은 곳은 아래에 말해 주세요.");
+    });
   } });
-  const aiBox = h("div", { class: "rb-tb-ai" }, h("div", { class: "rb-tb-h", style: "margin:0" }, "✨ AI로 시작하기"), wantIn,
-    h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" }, modelSel, modelId, aiBtn), aiMsg);
+  const editIn = h("input", { type: "text", placeholder: "예: 이름을 더 크게, 내 말풍선 모서리는 각지게", "aria-label": "AI로 고칠 내용", style: "flex:1;min-width:160px" });
+  const editBtn = btn("AI로 고치기", { size: "sm", icon: "brush", onClick: () => {
+    if (!editIn.value.trim()) return editIn.focus();
+    runBusy("AI가 고치는 중…", async (run) => {
+      const css = await aiStyle(aiEditPrompt(editIn.value, currentStyleCss(choice)), run);
+      choice = { ...choice, aiCss: css };
+      editIn.value = "";
+      replace(aiMsg, "고쳤어요. 마음에 안 들면 '되돌리기'를 눌러요.");
+    });
+  } });
+  editIn.addEventListener("keydown", (e) => e.key === "Enter" && !e.isComposing && editBtn.click());
+  const drawAi = () => {
+    replace(modeSeg, segmented([["new", "새 스타일 만들기"], ["pick", "있는 스타일에서 고르기"]], aiMode, (v) => {
+      aiMode = v;
+    }, "AI 방식"));
+    replace(aiStatus, choice.aiCss || undo.length ? h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px" },
+      choice.aiCss ? h("span", { class: "rb-muted" }, "AI 스타일 사용 중") : null,
+      undo.length ? btn("되돌리기", { size: "sm", icon: "undo", onClick: () => {
+        choice = undo.pop();
+        draw();
+        drawAi();
+        replace(aiMsg, "되돌렸어요.");
+      } }) : null,
+      choice.aiCss ? btn("기본 스타일로", { size: "sm", onClick: () => {
+        undo.push(structuredClone(choice));
+        delete choice.aiCss;
+        draw();
+        drawAi();
+      } }) : null) : "");
+  };
+  const aiBox = h("div", { class: "rb-tb-ai" }, h("div", { class: "rb-tb-h", style: "margin:0" }, "✨ AI"), modeSeg, wantIn,
+    h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" }, modelSel, modelId, aiBtn),
+    h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-top:1px dashed var(--rb-line);padding-top:8px" }, editIn, editBtn),
+    aiStatus, aiMsg);
+  drawAi();
 
   const save = async (thenStudio) => {
     const t = theme();

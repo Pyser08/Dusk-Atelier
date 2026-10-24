@@ -267,7 +267,8 @@ export function normalizeChoice(raw) {
     vivid: num(r.vivid, 50), round: num(r.round, 50), space: num(r.space, 50),
     avatar: AVATARS.some(([k]) => k === r.avatar) ? r.avatar : "style",
     font: FONTS.some((f) => f.id === r.font) ? r.font : "style",
-    deco
+    deco,
+    ...typeof r.aiCss === "string" && r.aiCss.trim() ? { aiCss: sanitizeAiCss(r.aiCss) } : {}
   };
 }
 
@@ -311,9 +312,8 @@ export function compileBuilder(choice, target) {
     `:root{\n${Object.entries(root).map(([k, x]) => `  ${k}: ${x};`).join("\n")}\n}`,
     WRAP[target] ?? WRAP.risu,
     BASE,
-    s.css,
-    ...s.deco.map((d) => c.deco[d.id] ? d.css : d.off ?? ""),
-    AVATAR_CSS[avatar] ?? ""
+    ...c.aiCss ? ["/* AI 스타일 */", c.aiCss] : [s.css, ...s.deco.map((d) => c.deco[d.id] ? d.css : d.off ?? "")],
+    c.aiCss && c.avatar === "style" ? "" : AVATAR_CSS[avatar] ?? ""
   ].filter(Boolean).join("\n");
   return { css, html: BUILDER_HTML, palette: P };
 }
@@ -331,6 +331,123 @@ export function buildTheme(choice, target, base = null) {
   t.tokens = { ...t.tokens, bg: P.bg, panel: P.paper, border: P.line, accent: P.accent, accent2: P.accent2, text: P.ink, sub: P.muted, quote: P.accentText, userBubble: P.userBubble, botBubble: P.paper };
   t.updated = Date.now();
   return t;
+}
+
+// ── AI 스타일 CSS 거르기 ──
+// .dt 안쪽만 꾸미게 한다: 다른 선택자·위험한 속성은 버리고, 계열 차이는 WRAP이 맡는다
+var BAD_DECL = /(^|;)\s*(position\s*:\s*(fixed|sticky)|behavio[u]?r\s*:|-moz-binding\s*:|content\s*:\s*url)[^;]*/gi;
+function cleanDecl(body) {
+  return body
+    .replace(/!important/gi, "")
+    .replace(/url\s*\([^)]*\)/gi, "none")
+    .replace(/expression\s*\(/gi, "(")
+    .replace(BAD_DECL, "$1")
+    .replace(/[<>]/g, "")
+    .trim();
+}
+var okSel = (sel) => sel.split(",").every((x) => /^\s*\.dt([-\w]*)?([\s.:>+~\[(]|$)/.test(x));
+// 중괄호를 직접 세어 규칙을 나눈다. @media는 안쪽을 다시 거른다. @keyframes는 이름이 dt-로 시작할 때만
+export function sanitizeAiCss(css, depth = 0) {
+  let src = String(css ?? "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/@import[^;]*;?/gi, "").replace(/@charset[^;]*;?/gi, "");
+  const out = [];
+  let i = 0;
+  while (i < src.length) {
+    const open = src.indexOf("{", i);
+    if (open < 0) break;
+    const head = src.slice(i, open).trim();
+    let d = 1, j = open + 1;
+    while (j < src.length && d) {
+      if (src[j] === "{") d++;
+      else if (src[j] === "}") d--;
+      j++;
+    }
+    const body = src.slice(open + 1, j - 1);
+    i = j;
+    if (/^@media\b/i.test(head) && depth === 0) {
+      const inner = sanitizeAiCss(body, 1);
+      if (inner) out.push(`${head.replace(/[<>{}]/g, "")}{\n${inner}\n}`);
+    } else if (/^@(-webkit-)?keyframes\s+dt-[\w-]+$/i.test(head) && depth === 0) {
+      out.push(`${head}{${body.replace(/[<>]/g, "")}}`);
+    } else if (!head.startsWith("@") && okSel(head)) {
+      const b = cleanDecl(body);
+      if (b) out.push(`${head.replace(/\s+/g, " ")}{${b}}`);
+    }
+  }
+  return out.join("\n").slice(0, 16000);
+}
+// 모델 응답에서 CSS만 꺼낸다 (```css 블록 우선)
+export function extractCss(text) {
+  const t = String(text ?? "");
+  const m = t.match(/```(?:css)?\s*([\s\S]*?)```/i);
+  return (m ? m[1] : t.slice(Math.max(0, t.indexOf(".dt")))).trim();
+}
+
+// AI가 지킬 계약: 일반 리스·포켓리스 어디서든 똑같이 보이도록
+var CONTRACT = `You write CSS for a RisuAI chat theme. The SAME CSS must work in both original RisuAI and PocketRisu-family apps (PocketRisu, RisuBard...). The app already handles the outer differences; you ONLY style the message markup below.
+
+Markup of every message (role is "char" or "user"):
+<div class="dt dt-char|dt-user">
+  <div class="dt-av"><risuicon/></div>            avatar (an <img> or div inside)
+  <div class="dt-card">
+    <div class="dt-head"><span class="dt-name"/><span class="dt-date"/></div>
+    <div class="dt-body"><risutextbox/></div>       message text: p, em, strong, mark, q, code, img, a, ul, blockquote; may be wrapped in .chattext
+    <div class="dt-foot"><risugeninfo/><risubuttons/></div>   small icon buttons (regenerate, edit, delete...)
+  </div>
+</div>
+
+A base layer already exists: .dt is flex row with gap; .dt-av sized by vars; .dt-card flex:1; text color/size/line-height from vars; .dt-foot is a small muted row.
+
+Variables you MUST use for all colors, sizes and fonts (never hard-code colors except transparent / rgb(0 0 0/x) for shadows):
+--t-bg --t-paper --t-tint --t-line --t-ink --t-muted --t-accent --t-accent2 --t-accent-text --t-on-accent --t-user-bubble --t-user-bubble2 --t-on-user (text on user bubble) --t-shadow (0~0.2 alpha number, use as rgb(0 0 0/var(--t-shadow)))
+--t-radius --t-font-size --t-line-height --t-space (spacing multiplier, use calc(Npx*var(--t-space))) --t-gap --t-card-width --t-avatar-size --t-avatar-radius --t-font-body --t-font-display
+color-mix(in srgb, var(--t-accent) 30%, transparent) is allowed.
+
+Rules (anything breaking them is deleted automatically):
+- Every selector starts with .dt, .dt-char, .dt-user, .dt-av, .dt-card, .dt-head, .dt-name, .dt-date, .dt-body, .dt-foot (descendants allowed, e.g. ".dt-user .dt-body p"). No :root, html, body, .risu-chat, or app classes.
+- No @import, no url(), no !important, no position:fixed/sticky. position:absolute only inside an element you set position:relative on.
+- ::before/::after with text or gradients for decoration are welcome. @keyframes names must start with dt- and stay subtle.
+- Text must stay readable: text on --t-paper/--t-tint uses --t-ink/--t-muted; text on user bubble uses --t-on-user (also set it for em, strong, mark inside).
+- Must not break on a 360px wide phone: add @media (max-width:600px) to shrink paddings/avatar or stack; never fixed widths wider than 100%; use max-width and min-width:0.
+- Keep .dt-foot buttons visible and clickable; do not hide .dt-body or .dt-foot; overflow-wrap for long words.
+- Both roles must look intentionally different (char vs user).`;
+
+export function aiStylePrompt(want, choice) {
+  const c = normalizeChoice(choice);
+  return [
+    { role: "system", content: `${CONTRACT}
+
+Design a NEW, distinctive, polished style that matches the request. Think like a senior UI designer: clear hierarchy, consistent spacing, tasteful decoration, no clutter.
+Reply with ONE \`\`\`css code block only. Under 160 lines.` },
+    { role: "user", content: `Request: ${String(want || "").slice(0, 600)}
+(Colors come from an accent ${c.accent} in ${c.mode} mode via the variables.)` }
+  ];
+}
+export function aiEditPrompt(want, css) {
+  return [
+    { role: "system", content: `${CONTRACT}
+
+You are editing an existing style. Change ONLY what the request asks; keep everything else exactly as it is. Reply with the FULL updated CSS in ONE \`\`\`css code block only.` },
+    { role: "user", content: `Current CSS:\n\`\`\`css\n${String(css).slice(0, 14000)}\n\`\`\`\n\nRequest: ${String(want || "").slice(0, 600)}` }
+  ];
+}
+// 스타일을 AI로 고칠 때 시작점: 이미 AI 스타일이면 그 CSS, 아니면 지금 스타일+켜진 장식+프로필
+export function currentStyleCss(choice) {
+  const c = normalizeChoice(choice);
+  if (c.aiCss) return c.aiCss;
+  const s = styleById(c.style);
+  const av = c.avatar === "style" ? s.avatar : c.avatar;
+  return [s.css, ...s.deco.map((d) => c.deco[d.id] ? d.css : d.off ?? ""), AVATAR_CSS[av] ?? ""].filter(Boolean).join("\n");
+}
+// 만들기·고치기 공통: CSS를 받아 거르고, 너무 적게 남으면 이유를 알려 1회 재시도
+export async function aiStyle(msgs, run) {
+  let text = await run(msgs);
+  let css = sanitizeAiCss(extractCss(text));
+  if ((css.match(/\{/g) ?? []).length < 4) {
+    text = await run([...msgs, { role: "assistant", content: String(text).slice(0, 2000) }, { role: "user", content: "Most rules were invalid or missing (selectors must start with .dt..., no url/!important/@import). Reply again with the full CSS in one ```css block only." }]);
+    css = sanitizeAiCss(extractCss(text));
+    if ((css.match(/\{/g) ?? []).length < 4) throw new Error("쓸 수 있는 CSS를 받지 못했어요. 더 큰 모델로 해 보세요");
+  }
+  return css;
 }
 
 // ── AI로 시작하기: AI는 CSS를 쓰지 않고 선택지 JSON만 고른다 ──
