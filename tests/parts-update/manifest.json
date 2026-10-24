@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "name": "Dusk Atelier Parts Update Test",
+  "parts": [
+    {
+      "id": "da_parts_test_host",
+      "displayName": "DA Parts Test Host",
+      "version": "0.1.0",
+      "pluginUrl": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/test/parts-updates/tests/parts-update/host.js"
+    },
+    {
+      "id": "da_parts_test_part",
+      "displayName": "DA Parts Test Part",
+      "version": "0.1.0",
+      "pluginUrl": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/test/parts-updates/tests/parts-update/part.js"
+    }
+  ]
+}
