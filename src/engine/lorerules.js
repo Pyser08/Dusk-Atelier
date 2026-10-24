@@ -514,9 +514,19 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     const cur = groups.get(g);
     if (!cur || (Number(a.entry.insertorder) || 0) > (Number(cur.entry.insertorder) || 0)) groups.set(g, a);
   }
+  // 같은 항목을 여러 소속에 복사해 둔 경우: 이름과 본문이 같으면 한 번만 넣는다
+  const seenBody = new Map();
+  const dup = new Map();
   const fired = [...active.values()].filter((a) => {
     const g = String(a.rule.group ?? "").trim();
-    return !g || groups.get(g) === a;
+    if (g && groups.get(g) !== a) return false;
+    const k = `${String(a.entry.comment ?? "").trim()}\u0000${bodyOf(a.entry.content)}`;
+    if (seenBody.has(k)) {
+      dup.set(a.rid, seenBody.get(k));
+      return false;
+    }
+    seenBody.set(k, a);
+    return true;
   });
   const f = { ...hist }, t = { ...trig };
   for (const a of fired) {
@@ -543,7 +553,8 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     const name = it.entry.comment || it.rid;
     if (firedSet.has(it.rid)) return { rid: it.rid, name, on: true, why: active.get(it.rid).why };
     let why;
-    if (active.has(it.rid)) why = `같은 그룹 '${String(it.rule.group).trim()}'의 다른 항목이 먼저 켜졌어요`;
+    if (dup.has(it.rid)) why = `같은 이름·내용의 항목이 이미 들어가요 (${dup.get(it.rid).why})`;
+    else if (active.has(it.rid)) why = `같은 그룹 '${String(it.rule.group).trim()}'의 다른 항목이 먼저 켜졌어요`;
     else if (blocked(it)) why = it.rule.once === "chat" ? "이미 켜져서 쉬는 중 (채팅에서 한 번만)" : `쿨다운 중 (${Math.max(1, Number(it.rule.cool) || 1)}턴 쉬기)`;
     else if (affMiss.has(it.rid)) why = affMiss.get(it.rid);
     else if (!condsOk(it)) {
