@@ -87,7 +87,10 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
     const items = collectManaged(entries);
     if (!items.length) return null;
     const msgs = toMsgs(chat);
-    if (input !== void 0 && input !== null) msgs.push({ role: "user", data: String(input) });
+    // 새 입력일 때만 사용자 메시지를 더한다. 빈 입력(이어 쓰기)이나, 마지막이 같은 사용자 메시지인 경우(리롤 때 입력 처리를 다시 부르는 리스)는 같은 턴으로 본다
+    const last = msgs.at(-1);
+    const inp = input === void 0 || input === null ? "" : String(input);
+    if (inp.trim() && !(last?.role === "user" && last.data.trim() === inp.trim())) msgs.push({ role: "user", data: inp });
     const turn = turnOf(msgs);
     const ss = chat?.scriptstate ?? {};
     const st = readState(ss);
