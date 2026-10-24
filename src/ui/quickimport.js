@@ -2,6 +2,7 @@
 // 상자를 누르면 Dusk 가져오기 화면이 열리고, 거기에 끌어 놓으면 에셋을 여러 개씩 동시에 올린다.
 // ×를 누르면 동그란 아이콘으로 작아지고, 아이콘을 누르면 다시 상자로 펼쳐진다.
 // 마우스로 끌어서 옮길 수 있다. 접힌 상태와 위치는 기억한다.
+// 봇에 들어가 채팅 화면이 떠 있는 동안에는 상자·아이콘을 숨기고, 채팅 화면에서 나오면 다시 보인다.
 // 리스는 플러그인에 drop 이벤트를 주지 않아서 상자 위에 놓은 파일은 받을 수 없다
 // → 상자에는 '눌러서 열기'로만 안내한다. 모바일은 + 메뉴에 이미 버튼이 있으니 띄우지 않는다.
 //
@@ -35,6 +36,9 @@ var INNER = {
   wide: `${ICON(42)}<span style="display:block;flex:1;min-width:0"><b style="display:block;font-size:15px;color:#ffffff">빠른 가져오기</b><span style="display:block;font-size:12.5px;color:#b1aecb;word-break:keep-all">에셋을 여러 개씩 동시에 올려서 리스 기본 가져오기보다 빨라요</span><span style="display:block;margin-top:5px;font-size:12px;font-weight:700;color:#c4b1ff;word-break:keep-all">눌러서 연 뒤 파일을 끌어 놓으세요 →</span></span>`,
   mini: ICON(40)
 };
+// 채팅 화면 감지: 채팅 입력칸·채팅 화면 요소가 있으면 채팅 중으로 본다
+var CHAT_SEL = "textarea.text-input-area, .default-chat-screen, .risu-chat";
+var CHAT_POLL_MS = 1200;
 var num = (v, d) => Number.isFinite(v) ? v : d;
 
 export function createQuickImport(api, { getDoc, onOpen } = {}) {
@@ -44,6 +48,8 @@ export function createQuickImport(api, { getDoc, onOpen } = {}) {
   let view = { w: 0, h: 0 };
   // 끌기: 메인 화면 전체의 pointermove·pointerup은 끄는 동안에만 듣는다
   let drag = null, lastDragEnd = 0;
+  // 채팅 화면이 떠 있는 동안 숨긴다
+  let hidden = false, chatTimer = null, chatBusy = false;
 
   async function loadState() {
     try {
@@ -74,7 +80,7 @@ export function createQuickImport(api, { getDoc, onOpen } = {}) {
     if (view.h > 0) bottom = Math.min(Math.max(MARGIN, bottom), Math.max(MARGIN, view.h - s.h - MARGIN));
     return { right: Math.round(right), bottom: Math.round(bottom) };
   }
-  const boxStyle = (visible) => `${BOX[mini ? "mini" : "wide"]};right:${pos.right}px;bottom:${pos.bottom}px;opacity:${visible ? 1 : 0}`;
+  const boxStyle = (visible) => `${BOX[mini ? "mini" : "wide"]};right:${pos.right}px;bottom:${pos.bottom}px;opacity:${visible ? 1 : 0}${hidden ? ";display:none" : ""}`;
 
   // 자동 감지가 켜져 있으면 감지기가 먼저 메인 화면을 얻는다. 허락 창이 두 번 뜨지 않게 잠시 기다린다.
   async function rootDoc(waitForWatcher) {
@@ -99,6 +105,37 @@ export function createQuickImport(api, { getDoc, onOpen } = {}) {
       x.setStyleAttribute(X[k]),
       box.setStyleAttribute(boxStyle(visible))
     ]);
+  }
+
+  async function inChat() {
+    try {
+      return !!(await doc.querySelector(CHAT_SEL));
+    } catch {
+      return false;
+    }
+  }
+  async function checkChat() {
+    if (chatBusy || !box || !doc || drag) return;
+    chatBusy = true;
+    try {
+      const now = await inChat();
+      if (now !== hidden && box) {
+        hidden = now;
+        await box.setStyle("display", hidden ? "none" : "flex").catch(() => {
+        });
+      }
+    } finally {
+      chatBusy = false;
+    }
+  }
+  function startChatWatch() {
+    if (chatTimer) return;
+    chatTimer = setInterval(() => checkChat(), CHAT_POLL_MS);
+  }
+  function stopChatWatch() {
+    clearInterval(chatTimer);
+    chatTimer = null;
+    hidden = false;
   }
 
   async function setMini(on) {
@@ -195,6 +232,8 @@ export function createQuickImport(api, { getDoc, onOpen } = {}) {
         await body.appendChild(b);
         setTimeout(() => paint(true).catch(() => {
         }), 30);
+        startChatWatch();
+        checkChat();
       } catch (e) {
         console.log(`[Dusk Atelier] 빠른 가져오기 상자를 띄우지 못했어요: ${e?.message ?? e}`);
         box = main = x = null;
@@ -207,6 +246,7 @@ export function createQuickImport(api, { getDoc, onOpen } = {}) {
 
   async function unmount() {
     const b = box;
+    stopChatWatch();
     box = main = x = null;
     if (b) await b.remove().catch(() => {
     });
