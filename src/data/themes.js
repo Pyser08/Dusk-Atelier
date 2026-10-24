@@ -97,11 +97,14 @@ export var TARGET_IDS = Object.keys(TARGETS);
 
 // 실행 중인 환경 추측. 리스 화면 문서(getRootDocument)는 비동기 래퍼라 모든 호출을 await 한다.
 // 각 계열의 메시지 셀렉터가 몇 개 잡히는지 비교하고, 못 정하면 UA·일반 리스.
-export async function detectTarget(doc) {
+// 원본 RisuAI만 risu 계열. 변종(PocketRisu·RisuBard 등)은 거의 포켓 계열이고 서버(node)에서 돈다
+export async function detectTarget(doc, api) {
   try {
-    if (/pocket/i.test(globalThis.navigator?.userAgent ?? "")) return "pocket";
+    const rt = await api?.getRuntimeInfo?.().catch(() => null);
+    if (rt?.platform === "node") return "pocket";
+    if (/pocket|bard/i.test(globalThis.navigator?.userAgent ?? "")) return "pocket";
     if (doc) {
-      if (await doc.querySelector("[class*=pocket], #pocket-app")) return "pocket";
+      if (await doc.querySelector("[class*=pocket], #pocket-app, [class*=bard]")) return "pocket";
       const [r, p] = await Promise.all([countSel(doc, TARGETS.risu.selectors.chat), countSel(doc, TARGETS.pocket.selectors.chat)]);
       if (p > 0 && r === 0) return "pocket";
     }

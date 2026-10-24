@@ -102,7 +102,7 @@ export function mockDoc(theme) {
 export async function renderThemeStudio(ctx) {
   const data = await loadThemes(ctx.api);
   const rootDoc = await ctx.api.getRootDocument?.().catch(() => null) ?? null;
-  const here = await detectTarget(rootDoc);
+  const here = await detectTarget(rootDoc, ctx.api);
   if (!data.target) data.target = here;
   let target = data.target;
   let cur = null, dirty = false, mobile = false, tab = "tokens";
@@ -435,7 +435,7 @@ export async function restoreActiveTheme(api) {
   const data = await loadThemes(api);
   const doc = await api.getRootDocument?.().catch(() => null);
   if (!doc) return;
-  const here = await detectTarget(doc);
+  const here = await detectTarget(doc, api);
   const pickT = data.forceApply ? data.target ?? here : here;
   const t = data.themes[pickT]?.find((x) => x.id === data.active[pickT]);
   if (t) await applyToDocument(doc, t);

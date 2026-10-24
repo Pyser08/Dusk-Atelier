@@ -44,7 +44,7 @@ export async function renderThemeBuilder(ctx) {
   }
   const data = await loadThemes(ctx.api);
   const rootDoc = await ctx.api.getRootDocument?.().catch(() => null) ?? null;
-  const target = data.target ?? await detectTarget(rootDoc);
+  const target = data.target ?? await detectTarget(rootDoc, ctx.api);
   const list = data.themes[target];
 
   // 스튜디오에서 "빌더에서 고치기"로 왔으면 그 테마를 이어서 편집
