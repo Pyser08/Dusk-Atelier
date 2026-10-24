@@ -3,14 +3,16 @@ import { openCharAssets, openCharEditor } from './chareditor.js';
 import { newCharacterBase, uniqueDisplayName } from '../../engine/character.js';
 import { createStore } from '../../engine/store.js';
 import { Busy, backupSnapshot, isGenerating } from '../../engine/safety.js';
-import { buildRisum, safeFileName } from '../../engine/export.js';
+import { buildRisum, moduleJson, safeFileName } from '../../engine/export.js';
+import { LIST_KO, applyListImport, buildCharx, listExportText, parseListFile } from '../../engine/devfile.js';
+import { changedKeys } from './patchui.js';
 import { loadCharacters } from '../../data/modules.js';
-import { copyText, download, fmtBytes, fmtWhen, h, replace } from '../dom.js';
+import { copyText, download, fmtBytes, fmtWhen, h, pickFiles, replace } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, confirmDialog, loading, folderDialog, iconBtn, note, openMenu, promptDialog, segmented } from '../kit.js';
+import { badge, btn, confirmDialog, loading, folderDialog, iconBtn, modal, note, openMenu, promptDialog, segmented } from '../kit.js';
 import { buildPatch, planPatch } from '../../engine/patch.js';
 import { devLint, devStats, loreActivation, nextVersion, projView, regexRun } from '../../engine/devcheck.js';
-import { baseViewOf, renderPatchMaker } from './devtools.js';
+import { baseViewOf, okIdentity, pickWork, renderPatchMaker } from './devtools.js';
 
 var KIND_KO = { module: "모듈", character: "봇" };
 var keyOf = (p) => p.kind === "module" ? `m:${p.id}` : `c:${p.id}`;
@@ -322,14 +324,137 @@ function actions(ctx, all, p, obj) {
       ctx.toast(`만들지 못했어요: ${e?.message ?? e}`, { error: true });
     }
   };
+  const fail = (e) => ctx.toast(e instanceof Busy ? "봇이 응답을 생성하는 중이에요. 끝난 뒤 다시 해 주세요." : `하지 못했어요: ${e?.message ?? e}`, { error: true });
+  const save = async (res, cur) => {
+    if (p.kind === "module") {
+      await ctx.svc.run("update", p.id, changedKeys(cur, res));
+      ctx.state.modDirty = true;
+      return;
+    }
+    if (isGenerating(await fullOf(ctx, all, p))) throw new Busy();
+    await ctx.api.setCharacterToIndex(t.i, res);
+    ctx.state.charsDirty = true;
+  };
+  const importLists = async () => {
+    const [f] = await pickFiles({ accept: ".json,application/json" });
+    if (!f) return;
+    let lists;
+    try {
+      lists = parseListFile(await f.text());
+    } catch (e) {
+      ctx.toast(e?.message ?? String(e), { error: true });
+      return;
+    }
+    const pick = await listImportDialog(ctx, lists, f.name);
+    if (!pick) return;
+    try {
+      const cur = await fullOf(ctx, all, p);
+      if (p.kind === "character" && isGenerating(cur)) throw new Busy();
+      const chosen = Object.fromEntries(Object.entries(lists).filter(([k]) => pick.keys.includes(k)));
+      const { next, stat } = applyListImport(p.kind, cur, chosen, pick.mode);
+      await createStore(ctx.api).addBackup({ kind: p.kind, target: p.id, name: cur.name, snapshot: p.kind === "module" ? cur : backupSnapshot("character", cur), note: "파일 불러오기 전", summary: f.name });
+      await save({ ...cur, ...next }, cur);
+      const msg = Object.entries(stat).map(([k, s2]) => pick.mode === "replace" ? `${LIST_KO[k]} ${s2.added}개로 교체` : `${LIST_KO[k]} 바꿈 ${s2.updated} · 추가 ${s2.added}`).join(" / ");
+      ctx.toast(`불러왔어요: ${msg}. 이전 상태는 도구 → 기록에 있어요.`);
+      await loadAll(ctx, true);
+      renderDev(ctx);
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const builtToPatch = async () => {
+    const w = await pickWork(ctx, p.kind);
+    if (!w) return;
+    try {
+      const key = keyOf(p);
+      const base = await createStore(ctx.api).getBaseline(key);
+      if (!await okIdentity(ctx, p.kind, base ?? await fullOf(ctx, all, p), w.obj)) return;
+      ctx.state.pm = { ...ctx.state.pm ?? {}, src: "risu", kind: p.kind, target: p.kind === "module" ? { kind: "module", key, id: p.id, name: t.name } : { kind: "character", key, i: t.i, chaId: p.id, name: t.name }, q: "", curFile: { key, work: w }, version: "" };
+      ctx.go("dev", "patchmaker");
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const exportList = (k) => async () => {
+    try {
+      const fresh = await fullOf(ctx, all, p);
+      download(`${safeFileName(fresh.name)}_${LIST_KO[k]}.json`, listExportText(p.kind, fresh, k), "application/json");
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const exportModJson = async () => {
+    try {
+      const m = await fullOf(ctx, all, p);
+      download(`${safeFileName(m.name)}${p.version ? `_v${safeFileName(p.version)}` : ""}.json`, moduleJson(m), "application/json");
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const exportCharx = async () => {
+    const tt = ctx.toast(".charx 만드는 중…", { seconds: 300 });
+    try {
+      const c = await fullOf(ctx, all, p);
+      const bytes = await buildCharx(c, (path) => ctx.assets.read(path));
+      tt.close();
+      download(`${safeFileName(c.name)}${p.version ? `_v${safeFileName(p.version)}` : ""}.charx`, bytes, "application/octet-stream");
+      ctx.toast(`봇 카드를 만들었어요 (${fmtBytes(bytes.size)})`);
+    } catch (e) {
+      tt.close();
+      fail(e);
+    }
+  };
+  const importMenu = (e) => openMenu(ctx.win, e.currentTarget, [
+    { label: "로어북·정규식·트리거 (.json)…", icon: "upload", onClick: importLists },
+    { label: p.kind === "module" ? "조립한 모듈과 비교해 패치…" : "조립한 봇 카드와 비교해 패치…", icon: "code", onClick: builtToPatch },
+    { label: "파일 두 개로 패치…", icon: "code", onClick: () => {
+      ctx.state.pm = { ...ctx.state.pm ?? {}, src: "files", kind: p.kind, version: "" };
+      ctx.go("dev", "patchmaker");
+    } }
+  ]);
+  const exportMenu = (e) => openMenu(ctx.win, e.currentTarget, [
+    { label: "로어북 (.json)", icon: "download", onClick: exportList("lore") },
+    { label: "정규식 (.json)", icon: "download", onClick: exportList("regex") },
+    { label: "트리거 (.json)", icon: "download", onClick: exportList("trigger") },
+    "sep",
+    ...p.kind === "module" ? [{ label: "모듈 .json", icon: "download", onClick: exportModJson }, { label: ".risum 전체", icon: "download", onClick: exportFull }] : [{ label: "봇 카드 .charx", icon: "download", onClick: exportCharx }]
+  ]);
   return h(
     "div",
     { style: "display:flex;gap:8px;flex-wrap:wrap" },
     btn("편집", { kind: "primary", icon: "edit", onClick: edit, id: "rb-dev-edit" }),
     btn("에셋", { icon: "image", onClick: assets }),
     btn("체크포인트", { icon: "check", onClick: checkpoint, id: "rb-dev-checkpoint" }),
-    p.kind === "module" ? btn(".risum 전체", { icon: "download", onClick: exportFull }) : null
+    btn("불러오기", { icon: "upload", onClick: importMenu, id: "rb-dev-import" }),
+    btn("내보내기", { icon: "download", onClick: exportMenu, id: "rb-dev-export" })
   );
+}
+function listImportDialog(ctx, lists, fileName) {
+  const keys = new Set(Object.keys(lists));
+  let mode = "merge";
+  const DESC = { merge: "이름·키가 같은 항목은 파일 내용으로 바꾸고, 새 항목은 뒤에 붙여요. 파일에 없는 기존 항목은 남아요.", replace: "고른 목록을 통째로 파일 내용으로 바꿔요. 파일에 없는 기존 항목은 지워져요." };
+  const desc = h("span", { class: "rb-muted", style: "white-space:normal" }, DESC[mode]);
+  return modal(ctx.win, (done) => h(
+    "div",
+    { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": "파일 불러오기" },
+    h("h3", { class: "rb-h3" }, "무엇을 불러올까요?"),
+    h("span", { class: "rb-muted" }, fileName),
+    ...Object.entries(lists).map(([k, arr]) => {
+      const cb = h("input", { type: "checkbox", checked: true });
+      cb.addEventListener("change", () => cb.checked ? keys.add(k) : keys.delete(k));
+      return h("label", { style: "display:flex;gap:8px;align-items:center" }, cb, `${LIST_KO[k]} ${arr.length}개`);
+    }),
+    h("span", { class: "rb-label" }, "방식"),
+    segmented([["merge", "합치기"], ["replace", "전체 덮어쓰기"]], mode, (v) => {
+      mode = v;
+      desc.textContent = DESC[v];
+    }, "불러오기 방식"),
+    desc,
+    h("span", { class: "rb-muted" }, "불러오기 전 상태는 자동으로 백업해요."),
+    h("div", { class: "btns" }, btn("취소", { onClick: () => done(null) }), btn("불러오기", { kind: "primary", onClick: () => {
+      if (keys.size) done({ keys: [...keys], mode });
+    } }))
+  ));
 }
 function baseCard(ctx, all, p, obj) {
   const store = createStore(ctx.api);

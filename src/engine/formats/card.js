@@ -3,7 +3,7 @@ import { Cancelled } from '../util.js';
 import { scanRisum } from './risum.js';
 import { readZipDirectory, readZipEntry } from './zip.js';
 
-function convertCharbookEntries(charbook) {
+export function convertCharbookEntries(charbook) {
   const out = [];
   for (const src of charbook?.entries ?? []) {
     const book = { ...src };
