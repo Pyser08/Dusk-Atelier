@@ -114,6 +114,7 @@ var BASE = `.dt{display:flex;gap:12px;align-items:flex-start;max-width:var(--t-c
 .dt-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .dt-name{font-weight:700;color:var(--t-ink);font-family:var(--t-font-display)}
 .dt-date{font-size:.78em;color:var(--t-muted)}
+.dt-body{max-width:var(--t-text-width);box-sizing:border-box}
 .dt-body,.dt-body .chattext{font-size:var(--t-font-size);line-height:var(--t-line-height);color:var(--t-ink);word-break:keep-all;overflow-wrap:anywhere}
 .dt-body p:first-child{margin-top:0}
 .dt-body p:last-child{margin-bottom:0}
@@ -142,7 +143,8 @@ export var STYLES = [
 .dt-head{border-bottom:1px solid var(--t-line);padding-bottom:8px;margin-bottom:10px}
 .dt-name{font-size:1.15em;letter-spacing:.02em}
 .dt-date{margin-left:auto;font-style:italic}
-.dt-user .dt-card{background-color:var(--t-tint)}`,
+.dt-user .dt-card{background-color:var(--t-tint)}
+.dt-body,.dt-foot{margin-inline:auto;max-width:var(--t-text-width)}`,
     deco: [
       { id: "lines", name: "줄 노트", on: true, css: `.dt-card{background-image:repeating-linear-gradient(transparent 0 calc(var(--t-font-size)*var(--t-line-height) - 1px),var(--t-tint) 0 calc(var(--t-font-size)*var(--t-line-height)))}` },
       { id: "salute", name: "To. / From.", on: true, css: `.dt-name::before{content:"To. ";font-weight:400;color:var(--t-muted)}
@@ -192,7 +194,8 @@ export var STYLES = [
     css: `.dt-card{background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(14px*var(--t-space)) calc(18px*var(--t-space)) calc(10px*var(--t-space))}
 .dt-name{font-size:.9em;letter-spacing:.03em}
 .dt-head{margin-bottom:6px}
-.dt-user .dt-card{background:var(--t-tint)}`,
+.dt-user .dt-card{background:var(--t-tint)}
+.dt-body,.dt-foot{margin-inline:auto;max-width:var(--t-text-width)}`,
     deco: [
       { id: "bar", name: "왼쪽 대표색 줄", on: true, css: `.dt-card{border-left:3px solid var(--t-accent)}
 .dt-user .dt-card{border-left-color:var(--t-muted)}` },
@@ -237,6 +240,13 @@ var fontById = (id) => FONTS.find((f) => f.id === id && f.body);
 
 // ── 선택 ──
 // 다이얼 0~100: vivid 차분↔화려, round 각지게↔둥글게, space 촘촘↔여유
+// 본문 너비: 카드가 넓어도 글줄은 읽기 좋은 길이로 (가운데 정렬은 스타일이 정함)
+export var WIDTHS = [
+  ["narrow", "좁게", "620px"],
+  ["normal", "보통", "720px"],
+  ["wide", "넓게", "860px"],
+  ["full", "꽉 차게", "100%"]
+];
 export var DIALS = [
   ["vivid", "차분", "화려"],
   ["round", "각지게", "둥글게"],
@@ -244,7 +254,7 @@ export var DIALS = [
 ];
 export function defaultChoice(styleId = "letter") {
   const s = styleById(styleId);
-  return { v: 2, style: s.id, accent: s.accent, mode: s.mode, vivid: 50, round: 50, space: 50, avatar: "style", font: "style", deco: Object.fromEntries(s.deco.map((d) => [d.id, d.on])) };
+  return { v: 2, style: s.id, accent: s.accent, mode: s.mode, vivid: 50, round: 50, space: 50, avatar: "style", font: "style", width: "normal", deco: Object.fromEntries(s.deco.map((d) => [d.id, d.on])) };
 }
 var HEX = /^#[0-9a-f]{6}$/i;
 var num = (x, d) => Number.isFinite(+x) ? Math.round(clamp(+x, 0, 100)) : d;
@@ -267,6 +277,7 @@ export function normalizeChoice(raw) {
     vivid: num(r.vivid, 50), round: num(r.round, 50), space: num(r.space, 50),
     avatar: AVATARS.some(([k]) => k === r.avatar) ? r.avatar : "style",
     font: FONTS.some((f) => f.id === r.font) ? r.font : "style",
+    width: WIDTHS.some(([k]) => k === r.width) ? r.width : "normal",
     deco,
     ...typeof r.aiCss === "string" && r.aiCss.trim() ? { aiCss: sanitizeAiCss(r.aiCss) } : {}
   };
@@ -298,7 +309,8 @@ export function compileBuilder(choice, target) {
     "--t-font-size": +(v.fontSize + font.size + sp / 50 * 0.6).toFixed(2) + "px",
     "--t-line-height": +(v.lineHeight + sp / 50 * 0.2).toFixed(2),
     "--t-space": +(1 + sp / 50 * 0.3).toFixed(2),
-    "--t-card-width": v.cardWidth + "px", "--t-gap": Math.round(v.gap * (1 + sp / 50 * 0.45)) + "px",
+    "--t-card-width": (c.width === "full" ? "100%" : Math.max(v.cardWidth, parseInt(WIDTHS.find(([k]) => k === c.width)[2]) + 80) + "px"),
+    "--t-text-width": WIDTHS.find(([k]) => k === c.width)[2], "--t-gap": Math.round(v.gap * (1 + sp / 50 * 0.45)) + "px",
     "--t-avatar-size": v.avatarSize + "px", "--t-avatar-radius": v.avatarRadius === 50 ? "50%" : scaleR(v.avatarRadius, c.round) + "px",
     "--t-font-body": font.body, "--t-font-display": font.display,
     // 리스 기본 변수도 맞춰 둔다 (설정 화면·입력창 등)
@@ -399,7 +411,7 @@ A base layer already exists: .dt is flex row with gap; .dt-av sized by vars; .dt
 
 Variables you MUST use for all colors, sizes and fonts (never hard-code colors except transparent / rgb(0 0 0/x) for shadows):
 --t-bg --t-paper --t-tint --t-line --t-ink --t-muted --t-accent --t-accent2 --t-accent-text --t-on-accent --t-user-bubble --t-user-bubble2 --t-on-user (text on user bubble) --t-shadow (0~0.2 alpha number, use as rgb(0 0 0/var(--t-shadow)))
---t-radius --t-font-size --t-line-height --t-space (spacing multiplier, use calc(Npx*var(--t-space))) --t-gap --t-card-width --t-avatar-size --t-avatar-radius --t-font-body --t-font-display
+--t-radius --t-font-size --t-line-height --t-text-width (max width of .dt-body, already applied) --t-space (spacing multiplier, use calc(Npx*var(--t-space))) --t-gap --t-card-width --t-avatar-size --t-avatar-radius --t-font-body --t-font-display
 color-mix(in srgb, var(--t-accent) 30%, transparent) is allowed.
 
 Rules (anything breaking them is deleted automatically):
@@ -462,7 +474,7 @@ export function aiPrompt(want) {
   const ex2 = { style: "messenger", accent: "#ff6fa8", mode: "dark", vivid: 85, round: 90, space: 40, avatar: "circle", font: "round", deco: ["tail", "name", "grad"], name: "네온 수다" };
   return [
     { role: "system", content: `You pick options for a chat theme builder. Reply with ONE JSON object only, no prose, no code fence.
-Keys: style (enum), accent ("#rrggbb"), mode ("light"|"dark"), vivid/round/space (integers 0-100: calm→flashy, sharp→round, dense→airy), avatar (enum), font (enum), deco (array of deco ids of the chosen style), name (short Korean title).
+Keys: style (enum), width (narrow|normal|wide|full: text column width), accent ("#rrggbb"), mode ("light"|"dark"), vivid/round/space (integers 0-100: calm→flashy, sharp→round, dense→airy), avatar (enum), font (enum), deco (array of deco ids of the chosen style), name (short Korean title).
 Catalog: ${JSON.stringify(cat)}
 Example: ${JSON.stringify(ex1)}
 Example: ${JSON.stringify(ex2)}` },

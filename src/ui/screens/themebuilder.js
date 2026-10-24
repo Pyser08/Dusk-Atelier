@@ -4,7 +4,7 @@ import { btn, iconBtn, segmented, note, chip, switchEl } from '../kit.js';
 import { AI_MODES, runAI } from '../../engine/merge.js';
 import { ensureStudioCss, mockDoc } from './themestudio.js';
 import { TARGETS, loadThemes, saveThemes, detectTarget } from '../../data/themes.js';
-import { STYLES, styleById, defaultChoice, normalizeChoice, buildTheme, makePalette, thumbHtml, contrast, handoff, DIALS, AVATARS, FONTS, aiChoose, aiStyle, aiStylePrompt, aiEditPrompt, currentStyleCss } from '../../data/themebuilder.js';
+import { STYLES, styleById, defaultChoice, normalizeChoice, buildTheme, makePalette, thumbHtml, contrast, handoff, DIALS, WIDTHS, AVATARS, FONTS, aiChoose, aiStyle, aiStylePrompt, aiEditPrompt, currentStyleCss } from '../../data/themebuilder.js';
 
 var SWATCHES = ["#9a6b4f", "#c2557a", "#e07a5f", "#d4a72c", "#5a9e6f", "#3a9ca8", "#4f9cf7", "#7c5cf0", "#8a8fa3"];
 var CSS = `
@@ -66,6 +66,7 @@ export async function renderThemeBuilder(ctx) {
   const viewEl = h("div");
   const dialEl = h("div");
   const decoEl = h("div", { class: "rb-tb-deco" });
+  const widthEl = h("div");
   const avEl = h("div", { class: "rb-tb-chips", role: "group", "aria-label": "프로필 모양" });
   const fontEl = h("div", { class: "rb-tb-chips", role: "group", "aria-label": "글꼴" });
   let mobile = false;
@@ -124,6 +125,10 @@ export async function renderThemeBuilder(ctx) {
       el.setAttribute("aria-checked", String(on));
       preview();
     } }))));
+    replace(widthEl, segmented(WIDTHS.map(([k, l]) => [k, l]), choice.width, (v) => {
+      choice.width = v;
+      preview();
+    }, "본문 너비"));
     replace(avEl, ...AVATARS.map(([k, l]) => chip(l, { pressed: choice.avatar === k, onClick: () => {
       choice.avatar = k;
       draw();
@@ -275,6 +280,7 @@ export async function renderThemeBuilder(ctx) {
     h("div", null, h("div", { class: "rb-tb-h" }, "3. 밝기"), modeEl),
     h("div", { style: "display:flex;flex-direction:column;gap:6px" }, palEl, infoEl),
     h("div", null, h("div", { class: "rb-tb-h" }, "4. 분위기"), dialEl),
+    h("div", null, h("div", { class: "rb-tb-h" }, "본문 너비"), widthEl),
     h("div", null, h("div", { class: "rb-tb-h" }, "5. 장식"), decoEl),
     h("div", null, h("div", { class: "rb-tb-h" }, "6. 프로필 모양"), avEl),
     h("div", null, h("div", { class: "rb-tb-h" }, "7. 글꼴"), fontEl),
