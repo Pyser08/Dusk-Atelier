@@ -97,20 +97,20 @@ export var TARGET_IDS = Object.keys(TARGETS);
 
 // 실행 중인 환경 추측. 리스 화면 문서(getRootDocument)는 비동기 래퍼라 모든 호출을 await 한다.
 // 각 계열의 메시지 셀렉터가 몇 개 잡히는지 비교하고, 못 정하면 UA·일반 리스.
-// 원본 RisuAI만 risu 계열. 변종(PocketRisu·RisuBard 등)은 거의 포켓 계열이고 서버(node)에서 돈다
+// 원본 RisuAI로 확인될 때만 risu 계열, 그 밖(PocketRisu·RisuBard 등 변종, 모르는 경우)은 모두 포켓 계열
 export async function detectTarget(doc, api) {
   try {
     const rt = await api?.getRuntimeInfo?.().catch(() => null);
     if (rt?.platform === "node") return "pocket";
     if (/pocket|bard/i.test(globalThis.navigator?.userAgent ?? "")) return "pocket";
-    if (doc) {
-      if (await doc.querySelector("[class*=pocket], #pocket-app, [class*=bard]")) return "pocket";
-      const [r, p] = await Promise.all([countSel(doc, TARGETS.risu.selectors.chat), countSel(doc, TARGETS.pocket.selectors.chat)]);
-      if (p > 0 && r === 0) return "pocket";
-    }
+    if (doc && await doc.querySelector("[class*=pocket], #pocket-app, [class*=bard]")) return "pocket";
+    const host = String(globalThis.location?.hostname ?? "");
+    // 원본: 공식 웹(risuai.xyz)·데스크톱(tauri)·로컬 웹, 또는 런타임이 브라우저·앱으로 알려진 경우
+    if (/(^|\.)risuai\.xyz$/i.test(host) || globalThis.__TAURI__ || globalThis.__TAURI_INTERNALS__) return "risu";
+    if (rt?.platform && /^(web|tauri|capacitor|android|ios|desktop)$/i.test(rt.platform)) return "risu";
   } catch {
   }
-  return "risu";
+  return "pocket";
 }
 async function countSel(doc, sel) {
   if (!sel) return 0;
