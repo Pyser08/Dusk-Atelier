@@ -5,6 +5,42 @@ import { btn, modal } from './kit.js';
 var KEY = "rbm:seenVersion:v1";
 var LOG = typeof __CHANGELOG__ !== "undefined" ? __CHANGELOG__ : [];
 export var CHANGELOG = LOG;
+var CHANGELOG_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/CHANGELOG.md";
+var CACHE_KEY = "rbm:changelog-cache:v1";
+
+function parseMarkdown(md) {
+  return String(md).split(/^## /m).slice(1).map((sec) => {
+    const [head, ...rest] = sec.split("\n");
+    const m = /^v?(\d+(?:\.\d+)*)\s*(?:\(([^)]*)\))?/.exec(head.trim());
+    return m ? { v: m[1], date: m[2] ?? "", body: rest.join("\n").trim().slice(0, 6000) } : null;
+  }).filter(Boolean).slice(0, 8);
+}
+
+export async function loadChangelog(api) {
+  let cached = null;
+  try {
+    const raw = await api.pluginStorage.getItem(CACHE_KEY);
+    if (raw) cached = JSON.parse(raw);
+  } catch {
+  }
+  const url = `${CHANGELOG_URL}?t=${Math.floor(Date.now() / 6e4)}`;
+  let res = null;
+  if (typeof api.nativeFetch === "function") res = await Promise.resolve().then(() => api.nativeFetch(url, { method: "GET", cache: "no-store" })).catch(() => null);
+  if (!res && typeof fetch === "function") res = await fetch(url, { cache: "no-store" }).catch(() => null);
+  if (res?.status >= 200 && res.status < 300) {
+    try {
+      const entries = parseMarkdown(await res.text());
+      if (entries.length) {
+        LOG.splice(0, LOG.length, ...entries);
+        await api.pluginStorage.setItem(CACHE_KEY, JSON.stringify(entries));
+        return LOG;
+      }
+    } catch {
+    }
+  }
+  if (Array.isArray(cached) && cached.length) LOG.splice(0, LOG.length, ...cached);
+  return LOG;
+}
 
 function cmp(a, b) {
   const x = String(a).split(".").map((n) => parseInt(n, 10) || 0), y = String(b).split(".").map((n) => parseInt(n, 10) || 0);

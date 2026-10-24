@@ -4,6 +4,7 @@ import { createLegacy } from './ui/legacy.js';
 import { h } from './ui/dom.js';
 import { iconMarkup } from './ui/icons.js';
 import { createApp } from './ui/app.js';
+import { loadChangelog } from './ui/whatsnew.js';
 import { createHostToast } from './ui/toast.js';
 import { createWatcher } from './ui/watch.js';
 import { createQuickImport } from './ui/quickimport.js';
@@ -34,6 +35,7 @@ async function start() {
   };
   const wrapped = { setCharacterToIndex: friendly((...a) => raw.setCharacterToIndex(...a)), setDatabaseLite: friendly((...a) => raw.setDatabaseLite(...a)) };
   const api = new Proxy(raw, { get: (t, k) => k in wrapped ? wrapped[k] : t[k] });
+  loadChangelog(api).catch(() => {});
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {
     if (!document.getElementById("rb-style")) document.head.appendChild(h("style", { id: "rb-style" }, CSS2));

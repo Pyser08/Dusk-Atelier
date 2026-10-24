@@ -30,7 +30,7 @@ const changelog = (() => {
       const [head, ...rest] = sec.split('\n');
       const m = /^v?(\d+(?:\.\d+)*)\s*(?:\(([^)]*)\))?/.exec(head.trim());
       return m ? { v: m[1], date: m[2] ?? '', body: rest.join('\n').trim().slice(0, 6000) } : null;
-    }).filter(Boolean).slice(0, 8);
+    }).filter(Boolean).slice(0, 1);
   } catch {
     return [];
   }
