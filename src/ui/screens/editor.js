@@ -751,7 +751,7 @@ export async function openEditorCore(ctx, cfg) {
       line(lab("켜질 확률"), range, probNum, h("span", { class: "rb-da-note" }, "%")),
       line(lab("반복"), segmented([["none", "제한 없음"], ["chat", "채팅에서 한 번"], ["cooldown", "쉬었다가"]], r.once || "none", (v) => set("once", v), "반복")),
       r.once === "cooldown" ? line(lab(""), h("span", { class: "rb-da-note" }, "켜진 뒤"), numIn(r, "cool", { min: 1, w: "64px" }), h("span", { class: "rb-da-note" }, "턴 쉬기")) : null,
-      line(lab("유지"), numIn(r, "hold", { min: 0, w: "64px" }), h("span", { class: "rb-da-note" }, "턴 동안 계속 켜 두기 (켜진 턴 포함, 0·1이면 그 턴만 · 유지 중엔 조건·확률을 안 봐요)")),
+      h("div", { class: "rb-da-pair" }, line(lab("유지"), numIn(r, "hold", { min: 0, w: "64px" }), h("span", { class: "rb-da-note" }, "턴 동안 계속 켜 둬요 (0·1이면 그 턴만)")), h("span", { class: "rb-da-note", style: "color:var(--rb-mute)" }, "켜진 턴부터 세고, 유지 중에는 조건·확률을 다시 보지 않아요")),
       line(lab("중복 금지 그룹"), text(r, "group", { placeholder: "예) 날씨 — 같은 그룹은 한 턴에 하나만" }))
     );
 
@@ -779,18 +779,22 @@ export async function openEditorCore(ctx, cfg) {
       const err = isExpr ? checkExpr(x.val) : null;
       return h(
         "div",
-        { class: "rb-da-cond", style: "flex-wrap:wrap" },
+        { class: "rb-da-cond" },
         h("span", { class: "rb-da-idx" }, String(xi + 1)),
-        text(x, "name", { placeholder: "변수 이름" }),
-        select2(x, "op", SET_OPS.map(([o, t]) => [o, t]), redraw),
-        text(x, "val", { placeholder: isExpr ? "예) love*2 + hp/10" : x.op === "=" ? "값" : "숫자" }),
-        isExpr ? h("button", { type: "button", class: "rb-badge", style: "cursor:pointer;border:1px solid var(--rb-line3);background:transparent;color:var(--rb-acc-text)", title: "수식 쓰는 법", onClick: () => exprHelp() }, "?") : null,
+        h(
+          "div",
+          { class: "rb-da-params" },
+          text(x, "name", { placeholder: "변수 이름" }),
+          select2(x, "op", SET_OPS.map(([o, t]) => [o, t]), redraw),
+          text(x, "val", { placeholder: isExpr ? "예) love*2 + hp/10" : x.op === "=" ? "값" : "숫자" }),
+          isExpr ? h("button", { type: "button", class: "rb-badge", style: "cursor:pointer;border:1px solid var(--rb-line3);background:transparent;color:var(--rb-acc-text);height:26px;padding:0 10px;font-size:13px", title: "수식 쓰는 법", "aria-label": "수식 쓰는 법", onClick: () => exprHelp() }, "? 쓰는 법") : null
+        ),
         trash(() => {
           r.set.splice(xi, 1);
           changed();
           redraw();
         }, "변수 지우기"),
-        err ? h("div", { class: "rb-da-note", style: "flex-basis:100%;color:var(--rb-danger,#e5484d)" }, `수식 오류 — ${err}`) : null
+        err ? h("div", { class: "rb-da-err" }, `수식 오류 — ${err}`) : null
       );
     });
     const setCard = card(

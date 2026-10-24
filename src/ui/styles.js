@@ -361,6 +361,11 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-da-range{flex:1;min-width:120px;accent-color:var(--rb-acc-text)}
 .rb-da .rb-input.rb-da-num{flex:0 0 auto;min-width:0;height:36px;text-align:center;padding:0 6px}
 .rb-da .rb-input{height:36px}
+.rb-da-params>select.rb-input{flex:1 1 140px;min-width:140px}
+.rb-da .rb-seg button{height:auto;min-height:36px;padding:6px 4px;line-height:1.35;word-break:keep-all}
+.rb-da-note{line-height:1.55}
+.rb-da-err{flex-basis:100%;font-size:12.5px;line-height:1.5;color:var(--rb-danger,#e5484d)}
+.rb-da-pair{display:flex;flex-direction:column;gap:4px}
 .rb-da-opts{display:flex;gap:12px;align-items:center;flex-wrap:nowrap}
 .rb-da-opts .rb-check{white-space:nowrap}
 @media (max-width:560px){.rb-da{padding:10px}.rb-da-lab{width:100%}.rb-da-line>.rb-seg{min-width:100%}}
