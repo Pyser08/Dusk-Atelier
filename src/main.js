@@ -6,6 +6,7 @@ import { iconMarkup } from './ui/icons.js';
 import { createApp } from './ui/app.js';
 import { createHostToast } from './ui/toast.js';
 import { createWatcher } from './ui/watch.js';
+import { createQuickImport } from './ui/quickimport.js';
 import { CSS2 } from './ui/styles.js';
 import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets } from './data/presets.js';
 import { createLoreRuntime } from './data/lorerules.js';
@@ -95,6 +96,10 @@ async function start() {
   hooks.created = (id) => watcher.markKnown(id);
   hooks.modulesChanged = () => watcher.snapshotModules();
   watcher.start().catch((e) => console.log(`[${TITLE}] 새 봇 감지 시작 실패: ${e?.message ?? e}`));
+  // PC 메인 화면 오른쪽 아래 '빠른 가져오기' 상자: 누르면 Dusk 가져오기 화면(동시 업로드)을 연다
+  const quickImport = createQuickImport(api, { getDoc: () => watcher.doc, onOpen: () => legacy.open().catch(() => {
+  }) });
+  quickImport.start().catch((e) => console.log(`[${TITLE}] 빠른 가져오기 상자 실패: ${e?.message ?? e}`));
   // 로어북 규칙(조건·확률·중복 금지·연쇄): 관리 항목이 있는 봇에서만 요청 훅을 건다
   const loreRuntime = createLoreRuntime(api);
   loreRuntime.start().catch((e) => console.log(`[${TITLE}] 로어북 규칙 시작 실패: ${e?.message ?? e}`));
@@ -133,6 +138,7 @@ async function start() {
   app = createApp(api, { legacy, version: VERSION, onPersonaChanged: () => refreshPersonaHandlers().catch(() => {
   }) });
   app.ctx.watcher = watcher;
+  app.ctx.quickImport = quickImport;
   app.ctx.loreRuntime = loreRuntime;
   app.ctx.loreLog = loreLog;
   refreshPersonaHandlers().catch(() => {
