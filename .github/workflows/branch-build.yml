@@ -10,13 +10,16 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -28,6 +31,17 @@ jobs:
         run: node tools/build.mjs
       - name: Syntax check
         run: node --check dusk_atelier.js
+      - name: Commit built plugin to the source branch
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        run: |
+          if git diff --quiet -- dusk_atelier.js; then echo "No bundle changes"; else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+            git add dusk_atelier.js
+            git commit -m "build: dusk_atelier.js v$(node -p "require('./package.json').version")"
+            if [ "${{ github.event_name }}" = "pull_request" ]; then target="${{ github.event.pull_request.head.ref }}"; else target="${{ github.ref_name }}"; fi
+            git push origin "HEAD:$target"
+          fi
       - name: Upload built plugin
         uses: actions/upload-artifact@v4
         with:
