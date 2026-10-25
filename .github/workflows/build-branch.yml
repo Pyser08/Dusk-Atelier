@@ -4,7 +4,7 @@ name: 브랜치 빌드
 on:
   push:
     branches: ['feat/**']
-    paths: ['src/**', 'tools/**', 'package.json', '.github/workflows/build-branch.yml']
+    paths: ['src/**', 'tools/**', 'package.json', '.github/workflows/build-branch.yml', '.github/workflows/charsplit-check.yml']
 
 permissions:
   contents: write
