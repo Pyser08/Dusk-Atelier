@@ -8,7 +8,11 @@ import { scanChat, chunkEntries, pickLore, summaryPrompt, mergePrompt, profilePr
 import { loadCharSplit, saveCharSplit, makeInstruction } from "../../data/charsplit.js";
 
 const drafts = new WeakMap();
-const textOf = v => typeof v === "string" ? v : Array.isArray(v) ? v.map(p => typeof p === "string" ? p : p?.text ?? "").join("\n") : String(v ?? "");
+const textOf = v => typeof v === "string" ? v : Array.isArray(v) ? v.map(p => typeof p === "string" ? p : textOf(p?.text ?? p?.data ?? p?.content ?? "")).join("\n") : v && typeof v === "object" ? textOf(v.text ?? v.data ?? v.content ?? v.mes ?? v.message ?? "") : String(v ?? "");
+const messageText = m => {
+  const values = [m?.data, m?.content, m?.text, m?.mes, m?.message].map(textOf);
+  return values.find(v => /⟦(?:C:|\/C|S⟧|\/S|T:)/.test(v)) ?? values.find(v => v.trim()) ?? "";
+};
 const idOf = c => String(c?.chaId ?? c?.id ?? "");
 const box = (...children) => h("div", { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:10px" }, ...children);
 const row = (label, el) => h("label", { style: "display:flex;flex-direction:column;gap:5px" }, h("b", { style: "font-size:13px" }, label), el);
@@ -133,7 +137,7 @@ async function stepChoose(ctx, d, settings, body, nav) {
   const chatItems = d.chats.map(c => {
     const check = h("input", { type:"checkbox", checked:d.selected.includes(c._i) });
     check.addEventListener("change", () => { d.selected = check.checked ? [...d.selected, c._i] : d.selected.filter(i => i !== c._i); });
-    const count = (c.message ?? []).filter(m => /⟦C:[^⟧]+⟧/.test(textOf(m.data))).length;
+    const count = (c.message ?? []).filter(m => /⟦C:[^⟧]+⟧/.test(messageText(m))).length;
     return h("label", { class:"rb-check" }, check, h("span", { style:"flex:1" }, c.name || "채팅 " + (c._i + 1)), h("span", { class:"rb-muted" }, "마크 " + count + "개"));
   });
   body.appendChild(box(h("b", null, "분석할 채팅"), ...chatItems, actions(btn("인물 분석 →", { kind:"primary", onClick:async () => {
@@ -143,8 +147,14 @@ async function stepChoose(ctx, d, settings, body, nav) {
     const people = {};
     for (const chatInfo of d.chats.filter(c => d.selected.includes(c._i))) {
       let chat = chatInfo;
-      if (!Array.isArray(chat.message) || !chat.message.length) chat = await api.getChatFromIndex(botIndex, chatInfo._i).catch(() => chatInfo);
-      const scan = scanChat(chat.message ?? [], cfg.aliases ?? {});
+      // chat 목록의 message가 요약/부분 데이터일 수 있으므로 공식 API에서 원본 채팅을 우선 조회해요.
+      try {
+        const fetched = await api.getChatFromIndex(botIndex, chatInfo._i);
+        if (Array.isArray(fetched)) chat = { ...chatInfo, message:fetched };
+        else if (Array.isArray(fetched?.message) && fetched.message.length) chat = fetched;
+      } catch {}
+      const messages = Array.isArray(chat?.message) ? chat.message : Array.isArray(chatInfo?.message) ? chatInfo.message : [];
+      const scan = scanChat(messages, cfg.aliases ?? {});
       for (const [name, entries] of Object.entries(scan.chars)) (people[name] ??= []).push(...entries);
     }
     d.people = Object.entries(people).map(([name, entries]) => ({ name, entries, count:entries.length })).sort((a,b) => b.count-a.count);
