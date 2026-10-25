@@ -11,7 +11,7 @@
   const api = globalThis.risuai ?? globalThis.Risuai;
   if (!api) return;
 
-  const JSON_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/data/part-loader-probe.json";
+  const JSON_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/ba636973d6a5064f08f52773027a76d8eaded091/data/part-loader-probe.json";
   const JS_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/data/part-loader-probe.js";
   const CACHE_KEY = "dusk_atelier:partprobe:test:v1";
   let root = null;
