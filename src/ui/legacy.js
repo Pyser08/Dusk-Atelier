@@ -2,7 +2,7 @@ import { Cancelled, newId, stableJson } from '../engine/util.js';
 import { readIncoming } from '../engine/formats/index.js';
 import { findCandidates, normalizeName } from '../engine/match.js';
 import { collectKnownKeys, planAssets } from '../engine/module.js';
-import { buildNewCharacter, characterAssetKeys, characterView, newCharacterBase, planCharacter, uniqueDisplayName } from '../engine/character.js';
+import { buildNewCharacter, characterAssetKeys, characterView, newCharacterBase, planCharacter, uniqueDisplayName, ensureCharacterInOrder } from '../engine/character.js';
 import { uploadAssets } from '../engine/upload.js';
 import { MOD_SPEC, applyView, charIncomingView, charSpec, modIncomingView, pickView } from '../engine/merge3.js';
 import { KIND_KO, applyPlan, changeOf, charFields, fieldsToMod, fingerprintCard, groupOf, itemLabel, keepSet, makePlan, modFields, modFingerprint, remapGreetings, summarizeCharacterUpdate, textOf, wordDiff, writeCharFields } from '../engine/tideplan.js';

@@ -9,10 +9,12 @@ export { readPngCard } from './formats/png.js';
 export { readIncoming } from './formats/index.js';
 export { findCandidates, normalizeName, stripTrailingNumber } from './match.js';
 export { buildMergedModule, collectKnownKeys, fieldChanges, mergeLorebook, planAssets } from './module.js';
-export { buildMergedCharacter, buildNewCharacter, characterAssetKeys, characterFieldChanges, characterView, newCharacterBase, planCharacter, uniqueDisplayName } from './character.js';
+export { buildMergedCharacter, buildNewCharacter, characterAssetKeys, characterFieldChanges, characterView, newCharacterBase, planCharacter, uniqueDisplayName, ensureCharacterInOrder } from './character.js';
 export { uploadAssets } from './upload.js';
 export { CHAR_LISTS, MOD_LISTS, MOD_SPEC, USER_KEYS, applyView, charIncomingView, charSpec, merge3, modIncomingView, pickView, summarize } from './merge3.js';
 export { createStore } from './store.js';
 export { Busy, backupSnapshot, isGenerating, restoreFromBackup } from './safety.js';
 export { buildRisum, moduleJson, rpackEncode, safeFileName } from './export.js';
 export { crc32, createZip } from './zipwrite.js';
+
+export { MARK as CHARSPLIT_MARK, normalizeMarks, stripMarksForPrompt, hideMarksForDisplay, lastTime, scanChat, mergeScans, chunkEntries, pickLore, summaryPrompt, mergePrompt, profilePrompt, greetingPrompt } from "./charsplit.js";

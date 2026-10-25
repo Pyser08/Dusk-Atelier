@@ -195,3 +195,8 @@ export function characterFieldChanges(existing, incomingChar) {
   const norm = (v) => v === void 0 || v === null || v === false || v === "" || Array.isArray(v) && !v.length ? null : v;
   return Object.keys(CHAR_LABELS).filter((k) => k in all && stableJson(norm(existing[k])) !== stableJson(norm(all[k]))).map((k) => CHAR_LABELS[k]);
 }
+
+export async function ensureCharacterInOrder(api, chaId) {
+  try { await api.checkCharOrder(); } catch {}
+  try { for (let i=0;i<3;i++) { const order=(await api.getDatabase(["characterOrder"]))?.characterOrder??[]; if(order.some(x=>x===chaId||Array.isArray(x?.data)&&x.data.includes(chaId)))return; if(i===0)await new Promise(r=>setTimeout(r,300));else await api.setDatabaseLite({characterOrder:[...order,chaId]}); } } catch {}
+}

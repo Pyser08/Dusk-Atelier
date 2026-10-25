@@ -106,6 +106,8 @@ async function start() {
   // 로어북 로그: 응답마다 들어간 로어북을 남기고, 응답 아래에 버튼을 붙인다
   const loreLog = createLoreLog(api, { loreRuntime });
   loreLog.start().catch((e) => console.log(`[${TITLE}] 로어북 로그 시작 실패: ${e?.message ?? e}`));
+  const charSplit = createCharSplit(api);
+  charSplit.start().catch((e) => console.log(`[${TITLE}] 캐릭터 분리 시작 실패: ${e?.message ?? e}`));
   let handlers = null, timer = null;
   const sync = () => app?.ctx.svc.serial(() => syncPersonaModules(api)).catch((e) => console.log("[Dusk Atelier] 페르소나 동기화 실패", e?.message ?? e));
   const onInput = async (text) => {
@@ -141,6 +143,7 @@ async function start() {
   app.ctx.quickImport = quickImport;
   app.ctx.loreRuntime = loreRuntime;
   app.ctx.loreLog = loreLog;
+  app.ctx.charSplit = charSplit;
   refreshPersonaHandlers().catch(() => {
   });
   (async () => {

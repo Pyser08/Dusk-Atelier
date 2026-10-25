@@ -10,6 +10,7 @@ import { renderUpdateSettings } from './updsettings.js';
 import { renderThemeStudio, targetToggle } from './themestudio.js';
 import { renderThemeBuilder } from './themebuilder.js';
 import { loadThemes, saveThemes, detectTarget, TARGETS } from '../../data/themes.js';
+import { loadCharSplit, saveCharSplit } from '../../data/charsplit.js';
 
 export async function renderSettingsTab(ctx) {
   if (ctx.state.sub === "theme") return renderSettings(ctx);
@@ -35,6 +36,8 @@ export async function renderSettingsTab(ctx) {
     });
   });
   const lore = await loadLoreSettings(ctx.api).catch(() => ({ ...LORE_DEFAULTS }));
+  const cs = await loadCharSplit(ctx.api);
+  const csSeg = segmented([["on", "켜기"], ["off", "끄기"]], cs.enabled === false ? "off" : "on", async (v) => { cs.enabled = v === "on"; await saveCharSplit(ctx.api, cs); await ctx.charSplit?.update?.({ enabled: cs.enabled }); }, "캐릭터 분리 자동 기록");
   const saved = h("span", { class: "rb-muted", style: "font-size:12.5px" });
   const setLore = async (patch) => {
     Object.assign(lore, patch);
@@ -78,6 +81,13 @@ export async function renderSettingsTab(ctx) {
       row("로어북 로그", logSeg),
       row("응답 아래 버튼", btnSeg),
       h("div", { class: "rb-muted", style: "font-size:12.5px;line-height:1.7;word-break:keep-all" }, "응답마다 들어간 로어북(Dusk 규칙이 없는 봇도)을 남겨요. 도구 → 로어북 로그에서 보고, AI 응답 아래 [📖 로어북] 버튼으로도 바로 봐요. 채팅 내용은 바꾸지 않아요.")
+    ),
+    section(
+      "character",
+      "캐릭터 분리",
+      "대화에 인물·시간 마크를 자동 기록해요. 기본으로 켜져 있으며, 도구에서 인물별 관계 기록을 추출해 새 봇으로 만들 수 있어요.",
+      row("자동 기록", csSeg),
+      h("div", { class: "rb-muted", style: "font-size:12.5px;line-height:1.7" }, "마크는 화면에서 숨겨지고 채팅 데이터에 저장돼요. 기능을 켠 뒤 생성한 응답부터 기록이 쌓여요.")
     ),
     section(
       "palette",
