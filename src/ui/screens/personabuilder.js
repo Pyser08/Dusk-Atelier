@@ -818,7 +818,11 @@ export async function renderPersonaBuilder(ctx) {
           h("span", { style: "flex:1" }),
           btn("새 페르소나로 저장", { size: "sm", icon: "plus", onClick: () => save(true).catch((e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true })) }),
           btn("이 페르소나에 저장", { size: "sm", kind: "primary", icon: "check", onClick: () => target ? save(false).catch((e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true })) : save(true).catch((e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true })) })),
-        note("info", "AI 결과는 항상 영어예요. 번역은 확인용이라 저장되지 않아요. 꺼진 섹션과 빈 칸은 설명에 들어가지 않아요."))
+        note("info", "AI 결과는 항상 영어예요. 번역은 확인용이라 저장되지 않아요. 꺼진 섹션과 빈 칸은 설명에 들어가지 않아요.")),
+      h("div", { style: "margin:6px 0 4px;text-align:center;font-size:11px;line-height:1.6;color:var(--rb-mute)" },
+        "🪶 Special thanks · ",
+        h("a", { href: "https://arca.live/b/characterai/179512405/995597043#c_995597043", target: "_blank", rel: "noopener noreferrer", style: "color:inherit;font-weight:700;text-decoration:underline" }, "홍루"),
+        "님 — 기본 양식(페르소나 프롬프트)의 바탕을 만드는 데 도움을 주셨어요")
     )
   ));
 }
