@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "1.0.0",
+  "title": "Part Loader Probe",
+  "message": "REMOTE_DATA_V1: 외부 JSON이 정상적으로 로드되었습니다.",
+  "rules": {
+    "displayLabel": "원격 데이터 V1",
+    "pingReply": "PONG_FROM_EMBEDDED_PART"
+  }
+}
