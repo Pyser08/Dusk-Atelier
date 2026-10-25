@@ -3,30 +3,53 @@ const txt=v=>typeof v==="string"?v:Array.isArray(v)?v.map(p=>typeof p==="string"
 const TIME=/⟦T:([^⟧]*)⟧/g;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 export function normalizeMarks(text,aliases={}) {
- let s=String(text??""), ts=[...s.matchAll(TIME)];
+ let s=String(text??""),ts=[...s.matchAll(TIME)];
  if(ts.length>1){let done=false,keep=ts[0][0];s=s.replace(TIME,m=>{if(!done&&m===keep){done=true;return m}return ""})}
  s=s.replace(/⟦C:([^⟧]+)⟧/g,(_,raw)=>{const ns=[...new Set(raw.split(",").map(n=>aliases[n.trim()]||n.trim()).filter(Boolean))];return ns.length?"⟦C:"+ns.join(",")+"⟧":""});
- let out="",open=false;
- for(const p of s.split(/(⟦C:[^⟧]+⟧|⟦\/C⟧)/g)){
-  if(/^⟦C:[^⟧]+⟧$/.test(p)){if(open)out+="⟦/C⟧";out+=p;open=true}
-  else if(p==="⟦/C⟧"){if(open){out+=p;open=false}}
-  else if(open&&/\n\s*\n/.test(p)){for(const q of p.split(/(\n\s*\n)/)){if(/^\n\s*\n$/.test(q)){out+="⟦/C⟧"+q;open=false}else out+=q}}
-  else out+=p;
+ // Repair malformed blocks with a single active-block state. Opening S closes C and vice versa,
+ // so the scanner can never swallow a C interaction inside an unclosed S block.
+ let out="",open="";
+ const close=()=>{if(open==="C")out+="⟦/C⟧";else if(open==="S")out+="⟦/S⟧";open=""};
+ const parts=s.split(/(⟦C:[^⟧]+⟧|⟦\/C⟧|⟦S⟧|⟦\/S⟧)/g);
+ for(const p of parts){
+  const isCOpen=/^⟦C:[^⟧]+⟧$/.test(p),isSOpen=p==="⟦S⟧";
+  if(isCOpen||isSOpen){close();out+=p;open=isCOpen?"C":"S";continue}
+  if(p==="⟦/C⟧"){if(open==="C"){out+=p;open=""}continue}
+  if(p==="⟦/S⟧"){if(open==="S"){out+=p;open=""}continue}
+  if(open==="C"&&/\n\s*\n/.test(p)){
+   for(const q of p.split(/(\n\s*\n)/)){if(/^\n\s*\n$/.test(q)){close();out+=q}else out+=q}
+  }else out+=p;
  }
- if(open)out+="⟦/C⟧";
- // Situation blocks are independent from character blocks and must never nest.
- let result="",si=-1;
- for(const p of out.split(/(⟦S⟧|⟦\/S⟧)/g)){
-  if(p==="⟦S⟧"){if(si===1)result+="⟦/S⟧";result+=p;si=1}
-  else if(p==="⟦/S⟧"){if(si===1){result+=p;si=0}}
-  else result+=p;
- }
- return si===1?result+"⟦/S⟧":result;
+ close();
+ return out;
 }
 export function stripMarksForPrompt(text,{keepTime=false}={}){let s=String(text??"").replace(/⟦C:[^⟧]+⟧|⟦\/C⟧|⟦S⟧|⟦\/S⟧/g,""),ts=[...s.matchAll(TIME)];if(ts.length>1){const last=ts.at(-1)[0];let done=false;s=s.replace(TIME,m=>{if(!done&&m===last){done=true;return m}return ""})}return keepTime?s:s.replace(TIME,"")}
 export function hideMarksForDisplay(text,{showTime=false,debug=false}={}){if(typeof text!=="string")return text;let s=text.replace(/⟦T:([^⟧]*)⟧/g,(_,t)=>showTime?'<span class="dusk-time">🕒 '+esc(t)+"</span>":"");if(debug)s=s.replace(/⟦C:([^⟧]+)⟧([\s\S]*?)⟦\/C⟧/g,(_,n,b)=>'<span class="dusk-mark" data-c="'+esc(n)+'">'+b+"</span>");return s.replace(/⟦C:[^⟧]+⟧|⟦\/C⟧|⟦S⟧|⟦\/S⟧/g,"")}
 export function lastTime(messages){let t="";for(const m of messages??[])for(const x of txt(m?.content??m?.data??m?.text).matchAll(TIME))t=x[1];return t}
-export function scanChat(messages,aliases={}){const times=[],chars={},situations=[];let time="",userBefore="",currentSituation="";for(let i=0;i<(messages??[]).length;i++){const m=messages[i]??{},s=txt(m.data??m.content??m.text),ts=[...s.matchAll(TIME)];if(ts.length){time=ts.at(-1)[1];times.push({i,t:time})}if(m.role==="user"||m.isUser){userBefore=s.replace(/⟦[^⟧]*⟧/g,"").slice(-300);continue}const blocks=/(?:⟦S⟧([\s\S]*?)⟦\/S⟧)|(?:⟦C:([^⟧]+)⟧([\s\S]*?)⟦\/C⟧)/g;for(const x of s.matchAll(blocks)){if(x[1]!==undefined){const text=x[1].trim();if(text){currentSituation=text;situations.push({i,t:time,text,userBefore})}continue}const names=[...new Set(x[2].split(",").map(n=>aliases[n.trim()]||n.trim()).filter(Boolean))],text=x[3].replace(/⟦T:[^⟧]*⟧/g,"").trim();for(const name of names)if(text)(chars[name]??=[]).push({i,t:time,text,userBefore,situation:currentSituation})}}return{times,chars,situations}}
+export function scanChat(messages,aliases={}){
+ const times=[],chars={},situations=[];
+ let time="",userBefore="",currentSituation="";
+ for(let i=0;i<(messages??[]).length;i++){
+  const m=messages[i]??{};
+  const raw=txt(m.data??m.content??m.text);
+  const s=normalizeMarks(raw,aliases);
+  const ts=[...s.matchAll(TIME)];
+  if(ts.length){time=ts.at(-1)[1];times.push({i,t:time})}
+  if(m.role==="user"||m.isUser){userBefore=s.replace(/⟦[^⟧]*⟧/g,"").slice(-300);continue}
+  const blocks=/(?:⟦S⟧([\s\S]*?)⟦\/S⟧)|(?:⟦C:([^⟧]+)⟧([\s\S]*?)⟦\/C⟧)/g;
+  for(const x of s.matchAll(blocks)){
+   if(x[1]!==undefined){
+    const text=x[1].trim();
+    if(text){currentSituation=text;situations.push({i,t:time,text,userBefore})}
+    continue;
+   }
+   const names=[...new Set(x[2].split(",").map(n=>aliases[n.trim()]||n.trim()).filter(Boolean))];
+   const text=x[3].replace(/⟦T:[^⟧]*⟧/g,"").trim();
+   for(const name of names)if(text)(chars[name]??=[]).push({i,t:time,text,userBefore,situation:currentSituation});
+  }
+ }
+ return{times,chars,situations};
+}
 export function mergeScans(scans){const out={times:[],chars:{},situations:[]};let offset=0;for(const s of scans??[]){out.times.push(...(s.times??[]).map(x=>({...x,i:x.i+offset})));out.situations.push(...(s.situations??[]).map(x=>({...x,i:x.i+offset})));for(const[n,es]of Object.entries(s.chars??{}))(out.chars[n]??=[]).push(...es.map(x=>({...x,i:x.i+offset})));offset+=s.messageCount??0}return out}
 export function chunkEntries(entries,maxChars=6000){const out=[];let c=[],n=0;for(const e of entries??[]){const line="["+(e.t||"time unknown")+"]"+(e.situation?" [situation: "+e.situation+"]":"")+" (user context: "+(e.userBefore||"none")+") "+(e.text||"");if(c.length&&n+line.length+1>maxChars){out.push(c);c=[];n=0}c.push({...e,_line:line});n+=line.length+1}if(c.length)out.push(c);return out}
 const nm=e=>[e?.comment,e?.key,e?.secondkey,e?.folder].flat().filter(Boolean).join(" ").toLowerCase(), body=e=>[e?.content,e?.comment,e?.key,e?.secondkey].flat().filter(Boolean).join("\n"), fid=e=>e?.extentions?.da_folder?.id||(e?.mode==="folder"?e.key:null), par=e=>e?.extentions?.da_parent||e?.folder||null;
