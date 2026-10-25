@@ -393,6 +393,27 @@ export async function renderPersonaBuilder(ctx) {
       aiBox,
       h("div", { class: "rb-pb-h" }, "AI로 쓰기", h("span", { class: "rb-muted", style: "font-weight:500;font-size:12px" }, `· ${AI_MODES.find(([v]) => v === P.mode)?.[1] ?? ""}${P.mode === "static" ? ` ${P.staticModel || "(ID 없음)"}` : ""} · 영어로 써요`)),
       h("div", { class: "rb-pb-bar" },
+        h("span", { class: "rb-label", style: "flex:none" }, "AI 모델"),
+        (() => {
+          const sel = h("select", { class: "rb-input", "aria-label": "AI 모델", style: "max-width:220px" }, ...AI_MODES.map(([v, l]) => h("option", { value: v, selected: P.mode === v }, l)));
+          sel.addEventListener("change", () => {
+            P.mode = sel.value;
+            savePB(api, pb).catch(() => {});
+            drawAi();
+            if (P.mode === "static") aiBox.querySelector('input[aria-label="모델 ID"]')?.focus();
+          });
+          return sel;
+        })(),
+        P.mode === "static" ? (() => {
+          const mid = h("input", { class: "rb-input", "aria-label": "모델 ID", placeholder: "모델 ID (예: gpt-4o, claude-…)", value: P.staticModel ?? "" });
+          mid.addEventListener("change", () => {
+            P.staticModel = mid.value.trim();
+            savePB(api, pb).catch(() => {});
+          });
+          return mid;
+        })() : null),
+      h("div", { class: "rb-pb-bar" },
+        h("span", { class: "rb-label", style: "flex:none" }, "AI 프리셋"),
         aiSel,
         iconBtn("edit", "AI 프리셋 편집", { boxed: true, onClick: () => editAi(aip()) }),
         iconBtn("more", "AI 프리셋 메뉴", { boxed: true, onClick: (ev) => openMenu(ctx.win, ev.currentTarget, [
