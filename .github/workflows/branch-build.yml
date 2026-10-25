@@ -1,0 +1,35 @@
+name: Branch build verification
+
+on:
+  push:
+    branches:
+      - 'research/**'
+      - 'feature/**'
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build plugin
+        run: node tools/build.mjs
+      - name: Syntax check
+        run: node --check dusk_atelier.js
+      - name: Upload built plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: dusk_atelier-${{ github.sha }}
+          path: dusk_atelier.js
+          if-no-files-found: error
+          retention-days: 14
