@@ -130,7 +130,7 @@ export function createRegression(api, { notify = () => {}, onSaved = () => {}, l
       return false;
     }
     try {
-      await api.registerButton({ name: "회귀 요약", icon: "↶", iconType: "html", location: "hamburger" }, createForCurrentChat);
+      await api.registerButton({ name: "회귀 요약", icon: "↶", iconType: "html", location: "chat" }, createForCurrentChat);
       return true;
     } catch (e) {
       log("회귀 버튼 등록 실패", e?.message ?? e);
