@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - test/update-size-probe
-    paths:
-      - .github/workflows/generate-update-size-probe.yml
   workflow_dispatch:
 
 permissions:
