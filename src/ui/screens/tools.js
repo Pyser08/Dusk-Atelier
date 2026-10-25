@@ -14,6 +14,7 @@ import { isDev } from './devtools.js';
 import { reload } from './modules.js';
 import { renderPresets } from './presets.js';
 import { renderLoreLog } from './lorelog.js';
+import { renderPersonaBuilder } from './personabuilder.js';
 
 export function tile(ic, title, desc, onClick, id) {
   return h(
@@ -50,6 +51,7 @@ export function renderTools(ctx) {
   if (ctx.state.sub === "inspector") return renderInspector(ctx);
   if (ctx.state.sub === "presets") return renderPresets(ctx);
   if (ctx.state.sub === "lorelog") return renderLoreLog(ctx);
+  if (ctx.state.sub === "personabuilder") return renderPersonaBuilder(ctx);
   if (ctx.state.sub === "patchmaker") {
     ctx.go("dev", "patchmaker");
     return;
@@ -68,6 +70,7 @@ export function renderTools(ctx) {
       "div",
       { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px" },
       tile("preset", "프리셋", "켜고 끌 모듈 조합·순서를 묶어 저장하고 버튼 하나로 바꾸기, 모바일·PC 자동 전환, 공유 코드", () => ctx.go("tools", "presets"), "rb-tool-presets"),
+      tile("character", "페르소나 빌더", "양식에 맞춰 칸을 채워 페르소나 설명 만들기, AI로 전체·빈 칸·부분 고치기 (영어 출력 + 번역 보기), 양식·AI 프리셋 공유", () => ctx.go("tools", "personabuilder"), "rb-tool-personabuilder"),
       tile("upload", "업데이트 가져오기", "모듈·캐릭터 파일로 기존 항목을 업데이트하거나 새로 넣기 (여러 파일 가능)", () => ctx.legacy.open(), "rb-tool-import"),
       tile("link", "다른 봇에서 가져오기 · 합치기", "다른 봇·모듈의 인물과 세계관을 가져오거나 두 봇을 합치기, 합친 출처만 업데이트·떼어내기 (AI 다듬기)", () => ctx.legacy.openMerge(), "rb-tool-merge"),
       tile("history", "기록 · 되돌리기", `업데이트·편집·삭제 전 상태 보기와 되돌리기 (채팅은 그대로)${ctx.state.histCount ? ` · ${ctx.state.histCount}개` : ""}`, () => ctx.go("tools", "history"), "rb-tool-backups"),
