@@ -247,7 +247,7 @@ function stepCreate(ctx, d, body, nav) {
         if(scripts.checked){ch.customscript=structuredClone(original.customscript??[]);ch.triggerscript=structuredClone(original.triggerscript??[]);}
         fresh.push(ch);await api.setDatabaseLite({characters:fresh});await ensureCharacterInOrder(api,ch.chaId);
         status.textContent="새 봇 '"+ch.name+"'을 만들었어요.";ctx.toast(status.textContent);
-        body.appendChild(btn("새 봇 열기",{kind:"primary",onClick:async()=>{try{await api.setCharacterToIndex(fresh.length-1,ch);await api.hideContainer();}catch(e){ctx.toast("새 봇을 열지 못했어요: "+(e?.message??e),{error:true});}}}));
+        body.appendChild(btn("완료 · 사이드바에서 선택",{kind:"primary",onClick:async()=>{try{await api.hideContainer();ctx.toast("새 봇이 사이드바에 추가됐어요. 사이드바에서 선택해 주세요.");}catch(e){ctx.toast("Dusk 창을 닫지 못했어요: "+(e?.message??e),{error:true});}}}));
       }catch(e){status.textContent=e?.message??String(e);ctx.toast(status.textContent,{error:true});}
       finally{d.creating=false;}
     }}))
