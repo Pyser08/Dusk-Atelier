@@ -66,6 +66,25 @@ export var DEFAULT_TEMPLATE = `### Reference Rules
 (알아서)
 `;
 
+// ── 화면에 보일 한글 이름. 양식에서 "Label [한글]"로 직접 정할 수도 있다 ──
+export var KO = {
+  "reference rules": "참고 규칙", "basic info": "기본 정보", appearance: "외모", personality: "성격", background: "배경", speech: "말투",
+  "purity & sexuality": "순결 · 성적 성향", skills: "능력", misc: "기타", "speech style reference": "말투 예시",
+  name: "이름", age: "나이", sex: "성별", "species/race": "종족", "status/occupation": "신분 / 직업", residence: "사는 곳",
+  build: "체형", attire: "옷차림", hair: "머리", eyes: "눈", face: "얼굴", height: "키",
+  "core traits": "핵심 성격", "outward self": "남에게 보이는 모습", "private self": "혼자일 때의 모습", desire: "욕망", fear: "두려움", flaws: "결점",
+  origin: "출신", history: "과거사", secret: "비밀", family: "가족", relationships: "인간관계",
+  manner: "말하는 방식", address: "호칭", "verbal tic": "말버릇", "emotional expression": "감정 표현",
+  purity: "순결", orientation: "성적 지향", attitude: "성에 대한 태도", "intimacy style": "스킨십 · 친밀함 스타일",
+  abilities: "능력 · 특기", tastes: "취향 (좋아하는 것 · 싫어하는 것)", hobby: "취미", habits: "습관", belongings: "소지품",
+  likes: "좋아하는 것", dislikes: "싫어하는 것", values: "가치관", goal: "목표", weakness: "약점"
+};
+var splitKo = (s) => {
+  const m = /^(.*?)\s*\[([^\]]+)\]\s*$/.exec(s);
+  return m ? [m[1].trim(), m[2].trim()] : [s.trim(), ""];
+};
+export var koName = (label, ko) => ko || KO[String(label).toLowerCase()] || label;
+
 // ── 양식 파싱 ──
 // 결과: [{ title, kind: "fields"|"fixed"|"free", fields:[{label, hint}], text, hint }]
 export function parseTemplate(src) {
@@ -89,15 +108,16 @@ export function parseTemplate(src) {
     const hm = /^\s*#{2,4}\s*(.+?)\s*#*\s*$/.exec(line);
     if (hm) {
       push();
-      cur = { title: hm[1].trim(), kind: "fields", fields: [], lines: [], text: "", hint: "" };
+      const [title, ko] = splitKo(hm[1]);
+      cur = { title, ko: koName(title, ko), kind: "fields", fields: [], lines: [], text: "", hint: "" };
       continue;
     }
     if (!cur) continue;
     const fm = /^\s*\*\s+(.+?)\s*$/.exec(line);
     if (fm) {
       const s = fm[1], i = s.indexOf(":");
-      const label = (i < 0 ? s : s.slice(0, i)).trim();
-      if (label) cur.fields.push({ label, hint: i < 0 ? "" : s.slice(i + 1).trim() });
+      const [label, ko] = splitKo(i < 0 ? s : s.slice(0, i));
+      if (label) cur.fields.push({ label, ko: koName(label, ko), hint: i < 0 ? "" : s.slice(i + 1).trim() });
       continue;
     }
     cur.lines.push(line);
@@ -107,6 +127,55 @@ export function parseTemplate(src) {
 }
 export var fieldKey = (sec, f) => `${sec}::${f}`;
 export var freeKey = (sec) => `${sec}::`;
+
+// ── 양식 고치기: 폴더(섹션)에 항목 추가·삭제, 폴더 추가·삭제 ──
+var headRe = (title) => new RegExp(`^\\s*#{2,4}\\s*${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s*\\[[^\\]]*\\])?\\s*#*\\s*$`);
+function secRange(lines, title) {
+  const a = lines.findIndex((l) => headRe(title).test(l));
+  if (a < 0) return null;
+  let b = lines.findIndex((l, i) => i > a && /^\s*#{2,4}\s*\S/.test(l));
+  if (b < 0) b = lines.length;
+  return [a, b];
+}
+export function addField(text, title, label, ko = "", hint = "") {
+  const lines = String(text).replace(/\r/g, "").split("\n");
+  const r = secRange(lines, title);
+  if (!r) throw new Error("폴더를 찾지 못했어요");
+  let at = r[0] + 1;
+  for (let i = r[0] + 1; i < r[1]; i++) if (/^\s*\*\s+/.test(lines[i])) at = i + 1;
+  lines.splice(at, 0, `* ${label}${ko ? ` [${ko}]` : ""}:${hint ? ` ${hint}` : ""}`);
+  return lines.join("\n");
+}
+export function removeField(text, title, label) {
+  const lines = String(text).replace(/\r/g, "").split("\n");
+  const r = secRange(lines, title);
+  if (!r) return text;
+  const norm = (s) => s.toLowerCase().trim();
+  for (let i = r[0] + 1; i < r[1]; i++) {
+    const m = /^\s*\*\s+(.+?)(?::.*)?$/.exec(lines[i]);
+    if (m && norm(splitKo(m[1])[0]) === norm(label)) {
+      lines.splice(i, 1);
+      break;
+    }
+  }
+  return lines.join("\n");
+}
+export function addSection(text, title, ko = "") {
+  const lines = String(text).replace(/\r/g, "").replace(/\s+$/, "").split("\n");
+  const block = ["", `### ${title}${ko ? ` [${ko}]` : ""}`];
+  // 말투 예시(자유 칸) 앞에 넣는다
+  const r = secRange(lines, "Speech Style Reference");
+  if (r) lines.splice(r[0], 0, ...block.slice(1), "");
+  else lines.push(...block);
+  return lines.join("\n") + "\n";
+}
+export function removeSection(text, title) {
+  const lines = String(text).replace(/\r/g, "").split("\n");
+  const r = secRange(lines, title);
+  if (!r) return text;
+  lines.splice(r[0], r[1] - r[0]);
+  return lines.join("\n");
+}
 
 // ── 조립: 값 → 페르소나 설명 텍스트. 빈 칸·꺼진 섹션은 뺀다 ──
 export function compose(sections, values, off = {}) {
@@ -183,7 +252,7 @@ function rulesOf(sections, off) {
   return sections.filter((s) => s.kind === "fixed" && !off[s.title]).map((s) => s.text).join("\n");
 }
 // task: "draft" 전체 새로 | "fill" 빈 칸만 | "edit" 지정 칸만 고치기
-export function buildPrompt({ sections, values, off = {}, task, keys = [], concept = "", instruction = "", extra = "" }) {
+export function buildPrompt({ sections, values, off = {}, task, keys = [], concept = "", instruction = "", extra = "", note = "" }) {
   const target = new Set(task === "fill" ? sections.flatMap((s) => s.kind === "fields" ? s.fields.map((f) => fieldKey(s.title, f.label)) : s.kind === "free" ? [freeKey(s.title)] : []).filter((k) => !String(values[k] ?? "").trim()) : keys);
   const all = task === "draft";
   const sheet = sheetFor(sections, values, off, (k, hint) => {
@@ -198,7 +267,7 @@ Output rules:
 - Only output the sections and fields marked <<WRITE…>>. Keep labels exactly as given. Replace each marker with the value.
 - Keep every field concise (one or two sentences, comma lists are fine). Stay consistent with every non-marked value.
 - For a free-form section (no "* Label" lines), write its content as plain lines under the header. For a speech style reference, write 4-6 short sample lines of dialogue in quotes showing tone, habits and forms of address.
-- Do not invent {{user}}'s partner or the other character's details.${rulesOf(sections, off) ? `\nThe finished sheet will be used with these reference rules (write content that fits them):\n${rulesOf(sections, off)}` : ""}${extra ? `\nAdditional style instructions from the user:\n${extra}` : ""}`;
+- Do not invent {{user}}'s partner or the other character's details.${rulesOf(sections, off) ? `\nThe finished sheet will be used with these reference rules (write content that fits them):\n${rulesOf(sections, off)}` : ""}${extra ? `\nAdditional style instructions from the user:\n${extra}` : ""}${note ? `\nExtra instructions for this run (follow them):\n${note}` : ""}`;
   const ask = [
     concept ? `Character concept: ${concept}` : "",
     instruction ? `Change request: ${instruction}` : "",

@@ -5,7 +5,8 @@ import { copyText, h, replace } from '../dom.js';
 import { btn, iconBtn, confirmDialog, promptDialog, modal, note, openMenu, switchEl, setSwitch } from '../kit.js';
 import { attachUndo } from '../undo.js';
 import { AI_MODES, runAI } from '../../engine/merge.js';
-import { parseTemplate, compose, readValues, buildPrompt, translatePrompt, fieldKey, freeKey, loadPB, savePB, pushBackup, loadBackups, newId, templateCode, aiCode, readCode, DEFAULT_AI } from '../../data/personabuilder.js';
+import { parseTemplate, compose, readValues, buildPrompt, translatePrompt, fieldKey, freeKey, loadPB, savePB, pushBackup, loadBackups, newId, templateCode, aiCode, readCode, DEFAULT_AI, addField, removeField, addSection, removeSection } from '../../data/personabuilder.js';
+import { ROULETTE, DEFAULT_SLOTS, catById, spin, rouletteText } from '../../data/personaroulette.js';
 
 var CSS = `
 .rb-pb{display:flex;flex-direction:column;gap:14px}
@@ -32,6 +33,17 @@ var CSS = `
 .rb-pb-mini{border:0;background:none;color:var(--rb-acc-text);cursor:pointer;padding:2px 4px;border-radius:6px;font-size:11.5px;font-weight:700}
 .rb-pb-mini:hover{background:var(--rb-acc-soft)}
 .rb-pb-mini:disabled{opacity:.4;cursor:default}
+.rb-pb-x{border:0;background:none;color:var(--rb-mute);cursor:pointer;padding:0 4px;font-size:14px;line-height:1;border-radius:6px}
+.rb-pb-x:hover{color:var(--rb-danger,#e5484d);background:var(--rb-acc-soft)}
+.rb-pb-add{border:1px dashed var(--rb-line);background:none;color:var(--rb-sub);border-radius:10px;padding:7px;cursor:pointer;font-size:12.5px;font-weight:600}
+.rb-pb-add:hover{color:var(--rb-acc-text);border-color:var(--rb-acc-text)}
+.rb-pb-rl{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.rb-pb-slot{border:1px solid var(--rb-line);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px;background:var(--rb-bg,transparent)}
+.rb-pb-slot[data-lock]{border-color:var(--rb-acc-text)}
+.rb-pb-slot select{height:30px;font-size:12px;border-radius:8px;padding:0 6px}
+.rb-pb-slot .val{min-height:38px;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:700;font-size:13.5px;border-radius:8px;background:var(--rb-acc-soft);color:var(--rb-acc-text);padding:4px 6px;line-height:1.35}
+.rb-pb-slot .val[data-spin]{opacity:.6;filter:blur(.4px)}
+.rb-pb-slot .ops{display:flex;gap:4px;justify-content:space-between}
 `;
 
 export async function renderPersonaBuilder(ctx) {
@@ -53,6 +65,8 @@ export async function renderPersonaBuilder(ctx) {
   let off = d.off && typeof d.off === "object" ? { ...d.off } : {};
   let ko = d.ko && typeof d.ko === "object" ? { ...d.ko } : {}; // key → { t: 번역, src: 번역할 때의 원문 }
   let concept = typeof d.concept === "string" ? d.concept : "";
+  let runNote = typeof d.note === "string" ? d.note : "";
+  let slots = Array.isArray(d.slots) && d.slots.length ? d.slots.filter((x) => x && typeof x.cat === "string").map((x) => ({ cat: catById(x.cat).id, value: String(x.value ?? ""), lock: !!x.lock })) : DEFAULT_SLOTS.map((cat) => ({ cat, value: "", lock: false }));
   const undo = [];
   let busy = false;
   const tpl = () => pb.templates.find((t) => t.id === pb.template) ?? pb.templates[0];
@@ -63,7 +77,7 @@ export async function renderPersonaBuilder(ctx) {
   const persist = () => {
     clearTimeout(saveT);
     saveT = setTimeout(() => {
-      pb.draft = { target, name, values, off, ko, concept };
+      pb.draft = { target, name, values, off, ko, concept, note: runNote, slots };
       savePB(api, pb).catch(() => {});
     }, 400);
   };
@@ -195,6 +209,13 @@ export async function renderPersonaBuilder(ctx) {
     concept = conceptIn.value;
     persist();
   });
+  const noteIn = h("textarea", { placeholder: "추가 지시 (선택) — 이번 AI 작업마다 함께 들어가요. 예: 판타지 세계관, 25살 이상, 말투 예시는 반말로", "aria-label": "추가 지시", style: "min-height:44px" });
+  noteIn.value = runNote;
+  attachUndo(noteIn);
+  noteIn.addEventListener("input", () => {
+    runNote = noteIn.value;
+    persist();
+  });
   const editIn = h("input", { class: "rb-input", style: "height:36px;flex:1;min-width:160px", placeholder: "켜진 섹션 전체에 적용할 수정 요청 (예: 더 냉소적으로)", "aria-label": "AI 수정 요청" });
   const koSw = switchEl(pb.showKo, { label: "번역 같이 보기", onChange: (v, el) => {
     pb.showKo = v;
@@ -238,7 +259,7 @@ export async function renderPersonaBuilder(ctx) {
       conceptIn.focus();
       return say("콘셉트를 한 줄이라도 적어 주세요.");
     }
-    const { messages, target: tg } = buildPrompt({ sections, values, off, task, keys, concept: extraConcept, instruction, extra: P.extra });
+    const { messages, target: tg } = buildPrompt({ sections, values, off, task, keys, concept: extraConcept, instruction, extra: P.extra, note: runNote.trim() });
     if (tg && !tg.size) return say(task === "fill" ? "빈 칸이 없어요." : "고칠 칸이 없어요.");
     setBusy(true);
     say(label);
@@ -371,6 +392,7 @@ export async function renderPersonaBuilder(ctx) {
           } }
         ].filter(Boolean)) })),
       conceptIn,
+      noteIn,
       h("div", { class: "rb-pb-bar" }, b1, b2, undoWrap, h("span", { style: "flex:1" }), h("label", { style: "display:flex;align-items:center;gap:6px;font-size:12.5px" }, koSw, "번역 같이 보기"), b4),
       h("div", { class: "rb-pb-bar" }, editIn, b3),
       msg
@@ -386,7 +408,7 @@ export async function renderPersonaBuilder(ctx) {
     ta.style.height = "auto";
     ta.style.height = `${Math.min(ta.scrollHeight + 2, 320)}px`;
   };
-  const fieldBox = (k, label, hint, big) => {
+  const fieldBox = (k, label, hint, big, en = "", onRemove = null) => {
     const ta = h("textarea", { placeholder: hint || "", "aria-label": label, rows: big ? 6 : 1 });
     ta.value = values[k] ?? "";
     attachUndo(ta);
@@ -411,7 +433,7 @@ export async function renderPersonaBuilder(ctx) {
     paintKo();
     if (!big) requestAnimationFrame(() => autoGrow(ta));
     const mini = h("button", { type: "button", class: "rb-pb-mini", title: "이 칸만 AI로 고치기", onClick: () => askEdit(`'${label}' 칸 AI로 고치기`, [k]), disabled: busy }, "✦ AI");
-    return h("div", { class: "rb-pb-f" }, h("div", { class: "lab" }, h("span", null, label), mini), ta, koEl);
+    return h("div", { class: "rb-pb-f" }, h("div", { class: "lab" }, h("span", { title: en ? `설명에는 영어 이름 '${en}'으로 들어가요` : "" }, label), mini, onRemove ? h("button", { type: "button", class: "rb-pb-x", title: "이 항목을 양식에서 빼기", "aria-label": `${label} 항목 빼기`, onClick: onRemove }, "×") : null), ta, koEl);
   };
   const drawSheet = () => {
     replace(sheet, ...sections.map((s) => {
@@ -419,7 +441,7 @@ export async function renderPersonaBuilder(ctx) {
       const total = s.kind === "fields" ? s.fields.length : s.kind === "free" ? 1 : 0;
       const det = h("details", { class: "rb-pb-sec", open: open.has(s.title), "data-off": !!off[s.title] });
       det.addEventListener("toggle", () => det.open ? open.add(s.title) : open.delete(s.title));
-      const sw = switchEl(!off[s.title], { label: `${s.title} 포함`, onChange: (v, el) => {
+      const sw = switchEl(!off[s.title], { label: `${s.ko} 포함`, onChange: (v, el) => {
         setSwitch(el, v);
         if (v) delete off[s.title];
         else off[s.title] = true;
@@ -430,15 +452,169 @@ export async function renderPersonaBuilder(ctx) {
       const keys = s.kind === "fields" ? s.fields.map((f) => fieldKey(s.title, f.label)) : [freeKey(s.title)];
       const secAi = s.kind === "fixed" ? null : h("button", { type: "button", class: "rb-pb-mini", title: "이 섹션만 AI로 고치기", disabled: busy, onClick: (e) => {
         e.preventDefault();
-        askEdit(`'${s.title}' 섹션 AI로 고치기`, keys);
+        askEdit(`'${s.ko}' 폴더 AI로 고치기`, keys);
       } }, "✦ AI");
       det.append(
-        h("summary", null, h("span", { style: "display:flex;color:var(--rb-sub)" }, "📁"), h("span", { class: "ttl" }, s.title), s.kind === "fixed" ? h("span", { class: "cnt" }, "고정 문구") : h("span", { class: "cnt" }, `${filled}/${total}`), secAi, sw),
-        h("div", { class: "rb-pb-body" }, s.kind === "fixed" ? h("div", { class: "rb-pb-fixed" }, s.text, h("div", { class: "rb-muted", style: "margin-top:6px" }, "양식 편집에서 바꿀 수 있어요.")) : s.kind === "free" ? fieldBox(freeKey(s.title), s.title, s.hint ? `(${s.hint})` : "자유롭게", true) : s.fields.map((f) => fieldBox(fieldKey(s.title, f.label), f.label, f.hint, false)))
+        h("summary", null, h("span", { style: "display:flex;color:var(--rb-sub)" }, "📁"), h("span", { class: "ttl", title: s.title }, s.ko), s.kind === "fixed" ? h("span", { class: "cnt" }, "고정 문구") : h("span", { class: "cnt" }, `${filled}/${total}`), secAi, sw),
+        h("div", { class: "rb-pb-body" },
+          s.kind === "fixed" ? h("div", { class: "rb-pb-fixed" }, h("div", { class: "rb-muted", style: "margin-bottom:6px" }, "AI에게 주는 규칙이에요. 영어 그대로 설명 맨 위에 들어가요. (양식 편집에서 바꿀 수 있어요)"), s.text) : s.kind === "free" ? fieldBox(freeKey(s.title), s.ko, s.hint ? `(${s.hint})` : "자유롭게", true, s.title) : s.fields.map((f) => fieldBox(fieldKey(s.title, f.label), f.ko, f.hint, false, f.label, () => dropField(s, f))),
+          s.kind === "fixed" || s.kind === "free" ? null : h("button", { type: "button", class: "rb-pb-add", onClick: () => newField(s) }, `＋ '${s.ko}'에 항목 추가`),
+          s.kind === "fixed" ? null : h("div", { style: "display:flex;justify-content:flex-end" }, h("button", { type: "button", class: "rb-pb-x", style: "font-size:12px;padding:3px 6px", onClick: () => dropSection(s) }, "이 폴더 양식에서 빼기")))
       );
       return det;
-    }));
+    }), h("button", { type: "button", class: "rb-pb-add", onClick: newSection }, "＋ 폴더 추가"));
     drawPreview();
+  };
+
+  // ── 양식에 항목·폴더 더하고 빼기 (지금 고른 양식이 바뀐다) ──
+  const nameDialog = (title, koLabel, enLabel, enPh) => modal(ctx.win, (done) => {
+    const ko = h("input", { class: "rb-input", placeholder: "예: 머리 모양", "aria-label": koLabel, "data-autofocus": "1" });
+    const en = h("input", { class: "rb-input", placeholder: enPh, "aria-label": enLabel });
+    const hint = h("input", { class: "rb-input", placeholder: "칸 안내 문구 (선택)", "aria-label": "안내 문구" });
+    const ok = () => {
+      const k = ko.value.replace(/[\[\]:#*]/g, "").trim(), e = en.value.replace(/[\[\]:#*]/g, "").trim();
+      if (!k && !e) return ko.focus();
+      done({ ko: k, en: e || k, hint: hint.value.trim() });
+    };
+    [ko, en, hint].forEach((x) => x.addEventListener("keydown", (ev) => ev.key === "Enter" && !ev.isComposing && ok()));
+    return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true" },
+      h("h3", { class: "rb-h3" }, title),
+      h("span", { class: "rb-label" }, koLabel), ko,
+      h("span", { class: "rb-label" }, `${enLabel} — 실제 설명에 들어가는 이름`), en,
+      enLabel.includes("항목") ? hint : null,
+      h("p", { class: "rb-p" }, `양식 '${tpl().name}'에 저장돼요. 영어 이름을 비우면 한글 이름이 그대로 들어가요.`),
+      h("div", { class: "btns" }, btn("취소", { onClick: () => done(null) }), btn("추가", { kind: "primary", onClick: ok })));
+  });
+  const changeTpl = (fn) => {
+    const t = tpl();
+    t.text = fn(t.text);
+    useTemplate(t.id);
+  };
+  async function newField(s) {
+    const r = await nameDialog(`'${s.ko}'에 항목 추가`, "항목 이름 (화면에 보여요)", "영어 항목 이름", "예: Hairstyle");
+    if (!r) return;
+    if (s.fields.some((f) => f.label.toLowerCase() === r.en.toLowerCase())) return ctx.toast("이미 있는 항목이에요", { error: true });
+    open.add(s.title);
+    changeTpl((t) => addField(t, s.title, r.en, r.ko !== r.en ? r.ko : "", r.hint));
+  }
+  async function dropField(s, f) {
+    const k = fieldKey(s.title, f.label);
+    if (!await confirmDialog(ctx.win, { title: `'${f.ko}' 항목을 양식에서 뺄까요?`, body: String(values[k] ?? "").trim() ? "적어 둔 내용도 함께 빠져요. (되돌리기 가능)" : "", ok: "빼기", danger: true })) return;
+    snap();
+    delete values[k];
+    changeTpl((t) => removeField(t, s.title, f.label));
+    drawUndo();
+  }
+  async function newSection() {
+    const r = await nameDialog("폴더 추가", "폴더 이름 (화면에 보여요)", "영어 폴더 이름", "예: Relationships");
+    if (!r) return;
+    if (sections.some((x) => x.title.toLowerCase() === r.en.toLowerCase())) return ctx.toast("이미 있는 폴더예요", { error: true });
+    open.add(r.en);
+    changeTpl((t) => addSection(t, r.en, r.ko !== r.en ? r.ko : ""));
+    ctx.toast(`'${r.ko || r.en}' 폴더를 만들었어요. 폴더를 열어 항목을 추가해 주세요.`);
+  }
+  async function dropSection(s) {
+    if (!await confirmDialog(ctx.win, { title: `'${s.ko}' 폴더를 양식에서 뺄까요?`, body: "폴더 안 항목도 모두 빠져요. 다시 넣으려면 '양식 편집'에서 처음 상태로 되돌릴 수 있어요(기본 양식).", ok: "빼기", danger: true })) return;
+    snap();
+    changeTpl((t) => removeSection(t, s.title));
+    drawUndo();
+  }
+
+  // ── 룰렛: 칸마다 범주를 골라 무작위로 뽑고, 콘셉트에 넣는다 ──
+  const rlBox = h("div", { class: "rb-pb-box" });
+  const groups = [...new Set(ROULETTE.map((c) => c.group))];
+  const spinSlot = (sl, el) => new Promise((res) => {
+    const v = el?.querySelector(".val");
+    if (!v || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      sl.value = spin(sl.cat, sl.value);
+      return res();
+    }
+    v.setAttribute("data-spin", "");
+    let n = 0;
+    const t = setInterval(() => {
+      v.textContent = spin(sl.cat);
+      if (++n >= 9) {
+        clearInterval(t);
+        sl.value = spin(sl.cat, sl.value);
+        v.textContent = sl.value;
+        v.removeAttribute("data-spin");
+        res();
+      }
+    }, 60);
+  });
+  const drawRoulette = () => {
+    const grid = h("div", { class: "rb-pb-rl" });
+    slots.forEach((sl, i) => {
+      const sel = h("select", { class: "rb-input", "aria-label": `${i + 1}번 칸 범주` }, ...groups.map((g) => h("optgroup", { label: g }, ...ROULETTE.filter((c) => c.group === g).map((c) => h("option", { value: c.id, selected: c.id === sl.cat }, c.ko)))));
+      sel.addEventListener("change", () => {
+        sl.cat = sel.value;
+        sl.value = "";
+        persist();
+        drawRoulette();
+      });
+      const card = h("div", { class: "rb-pb-slot", "data-lock": sl.lock },
+        sel,
+        h("div", { class: "val" }, sl.value || "?"),
+        h("div", { class: "ops" },
+          h("button", { type: "button", class: "rb-pb-mini", title: "이 칸만 다시 돌리기", onClick: async () => {
+            sl.lock = false;
+            await spinSlot(sl, card);
+            persist();
+            drawRoulette();
+          } }, "🎲 돌리기"),
+          h("button", { type: "button", class: "rb-pb-mini", "aria-pressed": sl.lock ? "true" : "false", title: "고정하면 '전부 돌리기'에서 빠져요", onClick: () => {
+            sl.lock = !sl.lock;
+            persist();
+            drawRoulette();
+          } }, sl.lock ? "🔒 고정됨" : "🔓 고정"),
+          slots.length > 1 ? h("button", { type: "button", class: "rb-pb-x", title: "칸 지우기", "aria-label": `${i + 1}번 칸 지우기`, onClick: () => {
+            slots.splice(i, 1);
+            persist();
+            drawRoulette();
+          } }, "×") : null));
+      grid.append(card);
+    });
+    const picked = rouletteText(slots);
+    replace(rlBox,
+      h("div", { class: "rb-pb-h" }, "🎰 룰렛", h("span", { class: "rb-muted", style: "font-weight:500;font-size:12px" }, "· 범주를 고르고 돌려서 나온 설정을 콘셉트에 넣어요")),
+      grid,
+      h("div", { class: "rb-pb-bar" },
+        btn("전부 돌리기", { kind: "primary", size: "sm", icon: "refresh", onClick: async () => {
+          const cards = [...grid.children];
+          await Promise.all(slots.map((sl, i) => sl.lock ? null : spinSlot(sl, cards[i])));
+          persist();
+          drawRoulette();
+        } }),
+        slots.length < 10 ? btn("칸 추가", { size: "sm", icon: "plus", onClick: () => {
+          const used = new Set(slots.map((x) => x.cat));
+          slots.push({ cat: (ROULETTE.find((c) => !used.has(c.id)) ?? ROULETTE[0]).id, value: "", lock: false });
+          persist();
+          drawRoulette();
+        } }) : null,
+        btn("범주도 무작위", { size: "sm", icon: "zap", title: "고정 안 된 칸의 범주까지 섞어서 돌려요", onClick: async () => {
+          const pool = ROULETTE.map((c) => c.id).filter((id) => !slots.some((x) => x.lock && x.cat === id)).sort(() => Math.random() - 0.5);
+          slots.forEach((sl) => {
+            if (!sl.lock) sl.cat = pool.pop() ?? sl.cat;
+          });
+          slots.forEach((sl) => {
+            if (!sl.lock) sl.value = spin(sl.cat);
+          });
+          persist();
+          drawRoulette();
+        } }),
+        h("span", { style: "flex:1" }),
+        btn("콘셉트에 넣기", { size: "sm", icon: "plus", disabled: !picked, onClick: () => {
+          concept = [concept.trim(), picked].filter(Boolean).join("\n");
+          conceptIn.value = concept;
+          persist();
+          say("룰렛 결과를 콘셉트에 넣었어요. '전체 쓰기'나 '빈 칸만 채우기'를 눌러 보세요.");
+        } }),
+        btn("이걸로 전체 쓰기", { size: "sm", icon: "zap", disabled: !picked, onClick: () => {
+          concept = [concept.trim(), picked].filter(Boolean).join("\n");
+          conceptIn.value = concept;
+          persist();
+          aiDo("룰렛 결과로 AI가 페르소나를 쓰는 중…", "draft");
+        } })));
   };
 
   // ── 미리보기 · 저장 ──
@@ -519,6 +695,7 @@ export async function renderPersonaBuilder(ctx) {
   drawTplSel();
   drawAi();
   drawSheet();
+  drawRoulette();
   replace(ctx.main, h(
     "div",
     { class: "rb-section rb-scroll", style: "flex:1" },
@@ -529,6 +706,7 @@ export async function renderPersonaBuilder(ctx) {
         h("div", { class: "rb-pb-bar" }, personaSel, nameIn),
         h("div", { class: "rb-pb-bar" }, h("span", { class: "rb-label", style: "flex:none" }, "설명 양식"), tplSel, tplMenu)),
       aiBox,
+      rlBox,
       sheet,
       h("div", { class: "rb-pb-box" },
         h("div", { class: "rb-pb-h" }, "미리보기", charCount, h("span", { style: "flex:1" }), btn("복사", { size: "sm", onClick: async () => {
