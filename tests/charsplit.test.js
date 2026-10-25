@@ -36,9 +36,9 @@ test("scanChat tolerates an unclosed S at end of a message", () => {
 test("chunkEntries carries situation and user context into summary input", () => {
   const entries = chunkEntries([{ t:"20:00", situation:"At the café.", userBefore:"Where are we?", text:"Mio answers." }]);
   assert.equal(entries.length, 1);
-  assert.match(entries[0]._line, /\[situation: At the café\.\]/);
-  assert.match(entries[0]._line, /\(user context: Where are we\?\)/);
-  assert.match(summaryPrompt({ name:"Mio", entries:entries[0] ? entries[0] && entries : [] })[1].content, /At the café/);
+  assert.match(entries[0][0]._line, /\[situation: At the café\.\]/);
+  assert.match(entries[0][0]._line, /\(user context: Where are we\?\)/);
+  assert.match(summaryPrompt({ name:"Mio", entries:entries[0] ?? [] })[1].content, /At the café/);
 });
 
 test("pickLore defaults to own and related entries, while keeping unrelated entries off", () => {
