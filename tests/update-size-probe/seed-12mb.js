@@ -1,5 +1,5 @@
 //@name dusk_update_size_12mb
-//@display-name Dusk Update Size Probe 1.2 MB
+//@display-name Dusk Update Size Probe 1.2 MiB
 //@api 3.0
 //@version 0.1.0
 //@update-url https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/test/update-size-probe/tests/update-size-probe/hosted/probe-12mb.js
@@ -7,7 +7,7 @@
 (async () => {
   const api = globalThis.risuai ?? globalThis.Risuai;
   if (!api) return;
-  const label = "Dusk Update Size Probe 1.2 MB v0.1.0 (seed)";
+  const label = "Dusk Update Size Probe 1.2 MiB v0.1.0 (seed)";
   try {
     await api.registerSetting(label, async () => {
       console.log('[Dusk Update Size Probe] seed loaded: ' + label);
