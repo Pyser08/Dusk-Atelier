@@ -1,4 +1,5 @@
 import { normalizeMarks, hideMarksForDisplay } from "../engine/charsplit.js";
+// Rebuild trigger for v1.6.3 bundle.
 export const CHARSPLIT_KEY="dusk.charsplit.v1";
 export const CHARSPLIT_DEFAULTS=Object.freeze({v:1,enabled:true,showTime:false,debug:false,bots:{},ai:{mode:"submodel",staticModel:"",extra:"",lang:"English"}});
 const txt=v=>typeof v==="string"?v:Array.isArray(v)?v.map(p=>typeof p==="string"?p:p?.text??"").join("\n"):String(v??""), idOf=c=>String(c?.chaId??c?.id??"");
