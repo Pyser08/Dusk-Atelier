@@ -94,6 +94,7 @@ async function stepChoose(ctx, d, settings, body, nav) {
     await persist(s);
     ctx.toast("설정을 저장했어요.");
   };
+  // 일괄 토글은 기존 봇별 이름·별칭 설정을 보존하고 on 값만 바꿔요.
   const toggleAllBots = async on => {
     const s = await loadCharSplit(api);
     for (const c of d.bots) {
