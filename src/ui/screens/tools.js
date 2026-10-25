@@ -54,7 +54,6 @@ export function renderTools(ctx) {
   if (ctx.state.sub === "lorelog") return renderLoreLog(ctx);
   if (ctx.state.sub === "personabuilder") return renderPersonaBuilder(ctx);
   if (ctx.state.sub === "charsplit") return renderCharSplit(ctx);
-  if (ctx.state.sub === "charsplit") return renderCharSplit(ctx);
   if (ctx.state.sub === "patchmaker") {
     ctx.go("dev", "patchmaker");
     return;
