@@ -4,15 +4,12 @@ import { readDb } from "../../data/modules.js";
 import { AI_MODES, runAI } from "../../engine/merge.js";
 import { newCharacterBase, uniqueDisplayName, ensureCharacterInOrder } from "../../engine/character.js";
 import { isGenerating } from "../../engine/safety.js";
-import { scanChat, chunkEntries, pickLore, summaryPrompt, mergePrompt, profilePrompt, greetingPrompt } from "../../engine/charsplit.js";
+import { extractMessageText, scanChat, chunkEntries, pickLore, summaryPrompt, mergePrompt, profilePrompt, greetingPrompt } from "../../engine/charsplit.js";
 import { loadCharSplit, saveCharSplit, makeInstruction } from "../../data/charsplit.js";
 
 const drafts = new WeakMap();
 const textOf = v => typeof v === "string" ? v : Array.isArray(v) ? v.map(p => typeof p === "string" ? p : textOf(p?.text ?? p?.data ?? p?.content ?? "")).join("\n") : v && typeof v === "object" ? textOf(v.text ?? v.data ?? v.content ?? v.mes ?? v.message ?? "") : String(v ?? "");
-const messageText = m => {
-  const values = [m?.data, m?.content, m?.text, m?.mes, m?.message].map(textOf);
-  return values.find(v => /⟦(?:C:|\/C|S⟧|\/S|T:)/.test(v)) ?? values.find(v => v.trim()) ?? "";
-};
+const messageText = extractMessageText;
 const idOf = c => String(c?.chaId ?? c?.id ?? "");
 const box = (...children) => h("div", { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:10px" }, ...children);
 const row = (label, el) => h("label", { style: "display:flex;flex-direction:column;gap:5px" }, h("b", { style: "font-size:13px" }, label), el);
