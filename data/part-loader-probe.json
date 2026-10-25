@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "dataVersion": "1.0.1",
+  "dataVersion": "1.0.2",
   "title": "Part Loader Probe",
-  "message": "REMOTE_DATA_V1.0.1: 플러그인 재설치 없이 원격 JSON 갱신을 확인합니다.",
+  "message": "REMOTE_DATA_V1.0.2: 두 번째 원격 데이터 갱신 테스트입니다.",
   "rules": {
-    "displayLabel": "원격 데이터 V1.0.1",
+    "displayLabel": "원격 데이터 V1.0.2",
     "pingReply": "PONG_FROM_EMBEDDED_PART"
   }
 }
