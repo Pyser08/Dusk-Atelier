@@ -78,7 +78,7 @@ async function stepChoose(ctx, d, settings, body, nav) {
   }
   const cfg = settings.bots?.[d.botId] ?? { on:true, names:[], aliases:{} };
   d.aliases = cfg.aliases ?? {};
-  const names = input((cfg.names ?? []).join(", "), "이름을 쉼표로 구분");
+  const names = input((cfg.names ?? []).join(", "), "쉼표로 구분 · 비우면 전체 인물");
   const enabled = h("input", { type:"checkbox", checked:cfg.on !== false });
   const showTime = h("input", { type:"checkbox", checked:settings.showTime === true });
   const debug = h("input", { type:"checkbox", checked:settings.debug === true });
@@ -121,7 +121,7 @@ async function stepChoose(ctx, d, settings, body, nav) {
       btn("모든 봇 끄기", { onClick:() => toggleAllBots(false) })
     ),
     h("label", { class:"rb-check" }, enabled, h("span", null, "이 봇의 마크 기록 켜기")),
-    row("허용 이름 목록", names),
+    row("허용 이름 목록 (비우면 전체 인물)", names),
     actions(
       btn("설정 저장", { kind:"primary", onClick:save }),
       btn("지시문 복사", { onClick:async () => ctx.toast(await copyText(makeInstruction({ names:names.value.split(",").map(n=>n.trim()).filter(Boolean) })) ? "복사했어요." : "복사하지 못했어요.") })
