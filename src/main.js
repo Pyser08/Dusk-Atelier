@@ -12,6 +12,7 @@ import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets
 import { createLoreRuntime } from './data/lorerules.js';
 import { createLoreLog } from './data/lorelog.js';
 import { createCharSplit } from './data/charsplit.js';
+import { createRegression } from './data/regression.js';
 import { restoreActiveTheme } from './ui/screens/themestudio.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
 
@@ -145,6 +146,16 @@ async function start() {
   app.ctx.loreRuntime = loreRuntime;
   app.ctx.loreLog = loreLog;
   app.ctx.charSplit = charSplit;
+  const regression = createRegression(api, {
+    notify: (message, opts) => app?.ctx.toast(message, opts),
+    onSaved: async () => {
+      if (!app?.ctx) return;
+      app.ctx.state.charsDirty = true;
+      if (app.ctx.state.tab === "characters") app.ctx.refresh();
+    }
+  });
+  app.ctx.regression = regression;
+  regression.start().catch((e) => console.log("[Dusk 회귀] 버튼 초기화 실패", e?.message ?? e));
   refreshPersonaHandlers().catch(() => {
   });
   (async () => {
