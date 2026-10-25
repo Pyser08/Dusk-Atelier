@@ -11,6 +11,7 @@ import { CSS2 } from './ui/styles.js';
 import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets } from './data/presets.js';
 import { createLoreRuntime } from './data/lorerules.js';
 import { createLoreLog } from './data/lorelog.js';
+import { createCharSplit } from './data/charsplit.js';
 import { restoreActiveTheme } from './ui/screens/themestudio.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
 
