@@ -1157,7 +1157,12 @@ export async function openEditorCore(ctx, cfg) {
         "div",
         { class: "rb-da-sub" },
         line(lab("찾는 범위"), h("span", { class: "rb-da-note" }, "최근"), numIn(r, "scan", { min: 1, w: "64px" }), h("span", { class: "rb-da-note" }, "개 메시지")),
-        line(switchEl(!!r.whole, { label: "이름 경계", onChange: (v) => set("whole", v) }), h("span", null, "이름 경계"), h("span", { class: "rb-da-note" }, "'김민'이 '김민수'엔 안 걸리고 '김민이·김민에게'엔 걸려요. 한글 1~2글자 키는 설정 → 로어북 → 이름 경계에 따라 자동 적용돼요"))
+        line(switchEl(!!r.whole, { label: "이름 경계", onChange: (v) => set("whole", v) }), h("span", null, "이름 경계"), h("span", { class: "rb-da-note" }, "'김민'이 '김민수'엔 안 걸리고 '김민이·김민에게'엔 걸려요. 한글 1~2글자 키는 설정 → 로어북 → 이름 경계에 따라 자동 적용돼요")),
+        line(switchEl(!!r.common, { label: "흔한 낱말 이름", onChange: (v) => set("common", v) }), h("span", null, "흔한 낱말 이름"), h("span", { class: "rb-da-note" }, "'하늘·유리·보라'처럼 일반 낱말과 같은 이름이면 켜요. '하늘이 맑다'에는 안 켜지고, 부를 때(하늘아·하늘 씨), 확인 단어가 같이 나올 때, 최근 3턴 안에 켜졌을 때만 켜져요")),
+        r.common ? h("div", { class: "rb-da-sub", style: "display:flex;flex-direction:column;gap:6px" },
+          line(lab("흔한 낱말인 키"), h("div", { style: "flex:1;min-width:180px" }, text(r, "commonKeys", { placeholder: `비우면 첫 키 '${String(l.key ?? "").split(",")[0].trim() || "?"}'` }))),
+          line(lab("확인 단어"), h("div", { style: "flex:1;min-width:180px" }, text(r, "commonWords", { placeholder: "예) 강하늘, 하늘 선배, 검도부, 은발 — 쉼표로 구분" }))),
+          h("span", { class: "rb-da-note" }, "다른 키(예: 강하늘)는 평소처럼 걸려요. 확인 단어는 성·별명·직업·외모처럼 이 인물을 말할 때 같이 나오는 말을 적어요.")) : null
       )
     );
 
@@ -1266,6 +1271,7 @@ export async function openEditorCore(ctx, cfg) {
     if (String(r.group ?? "").trim()) parts.push(`그룹 ${r.group}`);
     if ((r.chain ?? []).length) parts.push(`연쇄 ${r.chain.length}`);
     if (r.whole) parts.push("이름 경계");
+    if (r.common) parts.push("흔한 낱말 이름");
     return parts.join(" · ");
   }
   // 수식 쓰는 법 (켜질 때 변수 → 수식 옆 ? 버튼)

@@ -197,9 +197,22 @@ const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 function wholeRe(k) {
   return new RegExp(`(?<![가-힣A-Za-z0-9])${escRe(k)}(?=$|[^가-힣A-Za-z0-9]|${PARTICLE}{1,3}(?![가-힣]))`, "i");
 }
-function keyHit(keys, texts, { regex = false, all = false, whole = false } = {}) {
+// 흔한 낱말 이름 ('하늘'·'유리'처럼 일반 낱말과 같은 이름): 이름 경계로 걸리고, 다음 중 하나가 있을 때만 인정
+//   ① 부르는 말: 하늘아 · 하늘야 · 하늘 씨 · 하늘님   ② 확인 단어(성·별명·직업 등)가 찾는 범위 안에 있음
+//   ③ 최근 3턴 안에 이 항목이 켜진 적 있음 (이미 등장한 인물이면 대화를 이어 감)
+const VOC = "(?:\\s?(?:씨|님|양|군|선배|후배|언니|오빠|누나|형)|아|야|이여|여)";
+function commonHit(k, texts, { confirm = [], recent = false } = {}) {
+  const re = wholeRe(k);
+  if (!texts.some((t) => re.test(String(t ?? "")))) return false;
+  if (recent) return true;
+  const voc = new RegExp(`(?<![가-힣A-Za-z0-9])${escRe(k)}${VOC}${PARTICLE}{0,3}(?![가-힣])`, "i");
+  if (texts.some((t) => voc.test(String(t ?? "")))) return true;
+  return confirm.some((w) => texts.some((t) => norm(t).replace(/ /g, "").includes(norm(w).replace(/ /g, ""))));
+}
+function keyHit(keys, texts, { regex = false, all = false, whole = false, common = null } = {}) {
   if (!keys.length) return false;
   const test = (k) => {
+    if (!regex && common?.keys.has(k.trim())) return commonHit(k.trim(), texts, common);
     if (!regex && (whole || autoWhole(k.trim()))) {
       const re = wholeRe(k.trim());
       return texts.some((t) => re.test(String(t ?? "")));
@@ -423,6 +436,13 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     const n = Math.max(1, Number(scan) || 4);
     return messages.slice(-n).filter((m) => who === "any" || m.role === who).map((m) => m.data ?? "");
   };
+  const commonOf = (it) => {
+    if (!it.rule.common) return null;
+    const ks = splitKeys(it.rule.commonKeys);
+    const keys = new Set(ks.length ? ks : splitKeys(it.entry.key).slice(0, 1));
+    const h = hist[it.rid] ?? [];
+    return { keys, confirm: splitKeys(it.rule.commonWords), recent: h.some((t) => turn - t <= 3) };
+  };
   const holdOf = (it) => Math.max(0, Math.floor(Number(it.rule.hold) || 0));
   const blocked = (it) => {
     const h = hist[it.rid];
@@ -449,7 +469,7 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
       case "keys": {
         const e = it.entry;
         const texts = textsFor(it.rule.scan);
-        const o = { regex: !!e.useRegex, whole: !!it.rule.whole };
+        const o = { regex: !!e.useRegex, whole: !!it.rule.whole, common: commonOf(it) };
         if (!keyHit(splitKeys(e.key), texts, o)) return false;
         if (e.selective && splitKeys(e.secondkey).length) return keyHit(splitKeys(e.secondkey), texts, o);
         return true;
