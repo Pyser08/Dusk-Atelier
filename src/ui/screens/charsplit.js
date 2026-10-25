@@ -47,6 +47,7 @@ export async function renderCharSplit(ctx) {
 
 async function stepChoose(ctx, d, settings, body, nav) {
   const api = ctx.api;
+  if (typeof api.addRisuReplacer !== "function") body.appendChild(note("warn", "이 RisuAI에서는 자동 지시를 넣을 수 없어요. 아래 ‘지시문 복사’ 버튼으로 봇의 글로벌 노트/후속 지시에 붙여 넣어 주세요."));
   if (!d.bots.length) {
     try {
       const db = await readDb(api, ["characters"]);
