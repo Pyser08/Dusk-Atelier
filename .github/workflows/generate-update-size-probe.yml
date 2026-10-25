@@ -85,13 +85,6 @@ jobs:
               version: '0.2.0',
               updateUrl: targetUrl
             });
-            const seed = makePlugin({
-              slug: s.slug,
-              display: 'Dusk Update Size Probe ' + s.label,
-              targetBytes: 0, // overwritten below: seed is intentionally small
-              version: '0.1.0',
-              updateUrl: targetUrl
-            });
             // Generate a small seed with the same plugin identity and update URL.
             const seedBanner = [
               '//@name ' + name,
