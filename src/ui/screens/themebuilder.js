@@ -37,7 +37,8 @@ var CSS = `
 var cssDone = false;
 
 export async function renderThemeBuilder(ctx) {
-  await loadStyles(ctx.api);
+  let redrawStyles = () => {};
+  await loadStyles(ctx.api, () => redrawStyles());
   ensureStudioCss();
   if (!cssDone) {
     document.head.appendChild(h("style", null, CSS));
@@ -344,5 +345,8 @@ export async function renderThemeBuilder(ctx) {
   // 화면 전환 중 비동기 렌더가 늦게 끝나 이전 화면을 덮어쓰지 않도록 한다.
   if (ctx.state.tab !== "settings" || ctx.state.sub !== "themebuilder") return;
   replace(ctx.main, h("div", { class: "rb-scroll", style: "flex:1;display:flex;flex-direction:column;padding:4px" }, wrap));
+  redrawStyles = () => {
+    if (ctx.state.tab === "settings" && ctx.state.sub === "themebuilder" && ctx.main.contains(wrap)) draw();
+  };
   draw();
 }
