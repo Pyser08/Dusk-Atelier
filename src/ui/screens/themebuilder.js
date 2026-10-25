@@ -4,7 +4,7 @@ import { btn, iconBtn, segmented, note, chip, switchEl, promptDialog } from '../
 import { AI_MODES, runAI } from '../../engine/merge.js';
 import { ensureStudioCss, mockDoc } from './themestudio.js';
 import { TARGETS, loadThemes, saveThemes, detectTarget } from '../../data/themes.js';
-import { STYLES, styleById, defaultChoice, normalizeChoice, buildTheme, makePalette, thumbHtml, contrast, handoff, DIALS, WIDTHS, AVATARS, FONTS, aiChoose, aiStyle, aiStylePrompt, aiEditPrompt, currentStyleCss, pickAccentFromPixels, shareCode, readShareCode } from '../../data/themebuilder.js';
+import { STYLES, styleById, defaultChoice, normalizeChoice, buildTheme, makePalette, thumbHtml, contrast, handoff, DIALS, WIDTHS, AVATARS, FONTS, aiChoose, aiStyle, aiStylePrompt, aiEditPrompt, currentStyleCss, pickAccentFromPixels, shareCode, readShareCode, loadStyles } from '../../data/themebuilder.js';
 
 var SWATCHES = ["#9a6b4f", "#c2557a", "#e07a5f", "#d4a72c", "#5a9e6f", "#3a9ca8", "#4f9cf7", "#7c5cf0", "#8a8fa3"];
 var CSS = `
@@ -37,6 +37,8 @@ var CSS = `
 var cssDone = false;
 
 export async function renderThemeBuilder(ctx) {
+  let redrawStyles = () => {};
+  await loadStyles(ctx.api, () => redrawStyles());
   ensureStudioCss();
   if (!cssDone) {
     document.head.appendChild(h("style", null, CSS));
@@ -340,6 +342,11 @@ export async function renderThemeBuilder(ctx) {
       } })),
     note("info", "만든 테마는 스튜디오에서 적용하고, CSS·HTML을 직접 더 고칠 수도 있어요. 스튜디오에서 고친 뒤 빌더에서 다시 저장하면 직접 고친 부분은 덮어써져요."));
   const wrap = h("div", { class: "rb-section", style: "flex:1;display:flex;flex-direction:column;gap:12px;min-height:0" }, top, h("div", { class: "rb-tb" }, side, frame));
+  // 화면 전환 중 비동기 렌더가 늦게 끝나 이전 화면을 덮어쓰지 않도록 한다.
+  if (ctx.state.tab !== "settings" || ctx.state.sub !== "themebuilder") return;
   replace(ctx.main, h("div", { class: "rb-scroll", style: "flex:1;display:flex;flex-direction:column;padding:4px" }, wrap));
+  redrawStyles = () => {
+    if (ctx.state.tab === "settings" && ctx.state.sub === "themebuilder" && ctx.main.contains(wrap)) draw();
+  };
   draw();
 }

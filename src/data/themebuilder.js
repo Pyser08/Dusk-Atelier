@@ -181,155 +181,50 @@ position:relative;display:block;width:100%;max-width:var(--t-card-width);min-wid
 // css: 늘 들어가는 모양 / deco: 켜고 끌 장식 / 여백은 calc(..*var(--t-space))
 // 모든 스타일은 같은 마크업: 카드 안 머리(프로필+이름·날짜) → 본문 → 아래줄
 var CENTER = `.dt-body,.dt-foot{margin-inline:auto;max-width:var(--t-text-width)}`;
-export var STYLES = [
-  {
-    id: "letter",
-    name: "편지",
-    desc: "종이 위에 쓴 편지. 명조, 넉넉한 여백, 우표 같은 프로필",
-    mode: "light",
-    accent: "#9a6b4f",
-    vars: { radius: 4, fontSize: 15.5, lineHeight: 1.95, cardWidth: 820, gap: 26, avatarSize: 56, avatarRadius: 3 },
-    font: "serif",
-    avatar: "stamp",
-    css: `.dt-card{background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(24px*var(--t-space)) calc(30px*var(--t-space)) calc(16px*var(--t-space))}
-.dt-head{border-bottom:1px solid var(--t-line);padding-bottom:calc(12px*var(--t-space));margin-bottom:calc(16px*var(--t-space))}
-.dt-av{order:2;margin-left:auto}
-.dt-name{font-size:1.15em;letter-spacing:.02em}
-.dt-date{font-style:italic}
-.dt-user .dt-card{background-color:var(--t-tint)}
-.dt-foot{border-top:1px dotted var(--t-line);padding-top:8px}
-${CENTER}
-@media (max-width:600px){.dt-card{padding:16px 16px 12px}}`,
-    deco: [
-      { id: "lines", name: "줄 노트", on: true, css: `.dt-body{background-image:repeating-linear-gradient(transparent 0 calc(var(--t-font-size)*var(--t-line-height) - 1px),var(--t-tint) 0 calc(var(--t-font-size)*var(--t-line-height)))}
-.dt-user .dt-body{background-image:repeating-linear-gradient(transparent 0 calc(var(--t-font-size)*var(--t-line-height) - 1px),var(--t-line) 0 calc(var(--t-font-size)*var(--t-line-height)))}` },
-      { id: "salute", name: "To. / From.", on: true, css: `.dt-name::before{content:"To. ";font-weight:400;color:var(--t-muted)}
-.dt-char .dt-name::before{content:"From. "}` },
-      { id: "shadow", name: "종이 그림자", on: true, css: `.dt-card{box-shadow:0 1px 0 var(--t-line),0 8px 26px rgb(0 0 0/var(--t-shadow))}` },
-      { id: "seal", name: "봉인 도장", on: false, css: `.dt-char .dt-card::after{content:"";position:absolute;right:22px;bottom:-12px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--t-accent2),var(--t-accent));box-shadow:0 2px 4px rgb(0 0 0/.25)}` }
-    ]
-  },
-  {
-    id: "messenger",
-    name: "메신저",
-    desc: "익숙한 메신저 말풍선. 내 말은 오른쪽, 대표색 풍선",
-    mode: "dark",
-    accent: "#7c5cf0",
-    vars: { radius: 18, fontSize: 15, lineHeight: 1.65, cardWidth: 860, gap: 12, avatarSize: 34, avatarRadius: 50 },
-    font: "sans",
-    avatar: "circle",
-    css: `.dt-card{display:flex;flex-direction:column;align-items:flex-start}
-.dt-head{gap:8px;margin:0 0 6px}
-.dt-meta{flex-direction:row;align-items:baseline;gap:8px}
-.dt-name{font-size:.88em;font-weight:600}
-.dt-body{max-width:min(82%,var(--t-text-width));margin-left:calc(var(--t-avatar-size) + 8px);background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(10px*var(--t-space)) calc(14px*var(--t-space))}
-.dt-foot{width:auto;max-width:calc(100% - var(--t-avatar-size) - 8px);margin-left:calc(var(--t-avatar-size) + 8px);margin-top:4px;justify-content:flex-start}
-.dt-user .dt-card{align-items:flex-end}
-.dt-user .dt-head{flex-direction:row-reverse}
-.dt-user .dt-meta{flex-direction:row-reverse}
-.dt-user .dt-body{margin-left:0;margin-right:calc(var(--t-avatar-size) + 8px);background:var(--t-user-bubble);border-color:transparent}
-.dt-user .dt-foot{margin-left:0;margin-right:calc(var(--t-avatar-size) + 8px);justify-content:flex-end}
-.dt-user .dt-body,.dt-user .dt-body .chattext,.dt-user .dt-body em,.dt-user .dt-body strong,.dt-user .dt-body mark,.dt-user .dt-body q{color:var(--t-on-user)}
-@media (max-width:600px){.dt-body{max-width:92%}}`,
-    deco: [
-      { id: "tail", name: "말풍선 꼬리", on: true, css: `.dt-body{border-top-left-radius:4px}
-.dt-user .dt-body{border-top-left-radius:var(--t-radius);border-top-right-radius:4px}` },
-      { id: "name", name: "이름 표시", on: true, css: "", off: `.dt-name{display:none}` },
-      { id: "grad", name: "그라데이션 풍선", on: false, css: `.dt-user .dt-body{background:linear-gradient(135deg,var(--t-user-bubble),var(--t-user-bubble2))}` },
-      { id: "shadow", name: "떠 있는 풍선", on: false, css: `.dt-body{box-shadow:0 3px 12px rgb(0 0 0/var(--t-shadow))}` }
-    ]
-  },
-  {
-    id: "card",
-    name: "미니멀 카드",
-    desc: "군더더기 없는 카드. 얇은 선, 왼쪽 대표색 줄",
-    mode: "dark",
-    accent: "#4f9cf7",
-    vars: { radius: 12, fontSize: 15, lineHeight: 1.75, cardWidth: 860, gap: 14, avatarSize: 36, avatarRadius: 10 },
-    font: "sans",
-    avatar: "style",
-    css: `.dt-card{background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(14px*var(--t-space)) calc(18px*var(--t-space)) calc(10px*var(--t-space))}
-.dt-head{margin-bottom:calc(10px*var(--t-space))}
-.dt-meta{flex-direction:row;align-items:center;gap:10px}
-.dt-name{font-size:.9em;letter-spacing:.03em}
-.dt-date{margin-left:auto}
-.dt-user .dt-card{background:var(--t-tint)}
-${CENTER}`,
-    deco: [
-      { id: "bar", name: "왼쪽 대표색 줄", on: true, css: `.dt-card{border-left:3px solid var(--t-accent)}
-.dt-user .dt-card{border-left-color:var(--t-muted)}` },
-      { id: "dot", name: "이름 앞 점", on: true, css: `.dt-meta::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--t-accent)}
-.dt-user .dt-meta::before{background:var(--t-muted)}` },
-      { id: "caps", name: "대문자 이름", on: true, css: `.dt-name{text-transform:uppercase}` },
-      { id: "glow", name: "은은한 빛", on: false, css: `.dt-char .dt-card{box-shadow:0 0 0 1px color-mix(in srgb,var(--t-accent) 25%,transparent),0 8px 28px color-mix(in srgb,var(--t-accent) 18%,transparent)}` }
-    ]
-  },
-  {
-    id: "diary",
-    name: "밤의 일기",
-    desc: "별이 뜬 밤하늘 일기장. 우표 프로필, 날짜 배지, 점선 구분, 가운데 글줄",
-    mode: "dark",
-    accent: "#6a7cf0",
-    vars: { radius: 14, fontSize: 15, lineHeight: 1.85, cardWidth: 960, gap: 22, avatarSize: 92, avatarRadius: 3 },
-    font: "sans",
-    avatar: "stamp",
-    css: `.dt-card{border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(20px*var(--t-space)) calc(26px*var(--t-space)) calc(10px*var(--t-space));background:linear-gradient(160deg,color-mix(in srgb,var(--t-accent) 14%,var(--t-paper)),var(--t-paper) 55%)}
-.dt-head{align-items:flex-end;gap:16px;padding-bottom:calc(16px*var(--t-space));margin-bottom:calc(20px*var(--t-space));border-bottom:1px dashed var(--t-line)}
-.dt-meta{gap:8px;padding-bottom:4px}
-.dt-name{font-size:.72em;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--t-muted)}
-.dt-char .dt-name::before{content:"FROM · ";opacity:.7}
-.dt-user .dt-name::before{content:"TO · ";opacity:.7}
-.dt-date{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border:1px solid var(--t-line);border-radius:99px;font-size:.74em;color:var(--t-muted)}
-.dt-date::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--t-accent)}
-.dt-foot{max-width:none;margin-top:calc(16px*var(--t-space));padding-top:8px;border-top:1px dashed var(--t-line)}
-.dt-body{margin-inline:auto;max-width:var(--t-text-width)}
-.dt-user .dt-card{background:linear-gradient(160deg,color-mix(in srgb,var(--t-accent2) 12%,var(--t-tint)),var(--t-tint) 55%)}
-.dt-user .dt-head{flex-direction:row-reverse}
-.dt-user .dt-meta{align-items:flex-end}
-@media (max-width:600px){.dt-card{padding:14px 14px 8px}.dt-av{width:64px;height:64px}}`,
-    deco: [
-      { id: "stars", name: "별 반짝임", on: true, css: `.dt-card::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:.55;background:radial-gradient(1px 1px at 22% 18%,var(--t-ink),transparent),radial-gradient(1px 1px at 68% 9%,var(--t-ink),transparent),radial-gradient(1.5px 1.5px at 86% 26%,var(--t-accent2),transparent),radial-gradient(1px 1px at 47% 4%,var(--t-ink),transparent),radial-gradient(1px 1px at 93% 7%,var(--t-ink),transparent)}` },
-      { id: "frame", name: "그라데이션 테두리", on: true, css: `.dt-card{border-color:color-mix(in srgb,var(--t-accent) 35%,var(--t-line))}
-.dt-card::after{content:"";position:absolute;left:18px;right:18px;top:-1px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--t-accent),var(--t-accent2),transparent)}` },
-      { id: "quote", name: "대사 강조색", on: true, css: `.dt-body q,.dt-body mark{color:var(--t-accent2)}` },
-      { id: "shadow", name: "깊은 그림자", on: true, css: `.dt-card{box-shadow:0 14px 40px rgb(0 0 0/calc(var(--t-shadow)*2.2))}` }
-    ]
-  },
-  {
-    id: "novel",
-    name: "비주얼 노벨",
-    desc: "게임 대사창. 이름표가 붙은 반투명 상자, 상자 안 큰 초상화",
-    mode: "dark",
-    accent: "#e07a9a",
-    vars: { radius: 10, fontSize: 15.5, lineHeight: 1.8, cardWidth: 900, gap: 24, avatarSize: 96, avatarRadius: 10 },
-    font: "round",
-    avatar: "style",
-    css: `.dt{padding-top:16px}
-.dt-card{display:grid;grid-template-columns:var(--t-avatar-size) minmax(0,1fr);column-gap:calc(18px*var(--t-space));align-items:start;background:color-mix(in srgb,var(--t-paper) 90%,transparent);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(24px*var(--t-space)) calc(20px*var(--t-space)) calc(10px*var(--t-space))}
-.dt-head{display:contents}
-.dt-av{grid-column:1;grid-row:1/3;border:2px solid var(--t-line);box-shadow:0 6px 18px rgb(0 0 0/var(--t-shadow))}
-.dt-meta{position:absolute;top:-15px;left:calc(var(--t-avatar-size) + 30px);flex-direction:row;align-items:center;gap:8px;padding:4px 14px;border-radius:calc(var(--t-radius)*.8);background:var(--t-accent);box-shadow:0 3px 10px rgb(0 0 0/var(--t-shadow))}
-.dt-name{color:var(--t-on-accent);font-size:.9em}
-.dt-date{color:var(--t-on-accent);opacity:.75;font-size:.72em}
-.dt-body{grid-column:2;grid-row:1}
-.dt-foot{grid-column:2;grid-row:2}
-.dt-user .dt-card{grid-template-columns:minmax(0,1fr) var(--t-avatar-size)}
-.dt-user .dt-av{grid-column:2}
-.dt-user .dt-body,.dt-user .dt-foot{grid-column:1}
-.dt-user .dt-meta{left:auto;right:calc(var(--t-avatar-size) + 30px);background:var(--t-muted)}
-.dt-user .dt-name,.dt-user .dt-date{color:var(--t-paper)}
-@media (max-width:600px){.dt-card{--t-avatar-size:56px;column-gap:12px;padding:22px 12px 8px}.dt-meta{left:12px}.dt-user .dt-meta{right:12px}}`,
-    deco: [
-      { id: "arrow", name: "다음 표시 ▼", on: true, css: `.dt-char .dt-body::after{content:"▼";display:block;text-align:right;font-size:10px;color:var(--t-accent-text);animation:dt-blink 1.4s ease-in-out infinite}
-@keyframes dt-blink{50%{opacity:.25}}` },
-      { id: "glass", name: "유리 느낌", on: true, css: `.dt-card{backdrop-filter:blur(8px)}` },
-      { id: "line", name: "윗줄 강조", on: false, css: `.dt-card{border-top:3px solid var(--t-accent)}` },
-      { id: "corner", name: "모서리 장식", on: false, css: `.dt-card::after{content:"";position:absolute;right:8px;bottom:8px;width:14px;height:14px;border-right:2px solid var(--t-accent);border-bottom:2px solid var(--t-accent);border-radius:0 0 4px 0;opacity:.7}` }
-    ]
-  }
-
-];
+export var STYLES = [{"id":"letter","name":"편지","desc":"종이 위에 쓴 편지. 명조, 넉넉한 여백, 우표 같은 프로필","mode":"light","accent":"#9a6b4f","vars":{"radius":4,"fontSize":15.5,"lineHeight":1.95,"cardWidth":820,"gap":26,"avatarSize":56,"avatarRadius":3},"font":"serif","avatar":"stamp","css":".dt-card{background:var(--t-paper);border:1px solid var(--t-line);border-radius:var(--t-radius);padding:calc(24px*var(--t-space)) calc(30px*var(--t-space)) calc(16px*var(--t-space))}\n.dt-head{border-bottom:1px solid var(--t-line);padding-bottom:calc(12px*var(--t-space));margin-bottom:calc(16px*var(--t-space))}\n.dt-av{order:2;margin-left:auto}\n.dt-name{font-size:1.15em;letter-spacing:.02em}\n.dt-date{font-style:italic}\n.dt-user .dt-card{background-color:var(--t-tint)}\n.dt-foot{border-top:1px dotted var(--t-line);padding-top:8px}\n.dt-body,.dt-foot{margin-inline:auto;max-width:var(--t-text-width)}\n@media (max-width:600px){.dt-card{padding:16px 16px 12px}}","deco":[{"id":"lines","name":"줄 노트","on":true,"css":".dt-body{background-image:repeating-linear-gradient(transparent 0 calc(var(--t-font-size)*var(--t-line-height) - 1px),var(--t-tint) 0 calc(var(--t-font-size)*var(--t-line-height)))}\n.dt-user .dt-body{background-image:repeating-linear-gradient(transparent 0 calc(var(--t-font-size)*var(--t-line-height) - 1px),var(--t-line) 0 calc(var(--t-font-size)*var(--t-line-height)))}"},{"id":"salute","name":"To. / From.","on":true,"css":".dt-name::before{content:\"To. \";font-weight:400;color:var(--t-muted)}\n.dt-char .dt-name::before{content:\"From. \"}"},{"id":"shadow","name":"종이 그림자","on":true,"css":".dt-card{box-shadow:0 1px 0 var(--t-line),0 8px 26px rgb(0 0 0/var(--t-shadow))}"},{"id":"seal","name":"봉인 도장","on":false,"css":".dt-char .dt-card::after{content:\"\";position:absolute;right:22px;bottom:-12px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--t-accent2),var(--t-accent));box-shadow:0 2px 4px rgb(0 0 0/.25)}"}]}];
 export var styleById = (id) => STYLES.find((s) => s.id === id) ?? STYLES[0];
+
+// 스타일 견본은 JSON 데이터로 외부 갱신한다. 실행 코드는 이 플러그인 안에만 둔다.
+var STYLE_DATA_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/data/themebuilder-styles.v1.json";
+var STYLE_CACHE_KEY = "dusk_atelier:themebuilder:styles:v1";
+var stylesLoadedAt = 0;
+function validStylePayload(value) {
+  if (!value || value.schemaVersion !== 1 || typeof value.dataVersion !== "string" || !Array.isArray(value.styles) || value.styles.length < 1 || value.styles.length > 20) return false;
+  const ids = new Set();
+  return value.styles.every((s) => {
+    if (!s || typeof s.id !== "string" || !/^[a-z0-9_-]{1,40}$/.test(s.id) || ids.has(s.id)) return false;
+    ids.add(s.id);
+    return typeof s.name === "string" && typeof s.css === "string" &&
+      s.vars && typeof s.vars === "object" && Array.isArray(s.deco) &&
+      s.deco.every((d) => d && typeof d.id === "string" && typeof d.css === "string");
+  });
+}
+export async function loadStyles(api, onUpdate) {
+  if (Date.now() - stylesLoadedAt < 60_000 && stylesLoadedAt) return STYLES;
+  // 저장된 데이터부터 적용해 화면을 먼저 그리고, 네트워크 갱신은 기다리지 않는다.
+  try {
+    const raw = await api?.pluginStorage?.getItem(STYLE_CACHE_KEY);
+    const cached = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (validStylePayload(cached)) STYLES = cached.styles;
+  } catch {}
+  stylesLoadedAt = Date.now();
+  // 외부 JSON은 정적 데이터만 담는다. 실패하면 캐시/내장 기본 스타일을 유지한다.
+  (async () => {
+    try {
+      if (typeof api?.nativeFetch !== "function") return;
+      const response = await api.nativeFetch(STYLE_DATA_URL, { method: "GET", headers: { Accept: "application/json" } });
+      if (!response || response.status < 200 || response.status >= 300) return;
+      const payload = JSON.parse(await response.text());
+      if (!validStylePayload(payload)) return;
+      const changed = JSON.stringify(STYLES) !== JSON.stringify(payload.styles);
+      STYLES = payload.styles;
+      try { await api.pluginStorage?.setItem(STYLE_CACHE_KEY, JSON.stringify(payload)); } catch {}
+      if (changed) { try { onUpdate?.(); } catch {} }
+    } catch {}
+  })();
+  return STYLES;
+}
+
 
 // ── 프로필 모양 ──
 export var AVATARS = [
