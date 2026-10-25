@@ -1009,22 +1009,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
   }
   // 새로 넣은 봇이 사이드바(캐릭터 순서)에 꼭 들어가게: 리스의 checkCharOrder를 부른 뒤에도 빠져 있으면 직접 넣는다
   // (PocketRisu·RisuBard에서는 플러그인이 캐릭터를 추가한 직후 순서 갱신이 늦거나 빠지는 경우가 있음)
-  async function ensureInOrder(chaId) {
-    try {
-      await api.checkCharOrder();
-    } catch {
-    }
-    try {
-      for (let i = 0; i < 3; i++) {
-        const order = (await api.getDatabase(["characterOrder"]))?.characterOrder ?? [];
-        const has = order.some((x) => x === chaId || Array.isArray(x?.data) && x.data.includes(chaId));
-        if (has) return;
-        if (i === 0) await new Promise((r) => setTimeout(r, 300));
-        else await api.setDatabaseLite({ characterOrder: [...order, chaId] });
-      }
-    } catch {
-    }
-  }
+  async function ensureInOrder(chaId) { return ensureCharacterInOrder(api, chaId); }
   // ---- 새로 가져온 봇(업데이트 후보는 아님): 다른 봇과 합칠지 물어본다 ----
   let newQueue = [];
   async function renderNewOffer() {
