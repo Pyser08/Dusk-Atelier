@@ -53,11 +53,16 @@ const result = await build({
   logLevel: 'warning'
 });
 const code = result.outputFiles[0].text;
-// 1MB를 넘으면 RisuAI 자동 업데이트가 받지 못하므로 빌드를 막는다
+// 번들 용량 정책: 900 KiB부터 경고, 960 KiB를 넘으면 빌드 실패
+const WARN_BYTES = 900 * 1024;
 const MAX_BYTES = 1024 * 1024 - 64 * 1024;
-console.log(`번들 크기 ${(Buffer.byteLength(code, 'utf8') / 1024).toFixed(0)} KB (한도 ${(MAX_BYTES / 1024).toFixed(0)} KB)`);
-if (Buffer.byteLength(code, 'utf8') > MAX_BYTES) {
-  console.error('빌드 중단: 번들이 너무 커서 RisuAI 자동 업데이트가 실패해요.');
+const bundleBytes = Buffer.byteLength(code, 'utf8');
+console.log(`번들 크기 ${(bundleBytes / 1024).toFixed(1)} KiB (경고 ${(WARN_BYTES / 1024).toFixed(0)} KiB / 한도 ${(MAX_BYTES / 1024).toFixed(0)} KiB)`);
+if (bundleBytes >= WARN_BYTES) {
+  console.warn('용량 경고: 번들이 900 KiB 이상이에요. 최근 기능의 증가량과 외부 데이터 분리 가능성을 검토하세요.');
+}
+if (bundleBytes > MAX_BYTES) {
+  console.error('빌드 중단: 번들이 960 KiB를 초과해 RisuAI 자동 업데이트 안정성을 위협해요.');
   process.exit(1);
 }
 
