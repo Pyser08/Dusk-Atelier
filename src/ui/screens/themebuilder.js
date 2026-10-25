@@ -4,7 +4,7 @@ import { btn, iconBtn, segmented, note, chip, switchEl, promptDialog } from '../
 import { AI_MODES, runAI } from '../../engine/merge.js';
 import { ensureStudioCss, mockDoc } from './themestudio.js';
 import { TARGETS, loadThemes, saveThemes, detectTarget } from '../../data/themes.js';
-import { STYLES, styleById, defaultChoice, normalizeChoice, buildTheme, makePalette, thumbHtml, contrast, handoff, DIALS, WIDTHS, AVATARS, FONTS, aiChoose, aiStyle, aiStylePrompt, aiEditPrompt, currentStyleCss, pickAccentFromPixels, shareCode, readShareCode } from '../../data/themebuilder.js';
+import { STYLES, styleById, defaultChoice, normalizeChoice, buildTheme, makePalette, thumbHtml, contrast, handoff, DIALS, WIDTHS, AVATARS, FONTS, aiChoose, aiStyle, aiStylePrompt, aiEditPrompt, currentStyleCss, pickAccentFromPixels, shareCode, readShareCode, loadStyles } from '../../data/themebuilder.js';
 
 var SWATCHES = ["#9a6b4f", "#c2557a", "#e07a5f", "#d4a72c", "#5a9e6f", "#3a9ca8", "#4f9cf7", "#7c5cf0", "#8a8fa3"];
 var CSS = `
@@ -37,6 +37,7 @@ var CSS = `
 var cssDone = false;
 
 export async function renderThemeBuilder(ctx) {
+  await loadStyles(ctx.api);
   ensureStudioCss();
   if (!cssDone) {
     document.head.appendChild(h("style", null, CSS));
