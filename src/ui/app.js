@@ -1,6 +1,6 @@
 import { maybeShowWhatsNew, openChangelog, CHANGELOG } from './whatsnew.js';
 import { btn, iconBtn, toast } from './kit.js';
-import { CSS2, FONT_LINK } from './styles.js';
+import { CSS2, FONT_LINK, loadUiCss } from './styles.js';
 import { resolveMode, themeVars } from './theme.js';
 import { createPrefs } from './prefs.js';
 import { renderModules } from './screens/modules.js';
@@ -35,6 +35,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     doc.head.appendChild(h("link", { rel: "stylesheet", href: FONT_LINK }));
     doc.head.appendChild(h("style", { id: "rb-style" }, CSS2));
   }
+  loadUiCss(api).catch(() => {});
   const prefs = createPrefs(api);
   const svc = createService(api, prefs);
   const assets = createAssetLoader(api);
