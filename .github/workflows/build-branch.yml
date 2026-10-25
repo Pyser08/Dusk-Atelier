@@ -5,7 +5,7 @@ name: 브랜치 빌드
 on:
   push:
     branches: ['feat/**']
-    paths: ['src/**', 'tools/**', 'package.json', '.github/workflows/build-branch.yml', '.github/workflows/charsplit-check.yml']
+    paths: ['src/**', 'tools/**', 'tests/**', 'package.json', '.github/workflows/build-branch.yml']
 
 permissions:
   contents: write
@@ -19,6 +19,8 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
+      - name: 캐릭터 분리 단위 테스트
+        run: npm test
       - run: node tools/build.mjs
       - name: 빌드 결과 커밋
         run: |
