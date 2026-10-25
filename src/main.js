@@ -36,6 +36,7 @@ async function start() {
   };
   const wrapped = { setCharacterToIndex: friendly((...a) => raw.setCharacterToIndex(...a)), setDatabaseLite: friendly((...a) => raw.setDatabaseLite(...a)) };
   const api = new Proxy(raw, { get: (t, k) => k in wrapped ? wrapped[k] : t[k] });
+  // 레거시 UI 경로에서도 캐릭터 분리 훅은 필요하므로 조기 종료 전에 초기화한다.
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {
     if (!document.getElementById("rb-style")) document.head.appendChild(h("style", { id: "rb-style" }, CSS2));
