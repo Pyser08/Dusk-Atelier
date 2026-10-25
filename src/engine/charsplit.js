@@ -1,5 +1,9 @@
 export const MARK = Object.freeze({ T:/⟦T:([^⟧]*)⟧/g, OPEN:/⟦C:([^⟧]+)⟧/g, CLOSE:"⟦/C⟧", S_OPEN:"⟦S⟧", S_CLOSE:"⟦/S⟧" });
-const txt=v=>typeof v==="string"?v:Array.isArray(v)?v.map(p=>typeof p==="string"?p:p?.text??"").join("\n"):String(v??"");
+const txt=v=>typeof v==="string"?v:Array.isArray(v)?v.map(p=>typeof p==="string"?p:txt(p?.text??p?.data??p?.content??"")).join("\n"):v&&typeof v==="object"?txt(v.text??v.data??v.content??v.mes??v.message??""):String(v??"");
+const messageText=m=>{
+ const values=[m?.data,m?.content,m?.text,m?.mes,m?.message].map(txt);
+ return values.find(v=>/⟦(?:C:|\/C|S⟧|\/S|T:)/.test(v))??values.find(v=>v.trim())??"";
+};
 const TIME=/⟦T:([^⟧]*)⟧/g;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 export function normalizeMarks(text,aliases={}) {
@@ -31,7 +35,7 @@ export function scanChat(messages,aliases={}){
  let time="",userBefore="",currentSituation="";
  for(let i=0;i<(messages??[]).length;i++){
   const m=messages[i]??{};
-  const raw=txt(m.data??m.content??m.text);
+  const raw=messageText(m);
   const s=normalizeMarks(raw,aliases);
   const ts=[...s.matchAll(TIME)];
   if(ts.length){time=ts.at(-1)[1];times.push({i,t:time})}
