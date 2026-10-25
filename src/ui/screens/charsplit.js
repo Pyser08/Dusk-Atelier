@@ -72,7 +72,9 @@ async function stepChoose(ctx, d, settings, body, nav) {
     const s = await loadCharSplit(api);
     s.bots[d.botId] = { on:enabled.checked, names:names.value.split(",").map(n => n.trim()).filter(Boolean), aliases:cfg.aliases ?? {} };
     s.showTime = showTime.checked; s.debug = debug.checked;
-    await saveCharSplit(api, s);
+    // 설정 저장 시 런타임 캐시도 갱신해야 디버그 옵션이 즉시 반영돼요.
+    if (ctx.charSplit?.update) await ctx.charSplit.update(s);
+    else await saveCharSplit(api, s);
     ctx.toast("설정을 저장했어요.");
   };
   body.appendChild(box(
