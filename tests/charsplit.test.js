@@ -58,3 +58,10 @@ test("situation instructions avoid repeating unchanged scenes and use previous c
   assert.match(instruction, /Do NOT create a new S block for ordinary dialogue/);
   assert.match(instruction, /Never nest or overlap S and C blocks/);
 });
+
+
+test("empty allowed-name list explicitly records all identifiable characters", () => {
+  const instruction = makeInstruction({ names:[] });
+  assert.match(instruction, /EMPTY — record interactions for every identifiable named character/);
+  assert.match(instruction, /when it is empty, include all identifiable named characters/);
+});
