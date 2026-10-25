@@ -1,0 +1,136 @@
+name: Generate update size probe fixtures
+
+on:
+  push:
+    branches:
+      - test/update-size-probe
+    paths:
+      - .github/workflows/generate-update-size-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: test/update-size-probe
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Generate exact-size plugin fixtures
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = 'tests/update-size-probe';
+          const host = path.join(root, 'hosted');
+          fs.mkdirSync(host, { recursive: true });
+          const owner = 'Pyser08';
+          const repo = 'Dusk-Atelier';
+          const branch = 'test/update-size-probe';
+
+          function makePlugin({ slug, display, targetBytes, version, updateUrl }) {
+            const name = 'dusk_update_size_' + slug.replace(/[^a-z0-9_]/g, '_');
+            const banner = [
+              '//@name ' + name,
+              '//@display-name ' + display,
+              '//@api 3.0',
+              '//@version ' + version,
+              '//@update-url ' + updateUrl,
+              '//@link https://github.com/' + owner + '/' + repo + '/tree/' + branch + '/tests/update-size-probe',
+              ''
+            ].join('\n');
+            const body = `(async () => {
+            const api = globalThis.risuai ?? globalThis.Risuai;
+            if (!api) return;
+            const label = ${JSON.stringify(display + ' v' + version)};
+            try {
+              await api.registerSetting(label, async () => {
+                console.log('[Dusk Update Size Probe] ' + label + ' loaded');
+              }, '🧪', 'text');
+            } catch (e) {
+              console.log('[Dusk Update Size Probe] ' + label + ' registerSetting failed', e);
+            }
+            console.log('[Dusk Update Size Probe] loaded: ' + label);
+          })();
+          `;
+            const prefix = banner + body + '\n/* PAD:';
+            const suffix = ' */\n';
+            const fillerLength = targetBytes - Buffer.byteLength(prefix) - Buffer.byteLength(suffix);
+            if (fillerLength < 0) throw new Error('Target too small: ' + targetBytes);
+            const code = prefix + 'x'.repeat(fillerLength) + suffix;
+            if (Buffer.byteLength(code, 'utf8') !== targetBytes) {
+              throw new Error('Size mismatch: ' + Buffer.byteLength(code, 'utf8') + ' != ' + targetBytes);
+            }
+            return code;
+          }
+
+          const specs = [
+            { slug: '12mb', label: '1.2 MB', bytes: 1200 * 1024 },
+            { slug: '2mb', label: '2 MB', bytes: 2 * 1024 * 1024 }
+          ];
+          const results = [];
+          for (const s of specs) {
+            const name = 'dusk_update_size_' + s.slug;
+            const targetPath = 'tests/update-size-probe/hosted/probe-' + s.slug + '.js';
+            const targetUrl = 'https://raw.githubusercontent.com/' + owner + '/' + repo + '/' + branch + '/' + targetPath;
+            const target = makePlugin({
+              slug: s.slug,
+              display: 'Dusk Update Size Probe ' + s.label,
+              targetBytes: s.bytes,
+              version: '0.2.0',
+              updateUrl: targetUrl
+            });
+            const seed = makePlugin({
+              slug: s.slug,
+              display: 'Dusk Update Size Probe ' + s.label,
+              targetBytes: 0, // overwritten below: seed is intentionally small
+              version: '0.1.0',
+              updateUrl: targetUrl
+            });
+            // Generate a small seed with the same plugin identity and update URL.
+            const seedBanner = [
+              '//@name ' + name,
+              '//@display-name Dusk Update Size Probe ' + s.label,
+              '//@api 3.0',
+              '//@version 0.1.0',
+              '//@update-url ' + targetUrl,
+              '//@link https://github.com/' + owner + '/' + repo + '/tree/' + branch + '/tests/update-size-probe',
+              ''
+            ].join('\n');
+            const seedBody = `(async () => {
+            const api = globalThis.risuai ?? globalThis.Risuai;
+            if (!api) return;
+            const label = ${JSON.stringify('Dusk Update Size Probe ' + s.label + ' v0.1.0 (seed)')};
+            try {
+              await api.registerSetting(label, async () => {
+                console.log('[Dusk Update Size Probe] seed loaded: ' + label);
+              }, '🧪', 'text');
+            } catch (e) {
+              console.log('[Dusk Update Size Probe] seed registerSetting failed', e);
+            }
+            console.log('[Dusk Update Size Probe] seed loaded: ' + label);
+          })();
+          `;
+            fs.writeFileSync(path.join(root, 'seed-' + s.slug + '.js'), seedBanner + seedBody);
+            fs.writeFileSync(path.join(host, 'probe-' + s.slug + '.js'), target);
+            results.push({ label: s.label, targetBytes: Buffer.byteLength(target), seedBytes: Buffer.byteLength(seedBanner + seedBody), targetPath });
+          }
+          fs.writeFileSync(path.join(root, 'sizes.json'), JSON.stringify(results, null, 2) + '\n');
+          console.log(results);
+          NODE
+      - name: Commit generated fixtures
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/update-size-probe
+          if git diff --cached --quiet; then
+            echo "Fixtures already current"
+          else
+            git commit -m "Generate large plugin update test fixtures"
+            git push origin test/update-size-probe
+          fi
