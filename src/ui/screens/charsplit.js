@@ -247,7 +247,7 @@ function stepCreate(ctx, d, body, nav) {
         if(scripts.checked){ch.customscript=structuredClone(original.customscript??[]);ch.triggerscript=structuredClone(original.triggerscript??[]);}
         fresh.push(ch);await api.setDatabaseLite({characters:fresh});await ensureCharacterInOrder(api,ch.chaId);
         status.textContent="새 봇 '"+ch.name+"'을 만들었어요.";ctx.toast(status.textContent);
-        body.appendChild(btn("새 봇 열기",{kind:"primary",onClick:async()=>{try{await api.setCharacterToIndex(fresh.length-1);await api.hideContainer();}catch(e){ctx.toast("새 봇을 열지 못했어요: "+(e?.message??e),{error:true});}}}));
+        body.appendChild(btn("새 봇 열기",{kind:"primary",onClick:async()=>{try{await api.setCharacterToIndex(fresh.length-1,ch);await api.hideContainer();}catch(e){ctx.toast("새 봇을 열지 못했어요: "+(e?.message??e),{error:true});}}}));
       }catch(e){status.textContent=e?.message??String(e);ctx.toast(status.textContent,{error:true});}
       finally{d.creating=false;}
     }}))
