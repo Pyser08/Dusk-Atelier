@@ -19,7 +19,7 @@ const actions = (...children) => h("div", { style: "display:flex;gap:8px;flex-wr
 export async function renderCharSplit(ctx) {
   let d = drafts.get(ctx);
   if (!d) {
-    d = { step:0, bots:[], botId:"", chats:[], selected:[], people:[], person:"", entries:[], lore:[], record:"", desc:"", greeting:"", lang:"English", extra:"", mode:"submodel", model:"", busy:false };
+    d = { step:0, bots:[], botId:"", chats:[], selected:[], people:[], person:"", entries:[], lore:[], aliases:{}, record:"", desc:"", greeting:"", lang:"English", extra:"", mode:"submodel", model:"", busy:false, creating:false };
     drafts.set(ctx, d);
   }
   const api = ctx.api;
@@ -77,6 +77,7 @@ async function stepChoose(ctx, d, settings, body, nav) {
     d.selected = d.chats.some(c => c._i === chatIdx) ? [chatIdx] : d.chats.length ? [d.chats[0]._i] : [];
   }
   const cfg = settings.bots?.[d.botId] ?? { on:true, names:[], aliases:{} };
+  d.aliases = cfg.aliases ?? {};
   const names = input((cfg.names ?? []).join(", "), "이름을 쉼표로 구분");
   const enabled = h("input", { type:"checkbox", checked:cfg.on !== false });
   const showTime = h("input", { type:"checkbox", checked:settings.showTime === true });
@@ -167,7 +168,7 @@ function stepPerson(ctx, d, body, nav) {
     timeline,
     actions(btn("← 이전", { onClick:() => nav(0) }), btn("로어북 선택 →", { kind:"primary", disabled:!d.person, onClick:() => {
       const bot = d.bots.find(c => idOf(c) === d.botId);
-      d.lore = pickLore(bot?.globalLore ?? [], d.person, { aliases:{} });
+      d.lore = pickLore(bot?.globalLore ?? [], d.person, { aliases:d.aliases ?? {} });
       nav(2);
     }}))
   ));
@@ -192,7 +193,7 @@ function stepAI(ctx, d, body, nav) {
   const api = ctx.api;
   const mode = h("select", { class:"rb-input" }, ...AI_MODES.map(([v,label]) => h("option", { value:v, selected:v===d.mode }, label)));
   mode.addEventListener("change", () => d.mode=mode.value);
-  const model = input(d.model, "모델 ID (직접 입력)");
+  const model = input(d.model, "직접 입력 모드에서 사용할 모델 ID");
   const lang = h("select", { class:"rb-input" }, h("option",{value:"English",selected:d.lang==="English"},"English"), h("option",{value:"한국어",selected:d.lang==="한국어"},"한국어"));
   lang.addEventListener("change", () => d.lang=lang.value);
   const extra = area(d.extra, "추가 지시", 3), record = area(d.record, "관계 기록", 10), desc = area(d.desc, "새 봇 설명", 10), greeting = area(d.greeting, "첫 메시지", 8);
@@ -214,10 +215,10 @@ function stepAI(ctx, d, body, nav) {
     } catch(e) { status.textContent=e?.message??String(e);ctx.toast(status.textContent,{error:true}); }
     finally { d.busy=false;d.abort=null; }
   };
-  body.appendChild(box(row("AI 모델",mode),d.mode==="static"?row("모델 ID",model):null,row("출력 언어",lang),row("추가 지시",extra),
+  body.appendChild(box(row("AI 모델",mode),row("모델 ID (직접 입력 모드에서만 사용)",model),row("출력 언어",lang),row("추가 지시",extra),
     actions(btn("전체 생성",{kind:"primary",onClick:()=>generate("all")}),btn("관계 기록 재작성",{onClick:()=>generate("record")}),btn("설명 재작성",{onClick:()=>generate("desc")}),btn("첫 메시지 재작성",{onClick:()=>generate("greeting")}),btn("취소",{onClick:()=>d.abort?.abort()})),
     status,bar,h("b",null,"관계 기록"),record,h("b",null,"설명"),desc,h("b",null,"첫 메시지"),greeting,
-    actions(btn("← 이전",{onClick:()=>nav(2)}),btn("새 봇 만들기 →",{kind:"primary",onClick:()=>{d.record=record.value;d.desc=desc.value;d.greeting=greeting.value;d.model=model.value;d.extra=extra.value;nav(4);}}))
+    actions(btn("← 이전",{onClick:()=>{d.record=record.value;d.desc=desc.value;d.greeting=greeting.value;d.model=model.value;d.extra=extra.value;nav(2);}}),btn("새 봇 만들기 →",{kind:"primary",onClick:()=>{d.record=record.value;d.desc=desc.value;d.greeting=greeting.value;d.model=model.value;d.extra=extra.value;nav(4);}}))
   ));
 }
 
@@ -230,6 +231,9 @@ function stepCreate(ctx, d, body, nav) {
     status,actions(btn("← 이전",{onClick:()=>nav(3)}),btn("새 봇 생성",{kind:"primary",onClick:async()=>{
       const original=d.bots.find(c=>idOf(c)===d.botId);
       if(!original){ctx.toast("원본 봇을 찾지 못했어요.",{error:true});return;}
+      if(d.creating)return;
+      if(!d.record.trim()){ctx.toast("먼저 AI 요약에서 관계 기록을 생성하거나 입력해 주세요.",{error:true});return;}
+      d.creating=true;
       try{
         const db=await readDb(api,["characters"]),fresh=db.characters??[];
         if(fresh.some(isGenerating))throw new Error("다른 캐릭터가 응답 생성 중이에요.");
@@ -242,10 +246,10 @@ function stepCreate(ctx, d, body, nav) {
         if(image.checked)ch.image=original.image||"";
         if(scripts.checked){ch.customscript=structuredClone(original.customscript??[]);ch.triggerscript=structuredClone(original.triggerscript??[]);}
         fresh.push(ch);await api.setDatabaseLite({characters:fresh});await ensureCharacterInOrder(api,ch.chaId);
-        try{await api.setChatToIndex(fresh.length-1,0,ch.chats[0]);}catch{}
         status.textContent="새 봇 '"+ch.name+"'을 만들었어요.";ctx.toast(status.textContent);
-        body.appendChild(btn("새 봇 열기",{kind:"primary",onClick:async()=>{try{await api.setCharacterToIndex(fresh.length-1);}catch{}ctx.go("characters",null);}}));
+        body.appendChild(btn("새 봇 열기",{kind:"primary",onClick:async()=>{try{await api.setCharacterToIndex(fresh.length-1);await api.hideContainer();}catch(e){ctx.toast("새 봇을 열지 못했어요: "+(e?.message??e),{error:true});}}}));
       }catch(e){status.textContent=e?.message??String(e);ctx.toast(status.textContent,{error:true});}
+      finally{d.creating=false;}
     }}))
   ));
 }
