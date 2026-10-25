@@ -57,6 +57,7 @@ export async function renderSettingsTab(ctx) {
   const rerollSeg = segmented([["new", "새로 굴리기"], ["keep", "이전 결과 유지"]], lore.reroll === "keep" ? "keep" : "new", (v) => setLore({ reroll: v }), "리롤 때 확률");
   const logSeg = segmented([["on", "켜기"], ["off", "끄기"]], lore.log === false ? "off" : "on", (v) => setLore({ log: v === "on" }), "로어북 로그");
   const btnSeg = segmented([["on", "보이기"], ["off", "숨기기"]], lore.button === false ? "off" : "on", (v) => setLore({ button: v === "on" }), "응답 아래 로어북 버튼");
+  const bdSeg = segmented([["off", "끄기"], ["short", "짧은 이름만"], ["all", "모든 키"]], ["off", "all"].includes(lore.boundary) ? lore.boundary : "short", (v) => setLore({ boundary: v }), "이름 경계 기본값");
   const row = (label, seg) => h("div", { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" }, h("b", { style: "font-size:13.5px;min-width:120px" }, label), h("div", { style: "flex:1;min-width:240px" }, seg));
   replace(ctx.main, h(
     "div",
@@ -72,6 +73,8 @@ export async function renderSettingsTab(ctx) {
         h("div", null, "· 새로 굴리기: 응답이 끝나면 같은 턴을 미리 다시 계산해 두어, 리롤할 때마다 확률·연쇄가 새로 정해져요."),
         h("div", null, "· 이전 결과 유지: 리롤해도 입력할 때 정한 항목이 그대로 들어가요. 확률이 없는 규칙은 어느 쪽이든 같아요.")
       )),
+      row("이름 경계", bdSeg),
+      h("div", { class: "rb-muted", style: "font-size:12.5px;line-height:1.7;word-break:keep-all" }, "키가 다른 낱말 속에 끼어 잘못 켜지는 걸 막아요. 예) '얀'이 '하얀'에, '시하'가 '지시하는'에 걸리지 않고 '얀이·얀에게·시하였다'에는 걸려요. 짧은 이름만: 한글 1~2글자 키에만 자동 적용(추천). 모든 키: 영문 포함 전부. Dusk 규칙이 켜진 로어북에 적용돼요. 항목별 '이름 경계' 스위치는 그대로 쓸 수 있어요."),
       row("로어북 로그", logSeg),
       row("응답 아래 버튼", btnSeg),
       h("div", { class: "rb-muted", style: "font-size:12.5px;line-height:1.7;word-break:keep-all" }, "응답마다 들어간 로어북(Dusk 규칙이 없는 봇도)을 남겨요. 도구 → 로어북 로그에서 보고, AI 응답 아래 [📖 로어북] 버튼으로도 바로 봐요. 채팅 내용은 바꾸지 않아요.")

@@ -184,16 +184,23 @@ const norm = (s) => String(s ?? "").toLowerCase().replace(/\{\{\/\/[\s\S]*?\}\}/
 function splitKeys(s) {
   return String(s ?? "").split(",").map((x) => x.trim()).filter(Boolean);
 }
-// 이름 경계: '김민'이 '김민수'에는 안 걸리고 '김민이·김민에게'에는 걸린다
-const PARTICLE = "(?:으로|이랑|에게|한테|께서|에서|부터|까지|처럼|보다|은|는|이|가|을|를|의|에|와|과|도|로|만|께|랑|야|아|님|씨|서)";
+// 이름 경계: '김민'이 '김민수'에는 안 걸리고 '김민이·김민에게'에는 걸린다.
+// 앞 글자가 한글·영문·숫자면 안 걸린다 ('얀'↛'하얀', '시하'↛'지시하는'). 뒤에는 조사·호칭·서술격 어미만 붙을 수 있다.
+const PARTICLE = "(?:에게서|한테서|으로서|으로써|이라고|이라는|이라면|이었다|이었어|이었고|였다|였어|였고|이에요|이예요|예요|이야|이다|이고|이며|이나|이든|이랑|이란|이라|으로|에게|한테|께서|에서|부터|까지|처럼|보다|하고|마저|조차|밖에|라고|라는|라면|네|쪽|군|양|님|씨|은|는|이|가|을|를|의|에|와|과|도|로|만|께|랑|야|아|여|서|나|든|며|고|란|라|다|요)";
+// 전역 기본값 (설정 탭): "off" 규칙별 설정만 | "short" 한글 1~2글자 키는 자동으로 | "all" 모든 키
+let BOUNDARY = "short";
+export function setBoundaryMode(m) {
+  BOUNDARY = m === "off" || m === "all" ? m : "short";
+}
+const autoWhole = (k) => BOUNDARY === "all" || BOUNDARY === "short" && /^[가-힣]{1,2}$/.test(k);
 const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 function wholeRe(k) {
-  return new RegExp(`(?<![가-힣A-Za-z0-9])${escRe(k)}(?=$|[^가-힣A-Za-z0-9]|${PARTICLE}{1,2}(?![가-힣]))`, "i");
+  return new RegExp(`(?<![가-힣A-Za-z0-9])${escRe(k)}(?=$|[^가-힣A-Za-z0-9]|${PARTICLE}{1,3}(?![가-힣]))`, "i");
 }
 function keyHit(keys, texts, { regex = false, all = false, whole = false } = {}) {
   if (!keys.length) return false;
   const test = (k) => {
-    if (whole && !regex) {
+    if (!regex && (whole || autoWhole(k.trim()))) {
       const re = wholeRe(k.trim());
       return texts.some((t) => re.test(String(t ?? "")));
     }

@@ -8,24 +8,27 @@
 //   → 리롤하면 확률이 새로 굴려진 결정이 쓰이고, 그냥 다음 입력을 하면 입력 때 다시 계산한다.
 //   리롤이 실제로 일어났는지는 다음 입력 때 마지막 응답 시각으로 판단해 기록(한 번만·쿨다운)에 반영한다.
 // 발동 기록은 채팅 변수 da_state에 둔다 (채팅 복사·분기에 따라감, 현재 턴 이상 기록은 무시하므로 되돌리기에도 맞다).
-import { STATE_VAR, MAX_HIST, affOf, applySets, collectManaged, evaluate, gateValues, setTargets } from '../engine/lorerules.js';
+import { STATE_VAR, MAX_HIST, affOf, applySets, collectManaged, evaluate, gateValues, setTargets, setBoundaryMode } from '../engine/lorerules.js';
 
 const sv = (k) => "$" + k;
 
 // 설정 (설정 탭에서 바꿈): reroll = "new"(리롤 때 확률 새로 굴리기) | "keep"(입력 때 결정 그대로)
 export const LORE_SETTINGS_KEY = "dusk-lore-settings";
 // log: 로어북 로그 남기기, button: AI 응답 아래 '📖 로어북' 버튼
-export const LORE_DEFAULTS = { reroll: "new", log: true, button: true };
+export const LORE_DEFAULTS = { reroll: "new", log: true, button: true, boundary: "short" };
 export async function loadLoreSettings(api) {
   try {
     const raw = await api.pluginStorage.getItem(LORE_SETTINGS_KEY);
     const v = typeof raw === "string" ? JSON.parse(raw) : raw;
-    return { ...LORE_DEFAULTS, ...(v && typeof v === "object" ? v : {}) };
+    const out = { ...LORE_DEFAULTS, ...(v && typeof v === "object" ? v : {}) };
+    setBoundaryMode(out.boundary);
+    return out;
   } catch {
     return { ...LORE_DEFAULTS };
   }
 }
 export async function saveLoreSettings(api, v) {
+  setBoundaryMode({ ...LORE_DEFAULTS, ...v }.boundary);
   await api.pluginStorage.setItem(LORE_SETTINGS_KEY, JSON.stringify({ ...LORE_DEFAULTS, ...v }));
 }
 
@@ -34,6 +37,7 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
   let prepTimer = null;
   let prepKey = "";
   let busy = false;
+  loadLoreSettings(api).catch(() => {}); // 이름 경계 기본값을 엔진에 알린다
 
   async function moduleLore(charIdx, chatIdx) {
     try {
