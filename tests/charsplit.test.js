@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeMarks, scanChat, chunkEntries, pickLore, summaryPrompt } from "../src/engine/charsplit.js";
+import { normalizeMarks, scanChat, chunkEntries, pickLore, summaryPrompt, extractMessageText, isUserMessage } from "../src/engine/charsplit.js";
 import { makeInstruction } from "../src/data/charsplit.js";
 
 test("normalizer closes an S block before opening C; blocks never nest", () => {
@@ -73,4 +73,25 @@ test("empty allowed-name list explicitly records all identifiable characters", (
   const instruction = makeInstruction({ names:[] });
   assert.match(instruction, /EMPTY — record interactions for every identifiable named character/);
   assert.match(instruction, /when it is empty, include all identifiable named characters/);
+});
+
+test("canonical extraction detects marks in nested Risu content and supports is_user", () => {
+  const message = { role:"char", is_user:true, data:"plain metadata", content:[{type:"text",text:"⟦C:미오⟧안녕⟦/C⟧"}] };
+  assert.equal(extractMessageText(message), "⟦C:미오⟧안녕⟦/C⟧");
+  assert.equal(isUserMessage(message), true);
+  const scan = scanChat([
+    { is_user:true, data:"우리는 어디에 있어?" },
+    { role:"char", data:"⟦C:미오⟧여기 카페야.⟦/C⟧" }
+  ]);
+  assert.equal(scan.chars["미오"][0].userBefore, "우리는 어디에 있어?");
+  assert.equal(scan.messageCount, 2);
+});
+
+test("scanChat recognizes Risu snake_case user flag and preserves the following character interaction", () => {
+  const scan = scanChat([
+    { is_user:true, data:"오늘은 뭐 할까?" },
+    { is_user:false, data:"⟦C:미오⟧같이 산책하자.⟦/C⟧" }
+  ]);
+  assert.equal(scan.chars["미오"].length, 1);
+  assert.equal(scan.chars["미오"][0].userBefore, "오늘은 뭐 할까?");
 });
