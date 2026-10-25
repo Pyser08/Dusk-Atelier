@@ -13,6 +13,7 @@ import { openCharAssets, openCharEditor } from './chareditor.js';
 import { addProjects, findProject } from './dev.js';
 import { isDev, openPatchMaker } from './devtools.js';
 import { applyPatchFile, exportMyChanges } from './patchui.js';
+import { loadRegression, setRegressionActive } from '../../data/regression.js';
 
 var COARSE = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
 // 카드 크기: 채팅 기록을 뺀 캐릭터 데이터의 크기 (에셋 파일 자체는 포함하지 않음)
@@ -398,6 +399,10 @@ function detail2(ctx, c) {
     if (!cur || cur.chaId !== c.chaId) throw new Error("캐릭터를 다시 찾지 못했어요. 목록을 새로 고쳐 주세요.");
     return cur;
   };
+  const regressionPanel = h("div", { class: "rb-field" },
+    h("span", { class: "rb-label" }, "회귀"),
+    h("div", { class: "rb-card", style: "padding:10px 12px" }, h("div", { class: "rb-muted" }, "회귀 기록을 불러오는 중…"))
+  );
   ctx.showDetail(
     h(
       "div",
@@ -408,6 +413,7 @@ function detail2(ctx, c) {
       c.streaming ? note("warn", "지금 응답을 생성하는 중이에요. 끝난 뒤에 업데이트할 수 있어요.") : null
     ),
     h("div", { class: "rb-stats" }, stat("로어북", c.lore), stat("에셋", c.assets), stat("채팅", c.chats), stat("연결 모듈", c.modules.length)),
+    regressionPanel,
     h(
       "div",
       { class: "rb-field" },
@@ -466,6 +472,45 @@ function detail2(ctx, c) {
       }) })
     )
   );
+  (async () => {
+    const inner = regressionPanel.querySelector(".rb-card");
+    const records = (await loadRegression(ctx.api)).records.filter((r) => r.charId === c.chaId);
+    const fold = h("details", { style: "min-width:0" },
+      h("summary", { style: "cursor:pointer;font-weight:650" }, "회귀 기록 · " + records.length + "개"),
+      h("div", { style: "display:flex;flex-direction:column;gap:8px;padding-top:10px" },
+        records.length ? records.map((record) => {
+          const date = new Date(record.createdAt || Date.now()).toLocaleString();
+          const active = h("input", { type: "checkbox", checked: record.active === true });
+          active.addEventListener("change", async () => {
+            active.disabled = true;
+            try {
+              await setRegressionActive(ctx.api, c.i, c.chaId, record.id, active.checked);
+              record.active = active.checked;
+              ctx.state.charsDirty = true;
+              ctx.toast(active.checked ? "이 회귀 요약을 Dusk 로어북에 연결했어요." : "로어북 연결을 껐어요. 요약은 보존돼요.");
+            } catch (e) {
+              active.checked = !active.checked;
+              ctx.toast(e?.message ?? String(e), { error: true });
+            } finally {
+              active.disabled = false;
+            }
+          });
+          return h("details", { class: "rb-card", style: "padding:9px 10px" },
+            h("summary", { style: "cursor:pointer;font-size:13px;line-height:1.5" }, date + " · " + (record.chatName || "채팅")),
+            h("div", { style: "display:flex;flex-direction:column;gap:8px;padding-top:10px" },
+              h("label", { class: "rb-check" }, active, h("span", null, "Dusk 로어북에서 사용")),
+              h("div", { class: "rb-muted", style: "font-size:12px" }, "대상 이름이 대화에 나타날 때 이 요약이 로어북 항목으로 발동해요."),
+              h("div", { style: "white-space:pre-wrap;overflow:auto;max-height:320px;font-size:13px;line-height:1.6" }, record.summary || "(요약 내용 없음)")
+            )
+          );
+        }) : h("div", { class: "rb-muted", style: "font-size:12px" }, "아직 회귀 요약이 없어요. 채팅창 햄버거 메뉴에서 ‘회귀 요약’을 누르세요.")
+      )
+    );
+    inner.replaceChildren(fold);
+  })().catch((e) => {
+    const inner = regressionPanel.querySelector(".rb-card");
+    if (inner) inner.textContent = "회귀 기록을 불러오지 못했어요: " + (e?.message ?? e);
+  });
   (async () => {
     const list = (await createStore(ctx.api).listBackups()).filter((b) => b.target === c.chaId).slice(0, 3);
     replace(timeline, list.length ? list.map((b) => h("div", { class: "rb-card pad", style: "padding:10px 14px" }, h("div", { style: "display:flex;gap:8px" }, h("b", { style: "font-size:13px" }, b.note || "업데이트 전"), h("span", { class: "rb-muted" }, fmtWhen(b.t))), b.summary ? h("div", { class: "rb-muted" }, b.summary) : null)) : h("div", { class: "rb-muted", style: "padding:12px 14px;border-radius:12px;border:1px dashed var(--rb-line)" }, "아직 기록이 없어요."));
