@@ -151,10 +151,9 @@
     log("캐시 읽기 성공", typeof value === "string" ? value : JSON.stringify(value, null, 2), "ok");
   }
   async function clearCache() {
-    // pluginStorage API does not guarantee a delete method across versions;
-    // overwrite with an explicit sentinel instead of assuming a remove API.
-    await api.pluginStorage.setItem(CACHE_KEY, JSON.stringify({ cleared: true, at: Date.now() }));
-    log("캐시 초기화 표식 저장", "이 키는 삭제 API를 가정하지 않고 테스트 표식으로 덮어썼습니다.", "ok");
+    if (typeof api.pluginStorage?.removeItem !== "function") throw new Error("pluginStorage.removeItem API가 없습니다.");
+    await api.pluginStorage.removeItem(CACHE_KEY);
+    log("캐시 삭제 성공", "진단용 캐시 키만 삭제했습니다.", "ok");
   }
   async function testLocalPing() {
     const part = {
