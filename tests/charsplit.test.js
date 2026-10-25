@@ -27,6 +27,15 @@ test("scanChat extracts character interactions with the latest situation context
   assert.equal(scan.chars.Mio[0].userBefore, "우리는 어디에 있어?");
 });
 
+test("scanChat reads marks from nested content when data is only metadata", () => {
+  const scan = scanChat([{
+    data: "plain metadata",
+    content: { type:"text", text:"⟦C:미오⟧안녕!⟦/C⟧" }
+  }], { "미오":"Mio" });
+  assert.equal(scan.chars.Mio.length, 1);
+  assert.equal(scan.chars.Mio[0].text, "안녕!");
+});
+
 test("scanChat tolerates an unclosed S at end of a message", () => {
   const scan = scanChat([{ role:"assistant", data:"⟦S⟧They leave the station." }]);
   assert.equal(scan.situations.length, 1);
