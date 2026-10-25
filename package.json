@@ -1,12 +1,13 @@
 {
   "name": "dusk-atelier",
-  "version": "1.6.3",
+  "version": "1.7.0",
   "description": "RisuAI 플러그인 Dusk Atelier — 모듈·봇 관리와 관계 기록 기반 캐릭터 분리",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node tools/build.mjs",
-    "check": "node tools/build.mjs --check"
+    "check": "node tools/build.mjs --check",
+    "test": "node --test"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"
