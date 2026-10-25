@@ -119,7 +119,7 @@
   }
   async function testJson() {
     if (typeof api.nativeFetch !== "function") throw new Error("nativeFetch API가 없습니다.");
-    const res = await api.nativeFetch(JSON_URL, { method: "GET", headers: { Accept: "application/json" } });
+    const res = await api.nativeFetch(JSON_URL + "?_probe=" + Date.now(), { method: "GET", headers: { Accept: "application/json", "Cache-Control": "no-cache" } });
     if (!res || res.status < 200 || res.status >= 300) throw new Error("JSON 요청 실패: HTTP " + (res?.status ?? "unknown"));
     const text = await res.text();
     const data = JSON.parse(text);
@@ -130,7 +130,7 @@
   }
   async function testJs() {
     if (typeof api.nativeFetch !== "function") throw new Error("nativeFetch API가 없습니다.");
-    const res = await api.nativeFetch(JS_URL, { method: "GET", headers: { Accept: "text/javascript, text/plain" } });
+    const res = await api.nativeFetch(JS_URL + "?_probe=" + Date.now(), { method: "GET", headers: { Accept: "text/javascript, text/plain", "Cache-Control": "no-cache" } });
     if (!res || res.status < 200 || res.status >= 300) throw new Error("JS 파일 요청 실패: HTTP " + (res?.status ?? "unknown"));
     const text = await res.text();
     const markerFound = text.includes("PART_PROBE_EXECUTION_MARKER");
