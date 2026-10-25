@@ -55,7 +55,20 @@ async function stepChoose(ctx, d, settings, body, nav) {
       if (!d.botId && d.bots[idx]) d.botId = idOf(d.bots[idx]);
     } catch (e) { body.appendChild(note("err", "봇 목록을 읽지 못했어요: " + (e?.message ?? e))); return; }
   }
-  const botSelect = h("select", { class:"rb-input" }, ...d.bots.map(c => h("option", { value:idOf(c), selected:idOf(c) === d.botId }, c.name || "(이름 없음)")));
+  const botSearch = input(d.botSearch ?? "", "봇 이름 검색");
+  const makeBotOptions = () => {
+    const q = String(d.botSearch ?? "").trim().toLocaleLowerCase();
+    const found = d.bots.filter(c => !q || String(c.name ?? "").toLocaleLowerCase().includes(q) || idOf(c).toLocaleLowerCase().includes(q));
+    // 검색어가 현재 선택된 봇과 맞지 않아도 선택 상태가 사라지지 않게 유지해요.
+    const current = d.bots.find(c => idOf(c) === d.botId);
+    const list = current && !found.some(c => idOf(c) === d.botId) ? [current, ...found] : found;
+    return list.map(c => h("option", { value:idOf(c), selected:idOf(c) === d.botId }, c.name || "(이름 없음)"));
+  };
+  const botSelect = h("select", { class:"rb-input" }, ...makeBotOptions());
+  botSearch.addEventListener("input", () => {
+    d.botSearch = botSearch.value;
+    botSelect.replaceChildren(...makeBotOptions());
+  });
   botSelect.addEventListener("change", () => { d.botId = botSelect.value; d.chats = []; d.selected = []; renderCharSplit(ctx); });
   const bot = d.bots.find(c => idOf(c) === d.botId);
   if (bot && !d.chats.length) {
@@ -68,17 +81,43 @@ async function stepChoose(ctx, d, settings, body, nav) {
   const enabled = h("input", { type:"checkbox", checked:cfg.on !== false });
   const showTime = h("input", { type:"checkbox", checked:settings.showTime === true });
   const debug = h("input", { type:"checkbox", checked:settings.debug === true });
-  const save = async () => {
-    const s = await loadCharSplit(api);
-    s.bots[d.botId] = { on:enabled.checked, names:names.value.split(",").map(n => n.trim()).filter(Boolean), aliases:cfg.aliases ?? {} };
-    s.showTime = showTime.checked; s.debug = debug.checked;
-    // 설정 저장 시 런타임 캐시도 갱신해야 디버그 옵션이 즉시 반영돼요.
+  const globalEnabled = h("input", { type:"checkbox", checked:settings.enabled !== false });
+  const persist = async s => {
     if (ctx.charSplit?.update) await ctx.charSplit.update(s);
     else await saveCharSplit(api, s);
+  };
+  const save = async () => {
+    const s = await loadCharSplit(api);
+    s.enabled = globalEnabled.checked;
+    s.bots[d.botId] = { on:enabled.checked, names:names.value.split(",").map(n => n.trim()).filter(Boolean), aliases:cfg.aliases ?? {} };
+    s.showTime = showTime.checked; s.debug = debug.checked;
+    await persist(s);
     ctx.toast("설정을 저장했어요.");
   };
+  const toggleAllBots = async on => {
+    const s = await loadCharSplit(api);
+    for (const c of d.bots) {
+      const id = idOf(c), prev = s.bots[id] ?? {};
+      s.bots[id] = { on, names:Array.isArray(prev.names) ? prev.names : [], aliases:prev.aliases && typeof prev.aliases === "object" ? prev.aliases : {} };
+    }
+    await persist(s);
+    ctx.toast(on ? "모든 봇의 마크 기록을 켰어요." : "모든 봇의 마크 기록을 껐어요.");
+    renderCharSplit(ctx);
+  };
+  globalEnabled.addEventListener("change", async () => {
+    const s = await loadCharSplit(api); s.enabled = globalEnabled.checked;
+    await persist(s);
+    ctx.toast(globalEnabled.checked ? "캐릭터 분리 기능을 전체 켰어요." : "캐릭터 분리 기능을 전체 껐어요.");
+    renderCharSplit(ctx);
+  });
   body.appendChild(box(
+    row("봇 검색", botSearch),
     row("대상 봇", botSelect),
+    h("label", { class:"rb-check" }, globalEnabled, h("span", null, "캐릭터 분리 기능 전체 켜기")),
+    actions(
+      btn("모든 봇 켜기", { onClick:() => toggleAllBots(true) }),
+      btn("모든 봇 끄기", { onClick:() => toggleAllBots(false) })
+    ),
     h("label", { class:"rb-check" }, enabled, h("span", null, "이 봇의 마크 기록 켜기")),
     row("허용 이름 목록", names),
     actions(
