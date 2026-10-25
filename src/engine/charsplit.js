@@ -1,9 +1,11 @@
 export const MARK = Object.freeze({ T:/⟦T:([^⟧]*)⟧/g, OPEN:/⟦C:([^⟧]+)⟧/g, CLOSE:"⟦/C⟧", S_OPEN:"⟦S⟧", S_CLOSE:"⟦/S⟧" });
 const txt=v=>typeof v==="string"?v:Array.isArray(v)?v.map(p=>typeof p==="string"?p:txt(p?.text??p?.data??p?.content??"")).join("\n"):v&&typeof v==="object"?txt(v.text??v.data??v.content??v.mes??v.message??""):String(v??"");
-const messageText=m=>{
+export const extractMessageText=m=>{
  const values=[m?.data,m?.content,m?.text,m?.mes,m?.message].map(txt);
+ // Prefer the field containing Dusk marks, otherwise the first meaningful text field.
  return values.find(v=>/⟦(?:C:|\/C|S⟧|\/S|T:)/.test(v))??values.find(v=>v.trim())??"";
 };
+export const isUserMessage=m=>m?.role==="user"||m?.isUser===true||m?.is_user===true||m?.type==="user"||m?.role==="human";
 const TIME=/⟦T:([^⟧]*)⟧/g;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 export function normalizeMarks(text,aliases={}) {
@@ -35,11 +37,11 @@ export function scanChat(messages,aliases={}){
  let time="",userBefore="",currentSituation="";
  for(let i=0;i<(messages??[]).length;i++){
   const m=messages[i]??{};
-  const raw=messageText(m);
+  const raw=extractMessageText(m);
   const s=normalizeMarks(raw,aliases);
   const ts=[...s.matchAll(TIME)];
   if(ts.length){time=ts.at(-1)[1];times.push({i,t:time})}
-  if(m.role==="user"||m.isUser){userBefore=s.replace(/⟦[^⟧]*⟧/g,"").slice(-300);continue}
+  if(isUserMessage(m)){userBefore=s.replace(/⟦[^⟧]*⟧/g,"").slice(-300);continue}
   const blocks=/(?:⟦S⟧([\s\S]*?)⟦\/S⟧)|(?:⟦C:([^⟧]+)⟧([\s\S]*?)⟦\/C⟧)/g;
   for(const x of s.matchAll(blocks)){
    if(x[1]!==undefined){
@@ -52,7 +54,7 @@ export function scanChat(messages,aliases={}){
    for(const name of names)if(text)(chars[name]??=[]).push({i,t:time,text,userBefore,situation:currentSituation});
   }
  }
- return{times,chars,situations};
+ return{times,chars,situations,messageCount:(messages??[]).length};
 }
 export function mergeScans(scans){const out={times:[],chars:{},situations:[]};let offset=0;for(const s of scans??[]){out.times.push(...(s.times??[]).map(x=>({...x,i:x.i+offset})));out.situations.push(...(s.situations??[]).map(x=>({...x,i:x.i+offset})));for(const[n,es]of Object.entries(s.chars??{}))(out.chars[n]??=[]).push(...es.map(x=>({...x,i:x.i+offset})));offset+=s.messageCount??0}return out}
 export function chunkEntries(entries,maxChars=6000){const out=[];let c=[],n=0;for(const e of entries??[]){const line="["+(e.t||"time unknown")+"]"+(e.situation?" [situation: "+e.situation+"]":"")+" (user context: "+(e.userBefore||"none")+") "+(e.text||"");if(c.length&&n+line.length+1>maxChars){out.push(c);c=[];n=0}c.push({...e,_line:line});n+=line.length+1}if(c.length)out.push(c);return out}
