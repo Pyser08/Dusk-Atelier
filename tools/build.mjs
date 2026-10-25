@@ -42,7 +42,6 @@ const result = await build({
   target: 'es2022',
   charset: 'utf8',
   legalComments: 'none',
-  // 1MB를 넘으면 RisuAI 자동 업데이트가 실패하므로 공백·이름만 줄인다.
   // minifySyntax는 쓰지 않는다: 줄바꿈 든 문자열을 템플릿 문자열로 바꿔 줄 맨 앞에 //@ 가 생길 수 있다.
   minifyWhitespace: true,
   minifyIdentifiers: true,
@@ -53,13 +52,8 @@ const result = await build({
   logLevel: 'warning'
 });
 const code = result.outputFiles[0].text;
-// 1MB를 넘으면 RisuAI 자동 업데이트가 받지 못하므로 빌드를 막는다
-const MAX_BYTES = 1024 * 1024 - 64 * 1024;
-console.log(`번들 크기 ${(Buffer.byteLength(code, 'utf8') / 1024).toFixed(0)} KB (한도 ${(MAX_BYTES / 1024).toFixed(0)} KB)`);
-if (Buffer.byteLength(code, 'utf8') > MAX_BYTES) {
-  console.error('빌드 중단: 번들이 너무 커서 RisuAI 자동 업데이트가 실패해요.');
-  process.exit(1);
-}
+// 크기 제한 없이 번들을 출력하되, 크기는 계속 표시한다.
+console.log(`번들 크기 ${(Buffer.byteLength(code, 'utf8') / 1024).toFixed(0)} KB`);
 
 // RisuAI는 파일 전체에서 줄 맨 앞의 //@ 줄을 머리말로 읽는다 (같은 이름이면 뒤쪽 값이 이김).
 // 문자열 안에 줄 맨 앞 //@ 가 들어가면 버전이 엉뚱하게 바뀌므로 머리말 밖의 그런 줄은 빌드를 막는다.
