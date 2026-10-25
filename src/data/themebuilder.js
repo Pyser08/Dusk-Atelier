@@ -189,7 +189,7 @@ var STYLE_DATA_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/mai
 var STYLE_CACHE_KEY = "dusk_atelier:themebuilder:styles:v1";
 var stylesLoadedAt = 0;
 function validStylePayload(value) {
-  if (!value || value.schemaVersion !== 1 || !Array.isArray(value.styles) || value.styles.length < 1 || value.styles.length > 20) return false;
+  if (!value || value.schemaVersion !== 1 || typeof value.dataVersion !== "string" || !Array.isArray(value.styles) || value.styles.length < 1 || value.styles.length > 20) return false;
   const ids = new Set();
   return value.styles.every((s) => {
     if (!s || typeof s.id !== "string" || !/^[a-z0-9_-]{1,40}$/.test(s.id) || ids.has(s.id)) return false;
