@@ -214,9 +214,9 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     win.style.colorScheme = scheme;
   }
   function go(tab, sub = null) {
-    // 기록은 도구 탭 안으로 옮겼다 (1.4.6). 예전 go("history") 호출도 그대로 동작
-    if (tab === "history") {
-      tab = "tools";
+    // 기록은 설정 탭 안으로 옮겼다 (1.6.1, 그전엔 도구). 예전 go("history")·go("tools","history") 호출도 그대로 동작
+    if (tab === "history" || tab === "tools" && sub === "history") {
+      tab = "settings";
       sub = "history";
     }
     // 1.5.0: 프리셋은 도구 안으로, 색·업데이트 설정·설정 정리는 설정 탭으로
@@ -266,13 +266,13 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       h("div", { class: "rb-nav-hint" }, "파일을 창 어디에 끌어다 놓아도 바로 가져와요"),
       h("button", { type: "button", class: "rb-nav-hint", style: "padding-top:4px;background:none;border:0;color:inherit;cursor:pointer;text-align:left", title: "변경 기록 보기", onClick: () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록") }, `v${version} · 변경 기록`)
     );
-    const inHist = state.tab === "tools" && state.sub === "history";
+    const inHist = state.tab === "settings" && state.sub === "history";
     const showSearch = inHist || ["modules", "plugins", "characters"].includes(state.tab);
     searchInput.placeholder = inHist ? "기록에서 이름 찾기" : { modules: "모듈 이름, 로어북 키워드 검색", plugins: "플러그인 이름, 카테고리 검색", characters: "캐릭터 이름, 제작자 검색" }[state.tab] ?? "검색";
     win.classList.toggle("rb-nosearch", !showSearch);
     replace(detail3);
     detail3.hidden = true;
-    const screen = { modules: renderModules, plugins: renderPlugins, characters: renderCharacters, presets: renderPresets, tools: state.sub === "history" ? renderHistory : renderTools, settings: renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { modules: renderModules, plugins: renderPlugins, characters: renderCharacters, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
     Promise.resolve(screen(ctx)).catch((err) => {
       replace(main, h("div", { class: "rb-section" }, h("div", { class: "rb-note err", role: "alert" }, icon("alert", 18), h("span", null, `화면을 열지 못했어요: ${err?.message ?? err}`))));
     });

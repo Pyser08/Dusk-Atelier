@@ -56,33 +56,23 @@ export function renderTools(ctx) {
     ctx.go("dev", "patchmaker");
     return;
   }
-  const dev = isDev(ctx);
+
   replace(ctx.main, h(
     "div",
     { class: "rb-section rb-scroll", style: "flex:1" },
     h("h2", { class: "rb-h2" }, "도구"),
-    dev && h(
-      "div",
-      { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin-bottom:10px" },
-      tile("code", "개발 탭 열기", "개발 중인 모듈·봇 모음, 검사·테스트, 패치 만들기·릴리스 기록", () => ctx.go("dev"), "rb-tool-dev")
-    ),
     h(
       "div",
       { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px" },
       tile("preset", "프리셋", "켜고 끌 모듈 조합·순서를 묶어 저장하고 버튼 하나로 바꾸기, 모바일·PC 자동 전환, 공유 코드", () => ctx.go("tools", "presets"), "rb-tool-presets"),
       tile("character", "페르소나 빌더", "양식에 맞춰 칸을 채워 페르소나 설명 만들기, AI로 전체·빈 칸·부분 고치기 (영어 출력 + 번역 보기), 양식·AI 프리셋 공유", () => ctx.go("tools", "personabuilder"), "rb-tool-personabuilder"),
-      tile("upload", "업데이트 가져오기", "모듈·캐릭터 파일로 기존 항목을 업데이트하거나 새로 넣기 (여러 파일 가능)", () => ctx.legacy.open(), "rb-tool-import"),
-      tile("link", "다른 봇에서 가져오기 · 합치기", "다른 봇·모듈의 인물과 세계관을 가져오거나 두 봇을 합치기, 합친 출처만 업데이트·떼어내기 (AI 다듬기)", () => ctx.legacy.openMerge(), "rb-tool-merge"),
-      tile("history", "기록 · 되돌리기", `업데이트·편집·삭제 전 상태 보기와 되돌리기 (채팅은 그대로)${ctx.state.histCount ? ` · ${ctx.state.histCount}개` : ""}`, () => ctx.go("tools", "history"), "rb-tool-backups"),
       tile("book", "로어북 로그", "응답마다 어떤 로어북이 들어갔는지 보기 (AI 응답 아래 버튼으로도)", () => ctx.go("tools", "lorelog"), "rb-tool-lorelog"),
-      tile("download", "전체 백업", "모든 모듈(꺼진 것 포함)·에셋·프리셋·폴더·색 설정을 zip 한 파일로", () => fullBackup(ctx), "rb-tool-fullbackup"),
-      tile("upload", "전체 복원", "전체 백업 zip에서 모듈과 설정을 되살리기", () => fullRestore(ctx), "rb-tool-restore"),
       tile("info", ".risum 인스펙터", "모듈 파일 안을 열어 보기: 필드별 크기, 압축률, 에셋 목록, ZIP 추출", () => ctx.go("tools", "inspector"), "rb-tool-inspector")
     ),
     thanksCard()
   ));
 }
-async function fullBackup(ctx) {
+export async function fullBackup(ctx) {
   const db = await readDb(ctx.api, ["modules", "pluginCustomStorage", "enabledModules"]);
   const on = db.modules ?? [], off = db.pluginCustomStorage?.[DISABLED_KEY] ?? [];
   const paths = /* @__PURE__ */ new Map();
@@ -149,7 +139,7 @@ async function fullBackup(ctx) {
     ctx.toast(`백업하지 못했어요: ${e?.message ?? e}`, { error: true });
   }
 }
-async function fullRestore(ctx) {
+export async function fullRestore(ctx) {
   const [f] = await pickFiles({ accept: ".zip,application/zip" });
   if (!f) return;
   let entries, man;

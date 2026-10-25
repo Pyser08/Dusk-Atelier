@@ -4,7 +4,7 @@ import { note, segmented } from '../kit.js';
 import { icon } from '../icons.js';
 import { LORE_DEFAULTS, loadLoreSettings, saveLoreSettings } from '../../data/lorerules.js';
 import { devToggleCard } from './devtools.js';
-import { renderCleanup, tile } from './tools.js';
+import { renderCleanup, tile, fullBackup, fullRestore } from './tools.js';
 import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
 import { renderThemeStudio, targetToggle } from './themestudio.js';
@@ -82,6 +82,18 @@ export async function renderSettingsTab(ctx) {
       "테마 스튜디오에서 만들 계열을 골라요. 두 계열은 구조가 달라 테마가 서로 호환되지 않아요.",
       h("div", { style: "display:flex;align-items:center;gap:12px;flex-wrap:wrap" }, tToggle, h("div", { style: "flex:1;min-width:200px" }, tInfo)),
       h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px" }, tile("palette", "테마 빌더", "스타일과 색만 고르면 완성. 지식 없이도 예쁜 채팅 테마", () => ctx.go("settings", "themebuilder"), "rb-set-themebuilder"), tile("brush", "테마 스튜디오", "색·글꼴·말풍선 편집, 실시간 미리보기, CSS·채팅 HTML, 내보내기·가져오기", () => ctx.go("settings", "themestudio"), "rb-set-themestudio"))
+    ),
+    section(
+      "history",
+      "기록 · 백업",
+      "업데이트·편집·삭제 전 상태를 되돌리거나, 모듈과 설정을 통째로 백업·복원해요.",
+      h(
+        "div",
+        { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px" },
+        tile("history", "기록 · 되돌리기", `업데이트·편집·삭제 전 상태 보기와 되돌리기 (채팅은 그대로)${ctx.state.histCount ? ` · ${ctx.state.histCount}개` : ""}`, () => ctx.go("settings", "history"), "rb-set-backups"),
+        tile("download", "전체 백업", "모든 모듈(꺼진 것 포함)·에셋·프리셋·폴더·색 설정을 zip 한 파일로", () => fullBackup(ctx), "rb-set-fullbackup"),
+        tile("upload", "전체 복원", "전체 백업 zip에서 모듈과 설정을 되살리기", () => fullRestore(ctx), "rb-set-restore")
+      )
     ),
     h(
       "div",

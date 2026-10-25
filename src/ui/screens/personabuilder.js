@@ -6,7 +6,7 @@ import { btn, iconBtn, confirmDialog, promptDialog, modal, note, openMenu, switc
 import { attachUndo } from '../undo.js';
 import { AI_MODES, runAI } from '../../engine/merge.js';
 import { parseTemplate, compose, readValues, buildPrompt, translatePrompt, fieldKey, freeKey, loadPB, savePB, pushBackup, loadBackups, newId, templateCode, aiCode, readCode, DEFAULT_AI, addField, removeField, addSection, removeSection } from '../../data/personabuilder.js';
-import { ROULETTE, DEFAULT_SLOTS, catById, spin, rouletteText } from '../../data/personaroulette.js';
+import { ROULETTE, DEFAULT_SLOTS, catById, spin, wheelItems, rouletteText } from '../../data/personaroulette.js';
 
 var CSS = `
 .rb-pb{display:flex;flex-direction:column;gap:14px}
@@ -37,13 +37,36 @@ var CSS = `
 .rb-pb-x:hover{color:var(--rb-danger,#e5484d);background:var(--rb-acc-soft)}
 .rb-pb-add{border:1px dashed var(--rb-line);background:none;color:var(--rb-sub);border-radius:10px;padding:7px;cursor:pointer;font-size:12.5px;font-weight:600}
 .rb-pb-add:hover{color:var(--rb-acc-text);border-color:var(--rb-acc-text)}
-.rb-pb-rl{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
-.rb-pb-slot{border:1px solid var(--rb-line);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px;background:var(--rb-bg,transparent)}
-.rb-pb-slot[data-lock]{border-color:var(--rb-acc-text)}
-.rb-pb-slot select{height:30px;font-size:12px;border-radius:8px;padding:0 6px}
-.rb-pb-slot .val{min-height:38px;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:700;font-size:13.5px;border-radius:8px;background:var(--rb-acc-soft);color:var(--rb-acc-text);padding:4px 6px;line-height:1.35}
-.rb-pb-slot .val[data-spin]{opacity:.6;filter:blur(.4px)}
-.rb-pb-slot .ops{display:flex;gap:4px;justify-content:space-between}
+.rb-pb-stage{display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:14px;align-items:start}
+@media (max-width:640px){.rb-pb-stage{grid-template-columns:1fr}}
+.rb-pb-wcol{display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:10px}
+.rb-pb-wheel{position:relative;width:100%;max-width:300px;aspect-ratio:1}
+.rb-pb-wheel svg{width:100%;height:100%;display:block;filter:drop-shadow(0 6px 18px rgb(0 0 0/.35))}
+.rb-pb-wheel .rot{transform-origin:0 0;will-change:transform}
+.rb-pb-wheel .rim{fill:#2a2233;stroke:#d9b45a;stroke-width:3}
+.rb-pb-wheel .seg{stroke:rgb(255 255 255/.55);stroke-width:.6;transition:filter .3s}
+.rb-pb-wheel .seg.win{stroke:#ffe08a;stroke-width:2.4;filter:brightness(1.25) saturate(1.2)}
+.rb-pb-wheel .lbl{fill:#fff;font-size:7.4px;font-weight:700;paint-order:stroke;stroke:rgb(0 0 0/.35);stroke-width:1.6px;pointer-events:none}
+.rb-pb-wheel .pin{fill:#ffe9a8}
+.rb-pb-wheel .hub{fill:#2a2233;stroke:#d9b45a;stroke-width:3}
+.rb-pb-hubbtn{position:absolute;left:50%;top:50%;width:19%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:0;background:none;color:#ffe08a;font-weight:900;font-size:11px;letter-spacing:.5px;cursor:pointer}
+.rb-pb-hubbtn:hover{color:#fff}
+.rb-pb-ptr{position:absolute;left:50%;top:-4px;width:0;height:0;margin-left:-11px;border-left:11px solid transparent;border-right:11px solid transparent;border-top:24px solid #ffe08a;filter:drop-shadow(0 2px 3px rgb(0 0 0/.5));transform-origin:50% 0}
+.rb-pb-ptr.tick{animation:rbPbTick .11s ease-in-out infinite alternate}
+@keyframes rbPbTick{from{transform:rotate(-14deg)}to{transform:rotate(6deg)}}
+.rb-pb-wres{min-height:28px;text-align:center;font-size:14.5px;line-height:1.4;max-width:300px}
+.rb-pb-wres .pop{display:inline-block;color:var(--rb-acc-text);animation:rbPbPop .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes rbPbPop{0%{transform:scale(.6);opacity:0}100%{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.rb-pb-ptr.tick,.rb-pb-wres .pop{animation:none}}
+.rb-pb-slots{display:flex;flex-direction:column;gap:6px}
+.rb-pb-slot{border:1px solid var(--rb-line);border-radius:12px;padding:6px 8px;display:flex;align-items:center;gap:8px;background:var(--rb-bg,transparent);cursor:pointer}
+.rb-pb-slot[aria-current=true]{border-color:var(--rb-acc-text);box-shadow:0 0 0 2px var(--rb-acc-soft)}
+.rb-pb-slot[data-lock]{background:var(--rb-acc-soft)}
+.rb-pb-slot .no{width:22px;height:22px;border-radius:50%;background:var(--rb-acc-soft);color:var(--rb-acc-text);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800;flex:none}
+.rb-pb-slot .mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.rb-pb-slot select{height:28px;font-size:12px;border-radius:8px;padding:0 6px}
+.rb-pb-slot .val{font-weight:700;font-size:13px;line-height:1.35;padding:0 2px}
+.rb-pb-slot .ops{display:flex;gap:2px;flex:none}
 `;
 
 export async function renderPersonaBuilder(ctx) {
@@ -520,101 +543,197 @@ export async function renderPersonaBuilder(ctx) {
     drawUndo();
   }
 
-  // ── 룰렛: 칸마다 범주를 골라 무작위로 뽑고, 콘셉트에 넣는다 ──
+  // ── 룰렛: 진짜 원판. 칸(슬롯)마다 범주를 고르고 돌리면 원판이 돌아 당첨 항목에 멈춘다 ──
   const rlBox = h("div", { class: "rb-pb-box" });
   const groups = [...new Set(ROULETTE.map((c) => c.group))];
-  const spinSlot = (sl, el) => new Promise((res) => {
-    const v = el?.querySelector(".val");
-    if (!v || matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      sl.value = spin(sl.cat, sl.value);
-      return res();
-    }
-    v.setAttribute("data-spin", "");
-    let n = 0;
-    const t = setInterval(() => {
-      v.textContent = spin(sl.cat);
-      if (++n >= 9) {
-        clearInterval(t);
-        sl.value = spin(sl.cat, sl.value);
-        v.textContent = sl.value;
-        v.removeAttribute("data-spin");
-        res();
-      }
-    }, 60);
-  });
-  const drawRoulette = () => {
-    const grid = h("div", { class: "rb-pb-rl" });
-    slots.forEach((sl, i) => {
-      const sel = h("select", { class: "rb-input", "aria-label": `${i + 1}번 칸 범주` }, ...groups.map((g) => h("optgroup", { label: g }, ...ROULETTE.filter((c) => c.group === g).map((c) => h("option", { value: c.id, selected: c.id === sl.cat }, c.ko)))));
-      sel.addEventListener("change", () => {
-        sl.cat = sel.value;
-        sl.value = "";
-        persist();
-        drawRoulette();
-      });
-      const card = h("div", { class: "rb-pb-slot", "data-lock": sl.lock },
-        sel,
-        h("div", { class: "val" }, sl.value || "?"),
-        h("div", { class: "ops" },
-          h("button", { type: "button", class: "rb-pb-mini", title: "이 칸만 다시 돌리기", onClick: async () => {
-            sl.lock = false;
-            await spinSlot(sl, card);
-            persist();
-            drawRoulette();
-          } }, "🎲 돌리기"),
-          h("button", { type: "button", class: "rb-pb-mini", "aria-pressed": sl.lock ? "true" : "false", title: "고정하면 '전부 돌리기'에서 빠져요", onClick: () => {
-            sl.lock = !sl.lock;
-            persist();
-            drawRoulette();
-          } }, sl.lock ? "🔒 고정됨" : "🔓 고정"),
-          slots.length > 1 ? h("button", { type: "button", class: "rb-pb-x", title: "칸 지우기", "aria-label": `${i + 1}번 칸 지우기`, onClick: () => {
-            slots.splice(i, 1);
-            persist();
-            drawRoulette();
-          } }, "×") : null));
-      grid.append(card);
+  const reduce = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let active = 0, rot = 0, spinning = false;
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const sv = (tag, attrs, ...kids) => {
+    const el = document.createElementNS(SVGNS, tag);
+    for (const [k, v] of Object.entries(attrs ?? {})) el.setAttribute(k, v);
+    kids.forEach((k) => el.append(k));
+    return el;
+  };
+  const wheelWrap = h("div", { class: "rb-pb-wheel" });
+  const wheelRes = h("div", { class: "rb-pb-wres", "aria-live": "polite" });
+  const slotList = h("div", { class: "rb-pb-slots" });
+  const trunc = (s, n = 9) => s.length > n ? s.slice(0, n - 1) + "…" : s;
+  // 원판 그리기: items를 n칸으로, 당첨 칸(win)은 멈춘 뒤 강조
+  const drawWheel = (items, startRot, win = -1) => {
+    const n = items.length, R = 100, a = 2 * Math.PI / n;
+    const g = sv("g", { class: "rot", style: `transform:rotate(${startRot}deg)` });
+    items.forEach((it, i) => {
+      const a0 = i * a - Math.PI / 2, a1 = a0 + a;
+      const p = (t, r = R) => `${(r * Math.cos(t)).toFixed(2)} ${(r * Math.sin(t)).toFixed(2)}`;
+      const hue = Math.round(250 + i * 360 / n) % 360;
+      g.append(sv("path", { d: `M0 0 L${p(a0)} A${R} ${R} 0 0 1 ${p(a1)} Z`, class: i === win ? "seg win" : "seg", style: `fill:hsl(${hue} 52% ${i % 2 ? 40 : 47}%)` }));
+      const mid = (a0 + a1) / 2, deg = mid * 180 / Math.PI;
+      const t = sv("text", { x: 58, y: 0, transform: `rotate(${deg.toFixed(2)})`, class: "lbl", "text-anchor": "middle", "dominant-baseline": "middle" });
+      t.textContent = trunc(it);
+      g.append(t);
     });
-    const picked = rouletteText(slots);
-    replace(rlBox,
-      h("div", { class: "rb-pb-h" }, "🎰 룰렛", h("span", { class: "rb-muted", style: "font-weight:500;font-size:12px" }, "· 범주를 고르고 돌려서 나온 설정을 콘셉트에 넣어요")),
-      grid,
-      h("div", { class: "rb-pb-bar" },
-        btn("전부 돌리기", { kind: "primary", size: "sm", icon: "refresh", onClick: async () => {
-          const cards = [...grid.children];
-          await Promise.all(slots.map((sl, i) => sl.lock ? null : spinSlot(sl, cards[i])));
+    for (let i = 0; i < n; i++) {
+      const t = i * a - Math.PI / 2;
+      g.append(sv("circle", { cx: (R - 4) * Math.cos(t), cy: (R - 4) * Math.sin(t), r: 2.2, class: "pin" }));
+    }
+    const svg = sv("svg", { viewBox: "-108 -108 216 216", role: "img", "aria-label": "룰렛 원판" },
+      sv("circle", { r: 106, class: "rim" }),
+      g,
+      sv("circle", { r: 22, class: "hub" }));
+    const pointer = h("div", { class: "rb-pb-ptr", "aria-hidden": "true" });
+    const hub = h("button", { type: "button", class: "rb-pb-hubbtn", title: "이 칸 돌리기", onClick: () => spinOne(active) }, "SPIN");
+    replace(wheelWrap, svg, pointer, hub);
+    return { g, pointer, svg };
+  };
+  const preview = () => {
+    const sl = slots[active];
+    if (!sl) return;
+    const items = catById(sl.cat).items.slice().sort(() => Math.random() - 0.5).slice(0, 12);
+    if (sl.value && !items.includes(sl.value)) items[0] = sl.value;
+    const win = sl.value ? items.indexOf(sl.value) : -1;
+    const a = 360 / items.length;
+    rot = win >= 0 ? -(win + 0.5) * a : 0;
+    drawWheel(items, rot, win);
+    replace(wheelRes, sl.value ? h("b", null, sl.value) : h("span", { class: "rb-muted" }, `${catById(sl.cat).ko} · 항목 ${catById(sl.cat).items.length}개`));
+  };
+  // 한 칸 돌리기: 원판을 그 범주로 바꾸고 회전 → 멈춘 칸이 당첨
+  const spinOne = (i, fast = false) => new Promise((res) => {
+    const sl = slots[i];
+    if (!sl || spinning) return res();
+    spinning = true;
+    active = i;
+    drawSlots();
+    const winner = spin(sl.cat, sl.value);
+    const { items, at } = wheelItems(sl.cat, winner, 12);
+    const a = 360 / items.length;
+    const start = ((rot % 360) + 360) % 360;
+    const target = -(at + 0.5) * a;
+    const delta = ((target - start) % 360 + 360) % 360;
+    const jitter = (Math.random() - 0.5) * a * 0.6;
+    const end = start + 360 * (fast ? 4 : 6) + delta + jitter;
+    const { g, pointer } = drawWheel(items, start);
+    replace(wheelRes, h("span", { class: "rb-muted" }, `${catById(sl.cat).ko} 돌리는 중…`));
+    const finish = () => {
+      rot = end;
+      sl.value = winner;
+      spinning = false;
+      pointer.classList.remove("tick");
+      drawWheel(items, end, at);
+      replace(wheelRes, h("b", { class: "pop" }, winner));
+      persist();
+      drawSlots();
+      res();
+    };
+    if (reduce()) return finish();
+    const dur = fast ? 1900 : 3600;
+    g.getBoundingClientRect();
+    requestAnimationFrame(() => {
+      g.style.transition = `transform ${dur}ms cubic-bezier(.12,.75,.12,1)`;
+      g.style.transform = `rotate(${end}deg)`;
+      pointer.classList.add("tick");
+    });
+    setTimeout(finish, dur + 60);
+  });
+  const spinAll = async () => {
+    if (spinning) return;
+    for (let i = 0; i < slots.length; i++) if (!slots[i].lock) await spinOne(i, true);
+  };
+  const catSelect = (sl, i) => {
+    const sel = h("select", { class: "rb-input", "aria-label": `${i + 1}번 칸 범주` }, ...groups.map((g) => h("optgroup", { label: g }, ...ROULETTE.filter((c) => c.group === g).map((c) => h("option", { value: c.id, selected: c.id === sl.cat }, `${c.ko} (${c.items.length})`)))));
+    sel.addEventListener("click", (e) => e.stopPropagation());
+    sel.addEventListener("change", () => {
+      sl.cat = sel.value;
+      sl.value = "";
+      active = i;
+      persist();
+      drawSlots();
+      preview();
+    });
+    return sel;
+  };
+  const drawSlots = () => {
+    replace(slotList, ...slots.map((sl, i) => h("div", { class: "rb-pb-slot", "data-lock": sl.lock, "aria-current": i === active ? "true" : null, onClick: () => {
+      if (spinning || active === i) return;
+      active = i;
+      drawSlots();
+      preview();
+    } },
+      h("span", { class: "no" }, String(i + 1)),
+      h("div", { class: "mid" }, catSelect(sl, i), h("div", { class: "val" }, sl.value || "—")),
+      h("div", { class: "ops" },
+        h("button", { type: "button", class: "rb-pb-mini", title: "이 칸 돌리기", disabled: spinning, onClick: (e) => {
+          e.stopPropagation();
+          sl.lock = false;
+          spinOne(i);
+        } }, "🎲"),
+        h("button", { type: "button", class: "rb-pb-mini", "aria-pressed": sl.lock ? "true" : "false", title: sl.lock ? "고정 풀기" : "고정하면 '전부 돌리기'에서 빠져요", onClick: (e) => {
+          e.stopPropagation();
+          sl.lock = !sl.lock;
           persist();
-          drawRoulette();
-        } }),
-        slots.length < 10 ? btn("칸 추가", { size: "sm", icon: "plus", onClick: () => {
+          drawSlots();
+        } }, sl.lock ? "🔒" : "🔓"),
+        slots.length > 1 ? h("button", { type: "button", class: "rb-pb-x", title: "칸 지우기", "aria-label": `${i + 1}번 칸 지우기`, disabled: spinning, onClick: (e) => {
+          e.stopPropagation();
+          slots.splice(i, 1);
+          active = Math.min(active, slots.length - 1);
+          persist();
+          drawSlots();
+          preview();
+        } }, "×") : null))));
+    const picked = rouletteText(slots);
+    rlBtns.forEach((b) => b.disabled = spinning || b.dataset.need && !picked);
+  };
+  const rlBtns = [];
+  const mk = (b, need) => {
+    if (need) b.dataset.need = "1";
+    rlBtns.push(b);
+    return b;
+  };
+  const useConcept = () => {
+    concept = [concept.trim(), rouletteText(slots)].filter(Boolean).join("\n");
+    conceptIn.value = concept;
+    persist();
+  };
+  const drawRoulette = () => {
+    rlBtns.length = 0;
+    replace(rlBox,
+      h("div", { class: "rb-pb-h" }, "🎰 룰렛", h("span", { class: "rb-muted", style: "font-weight:500;font-size:12px" }, "· 칸을 골라 원판을 돌리고, 나온 설정을 콘셉트에 넣어요")),
+      h("div", { class: "rb-pb-stage" }, h("div", { class: "rb-pb-wcol" }, wheelWrap, wheelRes), slotList),
+      h("div", { class: "rb-pb-bar" },
+        mk(btn("전부 돌리기", { kind: "primary", size: "sm", icon: "refresh", onClick: spinAll })),
+        mk(btn("칸 추가", { size: "sm", icon: "plus", onClick: () => {
+          if (slots.length >= 10) return ctx.toast("칸은 10개까지예요");
           const used = new Set(slots.map((x) => x.cat));
           slots.push({ cat: (ROULETTE.find((c) => !used.has(c.id)) ?? ROULETTE[0]).id, value: "", lock: false });
+          active = slots.length - 1;
           persist();
-          drawRoulette();
-        } }) : null,
-        btn("범주도 무작위", { size: "sm", icon: "zap", title: "고정 안 된 칸의 범주까지 섞어서 돌려요", onClick: async () => {
+          drawSlots();
+          preview();
+        } })),
+        mk(btn("범주 섞기", { size: "sm", icon: "zap", title: "고정 안 된 칸의 범주를 무작위로 바꿔요", onClick: () => {
           const pool = ROULETTE.map((c) => c.id).filter((id) => !slots.some((x) => x.lock && x.cat === id)).sort(() => Math.random() - 0.5);
           slots.forEach((sl) => {
-            if (!sl.lock) sl.cat = pool.pop() ?? sl.cat;
-          });
-          slots.forEach((sl) => {
-            if (!sl.lock) sl.value = spin(sl.cat);
+            if (!sl.lock) {
+              sl.cat = pool.pop() ?? sl.cat;
+              sl.value = "";
+            }
           });
           persist();
-          drawRoulette();
-        } }),
+          drawSlots();
+          preview();
+        } })),
         h("span", { style: "flex:1" }),
-        btn("콘셉트에 넣기", { size: "sm", icon: "plus", disabled: !picked, onClick: () => {
-          concept = [concept.trim(), picked].filter(Boolean).join("\n");
-          conceptIn.value = concept;
-          persist();
+        mk(btn("콘셉트에 넣기", { size: "sm", icon: "plus", onClick: () => {
+          useConcept();
           say("룰렛 결과를 콘셉트에 넣었어요. '전체 쓰기'나 '빈 칸만 채우기'를 눌러 보세요.");
-        } }),
-        btn("이걸로 전체 쓰기", { size: "sm", icon: "zap", disabled: !picked, onClick: () => {
-          concept = [concept.trim(), picked].filter(Boolean).join("\n");
-          conceptIn.value = concept;
-          persist();
+        } }), true),
+        mk(btn("이걸로 전체 쓰기", { size: "sm", icon: "zap", onClick: () => {
+          useConcept();
           aiDo("룰렛 결과로 AI가 페르소나를 쓰는 중…", "draft");
-        } })));
+        } }), true)));
+    drawSlots();
+    preview();
   };
 
   // ── 미리보기 · 저장 ──
