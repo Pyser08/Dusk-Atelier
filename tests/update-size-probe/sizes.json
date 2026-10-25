@@ -1,0 +1,14 @@
+[
+  {
+    "label": "1.2 MB",
+    "targetBytes": 1228800,
+    "seedBytes": 812,
+    "targetPath": "tests/update-size-probe/hosted/probe-12mb.js"
+  },
+  {
+    "label": "2 MB",
+    "targetBytes": 2097152,
+    "seedBytes": 806,
+    "targetPath": "tests/update-size-probe/hosted/probe-2mb.js"
+  }
+]
