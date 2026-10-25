@@ -15,6 +15,7 @@ import { reload } from './modules.js';
 import { renderPresets } from './presets.js';
 import { renderLoreLog } from './lorelog.js';
 import { renderPersonaBuilder } from './personabuilder.js';
+import { renderCharSplit } from './charsplit.js';
 
 export function tile(ic, title, desc, onClick, id) {
   return h(
@@ -52,6 +53,7 @@ export function renderTools(ctx) {
   if (ctx.state.sub === "presets") return renderPresets(ctx);
   if (ctx.state.sub === "lorelog") return renderLoreLog(ctx);
   if (ctx.state.sub === "personabuilder") return renderPersonaBuilder(ctx);
+  if (ctx.state.sub === "charsplit") return renderCharSplit(ctx);
   if (ctx.state.sub === "charsplit") return renderCharSplit(ctx);
   if (ctx.state.sub === "patchmaker") {
     ctx.go("dev", "patchmaker");
