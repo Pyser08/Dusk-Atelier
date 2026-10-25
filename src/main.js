@@ -7,7 +7,7 @@ import { createApp } from './ui/app.js';
 import { createHostToast } from './ui/toast.js';
 import { createWatcher } from './ui/watch.js';
 import { createQuickImport } from './ui/quickimport.js';
-import { CSS2 } from './ui/styles.js';
+import { CSS2, loadUiCss } from './ui/styles.js';
 import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets } from './data/presets.js';
 import { createLoreRuntime } from './data/lorerules.js';
 import { createLoreLog } from './data/lorelog.js';
@@ -37,6 +37,7 @@ async function start() {
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {
     if (!document.getElementById("rb-style")) document.head.appendChild(h("style", { id: "rb-style" }, CSS2));
+    loadUiCss(api).catch(() => {});
     const legacy2 = await createLegacy(api);
     await api.registerButton({ name: TITLE, icon: ICON, iconType: "html", location: "hamburger" }, () => legacy2.open());
     await api.registerSetting(TITLE, () => legacy2.open(), ICON, "html");
