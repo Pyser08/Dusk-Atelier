@@ -199,33 +199,29 @@ function validStylePayload(value) {
       s.deco.every((d) => d && typeof d.id === "string" && typeof d.css === "string");
   });
 }
-export async function loadStyles(api) {
+export async function loadStyles(api, onUpdate) {
   if (Date.now() - stylesLoadedAt < 60_000 && stylesLoadedAt) return STYLES;
-  // 캐시가 있으면 네트워크 실패 시에도 이전에 받아 둔 스타일을 사용한다.
+  // 저장된 데이터부터 적용해 화면을 먼저 그리고, 네트워크 갱신은 기다리지 않는다.
   try {
     const raw = await api?.pluginStorage?.getItem(STYLE_CACHE_KEY);
     const cached = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (validStylePayload(cached)) STYLES = cached.styles;
-  } catch {
-  }
-  // GET을 명시한다. nativeFetch가 없거나 실패하면 캐시/내장 기본 스타일을 유지한다.
-  try {
-    if (typeof api?.nativeFetch === "function") {
-      const response = await api.nativeFetch(STYLE_DATA_URL, { method: "GET", headers: { Accept: "application/json" } });
-      if (response && response.status >= 200 && response.status < 300) {
-        const payload = JSON.parse(await response.text());
-        if (validStylePayload(payload)) {
-          STYLES = payload.styles;
-          try {
-            await api.pluginStorage?.setItem(STYLE_CACHE_KEY, JSON.stringify(payload));
-          } catch {
-          }
-        }
-      }
-    }
-  } catch {
-  }
+  } catch {}
   stylesLoadedAt = Date.now();
+  // 외부 JSON은 정적 데이터만 담는다. 실패하면 캐시/내장 기본 스타일을 유지한다.
+  (async () => {
+    try {
+      if (typeof api?.nativeFetch !== "function") return;
+      const response = await api.nativeFetch(STYLE_DATA_URL, { method: "GET", headers: { Accept: "application/json" } });
+      if (!response || response.status < 200 || response.status >= 300) return;
+      const payload = JSON.parse(await response.text());
+      if (!validStylePayload(payload)) return;
+      const changed = JSON.stringify(STYLES) !== JSON.stringify(payload.styles);
+      STYLES = payload.styles;
+      try { await api.pluginStorage?.setItem(STYLE_CACHE_KEY, JSON.stringify(payload)); } catch {}
+      if (changed) { try { onUpdate?.(); } catch {} }
+    } catch {}
+  })();
   return STYLES;
 }
 
