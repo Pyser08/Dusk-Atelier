@@ -161,7 +161,7 @@ function stepPerson(ctx, d, body, nav) {
     ));
   }
   const timeline = h("div", { style:"max-height:350px;overflow:auto" }, ...d.entries.slice(-200).map(e =>
-    h("div", { class:"rb-card pad", style:"margin:5px 0" }, h("small", { class:"rb-muted" }, e.t || "시각 미상"), h("div", { style:"white-space:pre-wrap" }, e.text))
+    h("div", { class:"rb-card pad", style:"margin:5px 0" }, h("small", { class:"rb-muted" }, e.t || "시각 미상"), e.situation ? h("div", { class:"rb-muted", style:"margin:3px 0 6px" }, "장면: " + e.situation) : null, h("div", { style:"white-space:pre-wrap" }, e.text))
   ));
   body.appendChild(box(h("b", null, "인물 선택"),
     d.people.length ? list : note("warn", "마크가 없어요. 기능을 켠 뒤 새 대화를 나누고 다시 분석해 주세요."),
