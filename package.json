@@ -1,6 +1,6 @@
 {
   "name": "dusk-atelier",
-  "version": "1.6.2",
+  "version": "1.7.0",
   "description": "RisuAI 플러그인 Dusk Atelier — 모듈·봇 관리와 관계 기록 기반 캐릭터 분리",
   "private": true,
   "type": "module",
