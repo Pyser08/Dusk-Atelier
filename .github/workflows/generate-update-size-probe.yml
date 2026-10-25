@@ -70,8 +70,9 @@ jobs:
           }
 
           const specs = [
-            { slug: '12mb', label: '1.2 MB', bytes: 1200 * 1024 },
-            { slug: '2mb', label: '2 MB', bytes: 2 * 1024 * 1024 }
+            { slug: '1mb', label: '1 MiB', bytes: 1024 * 1024 },
+            { slug: '12mb', label: '1.2 MiB', bytes: 1228800 },
+            { slug: '2mb', label: '2 MiB', bytes: 2 * 1024 * 1024 }
           ];
           const results = [];
           for (const s of specs) {
