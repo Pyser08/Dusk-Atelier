@@ -107,7 +107,7 @@ async function stepChoose(ctx, d, settings, body, nav) {
     d.people = Object.entries(people).map(([name, entries]) => ({ name, entries, count:entries.length })).sort((a,b) => b.count-a.count);
     d.person = d.people[0]?.name ?? ""; d.entries = d.people[0]?.entries ?? [];
     nav(1);
-  }})));
+  }}))));
 }
 
 function stepPerson(ctx, d, body, nav) {
