@@ -13,6 +13,7 @@ import { createLoreRuntime } from './data/lorerules.js';
 import { createLoreLog } from './data/lorelog.js';
 import { createCharSplit } from './data/charsplit.js';
 import { createRegression } from './data/regression.js';
+import { createEpisodicMemory } from './data/episodicmemory.js';
 import { restoreActiveTheme } from './ui/screens/themestudio.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
 
@@ -40,6 +41,8 @@ async function start() {
   // 레거시 UI 경로에서도 캐릭터 분리 훅은 필요하므로 조기 종료 전에 초기화한다.
   const charSplit = createCharSplit(api);
   charSplit.start().catch((e) => console.log(`[${TITLE}] 캐릭터 분리 시작 실패: ${e?.message ?? e}`));
+  const episodicMemory = createEpisodicMemory(api);
+  episodicMemory.start().catch((e) => console.log(`[${TITLE}] 장기기억 시작 실패: ${e?.message ?? e}`));
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {
     if (!document.getElementById("rb-style")) document.head.appendChild(h("style", { id: "rb-style" }, CSS2));
@@ -148,6 +151,7 @@ async function start() {
   app.ctx.loreRuntime = loreRuntime;
   app.ctx.loreLog = loreLog;
   app.ctx.charSplit = charSplit;
+  app.ctx.episodicMemory = episodicMemory;
   const regression = createRegression(api, {
     notify: (message, opts) => app?.ctx.toast(message, opts),
     onSaved: async () => {
