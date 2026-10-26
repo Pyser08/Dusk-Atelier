@@ -106,6 +106,17 @@ test("grading writes to the wiki when setGrade exists; falls back to cache when 
   assert.ok(bo.withGrades(await bo.gradeOnDemand("c", "t", { mode: "submodel" })).people["미나"].records.every((r) => r.g === "B"), "old RisuBard without setGrade");
 });
 
+test("user grade: written with gradeBy user, cleared cache, unsupported/denied handled", async () => {
+  const ok = mkApi({ setGrade: async () => ({}) }); const bw = createBardWikiBackend(ok.api, { store: createMemoryStore(ok.api) });
+  await bw.loadFolder("c", "t", { live: true, messages: msgs });
+  assert.equal(await bw.setGradeByUser("c", "t", "e1", 7), true);
+  assert.deepEqual(ok.saved.at(-1), { documentId: "e1", grade: 7, gradeBy: "user", expectedContentHash: "he1" });
+  await assert.rejects(bw.setGradeByUser("c", "t", "e1", 10), /0~9/);
+  const no = mkApi({ setGrade: async () => null }); const b2 = createBardWikiBackend(no.api, { store: createMemoryStore(no.api) });
+  await b2.loadFolder("c", "t", { live: true, messages: msgs }); assert.equal(await b2.setGradeByUser("c", "t", "e1", null), false);
+  const old = mkApi(); const b3 = createBardWikiBackend(old.api, { store: createMemoryStore(old.api) }); assert.equal(b3.canSetGrade(), false);
+  await b3.loadFolder("c", "t", { live: true, messages: msgs }); await assert.rejects(b3.setGradeByUser("c", "t", "e1", 5), /지원하지 않아요/);
+});
 test("리스바드 모든 위키 작성 언어 표제와 예전 표제를 읽는다", async () => {
   const { eventBullets, characterDigest } = await import("../src/engine/bardwikiadapt.js");
   for (const [title, line] of [["物語の要約", "日本語の出来事"], ["故事摘要", "简体事件"], ["故事概要", "繁體事件"], ["확정된 사건", "예전 표제"], ["Established Events", "legacy heading"]]) {

@@ -43,6 +43,18 @@ export function createBardWikiBackend(api, { store, log = (...a) => console.log(
     }
     const next = { ...snap, grades, hash: wrote ? "" : snap.hash }; await api.pluginStorage.setItem(key(chaId, chatId), JSON.stringify(next)); return next;  // hash 비움 → 다음 조회에서 위키 등급을 다시 읽음
   }
+  // 사용자가 위키 문서에 직접 등급을 지정(gradeBy:"user"). score: 0~9 또는 null(해제). 지원 안 하면 throw, 권한 거부면 false.
+  async function setGradeByUser(chaId, chatId, docId, score) {
+    if (typeof api?.bardWiki?.setGrade !== "function") throw new Error("이 리스바드 버전은 위키 등급 저장을 지원하지 않아요.");
+    if (!(score === null || (Number.isInteger(score) && score >= 0 && score <= 9))) throw new Error("등급 점수는 0~9예요.");
+    const snap = await load(chaId, chatId), d = snap?.docs?.find((x) => x.id === docId);
+    if (!d?.hash) throw new Error("먼저 이 채팅을 열고 새로고침해 주세요.");
+    const res = await api.bardWiki.setGrade({ documentId: docId, grade: score, gradeBy: "user", expectedContentHash: d.hash });
+    if (res == null) return false;
+    const grades = { ...(snap.grades ?? {}) }; delete grades[docId];
+    await api.pluginStorage.setItem(key(chaId, chatId), JSON.stringify({ ...snap, grades, hash: "" }));  // 다음 조회에서 위키 값을 다시 읽음
+    return true;
+  }
   const withGrades = (folder) => { for (const p of Object.values(folder?.people ?? {})) for (const r of p.records) { const c = !r.g && !r.wikiGrade && r.docId ? folder.grades?.[r.docId] : null; if (c) { r.g = c.g; r.gs = c.score; } } for (const sc of folder?.scenes ?? []) { const c = sc.docId && sc.gs == null ? folder.grades?.[sc.docId] : null; if (c) { sc.gs = c.score; sc.gby = "ai"; } } return folder; };
-  return { id: "bardwiki", loadFolder, gradeOnDemand, withGrades, isLive: (cur, target) => String(cur?.chaId) === String(target.chaId) && String(cur?.chatId) === String(target.chatId), available: async () => typeof api?.bardWiki?.getDocuments === "function" };
+  return { id: "bardwiki", loadFolder, gradeOnDemand, setGradeByUser, canSetGrade: () => typeof api?.bardWiki?.setGrade === "function", withGrades, isLive: (cur, target) => String(cur?.chaId) === String(target.chaId) && String(cur?.chatId) === String(target.chatId), available: async () => typeof api?.bardWiki?.getDocuments === "function" };
 }

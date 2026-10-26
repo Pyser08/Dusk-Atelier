@@ -70,6 +70,14 @@ async function analyzeNow(env) {
 async function gradeNow(env) {
   try { env.ctx.toast("등급을 매기는 중이에요…"); await env.ctx.memory.bardwiki.gradeOnDemand(env.bot.id, env.chatItem.id, env.idx.settings.model); env.redraw(); } catch (e) { fail(env.ctx)(e); }
 }
+const GRADE_SCORE = { D: 3, C: 5, B: 6, A: 7, S: 8, EX: 9 };
+async function setWikiGrade(env, r) {
+  const v = (await promptDialog(env.ctx.win, { title: "위키 등급 지정", label: `등급 (${GRADES.join(" / ")}), 0~9 점수, 또는 '해제'. 이 사건 문서 전체에 적용돼요.`, value: r.g ?? "", ok: "저장" }))?.trim().toUpperCase();
+  if (!v) return;
+  const score = v === "해제" ? null : v in GRADE_SCORE ? GRADE_SCORE[v] : /^\d$/.test(v) ? Number(v) : undefined;
+  if (score === undefined) return env.ctx.toast("등급은 D/C/B/A/S/EX, 0~9, 해제 중 하나예요.");
+  try { const ok = await env.ctx.memory.bardwiki.setGradeByUser(env.bot.id, env.chatItem.id, r.docId, score); env.ctx.toast(ok ? "위키에 등급을 저장했어요." : "쓰기 권한이 거부되어 저장하지 못했어요."); env.redraw(); } catch (e) { fail(env.ctx)(e); }
+}
 async function cleanOrphans(env) {
   const ok = await confirmDialog(env.ctx.win, { title: "고아 기록 정리", body: "다시 생성되거나 삭제된 응답에 연결된 기록을 지워요.", ok: "정리", danger: true }); if (!ok) return;
   await editFolder(env, (f) => { for (const p of Object.values(f.people)) p.records = p.records.filter((r) => !r.orphan); f.scenes = f.scenes.filter((s) => !s.orphan); });
@@ -96,13 +104,14 @@ function personDetail(env, host, key) {
   const shown = recs.slice(0, m.page * PAGE);
   const sceneOf = (r) => env.folder.scenes.find((s) => s.id === r.sit);
   const item = (r) => h("li", { class: "rb-mem-rec" }, gradeBadge(r.g), h("div", { class: "txt" }, h("div", null, r.act, r.pin ? " 📌" : ""),
-    h("div", { class: "rb-muted" }, [r.at != null ? at(r.at) : "", sceneOf(r) ? h("button", { type: "button", class: "rb-mem-link", onClick: () => { m.tab = "scenes"; m.focusScene = r.sit; env.redraw(); } }, sceneOf(r).place || sceneOf(r).sum.slice(0, 14)) : null, r.wiki ? "위키에서 가져온 요약" : "", r.legacy ? "이전 버전 기록" : ""].filter(Boolean).flatMap((x, i) => i ? [" · ", x] : [x]))),
+    h("div", { class: "rb-muted" }, [r.at != null ? at(r.at) : "", sceneOf(r) ? h("button", { type: "button", class: "rb-mem-link", onClick: () => { m.tab = "scenes"; m.focusScene = r.sit; env.redraw(); } }, sceneOf(r).place || sceneOf(r).sum.slice(0, 14)) : null, r.wiki ? "위키에서 가져온 요약" : "", r.wikiGrade ? `위키 등급 · ${r.gby === "user" ? "사용자" : "AI"}` : r.gs != null ? "AI 등급 · 플러그인 캐시" : "", r.legacy ? "이전 버전 기록" : ""].filter(Boolean).flatMap((x, i) => i ? [" · ", x] : [x]))),
     h("span", { style: "flex:1" }),
     btn("메뉴", { size: "sm", icon: "more", onClick: (e) => openMenu(env.ctx.win, e.currentTarget, [
       local && { label: "수정", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: "기록 수정", label: "행동 (80자)", value: r.act, ok: "저장" }); if (v) editFolder(env, (f) => { const x = f.people[key].records.find((y) => y.id === r.id); x.act = v.slice(0, 80); x.user = true; }); } },
       local && { label: "등급 변경", onClick: async () => { const v = (await promptDialog(env.ctx.win, { title: "등급 변경", label: `등급 (${GRADES.join(" / ")})`, value: r.g, ok: "저장" }))?.trim().toUpperCase(); if (GRADES.includes(v)) editFolder(env, (f) => { const x = f.people[key].records.find((y) => y.id === r.id); x.g = v; x.user = true; }); } },
       local && { label: r.pin ? "고정 해제" : "고정", onClick: () => editFolder(env, (f) => { const x = f.people[key].records.find((y) => y.id === r.id); x.pin = !x.pin; }) },
       local && { label: "삭제", danger: true, onClick: () => editFolder(env, (f) => { f.people[key].records = f.people[key].records.filter((y) => y.id !== r.id); }) },
+      !local && r.docId && env.view?.live && env.ctx.memory.bardwiki.canSetGrade() && { label: "위키 등급 지정", onClick: () => setWikiGrade(env, r) },
       r.at != null && { label: "여기서 새 채팅", onClick: () => newChatFrom(env, r.at) }
     ].filter(Boolean)) }));
   replace(host,
