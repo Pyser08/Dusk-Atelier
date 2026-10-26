@@ -63,10 +63,13 @@ test("pickLore defaults to own and related entries, while keeping unrelated entr
 test("situation instructions avoid repeating unchanged scenes and use previous context", () => {
   const instruction = makeInstruction({ names:["Mio"], last:"2026-10-25 20:00", lastSituation:"At the café with Mio." });
   assert.match(instruction, /At the café with Mio\./);
-  assert.match(instruction, /ONLY when the scene state materially changes/);
-  assert.match(instruction, /Do NOT create a new S block for ordinary dialogue/);
-  assert.match(instruction, /Never nest or overlap S and C blocks/);
-  assert.match(instruction, /OUTPUT CONTRACT: Return the normal in-character reply/);
+  assert.match(instruction, /add S only when the shared state materially changes/);
+  assert.match(instruction, /Do not add S for ordinary dialogue/);
+  assert.match(instruction, /C and S blocks must never overlap or nest/);
+  assert.match(instruction, /Return the normal story reply with inline marks only/);
+  assert.match(instruction, /Never sacrifice a natural reply/);
+  assert.match(instruction, /⟦T:unknown⟧/);
+  assert.match(instruction, /Do not omit a direct interaction merely because it is brief/);
 });
 
 
