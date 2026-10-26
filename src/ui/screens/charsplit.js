@@ -138,7 +138,9 @@ async function stepChoose(ctx, d, settings, body, nav) {
     const count = (c.message ?? []).filter(m => /⟦C:[^⟧]+⟧/.test(messageText(m))).length;
     return h("label", { class:"rb-check" }, check, h("span", { style:"flex:1" }, c.name || "채팅 " + (c._i + 1)), h("span", { class:"rb-muted" }, "마크 " + count + "개"));
   });
-  body.appendChild(box(h("b", null, "분석할 채팅"), ...chatItems, actions(btn("인물 분석 →", { kind:"primary", onClick:async () => {
+  body.appendChild(box(
+    h("b", null, "분석할 채팅"),
+    actions(btn("인물 분석 →", { kind:"primary", onClick:async () => {
     if (!d.selected.length) { ctx.toast("채팅을 하나 이상 선택해 주세요.", { error:true }); return; }
     await save();
     const botIndex = d.bots.findIndex(c => idOf(c) === d.botId);
@@ -158,7 +160,9 @@ async function stepChoose(ctx, d, settings, body, nav) {
     d.people = Object.entries(people).map(([name, entries]) => ({ name, entries, count:entries.length })).sort((a,b) => b.count-a.count);
     d.person = d.people[0]?.name ?? ""; d.entries = d.people[0]?.entries ?? []; d.lore = []; d.loreReady = false; d.record = ""; d.desc = ""; d.greeting = "";
     nav(1);
-  }}))));
+  }})),
+    h("div", { style:"max-height:min(52vh,560px);overflow-y:auto;overscroll-behavior:contain;padding-right:3px;display:flex;flex-direction:column;gap:4px" }, ...chatItems)
+  ));
 }
 
 function stepPerson(ctx, d, body, nav) {
