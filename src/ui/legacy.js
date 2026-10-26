@@ -13,6 +13,7 @@ import { AI_MODES, MergeSelfCheckError, adaptCharacterPrompt, applyPartialUpdate
 import { loadProvenance } from '../engine/tidestore.js';
 import { Busy, backupSnapshot, isGenerating, restoreFromBackup } from '../engine/safety.js';
 import { commit, entriesOf, readDb } from '../data/modules.js';
+import { insertCharacter } from '../data/addcharacter.js';
 import { characterImpact, impactHtml, moduleImpact } from '../engine/impact.js';
 import { loadPersonaMap } from '../data/persona.js';
 
@@ -1626,19 +1627,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
       const uploaded = await uploadWithProgress(file, plan.toUpload);
       updateProgress(100, "캐릭터 추가 중…");
       const fresh = (await loadDb(true)).characters;
-      if (fresh.some(isGenerating)) throw new Busy();
-      const created = buildNewCharacter(ch, plan, uploaded, fresh);
-      await hooks.created?.(created.chaId);
-      fresh.push(created);
-      await api.setDatabaseLite({ characters: fresh });
-      await ensureInOrder(created.chaId);
-      const idx = fresh.length - 1;
-      const check = await api.getCharacterFromIndex(idx);
-      if (check?.chaId !== created.chaId) throw new Error("추가 후 확인에서 캐릭터를 찾지 못했습니다. 캐릭터 목록을 확인해 주세요.");
-      try {
-        await api.setChatToIndex(idx, 0, created.chats[0]);
-      } catch {
-      }
+      const { created } = await insertCharacter(api, { characters: fresh, build: (all) => buildNewCharacter(ch, plan, uploaded, all), hooks, ensureInOrder, isGenerating, Busy });
       let note2 = "";
       try {
         const v0 = charIncomingView(ch, plan, uploaded);

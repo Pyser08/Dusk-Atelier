@@ -11,7 +11,7 @@ import { CSS2 } from './ui/styles.js';
 import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets } from './data/presets.js';
 import { createLoreRuntime } from './data/lorerules.js';
 import { createLoreLog } from './data/lorelog.js';
-import { createEpisodicMemory } from './data/episodicmemory.js';
+import { createMemory } from './data/memory.js';
 import { restoreActiveTheme } from './ui/screens/themestudio.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
 
@@ -36,8 +36,9 @@ async function start() {
   const wrapped = { setCharacterToIndex: friendly((...a) => raw.setCharacterToIndex(...a)), setDatabaseLite: friendly((...a) => raw.setDatabaseLite(...a)) };
   const api = new Proxy(raw, { get: (t, k) => k in wrapped ? wrapped[k] : t[k] });
   console.log(`[${TITLE}] 진입 경로`, globalThis.__RBM_ENTRY__ ?? "normal");
-  const episodicMemory = createEpisodicMemory(api);
-  episodicMemory.start().catch((e) => console.log(`[${TITLE}] 장기기억 시작 실패: ${e?.message ?? e}`));
+  const memoryRef = { toast: null };
+  const memory = createMemory(api, { notify: (t) => memoryRef.toast?.(t) });
+  memory.start().catch((e) => console.log(`[${TITLE}] 장기기억 시작 실패: ${e?.message ?? e}`));
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {
     if (!document.getElementById("rb-style")) document.head.appendChild(h("style", { id: "rb-style" }, CSS2));
@@ -145,7 +146,8 @@ async function start() {
   app.ctx.quickImport = quickImport;
   app.ctx.loreRuntime = loreRuntime;
   app.ctx.loreLog = loreLog;
-  app.ctx.episodicMemory = episodicMemory;
+  app.ctx.memory = memory;
+  memoryRef.toast = (t) => app.ctx.toast(t, { seconds: 8 });
   refreshPersonaHandlers().catch(() => {
   });
   (async () => {

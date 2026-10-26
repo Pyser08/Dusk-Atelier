@@ -20,7 +20,7 @@ import { openAssets } from './screens/assetmgr.js';
 import { renderDev } from './screens/dev.js';
 import { renderPlugins } from './screens/plugins.js';
 import { renderSettingsTab } from './screens/settingstab.js';
-import { renderMemory } from './screens/episodicmemory.js';
+import { renderMemory } from './screens/memory/index.js';
 
 var TABS = [
   { id: "modules", label: "모듈", icon: "module" },
