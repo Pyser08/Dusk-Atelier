@@ -21,22 +21,28 @@ export function createBardWikiBackend(api, { store, log = (...a) => console.log(
     await api.pluginStorage.setItem(key(chaId, chatId), JSON.stringify(folder));
     return { ...folder, snapshot: false };
   }
+  // 지금 열린 채팅의 사건 문서를 새로 읽어 {id: {hash, grade, gradeBy}}로 돌려준다(스냅샷의 해시는 저장 직후 낡을 수 있음). 실패하면 null.
+  async function freshEvents() {
+    try { const d = await api.bardWiki.getDocuments({ types: ["event"] }); return Array.isArray(d) ? new Map(d.map((x) => [x.id, { hash: x.contentHash ?? "", grade: wikiScore(x), gradeBy: x.gradeBy ?? null }])) : null; } catch { return null; }
+  }
   // 등급 매기기(AI): 위키에 등급이 없는 사건 문서만 문서 단위로 채점한다.
   // risuai.bardWiki.setGrade가 있으면 위키에 저장(gradeBy:"ai"), 없거나 거부/실패하면 ext 캐시에만 저장한다.
   // 사용자가 지정한 위키 등급은 읽기만 하고 덮어쓰지 않는다.
   async function gradeOnDemand(chaId, chatId, model, signal, { regrade = false } = {}) {
     const snap = await load(chaId, chatId); if (!snap) throw new Error("먼저 이 채팅을 열고 새로고침해 주세요.");
+    const fresh = await freshEvents();  // 있으면 최신 등급/해시를 기준으로 삼음
+    const docsNow = (snap.docs ?? []).map((d) => fresh?.has(d.id) ? { ...d, ...fresh.get(d.id) } : d);
     const grades = { ...(snap.grades ?? {}) };
-    if (regrade) for (const d of snap.docs ?? []) if (d.gradeBy !== "user") delete grades[d.id];  // 다시 매기기: 사용자 지정 등급만 보존
-    const items = (snap.docs ?? []).filter((d) => (regrade ? d.gradeBy !== "user" : d.grade == null && !grades[d.id]) && d.bullets?.length).map((d) => ({ id: d.id, act: d.bullets.join(" / ").slice(0, 600), hash: d.hash }));
+    if (regrade) for (const d of docsNow) if (d.gradeBy !== "user") delete grades[d.id];  // 다시 매기기: 사용자 지정 등급만 보존
+    const items = docsNow.filter((d) => (regrade ? d.gradeBy !== "user" : d.grade == null && !grades[d.id]) && d.bullets?.length).map((d) => ({ id: d.id, act: d.bullets.join(" / ").slice(0, 600), hash: d.hash }));
     if (!items.length) return { ...snap, lastGrade: { total: 0, wrote: 0, cacheOnly: 0, reason: "" } };
-    const canWrite = typeof api?.bardWiki?.setGrade === "function"; let writable = canWrite, wrote = 0, denied = false, failed = "";
+    const canWrite = typeof api?.bardWiki?.setGrade === "function" && !!fresh; let writable = canWrite, wrote = 0, denied = false, failed = "";  // fresh가 있어야(=지금 열린 채팅 문서) 위키에 씀
     for (let i = 0; i < items.length; i += 30) {
       const part = items.slice(i, i + 30), got = parseGrades(await runAI(api, gradeMessages(part), model, signal));
       for (const it of part) {
         const r = got[it.id]; if (!r) continue;
         grades[it.id] = r;
-        if (writable && it.hash) {
+        if (writable && fresh?.has(it.id) && it.hash) {
           try { const res = await api.bardWiki.setGrade({ documentId: it.id, grade: r.score, gradeBy: "ai", expectedContentHash: it.hash }); if (res == null) { writable = false; denied = true; } else wrote++; }  // null = 권한 거부 → 더 묻지 않음
           catch (e) { failed = String(e?.message ?? e); log("위키 등급 저장 실패", it.id, failed); }  // 문서가 바뀌었거나 사용자 등급이면 캐시만 사용
         }
@@ -49,9 +55,9 @@ export function createBardWikiBackend(api, { store, log = (...a) => console.log(
   async function setGradeByUser(chaId, chatId, docId, score) {
     if (typeof api?.bardWiki?.setGrade !== "function") throw new Error("이 리스바드 버전은 위키 등급 저장을 지원하지 않아요.");
     if (!(score === null || (Number.isInteger(score) && score >= 0 && score <= 9))) throw new Error("등급 점수는 0~9예요.");
-    const snap = await load(chaId, chatId), d = snap?.docs?.find((x) => x.id === docId);
-    if (!d?.hash) throw new Error("먼저 이 채팅을 열고 새로고침해 주세요.");
-    const res = await api.bardWiki.setGrade({ documentId: docId, grade: score, gradeBy: "user", expectedContentHash: d.hash });
+    const snap = await load(chaId, chatId), fresh = await freshEvents(), hash = fresh?.get(docId)?.hash ?? snap?.docs?.find((x) => x.id === docId)?.hash;
+    if (!snap || !hash) throw new Error("먼저 이 채팅을 열고 새로고침해 주세요.");
+    const res = await api.bardWiki.setGrade({ documentId: docId, grade: score, gradeBy: "user", expectedContentHash: hash });
     if (res == null) return false;
     const grades = { ...(snap.grades ?? {}) }; delete grades[docId];
     await api.pluginStorage.setItem(key(chaId, chatId), JSON.stringify({ ...snap, grades, hash: "" }));  // 다음 조회에서 위키 값을 다시 읽음

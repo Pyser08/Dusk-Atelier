@@ -130,6 +130,17 @@ test("nothing to grade reports total 0; regrade redoes AI grades but keeps user 
   const r = await b2.gradeOnDemand("c", "t", { mode: "submodel" }, undefined, { regrade: true });
   assert.equal(r.lastGrade.total, 1); assert.deepEqual(m2.saved.map((x) => x.documentId), ["e0"]);
 });
+test("repeated grading works when the wiki hash changes after each write (fresh hash used)", async () => {
+  const m = new Map(); const ver = {}, gr = {}; const saved = [];
+  const api = { pluginStorage: { getItem: async (k) => m.get(k) ?? null, setItem: async (k, v) => { m.set(k, v); } },
+    bardWiki: { getDocuments: async () => docs.map((d) => ({ ...d, contentHash: `h${d.id}.${ver[d.id] ?? 0}`, ...(gr[d.id] ?? {}) })),
+      setGrade: async (x) => { if (x.expectedContentHash !== `h${x.documentId}.${ver[x.documentId] ?? 0}`) throw new Error("changed"); ver[x.documentId] = (ver[x.documentId] ?? 0) + 1; gr[x.documentId] = { grade: x.grade ?? undefined, gradeBy: x.gradeBy }; saved.push(x); return {}; } } };
+  const bw = createBardWikiBackend(api, { store: createMemoryStore(api) });
+  await bw.loadFolder("c", "t", { live: true, messages: msgs });
+  assert.equal(await bw.setGradeByUser("c", "t", "e1", 5), true);
+  assert.equal(await bw.setGradeByUser("c", "t", "e1", 8), true, "second manual grade without reloading the snapshot");
+  assert.equal(saved.length, 2);
+});
 test("리스바드 모든 위키 작성 언어 표제와 예전 표제를 읽는다", async () => {
   const { eventBullets, characterDigest } = await import("../src/engine/bardwikiadapt.js");
   for (const [title, line] of [["物語の要約", "日本語の出来事"], ["故事摘要", "简体事件"], ["故事概要", "繁體事件"], ["확정된 사건", "예전 표제"], ["Established Events", "legacy heading"]]) {
