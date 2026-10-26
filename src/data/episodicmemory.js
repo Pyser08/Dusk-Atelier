@@ -88,7 +88,7 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
     const chatId = String(chat?.id ?? chatIndex);
     const signature = idOf(character) + "::" + chatId + "::" + output;
     if (signature === lastSignature) return;
-    lastSignature = signature;
+    if (signature === lastSignature) return;
     try {
       const state = await loadEpisodicMemory(api);
       const folderKey = keyOf(idOf(character), chatId);
@@ -138,6 +138,7 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
       state.status = { ...state.status, processed: (state.status.processed || 0) + 1, lastSuccessAt: now, lastError: "" };
       writeQueue = writeQueue.then(() => saveEpisodicMemory(api, state));
       await writeQueue;
+      lastSignature = signature;
       log("기억 분석 완료", folder.charName, folder.chatName);
     } catch (e) {
       log("자동 기억 분석 실패", e?.message ?? e);
