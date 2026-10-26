@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { runAI } from "../src/engine/merge.js";
+import { runAI } from "../src/engine/runai.js";
 
 test("runAI reads the official RisuAI success response", async () => {
   const api = { runLLMModel: async (options) => {
