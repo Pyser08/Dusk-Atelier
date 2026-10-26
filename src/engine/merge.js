@@ -44,7 +44,7 @@ function extractRunAIText(value, depth = 0) {
     }
     return null;
   }
-  const direct = ["result", "text", "content", "output", "response", "generatedText"];
+  const direct = ["result", "text", "content", "output", "output_text", "response", "generatedText"];
   for (const key of direct) {
     const found = extractRunAIText(value[key], depth + 1);
     if (found) return found;
@@ -63,29 +63,14 @@ function extractRunAIText(value, depth = 0) {
 export async function runAI(api, messages, pick, signal) {
   const opts = { messages, mode: pick?.mode && pick.mode !== "static" ? pick.mode : "submodel", allowPlugins: true };
   if (pick?.mode === "static" && pick.staticModel) opts.staticModel = pick.staticModel;
-  const describe = (value) => {
-    if (typeof value === "string") return value;
-    if (value == null) return "";
-    if (Array.isArray(value)) return value.map(describe).filter(Boolean).join("\\n");
-    if (typeof value === "object") {
-      if (typeof value.result === "string") return value.result;
-      if (typeof value.content === "string") return value.content;
-      if (typeof value.text === "string") return value.text;
-      if (typeof value.output_text === "string") return value.output_text;
-      const choice = value.choices?.[0]?.message?.content ?? value.choices?.[0]?.text;
-      if (typeof choice === "string") return choice;
-      if (Array.isArray(choice)) return choice.map((part) => typeof part === "string" ? part : part?.text ?? "").join("\\n");
-      if (Array.isArray(value.content)) return value.content.map((part) => typeof part === "string" ? part : part?.text ?? "").join("\\n");
-    }
-    return "";
-  };
+
   let last = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     if (signal?.aborted) throw new Error("AI 작업을 취소했어요.");
     try {
       const res = await api.runLLMModel(opts);
       if (signal?.aborted) throw new Error("AI 작업을 취소했어요.");
-      const text = describe(res).trim();
+      const text = extractRunAIText(res) ?? "";
       if (text) return text;
       const detail = res && typeof res === "object"
         ? [res.type, res.error, res.message, res.result].filter((v) => typeof v === "string" && v.trim()).join(": ").slice(0, 500)
