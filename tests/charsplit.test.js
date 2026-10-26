@@ -122,8 +122,8 @@ test("beforeRequest removes hidden marks without dropping non-text payload parts
   const output=await hook(input,"model");
   assert.equal(output[1].content[0].text,"Hello");
   assert.equal(output[1].content[1].url,"data:image/png;base64,abc");
-  assert.match(output[0].content, /Dusk Atelier \\| 이야기 메타데이터 — 조용히 따를 것/);
-  assert.match(output[0].content, /장면\\(S\\) — 매 순간을 기록하지 말고, 공유 상태를 기록한다/);
+  assert.match(output[0].content, /Dusk Atelier \| 이야기 메타데이터 — 조용히 따를 것/);
+  assert.match(output[0].content, /장면\(S\) — 매 순간을 기록하지 말고, 공유 상태를 기록한다/);
 });
 
 test("normalizer closes an unfinished C block and keeps a single current time mark", () => {
