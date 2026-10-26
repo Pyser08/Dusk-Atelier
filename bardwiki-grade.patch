@@ -1,0 +1,522 @@
+diff --git a/docs/ko/bardwiki-plugin-api.md b/docs/ko/bardwiki-plugin-api.md
+index 6eec3fc..c24034b 100644
+--- a/docs/ko/bardwiki-plugin-api.md
++++ b/docs/ko/bardwiki-plugin-api.md
+@@ -118,6 +118,21 @@ const updated = await Risuai.bardWiki.setContextMode({
+ - `auto`: 현재 입력과 관련 있을 때 포함
+ - `never`: 자동 컨텍스트에서 제외
+ 
++## 중요도 등급
++
++문서에는 선택 필드 `grade`(정수 0~9)와 `gradeBy`(`'user'` 또는 `'ai'`)가 있을 수 있습니다. 필드가 없는 문서는 미평가입니다. 표시용 등급은 점수에서 계산합니다: 0~1 없음, 2~3 D, 4~5 C, 6 B, 7 A, 8 S, 9 EX.
++
++```typescript
++const updated = await Risuai.bardWiki.setGrade({
++  documentId: document.id,
++  grade: 6,            // null이면 등급 해제
++  gradeBy: 'ai',       // 기본값 'ai'. 사용자가 지정한 등급('user')은 'ai'로 덮어쓸 수 없습니다.
++  expectedContentHash: document.contentHash,
++});
++```
++
++`setGrade`도 쓰기 권한을 요청하며, 거부되면 `null`을 반환합니다. 문서를 `saveDocument`로 수정해도 기존 등급은 유지됩니다.
++
+ ## 문서 삭제
+ 
+ ```typescript
+diff --git a/server/node/risubard-markdown-wiki.test.ts b/server/node/risubard-markdown-wiki.test.ts
+index 90408c6..220eb60 100644
+--- a/server/node/risubard-markdown-wiki.test.ts
++++ b/server/node/risubard-markdown-wiki.test.ts
+@@ -16,6 +16,33 @@ afterEach(async () => {
+ })
+ 
+ describe('Markdown narrative wiki', () => {
++    test('stores an optional importance grade that survives rewrites and rejects bad values', async () => {
++        const root = await fs.mkdtemp(join(tmpdir(), 'risubard-md-wiki-'))
++        temporaryDirectories.push(root)
++        const wiki = createMarkdownNarrativeWiki(root, { externalEditSweepMs: 0 })
++        const scope = { characterId: 'character', chatId: 'chat' }
++        const alice = await wiki.saveCanonicalDocument({ ...scope, type: 'character', title: 'Alice',
++            sourceMessageIds: ['assistant-1'], markdown: '## Alice\n\nAlice guards the north gate.' })
++        expect(alice.grade).toBeUndefined()
++        const graded = await wiki.setDocumentGrade({ ...scope, documentId: alice.id, grade: 6, gradeBy: 'ai',
++            expectedContentHash: alice.contentHash })
++        expect(graded).toMatchObject({ grade: 6, gradeBy: 'ai' })
++        await expect(wiki.setDocumentGrade({ ...scope, documentId: alice.id, grade: 10, expectedContentHash: graded.contentHash }))
++            .rejects.toThrow('Invalid wiki grade')
++        await expect(wiki.setDocumentGrade({ ...scope, documentId: alice.id, grade: 3, gradeBy: 'ai', expectedContentHash: 'stale' }))
++            .rejects.toThrow('changed')
++        const user = await wiki.setDocumentGrade({ ...scope, documentId: alice.id, grade: 8, gradeBy: 'user',
++            expectedContentHash: graded.contentHash })
++        await expect(wiki.setDocumentGrade({ ...scope, documentId: alice.id, grade: 2, gradeBy: 'ai', expectedContentHash: user.contentHash }))
++            .rejects.toThrow('user')
++        const rewritten = await wiki.saveCanonicalDocument({ ...scope, type: 'character', title: 'Alice', documentId: alice.id,
++            sourceMessageIds: ['assistant-2'], markdown: '## Alice\n\nAlice left the gate.', expectedContentHash: user.contentHash })
++        expect(rewritten).toMatchObject({ grade: 8, gradeBy: 'user' })
++        const cleared = await wiki.setDocumentGrade({ ...scope, documentId: alice.id, grade: null, gradeBy: 'user',
++            expectedContentHash: rewritten.contentHash })
++        expect(cleared.grade).toBeUndefined()
++    })
++
+     test('answers recall from the catalog and picks up external edits for the next recall', async () => {
+         const root = await fs.mkdtemp(join(tmpdir(), 'risubard-md-wiki-'))
+         temporaryDirectories.push(root)
+diff --git a/server/node/risubard-markdown-wiki.ts b/server/node/risubard-markdown-wiki.ts
+index b7269c8..82b4023 100644
+--- a/server/node/risubard-markdown-wiki.ts
++++ b/server/node/risubard-markdown-wiki.ts
+@@ -31,6 +31,9 @@ export interface MarkdownWikiDocument {
+     created?: string
+     authoring?: 'automatic' | 'ai-assisted' | 'manual'
+     contextMode: MarkdownWikiContextMode
++    /** Optional importance score 0-9 (0-1 none, 2-3 D, 4-5 C, 6 B, 7 A, 8 S, 9 EX). */
++    grade?: number
++    gradeBy?: 'user' | 'ai'
+     contentHash: string
+     reviewStatus?: 'unreviewed' | 'reviewed'
+     reviewBaseContent?: string
+@@ -39,6 +42,11 @@ export interface MarkdownWikiDocument {
+ 
+ export type MarkdownWikiContextMode = 'always' | 'auto' | 'never'
+ 
++function isGradeScore(value: unknown): value is number {
++    return typeof value === 'number' && Number.isInteger(value)
++        && value >= 0 && value <= 9
++}
++
+ export type MarkdownWikiDocumentType = 'event' | 'character' | 'location'
+     | 'scene' | 'faction' | 'creature' | 'item' | 'concept' | 'other'
+ export type CanonicalMarkdownWikiDocumentType = Exclude<
+@@ -380,6 +388,12 @@ function serializeDocument(
+             ? [`review_status: ${document.reviewStatus}`]
+             : []),
+         `context: ${document.contextMode}`,
++        ...(document.grade !== undefined
++            ? [`grade: ${document.grade}`]
++            : []),
++        ...(document.grade !== undefined && document.gradeBy
++            ? [`grade_by: ${document.gradeBy}`]
++            : []),
+         'aliases:',
+         ...document.aliases.map((alias) => `  - ${yamlString(alias)}`),
+         'source_messages:',
+@@ -446,6 +460,15 @@ function parseDocument(
+     const authoring = optionalScalar('authoring')
+     const context = optionalScalar('context')
+     const reviewStatus = optionalScalar('review_status')
++    const gradeRaw = optionalScalar('grade')
++    const gradeScore = typeof gradeRaw === 'number' ? gradeRaw : Number(gradeRaw)
++    const grade = gradeRaw !== undefined && isGradeScore(gradeScore)
++        ? gradeScore
++        : undefined
++    const gradeByRaw = optionalScalar('grade_by')
++    const gradeBy = grade !== undefined && (gradeByRaw === 'user' || gradeByRaw === 'ai')
++        ? gradeByRaw
++        : undefined
+     const retrievalMetadata = normalizeMemoryRetrievalMetadata(
+         optionalScalar('retrieval_metadata')
+     )
+@@ -493,6 +516,8 @@ function parseDocument(
+             reviewStatus: reviewStatus as 'unreviewed' | 'reviewed',
+         } : {}),
+         ...(retrievalMetadata ? { retrievalMetadata } : {}),
++        ...(grade !== undefined ? { grade } : {}),
++        ...(gradeBy ? { gradeBy } : {}),
+     }
+ }
+ 
+@@ -1569,6 +1594,8 @@ export function createMarkdownNarrativeWiki(
+                 authoring: 'automatic',
+                 contextMode: 'auto',
+                 retrievalMetadata,
++                ...(existingEvent?.grade !== undefined ? { grade: existingEvent.grade } : {}),
++                ...(existingEvent?.gradeBy ? { gradeBy: existingEvent.gradeBy } : {}),
+             })
+             await writeAtomically(
+                 fileSystem,
+@@ -1716,6 +1743,8 @@ export function createMarkdownNarrativeWiki(
+                     ? 'always'
+                     : existing?.contextMode ?? 'auto',
+                 retrievalMetadata,
++                ...(existing?.grade !== undefined ? { grade: existing.grade } : {}),
++                ...(existing?.gradeBy ? { gradeBy: existing.gradeBy } : {}),
+             })
+             await writeAtomically(fileSystem, file, prepared.contents)
+             await rebuildIndex(input.characterId, input.chatId, writingLanguage, [relativePath])
+@@ -1921,6 +1950,8 @@ export function createMarkdownNarrativeWiki(
+                     ? 'always'
+                     : existing?.contextMode ?? 'auto',
+                 retrievalMetadata,
++                ...(existing?.grade !== undefined ? { grade: existing.grade } : {}),
++                ...(existing?.gradeBy ? { gradeBy: existing.gradeBy } : {}),
+             })
+             await writeAtomically(fileSystem, file, prepared.contents)
+             if (oldFile && oldFile !== file) {
+@@ -2022,6 +2053,74 @@ export function createMarkdownNarrativeWiki(
+             return prepared.document
+         },
+ 
++        async setDocumentGrade(input: {
++            characterId: string
++            chatId: string
++            documentId: string
++            /** 0-9, or null to clear the grade. */
++            grade: number | null
++            gradeBy?: 'user' | 'ai'
++            expectedContentHash?: string
++        }): Promise<MarkdownWikiDocument> {
++            const workspace = workspaceFor(input.characterId, input.chatId)
++            const document = (await loadDocuments(
++                input.characterId,
++                input.chatId
++            )).find((item) => item.id === required(
++                input.documentId,
++                'Document ID'
++            ))
++            if (!document) {
++                throw new Error('Canonical wiki document does not exist')
++            }
++            if (input.grade !== null && !isGradeScore(input.grade)) {
++                throw new Error('Invalid wiki grade')
++            }
++            if (input.gradeBy !== undefined
++                && input.gradeBy !== 'user' && input.gradeBy !== 'ai') {
++                throw new Error('Invalid wiki grade source')
++            }
++            if (input.expectedContentHash
++                && document.contentHash !== input.expectedContentHash) {
++                throw new Error(
++                    'Wiki document changed since the draft was created'
++                )
++            }
++            // A user-set grade is never overwritten by an AI grade.
++            if (document.gradeBy === 'user' && input.gradeBy === 'ai') {
++                throw new Error('Wiki grade was set by the user')
++            }
++            const file = join(
++                workspace.directory,
++                ...document.relativePath.split('/')
++            )
++            const operationTime = now().toISOString()
++            const history = join(workspace.historyDirectory, document.id)
++            await fileSystem.mkdir(history, { recursive: true })
++            await writeAtomically(
++                fileSystem,
++                join(history, `${operationTime.replace(/[:.]/g, '-')}-${randomUUID().slice(0, 8)}.md`),
++                await fileSystem.readFile(file, 'utf8')
++            )
++            const {
++                contentHash: _contentHash,
++                grade: _grade,
++                gradeBy: _gradeBy,
++                ...stored
++            } = document
++            const prepared = prepareDocument({
++                ...stored,
++                ...(input.grade === null ? {} : {
++                    grade: input.grade,
++                    gradeBy: input.gradeBy ?? 'ai',
++                }),
++                updated: operationTime,
++            })
++            await writeAtomically(fileSystem, file, prepared.contents)
++            await rebuildIndex(input.characterId, input.chatId)
++            return prepared.document
++        },
++
+         async trashDocument(input: {
+             characterId: string
+             chatId: string
+diff --git a/server/node/risubard-memory-routes.cjs b/server/node/risubard-memory-routes.cjs
+index 4033299..41c9646 100644
+--- a/server/node/risubard-memory-routes.cjs
++++ b/server/node/risubard-memory-routes.cjs
+@@ -1009,6 +1009,38 @@ function registerRisuBardMemoryRoutes(app, options) {
+         }
+     )
+ 
++    app.post(
++        '/api/risubard/memory/wiki/document/grade',
++        async (req, res, next) => {
++            try {
++                if (!await options.auth(req, res)) return
++                if (!hasExactKeys(req.body, [
++                    'characterId', 'chatId', 'documentId', 'grade',
++                    'gradeBy', 'expectedContentHash',
++                ])
++                    || !hasBoundedId(req.body.characterId)
++                    || !hasBoundedId(req.body.chatId)
++                    || !hasBoundedId(req.body.documentId)
++                    || !(req.body.grade === null
++                        || (Number.isInteger(req.body.grade)
++                            && req.body.grade >= 0 && req.body.grade <= 9))
++                    || !['user', 'ai'].includes(req.body.gradeBy)
++                    || !hasBoundedId(req.body.expectedContentHash)) {
++                    res.status(400).send({
++                        error: 'Invalid Markdown wiki grade request',
++                    })
++                    return
++                }
++                res.send(await options.service.setWikiDocumentGrade(
++                    req.body
++                ))
++            }
++            catch (error) {
++                next(error)
++            }
++        }
++    )
++
+     app.post(
+         '/api/risubard/memory/wiki/event/retract-sources',
+         async (req, res, next) => {
+diff --git a/server/node/risubard-memory-runtime.cjs b/server/node/risubard-memory-runtime.cjs
+index c737172..bb3662f 100644
+--- a/server/node/risubard-memory-runtime.cjs
++++ b/server/node/risubard-memory-runtime.cjs
+@@ -288,6 +288,11 @@ function createRuntimeMemoryService(userDataDirectory, options = {}) {
+             input.chatId,
+             () => wiki.setDocumentContextMode(input)
+         ),
++        setWikiDocumentGrade: (input) => serialized(
++            input.characterId,
++            input.chatId,
++            () => wiki.setDocumentGrade(input)
++        ),
+         trashWikiDocument: (input) => serialized(
+             input.characterId,
+             input.chatId,
+diff --git a/src/ts/plugins/apiV3/risuai.d.ts b/src/ts/plugins/apiV3/risuai.d.ts
+index beaeed2..5886404 100644
+--- a/src/ts/plugins/apiV3/risuai.d.ts
++++ b/src/ts/plugins/apiV3/risuai.d.ts
+@@ -1268,6 +1268,9 @@ interface BardWikiDocument {
+     created?: string;
+     authoring?: 'automatic' | 'ai-assisted' | 'manual';
+     contextMode: BardWikiContextMode;
++    /** Optional importance score 0-9 (0-1 none, 2-3 D, 4-5 C, 6 B, 7 A, 8 S, 9 EX). */
++    grade?: number;
++    gradeBy?: 'user' | 'ai';
+     contentHash: string;
+     reviewStatus?: 'unreviewed' | 'reviewed';
+     reviewBaseContent?: string;
+@@ -1295,6 +1298,15 @@ interface BardWikiContextModeWrite {
+     expectedContentHash: string;
+ }
+ 
++interface BardWikiGradeWrite {
++    documentId: string;
++    /** 0-9, or null to clear the grade. */
++    grade: number | null;
++    /** Defaults to 'ai'. A grade set by 'user' is not overwritten by 'ai'. */
++    gradeBy?: 'user' | 'ai';
++    expectedContentHash: string;
++}
++
+ interface BardWikiAPI {
+     /** Retrieves BardWiki context and the recent-message window for the current chat. */
+     getContext(options?: BardWikiContextOptions): Promise<BardWikiContextResult>;
+@@ -1304,6 +1316,8 @@ interface BardWikiAPI {
+     saveDocument(document: BardWikiDocumentWrite): Promise<BardWikiDocument | null>;
+     /** Changes retrieval behavior. Requests BardWiki write permission. */
+     setContextMode(input: BardWikiContextModeWrite): Promise<BardWikiDocument | null>;
++    /** Sets or clears the importance grade. Requests BardWiki write permission. */
++    setGrade(input: BardWikiGradeWrite): Promise<BardWikiDocument | null>;
+     /** Moves a document to trash. Requests BardWiki write permission. */
+     trashDocument(documentId: string): Promise<{ id: string; trashed: true } | null>;
+ }
+diff --git a/src/ts/plugins/apiV3/v3.svelte.ts b/src/ts/plugins/apiV3/v3.svelte.ts
+index 80410f9..83e14bd 100644
+--- a/src/ts/plugins/apiV3/v3.svelte.ts
++++ b/src/ts/plugins/apiV3/v3.svelte.ts
+@@ -37,6 +37,7 @@ import {
+     getBardWikiPluginDocuments,
+     saveBardWikiPluginDocument,
+     setBardWikiPluginDocumentContextMode,
++    setBardWikiPluginDocumentGrade,
+     stripBardWikiVirtualMemory,
+     stripBardWikiVirtualMemoryFromCharacter,
+     stripBardWikiVirtualMemoryFromDatabase,
+@@ -1085,6 +1086,19 @@ const makeRisuaiAPIV3 = (iframe:HTMLIFrameElement,plugin:RisuPlugin) => {
+                 ...input,
+             })
+         },
++        _setBardWikiGrade: async (input: {
++            documentId: string
++            grade: number | null
++            gradeBy?: 'user' | 'ai'
++            expectedContentHash: string
++        }) => {
++            const conf = await getPermission('bardWikiWrite')
++            if (!conf) return null
++            return setBardWikiPluginDocumentGrade({
++                ...getCurrentBardWikiScope(),
++                ...input,
++            })
++        },
+         _trashBardWikiDocument: async (documentId: string) => {
+             const conf = await getPermission('bardWikiWrite')
+             if (!conf) return null
+@@ -1474,6 +1488,7 @@ const makeRisuaiAPIV3 = (iframe:HTMLIFrameElement,plugin:RisuPlugin) => {
+                     'getDocuments': '_getBardWikiDocuments',
+                     'saveDocument': '_saveBardWikiDocument',
+                     'setContextMode': '_setBardWikiContextMode',
++                    'setGrade': '_setBardWikiGrade',
+                     'trashDocument': '_trashBardWikiDocument',
+                 }
+             }
+diff --git a/src/ts/risubard/memoryWiki.ts b/src/ts/risubard/memoryWiki.ts
+index 540c3df..60ee442 100644
+--- a/src/ts/risubard/memoryWiki.ts
++++ b/src/ts/risubard/memoryWiki.ts
+@@ -57,6 +57,8 @@ export interface NarrativeMemoryWikiMarkdown {
+         created?: string
+         authoring?: 'automatic' | 'ai-assisted' | 'manual'
+         contextMode: MarkdownWikiContextMode
++        grade?: number
++        gradeBy?: 'user' | 'ai'
+         contentHash: string
+         reviewStatus?: 'unreviewed' | 'reviewed'
+         reviewBaseContent?: string
+@@ -335,7 +337,7 @@ function parseMarkdownWikiDocument(document: unknown, catalog = false): WikiCata
+     if (!isRecord(document)
+         || !documentKeys.every((key) => key in document)
+         || Object.keys(document).some((key) => ![
+-            ...documentKeys, 'created', 'authoring',
++            ...documentKeys, 'created', 'authoring', 'grade', 'gradeBy',
+             'supersededBy', 'reviewStatus',
+             'reviewBaseContent', 'aliases', 'retrievalMetadata',
+         ].includes(key))
+@@ -377,6 +379,12 @@ function parseMarkdownWikiDocument(document: unknown, catalog = false): WikiCata
+         || !['always', 'auto', 'never'].includes(
+             String(document.contextMode)
+         )
++        || (document.grade !== undefined
++            && !(Number.isInteger(document.grade)
++                && (document.grade as number) >= 0
++                && (document.grade as number) <= 9))
++        || (document.gradeBy !== undefined
++            && document.gradeBy !== 'user' && document.gradeBy !== 'ai')
+         || typeof document.contentHash !== 'string'
+         || document.contentHash.length === 0) {
+         throw new Error('Invalid RisuBard Markdown wiki view')
+@@ -396,6 +404,12 @@ function parseMarkdownWikiDocument(document: unknown, catalog = false): WikiCata
+         ...(catalog ? {} : { content: requireString(document.content) }),
+         links: document.links,
+         contextMode: document.contextMode as MarkdownWikiContextMode,
++        ...(document.grade === undefined ? {} : {
++            grade: document.grade as number,
++            ...(document.gradeBy === undefined ? {} : {
++                gradeBy: document.gradeBy as 'user' | 'ai',
++            }),
++        }),
+         contentHash: document.contentHash,
+         ...(document.retrievalMetadata === undefined ? {} : {
+             retrievalMetadata: normalizeMemoryRetrievalMetadata(document.retrievalMetadata),
+@@ -884,6 +898,64 @@ export async function setWikiDocumentContextMode(input: {
+     return value as unknown as NarrativeMemoryWikiMarkdown['documents'][number]
+ }
+ 
++export async function setWikiDocumentGrade(input: {
++    characterId: string
++    chatId: string
++    documentId: string
++    /** 0-9, or null to clear. */
++    grade: number | null
++    gradeBy?: 'user' | 'ai'
++    expectedContentHash: string
++    fetchImpl: typeof fetch
++    createAuth(): Promise<string>
++}): Promise<NarrativeMemoryWikiMarkdown['documents'][number]> {
++    if (input.grade !== null
++        && !(Number.isInteger(input.grade) && input.grade >= 0 && input.grade <= 9)) {
++        throw new Error('Invalid wiki grade')
++    }
++    const body = {
++        characterId: requiredMutationString(input.characterId, 'Character ID', 1_024),
++        chatId: requiredMutationString(input.chatId, 'Chat ID', 1_024),
++        documentId: requiredMutationString(input.documentId, 'Document ID', 1_024),
++        grade: input.grade,
++        gradeBy: input.gradeBy ?? 'ai',
++        expectedContentHash: requiredMutationString(
++            input.expectedContentHash,
++            'Content hash',
++            128
++        ),
++    }
++    const response = await invokeBrowserFetch(
++        input.fetchImpl,
++        '/api/risubard/memory/wiki/document/grade',
++        {
++            method: 'POST',
++            credentials: 'same-origin',
++            headers: {
++                'content-type': 'application/json',
++                'risu-auth': await input.createAuth(),
++            },
++            body: JSON.stringify(body),
++        }
++    )
++    if (!response.ok) {
++        throw new Error(
++            `Wiki grade update failed with status ${response.status}`
++        )
++    }
++    const value: unknown = await response.json()
++    if (!isRecord(value)
++        || value.id !== body.documentId
++        || value.status !== 'active'
++        || (body.grade === null
++            ? value.grade !== undefined
++            : value.grade !== body.grade)
++        || typeof value.contentHash !== 'string') {
++        throw new Error('Invalid wiki grade receipt')
++    }
++    return value as unknown as NarrativeMemoryWikiMarkdown['documents'][number]
++}
++
+ export async function trashWikiDocument(input: {
+     characterId: string
+     chatId: string
+diff --git a/src/ts/risubard/pluginBardWiki.ts b/src/ts/risubard/pluginBardWiki.ts
+index 24f15f8..6a23efb 100644
+--- a/src/ts/risubard/pluginBardWiki.ts
++++ b/src/ts/risubard/pluginBardWiki.ts
+@@ -7,6 +7,7 @@ import {
+     loadNarrativeMemoryWiki,
+     saveManualWikiDocument,
+     setWikiDocumentContextMode,
++    setWikiDocumentGrade,
+     trashWikiDocument,
+     type MarkdownWikiContextMode,
+     type MarkdownWikiDocumentType,
+@@ -299,6 +300,7 @@ interface BardWikiDocumentDependencies {
+     loadWiki: typeof loadNarrativeMemoryWiki
+     saveDocument: typeof saveManualWikiDocument
+     setContextMode: typeof setWikiDocumentContextMode
++    setGrade: typeof setWikiDocumentGrade
+     trashDocument: typeof trashWikiDocument
+ }
+ 
+@@ -356,6 +358,20 @@ export async function setBardWikiPluginDocumentContextMode(
+     return result
+ }
+ 
++export async function setBardWikiPluginDocumentGrade(
++    input: BardWikiPluginScope & {
++        documentId: string
++        grade: number | null
++        gradeBy?: 'user' | 'ai'
++        expectedContentHash: string
++    },
++    dependencies: Partial<BardWikiDocumentDependencies> = {}
++): Promise<BardWikiPluginDocument> {
++    const result = await (dependencies.setGrade ?? setWikiDocumentGrade)(input)
++    compatibilityCaches = new WeakMap()
++    return result
++}
++
+ export async function trashBardWikiPluginDocument(
+     input: BardWikiPluginScope & { documentId: string },
+     dependencies: Partial<BardWikiDocumentDependencies> = {}

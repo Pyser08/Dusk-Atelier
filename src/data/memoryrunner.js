@@ -1,0 +1,172 @@
+// 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 await 하지 않는다.
+import { extractMessageText, isUserMessage, hashText, isChatGenerating as isGenerating } from "../engine/chattext.js";
+import { analyze } from "../engine/memoryprompt.js";
+import { reconcile } from "../engine/memoryreconcile.js";
+import { applyAnalysis, knownPeople } from "../engine/memoryapply.js";
+import { runAI } from "../engine/runai.js";
+import { openForPrompt } from "../engine/memoryplus.js";
+import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engine/memorydigest.js";
+
+const midOf = (m) => typeof m?.chatId === "string" && m.chatId && !m.chatId.startsWith("inherited:") ? m.chatId : null;
+const MAX_FAILS = 5;
+
+export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null } = {}) {
+  let timer = null, dirty = false, running = false, started = false;
+  let session = { calls: 0, hooks: 0, displays: 0, hookAt: 0, tick: null }; const lastTried = new Map(); let lastTickAt = 0;
+  const note = (result, extra = {}) => { session.tick = { at: Date.now(), result, ...extra }; };
+  const run = call ?? ((msgs, pick, signal) => runAI(api, msgs, pick, signal));
+
+  const aiIndexes = (messages) => messages.map((m, i) => (!isUserMessage(m) && extractMessageText(m).trim() ? i : -1)).filter((i) => i >= 0);
+  const line = (m, i, n = 1500) => `[${i}] ${isUserMessage(m) ? "{{user}}" : "{{char}}"}: ${extractMessageText(m).trim().slice(0, n)}`;
+  const nameOf = (c, chat, i) => ({ botName: String(c?.name ?? "").slice(0, 160), chatName: String(chat?.name ?? chat?.chatName ?? `채팅 ${i + 1}`).slice(0, 160) });
+
+  async function bump(chaId, fn) { return store.updateIndex((idx) => { const b = idx.bots[chaId] ??= { on: true, ignore: [], fails: 0 }; return fn(b, idx); }); }
+  async function status(patch) { return store.updateIndex((idx) => { Object.assign(idx.status, patch); }).catch(() => {}); }
+
+  // 한 메시지(또는 묶음)를 분석해 반영. group: 같은 입력에 합칠 메시지 인덱스들(마지막이 앵커).
+  async function analyzeAt(charIndex, chatIndex, group, { signal, manual = false } = {}) {
+    const character = await api.getCharacterFromIndex(charIndex), chat = await api.getChatFromIndex(charIndex, chatIndex);
+    if (!character || !chat) throw new Error("캐릭터 또는 채팅을 찾지 못했어요.");
+    const chaId = String(character.chaId ?? charIndex), chatId = String(chat.id ?? chatIndex);
+    const messages = chat.message ?? [], last = group.at(-1), m = messages[last];
+    const text = group.map((i) => group.length > 1 ? line(messages[i], i, 3000) : extractMessageText(messages[i]).trim()).join("\n\n");
+    const h = hashText(extractMessageText(m)), anchor = { at: last, mid: midOf(m), h };
+    const idx = await store.getIndex(), bot = idx.bots[chaId] ?? { on: true, ignore: [] };
+    if (!manual) {
+      if (bot.on === false || bot.paused || idx.settings.autoRecord === false) return "off";
+      const ordinal = aiIndexes(messages).filter((i) => i <= last).length;
+      if (ordinal < (idx.settings.startTurn ?? 1)) return "early";
+      if (text.length < idx.settings.minChars) return "short";
+      if ((idx.settings.everyN ?? 1) > 1 && ordinal % idx.settings.everyN !== 0) return "skip";
+    }
+    const existing = await store.getFolder(chaId, chatId);
+    if (existing?.cursor?.h === h && existing.cursor.at === last) return "done";
+    const tryKey = chaId + "::" + chatId;
+    if (!manual && lastTried.get(tryKey) === h) return "done";
+    lastTried.set(tryKey, h);
+    const firstTime = !existing && !bot.notified;
+    const recent = messages.slice(Math.max(0, group[0] - 6), group[0]).map((mm, k) => line(mm, Math.max(0, group[0] - 6) + k));
+    const input = { bot: character.name, known: existing ? knownPeople(existing) : [], ignore: [...(bot.ignore ?? [])],
+      previousScene: existing ? (({ sum, facts, when } = {}) => sum ? { sum, facts, ...(when ? { when } : {}) } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, openItems: existing ? openForPrompt(existing) : [], recent, newest: { index: last, text } };
+    session.calls++;
+    let result;
+    try { result = await analyze((msgs) => run(msgs, idx.settings.model, signal), input); }
+    catch (e) {
+      const fails = await bump(chaId, (b) => ++b.fails);
+      await status({ lastError: String(e?.message ?? e).slice(0, 300) });
+      if (fails >= MAX_FAILS) { await bump(chaId, (b) => { b.paused = true; }); notify(`"${character.name}"의 장기 기억 분석이 ${MAX_FAILS}번 연속 실패해서 이 봇의 자동 기록을 멈췄어요. 기억 탭에서 다시 켤 수 있어요.`); }
+      lastTried.delete(tryKey);
+      throw e;
+    }
+    const names = nameOf(character, chat, chatIndex);
+    const out = await store.updateFolder(chaId, chatId, (folder) => {
+      Object.assign(folder, names, { chatIndex });
+      reconcile(folder, messages);
+      return applyAnalysis(folder, result, anchor, { ignore: bot.ignore ?? [], covered: group.map((i) => hashText(extractMessageText(messages[i]))) });
+    });
+    await bump(chaId, (b) => { b.fails = 0; b.lastRunAt = Date.now(); b.notified = true; });
+    await status({ processed: (idx.status.processed ?? 0) + 1, lastSuccessAt: Date.now(), lastError: "" });
+    digestIfNeeded(chaId, chatId, idx.settings.model).catch((e) => log("digest 실패", e?.message ?? e));
+    try { await afterAnalyze?.(charIndex, chatIndex); } catch (e) { log("후처리 실패", e?.message ?? e); }
+    if (firstTime) notify("이 봇의 장기 기억 자동 기록을 시작했어요 (기억 탭에서 끌 수 있어요)");
+    return out;
+  }
+
+  // 지연 압축: 조건이 맞는 인물 1명만, 호출은 큐 밖에서 하고 결과만 큐 안에서 반영. 실패하면 다음 분석 때 재시도.
+  async function digestIfNeeded(chaId, chatId, model) {
+    const f = await store.getFolder(chaId, chatId); if (!f) return false;
+    const pk = Object.keys(f.people).find((k) => needsDigest(f.people[k], f.runs ?? 0)); if (!pk) return false;
+    const targets = digestTargets(f.people[pk]); if (!targets.length) return false;
+    const raw = await run(digestMessages(f.people[pk], targets), model);
+    await store.updateFolder(chaId, chatId, (folder) => {
+      const p = folder.people[pk]; if (!p || p.digestUser) return;
+      const ids = new Set(targets.map((r) => r.id));
+      applyDigest(p, p.records.filter((r) => ids.has(r.id)), raw, folder.runs ?? 0);
+    });
+    return true;
+  }
+
+  async function latestAiIndex(charIndex, chatIndex) {
+    const chat = await api.getChatFromIndex(charIndex, chatIndex);
+    const ai = aiIndexes(chat?.message ?? []); return ai.at(-1) ?? -1;
+  }
+
+  // 메인 모델이 생성 중이면 2초마다 다시 확인한다(최대 3분). 훅이 다시 불리지 않아도 놓치지 않는다.
+  const WAIT_MS = 180000;
+  async function tick(since = Date.now()) {
+    if (running) { dirty = true; return; }
+    running = true; dirty = false; lastTickAt = Date.now();
+    try {
+      const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
+      if (!(ci >= 0) || !(ti >= 0)) { note("nochat"); return; }
+      const character = await api.getCharacterFromIndex(ci);
+      if (isGenerating(character)) {
+        if (Date.now() - since < WAIT_MS) { note("generating"); running = false; timer = setTimeout(() => tick(since), retryMs); } else note("generating-timeout");
+        return;
+      }
+      const i = await latestAiIndex(ci, ti);
+      if (i < 0) { note("noai"); return; }
+      const r = await analyzeAt(ci, ti, [i]);
+      note(typeof r === "string" ? r : "ok", { at_msg: i });
+    } catch (e) { note("error", { error: String(e?.message ?? e).slice(0, 200) }); log("자동 분석 실패", e?.message ?? e); }
+    finally { if (running) running = false; if (dirty) schedule(); }
+  }
+  async function schedule() {
+    clearTimeout(timer);
+    const idx = await store.getIndex().catch(() => null);
+    const ms = Math.max(0, Number(idx?.settings?.debounceSec ?? 4) * 1000);
+    timer = setTimeout(() => tick(), ms);
+  }
+  const onOutput = (text) => { session.hooks++; session.hookAt = Date.now(); dirty = true; schedule().catch(() => {}); return text; };  // 본문은 그대로 반환
+  // 출력 훅이 안 불리는 환경 대비: 화면 갱신 때 30초에 한 번, 현재 채팅의 마지막 AI 응답이 최근 것이면 점검한다(같은 응답은 해시로 중복 방지).
+  const onDisplay = (text) => {
+    session.displays++;
+    if (!running && !timer && Date.now() - lastTickAt > 30000) { lastTickAt = Date.now(); recentCheck().catch(() => {}); }
+    return text;
+  };
+  async function recentCheck() {
+    const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
+    if (!(ci >= 0) || !(ti >= 0)) return;
+    const chat = await api.getChatFromIndex(ci, ti), i = (await latestAiIndex(ci, ti));
+    const t = chat?.message?.[i]?.time;
+    if (i < 0 || (typeof t === "number" && Date.now() - t > 10 * 60e3)) return;
+    schedule().catch(() => {});
+  }
+
+  async function start() {
+    await store.migrate().catch((e) => log("v1 이전 실패", e?.message ?? e));
+    if (typeof api.addRisuScriptHandler !== "function") { await status({ hook: "unavailable", lastError: "이 환경에서는 출력 훅 API를 사용할 수 없어요." }); return false; }
+    try {
+      await api.addRisuScriptHandler("output", onOutput); started = true;
+      try { await api.addRisuScriptHandler("display", onDisplay); } catch (e) { log("display 보조 훅 등록 실패", e?.message ?? e); }
+      await status({ hook: "ready" }); return true;
+    }
+    catch (e) { await status({ hook: "error", lastError: String(e?.message ?? e).slice(0, 300) }); return false; }
+  }
+
+  // 수동·일괄 분석. range: {from,to} 메시지 인덱스(포함). AI 응답 3개씩 묶음.
+  function planBackfill(messages, { from = 0, to = Infinity } = {}, folder = null) {
+    const ai = aiIndexes(messages).filter((i) => i >= from && i <= to);
+    const done = new Set(folder?.done ?? []);
+    const todo = ai.filter((i) => !done.has(hashText(extractMessageText(messages[i]))));
+    const groups = []; for (let k = 0; k < todo.length; k += 3) groups.push(todo.slice(k, k + 3));
+    const chars = groups.reduce((n, g) => n + g.reduce((s, i) => s + extractMessageText(messages[i]).length, 0) + 4000, 0);
+    return { groups, calls: groups.length, tokens: Math.round(chars / 1.5) };
+  }
+  async function backfill(charIndex, chatIndex, range, { signal, onProgress } = {}) {
+    const chat = await api.getChatFromIndex(charIndex, chatIndex), character = await api.getCharacterFromIndex(charIndex);
+    const folder = await store.getFolder(String(character.chaId), String(chat.id ?? chatIndex));
+    const { groups } = planBackfill(chat.message ?? [], range, folder);
+    const failed = []; let n = 0;
+    for (const g of groups) {
+      if (signal?.aborted) break;
+      if (isGenerating(await api.getCharacterFromIndex(charIndex))) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
+      try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true }); } catch (e) { failed.push(g); if (signal?.aborted) break; }
+      onProgress?.(++n, groups.length, failed.length);
+    }
+    return { total: groups.length, failed };
+  }
+
+  return { start, onOutput, tick, analyzeAt, analyzeLatest: async (ci, ti) => { const i = await latestAiIndex(ci, ti); if (i < 0) throw new Error("분석할 AI 응답이 없어요."); return analyzeAt(ci, ti, [i], { manual: true }); },
+    planBackfill, backfill, digestIfNeeded, session: () => ({ ...session }), isStarted: () => started, stop: () => clearTimeout(timer) };
+}

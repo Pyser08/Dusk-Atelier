@@ -34,23 +34,4 @@ export var AI_MODES = [
   ["emotion", "감정 모델"],
   ["static", "모델 ID 직접 입력"]
 ];
-export async function runAI(api, messages, pick, signal) {
-  const opts = { messages, mode: pick?.mode && pick.mode !== "static" ? pick.mode : "submodel", allowPlugins: true };
-  if (pick?.mode === "static" && pick.staticModel) opts.staticModel = pick.staticModel;
-  let last = null;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    if (signal?.aborted) throw new Error("AI 작업을 취소했어요.");
-    try {
-      const res = await api.runLLMModel(opts);
-      if (signal?.aborted) throw new Error("AI 작업을 취소했어요.");
-      const text = typeof res === "string" ? res : res?.type === "success" && typeof res.result === "string" ? res.result : null;
-      if (text?.trim()) return text.trim();
-      last = new Error(typeof res?.result === "string" ? res.result : "모델이 본문을 돌려주지 않았어요.");
-    } catch (e) {
-      if (signal?.aborted) throw e;
-      last = e;
-    }
-    await new Promise((r) => setTimeout(r, 1200));
-  }
-  throw last ?? new Error("AI 응답을 받지 못했어요.");
-}
+export { runAI } from './runai.js';

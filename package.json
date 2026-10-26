@@ -1,12 +1,13 @@
 {
   "name": "dusk-atelier",
-  "version": "1.6.1",
-  "description": "RisuAI 플러그인 Dusk Atelier — 모듈·봇 관리와 업데이트 (RisuTide 통합 · 합치기 · 속도 개선)",
+  "version": "1.6.2",
+  "description": "RisuAI 플러그인 Dusk Atelier — 모듈·봇 관리와 인물별 장기기억",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node tools/build.mjs",
-    "check": "node tools/build.mjs --check"
+    "check": "node tools/build.mjs --check",
+    "test": "node --test"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"

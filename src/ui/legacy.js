@@ -2,7 +2,7 @@ import { Cancelled, newId, stableJson } from '../engine/util.js';
 import { readIncoming } from '../engine/formats/index.js';
 import { findCandidates, normalizeName } from '../engine/match.js';
 import { collectKnownKeys, planAssets } from '../engine/module.js';
-import { buildNewCharacter, characterAssetKeys, characterView, newCharacterBase, planCharacter, uniqueDisplayName } from '../engine/character.js';
+import { buildNewCharacter, characterAssetKeys, characterView, newCharacterBase, planCharacter, uniqueDisplayName, ensureCharacterInOrder } from '../engine/character.js';
 import { uploadAssets } from '../engine/upload.js';
 import { MOD_SPEC, applyView, charIncomingView, charSpec, modIncomingView, pickView } from '../engine/merge3.js';
 import { KIND_KO, applyPlan, changeOf, charFields, fieldsToMod, fingerprintCard, groupOf, itemLabel, keepSet, makePlan, modFields, modFingerprint, remapGreetings, summarizeCharacterUpdate, textOf, wordDiff, writeCharFields } from '../engine/tideplan.js';
@@ -13,6 +13,7 @@ import { AI_MODES, MergeSelfCheckError, adaptCharacterPrompt, applyPartialUpdate
 import { loadProvenance } from '../engine/tidestore.js';
 import { Busy, backupSnapshot, isGenerating, restoreFromBackup } from '../engine/safety.js';
 import { commit, entriesOf, readDb } from '../data/modules.js';
+import { insertCharacter } from '../data/addcharacter.js';
 import { characterImpact, impactHtml, moduleImpact } from '../engine/impact.js';
 import { loadPersonaMap } from '../data/persona.js';
 
@@ -1009,22 +1010,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
   }
   // 새로 넣은 봇이 사이드바(캐릭터 순서)에 꼭 들어가게: 리스의 checkCharOrder를 부른 뒤에도 빠져 있으면 직접 넣는다
   // (PocketRisu·RisuBard에서는 플러그인이 캐릭터를 추가한 직후 순서 갱신이 늦거나 빠지는 경우가 있음)
-  async function ensureInOrder(chaId) {
-    try {
-      await api.checkCharOrder();
-    } catch {
-    }
-    try {
-      for (let i = 0; i < 3; i++) {
-        const order = (await api.getDatabase(["characterOrder"]))?.characterOrder ?? [];
-        const has = order.some((x) => x === chaId || Array.isArray(x?.data) && x.data.includes(chaId));
-        if (has) return;
-        if (i === 0) await new Promise((r) => setTimeout(r, 300));
-        else await api.setDatabaseLite({ characterOrder: [...order, chaId] });
-      }
-    } catch {
-    }
-  }
+  async function ensureInOrder(chaId) { return ensureCharacterInOrder(api, chaId); }
   // ---- 새로 가져온 봇(업데이트 후보는 아님): 다른 봇과 합칠지 물어본다 ----
   let newQueue = [];
   async function renderNewOffer() {
@@ -1641,19 +1627,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
       const uploaded = await uploadWithProgress(file, plan.toUpload);
       updateProgress(100, "캐릭터 추가 중…");
       const fresh = (await loadDb(true)).characters;
-      if (fresh.some(isGenerating)) throw new Busy();
-      const created = buildNewCharacter(ch, plan, uploaded, fresh);
-      await hooks.created?.(created.chaId);
-      fresh.push(created);
-      await api.setDatabaseLite({ characters: fresh });
-      await ensureInOrder(created.chaId);
-      const idx = fresh.length - 1;
-      const check = await api.getCharacterFromIndex(idx);
-      if (check?.chaId !== created.chaId) throw new Error("추가 후 확인에서 캐릭터를 찾지 못했습니다. 캐릭터 목록을 확인해 주세요.");
-      try {
-        await api.setChatToIndex(idx, 0, created.chats[0]);
-      } catch {
-      }
+      const { created } = await insertCharacter(api, { characters: fresh, build: (all) => buildNewCharacter(ch, plan, uploaded, all), hooks, ensureInOrder, isGenerating, Busy });
       let note2 = "";
       try {
         const v0 = charIncomingView(ch, plan, uploaded);
