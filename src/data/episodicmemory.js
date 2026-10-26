@@ -102,7 +102,7 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
       if (folder.lastOutput === signature.slice(-160)) return false;
       const prompt = analysisPrompt(folder.charName, folder.chatName, chatLines(chat), output, folder.situations.at(-1)?.summary ?? "");
       const { runAI } = await import("../engine/merge.js");
-      const raw = await runAI(api, prompt, { mode: "submodel" });
+      const raw = await runAI(api, prompt, { mode: "memory" });
       const result = parseJson(raw);
       const now = Date.now();
       for (const item of (Array.isArray(result.characters) ? result.characters : []).slice(0, 20)) {
