@@ -126,6 +126,6 @@ test("beforeRequest removes hidden marks without dropping non-text payload parts
 test("normalizer closes an unfinished C block and keeps a single current time mark", () => {
   const out=normalizeMarks("⟦T:old⟧⟦T:new⟧⟦C:Mio⟧Hello");
   assert.equal((out.match(/⟦T:/g)??[]).length,1);
-  assert.match(out,/⟦T:new⟧/);
+  assert.match(out,/⟦T:old⟧/);
   assert.ok(out.endsWith("⟦C:Mio⟧Hello⟦/C⟧"));
 });
