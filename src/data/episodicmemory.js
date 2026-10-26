@@ -88,7 +88,6 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
     const chatId = String(chat?.id ?? chatIndex);
     const signature = idOf(character) + "::" + chatId + "::" + output;
     if (signature === lastSignature) return;
-    if (signature === lastSignature) return;
     try {
       const state = await loadEpisodicMemory(api);
       const folderKey = keyOf(idOf(character), chatId);
