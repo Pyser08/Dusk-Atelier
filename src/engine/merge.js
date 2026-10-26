@@ -48,7 +48,7 @@ export async function runAI(api, messages, pick, signal) {
       const text = extractRunAIText(res) ?? "";
       if (text) return text;
       const detail = res && typeof res === "object"
-        ? [res.type, res.error, res.message, res.result].filter((v) => typeof v === "string" && v.trim()).join(": ").slice(0, 500)
+        ? [(res.type && res.type !== "success" ? res.type : ""), res.error, res.message, res.result].filter((v) => typeof v === "string" && v.trim()).join(": ").slice(0, 500)
         : "";
       last = new Error(detail || (res == null ? "RisuAI가 빈 응답을 반환했어요." : `응답 본문을 읽을 수 없어요 (형식: ${typeof res}, 상태: ${res?.type ?? "없음"}).`));
     } catch (e) {
