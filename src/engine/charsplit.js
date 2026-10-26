@@ -31,7 +31,7 @@ export function normalizeMarks(text,aliases={}) {
 }
 export function stripMarksForPrompt(text,{keepTime=false}={}){let s=String(text??"").replace(/⟦C:[^⟧]+⟧|⟦\/C⟧|⟦S⟧|⟦\/S⟧/g,""),ts=[...s.matchAll(TIME)];if(ts.length>1){const last=ts.at(-1)[0];let done=false;s=s.replace(TIME,m=>{if(!done&&m===last){done=true;return m}return ""})}return keepTime?s:s.replace(TIME,"")}
 export function hideMarksForDisplay(text,{showTime=false,debug=false}={}){if(typeof text!=="string")return text;let s=text.replace(/⟦T:([^⟧]*)⟧/g,(_,t)=>showTime?'<span class="dusk-time">🕒 '+esc(t)+"</span>":"");if(debug)s=s.replace(/⟦C:([^⟧]+)⟧([\s\S]*?)⟦\/C⟧/g,(_,n,b)=>'<span class="dusk-mark" data-c="'+esc(n)+'">'+b+"</span>");return s.replace(/⟦C:[^⟧]+⟧|⟦\/C⟧|⟦S⟧|⟦\/S⟧/g,"")}
-export function lastTime(messages){let t="";for(const m of messages??[])for(const x of txt(m?.content??m?.data??m?.text).matchAll(TIME))t=x[1];return t}
+export function lastTime(messages){let t="";for(const m of messages??[])for(const x of extractMessageText(m).matchAll(TIME))t=x[1];return t}
 export function scanChat(messages,aliases={}){
  const times=[],chars={},situations=[];
  let time="",userBefore="",currentSituation="";
