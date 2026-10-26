@@ -81,6 +81,31 @@ test("on-demand grading is stored only in the cache and merged on read", async (
   assert.deepEqual(parseGrades('{"items":[{"id":"x","p":9,"s":0,"r":0}]}'), { x: { score: 3, g: "D" } });
 });
 
+const mkApi = (over = {}) => { const m = new Map(), saved = [];
+  const api = { pluginStorage: { getItem: async (k) => m.get(k) ?? null, setItem: async (k, v) => { m.set(k, v); } },
+    bardWiki: { getDocuments: async () => docs.map((d) => ({ ...d, contentHash: "h" + d.id, ...(over.wikiGrades?.[d.id] ?? {}) })), ...(over.setGrade ? { setGrade: async (x) => { saved.push(x); return over.setGrade(x); } } : {}) },
+    runLLMModel: async ({ messages }) => { const ids = JSON.parse(messages[1].content).items.map((i) => i.id); return { type: "success", result: JSON.stringify({ items: ids.map((id) => ({ id, p: 3, s: 2, r: 1 })) }) }; } };
+  return { api, saved }; };
+test("wiki-native grade (0-9) is read into records and never re-graded", async () => {
+  const { api, saved } = mkApi({ wikiGrades: { e1: { grade: 8, gradeBy: "user" } }, setGrade: async () => ({}) });
+  const bw = createBardWikiBackend(api, { store: createMemoryStore(api) });
+  const f = await bw.loadFolder("c", "t", { live: true, messages: msgs });
+  assert.ok(f.people["미나"].records.filter((r) => r.docId === "e1").every((r) => r.g === "S" && r.gs === 8 && r.wikiGrade && r.gby === "user"));
+  await bw.gradeOnDemand("c", "t", { mode: "submodel" });
+  assert.deepEqual(saved.map((x) => x.documentId), ["e0"], "only ungraded event docs are graded; e1 (user grade) untouched");
+  assert.deepEqual(saved[0], { documentId: "e0", grade: 6, gradeBy: "ai", expectedContentHash: "he0" });
+});
+test("grading writes to the wiki when setGrade exists; falls back to cache when denied or missing", async () => {
+  const denied = mkApi({ setGrade: async () => null }); const bw = createBardWikiBackend(denied.api, { store: createMemoryStore(denied.api) });
+  await bw.loadFolder("c", "t", { live: true, messages: msgs });
+  const g = bw.withGrades(await bw.gradeOnDemand("c", "t", { mode: "submodel" }));
+  assert.equal(denied.saved.length, 1, "stops asking after the first denial");
+  assert.ok(g.people["미나"].records.every((r) => r.g === "B"), "cache still applies");
+  const old = mkApi(); const bo = createBardWikiBackend(old.api, { store: createMemoryStore(old.api) });
+  await bo.loadFolder("c", "t", { live: true, messages: msgs });
+  assert.ok(bo.withGrades(await bo.gradeOnDemand("c", "t", { mode: "submodel" })).people["미나"].records.every((r) => r.g === "B"), "old RisuBard without setGrade");
+});
+
 test("리스바드 모든 위키 작성 언어 표제와 예전 표제를 읽는다", async () => {
   const { eventBullets, characterDigest } = await import("../src/engine/bardwikiadapt.js");
   for (const [title, line] of [["物語の要約", "日本語の出来事"], ["故事摘要", "简体事件"], ["故事概要", "繁體事件"], ["확정된 사건", "예전 표제"], ["Established Events", "legacy heading"]]) {

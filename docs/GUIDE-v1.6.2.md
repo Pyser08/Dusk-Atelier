@@ -39,7 +39,7 @@ RisuAI 플러그인(API 3.0). 모듈·봇 관리/업데이트(RisuTide 이식), 
 
 ### 3.4 리스바드(BardWiki) 모드
 - 저장소 설정: 자동 / 플러그인 / BardWiki / 끔. **자동**은 `risuai.bardWiki.getDocuments` 존재 시 BardWiki로 인식.
-- BardWiki 모드(명시 또는 자동 인식): **플러그인의 기록·주입 완전 비활성**(이중 비용 방지). 리스바드가 자체 위키를 프롬프트에 넣고, 플러그인은 위키 문서를 읽기 전용으로 어댑트해 같은 화면에 표시, 등급은 필요할 때만 AI로 매김, 새 봇/새 채팅 만들기는 위키 내용 기반. 위키가 markdown 모드가 아니면 `[]` → 안내 표시.
+- BardWiki 모드(명시 또는 자동 인식): **플러그인의 기록·주입 완전 비활성**(이중 비용 방지). 리스바드가 자체 위키를 프롬프트에 넣고, 플러그인은 위키 문서를 읽기 전용으로 어댑트해 같은 화면에 표시, 등급은 위키 문서의 `grade`(0~9, 선택 필드, `setGrade` API)를 우선 읽고 없는 사건 문서만 필요할 때 AI로 매김(`setGrade`가 있으면 위키에 저장, 없으면 `ext` 캐시; 사용자 지정 등급은 덮어쓰지 않음), 새 봇/새 채팅 만들기는 위키 내용 기반. 위키가 markdown 모드가 아니면 `[]` → 안내 표시.
 - 어댑터: `engine/bardwikiadapt.js`, `data/memorybackend-bardwiki.js`. 가상 메모리(hypaV3/hypaV2/supaMemory의 `bardwiki-plugin-context-v1`)는 복사 시 제거.
 
 ### 3.5 활용

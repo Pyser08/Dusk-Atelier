@@ -44,6 +44,8 @@ export function sourceToIndex(ids, messages) {
   const hit = (ids ?? []).filter((id) => typeof id === "string" && !id.startsWith("inherited:") && seen.has(id) && !dup.has(id)).map((id) => seen.get(id));
   return hit.length ? Math.max(...hit) : null;
 }
+// 위키 문서의 grade(0~9 정수)만 인정. 없거나 범위 밖이면 null(미평가).
+export const wikiScore = (d) => Number.isInteger(d?.grade) && d.grade >= 0 && d.grade <= 9 ? d.grade : null;
 const stamp = (d) => Date.parse(d?.updated ?? d?.created ?? "") || 0;
 
 export function adaptDocuments(docs, messages = [], { showHidden = false } = {}) {
@@ -59,9 +61,10 @@ export function adaptDocuments(docs, messages = [], { showHidden = false } = {})
     const bl = eventBullets(d); if (!bl.length) continue;
     const text = norm(d.content + " " + d.title);
     const who = Object.values(people).filter((p) => names(p).some((n) => text.includes(n))).map((p) => p.name);
-    scenes.push({ id: "w_" + d.id, at, sum: clip(bl[0], 200), facts: bl.slice(1, 4).map((x) => clip(x, 120)), place: "", when: "", who, at_ms: t, orphan: false, wiki: true, status: d.status });
+    const gs = wikiScore(d), gg = gs == null ? null : scoreToGrade(gs);  // 위키 원본 등급(0~9 점수)
+    scenes.push({ id: "w_" + d.id, at, sum: clip(bl[0], 200), facts: bl.slice(1, 4).map((x) => clip(x, 120)), place: "", when: "", who, at_ms: t, orphan: false, wiki: true, status: d.status, docId: d.id, ...(gs != null ? { gs, gby: d.gradeBy ?? "ai" } : {}) });
     for (const line of bl) for (const p of Object.values(people)) if (names(p).some((n) => norm(line).includes(n)))
-      p.records.push({ id: `w_${d.id}_${p.records.length}`, at, act: clip(line, 80), g: null, orphan: false, wiki: true, sit: "w_" + d.id, at_ms: t });
+      p.records.push({ id: `w_${d.id}_${p.records.length}`, at, act: clip(line, 80), g: gg, orphan: false, wiki: true, sit: "w_" + d.id, at_ms: t, docId: d.id, ...(gs != null ? { gs, gby: d.gradeBy ?? "ai", wikiGrade: true } : {}) });
   }
   const cur = list.filter((d) => d.type === "scene").sort((a, b) => stamp(b) - stamp(a))[0];
   if (cur) { const bl = bullets(cur.content); scenes.push({ id: "w_" + cur.id, at: null, sum: clip(bl[0] ?? cur.content, 200), facts: bl.slice(1, 4).map((x) => clip(x, 120)), place: clip(cur.title, 60), when: "", who: [], at_ms: stamp(cur), orphan: false, wiki: true, current: true }); }
