@@ -73,6 +73,10 @@ test("situation instructions avoid repeating unchanged scenes and use previous c
   assert.match(instruction, /C의 판정 기준은 말하는 인물이 아니라 대사·행동의 상대다/);
   assert.match(instruction, /NPC끼리의 대화.*C로 감싸지 않는다/);
   assert.match(instruction, /하연이 설지에게 하는 대사는 마커 밖에 둔다/);
+  assert.match(instruction, /답변의 첫 글자는 반드시/);
+  assert.match(instruction, /한 문장에.*NPC를 향한 말이 섞이면 문장을 자연스럽게 나눠/);
+  assert.match(instruction, /하단 상태표시의 날짜·시간도 T와 모순되면 안 된다/);
+  assert.match(instruction, /출력의 첫 부분은 반드시/);
 });
 
 
