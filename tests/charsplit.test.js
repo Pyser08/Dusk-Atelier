@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { normalizeMarks, scanChat, chunkEntries, pickLore, summaryPrompt, extractMessageText, isUserMessage } from "../src/engine/charsplit.js";
-import { makeInstruction } from "../src/data/charsplit.js";
+import { makeInstruction, createCharSplit } from "../src/data/charsplit.js";
 
 test("normalizer closes an S block before opening C; blocks never nest", () => {
   const out = normalizeMarks('⟦T:2026-10-25 20:00⟧⟦S⟧At the café.⟦C:Mio⟧"Hi."⟦/C⟧');
@@ -94,4 +94,30 @@ test("scanChat recognizes Risu snake_case user flag and preserves the following 
   ]);
   assert.equal(scan.chars["미오"].length, 1);
   assert.equal(scan.chars["미오"][0].userBefore, "오늘은 뭐 할까?");
+});
+
+test("beforeRequest removes hidden marks without dropping non-text payload parts", async () => {
+  let hook;
+  const storage = new Map();
+  const api = {
+    pluginStorage: { getItem: async k => storage.get(k) ?? null, setItem: async (k,v) => storage.set(k,v) },
+    getCurrentCharacterIndex: async () => 0,
+    getCharacterFromIndex: async () => ({ chaId:"bot-1", name:"Original" }),
+    addRisuReplacer: async (_name, fn) => { hook=fn; },
+    addRisuScriptHandler: async () => {}
+  };
+  const runtime=createCharSplit(api,{log:()=>{}});
+  await runtime.start();
+  const input=[
+    {role:"system",content:"Base system"},
+    {role:"user",content:[
+      {type:"text",text:"⟦T:2026-10-26 08:00⟧⟦C:Mio⟧Hello⟦/C⟧"},
+      {type:"image",url:"data:image/png;base64,abc"}
+    ]}
+  ];
+  const output=await hook(input,"model");
+  assert.equal(output[1].content[0].text,"Hello");
+  assert.equal(output[1].content[1].url,"data:image/png;base64,abc");
+  assert.match(output[0].content,/Dusk Atelier – interaction and situation marks/);
+  assert.match(output[0].content,/SITUATION MARKS — record scene state/);
 });
