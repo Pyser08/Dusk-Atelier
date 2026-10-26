@@ -11,7 +11,8 @@ const MAX_FAILS = 5;
 
 export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null } = {}) {
   let timer = null, dirty = false, running = false, started = false;
-  let session = { calls: 0 }; const lastTried = new Map();
+  let session = { calls: 0, hooks: 0, displays: 0, hookAt: 0, tick: null }; const lastTried = new Map(); let lastTickAt = 0;
+  const note = (result, extra = {}) => { session.tick = { at: Date.now(), result, ...extra }; };
   const run = call ?? ((msgs, pick, signal) => runAI(api, msgs, pick, signal));
 
   const aiIndexes = (messages) => messages.map((m, i) => (!isUserMessage(m) && extractMessageText(m).trim() ? i : -1)).filter((i) => i >= 0);
@@ -88,17 +89,24 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     const ai = aiIndexes(chat?.message ?? []); return ai.at(-1) ?? -1;
   }
 
-  async function tick(attempt = 0) {
+  // 메인 모델이 생성 중이면 2초마다 다시 확인한다(최대 3분). 훅이 다시 불리지 않아도 놓치지 않는다.
+  const WAIT_MS = 180000;
+  async function tick(since = Date.now()) {
     if (running) { dirty = true; return; }
-    running = true; dirty = false;
+    running = true; dirty = false; lastTickAt = Date.now();
     try {
       const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
-      if (!(ci >= 0) || !(ti >= 0)) return;
+      if (!(ci >= 0) || !(ti >= 0)) { note("nochat"); return; }
       const character = await api.getCharacterFromIndex(ci);
-      if (isGenerating(character)) { if (attempt < 5) { running = false; timer = setTimeout(() => tick(attempt + 1), retryMs); } return; }
+      if (isGenerating(character)) {
+        if (Date.now() - since < WAIT_MS) { note("generating"); running = false; timer = setTimeout(() => tick(since), retryMs); } else note("generating-timeout");
+        return;
+      }
       const i = await latestAiIndex(ci, ti);
-      if (i >= 0) await analyzeAt(ci, ti, [i]);
-    } catch (e) { log("자동 분석 실패", e?.message ?? e); }
+      if (i < 0) { note("noai"); return; }
+      const r = await analyzeAt(ci, ti, [i]);
+      note(typeof r === "string" ? r : "ok", { at_msg: i });
+    } catch (e) { note("error", { error: String(e?.message ?? e).slice(0, 200) }); log("자동 분석 실패", e?.message ?? e); }
     finally { if (running) running = false; if (dirty) schedule(); }
   }
   async function schedule() {
@@ -107,12 +115,30 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     const ms = Math.max(0, Number(idx?.settings?.debounceSec ?? 4) * 1000);
     timer = setTimeout(() => tick(), ms);
   }
-  const onOutput = (text) => { dirty = true; schedule().catch(() => {}); return text; };  // 본문은 그대로 반환
+  const onOutput = (text) => { session.hooks++; session.hookAt = Date.now(); dirty = true; schedule().catch(() => {}); return text; };  // 본문은 그대로 반환
+  // 출력 훅이 안 불리는 환경 대비: 화면 갱신 때 30초에 한 번, 현재 채팅의 마지막 AI 응답이 최근 것이면 점검한다(같은 응답은 해시로 중복 방지).
+  const onDisplay = (text) => {
+    session.displays++;
+    if (!running && !timer && Date.now() - lastTickAt > 30000) { lastTickAt = Date.now(); recentCheck().catch(() => {}); }
+    return text;
+  };
+  async function recentCheck() {
+    const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
+    if (!(ci >= 0) || !(ti >= 0)) return;
+    const chat = await api.getChatFromIndex(ci, ti), i = (await latestAiIndex(ci, ti));
+    const t = chat?.message?.[i]?.time;
+    if (i < 0 || (typeof t === "number" && Date.now() - t > 10 * 60e3)) return;
+    schedule().catch(() => {});
+  }
 
   async function start() {
     await store.migrate().catch((e) => log("v1 이전 실패", e?.message ?? e));
     if (typeof api.addRisuScriptHandler !== "function") { await status({ hook: "unavailable", lastError: "이 환경에서는 출력 훅 API를 사용할 수 없어요." }); return false; }
-    try { await api.addRisuScriptHandler("output", onOutput); started = true; await status({ hook: "ready" }); return true; }
+    try {
+      await api.addRisuScriptHandler("output", onOutput); started = true;
+      try { await api.addRisuScriptHandler("display", onDisplay); } catch (e) { log("display 보조 훅 등록 실패", e?.message ?? e); }
+      await status({ hook: "ready" }); return true;
+    }
     catch (e) { await status({ hook: "error", lastError: String(e?.message ?? e).slice(0, 300) }); return false; }
   }
 

@@ -80,3 +80,45 @@ test("backfill groups AI responses by 3 and skips already-recorded ones", async 
   assert.equal(r.total, 3); assert.equal(calls, 3); assert.equal(r.failed.length, 0);
   assert.equal(runner.planBackfill(chat.message, {}, await store.getFolder("c1", "t1")).calls, 0, "already analyzed responses are skipped");
 });
+
+test("display hook alone triggers a check for a fresh response (output hook never fires)", async () => {
+  const { api, store, chat } = setup(); let calls = 0;
+  chat.message[1].time = Date.now();
+  const runner = createMemoryRunner(api, { store, call: async () => { calls++; return good; } });
+  await store.updateIndex((i) => { i.settings.debounceSec = 0.01; });
+  await runner.start();
+  assert.equal(api.hooks.display("화면"), "화면");
+  await wait(120);
+  assert.equal(calls, 1);
+  assert.equal(runner.session().tick.result.length > 0, true);
+  assert.equal(runner.session().hooks, 0);
+  assert.equal(runner.session().displays, 1);
+});
+test("display hook ignores old chats (last AI message older than 10 minutes)", async () => {
+  const { api, store, chat } = setup(); let calls = 0;
+  chat.message[1].time = Date.now() - 30 * 60e3;
+  const runner = createMemoryRunner(api, { store, call: async () => { calls++; return good; } });
+  await store.updateIndex((i) => { i.settings.debounceSec = 0.01; });
+  await runner.start(); api.hooks.display("x"); await wait(100);
+  assert.equal(calls, 0);
+});
+test("keeps waiting for a long generation (more than 5 retries) and records diagnostics", async () => {
+  const { api, store, chat } = setup(); let calls = 0;
+  chat.isStreaming = true;
+  const runner = createMemoryRunner(api, { store, retryMs: 10, call: async () => { calls++; return good; } });
+  await store.updateIndex((i) => { i.settings.debounceSec = 0.01; });
+  await runner.start(); api.hooks.output("x"); await wait(150);
+  assert.equal(calls, 0);
+  assert.equal(runner.session().tick.result, "generating");
+  assert.ok(runner.session().hooks >= 1);
+  chat.isStreaming = false; await wait(60);
+  assert.equal(calls, 1);
+  assert.equal(runner.session().tick.result.length > 0, true);
+});
+test("skip reasons are visible in diagnostics (short response)", async () => {
+  const { api, store, chat } = setup();
+  const runner = createMemoryRunner(api, { store, call: async () => good });
+  await store.updateIndex((i) => { i.settings.debounceSec = 0.01; });
+  await runner.start(); chat.message[1].data = "짧아요"; chat.message[1].chatId = "mm"; api.hooks.output("x"); await wait(80);
+  assert.equal(runner.session().tick.result, "short");
+});

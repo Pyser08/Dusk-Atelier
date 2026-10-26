@@ -89,3 +89,9 @@ test("리스바드 모든 위키 작성 언어 표제와 예전 표제를 읽는
   assert.match(characterDigest({ content: "## 現在の状態\n- 屋上にいる\n\n## 関係と信頼\n- 信頼している\n\n## 장비\n- 무시" }), /屋上にいる.*信頼している/);
   assert.match(characterDigest({ content: "## 当前状态\n- 在屋顶" }), /在屋顶/);
 });
+
+test("진단 문구: 훅·점검 결과를 사람이 읽는 문장으로", async () => {
+  const { diagText } = await import("../src/engine/memorydiag.js");
+  assert.match(diagText({ hooks: 0, displays: 3, tick: null }), /출력 훅 아직 안 불림.*화면 갱신 3회.*아직 점검한 적 없음/);
+  assert.match(diagText({ hooks: 2, hookAt: Date.now(), displays: 0, tick: { at: Date.now(), result: "short" } }), /출력 훅 2회.*응답이 짧아서/);
+});

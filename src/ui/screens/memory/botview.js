@@ -1,4 +1,5 @@
 import { h, replace } from "../../dom.js";
+import { diagText } from "../../../engine/memorydiag.js";
 import { icon } from "../../icons.js";
 import { btn, badge, switchEl, setSwitch, loading, note } from "../../kit.js";
 import { mem, loadBots, loadChats, loadFolder, fail } from "./common.js";
@@ -35,6 +36,7 @@ export async function renderBotView(ctx, host, { redraw, back }) {
     h("div", null, h("b", null, "저장소 "), backend.id === "bardwiki" ? "리스바드 BardWiki" : backend.id === "off" ? "꺼짐" : "플러그인", h("span", { class: "rb-muted" }, ` · ${backend.reason}`)),
     h("div", null, h("b", null, "장기기억 주입 "), injText),
     caps.analyze ? h("div", { class: "rb-muted" }, `이번 세션 분석 호출 ${env.sess}회${botCfg.paused ? " · 이 봇은 연속 실패로 자동 기록이 멈춰 있어요" : ""}${idx.status.lastError ? " · 마지막 오류: " + idx.status.lastError.slice(0, 80) : ""}`) : null,
+    caps.analyze ? h("div", { class: "rb-muted rb-mem-diag" }, diagText(M.runner?.session?.() ?? {})) : null,
     view.snapshot ? note("warn", `스냅샷 ${new Date(folder.at_ms ?? 0).toLocaleString()} — 그 채팅을 열고 새로고침하면 갱신돼요.`) : null,
     view.missing ? note("warn", "이 채팅을 열면 볼 수 있어요.") : null,
     backend.duplicate ? note("warn", "BardWiki와 장기기억이 중복돼요. 비용이 두 번 들 수 있어요.") : null);
@@ -46,7 +48,7 @@ export async function renderBotView(ctx, host, { redraw, back }) {
   const body = h("div", { class: "rb-mem-body" });
   const tabs = h("div", { class: "rb-mem-tabs", role: "tablist" }, TABS.map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { m.tab = id; m.page = 1; redraw(); } }, label)));
   replace(host,
-    h("div", { class: "rb-mem-head" }, ctx.isMobile() ? btn("뒤로", { size: "sm", icon: "back", onClick: back }) : null, h("h2", null, bot.character.name || "이름 없는 캐릭터"), h("span", { style: "flex:1" }), sw),
+    h("div", { class: "rb-mem-head" }, h("span", { class: "rb-mem-back" }, btn("뒤로", { size: "sm", icon: "back", onClick: back })), h("h2", null, bot.character.name || "이름 없는 캐릭터"), h("span", { style: "flex:1" }), sw),
     status, chatRow, tabs, body);
   const draw = { people: renderPeople, scenes: renderScenes, compose: renderCompose, settings: renderSettings }[m.tab] ?? renderPeople;
   await draw(env, body);

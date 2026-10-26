@@ -384,10 +384,31 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
  .rb-mem-event-head>.rb-muted{margin-left:0;width:100%}
 }
 
-.rb-mem-root{display:flex;flex:1;min-height:0;gap:0;overflow:hidden}
+.rb-mem-wrap{container-type:inline-size;container-name:memwrap;flex:1;min-height:0;min-width:0;display:flex}
+.rb-mem-root{display:flex;flex:1;min-height:0;min-width:0;gap:0;overflow:hidden}
+.rb-mem-back{display:none}
 .rb-mem-col{display:flex;flex-direction:column;gap:10px;min-width:0;overflow:auto;padding:12px}
 .rb-mem-col.list{width:280px;flex-shrink:0;border-right:1px solid var(--rb-line2)}.rb-mem-col.view{flex:1}
-@media(max-width:760px){.rb-mem-col.list{width:auto;flex:1;border-right:0}}
+/* 좁은 폭(휴대폰·좁은 창)에서는 한 번에 한 칸만: 컨테이너 폭 기준 + 뷰포트 기준을 함께 건다 */
+@container memwrap (max-width:900px){
+ .rb-mem-root .rb-mem-col.list{width:auto;flex:1;border-right:0}
+ .rb-mem-root[data-view=bots] .rb-mem-col.view{display:none}
+ .rb-mem-root[data-view=bot] .rb-mem-col.list{display:none}
+ .rb-mem-back{display:inline-flex}
+ .rb-mem-col{padding:10px}
+ .rb-mem-grid{grid-template-columns:1fr}
+ .rb-mem-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.rb-mem-tabs .rb-chip{flex:0 0 auto}
+ .rb-mem-tools .rb-search{min-width:0;flex-basis:100%}
+ .rb-mem-head{flex-wrap:wrap}
+ .rb-mem-range input{width:96px}
+}
+@media(max-width:900px){
+ .rb-mem-root .rb-mem-col.list{width:auto;flex:1;border-right:0}
+ .rb-mem-root[data-view=bots] .rb-mem-col.view{display:none}
+ .rb-mem-root[data-view=bot] .rb-mem-col.list{display:none}
+ .rb-mem-back{display:inline-flex}
+}
+.rb-mem-diag{overflow-wrap:anywhere}
 .rb-mem-botlist{display:flex;flex-direction:column;gap:4px}
 .rb-mem-botlist .rb-row .txt,.rb-mem-card .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left}
 .rb-mem-botlist .name,.rb-mem-card .name{font-weight:600;display:flex;gap:6px;align-items:center}
