@@ -48,37 +48,37 @@ const appendTextToMessage=(m,suffix)=>{
 export async function loadCharSplit(api){try{const raw=await api.pluginStorage.getItem(CHARSPLIT_KEY),v=typeof raw==="string"?JSON.parse(raw):raw;return{...CHARSPLIT_DEFAULTS,...(v&&typeof v==="object"?v:{}),bots:{...(v?.bots??{})},ai:{...CHARSPLIT_DEFAULTS.ai,...(v?.ai??{})}}}catch{return{...CHARSPLIT_DEFAULTS,bots:{},ai:{...CHARSPLIT_DEFAULTS.ai}}}}
 export async function saveCharSplit(api,v){const out={...CHARSPLIT_DEFAULTS,...v,v:1,bots:v?.bots??{},ai:{...CHARSPLIT_DEFAULTS.ai,...(v?.ai??{})}};await api.pluginStorage.setItem(CHARSPLIT_KEY,JSON.stringify(out));return out}
 export function makeInstruction({names=[],last="",lastSituation=""}={}) {
- const allowed=names.length?names.join(", "):"No preset list: include every identifiable named character; never invent a name.";
+ const allowed=names.length?names.join(", "):"미리 지정된 이름 없음: 식별 가능한 이름 있는 인물을 모두 기록하고, 이름을 지어내지 말 것.";
  const previousTime=last||"unknown";
- const previousScene=lastSituation||"(no scene recorded yet)";
+ const previousScene=lastSituation||"(기록된 장면 없음)";
  return [
-  "[Dusk Atelier | STORY METADATA — FOLLOW QUIETLY]",
-  "Write the actual in-character continuation first in your planning; the final answer must remain natural fiction, not a report about tagging. The marks are hidden metadata for later extraction.",
+  "[Dusk Atelier | 이야기 메타데이터 — 조용히 따를 것]",
+  "먼저 평소와 같은 역할극 답변을 작성하고, 최종 출력은 태깅 보고서가 아닌 자연스러운 이야기로 유지한다. 마커는 나중에 프로그램이 추출할 숨김 메타데이터다.",
   "",
-  "PRIORITY",
-  "1. Preserve the scene, characterization, tone, pacing, and continuity. Never sacrifice a natural reply just to add metadata.",
-  "2. Add only marks supported by the conversation and story context. Never invent events, names, dates, locations, or relationships to fill a mark.",
-  "3. Keep each mark syntactically complete. C and S blocks must never overlap or nest.",
+  "우선순위",
+  "1. 장면, 인물 묘사, 말투, 속도감, 연속성을 보존한다. 마커를 넣기 위해 자연스러운 답변을 희생하지 않는다.",
+  "2. 대화와 이야기 맥락으로 뒷받침되는 정보만 기록한다. 마커를 채우려고 사건, 이름, 날짜, 장소, 관계를 만들어 내지 않는다.",
+  "3. 마커 문법을 정확히 지킨다. S와 C 블록은 서로 겹치거나 중첩될 수 없다.",
   "",
-  "TIME (T) — put exactly one ⟦T:...⟧ mark at the very beginning of the reply.",
-  "Previous confirmed time: "+previousTime+". Continue from it consistently. Use ⟦T:YYYY-MM-DD HH:mm⟧ when the story gives enough information to determine a date and time. If only relative time is known, use a concise relative value such as ⟦T:D+1 저녁⟧. If time cannot reasonably be inferred, use ⟦T:unknown⟧ rather than fabricate precision. Advance time only as much as the story implies; do not reset it or move it backwards without an explicit time jump.",
+  "시간(T) — 답변 맨 처음에 ⟦T:...⟧ 마커를 정확히 하나 둔다.",
+  "이전 확인 시간: "+previousTime+". 이전 시간에서 자연스럽게 이어 간다. 이야기에서 날짜와 시각을 충분히 알 수 있을 때는 ⟦T:YYYY-MM-DD HH:mm⟧ 형식을 쓴다. 상대적인 시간만 알 수 있다면 ⟦T:D+1 저녁⟧처럼 한국어 상대 시간으로 기록한다. 합리적으로 추정할 수 없다면 정밀한 시간을 꾸며 내지 말고 ⟦T:unknown⟧을 쓴다. 이야기에서 암시하는 만큼만 시간을 진행하며, 명시적인 시간 이동 없이 시간을 초기화하거나 과거로 되돌리지 않는다.",
   "",
-  "SCENE (S) — shared state, not a beat-by-beat transcript.",
-  "Last recorded scene: "+JSON.stringify(previousScene)+".",
-  "If there is no previous scene, write one ⟦S⟧...⟦/S⟧ block after T describing the current established scene. Later, add S only when the shared state materially changes: a location/setting change; someone arrives, leaves, or becomes involved; the ongoing event takes a consequential turn; or a meaningful condition/relationship situation changes. Do not add S for ordinary dialogue, facial expressions, small gestures, or routine actions. Describe only the updated facts needed to understand what is happening: location, present people, ongoing activity/event, and consequential change. If nothing material changed, omit S entirely. Place a new S at the transition point, before any C block that relies on the new situation.",
+  "장면(S) — 매 순간을 기록하지 말고, 공유 상태를 기록한다.",
+  "마지막 기록 장면: "+JSON.stringify(previousScene)+".",
+  "이전 장면 기록이 없다면 T 바로 뒤에 현재 확정된 장면을 설명하는 ⟦S⟧...⟦/S⟧ 블록을 하나 쓴다. 이후에는 공유 상태가 실질적으로 바뀔 때만 S를 추가한다. 예: 장소나 배경의 변화, 인물의 등장·퇴장·합류, 진행 중인 사건의 중요한 전환, 의미 있는 상태나 관계 상황의 변화. 평범한 대사, 표정, 작은 몸짓, 일상적인 행동에는 S를 붙이지 않는다. 상황을 이해하는 데 필요한 사실만 1~2문장으로 기록한다(장소, 함께 있는 인물, 진행 중인 활동, 핵심 변화). 실질적인 변화가 없다면 S를 생략한다. 새로운 상황을 전제로 하는 C 블록보다 먼저, 상황이 바뀌는 지점에 S를 둔다.",
   "",
-  "CHARACTER INTERACTION (C) — capture each meaningful direct interaction with {{user}}.",
-  "Known character names: "+allowed+". "+(names.length?"Use these names when they match the character; aliases may be normalized by the plugin.":"When no preset list is supplied, record every identifiable named character who interacts with {{user}}.")+"",
-  "Wrap a character's direct speech to {{user}} and the closely attached action/reaction in one ⟦C:Name⟧...⟦/C⟧ block. This includes addressing {{user}}, responding to {{user}}, meaningful looks/gestures/touch, giving or taking something, and actions clearly directed at {{user}}. Keep the dialogue and its attached action together; do not tag only a gesture while leaving its dialogue outside. For a genuinely shared interaction, use ⟦C:Name1,Name2⟧...⟦/C⟧. Do not tag unrelated dialogue between other characters, general narration, or actions that are not directed at {{user}}. Do not omit a direct interaction merely because it is brief.",
+  "인물 상호작용(C) — {{user}}와 직접 상호작용하는 내용을 기록한다.",
+  "알려진 인물 이름: "+allowed+". "+(names.length?"실제 이야기 속 인물과 일치하는 이름을 사용한다. 별칭은 플러그인에서 정규화할 수 있다.":"미리 지정된 이름 목록이 없다면 {{user}}와 상호작용하는, 식별 가능한 이름 있는 인물을 모두 기록한다."),
+  "{{user}}에게 하는 직접 대사와 그에 밀접하게 연결된 행동·반응을 하나의 ⟦C:이름⟧...⟦/C⟧ 블록으로 묶는다. {{user}}에게 말을 거는 것, 질문이나 말에 답하는 것, 의미 있는 시선·몸짓·접촉, 무언가를 주거나 받는 행동, {{user}}를 향한 것이 분명한 행동이 포함된다. 대사와 연결된 행동은 함께 둔다. 행동만 마커 안에 넣고 대사를 밖에 두거나 그 반대로 하지 않는다. 여러 인물과 {{user}}가 실제로 함께 상호작용한다면 ⟦C:이름1,이름2⟧...⟦/C⟧를 쓴다. 다른 인물들끼리만 나누는 무관한 대화, 일반적인 서술, {{user}}를 향하지 않는 행동은 태깅하지 않는다. 짧은 상호작용이라도 누락하지 않는다.",
   "",
-  "OUTPUT FORMAT",
-  "Return the normal story reply with inline marks only. Do not explain the marks, add a preface, or use a code fence. Start with one T mark. Add S only for a new or materially changed scene. Use C for direct character↔{{user}} interaction. Close every S/C block. Never put S or T inside C, and never put C inside S. Keep ordinary prose outside the blocks when it is not part of a direct interaction.",
+  "출력 형식",
+  "평소의 이야기 답변에 인라인 마커만 넣어 출력한다. 마커에 대한 설명, 서문, 요약을 덧붙이지 않고 코드 블록도 사용하지 않는다. T 마커 하나로 시작한다. S는 첫 장면이거나 상황이 실질적으로 바뀔 때만 추가한다. {{user}}와 직접 상호작용하는 인물의 대사·행동은 C로 묶는다. 모든 S/C 블록을 닫는다. S나 T를 C 안에 넣지 않고, C를 S 안에 넣지 않는다. 직접 상호작용에 해당하지 않는 일반 서술은 블록 밖에 둔다.",
   "",
-  "QUICK CHECK BEFORE SENDING",
-  "• T is first, appears once, and does not contradict established time.",
-  "• S is present for the initial scene or a material change, and absent for an unchanged scene.",
-  "• Every meaningful direct character interaction with {{user}} is inside C, with related dialogue and action kept together.",
-  "• Names and scene details are grounded in context; all blocks are closed and non-overlapping."
+  "전송 전 확인",
+  "• T가 맨 처음에 정확히 한 번 있으며, 이미 확정된 시간과 모순되지 않는다.",
+  "• S는 최초 장면 또는 실질적인 변화에만 있으며, 변화 없는 장면에서는 생략한다.",
+  "• {{user}}와 직접 상호작용하는 모든 내용을 C 안에 넣고, 연결된 대사와 행동을 함께 둔다.",
+  "• 이름과 장면 정보는 대화 맥락에 근거하며, 모든 블록이 닫혀 있고 서로 겹치지 않는다."
  ].join("\n");
 }
 export function createCharSplit(api,{log=(...a)=>console.log("[Dusk 캐릭터 분리]",...a)}={}){let settings=null;const conf=async()=>settings??=await loadCharSplit(api),current=async()=>{try{const i=await api.getCurrentCharacterIndex();return i>=0?await api.getCharacterFromIndex(i):null}catch{return null}},active=(s,c)=>s.enabled!==false&&s.bots?.[idOf(c)]?.on!==false;

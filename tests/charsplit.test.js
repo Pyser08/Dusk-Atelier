@@ -63,20 +63,20 @@ test("pickLore defaults to own and related entries, while keeping unrelated entr
 test("situation instructions avoid repeating unchanged scenes and use previous context", () => {
   const instruction = makeInstruction({ names:["Mio"], last:"2026-10-25 20:00", lastSituation:"At the café with Mio." });
   assert.match(instruction, /At the café with Mio\./);
-  assert.match(instruction, /add S only when the shared state materially changes/);
-  assert.match(instruction, /Do not add S for ordinary dialogue/);
-  assert.match(instruction, /C and S blocks must never overlap or nest/);
-  assert.match(instruction, /Return the normal story reply with inline marks only/);
-  assert.match(instruction, /Never sacrifice a natural reply/);
+  assert.match(instruction, /공유 상태가 실질적으로 바뀔 때만 S를 추가한다/);
+  assert.match(instruction, /평범한 대사, 표정, 작은 몸짓, 일상적인 행동에는 S를 붙이지 않는다/);
+  assert.match(instruction, /S와 C 블록은 서로 겹치거나 중첩될 수 없다/);
+  assert.match(instruction, /평소의 이야기 답변에 인라인 마커만 넣어 출력한다/);
+  assert.match(instruction, /마커를 넣기 위해 자연스러운 답변을 희생하지 않는다/);
   assert.match(instruction, /⟦T:unknown⟧/);
-  assert.match(instruction, /Do not omit a direct interaction merely because it is brief/);
+  assert.match(instruction, /짧은 상호작용이라도 누락하지 않는다/);
 });
 
 
 test("empty allowed-name list explicitly records all identifiable characters", () => {
   const instruction = makeInstruction({ names:[] });
-  assert.match(instruction, /No preset list: include every identifiable named character/);
-  assert.match(instruction, /When no preset list is supplied, record every identifiable named character/);
+  assert.match(instruction, /미리 지정된 이름 없음: 식별 가능한 이름 있는 인물을 모두 기록/);
+  assert.match(instruction, /미리 지정된 이름 목록이 없다면 .*인물을 모두 기록한다/);
 });
 
 test("canonical extraction detects marks in nested Risu content and supports is_user", () => {
