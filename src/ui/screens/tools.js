@@ -15,7 +15,6 @@ import { reload } from './modules.js';
 import { renderPresets } from './presets.js';
 import { renderLoreLog } from './lorelog.js';
 import { renderPersonaBuilder } from './personabuilder.js';
-import { renderCharSplit } from './charsplit.js';
 
 export function tile(ic, title, desc, onClick, id) {
   return h(
@@ -53,7 +52,6 @@ export function renderTools(ctx) {
   if (ctx.state.sub === "presets") return renderPresets(ctx);
   if (ctx.state.sub === "lorelog") return renderLoreLog(ctx);
   if (ctx.state.sub === "personabuilder") return renderPersonaBuilder(ctx);
-  if (ctx.state.sub === "charsplit") return renderCharSplit(ctx);
   if (ctx.state.sub === "patchmaker") {
     ctx.go("dev", "patchmaker");
     return;
@@ -66,7 +64,6 @@ export function renderTools(ctx) {
     h(
       "div",
       { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px" },
-      tile("character", "캐릭터 분리", "여러 인물이 나오는 봇에서 한 인물과의 관계를 요약해 새 봇으로 만들기", () => ctx.go("tools", "charsplit"), "rb-tool-charsplit"),
       tile("preset", "프리셋", "켜고 끌 모듈 조합·순서를 묶어 저장하고 버튼 하나로 바꾸기, 모바일·PC 자동 전환, 공유 코드", () => ctx.go("tools", "presets"), "rb-tool-presets"),
       tile("character", "페르소나 빌더", "양식에 맞춰 칸을 채워 페르소나 설명 만들기, AI로 전체·빈 칸·부분 고치기 (영어 출력 + 번역 보기), 양식·AI 프리셋 공유", () => ctx.go("tools", "personabuilder"), "rb-tool-personabuilder"),
       tile("book", "로어북 로그", "응답마다 어떤 로어북이 들어갔는지 보기 (AI 응답 아래 버튼으로도)", () => ctx.go("tools", "lorelog"), "rb-tool-lorelog"),

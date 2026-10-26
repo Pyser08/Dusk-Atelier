@@ -17,4 +17,3 @@ export { Busy, backupSnapshot, isGenerating, restoreFromBackup } from './safety.
 export { buildRisum, moduleJson, rpackEncode, safeFileName } from './export.js';
 export { crc32, createZip } from './zipwrite.js';
 
-export { MARK as CHARSPLIT_MARK, normalizeMarks, stripMarksForPrompt, hideMarksForDisplay, lastTime, scanChat, mergeScans, chunkEntries, pickLore, summaryPrompt, mergePrompt, profilePrompt, greetingPrompt } from "./charsplit.js";

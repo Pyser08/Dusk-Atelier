@@ -11,8 +11,6 @@ import { CSS2 } from './ui/styles.js';
 import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets } from './data/presets.js';
 import { createLoreRuntime } from './data/lorerules.js';
 import { createLoreLog } from './data/lorelog.js';
-import { createCharSplit } from './data/charsplit.js';
-import { createRegression } from './data/regression.js';
 import { createEpisodicMemory } from './data/episodicmemory.js';
 import { restoreActiveTheme } from './ui/screens/themestudio.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
@@ -38,9 +36,6 @@ async function start() {
   const wrapped = { setCharacterToIndex: friendly((...a) => raw.setCharacterToIndex(...a)), setDatabaseLite: friendly((...a) => raw.setDatabaseLite(...a)) };
   const api = new Proxy(raw, { get: (t, k) => k in wrapped ? wrapped[k] : t[k] });
   console.log(`[${TITLE}] 진입 경로`, globalThis.__RBM_ENTRY__ ?? "normal");
-  // 레거시 UI 경로에서도 캐릭터 분리 훅은 필요하므로 조기 종료 전에 초기화한다.
-  const charSplit = createCharSplit(api);
-  charSplit.start().catch((e) => console.log(`[${TITLE}] 캐릭터 분리 시작 실패: ${e?.message ?? e}`));
   const episodicMemory = createEpisodicMemory(api);
   episodicMemory.start().catch((e) => console.log(`[${TITLE}] 장기기억 시작 실패: ${e?.message ?? e}`));
   const ICON = iconMarkup("module", 20);
@@ -150,18 +145,7 @@ async function start() {
   app.ctx.quickImport = quickImport;
   app.ctx.loreRuntime = loreRuntime;
   app.ctx.loreLog = loreLog;
-  app.ctx.charSplit = charSplit;
   app.ctx.episodicMemory = episodicMemory;
-  const regression = createRegression(api, {
-    notify: (message, opts) => app?.ctx.toast(message, opts),
-    onSaved: async () => {
-      if (!app?.ctx) return;
-      app.ctx.state.charsDirty = true;
-      if (app.ctx.state.tab === "characters") app.ctx.refresh();
-    }
-  });
-  app.ctx.regression = regression;
-  regression.start().catch((e) => console.log("[Dusk 회귀] 버튼 초기화 실패", e?.message ?? e));
   refreshPersonaHandlers().catch(() => {
   });
   (async () => {

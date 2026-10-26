@@ -1,4 +1,4 @@
-import { extractMessageText, isUserMessage, stripMarksForPrompt } from "../engine/charsplit.js";
+import { extractMessageText, isUserMessage, stripMarksForPrompt } from "../engine/textmarks.js";
 
 export const EPISODIC_MEMORY_KEY = "dusk.episodic-memory.v1";
 export const MEMORY_GRADES = Object.freeze(["E", "D", "C", "B", "A", "S"]);
