@@ -29,19 +29,20 @@ export function createBardWikiBackend(api, { store, log = (...a) => console.log(
     const grades = { ...(snap.grades ?? {}) };
     const items = (snap.docs ?? []).filter((d) => d.grade == null && !grades[d.id] && d.bullets?.length).map((d) => ({ id: d.id, act: d.bullets.join(" / ").slice(0, 600), hash: d.hash }));
     if (!items.length) return snap;
-    const canWrite = typeof api?.bardWiki?.setGrade === "function"; let writable = canWrite, wrote = 0;
+    const canWrite = typeof api?.bardWiki?.setGrade === "function"; let writable = canWrite, wrote = 0, denied = false, failed = "";
     for (let i = 0; i < items.length; i += 30) {
       const part = items.slice(i, i + 30), got = parseGrades(await runAI(api, gradeMessages(part), model, signal));
       for (const it of part) {
         const r = got[it.id]; if (!r) continue;
         grades[it.id] = r;
         if (writable && it.hash) {
-          try { const res = await api.bardWiki.setGrade({ documentId: it.id, grade: r.score, gradeBy: "ai", expectedContentHash: it.hash }); if (res == null) writable = false; else wrote++; }  // null = 권한 거부 → 더 묻지 않음
-          catch (e) { log("위키 등급 저장 실패", it.id, e?.message ?? e); }  // 문서가 바뀌었거나 사용자 등급이면 캐시만 사용
+          try { const res = await api.bardWiki.setGrade({ documentId: it.id, grade: r.score, gradeBy: "ai", expectedContentHash: it.hash }); if (res == null) { writable = false; denied = true; } else wrote++; }  // null = 권한 거부 → 더 묻지 않음
+          catch (e) { failed = String(e?.message ?? e); log("위키 등급 저장 실패", it.id, failed); }  // 문서가 바뀌었거나 사용자 등급이면 캐시만 사용
         }
       }
     }
-    const next = { ...snap, grades, hash: wrote ? "" : snap.hash }; await api.pluginStorage.setItem(key(chaId, chatId), JSON.stringify(next)); return next;  // hash 비움 → 다음 조회에서 위키 등급을 다시 읽음
+    const next = { ...snap, grades, hash: wrote ? "" : snap.hash }; await api.pluginStorage.setItem(key(chaId, chatId), JSON.stringify(next));
+    return { ...next, lastGrade: { total: items.length, wrote, cacheOnly: items.length - wrote, reason: !canWrite ? "no-api" : denied ? "denied" : failed ? "failed" : "", error: failed } };  // hash 비움 → 다음 조회에서 위키 등급을 다시 읽음
   }
   // 사용자가 위키 문서에 직접 등급을 지정(gradeBy:"user"). score: 0~9 또는 null(해제). 지원 안 하면 throw, 권한 거부면 false.
   async function setGradeByUser(chaId, chatId, docId, score) {
