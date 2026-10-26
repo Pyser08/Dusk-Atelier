@@ -75,8 +75,8 @@ test("situation instructions avoid repeating unchanged scenes and use previous c
 
 test("empty allowed-name list explicitly records all identifiable characters", () => {
   const instruction = makeInstruction({ names:[] });
-  assert.match(instruction, /EMPTY — record interactions for every identifiable named character/);
-  assert.match(instruction, /when it is empty, include all identifiable named characters/);
+  assert.match(instruction, /No preset list: include every identifiable named character/);
+  assert.match(instruction, /When no preset list is supplied, record every identifiable named character/);
 });
 
 test("canonical extraction detects marks in nested Risu content and supports is_user", () => {
@@ -122,7 +122,7 @@ test("beforeRequest removes hidden marks without dropping non-text payload parts
   const output=await hook(input,"model");
   assert.equal(output[1].content[0].text,"Hello");
   assert.equal(output[1].content[1].url,"data:image/png;base64,abc");
-  assert.match(output[0].content,/Dusk Atelier – interaction and situation marks/);
+  assert.match(output[0].content,/Dusk Atelier \| STORY METADATA — FOLLOW QUIETLY/);
   assert.match(output[0].content,/SITUATION MARKS — record scene state/);
 });
 
