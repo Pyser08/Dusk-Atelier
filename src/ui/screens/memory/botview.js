@@ -12,9 +12,9 @@ import { renderBotSettings } from "./settings.js";
 
 const TABS = [["people", "등장인물"], ["scenes", "상황"], ["timeline", "시간선"], ["open", "열린 항목"], ["rels", "관계"], ["cards", "카드"], ["compose", "새 봇 만들기"]];
 
-export async function renderBotView(ctx, host, { redraw, back }) {
+export async function renderBotView(ctx, host, { redraw, redrawView, back, quiet }) {
   const m = mem(ctx), M = ctx.memory;
-  replace(host, loading("불러오는 중", { rows: 4 }));
+  if (!quiet) replace(host, loading("불러오는 중", { rows: 4 }));
   const bots = await loadBots(ctx), bot = bots.find((b) => b.id === m.botId);
   if (!bot) { m.botId = ""; return replace(host, h("div", { class: "rb-empty" }, "봇을 찾지 못했어요. 목록을 새로고침해 주세요.")); }
   const chats = await loadChats(ctx, bot);
@@ -25,7 +25,7 @@ export async function renderBotView(ctx, host, { redraw, back }) {
   const { folder, backend, idx } = view, caps = M.capabilities(backend.id);
   const botCfg = idx.bots[bot.id] ?? { on: true };
   const autoOn = botCfg.on !== false && !botCfg.paused;
-  const env = { ctx, bot, chats, chatItem, folder, view, backend, caps, idx, redraw, sess: M.runner?.session?.().calls ?? 0 };
+  const env = { ctx, bot, chats, chatItem, folder, view, backend, caps, idx, redraw, redrawView: redrawView ?? redraw, sess: M.runner?.session?.().calls ?? 0 };
 
   const sw = switchEl(autoOn && caps.analyze, { label: "자동 기록", disabled: !caps.analyze, onChange: async (v, el) => {
     setSwitch(el, v);
@@ -44,8 +44,8 @@ export async function renderBotView(ctx, host, { redraw, back }) {
     backend.duplicate ? note("warn", "BardWiki와 장기기억이 중복돼요. 비용이 두 번 들 수 있어요.") : null);
 
   const chatRow = chats.length > 12
-    ? h("select", { class: "rb-input", "aria-label": "채팅 선택", onChange: (e) => { m.chatIndex = +e.target.value; m.personKey = ""; redraw(); } }, chats.map((c) => h("option", { value: c.index, selected: c.index === m.chatIndex }, `${c.index + 1}. ${c.name} (${c.count})`)))
-    : h("div", { class: "rb-mem-chats", role: "tablist", "aria-label": "채팅 선택" }, chats.map((c) => h("button", { type: "button", class: "rb-chip", "aria-pressed": c.index === m.chatIndex ? "true" : "false", onClick: () => { m.chatIndex = c.index; m.personKey = ""; redraw(); } }, `${c.index + 1}. ${c.name}`, h("small", null, `${c.count}`))));
+    ? h("select", { class: "rb-input", "aria-label": "채팅 선택", onChange: (e) => { m.chatIndex = +e.target.value; m.personKey = ""; (redrawView ?? redraw)(); } }, chats.map((c) => h("option", { value: c.index, selected: c.index === m.chatIndex }, `${c.index + 1}. ${c.name} (${c.count})`)))
+    : h("div", { class: "rb-mem-chats", role: "tablist", "aria-label": "채팅 선택" }, chats.map((c) => h("button", { type: "button", class: "rb-chip", "aria-pressed": c.index === m.chatIndex ? "true" : "false", onClick: () => { m.chatIndex = c.index; m.personKey = ""; (redrawView ?? redraw)(); } }, `${c.index + 1}. ${c.name}`, h("small", null, `${c.count}`))));
 
   // '설정' 폴드: 자동 기록 토글 옆 버튼으로 여닫는다. 내용은 지난 대화 분석·제외 이름·초기화·상태.
   const setBtn = btn("설정", { size: "sm", icon: "sliders", onClick: () => toggleSettings() });
@@ -53,7 +53,7 @@ export async function renderBotView(ctx, host, { redraw, back }) {
   const setPanel = h("div", { class: "rb-mem-fold-panel", hidden: !m.settingsOpen }, renderBotSettings(env));
   const toggleSettings = () => { m.settingsOpen = !m.settingsOpen; setPanel.hidden = !m.settingsOpen; setBtn.setAttribute("aria-expanded", m.settingsOpen ? "true" : "false"); };
   const body = h("div", { class: "rb-mem-body" });
-  const tabs = h("div", { class: "rb-mem-tabs", role: "tablist" }, TABS.map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { m.tab = id; m.page = 1; redraw(); } }, label)));
+  const tabs = h("div", { class: "rb-mem-tabs", role: "tablist" }, TABS.map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { if (m.tab === id) return; m.tab = id; m.page = 1; (redrawView ?? redraw)(); } }, label)));
   replace(host,
     h("div", { class: "rb-mem-head" }, h("span", { class: "rb-mem-back" }, btn("뒤로", { size: "sm", icon: "back", onClick: back })), h("h2", null, bot.character.name || "이름 없는 캐릭터"), h("span", { class: ["rb-mem-mode", backend.id], title: backend.reason }, backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드"), h("span", { style: "flex:1" }), sw, setBtn),
     setPanel, status, chatRow, tabs, body);

@@ -1,4 +1,4 @@
-// v1.6.3 장부 탭: 열린 항목 · 관계 변화 · 세계 시간선. 로컬 저장소일 때만 고칠 수 있다.
+// v1.6.2 장부 탭: 열린 항목 · 관계 변화 · 세계 시간선. 로컬 저장소일 때만 고칠 수 있다.
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { btn, badge, note, promptDialog } from "../../kit.js";

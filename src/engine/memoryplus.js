@@ -1,4 +1,4 @@
-// v1.6.3 장기기억 확장(순수): 지식 경계·열린 항목·관계 변화·세계 시간선·기억 강화/망각·원문 발췌 복원.
+// v1.6.2 장기기억 확장(순수): 지식 경계·열린 항목·관계 변화·세계 시간선·기억 강화/망각·원문 발췌 복원.
 import { similarity } from "./memorygrade.js";
 import { extractMessageText, hashText } from "./chattext.js";
 

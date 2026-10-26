@@ -17,7 +17,13 @@ export async function loadBots(ctx, force = false) {
   m.bots = loaded.list.map((c, index) => c && !c.trashTime ? { character: c, index, id: String(c.chaId ?? c.id ?? index) } : null).filter(Boolean);
   return m.bots;
 }
-export async function loadChats(ctx, bot) {
+// 채팅 본문 읽기가 가장 느리다: 봇별로 20초 동안 재사용한다(봇을 열 때·force로 비운다).
+export async function loadChats(ctx, bot, force = false) {
+  const m = mem(ctx), c = (m.chatCache ??= {}), hit = c[bot.id];
+  if (!force && hit && Date.now() - hit.t < 20000 && hit.n === (bot.character.chats?.length ?? 0)) return hit.v;
+  const v = await readChats(ctx, bot); c[bot.id] = { t: Date.now(), n: v.length, v }; return v;
+}
+async function readChats(ctx, bot) {
   const n = bot.character.chats?.length ?? 0;
   return Promise.all(Array.from({ length: n }, async (_, index) => {
     let chat = null; try { chat = await ctx.api.getChatFromIndex(bot.index, index); } catch {}

@@ -65,7 +65,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     chars.push(c.text); used += c.tokens; manifest.included.push({ kind: "person", name: c.name, tokens: c.tokens, group: c.group }); manifest.recordIds.push(...c.ids); included.add(norm(c.name));
   }
   if (chars.length) lines.push("Characters (current state):", ...chars);
-  if (plus) {  // v1.6.3: 열린 항목 · 관계 변화량 · 지식 경계 · 원문 발췌. 각각 자기 예산 안에서 줄 단위로, 전체 상한을 넘으면 통째로 뺀다.
+  if (plus) {  // v1.6.2: 열린 항목 · 관계 변화량 · 지식 경계 · 원문 발췌. 각각 자기 예산 안에서 줄 단위로, 전체 상한을 넘으면 통째로 뺀다.
     const rel = new Set([...included, ...inScene]);
     const add = (kind, title, rows, capTokens) => {
       const keep = []; let n = estimateTokens(title);
