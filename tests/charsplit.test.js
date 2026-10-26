@@ -123,7 +123,7 @@ test("beforeRequest removes hidden marks without dropping non-text payload parts
   assert.equal(output[1].content[0].text,"Hello");
   assert.equal(output[1].content[1].url,"data:image/png;base64,abc");
   assert.match(output[0].content,/Dusk Atelier \| STORY METADATA — FOLLOW QUIETLY/);
-  assert.match(output[0].content,/SITUATION MARKS — record scene state/);
+  assert.match(output[0].content,/SCENE \(S\) — shared state, not a beat-by-beat transcript/);
 });
 
 test("normalizer closes an unfinished C block and keeps a single current time mark", () => {
