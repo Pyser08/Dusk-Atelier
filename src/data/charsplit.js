@@ -1,7 +1,7 @@
 import { normalizeMarks, hideMarksForDisplay, extractMessageText, isUserMessage } from "../engine/charsplit.js";
 export const CHARSPLIT_KEY="dusk.charsplit.v1";
 export const CHARSPLIT_DEFAULTS=Object.freeze({v:1,enabled:true,showTime:false,debug:false,bots:{},ai:{mode:"submodel",staticModel:"",extra:"",lang:"English"}});
-const txt=v=>typeof v==="string"?v:Array.isArray(v)?v.map(p=>typeof p==="string"?p:txt(p?.text??p?.data??p?.content??"")).join("\\n"):v&&typeof v==="object"?txt(v.text??v.data??v.content??v.mes??v.message??""):String(v??""), idOf=c=>String(c?.chaId??c?.id??"");
+const txt=v=>typeof v==="string"?v:Array.isArray(v)?v.map(p=>typeof p==="string"?p:txt(p?.text??p?.data??p?.content??"")).join("\n"):v&&typeof v==="object"?txt(v.text??v.data??v.content??v.mes??v.message??""):String(v??""), idOf=c=>String(c?.chaId??c?.id??"");
 const stripMarkText=v=>String(v??"").replace(/⟦C:[^⟧]+⟧|⟦\\/C⟧|⟦S⟧|⟦\\/S⟧|⟦T:[^⟧]*⟧/g,"");
 const mapTextParts=(value,fn)=>{
  if(typeof value==="string")return fn(value);
@@ -14,11 +14,35 @@ const mapTextParts=(value,fn)=>{
  return value;
 };
 const stripMessageMarks=m=>{
- const key=["content","data","text","mes","message"].find(k=>m?.[k]!=null&&txt(m[k]).trim());
+ const markPattern=/⟦(?:C:|\\/C|S⟧|\\/S|T:)/;
+ const keyWithMarks=["content","data","text","mes","message"].find(k=>m?.[k]!=null&&markPattern.test(txt(m[k])));
+ const key=keyWithMarks??["content","data","text","mes","message"].find(k=>m?.[k]!=null&&txt(m[k]).trim());
  if(!key)return {message:{...m},counts:{C:0,S:0,T:0}};
- const raw=extractMessageText(m),counts={C:(raw.match(/⟦C:[^⟧]+⟧|⟦\\/C⟧/g)||[]).length,S:(raw.match(/⟦S⟧|⟦\\/S⟧/g)||[]).length,T:(raw.match(/⟦T:[^⟧]*⟧/g)||[]).length};
+ const raw=txt(m[key]),counts={C:(raw.match(/⟦C:[^⟧]+⟧|⟦\\/C⟧/g)||[]).length,S:(raw.match(/⟦S⟧|⟦\\/S⟧/g)||[]).length,T:(raw.match(/⟦T:[^⟧]*⟧/g)||[]).length};
  const out={...m};out[key]=mapTextParts(m[key],stripMarkText);
  return {message:out,counts};
+};
+const appendTextToMessage=(m,suffix)=>{
+ const key=["content","data","text","mes","message"].find(k=>m?.[k]!=null);
+ if(!key){m.content=suffix;return}
+ const value=m[key];
+ if(typeof value==="string"){m[key]=value+"\n\n"+suffix;return}
+ if(Array.isArray(value)){
+  let added=false;
+  m[key]=value.map(part=>{
+   if(!added&&part&&typeof part==="object"&&typeof part.text==="string"){added=true;return {...part,text:part.text+"\n\n"+suffix}}
+   return part;
+  });
+  if(!added)m[key].push({type:"text",text:suffix});
+  return;
+ }
+ if(value&&typeof value==="object"){
+  const field=["text","data","content"].find(k=>typeof value[k]==="string");
+  if(field)m[key]={...value,[field]:value[field]+"\n\n"+suffix};
+  else m[key]={type:"text",text:txt(value)+"\n\n"+suffix};
+  return;
+ }
+ m[key]=suffix;
 };
 export async function loadCharSplit(api){try{const raw=await api.pluginStorage.getItem(CHARSPLIT_KEY),v=typeof raw==="string"?JSON.parse(raw):raw;return{...CHARSPLIT_DEFAULTS,...(v&&typeof v==="object"?v:{}),bots:{...(v?.bots??{})},ai:{...CHARSPLIT_DEFAULTS.ai,...(v?.ai??{})}}}catch{return{...CHARSPLIT_DEFAULTS,bots:{},ai:{...CHARSPLIT_DEFAULTS.ai}}}}
 export async function saveCharSplit(api,v){const out={...CHARSPLIT_DEFAULTS,...v,v:1,bots:v?.bots??{},ai:{...CHARSPLIT_DEFAULTS.ai,...(v?.ai??{})}};await api.pluginStorage.setItem(CHARSPLIT_KEY,JSON.stringify(out));return out}
