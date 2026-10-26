@@ -122,7 +122,7 @@ test("beforeRequest removes hidden marks without dropping non-text payload parts
   const output=await hook(input,"model");
   assert.equal(output[1].content[0].text,"Hello");
   assert.equal(output[1].content[1].url,"data:image/png;base64,abc");
-  assert.match(output[0].content,/Dusk Atelier \| STORY METADATA — FOLLOW QUIETLY/);
+  assert.match(output[0].content, /Dusk Atelier \\| 이야기 메타데이터 — 조용히 따를 것/);
   assert.match(output[0].content,/SCENE \(S\) — shared state, not a beat-by-beat transcript/);
 });
 
