@@ -50,14 +50,14 @@ export function makeInstruction({names=[],last="",lastSituation=""}={}){return["
 export function createCharSplit(api,{log=(...a)=>console.log("[Dusk 캐릭터 분리]",...a)}={}){let settings=null;const conf=async()=>settings??=await loadCharSplit(api),current=async()=>{try{const i=await api.getCurrentCharacterIndex();return i>=0?await api.getCharacterFromIndex(i):null}catch{return null}},active=(s,c)=>s.enabled!==false&&s.bots?.[idOf(c)]?.on!==false;
 function confirmedTimeBeforeLatestUser(messages){
 let last="", latestUser=-1;
-for(let i=0;i<messages.length;i++){const m=messages[i]??{};if(m.role==="user"||m.isUser)latestUser=i}
+for(let i=0;i<messages.length;i++){const m=messages[i]??{};if(isUserMessage(m))latestUser=i}
 const limit=latestUser>=0?latestUser:Math.max(-1,messages.length-2);
 for(let i=0;i<=limit;i++){const m=messages[i]??{};for(const x of extractMessageText(m).matchAll(/⟦T:([^⟧]*)⟧/g))last=x[1]}
 return last
 }
 function confirmedSituationBeforeLatestUser(messages){
 let last="", latestUser=-1;
-for(let i=0;i<messages.length;i++){const m=messages[i]??{};if(m.role==="user"||m.isUser)latestUser=i}
+for(let i=0;i<messages.length;i++){const m=messages[i]??{};if(isUserMessage(m))latestUser=i}
 const limit=latestUser>=0?latestUser:Math.max(-1,messages.length-2);
 for(let i=0;i<=limit;i++){const m=messages[i]??{};for(const x of txt(m.content??m.data??m.text).matchAll(/⟦S⟧([\s\S]*?)⟦\/S⟧/g))if(x[1].trim())last=x[1].trim()}
 return last
