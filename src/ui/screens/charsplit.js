@@ -20,7 +20,7 @@ const actions = (...children) => h("div", { style: "display:flex;gap:8px;flex-wr
 export async function renderCharSplit(ctx) {
   let d = drafts.get(ctx);
   if (!d) {
-    d = { step:0, bots:[], botId:"", chats:[], selected:[], people:[], person:"", entries:[], lore:[], aliases:{}, record:"", desc:"", greeting:"", lang:"English", extra:"", mode:"submodel", model:"", busy:false, creating:false };
+    d = { step:0, bots:[], botId:"", chats:[], selected:[], people:[], person:"", entries:[], lore:[], loreReady:false, aliases:{}, record:"", desc:"", greeting:"", lang:"English", extra:"", mode:"submodel", model:"", busy:false, creating:false };
     drafts.set(ctx, d);
   }
   const api = ctx.api;
@@ -32,7 +32,7 @@ export async function renderCharSplit(ctx) {
     h("span", { class:"rb-badge k-good" }, settings.enabled === false ? "전역 꺼짐" : "기본 켜짐")
   ));
   root.appendChild(note("info", "인물과 {{user}}의 상호작용을 모아 관계 기록을 만들고, 로어북과 함께 단일 캐릭터 봇으로 분리해요. 원본 봇과 채팅은 수정하지 않아요."));
-  const canStep = i => i === 0 || (i === 1 && d.people.length > 0) || ((i === 2 || i === 3) && !!d.person && d.entries.length > 0) || (i === 4 && !!d.record.trim());
+  const canStep = i => i === 0 || (i === 1 && d.people.length > 0) || (i === 2 && !!d.person && d.entries.length > 0) || (i === 3 && !!d.person && d.entries.length > 0 && d.loreReady) || (i === 4 && !!d.record.trim());
   root.appendChild(actions(...["① 봇·채팅","② 인물","③ 로어북","④ AI 요약","⑤ 새 봇"].map((label, i) =>
     btn(label, { kind:d.step === i ? "primary" : "", disabled:!canStep(i) || (d.busy && d.step !== i), onClick:() => { if (!d.busy && canStep(i)) { d.step = i; renderCharSplit(ctx); } } })
   )));
@@ -71,7 +71,7 @@ async function stepChoose(ctx, d, settings, body, nav) {
     d.botSearch = botSearch.value;
     botSelect.replaceChildren(...makeBotOptions());
   });
-  botSelect.addEventListener("change", () => { d.botId = botSelect.value; d.chats = []; d.selected = []; d.people = []; d.person = ""; d.entries = []; d.lore = []; d.record = ""; d.desc = ""; d.greeting = ""; renderCharSplit(ctx); });
+  botSelect.addEventListener("change", () => { d.botId = botSelect.value; d.chats = []; d.selected = []; d.people = []; d.person = ""; d.entries = []; d.lore = []; d.loreReady = false; d.record = ""; d.desc = ""; d.greeting = ""; renderCharSplit(ctx); });
   const bot = d.bots.find(c => idOf(c) === d.botId);
   if (bot && !d.chats.length) {
     d.chats = (bot.chats ?? []).map((c, i) => ({ ...c, _i:i }));
@@ -156,7 +156,7 @@ async function stepChoose(ctx, d, settings, body, nav) {
       for (const [name, entries] of Object.entries(scan.chars)) (people[name] ??= []).push(...entries);
     }
     d.people = Object.entries(people).map(([name, entries]) => ({ name, entries, count:entries.length })).sort((a,b) => b.count-a.count);
-    d.person = d.people[0]?.name ?? ""; d.entries = d.people[0]?.entries ?? [];
+    d.person = d.people[0]?.name ?? ""; d.entries = d.people[0]?.entries ?? []; d.lore = []; d.loreReady = false; d.record = ""; d.desc = ""; d.greeting = "";
     nav(1);
   }}))));
 }
@@ -164,7 +164,7 @@ async function stepChoose(ctx, d, settings, body, nav) {
 function stepPerson(ctx, d, body, nav) {
   const list = h("div", { style:"display:flex;flex-direction:column;gap:6px" });
   for (const person of d.people) {
-    list.appendChild(h("button", { class:"rb-row", style:"background:var(--rb-surf);padding:10px", onClick:() => { d.person=person.name; d.entries=person.entries; renderCharSplit(ctx); } },
+    list.appendChild(h("button", { class:"rb-row", style:"background:var(--rb-surf);padding:10px", onClick:() => { d.person=person.name; d.entries=person.entries; d.lore=[]; d.loreReady=false; d.record=""; d.desc=""; d.greeting=""; renderCharSplit(ctx); } },
       h("span", { class:"txt" }, h("span", { class:"name" }, person.name), h("span", { class:"meta" }, "마크 문장 " + person.count + "개"))
     ));
   }
@@ -177,6 +177,7 @@ function stepPerson(ctx, d, body, nav) {
     actions(btn("← 이전", { onClick:() => nav(0) }), btn("로어북 선택 →", { kind:"primary", disabled:!d.person, onClick:() => {
       const bot = d.bots.find(c => idOf(c) === d.botId);
       d.lore = pickLore(bot?.globalLore ?? [], d.person, { aliases:d.aliases ?? {} });
+      d.loreReady = true;
       nav(2);
     }}))
   ));
