@@ -26,9 +26,9 @@ async function render(ctx, mode) {
     state.memoryChatIndex = 0;
   }
   const character = selected?.character ?? null, charIndex = selected?.index ?? -1;
-  const chatCount = Math.max(1, Array.isArray(character?.chats) ? character.chats.length : 0);
+  const chatCount = Array.isArray(character?.chats) ? character.chats.length : 0;
   let chatIndex = Number.isInteger(state.memoryChatIndex) ? state.memoryChatIndex : 0;
-  if (chatIndex < 0 || chatIndex >= chatCount) chatIndex = 0;
+  if (chatCount === 0) chatIndex = -1; else if (chatIndex < 0 || chatIndex >= chatCount) chatIndex = 0;
   state.memoryChatIndex = chatIndex;
   const chats = await Promise.all(Array.from({length:chatCount}, async (_,index) => {
     const meta = character?.chats?.[index]; let chat = null;
@@ -65,7 +65,7 @@ async function render(ctx, mode) {
       h('span',{class:'txt'},h('span',{class:'name'},'채팅 '+(item.index+1)),h('span',{class:'meta'},item.name !== '채팅 '+(item.index+1) ? item.name : folder ? when(folder.updatedAt) : '기록 없음'),
         h('span',{class:'meta'},folder ? Object.keys(folder.characters ?? {}).length+'명 · '+totalRecords(folder)+'개 행동 · '+(folder.situations?.length ?? 0)+'개 상황':'아직 기록 없음')));
   }));
-  const analyze = btn('선택한 채팅 분석',{kind:'primary',icon:'sparkles',onClick:async()=>{
+  const analyze = btn('선택한 채팅 분석',{kind:'primary',icon:'sparkles',disabled:!character || !chosen?.chat,onClick:async()=>{
     try { if(!ctx.episodicMemory?.analyzeSelected) throw new Error('분석 기능이 초기화되지 않았어요.'); await ctx.episodicMemory.analyzeSelected(charIndex,chatIndex);ctx.toast('선택한 채팅 분석이 끝났어요.');await render(ctx,mode); }
     catch(e){ctx.toast('분석 실패: '+(e?.message ?? e),{error:true,seconds:8});await render(ctx,mode);}
   }});
