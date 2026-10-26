@@ -63,18 +63,34 @@ function extractRunAIText(value, depth = 0) {
 export async function runAI(api, messages, pick, signal) {
   const opts = { messages, mode: pick?.mode && pick.mode !== "static" ? pick.mode : "submodel", allowPlugins: true };
   if (pick?.mode === "static" && pick.staticModel) opts.staticModel = pick.staticModel;
+  const describe = (value) => {
+    if (typeof value === "string") return value;
+    if (value == null) return "";
+    if (Array.isArray(value)) return value.map(describe).filter(Boolean).join("\\n");
+    if (typeof value === "object") {
+      if (typeof value.result === "string") return value.result;
+      if (typeof value.content === "string") return value.content;
+      if (typeof value.text === "string") return value.text;
+      if (typeof value.output_text === "string") return value.output_text;
+      const choice = value.choices?.[0]?.message?.content ?? value.choices?.[0]?.text;
+      if (typeof choice === "string") return choice;
+      if (Array.isArray(choice)) return choice.map((part) => typeof part === "string" ? part : part?.text ?? "").join("\\n");
+      if (Array.isArray(value.content)) return value.content.map((part) => typeof part === "string" ? part : part?.text ?? "").join("\\n");
+    }
+    return "";
+  };
   let last = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     if (signal?.aborted) throw new Error("AI 작업을 취소했어요.");
     try {
       const res = await api.runLLMModel(opts);
       if (signal?.aborted) throw new Error("AI 작업을 취소했어요.");
-      const text = extractRunAIText(res);
+      const text = describe(res).trim();
       if (text) return text;
-      const shape = res && typeof res === "object"
-        ? `type=${String(res.type ?? "없음")}, keys=${Object.keys(res).slice(0, 12).join(",") || "없음"}`
-        : `type=${typeof res}`;
-      last = new Error(`보조 모델 응답에 읽을 수 있는 본문이 없어요 (${shape}).`);
+      const detail = res && typeof res === "object"
+        ? [res.type, res.error, res.message, res.result].filter((v) => typeof v === "string" && v.trim()).join(": ").slice(0, 500)
+        : "";
+      last = new Error(detail || (res == null ? "RisuAI가 빈 응답을 반환했어요." : `응답 본문을 읽을 수 없어요 (형식: ${typeof res}, 상태: ${res?.type ?? "없음"}).`));
     } catch (e) {
       if (signal?.aborted) throw e;
       last = e;
