@@ -2,7 +2,7 @@
 
 > 이전 마크 방식 계획(`PLAN-v1.6.2-charsplit.md`)은 **폐기**. 이 문서가 기준.
 > 기반: PR #4 (`feat/character-split-v1.6.2`) 위에서 이어서 개발. 마크(`⟦C⟧ ⟦T⟧ ⟦S⟧`) 관련 코드는 전부 제거.
-> **개정(2026-10-26)**: ① 자동 기록 기본 켜짐 ② 채팅 되돌리기 삭제 → "저장된 데이터로 새 채팅 만들기"만 ③ 저장 기록을 **장기기억으로 프롬프트에 주입**(§4A) ④ **리스바드 BardWiki 연동**(§4B). 변경 부분에는 [개정] 표시.
+> **개정(2026-10-26)**: ① 자동 기록 기본 켜짐 ② 채팅 되돌리기 삭제 → "저장된 데이터로 새 채팅 만들기"만 ③ 저장 기록을 **장기기억으로 프롬프트에 주입**(§4A) ④ **리스바드 BardWiki 연동**(§4B). 변경 부분에는 [개정] 표시. ⑤ **리스바드 소스(v0.9.83 이후 main)를 직접 확인해 §4B를 확정**(`risuai.bardWiki` 플러그인 API 존재).
 
 ## 0. 한 줄 요약
 
@@ -64,10 +64,10 @@ AI 응답이 끝날 때마다 **서브 모델이** 그 응답과 직전 대화�
 ```
 
 ### 2.3 메시지 앵커 + 정합성 (`engine/memoryreconcile.js`, 순수 함수)
-- `at` = `chat.message` 배열 인덱스, `h` = 그 메시지 본문 앞 200자의 해시(`engine/hash.js` 재사용).
+- `at` = `chat.message` 배열 인덱스, `mid` = 메시지의 **`chatId`**(RisuAI `Message.chatId`, 있으면 최우선 앵커. 리스바드 BardWiki 사건 문서의 `sourceMessageIds`와도 같은 값), `h` = 본문 앞 200자 해시(`engine/hash.js` 재사용, `chatId`가 없거나 `inherited:`로 시작하거나 중복일 때 대체 앵커). 기록·상황에는 `{at, mid?, h}`를 모두 저장.
 - 분석 전 `reconcile(folder, messages)`:
-  1. 각 기록/상황의 `(at,h)`가 맞으면 유지.
-  2. 인덱스가 어긋났지만 같은 `h`가 다른 인덱스에 있으면 `at` 갱신(중간 삭제 대응).
+  1. 각 기록/상황의 `mid`(있으면) 또는 `(at,h)`가 맞으면 유지.
+  2. 인덱스가 어긋났지만 같은 `mid`/`h`가 다른 인덱스에 있으면 `at` 갱신(중간 삭제 대응).
   3. 어디에도 없으면 `orphan:true`(다시 생성/삭제된 응답). UI에서는 기본 숨김, 설정에 "고아 기록 n개 정리" 버튼.
 - 다시 생성(리롤)하면 새 본문 해시가 달라 → 이전 기록은 자동으로 고아 처리, 새 응답이 새로 분석됨.
 
@@ -189,44 +189,74 @@ Characters:
 ### 4A.6 설정 추가
 `index.settings.inject = { on:true, fromTurn:2, targetTokens:1200, capTokens:2500, sceneTokens:300, recentSkip:8, position:"beforeLastUser" }`, `index.settings.loreRef = { on:false, tokens:600 }`.
 
-## 4B. 리스바드(RisuBard) 연동 — 저장소 백엔드 분리 [신규]
+## 4B. 리스바드(RisuBard) 연동 — BardWiki 사용 [개정·확정]
 
-리스바드에는 자체 **BardWiki**(마크다운 서사 메모리, 분석·검색·주입을 자체 수행)가 있다. 리스바드에서는 **중복 분석·중복 주입을 하지 않고** BardWiki를 쓴다.
+리스바드 소스를 직접 확인한 결과, **플러그인용 `risuai.bardWiki` API가 공식 제공**된다 (`docs/ko/bardwiki-plugin-api.md`, `src/ts/plugins/apiV3/risuai.d.ts`, `pluginBardWiki.ts`). 따라서 리스바드에서는 플러그인의 자체 분석·주입을 **끄고** BardWiki를 읽어서 쓴다.
 
-### 4B.1 백엔드 추상화 (`src/data/memorybackend.js`)
+### 4B.1 확인된 사실 (설계 전제)
+| 항목 | 내용 |
+|---|---|
+| 감지 | `typeof api.bardWiki?.getDocuments === "function"` (RisuAI 원본에는 없음). 보조로 `api.apiVersion` |
+| 읽기 | `getContext({query?})`, `getDocuments({types?, statuses?})` — **권한 창 없음**, 현재 캐릭터·**저장된 채팅 하나로 범위 고정**(다른 봇/채팅·임의 경로 지정 불가) |
+| 쓰기 | `saveDocument`, `setContextMode`, `trashDocument` — 처음 호출 때 사용자 권한 요청, 거부 시 `null`. 수정은 `expectedContentHash` 필수(해시 불일치 시 오류), 삭제는 휴지통 |
+| 문서 필드 | `id, type, status(active/superseded/retracted), supersededBy, title, aliases, relativePath, sourceMessageIds, created, updated, authoring(automatic/ai-assisted/manual), contextMode(always/auto/never), contentHash, links, content(마크다운)` |
+| 문서 유형 | `event, character, location, scene, faction, creature, item, concept, other` |
+| 앵커 | 사건 문서의 `sourceMessageIds` = 채팅 메시지의 `chatId` → **메시지 인덱스(`at`)로 변환 가능** (RisuBard `eventOrder.ts`와 같은 방식. `inherited:` 접두사 id는 무시, 중복 id는 모호하므로 제외) |
+| 분석 | 리스바드가 자체 수행(다음 사용자 메시지 성공 시 확정 분석). **플러그인이 분석을 트리거하거나 끝났는지 알림을 받을 방법은 없음** → 탭 열 때·새로고침 때 `getDocuments`로 확인 |
+| 주입 | 리스바드가 요청 컴파일러에서 직접 수행(고정 예산: 조회 목표/상한, 사건 예산, 문서당 예산). 플러그인이 getter로 읽는 채팅 복제본에는 `hypaV3Data.summaries`, `hypaV2Data.mainChunks`, `supaMemoryData`에 가상 컨텍스트가 **복제본에만** 붙고 저장 시 제거됨 |
+| 모드 | `getDocuments`는 위키가 마크다운 모드가 아니면 `[]` 반환 |
+| 본문 표제 | 사건 문서 `이야기 요약`(`Story Summary`) 아래 불릿이 요약. 인물 문서 `인물 핵심 / 관계와 신뢰 / 지식과 비밀 / 주요 전환 / 장비와 소지품`(영문: Identity / Relationships and Trust / Knowledge and Secrets / Major Transitions / Equipment and Possessions), 공통 `현재 상태(Current State)`, `작중 행적(Story History)`. **표제는 위키 작성 언어에 따라 달라지므로 ko·en 모두 허용**하고, 못 찾으면 본문 전체를 쓴다 (`wikiWritingLocales.json` 참고) |
+| AI 호출 | 리스바드에도 `runLLMModel({mode, messages, allowPlugins})`가 같은 시그니처로 있음 (v3.svelte.ts) |
+
+### 4B.2 동작 규칙 (`bardwiki` 백엔드일 때)
+1. **자동 선택**: 설정 "기억 저장소" = 자동(기본) → 감지되면 `bardwiki`, 아니면 `local`. 플러그인 / 끔 / BardWiki 강제 선택 가능. 선택 결과와 이유를 상태 카드에 표시.
+2. **끄는 것**: §4 러너(자동 분석), §4A 주입 훅, 로어북 대체 모드. 이유: 리스바드가 이미 분석·주입하므로 켜 두면 **이중 비용 + 이중 주입**. 사용자가 `local`을 강제하면 "BardWiki와 장기기억이 중복돼요" 경고를 한 번 표시.
+3. **유지하는 것**: 기억 탭 **보기**, **새 봇 합성**(§6), **저장된 데이터로 새 채팅**(§5).
+4. **범위 제한 처리**: 리스바드 API는 현재 선택한 채팅만 읽으므로 기억 탭의 봇·채팅 선택 UI는 다음처럼 동작:
+   - 현재 열린 채팅: BardWiki 실시간 조회.
+   - 다른 채팅: 마지막으로 조회했던 **스냅샷(읽기 전용 캐시)**을 `dusk.mem.v2.ext.<folderId>`에서 보여 주고 "스냅샷 {시각} — 그 채팅을 열고 새로고침하면 갱신돼요" 표시. 스냅샷이 없으면 "이 채팅을 열면 볼 수 있어요".
+   - 새 봇 합성 중 원본 채팅의 BardWiki가 필요하면 스냅샷 사용, 없거나 오래됐으면 "원본 채팅을 열고 새로고침해 주세요" 안내.
+5. 조회 비용: `getDocuments`는 본문까지 전부 주므로 탭 진입·새로고침 버튼에서만 호출(자동 폴링 없음). `contentHash`가 같으면 파싱·AI 결과 재사용.
+
+### 4B.2a 백엔드 인터페이스 (`src/data/memorybackend.js`)
 ```js
+// local: 이 문서의 저장·분석·주입 전부. bardwiki: 읽기 어댑터(§4B.3)
 interface MemoryBackend {
   id: "local" | "bardwiki"
   available(): Promise<boolean>
-  capabilities(): { analyze, inject, write, grades, anchors }   // UI가 기능 노출을 결정
-  listBots/ listChats(chaId)
-  loadFolder(chaId, chatId): Promise<Folder>                    // §2.2 모양으로 반환(어댑터가 변환)
-  saveFolder?(…)                                                // local만
+  capabilities(): { analyze:boolean, inject:boolean, write:boolean, grades:"auto"|"on-demand", anchors:"own"|"via-chatId"|"none" }
+  loadFolder(chaId, chatId): Promise<Folder>      // §2.2 모양으로 반환
+  isLive(chaId, chatId): boolean                  // bardwiki: 현재 열린 채팅만 true, 나머지는 스냅샷
 }
 ```
-- `local`(기본): 이 문서의 저장·분석·주입 전부.
-- `bardwiki`: 분석·주입은 **리스바드가 수행**하므로 플러그인의 러너(§4)와 주입 훅(§4A)을 **끈다**. 플러그인은 ① 기억 탭에서 BardWiki 내용을 **보기** ② 인물 문서 기준으로 **새 봇 합성**(§6) ③ "저장된 데이터로 새 채팅"을 맡는다.
-- 설정 "기억 저장소": **자동**(기본: 리스바드 BardWiki 감지되면 `bardwiki`, 아니면 `local`) / 플러그인 / 끔. 자동 선택 결과와 이유를 기억 탭 상단 상태 카드에 표시. 사용자가 강제로 `local`을 고르면 두 시스템이 동시에 돈다는 경고.
+UI는 `capabilities()`로 등급 칩·분석 버튼·주입 설정 노출 여부를 결정한다.
 
-### 4B.2 BardWiki → 우리 모델 어댑터 (읽기)
+### 4B.3 어댑터 (`src/data/memorybackend-bardwiki.js`, 순수 변환 함수는 `engine/bardwikiadapt.js`)
+BardWiki 문서 → 우리 모델(§2.2):
 | BardWiki | 우리 모델 |
 |---|---|
-| 캐릭터 문서(현재 상태·관계·지식·목표) | 인물 폴더 + digest(문서 본문 요약) |
-| 현재 장면 문서(시간·장소·참여자) | 현재 상황 |
-| 사건 문서(확정된 변화에서 자동 생성) | 상황 타임라인 / 인물 기록(등급 없음) |
-| 장소·세력·사물·개념 문서 | 합성 시 "관련 자료" 후보(로어북처럼 선택) |
-- BardWiki에는 등급·메시지 앵커가 없을 가능성이 높다 → `capabilities.grades=false, anchors=false`. UI는 등급 칩을 숨기고 "등급 매기기(AI)" 버튼으로 **필요할 때만** 사건/기록에 D~A를 한 번 부여(결과는 플러그인 쪽 보조 저장소 `dusk.mem.v2.ext.<id>`에 캐시, 위키 원본은 수정하지 않음).
-- 합성(§6)과 "새 채팅"(§5)은 어댑터가 준 Folder로 동일하게 동작. 앵커가 없으면 지점 선택은 상황/사건 단위로만.
+| `type:"character"` 문서 | **인물 폴더**. `name`=title, `aliases`, `digest`=본문(현재 상태/관계/지식 섹션 요약, 길면 앞부분만), 기록 목록은 아래 사건에서 채움 |
+| `type:"event"` + `status:"active"` | **상황 타임라인 항목** + 해당 사건에 등장하는 인물 기록. `at`=`sourceMessageIds`→인덱스 변환(실패 시 `updated` 시각순, 앵커 없음), `sum`=`이야기 요약` 불릿, `who`=`links`/본문 `[[링크]]` 중 character 문서 |
+| `type:"scene"` | **현재 상황**(최신 1건) |
+| `location/faction/creature/item/concept/other` | 합성 시 "관련 자료" 후보(로어북처럼 체크 선택) |
+| `status:"superseded"/"retracted"` | 기본 숨김 (토글로 표시) |
+- 등급·행동 단위 기록이 BardWiki에는 없으므로 `capabilities = { analyze:false, inject:false, write:true*, grades:"on-demand", anchors:"via-chatId" }`.
+- **등급은 필요할 때만**: "등급 매기기(AI)" 버튼 → 사건 불릿 단위로 §4.4와 동일한 세 축 채점 프롬프트를 사용해 D~A 부여 → 결과는 플러그인 쪽 캐시(`ext`)에만 저장(`contentHash`와 함께, 문서가 바뀌면 무효화). **위키 원본은 수정하지 않음.**
+- 인물 "기록" 항목은 사건 불릿 중 그 인물 이름/별칭이 들어간 줄을 연결해서 생성(AI 호출 없이 문자열 매칭, 정확도 낮을 수 있음 → UI에 "위키에서 가져온 요약" 배지).
+- `getContext({query})`는 **새 채팅 첫 메시지 작성** 때 선택적으로 사용 가능(해당 시점 BardWiki 요약을 모델 입력 참고로).
 
-### 4B.3 선행 조사 (Spike, 구현 전 필수) — 아직 확인하지 못한 것
-릴리스 노트와 공개 문서(`docs/ko/memory-wiki.md`, `docs/en/file-native-storage.md`)에서는 아래가 확인되지 않았다. **리스바드 저장소 소스를 직접 읽고** 결과를 PR 설명에 적을 것.
-1. 플러그인에서 BardWiki를 부를 수 있는 경로: `api.*` 메서드인지, 로컬 HTTP 라우트인지, 파일 시스템(`RISUBARD_DATA_ROOT` 아래 BardWiki)인지, 전혀 없는지.
-2. 문서 저장 형식: 폴더 구조, 프론트매터 키(내부 ID·유형·경로·해시), 채팅/캐릭터별 범위, 문서 제목 규칙, `[[링크]]`.
-3. 리스바드 감지 방법(전역 객체, 버전 API, 플러그인 API 차이).
-4. 읽기 전용으로 충분한지, 쓰기가 필요한 경우(해시 충돌 방지·이력·휴지통 규칙 준수)의 안전한 방법.
-5. 위키 분석 단위(응답 확정 시점)와 사건 문서에 시간/메시지 위치 정보가 있는지.
-6. 조사 결과 플러그인에서 접근할 방법이 **없으면**: 리스바드에서는 `local`을 끄고 안내문만 보여 주거나(BardWiki 사용 권장), 사용자가 위키 폴더를 내보낸 마크다운을 가져오는 "위키 가져오기"(읽기 전용)로 대체.
-- 조사 완료 전까지는 **감지 + 중복 방지(§4B.1의 자동 선택)만** 구현하고, 어댑터는 인터페이스와 모의 데이터 테스트까지만 작성.
+### 4B.4 새 채팅(§5)과 새 봇(§6)의 리스바드 처리
+- 새 채팅: 원본 메시지를 복사하지 않으므로 BardWiki와 무관. 단 새 채팅에는 BardWiki 데이터가 없다 → 안내 문구 "리스바드의 위키는 채팅마다 따로라, 새 채팅에서는 처음부터 쌓여요. 필요하면 아래 '관계 기록 문서 만들기'를 쓰세요".
+- (선택, 쓰기 권한 필요) **관계 기록 문서 만들기**: 새 채팅에서 `saveDocument({type:'concept', title:'{인물} 관계 기록', markdown})`로 요약을 BardWiki 문서로 넣고 `setContextMode(always)`. 권한 거부(`null`)면 건너뜀. 구현 우선순위 낮음(Phase 2).
+- 새 봇: 인물 문서 본문 + 사건 요약을 AI 입력으로 사용. 로어북 후보는 §6 방식 + 관련 자료 문서(location 등)를 "자료 문서"로 별도 체크.
+- **가상 컨텍스트 혼입 방지**: 리스바드에서 `getCharacterFromIndex`로 읽은 채팅 복제본에는 `risuBardVirtualMemory: "bardwiki-plugin-context-v1"` 표식이 붙은 `hypaV3Data.summaries`/`hypaV2Data.mainChunks` 항목과 `supaMemoryData` 안 `<!-- RISUBARD_BARDWIKI_PLUGIN_CONTEXT_START --> … END -->` 구간이 있다. 새 채팅/새 봇으로 데이터를 복사할 때 **이 표식 항목과 구간을 반드시 제거**하고 복사한다 (저장 시 리스바드가 제거해 주지만 이중 안전).
+
+### 4B.5 테스트 (모의 데이터, 실제 리스바드 없이)
+- 감지: `api.bardWiki` 유무에 따른 백엔드 자동 선택, `bardwiki`일 때 러너·주입 훅 미등록
+- 어댑터: 한국어/영어 표제 파싱, 표제 없는 본문, `superseded` 숨김, `sourceMessageIds`→인덱스(`inherited:`·중복 id 제외), 앵커 실패 시 시각 정렬, 인물 별칭 매칭
+- 스냅샷: 현재 채팅 조회 시 캐시 저장, 다른 채팅은 캐시 표시, `contentHash` 동일 시 재사용
+- 가상 컨텍스트 제거 함수: 표식 항목·`supaMemoryData` 구간만 제거
+- 쓰기(Phase 2): `null`(권한 거부) 처리, 해시 충돌 오류 처리
 
 ## 5. 회귀 = 저장된 데이터로 새 채팅 만들기 (`src/data/memoryrewind.js`) [개정]
 
@@ -304,7 +334,8 @@ interface MemoryBackend {
 | `src/engine/memoryinject.js` | [신규] 인물/기록 선택 점수, 고정 예산 조립, 토큰 추정 |
 | `src/engine/memorydigest.js` | [신규] 인물 digest 압축 프롬프트·조건 |
 | `src/data/memorybackend.js` | [신규] 백엔드 인터페이스 + `local` 구현 + 선택 로직 |
-| `src/data/memorybackend-bardwiki.js` | [신규] BardWiki 어댑터 (Spike 결과에 따라, 처음엔 감지+모의 데이터만) |
+| `src/data/memorybackend-bardwiki.js` | [신규] `risuai.bardWiki` 읽기 + 스냅샷 캐시 + 등급 온디맨드 |
+| `src/engine/bardwikiadapt.js` | [신규] BardWiki 문서 → 인물/상황 변환(표제 ko·en 파싱, 앵커 변환), 가상 컨텍스트 제거 |
 | `src/data/addcharacter.js` | `legacy.js`에서 추출한 봇 추가 공용 함수 |
 | `src/ui/screens/memory/` | `index.js`, `botlist.js`, `botview.js`, `people.js`, `person.js`, `scenes.js`, `compose.js`, `settings.js` |
 | `tests/memory*.test.js` | §9 |
@@ -336,7 +367,8 @@ interface MemoryBackend {
 6. `addcharacter.js` 추출(legacy 동작 동일 확인) → 새 봇 합성
 7. 새 채팅 만들기(`memoryrewind.js`)
 7a. **장기기억 주입**(`memoryinject`, `memorydigest`) — 4번 직후에 먼저 하고 싶다면 순서를 앞당겨도 됨(UI 없이도 동작 확인 가능)
-7b. 백엔드 추상화 + 리스바드 감지/중복 방지 → **Spike(§4B.3)** → 결과에 따라 BardWiki 어댑터
+7b. 백엔드 추상화 + 리스바드 감지/중복 방지(러너·주입 훅 미등록) → BardWiki 읽기 어댑터·스냅샷·등급 온디맨드 (§4B, 모의 데이터 테스트)
+7c. (Phase 2, 낮은 우선순위) 관계 기록 문서 만들기(BardWiki 쓰기)
 8. `package.json` 1.6.2 유지, `CHANGELOG.md` 갱신(해요체; PR의 E·D·C·B·A·S 문구를 D~A로 정정), `npm run build` + `npm run check` + `npm test`
 
 ## 11. 확인이 필요한 위험 (구현 중 먼저 검증하고 결과를 PR 설명에 적기)
@@ -348,12 +380,13 @@ interface MemoryBackend {
 5. 비용: 자동 기록이 기본 켜짐이라 응답마다 서브 모델 1회 호출 + 가끔 digest 호출. N턴마다·짧은 응답 건너뛰기·연속 실패 중지로 완화하고 "이번 세션 호출 수"를 표시.
 6. 주입 훅(`beforeRequest`)의 메시지 구조(역할·병합 방식)가 모델/공급자마다 달라 `system` 삽입이 거부되거나 합쳐질 수 있음 → 실제 환경에서 확인, 안 되면 `user` 앞머리 대체 또는 로어북 대체 모드.
 7. 주입이 최근 메시지와 모순될 수 있음 → 블록 머리말에 "최근 메시지가 우선"을 명시(§4A.3), `recentSkip`으로 겹침 제거.
-8. 리스바드 BardWiki 접근 경로 미확인(§4B.3).
+8. [확정] 리스바드는 `risuai.bardWiki`로 읽기 가능하나 **현재 채팅 하나만**(§4B.2-4). 다른 채팅은 스냅샷 한계가 있음. 실제 리스바드에서 확인: 읽기 응답 크기·속도, `sourceMessageIds`↔`chatId` 일치, 위키 작성 언어별 표제, 마크다운 모드가 아닌 채팅에서의 빈 배열 처리.
+9. 리스바드 API/문서 구조는 버전에 따라 바뀔 수 있음 → 필드가 없으면 건너뛰는 방어적 파싱, 어댑터는 얇게 유지.
 
 ## 12. 합의된 기본값 (바꾸고 싶으면 알려 주세요)
 
 - [개정] 자동 기록 **기본 켜짐**(봇별 끄기 가능), 디바운스 4초, 인물당 상한 300, 새 봇 합성 기본 등급 하한 **C**
 - [개정] 회귀 = **저장된 데이터로 새 채팅 만들기**만 제공(채팅 되돌리기 없음, 원문 메시지 복사는 옵션·기본 끔)
 - [개정] 장기기억 주입 기본 켜짐, 2번째 턴부터, 목표 1,200 / 상한 2,500 토큰
-- [개정] 기억 저장소 자동 선택(리스바드면 BardWiki)
+- [개정] 기억 저장소 자동 선택(리스바드면 `risuai.bardWiki` 읽기 사용, 플러그인 분석·주입은 끔)
 - 등급은 모델이 아니라 **세 축 점수**로 플러그인이 계산
