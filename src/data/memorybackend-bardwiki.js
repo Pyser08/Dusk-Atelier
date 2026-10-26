@@ -24,11 +24,12 @@ export function createBardWikiBackend(api, { store, log = (...a) => console.log(
   // 등급 매기기(AI): 위키에 등급이 없는 사건 문서만 문서 단위로 채점한다.
   // risuai.bardWiki.setGrade가 있으면 위키에 저장(gradeBy:"ai"), 없거나 거부/실패하면 ext 캐시에만 저장한다.
   // 사용자가 지정한 위키 등급은 읽기만 하고 덮어쓰지 않는다.
-  async function gradeOnDemand(chaId, chatId, model, signal) {
+  async function gradeOnDemand(chaId, chatId, model, signal, { regrade = false } = {}) {
     const snap = await load(chaId, chatId); if (!snap) throw new Error("먼저 이 채팅을 열고 새로고침해 주세요.");
     const grades = { ...(snap.grades ?? {}) };
-    const items = (snap.docs ?? []).filter((d) => d.grade == null && !grades[d.id] && d.bullets?.length).map((d) => ({ id: d.id, act: d.bullets.join(" / ").slice(0, 600), hash: d.hash }));
-    if (!items.length) return snap;
+    if (regrade) for (const d of snap.docs ?? []) if (d.gradeBy !== "user") delete grades[d.id];  // 다시 매기기: 사용자 지정 등급만 보존
+    const items = (snap.docs ?? []).filter((d) => (regrade ? d.gradeBy !== "user" : d.grade == null && !grades[d.id]) && d.bullets?.length).map((d) => ({ id: d.id, act: d.bullets.join(" / ").slice(0, 600), hash: d.hash }));
+    if (!items.length) return { ...snap, lastGrade: { total: 0, wrote: 0, cacheOnly: 0, reason: "" } };
     const canWrite = typeof api?.bardWiki?.setGrade === "function"; let writable = canWrite, wrote = 0, denied = false, failed = "";
     for (let i = 0; i < items.length; i += 30) {
       const part = items.slice(i, i + 30), got = parseGrades(await runAI(api, gradeMessages(part), model, signal));

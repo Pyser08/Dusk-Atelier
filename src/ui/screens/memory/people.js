@@ -68,7 +68,19 @@ async function analyzeNow(env) {
   try { ctx.toast("분석하는 중이에요…"); await ctx.memory.runner.analyzeLatest(bot.index, chatItem.index); ctx.toast("분석이 끝났어요."); env.redraw(); } catch (e) { fail(ctx)(e); }
 }
 async function gradeNow(env) {
-  try { env.ctx.toast("등급을 매기는 중이에요…"); const r = await env.ctx.memory.bardwiki.gradeOnDemand(env.bot.id, env.chatItem.id, env.idx.settings.model), g = r?.lastGrade; if (g) env.ctx.toast(g.wrote === g.total ? `${g.total}개를 매기고 위키에 저장했어요.` : `${g.total}개를 매겼어요. 위키 저장 ${g.wrote}개 · 플러그인 캐시만 ${g.cacheOnly}개 — ` + ({ "no-api": "이 리스바드에 setGrade가 없어요(패치 적용·클라이언트 재빌드 확인).", denied: "쓰기 권한이 거부됐거나 허용되지 않았어요(플러그인 권한 초기화 후 다시 시도).", failed: "저장 실패: " + g.error }[g.reason] ?? "")); env.redraw(); } catch (e) { fail(env.ctx)(e); }
+  const B = env.ctx.memory.bardwiki, model = env.idx.settings.model;
+  const report = (g) => g.wrote === g.total ? `${g.total}개를 매기고 위키에 저장했어요.` : `${g.total}개를 매겼어요. 위키 저장 ${g.wrote}개 · 플러그인 캐시만 ${g.cacheOnly}개 — ` + ({ "no-api": "이 리스바드에 setGrade가 없어요(패치 적용·클라이언트 재빌드 확인).", denied: "쓰기 권한이 거부됐거나 허용되지 않았어요(플러그인 권한 초기화 후 다시 시도).", failed: "저장 실패: " + g.error }[g.reason] ?? "");
+  try {
+    env.ctx.toast("등급을 매기는 중이에요…");
+    let r = await B.gradeOnDemand(env.bot.id, env.chatItem.id, model);
+    if (r?.lastGrade?.total === 0) {  // 매길 게 없음 → 다시 매길지 묻기
+      const again = await confirmDialog(env.ctx.win, { title: "이미 모두 등급이 있어요", body: "AI가 매긴 등급까지 다시 매길까요? 사용자가 직접 지정한 등급은 그대로 둬요.", ok: "다시 매기기" });
+      if (!again) return;
+      env.ctx.toast("다시 매기는 중이에요…"); r = await B.gradeOnDemand(env.bot.id, env.chatItem.id, model, undefined, { regrade: true });
+    }
+    if (r?.lastGrade?.total) env.ctx.toast(report(r.lastGrade)); else env.ctx.toast("매길 항목이 없었어요.");
+    env.redraw();
+  } catch (e) { fail(env.ctx)(e); }
 }
 const GRADE_SCORE = { D: 3, C: 5, B: 6, A: 7, S: 8, EX: 9 };
 async function setWikiGrade(env, r) {

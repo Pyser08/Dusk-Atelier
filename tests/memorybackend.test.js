@@ -117,6 +117,19 @@ test("user grade: written with gradeBy user, cleared cache, unsupported/denied h
   const old = mkApi(); const b3 = createBardWikiBackend(old.api, { store: createMemoryStore(old.api) }); assert.equal(b3.canSetGrade(), false);
   await b3.loadFolder("c", "t", { live: true, messages: msgs }); await assert.rejects(b3.setGradeByUser("c", "t", "e1", 5), /지원하지 않아요/);
 });
+test("nothing to grade reports total 0; regrade redoes AI grades but keeps user grades", async () => {
+  const { api, saved } = mkApi({ wikiGrades: { e1: { grade: 8, gradeBy: "user" } }, setGrade: async () => ({}) });
+  const bw = createBardWikiBackend(api, { store: createMemoryStore(api) });
+  await bw.loadFolder("c", "t", { live: true, messages: msgs });
+  await bw.gradeOnDemand("c", "t", { mode: "submodel" });
+  await bw.loadFolder("c", "t", { live: true, messages: msgs });
+  assert.equal((await bw.gradeOnDemand("c", "t", { mode: "submodel" })).lastGrade.total, 1, "e0 only (mock wiki does not persist grades)");
+  const m2 = mkApi({ wikiGrades: { e0: { grade: 5, gradeBy: "ai" }, e1: { grade: 8, gradeBy: "user" } }, setGrade: async () => ({}) });
+  const b2 = createBardWikiBackend(m2.api, { store: createMemoryStore(m2.api) }); await b2.loadFolder("c", "t", { live: true, messages: msgs });
+  assert.equal((await b2.gradeOnDemand("c", "t", { mode: "submodel" })).lastGrade.total, 0);
+  const r = await b2.gradeOnDemand("c", "t", { mode: "submodel" }, undefined, { regrade: true });
+  assert.equal(r.lastGrade.total, 1); assert.deepEqual(m2.saved.map((x) => x.documentId), ["e0"]);
+});
 test("리스바드 모든 위키 작성 언어 표제와 예전 표제를 읽는다", async () => {
   const { eventBullets, characterDigest } = await import("../src/engine/bardwikiadapt.js");
   for (const [title, line] of [["物語の要約", "日本語の出来事"], ["故事摘要", "简体事件"], ["故事概要", "繁體事件"], ["확정된 사건", "예전 표제"], ["Established Events", "legacy heading"]]) {
