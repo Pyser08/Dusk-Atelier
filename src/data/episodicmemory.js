@@ -1,4 +1,3 @@
-import { runAI } from "../engine/merge.js";
 import { extractMessageText, isUserMessage, stripMarksForPrompt } from "../engine/charsplit.js";
 
 export const EPISODIC_MEMORY_KEY = "dusk.episodic-memory.v1";
@@ -89,6 +88,7 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
       if (folder.lastOutput === signature.slice(-160)) return;
       const history = chatLines(chat);
       const prompt = analysisPrompt(folder.charName, folder.chatName, history, output, folder.situations.at(-1)?.summary ?? "");
+      const { runAI } = await import("../engine/merge.js");
       const raw = await runAI(api, prompt, { mode: "submodel" });
       const result = parseJson(raw);
       const now = Date.now();
