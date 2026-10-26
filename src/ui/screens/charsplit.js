@@ -32,8 +32,9 @@ export async function renderCharSplit(ctx) {
     h("span", { class:"rb-badge k-good" }, settings.enabled === false ? "전역 꺼짐" : "기본 켜짐")
   ));
   root.appendChild(note("info", "인물과 {{user}}의 상호작용을 모아 관계 기록을 만들고, 로어북과 함께 단일 캐릭터 봇으로 분리해요. 원본 봇과 채팅은 수정하지 않아요."));
+  const canStep = i => i === 0 || (i === 1 && d.people.length > 0) || ((i === 2 || i === 3) && !!d.person && d.entries.length > 0) || (i === 4 && !!d.record.trim());
   root.appendChild(actions(...["① 봇·채팅","② 인물","③ 로어북","④ AI 요약","⑤ 새 봇"].map((label, i) =>
-    btn(label, { kind:d.step === i ? "primary" : "", onClick:() => { if (!d.busy) { d.step = i; renderCharSplit(ctx); } } })
+    btn(label, { kind:d.step === i ? "primary" : "", disabled:!canStep(i) || (d.busy && d.step !== i), onClick:() => { if (!d.busy && canStep(i)) { d.step = i; renderCharSplit(ctx); } } })
   )));
   const body = h("div", { style:"display:flex;flex-direction:column;gap:12px" });
   root.appendChild(body);
@@ -70,7 +71,7 @@ async function stepChoose(ctx, d, settings, body, nav) {
     d.botSearch = botSearch.value;
     botSelect.replaceChildren(...makeBotOptions());
   });
-  botSelect.addEventListener("change", () => { d.botId = botSelect.value; d.chats = []; d.selected = []; renderCharSplit(ctx); });
+  botSelect.addEventListener("change", () => { d.botId = botSelect.value; d.chats = []; d.selected = []; d.people = []; d.person = ""; d.entries = []; d.lore = []; d.record = ""; d.desc = ""; d.greeting = ""; renderCharSplit(ctx); });
   const bot = d.bots.find(c => idOf(c) === d.botId);
   if (bot && !d.chats.length) {
     d.chats = (bot.chats ?? []).map((c, i) => ({ ...c, _i:i }));
@@ -133,7 +134,7 @@ async function stepChoose(ctx, d, settings, body, nav) {
   ));
   const chatItems = d.chats.map(c => {
     const check = h("input", { type:"checkbox", checked:d.selected.includes(c._i) });
-    check.addEventListener("change", () => { d.selected = check.checked ? [...d.selected, c._i] : d.selected.filter(i => i !== c._i); });
+    check.addEventListener("change", () => { d.selected = check.checked ? [...d.selected, c._i] : d.selected.filter(i => i !== c._i); d.people = []; d.person = ""; d.entries = []; d.lore = []; d.record = ""; d.desc = ""; d.greeting = ""; });
     const count = (c.message ?? []).filter(m => /⟦C:[^⟧]+⟧/.test(messageText(m))).length;
     return h("label", { class:"rb-check" }, check, h("span", { style:"flex:1" }, c.name || "채팅 " + (c._i + 1)), h("span", { class:"rb-muted" }, "마크 " + count + "개"));
   });
@@ -248,7 +249,7 @@ function stepCreate(ctx, d, body, nav) {
         ch.name=uniqueDisplayName(name.value.trim()||d.person,fresh);ch.desc=d.desc;ch.firstMessage=d.greeting;
         ch.creatorNotes="Dusk Atelier 캐릭터 분리: 원본 '"+original.name+"'에서 "+new Date().toISOString().slice(0,10)+" 생성";
         ch.globalLore=structuredClone(d.lore.filter(x=>x.selected).map(x=>x.entry));
-        for(const e of ch.globalLore){const rep=v=>typeof v==="string"?v.replace(/\{\{char\}\}/gi,original.name||""):v;e.content=rep(e.content);e.comment=rep(e.comment);}
+        for(const e of ch.globalLore){const rep=v=>typeof v==="string"?v.replace(/\{\{char\}\}/gi,ch.name||d.person||""):v;e.content=rep(e.content);e.comment=rep(e.comment);}
         ch.globalLore.push({comment:"{{user}}와의 관계 기록",content:d.record,alwaysActive:true,key:[],secondkey:[],insertorder:100});
         if(image.checked)ch.image=original.image||"";
         if(scripts.checked){ch.customscript=structuredClone(original.customscript??[]);ch.triggerscript=structuredClone(original.triggerscript??[]);}
