@@ -7,7 +7,7 @@ export const estimateTokens = (t) => { const s = String(t ?? ""); const ko = (s.
 const norm = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 const oneLine = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
 
-export const shouldInject = (folder, settings, userTurns) => !!(settings?.on !== false && folder?.cursor && userTurns >= (settings?.fromTurn ?? 2));
+export const shouldInject = (folder, settings, userTurns) => !!(settings?.on !== false && folder?.cursor && userTurns >= (settings?.fromTurn ?? 1));
 
 function sceneLine(s, cap) {
   const place = s.place ? ` (${s.place})` : "";
@@ -26,15 +26,26 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   const cur = scenes.at(-1);
   const lines = [HEADER];
   if (cur) lines.push(sceneLine(cur, sceneCap));
-  const earlier = scenes.slice(-4, -1);
-  if (earlier.length) { lines.push("Earlier scenes:"); for (const s of earlier) lines.push("- " + oneLine(s.sum).slice(0, 140)); }
+  // Story so far: 이전 장면을 최신부터 이벤트 예산 안에서 채우고 시간순으로 출력(통째로만 포함)
+  const evCap = settings.eventTokens ?? 600, evLines = []; let evUsed = 0;
+  for (const s of scenes.slice(0, -1).reverse()) {
+    const t = "- " + oneLine(s.sum) + (s.place ? ` (${s.place})` : ""), n = estimateTokens(t);
+    if (evUsed + n > evCap) { manifest.excluded.push({ kind: "event", name: oneLine(s.sum).slice(0, 20), tokens: n, reason: "budget" }); break; }
+    evLines.unshift(t); evUsed += n;
+  }
+  if (evLines.length) { lines.push("Story so far:", ...evLines); manifest.included.push({ kind: "events", tokens: evUsed, count: evLines.length }); }
   let used = estimateTokens(lines.join("\n")); manifest.included.push(...(cur ? [{ kind: "scene", id: cur.id, tokens: used }] : []));
 
   const recent = norm(recentText), inScene = new Set((cur?.who ?? []).map(norm));
   const cands = [];
   for (const p of Object.values(folder.people ?? {})) {
     const names = [p.name, ...(p.aliases ?? [])].map(norm).filter(Boolean);
-    const group = names.some((n) => inScene.has(n)) ? 1 : names.some((n) => recent.includes(n)) ? 2 : p.pinned ? 3 : 4;
+    // 컨텍스트 모드(BardWiki 방식): never=제외, always=항상(고정 포함), auto=장면/최근 언급 등 관련 있을 때만
+    const mode = p.ctx ?? (p.pinned ? "always" : "auto");
+    if (mode === "never") { manifest.excluded.push({ kind: "person", name: p.name, tokens: 0, reason: "never" }); continue; }
+    const rel = names.some((n) => inScene.has(n)) ? 1 : names.some((n) => recent.includes(n)) ? 2 : 0;
+    if (mode === "auto" && !rel) { manifest.excluded.push({ kind: "person", name: p.name, tokens: 0, reason: "not-relevant" }); continue; }
+    const group = mode === "always" ? 0 : rel;
     const age = (r) => r.at == null ? 50 : Math.max(0, messageCount - r.at);
     const recs = (p.records ?? []).filter((r) => !r.orphan && (r.at == null || r.at < messageCount - skip) && !(p.digest && r.digested && (r.g === "D" || r.g === "C")));
     const scored = recs.map((r) => ({ r, s: (GRADE_WEIGHT[r.g] ?? 1) * Math.pow(0.97, age(r)) + (r.pin ? 50 : 0) })).sort((a, b) => b.s - a.s);
@@ -47,11 +58,11 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   cands.sort((a, b) => a.group - b.group || b.best - a.best);
   const chars = [];
   for (const c of cands) {
-    const limit = c.group <= 3 ? cap : target;
+    const limit = c.group === 0 ? cap : target;
     if (used + c.tokens + 4 > limit) { manifest.excluded.push({ kind: "person", name: c.name, tokens: c.tokens, reason: "budget" }); continue; }  // 잘라 넣지 않고 통째로 제외
     chars.push(c.text); used += c.tokens; manifest.included.push({ kind: "person", name: c.name, tokens: c.tokens, group: c.group });
   }
-  if (chars.length) lines.push("Characters:", ...chars);
+  if (chars.length) lines.push("Characters (current state):", ...chars);
   if (!cur && !chars.length) return { text: "", manifest };
   const text = lines.join("\n"); manifest.tokens = estimateTokens(text);
   return { text, manifest };

@@ -33,8 +33,9 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     const idx = await store.getIndex(), bot = idx.bots[chaId] ?? { on: true, ignore: [] };
     if (!manual) {
       if (bot.on === false || bot.paused || idx.settings.autoRecord === false) return "off";
-      if (text.length < idx.settings.minChars) return "short";
       const ordinal = aiIndexes(messages).filter((i) => i <= last).length;
+      if (ordinal < (idx.settings.startTurn ?? 1)) return "early";
+      if (text.length < idx.settings.minChars) return "short";
       if ((idx.settings.everyN ?? 1) > 1 && ordinal % idx.settings.everyN !== 0) return "skip";
     }
     const existing = await store.getFolder(chaId, chatId);

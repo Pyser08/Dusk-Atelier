@@ -10,7 +10,7 @@ const folder = (people, scenes = [{ id: "s1", at: 1, sum: "비 오는 옥상", f
 
 test("no injection on the first turn, injection from the 2nd", () => {
   const f = folder({}); const s = { on: true, fromTurn: 2 };
-  assert.equal(shouldInject(f, s, 1), false); assert.equal(shouldInject(f, s, 2), true);
+  assert.equal(shouldInject(f, s, 1), false); assert.equal(shouldInject(f, s, 2), true); assert.equal(shouldInject(f, { on: true }, 1), true);
   assert.equal(shouldInject({ ...f, cursor: null }, s, 5), false);
   assert.equal(shouldInject(f, { on: false, fromTurn: 2 }, 5), false);
 });
@@ -23,7 +23,7 @@ test("block contains scene and key moments; empty folder → empty text", () => 
 });
 test("budget: oversize item is excluded whole, never truncated; target and cap respected", () => {
   const big = { name: "큰", records: Array.from({ length: 5 }, (_, i) => rec(i, "A", "가".repeat(80))) };
-  const people = { 큰: big }; for (let i = 0; i < 30; i++) people["p" + i] = { name: "p" + i, records: [rec(i, "B", "나".repeat(70))] };
+  const people = { 큰: { ...big, ctx: "always" } }; for (let i = 0; i < 30; i++) people["p" + i] = { name: "p" + i, ctx: "always", records: [rec(i, "B", "나".repeat(70))] };
   const s = { targetTokens: 300, capTokens: 400, sceneTokens: 300 };
   const { text, manifest } = buildBlock(folder(people), { messageCount: 200, settings: s });
   assert.ok(estimateTokens(text) <= 400);
@@ -34,6 +34,13 @@ test("in-scene and mentioned people are prioritized over others", () => {
   const people = { 미나: { name: "미나", records: [rec(1, "D", "장면 속 행동")] }, 다른: { name: "다른", records: [rec(1, "A", "중요한 행동")] }, 언급: { name: "언급", records: [rec(1, "D", "언급된 행동")] } };
   const { text } = buildBlock(folder(people), { messageCount: 60, recentText: "언급 이야기", settings: { targetTokens: 70, capTokens: 70 } });
   assert.match(text, /미나:/); assert.match(text, /언급:/);
+});
+test("context modes: never excluded, auto only when relevant, story-so-far listed", () => {
+  const people = { 미나: { name: "미나", records: [rec(1, "A", "장면 행동")] }, 무관: { name: "무관", records: [rec(1, "A", "무관 행동")] }, 숨김: { name: "숨김", ctx: "never", records: [rec(1, "A", "숨김 행동")] }, 고정: { name: "고정", ctx: "always", records: [rec(1, "B", "고정 행동")] } };
+  const scenes = [{ id: "s0", at: 0, sum: "첫 만남", facts: [], who: [] }, { id: "s1", at: 1, sum: "비 오는 옥상", facts: [], place: "옥상", who: ["미나"] }];
+  const { text, manifest } = buildBlock(folder(people, scenes), { messageCount: 60 });
+  assert.match(text, /Story so far:\n- 첫 만남/); assert.match(text, /미나:/); assert.match(text, /고정:/);
+  assert.doesNotMatch(text, /무관:|숨김:/); assert.ok(manifest.excluded.some((x) => x.reason === "not-relevant"));
 });
 test("records within recentSkip of the latest messages are omitted", () => {
   const f = folder({ 미나: { name: "미나", records: [rec(5, "A", "오래된 일"), rec(58, "A", "방금 일")] } });
@@ -81,7 +88,7 @@ test("injector hook: modifies only the request copy and ignores non-model types"
   assert.equal(out.length, 2); assert.match(out[0].content, /Current scene: 장면/); assert.equal(req.length, 1);
   assert.equal(await api.rep(req, "memory"), req);
   assert.equal(inj.lastRequest().injected, true);
-  chat.message.length = 1; assert.equal(await api.rep(req, "model"), req, "first turn → none");
+  await store.updateIndex((i) => { i.settings.inject.fromTurn = 3; }); assert.equal(await api.rep(req, "model"), req, "before fromTurn → none");
 });
 test("injector falls back to lore mode without the hook; syncLore is idempotent", async () => {
   const m = new Map(); let saved = null;

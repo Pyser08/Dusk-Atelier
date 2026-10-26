@@ -8,9 +8,9 @@ export const EXT_PREFIX = "dusk.mem.v2.ext.";
 export const LEGACY_KEY = "dusk.episodic-memory.v1";
 
 export const DEFAULT_SETTINGS = Object.freeze({
-  autoRecord: true, debounceSec: 4, everyN: 1, minChars: 120, personCap: 300,
+  autoRecord: true, startTurn: 1, debounceSec: 4, everyN: 1, minChars: 120, personCap: 300,
   model: { mode: "memory" }, backend: "auto",
-  inject: { on: true, fromTurn: 2, targetTokens: 1200, capTokens: 2500, sceneTokens: 300, recentSkip: 8, position: "beforeLastUser" },
+  inject: { on: true, m1: true, fromTurn: 1, targetTokens: 1200, capTokens: 2500, sceneTokens: 300, eventTokens: 600, recentSkip: 8, position: "beforeLastUser" },
   loreRef: { on: false, tokens: 600 }
 });
 const newIndex = () => ({ v: 2, settings: structuredClone(DEFAULT_SETTINGS), bots: {}, folders: {}, status: { hook: "pending", processed: 0, lastSuccessAt: 0, lastError: "" } });
@@ -60,6 +60,7 @@ export function createMemoryStore(api) {
     const raw = await get(INDEX_KEY);
     if (!raw || raw.v !== 2) return newIndex();
     const base = newIndex();
+    if (raw.settings?.inject && !raw.settings.inject.m1) { raw.settings.inject.fromTurn = 1; raw.settings.inject.m1 = true; }  // 1.6.2 초기 빌드(2번째 턴) → 1번째 턴 이전
     return { ...base, ...raw, settings: { ...base.settings, ...raw.settings, inject: { ...base.settings.inject, ...raw.settings?.inject }, loreRef: { ...base.settings.loreRef, ...raw.settings?.loreRef }, model: { ...base.settings.model, ...raw.settings?.model } }, bots: raw.bots ?? {}, folders: raw.folders ?? {}, status: { ...base.status, ...raw.status } };
   };
   const writeFolder = async (idx, folder) => {
