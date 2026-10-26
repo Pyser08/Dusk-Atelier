@@ -34,6 +34,32 @@ export var AI_MODES = [
   ["emotion", "감정 모델"],
   ["static", "모델 ID 직접 입력"]
 ];
+function extractRunAIText(value, depth = 0) {
+  if (typeof value === "string") return value.trim() || null;
+  if (!value || typeof value !== "object" || depth > 5) return null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = extractRunAIText(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+  const direct = ["result", "text", "content", "output", "response", "generatedText"];
+  for (const key of direct) {
+    const found = extractRunAIText(value[key], depth + 1);
+    if (found) return found;
+  }
+  const choices = value.choices ?? value.data?.choices;
+  if (Array.isArray(choices)) {
+    for (const choice of choices) {
+      const found = extractRunAIText(choice?.message?.content ?? choice?.text ?? choice?.delta?.content, depth + 1);
+      if (found) return found;
+    }
+  }
+  if (value.message && typeof value.message === "object") return extractRunAIText(value.message.content ?? value.message.text, depth + 1);
+  if (value.data && typeof value.data === "object") return extractRunAIText(value.data, depth + 1);
+  return null;
+}
 export async function runAI(api, messages, pick, signal) {
   const opts = { messages, mode: pick?.mode && pick.mode !== "static" ? pick.mode : "submodel", allowPlugins: true };
   if (pick?.mode === "static" && pick.staticModel) opts.staticModel = pick.staticModel;
@@ -43,14 +69,17 @@ export async function runAI(api, messages, pick, signal) {
     try {
       const res = await api.runLLMModel(opts);
       if (signal?.aborted) throw new Error("AI 작업을 취소했어요.");
-      const text = typeof res === "string" ? res : res?.type === "success" && typeof res.result === "string" ? res.result : null;
-      if (text?.trim()) return text.trim();
-      last = new Error(typeof res?.result === "string" ? res.result : "모델이 본문을 돌려주지 않았어요.");
+      const text = extractRunAIText(res);
+      if (text) return text;
+      const shape = res && typeof res === "object"
+        ? `type=${String(res.type ?? "없음")}, keys=${Object.keys(res).slice(0, 12).join(",") || "없음"}`
+        : `type=${typeof res}`;
+      last = new Error(`보조 모델 응답에 읽을 수 있는 본문이 없어요 (${shape}).`);
     } catch (e) {
       if (signal?.aborted) throw e;
       last = e;
     }
-    await new Promise((r) => setTimeout(r, 1200));
+    if (attempt < 3) await new Promise((r) => setTimeout(r, 1200));
   }
   throw last ?? new Error("AI 응답을 받지 못했어요.");
 }
