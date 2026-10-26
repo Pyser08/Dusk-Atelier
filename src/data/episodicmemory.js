@@ -177,16 +177,6 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
     await analyzeOutput(extractMessageText(latest), { charIndex, chatIndex });
     return loadEpisodicMemory(api);
   }
-  async function analyzeSelected(charIndex, chatIndex) {
-    if (!(charIndex >= 0) || !(chatIndex >= 0)) throw new Error("캐릭터와 채팅을 선택해 주세요.");
-    const chat = await api.getChatFromIndex(charIndex, chatIndex);
-    const latest = [...(chat?.message ?? [])].reverse().find(m => !isUserMessage(m) && extractMessageText(m).trim());
-    if (!latest) throw new Error("선택한 채팅에 분석할 AI 응답이 없어요.");
-    await analyzeOutput(extractMessageText(latest), charIndex, chatIndex);
-    const state = await loadEpisodicMemory(api);
-    if (state.status.lastError) throw new Error(state.status.lastError);
-    return state;
-  }
   async function analyzeCurrent() {
     const charIndex = await api.getCurrentCharacterIndex();
     const chatIndex = await api.getCurrentChatIndex();
