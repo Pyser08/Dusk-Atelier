@@ -20,11 +20,14 @@ import { openAssets } from './screens/assetmgr.js';
 import { renderDev } from './screens/dev.js';
 import { renderPlugins } from './screens/plugins.js';
 import { renderSettingsTab } from './screens/settingstab.js';
+import { renderMemory, renderSituations } from './screens/episodicmemory.js';
 
 var TABS = [
   { id: "modules", label: "모듈", icon: "module" },
   { id: "plugins", label: "플러그인", icon: "plugin" },
   { id: "characters", label: "캐릭터", icon: "character" },
+  { id: "memory", label: "인물 기억", icon: "brain" },
+  { id: "situations", label: "상황 기록", icon: "map" },
   { id: "tools", label: "도구", icon: "tools" },
   { id: "settings", label: "설정", icon: "sliders" },
   { id: "dev", label: "개발", icon: "code", dev: true }
@@ -272,7 +275,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     win.classList.toggle("rb-nosearch", !showSearch);
     replace(detail3);
     detail3.hidden = true;
-    const screen = { modules: renderModules, plugins: renderPlugins, characters: renderCharacters, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, situations: renderSituations, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
     Promise.resolve(screen(ctx)).catch((err) => {
       replace(main, h("div", { class: "rb-section" }, h("div", { class: "rb-note err", role: "alert" }, icon("alert", 18), h("span", null, `화면을 열지 못했어요: ${err?.message ?? err}`))));
     });
