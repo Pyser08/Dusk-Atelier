@@ -1,9 +1,9 @@
 // 카드 만들기 흐름(AI 호출 3회: 카드·연결·첫 메시지)과 에셋 고르기. 화면 코드 없이 api만 쓴다.
 import { runAI } from "../engine/runai.js";
-import { cardPrompt, normalizeCardResponse, parseLoose, linkPrompt, normalizeLinkResponse, shortlistAssets, pickAssetPrompt, parsePicks } from "../engine/card/prompt.js";
+import { cardPrompt, normalizeCardResponse, parseLoose, gradePrompt, parseGrade, tagPrompt, parseTagPick, linkPrompt, normalizeLinkResponse, shortlistAssets, pickAssetPrompt, parsePicks } from "../engine/card/prompt.js";
 import { newCard } from "../engine/card/card.js";
 import { sourceMemories } from "../engine/card/memories.js";
-import { parseTags } from "../engine/card/tags.js";
+import { parseTags, calcStats } from "../engine/card/tags.js";
 import { isImageExt } from "../ui/assets.js";
 
 // 사용자(페르소나) 이름들: {{user}}로 통일할 대상. 못 읽으면 빈 배열.
@@ -62,4 +62,16 @@ export async function pickIllustrations(api, { card, assets, model, signal }) {
   const list = shortlistAssets(assets, card);
   const picks = parsePicks(await runAI(api, pickAssetPrompt({ card, assets: list }), model, signal), list.length);
   return picks.map((i) => list[i]);
+}
+
+// AI가 기록을 보고 카드 등급을 정한다(AI 1회). 구간 기록 전체를 근거로 준다.
+export async function aiGrade(api, { name, folder, records, messages, model, lang, signal }) {
+  const mem = sourceMemories(folder, records, messages, { limit: 40 }).map(({ excerpt, ...rest }) => rest);
+  return parseGrade(await runAI(api, gradePrompt({ name, memories: mem, lang }), model, signal));
+}
+// AI가 태그를 고른다(AI 1회). 반환: {names, definitions} — 등급이 정한 개수만큼.
+export async function aiTags(api, { card, cfg, model, lang, signal }) {
+  const parsed = parseTags(cfg.tagText);
+  const r = parseTagPick(await runAI(api, tagPrompt({ card, parsed, grade: card.grade, lang }), model, signal), parsed, card.grade);
+  return { tags: r.names, tagDefinitions: r.definitions, stats: calcStats(r.names, r.definitions) };
 }

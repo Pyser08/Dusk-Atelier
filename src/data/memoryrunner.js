@@ -4,6 +4,7 @@ import { analyze } from "../engine/memoryprompt.js";
 import { reconcile } from "../engine/memoryreconcile.js";
 import { applyAnalysis, knownPeople } from "../engine/memoryapply.js";
 import { runAI } from "../engine/runai.js";
+import { openForPrompt } from "../engine/memoryplus.js";
 import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engine/memorydigest.js";
 
 const midOf = (m) => typeof m?.chatId === "string" && m.chatId && !m.chatId.startsWith("inherited:") ? m.chatId : null;
@@ -46,7 +47,7 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     const firstTime = !existing && !bot.notified;
     const recent = messages.slice(Math.max(0, group[0] - 6), group[0]).map((mm, k) => line(mm, Math.max(0, group[0] - 6) + k));
     const input = { bot: character.name, known: existing ? knownPeople(existing) : [], ignore: [...(bot.ignore ?? [])],
-      previousScene: existing ? (({ sum, facts } = {}) => sum ? { sum, facts } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, recent, newest: { index: last, text } };
+      previousScene: existing ? (({ sum, facts, when } = {}) => sum ? { sum, facts, ...(when ? { when } : {}) } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, openItems: existing ? openForPrompt(existing) : [], recent, newest: { index: last, text } };
     session.calls++;
     let result;
     try { result = await analyze((msgs) => run(msgs, idx.settings.model, signal), input); }

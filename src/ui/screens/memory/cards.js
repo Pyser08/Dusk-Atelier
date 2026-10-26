@@ -5,6 +5,7 @@ import { fail, gradeBadge } from "./common.js";
 import { cardPreview } from "../../card/preview.js";
 import { cardPng } from "../../card/render.js";
 import { colorOf } from "../../../engine/card/grade.js";
+import { makeBotFromCard } from "./makebot.js";
 
 const when = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? "" : d.toLocaleDateString(); };
 
@@ -30,8 +31,15 @@ async function openCard(env, id) {
       if (!await confirmDialog(ctx.win, { title: "카드 삭제", body: `'${card.name}' 카드를 지워요. 이미 만든 새 봇은 그대로예요.`, ok: "지우기", danger: true })) return;
       try { await M.cards.remove(card.id); done(null); env.redraw(); } catch (e) { fail(ctx)(e); }
     } });
+    const mk = card.link ? btn("새 봇 만들기", { onClick: async () => {
+      try {
+        mk.disabled = true; const cfg = await M.cards.getCfg();
+        const created = await makeBotFromCard(env, { card, link: card.link, first: card.first, name: `${env.bot.character.name} · ${card.name}`, imageUse: cfg.imageUse, withPng: cfg.withPng, picks: [], bmp: await pv.bitmapFor(card.image?.ref) });
+        ctx.toast(`'${created.name}' 봇을 만들었어요.`); done(null); env.ctx.state.mem.bots = null; env.redraw();
+      } catch (e) { mk.disabled = false; fail(ctx)(e); }
+    } }) : null;
     return h("div", { class: "rb-dialog rb-card-dialog", role: "dialog", "aria-modal": "true" }, h("h3", null, card.name, " ", badge(card.grade, "acc")), pv.el,
       h("p", { class: "rb-muted" }, `${card.keyword || ""} · 태그 ${card.tags.length}개 · 기억 ${card.memories.length}개`),
-      h("div", { class: "rb-dialog-actions" }, del, btn("닫기", { onClick: () => done(null) }), save));
+      h("div", { class: "rb-dialog-actions" }, del, btn("닫기", { onClick: () => done(null) }), mk, save));
   });
 }

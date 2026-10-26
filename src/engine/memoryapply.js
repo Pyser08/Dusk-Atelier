@@ -1,5 +1,6 @@
 // 분석 결과를 폴더에 반영하는 순수 함수.
 import { gradeResponse, findDuplicate, gradeRank } from "./memorygrade.js";
+import { applyRel, applyOpen, reinforce } from "./memoryplus.js";
 
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 const rid = (p) => p + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -15,7 +16,7 @@ export const latestScene = (folder) => [...(folder.scenes ?? [])].reverse().find
 // anchor: {at, mid, h}. 반환: {records, upgraded, scene:'new'|'updated'|null}
 export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null } = {}) {
   const ign = new Set(ignore.map(key));
-  const out = { records: 0, upgraded: 0, scene: null };
+  const out = { records: 0, upgraded: 0, scene: null, rel: 0, open: 0, closed: 0 };
   const prev = latestScene(folder);
   const sc = result?.scene;
   if (sc && (sc.changed || !prev)) {
@@ -31,10 +32,12 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
     if (!pk) { pk = key(e.name); folder.people[pk] = { name: e.name, aliases: [], pinned: false, records: [] }; }
     const person = folder.people[pk];
     const dup = findDuplicate(person.records, e.act, e.g);
-    if (dup) { if (dup.upgrade && !dup.dup.user) { dup.dup.g = e.g; dup.dup.score = Math.max(dup.dup.score ?? 0, e.score); out.upgraded++; } continue; }
-    person.records.push({ id: rid("r"), ...anchor, act: e.act, g: e.g, score: e.score, p: e.p, s: e.s, r: e.r, sit, user: false, pin: false, at_ms: now, orphan: false });
+    if (dup) { reinforce(dup.dup, anchor); if (e.know?.length && !dup.dup.know) dup.dup.know = e.know; if (dup.upgrade && !dup.dup.user) { dup.dup.g = e.g; dup.dup.score = Math.max(dup.dup.score ?? 0, e.score); out.upgraded++; } continue; }
+    person.records.push({ id: rid("r"), ...anchor, act: e.act, g: e.g, score: e.score, p: e.p, s: e.s, r: e.r, sit, user: false, pin: false, at_ms: now, orphan: false, ...(e.know?.length ? { know: e.know } : {}) });
     out.records++;
   }
+  out.rel = applyRel(folder, result?.rel, anchor, now);
+  { const o = applyOpen(folder, result?.open, anchor, now); out.open = o.added; out.closed = o.closed; }
   folder.runs = (folder.runs ?? 0) + 1;
   folder.cursor = { ...anchor };
   folder.done = [...new Set([...(folder.done ?? []), ...(covered ?? [anchor.h])])].slice(-1000);  // 분석을 마친 응답 해시(일괄 분석 건너뛰기용)

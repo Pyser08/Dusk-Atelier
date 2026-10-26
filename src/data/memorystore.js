@@ -10,7 +10,7 @@ export const LEGACY_KEY = "dusk.episodic-memory.v1";
 export const DEFAULT_SETTINGS = Object.freeze({
   autoRecord: true, startTurn: 1, debounceSec: 4, everyN: 1, minChars: 120, personCap: 300,
   model: { mode: "memory" }, backend: "auto",
-  inject: { on: true, m1: true, fromTurn: 1, targetTokens: 1200, capTokens: 2500, sceneTokens: 300, eventTokens: 600, recentSkip: 8, position: "beforeLastUser" },
+  inject: { on: true, m1: true, fromTurn: 1, targetTokens: 1200, capTokens: 2500, sceneTokens: 300, eventTokens: 600, recentSkip: 8, position: "beforeLastUser", plus: true, forgetAfter: 150, knowTokens: 160, openTokens: 160, relTokens: 140, srcTokens: 300 },
   loreRef: { on: false, tokens: 600 }
 });
 const newIndex = () => ({ v: 2, settings: structuredClone(DEFAULT_SETTINGS), bots: {}, folders: {}, status: { hook: "pending", processed: 0, lastSuccessAt: 0, lastError: "" } });

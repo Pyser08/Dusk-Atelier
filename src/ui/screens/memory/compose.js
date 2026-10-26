@@ -10,15 +10,12 @@ import { autoGrade, tagCountOf, MEMORY_LABEL } from "../../../engine/card/grade.
 import { parseTags, calcStats } from "../../../engine/card/tags.js";
 import { editCard, defaultImage } from "../../../engine/card/card.js";
 import { sceneAt, draftFirstMessage } from "../../../data/memoryrewind.js";
-import { buildCardCharacter } from "../../../data/cardbot.js";
-import { generateCard, generateLink, listBotImages, pickIllustrations, roleNamesOf } from "../../../data/cardflow.js";
-import { insertCharacter } from "../../../data/addcharacter.js";
-import { ensureCharacterInOrder } from "../../../engine/character.js";
-import { isGenerating, Busy } from "../../../engine/safety.js";
+import { makeBotFromCard } from "./makebot.js";
+import { generateCard, generateLink, listBotImages, pickIllustrations, roleNamesOf, aiGrade, aiTags } from "../../../data/cardflow.js";
 import { cardPreview, assetThumb } from "../../card/preview.js";
 import { cardPng } from "../../card/render.js";
 
-const STEPS = ["인물", "범위·등급", "카드", "연결", "확인"];
+const STEPS = ["인물", "범위·등급", "카드", "연결", "만들기"];
 const IMAGE_USE = [["card", "카드 이미지(PNG)"], ["illustration", "카드 일러스트 에셋"], ["source", "원본 봇 이미지"], ["none", "없음"]];
 const LEVELS = ["M1", "M2", "M3"];
 
@@ -34,12 +31,13 @@ export async function renderCompose(env, host) {
   const total = chatItem.chat?.message?.length ?? 0, messages = chatItem.chat?.message ?? [];
   const cfg = await M.cards.getCfg();
   const c = m.compose ??= {};
-  for (const [k, v] of Object.entries({ step: 0, keys: [people[0][0]], minGrade: "C", from: 1, to: total || 9999, gradeSet: null, card: null, mode: "memory", picks: null, entryLevels: [...cfg.entryLevels], lang: cfg.lang, extra: "", linkExtra: cfg.linkExtra ?? "", link: null, first: "", name: "", imageUse: cfg.imageUse, withPng: cfg.withPng, copyExtras: false, withRel: true, calls: 0, assets: null, aiPicks: null, work: Promise.resolve() })) if (!(k in c)) c[k] = v;
+  for (const [k, v] of Object.entries({ step: 0, keys: [people[0][0]], minGrade: "C", from: 1, to: total || 9999, gradeSet: null, gradeMode: "auto", aiGrade: null, card: null, mode: "memory", picks: null, entryLevels: [...cfg.entryLevels], lang: cfg.lang, extra: "", linkExtra: cfg.linkExtra ?? "", link: null, first: "", name: "", imageUse: cfg.imageUse, withPng: cfg.withPng, copyExtras: false, withRel: true, calls: 0, assets: null, aiPicks: null, work: Promise.resolve() })) if (!(k in c)) c[k] = v;
   const main = folder.people[c.keys[0]], names = main ? [main.name, ...(main.aliases ?? [])] : [];
   const parsed = parseTags(cfg.tagText);
   const model = env.idx.settings.model;
   const records = () => selectRecords(folder, c.keys, { minGrade: c.minGrade, from: c.from - 1, to: c.to - 1 });
-  const cardGrade = () => c.gradeSet ?? autoGrade(records());
+  const sig = () => [c.keys.join(","), c.minGrade, c.from, c.to].join("|");
+  const cardGrade = () => c.gradeSet ?? (c.gradeMode === "ai" && c.aiGrade?.sig === sig() ? c.aiGrade.grade : autoGrade(records()));
   const go = async (s) => { await c.work; c.step = s; renderCompose(env, host); };
   const again = () => renderCompose(env, host);
   const guard = (fn) => async () => { try { await fn(); } catch (e) { fail(ctx)(e); again(); } };
@@ -62,9 +60,9 @@ export async function renderCompose(env, host) {
     body = h("div", null, env.backend.id === "bardwiki" && !rs.length ? note("warn", "BardWiki 기록에는 등급이 없어요. 인물 탭의 더보기에서 '등급 매기기(AI)'를 먼저 해 주세요.") : null,
       field("기록 등급 하한", h("div", { class: "rb-mem-chats" }, GRADES.map((x) => chip(`${x}+`, { pressed: c.minGrade === x, onClick: () => { c.minGrade = x; c.card = null; c.link = null; again(); } })))),
       h("div", { class: "rb-mem-range" }, h("label", null, "시작 메시지 ", h("input", { class: "rb-input", type: "number", min: 1, max: total, value: c.from, onChange: (e) => { c.from = Math.max(1, +e.target.value || 1); c.card = null; again(); } })), h("label", null, "끝 메시지 ", h("input", { class: "rb-input", type: "number", min: 1, max: total, value: Math.min(c.to, total || c.to), onChange: (e) => { c.to = Math.max(c.from, +e.target.value || total); c.card = null; again(); } }))),
-      field(`카드 등급 (${c.gradeSet ? "직접 정함" : "구간의 최고 등급으로 자동"})`, h("div", { class: "rb-mem-chats" }, chip("자동", { pressed: !c.gradeSet, onClick: () => { c.gradeSet = null; c.card = null; again(); } }), GRADES.map((x) => chip(x, { pressed: c.gradeSet === x, onClick: () => { c.gradeSet = x; c.card = null; again(); } })))),
-      h("p", null, `선택된 기록 ${rs.length}개 · 원문 발췌 대상 ${ex}개 · 카드 ${g}등급(태그 ${tagCountOf(g)}개)`),
-      note("info", "AI 3회 호출: 카드 → 연결 문서 → 첫 메시지. 일러스트를 AI가 고르게 하면 1회 더 들어요."), nav(rs.length > 0));
+      field(`카드 등급 (${c.gradeMode === "manual" ? "직접 정함" : c.gradeMode === "ai" ? "카드를 만들 때 AI가 정함 · AI 1회 추가" : "구간의 최고 등급으로 자동"})`, h("div", { class: "rb-mem-chats" }, chip("자동", { pressed: c.gradeMode === "auto", onClick: () => { c.gradeSet = null; c.gradeMode = "auto"; c.card = null; again(); } }), chip("AI", { pressed: c.gradeMode === "ai", onClick: () => { c.gradeSet = null; c.gradeMode = "ai"; c.card = null; again(); } }), GRADES.map((x) => chip(x, { pressed: c.gradeSet === x, onClick: () => { c.gradeSet = x; c.gradeMode = "manual"; c.card = null; again(); } })))),
+      h("p", null, `선택된 기록 ${rs.length}개 · 원문 발췌 대상 ${ex}개 · ${c.gradeMode === "ai" ? "카드 등급은 AI가 정해요" : `카드 ${g}등급(태그 ${tagCountOf(g)}개)`}`),
+      note("info", "AI 3회 호출: 카드 → 연결 문서 → 첫 메시지(연결·첫 메시지는 건너뛰어도 돼요). 등급 AI 판단·일러스트 AI 고르기는 각각 1회 더 들어요."), nav(rs.length > 0));
   } else if (c.step === 2) {
     body = renderCardStep();
   } else if (c.step === 3) {
@@ -79,7 +77,9 @@ export async function renderCompose(env, host) {
   function renderCardStep() {
     const rs = records(), others = c.keys.slice(1).map((k) => folder.people[k]?.name).filter(Boolean);
     const make = btn(c.card ? "카드 다시 만들기 (AI 1회)" : "AI로 카드 만들기 (AI 1회)", { kind: c.card ? "" : "primary", onClick: guard(async () => {
-      make.disabled = true; ctx.toast("카드를 만드는 중이에요…");
+      make.disabled = true;
+      if (c.gradeMode === "ai" && c.aiGrade?.sig !== sig()) { ctx.toast("AI가 등급을 정하는 중이에요…"); const r = await aiGrade(ctx.api, { name: main.name, folder, records: rs, messages, model, lang: c.lang }); c.calls++; c.aiGrade = { sig: sig(), ...r }; ctx.toast(`AI 판단: ${r.grade}${r.why ? " — " + r.why : ""}`); }
+      ctx.toast("카드를 만드는 중이에요…");
       const { card, body: b } = await generateCard(ctx.api, { folder, records: rs, messages, name: main.name, grade: cardGrade(), others, cfg, model, lang: c.lang, roleNames: await roleNamesOf(ctx.api), source: { botName: bot.character.name, chatName: chatItem.name, chaId: bot.id, chatId: chatItem.id, from: c.from, to: c.to, minGrade: c.minGrade, people: c.keys.map((k) => folder.people[k]?.name) } });
       c.calls++; c.card = card; c.link = null; c.picks = null; c.aiPicks = null; c.warnings = b.warnings;
       const assets = c.assets ??= await listBotImages(ctx.api, bot.character);
@@ -100,6 +100,15 @@ export async function renderCompose(env, host) {
       q.addEventListener("input", paint); paint();
       return h("details", { class: "rb-mem-man", open: card.tags.length < limit }, h("summary", null, card.tags.length < limit ? "태그 추가" : "태그 바꾸기(먼저 하나를 빼세요)"), q, list);
     };
+    const aiRegrade = btn("AI로 등급·태그 다시 정하기 (AI 1~2회)", { onClick: guard(async () => {
+      ctx.toast("AI가 등급을 정하는 중이에요…");
+      const r = await aiGrade(ctx.api, { name: main.name, folder, records: rs, messages, model, lang: c.lang }); c.calls++;
+      c.aiGrade = { sig: sig(), ...r }; const keep = card.tags.slice(0, tagCountOf(r.grade)), defs = Object.fromEntries(keep.map((t) => [t, card.tagDefinitions[t]]));
+      await apply({ grade: r.grade, tags: keep, tagDefinitions: defs, stats: calcStats(keep, defs) }); await c.work;
+      if (tagCountOf(r.grade) > keep.length) { ctx.toast(`AI 판단: ${r.grade} — 태그를 고르는 중이에요…`); await apply(await aiTags(ctx.api, { card: c.card, cfg, model, lang: c.lang })); c.calls++; }
+      ctx.toast(`등급 ${r.grade}${r.why ? " — " + r.why : ""}`); again();
+    }) });
+    const aiRetag = btn("AI로 태그 고르기 (AI 1회)", { disabled: !limit, onClick: guard(async () => { ctx.toast("AI가 태그를 고르는 중이에요…"); await apply(await aiTags(ctx.api, { card, cfg, model, lang: c.lang })); c.calls++; again(); }) });
     const crop = (k, v) => { c.card = { ...c.card, image: { ...c.card.image, crop: { ...c.card.image.crop, [k]: v } } }; preview.draw(c.card); };
     const cur = c.card.image;
     const picks = c.aiPicks ?? [];
@@ -124,10 +133,10 @@ export async function renderCompose(env, host) {
         slider("밤 베일", cur.veil, 0, 1, 0.01, (v) => { c.card = { ...c.card, image: { ...c.card.image, veil: v } }; preview.draw(c.card); })),
       h("div", { class: "rb-card-form" },
         c.warnings?.length ? note("warn", c.warnings.slice(0, 3).join(" · ")) : null,
-        field("등급", h("div", { class: "rb-mem-chats" }, GRADES.map((g) => chip(g, { pressed: card.grade === g, onClick: () => setGrade(g) })))),
+        field("등급", h("div", { class: "rb-mem-chats" }, GRADES.map((g) => chip(g, { pressed: card.grade === g, onClick: () => setGrade(g) }))), h("div", { class: "rb-mem-sact" }, aiRegrade)),
         field("이름", input("이름", card.name, (v) => apply({ name: v.trim() || card.name }).then(again))), field("키워드", input("키워드", card.keyword, (v) => apply({ keyword: v }))),
         field("대표 대사", textarea("대표 대사", card.quote, 60, (v) => apply({ quote: v }))),
-        field(`태그 (${card.tags.length}/${limit})`, limit ? h("div", null, h("div", { class: "rb-mem-chats" }, card.tags.map((n) => chip(`${n} ✕`, { pressed: true, onClick: () => toggleTag(n) }))), tagPicker()) : h("span", { class: "rb-muted" }, "D등급은 태그가 없어요.")),
+        field(`태그 (${card.tags.length}/${limit})`, limit ? h("div", null, h("div", { class: "rb-mem-sact" }, aiRetag), h("div", { class: "rb-mem-chats" }, card.tags.map((n) => chip(`${n} ✕`, { pressed: true, onClick: () => toggleTag(n) }))), tagPicker()) : h("span", { class: "rb-muted" }, "D등급은 태그가 없어요.")),
         field("일러스트", h("div", { class: "rb-mem-sact" }, findAi), picks.length ? h("div", { class: "rb-card-thumbs" }, picks.map((a) => assetThumb(ctx, a, { selected: cur.ref === a.path, onClick: () => pick(a) }))) : null, allBox),
         field("BEFORE", textarea("BEFORE", card.before, 90, (v) => apply({ before: v }))), field("AFTER", textarea("AFTER", card.after, 90, (v) => apply({ after: v }))),
         field("지금 관계", textarea("관계", card.relationship, 70, (v) => apply({ relationship: v }))), field("현재 상태", textarea("현재 상태", card.currentState, 60, (v) => apply({ currentState: v }))),
@@ -157,39 +166,47 @@ export async function renderCompose(env, host) {
       link ? h("div", { class: "rb-mem-sec rb-card" }, field("설명", textarea("설명", link.desc, 160, (v) => { link.desc = v; })), field("관계 기록 (상시 로어북)", textarea("관계 기록", link.relationship, 120, (v) => { link.relationship = v; })),
         h("label", { class: "rb-mem-check" }, h("input", { type: "checkbox", checked: c.withRel, onChange: (e) => { c.withRel = e.target.checked; } }), "관계 기록을 상시 로어북 항목으로 넣기"),
         h("details", { class: "rb-mem-man", open: true }, h("summary", null, `기억 항목 ${link.entries.length}개`), link.entries.map((e) => h("div", { class: "rb-mem-field" }, h("span", null, `${e.id} · ${e.memory}`), input("키워드", e.key, (v) => { e.key = v; }), textarea("내용", e.content, 70, (v) => { e.content = v; }))))) : null,
-      callNote, nav(!!link));
+      callNote, nav(true, link ? "다음" : "연결 없이 다음"));
   }
 
   // ───────── 5단계: 첫 메시지·확인 ─────────
   function renderFinish() {
     const card = c.card, link = c.link;
-    if (!card || !link) return h("div", { class: "rb-empty" }, "카드와 연결 문서를 먼저 만들어 주세요.");
+    if (!card) return h("div", { class: "rb-empty" }, "카드를 먼저 만들어 주세요.");
     const nm = h("input", { class: "rb-input", value: c.name || `${bot.character.name} · ${card.name}`, "aria-label": "새 봇 이름", onInput: (e) => { c.name = e.target.value; } });
     const first = textarea("첫 메시지", c.first, 130, (v) => { c.first = v; });
     const genFirst = btn(c.first ? "첫 메시지 다시 쓰기 (AI 1회)" : "첫 메시지 만들기 (AI 1회)", { kind: c.first ? "" : "primary", onClick: guard(async () => {
       genFirst.disabled = true; ctx.toast("첫 메시지를 쓰는 중이에요…");
       c.first = await draftFirstMessage(ctx.api, { name: card.name, scene: sceneAt(folder, c.to - 1), relationship: link.relationship, model, lang: c.lang }); c.calls++; again();
     }) });
-    const create = btn("새 봇 만들기", { kind: "primary", onClick: async () => {
+    const done = (msg) => { m.bots = null; m.compose = null; m.tab = "cards"; ctx.toast(msg); env.redraw(); };
+    // 카드 만들기: 카드(연결 문서·첫 메시지 포함)를 카드 탭에 저장한다. 봇은 만들지 않는다.
+    const make = btn("카드 만들기", { kind: "primary", onClick: async () => {
       try {
-        create.disabled = true; await c.work;
-        const need = c.imageUse === "card" || c.withPng;
-        let cardAssetKey = null;
-        if (need) { const bmp = await preview.bitmapFor(card.image.ref); cardAssetKey = await ctx.api.saveAsset(await cardPng(card, bmp)); if (typeof cardAssetKey !== "string" || !cardAssetKey) throw new Error("카드 이미지를 저장하지 못했어요."); }
-        await M.cards.save(card);
-        const db = await ctx.api.getDatabase(["characters"]); const characters = Array.isArray(db?.characters) ? db.characters : [];
-        const { created } = await insertCharacter(ctx.api, { characters, hooks: { created: (id) => ctx.watcher?.markKnown?.(id) }, ensureInOrder: (id) => ensureCharacterInOrder(ctx.api, id), isGenerating, Busy,
-          build: (all) => buildCardCharacter({ source: bot.character, name: nm.value, card, link, firstMessage: c.first || bot.character.firstMessage || "", lorePicks: c.picks ?? [], withRelationship: c.withRel, characters: all, chatName: chatItem.name, minGrade: c.minGrade, imageUse: c.imageUse, illustrationPath: card.image.ref, cardAssetKey, withPng: c.withPng, copyExtras: c.copyExtras }) });
-        m.bots = null; m.compose = null; ctx.toast(`'${created.name}' 봇을 만들었어요.`); env.redraw();
-      } catch (e) { create.disabled = false; fail(ctx)(e); }
+        make.disabled = true; await c.work;
+        const saved = { ...c.card, ...(link ? { link, first: c.first } : {}) };
+        await M.cards.save(saved);
+        if (c.dlPng) download(`${saved.name}-${saved.grade}.png`, new Blob([await cardPng(saved, await preview.bitmapFor(saved.image?.ref))], { type: "image/png" }));
+        done(`'${saved.name}' 카드를 만들었어요. 카드 탭에서 볼 수 있어요.`);
+      } catch (e) { make.disabled = false; fail(ctx)(e); }
     } });
+    const withBot = link ? btn("카드와 새 봇 함께 만들기", { onClick: async () => {
+      try {
+        withBot.disabled = true; await c.work;
+        const created = await makeBotFromCard(env, { card: c.card, link, first: c.first, name: nm.value, imageUse: c.imageUse, withPng: c.withPng, copyExtras: c.copyExtras, picks: c.picks ?? [], withRel: c.withRel, bmp: await preview.bitmapFor(c.card.image?.ref), minGrade: c.minGrade, chatName: chatItem.name });
+        done(`카드와 '${created.name}' 봇을 만들었어요.`);
+      } catch (e) { withBot.disabled = false; fail(ctx)(e); }
+    } }) : null;
     return h("div", null, h("div", { class: "rb-card-edit" }, h("div", { class: "rb-card-side" }, preview.el),
-      h("div", { class: "rb-card-form" }, field("이름", nm), field("첫 메시지", first), h("div", { class: "rb-mem-sact" }, genFirst),
-        field("봇 이미지", h("select", { class: "rb-input", "aria-label": "봇 이미지", onChange: (e) => { c.imageUse = e.target.value; again(); } }, IMAGE_USE.map(([v, l]) => h("option", { value: v, selected: c.imageUse === v }, l)))),
-        h("label", { class: "rb-mem-check" }, h("input", { type: "checkbox", checked: c.withPng, onChange: (e) => { c.withPng = e.target.checked; } }), "카드 PNG를 새 봇 에셋에도 넣기"),
-        h("label", { class: "rb-mem-check" }, h("input", { type: "checkbox", checked: c.copyExtras, onChange: (e) => { c.copyExtras = e.target.checked; } }), "정규식·트리거·모듈도 복사"),
-        h("p", { class: "rb-muted" }, `제작자 노트에 출처(원본 봇·채팅·날짜·등급 하한 ${c.minGrade}+)와 카드 정보를 적고, 새 봇 태그에 카드 태그 이름을 합쳐요. 카드는 카드 탭에도 저장돼요. 원본 봇과 채팅은 바뀌지 않아요.`),
-        callNote, h("div", { class: "rb-mem-sact" }, btn("이전", { onClick: () => go(3) }), create))));
+      h("div", { class: "rb-card-form" },
+        h("label", { class: "rb-mem-check" }, h("input", { type: "checkbox", checked: !!c.dlPng, onChange: (e) => { c.dlPng = e.target.checked; } }), "카드 PNG도 내려받기"),
+        link ? h("div", { class: "rb-mem-sec rb-card" }, h("h3", null, "새 봇도 만들 때만 쓰는 설정"), field("새 봇 이름", nm), field("첫 메시지", first), h("div", { class: "rb-mem-sact" }, genFirst),
+          field("봇 이미지", h("select", { class: "rb-input", "aria-label": "봇 이미지", onChange: (e) => { c.imageUse = e.target.value; again(); } }, IMAGE_USE.map(([v, l]) => h("option", { value: v, selected: c.imageUse === v }, l)))),
+          h("label", { class: "rb-mem-check" }, h("input", { type: "checkbox", checked: c.withPng, onChange: (e) => { c.withPng = e.target.checked; } }), "카드 PNG를 새 봇 에셋에도 넣기"),
+          h("label", { class: "rb-mem-check" }, h("input", { type: "checkbox", checked: c.copyExtras, onChange: (e) => { c.copyExtras = e.target.checked; } }), "정규식·트리거·모듈도 복사"),
+          h("p", { class: "rb-muted" }, "제작자 노트에 출처와 카드 정보를 적고, 새 봇 태그에 카드 태그 이름을 합쳐요. 원본 봇과 채팅은 바뀌지 않아요.")) : note("info", "연결 문서가 없어서 카드만 만들 수 있어요. (새 봇은 연결 단계에서 문서를 만든 뒤에 만들 수 있어요.)"),
+        h("p", { class: "rb-muted" }, "카드는 카드 탭에 저장돼요. 연결 문서가 있으면 나중에 카드 탭에서 새 봇을 만들 수도 있어요."),
+        callNote, h("div", { class: "rb-mem-sact" }, btn("이전", { onClick: () => go(3) }), make, withBot))));
   }
   if (c.step === 4 && c.card) preview.draw(c.card);
 }

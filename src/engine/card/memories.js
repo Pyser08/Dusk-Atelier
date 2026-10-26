@@ -45,7 +45,7 @@ export function sourceMemories(folder, records, messages, { limit = 70 } = {}) {
   if (rows.length > limit) { const keep = new Set([...rows].sort((a, b) => b.w - a.w || (b.r.at ?? 0) - (a.r.at ?? 0)).slice(0, limit)); rows = rows.filter((x) => keep.has(x)); }
   return rows.map(({ r }) => {
     const s = scenes.get(r.sit);
-    const item = { at: r.at != null ? r.at + 1 : null, who: r.person, level: MEMORY_LEVEL[r.g] ?? "M0", act: r.act };
+    const item = { at: r.at != null ? r.at + 1 : null, who: r.person, level: MEMORY_LEVEL[r.g] ?? "M0", g: r.g, act: r.act };
     if (s?.place) item.place = s.place;
     if (s?.when) item.when = s.when;
     if (needsExcerpt(r)) { const ex = excerptAt(messages, r.at); if (ex) item.excerpt = ex; }
