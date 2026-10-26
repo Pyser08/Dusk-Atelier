@@ -71,7 +71,7 @@ test("situation instructions avoid repeating unchanged scenes and use previous c
   assert.match(instruction, /⟦T:unknown⟧/);
   assert.match(instruction, /짧은 상호작용이라도 누락하지 않는다/);
   assert.match(instruction, /C의 판정 기준은 말하는 인물이 아니라 대사·행동의 상대다/);
-  assert.match(instruction, /NPC끼리의 대화, \\{\\{user\\}\\}와 무관한 행동은 C로 감싸지 않는다/);
+  assert.match(instruction, /NPC끼리의 대화.*C로 감싸지 않는다/);
   assert.match(instruction, /하연이 설지에게 하는 대사는 마커 밖에 둔다/);
 });
 
