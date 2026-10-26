@@ -2,6 +2,7 @@ import { h, replace } from "../../dom.js";
 import { btn, switchEl, setSwitch, confirmDialog, progressBar } from "../../kit.js";
 import { AI_MODES } from "../../../engine/merge.js";
 import { mem, fail } from "./common.js";
+import { parseTags, DEFAULT_TAG_TEXT } from "../../../engine/card/tags.js";
 
 function builders(ctx, idx, redraw) {
   const M = ctx.memory, S = idx.settings;
@@ -24,6 +25,7 @@ export async function renderGlobalSettings(ctx, host, { redraw }) {
   const last = M.injector?.lastRequest?.(), man = last?.manifest;
   const modeLabel = backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드";
 
+  const ccfg = await M.cards.getCfg();
   const body = h("div", { class: "rb-mem-foldbody" },
     h("div", { class: "rb-mem-modeline" }, h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), h("span", { class: "rb-muted" }, backend.reason)),
     section("기억 저장소", h("label", { class: "rb-mem-field" }, h("span", null, "저장소"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.backend = e.target.value; }) }, [["auto", "자동"], ["local", "플러그인"], ["bardwiki", "BardWiki"], ["off", "끔"]].map(([v, l]) => h("option", { value: v, selected: S.backend === v }, l)))), h("p", { class: "rb-muted" }, "리스바드에서는 이중 비용을 막으려고 플러그인의 분석·주입을 끄고 위키를 읽어요. 바꾼 뒤에는 RisuAI를 다시 불러와야 훅에 반영돼요.")),
@@ -37,7 +39,8 @@ export async function renderGlobalSettings(ctx, host, { redraw }) {
       num("최근 메시지 겹침 제외(개)", () => S.inject.recentSkip, (s, v) => { s.inject.recentSkip = v; }, { max: 40 }),
       h("label", { class: "rb-mem-field" }, h("span", null, "삽입 위치"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.inject.position = e.target.value; }) }, [["beforeLastUser", "마지막 사용자 메시지 앞"], ["afterSystem", "시스템 프롬프트 뒤"]].map(([v, l]) => h("option", { value: v, selected: S.inject.position === v }, l)))),
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 들어간 기억 보기"), man ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `주입함 (약 ${man.tokens} 토큰)` : "주입하지 않음"}`),
-        h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요."))) : null);
+        h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요."))) : null,
+    cardSettings(ctx, ccfg, redraw));
   const fold = h("details", { class: "rb-mem-fold", open: !!m.globalOpen }, h("summary", null, "전체 설정", h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel)), body);
   fold.addEventListener("toggle", () => { m.globalOpen = fold.open; });
   replace(host, fold);
@@ -74,4 +77,20 @@ export function renderBotSettings(env) {
     caps.analyze ? section("이 봇에서 기록하지 않을 이름", h("div", { class: "rb-mem-chats" }, ignore.map((n) => h("button", { type: "button", class: "rb-chip", title: "눌러서 제거", onClick: () => M.store.updateIndex((i) => { i.bots[bot.id].ignore = i.bots[bot.id].ignore.filter((x) => x !== n); }).then(env.redraw) }, n, " ✕")), ignIn)) : null,
     section("초기화", h("div", { class: "rb-mem-sact" }, btn("이 채팅 기억 지우기", { onClick: () => reset("chat") }), btn("이 봇 기억 지우기", { onClick: () => reset("bot") }), btn("전체 기억 지우기", { onClick: () => reset("all") }))),
     section("상태", h("p", { class: "rb-muted" }, `훅: ${idx.status.hook} · 처리 ${idx.status.processed}회 · 마지막 성공 ${idx.status.lastSuccessAt ? new Date(idx.status.lastSuccessAt).toLocaleString() : "없음"}${idx.status.lastError ? " · 오류: " + idx.status.lastError : ""}`)));
+}
+
+// ---- 카드 설정: 태그·스탯 정의, 기본 언어, 연결 추가 지시. 카드 만들기와 새 봇 만들기에서 쓴다.
+function cardSettings(ctx, cfg, redraw) {
+  const M = ctx.memory, save = (patch) => M.cards.setCfg(patch).then(() => redraw()).catch(fail(ctx));
+  const tagArea = h("textarea", { class: "rb-input rb-card-tags", "aria-label": "태그 정의", spellcheck: "false", style: "min-height:240px;height:auto;padding:10px;font-family:monospace;font-size:12px" }); tagArea.value = cfg.tagText;
+  const status = h("p", { class: "rb-muted" }), saveBtn = btn("태그 정의 저장", { kind: "primary", onClick: () => save({ tagText: tagArea.value }) });
+  const check = () => { const p = parseTags(tagArea.value), bad = p.errors.length; status.textContent = bad ? `오류 ${bad}개: ${p.errors.slice(0, 3).join(" · ")}` : `스탯 ${Object.keys(p.stats).length}개 · 태그 ${Object.keys(p.tags).length}개`; saveBtn.disabled = !!bad || !Object.keys(p.tags).length; };
+  tagArea.addEventListener("input", check); check();
+  const ta = (label, key, rows) => { const t = h("textarea", { class: "rb-input", "aria-label": label, style: `min-height:${rows}px;height:auto;padding:10px`, onChange: (e) => save({ [key]: e.target.value }) }); t.value = cfg[key] ?? ""; return h("label", { class: "rb-mem-field" }, h("span", null, label), t); };
+  const sel = (label, key, opts) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("select", { class: "rb-input", onChange: (e) => save({ [key]: e.target.value }) }, opts.map(([v, l]) => h("option", { value: v, selected: cfg[key] === v }, l))));
+  return h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "카드"),
+    h("p", { class: "rb-muted" }, "한 줄에 하나: `스탯이름:설명(ST)` 은 스탯, `태그이름:설명(스탯:수치,스탯:수치)` 는 태그예요. # 으로 시작하면 주석이에요. 카드의 태그는 여기서 정한 목록에서 골라요."),
+    tagArea, status, h("div", { class: "rb-mem-sact" }, saveBtn, btn("기본값으로", { onClick: () => { tagArea.value = DEFAULT_TAG_TEXT; check(); } })),
+    sel("카드·연결 기본 언어", "lang", [["ko", "한국어"], ["en", "English"]]), sel("새 봇 이미지 기본값", "imageUse", [["card", "카드 이미지(PNG)"], ["illustration", "카드 일러스트 에셋"], ["source", "원본 봇 이미지"], ["none", "없음"]]),
+    ta("카드 추가 지시(항상 적용)", "extra", 60), ta("연결 추가 지시(항상 적용)", "linkExtra", 60));
 }

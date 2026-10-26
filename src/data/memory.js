@@ -4,9 +4,11 @@ import { createMemoryRunner } from "./memoryrunner.js";
 import { createMemoryInjector } from "./memoryinject.js";
 import { createBardWikiBackend } from "./memorybackend-bardwiki.js";
 import { selectBackend, capabilitiesOf } from "./memorybackend.js";
+import { createCardStore } from "./cardstore.js";
 
 export function createMemory(api, { notify = () => {}, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
   const store = createMemoryStore(api);
+  const cards = createCardStore(api);
   const injector = createMemoryInjector(api, { store, log });
   const runner = createMemoryRunner(api, { store, log, notify, afterAnalyze: async (ci, ti) => { if (injector.mode() === "lore") await injector.syncLore(ci, ti); } });
   const bardwiki = createBardWikiBackend(api, { store, log });
@@ -26,5 +28,5 @@ export function createMemory(api, { notify = () => {}, log = (...a) => console.l
     if (sel.duplicate) notify("BardWiki와 장기기억이 중복돼요. 비용이 두 번 들 수 있어요.");
     return active;
   }
-  return { store, runner, injector, bardwiki, backend, capabilities: capabilitiesOf, start, active: () => active };
+  return { store, cards, runner, injector, bardwiki, backend, capabilities: capabilitiesOf, start, active: () => active };
 }

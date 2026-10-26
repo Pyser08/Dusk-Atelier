@@ -465,4 +465,18 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-steps li[aria-current=step]{background:var(--rb-acc-soft);color:var(--rb-text);font-weight:700}.rb-mem-steps li.done{color:var(--rb-sub)}
 .rb-mem-card.pick input{flex-shrink:0}.rb-mem-pre{white-space:pre-wrap;font-size:12px;background:var(--rb-surf2);padding:10px;border-radius:10px;max-height:260px;overflow:auto}
 .rb-mem-man summary{cursor:pointer;font-size:13px;min-height:32px}
+.rb-card-edit{display:grid;grid-template-columns:minmax(220px,340px) minmax(0,1fr);gap:16px;align-items:start}
+.rb-card-side{display:flex;flex-direction:column;gap:10px;position:sticky;top:0}
+.rb-card-form{display:flex;flex-direction:column;gap:12px;min-width:0}
+.rb-card-canvas{width:100%;aspect-ratio:2/3;height:auto;border-radius:14px;background:#0b0b14;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.rb-card-slider{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--rb-sub)}.rb-card-slider span{width:56px;flex-shrink:0}.rb-card-slider input{flex:1;min-width:0;height:28px}
+.rb-card-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;max-height:280px;overflow:auto;padding:2px}
+.rb-card-thumb{display:flex;flex-direction:column;gap:4px;padding:4px;border-radius:10px;border:2px solid transparent;background:var(--rb-surf);cursor:pointer;color:var(--rb-sub);font-size:11px;min-height:44px}
+.rb-card-thumb img{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:8px;background:var(--rb-surf2)}
+.rb-card-thumb span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rb-card-thumb[aria-pressed=true]{border-color:var(--rb-sel-ring);color:var(--rb-text)}
+.rb-card-tagpool{max-height:200px;overflow:auto;margin-top:6px}
+.rb-card-tile{border-left:4px solid var(--g,var(--rb-line))}
+.rb-card-dialog{width:min(420px,94vw);max-height:92vh;overflow:auto}.rb-card-dialog .rb-card-canvas{margin:8px 0}
+@container memwrap (max-width:900px){.rb-card-edit{grid-template-columns:1fr}.rb-card-side{position:static;max-width:340px;width:100%;margin:0 auto}}
 `+PROB_CSS;

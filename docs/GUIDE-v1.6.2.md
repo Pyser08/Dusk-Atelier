@@ -113,3 +113,13 @@ getDatabase, getCharacterFromIndex, getChatFromIndex, getCurrentCharacterIndex/C
 4. 테스트 추가 → `node --test` → `node tools/build.mjs` → `--check` → CHANGELOG(새 버전 섹션, 부드러운 어투) → package.json 버전.
 5. 커밋 메시지에 세션 attribution 줄 포함, PR #4 브랜치에 푸시.
 6. 비용 주의: 사용자는 토큰 절감을 중시 — 호출은 응답당 1회, 새 AI 호출 추가는 사용자 확인 후.
+
+
+## 기억 카드 (아르카나 카드 이식, 2026-10-27)
+- 순수 엔진: `src/engine/card/` — grade(등급색·태그 수·테마 파생), tags(정의 파서·정규화), memories(기록→M0~M3·발췌·{{user}}), card(모델·sha256 해시 — crypto.subtle 없으면 JS 구현), png(tEXt `dusk-card` 청크), layout(글자 폭 측정 함수를 받는 순수 레이아웃, 태그 줄바꿈 포함), prompt(카드·연결·에셋 고르기 프롬프트와 정규화).
+- 데이터: `src/data/cardstore.js`(키 `dusk.mem.v2.card.<id>`·`dusk.mem.v2.cardidx`·`dusk.mem.v2.cardcfg`, `memory.cards`로 노출), `cardflow.js`(AI 호출·에셋 목록), `cardbot.js`(새 봇 객체), `cardassets.js`(프레임 WebP 1장 + Giants woff2, 자동 생성물).
+- 화면: `src/ui/card/render.js`(캔버스 렌더러 — 프레임을 밝기→등급색 듀오톤으로 물들임), `preview.js`, `src/ui/screens/memory/compose.js`(5단계), `cards.js`(카드 탭), `settings.js`의 카드 설정.
+- 프레임: 은색 SR 프레임의 오른쪽 위 글자를 지운 투명 프레임 1장. 등급 글자(D~EX)는 Giants로 직접 그려요. 6장을 새로 만드는 방식은 쓰지 않았어요.
+- 에셋 고르기: 봇(대표·감정·추가 에셋)과 켜진 모듈의 이미지 이름을 AI에 주고 최대 3개를 골라요. 150개를 넘으면 카드 단어와 겹치는 이름을 우선해요.
+- 함정: Giants 글꼴은 라틴만 있어 한글 이름은 시스템 명조로 폴백돼요. 카드 PNG는 약 2MB라 에셋으로 넣기 싫으면 설정에서 끌 수 있어요.
+- 검증: `node --test`(카드 단위 테스트 포함). 렌더링은 Chromium으로 D·C·EX 카드를 실제로 그려 확인했어요.
