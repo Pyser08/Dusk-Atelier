@@ -372,6 +372,14 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 @media (max-width:560px){.rb-da{padding:10px}.rb-da-lab{width:100%}.rb-da-line>.rb-seg{min-width:100%}}
 
 .rb-mem-layout{display:flex;flex:1;min-height:0;gap:0;overflow:hidden}
+.rb-mem-charlist,.rb-mem-chatlist{display:flex;flex-direction:column;gap:4px;min-width:0}
+.rb-mem-charlist .rb-row,.rb-mem-chatlist .rb-row{width:100%;text-align:left;display:flex;align-items:flex-start;gap:9px}
+.rb-mem-charlist .rb-row.is-active,.rb-mem-chatlist .rb-row.is-active{background:var(--rb-sel-bg);box-shadow:inset 0 0 0 1px var(--rb-sel-ring)}
+.rb-mem-charlist .rb-row .txt,.rb-mem-chatlist .rb-row .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.rb-mem-charlist .rb-row .meta,.rb-mem-chatlist .rb-row .meta{white-space:normal;overflow-wrap:anywhere}
+.rb-mem-search{margin:8px 4px 12px;max-width:none}
+.rb-mem-chatlist{margin-top:12px;padding-top:12px;border-top:1px solid var(--rb-line2)}
+.rb-mem-chatlist>.rb-label{padding:0 12px 4px}
 .rb-mem-charlist,.rb-mem-chatlist{display:flex;flex-direction:column;gap:4px;padding:4px 0 10px}
 .rb-mem-charlist .rb-row,.rb-mem-chatlist .rb-row{width:100%;text-align:left;display:flex;align-items:flex-start;gap:9px}
 .rb-mem-charlist .rb-row.is-active,.rb-mem-chatlist .rb-row.is-active{background:var(--rb-sel-bg);border-color:var(--rb-sel-ring)}
@@ -397,5 +405,5 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-record-head>.rb-muted{margin-left:auto}
 .rb-mem-facts{font-size:13px;color:var(--rb-sub)}
 .rb-mem-facts ul{margin:5px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
-@media(max-width:760px){.rb-mem-layout{flex-direction:column;overflow:auto}.rb-mem-sidebar{width:auto;max-height:360px;border-right:0;border-bottom:1px solid var(--rb-line2)}.rb-mem-nav-list{display:flex;flex-direction:row;overflow:auto}.rb-mem-nav-list .rb-row{min-width:190px;width:190px}.rb-mem-pane{overflow:visible;padding:14px}}
+@media(max-width:760px){.rb-mem-layout{flex-direction:column;overflow:auto}.rb-mem-sidebar{width:auto;max-height:420px;border-right:0;border-bottom:1px solid var(--rb-line2)}.rb-mem-charlist,.rb-mem-chatlist{display:flex;flex-direction:row;overflow:auto}.rb-mem-charlist .rb-row,.rb-mem-chatlist .rb-row{min-width:190px;width:190px}.rb-mem-pane{overflow:visible;padding:14px}}
 `+PROB_CSS;
