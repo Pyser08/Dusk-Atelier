@@ -66,6 +66,7 @@ test("situation instructions avoid repeating unchanged scenes and use previous c
   assert.match(instruction, /ONLY when the scene state materially changes/);
   assert.match(instruction, /Do NOT create a new S block for ordinary dialogue/);
   assert.match(instruction, /Never nest or overlap S and C blocks/);
+  assert.match(instruction, /OUTPUT CONTRACT: Return the normal in-character reply/);
 });
 
 
@@ -120,4 +121,11 @@ test("beforeRequest removes hidden marks without dropping non-text payload parts
   assert.equal(output[1].content[1].url,"data:image/png;base64,abc");
   assert.match(output[0].content,/Dusk Atelier – interaction and situation marks/);
   assert.match(output[0].content,/SITUATION MARKS — record scene state/);
+});
+
+test("normalizer closes an unfinished C block and keeps a single current time mark", () => {
+  const out=normalizeMarks("⟦T:old⟧⟦T:new⟧⟦C:Mio⟧Hello");
+  assert.equal((out.match(/⟦T:/g)??[]).length,1);
+  assert.match(out,/⟦T:new⟧/);
+  assert.match(out,/⟦C:Mio⟧Hello⟦\\/C⟧$/);
 });
