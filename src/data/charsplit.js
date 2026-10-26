@@ -1,4 +1,5 @@
 import { normalizeMarks, hideMarksForDisplay, extractMessageText, isUserMessage } from "../engine/charsplit.js";
+// Keep hidden-mark processing lossless for non-text payloads and consistent across chat paths.
 export const CHARSPLIT_KEY="dusk.charsplit.v1";
 export const CHARSPLIT_DEFAULTS=Object.freeze({v:1,enabled:true,showTime:false,debug:false,bots:{},ai:{mode:"submodel",staticModel:"",extra:"",lang:"English"}});
 const txt=v=>typeof v==="string"?v:Array.isArray(v)?v.map(p=>typeof p==="string"?p:txt(p?.text??p?.data??p?.content??"")).join("\n"):v&&typeof v==="object"?txt(v.text??v.data??v.content??v.mes??v.message??""):String(v??""), idOf=c=>String(c?.chaId??c?.id??"");
