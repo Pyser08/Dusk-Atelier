@@ -127,5 +127,5 @@ test("normalizer closes an unfinished C block and keeps a single current time ma
   const out=normalizeMarks("⟦T:old⟧⟦T:new⟧⟦C:Mio⟧Hello");
   assert.equal((out.match(/⟦T:/g)??[]).length,1);
   assert.match(out,/⟦T:new⟧/);
-  assert.match(out,/⟦C:Mio⟧Hello⟦\\/C⟧$/);
+  assert.ok(out.endsWith("⟦C:Mio⟧Hello⟦/C⟧"));
 });
