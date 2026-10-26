@@ -63,11 +63,11 @@ function analysisPrompt(botName, chatName, history, output, previousSituation) {
   ];
 }
 export function createEpisodicMemory(api, { log = (...args) => console.log("[Dusk 기억]", ...args) } = {}) {
-  let running = false;
   let lastSignature = "";
+  let analysisQueue = Promise.resolve();
   let writeQueue = Promise.resolve();
   async function analyzeOutput(output) {
-    if (running || typeof output !== "string" || !output.trim()) return;
+    if (typeof output !== "string" || !output.trim()) return;
     const charIndex = await api.getCurrentCharacterIndex();
     const chatIndex = await api.getCurrentChatIndex();
     if (!(charIndex >= 0) || !(chatIndex >= 0)) return;
@@ -78,7 +78,6 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
     const signature = idOf(character) + "::" + chatId + "::" + output;
     if (signature === lastSignature) return;
     lastSignature = signature;
-    running = true;
     try {
       const state = await loadEpisodicMemory(api);
       const folderKey = keyOf(idOf(character), chatId);
@@ -87,6 +86,7 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
         chatId, chatName: clean(chat?.name || chat?.chatName || ("채팅 " + (chatIndex + 1)), 160),
         createdAt: Date.now(), updatedAt: Date.now(), characters: {}, situations: [], lastOutput: ""
       };
+      if (folder.lastOutput === signature.slice(-160)) return;
       const history = chatLines(chat);
       const prompt = analysisPrompt(folder.charName, folder.chatName, history, output, folder.situations.at(-1)?.summary ?? "");
       const raw = await runAI(api, prompt, { mode: "submodel" });
@@ -130,8 +130,6 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
       await writeQueue;
     } catch (e) {
       log("자동 기억 분석 실패", e?.message ?? e);
-    } finally {
-      running = false;
     }
   }
   async function start() {
@@ -142,7 +140,7 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
     try {
       await api.addRisuScriptHandler("output", (text) => {
         // 출력 응답은 지연시키지 않고, 기록 작업은 백그라운드에서 진행한다.
-        Promise.resolve().then(() => analyzeOutput(text)).catch(e => log("자동 기억 작업 실패", e?.message ?? e));
+        analysisQueue = analysisQueue.then(() => analyzeOutput(text)).catch(e => log("자동 기억 작업 실패", e?.message ?? e));
         return text;
       });
       log("자동 기억 출력 훅 등록 완료");
