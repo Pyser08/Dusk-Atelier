@@ -6,9 +6,9 @@ import { mem, loadBots, loadChats, loadFolder, fail } from "./common.js";
 import { renderPeople } from "./people.js";
 import { renderScenes } from "./scenes.js";
 import { renderCompose } from "./compose.js";
-import { renderSettings } from "./settings.js";
+import { renderBotSettings } from "./settings.js";
 
-const TABS = [["people", "등장인물"], ["scenes", "상황"], ["compose", "새 봇 만들기"], ["settings", "설정"]];
+const TABS = [["people", "등장인물"], ["scenes", "상황"], ["compose", "새 봇 만들기"]];
 
 export async function renderBotView(ctx, host, { redraw, back }) {
   const m = mem(ctx), M = ctx.memory;
@@ -45,11 +45,16 @@ export async function renderBotView(ctx, host, { redraw, back }) {
     ? h("select", { class: "rb-input", "aria-label": "채팅 선택", onChange: (e) => { m.chatIndex = +e.target.value; m.personKey = ""; redraw(); } }, chats.map((c) => h("option", { value: c.index, selected: c.index === m.chatIndex }, `${c.index + 1}. ${c.name} (${c.count})`)))
     : h("div", { class: "rb-mem-chats", role: "tablist", "aria-label": "채팅 선택" }, chats.map((c) => h("button", { type: "button", class: "rb-chip", "aria-pressed": c.index === m.chatIndex ? "true" : "false", onClick: () => { m.chatIndex = c.index; m.personKey = ""; redraw(); } }, `${c.index + 1}. ${c.name}`, h("small", null, `${c.count}`))));
 
+  // '설정' 폴드: 자동 기록 토글 옆 버튼으로 여닫는다. 내용은 지난 대화 분석·제외 이름·초기화·상태.
+  const setBtn = btn("설정", { size: "sm", icon: "sliders", onClick: () => toggleSettings() });
+  setBtn.setAttribute("aria-expanded", m.settingsOpen ? "true" : "false");
+  const setPanel = h("div", { class: "rb-mem-fold-panel", hidden: !m.settingsOpen }, renderBotSettings(env));
+  const toggleSettings = () => { m.settingsOpen = !m.settingsOpen; setPanel.hidden = !m.settingsOpen; setBtn.setAttribute("aria-expanded", m.settingsOpen ? "true" : "false"); };
   const body = h("div", { class: "rb-mem-body" });
   const tabs = h("div", { class: "rb-mem-tabs", role: "tablist" }, TABS.map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { m.tab = id; m.page = 1; redraw(); } }, label)));
   replace(host,
-    h("div", { class: "rb-mem-head" }, h("span", { class: "rb-mem-back" }, btn("뒤로", { size: "sm", icon: "back", onClick: back })), h("h2", null, bot.character.name || "이름 없는 캐릭터"), h("span", { class: ["rb-mem-mode", backend.id], title: backend.reason }, backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드"), h("span", { style: "flex:1" }), sw),
-    status, chatRow, tabs, body);
-  const draw = { people: renderPeople, scenes: renderScenes, compose: renderCompose, settings: renderSettings }[m.tab] ?? renderPeople;
+    h("div", { class: "rb-mem-head" }, h("span", { class: "rb-mem-back" }, btn("뒤로", { size: "sm", icon: "back", onClick: back })), h("h2", null, bot.character.name || "이름 없는 캐릭터"), h("span", { class: ["rb-mem-mode", backend.id], title: backend.reason }, backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드"), h("span", { style: "flex:1" }), sw, setBtn),
+    setPanel, status, chatRow, tabs, body);
+  const draw = { people: renderPeople, scenes: renderScenes, compose: renderCompose }[m.tab] ?? renderPeople;
   await draw(env, body);
 }

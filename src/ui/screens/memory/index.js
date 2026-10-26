@@ -4,6 +4,7 @@ import { icon } from "../../icons.js";
 import { mem, fail } from "./common.js";
 import { renderBotList } from "./botlist.js";
 import { renderBotView } from "./botview.js";
+import { renderGlobalSettings } from "./settings.js";
 
 export async function renderMemory(ctx) {
   const m = mem(ctx);
@@ -14,7 +15,11 @@ export async function renderMemory(ctx) {
   const showView = true, showList = true;
   replace(ctx.main, h("div", { class: "rb-mem-wrap" }, h("div", { class: "rb-mem-root", "data-view": m.view === "bot" && m.botId ? "bot" : "bots" }, listHost, viewHost)));
   const open = (id) => { m.botId = id; m.chatIndex = 0; m.tab = "people"; m.personKey = ""; m.view = "bot"; m.compose = null; redraw(); };
-  if (showList) await renderBotList(ctx, listHost, { open, redraw });
+  if (showList) {
+    const gHost = h("div"), bHost = h("div", { class: "rb-mem-botwrap" });
+    replace(listHost, gHost, bHost);
+    await Promise.all([renderGlobalSettings(ctx, gHost, { redraw }), renderBotList(ctx, bHost, { open, redraw })]);
+  }
   if (showView) {
     if (m.botId) await renderBotView(ctx, viewHost, { redraw, back: () => { m.view = "bots"; redraw(); } });
     else replace(viewHost, h("div", { class: "rb-empty" }, icon("search", 22), h("div", null, "왼쪽에서 봇을 골라 주세요.")));

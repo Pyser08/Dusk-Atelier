@@ -415,6 +415,17 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
  .rb-mem-back{display:inline-flex}
 }
 .rb-mem-diag{overflow-wrap:anywhere}
+.rb-mem-fold{border:1px solid var(--rb-line2);border-radius:14px;background:var(--rb-surf);flex-shrink:0}
+.rb-mem-fold>summary{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:0 14px;cursor:pointer;font-weight:700;list-style:none}
+.rb-mem-fold>summary::-webkit-details-marker{display:none}
+.rb-mem-fold>summary::after{content:"▾";color:var(--rb-mute);margin-left:auto;padding-left:8px}
+.rb-mem-fold[open]>summary::after{content:"▴"}
+.rb-mem-fold>summary .rb-mem-mode{margin-left:8px}
+.rb-mem-foldbody{display:flex;flex-direction:column;gap:10px;padding:0 10px 12px}
+.rb-mem-modeline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 4px}
+.rb-mem-fold-panel{display:flex;flex-direction:column;border:1px solid var(--rb-line2);border-radius:14px;background:var(--rb-surf);padding:10px 0 2px;flex-shrink:0}
+.rb-mem-fold-panel[hidden]{display:none}
+.rb-mem-botwrap{display:flex;flex-direction:column;gap:10px;min-height:0}
 .rb-mem-botlist{display:flex;flex-direction:column;gap:4px}
 .rb-mem-botlist .rb-row .txt,.rb-mem-card .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left}
 .rb-mem-botlist .name,.rb-mem-card .name{font-weight:600;display:flex;gap:6px;align-items:center}
