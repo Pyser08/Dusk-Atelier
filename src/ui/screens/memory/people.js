@@ -40,7 +40,7 @@ export async function renderPeople(env, host) {
   if (m.personKey && folder.people?.[m.personKey]) return personDetail(env, host, m.personKey);
   m.personKey = "";
   if (!people.length) return replace(host, h("div", { class: "rb-empty" }, icon("character", 24), h("div", null, "아직 기록된 인물이 없어요."),
-    caps.analyze ? btn("이 채팅 분석하기", { kind: "primary", onClick: () => analyzeNow(env) }) : h("div", { class: "rb-muted" }, "리스바드가 위키를 쌓으면 여기서 볼 수 있어요. 채팅을 열고 새로고침해 주세요.")));
+    caps.analyze ? h("div", { class: "rb-mem-sact" }, btn("지난 대화 전체 분석하기", { kind: "primary", onClick: () => { m.tab = "settings"; env.redraw(); } }), btn("마지막 응답만 분석", { onClick: () => analyzeNow(env) })) : h("div", { class: "rb-muted" }, "리스바드가 위키를 쌓으면 여기서 볼 수 있어요. 채팅을 열고 새로고침해 주세요.")));
   const q = m.personSearch.trim().toLowerCase();
   let rows = people.filter(([, p]) => !q || [p.name, ...(p.aliases ?? [])].some((n) => String(n).toLowerCase().includes(q)));
   rows = rows.sort(([, a], [, b]) => m.sort === "count" ? visibleRecords(b).length - visibleRecords(a).length : m.sort === "grade" ? GRADES.indexOf(topGrade(b) || "D") - GRADES.indexOf(topGrade(a) || "D") : lastAt(b) - lastAt(a));
@@ -60,7 +60,7 @@ export async function renderPeople(env, host) {
   replace(host, h("div", { class: "rb-mem-tools" },
     h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "인물 검색", value: m.personSearch, "aria-label": "인물 검색", onInput: (e) => { m.personSearch = e.target.value; env.redraw(); } })),
     h("select", { class: "rb-input", style: "width:auto;height:36px", "aria-label": "정렬", onChange: (e) => { m.sort = e.target.value; env.redraw(); } }, [["time", "최근 등장"], ["count", "기록 많은 순"], ["grade", "최고 등급"]].map(([v, l]) => h("option", { value: v, selected: m.sort === v }, l))),
-    caps.analyze ? btn("분석", { size: "sm", icon: "refresh", onClick: () => analyzeNow(env) }) : btn("새로고침", { size: "sm", icon: "refresh", onClick: () => env.redraw() }), menu), grid);
+    caps.analyze ? btn("지난 대화 분석", { size: "sm", icon: "refresh", onClick: () => { m.tab = "settings"; env.redraw(); } }) : btn("새로고침", { size: "sm", icon: "refresh", onClick: () => env.redraw() }), menu), grid);
 }
 
 async function analyzeNow(env) {
