@@ -387,6 +387,12 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-wrap{container-type:inline-size;container-name:memwrap;flex:1;min-height:0;min-width:0;display:flex}
 .rb-mem-root{display:flex;flex:1;min-height:0;min-width:0;gap:0;overflow:hidden}
 .rb-mem-back{display:none}
+/* 세로 flex 안에서 내용이 길 때(설정 탭 등) 머리·상태·알약 탭이 줄어들어 가려지지 않게 */
+.rb-mem-col>*{flex-shrink:0}
+.rb-mem-tabs,.rb-mem-chats,.rb-mem-status,.rb-mem-head{flex-shrink:0}
+.rb-mem-mode{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;background:var(--rb-surf2);color:var(--rb-sub);border:1px solid var(--rb-line2)}
+.rb-mem-mode.bardwiki{background:var(--rb-acc-soft);color:var(--rb-acc-text);border-color:var(--rb-sel-ring)}
+.rb-mem-mode.local{background:linear-gradient(135deg,rgba(91,141,239,.18),rgba(154,107,255,.18));color:var(--rb-text)}
 .rb-mem-col{display:flex;flex-direction:column;gap:10px;min-width:0;overflow:auto;padding:12px}
 .rb-mem-col.list{width:280px;flex-shrink:0;border-right:1px solid var(--rb-line2)}.rb-mem-col.view{flex:1}
 /* 좁은 폭(휴대폰·좁은 창)에서는 한 번에 한 칸만: 컨테이너 폭 기준 + 뷰포트 기준을 함께 건다 */

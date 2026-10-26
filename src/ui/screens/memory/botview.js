@@ -48,7 +48,7 @@ export async function renderBotView(ctx, host, { redraw, back }) {
   const body = h("div", { class: "rb-mem-body" });
   const tabs = h("div", { class: "rb-mem-tabs", role: "tablist" }, TABS.map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { m.tab = id; m.page = 1; redraw(); } }, label)));
   replace(host,
-    h("div", { class: "rb-mem-head" }, h("span", { class: "rb-mem-back" }, btn("뒤로", { size: "sm", icon: "back", onClick: back })), h("h2", null, bot.character.name || "이름 없는 캐릭터"), h("span", { style: "flex:1" }), sw),
+    h("div", { class: "rb-mem-head" }, h("span", { class: "rb-mem-back" }, btn("뒤로", { size: "sm", icon: "back", onClick: back })), h("h2", null, bot.character.name || "이름 없는 캐릭터"), h("span", { class: ["rb-mem-mode", backend.id], title: backend.reason }, backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드"), h("span", { style: "flex:1" }), sw),
     status, chatRow, tabs, body);
   const draw = { people: renderPeople, scenes: renderScenes, compose: renderCompose, settings: renderSettings }[m.tab] ?? renderPeople;
   await draw(env, body);
