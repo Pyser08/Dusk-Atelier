@@ -2,7 +2,7 @@ import { normalizeMarks, hideMarksForDisplay, extractMessageText, isUserMessage 
 export const CHARSPLIT_KEY="dusk.charsplit.v1";
 export const CHARSPLIT_DEFAULTS=Object.freeze({v:1,enabled:true,showTime:false,debug:false,bots:{},ai:{mode:"submodel",staticModel:"",extra:"",lang:"English"}});
 const txt=v=>typeof v==="string"?v:Array.isArray(v)?v.map(p=>typeof p==="string"?p:txt(p?.text??p?.data??p?.content??"")).join("\n"):v&&typeof v==="object"?txt(v.text??v.data??v.content??v.mes??v.message??""):String(v??""), idOf=c=>String(c?.chaId??c?.id??"");
-const stripMarkText=v=>String(v??"").replace(/⟦C:[^⟧]+⟧|⟦\\/C⟧|⟦S⟧|⟦\\/S⟧|⟦T:[^⟧]*⟧/g,"");
+const stripMarkText=v=>String(v??"").replace(/⟦C:[^⟧]+⟧|⟦\/C⟧|⟦S⟧|⟦\/S⟧|⟦T:[^⟧]*⟧/g,"");
 const mapTextParts=(value,fn)=>{
  if(typeof value==="string")return fn(value);
  if(Array.isArray(value))return value.map(part=>mapTextParts(part,fn));
@@ -14,11 +14,11 @@ const mapTextParts=(value,fn)=>{
  return value;
 };
 const stripMessageMarks=m=>{
- const markPattern=/⟦(?:C:|\\/C|S⟧|\\/S|T:)/;
+ const markPattern=/⟦(?:C:|\/C|S⟧|\/S|T:)/;
  const keyWithMarks=["content","data","text","mes","message"].find(k=>m?.[k]!=null&&markPattern.test(txt(m[k])));
  const key=keyWithMarks??["content","data","text","mes","message"].find(k=>m?.[k]!=null&&txt(m[k]).trim());
  if(!key)return {message:{...m},counts:{C:0,S:0,T:0}};
- const raw=txt(m[key]),counts={C:(raw.match(/⟦C:[^⟧]+⟧|⟦\\/C⟧/g)||[]).length,S:(raw.match(/⟦S⟧|⟦\\/S⟧/g)||[]).length,T:(raw.match(/⟦T:[^⟧]*⟧/g)||[]).length};
+ const raw=txt(m[key]),counts={C:(raw.match(/⟦C:[^⟧]+⟧|⟦\/C⟧/g)||[]).length,S:(raw.match(/⟦S⟧|⟦\/S⟧/g)||[]).length,T:(raw.match(/⟦T:[^⟧]*⟧/g)||[]).length};
  const out={...m};out[key]=mapTextParts(m[key],stripMarkText);
  return {message:out,counts};
 };
