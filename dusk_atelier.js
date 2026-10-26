@@ -891,6 +891,15 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 @media (max-width:560px){.rb-da{padding:10px}.rb-da-lab{width:100%}.rb-da-line>.rb-seg{min-width:100%}}
 
 .rb-mem-layout{display:flex;flex:1;min-height:0;gap:0;overflow:hidden}
+.rb-mem-charlist,.rb-mem-chatlist{display:flex;flex-direction:column;gap:4px;padding:4px 0 10px}
+.rb-mem-charlist .rb-row,.rb-mem-chatlist .rb-row{width:100%;text-align:left;display:flex;align-items:flex-start;gap:9px}
+.rb-mem-charlist .rb-row.is-active,.rb-mem-chatlist .rb-row.is-active{background:var(--rb-sel-bg);border-color:var(--rb-sel-ring)}
+.rb-mem-charlist .txt,.rb-mem-chatlist .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.rb-mem-charlist .meta,.rb-mem-chatlist .meta{white-space:normal;overflow-wrap:anywhere}
+.rb-mem-search{margin:8px 4px 4px;width:calc(100% - 8px);box-sizing:border-box}
+.rb-mem-chatlist{border-top:1px solid var(--rb-line2);margin-top:6px;padding-top:12px}
+.rb-mem-chatlist>.rb-label{padding:0 8px 4px}
+
 .rb-mem-sidebar{width:260px;flex-shrink:0;min-height:0;overflow:auto;border-right:1px solid var(--rb-line2);padding:4px 8px 12px}
 .rb-mem-folders,.rb-mem-nav-list{display:flex;flex-direction:column;gap:4px}
 .rb-mem-folders .rb-row,.rb-mem-nav-list .rb-row{width:100%;text-align:left;display:flex;align-items:flex-start;gap:10px}
