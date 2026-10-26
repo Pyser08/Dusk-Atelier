@@ -77,14 +77,15 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
       log("기억 상태 저장 실패", e?.message ?? e);
     }
   }
-  async function analyzeOutput(output) {
-    if (typeof output !== "string" || !output.trim()) return;
-    const charIndex = await api.getCurrentCharacterIndex();
-    const chatIndex = await api.getCurrentChatIndex();
-    if (!(charIndex >= 0) || !(chatIndex >= 0)) return;
+  async function analyzeOutput(output, target = null) {
+    if (typeof output !== "string" || !output.trim()) throw new Error("분석할 본문이 비어 있어요.");
+    const charIndex = Number.isInteger(target?.charIndex) ? target.charIndex : await api.getCurrentCharacterIndex();
+    const chatIndex = Number.isInteger(target?.chatIndex) ? target.chatIndex : await api.getCurrentChatIndex();
+    if (!(charIndex >= 0) || !(chatIndex >= 0)) throw new Error("캐릭터 또는 채팅을 찾지 못했어요.");
     const character = await api.getCharacterFromIndex(charIndex);
-    if (!character) return;
+    if (!character) throw new Error("선택한 캐릭터를 불러오지 못했어요.");
     const chat = await api.getChatFromIndex(charIndex, chatIndex);
+    if (!chat) throw new Error("선택한 채팅을 불러오지 못했어요.");
     const chatId = String(chat?.id ?? chatIndex);
     const signature = idOf(character) + "::" + chatId + "::" + output;
     if (signature === lastSignature) return;
@@ -92,11 +93,13 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
       const state = await loadEpisodicMemory(api);
       const folderKey = keyOf(idOf(character), chatId);
       const folder = state.folders[folderKey] ?? {
-        id: folderKey, charId: idOf(character), charName: clean(character.name, 160),
-        chatId, chatName: clean(chat?.name || chat?.chatName || ("채팅 " + (chatIndex + 1)), 160),
+        id: folderKey, charId: idOf(character), charIndex, charName: clean(character.name, 160),
+        chatId, chatIndex, chatName: clean(chat?.name || chat?.chatName || ("채팅 " + (chatIndex + 1)), 160),
         createdAt: Date.now(), updatedAt: Date.now(), characters: {}, situations: [], lastOutput: ""
       };
-      if (folder.lastOutput === signature.slice(-160)) return;
+      folder.charIndex = charIndex;
+      folder.chatIndex = chatIndex;
+      if (folder.lastOutput === signature.slice(-160)) return false;
       const prompt = analysisPrompt(folder.charName, folder.chatName, chatLines(chat), output, folder.situations.at(-1)?.summary ?? "");
       const { runAI } = await import("../engine/merge.js");
       const raw = await runAI(api, prompt, { mode: "submodel" });
@@ -139,10 +142,40 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
       await writeQueue;
       lastSignature = signature;
       log("기억 분석 완료", folder.charName, folder.chatName);
+      return true;
     } catch (e) {
-      log("자동 기억 분석 실패", e?.message ?? e);
+      log("기억 분석 실패", e?.message ?? e);
       await updateStatus({ lastError: String(e?.message ?? e).slice(0, 500) });
+      throw e;
     }
+  }
+  async function ensureFolder(charIndex, chatIndex) {
+    const character = await api.getCharacterFromIndex(charIndex);
+    if (!character) throw new Error("선택한 캐릭터를 불러오지 못했어요.");
+    const chat = await api.getChatFromIndex(charIndex, chatIndex);
+    if (!chat) throw new Error("선택한 채팅을 불러오지 못했어요.");
+    const chatId = String(chat.id ?? chatIndex);
+    const folderKey = keyOf(idOf(character), chatId);
+    const state = await loadEpisodicMemory(api);
+    const folder = state.folders[folderKey] ?? {
+      id: folderKey, charId: idOf(character), charIndex, charName: clean(character.name, 160),
+      chatId, chatIndex, chatName: clean(chat.name || chat.chatName || ("채팅 " + (chatIndex + 1)), 160),
+      createdAt: Date.now(), updatedAt: Date.now(), characters: {}, situations: [], lastOutput: ""
+    };
+    folder.charIndex = charIndex;
+    folder.chatIndex = chatIndex;
+    folder.chatName = clean(chat.name || chat.chatName || ("채팅 " + (chatIndex + 1)), 160);
+    state.folders[folderKey] = folder;
+    await saveEpisodicMemory(api, state);
+    return folder;
+  }
+  async function analyzeSelected(charIndex, chatIndex) {
+    const folder = await ensureFolder(charIndex, chatIndex);
+    const chat = await api.getChatFromIndex(charIndex, chatIndex);
+    const latest = [...(chat?.message ?? [])].reverse().find(m => !isUserMessage(m) && extractMessageText(m).trim());
+    if (!latest) throw new Error("선택한 채팅에 분석할 AI 응답이 없어요.");
+    await analyzeOutput(extractMessageText(latest), { charIndex, chatIndex });
+    return loadEpisodicMemory(api);
   }
   async function analyzeCurrent() {
     const charIndex = await api.getCurrentCharacterIndex();
@@ -174,5 +207,5 @@ export function createEpisodicMemory(api, { log = (...args) => console.log("[Dus
       return false;
     }
   }
-  return { start, load: () => loadEpisodicMemory(api), analyzeCurrent };
+  return { start, load: () => loadEpisodicMemory(api), analyzeCurrent, analyzeSelected, ensureFolder };
 }
