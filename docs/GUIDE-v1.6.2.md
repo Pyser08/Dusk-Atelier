@@ -44,6 +44,7 @@ RisuAI 플러그인(API 3.0). 모듈·봇 관리/업데이트(RisuTide 이식), 
 - **등급 연동(리스바드에 `grade` 필드 패치가 있을 때):**
   - 위키 사건 문서의 `grade`(정수 0~9)와 `gradeBy`("user"|"ai")를 읽어 그 문서에서 나온 기록·상황 카드에 표시(0~1은 등급 없음). 위키 등급이 있으면 AI로 다시 채점하지 않음. 기록 옆에 "위키 등급 · 사용자/AI" 또는 "AI 등급 · 플러그인 캐시" 표시.
   - 등급 매기기(`gradeOnDemand`)는 **등급 없는 사건 문서만 문서 단위**로 AI 채점(30개씩). `bardWiki.setGrade`가 있으면 `gradeBy:"ai"`로 위키에 저장, 첫 권한 거부(null) 시 더 묻지 않고 캐시에만 저장, 저장 실패(문서 변경/사용자 등급)도 캐시만 사용. `setGrade`가 없는 구버전은 캐시만 사용(이전 동작 유지).
+  - 등급 매기기 결과 토스트: 위키 저장 N개 / 캐시만 M개와 이유(setGrade 없음·권한 거부·저장 실패). 매길 항목이 없으면 "AI 등급 다시 매기기"를 물음(`gradeOnDemand(..., {regrade:true})`, 사용자 지정 등급은 유지; 반환값의 `lastGrade{total,wrote,cacheOnly,reason,error}`).
   - 사용자 지정: 기록 메뉴 "위키 등급 지정"(현재 열린 채팅, `setGrade` 지원 시) → D/C/B/A/S/EX(대표 점수 3/5/6/7/8/9), 0~9, "해제" 입력. `gradeBy:"user"`로 저장되며 AI가 덮어쓰지 않음.
   - 리스바드 쪽 패치 파일: 저장소 루트의 `bardwiki-grade.patch`(및 변경 파일 zip). 규격은 아래 §7-1.
 
@@ -69,7 +70,7 @@ RisuAI 플러그인(API 3.0). 모듈·봇 관리/업데이트(RisuTide 이식), 
 ## 5. 저장소·브랜치·빌드
 - 저장소 https://github.com/Pyser08/Dusk-Atelier. main에는 빌드 결과 `dusk_atelier.js`와 문서; 1.6.2 코드는 PR #4 브랜치 `feat/character-split-v1.6.2`.
 - **`dusk_atelier.js`는 빌드 산출물**: 직접 고치지 말 것. 소스는 `src/`(main.js 진입).
-- `node tools/build.mjs`(esbuild 번들, IIFE 단일 파일, `//@` 머리말 생성, CHANGELOG 최근 8버전 포함), `node tools/build.mjs --check`(저장소 파일과 비교), `node --test`(현재 85개 통과). 버전은 `package.json` + CHANGELOG 맨 위 섹션.
+- `node tools/build.mjs`(esbuild 번들, IIFE 단일 파일, `//@` 머리말 생성, CHANGELOG 최근 8버전 포함), `node tools/build.mjs --check`(저장소 파일과 비교), `node --test`(현재 86개 통과). 버전은 `package.json` + CHANGELOG 맨 위 섹션.
 - 줄 맨 앞 `//@`는 RisuAI가 머리말로 읽으므로 번들 안에 생기지 않게 함(minifySyntax 금지).
 - 커밋 전 반드시: 테스트 → build → check.
 
