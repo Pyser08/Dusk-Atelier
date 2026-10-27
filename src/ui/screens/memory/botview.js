@@ -3,7 +3,7 @@ import { diagText } from "../../../engine/memorydiag.js";
 import { icon } from "../../icons.js";
 import { btn, badge, switchEl, setSwitch, loading, note } from "../../kit.js";
 import { mem, loadBots, loadChats, loadFolder, fail } from "./common.js";
-import { renderPeople } from "./people.js";
+import { renderPeopleTab } from "./wikiview.js";
 import { renderScenes } from "./scenes.js";
 import { renderOpen, renderRels, renderTimeline } from "./ledger.js";
 import { renderBotSettings, renderBotAnalysis } from "./settings.js";
@@ -55,7 +55,7 @@ export async function renderBotView(ctx, host, { redraw, redrawView, back, quiet
   const toggleSettings = () => { m.settingsOpen = !m.settingsOpen; setPanel.hidden = !m.settingsOpen; setBtn.setAttribute("aria-expanded", m.settingsOpen ? "true" : "false"); };
   const body = h("div", { class: "rb-mem-body" });
   // 탭 전환은 아래 본문만 다시 그린다(폴더·채팅·설정을 다시 읽지 않는다). 저장·분석 같은 변경은 기존처럼 전체를 다시 그린다.
-  const DRAW = { people: renderPeople, scenes: renderScenes, timeline: renderTimeline, open: renderOpen, rels: renderRels };
+  const DRAW = { people: renderPeopleTab, scenes: renderScenes, timeline: renderTimeline, open: renderOpen, rels: renderRels };
   const drawBody = () => (DRAW[m.tab] ?? renderPeople)(env, body);
   const tabBtns = TABS.map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { if (m.tab === id) return; m.tab = id; m.page = 1; tabBtns.forEach((b, k) => b.setAttribute("aria-pressed", TABS[k][0] === id ? "true" : "false")); Promise.resolve(drawBody()).catch(fail(ctx)); } }, label));
   const tabs = h("div", { class: "rb-mem-tabs", role: "tablist" }, tabBtns);
