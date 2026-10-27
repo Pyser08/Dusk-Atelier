@@ -563,6 +563,17 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
       }
       for (const tgt of pass2) changed = add(tgt, `소속: ${gname}`) || changed;
     }
+    // 같이 켜기(연쇄): 켜진 항목이 지정한 항목을 확률로 같이 켠다 (항목 쌍마다 한 번만 굴린다)
+    for (const a of [...active.values()]) {
+      for (const c of a.rule.chain ?? []) {
+        const tgt = byRid.get(c.rid);
+        if (!tgt || active.has(tgt.rid) || blocked(tgt)) continue;
+        const key = `${a.rid}>${tgt.rid}`;
+        if (rolled.has(key)) continue;
+        rolled.set(key, roll(c.prob));
+        if (rolled.get(key)) changed = add(tgt, `연쇄: ${a.entry.comment || a.rid}`) || changed;
+      }
+    }
     if (!changed) break;
   }
   // 'without' 조건은 최종 결과로 다시 확인 (나중에 켜진 항목 때문에 무효가 된 경우)

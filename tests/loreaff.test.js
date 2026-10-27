@@ -29,3 +29,10 @@ test("하위 소속 구성원이 나와도 형제 소속·구성원은 안 따�
 test("하위 소속 이름이 나오면 그 소속 구성원만 켜진다", () => {
   assert.deepEqual(run("정의실현위원회"), ["정의실현위원회", "트리니티", "하스미"].sort());
 });
+
+test("같이 켜기(연쇄): 프라나가 나오면 지정한 아로나도 켜진다", () => {
+  const es = [folder("샬레", null, { def: 100, max: "", prob: {} }), member("프라나", "샬레"), member("아로나", "샬레"), member("유우카", "샬레")];
+  es[1].extentions.da_rule.chain = [{ rid: "r_아로나", prob: 100 }];
+  const r = evaluate({ items: collectManaged(es), messages: [{ role: "user", data: "프라나" }], turn: 1, rng: () => 0 });
+  assert.deepEqual(r.fired.map((f) => f.entry.comment.replace("[소속] ", "")).sort(), ["샬레", "아로나", "프라나"].sort());
+});
