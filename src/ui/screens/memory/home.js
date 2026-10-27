@@ -6,6 +6,7 @@ import { mem, fail, gradeBadge, at } from "./common.js";
 import { stepsOf } from "../../../engine/flowsteps.js";
 import { firstRunFeatures } from "../../../engine/firstrun.js";
 import { openSetup } from "./setup.js";
+import { guideBtn } from "./guide.js";
 
 async function recentLines(M, n = 3) {
   const idx = await M.store.getIndex();
@@ -38,7 +39,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   const dots = h("ol", { class: "rb-mem-flowsteps", "aria-label": "이번 턴 진행" }, steps.map((s) => h("li", { class: ["rb-mem-flowstep", `is-${s.state}`], title: s.hint || s.label }, h("i", { "aria-hidden": "true" }), h("span", null, s.label))));
   const recent = h("ul", { class: "rb-mem-reclist rb-mem-recent" });
   const card = h("section", { class: ["rb-card", "rb-mem-home", on && "on"] },
-    h("div", { class: "rb-mem-homehead" }, icon("brain", 22), h("div", { class: "t" }, h("b", null, "장기기억"), h("small", { class: "rb-muted" }, !canFlow ? (backend.id === "bardwiki" ? "리스바드 위키를 읽는 중이라 이 기능은 쓰지 않아요." : "기억 저장소가 꺼져 있어요.") : on ? `켜져 있어요 · ${flow.mode === "accurate" ? "더 정확하게" : "빠르게"}` : "꺼져 있어요. 스위치만 켜도 바로 써요.")), sw),
+    h("div", { class: "rb-mem-homehead" }, icon("brain", 22), h("div", { class: "t" }, h("b", null, "장기기억 ", guideBtn(ctx, "home", { redraw })), h("small", { class: "rb-muted" }, !canFlow ? (backend.id === "bardwiki" ? "리스바드 위키를 읽는 중이라 이 기능은 쓰지 않아요." : "기억 저장소가 꺼져 있어요.") : on ? `켜져 있어요 · ${flow.mode === "accurate" ? "더 정확하게" : "빠르게"}` : "꺼져 있어요. 스위치만 켜도 바로 써요.")), sw),
     on ? dots : null, recent,
     h("div", { class: "rb-mem-sact" }, btn(on ? "설정 열기" : "처음 설정하기", { kind: on ? "" : "primary", icon: "sliders", onClick: async () => { if (on) { m.globalOpen = true; return redraw(); } if (!M.flow || !canFlow) { m.globalOpen = true; return redraw(); } if (await openSetup(ctx)) redraw(); } })),
     idx.status?.lastError ? note("warn", `마지막 오류: ${String(idx.status.lastError).slice(0, 90)}`) : null);

@@ -22,3 +22,9 @@ test("마법사 3단계와 요약", () => {
   assert.equal(wizardSummary({ easyKind: "risuai", level: "basic", mode: "fast" }), "리스 보조 모델 · 기본 · 빠르게");
   assert.equal(wizardSummary({ easyKind: "api", level: "full", mode: "accurate" }), "내 API · 전부 · 더 정확하게");
 });
+
+import { GUIDE, GUIDE_ORDER } from "../src/engine/memoryguide.js";
+test("가이드: 모든 주제에 제목과 단계가 있다", () => {
+  for (const k of GUIDE_ORDER) { assert.ok(GUIDE[k].title); assert.ok(GUIDE[k].steps.length >= 3); }
+  assert.equal(GUIDE.home.again, true);
+});

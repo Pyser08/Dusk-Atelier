@@ -1,6 +1,7 @@
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { btn, badge, chip, openMenu, promptDialog, confirmDialog, modal } from "../../kit.js";
+import { guideBtn } from "./guide.js";
 import { mem, fail, gradeBadge, avatar, at, visibleRecords, topGrade, lastAt } from "./common.js";
 import { GRADES } from "../../../engine/memorygrade.js";
 import { personKey } from "../../../data/memorystore.js";
@@ -131,7 +132,7 @@ function personDetail(env, host, key) {
       r.at != null && { label: "여기서 새 채팅", onClick: () => newChatFrom(env, r.at) }
     ].filter(Boolean)) }));
   replace(host,
-    h("div", { class: "rb-mem-phead" }, btn("목록", { size: "sm", icon: "back", onClick: () => { m.personKey = ""; env.redraw(); } }), avatar(p.name, topGrade(p)), h("h3", null, p.name), (p.aliases ?? []).length ? h("span", { class: "rb-muted" }, `별칭: ${p.aliases.join(", ")}`) : null, h("span", { style: "flex:1" }),
+    h("div", { class: "rb-mem-phead" }, btn("목록", { size: "sm", icon: "back", onClick: () => { m.personKey = ""; env.redraw(); } }), avatar(p.name, topGrade(p)), h("h3", null, p.name, guideBtn(env.ctx, "person")), (p.aliases ?? []).length ? h("span", { class: "rb-muted" }, `별칭: ${p.aliases.join(", ")}`) : null, h("span", { style: "flex:1" }),
       local && btn(p.pinned ? "고정됨" : "고정", { size: "sm", onClick: () => editFolder(env, (f) => { f.people[key].pinned = !f.people[key].pinned; }) }),
       local && btn({ always: "항상 포함", never: "제외", auto: "자동(관련 시)" }[p.ctx ?? (p.pinned ? "always" : "auto")], { size: "sm", title: "프롬프트 포함 방식: 자동 → 항상 → 제외", onClick: () => editFolder(env, (f) => { const q = f.people[key], c = q.ctx ?? (q.pinned ? "always" : "auto"); q.ctx = { auto: "always", always: "never", never: "auto" }[c]; }) }),
       local && btn("별칭", { size: "sm", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: "별칭 편집", label: "쉼표로 구분", value: (p.aliases ?? []).join(", "), ok: "저장" }); if (v != null) editFolder(env, (f) => { f.people[key].aliases = v.split(",").map((s) => s.trim()).filter(Boolean); }); } }),
