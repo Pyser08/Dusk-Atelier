@@ -4,6 +4,7 @@ import { h, replace, pickFiles } from "../../dom.js";
 import { btn, switchEl, setSwitch, segmented, optionCards, toggleRow, note, confirmDialog } from "../../kit.js";
 import { fail } from "./common.js";
 import { guideBtn } from "./guide.js";
+import { advancedGlobal } from "./advanced.js";
 import { LEVELS, FEATURE_CARDS, applyLevel, levelOf, levelPatch, summaryOf, needsOf } from "../../../engine/trackpreset.js";
 import { getCfg, saveCfg, keyStore, testPreset, listModels, getUsage, resetUsage } from "../../../data/modelhub.js";
 import { addPreset, updatePreset, removePreset, presetOf, STAGES, STAGE_LABEL } from "../../../engine/modelcfg.js";
@@ -122,6 +123,8 @@ export async function flowSections(ctx, host, { redraw }) {
       h("p", { class: "rb-muted" }, "성인 인물의 욕구·월경·임신을 따라가요. 켜지 않으면 아무것도 기록하지 않아요."),
       toggleRow("욕구 기록", "성인 항목이에요. 월경·임신 기록의 바탕이 돼요.", desire, (v) => ed((s) => { s.sexualDesireEnabled = v; if (!v) s.features.openness.cycle = false; })),
       toggleRow("월경·임신 기록", "이야기 속 날짜로 주기·임신·출산을 프로그램이 셈해요. 날짜가 없는 턴은 아무것도 움직이지 않아요.", cycle, (v) => ed((s) => { if (v) { s.sexualDesireEnabled = true; s.features.openness.enabled = true; } s.features.openness.cycle = v; })),
+      desire ? toggleRow("이상성향 기록", "특이한 성적 취향도 따라가요.", snap.paraphiliaEnabled === true, (v) => ed((s) => { s.paraphiliaEnabled = v; })) : null,
+      desire ? toggleRow("노골적인 묘사 수위", "기록 문장이 직설적이 돼요. 꺼 두면 순화해서 적어요.", snap.explicitSexualStyleEnabled === true, (v) => ed((s) => { s.explicitSexualStyleEnabled = v; })) : null,
       cycle ? h("label", { class: "rb-mem-field" }, h("span", null, "임신 확률 배수 (0.5~3)"), slider, rateLabel) : null,
       cycle ? btn("기본값으로", { size: "sm", onClick: () => ed((s) => { s.features.openness.cycleRate = 1; }) }) : null));
   };
@@ -136,10 +139,20 @@ export async function flowSections(ctx, host, { redraw }) {
     } catch (e) { fail(ctx)(e); }
   } });
 
+  // ---- 5) 고급 모드: 켜면 리수폿의 세부 기능(추가 프롬프트·Hypa·Copilot/Vertex·실행 기록…)이 보인다.
+  const advHost = h("div"), advSw = h("div");
+  const paintAdv = async () => {
+    const on = ((await M.store.getIndex()).settings.flow ?? {}).advanced === true;
+    replace(advSw, toggleRow("고급 모드", "리수폿에서 온 세부 기능을 모두 보여 줘요. 처음이면 꺼 두세요. 꺼도 설정값은 그대로 남아요.", on, async (v) => { await M.store.updateIndex((i) => { i.settings.flow = { ...(i.settings.flow ?? {}), advanced: v }; }); await apply(); redraw(); }));
+    if (on) await advancedGlobal(ctx, advHost, { redraw, st, apply }); else replace(advHost);
+  };
+  paintAdv().catch(fail(ctx));
+
   replace(host,
     sec("무엇을 기억할까요?", "수준을 고르면 아래 카드가 같이 바뀌어요. 바로 저장되고 다음 응답부터 적용돼요.", lvHost, featHost),
     sec("기억 방식", null, modeHost),
     sec("AI 모델", "기록과 정리를 맡길 모델이에요. 모르겠으면 ‘리스 보조 모델’로 두세요.", cfgHost),
     h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "고급"), adultHost),
-    sec("가져오기", "기존에 쓰던 리수폿의 백업 파일(.json)을 불러와요. 인물 문서와 설정만 받고, API 키는 받지 않아요.", importBtn));
+    sec("가져오기", "기존에 쓰던 리수폿의 백업 파일(.json)을 불러와요. 인물 문서와 설정만 받고, API 키는 받지 않아요.", importBtn),
+    h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "고급 모드"), advSw), advHost);
 }

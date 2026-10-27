@@ -111,7 +111,7 @@ function fieldReferences(scope,person,field,bundle){
   else{const source=bundle.source||{};add('source:rp','확정 RP',source.assistant?.text,'confirmed_chat');add('source:user','사용자 발언',source.user?.text,'user_context');add('source:recent_context','이전 대화',source.recentContext,'memory_context');for(const item of bundle.related?.sources||[])add(item.ref,item.label||'관련 로어·설정',item.content);}
   return references;
 }
-class PeopleFieldController{
+export class PeopleFieldController{
   constructor({api,settingsStore,keyStore,wikiController,traceStore=null,llmCall=callWriterModel}){Object.assign(this,{api,settingsStore,keyStore,wikiController,traceStore,llmCall});this.phase='idle';this.targetId='';this.key='';this.label='';this.error='';this.proposal=null;this.usage=null;this.listeners=new Set();this.token=0;this.abort=null;this.disposed=false;}
   status(){return{phase:this.phase,running:['running','applying'].includes(this.phase),targetId:this.targetId,key:this.key,label:this.label,error:this.error,usage:this.usage,proposal:this.proposal?{before:fieldClone(this.proposal.field.before),after:fieldClone(this.proposal.after),reason:this.proposal.reason,issues:[...this.proposal.issues],changed:this.proposal.changed}:null};}
   subscribe(listener){this.listeners.add(listener);listener(this.status());return()=>this.listeners.delete(listener);}

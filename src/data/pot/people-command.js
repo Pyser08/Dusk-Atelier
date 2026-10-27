@@ -90,7 +90,7 @@ export function preparePeopleCommand(raw,{scope,documentId,requestRef,slots,sett
   return {scope:preservePeoplePins(scope,next),changes,issues};
 }
 
-class PeopleCommandController {
+export class PeopleCommandController {
   constructor({api,settingsStore,keyStore,wikiController,sourceLibrary,traceStore=null,llmCall=callWriterModel}){Object.assign(this,{api,settingsStore,keyStore,wikiController,sourceLibrary,traceStore,llmCall});this.phase='idle';this.error='';this.targetId='';this.proposal=null;this.listeners=new Set();this.token=0;this.abort=null;this.disposed=false;}
   status(){return{phase:this.phase,running:['running','applying'].includes(this.phase),targetId:this.targetId,error:this.error,proposal:this.proposal?{changes:commandClone(this.proposal.changes),issues:[...this.proposal.issues],applied:!!this.proposal.applied}:null};}
   subscribe(listener){this.listeners.add(listener);listener(this.status());return()=>this.listeners.delete(listener);}

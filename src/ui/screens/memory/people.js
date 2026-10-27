@@ -8,7 +8,10 @@ import { personKey } from "../../../data/memorystore.js";
 import { createRewindChat, draftFirstMessage, sceneAt } from "../../../data/memoryrewind.js";
 import { isGenerating, Busy } from "../../../engine/safety.js";
 import { findDoc, stateOf, timelineOf, countsOf, filterTimeline, TL_FILTERS, cycleOf } from "../../../engine/personview.js";
-import { editSectionText, setPin, isPinned, sectionPinKey, metricPinKey, isPaused, setPaused } from "../../../engine/personedit.js";
+import { openAITools, confirmManual } from "./aitools.js";
+import { openMerge } from "./mergeui.js";
+import { wikiPanel } from "./wikipanel.js";
+import { editMetricValue, editSectionText, setPin, isPinned, sectionPinKey, metricPinKey, isPaused, setPaused } from "../../../engine/personedit.js";
 
 const PAGE = 100;
 // 폴더 수정 헬퍼(로컬 저장소만). fn(folder) 안에서 고친다.
@@ -55,7 +58,7 @@ export async function renderPeople(env, host) {
         h("span", { class: "rb-mem-minibar", "aria-label": "등급 분포" }, GRADES.map((g, i) => h("i", { "data-g": g, style: { flex: String(Math.max(dist[i], 0.0001)) }, title: `${g} ${dist[i]}` })))));
   }));
   const menu = btn("더보기", { size: "sm", icon: "more", onClick: (e) => openMenu(env.ctx.win, e.currentTarget, [
-    caps.analyze && { label: "인물 합치기", onClick: () => mergePeople(env, people) },
+    caps.analyze && { label: "인물 합치기", onClick: () => openMerge(env, people).catch(fail(env.ctx)) },
     caps.analyze && { label: "고아 기록 정리", onClick: () => cleanOrphans(env) },
     caps.grades === "on-demand" && { label: "등급 매기기(AI)", onClick: () => gradeNow(env) },
     env.backend.id === "bardwiki" && { label: m.showHidden ? "대체·철회 문서 숨기기" : "대체·철회 문서 보기", onClick: () => { m.showHidden = !m.showHidden; env.redraw(); } }
@@ -97,20 +100,6 @@ async function cleanOrphans(env) {
   const ok = await confirmDialog(env.ctx.win, { title: "고아 기록 정리", body: "다시 생성되거나 삭제된 응답에 연결된 기록을 지워요.", ok: "정리", danger: true }); if (!ok) return;
   await editFolder(env, (f) => { for (const p of Object.values(f.people)) p.records = p.records.filter((r) => !r.orphan); f.scenes = f.scenes.filter((s) => !s.orphan); });
 }
-async function mergePeople(env, people) {
-  const names = people.map(([k, p]) => `${p.name}`);
-  const a = await promptDialog(env.ctx.win, { title: "인물 합치기 (1/2)", label: `남길 인물 이름 (${names.slice(0, 8).join(", ")}…)`, ok: "다음" }); if (!a) return;
-  const b = await promptDialog(env.ctx.win, { title: "인물 합치기 (2/2)", label: `"${a}"에 합칠 인물 이름`, ok: "합치기" }); if (!b) return;
-  await editFolder(env, (f) => {
-    const ka = personKey(a), kb = personKey(b), pa = f.people[ka], pb = f.people[kb];
-    if (!pa || !pb || ka === kb) throw new Error("두 이름이 서로 다른 기존 인물이어야 해요.");
-    pa.aliases = [...new Set([...(pa.aliases ?? []), pb.name, ...(pb.aliases ?? [])])];
-    const seen = new Set(pa.records.map((r) => r.act));
-    for (const r of pb.records) if (!seen.has(r.act)) pa.records.push(r);
-    pa.records.sort((x, y) => (x.at ?? -1) - (y.at ?? -1)); delete f.people[kb];
-  });
-}
-
 function personDetail(env, host, key) {
   const m = mem(env.ctx), p = env.folder.people[key], { caps } = env, local = caps.analyze;
   const all = visibleRecords(p);
@@ -138,9 +127,11 @@ function personDetail(env, host, key) {
       local && btn({ always: "항상 포함", never: "제외", auto: "자동(관련 시)" }[p.ctx ?? (p.pinned ? "always" : "auto")], { size: "sm", title: "프롬프트 포함 방식: 자동 → 항상 → 제외", onClick: () => editFolder(env, (f) => { const q = f.people[key], c = q.ctx ?? (q.pinned ? "always" : "auto"); q.ctx = { auto: "always", always: "never", never: "auto" }[c]; }) }),
       local && btn(isPaused(env.idx.bots?.[env.bot.id]?.ignore, p) ? "⏸ 기록 쉬는 중" : "⏸ 기록 쉬기", { size: "sm", title: "이 인물의 사건 기록을 새로 만들지 않아요. 이미 쌓인 기록은 그대로고, 인물 위키 수치는 계속 갱신될 수 있어요.", onClick: () => pausePerson(env, p) }),
       local && btn("별칭", { size: "sm", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: "별칭 편집", label: "쉼표로 구분", value: (p.aliases ?? []).join(", "), ok: "저장" }); if (v != null) editFolder(env, (f) => { f.people[key].aliases = v.split(",").map((s) => s.trim()).filter(Boolean); }); } }),
+      env.advanced && local && doc && btn("AI 도구", { size: "sm", title: "전체 다시 정리 · 직접 지시 · 항목 AI 작성 · 수치 제안", onClick: () => openAITools(env, doc, p).catch(fail(env.ctx)) }),
       btn("이 인물로 새 봇 만들기", { kind: "primary", size: "sm", onClick: () => { m.compose = { keys: [key] }; m.ctab = "compose"; env.ctx.go("cards"); } })),
     p.digest ? h("div", { class: "rb-card rb-mem-digest" }, h("b", null, "요약 "), p.digest) : null,
     state ? stateCard(env, state, env.cycleOn ? cycleOf(doc) : null) : null,
+    env.advanced && doc && wikiEditable(env) ? wikiPanel(env, doc) : null,
     h("div", { class: "rb-mem-chats rb-mem-tlchips", role: "tablist", "aria-label": "이야기 걸러 보기" }, TL_FILTERS.map(([id, label]) => chip(label, { pressed: m.tlFilter === id && m.sort !== "grade", count: id === "all" ? counts.all : counts[id] ?? 0, onClick: () => { m.tlFilter = id; m.sort = m.sort === "grade" ? "time" : m.sort; m.page = 1; env.redraw(); } }))),
     h("div", { class: "rb-mem-tools" }, m.tlFilter === "all" || m.tlFilter === "event" ? h("div", { class: "rb-mem-chats" }, GRADES.map((g) => chip(g, { pressed: m.grades.includes(g), onClick: () => { m.grades = m.grades.includes(g) ? m.grades.filter((x) => x !== g) : [...m.grades, g]; m.page = 1; env.redraw(); } }))) : null,
       h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "기록 검색", value: m.search, "aria-label": "기록 검색", onInput: (e) => { m.search = e.target.value; m.page = 1; env.redraw(); } })),
@@ -163,6 +154,16 @@ async function pausePerson(env, p) {
   env.ctx.toast(on ? `${p.name}의 사건 기록을 쉬어요. 이미 쌓인 기록은 그대로예요.` : `${p.name}의 기록을 다시 시작해요.`);
   env.redraw();
 }
+const policyOf = (env, slot) => { try { return JSON.parse(env.ctx.memory.lib.base.policies).policies[slot] ?? null; } catch { return null; } };
+// 수치 직접 수정(정책): 고정된 수치는 거절 · 숫자와 이유를 적고 · 한 번 더 확인한 뒤 바꾼다. 이유는 위키에 남는다.
+async function editMetric(env, st, x) {
+  if (isPinned(env.folder.wiki, st.docId, metricPinKey(x.metricId))) return env.ctx.toast("고정(📌)된 수치예요. 먼저 고정을 풀어 주세요.", { error: true });
+  const v = await promptDialog(env.ctx.win, { title: `${x.label} 직접 고치기`, label: `새 값 (${x.min}~${x.max}, 지금 ${x.value})`, value: String(x.value), ok: "다음" }); if (v == null || v.trim() === "") return;
+  const n = Number(v); if (!Number.isFinite(n)) return env.ctx.toast("숫자를 적어 주세요.", { error: true });
+  const why = await promptDialog(env.ctx.win, { title: "고치는 이유", label: "기록에 남겨요 (비우면 ‘사용자 직접 수정’)", value: "", ok: "저장" }); if (why == null) return;
+  if (!(await confirmManual(env, `${x.label}을 ${x.value} → ${n}(으)로 바꿀까요?`, "AI가 쌓은 수치를 직접 덮어써요. 앞으로의 변화는 이 값에서 이어져요."))) return;
+  await wikiEdit(env, (w) => editMetricValue(w, st.docId, x.metricId, n, why, policyOf(env, x.slotId)), "수치를 바꿨어요.");
+}
 async function editWikiText(env, st, t) {
   const text = await modal(env.ctx.win, (done) => {
     const ta = h("textarea", { class: "rb-input", style: "min-height:160px;height:auto;padding:10px", "aria-label": t.label, "data-autofocus": "1" }); ta.value = t.body;
@@ -183,7 +184,7 @@ function stateCard(env, st, cyc) {
   const m = mem(env.ctx), editable = wikiEditable(env);
   const meter = (x) => h("div", { class: "rb-mem-meterrow" }, h("button", { type: "button", class: "rb-mem-meter", title: `${x.label} ${x.value} (${x.min}~${x.max}) — 눌러서 바뀐 기록 보기`, onClick: () => { m.tlFilter = "state"; m.sort = "time"; m.page = 1; env.redraw(); } },
     h("span", { class: "l" }, x.label), h("span", { class: "bar", role: "progressbar", "aria-valuemin": x.min, "aria-valuemax": x.max, "aria-valuenow": x.value }, h("i", { style: { width: `${Math.round(((x.value - x.min) / Math.max(1, x.max - x.min)) * 100)}%` } })),
-    h("span", { class: "v" }, String(x.value), x.delta ? h("small", null, x.delta > 0 ? ` ↑${x.delta}` : ` ↓${-x.delta}`) : null)), editable && x.metricId ? pinBtn(env, st, metricPinKey(x.metricId)) : null);
+    h("span", { class: "v" }, String(x.value), x.delta ? h("small", null, x.delta > 0 ? ` ↑${x.delta}` : ` ↓${-x.delta}`) : null)), editable && x.metricId ? h("span", { class: "rb-mem-rowact" }, x.slotId && policyOf(env, x.slotId) ? btn("✎", { size: "sm", title: `${x.label} 직접 고치기`, "aria-label": `${x.label} 직접 고치기`, onClick: () => editMetric(env, st, x).catch(fail(env.ctx)) }) : null, pinBtn(env, st, metricPinKey(x.metricId))) : null);
   const textRows = (t) => [h("dt", null, t.label, editable && t.sectionId ? h("span", { class: "rb-mem-rowact" }, btn("✎", { size: "sm", title: `${t.label} 직접 고치기`, "aria-label": `${t.label} 직접 고치기`, onClick: () => editWikiText(env, st, t).catch(fail(env.ctx)) }), pinBtn(env, st, sectionPinKey(t.sectionId))) : null),
     h("dd", null, t.body.length > 220 ? t.body.slice(0, 220) + "…" : t.body)];
   return h("section", { class: "rb-card rb-mem-state" }, h("h4", null, "지금 상태", st.updatedAt ? h("small", { class: "rb-muted" }, ` · ${new Date(st.updatedAt).toLocaleDateString()}`) : null),

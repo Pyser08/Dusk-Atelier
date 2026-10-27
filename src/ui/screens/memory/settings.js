@@ -4,6 +4,7 @@ import { AI_MODES } from "../../../engine/merge.js";
 import { mem, fail } from "./common.js";
 import { parseTags, DEFAULT_TAG_TEXT } from "../../../engine/card/tags.js";
 import { flowSections } from "./flowsettings.js";
+import { advancedBot } from "./advanced.js";
 
 function builders(ctx, idx, redraw) {
   const M = ctx.memory, S = idx.settings;
@@ -74,9 +75,12 @@ export function renderBotSettings(env) {
     try { if (scope === "chat") await M.store.deleteFolder(bot.id, chatItem.id); else if (scope === "bot") await M.store.deleteBot(bot.id); else await M.store.resetAll(); env.redraw(); } catch (e) { fail(ctx)(e); }
   };
 
+  const advBox = h("div");
+  if (idx.settings.flow?.advanced === true && idx.settings.flow?.on === true) advancedBot(env, advBox).catch(fail(ctx));
   return h("div", { class: "rb-mem-foldbody" },
     caps.analyze ? section("지난 대화 분석 (이 채팅 전체)", h("div", { class: "rb-mem-range" }, from, "~", to), est, h("div", { class: "rb-mem-sact" }, btn("분석 시작", { kind: "primary", onClick: () => run() }), failed.length ? btn(`실패만 다시 (${failed.length})`, { onClick: () => run(true) }) : null), prog) : null,
     caps.analyze ? section("이 봇에서 기록하지 않을 이름", h("div", { class: "rb-mem-chats" }, ignore.map((n) => h("button", { type: "button", class: "rb-chip", title: "눌러서 제거", onClick: () => M.store.updateIndex((i) => { i.bots[bot.id].ignore = i.bots[bot.id].ignore.filter((x) => x !== n); }).then(env.redraw) }, n, " ✕")), ignIn)) : null,
+    advBox,
     section("초기화", h("div", { class: "rb-mem-sact" }, btn("이 채팅 기억 지우기", { onClick: () => reset("chat") }), btn("이 봇 기억 지우기", { onClick: () => reset("bot") }), btn("전체 기억 지우기", { onClick: () => reset("all") }))),
     section("상태", h("p", { class: "rb-muted" }, `훅: ${idx.status.hook} · 처리 ${idx.status.processed}회 · 마지막 성공 ${idx.status.lastSuccessAt ? new Date(idx.status.lastSuccessAt).toLocaleString() : "없음"}${idx.status.lastError ? " · 오류: " + idx.status.lastError : ""}`)));
 }

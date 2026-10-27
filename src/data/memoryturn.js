@@ -19,6 +19,7 @@ import { potModels } from "../engine/modelcfg.js";
 import { recallFor, mergeMemory } from "../engine/recall.js";
 import { appendDuskSection, splitDusk, checkDusk, SECTION_MARK } from "../engine/duskwriter.js";
 import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
+import { makeTools } from "./memorytools.js";
 
 const READONLY = new Set(["writer_schema", "director_schema", "slots", "policies"]);
 export const promptKeysOf = (lib) => Object.entries(lib).flatMap(([id, parts]) => Object.keys(parts).filter((p) => !READONLY.has(p)).map((p) => `${id}:${p}`));
@@ -33,13 +34,13 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
   const putStash = (h, v) => { stash.set(h, v); while (stash.size > STASH_MAX) stash.delete(stash.keys().next().value); };
   const libFor = (mode) => mode === "accurate" ? sourceLibrary : { ...sourceLibrary, base: { ...sourceLibrary.base, director: undefined } };
 
-  const flowOf = async () => { const f = (await store.getIndex()).settings.flow ?? {}; return { on: f.on === true, mode: f.mode === "accurate" ? "accurate" : "fast", recallTokens: f.recallTokens }; };
+  const flowOf = async () => { const f = (await store.getIndex()).settings.flow ?? {}; return { on: f.on === true, advanced: f.advanced === true, mode: f.mode === "accurate" ? "accurate" : "fast", recallTokens: f.recallTokens }; };
 
   async function syncPot(settings, f) {
     const cfg = await getCfg(api), m = potModels(cfg);
     settings.update((s) => {
       s.enabled = true; s.autoWriterEnabled = true; s.retrievalMode = f.mode === "accurate" ? "router" : "keyword";
-      s.hypaReferenceEnabled = false; s.hypaPlusReferenceEnabled = false;  // 리스 기본 메모리(Hypa)는 Dusk 장기기억이 대신한다(화면에서도 숨김)
+      if (!f.advanced) { s.hypaReferenceEnabled = false; s.hypaPlusReferenceEnabled = false; }  // 리스 기본 메모리(Hypa)는 Dusk 장기기억이 대신한다: 고급 모드를 켰을 때만 설정값을 따른다
       s.useRisuSubmodel = m.useRisuSubmodel;
       if (!m.useRisuSubmodel) { s.models.shared = m.shared; for (const [k, v] of Object.entries(m.stages)) s.models.stages[k] = v.mode === "dedicated" ? v : { ...s.models.stages[k], mode: "shared" }; }
     });
@@ -106,7 +107,7 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
       return injector.beforeRequest(out, type, { focus });
     };
     const hooks = new RuntimeHookManager(api, auto, main, { scheduler });
-    return { settings, wiki, auto, main, hooks, trace, keys };
+    return { settings, wiki, auto, main, hooks, trace, keys, stageCall };
   }
 
   async function start() {
@@ -131,7 +132,7 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
   }
   async function stop() {
     if (!rt) return false;
-    const r = rt; rt = null; delete link.settle; delete link.take; delete link.takeCycle; stash.clear(); cycleEvents.length = 0; cyclePending = null;
+    const r = rt; rt = null; try { r.tools?.dispose(); } catch {} delete link.settle; delete link.take; delete link.takeCycle; stash.clear(); cycleEvents.length = 0; cyclePending = null;
     await r.hooks.dispose().catch(() => {});
     await injector.start();
     return true;
@@ -154,5 +155,5 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
   }
   const dropCold = () => { cold = null; };
 
-  return { start: apply, apply: async () => { dropCold(); return apply(); }, stop, isOn: () => !!rt, last: () => lastTurn, runtime: () => rt, stash: () => stash.size, settings: settingsStore };
+  return { start: apply, apply: async () => { dropCold(); return apply(); }, stop, isOn: () => !!rt, tools: () => rt ? (rt.tools ??= makeTools({ api, rt, sourceLibrary, llmCall: rt.stageCall })) : null, last: () => lastTurn, runtime: () => rt, stash: () => stash.size, settings: settingsStore };
 }

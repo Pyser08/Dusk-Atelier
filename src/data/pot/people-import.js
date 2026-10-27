@@ -134,7 +134,7 @@ function applyPeopleImportCandidates(scope,candidates,selectedIds,{now=new Date(
   return{scope:normalizeWikiScope(next),report:{created,initialized,preserved,ambiguous,renamed,metadataUpdated,metadataNotes:[...new Set(metadataNotes)].slice(0,24)}};
 }
 
-class PeopleImportController{
+export class PeopleImportController{
   constructor({api,settingsStore,keyStore,wikiController,traceStore=null,scheduler=globalThis}){this.api=api;this.settingsStore=settingsStore;this.keyStore=keyStore;this.wikiController=wikiController;this.traceStore=traceStore;this.scheduler=scheduler;this.phase='idle';this.stage='';this.completed=0;this.total=0;this.startedAt=0;this.elapsedMs=0;this.error='';this.applying=false;this.applyPromise=null;this.applyReport=null;this.pendingSave=null;this.sourceValidation=null;this.disposed=false;this.candidates=[];this.selected=new Set();this.abortController=null;this.cancelRequested=false;this.interval=null;this.listeners=new Set();this.scopeToken='';this.sexualField='';this.sexualDocumentId='';this.loreSelector=new PeopleLoreSelector({api,wikiController});}
   status(){return{phase:this.phase,stage:this.stage,completed:this.completed,total:this.total,elapsedMs:this.elapsedMs,error:this.error,candidates:this.candidates.map(candidate=>({...candidate,selected:this.selected.has(candidate.id)})),sexualField:this.sexualField,sexualDocumentId:this.sexualDocumentId,applying:this.applying,applyReport:this.applyReport?{...this.applyReport}:null,running:this.phase==='running'||this.applying};}
   subscribe(listener){this.listeners.add(listener);listener(this.status());return()=>this.listeners.delete(listener);}

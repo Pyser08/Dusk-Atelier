@@ -11,7 +11,7 @@ export function normalizePersonaNames(raw={}){
 function personaNamePreference(settings,scope,binding=''){const key=personaNameScopeKey(scope),entry=key?settings?.personaNamesByScope?.[key]:null;return entry&&entry.binding===String(binding||'')?entry:null;}
 function personaNamePreferenceStamp(settings,scope){return JSON.stringify(settings?.personaNamesByScope?.[personaNameScopeKey(scope)]??null);}
 
-class PersonaNameController{
+export class PersonaNameController{
   constructor({api,settingsStore,wikiController,isBusy=()=>false}){Object.assign(this,{api,settingsStore,wikiController,isBusy});this.operation='';this.pendingWrite=null;this.listeners=new Set();this.disposed=false;}
   configuration(){const state=this.settingsStore.status(),key=[state.revision,state.phase,state.loaded].join(':');if(this.configKey!==key){this.configKey=key;this.configCache=this.settingsStore.snapshot();}return this.configCache;}
   context(){const wiki=this.wikiController.status(),context=this.wikiController.personaNameContext;return wiki.phase==='ready'&&wiki.enabled!==false&&context&&personaNameScopeKey(context)===personaNameScopeKey(wiki.scope)?context:null;}

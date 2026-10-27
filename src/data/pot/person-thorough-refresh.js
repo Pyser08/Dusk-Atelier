@@ -157,7 +157,7 @@ function thoroughRefreshProgressHtml(progress,esc){
  return`<section class="rp-refresh-options" data-thorough-refresh-progress><h4>구역별 작성 · ${done}/${progress.total}</h4><progress aria-label="구역별 작성 진행" max="${progress.total}" value="${done}" style="width:100%;margin-top:10px"></progress><ul class="rp-refresh-issues">${progress.items.map(item=>'<li><strong>'+esc(item.label)+'</strong> · '+labels[item.state]+(item.reason?' — '+esc(item.reason):'')+'</li>').join('')}</ul></section>`;
 }
 
-class PersonRefreshController{
+export class PersonRefreshController{
  constructor({api,settingsStore,keyStore,wikiController,sourceLibrary,sourceReader,traceStore=null,llmCall=callWriterModel}){Object.assign(this,{api,settingsStore,keyStore,wikiController,sourceLibrary,sourceReader,traceStore,llmCall});this.phase='idle';this.mode='standard';this.progress=null;this.error='';this.targetId='';this.proposal=null;this.usage=null;this.listeners=new Set();this.token=0;this.abort=null;this.disposed=false;}
  status(){return{phase:this.phase,mode:this.mode,progress:this.progress?refreshClone(this.progress):null,running:['running','applying'].includes(this.phase),targetId:this.targetId,error:this.error,usage:this.usage?refreshClone(this.usage):null,proposal:this.proposal?{changes:refreshClone(this.proposal.changes),issues:[...this.proposal.issues],output:refreshClone(this.proposal.output),applied:!!this.proposal.applied}:null};}
  subscribe(listener){this.listeners.add(listener);listener(this.status());return()=>this.listeners.delete(listener);}emit(){for(const listener of this.listeners)try{listener(this.status());}catch{}}

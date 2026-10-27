@@ -1,6 +1,6 @@
 // 인물 페이지에서 바로 고치는 순수 함수(v1.6.4 ③): ✎ 직접 수정 · 📌 고정 · ⏸ 이 인물만 기록 쉬기.
 // 위키 범위(scope)는 리수폿 규칙 그대로 검증한다 — 고정된 항목은 고칠 수 없고, 편집 중 바뀐 항목은 거절한다.
-import { updatePersonSection } from "./pot/people-records.js";
+import { updatePersonSection, updatePersonMetric } from "./pot/people-records.js";
 import { setPeopleItemPin, peopleItemPinned } from "./pot/people-pins.js";
 
 export const scopeKeyOf = (scope) => `${scope?.scope?.characterId}\n${scope?.scope?.chatKey}`;
@@ -10,6 +10,13 @@ export function editSectionText(scope, docId, sectionId, text) {
   const sec = scope?.documents?.[docId]?.sections?.find((s) => s.id === sectionId);
   if (!sec) throw new Error("고칠 항목을 찾지 못했어요.");
   return updatePersonSection(scope, docId, { id: sectionId, title: sec.heading, text: String(text ?? ""), expected: JSON.stringify(sec), scopeKey: scopeKeyOf(scope) });
+}
+// 수치 직접 수정: 고정(📌)된 수치는 리수폿 규칙대로 거절한다. 반환: 새 범위
+export function editMetricValue(scope, docId, metricId, value, reason, policy) {
+  const metric = scope?.documents?.[docId]?.metrics?.find((m) => m.id === metricId);
+  if (!metric) throw new Error("고칠 수치를 찾지 못했어요.");
+  if (!policy) throw new Error("이 수치는 직접 고칠 수 없어요.");
+  return updatePersonMetric(scope, docId, { id: metricId, value: Number(value), reason: String(reason ?? "").trim() || "사용자 직접 수정", expected: JSON.stringify(metric), scopeKey: scopeKeyOf(scope) }, policy);
 }
 export const setPin = (scope, docId, key, on) => setPeopleItemPin(scope, docId, key, on);
 export const isPinned = (scope, docId, key) => peopleItemPinned(scope, docId, key);

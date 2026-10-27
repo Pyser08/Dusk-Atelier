@@ -20,7 +20,7 @@ export function stateOf(doc) {
   if (!doc) return null;
   const meters = METERS.map(([slot, label]) => {
     const m = (doc.metrics ?? []).find((x) => x.slotId === slot);
-    return m ? { id: slot.split(".")[0], metricId: m.id, label, value: m.value, min: m.minimum, max: m.maximum, delta: m.lastDelta ?? 0, stage: m.stageLabel ?? "" } : null;
+    return m ? { id: slot.split(".")[0], slotId: slot, metricId: m.id, label, value: m.value, min: m.minimum, max: m.maximum, delta: m.lastDelta ?? 0, stage: m.stageLabel ?? "" } : null;
   }).filter(Boolean);
   const texts = TEXTS.map(([slot, label]) => {
     const s = (doc.sections ?? []).find((x) => x?.provenance?.slotId === slot);

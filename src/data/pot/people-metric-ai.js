@@ -89,7 +89,7 @@ export function preparePeopleMetricProposal(raw,{scope,documentId,slotId,metricI
   return peopleMetricAIPrepareValue(response,{scope,documentId,request});
 }
 
-class PeopleMetricAIController{
+export class PeopleMetricAIController{
   constructor({api,settingsStore,keyStore,wikiController,sourceReader,traceStore=null,llmCall=callWriterModel}){Object.assign(this,{api,settingsStore,keyStore,wikiController,sourceReader,traceStore,llmCall});this.phase='idle';this.targetId='';this.slotId='';this.metricId='';this.label='';this.error='';this.proposal=null;this.usage=null;this.listeners=new Set();this.token=0;this.abort=null;this.disposed=false;}
   status(){return{phase:this.phase,running:['running','applying'].includes(this.phase),targetId:this.targetId,slotId:this.slotId,metricId:this.metricId,label:this.label,error:this.error,usage:this.usage,proposal:this.proposal?peopleMetricAIClone(this.proposal.preview):null};}
   subscribe(listener){this.listeners.add(listener);listener(this.status());return()=>this.listeners.delete(listener);}

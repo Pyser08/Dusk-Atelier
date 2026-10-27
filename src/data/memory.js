@@ -32,5 +32,5 @@ export function createMemory(api, { notify = () => {}, log = (...a) => console.l
     if (sel.duplicate) notify("BardWiki와 장기기억이 중복돼요. 비용이 두 번 들 수 있어요.");
     return active;
   }
-  return { store, cards, runner, injector, flow, bardwiki, backend, capabilities: capabilitiesOf, start, active: () => active };
+  return { store, cards, runner, injector, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, start, active: () => active };
 }
