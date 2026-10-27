@@ -230,6 +230,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       tab = "settings";
       sub = sub === "settings" ? "theme" : sub;
     }
+    const leaving = tab !== state.tab || sub !== state.sub;
+    if (leaving) stashPane();
     if (tab !== state.tab || (sub === "history") !== (state.sub === "history")) {
       state.search = "";
       searchInput.value = "";
@@ -245,8 +247,20 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     state.tab = tab;
     state.sub = sub;
     ctx.closeSheet();
-    render();
+    render({ reuse: changed });
     if (changed) fadeUp(main, { duration: 180 });
+  }
+  // 1.6.3: 한 번 그린 탭은 DOM을 보존했다가 돌아오면 그대로 붙인다 (재렌더 생략)
+  const paneCache = new Map();
+  const CACHEABLE = /* @__PURE__ */ new Set(["plugins", "tools", "settings"]);
+  const paneKey = () => `${state.tab}|${state.sub ?? ""}`;
+  let paneReady = false;
+  function stashPane() {
+    if (!paneReady || !CACHEABLE.has(state.tab) || state.search) return;
+    paneCache.set(paneKey(), { nodes: [...main.childNodes], at: Date.now() });
+  }
+  function dropPanes() {
+    paneCache.clear();
   }
   function refreshTabs() {
     const on = !!prefs.ui?.devMode;
@@ -257,8 +271,9 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     win.classList.toggle("rb-has-dev", on);
     if (!on && state.tab === "dev") go("tools");
   }
-  function render() {
+  function render({ reuse = false } = {}) {
     refreshTabs();
+    if (!reuse) dropPanes();
     for (const links of [navLinks, barLinks]) for (const [id, a] of links) {
       if (id === state.tab) a.setAttribute("aria-current", "page");
       else a.removeAttribute("aria-current");
@@ -274,8 +289,18 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     win.classList.toggle("rb-nosearch", !showSearch);
     replace(detail3);
     detail3.hidden = true;
+    const hit = reuse ? paneCache.get(paneKey()) : null;
+    if (hit) {
+      paneCache.delete(paneKey());
+      replace(main, ...hit.nodes);
+      paneReady = true;
+      return;
+    }
+    paneReady = false;
     const screen = { modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
-    Promise.resolve(screen(ctx)).catch((err) => {
+    Promise.resolve(screen(ctx)).then(() => {
+      paneReady = true;
+    }).catch((err) => {
       replace(main, h("div", { class: "rb-section" }, h("div", { class: "rb-note err", role: "alert" }, icon("alert", 18), h("span", null, `화면을 열지 못했어요: ${err?.message ?? err}`))));
     });
   }
@@ -291,6 +316,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     state.modDirty = true;
     state.charOrderStale = true;
     if (state.chars) state.charsBg = true;
+    dropPanes();
     svc.invalidate();
     applyTheme();
     root.hidden = false;
