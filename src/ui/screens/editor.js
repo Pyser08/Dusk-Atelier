@@ -10,6 +10,7 @@ import { gripDrag } from '../sortable.js';
 import { reload } from './modules.js';
 import { attachUndo } from '../undo.js';
 import { attachProbPick } from '../probpick.js';
+import { openLoreDusk } from './loredusk.js';
 import { AFF_PREFIX, COND_TYPES, PLACE_PREFIX, SET_OPS, VAR_OPS, affName, affOf, affsOf, ancestorsOf, applySets, bodyOf, checkExpr, collectManaged, defaultAff, defaultRule, evaluate, folderIdOf, folderMap, gateVar, isAff, isDuskFolder, isFolder, isManaged, isPlace, nativeContent, parentOf, placeLinks, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
 import { FOLDER_SWATCHES, folderTint } from '../theme.js';
 // 관리 항목의 내용 머리(@@activate·{{#if}})를 규칙에 맞춘다
@@ -499,6 +500,27 @@ export async function openEditorCore(ctx, cfg) {
       render();
       ctx.toast("이름순으로 정렬했어요 (폴더 안에서만)");
     }
+    // 로어북 더스크화: 결과는 초안에만 반영하고, 저장 전에는 되돌릴 수 있다
+    async function duskify() {
+      const r = await openLoreDusk(ctx, { list });
+      if (!r) return;
+      const before = structuredClone(list);
+      const cur = selObj();
+      list.splice(0, list.length, ...r.entries);
+      syncRuleContent(list);
+      es.sel[kind] = Math.max(0, cur ? list.indexOf(cur) : 0);
+      es.loreCollapsed?.clear();
+      changed();
+      render();
+      ctx.toast(`더스크화 적용: ${r.text}`, { seconds: 12, action: { label: "되돌리기", run: () => {
+        list.splice(0, list.length, ...before);
+        syncRuleContent(list);
+        es.sel[kind] = Math.min(es.sel[kind], list.length - 1);
+        changed();
+        render();
+        ctx.toast("더스크화를 되돌렸어요");
+      } } });
+    }
     const newMenu = (ev) => openMenu(ctx.win, ev.currentTarget, [
       { label: "폴더", icon: "folderPlus", onClick: () => newFolderPicked(false) },
       { label: "소속 폴더", icon: "link", onClick: () => newFolderPicked(true) },
@@ -518,6 +540,7 @@ export async function openEditorCore(ctx, cfg) {
         else for (const f of fmap.values()) es.loreCollapsed.add(folderIdOf(f));
         render();
       } }) : null,
+      isLore && list.length > 1 ? btn("더스크화", { size: "sm", title: "기존 로어북을 소속·장소 구조로 바꾸기 (구분선 변환 + AI 분석)", onClick: () => duskify() }) : null,
       isLore && list.length > 1 ? btn("이름순", { size: "sm", title: "폴더 안에서 이름순으로 정렬 (폴더 구조 유지)", onClick: () => sortByName() }) : null,
       isLore ? btn(selecting ? "선택 끝" : "선택", { size: "sm", kind: selecting ? "primary" : void 0, onClick: () => {
         es.selMode = !es.selMode;
