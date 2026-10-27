@@ -5,6 +5,7 @@ import { btn, switchEl, setSwitch, segmented, optionCards, toggleRow, note, conf
 import { fail } from "./common.js";
 import { guideBtn } from "./guide.js";
 import { advancedGlobal } from "./advanced.js";
+import { advancedModel } from "./modeladv.js";
 import { LEVELS, FEATURE_CARDS, applyLevel, levelOf, levelPatch, summaryOf, needsOf } from "../../../engine/trackpreset.js";
 import { getCfg, saveCfg, keyStore, testPreset, listModels, getUsage, resetUsage } from "../../../data/modelhub.js";
 import { addPreset, updatePreset, removePreset, presetOf, STAGES, STAGE_LABEL } from "../../../engine/modelcfg.js";
@@ -140,18 +141,18 @@ export async function flowSections(ctx, host, { redraw }) {
   } });
 
   // ---- 5) 고급 모드: 켜면 리수폿의 세부 기능(추가 프롬프트·Hypa·Copilot/Vertex·실행 기록…)이 보인다.
-  const advHost = h("div"), advSw = h("div");
+  const advHost = h("div"), advSw = h("div"), modelAdv = h("div");
   const paintAdv = async () => {
     const on = ((await M.store.getIndex()).settings.flow ?? {}).advanced === true;
     replace(advSw, toggleRow("고급 모드", "리수폿에서 온 세부 기능을 모두 보여 줘요. 처음이면 꺼 두세요. 꺼도 설정값은 그대로 남아요.", on, async (v) => { await M.store.updateIndex((i) => { i.settings.flow = { ...(i.settings.flow ?? {}), advanced: v }; }); await apply(); redraw(); }));
-    if (on) await advancedGlobal(ctx, advHost, { redraw, st, apply }); else replace(advHost);
+    if (on) { await advancedGlobal(ctx, advHost, { redraw, st, apply }); await advancedModel(ctx, modelAdv, { apply, repaint: () => { paintModel(); paintAdv(); } }); } else { replace(advHost); replace(modelAdv); }
   };
   paintAdv().catch(fail(ctx));
 
   replace(host,
     sec("무엇을 기억할까요?", "수준을 고르면 아래 카드가 같이 바뀌어요. 바로 저장되고 다음 응답부터 적용돼요.", lvHost, featHost),
     sec("기억 방식", null, modeHost),
-    sec("AI 모델", "기록과 정리를 맡길 모델이에요. 모르겠으면 ‘리스 보조 모델’로 두세요.", cfgHost),
+    sec("AI 모델", "기록과 정리를 맡길 모델이에요. 모르겠으면 ‘리스 보조 모델’로 두세요.", cfgHost, modelAdv),
     h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "고급"), adultHost),
     sec("가져오기", "기존에 쓰던 리수폿의 백업 파일(.json)을 불러와요. 인물 문서와 설정만 받고, API 키는 받지 않아요.", importBtn),
     h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "고급 모드"), advSw), advHost);

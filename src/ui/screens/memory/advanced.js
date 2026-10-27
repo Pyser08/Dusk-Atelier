@@ -1,5 +1,6 @@
 // 기억 탭 고급 모드: 리수폿에서 온 세부 기능(추가 프롬프트·관찰자·페르소나 이름·흐름 세부·Hypa 참고·실행 기록·내보내기)을 한곳에 모았다.
 // 고급 모드를 켜야만 보인다(index.settings.flow.advanced). 값은 리수폿 설정 저장소(`M.flow.settings()`)에 바로 저장한다.
+import { openRecovery } from "./recovery.js";
 import { h, replace, pickFiles } from "../../dom.js";
 import { btn, switchEl, setSwitch, segmented, toggleRow, note, confirmDialog } from "../../kit.js";
 import { fail } from "./common.js";
@@ -78,7 +79,8 @@ export async function advancedBot(env, host) {
   const live = liveScope(M, bot.id);
   const paint = () => {
     const s = st.rawSnapshot(), ed = (fn) => { try { st.update(fn); } catch (e) { fail(ctx)(e); } paint(); };
-    replace(host, customPrompts(ctx, s, ed, bot, live), personaName(ctx, s, ed, live), aiRefs(s, ed, live), retention(env));
+    replace(host, customPrompts(ctx, s, ed, bot, live), personaName(ctx, s, ed, live), aiRefs(s, ed, live), retention(env),
+      h("section", { class: "rb-mem-sec" }, h("h4", null, "복구 · 실행 기록"), h("p", { class: "rb-muted" }, "깨진 AI 응답을 고쳐 반영하거나 최근 호출 기록을 봐요."), btn("열기", { onClick: () => openRecovery(env) })));
   };
   paint();
 }
