@@ -18,7 +18,7 @@ function builders(ctx, idx, redraw, kind = "all") {
 }
 
 // ---- 전체 설정: 기억 탭 메인 화면(봇 목록 위)에 접이식으로 둔다. 모든 봇에 공통 적용.
-export async function renderGlobalSettings(ctx, host, { redraw }) {
+export async function renderGlobalSettings(ctx, host, { redraw, panel = false }) {
   const m = mem(ctx), M = ctx.memory, idx = await M.store.getIndex();
   const backend = M.backend(idx.settings), caps = M.capabilities(backend.id);
   const { S, save, num, sw, section } = builders(ctx, idx, redraw);
@@ -50,6 +50,10 @@ export async function renderGlobalSettings(ctx, host, { redraw }) {
   const tools = h("div", { class: "rb-mem-tools" });
   const body = h("div", { class: "rb-mem-foldbody" }, h("div", { class: "rb-mem-modeline" }, h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), h("span", { class: "rb-muted" }, backend.reason)), tools, flowHost, shareBox, adv);
   tools.append(searchBox(body), btn("설정 변경 이력", { size: "sm", onClick: () => openSettingsHistory(ctx, { apply: () => M.flow?.apply?.(), redraw }).catch(fail(ctx)) }));
+  if (panel) {
+    // 넓은 화면: 설정을 오른쪽(가운데) 칸에 크게 펼친다.
+    return replace(host, h("section", { class: "rb-mem-setpanel" }, h("div", { class: "rb-mem-sethead" }, h("b", null, "설정"), h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), btn("닫기", { size: "sm", onClick: () => { m.globalOpen = false; redraw(); } })), body));
+  }
   const fold = h("details", { class: "rb-mem-fold", open: !!m.globalOpen }, h("summary", null, "설정", h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel)), body);
   fold.addEventListener("toggle", () => { m.globalOpen = fold.open; });
   replace(host, fold);

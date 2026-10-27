@@ -560,6 +560,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-fold>summary::after{content:"▾";color:var(--rb-mute);margin-left:auto;padding-left:8px}
 .rb-mem-fold[open]>summary::after{content:"▴"}
 .rb-mem-fold>summary .rb-mem-mode{margin-left:8px}
+.rb-mem-setpanel{width:100%;max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:12px;padding:6px 4px 20px}.rb-mem-sethead{display:flex;align-items:center;gap:10px;font-size:17px;padding:6px 0}.rb-mem-sethead .rb-btn{margin-left:auto}
 .rb-mem-foldbody{display:flex;flex-direction:column;gap:10px;padding:0 10px 12px}
 .rb-mem-modeline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 4px}
 .rb-mem-fold-panel{display:flex;flex-direction:column;border:1px solid var(--rb-line2);border-radius:14px;background:var(--rb-surf);padding:10px 0 2px;flex-shrink:0}

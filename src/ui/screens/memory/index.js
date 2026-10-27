@@ -16,15 +16,16 @@ export async function renderMemory(ctx) {
   // 화면 폭 판정은 JS가 아니라 CSS(컨테이너 폭)가 한다: 좁으면 한 번에 한 칸(data-view), 넓으면 두 칸.
   const showView = true, showList = true;
   replace(ctx.main, h("div", { class: "rb-mem-wrap" }, h("div", { class: "rb-mem-root", "data-view": m.view === "bot" && m.botId ? "bot" : "bots" }, listHost, viewHost)));
-  const open = (id) => { m.botId = id; m.chatIndex = 0; m.tab = "people"; m.personKey = ""; m.view = "bot"; m.compose = null; redraw(); };
+  const wide = ctx.main.clientWidth >= 900, setPanel = wide && !!m.globalOpen;
+  const open = (id) => { m.globalOpen = false; m.botId = id; m.chatIndex = 0; m.tab = "people"; m.personKey = ""; m.view = "bot"; m.compose = null; redraw(); };
   if (showList) {
     const hHost = h("div"), gHost = h("div"), bHost = h("div", { class: "rb-mem-botwrap" });
     replace(listHost, hHost, gHost, bHost);
-    await Promise.all([renderMemoryHome(ctx, hHost, { redraw }), renderGlobalSettings(ctx, gHost, { redraw }), renderBotList(ctx, bHost, { open, redraw })]);
+    await Promise.all([renderMemoryHome(ctx, hHost, { redraw }), (wide ? Promise.resolve() : renderGlobalSettings(ctx, gHost, { redraw })), renderBotList(ctx, bHost, { open, redraw })]);
   }
   if (showView) {
     // 탭·채팅 전환은 오른쪽 칸만 다시 그린다(목록·전역 설정은 건드리지 않는다).
-    const drawView = (first) => m.botId
+    const drawView = (first) => setPanel ? renderGlobalSettings(ctx, viewHost, { redraw, panel: true }) : m.botId
       ? renderBotView(ctx, viewHost, { redraw, redrawView: () => drawView(false).catch(fail(ctx)), back: () => { m.view = "bots"; redraw(); }, quiet: !first })
       : Promise.resolve(replace(viewHost, h("div", { class: "rb-empty rb-mem-empty" }, icon("brain", 28), h("div", { style: "font-weight:700;color:var(--rb-text);font-size:15px" }, "왼쪽에서 봇을 골라 주세요."), stepsGuide("처음이라면 이 순서로", ["왼쪽에서 기억을 보고 싶은 봇을 눌러요.", "인물별 기록이 자동으로 쌓여 있어요. 없다면 ‘이 채팅 일괄 분석’을 눌러요.", "카드와 새 봇은 ‘기억 카드’ 탭에서 만들어요."]))));
     await drawView(true);
