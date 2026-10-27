@@ -453,6 +453,21 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-thanks-kicker{font-size:11px;font-weight:800;letter-spacing:.18em;color:#9fe0ff}
 .rb-thanks-title{font-size:24px;font-weight:800;letter-spacing:-.01em;background:linear-gradient(90deg,#ffffff,#9fe0ff);-webkit-background-clip:text;background-clip:text;color:transparent}
 .rb-thanks-text{font-size:13.5px;line-height:1.7;color:#cfeaff;word-break:keep-all}
+.rb-credits{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.rb-credit{position:relative;display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;background:var(--rb-surf);border:1px solid var(--rb-line);overflow:hidden;opacity:0;transform:translateY(-10px);animation:rb-credit-in .5s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(var(--rb-ci) * .08s);transition:transform .2s,box-shadow .2s}
+.rb-credit::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#7fd3ff,#a78bfa,#f0abfc);opacity:.85}
+.rb-credit:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(120,100,220,.18)}
+.rb-credit-ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--rb-acc-soft);color:var(--rb-acc-text);flex-shrink:0;animation:rb-credit-breathe 3.6s ease-in-out infinite}
+.rb-credit-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rb-credit-txt b{font-size:15px}
+.rb-credit-txt span{font-size:12.5px;color:var(--rb-mute);line-height:1.5;word-break:keep-all}
+.rb-credit-txt em{font-style:normal;font-size:11.5px;color:var(--rb-acc-text);font-weight:700}
+.rb-credit-link{flex-shrink:0;font-size:12.5px;font-weight:700;padding:8px 12px;border-radius:10px;background:var(--rb-acc-soft);color:var(--rb-acc-text);text-decoration:none}
+.rb-credit-link:hover{filter:brightness(1.1)}
+@keyframes rb-credit-in{to{opacity:1;transform:none}}
+@keyframes rb-credit-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@media (max-width:520px){.rb-credit{flex-wrap:wrap}.rb-credit-link{margin-left:54px}}
+@media (prefers-reduced-motion:reduce){.rb-credit{opacity:1;transform:none;animation:none}.rb-credit-ico{animation:none}}
 .rb-da{margin-top:10px;border:1px solid var(--rb-line);border-radius:16px;background:var(--rb-surf);padding:14px;display:flex;flex-direction:column;gap:12px}
 .rb-da.on{border-color:var(--rb-sel-ring);box-shadow:0 0 0 1px var(--rb-acc-soft) inset}
 .rb-da-head{display:flex;align-items:center;gap:12px}

@@ -47,6 +47,32 @@ function thanksCard() {
   );
   return box;
 }
+// 이식 크레딧 카드 — 원작자 이름은 적지 않고 원문 글 링크만 둔다
+const CREDITS = [
+  { key: "pot", ic: "book", name: "risupot", desc: "인물 위키·모델 계층·프롬프트 — 장기 기억의 뼈대", url: "https://arca.live/b/characterai/185024906" },
+  { key: "arcana", ic: "sparkle", name: "Arcana Card", desc: "기억 카드 — 인물을 카드로 남기는 방식", url: "https://arca.live/b/characterai/185793481" }
+];
+function creditCards() {
+  return h(
+    "div",
+    { class: "rb-credits" },
+    ...CREDITS.map((c, i) =>
+      h(
+        "div",
+        { class: "rb-credit", "data-credit": c.key, style: `--rb-ci:${i + 1}` },
+        h("span", { class: "rb-credit-ico", "aria-hidden": "true" }, icon(c.ic, 22)),
+        h(
+          "div",
+          { class: "rb-credit-txt" },
+          h("b", null, c.name),
+          h("span", null, c.desc),
+          h("em", null, "허락받아 이식했어요")
+        ),
+        h("a", { class: "rb-credit-link", href: c.url, target: "_blank", rel: "noopener noreferrer" }, "원문 글 보기")
+      )
+    )
+  );
+}
 export function renderTools(ctx) {
   if (ctx.state.sub === "inspector") return renderInspector(ctx);
   if (ctx.state.sub === "presets") return renderPresets(ctx);
@@ -68,7 +94,8 @@ export function renderTools(ctx) {
       tile("book", "로어북 로그", "응답마다 어떤 로어북이 들어갔는지 보기 (AI 응답 아래 버튼으로도)", () => ctx.go("tools", "lorelog"), "rb-tool-lorelog"),
       tile("info", ".risum 인스펙터", "모듈 파일 안을 열어 보기: 필드별 크기, 압축률, 에셋 목록, ZIP 추출", () => ctx.go("tools", "inspector"), "rb-tool-inspector")
     ),
-    thanksCard()
+    thanksCard(),
+    creditCards()
   );
   const guide = guidePanel("어떤 도구가 맞을까요?", "하고 싶은 일로 골라 보세요.", [
     { label: "모듈 켜기 조합을 저장하고 싶어요", text: "프리셋", onClick: () => ctx.go("tools", "presets") },
