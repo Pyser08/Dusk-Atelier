@@ -107,3 +107,52 @@
 - **끝난 뒤**: 대조표를 이 문서에 붙이고, 빠진 것이 없다고 사용자에게 보고한다.
 - **Hypa는 가져오지 않는 게 의도(사용자 확인 2026-10-28)**: 리스 기본 메모리(Hypa/Hypa+)는 Dusk 장기기억 플러그인이 대체한다. 대조표에서 Hypa 참고(hypa-reference)와 계획서 2절의 ‘Hypa 참고는 선택 사항으로 유지’는 **의도적 제외**로 표시한다. 단, 이미 이식된 `engine/pot/hypa-reference.js`·설정 옵션·화면 문구(“리스 기본 메모리”)가 있다면 지울지/숨길지 7-B에서 사용자에게 확인한다.
 - **Hypa 끄기 적용(2026-10-28)**: `data/memoryturn.js` `syncPot`이 흐름을 켤 때마다 `hypaReferenceEnabled`·`hypaPlusReferenceEnabled`를 false로 강제(생성 파일 settings.js는 건드리지 않음). 화면은 원래 없음. 시험 `memoryturn.test.js` 마지막. 나중에 Hypa 화면을 만들면 이 강제를 설정값 존중으로 바꿀 것.
+
+## 7-B 대조표 (2026-10-28, 리수폿 2.3.0 UI 모듈 ↔ Dusk 화면)
+방법: 원본 `// Source: src/*-ui.mjs`(약 35개) 화면 문구를 뽑아 `src/ui/screens/memory/*`와 짝지음. 상태: ✅ 있음 · 🟡 일부 · 🔧 엔진만(화면 없음) · ⛔ 의도적 제외.
+엔진 쪽(`engine/pot`·`data/pot`)은 전부 이식돼 있고 `M.flow.settings()`(설정 저장소)로 값이 흐르므로, 🔧는 화면만 만들면 됨.
+
+| # | 리수폿 기능(원본 모듈) | Dusk 위치 | 상태 |
+|---|---|---|---|
+| 1 | 전원·추적 수준·6기능 카드(호감·말투·인지·의심·개방·리듬) `ui` | 설정 > 기능 카드 | ✅ |
+| 2 | 수치 모드·계산 정책·증감 승수 `ui` | 호감 카드 ‘폭’만 | 🟡 |
+| 3 | 관계만 모드·인식 모드 `ui` | 인식 3단계만 | 🟡 |
+| 4 | 모델 설정: 공급자·모델·키·연결 시험·단계별 `model-editor` | 설정 > AI 모델 | ✅ |
+| 5 | 모델 고급: 모델 목록 불러오기·호출 제한시간·추가 JSON body·reasoning·PDF 전송 방식·Copilot/GitHub 인증·Vertex 서비스계정·키 복사 | 없음(엔진 `llm-client`·`copilot-client`·`vertex-client`) | 🔧 |
+| 6 | Router 모드 빠름/정확 `flow-ui` | 설정 > 기억 방식 | ✅ |
+| 7 | Director 역할(연출 지시/사실만) · 이전 완료 턴·최근 메시지 수(stage-context) · Writer 입력 예산 · 본문 변경 검사 · 검색 한정 키워드(이 봇/공통) `flow-ui` | 없음 | 🔧 |
+| 8 | 리스 보조모델 일괄 사용 · 단계별 전용 모델 `flow-ui` | 설정 > AI 모델 | ✅ |
+| 9 | 추가 프롬프트(전체/봇/채팅 범위, 3단계별) `custom-prompts-ui` | 없음(엔진 `custom-prompts`) | 🔧 |
+| 10 | 관찰자 모드 · 페르소나 이름 지정/자동 조회 `persona-name-ui` | 없음(엔진 `observer-mode`·`persona-name`) | 🔧 |
+| 11 | AI 참고 설정(최근 대화 턴·기억 참조 개수) `manual-ai-settings-ui` | 없음 | 🔧 (Hypa 부분은 ⛔) |
+| 12 | Hypa·Hypa+ 참고 | 일부러 안 만듦, `syncPot`이 항상 끔 | ⛔ |
+| 13 | 관계 이력 보관 개수 `record-retention-ui` | 없음(Dusk ‘인물당 기록 상한’은 별개) | 🔧 |
+| 14 | 인물 목록 폴더 분류(새 폴더·미분류·정리) `people-folders-ui` | 인물 카드 그리드(검색·정렬) | 🟡 |
+| 15 | 자동 추적 인물 선택(N명만) `people-tracking-ui` | 인물 ⏸(이 인물만 끔) | 🟡 |
+| 16 | 인물 후보 찾기·로어북 선택 분석·수동 새 인물 seed `people-lore-selector-ui`·`people-ui` | 없음(엔진 `people-lore-selector`·`people-import`) | 🔧 |
+| 17 | 인물 항목 직접 추가·편집·삭제 `people-records-ui`·`people-field-ui` | 인물 ✎(절 본문 수정) | 🟡 |
+| 18 | 항목별 AI 작성(Writer) `people-field-ui`·`people-metric-ai-ui` | 없음 | 🔧 |
+| 19 | 수치 직접 편집(호감·의심·음란·첫인상) `people-entry-editor`·`people-metrics-ui` | 없음(`manuallySetMetric` 정책 필요) | 🔧 |
+| 20 | 장기 변화 후보(증거·승인/거부) `people-candidate-ui`·`people-patterns-ui` | 없음 | 🔧 |
+| 21 | NPC 감정 기록 `npc-emotion-ui` | 위키 ‘지금 상태’ 한 줄만 | 🟡 |
+| 22 | 인물 고정(📌) `people-ui` | 인물 📌 | ✅ |
+| 23 | 인물 통합(미리보기·항목별 선택·통합 전 백업) `person-merge-ui` | 인물 합치기(별칭 병합) | 🟡 |
+| 24 | 인물 AI 다시 정리(구역 선택·꼼꼼 전체 작성) `person-refresh-ui` | 없음(엔진 `person-refresh`·`person-thorough-refresh`) | 🔧 |
+| 25 | 직접 지시로 변경안 만들기 `people-command-ui` | 없음(엔진 `people-command`) | 🔧 |
+| 26 | 위키 문서 화면: 변경 이력 복원·자동 기록 재시도·활동 기록 삭제·요약 정리 `wiki-ui` | 인물 페이지(위키 절) | 🟡 |
+| 27 | 수동 Writer: RP 본문 붙여넣어 분석·변경안 검토 `writer-ui` | 지난 대화 분석·마지막 응답만 분석 | 🟡 |
+| 28 | 복구: JSON 붙여넣어 강제 반영 `writer-recovery-ui` | 없음(엔진 `writer-recovery`·`writer-force`) | 🔧 |
+| 29 | 실행 기록 검사기·단계별 재시도·삭제 `inspector`·`inspector-records` | ‘마지막 요청에 들어간 기억 보기’·진단 줄 | 🟡 |
+| 30 | 데이터 가져오기 | 설정 > 가져오기 | ✅ |
+| 31 | 내보내기·전체 백업·프리셋 공유 `flow-ui` | 없음 | 🔧 |
+| 32 | 고아 기록 정리 · 기억 초기화 | 설정 | ✅ |
+| 33 | 토큰 사용량(합계) | 설정 > AI 모델 | ✅ (단계별 표시 없음 🟡) |
+| 34 | PDF 참고·PDF 전송 `pdf-reference` | 없음(엔진 있음) | 🔧 |
+| 35 | 원문 확인(source-check) | 없음(엔진 있음) | 🔧 |
+| 36 | 성인: 욕구 · 월경·임신 | 설정 > 고급 > 성인 항목 | ✅ |
+| 37 | 성인: 이상성욕·묘사 수위·성적 태도 항목 | 없음 | 🔧 |
+| 38 | 인물 프로필 기능·NPC 간 상호작용 기록 스위치 | 없음 | 🔧 |
+
+**결론**: ✅ 9 · 🟡 12 · 🔧 17 · ⛔ 1(+11의 Hypa 부분). ‘리수폿 기능 전부 사용 가능’ 목표엔 🔧·🟡 화면이 필요. 아래 묶음으로 7-B를 나눠 진행 제안.
+**제안 묶음**: ⓐ 설정 화면(7·9·10·11·13·31·37·38, 한 곳 ‘고급’ 접기) → ⓑ 인물 화면(17·18·19·20·21·23·24·25) → ⓒ 모델 고급·위키/복구/검사기(5·26·28·29·34·35) → ⓓ 범위 칩·검색·되돌리기·공유·팝오버·미리보기 → ⓔ 최적화·CHANGELOG·GUIDE·소스맵·아카 글·빌드.
+**사용자 확인 필요**: 19(수치 직접 편집 정책: 고정핀과 충돌 시 거절/덮어쓰기), 5(Copilot·Vertex 인증까지 이식할지 — 일반 사용자에겐 무거움), 34(PDF 참고 필요 여부), 12(Hypa 설정값 코드 정리 여부).
