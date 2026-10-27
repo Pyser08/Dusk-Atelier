@@ -7,9 +7,12 @@
   "scripts": {
     "build": "node tools/build.mjs",
     "check": "node tools/build.mjs --check",
-    "test": "node --test"
+    "test": "node --test",
+    "pot:split": "node tools/pot-split.mjs"
   },
   "devDependencies": {
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "acorn": "^8.18.0",
+    "eslint-scope": "^9.1.2"
   }
 }
