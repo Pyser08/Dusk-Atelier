@@ -1,5 +1,5 @@
 import { h, replace } from "../../dom.js";
-import { btn, switchEl, setSwitch, confirmDialog, progressBar } from "../../kit.js";
+import { btn, switchEl, setSwitch, confirmDialog, progressBar, loading } from "../../kit.js";
 import { AI_MODES } from "../../../engine/merge.js";
 import { mem, fail } from "./common.js";
 import { parseTags, DEFAULT_TAG_TEXT } from "../../../engine/card/tags.js";
@@ -29,8 +29,7 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
   const last = M.injector?.lastRequest?.(), man = last?.manifest;
   const modeLabel = backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드";
 
-  const flowHost = h("div");
-  if (backend.id === "local") await flowSections(ctx, flowHost, { redraw }).catch(fail(ctx));
+  const flowHost = h("div"), shareHost = h("div");
   const adv = h("details", { class: "rb-mem-man rb-mem-adv", open: !!m.advOpen, onToggle: (e) => { m.advOpen = e.target.open; } }, h("summary", null, "고급: 기록·주입 세부 설정"),
     section("기억 저장소", h("label", { class: "rb-mem-field" }, h("span", null, "저장소"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.backend = e.target.value; }) }, [["auto", "자동"], ["local", "플러그인"], ["bardwiki", "BardWiki"], ["off", "끔"]].map(([v, l]) => h("option", { value: v, selected: S.backend === v }, l)))), h("p", { class: "rb-muted" }, "리스바드에서는 이중 비용을 막으려고 플러그인의 분석·주입을 끄고 위키를 읽어요. 바꾼 뒤에는 RisuAI를 다시 불러와야 훅에 반영돼요.")),
     caps.analyze ? section("분석", h("label", { class: "rb-mem-field" }, h("span", null, "분석 모델"), mode, sid),
@@ -45,17 +44,26 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
       h("label", { class: "rb-mem-field" }, h("span", null, "삽입 위치"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.inject.position = e.target.value; }) }, [["beforeLastUser", "마지막 사용자 메시지 앞"], ["afterSystem", "시스템 프롬프트 뒤"]].map(([v, l]) => h("option", { value: v, selected: S.inject.position === v }, l)))),
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 들어간 기억 보기"), man ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `주입함 (약 ${man.tokens} 토큰)` : "주입하지 않음"}`),
         h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요.")), previewBox(ctx)) : null);
-  let shareBox = null;
-  if (backend.id === "local" && M.flow) { try { const st = await M.flow.settings(); if (!st.status().blocked) shareBox = shareSection(ctx, tracked(ctx, st), { apply: () => M.flow.apply().catch(fail(ctx)), redraw }); } catch { /* 흐름 설정을 못 읽으면 공유 칸만 뺀다 */ } }
+  // 흐름 설정·공유 칸은 읽는 데 오래 걸려서 화면을 먼저 보여 주고 뒤에서 채운다. 접힌 설정은 처음 열 때 채운다.
+  let loaded = false;
+  const loadHeavy = () => {
+    if (loaded) return; loaded = true;
+    if (backend.id !== "local") return;
+    replace(flowHost, loading("불러오는 중", { rows: 3 }));
+    flowSections(ctx, flowHost, { redraw }).catch(fail(ctx));
+    if (M.flow) (async () => { try { const st = await M.flow.settings(); if (!st.status().blocked) replace(shareHost, shareSection(ctx, tracked(ctx, st), { apply: () => M.flow.apply().catch(fail(ctx)), redraw })); } catch { /* 흐름 설정을 못 읽으면 공유 칸만 뺀다 */ } })();
+  };
   const tools = h("div", { class: "rb-mem-tools" });
-  const body = h("div", { class: "rb-mem-foldbody" }, h("div", { class: "rb-mem-modeline" }, h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), h("span", { class: "rb-muted" }, backend.reason)), tools, flowHost, shareBox, adv);
+  const body = h("div", { class: "rb-mem-foldbody" }, h("div", { class: "rb-mem-modeline" }, h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), h("span", { class: "rb-muted" }, backend.reason)), tools, flowHost, shareHost, adv);
   tools.append(searchBox(body), btn("설정 변경 이력", { size: "sm", onClick: () => openSettingsHistory(ctx, { apply: () => M.flow?.apply?.(), redraw }).catch(fail(ctx)) }));
   if (panel) {
     // 넓은 화면: 설정을 오른쪽(가운데) 칸에 크게 펼친다.
+    loadHeavy();
     return replace(host, h("section", { class: "rb-mem-setpanel" }, h("div", { class: "rb-mem-sethead" }, h("b", null, "설정"), h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), btn("닫기", { size: "sm", onClick: () => { m.globalOpen = false; redraw(); } })), body));
   }
   const fold = h("details", { class: "rb-mem-fold", open: !!m.globalOpen }, h("summary", null, "설정", h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel)), body);
-  fold.addEventListener("toggle", () => { m.globalOpen = fold.open; });
+  fold.addEventListener("toggle", () => { m.globalOpen = fold.open; if (fold.open) loadHeavy(); });
+  if (m.globalOpen) loadHeavy();
   replace(host, fold);
 }
 
@@ -65,6 +73,26 @@ export function renderBotSettings(env) {
   const { section } = builders(ctx, idx, env.redraw, "bot");
   const ignore = idx.bots[bot.id]?.ignore ?? [];
   const ignIn = h("input", { class: "rb-input", placeholder: "제외할 이름 추가 후 Enter", "aria-label": "제외 이름", onKeydown: (e) => { if (e.key === "Enter" && e.target.value.trim()) { const v = e.target.value.trim(); M.store.updateIndex((i) => { const b = i.bots[bot.id] ??= { on: true, ignore: [], fails: 0 }; b.ignore = [...new Set([...(b.ignore ?? []), v])]; }).then(env.redraw).catch(fail(ctx)); } } });
+  const reset = async (scope) => {
+    const ok = await confirmDialog(ctx.win, { title: "기억 초기화", body: scope === "chat" ? "이 채팅의 기억을 모두 지워요." : scope === "bot" ? "이 봇의 모든 채팅 기억을 지워요." : "모든 봇의 장기 기억을 지워요.", ok: "지우기", danger: true }); if (!ok) return;
+    try { if (scope === "chat") await M.store.deleteFolder(bot.id, chatItem.id); else if (scope === "bot") await M.store.deleteBot(bot.id); else await M.store.resetAll(); env.redraw(); } catch (e) { fail(ctx)(e); }
+  };
+
+  const advBox = h("div");
+  if (idx.settings.flow?.advanced === true && idx.settings.flow?.on === true) advancedBot(env, advBox).catch(fail(ctx));
+  return h("div", { class: "rb-mem-foldbody" },
+    caps.analyze ? section("이 봇에서 기록하지 않을 이름", h("div", { class: "rb-mem-chats" }, ignore.map((n) => h("button", { type: "button", class: "rb-chip", title: "눌러서 제거", onClick: () => M.store.updateIndex((i) => { i.bots[bot.id].ignore = i.bots[bot.id].ignore.filter((x) => x !== n); }).then(env.redraw) }, n, " ✕")), ignIn)) : null,
+    advBox,
+    section(["초기화", null], h("div", { class: "rb-mem-sact" }, btn("이 채팅 기억 지우기", { onClick: () => reset("chat") }), btn("이 봇 기억 지우기", { onClick: () => reset("bot") }), btn("전체 기억 지우기", { onClick: () => reset("all") }))),
+    section(["상태", "chat"], h("p", { class: "rb-muted" }, `훅: ${idx.status.hook} · 처리 ${idx.status.processed}회 · 마지막 성공 ${idx.status.lastSuccessAt ? new Date(idx.status.lastSuccessAt).toLocaleString() : "없음"}${idx.status.lastError ? " · 오류: " + idx.status.lastError : ""}`)));
+}
+
+
+// ---- 지난 대화 분석: 설정 폴드를 열지 않아도 봇 화면에서 바로 쓴다.
+export function renderBotAnalysis(env) {
+  const { ctx, idx, caps, bot, chatItem } = env, M = ctx.memory;
+  if (!caps.analyze) return null;
+  const { section } = builders(ctx, idx, env.redraw, "bot");
   // 일괄 분석
   const total = chatItem.chat?.message?.length ?? 0;
   const from = h("input", { class: "rb-input", type: "number", min: 1, max: total, value: 1, "aria-label": "시작 메시지 번호" }), to = h("input", { class: "rb-input", type: "number", min: 1, max: total, value: total, "aria-label": "끝 메시지 번호" });
@@ -80,19 +108,7 @@ export function renderBotSettings(env) {
       failed = r.failed; ctx.toast(`일괄 분석이 끝났어요 (${r.total - r.failed.length}/${r.total}).`); env.redraw();
     } catch (e) { fail(ctx)(e); env.redraw(); }
   };
-  const reset = async (scope) => {
-    const ok = await confirmDialog(ctx.win, { title: "기억 초기화", body: scope === "chat" ? "이 채팅의 기억을 모두 지워요." : scope === "bot" ? "이 봇의 모든 채팅 기억을 지워요." : "모든 봇의 장기 기억을 지워요.", ok: "지우기", danger: true }); if (!ok) return;
-    try { if (scope === "chat") await M.store.deleteFolder(bot.id, chatItem.id); else if (scope === "bot") await M.store.deleteBot(bot.id); else await M.store.resetAll(); env.redraw(); } catch (e) { fail(ctx)(e); }
-  };
-
-  const advBox = h("div");
-  if (idx.settings.flow?.advanced === true && idx.settings.flow?.on === true) advancedBot(env, advBox).catch(fail(ctx));
-  return h("div", { class: "rb-mem-foldbody" },
-    caps.analyze ? section(["지난 대화 분석 (이 채팅 전체)", "chat"], h("div", { class: "rb-mem-range" }, from, "~", to), est, h("div", { class: "rb-mem-sact" }, btn("분석 시작", { kind: "primary", onClick: () => run() }), failed.length ? btn(`실패만 다시 (${failed.length})`, { onClick: () => run(true) }) : null), prog) : null,
-    caps.analyze ? section("이 봇에서 기록하지 않을 이름", h("div", { class: "rb-mem-chats" }, ignore.map((n) => h("button", { type: "button", class: "rb-chip", title: "눌러서 제거", onClick: () => M.store.updateIndex((i) => { i.bots[bot.id].ignore = i.bots[bot.id].ignore.filter((x) => x !== n); }).then(env.redraw) }, n, " ✕")), ignIn)) : null,
-    advBox,
-    section(["초기화", null], h("div", { class: "rb-mem-sact" }, btn("이 채팅 기억 지우기", { onClick: () => reset("chat") }), btn("이 봇 기억 지우기", { onClick: () => reset("bot") }), btn("전체 기억 지우기", { onClick: () => reset("all") }))),
-    section(["상태", "chat"], h("p", { class: "rb-muted" }, `훅: ${idx.status.hook} · 처리 ${idx.status.processed}회 · 마지막 성공 ${idx.status.lastSuccessAt ? new Date(idx.status.lastSuccessAt).toLocaleString() : "없음"}${idx.status.lastError ? " · 오류: " + idx.status.lastError : ""}`)));
+  return section(["지난 대화 분석 (이 채팅 전체)", "chat"], h("div", { class: "rb-mem-range" }, from, "~", to), est, h("div", { class: "rb-mem-sact" }, btn("분석 시작", { kind: "primary", onClick: () => run() }), failed.length ? btn(`실패만 다시 (${failed.length})`, { onClick: () => run(true) }) : null), prog);
 }
 
 // ---- 카드 설정: 태그·스탯 정의, 기본 언어, 연결 추가 지시. 카드 만들기와 새 봇 만들기에서 쓴다.
