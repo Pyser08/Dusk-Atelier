@@ -330,10 +330,13 @@ export function openMenu(host, anchor, items) {
     ));
   }
   host.appendChild(menu);
+  // 글자 크기 옵션(zoom)이 켜져 있으면 화면 좌표를 배율로 나눠 줘야 제자리에 뜬다
+  const z = parseFloat(host.ownerDocument.defaultView?.getComputedStyle?.(host).zoom) || 1;
   const hr = host.getBoundingClientRect(), ar = anchor.getBoundingClientRect(), mr = menu.getBoundingClientRect();
-  let left = ar.right - hr.left - mr.width, top = ar.bottom - hr.top + 6;
+  const hh = hr.height / z, mw = mr.width / z, mh = mr.height / z;
+  let left = (ar.right - hr.left) / z - mw, top = (ar.bottom - hr.top) / z + 6;
   if (left < 8) left = 8;
-  if (top + mr.height > hr.height - 8) top = Math.max(8, ar.top - hr.top - mr.height - 6);
+  if (top + mh > hh - 8) top = Math.max(8, (ar.top - hr.top) / z - mh - 6);
   menu.style.left = left + "px";
   menu.style.top = top + "px";
   setTimeout(() => {
@@ -433,3 +436,56 @@ export function sortShort(cur) {
   if (!cur) return "";
   return `${cur.key === "size" ? "크기" : "이름"} ${cur.dir > 0 ? "↓" : "↑"}`;
 }
+
+// ── 고르기 카드: 그림(pic) + 이름 + 한 줄 설명. 하나만 고르는 설정(메뉴 위치 등)에 쓴다
+export function optionCards(options, value, onChange, label) {
+  const el = h("div", { class: "rb-opts", role: "radiogroup", "aria-label": label });
+  const paint = (v) => el.querySelectorAll(".rb-opt").forEach((b) => b.setAttribute("aria-checked", b.dataset.v === v ? "true" : "false"));
+  for (const o of options) el.appendChild(h(
+    "button",
+    { type: "button", role: "radio", class: "rb-opt", dataset: { v: o.value }, onClick: () => {
+      paint(o.value);
+      onChange(o.value);
+    } },
+    o.pic ?? null,
+    h("b", null, o.label),
+    o.text ? h("small", null, o.text) : null
+  ));
+  paint(value);
+  return el;
+}
+// ── 켜고 끄는 설정 한 줄: 제목 + 설명 + 스위치(켜짐/꺼짐 글자)
+export function toggleRow(title, text, on, onChange) {
+  const sw = switchEl(on, { label: title, onChange: (v, el) => {
+    el.setAttribute("aria-checked", v ? "true" : "false");
+    onChange(v);
+  } });
+  return h("div", { class: "rb-toggle" }, h("div", { class: "t" }, h("b", null, title), text ? h("small", null, text) : null), sw);
+}
+
+// ── 오른쪽 설명 패널: "이럴 땐 여기로" 목록. 넓은 화면에서만 보이고 좁으면 숨는다
+export function guidePanel(title, text, rows) {
+  return h(
+    "aside",
+    { class: "rb-guide", "aria-label": title },
+    h("div", { class: "rb-guide-h" }, icon("sparkle", 16), h("b", null, title)),
+    text ? h("p", { class: "rb-p", style: "margin:0" }, text) : null,
+    h("div", { class: "rb-guide-list" }, ...rows.map((r) => h(
+      "button",
+      { type: "button", class: "rb-guide-row", onClick: r.onClick },
+      h("span", { class: "q" }, r.label),
+      r.text ? h("small", null, r.text) : null,
+      h("span", { class: "go" }, icon("chevron", 14))
+    )))
+  );
+}
+// ── 처음 쓰는 사람을 위한 번호 안내 (빈 화면용)
+export function stepsGuide(title, steps) {
+  return h(
+    "div",
+    { class: "rb-steps" },
+    h("h3", { class: "rb-h3" }, title),
+    h("ol", null, ...steps.map((t, i) => h("li", null, h("i", null, String(i + 1)), h("span", null, t))))
+  );
+}
+

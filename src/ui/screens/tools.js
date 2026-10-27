@@ -6,7 +6,7 @@ import { createZip } from '../../engine/zipwrite.js';
 import { DISABLED_KEY, ORDER_KEY, commit, readDb } from '../../data/modules.js';
 import { download, fmtBytes, h, pickFiles, replace } from '../dom.js';
 import { icon } from '../icons.js';
-import { btn, confirmDialog, note, progressBar } from '../kit.js';
+import { btn, confirmDialog, guidePanel, note, progressBar } from '../kit.js';
 import { defaultsMeta } from '../prefs.js';
 import { PRESET_KEY, loadPresets, savePresets } from '../../data/presets.js';
 import { INJECTED_KEY, loadPersonaMap, savePersonaMap } from '../../data/persona.js';
@@ -57,20 +57,26 @@ export function renderTools(ctx) {
     return;
   }
 
-  replace(ctx.main, h(
+  const content = h(
     "div",
-    { class: "rb-section rb-scroll", style: "flex:1" },
-    h("h2", { class: "rb-h2" }, "도구"),
+    { class: "rb-section", style: "flex:1;min-width:0" },
     h(
       "div",
-      { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px" },
+      { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px" },
       tile("preset", "프리셋", "켜고 끌 모듈 조합·순서를 묶어 저장하고 버튼 하나로 바꾸기, 모바일·PC 자동 전환, 공유 코드", () => ctx.go("tools", "presets"), "rb-tool-presets"),
       tile("character", "페르소나 빌더", "양식에 맞춰 칸을 채워 페르소나 설명 만들기, AI로 전체·빈 칸·부분 고치기 (영어 출력 + 번역 보기), 양식·AI 프리셋 공유", () => ctx.go("tools", "personabuilder"), "rb-tool-personabuilder"),
       tile("book", "로어북 로그", "응답마다 어떤 로어북이 들어갔는지 보기 (AI 응답 아래 버튼으로도)", () => ctx.go("tools", "lorelog"), "rb-tool-lorelog"),
       tile("info", ".risum 인스펙터", "모듈 파일 안을 열어 보기: 필드별 크기, 압축률, 에셋 목록, ZIP 추출", () => ctx.go("tools", "inspector"), "rb-tool-inspector")
     ),
     thanksCard()
-  ));
+  );
+  const guide = guidePanel("어떤 도구가 맞을까요?", "하고 싶은 일로 골라 보세요.", [
+    { label: "모듈 켜기 조합을 저장하고 싶어요", text: "프리셋", onClick: () => ctx.go("tools", "presets") },
+    { label: "페르소나 설명을 양식으로 만들고 싶어요", text: "페르소나 빌더", onClick: () => ctx.go("tools", "personabuilder") },
+    { label: "응답에 어떤 로어북이 들어갔는지 보고 싶어요", text: "로어북 로그", onClick: () => ctx.go("tools", "lorelog") },
+    { label: "모듈 파일 안을 열어 보고 싶어요", text: ".risum 인스펙터", onClick: () => ctx.go("tools", "inspector") }
+  ]);
+  replace(ctx.main, h("div", { class: "rb-scroll rb-twocol" }, content, guide));
 }
 export async function fullBackup(ctx) {
   const db = await readDb(ctx.api, ["modules", "pluginCustomStorage", "enabledModules"]);

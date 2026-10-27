@@ -1,7 +1,7 @@
 import { maybeShowWhatsNew, openChangelog, CHANGELOG } from './whatsnew.js';
-import { btn, iconBtn, toast } from './kit.js';
+import { btn, iconBtn, openMenu, toast } from './kit.js';
 import { CSS2, FONT_LINK } from './styles.js';
-import { resolveMode, themeVars } from './theme.js';
+import { normalizeTheme, resolveMode, themeVars } from './theme.js';
 import { createPrefs } from './prefs.js';
 import { renderModules } from './screens/modules.js';
 import { renderSettings } from './screens/settings.js';
@@ -21,16 +21,9 @@ import { renderDev } from './screens/dev.js';
 import { renderPlugins } from './screens/plugins.js';
 import { renderSettingsTab } from './screens/settingstab.js';
 import { renderMemory } from './screens/memory/index.js';
+import { renderHome } from './screens/home.js';
+import { SEARCH, TABS, subLabel } from './tabs.js';
 
-var TABS = [
-  { id: "modules", label: "모듈", icon: "module" },
-  { id: "plugins", label: "플러그인", icon: "plugin" },
-  { id: "characters", label: "캐릭터", icon: "character" },
-  { id: "memory", label: "장기 기억", icon: "brain" },
-  { id: "tools", label: "도구", icon: "tools" },
-  { id: "settings", label: "설정", icon: "sliders" },
-  { id: "dev", label: "개발", icon: "code", dev: true }
-];
 export function createApp(api, { legacy, version, onPersonaChanged }) {
   const doc = document;
   if (!doc.getElementById("rb-style")) {
@@ -40,22 +33,18 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const prefs = createPrefs(api);
   const svc = createService(api, prefs);
   const assets = createAssetLoader(api);
-  const state = { tab: "modules", search: "", risuScheme: "dark", mode: "dark", sub: null, opened: false };
+  const state = { tab: "modules", search: "", risuScheme: "dark", mode: "dark", sub: null, opened: false, layout: "home" };
   const root = h("div", { class: "rb-root", hidden: true });
   const win = h("div", { class: "rb-win", role: "dialog", "aria-modal": "true", "aria-label": "Dusk Atelier" });
   root.appendChild(win);
   doc.body.appendChild(root);
-  const searchInput = h("input", { type: "search", placeholder: "모듈 이름, 로어북 키워드 검색", "aria-label": "검색" });
-  const mobileSearchInput = h("input", { type: "search", placeholder: "검색", "aria-label": "검색" });
+  const searchInput = h("input", { type: "search", placeholder: "검색", "aria-label": "검색" });
   let searchTimer = null;
-  const onSearch = (e) => {
+  searchInput.addEventListener("input", (e) => {
     state.search = e.target.value;
-    (e.target === searchInput ? mobileSearchInput : searchInput).value = state.search;
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => ctx.refresh(), 120);
-  };
-  searchInput.addEventListener("input", onSearch);
-  mobileSearchInput.addEventListener("input", onSearch);
+  });
   // 새 버전 알림: 열 때 업데이트 주소의 머리말(앞 512바이트)만 읽어 버전을 비교한다
   const UPDATE_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js";
   const UPDATE_HOW = "RisuAI 설정 → 플러그인에서 Dusk Atelier 옆 초록색 + 버튼을 누르면 업데이트돼요.";
@@ -124,48 +113,108 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     "header",
     { class: "rb-head" },
     h(
-      "div",
-      { class: "rb-brand" },
+      "button",
+      { type: "button", class: "rb-brand", title: "홈으로", "aria-label": "Dusk Atelier 홈으로", onClick: () => go("home") },
       h("div", { class: "rb-logo", "aria-hidden": "true" }, icon("module", 18)),
-      h("div", null, h("b", null, "Dusk Atelier"), h("small", null, "for RisuBard"))
+      h("span", null, h("b", null, "Dusk Atelier"), h("small", null, "for RisuBard"))
     ),
-    h("label", { class: "rb-search" }, icon("search", 16), searchInput, h("span", { class: "rb-kbd", "aria-hidden": "true" }, "/")),
     h("div", { class: "rb-spacer" }),
     updBtn,
     btn("가져오기", { icon: "upload", labelClass: "lbl", onClick: () => legacy.open(), id: "rb-import" }),
-    iconBtn("palette", "색 바꾸기", { onClick: () => go("settings", "theme") }),
+    iconBtn("palette", "화면 꾸미기", { onClick: () => go("settings", "theme"), id: "rb-look" }),
     iconBtn("x", "닫기", { onClick: () => close(), id: "rb-close" })
   );
+  // 메뉴: 왼쪽(left) · 위쪽(top) · 모바일 아래 탭. 어떤 걸 보일지는 win 클래스(rb-lay-*)가 정한다
   const nav = h("nav", { class: "rb-nav", "aria-label": "탭" });
+  const topnav = h("nav", { class: "rb-topnav", "aria-label": "탭" });
   const tabbar = h("nav", { class: "rb-tabbar", "aria-label": "탭" });
-  const navLinks = /* @__PURE__ */ new Map(), barLinks = /* @__PURE__ */ new Map();
+  const navLinks = /* @__PURE__ */ new Map(), topLinks = /* @__PURE__ */ new Map(), barLinks = /* @__PURE__ */ new Map();
+  const mkLink = (t, size, withCount) => h("a", { href: "#", dataset: { tab: t.id }, onClick: (e) => {
+    e.preventDefault();
+    go(t.id);
+  } }, icon(t.icon, size), withCount ? h("span", null, t.label) : t.label, withCount ? h("small") : null);
   for (const t of TABS) {
-    const a = h("a", { href: "#", dataset: { tab: t.id }, onClick: (e) => {
-      e.preventDefault();
-      go(t.id);
-    } }, icon(t.icon, 18), h("span", null, t.label), h("small"));
+    const a = mkLink(t, 18, true);
     navLinks.set(t.id, a);
     nav.appendChild(a);
-    const b = h("a", { href: "#", dataset: { tab: t.id }, onClick: (e) => {
-      e.preventDefault();
-      go(t.id);
-    } }, icon(t.icon, 22), t.label);
-    barLinks.set(t.id, b);
+    const c = mkLink(t, 16, false);
+    c.appendChild(h("small"));
+    topLinks.set(t.id, c);
+    topnav.appendChild(c);
+  }
+  const BAR = ["home", "modules", "characters", "memory"];
+  for (const id of BAR) {
+    const t = TABS.find((x) => x.id === id);
+    const b = mkLink(t, 22, false);
+    barLinks.set(id, b);
     tabbar.appendChild(b);
   }
+  const moreLink = h("a", { href: "#", id: "rb-more", "aria-haspopup": "menu", onClick: (e) => {
+    e.preventDefault();
+    const dev = !!prefs.ui?.devMode;
+    openMenu(win, moreLink, [
+      ...TABS.filter((t) => t.group === "more" && (!t.dev || dev)).map((t) => ({ icon: t.icon, label: t.label, onClick: () => go(t.id) })),
+      "sep",
+      { icon: "palette", label: "화면 꾸미기", onClick: () => go("settings", "theme") }
+    ]);
+  } }, icon("menu", 22), "더보기");
+  tabbar.appendChild(moreLink);
+  barLinks.set("more", moreLink);
   const navFoot = h("div", { style: "margin-top:auto;display:flex;flex-direction:column" });
   nav.appendChild(navFoot);
   const main = h("section", { class: "rb-main", "aria-live": "polite" });
   const detail3 = h("aside", { class: "rb-detail rb-scroll", "aria-label": "상세" });
   const sheetBack = h("div", { class: "rb-sheet-back", onClick: () => ctx.closeSheet() });
-  const body = h("div", { class: "rb-body" }, nav, main, sheetBack, detail3);
+  // 탭마다 맨 위 줄: 홈 › 탭(눌러서 다른 탭으로) · 한 줄 설명 · 검색 · 도움말
+  const crumb = h("div", { class: "rb-crumb", "aria-label": "현재 위치" });
+  const phDesc = h("div", { class: "rb-ph-desc" });
+  const helpBtn = iconBtn("help", "이 화면 설명", { boxed: true, id: "rb-help-btn", onClick: () => toggleHelp() });
+  const pagehead = h(
+    "div",
+    { class: "rb-pagehead" },
+    h("div", { class: "rb-ph-text" }, crumb, phDesc),
+    h("div", { class: "rb-ph-tools" }, h("label", { class: "rb-search" }, icon("search", 16), searchInput, h("span", { class: "rb-kbd", "aria-hidden": "true" }, "/")), helpBtn)
+  );
+  const col = h("div", { class: "rb-col" }, pagehead, main);
+  const body = h("div", { class: "rb-body" }, nav, col, sheetBack, detail3);
   let wasLoading = false;
   new MutationObserver(() => {
     const now = !!main.querySelector(":scope > .rb-loading");
     if (wasLoading && !now) for (const el of main.children) motion(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 180 });
     wasLoading = now;
   }).observe(main, { childList: true });
-  win.append(head, h("label", { class: "rb-search rb-mobile-search" }, icon("search", 16), mobileSearchInput), body, tabbar);
+  win.append(head, topnav, body, tabbar);
+  const closeHelp = () => pagehead.querySelector(":scope > .rb-help")?.remove();
+  function toggleHelp() {
+    if (pagehead.querySelector(":scope > .rb-help")) return closeHelp();
+    const t = TABS.find((x) => x.id === state.tab) ?? TABS[0];
+    const tips = t.help ?? [];
+    pagehead.appendChild(h(
+      "div",
+      { class: "rb-help", role: "dialog", "aria-label": `${t.label} 설명` },
+      h("h3", null, icon("help", 18), `${t.label}, 이렇게 써요`),
+      h("p", { class: "rb-p", style: "margin:0" }, t.desc),
+      tips.length ? h("ul", null, ...tips.map((x) => h("li", null, x))) : null,
+      btn("알겠어요", { size: "sm", kind: "primary", onClick: closeHelp })
+    ));
+  }
+  const sep = () => h("span", { class: "sep", "aria-hidden": "true" }, icon("chevron", 14));
+  function paintHead() {
+    const t = TABS.find((x) => x.id === state.tab) ?? TABS[0];
+    const sl = subLabel(state.tab, state.sub);
+    replace(
+      crumb,
+      h("button", { type: "button", title: "홈으로", onClick: () => go("home") }, icon("home", 14), "홈"),
+      sep(),
+      h("button", { type: "button", class: sl ? "" : "cur", "aria-haspopup": "menu", id: "rb-tabmenu", onClick: (e) => {
+        const dev = !!prefs.ui?.devMode;
+        openMenu(win, e.currentTarget, TABS.filter((x) => x.id !== "home" && (!x.dev || dev)).map((x) => ({ icon: x.icon, label: x.label, onClick: () => go(x.id) })));
+      } }, t.label, icon("down", 14)),
+      ...sl ? [sep(), h("button", { type: "button", class: "cur", onClick: () => go(state.tab) }, sl)] : []
+    );
+    phDesc.textContent = t.desc;
+    closeHelp();
+  }
   let dragDepth = 0, dropEl = null;
   const hasFiles = (e) => [...e.dataTransfer?.types ?? []].includes("Files");
   win.addEventListener("dragenter", (e) => {
@@ -199,7 +248,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   doc.addEventListener("keydown", (e) => {
     if (root.hidden) return;
     if (e.key === "Escape" && !win.querySelector(".rb-modal, .rb-menu, .rb-full, .rb-lightbox")) {
-      if (detail3.classList.contains("open")) ctx.closeSheet();
+      if (pagehead.querySelector(":scope > .rb-help")) closeHelp();
+      else if (detail3.classList.contains("open")) ctx.closeSheet();
       else close();
     }
     if (e.key === "/" && doc.activeElement?.tagName !== "INPUT" && doc.activeElement?.tagName !== "TEXTAREA") {
@@ -214,6 +264,11 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
     doc.documentElement.style.colorScheme = state.risuScheme;
     win.style.colorScheme = scheme;
+    const th = normalizeTheme(theme);
+    state.layout = th.layout;
+    for (const c of [...win.classList]) if (c.startsWith("rb-lay-") || c.startsWith("rb-den-")) win.classList.remove(c);
+    win.classList.add(`rb-lay-${th.layout}`, `rb-den-${th.density}`);
+    win.classList.toggle("rb-hc", th.contrast === "high");
   }
   function go(tab, sub = null) {
     // 기록은 설정 탭 안으로 옮겼다 (1.6.1, 그전엔 도구). 예전 go("history")·go("tools","history") 호출도 그대로 동작
@@ -235,7 +290,6 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     if (tab !== state.tab || (sub === "history") !== (state.sub === "history")) {
       state.search = "";
       searchInput.value = "";
-      mobileSearchInput.value = "";
     }
     if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsBg = true;
     if (tab === "characters") state.charOrderStale = true;
@@ -264,18 +318,20 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   }
   function refreshTabs() {
     const on = !!prefs.ui?.devMode;
-    for (const links of [navLinks, barLinks]) {
+    for (const links of [navLinks, topLinks]) {
       const a = links.get("dev");
       if (a) a.hidden = !on;
     }
     win.classList.toggle("rb-has-dev", on);
     if (!on && state.tab === "dev") go("tools");
   }
+  const MORE = /* @__PURE__ */ new Set(["plugins", "tools", "settings", "dev"]);
   function render({ reuse = false } = {}) {
     refreshTabs();
     if (!reuse) dropPanes();
-    for (const links of [navLinks, barLinks]) for (const [id, a] of links) {
-      if (id === state.tab) a.setAttribute("aria-current", "page");
+    for (const links of [navLinks, topLinks, barLinks]) for (const [id, a] of links) {
+      const on = id === state.tab || id === "more" && MORE.has(state.tab);
+      if (on) a.setAttribute("aria-current", "page");
       else a.removeAttribute("aria-current");
     }
     replace(
@@ -285,8 +341,10 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     );
     const inHist = state.tab === "settings" && state.sub === "history";
     const showSearch = inHist || ["modules", "plugins", "characters"].includes(state.tab);
-    searchInput.placeholder = inHist ? "기록에서 이름 찾기" : { modules: "모듈 이름, 로어북 키워드 검색", plugins: "플러그인 이름, 카테고리 검색", characters: "캐릭터 이름, 제작자 검색" }[state.tab] ?? "검색";
+    searchInput.placeholder = inHist ? "기록에서 이름 찾기" : SEARCH[state.tab] ?? "검색";
     win.classList.toggle("rb-nosearch", !showSearch);
+    win.classList.toggle("rb-is-home", state.tab === "home");
+    paintHead();
     replace(detail3);
     detail3.hidden = true;
     const hit = reuse ? paneCache.get(paneKey()) : null;
@@ -297,7 +355,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { home: renderHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
     Promise.resolve(screen(ctx)).then(() => {
       paneReady = true;
     }).catch((err) => {
@@ -313,6 +371,11 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     }
     if (!prefs.ui) await prefs.load();
     else await prefs.reloadMeta();
+    // 첫 화면: 홈 카드 방식이면 홈, 메뉴(왼쪽·위쪽) 방식이면 모듈 (창을 연 뒤 다시 열 땐 보던 곳 그대로)
+    if (!state.opened) {
+      state.tab = normalizeTheme(prefs.ui?.theme).layout === "home" ? "home" : "modules";
+      state.sub = null;
+    }
     state.modDirty = true;
     state.charOrderStale = true;
     if (state.chars) state.charsBg = true;
@@ -369,8 +432,10 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     applyTheme,
     refreshTabs: () => refreshTabs(),
     setNavCount(tab, n) {
-      const s = navLinks.get(tab)?.querySelector("small");
-      if (s) s.textContent = n === void 0 ? "" : String(n);
+      for (const links of [navLinks, topLinks]) {
+        const s = links.get(tab)?.querySelector("small");
+        if (s) s.textContent = n === void 0 ? "" : String(n);
+      }
     },
     openSheet() {
       detail3.hidden = false;
@@ -391,7 +456,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       }
     },
     toast: (text, opts) => toast(win, text, opts),
-    isMobile: () => (win.clientWidth || 1e3) <= 760
+    isMobile: () => (root.clientWidth || 1e3) <= 760
   };
   onNotice((msg) => ctx.toast(msg, { seconds: 8 }));
   return { open, close, ctx };

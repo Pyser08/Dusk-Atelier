@@ -1,6 +1,6 @@
 // 설정 탭: 흩어져 있던 설정을 한곳에. (도구와 개발 탭 사이)
 import { h, replace } from '../dom.js';
-import { note, segmented } from '../kit.js';
+import { guidePanel, note, segmented } from '../kit.js';
 import { icon } from '../icons.js';
 import { LORE_DEFAULTS, loadLoreSettings, saveLoreSettings } from '../../data/lorerules.js';
 import { devToggleCard } from './devtools.js';
@@ -59,10 +59,15 @@ export async function renderSettingsTab(ctx) {
   const btnSeg = segmented([["on", "보이기"], ["off", "숨기기"]], lore.button === false ? "off" : "on", (v) => setLore({ button: v === "on" }), "응답 아래 로어북 버튼");
   const bdSeg = segmented([["off", "끄기"], ["short", "짧은 이름만"], ["all", "모든 키"]], ["off", "all"].includes(lore.boundary) ? lore.boundary : "short", (v) => setLore({ boundary: v }), "이름 경계 기본값");
   const row = (label, seg) => h("div", { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" }, h("b", { style: "font-size:13.5px;min-width:120px" }, label), h("div", { style: "flex:1;min-width:240px" }, seg));
-  replace(ctx.main, h(
+  const content = h(
     "div",
-    { class: "rb-section rb-scroll", style: "flex:1;max-width:820px" },
-    h("h2", { class: "rb-h2" }, "설정"),
+    { class: "rb-section", style: "flex:1;min-width:0;max-width:880px" },
+    section(
+      "palette",
+      "화면 꾸미기",
+      "색 · 메뉴 위치 · 줄 간격 · 글자 크기 · 고대비를 눌러서 고르고, 바로 바뀌어요.",
+      h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px" }, tile("palette", "화면 꾸미기 열기", "색 프리셋 한 번 클릭, 홈 카드/왼쪽/위쪽 메뉴, 큰 글자, 고대비", () => ctx.go("settings", "theme"), "rb-set-theme"))
+    ),
     section(
       "zap",
       "로어북",
@@ -101,7 +106,6 @@ export async function renderSettingsTab(ctx) {
     h(
       "div",
       { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin-bottom:14px" },
-      tile("palette", "색 바꾸기", "테마 색, 직접 고른 색, 밝기(RisuAI 따라가기/다크/라이트)", () => ctx.go("settings", "theme"), "rb-set-theme"),
       tile("refresh", "업데이트 설정", "새로 가져온 봇 자동 감지, 받은 사본 정리, 채팅 백업", () => ctx.go("settings", "updset"), "rb-set-updset"),
       tile("trash", "설정 정리", "이 플러그인이 저장한 순서·폴더·프리셋·연결 정보를 골라서 지우기", () => ctx.go("settings", "cleanup"), "rb-set-cleanup")
     ),
@@ -109,5 +113,14 @@ export async function renderSettingsTab(ctx) {
       ctx.refreshTabs();
       renderSettingsTab(ctx);
     })
-  ));
+  );
+  const guide = guidePanel("이럴 땐 여기로", "하고 싶은 일을 누르면 해당 화면으로 가요.", [
+    { label: "색·글자 크기를 바꾸고 싶어요", text: "화면 꾸미기", onClick: () => ctx.go("settings", "theme") },
+    { label: "모듈이 꼬였어요, 되돌리고 싶어요", text: "기록 · 되돌리기", onClick: () => ctx.go("settings", "history") },
+    { label: "다른 기기로 옮기고 싶어요", text: "전체 백업·복원", onClick: () => fullBackup(ctx) },
+    { label: "새 봇을 알아서 잡아 주면 좋겠어요", text: "업데이트 설정", onClick: () => ctx.go("settings", "updset") },
+    { label: "쌓인 설정을 정리하고 싶어요", text: "설정 정리", onClick: () => ctx.go("settings", "cleanup") },
+    { label: "내 채팅 테마를 만들고 싶어요", text: "테마 빌더", onClick: () => ctx.go("settings", "themebuilder") }
+  ]);
+  replace(ctx.main, h("div", { class: "rb-scroll rb-twocol" }, content, guide));
 }
