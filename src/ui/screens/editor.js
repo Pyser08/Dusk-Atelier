@@ -200,12 +200,14 @@ export async function openEditorCore(ctx, cfg) {
   const panel = h("div", { class: "rb-full", role: "dialog", "aria-label": `${original.name} 편집` });
   const titleB = h("b", null, original.name || "(이름 없음)");
   const issuesBtn = btn("", { size: "sm", kind: "ghost", onClick: () => showIssues() });
+  const saveState = h("small", { class: "rb-muted", style: "white-space:nowrap;font-size:11px", "aria-live": "polite" });
   const applyBtn = btn("적용", { kind: "primary", icon: "check", onClick: () => apply() });
   const head = h(
     "div",
     { class: "rb-full-head" },
     iconBtn("back", "닫기", { onClick: () => close() }),
     h("div", { class: "ttl" }, h("small", null, cfg.kindLabel), titleB),
+    saveState,
     issuesBtn,
     btn("CBS 사전", { size: "sm", onClick: () => cbsPanel() }),
     applyBtn
@@ -259,6 +261,7 @@ export async function openEditorCore(ctx, cfg) {
     issuesBtn.style.color = errs ? "var(--rb-danger)" : warns ? "var(--rb-warn)" : "var(--rb-teal)";
     applyBtn.disabled = !dirty();
     titleB.textContent = (draft.name || "(이름 없음)") + (dirty() ? " •" : "");
+    paintSaveState();
   }
   let headTimer = null, tabsTimer = null;
   const changed = () => {
@@ -465,6 +468,28 @@ export async function openEditorCore(ctx, cfg) {
     });
     es.multi ??= /* @__PURE__ */ new Set();
     const selecting = isLore && !!es.selMode;
+    const collapsedAll = () => fmap.size > 0 && [...fmap.values()].every((f) => es.loreCollapsed?.has(folderIdOf(f)));
+    function sortByName() {
+      const cur = selObj();
+      const cmp = (a, b) => String(a.comment || a.key || "").localeCompare(String(b.comment || b.key || ""), "ko", { numeric: true, sensitivity: "base" });
+      const out = [], seen = /* @__PURE__ */ new Set();
+      const walk = (parent) => {
+        for (const x of kidsOf(parent).sort(cmp)) {
+          if (seen.has(x)) continue;
+          seen.add(x);
+          out.push(x);
+          if (isFolder(x)) walk(folderIdOf(x));
+        }
+      };
+      walk(null);
+      for (const x of list) if (!seen.has(x)) out.push(x);
+      list.splice(0, list.length, ...out);
+      if (cur) es.sel[kind] = list.indexOf(cur);
+      syncRuleContent(list);
+      changed();
+      render();
+      ctx.toast("이름순으로 정렬했어요 (폴더 안에서만)");
+    }
     const newMenu = (ev) => openMenu(ctx.win, ev.currentTarget, [
       { label: "폴더", icon: "folderPlus", onClick: () => newFolderPicked(false) },
       { label: "소속 폴더", icon: "link", onClick: () => newFolderPicked(true) },
@@ -478,6 +503,13 @@ export async function openEditorCore(ctx, cfg) {
       search,
       btn("추가", { size: "sm", icon: "plus", onClick: () => add(isLore ? newLore : kind === "regex" ? newRegex : newTrigger) }),
       isLore ? btn("만들기", { size: "sm", icon: "folderPlus", onClick: newMenu }) : null,
+      isLore && fmap.size ? btn(collapsedAll() ? "모두 펴기" : "모두 접기", { size: "sm", title: "모든 폴더 접기/펴기", onClick: () => {
+        es.loreCollapsed ??= /* @__PURE__ */ new Set();
+        if (collapsedAll()) es.loreCollapsed.clear();
+        else for (const f of fmap.values()) es.loreCollapsed.add(folderIdOf(f));
+        render();
+      } }) : null,
+      isLore && list.length > 1 ? btn("이름순", { size: "sm", title: "폴더 안에서 이름순으로 정렬 (폴더 구조 유지)", onClick: () => sortByName() }) : null,
       isLore ? btn(selecting ? "선택 끝" : "선택", { size: "sm", kind: selecting ? "primary" : void 0, onClick: () => {
         es.selMode = !es.selMode;
         es.multi.clear();
@@ -685,19 +717,29 @@ export async function openEditorCore(ctx, cfg) {
       const id = folderIdOf(x);
       return [...fmap.values()].some((f) => f !== x && isAff(f) && under(folderIdOf(f), id));
     };
+    let vis = null;
+    if (isLore && q) {
+      vis = /* @__PURE__ */ new Set();
+      for (const x of list) {
+        if (!match(x)) continue;
+        vis.add(x);
+        for (const f of ancestorsOf(x, fmap)) vis.add(f);
+      }
+    }
     function paintTree(out, parent, depth, seen) {
       for (const x of kidsOf(parent)) {
         if (seen.has(x)) continue;
         seen.add(x);
+        if (vis && !vis.has(x)) continue;
         if (es.loreTab === "aff" && !affVisible(x)) continue;
         if (isFolder(x)) {
-          out.push(folderRow(x, depth));
-          if (!es.loreCollapsed.has(folderIdOf(x))) {
+          out.push(folderRow(x, depth, { grip: !q }));
+          if (q || !es.loreCollapsed.has(folderIdOf(x))) {
             const before = out.length;
             paintTree(out, folderIdOf(x), depth + 1, seen);
-            if (out.length === before) out.push(h("div", { class: "rb-muted", style: `padding:4px 10px 6px;font-size:12px;margin-left:${(depth + 1) * 14}px`, dataset: { dropFolder: folderIdOf(x) } }, "비어 있어요 — 항목을 여기로 끌어다 놓으세요"));
+            if (!q && out.length === before) out.push(h("div", { class: "rb-muted", style: `padding:4px 10px 6px;font-size:12px;margin-left:${(depth + 1) * 14}px`, dataset: { dropFolder: folderIdOf(x) } }, "비어 있어요 — 항목을 여기로 끌어다 놓으세요"));
           }
-        } else out.push(rowFor(x, list.indexOf(x), { depth }));
+        } else out.push(rowFor(x, list.indexOf(x), { depth, grip: !q }));
       }
     }
     function paintItems() {
@@ -706,6 +748,8 @@ export async function openEditorCore(ctx, cfg) {
         list.forEach((it2, i2) => {
           if (match(it2)) out.push(rowFor(it2, i2, { grip: !q }));
         });
+      } else if (q && es.loreTab !== "char") {
+        paintTree(out, null, 0, /* @__PURE__ */ new Set());
       } else if (q) {
         list.forEach((it2, i2) => {
           if (!match(it2)) return;
@@ -1643,6 +1687,14 @@ export async function openEditorCore(ctx, cfg) {
     back.appendChild(box);
     ctx.win.appendChild(back);
   }
+  async function commit() {
+    await cfg.save(draft, original);
+    Object.assign(original, structuredClone(draft));
+    for (const k of Object.keys(original)) if (!(k in draft)) delete original[k];
+    es.savedAt = Date.now();
+    paintHead();
+    paintSaveState();
+  }
   async function apply() {
     syncRuleContent(draft.lorebook);
     if (!dirty()) return;
@@ -1653,18 +1705,55 @@ export async function openEditorCore(ctx, cfg) {
     if (!ok) return;
     applyBtn.disabled = true;
     try {
-      await cfg.save(draft, original);
-      Object.assign(original, structuredClone(draft));
-      for (const k of Object.keys(original)) if (!(k in draft)) delete original[k];
+      await commit();
       ctx.toast("저장했어요");
-      paintHead();
     } catch (err) {
       ctx.toast(`저장하지 못했어요: ${err?.message ?? err}`, { error: true });
       applyBtn.disabled = false;
     }
   }
+  // 자동 저장: 2분마다, 바뀐 게 있을 때만. 입력 중이면 잠깐 미룬다. 확인 창 없이 저장하고 백업은 cfg.save가 남긴다.
+  const AUTO_MS = 12e4;
+  let autoBusy = false, lastInput = 0;
+  panel.addEventListener("input", () => {
+    lastInput = Date.now();
+    es.dirtyAt ??= Date.now();
+  });
+  function paintSaveState() {
+    if (!panel.isConnected) return;
+    const d = dirty();
+    const ago = es.savedAt ? Math.max(0, Math.round((Date.now() - es.savedAt) / 1e3)) : null;
+    saveState.textContent = d ? es.autoFail ? "자동 저장 실패 · 다시 시도해요" : "저장 안 된 변경" : ago === null ? "" : ago < 60 ? `저장됨 · ${ago}초 전` : `저장됨 · ${Math.round(ago / 60)}분 전`;
+    saveState.style.color = d ? "var(--rb-warn)" : "";
+  }
+  async function autoSave() {
+    if (autoBusy || !panel.isConnected || !dirty()) return;
+    if (Date.now() - lastInput < 4e3) return;
+    autoBusy = true;
+    try {
+      syncRuleContent(draft.lorebook);
+      await commit();
+      es.autoFail = false;
+    } catch (err) {
+      if (!es.autoFail) ctx.toast(`자동 저장하지 못했어요: ${err?.message ?? err}`, { error: true });
+      es.autoFail = true;
+    } finally {
+      autoBusy = false;
+      paintSaveState();
+    }
+  }
+  const autoTimer = setInterval(() => {
+    if (!panel.isConnected) return clearInterval(autoTimer);
+    autoSave();
+  }, AUTO_MS);
+  const stateTimer = setInterval(() => {
+    if (!panel.isConnected) return clearInterval(stateTimer);
+    paintSaveState();
+  }, 1e4);
   async function close() {
     if (dirty() && !await confirmDialog(ctx.win, { title: "저장하지 않은 변경이 있어요", body: "닫으면 바뀐 내용이 사라져요.", ok: "버리고 닫기", danger: true })) return;
+    clearInterval(autoTimer);
+    clearInterval(stateTimer);
     panel.remove();
   }
   render();
