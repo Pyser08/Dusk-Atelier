@@ -235,3 +235,11 @@ test("저장소 어댑터: 설정·카탈로그·위키는 Dusk v3 저장소로,
   assert.equal((await st.getItem(k)), null);
   assert.ok(!(await st.keys()).includes(k));
 });
+
+test("리스 기본 메모리(Hypa) 참고는 흐름을 켜면 항상 꺼진다 — Dusk 장기기억이 대신함", async () => {
+  const h = harness();
+  await turnOn(h);
+  const snap = (await h.mem.flow.settings()).rawSnapshot();
+  assert.equal(snap.hypaReferenceEnabled, false);
+  assert.equal(snap.hypaPlusReferenceEnabled, false);
+});

@@ -39,6 +39,7 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
     const cfg = await getCfg(api), m = potModels(cfg);
     settings.update((s) => {
       s.enabled = true; s.autoWriterEnabled = true; s.retrievalMode = f.mode === "accurate" ? "router" : "keyword";
+      s.hypaReferenceEnabled = false; s.hypaPlusReferenceEnabled = false;  // 리스 기본 메모리(Hypa)는 Dusk 장기기억이 대신한다(화면에서도 숨김)
       s.useRisuSubmodel = m.useRisuSubmodel;
       if (!m.useRisuSubmodel) { s.models.shared = m.shared; for (const [k, v] of Object.entries(m.stages)) s.models.stages[k] = v.mode === "dedicated" ? v : { ...s.models.stages[k], mode: "shared" }; }
     });

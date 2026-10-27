@@ -106,3 +106,4 @@
 - **특히 확인할 것**: 추가 프롬프트 편집(custom-prompts)·프롬프트 초기화, 인물 AI 다시 정리(person-thorough-refresh)·인물 합치기(person-merge)·people-command, 관찰자 모드(observer-mode)·페르소나 이름, 백업·정리·진단·토큰 사용량(설정 5번 ‘관리’), 고아 기록 정리(orphan-cleanup), PDF 참고(pdf-reference), 원문 확인(source-check), 주기 외 성인 항목(욕구·성향·묘사 수위), 수치 직접 수정(manuallySetMetric, 정책 필요), 모델 수정 이력(revision).
 - **끝난 뒤**: 대조표를 이 문서에 붙이고, 빠진 것이 없다고 사용자에게 보고한다.
 - **Hypa는 가져오지 않는 게 의도(사용자 확인 2026-10-28)**: 리스 기본 메모리(Hypa/Hypa+)는 Dusk 장기기억 플러그인이 대체한다. 대조표에서 Hypa 참고(hypa-reference)와 계획서 2절의 ‘Hypa 참고는 선택 사항으로 유지’는 **의도적 제외**로 표시한다. 단, 이미 이식된 `engine/pot/hypa-reference.js`·설정 옵션·화면 문구(“리스 기본 메모리”)가 있다면 지울지/숨길지 7-B에서 사용자에게 확인한다.
+- **Hypa 끄기 적용(2026-10-28)**: `data/memoryturn.js` `syncPot`이 흐름을 켤 때마다 `hypaReferenceEnabled`·`hypaPlusReferenceEnabled`를 false로 강제(생성 파일 settings.js는 건드리지 않음). 화면은 원래 없음. 시험 `memoryturn.test.js` 마지막. 나중에 Hypa 화면을 만들면 이 강제를 설정값 존중으로 바꿀 것.
