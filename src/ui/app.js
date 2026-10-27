@@ -23,6 +23,7 @@ import { renderDev } from './screens/dev.js';
 import { renderPlugins } from './screens/plugins.js';
 import { renderSettingsTab } from './screens/settingstab.js';
 import { renderMemory } from './screens/memory/index.js';
+import { renderCardsTab } from './screens/cards/index.js';
 import { renderHome } from './screens/home.js';
 import { SEARCH, TABS, subLabel } from './tabs.js';
 
@@ -156,7 +157,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     e.preventDefault();
     const dev = !!prefs.ui?.devMode;
     openMenu(win, moreLink, [
-      ...TABS.filter((t) => t.group === "more" && (!t.dev || dev)).map((t) => ({ icon: t.icon, label: t.label, onClick: () => go(t.id) })),
+      ...TABS.filter((t) => (t.group === "more" || t.id === "cards") && (!t.dev || dev)).map((t) => ({ icon: t.icon, label: t.label, onClick: () => go(t.id) })),
       "sep",
       { icon: "palette", label: "화면 꾸미기", onClick: () => go("settings", "theme") }
     ]);
@@ -358,7 +359,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { home: renderHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
     Promise.resolve(screen(ctx)).then(() => {
       paneReady = true;
     }).catch((err) => {

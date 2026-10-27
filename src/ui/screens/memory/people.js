@@ -135,7 +135,7 @@ function personDetail(env, host, key) {
       local && btn(p.pinned ? "고정됨" : "고정", { size: "sm", onClick: () => editFolder(env, (f) => { f.people[key].pinned = !f.people[key].pinned; }) }),
       local && btn({ always: "항상 포함", never: "제외", auto: "자동(관련 시)" }[p.ctx ?? (p.pinned ? "always" : "auto")], { size: "sm", title: "프롬프트 포함 방식: 자동 → 항상 → 제외", onClick: () => editFolder(env, (f) => { const q = f.people[key], c = q.ctx ?? (q.pinned ? "always" : "auto"); q.ctx = { auto: "always", always: "never", never: "auto" }[c]; }) }),
       local && btn("별칭", { size: "sm", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: "별칭 편집", label: "쉼표로 구분", value: (p.aliases ?? []).join(", "), ok: "저장" }); if (v != null) editFolder(env, (f) => { f.people[key].aliases = v.split(",").map((s) => s.trim()).filter(Boolean); }); } }),
-      btn("이 인물로 새 봇 만들기", { kind: "primary", size: "sm", onClick: () => { m.compose = { keys: [key] }; m.tab = "compose"; env.redraw(); } })),
+      btn("이 인물로 새 봇 만들기", { kind: "primary", size: "sm", onClick: () => { m.compose = { keys: [key] }; m.ctab = "compose"; env.ctx.go("cards"); } })),
     p.digest ? h("div", { class: "rb-card rb-mem-digest" }, h("b", null, "요약 "), p.digest) : null,
     state ? stateCard(env, state) : null,
     h("div", { class: "rb-mem-chats rb-mem-tlchips", role: "tablist", "aria-label": "이야기 걸러 보기" }, TL_FILTERS.map(([id, label]) => chip(label, { pressed: m.tlFilter === id && m.sort !== "grade", count: id === "all" ? counts.all : counts[id] ?? 0, onClick: () => { m.tlFilter = id; m.sort = m.sort === "grade" ? "time" : m.sort; m.page = 1; env.redraw(); } }))),

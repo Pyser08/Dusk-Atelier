@@ -31,7 +31,8 @@ export function renderHome(ctx) {
           card("main", "upload", "가져오기", "봇·모듈 파일을 골라 가져오고, 같은 봇이면 알아서 합쳐요.", () => ctx.legacy.open(), "rb-home-import"),
           tab(by("modules")),
           tab(by("characters")),
-          tab(by("memory"))
+          tab(by("memory")),
+          tab(by("cards"))
         )
       ),
       h(

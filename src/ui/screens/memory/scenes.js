@@ -20,7 +20,7 @@ export async function renderScenes(env, host) {
       h("p", null, s.sum), (s.facts ?? []).length ? h("ul", { class: "rb-mem-facts" }, s.facts.slice(0, 3).map((f) => h("li", null, f))) : null,
       (s.who ?? []).length ? h("div", { class: "rb-mem-who" }, s.who.map((n) => h("button", { type: "button", class: "rb-mem-link", onClick: () => goPerson(n), "aria-label": `${n} 폴더 열기` }, avatar(n), n))) : null,
       h("div", { class: "rb-mem-sact" }, s.at != null ? btn("여기서 새 채팅", { size: "sm", onClick: () => newChatFrom(env, s.at) }) : null,
-        s.at != null ? btn("여기까지로 새 봇 만들기", { size: "sm", onClick: () => { m.compose = { keys: Object.keys(folder.people).filter((k) => visibleRecords(folder.people[k]).some((r) => r.sit === s.id)), to: s.at + 1 }; m.tab = "compose"; env.redraw(); } }) : null));
+        s.at != null ? btn("여기까지로 새 봇 만들기", { size: "sm", onClick: () => { m.compose = { keys: Object.keys(folder.people).filter((k) => visibleRecords(folder.people[k]).some((r) => r.sit === s.id)), to: s.at + 1 }; m.ctab = "compose"; env.ctx.go("cards"); } }) : null));
     return card;
   });
   replace(host, h("div", { class: "rb-mem-tools" }, btn(m.sceneDesc ? "최근순" : "오래된순", { size: "sm", onClick: () => { m.sceneDesc = !m.sceneDesc; env.redraw(); } })), h("div", { class: "rb-mem-timeline" }, cards));

@@ -199,7 +199,7 @@ export async function renderCompose(env, host) {
       genFirst.disabled = true; ctx.toast("첫 메시지를 쓰는 중이에요…");
       c.first = await draftFirstMessage(ctx.api, { name: card.name, scene: sceneAt(folder, c.to - 1), relationship: link.relationship, model, lang: c.lang }); c.calls++; again();
     }) });
-    const done = (msg) => { m.bots = null; m.compose = null; m.tab = "cards"; ctx.toast(msg); env.redraw(); };
+    const done = (msg) => { m.bots = null; m.compose = null; m.ctab = "list"; ctx.toast(msg); env.redraw(); };
     // 카드 만들기: 카드(연결 문서·첫 메시지 포함)를 카드 탭에 저장한다. 봇은 만들지 않는다.
     const make = btn("카드 만들기", { kind: "primary", onClick: async () => {
       try {

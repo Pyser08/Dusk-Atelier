@@ -26,7 +26,7 @@ export async function renderMemory(ctx) {
     // 탭·채팅 전환은 오른쪽 칸만 다시 그린다(목록·전역 설정은 건드리지 않는다).
     const drawView = (first) => m.botId
       ? renderBotView(ctx, viewHost, { redraw, redrawView: () => drawView(false).catch(fail(ctx)), back: () => { m.view = "bots"; redraw(); }, quiet: !first })
-      : Promise.resolve(replace(viewHost, h("div", { class: "rb-empty rb-mem-empty" }, icon("brain", 28), h("div", { style: "font-weight:700;color:var(--rb-text);font-size:15px" }, "왼쪽에서 봇을 골라 주세요."), stepsGuide("처음이라면 이 순서로", ["왼쪽에서 기억을 보고 싶은 봇을 눌러요.", "인물별 기록이 자동으로 쌓여 있어요. 없다면 ‘이 채팅 일괄 분석’을 눌러요.", "마음에 드는 인물은 기억 카드로 만들어 새 봇으로 이어 가요."]))));
+      : Promise.resolve(replace(viewHost, h("div", { class: "rb-empty rb-mem-empty" }, icon("brain", 28), h("div", { style: "font-weight:700;color:var(--rb-text);font-size:15px" }, "왼쪽에서 봇을 골라 주세요."), stepsGuide("처음이라면 이 순서로", ["왼쪽에서 기억을 보고 싶은 봇을 눌러요.", "인물별 기록이 자동으로 쌓여 있어요. 없다면 ‘이 채팅 일괄 분석’을 눌러요.", "카드와 새 봇은 ‘기억 카드’ 탭에서 만들어요."]))));
     await drawView(true);
   }
 }

@@ -55,6 +55,10 @@
 - 시험 `tests/memoryscreen.test.js` 6개, 전체 188(9 건너뜀=ref 브랜치 없음) 통과. 화면은 스크린샷으로 확인(가짜 api 하네스는 저장소에 두지 않음).
 - **아직 안 한 것**: 범위 칩(이 봇/모든 봇/이 채팅)·설정 검색·되돌리기 이력·프리셋 공유·채팅 헤더 팝오버·다음 턴 미리보기(계획서 12절), 크레딧 카드(8절), 월경·임신 UI·날짜 공유(11절), 성인 항목 접기, 인물 페이지 ✎📌⏸ 편집, 장부·상황 탭과 위키 관계 합치기. **실제 리스에서 켜기·모델 실호출 시험은 아직** — 6단계 전에 사용자가 한 번 켜 보면 좋음.
 
+## 5단계 추가: 카드 탭 분리 (2026-10-28)
+- 새 최상위 탭 `cards`(‘기억 카드’, `ui/screens/cards/index.js`, 홈 카드·더보기 메뉴에 등록). 왼쪽: 카드 설정 폴드(`cardSettings`, settings.js에서 export) + 봇 목록, 오른쪽: 봇·채팅 고르기 → ‘만든 카드’(`memory/cards.js`) / ‘새 카드·새 봇 만들기’(`memory/compose.js`). 봇·채팅 선택(`m.botId`·`m.chatIndex`)은 기억 탭과 공유, 카드 탭 상태는 `m.ctab`.
+- 기억 탭 봇 화면에서 카드·새 봇 만들기 탭과 카드 설정을 뺌. 인물 페이지·상황의 ‘새 봇 만들기’ 버튼은 `m.compose`를 채우고 `ctx.go("cards")`로 넘김. 저장소는 원래 분리돼 있어 변경 없음.
+
 ## 4단계(턴 흐름)에서 볼 곳
 - 원본 `startPlugin`(ref 브랜치 plugin 모듈)의 훅 등록 순서, `src/data/pot/router-runtime.js`·`director-runtime.js`·`writer-controller.js`·`runtime-hooks.js`, Dusk 쪽 `src/data/memoryrunner.js`(runAI 호출). 단계 호출은 `pickForStage(api,"router"|"director"|"writer")` 결과에 `stage`를 붙여 `runAI`로.
 

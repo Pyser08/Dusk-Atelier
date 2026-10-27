@@ -5,12 +5,10 @@ import { btn, badge, switchEl, setSwitch, loading, note } from "../../kit.js";
 import { mem, loadBots, loadChats, loadFolder, fail } from "./common.js";
 import { renderPeople } from "./people.js";
 import { renderScenes } from "./scenes.js";
-import { renderCompose } from "./compose.js";
-import { renderCards } from "./cards.js";
 import { renderOpen, renderRels, renderTimeline } from "./ledger.js";
 import { renderBotSettings } from "./settings.js";
 
-const TABS = [["people", "등장인물"], ["scenes", "상황"], ["timeline", "시간선"], ["open", "열린 항목"], ["rels", "관계"], ["cards", "카드"], ["compose", "새 봇 만들기"]];
+const TABS = [["people", "등장인물"], ["scenes", "상황"], ["timeline", "시간선"], ["open", "열린 항목"], ["rels", "관계"]];
 
 export async function renderBotView(ctx, host, { redraw, redrawView, back, quiet }) {
   const m = mem(ctx), M = ctx.memory;
@@ -57,6 +55,6 @@ export async function renderBotView(ctx, host, { redraw, redrawView, back, quiet
   replace(host,
     h("div", { class: "rb-mem-head" }, h("span", { class: "rb-mem-back" }, btn("뒤로", { size: "sm", icon: "back", onClick: back })), h("h2", null, bot.character.name || "이름 없는 캐릭터"), h("span", { class: ["rb-mem-mode", backend.id], title: backend.reason }, backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드"), h("span", { style: "flex:1" }), sw, setBtn),
     setPanel, status, chatRow, tabs, body);
-  const draw = { people: renderPeople, scenes: renderScenes, timeline: renderTimeline, open: renderOpen, rels: renderRels, cards: renderCards, compose: renderCompose }[m.tab] ?? renderPeople;
+  const draw = { people: renderPeople, scenes: renderScenes, timeline: renderTimeline, open: renderOpen, rels: renderRels }[m.tab] ?? renderPeople;
   await draw(env, body);
 }

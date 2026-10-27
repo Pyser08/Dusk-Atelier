@@ -26,7 +26,6 @@ export async function renderGlobalSettings(ctx, host, { redraw }) {
   const last = M.injector?.lastRequest?.(), man = last?.manifest;
   const modeLabel = backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드";
 
-  const ccfg = await M.cards.getCfg();
   const flowHost = h("div");
   if (backend.id === "local") await flowSections(ctx, flowHost, { redraw }).catch(fail(ctx));
   const adv = h("details", { class: "rb-mem-man rb-mem-adv", open: !!m.advOpen, onToggle: (e) => { m.advOpen = e.target.open; } }, h("summary", null, "고급: 기록·주입 세부 설정"),
@@ -42,8 +41,7 @@ export async function renderGlobalSettings(ctx, host, { redraw }) {
       num("최근 메시지 겹침 제외(개)", () => S.inject.recentSkip, (s, v) => { s.inject.recentSkip = v; }, { max: 40 }),
       h("label", { class: "rb-mem-field" }, h("span", null, "삽입 위치"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.inject.position = e.target.value; }) }, [["beforeLastUser", "마지막 사용자 메시지 앞"], ["afterSystem", "시스템 프롬프트 뒤"]].map(([v, l]) => h("option", { value: v, selected: S.inject.position === v }, l)))),
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 들어간 기억 보기"), man ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `주입함 (약 ${man.tokens} 토큰)` : "주입하지 않음"}`),
-        h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요."))) : null,
-    cardSettings(ctx, ccfg, redraw));
+        h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요."))) : null);
   const body = h("div", { class: "rb-mem-foldbody" }, h("div", { class: "rb-mem-modeline" }, h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), h("span", { class: "rb-muted" }, backend.reason)), flowHost, adv);
   const fold = h("details", { class: "rb-mem-fold", open: !!m.globalOpen }, h("summary", null, "설정", h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel)), body);
   fold.addEventListener("toggle", () => { m.globalOpen = fold.open; });
@@ -84,7 +82,7 @@ export function renderBotSettings(env) {
 }
 
 // ---- 카드 설정: 태그·스탯 정의, 기본 언어, 연결 추가 지시. 카드 만들기와 새 봇 만들기에서 쓴다.
-function cardSettings(ctx, cfg, redraw) {
+export function cardSettings(ctx, cfg, redraw) {
   const M = ctx.memory, save = (patch) => M.cards.setCfg(patch).then(() => redraw()).catch(fail(ctx));
   const tagArea = h("textarea", { class: "rb-input rb-card-tags", "aria-label": "태그 정의", spellcheck: "false", style: "min-height:240px;height:auto;padding:10px;font-family:monospace;font-size:12px" }); tagArea.value = cfg.tagText;
   const status = h("p", { class: "rb-muted" }), saveBtn = btn("태그 정의 저장", { kind: "primary", onClick: () => save({ tagText: tagArea.value }) });
