@@ -106,7 +106,7 @@ for (const v of vars) {
 }
 
 // Dusk 어댑터(src/data/modelhub.js)가 직접 쓰는 이름은 다른 이식 모듈이 안 써도 항상 내보낸다.
-const PUBLIC = ['LocalKeyStore', 'LlmClientError', 'testModelConnection', 'providerModelList', 'copilotLoginStep', 'SettingsStore', 'WikiController', 'AutoWikiController', 'MainWikiHook', 'RuntimeTraceStore', 'WriterController', 'RuntimeHookManager', 'storyDateFromText',
+const PUBLIC = ['LocalKeyStore', 'LlmClientError', 'testModelConnection', 'providerModelList', 'copilotLoginStep', 'SettingsStore', 'WikiController', 'SummaryController', 'AutoWikiController', 'MainWikiHook', 'RuntimeTraceStore', 'WriterController', 'RuntimeHookManager', 'storyDateFromText',
   // 7단계 B: 인물 화면의 AI 도구가 쓰는 컨트롤러
   'PersonRefreshController', 'PeopleCommandController', 'PeopleFieldController', 'PeopleMetricAIController', 'WriterRecoveryController', 'PersonaNameController', 'OrphanCleanupController', 'PeopleImportController'];
 for (const n of PUBLIC) { if (!vars.some((v) => v.name === n)) throw new Error(`PUBLIC 이름 없음: ${n}`); M(owner(n)).exports.add(n); }
