@@ -1,0 +1,60 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { collectManaged, evaluate } from "../src/engine/lorerules.js";
+
+// 트리니티(소속) ⊃ 정의실현위원회(소속) ⊃ 하스미 / 트리니티 ⊃ 마시로 · 게헨나(소속) ⊃ 히나
+const rule = (keys) => ({ da_rid: undefined, da_rule: { on: true, cond: [{ t: "text", v: keys }], mode: "all", prob: 100 } });
+const folder = (id, parent, aff) => ({ mode: "normal", key: id, comment: `[소속] ${id}`, content: "", folder: parent, extentions: { da_folder: { id, aff }, da_rid: `r_${id}`, da_rule: { on: true, cond: [{ t: "text", keys: id }], mode: "all", prob: 100 } } });
+const member = (name, parent) => ({ mode: "normal", key: name, comment: name, content: name, folder: parent, extentions: { da_rid: `r_${name}`, da_rule: { on: true, cond: [{ t: "text", keys: name }], mode: "all", prob: 100 } } });
+const entries = [
+  folder("트리니티", null, { def: 100, max: "", prob: {} }), folder("정의실현위원회", "트리니티", { def: 100, max: "", prob: {} }),
+  member("하스미", "정의실현위원회"), member("마시로", "트리니티"), member("코하루", "트리니티"),
+  folder("게헨나", null, { def: 100, max: "", prob: {} }), member("히나", "게헨나")
+];
+const run = (text) => {
+  const items = collectManaged(entries);
+  const r = evaluate({ items, messages: [{ role: "user", data: text }], turn: 1, rng: () => 0 });
+  return r.fired.map((f) => f.entry.comment.replace("[소속] ", "")).sort();
+};
+
+test("소속 이름만 나오면 구성원이 같이 켜진다", () => {
+  assert.deepEqual(run("트리니티"), ["마시로", "코하루", "트리니티", "하스미"].sort());
+});
+test("구성원 한 명만 나오면 소속 정보만 들어오고 다른 구성원은 안 따라온다", () => {
+  assert.deepEqual(run("마시로"), ["마시로", "트리니티"]);
+});
+test("하위 소속 구성원이 나와도 형제 소속·구성원은 안 따라온다", () => {
+  assert.deepEqual(run("하스미"), ["정의실현위원회", "트리니티", "하스미"].sort());
+});
+test("하위 소속 이름이 나오면 그 소속 구성원만 켜진다", () => {
+  assert.deepEqual(run("정의실현위원회"), ["정의실현위원회", "트리니티", "하스미"].sort());
+});
+
+test("같이 켜기(연쇄): 프라나가 나오면 지정한 아로나도 켜진다", () => {
+  const es = [folder("샬레", null, { def: 100, max: "", prob: {} }), member("프라나", "샬레"), member("아로나", "샬레"), member("유우카", "샬레")];
+  es[1].extentions.da_rule.chain = [{ rid: "r_아로나", prob: 100 }];
+  const r = evaluate({ items: collectManaged(es), messages: [{ role: "user", data: "프라나" }], turn: 1, rng: () => 0 });
+  assert.deepEqual(r.fired.map((f) => f.entry.comment.replace("[소속] ", "")).sort(), ["샬레", "아로나", "프라나"].sort());
+});
+
+test("장소는 가장 가까운 소속만 켠다: 다과회실 → 티파티만, 트리니티와 그 연쇄는 안 켜진다", () => {
+  const place = { mode: "normal", key: "다과회실", comment: "[장소] 다과회실", content: "", folder: "티파티", extentions: { da_place: { links: [] }, da_rid: "r_다과회실", da_rule: { on: true, cond: [{ t: "text", keys: "다과회실" }], mode: "all", prob: 100 } } };
+  const es = [folder("트리니티", null, { def: 100, max: "", prob: {} }), folder("티파티", "트리니티", { def: 100, max: "", prob: {} }), place, member("미카", "티파티"), member("마시로", "트리니티")];
+  es[0].extentions.da_rule.chain = [{ rid: "r_마시로", prob: 100 }];
+  const r = evaluate({ items: collectManaged(es), messages: [{ role: "user", data: "다과회실" }], turn: 1, rng: () => 0 });
+  assert.deepEqual(r.fired.map((f) => f.entry.comment.replace(/^\[(소속|장소)\] /, "")).sort(), ["다과회실", "미카", "티파티"].sort());
+});
+
+test("중첩 소속의 구성원만 불러도 윗 소속들의 연쇄·구성원은 켜지지 않는다 (트리니티 ⊃ 티파티 ⊃ 나기사)", () => {
+  const es = [folder("트리니티", null, { def: 100, max: "", prob: {} }), folder("티파티", "트리니티", { def: 100, max: "", prob: {} }), member("나기사", "티파티"), member("미카", "티파티"), member("마시로", "트리니티"), member("세이아", "트리니티")];
+  es[0].extentions.da_rule.chain = [{ rid: "r_마시로", prob: 100 }];
+  es[1].extentions.da_rule.chain = [{ rid: "r_미카", prob: 100 }];
+  const r = evaluate({ items: collectManaged(es), messages: [{ role: "user", data: "나기사" }], turn: 1, rng: () => 0 });
+  assert.deepEqual(r.fired.map((f) => f.entry.comment.replace("[소속] ", "")).sort(), ["나기사", "트리니티", "티파티"].sort());
+});
+test("구성원 자신의 연쇄는 그대로 동작한다", () => {
+  const es = [folder("트리니티", null, { def: 100, max: "", prob: {} }), folder("티파티", "트리니티", { def: 100, max: "", prob: {} }), member("나기사", "티파티"), member("미카", "티파티")];
+  es[2].extentions.da_rule.chain = [{ rid: "r_미카", prob: 100 }];
+  const r = evaluate({ items: collectManaged(es), messages: [{ role: "user", data: "나기사" }], turn: 1, rng: () => 0 });
+  assert.deepEqual(r.fired.map((f) => f.entry.comment.replace("[소속] ", "")).sort(), ["나기사", "미카", "트리니티", "티파티"].sort());
+});

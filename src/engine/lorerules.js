@@ -55,7 +55,7 @@ export const ridOf = (entry) => entry?.extentions?.da_rid || null;
 //   aff = { def: 기본 %, max: 최대 N명(''=제한 없음), prob: { rid: % } }   소속 폴더 (규칙이 켜진 관리 항목)
 //   extentions.da_place = { links: [폴더 id] }    장소 항목
 // 소속 폴더 안의 항목은 하위 폴더까지 전부 구성원이다 (게헨나 ⊃ 선도부 ⊃ 히나 → 히나는 둘 다).
-// 소속 켜짐: 소속 키(규칙 조건) · 그 안(또는 연결된) 장소가 켜짐 · 구성원이 자기 키로 켜짐
+// 소속 켜짐: 소속 키(규칙 조건) · 바로 그 안(가장 가까운 소속)이거나 연결된 장소가 켜짐 (장소는 상위 소속까지 올라가지 않는다) · 구성원이 자기 키로 켜짐
 // 소속이 켜지면 구성원마다 확률을 굴리고, 통과한 사람 중 무작위로 최대 N명을 켠다. 자기 키로 켜진 구성원은 제한 무관.
 export const AFF_PREFIX = "[소속] ";
 export const PLACE_PREFIX = "[장소] ";
@@ -512,7 +512,7 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     for (const [rid, a] of active) {
       const x = byRid.get(rid);
       if (!x || rid === it.rid) continue;
-      if (x.place && (inAff(x, it.fid) || x.place.includes(it.fid))) return `장소 '${affName(x.entry) || rid}' 켜짐`;
+      if (x.place && (x.affs?.[0] === it.fid || x.place.includes(it.fid))) return `장소 '${affName(x.entry) || rid}' 켜짐`;
     }
     for (const [rid, a] of active) {
       const x = byRid.get(rid);
@@ -539,6 +539,9 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     for (const g of affItems) {
       const ga = active.get(g.rid);
       if (!ga || expanded.has(g.rid)) continue;
+      // 구성원(또는 하위 소속)이 먼저 켜져서 따라 켜진 소속은 정보만 들어오고, 다른 구성원·소속을 데려오지 않는다.
+      // 소속 자신의 키·연결된 장소로 켜졌을 때만 구성원을 뽑는다.
+      if (String(ga.why).startsWith("소속 켜짐: 구성원")) { expanded.add(g.rid); continue; }
       expanded.add(g.rid);
       const a = g.aff;
       const gname = affName(g.entry) || g.rid;
@@ -559,6 +562,19 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
         pass2 = pass2.slice(0, max);
       }
       for (const tgt of pass2) changed = add(tgt, `소속: ${gname}`) || changed;
+    }
+    // 같이 켜기(연쇄): 켜진 항목이 지정한 항목을 확률로 같이 켠다 (항목 쌍마다 한 번만 굴린다)
+    for (const a of [...active.values()]) {
+      // 구성원 때문에 따라 켜진 소속(몇 단계 중첩이든)은 정보만 들어오고 연쇄도 내보내지 않는다
+      if (String(a.why).startsWith("소속 켜짐: 구성원")) continue;
+      for (const c of a.rule.chain ?? []) {
+        const tgt = byRid.get(c.rid);
+        if (!tgt || active.has(tgt.rid) || blocked(tgt)) continue;
+        const key = `${a.rid}>${tgt.rid}`;
+        if (rolled.has(key)) continue;
+        rolled.set(key, roll(c.prob));
+        if (rolled.get(key)) changed = add(tgt, `연쇄: ${a.entry.comment || a.rid}`) || changed;
+      }
     }
     if (!changed) break;
   }
