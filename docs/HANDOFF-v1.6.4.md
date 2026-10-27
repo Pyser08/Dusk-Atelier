@@ -103,5 +103,6 @@
 ## ★ 7단계 B 첫 작업 (사용자 지시 2026-10-28): 리수폿 기능 전부 가져왔는지 대조
 - **목표**: 7-B를 끝내면 리수폿 기능이 빠짐없이 Dusk에 있어야 한다. 진행 전에 먼저 대조표를 만든다.
 - **방법**: ① `ref/risupot` 브랜치(리수폿 2.3.0)의 UI·설정·명령 목록을 뽑는다(`git fetch --depth=1 origin ref/risupot`, 화면 모듈과 설정 키 `SettingsStore` 기본값, 인물·관리·진단·프롬프트 관련 버튼). ② `src/ui/screens/memory/*`·`engine/pot/*`·`data/pot/*`와 하나씩 짝지어 표로 쓴다: 리수폿 기능 | Dusk 진입 화면 | 상태(있음/엔진만 있고 화면 없음/없음). ③ ‘엔진만 있음·없음’은 7-B 범위에 넣어 구현하거나, 일부러 뺀 것이면 이유를 적고 사용자에게 확인.
-- **특히 확인할 것**: 추가 프롬프트 편집(custom-prompts)·프롬프트 초기화, 인물 AI 다시 정리(person-thorough-refresh)·인물 합치기(person-merge)·people-command, 관찰자 모드(observer-mode)·페르소나 이름, 백업·정리·진단·토큰 사용량(설정 5번 ‘관리’), 고아 기록 정리(orphan-cleanup), PDF·Hypa 참고(pdf-reference·hypa-reference), 원문 확인(source-check), 주기 외 성인 항목(욕구·성향·묘사 수위), 수치 직접 수정(manuallySetMetric, 정책 필요), 모델 수정 이력(revision).
+- **특히 확인할 것**: 추가 프롬프트 편집(custom-prompts)·프롬프트 초기화, 인물 AI 다시 정리(person-thorough-refresh)·인물 합치기(person-merge)·people-command, 관찰자 모드(observer-mode)·페르소나 이름, 백업·정리·진단·토큰 사용량(설정 5번 ‘관리’), 고아 기록 정리(orphan-cleanup), PDF 참고(pdf-reference), 원문 확인(source-check), 주기 외 성인 항목(욕구·성향·묘사 수위), 수치 직접 수정(manuallySetMetric, 정책 필요), 모델 수정 이력(revision).
 - **끝난 뒤**: 대조표를 이 문서에 붙이고, 빠진 것이 없다고 사용자에게 보고한다.
+- **Hypa는 가져오지 않는 게 의도(사용자 확인 2026-10-28)**: 리스 기본 메모리(Hypa/Hypa+)는 Dusk 장기기억 플러그인이 대체한다. 대조표에서 Hypa 참고(hypa-reference)와 계획서 2절의 ‘Hypa 참고는 선택 사항으로 유지’는 **의도적 제외**로 표시한다. 단, 이미 이식된 `engine/pot/hypa-reference.js`·설정 옵션·화면 문구(“리스 기본 메모리”)가 있다면 지울지/숨길지 7-B에서 사용자에게 확인한다.
