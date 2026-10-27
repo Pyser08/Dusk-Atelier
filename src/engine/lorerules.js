@@ -539,6 +539,9 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     for (const g of affItems) {
       const ga = active.get(g.rid);
       if (!ga || expanded.has(g.rid)) continue;
+      // 구성원(또는 하위 소속)이 먼저 켜져서 따라 켜진 소속은 정보만 들어오고, 다른 구성원·소속을 데려오지 않는다.
+      // 소속 자신의 키·연결된 장소로 켜졌을 때만 구성원을 뽑는다.
+      if (String(ga.why).startsWith("소속 켜짐: 구성원")) { expanded.add(g.rid); continue; }
       expanded.add(g.rid);
       const a = g.aff;
       const gname = affName(g.entry) || g.rid;
