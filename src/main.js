@@ -11,6 +11,7 @@ import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets
 import { createLoreRuntime } from './data/lorerules.js';
 import { createLoreLog } from './data/lorelog.js';
 import { createMemory } from './data/memory.js';
+import './data/modelhub.js';
 import { restoreActiveTheme } from './ui/screens/themestudio.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
 

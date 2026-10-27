@@ -26,7 +26,7 @@ function validateCredential(provider, text) {
 }
 
 /** V2 (0.10.11): plaintext leaves the local store only through the user's explicit full-backup action. */
-class LocalKeyStore {
+export class LocalKeyStore {
   #values = {};
   #savedValues = {};
   #backend = null;

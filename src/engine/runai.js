@@ -25,7 +25,15 @@ export async function settleResponse(res, signal) {
   return res;
 }
 
+// 내 API 모델(pick.mode === "custom")은 data/modelhub.js가 등록한 실행기로 보낸다. 리스 보조 모델 경로는 그대로.
+let customRunner = null;
+export function setCustomRunner(fn) { customRunner = fn; }
+
 export async function runAI(api, messages, pick, signal) {
+  if (pick?.mode === "custom") {
+    if (!customRunner) throw new Error("내 API 모델을 쓸 수 없어요 (모델 설정이 아직 준비되지 않았어요).");
+    return customRunner(api, messages, pick, signal);
+  }
   const opts = { messages, mode: pick?.mode && pick.mode !== "static" ? pick.mode : "submodel", allowPlugins: true };
   if (pick?.mode === "static" && pick.staticModel) opts.staticModel = pick.staticModel;
 

@@ -6,7 +6,7 @@ import { providerHttpDetail } from './provider-errors.js';
 import { reportModelTokenUsage } from '../../engine/pot/token-usage.js';
 import { VertexClientError, buildVertexRequest, parseVertexAccount, vertexAccessToken, vertexEmptyDetail, vertexResponseText } from './vertex-client.js';
 
-class LlmClientError extends Error { constructor(message, code = 'writer-model-error') { super(message); this.name = 'LlmClientError'; this.code = code; } }
+export class LlmClientError extends Error { constructor(message, code = 'writer-model-error') { super(message); this.name = 'LlmClientError'; this.code = code; } }
 class LlmTimeoutError extends LlmClientError { constructor(message) { super(message, 'model-timeout'); this.name = 'LlmTimeoutError'; } }
 const blockedHeader = /^(authorization|proxy-authorization|x-api-key|api-key|host|content-length|content-type|anthropic-version|connection|transfer-encoding|accept-encoding|origin|referer|user-agent)$/i;
 const blockedBody = new Set(['model', 'messages', 'system', 'max_tokens']);
@@ -156,7 +156,7 @@ export async function callWriterModel(api, keyStore, preset, prompt, { signal, s
   }, { signal, timeoutSeconds, scheduler, label });}catch(error){if(error instanceof VertexClientError||error instanceof CopilotClientError)throw new LlmClientError(`${label} · ${error.message}`,error.code);throw error;}
 }
 
-async function testModelConnection(api, keyStore, preset, { signal, scheduler = globalThis, now = () => Date.now() } = {}) {
+export async function testModelConnection(api, keyStore, preset, { signal, scheduler = globalThis, now = () => Date.now() } = {}) {
   const started = now(),pdfEnabled=modelPdfMode(preset)!=='none',pdfProbe='RISUPOT_PDF_PROBE_7F3A91C2';
   const testPreset = { ...preset },testPrompt=pdfEnabled?`Connection and PDF attachment test. Read the attached PDF, find the pdf_probe field, and return one JSON object containing only pdf_probe with its exact value. The value is not present in this Text control, so do not guess it.\n${wrapPdfReference(JSON.stringify({pdf_probe:pdfProbe}))}`:'Connection test. Return exactly {"ok":true}.';
   const output=await callWriterModel(api, keyStore, testPreset, testPrompt, { signal, stageLabel: 'Connection test', scheduler });
@@ -164,7 +164,7 @@ async function testModelConnection(api, keyStore, preset, { signal, scheduler = 
   return { ok: true, elapsedMs: Math.max(0, Math.round(now() - started)),...(pdfEnabled?{pdfVerified:true}:{}) };
 }
 
-async function providerModelList(api,keyStore,preset,{signal}={}){
+export async function providerModelList(api,keyStore,preset,{signal}={}){
   if(!['openrouter','copilot'].includes(preset.provider))throw new LlmClientError('이 Provider는 모델 목록 불러오기를 지원하지 않습니다.');
   try{return await runLlmWithTimeout(requestSignal=>keyStore.use(preset.provider,async credential=>{
     const transport=(url,options)=>api.nativeFetch(url,options);
@@ -172,6 +172,6 @@ async function providerModelList(api,keyStore,preset,{signal}={}){
     const response=await transport('https://openrouter.ai/api/v1/models',{method:'GET',headers:{Authorization:`Bearer ${credential}`},signal:requestSignal,redirect:'error'});if(!response?.ok)throw new LlmClientError(`OpenRouter 모델 목록 HTTP ${Number(response?.status)||0}${await providerHttpDetail(response,[credential])}`);const models=normalizeProviderModels(await safeResponseJson(response,'OpenRouter'));if(!models.length)throw new LlmClientError('OpenRouter 모델 목록이 비어 있습니다.');return models;
   }),{signal,timeoutSeconds:llmTimeoutSeconds(preset),label:'모델 목록'});}catch(error){if(error instanceof CopilotClientError)throw new LlmClientError(error.message,error.code);throw error;}
 }
-async function copilotLoginStep(api,{login=null,engine='vscode',signal}={}){
+export async function copilotLoginStep(api,{login=null,engine='vscode',signal}={}){
   try{return await runLlmWithTimeout(requestSignal=>{const options={transport:(url,request)=>api.nativeFetch(url,request),signal:requestSignal};return login?completeCopilotLogin(login,options):startCopilotLogin(engine,options);},{signal,timeoutSeconds:60,label:'GitHub 인증'});}catch(error){if(error instanceof CopilotClientError)throw new LlmClientError(error.message,error.code);throw error;}
 }

@@ -28,8 +28,16 @@
 - 시험: `tests/memorystore3.test.js` 6개. `node --test` 155개 전부 통과(원본 대조 9개 포함 — `git fetch origin ref/risupot` 뒤 `git update-ref refs/remotes/origin/ref/risupot FETCH_HEAD`, acorn·eslint-scope 링크 필요).
 - 아직 화면에 연결 안 함(가져오기 버튼은 5·6단계). 위키 갱신·주입은 4단계.
 
-## 3단계(모델 계층)에서 볼 곳
-- 리수폿 모델: `src/data/pot/llm-client.js`·`vertex-client.js`·`copilot-client.js`·`provider-errors.js`, 설정 `src/engine/pot/settings.js`(`featureSettingsFor`), 모델 옵션 `src/engine/pot/model-options.js`. Dusk 쪽 AI 프리셋: `src/data/personabuilder.js`·`src/engine/runai.js`.
+## 3단계 결과 (완료)
+- `tools/pot-split.mjs`에 `PUBLIC` 목록 추가(LocalKeyStore·LlmClientError·testModelConnection·providerModelList·copilotLoginStep을 항상 export) → `npm run pot:split` 재생성(바뀐 것 2개).
+- `src/engine/modelcfg.js`(순수): 설정 `{v:1, easy:{kind:"risuai"|"api",presetId}, presets:[{id,name,preset}], stages:{router|director|writer:{mode:"shared"|"dedicated",presetId}}}`, `pickFor(cfg, stage)` → `{mode:"custom",presetId}` 또는 null(=리스 보조 모델), `toPrompt/fromReply`(글 작업은 `{"text":…}`로 감싸 벗김 — 리수폿 클라이언트가 항상 JSON 하나만 요구하기 때문), 토큰 사용량 누적(`addUsage`).
+- `src/data/modelhub.js`: 저장 `dusk.models.v1`(프리셋·단계), 키는 `LocalKeyStore`(플러그인 로컬 저장소 `risupot.provider-keys`, 일반 설정·백업·공유 코드에 안 들어감), 사용량 `dusk.models.usage.v1`(1.5초 묶음 저장). `runAI`가 `pick.mode==="custom"`이면 `setCustomRunner`로 등록된 실행기(→ `callWriterModel`)로 보냄 → **기존 호출처는 pick만 바꾸면 내 API를 쓴다**. 공개 함수: `getCfg/saveCfg/keyStore/pickForStage/getUsage/resetUsage/testPreset/listModels/copilotLogin`. `main.js`에서 import로 등록.
+- 시험 `tests/modelhub.test.js` 6개(설정·프롬프트 감싸기·사용량·OpenAI 형식 호출 헤더/키 비저장/사용량·리스 보조 모델 프리셋·연결 시험). `node --test` 161개 통과, 빌드 1802KB.
+- 아직 안 한 것(5·6단계 화면): 모델 설정 화면(쉬운 모드/단계별), 기존 AI 프리셋(페르소나 빌더 DPA1)과 UI 통합 — 지금은 pick 객체만 연결. 공유 코드는 키 미포함. 호출처가 `pick.stage`를 넘기면 단계별 사용량이 쌓임(4단계 턴 흐름에서 지정).
+- 실호출 확인: 가짜 api로 OpenAI 형식·리스 보조 모델 경로 확인함. **실제 리스에서 OpenAI 키·보조 모델 실호출은 5단계 화면이 생긴 뒤 같이 시험**.
+
+## 4단계(턴 흐름)에서 볼 곳
+- 원본 `startPlugin`(ref 브랜치 plugin 모듈)의 훅 등록 순서, `src/data/pot/router-runtime.js`·`director-runtime.js`·`writer-controller.js`·`runtime-hooks.js`, Dusk 쪽 `src/data/memoryrunner.js`(runAI 호출). 단계 호출은 `pickForStage(api,"router"|"director"|"writer")` 결과에 `stage`를 붙여 `runAI`로.
 
 ## (참고) 2단계에서 보던 곳
 - 리수폿 저장 형식: `src/data/pot/wiki-store.js`, `src/engine/pot/chat-scope.js`(채팅 범위 키), `src/engine/pot/settings.js`(설정·봇별 기능 세트 `featureSettingsFor`), `src/engine/pot/people-folders.js`·`people-pins.js`.
