@@ -99,3 +99,9 @@
   - 시험 `tests/personedit.test.js` 5개(실제 위키 스키마로 수정·고정 충돌·없는 항목·⏸).
 - 전체 `node --test`: 211개 중 202 통과, 실패 0(9 건너뜀).
 - **아직 안 한 것(7단계 B)**: 수치 ✎(manuallySetMetric은 정책 필요), 범위 칩·설정 검색·되돌리기 10개·프리셋 공유·‘이 채팅’ 팝오버·주입 미리보기, 위키 감정(NPC emotion)·관계 수치까지 장부와 완전 합치기, 최적화(DOM 보존)·CHANGELOG·GUIDE·소스맵·아카 글, 실제 리스 시험(월경·임신 포함).
+
+## ★ 7단계 B 첫 작업 (사용자 지시 2026-10-28): 리수폿 기능 전부 가져왔는지 대조
+- **목표**: 7-B를 끝내면 리수폿 기능이 빠짐없이 Dusk에 있어야 한다. 진행 전에 먼저 대조표를 만든다.
+- **방법**: ① `ref/risupot` 브랜치(리수폿 2.3.0)의 UI·설정·명령 목록을 뽑는다(`git fetch --depth=1 origin ref/risupot`, 화면 모듈과 설정 키 `SettingsStore` 기본값, 인물·관리·진단·프롬프트 관련 버튼). ② `src/ui/screens/memory/*`·`engine/pot/*`·`data/pot/*`와 하나씩 짝지어 표로 쓴다: 리수폿 기능 | Dusk 진입 화면 | 상태(있음/엔진만 있고 화면 없음/없음). ③ ‘엔진만 있음·없음’은 7-B 범위에 넣어 구현하거나, 일부러 뺀 것이면 이유를 적고 사용자에게 확인.
+- **특히 확인할 것**: 추가 프롬프트 편집(custom-prompts)·프롬프트 초기화, 인물 AI 다시 정리(person-thorough-refresh)·인물 합치기(person-merge)·people-command, 관찰자 모드(observer-mode)·페르소나 이름, 백업·정리·진단·토큰 사용량(설정 5번 ‘관리’), 고아 기록 정리(orphan-cleanup), PDF·Hypa 참고(pdf-reference·hypa-reference), 원문 확인(source-check), 주기 외 성인 항목(욕구·성향·묘사 수위), 수치 직접 수정(manuallySetMetric, 정책 필요), 모델 수정 이력(revision).
+- **끝난 뒤**: 대조표를 이 문서에 붙이고, 빠진 것이 없다고 사용자에게 보고한다.
