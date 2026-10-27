@@ -81,7 +81,10 @@ export async function maybeShowWhatsNew(ctx) {
   } catch {
   }
   const save = () => ctx.api.pluginStorage.setItem(KEY, cur).catch(() => {});
-  if (!seen) return save();
+  if (!seen) {
+    await save();
+    return true; // 처음 설치(또는 다시 설치): 처음 둘러보기를 보여 줄 대상
+  }
   if (cmp(cur, seen) <= 0) return;
   const entries = LOG.filter((e) => cmp(e.v, seen) > 0 && cmp(e.v, cur) <= 0);
   await save();

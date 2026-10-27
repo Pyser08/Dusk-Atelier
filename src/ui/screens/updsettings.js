@@ -48,7 +48,6 @@ export async function renderUpdateSettings(ctx) {
         await ctx.prefs.saveUi({ [key]: on }).catch(() => {
         });
         if (key === "autoDetect") ctx.watcher?.setEnabled(on);
-        if (key === "quickImport") ctx.quickImport?.setEnabled(on);
         ctx.toast(on ? `${title}: 켰어요` : `${title}: 껐어요`);
       }
     });
@@ -70,7 +69,6 @@ export async function renderUpdateSettings(ctx) {
       row("autoDetect", "refresh", "새로 가져온 봇 자동 감지", "리스에서 봇을 가져오면 기존 봇의 새 버전인지 확인하고 \"이어 붙일까요?\"라고 물어요. 몇 초마다 봇 목록과 봇 목록 끝을 가볍게 확인하고, 모듈은 20초마다(가져오기 직후엔 3초마다) 확인해요. 리스 메인 화면에 끌어다 놓아 가져와도 잡혀요. 메인 화면 접근을 허락하면 + 메뉴에 'Dusk Atelier로 업데이트' 버튼도 생겨요."),
       row("trashCopies", "trash", "이어 붙인 뒤 받은 사본을 휴지통으로", "업데이트가 끝나면 새로 가져온 사본 봇을 휴지통으로 옮겨요. 대화가 생긴 사본은 건드리지 않아요.", node ? null : "이 앱(원본 RisuAI 웹·데스크톱)에서는 자동 정리가 안 돼요. 사본은 직접 지워 주세요."),
       statusCard(ctx),
-      row("quickImport", "upload", "PC 메인 화면에 빠른 가져오기 상자", "리스 화면 오른쪽 아래에 작은 상자를 띄워요. 누르면 Dusk 가져오기 화면이 열리고, 거기에 끌어 놓으면 에셋을 여러 개씩 동시에 올려서 리스 기본 가져오기보다 빨라요. 리스는 상자 위에 놓은 파일을 플러그인에 넘겨주지 않아서, 꼭 누른 뒤 열린 화면에 놓아야 해요. 메인 화면 접근을 허락해야 보이고, 모바일에서는 띄우지 않아요(+ 메뉴의 버튼을 쓰세요). ×를 누르면 작은 아이콘으로 접히고, 아이콘을 누르면 다시 펼쳐져요. 마우스로 끌어서 원하는 곳으로 옮길 수 있어요."),
       row("chatBackup", "message", "업데이트 전 백업에 채팅도 넣기", "바꾸기 전 백업에 채팅까지 담아요. 같은 내용은 한 번만 저장하지만 채팅이 많으면 백업이 커져요. 되돌릴 때 백업에만 있는 채팅을 새 채팅으로 덧붙여요(지금 채팅은 그대로).")
     )
   ));

@@ -4,7 +4,11 @@ var START_PX = 5;
 // 터치: 손잡이(grip)로만 끈다. 줄을 길게 누르는 건 여러 개 고르기에 쓰인다.
 // 브라우저 기본 끌기(draggable)는 RisuAI 플러그인 창 안에서 막힐 수 있어 포인터 이벤트로만 처리한다.
 var SKIP = "button:not(.rb-item),input,textarea,select,a,[role=switch],.rb-mcb,[contenteditable=true],.rb-icon-btn";
-export function gripDrag({ grip, row: row2, root, scroller, onDrop, mouse = true, count, skip, whole = true }) {
+export function gripDrag({ grip, row: row2, root: rootArg, scroller: scrollerArg, onDrop, mouse = true, count, skip, whole = true }) {
+  // 목록이 아직 문서에 붙기 전에 연결해도 되게, 끌기를 시작할 때 목록을 찾는다.
+  const rootOf = () => (typeof rootArg === "function" ? rootArg() : rootArg) ?? row2.parentElement;
+  const scrollerOf = () => (typeof scrollerArg === "function" ? scrollerArg() : scrollerArg);
+  for (const im of row2.querySelectorAll("img")) im.draggable = false;
   if (grip) {
     grip.style.touchAction = "none";
     grip.addEventListener("pointerdown", (ev) => {
@@ -46,6 +50,8 @@ export function gripDrag({ grip, row: row2, root, scroller, onDrop, mouse = true
     });
   }
   function begin(ev, capture, firstMove) {
+    const root = rootOf(), scroller = scrollerOf();
+    if (!root) return;
     const doc = row2.ownerDocument, win = doc.defaultView;
     const host = root.closest(".rb-win") ?? root.closest(".rb-full") ?? doc.body;
     const r = row2.getBoundingClientRect(), hr = host.getBoundingClientRect();

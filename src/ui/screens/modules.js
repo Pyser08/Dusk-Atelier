@@ -274,10 +274,7 @@ function row(ctx, e, filtering) {
     } })
   );
   if (!filtering) {
-    queueMicrotask(() => {
-      const list = el.closest(".rb-list");
-      if (list) gripDrag({ grip, row: el, root: list, scroller: list, count: () => mu.dragIds(m.id).length, skip: (t) => mu.dragIds(m.id).includes(t.getAttribute("data-drop-row")), onDrop: (d) => applyDrop(ctx, mu.dragIds(m.id), d) });
-    });
+    gripDrag({ grip, row: el, root: () => el.closest(".rb-list"), scroller: () => el.closest(".rb-list"), count: () => mu.dragIds(m.id).length, skip: (t) => mu.dragIds(m.id).includes(t.getAttribute("data-drop-row")), onDrop: (d) => applyDrop(ctx, mu.dragIds(m.id), d) });
   }
   return el;
 }

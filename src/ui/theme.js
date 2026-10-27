@@ -13,7 +13,9 @@ export var DEFAULT_THEME = { v: 2, preset: "coral", a: "#cc4b2e", b: "#b93e22", 
 export var LAYOUTS = [["home", "홈 카드"], ["left", "왼쪽 메뉴"], ["top", "위쪽 메뉴"]];
 export var DENSITIES = [["roomy", "넉넉하게"], ["compact", "촘촘하게"]];
 export var SIZES = [["m", "보통"], ["l", "크게"], ["xl", "아주 크게"]];
-var ZOOM = { m: 1, l: 1.12, xl: 1.26 };
+export var ZOOM = { m: 1, l: 1.12, xl: 1.26 };
+export var ZOOM_MIN = 85, ZOOM_MAX = 160;
+export var zoomOf = (t) => (Number.isFinite(t?.zoom) ? t.zoom / 100 : (ZOOM[t?.size] ?? 1));
 export var NAME_SWATCHES = ["#f2b8d6", "#f58ea3", "#f5c26b", "#e8e27a", "#9be3c8", "#8fd3ff", "#8ea2ff", "#c4b1ff", "#d7a6ff", "#c9cbe4"];
 export var FOLDER_SWATCHES = ["#8ea2ff", "#c4b1ff", "#f2b8d6", "#f5c26b", "#9be3c8", "#8fd3ff", "#f58ea3", "#a4a7c9"];
 var BASE = {
@@ -146,6 +148,10 @@ export function normalizeTheme(t) {
   out.layout = pick(LAYOUTS, out.layout, "home");
   out.density = pick(DENSITIES, out.density, "roomy");
   out.size = pick(SIZES, out.size, "m");
+  // 글자 크기: 막대로 고른 값(퍼센트). 없으면 보통/크게/아주 크게에서 가져온다.
+  const z = Number(out.zoom);
+  if (Number.isFinite(z) && z > 0) out.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z / 5) * 5));
+  else out.zoom = Math.round((ZOOM[out.size] ?? 1) * 100);
   out.v = 2;
   return out;
 }
@@ -224,7 +230,7 @@ export function themeVars(themeIn, mode) {
     "--rb-ctl-sm": dens ? "30px" : "34px",
     "--rb-row-py": dens ? "8px" : "13px",
     "--rb-gap": dens ? "10px" : "16px",
-    "--rb-zoom": String(ZOOM[theme.size] ?? 1)
+    "--rb-zoom": String(zoomOf(theme))
   };
   return { vars: v, scheme: B.scheme, onAccentRatio: on.ratio, mode, hc };
 }

@@ -24,7 +24,7 @@ export async function readUi(api) {
     return {};
   }
 }
-export var watchDefaults = (ui) => ({ autoDetect: ui?.autoDetect !== false, trashCopies: ui?.trashCopies !== false, chatBackup: ui?.chatBackup === true, quickImport: ui?.quickImport !== false });
+export var watchDefaults = (ui) => ({ autoDetect: ui?.autoDetect !== false, trashCopies: ui?.trashCopies !== false, chatBackup: ui?.chatBackup === true });
 
 /** 이 앱이 열지 않은 봇에도 저장이 남는지 (PocketRisu·RisuBard = node) */
 export async function persistentWrites(api) {

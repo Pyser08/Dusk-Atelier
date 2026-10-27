@@ -196,7 +196,25 @@ export function characterFieldChanges(existing, incomingChar) {
   return Object.keys(CHAR_LABELS).filter((k) => k in all && stableJson(norm(existing[k])) !== stableJson(norm(all[k]))).map((k) => CHAR_LABELS[k]);
 }
 
-export async function ensureCharacterInOrder(api, chaId) {
+// 새로 넣은 봇이 리스 메인 화면 사이드바에 보이게 하고(순서 목록에 넣기), 맨 위에 고정한다(핀).
+export async function ensureCharacterInOrder(api, chaId, { top = true } = {}) {
+  const has = (order) => order.some((x) => x === chaId || (Array.isArray(x?.data) && x.data.includes(chaId)));
+  const read = async () => (await api.getDatabase(["characterOrder"]))?.characterOrder ?? [];
   try { await api.checkCharOrder(); } catch {}
-  try { for (let i=0;i<3;i++) { const order=(await api.getDatabase(["characterOrder"]))?.characterOrder??[]; if(order.some(x=>x===chaId||Array.isArray(x?.data)&&x.data.includes(chaId)))return; if(i===0)await new Promise(r=>setTimeout(r,300));else await api.setDatabaseLite({characterOrder:[...order,chaId]}); } } catch {}
+  try {
+    for (let i = 0; i < 3; i++) {
+      const order = await read();
+      if (has(order)) break;
+      if (i === 0) await new Promise((r) => setTimeout(r, 300));
+      else await api.setDatabaseLite({ characterOrder: [...order, chaId] });
+    }
+  } catch {}
+  if (!top) return;
+  try {
+    const order = await read();
+    if (order[0] === chaId) return;
+    // 폴더 안이 아니라 맨 바깥 줄에 있을 때만 맨 위로 올린다(폴더 안의 봇은 폴더 구성을 건드리지 않는다)
+    if (!order.includes(chaId) && has(order)) return;
+    await api.setDatabaseLite({ characterOrder: [chaId, ...order.filter((x) => x !== chaId)] });
+  } catch {}
 }

@@ -2,7 +2,7 @@
 import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
 import { badge, btn, chip, iconBtn, optionCards, progressBar, segmented, switchEl, toggleRow } from '../kit.js';
-import { DEFAULT_THEME, DENSITIES, LAYOUTS, PRESETS, SIZES, normalizeTheme, themeVars } from '../theme.js';
+import { DEFAULT_THEME, DENSITIES, LAYOUTS, PRESETS, SIZES, ZOOM, ZOOM_MIN, ZOOM_MAX, normalizeTheme, themeVars } from '../theme.js';
 
 var pic = (...kids) => h("div", { class: "pic" }, ...kids);
 var LAYOUT_TEXT = { home: "첫 화면에 큰 카드가 나와요. 처음 쓰기 가장 쉬워요.", left: "왼쪽에 메뉴가 늘 보여요. 자주 오갈 때 편해요.", top: "위쪽에 알약 메뉴가 늘 보여요. 화면이 넓게 쓰여요." };
@@ -56,7 +56,21 @@ export function renderSettings(ctx) {
   const modeSeg = segmented([["auto", "RisuAI 따라가기"], ["dark", "다크"], ["light", "라이트"]], theme.mode, (v) => update({ mode: v }), "밝기");
   const layoutCards = optionCards(LAYOUTS.map(([value, label]) => ({ value, label, text: LAYOUT_TEXT[value], pic: layoutPic(value) })), theme.layout, (v) => update({ layout: v }), "메뉴 위치");
   const densitySeg = segmented(DENSITIES, theme.density, (v) => update({ density: v }), "밀도");
-  const sizeSeg = segmented(SIZES, theme.size, (v) => update({ size: v }), "글자 크기");
+  const zoomLabel = h("b", { style: "min-width:48px;text-align:right;font-variant-numeric:tabular-nums" }, `${theme.zoom}%`);
+  const zoomRange = h("input", { type: "range", min: String(ZOOM_MIN), max: String(ZOOM_MAX), step: "5", value: String(theme.zoom), "aria-label": "글자 크기 (퍼센트)", style: "flex:1;min-width:120px;accent-color:var(--rb-acc)" });
+  zoomRange.addEventListener("input", () => {
+    zoomLabel.textContent = `${zoomRange.value}%`;
+    update({ zoom: Number(zoomRange.value) });
+    sizeSegPaint();
+  });
+  const sizeSegBase = segmented(SIZES, null, (v) => {
+    update({ size: v, zoom: Math.round(ZOOM[v] * 100) });
+    zoomRange.value = String(theme.zoom);
+    zoomLabel.textContent = `${theme.zoom}%`;
+  }, "글자 크기 빠른 선택");
+  const sizeSegPaint = () => sizeSegBase.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", Math.round(ZOOM[b.dataset.v] * 100) === theme.zoom ? "true" : "false"));
+  sizeSegPaint();
+  const sizeSeg = h("div", { style: "display:flex;flex-direction:column;gap:10px" }, h("div", { style: "display:flex;align-items:center;gap:10px" }, h("span", { class: "rb-muted", "aria-hidden": "true" }, "작게"), zoomRange, h("span", { class: "rb-muted", "aria-hidden": "true" }, "크게"), zoomLabel), sizeSegBase);
   const hcRow = toggleRow("고대비 모드", "글자와 바탕의 대비를 크게, 테두리를 굵게 해요. 켜짐·꺼짐은 항상 글자로도 보여요.", theme.contrast === "high", (on) => update({ contrast: on ? "high" : "normal" }));
   function paint() {
     presetBtns.forEach((b) => b.setAttribute("aria-pressed", b.dataset.id === theme.preset ? "true" : "false"));
@@ -87,7 +101,7 @@ export function renderSettings(ctx) {
     group("sun", "밝기", null, modeSeg, modeNote),
     group("layout", "메뉴 위치", "어디서 다른 화면으로 옮겨 다닐지 골라요.", layoutCards),
     group("list", "줄 간격", "목록과 버튼의 여유를 정해요.", densitySeg),
-    group("size", "글자 크기", "창 전체가 함께 커져요.", sizeSeg),
+    group("size", "글자 크기", "막대를 움직이면 창 전체가 함께 커지고 작아져요. 아래 버튼으로 바로 고를 수도 있어요.", sizeSeg),
     group("contrast", "고대비", null, hcRow),
     h("div", { style: "display:flex;align-items:center;gap:12px;flex-wrap:wrap" }, btn("기본값으로", { onClick: () => update({ ...DEFAULT_THEME }) }), saved)
   );

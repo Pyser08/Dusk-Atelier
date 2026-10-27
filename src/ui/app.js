@@ -388,8 +388,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     root.hidden = false;
     await api.showContainer("fullscreen");
     render();
-    maybeShowWhatsNew(ctx).catch(() => {
-    }).then(() => maybeShowTour(ctx)).catch(() => {
+    // 처음 둘러보기는 처음 설치·다시 설치한 사람에게만 (업데이트로 온 사람에게는 띄우지 않는다)
+    maybeShowWhatsNew(ctx).then((fresh) => fresh ? maybeShowTour(ctx) : void 0).catch(() => {
     });
     checkUpdate().catch(() => {
     });
