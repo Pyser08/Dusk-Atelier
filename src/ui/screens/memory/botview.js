@@ -54,10 +54,13 @@ export async function renderBotView(ctx, host, { redraw, redrawView, back, quiet
   const setPanel = h("div", { class: "rb-mem-fold-panel", hidden: !m.settingsOpen }, renderBotSettings(env));
   const toggleSettings = () => { m.settingsOpen = !m.settingsOpen; setPanel.hidden = !m.settingsOpen; setBtn.setAttribute("aria-expanded", m.settingsOpen ? "true" : "false"); };
   const body = h("div", { class: "rb-mem-body" });
-  const tabs = h("div", { class: "rb-mem-tabs", role: "tablist" }, TABS.map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { if (m.tab === id) return; m.tab = id; m.page = 1; (redrawView ?? redraw)(); } }, label)));
+  // 탭 전환은 아래 본문만 다시 그린다(폴더·채팅·설정을 다시 읽지 않는다). 저장·분석 같은 변경은 기존처럼 전체를 다시 그린다.
+  const DRAW = { people: renderPeople, scenes: renderScenes, timeline: renderTimeline, open: renderOpen, rels: renderRels };
+  const drawBody = () => (DRAW[m.tab] ?? renderPeople)(env, body);
+  const tabBtns = TABS.map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { if (m.tab === id) return; m.tab = id; m.page = 1; tabBtns.forEach((b, k) => b.setAttribute("aria-pressed", TABS[k][0] === id ? "true" : "false")); Promise.resolve(drawBody()).catch(fail(ctx)); } }, label));
+  const tabs = h("div", { class: "rb-mem-tabs", role: "tablist" }, tabBtns);
   replace(host,
     h("div", { class: "rb-mem-head" }, h("span", { class: "rb-mem-back" }, btn("뒤로", { size: "sm", icon: "back", onClick: back })), h("h2", null, bot.character.name || "이름 없는 캐릭터"), h("span", { class: ["rb-mem-mode", backend.id], title: backend.reason }, backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드"), h("span", { style: "flex:1" }), sw, btn("이 채팅", { size: "sm", title: "이 채팅의 추적 인물·내 이름·관찰자·프롬프트 보기", onClick: () => openChatInfo(env).catch(fail(ctx)) }), setBtn),
     setPanel, status, chatRow, tabs, body);
-  const draw = { people: renderPeople, scenes: renderScenes, timeline: renderTimeline, open: renderOpen, rels: renderRels }[m.tab] ?? renderPeople;
-  await draw(env, body);
+  await drawBody();
 }
