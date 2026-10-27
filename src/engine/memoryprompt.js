@@ -15,17 +15,18 @@ export const SYSTEM_PROMPT = [
   "scene.changed is true only if place, participants, ongoing event or shared state meaningfully changed versus previousScene; otherwise false. `when` only if written in the text.",
   "`know` is optional: list who witnessed or knows this act ONLY when it is a secret or seen by a limited set; omit it for public acts. Never mark someone as knowing what they could not have seen or heard.",
   "`when` is the in-story date/time (e.g. '3월 2일 저녁', 'Day 3 night') only if written or clearly implied; reuse the format of previousScene.when.",
+  "If the input has `storyDate` (YYYY-MM-DD), the program already extracted the story date from the text: do not guess another date, and in `when` write only the time of day or leave it empty.",
   "`rel` lists at most 4 relationship changes between two characters that visibly happened in this response (dir: + warmer/closer, - colder/worse, 0 just different). Omit if none.",
   "`open.add` records at most 3 promises, foreshadowing or unanswered questions that matter later. `open.close` lists ids from `openItems` that this response resolved. Omit both if none.",
   "If nothing is worth recording, return people:[]."
 ].join("\n");
 
 const cut = (v, n) => String(v ?? "").trim().slice(0, n);
-export function buildMessages({ bot, known = [], ignore = [], previousScene = null, openItems = [], recent = [], newest }) {
+export function buildMessages({ bot, known = [], ignore = [], previousScene = null, openItems = [], recent = [], newest, storyDate = "" }) {
   // recent: 뒤에서부터 합계 4000자, newest.text ≤ 6000자
   const kept = []; let total = 0;
   for (let i = recent.length - 1; i >= 0; i--) { total += recent[i].length; if (total > 4000 && kept.length) break; kept.unshift(recent[i].slice(0, 4000)); }
-  const payload = { bot: cut(bot, 120), known, ignore, previousScene, ...(openItems.length ? { openItems } : {}), recent: kept, newest: { index: newest.index, text: cut(newest.text, 6000) } };
+  const payload = { bot: cut(bot, 120), known, ignore, previousScene, ...(openItems.length ? { openItems } : {}), ...(storyDate ? { storyDate } : {}), recent: kept, newest: { index: newest.index, text: cut(newest.text, 6000) } };
   return [{ role: "system", content: SYSTEM_PROMPT }, { role: "user", content: JSON.stringify(payload) }];
 }
 

@@ -5,6 +5,8 @@ const norm = (s) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, "");
 const METERS = [["affinity.score", "호감"], ["suspicion.score", "의심"], ["openness.score", "마음 열기"]];
 const TEXTS = [["core.relationship", "관계·호칭"], ["core.current_state", "지금 상태"], ["core.speech", "말투"], ["core.profile", "프로필"]];
 
+import { parseCycleBody, CYCLE_SLOT, CYCLE_HEADING } from "./pot/cycle-tracking.js";
+
 // 이름·별칭이 맞는 Character 문서
 export function findDoc(wiki, person) {
   const docs = (wiki?.documents ?? []).filter((d) => d?.type === "Character");
@@ -48,3 +50,22 @@ export function timelineOf(folder, person, doc) {
 
 export const countsOf = (items) => items.reduce((c, x) => { c.all++; c[x.kind] = (c[x.kind] ?? 0) + 1; return c; }, { all: 0 });
 export const filterTimeline = (items, f) => f === "all" || !f ? items : items.filter((x) => x.kind === f);
+
+// 월경·임신 줄(프로그램이 관리하는 구획): 성인 여성 인물에게만 있고, 구획이 없으면 null.
+const dayNo = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso ?? "")); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000 : NaN; };
+export function cycleOf(doc) {
+  const sec = (doc?.sections ?? []).find((x) => x?.provenance?.slotId === CYCLE_SLOT || x?.heading === CYCLE_HEADING);
+  const st = sec ? parseCycleBody(sec.body) : null;
+  if (!st) return null;
+  const lines = [];
+  if (st.conception) {
+    const days = st.date ? Math.floor(dayNo(st.date) - dayNo(st.conception)) : NaN;
+    lines.push(`임신 중${Number.isFinite(days) && days >= 0 ? ` · 약 ${Math.floor(days / 7) + 1}주차` : ""} · 본인은 ${st.known ? "알고 있어요" : "아직 몰라요"}`);
+  } else if (st.start && st.date) {
+    const diff = dayNo(st.date) - dayNo(st.start);
+    if (Number.isFinite(diff) && diff >= 0) lines.push(`주기 ${(diff % st.length) + 1}일째 (주기 ${st.length}일)`);
+    else lines.push(`다음 주기는 ${st.start}부터 (주기 ${st.length}일)`);
+  } else lines.push(`주기 ${st.length}일 · 이야기 날짜를 기다리는 중`);
+  if (st.birth) lines.push(`최근 출산 ${st.birth}`);
+  return { lines, date: st.date, pregnant: !!st.conception, known: st.known };
+}

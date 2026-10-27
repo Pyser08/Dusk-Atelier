@@ -23,7 +23,7 @@ const CYCLE_MONTH_DAY = /(\d{1,2})\s*월\s*(\d{1,2})\s*일/g;
  * The story date of this reply. A date on a short or bracketed line (a status line) wins over one inside prose.
  * A date without a year takes the year of `previous`. A date before `previous` or more than a year after it is ignored.
  */
-function storyDateFromText(text, previous = '') {
+export function storyDateFromText(text, previous = '') {
   const lines = String(text || '').split(/\r?\n/), found = [];
   lines.forEach((line, index) => {
     const status = line.trim().length <= 80 || /[\[\]【】|]/.test(line);

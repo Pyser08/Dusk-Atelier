@@ -1,6 +1,7 @@
 // 분석 결과를 폴더에 반영하는 순수 함수.
 import { gradeResponse, findDuplicate, gradeRank } from "./memorygrade.js";
 import { applyRel, applyOpen, reinforce } from "./memoryplus.js";
+import { mergeWhen } from "./storydate.js";
 
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 const rid = (p) => p + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -14,16 +15,17 @@ export function findPersonKey(folder, name) {
 export const latestScene = (folder) => [...(folder.scenes ?? [])].reverse().find((s) => !s.orphan) ?? null;
 
 // anchor: {at, mid, h}. 반환: {records, upgraded, scene:'new'|'updated'|null}
-export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null } = {}) {
+export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null, storyDate = "" } = {}) {
   const ign = new Set(ignore.map(key));
   const out = { records: 0, upgraded: 0, scene: null, rel: 0, open: 0, closed: 0 };
   const prev = latestScene(folder);
   const sc = result?.scene;
   if (sc && (sc.changed || !prev)) {
-    folder.scenes.push({ id: rid("s"), ...anchor, sum: sc.sum, facts: sc.facts ?? [], place: sc.place ?? "", when: sc.when ?? "", who: sc.who ?? [], at_ms: now, orphan: false });
+    folder.scenes.push({ id: rid("s"), ...anchor, sum: sc.sum, facts: sc.facts ?? [], place: sc.place ?? "", when: mergeWhen(sc.when, storyDate), ...(storyDate ? { iso: storyDate } : {}), who: sc.who ?? [], at_ms: now, orphan: false });
     out.scene = "new";
   } else if (sc && prev) {
     if (sc.facts?.length) prev.facts = sc.facts;
+    if (storyDate && prev.iso !== storyDate) { prev.iso = storyDate; prev.when = mergeWhen(prev.when, storyDate); }
     prev.updated_ms = now; out.scene = "updated";
   }
   const sit = latestScene(folder)?.id ?? null;

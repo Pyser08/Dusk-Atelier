@@ -18,6 +18,7 @@ import { keyStore as hubKeys, getCfg, recordUsage } from "./modelhub.js";
 import { potModels } from "../engine/modelcfg.js";
 import { recallFor, mergeMemory } from "../engine/recall.js";
 import { appendDuskSection, splitDusk, checkDusk, SECTION_MARK } from "../engine/duskwriter.js";
+import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
 
 const READONLY = new Set(["writer_schema", "director_schema", "slots", "policies"]);
 export const promptKeysOf = (lib) => Object.entries(lib).flatMap(([id, parts]) => Object.keys(parts).filter((p) => !READONLY.has(p)).map((p) => `${id}:${p}`));
@@ -27,6 +28,7 @@ const STASH_MAX = 8;
 // link: 러너와 공유하는 빈 객체. 턴 흐름이 켜지면 settle/take가 채워진다.
 export function createTurnFlow(api, { store, runner, injector, sourceLibrary, link = {}, log = (...a) => console.log("[Dusk 기억]", ...a), scheduler = globalThis } = {}) {
   let rt = null, starting = null, lastTurn = null, cold = null;
+  let cyclePending = null; const cycleEvents = [];  // 월경·임신: 응답 전 상태 → 응답 뒤 달라진 큰 사건(출산 등)을 Dusk 기록 대기열에
   const stash = new Map();  // 메시지 해시 → 검증된 dusk 구획
   const putStash = (h, v) => { stash.set(h, v); while (stash.size > STASH_MAX) stash.delete(stash.keys().next().value); };
   const libFor = (mode) => mode === "accurate" ? sourceLibrary : { ...sourceLibrary, base: { ...sourceLibrary.base, director: undefined } };
@@ -59,6 +61,7 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
     // 기록하기: Dusk 구획을 같이 싣고, 돌아온 응답에서 떼어 낸다.
     const writerCall = async (a, k, preset, prompt, opts = {}) => {
       const label = String(opts.stageLabel ?? ""); let sent = prompt, prep = null;
+      if (/^writer/i.test(label)) { try { cyclePending = cycleStates(wiki.snapshot()); } catch { cyclePending = null; } }
       const had = String(prompt).includes(SECTION_MARK);
       if (/^writer/i.test(label)) {
         try { prep = await runner.prepareLatest(await api.getCurrentCharacterIndex(), await api.getCurrentChatIndex()); } catch { prep = null; }
@@ -114,7 +117,12 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
       await injector.stop();
       const state = await r.hooks.ensure();
       if (state !== "ready") { log("턴 흐름 훅 등록 실패:", state); await r.hooks.dispose().catch(() => {}); await injector.start(); return null; }
-      link.settle = (ci, ti) => r.auto.waitForScope(ci, ti, { timeoutMs: 180000 });
+      link.settle = async (ci, ti) => {
+        const ok = await r.auto.waitForScope(ci, ti, { timeoutMs: 180000 });
+        try { if (cyclePending) { const ev = milestonesBetween(cyclePending, cycleStates(r.wiki.snapshot())); cyclePending = null; cycleEvents.push(...ev); } } catch { cyclePending = null; }
+        return ok;
+      };
+      link.takeCycle = () => cycleEvents.splice(0);
       link.take = (h) => { const v = stash.get(h); if (v) stash.delete(h); return v ?? null; };
       rt = r; return r;
     })();
@@ -122,7 +130,7 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
   }
   async function stop() {
     if (!rt) return false;
-    const r = rt; rt = null; delete link.settle; delete link.take; stash.clear();
+    const r = rt; rt = null; delete link.settle; delete link.take; delete link.takeCycle; stash.clear(); cycleEvents.length = 0; cyclePending = null;
     await r.hooks.dispose().catch(() => {});
     await injector.start();
     return true;

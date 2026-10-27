@@ -7,7 +7,7 @@ import { GRADES } from "../../../engine/memorygrade.js";
 import { personKey } from "../../../data/memorystore.js";
 import { createRewindChat, draftFirstMessage, sceneAt } from "../../../data/memoryrewind.js";
 import { isGenerating, Busy } from "../../../engine/safety.js";
-import { findDoc, stateOf, timelineOf, countsOf, filterTimeline, TL_FILTERS } from "../../../engine/personview.js";
+import { findDoc, stateOf, timelineOf, countsOf, filterTimeline, TL_FILTERS, cycleOf } from "../../../engine/personview.js";
 
 const PAGE = 100;
 // 폴더 수정 헬퍼(로컬 저장소만). fn(folder) 안에서 고친다.
@@ -138,7 +138,7 @@ function personDetail(env, host, key) {
       local && btn("별칭", { size: "sm", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: "별칭 편집", label: "쉼표로 구분", value: (p.aliases ?? []).join(", "), ok: "저장" }); if (v != null) editFolder(env, (f) => { f.people[key].aliases = v.split(",").map((s) => s.trim()).filter(Boolean); }); } }),
       btn("이 인물로 새 봇 만들기", { kind: "primary", size: "sm", onClick: () => { m.compose = { keys: [key] }; m.ctab = "compose"; env.ctx.go("cards"); } })),
     p.digest ? h("div", { class: "rb-card rb-mem-digest" }, h("b", null, "요약 "), p.digest) : null,
-    state ? stateCard(env, state) : null,
+    state ? stateCard(env, state, env.cycleOn ? cycleOf(doc) : null) : null,
     h("div", { class: "rb-mem-chats rb-mem-tlchips", role: "tablist", "aria-label": "이야기 걸러 보기" }, TL_FILTERS.map(([id, label]) => chip(label, { pressed: m.tlFilter === id && m.sort !== "grade", count: id === "all" ? counts.all : counts[id] ?? 0, onClick: () => { m.tlFilter = id; m.sort = m.sort === "grade" ? "time" : m.sort; m.page = 1; env.redraw(); } }))),
     h("div", { class: "rb-mem-tools" }, m.tlFilter === "all" || m.tlFilter === "event" ? h("div", { class: "rb-mem-chats" }, GRADES.map((g) => chip(g, { pressed: m.grades.includes(g), onClick: () => { m.grades = m.grades.includes(g) ? m.grades.filter((x) => x !== g) : [...m.grades, g]; m.page = 1; env.redraw(); } }))) : null,
       h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "기록 검색", value: m.search, "aria-label": "기록 검색", onInput: (e) => { m.search = e.target.value; m.page = 1; env.redraw(); } })),
@@ -152,12 +152,13 @@ const storyItem = (env, x) => h("li", { class: ["rb-mem-rec", "rb-mem-story-row"
   h("div", { class: "txt" }, h("div", null, x.text), h("div", { class: "rb-muted" }, [x.at != null ? at(x.at) : "", x.ms ? new Date(x.ms).toLocaleString() : ""].filter(Boolean).join(" · "))));
 
 // 지금 상태 카드(위키 문서): 수치 막대 + 호칭·관계 등 글. 숫자를 누르면 ‘상태’ 줄로 걸러 본다.
-function stateCard(env, st) {
+function stateCard(env, st, cyc) {
   const m = mem(env.ctx);
   const meter = (x) => h("button", { type: "button", class: "rb-mem-meter", title: `${x.label} ${x.value} (${x.min}~${x.max}) — 눌러서 바뀐 기록 보기`, onClick: () => { m.tlFilter = "state"; m.sort = "time"; m.page = 1; env.redraw(); } },
     h("span", { class: "l" }, x.label), h("span", { class: "bar", role: "progressbar", "aria-valuemin": x.min, "aria-valuemax": x.max, "aria-valuenow": x.value }, h("i", { style: { width: `${Math.round(((x.value - x.min) / Math.max(1, x.max - x.min)) * 100)}%` } })),
     h("span", { class: "v" }, String(x.value), x.delta ? h("small", null, x.delta > 0 ? ` ↑${x.delta}` : ` ↓${-x.delta}`) : null));
   return h("section", { class: "rb-card rb-mem-state" }, h("h4", null, "지금 상태", st.updatedAt ? h("small", { class: "rb-muted" }, ` · ${new Date(st.updatedAt).toLocaleDateString()}`) : null),
     st.meters.length ? h("div", { class: "rb-mem-meters" }, st.meters.map(meter)) : null,
+    cyc ? h("div", { class: "rb-mem-cycle", role: "note" }, h("b", null, "월경·임신 "), cyc.lines.join(" · "), cyc.date ? h("small", { class: "rb-muted" }, ` (${cyc.date} 기준)`) : null) : null,
     st.texts.length ? h("dl", { class: "rb-mem-texts" }, st.texts.flatMap((t) => [h("dt", null, t.label), h("dd", null, t.body.length > 220 ? t.body.slice(0, 220) + "…" : t.body)])) : null);
 }

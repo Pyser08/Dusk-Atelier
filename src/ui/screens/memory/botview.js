@@ -23,7 +23,8 @@ export async function renderBotView(ctx, host, { redraw, redrawView, back, quiet
   const { folder, backend, idx } = view, caps = M.capabilities(backend.id);
   const botCfg = idx.bots[bot.id] ?? { on: true };
   const autoOn = botCfg.on !== false && !botCfg.paused;
-  const env = { ctx, bot, chats, chatItem, folder, view, backend, caps, idx, redraw, redrawView: redrawView ?? redraw, sess: M.runner?.session?.().calls ?? 0 };
+  const cycleOn = await M.flow?.settings?.().then((st) => { const r = st.rawSnapshot(); return r.features?.openness?.cycle === true && r.sexualDesireEnabled === true; }).catch(() => false);
+  const env = { ctx, bot, chats, chatItem, folder, view, backend, caps, idx, cycleOn, redraw, redrawView: redrawView ?? redraw, sess: M.runner?.session?.().calls ?? 0 };
 
   const sw = switchEl(autoOn && caps.analyze, { label: "자동 기록", disabled: !caps.analyze, onChange: async (v, el) => {
     setSwitch(el, v);

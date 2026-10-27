@@ -3,6 +3,8 @@ import { extractMessageText, isUserMessage, hashText, isChatGenerating as isGene
 import { analyze } from "../engine/memoryprompt.js";
 import { reconcile } from "../engine/memoryreconcile.js";
 import { applyAnalysis, knownPeople } from "../engine/memoryapply.js";
+import { storyDateOf } from "../engine/storydate.js";
+import { addMilestones } from "../engine/cyclememo.js";
 import { runAI } from "../engine/runai.js";
 import { openForPrompt } from "../engine/memoryplus.js";
 import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engine/memorydigest.js";
@@ -48,7 +50,7 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
   function inputOf(g, existing, group) {
     const recent = g.messages.slice(Math.max(0, group[0] - 6), group[0]).map((mm, k) => line(mm, Math.max(0, group[0] - 6) + k));
     return { bot: g.character.name, known: existing ? knownPeople(existing) : [], ignore: [...(g.bot.ignore ?? [])],
-      previousScene: existing ? (({ sum, facts, when } = {}) => sum ? { sum, facts, ...(when ? { when } : {}) } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, openItems: existing ? openForPrompt(existing) : [], recent, newest: { index: g.last, text: g.text } };
+      previousScene: existing ? (({ sum, facts, when } = {}) => sum ? { sum, facts, ...(when ? { when } : {}) } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, openItems: existing ? openForPrompt(existing) : [], recent, newest: { index: g.last, text: g.text }, storyDate: storyDateOf(g.text, existing) };
   }
   // 리수폿 Writer 호출에 같이 실을 때 쓰는 준비물. 기록 대상이 아니면 null.
   async function prepareLatest(charIndex, chatIndex) {
@@ -87,7 +89,10 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     const out = await store.updateFolder(chaId, chatId, (folder) => {
       Object.assign(folder, names, { chatIndex });
       reconcile(folder, messages);
-      return applyAnalysis(folder, result, anchor, { ignore: bot.ignore ?? [], covered: group.map((i) => hashText(extractMessageText(messages[i]))) });
+      const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => hashText(extractMessageText(messages[i]))) });
+      const ev = link?.takeCycle?.() ?? [];
+      if (ev.length) res.cycle = addMilestones(folder, ev);
+      return res;
     });
     await bump(chaId, (b) => { b.fails = 0; b.lastRunAt = Date.now(); b.notified = true; });
     await status({ processed: (idx.status.processed ?? 0) + 1, lastSuccessAt: Date.now(), lastError: "" });

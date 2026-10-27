@@ -24,7 +24,7 @@ export async function flowSections(ctx, host, { redraw }) {
 
   // ---- 1) 추적 수준 + 기능 카드
   const featHost = h("div", { class: "rb-mem-feats" }), lvHost = h("div");
-  const edit = (fn) => { st.update((s) => fn(s)); paint(); };
+  const edit = (fn) => { st.update((s) => fn(s)); paint(); paintAdult(); };
   const paint = () => {
     const snap = st.rawSnapshot(), f = snap.features, lv = levelOf(f);
     replace(lvHost, optionCards(LEVELS.map((l) => ({ value: l.id, label: l.label, text: l.text })), lv, (v) => edit((s) => { s.features = applyLevel(s.features, v); }), "추적 수준"),
@@ -46,8 +46,7 @@ export async function flowSections(ctx, host, { redraw }) {
     const set = (k, v) => edit((s) => { s.features[c.id][k] = v; });
     if (c.detail === "numbers") return h("div", null,
       toggleRow("숫자 표시", "점수를 숫자로도 보여 줘요.", f.numbers === true, (v) => set("numbers", v)),
-      numRow("한 번에 오르는 폭", f.increase ?? 1, (n) => set("increase", n), { min: 1, max: 5 }), numRow("한 번에 내리는 폭", f.decrease ?? 1, (n) => set("decrease", n), { min: 1, max: 5 }),
-      c.id === "openness" ? h("div", null, toggleRow("주기·월경·임신 기록", "성인 항목이에요. 켜려면 ‘욕구 기록’이 먼저 필요해요.", f.cycle === true, (v) => set("cycle", v)), f.cycle ? numRow("임신 확률 배수(0.5~3)", f.cycleRate ?? 1, (n) => set("cycleRate", n), { min: 0.5, max: 3, step: 0.5 }) : null) : null);
+      numRow("한 번에 오르는 폭", f.increase ?? 1, (n) => set("increase", n), { min: 1, max: 5 }), numRow("한 번에 내리는 폭", f.decrease ?? 1, (n) => set("decrease", n), { min: 1, max: 5 }));
     if (c.detail === "register") return h("div", null,
       h("div", { class: "rb-mem-field" }, h("span", null, "말투가 바뀌면"), segmented([["ask", "확인 후 적용"], ["auto", "자동 적용"]], f.change ?? "ask", (v) => set("change", v), "말투 변경")),
       h("div", { class: "rb-mem-field" }, h("span", null, "말투 다변화"), segmented([["off", "끔"], ["on", "켬"]], f.variety === "off" || !f.variety ? "off" : "on", (v) => set("variety", v === "off" ? "off" : "on"), "말투 다변화")),
@@ -111,6 +110,23 @@ export async function flowSections(ctx, host, { redraw }) {
   const paintMode = () => replace(modeHost, optionCards([{ value: "fast", label: "빠르게", text: "응답 뒤 모델 호출 1회. 키워드로 인물을 골라요." }, { value: "accurate", label: "더 정확하게", text: "고르기·정리 노트를 더해 기억을 더 잘 찾아요. 호출이 늘어요." }], flow.mode === "accurate" ? "accurate" : "fast", async (v) => { await M.store.updateIndex((i) => { i.settings.flow = { ...(i.settings.flow ?? {}), mode: v }; }); flow.mode = v; await apply(); }, "기억 방식"));
   paintMode();
 
+  // ---- 3-2) 성인 항목 (기본 꺼짐, 접힌 곳): 욕구 기록 → 월경·임신 기록(스위치 + 임신 확률 배수)
+  const adultHost = h("div");
+  const paintAdult = () => {
+    const snap = st.rawSnapshot(), op = snap.features.openness ?? {}, desire = snap.sexualDesireEnabled === true, cycle = op.cycle === true;
+    const ed = (fn) => { st.update((s) => fn(s)); paintAdult(); };
+    const rate = Number(op.cycleRate ?? 1);
+    const rateLabel = h("b", null, `×${rate}`);
+    const slider = h("input", { type: "range", class: "rb-range", min: 0.5, max: 3, step: 0.1, value: rate, "aria-label": "임신 확률 배수", onInput: (e) => { rateLabel.textContent = `×${Number(e.target.value)}`; }, onChange: (e) => ed((s) => { s.features.openness.cycleRate = Math.min(3, Math.max(0.5, Number(e.target.value) || 1)); }) });
+    replace(adultHost, h("details", { class: "rb-mem-man rb-mem-adult" }, h("summary", null, "성인 항목 (기본 꺼짐)"),
+      h("p", { class: "rb-muted" }, "성인 인물의 욕구·월경·임신을 따라가요. 켜지 않으면 아무것도 기록하지 않아요."),
+      toggleRow("욕구 기록", "성인 항목이에요. 월경·임신 기록의 바탕이 돼요.", desire, (v) => ed((s) => { s.sexualDesireEnabled = v; if (!v) s.features.openness.cycle = false; })),
+      toggleRow("월경·임신 기록", "이야기 속 날짜로 주기·임신·출산을 프로그램이 셈해요. 날짜가 없는 턴은 아무것도 움직이지 않아요.", cycle, (v) => ed((s) => { if (v) { s.sexualDesireEnabled = true; s.features.openness.enabled = true; } s.features.openness.cycle = v; })),
+      cycle ? h("label", { class: "rb-mem-field" }, h("span", null, "임신 확률 배수 (0.5~3)"), slider, rateLabel) : null,
+      cycle ? btn("기본값으로", { size: "sm", onClick: () => ed((s) => { s.features.openness.cycleRate = 1; }) }) : null));
+  };
+  paintAdult();
+
   // ---- 4) 가져오기·관리
   const importBtn = btn("리수폿 데이터 가져오기", { icon: "upload", onClick: async () => {
     const [file] = await pickFiles({ accept: ".json,.txt" }); if (!file) return;
@@ -124,5 +140,6 @@ export async function flowSections(ctx, host, { redraw }) {
     sec("무엇을 기억할까요?", "수준을 고르면 아래 카드가 같이 바뀌어요. 바로 저장되고 다음 응답부터 적용돼요.", lvHost, featHost),
     sec("기억 방식", null, modeHost),
     sec("AI 모델", "기록과 정리를 맡길 모델이에요. 모르겠으면 ‘리스 보조 모델’로 두세요.", cfgHost),
+    h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "고급"), adultHost),
     sec("가져오기", "기존에 쓰던 리수폿의 백업 파일(.json)을 불러와요. 인물 문서와 설정만 받고, API 키는 받지 않아요.", importBtn));
 }

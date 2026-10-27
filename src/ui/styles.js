@@ -634,6 +634,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-feat p{margin:0}.rb-mem-featsum{font-size:12.5px;color:var(--rb-sub)}
 .rb-mem-apiform{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .rb-mem-adv{margin-top:2px}.rb-mem-adv>summary{font-weight:700;cursor:pointer;min-height:40px;display:flex;align-items:center}
+.rb-mem-cycle{font-size:13px;line-height:1.6;padding:8px 10px;border-radius:10px;background:var(--rb-acc-soft);color:var(--rb-acc-text)}
+.rb-mem-adult>summary{font-weight:700}
 .rb-mem-state{padding:12px 14px;display:flex;flex-direction:column;gap:10px}.rb-mem-state h4{margin:0;font-size:14px}
 .rb-mem-meters{display:flex;flex-direction:column;gap:6px}
 .rb-mem-meter{display:grid;grid-template-columns:72px 1fr auto;align-items:center;gap:10px;background:none;border:0;padding:4px 0;text-align:left;cursor:pointer;color:inherit;font:inherit}
