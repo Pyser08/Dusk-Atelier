@@ -19,6 +19,18 @@
   ① 이름 누락 없음 ② 상수 값 동일 ③ 함수 본문 동일(이력 주석만 차이) ④ 엔진 함수 전부 × 블루 아카이브 예제 입력 13종 결과·오류 동일(난수·시각·UUID 고정) ⑤ 유우카·코유키 인물 위키 생성·수정·병합 계획 ⑥ 월경·임신 상태 전이 ⑦ 말투 다변화·CBS 판정 ⑧ 프롬프트 동일 ⑨ 분리 도구 결과 최신. 원본이 없으면 건너뜀.
 - `node --test` 149개 통과.
 
-## 2단계(저장소 v3)에서 볼 곳
+## 2단계 결과 (완료)
+- `src/data/memorystore3.js` (`createMemoryStoreV3`): v2와 같은 메서드(getIndex·updateIndex·getFolder·updateFolder·deleteFolder·deleteBot·resetAll·migrate·serial) + `getWiki`·`botFolders`·`botPeople`·`importPot`. 키 `dusk.mem.v3.index` / `dusk.mem.v3.f.<folderId>`. `src/data/memory.js`가 이 저장소를 쓰도록 교체(다른 코드 변경 없음).
+- 폴더 v3 = v2 폴더 + `wiki`(리수폿 채팅별 위키 상태, 없으면 null). 채팅 범위는 기존 `folderIdOf(chaId, chatId)` 그대로 — 리수폿 `characterId·chatKey`와 대응. 인덱스 v3 = v2 + `pot: { settings, importedAt, sources }`(리수폿 설정 원본 보관, 정규화는 3단계).
+- 이전(`migrate`): v2 → v3 자동(v2 키는 지우지 않음, 인덱스를 마지막에 써서 중간에 끊겨도 재시도), v2가 없으면 v1 → v3 직접. 이미 v3면 0.
+- 리수폿 가져오기(`importPot`): `risupot-backup`·`risupot-full-backup`·`risupot-settings-preset`·저장소 덤프(`risupot.*` 키 모음) 지원. 위키는 revision이 더 높을 때만 덮어씀(`force`로 강제), 설정은 비어 있을 때만 채움. **인증 키(localProviderKeys·risupot.provider-keys)는 받지 않음**(`keysIgnored`로 알림). 순수 변환: `src/engine/memoryv3.js`(`parsePotBundle`·`botPeople` 등).
+- 봇 전체 보기: `botPeople(chaId)`가 채팅별 폴더 인물을 이름으로 합치고 기록마다 `chatId`를 붙임.
+- 시험: `tests/memorystore3.test.js` 6개. `node --test` 155개 전부 통과(원본 대조 9개 포함 — `git fetch origin ref/risupot` 뒤 `git update-ref refs/remotes/origin/ref/risupot FETCH_HEAD`, acorn·eslint-scope 링크 필요).
+- 아직 화면에 연결 안 함(가져오기 버튼은 5·6단계). 위키 갱신·주입은 4단계.
+
+## 3단계(모델 계층)에서 볼 곳
+- 리수폿 모델: `src/data/pot/llm-client.js`·`vertex-client.js`·`copilot-client.js`·`provider-errors.js`, 설정 `src/engine/pot/settings.js`(`featureSettingsFor`), 모델 옵션 `src/engine/pot/model-options.js`. Dusk 쪽 AI 프리셋: `src/data/personabuilder.js`·`src/engine/runai.js`.
+
+## (참고) 2단계에서 보던 곳
 - 리수폿 저장 형식: `src/data/pot/wiki-store.js`, `src/engine/pot/chat-scope.js`(채팅 범위 키), `src/engine/pot/settings.js`(설정·봇별 기능 세트 `featureSettingsFor`), `src/engine/pot/people-folders.js`·`people-pins.js`.
 - Dusk 기존 저장소: `src/data/memorystore.js`(v2 키·직렬 쓰기 큐).

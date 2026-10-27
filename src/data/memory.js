@@ -1,5 +1,5 @@
 // 장기기억 조립: 저장소·러너·주입·BardWiki 백엔드를 묶고, 선택된 백엔드에 따라 훅을 등록한다.
-import { createMemoryStore } from "./memorystore.js";
+import { createMemoryStoreV3 as createMemoryStore } from "./memorystore3.js";
 import { createMemoryRunner } from "./memoryrunner.js";
 import { createMemoryInjector } from "./memoryinject.js";
 import { createBardWikiBackend } from "./memorybackend-bardwiki.js";
