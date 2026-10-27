@@ -155,13 +155,12 @@ async function pausePerson(env, p) {
   env.redraw();
 }
 const policyOf = (env, slot) => { try { return JSON.parse(env.ctx.memory.lib.base.policies).policies[slot] ?? null; } catch { return null; } };
-// 수치 직접 수정(정책): 고정된 수치는 거절 · 숫자와 이유를 적고 · 한 번 더 확인한 뒤 바꾼다. 이유는 위키에 남는다.
+// 수치 직접 수정(정책): 고정된 수치도 덮어씀(고정은 유지) · 숫자와 이유를 적고 · 한 번 더 확인한 뒤 바꾼다. 이유는 위키에 남는다.
 async function editMetric(env, st, x) {
-  if (isPinned(env.folder.wiki, st.docId, metricPinKey(x.metricId))) return env.ctx.toast("고정(📌)된 수치예요. 먼저 고정을 풀어 주세요.", { error: true });
   const v = await promptDialog(env.ctx.win, { title: `${x.label} 직접 고치기`, label: `새 값 (${x.min}~${x.max}, 지금 ${x.value})`, value: String(x.value), ok: "다음" }); if (v == null || v.trim() === "") return;
   const n = Number(v); if (!Number.isFinite(n)) return env.ctx.toast("숫자를 적어 주세요.", { error: true });
   const why = await promptDialog(env.ctx.win, { title: "고치는 이유", label: "기록에 남겨요 (비우면 ‘사용자 직접 수정’)", value: "", ok: "저장" }); if (why == null) return;
-  if (!(await confirmManual(env, `${x.label}을 ${x.value} → ${n}(으)로 바꿀까요?`, "AI가 쌓은 수치를 직접 덮어써요. 앞으로의 변화는 이 값에서 이어져요."))) return;
+  if (!(await confirmManual(env, `${x.label}을 ${x.value} → ${n}(으)로 바꿀까요?`, `AI가 쌓은 수치를 직접 덮어써요.${isPinned(env.folder.wiki, st.docId, metricPinKey(x.metricId)) ? " 고정(📌)돼 있어도 바뀌고, 고정은 그대로 남아요." : ""} 앞으로의 변화는 이 값에서 이어져요.`))) return;
   await wikiEdit(env, (w) => editMetricValue(w, st.docId, x.metricId, n, why, policyOf(env, x.slotId)), "수치를 바꿨어요.");
 }
 async function editWikiText(env, st, t) {

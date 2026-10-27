@@ -132,7 +132,7 @@
 | 16 | 인물 후보 찾기·로어북 선택 분석·수동 새 인물 seed `people-lore-selector-ui`·`people-ui` | 없음(엔진 `people-lore-selector`·`people-import`) | 🔧 |
 | 17 | 인물 항목 직접 추가·편집·삭제 `people-records-ui`·`people-field-ui` | 인물 ✎(절 본문 수정) | 🟡 |
 | 18 | 항목별 AI 작성(Writer) `people-field-ui`·`people-metric-ai-ui` | 없음 | 🔧 |
-| 19 | 수치 직접 편집(호감·의심·음란·첫인상) `people-entry-editor`·`people-metrics-ui` | 없음(`manuallySetMetric` 정책 필요) | 🔧 |
+| 19 | 수치 직접 편집(호감·의심·음란·첫인상) `people-entry-editor`·`people-metrics-ui` | 인물 페이지 수치 ✎(고정도 덮어씀) | ✅ |
 | 20 | 장기 변화 후보(증거·승인/거부) `people-candidate-ui`·`people-patterns-ui` | 없음 | 🔧 |
 | 21 | NPC 감정 기록 `npc-emotion-ui` | 위키 ‘지금 상태’ 한 줄만 | 🟡 |
 | 22 | 인물 고정(📌) `people-ui` | 인물 📌 | ✅ |
@@ -171,6 +171,6 @@
 - **남은 것**: ⓑ 중 사용자 정책 확인(19 수치 직접 편집 충돌 정책), 5의 Copilot·Vertex는 이미 `modeladv.js`에 있음 → 유지 여부만 확인, ⓔ(최적화·CHANGELOG·GUIDE·소스맵·아카 글·버전 올리기), 실제 리스 시험(월경·임신·검색 필터·이력 되돌리기·미리보기 포함). 이번 화면들은 Playwright 시험을 못 돌렸음.
 
 ## 사용자 결정 확정 (2026-10-28)
-- **19 수치 직접 편집**: 고정핀(📌)과 충돌해도 **덮어쓴다**(거절하지 않음). 아직 화면 미구현 → 인물 페이지 수치 ✎로 만들 것.
+- **19 수치 직접 편집**: 고정핀(📌)과 충돌해도 **덮어쓴다**(거절하지 않음). 구현 완료(2026-10-28): `personedit.editMetricValue`가 고정을 잠깐 풀고 고친 뒤 다시 고정, 인물 페이지 수치 ✎의 거절 제거·확인창에 안내. 시험 2개 추가.
 - **5 Copilot·Vertex 인증**: **고급 모드에서만 표시**. 이미 `modeladv.js`가 고급 모드 전용이라 추가 작업 없음.
 - 따라서 ‘사용자 확인 필요’ 4건 중 남은 건 34(PDF 참고, 이미 ✅)·12(Hypa 설정값 코드 정리 여부)뿐.

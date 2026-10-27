@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createEmptyWikiScope, createWikiDocument } from "../src/engine/pot/wiki-schema.js";
-import { editSectionText, setPin, isPinned, sectionPinKey, isPaused, setPaused } from "../src/engine/personedit.js";
+import { updatePersonMetric } from "../src/engine/pot/people-records.js";
+import { editMetricValue, metricPinKey, editSectionText, setPin, isPinned, sectionPinKey, isPaused, setPaused } from "../src/engine/personedit.js";
 import { wikiNote, stateOf } from "../src/engine/personview.js";
 
 function scopeWithPerson() {
@@ -45,4 +46,33 @@ test("stateOf는 고칠 항목의 id를 내어 주고, wikiNote는 한 줄을 �
   const note = wikiNote({ documents: { d1: doc } }, "시로코");
   assert.ok(note.endsWith("…") && note.length <= 161);
   assert.equal(wikiNote({ documents: { d1: doc } }, "없는사람"), "");
+});
+
+const POLICY = { minimum: 0, maximum: 10, stage_ceilings: [4, 10], stage_labels: ["낮음", "높음"] };
+function scopeWithMetric() {
+  const { scope, id } = scopeWithPerson();
+  const key = `${scope.scope.characterId}\n${scope.scope.chatKey}`;
+  const withMetric = updatePersonMetric(scope, id, { isNew: true, id: "m1", slotId: "openness.score", targetRefs: [], value: 3, reason: "시험", expected: null, scopeKey: key }, POLICY);
+  return { scope: withMetric, id };
+}
+test("수치 ✎: 고정된 수치도 덮어쓰고, 고정은 그대로 남는다 (사용자 결정 2026-10-28)", () => {
+  const { scope, id } = scopeWithMetric();
+  const key = metricPinKey("m1");
+  const pinned = setPin(scope, id, key, true);
+  const next = editMetricValue(pinned, id, "m1", 8, "직접 올림", POLICY);
+  const m = next.documents[id].metrics.find((x) => x.id === "m1");
+  assert.equal(m.value, 8);
+  assert.equal(m.reason, "직접 올림");
+  assert.equal(isPinned(next, id, key), true);
+  assert.equal(pinned.documents[id].metrics[0].value, 3);
+});
+test("수치 ✎: 고정 안 된 수치는 고정 없이 바뀌고, 범위 밖·정책 없음은 거절한다", () => {
+  const { scope, id } = scopeWithMetric();
+  const next = editMetricValue(scope, id, "m1", 5, "", POLICY);
+  assert.equal(next.documents[id].metrics[0].value, 5);
+  assert.equal(next.documents[id].metrics[0].reason, "사용자 직접 수정");
+  assert.equal(isPinned(next, id, metricPinKey("m1")), false);
+  assert.throws(() => editMetricValue(scope, id, "m1", 11, "x", POLICY), /점수는/);
+  assert.throws(() => editMetricValue(scope, id, "m1", 5, "x", null), /직접 고칠 수 없어요/);
+  assert.throws(() => editMetricValue(scope, id, "없는수치", 5, "x", POLICY), /찾지 못했어요/);
 });

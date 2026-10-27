@@ -11,12 +11,16 @@ export function editSectionText(scope, docId, sectionId, text) {
   if (!sec) throw new Error("고칠 항목을 찾지 못했어요.");
   return updatePersonSection(scope, docId, { id: sectionId, title: sec.heading, text: String(text ?? ""), expected: JSON.stringify(sec), scopeKey: scopeKeyOf(scope) });
 }
-// 수치 직접 수정: 고정(📌)된 수치는 리수폿 규칙대로 거절한다. 반환: 새 범위
+// 수치 직접 수정: 사용자 결정(2026-10-28)에 따라 고정(📌)된 수치도 덮어쓴다. 리수폿 규칙이 고정 수치를 거절하므로
+// 잠깐 고정을 풀고 고친 뒤 다시 고정한다(고정은 그대로 유지). 반환: 새 범위
 export function editMetricValue(scope, docId, metricId, value, reason, policy) {
   const metric = scope?.documents?.[docId]?.metrics?.find((m) => m.id === metricId);
   if (!metric) throw new Error("고칠 수치를 찾지 못했어요.");
   if (!policy) throw new Error("이 수치는 직접 고칠 수 없어요.");
-  return updatePersonMetric(scope, docId, { id: metricId, value: Number(value), reason: String(reason ?? "").trim() || "사용자 직접 수정", expected: JSON.stringify(metric), scopeKey: scopeKeyOf(scope) }, policy);
+  const key = metricPinKey(metricId), was = peopleItemPinned(scope, docId, key);
+  const base = was ? setPeopleItemPin(scope, docId, key, false) : scope;
+  const next = updatePersonMetric(base, docId, { id: metricId, value: Number(value), reason: String(reason ?? "").trim() || "사용자 직접 수정", expected: JSON.stringify(metric), scopeKey: scopeKeyOf(scope) }, policy);
+  return was ? setPeopleItemPin(next, docId, key, true) : next;
 }
 export const setPin = (scope, docId, key, on) => setPeopleItemPin(scope, docId, key, on);
 export const isPinned = (scope, docId, key) => peopleItemPinned(scope, docId, key);
