@@ -5,6 +5,7 @@ import { btn, badge, note, promptDialog, confirmDialog } from "../../kit.js";
 import { mem, at } from "./common.js";
 import { editFolder } from "./people.js";
 import { OPEN_KINDS, openItems, timelineOf } from "../../../engine/memoryplus.js";
+import { wikiNote } from "../../../engine/personview.js";
 
 const empty = (ic, text) => h("div", { class: "rb-empty" }, icon(ic, 24), h("div", null, text));
 const readonlyNote = (env) => env.backend.id !== "local" ? note("info", "BardWiki 모드에서는 위키에 없는 항목이라 비어 있을 수 있고, 고칠 수도 없어요.") : null;
@@ -31,6 +32,7 @@ export async function renderRels(env, host) {
   if (!pairs.length) return replace(host, readonlyNote(env), empty("list", "아직 기록된 관계 변화가 없어요."));
   replace(host, readonlyNote(env), h("p", { class: "rb-muted" }, "두 인물 사이에서 눈에 띄게 달라진 점을 쌍별로 모아요. 최근 변화가 주입에 들어가요."),
     pairs.map(([k, p]) => h("article", { class: "rb-card rb-mem-sec" }, h("div", { class: "rb-mem-shead" }, h("b", null, `${p.from} → ${p.to}`), h("span", { style: "flex:1" }), local ? btn("지우기", { size: "sm", onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 관계 기록을 지울까요?", body: `${p.from} → ${p.to} 사이에 쌓인 변화가 모두 사라져요. 되돌릴 수 없어요.`, ok: "삭제", danger: true }))) return; editFolder(env, (f) => { delete f.rels[k]; }); } }) : null),
+      wikiNote(folder.wiki, p.from) ? h("p", { class: "rb-mem-wikinote" }, h("b", null, `${p.from}의 현재 관계(위키) `), wikiNote(folder.wiki, p.from)) : null,
       h("ul", { class: "rb-mem-facts" }, p.items.slice().reverse().slice(0, 8).map((i) => h("li", null, `${i.at != null ? at(i.at) + " " : ""}${i.d}${i.dir === "+" ? " ↑" : i.dir === "-" ? " ↓" : ""}`))))));
 }
 

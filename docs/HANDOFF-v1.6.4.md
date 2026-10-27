@@ -86,3 +86,16 @@
 - 인물 페이지 ✎(직접 수정)·📌(고정)·⏸(이 인물만 추적 끄기), 장부·상황 탭과 위키 관계·감정 합치기
 **원래 7단계**: 탭 진입 속도(DOM 보존 규칙), CHANGELOG·GUIDE·소스맵·아카 글(시리즈 박스 5편 규칙), `node --test` 전부 통과, 실제 리스 시험(마법사로 켜기·내 API 실호출·리롤).
 **권장 진행 순서**: ① 크레딧 → ② 월경·임신+날짜 공유 → ③ 인물 ✎📌⏸·장부 합치기 → ④ 범위 칩·검색·되돌리기·공유·팝오버·미리보기 → ⑤ 최적화·문서. 한 챗에 다 넣기엔 크므로 ①~③ / ④~⑤ 두 챗으로 나누는 것을 권장(사용량 절약).
+
+## 7단계 A 결과 (①~③, 2026-10-28) — feat/1.6.4
+- **번들은 아직 재빌드 전**: 이 세션에서 `npm install`이 프록시 정책(403)으로 막혀 `npm run build`를 못 했다. 소스·시험(`node --test`)만 확인. 새 챗/PC에서 `npm install && npm run build` 후 `dusk_atelier.js` 커밋 필요. `package.json` version은 아직 1.6.3.
+- **① 크레딧**: `ui/screens/tools.js` `creditCards()` — 리스타이드 크레딧(코드상 도구 탭) 바로 아래에 risupot·Arcana Card 카드 2장(원작자 이름 없이 링크만, '허락받아 이식했어요'). 스타일 `.rb-credit*`(진입 떠오름 0.08초 간격·실 테두리·호버·숨쉬는 아이콘, 동작 줄이기 시 끔). 설정 탭으로 옮길지는 사용자 결정 대기. ‘설정 > 정보 이식 범위 표기’는 아직 안 함.
+- **② 월경·임신**: 설정 화면 `flowsettings.js`에 ‘고급 > 성인 항목(접힘, 기본 꺼짐)’ 신설 — 욕구 기록·월경·임신 스위치 + 임신 확률 슬라이더(0.5~3), 기능 카드(마음 열기) 안에 있던 토글은 제거. 인물 페이지 `월경·임신` 줄은 `env.cycleOn`(기능 켜짐+욕구 기록 켜짐) + 위키에 구획이 있을 때만(`personview.cycleOf`). 
+  - **날짜 공유**: `engine/storydate.js`(`storyDateOf`·`mergeWhen`·`latestStoryIso`). 리수폿 `storyDateFromText`를 `pot/cycle-tracking.js`에서 export(+`tools/pot-split.mjs` PUBLIC 추가)해 Dusk 러너 입력에 `storyDate`로 넣고, 분석 프롬프트에 “날짜는 프로그램이 뽑았으니 추측 금지” 규칙 추가. `applyAnalysis(…, {storyDate})`가 상황에 `iso`를 저장하고 `when`을 합쳐 세계 시간선에 반영.
+  - **높은 등급 사건**: `engine/cyclememo.js` — 출산(EX)·임신 확인(S)만 Dusk 기록으로 남김(수정=본인이 모르는 사실은 기록 안 함). `data/memoryturn.js`가 Writer 호출 전 상태를 저장→`link.settle` 뒤 비교→`link.takeCycle()`→러너가 `addMilestones`.
+  - 시험 `tests/cyclememo.test.js`(날짜 없는 턴·연도 없는 날짜·역행/1년 초과·출산 +6주·배수 경계·리롤 결정성 등).
+- **③ 인물 ✎📌⏸ + 합치기**: `engine/personedit.js`(순수) + `people.js` 연결. ✎=위키 절 본문 직접 수정(고정 항목은 거절), 📌=절·수치 고정(`people.pins`), ⏸=봇 제외 이름 목록에 넣어 **Dusk 사건 기록만** 쉼(위키 수치는 계속 갱신될 수 있음, 안내 문구 있음). 로컬 저장소·스냅샷 아님일 때만 표시. 장부 ‘관계’ 탭에 위키 ‘현재 관계’ 한 줄, 상황 탭 ‘현재 상황’ 카드에 인물별 위키 ‘지금 상태’ 한 줄 합침(`personview.wikiNote`).
+  - **버그 수정**: `findDoc`이 `documents`를 배열로만 가정해 실제 위키 범위(객체)에서 인물 페이지가 깨질 수 있었음 → `Object.values`로 수정.
+  - 시험 `tests/personedit.test.js` 5개(실제 위키 스키마로 수정·고정 충돌·없는 항목·⏸).
+- 전체 `node --test`: 211개 중 202 통과, 실패 0(9 건너뜀).
+- **아직 안 한 것(7단계 B)**: 수치 ✎(manuallySetMetric은 정책 필요), 범위 칩·설정 검색·되돌리기 10개·프리셋 공유·‘이 채팅’ 팝오버·주입 미리보기, 위키 감정(NPC emotion)·관계 수치까지 장부와 완전 합치기, 최적화(DOM 보존)·CHANGELOG·GUIDE·소스맵·아카 글, 실제 리스 시험(월경·임신 포함).

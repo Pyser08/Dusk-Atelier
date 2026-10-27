@@ -106,3 +106,10 @@ test("인물 페이지 월경·임신 줄: 구획이 있을 때만, 임신이면
   const b = cycleOf(doc({ ...base, birth: "2026-12-01", start: "2027-01-12", date: "2026-12-01" }));
   assert.ok(b.lines.some((l) => /최근 출산 2026-12-01/.test(l)));
 });
+
+import { findDoc } from "../src/engine/personview.js";
+test("findDoc: 실제 위키 범위처럼 documents가 객체여도 인물 문서를 찾는다", () => {
+  const wiki = { documents: { d1: { id: "d1", type: "Character", title: "시로코", aliases: ["Shiroko"], sections: [] }, d2: { id: "d2", type: "Location", title: "아비도스" } } };
+  assert.equal(findDoc(wiki, { name: "Shiroko" })?.id, "d1");
+  assert.equal(findDoc(wiki, { name: "아비도스" }), null);
+});

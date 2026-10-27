@@ -9,7 +9,8 @@ import { parseCycleBody, CYCLE_SLOT, CYCLE_HEADING } from "./pot/cycle-tracking.
 
 // 이름·별칭이 맞는 Character 문서
 export function findDoc(wiki, person) {
-  const docs = (wiki?.documents ?? []).filter((d) => d?.type === "Character");
+  // 실제 위키 범위는 documents가 {id: 문서} 객체다(배열로 만든 시험 자료도 같이 받는다)
+  const docs = Object.values(wiki?.documents ?? {}).filter((d) => d?.type === "Character");
   if (!docs.length || !person) return null;
   const names = new Set([person.name, ...(person.aliases ?? [])].map(norm).filter(Boolean));
   return docs.find((d) => names.has(norm(d.title))) ?? docs.find((d) => (d.aliases ?? []).some((a) => names.has(norm(a)))) ?? null;
@@ -19,13 +20,13 @@ export function stateOf(doc) {
   if (!doc) return null;
   const meters = METERS.map(([slot, label]) => {
     const m = (doc.metrics ?? []).find((x) => x.slotId === slot);
-    return m ? { id: slot.split(".")[0], label, value: m.value, min: m.minimum, max: m.maximum, delta: m.lastDelta ?? 0, stage: m.stageLabel ?? "" } : null;
+    return m ? { id: slot.split(".")[0], metricId: m.id, label, value: m.value, min: m.minimum, max: m.maximum, delta: m.lastDelta ?? 0, stage: m.stageLabel ?? "" } : null;
   }).filter(Boolean);
   const texts = TEXTS.map(([slot, label]) => {
     const s = (doc.sections ?? []).find((x) => x?.provenance?.slotId === slot);
-    return s?.body?.trim() ? { id: slot, label, body: s.body.trim() } : null;
+    return s?.body?.trim() ? { id: slot, sectionId: s.id, label, body: s.body.trim() } : null;
   }).filter(Boolean);
-  return { title: doc.title, meters, texts, updatedAt: Date.parse(doc.updatedAt) || 0 };
+  return { docId: doc.id, title: doc.title, meters, texts, updatedAt: Date.parse(doc.updatedAt) || 0 };
 }
 
 // 타임라인 한 줄: {id, kind, ms, at, text, g?, rec?}
@@ -68,4 +69,11 @@ export function cycleOf(doc) {
   } else lines.push(`주기 ${st.length}일 · 이야기 날짜를 기다리는 중`);
   if (st.birth) lines.push(`최근 출산 ${st.birth}`);
   return { lines, date: st.date, pregnant: !!st.conception, known: st.known };
+}
+
+// 위키의 인물 글 한 줄(관계·현재 상태 등)을 이름으로 찾는다. 장부·상황 탭이 Dusk 기록 옆에 같이 보여 준다.
+export function wikiNote(wiki, name, slot = "core.relationship", max = 160) {
+  const doc = findDoc(wiki, { name });
+  const body = (doc?.sections ?? []).find((x) => x?.provenance?.slotId === slot)?.body?.trim() ?? "";
+  return body.length > max ? body.slice(0, max) + "…" : body;
 }

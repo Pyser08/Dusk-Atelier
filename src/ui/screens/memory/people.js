@@ -8,6 +8,7 @@ import { personKey } from "../../../data/memorystore.js";
 import { createRewindChat, draftFirstMessage, sceneAt } from "../../../data/memoryrewind.js";
 import { isGenerating, Busy } from "../../../engine/safety.js";
 import { findDoc, stateOf, timelineOf, countsOf, filterTimeline, TL_FILTERS, cycleOf } from "../../../engine/personview.js";
+import { editSectionText, setPin, isPinned, sectionPinKey, metricPinKey, isPaused, setPaused } from "../../../engine/personedit.js";
 
 const PAGE = 100;
 // 폴더 수정 헬퍼(로컬 저장소만). fn(folder) 안에서 고친다.
@@ -135,6 +136,7 @@ function personDetail(env, host, key) {
     h("div", { class: "rb-mem-phead" }, btn("목록", { size: "sm", icon: "back", onClick: () => { m.personKey = ""; env.redraw(); } }), avatar(p.name, topGrade(p)), h("h3", null, p.name, guideBtn(env.ctx, "person")), (p.aliases ?? []).length ? h("span", { class: "rb-muted" }, `별칭: ${p.aliases.join(", ")}`) : null, h("span", { style: "flex:1" }),
       local && btn(p.pinned ? "고정됨" : "고정", { size: "sm", onClick: () => editFolder(env, (f) => { f.people[key].pinned = !f.people[key].pinned; }) }),
       local && btn({ always: "항상 포함", never: "제외", auto: "자동(관련 시)" }[p.ctx ?? (p.pinned ? "always" : "auto")], { size: "sm", title: "프롬프트 포함 방식: 자동 → 항상 → 제외", onClick: () => editFolder(env, (f) => { const q = f.people[key], c = q.ctx ?? (q.pinned ? "always" : "auto"); q.ctx = { auto: "always", always: "never", never: "auto" }[c]; }) }),
+      local && btn(isPaused(env.idx.bots?.[env.bot.id]?.ignore, p) ? "⏸ 기록 쉬는 중" : "⏸ 기록 쉬기", { size: "sm", title: "이 인물의 사건 기록을 새로 만들지 않아요. 이미 쌓인 기록은 그대로고, 인물 위키 수치는 계속 갱신될 수 있어요.", onClick: () => pausePerson(env, p) }),
       local && btn("별칭", { size: "sm", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: "별칭 편집", label: "쉼표로 구분", value: (p.aliases ?? []).join(", "), ok: "저장" }); if (v != null) editFolder(env, (f) => { f.people[key].aliases = v.split(",").map((s) => s.trim()).filter(Boolean); }); } }),
       btn("이 인물로 새 봇 만들기", { kind: "primary", size: "sm", onClick: () => { m.compose = { keys: [key] }; m.ctab = "compose"; env.ctx.go("cards"); } })),
     p.digest ? h("div", { class: "rb-card rb-mem-digest" }, h("b", null, "요약 "), p.digest) : null,
@@ -152,13 +154,40 @@ const storyItem = (env, x) => h("li", { class: ["rb-mem-rec", "rb-mem-story-row"
   h("div", { class: "txt" }, h("div", null, x.text), h("div", { class: "rb-muted" }, [x.at != null ? at(x.at) : "", x.ms ? new Date(x.ms).toLocaleString() : ""].filter(Boolean).join(" · "))));
 
 // 지금 상태 카드(위키 문서): 수치 막대 + 호칭·관계 등 글. 숫자를 누르면 ‘상태’ 줄로 걸러 본다.
+// 위키 범위(가져오기·저장된 인물 위키)를 플러그인 저장소에서 직접 고칠 수 있을 때만 ✎·📌을 보여 준다.
+const wikiEditable = (env) => env.backend.id === "local" && env.caps.analyze && !env.view?.snapshot && env.folder.wiki?.documents;
+const wikiEdit = (env, fn, okText) => editFolder(env, (f) => { f.wiki = fn(f.wiki); }).then(() => okText && env.ctx.toast(okText));
+async function pausePerson(env, p) {
+  const on = !isPaused(env.idx.bots?.[env.bot.id]?.ignore, p);
+  await env.ctx.memory.store.updateIndex((i) => { const b = i.bots[env.bot.id] ??= { on: true, ignore: [], fails: 0 }; b.ignore = setPaused(b.ignore, p, on); }).catch(fail(env.ctx));
+  env.ctx.toast(on ? `${p.name}의 사건 기록을 쉬어요. 이미 쌓인 기록은 그대로예요.` : `${p.name}의 기록을 다시 시작해요.`);
+  env.redraw();
+}
+async function editWikiText(env, st, t) {
+  const text = await modal(env.ctx.win, (done) => {
+    const ta = h("textarea", { class: "rb-input", style: "min-height:160px;height:auto;padding:10px", "aria-label": t.label, "data-autofocus": "1" }); ta.value = t.body;
+    return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(560px,94vw)" },
+      h("h3", null, `${t.label} 고치기`), h("p", { class: "rb-muted" }, "AI가 쓴 글을 직접 고쳐요. 고친 글은 다음 응답부터 반영되고, 📌으로 고정하면 AI가 다시 덮어쓰지 않아요."), ta,
+      h("div", { class: "rb-dialog-actions" }, btn("취소", { onClick: () => done(null) }), btn("저장", { kind: "primary", onClick: () => done(ta.value) })));
+  });
+  if (text == null || text.trim() === t.body) return;
+  await wikiEdit(env, (w) => editSectionText(w, st.docId, t.sectionId, text), "고쳤어요.");
+}
+const pinBtn = (env, st, key) => {
+  const on = isPinned(env.folder.wiki, st.docId, key);
+  return btn(on ? "📌" : "📍", { size: "sm", title: on ? "고정됨 — 눌러서 해제" : "고정하면 AI가 이 항목을 고치지 않아요", "aria-pressed": on ? "true" : "false", onClick: () => wikiEdit(env, (w) => setPin(w, st.docId, key, !on)) });
+};
+
+// 지금 상태 카드(위키 문서): 수치 막대 + 호칭·관계 등 글. 숫자를 누르면 ‘상태’ 줄로 걸러 본다.
 function stateCard(env, st, cyc) {
-  const m = mem(env.ctx);
-  const meter = (x) => h("button", { type: "button", class: "rb-mem-meter", title: `${x.label} ${x.value} (${x.min}~${x.max}) — 눌러서 바뀐 기록 보기`, onClick: () => { m.tlFilter = "state"; m.sort = "time"; m.page = 1; env.redraw(); } },
+  const m = mem(env.ctx), editable = wikiEditable(env);
+  const meter = (x) => h("div", { class: "rb-mem-meterrow" }, h("button", { type: "button", class: "rb-mem-meter", title: `${x.label} ${x.value} (${x.min}~${x.max}) — 눌러서 바뀐 기록 보기`, onClick: () => { m.tlFilter = "state"; m.sort = "time"; m.page = 1; env.redraw(); } },
     h("span", { class: "l" }, x.label), h("span", { class: "bar", role: "progressbar", "aria-valuemin": x.min, "aria-valuemax": x.max, "aria-valuenow": x.value }, h("i", { style: { width: `${Math.round(((x.value - x.min) / Math.max(1, x.max - x.min)) * 100)}%` } })),
-    h("span", { class: "v" }, String(x.value), x.delta ? h("small", null, x.delta > 0 ? ` ↑${x.delta}` : ` ↓${-x.delta}`) : null));
+    h("span", { class: "v" }, String(x.value), x.delta ? h("small", null, x.delta > 0 ? ` ↑${x.delta}` : ` ↓${-x.delta}`) : null)), editable && x.metricId ? pinBtn(env, st, metricPinKey(x.metricId)) : null);
+  const textRows = (t) => [h("dt", null, t.label, editable && t.sectionId ? h("span", { class: "rb-mem-rowact" }, btn("✎", { size: "sm", title: `${t.label} 직접 고치기`, "aria-label": `${t.label} 직접 고치기`, onClick: () => editWikiText(env, st, t).catch(fail(env.ctx)) }), pinBtn(env, st, sectionPinKey(t.sectionId))) : null),
+    h("dd", null, t.body.length > 220 ? t.body.slice(0, 220) + "…" : t.body)];
   return h("section", { class: "rb-card rb-mem-state" }, h("h4", null, "지금 상태", st.updatedAt ? h("small", { class: "rb-muted" }, ` · ${new Date(st.updatedAt).toLocaleDateString()}`) : null),
     st.meters.length ? h("div", { class: "rb-mem-meters" }, st.meters.map(meter)) : null,
     cyc ? h("div", { class: "rb-mem-cycle", role: "note" }, h("b", null, "월경·임신 "), cyc.lines.join(" · "), cyc.date ? h("small", { class: "rb-muted" }, ` (${cyc.date} 기준)`) : null) : null,
-    st.texts.length ? h("dl", { class: "rb-mem-texts" }, st.texts.flatMap((t) => [h("dt", null, t.label), h("dd", null, t.body.length > 220 ? t.body.slice(0, 220) + "…" : t.body)])) : null);
+    st.texts.length ? h("dl", { class: "rb-mem-texts" }, st.texts.flatMap(textRows)) : null);
 }
