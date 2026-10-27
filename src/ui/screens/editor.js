@@ -1,5 +1,6 @@
 import { CBS } from '../cbs.js';
 import { codeEditor } from '../codeedit.js';
+import { regexRun } from '../../engine/devcheck.js';
 import { newId, stableJson } from '../../engine/util.js';
 import { createStore } from '../../engine/store.js';
 import { h, replace } from '../dom.js';
@@ -228,6 +229,14 @@ export async function openEditorCore(ctx, cfg) {
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "s") {
       ev.preventDefault();
       apply();
+    }
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "p" && ["lorebook", "regex", "trigger"].includes(es.tab)) {
+      ev.preventDefault();
+      quickJump();
+    }
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "h" && ["lorebook", "regex", "trigger"].includes(es.tab)) {
+      ev.preventDefault();
+      findReplace();
     }
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "f") {
       const s = panel.querySelector(".rb-side-tools input");
@@ -639,6 +648,8 @@ export async function openEditorCore(ctx, cfg) {
       });
       return c;
     };
+    const origSet = new Set((original[kind] ?? []).map((x) => stableJson(x)));
+    const unsaved = (x) => !origSet.has(stableJson(x));
     const rowFor = (it2, i2, { child = false, grip = true, depth = 0 } = {}) => {
       const divider = isLore ? isLoreDivider(it2) : kind === "regex" ? isRegexDivider(it2) : false;
       const label = it2.comment || (isLore ? it2.key : it2.in) || "(이름 없음)";
@@ -658,6 +669,7 @@ export async function openEditorCore(ctx, cfg) {
           render();
         } },
         h("span", { class: "t" }, label),
+        unsaved(it2) ? h("span", { class: "rb-dot", title: "저장 안 된 변경", "aria-label": "저장 안 된 변경", style: "flex:none;width:7px;height:7px;border-radius:50%;background:var(--rb-warn)" }) : null,
         isLore && isPlace(it2) ? badge("장소", "ok") : null,
         isLore && !divider && (it2.alwaysActive || it2.mode === "constant") && !isManaged(it2) ? badge("항상", "acc") : null,
         isLore && isManaged(it2) && !isPlace(it2) ? badge("규칙", "acc") : null,
@@ -741,6 +753,26 @@ export async function openEditorCore(ctx, cfg) {
           }
         } else out.push(rowFor(x, list.indexOf(x), { depth, grip: !q }));
       }
+    }
+    if (!items.__kb) {
+      items.__kb = true;
+      items.addEventListener("keydown", (ev) => {
+        const opts = [...items.querySelectorAll("[role=option]")];
+        const i = opts.indexOf(document.activeElement ?? ev.target);
+        if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+          ev.preventDefault();
+          opts[Math.max(0, Math.min(opts.length - 1, (i < 0 ? 0 : i) + (ev.key === "ArrowDown" ? 1 : -1)))]?.focus();
+        } else if ((ev.key === "ArrowRight" || ev.key === "ArrowLeft") && i >= 0) {
+          const row = opts[i].closest(".rb-item-row");
+          const id = row?.dataset?.dropFolder;
+          if (!id) return;
+          const open = !es.loreCollapsed?.has(id);
+          if (ev.key === "ArrowRight" === !open) {
+            ev.preventDefault();
+            row.querySelector(".rb-folder-chev")?.click();
+          }
+        }
+      });
     }
     function paintItems() {
       const out = [];
@@ -1531,15 +1563,28 @@ export async function openEditorCore(ctx, cfg) {
     const flags = h("div", { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap;align-items:center" }, check(r, "ableFlag", "플래그 직접 지정"));
     const flagInput = text(r, "flag", { placeholder: "g, i, m, s…" });
     flags.appendChild(h("div", { style: "width:180px" }, flagInput));
-    return h(
+    const testIn = h("textarea", { class: "rb-textarea", rows: 3, spellcheck: "false", placeholder: "여기에 시험할 글을 붙여넣으면 바로 결과가 나와요", "aria-label": "정규식 시험 입력" });
+    const testOut = h("div", { class: "rb-muted", style: "white-space:pre-wrap;word-break:break-word;font-size:13px;margin-top:6px" });
+    const runTest = () => {
+      if (!testIn.value) return void (testOut.textContent = "");
+      const res = regexRun([{ ...r }], testIn.value, r.type), st = res.steps[0];
+      testOut.textContent = !st ? "패턴이 비었거나 '비활성' 상태예요" : st.error ? `패턴 오류: ${st.error}` : st.skipped ? st.skipped : st.matched ? `일치 ${st.matched}곳\n${res.out}` : "일치하는 곳이 없어요";
+      testOut.style.color = st?.error ? "var(--rb-danger)" : "";
+    };
+    testIn.addEventListener("input", runTest);
+    const form = h(
       "div",
       { class: "rb-form" },
       field("이름", text(r, "comment")),
       field("적용 시점", select2(r, "type", REGEX_TYPES)),
       field("찾을 패턴 (IN)", codeArea(r, "in", { lang: "regex" }), true),
       field("바꿀 내용 (OUT)", codeArea(r, "out", { lang: "replace", tall: true }), true),
-      flags
+      flags,
+      field("바로 시험", h("div", null, testIn, testOut), true)
     );
+    form.addEventListener("input", runTest);
+    form.addEventListener("change", runTest);
+    return form;
   }
   function triggerForm(t) {
     const lua = Array.isArray(t.effect) && t.effect.length === 1 && ["triggerlua", "triggercode"].includes(t.effect[0]?.type) ? t.effect[0] : null;
@@ -1686,6 +1731,115 @@ export async function openEditorCore(ctx, cfg) {
     );
     back.appendChild(box);
     ctx.win.appendChild(back);
+  }
+  const FR_FIELDS = { lorebook: ["comment", "key", "secondkey", "content"], regex: ["comment", "in", "out"], trigger: ["comment"] };
+  function openSmall(title, nodes, label) {
+    const back = h("div", { class: "rb-modal", onMousedown: (ev) => {
+      if (ev.target === back) back.remove();
+    } });
+    back.appendChild(h("div", { class: "rb-dialog", role: "dialog", "aria-label": label ?? title, style: "max-width:520px" }, h("h3", { class: "rb-h3" }, title), ...nodes));
+    back.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") {
+        ev.stopPropagation();
+        back.remove();
+      }
+    });
+    ctx.win.appendChild(back);
+    return back;
+  }
+  // Ctrl+P: 이름·키로 항목 빠르게 찾아가기
+  function quickJump() {
+    const kind = es.tab, list = draft[kind];
+    const inp = h("input", { class: "rb-input", placeholder: "항목 이름·키 (↑↓ 이동, Enter 열기)", "aria-label": "항목 빠른 이동", style: "width:100%" });
+    const box = h("div", { class: "rb-scroll", style: "max-height:46vh;display:flex;flex-direction:column;gap:2px;margin-top:8px" });
+    let hits = [], cur = 0;
+    const go = (x) => {
+      es.sel[kind] = list.indexOf(x);
+      es.q[kind] = "";
+      es.mItem = true;
+      for (const f of ancestorsOf(x, folderMap(list))) es.loreCollapsed?.delete(folderIdOf(f));
+      back.remove();
+      render();
+    };
+    const paint = () => {
+      const q = inp.value.trim().toLowerCase();
+      hits = list.filter((x) => !q || [x.comment, x.key, x.in].some((v) => String(v ?? "").toLowerCase().includes(q))).slice(0, 40);
+      cur = Math.min(cur, Math.max(0, hits.length - 1));
+      replace(box, hits.length ? hits.map((x, i) => h("button", { type: "button", class: "rb-item", "aria-selected": i === cur ? "true" : "false", style: i === cur ? "outline:1px solid var(--rb-acc-text)" : "", onClick: () => go(x) }, h("span", { class: "t" }, x.comment || x.key || x.in || "(이름 없음)"))) : h("div", { class: "rb-empty" }, "찾는 항목이 없어요"));
+    };
+    inp.addEventListener("input", () => {
+      cur = 0;
+      paint();
+    });
+    inp.addEventListener("keydown", (ev) => {
+      if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+        ev.preventDefault();
+        cur = Math.max(0, Math.min(hits.length - 1, cur + (ev.key === "ArrowDown" ? 1 : -1)));
+        paint();
+      } else if (ev.key === "Enter" && hits[cur]) {
+        ev.preventDefault();
+        go(hits[cur]);
+      }
+    });
+    const back = openSmall("항목 빠른 이동", [inp, box]);
+    paint();
+    inp.focus();
+  }
+  // Ctrl+H: 지금 탭 전체에서 찾아 바꾸기
+  function findReplace() {
+    const kind = es.tab, list = draft[kind], fields = FR_FIELDS[kind];
+    const fIn = h("input", { class: "rb-input", placeholder: "찾을 글", "aria-label": "찾을 글", style: "width:100%" });
+    const rIn = h("input", { class: "rb-input", placeholder: "바꿀 글", "aria-label": "바꿀 글", style: "width:100%;margin-top:6px" });
+    const rx = h("input", { type: "checkbox" }), cs = h("input", { type: "checkbox" });
+    const info = h("div", { class: "rb-muted", style: "margin-top:8px;min-height:20px" });
+    const build = () => {
+      if (!fIn.value) return null;
+      try {
+        return new RegExp(rx.checked ? fIn.value : fIn.value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), cs.checked ? "g" : "gi");
+      } catch (e) {
+        info.textContent = `패턴 오류: ${e.message}`;
+        return null;
+      }
+    };
+    const count = () => {
+      const re = build();
+      if (!re) return void (fIn.value || (info.textContent = ""));
+      let n = 0, it = 0;
+      for (const x of list) {
+        let hit = 0;
+        for (const f of fields) if (typeof x[f] === "string") hit += (x[f].match(re) ?? []).length;
+        if (hit) it++;
+        n += hit;
+      }
+      info.textContent = n ? `${it}개 항목에서 ${n}곳` : "일치하는 곳이 없어요";
+    };
+    for (const e of [fIn, rx, cs]) e.addEventListener(e === fIn ? "input" : "change", count);
+    const back = openSmall("찾아 바꾸기 (지금 탭 전체)", [
+      fIn,
+      rIn,
+      h("div", { style: "display:flex;gap:14px;margin-top:8px;font-size:13px" }, h("label", null, rx, " 정규식"), h("label", null, cs, " 대소문자 구분")),
+      info,
+      h("div", { class: "btns" }, btn("닫기", { onClick: () => back.remove() }), btn("모두 바꾸기", { kind: "primary", onClick: () => {
+        const re = build();
+        if (!re) return;
+        let n = 0;
+        for (const x of list) for (const f of fields) {
+          if (typeof x[f] !== "string") continue;
+          const c = (x[f].match(re) ?? []).length;
+          if (!c) continue;
+          n += c;
+          x[f] = rx.checked ? x[f].replace(re, rIn.value) : x[f].replace(re, () => rIn.value);
+        }
+        back.remove();
+        if (n) {
+          syncRuleContent(draft.lorebook);
+          changed();
+          render();
+        }
+        ctx.toast(n ? `${n}곳을 바꿨어요 (저장 전이라 되돌릴 수 있어요)` : "바꿀 곳이 없어요");
+      } }))
+    ]);
+    fIn.focus();
   }
   async function commit() {
     await cfg.save(draft, original);
