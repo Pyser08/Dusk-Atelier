@@ -44,3 +44,17 @@ test("장소는 가장 가까운 소속만 켠다: 다과회실 → 티파티만
   const r = evaluate({ items: collectManaged(es), messages: [{ role: "user", data: "다과회실" }], turn: 1, rng: () => 0 });
   assert.deepEqual(r.fired.map((f) => f.entry.comment.replace(/^\[(소속|장소)\] /, "")).sort(), ["다과회실", "미카", "티파티"].sort());
 });
+
+test("중첩 소속의 구성원만 불러도 윗 소속들의 연쇄·구성원은 켜지지 않는다 (트리니티 ⊃ 티파티 ⊃ 나기사)", () => {
+  const es = [folder("트리니티", null, { def: 100, max: "", prob: {} }), folder("티파티", "트리니티", { def: 100, max: "", prob: {} }), member("나기사", "티파티"), member("미카", "티파티"), member("마시로", "트리니티"), member("세이아", "트리니티")];
+  es[0].extentions.da_rule.chain = [{ rid: "r_마시로", prob: 100 }];
+  es[1].extentions.da_rule.chain = [{ rid: "r_미카", prob: 100 }];
+  const r = evaluate({ items: collectManaged(es), messages: [{ role: "user", data: "나기사" }], turn: 1, rng: () => 0 });
+  assert.deepEqual(r.fired.map((f) => f.entry.comment.replace("[소속] ", "")).sort(), ["나기사", "트리니티", "티파티"].sort());
+});
+test("구성원 자신의 연쇄는 그대로 동작한다", () => {
+  const es = [folder("트리니티", null, { def: 100, max: "", prob: {} }), folder("티파티", "트리니티", { def: 100, max: "", prob: {} }), member("나기사", "티파티"), member("미카", "티파티")];
+  es[2].extentions.da_rule.chain = [{ rid: "r_미카", prob: 100 }];
+  const r = evaluate({ items: collectManaged(es), messages: [{ role: "user", data: "나기사" }], turn: 1, rng: () => 0 });
+  assert.deepEqual(r.fired.map((f) => f.entry.comment.replace("[소속] ", "")).sort(), ["나기사", "미카", "트리니티", "티파티"].sort());
+});

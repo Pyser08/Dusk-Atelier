@@ -565,6 +565,8 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     }
     // 같이 켜기(연쇄): 켜진 항목이 지정한 항목을 확률로 같이 켠다 (항목 쌍마다 한 번만 굴린다)
     for (const a of [...active.values()]) {
+      // 구성원 때문에 따라 켜진 소속(몇 단계 중첩이든)은 정보만 들어오고 연쇄도 내보내지 않는다
+      if (String(a.why).startsWith("소속 켜짐: 구성원")) continue;
       for (const c of a.rule.chain ?? []) {
         const tgt = byRid.get(c.rid);
         if (!tgt || active.has(tgt.rid) || blocked(tgt)) continue;
