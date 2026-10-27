@@ -5,13 +5,15 @@ import { mem, fail } from "./common.js";
 import { parseTags, DEFAULT_TAG_TEXT } from "../../../engine/card/tags.js";
 import { flowSections } from "./flowsettings.js";
 import { advancedBot } from "./advanced.js";
+import { scopeChip, tracked, searchBox, openSettingsHistory, shareSection, previewBox } from "./settingstools.js";
+import { pushHist } from "../../../engine/settingsutil.js";
 
-function builders(ctx, idx, redraw) {
+function builders(ctx, idx, redraw, kind = "all") {
   const M = ctx.memory, S = idx.settings;
-  const save = (fn) => M.store.updateIndex((i) => fn(i.settings, i)).then(() => redraw()).catch(fail(ctx));
+  const save = (fn) => M.store.updateIndex((i) => { const before = structuredClone(i.settings); fn(i.settings, i); i.settingsHistory = pushHist(i.settingsHistory, "dusk", before, i.settings); }).then(() => redraw()).catch(fail(ctx));
   const num = (label, get, set, { min = 0, max = 99999, step = 1 } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("input", { class: "rb-input", type: "number", min, max, step, value: get(), onChange: (e) => { const v = Math.min(max, Math.max(min, Number(e.target.value) || 0)); save((s) => set(s, v)); } }));
   const sw = (label, on, set) => h("div", { class: "rb-mem-field row" }, h("span", null, label), switchEl(on, { label, onChange: (v, el) => { setSwitch(el, v); save((s) => set(s, v)); } }));
-  const section = (title, ...kids) => h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, title), ...kids);
+  const section = (title, ...kids) => { const [t, k = kind] = Array.isArray(title) ? title : [title]; return h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, t, k ? scopeChip(k) : null), ...kids); };
   return { M, S, save, num, sw, section };
 }
 
@@ -42,8 +44,12 @@ export async function renderGlobalSettings(ctx, host, { redraw }) {
       num("최근 메시지 겹침 제외(개)", () => S.inject.recentSkip, (s, v) => { s.inject.recentSkip = v; }, { max: 40 }),
       h("label", { class: "rb-mem-field" }, h("span", null, "삽입 위치"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.inject.position = e.target.value; }) }, [["beforeLastUser", "마지막 사용자 메시지 앞"], ["afterSystem", "시스템 프롬프트 뒤"]].map(([v, l]) => h("option", { value: v, selected: S.inject.position === v }, l)))),
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 들어간 기억 보기"), man ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `주입함 (약 ${man.tokens} 토큰)` : "주입하지 않음"}`),
-        h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요."))) : null);
-  const body = h("div", { class: "rb-mem-foldbody" }, h("div", { class: "rb-mem-modeline" }, h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), h("span", { class: "rb-muted" }, backend.reason)), flowHost, adv);
+        h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요.")), previewBox(ctx)) : null);
+  let shareBox = null;
+  if (backend.id === "local" && M.flow) { try { const st = await M.flow.settings(); if (!st.status().blocked) shareBox = shareSection(ctx, tracked(ctx, st), { apply: () => M.flow.apply().catch(fail(ctx)), redraw }); } catch { /* 흐름 설정을 못 읽으면 공유 칸만 뺀다 */ } }
+  const tools = h("div", { class: "rb-mem-tools" });
+  const body = h("div", { class: "rb-mem-foldbody" }, h("div", { class: "rb-mem-modeline" }, h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), h("span", { class: "rb-muted" }, backend.reason)), tools, flowHost, shareBox, adv);
+  tools.append(searchBox(body), btn("설정 변경 이력", { size: "sm", onClick: () => openSettingsHistory(ctx, { apply: () => M.flow?.apply?.(), redraw }).catch(fail(ctx)) }));
   const fold = h("details", { class: "rb-mem-fold", open: !!m.globalOpen }, h("summary", null, "설정", h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel)), body);
   fold.addEventListener("toggle", () => { m.globalOpen = fold.open; });
   replace(host, fold);
@@ -52,7 +58,7 @@ export async function renderGlobalSettings(ctx, host, { redraw }) {
 // ---- 봇 안의 '설정' 폴드 내용: 지난 대화 분석, 제외 이름, 초기화, 상태. (토글 옆 버튼으로 여닫는다)
 export function renderBotSettings(env) {
   const { ctx, idx, caps, bot, chatItem } = env, M = ctx.memory;
-  const { section } = builders(ctx, idx, env.redraw);
+  const { section } = builders(ctx, idx, env.redraw, "bot");
   const ignore = idx.bots[bot.id]?.ignore ?? [];
   const ignIn = h("input", { class: "rb-input", placeholder: "제외할 이름 추가 후 Enter", "aria-label": "제외 이름", onKeydown: (e) => { if (e.key === "Enter" && e.target.value.trim()) { const v = e.target.value.trim(); M.store.updateIndex((i) => { const b = i.bots[bot.id] ??= { on: true, ignore: [], fails: 0 }; b.ignore = [...new Set([...(b.ignore ?? []), v])]; }).then(env.redraw).catch(fail(ctx)); } } });
   // 일괄 분석
@@ -78,11 +84,11 @@ export function renderBotSettings(env) {
   const advBox = h("div");
   if (idx.settings.flow?.advanced === true && idx.settings.flow?.on === true) advancedBot(env, advBox).catch(fail(ctx));
   return h("div", { class: "rb-mem-foldbody" },
-    caps.analyze ? section("지난 대화 분석 (이 채팅 전체)", h("div", { class: "rb-mem-range" }, from, "~", to), est, h("div", { class: "rb-mem-sact" }, btn("분석 시작", { kind: "primary", onClick: () => run() }), failed.length ? btn(`실패만 다시 (${failed.length})`, { onClick: () => run(true) }) : null), prog) : null,
+    caps.analyze ? section(["지난 대화 분석 (이 채팅 전체)", "chat"], h("div", { class: "rb-mem-range" }, from, "~", to), est, h("div", { class: "rb-mem-sact" }, btn("분석 시작", { kind: "primary", onClick: () => run() }), failed.length ? btn(`실패만 다시 (${failed.length})`, { onClick: () => run(true) }) : null), prog) : null,
     caps.analyze ? section("이 봇에서 기록하지 않을 이름", h("div", { class: "rb-mem-chats" }, ignore.map((n) => h("button", { type: "button", class: "rb-chip", title: "눌러서 제거", onClick: () => M.store.updateIndex((i) => { i.bots[bot.id].ignore = i.bots[bot.id].ignore.filter((x) => x !== n); }).then(env.redraw) }, n, " ✕")), ignIn)) : null,
     advBox,
-    section("초기화", h("div", { class: "rb-mem-sact" }, btn("이 채팅 기억 지우기", { onClick: () => reset("chat") }), btn("이 봇 기억 지우기", { onClick: () => reset("bot") }), btn("전체 기억 지우기", { onClick: () => reset("all") }))),
-    section("상태", h("p", { class: "rb-muted" }, `훅: ${idx.status.hook} · 처리 ${idx.status.processed}회 · 마지막 성공 ${idx.status.lastSuccessAt ? new Date(idx.status.lastSuccessAt).toLocaleString() : "없음"}${idx.status.lastError ? " · 오류: " + idx.status.lastError : ""}`)));
+    section(["초기화", null], h("div", { class: "rb-mem-sact" }, btn("이 채팅 기억 지우기", { onClick: () => reset("chat") }), btn("이 봇 기억 지우기", { onClick: () => reset("bot") }), btn("전체 기억 지우기", { onClick: () => reset("all") }))),
+    section(["상태", "chat"], h("p", { class: "rb-muted" }, `훅: ${idx.status.hook} · 처리 ${idx.status.processed}회 · 마지막 성공 ${idx.status.lastSuccessAt ? new Date(idx.status.lastSuccessAt).toLocaleString() : "없음"}${idx.status.lastError ? " · 오류: " + idx.status.lastError : ""}`)));
 }
 
 // ---- 카드 설정: 태그·스탯 정의, 기본 언어, 연결 추가 지시. 카드 만들기와 새 봇 만들기에서 쓴다.

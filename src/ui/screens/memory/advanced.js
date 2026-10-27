@@ -2,6 +2,7 @@
 // 고급 모드를 켜야만 보인다(index.settings.flow.advanced). 값은 리수폿 설정 저장소(`M.flow.settings()`)에 바로 저장한다.
 import { openRecovery } from "./recovery.js";
 import { openWikiLog } from "./wikilog.js";
+import { scopeChip, tracked } from "./settingstools.js";
 import { h, replace, pickFiles } from "../../dom.js";
 import { btn, switchEl, setSwitch, segmented, toggleRow, note, confirmDialog } from "../../kit.js";
 import { fail } from "./common.js";
@@ -10,7 +11,7 @@ import { wikiRetentionStatus, WIKI_RETENTION_MAX } from "../../../engine/pot/wik
 import { RELATIONSHIP_HISTORY_MAX, relationshipHistoryLimit } from "../../../engine/pot/relationship-history.js";
 
 const num = (label, v, set, { min = 0, max = 200, step = 1 } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("input", { class: "rb-input", type: "number", min, max, step, value: v, onChange: (e) => { set(Math.min(max, Math.max(min, Math.round(Number(e.target.value) || 0)))); } }));
-const sec = (title, desc, ...kids) => h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, title), desc ? h("p", { class: "rb-muted" }, desc) : null, ...kids);
+const sec = (title, desc, ...kids) => { const [t, k = "all"] = Array.isArray(title) ? title : [title]; return h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, t, k ? scopeChip(k) : null), desc ? h("p", { class: "rb-muted" }, desc) : null, ...kids); };
 export const STAGE_NAMES = { router: "관련 인물 고르기", director: "정리 노트", writer: "기록하기" };
 
 // 지금 열려 있는 채팅의 리수폿 범위(없으면 null). 봇·채팅 단위 설정은 이 범위가 있어야 저장할 수 있다.
@@ -76,13 +77,13 @@ function transfer(ctx, st, redraw, apply) {
 // ---- 봇별 고급 설정(봇 화면의 ‘설정’ 폴드 안): 추가 프롬프트 · 페르소나 이름 · AI 참고 설정
 export async function advancedBot(env, host) {
   const { ctx, bot } = env, M = ctx.memory;
-  const st = await M.flow?.settings?.(); if (!st || st.status().blocked) return replace(host);
+  const st = tracked(ctx, await M.flow?.settings?.()); if (!st || st.status().blocked) return replace(host);
   const live = liveScope(M, bot.id);
   const paint = () => {
     const s = st.rawSnapshot(), ed = (fn) => { try { st.update(fn); } catch (e) { fail(ctx)(e); } paint(); };
     replace(host, customPrompts(ctx, s, ed, bot, live), personaName(ctx, s, ed, live), aiRefs(s, ed, live), retention(env),
-      h("section", { class: "rb-mem-sec" }, h("h4", null, "복구 · 실행 기록"), h("p", { class: "rb-muted" }, "깨진 AI 응답을 고쳐 반영하거나 최근 호출 기록을 봐요."), btn("열기", { onClick: () => openRecovery(env) })),
-      h("section", { class: "rb-mem-sec" }, h("h4", null, "위키 기록 관리"), h("p", { class: "rb-muted" }, "변경 이력 되돌리기 · 자동 기록 다시 시도/지우기 · 인물 문서 요약 정리."), btn("열기", { onClick: () => openWikiLog(env) })));
+      h("section", { class: "rb-mem-sec" }, h("h4", null, "복구 · 실행 기록", scopeChip("chat")), h("p", { class: "rb-muted" }, "깨진 AI 응답을 고쳐 반영하거나 최근 호출 기록을 봐요."), btn("열기", { onClick: () => openRecovery(env) })),
+      h("section", { class: "rb-mem-sec" }, h("h4", null, "위키 기록 관리", scopeChip("chat")), h("p", { class: "rb-muted" }, "변경 이력 되돌리기 · 자동 기록 다시 시도/지우기 · 인물 문서 요약 정리."), btn("열기", { onClick: () => openWikiLog(env) })));
   };
   paint();
 }
@@ -107,17 +108,17 @@ function customPrompts(ctx, s, ed, bot, live) {
     const scope = kind === "all" ? { kind: "all" } : kind === "bot" ? { kind: "bot", characterId: String(bot.id), label: bot.character?.name ?? "" } : { kind: "chat", characterId: live.characterId, chatKey: live.chatKey, label: live.chat ?? "" };
     ed((x) => { x.customPrompts = [...(x.customPrompts ?? []), { id, name: "", stages: ["writer"], scope, enabled: true, text: "새 규칙을 여기에 적어 주세요." }]; });
   };
-  return sec("추가 프롬프트", "기본 규칙 뒤에 덧붙는 내 규칙이에요. 출력 형식은 바꾸지 못해요. 단계마다 켜고 끌 수 있어요.",
+  return sec(["추가 프롬프트", null], "기본 규칙 뒤에 덧붙는 내 규칙이에요. 출력 형식은 바꾸지 못해요. 단계마다 켜고 끌 수 있어요.",
     list.map(row), list.length ? null : h("p", { class: "rb-muted" }, "아직 없어요."),
     h("div", { class: "rb-mem-sact" }, btn("모든 곳에 추가", { onClick: () => add("all") }), btn("이 봇에만 추가", { onClick: () => add("bot") }), btn("이 채팅에만 추가", { disabled: !live, title: live ? "" : "이 채팅을 연 상태에서 쓸 수 있어요", onClick: () => add("chat") })));
 }
 
 const nameOk = (v) => { const t = String(v ?? "").normalize("NFC").trim(); if (!t || t.length > 160 || /[\u0000-\u001f\u007f]|\{\{|\}\}/.test(t)) throw new Error("이름은 160자 이내, 제어 문자와 {{ }} 없이 적어 주세요."); return t; };
 function personaName(ctx, s, ed, live) {
-  if (!live) return sec("내 이름(페르소나) 지정", null, note("warn", "이 채팅을 리스에서 연 상태에서 지정할 수 있어요."));
+  if (!live) return sec(["내 이름(페르소나) 지정", "chat"], null, note("warn", "이 채팅을 리스에서 연 상태에서 지정할 수 있어요."));
   const key = JSON.stringify([live.characterId, live.chatKey]), cur = s.personaNamesByScope?.[key]?.name ?? "";
   const inp = h("input", { class: "rb-input", value: cur, placeholder: "자동으로 찾기", "aria-label": "페르소나 이름" });
-  return sec("내 이름(페르소나) 지정", "기억에서 ‘나’를 부를 이름이에요. 비워 두고 저장하면 자동으로 찾아요.", h("div", { class: "rb-mem-sact" }, inp,
+  return sec(["내 이름(페르소나) 지정", "chat"], "기억에서 ‘나’를 부를 이름이에요. 비워 두고 저장하면 자동으로 찾아요.", h("div", { class: "rb-mem-sact" }, inp,
     btn("저장", { kind: "primary", onClick: () => { try { const t = inp.value.trim() ? nameOk(inp.value) : null; ed((x) => { const map = { ...(x.personaNamesByScope ?? {}) }; if (t) map[key] = { name: t, binding: live.binding }; else delete map[key]; x.personaNamesByScope = map; }); } catch (e) { fail(ctx)(e); } } })));
 }
 
@@ -126,7 +127,7 @@ function aiRefs(s, ed, live) {
   const key = `scope:${encodeURIComponent(live.characterId)}:${encodeURIComponent(live.chatKey)}`, cur = { recentTurns: 2, memorySource: "off", memoryLimit: 16, ...(s.manualAIReferencesByScope?.[key] ?? {}) };
   const set = (patch) => ed((x) => { x.manualAIReferencesByScope = { ...(x.manualAIReferencesByScope ?? {}), [key]: { ...cur, ...patch } }; });
   const hypaOn = s.hypaReferenceEnabled || s.hypaPlusReferenceEnabled;
-  return sec("직접 AI 작성 때 참고할 것 (이 채팅)", "인물 AI 작성·다시 정리처럼 직접 누르는 AI 기능이 최근 대화를 얼마나 볼지 정해요.",
+  return sec(["직접 AI 작성 때 참고할 것 (이 채팅)", "chat"], "인물 AI 작성·다시 정리처럼 직접 누르는 AI 기능이 최근 대화를 얼마나 볼지 정해요.",
     num("최근 대화 턴 수", cur.recentTurns, (n) => set({ recentTurns: n }), { min: 0, max: 200 }),
     hypaOn ? h("div", { class: "rb-mem-field" }, h("span", null, "리스 기본 메모리"), segmented([["off", "안 씀"], ["hypa", "Hypa"], ["hypaplus", "Hypa+"]], cur.memorySource, (v) => set({ memorySource: v }), "기억 종류")) : null,
     hypaOn && cur.memorySource !== "off" ? num("참고 항목 수", cur.memoryLimit, (n) => set({ memoryLimit: n }), { min: 0, max: HYPA_REFERENCE_MAX_ITEMS }) : null);
@@ -138,7 +139,7 @@ function retention(env) {
   if (!wiki || env.backend?.id !== "local" || env.view?.snapshot) return null;
   let st; try { st = wikiRetentionStatus(wiki); } catch { return null; }
   const save = (fn, ok) => ctx.memory.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { f.wiki = fn(f.wiki); }).then(() => { ctx.toast(ok); env.redraw(); }).catch(fail(ctx));
-  return sec("보관 개수 (이 채팅)", "너무 많이 쌓이면 오래된 것부터 정리돼요. 줄이면 다음 정리 때 반영돼요.",
+  return sec(["보관 개수 (이 채팅)", "chat"], "너무 많이 쌓이면 오래된 것부터 정리돼요. 줄이면 다음 정리 때 반영돼요.",
     num(`관계 이력 (지금 ${relationshipHistoryLimit(wiki)}개 보관)`, relationshipHistoryLimit(wiki), (n) => save((w) => ({ ...w, relationshipHistoryLimit: Math.max(1, n) }), "관계 이력 보관 개수를 바꿨어요."), { min: 1, max: RELATIONSHIP_HISTORY_MAX }),
     num(`변경 이력 (지금 ${st.history.count}/${st.history.limit})`, st.history.limit, (n) => save((w) => ({ ...w, recordRetention: { ...(w.recordRetention ?? {}), history: Math.max(1, n) } }), "변경 이력 보관 개수를 바꿨어요."), { min: 1, max: WIKI_RETENTION_MAX }),
     num(`자동 기록 활동 (지금 ${st.activity.count}/${st.activity.limit})`, st.activity.limit, (n) => save((w) => ({ ...w, recordRetention: { ...(w.recordRetention ?? {}), activity: Math.max(1, n) } }), "자동 기록 활동 보관 개수를 바꿨어요."), { min: 1, max: WIKI_RETENTION_MAX }));

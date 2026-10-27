@@ -2,6 +2,7 @@
 // 리수폿 기능과 Dusk 기능을 구분 없이 "무엇을 기억하나"로 보여 준다. 저장 버튼 없이 바로 저장, 다음 턴부터 적용.
 import { h, replace, pickFiles } from "../../dom.js";
 import { btn, switchEl, setSwitch, segmented, optionCards, toggleRow, note, confirmDialog } from "../../kit.js";
+import { scopeChip, tracked } from "./settingstools.js";
 import { fail } from "./common.js";
 import { guideBtn } from "./guide.js";
 import { advancedGlobal } from "./advanced.js";
@@ -18,10 +19,10 @@ const GK = { "무엇을 기억할까요?": "level", "기억 방식": "mode", "AI
 export async function flowSections(ctx, host, { redraw }) {
   const M = ctx.memory;
   if (!M.flow) return replace(host);
-  const st = await M.flow.settings(), blocked = st.status().blocked;
+  const st = tracked(ctx, await M.flow.settings()), blocked = st.status().blocked;
   const idx = await M.store.getIndex(), flow = idx.settings.flow ?? {};
   const apply = () => M.flow.apply().catch(fail(ctx));
-  const sec = (title, desc, ...kids) => h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, title, GK[title] ? guideBtn(ctx, GK[title], { redraw }) : null), desc ? h("p", { class: "rb-muted" }, desc) : null, ...kids);
+  const sec = (title, desc, ...kids) => h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, title, scopeChip("all"), GK[title] ? guideBtn(ctx, GK[title], { redraw }) : null), desc ? h("p", { class: "rb-muted" }, desc) : null, ...kids);
   if (blocked) return replace(host, sec("기억 설정", null, note("warn", "저장된 리수폿 설정을 읽지 못했어요. 원본은 그대로 보관돼 있어요. 설정 가져오기를 다시 해 보거나 개발자에게 알려 주세요.")));
 
   // ---- 1) 추적 수준 + 기능 카드

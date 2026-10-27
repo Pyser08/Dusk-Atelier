@@ -19,7 +19,7 @@ export function createMemoryInjector(api, { store, log = (...a) => console.log("
     }).catch((e) => log("사용 기록 실패", e?.message ?? e));
   }
   // 블록을 만든다. 주입 조건이 아니면 null.
-  async function compose({ character, chat }, { focus = null } = {}) {
+  async function compose({ character, chat }, { focus = null, mark = true } = {}) {
     const idx = await store.getIndex();
     if (idx.settings.backend === "off" || idx.settings.inject.on === false || idx.bots[String(character.chaId)]?.on === false) return null;
     const folder = await store.getFolder(String(character.chaId), String(chat.id));
@@ -28,7 +28,7 @@ export function createMemoryInjector(api, { store, log = (...a) => console.log("
     if (!shouldInject(folder, idx.settings.inject, userTurns)) return null;
     const tail = msgs.slice(-2).map(extractMessageText).join("\n");
     const { text, manifest } = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus });
-    if (text && idx.settings.inject.plus !== false && manifest.recordIds?.length) markUsed(character, chat, manifest.recordIds, msgs.length);
+    if (mark && text && idx.settings.inject.plus !== false && manifest.recordIds?.length) markUsed(character, chat, manifest.recordIds, msgs.length);
     return { text, manifest, position: idx.settings.inject.position };
   }
   async function beforeRequest(messages, type, { focus = null } = {}) {
@@ -40,6 +40,13 @@ export function createMemoryInjector(api, { store, log = (...a) => console.log("
       last = { at: Date.now(), injected: true, manifest: c.manifest, text: c.text };
       return insertBlock(messages, c.text, c.position);
     } catch (e) { log("주입 실패", e?.message ?? e); return messages; }
+  }
+  // 지금 열린 채팅에 다음 요청 때 들어갈 블록을 미리 만들어 본다. 저장 데이터·사용 횟수는 건드리지 않는다.
+  async function preview() {
+    const cur = await current(); if (!cur) return { ok: false, why: "리스에서 채팅을 연 상태에서 볼 수 있어요." };
+    const c = await compose(cur, { mark: false });
+    if (!c?.text) return { ok: true, injected: false, manifest: c?.manifest ?? null };
+    return { ok: true, injected: true, text: c.text, manifest: c.manifest, position: c.position, botId: String(cur.character.chaId), chatId: String(cur.chat.id) };
   }
   // 훅이 없는 환경: 분석 뒤 채팅 localLore의 [Dusk 기억] 항목을 갱신.
   async function syncLore(ci, ti) {
@@ -62,5 +69,5 @@ export function createMemoryInjector(api, { store, log = (...a) => console.log("
     if (mode !== "hook") return false;
     try { await api.removeRisuReplacer?.("beforeRequest", beforeRequest); mode = "none"; return true; } catch (e) { log("beforeRequest 훅 해제 실패", e?.message ?? e); return false; }
   }
-  return { start, stop, beforeRequest, compose, syncLore, current, lastRequest: () => last, mode: () => mode };
+  return { start, stop, beforeRequest, compose, preview, syncLore, current, lastRequest: () => last, mode: () => mode };
 }

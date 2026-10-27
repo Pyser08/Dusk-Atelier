@@ -564,6 +564,10 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-modeline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 4px}
 .rb-mem-fold-panel{display:flex;flex-direction:column;border:1px solid var(--rb-line2);border-radius:14px;background:var(--rb-surf);padding:10px 0 2px;flex-shrink:0}
 .rb-mem-fold-panel[hidden]{display:none}
+.rb-mem-scope{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;vertical-align:middle;border:1px solid var(--rb-line2);color:var(--rb-muted);background:var(--rb-surf)}
+.rb-mem-scope.chat{color:var(--rb-acc-text);border-color:var(--rb-acc-text)}
+.rb-mem-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.rb-mem-tools .rb-mem-search{flex:1 1 220px;min-width:0}
 .rb-mem-botwrap{display:flex;flex-direction:column;gap:10px;min-height:0}
 .rb-mem-botlist{display:flex;flex-direction:column;gap:4px}
 .rb-mem-botlist .rb-row .txt,.rb-mem-card .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left}
