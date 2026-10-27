@@ -20,7 +20,7 @@ function sceneLine(s, cap) {
 }
 
 // ctx: {messageCount, recentText, settings:{targetTokens,capTokens,sceneTokens,recentSkip}}
-export function buildBlock(folder, { messageCount = 0, recentText = "", settings = {}, messages = null } = {}) {
+export function buildBlock(folder, { messageCount = 0, recentText = "", settings = {}, messages = null, focus = null } = {}) {
   const target = settings.targetTokens ?? 1200, cap = settings.capTokens ?? 2500, sceneCap = settings.sceneTokens ?? 300, skip = settings.recentSkip ?? 8;
   const manifest = { included: [], excluded: [], tokens: 0, recordIds: [] }, plus = settings.plus !== false;
   const scenes = (folder.scenes ?? []).filter((s) => !s.orphan);
@@ -39,13 +39,14 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   let used = estimateTokens(lines.join("\n")); manifest.included.push(...(cur ? [{ kind: "scene", id: cur.id, tokens: used }] : []));
 
   const recent = norm(recentText), inScene = new Set((cur?.who ?? []).map(norm));
+  const focused = new Set((focus ?? []).map(norm));  // v1.6.4: 리수폿이 이번 턴에 고른 인물은 장면에 있는 것처럼 다룬다
   const cands = [];
   for (const p of Object.values(folder.people ?? {})) {
     const names = [p.name, ...(p.aliases ?? [])].map(norm).filter(Boolean);
     // 컨텍스트 모드(BardWiki 방식): never=제외, always=항상(고정 포함), auto=장면/최근 언급 등 관련 있을 때만
     const mode = p.ctx ?? (p.pinned ? "always" : "auto");
     if (mode === "never") { manifest.excluded.push({ kind: "person", name: p.name, tokens: 0, reason: "never" }); continue; }
-    const rel = names.some((n) => inScene.has(n)) ? 1 : names.some((n) => recent.includes(n)) ? 2 : 0;
+    const rel = names.some((n) => inScene.has(n) || focused.has(n)) ? 1 : names.some((n) => recent.includes(n)) ? 2 : 0;
     if (mode === "auto" && !rel) { manifest.excluded.push({ kind: "person", name: p.name, tokens: 0, reason: "not-relevant" }); continue; }
     const group = mode === "always" ? 0 : rel;
     const age = (r) => r.at == null ? 50 : Math.max(0, messageCount - (plus ? lastTouch(r) : r.at));

@@ -1,0 +1,21 @@
+[
+ {
+  "file": "src/data/pot/main-wiki-hook.js",
+  "why": "Director 장기기억 참고에 Dusk 회상을 합치는 자리(this.mergeRecall, 없으면 그대로)",
+  "from": "longTermMemory=settings.relationshipOnlyMode?await collectHypaReference(",
+  "to": "longTermMemory=await (this.mergeRecall??(memory=>memory))(settings.relationshipOnlyMode?await collectHypaReference("
+ },
+ {
+  "file": "src/data/pot/main-wiki-hook.js",
+  "why": "위 패치의 닫는 부분(회상 입력 전달)",
+  "from": ":{items:[],counts:{hypa:0,hypaplus:0},characters:0},peopleProfiles=",
+  "to": ":{items:[],counts:{hypa:0,hypaplus:0},characters:0},{scope,documents,currentUser,recentChat,characterIndex,chatIndex,chat}),peopleProfiles="
+ },
+ {
+  "file": "src/data/pot/main-wiki-hook.js",
+  "why": "Router·Director 모델 호출을 Dusk 모델 허브(사용량 집계)로 보낼 수 있게(this.llmCall, 없으면 원본 호출)",
+  "count": 2,
+  "from": "callWriterModel(this.api,this.keyStore,preset,",
+  "to": "(this.llmCall??callWriterModel)(this.api,this.keyStore,preset,"
+ }
+]

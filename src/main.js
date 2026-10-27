@@ -11,6 +11,7 @@ import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets
 import { createLoreRuntime } from './data/lorerules.js';
 import { createLoreLog } from './data/lorelog.js';
 import { createMemory } from './data/memory.js';
+import POT_PROMPTS from './data/pot/prompts.json';
 import './data/modelhub.js';
 import { restoreActiveTheme } from './ui/screens/themestudio.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
@@ -37,7 +38,7 @@ async function start() {
   const api = new Proxy(raw, { get: (t, k) => k in wrapped ? wrapped[k] : t[k] });
   console.log(`[${TITLE}] 진입 경로`, globalThis.__RBM_ENTRY__ ?? "normal");
   const memoryRef = { toast: null };
-  const memory = createMemory(api, { notify: (t) => memoryRef.toast?.(t) });
+  const memory = createMemory(api, { notify: (t) => memoryRef.toast?.(t), potLibrary: POT_PROMPTS });
   memory.start().catch((e) => console.log(`[${TITLE}] 장기기억 시작 실패: ${e?.message ?? e}`));
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {

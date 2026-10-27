@@ -36,6 +36,18 @@
 - 아직 안 한 것(5·6단계 화면): 모델 설정 화면(쉬운 모드/단계별), 기존 AI 프리셋(페르소나 빌더 DPA1)과 UI 통합 — 지금은 pick 객체만 연결. 공유 코드는 키 미포함. 호출처가 `pick.stage`를 넘기면 단계별 사용량이 쌓임(4단계 턴 흐름에서 지정).
 - 실호출 확인: 가짜 api로 OpenAI 형식·리스 보조 모델 경로 확인함. **실제 리스에서 OpenAI 키·보조 모델 실호출은 5단계 화면이 생긴 뒤 같이 시험**.
 
+## 4단계 결과 (완료)
+- **연결 방식**: 리수폿 컨트롤러(`WikiController`·`AutoWikiController`·`MainWikiHook`·`RuntimeHookManager`)를 그대로 쓰고, Dusk 쪽은 어댑터로 붙임. `src/data/memoryturn.js`(`createTurnFlow`)가 `createMemory(api,{potLibrary})`에서 만들어져 `memory.flow`로 노출. 설정 `index.settings.flow = {on:false, mode:"fast"|"accurate", recallTokens:700}`(기본 꺼짐 → 켜지 않으면 v1.6.2 경로 그대로). `flow.apply()`가 켜기/끄기/모드 전환, 켜면 Dusk 주입 훅을 내리고 **요청 직전 훅 하나**(위키→Dusk 블록)로 합침.
+- **저장소 어댑터** `src/data/potstorage.js`: 리수폿이 쓰는 pluginStorage 모양을 v3 저장소에 연결(설정→`pot.settings`, 카탈로그→`pot.catalog`, 채팅별 위키→폴더 `.wiki`, 그 밖은 실제 pluginStorage). 인증 키는 거치지 않음.
+- **회상(Recall)** `src/engine/recall.js`: 고른 인물의 Dusk 기록을 점수(등급 가중치×강화×키워드×열린 항목)로 골라 `mergeMemory`로 정리 노트(Director)의 장기기억 참고(`source:"dusk"`)에 합침. 요청 직전 `[Dusk Memory]` 블록은 `focus`(고른 인물)를 받아 장면에 없어도 그 인물 기록을 넣음(`injector.beforeRequest(out,type,{focus})`).
+- **기록 합치기** `src/engine/duskwriter.js`: 리수폿 Writer 프롬프트 끝에 `# Dusk Memory Section`을 덧붙여 응답 JSON에 `dusk` 키를 같이 받음 → `splitDusk`로 떼고 `checkDusk`(기존 `validate`)로 **구획별 따로 검증**. 통과분은 `memoryturn`의 stash에 보관, `memoryrunner.analyzeAt`이 `link.take(h)`로 가져가 호출 없이 저장(`session.combined`). dusk가 없거나 깨지면 러너가 기존 방식으로 따로 1회 호출. 리수폿 쪽이 틀려도 dusk 구획은 저장(반대도 동일). 러너는 `link.settle`로 리수폿 Writer가 끝나길 기다림.
+- **러너 리팩터** `memoryrunner.js`: `gather/gate/inputOf/prepareLatest` 분리, 동작 동일.
+- **리수폿 원본 패치(고정 3곳)** `tools/pot-patches.json` → `pot-split.mjs`가 생성 때 적용(문자열 정확 일치, 안 맞으면 생성 중단): Director 장기기억 참고 합치기 훅(`this.mergeRecall`), Router·Director 호출을 `this.llmCall`(Dusk 모델 허브·사용량 집계)로. 훅이 비면 원본과 동일 동작. `PUBLIC` 목록에 `SettingsStore·WikiController·AutoWikiController·MainWikiHook·RuntimeTraceStore·WriterController·RuntimeHookManager` 추가. `pot-port.test.js`는 패치 반영분만 허용하도록 조정.
+- **리롤**: 리수폿 자체 롤백 + Dusk 앵커 정합성(고아 처리) 그대로 — 같은 자리 응답이 바뀌면 이전 응답분 위키·기록이 함께 정리됨(시험 있음).
+- **시험** `tests/memoryturn.test.js` 11개(블루 아카이브 10턴: 빠른 모드 응답마다 모델 호출 1회·위키+Dusk 동시 축적, 요청 직전 위키 참고+Dusk 블록 1회씩, 정확하게 모드의 고르기·정리 노트·회상 합류, Dusk 구획 없음/깨짐/리수폿 쪽 오류 독립, 리롤, 저장소 어댑터), `tests/recall.test.js`. `node --test` 182개 통과, 빌드 2.5MB(번들 2653KB).
+- **시험 하네스 주의**: 리수폿 Main 훅은 요청에 "직전 AI 응답이 들어 있거나 비시스템 메시지 3개 이상"이어야 본 요청으로 인정함 → 시험의 가짜 요청에 최근 대화를 같이 넣어야 함. 가짜 Writer는 검토 대상 문서마다 `no_canonical_change`를 내야 함(계약).
+- **아직 안 한 것(5단계 이후)**: 설정 화면(켜기 스위치·빠른/정확하게·모델), 홈 진행 점 5개, 인물 페이지 통합 타임라인, 리수폿 가져오기 버튼, 월경·임신 날짜 공유(세계 시간선) — 엔진은 이식돼 있으나 `storyDateFromText` → Dusk 시간선 연결은 5~6단계에서. **실제 리스에서의 실호출 시험은 5단계 화면 뒤**(지금은 켜는 UI가 없고 `index.settings.flow.on` 직접 설정 + `memory.flow.apply()`로만 켬).
+
 ## 4단계(턴 흐름)에서 볼 곳
 - 원본 `startPlugin`(ref 브랜치 plugin 모듈)의 훅 등록 순서, `src/data/pot/router-runtime.js`·`director-runtime.js`·`writer-controller.js`·`runtime-hooks.js`, Dusk 쪽 `src/data/memoryrunner.js`(runAI 호출). 단계 호출은 `pickForStage(api,"router"|"director"|"writer")` 결과에 `stage`를 붙여 `runAI`로.
 

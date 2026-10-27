@@ -106,7 +106,7 @@ for (const v of vars) {
 }
 
 // Dusk 어댑터(src/data/modelhub.js)가 직접 쓰는 이름은 다른 이식 모듈이 안 써도 항상 내보낸다.
-const PUBLIC = ['LocalKeyStore', 'LlmClientError', 'testModelConnection', 'providerModelList', 'copilotLoginStep'];
+const PUBLIC = ['LocalKeyStore', 'LlmClientError', 'testModelConnection', 'providerModelList', 'copilotLoginStep', 'SettingsStore', 'WikiController', 'AutoWikiController', 'MainWikiHook', 'RuntimeTraceStore', 'WriterController', 'RuntimeHookManager'];
 for (const n of PUBLIC) { if (!vars.some((v) => v.name === n)) throw new Error(`PUBLIC 이름 없음: ${n}`); M(owner(n)).exports.add(n); }
 
 // ── 출력 ──────────────────────────────────────────────
@@ -152,6 +152,15 @@ if (missing.size) {
   console.error('이식 모듈이 UI/plugin 이름을 씀 — 분류를 고쳐야 함:');
   for (const [n, users] of missing) console.error(`  ${n} ← ${[...users].join(', ')}`);
   process.exit(1);
+}
+// Dusk 연결용 작은 고정 패치(tools/pot-patches.json, 문자열 정확 일치). 원본이 바뀌어 안 맞으면 생성이 멈춘다 → 어댑터 쪽을 다시 확인할 것.
+// 패치된 코드는 훅이 비어 있으면 원본과 똑같이 동작하고, Dusk 어댑터가 훅을 채울 때만 달라진다.
+const PATCHES = JSON.parse(fs.readFileSync(path.join(root, 'tools/pot-patches.json'), 'utf8'));
+for (const pt of PATCHES) {
+  const text = files.get(pt.file);
+  const n = text ? text.split(pt.from).length - 1 : 0;
+  if (n !== (pt.count ?? 1)) { console.error(`패치 실패(${n}회 일치): ${pt.file} — ${pt.why}`); process.exit(1); }
+  files.set(pt.file, text.split(pt.from).join(pt.to));
 }
 // 프롬프트 라이브러리 (리스 프롬프트 키 → 텍스트). 순서·내용 그대로.
 const lib = Function(`"use strict";return (${src.slice(content.start, content.end)})`)();

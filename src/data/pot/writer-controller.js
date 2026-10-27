@@ -12,7 +12,7 @@ import { writerReceiptHash } from './writer-receipts.js';
 import { buildManualWriterFilter, writerTargetKeywords } from '../../engine/pot/writer-targets.js';
 
 const requestId = () => `req:${globalThis.crypto?.randomUUID?.().replaceAll('-', '_') || `${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`}`;
-class WriterController {
+export class WriterController {
   constructor({ api, settingsStore, keyStore, wikiController, sourceLibrary, traceStore = null, llmCall = callWriterModel }) {
     this.api = api; this.settingsStore = settingsStore; this.keyStore = keyStore; this.wikiController = wikiController; this.sourceLibrary = sourceLibrary; this.traceStore=traceStore; this.llmCall = llmCall;
     this.rpText = ''; this.userText = ''; this.targetKeywords=''; this.source = null; this.proposal = null; this.phase = 'idle'; this.error = ''; this.runToken = 0; this.listeners = new Set();

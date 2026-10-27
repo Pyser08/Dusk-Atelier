@@ -1,6 +1,6 @@
 // 출처: risupot 2.3.0 src/runtime-hooks.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
 
-class RuntimeHookManager{
+export class RuntimeHookManager{
  constructor(api,auto,main,{scheduler=globalThis}={}){this.api=api;this.auto=auto;this.main=main;this.scheduler=scheduler;this.state='pending';this.permissionGranted=false;this.chat=false;this.replacer=false;this.worker=null;this.timer=null;this.retried=false;this.chatListener=arg=>{main.clearDirectorCache?.();auto.onOutput(arg)};this.beforeListener=(messages,type)=>main.listener(messages,type)}
  status(){return{state:this.state,chat:this.chat,replacer:this.replacer}}
  publish(){this.auto.setHook(this.state);this.main.setHook(this.state)}

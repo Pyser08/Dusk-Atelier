@@ -19,7 +19,7 @@ export function createMemoryInjector(api, { store, log = (...a) => console.log("
     }).catch((e) => log("사용 기록 실패", e?.message ?? e));
   }
   // 블록을 만든다. 주입 조건이 아니면 null.
-  async function compose({ character, chat }) {
+  async function compose({ character, chat }, { focus = null } = {}) {
     const idx = await store.getIndex();
     if (idx.settings.backend === "off" || idx.settings.inject.on === false || idx.bots[String(character.chaId)]?.on === false) return null;
     const folder = await store.getFolder(String(character.chaId), String(chat.id));
@@ -27,15 +27,15 @@ export function createMemoryInjector(api, { store, log = (...a) => console.log("
     const userTurns = msgs.filter(isUserMessage).length;
     if (!shouldInject(folder, idx.settings.inject, userTurns)) return null;
     const tail = msgs.slice(-2).map(extractMessageText).join("\n");
-    const { text, manifest } = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs });
+    const { text, manifest } = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus });
     if (text && idx.settings.inject.plus !== false && manifest.recordIds?.length) markUsed(character, chat, manifest.recordIds, msgs.length);
     return { text, manifest, position: idx.settings.inject.position };
   }
-  async function beforeRequest(messages, type) {
+  async function beforeRequest(messages, type, { focus = null } = {}) {
     try {
       if (type && type !== "model") return messages;
       const cur = await current(); if (!cur) return messages;
-      const c = await compose(cur);
+      const c = await compose(cur, { focus });
       if (!c?.text) { last = { at: Date.now(), injected: false, manifest: c?.manifest ?? null }; return messages; }
       last = { at: Date.now(), injected: true, manifest: c.manifest, text: c.text };
       return insertBlock(messages, c.text, c.position);
@@ -57,5 +57,10 @@ export function createMemoryInjector(api, { store, log = (...a) => console.log("
     }
     mode = "lore"; return "lore";
   }
-  return { start, beforeRequest, compose, syncLore, current, lastRequest: () => last, mode: () => mode };
+  // v1.6.4: 턴 흐름이 요청 직전 훅 하나로 위키·Dusk 블록을 같이 넣을 때는 이 훅을 내려 이중 주입을 막는다.
+  async function stop() {
+    if (mode !== "hook") return false;
+    try { await api.removeRisuReplacer?.("beforeRequest", beforeRequest); mode = "none"; return true; } catch (e) { log("beforeRequest 훅 해제 실패", e?.message ?? e); return false; }
+  }
+  return { start, stop, beforeRequest, compose, syncLore, current, lastRequest: () => last, mode: () => mode };
 }

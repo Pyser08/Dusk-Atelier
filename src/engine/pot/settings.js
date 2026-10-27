@@ -307,7 +307,7 @@ function hydrateSettings(raw, { promptKeys = [] } = {}) {
 }
 
 /** One writer per instance, monotonically queued snapshots, no retries without an explicit action. */
-class SettingsStore {
+export class SettingsStore {
   constructor(storage, { promptKeys = [] } = {}) {
     this.storage = storage;
     this.promptKeys = [...promptKeys];

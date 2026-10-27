@@ -5,13 +5,16 @@ import { createMemoryInjector } from "./memoryinject.js";
 import { createBardWikiBackend } from "./memorybackend-bardwiki.js";
 import { selectBackend, capabilitiesOf } from "./memorybackend.js";
 import { createCardStore } from "./cardstore.js";
+import { createTurnFlow } from "./memoryturn.js";
 
-export function createMemory(api, { notify = () => {}, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
+export function createMemory(api, { notify = () => {}, log = (...a) => console.log("[Dusk 기억]", ...a), potLibrary = null } = {}) {
   const store = createMemoryStore(api);
   const cards = createCardStore(api);
   const injector = createMemoryInjector(api, { store, log });
-  const runner = createMemoryRunner(api, { store, log, notify, afterAnalyze: async (ci, ti) => { if (injector.mode() === "lore") await injector.syncLore(ci, ti); } });
+  const link = {};  // 턴 흐름이 켜지면 채워진다(리수폿 Writer와 기록 호출을 합칠 때 러너가 쓴다)
+  const runner = createMemoryRunner(api, { store, log, notify, link, afterAnalyze: async (ci, ti) => { if (injector.mode() === "lore") await injector.syncLore(ci, ti); } });
   const bardwiki = createBardWikiBackend(api, { store, log });
+  const flow = potLibrary ? createTurnFlow(api, { store, runner, injector, sourceLibrary: potLibrary, link, log }) : null;
   const backend = (settings) => selectBackend(api, settings?.backend ?? "auto");
   let active = "off";
   // 반환: 선택된 백엔드 id. bardwiki/off면 러너·주입 훅을 등록하지 않는다(이중 비용·이중 주입 방지).
@@ -22,11 +25,12 @@ export function createMemory(api, { notify = () => {}, log = (...a) => console.l
     if (sel.id === "local") {
       await injector.start().catch((e) => log("주입 시작 실패", e?.message ?? e));
       await runner.start();
+      if (flow) await flow.start().catch((e) => log("턴 흐름 시작 실패", e?.message ?? e));
     } else {
       await store.updateIndex((i) => { i.status.hook = sel.id === "bardwiki" ? "bardwiki" : "off"; });
     }
     if (sel.duplicate) notify("BardWiki와 장기기억이 중복돼요. 비용이 두 번 들 수 있어요.");
     return active;
   }
-  return { store, cards, runner, injector, bardwiki, backend, capabilities: capabilitiesOf, start, active: () => active };
+  return { store, cards, runner, injector, flow, bardwiki, backend, capabilities: capabilitiesOf, start, active: () => active };
 }

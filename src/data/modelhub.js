@@ -66,5 +66,7 @@ export async function listModels(api, presetId, { signal } = {}) {
   const s = await hub(api); await s.keys.load();
   return providerModelList(api, s.keys, presetOf(s.cfg, presetId), { signal });
 }
+// 리수폿 단계 호출(고르기·정리 노트·기록하기)의 토큰 사용량 집계용
+export async function recordUsage(api, stage, usage) { const s = await hub(api); noteUsage(api, s, stage, usage); }
 export const copilotLogin = (api, opts) => copilotLoginStep(api, opts);
 export { defaultCfg };

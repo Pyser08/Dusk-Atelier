@@ -10,7 +10,7 @@ import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engi
 const midOf = (m) => typeof m?.chatId === "string" && m.chatId && !m.chatId.startsWith("inherited:") ? m.chatId : null;
 const MAX_FAILS = 5;
 
-export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null } = {}) {
+export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null } = {}) {
   let timer = null, dirty = false, running = false, started = false;
   let session = { calls: 0, hooks: 0, displays: 0, hookAt: 0, tick: null }; const lastTried = new Map(); let lastTickAt = 0;
   const note = (result, extra = {}) => { session.tick = { at: Date.now(), result, ...extra }; };
@@ -23,8 +23,8 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
   async function bump(chaId, fn) { return store.updateIndex((idx) => { const b = idx.bots[chaId] ??= { on: true, ignore: [], fails: 0 }; return fn(b, idx); }); }
   async function status(patch) { return store.updateIndex((idx) => { Object.assign(idx.status, patch); }).catch(() => {}); }
 
-  // 한 메시지(또는 묶음)를 분석해 반영. group: 같은 입력에 합칠 메시지 인덱스들(마지막이 앵커).
-  async function analyzeAt(charIndex, chatIndex, group, { signal, manual = false } = {}) {
+  // 분석 대상 한 묶음의 공통 자료(채팅·앵커·설정). 모델 호출 없음.
+  async function gather(charIndex, chatIndex, group) {
     const character = await api.getCharacterFromIndex(charIndex), chat = await api.getChatFromIndex(charIndex, chatIndex);
     if (!character || !chat) throw new Error("캐릭터 또는 채팅을 찾지 못했어요.");
     const chaId = String(character.chaId ?? charIndex), chatId = String(chat.id ?? chatIndex);
@@ -32,25 +32,50 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     const text = group.map((i) => group.length > 1 ? line(messages[i], i, 3000) : extractMessageText(messages[i]).trim()).join("\n\n");
     const h = hashText(extractMessageText(m)), anchor = { at: last, mid: midOf(m), h };
     const idx = await store.getIndex(), bot = idx.bots[chaId] ?? { on: true, ignore: [] };
-    if (!manual) {
-      if (bot.on === false || bot.paused || idx.settings.autoRecord === false) return "off";
-      const ordinal = aiIndexes(messages).filter((i) => i <= last).length;
-      if (ordinal < (idx.settings.startTurn ?? 1)) return "early";
-      if (text.length < idx.settings.minChars) return "short";
-      if ((idx.settings.everyN ?? 1) > 1 && ordinal % idx.settings.everyN !== 0) return "skip";
-    }
+    return { character, chat, chaId, chatId, messages, last, text, h, anchor, idx, bot };
+  }
+  // 자동 기록 조건. 문자열이면 기록하지 않는 이유, null이면 기록 대상.
+  function gate(g, manual) {
+    if (manual) return null;
+    if (g.bot.on === false || g.bot.paused || g.idx.settings.autoRecord === false) return "off";
+    const ordinal = aiIndexes(g.messages).filter((i) => i <= g.last).length;
+    if (ordinal < (g.idx.settings.startTurn ?? 1)) return "early";
+    if (g.text.length < g.idx.settings.minChars) return "short";
+    if ((g.idx.settings.everyN ?? 1) > 1 && ordinal % g.idx.settings.everyN !== 0) return "skip";
+    return null;
+  }
+  // 분석 모델에 보낼 입력(기존 폴더 기준).
+  function inputOf(g, existing, group) {
+    const recent = g.messages.slice(Math.max(0, group[0] - 6), group[0]).map((mm, k) => line(mm, Math.max(0, group[0] - 6) + k));
+    return { bot: g.character.name, known: existing ? knownPeople(existing) : [], ignore: [...(g.bot.ignore ?? [])],
+      previousScene: existing ? (({ sum, facts, when } = {}) => sum ? { sum, facts, ...(when ? { when } : {}) } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, openItems: existing ? openForPrompt(existing) : [], recent, newest: { index: g.last, text: g.text } };
+  }
+  // 리수폿 Writer 호출에 같이 실을 때 쓰는 준비물. 기록 대상이 아니면 null.
+  async function prepareLatest(charIndex, chatIndex) {
+    const i = await latestAiIndex(charIndex, chatIndex); if (i < 0) return null;
+    const g = await gather(charIndex, chatIndex, [i]);
+    if (gate(g, false)) return null;
+    const existing = await store.getFolder(g.chaId, g.chatId);
+    if (existing?.cursor?.h === g.h && existing.cursor.at === g.last) return null;
+    return { h: g.h, ignore: [...(g.bot.ignore ?? [])], input: inputOf(g, existing, [i]) };
+  }
+
+  // 한 메시지(또는 묶음)를 분석해 반영. group: 같은 입력에 합칠 메시지 인덱스들(마지막이 앵커).
+  async function analyzeAt(charIndex, chatIndex, group, { signal, manual = false } = {}) {
+    const g = await gather(charIndex, chatIndex, group);
+    const { character, chat, chaId, chatId, messages, last, text, h, anchor, idx, bot } = g;
+    const why = gate(g, manual); if (why) return why;
     const existing = await store.getFolder(chaId, chatId);
     if (existing?.cursor?.h === h && existing.cursor.at === last) return "done";
     const tryKey = chaId + "::" + chatId;
     if (!manual && lastTried.get(tryKey) === h) return "done";
     lastTried.set(tryKey, h);
     const firstTime = !existing && !bot.notified;
-    const recent = messages.slice(Math.max(0, group[0] - 6), group[0]).map((mm, k) => line(mm, Math.max(0, group[0] - 6) + k));
-    const input = { bot: character.name, known: existing ? knownPeople(existing) : [], ignore: [...(bot.ignore ?? [])],
-      previousScene: existing ? (({ sum, facts, when } = {}) => sum ? { sum, facts, ...(when ? { when } : {}) } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, openItems: existing ? openForPrompt(existing) : [], recent, newest: { index: last, text } };
-    session.calls++;
-    let result;
-    try { result = await analyze((msgs) => run(msgs, idx.settings.model, signal), input); }
+    const input = inputOf(g, existing, group);
+    let result = manual ? null : link?.take?.(h) ?? null;
+    if (result) session.combined = (session.combined ?? 0) + 1;
+    else session.calls++;
+    try { if (!result) result = await analyze((msgs) => run(msgs, idx.settings.model, signal), input); }
     catch (e) {
       const fails = await bump(chaId, (b) => ++b.fails);
       await status({ lastError: String(e?.message ?? e).slice(0, 300) });
@@ -106,6 +131,7 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
       }
       const i = await latestAiIndex(ci, ti);
       if (i < 0) { note("noai"); return; }
+      if (link?.settle) await link.settle(ci, ti).catch(() => {});  // 리수폿 Writer가 같은 응답을 처리 중이면 끝날 때까지 기다려 호출을 합친다
       const r = await analyzeAt(ci, ti, [i]);
       note(typeof r === "string" ? r : "ok", { at_msg: i });
     } catch (e) { note("error", { error: String(e?.message ?? e).slice(0, 200) }); log("자동 분석 실패", e?.message ?? e); }
@@ -167,6 +193,6 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     return { total: groups.length, failed };
   }
 
-  return { start, onOutput, tick, analyzeAt, analyzeLatest: async (ci, ti) => { const i = await latestAiIndex(ci, ti); if (i < 0) throw new Error("분석할 AI 응답이 없어요."); return analyzeAt(ci, ti, [i], { manual: true }); },
+  return { start, onOutput, tick, analyzeAt, prepareLatest, analyzeLatest: async (ci, ti) => { const i = await latestAiIndex(ci, ti); if (i < 0) throw new Error("분석할 AI 응답이 없어요."); return analyzeAt(ci, ti, [i], { manual: true }); },
     planBackfill, backfill, digestIfNeeded, session: () => ({ ...session }), isStarted: () => started, stop: () => clearTimeout(timer) };
 }

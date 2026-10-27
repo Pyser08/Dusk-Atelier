@@ -22,7 +22,7 @@ export function createMemoryStoreV3(api) {
     const raw = await get(INDEX_KEY);
     if (!raw || raw.v !== V3) return newIndex();
     const base = newIndex();
-    return { ...base, ...raw, settings: { ...base.settings, ...raw.settings, inject: { ...base.settings.inject, ...raw.settings?.inject }, loreRef: { ...base.settings.loreRef, ...raw.settings?.loreRef }, model: { ...base.settings.model, ...raw.settings?.model } }, bots: raw.bots ?? {}, folders: raw.folders ?? {}, status: { ...base.status, ...raw.status }, pot: { ...base.pot, ...raw.pot } };
+    return { ...base, ...raw, settings: { ...base.settings, ...raw.settings, inject: { ...base.settings.inject, ...raw.settings?.inject }, loreRef: { ...base.settings.loreRef, ...raw.settings?.loreRef }, model: { ...base.settings.model, ...raw.settings?.model }, flow: { ...base.settings.flow, ...raw.settings?.flow } }, bots: raw.bots ?? {}, folders: raw.folders ?? {}, status: { ...base.status, ...raw.status }, pot: { ...base.pot, ...raw.pot } };
   };
   const writeFolder = async (idx, folder) => {
     for (const p of Object.values(folder.people)) p.records = pruneRecords(p.records ?? [], idx.settings.personCap);

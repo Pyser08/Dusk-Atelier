@@ -13,7 +13,7 @@ import { normalizeWikiRetention, wikiRetentionStatus } from '../../engine/pot/wi
 import { createEmptyWikiScope, createWikiDocument, deleteWikiDocument, normalizeWikiScope, parseWikiMarkdown, restoreWikiHistory, searchValidatedWikiDocuments, updateWikiDocument } from '../../engine/pot/wiki-schema.js';
 import { WikiRepository } from './wiki-store.js';
 
-class WikiController {
+export class WikiController {
   constructor(api, storage = api.pluginStorage, options = {}) {
     this.api=api;this.userIdentity=null;this.userIdentityPromise=null;this.userIdentityPending=false;this.userIdentitySequence=0;this.personaNameContext=null;
     this.scopeManager = options.scopeManager || new ChatScopeManager(api, options);

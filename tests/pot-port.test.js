@@ -76,11 +76,14 @@ test('상수·데이터 값이 원본과 같음', { skip }, () => {
   }
 });
 
+// Dusk 연결 패치(tools/pot-patches.json)는 되돌려서 원본과 비교한다.
+const PATCHES = JSON.parse(fs.readFileSync(path.join(root, 'tools/pot-patches.json'), 'utf8'));
+const unpatch = (text) => PATCHES.reduce((t, p) => t.split(p.to).join(p.from), text);
 const HISTORY = /^\s*\/\/ (?:(?:Release|Local|PersonaName|[A-Z][A-Za-z]*) )?V\d+\b.*$\n?/gm; // tools/pot-split.mjs와 같은 규칙
 test('함수 본문이 원본과 같음 (주석 이력만 제거)', { skip }, () => {
   for (const [n, v] of Object.entries(ported)) {
     if (typeof v !== 'function') continue;
-    assert.equal(String(v), String(orig[n]).replace(HISTORY, ''), n);
+    assert.equal(unpatch(String(v)), String(orig[n]).replace(HISTORY, ''), n);
   }
 });
 

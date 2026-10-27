@@ -77,3 +77,13 @@ export function addUsage(u, stage, usage) {
   const k = stage || "tools", cur = u.by[k] || { calls: 0, input: 0, output: 0 };
   return { total: { calls: u.total.calls + 1, input: u.total.input + inp, output: u.total.output + out }, by: { ...u.by, [k]: { calls: cur.calls + 1, input: cur.input + inp, output: cur.output + out } } };
 }
+
+// 리수폿 설정(models·useRisuSubmodel)에 넣을 값. 고른 모델이 하나도 없으면 리스 보조 모델만 쓴다(useRisuSubmodel).
+export function potModels(cfg) {
+  const picks = Object.fromEntries(STAGES.map((s) => [s, pickFor(cfg, s)]));
+  if (STAGES.every((s) => !picks[s])) return { useRisuSubmodel: true };
+  const risu = () => { const p = { ...createModelPreset("리스 보조 모델"), provider: "risuai", baseUrl: "", model: "RisuAI 보조모델", reasoningQuickSetting: "default", vertexPaygoTier: "default", extraBodyJson: "", receiveContextAsPdf: false }; delete p.pdfMode; return validateModelPreset(p); };
+  const shared = cfg.easy.kind === "api" ? presetOf(cfg, cfg.easy.presetId) : risu();
+  const stages = Object.fromEntries(STAGES.map((s) => [s, picks[s] && cfg.stages[s].mode === "dedicated" ? { mode: "dedicated", preset: presetOf(cfg, cfg.stages[s].presetId) } : { mode: "shared" }]));
+  return { useRisuSubmodel: false, shared, stages };
+}
