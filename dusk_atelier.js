@@ -1061,7 +1061,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
  .rb-mem-back{display:inline-flex}
  .rb-mem-col{padding:10px}
  .rb-mem-grid{grid-template-columns:1fr}
- .rb-mem-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.rb-mem-tabs .rb-chip{flex:0 0 auto}
+ .rb-mem-tabs{flex-wrap:nowrap;justify-content:center;gap:4px}.rb-mem-tabs .rb-chip{flex:1 1 0;min-width:0;min-height:44px;padding-left:4px;padding-right:4px;justify-content:center;text-align:center;white-space:nowrap;font-size:14px}
  .rb-mem-tools .rb-search{min-width:0;flex-basis:100%}
  .rb-mem-head{flex-wrap:wrap}
  .rb-mem-range input{width:96px}
