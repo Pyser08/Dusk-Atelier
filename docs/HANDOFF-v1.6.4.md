@@ -65,3 +65,11 @@
 ## (참고) 2단계에서 보던 곳
 - 리수폿 저장 형식: `src/data/pot/wiki-store.js`, `src/engine/pot/chat-scope.js`(채팅 범위 키), `src/engine/pot/settings.js`(설정·봇별 기능 세트 `featureSettingsFor`), `src/engine/pot/people-folders.js`·`people-pins.js`.
 - Dusk 기존 저장소: `src/data/memorystore.js`(v2 키·직렬 쓰기 큐).
+
+## 6단계 결과 (완료, 2026-10-28)
+- **처음 설정하기 마법사** `ui/screens/memory/setup.js`(`openSetup`): 3단계(AI 고르기 → 무엇을 기억할까요 → 켜기), 단계 점·이전/나중에. 끝에서 모델 설정·추적 수준·`flow {on,mode,setupDone}` 저장 후 `flow.apply()`. 리수폿 동시 설치면 ‘가져온 뒤 끄기’ 안내.
+- **설정 0개로 켜기** `engine/firstrun.js`: 홈 스위치를 처음 켤 때(`setupDone` 없음) 켜진 기능이 없으면 ‘기본’ 수준을 적용(`firstRunFeatures`). 이미 정한 설정은 그대로.
+- 홈: 꺼져 있을 때 ‘처음 설정하기’ → 마법사, 켜져 있으면 ‘설정 열기’. 둘러보기에 장기 기억·기억 카드 문구 갱신.
+- 용어: 사용자 화면은 이미 ‘관련 인물 고르기·정리 노트·기록하기’ 사용(Router 등은 고급 단계별 모델 옆 괄호만).
+- 시험 `tests/firstrun.test.js` 4개, 전체 192(9 건너뜀) 통과, 빌드 2.5MB.
+- **아직 안 한 것**: 크레딧 카드, 범위 칩·설정 검색·되돌리기·프리셋 공유, 월경·임신 UI/날짜 공유, 인물 ✎📌⏸, 실제 리스 시험(마법사로 켜 보기).

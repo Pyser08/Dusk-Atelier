@@ -604,6 +604,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-card-dialog{width:min(420px,94vw);max-height:92vh;overflow:auto}.rb-card-dialog .rb-card-canvas{margin:8px 0}
 @container memwrap (max-width:900px){.rb-card-edit{grid-template-columns:1fr}.rb-card-side{position:static;max-width:340px;width:100%;margin:0 auto}}
 
+.rb-wiz{display:flex;flex-direction:column;gap:14px;max-width:520px;width:100%}.rb-wiz-dots{display:flex;gap:8px;list-style:none;margin:0;padding:0}.rb-wiz-dots li{flex:1;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--rb-mute)}.rb-wiz-dots li i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--rb-surf2);font-style:normal;font-weight:700}.rb-wiz-dots li.on{color:var(--rb-text);font-weight:700}.rb-wiz-dots li.on i{background:var(--rb-acc-a);color:#fff}.rb-wiz-dots li.done i{background:var(--rb-acc-soft)}.rb-wiz-body{display:flex;flex-direction:column;gap:12px}.rb-wiz-sum{padding:10px 12px;border-radius:10px;background:var(--rb-surf2);font-weight:700}
 .rb-mem-home{padding:14px;display:flex;flex-direction:column;gap:12px}.rb-mem-home.on{border-color:var(--rb-acc-a)}
 .rb-mem-homehead{display:flex;align-items:center;gap:12px}.rb-mem-homehead .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.rb-mem-homehead b{font-size:16px}
 .rb-mem-flowsteps{display:flex;gap:4px;list-style:none;margin:0;padding:0}
