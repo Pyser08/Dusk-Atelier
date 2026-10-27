@@ -26,7 +26,7 @@ const STASH_MAX = 8;
 
 // link: 러너와 공유하는 빈 객체. 턴 흐름이 켜지면 settle/take가 채워진다.
 export function createTurnFlow(api, { store, runner, injector, sourceLibrary, link = {}, log = (...a) => console.log("[Dusk 기억]", ...a), scheduler = globalThis } = {}) {
-  let rt = null, starting = null, lastTurn = null;
+  let rt = null, starting = null, lastTurn = null, cold = null;
   const stash = new Map();  // 메시지 해시 → 검증된 dusk 구획
   const putStash = (h, v) => { stash.set(h, v); while (stash.size > STASH_MAX) stash.delete(stash.keys().next().value); };
   const libFor = (mode) => mode === "accurate" ? sourceLibrary : { ...sourceLibrary, base: { ...sourceLibrary.base, director: undefined } };
@@ -136,5 +136,14 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
     return true;
   }
 
-  return { start: apply, apply, stop, isOn: () => !!rt, last: () => lastTurn, runtime: () => rt, stash: () => stash.size };
+  // 화면용 리수폿 설정 저장소: 흐름이 켜져 있으면 그것을, 꺼져 있으면 따로 읽은 것을 준다(둘 다 같은 저장소에 쓴다).
+  async function settingsStore() {
+    if (rt) return rt.settings;
+    cold ??= (async () => { const s = new SettingsStore(createPotStorage(api, store), { promptKeys: promptKeysOf(sourceLibrary) }); await s.load(); return s; })();
+    const s = await cold; if (!s.status().loaded) cold = null;
+    return s;
+  }
+  const dropCold = () => { cold = null; };
+
+  return { start: apply, apply: async () => { dropCold(); return apply(); }, stop, isOn: () => !!rt, last: () => lastTurn, runtime: () => rt, stash: () => stash.size, settings: settingsStore };
 }

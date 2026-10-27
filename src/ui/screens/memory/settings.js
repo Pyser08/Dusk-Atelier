@@ -3,6 +3,7 @@ import { btn, switchEl, setSwitch, confirmDialog, progressBar } from "../../kit.
 import { AI_MODES } from "../../../engine/merge.js";
 import { mem, fail } from "./common.js";
 import { parseTags, DEFAULT_TAG_TEXT } from "../../../engine/card/tags.js";
+import { flowSections } from "./flowsettings.js";
 
 function builders(ctx, idx, redraw) {
   const M = ctx.memory, S = idx.settings;
@@ -26,8 +27,9 @@ export async function renderGlobalSettings(ctx, host, { redraw }) {
   const modeLabel = backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드";
 
   const ccfg = await M.cards.getCfg();
-  const body = h("div", { class: "rb-mem-foldbody" },
-    h("div", { class: "rb-mem-modeline" }, h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), h("span", { class: "rb-muted" }, backend.reason)),
+  const flowHost = h("div");
+  if (backend.id === "local") await flowSections(ctx, flowHost, { redraw }).catch(fail(ctx));
+  const adv = h("details", { class: "rb-mem-man rb-mem-adv", open: !!m.advOpen, onToggle: (e) => { m.advOpen = e.target.open; } }, h("summary", null, "고급: 기록·주입 세부 설정"),
     section("기억 저장소", h("label", { class: "rb-mem-field" }, h("span", null, "저장소"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.backend = e.target.value; }) }, [["auto", "자동"], ["local", "플러그인"], ["bardwiki", "BardWiki"], ["off", "끔"]].map(([v, l]) => h("option", { value: v, selected: S.backend === v }, l)))), h("p", { class: "rb-muted" }, "리스바드에서는 이중 비용을 막으려고 플러그인의 분석·주입을 끄고 위키를 읽어요. 바꾼 뒤에는 RisuAI를 다시 불러와야 훅에 반영돼요.")),
     caps.analyze ? section("분석", h("label", { class: "rb-mem-field" }, h("span", null, "분석 모델"), mode, sid),
       num("디바운스(초)", () => S.debounceSec, (s, v) => { s.debounceSec = v; }, { max: 60 }), num("기록 시작 턴(1=첫 응답부터)", () => S.startTurn ?? 1, (s, v) => { s.startTurn = Math.max(1, v); }, { min: 1, max: 50 }), num("N턴마다 분석", () => S.everyN, (s, v) => { s.everyN = Math.max(1, v); }, { min: 1, max: 20 }),
@@ -42,7 +44,8 @@ export async function renderGlobalSettings(ctx, host, { redraw }) {
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 들어간 기억 보기"), man ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `주입함 (약 ${man.tokens} 토큰)` : "주입하지 않음"}`),
         h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요."))) : null,
     cardSettings(ctx, ccfg, redraw));
-  const fold = h("details", { class: "rb-mem-fold", open: !!m.globalOpen }, h("summary", null, "전체 설정", h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel)), body);
+  const body = h("div", { class: "rb-mem-foldbody" }, h("div", { class: "rb-mem-modeline" }, h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), h("span", { class: "rb-muted" }, backend.reason)), flowHost, adv);
+  const fold = h("details", { class: "rb-mem-fold", open: !!m.globalOpen }, h("summary", null, "설정", h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel)), body);
   fold.addEventListener("toggle", () => { m.globalOpen = fold.open; });
   replace(host, fold);
 }

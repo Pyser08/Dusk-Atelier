@@ -6,6 +6,7 @@ import { mem, fail } from "./common.js";
 import { renderBotList } from "./botlist.js";
 import { renderBotView } from "./botview.js";
 import { renderGlobalSettings } from "./settings.js";
+import { renderMemoryHome } from "./home.js";
 
 export async function renderMemory(ctx) {
   const m = mem(ctx);
@@ -17,9 +18,9 @@ export async function renderMemory(ctx) {
   replace(ctx.main, h("div", { class: "rb-mem-wrap" }, h("div", { class: "rb-mem-root", "data-view": m.view === "bot" && m.botId ? "bot" : "bots" }, listHost, viewHost)));
   const open = (id) => { m.botId = id; m.chatIndex = 0; m.tab = "people"; m.personKey = ""; m.view = "bot"; m.compose = null; redraw(); };
   if (showList) {
-    const gHost = h("div"), bHost = h("div", { class: "rb-mem-botwrap" });
-    replace(listHost, gHost, bHost);
-    await Promise.all([renderGlobalSettings(ctx, gHost, { redraw }), renderBotList(ctx, bHost, { open, redraw })]);
+    const hHost = h("div"), gHost = h("div"), bHost = h("div", { class: "rb-mem-botwrap" });
+    replace(listHost, hHost, gHost, bHost);
+    await Promise.all([renderMemoryHome(ctx, hHost, { redraw }), renderGlobalSettings(ctx, gHost, { redraw }), renderBotList(ctx, bHost, { open, redraw })]);
   }
   if (showView) {
     // 탭·채팅 전환은 오른쪽 칸만 다시 그린다(목록·전역 설정은 건드리지 않는다).
