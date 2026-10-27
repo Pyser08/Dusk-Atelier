@@ -115,8 +115,8 @@
 | # | 리수폿 기능(원본 모듈) | Dusk 위치 | 상태 |
 |---|---|---|---|
 | 1 | 전원·추적 수준·6기능 카드(호감·말투·인지·의심·개방·리듬) `ui` | 설정 > 기능 카드 | ✅ |
-| 2 | 수치 모드·계산 정책·증감 승수 `ui` | 호감 카드 ‘폭’만 | 🟡 |
-| 3 | 관계만 모드·인식 모드 `ui` | 인식 3단계만 | 🟡 |
+| 2 | 수치 모드·계산 정책·증감 승수 `ui` | 설정 > 기능 카드 세부: 숫자 표시·증가/감소 승수(0~10, 0.25 단위)·계산 예시 문구 | ✅ |
+| 3 | 관계만 모드·인식 모드 `ui` | 고급 > 흐름 세부: 서사관계 전용 모드 + 인식 3단계(리듬 카드는 전용 모드에서 쉼 안내) | ✅ |
 | 4 | 모델 설정: 공급자·모델·키·연결 시험·단계별 `model-editor` | 설정 > AI 모델 | ✅ |
 | 5 | 모델 고급: 모델 목록 불러오기·호출 제한시간·추가 JSON body·reasoning·PDF 전송 방식·Copilot/GitHub 인증·Vertex 서비스계정·키 복사 | 없음(엔진 `llm-client`·`copilot-client`·`vertex-client`) | 🔧 |
 | 6 | Router 모드 빠름/정확 `flow-ui` | 설정 > 기억 방식 | ✅ |
@@ -127,26 +127,26 @@
 | 11 | AI 참고 설정(최근 대화 턴·기억 참조 개수) `manual-ai-settings-ui` | 없음 | 🔧 (Hypa 부분은 ⛔) |
 | 12 | Hypa·Hypa+ 참고 | 일부러 안 만듦, `syncPot`이 항상 끔 | ⛔ |
 | 13 | 관계 이력 보관 개수 `record-retention-ui` | 없음(Dusk ‘인물당 기록 상한’은 별개) | 🔧 |
-| 14 | 인물 목록 폴더 분류(새 폴더·미분류·정리) `people-folders-ui` | 인물 카드 그리드(검색·정렬) | 🟡 |
-| 15 | 자동 추적 인물 선택(N명만) `people-tracking-ui` | 인물 ⏸(이 인물만 끔) | 🟡 |
+| 14 | 인물 목록 폴더 분류(새 폴더·미분류·정리) `people-folders-ui` | 인물 목록 폴더 묶기(접기 유지) · 더보기 > 인물 폴더 정리(새 폴더·이름 바꾸기·삭제·옮기기) `folderui.js` | ✅ |
+| 15 | 자동 추적 인물 선택(N명만) `people-tracking-ui` | 더보기 > 추적 인물 고르기(자동 기록 모두/고른 인물만 + 인물 체크) `trackui.js` | ✅ |
 | 16 | 인물 후보 찾기·로어북 선택 분석·수동 새 인물 seed `people-lore-selector-ui`·`people-ui` | 없음(엔진 `people-lore-selector`·`people-import`) | 🔧 |
-| 17 | 인물 항목 직접 추가·편집·삭제 `people-records-ui`·`people-field-ui` | 인물 ✎(절 본문 수정) | 🟡 |
+| 17 | 인물 항목 직접 추가·편집·삭제 `people-records-ui`·`people-field-ui` | 인물 페이지 ‘항목 관리’(추가·고치기·지우기, 12종) `recordsui.js`·`engine/personrecords.js` | ✅ |
 | 18 | 항목별 AI 작성(Writer) `people-field-ui`·`people-metric-ai-ui` | 없음 | 🔧 |
 | 19 | 수치 직접 편집(호감·의심·음란·첫인상) `people-entry-editor`·`people-metrics-ui` | 인물 페이지 수치 ✎(고정도 덮어씀) | ✅ |
 | 20 | 장기 변화 후보(증거·승인/거부) `people-candidate-ui`·`people-patterns-ui` | 없음 | 🔧 |
-| 21 | NPC 감정 기록 `npc-emotion-ui` | 위키 ‘지금 상태’ 한 줄만 | 🟡 |
+| 21 | NPC 감정 기록 `npc-emotion-ui` | 항목 관리의 ‘NPC 감정 추가’(대상 인물·[감정] 이유 형식 검사) | ✅ |
 | 22 | 인물 고정(📌) `people-ui` | 인물 📌 | ✅ |
-| 23 | 인물 통합(미리보기·항목별 선택·통합 전 백업) `person-merge-ui` | 인물 합치기(별칭 병합) | 🟡 |
+| 23 | 인물 통합(미리보기·항목별 선택·통합 전 백업) `person-merge-ui` | 합치기 미리보기·항목별 선택은 이미 있었고, 합치기 전 백업(최근 5건) + 더보기 > 합치기 되돌리기 추가 | ✅ |
 | 24 | 인물 AI 다시 정리(구역 선택·꼼꼼 전체 작성) `person-refresh-ui` | 없음(엔진 `person-refresh`·`person-thorough-refresh`) | 🔧 |
 | 25 | 직접 지시로 변경안 만들기 `people-command-ui` | 없음(엔진 `people-command`) | 🔧 |
 | 26 | 위키 문서 화면: 변경 이력 복원·자동 기록 재시도·활동 기록 삭제·요약 정리 `wiki-ui` | 인물 페이지 + 고급 > 위키 기록 관리 | ✅(요약 정리·이력·재시도) |
-| 27 | 수동 Writer: RP 본문 붙여넣어 분석·변경안 검토 `writer-ui` | 지난 대화 분석·마지막 응답만 분석 | 🟡 |
+| 27 | 수동 Writer: RP 본문 붙여넣어 분석·변경안 검토 `writer-ui` | 더보기 > RP 붙여넣어 분석(수동 Writer): 최근 응답 불러오기·붙여넣기 → 변경안 검토 → 반영 `writerui.js`(`memorytools.js`에 `writer`) | ✅ |
 | 28 | 복구: JSON 붙여넣어 강제 반영 `writer-recovery-ui` | 고급 > 복구·실행 기록 | ✅ |
 | 29 | 실행 기록 검사기·단계별 재시도·삭제 `inspector`·`inspector-records` | ‘마지막 요청에 들어간 기억 보기’·진단 줄 | 🟡 |
 | 30 | 데이터 가져오기 | 설정 > 가져오기 | ✅ |
 | 31 | 내보내기·전체 백업·프리셋 공유 `flow-ui` | 고급 > 설정 내보내기·가져오기·프리셋 코드 | ✅ |
 | 32 | 고아 기록 정리 · 기억 초기화 | 설정 | ✅ |
-| 33 | 토큰 사용량(합계) | 설정 > AI 모델 | ✅ (단계별 표시 없음 🟡) |
+| 33 | 토큰 사용량(합계) | 설정 > AI 모델 | ✅ (설정 > AI 모델 ‘단계별 사용량’ 접기 추가) |
 | 34 | PDF 참고·PDF 전송 `pdf-reference` | 설정 > 모델 고급 ‘PDF 전송’ | ✅ |
 | 35 | 원문 확인(source-check) | 고급 > 본문 변경 검사 스위치 | ✅ |
 | 36 | 성인: 욕구 · 월경·임신 | 설정 > 고급 > 성인 항목 | ✅ |
@@ -174,3 +174,9 @@
 - **19 수치 직접 편집**: 고정핀(📌)과 충돌해도 **덮어쓴다**(거절하지 않음). 구현 완료(2026-10-28): `personedit.editMetricValue`가 고정을 잠깐 풀고 고친 뒤 다시 고정, 인물 페이지 수치 ✎의 거절 제거·확인창에 안내. 시험 2개 추가.
 - **5 Copilot·Vertex 인증**: **고급 모드에서만 표시**. 이미 `modeladv.js`가 고급 모드 전용이라 추가 작업 없음.
 - **12 Hypa 설정값·코드**: **그대로 둔다**(`syncPot`이 항상 끔, 생성 파일은 건드리지 않음). 따라서 사용자 확인 필요 항목은 모두 해결됨.
+
+## 7-B 🟡 구현 결과 (2026-10-28)
+- 🟡 12개 중 29(실행 기록 한 건 재실행: 재생 입력이 세션 메모리에만 있어 불가)만 제외하고 전부 구현. 대조표 최신: ✅ 2·3·14·15·17·21·23·27·33 추가.
+- 새 파일: `engine/peoplegroup.js`, `engine/personrecords.js`, `ui/screens/memory/{folderui,recordsui,trackui,writerui}.js`. 수정: `people.js`(메뉴·묶음 표시), `flowsettings.js`(승수·단계별 사용량), `advanced.js`(전용 모드), `mergeui.js`(백업·되돌리기), `memorytools.js`(writer), `styles.js`.
+- 시험: `node --test` 233개(통과 224·실패 0) + 브라우저 연기 시험 `node tests/e2e/run-smoke.mjs`(폴더·항목·NPC 감정·수동 Writer·추적·되돌리기 13항목 통과, 가짜 ctx 사용). 실제 리스 시험은 아직: 월경·임신·검색 필터·이력 되돌리기·미리보기에 더해 폴더·항목 관리·수동 Writer·추적 저장.
+- 남은 것(ⓔ 문서 쪽): 버전 올리기(package.json 아직 1.6.3) · CHANGELOG · GUIDE-v1.6.4 · 소스맵 갱신 · 아카 글 · 릴리즈. 문서는 🟡 구현이 끝난 뒤 한 번에 쓰기로 해서 아직 안 씀.

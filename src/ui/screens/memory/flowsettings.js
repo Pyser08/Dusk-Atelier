@@ -41,15 +41,21 @@ export async function flowSections(ctx, host, { redraw }) {
     return h("article", { class: ["rb-card", "rb-mem-feat", f.enabled && "on"] },
       h("div", { class: "rb-mem-shead" }, h("b", null, c.label), h("span", { style: "flex:1" }), sw),
       h("p", { class: "rb-muted" }, c.desc), h("div", { class: "rb-mem-featsum" }, summaryOf(c.id, f)),
+      snap.relationshipOnlyMode && c.id === "rhythm" ? h("div", { class: "rb-note" }, "서사관계 전용 모드에서는 쉬어요. (고급 설정에서 끌 수 있어요)") : null,
       needs.map((n) => h("div", { class: "rb-note warn" }, n.label, " ", btn("켜기", { size: "sm", onClick: () => edit((s) => n.fix(s)) }))),
       body ? h("details", { class: "rb-mem-man" }, h("summary", null, "세부 설정"), body, btn("기본값으로", { size: "sm", onClick: () => edit((s) => { s.features[c.id] = { ...levelPatch("basic")[c.id], enabled: s.features[c.id].enabled }; }) })) : null);
   };
-  const numRow = (label, v, set, { min = 0, max = 5, step = 1 } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("input", { class: "rb-input", type: "number", min, max, step, value: v, onChange: (e) => { const n = Math.min(max, Math.max(min, Number(e.target.value) || 0)); set(n); } }));
+  const numRow = (label, v, set, { min = 0, max = 5, step = 1 } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("input", { class: "rb-input", type: "number", min, max, step, value: v, onChange: (e) => { const raw = Number(e.target.value); const n = Math.min(max, Math.max(min, Number.isFinite(raw) ? Math.round(raw * 100) / 100 : min)); set(n); } }));
+  // 원본 ‘새 사건 예시’ 계산식: 호감·음란 기본 +3, 의심 기본 +2에 증가 승수를 곱한다(기존 총점에는 곱하지 않는다).
+  const rateText = (id, f) => { const base = id === "suspicion" ? 2 : 3, inc = f.increase ?? 1; return `새 사건 예시 +${base} × ${inc} → +${Number((base * inc).toFixed(4))} 반영 · 기존 총점에는 곱하지 않아요.`; };
   const detailRows = (c, f, edit) => {
     const set = (k, v) => edit((s) => { s.features[c.id][k] = v; });
     if (c.detail === "numbers") return h("div", null,
       toggleRow("숫자 표시", "점수를 숫자로도 보여 줘요.", f.numbers === true, (v) => set("numbers", v)),
-      numRow("한 번에 오르는 폭", f.increase ?? 1, (n) => set("increase", n), { min: 1, max: 5 }), numRow("한 번에 내리는 폭", f.decrease ?? 1, (n) => set("decrease", n), { min: 1, max: 5 }));
+      f.numbers === true ? h("div", null,
+        h("div", { class: "rb-mem-grid" }, numRow("증가 승수 ×", f.increase ?? 1, (n) => set("increase", n), { min: 0, max: 10, step: 0.25 }), numRow("감소 승수 ×", f.decrease ?? 1, (n) => set("decrease", n), { min: 0, max: 10, step: 0.25 })),
+        h("p", { class: "rb-muted rb-mem-formula" }, rateText(c.id, f)))
+        : h("p", { class: "rb-muted rb-mem-formula" }, "정성 판단만 적용해요. 보관된 점수는 쓰지 않아요."));
     if (c.detail === "register") return h("div", null,
       h("div", { class: "rb-mem-field" }, h("span", null, "말투가 바뀌면"), segmented([["ask", "확인 후 적용"], ["auto", "자동 적용"]], f.change ?? "ask", (v) => set("change", v), "말투 변경")),
       h("div", { class: "rb-mem-field" }, h("span", null, "말투 다변화"), segmented([["off", "끔"], ["on", "켬"]], f.variety === "off" || !f.variety ? "off" : "on", (v) => set("variety", v === "off" ? "off" : "on"), "말투 다변화")),
@@ -104,7 +110,8 @@ export async function flowSections(ctx, host, { redraw }) {
         h("p", { class: "rb-muted" }, "키는 이 기기의 플러그인 저장소에만 두고, 설정 내보내기·백업·공유 코드에는 넣지 않아요."), h("div", { class: "rb-mem-sact" }, useApi, test), out),
       h("details", { class: "rb-mem-man" }, h("summary", null, "고급: 단계별 모델"), h("p", { class: "rb-muted" }, "단계마다 다른 모델을 쓸 수 있어요. 비워 두면 위 설정을 같이 써요."), stageRows,
         cfg.presets.length ? h("div", { class: "rb-mem-chats" }, cfg.presets.map((p) => h("button", { type: "button", class: "rb-chip", title: "눌러서 삭제", onClick: async () => { if (!(await confirmDialog(ctx.win, { title: `‘${p.name}’ 모델을 지울까요?`, body: "이 모델을 쓰던 단계는 공통 모델로 돌아가요.", ok: "지우기", danger: true }))) return; await saveCfg(ctx.api, removePreset(await getCfg(ctx.api), p.id)); await apply(); paintModel(); } }, p.name, " ✕"))) : null),
-      h("div", { class: "rb-muted" }, `모델 호출 ${fmt(used.calls)}회 · 입력 ${fmt(used.input)} · 출력 ${fmt(used.output)} 토큰 `, btn("집계 지우기", { size: "sm", onClick: async () => { await resetUsage(ctx.api); paintModel(); } })));
+      h("div", { class: "rb-muted" }, `모델 호출 ${fmt(used.calls)}회 · 입력 ${fmt(used.input)} · 출력 ${fmt(used.output)} 토큰 `, btn("집계 지우기", { size: "sm", onClick: async () => { await resetUsage(ctx.api); paintModel(); } })),
+      Object.keys(usage.by ?? {}).length ? h("details", { class: "rb-mem-man" }, h("summary", null, "단계별 사용량"), h("ul", { class: "rb-mem-usage" }, Object.entries(usage.by).map(([k, u]) => h("li", { class: "rb-muted" }, `${STAGE_LABEL[k] ?? k} · 호출 ${fmt(u.calls)}회 · 입력 ${fmt(u.input)} · 출력 ${fmt(u.output)}`)))) : null);
   };
   paintModel().catch(fail(ctx));
 

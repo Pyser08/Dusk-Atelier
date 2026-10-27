@@ -38,6 +38,7 @@ export async function advancedGlobal(ctx, host, { redraw, st, apply }) {
         sw("본문 변경 검사", "켜면 응답 본문이 도중에 바뀐 경우 기록을 저장하지 않아요.", "writerSourceCheckEnabled"),
         sw("기존 인물 로어북 검색", "인물 후보를 찾을 때 로어북도 함께 살펴요.", "writerSearchExistingLore"),
         h("label", { class: "rb-mem-field" }, h("span", null, "고르기 키워드 고정 (쉼표·줄바꿈, 2,000자까지)"), h("textarea", { class: "rb-input", rows: 3, "aria-label": "고르기 키워드 고정", onChange: (e) => ed((x) => { x.routerFixedKeywords = e.target.value.slice(0, 2000); }) }, s.routerFixedKeywords ?? "")),
+        sw("서사관계 전용 모드", "인물 문서와 관계만 기록해요. 사건·장면·장소 기록과 리듬 기능은 쉬고, 이미 있던 기록은 그대로 보존돼요.", "relationshipOnlyMode"),
         h("div", { class: "rb-mem-field" }, h("span", null, "관계만 기록할 때 인지·정체 인식"), segmented([["off", "끔"], ["light", "라이트"], ["on", "켬"]], s.relationshipPerceptionMode ?? "light", (v) => ed((x) => { x.relationshipPerceptionMode = v; }), "관계 인지"))),
       sec("무엇을 따라갈까요", null,
         sw("관찰자 모드", "내가 이야기에 직접 나오지 않고 지켜보는 형식일 때 켜요.", "observerModeEnabled"),

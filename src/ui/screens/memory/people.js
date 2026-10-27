@@ -9,7 +9,12 @@ import { createRewindChat, draftFirstMessage, sceneAt } from "../../../data/memo
 import { isGenerating, Busy } from "../../../engine/safety.js";
 import { findDoc, stateOf, timelineOf, countsOf, filterTimeline, TL_FILTERS, cycleOf } from "../../../engine/personview.js";
 import { openAITools, confirmManual } from "./aitools.js";
-import { openMerge } from "./mergeui.js";
+import { openMerge, restoreLastMerge } from "./mergeui.js";
+import { openTracking } from "./trackui.js";
+import { openRecords } from "./recordsui.js";
+import { openFolders } from "./folderui.js";
+import { openWriter } from "./writerui.js";
+import { hasFolders, groupPeople } from "../../../engine/peoplegroup.js";
 import { wikiPanel } from "./wikipanel.js";
 import { editMetricValue, editSectionText, setPin, isPinned, sectionPinKey, metricPinKey, isPaused, setPaused } from "../../../engine/personedit.js";
 
@@ -46,19 +51,28 @@ export async function renderPeople(env, host) {
   if (m.personKey && folder.people?.[m.personKey]) return personDetail(env, host, m.personKey);
   m.personKey = "";
   if (!people.length) return replace(host, h("div", { class: "rb-empty" }, icon("character", 24), h("div", null, "아직 기록된 인물이 없어요."),
-    caps.analyze ? h("div", { class: "rb-mem-sact" }, btn("지난 대화 전체 분석하기", { kind: "primary", onClick: () => { m.settingsOpen = true; env.redraw(); } }), btn("마지막 응답만 분석", { onClick: () => analyzeNow(env) })) : h("div", { class: "rb-muted" }, "리스바드가 위키를 쌓으면 여기서 볼 수 있어요. 채팅을 열고 새로고침해 주세요.")));
+    caps.analyze ? h("div", { class: "rb-mem-sact" }, btn("지난 대화 전체 분석하기", { kind: "primary", onClick: () => { m.settingsOpen = true; env.redraw(); } }), btn("마지막 응답만 분석", { onClick: () => analyzeNow(env) }), btn("RP 붙여넣어 분석", { onClick: () => openWriter(env).catch(fail(env.ctx)) })) : h("div", { class: "rb-muted" }, "리스바드가 위키를 쌓으면 여기서 볼 수 있어요. 채팅을 열고 새로고침해 주세요.")));
   const q = m.personSearch.trim().toLowerCase();
   let rows = people.filter(([, p]) => !q || [p.name, ...(p.aliases ?? [])].some((n) => String(n).toLowerCase().includes(q)));
   rows = rows.sort(([, a], [, b]) => m.sort === "count" ? visibleRecords(b).length - visibleRecords(a).length : m.sort === "grade" ? GRADES.indexOf(topGrade(b) || "D") - GRADES.indexOf(topGrade(a) || "D") : lastAt(b) - lastAt(a));
-  const grid = h("div", { class: "rb-mem-grid" }, rows.map(([k, p]) => {
+  const card = ([k, p]) => {
     const recs = visibleRecords(p), tg = topGrade(p);
     const dist = GRADES.map((g) => recs.filter((r) => r.g === g).length);
     return h("button", { type: "button", class: "rb-mem-card", onClick: () => { m.personKey = k; m.grades = []; m.search = ""; m.page = 1; env.redraw(); } },
       avatar(p.name, tg), h("span", { class: "txt" }, h("span", { class: "name" }, p.name, " ", gradeBadge(tg)), h("span", { class: "meta" }, `기록 ${recs.length}${lastAt(p) >= 0 ? ` · 마지막 ${at(lastAt(p))}` : ""}${p.wiki ? " · 위키 요약" : ""}`),
         h("span", { class: "rb-mem-minibar", "aria-label": "등급 분포" }, GRADES.map((g, i) => h("i", { "data-g": g, style: { flex: String(Math.max(dist[i], 0.0001)) }, title: `${g} ${dist[i]}` })))));
-  }));
+  };
+  const wk = env.folder.wiki, grouped = wikiEditable(env) && hasFolders(wk);
+  const grid = grouped
+    ? h("div", { class: "rb-mem-pgroups" }, groupPeople(rows, wk).filter((g) => g.rows.length || g.id).map((g) => h("details", { class: "rb-mem-pgroup", open: !(m.foldClosed ?? {})[g.id] ? true : null, onToggle: (e) => { (m.foldClosed ??= {})[g.id] = !e.currentTarget.open; } },
+        h("summary", null, icon("folder", 14), " ", g.name, h("small", { class: "rb-muted" }, ` ${g.rows.length}명`)), h("div", { class: "rb-mem-grid" }, g.rows.map(card)))))
+    : h("div", { class: "rb-mem-grid" }, rows.map(card));
   const menu = btn("더보기", { size: "sm", icon: "more", onClick: (e) => openMenu(env.ctx.win, e.currentTarget, [
     caps.analyze && { label: "인물 합치기", onClick: () => openMerge(env, people).catch(fail(env.ctx)) },
+    caps.analyze && { label: "RP 붙여넣어 분석 (수동 Writer)", onClick: () => openWriter(env).catch(fail(env.ctx)) },
+    wikiEditable(env) && { label: "인물 폴더 정리", onClick: () => openFolders(env, people).catch(fail(env.ctx)) },
+    caps.analyze && env.backend.id === "local" && { label: "추적 인물 고르기", onClick: () => openTracking(env).catch(fail(env.ctx)) },
+    caps.analyze && { label: "합치기 되돌리기", onClick: () => restoreLastMerge(env).catch(fail(env.ctx)) },
     caps.analyze && { label: "고아 기록 정리", onClick: () => cleanOrphans(env) },
     caps.grades === "on-demand" && { label: "등급 매기기(AI)", onClick: () => gradeNow(env) },
     env.backend.id === "bardwiki" && { label: m.showHidden ? "대체·철회 문서 숨기기" : "대체·철회 문서 보기", onClick: () => { m.showHidden = !m.showHidden; env.redraw(); } }
@@ -127,6 +141,7 @@ function personDetail(env, host, key) {
       local && btn({ always: "항상 포함", never: "제외", auto: "자동(관련 시)" }[p.ctx ?? (p.pinned ? "always" : "auto")], { size: "sm", title: "프롬프트 포함 방식: 자동 → 항상 → 제외", onClick: () => editFolder(env, (f) => { const q = f.people[key], c = q.ctx ?? (q.pinned ? "always" : "auto"); q.ctx = { auto: "always", always: "never", never: "auto" }[c]; }) }),
       local && btn(isPaused(env.idx.bots?.[env.bot.id]?.ignore, p) ? "⏸ 기록 쉬는 중" : "⏸ 기록 쉬기", { size: "sm", title: "이 인물의 사건 기록을 새로 만들지 않아요. 이미 쌓인 기록은 그대로고, 인물 위키 수치는 계속 갱신될 수 있어요.", onClick: () => pausePerson(env, p) }),
       local && btn("별칭", { size: "sm", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: "별칭 편집", label: "쉼표로 구분", value: (p.aliases ?? []).join(", "), ok: "저장" }); if (v != null) editFolder(env, (f) => { f.people[key].aliases = v.split(",").map((s) => s.trim()).filter(Boolean); }); } }),
+      local && doc && wikiEditable(env) && btn("항목 관리", { size: "sm", title: "항목 직접 추가·고치기·지우기 · NPC 감정", onClick: () => openRecords(env, doc).catch(fail(env.ctx)) }),
       env.advanced && local && doc && btn("AI 도구", { size: "sm", title: "전체 다시 정리 · 직접 지시 · 항목 AI 작성 · 수치 제안", onClick: () => openAITools(env, doc, p).catch(fail(env.ctx)) }),
       btn("이 인물로 새 봇 만들기", { kind: "primary", size: "sm", onClick: () => { m.compose = { keys: [key] }; m.ctab = "compose"; env.ctx.go("cards"); } })),
     p.digest ? h("div", { class: "rb-card rb-mem-digest" }, h("b", null, "요약 "), p.digest) : null,

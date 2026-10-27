@@ -653,5 +653,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-kind{flex-shrink:0;min-width:34px;text-align:center;font-size:11px;font-weight:700;padding:2px 6px;border-radius:99px;background:var(--rb-acc-soft);color:var(--rb-text)}
 .rb-mem-kind.k-open{background:transparent;border:1px solid var(--rb-line3)}.rb-mem-kind.k-rel{background:var(--rb-line2)}
 .rb-mem-story-row .txt{flex:1;min-width:0}
+.rb-mem-checks{display:flex;flex-direction:column;max-height:260px;overflow:auto;border:1px solid var(--rb-line2);border-radius:10px;padding:4px 10px;margin:8px 0}
+.rb-mem-pgroups{display:flex;flex-direction:column;gap:10px}.rb-mem-pgroup>summary{cursor:pointer;font-weight:700;font-size:14px;padding:8px 2px;display:flex;align-items:center;gap:4px;min-height:36px}.rb-mem-pgroup[open]>summary{margin-bottom:6px}
+.rb-mem-usage{margin:6px 0 0;padding-left:18px;font-size:12px}.rb-mem-formula{font-size:12px;margin:4px 0 0}
 @media (prefers-reduced-motion:no-preference){.rb-mem-flowstep i{transition:background .2s,box-shadow .2s}}
 `+PROB_CSS;
