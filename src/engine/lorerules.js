@@ -55,7 +55,7 @@ export const ridOf = (entry) => entry?.extentions?.da_rid || null;
 //   aff = { def: 기본 %, max: 최대 N명(''=제한 없음), prob: { rid: % } }   소속 폴더 (규칙이 켜진 관리 항목)
 //   extentions.da_place = { links: [폴더 id] }    장소 항목
 // 소속 폴더 안의 항목은 하위 폴더까지 전부 구성원이다 (게헨나 ⊃ 선도부 ⊃ 히나 → 히나는 둘 다).
-// 소속 켜짐: 소속 키(규칙 조건) · 그 안(또는 연결된) 장소가 켜짐 · 구성원이 자기 키로 켜짐
+// 소속 켜짐: 소속 키(규칙 조건) · 바로 그 안(가장 가까운 소속)이거나 연결된 장소가 켜짐 (장소는 상위 소속까지 올라가지 않는다) · 구성원이 자기 키로 켜짐
 // 소속이 켜지면 구성원마다 확률을 굴리고, 통과한 사람 중 무작위로 최대 N명을 켠다. 자기 키로 켜진 구성원은 제한 무관.
 export const AFF_PREFIX = "[소속] ";
 export const PLACE_PREFIX = "[장소] ";
@@ -512,7 +512,7 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     for (const [rid, a] of active) {
       const x = byRid.get(rid);
       if (!x || rid === it.rid) continue;
-      if (x.place && (inAff(x, it.fid) || x.place.includes(it.fid))) return `장소 '${affName(x.entry) || rid}' 켜짐`;
+      if (x.place && (x.affs?.[0] === it.fid || x.place.includes(it.fid))) return `장소 '${affName(x.entry) || rid}' 켜짐`;
     }
     for (const [rid, a] of active) {
       const x = byRid.get(rid);

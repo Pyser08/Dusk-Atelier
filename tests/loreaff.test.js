@@ -36,3 +36,11 @@ test("같이 켜기(연쇄): 프라나가 나오면 지정한 아로나도 켜�
   const r = evaluate({ items: collectManaged(es), messages: [{ role: "user", data: "프라나" }], turn: 1, rng: () => 0 });
   assert.deepEqual(r.fired.map((f) => f.entry.comment.replace("[소속] ", "")).sort(), ["샬레", "아로나", "프라나"].sort());
 });
+
+test("장소는 가장 가까운 소속만 켠다: 다과회실 → 티파티만, 트리니티와 그 연쇄는 안 켜진다", () => {
+  const place = { mode: "normal", key: "다과회실", comment: "[장소] 다과회실", content: "", folder: "티파티", extentions: { da_place: { links: [] }, da_rid: "r_다과회실", da_rule: { on: true, cond: [{ t: "text", keys: "다과회실" }], mode: "all", prob: 100 } } };
+  const es = [folder("트리니티", null, { def: 100, max: "", prob: {} }), folder("티파티", "트리니티", { def: 100, max: "", prob: {} }), place, member("미카", "티파티"), member("마시로", "트리니티")];
+  es[0].extentions.da_rule.chain = [{ rid: "r_마시로", prob: 100 }];
+  const r = evaluate({ items: collectManaged(es), messages: [{ role: "user", data: "다과회실" }], turn: 1, rng: () => 0 });
+  assert.deepEqual(r.fired.map((f) => f.entry.comment.replace(/^\[(소속|장소)\] /, "")).sort(), ["다과회실", "미카", "티파티"].sort());
+});
