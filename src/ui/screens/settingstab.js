@@ -2,6 +2,7 @@
 import { h, replace } from '../dom.js';
 import { guidePanel, note, segmented } from '../kit.js';
 import { icon } from '../icons.js';
+import { openTour } from '../tour.js';
 import { LORE_DEFAULTS, loadLoreSettings, saveLoreSettings } from '../../data/lorerules.js';
 import { devToggleCard } from './devtools.js';
 import { renderCleanup, tile, fullBackup, fullRestore } from './tools.js';
@@ -106,6 +107,7 @@ export async function renderSettingsTab(ctx) {
     h(
       "div",
       { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin-bottom:14px" },
+      tile("help", "처음 둘러보기", "Dusk Atelier 사용법을 다섯 장으로 다시 봐요", () => openTour(ctx), "rb-set-tour"),
       tile("refresh", "업데이트 설정", "새로 가져온 봇 자동 감지, 받은 사본 정리, 채팅 백업", () => ctx.go("settings", "updset"), "rb-set-updset"),
       tile("trash", "설정 정리", "이 플러그인이 저장한 순서·폴더·프리셋·연결 정보를 골라서 지우기", () => ctx.go("settings", "cleanup"), "rb-set-cleanup")
     ),

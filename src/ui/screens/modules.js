@@ -8,7 +8,7 @@ import { buildRisum, moduleJson, safeFileName } from '../../engine/export.js';
 import { hasAssets, loadCharacters, moduleCounts, moduleFlags } from '../../data/modules.js';
 import { copyText, download, fmtWhen, h, replace, vanish } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, chip, trayBtn, tray, sortChips, sortLabel, sortShort, sortBy, fmtSize, colorDialog, loading, spinner, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog, setSwitch, switchEl } from '../kit.js';
+import { emptyState, badge, btn, chip, trayBtn, tray, sortChips, sortLabel, sortShort, sortBy, fmtSize, colorDialog, loading, spinner, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog, setSwitch, switchEl } from '../kit.js';
 import { FOLDER_SWATCHES, NAME_SWATCHES, folderTint, readableName } from '../theme.js';
 import { loadPersonaMap, setPersonaLink } from '../../data/persona.js';
 import { addProjects, findProject } from './dev.js';
@@ -157,7 +157,7 @@ function draw(ctx) {
   if (fv !== void 0 && !filtering) list.dataset.dropFolder = fv;
   if (folders.length) list.appendChild(h("div", { class: "rb-label", style: "padding:14px 12px 6px;border-radius:10px", dataset: filtering ? {} : { dropFolder: "" } }, "폴더 없음"));
   for (const e of loose) list.appendChild(row(ctx, e, filtering));
-  if (!shown.length) list.appendChild(h("div", { class: "rb-empty" }, fv !== void 0 && !filtering ? '이 폴더에 모듈이 없어요. 폴더 메뉴의 "넣을 모듈 고르기"로 넣을 수 있어요.' : entries.length ? "조건에 맞는 모듈이 없어요." : '설치된 모듈이 없어요. 위의 "가져오기"나 파일을 창에 끌어 놓아서 추가하세요.'));
+  if (!shown.length) list.appendChild(fv === void 0 && !entries.length ? emptyState({ icon: "module", title: "아직 모듈이 없어요", text: "모듈 파일을 가져오면 여기서 켜고 끄고 순서를 정할 수 있어요. 파일을 창에 끌어 놓아도 돼요.", actions: [{ label: "파일 가져오기", icon: "upload", onClick: () => ctx.legacy.open() }] }) : h("div", { class: "rb-empty" }, fv !== void 0 && !filtering ? '이 폴더에 모듈이 없어요. 폴더 메뉴의 "넣을 모듈 고르기"로 넣을 수 있어요.' : entries.length ? "조건에 맞는 모듈이 없어요." : '설치된 모듈이 없어요.'));
   const scroll = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
   const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 모듈" });
   replace(ctx.main, toolbar, sortTray, folderBar, bar, list);

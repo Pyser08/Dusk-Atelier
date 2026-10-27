@@ -49,12 +49,32 @@ export async function renderCompose(env, host) {
   const stepper = h("ol", { class: "rb-mem-steps" }, STEPS.map((t, i) => h("li", { "aria-current": i === c.step ? "step" : null, class: i < c.step ? "done" : "" }, `${i + 1}. ${t}`)));
   const nav = (ok = true, nextLabel = "다음") => h("div", { class: "rb-mem-sact" }, c.step > 0 ? btn("이전", { onClick: () => go(c.step - 1) }) : null, c.step < 4 ? btn(nextLabel, { kind: "primary", disabled: !ok, onClick: () => go(c.step + 1) }) : null);
   const callNote = h("p", { class: "rb-muted" }, `이번 만들기에서 AI ${c.calls}회 호출했어요.`);
+  // 빠르게 만들기: 등급·범위는 자동으로 두고 카드 → 연결(기억 연결) → 첫 메시지를 한 번에 만든 뒤 마지막 확인 단계로 간다. 중간에 실패하면 만든 데까지는 남아서 이어서 할 수 있다.
+  const quickMake = async () => {
+    const rs = records();
+    if (!rs.length) { ctx.toast("고른 범위에 기록이 없어요. 등급 하한을 낮춰 보세요.", { error: true }); return; }
+    const others = c.keys.slice(1).map((k) => folder.people[k]?.name).filter(Boolean);
+    ctx.toast("카드를 만드는 중이에요… (1/3)", { seconds: 60 });
+    const { card, body: b } = await generateCard(ctx.api, { folder, records: rs, messages, name: main.name, grade: cardGrade(), others, cfg, model, lang: c.lang, roleNames: await roleNamesOf(ctx.api), source: { botName: bot.character.name, chatName: chatItem.name, chaId: bot.id, chatId: chatItem.id, from: c.from, to: c.to, minGrade: c.minGrade, people: c.keys.map((k) => folder.people[k]?.name) } });
+    c.calls++; c.card = card; c.link = null; c.picks = null; c.aiPicks = null; c.warnings = b.warnings;
+    const assets = c.assets ??= await listBotImages(ctx.api, bot.character);
+    if (assets.length && !card.image.ref) c.card = { ...card, image: { ...card.image, ref: assets[0].path } };
+    ctx.toast("연결 문서를 만드는 중이에요… (2/3)", { seconds: 60 });
+    c.picks = pickLore(bot.character.globalLore, { names: [c.card.name, ...names] });
+    c.link = await generateLink(ctx.api, { card: c.card, mode: c.mode, originalDesc: bot.character.desc ?? "", entryLevels: c.entryLevels, lang: c.lang, extra: cfg.linkExtra ?? "", model }); c.calls++;
+    ctx.toast("첫 메시지를 쓰는 중이에요… (3/3)", { seconds: 60 });
+    c.first = await draftFirstMessage(ctx.api, { name: c.card.name, scene: sceneAt(folder, c.to - 1), relationship: c.link.relationship, model, lang: c.lang }); c.calls++;
+    ctx.toast("다 만들었어요. 확인하고 저장하세요.");
+    c.step = 4; again();
+  };
+  const quick = btn("빠르게 만들기 (AI 3회)", { kind: "primary", icon: "zap", onClick: guard(async () => { quick.disabled = true; await quickMake(); }) });
+  const quickBox = h("div", { class: "rb-mem-sec rb-card" }, h("b", null, "단계를 건너뛰고 싶다면"), h("p", { class: "rb-muted", style: "margin:4px 0 8px" }, "등급·카드·연결·첫 메시지를 알아서 만들고 마지막 확인 단계로 바로 가요. 거기서 고칠 수 있어요."), h("div", { class: "rb-mem-sact" }, quick));
   let body;
 
   if (c.step === 0) {
     body = h("div", null, h("p", { class: "rb-muted" }, "주인공 1명을 고르고, 함께 가져올 인물을 체크하세요."),
       h("div", { class: "rb-mem-grid" }, people.map(([k, p]) => h("label", { class: "rb-mem-card pick" }, h("input", { type: "radio", name: "main", checked: c.keys[0] === k, onChange: () => { c.keys = [k]; c.picks = null; c.card = null; c.link = null; again(); } }), avatar(p.name), h("span", { class: "txt" }, h("span", { class: "name" }, p.name), h("span", { class: "meta" }, `기록 ${visibleRecords(p).length}`))))),
-      people.length > 1 ? field("함께 가져올 인물", h("div", { class: "rb-mem-chats" }, people.filter(([k]) => k !== c.keys[0]).map(([k, p]) => chip(p.name, { pressed: c.keys.includes(k), onClick: () => { c.keys = c.keys.includes(k) ? c.keys.filter((x) => x !== k) : [...c.keys, k]; c.card = null; c.link = null; again(); } })))) : null, nav());
+      people.length > 1 ? field("함께 가져올 인물", h("div", { class: "rb-mem-chats" }, people.filter(([k]) => k !== c.keys[0]).map(([k, p]) => chip(p.name, { pressed: c.keys.includes(k), onClick: () => { c.keys = c.keys.includes(k) ? c.keys.filter((x) => x !== k) : [...c.keys, k]; c.card = null; c.link = null; again(); } })))) : null, quickBox, nav());
   } else if (c.step === 1) {
     const rs = records(), ex = excerptCount(rs), g = cardGrade();
     body = h("div", null, env.backend.id === "bardwiki" && !rs.length ? note("warn", "BardWiki 기록에는 등급이 없어요. 인물 탭의 더보기에서 '등급 매기기(AI)'를 먼저 해 주세요.") : null,
@@ -62,7 +82,7 @@ export async function renderCompose(env, host) {
       h("div", { class: "rb-mem-range" }, h("label", null, "시작 메시지 ", h("input", { class: "rb-input", type: "number", min: 1, max: total, value: c.from, onChange: (e) => { c.from = Math.max(1, +e.target.value || 1); c.card = null; again(); } })), h("label", null, "끝 메시지 ", h("input", { class: "rb-input", type: "number", min: 1, max: total, value: Math.min(c.to, total || c.to), onChange: (e) => { c.to = Math.max(c.from, +e.target.value || total); c.card = null; again(); } }))),
       field(`카드 등급 (${c.gradeMode === "manual" ? "직접 정함" : c.gradeMode === "ai" ? "카드를 만들 때 AI가 정함 · AI 1회 추가" : "구간의 최고 등급으로 자동"})`, h("div", { class: "rb-mem-chats" }, chip("자동", { pressed: c.gradeMode === "auto", onClick: () => { c.gradeSet = null; c.gradeMode = "auto"; c.card = null; again(); } }), chip("AI", { pressed: c.gradeMode === "ai", onClick: () => { c.gradeSet = null; c.gradeMode = "ai"; c.card = null; again(); } }), GRADES.map((x) => chip(x, { pressed: c.gradeSet === x, onClick: () => { c.gradeSet = x; c.gradeMode = "manual"; c.card = null; again(); } })))),
       h("p", null, `선택된 기록 ${rs.length}개 · 원문 발췌 대상 ${ex}개 · ${c.gradeMode === "ai" ? "카드 등급은 AI가 정해요" : `카드 ${g}등급(태그 ${tagCountOf(g)}개)`}`),
-      note("info", "AI 3회 호출: 카드 → 연결 문서 → 첫 메시지(연결·첫 메시지는 건너뛰어도 돼요). 등급 AI 판단·일러스트 AI 고르기는 각각 1회 더 들어요."), nav(rs.length > 0));
+      note("info", "AI 3회 호출: 카드 → 연결 문서 → 첫 메시지(연결·첫 메시지는 건너뛰어도 돼요). 등급 AI 판단·일러스트 AI 고르기는 각각 1회 더 들어요."), quickBox, nav(rs.length > 0));
   } else if (c.step === 2) {
     body = renderCardStep();
   } else if (c.step === 3) {

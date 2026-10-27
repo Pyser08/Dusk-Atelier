@@ -3,6 +3,7 @@ import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
 import { TABS } from '../tabs.js';
 import { CHANGELOG, openChangelog } from '../whatsnew.js';
+import { openTour } from '../tour.js';
 
 export function renderHome(ctx) {
   const card = (cls, ic, title, text, onClick, id) => h(
@@ -48,7 +49,7 @@ export function renderHome(ctx) {
         "div",
         { class: "rb-home-foot" },
         h("button", { type: "button", class: "rb-btn ghost sm", onClick: () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록") }, icon("history", 14), `v${ctx.version} · 새로 바뀐 점`),
-        h("span", null, "단축키: / 로 검색, Esc 로 닫기")
+        h("button", { type: "button", class: "rb-btn ghost sm", onClick: () => openTour(ctx) }, icon("help", 14), "처음 둘러보기"), h("span", null, "단축키: / 로 검색, Esc 로 닫기")
       )
     )
   );

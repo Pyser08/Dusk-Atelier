@@ -489,3 +489,15 @@ export function stepsGuide(title, steps) {
   );
 }
 
+
+// 빈 화면 안내: 무엇을 하는 곳인지 + 첫 행동 버튼 (처음 쓰는 사람이 막히지 않게)
+export function emptyState({ icon: ic = "info", title, text, actions = [] } = {}) {
+  return h(
+    "div",
+    { class: "rb-empty rb-empty-card" },
+    h("span", { class: "ico", "aria-hidden": "true" }, icon(ic, 28)),
+    h("b", null, title),
+    text ? h("p", null, text) : null,
+    actions.length ? h("div", { class: "acts" }, ...actions.map((a) => btn(a.label, { kind: a.kind ?? "primary", icon: a.icon, onClick: a.onClick }))) : null
+  );
+}

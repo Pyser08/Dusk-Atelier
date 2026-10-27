@@ -1,3 +1,5 @@
+import { maybeShowTour } from './tour.js';
+import { installTooltips } from './tooltip.js';
 import { maybeShowWhatsNew, openChangelog, CHANGELOG } from './whatsnew.js';
 import { btn, iconBtn, openMenu, toast } from './kit.js';
 import { CSS2, FONT_LINK } from './styles.js';
@@ -35,6 +37,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const assets = createAssetLoader(api);
   const state = { tab: "modules", search: "", risuScheme: "dark", mode: "dark", sub: null, opened: false, layout: "home" };
   const root = h("div", { class: "rb-root", hidden: true });
+  installTooltips(root);
   const win = h("div", { class: "rb-win", role: "dialog", "aria-modal": "true", "aria-label": "Dusk Atelier" });
   root.appendChild(win);
   doc.body.appendChild(root);
@@ -386,6 +389,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     await api.showContainer("fullscreen");
     render();
     maybeShowWhatsNew(ctx).catch(() => {
+    }).then(() => maybeShowTour(ctx)).catch(() => {
     });
     checkUpdate().catch(() => {
     });

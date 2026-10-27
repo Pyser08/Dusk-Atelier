@@ -6,7 +6,7 @@ import { Busy, isGenerating } from '../../engine/safety.js';
 import { loadCharacters } from '../../data/modules.js';
 import { fmtWhen, h, replace, vanish } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, trayBtn, tray, sortChips, sortLabel, sortShort, sortBy, fmtSize, confirmDialog, loading, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog } from '../kit.js';
+import { emptyState, badge, btn, trayBtn, tray, sortChips, sortLabel, sortShort, sortBy, fmtSize, confirmDialog, loading, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog } from '../kit.js';
 import { createMulti } from '../multiselect.js';
 import { dragBadge, gripDrag } from '../sortable.js';
 import { openCharAssets, openCharEditor } from './chareditor.js';
@@ -247,7 +247,7 @@ async function drawCharacters(ctx) {
       box.appendChild(outside);
     }
   }
-  if (!list.length) box.appendChild(h("div", { class: "rb-empty" }, st.chars.length ? "찾는 캐릭터가 없어요." : "캐릭터가 없어요."));
+  if (!list.length) box.appendChild(st.chars.length ? h("div", { class: "rb-empty" }, "찾는 캐릭터가 없어요.") : emptyState({ icon: "character", title: "아직 캐릭터가 없어요", text: "캐릭터 파일을 가져오면 폴더로 정리하고 에셋·로어북을 다듬을 수 있어요.", actions: [{ label: "파일 가져오기", icon: "upload", onClick: () => ctx.legacy.open() }] }));
   const keep = ctx.main.querySelector(".rb-list")?.scrollTop ?? 0;
   const bar = h("div", { class: "rb-pickbar", role: "toolbar", "aria-label": "고른 봇" });
   const openTray = () => {
