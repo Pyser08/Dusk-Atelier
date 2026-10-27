@@ -6,6 +6,9 @@ import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
 import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog, segmented, switchEl } from '../kit.js';
 import { gripDrag } from '../sortable.js';
+import { entryPicker } from '../entrypicker.js';
+import { sortLoreByName } from '../../engine/lorelist.js';
+import { estimateTokens } from '../../engine/memoryinject.js';
 import { reload } from './modules.js';
 import { attachUndo } from '../undo.js';
 import { attachProbPick } from '../probpick.js';
@@ -287,7 +290,7 @@ export async function openEditorCore(ctx, cfg) {
     });
     return el;
   };
-  const area = (obj, key, { tall, placeholder, mono = true, probPick } = {}) => {
+  const area = (obj, key, { tall, placeholder, mono = true, probPick, tokens } = {}) => {
     const el = h("textarea", { class: ["rb-textarea", tall && "tall"], spellcheck: "false", placeholder, style: mono ? null : "font-family:inherit;font-size:14px" });
     el.value = obj[key] ?? "";
     el.addEventListener("input", () => {
@@ -302,7 +305,14 @@ export async function openEditorCore(ctx, cfg) {
         el.dispatchEvent(new Event("input"));
       }
     });
-    return probPick ? attachProbPick(el, ctx.win) : el;
+    const base = probPick ? attachProbPick(el, ctx.win) : el;
+    if (!tokens) return base;
+    // 내용 토큰 수(추정): 한글은 글자당 약 0.67, 그 밖은 4글자당 1토큰. 규칙 항목의 @@activate/#if 장식은 빼고 센다.
+    const tk = h("div", { class: "rb-muted", style: "font-size:12px;margin-top:4px;text-align:right", "aria-live": "polite" });
+    const upd = () => { const n = estimateTokens(bodyOf(el.value)); tk.textContent = `약 ${n.toLocaleString()} 토큰 (추정) · ${el.value.length.toLocaleString()}자`; };
+    el.addEventListener("input", upd);
+    upd();
+    return h("div", null, base, tk);
   };
   // 코드 편집기 모양의 칸 (정규식 IN/OUT): 색 입히기 + 괄호 짝 표시
   const codeArea = (obj, key, { lang, tall, placeholder } = {}) => {
@@ -472,12 +482,35 @@ export async function openEditorCore(ctx, cfg) {
       { label: "장소 (지금 폴더 안)", icon: "plus", onClick: () => add(() => newPlaceEntry()) },
       { label: "장소 (독립)", icon: "plus", onClick: () => add(() => newPlaceEntry(), { parent: null }) }
     ]);
+    // 이름순 정렬: 폴더 구조(부모 표시)는 건드리지 않고 배열 순서만 바꾼다. 구분선(-- 이름 --) 사이 구간 안에서만 정렬.
+    const applySort = (scope) => {
+      const out = sortLoreByName(list, { isDivider: isLoreDivider, scope });
+      const cur = selObj();
+      if (out.length !== list.length || out.every((x, i) => x === list[i])) {
+        ctx.toast("이미 이름순이에요");
+        return;
+      }
+      list.splice(0, list.length, ...out);
+      reselect(cur);
+      changed();
+      render();
+      ctx.toast(scope === null ? "전체를 이름순으로 정렬했어요 (저장하면 적용돼요)" : "이 폴더 안을 이름순으로 정렬했어요 (저장하면 적용돼요)");
+    };
+    const sortMenu = (ev) => {
+      const cur = selObj();
+      const fid = cur ? (isFolder(cur) ? folderIdOf(cur) : pid(cur)) : null;
+      openMenu(ctx.win, ev.currentTarget, [
+        { label: "전체 이름순 (폴더 안에서만)", icon: "list", onClick: () => applySort(null) },
+        fid ? { label: "고른 폴더 안만 이름순", icon: "folder", onClick: () => applySort(fid) } : null
+      ].filter(Boolean));
+    };
     const tools = h(
       "div",
       { class: "rb-side-tools" },
       search,
       btn("추가", { size: "sm", icon: "plus", onClick: () => add(isLore ? newLore : kind === "regex" ? newRegex : newTrigger) }),
       isLore ? btn("만들기", { size: "sm", icon: "folderPlus", onClick: newMenu }) : null,
+      isLore ? btn("이름순", { size: "sm", icon: "list", onClick: (ev) => sortMenu(ev) }) : null,
       isLore ? btn(selecting ? "선택 끝" : "선택", { size: "sm", kind: selecting ? "primary" : void 0, onClick: () => {
         es.selMode = !es.selMode;
         es.multi.clear();
@@ -873,7 +906,7 @@ export async function openEditorCore(ctx, cfg) {
       field(isPlace(l) ? "장소 이름" : "이름", isPlace(l) ? prefixedName(l, PLACE_PREFIX) : text(l, "comment")),
       isPlace(l) ? null : field("방식", select2(l, "mode", LORE_MODES.filter((x) => x[0] !== "folder"))),
       field(isPlace(l) ? "장소 키 (쉼표로 구분) — 이 말이 나오면 장소가 켜져요" : "활성화 키 (쉼표로 구분)", text(l, "key"), true),
-      field(isPlace(l) ? "장소 설명" : "내용", area(l, "content", { tall: true, mono: false, probPick: true }), true),
+      field(isPlace(l) ? "장소 설명" : "내용", area(l, "content", { tall: true, mono: false, probPick: true, tokens: true }), true),
       isPlace(l) ? placeCard(l, fmap) : null,
       h(
         "div",
@@ -1012,7 +1045,7 @@ export async function openEditorCore(ctx, cfg) {
       { class: "rb-form" },
       ...head,
       field("소속 키 (쉼표로 구분)", text(l, "key", { placeholder: "예) 선도부, 풍기위원회" }), true),
-      field("소속 설명 (비워도 돼요)", area(l, "content", { tall: true, mono: false }), true),
+      field("소속 설명 (비워도 돼요)", area(l, "content", { tall: true, mono: false, tokens: true }), true),
       h(
         "div",
         { class: "wide rb-da on" },
@@ -1087,10 +1120,18 @@ export async function openEditorCore(ctx, cfg) {
     }
     const r = l.extentions.da_rule = rule;
     const others = draft.lorebook.filter((x) => x !== l && x.mode !== "folder" && !isLoreDivider(x));
-    const pickEntry = (obj, key, empty = "항목 고르기") => {
-      const el = h("select", { class: "rb-input" }, h("option", { value: "" }, empty), others.map((x, xi) => h("option", { value: String(xi), selected: !!ridOf(x) && obj[key] === ridOf(x) }, (x.comment || "(이름 없음)") + (isManaged(x) ? "" : " · 규칙 꺼짐"))));
-      el.addEventListener("change", () => {
-        const t = el.value === "" ? null : others[Number(el.value)];
+    const otherSet = new Set(others);
+    const pickEntry = (obj, key, empty = "항목 고르기") => entryPicker({
+      win: ctx.win,
+      list: draft.lorebook,
+      pickable: (x) => otherSet.has(x),
+      isDivider: isLoreDivider,
+      value: (obj[key] && others.find((x) => ridOf(x) === obj[key])) || null,
+      empty,
+      noteOf: (x) => (isManaged(x) ? "" : "규칙 꺼짐"),
+      labelOf: (x) => (isFolder(x) ? affName(x) : x.comment) || "(이름 없음)",
+      title: "항목 고르기",
+      onPick: (t) => {
         if (t) {
           t.extentions = { ...(t.extentions ?? {}) };
           t.extentions.da_rid ||= newId();
@@ -1098,9 +1139,8 @@ export async function openEditorCore(ctx, cfg) {
         obj[key] = t ? t.extentions.da_rid : "";
         changed();
         redraw();
-      });
-      return el;
-    };
+      }
+    });
     const set = (key, v, re = true) => {
       r[key] = v;
       changed();
