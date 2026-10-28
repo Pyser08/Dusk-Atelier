@@ -65,7 +65,7 @@ export async function renderBotView(ctx, host, { redraw, redrawView, back, quiet
   host.onscroll = () => { const top = host.getBoundingClientRect().top + 70; let cur = TABS[0][0]; for (const [id] of TABS) if (wraps[id].getBoundingClientRect().top <= top) cur = id; if (cur !== m.tab) { m.tab = cur; setActive(cur); } };
   replace(host,
     h("div", { class: "rb-mem-head" }, h("span", { class: "rb-mem-back" }, btn("뒤로", { size: "sm", icon: "back", onClick: back })), h("h2", null, bot.character.name || "이름 없는 캐릭터"), h("span", { class: ["rb-mem-mode", backend.id], title: backend.reason }, backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드"), h("span", { style: "flex:1" }), sw, btn("이 채팅", { size: "sm", title: "이 채팅의 추적 인물·내 이름·관찰자·프롬프트 보기", onClick: () => openChatInfo(env).catch(fail(ctx)) }), setBtn),
-    setPanel, status, chatRow, renderBotAnalysis(env), tabs, body);
+    setPanel, chatRow, h("div", { class: "rb-mem-topgrid" }, status, renderBotAnalysis(env)), tabs, body);
   await Promise.all(TABS.map(([id]) => Promise.resolve(DRAW[id](env, inner[id])).catch(fail(ctx))));
   host.scrollTop = keepTop;
 }
