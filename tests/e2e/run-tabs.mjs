@@ -27,18 +27,20 @@ for (const mobile of [false, true]) {
   await open(page, "full");
   await tab(page, "로어북"); await page.waitForTimeout(80);
   const bar = page.locator(".rb-side-tools.rb-bar").first();
-  const names = (await bar.locator("button").allTextContents()).map((t) => t.trim());
-  ok(`[${tag}] 로어북 바: 추가·만들기만 보이고 이름순 등은 숨김`, names.includes("추가") && names.includes("만들기") && !names.some((n) => /이름순|더스크화|선택/.test(n)), names.join("|"));
+  const names = (await bar.locator("button:visible").allTextContents()).map((t) => t.trim());
+  ok(`[${tag}] 로어북 바: 추가·만들기 + (PC만) 이름순·더스크화, 좁은 화면은 더보기 안`, names.includes("추가") && names.includes("만들기") && (mobile ? !names.some((n) => /이름순|더스크화|선택/.test(n)) : names.some((n) => /이름순/.test(n)) && names.some((n) => /더스크화/.test(n))), names.join("|"));
+  ok(`[${tag}] 로어북: 전체·캐릭터·소속 탭과 검색이 목록 위쪽에`, (await page.locator(".side .rb-treehead input").count()) === 1 && /전체/.test(await page.locator(".side .rb-treehead").textContent()) && /소속/.test(await page.locator(".side .rb-treehead").textContent()));
   await bar.locator("[aria-label='더보기']").click();
   const menu = (await page.locator(".rb-menu").textContent());
   ok(`[${tag}] 더보기 메뉴: 이름순·더스크화·여러 개 고르기`, /이름순/.test(menu) && /더스크화/.test(menu) && /여러 개 고르기/.test(menu), menu);
   await page.keyboard.press("Escape");
   // 고급 접기
   if (mobile) await page.locator(".side .rb-item").first().click().catch(() => {}); await page.waitForTimeout(100);
-  const adv = page.locator(".rb-adv").first();
-  ok(`[${tag}] 로어북 '고급 설정'은 접혀 있음`, (await adv.count()) === 1 && !(await adv.evaluate((d) => d.open)));
-  await adv.locator("summary").click();
-  ok(`[${tag}] 열면 보조 키·삽입 순서 보임`, (await adv.textContent()).includes("보조 키") && (await adv.textContent()).includes("삽입 순서"));
+  const cond = page.locator(".rb-fold", { hasText: "켜지는 조건" }).first();
+  ok(`[${tag}] 로어북 '기본'은 열림, '켜지는 조건'·'고급'은 접혀 있음`, (await page.locator(".rb-fold").evaluateAll((d) => d.map((x) => x.open))).slice(0, 1).join() === "true" && !(await cond.evaluate((d) => d.open)));
+  await cond.locator("summary").click();
+  ok(`[${tag}] 켜지는 조건을 열면 삽입 순서·보조 키 칸 보임`, (await cond.textContent()).includes("삽입 순서") && (await cond.textContent()).includes("보조 키도 함께 필요"));
+  ok(`[${tag}] ⓘ를 누르기 전엔 팁이 숨겨져 있음`, (await page.locator(".rb-tipbox.show").count()) === 0);
   // ── 정규식 ──
   await tab(page, "정규식"); await page.waitForTimeout(80);
   if (mobile) await page.locator(".side .rb-item").first().click().catch(() => {}); await page.waitForTimeout(100);

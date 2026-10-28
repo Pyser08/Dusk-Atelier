@@ -249,6 +249,24 @@ export async function openEditorCore(ctx, cfg) {
 .rb-help p{margin:0;color:var(--rb-text)}
 @media (max-width:640px){.rb-help{top:auto;left:0;width:auto;max-height:60%;border-left:0;border-top:var(--rb-bw,1px) solid var(--rb-line2);border-radius:16px 16px 0 0;transform:translateY(100%);box-shadow:0 -6px 16px rgba(0,0,0,.18)}}
 @media (prefers-reduced-motion:reduce){.rb-help{transition:none}}
+.rb-side-tools.rb-bar.rb-toolrow{margin:0;border-radius:0;border-width:0 0 var(--rb-bw,1px) 0;padding:8px 16px;flex-wrap:wrap;align-items:center}
+.rb-toolrow[hidden]{display:none}
+.rb-fold{border-radius:16px;border:1px solid var(--rb-line2);background:var(--rb-surf)}
+.rb-fold>summary{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;list-style:none;min-height:24px}
+.rb-fold>summary::-webkit-details-marker{display:none}
+.rb-fold>summary .t{font-weight:700;font-size:15px}
+.rb-fold>summary .h{flex:1;min-width:0;font-size:12px;color:var(--rb-sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rb-fold>summary svg{flex:none;transition:transform .15s}
+.rb-fold[open]>summary svg{transform:rotate(180deg)}
+.rb-fold-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:12px}
+.rb-rel{border-radius:16px;border:1px solid var(--rb-line3);background:var(--rb-surf2);padding:10px 14px;display:flex;flex-direction:column;gap:6px}
+.rb-rel h5{margin:4px 0 0;font-size:12px;color:var(--rb-sub);font-weight:700}
+.rb-rel .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rb-rel .rb-chip{height:26px;padding:0 10px;font-size:12px}
+.rb-treehead{display:flex;flex-direction:column;gap:8px;padding:10px 12px 6px}
+.rb-treehead .rb-input{height:36px}
+@media (max-width:760px){.rb-pc-only{display:none!important}.rb-toolrow.m-hide{display:none}}
+@media (prefers-reduced-motion:reduce){.rb-fold>summary svg{transition:none}}
 .rb-side-tools.rb-bar{padding:8px;border-radius:14px;border:1px solid var(--rb-line2);background:var(--rb-surf);margin:0 0 8px;gap:6px}
 .rb-adv{border-radius:12px;border:1px solid var(--rb-line2);background:var(--rb-surf)}
 .rb-adv>summary{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;list-style:none;font-size:13px;font-weight:600;min-height:24px}
@@ -300,6 +318,7 @@ export async function openEditorCore(ctx, cfg) {
     applyBtn
   );
   const tabsEl = h("div", { class: "rb-tabs", role: "tablist" });
+  const toolEl = h("div", { class: "rb-side-tools rb-bar rb-toolrow", hidden: true });
   const body = h("div", { class: "rb-split" });
   // 우측 하단 버튼 하나: 누르면 [AI 창 · 규칙 시험] 두 개가 펼쳐진다 (AI 창은 봇 편집에서만, 모듈은 규칙 시험만)
   const hasAi = cfg.idKey === "chaId";
@@ -347,7 +366,7 @@ export async function openEditorCore(ctx, cfg) {
     fabMain.title = (hasAi ? "AI 창 · 규칙 시험" : "") + (label ? ` — ${label}` : "");
     fabMain.setAttribute("aria-label", "도구" + (label ? ` (${label})` : ""));
   }
-  panel.append(head, tabsEl, body, statusEl, testFab, helpEl);
+  panel.append(head, tabsEl, toolEl, body, statusEl, testFab, helpEl);
   ctx.win.appendChild(panel);
   panel.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && !ctx.win.querySelector(".rb-modal, .rb-menu, #rb-rule-test")) {
@@ -453,6 +472,14 @@ export async function openEditorCore(ctx, cfg) {
     const d = h("details", { class: "rb-adv wide" }, h("summary", null, h("span", null, title), h("span", { class: "h" }, hint), icon("down", 16)), h("div", { class: "in" }, h("div", { class: "rb-form" }, ...kids)));
     d.open = !!es.adv[key];
     d.addEventListener("toggle", () => { es.adv[key] = d.open; });
+    return d;
+  };
+  // 접는 카드(목업의 기본·켜지는 조건·고급 …): 열림 상태는 항목을 바꿔도 기억
+  const foldCard = (key, title, hint, open, ...kids) => {
+    es.fold ??= {};
+    const d = h("details", { class: "rb-fold wide" }, h("summary", null, h("span", { class: "t" }, title), h("span", { class: "h" }, hint ?? ""), icon("down", 16)), h("div", { class: "rb-fold-body" }, ...kids));
+    d.open = es.fold[key] ?? !!open;
+    d.addEventListener("toggle", () => { es.fold[key] = d.open; });
     return d;
   };
   const text = (obj, key, { placeholder, onInput } = {}) => {
@@ -581,7 +608,16 @@ export async function openEditorCore(ctx, cfg) {
     const list = draft[kind];
     const isLore = kind === "lorebook";
     const q = es.q[kind].trim().toLowerCase();
-    const match = (it2) => !q || [it2.comment, it2.key, it2.secondkey, it2.content, it2.in, it2.out, JSON.stringify(it2.effect ?? "")].some((v) => String(v ?? "").toLowerCase().includes(q));
+    es.filt ??= { regex: "all", trigger: "all" };
+    const isLuaTrig = (t) => Array.isArray(t.effect) && t.effect.length === 1 && ["triggerlua", "triggercode"].includes(t.effect[0]?.type);
+    const passF = (it2) => {
+      const f = es.filt[kind];
+      if (!f || f === "all") return true;
+      if (kind === "regex") return f === "off" ? it2.type === "disabled" : it2.type !== "disabled";
+      if (kind === "trigger") return f === "lua" ? isLuaTrig(it2) : !isLuaTrig(it2);
+      return true;
+    };
+    const match = (it2) => passF(it2) && (!q || [it2.comment, it2.key, it2.secondkey, it2.content, it2.in, it2.out, JSON.stringify(it2.effect ?? "")].some((v) => String(v ?? "").toLowerCase().includes(q)));
     if (es.sel[kind] >= list.length) es.sel[kind] = list.length - 1;
     if (isLore) maybeConvertNative();
     // ---------- 로어북 폴더 트리 (Dusk 폴더: 중첩·색·소속) ----------
@@ -749,21 +785,41 @@ export async function openEditorCore(ctx, cfg) {
       !isLore ? { label: "찾아 바꾸기 (Ctrl+H)", icon: "search", onClick: () => findReplace() } : null,
       !isLore ? { label: "빠른 이동 (Ctrl+P)", icon: "list", onClick: () => quickJump() } : null
     ].filter((x, i, arr) => x && !(x === "sep" && (i === 0 || !arr[i + 1]))));
-    const tools = h(
-      "div",
-      { class: "rb-side-tools rb-bar" },
-      search,
+    const pcOnly = (b) => {
+      b.classList.add("rb-pc-only");
+      return b;
+    };
+    const toggleAllFolders = () => {
+      es.loreCollapsed ??= /* @__PURE__ */ new Set();
+      if (collapsedAll()) es.loreCollapsed.clear();
+      else for (const f of fmap.values()) es.loreCollapsed.add(folderIdOf(f));
+      render();
+    };
+    // 위쪽 줄(목업): 추가 · 만들기 · (PC) 이름순·전체 접기·더스크화 · 더보기. 좁은 화면에서는 더보기 안으로
+    replace(
+      toolEl,
       btn("추가", { size: "sm", icon: "plus", onClick: () => add(isLore ? newLore : kind === "regex" ? newRegex : newTrigger) }),
       isLore ? btn("만들기", { size: "sm", icon: "folderPlus", onClick: newMenu }) : null,
+      isLore && list.length > 1 ? pcOnly(btn("이름순", { size: "sm", icon: "list", onClick: sortMenu })) : null,
+      isLore && fmap.size ? pcOnly(btn(collapsedAll() ? "전체 펴기" : "전체 접기", { size: "sm", icon: "folder", onClick: toggleAllFolders })) : null,
+      isLore && list.length > 1 ? pcOnly(btn("더스크화", { size: "sm", icon: "sparkle", onClick: () => duskify() })) : null,
       isLore && selecting ? btn("선택 끝", { size: "sm", kind: "primary", onClick: () => {
         es.selMode = false;
         es.multi.clear();
         render();
       } }) : null,
+      h("div", { class: "rb-spacer", style: "flex:1" }),
       iconBtn("more", "더보기", { boxed: true, onClick: moreMenu })
     );
+    const searchBox = h("div", { class: "rb-side-tools", style: "padding:0;border:0" }, search);
+    // 정규식(켜짐/꺼짐)·트리거(일반/Lua) 거르기
+    const FILTERS = { regex: [["all", "전체"], ["on", "켜짐"], ["off", "꺼짐"]], trigger: [["all", "전체"], ["gen", "일반"], ["lua", "Lua"]] };
+    const filterSeg = FILTERS[kind] ? segmented(FILTERS[kind], es.filt[kind], (v) => {
+      es.filt[kind] = v;
+      render();
+    }, "거르기") : null;
     // 로어북: 전체 / 캐릭터 / 소속 탭
-    const loreTabs = isLore ? h("div", { class: "rb-lore-tabs", style: "padding:0 0 6px" }, segmented([["all", "전체"], ["char", "캐릭터"], ["aff", "소속"]], es.loreTab, (v) => {
+    const loreTabs = isLore ? h("div", { class: "rb-lore-tabs" }, segmented([["all", "전체"], ["char", "캐릭터"], ["aff", "소속"]], es.loreTab, (v) => {
       es.loreTab = v;
       render();
     }, "로어북 보기")) : null;
@@ -911,6 +967,7 @@ export async function openEditorCore(ctx, cfg) {
         isLore && !divider && (it2.alwaysActive || it2.mode === "constant") && !isManaged(it2) ? badge("항상", "acc") : null,
         isLore && isManaged(it2) && !isPlace(it2) ? badge("규칙", "acc") : null,
         affPath.length ? badge(affName(affPath[0]) + (affPath.length > 1 ? ` +${affPath.length - 1}` : ""), "mute") : null,
+        kind === "trigger" && isLuaTrig(it2) ? badge("Lua", "acc") : null,
         kind === "trigger" ? badge(TRIGGER_TYPES.find((x) => x[0] === it2.type)?.[1] ?? it2.type, "mute") : null
       );
       const pad = depth ? `margin-left:${depth * 14}px` : "";
@@ -1124,7 +1181,8 @@ export async function openEditorCore(ctx, cfg) {
     } })));
     if (!it) pane.appendChild(h("div", { class: "rb-empty" }, list.length ? "왼쪽에서 항목을 고르세요." : "왼쪽의 버튼으로 첫 항목을 만들어 보세요."));
     else pane.append(itemTools, isLore ? loreForm(it) : kind === "regex" ? regexForm(it) : triggerForm(it));
-    replace(body, h("div", { class: "side" }, kind === "trigger" && hasAi ? h("div", { style: "padding:0 0 8px" }, trigSeg()) : null, tools, loreTabs, bulkBar, items), pane);
+    toolEl.classList.toggle("m-hide", !!(es.mItem && it));
+    replace(body, h("div", { class: "side" }, kind === "trigger" && hasAi ? h("div", { style: "padding:8px 12px 0" }, trigSeg()) : null, h("div", { class: "rb-treehead" }, loreTabs, filterSeg, searchBox), bulkBar, items), pane);
     es.shown = { kind, items, pane, item: it };
     restoreView(kind, items, pane, it);
   }
@@ -1159,12 +1217,24 @@ export async function openEditorCore(ctx, cfg) {
     }, 50);
   }
   function loreForm(l) {
-    if (l.mode === "folder") return h("div", { class: "rb-form" }, field("폴더 이름 (리스 폴더)", text(l, "comment")), h("p", { class: "rb-muted wide" }, `이 폴더 안 항목 ${draft.lorebook.filter((x) => x.folder === l.key).length}개 · 리스 폴더는 한 단계만 돼요. 로어북을 다시 열면 Dusk 폴더로 바꿀 수 있어요.`));
+    if (l.mode === "folder") return h("div", { class: "rb-form" }, field("폴더 이름 (리스 폴더)", text(l, "comment")), h("p", { class: "rb-muted wide" }, `이 폴더 안 항목 ${draft.lorebook.filter((x) => x.folder === l.key).length}개`, tipEl("리스 폴더는 한 단계만 돼요. 로어북을 다시 열면 Dusk 폴더로 바꿀 수 있어요.")));
     if (isDuskFolder(l)) return folderForm(l);
     const fmap = folderMap(draft.lorebook);
     const path = ancestorsOf(l, fmap);
     const myAffs = path.filter(isAff);
-    const affLine = path.length ? h("div", { class: "wide", style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" }, h("span", { class: "rb-muted" }, myAffs.length ? "소속" : "폴더"), ...[...path].reverse().map((g) => btn((isAff(g) ? "" : "📁 ") + (affName(g) || "(이름 없음)"), { size: "sm", onClick: () => goEntry(g) }))) : null;
+    // 🔗 관계 카드: 소속(없으면 폴더 위치)과 같은 소속의 다른 구성원을 칩으로. 누르면 그 항목으로 이동
+    const chip = (x, label) => h("button", { type: "button", class: "rb-chip", onClick: () => goEntry(x) }, label ?? (affName(x) || x.comment || "(이름 없음)"));
+    const relCard = isPlace(l) ? null : (() => {
+      const kids = [];
+      if (myAffs.length) {
+        const a0 = myAffs[0];
+        const sibs = draft.lorebook.filter((x) => x !== l && !isFolder(x) && !isPlace(x) && ancestorsOf(x, fmap).includes(a0));
+        kids.push(h("h5", null, "🏷 소속"), h("div", { class: "row" }, ...myAffs.map((g) => chip(g))));
+        if (sibs.length) kids.push(h("h5", null, "같은 소속의 다른 구성원"), h("div", { class: "row" }, ...sibs.slice(0, 12).map((x) => chip(x)), sibs.length > 12 ? h("span", { class: "rb-muted", style: "font-size:12px" }, `외 ${sibs.length - 12}명`) : null));
+      } else if (path.length) kids.push(h("h5", null, "📁 폴더"), h("div", { class: "row" }, ...[...path].reverse().map((g) => chip(g))));
+      else kids.push(h("div", { class: "row" }, badge("관계 없음", "mute"), tipEl("소속 폴더 안으로 옮기면 구성원이 돼요. 목록에서 항목을 끌어다 놓으세요.")));
+      return h("section", { class: "rb-rel wide" }, h("b", { style: "font-size:14px" }, "🔗 관계 ", h("small", { class: "rb-muted", style: "font-weight:400" }, "누르면 이동")), ...kids);
+    })();
     // 같은 이름 복사본이 어긋났는지
     const twins = draft.lorebook.filter((x) => x !== l && !isFolder(x) && String(x.comment ?? "").trim() && String(x.comment ?? "").trim() === String(l.comment ?? "").trim());
     const diff = twins.filter((x) => bodyOf(x.content) !== bodyOf(l.content) || String(x.key ?? "") !== String(l.key ?? ""));
@@ -1190,29 +1260,34 @@ export async function openEditorCore(ctx, cfg) {
       else l.enabled = false;
       changed();
     });
+    const managedNote = myAffs.length || isPlace(l) ? tipEl(isPlace(l) ? "장소는 Dusk 규칙으로 켜져요 (규칙은 끌 수 없어요)." : "소속 폴더 안 항목은 Dusk 규칙이 늘 켜져 있어요 (소속이 켜질 때 함께 켜지려면 필요해요).") : null;
+    const condHint = `${l.alwaysActive || l.mode === "constant" ? "항상 켜짐" : "키로 켜짐"} · 확률 ${l.activationPercent ?? 100}% · 순서 ${l.insertorder ?? 100}`;
     return h(
       "div",
       { class: "rb-form" },
-      affLine,
+      relCard,
       twinNote,
-      field(isPlace(l) ? "장소 이름" : "이름", isPlace(l) ? prefixedName(l, PLACE_PREFIX) : text(l, "comment")),
-      isPlace(l) ? null : field("방식", select2(l, "mode", LORE_MODES.filter((x) => x[0] !== "folder"))),
-      field(isPlace(l) ? "장소 키 (쉼표로 구분) — 이 말이 나오면 장소가 켜져요" : "활성화 키 (쉼표로 구분)", text(l, "key"), true),
-      field(isPlace(l) ? "장소 설명" : "내용", area(l, "content", { tall: true, mono: false, probPick: true, tokens: true }), true),
+      foldCard("lore-basic", "기본", "이름 · 키 · 내용", true,
+        h("div", { class: "rb-form" },
+          field(isPlace(l) ? "장소 이름" : "이름", isPlace(l) ? prefixedName(l, PLACE_PREFIX) : text(l, "comment")),
+          field("보조 키", text(l, "secondkey", { placeholder: "비어 있어도 돼요" }), false, "아래 '보조 키도 함께 필요'를 켜면 이 키도 대화에 있어야 켜져요."),
+          field(isPlace(l) ? "장소 키 (쉼표로 구분)" : "키 (쉼표로 구분)", text(l, "key"), true, isPlace(l) ? "이 말이 나오면 장소가 켜져요." : "이 글자가 대화에 나오면 항목이 켜져요."),
+          field(isPlace(l) ? "장소 설명" : "내용", area(l, "content", { tall: true, mono: false, probPick: true, tokens: true }), true))),
       isPlace(l) ? placeCard(l, fmap) : null,
-      h(
-        "div",
-        { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap" },
-        h("label", { class: "rb-check" }, enabled, h("span", null, "사용")),
-        isPlace(l) ? null : check(l, "alwaysActive", "항상 켜짐")
-      ),
-      advFold("lore", "고급 설정", "보조 키 · 키를 정규식으로 · 삽입 순서 · 켜질 확률",
-        h("div", { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap" }, check(l, "selective", "보조 키 사용"), check(l, "useRegex", "키를 정규식으로")),
-        field("보조 키", text(l, "secondkey", { placeholder: "보조 키 사용을 켜면 둘 다 있어야 켜짐" })),
-        field("삽입 순서", num(l, "insertorder")),
-        isManaged(l) ? null : field("켜질 확률 (%)", num(l, "activationPercent"))),
-      myAffs.length || isPlace(l) ? h("p", { class: "rb-muted wide", style: "margin:0;font-size:12.5px" }, isPlace(l) ? "장소는 Dusk 규칙으로 켜져요 (규칙은 끌 수 없어요)." : "소속 폴더 안 항목은 Dusk 규칙이 늘 켜져 있어요 (소속이 켜질 때 함께 켜지려면 필요해요).") : null,
-      ruleSection(l)
+      foldCard("lore-cond", "켜지는 조건", condHint, false,
+        h("div", { style: "display:flex;gap:16px;flex-wrap:wrap;align-items:center" },
+          h("label", { class: "rb-check" }, enabled, h("span", null, "사용")),
+          isPlace(l) ? null : check(l, "alwaysActive", "항상 켜짐"),
+          isPlace(l) ? null : tipEl("키와 상관없이 매번 들어가요. 토큰을 많이 써요."),
+          check(l, "selective", "보조 키도 함께 필요"),
+          check(l, "useRegex", "키를 정규식으로 읽기"),
+          managedNote),
+        h("div", { class: "rb-form" },
+          isManaged(l) ? null : field("켜질 확률 (%)", num(l, "activationPercent")),
+          field("삽입 순서", num(l, "insertorder"), false, "숫자가 클수록 프롬프트에서 뒤쪽에 들어가요."))),
+      ruleSection(l),
+      isPlace(l) ? null : foldCard("lore-adv", "고급", "방식", false,
+        h("div", { class: "rb-form" }, field("방식", select2(l, "mode", LORE_MODES.filter((x) => x[0] !== "folder")), false, "리스의 항목 종류예요. 보통은 '일반'이면 돼요.")))
     );
   }
   // 접두사([소속]·[장소])를 뺀 이름을 고치는 칸
@@ -1241,7 +1316,7 @@ export async function openEditorCore(ctx, cfg) {
     return h(
       "div",
       { class: "wide rb-da on" },
-      h("section", { class: "rb-da-card" }, h("header", null, icon("link", 16), h("b", null, "이 장소가 켜지면 같이 켜질 소속"), h("small", null, inside.length ? "폴더 위치로 정해진 소속 + 아래에서 더 고른 소속" : "독립 장소 — 아래에서 고른 소속만 켜져요 (안 고르면 장소만 켜져요)")),
+      h("section", { class: "rb-da-card" }, h("header", null, icon("link", 16), h("b", null, "이 장소가 켜지면 같이 켜질 소속"), tipEl(inside.length ? "폴더 위치로 정해진 소속 + 아래에서 더 고른 소속이에요." : "독립 장소예요. 아래에서 고른 소속만 같이 켜져요 (안 고르면 장소만 켜져요).")),
         inside.length ? h("div", { class: "rb-da-line", style: "flex-wrap:wrap;gap:6px" }, h("span", { class: "rb-da-lab" }, "들어 있는 소속"), ...inside.map((f) => btn(affName(f), { size: "sm", onClick: () => goEntry(f) }))) : null,
         affs.length ? h("div", { class: "rb-da-line", style: "flex-wrap:wrap;gap:12px" }, h("span", { class: "rb-da-lab" }, "더 연결"), ...affs.map((f) => {
           const id = folderIdOf(f);
@@ -1298,7 +1373,7 @@ export async function openEditorCore(ctx, cfg) {
         "div",
         { class: "rb-da-head" },
         h("span", { class: "rb-da-ico" }, icon("link", 18)),
-        h("div", { class: "rb-da-ttl" }, h("b", null, "소속으로 쓰기"), h("small", null, aff ? `구성원 ${members.length}명 · 장소 ${places.length}곳` : "켜면 이 폴더 안 항목(하위 폴더 포함)이 모두 구성원이 돼요")),
+        h("div", { class: "rb-da-ttl" }, h("b", null, "소속으로 쓰기"), aff ? h("small", null, `구성원 ${members.length}명 · 장소 ${places.length}곳`) : tipEl("켜면 이 폴더 안 항목(하위 폴더 포함)이 모두 구성원이 돼요.")),
         switchEl(aff, { label: "소속으로 쓰기", onChange: setAff })
       ))
     ];
@@ -1329,7 +1404,7 @@ export async function openEditorCore(ctx, cfg) {
         h("span", { class: "rb-da-note" }, "%")
       );
     });
-    const card = (ic, title, sub, ...kids) => h("section", { class: "rb-da-card" }, h("header", null, icon(ic, 16), h("b", null, title), sub ? h("small", null, sub) : null), ...kids);
+    const card = (ic, title, sub, ...kids) => h("section", { class: "rb-da-card" }, h("header", null, icon(ic, 16), h("b", null, title), sub ? tipEl(sub) : null), ...kids);
     const line = (...kids) => h("div", { class: "rb-da-line" }, ...kids);
     const lab = (t) => h("span", { class: "rb-da-lab" }, t);
     return h(
@@ -1349,8 +1424,8 @@ export async function openEditorCore(ctx, cfg) {
           h(
             "div",
             { class: "rb-da-sub" },
-            line(lab("기본 확률"), numBox(a, "def", { min: 0, max: 100, w: "70px", ph: "100" }), h("span", { class: "rb-da-note" }, "% (구성원 칸이 비어 있으면 이 값)")),
-            line(lab("최대 인원"), numBox(a, "max", { min: 0, w: "70px", ph: "제한 없음" }), h("span", { class: "rb-da-note" }, "명 — 확률을 통과한 사람 중 무작위로 (비우면 제한 없음)"))
+            line(lab("기본 확률"), numBox(a, "def", { min: 0, max: 100, w: "70px", ph: "100" }), h("span", { class: "rb-da-note" }, "%"), tipEl("구성원 칸이 비어 있으면 이 값을 써요.")),
+            line(lab("최대 인원"), numBox(a, "max", { min: 0, w: "70px", ph: "제한 없음" }), h("span", { class: "rb-da-note" }, "명"), tipEl("확률을 통과한 사람 중 무작위로 뽑아요. 비우면 제한이 없어요."))
           )
         ), card(
           "search",
@@ -2001,6 +2076,7 @@ export async function openEditorCore(ctx, cfg) {
   };
   function renderVars() {
     es.shown = null;
+    toolEl.hidden = true;
     replace(body, h("div", { class: "side" }, h("div", { style: "padding:8px" }, trigSeg())), varsPane());
   }
   function render() {
@@ -2008,6 +2084,7 @@ export async function openEditorCore(ctx, cfg) {
     paintTabs();
     paintHead();
     if (panel.classList.contains("help-on")) paintHelp();
+    toolEl.hidden = !["lorebook", "regex", "trigger"].includes(es.tab);
     if (es.tab === "info" || es.tab === "json" || es.tab === "ai") body.classList.remove("m-item", "m-list");
     if (es.tab === "trigger" && hasAi && es.trigView === "vars") {
       body.classList.remove("m-item", "m-list");
