@@ -6,9 +6,34 @@ import { Busy, backupSnapshot, isGenerating } from '../../engine/safety.js';
 import { h } from '../dom.js';
 import { btn, iconBtn, note, segmented } from '../kit.js';
 import { codeEditor } from '../codeedit.js';
+import { icon } from '../icons.js';
+import { estimateTokens } from '../../engine/memoryinject.js';
+import { createGreetingManager } from './greetings.js';
 import { openEditorCore, validateModule } from './editor.js';
 import { patchSavedChar } from './characters.js';
 
+
+var INFO_CSS = `
+.rb-info{display:flex;flex-direction:column;gap:12px}
+.rb-info-sum{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding:14px 16px;border-radius:16px;border:1px solid var(--rb-line2);background:var(--rb-surf)}
+.rb-info-name{font-size:18px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rb-info-tags{display:flex;flex-wrap:wrap;gap:6px}
+.rb-info-stats{display:flex;flex-wrap:wrap;gap:8px}
+.rb-info-stat{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:72px;padding:8px 12px;border-radius:12px;border:1px solid var(--rb-line2);background:var(--rb-surf2);color:var(--rb-text);font:inherit;cursor:pointer}
+.rb-info-stat:disabled{cursor:default;opacity:1}
+.rb-info-stat b{font-size:16px}
+.rb-info-stat span{font-size:11px;color:var(--rb-sub)}
+@media (hover:hover){.rb-info-stat:not(:disabled):hover{border-color:var(--rb-sel-ring);background:var(--rb-sel-bg)}}
+.rb-info-card{border-radius:16px;border:1px solid var(--rb-line2);background:var(--rb-surf)}
+.rb-info-card>summary{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;list-style:none;min-height:24px}
+.rb-info-card>summary::-webkit-details-marker{display:none}
+.rb-info-card>summary .t{font-weight:700;font-size:15px}
+.rb-info-card>summary .h{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rb-info-card>summary svg{flex:none;transition:transform .15s}
+.rb-info-card[open]>summary svg{transform:rotate(180deg)}
+.rb-info-body{padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px}
+@media (prefers-reduced-motion:reduce){.rb-info-card>summary svg{transition:none}}
+`;
 var MAP = { lorebook: "globalLore", regex: "customscript", trigger: "triggerscript" };
 var SKIP = /* @__PURE__ */ new Set([...USER_KEYS, "emotionImages", "additionalAssets", "ccAssets", "image", "vits", "chats", "chatFolders", "chatPage", "loreCache", "lowLevelHistory"]);
 var CHAR_INFO_LABELS = {
@@ -25,6 +50,7 @@ var CHAR_INFO_LABELS = {
   replaceGlobalNote: "글로벌 노트 교체",
   additionalText: "추가 텍스트",
   creatorNotes: "제작자 노트",
+  groupOnlyGreetings: "그룹 전용 인사말",
   creator: "제작자",
   characterVersion: "버전",
   tags: "태그",
@@ -80,102 +106,81 @@ export async function openCharEditor(ctx, index, chaId) {
     infoLabels: CHAR_INFO_LABELS,
     infoTitle: "봇 정보",
     validate: (v) => validateModule(v),
-    renderInfo: ({ draft, field, text, area, check, changed }) => {
-      // 첫 메시지·추가 인사말: 일반(글 쓰듯, 줄바꿈) / 코드(줄 번호·고정폭). 두 모드 모두 {{CBS}}·<img=…>·태그에 색을 입힌다
-      let mode = ctx.prefs?.ui?.textMode === "code" ? "code" : "text";
-      const rich = (get, set, { tall, label }) => codeEditor(get() ?? "", {
-        lang: "text",
-        label,
-        tab: "\t",
-        gutter: mode === "code",
-        wrap: true,
-        prose: mode !== "code",
-        minHeight: tall ? "max(300px,46vh)" : "96px",
-        maxHeight: tall ? "70vh" : "50vh",
-        onChange: (v) => {
-          set(v);
-          changed();
-        }
-      }).el;
-      const fmHolder = h("div");
-      const paintFm = () => fmHolder.replaceChildren(rich(() => draft.firstMessage, (v) => draft.firstMessage = v, { tall: true, label: "첫 메시지" }));
-      const modeSeg = segmented([["text", "일반"], ["code", "코드"]], mode, (v) => {
-        if (v === mode) return;
-        mode = v;
-        ctx.prefs?.saveUi?.({ textMode: v })?.catch?.(() => {
-        });
-        paintFm();
-        paintGreets();
-      }, "첫 메시지 입력 모드");
-      modeSeg.style.width = "160px";
-      const fmBox = h(
-        "div",
-        { style: "display:flex;flex-direction:column;gap:8px" },
-        h(
-          "div",
-          { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
-          modeSeg,
-          h("span", { class: "rb-muted", style: "font-size:12px;word-break:keep-all" }, "일반은 글 쓰는 칸, 코드는 줄 번호와 고정폭 글꼴이에요. 긴 줄은 둘 다 자동으로 줄바꿈돼요. 둘 다 {{CBS}}·<img=…>·태그에 색이 들어가요. 추가 인사말도 같이 바뀌어요.")
-        ),
-        fmHolder
-      );
-      const greets = h("div", { class: "wide", style: "display:flex;flex-direction:column;gap:8px" });
-      const paintGreets = () => {
-        if (!Array.isArray(draft.alternateGreetings)) draft.alternateGreetings = [];
-        greets.replaceChildren(
-          h("span", { class: "rb-label" }, `추가 인사말 (${draft.alternateGreetings.length})`),
-          ...draft.alternateGreetings.map((g, i) => {
-            const ta = h("div", { style: "flex:1;min-width:0" }, rich(() => draft.alternateGreetings[i], (v) => draft.alternateGreetings[i] = v, { label: `추가 인사말 ${i + 1}` }));
-            return h("div", { style: "display:flex;gap:6px;align-items:flex-start" }, ta, iconBtn("trash", `추가 인사말 ${i + 1} 지우기`, { onClick: () => {
-              draft.alternateGreetings.splice(i, 1);
-              changed();
-              paintGreets();
-            } }));
-          }),
-          h("div", null, btn("인사말 추가", { size: "sm", icon: "plus", onClick: () => {
-            draft.alternateGreetings.push("");
-            changed();
-            paintGreets();
-          } }))
-        );
-      };
-      paintFm();
-      paintGreets();
-      const tags =h("input", { class: "rb-input", value: (draft.tags ?? []).join(", "), placeholder: "쉼표로 구분" });
+    renderInfo: ({ draft, field, text, area, check, changed, goTab, ui, emitArea }) => {
+      // 위: 요약 카드(누르면 해당 탭) · 아래: 접는 카드 3개 — 기본 / 인사말 / 고급 (열림 상태는 탭을 오가도 기억)
+      ui.open ??= { basic: true, greet: true, adv: false };
+      const gm = createGreetingManager(ctx, { draft, changed, ui: ui.gm ??= {}, onArea: (a) => emitArea?.(a) });
+      const tags = h("input", { class: "rb-input", value: (draft.tags ?? []).join(", "), placeholder: "쉼표로 구분", "aria-label": "태그" });
       tags.addEventListener("input", () => {
         draft.tags = tags.value.split(",").map((s) => s.trim()).filter(Boolean);
         changed();
       });
       const prose = { mono: false };
-      return [
-        h(
-          "div",
-          { class: "rb-form" },
+      // ── 요약 카드 ──
+      const SUM_TEXT = ["desc", "personality", "scenario", "systemPrompt", "exampleMessage", "firstMessage", "postHistoryInstructions", "additionalText"];
+      const stat = (label, valueEl, tab, title) => h("button", { type: "button", class: "rb-info-stat", title, "aria-label": `${label} ${valueEl.textContent}${tab ? " — 눌러서 열기" : ""}`, onClick: () => tab && goTab(tab), disabled: !tab }, h("b", null, valueEl), h("span", null, label));
+      const vTok = h("span"), vLore = h("span"), vRe = h("span"), vTrig = h("span"), vGr = h("span");
+      const nameEl = h("div", { class: "rb-info-name" });
+      const tagsEl = h("div", { class: "rb-info-tags" });
+      const paintSummary = () => {
+        const tok = estimateTokens(SUM_TEXT.map((k) => String(draft[k] ?? "")).join("\n"));
+        vTok.textContent = `약 ${tok.toLocaleString()}`;
+        vLore.textContent = String((draft.lorebook ?? []).length);
+        vRe.textContent = String((draft.regex ?? []).length);
+        vTrig.textContent = String((draft.trigger ?? []).length);
+        vGr.textContent = String(1 + (draft.alternateGreetings?.length ?? 0) + (draft.groupOnlyGreetings?.length ?? 0));
+        nameEl.textContent = draft.name || "(이름 없음)";
+        tagsEl.replaceChildren(...(draft.tags ?? []).slice(0, 8).map((t) => h("span", { class: "rb-chip", style: "height:24px;padding:0 10px;font-size:12px;cursor:default" }, t)));
+      };
+      const summary = h("div", { class: "rb-info-sum" },
+        h("div", { style: "min-width:0;flex:1 1 220px;display:flex;flex-direction:column;gap:6px" }, nameEl, tagsEl),
+        h("div", { class: "rb-info-stats" },
+          stat("토큰(추정)", vTok, null, "설명·성격·시나리오·시스템·예시·인사말 등 기본 정보의 대략적인 토큰 수"),
+          stat("인사말", vGr, null, "첫 메시지 + 추가 인사말 + 그룹 전용"),
+          stat("로어북", vLore, "lorebook", "로어북 탭 열기"),
+          stat("정규식", vRe, "regex", "정규식 탭 열기"),
+          stat("트리거", vTrig, "trigger", "트리거 탭 열기")));
+      paintSummary();
+      // ── 접는 카드 ──
+      const card = (key, title, hint, ...kids) => {
+        const d = h("details", { class: "rb-info-card" },
+          h("summary", null, h("span", { class: "t" }, title), h("span", { class: "rb-muted h" }, hint), icon("down", 16)),
+          h("div", { class: "rb-info-body" }, ...kids));
+        d.open = !!ui.open[key];
+        d.addEventListener("toggle", () => { ui.open[key] = d.open; });
+        return d;
+      };
+      const basic = card("basic", "기본", "이름 · 설명 · 성격 · 시나리오",
+        h("div", { class: "rb-form" },
           field("이름", text(draft, "name")),
           field("별명", text(draft, "nickname")),
-          field("제작자", text(draft, "creator")),
-          field("버전", text(draft, "characterVersion")),
           field("태그", tags, true),
           field("설명", area(draft, "desc", { tall: true, ...prose }), true),
-          // label로 감싸면 안내 글을 눌러도 '일반' 버튼이 눌리므로 div로 감싼다
-          h("div", { class: "rb-field wide" }, h("span", { class: "rb-label" }, "첫 메시지"), fmBox),
-          greets,
           field("성격", area(draft, "personality", prose), true),
-          field("시나리오", area(draft, "scenario", prose), true),
-          field("예시 대화", area(draft, "exampleMessage", prose), true),
+          field("시나리오", area(draft, "scenario", prose), true)));
+      const greet = card("greet", "인사말", "첫 메시지 · 추가 인사말 · 그룹 전용", gm.el);
+      const adv = card("adv", "고급", "시스템 프롬프트 · 예시 대화 · 제작자 노트 · 변수",
+        h("div", { class: "rb-form" },
           field("시스템 프롬프트", area(draft, "systemPrompt", prose), true),
+          field("예시 대화", area(draft, "exampleMessage", prose), true),
           field("후속 지시 (post history)", area(draft, "postHistoryInstructions", prose), true),
           field("글로벌 노트 교체", area(draft, "replaceGlobalNote", prose), true),
           field("추가 텍스트", area(draft, "additionalText", prose), true),
+          field("제작자", text(draft, "creator")),
+          field("버전", text(draft, "characterVersion")),
           field("제작자 노트", area(draft, "creatorNotes", prose), true),
           field("기본 변수 (defaultVariables)", area(draft, "defaultVariables"), true),
           field("모듈 토글 정의 (customModuleToggle)", area(draft, "customModuleToggle"), true),
           field("배경 HTML (backgroundHTML)", area(draft, "backgroundHTML"), true),
           field("모듈 네임스페이스", text(draft, "moduleNamespace")),
-          h("div", { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap" }, check(draft, "lowLevelAccess", "저수준 접근"), check(draft, "utilityBot", "도구 봇"))
-        ),
-        note("info", '채팅·메모는 건드리지 않아요. 이미지는 봇 상세의 "에셋"에서 고쳐요.')
-      ];
+          h("div", { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap" }, check(draft, "lowLevelAccess", "저수준 접근"), check(draft, "utilityBot", "도구 봇"))));
+      const wrap = h("div", { class: "rb-info" }, summary, basic, greet, adv, note("info", '채팅·메모는 건드리지 않아요. 이미지는 봇 상세의 "에셋"에서 고쳐요.'));
+      // 글자를 치는 동안 요약(토큰·이름·태그)을 가볍게 갱신하고, 인사말 밖에서 입력하면 AI 창 작업을 '설명'으로 되돌린다
+      let t = 0;
+      wrap.addEventListener("input", () => { clearTimeout(t); t = setTimeout(paintSummary, 300); });
+      wrap.addEventListener("focusin", (ev) => { if (!ev.target.closest(".rb-gm")) emitArea?.("info"); });
+      if (!document.getElementById("rb-info-style")) document.head.appendChild(h("style", { id: "rb-info-style" }, INFO_CSS));
+      return [wrap];
     },
     async save(draft, original) {
       // 빠른 저장: 봇을 한 번만 읽고 곧바로 쓴다 (읽기와 쓰기 사이에 기다리는 일이 없어 두 번 읽어 확인할 필요가 없다).

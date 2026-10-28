@@ -32,7 +32,7 @@ export function clampGeom(g, pw, ph) {
   return { x, y, w, h: hh };
 }
 // 보고 있는 탭 → 작업 종류 (정보 탭은 설명, JSON·AI 탭은 설계 대화)
-export const TAB_TASK = { info: 'description', lorebook: 'lorebook', regex: 'regex', trigger: 'lua', json: 'workshop', ai: 'workshop' };
+export const TAB_TASK = { info: 'description', greeting: 'greeting', lorebook: 'lorebook', regex: 'regex', trigger: 'lua', json: 'workshop', ai: 'workshop' };
 
 export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, onRuleTest, tab }) {
   const old = panel.querySelector('#rb-ai-popup');

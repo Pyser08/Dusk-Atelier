@@ -302,15 +302,19 @@ export async function openEditorCore(ctx, cfg) {
     if (ev.target.matches("textarea, input[type=text], input:not([type])")) es.lastField = ev.target;
   });
   const TABS2 = [["info", "정보"], ["lorebook", "로어북"], ["regex", "정규식"], ["trigger", "트리거"], ...(hasAi ? [["ai", "AI로 제작"]] : []), ["json", "JSON"]];
+  function goTab(k) {
+    if (!TABS2.some(([t]) => t === k)) return;
+    es.tab = k;
+    es.mItem = false;
+    render();
+    panel.querySelector("#rb-ai-popup")?.syncTab?.(k);
+  }
+  // 정보 탭 안에서 인사말 칸에 있는지 아닌지를 AI 창이 알 수 있게 (작업 종류 자동 선택)
+  panel.addEventListener("da-area", (ev) => panel.querySelector("#rb-ai-popup")?.syncTab?.(ev.detail));
   function paintTabs() {
     replace(tabsEl, TABS2.map(([k, label]) => h(
       "button",
-      { type: "button", role: "tab", "aria-selected": es.tab === k ? "true" : "false", onClick: () => {
-        es.tab = k;
-        es.mItem = false;
-        render();
-        panel.querySelector("#rb-ai-popup")?.syncTab?.(k);
-      } },
+      { type: "button", role: "tab", "aria-selected": es.tab === k ? "true" : "false", onClick: () => goTab(k) },
       label,
       ["lorebook", "regex", "trigger"].includes(k) ? h("small", null, String(draft[k].length)) : k === "ai" && build?.pendingCount() ? h("small", null, String(build.pendingCount())) : null
     )));
@@ -435,7 +439,7 @@ export async function openEditorCore(ctx, cfg) {
   };
   function renderInfo() {
     if (cfg.renderInfo) {
-      replace(body, h("div", { class: "pane" }, cfg.renderInfo({ draft, field, text, area, check, num, jsonArea, select: select2, changed })));
+      replace(body, h("div", { class: "pane" }, cfg.renderInfo({ draft, field, text, area, check, num, jsonArea, select: select2, changed, goTab, ui: es.infoUi ??= {}, emitArea: (a) => panel.dispatchEvent(new CustomEvent("da-area", { detail: a })) })));
       return;
     }
     replace(body, h(
