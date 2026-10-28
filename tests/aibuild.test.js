@@ -114,8 +114,8 @@ test('요청 중 원고가 바뀌면 결과를 버린다 + 한도 초과 요청�
   await b.sendRequest();
   assert.equal(b.state.s.candidates.length, 0);
   assert.equal(b.state.s.thread.at(-1).error, true);
-  await b.setSettings({ maxInputChars: 1000 });
-  b.setRequest('description', '가'.repeat(2000));
+  await b.setSettings({ maxInputTokens: 1000 });
+  b.setRequest('description', '가'.repeat(3000));
   await assert.rejects(() => b.sendRequest(), /한도/);
 });
 

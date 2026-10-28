@@ -1,3 +1,4 @@
+import { startHostUpdateToast } from './ui/hostupdate.js';
 import { createMemoryButton } from './data/memorybutton.js';
 import * as engine_exports from './engine/index.js';
 import { hostBlockedMessage, isHostBlocked } from './data/modules.js';
@@ -147,6 +148,8 @@ async function start() {
   memoryRef.toast = (t) => app.ctx.toast(t, { seconds: 8 });
   refreshPersonaHandlers().catch(() => {
   });
+  // 새 버전이 있으면 메인 화면 오른쪽 위에 큰 알림 (켜질 때 한 번)
+  setTimeout(() => startHostUpdateToast(api, { version: VERSION, log: (m) => console.log(`[${TITLE}] ${m}`) }).catch(() => {}), 4000);
   (async () => {
     const data = await loadPresets(api);
     const device = isMobileDevice() ? "mobile" : "desktop";

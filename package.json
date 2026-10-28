@@ -1,6 +1,6 @@
 {
   "name": "dusk-atelier",
-  "version": "1.6.7",
+  "version": "1.6.8",
   "description": "RisuAI 플러그인 Dusk Atelier — 모듈·봇 관리와 인물별 장기기억",
   "private": true,
   "type": "module",

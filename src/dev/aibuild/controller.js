@@ -7,6 +7,7 @@ import { assemblePreset, newPresetState, validatePresetState } from './preset-en
 import { createAiStore, normalizeSettings, AUTOSAVE_MS } from './store.js';
 import { toDraft, toView } from './bridge.js';
 import { applyDesignToResponse, DesignError, hasDusk, resolveLoreMode } from './duskdesign.js';
+import { estimateTokens } from '../../engine/memoryinject.js';
 
 export function createAiBuild({ api, host, store: given }) {
   const store = given ?? createAiStore(api);
@@ -91,8 +92,8 @@ export function createAiBuild({ api, host, store: given }) {
     const report = previewRequest(task);
     assert(!report.issues.length, '프리셋 조립 오류:\n' + report.issues.join('\n'));
     const messages = report.messages;
-    const chars = messages.reduce((n, m) => n + m.content.length, 0);
-    assert(chars <= st.settings.maxInputChars, `전송 내용이 설정한 ${st.settings.maxInputChars.toLocaleString()}자 한도를 초과했습니다. (현재 ${chars.toLocaleString()}자) 설정에서 한도를 늘리거나 요청을 줄여 주세요.`);
+    const tokens = estimateTokens(messages.map((m) => m.content).join('\n'));
+    assert(tokens <= st.settings.maxInputTokens, `전송 내용이 설정한 ${st.settings.maxInputTokens.toLocaleString()}토큰 한도를 초과했습니다. (현재 약 ${tokens.toLocaleString()}토큰) 설정에서 한도를 늘리거나 요청을 줄여 주세요.`);
     const meta = { sessionId: s.sessionId, targetId: s.targetId, revision: s.revision, promptRevision: s.promptRevision };
     const before = clone(s.draft);
     const job = { ...meta, id: uid(), start: Date.now(), label: TASKS[task].label + ' · 응답 대기', cancelled: false };

@@ -6,13 +6,14 @@ import { validatePresetState } from './preset-engine.js';
 
 export const STORE_PREFIX = 'da_aibuild:';
 export const AUTOSAVE_MS = 18e4; // 자동저장 3분
-export const DEFAULT_SETTINGS = { model: 'submodel', timeout: 300, maxInputChars: 1e5, lore: 'auto', retry: true, loreByBot: {} };
+export const DEFAULT_SETTINGS = { model: 'submodel', timeout: 300, maxInputTokens: 150000, lore: 'auto', retry: true, loreByBot: {} };
 
 export function normalizeSettings(raw) {
   const s = { ...DEFAULT_SETTINGS, ...(raw && typeof raw === 'object' ? raw : {}) };
   if (!['model', 'submodel'].includes(s.model)) s.model = 'submodel';
   if (!Number.isFinite(s.timeout) || s.timeout < 10 || s.timeout > 3600) s.timeout = 300;
-  if (!Number.isFinite(s.maxInputChars) || s.maxInputChars < 1e3 || s.maxInputChars > 1e6) s.maxInputChars = 1e5;
+  delete s.maxInputChars; // 예전 글자 수 한도는 토큰 한도로 바뀜
+  if (!Number.isFinite(s.maxInputTokens) || s.maxInputTokens < 1e3 || s.maxInputTokens > 2e6) s.maxInputTokens = 150000;
   if (!['auto', 'dusk', 'plain'].includes(s.lore)) s.lore = 'auto';
   s.retry = s.retry !== false;
   // 봇마다 마지막으로 고른 로어북 방식 (dusk | plain), 최대 200개
