@@ -14,7 +14,7 @@ import { reload } from './modules.js';
 import { attachUndo } from '../undo.js';
 import { createAiBuild } from '../../dev/aibuild/controller.js';
 import { hostFromEditor } from '../../dev/aibuild/bridge.js';
-import { openAiPopup } from './aibuild.js';
+import { openAiPopup, loadPopupGeom } from './aibuild.js';
 import { renderAiTab } from './aitab.js';
 import { bbInstalled } from '../../engine/firstrun.js';
 import { attachProbPick } from '../probpick.js';
@@ -231,8 +231,9 @@ export async function openEditorCore(ctx, cfg) {
     b.style.cssText = "box-shadow:0 6px 20px rgba(0,0,0,.4);border-radius:999px;transition:opacity .16s ease,transform .16s ease";
     return b;
   };
+  let aiItem = null;
   const dialItems = h("div", { style: "display:flex;flex-direction:column;align-items:flex-end;gap:8px;transition:opacity .16s ease,transform .16s ease;opacity:0;transform:translateY(8px);pointer-events:none;visibility:hidden" },
-    hasAi ? fabItem("AI 창", "sparkle", "AI로 로어북·설명·정규식·Lua를 만들고 바로 반영", () => aiWindow()) : null,
+    hasAi ? (aiItem = fabItem("AI 창", "sparkle", "AI로 로어북·설명·정규식·Lua를 만들고 바로 반영", () => aiWindow())) : null,
     fabItem("규칙 시험", "zap", "가상 대화로 Dusk 규칙이 어떻게 켜지는지 시험", () => ruleTester()));
   let dialOpen = false;
   const closeDial = () => { dialOpen = false; dialItems.style.opacity = "0"; dialItems.style.transform = "translateY(8px)"; dialItems.style.pointerEvents = "none"; dialItems.style.visibility = "hidden"; fabMain.setAttribute("aria-expanded", "false"); };
@@ -243,6 +244,32 @@ export async function openEditorCore(ctx, cfg) {
   fabMain.style.cssText = "box-shadow:0 6px 20px rgba(0,0,0,.4);border-radius:999px";
   if (hasAi) fabMain.setAttribute("aria-haspopup", "true");
   const testFab = h("div", { id: "rb-rule-test-fab", style: "position:absolute;right:16px;bottom:16px;z-index:30;display:flex;flex-direction:column;align-items:flex-end;gap:8px" }, hasAi ? dialItems : null, fabMain);
+  // 버튼 표시: 대기 중이면 깜빡이는 점, 수정안이 도착하면 숫자 배지 (창이 닫혀 있어도 보임)
+  if (!document.getElementById("rb-fab-style")) document.head.appendChild(h("style", { id: "rb-fab-style" }, "@keyframes rb-fab-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}@media (prefers-reduced-motion:reduce){.rb-fab-dot{animation:none!important}}"));
+  const fabMark = (host) => {
+    if (!host) return null;
+    host.style.position = "relative";
+    return host.appendChild(h("span", { class: "rb-fab-mark", "aria-hidden": "true", style: "position:absolute;top:-6px;right:-4px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:var(--rb-warn,#e8a33d);color:#111;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;line-height:1" }));
+  };
+  let fabMarks = [];
+  function paintFab() {
+    if (!hasAi) return;
+    if (!fabMarks.length) fabMarks = [fabMark(fabMain), fabMark(aiItem)].filter(Boolean);
+    const busy = !!build?.state?.job, n = build?.pendingCount?.() ?? 0;
+    for (const m of fabMarks) {
+      m.classList.toggle("rb-fab-dot", busy && !n);
+      m.style.animation = busy && !n ? "rb-fab-pulse 1.1s ease-in-out infinite" : "";
+      m.style.display = busy || n ? "flex" : "none";
+      m.style.width = busy && !n ? "12px" : "";
+      m.style.minWidth = busy && !n ? "12px" : "18px";
+      m.style.height = busy && !n ? "12px" : "18px";
+      m.style.padding = busy && !n ? "0" : "0 5px";
+      m.textContent = busy && !n ? "" : n ? String(n) : "";
+    }
+    const label = busy ? "AI가 응답을 만드는 중" : n ? `새 수정안 ${n}개` : "";
+    fabMain.title = (hasAi ? "AI 창 · 규칙 시험" : "") + (label ? ` — ${label}` : "");
+    fabMain.setAttribute("aria-label", "도구" + (label ? ` (${label})` : ""));
+  }
   panel.append(head, tabsEl, body, testFab);
   ctx.win.appendChild(panel);
   panel.addEventListener("keydown", (ev) => {
@@ -282,6 +309,7 @@ export async function openEditorCore(ctx, cfg) {
         es.tab = k;
         es.mItem = false;
         render();
+        panel.querySelector("#rb-ai-popup")?.syncTab?.(k);
       } },
       label,
       ["lorebook", "regex", "trigger"].includes(k) ? h("small", null, String(draft[k].length)) : k === "ai" && build?.pendingCount() ? h("small", null, String(build.pendingCount())) : null
@@ -1982,15 +2010,24 @@ export async function openEditorCore(ctx, cfg) {
     if (!build) {
       build = createAiBuild({ api: ctx.api, host: hostFromEditor(handle, { targetId: () => draft[cfg.idKey] }) });
       buildInit = build.init().catch((err) => ctx.toast(`AI 설정을 불러오지 못했어요: ${err?.message ?? err}`, { error: true }));
-      build.subscribe(() => { if (panel.isConnected) paintTabs(); });
+      let lastPending = 0;
+      build.subscribe(() => {
+        if (!panel.isConnected) return;
+        paintTabs();
+        paintFab();
+        const n = build.pendingCount();
+        if (n > lastPending && !panel.querySelector("#rb-ai-popup")) ctx.toast("AI 수정안이 도착했어요 — 우측 하단 버튼에서 확인하세요");
+        lastPending = n;
+      });
     }
     return build;
   }
   async function aiWindow() {
     const b = getBuild();
     try { bbPresent = bbInstalled((await ctx.api.getDatabase(["plugins"]))?.plugins); } catch { /* 감지 실패는 무시 */ }
+    await loadPopupGeom(ctx);
     testFab.style.visibility = "hidden";
-    openAiPopup(ctx, { panel, build: b, selection: () => es.sel, bbPresent, onClose: () => { testFab.style.visibility = ""; },
+    openAiPopup(ctx, { panel, build: b, selection: () => es.sel, bbPresent, tab: es.tab, onClose: () => { testFab.style.visibility = ""; paintFab(); },
       // 수정안을 적용하기 전에 그 상태 그대로 규칙 시험 (시험 창에서 [수정안으로 돌아가기]로 AI 창에 되돌아와요)
       onRuleTest: (lorebook) => { panel.querySelector("#rb-ai-popup")?.closePopup?.(); ruleTester({ lorebook, onBack: () => aiWindow() }); } });
   }

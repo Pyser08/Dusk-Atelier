@@ -236,7 +236,7 @@ export async function renderPersonaBuilder(ctx) {
     runNote = noteIn.value;
     persist();
   });
-  const editIn = h("input", { class: "rb-input", style: "height:36px;flex:1;min-width:160px", placeholder: "켜진 섹션 전체에 적용할 수정 요청 (예: 더 냉소적으로)", "aria-label": "AI 수정 요청" });
+  const editIn = h("input", { class: "rb-input", style: "height:36px;flex:1;min-width:160px", placeholder: "켜진 섹션 전체에 적용할 수정 요청 (예: 더 냉소적으로)", "aria-label": "AI 수정 요청", enterkeyhint: "send", autocapitalize: "off", autocomplete: "off" });
   const koSw = switchEl(pb.showKo, { label: "번역 같이 보기", onChange: (v, el) => {
     pb.showKo = v;
     setSwitch(el, v);
@@ -388,7 +388,15 @@ export async function renderPersonaBuilder(ctx) {
       say("번역했어요.");
     } });
     aiButtons.push(b1, b2, b3, b4);
-    editIn.onkeydown = (e) => e.key === "Enter" && !e.isComposing && b3.click();
+    // on* 속성 핸들러가 false를 돌려주면 브라우저가 입력을 취소해 영문·지우기가 막힌다 → 값을 돌려주지 않는 리스너로 연결
+    if (editIn.__pbKey) editIn.removeEventListener("keydown", editIn.__pbKey);
+    editIn.__pbKey = (e) => {
+      if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) {
+        e.preventDefault();
+        b3.click();
+      }
+    };
+    editIn.addEventListener("keydown", editIn.__pbKey);
     replace(
       aiBox,
       h("div", { class: "rb-pb-h" }, "AI로 쓰기", h("span", { class: "rb-muted", style: "font-weight:500;font-size:12px" }, `· ${AI_MODES.find(([v]) => v === P.mode)?.[1] ?? ""}${P.mode === "static" ? ` ${P.staticModel || "(ID 없음)"}` : ""} · 영어로 써요`)),

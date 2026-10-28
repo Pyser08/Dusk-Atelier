@@ -1,5 +1,6 @@
 // AI로 제작 팝업(우측 하단). v1.6.7 2단계: 요청 → 수정안 카드 → 적용하면 편집기 탭에 바로 반영.
-// 화면 다듬기(끌어서 옮기기·크기·모바일 시트·프리셋 화면)는 5단계에서 이어서 한다.
+// 5단계: PC는 머리글을 끌어 옮기고 모서리를 끌어 크기를 바꾸며(위치·크기 기억), 좁은 화면은 아래 시트로 열린다.
+// 열어 둔 채 탭을 바꿔도 유지되고, 보고 있는 탭에 맞춰 작업 종류를 자동으로 고른다.
 import { h, replace } from '../dom.js';
 import { btn, iconBtn, note, segmented } from '../kit.js';
 
@@ -8,18 +9,43 @@ const STATE_LABEL = { ok: '적용할 수 있어요', applied: '적용함', disca
 
 const KIND = { affiliation: '소속', folder: '폴더', place: '장소', entry: '항목' };
 
-export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, onRuleTest }) {
+
+// ── 위치·크기 기억 (pluginStorage, 실패해도 무시) ──
+const GEOM_KEY = 'da_aibuild:popupgeom';
+let geomCache = null;
+export async function loadPopupGeom(ctx) {
+  if (geomCache) return geomCache;
+  try { const raw = await ctx.api.pluginStorage.getItem(GEOM_KEY); const g = raw ? JSON.parse(raw) : null; geomCache = g && typeof g === 'object' ? g : {}; } catch { geomCache = {}; }
+  return geomCache;
+}
+function saveGeom(ctx, g) {
+  geomCache = { ...g };
+  try { Promise.resolve(ctx.api.pluginStorage.setItem(GEOM_KEY, JSON.stringify(geomCache))).catch(() => {}); } catch { /* 저장 실패는 무시 */ }
+}
+const MIN_W = 340, MIN_H = 320, SHEET_MAX = 640;
+// 화면에 맞게 잘라 넣는다: 크기는 최소~패널 크기, 위치는 패널 안
+export function clampGeom(g, pw, ph) {
+  const w = Math.max(Math.min(MIN_W, pw), Math.min(g.w || 520, pw - 16));
+  const hh = Math.max(Math.min(MIN_H, ph), Math.min(g.h || 640, ph - 16));
+  const x = Math.min(Math.max(8, Number.isFinite(g.x) ? g.x : pw - w - 16), Math.max(8, pw - w - 8));
+  const y = Math.min(Math.max(8, Number.isFinite(g.y) ? g.y : ph - hh - 16), Math.max(8, ph - hh - 8));
+  return { x, y, w, h: hh };
+}
+// 보고 있는 탭 → 작업 종류 (정보 탭은 설명, JSON·AI 탭은 설계 대화)
+export const TAB_TASK = { info: 'description', lorebook: 'lorebook', regex: 'regex', trigger: 'lua', json: 'workshop', ai: 'workshop' };
+
+export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, onRuleTest, tab }) {
   const old = panel.querySelector('#rb-ai-popup');
   if (old) return old.closePopup?.();
   const st = build.state;
-  const back = h('div', { id: 'rb-ai-popup', role: 'dialog', 'aria-label': 'AI로 제작', style: 'position:absolute;right:16px;bottom:16px;z-index:40;width:min(520px,calc(100% - 32px));height:min(640px,calc(100% - 32px));display:flex;flex-direction:column;background:var(--rb-surface,#fff);color:var(--rb-text,inherit);border:1px solid var(--rb-line,#ccc);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden' });
+  const back = h('div', { id: 'rb-ai-popup', role: 'dialog', 'aria-label': 'AI로 제작', style: 'position:absolute;z-index:40;display:flex;flex-direction:column;background:var(--rb-surface,#fff);color:var(--rb-text,inherit);border:1px solid var(--rb-line,#ccc);box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden;box-sizing:border-box' });
   const status = h('small', { class: 'rb-muted', 'aria-live': 'polite' });
   const list = h('div', { class: 'rb-scroll', style: 'flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px' });
   const taskSel = h('select', { class: 'rb-input', 'aria-label': '작업 종류', style: 'flex:1' }, Object.entries(build.TASKS).map(([k, t]) => h('option', { value: k }, t.label)));
   const modelSel = h('select', { class: 'rb-input', 'aria-label': '모델', style: 'width:auto' }, h('option', { value: 'submodel' }, '보조 모델'), h('option', { value: 'model' }, '메인 모델'));
   const scope = h('input', { type: 'checkbox' });
   const scopeLbl = h('label', { class: 'rb-muted', style: 'display:none;align-items:center;gap:4px;font-size:12px' }, scope, '선택한 항목만');
-  const ta = h('textarea', { class: 'rb-textarea', rows: 3, placeholder: '무엇을 만들거나 고칠까요? (Ctrl+Enter로 보내기)', style: 'font-family:inherit;font-size:14px' });
+  const ta = h('textarea', { class: 'rb-textarea', rows: 3, placeholder: '무엇을 만들거나 고칠까요? (Ctrl+Enter로 보내기)', style: 'font-family:inherit;font-size:16px' });
   // 로어북 방식 (Dusk | 일반): 로어북·설계 대화 작업에서만 보인다. 봇마다 마지막 선택을 기억한다.
   const loreSeg = segmented([['dusk', 'Dusk 방식'], ['plain', '일반 방식']], build.loreMode(), async (v) => { try { await build.setLoreMode(v); } catch (e) { ctx.toast(e.message, { error: true }); } paint(); }, '로어북 방식');
   loreSeg.style.cssText = 'flex:none;min-width:190px';
@@ -113,19 +139,95 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
     } catch (e) { ctx.toast(e.message, { error: true }); }
     paint();
   }
-  taskSel.addEventListener('change', () => { build.setRequest(st.task, ta.value); build.setTask(taskSel.value); ta.value = st.s.requests[st.task] ?? ''; });
+  // 사용자가 직접 작업 종류를 고르면 그 뒤로는 탭을 바꿔도 자동으로 바꾸지 않는다 (창을 다시 열면 자동으로 돌아옴)
+  let autoTask = true;
+  const pickTask = (k) => { build.setRequest(st.task, ta.value); build.setTask(k); ta.value = st.s.requests[st.task] ?? ''; };
+  taskSel.addEventListener('change', () => { autoTask = false; pickTask(taskSel.value); });
   modelSel.addEventListener('change', () => build.setSettings({ model: modelSel.value }));
   scope.addEventListener('change', () => build.setScopeOnly(scope.checked));
   ta.addEventListener('input', () => build.setRequest(st.task, ta.value));
   ta.addEventListener('keydown', (ev) => { if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter') { ev.preventDefault(); send(); } });
 
+  // ── 배치: PC는 떠 있는 창(끌기·크기), 좁은 화면은 아래 시트 ──
+  let geom = null, sheet = false;
+  const pSize = () => ({ pw: panel.clientWidth || 800, ph: panel.clientHeight || 600 });
+  function layout() {
+    const { pw, ph } = pSize();
+    sheet = pw < SHEET_MAX;
+    const s2 = back.style;
+    if (sheet) {
+      s2.left = '0'; s2.right = '0'; s2.top = 'auto'; s2.bottom = '0'; s2.width = '100%';
+      s2.height = 'min(86%, ' + Math.max(320, ph - 24) + 'px)'; s2.borderRadius = '16px 16px 0 0'; s2.paddingBottom = 'env(safe-area-inset-bottom)';
+      grip.style.display = 'flex'; hdr.style.cursor = 'default'; rzNW.style.display = 'none'; rzSE.style.display = 'none';
+    } else {
+      geom = clampGeom(geom ?? {}, pw, ph);
+      s2.left = geom.x + 'px'; s2.top = geom.y + 'px'; s2.right = 'auto'; s2.bottom = 'auto'; s2.width = geom.w + 'px'; s2.height = geom.h + 'px';
+      s2.borderRadius = '16px'; s2.paddingBottom = '0';
+      grip.style.display = 'none'; hdr.style.cursor = 'grab'; rzNW.style.display = ''; rzSE.style.display = '';
+    }
+  }
+  // 포인터 끌기 공통: 마우스·터치·펜 모두 pointer 이벤트로 처리
+  function drag(ev, onMove, onEnd) {
+    ev.preventDefault();
+    const el = ev.currentTarget, id = ev.pointerId;
+    try { el.setPointerCapture(id); } catch { /* 캡처 실패는 무시 */ }
+    const sx = ev.clientX, sy = ev.clientY;
+    const mv = (e) => { if (e.pointerId === id) onMove(e.clientX - sx, e.clientY - sy); };
+    const up = (e) => {
+      if (e.pointerId !== id) return;
+      el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+      onEnd?.(e.clientX - sx, e.clientY - sy);
+    };
+    el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  }
+  const hdrTitle = h('b', null, 'AI로 제작');
+  const closeB = iconBtn('x', '닫기', { onClick: () => close() });
+  const hdr = h('div', { style: 'display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--rb-line,#ccc);touch-action:none;user-select:none;-webkit-user-select:none' }, hdrTitle, status, h('span', { style: 'flex:1' }), modelSel, closeB);
+  hdr.addEventListener('pointerdown', (ev) => {
+    if (sheet || ev.button > 0 || ev.target.closest('button,select,input,textarea,a')) return;
+    const g0 = { ...geom };
+    hdr.style.cursor = 'grabbing';
+    drag(ev, (dx, dy) => { geom = clampGeom({ ...g0, x: g0.x + dx, y: g0.y + dy }, pSize().pw, pSize().ph); layout(); },
+      () => { hdr.style.cursor = 'grab'; saveGeom(ctx, geom); });
+  });
+  // 아래 시트: 위쪽 손잡이를 아래로 끌면 닫힘
+  const grip = h('div', { style: 'display:none;justify-content:center;padding:8px 0 2px;touch-action:none' }, h('span', { style: 'width:44px;height:5px;border-radius:3px;background:var(--rb-line,#bbb)' }));
+  grip.addEventListener('pointerdown', (ev) => {
+    drag(ev, (dx, dy) => { back.style.transform = 'translateY(' + Math.max(0, dy) + 'px)'; },
+      (dx, dy) => { if (dy > 90) close(); else back.style.transform = ''; });
+  });
+  const mkRz = (dir) => {
+    const nw = dir === 'nw';
+    const el = h('div', { 'aria-label': nw ? '크기 조절(왼쪽 위)' : '크기 조절(오른쪽 아래)', title: '끌어서 크기를 바꿔요', style: 'position:absolute;width:22px;height:22px;touch-action:none;z-index:2;' + (nw ? 'left:0;top:0;cursor:nwse-resize' : 'right:0;bottom:0;cursor:nwse-resize') },
+      h('span', { style: 'position:absolute;width:10px;height:10px;opacity:.55;' + (nw ? 'left:4px;top:4px;border-left:2px solid currentColor;border-top:2px solid currentColor;border-top-left-radius:4px' : 'right:4px;bottom:4px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;border-bottom-right-radius:4px') }));
+    el.addEventListener('pointerdown', (ev) => {
+      if (sheet) return;
+      const g0 = { ...geom }, { pw, ph } = pSize();
+      drag(ev, (dx, dy) => {
+        let { x, y, w, h: hh } = g0;
+        if (nw) { w = g0.w - dx; hh = g0.h - dy; w = Math.max(MIN_W, Math.min(w, g0.x + g0.w - 8)); hh = Math.max(MIN_H, Math.min(hh, g0.y + g0.h - 8)); x = g0.x + g0.w - w; y = g0.y + g0.h - hh; }
+        else { w = Math.max(MIN_W, Math.min(g0.w + dx, pw - g0.x - 8)); hh = Math.max(MIN_H, Math.min(g0.h + dy, ph - g0.y - 8)); }
+        geom = { x, y, w, h: hh }; layout();
+      }, () => saveGeom(ctx, geom));
+    });
+    return el;
+  };
+  const rzNW = mkRz('nw'), rzSE = mkRz('se');
+
   const unsub = build.subscribe(paint);
   const timer = setInterval(() => { if (!back.isConnected) return clearInterval(timer); if (st.job) paint(); }, 1000);
-  const close = () => { unsub(); clearInterval(timer); back.remove(); onClose?.(); };
+  let ro = null;
+  const close = () => { unsub(); clearInterval(timer); ro?.disconnect(); win.removeEventListener('resize', onWin); back.remove(); onClose?.(); };
+  const win = panel.ownerDocument.defaultView ?? window;
+  const onWin = () => { if (back.isConnected) layout(); };
+  win.addEventListener('resize', onWin);
+  if (typeof ResizeObserver === 'function') { ro = new ResizeObserver(onWin); ro.observe(panel); }
   back.closePopup = close;
+  // 열려 있는 동안 탭이 바뀌면(편집기에서 호출) 그 탭에 맞는 작업 종류로 바꾼다
+  back.syncTab = (t) => { const k = TAB_TASK[t]; if (autoTask && k && k !== st.task && build.TASKS[k]) pickTask(k); };
   back.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); close(); } });
   back.append(
-    h('div', { style: 'display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--rb-line,#ccc)' }, h('b', null, 'AI로 제작'), status, h('span', { style: 'flex:1' }), modelSel, iconBtn('x', '닫기', { onClick: close })),
+    grip, rzNW, rzSE, hdr,
     bbNote,
     h('div', { style: 'display:flex;gap:8px;align-items:center;padding:8px 12px;flex-wrap:wrap' }, taskSel, scopeLbl, loreSeg),
     loreHint,
@@ -133,8 +235,11 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
     h('div', { style: 'padding:10px 12px;border-top:1px solid var(--rb-line,#ccc);display:flex;flex-direction:column;gap:8px' }, ta,
       h('div', { style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, undoB, saveB, newB, bbPresent ? importB : null, h('span', { style: 'flex:1' }), sendB, stopB))
   );
+  geom = geomCache && Number.isFinite(geomCache.w) ? { ...geomCache } : null;
   panel.appendChild(back);
+  if (tab) back.syncTab(tab);
+  layout();
   paint();
-  ta.focus();
+  if (!sheet) ta.focus();
   return back;
 }
