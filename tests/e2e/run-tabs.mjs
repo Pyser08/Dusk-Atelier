@@ -68,9 +68,9 @@ for (const mobile of [false, true]) {
   await tab(page, "트리거"); await page.waitForTimeout(80);
   if (mobile) await page.locator(".side .rb-item").first().click().catch(() => {}); await page.waitForTimeout(100);
   ok(`[${tag}] Lua 트리거 표시`, (await page.locator(".rb-kind").first().textContent()).includes("Lua"));
-  ok(`[${tag}] 트리거 보기 전환(트리거|초기 변수)`, (await page.locator(".rb-seg button").allTextContents()).join("|").includes("초기 변수"));
+  ok(`[${tag}] 트리거: 일반/Lua 거르기와 초기 변수 고정 행`, (await page.locator(".rb-seg button").allTextContents()).join("|").includes("Lua") && (await page.locator(".rb-pin").count()) === 1);
   if (mobile) await page.getByRole("button", { name: "목록으로" }).click();
-  await page.locator(".rb-seg button", { hasText: "초기 변수" }).click(); await page.waitForTimeout(80);
+  await page.locator(".rb-pin").click(); await page.waitForTimeout(80);
   ok(`[${tag}] 초기 변수 3줄·중복 경고`, (await page.locator(".rb-var").count()) === 3 && (await page.locator(".rb-note.warn, .rb-note").filter({ hasText: "hp" }).count()) >= 1);
   await page.locator(".rb-var").nth(1).locator("input.v").fill("시로코");
   ok(`[${tag}] 값 고치면 봇 변수에 반영`, (await page.evaluate(() => __ed.draft.defaultVariables)) === "hp=10\nname=시로코\nhp=20");
@@ -80,7 +80,16 @@ for (const mobile of [false, true]) {
   await page.locator(".rb-var").last().locator("input.k").fill("mp"); await page.locator(".rb-var").last().locator("input.v").fill("5");
   ok(`[${tag}] 변수 추가`, (await page.evaluate(() => __ed.draft.defaultVariables)) === "hp=10\nname=시로코\nmp=5");
   if (mobile) ok("[모바일] 변수 화면 가로로 안 넘침", await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
-  await page.locator(".rb-seg button", { hasText: "트리거" }).click(); await page.waitForTimeout(80);
+  if (mobile) await page.getByRole("button", { name: "목록으로" }).click();
+  await page.locator(".side .rb-item").first().click(); await page.waitForTimeout(80);
+  ok(`[${tag}] 트리거를 고르면 초기 변수 화면에서 돌아옴`, (await page.locator(".rb-kind").count()) === 1 && (await page.locator(".rb-pin.on").count()) === 0);
+  ok(`[${tag}] 트리거 카드: 기본·Lua 코드 열림, 고급 접힘`, (await page.locator(".rb-fold").evaluateAll((d) => d.map((x) => x.open))).join() === "true,true,false");
+  if (mobile) await page.getByRole("button", { name: "목록으로" }).click();
+  await page.locator(".rb-seg button", { hasText: "일반" }).click(); await page.waitForTimeout(80);
+  ok(`[${tag}] 일반 거르기: Lua 트리거는 빠지고 일반만`, (await page.locator(".side .rb-item").count()) === 1 && !(await page.locator(".side .rb-item").first().textContent()).includes("Lua"));
+  await page.locator(".rb-seg button", { hasText: "Lua" }).click(); await page.waitForTimeout(80);
+  ok(`[${tag}] Lua 거르기: Lua 트리거가 보임`, (await page.locator(".side .rb-item").count()) === 1);
+  await page.locator(".rb-seg button", { hasText: "전체" }).click(); await page.waitForTimeout(80);
   // ── JSON ──
   await tab(page, "JSON"); await page.waitForTimeout(80);
   ok(`[${tag}] JSON 올바름 표시`, (await page.locator(".rb-bar small").textContent()).includes("올바른 JSON"));

@@ -265,6 +265,9 @@ export async function openEditorCore(ctx, cfg) {
 .rb-rel .rb-chip{height:26px;padding:0 10px;font-size:12px}
 .rb-treehead{display:flex;flex-direction:column;gap:8px;padding:10px 12px 6px}
 .rb-treehead .rb-input{height:36px}
+.rb-pin{display:flex;gap:8px;align-items:center;width:100%;padding:8px 10px;border-radius:10px;border:0;background:var(--rb-surf2);color:var(--rb-text);font:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:left}
+.rb-pin.on{box-shadow:inset 0 0 0 2px var(--rb-sel-ring)}
+.rb-pin small{margin-left:auto;font-weight:400;color:var(--rb-sub)}
 @media (max-width:760px){.rb-pc-only{display:none!important}.rb-toolrow.m-hide{display:none}}
 @media (prefers-reduced-motion:reduce){.rb-fold>summary svg{transition:none}}
 .rb-side-tools.rb-bar{padding:8px;border-radius:14px;border:1px solid var(--rb-line2);background:var(--rb-surf);margin:0 0 8px;gap:6px}
@@ -466,14 +469,6 @@ export async function openEditorCore(ctx, cfg) {
     const [i, box] = tip ? tipPair(tip) : [null, null];
     return h("label", { class: ["rb-field", wide && "wide"] }, h("span", { class: "rb-label" }, label, i), box, input);
   };
-  // 접는 '고급' 칸: 열림 상태는 항목을 바꿔도 기억 (처음 쓰는 사람은 기본 칸만 보게)
-  const advFold = (key, title, hint, ...kids) => {
-    es.adv ??= {};
-    const d = h("details", { class: "rb-adv wide" }, h("summary", null, h("span", null, title), h("span", { class: "h" }, hint), icon("down", 16)), h("div", { class: "in" }, h("div", { class: "rb-form" }, ...kids)));
-    d.open = !!es.adv[key];
-    d.addEventListener("toggle", () => { es.adv[key] = d.open; });
-    return d;
-  };
   // 접는 카드(목업의 기본·켜지는 조건·고급 …): 열림 상태는 항목을 바꿔도 기억
   const foldCard = (key, title, hint, open, ...kids) => {
     es.fold ??= {};
@@ -607,6 +602,7 @@ export async function openEditorCore(ctx, cfg) {
   function renderList(kind) {
     const list = draft[kind];
     const isLore = kind === "lorebook";
+    const showVars = kind === "trigger" && hasAi && es.trigView === "vars";
     const q = es.q[kind].trim().toLowerCase();
     es.filt ??= { regex: "all", trigger: "all" };
     const isLuaTrig = (t) => Array.isArray(t.effect) && t.effect.length === 1 && ["triggerlua", "triggercode"].includes(t.effect[0]?.type);
@@ -950,13 +946,14 @@ export async function openEditorCore(ctx, cfg) {
       const affPath = isLore && es.loreTab === "char" ? affsOf(it2, fmap) : [];
       const b = h(
         "button",
-        { type: "button", class: ["rb-item", off && "off", child && "child", divider && "divider"], role: "option", "aria-selected": es.sel[kind] === i2 ? "true" : "false", onClick: () => {
+        { type: "button", class: ["rb-item", off && "off", child && "child", divider && "divider"], role: "option", "aria-selected": es.sel[kind] === i2 && !showVars ? "true" : "false", onClick: () => {
           if (selecting) {
             if (es.multi.has(it2)) es.multi.delete(it2);
             else es.multi.add(it2);
             render();
             return;
           }
+          if (kind === "trigger") es.trigView = "list";
           es.sel[kind] = i2;
           es.mItem = true;
           render();
@@ -1173,18 +1170,26 @@ export async function openEditorCore(ctx, cfg) {
       } })
     ) : null;
     const pane = h("div", { class: "pane" });
-    body.classList.toggle("m-item", !!(es.mItem && it));
-    body.classList.toggle("m-list", !(es.mItem && it));
+    const cur = showVars ? null : it;
+    const detail = showVars || !!it;
+    body.classList.toggle("m-item", !!(es.mItem && detail));
+    body.classList.toggle("m-list", !(es.mItem && detail));
     pane.appendChild(h("div", { class: "rb-mobile-only" }, btn("목록으로", { size: "sm", icon: "back", onClick: () => {
       es.mItem = false;
       render();
     } })));
-    if (!it) pane.appendChild(h("div", { class: "rb-empty" }, list.length ? "왼쪽에서 항목을 고르세요." : "왼쪽의 버튼으로 첫 항목을 만들어 보세요."));
+    if (showVars) pane.append(varsCard());
+    else if (!it) pane.appendChild(h("div", { class: "rb-empty" }, list.length ? "왼쪽에서 항목을 고르세요." : "왼쪽의 버튼으로 첫 항목을 만들어 보세요."));
     else pane.append(itemTools, isLore ? loreForm(it) : kind === "regex" ? regexForm(it) : triggerForm(it));
-    toolEl.classList.toggle("m-hide", !!(es.mItem && it));
-    replace(body, h("div", { class: "side" }, kind === "trigger" && hasAi ? h("div", { style: "padding:8px 12px 0" }, trigSeg()) : null, h("div", { class: "rb-treehead" }, loreTabs, filterSeg, searchBox), bulkBar, items), pane);
-    es.shown = { kind, items, pane, item: it };
-    restoreView(kind, items, pane, it);
+    toolEl.classList.toggle("m-hide", !!(es.mItem && detail));
+    const pinned = kind === "trigger" && hasAi ? h("div", { style: "padding:0 12px 6px" }, h("button", { type: "button", class: ["rb-pin", showVars && "on"], onClick: () => {
+      es.trigView = "vars";
+      es.mItem = true;
+      render();
+    } }, "📦 초기 변수", h("small", null, String(parseVars(draft.defaultVariables).length)))) : null;
+    replace(body, h("div", { class: "side" }, h("div", { class: "rb-treehead" }, loreTabs, filterSeg, searchBox), pinned, bulkBar, items), pane);
+    es.shown = { kind, items, pane, item: cur };
+    restoreView(kind, items, pane, cur);
   }
   // 리스 순정 폴더가 있으면 Dusk 폴더로 바꿀지 한 번 묻는다
   function maybeConvertNative() {
@@ -1964,22 +1969,32 @@ export async function openEditorCore(ctx, cfg) {
   function triggerForm(t) {
     const lua = Array.isArray(t.effect) && t.effect.length === 1 && ["triggerlua", "triggercode"].includes(t.effect[0]?.type) ? t.effect[0] : null;
     const kindBadge = h("span", { class: "rb-kind wide", style: "align-self:flex-start" }, icon(lua ? "code" : "zap", 14), lua ? (lua.type === "triggerlua" ? "Lua 트리거" : "코드 트리거") : "일반 트리거 (조건 · 효과)");
+    const typeSeg = segmented(TRIGGER_TYPES, t.type ?? "start", (v) => {
+      t.type = v;
+      changed();
+      render();
+    }, "실행 시점");
+    const typeLabel = TRIGGER_TYPES.find((x) => x[0] === t.type)?.[1] ?? "";
     return h(
       "div",
       { class: "rb-form" },
-      kindBadge,
-      field("이름", text(t, "comment")),
-      field("실행 시점", select2(t, "type", TRIGGER_TYPES)),
-      lua ? field(lua.type === "triggerlua" ? "Lua 코드" : "트리거 코드", lua.type === "triggerlua" ? codeArea(lua, "code", { lang: "lua", tall: true }) : area(lua, "code", { tall: true }), true) : null,
-      lua ? null : field("조건 (conditions, JSON)", jsonArea(t, "conditions"), true),
-      lua ? null : field("효과 (effect, JSON)", jsonArea(t, "effect", { tall: true }), true),
-      advFold("trigger", "고급 설정", lua ? "저수준 접근 · 조건(JSON)" : "저수준 접근",
-        h("div", { class: "wide", style: "display:flex;gap:16px" }, check(t, "lowLevelAccess", "저수준 접근")),
+      foldCard("tg-basic", "기본", `${typeLabel}${lua ? " · Lua" : " · 일반"}`, true,
+        h("div", { class: "rb-form" },
+          kindBadge,
+          field("이름", text(t, "comment")),
+          field("실행 시점", typeSeg, true, "채팅 시작·입력·출력·화면 표시·요청·수동(버튼) 중에서 골라요."))),
+      lua
+        ? foldCard("tg-code", lua.type === "triggerlua" ? "Lua 코드" : "트리거 코드", "", true,
+          lua.type === "triggerlua" ? codeArea(lua, "code", { lang: "lua", tall: true }) : area(lua, "code", { tall: true }))
+        : foldCard("tg-cond", "조건", "모두 만족하면 실행", true, field("조건 (conditions, JSON)", jsonArea(t, "conditions"), true, "비워 두면 항상 실행돼요.")),
+      lua ? null : foldCard("tg-effect", "효과", "위에서부터 차례로", true, field("효과 (effect, JSON)", jsonArea(t, "effect", { tall: true }), true)),
+      foldCard("tg-adv", "고급", lua ? "저수준 접근 · 조건(JSON)" : "저수준 접근", false,
+        h("div", { style: "display:flex;gap:6px;align-items:center" }, check(t, "lowLevelAccess", "저수준 접근"), tipEl("AI 호출·이미지 생성 같은 고급 기능이 필요한 트리거에만 켜세요.")),
         lua ? field("조건 (conditions, JSON)", jsonArea(t, "conditions"), true) : null)
     );
   }
   // 초기 변수(defaultVariables): Lua가 읽고 쓰는 변수의 시작값. 봇에만 있다 (모듈엔 없음)
-  function varsPane() {
+  function varsCard() {
     const rows = parseVars(draft.defaultVariables);
     const wrap = h("div", { class: "rb-vars" });
     const commit = () => { draft.defaultVariables = serializeVars(rows); if (!draft.defaultVariables && original.defaultVariables === void 0) delete draft.defaultVariables; changed(); };
@@ -1997,7 +2012,7 @@ export async function openEditorCore(ctx, cfg) {
         h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, btn("변수 추가", { size: "sm", icon: "plus", onClick: () => { rows.push({ k: "", v: "" }); paint(); wrap.querySelectorAll(".k").forEach((x, n, a) => n === a.length - 1 && x.focus()); } })));
     };
     paint();
-    return h("div", { class: "pane" }, h("p", { class: "rb-muted", style: "margin:0;font-size:13px" }, "한 줄에 변수 하나(key=value)로 저장돼요. 채팅이 시작될 때 이 값으로 채워지고, Lua·트리거가 읽고 바꿔요."), wrap);
+    return foldCard("vars", "📦 초기 변수", "채팅이 시작될 때 들어가는 값 (봇만)", true, h("div", null, tipEl("한 줄에 변수 하나(key=value)로 저장돼요. 채팅이 시작될 때 이 값으로 채워지고, Lua·트리거가 읽고 바꿔요.")), wrap);
   }
   function renderJson() {
     const view = structuredClone(draft);
@@ -2005,7 +2020,7 @@ export async function openEditorCore(ctx, cfg) {
     const el = h("textarea", { class: "rb-textarea", style: "flex:1;min-height:60vh", spellcheck: "false", "aria-label": "전체 JSON" });
     el.value = JSON.stringify(view, null, 2);
     attachUndo(el);
-    const msg = h("span", { class: "rb-muted", "aria-live": "polite" }, "전체를 JSON으로 고쳐요. 식별자(id)는 바꿀 수 없어요.");
+    const msg = h("span", { class: "rb-muted", "aria-live": "polite" });
     const stat = h("small", { class: "rb-muted", style: "white-space:nowrap" });
     // 칠 때마다 문법을 확인해 오류가 있는 줄을 알려 준다
     const lineOf = (e) => { const m = /position (\d+)/.exec(e.message) ?? /line (\d+)/.exec(e.message); if (!m) return ""; return /line/.test(m[0]) ? ` (${m[1]}번째 줄)` : ` (${el.value.slice(0, Number(m[1])).split("\n").length}번째 줄)`; };
@@ -2090,16 +2105,6 @@ export async function openEditorCore(ctx, cfg) {
     // 코드 편집기는 다음 프레임에 높이가 잡히므로 한 번 더
     requestAnimationFrame(apply2);
   }
-  // 트리거 탭 위쪽 전환: 트리거 목록 ↔ 초기 변수 (봇만)
-  const trigSeg = () => {
-    const sg = segmented([["list", "트리거"], ["vars", "초기 변수"]], es.trigView ?? "list", (v) => { es.trigView = v; render(); }, "트리거 보기");
-    return sg;
-  };
-  function renderVars() {
-    es.shown = null;
-    toolEl.hidden = true;
-    replace(body, h("div", { class: "side" }, h("div", { style: "padding:8px" }, trigSeg())), varsPane());
-  }
   function render() {
     saveView();
     paintTabs();
@@ -2107,10 +2112,6 @@ export async function openEditorCore(ctx, cfg) {
     if (panel.classList.contains("help-on")) paintHelp();
     toolEl.hidden = !["lorebook", "regex", "trigger"].includes(es.tab);
     if (es.tab === "info" || es.tab === "json" || es.tab === "ai") body.classList.remove("m-item", "m-list");
-    if (es.tab === "trigger" && hasAi && es.trigView === "vars") {
-      body.classList.remove("m-item", "m-list");
-      return renderVars();
-    }
     if (es.tab === "info") renderInfo();
     else if (es.tab === "ai") renderAi();
     else if (es.tab === "json") renderJson();
