@@ -7,10 +7,10 @@ import { selectBackend, capabilitiesOf } from "./memorybackend.js";
 import { createCardStore } from "./cardstore.js";
 import { createTurnFlow } from "./memoryturn.js";
 
-export function createMemory(api, { notify = () => {}, log = (...a) => console.log("[Dusk 기억]", ...a), potLibrary = null, onOpen = null } = {}) {
+export function createMemory(api, { storyNow = null, notify = () => {}, log = (...a) => console.log("[Dusk 기억]", ...a), potLibrary = null, onOpen = null } = {}) {
   const store = createMemoryStore(api);
   const cards = createCardStore(api);
-  const injector = createMemoryInjector(api, { store, log });
+  const injector = createMemoryInjector(api, { store, storyNow, log });
   const link = {};  // 턴 흐름이 켜지면 채워진다(리수폿 Writer와 기록 호출을 합칠 때 러너가 쓴다)
   const runner = createMemoryRunner(api, { store, log, notify, link, afterAnalyze: async (ci, ti) => { if (injector.mode() === "lore") await injector.syncLore(ci, ti); } });
   const bardwiki = createBardWikiBackend(api, { store, log });

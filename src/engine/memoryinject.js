@@ -20,14 +20,15 @@ function sceneLine(s, cap) {
 }
 
 // ctx: {messageCount, recentText, settings:{targetTokens,capTokens,sceneTokens,recentSkip}}
-export function buildBlock(folder, { messageCount = 0, recentText = "", settings = {}, messages = null, focus = null } = {}) {
+export function buildBlock(folder, { messageCount = 0, recentText = "", settings = {}, messages = null, focus = null, storyNow = "" } = {}) {
   const target = settings.targetTokens ?? 1200, cap = settings.capTokens ?? 2500, sceneCap = settings.sceneTokens ?? 300, skip = settings.recentSkip ?? 8;
   const manifest = { included: [], excluded: [], tokens: 0, recordIds: [] }, plus = settings.plus !== false;
   const scenes = (folder.scenes ?? []).filter((s) => !s.orphan);
   const cur = scenes.at(-1);
   const lines = [HEADER];
   if (cur) lines.push(sceneLine(cur, sceneCap));
-  if (plus && cur && !cur.when && currentStoryTime(folder)) lines.push(`Story time (last known): ${oneLine(currentStoryTime(folder))}`);
+  if (storyNow) lines.push(`Story time (now): ${oneLine(storyNow)}`); // 이야기 시간 설정이 켜져 있으면 그 값이 기준
+  else if (plus && cur && !cur.when && currentStoryTime(folder)) lines.push(`Story time (last known): ${oneLine(currentStoryTime(folder))}`);
   // Story so far: 이전 장면을 최신부터 이벤트 예산 안에서 채우고 시간순으로 출력(통째로만 포함)
   const evCap = settings.eventTokens ?? 600, evLines = []; let evUsed = 0;
   for (const s of scenes.slice(0, -1).reverse()) {

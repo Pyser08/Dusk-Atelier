@@ -1,9 +1,10 @@
 // 장기기억 주입 훅: 요청 사본에만 [Dusk Memory] 블록을 넣는다(저장 데이터 불변).
 import { extractMessageText, isUserMessage } from "../engine/chattext.js";
 import { buildBlock, insertBlock, shouldInject, upsertLoreEntry } from "../engine/memoryinject.js";
+import { stateText } from "../engine/storytime.js";
 import { loadReconciled } from "./memoryload.js";
 
-export function createMemoryInjector(api, { store, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
+export function createMemoryInjector(api, { store, storyNow = null, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
   let last = null, mode = "none";
 
   async function current() {
@@ -27,8 +28,9 @@ export function createMemoryInjector(api, { store, log = (...a) => console.log("
     const folder = await loadReconciled(store, character.chaId, chat.id, msgs);  // 읽기 시점 대조(저장 안 함)
     const userTurns = msgs.filter(isUserMessage).length;
     if (!shouldInject(folder, idx.settings.inject, userTurns)) return null;
+    let now = ""; try { const s = await storyNow?.(character.chaId, chat.id); now = s ? stateText(s) : ""; } catch { now = ""; }
     const tail = msgs.slice(-2).map(extractMessageText).join("\n");
-    const { text, manifest } = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus });
+    const { text, manifest } = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus, storyNow: now });
     if (mark && text && idx.settings.inject.plus !== false && manifest.recordIds?.length) markUsed(character, chat, manifest.recordIds, msgs.length);
     return { text, manifest, position: idx.settings.inject.position };
   }
