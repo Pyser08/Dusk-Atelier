@@ -19,7 +19,7 @@ import { attachProbPick } from '../probpick.js';
 import { segments, summarize } from '../../engine/regexview.js';
 import { parseVars, serializeVars, duplicateKeys } from '../../engine/vars.js';
 import { openLoreDusk } from './loredusk.js';
-import { AFF_PREFIX, COND_TYPES, PLACE_PREFIX, SET_OPS, VAR_OPS, affName, affOf, affsOf, ancestorsOf, applySets, bodyOf, checkExpr, collectManaged, defaultAff, defaultRule, evaluate, folderIdOf, folderMap, gateVar, isAff, isDuskFolder, isFolder, isManaged, isPlace, nativeContent, parentOf, placeLinks, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
+import { AFF_PREFIX, COND_TYPES, PLACE_PREFIX, SET_OPS, VAR_OPS, VAR_OP_LABEL, affName, affOf, affsOf, ancestorsOf, applySets, bodyOf, checkExpr, collectManaged, defaultAff, defaultRule, evaluate, folderIdOf, folderMap, gateVar, isAff, isDuskFolder, isFolder, isManaged, isPlace, nativeContent, parentOf, placeLinks, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
 import { FOLDER_SWATCHES, folderTint } from '../theme.js';
 // 관리 항목의 내용 머리(@@activate·{{#if}})를 규칙에 맞춘다
 export function syncRuleContent(lorebook) {
@@ -1547,8 +1547,8 @@ export async function openEditorCore(ctx, cfg) {
       typeSel.classList.add("rb-da-type");
       let params = [];
       if (c.t === "keys") params = [h("span", { class: "rb-da-note" }, String(l.key ?? "").trim() ? `키: ${l.key}` : "활성화 키 칸이 비어 있어요")];
-      else if (c.t === "text" || c.t === "notext") params = [text(c, "keys", { placeholder: "단어1, 단어2" }), select2(c, "in", [["any", "누구 말이든"], ["user", "사용자 말"], ["char", "봇 말"]]), h("span", { class: "rb-da-opts" }, check(c, "all", "모두 있어야"), check(c, "regex", "정규식"))];
-      else if (c.t === "var") params = [text(c, "name", { placeholder: "변수 이름" }), select2(c, "op", VAR_OPS.map((o) => [o, o]), redraw), c.op === "있음" || c.op === "없음" ? null : text(c, "val", { placeholder: "값" })];
+      else if (c.t === "text" || c.t === "notext") params = [text(c, "keys", { placeholder: "단어1, 단어2" }), select2(c, "in", [["any", "누구 말이든"], ["user", "사용자 말"], ["input", "방금 입력(내 마지막 말)"], ["char", "봇 말"]]), h("span", { class: "rb-da-opts" }, check(c, "all", "모두 있어야"), check(c, "regex", "정규식"))];
+      else if (c.t === "var") params = [text(c, "name", { placeholder: "변수 이름" }), select2(c, "op", VAR_OPS.map((o) => [o, VAR_OP_LABEL[o] ?? o]), redraw), c.op === "있음" || c.op === "없음" ? null : text(c, "val", { placeholder: "값" })];
       else if (c.t === "turn") params = [numIn(c, "min", { w: "70px" }), h("span", { class: "rb-da-note" }, "턴부터"), numIn(c, "max", { w: "70px" }), h("span", { class: "rb-da-note" }, "턴까지")];
       else if (c.t === "count") params = [text(c, "keys", { placeholder: "단어1, 단어2" }), select2(c, "in", [["any", "누구 말이든"], ["user", "사용자 말"], ["char", "봇 말"]]), numIn(c, "min", { min: 0, w: "64px" }), h("span", { class: "rb-da-note" }, "번 이상 (메시지 수)"), h("span", { class: "rb-da-opts" }, check(c, "regex", "정규식"))];
       else if (c.t === "times") params = [pickEntry(c, "rid", "이 항목 자신"), numIn(c, "min", { min: 0, w: "64px" }), h("span", { class: "rb-da-note" }, "번 이상 켜짐 (켜진 턴 수, 최근 50개까지)")];

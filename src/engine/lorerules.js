@@ -28,14 +28,16 @@ export const COND_TYPES = [
   ["keys", "이 항목의 키가 최근 대화에 있음"],
   ["text", "특정 단어가 최근 대화에 있음"],
   ["notext", "특정 단어가 최근 대화에 없음"],
-  ["var", "채팅 변수 비교"],
+  ["var", "채팅 변수 (이상·이하·초과·미만·같음·글자 비교)"],
   ["turn", "턴 범위"],
   ["count", "단어가 대화 전체에 N번 이상 나옴 (누적)"],
   ["times", "항목이 지금까지 N번 이상 켜짐 (누적)"],
   ["with", "다른 항목이 이번 턴에 켜짐"],
   ["without", "다른 항목이 이번 턴에 안 켜짐"]
 ];
-export const VAR_OPS = ["=", "!=", ">", "<", ">=", "<=", "있음", "없음"];
+export const VAR_OPS = ["=", "!=", ">", "<", ">=", "<=", "포함", "미포함", "있음", "없음"];
+// 화면에 보이는 이름 (저장값은 위 기호/말 그대로라 예전 규칙도 그대로 동작)
+export const VAR_OP_LABEL = { "=": "같음 (=)", "!=": "다름 (≠)", ">": "초과 (>)", "<": "미만 (<)", ">=": "이상 (≥)", "<=": "이하 (≤)", "포함": "글자가 들어 있음", "미포함": "글자가 안 들어 있음", "있음": "값이 있음", "없음": "값이 없음" };
 
 export function defaultRule() {
   return { v: RULE_VERSION, on: true, mode: "all", cond: [{ t: "keys" }], prob: 100, once: "none", cool: 3, group: "", at: "top", depth: 4, role: "system", scan: 4, hold: 0, set: [], chain: [] };
@@ -240,6 +242,8 @@ function keyHit(keys, texts, { regex = false, all = false, whole = false, common
 function cmp(a, op, b) {
   if (op === "있음") return a !== void 0 && a !== null && String(a) !== "" && String(a) !== "null";
   if (op === "없음") return a === void 0 || a === null || String(a) === "" || String(a) === "null";
+  if (op === "포함") return String(b ?? "") !== "" && String(a ?? "").includes(String(b));
+  if (op === "미포함") return !String(a ?? "").includes(String(b ?? ""));
   const na = Number(a), nb = Number(b);
   const numeric = String(a ?? "").trim() !== "" && String(b ?? "").trim() !== "" && !isNaN(na) && !isNaN(nb);
   switch (op) {
@@ -435,6 +439,7 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
   const byRid = new Map(items.map((x) => [x.rid, x]));
   const nameOf = (rid) => byRid.get(rid)?.entry.comment || rid || "?";
   const textsFor = (scan, who = "any") => {
+    if (who === "input") { const last = messages.findLast((m) => m.role === "user"); return last ? [last.data ?? ""] : []; }  // 방금 입력: 가장 최근 내 말 하나
     const n = Math.max(1, Number(scan) || 4);
     return messages.slice(-n).filter((m) => who === "any" || m.role === who).map((m) => m.data ?? "");
   };
@@ -616,7 +621,7 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
       case "keys": return `키 일치(${String(it.entry.key ?? "").trim() || "키 없음"})`;
       case "text": return `'${c.keys ?? ""}' 있음`;
       case "notext": return `'${c.keys ?? ""}' 없음`;
-      case "var": return `변수 ${c.name ?? "?"} ${c.op || "="} ${c.val ?? ""}`.trim() + ` (지금 ${vars[c.name] ?? vars["$" + c.name] ?? "없음"})`;
+      case "var": return `변수 ${c.name ?? "?"} ${VAR_OP_LABEL[c.op || "="] ?? c.op} ${c.val ?? ""}`.trim() + ` (지금 ${vars[c.name] ?? vars["$" + c.name] ?? "없음"})`;
       case "turn": return `턴 ${c.min ?? ""}~${c.max ?? ""} (지금 ${turn}턴)`;
       case "count": return `'${c.keys ?? ""}' ${c.min || 1}번 이상 (지금 ${countHits(it, c)}번)`;
       case "times": return `'${c.rid ? nameOf(c.rid) : "이 항목"}' ${c.min || 1}번 이상 켜짐 (지금 ${(hist[c.rid || it.rid] ?? []).length}번)`;
