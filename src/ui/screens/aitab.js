@@ -2,7 +2,7 @@
 //   ① 시작하기 — 제작 노트·종류·로어북 방식   ② 프롬프트 프리셋   ③ 작업 프롬프트   ④ 설정   ⑤ 저장본
 // 요청을 보내고 수정안을 보는 곳은 우측 하단 AI 창(5단계에서 다듬음)이고, 여기는 '무엇을 어떻게 보낼지'를 준비하는 곳이다.
 import { h, replace } from '../dom.js';
-import { badge, btn, note, segmented, toggleRow } from '../kit.js';
+import { badge, btn, modal, note, segmented, toggleRow } from '../kit.js';
 import { decodePreset } from '../../dev/aibuild/preset-format.js';
 import { toggleDefinitions, BLOCK_TYPES } from '../../dev/aibuild/preset-engine.js';
 import { activeModules, moduleOptions, readInstalledModules, selectInstalledModules } from '../../dev/aibuild/modules.js';
@@ -35,22 +35,31 @@ export function renderAiTab(ctx, { build, openPopup, state = {} }) {
   seg.classList.add('rb-seg-nowrap');
   seg.style.overflowX = 'auto';
   // 처음 들어왔을 때 한 번만 3장 안내 (끝내거나 건너뛰면 다시 안 뜨고, [사용법]으로 언제든 다시 볼 수 있다)
-  const introBox = h('div');
-  const showIntro = (i) => {
-    state.intro = i;
-    const last = i === INTRO.length - 1;
-    const done = () => { state.intro = null; replace(introBox); try { Promise.resolve(ctx.api.pluginStorage.setItem(INTRO_KEY, '1')).catch(() => {}); } catch { /* 저장 실패는 무시 */ } };
-    replace(introBox, h('section', { class: 'rb-card pad bordered', role: 'region', 'aria-label': '사용 안내', style: 'display:flex;flex-direction:column;gap:10px;border-color:var(--rb-sel-ring)' },
-      h('div', { style: 'display:flex;align-items:center;gap:8px' }, h('span', { class: 'rb-muted', style: 'font-size:12px;font-weight:700' }, `사용 안내 ${i + 1} / ${INTRO.length}`), h('span', { style: 'flex:1' }),
-        btn('건너뛰기', { size: 'sm', kind: 'ghost', onClick: done })),
-      h('b', { style: 'font-size:15px' }, INTRO[i][0]),
-      h('div', { class: 'rb-muted', style: 'font-size:13.5px;line-height:1.7' }, INTRO[i][1]),
-      h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' },
-        i > 0 ? btn('이전', { size: 'sm', onClick: () => showIntro(i - 1) }) : null,
-        last ? btn('시작하기', { kind: 'primary', size: 'sm', icon: 'check', onClick: () => { done(); openPopup(); } }) : btn('다음', { kind: 'primary', size: 'sm', onClick: () => showIntro(i + 1) }))));
+  let introOpen = false;
+  const saveIntro = () => { try { Promise.resolve(ctx.api.pluginStorage.setItem(INTRO_KEY, '1')).catch(() => {}); } catch { /* 저장 실패는 무시 */ } };
+  const showIntro = (i = 0) => {
+    if (introOpen) return;
+    introOpen = true;
+    let idx = i;
+    modal(ctx.win, (close) => {
+      const box = h('div', { class: 'rb-dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': '사용 안내', style: 'display:flex;flex-direction:column;gap:12px;max-width:420px' });
+      const paint2 = () => {
+        const last = idx === INTRO.length - 1;
+        replace(box,
+          h('div', { style: 'display:flex;align-items:center;gap:8px' }, h('span', { class: 'rb-muted', style: 'font-size:12px;font-weight:700' }, `사용 안내 ${idx + 1} / ${INTRO.length}`), h('span', { style: 'flex:1' }),
+            btn('건너뛰기', { size: 'sm', kind: 'ghost', onClick: () => close('skip') })),
+          h('b', { style: 'font-size:16px' }, INTRO[idx][0]),
+          h('div', { class: 'rb-muted', style: 'font-size:13.5px;line-height:1.7' }, INTRO[idx][1]),
+          h('div', { class: 'btns' },
+            idx > 0 ? btn('이전', { onClick: () => { idx--; paint2(); } }) : null,
+            last ? btn('시작하기', { kind: 'primary', icon: 'check', onClick: () => close('start') }) : btn('다음', { kind: 'primary', onClick: () => { idx++; paint2(); } })));
+      };
+      paint2();
+      return box;
+    }).then((r) => { introOpen = false; state.intro = null; saveIntro(); if (r === 'start') openPopup(); });
   };
   head.insertBefore(btn('사용법', { size: 'sm', icon: 'help', onClick: () => showIntro(0) }), head.lastChild);
-  root.append(head, introBox, seg, content);
+  root.append(head, seg, content);
   if (state.intro != null) showIntro(state.intro);
   else Promise.resolve(ctx.api.pluginStorage.getItem(INTRO_KEY)).then((v) => { if (!v && root.isConnected !== false && state.intro == null) showIntro(0); }).catch(() => {});
 

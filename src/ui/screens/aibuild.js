@@ -38,7 +38,7 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
   const old = panel.querySelector('#rb-ai-popup');
   if (old) return old.closePopup?.();
   const st = build.state;
-  const back = h('div', { id: 'rb-ai-popup', role: 'dialog', 'aria-label': 'AI로 제작', style: 'position:absolute;z-index:40;display:flex;flex-direction:column;background:var(--rb-surface,#fff);color:var(--rb-text,inherit);border:1px solid var(--rb-line,#ccc);box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden;box-sizing:border-box' });
+  const back = h('div', { id: 'rb-ai-popup', role: 'dialog', 'aria-label': 'AI로 제작', style: 'position:absolute;z-index:40;display:flex;flex-direction:column;background:var(--rb-win,var(--rb-surf));color:var(--rb-text);border:1px solid var(--rb-line2);box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden;box-sizing:border-box' });
   const status = h('small', { class: 'rb-muted', 'aria-live': 'polite' });
   const list = h('div', { class: 'rb-scroll', style: 'flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px' });
   const taskSel = h('select', { class: 'rb-input', 'aria-label': '작업 종류', style: 'flex:1' }, Object.entries(build.TASKS).map(([k, t]) => h('option', { value: k }, t.label)));
@@ -89,7 +89,7 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
     let areas = [];
     let err = null;
     try { areas = build.diff(c).changed; } catch (e) { err = e.message; }
-    return h('div', { style: 'border:1px solid var(--rb-line,#ccc);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px' },
+    return h('div', { style: 'border:1px solid var(--rb-line2);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px' },
       h('div', { style: 'display:flex;justify-content:space-between;gap:8px;align-items:center' }, h('b', null, c.label), h('small', { class: 'rb-muted' }, STATE_LABEL[state])),
       err ? h('small', { class: 'rb-muted' }, '해석할 수 없어요: ' + err) : h('div', { style: 'display:flex;gap:6px;flex-wrap:wrap' }, areas.map((a) => h('span', { class: 'rb-chip' }, AREA[a] ?? a)), areas.length ? null : h('small', { class: 'rb-muted' }, '바뀌는 내용이 없어요')),
       duskPreview(c),
@@ -103,7 +103,7 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
     const s = st.s;
     const items = [];
     if (!s.thread.length) items.push(h('p', { class: 'rb-muted' }, '왼쪽 위 작업 종류를 고르고 요청을 적으면 AI가 수정안을 만들어요. 마음에 들면 [적용]을 누르세요. 편집기의 각 탭에 바로 반영되고, 저장은 따로예요.'));
-    for (const m of s.thread) items.push(h('div', { style: `align-self:${m.role === 'user' ? 'flex-end' : 'flex-start'};max-width:90%;white-space:pre-wrap;padding:8px 10px;border-radius:12px;background:${m.error ? 'rgba(220,60,60,.15)' : m.role === 'user' ? 'var(--rb-teal-soft,rgba(80,160,150,.18))' : 'var(--rb-surface-2,rgba(128,128,128,.14))'}` }, m.content));
+    for (const m of s.thread) items.push(h('div', { style: `align-self:${m.role === 'user' ? 'flex-end' : 'flex-start'};max-width:90%;white-space:pre-wrap;padding:8px 10px;border-radius:12px;background:${m.error ? 'rgba(220,60,60,.15)' : m.role === 'user' ? 'var(--rb-teal-soft)' : 'var(--rb-surf2)'}` }, m.content));
     for (const c of s.candidates) items.push(card(c));
     if (st.job) items.push(h('small', { class: 'rb-muted' }, `${st.job.label} · ${Math.round((Date.now() - st.job.start) / 1000)}초`));
     replace(list, items);
@@ -182,7 +182,7 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
   }
   const hdrTitle = h('b', null, 'AI로 제작');
   const closeB = iconBtn('x', '닫기', { onClick: () => close() });
-  const hdr = h('div', { style: 'display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--rb-line,#ccc);touch-action:none;user-select:none;-webkit-user-select:none' }, hdrTitle, status, h('span', { style: 'flex:1' }), modelSel, closeB);
+  const hdr = h('div', { style: 'display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--rb-line2);touch-action:none;user-select:none;-webkit-user-select:none' }, hdrTitle, status, h('span', { style: 'flex:1' }), modelSel, closeB);
   hdr.addEventListener('pointerdown', (ev) => {
     if (sheet || ev.button > 0 || ev.target.closest('button,select,input,textarea,a')) return;
     const g0 = { ...geom };
@@ -191,7 +191,7 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
       () => { hdr.style.cursor = 'grab'; saveGeom(ctx, geom); });
   });
   // 아래 시트: 위쪽 손잡이를 아래로 끌면 닫힘
-  const grip = h('div', { style: 'display:none;justify-content:center;padding:8px 0 2px;touch-action:none' }, h('span', { style: 'width:44px;height:5px;border-radius:3px;background:var(--rb-line,#bbb)' }));
+  const grip = h('div', { style: 'display:none;justify-content:center;padding:8px 0 2px;touch-action:none' }, h('span', { style: 'width:44px;height:5px;border-radius:3px;background:var(--rb-line2)' }));
   grip.addEventListener('pointerdown', (ev) => {
     drag(ev, (dx, dy) => { back.style.transform = 'translateY(' + Math.max(0, dy) + 'px)'; },
       (dx, dy) => { if (dy > 90) close(); else back.style.transform = ''; });
@@ -232,7 +232,7 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
     h('div', { style: 'display:flex;gap:8px;align-items:center;padding:8px 12px;flex-wrap:wrap' }, taskSel, scopeLbl, loreSeg),
     loreHint,
     list,
-    h('div', { style: 'padding:10px 12px;border-top:1px solid var(--rb-line,#ccc);display:flex;flex-direction:column;gap:8px' }, ta,
+    h('div', { style: 'padding:10px 12px;border-top:1px solid var(--rb-line2);display:flex;flex-direction:column;gap:8px' }, ta,
       h('div', { style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, undoB, saveB, newB, bbPresent ? importB : null, h('span', { style: 'flex:1' }), sendB, stopB))
   );
   geom = geomCache && Number.isFinite(geomCache.w) ? { ...geomCache } : null;
