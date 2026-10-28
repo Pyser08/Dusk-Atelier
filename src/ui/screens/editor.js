@@ -13,6 +13,7 @@ import { estimateTokens } from '../../engine/memoryinject.js';
 import { reload } from './modules.js';
 import { attachUndo } from '../undo.js';
 import { openAiPopup, loadPopupGeom } from './aibuild.js';
+import { openRoulette } from './roulettepop.js';
 import { bbInstalled } from '../../engine/firstrun.js';
 import { attachProbPick } from '../probpick.js';
 import { segments, summarize } from '../../engine/regexview.js';
@@ -331,14 +332,19 @@ export async function openEditorCore(ctx, cfg) {
     return b;
   };
   let aiItem = null;
-  const dialItems = h("div", { style: "display:flex;flex-direction:column;align-items:flex-end;gap:8px;transition:opacity .16s ease,transform .16s ease;opacity:0;transform:translateY(8px);pointer-events:none;visibility:hidden" },
-    hasAi ? (aiItem = fabItem("AI 창", "sparkle", "AI로 로어북·설명·정규식·Lua를 만들고 바로 반영", () => aiWindow())) : null,
-    fabItem("규칙 시험", "zap", "가상 대화로 Dusk 규칙이 어떻게 켜지는지 시험", () => ruleTester()));
+  const rouletteItem = () => openRoulette(ctx, { onInsert: (t) => { draft.desc = [String(draft.desc ?? "").trimEnd(), t].filter(Boolean).join("\n"); changed(); if (es.tab === "info") renderInfo(); } });
+  // 펼침 패널: 테두리·머리글("도구")·왼쪽 연결선으로 버튼들이 '도구' 안에 속함을 보여 준다
+  const dialItems = h("div", { class: "rb-dial", role: "group", "aria-label": "도구 모음", style: "display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:10px 10px 12px 14px;margin-bottom:-6px;border:1px solid var(--rb-accent,#8b7cf6);border-bottom:0;border-radius:16px 16px 0 0;background:var(--rb-panel,#1d1d24);box-shadow:0 -6px 20px rgba(0,0,0,.4);transition:opacity .16s ease,transform .16s ease;opacity:0;transform:translateY(8px);pointer-events:none;visibility:hidden;display:none" },
+    h("div", { style: "font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.75" }, "도구 ▾"),
+    h("div", { style: "display:flex;flex-direction:column;align-items:stretch;gap:8px;border-left:2px solid var(--rb-accent,#8b7cf6);padding-left:10px" },
+      hasAi ? (aiItem = fabItem("AI 창", "sparkle", "AI로 로어북·설명·정규식·Lua를 만들고 바로 반영", () => aiWindow())) : null,
+      hasAi ? fabItem("룰렛", "refresh", "범주별 무작위 특징을 뽑아 설명에 넣기", rouletteItem) : null,
+      fabItem("규칙 시험", "zap", "가상 대화로 Dusk 규칙이 어떻게 켜지는지 시험", () => ruleTester())));
   let dialOpen = false;
-  const closeDial = () => { dialOpen = false; dialItems.style.opacity = "0"; dialItems.style.transform = "translateY(8px)"; dialItems.style.pointerEvents = "none"; dialItems.style.visibility = "hidden"; fabMain.setAttribute("aria-expanded", "false"); };
-  const openDial = () => { dialOpen = true; dialItems.style.visibility = "visible"; dialItems.style.opacity = "1"; dialItems.style.transform = "none"; dialItems.style.pointerEvents = "auto"; fabMain.setAttribute("aria-expanded", "true"); };
+  const closeDial = () => { dialOpen = false; dialItems.style.opacity = "0"; dialItems.style.transform = "translateY(8px)"; dialItems.style.pointerEvents = "none"; dialItems.style.visibility = "hidden"; dialItems.style.display = "none"; fabMain.setAttribute("aria-expanded", "false"); if (hasAi) fabMain.style.borderRadius = "999px"; };
+  const openDial = () => { dialOpen = true; dialItems.style.display = "flex"; dialItems.style.visibility = "visible"; dialItems.style.opacity = "1"; dialItems.style.transform = "none"; dialItems.style.pointerEvents = "auto"; fabMain.setAttribute("aria-expanded", "true"); if (hasAi) fabMain.style.borderRadius = "0 0 16px 16px"; };
   const fabMain = hasAi
-    ? btn("도구", { kind: "primary", icon: "sparkle", title: "AI 창 · 규칙 시험", onClick: () => (dialOpen ? closeDial() : openDial()) })
+    ? btn("도구", { kind: "primary", icon: "sparkle", title: "AI 창 · 룰렛 · 규칙 시험", onClick: () => (dialOpen ? closeDial() : openDial()) })
     : btn("규칙 시험", { kind: "primary", icon: "zap", title: "가상 대화로 Dusk 규칙이 어떻게 켜지는지 시험", onClick: () => ruleTester() });
   fabMain.style.cssText = "box-shadow:0 6px 20px rgba(0,0,0,.4);border-radius:999px";
   if (hasAi) fabMain.setAttribute("aria-haspopup", "true");
