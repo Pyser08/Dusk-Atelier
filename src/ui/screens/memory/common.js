@@ -1,5 +1,5 @@
 import { h } from '../../dom.js';
-import { modal } from '../kit.js';
+import { modal } from '../../kit.js';
 import { loadCharacters } from '../../../data/modules.js';
 import { emptyFolder } from '../../../data/memorystore.js';
 import { reconcile } from '../../../engine/memoryreconcile.js';
