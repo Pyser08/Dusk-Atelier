@@ -31,6 +31,8 @@ const STASH_MAX = 8;
 // link: 러너와 공유하는 빈 객체. 턴 흐름이 켜지면 settle/take가 채워진다.
 export function createTurnFlow(api, { store, runner, injector, sourceLibrary, link = {}, onOpen = null, log = (...a) => console.log("[Dusk 기억]", ...a), scheduler = globalThis } = {}) {
   let rt = null, starting = null, lastTurn = null, cold = null;
+  // pure: 기억 저장소가 '끔'이면 Dusk 자체 기억(기록·회상·주입)은 전부 빼고 리수폿 위키 정리만 돌린다
+  let pure = false;
   let cyclePending = null; const cycleEvents = [];  // 월경·임신: 응답 전 상태 → 응답 뒤 달라진 큰 사건(출산 등)을 Dusk 기록 대기열에
   const stash = new Map();  // 메시지 해시 → 검증된 dusk 구획
   const putStash = (h, v) => { stash.set(h, v); while (stash.size > STASH_MAX) stash.delete(stash.keys().next().value); };
@@ -67,7 +69,7 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
       const label = String(opts.stageLabel ?? ""); let sent = prompt, prep = null;
       if (/^writer/i.test(label)) { try { cyclePending = cycleStates(wiki.snapshot()); } catch { cyclePending = null; } }
       const had = String(prompt).includes(SECTION_MARK);
-      if (/^writer/i.test(label)) {
+      if (/^writer/i.test(label) && !pure) {
         try { prep = await runner.prepareLatest(await api.getCurrentCharacterIndex(), await api.getCurrentChatIndex()); } catch { prep = null; }
         if (prep && !had && !stash.has(prep.h)) sent = appendDuskSection(prompt, prep.input);
       }
@@ -95,6 +97,7 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
     const main = new MainWikiHook(api, settings, wiki, keys, libFor("fast"), auto, null, trace);
     main.llmCall = stageCall;
     main.mergeRecall = async (memory, ctx) => {
+      if (pure) return memory;
       try {
         const idx = await store.getIndex(), character = await api.getCharacterFromIndex(ctx.characterIndex);
         const msgs = ctx.chat?.message ?? [];
@@ -117,7 +120,7 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
       try { out = await main.before(messages, type); } catch (e) { log("위키 주입 실패", e?.message ?? e); }
       const focus = main.last?.at !== before ? (main.last?.documents ?? []).map((d) => d.title) : [];
       lastTurn = { ...(lastTurn ?? {}), at: Date.now(), focus, mode: main.last?.actualMode ?? "", director: main.last?.director?.status ?? "idle" };
-      return injector.beforeRequest(out, type, { focus });
+      return pure ? out : injector.beforeRequest(out, type, { focus });
     };
     const hooks = new RuntimeHookManager(api, auto, main, { scheduler });
     return { settings, wiki, auto, main, hooks, trace, keys, stageCall };
@@ -127,11 +130,12 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
     if (rt) return rt;
     if (starting) return starting;
     starting = (async () => {
+      pure = ((await store.getIndex()).settings.backend ?? "auto") === "off";
       const f = await flowOf(), r = await build();
       await syncPot(r.settings, f); r.main.sourceLibrary = libFor(f.mode);
-      await injector.stop();
+      if (!pure) await injector.stop();
       const state = await r.hooks.ensure();
-      if (state !== "ready") { log("턴 흐름 훅 등록 실패:", state); await r.hooks.dispose().catch(() => {}); await injector.start(); return null; }
+      if (state !== "ready") { log("턴 흐름 훅 등록 실패:", state); await r.hooks.dispose().catch(() => {}); if (!pure) await injector.start(); return null; }
       link.settle = async (ci, ti) => {
         const ok = await r.auto.waitForScope(ci, ti, { timeoutMs: 180000 });
         try { if (cyclePending) { const ev = milestonesBetween(cyclePending, cycleStates(r.wiki.snapshot())); cyclePending = null; cycleEvents.push(...ev); } } catch { cyclePending = null; }
@@ -147,7 +151,7 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
     if (!rt) return false;
     const r = rt; rt = null; try { r.tools?.dispose(); } catch {} delete link.settle; delete link.take; delete link.takeCycle; stash.clear(); cycleEvents.length = 0; cyclePending = null;
     await r.hooks.dispose().catch(() => {});
-    await injector.start();
+    if (!pure) await injector.start();
     return true;
   }
   // 설정(flow.on·mode, 모델)이 바뀐 뒤 부른다.
