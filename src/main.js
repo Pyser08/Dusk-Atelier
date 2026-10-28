@@ -12,6 +12,7 @@ import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets
 import { createLoreRuntime } from './data/lorerules.js';
 import { createLoreLog } from './data/lorelog.js';
 import { createMemory } from './data/memory.js';
+import { createAffHud } from './data/affhud.js';
 import POT_PROMPTS from './data/pot/prompts.json';
 import './data/modelhub.js';
 import { restoreActiveTheme } from './ui/screens/themestudio.js';
@@ -40,6 +41,8 @@ async function start() {
   console.log(`[${TITLE}] 진입 경로`, globalThis.__RBM_ENTRY__ ?? "normal");
   const memoryRef = { toast: null };
   const memory = createMemory(api, { notify: (t) => memoryRef.toast?.(t), potLibrary: POT_PROMPTS, onOpen: () => memoryRef.open?.() });
+  const affhud = createAffHud(api, { store: memory.store, link: memory.link });
+  affhud.start().catch((e) => console.log(`[${TITLE}] 호감도 HUD 시작 실패: ${e?.message ?? e}`));
   memory.start().catch((e) => console.log(`[${TITLE}] 장기기억 시작 실패: ${e?.message ?? e}`));
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {
@@ -144,6 +147,7 @@ async function start() {
   app.ctx.loreRuntime = loreRuntime;
   app.ctx.loreLog = loreLog;
   app.ctx.memory = memory;
+  app.ctx.affhud = affhud;
   memoryRef.toast = (t) => app.ctx.toast(t, { seconds: 8 });
   refreshPersonaHandlers().catch(() => {
   });
