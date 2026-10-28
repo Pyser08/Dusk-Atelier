@@ -12,6 +12,7 @@ import { openAbout } from './about.js';
 import { renderThemeStudio, targetToggle } from './themestudio.js';
 import { renderThemeBuilder } from './themebuilder.js';
 import { loadMemoryButtonOn } from '../../data/memorybutton.js';
+import { loadStoryTimeOn } from '../../data/storytime.js';
 import { loadThemes, saveThemes, detectTarget, TARGETS } from '../../data/themes.js';
 
 export async function renderSettingsTab(ctx) {
@@ -38,6 +39,10 @@ export async function renderSettingsTab(ctx) {
     });
   });
   const memBtnOn = await loadMemoryButtonOn(ctx.api);
+  const stOn = await loadStoryTimeOn(ctx.api);
+  const stSeg = segmented([["on", "켜기"], ["off", "끄기"]], stOn ? "on" : "off", async (v) => {
+    try { if (ctx.storyTime) await ctx.storyTime.set(v === "on"); else await ctx.api.pluginStorage.setItem("dusk.ui.storyTime", v); ctx.toast(v === "on" ? "이야기 시간 삽입을 켰어요. 다음 요청부터 적용돼요." : "이야기 시간 삽입을 껐어요."); } catch (e) { ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }); }
+  }, "이야기 시간 자동 삽입");
   const lore = await loadLoreSettings(ctx.api).catch(() => ({ ...LORE_DEFAULTS }));
   const saved = h("span", { class: "rb-muted", style: "font-size:12.5px" });
   const setLore = async (patch) => {
@@ -97,6 +102,13 @@ export async function renderSettingsTab(ctx) {
       "장기기억 버튼",
       "채팅 입력 옆 메뉴에 뜨는 [장기기억] 버튼을 보이거나 숨겨요. 장기기억 기능 자체는 그대로예요.",
       row("메뉴 버튼", memBtnSeg)
+    ),
+    section(
+      "clock",
+      "이야기 시간",
+      "장기기억을 켜든 끄든 상관없이, 봇 응답에서 날짜가 바뀌면 그 날짜를 요청 맨 위에 한 줄로 넣어요. 날짜가 없으면 아무것도 넣지 않아요.",
+      row("자동 삽입", stSeg),
+      h("div", { class: "rb-muted", style: "font-size:12.5px;line-height:1.7;word-break:keep-all" }, "예) ‘2026-10-28’처럼 봇이 적은 날짜를 읽어요(앞 날짜보다 과거이거나 1년 넘게 건너뛴 날짜는 무시). 실제 현재 시각이 아니라 이야기 속 날짜예요. 저장된 채팅은 바뀌지 않고 요청에만 들어가요.")
     ),
     section(
       "palette",
