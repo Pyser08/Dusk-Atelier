@@ -5,7 +5,7 @@
 import { extractMessageText, isUserMessage, hashText, isChatGenerating as isGenerating } from "../engine/chattext.js";
 import { runAI } from "../engine/runai.js";
 import { pickForStage } from "./modelhub.js";
-import { AFF_DEFAULTS, buildAffMessages, clampAff, hasHud, installHud, parseDelta, readPotAffinity, uninstallHud } from "../engine/affhud.js";
+import { AFF_DEFAULTS, buildAffMessages, clampAff, designMessages, extractHud, hasHud, hudHtml, installHud, parseDelta, readPotAffinity, uninstallHud, validateHud } from "../engine/affhud.js";
 
 const sv = (n) => "$" + n;
 const num = (v) => { const n = Number(v); return v !== "" && v != null && Number.isFinite(n) ? n : null; };
@@ -26,6 +26,31 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
     const c = await getCfg(chaId);
     await api.setCharacterToIndex(ci, installHud(ch, c));
     return c;
+  }
+
+  // AI 디자인 변경: 요청대로 새 HUD를 만든다(적용 전 후보). 검사를 통과하지 못하면 이유를 알려 한 번 고쳐 달라고 다시 부탁한다.
+  async function design(ci, request) {
+    const ch = await api.getCharacterFromIndex(ci), cfg = await getCfg(String(ch.chaId));
+    const current = cfg.html || hudHtml();
+    let html = extractHud(await askAI(designMessages({ request, current, charName: ch.name ?? "캐릭터" })));
+    let v = validateHud(html);
+    if (!v.ok) {
+      const retry = [...designMessages({ request, current, charName: ch.name ?? "캐릭터" }), { role: "assistant", content: html }, { role: "user", content: `검사에서 걸렸어요. 아래만 고쳐 전체 HTML을 다시 줘.\n- ${v.errors.join("\n- ")}` }];
+      html = extractHud(await askAI(retry)); v = validateHud(html);
+    }
+    return { html, ...v };
+  }
+  async function applyDesign(ci, html) {
+    const v = validateHud(html);
+    if (!v.ok) throw new Error(v.errors[0]);
+    const ch = await api.getCharacterFromIndex(ci);
+    await setCfg(String(ch.chaId), { html });
+    return install(ci);
+  }
+  async function resetDesign(ci) {
+    const ch = await api.getCharacterFromIndex(ci);
+    await setCfg(String(ch.chaId), { html: "" });
+    return install(ci);
   }
   async function uninstall(ci) {
     const ch = await api.getCharacterFromIndex(ci);
@@ -100,5 +125,5 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
     try { await api.addRisuScriptHandler("output", onOutput); return true; } catch (e) { log("출력 훅 등록 실패", e?.message ?? e); return false; }
   }
 
-  return { start, syncAt, tick, install, uninstall, getCfg, setCfg, onOutput };
+  return { start, syncAt, tick, install, uninstall, design, applyDesign, resetDesign, getCfg, setCfg, onOutput };
 }

@@ -34,7 +34,7 @@ const strip = (html) => {
 export const hasHud = (html) => String(html ?? "").includes(MARK_A);
 
 // 캐릭터 객체에 HUD를 넣은 사본을 돌려준다. 이미 있으면 교체. 기본 변수는 없을 때만 채운다(사용자가 고친 값 보존).
-export function installHud(ch, { min = AFF_DEFAULTS.min, max = AFF_DEFAULTS.max, start = AFF_DEFAULTS.start } = {}) {
+export function installHud(ch, { min = AFF_DEFAULTS.min, max = AFF_DEFAULTS.max, start = AFF_DEFAULTS.start, html = "" } = {}) {
   const rows = parseVars(ch?.defaultVariables);
   const want = { aff: String(start), aff_d: "0", aff_min: String(min), aff_max: String(max) };
   for (const [k, v] of Object.entries(want)) {
@@ -43,7 +43,7 @@ export function installHud(ch, { min = AFF_DEFAULTS.min, max = AFF_DEFAULTS.max,
     else if (k === "aff_min" || k === "aff_max") r.v = v;
   }
   const base = strip(ch?.backgroundHTML);
-  return { ...ch, backgroundHTML: (base ? base + "\n" : "") + hudHtml(), defaultVariables: serializeVars(rows) };
+  return { ...ch, backgroundHTML: (base ? base + "\n" : "") + (html || hudHtml()), defaultVariables: serializeVars(rows) };
 }
 export function uninstallHud(ch) {
   const rows = parseVars(ch?.defaultVariables).filter((r) => !AFF_KEYS.includes(r.k));
@@ -86,3 +86,57 @@ export function parseDelta(text, step = AFF_DEFAULTS.step) {
   } catch { return null; }
 }
 export const clampAff = (v, min, max) => Math.max(min, Math.min(max, v));
+
+// ── AI 디자인 변경 ──
+// 로직(변수·CBS 식·구조 태그)은 고정하고 CSS와 겉모습만 바꾸게 한다. 결과는 검사를 통과해야 쓸 수 있다.
+export const REQUIRED = ["{{getvar::aff}}", "{{getvar::aff_d}}", "{{getvar::aff_min}}", "{{getvar::aff_max}}", "{{calc::", "{{source::char}}", "{{char}}", "<details", "<summary", ".dafx-aff"];
+export const HTML_MAX = 12000;
+
+export function designMessages({ request, current, charName = "캐릭터" }) {
+  return [
+    { role: "system", content: `너는 RisuAI 채팅 화면용 호감도 HUD 디자이너다. 사용자의 디자인 요청대로 현재 HUD의 겉모습만 바꾼다.
+[절대 바꾸지 않는 것]
+- 맨 앞 ${MARK_A} 와 맨 뒤 ${MARK_B} 주석
+- 다음 CBS 식은 그대로 둔다(자리와 모양은 바꿔도 되지만 식 자체를 고치거나 빼지 않는다): ${REQUIRED.filter((x) => x.startsWith("{{")).join(" ")} 와 {{#if …}}{{/if}} 조건(aff_d > 0, < 0)
+- 게이지 폭은 style="width:clamp(0%,{{calc::…}}%,100%)" 식을 유지한다.
+- 바깥 요소는 <details class="dafx-aff"> + <summary> (버튼으로 여닫기), 모든 클래스는 dafx- 로 시작한다.
+- 배경 HTML은 화면 고정이므로 position:fixed 위치(기본 우측 상단)는 요청이 없으면 유지한다.
+[금지] <script>, on*= 속성, javascript:, @import, 외부 주소(http) 이미지·폰트·url(). 이미지는 {{source::char}}만 쓴다.
+[허용] CSS(그라데이션·그림자·테두리·폰트 크기·애니메이션 @keyframes 포함), 장식용 span/div, 이모지·기호 아이콘, 텍스트 라벨 변경(예: "호감도" → 다른 말).
+[모바일] 폭 600px 이하에서도 화면을 가리지 않게 @media 를 유지한다. 전체 ${HTML_MAX}자 이하.
+출력: 수정된 전체 HTML 하나만. 설명·코드펜스 없이.` },
+    { role: "user", content: `[캐릭터 이름] ${charName}\n[디자인 요청]\n${request}\n\n[현재 HUD]\n${current}` }
+  ];
+}
+export function extractHud(text) {
+  let t = String(text ?? "").trim().replace(/^```(?:html)?\s*/i, "").replace(/\s*```$/, "");
+  const a = t.indexOf(MARK_A), b = t.lastIndexOf(MARK_B);
+  return a >= 0 && b > a ? t.slice(a, b + MARK_B.length) : t;
+}
+export function validateHud(html) {
+  const s = String(html ?? ""), errors = [];
+  if (!s.startsWith(MARK_A) || !s.endsWith(MARK_B)) errors.push("시작·끝 표시가 없어요");
+  for (const r of REQUIRED) if (!s.includes(r)) errors.push(`빠진 부분: ${r}`);
+  if (!/\{\{#if \{\{greater::\{\{getvar::aff_d\}\}::0\}\}\}/.test(s) || !/\{\{#if \{\{less::\{\{getvar::aff_d\}\}::0\}\}\}/.test(s)) errors.push("증감(+/-) 표시 조건이 바뀌었어요");
+  if (!/width:\s*clamp\(0%,\s*\{\{calc::/.test(s)) errors.push("게이지 폭 식이 바뀌었어요");
+  if ((s.match(/\{\{#if /g) ?? []).length !== (s.match(/\{\{\/if\}\}/g) ?? []).length) errors.push("조건 짝이 맞지 않아요");
+  if (/<\s*(script|iframe|object|embed|link|meta|form|input|base)\b/i.test(s)) errors.push("쓸 수 없는 태그가 있어요");
+  if (/\son[a-z]+\s*=/i.test(s) || /javascript:/i.test(s)) errors.push("스크립트 속성이 있어요");
+  if (/@import|url\(\s*['"]?\s*(https?:|\/\/|data:)|src\s*=\s*['"]?\s*(https?:|\/\/)/i.test(s)) errors.push("외부 주소를 쓸 수 없어요");
+  if ((s.match(/<details\b/g) ?? []).length !== 1 || (s.match(/<\/details>/g) ?? []).length !== 1) errors.push("바깥 요소(details)는 하나여야 해요");
+  if (s.length > HTML_MAX) errors.push(`너무 길어요 (${s.length}/${HTML_MAX}자)`);
+  const bad = [...s.matchAll(/class\s*=\s*"([^"]*)"/g)].flatMap((m) => m[1].split(/\s+/)).filter((c) => c && !c.startsWith("dafx-"));
+  if (bad.length) errors.push(`클래스는 dafx- 로 시작해야 해요: ${[...new Set(bad)].slice(0, 3).join(", ")}`);
+  return { ok: !errors.length, errors };
+}
+
+// 미리보기용: CBS 식을 샘플 값으로 풀어 iframe에 넣을 문서를 만든다. (실제 리수 렌더링과 조금 다를 수 있다)
+export function previewDoc(html, sample = {}) {
+  const v = { char: "아루", aff: 148, aff_d: 3, aff_min: -100, aff_max: 300, ...sample };
+  let s = String(html);
+  s = s.replace(/\{\{source::char\}\}/g, "").replace(/\{\{char\}\}/g, v.char).replace(/\{\{getvar::(\w+)\}\}/g, (_, k) => v[k] ?? "null");
+  for (let n = 0; n < 5; n++) s = s.replace(/\{\{calc::([^{}]*)\}\}/g, (_, e) => /^[\d\s+\-*/().]+$/.test(e) ? String(Math.round(Function(`return (${e.replace(/--/g, "+")})`)() * 100) / 100) : "0");
+  s = s.replace(/\{\{#if \{\{(greater|less)::(-?[\d.]+)::(-?[\d.]+)\}\}\}\}([\s\S]*?)\{\{\/if\}\}/g, (_, op, a, b, body) => (op === "greater" ? +a > +b : +a < +b) ? body : "");
+  s = s.replace(/<summary/, "<summary").replace(/<details class="dafx-aff"/, '<details class="dafx-aff" open');
+  return `<!doctype html><meta charset="utf-8"><body style="margin:0;height:140px;background:#0e0d16;color:#eee">${s}</body>`;
+}

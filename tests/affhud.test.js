@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { hasHud, installHud, uninstallHud, parseDelta, readPotAffinity, clampAff, MARK_A } from "../src/engine/affhud.js";
+import { hasHud, installHud, uninstallHud, parseDelta, readPotAffinity, clampAff, MARK_A, hudHtml, validateHud, extractHud, previewDoc } from "../src/engine/affhud.js";
 import { createAffHud } from "../src/data/affhud.js";
 
 test("installHud: 배경 HTML 교체·기본 변수 보존, uninstall로 원복", () => {
@@ -79,4 +79,44 @@ test("syncAt: 파싱 실패는 기록하지 않음", async () => {
   const hud = createAffHud(api, { store: fakeStore(false, null), ask: async () => "잘 모르겠어요", log: () => {} });
   assert.equal(await hud.syncAt(0, 0), "parse-fail");
   assert.equal(chat.scriptstate.$aff, undefined);
+});
+
+test("validateHud: 기본 HUD 통과, 로직 훼손·위험 요소 거부", () => {
+  const base = hudHtml();
+  assert.deepEqual(validateHud(base), { ok: true, errors: [] });
+  assert.equal(validateHud(base.replace("{{getvar::aff_d}}", "")).ok, false);
+  assert.equal(validateHud(base.replace("<style>", "<script>alert(1)</script><style>")).ok, false);
+  assert.equal(validateHud(base.replace("</style>", ".dafx-aff{background:url(https://x.y/a.png)}</style>")).ok, false);
+  assert.equal(validateHud(base.replace('class="dafx-aff-bar"', 'class="bar"')).ok, false);
+  assert.equal(validateHud(base.replace("clamp(0%,", "calc(")).ok, false);
+  assert.equal(validateHud(base.replace(/<summary/, '<summary onclick="x()"')).ok, false);
+});
+test("extractHud: 코드펜스·앞뒤 설명 제거 / 사용자 CSS 변경은 통과", () => {
+  const css = hudHtml().replace("#eee", "#ffd6e8");
+  assert.equal(extractHud("```html\n" + css + "\n```"), css);
+  assert.equal(extractHud("여기요:\n" + css + "\n끝"), css);
+  assert.equal(validateHud(css).ok, true);
+});
+test("previewDoc: 식을 풀어 샘플로 보여 줌", () => {
+  const d = previewDoc(hudHtml());
+  assert.ok(!d.includes("{{"));
+  assert.match(d, /호감도 148/);
+  assert.match(d, /▲ \+3/);
+  assert.match(d, /width:clamp\(0%,62(\.\d+)?%,100%\)/);
+});
+test("design: 검사 실패 시 한 번 다시 부탁, 적용하면 설정에 저장", async () => {
+  const { api } = fakeApi(msgs("x"));
+  let calls = 0;
+  const ch = { chaId: "cha1", name: "아루", backgroundHTML: "" };
+  api.getCharacterFromIndex = async () => ch; api.setCharacterToIndex = async (_i, v) => Object.assign(ch, v);
+  const store = fakeStore(false, null);
+  const good = hudHtml().replace("#eee", "#ffd6e8");
+  const hud = createAffHud(api, { store, ask: async () => (++calls === 1 ? "<div>망가진 결과</div>" : good) });
+  const r = await hud.design(0, "핑크로");
+  assert.equal(calls, 2); assert.equal(r.ok, true);
+  await hud.applyDesign(0, r.html);
+  assert.ok(ch.backgroundHTML.includes("#ffd6e8"));
+  await hud.resetDesign(0);
+  assert.ok(!ch.backgroundHTML.includes("#ffd6e8") && hasHud(ch.backgroundHTML));
+  await assert.rejects(hud.applyDesign(0, "<div></div>"));
 });
