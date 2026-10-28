@@ -2,7 +2,7 @@
 // 생김새는 Dusk 토큰·카드 스타일, 배치·항목 순서·수정 규칙(고정·편집 중 변경 거절)은 리수폿을 따른다.
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
-import { btn, modal, promptDialog, confirmDialog, openMenu } from "../../kit.js";
+import { btn, modal, promptDialog, confirmDialog, openMenu, note } from "../../kit.js";
 import { mem, fail, avatar, visibleRecords } from "./common.js";
 import { findDoc } from "../../../engine/personview.js";
 import { RECORD_GROUPS, groupInfo, recordGroupOf, targetCandidates } from "../../../engine/personrecords.js";
@@ -15,6 +15,7 @@ import { openRecords } from "./recordsui.js";
 import { openAITools, openFieldAI, openImport } from "./aitools.js";
 import { liveScope } from "./advanced.js";
 import { wikiPanel } from "./wikipanel.js";
+import { openWikiLog } from "./wikilog.js";
 
 const USER = "{{user}}";
 const AXIS_LABEL = { relationalInitiative: "관계 주도성", expressionDirectness: "표현 직접성", emotionalExpressiveness: "감정 표출성", guardedness: "경계 성향", impulsivity: "충동성", relationshipPersistence: "관계 지속성" };
@@ -37,6 +38,18 @@ const ALWAYS = new Set(["overview", "userRelationship", "appraisal", "speech", "
 const LABEL = { overview: "인물 개요", userRelationship: `${USER}와의 관계`, appraisal: "상대별 첫인상 설명", speech: "대상별 말투", npc: "다른 NPC 간 감정·관계", knowledge: "알고 있는 정보", relationship: "관계 태도·인지 차이(심리의 실마리)", behavior: "행동 경향", secret: "비밀", openness: "음란도 태도·행동", suspicion: "불륜 의심", etc: "기타 항목" };
 const SUB = { npc: "NPC가 다른 NPC에게 느끼는 감정·관계" };
 const EMPTY = "아직 등록된 내용이 없습니다.";
+// 자동 생성이 지금 어떤 상태인지 한 줄로: 안 만들어질 때 이유가 바로 보이게 한다.
+export function autoStatusOf(M, wikiDocs = 0) {
+  const rt = M.flow?.runtime?.();
+  if (!rt?.auto) return { kind: "warn", text: "장기기억이 꺼져 있거나 아직 준비 중이라 위키가 자동으로 만들어지지 않아요. 왼쪽 위 ‘장기기억’ 스위치를 확인해 주세요." };
+  const st = rt.auto.status();
+  if (!st.globalEnabled) return { kind: "warn", text: "기억 흐름이 꺼져 있어요. 켜면 다음 응답부터 위키가 만들어져요." };
+  if (st.hook !== "ready") return { kind: "warn", text: `리스 연결이 아직 준비되지 않았어요(${st.hook || "대기"}). 이 채팅을 열고 새 응답을 한 번 받으면 연결돼요.` };
+  if (!st.autoEnabled && !st.trackedCount) return { kind: "warn", text: "자동 Writer가 꺼져 있고 추적할 인물도 없어서 위키가 자동으로 쌓이지 않아요. ‘더보기 → 추적 인물 고르기’에서 켜 주세요." };
+  const base = st.autoEnabled ? "자동 생성 켜짐 · 새 응답마다 인물 위키를 갱신해요(관계 중심)" : `선택한 ${st.trackedCount}명만 자동 갱신`;
+  const doing = st.phase && st.phase !== "idle" && st.phase !== "completed" ? ` · ${st.message || st.phase}` : st.message ? ` · ${st.message}` : "";
+  return { kind: st.phase === "failed" ? "err" : wikiDocs ? "ok" : "info", text: base + doing + (wikiDocs ? "" : " · 아직 만들어진 인물이 없어요. 응답이 한 번 더 오면 생겨요.") };
+}
 const when = (iso) => { const t = Date.parse(iso); return t ? new Date(t).toLocaleString() : ""; };
 
 const textModal = (ctx, title, value, hint) => modal(ctx.win, (done) => {
@@ -62,9 +75,11 @@ export async function renderPeopleTab(env, host) {
     const v = await promptDialog(ctx.win, { title: "빈 인물 직접 추가", label: "인물 이름", ok: "추가" });
     if (v?.trim()) commit((w) => createBlankPerson(w, v), "인물을 추가했어요.");
   };
-  const top = (n) => h("div", { class: "rb-wk-head" }, h("div", null, h("div", { class: "rb-wk-eyebrow rb-muted" }, "CURRENT CHAT / PEOPLE"), h("h2", null, "인물 위키")),
+  const autoSt = autoStatusOf(M, docs.length);
+  const strip = () => h("div", { class: "rb-wk-auto" }, note(autoSt.kind, autoSt.text), h("span", { class: "rb-mem-rowact" }, btn("위키 기록·다시 시도", { size: "sm", onClick: () => openWikiLog(env).catch(fail(ctx)) })));
+  const top = (n) => h("div", { class: "rb-wk-headwrap" }, h("div", { class: "rb-wk-head" }, h("div", null, h("div", { class: "rb-wk-eyebrow rb-muted" }, "CURRENT CHAT / PEOPLE"), h("h2", null, "인물 위키")),
     h("span", { class: "rb-mem-rowact" }, h("span", { class: "rb-wk-n" }, `${n}명`), btn("인물 추가·가져오기", { size: "sm", onClick: () => openImport(env).catch(fail(ctx)) }), btn("빈 인물 직접 추가", { size: "sm", onClick: addBlank }),
-      btn("더보기", { size: "sm", icon: "more", onClick: (e) => openMenu(ctx.win, e.currentTarget, peopleMenuItems(env, Object.entries(people).filter(([, p]) => visibleRecords(p).length || p.digest))) })));
+      btn("더보기", { size: "sm", icon: "more", onClick: (e) => openMenu(ctx.win, e.currentTarget, peopleMenuItems(env, Object.entries(people).filter(([, p]) => visibleRecords(p).length || p.digest))) }))), strip());
 
   const keyOfDoc = new Map();
   for (const [k, p] of Object.entries(people)) { const d = findDoc(wiki, p); if (d) keyOfDoc.set(d.id, k); }

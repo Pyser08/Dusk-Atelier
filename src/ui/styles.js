@@ -584,6 +584,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-wk-meta{font-size:12px}.rb-wk-body{margin:0;white-space:pre-wrap;line-height:1.55;overflow-wrap:anywhere}
 .rb-wk-unset{margin:6px 0;font-size:18px;color:var(--rb-mute)}
 .rb-wk-delta{align-self:flex-start;font-size:12px;padding:1px 8px;border-radius:8px;border:1px solid var(--rb-line2)}
+.rb-wk-headwrap{display:flex;flex-direction:column;gap:10px}.rb-wk-auto{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.rb-wk-auto .rb-note{flex:1;min-width:220px;margin:0}
 .rb-wk-foot{display:flex;align-items:center;gap:10px;justify-content:space-between}
 .rb-wk-empty{margin:0;font-size:13px}.rb-wk-form{display:flex;flex-direction:column;gap:10px}
 .rb-wk-head .rb-mem-rowact{flex-wrap:wrap;justify-content:flex-end}
