@@ -132,3 +132,24 @@ export async function openImport(env) {
       h("div", { class: "rb-mem-shead" }, h("h3", null, "인물 추가·가져오기"), h("span", { style: "flex:1" }), btn("닫기", { onClick: close })), body);
   });
 }
+
+// 수치·성격이 비어 있는 인물들을 차례로 AI가 채운다. 인물마다 변경안을 만들고 곧바로 반영한다(고정한 항목은 엔진이 건드리지 않는다).
+export async function fillEmptyPeople(env, docs) {
+  const { ctx } = env, chk = await toolsFor(env);
+  if (chk.why) return ctx.toast(chk.why, { error: true });
+  const { refresh } = chk.tools, groups = PERSON_REFRESH_GROUPS.map((g) => g.id);
+  let ok = 0, same = 0, bad = 0;
+  for (const [i, doc] of docs.entries()) {
+    ctx.toast(`AI가 인물을 채우는 중이에요 (${i + 1}/${docs.length}) · ${doc.title}`, { seconds: 6 });
+    try {
+      refresh.cancel({ silent: true });
+      await refresh.generate(doc.id, { groups, mode: "standard" });
+      const s = refresh.status();
+      if (s.error) { bad++; continue; }
+      if (s.proposal?.changes?.length) { await refresh.apply(); (refresh.status().error ? bad++ : ok++); } else same++;
+    } catch { bad++; }
+  }
+  refresh.cancel({ silent: true });
+  ctx.toast(`인물 채우기를 마쳤어요 · 반영 ${ok}명${same ? ` · 변경 없음 ${same}명` : ""}${bad ? ` · 실패 ${bad}명(인물 페이지에서 다시 시도)` : ""}`, { seconds: 9, error: bad > 0 && !ok });
+  (env.redrawView ?? env.redraw)();
+}
