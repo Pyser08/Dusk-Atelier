@@ -10,7 +10,7 @@ export async function renderModeBar(ctx, host, { redraw }) {
   const setBackend = async (v) => {
     try {
       await M.store.updateIndex((i) => { i.settings.backend = v; });
-      ctx.toast("저장했어요. 훅에 반영하려면 RisuAI를 다시 불러와 주세요.");
+      ctx.toast("기억 저장소를 바꿨어요.");
     } catch (e) { fail(ctx)(e); }
     redraw();
   };
