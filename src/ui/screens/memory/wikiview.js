@@ -75,8 +75,11 @@ export async function renderPeopleTab(env, host) {
     const v = await promptDialog(ctx.win, { title: "빈 인물 직접 추가", label: "인물 이름", ok: "추가" });
     if (v?.trim()) commit((w) => createBlankPerson(w, v), "인물을 추가했어요.");
   };
+  // 장기기억이 알아본 인물 중 위키 문서가 없는 사람을 한꺼번에 빈 문서로 만든다(자동 Writer는 한 응답에서 두드러진 인물만 만들기 때문).
+  const missing = Object.entries(people).filter(([, p]) => p?.name && !findDoc(wiki, p) && (visibleRecords(p).length || p.digest));
+  const makeMissing = () => commit((w) => { let cur = w; for (const [, p] of missing) { try { cur = createBlankPerson(cur, p.name); } catch { /* 이미 있으면 건너뜀 */ } } return cur; }, `${missing.length}명의 위키 문서를 만들었어요. 수치·성격은 각 인물에서 ‘AI 작성’으로 채워요.`);
   const autoSt = autoStatusOf(M, docs.length);
-  const strip = () => h("div", { class: "rb-wk-auto" }, note(autoSt.kind, autoSt.text), h("span", { class: "rb-mem-rowact" }, btn("위키 기록·다시 시도", { size: "sm", onClick: () => openWikiLog(env).catch(fail(ctx)) })));
+  const strip = () => h("div", { class: "rb-wk-auto" }, note(autoSt.kind, autoSt.text), h("span", { class: "rb-mem-rowact" }, missing.length && wikiEditable(env) ? btn(`위키 없는 인물 ${missing.length}명 만들기`, { size: "sm", kind: "primary", onClick: () => makeMissing() }) : null, btn("위키 기록·다시 시도", { size: "sm", onClick: () => openWikiLog(env).catch(fail(ctx)) })));
   const top = (n) => h("div", { class: "rb-wk-headwrap" }, h("div", { class: "rb-wk-head" }, h("div", null, h("div", { class: "rb-wk-eyebrow rb-muted" }, "CURRENT CHAT / PEOPLE"), h("h2", null, "인물 위키")),
     h("span", { class: "rb-mem-rowact" }, h("span", { class: "rb-wk-n" }, `${n}명`), btn("인물 추가·가져오기", { size: "sm", onClick: () => openImport(env).catch(fail(ctx)) }), btn("빈 인물 직접 추가", { size: "sm", onClick: addBlank }),
       btn("더보기", { size: "sm", icon: "more", onClick: (e) => openMenu(ctx.win, e.currentTarget, peopleMenuItems(env, Object.entries(people).filter(([, p]) => visibleRecords(p).length || p.digest))) }))), strip());
