@@ -212,7 +212,8 @@ export async function editWikiText(env, st, t) {
 }
 export const pinBtn = (env, st, key) => {
   const on = isPinned(env.folder.wiki, st.docId, key);
-  return btn(on ? "📌" : "📍", { size: "sm", title: on ? "고정됨 — 눌러서 해제" : "고정하면 AI가 이 항목을 고치지 않아요", "aria-pressed": on ? "true" : "false", onClick: () => wikiEdit(env, (w) => setPin(w, st.docId, key, !on)) });
+  const b = btn(on ? "📌" : "📍", { size: "sm", title: on ? "고정됨 — 눌러서 해제" : "고정하면 AI가 이 항목을 고치지 않아요", "aria-pressed": on ? "true" : "false", onClick: () => { b.textContent = on ? "📍" : "📌"; b.disabled = true; wikiEdit(env, (w) => setPin(w, st.docId, key, !on)); } });
+  return b;
 };
 
 // 지금 상태 카드(위키 문서): 수치 막대 + 호칭·관계 등 글. 숫자를 누르면 ‘상태’ 줄로 걸러 본다.
