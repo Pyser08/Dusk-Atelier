@@ -40,6 +40,8 @@
 - 시험: `node --test` 288(279 통과·0 실패), e2e `run-editor-ai`(30)·`run-popup`(32)·`run-info`(53)·`run-tabs`(57)·`run-persona`(12)·`run-smoke`(13) 모두 통과. 실행은 `node tests/e2e/<이름>.mjs`(파이프 없이 파일로 리다이렉트 권장).
 
 ## 남은 일 (새 챗에서)
-1. 버전 1.6.7로 올리기(`package.json`) · CHANGELOG · GUIDE-v1.6.7 · 소스맵 머리글 · 크레딧 확인 → 빌드 → main 병합·릴리즈(아카 글 여부는 그때 결정)
-2. `LICENSE`를 GitHub AGPL-3.0 전문으로 교체, risupot·Arcana Card·RisuTide 원 라이선스 확인(대조표 `docs/LICENSE-AUDIT-v1.6.7.md`)
-3. 실제 리스·리스바드에서 수동 시험: 작업 7종, 로어북 두 방식, 프리셋 요청, 적용→탭 반영→저장→재진입, charx 왕복, 모바일(특히 아래 시트·퍼스트 메시지 목록→상세·초기 변수 화면)
+- 완료(2026-10-28): 버전 1.6.7 상향 · CHANGELOG · `docs/GUIDE-v1.6.7.md` · 소스맵 갱신 · 빌드 — `feat/1.6.7`에 푸시(main 병합·릴리즈는 아직).
+1. `LICENSE`를 GitHub AGPL-3.0 전문으로 교체, risupot·Arcana Card·RisuTide 원 라이선스 확인(대조표 `docs/LICENSE-AUDIT-v1.6.7.md`)
+2. 실제 리스·리스바드에서 수동 시험: 작업 7종, 로어북 두 방식, 프리셋 요청, 적용→탭 반영→저장→재진입, charx 왕복, 모바일(특히 아래 시트·퍼스트 메시지 목록→상세·초기 변수 화면)
+3. 위 확인 뒤 main 병합 → release.yml 릴리즈(아카 글 여부는 그때 결정)
+4. (선택) 편집 화면 디자인 후속: 로어북·정규식·트리거를 '전체·캐릭터·소속' 탭 + 폴더 트리 + 도움말 ? 토글 + 관계 카드 형태로 개편하는 목업 합의됨(목업 파일은 채팅에서만 전달, 구현은 아직)
