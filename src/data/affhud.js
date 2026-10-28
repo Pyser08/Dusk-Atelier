@@ -5,7 +5,8 @@
 import { extractMessageText, isUserMessage, hashText, isChatGenerating as isGenerating } from "../engine/chattext.js";
 import { runAI } from "../engine/runai.js";
 import { pickForStage } from "./modelhub.js";
-import { AFF_DEFAULTS, buildAffMessages, clampAff, designMessages, designRetry, extractHud, hasHud, hudHtml, installHud, parseDelta, readPotAffinity, uninstallHud, validateHud } from "../engine/affhud.js";
+import { readDb, entriesOf, ops as moduleOps } from "./modules.js";
+import { AFF_DEFAULTS, buildAffMessages, clampAff, designMessages, designRetry, extractHud, hasHud, hudHtml, installHud, installHudModule, uninstallHudModule, parseDelta, readPotAffinity, uninstallHud, validateHud } from "../engine/affhud.js";
 
 const sv = (n) => "$" + n;
 const num = (v) => { const n = Number(v); return v !== "" && v != null && Number.isFinite(n) ? n : null; };
@@ -30,12 +31,16 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
 
   // AI 디자인 변경: 요청대로 새 HUD를 만든다(적용 전 후보). 검사를 통과하지 못하면 이유를 알려 한 번 고쳐 달라고 다시 부탁한다.
   async function design(ci, request) {
-    const ch = await api.getCharacterFromIndex(ci), cfg = await getCfg(String(ch.chaId));
+    const ch = await api.getCharacterFromIndex(ci);
+    return designFor(String(ch.chaId), ch.name ?? "캐릭터", request);
+  }
+  async function designFor(key, charName, request) {
+    const cfg = await getCfg(key);
     const current = cfg.html || hudHtml();
-    let html = extractHud(await askAI(designMessages({ request, current, charName: ch.name ?? "캐릭터" })));
+    let html = extractHud(await askAI(designMessages({ request, current, charName })));
     let v = validateHud(html);
     if (!v.ok) {
-      const retry = [...designMessages({ request, current, charName: ch.name ?? "캐릭터" }), { role: "assistant", content: html }, { role: "user", content: designRetry(v.errors) }];
+      const retry = [...designMessages({ request, current, charName }), { role: "assistant", content: html }, { role: "user", content: designRetry(v.errors) }];
       html = extractHud(await askAI(retry)); v = validateHud(html);
     }
     return { html, ...v };
@@ -58,6 +63,47 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
     await api.setCharacterToIndex(ci, uninstallHud(ch));
   }
 
+  // ── 모듈 판 (v1.6.9): 설정 키는 "m:<모듈 id>", HUD는 모듈 배경 HTML에 들어간다 ──
+  const mkey = (id) => "m:" + id;
+  async function getModule(id) {
+    const db = await readDb(api, ["modules", "pluginCustomStorage", "enabledModules"]);
+    const m = entriesOf(db).find((e) => e.module.id === id)?.module;
+    if (!m) throw new Error("모듈을 다시 찾지 못했어요. 새로 고침을 눌러 주세요.");
+    return m;
+  }
+  async function installMod(id, patch = {}) {
+    await setCfg(mkey(id), { on: true, ...patch });
+    const c = await getCfg(mkey(id)), m = await getModule(id);
+    await moduleOps.update(api, id, { backgroundEmbedding: installHudModule(m, c).backgroundEmbedding });
+    return c;
+  }
+  const designMod = (id, request) => designFor(mkey(id), "캐릭터", request);
+  async function applyDesignMod(id, html) {
+    const v = validateHud(html);
+    if (!v.ok) throw new Error(v.errors[0]);
+    await setCfg(mkey(id), { html });
+    return installMod(id);
+  }
+  async function resetDesignMod(id) { await setCfg(mkey(id), { html: "" }); return installMod(id); }
+  async function uninstallMod(id) {
+    await setCfg(mkey(id), { on: false });
+    const m = await getModule(id);
+    await moduleOps.update(api, id, { backgroundEmbedding: uninstallHudModule(m).backgroundEmbedding });
+  }
+  // 이 채팅에 쓰이는 HUD 주인: 봇 자신 → 켜진 모듈(전체·봇·채팅 모듈) 순
+  async function ownerOf(character, chat) {
+    const cfg = await getCfg(String(character.chaId));
+    if (cfg.on && hasHud(character.backgroundHTML)) return { cfg };
+    const db = await readDb(api, ["modules", "pluginCustomStorage", "enabledModules"]);
+    const ids = new Set([...(db.enabledModules ?? []), ...(character.modules ?? []), ...(chat?.modules ?? [])]);
+    for (const { module: m } of entriesOf(db)) {
+      if (!ids.has(m.id) || !hasHud(m.backgroundEmbedding)) continue;
+      const c = await getCfg(mkey(m.id));
+      if (c.on) return { cfg: c };
+    }
+    return null;
+  }
+
   async function writeVars(ci, ti, vars) {
     const chat = await api.getChatFromIndex(ci, ti);  // 가장 최신 채팅을 다시 읽어 변수만 덮는다
     if (!chat) return false;
@@ -71,9 +117,10 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
   // 한 번 맞춘다. 반환: "off" | "same" | "pot" | "own" | "parse-fail" | "noai"
   async function syncAt(ci, ti) {
     const character = await api.getCharacterFromIndex(ci), chaId = String(character.chaId);
-    const cfg = await getCfg(chaId);
-    if (!cfg.on || !hasHud(character.backgroundHTML)) return "off";
     const chat = await api.getChatFromIndex(ci, ti), msgs = chat?.message ?? [];
+    const owner = await ownerOf(character, chat);
+    if (!owner) return "off";
+    const cfg = owner.cfg;
     const i = lastAi(msgs);
     if (i < 0) return "noai";
     const ss = chat.scriptstate ?? {}, hash = hashText(extractMessageText(msgs[i]));
@@ -125,5 +172,5 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
     try { await api.addRisuScriptHandler("output", onOutput); return true; } catch (e) { log("출력 훅 등록 실패", e?.message ?? e); return false; }
   }
 
-  return { start, syncAt, tick, install, uninstall, design, applyDesign, resetDesign, getCfg, setCfg, onOutput };
+  return { start, syncAt, tick, install, uninstall, design, applyDesign, resetDesign, getCfg, setCfg, onOutput, getModule, installMod, uninstallMod, designMod, applyDesignMod, resetDesignMod };
 }

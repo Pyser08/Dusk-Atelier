@@ -46,6 +46,14 @@ export function installHud(ch, { min = AFF_DEFAULTS.min, max = AFF_DEFAULTS.max,
   const base = strip(ch?.backgroundHTML);
   return { ...ch, backgroundHTML: (base ? base + "\n" : "") + (html || hudHtml()), defaultVariables: serializeVars(rows) };
 }
+// 모듈 판: 모듈 배경 HTML(backgroundEmbedding)에 HUD를 넣는다. 모듈에는 기본 변수 칸이 없어 변수는 첫 응답 뒤부터 쓰인다.
+export function installHudModule(m, { html = "" } = {}) {
+  const base = strip(m?.backgroundEmbedding);
+  return { ...m, backgroundEmbedding: (base ? base + "\n" : "") + (html || hudHtml()) };
+}
+export function uninstallHudModule(m) {
+  return { ...m, backgroundEmbedding: strip(m?.backgroundEmbedding) };
+}
 export function uninstallHud(ch) {
   const rows = parseVars(ch?.defaultVariables).filter((r) => !AFF_KEYS.includes(r.k));
   return { ...ch, backgroundHTML: strip(ch?.backgroundHTML), defaultVariables: serializeVars(rows) };

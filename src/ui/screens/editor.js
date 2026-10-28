@@ -15,6 +15,7 @@ import { attachUndo } from '../undo.js';
 import { openAiPopup, loadPopupGeom } from './aibuild.js';
 import { openRoulette } from './roulettepop.js';
 import { bbInstalled } from '../../engine/firstrun.js';
+import { infoCard, infoStat, ensureInfoStyle } from './infocard.js';
 import { attachProbPick } from '../probpick.js';
 import { pickFix, clearFix } from '../aifix.js';
 import { segments, summarize } from '../../engine/regexview.js';
@@ -189,6 +190,50 @@ export async function openEditor(ctx, id) {
     kindLabel: "모듈 편집",
     idKey: "id",
     validate: validateModule,
+    // 봇 편집기와 같은 모양: 위 요약 카드 + 접는 카드(기본 / 고급)
+    renderInfo: ({ draft, field, text, area, check, jsonArea, changed, goTab, ui, emitArea, tipEl, setHelp }) => {
+      ui.open ??= { basic: true, adv: false };
+      const prose = { mono: false };
+      const vTok = h("span"), vLore = h("span"), vRe = h("span"), vTrig = h("span"), vAs = h("span");
+      const nameEl = h("div", { class: "rb-info-name" }), tagsEl = h("div", { class: "rb-info-tags" });
+      const paint = () => {
+        vTok.textContent = `약 ${estimateTokens(String(draft.description ?? "")).toLocaleString()}`;
+        vLore.textContent = String((draft.lorebook ?? []).length);
+        vRe.textContent = String((draft.regex ?? []).length);
+        vTrig.textContent = String((draft.trigger ?? []).length);
+        vAs.textContent = String((draft.assets ?? []).length);
+        nameEl.textContent = draft.name || "(이름 없음)";
+        tagsEl.replaceChildren(draft.namespace ? h("span", { class: "rb-chip", style: "height:24px;padding:0 10px;font-size:12px;cursor:default" }, draft.namespace) : null);
+      };
+      const stat = (...a) => infoStat(goTab, ...a);
+      const summary = h("div", { class: "rb-info-sum" },
+        h("div", { style: "min-width:0;flex:1 1 220px;display:flex;flex-direction:column;gap:6px" }, nameEl, tagsEl),
+        h("div", { class: "rb-info-stats" },
+          stat("토큰(추정)", vTok, null, "설명의 대략적인 토큰 수"),
+          stat("에셋", vAs, null, "모듈에 들어 있는 에셋 수 (에셋 관리에서 고쳐요)"),
+          stat("로어북", vLore, "lorebook", "로어북 탭 열기"),
+          stat("정규식", vRe, "regex", "정규식 탭 열기"),
+          stat("트리거", vTrig, "trigger", "트리거 탭 열기")));
+      paint();
+      const basic = infoCard(ui, "basic", "기본", "이름 · 네임스페이스 · 설명", setHelp,
+        h("div", { class: "rb-form" },
+          field("이름", text(draft, "name")),
+          field("네임스페이스", text(draft, "namespace", { placeholder: "다른 모듈·트리거가 이 모듈을 가리킬 때 쓰는 이름" })),
+          field("설명", area(draft, "description", { tall: true, ...prose }), true, "모듈의 핵심만 짧게 적어요.")));
+      const adv = infoCard(ui, "adv", "고급", "모듈 토글 · 배경 HTML · 스크립트 · MCP · 접근 권한", setHelp,
+        h("div", { class: "rb-form" },
+          field("모듈 토글 정의 (customModuleToggle)", area(draft, "customModuleToggle", { placeholder: "예) toggle_이름=보여줄 이름" }), true),
+          field("배경 HTML (backgroundEmbedding)", area(draft, "backgroundEmbedding"), true),
+          field("스크립트 (cjs)", area(draft, "cjs"), true),
+          field("MCP 설정 (JSON)", jsonArea(draft, "mcp"), true),
+          h("div", { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap;align-items:center" }, check(draft, "lowLevelAccess", "저수준 접근"), check(draft, "hideIcon", "아이콘 숨김"))));
+      const wrap = h("div", { class: "rb-info" }, summary, basic, adv, draft.lowLevelAccess ? note("warn", "저수준 접근을 켠 모듈은 믿을 수 있는 출처일 때만 쓰세요.") : null);
+      let t = 0;
+      wrap.addEventListener("input", () => { clearTimeout(t); t = setTimeout(paint, 300); });
+      wrap.addEventListener("focusin", () => emitArea?.("info"));
+      ensureInfoStyle();
+      return [wrap];
+    },
     async save(draft, original) {
       // 백업은 저장과 함께 진행 (편집 전 상태는 이미 메모리에 있다)
       const backup = createStore(ctx.api).addBackup({ kind: "module", target: original.id, name: original.name, snapshot: structuredClone(original), note: "편집 전" }).catch(() => null);

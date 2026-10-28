@@ -252,7 +252,7 @@ function detail(ctx, all, p) {
       baseCard(ctx, all, p, obj),
       lintCard(ctx, p, obj, view),
       testCard(ctx, p, view),
-      ...p.kind === "character" ? [affCard(ctx, t)] : [],
+      affCard(ctx, p.kind === "character" ? { kind: "character", i: t.i } : { kind: "module", id: p.id }),
       releaseCard(ctx, p, t),
       h("div", null, remove)
     );

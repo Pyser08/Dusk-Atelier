@@ -11,29 +11,9 @@ import { estimateTokens } from '../../engine/memoryinject.js';
 import { createGreetingManager } from './greetings.js';
 import { openEditorCore, validateModule } from './editor.js';
 import { patchSavedChar } from './characters.js';
+import { INFO_CSS } from './infocard.js';
 
 
-var INFO_CSS = `
-.rb-info{display:flex;flex-direction:column;gap:12px}
-.rb-info-sum{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding:14px 16px;border-radius:16px;border:1px solid var(--rb-line2);background:var(--rb-surf)}
-.rb-info-name{font-size:18px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rb-info-tags{display:flex;flex-wrap:wrap;gap:6px}
-.rb-info-stats{display:flex;flex-wrap:wrap;gap:8px}
-.rb-info-stat{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:72px;padding:8px 12px;border-radius:12px;border:1px solid var(--rb-line2);background:var(--rb-surf2);color:var(--rb-text);font:inherit;cursor:pointer}
-.rb-info-stat:disabled{cursor:default;opacity:1}
-.rb-info-stat b{font-size:16px}
-.rb-info-stat span{font-size:11px;color:var(--rb-sub)}
-@media (hover:hover){.rb-info-stat:not(:disabled):hover{border-color:var(--rb-sel-ring);background:var(--rb-sel-bg)}}
-.rb-info-card{border-radius:16px;border:1px solid var(--rb-line2);background:var(--rb-surf)}
-.rb-info-card>summary{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;list-style:none;min-height:24px}
-.rb-info-card>summary::-webkit-details-marker{display:none}
-.rb-info-card>summary .t{font-weight:700;font-size:15px}
-.rb-info-card>summary .h{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rb-info-card>summary svg{flex:none;transition:transform .15s}
-.rb-info-card[open]>summary svg{transform:rotate(180deg)}
-.rb-info-body{padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px}
-@media (prefers-reduced-motion:reduce){.rb-info-card>summary svg{transition:none}}
-`;
 var MAP = { lorebook: "globalLore", regex: "customscript", trigger: "triggerscript" };
 var SKIP = /* @__PURE__ */ new Set([...USER_KEYS, "emotionImages", "additionalAssets", "ccAssets", "image", "vits", "chats", "chatFolders", "chatPage", "loreCache", "lowLevelHistory"]);
 var CHAR_INFO_LABELS = {
