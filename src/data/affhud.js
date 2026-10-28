@@ -5,7 +5,7 @@
 import { extractMessageText, isUserMessage, hashText, isChatGenerating as isGenerating } from "../engine/chattext.js";
 import { runAI } from "../engine/runai.js";
 import { pickForStage } from "./modelhub.js";
-import { AFF_DEFAULTS, buildAffMessages, clampAff, designMessages, extractHud, hasHud, hudHtml, installHud, parseDelta, readPotAffinity, uninstallHud, validateHud } from "../engine/affhud.js";
+import { AFF_DEFAULTS, buildAffMessages, clampAff, designMessages, designRetry, extractHud, hasHud, hudHtml, installHud, parseDelta, readPotAffinity, uninstallHud, validateHud } from "../engine/affhud.js";
 
 const sv = (n) => "$" + n;
 const num = (v) => { const n = Number(v); return v !== "" && v != null && Number.isFinite(n) ? n : null; };
@@ -35,7 +35,7 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
     let html = extractHud(await askAI(designMessages({ request, current, charName: ch.name ?? "캐릭터" })));
     let v = validateHud(html);
     if (!v.ok) {
-      const retry = [...designMessages({ request, current, charName: ch.name ?? "캐릭터" }), { role: "assistant", content: html }, { role: "user", content: `검사에서 걸렸어요. 아래만 고쳐 전체 HTML을 다시 줘.\n- ${v.errors.join("\n- ")}` }];
+      const retry = [...designMessages({ request, current, charName: ch.name ?? "캐릭터" }), { role: "assistant", content: html }, { role: "user", content: designRetry(v.errors) }];
       html = extractHud(await askAI(retry)); v = validateHud(html);
     }
     return { html, ...v };
@@ -93,7 +93,7 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
     // B: 같은 자리(i)를 다시 생성했으면 직전에 더하기 전 값에서 다시 계산한다
     const base = String(ss[sv("aff_n")]) === String(i) && num(ss[sv("aff_prev")]) !== null ? num(ss[sv("aff_prev")]) : cur;
     const recent = msgs.slice(Math.max(0, i - 3), i + 1).map((m) => ({ user: isUserMessage(m), text: extractMessageText(m).slice(0, 700) }));
-    const text = await askAI(buildAffMessages({ charName: character.name ?? "캐릭터", recent, value: base, min: cfg.min, max: cfg.max, step: cfg.step }));
+    const text = await askAI(buildAffMessages({ charName: character.name ?? "캐릭터", recent, value: base, min: cfg.min, max: cfg.max, step: cfg.step, profile: [character.desc, character.personality].filter(Boolean).join("\n"), note: cfg.note }));
     const d = parseDelta(text, cfg.step);
     if (d === null) { log("변화량을 읽지 못했어요", String(text).slice(0, 80)); return "parse-fail"; }
     const value = clampAff(base + d, cfg.min, cfg.max);
