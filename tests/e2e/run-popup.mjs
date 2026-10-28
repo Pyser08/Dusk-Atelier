@@ -73,4 +73,28 @@ const box = (page) => page.locator("#rb-ai-popup").boundingBox();
   ok("[모바일] 손잡이를 아래로 끌면 닫힘", (await page.locator("#rb-ai-popup").count()) === 0);
   ok("[모바일] 오류 없음", !logs.length, logs.join(";")); await ctx.close();
 }
+// ── AI 탭 첫 진입 안내 ──
+{
+  const ctx = await browser.newContext({ viewport: { width: 1200, height: 800 } }), page = await ctx.newPage(); page.setDefaultTimeout(5000);
+  const logs = []; page.on("pageerror", (e) => logs.push(e.message));
+  await open(page);
+  const intro = page.locator("section[aria-label='사용 안내']");
+  await tab(page, "AI로 제작"); await page.waitForSelector("section[aria-label='사용 안내']");
+  ok("[안내] AI 탭 첫 진입에 3장 안내 1/3", (await intro.textContent()).includes("1 / 3"));
+  await page.getByRole("button", { name: "다음" }).click(); await page.getByRole("button", { name: "다음" }).click();
+  ok("[안내] 3/3에 Dusk/일반 방식 설명 없음·적용 저장 설명", (await intro.textContent()).includes("3 / 3") && (await intro.textContent()).includes("Ctrl+S"));
+  await page.getByRole("button", { name: "이전" }).click();
+  ok("[안내] 2/3에 Dusk 방식·일반 방식 차이", (await intro.textContent()).includes("Dusk 방식") && (await intro.textContent()).includes("일반 방식"));
+  await page.getByRole("button", { name: "다음" }).click(); await page.getByRole("button", { name: "시작하기" }).first().click(); await page.waitForTimeout(200);
+  ok("[안내] 시작하기 → AI 창 열림·안내 닫힘", (await page.locator("#rb-ai-popup").count()) === 1 && (await intro.count()) === 0);
+  ok("[안내] 본 기록은 da_aibuild:intro", await page.evaluate(() => T.store.get("da_aibuild:intro") === "1"));
+  await page.locator("#rb-ai-popup [aria-label='닫기']").click();
+  await tab(page, "정보"); await tab(page, "AI로 제작"); await page.waitForTimeout(300);
+  ok("[안내] 다시 들어가도 안 뜸", (await intro.count()) === 0);
+  await page.getByRole("button", { name: "사용법" }).click();
+  ok("[안내] [사용법]으로 다시 볼 수 있음", (await intro.count()) === 1);
+  await page.getByRole("button", { name: "건너뛰기" }).click();
+  ok("[안내] 건너뛰기", (await intro.count()) === 0);
+  ok("[안내] 오류 없음", !logs.length, logs.join(";")); await ctx.close();
+}
 await browser.close(); process.exit(out.every(Boolean) ? 0 : 1);

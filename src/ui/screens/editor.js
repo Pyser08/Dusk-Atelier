@@ -3,21 +3,20 @@ import { codeEditor } from '../codeedit.js';
 import { regexRun } from '../../engine/devcheck.js';
 import { newId, stableJson } from '../../engine/util.js';
 import { createStore } from '../../engine/store.js';
-import { h, replace } from '../dom.js';
+import { copyText, h, replace } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, note, openMenu, promptDialog, segmented, switchEl } from '../kit.js';
+import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, loading, note, openMenu, promptDialog, segmented, switchEl } from '../kit.js';
 import { gripDrag } from '../sortable.js';
 import { entryPicker } from '../entrypicker.js';
 import { sortLoreByName } from '../../engine/lorelist.js';
 import { estimateTokens } from '../../engine/memoryinject.js';
 import { reload } from './modules.js';
 import { attachUndo } from '../undo.js';
-import { createAiBuild } from '../../dev/aibuild/controller.js';
-import { hostFromEditor } from '../../dev/aibuild/bridge.js';
 import { openAiPopup, loadPopupGeom } from './aibuild.js';
-import { renderAiTab } from './aitab.js';
 import { bbInstalled } from '../../engine/firstrun.js';
 import { attachProbPick } from '../probpick.js';
+import { segments, summarize } from '../../engine/regexview.js';
+import { parseVars, serializeVars, duplicateKeys } from '../../engine/vars.js';
 import { openLoreDusk } from './loredusk.js';
 import { AFF_PREFIX, COND_TYPES, PLACE_PREFIX, SET_OPS, VAR_OPS, affName, affOf, affsOf, ancestorsOf, applySets, bodyOf, checkExpr, collectManaged, defaultAff, defaultRule, evaluate, folderIdOf, folderMap, gateVar, isAff, isDuskFolder, isFolder, isManaged, isPlace, nativeContent, parentOf, placeLinks, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
 import { FOLDER_SWATCHES, folderTint } from '../theme.js';
@@ -202,6 +201,30 @@ export async function openEditor(ctx, id) {
   });
 }
 export async function openEditorCore(ctx, cfg) {
+  const E7_CSS = `
+.rb-side-tools.rb-bar{padding:8px;border-radius:14px;border:1px solid var(--rb-line2);background:var(--rb-surf);margin:0 0 8px;gap:6px}
+.rb-adv{border-radius:12px;border:1px solid var(--rb-line2);background:var(--rb-surf)}
+.rb-adv>summary{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;list-style:none;font-size:13px;font-weight:600;min-height:24px}
+.rb-adv>summary::-webkit-details-marker{display:none}
+.rb-adv>summary .h{font-weight:400;color:var(--rb-sub);font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rb-adv>summary svg{flex:none;transition:transform .15s}
+.rb-adv[open]>summary svg{transform:rotate(180deg)}
+.rb-adv>.in{padding:2px 12px 12px}
+.rb-emptycard{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:22px 14px;border:1px dashed var(--rb-line3);border-radius:14px;color:var(--rb-sub);font-size:13px;line-height:1.6}
+.rb-emptycard b{color:var(--rb-text);font-size:14px}
+.rb-emptycard .acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.rb-kind{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--rb-surf2);border:1px solid var(--rb-line2)}
+.rb-rx-in{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.7;padding:8px 10px;border-radius:10px;background:var(--rb-surf2);max-height:220px;overflow:auto}
+.rb-rx-in mark{background:var(--rb-sel-bg);color:inherit;border-radius:4px;outline:1px solid var(--rb-sel-ring);padding:0 1px}
+.rb-rx-lines{font-size:12px;line-height:1.7;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-word;color:var(--rb-sub)}
+.rb-rx-out{white-space:pre-wrap;word-break:break-word;font-size:13px;padding:8px 10px;border-radius:10px;border:1px solid var(--rb-line2);max-height:220px;overflow:auto}
+.rb-vars{display:flex;flex-direction:column;gap:8px}
+.rb-var{display:grid;grid-template-columns:minmax(80px,1fr) minmax(80px,2fr) auto;gap:6px;align-items:center}
+.rb-var .rb-input{min-width:0}
+@media (max-width:640px){.rb-var{grid-template-columns:minmax(0,1fr) auto}.rb-var .k{grid-column:1 / 2}.rb-var .v{grid-column:1 / 2}.rb-var .x{grid-row:1 / 3;grid-column:2}}
+@media (prefers-reduced-motion:reduce){.rb-adv>summary svg{transition:none}}
+`;
+  if (!document.getElementById("rb-e7-style")) document.head.appendChild(h("style", { id: "rb-e7-style" }, E7_CSS));
   const original = structuredClone(cfg.view);
   let draft = structuredClone(cfg.view);
   for (const k of ["lorebook", "regex", "trigger"]) if (!Array.isArray(draft[k])) draft[k] = [];
@@ -338,6 +361,14 @@ export async function openEditorCore(ctx, cfg) {
     tabsTimer = setTimeout(paintTabs, 120);
   };
   const field = (label, input, wide) => h("label", { class: ["rb-field", wide && "wide"] }, h("span", { class: "rb-label" }, label), input);
+  // 접는 '고급' 칸: 열림 상태는 항목을 바꿔도 기억 (처음 쓰는 사람은 기본 칸만 보게)
+  const advFold = (key, title, hint, ...kids) => {
+    es.adv ??= {};
+    const d = h("details", { class: "rb-adv wide" }, h("summary", null, h("span", null, title), h("span", { class: "h" }, hint), icon("down", 16)), h("div", { class: "in" }, h("div", { class: "rb-form" }, ...kids)));
+    d.open = !!es.adv[key];
+    d.addEventListener("toggle", () => { es.adv[key] = d.open; });
+    return d;
+  };
   const text = (obj, key, { placeholder, onInput } = {}) => {
     const el = h("input", { class: "rb-input", value: obj[key] ?? "", placeholder });
     el.addEventListener("input", () => {
@@ -612,25 +643,38 @@ export async function openEditorCore(ctx, cfg) {
         fid ? { label: "고른 폴더 안만 이름순", icon: "folder", onClick: () => applySort(fid) } : null
       ].filter(Boolean));
     };
-    const tools = h(
-      "div",
-      { class: "rb-side-tools" },
-      search,
-      btn("추가", { size: "sm", icon: "plus", onClick: () => add(isLore ? newLore : kind === "regex" ? newRegex : newTrigger) }),
-      isLore ? btn("만들기", { size: "sm", icon: "folderPlus", onClick: newMenu }) : null,
-      isLore && fmap.size ? btn(collapsedAll() ? "모두 펴기" : "모두 접기", { size: "sm", title: "모든 폴더 접기/펴기", onClick: () => {
+    // 위쪽 바: 검색 · 추가 · (로어북) 만들기 · 더보기. 자주 안 쓰는 건 '더보기' 안으로
+    const moreMenu = (ev) => openMenu(ctx.win, ev.currentTarget, [
+      isLore && fmap.size ? { label: collapsedAll() ? "모든 폴더 펴기" : "모든 폴더 접기", icon: "folder", onClick: () => {
         es.loreCollapsed ??= /* @__PURE__ */ new Set();
         if (collapsedAll()) es.loreCollapsed.clear();
         else for (const f of fmap.values()) es.loreCollapsed.add(folderIdOf(f));
         render();
-      } }) : null,
-      isLore && list.length > 1 ? btn("더스크화", { size: "sm", title: "기존 로어북을 소속·장소 구조로 바꾸기 (구분선 변환 + AI 분석)", onClick: () => duskify() }) : null,
-      isLore ? btn("이름순", { size: "sm", icon: "list", onClick: (ev) => sortMenu(ev) }) : null,
-      isLore ? btn(selecting ? "선택 끝" : "선택", { size: "sm", kind: selecting ? "primary" : void 0, onClick: () => {
+      } } : null,
+      isLore ? { label: "여러 개 고르기", icon: "check", onClick: () => {
         es.selMode = !es.selMode;
         es.multi.clear();
         render();
-      } }) : null
+      } } : null,
+      isLore && list.length > 1 ? "sep" : null,
+      isLore && list.length > 1 ? { label: "전체 이름순 (폴더 안에서만)", icon: "list", onClick: () => applySort(null) } : null,
+      isLore && list.length > 1 && (() => { const cur = selObj(); return cur && (isFolder(cur) ? folderIdOf(cur) : pid(cur)); })() ? { label: "고른 폴더 안만 이름순", icon: "folder", onClick: () => { const cur = selObj(); applySort(isFolder(cur) ? folderIdOf(cur) : pid(cur)); } } : null,
+      isLore && list.length > 1 ? { label: "더스크화 (구분선 변환 + AI 분석)", icon: "sparkle", onClick: () => duskify() } : null,
+      !isLore ? { label: "찾아 바꾸기 (Ctrl+H)", icon: "search", onClick: () => findReplace() } : null,
+      !isLore ? { label: "빠른 이동 (Ctrl+P)", icon: "list", onClick: () => quickJump() } : null
+    ].filter((x, i, arr) => x && !(x === "sep" && (i === 0 || !arr[i + 1]))));
+    const tools = h(
+      "div",
+      { class: "rb-side-tools rb-bar" },
+      search,
+      btn("추가", { size: "sm", icon: "plus", onClick: () => add(isLore ? newLore : kind === "regex" ? newRegex : newTrigger) }),
+      isLore ? btn("만들기", { size: "sm", icon: "folderPlus", onClick: newMenu }) : null,
+      isLore && selecting ? btn("선택 끝", { size: "sm", kind: "primary", onClick: () => {
+        es.selMode = false;
+        es.multi.clear();
+        render();
+      } }) : null,
+      iconBtn("more", "더보기", { boxed: true, onClick: moreMenu })
     );
     // 로어북: 전체 / 캐릭터 / 소속 탭
     const loreTabs = isLore ? h("div", { class: "rb-lore-tabs", style: "padding:0 0 6px" }, segmented([["all", "전체"], ["char", "캐릭터"], ["aff", "소속"]], es.loreTab, (v) => {
@@ -881,6 +925,17 @@ export async function openEditorCore(ctx, cfg) {
         }
       });
     }
+    // 비어 있을 때: 이게 뭔지 한 줄 + 첫 행동 버튼
+    function emptyCard() {
+      const E = {
+        lorebook: ["book", "아직 로어북이 없어요", "인물·장소·설정을 적어 두면, 그 키워드가 나올 때만 AI에게 전달돼요.", "첫 로어북 만들기", newLore],
+        regex: ["code", "아직 정규식이 없어요", "채팅에 나온 글을 찾아 바꾸거나 꾸밀 때 써요. 예: 상태창을 예쁘게 보여주기.", "첫 정규식 만들기", newRegex],
+        trigger: ["zap", "아직 트리거가 없어요", "대화를 시작하거나 입력·출력할 때 자동으로 실행되는 Lua 코드예요.", "첫 트리거 만들기", newTrigger]
+      }[kind];
+      return h("div", { class: "rb-emptycard" }, icon(E[0], 28), h("b", null, E[1]), h("span", null, E[2]),
+        h("div", { class: "acts" }, btn(E[3], { kind: "primary", icon: "plus", onClick: () => add(E[4]) }),
+          hasAi ? btn("AI로 만들기", { icon: "sparkle", onClick: () => aiWindow() }) : null));
+    }
     function paintItems() {
       const out = [];
       if (!isLore) {
@@ -903,6 +958,7 @@ export async function openEditorCore(ctx, cfg) {
         // 부모를 잃은 항목(지워진 폴더 등)은 맨 뒤에
         if (fmap.size) out.push(h("div", { class: "rb-label", style: "padding:10px 10px 6px;border-radius:8px", dataset: { dropFolder: "" } }, "여기에 놓으면 폴더 밖으로"));
       }
+      if (!out.length && !list.length && !q) return replace(items, emptyCard());
       replace(items, out.length ? out : h("div", { class: "rb-empty" }, list.length ? (q ? "찾는 항목이 없어요" : es.loreTab === "aff" ? '소속이 없어요. "만들기 → 소속 폴더"로 만드세요.' : "항목이 없어요") : '항목이 없어요. "추가"를 눌러 만드세요.'));
     }
     async function newFolderPicked(aff) {
@@ -980,9 +1036,9 @@ export async function openEditorCore(ctx, cfg) {
       es.mItem = false;
       render();
     } })));
-    if (!it) pane.appendChild(h("div", { class: "rb-empty" }, "왼쪽에서 항목을 고르세요."));
+    if (!it) pane.appendChild(h("div", { class: "rb-empty" }, list.length ? "왼쪽에서 항목을 고르세요." : "왼쪽의 버튼으로 첫 항목을 만들어 보세요."));
     else pane.append(itemTools, isLore ? loreForm(it) : kind === "regex" ? regexForm(it) : triggerForm(it));
-    replace(body, h("div", { class: "side" }, tools, loreTabs, bulkBar, items), pane);
+    replace(body, h("div", { class: "side" }, kind === "trigger" && hasAi ? h("div", { style: "padding:0 0 8px" }, trigSeg()) : null, tools, loreTabs, bulkBar, items), pane);
     es.shown = { kind, items, pane, item: it };
     restoreView(kind, items, pane, it);
   }
@@ -1062,13 +1118,13 @@ export async function openEditorCore(ctx, cfg) {
         "div",
         { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap" },
         h("label", { class: "rb-check" }, enabled, h("span", null, "사용")),
-        isPlace(l) ? null : check(l, "alwaysActive", "항상 켜짐"),
-        check(l, "selective", "보조 키 사용"),
-        check(l, "useRegex", "키를 정규식으로")
+        isPlace(l) ? null : check(l, "alwaysActive", "항상 켜짐")
       ),
-      field("보조 키", text(l, "secondkey", { placeholder: "보조 키 사용을 켜면 둘 다 있어야 켜짐" })),
-      field("삽입 순서", num(l, "insertorder")),
-      isManaged(l) ? null : field("켜질 확률 (%)", num(l, "activationPercent")),
+      advFold("lore", "고급 설정", "보조 키 · 키를 정규식으로 · 삽입 순서 · 켜질 확률",
+        h("div", { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap" }, check(l, "selective", "보조 키 사용"), check(l, "useRegex", "키를 정규식으로")),
+        field("보조 키", text(l, "secondkey", { placeholder: "보조 키 사용을 켜면 둘 다 있어야 켜짐" })),
+        field("삽입 순서", num(l, "insertorder")),
+        isManaged(l) ? null : field("켜질 확률 (%)", num(l, "activationPercent"))),
       myAffs.length || isPlace(l) ? h("p", { class: "rb-muted wide", style: "margin:0;font-size:12.5px" }, isPlace(l) ? "장소는 Dusk 규칙으로 켜져요 (규칙은 끌 수 없어요)." : "소속 폴더 안 항목은 Dusk 규칙이 늘 켜져 있어요 (소속이 켜질 때 함께 켜지려면 필요해요).") : null,
       ruleSection(l)
     );
@@ -1676,16 +1732,37 @@ export async function openEditorCore(ctx, cfg) {
     input.focus();
   }
   function regexForm(r) {
-    const flags = h("div", { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap;align-items:center" }, check(r, "ableFlag", "플래그 직접 지정"));
     const flagInput = text(r, "flag", { placeholder: "g, i, m, s…" });
-    flags.appendChild(h("div", { style: "width:180px" }, flagInput));
+    const flags = h("div", { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap;align-items:center" }, check(r, "ableFlag", "플래그 직접 지정"), h("div", { style: "width:180px" }, flagInput));
+    // 바로 시험 (RE2JS 한 엔진): 입력 글에서 일치한 곳을 강조하고, 위치·캡처 그룹·바뀐 결과를 보여 준다. CBS·@@ 같은 특수 문법은 기존 근사 시험으로.
     const testIn = h("textarea", { class: "rb-textarea", rows: 3, spellcheck: "false", placeholder: "여기에 시험할 글을 붙여넣으면 바로 결과가 나와요", "aria-label": "정규식 시험 입력" });
-    const testOut = h("div", { class: "rb-muted", style: "white-space:pre-wrap;word-break:break-word;font-size:13px;margin-top:6px" });
-    const runTest = () => {
-      if (!testIn.value) return void (testOut.textContent = "");
+    const testOut = h("div", { style: "display:flex;flex-direction:column;gap:8px;margin-top:8px", "aria-live": "polite" });
+    let seq = 0;
+    const msg = (t, danger) => replace(testOut, h("div", { class: "rb-muted", style: `white-space:pre-wrap;word-break:break-word;font-size:13px;${danger ? "color:var(--rb-danger)" : ""}` }, t));
+    const runTest = async () => {
+      const my = ++seq;
+      if (!testIn.value) return replace(testOut);
       const res = regexRun([{ ...r }], testIn.value, r.type), st = res.steps[0];
-      testOut.textContent = !st ? "패턴이 비었거나 '비활성' 상태예요" : st.error ? `패턴 오류: ${st.error}` : st.skipped ? st.skipped : st.matched ? `일치 ${st.matched}곳\n${res.out}` : "일치하는 곳이 없어요";
-      testOut.style.color = st?.error ? "var(--rb-danger)" : "";
+      if (!st) return msg("패턴이 비었거나 '비활성' 상태예요");
+      if (st.skipped) return msg(st.skipped);
+      let rich = null;
+      try {
+        rich = await (await import('../../dev/aibuild/regextest.js')).regexTest({ in: String(r.in ?? ""), out: String(r.out ?? ""), flag: r.flag, ableFlag: !!r.ableFlag }, testIn.value);
+      } catch (e) {
+        // RE2JS가 못 다루는 문법(CBS·@@ 액션 등)은 기존 시험 결과로 보여 준다
+        if (my !== seq) return;
+        return msg(st.error ? `패턴 오류: ${st.error}` : st.matched ? `일치 ${st.matched}곳 (간이 시험: ${e.message})\n${res.out}` : `일치하는 곳이 없어요 (간이 시험: ${e.message})`, !!st.error);
+      }
+      if (my !== seq) return;
+      if (!rich.matches.length) return msg("일치하는 곳이 없어요");
+      const sum = summarize(rich.matches);
+      replace(testOut,
+        h("div", { style: "font-size:13px;font-weight:600" }, `일치 ${rich.matches.length.toLocaleString()}곳`),
+        h("div", { class: "rb-rx-in", "aria-label": "일치한 곳 표시" }, ...segments(testIn.value, rich.matches).map((g) => g.hit === null ? g.text : h("mark", { title: `위치 ${rich.matches[g.hit].start}–${rich.matches[g.hit].end}` }, g.text))),
+        h("div", { class: "rb-rx-lines" }, sum.lines.join("\n") + (sum.more ? `\n… 외 ${sum.more}곳` : "")),
+        h("div", { style: "font-size:12px;font-weight:600;color:var(--rb-sub)" }, "바뀐 결과"),
+        h("div", { class: "rb-rx-out" }, rich.output),
+        rich.note ? h("div", { class: "rb-muted", style: "font-size:12px" }, rich.note) : null);
     };
     testIn.addEventListener("input", runTest);
     const form = h(
@@ -1695,8 +1772,8 @@ export async function openEditorCore(ctx, cfg) {
       field("적용 시점", select2(r, "type", REGEX_TYPES)),
       field("찾을 패턴 (IN)", codeArea(r, "in", { lang: "regex" }), true),
       field("바꿀 내용 (OUT)", codeArea(r, "out", { lang: "replace", tall: true }), true),
-      flags,
-      field("바로 시험", h("div", null, testIn, testOut), true)
+      field("바로 시험", h("div", null, testIn, testOut), true),
+      advFold("regex", "고급 설정", "플래그 직접 지정", flags)
     );
     form.addEventListener("input", runTest);
     form.addEventListener("change", runTest);
@@ -1704,23 +1781,63 @@ export async function openEditorCore(ctx, cfg) {
   }
   function triggerForm(t) {
     const lua = Array.isArray(t.effect) && t.effect.length === 1 && ["triggerlua", "triggercode"].includes(t.effect[0]?.type) ? t.effect[0] : null;
+    const kindBadge = h("span", { class: "rb-kind wide", style: "align-self:flex-start" }, icon(lua ? "code" : "zap", 14), lua ? (lua.type === "triggerlua" ? "Lua 트리거" : "코드 트리거") : "일반 트리거 (조건 · 효과)");
     return h(
       "div",
       { class: "rb-form" },
+      kindBadge,
       field("이름", text(t, "comment")),
       field("실행 시점", select2(t, "type", TRIGGER_TYPES)),
-      h("div", { class: "wide", style: "display:flex;gap:16px" }, check(t, "lowLevelAccess", "저수준 접근")),
       lua ? field(lua.type === "triggerlua" ? "Lua 코드" : "트리거 코드", lua.type === "triggerlua" ? codeArea(lua, "code", { lang: "lua", tall: true }) : area(lua, "code", { tall: true }), true) : null,
-      field("조건 (conditions, JSON)", jsonArea(t, "conditions"), true),
-      lua ? null : field("효과 (effect, JSON)", jsonArea(t, "effect", { tall: true }), true)
+      lua ? null : field("조건 (conditions, JSON)", jsonArea(t, "conditions"), true),
+      lua ? null : field("효과 (effect, JSON)", jsonArea(t, "effect", { tall: true }), true),
+      advFold("trigger", "고급 설정", lua ? "저수준 접근 · 조건(JSON)" : "저수준 접근",
+        h("div", { class: "wide", style: "display:flex;gap:16px" }, check(t, "lowLevelAccess", "저수준 접근")),
+        lua ? field("조건 (conditions, JSON)", jsonArea(t, "conditions"), true) : null)
     );
+  }
+  // 초기 변수(defaultVariables): Lua가 읽고 쓰는 변수의 시작값. 봇에만 있다 (모듈엔 없음)
+  function varsPane() {
+    const rows = parseVars(draft.defaultVariables);
+    const wrap = h("div", { class: "rb-vars" });
+    const commit = () => { draft.defaultVariables = serializeVars(rows); if (!draft.defaultVariables && original.defaultVariables === void 0) delete draft.defaultVariables; changed(); };
+    const paint = () => {
+      const dup = duplicateKeys(rows);
+      replace(wrap,
+        rows.length ? rows.map((row, i) => {
+          const k = h("input", { class: "rb-input k", value: row.k, placeholder: "변수 이름", "aria-label": `변수 ${i + 1} 이름`, autocapitalize: "off", autocomplete: "off", spellcheck: "false" });
+          const v = row.v === null ? h("span", { class: "rb-muted v", style: "font-size:12px" }, "(= 없는 줄 — 그대로 보존)") : h("input", { class: "rb-input v", value: row.v, placeholder: "시작값", "aria-label": `변수 ${i + 1} 값`, autocapitalize: "off", autocomplete: "off", spellcheck: "false" });
+          k.addEventListener("input", () => { row.k = k.value; commit(); });
+          v.addEventListener?.("input", () => { row.v = v.value; commit(); });
+          return h("div", { class: "rb-var" }, k, v, h("span", { class: "x" }, iconBtn("trash", `변수 ${i + 1} 지우기`, { onClick: () => { rows.splice(i, 1); commit(); paint(); } })));
+        }) : h("div", { class: "rb-emptycard" }, icon("sliders", 26), h("b", null, "초기 변수가 없어요"), h("span", null, "Lua가 쓸 변수의 시작값을 정해 둘 수 있어요. 예: hp = 100")),
+        dup.size ? note("warn", `같은 이름이 두 번 있어요: ${[...dup].join(", ")} — 아래쪽 값이 나중에 적용돼요.`) : null,
+        h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, btn("변수 추가", { size: "sm", icon: "plus", onClick: () => { rows.push({ k: "", v: "" }); paint(); wrap.querySelectorAll(".k").forEach((x, n, a) => n === a.length - 1 && x.focus()); } })));
+    };
+    paint();
+    return h("div", { class: "pane" }, h("p", { class: "rb-muted", style: "margin:0;font-size:13px" }, "한 줄에 변수 하나(key=value)로 저장돼요. 채팅이 시작될 때 이 값으로 채워지고, Lua·트리거가 읽고 바꿔요."), wrap);
   }
   function renderJson() {
     const view = structuredClone(draft);
     delete view[cfg.idKey];
-    const el = h("textarea", { class: "rb-textarea", style: "flex:1;min-height:60vh", spellcheck: "false" });
+    const el = h("textarea", { class: "rb-textarea", style: "flex:1;min-height:60vh", spellcheck: "false", "aria-label": "전체 JSON" });
     el.value = JSON.stringify(view, null, 2);
-    const msg = h("span", { class: "rb-muted" }, "전체를 JSON으로 고쳐요. 식별자(id)는 바꿀 수 없어요.");
+    attachUndo(el);
+    const msg = h("span", { class: "rb-muted", "aria-live": "polite" }, "전체를 JSON으로 고쳐요. 식별자(id)는 바꿀 수 없어요.");
+    const stat = h("small", { class: "rb-muted", style: "white-space:nowrap" });
+    // 칠 때마다 문법을 확인해 오류가 있는 줄을 알려 준다
+    const lineOf = (e) => { const m = /position (\d+)/.exec(e.message) ?? /line (\d+)/.exec(e.message); if (!m) return ""; return /line/.test(m[0]) ? ` (${m[1]}번째 줄)` : ` (${el.value.slice(0, Number(m[1])).split("\n").length}번째 줄)`; };
+    const check2 = () => {
+      try { JSON.parse(el.value); stat.textContent = `올바른 JSON · ${el.value.length.toLocaleString()}자`; stat.style.color = "var(--rb-teal)"; el.style.borderColor = ""; return true; }
+      catch (e) { stat.textContent = `문법 오류${lineOf(e)}`; stat.style.color = "var(--rb-danger)"; el.style.borderColor = "var(--rb-danger)"; return false; }
+    };
+    let jt = 0;
+    el.addEventListener("input", () => { clearTimeout(jt); jt = setTimeout(check2, 200); });
+    const fmtB = btn("서식 정리", { size: "sm", onClick: () => {
+      try { el.value = JSON.stringify(JSON.parse(el.value), null, 2); check2(); msg.textContent = "들여쓰기를 정리했어요."; msg.style.color = ""; }
+      catch (e) { msg.textContent = `정리하지 못했어요: ${e.message}`; msg.style.color = "var(--rb-danger)"; }
+    } });
+    const copyB = btn("복사", { size: "sm", onClick: async () => { try { await copyText(el.value); ctx.toast("JSON을 복사했어요"); } catch { ctx.toast("복사하지 못했어요", { error: true }); } } });
     const applyJson = btn("JSON 반영", { size: "sm", kind: "primary", onClick: () => {
       try {
         const j = JSON.parse(el.value);
@@ -1736,7 +1853,8 @@ export async function openEditorCore(ctx, cfg) {
         msg.style.color = "var(--rb-danger)";
       }
     } });
-    replace(body, h("div", { class: "pane" }, h("div", { style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap" }, msg, h("div", { class: "rb-spacer" }), applyJson), el));
+    check2();
+    replace(body, h("div", { class: "pane" }, h("div", { class: "rb-side-tools rb-bar", style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" }, msg, h("div", { class: "rb-spacer", style: "flex:1" }), stat, copyB, fmtB, applyJson), el));
   }
   // 항목을 바꾸거나 다시 그려도 목록 스크롤·항목별 스크롤·마지막 커서 위치를 지킨다
   function saveView() {
@@ -1790,11 +1908,24 @@ export async function openEditorCore(ctx, cfg) {
     // 코드 편집기는 다음 프레임에 높이가 잡히므로 한 번 더
     requestAnimationFrame(apply2);
   }
+  // 트리거 탭 위쪽 전환: 트리거 목록 ↔ 초기 변수 (봇만)
+  const trigSeg = () => {
+    const sg = segmented([["list", "트리거"], ["vars", "초기 변수"]], es.trigView ?? "list", (v) => { es.trigView = v; render(); }, "트리거 보기");
+    return sg;
+  };
+  function renderVars() {
+    es.shown = null;
+    replace(body, h("div", { class: "side" }, h("div", { style: "padding:8px" }, trigSeg())), varsPane());
+  }
   function render() {
     saveView();
     paintTabs();
     paintHead();
     if (es.tab === "info" || es.tab === "json" || es.tab === "ai") body.classList.remove("m-item", "m-list");
+    if (es.tab === "trigger" && hasAi && es.trigView === "vars") {
+      body.classList.remove("m-item", "m-list");
+      return renderVars();
+    }
     if (es.tab === "info") renderInfo();
     else if (es.tab === "ai") renderAi();
     else if (es.tab === "json") renderJson();
@@ -2009,10 +2140,11 @@ export async function openEditorCore(ctx, cfg) {
     ctx.toast(`되돌렸어요 · ${last.label ?? "AI 수정안"}`);
     return true;
   }
-  let build = null, buildInit = null, bbPresent = false;
-  function getBuild() {
-    if (!build) {
-      build = createAiBuild({ api: ctx.api, host: hostFromEditor(handle, { targetId: () => draft[cfg.idKey] }) });
+  // AI 엔진(요청 조립·프리셋·암호/압축 라이브러리)은 AI를 처음 쓸 때만 불러온다 → 편집기를 여는 속도는 그대로
+  let build = null, buildInit = null, buildP = null, bbPresent = false;
+  function ensureBuild() {
+    buildP ??= Promise.all([import('../../dev/aibuild/controller.js'), import('../../dev/aibuild/bridge.js')]).then(([c, br]) => {
+      build = c.createAiBuild({ api: ctx.api, host: br.hostFromEditor(handle, { targetId: () => draft[cfg.idKey] }) });
       buildInit = build.init().catch((err) => ctx.toast(`AI 설정을 불러오지 못했어요: ${err?.message ?? err}`, { error: true }));
       let lastPending = 0;
       build.subscribe(() => {
@@ -2023,11 +2155,13 @@ export async function openEditorCore(ctx, cfg) {
         if (n > lastPending && !panel.querySelector("#rb-ai-popup")) ctx.toast("AI 수정안이 도착했어요 — 우측 하단 버튼에서 확인하세요");
         lastPending = n;
       });
-    }
-    return build;
+      return build;
+    }, (err) => { buildP = null; throw err; });
+    return buildP;
   }
   async function aiWindow() {
-    const b = getBuild();
+    let b;
+    try { b = await ensureBuild(); } catch (e) { return ctx.toast(`AI 도구를 불러오지 못했어요: ${e?.message ?? e}`, { error: true }); }
     try { bbPresent = bbInstalled((await ctx.api.getDatabase(["plugins"]))?.plugins); } catch { /* 감지 실패는 무시 */ }
     await loadPopupGeom(ctx);
     testFab.style.visibility = "hidden";
@@ -2035,13 +2169,19 @@ export async function openEditorCore(ctx, cfg) {
       // 수정안을 적용하기 전에 그 상태 그대로 규칙 시험 (시험 창에서 [수정안으로 돌아가기]로 AI 창에 되돌아와요)
       onRuleTest: (lorebook) => { panel.querySelector("#rb-ai-popup")?.closePopup?.(); ruleTester({ lorebook, onBack: () => aiWindow() }); } });
   }
-  function renderAi() {
-    const b = getBuild();
+  async function renderAi() {
     es.aiRoot?.__dispose?.();
-    const root = renderAiTab(ctx, { build: b, openPopup: () => aiWindow(), state: es.ai ??= {} });
+    const mine = es.aiRoot = h("div", { class: "pane" }, loading("AI 도구를 불러오는 중"));
+    replace(body, mine);
+    let b, tabMod;
+    try { [b, tabMod] = await Promise.all([ensureBuild(), import("./aitab.js")]); await buildInit; } catch (e) {
+      if (es.aiRoot === mine) replace(mine, note("err", `AI 도구를 불러오지 못했어요: ${e?.message ?? e}`));
+      return;
+    }
+    if (es.tab !== "ai" || es.aiRoot !== mine || !panel.isConnected) return;
+    const root = tabMod.renderAiTab(ctx, { build: b, openPopup: () => aiWindow(), state: es.ai ??= {} });
     es.aiRoot = root;
     replace(body, root);
-    if (!b.state.ready) buildInit?.then(() => { if (es.tab === "ai" && es.aiRoot === root && panel.isConnected) renderAi(); });
   }
   const AUTO_MS = 12e4;
   let autoBusy = false, lastInput = 0;

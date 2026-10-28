@@ -10,6 +10,12 @@ import { activeModules, moduleOptions, readInstalledModules, selectInstalledModu
 const SUBS = [['start', '시작하기'], ['preset', '프롬프트 프리셋'], ['prompt', '작업 프롬프트'], ['settings', '설정'], ['saves', '저장본']];
 const card = (title, sub, ...kids) => h('section', { class: 'rb-card pad bordered', style: 'display:flex;flex-direction:column;gap:10px' }, h('div', null, h('b', null, title), sub ? h('div', { class: 'rb-muted', style: 'font-size:12px;margin-top:2px' }, sub) : null), ...kids);
 const field = (label, input) => h('label', { class: 'rb-field wide' }, h('span', { class: 'rb-label' }, label), input);
+const INTRO_KEY = 'da_aibuild:intro';
+const INTRO = [
+  ['AI로 제작은 뭘 하는 곳인가요?', '말로 요청하면 AI가 캐릭터 설명·로어북·정규식·Lua·첫 메시지를 대신 만들어 줘요. 직접 쓰지 않아도 되고, 이미 써 둔 걸 고쳐 달라고 해도 돼요.'],
+  ['어떻게 말을 거나요?', '우측 하단 버튼에서 [AI 창]을 열고, 만들 종류를 고른 뒤 하고 싶은 걸 적어 보내세요. 로어북은 두 가지 방식이 있어요 — Dusk 방식은 폴더·소속·켜지는 조건까지 설계하고(Dusk 플러그인 필요), 일반 방식은 리스 기본 로어북(키·내용)만 만들어요.'],
+  ['적용하고 저장하기', 'AI가 만든 건 먼저 수정안 카드로 와요. [적용]을 누르면 각 탭에 바로 반영되고, 마음에 안 들면 [되돌리기]로 한 단계씩 돌아가요. 저장은 편집기 위쪽 [적용] 버튼(Ctrl+S)이고, 2분마다 자동 저장도 해요.']
+];
 const when = (iso) => { try { return new Date(iso).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
 
 export function renderAiTab(ctx, { build, openPopup, state = {} }) {
@@ -28,7 +34,25 @@ export function renderAiTab(ctx, { build, openPopup, state = {} }) {
   const seg = segmented(SUBS, state.sub, (v) => { state.sub = v; paint(); }, '하위 화면');
   seg.classList.add('rb-seg-nowrap');
   seg.style.overflowX = 'auto';
-  root.append(head, seg, content);
+  // 처음 들어왔을 때 한 번만 3장 안내 (끝내거나 건너뛰면 다시 안 뜨고, [사용법]으로 언제든 다시 볼 수 있다)
+  const introBox = h('div');
+  const showIntro = (i) => {
+    state.intro = i;
+    const last = i === INTRO.length - 1;
+    const done = () => { state.intro = null; replace(introBox); try { Promise.resolve(ctx.api.pluginStorage.setItem(INTRO_KEY, '1')).catch(() => {}); } catch { /* 저장 실패는 무시 */ } };
+    replace(introBox, h('section', { class: 'rb-card pad bordered', role: 'region', 'aria-label': '사용 안내', style: 'display:flex;flex-direction:column;gap:10px;border-color:var(--rb-sel-ring)' },
+      h('div', { style: 'display:flex;align-items:center;gap:8px' }, h('span', { class: 'rb-muted', style: 'font-size:12px;font-weight:700' }, `사용 안내 ${i + 1} / ${INTRO.length}`), h('span', { style: 'flex:1' }),
+        btn('건너뛰기', { size: 'sm', kind: 'ghost', onClick: done })),
+      h('b', { style: 'font-size:15px' }, INTRO[i][0]),
+      h('div', { class: 'rb-muted', style: 'font-size:13.5px;line-height:1.7' }, INTRO[i][1]),
+      h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' },
+        i > 0 ? btn('이전', { size: 'sm', onClick: () => showIntro(i - 1) }) : null,
+        last ? btn('시작하기', { kind: 'primary', size: 'sm', icon: 'check', onClick: () => { done(); openPopup(); } }) : btn('다음', { kind: 'primary', size: 'sm', onClick: () => showIntro(i + 1) }))));
+  };
+  head.insertBefore(btn('사용법', { size: 'sm', icon: 'help', onClick: () => showIntro(0) }), head.lastChild);
+  root.append(head, introBox, seg, content);
+  if (state.intro != null) showIntro(state.intro);
+  else Promise.resolve(ctx.api.pluginStorage.getItem(INTRO_KEY)).then((v) => { if (!v && root.isConnected !== false && state.intro == null) showIntro(0); }).catch(() => {});
 
   // ---------- ① 시작하기 ----------
   function viewStart() {

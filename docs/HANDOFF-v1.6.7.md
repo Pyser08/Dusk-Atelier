@@ -31,5 +31,15 @@
 - 시험: `tests/duskdesign.test.js`(15, 실제 규칙 엔진 평가 포함), `run-editor-ai.mjs` 30항목, 전체 `node --test` 268 통과.
 - 주의: 빌드/e2e용 node_modules는 `esbuild`·`@esbuild`는 /opt/npm-tools, `acorn`·`eslint-scope`·`playwright`는 /opt/node-tools에서 개별 심볼릭 링크(디렉터리 통째 링크는 esbuild를 못 찾음).
 
-## 다음 (5단계~)
-5단계 AI 팝업 개편(끌어 옮기기·크기 조절·위치 기억·모바일 시트·대기 점/수정안 배지·보고 있는 탭에 맞춰 작업 자동 선택) → 6 정보 탭·퍼스트 메시지 → 7 나머지 탭(정규식 '바로 시험'을 RE2JS로 통일 포함) → 8 처음 사용자·최적화(지연 로딩)·릴리즈(버전 1.6.7, CHANGELOG·GUIDE·소스맵·크레딧). BB 화면 로직 참고: 번들 `src/ui.js` 14061~14956(Workshop 클래스), `preset-ui.js` 13698~14060, `modules-ui.js` 13612~13697.
+## 5~8단계 완료 (릴리즈만 남음)
+- **5단계 AI 팝업** `ui/screens/aibuild.js`: 머리글 끌기·좌상/우하 모서리 크기 조절·위치/크기 기억(`da_aibuild:popupgeom`), 패널 폭 640px 미만은 아래 시트(손잡이를 아래로 끌면 닫힘, 입력칸 16px), 탭 전환 시 작업 자동 선택(`TAB_TASK`, 직접 고르면 자동 중단), 우측 하단 버튼에 대기 점·수정안 숫자 배지(`editor.js paintFab`)와 도착 토스트.
+- **6단계 정보 탭** `ui/screens/chareditor.js renderInfo`: 요약 카드(이름·태그·토큰·인사말/로어북/정규식/트리거 수, 누르면 탭 이동) + 접는 카드 3개(기본/인사말/고급, 열림 상태 기억). **퍼스트 메시지 관리자** `ui/screens/greetings.js` + 순수 로직 `engine/greetings.js`: 목록(검색·끌어 순서·복제·삭제 취소·대표 지정·그룹 전용 `groupOnlyGreetings`)+편집(읽기/편집, 일반/코드, Alt+↑↓, 나란히 비교), 좁은 화면은 목록→상세. 정보 탭 입력 중 AI 창 작업은 설명/첫 메시지로 자동.
+- **7단계 나머지 탭** `ui/screens/editor.js`: 상단 바 카드화(추가·만들기·더보기), 빈 화면 안내 카드+첫 행동 버튼, 로어북·정규식·트리거 '고급 설정' 접기(`advFold`), 정규식 '바로 시험'을 RE2JS(`regexTest`)로 통일(일치 강조·위치·캡처 그룹·바뀐 결과, CBS/@@는 기존 간이 시험), 트리거 Lua/일반 구분 + **초기 변수** 화면(`engine/vars.js`, 봇만), JSON 탭 문법 오류 줄 번호·서식 정리·복사.
+- **8단계(릴리즈 제외)**: AI 탭 첫 진입 3장 안내(`da_aibuild:intro`, [사용법]으로 재열기, Dusk/일반 방식 차이 포함), AI 엔진(controller·bridge·aitab·regextest)은 동적 import로 **처음 쓸 때만 초기화**(esbuild가 같은 파일 안 지연 초기화로 변환).
+- 별도 수정: 페르소나 빌더 '전체 고치기' 입력칸에서 영문·지우기 안 되던 버그(`onkeydown`이 `false` 반환 → 입력 취소) 수정, `tests/e2e/run-persona.mjs`.
+- 시험: `node --test` 288(279 통과·0 실패), e2e `run-editor-ai`(30)·`run-popup`(32)·`run-info`(53)·`run-tabs`(57)·`run-persona`(12)·`run-smoke`(13) 모두 통과. 실행은 `node tests/e2e/<이름>.mjs`(파이프 없이 파일로 리다이렉트 권장).
+
+## 남은 일 (새 챗에서)
+1. 버전 1.6.7로 올리기(`package.json`) · CHANGELOG · GUIDE-v1.6.7 · 소스맵 머리글 · 크레딧 확인 → 빌드 → main 병합·릴리즈(아카 글 여부는 그때 결정)
+2. `LICENSE`를 GitHub AGPL-3.0 전문으로 교체, risupot·Arcana Card·RisuTide 원 라이선스 확인(대조표 `docs/LICENSE-AUDIT-v1.6.7.md`)
+3. 실제 리스·리스바드에서 수동 시험: 작업 7종, 로어북 두 방식, 프리셋 요청, 적용→탭 반영→저장→재진입, charx 왕복, 모바일(특히 아래 시트·퍼스트 메시지 목록→상세·초기 변수 화면)
