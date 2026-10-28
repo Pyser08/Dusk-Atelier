@@ -1,3 +1,4 @@
+import { createMemoryButton } from './data/memorybutton.js';
 import * as engine_exports from './engine/index.js';
 import { hostBlockedMessage, isHostBlocked } from './data/modules.js';
 import { createLegacy } from './ui/legacy.js';
@@ -165,7 +166,9 @@ async function start() {
   // 채팅창 입력 옆 메뉴에서 바로 장기기억으로
   const openMemory = () => app.open({ tab: "memory" }).catch((e) => console.log(`[${TITLE}] 열기 실패: ${e?.message ?? e}`));
   memoryRef.open = openMemory;
-  try { await api.registerButton({ name: "장기기억", icon: iconMarkup("brain", 20), iconType: "html", location: "action" }, openMemory); } catch (e) { console.log(`[${TITLE}] 채팅 메뉴 버튼 등록 실패`, e?.message ?? e); }
+  const memBtn = createMemoryButton(api, { name: "장기기억", icon: iconMarkup("brain", 20), open: openMemory, log: (m) => console.log(`[${TITLE}] ${m}`) });
+  app.ctx.memoryButton = memBtn;
+  await memBtn.start();
 }
 if (typeof globalThis.__RBU_TEST__ !== "undefined") globalThis.__RBU_TEST__.RBU = { ...engine_exports };
 else start().catch((e) => console.log(`[${TITLE}] 초기화 실패: ${e?.message ?? e}`));

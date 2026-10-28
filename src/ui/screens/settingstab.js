@@ -10,6 +10,7 @@ import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
 import { renderThemeStudio, targetToggle } from './themestudio.js';
 import { renderThemeBuilder } from './themebuilder.js';
+import { loadMemoryButtonOn } from '../../data/memorybutton.js';
 import { loadThemes, saveThemes, detectTarget, TARGETS } from '../../data/themes.js';
 
 export async function renderSettingsTab(ctx) {
@@ -35,6 +36,7 @@ export async function renderSettingsTab(ctx) {
     await saveThemes(ctx.api, themes).catch(() => {
     });
   });
+  const memBtnOn = await loadMemoryButtonOn(ctx.api);
   const lore = await loadLoreSettings(ctx.api).catch(() => ({ ...LORE_DEFAULTS }));
   const saved = h("span", { class: "rb-muted", style: "font-size:12.5px" });
   const setLore = async (patch) => {
@@ -59,6 +61,10 @@ export async function renderSettingsTab(ctx) {
   const logSeg = segmented([["on", "켜기"], ["off", "끄기"]], lore.log === false ? "off" : "on", (v) => setLore({ log: v === "on" }), "로어북 로그");
   const btnSeg = segmented([["on", "보이기"], ["off", "숨기기"]], lore.button === false ? "off" : "on", (v) => setLore({ button: v === "on" }), "응답 아래 로어북 버튼");
   const bdSeg = segmented([["off", "끄기"], ["short", "짧은 이름만"], ["all", "모든 키"]], ["off", "all"].includes(lore.boundary) ? lore.boundary : "short", (v) => setLore({ boundary: v }), "이름 경계 기본값");
+  const memBtnSeg = segmented([["on", "보이기"], ["off", "숨기기"]], memBtnOn ? "on" : "off", async (v) => {
+    const ok = await ctx.memoryButton?.set(v === "on");
+    ctx.toast(ok === false ? "저장했어요. 이 화면에선 바로 안 바뀌어서 리스를 새로 고치면 적용돼요." : v === "on" ? "채팅 메뉴에 장기기억 버튼을 보여요" : "채팅 메뉴의 장기기억 버튼을 숨겼어요");
+  }, "채팅 메뉴 장기기억 버튼");
   const row = (label, seg) => h("div", { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" }, h("b", { style: "font-size:13.5px;min-width:120px" }, label), h("div", { style: "flex:1;min-width:240px" }, seg));
   const content = h(
     "div",
@@ -84,6 +90,12 @@ export async function renderSettingsTab(ctx) {
       row("로어북 로그", logSeg),
       row("응답 아래 버튼", btnSeg),
       h("div", { class: "rb-muted", style: "font-size:12.5px;line-height:1.7;word-break:keep-all" }, "응답마다 들어간 로어북(Dusk 규칙이 없는 봇도)을 남겨요. 도구 → 로어북 로그에서 보고, AI 응답 아래 [📖 로어북] 버튼으로도 바로 봐요. 채팅 내용은 바꾸지 않아요.")
+    ),
+    section(
+      "brain",
+      "장기기억 버튼",
+      "채팅 입력 옆 메뉴에 뜨는 [장기기억] 버튼을 보이거나 숨겨요. 장기기억 기능 자체는 그대로예요.",
+      row("메뉴 버튼", memBtnSeg)
     ),
     section(
       "palette",

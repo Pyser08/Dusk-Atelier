@@ -47,11 +47,17 @@ function thanksCard() {
   );
   return box;
 }
-// 이식 크레딧 카드 — 원작자 이름은 적지 않고 원문 글 링크만 둔다
+// 이식 크레딧 카드 — 원작자 이름은 적지 않고 원문 글 링크만 둔다 (RisuTide 감사 카드와 같은 결: 어두운 그라데이션 + 움직이는 배경)
 const CREDITS = [
-  { key: "pot", ic: "book", name: "risupot", desc: "인물 위키·모델 계층·프롬프트 — 장기 기억의 뼈대", url: "https://arca.live/b/characterai/185024906" },
-  { key: "arcana", ic: "sparkle", name: "Arcana Card", desc: "기억 카드 — 인물을 카드로 남기는 방식", url: "https://arca.live/b/characterai/185793481" }
+  { key: "pot", emoji: "📜", kicker: "PORTED WITH PERMISSION", name: "risupot", desc: "인물 위키·모델 계층·프롬프트 — 장기 기억의 뼈대. 허락을 받아 Dusk 방식으로 옮겨 왔어요.", url: "https://arca.live/b/characterai/185024906" },
+  { key: "arcana", emoji: "🃏", kicker: "PORTED WITH PERMISSION", name: "Arcana Card", desc: "기억 카드 — 인물을 한 장의 카드로 남기는 방식. 허락을 받아 Dusk 방식으로 옮겨 왔어요.", url: "https://arca.live/b/characterai/185793481" }
 ];
+const STAR_POS = [[8, 22, 0], [18, 70, 1.1], [31, 36, 0.5], [44, 80, 1.7], [57, 18, 0.9], [66, 58, 2.1], [78, 30, 0.3], [88, 74, 1.4], [94, 20, 1.9]];
+function creditFx(key) {
+  const fx = h("div", { class: "rb-cr-fx", "aria-hidden": "true" }, h("i", { class: "rb-cr-glow" }), h("i", { class: "rb-cr-shine" }));
+  STAR_POS.forEach(([x, y, d], n) => fx.appendChild(h("i", { class: "rb-cr-star", style: `left:${x}%;top:${y}%;animation-delay:${d}s;${n % 3 === 0 ? "width:5px;height:5px" : ""}` })));
+  return fx;
+}
 function creditCards() {
   return h(
     "div",
@@ -59,16 +65,21 @@ function creditCards() {
     ...CREDITS.map((c, i) =>
       h(
         "div",
-        { class: "rb-credit", "data-credit": c.key, style: `--rb-ci:${i + 1}` },
-        h("span", { class: "rb-credit-ico", "aria-hidden": "true" }, icon(c.ic, 22)),
+        { class: "rb-cr", "data-credit": c.key, style: `--rb-ci:${i + 1}` },
+        creditFx(c.key),
         h(
           "div",
-          { class: "rb-credit-txt" },
-          h("b", null, c.name),
-          h("span", null, c.desc),
-          h("em", null, "허락받아 이식했어요")
-        ),
-        h("a", { class: "rb-credit-link", href: c.url, target: "_blank", rel: "noopener noreferrer" }, "원문 글 보기")
+          { class: "rb-cr-body" },
+          h("span", { class: "rb-cr-emoji", "aria-hidden": "true" }, c.emoji),
+          h(
+            "div",
+            { class: "rb-cr-txt" },
+            h("span", { class: "rb-cr-kicker" }, c.kicker),
+            h("b", { class: "rb-cr-title" }, c.name),
+            h("span", { class: "rb-cr-desc" }, c.desc),
+            h("a", { class: "rb-cr-link", href: c.url, target: "_blank", rel: "noopener noreferrer" }, "원문 글 보기 ↗")
+          )
+        )
       )
     )
   );
