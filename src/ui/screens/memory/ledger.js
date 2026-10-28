@@ -15,7 +15,7 @@ export async function renderOpen(env, host) {
   const open = openItems(folder), done = openItems(folder, { closed: true });
   const row = (x, closed) => h("li", { class: "rb-mem-rec" }, badge(OPEN_KINDS[x.kind] ?? "항목", x.kind === "promise" ? "acc" : x.kind === "foreshadow" ? "acc2" : "mute"),
     h("div", { class: "txt" }, h("div", null, x.text), h("div", { class: "rb-muted" }, [x.at != null ? at(x.at) : "", (x.who ?? []).join(", "), closed && x.closedAt != null ? `해결 ${at(x.closedAt)}` : ""].filter(Boolean).join(" · "))), h("span", { style: "flex:1" }),
-    local ? btn(closed ? "다시 열기" : "해결", { size: "sm", onClick: () => editFolder(env, (f) => { const o = f.open.find((y) => y.id === x.id); if (o) { o.closed = !closed; if (!closed) { o.closedAt = f.cursor?.at ?? null; o.closed_ms = Date.now(); } } }) }) : null,
+    local ? btn(closed ? "다시 열기" : "해결", { size: "sm", onClick: () => editFolder(env, (f) => { const o = f.open.find((y) => y.id === x.id); if (o) { o.closed = !closed; delete o.closedBy; delete o.closedOrphan; if (!closed) { o.closedAt = f.cursor?.at ?? null; o.closed_ms = Date.now(); } } }) }) : null,
     local ? btn("삭제", { size: "sm", onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 항목을 지울까요?", body: "지운 항목은 되돌릴 수 없어요. 해결된 일이라면 지우지 말고 '해결'을 눌러 두세요.", ok: "삭제", danger: true }))) return; editFolder(env, (f) => { f.open = f.open.filter((y) => y.id !== x.id); }); } }) : null);
   const add = local ? btn("항목 추가", { size: "sm", icon: "plus", onClick: async () => {
     const v = await promptDialog(env.ctx.win, { title: "열린 항목 추가", label: "약속·복선·의문 (80자)", ok: "추가" }); if (!v?.trim()) return;
@@ -28,7 +28,7 @@ export async function renderOpen(env, host) {
 
 export async function renderRels(env, host) {
   const { folder } = env, local = env.backend.id === "local";
-  const pairs = Object.entries(folder.rels ?? {}).filter(([, p]) => p.items?.length).sort((a, b) => (b[1].items.at(-1).at_ms ?? 0) - (a[1].items.at(-1).at_ms ?? 0));
+  const pairs = Object.entries(folder.rels ?? {}).map(([k, p]) => [k, { ...p, items: (p.items ?? []).filter((i) => !i.orphan) }]).filter(([, p]) => p.items.length).sort((a, b) => (b[1].items.at(-1).at_ms ?? 0) - (a[1].items.at(-1).at_ms ?? 0));
   if (!pairs.length) return replace(host, readonlyNote(env), empty("list", "아직 기록된 관계 변화가 없어요."));
   replace(host, readonlyNote(env), h("p", { class: "rb-muted" }, "두 인물 사이에서 눈에 띄게 달라진 점을 쌍별로 모아요. 최근 변화가 주입에 들어가요."),
     pairs.map(([k, p]) => h("article", { class: "rb-card rb-mem-sec" }, h("div", { class: "rb-mem-shead" }, h("b", null, `${p.from} → ${p.to}`), h("span", { style: "flex:1" }), local ? btn("지우기", { size: "sm", onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 관계 기록을 지울까요?", body: `${p.from} → ${p.to} 사이에 쌓인 변화가 모두 사라져요. 되돌릴 수 없어요.`, ok: "삭제", danger: true }))) return; editFolder(env, (f) => { delete f.rels[k]; }); } }) : null),

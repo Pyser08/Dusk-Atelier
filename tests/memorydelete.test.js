@@ -25,3 +25,7 @@ test("지운 문장은 다시 추출돼도 반영 안 됨", () => {
   applyAnalysis(f, res, { at: 10, h: "H10" });
   assert.equal(f.people.a.records.some((r) => r.act === "떠났다"), false);
 });
+test("출처(src.hash)가 있으면 해시로 묶는다", () => {
+  const f = mk(); f.open[0].src = { chatId: null, hash: "H1", at: 4 }; f.open[1].src = { chatId: null, hash: "H2", at: 9 };
+  assert.deepEqual(relatedOf(f, f.people.a.records[0]).open.map((o) => o.id), ["o1"]);
+});

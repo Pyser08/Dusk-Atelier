@@ -5,7 +5,7 @@ export const tombKey = (pk, act) => `${pk}|${norm(act)}`;
 export const isTombed = (folder, pk, act) => (folder.tomb ?? []).includes(tombKey(pk, act));
 
 // 지운 기록과 같은 응답에서 나온 관계 변화·떡밥. 출처(src)가 있으면 해시로, 없으면(레거시) 응답 번호(at)로 묶는다.
-const same = (x, rec) => (x.src?.h ? x.src.h === rec.h : x.at != null && x.at === rec.at);
+const same = (x, rec) => (x.src?.hash ? x.src.hash === rec.h : x.at != null && x.at === rec.at);
 export function relatedOf(folder, rec) {
   const rels = [], open = [];
   for (const [k, pair] of Object.entries(folder.rels ?? {})) (pair.items ?? []).forEach((x, i) => { if (same(x, rec)) rels.push({ key: k, idx: i, text: `${pair.from} → ${pair.to}: ${x.d}` }); });

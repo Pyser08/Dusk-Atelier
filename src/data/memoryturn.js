@@ -18,6 +18,7 @@ import { keyStore as hubKeys, getCfg, recordUsage } from "./modelhub.js";
 import { potModels } from "../engine/modelcfg.js";
 import { recallFor, mergeMemory } from "../engine/recall.js";
 import { createRetryToast, judgeAutoResult } from "./retrytoast.js";
+import { loadReconciled } from "./memoryload.js";
 import { appendDuskSection, splitDusk, checkDusk, SECTION_MARK } from "../engine/duskwriter.js";
 import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
 import { makeTools } from "./memorytools.js";
@@ -96,9 +97,9 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
     main.mergeRecall = async (memory, ctx) => {
       try {
         const idx = await store.getIndex(), character = await api.getCharacterFromIndex(ctx.characterIndex);
-        const folder = await store.getFolder(String(character?.chaId ?? ctx.characterIndex), String(ctx.chat?.id ?? ctx.chatIndex));
-        if (!folder) return memory;
         const msgs = ctx.chat?.message ?? [];
+        const folder = await loadReconciled(store, character?.chaId ?? ctx.characterIndex, ctx.chat?.id ?? ctx.chatIndex, msgs);  // 읽기 시점 대조(저장 안 함)
+        if (!folder) return memory;
         const r = recallFor(folder, {
           names: (ctx.documents ?? []).flatMap((d) => [d.title, ...(d.aliases ?? [])]),
           query: [ctx.currentUser, ...(ctx.recentChat ?? []).map((m) => m.text)].join("\n"),

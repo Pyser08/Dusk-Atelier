@@ -1,4 +1,5 @@
 // 앵커 정합성. 기록/상황은 {at, mid?, h}를 가진다. 순수 함수 — 폴더를 직접 수정한다.
+// v1.6.5: 관계 변화(rels)·열린 항목(open)도 출처(src, closedBy)로 대조한다.
 import { extractMessageText, hashText } from "./chattext.js";
 
 export function indexMessages(messages) {
@@ -26,15 +27,61 @@ function fix(item, idx) {
   item.orphan = true;
 }
 
-// legacy(앵커 없는) 항목은 건드리지 않는다. 반환: 고아로 바뀐 수.
+// 출처 {chatId(메시지 id), hash, at}. 앵커 {at, mid, h}에서 만든다. 해시가 없으면 출처 없음(undefined).
+export const srcOf = (anchor) => anchor?.h ? { chatId: anchor.mid ?? null, hash: anchor.h, at: anchor.at ?? null } : undefined;
+const hasSrc = (s) => !!s?.hash;
+// 출처 응답이 지금 채팅에 살아 있는가. 위치가 바뀌었으면 src.at도 고친다.
+function srcAlive(src, idx) {
+  const t = { mid: src.chatId ?? null, h: src.hash, at: src.at ?? -1 };
+  fix(t, idx);
+  if (!t.orphan) src.at = t.at;
+  return !t.orphan;
+}
+
+// 고아 정리(v1.6.5): 먼저 최신 대조를 돌려 판정(레거시 at_ms 단서 포함)을 끝낸 뒤,
+// 관계 변화·떡밥을 지우고 마지막에 기록·장면을 지운다. 순서가 바뀌면 같은 at_ms로 묶인 옛 항목을 판정할 수 없다.
+// 반환: 지운 개수 {records, scenes, rels, open, reopened}
+export function cleanOrphans(folder, messages) {
+  if (messages?.length) reconcile(folder, messages);
+  const out = { records: 0, scenes: 0, rels: 0, open: 0, reopened: 0 };
+  for (const [k, p] of Object.entries(folder.rels ?? {})) {
+    const keep = (p.items ?? []).filter((x) => !x.orphan);
+    out.rels += (p.items ?? []).length - keep.length;
+    if (keep.length) p.items = keep; else delete folder.rels[k];
+  }
+  const live = (folder.open ?? []).filter((x) => !x.orphan);
+  out.open = (folder.open ?? []).length - live.length;
+  folder.open = live;
+  for (const x of folder.open) if (x.closedOrphan) { x.closed = false; delete x.closedOrphan; delete x.closedBy; delete x.closedAt; delete x.closed_ms; out.reopened++; }
+  for (const p of Object.values(folder.people ?? {})) { const keep = (p.records ?? []).filter((r) => !r.orphan); out.records += (p.records ?? []).length - keep.length; p.records = keep; }
+  const scenes = (folder.scenes ?? []).filter((s) => !s.orphan);
+  out.scenes = (folder.scenes ?? []).length - scenes.length; folder.scenes = scenes;
+  return out;
+}
+
+// legacy(앵커 없는) 기록·장면은 건드리지 않는다. 반환: 고아로 바뀐 기록·장면 수.
+// rels/open 항목은 src가 있으면 그 응답으로, 없으면(옛 데이터) 같은 at_ms의 기록·장면이 전부 고아인지로 판정한다.
 export function reconcile(folder, messages) {
   const idx = indexMessages(messages);
   let orphans = 0;
   const items = [...Object.values(folder.people ?? {}).flatMap((p) => p.records ?? []), ...(folder.scenes ?? [])];
+  const byMs = new Map();
   for (const it of items) {
     if (it.legacy || it.carried || !it.h) continue;
     fix(it, idx);
     if (it.orphan) orphans++;
+    if (it.at_ms != null) { const g = byMs.get(it.at_ms) ?? { n: 0, o: 0 }; g.n++; if (it.orphan) g.o++; byMs.set(it.at_ms, g); }
+  }
+  const dead = (src, ms) => {
+    if (hasSrc(src)) return !srcAlive(src, idx);
+    const g = ms != null ? byMs.get(ms) : null;
+    return !!g && g.o === g.n;
+  };
+  for (const p of Object.values(folder.rels ?? {})) for (const x of p.items ?? []) x.orphan = dead(x.src, x.at_ms);
+  for (const x of folder.open ?? []) {
+    x.orphan = dead(x.src, x.at_ms);
+    // 버린 분석이 닫은 떡밥은 다시 연다(되돌릴 수 있게 closed는 두고 표시만 한다).
+    if (x.closed && dead(x.closedBy, x.closed_ms)) x.closedOrphan = true; else delete x.closedOrphan;
   }
   if (folder.cursor?.h) {
     const c = { ...folder.cursor }; fix(c, idx);
