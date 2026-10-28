@@ -2,6 +2,7 @@
 import { extractMessageText, isUserMessage, hashText, isChatGenerating as isGenerating } from "../engine/chattext.js";
 import { analyze } from "../engine/memoryprompt.js";
 import { reconcile } from "../engine/memoryreconcile.js";
+import { loadReconciled } from "./memoryload.js";
 import { applyAnalysis, knownPeople } from "../engine/memoryapply.js";
 import { storyDateOf } from "../engine/storydate.js";
 import { addMilestones } from "../engine/cyclememo.js";
@@ -57,7 +58,7 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     const i = await latestAiIndex(charIndex, chatIndex); if (i < 0) return null;
     const g = await gather(charIndex, chatIndex, [i]);
     if (gate(g, false)) return null;
-    const existing = await store.getFolder(g.chaId, g.chatId);
+    const existing = await loadReconciled(store, g.chaId, g.chatId, g.messages);  // 옛 장면·떡밥이 새 요약에 섞이지 않게 먼저 대조
     if (existing?.cursor?.h === g.h && existing.cursor.at === g.last) return null;
     return { h: g.h, ignore: [...(g.bot.ignore ?? [])], input: inputOf(g, existing, [i]) };
   }
@@ -67,7 +68,7 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     const g = await gather(charIndex, chatIndex, group);
     const { character, chat, chaId, chatId, messages, last, text, h, anchor, idx, bot } = g;
     const why = gate(g, manual); if (why) return why;
-    const existing = await store.getFolder(chaId, chatId);
+    const existing = await loadReconciled(store, chaId, chatId, messages);  // 옛 장면·떡밥이 새 요약에 섞이지 않게 먼저 대조
     if (existing?.cursor?.h === h && existing.cursor.at === last) return "done";
     const tryKey = chaId + "::" + chatId;
     if (!manual && lastTried.get(tryKey) === h) return "done";

@@ -1,6 +1,7 @@
 // v1.6.2 장기기억 확장(순수): 지식 경계·열린 항목·관계 변화·세계 시간선·기억 강화/망각·원문 발췌 복원.
 import { similarity } from "./memorygrade.js";
 import { extractMessageText, hashText } from "./chattext.js";
+import { srcOf } from "./memoryreconcile.js";
 
 const cut = (v, n) => String(v ?? "").trim().slice(0, n);
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
@@ -25,11 +26,12 @@ export function validatePlus(obj) {
 export function applyRel(folder, rels, anchor, now = Date.now()) {
   folder.rels ??= {};
   let n = 0;
+  const src = srcOf(anchor);
   for (const r of rels ?? []) {
     const k = key(r.from) + ">" + key(r.to), pair = folder.rels[k] ??= { from: r.from, to: r.to, items: [] };
-    const last = pair.items.at(-1);
+    const last = pair.items.filter((i) => !i.orphan).at(-1);
     if (last && similarity(last.d, r.d) >= 0.8) continue;
-    pair.items.push({ d: r.d, dir: r.dir, at: anchor?.at ?? null, at_ms: now }); n++;
+    pair.items.push({ d: r.d, dir: r.dir, at: anchor?.at ?? null, at_ms: now, ...(src ? { src } : {}) }); n++;
     if (pair.items.length > REL_CAP) pair.items = pair.items.slice(-REL_CAP);
   }
   return n;
@@ -38,22 +40,28 @@ export function applyRel(folder, rels, anchor, now = Date.now()) {
 export function applyOpen(folder, open, anchor, now = Date.now()) {
   folder.open ??= [];
   let added = 0, closed = 0;
+  const src = srcOf(anchor);
   for (const a of open?.add ?? []) {
-    if (folder.open.some((x) => !x.closed && similarity(x.text, a.text) >= 0.8)) continue;
-    folder.open.push({ id: rid("o"), text: a.text, kind: a.kind, who: a.who ?? [], at: anchor?.at ?? null, at_ms: now, closed: false }); added++;
+    if (folder.open.some((x) => !x.orphan && !isClosed(x) && similarity(x.text, a.text) >= 0.8)) continue;
+    folder.open.push({ id: rid("o"), text: a.text, kind: a.kind, who: a.who ?? [], at: anchor?.at ?? null, at_ms: now, closed: false, ...(src ? { src } : {}) }); added++;
   }
   for (const id of open?.close ?? []) {
-    const x = folder.open.find((o) => o.id === id && !o.closed);
-    if (x) { x.closed = true; x.closedAt = anchor?.at ?? null; x.closed_ms = now; closed++; }
+    const x = folder.open.find((o) => o.id === id && !o.orphan && !isClosed(o));
+    if (x) {
+      x.closed = true; x.closedAt = anchor?.at ?? null; x.closed_ms = now; closed++;
+      delete x.closedOrphan; if (src) x.closedBy = src; else delete x.closedBy;
+    }
   }
   if (folder.open.length > OPEN_CAP) {  // 해결된 것부터 오래된 순으로 정리
-    const drop = new Set(folder.open.filter((x) => x.closed).slice(0, folder.open.length - OPEN_CAP));
+    const drop = new Set(folder.open.filter((x) => x.orphan || isClosed(x)).slice(0, folder.open.length - OPEN_CAP));
     folder.open = folder.open.filter((x) => !drop.has(x));
     if (folder.open.length > OPEN_CAP) folder.open = folder.open.slice(-OPEN_CAP);
   }
   return { added, closed };
 }
-export const openItems = (folder, { closed = false } = {}) => (folder.open ?? []).filter((x) => !!x.closed === closed);
+// 닫힘 판정: 버린 분석이 닫은 항목(closedOrphan)은 열린 것으로 본다. 고아 항목(orphan)은 어느 쪽에도 들지 않는다.
+export const isClosed = (x) => !!x.closed && !x.closedOrphan;
+export const openItems = (folder, { closed = false } = {}) => (folder.open ?? []).filter((x) => !x.orphan && isClosed(x) === closed);
 // 분석 입력에 넣을 열린 항목(모델이 id로 닫는다)
 export const openForPrompt = (folder, n = 12) => openItems(folder).slice(-n).map((x) => ({ id: x.id, kind: x.kind, text: x.text }));
 
@@ -92,7 +100,7 @@ export function openLines(folder, { limit = 6 } = {}) {
 }
 // 관계 변화량: 쌍별 최근 3개 변화를 한 줄로. 최근에 움직인 쌍 우선.
 export function relLines(folder, { limit = 5, relevant = null } = {}) {
-  const pairs = Object.values(folder.rels ?? {}).filter((p) => p.items?.length && (!relevant || relevant.has(key(p.from)) || relevant.has(key(p.to))));
+  const pairs = Object.values(folder.rels ?? {}).map((p) => ({ ...p, items: (p.items ?? []).filter((i) => !i.orphan) })).filter((p) => p.items.length && (!relevant || relevant.has(key(p.from)) || relevant.has(key(p.to))));
   pairs.sort((a, b) => (b.items.at(-1).at_ms ?? 0) - (a.items.at(-1).at_ms ?? 0));
   return pairs.slice(0, limit).map((p) => `- ${p.from} → ${p.to}: ${p.items.slice(-3).map((i) => `${oneLine(i.d)}${i.dir === "+" ? " ↑" : i.dir === "-" ? " ↓" : ""}`).join("; ")}`);
 }

@@ -4,6 +4,7 @@ import { btn, badge, chip, openMenu, promptDialog, confirmDialog, modal } from "
 import { guideBtn } from "./guide.js";
 import { mem, fail, gradeBadge, avatar, at, visibleRecords, topGrade, lastAt } from "./common.js";
 import { GRADES } from "../../../engine/memorygrade.js";
+import { cleanOrphans as cleanOrphansIn } from "../../../engine/memoryreconcile.js";
 import { personKey } from "../../../data/memorystore.js";
 import { createRewindChat, draftFirstMessage, sceneAt } from "../../../data/memoryrewind.js";
 import { isGenerating, Busy } from "../../../engine/safety.js";
@@ -117,8 +118,8 @@ async function setWikiGrade(env, r) {
   try { const ok = await env.ctx.memory.bardwiki.setGradeByUser(env.bot.id, env.chatItem.id, r.docId, score); env.ctx.toast(ok ? "위키에 등급을 저장했어요." : "쓰기 권한이 거부되어 저장하지 못했어요."); env.redraw(); } catch (e) { fail(env.ctx)(e); }
 }
 async function cleanOrphans(env) {
-  const ok = await confirmDialog(env.ctx.win, { title: "고아 기록 정리", body: "다시 생성되거나 삭제된 응답에 연결된 기록을 지워요.", ok: "정리", danger: true }); if (!ok) return;
-  await editFolder(env, (f) => { for (const p of Object.values(f.people)) p.records = p.records.filter((r) => !r.orphan); f.scenes = f.scenes.filter((s) => !s.orphan); });
+  const ok = await confirmDialog(env.ctx.win, { title: "고아 기록 정리", body: "다시 생성되거나 삭제된 응답에 연결된 기록·장면·관계 변화·열린 항목을 지워요. 그 응답이 닫았던 열린 항목은 다시 열려요.", ok: "정리", danger: true }); if (!ok) return;
+  await editFolder(env, (f) => { cleanOrphansIn(f, env.chatItem.chat?.message ?? []); });
 }
 export function personDetail(env, host, key, embedded = false) {
   const m = mem(env.ctx), p = env.folder.people[key], { caps } = env, local = caps.analyze;
@@ -172,7 +173,7 @@ const storyItem = (env, x) => {
     { label: "삭제", danger: true, onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 관계 변화를 지울까요?", body: "지운 항목은 되돌릴 수 없어요.", ok: "삭제", danger: true })) editFolder(env, (f) => { f.rels?.[x.relKey]?.items?.splice(x.relIdx, 1); }); } });
   if (local && x.kind === "open") items.push(
     { label: "수정", onClick: async () => { const v = await ask("약속·열린 항목 수정", "내용 (80자)", x.text); if (v?.trim()) editFolder(env, (f) => { const o = f.open?.find((y) => y.id === x.id); if (o) o.text = v.trim().slice(0, 80); }); } },
-    { label: "해결로 표시", onClick: () => editFolder(env, (f) => { const o = f.open?.find((y) => y.id === x.id); if (o) { o.closed = true; o.closedAt = f.cursor?.at ?? null; } }) },
+    { label: "해결로 표시", onClick: () => editFolder(env, (f) => { const o = f.open?.find((y) => y.id === x.id); if (o) { o.closed = true; delete o.closedBy; delete o.closedOrphan; o.closedAt = f.cursor?.at ?? null; } }) },
     { label: "삭제", danger: true, onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 항목을 지울까요?", body: "해결된 일이라면 지우지 말고 ‘해결로 표시’를 써 보세요.", ok: "삭제", danger: true })) editFolder(env, (f) => { f.open = (f.open ?? []).filter((y) => y.id !== x.id); }); } });
   if (local && x.kind === "state" && x.histId) items.push(
     { label: "수정", onClick: async () => { const v = await ask("상태 변화 설명 수정", "내용 (240자)", x.text); if (v?.trim()) editFolder(env, (f) => { const e = f.wiki?.history?.find((y) => y.id === x.histId); if (e) e.summary = v.trim().slice(0, 240); }); } });

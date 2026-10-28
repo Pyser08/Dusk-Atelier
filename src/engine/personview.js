@@ -36,10 +36,10 @@ export function timelineOf(folder, person, doc) {
   const names = new Set([person?.name, ...(person?.aliases ?? [])].map(norm));
   for (const [relKey, p] of Object.entries(folder?.rels ?? {})) {
     if (!names.has(norm(p.from)) && !names.has(norm(p.to))) continue;
-    for (const [i, x] of (p.items ?? []).entries()) out.push({ id: `rel:${p.from}:${p.to}:${i}`, kind: "rel", ms: x.at_ms ?? 0, at: x.at ?? null, text: `${p.from} → ${p.to}  ${x.d}${x.dir === "+" ? " ↑" : x.dir === "-" ? " ↓" : ""}`, relKey, relIdx: i, raw: x.d });
+    for (const [i, x] of (p.items ?? []).entries()) if (!x.orphan) out.push({ id: `rel:${p.from}:${p.to}:${i}`, kind: "rel", ms: x.at_ms ?? 0, at: x.at ?? null, text: `${p.from} → ${p.to}  ${x.d}${x.dir === "+" ? " ↑" : x.dir === "-" ? " ↓" : ""}`, relKey, relIdx: i, raw: x.d });
   }
   for (const o of folder?.open ?? []) {
-    if (o.closed || !(o.who ?? []).some((w) => names.has(norm(w)))) continue;
+    if (o.orphan || (o.closed && !o.closedOrphan) || !(o.who ?? []).some((w) => names.has(norm(w)))) continue;
     out.push({ id: o.id, kind: "open", ms: o.at_ms ?? 0, at: o.at ?? null, text: o.text, openKind: o.kind });
   }
   if (doc) for (const e of folder?.wiki?.history ?? []) {

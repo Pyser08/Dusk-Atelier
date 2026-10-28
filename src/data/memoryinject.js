@@ -1,6 +1,7 @@
 // 장기기억 주입 훅: 요청 사본에만 [Dusk Memory] 블록을 넣는다(저장 데이터 불변).
 import { extractMessageText, isUserMessage } from "../engine/chattext.js";
 import { buildBlock, insertBlock, shouldInject, upsertLoreEntry } from "../engine/memoryinject.js";
+import { loadReconciled } from "./memoryload.js";
 
 export function createMemoryInjector(api, { store, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
   let last = null, mode = "none";
@@ -22,8 +23,8 @@ export function createMemoryInjector(api, { store, log = (...a) => console.log("
   async function compose({ character, chat }, { focus = null, mark = true } = {}) {
     const idx = await store.getIndex();
     if (idx.settings.backend === "off" || idx.settings.inject.on === false || idx.bots[String(character.chaId)]?.on === false) return null;
-    const folder = await store.getFolder(String(character.chaId), String(chat.id));
     const msgs = chat.message ?? [];
+    const folder = await loadReconciled(store, character.chaId, chat.id, msgs);  // 읽기 시점 대조(저장 안 함)
     const userTurns = msgs.filter(isUserMessage).length;
     if (!shouldInject(folder, idx.settings.inject, userTurns)) return null;
     const tail = msgs.slice(-2).map(extractMessageText).join("\n");
