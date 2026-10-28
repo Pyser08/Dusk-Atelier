@@ -2,6 +2,7 @@
 import { gradeResponse, findDuplicate, gradeRank } from "./memorygrade.js";
 import { applyRel, applyOpen, reinforce } from "./memoryplus.js";
 import { mergeWhen } from "./storydate.js";
+import { isTombed } from "./memorydelete.js";
 
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 const rid = (p) => p + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -33,6 +34,7 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
     let pk = findPersonKey(folder, e.name);
     if (!pk) { pk = key(e.name); folder.people[pk] = { name: e.name, aliases: [], pinned: false, records: [] }; }
     const person = folder.people[pk];
+    if (isTombed(folder, pk, e.act)) continue;  // 사용자가 지운 기록은 다시 만들지 않음
     const dup = findDuplicate(person.records, e.act, e.g);
     if (dup) { reinforce(dup.dup, anchor); if (e.know?.length && !dup.dup.know) dup.dup.know = e.know; if (dup.upgrade && !dup.dup.user) { dup.dup.g = e.g; dup.dup.score = Math.max(dup.dup.score ?? 0, e.score); out.upgraded++; } continue; }
     person.records.push({ id: rid("r"), ...anchor, act: e.act, g: e.g, score: e.score, p: e.p, s: e.s, r: e.r, sit, user: false, pin: false, at_ms: now, orphan: false, ...(e.know?.length ? { know: e.know } : {}) });

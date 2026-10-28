@@ -50,12 +50,13 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     if (mode === "auto" && !rel) { manifest.excluded.push({ kind: "person", name: p.name, tokens: 0, reason: "not-relevant" }); continue; }
     const group = mode === "always" ? 0 : rel;
     const age = (r) => r.at == null ? 50 : Math.max(0, messageCount - (plus ? lastTouch(r) : r.at));
-    const recs = (p.records ?? []).filter((r) => !r.orphan && (r.at == null || r.at < messageCount - skip) && !(p.digest && r.digested && (r.g === "D" || r.g === "C")) && !(plus && forgotten(r, messageCount, settings.forgetAfter ?? 150)));
+    const recs = (p.records ?? []).filter((r) => !r.orphan && (r.at == null || r.at < messageCount - skip) && !(p.digest && !p.digestStale && r.digested && (r.g === "D" || r.g === "C")) && !(plus && forgotten(r, messageCount, settings.forgetAfter ?? 150)));
     const scored = recs.map((r) => ({ r, s: (GRADE_WEIGHT[r.g] ?? 1) * Math.pow(0.97, age(r)) * (plus ? strength(r) : 1) + (r.pin ? 50 : 0) })).sort((a, b) => b.s - a.s);
     const top = scored.slice(0, 5);
-    if (!top.length && !p.digest) continue;
+    const dg = p.digest && !p.digestStale ? p.digest : "";  // 재요약 대기 중인 digest는 넣지 않음
+    if (!top.length && !dg) continue;
     const moments = top.sort((a, b) => (a.r.at ?? -1) - (b.r.at ?? -1)).map((x) => `(${x.r.g}) ${oneLine(x.r.act)}`);
-    const text = `- ${p.name}: ${[p.digest ? oneLine(p.digest) : "", moments.length ? "Key moments: " + moments.join(", ") : ""].filter(Boolean).join(" / ")}`;
+    const text = `- ${p.name}: ${[dg ? oneLine(dg) : "", moments.length ? "Key moments: " + moments.join(", ") : ""].filter(Boolean).join(" / ")}`;
     cands.push({ name: p.name, ids: top.map((x) => x.r.id), group, best: (top[0]?.s ?? 0) + (p.pinned ? 50 : 0), text, tokens: estimateTokens(text) });
   }
   cands.sort((a, b) => a.group - b.group || b.best - a.best);

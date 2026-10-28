@@ -17,6 +17,7 @@ import { openWriter } from "./writerui.js";
 import { hasFolders, groupPeople } from "../../../engine/peoplegroup.js";
 import { wikiPanel } from "./wikipanel.js";
 import { editMetricValue, editSectionText, setPin, isPinned, sectionPinKey, metricPinKey, isPaused, setPaused } from "../../../engine/personedit.js";
+import { deleteRecord, relatedOf } from "../../../engine/memorydelete.js";
 
 const PAGE = 100;
 // 폴더 수정 헬퍼(로컬 저장소만). fn(folder) 안에서 고친다.
@@ -116,6 +117,12 @@ async function setWikiGrade(env, r) {
   if (score === undefined) return env.ctx.toast("등급은 D/C/B/A/S/EX, 0~9, 해제 중 하나예요.");
   try { const ok = await env.ctx.memory.bardwiki.setGradeByUser(env.bot.id, env.chatItem.id, r.docId, score); env.ctx.toast(ok ? "위키에 등급을 저장했어요." : "쓰기 권한이 거부되어 저장하지 못했어요."); env.redraw(); } catch (e) { fail(env.ctx)(e); }
 }
+async function deleteWithCascade(env, key, r) {
+  const rel = relatedOf(env.folder, r), n = rel.rels.length + rel.open.length;
+  if (!(await confirmDialog(env.ctx.win, { title: "이 기록을 지울까요?", body: "지운 기록은 되돌릴 수 없고, 같은 문장은 다시 기록되지 않아요. 남겨 두고 싶다면 등급을 D로 낮춰 보세요.", ok: "삭제", danger: true }))) return;
+  const also = n > 0 && await confirmDialog(env.ctx.win, { title: "같은 응답의 관계 변화·떡밥도 지울까요?", body: [...rel.rels, ...rel.open].slice(0, 5).map((x) => "· " + x.text).join("\n") + (n > 5 ? `\n…외 ${n - 5}개` : ""), ok: "같이 지우기" });
+  await editFolder(env, (f) => { deleteRecord(f, key, r.id, { alsoRelated: !!also }); });
+}
 async function cleanOrphans(env) {
   const ok = await confirmDialog(env.ctx.win, { title: "고아 기록 정리", body: "다시 생성되거나 삭제된 응답에 연결된 기록을 지워요.", ok: "정리", danger: true }); if (!ok) return;
   await editFolder(env, (f) => { for (const p of Object.values(f.people)) p.records = p.records.filter((r) => !r.orphan); f.scenes = f.scenes.filter((s) => !s.orphan); });
@@ -137,7 +144,7 @@ export function personDetail(env, host, key, embedded = false) {
       local && { label: "수정", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: "기록 수정", label: "행동 (80자)", value: r.act, ok: "저장" }); if (v) editFolder(env, (f) => { const x = f.people[key].records.find((y) => y.id === r.id); x.act = v.slice(0, 80); x.user = true; }); } },
       local && { label: "등급 변경", onClick: async () => { const v = (await promptDialog(env.ctx.win, { title: "등급 변경", label: `등급 (${GRADES.join(" / ")})`, value: r.g, ok: "저장" }))?.trim().toUpperCase(); if (GRADES.includes(v)) editFolder(env, (f) => { const x = f.people[key].records.find((y) => y.id === r.id); x.g = v; x.user = true; }); } },
       local && { label: r.pin ? "고정 해제" : "고정", onClick: () => editFolder(env, (f) => { const x = f.people[key].records.find((y) => y.id === r.id); x.pin = !x.pin; }) },
-      local && { label: "삭제", danger: true, onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 기록을 지울까요?", body: "지운 기록은 되돌릴 수 없어요. 남겨 두고 싶다면 등급을 D로 낮춰 보세요.", ok: "삭제", danger: true }))) return; editFolder(env, (f) => { f.people[key].records = f.people[key].records.filter((y) => y.id !== r.id); }); } },
+      local && { label: "삭제", danger: true, onClick: () => deleteWithCascade(env, key, r) },
       !local && r.docId && env.view?.live && env.ctx.memory.bardwiki.canSetGrade() && { label: "위키 등급 지정", onClick: () => setWikiGrade(env, r) },
       r.at != null && { label: "여기서 새 채팅", onClick: () => newChatFrom(env, r.at) }
     ].filter(Boolean)) }));
