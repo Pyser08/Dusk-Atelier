@@ -13,6 +13,7 @@ import { badge, btn, confirmDialog, loading, folderDialog, iconBtn, modal, note,
 import { buildPatch, planPatch } from '../../engine/patch.js';
 import { devLint, devStats, loreActivation, nextVersion, projView, regexRun } from '../../engine/devcheck.js';
 import { baseViewOf, okIdentity, pickWork, renderPatchMaker } from './devtools.js';
+import { affCard } from './devaff.js';
 
 var KIND_KO = { module: "모듈", character: "봇" };
 var keyOf = (p) => p.kind === "module" ? `m:${p.id}` : `c:${p.id}`;
@@ -251,6 +252,7 @@ function detail(ctx, all, p) {
       baseCard(ctx, all, p, obj),
       lintCard(ctx, p, obj, view),
       testCard(ctx, p, view),
+      ...p.kind === "character" ? [affCard(ctx, t)] : [],
       releaseCard(ctx, p, t),
       h("div", null, remove)
     );
