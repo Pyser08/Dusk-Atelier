@@ -2,17 +2,19 @@
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { switchEl, setSwitch, segmented, note } from "../../kit.js";
-import { fail, potOn } from "./common.js";
+import { fail, potOn, askRefresh } from "./common.js";
 
 export async function renderModeBar(ctx, host, { redraw }) {
   const M = ctx.memory, idx = await M.store.getIndex(), S = idx.settings;
   const backend = M.backend(S), local = backend.id === "local", pot = potOn(S);
   const setBackend = async (v) => {
+    if (v === (S.backend ?? "auto")) return;
     try {
       await M.store.updateIndex((i) => { i.settings.backend = v; });
       ctx.toast("기억 저장소를 바꿨어요.");
     } catch (e) { fail(ctx)(e); }
     redraw();
+    askRefresh(ctx);
   };
   const setPot = async (v, el) => {
     setSwitch(el, v);

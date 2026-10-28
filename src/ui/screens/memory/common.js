@@ -1,4 +1,5 @@
 import { h } from '../../dom.js';
+import { modal } from '../kit.js';
 import { loadCharacters } from '../../../data/modules.js';
 import { emptyFolder } from '../../../data/memorystore.js';
 import { reconcile } from '../../../engine/memoryreconcile.js';
@@ -51,3 +52,11 @@ export const lastAt = (p) => visibleRecords(p).reduce((m, r) => Math.max(m, r.at
 
 // v1.6.5: 리수폿 기능(인물 위키·턴 흐름) 사용 여부. 꺼져 있으면 v1.6.2 때의 Dusk 기능만 보인다. 기본 켜짐.
 export const potOn = (settings) => settings?.potMode !== false;
+
+// 기억 저장소를 바꾼 뒤: 화면 한가운데에 '리스 새로고침' 안내를 띄운다 (훅은 다시 불러와야 반영돼요)
+export function askRefresh(ctx) {
+  return modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "alertdialog", "aria-modal": "true", "aria-label": "새로고침 안내", style: "max-width:380px;text-align:center;display:flex;flex-direction:column;gap:12px;padding:20px" },
+    h("b", { style: "font-size:16px" }, "리스를 새로고침해 주세요"),
+    h("p", { class: "rb-muted", style: "margin:0;line-height:1.6" }, "기억 저장소를 바꾸면 기록·주입 훅은 리스를 다시 불러와야 반영돼요. 새로고침(F5 또는 앱 다시 시작) 전까지는 이전 방식이 계속 동작할 수 있어요."),
+    h("button", { class: "rb-btn primary", type: "button", onClick: () => done(true) }, "확인")));
+}
