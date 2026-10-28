@@ -1,0 +1,14 @@
+GNU AFFERO GENERAL PUBLIC LICENSE
+Version 3, 19 November 2007
+
+Dusk Atelier is licensed under the GNU Affero General Public License, version 3
+(AGPL-3.0-only). The full license text is published by the Free Software
+Foundation: https://www.gnu.org/licenses/agpl-3.0.txt
+
+NOTE FOR THE MAINTAINER: the canonical full text could not be fetched from the
+build sandbox. Replace this file with the unmodified official text
+(GitHub: Add file -> Create new file -> name it LICENSE -> "Choose a license
+template" -> GNU Affero General Public License v3.0) so that GitHub and other
+tools recognise the license.
+
+Third-party notices: see NOTICE.md.

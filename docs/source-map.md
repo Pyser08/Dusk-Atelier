@@ -1,4 +1,4 @@
-# Dusk Atelier 소스 구조 지도 (v1.6.4 기준, tools/source-map.mjs로 자동 생성)
+# Dusk Atelier 소스 구조 지도 (v1.6.6 기준, tools/source-map.mjs로 자동 생성)
 
 새 채팅에서 파일을 찾을 때 먼저 이 문서를 보고, 필요한 파일만 읽는다. 저장소: Pyser08/Dusk-Atelier. 기능 작업은 브랜치에서 하고 main에 push하면 release.yml이 package.json 버전으로 릴리스한다. 갱신: `node tools/source-map.mjs > docs/source-map.md` 후 프로젝트 문서 `claude/source-map.md`로 올린다(`project_write` + `local_path`).
 
@@ -17,7 +17,7 @@
 
 ## 파일 목록
 ### src/
-- `main.js` (172줄) 
+- `main.js` (175줄) 
 
 ### src/data/
 - `addcharacter.js` (20줄) 새 봇을 DB에 추가하는 공용 흐름 (legacy.js의 '캐릭터 추가'에서 추출, 동작 동일). — insertCharacter
@@ -28,19 +28,21 @@
 - `cardstore.js` (42줄) 카드 저장소: 카드 본문(dusk.mem.v2.card.<id>), 목록 인덱스, 카드 설정. 직렬 … — CARD_PREFIX, CARD_INDEX_KEY, CARD_CFG_KEY, DEFAULT_CARD_CFG, createCardStore
 - `charorder.js` (114줄) — layout, moveChar, createFolder2, setMembers, renameFolder2
 - `interopSnippet.js` (4줄) DA Interop v1 스니펫 원본: https://github.com/Pyser08/dusk-at…
-- `lorelog.js` (169줄) 로어북 로그 런타임 — LORE_LOG_KEY, loadLoreLog, clearLoreLog, createLoreLog
+- `lorelog.js` (171줄) 로어북 로그 런타임 — LORE_LOG_KEY, loadLoreLog, clearLoreLog, createLoreLog
 - `lorerules.js` (261줄) 로어북 규칙 런타임 — LORE_SETTINGS_KEY, LORE_DEFAULTS, loadLoreSettings, saveLoreSettings, createLoreRuntime
 - `memory.js` (37줄) 장기기억 조립: 저장소·러너·주입·BardWiki 백엔드를 묶고, 선택된 백엔드에 따라 훅을 등록한다… — createMemory
 - `memorybackend-bardwiki.js` (69줄) 리스바드 BardWiki 읽기 어댑터 + 스냅샷 캐시(dusk.mem.v2.ext.<folderId>… — createBardWikiBackend
 - `memorybackend.js` (16줄) 기억 저장소 백엔드 선택. local = 플러그인 자체 저장·분석·주입, bardwiki = 리스바드… — hasBardWiki, selectBackend, CAPABILITIES, capabilitiesOf
 - `memorybot.js` (22줄) 장기기억에서 합성한 새 봇 객체 만들기. 원본 봇은 수정하지 않는다(새 객체만 반환). — buildMemoryCharacter
-- `memoryinject.js` (74줄) 장기기억 주입 훅: 요청 사본에만 [Dusk Memory] 블록을 넣는다(저장 데이터 불변). — createMemoryInjector
+- `memorybutton.js` (49줄) 채팅 메뉴(입력 옆)의 '장기기억' 버튼을 설정에서 켜고 끄기 (v1.6.5). 기본 켜짐. — MEMORY_BUTTON_KEY, loadMemoryButtonOn, createMemoryButton
+- `memoryinject.js` (75줄) 장기기억 주입 훅: 요청 사본에만 [Dusk Memory] 블록을 넣는다(저장 데이터 불변). — createMemoryInjector
+- `memoryload.js` (12줄) v1.6.5 읽기 경로 대조: 폴더를 읽어 메모리 사본에서만 앵커 정합성(reconcile)을 맞춘다… — loadReconciled
 - `memoryrewind.js` (57줄) 저장된 기억으로 새 채팅 만들기. 원본 채팅·봇 데이터는 수정하지 않고 새 채팅만 추가한다. — sliceFolder, sceneAt, draftFirstMessage, createRewindChat
-- `memoryrunner.js` (204줄) 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 … — createMemoryRunner
+- `memoryrunner.js` (205줄) 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 … — createMemoryRunner
 - `memorystore.js` (120줄) 장기기억 v2 저장소: 인덱스 + 폴더별 키 분할, 직렬 쓰기 큐, v1 마이그레이션. — INDEX_KEY, FOLDER_PREFIX, EXT_PREFIX, LEGACY_KEY, DEFAULT_SETTINGS
 - `memorystore3.js` (126줄) 장기기억 v3 저장소: v2와 같은 메서드 + 채팅별 인물 위키(wiki) + 리수폿 가져오기. 직렬… — INDEX_KEY, FOLDER_PREFIX, createMemoryStoreV3
 - `memorytools.js` (33줄) 인물 AI 도구(7단계 B): 리수폿 컨트롤러를 한 묶음으로 만든다. 턴 흐름이 켜져 있고 그 채팅이… — makeTools
-- `memoryturn.js` (172줄) 턴 흐름 (v1.6.4 4단계): 리수폿 인물 위키(고르기·정리 노트·기록하기)와 Dusk 기록을 한… — promptKeysOf, stageOf, createTurnFlow
+- `memoryturn.js` (173줄) 턴 흐름 (v1.6.4 4단계): 리수폿 인물 위키(고르기·정리 노트·기록하기)와 Dusk 기록을 한… — promptKeysOf, stageOf, createTurnFlow
 - `modelhub.js` (73줄) 모델 허브 (v1.6.4 3단계): 모델 프리셋 저장·키 보관·내 API 호출·토큰 사용량. 화면은 … — getCfg, saveCfg, keyStore, pickForStage, getUsage
 - `modules.js` (241줄) — loadCharacters, readDb, entriesOf, loadModuleState, moduleCounts
 - `persona.js` (152줄) — loadPersonaMap, savePersonaMap, setPersonaLink, syncPersonaModules
@@ -58,6 +60,21 @@
 ### src/data/pot/
 - `pot/*.js` 33개 — 리수폿 저장소·모델 클라이언트·훅·추적(자동 생성, prompts.json·MANIFEST.json 포함)
 
+### src/dev/aibuild/
+- `bridge.js` (46줄) 실시간 반영 다리 (v1.6.7 2단계). — toDraft, toView, hostFromEditor
+- `controller.js` (253줄) AI로 제작 컨트롤러 (화면 없음). 봇빌더 Workshop 클래스의 로직 부분을 이식하고, — createAiBuild
+- `core.js` (458줄) 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식.… — editable, blankCharacter, newSession, sessionFromCharacter, snapshot
+- `index.js` (8줄) AI로 제작(봇빌더 v0.3.2 이식) 공개 진입점. 화면 없이 쓸 수 있는 엔진 + 컨트롤러. — createAiBuild, createAiStore, normalizeSettings, DEFAULT_SETTINGS, STORE_PREFIX
+- `model.js` (60줄) 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식.… — responseText, callModel
+- `modules.js` (111줄) 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식.… — MODULE_LIMIT, badKeys, tree, normalizeModule, normalizeModules
+- `preset-calc.js` (108줄) 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식.… — precedence, isOperator, isNumber, toRPN, calculate
+- `preset-engine.js` (461줄) 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식.… — newPresetState, validatePresetState, toggleDefinitions, presetValues, tokenize
+- `preset-format.js` (108줄) 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식.… — rpackMap, import_index_no_eval, PRESET_LIMIT, key, expand
+- `preset-v2.js` (65줄) 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식.… — parseToggleSyntax, parseToggleTree, toggleDefault, ops, safeArg
+- `regextest.js` (68줄) 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식.… — expandReplacement, regexTest
+- `store.js` (95줄) AI로 제작(봇빌더 이식) 저장소 — 키는 전부 da_aibuild:* (봇빌더 원본 키와 분리). — STORE_PREFIX, AUTOSAVE_MS, DEFAULT_SETTINGS, normalizeSettings, createAiStore
+- `util.js` (37줄) 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식.… — VERSION, PREFIX, FIELDS, ARRAY_FIELDS, dangerous
+
 ### src/engine/
 - `airesponse.js` (30줄) — extractRunAIText
 - `bardwikiadapt.js` (98줄) 리스바드 BardWiki 문서 → 장기기억 폴더(§2.2 모양) 변환. 순수 함수. 필드가 없으면 건… — VIRTUAL_MARK, parseSections, bullets, SUMMARY_TITLES, eventBullets
@@ -68,7 +85,7 @@
 - `devfile.js` (263줄) 개발 모드 전용 파일 불러오기·내보내기 (1.5.4). — readWorkFile, identityDiff, parseListFile, applyListImport, listExportText
 - `duskwriter.js` (36줄) v1.6.4 기록 호출 합치기(순수): 리수폿 Writer 프롬프트에 Dusk 기록 구획을 덧붙이고,… — SECTION_MARK, appendDuskSection, splitDusk, checkDusk
 - `export.js` (42줄) — rpackEncode, buildRisum, moduleJson
-- `firstrun.js` (25줄) 처음 쓰는 사람용(순수): 설정을 하나도 안 만져도 켜기만 하면 작동하도록 기본값을 정한다. — WIZARD, firstRunFeatures, isPotName, potInstalled, wizardSummary
+- `firstrun.js` (29줄) 처음 쓰는 사람용(순수): 설정을 하나도 안 만져도 켜기만 하면 작동하도록 기본값을 정한다. — WIZARD, firstRunFeatures, isPotName, potInstalled, isBbName
 - `flowsteps.js` (19줄) 이번 턴 진행 점 5개(고르기 → 회상 → 정리 → 주입 → 저장). 순수 함수: 마지막 턴 기록만 … — STEP_LABELS, stepsOf
 - `hash.js` (132줄) — sha256js, sha256
 - `image.js` (177줄) — imageSize, readMetadata, stripMetadata, canEncode, convertImage
@@ -76,19 +93,20 @@
 - `index.js` (20줄) — rpackDecode, assetKey, sha256, sha256js, Cancelled
 - `loredusk.js` (268줄) 로어북 더스크화: 기존 로어북을 Dusk 폴더·소속·장소 구조로 바꾸는 계획을 만들고 적용한다 (순수… — dividerName, sigOf, rulePlan, batches, batchMessages
 - `lorelist.js` (72줄) 로어북 목록 구조 계산(순수): 폴더 트리 만들기, 이름순 정렬. — nameOf, byName, childrenMap, sortLoreByName, pickTree
-- `lorelog.js` (90줄) 로어북 로그: 이번 응답에 어떤 로어북 항목이 들어갔는지 알아낸다 (순수 함수) — squash, probeLines, detectInPrompt, estimateUsed, headKey
+- `lorelog.js` (94줄) 로어북 로그: 이번 응답에 어떤 로어북 항목이 들어갔는지 알아낸다 (순수 함수) — squash, probeLines, detectInPrompt, estimateUsed, headKey
 - `lorerules.js` (783줄) Dusk 로어북 규칙 (DA Lore Rules v1) — RULE_VERSION, DONT_ACTIVATE, STATE_VAR, SET_OPS, MAX_HIST
 - `match.js` (60줄) — normalizeName, stripTrailingNumber, findCandidates
-- `memoryapply.js` (55줄) 분석 결과를 폴더에 반영하는 순수 함수. — findPersonKey, latestScene, applyAnalysis, knownPeople, gradeRank
+- `memoryapply.js` (57줄) 분석 결과를 폴더에 반영하는 순수 함수. — findPersonKey, latestScene, applyAnalysis, knownPeople, gradeRank
 - `memorycompose.js` (91줄) 새 봇 합성: 기록 선택 → 상황 블록 → 로어북 후보 → 생성 프롬프트. 순수 함수. — selectRecords, sceneBlocks, pickLore, relationshipPrompt, descPrompt
+- `memorydelete.js` (27줄) 기록 삭제 연쇄 처리 (v1.6.5 4단계, 순수): 같은 응답에서 나온 관계 변화·떡밥 찾기, di… — TOMB_MAX, tombKey, isTombed, relatedOf, deleteRecord
 - `memorydiag.js` (9줄) 자동 기록 진단 문구(순수 함수). 기억 탭 상태 카드에서 쓴다. — diagText
-- `memorydigest.js` (25줄) 인물별 digest(압축) 조건·프롬프트·반영. — DIGEST_MIN_RECORDS, undigested, needsDigest, digestTargets, digestMessages
+- `memorydigest.js` (26줄) 인물별 digest(압축) 조건·프롬프트·반영. — DIGEST_MIN_RECORDS, undigested, needsDigest, digestTargets, digestMessages
 - `memorygrade.js` (71줄) 장기기억 등급 D < C < B < A < S < EX. 모델은 p·s·r(0~3)만 내고 등급은 여… — GRADES, GRADE_WEIGHT, SCORE_TABLE, GRADE_CAP, MAX_PER_RESPONSE
 - `memoryguide.js` (10줄) 장기기억 첫 켜기 가이드 글(순수 데이터). 화면마다 작은 ? 버튼이 이걸 보여 준다. — GUIDE_ORDER, GUIDE
-- `memoryinject.js` (107줄) 장기기억 주입: 고정 예산으로 [Dusk Memory] 블록을 조립한다. 순수 함수. — MARKER, HEADER, estimateTokens, shouldInject, buildBlock
-- `memoryplus.js` (114줄) v1.6.2 장기기억 확장(순수): 지식 경계·열린 항목·관계 변화·세계 시간선·기억 강화/망각·원문… — OPEN_KINDS, OPEN_CAP, validateKnow, validatePlus, applyRel
+- `memoryinject.js` (108줄) 장기기억 주입: 고정 예산으로 [Dusk Memory] 블록을 조립한다. 순수 함수. — MARKER, HEADER, estimateTokens, shouldInject, buildBlock
+- `memoryplus.js` (122줄) v1.6.2 장기기억 확장(순수): 지식 경계·열린 항목·관계 변화·세계 시간선·기억 강화/망각·원문… — OPEN_KINDS, OPEN_CAP, validateKnow, validatePlus, applyRel
 - `memoryprompt.js` (65줄) 장기기억 분석 프롬프트·응답 파싱·검증. — SYSTEM_PROMPT, buildMessages, parseJson, validate, analyze
-- `memoryreconcile.js` (45줄) 앵커 정합성. 기록/상황은 {at, mid?, h}를 가진다. 순수 함수 — 폴더를 직접 수정한다. — indexMessages, reconcile
+- `memoryreconcile.js` (92줄) 앵커 정합성. 기록/상황은 {at, mid?, h}를 가진다. 순수 함수 — 폴더를 직접 수정한다. — indexMessages, srcOf, cleanOrphans, reconcile
 - `memoryv3.js` (58줄) 장기기억 v3 순수 변환: v2 → v3, 리수폿 백업/저장소 덤프 → v3 조각, 봇 전체 인물 모… — V3, indexV2toV3, folderV2toV3, parsePotBundle, botPeople
 - `merge.js` (37줄) 합치기(RisuTide) 연결: 인물·세계관 가져오기, 전체 합치기, 출처별 업데이트, 떼어내기, A… — adaptCharacterPrompt, conflictTidyPrompt, mergeInput, prepareScopedSelection, applyScopedSelection
 - `merge3.js` (196줄) — charIncomingView, modIncomingView, pickView, merge3, charSpec
@@ -150,7 +168,7 @@
 - `prefs.js` (51줄) 
 - `probpick.js` (184줄) 로어북 내용에서 고른 부분을 확률로 나오게 만들기 (선택 → 🎲 버튼 → 팝업)
 - `sortable.js` (167줄) 마우스·펜: 줄 어디를 잡아도 5px 움직이면 끌기 시작 (클릭은 그대로 클릭).
-- `styles.js` (724줄) 
+- `styles.js` (742줄) 
 - `tabs.js` (65줄) 탭 목록과 설명 문구 (홈 카드·위쪽 줄·도움말이 같이 쓴다). 화면 코드 없음.
 - `theme.js` (247줄) v1.6.3 UI 리뉴얼: 밝은 회백 + 코랄 포인트가 기본. 색은 전부 여기 토큰에서만 나온다.
 - `toast.js` (61줄) 리스 메인 화면 오른쪽 위에 띄우는 알림 (메인 화면 접근 권한이 있을 때만)
@@ -165,13 +183,15 @@
 - `render.js` (169줄) 카드 캔버스 렌더러: 일러스트 → 밤 베일 → 등급색 프레임 → 이름·키워드·태그·대사·등급 문양.
 
 ### src/ui/screens/
+- `about.js` (28줄) 정보 · 라이선스: 버전, AGPL-3.0 고지(무보증), 소스 위치, 포함된 외부 코드 목록.
+- `aibuild.js` (112줄) AI로 제작 팝업(우측 하단). v1.6.7 2단계: 요청 → 수정안 카드 → 적용하면 편집기 탭에 …
 - `assetdupes.js` (164줄) 중복 에셋 찾기 (1.4.6)
 - `assetmgr.js` (1063줄) 
 - `characters.js` (605줄) 
 - `chareditor.js` (224줄) 
 - `dev.js` (616줄) 
 - `devtools.js` (405줄) 
-- `editor.js` (1981줄) 
+- `editor.js` (2038줄) 
 - `history.js` (142줄) 
 - `home.js` (58줄) 홈: "무엇을 하고 싶으세요?" 큰 카드 그리드. 처음 쓰는 사람이 첫 행동을 바로 고르게.
 - `loredusk.js` (101줄) 로어북 더스크화 창: 구분선 규칙 변환 / AI 분석 → 미리보기(체크한 것만) → 적용
@@ -183,10 +203,10 @@
 - `plugins.js` (627줄) 플러그인 탭 — 목록·카테고리·업데이트 확인 / DA Interop 연동 설정 / 플러그인 만들기 /…
 - `presets.js` (217줄) 
 - `settings.js` (128줄) 화면 꾸미기 (예전 '색 바꾸기'): 색 · 밝기 · 메뉴 위치 · 밀도 · 글자 크기 · 고대비. …
-- `settingstab.js` (129줄) 설정 탭: 흩어져 있던 설정을 한곳에. (도구와 개발 탭 사이)
+- `settingstab.js` (143줄) 설정 탭: 흩어져 있던 설정을 한곳에. (도구와 개발 탭 사이)
 - `themebuilder.js` (346줄) 테마 빌더 화면: 스타일 → 대표색 → 밝기만 고르면 테마 완성. 결과는 일반 테마로 저장된다.
 - `themestudio.js` (443줄) 테마 스튜디오: 계열(일반 리스/포켓리스)별 테마 편집 · 실시간 미리보기 · 적용 · 공유
-- `tools.js` (424줄) 
+- `tools.js` (436줄) 
 - `updsettings.js` (76줄) 도구 → 업데이트 설정: 새 봇 자동 감지, 받은 사본 정리, 채팅 백업
 
 ### src/ui/screens/cards/
@@ -198,18 +218,19 @@
 - `botlist.js` (25줄) 
 - `botview.js` (73줄) 
 - `cards.js` (46줄) 카드 탭: 이 봇에서 만든 카드를 모아 보고, 크게 보기·PNG 저장·삭제를 한다.
-- `common.js` (51줄) 
+- `common.js` (54줄) 
 - `compose.js` (233줄) 새 봇 만들기 5단계: 인물 → 범위·등급 → 카드 → 연결 → 첫 메시지·확인
 - `flowsettings.js` (167줄) 기억 탭 설정: 추적 수준 3종 · 기능 카드 6장 · AI 모델(쉬운/고급) · 가져오기·사용량.
 - `folderui.js` (46줄) 인물 폴더 정리: 새 폴더 · 이름 바꾸기 · 삭제(인물은 미분류로) · 고른 인물을 폴더로 옮기기(…
 - `guide.js` (19줄) 작은 ? 가이드 버튼: 누르면 그 자리에 맞는 첫 켜기 안내가 떠요. 홈 안내에서는 처음 설정을 다시…
-- `home.js` (49줄) 기억 탭 홈: 켜기 스위치 + 상태 카드 하나. 이번 턴 진행 점 5개와 최근 기록 3줄.
-- `index.js` (43줄) 기억 탭 진입점. 상태는 ctx.state.mem 한 객체로만 관리한다.
+- `home.js` (50줄) 기억 탭 홈: 켜기 스위치 + 상태 카드 하나. 이번 턴 진행 점 5개와 최근 기록 3줄.
+- `index.js` (44줄) 기억 탭 진입점. 상태는 ctx.state.mem 한 객체로만 관리한다.
 - `ledger.js` (46줄) v1.6.2 장부 탭: 열린 항목 · 관계 변화 · 세계 시간선. 로컬 저장소일 때만 고칠 수 있다.
 - `makebot.js` (24줄) 카드 → 새 봇 만들기(공용). 카드 이미지 PNG를 에셋으로 저장하고, 카드를 저장한 뒤, 봇을 추…
 - `mergeui.js` (86줄) 인물 합치기(미리보기 포함): 남길 인물과 합칠 인물을 고르면, 인물 위키 문서가 둘 다 있을 때는 …
+- `modebar.js` (35줄) 기억 탭 맨 위: 저장소(플러그인 / BardWiki) 고르기 + 리수폿 기능 켜고 끄기 (v1.6.…
 - `modeladv.js` (66줄) 고급 모델 설정(고급 모드): 공급자 전체 · 모델 목록 불러오기 · 온도/최대 출력/문맥/제한시간 …
-- `people.js` (232줄) 
+- `people.js` (240줄) 
 - `recordsui.js` (68줄) 인물 항목 관리: 항목 직접 추가·고치기·지우기와 NPC 감정 기록(리수폿 people-records…
 - `recovery.js` (53줄) 복구·실행 기록(고급 모드): Writer 원문 JSON을 붙여넣어 진단 → 고치기 → 반영(또는 강…
 - `scenes.js` (31줄) 
@@ -223,10 +244,14 @@
 - `writerui.js` (66줄) 수동 Writer(리수폿 writer-ui 대응): RP 본문을 붙여넣거나 최근 응답을 불러와 AI로…
 
 ### src/vendor/
+- `fflate-full.js` (1109줄) 봇빌더(BB) v0.3.2의 번들에서 추출한 외부 라이브러리 (MIT). 라이선스: 저장소 NOTIC… — Decompress, strFromU8, strToU8, unzipSync, zipSync
 - `fflate.js` (1154줄) fflate 0.8.2 (MIT, https://github.com/101arrowz/fflate) … — gzipSync, gunzipSync, strFromU8, strToU8
+- `msgpackr.js` (2252줄) 봇빌더(BB) v0.3.2의 번들에서 추출한 외부 라이브러리 (MIT). 라이선스: 저장소 NOTIC… — unpack
+- `noble.js` (877줄) 봇빌더(BB) v0.3.2의 번들에서 추출한 외부 라이브러리 (MIT). 라이선스: 저장소 NOTIC… — sha2562, gcm
+- `re2js.js` (6649줄) 봇빌더(BB) v0.3.2의 번들에서 추출한 외부 라이브러리 (MIT). 라이선스: 저장소 NOTIC… — RE2JS
 
 ## Risu 플러그인 API (우리 코드가 쓰는 호출, 횟수순)
-`getCharacterFromIndex`(44), `getDatabase`(38), `getChatFromIndex`(18), `setDatabaseLite`(16), `getCurrentCharacterIndex`(16), `setCharacterToIndex`(14), `getCurrentChatIndex`(13), `addRisuScriptHandler`(8), `setChatToIndex`(6), `saveAsset`(6), `toggle`(5), `registerButton`(3), `hideContainer`(3), `addRisuReplacer`(2), `nativeFetch`(2), `getRootDocument`(2), `checkCharOrder`(2), `readImage`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `getColorScheme`(2), `showContainer`(2), `getCurrentLorebookEntries`(1), `requestPluginPermission`(1), `runLLMModel`(1), `ordered`(1), `range`(1), `clear`(1), `setDatabase`(1)
+`getCharacterFromIndex`(44), `getDatabase`(39), `getChatFromIndex`(18), `setDatabaseLite`(16), `getCurrentCharacterIndex`(16), `setCharacterToIndex`(14), `getCurrentChatIndex`(13), `addRisuScriptHandler`(8), `setChatToIndex`(6), `saveAsset`(6), `toggle`(5), `registerButton`(3), `hideContainer`(3), `addRisuReplacer`(2), `nativeFetch`(2), `getRootDocument`(2), `checkCharOrder`(2), `readImage`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `getColorScheme`(2), `showContainer`(2), `getCurrentLorebookEntries`(1), `unregisterUIPart`(1), `requestPluginPermission`(1), `runLLMModel`(1), `ordered`(1), `range`(1), `clear`(1), `setDatabase`(1)
 
 ## RisuAI 본체 구조 (kwaroran/RisuAI, 2026.10.220 기준)
 읽기 전용 클론: `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/kwaroran/risuai` (add_repo로 읽기만 가능, 쓰기 불가). 전체를 읽지 말고 아래 위치만 grep한다.

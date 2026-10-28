@@ -19,7 +19,8 @@ const banner = [
   '//@update-url https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js',
   '//@link https://github.com/Pyser08/Dusk-Atelier 저장소',
   '',
-  `/* Dusk Atelier v${version} — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */`
+  `/* Dusk Atelier v${version} — 소스: https://github.com/Pyser08/Dusk-Atelier (src/ 폴더). 이 파일은 빌드 결과물입니다. */`,
+  '/* 라이선스: GNU AGPL-3.0-only. 이 프로그램은 어떠한 보증도 없이 배포됩니다. 외부 코드 고지: 저장소 NOTICE.md */'
 ].join('\n');
 
 // 변경 기록: CHANGELOG.md의 최근 8개 버전을 번들에 넣어 업데이트 뒤 "새로 바뀐 점" 창에 보여 준다

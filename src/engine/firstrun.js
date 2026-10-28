@@ -17,6 +17,10 @@ export function firstRunFeatures(features) {
 export const isPotName = (name) => /risupot|리수폿/i.test(String(name ?? ""));
 export const potInstalled = (plugins) => (plugins ?? []).some((p) => isPotName(p?.name) && p?.enabled !== false);
 
+// 봇빌더(AI로 제작의 원본) 플러그인이 같이 켜져 있는지 (같은 기능이 Dusk 안에 있다는 안내용)
+export const isBbName = (name) => /봇빌더|risu_story_workshop|botbuilder/i.test(String(name ?? ""));
+export const bbInstalled = (plugins) => (plugins ?? []).some((p) => isBbName(p?.name) && p?.enabled !== false);
+
 // 마법사 끝 요약 한 줄
 export function wizardSummary({ easyKind, level, mode }) {
   const lv = { light: "가볍게", basic: "기본", full: "전부", custom: "맞춤" }[level] ?? "기본";

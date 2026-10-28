@@ -12,6 +12,10 @@ import { sortLoreByName } from '../../engine/lorelist.js';
 import { estimateTokens } from '../../engine/memoryinject.js';
 import { reload } from './modules.js';
 import { attachUndo } from '../undo.js';
+import { createAiBuild } from '../../dev/aibuild/controller.js';
+import { hostFromEditor } from '../../dev/aibuild/bridge.js';
+import { openAiPopup } from './aibuild.js';
+import { bbInstalled } from '../../engine/firstrun.js';
 import { attachProbPick } from '../probpick.js';
 import { openLoreDusk } from './loredusk.js';
 import { AFF_PREFIX, COND_TYPES, PLACE_PREFIX, SET_OPS, VAR_OPS, affName, affOf, affsOf, ancestorsOf, applySets, bodyOf, checkExpr, collectManaged, defaultAff, defaultRule, evaluate, folderIdOf, folderMap, gateVar, isAff, isDuskFolder, isFolder, isManaged, isPlace, nativeContent, parentOf, placeLinks, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
@@ -219,10 +223,25 @@ export async function openEditorCore(ctx, cfg) {
   );
   const tabsEl = h("div", { class: "rb-tabs", role: "tablist" });
   const body = h("div", { class: "rb-split" });
-  // 규칙 시험: 어느 탭(정보·로어북·정규식·트리거·JSON)에서든 우측 하단 버튼으로 연다
-  const testFab = btn("규칙 시험", { kind: "primary", icon: "zap", title: "가상 대화로 Dusk 규칙이 어떻게 켜지는지 시험", onClick: () => ruleTester() });
-  testFab.id = "rb-rule-test-fab";
-  testFab.style.cssText = "position:absolute;right:16px;bottom:16px;z-index:30;box-shadow:0 6px 20px rgba(0,0,0,.4);border-radius:999px";
+  // 우측 하단 버튼 하나: 누르면 [AI 창 · 규칙 시험] 두 개가 펼쳐진다 (AI 창은 봇 편집에서만, 모듈은 규칙 시험만)
+  const hasAi = cfg.idKey === "chaId";
+  const fabItem = (label, ic, title, fn) => {
+    const b = btn(label, { kind: "primary", icon: ic, title, onClick: () => { closeDial(); fn(); } });
+    b.style.cssText = "box-shadow:0 6px 20px rgba(0,0,0,.4);border-radius:999px;transition:opacity .16s ease,transform .16s ease";
+    return b;
+  };
+  const dialItems = h("div", { style: "display:flex;flex-direction:column;align-items:flex-end;gap:8px;transition:opacity .16s ease,transform .16s ease;opacity:0;transform:translateY(8px);pointer-events:none;visibility:hidden" },
+    hasAi ? fabItem("AI 창", "sparkle", "AI로 로어북·설명·정규식·Lua를 만들고 바로 반영", () => aiWindow()) : null,
+    fabItem("규칙 시험", "zap", "가상 대화로 Dusk 규칙이 어떻게 켜지는지 시험", () => ruleTester()));
+  let dialOpen = false;
+  const closeDial = () => { dialOpen = false; dialItems.style.opacity = "0"; dialItems.style.transform = "translateY(8px)"; dialItems.style.pointerEvents = "none"; dialItems.style.visibility = "hidden"; fabMain.setAttribute("aria-expanded", "false"); };
+  const openDial = () => { dialOpen = true; dialItems.style.visibility = "visible"; dialItems.style.opacity = "1"; dialItems.style.transform = "none"; dialItems.style.pointerEvents = "auto"; fabMain.setAttribute("aria-expanded", "true"); };
+  const fabMain = hasAi
+    ? btn("도구", { kind: "primary", icon: "sparkle", title: "AI 창 · 규칙 시험", onClick: () => (dialOpen ? closeDial() : openDial()) })
+    : btn("규칙 시험", { kind: "primary", icon: "zap", title: "가상 대화로 Dusk 규칙이 어떻게 켜지는지 시험", onClick: () => ruleTester() });
+  fabMain.style.cssText = "box-shadow:0 6px 20px rgba(0,0,0,.4);border-radius:999px";
+  if (hasAi) fabMain.setAttribute("aria-haspopup", "true");
+  const testFab = h("div", { id: "rb-rule-test-fab", style: "position:absolute;right:16px;bottom:16px;z-index:30;display:flex;flex-direction:column;align-items:flex-end;gap:8px" }, hasAi ? dialItems : null, fabMain);
   panel.append(head, tabsEl, body, testFab);
   ctx.win.appendChild(panel);
   panel.addEventListener("keydown", (ev) => {
@@ -1929,6 +1948,42 @@ export async function openEditorCore(ctx, cfg) {
     }
   }
   // 자동 저장: 2분마다, 바뀐 게 있을 때만. 입력 중이면 잠깐 미룬다. 확인 창 없이 저장하고 백업은 cfg.save가 남긴다.
+  // AI 수정안 적용(v1.6.7 2단계): 작업본을 통째로 바꾸고 모든 탭을 다시 그린다. 적용 1회 = 되돌리기 1단계.
+  const aiHist = [];
+  const afterReplace = () => {
+    for (const k of ["lorebook", "regex", "trigger"]) {
+      if (!Array.isArray(draft[k])) draft[k] = [];
+      es.sel[k] = Math.min(es.sel[k] ?? 0, Math.max(draft[k].length - 1, 0));
+    }
+    es.dirtyAt ??= Date.now();
+    es.mItem = false;
+    render();
+  };
+  function replaceDraft(next, label) {
+    aiHist.push({ draft: structuredClone(draft), label });
+    if (aiHist.length > 30) aiHist.shift();
+    draft = structuredClone(next);
+    afterReplace();
+  }
+  function undoAi() {
+    const last = aiHist.pop();
+    if (!last) return false;
+    draft = last.draft;
+    afterReplace();
+    ctx.toast(`되돌렸어요 · ${last.label ?? "AI 수정안"}`);
+    return true;
+  }
+  let build = null;
+  async function aiWindow() {
+    let bbPresent = false;
+    try { bbPresent = bbInstalled((await ctx.api.getDatabase(["plugins"]))?.plugins); } catch { /* 감지 실패는 무시 */ }
+    if (!build) {
+      build = createAiBuild({ api: ctx.api, host: hostFromEditor(handle, { targetId: () => draft[cfg.idKey] }) });
+      build.init().catch((err) => ctx.toast(`AI 설정을 불러오지 못했어요: ${err?.message ?? err}`, { error: true }));
+    }
+    testFab.style.visibility = "hidden";
+    openAiPopup(ctx, { panel, build, selection: () => es.sel, bbPresent, onClose: () => { testFab.style.visibility = ""; } });
+  }
   const AUTO_MS = 12e4;
   let autoBusy = false, lastInput = 0;
   panel.addEventListener("input", () => {
@@ -1970,11 +2025,13 @@ export async function openEditorCore(ctx, cfg) {
     if (dirty() && !await confirmDialog(ctx.win, { title: "저장하지 않은 변경이 있어요", body: "닫으면 바뀐 내용이 사라져요.", ok: "버리고 닫기", danger: true })) return;
     clearInterval(autoTimer);
     clearInterval(stateTimer);
+    build?.destroy();
     panel.remove();
   }
   render();
   panel.querySelector(".rb-tabs button[aria-selected=true]")?.focus();
-  return { panel, close, get draft() {
+  const handle = { panel, close, get draft() {
     return draft;
-  }, apply };
+  }, apply, replaceDraft, undoAi, canUndoAi: () => aiHist.length > 0 };
+  return handle;
 }

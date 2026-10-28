@@ -194,3 +194,8 @@ node tools/build.mjs --check   # 빌드 결과가 저장소의 dusk_atelier.js�
 
 ## Special thanks
 - **RisuTide** 개발자님 — 업데이트 판단 로직, 인사말 보호, 백업 방식을 Dusk Atelier로 이어 개발하도록 허락해 주셨어요.
+- **봇빌더** 원작자님 — AI로 설명·로어북·정규식·Lua를 만드는 엔진과 프리셋 요청 조립을 Dusk Atelier 개발 탭으로 옮기도록 허락해 주셨어요. (원문 글: https://arca.live/b/characterai/187289284)
+
+## 라이선스
+Dusk Atelier는 **GNU Affero General Public License v3.0 (AGPL-3.0)** 입니다. 소스는 이 저장소(`src/`)입니다. 이 프로그램은 어떠한 보증도 없이 배포됩니다.
+번들에 함께 들어 있는 외부 코드(RE2JS·fflate·msgpackr·@noble·RPack 매핑)와 RisuBard 프리셋 해석 코드의 고지는 [NOTICE.md](NOTICE.md)에 있습니다. 라이선스 대조 결과는 [docs/LICENSE-AUDIT-v1.6.7.md](docs/LICENSE-AUDIT-v1.6.7.md)에 있습니다.
