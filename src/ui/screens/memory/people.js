@@ -2,7 +2,7 @@ import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { btn, badge, chip, openMenu, promptDialog, confirmDialog, modal } from "../../kit.js";
 import { guideBtn } from "./guide.js";
-import { mem, fail, gradeBadge, avatar, at, visibleRecords, topGrade, lastAt } from "./common.js";
+import { mem, fail, gradeBadge, avatar, at, visibleRecords, topGrade, lastAt, potOn } from "./common.js";
 import { GRADES } from "../../../engine/memorygrade.js";
 import { cleanOrphans as cleanOrphansIn } from "../../../engine/memoryreconcile.js";
 import { personKey } from "../../../data/memorystore.js";
@@ -191,7 +191,7 @@ const storyItem = (env, x) => {
 
 // 지금 상태 카드(위키 문서): 수치 막대 + 호칭·관계 등 글. 숫자를 누르면 ‘상태’ 줄로 걸러 본다.
 // 위키 범위(가져오기·저장된 인물 위키)를 플러그인 저장소에서 직접 고칠 수 있을 때만 ✎·📌을 보여 준다.
-export const wikiEditable = (env) => env.backend.id === "local" && env.caps.analyze && !env.view?.snapshot && env.folder.wiki?.documents;
+export const wikiEditable = (env) => potOn(env.idx?.settings) && env.backend.id === "local" && env.caps.analyze && !env.view?.snapshot && env.folder.wiki?.documents;
 export const wikiEdit = (env, fn, okText) => editFolder(env, (f) => { f.wiki = fn(f.wiki); }).then(() => okText && env.ctx.toast(okText));
 export async function pausePerson(env, p) {
   const on = !isPaused(env.idx.bots?.[env.bot.id]?.ignore, p);

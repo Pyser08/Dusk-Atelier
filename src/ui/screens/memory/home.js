@@ -2,7 +2,7 @@
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { btn, switchEl, setSwitch, note } from "../../kit.js";
-import { mem, fail, gradeBadge, at } from "./common.js";
+import { mem, fail, gradeBadge, at, potOn } from "./common.js";
 import { stepsOf } from "../../../engine/flowsteps.js";
 import { firstRunFeatures } from "../../../engine/firstrun.js";
 import { openSetup } from "./setup.js";
@@ -21,6 +21,7 @@ async function recentLines(M, n = 3) {
 
 export async function renderMemoryHome(ctx, host, { redraw }) {
   const m = mem(ctx), M = ctx.memory, idx = await M.store.getIndex();
+  if (!potOn(idx.settings)) return replace(host);
   const backend = M.backend(idx.settings), flow = idx.settings.flow ?? {}, canFlow = !!M.flow && backend.id === "local";
   const on = flow.on === true && canFlow;
   const setOn = async (v, el) => {

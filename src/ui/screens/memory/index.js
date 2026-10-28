@@ -7,6 +7,7 @@ import { renderBotList } from "./botlist.js";
 import { renderBotView } from "./botview.js";
 import { renderGlobalSettings } from "./settings.js";
 import { renderMemoryHome } from "./home.js";
+import { renderModeBar } from "./modebar.js";
 
 export async function renderMemory(ctx) {
   const m = mem(ctx);
@@ -27,9 +28,9 @@ export async function renderMemory(ctx) {
     drawViewNow?.().catch(fail(ctx));
   };
   if (showList) {
-    const hHost = h("div"), gHost = h("div");
-    replace(listHost, hHost, gHost, bHost);
-    await Promise.all([renderMemoryHome(ctx, hHost, { redraw }), (wide ? Promise.resolve() : renderGlobalSettings(ctx, gHost, { redraw })), renderBotList(ctx, bHost, { open, redraw })]);
+    const mHost = h("div"), hHost = h("div"), gHost = h("div");
+    replace(listHost, mHost, hHost, gHost, bHost);
+    await Promise.all([renderModeBar(ctx, mHost, { redraw }), renderMemoryHome(ctx, hHost, { redraw }), (wide ? Promise.resolve() : renderGlobalSettings(ctx, gHost, { redraw })), renderBotList(ctx, bHost, { open, redraw })]);
   }
   if (showView) {
     // 탭·채팅 전환은 오른쪽 칸만 다시 그린다(목록·전역 설정은 건드리지 않는다).

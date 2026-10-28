@@ -3,7 +3,7 @@
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { btn, modal, promptDialog, confirmDialog, openMenu, note } from "../../kit.js";
-import { mem, fail, avatar, visibleRecords } from "./common.js";
+import { mem, fail, avatar, visibleRecords, potOn } from "./common.js";
 import { findDoc } from "../../../engine/personview.js";
 import { RECORD_GROUPS, groupInfo, recordGroupOf, targetCandidates } from "../../../engine/personrecords.js";
 import { sectionPinKey, metricPinKey, scopeKeyOf, isPaused, isPinned } from "../../../engine/personedit.js";
@@ -61,7 +61,7 @@ const textModal = (ctx, title, value, hint) => modal(ctx.win, (done) => {
 export async function renderPeopleTab(env, host) {
   const m = mem(env.ctx), wiki = env.folder.wiki, ctx = env.ctx, M = ctx.memory;
   // 위키를 직접 다루는 건 플러그인 저장소 모드뿐이다. BardWiki 모드는 기존 인물 화면을 그대로 쓴다.
-  if (!(env.backend.id === "local" && env.caps.analyze)) return renderPeople(env, host);
+  if (!(env.backend.id === "local" && env.caps.analyze) || !potOn(env.idx?.settings)) return renderPeople(env, host);
   const people = env.folder.people ?? {}, docs = Object.values(wiki?.documents ?? {}).filter((d) => d?.type === "Character");
   const again = () => renderPeopleTab(env, host);
   // 위키를 고친다(저장 → 이 화면만 다시 그림). 위키가 아직 없으면 지금 열린 채팅의 범위로 새로 만든다.

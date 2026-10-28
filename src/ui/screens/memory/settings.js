@@ -1,7 +1,7 @@
 import { h, replace } from "../../dom.js";
 import { btn, switchEl, setSwitch, confirmDialog, progressBar, loading } from "../../kit.js";
 import { AI_MODES } from "../../../engine/merge.js";
-import { mem, fail } from "./common.js";
+import { mem, fail, potOn } from "./common.js";
 import { parseTags, DEFAULT_TAG_TEXT } from "../../../engine/card/tags.js";
 import { flowSections } from "./flowsettings.js";
 import { advancedBot } from "./advanced.js";
@@ -43,12 +43,12 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
       num("최근 메시지 겹침 제외(개)", () => S.inject.recentSkip, (s, v) => { s.inject.recentSkip = v; }, { max: 40 }),
       h("label", { class: "rb-mem-field" }, h("span", null, "삽입 위치"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.inject.position = e.target.value; }) }, [["beforeLastUser", "마지막 사용자 메시지 앞"], ["afterSystem", "시스템 프롬프트 뒤"]].map(([v, l]) => h("option", { value: v, selected: S.inject.position === v }, l)))),
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 들어간 기억 보기"), man ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `주입함 (약 ${man.tokens} 토큰)` : "주입하지 않음"}`),
-        h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요.")), previewBox(ctx)) : null);
+        h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요.")), potOn(S) ? previewBox(ctx) : null) : null);
   // 흐름 설정·공유 칸은 읽는 데 오래 걸려서 화면을 먼저 보여 주고 뒤에서 채운다. 접힌 설정은 처음 열 때 채운다.
   let loaded = false;
   const loadHeavy = () => {
     if (loaded) return; loaded = true;
-    if (backend.id !== "local") return;
+    if (backend.id !== "local" || !potOn(S)) return;
     replace(flowHost, loading("불러오는 중", { rows: 3 }));
     flowSections(ctx, flowHost, { redraw }).catch(fail(ctx));
     if (M.flow) (async () => { try { const st = await M.flow.settings(); if (!st.status().blocked) replace(shareHost, shareSection(ctx, tracked(ctx, st), { apply: () => M.flow.apply().catch(fail(ctx)), redraw })); } catch { /* 흐름 설정을 못 읽으면 공유 칸만 뺀다 */ } })();

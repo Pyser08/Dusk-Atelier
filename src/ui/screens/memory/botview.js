@@ -2,7 +2,7 @@ import { h, replace } from "../../dom.js";
 import { diagText } from "../../../engine/memorydiag.js";
 import { icon } from "../../icons.js";
 import { btn, badge, switchEl, setSwitch, loading, note } from "../../kit.js";
-import { mem, loadBots, loadChats, loadFolder, fail } from "./common.js";
+import { mem, loadBots, loadChats, loadFolder, fail, potOn } from "./common.js";
 import { renderPeopleTab } from "./wikiview.js";
 import { renderScenes } from "./scenes.js";
 import { renderOpen, renderRels, renderTimeline } from "./ledger.js";
@@ -26,7 +26,7 @@ export async function renderBotView(ctx, host, { redraw, redrawView, back, quiet
   const botCfg = idx.bots[bot.id] ?? { on: true };
   const autoOn = botCfg.on !== false && !botCfg.paused;
   const cycleOn = await M.flow?.settings?.().then((st) => { const r = st.rawSnapshot(); return r.features?.openness?.cycle === true && r.sexualDesireEnabled === true; }).catch(() => false);
-  const advanced = idx.settings.flow?.advanced === true && idx.settings.flow?.on === true;
+  const advanced = potOn(idx.settings) && idx.settings.flow?.advanced === true && idx.settings.flow?.on === true;
   const env = { ctx, bot, chats, advanced, chatItem, folder, view, backend, caps, idx, cycleOn, redraw, redrawView: redrawView ?? redraw, sess: M.runner?.session?.().calls ?? 0 };
 
   const sw = switchEl(autoOn && caps.analyze, { label: "자동 기록", disabled: !caps.analyze, onChange: async (v, el) => {
