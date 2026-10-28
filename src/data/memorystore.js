@@ -9,7 +9,7 @@ export const LEGACY_KEY = "dusk.episodic-memory.v1";
 
 export const DEFAULT_SETTINGS = Object.freeze({
   autoRecord: true, startTurn: 1, debounceSec: 4, everyN: 1, minChars: 120, personCap: 300,
-  model: { mode: "memory" }, backend: "auto", potMode: true,
+  model: { mode: "memory" }, modelTimeoutSec: 600, backend: "auto", potMode: true,
   inject: { on: true, m1: true, fromTurn: 1, targetTokens: 1200, capTokens: 2500, sceneTokens: 300, eventTokens: 600, recentSkip: 8, position: "beforeLastUser", plus: true, forgetAfter: 150, knowTokens: 160, openTokens: 160, relTokens: 140, srcTokens: 300 },
   loreRef: { on: false, tokens: 600 },
   // v1.6.4 턴 흐름: on=리수폿 인물 위키·고르기·정리 노트를 Dusk 기록과 한 흐름으로 돌림, mode=fast(키워드 고르기·호출 1회) | accurate(고르기+정리 노트)

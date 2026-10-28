@@ -29,6 +29,11 @@ export async function settleResponse(res, signal) {
 let customRunner = null;
 export function setCustomRunner(fn) { customRunner = fn; }
 
+// pick.timeoutSec(초)가 있으면 그 시간 안에 못 끝난 호출을 실패로 본다 (없으면 기다리기만 한다)
+function withTimeout(promise, sec) {
+  if (!Number.isFinite(sec) || sec <= 0) return promise;
+  let t; return Promise.race([promise, new Promise((_, rej) => { t = setTimeout(() => rej(new Error(`보조 모델 응답이 ${sec}초 제한시간을 넘었어요.`)), sec * 1000); })]).finally(() => clearTimeout(t));
+}
 export async function runAI(api, messages, pick, signal) {
   if (pick?.mode === "custom") {
     if (!customRunner) throw new Error("내 API 모델을 쓸 수 없어요 (모델 설정이 아직 준비되지 않았어요).");
@@ -41,7 +46,7 @@ export async function runAI(api, messages, pick, signal) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     if (signal?.aborted) throw new Error("AI 작업을 취소했어요.");
     try {
-      const res = await settleResponse(await api.runLLMModel(opts), signal);
+      const res = await withTimeout((async () => settleResponse(await api.runLLMModel(opts), signal))(), pick?.timeoutSec);
       if (signal?.aborted) throw new Error("AI 작업을 취소했어요.");
       const text = extractRunAIText(res) ?? "";
       if (text) return text;

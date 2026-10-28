@@ -24,3 +24,13 @@ test("runAI drains a streaming response (string deltas) and a bare stream", asyn
   assert.equal(await runAI({ runLLMModel: async () => ({ type: "streaming", result: streamOf(["he", "llo"]) }) }, []), "hello");
   assert.equal(await runAI({ runLLMModel: async () => streamOf(["ok"]) }, []), "ok");
 });
+
+test('v1.6.8: pick.timeoutSec가 있으면 오래 걸리는 호출을 실패로 본다', async () => {
+  const { runAI } = await import('../src/engine/runai.js');
+  const slow = { runLLMModel: () => new Promise(() => {}) };
+  const t0 = Date.now();
+  await assert.rejects(() => runAI(slow, [], { mode: 'submodel', timeoutSec: 0.01 }), /제한시간/);
+  assert.ok(Date.now() - t0 < 20000);
+  const ok = { runLLMModel: async () => ({ type: 'success', result: '완료' }) };
+  assert.equal(await runAI(ok, [], { mode: 'submodel', timeoutSec: 600 }), '완료');
+});

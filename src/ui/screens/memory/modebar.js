@@ -29,6 +29,6 @@ export async function renderModeBar(ctx, host, { redraw }) {
   replace(host, h("section", { class: ["rb-card", "rb-mem-modebar", pot && local && "pot"] },
     h("div", { class: "rb-mem-mbrow" }, h("span", { class: "ic" }, icon("brain", 20)), h("div", { class: "t" }, h("b", null, "장기기억 방식"), h("small", { class: "rb-muted" }, `지금: ${label} · ${backend.reason}`))),
     seg,
-    h("div", { class: "rb-mem-mbrow pot" }, h("div", { class: "t" }, h("b", null, "리수폿 기능"), h("small", { class: "rb-muted" }, !local ? (pot ? "켜짐 · BardWiki를 쓰는 중에도 ‘장기기억 켜기’로 턴 흐름을 돌릴 수 있어요. 기억이 두 번 쌓이니 비용에 유의하세요." : "꺼짐 · BardWiki 사용 중이라 기존 Dusk 기능만 보여요.") : pot ? "켜짐 · 인물 위키, 한 번에 도는 기억 흐름, 고급 설정까지 써요." : "꺼짐 · 인물 위키 등은 가리고 기존 Dusk 기억 기능만 써요.")), sw),
+    h("div", { class: "rb-mem-mbrow pot" }, h("div", { class: "t" }, h("b", null, "리수폿 기능"), h("small", { class: "rb-muted" }, !local ? (pot ? (backend.id === "off" ? "켜짐 · 저장소가 꺼져 있어도 ‘장기기억 켜기’로 리수폿 턴 흐름을 돌릴 수 있어요." : "켜짐 · BardWiki를 쓰는 중에도 ‘장기기억 켜기’로 턴 흐름을 돌릴 수 있어요. 기억이 두 번 쌓이니 비용에 유의하세요.") : "꺼짐 · 기존 Dusk 기능만 보여요.") : pot ? "켜짐 · 인물 위키, 한 번에 도는 기억 흐름, 고급 설정까지 써요." : "꺼짐 · 인물 위키 등은 가리고 기존 Dusk 기억 기능만 써요.")), sw),
     backend.duplicate ? note("warn", "BardWiki와 장기기억이 중복돼요. 비용이 두 번 들 수 있어요.") : null));
 }

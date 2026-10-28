@@ -17,6 +17,8 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
   let timer = null, dirty = false, running = false, started = false;
   let session = { calls: 0, hooks: 0, displays: 0, hookAt: 0, tick: null }; const lastTried = new Map(); let lastTickAt = 0;
   const note = (result, extra = {}) => { session.tick = { at: Date.now(), result, ...extra }; };
+  // 보조 모델 호출 제한시간(초): 기록·주입 세부 설정에서 바꾼다. 기본 600초
+  const modelOf = (s) => ({ ...s.model, timeoutSec: Number.isFinite(s.modelTimeoutSec) ? s.modelTimeoutSec : 600 });
   const run = call ?? ((msgs, pick, signal) => runAI(api, msgs, pick, signal));
 
   const aiIndexes = (messages) => messages.map((m, i) => (!isUserMessage(m) && extractMessageText(m).trim() ? i : -1)).filter((i) => i >= 0);
@@ -78,7 +80,7 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     let result = manual ? null : link?.take?.(h) ?? null;
     if (result) session.combined = (session.combined ?? 0) + 1;
     else session.calls++;
-    try { if (!result) result = await analyze((msgs) => run(msgs, idx.settings.model, signal), input); }
+    try { if (!result) result = await analyze((msgs) => run(msgs, modelOf(idx.settings), signal), input); }
     catch (e) {
       const fails = await bump(chaId, (b) => ++b.fails);
       await status({ lastError: String(e?.message ?? e).slice(0, 300) });
@@ -97,7 +99,7 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     });
     await bump(chaId, (b) => { b.fails = 0; b.lastRunAt = Date.now(); b.notified = true; });
     await status({ processed: (idx.status.processed ?? 0) + 1, lastSuccessAt: Date.now(), lastError: "" });
-    digestIfNeeded(chaId, chatId, idx.settings.model).catch((e) => log("digest 실패", e?.message ?? e));
+    digestIfNeeded(chaId, chatId, modelOf(idx.settings)).catch((e) => log("digest 실패", e?.message ?? e));
     try { await afterAnalyze?.(charIndex, chatIndex); } catch (e) { log("후처리 실패", e?.message ?? e); }
     if (firstTime) notify("이 봇의 장기 기억 자동 기록을 시작했어요 (기억 탭에서 끌 수 있어요)");
     return out;
