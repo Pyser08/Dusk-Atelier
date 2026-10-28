@@ -7,14 +7,14 @@ import { selectBackend, capabilitiesOf } from "./memorybackend.js";
 import { createCardStore } from "./cardstore.js";
 import { createTurnFlow } from "./memoryturn.js";
 
-export function createMemory(api, { notify = () => {}, log = (...a) => console.log("[Dusk 기억]", ...a), potLibrary = null } = {}) {
+export function createMemory(api, { notify = () => {}, log = (...a) => console.log("[Dusk 기억]", ...a), potLibrary = null, onOpen = null } = {}) {
   const store = createMemoryStore(api);
   const cards = createCardStore(api);
   const injector = createMemoryInjector(api, { store, log });
   const link = {};  // 턴 흐름이 켜지면 채워진다(리수폿 Writer와 기록 호출을 합칠 때 러너가 쓴다)
   const runner = createMemoryRunner(api, { store, log, notify, link, afterAnalyze: async (ci, ti) => { if (injector.mode() === "lore") await injector.syncLore(ci, ti); } });
   const bardwiki = createBardWikiBackend(api, { store, log });
-  const flow = potLibrary ? createTurnFlow(api, { store, runner, injector, sourceLibrary: potLibrary, link, log }) : null;
+  const flow = potLibrary ? createTurnFlow(api, { store, runner, injector, sourceLibrary: potLibrary, link, onOpen, log }) : null;
   const backend = (settings) => selectBackend(api, settings?.backend ?? "auto");
   let active = "off";
   // 반환: 선택된 백엔드 id. bardwiki/off면 러너·주입 훅을 등록하지 않는다(이중 비용·이중 주입 방지).

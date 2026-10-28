@@ -17,6 +17,7 @@ import { createPotStorage } from "./potstorage.js";
 import { keyStore as hubKeys, getCfg, recordUsage } from "./modelhub.js";
 import { potModels } from "../engine/modelcfg.js";
 import { recallFor, mergeMemory } from "../engine/recall.js";
+import { createRetryToast, judgeAutoResult } from "./retrytoast.js";
 import { appendDuskSection, splitDusk, checkDusk, SECTION_MARK } from "../engine/duskwriter.js";
 import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
 import { makeTools } from "./memorytools.js";
@@ -27,7 +28,7 @@ export const stageOf = (label) => /^router/i.test(label) ? "router" : /^director
 const STASH_MAX = 8;
 
 // link: 러너와 공유하는 빈 객체. 턴 흐름이 켜지면 settle/take가 채워진다.
-export function createTurnFlow(api, { store, runner, injector, sourceLibrary, link = {}, log = (...a) => console.log("[Dusk 기억]", ...a), scheduler = globalThis } = {}) {
+export function createTurnFlow(api, { store, runner, injector, sourceLibrary, link = {}, onOpen = null, log = (...a) => console.log("[Dusk 기억]", ...a), scheduler = globalThis } = {}) {
   let rt = null, starting = null, lastTurn = null, cold = null;
   let cyclePending = null; const cycleEvents = [];  // 월경·임신: 응답 전 상태 → 응답 뒤 달라진 큰 사건(출산 등)을 Dusk 기록 대기열에
   const stash = new Map();  // 메시지 해시 → 검증된 dusk 구획
@@ -79,6 +80,17 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
     };
 
     const auto = new AutoWikiController({ api, settingsStore: settings, keyStore: keys, wikiController: wiki, sourceLibrary, traceStore: trace, scheduler, llmCall: writerCall });
+    // 자동 기록이 막히거나 비었을 때 오른쪽 아래에 알리고, 거기서 바로 다시 시도한다.
+    const toast = createRetryToast(api, { scheduler, onRetry: () => auto.retry(), onOpen: () => onOpen?.() });
+    let seen = "";
+    auto.subscribe((st) => {
+      const key = `${st.phase}|${st.message}`;
+      if (key === seen || !["completed", "failed", "manual"].includes(st.phase)) return;
+      seen = key;
+      let scope = null; try { scope = wiki.snapshot(); } catch { /* 아직 준비 전 */ }
+      const verdict = judgeAutoResult({ phase: st.phase, message: st.message, scope });
+      if (verdict) toast.show(verdict.text).catch(() => {}); else toast.hide().catch(() => {});
+    });
     const main = new MainWikiHook(api, settings, wiki, keys, libFor("fast"), auto, null, trace);
     main.llmCall = stageCall;
     main.mergeRecall = async (memory, ctx) => {

@@ -38,7 +38,7 @@ async function start() {
   const api = new Proxy(raw, { get: (t, k) => k in wrapped ? wrapped[k] : t[k] });
   console.log(`[${TITLE}] 진입 경로`, globalThis.__RBM_ENTRY__ ?? "normal");
   const memoryRef = { toast: null };
-  const memory = createMemory(api, { notify: (t) => memoryRef.toast?.(t), potLibrary: POT_PROMPTS });
+  const memory = createMemory(api, { notify: (t) => memoryRef.toast?.(t), potLibrary: POT_PROMPTS, onOpen: () => memoryRef.open?.() });
   memory.start().catch((e) => console.log(`[${TITLE}] 장기기억 시작 실패: ${e?.message ?? e}`));
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {
@@ -162,6 +162,10 @@ async function start() {
   const open = () => app.open().catch((e) => console.log(`[${TITLE}] 열기 실패: ${e?.message ?? e}`));
   await api.registerButton({ name: TITLE, icon: ICON, iconType: "html", location: "hamburger" }, open);
   await api.registerSetting(TITLE, open, ICON, "html");
+  // 채팅창 입력 옆 메뉴에서 바로 장기기억으로
+  const openMemory = () => app.open({ tab: "memory" }).catch((e) => console.log(`[${TITLE}] 열기 실패: ${e?.message ?? e}`));
+  memoryRef.open = openMemory;
+  try { await api.registerButton({ name: "장기기억", icon: iconMarkup("brain", 20), iconType: "html", location: "action" }, openMemory); } catch (e) { console.log(`[${TITLE}] 채팅 메뉴 버튼 등록 실패`, e?.message ?? e); }
 }
 if (typeof globalThis.__RBU_TEST__ !== "undefined") globalThis.__RBU_TEST__.RBU = { ...engine_exports };
 else start().catch((e) => console.log(`[${TITLE}] 초기화 실패: ${e?.message ?? e}`));

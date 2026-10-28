@@ -366,7 +366,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       replace(main, h("div", { class: "rb-section" }, h("div", { class: "rb-note err", role: "alert" }, icon("alert", 18), h("span", null, `화면을 열지 못했어요: ${err?.message ?? err}`))));
     });
   }
-  async function open() {
+  async function open(opts) {
     try {
       const cs = await api.getColorScheme();
       state.risuScheme = cs?.scheme?.type === "light" ? "light" : "dark";
@@ -377,9 +377,10 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     else await prefs.reloadMeta();
     // 첫 화면: 홈 카드 방식이면 홈, 메뉴(왼쪽·위쪽) 방식이면 모듈 (창을 연 뒤 다시 열 땐 보던 곳 그대로)
     if (!state.opened) {
-      state.tab = normalizeTheme(prefs.ui?.theme).layout === "home" ? "home" : "modules";
+      state.tab = "home";
       state.sub = null;
     }
+    if (opts?.tab) { state.tab = opts.tab; state.sub = null; }
     state.modDirty = true;
     state.charOrderStale = true;
     if (state.chars) state.charsBg = true;
