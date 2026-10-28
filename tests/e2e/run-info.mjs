@@ -73,6 +73,19 @@ for (const mobile of [false, true]) {
   await page.getByRole("button", { name: "나란히 비교" }).click(); await page.waitForTimeout(80);
   ok(`[${tag}] 나란히 비교: 편집기 2개`, (await page.locator(".rb-gm-edit textarea").count()) === 2);
   await page.getByRole("button", { name: "비교 끄기" }).click();
+  // ? 도움말·ⓘ 팁·태그 칩 (v1.6.7 편집 화면 디자인)
+  ok(`[${tag}] 도움말은 ? 를 누르기 전엔 숨김`, !(await page.locator(".rb-full.help-on").count()) && !(await page.locator(".rb-tipbox.show").count()));
+  await page.locator(".rb-helpbtn").click();
+  ok(`[${tag}] ? 를 누르면 현재 카드 도움말`, (await page.locator(".rb-help").textContent()).includes("기본") && (await page.locator(".rb-full.help-on").count()) === 1);
+  await page.locator(".rb-help .rb-icon-btn").click();
+  ok(`[${tag}] 도움말 닫기`, (await page.locator(".rb-full.help-on").count()) === 0);
+  await page.locator(".rb-ibtn").first().click();
+  ok(`[${tag}] ⓘ 를 누르면 팁이 펼쳐짐`, (await page.locator(".rb-tipbox.show").count()) === 1);
+  await page.locator('input[aria-label="태그"]').fill("새태그");
+  await page.locator('input[aria-label="태그"]').press("Enter");
+  ok(`[${tag}] 태그를 Enter로 추가`, (await page.evaluate(() => __ed.draft.tags)).includes("새태그"));
+  await page.locator(".rb-tag-edit .rb-chip", { hasText: "새태그" }).click();
+  ok(`[${tag}] 태그 칩을 눌러 지움`, !(await page.evaluate(() => __ed.draft.tags)).includes("새태그"));
   // 열림 상태 기억
   await page.locator(".rb-info-card").nth(2).locator("summary").click();
   await page.evaluate(() => { const t = [...document.querySelectorAll(".rb-tabs button")]; t.find((b) => b.textContent.startsWith("JSON")).click(); t.find((b) => b.textContent.startsWith("정보")).click(); });

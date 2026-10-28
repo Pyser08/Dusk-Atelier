@@ -4,7 +4,7 @@ import { USER_KEYS } from '../../engine/merge3.js';
 import { createStore } from '../../engine/store.js';
 import { Busy, backupSnapshot, isGenerating } from '../../engine/safety.js';
 import { h } from '../dom.js';
-import { btn, iconBtn, note, segmented } from '../kit.js';
+import { btn, iconBtn, segmented } from '../kit.js';
 import { codeEditor } from '../codeedit.js';
 import { icon } from '../icons.js';
 import { estimateTokens } from '../../engine/memoryinject.js';
@@ -106,15 +106,27 @@ export async function openCharEditor(ctx, index, chaId) {
     infoLabels: CHAR_INFO_LABELS,
     infoTitle: "봇 정보",
     validate: (v) => validateModule(v),
-    renderInfo: ({ draft, field, text, area, check, changed, goTab, ui, emitArea }) => {
+    renderInfo: ({ draft, field, text, area, check, changed, goTab, ui, emitArea, tipEl, setHelp }) => {
       // 위: 요약 카드(누르면 해당 탭) · 아래: 접는 카드 3개 — 기본 / 인사말 / 고급 (열림 상태는 탭을 오가도 기억)
       ui.open ??= { basic: true, greet: true, adv: false };
       const gm = createGreetingManager(ctx, { draft, changed, ui: ui.gm ??= {}, onArea: (a) => emitArea?.(a) });
-      const tags = h("input", { class: "rb-input", value: (draft.tags ?? []).join(", "), placeholder: "쉼표로 구분", "aria-label": "태그" });
-      tags.addEventListener("input", () => {
-        draft.tags = tags.value.split(",").map((s) => s.trim()).filter(Boolean);
+      // 태그: 칩으로 보여 주고, 입력칸에 쓰고 Enter·쉼표로 추가 (칩의 ×로 지움)
+      const tagChips = h("div", { class: "rb-tag-edit", style: "display:flex;flex-wrap:wrap;gap:6px" });
+      const tagIn = h("input", { class: "rb-input", placeholder: "+ 태그 (Enter·쉼표로 추가)", "aria-label": "태그", style: "flex:1;min-width:140px" });
+      const paintTagChips = () => tagChips.replaceChildren(...(draft.tags ?? []).map((t, i) => h("button", { type: "button", class: "rb-chip", style: "height:26px;padding:0 10px;font-size:12px", title: "눌러서 지우기", "aria-label": `태그 ${t} 지우기`, onClick: () => { draft.tags = draft.tags.filter((_, k) => k !== i); paintTagChips(); changed(); paintSummary(); } }, `${t} ×`)));
+      const addTags = () => {
+        const add = tagIn.value.split(",").map((s) => s.trim()).filter(Boolean);
+        if (!add.length) return;
+        draft.tags = [...new Set([...(draft.tags ?? []), ...add])];
+        tagIn.value = "";
+        paintTagChips();
         changed();
-      });
+        paintSummary();
+      };
+      tagIn.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); addTags(); } });
+      tagIn.addEventListener("input", () => { if (tagIn.value.includes(",")) addTags(); });
+      tagIn.addEventListener("blur", addTags);
+      const tags = h("div", { style: "display:flex;flex-direction:column;gap:8px" }, tagChips, tagIn);
       const prose = { mono: false };
       // ── 요약 카드 ──
       const SUM_TEXT = ["desc", "personality", "scenario", "systemPrompt", "exampleMessage", "firstMessage", "postHistoryInstructions", "additionalText"];
@@ -148,22 +160,23 @@ export async function openCharEditor(ctx, index, chaId) {
           h("div", { class: "rb-info-body" }, ...kids));
         d.open = !!ui.open[key];
         d.addEventListener("toggle", () => { ui.open[key] = d.open; });
+        d.querySelector("summary").addEventListener("click", () => setHelp?.(key));
         return d;
       };
       const basic = card("basic", "기본", "이름 · 설명 · 성격 · 시나리오",
         h("div", { class: "rb-form" },
           field("이름", text(draft, "name")),
-          field("별명", text(draft, "nickname")),
-          field("태그", tags, true),
-          field("설명", area(draft, "desc", { tall: true, ...prose }), true),
+          field("별명", text(draft, "nickname"), false, "채팅 화면에서 이름 대신 쓸 별명이에요. 비워 두면 이름을 써요."),
+          field("태그", tags, true, "봇을 분류하는 꼬리표예요. 위 요약 카드에도 보여요."),
+          field("설명", area(draft, "desc", { tall: true, ...prose }), true, "캐릭터의 핵심만 짧게 적어요. 자세한 내용은 로어북에 넣으면 토큰을 아껴요."),
           field("성격", area(draft, "personality", prose), true),
           field("시나리오", area(draft, "scenario", prose), true)));
       const greet = card("greet", "인사말", "첫 메시지 · 추가 인사말 · 그룹 전용", gm.el);
       const adv = card("adv", "고급", "시스템 프롬프트 · 예시 대화 · 제작자 노트 · 변수",
         h("div", { class: "rb-form" },
-          field("시스템 프롬프트", area(draft, "systemPrompt", prose), true),
+          field("시스템 프롬프트", area(draft, "systemPrompt", prose), true, "이 봇에만 적용되는 시스템 지시예요. 비워 두면 프리셋의 것을 써요."),
           field("예시 대화", area(draft, "exampleMessage", prose), true),
-          field("후속 지시 (post history)", area(draft, "postHistoryInstructions", prose), true),
+          field("후속 지시 (post history)", area(draft, "postHistoryInstructions", prose), true, "대화 기록 뒤에 붙는 지시예요."),
           field("글로벌 노트 교체", area(draft, "replaceGlobalNote", prose), true),
           field("추가 텍스트", area(draft, "additionalText", prose), true),
           field("제작자", text(draft, "creator")),
@@ -173,8 +186,9 @@ export async function openCharEditor(ctx, index, chaId) {
           field("모듈 토글 정의 (customModuleToggle)", area(draft, "customModuleToggle"), true),
           field("배경 HTML (backgroundHTML)", area(draft, "backgroundHTML"), true),
           field("모듈 네임스페이스", text(draft, "moduleNamespace")),
-          h("div", { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap" }, check(draft, "lowLevelAccess", "저수준 접근"), check(draft, "utilityBot", "도구 봇"))));
-      const wrap = h("div", { class: "rb-info" }, summary, basic, greet, adv, note("info", '채팅·메모는 건드리지 않아요. 이미지는 봇 상세의 "에셋"에서 고쳐요.'));
+          h("div", { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap;align-items:center" }, check(draft, "lowLevelAccess", "저수준 접근"), tipEl?.("AI 호출·이미지 생성 같은 고급 기능을 쓰는 스크립트에 필요해요. 믿을 수 있는 봇에서만 켜세요."), check(draft, "utilityBot", "도구 봇"))));
+      const wrap = h("div", { class: "rb-info" }, summary, basic, greet, adv);
+      paintTagChips();
       // 글자를 치는 동안 요약(토큰·이름·태그)을 가볍게 갱신하고, 인사말 밖에서 입력하면 AI 창 작업을 '설명'으로 되돌린다
       let t = 0;
       wrap.addEventListener("input", () => { clearTimeout(t); t = setTimeout(paintSummary, 300); });

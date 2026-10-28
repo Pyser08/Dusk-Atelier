@@ -200,8 +200,55 @@ export async function openEditor(ctx, id) {
     }
   });
 }
+// ⓘ 팁: 눌렀을 때만 한 줄 설명이 펼쳐진다 (항상 보이는 안내문 대신)
+export function tipPair(text) {
+  const box = h("div", { class: "rb-tipbox", role: "note" }, text);
+  const i = h("button", { type: "button", class: "rb-ibtn", "aria-label": "설명 보기", "aria-expanded": "false", onClick: (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    const on = !box.classList.contains("show");
+    box.classList.toggle("show", on);
+    i.setAttribute("aria-expanded", String(on));
+  } }, "i");
+  return [i, box];
+}
+export function tipEl(text) {
+  const [i, box] = tipPair(text);
+  return h("span", { class: "rb-tip", style: "display:contents" }, i, box);
+}
+// ? 도움말: 탭마다(정보 탭은 열린 카드마다) 보여 줄 글
+const HELP = {
+  info: {
+    basic: [["💡 기본", "봇의 이름과 설명을 정하는 곳이에요. 비워 두어도 괜찮아요."], ["✍ 팁", "설명은 짧게, 자세한 내용은 로어북에 넣으면 토큰을 아껴요."]],
+    greet: [["💡 인사말", "채팅을 시작할 때 보여 줄 말이에요. 끌어서 순서를 바꾸고, '대표'로 정한 것이 첫 메시지가 돼요."], ["그룹 전용", "그룹 채팅에서만 쓰는 인사말이에요."]],
+    adv: [["💡 고급", "시스템 프롬프트·예시 대화·제작자 노트·기본 변수처럼 처음엔 안 만져도 되는 칸이에요."], ["주의", "저수준 접근은 믿을 수 있는 봇에서만 켜세요."]],
+    _: [["다른 카드를 열면", "이 설명도 따라서 바뀌어요."], ["참고", "채팅·메모는 건드리지 않아요. 이미지는 봇 상세의 '에셋'에서 고쳐요."]]
+  },
+  lorebook: [["💡 로어북이란?", "키가 대화에 나오면 AI에게 설정을 알려주는 메모예요."], ["보는 법", "전체 · 캐릭터 · 소속 탭으로 바꿔 볼 수 있어요. 캐릭터 탭은 인물을 소속 배지와 함께 모아 보여줘요."], ["단축키", "Ctrl+S 저장 · Ctrl+P 항목 이동 · Ctrl+F 찾기 · Ctrl+H 찾아 바꾸기"], ["자동 저장", "2분마다, 변경이 있을 때만 저장돼요."]],
+  regex: [["💡 정규식이란?", "글을 자동으로 고쳐 주는 규칙이에요. “이런 글을 찾아서 → 이렇게 바꿔라”를 적어요."], ["적용 시점", "입력 · 출력 · 요청 · 화면 표시 중 언제 고칠지 정해요."], ["바로 시험", "시험할 글을 넣으면 일치한 곳이 바로 표시돼요."], ["단축키", "Ctrl+S 저장 · Ctrl+P 항목 이동 · Ctrl+H 찾아 바꾸기"]],
+  trigger: [["💡 트리거란?", "정해진 때(채팅 시작·입력·출력…)에 조건을 보고 효과를 실행해요."], ["일반 / Lua", "일반은 조건·효과를 채워서, Lua는 코드를 직접 써요."], ["초기 변수", "채팅을 시작할 때 들어가는 변수 값이에요(봇만)."]],
+  ai: [["💡 AI로 제작", "AI가 만든 수정안은 '적용'을 눌러야 이 화면에 반영돼요. 반영한 뒤에도 되돌릴 수 있어요."]],
+  json: [["💡 JSON", "전체를 JSON으로 고쳐요. 식별자(id)는 바꿀 수 없어요. 고친 뒤 'JSON 반영' → '적용'을 눌러야 저장돼요."]]
+};
 export async function openEditorCore(ctx, cfg) {
   const E7_CSS = `
+.rb-ibtn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;border-radius:50%;border:1px solid var(--rb-line3);background:var(--rb-surf2);color:var(--rb-sub);font-weight:800;font-size:11px;line-height:1;cursor:pointer;padding:0;vertical-align:middle}
+.rb-ibtn[aria-expanded=true]{background:var(--rb-sel-bg);color:var(--rb-acc-text);border-color:var(--rb-sel-ring)}
+.rb-tipbox{display:none;margin-top:4px;padding:8px 10px;border-radius:10px;background:var(--rb-sel-bg);color:var(--rb-text);font-size:12.5px;line-height:1.55;font-weight:400}
+.rb-tipbox.show{display:block}
+.rb-helpbtn{width:32px;padding:0;border-radius:50%;font-weight:800}
+.rb-full.help-on .rb-helpbtn{background:var(--rb-sel-bg);color:var(--rb-acc-text);border-color:var(--rb-sel-ring)}
+.rb-chg{padding:2px 10px;border-radius:999px;background:var(--rb-sel-bg);color:var(--rb-acc-text);font-size:12px;font-weight:700;white-space:nowrap}
+.rb-statusbar{flex-shrink:0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 16px;background:var(--rb-surf);border-top:var(--rb-bw,1px) solid var(--rb-line2);font-size:12px;color:var(--rb-sub)}
+.rb-statusbar .dot{color:var(--rb-teal)}
+.rb-help{position:absolute;right:0;top:0;bottom:0;width:min(280px,86%);z-index:34;padding:14px 16px;overflow:auto;background:var(--rb-surf);border-left:var(--rb-bw,1px) solid var(--rb-line2);box-shadow:-6px 0 16px rgba(0,0,0,.18);font-size:13px;line-height:1.6;transform:translateX(100%);visibility:hidden;transition:transform .2s,visibility .2s}
+.rb-full.help-on .rb-help{transform:none;visibility:visible}
+.rb-help .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.rb-help .hd b{flex:1;font-size:14px}
+.rb-help h4{margin:12px 0 2px;font-size:13px;color:var(--rb-acc-text)}
+.rb-help p{margin:0;color:var(--rb-text)}
+@media (max-width:640px){.rb-help{top:auto;left:0;width:auto;max-height:60%;border-left:0;border-top:var(--rb-bw,1px) solid var(--rb-line2);border-radius:16px 16px 0 0;transform:translateY(100%);box-shadow:0 -6px 16px rgba(0,0,0,.18)}}
+@media (prefers-reduced-motion:reduce){.rb-help{transition:none}}
 .rb-side-tools.rb-bar{padding:8px;border-radius:14px;border:1px solid var(--rb-line2);background:var(--rb-surf);margin:0 0 8px;gap:6px}
 .rb-adv{border-radius:12px;border:1px solid var(--rb-line2);background:var(--rb-surf)}
 .rb-adv>summary{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;list-style:none;font-size:13px;font-weight:600;min-height:24px}
@@ -233,16 +280,23 @@ export async function openEditorCore(ctx, cfg) {
   const panel = h("div", { class: "rb-full", role: "dialog", "aria-label": `${original.name} 편집` });
   const titleB = h("b", null, original.name || "(이름 없음)");
   const issuesBtn = btn("", { size: "sm", kind: "ghost", onClick: () => showIssues() });
-  const saveState = h("small", { class: "rb-muted", style: "white-space:nowrap;font-size:11px", "aria-live": "polite" });
+  const saveState = h("span", { "aria-live": "polite" });
+  const chgChip = h("span", { class: "rb-chg", hidden: true });
   const applyBtn = btn("적용", { kind: "primary", icon: "check", onClick: () => apply() });
+  const helpBtn = btn("?", { size: "sm", title: "도움말 (이 화면 설명)", onClick: () => toggleHelp() });
+  helpBtn.classList.add("rb-helpbtn");
+  helpBtn.setAttribute("aria-pressed", "false");
+  const statusEl = h("div", { class: "rb-statusbar" }, h("span", { class: "dot", "aria-hidden": "true" }, "●"), saveState, h("span", null, "자동 저장 2분"));
+  const helpEl = h("aside", { class: "rb-help", "aria-label": "도움말" });
   const head = h(
     "div",
     { class: "rb-full-head" },
     iconBtn("back", "닫기", { onClick: () => close() }),
     h("div", { class: "ttl" }, h("small", null, cfg.kindLabel), titleB),
-    saveState,
+    chgChip,
     issuesBtn,
     btn("CBS 사전", { size: "sm", onClick: () => cbsPanel() }),
+    helpBtn,
     applyBtn
   );
   const tabsEl = h("div", { class: "rb-tabs", role: "tablist" });
@@ -266,7 +320,7 @@ export async function openEditorCore(ctx, cfg) {
     : btn("규칙 시험", { kind: "primary", icon: "zap", title: "가상 대화로 Dusk 규칙이 어떻게 켜지는지 시험", onClick: () => ruleTester() });
   fabMain.style.cssText = "box-shadow:0 6px 20px rgba(0,0,0,.4);border-radius:999px";
   if (hasAi) fabMain.setAttribute("aria-haspopup", "true");
-  const testFab = h("div", { id: "rb-rule-test-fab", style: "position:absolute;right:16px;bottom:16px;z-index:30;display:flex;flex-direction:column;align-items:flex-end;gap:8px" }, hasAi ? dialItems : null, fabMain);
+  const testFab = h("div", { id: "rb-rule-test-fab", style: "position:absolute;right:16px;bottom:48px;z-index:30;display:flex;flex-direction:column;align-items:flex-end;gap:8px" }, hasAi ? dialItems : null, fabMain);
   // 버튼 표시: 대기 중이면 깜빡이는 점, 수정안이 도착하면 숫자 배지 (창이 닫혀 있어도 보임)
   if (!document.getElementById("rb-fab-style")) document.head.appendChild(h("style", { id: "rb-fab-style" }, "@keyframes rb-fab-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}@media (prefers-reduced-motion:reduce){.rb-fab-dot{animation:none!important}}"));
   const fabMark = (host) => {
@@ -293,11 +347,12 @@ export async function openEditorCore(ctx, cfg) {
     fabMain.title = (hasAi ? "AI 창 · 규칙 시험" : "") + (label ? ` — ${label}` : "");
     fabMain.setAttribute("aria-label", "도구" + (label ? ` (${label})` : ""));
   }
-  panel.append(head, tabsEl, body, testFab);
+  panel.append(head, tabsEl, body, statusEl, testFab, helpEl);
   ctx.win.appendChild(panel);
   panel.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && !ctx.win.querySelector(".rb-modal, .rb-menu, #rb-rule-test")) {
       ev.stopPropagation();
+      if (panel.classList.contains("help-on")) return toggleHelp(false);
       close();
     }
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "s") {
@@ -342,13 +397,41 @@ export async function openEditorCore(ctx, cfg) {
       ["lorebook", "regex", "trigger"].includes(k) ? h("small", null, String(draft[k].length)) : k === "ai" && build?.pendingCount() ? h("small", null, String(build.pendingCount())) : null
     )));
   }
+  function toggleHelp(on) {
+    const next = on ?? !panel.classList.contains("help-on");
+    panel.classList.toggle("help-on", next);
+    helpBtn.setAttribute("aria-pressed", String(next));
+    if (next) paintHelp();
+  }
+  function paintHelp() {
+    const t = es.tab;
+    const src = t === "info" ? [...(HELP.info[es.infoHelp ?? "basic"] ?? []), ...HELP.info._] : HELP[t] ?? [];
+    replace(helpEl, h("div", { class: "hd" }, h("b", null, "도움말"), iconBtn("x", "도움말 닫기", { onClick: () => toggleHelp(false) })), ...src.map(([title, body]) => h("div", null, h("h4", null, title), h("p", null, body))));
+  }
+  // 바뀐 곳 수: 목록은 추가·수정·삭제 중 가장 큰 쪽, 나머지는 바뀐 필드 수
+  function changeCount() {
+    let n = 0;
+    for (const k of new Set([...Object.keys(draft), ...Object.keys(original)])) {
+      if (k === cfg.idKey) continue;
+      if (["lorebook", "regex", "trigger"].includes(k)) {
+        const o = (original[k] ?? []).map((x) => stableJson(x)), d = (draft[k] ?? []).map((x) => stableJson(x));
+        const os = new Set(o), ds = new Set(d);
+        n += Math.max(d.filter((x) => !os.has(x)).length, o.filter((x) => !ds.has(x)).length);
+      } else if (stableJson(draft[k] ?? null) !== stableJson(original[k] ?? null)) n++;
+    }
+    return n;
+  }
   function paintHead() {
     const iss = cfg.validate(draft);
     const errs = iss.filter((i) => i.level === "err").length, warns = iss.length - errs;
     replace(issuesBtn, icon(errs || warns ? "alert" : "check", 16), h("span", null, errs ? `오류 ${errs}` : warns ? `경고 ${warns}` : "검증 통과"));
     issuesBtn.style.color = errs ? "var(--rb-danger)" : warns ? "var(--rb-warn)" : "var(--rb-teal)";
-    applyBtn.disabled = !dirty();
-    titleB.textContent = (draft.name || "(이름 없음)") + (dirty() ? " •" : "");
+    const isDirty = dirty();
+    applyBtn.disabled = !isDirty;
+    titleB.textContent = (draft.name || "(이름 없음)") + (isDirty ? " •" : "");
+    const cc = isDirty ? changeCount() : 0;
+    chgChip.hidden = !cc;
+    chgChip.textContent = `변경 ${cc}`;
     paintSaveState();
   }
   let headTimer = null, tabsTimer = null;
@@ -360,7 +443,10 @@ export async function openEditorCore(ctx, cfg) {
     clearTimeout(tabsTimer);
     tabsTimer = setTimeout(paintTabs, 120);
   };
-  const field = (label, input, wide) => h("label", { class: ["rb-field", wide && "wide"] }, h("span", { class: "rb-label" }, label), input);
+  const field = (label, input, wide, tip) => {
+    const [i, box] = tip ? tipPair(tip) : [null, null];
+    return h("label", { class: ["rb-field", wide && "wide"] }, h("span", { class: "rb-label" }, label, i), box, input);
+  };
   // 접는 '고급' 칸: 열림 상태는 항목을 바꿔도 기억 (처음 쓰는 사람은 기본 칸만 보게)
   const advFold = (key, title, hint, ...kids) => {
     es.adv ??= {};
@@ -470,7 +556,7 @@ export async function openEditorCore(ctx, cfg) {
   };
   function renderInfo() {
     if (cfg.renderInfo) {
-      replace(body, h("div", { class: "pane" }, cfg.renderInfo({ draft, field, text, area, check, num, jsonArea, select: select2, changed, goTab, ui: es.infoUi ??= {}, emitArea: (a) => panel.dispatchEvent(new CustomEvent("da-area", { detail: a })) })));
+      replace(body, h("div", { class: "pane" }, cfg.renderInfo({ draft, field, text, area, check, num, jsonArea, select: select2, changed, goTab, tipEl, setHelp: (k) => { es.infoHelp = k; if (panel.classList.contains("help-on")) paintHelp(); }, ui: es.infoUi ??= {}, emitArea: (a) => panel.dispatchEvent(new CustomEvent("da-area", { detail: a })) })));
       return;
     }
     replace(body, h(
@@ -1921,6 +2007,7 @@ export async function openEditorCore(ctx, cfg) {
     saveView();
     paintTabs();
     paintHead();
+    if (panel.classList.contains("help-on")) paintHelp();
     if (es.tab === "info" || es.tab === "json" || es.tab === "ai") body.classList.remove("m-item", "m-list");
     if (es.tab === "trigger" && hasAi && es.trigView === "vars") {
       body.classList.remove("m-item", "m-list");
@@ -2195,6 +2282,7 @@ export async function openEditorCore(ctx, cfg) {
     const ago = es.savedAt ? Math.max(0, Math.round((Date.now() - es.savedAt) / 1e3)) : null;
     saveState.textContent = d ? es.autoFail ? "자동 저장 실패 · 다시 시도해요" : "저장 안 된 변경" : ago === null ? "" : ago < 60 ? `저장됨 · ${ago}초 전` : `저장됨 · ${Math.round(ago / 60)}분 전`;
     saveState.style.color = d ? "var(--rb-warn)" : "";
+    statusEl.firstChild.style.color = d ? "var(--rb-warn)" : "";
   }
   async function autoSave() {
     if (autoBusy || !panel.isConnected || !dirty()) return;
