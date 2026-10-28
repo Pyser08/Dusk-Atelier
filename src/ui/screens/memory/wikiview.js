@@ -77,8 +77,11 @@ export async function renderPeopleTab(env, host) {
     if (v?.trim()) commit((w) => createBlankPerson(w, v), "인물을 추가했어요.");
   };
   // 장기기억이 알아본 인물 중 위키 문서가 없는 사람을 한꺼번에 빈 문서로 만든다(자동 Writer는 한 응답에서 두드러진 인물만 만들기 때문).
-  const missing = Object.entries(people).filter(([, p]) => p?.name && !findDoc(wiki, p) && (visibleRecords(p).length || p.digest));
-  const empties = docs.filter((d) => !(d.metrics ?? []).length);
+  // {{user}}(플레이어)는 따로 문서를 만들지 않는다.
+  const ui = M.flow?.runtime?.()?.wiki?.userIdentity, userSet = new Set([ui?.title, ...(ui?.aliases ?? []), "{{user}}", "user", "유저"].filter(Boolean).map((x) => String(x).trim().toLowerCase()));
+  const isUser = (name) => userSet.has(String(name ?? "").trim().toLowerCase());
+  const missing = Object.entries(people).filter(([, p]) => p?.name && !isUser(p.name) && !findDoc(wiki, p) && (visibleRecords(p).length || p.digest));
+  const empties = docs.filter((d) => !isUser(d.title) && !(d.metrics ?? []).length);
   const makeMissing = () => commit((w) => { let cur = w; for (const [, p] of missing) { try { cur = createBlankPerson(cur, p.name); } catch { /* 이미 있으면 건너뜀 */ } } return cur; }, `${missing.length}명의 위키 문서를 만들었어요. 수치·성격은 각 인물에서 ‘AI 작성’으로 채워요.`);
   const autoSt = autoStatusOf(M, docs.length);
   const strip = () => h("div", { class: "rb-wk-auto" }, note(autoSt.kind, autoSt.text), h("span", { class: "rb-mem-rowact" }, empties.length && wikiEditable(env) ? btn(`비어 있는 인물 ${empties.length}명 AI로 채우기`, { size: "sm", kind: "primary", onClick: () => fillEmptyPeople(env, empties).catch(fail(ctx)) }) : null, missing.length && wikiEditable(env) ? btn(`위키 없는 인물 ${missing.length}명 만들기`, { size: "sm", kind: "primary", onClick: () => makeMissing() }) : null, btn("위키 기록·다시 시도", { size: "sm", onClick: () => openWikiLog(env).catch(fail(ctx)) })));

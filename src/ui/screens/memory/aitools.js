@@ -149,9 +149,14 @@ export async function fillEmptyPeople(env, docs) {
     ctx.toast(`AI가 인물을 채우는 중이에요 (${i + 1}/${docs.length}) · ${doc.title}`, { seconds: 6 });
     // 1) 개요·관계·성격 등을 한꺼번에
     try {
-      refresh.cancel({ silent: true });
-      await refresh.generate(doc.id, { groups, mode: "standard" });
-      const s = refresh.status();
+      // 모델이 근거 문장을 정확히 못 옮기면 거절되므로(‘인용이 원문에 없음’) 같은 요청을 두 번까지 더 시도한다.
+      let s = null;
+      for (let t = 0; t < 3; t++) {
+        refresh.cancel({ silent: true });
+        await refresh.generate(doc.id, { groups, mode: "standard" });
+        s = refresh.status();
+        if (!s.error || !/인용|근거|원문/.test(String(s.error))) break;
+      }
       if (s.error) { bad++; keep(s.error); }
       else if (s.proposal?.changes?.length) { await refresh.apply(); if (refresh.status().error) { bad++; keep(refresh.status().error); } else ok++; } else same++;
     } catch (e) { bad++; keep(e); }
