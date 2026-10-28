@@ -7,7 +7,7 @@ import { RECORD_GROUPS, groupInfo, listRecords, targetCandidates, addRecord, edi
 
 const TARGET_HELP = { none: "", user: "대상은 나(user)로 정해져요.", npc: "대상은 다른 인물 1명이에요.", required: "누구에 대한 내용인지 골라 주세요.", optional: "대상을 고르지 않아도 돼요." };
 
-export async function openRecords(env, doc) {
+export async function openRecords(env, doc, opts = {}) {
   const { ctx } = env, M = ctx.memory;
   const flowSt = await M.flow?.settings?.().catch?.(() => null), adult = flowSt?.rawSnapshot?.().sexualDesireEnabled === true;
   let wiki = env.folder.wiki, changed = false;
@@ -18,7 +18,7 @@ export async function openRecords(env, doc) {
   };
   await modal(ctx.win, (done) => {
     const body = h("div"), docNow = () => wiki.documents[doc.id] ?? doc;
-    let form = null;                       // { group, slot, target, text, title, editId }
+    let form = opts.group ? { group: opts.group, slot: "", target: "", text: "", title: "" } : null;   // { group, slot, target, text, title, editId }
     const groups = RECORD_GROUPS.filter((g) => adult || !g.adult);
     const paint = () => replace(body, form ? formView() : listView());
     const listView = () => {

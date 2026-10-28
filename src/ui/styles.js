@@ -584,6 +584,11 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-wk-meta{font-size:12px}.rb-wk-body{margin:0;white-space:pre-wrap;line-height:1.55;overflow-wrap:anywhere}
 .rb-wk-unset{margin:6px 0;font-size:18px;color:var(--rb-mute)}
 .rb-wk-delta{align-self:flex-start;font-size:12px;padding:1px 8px;border-radius:8px;border:1px solid var(--rb-line2)}
+.rb-wk-foot{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.rb-wk-empty{margin:0;font-size:13px}.rb-wk-form{display:flex;flex-direction:column;gap:10px}
+.rb-wk-head .rb-mem-rowact{flex-wrap:wrap;justify-content:flex-end}
+.rb-wk-story{display:flex;flex-direction:column;gap:10px}
+.rb-wk-card .rb-mem-rowact,.rb-wk-ch .rb-mem-rowact{flex-wrap:wrap}
 .rb-wk-bar{height:6px;border-radius:99px;background:var(--rb-surf2);overflow:hidden}.rb-wk-bar i{display:block;height:100%;border-radius:99px;background:var(--rb-text);opacity:.7}
 .rb-wk-range{display:flex;justify-content:space-between;gap:8px;font-size:12px}
 @container memwrap (max-width:900px){.rb-wk{grid-template-columns:1fr}.rb-wk-list{flex-direction:row;overflow-x:auto}.rb-wk-row{flex:0 0 auto}.rb-wk-grid{grid-template-columns:1fr}}

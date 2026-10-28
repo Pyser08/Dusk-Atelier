@@ -34,9 +34,9 @@ export function timelineOf(folder, person, doc) {
   const out = [];
   for (const r of person?.records ?? []) if (!r.orphan) out.push({ id: r.id, kind: "event", ms: r.at_ms ?? 0, at: r.at ?? null, text: r.act, g: r.g, rec: r });
   const names = new Set([person?.name, ...(person?.aliases ?? [])].map(norm));
-  for (const p of Object.values(folder?.rels ?? {})) {
+  for (const [relKey, p] of Object.entries(folder?.rels ?? {})) {
     if (!names.has(norm(p.from)) && !names.has(norm(p.to))) continue;
-    for (const [i, x] of (p.items ?? []).entries()) out.push({ id: `rel:${p.from}:${p.to}:${i}`, kind: "rel", ms: x.at_ms ?? 0, at: x.at ?? null, text: `${p.from} → ${p.to}  ${x.d}${x.dir === "+" ? " ↑" : x.dir === "-" ? " ↓" : ""}` });
+    for (const [i, x] of (p.items ?? []).entries()) out.push({ id: `rel:${p.from}:${p.to}:${i}`, kind: "rel", ms: x.at_ms ?? 0, at: x.at ?? null, text: `${p.from} → ${p.to}  ${x.d}${x.dir === "+" ? " ↑" : x.dir === "-" ? " ↓" : ""}`, relKey, relIdx: i, raw: x.d });
   }
   for (const o of folder?.open ?? []) {
     if (o.closed || !(o.who ?? []).some((w) => names.has(norm(w)))) continue;
@@ -44,7 +44,7 @@ export function timelineOf(folder, person, doc) {
   }
   if (doc) for (const e of folder?.wiki?.history ?? []) {
     if (e.documentId !== doc.id) continue;
-    out.push({ id: `wiki:${e.id}`, kind: "state", ms: Date.parse(e.at) || 0, at: null, text: e.summary || { create: "인물 문서를 만들었어요", update: "인물 상태가 바뀌었어요", delete: "인물 문서를 지웠어요", restore: "이전 상태로 되돌렸어요" }[e.action] || "상태 변화" });
+    out.push({ id: `wiki:${e.id}`, histId: e.id, kind: "state", ms: Date.parse(e.at) || 0, at: null, text: e.summary || { create: "인물 문서를 만들었어요", update: "인물 상태가 바뀌었어요", delete: "인물 문서를 지웠어요", restore: "이전 상태로 되돌렸어요" }[e.action] || "상태 변화" });
   }
   return out.sort((a, b) => a.ms - b.ms || (a.at ?? -1) - (b.at ?? -1));
 }

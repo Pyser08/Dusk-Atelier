@@ -9,6 +9,7 @@ import { WriterRecoveryController } from "./pot/writer-recovery.js";
 import { PersonaNameController } from "../engine/pot/persona-name.js";
 import { SummaryController } from "./pot/summary-controller.js";
 import { WriterController } from "./pot/writer-controller.js";
+import { PeopleImportController } from "./pot/people-import.js";
 
 const busyOf = (list) => () => list.some((c) => c && (c.status().running || ["running", "applying"].includes(c.status().phase)));
 
@@ -22,9 +23,10 @@ export function makeTools({ api, rt, sourceLibrary, llmCall }) {
   const refresh = new PersonRefreshController({ ...base, sourceLibrary, sourceReader, ...llm });
   const summary = new SummaryController({ ...base });
   const writer = new WriterController({ ...base, sourceLibrary, ...llm });
-  const all = [field, command, metric, refresh, summary, writer];
+  const importer = new PeopleImportController({ ...base });
+  const all = [field, command, metric, refresh, summary, writer, importer];
   const recovery = new WriterRecoveryController({ ...base, sourceLibrary, isBusy: busyOf([...all, rt.auto]) });
   const persona = new PersonaNameController({ api, settingsStore: rt.settings, wikiController: rt.wiki, isBusy: busyOf(all) });
   const dispose = () => { for (const c of [...all, recovery, persona]) { try { (c.dispose ?? c.destroy)?.call(c); } catch {} } };
-  return { field, command, metric, refresh, summary, writer, recovery, persona, busy: busyOf(all), dispose };
+  return { field, command, metric, refresh, summary, writer, importer, recovery, persona, busy: busyOf(all), dispose };
 }

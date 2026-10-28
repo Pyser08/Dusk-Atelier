@@ -38,13 +38,13 @@ function review(ctrl, getChanges, { apply, cancel, what }) {
     prop?.applied ? note("ok", "반영했어요. 인물 페이지에서 확인해 보세요.") : null);
 }
 
-export async function openAITools(env, doc, person) {
+export async function openAITools(env, doc, person, startTab = "refresh") {
   const { ctx } = env, chk = await toolsFor(env);
   if (!chk.tools) return ctx.toast(chk.why, { error: true });
   const { tools } = chk, docId = doc.id, M = ctx.memory;
   const policies = M.lib ? (() => { try { return JSON.parse(M.lib.base.policies).policies; } catch { return {}; } })() : {};
   await modal(ctx.win, (done) => {
-    let tab = "refresh", groups = new Set(), mode = "standard", instruction = "", fieldKey = "profile:personality", metricSlot = Object.keys(PEOPLE_AI_METRIC_NAMES)[0];
+    let tab = startTab, groups = new Set(), mode = "standard", instruction = "", fieldKey = "profile:personality", metricSlot = Object.keys(PEOPLE_AI_METRIC_NAMES)[0];
     const subs = [];
     const body = h("div");
     const close = () => { for (const u of subs) u(); try { for (const c of [tools.refresh, tools.command, tools.field, tools.metric]) c.cancel(); } catch {} done(null); env.redraw(); };
@@ -81,3 +81,54 @@ export async function openAITools(env, doc, person) {
 }
 
 export const confirmManual = (env, title, body) => confirmDialog(env.ctx.win, { title, body, ok: "바꾸기", danger: true });
+
+// 항목 하나를 AI로 쓴다(리수폿 ‘AI 작성’ 버튼). key: section:<id> · profile:personality · new:overview · new:pattern · new:record:<json>
+export async function openFieldAI(env, doc, key, title = "AI 작성") {
+  const { ctx } = env, chk = await toolsFor(env);
+  if (!chk.tools) return ctx.toast(chk.why, { error: true });
+  const { tools } = chk, run = (p) => p.catch((e) => fail(ctx)(e));
+  await modal(ctx.win, (done) => {
+    const body = h("div"); let unsub = null;
+    const close = () => { try { unsub?.(); tools.field.cancel(); } catch {} done(null); env.redraw(); };
+    const paint = () => replace(body, h("div", null,
+      review(tools.field, (s) => s.proposal && s.proposal.changed !== false ? [{ label: s.label || title, before: s.proposal.before, after: s.proposal.after }] : [], { apply: () => run(tools.field.apply()), cancel: () => tools.field.cancel(), what: "내용" }),
+      !busy(tools.field.status()) && !tools.field.status().proposal ? h("div", { class: "rb-mem-sact" }, btn("다시 작성", { kind: "primary", onClick: () => run(tools.field.generate(doc.id, key)) })) : null));
+    unsub = tools.field.subscribe(() => paint());
+    run(tools.field.generate(doc.id, key));
+    return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(680px,96vw);max-height:90vh;overflow:auto" },
+      h("div", { class: "rb-mem-shead" }, h("h3", null, `${doc.title} · ${title}`), h("span", { style: "flex:1" }), btn("닫기", { onClick: close })),
+      h("p", { class: "rb-muted" }, "AI가 쓴 변경안을 보고 반영할지 정해요. 📌 고정한 항목은 건드리지 않아요."), body);
+  });
+}
+
+// 인물 추가·가져오기: 카드·로어북 전체 / 지금 대화 / 직접 자료에서 인물 후보를 찾아 고른 인물을 위키에 넣는다.
+export async function openImport(env) {
+  const { ctx } = env, chk = await toolsFor(env);
+  if (!chk.tools) return ctx.toast(chk.why, { error: true });
+  const imp = chk.tools.importer, run = (p) => Promise.resolve(p).catch((e) => fail(ctx)(e));
+  await modal(ctx.win, (done) => {
+    let mode = "all", unsub = null; const form = { name: "", aliases: "", material: "" };
+    const body = h("div");
+    const close = () => { try { unsub?.(); if (imp.status().phase === "running") imp.cancel(); } catch {} done(null); env.redraw(); };
+    const paint = () => {
+      const s = imp.status(), running = s.running, cands = s.candidates ?? [];
+      const field = (label, key, ph, rows) => h("label", { class: "rb-mem-field" }, h("span", null, label), rows
+        ? h("textarea", { class: "rb-input", rows, placeholder: ph, "aria-label": label, onInput: (e) => { form[key] = e.target.value; } }, form[key])
+        : h("input", { class: "rb-input", placeholder: ph, "aria-label": label, value: form[key], onInput: (e) => { form[key] = e.target.value; } }));
+      replace(body,
+        segmented([["all", "카드·로어북 전체"], ["active", "지금 대화"], ["direct", "직접 입력"]], mode, (v) => { mode = v; paint(); }, "가져올 곳"),
+        mode === "direct" ? h("div", null, field("이름", "name", "예: 한연희"), field("별칭 (쉼표로 구분)", "aliases", "선택"), field("자료", "material", "이 인물에 대해 알려 줄 글을 붙여 넣어요", 6)) : h("p", { class: "rb-muted" }, mode === "all" ? "캐릭터 카드와 로어북 전체에서 인물을 찾아요." : "지금 켜져 있는 로어북과 최근 대화에서 인물을 찾아요."),
+        h("div", { class: "rb-mem-sact" }, btn("인물 찾기", { kind: "primary", disabled: running, onClick: () => run(mode === "direct" ? imp.runDirect({ ...form }) : imp.run(mode)) }), running ? btn("취소", { onClick: () => imp.cancel() }) : null),
+        running ? h("p", { class: "rb-muted", role: "status" }, `${s.stage || "작업 중"}… ${s.total ? `${s.completed}/${s.total}` : ""}`) : null,
+        s.error ? note("err", s.error) : null,
+        cands.length ? h("div", null, h("h4", null, `인물 후보 ${cands.length}명`),
+          h("ul", { class: "rb-mem-reclist" }, cands.map((c) => h("li", { class: "rb-mem-rec" }, h("label", { class: "rb-mem-check" },
+            h("input", { type: "checkbox", checked: !!c.selected, disabled: !!c.ambiguous || running, onChange: (e) => imp.toggle(c.id, e.target.checked) }), h("b", null, c.name), (c.aliases ?? []).length ? h("small", { class: "rb-muted" }, ` · ${c.aliases.join(", ")}`) : null, c.ambiguous ? h("small", { class: "rb-muted" }, " · 이름이 겹쳐 고를 수 없어요") : null)))),
+          h("div", { class: "rb-mem-sact" }, btn("고른 인물 반영", { kind: "primary", disabled: running || !cands.some((c) => c.selected), onClick: () => run(imp.applySelection()) }))) : null,
+        s.applyReport ? note("ok", "반영했어요. 닫으면 인물 위키에서 볼 수 있어요.") : null);
+    };
+    unsub = imp.subscribe(() => paint());
+    return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(680px,96vw);max-height:90vh;overflow:auto" },
+      h("div", { class: "rb-mem-shead" }, h("h3", null, "인물 추가·가져오기"), h("span", { style: "flex:1" }), btn("닫기", { onClick: close })), body);
+  });
+}

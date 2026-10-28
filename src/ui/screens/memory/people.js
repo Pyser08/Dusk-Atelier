@@ -44,6 +44,21 @@ export async function newChatFrom(env, atIdx) {
   } catch (e) { fail(ctx)(e); }
 }
 
+// 인물 목록 ‘더보기’ 메뉴: 합치기·폴더·추적·정리 등. 위키 화면에서도 같이 쓴다.
+export function peopleMenuItems(env, people) {
+  const m = mem(env.ctx), { caps } = env;
+  return [
+    caps.analyze && { label: "인물 합치기", onClick: () => openMerge(env, people).catch(fail(env.ctx)) },
+    caps.analyze && { label: "RP 붙여넣어 분석 (수동 Writer)", onClick: () => openWriter(env).catch(fail(env.ctx)) },
+    wikiEditable(env) && { label: "인물 폴더 정리", onClick: () => openFolders(env, people).catch(fail(env.ctx)) },
+    caps.analyze && env.backend.id === "local" && { label: "추적 인물 고르기", onClick: () => openTracking(env).catch(fail(env.ctx)) },
+    caps.analyze && { label: "합치기 되돌리기", onClick: () => restoreLastMerge(env).catch(fail(env.ctx)) },
+    caps.analyze && { label: "고아 기록 정리", onClick: () => cleanOrphans(env) },
+    caps.grades === "on-demand" && { label: "등급 매기기(AI)", onClick: () => gradeNow(env) },
+    env.backend.id === "bardwiki" && { label: m.showHidden ? "대체·철회 문서 숨기기" : "대체·철회 문서 보기", onClick: () => { m.showHidden = !m.showHidden; env.redraw(); } }
+    ].filter(Boolean);
+}
+
 export async function renderPeople(env, host) {
   const m = mem(env.ctx);
   const { folder, caps } = env;
@@ -67,16 +82,7 @@ export async function renderPeople(env, host) {
     ? h("div", { class: "rb-mem-pgroups" }, groupPeople(rows, wk).filter((g) => g.rows.length || g.id).map((g) => h("details", { class: "rb-mem-pgroup", open: !(m.foldClosed ?? {})[g.id] ? true : null, onToggle: (e) => { (m.foldClosed ??= {})[g.id] = !e.currentTarget.open; } },
         h("summary", null, icon("folder", 14), " ", g.name, h("small", { class: "rb-muted" }, ` ${g.rows.length}명`)), h("div", { class: "rb-mem-grid" }, g.rows.map(card)))))
     : h("div", { class: "rb-mem-grid" }, rows.map(card));
-  const menu = btn("더보기", { size: "sm", icon: "more", onClick: (e) => openMenu(env.ctx.win, e.currentTarget, [
-    caps.analyze && { label: "인물 합치기", onClick: () => openMerge(env, people).catch(fail(env.ctx)) },
-    caps.analyze && { label: "RP 붙여넣어 분석 (수동 Writer)", onClick: () => openWriter(env).catch(fail(env.ctx)) },
-    wikiEditable(env) && { label: "인물 폴더 정리", onClick: () => openFolders(env, people).catch(fail(env.ctx)) },
-    caps.analyze && env.backend.id === "local" && { label: "추적 인물 고르기", onClick: () => openTracking(env).catch(fail(env.ctx)) },
-    caps.analyze && { label: "합치기 되돌리기", onClick: () => restoreLastMerge(env).catch(fail(env.ctx)) },
-    caps.analyze && { label: "고아 기록 정리", onClick: () => cleanOrphans(env) },
-    caps.grades === "on-demand" && { label: "등급 매기기(AI)", onClick: () => gradeNow(env) },
-    env.backend.id === "bardwiki" && { label: m.showHidden ? "대체·철회 문서 숨기기" : "대체·철회 문서 보기", onClick: () => { m.showHidden = !m.showHidden; env.redraw(); } }
-  ].filter(Boolean)) });
+  const menu = btn("더보기", { size: "sm", icon: "more", onClick: (e) => openMenu(env.ctx.win, e.currentTarget, peopleMenuItems(env, people)) });
   replace(host, h("div", { class: "rb-mem-tools" },
     h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "인물 검색", value: m.personSearch, "aria-label": "인물 검색", onInput: (e) => { m.personSearch = e.target.value; env.redraw(); } })),
     h("select", { class: "rb-input", style: "width:auto;height:36px", "aria-label": "정렬", onChange: (e) => { m.sort = e.target.value; env.redraw(); } }, [["time", "최근 등장"], ["count", "기록 많은 순"], ["grade", "최고 등급"]].map(([v, l]) => h("option", { value: v, selected: m.sort === v }, l))),
@@ -120,14 +126,14 @@ export function personDetail(env, host, key, embedded = false) {
   const doc = findDoc(env.folder.wiki, p), state = stateOf(doc), tl = timelineOf(env.folder, p, doc), counts = countsOf(tl);
   m.tlFilter ??= "all";
   const evOk = (x) => x.kind !== "event" || ((!m.grades.length || m.grades.includes(x.g)) && (!m.search || x.text.toLowerCase().includes(m.search.toLowerCase())));
-  let recs = filterTimeline(tl, m.sort === "grade" ? "event" : m.tlFilter).filter(evOk);
+  let recs = filterTimeline(tl, embedded ? "all" : m.sort === "grade" ? "event" : m.tlFilter).filter(evOk);
   recs = m.sort === "grade" ? recs.sort((a, b) => GRADES.indexOf(b.g ?? "") - GRADES.indexOf(a.g ?? "")) : recs;
   const shown = recs.slice(0, m.page * PAGE);
   const sceneOf = (r) => env.folder.scenes.find((s) => s.id === r.sit);
   const eventItem = (r) => h("li", { class: "rb-mem-rec" }, gradeBadge(r.g), h("div", { class: "txt" }, h("div", null, r.act, r.pin ? " 📌" : ""),
     h("div", { class: "rb-muted" }, [r.at != null ? at(r.at) : "", r.know?.length ? `아는 사람 ${r.know.join(", ")}` : "", (r.m ?? 1) > 1 ? `×${r.m} 반복` : "", sceneOf(r) ? h("button", { type: "button", class: "rb-mem-link", onClick: () => { m.tab = "scenes"; m.focusScene = r.sit; env.redraw(); } }, sceneOf(r).place || sceneOf(r).sum.slice(0, 14)) : null, r.wiki ? "위키에서 가져온 요약" : "", r.wikiGrade ? `위키 등급 · ${r.gby === "user" ? "사용자" : "AI"}` : r.gs != null ? "AI 등급 · 플러그인 캐시" : "", r.legacy ? "이전 버전 기록" : ""].filter(Boolean).flatMap((x, i) => i ? [" · ", x] : [x]))),
     h("span", { style: "flex:1" }),
-    btn("메뉴", { size: "sm", icon: "more", onClick: (e) => openMenu(env.ctx.win, e.currentTarget, [
+    btn("수정", { size: "sm", icon: "more", onClick: (e) => openMenu(env.ctx.win, e.currentTarget, [
       local && { label: "수정", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: "기록 수정", label: "행동 (80자)", value: r.act, ok: "저장" }); if (v) editFolder(env, (f) => { const x = f.people[key].records.find((y) => y.id === r.id); x.act = v.slice(0, 80); x.user = true; }); } },
       local && { label: "등급 변경", onClick: async () => { const v = (await promptDialog(env.ctx.win, { title: "등급 변경", label: `등급 (${GRADES.join(" / ")})`, value: r.g, ok: "저장" }))?.trim().toUpperCase(); if (GRADES.includes(v)) editFolder(env, (f) => { const x = f.people[key].records.find((y) => y.id === r.id); x.g = v; x.user = true; }); } },
       local && { label: r.pin ? "고정 해제" : "고정", onClick: () => editFolder(env, (f) => { const x = f.people[key].records.find((y) => y.id === r.id); x.pin = !x.pin; }) },
@@ -147,8 +153,8 @@ export function personDetail(env, host, key, embedded = false) {
     p.digest ? h("div", { class: "rb-card rb-mem-digest" }, h("b", null, "요약 "), p.digest) : null,
     !embedded && state ? stateCard(env, state, env.cycleOn ? cycleOf(doc) : null) : null,
     !embedded && env.advanced && doc && wikiEditable(env) ? wikiPanel(env, doc) : null,
-    h("div", { class: "rb-mem-chats rb-mem-tlchips", role: "tablist", "aria-label": "이야기 걸러 보기" }, TL_FILTERS.map(([id, label]) => chip(label, { pressed: m.tlFilter === id && m.sort !== "grade", count: id === "all" ? counts.all : counts[id] ?? 0, onClick: () => { m.tlFilter = id; m.sort = m.sort === "grade" ? "time" : m.sort; m.page = 1; env.redraw(); } }))),
-    h("div", { class: "rb-mem-tools" }, m.tlFilter === "all" || m.tlFilter === "event" ? h("div", { class: "rb-mem-chats" }, GRADES.map((g) => chip(g, { pressed: m.grades.includes(g), onClick: () => { m.grades = m.grades.includes(g) ? m.grades.filter((x) => x !== g) : [...m.grades, g]; m.page = 1; env.redraw(); } }))) : null,
+    embedded ? null : h("div", { class: "rb-mem-chats rb-mem-tlchips", role: "tablist", "aria-label": "이야기 걸러 보기" }, TL_FILTERS.map(([id, label]) => chip(label, { pressed: m.tlFilter === id && m.sort !== "grade", count: id === "all" ? counts.all : counts[id] ?? 0, onClick: () => { m.tlFilter = id; m.sort = m.sort === "grade" ? "time" : m.sort; m.page = 1; env.redraw(); } }))),
+    h("div", { class: "rb-mem-tools" }, embedded || m.tlFilter === "all" || m.tlFilter === "event" ? h("div", { class: "rb-mem-chats" }, GRADES.map((g) => chip(g, { pressed: m.grades.includes(g), onClick: () => { m.grades = m.grades.includes(g) ? m.grades.filter((x) => x !== g) : [...m.grades, g]; m.page = 1; env.redraw(); } }))) : null,
       h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "기록 검색", value: m.search, "aria-label": "기록 검색", onInput: (e) => { m.search = e.target.value; m.page = 1; env.redraw(); } })),
       h("select", { class: "rb-input", style: "width:auto;height:36px", "aria-label": "정렬", onChange: (e) => { m.sort = e.target.value; env.redraw(); } }, [["time", "시간순"], ["grade", "등급순"]].map(([v, l]) => h("option", { value: v, selected: m.sort === v }, l)))),
     recs.length ? h("ul", { class: "rb-mem-reclist rb-mem-story" }, shown.map((x) => x.kind === "event" ? eventItem(x.rec) : storyItem(env, x))) : h("div", { class: "rb-empty" }, "조건에 맞는 이야기가 없어요."),
@@ -156,8 +162,24 @@ export function personDetail(env, host, key, embedded = false) {
 }
 
 const KIND_LABEL = { rel: "관계", state: "상태", open: "약속" };
-const storyItem = (env, x) => h("li", { class: ["rb-mem-rec", "rb-mem-story-row", `k-${x.kind}`] }, h("span", { class: ["rb-mem-kind", `k-${x.kind}`], title: KIND_LABEL[x.kind] }, KIND_LABEL[x.kind] ?? x.kind),
-  h("div", { class: "txt" }, h("div", null, x.text), h("div", { class: "rb-muted" }, [x.at != null ? at(x.at) : "", x.ms ? new Date(x.ms).toLocaleString() : ""].filter(Boolean).join(" · "))));
+// 관계·상태·약속 한 줄: 사건과 같이 오른쪽 메뉴에서 고치거나 지운다. (상태는 위키 이력 요약만 고칠 수 있고, 이력 자체는 지우지 않는다.)
+const storyItem = (env, x) => {
+  const local = env.caps.analyze, ctx = env.ctx;
+  const ask = (title, label, value) => promptDialog(ctx.win, { title, label, value, ok: "저장" });
+  const items = [];
+  if (local && x.kind === "rel") items.push(
+    { label: "수정", onClick: async () => { const v = await ask("관계 변화 수정", "내용 (80자)", x.raw ?? ""); if (v?.trim()) editFolder(env, (f) => { const it = f.rels?.[x.relKey]?.items?.[x.relIdx]; if (it) it.d = v.trim().slice(0, 80); }); } },
+    { label: "삭제", danger: true, onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 관계 변화를 지울까요?", body: "지운 항목은 되돌릴 수 없어요.", ok: "삭제", danger: true })) editFolder(env, (f) => { f.rels?.[x.relKey]?.items?.splice(x.relIdx, 1); }); } });
+  if (local && x.kind === "open") items.push(
+    { label: "수정", onClick: async () => { const v = await ask("약속·열린 항목 수정", "내용 (80자)", x.text); if (v?.trim()) editFolder(env, (f) => { const o = f.open?.find((y) => y.id === x.id); if (o) o.text = v.trim().slice(0, 80); }); } },
+    { label: "해결로 표시", onClick: () => editFolder(env, (f) => { const o = f.open?.find((y) => y.id === x.id); if (o) { o.closed = true; o.closedAt = f.cursor?.at ?? null; } }) },
+    { label: "삭제", danger: true, onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 항목을 지울까요?", body: "해결된 일이라면 지우지 말고 ‘해결로 표시’를 써 보세요.", ok: "삭제", danger: true })) editFolder(env, (f) => { f.open = (f.open ?? []).filter((y) => y.id !== x.id); }); } });
+  if (local && x.kind === "state" && x.histId) items.push(
+    { label: "수정", onClick: async () => { const v = await ask("상태 변화 설명 수정", "내용 (240자)", x.text); if (v?.trim()) editFolder(env, (f) => { const e = f.wiki?.history?.find((y) => y.id === x.histId); if (e) e.summary = v.trim().slice(0, 240); }); } });
+  return h("li", { class: ["rb-mem-rec", "rb-mem-story-row", `k-${x.kind}`] }, h("span", { class: ["rb-mem-kind", `k-${x.kind}`], title: KIND_LABEL[x.kind] }, KIND_LABEL[x.kind] ?? x.kind),
+    h("div", { class: "txt" }, h("div", null, x.text), h("div", { class: "rb-muted" }, [x.at != null ? at(x.at) : "", x.ms ? new Date(x.ms).toLocaleString() : ""].filter(Boolean).join(" · "))),
+    h("span", { style: "flex:1" }), items.length ? btn("수정", { size: "sm", icon: "more", onClick: (e) => openMenu(ctx.win, e.currentTarget, items) }) : null);
+};
 
 // 지금 상태 카드(위키 문서): 수치 막대 + 호칭·관계 등 글. 숫자를 누르면 ‘상태’ 줄로 걸러 본다.
 // 위키 범위(가져오기·저장된 인물 위키)를 플러그인 저장소에서 직접 고칠 수 있을 때만 ✎·📌을 보여 준다.
