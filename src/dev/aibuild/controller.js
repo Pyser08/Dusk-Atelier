@@ -7,6 +7,7 @@ import { assemblePreset, newPresetState, validatePresetState } from './preset-en
 import { createAiStore, normalizeSettings, AUTOSAVE_MS } from './store.js';
 import { toDraft, toView } from './bridge.js';
 import { checkInputSize } from './limits.js';
+import { partMessages, cleanPart } from './partrewrite.js';
 import { loreSelection, reconcileLoreSelection, validLoreIncluded, assertLoreRefsIncluded, compactLorePacket, loreChanges } from './loreselect.js';
 import { applyDesignToResponse, DesignError, hasDusk, resolveLoreMode } from './duskdesign.js';
 
@@ -33,7 +34,11 @@ export function createAiBuild({ api, host, store: given }) {
   const touch = (draft = true) => { st.started = true; st.serial++; if (draft) st.s.revision++; };
 
   // 편집기 작업본을 읽어 session.draft를 맞춘다. 손으로 고쳤으면 revision을 올려 대기 수정안을 '원고가 바뀜'으로 만든다.
+  // 한 번 그리는 동안(동기 구간)에는 편집기 작업본이 바뀔 수 없으니 읽기를 한 번만 한다 (AI 창 열기·다시 그리기가 느린 원인이던 반복 계산)
+  let batchDepth = 0, batchDraft = null;
+  function batch(fn) { batchDepth++; try { return fn(); } finally { if (--batchDepth === 0) batchDraft = null; } }
   function sync() {
+    if (batchDepth && batchDraft) return batchDraft;
     const draft = toDraft(host.getView(), host.assets?.());
     const sig = stable(draft);
     if (lastSig !== null && sig !== lastSig) { st.s.revision++; st.serial++; st.started = true; }
@@ -41,6 +46,7 @@ export function createAiBuild({ api, host, store: given }) {
     st.s.loreIncluded = reconcileLoreSelection(st.s.draft?.globalLore, st.s.loreIncluded, draft.globalLore);
     st.s.draft = draft;
     st.s.targetId = host.targetId?.() ?? null;
+    if (batchDepth) batchDraft = draft;
     return draft;
   }
 
@@ -179,6 +185,27 @@ export function createAiBuild({ api, host, store: given }) {
   }
 
   // ---- 설정·프롬프트·프리셋·저장본 ----
+  // 로어북 고른 부분만 다시 쓰기: 글 한 토막을 보내고 새 글 한 토막을 받는다. 적용은 화면이 글칸에 직접 한다.
+  async function rewritePart({ text, request, label = '', before = '', after = '' }) {
+    assert(!st.job, '다른 LLM 요청이 진행 중입니다.');
+    assert(String(text ?? '').trim(), '고칠 부분을 먼저 골라 주세요.');
+    assert(String(request ?? '').trim(), '어떻게 고칠지 적어 주세요.');
+    const messages = partMessages({ text, request, label, before, after });
+    checkInputSize(messages, st.settings.maxInputChars);
+    const job = { id: uid(), start: Date.now(), label: '부분 다시 쓰기 · 응답 대기', cancelled: false };
+    st.job = job;
+    emit();
+    try {
+      const raw = await callModel(api, messages, st.settings.model, st.settings.timeout, job);
+      assert(!job.cancelled && st.job?.id === job.id, '대기를 중단해 결과를 버렸습니다.');
+      const out = cleanPart(raw, text);
+      assert(out, 'AI가 새 글을 주지 않았어요. 요청을 바꿔 다시 시도해 주세요.');
+      return out;
+    } finally {
+      if (st.job?.id === job.id) st.job = null;
+      emit();
+    }
+  }
   async function setSettings(patch) {
     st.settings = normalizeSettings({ ...st.settings, ...patch });
     await store.saveSettings(st.settings);
@@ -321,7 +348,7 @@ export function createAiBuild({ api, host, store: given }) {
   function destroy() { destroyed = true; clearInterval(autoTimer); st.job?.stop?.('편집기를 닫아 대기를 중단했습니다.'); subs.clear(); }
 
   return {
-    state: st, store, init, destroy, sync,
+    state: st, store, init, destroy, sync, batch, rewritePart,
     subscribe: (fn) => { subs.add(fn); return () => subs.delete(fn); },
     TASKS, loreMode, setLoreMode, hasDusk: () => hasDusk(st.s.draft.globalLore), requestWithScope, promptFor, previewRequest, sendRequest, cancel,
     loreList, setLoreIncluded, setAllLore, changesOf,

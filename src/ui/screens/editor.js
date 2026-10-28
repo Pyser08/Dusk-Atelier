@@ -16,6 +16,7 @@ import { openAiPopup, loadPopupGeom } from './aibuild.js';
 import { openRoulette } from './roulettepop.js';
 import { bbInstalled } from '../../engine/firstrun.js';
 import { attachProbPick } from '../probpick.js';
+import { pickFix, clearFix } from '../aifix.js';
 import { segments, summarize } from '../../engine/regexview.js';
 import { parseVars, serializeVars, duplicateKeys } from '../../engine/vars.js';
 import { openLoreDusk } from './loredusk.js';
@@ -376,6 +377,10 @@ export async function openEditorCore(ctx, cfg) {
     fabMain.setAttribute("aria-label", "도구" + (label ? ` (${label})` : ""));
   }
   panel.append(head, tabsEl, toolEl, body, statusEl, testFab, helpEl);
+  if (hasAi) {
+    for (const ev of ["pointerenter", "focus", "touchstart"]) fabMain.addEventListener(ev, () => warmAi(), { once: true });
+    setTimeout(() => { if (panel.isConnected) warmAi(); }, 1500);
+  }
   ctx.win.appendChild(panel);
   panel.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && !ctx.win.querySelector(".rb-modal, .rb-menu, #rb-rule-test")) {
@@ -500,7 +505,7 @@ export async function openEditorCore(ctx, cfg) {
     });
     return el;
   };
-  const area = (obj, key, { tall, placeholder, mono = true, probPick, tokens } = {}) => {
+  const area = (obj, key, { tall, placeholder, mono = true, probPick, tokens, aiFix } = {}) => {
     const el = h("textarea", { class: ["rb-textarea", tall && "tall"], spellcheck: "false", placeholder, style: mono ? null : "font-family:inherit;font-size:14px" });
     el.value = obj[key] ?? "";
     el.addEventListener("input", () => {
@@ -515,7 +520,8 @@ export async function openEditorCore(ctx, cfg) {
         el.dispatchEvent(new Event("input"));
       }
     });
-    const base = probPick ? attachProbPick(el, ctx.win) : el;
+    // aiFix가 있으면 글을 고를 때 'AI로 다시 쓰기' 버튼이 뜨고, 고른 부분이 AI 창 '고칠 부분' 상자와 맞춰진다
+    const base = probPick ? attachProbPick(el, ctx.win, void 0, aiFix && hasAi ? { onSelect: ({ s, e }) => pickFix({ ta: el, label: aiFix(), s, e }), onAi: () => aiWindow({ fix: true }) } : void 0) : el;
     if (!tokens) return base;
     // 내용 토큰 수(추정): 한글은 글자당 약 0.67, 그 밖은 4글자당 1토큰. 규칙 항목의 @@activate/#if 장식은 빼고 센다.
     const tk = h("div", { class: "rb-muted", style: "font-size:12px;margin-top:4px;text-align:right", "aria-live": "polite" });
@@ -1283,7 +1289,7 @@ export async function openEditorCore(ctx, cfg) {
           field(isPlace(l) ? "장소 이름" : "이름", isPlace(l) ? prefixedName(l, PLACE_PREFIX) : text(l, "comment")),
           field("보조 키", text(l, "secondkey", { placeholder: "비어 있어도 돼요" }), false, "아래 '보조 키도 함께 필요'를 켜면 이 키도 대화에 있어야 켜져요."),
           field(isPlace(l) ? "장소 키 (쉼표로 구분)" : "키 (쉼표로 구분)", text(l, "key"), true, isPlace(l) ? "이 말이 나오면 장소가 켜져요." : "이 글자가 대화에 나오면 항목이 켜져요."),
-          field(isPlace(l) ? "장소 설명" : "내용", area(l, "content", { tall: true, mono: false, probPick: true, tokens: true }), true))),
+          field(isPlace(l) ? "장소 설명" : "내용", area(l, "content", { tall: true, mono: false, probPick: true, tokens: true, aiFix: () => String(l.comment ?? "").trim() || "이름 없는 항목" }), true))),
       isPlace(l) ? placeCard(l, fmap) : null,
       foldCard("lore-cond", "켜지는 조건", condHint, false,
         h("div", { style: "display:flex;gap:16px;flex-wrap:wrap;align-items:center" },
@@ -2351,10 +2357,29 @@ export async function openEditorCore(ctx, cfg) {
     }, (err) => { buildP = null; throw err; });
     return buildP;
   }
-  async function aiWindow() {
+  // 느림 개선: 플러그인 전체를 읽는 봇빌더 감지(getDatabase plugins)는 한 번만, 기다리지 않고 한다. AI 엔진·창 위치는 미리 불러 둔다.
+  let bbProbe = null;
+  function probeBb() {
+    bbProbe ??= Promise.resolve().then(() => ctx.api.getDatabase(["plugins"])).then((d) => { bbPresent = bbInstalled(d?.plugins); return bbPresent; }, () => false);
+    return bbProbe;
+  }
+  let warmed = false;
+  function warmAi() {
+    if (warmed || !hasAi) return;
+    warmed = true;
+    ensureBuild().catch(() => { warmed = false; });
+    probeBb();
+    loadPopupGeom(ctx).catch(() => {});
+  }
+  async function aiWindow(opts) {
+    // 'AI로 다시 쓰기'는 창이 이미 열려 있으면 닫지 않고 상자만 보여 준다
+    const open = panel.querySelector("#rb-ai-popup");
+    if (opts?.fix && open) return open.focusFix?.();
+    if (!opts?.fix) clearFix(); // 도구 모음에서 평소처럼 열 때는 이전에 골라 둔 '고칠 부분'을 비운다
     let b;
     try { b = await ensureBuild(); } catch (e) { return ctx.toast(`AI 도구를 불러오지 못했어요: ${e?.message ?? e}`, { error: true }); }
-    try { bbPresent = bbInstalled((await ctx.api.getDatabase(["plugins"]))?.plugins); } catch { /* 감지 실패는 무시 */ }
+    // 봇빌더 감지는 미리 해 둔 결과를 쓴다. 아직 안 끝났어도 최대 0.25초만 기다리고 연다.
+    await Promise.race([probeBb(), new Promise((r) => setTimeout(r, 250))]);
     await loadPopupGeom(ctx);
     testFab.style.visibility = "hidden";
     openAiPopup(ctx, { panel, build: b, selection: () => es.sel, bbPresent, tab: es.tab, onClose: () => { testFab.style.visibility = ""; paintFab(); },

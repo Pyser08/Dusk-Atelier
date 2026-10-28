@@ -33,7 +33,7 @@ export async function runSmoke() {
   ok("AI 창 열림", !!pop);
   ok("봇빌더 동시 설치 안내", pop && pop.textContent.includes("봇빌더 플러그인이 같이 켜져"));
   const sel = pop.querySelector("select[aria-label='작업 종류']"); sel.value = "lorebook"; sel.dispatchEvent(new Event("change"));
-  const ta = pop.querySelector("textarea"); ta.value = "아코 추가"; ta.dispatchEvent(new Event("input"));
+  const ta = pop.querySelector("textarea[aria-label='요청']"); ta.value = "아코 추가"; ta.dispatchEvent(new Event("input"));
   clickText("보내기", pop); await sleep(300);
   ok("수정안 카드 표시", pop.textContent.includes("적용할 수 있어요"));
   const countTab = () => $(".rb-tabs button").find((b) => b.textContent.startsWith("로어북"))?.textContent;
@@ -69,7 +69,7 @@ export async function runSmoke() {
   const pop2 = document.querySelector("#rb-ai-popup");
   const sel2 = pop2.querySelector("select[aria-label='작업 종류']"); sel2.value = "lorebook"; sel2.dispatchEvent(new Event("change")); await sleep(50);
   ok("팝업에 로어북 방식 토글(Dusk 선택됨)", $(".rb-seg button[aria-checked=true]", pop2).some((b) => b.textContent.includes("Dusk 방식")));
-  const ta2 = pop2.querySelector("textarea"); ta2.value = "게헨나 소속 만들어"; ta2.dispatchEvent(new Event("input"));
+  const ta2 = pop2.querySelector("textarea[aria-label='요청']"); ta2.value = "게헨나 소속 만들어"; ta2.dispatchEvent(new Event("input"));
   clickText("보내기", pop2); await sleep(400);
   ok("Dusk 구조 미리보기 카드", pop2.textContent.includes("Dusk 구조 미리보기") && pop2.textContent.includes("소속") && pop2.textContent.includes("이오리"));
   ok("적용 전 규칙 시험 버튼", $("button", pop2).some((b) => b.textContent.includes("적용 전 규칙 시험")));

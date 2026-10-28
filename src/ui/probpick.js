@@ -52,11 +52,13 @@ function crossesBlock(blocks, s, e) {
 }
 
 // textarea를 감싼 칸을 돌려준다. win은 팝업을 붙일 창
-export function attachProbPick(ta, win, onChange) {
+// hooks(선택): { onAi(): 'AI로 다시 쓰기' 버튼을 눌렀을 때, onSelect({s,e}): 글을 고를 때마다 }
+export function attachProbPick(ta, win, onChange, hooks) {
   const bar = h("button", { type: "button", class: "rb-pp-bar", hidden: true, onMousedown: (ev) => ev.preventDefault(), onTouchstart: (ev) => ev.preventDefault() });
+  const aiBar = hooks?.onAi ? h("button", { type: "button", class: "rb-pp-bar rb-pp-ai", hidden: true, onMousedown: (ev) => ev.preventDefault(), onTouchstart: (ev) => ev.preventDefault() }, "✨ AI로 다시 쓰기") : null;
   const inner = h("div", { class: "rb-pp-in" });
   const back = h("div", { class: "rb-pp-back", "aria-hidden": "true" }, inner);
-  const wrap = h("div", { class: "rb-pp-wrap" }, back, ta, bar);
+  const wrap = h("div", { class: "rb-pp-wrap" }, back, ta, bar, aiBar);
   ta.classList.add("rb-pp-ta");
   let cur = null;
 
@@ -98,6 +100,8 @@ export function attachProbPick(ta, win, onChange) {
     return null;
   };
   const paint = () => {
+    const s0 = ta.selectionStart ?? 0, e0 = ta.selectionEnd ?? 0, picked = e0 > s0 && ta.value.slice(s0, e0).trim();
+    if (aiBar) { aiBar.hidden = !picked; if (picked) hooks.onSelect?.({ s: s0, e: e0 }); }
     cur = targetNow();
     if (!cur) { bar.hidden = true; return; }
     bar.textContent = cur.mode === "edit" ? `🎲 ${cur.block.pct}% 확률 수정` : "🎲 확률로 만들기";
@@ -106,8 +110,9 @@ export function attachProbPick(ta, win, onChange) {
   let timer = 0;
   const later = () => { clearTimeout(timer); timer = setTimeout(paint, 30); };
   for (const ev of ["select", "keyup", "mouseup", "touchend", "input", "focus"]) ta.addEventListener(ev, later);
-  ta.addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== bar) bar.hidden = true; }, 200));
+  ta.addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== bar) bar.hidden = true; if (aiBar && document.activeElement !== aiBar) aiBar.hidden = true; }, 200));
   bar.addEventListener("click", () => { if (cur) open(cur); });
+  aiBar?.addEventListener("click", () => { hooks.onSelect?.({ s: ta.selectionStart ?? 0, e: ta.selectionEnd ?? 0 }); hooks.onAi(); });
 
   function replaceRange(s, e, text) {
     ta.focus();
@@ -178,6 +183,7 @@ export var PROB_CSS = `
 .rb-pp-ta{position:relative;z-index:1;background:transparent !important}
 .rb-pp-mark{color:transparent;background:color-mix(in srgb,var(--rb-acc-text) 16%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--rb-acc-text) 55%,transparent);border-radius:4px}
 .rb-pp-bar{position:absolute;right:10px;bottom:10px;z-index:5;padding:7px 12px;border-radius:999px;border:1px solid var(--rb-line3);background:var(--rb-win);color:var(--rb-text);font-weight:600;font-size:13px;box-shadow:var(--rb-shadow);cursor:pointer}
+.rb-pp-ai{bottom:52px}
 .rb-pp-bar[hidden]{display:none}
 .rb-pp-prev{padding:10px 12px;border-radius:10px;background:var(--rb-surf);border:1px solid var(--rb-line);font-size:13.5px;line-height:1.6;max-height:96px;overflow:auto;word-break:break-word}
 `;

@@ -46,7 +46,7 @@ const box = (page) => page.locator("#rb-ai-popup").boundingBox();
   // 대기 점 · 수정안 배지
   await page.evaluate(() => window.__hold(true));
   await page.locator("#rb-ai-popup select[aria-label='작업 종류']").selectOption("description");
-  await page.locator("#rb-ai-popup textarea").fill("설명 다시 써줘"); await page.getByRole("button", { name: "보내기" }).click();
+  await page.locator("#rb-ai-popup textarea[aria-label='요청']").fill("설명 다시 써줘"); await page.getByRole("button", { name: "보내기" }).click();
   await page.locator("#rb-ai-popup [aria-label='닫기']").click(); await page.waitForTimeout(100);
   const mark = page.locator("#rb-rule-test-fab > button .rb-fab-mark");
   ok("[PC] 창을 닫아도 대기 중 점 표시", await mark.isVisible() && (await mark.textContent()) === "", await mark.textContent());
@@ -65,7 +65,7 @@ const box = (page) => page.locator("#rb-ai-popup").boundingBox();
   const b = await box(page);
   ok("[모바일] 아래 시트: 가로 꽉 참·바닥에 붙음", Math.abs(b.x) < 1 && Math.abs(b.width - 390) < 2 && Math.abs(b.y + b.height - 780) < 2, JSON.stringify(b));
   ok("[모바일] 높이는 화면의 90% 이하", b.height <= 780 * 0.9);
-  ok("[모바일] 입력칸 글자 16px 이상(확대 방지)", (await page.locator("#rb-ai-popup textarea").evaluate((e) => parseFloat(getComputedStyle(e).fontSize))) >= 16);
+  ok("[모바일] 입력칸 글자 16px 이상(확대 방지)", (await page.locator("#rb-ai-popup textarea[aria-label='요청']").evaluate((e) => parseFloat(getComputedStyle(e).fontSize))) >= 16);
   ok("[모바일] 크기 조절 손잡이 숨김", !(await page.locator("#rb-ai-popup [aria-label^='크기 조절']").first().isVisible()));
   // 손잡이를 아래로 끌면 닫힘 (포인터 이벤트)
   await page.evaluate(() => { const g = document.querySelector("#rb-ai-popup > div"); const mk = (t, y) => g.dispatchEvent(new PointerEvent(t, { pointerId: 7, bubbles: true, clientX: 200, clientY: y, isPrimary: true })); g.setPointerCapture = () => {}; mk("pointerdown", 400); mk("pointermove", 520); mk("pointerup", 520); });

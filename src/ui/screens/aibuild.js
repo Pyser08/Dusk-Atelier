@@ -4,6 +4,7 @@
 import { h, replace } from '../dom.js';
 import { btn, iconBtn, note, segmented } from '../kit.js';
 import { LOREREQ_CSS } from '../lorereq-css.js';
+import { getFix, onFix, clearFix, setFixText, locate, replaceIn, addRewrite, rewrites } from '../aifix.js';
 
 const AREA = { name: '이름', desc: '설명', personality: '성격', scenario: '시나리오', firstMessage: '첫 메시지', defaultVariables: '변수', globalLore: '로어북', customscript: '정규식', triggerscript: '트리거', systemPrompt: '시스템', exampleMessage: '예시 대화', postHistoryInstructions: '후속 지시', creatorNotes: '제작자 노트' };
 const STATE_LABEL = { ok: '적용할 수 있어요', applied: '적용함', discarded: '버림', stale: '원고가 바뀌어 쓸 수 없어요' };
@@ -46,7 +47,37 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
   const modelSel = h('select', { class: 'rb-input', 'aria-label': '모델', style: 'width:auto' }, h('option', { value: 'submodel' }, '보조 모델'), h('option', { value: 'model' }, '메인 모델'));
   const scope = h('input', { type: 'checkbox' });
   const scopeLbl = h('label', { class: 'rb-muted', style: 'display:none;align-items:center;gap:4px;font-size:12px' }, scope, '선택한 항목만');
-  const ta = h('textarea', { class: 'rb-textarea', rows: 3, placeholder: '무엇을 만들거나 고칠까요? (Ctrl+Enter로 보내기)', style: 'font-family:inherit;font-size:16px' });
+  const ta = h('textarea', { class: 'rb-textarea', rows: 3, 'aria-label': '요청', placeholder: '무엇을 만들거나 고칠까요? (Ctrl+Enter로 보내기)', style: 'font-family:inherit;font-size:16px' });
+  // 고칠 부분: 편집기 로어북 글칸에서 고른 글과 양방향으로 맞춘다 (여기서 고치면 글칸도 바뀌고, 글칸에서 다시 고르면 여기도 바뀐다)
+  const fixTa = h('textarea', { class: 'rb-textarea', rows: 3, 'aria-label': '고칠 부분', placeholder: '로어북 내용에서 글을 드래그하면 여기에 나와요', style: 'font-family:inherit;font-size:16px' });
+  const fixInfo = h('small', { class: 'rb-muted', 'aria-live': 'polite', style: 'flex:1;min-width:0' });
+  const fixWrap = h('div', { style: 'display:none;flex-direction:column;gap:4px' },
+    h('div', { style: 'display:flex;align-items:center;gap:8px' }, h('b', { style: 'font-size:13px' }, '고칠 부분'), fixInfo, btn('해제', { size: 'sm', title: '고칠 부분 없이 평소처럼 요청해요', onClick: () => clearFix() })),
+    fixTa);
+  function paintFix(t) {
+    fixWrap.style.display = t ? 'flex' : 'none';
+    ta.placeholder = t ? '이 부분을 어떻게 고칠까요? (Ctrl+Enter로 보내기)' : '무엇을 만들거나 고칠까요? (Ctrl+Enter로 보내기)';
+    if (!t) return;
+    if (ta.ownerDocument.activeElement !== fixTa && fixTa.value !== t.text) fixTa.value = t.text;
+    fixInfo.textContent = locate(t) ? `${t.label} · ${t.text.length.toLocaleString()}자 · 여기서 고치면 글칸도 바뀌어요` : `${t.label} · 글칸과 연결이 끊겼어요. 로어북 내용에서 다시 골라 주세요`;
+  }
+  const unFix = onFix(paintFix);
+  fixTa.addEventListener('input', () => { if (!setFixText(fixTa.value)) paintFix(getFix()); });
+  // 부분 다시 쓰기 결과 카드: 적용하면 그때의 자리에 바로 바뀌고, 되돌리기로 원래 글로 돌아가요
+  function rewriteCard(r) {
+    const state = r.applied ? '적용함' : r.discarded ? '버림' : locate(r) ? '적용할 수 있어요' : '글칸과 연결이 끊겼어요';
+    const can = !r.discarded && (r.applied || locate(r));
+    const preview = (t) => h('div', { style: 'white-space:pre-wrap;font-size:13px;line-height:1.55;max-height:140px;overflow:auto;padding:6px 8px;border-radius:8px;background:var(--rb-surf2)' }, t);
+    return h('div', { style: 'border:1px solid var(--rb-line2);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px' + (r.discarded ? ';opacity:.6' : '') },
+      h('div', { style: 'display:flex;justify-content:space-between;gap:8px;align-items:center' }, h('b', null, '부분 다시 쓰기 · ' + r.label), h('small', { class: 'rb-muted' }, state)),
+      h('small', { class: 'rb-muted' }, '요청: ' + r.request),
+      h('details', null, h('summary', { style: 'cursor:pointer;font-size:12.5px' }, '원래 글'), preview(r.applied ? r.prev : r.orig)),
+      preview(r.applied ? r.text : r.result),
+      h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' },
+        !r.applied && !r.discarded ? Object.assign(btn('적용', { kind: 'primary', size: 'sm', icon: 'check', onClick: () => { const t0 = r.text; if (replaceIn(r, r.result)) { r.prev = t0; r.applied = true; ctx.toast('적용했어요 — 글칸에 바로 반영됐어요'); } else ctx.toast('글칸의 그 부분이 바뀌어 적용하지 못했어요. 다시 골라 주세요.', { error: true }); paint(); } }), { disabled: !can }) : null,
+        r.applied ? btn('되돌리기', { size: 'sm', icon: 'undo', onClick: () => { if (replaceIn(r, r.prev)) { r.applied = false; ctx.toast('되돌렸어요'); } else ctx.toast('글칸의 그 부분이 바뀌어 되돌리지 못했어요.', { error: true }); paint(); } }) : null,
+        !r.applied && !r.discarded ? btn('버리기', { size: 'sm', onClick: () => { r.discarded = true; paint(); } }) : null));
+  }
   // 로어북 방식 (Dusk | 일반): 로어북·설계 대화 작업에서만 보인다. 봇마다 마지막 선택을 기억한다.
   const loreSeg = segmented([['dusk', 'Dusk 방식'], ['plain', '일반 방식']], build.loreMode(), async (v) => { try { await build.setLoreMode(v); } catch (e) { ctx.toast(e.message, { error: true }); } paint(); }, '로어북 방식');
   loreSeg.style.cssText = 'flex:none;min-width:190px';
@@ -138,12 +169,14 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
         btn('버리기', { size: 'sm', onClick: () => build.discardCandidate(c) })) : null
     );
   }
-  function paint() {
+  function paint() { build.batch(paintNow); }
+  function paintNow() {
     const s = st.s;
     const items = [];
     if (!s.thread.length) items.push(h('p', { class: 'rb-muted' }, '왼쪽 위 작업 종류를 고르고 요청을 적으면 AI가 수정안을 만들어요. 마음에 들면 [적용]을 누르세요. 편집기의 각 탭에 바로 반영되고, 저장은 따로예요.'));
     for (const m of s.thread) items.push(h('div', { style: `align-self:${m.role === 'user' ? 'flex-end' : 'flex-start'};max-width:90%;white-space:pre-wrap;padding:8px 10px;border-radius:12px;background:${m.error ? 'rgba(220,60,60,.15)' : m.role === 'user' ? 'var(--rb-teal-soft)' : 'var(--rb-surf2)'}` }, m.content));
     for (const c of s.candidates) items.push(card(c));
+    for (const r of rewrites) items.push(rewriteCard(r));
     if (st.job) items.push(h('small', { class: 'rb-muted' }, `${st.job.label} · ${Math.round((Date.now() - st.job.start) / 1000)}초`));
     replace(list, items);
     list.scrollTop = list.scrollHeight;
@@ -165,7 +198,23 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
     undoB.disabled = !build.canUndo();
     status.textContent = st.job ? '응답 기다리는 중' : st.autoError ? '자동 저장 실패: ' + st.autoError : '';
   }
+  async function sendFix(t) {
+    const request = ta.value.trim();
+    const at = locate(t);
+    if (!at) { ctx.toast('글칸과 연결이 끊겼어요. 로어북 내용에서 다시 골라 주세요.', { error: true }); return; }
+    const full = String(t.ta.value ?? '');
+    try {
+      const p = build.rewritePart({ text: t.text, request, label: t.label, before: full.slice(0, at.s), after: full.slice(at.e) });
+      paint();
+      const result = await p;
+      addRewrite({ ta: t.ta, s: at.s, e: at.e, text: t.text, orig: t.text, label: t.label, request, result });
+      ta.value = '';
+    } catch (e) { ctx.toast(e.message, { error: true }); }
+    paint();
+  }
   async function send() {
+    const fix = getFix();
+    if (fix && fix.text.trim()) return sendFix(fix);
     try {
       const sel = selection?.() ?? {};
       build.setSelected('lorebook', sel.lorebook ?? 0);
@@ -257,12 +306,13 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
   const unsub = build.subscribe(paint);
   const timer = setInterval(() => { if (!back.isConnected) return clearInterval(timer); if (st.job) paint(); }, 1000);
   let ro = null;
-  const close = () => { unsub(); clearInterval(timer); ro?.disconnect(); win.removeEventListener('resize', onWin); back.remove(); onClose?.(); };
+  const close = () => { unsub(); unFix(); clearInterval(timer); ro?.disconnect(); win.removeEventListener('resize', onWin); back.remove(); onClose?.(); };
   const win = panel.ownerDocument.defaultView ?? window;
   const onWin = () => { if (back.isConnected) layout(); };
   win.addEventListener('resize', onWin);
   if (typeof ResizeObserver === 'function') { ro = new ResizeObserver(onWin); ro.observe(panel); }
   back.closePopup = close;
+  back.focusFix = () => { paintFix(getFix()); (getFix() ? ta : fixTa).focus?.(); };
   // 열려 있는 동안 탭이 바뀌면(편집기에서 호출) 그 탭에 맞는 작업 종류로 바꾼다
   back.syncTab = (t) => { const k = TAB_TASK[t]; if (autoTask && k && k !== st.task && build.TASKS[k]) pickTask(k); };
   back.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); close(); } });
@@ -273,13 +323,14 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
     loreHint,
     lorePanel,
     list,
-    h('div', { style: 'padding:10px 12px;border-top:1px solid var(--rb-line2);display:flex;flex-direction:column;gap:8px' }, ta,
+    h('div', { style: 'padding:10px 12px;border-top:1px solid var(--rb-line2);display:flex;flex-direction:column;gap:8px' }, fixWrap, ta,
       h('div', { style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, undoB, saveB, newB, bbPresent ? importB : null, h('span', { style: 'flex:1' }), sendB, stopB))
   );
   geom = geomCache && Number.isFinite(geomCache.w) ? { ...geomCache } : null;
   panel.appendChild(back);
   if (tab) back.syncTab(tab);
   layout();
+  paintFix(getFix());
   paint();
   if (!sheet) ta.focus();
   return back;
