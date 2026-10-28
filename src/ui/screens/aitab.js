@@ -90,8 +90,57 @@ export function renderAiTab(ctx, { build, openPopup, state = {} }) {
     ];
   }
 
+  // 블록 편집: 추가·복제·삭제·순서·켜기 끄기·이름/역할/본문, 프리셋 이름, JSON 내보내기
+  function blocksCard(ps, blocks, save) {
+    const setBlocks = (list) => save({ ...ps, preset: { ...ps.preset, promptTemplate: list } });
+    const patch = (i, o) => setBlocks(blocks.map((b, k) => (k === i ? { ...b, ...o } : b)));
+    const move = (i, d) => { const l = blocks.slice(); const j = i + d; if (j < 0 || j >= l.length) return; openBlock = j; [l[i], l[j]] = [l[j], l[i]]; setBlocks(l); };
+    const nameIn = h('input', { class: 'rb-input', value: ps.preset.name ?? '', 'aria-label': '프리셋 이름' });
+    nameIn.addEventListener('change', () => save({ ...ps, preset: { ...ps.preset, name: nameIn.value.trim() || '이름 없는 프리셋' } }));
+    const exportJson = () => {
+      const blob = new Blob([JSON.stringify(ps.preset, null, 2)], { type: 'application/json' });
+      const a = h('a', { href: URL.createObjectURL(blob), download: `${(ps.preset.name || 'preset').replace(/[\\/:*?"<>|]/g, '_')}.json` });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    };
+    const rowEl = (b, i) => {
+      const enabled = b.enabled !== false;
+      const label = BLOCK_TYPES.find(([k]) => k === b.type)?.[1] ?? b.type;
+      const typeSel = h('select', { class: 'rb-input', 'aria-label': '블록 종류' }, BLOCK_TYPES.map(([k, v]) => h('option', { value: k, selected: k === b.type }, v)));
+      typeSel.addEventListener('change', () => patch(i, { type: typeSel.value }));
+      const nm = h('input', { class: 'rb-input', value: b.name ?? '', placeholder: '이름(선택)', 'aria-label': '블록 이름' });
+      nm.addEventListener('change', () => patch(i, { name: nm.value }));
+      const roleSel = h('select', { class: 'rb-input', 'aria-label': '역할' }, [['', '역할 없음'], ['user', 'user'], ['bot', 'bot(assistant)'], ['system', 'system']].map(([k, v]) => h('option', { value: k, selected: (b.role ?? '') === k }, v)));
+      roleSel.addEventListener('change', () => patch(i, { role: roleSel.value || undefined }));
+      const tx = h('textarea', { class: 'rb-textarea', rows: 6, 'aria-label': '블록 본문', style: 'font-family:var(--rb-mono,monospace);font-size:12px' });
+      tx.value = b.text ?? '';
+      tx.addEventListener('change', () => patch(i, { text: tx.value }));
+      const det = h('details', { style: `border:1px solid var(--rb-line2);border-radius:10px;padding:6px 8px;${enabled ? '' : 'opacity:.55'}` },
+        h('summary', { style: 'cursor:pointer;display:flex;gap:8px;align-items:baseline;font-size:13px' },
+          h('span', { class: 'rb-muted', style: 'width:26px;text-align:right' }, String(i + 1)), h('b', null, label),
+          h('span', { class: 'rb-muted', style: 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1' }, [b.name, b.role, String(b.text ?? '').replace(/\s+/g, ' ').slice(0, 50)].filter(Boolean).join(' · '))),
+        h('div', { style: 'display:flex;flex-direction:column;gap:8px;margin-top:8px' },
+          h('div', { style: 'display:flex;gap:6px;flex-wrap:wrap' }, typeSel, nm, roleSel),
+          tx,
+          h('div', { style: 'display:flex;gap:6px;flex-wrap:wrap' },
+            btn(enabled ? '끄기' : '켜기', { size: 'sm', onClick: () => patch(i, { enabled: !enabled }) }),
+            btn('위로', { size: 'sm', icon: 'up', onClick: () => move(i, -1) }), btn('아래로', { size: 'sm', icon: 'down', onClick: () => move(i, 1) }),
+            btn('복제', { size: 'sm', onClick: () => setBlocks([...blocks.slice(0, i + 1), structuredClone(b), ...blocks.slice(i + 1)]) }),
+            btn('삭제', { size: 'sm', kind: 'danger', onClick: () => setBlocks(blocks.filter((_, k) => k !== i)) }))));
+      det.open = openBlock === i;
+      det.addEventListener('toggle', () => { if (det.open) openBlock = i; else if (openBlock === i) openBlock = -1; });
+      return det;
+    };
+    return card('블록', '보내는 순서예요. 눌러서 펼치면 종류·이름·역할·본문을 고치고 순서를 바꿀 수 있어요. 바꾼 내용은 이 기기의 저장본에 반영돼요.',
+      h('div', { style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, h('span', { class: 'rb-label' }, '프리셋 이름'), nameIn,
+        btn('JSON 내보내기', { size: 'sm', icon: 'download', onClick: exportJson })),
+      h('div', { style: 'display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto' }, blocks.map(rowEl)),
+      btn('블록 추가', { size: 'sm', icon: 'plus', onClick: () => setBlocks([...blocks, { type: 'plain', name: '새 블록', role: 'system', text: '', enabled: true }]) }));
+  }
+
   // ---------- ② 프롬프트 프리셋 ----------
   let showSend = false;
+  let openBlock = -1;
   function viewPreset() {
     const ps = st.s.preset;
     const save = async (next, quiet) => { try { await build.setPreset(next); if (!quiet) paint(); } catch (e) { fail(e); paint(); } };
@@ -118,11 +167,7 @@ export function renderAiTab(ctx, { build, openPopup, state = {} }) {
     }
     // 블록
     const blocks = ps.preset.promptTemplate ?? [];
-    out.push(card('블록', '보내는 순서예요. 이 화면에서는 보기만 하고, 순서나 내용은 리스에서 고쳐 다시 열어 주세요.',
-      h('div', { style: 'display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto' }, blocks.map((b, i) => h('div', { style: 'display:flex;gap:8px;align-items:baseline;font-size:13px' },
-        h('span', { class: 'rb-muted', style: 'width:26px;text-align:right' }, String(i + 1)),
-        h('b', null, BLOCK_TYPES.find(([k]) => k === b.type)?.[1] ?? b.type),
-        h('span', { class: 'rb-muted', style: 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1' }, [b.name, b.role, String(b.text ?? '').replace(/\s+/g, ' ').slice(0, 60)].filter(Boolean).join(' · ')))))));
+    out.push(blocksCard(ps, blocks, save));
     // 토글
     let defs = { items: [], definitions: [] };
     try { defs = toggleDefinitions(ps.preset, activeModules(ps)); } catch (e) { out.push(note('err', '토글을 읽지 못했어요: ' + e.message)); }

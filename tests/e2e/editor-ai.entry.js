@@ -87,6 +87,27 @@ export async function runSmoke() {
   main.click(); await sleep(50);
   clickText("규칙 시험", fab); await sleep(200);
   ok("규칙 시험 창 열림", !!document.querySelector("#rb-rule-test"));
+  // ---- 프리셋 블록 편집 ----
+  main.click(); await sleep(50);
+  ok("펼치면 AI 창·룰렛·규칙 시험 세 개가 '도구' 패널 안", !!fab.querySelector(".rb-dial") && $("button", fab.querySelector(".rb-dial")).length === 3 && fab.querySelector(".rb-dial").textContent.includes("도구"));
+  main.click(); await sleep(50);
+  const aiTabBtn = $(".rb-tabs button").find((b) => b.textContent.startsWith("AI로 제작")); aiTabBtn.click(); await sleep(150);
+  const pn = document.querySelector(".pane") ?? document.body;
+  const subBtn = (t) => $("button", document).find((b) => b.textContent.trim() === t);
+  subBtn("프롬프트 프리셋").click(); await sleep(150);
+  const fin = document.querySelector("input[type=file][accept*='.risup']");
+  const dt = new DataTransfer(); dt.items.add(new File([JSON.stringify({ name: "시험", promptTemplate: [{ type: "plain", name: "A", role: "system", text: "가" }, { type: "plain", name: "B", role: "user", text: "나" }] })], "t.json", { type: "application/json" }));
+  fin.files = dt.files; fin.dispatchEvent(new Event("change")); await sleep(300);
+  ok("프리셋 블록 2개 표시", $("details:has(textarea[aria-label='블록 본문']) > summary").length === 2);
+  $("details:has(textarea[aria-label='블록 본문']) > summary")[0].click(); await sleep(50);
+  const bta = $("textarea[aria-label='블록 본문']")[0]; bta.value = "수정됨"; bta.dispatchEvent(new Event("change")); await sleep(300);
+  ok("본문 수정 반영", $("details:has(textarea[aria-label='블록 본문']) > summary")[0].textContent.includes("수정됨"));
+  clickText("아래로", document); await sleep(300);
+  ok("순서 바뀜", $("details:has(textarea[aria-label='블록 본문']) > summary")[1].textContent.includes("수정됨"));
+  clickText("블록 추가", document); await sleep(300);
+  ok("블록 추가", $("details:has(textarea[aria-label='블록 본문']) > summary").length === 3);
+  clickText("삭제", document); await sleep(300);
+  ok("블록 삭제", $("details:has(textarea[aria-label='블록 본문']) > summary").length === 2);
   return out;
 }
 window.runSmoke = runSmoke;
