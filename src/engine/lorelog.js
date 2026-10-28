@@ -65,14 +65,18 @@ export function estimateUsed(tagged, messages, { depth = 5, duskFired = {} } = {
   return out;
 }
 
-// 응답 글로 기록을 찾는 열쇠: 앞부분 60자(공백·기호 제외)
-export const headKey = (text) => squash(text).slice(0, 60);
+// 응답 글로 기록을 찾는 열쇠: 앞부분 60자(공백·기호 제외). 화면 글에는 테마·정규식이 넣은 HTML 태그(<br>, <p> 등)가
+// 섞일 수 있어 태그와 엔티티를 먼저 걷고 비교한다(안 그러면 'br' 같은 글자가 끼어 못 찾는다).
+const plain = (t) => String(t ?? "").replace(/<[^>]*>/g, "").replace(/&(?:nbsp|amp|lt|gt|quot|#\d+|#x[\da-f]+);/gi, "");
+export const headKey = (text) => squash(plain(text)).slice(0, 60);
+export const tailKey = (text) => { const t = squash(plain(text)); return t.length > 40 ? t.slice(-40) : ""; };
 export function matchRecord(recs, text) {
-  const t = squash(text);
+  const t = squash(plain(text));
   if (t.length < 4) return null;
   for (let i = recs.length - 1; i >= 0; i--) {
     const r = recs[i];
-    if (r.head && r.head.length >= 4 && t.includes(r.head)) return r;
+    if (!r.head || r.head.length < 4) continue;
+    if (t.includes(r.head) || (r.tail && t.includes(r.tail)) || (r.head.length > 24 && t.includes(r.head.slice(0, 24)))) return r;
   }
   return null;
 }

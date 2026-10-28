@@ -3,7 +3,7 @@
 //   (리스 버전에 따라 이 훅이 없으면 출력 때 키·Dusk 규칙으로 추정한다)
 // · 응답이 나오면(output): 응답 앞부분을 열쇠로 기록에 붙여 저장한다
 // · 화면에 그릴 때(display): 열쇠가 맞는 응답 아래에 '📖 로어북 N개' 접는 버튼을 붙인다 (저장된 채팅은 건드리지 않음)
-import { detectInPrompt, estimateUsed, headKey, loreButtonHtml, matchRecord } from '../engine/lorelog.js';
+import { detectInPrompt, estimateUsed, headKey, tailKey, loreButtonHtml, matchRecord } from '../engine/lorelog.js';
 import { loadLoreSettings } from './lorerules.js';
 
 export const LORE_LOG_KEY = "dusk-lore-log";
@@ -99,6 +99,7 @@ export function createLoreLog(api, { loreRuntime, log = (...a) => console.log("[
       // 같은 요청의 응답이 이어서 들어옴(스트리밍): 앞부분이 이어지면 같은 기록
       if (rec?.id && (head.startsWith(rec.head) || rec.head.startsWith(head))) {
         rec.head = head;
+        rec.tail = tailKey(text);
         save();
         return text;
       }
@@ -111,6 +112,7 @@ export function createLoreLog(api, { loreRuntime, log = (...a) => console.log("[
       }
       rec.id = `${rec.at.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
       rec.head = head;
+      rec.tail = tailKey(text);
       recs.push(rec);
       if (recs.length > MAX_RECS) recs.splice(0, recs.length - MAX_RECS);
       save();
