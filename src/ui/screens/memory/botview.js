@@ -9,10 +9,11 @@ import { renderOpen, renderRels, renderTimeline } from "./ledger.js";
 import { renderBotSettings, renderBotAnalysis } from "./settings.js";
 import { openChatInfo } from "./settingstools.js";
 
-const TABS = [["people", "등장인물"], ["scenes", "상황"], ["timeline", "시간선"], ["open", "열린 항목"], ["rels", "관계"]];
+const TABS = [["people", "인물 위키"], ["scenes", "상황"], ["timeline", "시간선"], ["open", "열린 항목"], ["rels", "관계"]];
 
 export async function renderBotView(ctx, host, { redraw, redrawView, back, quiet }) {
   const m = mem(ctx), M = ctx.memory;
+  const keepTop = quiet ? host.scrollTop : 0;
   if (!quiet) replace(host, loading("불러오는 중", { rows: 4 }));
   const bots = await loadBots(ctx), bot = bots.find((b) => b.id === m.botId);
   if (!bot) { m.botId = ""; return replace(host, h("div", { class: "rb-empty" }, "봇을 찾지 못했어요. 목록을 새로고침해 주세요.")); }
@@ -53,14 +54,18 @@ export async function renderBotView(ctx, host, { redraw, redrawView, back, quiet
   setBtn.setAttribute("aria-expanded", m.settingsOpen ? "true" : "false");
   const setPanel = h("div", { class: "rb-mem-fold-panel", hidden: !m.settingsOpen }, renderBotSettings(env));
   const toggleSettings = () => { m.settingsOpen = !m.settingsOpen; setPanel.hidden = !m.settingsOpen; setBtn.setAttribute("aria-expanded", m.settingsOpen ? "true" : "false"); };
-  const body = h("div", { class: "rb-mem-body" });
-  // 탭 전환은 아래 본문만 다시 그린다(폴더·채팅·설정을 다시 읽지 않는다). 저장·분석 같은 변경은 기존처럼 전체를 다시 그린다.
+  // 인물 위키·상황·시간선·열린 항목·관계를 한 페이지에 쌓고, 위 버튼은 그 자리로 스크롤만 옮긴다(다시 읽거나 그리지 않는다).
   const DRAW = { people: renderPeopleTab, scenes: renderScenes, timeline: renderTimeline, open: renderOpen, rels: renderRels };
-  const drawBody = () => (DRAW[m.tab] ?? renderPeople)(env, body);
-  const tabBtns = TABS.map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { if (m.tab === id) return; m.tab = id; m.page = 1; tabBtns.forEach((b, k) => b.setAttribute("aria-pressed", TABS[k][0] === id ? "true" : "false")); Promise.resolve(drawBody()).catch(fail(ctx)); } }, label));
-  const tabs = h("div", { class: "rb-mem-tabs", role: "tablist" }, tabBtns);
+  const inner = Object.fromEntries(TABS.map(([id]) => [id, h("div", { class: "rb-mem-anchor-body" })]));
+  const wraps = Object.fromEntries(TABS.map(([id, label]) => [id, h("section", { class: "rb-mem-anchor", "data-sec": id }, id === "people" ? null : h("h3", { class: "rb-mem-anchortitle" }, label), inner[id])]));
+  const tabBtns = TABS.map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { m.tab = id; setActive(id); wraps[id].scrollIntoView({ behavior: "smooth", block: "start" }); } }, label));
+  const setActive = (id) => tabBtns.forEach((b, k) => b.setAttribute("aria-pressed", TABS[k][0] === id ? "true" : "false"));
+  const tabs = h("div", { class: "rb-mem-tabs rb-mem-navtabs", role: "tablist", "aria-label": "이 채팅의 기억 구역" }, tabBtns);
+  const body = h("div", { class: "rb-mem-body" }, TABS.map(([id]) => wraps[id]));
+  host.onscroll = () => { const top = host.getBoundingClientRect().top + 70; let cur = TABS[0][0]; for (const [id] of TABS) if (wraps[id].getBoundingClientRect().top <= top) cur = id; if (cur !== m.tab) { m.tab = cur; setActive(cur); } };
   replace(host,
     h("div", { class: "rb-mem-head" }, h("span", { class: "rb-mem-back" }, btn("뒤로", { size: "sm", icon: "back", onClick: back })), h("h2", null, bot.character.name || "이름 없는 캐릭터"), h("span", { class: ["rb-mem-mode", backend.id], title: backend.reason }, backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드"), h("span", { style: "flex:1" }), sw, btn("이 채팅", { size: "sm", title: "이 채팅의 추적 인물·내 이름·관찰자·프롬프트 보기", onClick: () => openChatInfo(env).catch(fail(ctx)) }), setBtn),
     setPanel, status, chatRow, renderBotAnalysis(env), tabs, body);
-  await drawBody();
+  await Promise.all(TABS.map(([id]) => Promise.resolve(DRAW[id](env, inner[id])).catch(fail(ctx))));
+  host.scrollTop = keepTop;
 }

@@ -15,7 +15,7 @@ const field = (label, el) => h("label", { class: "rb-mem-field" }, h("span", nul
 
 export async function advancedModel(ctx, host, { apply, repaint }) {
   const cfg = await getCfg(ctx.api), id = cfg.easy.kind === "api" ? cfg.easy.presetId : "", cur = id ? presetOf(cfg, id) : null;
-  if (!cur) return replace(host, h("details", { class: "rb-mem-man" }, h("summary", null, "고급: 모델 세부 설정"), note("info", "위에서 ‘내 API’를 고르고 저장하면 여기서 자세히 고칠 수 있어요.")));
+  if (!cur) return replace(host, h("details", { class: "rb-mem-man rb-mem-advfold" }, h("summary", null, "고급: 모델 세부 설정"), note("info", "위에서 ‘내 API’를 고르고 저장하면 여기서 자세히 고칠 수 있어요.")));
   const keys = await keyStore(ctx.api);
   const d = { ...cur };  // 편집 초안
   const out = h("div", { class: "rb-muted", role: "status" });
@@ -50,7 +50,7 @@ export async function advancedModel(ctx, host, { apply, repaint }) {
       keys.has("vertex-ai") ? h("p", { class: "rb-muted" }, "저장된 인증 정보 있음") : null, field("요금 등급(Vertex)", h("input", { class: "rb-input", value: d.vertexPaygoTier ?? "default", onChange: set("vertexPaygoTier") }))); };
   const paint = () => {
     const reasons = REASON.filter((r) => okWith(d, { reasoningQuickSetting: r })), pdfOk = ["reference", "full"].some((m) => okWith(d, { pdfMode: m }));
-    replace(host, h("details", { class: "rb-mem-man", open: true }, h("summary", null, "고급: 모델 세부 설정"),
+    replace(host, h("details", { class: "rb-mem-man rb-mem-advfold", open: true }, h("summary", null, "고급: 모델 세부 설정"),
       h("p", { class: "rb-muted" }, "여기서 바꾼 값은 ‘내 API’ 프리셋에 저장돼요. 키는 이 기기에만 두고 공유·백업에 넣지 않아요."),
       field("공급자", prov), field("모델", modelIn), loadList, listHost,
       field("주소(Base URL)", h("input", { class: "rb-input", value: d.baseUrl ?? "", placeholder: "비우면 기본 주소", onChange: set("baseUrl") })),

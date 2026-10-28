@@ -108,7 +108,7 @@ export async function flowSections(ctx, host, { redraw }) {
       !apiOpen ? h("p", { class: "rb-muted" }, "RisuAI 설정의 보조 모델을 그대로 써요. 따로 키를 넣을 필요가 없어요.") : null,
       apiOpen && h("div", { class: "rb-mem-apiform" }, h("label", { class: "rb-mem-field" }, h("span", null, "공급자"), prov), h("label", { class: "rb-mem-field" }, h("span", null, "모델"), model), urlRow, h("label", { class: "rb-mem-field" }, h("span", null, "API 키"), key),
         h("p", { class: "rb-muted" }, "키는 이 기기의 플러그인 저장소에만 두고, 설정 내보내기·백업·공유 코드에는 넣지 않아요."), h("div", { class: "rb-mem-sact" }, useApi, test), out),
-      h("details", { class: "rb-mem-man" }, h("summary", null, "고급: 단계별 모델"), h("p", { class: "rb-muted" }, "단계마다 다른 모델을 쓸 수 있어요. 비워 두면 위 설정을 같이 써요."), stageRows,
+      h("details", { class: "rb-mem-man rb-mem-advfold" }, h("summary", null, "고급: 단계별 모델"), h("p", { class: "rb-muted" }, "단계마다 다른 모델을 쓸 수 있어요. 비워 두면 위 설정을 같이 써요."), stageRows,
         cfg.presets.length ? h("div", { class: "rb-mem-chats" }, cfg.presets.map((p) => h("button", { type: "button", class: "rb-chip", title: "눌러서 삭제", onClick: async () => { if (!(await confirmDialog(ctx.win, { title: `‘${p.name}’ 모델을 지울까요?`, body: "이 모델을 쓰던 단계는 공통 모델로 돌아가요.", ok: "지우기", danger: true }))) return; await saveCfg(ctx.api, removePreset(await getCfg(ctx.api), p.id)); await apply(); paintModel(); } }, p.name, " ✕"))) : null),
       h("div", { class: "rb-muted" }, `모델 호출 ${fmt(used.calls)}회 · 입력 ${fmt(used.input)} · 출력 ${fmt(used.output)} 토큰 `, btn("집계 지우기", { size: "sm", onClick: async () => { await resetUsage(ctx.api); paintModel(); } })),
       Object.keys(usage.by ?? {}).length ? h("details", { class: "rb-mem-man" }, h("summary", null, "단계별 사용량"), h("ul", { class: "rb-mem-usage" }, Object.entries(usage.by).map(([k, u]) => h("li", { class: "rb-muted" }, `${STAGE_LABEL[k] ?? k} · 호출 ${fmt(u.calls)}회 · 입력 ${fmt(u.input)} · 출력 ${fmt(u.output)}`)))) : null);
@@ -128,8 +128,7 @@ export async function flowSections(ctx, host, { redraw }) {
     const rate = Number(op.cycleRate ?? 1);
     const rateLabel = h("b", null, `×${rate}`);
     const slider = h("input", { type: "range", class: "rb-range", min: 0.5, max: 3, step: 0.1, value: rate, "aria-label": "임신 확률 배수", onInput: (e) => { rateLabel.textContent = `×${Number(e.target.value)}`; }, onChange: (e) => ed((s) => { s.features.openness.cycleRate = Math.min(3, Math.max(0.5, Number(e.target.value) || 1)); }) });
-    replace(adultHost, h("details", { class: "rb-mem-man rb-mem-adult" }, h("summary", null, "성인 항목 (기본 꺼짐)"),
-      h("p", { class: "rb-muted" }, "성인 인물의 욕구·월경·임신을 따라가요. 켜지 않으면 아무것도 기록하지 않아요."),
+    replace(adultHost, sec("성인 항목 (기본 꺼짐)", "성인 인물의 욕구·월경·임신을 따라가요. 켜지 않으면 아무것도 기록하지 않아요.",
       toggleRow("욕구 기록", "성인 항목이에요. 월경·임신 기록의 바탕이 돼요.", desire, (v) => ed((s) => { s.sexualDesireEnabled = v; if (!v) s.features.openness.cycle = false; })),
       toggleRow("월경·임신 기록", "이야기 속 날짜로 주기·임신·출산을 프로그램이 셈해요. 날짜가 없는 턴은 아무것도 움직이지 않아요.", cycle, (v) => ed((s) => { if (v) { s.sexualDesireEnabled = true; s.features.openness.enabled = true; } s.features.openness.cycle = v; })),
       desire ? toggleRow("이상성향 기록", "특이한 성적 취향도 따라가요.", snap.paraphiliaEnabled === true, (v) => ed((s) => { s.paraphiliaEnabled = v; })) : null,
@@ -160,8 +159,8 @@ export async function flowSections(ctx, host, { redraw }) {
   replace(host,
     sec("무엇을 기억할까요?", "수준을 고르면 아래 카드가 같이 바뀌어요. 바로 저장되고 다음 응답부터 적용돼요.", lvHost, featHost),
     sec("기억 방식", null, modeHost),
+    adultHost,
     sec("AI 모델", "기록과 정리를 맡길 모델이에요. 모르겠으면 ‘리스 보조 모델’로 두세요.", cfgHost, modelAdv),
-    h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "고급"), adultHost),
     sec("가져오기", "기존에 쓰던 리수폿의 백업 파일(.json)을 불러와요. 인물 문서와 설정만 받고, API 키는 받지 않아요.", importBtn),
     h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "고급 모드"), advSw), advHost);
 }

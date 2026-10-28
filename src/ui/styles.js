@@ -584,6 +584,14 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-wk-meta{font-size:12px}.rb-wk-body{margin:0;white-space:pre-wrap;line-height:1.55;overflow-wrap:anywhere}
 .rb-wk-unset{margin:6px 0;font-size:18px;color:var(--rb-mute)}
 .rb-wk-delta{align-self:flex-start;font-size:12px;padding:1px 8px;border-radius:8px;border:1px solid var(--rb-line2)}
+.rb-mem-advfold{border:1px solid var(--rb-line3);border-left:4px solid var(--rb-text);border-radius:12px;background:var(--rb-surf2);margin:6px 0}
+.rb-mem-advfold>summary{display:flex;align-items:center;gap:8px;min-height:52px;padding:0 14px;font-size:15px;font-weight:700;cursor:pointer;list-style:none}
+.rb-mem-advfold>summary::-webkit-details-marker{display:none}.rb-mem-advfold>summary::before{content:"고급";font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--rb-text);color:var(--rb-win)}
+.rb-mem-advfold>summary::after{content:"▾";margin-left:auto;font-size:16px;color:var(--rb-sub)}.rb-mem-advfold[open]>summary::after{content:"▴"}
+.rb-mem-advfold>*:not(summary){margin-left:14px;margin-right:14px}.rb-mem-advfold[open]{padding-bottom:12px}
+.rb-mem-navtabs{position:sticky;top:-12px;z-index:3;background:var(--rb-win);padding-top:8px;margin-top:-8px}
+.rb-mem-anchor{scroll-margin-top:64px;display:flex;flex-direction:column;gap:10px;padding-top:6px}.rb-mem-anchor+.rb-mem-anchor{border-top:1px solid var(--rb-line2);margin-top:18px;padding-top:18px}
+.rb-mem-anchortitle{margin:0;font-size:18px}.rb-mem-anchor-body{min-width:0}
 .rb-wk-headwrap{display:flex;flex-direction:column;gap:10px}.rb-wk-auto{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.rb-wk-auto .rb-note{flex:1;min-width:220px;margin:0}
 .rb-wk-foot{display:flex;align-items:center;gap:10px;justify-content:space-between}
 .rb-wk-empty{margin:0;font-size:13px}.rb-wk-form{display:flex;flex-direction:column;gap:10px}

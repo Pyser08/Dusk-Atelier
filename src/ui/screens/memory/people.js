@@ -128,7 +128,7 @@ export function personDetail(env, host, key, embedded = false) {
   const evOk = (x) => x.kind !== "event" || ((!m.grades.length || m.grades.includes(x.g)) && (!m.search || x.text.toLowerCase().includes(m.search.toLowerCase())));
   let recs = filterTimeline(tl, embedded ? "all" : m.sort === "grade" ? "event" : m.tlFilter).filter(evOk);
   recs = m.sort === "grade" ? recs.sort((a, b) => GRADES.indexOf(b.g ?? "") - GRADES.indexOf(a.g ?? "")) : recs;
-  const shown = recs.slice(0, m.page * PAGE);
+  const shown = recs.slice(0, m.spage * PAGE);
   const sceneOf = (r) => env.folder.scenes.find((s) => s.id === r.sit);
   const eventItem = (r) => h("li", { class: "rb-mem-rec" }, gradeBadge(r.g), h("div", { class: "txt" }, h("div", null, r.act, r.pin ? " 📌" : ""),
     h("div", { class: "rb-muted" }, [r.at != null ? at(r.at) : "", r.know?.length ? `아는 사람 ${r.know.join(", ")}` : "", (r.m ?? 1) > 1 ? `×${r.m} 반복` : "", sceneOf(r) ? h("button", { type: "button", class: "rb-mem-link", onClick: () => { m.tab = "scenes"; m.focusScene = r.sit; env.redraw(); } }, sceneOf(r).place || sceneOf(r).sum.slice(0, 14)) : null, r.wiki ? "위키에서 가져온 요약" : "", r.wikiGrade ? `위키 등급 · ${r.gby === "user" ? "사용자" : "AI"}` : r.gs != null ? "AI 등급 · 플러그인 캐시" : "", r.legacy ? "이전 버전 기록" : ""].filter(Boolean).flatMap((x, i) => i ? [" · ", x] : [x]))),
@@ -153,12 +153,12 @@ export function personDetail(env, host, key, embedded = false) {
     p.digest ? h("div", { class: "rb-card rb-mem-digest" }, h("b", null, "요약 "), p.digest) : null,
     !embedded && state ? stateCard(env, state, env.cycleOn ? cycleOf(doc) : null) : null,
     !embedded && env.advanced && doc && wikiEditable(env) ? wikiPanel(env, doc) : null,
-    embedded ? null : h("div", { class: "rb-mem-chats rb-mem-tlchips", role: "tablist", "aria-label": "이야기 걸러 보기" }, TL_FILTERS.map(([id, label]) => chip(label, { pressed: m.tlFilter === id && m.sort !== "grade", count: id === "all" ? counts.all : counts[id] ?? 0, onClick: () => { m.tlFilter = id; m.sort = m.sort === "grade" ? "time" : m.sort; m.page = 1; env.redraw(); } }))),
-    h("div", { class: "rb-mem-tools" }, embedded || m.tlFilter === "all" || m.tlFilter === "event" ? h("div", { class: "rb-mem-chats" }, GRADES.map((g) => chip(g, { pressed: m.grades.includes(g), onClick: () => { m.grades = m.grades.includes(g) ? m.grades.filter((x) => x !== g) : [...m.grades, g]; m.page = 1; env.redraw(); } }))) : null,
-      h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "기록 검색", value: m.search, "aria-label": "기록 검색", onInput: (e) => { m.search = e.target.value; m.page = 1; env.redraw(); } })),
+    embedded ? null : h("div", { class: "rb-mem-chats rb-mem-tlchips", role: "tablist", "aria-label": "이야기 걸러 보기" }, TL_FILTERS.map(([id, label]) => chip(label, { pressed: m.tlFilter === id && m.sort !== "grade", count: id === "all" ? counts.all : counts[id] ?? 0, onClick: () => { m.tlFilter = id; m.sort = m.sort === "grade" ? "time" : m.sort; m.spage = 1; env.redraw(); } }))),
+    h("div", { class: "rb-mem-tools" }, embedded || m.tlFilter === "all" || m.tlFilter === "event" ? h("div", { class: "rb-mem-chats" }, GRADES.map((g) => chip(g, { pressed: m.grades.includes(g), onClick: () => { m.grades = m.grades.includes(g) ? m.grades.filter((x) => x !== g) : [...m.grades, g]; m.spage = 1; env.redraw(); } }))) : null,
+      h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "기록 검색", value: m.search, "aria-label": "기록 검색", onInput: (e) => { m.search = e.target.value; m.spage = 1; env.redraw(); } })),
       h("select", { class: "rb-input", style: "width:auto;height:36px", "aria-label": "정렬", onChange: (e) => { m.sort = e.target.value; env.redraw(); } }, [["time", "시간순"], ["grade", "등급순"]].map(([v, l]) => h("option", { value: v, selected: m.sort === v }, l)))),
     recs.length ? h("ul", { class: "rb-mem-reclist rb-mem-story" }, shown.map((x) => x.kind === "event" ? eventItem(x.rec) : storyItem(env, x))) : h("div", { class: "rb-empty" }, "조건에 맞는 이야기가 없어요."),
-    recs.length > shown.length ? btn(`더 보기 (${recs.length - shown.length})`, { onClick: () => { m.page++; env.redraw(); } }) : null);
+    recs.length > shown.length ? btn(`더 보기 (${recs.length - shown.length})`, { onClick: () => { m.spage++; env.redraw(); } }) : null);
 }
 
 const KIND_LABEL = { rel: "관계", state: "상태", open: "약속" };
