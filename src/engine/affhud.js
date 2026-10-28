@@ -1,6 +1,7 @@
 // 호감도 HUD 프리셋(순수): 배경 HTML 조각·기본 변수 설치/제거, 리스폿 수치 읽기, 자체 보조모델(B) 프롬프트·결과 처리.
 // 값 출처: A = 리스폿 affinity.score 동기화, B = 자체 보조모델. 둘 다 같은 채팅 변수($aff, $aff_d, $aff_min, $aff_max)에 쓴다.
 import { parseVars, serializeVars } from "./vars.js";
+import { DESIGN_RETRY, DESIGN_SYSTEM, DESIGN_USER, JUDGE_SYSTEM, JUDGE_USER, fill } from "./affprompts.js";
 
 export const MARK_A = "<!--DAFX-AFF-->", MARK_B = "<!--/DAFX-AFF-->";
 export const AFF_DEFAULTS = { min: -100, max: 300, start: 0, step: 5 };
@@ -70,12 +71,12 @@ export function readPotAffinity(wiki, charName = "") {
 }
 
 // B: 자체 보조모델. 최근 대화와 현재 값을 주고 이번 응답의 변화량만 JSON으로 받는다.
-export function buildAffMessages({ charName, userName = "사용자", recent, value, min, max, step }) {
+export function buildAffMessages({ charName, userName = "사용자", recent, value, min, max, step, profile = "", note = "" }) {
   const chat = recent.map((m) => `${m.user ? userName : charName}: ${m.text}`).join("\n\n");
-  return [
-    { role: "system", content: `너는 롤플레이 호감도 기록자다. ${charName}가 ${userName}에게 느끼는 호감이 마지막 ${charName} 응답에서 얼마나 바뀌었는지만 판정한다.\n- 현재 호감도 ${value} (범위 ${min}~${max}).\n- 변화량은 -${step}~+${step} 정수. 특별한 일이 없으면 0. 한 번에 크게 바꾸지 않는다.\n- 대사보다 행동과 관계 변화를 근거로 한다.\n- 출력은 JSON 하나만: {"delta": 정수, "reason": "15자 이내"}` },
-    { role: "user", content: `[최근 대화]\n${chat}\n\n위 마지막 응답 기준으로 판정해줘.` }
-  ];
+  const vars = { char: charName, user: userName, value, min, max, step, chat,
+    profile: profile ? `\n[캐릭터 요약]\n${String(profile).slice(0, 600)}\n` : "",
+    note: note ? `\n[이 봇의 호감 기준(작성자 지정, 우선 적용)]\n${String(note).slice(0, 400)}\n` : "" };
+  return [{ role: "system", content: fill(JUDGE_SYSTEM, vars) }, { role: "user", content: fill(JUDGE_USER, vars) }];
 }
 export function parseDelta(text, step = AFF_DEFAULTS.step) {
   const m = String(text ?? "").match(/\{[\s\S]*?\}/);
@@ -93,21 +94,13 @@ export const REQUIRED = ["{{getvar::aff}}", "{{getvar::aff_d}}", "{{getvar::aff_
 export const HTML_MAX = 12000;
 
 export function designMessages({ request, current, charName = "캐릭터" }) {
+  const macros = REQUIRED.filter((x) => x.startsWith("{{")).join(" ");
   return [
-    { role: "system", content: `너는 RisuAI 채팅 화면용 호감도 HUD 디자이너다. 사용자의 디자인 요청대로 현재 HUD의 겉모습만 바꾼다.
-[절대 바꾸지 않는 것]
-- 맨 앞 ${MARK_A} 와 맨 뒤 ${MARK_B} 주석
-- 다음 CBS 식은 그대로 둔다(자리와 모양은 바꿔도 되지만 식 자체를 고치거나 빼지 않는다): ${REQUIRED.filter((x) => x.startsWith("{{")).join(" ")} 와 {{#if …}}{{/if}} 조건(aff_d > 0, < 0)
-- 게이지 폭은 style="width:clamp(0%,{{calc::…}}%,100%)" 식을 유지한다.
-- 바깥 요소는 <details class="dafx-aff"> + <summary> (버튼으로 여닫기), 모든 클래스는 dafx- 로 시작한다.
-- 배경 HTML은 화면 고정이므로 position:fixed 위치(기본 우측 상단)는 요청이 없으면 유지한다.
-[금지] <script>, on*= 속성, javascript:, @import, 외부 주소(http) 이미지·폰트·url(). 이미지는 {{source::char}}만 쓴다.
-[허용] CSS(그라데이션·그림자·테두리·폰트 크기·애니메이션 @keyframes 포함), 장식용 span/div, 이모지·기호 아이콘, 텍스트 라벨 변경(예: "호감도" → 다른 말).
-[모바일] 폭 600px 이하에서도 화면을 가리지 않게 @media 를 유지한다. 전체 ${HTML_MAX}자 이하.
-출력: 수정된 전체 HTML 하나만. 설명·코드펜스 없이.` },
-    { role: "user", content: `[캐릭터 이름] ${charName}\n[디자인 요청]\n${request}\n\n[현재 HUD]\n${current}` }
+    { role: "system", content: fill(DESIGN_SYSTEM, { markA: MARK_A, markB: MARK_B, macros, max: HTML_MAX }) },
+    { role: "user", content: fill(DESIGN_USER, { char: charName, request, current }) }
   ];
 }
+export const designRetry = (errors) => fill(DESIGN_RETRY, { errors: errors.join("\n- ") });
 export function extractHud(text) {
   let t = String(text ?? "").trim().replace(/^```(?:html)?\s*/i, "").replace(/\s*```$/, "");
   const a = t.indexOf(MARK_A), b = t.lastIndexOf(MARK_B);

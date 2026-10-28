@@ -24,6 +24,7 @@ export function affCard(ctx, t) {
         segmented([["auto", "자동 (리스폿 우선)"], ["own", "자체 보조모델만"]], cfg.source, async (v) => { await aff.setCfg(chaId, { source: v }); }, "값 출처"),
         h("span", { class: "rb-muted", style: "white-space:normal" }, "자동: 리스폿 흐름이 켜져 있고 호감 수치가 있으면 그 값을 쓰고, 없으면 자체 보조모델로 대신해요. 자체: 응답마다 보조모델을 한 번 더 불러요."),
         h("div", { style: "display:flex;gap:12px;flex-wrap:wrap" }, num("min", "최소"), num("max", "최대"), num("start", "시작값"), num("step", "한 번에 최대")),
+        noteBox(aff, chaId, cfg),
         note("info", "자체 보조모델은 모델 설정의 ‘기록하기’ 모델을 써요. 호출은 응답마다 1회예요."),
         on ? designBox(ctx, t, cfg, draw) : null,
         h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" },
@@ -67,4 +68,12 @@ function designBox(ctx, t, cfg, redraw) {
     h("span", { class: "rb-label" }, "디자인 변경 (AI)"), ta,
     h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, make, cfg.html ? btn("기본 디자인으로", { onClick: async () => { await aff.resetDesign(t.i); ctx.toast("기본 디자인으로 되돌렸어요"); redraw(); } }) : null),
     out);
+}
+
+// 이 봇만의 호감 기준(선택). 자체 보조모델이 기본 기준표보다 먼저 따른다.
+function noteBox(aff, chaId, cfg) {
+  const ta = h("textarea", { class: "rb-input", rows: 2, maxlength: 400, value: cfg.note ?? "", placeholder: "예: 츤데레라 칭찬에 바로 오르지 않음. 약속을 지키는 행동에 크게 반응. 무례에는 -3 이상.", "aria-label": "호감 기준", style: "width:100%;resize:vertical" });
+  ta.value = cfg.note ?? "";
+  ta.addEventListener("change", async () => { await aff.setCfg(chaId, { note: ta.value.trim() }); });
+  return h("div", { style: "display:flex;flex-direction:column;gap:4px" }, h("span", { class: "rb-label" }, "이 봇의 호감 기준 (선택, 자체 보조모델용)"), ta);
 }

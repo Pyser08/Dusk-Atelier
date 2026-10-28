@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { hasHud, installHud, uninstallHud, parseDelta, readPotAffinity, clampAff, MARK_A, hudHtml, validateHud, extractHud, previewDoc } from "../src/engine/affhud.js";
+import { hasHud, installHud, uninstallHud, parseDelta, readPotAffinity, clampAff, MARK_A, buildAffMessages, designMessages, hudHtml, validateHud, extractHud, previewDoc } from "../src/engine/affhud.js";
 import { createAffHud } from "../src/data/affhud.js";
 
 test("installHud: 배경 HTML 교체·기본 변수 보존, uninstall로 원복", () => {
@@ -119,4 +119,14 @@ test("design: 검사 실패 시 한 번 다시 부탁, 적용하면 설정에 �
   await hud.resetDesign(0);
   assert.ok(!ch.backgroundHTML.includes("#ffd6e8") && hasHud(ch.backgroundHTML));
   await assert.rejects(hud.applyDesign(0, "<div></div>"));
+});
+
+test("프롬프트: 자리표시자가 모두 채워지고 기준 메모·프로필이 들어감", () => {
+  const m = buildAffMessages({ charName: "아루", userName: "선생", recent: [{ user: true, text: "안녕" }, { user: false, text: "응." }], value: 10, min: -100, max: 300, step: 5, profile: "츤데레", note: "무례하면 -3" });
+  const all = m.map((x) => x.content).join("\n");
+  assert.ok(!/\{(char|user|value|min|max|step|chat|profile|note)\}/.test(all));
+  assert.match(all, /츤데레/); assert.match(all, /무례하면 -3/); assert.match(all, /선생: 안녕/); assert.match(all, /±5/);
+  const d = designMessages({ request: "핑크", current: hudHtml(), charName: "아루" }).map((x) => x.content).join("\n");
+  assert.ok(!/\{(markA|markB|macros|max|request|current)\}/.test(d));
+  assert.match(d, /핑크/); assert.match(d, /DAFX-AFF/);
 });
