@@ -228,7 +228,7 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
   back.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); close(); } });
   back.append(
     grip, rzNW, rzSE, hdr,
-    bbNote,
+    ...(bbNote ? [bbNote] : []),
     h('div', { style: 'display:flex;gap:8px;align-items:center;padding:8px 12px;flex-wrap:wrap' }, taskSel, scopeLbl, loreSeg),
     loreHint,
     list,
