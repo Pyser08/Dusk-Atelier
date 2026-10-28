@@ -6,6 +6,7 @@ import { callModel } from './model.js';
 import { assemblePreset, newPresetState, validatePresetState } from './preset-engine.js';
 import { createAiStore, normalizeSettings, AUTOSAVE_MS } from './store.js';
 import { toDraft, toView } from './bridge.js';
+import { applyDesignToResponse, DesignError, hasDusk, resolveLoreMode } from './duskdesign.js';
 
 export function createAiBuild({ api, host, store: given }) {
   const store = given ?? createAiStore(api);
@@ -56,10 +57,27 @@ export function createAiBuild({ api, host, store: given }) {
     return { request, scope, text: request + (scope ? `\n[허용 편집 범위] 기존 항목 ${scope}만 수정·삭제할 수 있다. 새 항목 추가와 다른 항목 변경은 금지한다.` : '') };
   }
   function promptFor(task) { return st.prompts[task] ?? defaultPrompt(task); }
+  // ---- 로어북 방식 (Dusk | 일반): 봇마다 마지막 선택을 기억한다 ----
+  const loreKey = () => st.s.targetId || '_new';
+  function loreMode() {
+    sync();
+    return resolveLoreMode({ setting: st.settings.lore, remembered: st.settings.loreByBot?.[loreKey()], lore: st.s.draft.globalLore });
+  }
+  async function setLoreMode(mode) {
+    assert(['dusk', 'plain'].includes(mode), '로어북 방식은 dusk 또는 plain이에요.');
+    await setSettings({ loreByBot: { ...st.settings.loreByBot, [loreKey()]: mode } });
+  }
+  const loreTask = (task) => ['lorebook', 'workshop'].includes(task);
+  // 응답 JSON 문자열의 Dusk 설계를 수정안 형식으로 바꾼다
+  function convertRaw(raw, task, before) {
+    const response = JSON.parse(raw);
+    const res = applyDesignToResponse(response, before.globalLore ?? []);
+    return res;
+  }
   function previewRequest(task = st.task, forcePreset = false) {
     sync();
     const usePreset = forcePreset || st.s.preset.mode === 'preset';
-    const direct = composeMessages(usePreset ? { ...st.s, thread: [] } : st.s, task, requestWithScope(task).text, promptFor(task));
+    const direct = composeMessages(usePreset ? { ...st.s, thread: [] } : st.s, task, requestWithScope(task).text, promptFor(task), { lore: loreTask(task) ? loreMode() : 'plain' });
     if (usePreset) return assemblePreset(st.s.preset, st.s, task, direct);
     return { messages: direct, trace: [], issues: [], notes: [], globals: {} };
   }
@@ -69,6 +87,7 @@ export function createAiBuild({ api, host, store: given }) {
     const task = st.task, s = st.s;
     const { request, scope } = requestWithScope(task);
     assert(request, 'LLM에게 전달할 요청을 적어 주세요.');
+    const loreAtSend = loreTask(task) ? loreMode() : 'plain';
     const report = previewRequest(task);
     assert(!report.issues.length, '프리셋 조립 오류:\n' + report.issues.join('\n'));
     const messages = report.messages;
@@ -86,13 +105,31 @@ export function createAiBuild({ api, host, store: given }) {
       raw = await callModel(api, messages, st.settings.model, st.settings.timeout, job);
       assert(!job.cancelled && st.job?.id === job.id && candidateValidMeta(meta), '요청 이후 작업 대상·원고·프롬프트가 바뀌어 결과를 버렸습니다. 다시 요청해 주세요.');
       raw = extractResponseJson(raw, task);
-      const packet = parseResponse(raw, task, before);
+      let info = null;
+      const dusk = loreAtSend === 'dusk';
+      if (dusk) {
+        let res = convertRaw(raw, task, before);
+        if (res.errors.length && st.settings.retry) {
+          // 검사에서 걸리면 오류 문구를 그대로 붙여 AI에게 한 번만 다시 요청한다
+          job.label = TASKS[task].label + ' · 검사 오류를 고쳐 다시 요청 중';
+          emit();
+          const retry = [...messages, { role: 'assistant', content: raw }, { role: 'user', content: '방금 응답을 Dusk 검사기에 넣었더니 아래 오류가 났다. 같은 형식(schemaVersion·task·data)의 완전한 JSON 응답 하나로 고쳐서 다시 보내라. 오류와 무관한 부분은 그대로 유지하라.\n- ' + res.errors.join('\n- ') }];
+          raw = await callModel(api, retry, st.settings.model, st.settings.timeout, job);
+          assert(!job.cancelled && st.job?.id === job.id && candidateValidMeta(meta), '요청 이후 작업 대상·원고·프롬프트가 바뀌어 결과를 버렸습니다. 다시 요청해 주세요.');
+          raw = extractResponseJson(raw, task);
+          res = convertRaw(raw, task, before);
+        }
+        if (res.errors.length) throw new DesignError(res.errors);
+        raw = JSON.stringify(res.response);
+        info = { warnings: res.warnings, fixes: res.fixes, preview: res.preview };
+      }
+      const packet = parseResponse(raw, task, before, dusk);
       if (scope) {
         assert(packet.data.upsert.every((x) => x.ref === scope) && packet.data.remove.every((x) => x === scope), '선택한 항목 밖의 변경이 포함되어 결과를 버렸습니다.');
       }
       const changes = task === 'workshop' ? packet.data.changes.length : 1;
       s.thread.push({ id: uid(), role: 'assistant', content: task === 'workshop' ? packet.data.reply : TASKS[task].label + ' 수정안을 작성했습니다. 아래 카드에서 바뀌는 내용을 확인한 뒤 적용하세요.', task });
-      if (changes) s.candidates.push({ ...meta, id: uid(), label: TASKS[task].label + ' · ' + new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }), before, packet });
+      if (changes) s.candidates.push({ ...meta, id: uid(), label: TASKS[task].label + ' · ' + new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }), before, packet, ...(info && (info.preview.length || info.warnings.length || info.fixes.length) ? { dusk: info } : {}) });
       touch(false);
     } catch (error) {
       if (st.s.sessionId === s.sessionId) {
@@ -166,6 +203,18 @@ export function createAiBuild({ api, host, store: given }) {
   }
   function setTask(task) { assert(TASKS[task], '알 수 없는 작업입니다.'); st.task = task; emit(); }
   function setRequest(task, text) { st.s.requests[task] = text; touch(false); }
+  // 제작 노트·종류: 요청에 같이 실린다. 바뀌면 대기 수정안은 '맥락이 바뀜'으로 본다
+  function setBrief(text, kind) {
+    const s = st.s;
+    const brief = String(text ?? s.brief);
+    const k = kind === undefined ? s.kind : kind;
+    assert(['character', 'simulation'].includes(k), '종류는 character 또는 simulation이에요.');
+    if (brief === s.brief && k === s.kind) return;
+    s.brief = brief; s.kind = k;
+    s.promptRevision++;
+    touch(false);
+    emit();
+  }
   function setScopeOnly(on) { st.scopeOnly = !!on; emit(); }
   function setSelected(task, i) { st.s.selected[task] = i; }
 
@@ -242,9 +291,9 @@ export function createAiBuild({ api, host, store: given }) {
   return {
     state: st, store, init, destroy, sync,
     subscribe: (fn) => { subs.add(fn); return () => subs.delete(fn); },
-    TASKS, requestWithScope, promptFor, previewRequest, sendRequest, cancel,
+    TASKS, loreMode, setLoreMode, hasDusk: () => hasDusk(st.s.draft.globalLore), requestWithScope, promptFor, previewRequest, sendRequest, cancel,
     candidateValid, candidateState, diff, applyCandidate, discardCandidate,
-    setSettings, setPrompt, resetPrompt, setPreset, setTask, setRequest, setScopeOnly, setSelected,
+    setSettings, setPrompt, resetPrompt, setPreset, setTask, setRequest, setScopeOnly, setSelected, setBrief,
     saveSlot, autosave, restoreSlot, importBB, newThread,
     undo: () => host.undo?.(), canUndo: () => !!host.canUndo?.(),
     pendingCount: () => st.s.candidates.filter((c) => !c.status && candidateValidMeta(c)).length

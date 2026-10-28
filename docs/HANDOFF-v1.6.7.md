@@ -1,4 +1,4 @@
-# v1.6.7 인계 (0~2단계 완료, 3단계부터 새 챗)
+# v1.6.7 인계 (0~4단계 완료, 5단계부터 새 챗)
 
 브랜치 `feat/1.6.7` (main에서 분기, 버전은 아직 1.6.6 — 7·8단계에서 1.6.7로 올림). 원본: `ref/botbuilder` 브랜치 `risu_story_workshop.js`(v0.3.2, 번들 14,966줄).
 
@@ -16,5 +16,20 @@
 - BB `정규식 시험` 엔진(RE2JS)과 Dusk `devcheck.regexRun`은 아직 두 개 — 7단계(정규식 '바로 시험' 합치기)에서 통일.
 - 저장본 불러오기는 대화·요청·프리셋만 가져오고 원고는 편집기 것을 유지, 원고가 달라진 수정안은 stale.
 
-## 다음 (3단계~)
-3단계 탭 순서 정보·로어북·정규식·트리거·AI로 제작·JSON(하위 화면 5개) → 4단계 로어북 방식 토글(Dusk/일반, 설계 JSON·변환·검증) → 5단계 팝업 개편 → 6 정보 탭·퍼스트 메시지 → 7 나머지 탭 → 8 처음 사용자·최적화·릴리즈(CHANGELOG·GUIDE·소스맵·크레딧). BB 화면 로직 참고: 번들 `src/ui.js` 14061~14956(Workshop 클래스), `preset-ui.js` 13698~14060, `modules-ui.js` 13612~13697.
+## 3단계 완료 (AI로 제작 탭)
+- 탭 순서 **정보(첫 화면)·로어북·정규식·트리거·AI로 제작·JSON** (`editor.js`: `es.tab="info"`, `hasAi`일 때만 AI 탭, 대기 수정안 수 배지). `getBuild()`로 컨트롤러를 한 번만 만들어 AI 탭과 팝업이 공유.
+- `ui/screens/aitab.js`: 하위 화면 5개 — ① 시작하기(제작 노트·종류 `build.setBrief`, 로어북 방식 이 봇/새 봇 기본값) ② 프롬프트 프리셋(요청 방식, .risup/.json 열기, 블록 보기, 토글(스위치·선택·글), 설치 모듈 고르기·런타임 제외, 참고자료·전역 변수·제외 스위치, 전송 내용 미리보기) ③ 작업 프롬프트(작업별 시스템/사용자 프롬프트 저장·기본값) ④ 설정(모델·대기 시간·전송 한도·자동 재요청) ⑤ 저장본(자동/임시 불러오기·저장, 봇빌더 JSON 가져오기).
+- 프리셋 블록은 보기만 함(순서·내용 편집은 리스에서). 필요하면 7단계 이후 편집 추가.
+- 새 봇·charx 열기/내보내기는 Dusk 기존 기능 그대로(개발 탭).
+
+## 4단계 완료 (로어북 방식 토글 Dusk/일반)
+- `src/dev/aibuild/duskdesign.js`(순수): 설계 JSON(`data.design` = folders·entries·remove) → Dusk 항목 변환 `convertDesign`, 응답 변환 `applyDesignToResponse`(lorebook 작업과 설계 대화의 lorebook 변경 둘 다), AI용 안내문 `DUSK_GUIDE`·형식 `DESIGN_FORMAT`·예시 `designExamples`(블아), 기존 로어북을 구조로 보여 주는 `duskContext`, 규칙 ⇄ 설계 변환 `ruleToDesign`, 방식 결정 `resolveLoreMode`(봇별 기억 > 설정 > Dusk 규칙 유무).
+- 검사 순서: 형식 → 이름 해석(없는 대상·중복 이름·자기 참조·폴더 순환) → `validateRules`(고친·새 항목만) 통과해야 수정안 생성. 자동 수정: 규칙 꺼진 연쇄·with 대상 → 규칙 켬(미리보기에 표시). 경고: 누적 조건+반복 없음, 한 글자 키 등.
+- 컨트롤러: `loreMode()/setLoreMode()`(설정 `loreByBot`), 검사 실패 시 오류 문구를 붙여 **한 번 자동 재요청**(설정 `retry`), 수정안에 `dusk:{preview,warnings,fixes}`.
+- `core.js`: `composeMessages(..., {lore})`, `formatFor(task, lore)`. 수정안 `packet.dusk===true`일 때만 `extentions`·`folder` 필드 허용(일반 응답엔 불허). 일반 방식에서 관리 항목의 content를 고치면 `nativeContent`로 게이트를 다시 감싸 규칙 유지.
+- 팝업(`aibuild.js`): 로어북·설계 대화 작업에서 방식 토글, 수정안 카드에 Dusk 구조 미리보기, **적용 전 규칙 시험**(`editor.js ruleTester({lorebook,onBack})` — 적용되지 않은 상태로 시험, [수정안으로 돌아가기]로 AI 창 복귀).
+- 시험: `tests/duskdesign.test.js`(15, 실제 규칙 엔진 평가 포함), `run-editor-ai.mjs` 30항목, 전체 `node --test` 268 통과.
+- 주의: 빌드/e2e용 node_modules는 `esbuild`·`@esbuild`는 /opt/npm-tools, `acorn`·`eslint-scope`·`playwright`는 /opt/node-tools에서 개별 심볼릭 링크(디렉터리 통째 링크는 esbuild를 못 찾음).
+
+## 다음 (5단계~)
+5단계 AI 팝업 개편(끌어 옮기기·크기 조절·위치 기억·모바일 시트·대기 점/수정안 배지·보고 있는 탭에 맞춰 작업 자동 선택) → 6 정보 탭·퍼스트 메시지 → 7 나머지 탭(정규식 '바로 시험'을 RE2JS로 통일 포함) → 8 처음 사용자·최적화(지연 로딩)·릴리즈(버전 1.6.7, CHANGELOG·GUIDE·소스맵·크레딧). BB 화면 로직 참고: 번들 `src/ui.js` 14061~14956(Workshop 클래스), `preset-ui.js` 13698~14060, `modules-ui.js` 13612~13697.

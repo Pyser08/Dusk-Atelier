@@ -15,6 +15,7 @@ import { attachUndo } from '../undo.js';
 import { createAiBuild } from '../../dev/aibuild/controller.js';
 import { hostFromEditor } from '../../dev/aibuild/bridge.js';
 import { openAiPopup } from './aibuild.js';
+import { renderAiTab } from './aitab.js';
 import { bbInstalled } from '../../engine/firstrun.js';
 import { attachProbPick } from '../probpick.js';
 import { openLoreDusk } from './loredusk.js';
@@ -204,7 +205,7 @@ export async function openEditorCore(ctx, cfg) {
   const original = structuredClone(cfg.view);
   let draft = structuredClone(cfg.view);
   for (const k of ["lorebook", "regex", "trigger"]) if (!Array.isArray(draft[k])) draft[k] = [];
-  const es = { tab: "lorebook", loreTab: "all", sel: { lorebook: 0, regex: 0, trigger: 0 }, q: { lorebook: "", regex: "", trigger: "" }, lastField: null, mItem: false, listScroll: { lorebook: 0, regex: 0, trigger: 0 }, itemView: /* @__PURE__ */ new WeakMap(), shown: null };
+  const es = { tab: "info", loreTab: "all", sel: { lorebook: 0, regex: 0, trigger: 0 }, q: { lorebook: "", regex: "", trigger: "" }, lastField: null, mItem: false, listScroll: { lorebook: 0, regex: 0, trigger: 0 }, itemView: /* @__PURE__ */ new WeakMap(), shown: null };
   const dirty = () => stableJson(draft) !== stableJson(original);
   const panel = h("div", { class: "rb-full", role: "dialog", "aria-label": `${original.name} 편집` });
   const titleB = h("b", null, original.name || "(이름 없음)");
@@ -273,7 +274,7 @@ export async function openEditorCore(ctx, cfg) {
   panel.addEventListener("focusin", (ev) => {
     if (ev.target.matches("textarea, input[type=text], input:not([type])")) es.lastField = ev.target;
   });
-  const TABS2 = [["info", "정보"], ["lorebook", "로어북"], ["regex", "정규식"], ["trigger", "트리거"], ["json", "JSON"]];
+  const TABS2 = [["info", "정보"], ["lorebook", "로어북"], ["regex", "정규식"], ["trigger", "트리거"], ...(hasAi ? [["ai", "AI로 제작"]] : []), ["json", "JSON"]];
   function paintTabs() {
     replace(tabsEl, TABS2.map(([k, label]) => h(
       "button",
@@ -283,7 +284,7 @@ export async function openEditorCore(ctx, cfg) {
         render();
       } },
       label,
-      ["lorebook", "regex", "trigger"].includes(k) ? h("small", null, String(draft[k].length)) : null
+      ["lorebook", "regex", "trigger"].includes(k) ? h("small", null, String(draft[k].length)) : k === "ai" && build?.pendingCount() ? h("small", null, String(build.pendingCount())) : null
     )));
   }
   function paintHead() {
@@ -1468,10 +1469,11 @@ export async function openEditorCore(ctx, cfg) {
   }
   // 규칙 시험: 가상 대화를 한 턴씩 보내 보며 어떤 규칙이 왜 켜지고 안 켜지는지, 변수가 어떻게 바뀌는지 본다
   // (저장하지 않은 편집 중인 로어북 그대로 계산. 실제 채팅·변수는 건드리지 않는다)
-  function ruleTester() {
+  function ruleTester(opts = {}) {
     // 우측 하단 버튼에서 펼쳐지는 창 (뒤쪽 편집 화면은 그대로 쓸 수 있어서, 고치고 바로 다시 시험할 수 있다)
     const old = panel.querySelector("#rb-rule-test");
-    if (old) return old.closeTester?.();
+    if (old && opts.lorebook) old.remove();
+    else if (old) return old.closeTester?.();
     const back = h("div", { id: "rb-rule-test", style: "position:absolute;right:16px;bottom:16px;z-index:40;width:min(760px,calc(100% - 32px));max-height:calc(100% - 32px);display:flex;transform-origin:100% 100%" });
     const still = !!globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     let closing = false;
@@ -1508,7 +1510,7 @@ export async function openEditorCore(ctx, cfg) {
     const userCount = (m) => m.filter((x) => x.role === "user").length;
     const curTurn = () => base + userCount(hist);
     const parseVars = (txt) => Object.fromEntries(String(txt).split(",").map((x) => x.split("=").map((y) => y.trim())).filter((x) => x[0]).map(([k, ...v]) => ["$" + k, v.join("=")]));
-    const items = () => collectManaged(draft.lorebook);
+    const items = () => collectManaged(opts.lorebook ?? draft.lorebook);
     const parseMsgs = (txt) => String(txt).split("\n").map((x) => x.trim()).filter(Boolean).map((x) => /^(나|user|유저)\s*[:：]/i.test(x) ? { role: "user", data: x.replace(/^[^:：]*[:：]\s*/, "") } : { role: "char", data: x.replace(/^(봇|char|bot)\s*[:：]\s*/i, "") });
     const rngOpts = () => ({ ignoreProb: probSel.value === "on", rng: probSel.value === "off" ? () => 0.99999 : Math.random });
     const turnCard = (t) => {
@@ -1626,7 +1628,8 @@ export async function openEditorCore(ctx, cfg) {
       "div",
       { class: "rb-dialog", role: "dialog", "aria-label": "규칙 시험", style: "max-width:none;width:100%;max-height:100%;overflow:auto;animation:none" },
       h("div", { style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap" }, h("h3", { class: "rb-h3", style: "margin:0" }, "규칙 시험 — 가상 대화"), turnBadge),
-      h("p", { class: "rb-muted", style: "margin:0" }, "지금 편집 중인 로어북(저장 전 변경 포함)으로 입력을 한 턴씩 보내 봐요. 실제 채팅과 변수는 건드리지 않아요."),
+      opts.lorebook ? h("div", { class: "rb-note warn", role: "status", style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap" }, h("span", { style: "flex:1;min-width:180px" }, "AI 수정안을 적용한 상태로 시험 중이에요. 아직 편집기에는 반영되지 않았어요."), opts.onBack ? btn("수정안으로 돌아가기", { size: "sm", onClick: () => { closeTester(); opts.onBack(); } }) : null) : null,
+      h("p", { class: "rb-muted", style: "margin:0" }, opts.lorebook ? "수정안이 적용된 로어북으로 입력을 한 턴씩 보내 봐요. 실제 채팅과 변수는 건드리지 않아요." : "지금 편집 중인 로어북(저장 전 변경 포함)으로 입력을 한 턴씩 보내 봐요. 실제 채팅과 변수는 건드리지 않아요."),
       logEl,
       input,
       botIn,
@@ -1759,8 +1762,9 @@ export async function openEditorCore(ctx, cfg) {
     saveView();
     paintTabs();
     paintHead();
-    if (es.tab === "info" || es.tab === "json") body.classList.remove("m-item", "m-list");
+    if (es.tab === "info" || es.tab === "json" || es.tab === "ai") body.classList.remove("m-item", "m-list");
     if (es.tab === "info") renderInfo();
+    else if (es.tab === "ai") renderAi();
     else if (es.tab === "json") renderJson();
     else renderList(es.tab);
   }
@@ -1973,16 +1977,30 @@ export async function openEditorCore(ctx, cfg) {
     ctx.toast(`되돌렸어요 · ${last.label ?? "AI 수정안"}`);
     return true;
   }
-  let build = null;
-  async function aiWindow() {
-    let bbPresent = false;
-    try { bbPresent = bbInstalled((await ctx.api.getDatabase(["plugins"]))?.plugins); } catch { /* 감지 실패는 무시 */ }
+  let build = null, buildInit = null, bbPresent = false;
+  function getBuild() {
     if (!build) {
       build = createAiBuild({ api: ctx.api, host: hostFromEditor(handle, { targetId: () => draft[cfg.idKey] }) });
-      build.init().catch((err) => ctx.toast(`AI 설정을 불러오지 못했어요: ${err?.message ?? err}`, { error: true }));
+      buildInit = build.init().catch((err) => ctx.toast(`AI 설정을 불러오지 못했어요: ${err?.message ?? err}`, { error: true }));
+      build.subscribe(() => { if (panel.isConnected) paintTabs(); });
     }
+    return build;
+  }
+  async function aiWindow() {
+    const b = getBuild();
+    try { bbPresent = bbInstalled((await ctx.api.getDatabase(["plugins"]))?.plugins); } catch { /* 감지 실패는 무시 */ }
     testFab.style.visibility = "hidden";
-    openAiPopup(ctx, { panel, build, selection: () => es.sel, bbPresent, onClose: () => { testFab.style.visibility = ""; } });
+    openAiPopup(ctx, { panel, build: b, selection: () => es.sel, bbPresent, onClose: () => { testFab.style.visibility = ""; },
+      // 수정안을 적용하기 전에 그 상태 그대로 규칙 시험 (시험 창에서 [수정안으로 돌아가기]로 AI 창에 되돌아와요)
+      onRuleTest: (lorebook) => { panel.querySelector("#rb-ai-popup")?.closePopup?.(); ruleTester({ lorebook, onBack: () => aiWindow() }); } });
+  }
+  function renderAi() {
+    const b = getBuild();
+    es.aiRoot?.__dispose?.();
+    const root = renderAiTab(ctx, { build: b, openPopup: () => aiWindow(), state: es.ai ??= {} });
+    es.aiRoot = root;
+    replace(body, root);
+    if (!b.state.ready) buildInit?.then(() => { if (es.tab === "ai" && es.aiRoot === root && panel.isConnected) renderAi(); });
   }
   const AUTO_MS = 12e4;
   let autoBusy = false, lastInput = 0;

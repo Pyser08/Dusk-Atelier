@@ -6,7 +6,7 @@ import { validatePresetState } from './preset-engine.js';
 
 export const STORE_PREFIX = 'da_aibuild:';
 export const AUTOSAVE_MS = 18e4; // 자동저장 3분
-export const DEFAULT_SETTINGS = { model: 'submodel', timeout: 300, maxInputChars: 1e5, lore: 'auto', retry: true };
+export const DEFAULT_SETTINGS = { model: 'submodel', timeout: 300, maxInputChars: 1e5, lore: 'auto', retry: true, loreByBot: {} };
 
 export function normalizeSettings(raw) {
   const s = { ...DEFAULT_SETTINGS, ...(raw && typeof raw === 'object' ? raw : {}) };
@@ -15,6 +15,9 @@ export function normalizeSettings(raw) {
   if (!Number.isFinite(s.maxInputChars) || s.maxInputChars < 1e3 || s.maxInputChars > 1e6) s.maxInputChars = 1e5;
   if (!['auto', 'dusk', 'plain'].includes(s.lore)) s.lore = 'auto';
   s.retry = s.retry !== false;
+  // 봇마다 마지막으로 고른 로어북 방식 (dusk | plain), 최대 200개
+  const by = s.loreByBot && typeof s.loreByBot === 'object' && !Array.isArray(s.loreByBot) ? s.loreByBot : {};
+  s.loreByBot = Object.fromEntries(Object.entries(by).filter(([k, v]) => k && ['dusk', 'plain'].includes(v)).slice(-200));
   return s;
 }
 

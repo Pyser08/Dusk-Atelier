@@ -1,5 +1,11 @@
 // 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식. 원작자 허락. 원본은 저장소 ref/botbuilder 브랜치.
 import { FIELDS, clone, uid, assert, ARRAY_FIELDS, str, keys, array, object, dangerous, bytes, equal } from './util.js';
+import { nativeContent, ridOf, ruleOf } from '../../engine/lorerules.js';
+import { DESIGN_FORMAT, DUSK_GUIDE, designExamples, duskContext } from './duskdesign.js';
+// Dusk 방식 수정안(설계 JSON을 변환한 것)에만 extentions·folder 필드를 허용한다. 일반 방식 응답에는 허용하지 않는다.
+let EXT_OK = false;
+const withExt = (on, fn) => { const p = EXT_OK; EXT_OK = !!on; try { return fn(); } finally { EXT_OK = p; } };
+const EXT_KEYS = ['da_rid', 'da_rule', 'da_folder', 'da_parent', 'da_place'];
   function editable(raw) {
     const r = {};
     for (const f of FIELDS) if (Object.hasOwn(raw, f)) r[f] = clone(raw[f]);
@@ -51,7 +57,7 @@ import { FIELDS, clone, uid, assert, ARRAY_FIELDS, str, keys, array, object, dan
     assert(s.requests && s.selected && s.promptDrafts, "저장본 작업 정보가 없습니다.");
     for (const c of s.candidates) if (!c.status) {
       assert(c.before && c.packet, "저장본 제안 형식이 올바르지 않습니다.");
-      validateData(c.packet.task, c.packet.data, c.before);
+      withExt(c.packet.dusk === true, () => validateData(c.packet.task, c.packet.data, c.before));
     }
     return s;
   }
@@ -132,7 +138,8 @@ workshop의 changes는 task/data 객체 목록이며 task는 중복 없이 최�
 아래 예시는 구조와 이스케이프 참고용이다. 예시 내용 자체를 복사하지 말고 사용자 요청에 맞는 실제 완성 데이터로 교체하라.
 전송 전에 JSON 문법, task 값, 필수 필드와 값의 자료형을 확인하라.`;
   }
-  function responseExamples(task) {
+  function responseExamples(task, dusk = false) {
+    if (dusk && task === "lorebook") return designExamples().map((t, i) => "[완전한 JSON 응답 예시 " + (i + 1) + "]\n" + t).join("\n\n");
     const samples = {
       workshop: [
         { reply: "시작 장소는 항구와 도서관 중 어느 쪽이 좋을까요?", changes: [] },
@@ -150,18 +157,22 @@ workshop의 changes는 task/data 객체 목록이며 task는 중복 없이 최�
     };
     return samples[task].map((data, i) => "[완전한 JSON 응답 예시 " + (i + 1) + "]\n" + JSON.stringify({ schemaVersion: 1, task, data }, null, 2)).join("\n\n");
   }
-  function formatFor(task) {
-    const format = { schemaVersion: 1, task, data: TASKS[task].format };
-    return jsonContract(task) + "\n\n[필수 데이터 구조]\n" + JSON.stringify(format, null, 2) + "\n\n" + responseExamples(task) + (task === "workshop" ? "\nchanges의 각 task는 description/lorebook/regex/lua/greeting/choiceGreeting 중 하나이며 해당 data 형식은 다음과 같다:\n" + JSON.stringify(Object.fromEntries(Object.entries(TASKS).filter(([k]) => k !== "workshop").map(([k, v]) => [k, v.format]))) : "") + "\n허용 필드: lore entry=comment,key,secondkey,content,insertorder,mode,alwaysActive,selective,useRegex,activationPercent; regex rule=comment,in,out,type,flag,ableFlag. 삭제 목록에는 현재 원고의 ref만 사용할 것.";
+  function formatFor(task, lore = "plain") {
+    const dusk = lore === "dusk" && ["lorebook", "workshop"].includes(task);
+    const fmtOf = (k) => dusk && k === "lorebook" ? { design: DESIGN_FORMAT } : TASKS[k].format;
+    const format = { schemaVersion: 1, task, data: fmtOf(task) };
+    return jsonContract(task) + "\n\n[필수 데이터 구조]\n" + JSON.stringify(format, null, 2) + "\n\n" + responseExamples(task, dusk) + (task === "workshop" ? "\nchanges의 각 task는 description/lorebook/regex/lua/greeting/choiceGreeting 중 하나이며 해당 data 형식은 다음과 같다:\n" + JSON.stringify(Object.fromEntries(Object.entries(TASKS).filter(([k]) => k !== "workshop").map(([k, v]) => [k, fmtOf(k)]))) : "") + (dusk ? "\n허용 필드: lorebook은 data.design만 사용한다(upsert·extentions 직접 작성 금지); regex rule=comment,in,out,type,flag,ableFlag. 삭제 목록에는 현재 원고의 ref만 사용할 것.\n\n" + DUSK_GUIDE : "\n허용 필드: lore entry=comment,key,secondkey,content,insertorder,mode,alwaysActive,selective,useRegex,activationPercent; regex rule=comment,in,out,type,flag,ableFlag. 삭제 목록에는 현재 원고의 ref만 사용할 것.");
   }
-  function composeMessages(session, task, request, prompt) {
+  function composeMessages(session, task, request, prompt, opts = {}) {
     assert(TASKS[task], "알 수 없는 요청입니다.");
     str(prompt.system, "시스템 프롬프트");
     str(prompt.user, "사용자 프롬프트");
     for (const slot of ["TASK_NAME", "CURRENT_DRAFT", "USER_REQUEST", "REFERENCE_CONTEXT", "OUTPUT_FORMAT"]) assert(prompt.user.includes("<<" + slot + ">>"), "프롬프트 치환 자리 누락: " + slot);
+    const lore = opts.lore === "dusk" ? "dusk" : "plain";
     const context = contextOf(session.draft);
+    if (lore === "dusk" && ["lorebook", "workshop"].includes(task)) context.lorebook = duskContext(session.draft.globalLore);
     const refs = { description: context.description, lorebook: context.lorebook, regex: context.regex, lua: { scripts: context.scripts, variables: context.defaultVariables }, greeting: context.firstMessage, choiceGreeting: { text: context.firstMessage, scripts: context.scripts, variables: context.defaultVariables, regex: context.regex } };
-    const values = { TASK_NAME: TASKS[task].label, CURRENT_DRAFT: JSON.stringify(task === "workshop" ? context : refs[task]), USER_REQUEST: request, REFERENCE_CONTEXT: JSON.stringify({ project: session.kind, brief: session.brief, character: context, conversation: session.thread.filter((m) => !m.error).map((m) => ({ role: m.role, content: m.content })), compatibility: "RisuAI API v3 / RisuBard. risu-btn → onButtonClick(accessKey, buttonKey); getChatVar/setChatVar. HTML/CSS 미리보기와 코드 실행은 제공하지 않는다." }), OUTPUT_FORMAT: formatFor(task) };
+    const values = { TASK_NAME: TASKS[task].label, CURRENT_DRAFT: JSON.stringify(task === "workshop" ? context : refs[task]), USER_REQUEST: request, REFERENCE_CONTEXT: JSON.stringify({ project: session.kind, brief: session.brief, character: context, conversation: session.thread.filter((m) => !m.error).map((m) => ({ role: m.role, content: m.content })), compatibility: "RisuAI API v3 / RisuBard. risu-btn → onButtonClick(accessKey, buttonKey); getChatVar/setChatVar. HTML/CSS 미리보기와 코드 실행은 제공하지 않는다." }), OUTPUT_FORMAT: formatFor(task, lore) };
     const reference = JSON.parse(values.REFERENCE_CONTEXT);
     reference.pendingProposals = session.candidates.filter((c) => !c.status).map((c) => ({ id: c.id, task: c.packet.task, data: c.packet.data }));
     reference.pendingProposalNote = "미적용 제안이다. 현재 원고와 구분하고, 새 수정안의 참조는 현재 원고 기준으로 작성하라.";
@@ -171,7 +182,11 @@ workshop의 changes는 task/data 객체 목록이며 task는 중복 없이 최�
   var LORE_KEYS = ["comment", "key", "secondkey", "content", "insertorder", "mode", "alwaysActive", "selective", "useRegex", "activationPercent"];
   var REGEX_KEYS = ["comment", "in", "out", "flag", "ableFlag", "type"];
   function validateEntry(entry, type, isNew) {
-    keys(entry, [], type === "lore" ? LORE_KEYS : REGEX_KEYS);
+    keys(entry, [], type === "lore" ? (EXT_OK ? [...LORE_KEYS, "extentions", "folder"] : LORE_KEYS) : REGEX_KEYS);
+    if (type === "lore" && EXT_OK) {
+      if ("extentions" in entry) { object(entry.extentions, "extentions"); for (const k of Object.keys(entry.extentions)) assert(EXT_KEYS.includes(k), "허용하지 않는 Dusk 필드: " + k); }
+      if ("folder" in entry) str(entry.folder, "folder");
+    }
     const strings = type === "lore" ? ["comment", "key", "secondkey", "content"] : ["comment", "in", "out", "flag", "type"];
     for (const k of strings) if (k in entry) str(entry[k], k);
     for (const k of ["alwaysActive", "selective", "useRegex", "ableFlag"]) if (k in entry) assert(typeof entry[k] === "boolean", k + ": 불리언이 필요합니다.");
@@ -335,11 +350,12 @@ workshop의 changes는 task/data 객체 목록이며 task는 중복 없이 최�
     assert(candidates.length === 1, "응답 JSON 객체가 여러 개여서 결과를 선택할 수 없습니다. 객체 하나로 다시 요청하세요.");
     return candidates[0];
   }
-  function parseResponse(raw, task, draft) {
+  function parseResponse(raw, task, draft, allowDusk = false) {
     const response = JSON.parse(extractResponseJson(raw, task));
-    keys(response, ["schemaVersion", "task", "data"]);
+    keys(response, ["schemaVersion", "task", "data"], allowDusk ? ["dusk"] : []);
     assert(response.schemaVersion === 1 && response.task === task, "응답 버전 또는 작업 종류가 요청과 다릅니다.");
-    validateData(task, response.data, draft);
+    withExt(allowDusk && response.dusk === true, () => validateData(task, response.data, draft));
+    if (!allowDusk) delete response.dusk;
     return response;
   }
   function parseVariables(text) {
@@ -365,7 +381,12 @@ workshop의 changes는 task/data 객체 목록이며 task는 중복 없이 최�
   }
   function applyUpdates(draft, field, list, remove, prefix) {
     const old = draft[field] ?? [], updatesByRef = new Map(list.filter((x) => x.ref !== null).map((x) => [x.ref, x.entry ?? x.rule]));
-    draft[field] = old.flatMap((item, i) => remove.includes(prefix + i) ? [] : [{ ...item, ...updatesByRef.get(prefix + i) ?? {} }]);
+    const rewrap = (merged, upd) => {
+      const r = field === "globalLore" ? ruleOf(merged) : null;
+      if (r && r.on !== false && ridOf(merged) && upd && typeof upd.content === "string" && merged.mode !== "folder") merged.content = nativeContent(upd.content, r, ridOf(merged));
+      return merged;
+    };
+    draft[field] = old.flatMap((item, i) => remove.includes(prefix + i) ? [] : [rewrap({ ...item, ...updatesByRef.get(prefix + i) ?? {} }, updatesByRef.get(prefix + i))]);
     for (const item of list.filter((x) => x.ref === null)) draft[field].push(field === "globalLore" ? { key: "", secondkey: "", content: "", comment: "", mode: "normal", insertorder: 100, alwaysActive: false, selective: false, ...item.entry } : { comment: "", flag: "g", ableFlag: true, ...item.rule });
   }
   function applyScripts(draft, data) {
@@ -386,7 +407,7 @@ workshop의 changes는 task/data 객체 목록이며 task는 중복 없이 최�
     draft.defaultVariables = applyVariables(draft.defaultVariables ?? "", data.variables, data.removeVariables ?? []);
   }
   function applyPacket(draft, packet) {
-    validateData(packet.task, packet.data, draft);
+    withExt(packet.dusk === true, () => validateData(packet.task, packet.data, draft));
     const result = clone(draft), changes = packet.task === "workshop" ? packet.data.changes : [packet];
     for (const { task, data } of changes) {
       if (task === "description") result.desc = data.text;
