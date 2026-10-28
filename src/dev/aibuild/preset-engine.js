@@ -292,6 +292,10 @@ import { parseVariables } from './core.js';
         context.trim = true;
         return "";
       }
+      if (name === "length") {
+        assert(args.length >= 1, "length 인자 오류");
+        return String(args[0].length);  // 리스와 같이 첫 인자의 글자 수(UTF-16 기준)
+      }
       if (name === "lower") return args.join("::").toLowerCase();
       if (name === "upper") return args.join("::").toUpperCase();
       throw new Error("지원하지 않는 CBS: " + head);
