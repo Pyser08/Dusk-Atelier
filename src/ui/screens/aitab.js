@@ -6,7 +6,6 @@ import { badge, btn, modal, note, segmented, toggleRow } from '../kit.js';
 import { decodePreset } from '../../dev/aibuild/preset-format.js';
 import { toggleDefinitions, BLOCK_TYPES } from '../../dev/aibuild/preset-engine.js';
 import { activeModules, moduleOptions, readInstalledModules, selectInstalledModules } from '../../dev/aibuild/modules.js';
-import { estimateTokens } from '../../engine/memoryinject.js';
 
 const SUBS = [['start', '시작하기'], ['preset', '프롬프트 프리셋'], ['prompt', '작업 프롬프트'], ['settings', '설정'], ['saves', '저장본']];
 const card = (title, sub, ...kids) => h('section', { class: 'rb-card pad bordered', style: 'display:flex;flex-direction:column;gap:10px' }, h('div', null, h('b', null, title), sub ? h('div', { class: 'rb-muted', style: 'font-size:12px;margin-top:2px' }, sub) : null), ...kids);
@@ -243,9 +242,9 @@ export function renderAiTab(ctx, { build, openPopup, state = {} }) {
       if (!showSend) return replace(out, []);
       try {
         const rep = build.previewRequest(task, st.s.preset.mode === 'preset' && !!st.s.preset.preset);
-        const tokens = estimateTokens(rep.messages.map((m) => m.content).join('\n'));
+        const chars = rep.messages.reduce((n, m) => n + m.content.length, 0);
         replace(out, [
-          h('div', { class: 'rb-muted', style: 'font-size:12px' }, `작업: ${build.TASKS[task].label} · 메시지 ${rep.messages.length}개 · 약 ${tokens.toLocaleString()}토큰 (한도 ${st.settings.maxInputTokens.toLocaleString()}토큰)`),
+          h('div', { class: 'rb-muted', style: 'font-size:12px' }, `작업: ${build.TASKS[task].label} · 메시지 ${rep.messages.length}개 · ${chars.toLocaleString()}자 (한도 ${st.settings.maxInputChars.toLocaleString()}자)`),
           ...(rep.issues ?? []).map((m) => note('err', m)),
           ...(rep.notes ?? []).map((m) => note('warn', m)),
           ...rep.messages.map((m, i) => h('details', null, h('summary', { style: 'cursor:pointer;font-size:13px' }, `${i + 1}. ${m.role} · ${m.content.length.toLocaleString()}자`), h('pre', { style: 'white-space:pre-wrap;max-height:320px;overflow:auto;font-size:12px;margin:6px 0' }, m.content)))
@@ -292,7 +291,8 @@ export function renderAiTab(ctx, { build, openPopup, state = {} }) {
     };
     return [
       card('모델', '리스에 설정해 둔 모델을 써요. 보조 모델이 더 싸고 빨라요.', modelSeg),
-      card('기다리는 시간·보내는 양', null, field('응답을 기다리는 시간', num('timeout', 10, 3600, '초')), field('한 번에 보낼 최대 토큰 수', num('maxInputTokens', 1000, 2000000, '토큰'))),
+      card('기다리는 시간·보내는 양', null, field('응답을 기다리는 시간', num('timeout', 10, 3600, '초')), field('한 번에 보낼 최대 글자 수', num('maxInputChars', 1000, 10000000, '자')),
+        h('div', { class: 'rb-muted', style: 'font-size:12px;line-height:1.5' }, '기본 3,000,000자, 최대 10,000,000자이고 전체 전송은 32MiB까지예요. 글자 수와 바이트로만 재며, 정확한 토큰 수는 계산하지 않아요. 넘으면 자르지 않고 보내기를 막아요. 로어북은 보내기 창에서 항목별로 뺄 수 있어요.')),
       card('안전장치', null, toggleRow('검사에 걸리면 AI에게 한 번 다시 요청', 'Dusk 방식의 설계가 규칙 검사를 통과하지 못하면 오류 내용을 붙여 한 번만 다시 물어봐요', s.retry, (v) => set({ retry: v })))
     ];
   }

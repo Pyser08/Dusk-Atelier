@@ -3,6 +3,7 @@
 // 열어 둔 채 탭을 바꿔도 유지되고, 보고 있는 탭에 맞춰 작업 종류를 자동으로 고른다.
 import { h, replace } from '../dom.js';
 import { btn, iconBtn, note, segmented } from '../kit.js';
+import { LOREREQ_CSS } from '../lorereq-css.js';
 
 const AREA = { name: '이름', desc: '설명', personality: '성격', scenario: '시나리오', firstMessage: '첫 메시지', defaultVariables: '변수', globalLore: '로어북', customscript: '정규식', triggerscript: '트리거', systemPrompt: '시스템', exampleMessage: '예시 대화', postHistoryInstructions: '후속 지시', creatorNotes: '제작자 노트' };
 const STATE_LABEL = { ok: '적용할 수 있어요', applied: '적용함', discarded: '버림', stale: '원고가 바뀌어 쓸 수 없어요' };
@@ -50,6 +51,32 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
   const loreSeg = segmented([['dusk', 'Dusk 방식'], ['plain', '일반 방식']], build.loreMode(), async (v) => { try { await build.setLoreMode(v); } catch (e) { ctx.toast(e.message, { error: true }); } paint(); }, '로어북 방식');
   loreSeg.style.cssText = 'flex:none;min-width:190px';
   const loreHint = h('small', { class: 'rb-muted', style: 'display:none;padding:0 12px 6px;line-height:1.5' });
+  // 이번 요청에 포함할 로어북: 항목별 체크 + 전체 포함/제외. 다시 그려도 스크롤 위치를 지킨다.
+  const loreHead = h('summary', null);
+  const loreBar = h('div', { class: 'rb-lorereq-bar' },
+    btn('전체 포함', { size: 'sm', onClick: () => build.setAllLore(true) }),
+    btn('전체 제외', { size: 'sm', onClick: () => build.setAllLore(false) }));
+  const loreListEl = h('div', { class: 'rb-lorereq-list', role: 'group', 'aria-label': '이번 요청에 포함할 로어북' });
+  const lorePanel = h('details', { class: 'rb-lorereq', style: 'display:none' }, loreHead, h('style', null, LOREREQ_CSS), loreBar, loreListEl);
+  let loreSig = null;
+  function paintLore() {
+    const items = build.loreList();
+    lorePanel.style.display = items.length ? '' : 'none';
+    const on = items.filter((x) => x.included).length;
+    loreHead.textContent = `이번 요청에 포함할 로어북 · ${on}/${items.length}개`;
+    const sig = items.map((x) => (x.included ? '1' : '0') + x.name + (x.folder ? '/' : '')).join('\u0001');
+    if (sig === loreSig) return;
+    loreSig = sig;
+    const top = loreListEl.scrollTop;
+    replace(loreListEl, items.map((x) => {
+      const cb = h('input', { type: 'checkbox', 'aria-label': x.name });
+      cb.checked = x.included;
+      cb.addEventListener('change', () => build.setLoreIncluded(x.index, cb.checked));
+      return h('label', { class: 'rb-lorereq-item', 'data-off': x.included ? '0' : '1' }, cb, h('span', null, (x.folder ? '📁 ' : '') + x.name));
+    }));
+    loreListEl.scrollTop = top;
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => { loreListEl.scrollTop = top; });
+  }
   const sendB = btn('보내기', { kind: 'primary', icon: 'sparkle', onClick: () => send() });
   const stopB = btn('중단', { onClick: () => build.cancel() });
   const undoB = btn('되돌리기', { size: 'sm', icon: 'undo', title: '마지막으로 적용한 수정안을 되돌려요', onClick: () => { build.undo(); paint(); } });
@@ -84,6 +111,17 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
       h('div', { style: 'display:flex;flex-direction:column;gap:4px;margin-top:6px;max-height:220px;overflow:auto' }, rows),
       ...d.fixes.map((m) => note('info', '자동 수정 · ' + m)), ...d.warnings.map((m) => note('warn', m)));
   }
+  // 로어북 수정안: 바뀌는 항목과 필드만 보여 준다 (나머지는 그대로 보존)
+  const FIELD_LABEL = { comment: '제목', key: '키', secondkey: '보조 키', content: '내용', insertorder: '순서', mode: '방식', alwaysActive: '항상 활성', selective: '선택적', useRegex: '정규식', activationPercent: '확률', extentions: 'Dusk 규칙', folder: '폴더' };
+  function loreDiffView(c) {
+    let rows = [];
+    try { rows = build.changesOf(c); } catch { return null; }
+    if (!rows.length) return null;
+    return h('div', { class: 'rb-lorediff' }, rows.map((r) => h('div', null,
+      h('span', { class: 'rb-muted', style: 'width:14px;text-align:center' }, r.kind === 'remove' ? '−' : r.kind === 'new' ? '+' : '~'),
+      h('b', { style: r.kind === 'remove' ? 'text-decoration:line-through' : '' }, r.name),
+      r.fields.length ? h('span', { class: 'rb-muted' }, (r.kind === 'new' ? '새 항목 · ' : '') + r.fields.map((f) => FIELD_LABEL[f] ?? f).join('·') + (r.kind === 'edit' ? ' 바뀜' : '')) : null)));
+  }
   function card(c) {
     const state = build.candidateState(c);
     let areas = [];
@@ -92,6 +130,7 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
     return h('div', { style: 'border:1px solid var(--rb-line2);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px' },
       h('div', { style: 'display:flex;justify-content:space-between;gap:8px;align-items:center' }, h('b', null, c.label), h('small', { class: 'rb-muted' }, STATE_LABEL[state])),
       err ? h('small', { class: 'rb-muted' }, '해석할 수 없어요: ' + err) : h('div', { style: 'display:flex;gap:6px;flex-wrap:wrap' }, areas.map((a) => h('span', { class: 'rb-chip' }, AREA[a] ?? a)), areas.length ? null : h('small', { class: 'rb-muted' }, '바뀌는 내용이 없어요')),
+      loreDiffView(c),
       duskPreview(c),
       state === 'ok' ? h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' },
         btn('적용', { kind: 'primary', size: 'sm', icon: 'check', onClick: () => { try { build.applyCandidate(c); ctx.toast('적용했어요 — 편집기 탭에 바로 반영돼요'); } catch (e) { ctx.toast(e.message, { error: true }); } } }),
@@ -116,6 +155,7 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
     loreSeg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', b.dataset.v === lm ? 'true' : 'false'));
     loreHint.style.display = loreTask ? '' : 'none';
     loreHint.textContent = lm === 'dusk' ? '폴더·소속·장소와 켜지는 규칙까지 설계해요. 적용 전에 규칙 시험으로 확인할 수 있어요.' : '리스 기본 로어북(키·내용)만 만들어요. 기존 Dusk 규칙은 그대로 둬요.';
+    paintLore();
     scope.checked = st.scopeOnly;
     taskSel.value = st.task;
     modelSel.value = st.settings.model;
@@ -231,6 +271,7 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
     ...(bbNote ? [bbNote] : []),
     h('div', { style: 'display:flex;gap:8px;align-items:center;padding:8px 12px;flex-wrap:wrap' }, taskSel, scopeLbl, loreSeg),
     loreHint,
+    lorePanel,
     list,
     h('div', { style: 'padding:10px 12px;border-top:1px solid var(--rb-line2);display:flex;flex-direction:column;gap:8px' }, ta,
       h('div', { style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, undoB, saveB, newB, bbPresent ? importB : null, h('span', { style: 'flex:1' }), sendB, stopB))

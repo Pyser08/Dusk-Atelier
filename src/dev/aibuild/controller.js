@@ -6,8 +6,9 @@ import { callModel } from './model.js';
 import { assemblePreset, newPresetState, validatePresetState } from './preset-engine.js';
 import { createAiStore, normalizeSettings, AUTOSAVE_MS } from './store.js';
 import { toDraft, toView } from './bridge.js';
+import { checkInputSize } from './limits.js';
+import { loreSelection, reconcileLoreSelection, validLoreIncluded, assertLoreRefsIncluded, compactLorePacket, loreChanges } from './loreselect.js';
 import { applyDesignToResponse, DesignError, hasDusk, resolveLoreMode } from './duskdesign.js';
-import { estimateTokens } from '../../engine/memoryinject.js';
 
 export function createAiBuild({ api, host, store: given }) {
   const store = given ?? createAiStore(api);
@@ -37,6 +38,7 @@ export function createAiBuild({ api, host, store: given }) {
     const sig = stable(draft);
     if (lastSig !== null && sig !== lastSig) { st.s.revision++; st.serial++; st.started = true; }
     lastSig = sig;
+    st.s.loreIncluded = reconcileLoreSelection(st.s.draft?.globalLore, st.s.loreIncluded, draft.globalLore);
     st.s.draft = draft;
     st.s.targetId = host.targetId?.() ?? null;
     return draft;
@@ -92,8 +94,8 @@ export function createAiBuild({ api, host, store: given }) {
     const report = previewRequest(task);
     assert(!report.issues.length, '프리셋 조립 오류:\n' + report.issues.join('\n'));
     const messages = report.messages;
-    const tokens = estimateTokens(messages.map((m) => m.content).join('\n'));
-    assert(tokens <= st.settings.maxInputTokens, `전송 내용이 설정한 ${st.settings.maxInputTokens.toLocaleString()}토큰 한도를 초과했습니다. (현재 약 ${tokens.toLocaleString()}토큰) 설정에서 한도를 늘리거나 요청을 줄여 주세요.`);
+    checkInputSize(messages, st.settings.maxInputChars); // 글자·바이트 한도 (토큰 계산 없음, 자르지 않고 막음)
+    const included = loreSelection(s);
     const meta = { sessionId: s.sessionId, targetId: s.targetId, revision: s.revision, promptRevision: s.promptRevision };
     const before = clone(s.draft);
     const job = { ...meta, id: uid(), start: Date.now(), label: TASKS[task].label + ' · 응답 대기', cancelled: false };
@@ -124,7 +126,9 @@ export function createAiBuild({ api, host, store: given }) {
         raw = JSON.stringify(res.response);
         info = { warnings: res.warnings, fixes: res.fixes, preview: res.preview };
       }
-      const packet = parseResponse(raw, task, before, dusk);
+      let packet = parseResponse(raw, task, before, dusk);
+      assertLoreRefsIncluded(packet, included); // 요청에서 뺀 로어북은 건드릴 수 없다
+      packet = compactLorePacket(packet, before.globalLore ?? []); // 바뀐 항목·필드만 남긴다
       if (scope) {
         assert(packet.data.upsert.every((x) => x.ref === scope) && packet.data.remove.every((x) => x === scope), '선택한 항목 밖의 변경이 포함되어 결과를 버렸습니다.');
       }
@@ -169,6 +173,7 @@ export function createAiBuild({ api, host, store: given }) {
     touch(false);
     emit();
   }
+  const changesOf = (candidate) => loreChanges(candidate.packet, candidate.before.globalLore ?? []);
   function discardCandidate(candidate) {
     if (!candidate.status) { candidate.status = 'discarded'; touch(false); emit(); }
   }
@@ -216,6 +221,30 @@ export function createAiBuild({ api, host, store: given }) {
     touch(false);
     emit();
   }
+  // ---- 요청에 포함할 로어북 (항목별 체크 · 전체 포함/제외) ----
+  const inclusionChanged = () => { st.s.promptRevision++; touch(false); emit(); };
+  function loreList() {
+    sync();
+    const inc = loreSelection(st.s);
+    return (st.s.draft.globalLore ?? []).map((e, i) => ({ index: i, name: e.comment || e.key || '(이름 없음)', folder: e.mode === 'folder', included: inc[i] }));
+  }
+  function setLoreIncluded(i, on) {
+    sync();
+    const n = (st.s.draft.globalLore ?? []).length;
+    assert(Number.isInteger(i) && i >= 0 && i < n, '없는 로어북 항목이에요.');
+    const next = loreSelection(st.s);
+    if (next[i] === !!on) return;
+    next[i] = !!on;
+    st.s.loreIncluded = next;
+    inclusionChanged();
+  }
+  function setAllLore(on) {
+    sync();
+    const n = (st.s.draft.globalLore ?? []).length;
+    if (loreSelection(st.s).every((x) => x === !!on)) return;
+    st.s.loreIncluded = Array(n).fill(!!on);
+    inclusionChanged();
+  }
   function setScopeOnly(on) { st.scopeOnly = !!on; emit(); }
   function setSelected(task, i) { st.s.selected[task] = i; }
 
@@ -239,7 +268,9 @@ export function createAiBuild({ api, host, store: given }) {
   function restoreSession(session) {
     const r = clone(session);
     const cur = sync();
+    const savedLore = r.draft?.globalLore, savedInc = r.loreIncluded;
     r.draft = cur; r.targetId = st.s.targetId; r.base = st.s.base; r.source = st.s.source;
+    r.loreIncluded = validLoreIncluded(reconcileLoreSelection(savedLore, validLoreIncluded(savedInc, (savedLore ?? []).length), cur.globalLore), (cur.globalLore ?? []).length);
     r.sessionId = st.s.sessionId; r.revision = st.s.revision; r.promptRevision = st.s.promptRevision;
     const sig = stable(cur);
     r.candidates = (r.candidates ?? []).map((c) => {
@@ -293,6 +324,7 @@ export function createAiBuild({ api, host, store: given }) {
     state: st, store, init, destroy, sync,
     subscribe: (fn) => { subs.add(fn); return () => subs.delete(fn); },
     TASKS, loreMode, setLoreMode, hasDusk: () => hasDusk(st.s.draft.globalLore), requestWithScope, promptFor, previewRequest, sendRequest, cancel,
+    loreList, setLoreIncluded, setAllLore, changesOf,
     candidateValid, candidateState, diff, applyCandidate, discardCandidate,
     setSettings, setPrompt, resetPrompt, setPreset, setTask, setRequest, setScopeOnly, setSelected, setBrief,
     saveSlot, autosave, restoreSlot, importBB, newThread,

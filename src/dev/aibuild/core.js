@@ -1,6 +1,7 @@
 // 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식. 원작자 허락. 원본은 저장소 ref/botbuilder 브랜치.
 import { FIELDS, clone, uid, assert, ARRAY_FIELDS, str, keys, array, object, dangerous, bytes, equal } from './util.js';
 import { nativeContent, ridOf, ruleOf } from '../../engine/lorerules.js';
+import { loreSelection, requestLorebook, validLoreIncluded } from './loreselect.js';
 import { DESIGN_FORMAT, DUSK_GUIDE, designExamples, duskContext } from './duskdesign.js';
 // Dusk 방식 수정안(설계 JSON을 변환한 것)에만 extentions·folder 필드를 허용한다. 일반 방식 응답에는 허용하지 않는다.
 let EXT_OK = false;
@@ -15,7 +16,7 @@ const EXT_KEYS = ['da_rid', 'da_rule', 'da_folder', 'da_parent', 'da_place'];
     return { type: "character", chaId: uid(), name: "이름 없는 이야기", desc: "", firstMessage: "", notes: "", chats: [{ id: uid(), name: "Chat 1", message: [], note: "", localLore: [] }], chatFolders: [], chatPage: 0, viewScreen: "none", bias: [], emotionImages: [], globalLore: [], sdData: [], utilityBot: false, customscript: [], triggerscript: [], exampleMessage: "", creatorNotes: "", systemPrompt: "", postHistoryInstructions: "", alternateGreetings: [], tags: [], creator: "", characterVersion: "1.0", personality: "", scenario: "", firstMsgIndex: -1, additionalText: "", defaultVariables: "", additionalAssets: [] };
   }
   function newSession() {
-    return { schemaVersion: 1, sessionId: uid(), targetId: null, revision: 0, promptRevision: 0, base: null, draft: blankCharacter(), source: null, thread: [], brief: "", kind: "character", requests: {}, selected: {}, candidates: [], regexInput: "", tab: "overview", promptDrafts: {}, cardMeta: null };
+    return { schemaVersion: 1, sessionId: uid(), targetId: null, revision: 0, promptRevision: 0, loreIncluded: [], base: null, draft: blankCharacter(), source: null, thread: [], brief: "", kind: "character", requests: {}, selected: {}, candidates: [], regexInput: "", tab: "overview", promptDrafts: {}, cardMeta: null };
   }
   function sessionFromCharacter(raw) {
     assert(raw && raw.chaId && (!raw.type || raw.type === "character"), "일반 캐릭터만 불러올 수 있습니다.");
@@ -54,6 +55,7 @@ const EXT_KEYS = ['da_rid', 'da_rule', 'da_folder', 'da_parent', 'da_place'];
     assert(s.thread.every((m) => ["user", "assistant"].includes(m.role) && typeof m.content === "string"), "저장본 대화 형식이 올바르지 않습니다.");
     for (const t of s.draft.triggerscript ?? []) assert(t && Array.isArray(t.effect) && Array.isArray(t.conditions) && t.effect.every((e) => e && typeof e.type === "string"), "저장본 트리거 형식이 올바르지 않습니다.");
     for (const a of s.draft.additionalAssets ?? []) assert(Array.isArray(a) && a.length >= 2 && typeof a[0] === "string" && typeof a[1] === "string", "저장본 에셋 형식이 올바르지 않습니다.");
+    s.loreIncluded = validLoreIncluded(s.loreIncluded, (s.draft.globalLore ?? []).length);
     assert(s.requests && s.selected && s.promptDrafts, "저장본 작업 정보가 없습니다.");
     for (const c of s.candidates) if (!c.status) {
       assert(c.before && c.packet, "저장본 제안 형식이 올바르지 않습니다.");
@@ -68,14 +70,14 @@ const EXT_KEYS = ['da_rid', 'da_rule', 'da_folder', 'da_parent', 'da_place'];
     }));
     return r;
   }
-  function contextOf(draft) {
+  function contextOf(draft, included = []) {
     return {
       name: draft.name,
       description: draft.desc,
       personality: draft.personality,
       scenario: draft.scenario,
       firstMessage: draft.firstMessage,
-      lorebook: (draft.globalLore ?? []).map((entry, i) => ({ ref: "l" + i, entry })),
+      lorebook: requestLorebook(draft.globalLore, included),
       regex: (draft.customscript ?? []).map((rule, i) => ({ ref: "r" + i, rule })),
       scripts: luaEntries(draft),
       defaultVariables: draft.defaultVariables ?? "",
@@ -85,7 +87,7 @@ const EXT_KEYS = ['da_rid', 'da_rule', 'da_folder', 'da_parent', 'da_place'];
   var TASKS = {
     workshop: { label: "설계 대화", hint: "방향을 의논하고, 필요한 경우에만 원고 수정안을 제안합니다.", format: { reply: "대화 답변", changes: [{ task: "description", data: { text: "검토할 설명" } }] }, instruction: "사용자와 대화하며 캐릭터 또는 시뮬레이션을 설계하라. 질문, 설정 점검, 아이디어 논의에는 reply로만 답하고 changes는 빈 배열로 둬라. 제작·수정을 요청했을 때만 필요한 작업별 수정안을 changes에 담아라. 임의로 범위를 확장하지 마라. 시뮬레이션이면 세계 규칙, 사용자 역할, 시작 상황, 진행 조건의 일관성을 검토하라." },
     description: { label: "캐릭터 설명", format: { text: "완성된 설명 본문" }, instruction: "요청한 성격·배경·말투·관계·행동 특성을 캐릭터 설명으로 작성하거나 수정하라. 시뮬레이션의 설명에는 세계 규칙과 진행 방식도 포함하라. data.text에 완성 본문을 반환하라." },
-    lorebook: { label: "로어북", format: { upsert: [{ ref: null, entry: { comment: "제목", key: "키워드", content: "내용" } }], remove: [] }, instruction: "키워드·본문·활성화 조건이 일치하는 로어북을 작성하라. 기존 항목은 제공된 ref로 식별하고 수정하지 않는 항목과 설정을 유지하라." },
+    lorebook: { label: "로어북", format: { upsert: [{ ref: null, entry: { comment: "제목", key: "키워드", content: "내용" } }], remove: [] }, instruction: "키워드·본문·활성화 조건이 일치하는 로어북을 작성하라. 기존 항목은 제공된 ref로 식별하라. 기존 항목을 고칠 때는 entry에 실제로 바뀌는 필드만 담고(예: content만), 바뀌지 않는 필드와 수정하지 않는 항목은 쓰지 마라. 새 항목(ref:null)만 key·content를 모두 써라. 제공되지 않은 ref는 사용하지 마라." },
     regex: { label: "정규식 · HTML/CSS", format: { upsert: [{ ref: null, rule: { comment: "이름", in: "패턴", out: "치환문", type: "editdisplay", flag: "g", ableFlag: true } }], remove: [] }, instruction: "IN 패턴과 OUT의 캡처 참조·HTML/CSS를 일치시켜라. RisuAI 적용 유형은 editinput/editoutput/editprocess/editdisplay다. 생성 HTML은 텍스트 원고로만 검토된다. 기존 규칙의 ref·플래그·유형은 요청에 맞춰 보존하라." },
     lua: { label: "Lua · 변수", format: { scripts: [{ ref: null, comment: "설명", code: "-- Lua" }], removeScripts: [], variables: {}, removeVariables: [] }, instruction: "RisuAI Lua 코드와 초기 변수를 작성하라. 확인된 onInput/onOutput/onStart/onButtonClick(accessKey, buttonKey), getChatVar(accessKey,key), setChatVar(accessKey,key,value)를 사용하라. 초기 변수는 key=value 문자열이며 값에 등호·줄바꿈을 넣지 마라. 기존 이벤트·다른 효과를 유지하라." },
     greeting: { label: "첫 메시지", format: { text: "시작 장면" }, instruction: "제공된 설명과 로어북을 참고해 캐릭터·세계관과 일관된 시작 장면을 작성하라. data.text에는 퍼스트 메시지 본문만 반환하라." },
@@ -169,8 +171,9 @@ workshop의 changes는 task/data 객체 목록이며 task는 중복 없이 최�
     str(prompt.user, "사용자 프롬프트");
     for (const slot of ["TASK_NAME", "CURRENT_DRAFT", "USER_REQUEST", "REFERENCE_CONTEXT", "OUTPUT_FORMAT"]) assert(prompt.user.includes("<<" + slot + ">>"), "프롬프트 치환 자리 누락: " + slot);
     const lore = opts.lore === "dusk" ? "dusk" : "plain";
-    const context = contextOf(session.draft);
-    if (lore === "dusk" && ["lorebook", "workshop"].includes(task)) context.lorebook = duskContext(session.draft.globalLore);
+    const included = loreSelection(session);
+    const context = contextOf(session.draft, included);
+    if (lore === "dusk" && ["lorebook", "workshop"].includes(task)) context.lorebook = duskContext(session.draft.globalLore).filter((o) => included[Number(o.ref.slice(1))] !== false);
     const refs = { description: context.description, lorebook: context.lorebook, regex: context.regex, lua: { scripts: context.scripts, variables: context.defaultVariables }, greeting: context.firstMessage, choiceGreeting: { text: context.firstMessage, scripts: context.scripts, variables: context.defaultVariables, regex: context.regex } };
     const values = { TASK_NAME: TASKS[task].label, CURRENT_DRAFT: JSON.stringify(task === "workshop" ? context : refs[task]), USER_REQUEST: request, REFERENCE_CONTEXT: JSON.stringify({ project: session.kind, brief: session.brief, character: context, conversation: session.thread.filter((m) => !m.error).map((m) => ({ role: m.role, content: m.content })), compatibility: "RisuAI API v3 / RisuBard. risu-btn → onButtonClick(accessKey, buttonKey); getChatVar/setChatVar. HTML/CSS 미리보기와 코드 실행은 제공하지 않는다." }), OUTPUT_FORMAT: formatFor(task, lore) };
     const reference = JSON.parse(values.REFERENCE_CONTEXT);
