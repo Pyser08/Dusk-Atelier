@@ -19,9 +19,15 @@
   "to": "(this.llmCall??callWriterModel)(this.api,this.keyStore,preset,"
  },
  {
-  "file": "src/engine/pot/writer-proposal.js",
-  "why": "모델이 검토 후보 일부를 빠뜨려도 실패시키지 않고 변화 없음으로 처리(자동 위키가 이 오류로 멈추던 문제)",
-  "from": "proposalAssert(!missingCandidates.length,`retrieval candidate 검토가 누락되었습니다: ${missingCandidates.join(', ')}. 변화가 없으면 대상별 no_canonical_change를 남기세요.`);",
-  "to": "for(const ref of missingCandidates){if(issues.length<32)issues.push({code:'no_canonical_change',document_ref:ref,detail:'검토 누락 — 변화 없음으로 처리(Dusk)'});}"
+  "file": "src/data/pot/auto-wiki.js",
+  "why": "검증 실패(형식·대상 참조) 시 같은 응답을 최대 2번 자동 재시도",
+  "from": "else if(progressToken!==null)this.progressPanel?.writerFailure(progressToken,detail||reason);",
+  "to": "else if(progressToken!==null)this.progressPanel?.writerFailure(progressToken,detail||reason);if(['json-contract','target-ref'].includes(stage)&&this.phase==='failed'){this.autoRetries=(this.autoRetries||0)+1;if(this.autoRetries<=2){this.message+=` · 자동 재시도 ${this.autoRetries}/2`;this.scheduler.setTimeout(()=>{this.retry().catch(()=>{})},2500);}else this.autoRetries=0;}"
+ },
+ {
+  "file": "src/data/pot/auto-wiki.js",
+  "why": "성공하면 자동 재시도 횟수 초기화",
+  "from": "this.phase = 'completed'; this.message = settings.relationshipOnlyMode",
+  "to": "this.autoRetries=0;this.phase = 'completed'; this.message = settings.relationshipOnlyMode"
  }
 ]
