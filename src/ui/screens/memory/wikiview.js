@@ -65,7 +65,8 @@ export async function renderPeopleTab(env, host) {
   const people = env.folder.people ?? {}, docs = Object.values(wiki?.documents ?? {}).filter((d) => d?.type === "Character");
   const again = () => renderPeopleTab(env, host);
   // 위키를 고친다(저장 → 이 화면만 다시 그림). 위키가 아직 없으면 지금 열린 채팅의 범위로 새로 만든다.
-  const commit = (fn, ok) => M.store.updateFolder(env.bot.id, env.chatItem.id, (f) => {
+  const commit = async (fn, ok) => { if (!env.folder.wiki?.documents && !liveScope(M, env.bot.id)) { try { await M.flow?.runtime?.()?.wiki?.refresh?.(); } catch { /* 아래에서 안내 */ } } return commit0(fn, ok); };
+  const commit0 = (fn, ok) => M.store.updateFolder(env.bot.id, env.chatItem.id, (f) => {
     let w = f.wiki;
     if (!w?.documents) { const sc = liveScope(M, env.bot.id); if (!sc) throw new Error("리스에서 이 봇의 이 채팅을 연 상태에서 쓸 수 있어요."); w = createEmptyWikiScope({ characterId: sc.characterId, chatKey: sc.chatKey }); }
     f.wiki = fn(w);

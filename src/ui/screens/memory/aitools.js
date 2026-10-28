@@ -16,9 +16,12 @@ const busy = (s) => s?.running || ["running", "applying"].includes(s?.phase);
 export async function toolsFor(env) {
   const { ctx, bot, chatItem } = env, M = ctx.memory, tools = M.flow?.tools?.();
   if (!tools) return { why: "기억 흐름이 켜져 있어야 해요. 설정에서 ‘장기기억 켜기’를 확인해 주세요." };
-  const scope = liveScope(M, bot.id);
+  // 위키가 이 채팅에 아직 연결되지 않았으면(플러그인을 켠 뒤 응답을 받기 전) 지금 연다.
+  let scope = liveScope(M, bot.id);
+  if (!scope) { try { await M.flow.runtime()?.wiki?.refresh?.(); } catch { /* 아래에서 안내 */ } scope = liveScope(M, bot.id); }
   const [ci, ti] = await Promise.all([ctx.api.getCurrentCharacterIndex().catch(() => -1), ctx.api.getCurrentChatIndex().catch(() => -1)]);
-  if (!scope || ci !== bot.index || ti !== chatItem.index) return { why: "리스에서 이 봇의 이 채팅을 연 상태에서 쓸 수 있어요." };
+  if (ci !== bot.index || ti !== chatItem.index) return { why: "리스에서 열려 있는 채팅과 지금 고른 채팅이 달라요. 위에서 열려 있는 채팅을 골라 주세요." };
+  if (!scope) return { why: "이 채팅의 위키를 아직 열지 못했어요. 응답을 한 번 받은 뒤 다시 눌러 주세요." };
   return { tools, scope };
 }
 
