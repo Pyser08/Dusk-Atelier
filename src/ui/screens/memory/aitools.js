@@ -140,19 +140,33 @@ export async function openImport(env) {
 export async function fillEmptyPeople(env, docs) {
   const { ctx } = env, chk = await toolsFor(env);
   if (chk.why) return ctx.toast(chk.why, { error: true });
-  const { refresh } = chk.tools, groups = PERSON_REFRESH_GROUPS.map((g) => g.id);
-  let ok = 0, same = 0, bad = 0;
+  const { refresh, metric } = chk.tools, groups = PERSON_REFRESH_GROUPS.map((g) => g.id);
+  let ok = 0, same = 0, bad = 0, metrics = 0, firstErr = "";
+  const keep = (e) => { if (!firstErr && e) firstErr = String(e.message ?? e).slice(0, 90); };
   for (const [i, doc] of docs.entries()) {
     ctx.toast(`AI가 인물을 채우는 중이에요 (${i + 1}/${docs.length}) · ${doc.title}`, { seconds: 6 });
+    // 1) 개요·관계·성격 등을 한꺼번에
     try {
       refresh.cancel({ silent: true });
       await refresh.generate(doc.id, { groups, mode: "standard" });
       const s = refresh.status();
-      if (s.error) { bad++; continue; }
-      if (s.proposal?.changes?.length) { await refresh.apply(); (refresh.status().error ? bad++ : ok++); } else same++;
-    } catch { bad++; }
+      if (s.error) { bad++; keep(s.error); }
+      else if (s.proposal?.changes?.length) { await refresh.apply(); if (refresh.status().error) { bad++; keep(refresh.status().error); } else ok++; } else same++;
+    } catch (e) { bad++; keep(e); }
+    // 2) 수치는 따로 하나씩: 위 단계에서 못 만들었거나 비어 있으면 호감도·첫인상·음란도·의심도를 각각 요청한다.
+    for (const slot of Object.keys(PEOPLE_AI_METRIC_NAMES)) {
+      const now = chk.tools && ctx.memory.flow?.runtime?.()?.wiki?.snapshot?.()?.documents?.[doc.id];
+      if ((now?.metrics ?? []).some((m) => m.slotId === slot)) continue;
+      try {
+        metric.cancel({ silent: true });
+        await metric.generate(doc.id, slot, {});
+        const ms = metric.status();
+        if (ms.error) { keep(ms.error); continue; }
+        if (ms.proposal) { await metric.apply(); if (!metric.status().error) metrics++; else keep(metric.status().error); }
+      } catch (e) { keep(e); }
+    }
   }
-  refresh.cancel({ silent: true });
-  ctx.toast(`인물 채우기를 마쳤어요 · 반영 ${ok}명${same ? ` · 변경 없음 ${same}명` : ""}${bad ? ` · 실패 ${bad}명(인물 페이지에서 다시 시도)` : ""}`, { seconds: 9, error: bad > 0 && !ok });
+  refresh.cancel({ silent: true }); metric.cancel({ silent: true });
+  ctx.toast(`인물 채우기를 마쳤어요 · 반영 ${ok}명 · 수치 ${metrics}개${same ? ` · 변경 없음 ${same}명` : ""}${bad ? ` · 실패 ${bad}명` : ""}${firstErr ? ` · 사유: ${firstErr}` : ""}`, { seconds: 14, error: bad > 0 && !ok && !metrics });
   (env.redrawView ?? env.redraw)();
 }
