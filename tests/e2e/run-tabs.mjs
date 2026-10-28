@@ -54,7 +54,16 @@ for (const mobile of [false, true]) {
   ok(`[${tag}] 잘못된 패턴은 오류 안내`, /오류|잘못/.test(await page.locator(".rb-form [aria-live=polite]").last().textContent()));
   await fill("찾을 패턴", "zzz"); await page.waitForTimeout(250);
   ok(`[${tag}] 일치 없음 안내`, (await page.locator(".rb-form [aria-live=polite]").last().textContent()).includes("일치하는 곳이 없어요"));
-  ok(`[${tag}] 정규식 '고급 설정'(플래그)은 접힘`, !(await page.locator(".rb-adv").first().evaluate((d) => d.open)));
+  const rxAdv = page.locator(".rb-fold", { hasText: "패턴 검사" }).first();
+  ok(`[${tag}] 정규식 카드: 기본·찾아서 바꾸기·바로 시험은 열림, 고급은 접힘`, (await page.locator(".rb-fold").evaluateAll((d) => d.map((x) => x.open))).join() === "true,true,true,false");
+  await rxAdv.locator("summary").click();
+  ok(`[${tag}] 패턴 검사: 정상 패턴은 문제 없음`, (await rxAdv.textContent()).includes("문제 없음"));
+  await fill("찾을 패턴", "(["); await page.waitForTimeout(250);
+  ok(`[${tag}] 패턴 검사: 오류 표시`, (await rxAdv.textContent()).includes("패턴 오류"));
+  if (mobile) await page.getByRole("button", { name: "목록으로" }).click();
+  await page.locator(".rb-seg button", { hasText: "꺼짐" }).click(); await page.waitForTimeout(80);
+  ok(`[${tag}] 켜짐/꺼짐 거르기: 꺼짐엔 항목 없음`, (await page.locator(".side .rb-item").count()) === 0);
+  await page.locator(".rb-seg button", { hasText: "전체" }).click(); await page.waitForTimeout(80);
   // ── 트리거 ──
   await tab(page, "트리거"); await page.waitForTimeout(80);
   if (mobile) await page.locator(".side .rb-item").first().click().catch(() => {}); await page.waitForTimeout(100);

@@ -1894,7 +1894,7 @@ export async function openEditorCore(ctx, cfg) {
   }
   function regexForm(r) {
     const flagInput = text(r, "flag", { placeholder: "g, i, m, s…" });
-    const flags = h("div", { class: "wide", style: "display:flex;gap:16px;flex-wrap:wrap;align-items:center" }, check(r, "ableFlag", "플래그 직접 지정"), h("div", { style: "width:180px" }, flagInput));
+    const flags = h("div", { style: "display:flex;gap:16px;flex-wrap:wrap;align-items:center" }, check(r, "ableFlag", "플래그 직접 지정"), h("div", { style: "width:180px" }, flagInput));
     // 바로 시험 (RE2JS 한 엔진): 입력 글에서 일치한 곳을 강조하고, 위치·캡처 그룹·바뀐 결과를 보여 준다. CBS·@@ 같은 특수 문법은 기존 근사 시험으로.
     const testIn = h("textarea", { class: "rb-textarea", rows: 3, spellcheck: "false", placeholder: "여기에 시험할 글을 붙여넣으면 바로 결과가 나와요", "aria-label": "정규식 시험 입력" });
     const testOut = h("div", { style: "display:flex;flex-direction:column;gap:8px;margin-top:8px", "aria-live": "polite" });
@@ -1926,16 +1926,37 @@ export async function openEditorCore(ctx, cfg) {
         rich.note ? h("div", { class: "rb-muted", style: "font-size:12px" }, rich.note) : null);
     };
     testIn.addEventListener("input", runTest);
+    const typeSeg = segmented(REGEX_TYPES, r.type ?? "editoutput", (v) => {
+      r.type = v;
+      changed();
+      render();
+    }, "적용 시점");
+    // 고급: 패턴 검사 (정규식 문법 오류를 바로 알려 줌)
+    const chk = h("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" });
+    const paintChk = () => {
+      const st = regexRun([{ ...r }], "", r.type).steps[0];
+      replace(chk, h("span", { class: "rb-muted", style: "font-size:13px" }, "패턴 검사"), st?.error ? badge(`패턴 오류: ${st.error}`, "warn") : st?.skipped ? badge(st.skipped, "mute") : badge("문제 없음", "ok"));
+    };
+    paintChk();
+    const typeLabel = REGEX_TYPES.find((x) => x[0] === r.type)?.[1] ?? "";
     const form = h(
       "div",
       { class: "rb-form" },
-      field("이름", text(r, "comment")),
-      field("적용 시점", select2(r, "type", REGEX_TYPES)),
-      field("찾을 패턴 (IN)", codeArea(r, "in", { lang: "regex" }), true),
-      field("바꿀 내용 (OUT)", codeArea(r, "out", { lang: "replace", tall: true }), true),
-      field("바로 시험", h("div", null, testIn, testOut), true),
-      advFold("regex", "고급 설정", "플래그 직접 지정", flags)
+      foldCard("rx-basic", "기본", typeLabel, true,
+        h("div", { class: "rb-form" },
+          field("이름", text(r, "comment")),
+          field("적용 시점", typeSeg, true, "입력=내가 보낼 때, 출력=AI 답이 올 때, 요청 데이터=AI에게 보낼 데이터, 화면 표시=보이는 글만 바꿈(저장된 글은 그대로)예요."))),
+      foldCard("rx-find", "찾아서 바꾸기", "패턴 → 바꿀 내용", true,
+        h("div", { class: "rb-form" },
+          field("찾을 패턴 (IN)", codeArea(r, "in", { lang: "regex" }), true),
+          field("바꿀 내용 (OUT)", codeArea(r, "out", { lang: "replace", tall: true }), true, "$1, $2 …로 찾은 부분을 다시 쓸 수 있어요. {{user}} 같은 CBS도 써요."),
+          h("div", { class: "wide", style: "display:flex;gap:6px;align-items:center" }, flags, tipEl("켜야 아래 플래그가 적용돼요. 끄면 기본값을 써요.")))),
+      foldCard("rx-test", "🧪 바로 시험", "", true,
+        h("div", null, h("div", { style: "margin-bottom:6px" }, tipEl("RE2JS 엔진으로 시험해요. CBS({{…}})와 @@ 지시어는 간이 시험이에요. 시험할 글을 넣으면 일치한 곳이 바로 표시돼요.")), testIn, testOut)),
+      foldCard("rx-adv", "고급", "패턴 검사", false, chk)
     );
+    form.addEventListener("input", paintChk);
+    form.addEventListener("change", paintChk);
     form.addEventListener("input", runTest);
     form.addEventListener("change", runTest);
     return form;
