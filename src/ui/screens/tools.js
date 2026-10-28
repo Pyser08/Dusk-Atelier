@@ -49,7 +49,7 @@ function thanksCard() {
 }
 // 이식 크레딧 카드 — 원작자 이름은 적지 않고 원문 글 링크만 둔다 (RisuTide 감사 카드와 같은 결: 어두운 그라데이션 + 움직이는 배경)
 const CREDITS = [
-  { key: "pot", emoji: "📜", kicker: "PORTED WITH PERMISSION", name: "risupot", desc: "인물 위키·모델 계층·프롬프트 — 장기 기억의 뼈대. 허락을 받아 Dusk 방식으로 옮겨 왔어요.", url: "https://arca.live/b/characterai/185024906" },
+  { key: "pot", emoji: "📜", kicker: "PORTED WITH PERMISSION", name: "Risupot", desc: "인물 위키·모델 계층·프롬프트 — 장기 기억의 뼈대. 허락을 받아 Dusk 방식으로 옮겨 왔어요.", url: "https://arca.live/b/characterai/185024906" },
   { key: "arcana", emoji: "🃏", kicker: "PORTED WITH PERMISSION", name: "Arcana Card", desc: "기억 카드 — 인물을 한 장의 카드로 남기는 방식. 허락을 받아 Dusk 방식으로 옮겨 왔어요.", url: "https://arca.live/b/characterai/185793481" },
   { key: "bb", emoji: "🛠️", kicker: "PORTED WITH PERMISSION", name: "봇빌더", desc: "AI로 제작 — 설명·로어북·정규식·Lua를 AI와 함께 만드는 방식. 허락을 받아 Dusk 방식으로 옮겨 왔어요.", url: "https://arca.live/b/characterai/187289284" }
 ];

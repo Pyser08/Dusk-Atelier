@@ -453,7 +453,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-thanks-kicker{font-size:11px;font-weight:800;letter-spacing:.18em;color:#9fe0ff}
 .rb-thanks-title{font-size:24px;font-weight:800;letter-spacing:-.01em;background:linear-gradient(90deg,#ffffff,#9fe0ff);-webkit-background-clip:text;background-clip:text;color:transparent}
 .rb-thanks-text{font-size:13.5px;line-height:1.7;color:#cfeaff;word-break:keep-all}
-.rb-credits{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.rb-credits{display:flex;flex-direction:column;gap:12px;margin-top:0}
 .rb-cr{position:relative;border-radius:20px;overflow:hidden;padding:22px;color:#f3ecff;box-shadow:0 14px 40px rgba(30,16,70,.35);opacity:0;transform:translateY(-12px) scale(.98);animation:rb-cr-in .6s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(var(--rb-ci) * .1s);transition:transform .25s,box-shadow .25s}
 .rb-cr[data-credit=pot]{background:linear-gradient(135deg,#1a1245 0%,#2e1f7a 48%,#5b34a8 100%)}
 .rb-cr[data-credit=arcana]{background:linear-gradient(135deg,#3a0f3a 0%,#7a1f5c 48%,#c2477a 100%)}
