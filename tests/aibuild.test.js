@@ -5,7 +5,7 @@ import { createAiBuild } from '../src/dev/aibuild/controller.js';
 import { createAiStore } from '../src/dev/aibuild/store.js';
 import { toDraft, toView } from '../src/dev/aibuild/bridge.js';
 import { regexTest } from '../src/dev/aibuild/regextest.js';
-import { newPresetState, assemblePreset } from '../src/dev/aibuild/preset-engine.js';
+import { newPresetState, assemblePreset, renderPresetText } from '../src/dev/aibuild/preset-engine.js';
 import { TASKS, composeMessages, defaultPrompt, snapshot, restoreSnapshot, newSession } from '../src/dev/aibuild/core.js';
 
 const memStorage = () => {
@@ -166,4 +166,12 @@ test('정규식 시험(RE2JS)과 프리셋 기본 상태', async () => {
   assert.equal(msgs.length, 2);
   assert.ok(Object.keys(TASKS).includes('workshop'));
   assert.equal(typeof assemblePreset, 'function');
+});
+
+test("프리셋 CBS: length는 글자 수를 돌려주고 조건식에서도 쓴다 (누렁이 프리셋 가이드라인·추가 토글)", () => {
+  const ctx = { fields: {}, variables: { v: "가나다라" }, globals: {}, modules: [] };
+  assert.equal(renderPresetText("{{length::가나다}}", ctx), "3");
+  assert.equal(renderPresetText("{{length::{{getvar::v}}}}", ctx), "4");
+  assert.equal(renderPresetText("{{length::}}", ctx), "0");
+  assert.equal(renderPresetText("{{#if {{greater::{{length::{{getvar::v}}}}::3}}}}긴 글{{/if}}", ctx), "긴 글");
 });
