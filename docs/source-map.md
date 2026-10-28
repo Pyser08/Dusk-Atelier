@@ -21,6 +21,7 @@
 
 ### src/data/
 - `addcharacter.js` (20줄) 새 봇을 DB에 추가하는 공용 흐름 (legacy.js의 '캐릭터 추가'에서 추출, 동작 동일). — insertCharacter
+- `affhud.js` 호감도 HUD 런타임 (v1.6.8): 응답이 끝나면 리스폿 호감 수치를 채팅 변수($aff…)에 복사(A), 리스폿이 없으면 자체 보조모델이 변화량을 판정(B). 봇별 설정·설치·AI 디자인 변경. — createAffHud
 - `assetfolders.js` (65줄) — foldersOf, childFolders, folderPath, createFolder, renameFolder
 - `cardassets.js` (6줄) 카드 에셋(자동 생성): 기본 프레임 1장(글자 제거·투명 처리, 1024x1536 WebP)과 Gi… — CARD_FRAME_DATA, CARD_FONT_DATA, CARD_FRAME_SIZE
 - `cardbot.js` (26줄) 카드로 새 봇 객체 만들기. 원본 봇은 수정하지 않고 새 객체만 반환한다. — buildCardCharacter
@@ -77,6 +78,8 @@
 - `util.js` (37줄) 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식.… — VERSION, PREFIX, FIELDS, ARRAY_FIELDS, dangerous
 
 ### src/engine/
+- `affhud.js` 호감도 HUD 순수 로직 (v1.6.8): HUD HTML·설치/제거, 리스폿 수치 읽기, 판정·디자인 프롬프트 조립, 디자인 검사(validateHud)·미리보기. — hudHtml, installHud, readPotAffinity, validateHud, previewDoc
+- `affprompts.js` 호감도 HUD 기본 프롬프트(판정 기준표·디자인 지침) 모음. 문구만 고치면 된다. — JUDGE_SYSTEM, DESIGN_SYSTEM, fill
 - `airesponse.js` (30줄) — extractRunAIText
 - `bardwikiadapt.js` (98줄) 리스바드 BardWiki 문서 → 장기기억 폴더(§2.2 모양) 변환. 순수 함수. 필드가 없으면 건… — VIRTUAL_MARK, parseSections, bullets, SUMMARY_TITLES, eventBullets
 - `character.js` (221줄) — characterAssetKeys, characterView, planCharacter, buildMergedCharacter, newCharacterBase
@@ -189,6 +192,7 @@
 ### src/ui/screens/
 - `about.js` (28줄) 정보 · 라이선스: 버전, AGPL-3.0 고지(무보증), 소스 위치, 포함된 외부 코드 목록.
 - `aibuild.js` (246줄) AI로 제작 팝업(우측 하단). v1.6.7 2단계: 요청 → 수정안 카드 → 적용하면 편집기 탭에 …
+- `devaff.js` 개발 탭 봇 카드 ‘기능 프리셋 · 호감도 HUD’ (v1.6.8): 설치/제거, 값 출처, 호감 기준 메모, AI 디자인 변경(미리보기·적용). — affCard
 - `roulettepop.js` 봇 편집 도구 → 룰렛 팝업(범주별 무작위 특징 → 복사/설명 끝에 넣기, v1.6.7)
 - `aitab.js` (프리셋 블록 편집·JSON 내보내기 포함) AI로 제작 탭 (v1.6.7 3단계). 봇빌더의 작업 화면을 Dusk 방식으로: 다섯 하위 화면.
 - `assetdupes.js` (164줄) 중복 에셋 찾기 (1.4.6)
