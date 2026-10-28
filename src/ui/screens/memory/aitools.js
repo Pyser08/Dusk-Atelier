@@ -10,6 +10,8 @@ import { PEOPLE_AI_METRIC_NAMES } from "../../../data/pot/people-metric-ai.js";
 
 const LABELS = { summary: "성격 요약", coreTraits: "핵심 기질", values: "중요 가치", emotionExpression: "감정 표현", defenseResponse: "방어 반응", intimacyStyle: "친밀 표현" };
 const show = (v) => v == null || v === "" ? "없음" : Array.isArray(v) ? v.map(show).join("\n") : typeof v === "object" ? Object.entries(v).map(([k, x]) => `${LABELS[k] ?? k} · ${show(x)}`).join("\n") : String(v);
+// 수치 규격(허용 범위)은 기본 정책에서 읽는다. 수치 AI는 이 값을 받아야 동작한다.
+const policyFor = (env, slot) => { try { return JSON.parse(env.ctx.memory.lib.base.policies).policies[slot] ?? null; } catch { return null; } };
 const busy = (s) => s?.running || ["running", "applying"].includes(s?.phase);
 
 // 이 인물에 AI 도구를 쓸 수 있는지. 반환: {tools, scope} 또는 {why}
@@ -71,7 +73,7 @@ export async function openAITools(env, doc, person, startTab = "refresh") {
           review(tools.field, (s) => s.proposal && s.proposal.changed !== false ? [{ label: s.label || "항목", before: s.proposal.before, after: s.proposal.after }] : [], { apply: () => run(tools.field.apply()), cancel: () => tools.field.cancel(), what: "내용" })),
         metric: () => h("div", null, h("p", { class: "rb-muted" }, "대화 근거를 보고 AI가 수치(호감·음란·의심 등)를 제안해요. 직접 숫자를 고치려면 인물 페이지의 수치 옆 ✎를 쓰세요."),
           h("label", { class: "rb-mem-field" }, h("span", null, "수치"), h("select", { class: "rb-input", onChange: (e) => { metricSlot = e.target.value; tools.metric.cancel(); } }, Object.entries(PEOPLE_AI_METRIC_NAMES).map(([v, l]) => h("option", { value: v, selected: v === metricSlot }, l)))),
-          h("div", { class: "rb-mem-sact" }, btn("제안 받기", { kind: "primary", disabled: busy(tools.metric.status()), onClick: () => run(tools.metric.generate(docId, metricSlot, {})) })),
+          h("div", { class: "rb-mem-sact" }, btn("제안 받기", { kind: "primary", disabled: busy(tools.metric.status()), onClick: () => run(tools.metric.generate(docId, metricSlot, { policy: policyFor(env, metricSlot) })) })),
           review(tools.metric, (s) => s.proposal ? [{ label: s.label || "수치", before: s.proposal.before ?? s.proposal.current, after: s.proposal.after ?? s.proposal.proposed ?? s.proposal }] : [], { apply: () => run(tools.metric.apply()), cancel: () => tools.metric.cancel(), what: "수치" }))
       };
       replace(body, segmented([["refresh", "전체 다시 정리"], ["command", "직접 지시"], ["field", "항목 AI 작성"], ["metric", "수치 제안"]], tab, (v) => { tab = v; paint(); }, "AI 도구"), panes[tab]());
@@ -154,12 +156,13 @@ export async function fillEmptyPeople(env, docs) {
       else if (s.proposal?.changes?.length) { await refresh.apply(); if (refresh.status().error) { bad++; keep(refresh.status().error); } else ok++; } else same++;
     } catch (e) { bad++; keep(e); }
     // 2) 수치는 따로 하나씩: 위 단계에서 못 만들었거나 비어 있으면 호감도·첫인상·음란도·의심도를 각각 요청한다.
-    for (const slot of Object.keys(PEOPLE_AI_METRIC_NAMES)) {
+    // 의심도는 두 인물을 짝지어야 해서 일괄에서는 제외한다(인물 페이지에서 따로 지정).
+    for (const slot of ["affinity.score", "affinity.taste_band", "openness.score"]) {
       const now = chk.tools && ctx.memory.flow?.runtime?.()?.wiki?.snapshot?.()?.documents?.[doc.id];
       if ((now?.metrics ?? []).some((m) => m.slotId === slot)) continue;
       try {
         metric.cancel({ silent: true });
-        await metric.generate(doc.id, slot, {});
+        await metric.generate(doc.id, slot, { policy: policyFor(env, slot), targetRefs: slot.startsWith("affinity.") ? ["actor:user"] : [] });
         const ms = metric.status();
         if (ms.error) { keep(ms.error); continue; }
         if (ms.proposal) { await metric.apply(); if (!metric.status().error) metrics++; else keep(metric.status().error); }
