@@ -13,7 +13,7 @@ import { renderThemeStudio, targetToggle } from './themestudio.js';
 import { renderThemeBuilder } from './themebuilder.js';
 import { loadMemoryButtonOn } from '../../data/memorybutton.js';
 import { loadStoryTimeOn } from '../../data/storytime.js';
-import { loadFairOn } from '../../data/fairplay.js';
+import { loadFairOn, loadDiceOn, loadDiceMode, DICE_KEY, DICE_MODE_KEY } from '../../data/fairplay.js';
 import { loadThemes, saveThemes, detectTarget, TARGETS } from '../../data/themes.js';
 
 export async function renderSettingsTab(ctx) {
@@ -44,6 +44,14 @@ export async function renderSettingsTab(ctx) {
   const fairSeg = segmented([["on", "켜기"], ["off", "끄기"]], fairOn ? "on" : "off", async (v) => {
     try { if (ctx.fairPlay) await ctx.fairPlay.set(v === "on"); else await ctx.api.pluginStorage.setItem("dusk.ui.fairPlay", v); ctx.toast(v === "on" ? "공정한 전개를 켰어요. 다음 요청부터 적용돼요." : "공정한 전개를 껐어요."); } catch (e) { ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }); }
   }, "공정한 전개");
+  const diceOn = await loadDiceOn(ctx.api);
+  const diceMode = await loadDiceMode(ctx.api);
+  const diceSeg = segmented([["on", "켜기"], ["off", "끄기"]], diceOn ? "on" : "off", async (v) => {
+    try { if (ctx.fairPlay) await ctx.fairPlay.setDice(v === "on"); else await ctx.api.pluginStorage.setItem(DICE_KEY, v); ctx.toast(v === "on" ? "유저 편향 없애기를 켰어요. 공정한 전개가 켜져 있을 때 다음 요청부터 적용돼요." : "유저 편향 없애기를 껐어요."); } catch (e) { ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }); }
+  }, "유저 편향 없애기");
+  const diceModeSeg = segmented([["reinterpret", "재해석"], ["respect", "존중"]], diceMode, async (v) => {
+    try { if (ctx.fairPlay) await ctx.fairPlay.setDiceMode(v); else await ctx.api.pluginStorage.setItem(DICE_MODE_KEY, v); ctx.toast(v === "respect" ? "내가 적은 결과를 그대로 따를게요." : "내가 적은 결과도 시도로 보고 주사위로 가릴게요."); } catch (e) { ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }); }
+  }, "내가 결과까지 적었을 때");
   const stOn = await loadStoryTimeOn(ctx.api);
   const stSeg = segmented([["on", "켜기"], ["off", "끄기"]], stOn ? "on" : "off", async (v) => {
     try { if (ctx.storyTime) await ctx.storyTime.set(v === "on"); else await ctx.api.pluginStorage.setItem("dusk.ui.storyTime", v); ctx.toast(v === "on" ? "이야기 시간 삽입을 켰어요. 다음 요청부터 적용돼요." : "이야기 시간 삽입을 껐어요."); } catch (e) { ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }); }
@@ -113,7 +121,9 @@ export async function renderSettingsTab(ctx) {
       "공정한 전개",
       "AI가 내 캐릭터에게만 유리하게 풀어 가는 경향을 줄여요. 요청마다 짧은 지침을 함께 보내요. 장기기억과 상관없이 동작하고, 기본은 꺼짐이에요.",
       row("공정한 전개", fairSeg),
-      h("div", { class: "rb-muted", style: "font-size:12.5px;line-height:1.7;word-break:keep-all" }, "· 내가 결과를 분명하게 적지 않았다면, 상황·능력·자원으로 봐서 가능한지 따져서 풀어요(실패·부분 성공·대가도 가능).", h("br"), "· 다른 인물은 자기 목적과 성격대로 움직여요. 나를 편들거나 구해 주는 게 기본이 아니에요.", h("br"), "· 내가 결과를 분명히 적으면(예: ‘이긴다’) 그대로 따라요. 지침이 늘어난 만큼 요청이 조금 길어져요.")
+      row("유저 편향 없애기 (코드 주사위)", diceSeg),
+      row("내가 결과까지 적었을 때", diceModeSeg),
+      h("div", { class: "rb-muted", style: "font-size:12.5px;line-height:1.7;word-break:keep-all" }, "· 유저 편향 없애기: 요청마다 프로그램이 1~100 값을 3개 굴려 함께 보내고, 결과가 불확실한 행동은 AI가 난이도를 정해 그 값으로 성패를 가려요. 연속 동작은 한 번 실패하면 거기서 끊겨요. 공정한 전개가 켜져 있을 때만 작동하고, 값은 AI가 본문에 드러내지 않아요.", h("br"), "· 재해석: 내가 ‘쓰러뜨렸다’처럼 결과까지 적어도 시도로 보고 주사위로 가려요. 존중: 내가 적은 결과는 그대로 따라요.", h("br"), "· 내가 결과를 분명하게 적지 않았다면, 상황·능력·자원으로 봐서 가능한지 따져서 풀어요(실패·부분 성공·대가도 가능).", h("br"), "· 다른 인물은 자기 목적과 성격대로 움직여요. 나를 편들거나 구해 주는 게 기본이 아니에요.", h("br"), "· 내가 결과를 분명히 적으면(예: ‘이긴다’) 그대로 따라요. 지침이 늘어난 만큼 요청이 조금 길어져요.")
     ),
     section(
       "clock",
