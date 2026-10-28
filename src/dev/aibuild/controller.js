@@ -1,7 +1,7 @@
 // AI로 제작 컨트롤러 (화면 없음). 봇빌더 Workshop 클래스의 로직 부분을 이식하고,
 // 작업본은 Dusk 편집기(host)에서 직접 읽고 쓴다. 화면(팝업·탭)은 subscribe()로 다시 그린다.
 import { assert, clone, equal, stable, uid, FIELDS } from './util.js';
-import { TASKS, newSession, composeMessages, defaultPrompt, extractResponseJson, parseResponse, applyPacket } from './core.js';
+import { TASKS as ALL_TASKS, MODULE_ONLY_OFF, withKind, newSession, composeMessages as coreCompose, defaultPrompt, extractResponseJson, parseResponse as coreParse, applyPacket as coreApply } from './core.js';
 import { callModel } from './model.js';
 import { assemblePreset, newPresetState, validatePresetState } from './preset-engine.js';
 import { createAiStore, normalizeSettings, AUTOSAVE_MS } from './store.js';
@@ -13,6 +13,14 @@ import { applyDesignToResponse, DesignError, hasDusk, resolveLoreMode } from './
 
 export function createAiBuild({ api, host, store: given }) {
   const store = given ?? createAiStore(api);
+  // 편집 대상 종류: 봇(기본) 또는 모듈. 모듈은 첫 메시지·초기 변수 작업이 없고 description이 모듈 설명이다.
+  const kind = host.kind?.() === 'module' ? 'module' : 'character';
+  const TASKS = kind === 'module'
+    ? Object.fromEntries(Object.entries(ALL_TASKS).filter(([k]) => !MODULE_ONLY_OFF.includes(k)).map(([k, t]) => [k, k === 'description' ? { ...t, label: '모듈 설명' } : t]))
+    : ALL_TASKS;
+  const composeMessages = (...a) => withKind(kind, () => coreCompose(...a));
+  const parseResponse = (...a) => withKind(kind, () => coreParse(...a));
+  const applyPacket = (...a) => withKind(kind, () => coreApply(...a));
   const st = {
     s: newSession(),
     prompts: {},
@@ -39,7 +47,7 @@ export function createAiBuild({ api, host, store: given }) {
   function batch(fn) { batchDepth++; try { return fn(); } finally { if (--batchDepth === 0) batchDraft = null; } }
   function sync() {
     if (batchDepth && batchDraft) return batchDraft;
-    const draft = toDraft(host.getView(), host.assets?.());
+    const draft = toDraft(host.getView(), host.assets?.(), kind);
     const sig = stable(draft);
     if (lastSig !== null && sig !== lastSig) { st.s.revision++; st.serial++; st.started = true; }
     lastSig = sig;
@@ -171,7 +179,7 @@ export function createAiBuild({ api, host, store: given }) {
     assert(candidateValid(candidate), '현재 원고와 다른 시점의 수정안입니다. 다시 요청하세요.');
     const next = applyPacket(st.s.draft, candidate.packet);
     assert(candidateValid(candidate), '원고가 바뀌었습니다.');
-    host.replaceView(toView(next), 'AI 수정안 적용 · ' + candidate.label);
+    host.replaceView(toView(next, kind), 'AI 수정안 적용 · ' + candidate.label);
     candidate.status = 'applied';
     lastSig = null;
     sync();
@@ -213,7 +221,7 @@ export function createAiBuild({ api, host, store: given }) {
   }
   async function setPrompt(task, p) {
     assert(TASKS[task], '알 수 없는 작업입니다.');
-    composeMessages({ ...st.s, draft: toDraft(host.getView()) }, task, 'x', p); // 치환 자리·문자열 검사
+    composeMessages({ ...st.s, draft: toDraft(host.getView(), undefined, kind) }, task, 'x', p); // 치환 자리·문자열 검사
     st.prompts[task] = { system: p.system, user: p.user };
     st.s.promptRevision++;
     touch(false);
@@ -350,7 +358,7 @@ export function createAiBuild({ api, host, store: given }) {
   return {
     state: st, store, init, destroy, sync, batch, rewritePart,
     subscribe: (fn) => { subs.add(fn); return () => subs.delete(fn); },
-    TASKS, loreMode, setLoreMode, hasDusk: () => hasDusk(st.s.draft.globalLore), requestWithScope, promptFor, previewRequest, sendRequest, cancel,
+    TASKS, kind, loreMode, setLoreMode, hasDusk: () => hasDusk(st.s.draft.globalLore), requestWithScope, promptFor, previewRequest, sendRequest, cancel,
     loreList, setLoreIncluded, setAllLore, changesOf,
     candidateValid, candidateState, diff, applyCandidate, discardCandidate,
     setSettings, setPrompt, resetPrompt, setPreset, setTask, setRequest, setScopeOnly, setSelected, setBrief,

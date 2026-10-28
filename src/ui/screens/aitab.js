@@ -66,6 +66,7 @@ export function renderAiTab(ctx, { build, openPopup, state = {} }) {
   // ---------- ① 시작하기 ----------
   function viewStart() {
     const s = st.s;
+    const who = build.kind === 'module' ? '모듈' : '봇';
     const brief = h('textarea', { class: 'rb-textarea', rows: 5, spellcheck: 'false', placeholder: '예) 게헨나 학원을 배경으로 한 일상 시뮬레이션. 사용자는 전학생. 말투는 가볍게.', style: 'font-family:inherit;font-size:14px' });
     brief.value = s.brief ?? '';
     const kind = segmented([['character', '캐릭터'], ['simulation', '시뮬레이션']], s.kind, (v) => build.setBrief(brief.value, v), '제작 종류');
@@ -75,13 +76,13 @@ export function renderAiTab(ctx, { build, openPopup, state = {} }) {
     const defSeg = segmented([['auto', '자동'], ['dusk', 'Dusk'], ['plain', '일반']], st.settings.lore, async (v) => { try { await build.setSettings({ lore: v }); paint(); } catch (e) { fail(e); } }, '새 봇의 기본 방식');
     return [
       card('1. 무엇을 만들까요?', '여기에 적은 내용은 모든 요청에 함께 전달돼요. 비워 두고 바로 AI 창에서 말해도 돼요.', kind, brief),
-      card('2. 로어북은 어떻게 만들까요?', '이 봇에 대한 선택이에요. 봇마다 마지막 선택을 기억해요.', modeSeg,
+      card('2. 로어북은 어떻게 만들까요?', `이 ${who}에 대한 선택이에요. ${who}마다 마지막 선택을 기억해요.`, modeSeg,
         h('div', { class: 'rb-muted', style: 'font-size:13px;line-height:1.6' },
           mode === 'dusk'
             ? 'Dusk 방식: 폴더·소속·장소와 켜지는 조건(확률·한 번만·연쇄·변수)까지 AI가 설계해요. 적용하기 전에 규칙 시험으로 확인할 수 있어요. Dusk 플러그인이 있어야 규칙대로 작동해요.'
             : '일반 방식: 리스 기본 로어북(키·내용·항상 켜짐)만 만들어요. Dusk 규칙이 이미 있는 항목은 건드리지 않고, 내용만 고쳐도 규칙은 유지돼요.'),
-        h('div', { class: 'rb-muted', style: 'font-size:12px' }, '이 봇에 Dusk 규칙·폴더가 ' + (build.hasDusk() ? '있어요.' : '아직 없어요.')),
-        field('새 봇의 기본 방식', defSeg)),
+        h('div', { class: 'rb-muted', style: 'font-size:12px' }, `이 ${who}에 Dusk 규칙·폴더가 ` + (build.hasDusk() ? '있어요.' : '아직 없어요.')),
+        field(`새 ${who}의 기본 방식`, defSeg)),
       card('3. 시작하기', null,
         h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' },
           btn('AI 창 열기', { kind: 'primary', icon: 'sparkle', onClick: () => openPopup() }),

@@ -326,14 +326,16 @@ export async function openEditorCore(ctx, cfg) {
   const toolEl = h("div", { class: "rb-side-tools rb-bar rb-toolrow", hidden: true });
   const body = h("div", { class: "rb-split" });
   // 우측 하단 버튼 하나: 누르면 [AI 창 · 규칙 시험] 두 개가 펼쳐진다 (AI 창은 봇 편집에서만, 모듈은 규칙 시험만)
-  const hasAi = cfg.idKey === "chaId";
+  const isBot = cfg.idKey === "chaId";
+  const hasAi = true; // v1.6.9: AI 창·룰렛·AI로 제작 탭은 봇·모듈 모두
+  const descKey = isBot ? "desc" : "description"; // 룰렛 등이 글을 넣는 설명 칸
   const fabItem = (label, ic, title, fn) => {
     const b = btn(label, { kind: "primary", icon: ic, title, onClick: () => { closeDial(); fn(); } });
     b.style.cssText = "box-shadow:0 6px 20px rgba(0,0,0,.4);border-radius:999px;transition:opacity .16s ease,transform .16s ease";
     return b;
   };
   let aiItem = null;
-  const rouletteItem = () => openRoulette(ctx, { onInsert: (t) => { draft.desc = [String(draft.desc ?? "").trimEnd(), t].filter(Boolean).join("\n"); changed(); if (es.tab === "info") renderInfo(); } });
+  const rouletteItem = () => openRoulette(ctx, { onInsert: (t) => { draft[descKey] = [String(draft[descKey] ?? "").trimEnd(), t].filter(Boolean).join("\n"); changed(); if (es.tab === "info") renderInfo(); } });
   // 펼침 패널: 테두리·머리글("도구")·왼쪽 연결선으로 버튼들이 '도구' 안에 속함을 보여 준다
   const dialItems = h("div", { class: "rb-dial", role: "group", "aria-label": "도구 모음", style: "display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:10px 10px 12px 14px;margin-bottom:-6px;border:1px solid var(--rb-accent,#8b7cf6);border-bottom:0;border-radius:16px 16px 0 0;background:var(--rb-panel,#1d1d24);box-shadow:0 -6px 20px rgba(0,0,0,.4);transition:opacity .16s ease,transform .16s ease;opacity:0;transform:translateY(8px);pointer-events:none;visibility:hidden;display:none" },
     h("div", { style: "font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.75" }, "도구 ▾"),
@@ -614,7 +616,7 @@ export async function openEditorCore(ctx, cfg) {
   function renderList(kind) {
     const list = draft[kind];
     const isLore = kind === "lorebook";
-    const showVars = kind === "trigger" && hasAi && es.trigView === "vars";
+    const showVars = kind === "trigger" && isBot && es.trigView === "vars";
     const q = es.q[kind].trim().toLowerCase();
     es.filt ??= { regex: "all", trigger: "all" };
     const isLuaTrig = (t) => Array.isArray(t.effect) && t.effect.length === 1 && ["triggerlua", "triggercode"].includes(t.effect[0]?.type);
@@ -1194,7 +1196,7 @@ export async function openEditorCore(ctx, cfg) {
     else if (!it) pane.appendChild(h("div", { class: "rb-empty" }, list.length ? "왼쪽에서 항목을 고르세요." : "왼쪽의 버튼으로 첫 항목을 만들어 보세요."));
     else pane.append(itemTools, isLore ? loreForm(it) : kind === "regex" ? regexForm(it) : triggerForm(it));
     toolEl.classList.toggle("m-hide", !!(es.mItem && detail));
-    const pinned = kind === "trigger" && hasAi ? h("div", { style: "padding:0 12px 6px" }, h("button", { type: "button", class: ["rb-pin", showVars && "on"], onClick: () => {
+    const pinned = kind === "trigger" && isBot ? h("div", { style: "padding:0 12px 6px" }, h("button", { type: "button", class: ["rb-pin", showVars && "on"], onClick: () => {
       es.trigView = "vars";
       es.mItem = true;
       render();
@@ -2342,7 +2344,7 @@ export async function openEditorCore(ctx, cfg) {
   let build = null, buildInit = null, buildP = null, bbPresent = false;
   function ensureBuild() {
     buildP ??= Promise.all([import('../../dev/aibuild/controller.js'), import('../../dev/aibuild/bridge.js')]).then(([c, br]) => {
-      build = c.createAiBuild({ api: ctx.api, host: br.hostFromEditor(handle, { targetId: () => draft[cfg.idKey] }) });
+      build = c.createAiBuild({ api: ctx.api, host: br.hostFromEditor(handle, { targetId: () => draft[cfg.idKey], kind: isBot ? "character" : "module" }) });
       buildInit = build.init().catch((err) => ctx.toast(`AI 설정을 불러오지 못했어요: ${err?.message ?? err}`, { error: true }));
       let lastPending = 0;
       build.subscribe(() => {

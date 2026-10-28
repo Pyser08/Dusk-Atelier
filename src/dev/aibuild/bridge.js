@@ -8,8 +8,9 @@ import { clone, stable } from './util.js';
 const MAP = [['lorebook', 'globalLore'], ['regex', 'customscript'], ['trigger', 'triggerscript']];
 
 // Dusk view → 봇빌더 draft (읽기용 복사본)
-export function toDraft(view, assets) {
+export function toDraft(view, assets, kind = 'character') {
   const d = clone(view) ?? {};
+  if (kind === 'module') { d.desc = typeof d.description === 'string' ? d.description : ''; delete d.description; } // 모듈의 description ↔ 봇빌더 desc
   for (const [v, c] of MAP) {
     d[c] = Array.isArray(d[v]) ? d[v] : [];
     delete d[v];
@@ -19,8 +20,12 @@ export function toDraft(view, assets) {
 }
 
 // 봇빌더 draft → Dusk view (편집기에 되돌려 넣을 값)
-export function toView(draft) {
+export function toView(draft, kind = 'character') {
   const v = clone(draft) ?? {};
+  if (kind === 'module') {
+    v.description = typeof v.desc === 'string' ? v.desc : (v.description ?? '');
+    for (const k of ['desc', 'personality', 'scenario', 'firstMessage', 'defaultVariables']) delete v[k];
+  }
   for (const [vk, c] of MAP) {
     v[vk] = Array.isArray(v[c]) ? v[c] : [];
     delete v[c];
@@ -31,9 +36,10 @@ export function toView(draft) {
 
 // 편집기 핸들(openEditorCore 반환값)을 봇빌더 컨트롤러용 host로 감싼다.
 // editor: { draft, replaceDraft(next, label), undoAi(), ... }
-export function hostFromEditor(editor, { targetId, assets } = {}) {
+export function hostFromEditor(editor, { targetId, assets, kind = 'character' } = {}) {
   const tid = typeof targetId === 'function' ? targetId : () => targetId;
   return {
+    kind: () => kind,
     getView: () => editor.draft,
     targetId: () => tid() ?? editor.draft?.chaId ?? editor.draft?.id ?? null,
     assets: () => (typeof assets === 'function' ? assets() : assets) ?? [],

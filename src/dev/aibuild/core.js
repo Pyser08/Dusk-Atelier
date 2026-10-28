@@ -5,6 +5,11 @@ import { loreSelection, requestLorebook, validLoreIncluded } from './loreselect.
 import { DESIGN_FORMAT, DUSK_GUIDE, designExamples, duskContext } from './duskdesign.js';
 // Dusk 방식 수정안(설계 JSON을 변환한 것)에만 extentions·folder 필드를 허용한다. 일반 방식 응답에는 허용하지 않는다.
 let EXT_OK = false;
+// 편집 대상 종류(v1.6.9): 'character' | 'module'. 모듈에는 첫 메시지·초기 변수·성격 같은 봇 전용 칸이 없다.
+let KIND = 'character';
+const withKind = (k, fn) => { const p = KIND; KIND = k === 'module' ? 'module' : 'character'; try { return fn(); } finally { KIND = p; } };
+const MODULE_ONLY_OFF = ['greeting', 'choiceGreeting'];
+const MODULE_NOTE = '\n\n[편집 대상: 모듈]\n이 원고는 캐릭터가 아니라 RisuAI 모듈이다. 모듈에는 성격·시나리오·첫 메시지·초기 변수(defaultVariables)가 없다. description은 모듈 설명이고, 로어북·정규식·트리거(Lua)만 다룬다. 초기 변수는 Lua의 onStart 등에서 setChatVar로 설정하라.';
 const withExt = (on, fn) => { const p = EXT_OK; EXT_OK = !!on; try { return fn(); } finally { EXT_OK = p; } };
 const EXT_KEYS = ['da_rid', 'da_rule', 'da_folder', 'da_parent', 'da_place'];
   function editable(raw) {
@@ -71,6 +76,14 @@ const EXT_KEYS = ['da_rid', 'da_rule', 'da_folder', 'da_parent', 'da_place'];
     return r;
   }
   function contextOf(draft, included = []) {
+    if (KIND === "module") return {
+      name: draft.name,
+      description: draft.desc,
+      lorebook: requestLorebook(draft.globalLore, included),
+      regex: (draft.customscript ?? []).map((rule, i) => ({ ref: "r" + i, rule })),
+      scripts: luaEntries(draft),
+      assets: draft.additionalAssets ?? []
+    };
     return {
       name: draft.name,
       description: draft.desc,
@@ -175,12 +188,12 @@ workshop의 changes는 task/data 객체 목록이며 task는 중복 없이 최�
     const context = contextOf(session.draft, included);
     if (lore === "dusk" && ["lorebook", "workshop"].includes(task)) context.lorebook = duskContext(session.draft.globalLore).filter((o) => included[Number(o.ref.slice(1))] !== false);
     const refs = { description: context.description, lorebook: context.lorebook, regex: context.regex, lua: { scripts: context.scripts, variables: context.defaultVariables }, greeting: context.firstMessage, choiceGreeting: { text: context.firstMessage, scripts: context.scripts, variables: context.defaultVariables, regex: context.regex } };
-    const values = { TASK_NAME: TASKS[task].label, CURRENT_DRAFT: JSON.stringify(task === "workshop" ? context : refs[task]), USER_REQUEST: request, REFERENCE_CONTEXT: JSON.stringify({ project: session.kind, brief: session.brief, character: context, conversation: session.thread.filter((m) => !m.error).map((m) => ({ role: m.role, content: m.content })), compatibility: "RisuAI API v3 / RisuBard. risu-btn → onButtonClick(accessKey, buttonKey); getChatVar/setChatVar. HTML/CSS 미리보기와 코드 실행은 제공하지 않는다." }), OUTPUT_FORMAT: formatFor(task, lore) };
+    const values = { TASK_NAME: TASKS[task].label, CURRENT_DRAFT: JSON.stringify(task === "workshop" ? context : refs[task]), USER_REQUEST: request, REFERENCE_CONTEXT: JSON.stringify({ project: session.kind, brief: session.brief, [KIND === "module" ? "module" : "character"]: context, conversation: session.thread.filter((m) => !m.error).map((m) => ({ role: m.role, content: m.content })), compatibility: "RisuAI API v3 / RisuBard. risu-btn → onButtonClick(accessKey, buttonKey); getChatVar/setChatVar. HTML/CSS 미리보기와 코드 실행은 제공하지 않는다." }), OUTPUT_FORMAT: formatFor(task, lore) };
     const reference = JSON.parse(values.REFERENCE_CONTEXT);
     reference.pendingProposals = session.candidates.filter((c) => !c.status).map((c) => ({ id: c.id, task: c.packet.task, data: c.packet.data }));
     reference.pendingProposalNote = "미적용 제안이다. 현재 원고와 구분하고, 새 수정안의 참조는 현재 원고 기준으로 작성하라.";
     values.REFERENCE_CONTEXT = JSON.stringify(reference);
-    return [{ role: "system", content: prompt.system + "\n\n" + jsonContract(task) }, { role: "user", content: prompt.user.replace(/<<(TASK_NAME|CURRENT_DRAFT|USER_REQUEST|REFERENCE_CONTEXT|OUTPUT_FORMAT)>>/g, (_, key2) => values[key2]) }];
+    return [{ role: "system", content: prompt.system + (KIND === "module" ? MODULE_NOTE : "") + "\n\n" + jsonContract(task) }, { role: "user", content: prompt.user.replace(/<<(TASK_NAME|CURRENT_DRAFT|USER_REQUEST|REFERENCE_CONTEXT|OUTPUT_FORMAT)>>/g, (_, key2) => values[key2]) }];
   }
   var LORE_KEYS = ["comment", "key", "secondkey", "content", "insertorder", "mode", "alwaysActive", "selective", "useRegex", "activationPercent"];
   var REGEX_KEYS = ["comment", "in", "out", "flag", "ableFlag", "type"];
@@ -253,6 +266,8 @@ workshop의 changes는 task/data 객체 목록이며 task는 중복 없이 최�
     }
   }
   function validateData(task, data, draft) {
+    assert(!(KIND === "module" && MODULE_ONLY_OFF.includes(task)), "모듈에는 첫 메시지·시작 상황 작업이 없습니다.");
+    if (KIND === "module" && task === "lua") assert(!Object.keys(data?.variables ?? {}).length && !(data?.removeVariables ?? []).length, "모듈에는 초기 변수가 없습니다. 변수는 Lua에서 설정하세요.");
     if (task === "workshop") {
       keys(data, ["reply", "changes"]);
       str(data.reply, "대화 답변");
@@ -478,4 +493,4 @@ workshop의 changes는 task/data 객체 목록이며 task는 중복 없이 최�
     }
     return { merged, conflicts: [...new Set(conflicts)], changed };
   }
-export { editable, blankCharacter, newSession, sessionFromCharacter, snapshot, restoreSnapshot, luaEntries, contextOf, TASKS, COMMON, TASK_GUIDANCE, USER_TEMPLATE, defaultPrompt, jsonContract, responseExamples, formatFor, composeMessages, LORE_KEYS, REGEX_KEYS, validateEntry, updates, variables, scripts, validateData, extractResponseJson, parseResponse, parseVariables, applyVariables, applyUpdates, applyScripts, applyPacket, nativeId, locate, mergeCharacter };
+export { withKind, MODULE_ONLY_OFF, editable, blankCharacter, newSession, sessionFromCharacter, snapshot, restoreSnapshot, luaEntries, contextOf, TASKS, COMMON, TASK_GUIDANCE, USER_TEMPLATE, defaultPrompt, jsonContract, responseExamples, formatFor, composeMessages, LORE_KEYS, REGEX_KEYS, validateEntry, updates, variables, scripts, validateData, extractResponseJson, parseResponse, parseVariables, applyVariables, applyUpdates, applyScripts, applyPacket, nativeId, locate, mergeCharacter };
