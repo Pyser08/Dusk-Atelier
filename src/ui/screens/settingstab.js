@@ -89,10 +89,17 @@ export async function renderSettingsTab(ctx) {
     "div",
     { class: "rb-section", style: "flex:1;min-width:0;max-width:880px" },
     section(
+      "sliders",
+      "화면 모드",
+      "간단은 꼭 필요한 것만, 고급은 세부 설정까지 보여요.",
+      segmented([["simple", "간단"], ["advanced", "고급"]], ctx.prefs.uiMode, (v) => ctx.setUiMode(v), "화면 모드"),
+      h("div", { class: "rb-muted", style: "font-size:12.5px;line-height:1.7;word-break:keep-all" }, "간단으로 돌아가면 고급 영역과 개발자 모드가 함께 숨겨져요. 저장된 설정은 지워지지 않아요.")
+    ),
+    section(
       "palette",
       "화면 꾸미기",
       "색 · 메뉴 위치 · 줄 간격 · 글자 크기 · 고대비를 눌러서 고르고, 바로 바뀌어요.",
-      h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px" }, tile("palette", "화면 꾸미기 열기", "색 프리셋 한 번 클릭, 홈 카드/왼쪽/위쪽 메뉴, 큰 글자, 고대비", () => ctx.go("settings", "theme"), "rb-set-theme"))
+      h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px" }, tile("palette", "화면 꾸미기 열기", "색 프리셋 한 번 클릭, 왼쪽/위쪽 메뉴, 큰 글자, 고대비", () => ctx.go("look"), "rb-set-theme"))
     ),
     section(
       "zap",
@@ -159,10 +166,11 @@ export async function renderSettingsTab(ctx) {
       tile("trash", "설정 정리", "이 플러그인이 저장한 순서·폴더·프리셋·연결 정보를 골라서 지우기", () => ctx.go("settings", "cleanup"), "rb-set-cleanup"),
       tile("info", "정보 · 라이선스", "버전, 라이선스(AGPL-3.0), 소스 위치, 함께 들어 있는 코드", () => openAbout(ctx), "rb-set-about")
     ),
-    devToggleCard(ctx, () => {
+    // 개발자 모드는 고급 모드에서만 보인다
+    ctx.prefs.advanced ? devToggleCard(ctx, () => {
       ctx.refreshTabs();
       renderSettingsTab(ctx);
-    })
+    }) : null
   );
   const guide = guidePanel("이럴 땐 여기로", "하고 싶은 일을 누르면 해당 화면으로 가요.", [
     { label: "색·글자 크기를 바꾸고 싶어요", text: "화면 꾸미기", onClick: () => ctx.go("settings", "theme") },

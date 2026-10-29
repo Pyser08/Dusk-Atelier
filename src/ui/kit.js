@@ -490,6 +490,123 @@ export function stepsGuide(title, steps) {
 }
 
 
+// ── 1.7.0 공용 화면 부품 (한 화면 = 스위치 1개 + 주요 동작 최대 3개) ──────────────────
+// 머리: 제목 + (선택) 부제 + (선택) 스위치. 스위치는 { label, on, onChange } 로 준다.
+export function pageHead(title, { sub, sw, back } = {}) {
+  const s = sw ? switchEl(sw.on, { label: sw.label ?? title, onChange: (v, el) => {
+    el.setAttribute("aria-checked", v ? "true" : "false");
+    sw.onChange?.(v, el);
+  } }) : null;
+  return h(
+    "header",
+    { class: "rb-phead" },
+    back ? iconBtn("back", back.label ?? "뒤로", { onClick: back.onClick }) : null,
+    h("div", { class: "t" }, h("h2", { class: "rb-h2" }, title), sub ? h("span", { class: "rb-muted" }, sub) : null),
+    s ? h("label", { class: "sw" }, h("span", null, sw.text ?? "이 채팅에서 사용"), s) : null
+  );
+}
+// 상태 카드: 꺼짐(회색) / 준비 중(노랑) / 사용 중(초록). 오류는 kind:"err"(빨강) 한 줄 + 해결 버튼.
+export var STATUS_KINDS = { off: "꺼짐", prep: "준비 중", on: "사용 중", err: "문제 있음" };
+export function statusCard(state, line, action) {
+  const k = STATUS_KINDS[state] ? state : "off";
+  return h(
+    "div",
+    { class: ["rb-status", `k-${k}`], role: k === "err" ? "alert" : "status" },
+    h("span", { class: "dot", "aria-hidden": "true" }),
+    h("div", { class: "t" }, h("b", null, STATUS_KINDS[k]), line ? h("span", null, line) : null),
+    action ? btn(action.label, { size: "sm", kind: action.kind, onClick: action.onClick }) : null
+  );
+}
+// 주요 동작 줄: 최대 3개(첫 번째만 색 채움). 더 넣으면 앞의 3개만 보인다.
+export function actionRow(items) {
+  const list = items.filter(Boolean).slice(0, 3);
+  return h("div", { class: "rb-actions" }, ...list.map((a, i) => btn(a.label, { kind: a.kind ?? (i === 0 ? "primary" : ""), icon: a.icon, onClick: a.onClick, id: a.id })));
+}
+// 고급 영역: 고급 모드에서만 보인다. 간단 모드에서는 맨 아래 작은 '고급 모드에서 더 보기' 링크만 둔다.
+export function advFold(ctx, tabId, ...kids) {
+  const items = kids.flat().filter(Boolean);
+  if (!items.length) return null;
+  if (!ctx.prefs.advanced) {
+    return h("button", { type: "button", class: "rb-advlink", id: `rb-adv-${tabId}`, onClick: () => ctx.setUiMode?.("advanced") }, "고급 모드에서 더 보기", icon("chevron", 14));
+  }
+  return h("section", { class: "rb-adv", "data-tab": tabId, "aria-label": "고급" }, h("h3", { class: "rb-h3" }, "고급"), ...items);
+}
+// 더보기 칩 줄 (모바일): 더보기 하위 화면 맨 위에 가로 스크롤로 보인다.
+export function moreNav(tabs, activeId, go) {
+  const el = h("nav", { class: "rb-morenav", "aria-label": "더보기" });
+  for (const t of tabs) {
+    el.appendChild(h(
+      "button",
+      { type: "button", class: "rb-chip", "aria-pressed": t.id === activeId ? "true" : "false", "aria-current": t.id === activeId ? "page" : void 0, dataset: { tab: t.id }, onClick: () => go(t.id) },
+      icon(t.icon, 14),
+      t.label
+    ));
+  }
+  return el;
+}
+// 아래에서 올라오는 시트 (모바일). 배경을 누르거나 ✕, Esc로 닫는다.
+export function sheet(host, content, { title, onClose } = {}) {
+  host.querySelector(":scope > .rb-bsheet-back")?.remove();
+  const close = () => {
+    back.remove();
+    host.ownerDocument.removeEventListener("keydown", onKey, true);
+    onClose?.();
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      close();
+    }
+  };
+  const panel = h(
+    "div",
+    { class: "rb-bsheet", role: "dialog", "aria-modal": "true", "aria-label": title ?? "시트" },
+    h("span", { class: "grab", "aria-hidden": "true" }),
+    h("div", { class: "hd" }, title ? h("b", null, title) : h("span"), iconBtn("x", "닫기", { onClick: close })),
+    h("div", { class: "bd rb-scroll" }, content)
+  );
+  const back = h("div", { class: "rb-bsheet-back", onClick: (e) => {
+    if (e.target === back) close();
+  } }, panel);
+  host.appendChild(back);
+  host.ownerDocument.addEventListener("keydown", onKey, true);
+  return { close, panel };
+}
+// 눌린 자리 옆에 뜨는 작은 창 (PC). 바깥을 누르거나 Esc로 닫는다.
+export function popover(host, anchor, content, { width = 380, title } = {}) {
+  host.querySelector(":scope > .rb-pop")?.remove();
+  const pop = h("div", { class: "rb-pop", role: "dialog", "aria-label": title ?? "상세", style: `width:${width}px` }, title ? h("div", { class: "hd" }, h("b", null, title)) : null, h("div", { class: "bd" }, content));
+  const close = () => {
+    pop.remove();
+    host.ownerDocument.removeEventListener("mousedown", onDown, true);
+    host.ownerDocument.removeEventListener("keydown", onKey, true);
+    anchor.focus?.();
+  };
+  const onDown = (e) => {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) close();
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      close();
+    }
+  };
+  host.appendChild(pop);
+  const z = parseFloat(host.ownerDocument.defaultView?.getComputedStyle?.(host).zoom) || 1;
+  const hr = host.getBoundingClientRect(), ar = anchor.getBoundingClientRect(), pr = pop.getBoundingClientRect();
+  const hw = hr.width / z, hh = hr.height / z, pw = pr.width / z, ph = pr.height / z;
+  let left = (ar.right - hr.left) / z - pw, top = (ar.bottom - hr.top) / z + 8;
+  left = Math.max(8, Math.min(left, hw - pw - 8));
+  if (top + ph > hh - 8) top = Math.max(8, (ar.top - hr.top) / z - ph - 8);
+  pop.style.left = left + "px";
+  pop.style.top = top + "px";
+  setTimeout(() => {
+    host.ownerDocument.addEventListener("mousedown", onDown, true);
+    host.ownerDocument.addEventListener("keydown", onKey, true);
+  }, 0);
+  return { close, el: pop };
+}
+
 // 빈 화면 안내: 무엇을 하는 곳인지 + 첫 행동 버튼 (처음 쓰는 사람이 막히지 않게)
 export function emptyState({ icon: ic = "info", title, text, actions = [] } = {}) {
   return h(

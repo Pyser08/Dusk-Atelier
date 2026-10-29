@@ -9,8 +9,9 @@ export var PRESETS = [
   { id: "mono", name: "모노", a: "#3f4650", b: "#2b3038" },
   { id: "dusk", name: "황혼(예전 색)", a: "#4f63e0", b: "#7c4fe0" }
 ];
-export var DEFAULT_THEME = { v: 2, preset: "coral", a: "#cc4b2e", b: "#b93e22", mode: "auto", contrast: "normal", layout: "home", density: "roomy", size: "m" };
-export var LAYOUTS = [["home", "홈 카드"], ["left", "왼쪽 메뉴"], ["top", "위쪽 메뉴"]];
+export var DEFAULT_THEME = { v: 2, preset: "coral", a: "#cc4b2e", b: "#b93e22", mode: "auto", contrast: "normal", layout: "left", density: "roomy", size: "m" };
+// 1.7.0: 'home'(홈 카드) 메뉴 위치는 새 홈 화면이 대신하므로 없앴다. 예전 저장값 home은 left로 옮긴다.
+export var LAYOUTS = [["left", "왼쪽 메뉴"], ["top", "위쪽 메뉴"]];
 export var DENSITIES = [["roomy", "넉넉하게"], ["compact", "촘촘하게"]];
 export var SIZES = [["m", "보통"], ["l", "크게"], ["xl", "아주 크게"]];
 export var ZOOM = { m: 1, l: 1.12, xl: 1.26 };
@@ -145,7 +146,7 @@ export function normalizeTheme(t) {
   }
   if (!["auto", "dark", "light"].includes(out.mode)) out.mode = "auto";
   out.contrast = out.contrast === "high" ? "high" : "normal";
-  out.layout = pick(LAYOUTS, out.layout, "home");
+  out.layout = pick(LAYOUTS, out.layout === "home" ? "left" : out.layout, "left");
   out.density = pick(DENSITIES, out.density, "roomy");
   out.size = pick(SIZES, out.size, "m");
   // 글자 크기: 막대로 고른 값(퍼센트). 없으면 보통/크게/아주 크게에서 가져온다.

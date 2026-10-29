@@ -60,8 +60,43 @@ html,body{margin:0;height:100%;background:transparent}
 .rb-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
 .rb-detail{width:380px;flex-shrink:0;border-left:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-win);padding:20px;display:flex;flex-direction:column;gap:18px}
 
-/* 메뉴 위치: 홈 카드(기본) · 왼쪽 · 위쪽 */
-.rb-lay-home .rb-nav,.rb-lay-home .rb-topnav,.rb-lay-left .rb-topnav,.rb-lay-top .rb-nav{display:none}
+/* 메뉴 위치: 왼쪽(기본) · 위쪽 */
+.rb-lay-left .rb-topnav,.rb-lay-top .rb-nav{display:none}
+.rb-nav-lab{padding:14px 12px 4px;font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--rb-mute)}
+.rb-nav-lab:first-child{padding-top:2px}
+.rb-topsep{flex-shrink:0;width:1px;align-self:center;height:20px;background:var(--rb-line3);margin:0 4px}
+.rb-win .rb-topnav{gap:0;padding-left:12px;padding-right:12px}
+.rb-win .rb-topnav a{padding:0 10px;gap:6px}
+.rb-topnav .rb-layseg{margin-left:auto;flex-shrink:0;align-self:center;position:sticky;right:0;box-shadow:-14px 0 10px -2px var(--rb-surf)}
+.rb-layseg{display:inline-flex;border:var(--rb-bw,1px) solid var(--rb-line3);border-radius:999px;overflow:hidden;background:var(--rb-surf)}
+.rb-layseg button{height:30px;padding:0 12px;border:0;background:transparent;color:var(--rb-sub);font-size:12.5px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+.rb-layseg button[aria-pressed=true]{background:var(--rb-text);color:var(--rb-win);font-weight:700}
+.rb-nav .rb-layseg{margin:12px 4px 0;align-self:flex-start}
+.rb-morenav{display:none}
+/* 1.7.0 공용 부품: 머리 · 상태 카드 · 동작 줄 · 고급 · 시트 · 작은 창 */
+.rb-phead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:4px 0 2px}
+.rb-phead .t{flex:1;min-width:160px;display:flex;flex-direction:column;gap:2px}
+.rb-phead .sw{display:inline-flex;align-items:center;gap:10px;font-size:13.5px;font-weight:600;color:var(--rb-sub)}
+.rb-status{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--rb-r3);border:var(--rb-bw,1px) solid var(--rb-line);background:var(--rb-surf);box-shadow:var(--rb-shadow-card)}
+.rb-status .dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;background:var(--rb-grip)}
+.rb-status .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:13.5px;color:var(--rb-sub)}
+.rb-status .t b{font-size:15px;color:var(--rb-text)}
+.rb-status.k-on .dot{background:var(--rb-ok)}.rb-status.k-on .t b{color:var(--rb-ok)}
+.rb-status.k-prep{background:var(--rb-warn-soft)}.rb-status.k-prep .dot{background:var(--rb-warn)}.rb-status.k-prep .t b{color:var(--rb-warn)}
+.rb-status.k-err{background:var(--rb-danger-soft)}.rb-status.k-err .dot{background:var(--rb-danger)}.rb-status.k-err .t b{color:var(--rb-danger)}
+.rb-actions{display:flex;gap:10px;flex-wrap:wrap}
+.rb-actions .rb-btn{flex:1 1 auto;min-height:44px;justify-content:center}
+.rb-adv{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:var(--rb-r3);border:var(--rb-bw,1px) dashed var(--rb-line3);background:transparent}
+.rb-advlink{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--rb-mute);font-size:13px;cursor:pointer;padding:8px 2px;font-family:inherit;text-decoration:underline;text-underline-offset:3px}
+.rb-bsheet-back{position:absolute;inset:0;z-index:60;background:rgba(10,9,8,.45);display:flex;align-items:flex-end}
+.rb-bsheet{width:100%;max-height:82%;background:var(--rb-win);border-radius:var(--rb-r4) var(--rb-r4) 0 0;box-shadow:var(--rb-shadow);display:flex;flex-direction:column;animation:rb-bs-up .22s ease-out}
+.rb-bsheet .grab{width:40px;height:4px;border-radius:4px;background:var(--rb-line3);margin:8px auto 0}
+.rb-bsheet .hd{display:flex;align-items:center;justify-content:space-between;padding:8px 16px 4px;gap:8px}
+.rb-bsheet .bd{padding:8px 16px 20px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+@keyframes rb-bs-up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+.rb-pop{position:absolute;z-index:60;max-width:calc(100% - 16px);background:var(--rb-surf);border:var(--rb-bw,1px) solid var(--rb-line);border-radius:var(--rb-r3);box-shadow:var(--rb-shadow-sm);display:flex;flex-direction:column;max-height:70%}
+.rb-pop .hd{padding:12px 16px 0}.rb-pop .bd{padding:12px 16px 16px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.rb-interim{display:flex;flex-direction:column;gap:14px;padding:18px 22px 28px;max-width:720px}
 .rb-topnav{flex-shrink:0;display:flex;gap:6px;padding:10px 16px;overflow-x:auto;scrollbar-width:thin;background:var(--rb-surf);border-bottom:var(--rb-bw,1px) solid var(--rb-line2)}
 .rb-topnav a{height:var(--rb-ctl);display:inline-flex;align-items:center;gap:8px;padding:0 14px;border-radius:999px;color:var(--rb-sub);text-decoration:none;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;flex-shrink:0;border:var(--rb-bw,1px) solid transparent}
 @media (hover: hover){.rb-topnav a:hover{background:var(--rb-hover);color:var(--rb-text)}}
@@ -409,6 +444,10 @@ select.rb-input{appearance:auto}
   .rb-head{padding:0 12px;gap:8px;height:56px}
   .rb-head .rb-btn .lbl{display:none}.rb-head .rb-btn{width:44px;padding:0}
   .rb-nav,.rb-topnav{display:none !important}
+  .rb-in-more .rb-morenav{display:flex;gap:8px;padding:10px 16px 4px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+  .rb-morenav .rb-chip{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px}
+  .rb-morenav .rb-chip[aria-pressed=true]{background:var(--rb-text);color:var(--rb-win);border-color:var(--rb-text)}
+  .rb-interim{padding:12px 16px 24px}
   .rb-pagehead{padding:12px 16px 8px;gap:8px}
   .rb-ph-tools{width:100%}
   .rb-ph-tools .rb-search{width:auto;flex:1 1 auto;max-width:none;height:44px}

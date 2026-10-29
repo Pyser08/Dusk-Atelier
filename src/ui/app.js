@@ -1,7 +1,7 @@
 import { maybeShowTour } from './tour.js';
 import { installTooltips } from './tooltip.js';
 import { maybeShowWhatsNew, openChangelog, CHANGELOG } from './whatsnew.js';
-import { btn, iconBtn, openMenu, toast } from './kit.js';
+import { btn, iconBtn, moreNav, openMenu, toast } from './kit.js';
 import { CSS2, FONT_LINK } from './styles.js';
 import { normalizeTheme, resolveMode, themeVars } from './theme.js';
 import { createPrefs } from './prefs.js';
@@ -25,7 +25,8 @@ import { renderSettingsTab } from './screens/settingstab.js';
 import { renderMemory } from './screens/memory/index.js';
 import { renderCardsTab } from './screens/cards/index.js';
 import { renderHome } from './screens/home.js';
-import { SEARCH, TABS, subLabel } from './tabs.js';
+import { renderPeople, renderPot } from './screens/interim.js';
+import { BASE_IDS, MORE_IDS, SEARCH, TABS, subLabel } from './tabs.js';
 
 export function createApp(api, { legacy, version, onPersonaChanged }) {
   const doc = document;
@@ -36,7 +37,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const prefs = createPrefs(api);
   const svc = createService(api, prefs);
   const assets = createAssetLoader(api);
-  const state = { tab: "modules", search: "", risuScheme: "dark", mode: "dark", sub: null, opened: false, layout: "home" };
+  const state = { tab: "modules", search: "", risuScheme: "dark", mode: "dark", sub: null, opened: false, layout: "left", lastMore: "characters" };
   const root = h("div", { class: "rb-root", hidden: true });
   installTooltips(root);
   const win = h("div", { class: "rb-win", role: "dialog", "aria-modal": "true", "aria-label": "Dusk Atelier" });
@@ -125,7 +126,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     h("div", { class: "rb-spacer" }),
     updBtn,
     btn("가져오기", { icon: "upload", labelClass: "lbl", onClick: () => legacy.open(), id: "rb-import" }),
-    iconBtn("palette", "화면 꾸미기", { onClick: () => go("settings", "theme"), id: "rb-look" }),
+    iconBtn("palette", "꾸미기", { onClick: () => go("look"), id: "rb-look" }),
     iconBtn("x", "닫기", { onClick: () => close(), id: "rb-close" })
   );
   // 메뉴: 왼쪽(left) · 위쪽(top) · 모바일 아래 탭. 어떤 걸 보일지는 win 클래스(rb-lay-*)가 정한다
@@ -137,7 +138,12 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     e.preventDefault();
     go(t.id);
   } }, icon(t.icon, size), withCount ? h("span", null, t.label) : t.label, withCount ? h("small") : null);
+  // 사이드바: 기본 4개 → "더보기" 라벨 → 더보기 항목. 위쪽 바: 같은 순서, 가운데 세로 줄로 나눈다.
   for (const t of TABS) {
+    if (t.id === MORE_IDS[0]) {
+      nav.appendChild(h("div", { class: "rb-nav-lab", "aria-hidden": "true" }, "더보기"));
+      topnav.appendChild(h("span", { class: "rb-topsep", "aria-hidden": "true" }));
+    }
     const a = mkLink(t, 18, true);
     navLinks.set(t.id, a);
     nav.appendChild(a);
@@ -146,26 +152,31 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     topLinks.set(t.id, c);
     topnav.appendChild(c);
   }
-  const BAR = ["home", "modules", "characters", "memory"];
-  for (const id of BAR) {
+  // 메뉴 위치 바꾸기: 사이드바 맨 아래 · 위쪽 바 오른쪽의 `◧ 왼쪽 | ⬒ 위쪽` 분할 버튼 (설정 → 화면 → 메뉴 위치와 같은 값)
+  const layoutSeg = () => {
+    const seg = h("div", { class: "rb-layseg", role: "group", "aria-label": "메뉴 위치" });
+    for (const [v, text, ic] of [["left", "왼쪽", "◧"], ["top", "위쪽", "⬒"]]) {
+      seg.appendChild(h("button", { type: "button", dataset: { v }, "aria-pressed": "false", title: `메뉴를 ${text}에`, onClick: () => setLayout(v) }, h("span", { "aria-hidden": "true" }, ic), text));
+    }
+    return seg;
+  };
+  topnav.appendChild(layoutSeg());
+  // 모바일 아래 탭바: 홈 · 기억 · 리수폿 · 인물 · 더보기
+  for (const id of BASE_IDS) {
     const t = TABS.find((x) => x.id === id);
     const b = mkLink(t, 22, false);
     barLinks.set(id, b);
     tabbar.appendChild(b);
   }
-  const moreLink = h("a", { href: "#", id: "rb-more", "aria-haspopup": "menu", onClick: (e) => {
+  const moreLink = h("a", { href: "#", id: "rb-more", onClick: (e) => {
     e.preventDefault();
-    const dev = !!prefs.ui?.devMode;
-    openMenu(win, moreLink, [
-      ...TABS.filter((t) => (t.group === "more" || t.id === "cards") && (!t.dev || dev)).map((t) => ({ icon: t.icon, label: t.label, onClick: () => go(t.id) })),
-      "sep",
-      { icon: "palette", label: "화면 꾸미기", onClick: () => go("settings", "theme") }
-    ]);
+    go(state.lastMore && MORE_IDS.includes(state.lastMore) ? state.lastMore : MORE_IDS[0]);
   } }, icon("menu", 22), "더보기");
   tabbar.appendChild(moreLink);
   barLinks.set("more", moreLink);
   const navFoot = h("div", { style: "margin-top:auto;display:flex;flex-direction:column" });
   nav.appendChild(navFoot);
+  const moreHost = h("div", { class: "rb-morehost" });
   const main = h("section", { class: "rb-main", "aria-live": "polite" });
   const detail3 = h("aside", { class: "rb-detail rb-scroll", "aria-label": "상세" });
   const sheetBack = h("div", { class: "rb-sheet-back", onClick: () => ctx.closeSheet() });
@@ -179,7 +190,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     h("div", { class: "rb-ph-text" }, crumb, phDesc),
     h("div", { class: "rb-ph-tools" }, h("label", { class: "rb-search" }, icon("search", 16), searchInput, h("span", { class: "rb-kbd", "aria-hidden": "true" }, "/")), helpBtn)
   );
-  const col = h("div", { class: "rb-col" }, pagehead, main);
+  const col = h("div", { class: "rb-col" }, moreHost, pagehead, main);
   const body = h("div", { class: "rb-body" }, nav, col, sheetBack, detail3);
   let wasLoading = false;
   new MutationObserver(() => {
@@ -206,10 +217,13 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   function paintHead() {
     const t = TABS.find((x) => x.id === state.tab) ?? TABS[0];
     const sl = subLabel(state.tab, state.sub);
+    const inMore = MORE_IDS.includes(state.tab);
     replace(
       crumb,
       h("button", { type: "button", title: "홈으로", onClick: () => go("home") }, icon("home", 14), "홈"),
       sep(),
+      // 더보기 하위 화면은 `더보기 › 화면이름` 경로로 보인다
+      ...inMore ? [h("button", { type: "button", id: "rb-crumb-more", onClick: () => go(state.lastMore) }, "더보기"), sep()] : [],
       h("button", { type: "button", class: sl ? "" : "cur", "aria-haspopup": "menu", id: "rb-tabmenu", onClick: (e) => {
         const dev = !!prefs.ui?.devMode;
         openMenu(win, e.currentTarget, TABS.filter((x) => x.id !== "home" && (!x.dev || dev)).map((x) => ({ icon: x.icon, label: x.label, onClick: () => go(x.id) })));
@@ -273,6 +287,21 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     for (const c of [...win.classList]) if (c.startsWith("rb-lay-") || c.startsWith("rb-den-")) win.classList.remove(c);
     win.classList.add(`rb-lay-${th.layout}`, `rb-den-${th.density}`);
     win.classList.toggle("rb-hc", th.contrast === "high");
+    paintLay();
+  }
+  // 메뉴 위치 분할 버튼(사이드바·위쪽 바)의 눌림 표시
+  function paintLay() {
+    for (const b of win.querySelectorAll(".rb-layseg button")) b.setAttribute("aria-pressed", b.dataset.v === state.layout ? "true" : "false");
+  }
+  async function setLayout(v) {
+    const th = normalizeTheme({ ...prefs.ui?.theme, layout: v });
+    prefs.ui.theme = th;
+    applyTheme();
+    try {
+      await prefs.saveUi({ theme: th });
+    } catch (e) {
+      ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
+    }
   }
   function go(tab, sub = null) {
     // 기록은 설정 탭 안으로 옮겼다 (1.6.1, 그전엔 도구). 예전 go("history")·go("tools","history") 호출도 그대로 동작
@@ -329,10 +358,24 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     win.classList.toggle("rb-has-dev", on);
     if (!on && state.tab === "dev") go("tools");
   }
-  const MORE = /* @__PURE__ */ new Set(["plugins", "tools", "settings", "dev"]);
+  const MORE = new Set(MORE_IDS);
+  // 화면 모드(간단/고급) 바꾸기: 고급 영역·개발자 모드가 바로 따라 바뀐다
+  async function setUiMode(mode) {
+    try {
+      await prefs.setUiMode(mode);
+    } catch (e) {
+      return ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
+    }
+    ctx.toast(mode === "advanced" ? "고급 모드로 바꿨어요. 설정에서 언제든 되돌릴 수 있어요." : "간단 모드로 바꿨어요.");
+    dropPanes();
+    render();
+  }
   function render({ reuse = false } = {}) {
     refreshTabs();
     if (!reuse) dropPanes();
+    if (MORE.has(state.tab)) state.lastMore = state.tab;
+    win.classList.toggle("rb-in-more", MORE.has(state.tab));
+    replace(moreHost, moreNav(TABS.filter((t) => t.group === "more" && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
     for (const links of [navLinks, topLinks, barLinks]) for (const [id, a] of links) {
       const on = id === state.tab || id === "more" && MORE.has(state.tab);
       if (on) a.setAttribute("aria-current", "page");
@@ -341,8 +384,10 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     replace(
       navFoot,
       h("div", { class: "rb-nav-hint" }, "파일을 창 어디에 끌어다 놓아도 바로 가져와요"),
+      layoutSeg(),
       h("button", { type: "button", class: "rb-nav-hint", style: "padding-top:4px;background:none;border:0;color:inherit;cursor:pointer;text-align:left", title: "변경 기록 보기", onClick: () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록") }, `v${version} · 변경 기록`)
     );
+    paintLay();
     const inHist = state.tab === "settings" && state.sub === "history";
     const showSearch = inHist || ["modules", "plugins", "characters"].includes(state.tab);
     searchInput.placeholder = inHist ? "기록에서 이름 찾기" : SEARCH[state.tab] ?? "검색";
@@ -359,7 +404,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { home: renderHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, pot: renderPot, people: renderPeople, look: renderSettings, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
     Promise.resolve(screen(ctx)).then(() => {
       paneReady = true;
     }).catch((err) => {
@@ -437,6 +482,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     refresh: () => render(),
     applyTheme,
     refreshTabs: () => refreshTabs(),
+    setUiMode,
+    setLayout,
     setNavCount(tab, n) {
       for (const links of [navLinks, topLinks]) {
         const s = links.get(tab)?.querySelector("small");

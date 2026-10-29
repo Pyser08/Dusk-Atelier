@@ -29,10 +29,9 @@ export function renderHome(ctx) {
           "div",
           { class: "rb-home-grid" },
           card("main", "upload", "가져오기", "봇·모듈 파일을 골라 가져오고, 같은 봇이면 알아서 합쳐요.", () => ctx.legacy.open(), "rb-home-import"),
-          tab(by("modules")),
-          tab(by("characters")),
           tab(by("memory")),
-          tab(by("cards"))
+          tab(by("pot")),
+          tab(by("people"))
         )
       ),
       h(
@@ -42,8 +41,7 @@ export function renderHome(ctx) {
         h(
           "div",
           { class: "rb-home-grid sm" },
-          ...more.map((t) => tab(t, "mini")),
-          card("mini", "palette", "화면 꾸미기", "색·메뉴 위치·글자 크기·고대비를 고르세요.", () => ctx.go("settings", "theme"), "rb-home-look")
+          ...more.map((t) => tab(t, "mini"))
         )
       ),
       h(

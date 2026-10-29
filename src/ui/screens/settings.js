@@ -5,8 +5,8 @@ import { badge, btn, chip, iconBtn, optionCards, progressBar, segmented, switchE
 import { DEFAULT_THEME, DENSITIES, LAYOUTS, PRESETS, SIZES, ZOOM, ZOOM_MIN, ZOOM_MAX, normalizeTheme, themeVars } from '../theme.js';
 
 var pic = (...kids) => h("div", { class: "pic" }, ...kids);
-var LAYOUT_TEXT = { home: "첫 화면에 큰 카드가 나와요. 처음 쓰기 가장 쉬워요.", left: "왼쪽에 메뉴가 늘 보여요. 자주 오갈 때 편해요.", top: "위쪽에 알약 메뉴가 늘 보여요. 화면이 넓게 쓰여요." };
-var layoutPic = (id) => id === "home" ? h("div", { class: "pic", style: "display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:4px" }, h("i", { class: "a" }), h("i"), h("i"), h("i"), h("i"), h("i")) : id === "left" ? pic(h("i", { style: "width:24%" }), h("i", { style: "flex:1;background:var(--rb-hover)" })) : h("div", { class: "pic", style: "flex-direction:column" }, h("i", { style: "height:24%" }), h("i", { style: "flex:1;background:var(--rb-hover)" }));
+var LAYOUT_TEXT = { left: "왼쪽에 메뉴가 늘 보여요. 자주 오갈 때 편해요.", top: "위쪽에 알약 메뉴가 늘 보여요. 화면이 넓게 쓰여요." };
+var layoutPic = (id) => id === "left" ? pic(h("i", { style: "width:24%" }), h("i", { style: "flex:1;background:var(--rb-hover)" })) : h("div", { class: "pic", style: "flex-direction:column" }, h("i", { style: "height:24%" }), h("i", { style: "flex:1;background:var(--rb-hover)" }));
 
 export function renderSettings(ctx) {
   const { prefs } = ctx;
