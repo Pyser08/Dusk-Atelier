@@ -77,6 +77,15 @@ export function reconcile(folder, messages) {
     it.hs = it.hs.filter((s) => srcAlive(s, idx));
     it.m = Math.max(1, (it.m0 ?? 0) + it.hs.length);
   }
+  // v1.7.1: 사라진 응답에서 생긴 감정 변화는 되돌린다(최근 것부터, 지금 값이 그 변화의 결과일 때만).
+  for (const pair of Object.values(folder.emo ?? {})) {
+    for (let i = (pair.log ?? []).length - 1; i >= 0; i--) {
+      const e = pair.log[i];
+      if (e.orphan || !hasSrc(e.src) || srcAlive(e.src, idx)) continue;
+      e.orphan = true;
+      for (const [tag, v] of Object.entries(e.t ?? {})) if (pair.tags[tag] === v && !pair.lock?.[tag]) { if (e.from?.[tag] == null) delete pair.tags[tag]; else pair.tags[tag] = e.from[tag]; }
+    }
+  }
   const dead = (src, ms) => {
     if (hasSrc(src)) return !srcAlive(src, idx);
     const g = ms != null ? byMs.get(ms) : null;

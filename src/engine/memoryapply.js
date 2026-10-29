@@ -3,6 +3,7 @@ import { gradeResponse, findDuplicate, gradeRank } from "./memorygrade.js";
 import { applyRel, applyOpen, reinforce } from "./memoryplus.js";
 import { mergeWhen } from "./storydate.js";
 import { isTombed } from "./memorydelete.js";
+import { applyEmo, emoForPrompt } from "./memoryemo.js";
 import { trustFields, mergeTrust, resolveConflicts, attrsForPrompt } from "./memorytrust.js";
 
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
@@ -19,7 +20,7 @@ export const latestScene = (folder) => [...(folder.scenes ?? [])].reverse().find
 // anchor: {at, mid, h}. 반환: {records, upgraded, scene:'new'|'updated'|null}
 export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null, storyDate = "" } = {}) {
   const ign = new Set(ignore.map(key));
-  const out = { records: 0, upgraded: 0, scene: null, rel: 0, open: 0, closed: 0, conflicts: [], alerts: [] };
+  const out = { records: 0, upgraded: 0, scene: null, rel: 0, open: 0, closed: 0, emo: 0, conflicts: [], alerts: [] };
   const prev = latestScene(folder);
   const sc = result?.scene;
   if (sc && (sc.changed || !prev)) {
@@ -37,8 +38,8 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
     const person = folder.people[pk];
     if (isTombed(folder, pk, e.act)) continue;  // 사용자가 지운 기록은 다시 만들지 않음
     const dup = findDuplicate(person.records, e.act, e.g);
-    if (dup) { reinforce(dup.dup, anchor); mergeTrust(dup.dup, e); if (e.know?.length && !dup.dup.know) dup.dup.know = e.know; if (dup.upgrade && !dup.dup.user) { dup.dup.g = e.g; dup.dup.score = Math.max(dup.dup.score ?? 0, e.score); out.upgraded++; } continue; }
-    const nr = { id: rid("r"), ...anchor, act: e.act, g: e.g, score: e.score, p: e.p, s: e.s, r: e.r, sit, user: false, pin: false, at_ms: now, orphan: false, ...(e.know?.length ? { know: e.know } : {}), ...trustFields(e, anchor) };
+    if (dup) { reinforce(dup.dup, anchor); mergeTrust(dup.dup, e); if (e.keys?.length) dup.dup.keys = [...new Set([...(dup.dup.keys ?? []), ...e.keys])].slice(0, 4); if (e.know?.length && !dup.dup.know) dup.dup.know = e.know; if (dup.upgrade && !dup.dup.user) { dup.dup.g = e.g; dup.dup.score = Math.max(dup.dup.score ?? 0, e.score); out.upgraded++; } continue; }
+    const nr = { id: rid("r"), ...anchor, act: e.act, g: e.g, score: e.score, p: e.p, s: e.s, r: e.r, sit, user: false, pin: false, at_ms: now, orphan: false, ...(e.know?.length ? { know: e.know } : {}), ...(e.keys?.length ? { keys: e.keys } : {}), ...trustFields(e, anchor) };
     const cr = resolveConflicts(person.records, nr, { now });  // 같은 속성의 옛 기록과 비교(변화·조건부·모순·보류)
     out.conflicts.push(...cr.verdicts.map((v) => ({ ...v, person: person.name, id: nr.id })));
     if (cr.alerts.length) { out.alerts.push(...cr.alerts.map((a) => ({ ...a, person: person.name }))); folder.alerts = [...(folder.alerts ?? []), ...cr.alerts.map((a) => ({ ...a, person: person.name, at_ms: now }))].slice(-20); }
@@ -46,6 +47,7 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
     out.records++;
   }
   out.rel = applyRel(folder, result?.rel, anchor, now);
+  out.emo = applyEmo(folder, result?.emo, anchor, now);
   { const o = applyOpen(folder, result?.open, anchor, now); out.open = o.added; out.closed = o.closed; }
   folder.runs = (folder.runs ?? 0) + 1;
   folder.cursor = { ...anchor };
@@ -69,4 +71,5 @@ export function knownPeople(folder, limit = 30) {
   return Object.values(folder.people).filter((p) => (p.records ?? []).some((r) => !r.orphan)).slice(0, limit)
     .map((p) => ({ name: p.name, aliases: p.aliases ?? [], last: [...p.records].reverse().find((r) => !r.orphan)?.act ?? "", ...(attrsForPrompt(p).length ? { attrs: attrsForPrompt(p) } : {}) }));
 }
+export const emoStateFor = emoForPrompt;
 export { gradeRank };

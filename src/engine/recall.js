@@ -21,7 +21,7 @@ export function keywordBoost(act, qWords) {
 
 export function scoreRecord(r, { messageCount = 0, qWords = [], plus = true, openBonus = 0 } = {}) {
   const age = r.at == null ? 50 : Math.max(0, messageCount - (plus ? lastTouch(r) : r.at));
-  return (GRADE_WEIGHT[r.g] ?? 1) * Math.pow(0.97, age) * (plus ? strength(r) : 1) * keywordBoost(r.act, qWords) + (r.pin ? 50 : 0) + openBonus;
+  return (GRADE_WEIGHT[r.g] ?? 1) * Math.pow(0.97, age) * (plus ? strength(r) : 1) * keywordBoost(r.act + " " + (r.keys ?? []).join(" "), qWords) + (r.pin ? 50 : 0) + openBonus;
 }
 
 // 이름(별칭 포함)이 names 중 하나와 맞는 인물만. names가 비면 빈 배열.
