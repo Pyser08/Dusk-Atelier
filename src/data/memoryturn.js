@@ -6,6 +6,7 @@
 //  [응답 뒤] 기록하기(Writer): 리수폿 Writer 호출에 Dusk 기록 구획(dusk)을 같이 실어 한 번에 받는다.
 //    - 두 구획은 따로 검증한다. dusk 구획이 없거나 틀리면 기존 방식(따로 한 번 더 호출)으로 대신한다.
 //  빠른 모드: 모델 호출 없이 키워드로 인물을 고르고 정리 노트를 건너뛴다(응답 뒤 호출 1회). 정확하게: 고르기+정리 노트 사용.
+import { folderIdOf } from "./memorystore.js";
 import { SettingsStore } from "../engine/pot/settings.js";
 import { WikiController } from "./pot/wiki-controller.js";
 import { AutoWikiController } from "./pot/auto-wiki.js";
@@ -31,7 +32,7 @@ export const stageOf = (label) => /^router/i.test(label) ? "router" : /^director
 const STASH_MAX = 8;
 
 // link: 러너와 공유하는 빈 객체. 턴 흐름이 켜지면 settle/take가 채워진다.
-export function createTurnFlow(api, { store, runner, injector, sourceLibrary, link = {}, onOpen = null, log = (...a) => console.log("[Dusk 기억]", ...a), scheduler = globalThis } = {}) {
+export function createTurnFlow(api, { store, runner, injector, embedder = null, sourceLibrary, link = {}, onOpen = null, log = (...a) => console.log("[Dusk 기억]", ...a), scheduler = globalThis } = {}) {
   let rt = null, starting = null, lastTurn = null, cold = null;
   // pure: 기억 저장소가 '끔'이면 Dusk 자체 기억(기록·회상·주입)은 전부 빼고 리수폿 위키 정리만 돌린다
   let pure = false;
@@ -105,7 +106,10 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
         const msgs = ctx.chat?.message ?? [];
         const folder = await loadReconciled(store, character?.chaId ?? ctx.characterIndex, ctx.chat?.id ?? ctx.chatIndex, msgs);  // 읽기 시점 대조(저장 안 함)
         if (!folder) return memory;
+        const query = [ctx.currentUser, ...(ctx.recentChat ?? []).map((m) => m.text)].join("\n");
+        let sem = null; try { if (embedder) sem = await embedder.scores(folderIdOf(character?.chaId ?? ctx.characterIndex, ctx.chat?.id ?? ctx.chatIndex), folder, query); } catch { sem = null; }
         const r = recallFor(folder, {
+          sem, semMin: embedder?.cfg().minSim,
           names: (ctx.documents ?? []).flatMap((d) => [d.title, ...(d.aliases ?? [])]),
           query: [ctx.currentUser, ...(ctx.recentChat ?? []).map((m) => m.text)].join("\n"),
           messageCount: msgs.length, messages: msgs,

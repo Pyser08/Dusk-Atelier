@@ -1,5 +1,10 @@
 // 장기기억 주입: 고정 예산으로 [Dusk Memory] 블록을 조립한다. 순수 함수.
 import { GRADE_WEIGHT } from "./memorygrade.js";
+import { injectable, trustTag, changeNote } from "./memorytrust.js";
+import { emoLines, hasEmo } from "./memoryemo.js";
+import { keyHits, keyBoost } from "./memorykeys.js";
+import { semBoost, semHit } from "./embed.js";
+import { povLines, innerLines, expLines } from "./memoryinner.js";
 import { lastTouch, strength, forgotten, knowLines, openLines, relLines, sourceLines, currentStoryTime } from "./memoryplus.js";
 
 export const MARKER = "[Dusk Memory";
@@ -14,6 +19,7 @@ const live = (x) => !!x && !x.orphan;
 export function hasLiveMemory(folder) {
   if (!folder) return false;
   if ((folder.scenes ?? []).some(live)) return true;
+  if (hasEmo(folder)) return true;
   if (Object.values(folder.people ?? {}).some((p) => p?.digest || (p?.records ?? []).some(live))) return true;
   if ((folder.open ?? []).some((x) => live(x) && !x.closed)) return true;
   return Object.values(folder.rels ?? {}).some((p) => (p?.items ?? []).some(live));
@@ -48,7 +54,7 @@ function sceneLine(s, cap) {
 }
 
 // ctx: {messageCount, recentText, settings:{targetTokens,capTokens,sceneTokens,recentSkip}}
-export function buildBlock(folder, { messageCount = 0, recentText = "", settings = {}, messages = null, focus = null, storyNow = "" } = {}) {
+export function buildBlock(folder, { messageCount = 0, recentText = "", settings = {}, messages = null, focus = null, storyNow = "", sem = null, semMin = 0.32 } = {}) {
   const target = settings.targetTokens ?? 1200, cap = settings.capTokens ?? 2500, sceneCap = settings.sceneTokens ?? 300, skip = settings.recentSkip ?? 8;
   const manifest = { included: [], excluded: [], tokens: 0, recordIds: [] }, plus = settings.plus !== false;
   const scenes = (folder.scenes ?? []).filter((s) => !s.orphan);
@@ -75,16 +81,21 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     // 컨텍스트 모드(BardWiki 방식): never=제외, always=항상(고정 포함), auto=장면/최근 언급 등 관련 있을 때만
     const mode = p.ctx ?? (p.pinned ? "always" : "auto");
     if (mode === "never") { manifest.excluded.push({ kind: "person", name: p.name, tokens: 0, reason: "never" }); continue; }
-    const rel = names.some((n) => inScene.has(n) || focused.has(n)) ? 1 : names.some((n) => recent.includes(n)) ? 2 : 0;
+    const keyRel = plus && (p.records ?? []).some((r) => injectable(r) && keyHits(r, folder, recent) > 0 || semHit(sem?.get(r.id), semMin));  // 검색 키·의미 유사가 현재 장면 글에 나오면 관련 있는 인물로 본다
+    const rel = names.some((n) => inScene.has(n) || focused.has(n)) ? 1 : names.some((n) => recent.includes(n)) || keyRel ? 2 : 0;
     if (mode === "auto" && !rel) { manifest.excluded.push({ kind: "person", name: p.name, tokens: 0, reason: "not-relevant" }); continue; }
     const group = mode === "always" ? 0 : rel;
     const age = (r) => r.at == null ? 50 : Math.max(0, messageCount - (plus ? lastTouch(r) : r.at));
-    const recs = (p.records ?? []).filter((r) => !r.orphan && (r.at == null || r.at < messageCount - skip) && !(p.digest && !p.digestStale && r.digested && (r.g === "D" || r.g === "C")) && !(plus && forgotten(r, messageCount, settings.forgetAfter ?? 150)));
-    const scored = recs.map((r) => ({ r, s: (GRADE_WEIGHT[r.g] ?? 1) * Math.pow(0.97, age(r)) * (plus ? strength(r) : 1) + (r.pin ? 50 : 0) })).sort((a, b) => b.s - a.s);
+    const recs = (p.records ?? []).filter((r) => injectable(r) && (r.at == null || r.at < messageCount - skip) && !(p.digest && !p.digestStale && r.digested && (r.g === "D" || r.g === "C")) && !(plus && forgotten(r, messageCount, settings.forgetAfter ?? 150)));
+    const scored = recs.map((r) => ({ r, s: (GRADE_WEIGHT[r.g] ?? 1) * Math.pow(0.97, age(r)) * (plus ? strength(r) : 1) * (plus ? keyBoost(keyHits(r, folder, recent)) * semBoost(sem?.get(r.id), semMin) : 1) + (r.pin ? 50 : 0) })).sort((a, b) => b.s - a.s);
     const top = scored.slice(0, 5);
+    if (plus && sem) {  // 의미가 아주 비슷한 기록은 등급이 낮아도 자리를 얻는다(인물당 최대 2개, 고정 기록은 밀어내지 않음)
+      const rescue = scored.slice(5).filter((x) => (sem.get(x.r.id) ?? 0) >= semMin + 0.15).sort((a, b) => sem.get(b.r.id) - sem.get(a.r.id)).slice(0, 2);
+      for (const x of rescue) { let i = top.length - 1; while (i >= 0 && top[i].r.pin) i--; if (i < 0) break; top.splice(i, 1, x); top.sort((a, b) => b.s - a.s); }
+    }
     const dg = p.digest && !p.digestStale ? p.digest : "";  // 재요약 대기 중인 digest는 넣지 않음
     if (!top.length && !dg) continue;
-    const moments = top.sort((a, b) => (a.r.at ?? -1) - (b.r.at ?? -1)).map((x) => `(${x.r.g}) ${oneLine(x.r.act)}`);
+    const moments = top.sort((a, b) => (a.r.at ?? -1) - (b.r.at ?? -1)).map((x) => `(${x.r.g}) ${oneLine(x.r.act)}${trustTag(x.r)}${changeNote(x.r)}`);
     const text = `- ${p.name}: ${[dg ? oneLine(dg) : "", moments.length ? "Key moments: " + moments.join(", ") : ""].filter(Boolean).join(" / ")}`;
     cands.push({ name: p.name, ids: top.map((x) => x.r.id), group, best: (top[0]?.s ?? 0) + (p.pinned ? 50 : 0), text, tokens: estimateTokens(text) });
   }
@@ -104,6 +115,12 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
       if (keep.length) { lines.push(title, ...keep); used += n; manifest.included.push({ kind, tokens: n, count: keep.length }); }
     };
     add("open", "Open threads (unresolved; do not resolve them early):", openLines(folder), settings.openTokens ?? 160);
+    add("emo", "Feelings (current gauges 0-10):", emoLines(folder, { relevant: rel.size ? rel : null }), settings.emoTokens ?? 160);
+    if (settings.stage3 !== false) {  // 3단계: 현재 장면의 인물별 인식 · 자기 해석 · 기대 불일치(각자 작은 예산)
+      add("pov", "Perspectives on the current event (each character sees it differently):", povLines(cur), settings.povTokens ?? 120);
+      add("self", "Inner states (own view vs likely real reason; the reason is only inferred):", innerLines(Object.values(folder.people ?? {}).filter((p) => (p.ctx ?? "auto") !== "never"), { relevant: rel.size ? rel : null }), settings.selfTokens ?? 140);
+      add("exp", "Expectation gaps between characters:", expLines(folder, { relevant: rel.size ? rel : null }), settings.expTokens ?? 140);
+    }
     add("rel", "Relationship shifts (recent):", relLines(folder, { relevant: rel.size ? rel : null }), settings.relTokens ?? 140);
     add("know", "Knowledge limits (who knows what):", knowLines(Object.values(folder.people ?? {}).filter((p) => (p.ctx ?? "auto") !== "never")), settings.knowTokens ?? 160);
     if (messages) { const src = sourceLines(folder, messages, { limit: settings.srcCount ?? 2 }); add("src", "Source lines (verbatim from the story):", src.map((x) => x.line), settings.srcTokens ?? 300); manifest.recordIds.push(...src.map((x) => x.id)); }

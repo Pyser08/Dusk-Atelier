@@ -9,6 +9,7 @@ const norm = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 const oneLine = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
 const words = (t) => [...new Set(String(t ?? "").toLowerCase().normalize("NFC").split(/[^\p{L}\p{N}_]+/u).filter((w) => w.length >= 2))];
 
+import { semBoost } from "./embed.js";
 export const RECALL_DEFAULTS = Object.freeze({ tokens: 700, perPerson: 4, sourceCount: 1, forgetAfter: 150 });
 
 // 키워드 보너스: 질의 낱말이 기록 문장에 들어 있을수록 가산(최대 +1.5배)
@@ -21,7 +22,7 @@ export function keywordBoost(act, qWords) {
 
 export function scoreRecord(r, { messageCount = 0, qWords = [], plus = true, openBonus = 0 } = {}) {
   const age = r.at == null ? 50 : Math.max(0, messageCount - (plus ? lastTouch(r) : r.at));
-  return (GRADE_WEIGHT[r.g] ?? 1) * Math.pow(0.97, age) * (plus ? strength(r) : 1) * keywordBoost(r.act, qWords) + (r.pin ? 50 : 0) + openBonus;
+  return (GRADE_WEIGHT[r.g] ?? 1) * Math.pow(0.97, age) * (plus ? strength(r) : 1) * keywordBoost(r.act + " " + (r.keys ?? []).join(" "), qWords) + (r.pin ? 50 : 0) + openBonus;
 }
 
 // 이름(별칭 포함)이 names 중 하나와 맞는 인물만. names가 비면 빈 배열.
@@ -38,7 +39,7 @@ export function unknownFor(folder, person, { limit = 3 } = {}) {
   for (const q of Object.values(folder?.people ?? {})) {
     if (q === person) continue;
     for (const r of q.records ?? []) {
-      if (r.orphan || !r.know?.length) continue;
+      if (r.orphan || r.valid === false || !r.know?.length) continue;
       if (r.know.map(norm).some((k) => me.has(k))) continue;
       rows.push({ r, who: q.name });
     }
@@ -48,7 +49,7 @@ export function unknownFor(folder, person, { limit = 3 } = {}) {
 }
 
 // 반환: { items:[{source:"dusk", text}], recordIds, tokens, people:[이름] }
-export function recallFor(folder, { names = [], query = "", messageCount = 0, messages = null, settings = {} } = {}) {
+export function recallFor(folder, { names = [], query = "", messageCount = 0, messages = null, settings = {}, sem = null, semMin = 0.32 } = {}) {
   const cfg = { ...RECALL_DEFAULTS, ...settings }, plus = settings.plus !== false;
   const out = { items: [], recordIds: [], tokens: 0, people: [] };
   if (!folder) return out;
@@ -65,9 +66,10 @@ export function recallFor(folder, { names = [], query = "", messageCount = 0, me
   // 인물별 점수 상위 → 가장 좋은 기록이 높은 인물부터 넣는다
   const cands = people.map((p) => {
     const mine = opens.filter((o) => (o.who ?? []).map(norm).some((w) => [p.name, ...(p.aliases ?? [])].map(norm).includes(w)));
-    const recs = (p.records ?? []).filter((r) => !r.orphan && !(plus && forgotten(r, messageCount, cfg.forgetAfter)));
-    const scored = recs.map((r) => ({ r, s: scoreRecord(r, { messageCount, qWords, plus, openBonus: mine.length ? 0.5 : 0 }) })).sort((a, b) => b.s - a.s);
+    const recs = (p.records ?? []).filter((r) => !r.orphan && r.valid !== false && !(plus && forgotten(r, messageCount, cfg.forgetAfter)));
+    const scored = recs.map((r) => ({ r, s: scoreRecord(r, { messageCount, qWords, plus, openBonus: mine.length ? 0.5 : 0 }) * semBoost(sem?.get(r.id), semMin) })).sort((a, b) => b.s - a.s);
     const top = scored.slice(0, cfg.perPerson);
+    if (sem) for (const x of scored.slice(cfg.perPerson).filter((y) => (sem.get(y.r.id) ?? 0) >= semMin + 0.15).sort((a, b) => sem.get(b.r.id) - sem.get(a.r.id)).slice(0, 1)) { let i = top.length - 1; while (i >= 0 && top[i].r.pin) i--; if (i >= 0) top.splice(i, 1, x); }
     return { p, top, mine, best: (top[0]?.s ?? 0) + (p.pinned ? 50 : 0) };
   }).sort((a, b) => b.best - a.best);
 

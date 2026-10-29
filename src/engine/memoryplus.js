@@ -2,6 +2,7 @@
 import { similarity } from "./memorygrade.js";
 import { extractMessageText, hashText } from "./chattext.js";
 import { srcOf } from "./memoryreconcile.js";
+import { addSource } from "./memorytrust.js";
 
 const cut = (v, n) => String(v ?? "").trim().slice(0, n);
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
@@ -66,7 +67,13 @@ export const openItems = (folder, { closed = false } = {}) => (folder.open ?? []
 export const openForPrompt = (folder, n = 12) => openItems(folder).slice(-n).map((x) => ({ id: x.id, kind: x.kind, text: x.text }));
 
 // 기억 강화: 같은 행동이 다시 기록되면 언급 횟수(m)와 마지막 언급 위치(lm)를 올린다.
-export function reinforce(record, anchor) { record.m = (record.m ?? 1) + 1; if (anchor?.at != null) record.lm = anchor.at; return record; }
+// v1.7.1: 같은 출처 응답(재분석·리롤 전후 같은 자리)은 횟수에 더하지 않는다.
+export function reinforce(record, anchor) {
+  if (anchor?.h) { if (!addSource(record, anchor)) return record; }
+  else record.m = (record.m ?? 1) + 1;
+  if (anchor?.at != null) record.lm = anchor.at;
+  return record;
+}
 
 // ── 세계 시간선: 이야기 속 시각이 적힌 상황만, 메시지 순서대로 ──
 export function timelineOf(folder) {
@@ -91,7 +98,7 @@ const oneLine = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
 // 지식 경계: know가 있는 기록 = 비밀·제한적으로 목격된 일. 누가 아는지 명시한다.
 export function knowLines(people, { limit = 4 } = {}) {
   const rows = [];
-  for (const p of people) for (const r of p.records ?? []) if (!r.orphan && r.know?.length) rows.push({ r, who: p.name });
+  for (const p of people) for (const r of p.records ?? []) if (!r.orphan && r.valid !== false && r.know?.length) rows.push({ r, who: p.name });
   rows.sort((a, b) => (lastTouch(b.r)) - (lastTouch(a.r)));
   return rows.slice(0, limit).map(({ r, who }) => `- ${oneLine(r.act)} (${who}) — only ${r.know.join(", ")} know this; others do not.`);
 }

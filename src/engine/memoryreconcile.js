@@ -1,6 +1,7 @@
 // 앵커 정합성. 기록/상황은 {at, mid?, h}를 가진다. 순수 함수 — 폴더를 직접 수정한다.
 // v1.6.5: 관계 변화(rels)·열린 항목(open)도 출처(src, closedBy)로 대조한다.
 import { extractMessageText, hashText } from "./chattext.js";
+import { revertExp } from "./memoryinner.js";
 
 export function indexMessages(messages) {
   const byMid = new Map(), byHash = new Map(), dupMid = new Set();
@@ -72,6 +73,21 @@ export function reconcile(folder, messages) {
     if (it.orphan) orphans++;
     if (it.at_ms != null) { const g = byMs.get(it.at_ms) ?? { n: 0, o: 0 }; g.n++; if (it.orphan) g.o++; byMs.set(it.at_ms, g); }
   }
+  // v1.7.1: 반복 횟수(m)는 지금 채팅에 살아 있는 출처 응답 수로 다시 센다(리롤·삭제로 사라진 응답은 뺀다).
+  for (const it of items) if (Array.isArray(it.hs) && it.hs.length) {
+    it.hs = it.hs.filter((s) => srcAlive(s, idx));
+    it.m = Math.max(1, (it.m0 ?? 0) + it.hs.length);
+  }
+  // v1.7.1: 사라진 응답에서 생긴 감정 변화는 되돌린다(최근 것부터, 지금 값이 그 변화의 결과일 때만).
+  for (const pair of Object.values(folder.emo ?? {})) {
+    for (let i = (pair.log ?? []).length - 1; i >= 0; i--) {
+      const e = pair.log[i];
+      if (e.orphan || !hasSrc(e.src) || srcAlive(e.src, idx)) continue;
+      e.orphan = true;
+      for (const [tag, v] of Object.entries(e.t ?? {})) if (pair.tags[tag] === v && !pair.lock?.[tag]) { if (e.from?.[tag] == null) delete pair.tags[tag]; else pair.tags[tag] = e.from[tag]; }
+    }
+  }
+  revertExp(folder, (s) => srcAlive(s, idx));  // 사라진 응답에서 생긴 기대 불일치는 직전 값으로
   const dead = (src, ms) => {
     if (hasSrc(src)) return !srcAlive(src, idx);
     const g = ms != null ? byMs.get(ms) : null;

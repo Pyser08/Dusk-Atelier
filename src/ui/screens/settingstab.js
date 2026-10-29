@@ -1,6 +1,7 @@
 // 설정 탭 (v1.7.0 7단계, 계획 §3.13): 화면(모드·메뉴 위치·꾸미기) → 이야기 도우미 스위치 3 → (고급) 개발자 → 백업 → 둘러보기·새로 바뀐 점.
 // 세부는 고급 모드에서만: 주사위·로어북·기억 버튼·테마 대상·기록·설정 정리·업데이트 설정·정보.
 import { renderPrompts } from './promptstab.js';
+import { openEmbedModal } from './memory/embedmodal.js';
 import { h, replace } from '../dom.js';
 import { advFold, guidePanel, pageHead, segmented, switchEl } from '../kit.js';
 import { icon } from '../icons.js';
@@ -61,7 +62,8 @@ export async function renderSettingsTab(ctx) {
     ),
     card(
       "기억 · 리수폿",
-      linkRow("기억·리수폿 프롬프트", "쓸 때 덧붙일 내 프롬프트 · JSON/.risup 불러오기", () => ctx.go("settings", "prompts"), "rb-set-prompts")
+      linkRow("기억·리수폿 프롬프트", "쓸 때 덧붙일 내 프롬프트 · JSON/.risup 불러오기", () => ctx.go("settings", "prompts"), "rb-set-prompts"),
+      linkRow("임베딩(의미 검색)", "뜻이 비슷한 기억 찾기 · API 주소·키·기본 사용·대기 시간", () => { if (ctx.memory?.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, "rb-set-embed")
     ),
     card(
       "이야기 도우미",
