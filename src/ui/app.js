@@ -440,9 +440,9 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     root.hidden = false;
     await api.showContainer("fullscreen");
     render();
-    // 처음 둘러보기는 처음 설치·다시 설치한 사람에게만 (업데이트로 온 사람에게는 띄우지 않는다)
+    // 처음 둘러보기: 처음 설치한 사람, 그리고 둘러보기가 새로 바뀐 버전(TOUR_VER)으로 업데이트한 사람에게 한 번 띄운다
     // 처음 설치면: 리스바드 감지 시 기억 방식 질문(한 번만) → 둘러보기
-    maybeShowWhatsNew(ctx).then((fresh) => fresh ? maybeAskBardWiki(ctx).catch(() => {}).then(() => maybeShowTour(ctx)) : void 0).catch(() => {
+    maybeShowWhatsNew(ctx).then((fresh) => (fresh ? maybeAskBardWiki(ctx).catch(() => {}) : void 0)).then(() => maybeShowTour(ctx)).catch(() => {
     });
     checkUpdate().catch(() => {
     });

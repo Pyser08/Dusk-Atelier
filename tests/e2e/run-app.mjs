@@ -333,7 +333,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
 for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모바일", { width: 390, height: 844 }, { hasTouch: true, isMobile: true }]]) {
   const t = tag === "PC" ? "pc" : "m";
   const ctx = await browser.newContext({ viewport: vp, ...extra });
-  const page = await boot(ctx, { "rbm:ui:v1": JSON.stringify({ tourDone: true }) }, { memory: true, story: true });
+  const page = await boot(ctx, { "rbm:ui:v1": JSON.stringify({ tourDone: true, tourVer: 2 }) }, { memory: true, story: true });
   await go(page, "홈"); await page.waitForTimeout(600);
   ok(`[7단계 ${tag}] 홈: 첫 안내 카드(세부 설정 위치) 보임`, (await page.locator("#rb-simple-note").count()) === 1 && (await page.locator("#rb-simple-note").textContent()).includes("설정 → 화면 모드 → 고급"));
   await shot(page, `s7-${t}-6-home-notice`);
@@ -344,7 +344,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   await ctx.close();
 }
 { const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
-  const page = await boot(ctx, { "rbm:ui:v1": JSON.stringify({ tourDone: true }) }, { memory: true });
+  const page = await boot(ctx, { "rbm:ui:v1": JSON.stringify({ tourDone: true, tourVer: 2 }) }, { memory: true });
   await go(page, "홈"); await page.waitForTimeout(500);
   await page.locator("#rb-simple-note .rb-btn", { hasText: "고급 모드로 보기" }).click(); await page.waitForTimeout(600);
   const u = JSON.parse(await page.evaluate(() => __api.store["rbm:ui:v1"]));

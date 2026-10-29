@@ -101,10 +101,12 @@ export async function openTour(ctx) {
     paint();
   });
   // 끝까지 봤든 건너뛰었든 한 번 보여 줬으면 다시 자동으로 띄우지 않는다.
-  ctx.prefs.saveUi({ tourDone: true }).catch(() => {});
+  ctx.prefs.saveUi({ tourDone: true, tourVer: TOUR_VER }).catch(() => {});
 }
 
+// 둘러보기를 새로 짠 버전(1.7.0)이면 TOUR_VER를 올려 두었다: 이전 버전에서 업데이트한 사람도 한 번은 자동으로 본다.
+export var TOUR_VER = 2;
 export async function maybeShowTour(ctx) {
-  if (ctx.prefs.ui?.tourDone) return;
+  if (ctx.prefs.ui?.tourDone && (ctx.prefs.ui?.tourVer ?? 0) >= TOUR_VER) return;
   await openTour(ctx);
 }
