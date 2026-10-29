@@ -38,7 +38,7 @@ export function unknownFor(folder, person, { limit = 3 } = {}) {
   for (const q of Object.values(folder?.people ?? {})) {
     if (q === person) continue;
     for (const r of q.records ?? []) {
-      if (r.orphan || !r.know?.length) continue;
+      if (r.orphan || r.valid === false || !r.know?.length) continue;
       if (r.know.map(norm).some((k) => me.has(k))) continue;
       rows.push({ r, who: q.name });
     }
@@ -65,7 +65,7 @@ export function recallFor(folder, { names = [], query = "", messageCount = 0, me
   // 인물별 점수 상위 → 가장 좋은 기록이 높은 인물부터 넣는다
   const cands = people.map((p) => {
     const mine = opens.filter((o) => (o.who ?? []).map(norm).some((w) => [p.name, ...(p.aliases ?? [])].map(norm).includes(w)));
-    const recs = (p.records ?? []).filter((r) => !r.orphan && !(plus && forgotten(r, messageCount, cfg.forgetAfter)));
+    const recs = (p.records ?? []).filter((r) => !r.orphan && r.valid !== false && !(plus && forgotten(r, messageCount, cfg.forgetAfter)));
     const scored = recs.map((r) => ({ r, s: scoreRecord(r, { messageCount, qWords, plus, openBonus: mine.length ? 0.5 : 0 }) })).sort((a, b) => b.s - a.s);
     const top = scored.slice(0, cfg.perPerson);
     return { p, top, mine, best: (top[0]?.s ?? 0) + (p.pinned ? 50 : 0) };

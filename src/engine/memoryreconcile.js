@@ -72,6 +72,11 @@ export function reconcile(folder, messages) {
     if (it.orphan) orphans++;
     if (it.at_ms != null) { const g = byMs.get(it.at_ms) ?? { n: 0, o: 0 }; g.n++; if (it.orphan) g.o++; byMs.set(it.at_ms, g); }
   }
+  // v1.7.1: 반복 횟수(m)는 지금 채팅에 살아 있는 출처 응답 수로 다시 센다(리롤·삭제로 사라진 응답은 뺀다).
+  for (const it of items) if (Array.isArray(it.hs) && it.hs.length) {
+    it.hs = it.hs.filter((s) => srcAlive(s, idx));
+    it.m = Math.max(1, (it.m0 ?? 0) + it.hs.length);
+  }
   const dead = (src, ms) => {
     if (hasSrc(src)) return !srcAlive(src, idx);
     const g = ms != null ? byMs.get(ms) : null;
