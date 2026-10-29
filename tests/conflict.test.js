@@ -30,3 +30,10 @@ test("그대로 두기: 기록을 숨기고 원본은 그대로", () => {
   assert.equal(conflictsOf(scope).length, 1);
   assert.equal(next.revision, 4);
 });
+
+test("수치 칸은 슬롯 이름 대신 한글 이름으로", () => {
+  const sc = { documents: { d: { id: "d", title: "A", sections: [], metrics: [{ id: "m", slotId: "affinity.score", value: 62 }] } },
+    history: [{ id: "h", documentId: "d", before: { sections: [], metrics: [] }, after: { title: "A", sections: [], metrics: [{ id: "m", slotId: "affinity.score", value: 40 }] } }],
+    automation: { records: { c: { status: "completed", messageIndex: 1, historyIds: ["h"] } } } };
+  assert.equal(compareChanges(sc, { messageIndex: 1 })[0].rows[0].label, "호감도");
+});

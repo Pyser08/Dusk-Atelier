@@ -8,11 +8,15 @@ export var conflictsOf = (scope) => Object.entries(scope?.automation?.records ??
   .map(([key, r]) => ({ key, at: r.at ?? "", messageIndex: r.messageIndex }))
   .sort((a, b) => String(b.at).localeCompare(String(a.at)));
 
+// 슬롯 이름 → 화면에 보일 말
+var SLOT_LABEL = { "affinity.score": "호감도", "affinity.taste_band": "첫인상", "openness.score": "음란도", "suspicion.score": "의심도", "core.relationship": "관계·호칭", "core.current_state": "지금 상태", "core.speech": "말투", "core.profile": "프로필" };
+export var slotLabel = (id) => SLOT_LABEL[id] ?? id ?? "수치";
+
 var val = (v) => v == null || v === "" ? "없음" : String(v);
 function itemsOf(doc) {
   const out = new Map();
-  for (const s of doc?.sections ?? []) out.set(`s:${s.id}`, { label: s.heading || s.title || s.provenance?.slotId || "본문", text: s.body ?? "" });
-  for (const m of doc?.metrics ?? []) out.set(`m:${m.id}`, { label: m.slotId ?? "수치", text: m.value });
+  for (const s of doc?.sections ?? []) out.set(`s:${s.id}`, { label: s.heading || s.title || slotLabel(s.provenance?.slotId) || "본문", text: s.body ?? "" });
+  for (const m of doc?.metrics ?? []) out.set(`m:${m.id}`, { label: slotLabel(m.slotId), text: m.value });
   return out;
 }
 
