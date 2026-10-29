@@ -2,9 +2,8 @@
 // 카드는 기억 기록을 재료로 쓰지만 저장소(cardstore)는 기억 저장소와 완전히 분리돼 있다.
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
-import { btn, stepsGuide, loading } from "../../kit.js";
+import { advFold, btn, stepsGuide, loading } from "../../kit.js";
 import { mem, fail, loadBots, loadChats, loadFolder } from "../memory/common.js";
-import { renderBotList } from "../memory/botlist.js";
 import { renderCards } from "../memory/cards.js";
 import { renderCompose } from "../memory/compose.js";
 import { cardSettings } from "../memory/settings.js";
@@ -15,17 +14,27 @@ export async function renderCardsTab(ctx) {
   const m = mem(ctx);
   if (!ctx.memory) return replace(ctx.main, h("div", { class: "rb-empty" }, "기억 카드 기능이 아직 준비되지 않았어요. 플러그인을 다시 불러와 주세요."));
   m.ctab ??= "list";
-  const listHost = h("div", { class: "rb-mem-col list" }), viewHost = h("div", { class: "rb-mem-col view" });
   const redraw = () => renderCardsTab(ctx).catch(fail(ctx));
-  replace(ctx.main, h("div", { class: "rb-mem-wrap" }, h("div", { class: "rb-mem-root", "data-view": m.botId ? "bot" : "bots" }, listHost, viewHost)));
-  const open = (id) => { m.botId = id; m.chatIndex = 0; m.personKey = ""; m.view = "bot"; m.compose = null; m.ctab = "list"; redraw(); };
-  const sHost = h("div"), bHost = h("div", { class: "rb-mem-botwrap" });
-  replace(listHost, sHost, bHost);
-  await Promise.all([renderCardSettings(ctx, sHost, redraw), renderBotList(ctx, bHost, { open, redraw })]);
-  const drawView = (first) => m.botId ? renderBotCards(ctx, viewHost, { redraw, redrawView: () => drawView(false).catch(fail(ctx)), back: () => { m.botId = ""; m.view = "bots"; redraw(); }, quiet: !first })
-    : Promise.resolve(replace(viewHost, h("div", { class: "rb-empty rb-mem-empty" }, icon("sparkle", 28), h("div", { style: "font-weight:700;color:var(--rb-text);font-size:15px" }, "왼쪽에서 봇을 골라 주세요."),
-      stepsGuide("카드는 이 순서로 만들어요", ["왼쪽에서 카드를 만들 봇을 눌러요.", "‘새 카드·새 봇 만들기’에서 인물과 범위를 골라요.", "카드가 마음에 들면 새 봇으로 이어 가요. 기억은 ‘장기 기억’ 탭에서 쌓여요."]))));
+  // 지금 열린 채팅이 기본(1.7.0): 처음 들어오면 그 봇·채팅을 바로 고른다. 다른 봇은 위의 드롭다운에서.
+  if (!m.botId) {
+    const cur = await ctx.memory.switches?.currentChat?.().catch(() => null);
+    if (cur) { m.botId = cur.chaId; m.chatIndex = cur.ti; m.view = "bot"; m.compose = null; }
+  }
+  const bots = await loadBots(ctx);
+  const pickBot = h("select", { class: "rb-input", "aria-label": "카드를 만들 봇", onChange: (e) => { m.botId = e.target.value; m.chatIndex = 0; m.personKey = ""; m.view = "bot"; m.compose = null; m.ctab = "list"; redraw(); } },
+    !m.botId ? h("option", { value: "", selected: true }, "카드를 만들 봇 고르기") : null,
+    ...bots.map((b) => h("option", { value: b.id, selected: b.id === m.botId }, b.character.name || "이름 없는 캐릭터")));
+  const top = h("div", { class: "rb-cards2-top" }, h("label", { class: "rb-cards2-pick" }, h("small", null, "카드를 만들 봇"), pickBot));
+  const viewHost = h("div", { class: "rb-mem-col view" }), advHost = h("div");
+  replace(ctx.main, h("div", { class: "rb-cards2 rb-scroll" }, top, h("div", { class: "rb-mem-wrap" }, h("div", { class: "rb-mem-root", "data-view": "bot" }, viewHost)), advHost));
+  const drawView = (first) => m.botId ? renderBotCards(ctx, viewHost, { redraw, redrawView: () => drawView(false).catch(fail(ctx)), back: () => {}, quiet: !first })
+    : Promise.resolve(replace(viewHost, h("div", { class: "rb-empty rb-mem-empty" }, icon("sparkle", 28), h("div", { style: "font-weight:700;color:var(--rb-text);font-size:15px" }, "위에서 봇을 골라 주세요."),
+      stepsGuide("카드는 이 순서로 만들어요", ["위에서 카드를 만들 봇을 골라요.", "‘새 카드·새 봇 만들기’에서 인물과 범위를 골라요.", "카드가 마음에 들면 새 봇으로 이어 가요."]))));
   await drawView(true);
+  // 카드 설정(태그·기본 언어)은 고급에서만
+  const sHost = h("div");
+  await renderCardSettings(ctx, sHost, redraw);
+  replace(advHost, advFold(ctx, "cards", sHost));
 }
 
 async function renderCardSettings(ctx, host, redraw) {

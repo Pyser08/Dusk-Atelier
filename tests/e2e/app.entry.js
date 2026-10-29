@@ -24,6 +24,11 @@ export function fakeApi(seed = {}, story = false, mods = false) {
     ];
     db.enabledModules = ["m1", "m3"];
     db.personas = [{ id: "p1", name: "선생님" }, { id: "p2", name: "학생회장" }];
+    db.plugins = [
+      { name: "dusk_atelier", displayName: "Dusk Atelier", versionOfPlugin: "1.7.0", version: 3, script: "x".repeat(3300000), enabled: true },
+      { name: "risupot", displayName: "RisuPot", versionOfPlugin: "2.3.0", version: 3, script: "x".repeat(180000), enabled: true },
+      { name: "tts_helper", displayName: "TTS 도우미", versionOfPlugin: "0.9.1", version: 3, script: "x".repeat(24000), enabled: false }
+    ];
     chars[0].modules = ["m1", "m3"];
     store["rbm:persona:v1"] = JSON.stringify({ map: { p1: ["m1"] }, injectedIndex: {}, chatInjected: {} });
   }

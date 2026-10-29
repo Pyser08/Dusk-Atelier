@@ -6,7 +6,7 @@ import { createZip } from '../../engine/zipwrite.js';
 import { DISABLED_KEY, ORDER_KEY, commit, readDb } from '../../data/modules.js';
 import { download, fmtBytes, h, pickFiles, replace } from '../dom.js';
 import { icon } from '../icons.js';
-import { btn, confirmDialog, guidePanel, note, progressBar } from '../kit.js';
+import { btn, confirmDialog, guidePanel, note, openMenu, progressBar } from '../kit.js';
 import { defaultsMeta } from '../prefs.js';
 import { PRESET_KEY, loadPresets, savePresets } from '../../data/presets.js';
 import { INJECTED_KEY, loadPersonaMap, savePersonaMap } from '../../data/persona.js';
@@ -49,9 +49,9 @@ function thanksCard() {
 }
 // 이식 크레딧 카드 — 원작자 이름은 적지 않고 원문 글 링크만 둔다 (RisuTide 감사 카드와 같은 결: 어두운 그라데이션 + 움직이는 배경)
 const CREDITS = [
-  { key: "pot", emoji: "📜", kicker: "PORTED WITH PERMISSION", name: "Risupot", desc: "인물 위키·모델 계층·프롬프트 — 장기 기억의 뼈대. 허락을 받아 Dusk 방식으로 옮겨 왔어요.", url: "https://arca.live/b/characterai/185024906" },
-  { key: "arcana", emoji: "🃏", kicker: "PORTED WITH PERMISSION", name: "Arcana Card", desc: "기억 카드 — 인물을 한 장의 카드로 남기는 방식. 허락을 받아 Dusk 방식으로 옮겨 왔어요.", url: "https://arca.live/b/characterai/185793481" },
-  { key: "bb", emoji: "🛠️", kicker: "PORTED WITH PERMISSION", name: "봇빌더", desc: "AI로 제작 — 설명·로어북·정규식·Lua를 AI와 함께 만드는 방식. 허락을 받아 Dusk 방식으로 옮겨 왔어요.", url: "https://arca.live/b/characterai/187289284" }
+  { key: "pot", emoji: "📜", kicker: "PORTED WITH PERMISSION", name: "Risupot", desc: "위키 기억 기능의 바탕이에요. 허락을 받아 옮겨 왔어요.", url: "https://arca.live/b/characterai/185024906" },
+  { key: "arcana", emoji: "🃏", kicker: "PORTED WITH PERMISSION", name: "Arcana Card", desc: "기억 카드의 바탕이에요. 허락을 받아 옮겨 왔어요.", url: "https://arca.live/b/characterai/185793481" },
+  { key: "bb", emoji: "🛠️", kicker: "PORTED WITH PERMISSION", name: "봇빌더", desc: "AI로 제작 기능을 허락받고 옮겨 왔어요.", url: "https://arca.live/b/characterai/187289284" }
 ];
 const STAR_POS = [[8, 22, 0], [18, 70, 1.1], [31, 36, 0.5], [44, 80, 1.7], [57, 18, 0.9], [66, 58, 2.1], [78, 30, 0.3], [88, 74, 1.4], [94, 20, 1.9]];
 function creditFx(key) {
@@ -95,26 +95,38 @@ export function renderTools(ctx) {
     return;
   }
 
+  const tile2 = (ic, title, desc, onClick, id) => h(
+    "button",
+    { type: "button", class: "rb-ttile", onClick, id },
+    h("span", { class: "ico" }, icon(ic, 22)),
+    h("b", null, title),
+    h("small", null, desc)
+  );
   const content = h(
     "div",
     { class: "rb-section", style: "flex:1;min-width:0" },
     h(
       "div",
-      { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px" },
-      tile("preset", "프리셋", "켜고 끌 모듈 조합·순서를 묶어 저장하고 버튼 하나로 바꾸기, 모바일·PC 자동 전환, 공유 코드", () => ctx.go("tools", "presets"), "rb-tool-presets"),
-      tile("character", "페르소나 빌더", "양식에 맞춰 칸을 채워 페르소나 설명 만들기, AI로 전체·빈 칸·부분 고치기 (영어 출력 + 번역 보기), 양식·AI 프리셋 공유", () => ctx.go("tools", "personabuilder"), "rb-tool-personabuilder"),
-      tile("book", "로어북 로그", "응답마다 어떤 로어북이 들어갔는지 보기 (AI 응답 아래 버튼으로도)", () => ctx.go("tools", "lorelog"), "rb-tool-lorelog"),
-      tile("info", ".risum 인스펙터", "모듈 파일 안을 열어 보기: 필드별 크기, 압축률, 에셋 목록, ZIP 추출", () => ctx.go("tools", "inspector"), "rb-tool-inspector")
+      { class: "rb-tgrid" },
+      tile2("preset", "프리셋", "모듈 조합을 저장하고 공유해요", () => ctx.go("tools", "presets"), "rb-tool-presets"),
+      tile2("character", "페르소나 빌더", "양식으로 페르소나를 만들어요", () => ctx.go("tools", "personabuilder"), "rb-tool-personabuilder"),
+      tile2("book", "로어북 로그", "응답에 들어간 로어북 보기", () => ctx.go("tools", "lorelog"), "rb-tool-lorelog"),
+      tile2("info", ".risum 인스펙터", "모듈 파일 안을 열어 봐요", () => ctx.go("tools", "inspector"), "rb-tool-inspector"),
+      tile2("download", "전체 백업·복원", "설정과 데이터를 저장·복원", (ev) => openMenu(ctx.win, ev.currentTarget, [
+        { label: "백업 만들기", icon: "download", onClick: () => fullBackup(ctx) },
+        { label: "백업에서 복원", icon: "upload", onClick: () => fullRestore(ctx) }
+      ]), "rb-tool-backup"),
+      tile2("history", "기록·되돌리기", "봇·모듈 변경을 되돌려요", () => ctx.go("settings", "history"), "rb-tool-history")
     ),
-    thanksCard(),
-    creditCards()
+    h("section", { class: "rb-thanks-sec" }, h("h2", { class: "rb-label" }, "도움 주신 분들"), thanksCard(), creditCards())
   );
-  const guide = guidePanel("어떤 도구가 맞을까요?", "하고 싶은 일로 골라 보세요.", [
+  const adv = ctx.prefs.uiMode === "advanced";
+  const guide = adv ? guidePanel("어떤 도구가 맞을까요?", "하고 싶은 일로 골라 보세요.", [
     { label: "모듈 켜기 조합을 저장하고 싶어요", text: "프리셋", onClick: () => ctx.go("tools", "presets") },
     { label: "페르소나 설명을 양식으로 만들고 싶어요", text: "페르소나 빌더", onClick: () => ctx.go("tools", "personabuilder") },
     { label: "응답에 어떤 로어북이 들어갔는지 보고 싶어요", text: "로어북 로그", onClick: () => ctx.go("tools", "lorelog") },
     { label: "모듈 파일 안을 열어 보고 싶어요", text: ".risum 인스펙터", onClick: () => ctx.go("tools", "inspector") }
-  ]);
+  ]) : null;
   replace(ctx.main, h("div", { class: "rb-scroll rb-twocol" }, content, guide));
 }
 export async function fullBackup(ctx) {

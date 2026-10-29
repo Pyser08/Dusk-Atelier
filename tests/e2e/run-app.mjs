@@ -220,6 +220,36 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   ok(`[5단계 ${tag}] 가로로 안 넘침·오류 없음`, (await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)) && !(page.__errs?.length) && !(await page.evaluate(() => __errors.length)), (page.__errs ?? []).join(";"));
   await ctx.close();
 }
+// ── 6단계: 홈 상태판·바로 하기 9칸 · 도구 6타일 + 도움 주신 분들 · 기억 카드 · 플러그인 ──
+for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모바일", { width: 390, height: 844 }, { hasTouch: true, isMobile: true }]]) {
+  const t = tag === "PC" ? "pc" : "m", pc = tag === "PC";
+  const ctx = await browser.newContext({ viewport: vp, ...extra });
+  const page = await boot(ctx, {}, { memory: true, story: true, mods: true });
+  const openTab = async (label) => { if (pc) await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(700); };
+  await go(page, "홈"); await page.waitForTimeout(800);
+  ok(`[6단계 ${tag}] 홈: 지금 열린 채팅 머리(봇·채팅 이름) + 바꾸기`, (await page.locator(".rb-hhead h1").textContent()).includes("시로코 · 교실 이야기") && (await page.locator(".rb-hhead .rb-btn", { hasText: "바꾸기" }).count()) === 1);
+  ok(`[6단계 ${tag}] 홈: 상태 3줄(기억·리수폿·인물)`, (await page.locator(".rb-hstat").count()) === 3 && (await page.locator(".rb-hstat .lab b").allTextContents()).join("|") === "기억|리수폿|인물");
+  ok(`[6단계 ${tag}] 홈: 바로 하기 9칸`, (await page.locator(".rb-htile").count()) === 9 && (await page.locator(".rb-htile b").allTextContents()).join("|") === "캐릭터|모듈|기억 카드|AI로 봇 만들기|가져오기|지난 대화 분석|꾸미기|도구|플러그인");
+  if (pc) ok("[6단계 PC] 홈: 오른쪽 최근 기록 3개", (await page.locator(".rb-hrecent .rb-hrec").count()) === 3);
+  ok(`[6단계 ${tag}] 홈: 맨 아래 설정 · 처음 둘러보기 · 새로 바뀐 점`, (await page.locator(".rb-home-foot .rb-btn").allTextContents()).join("|").replace(/\s/g, "").includes("설정|처음둘러보기|v1.7.0-dev·새로바뀐점"), (await page.locator(".rb-home-foot .rb-btn").allTextContents()).join("|"));
+  await shot(page, `s6-${t}-1-home`);
+  await page.locator("#rb-home-modules").click(); await page.waitForTimeout(500);
+  ok(`[6단계 ${tag}] 홈 타일 → 모듈 화면`, (await page.locator(".rb-row .rb-linkbtn").count()) === 3);
+  await go(page, "홈");
+  // 도구
+  await openTab("도구");
+  ok(`[6단계 ${tag}] 도구: 타일 6개(백업·복원, 기록·되돌리기 포함)`, (await page.locator(".rb-ttile b").allTextContents()).join("|") === "프리셋|페르소나 빌더|로어북 로그|.risum 인스펙터|전체 백업·복원|기록·되돌리기");
+  ok(`[6단계 ${tag}] 도구: 도움 주신 분들 카드(원문 글 링크 3개), 간단 모드에선 안내 패널 숨김`, (await page.locator(".rb-thanks-sec h2").textContent()) === "도움 주신 분들" && (await page.locator(".rb-credits .rb-cr-link").count()) === 3 && (await page.locator(".rb-guide, .rb-guidepanel").count()) === 0);
+  await shot(page, `s6-${t}-2-tools`);
+  await page.locator("#rb-tool-backup").click(); await page.waitForTimeout(300);
+  ok(`[6단계 ${tag}] 백업·복원 타일 → 백업 만들기/복원 메뉴`, (await page.locator(".rb-menu").first().textContent()).includes("백업 만들기") && (await page.locator(".rb-menu").first().textContent()).includes("복원"));
+  await page.keyboard.press("Escape"); await page.waitForTimeout(200);
+  // 기억 카드 · 플러그인
+  await openTab("기억 카드"); await shot(page, `s6-${t}-3-cards`);
+  await openTab("플러그인"); await shot(page, `s6-${t}-4-plugins`);
+  ok(`[6단계 ${tag}] 가로로 안 넘침·오류 없음`, (await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)) && !(page.__errs?.length) && !(await page.evaluate(() => __errors.length)), (page.__errs ?? []).join(";") + (await page.evaluate(() => __errors.join(";"))));
+  await ctx.close();
+}
 // ── 장기기억 방식 카드: 간단=숨김+자동, 고급=선택기만(리수폿 스위치 없음) ──
 { const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await boot(ctx, {}, { memory: true });
