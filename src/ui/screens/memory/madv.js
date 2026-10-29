@@ -6,6 +6,7 @@ import { diagText } from "../../../engine/memorydiag.js";
 import { fail, askRefresh } from "./common.js";
 import { builders, renderGlobalSettings } from "./settings.js";
 import { memoryEditor } from "./editor.js";
+import { loreEditor } from "./loreeditor.js";
 
 export function advancedBlocks(ctx, { cur, idx, redraw, modeHost }) {
   const M = ctx.memory, { S, save, num, sw, section } = builders(ctx, idx, redraw, "");
@@ -36,7 +37,7 @@ export function advancedBlocks(ctx, { cur, idx, redraw, modeHost }) {
 
   return [
     modeHost,
-    memoryEditor(ctx, cur, { redraw }),  // 기억 방식 박스 바로 아래(고급 모드 전용)
+    loreEditor(ctx, cur),  // 기억 방식 박스 바로 아래(고급 모드 전용): 대화에 들어가는 로어 편집
     section("저장·기록", h("label", { class: "rb-mem-field" }, h("span", null, "자동 기록 시점"), confirmSel),
       h("label", { class: "rb-mem-field" }, h("span", null, "분석 모델"), mode, sid),
       num("응답 대기 시간(초)", () => S.modelTimeoutSec ?? 600, (s, v) => { s.modelTimeoutSec = Math.max(10, v); }, { min: 10, max: 3600, step: 10 })),
@@ -50,6 +51,7 @@ export function advancedBlocks(ctx, { cur, idx, redraw, modeHost }) {
           h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name ?? x.kind} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))))
         : h("p", { class: "rb-muted" }, "아직 요청이 없었어요.")),
       idx.status?.lastError ? h("p", { class: "rb-muted" }, `마지막 오류: ${String(idx.status.lastError).slice(0, 120)}`) : null),
+    memoryEditor(ctx, cur, { redraw }),  // 저장된 기억 데이터 자체를 고치는 상세 편집
     h("section", { class: "rb-card rb-mem-sec rb-danger-zone" }, h("h3", null, "위험 구역"),
       h("div", { class: "rb-mem-sact" }, btn("이 채팅 기억 지우기", { onClick: () => reset("chat") }), btn("이 봇 기억 지우기", { onClick: () => reset("bot") }), btn("기억 초기화 (전체)", { onClick: () => reset("all") }))),
     more

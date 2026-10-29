@@ -176,7 +176,7 @@ export function memoryEditor(ctx, cur, { redraw }) {
   let loaded = !!st.openBox;
   if (loaded) { replace(body, loading("불러오는 중")); draw(); }  // 다시 그려질 때 열려 있던 상태 그대로 내용을 채운다
   return h("details", { class: "rb-card rb-mem-ed", open: !!st.openBox, onToggle: (e) => { st.openBox = e.target.open; if (e.target.open && !loaded) { loaded = true; replace(body, loading("불러오는 중")); draw(); } } },
-    h("summary", null, h("b", null, "기억 편집기"), h("small", { class: "rb-muted" }, " 저장된 기억을 로어북처럼 고쳐요")),
+    h("summary", null, h("b", null, "기억 데이터 편집 (상세)"), h("small", { class: "rb-muted" }, " 저장된 기록·감정·기대 자체를 고쳐요")),
     h("p", { class: "rb-muted rb-mem-edhelp" }, "고친 칸은 🔒 잠겨서 자동 기록이 덮어쓰지 않아요. 수정은 이 채팅에만 적용되고, 직전 1건은 되돌릴 수 있어요."),
     body);
 }

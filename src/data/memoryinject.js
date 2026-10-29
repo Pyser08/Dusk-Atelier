@@ -2,6 +2,7 @@
 import { extractMessageText, isUserMessage } from "../engine/chattext.js";
 import { buildBlock, insertBlock, injectVerdict, upsertLoreEntry } from "../engine/memoryinject.js";
 import { stateText } from "../engine/storytime.js";
+import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
 
 // onRequest: 메인 모델 요청 직전에 부른다(기다리지 않음). 러너가 '다음 입력 때 직전 응답 확정'을 시작하는 데 쓴다.
@@ -32,12 +33,16 @@ export function createMemoryInjector(api, { store, storyNow = null, onRequest = 
     const folder = await loadReconciled(store, character.chaId, chat.id, msgs);  // 읽기 시점 대조(저장 안 함)
     const userTurns = msgs.filter(isUserMessage).length;
     const verdict = injectVerdict(folder, idx.settings.inject, userTurns);
-    if (!verdict.ok) return none(verdict.reason);
+    const notesOnly = !verdict.ok && verdict.reason === "no-memory" && (folder?.lore?.add ?? []).some((n) => n.on !== false);  // 내가 쓴 로어만 있어도 넣는다
+    if (!verdict.ok && !notesOnly) return none(verdict.reason);
     let now = ""; try { const s = await storyNow?.(character.chaId, chat.id); now = s ? stateText(s) : ""; } catch { now = ""; }
     const tail = msgs.slice(-2).map(extractMessageText).join("\n");
-    const { text, manifest } = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus, storyNow: now });
-    if (mark && text && idx.settings.inject.plus !== false && manifest.recordIds?.length) markUsed(character, chat, manifest.recordIds, msgs.length);
-    return { text, manifest, position: idx.settings.inject.position, reason: text ? "" : "empty" };
+    const built = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus, storyNow: now });
+    const raw = built.text, manifest = built.manifest;
+    const text = applyLore(raw, folder?.lore);  // 주입 로어 편집(줄 수정·숨김·내 로어)
+    if (manifest && text !== raw) manifest.tokens = loreTokens(text);
+    if (mark && text && idx.settings.inject.plus !== false && manifest?.recordIds?.length) markUsed(character, chat, manifest.recordIds, msgs.length);
+    return { text, raw, manifest, position: idx.settings.inject.position, reason: text ? "" : "empty" };
   }
   async function beforeRequest(messages, type, { focus = null } = {}) {
     try {
@@ -54,8 +59,8 @@ export function createMemoryInjector(api, { store, storyNow = null, onRequest = 
   async function preview() {
     const cur = await current(); if (!cur) return { ok: false, why: "리스에서 채팅을 연 상태에서 볼 수 있어요." };
     const c = await compose(cur, { mark: false });
-    if (!c?.text) return { ok: true, injected: false, manifest: c?.manifest ?? null, reason: c?.reason ?? "" };
-    return { ok: true, injected: true, text: c.text, manifest: c.manifest, position: c.position, botId: String(cur.character.chaId), chatId: String(cur.chat.id) };
+    if (!c?.text) return { ok: true, injected: false, raw: c?.raw ?? "", manifest: c?.manifest ?? null, reason: c?.reason ?? "" };
+    return { ok: true, injected: true, text: c.text, raw: c.raw, manifest: c.manifest, position: c.position, botId: String(cur.character.chaId), chatId: String(cur.chat.id) };
   }
   // 훅이 없는 환경: 분석 뒤 채팅 localLore의 [Dusk 기억] 항목을 갱신.
   async function syncLore(ci, ti) {
