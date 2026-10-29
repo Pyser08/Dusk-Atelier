@@ -8,7 +8,8 @@ UI 전면 개편("간단하게, 바로 쓰게"). 설계·목업·§체크리스�
 3. 기억(`screens/memory/` mhome·madv·mdetail·mbots)과 리수폿(`screens/pot.js`)은 스위치·설정이 분리(`engine/memoryswitch.js` → `data/memoryswitches.js`, 설정 `potStore`). 인물(`screens/peoplescreen.js`)의 스위치는 `autoWriterEnabled`.
 4. 모듈 연결은 `screens/modlinks.js`(패널·팝오버·시트 공용), 새 봇·AI로 봇 만들기는 `screens/newbot.js`.
 5. 꾸미기·설정(`screens/settings.js`·`settingstab.js`)은 간단 모드에서 핵심만. 처음 둘러보기 12장(`ui/tour.js`), 홈 첫 안내 1회(`simpleNoticeDone`).
-6. 롤백 충돌 `변경 비교`(`engine/conflict.js`·`memory/conflictui.js`), 테마 공유 코드 `DTB2:`(`data/themebuilder.js`, STYLES·AVATARS·FONTS·WIDTHS는 끝에만 추가).
+6. 채팅 테마: 도구 → `chattheme`(`screens/chattheme.js`, 목록·코드·파일), `themebuilder`·`themestudio`도 도구 하위(설정 호출은 `app.js go()`가 도구로 돌림). 세 화면 위에 `themeTabs`. 이 sub들은 목록이 바뀌므로 패널 캐시에서 뺌.
+7. 롤백 충돌 `변경 비교`(`engine/conflict.js`·`memory/conflictui.js`), 테마 공유 코드 `DTB2:`(`data/themebuilder.js`, STYLES·AVATARS·FONTS·WIDTHS는 끝에만 추가).
 
 ## 8단계에서 한 것
 - 모듈 도구 줄을 칩 줄(`.rb-chips`)과 동작 줄(`.rb-modacts`)로 분리(`.rb-modbar`): 모바일에서 `새 모듈`이 가로 스크롤 밖에 숨던 문제.

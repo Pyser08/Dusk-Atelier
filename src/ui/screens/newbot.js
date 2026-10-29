@@ -3,6 +3,7 @@ import { insertCharacter } from '../../data/addcharacter.js';
 import { ensureCharacterInOrder, newCharacterBase, uniqueDisplayName } from '../../engine/character.js';
 import { Busy, isGenerating } from '../../engine/safety.js';
 import { openCharEditor } from './chareditor.js';
+import { addProjects } from './dev.js';
 
 /** 빈 봇을 DB에 추가한다. 반환: {created, idx} */
 export async function addBlankBot(ctx, name = "새 봇") {
@@ -28,6 +29,8 @@ export async function createBotAndEdit(ctx, { name, tab } = {}) {
     const { created, idx } = await addBlankBot(ctx, name);
     ctx.state.charsDirty = true;
     ctx.state.charSel = created.chaId;
+    // AI로 봇 만들기: 만든 봇은 개발 목록에도 바로 넣는다(개발자 모드가 꺼져 있어도 목록에는 쌓아 둔다)
+    if (tab === "ai") await addProjects(ctx, [{ kind: "character", id: created.chaId }]).catch(() => {});
     ctx.refresh();
     await openCharEditor(ctx, idx, created.chaId, { startTab: tab });
   } catch (e) {

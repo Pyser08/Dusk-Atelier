@@ -320,6 +320,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       tab = "settings";
       sub = sub === "settings" ? "theme" : sub;
     }
+    // 1.7.0: 테마 빌더·스튜디오는 도구 → 채팅 테마로 옮겼다 (예전 settings 호출도 그대로 동작)
+    if (tab === "settings" && ["chattheme", "themebuilder", "themestudio"].includes(sub)) tab = "tools";
     const leaving = tab !== state.tab || sub !== state.sub;
     if (leaving) stashPane();
     if (tab !== state.tab || (sub === "history") !== (state.sub === "history")) {
@@ -346,6 +348,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   let paneReady = false;
   function stashPane() {
     if (!paneReady || !CACHEABLE.has(state.tab) || state.search) return;
+    if (state.tab === "tools" && ["chattheme", "themebuilder", "themestudio"].includes(state.sub)) return; // 목록이 바뀌므로 다시 그린다
     paneCache.set(paneKey(), { nodes: [...main.childNodes], at: Date.now() });
   }
   function dropPanes() {

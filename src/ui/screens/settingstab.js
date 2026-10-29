@@ -11,19 +11,14 @@ import { renderCleanup, tile, fullBackup, fullRestore } from './tools.js';
 import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
 import { openAbout } from './about.js';
-import { renderThemeStudio, targetToggle } from './themestudio.js';
-import { renderThemeBuilder } from './themebuilder.js';
 import { loadMemoryButtonOn } from '../../data/memorybutton.js';
 import { loadStoryTimeOn } from '../../data/storytime.js';
 import { loadFairOn, loadDiceOn, loadDiceMode, DICE_KEY, DICE_MODE_KEY } from '../../data/fairplay.js';
-import { loadThemes, saveThemes, detectTarget, TARGETS } from '../../data/themes.js';
 
 export async function renderSettingsTab(ctx) {
   if (ctx.state.sub === "theme") return renderSettings(ctx);
   if (ctx.state.sub === "updset") return renderUpdateSettings(ctx);
   if (ctx.state.sub === "cleanup") return renderCleanup(ctx);
-  if (ctx.state.sub === "themestudio") return renderThemeStudio(ctx);
-  if (ctx.state.sub === "themebuilder") return renderThemeBuilder(ctx);
   const adv = ctx.prefs.advanced;
   const fail = (e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
 
@@ -79,21 +74,6 @@ export async function renderSettingsTab(ctx) {
   // ── 고급 영역 ──
   let advBlocks = [true];
   if (adv) {
-    const themes = await loadThemes(ctx.api);
-    const rootDoc = await ctx.api.getRootDocument?.().catch(() => null) ?? null;
-    const here = await detectTarget(rootDoc, ctx.api);
-    const tTarget = themes.target ?? here;
-    const tInfo = h("div", { class: "rb-muted", style: "font-size:12.5px;line-height:1.7;word-break:keep-all" });
-    const paintInfo = (v) => {
-      const n = themes.themes[v].length, on = themes.themes[v].find((x) => x.id === themes.active[v]);
-      tInfo.textContent = `${TARGETS[v].label} 테마 ${n}개${on ? ` · 켜짐: ${on.name}` : ""}${v !== here ? ` · 지금 화면은 ${TARGETS[here].label} 계열이라 여기서 켜면 모양이 깨질 수 있어요` : ""}`;
-    };
-    paintInfo(tTarget);
-    const tToggle = targetToggle(tTarget, async (v) => {
-      themes.target = v;
-      paintInfo(v);
-      await saveThemes(ctx.api, themes).catch(() => {});
-    });
     const memBtnOn = await loadMemoryButtonOn(ctx.api);
     const lore = await loadLoreSettings(ctx.api).catch(() => ({ ...LORE_DEFAULTS }));
     const saved = h("span", { class: "rb-muted", style: "font-size:12.5px" });
@@ -132,14 +112,13 @@ export async function renderSettingsTab(ctx) {
       sec("이야기 도우미 세부", lab("내가 결과까지 적었을 때", diceModeSeg), note("· 유저 편향 없애기: 요청마다 프로그램이 1~100 값을 3개 굴려 함께 보내고, 결과가 불확실한 행동은 AI가 난이도를 정해 그 값으로 성패를 가려요. 공정한 전개가 켜져 있을 때만 작동해요."), note("· 재해석: 내가 ‘쓰러뜨렸다’처럼 결과까지 적어도 시도로 보고 주사위로 가려요. 존중: 내가 적은 결과는 그대로 따라요."), note("· 공정한 전개는 요청마다 짧은 지침을 함께 보내요. 지침이 늘어난 만큼 요청이 조금 길어져요."), note("· 이야기 시간: 응답 첫 줄 ‘[2026-10-28 15:30 | 교실]’ 같은 상태 줄을 읽어 이어 가요. 실제 현재 시각이 아니라 이야기 속 시각이에요.")),
       sec("로어북", lab("다시 생성(리롤) 때", rerollSeg), lab("이름 경계", bdSeg), lab("로어북 로그", logSeg), lab("응답 아래 버튼", btnSeg), saved, note("· 이름 경계: 키가 다른 낱말 속에 끼어 잘못 켜지는 걸 막아요. 짧은 이름만: 한글 1~2글자 키에만 자동 적용(추천). 모든 키: 영문 포함 전부."), note("· 로어북 로그: 응답마다 들어간 로어북을 남겨요. 도구 → 로어북 로그와 응답 아래 [📖 로어북] 버튼에서 봐요.")),
       sec("채팅 메뉴", lab("기억 버튼", memBtnSeg), note("채팅 입력 옆 메뉴의 [기억] 버튼을 보이거나 숨겨요. 기억 기능 자체는 그대로예요.")),
-      sec("테마 대상", h("div", { style: "display:flex;align-items:center;gap:12px;flex-wrap:wrap" }, tToggle, h("div", { style: "flex:1;min-width:200px" }, tInfo)), note("두 계열은 구조가 달라 테마가 서로 호환되지 않아요."), h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px" }, tile("palette", "테마 빌더", "스타일과 색만 고르면 완성", () => ctx.go("settings", "themebuilder"), "rb-set-themebuilder"), tile("brush", "테마 스튜디오", "색·글꼴·말풍선·CSS 편집, 공유 코드", () => ctx.go("settings", "themestudio"), "rb-set-themestudio"))),
       sec("정리 · 기록", tiles),
       guidePanel("이럴 땐 여기로", "하고 싶은 일을 누르면 해당 화면으로 가요.", [
         { label: "색·글자 크기를 바꾸고 싶어요", text: "꾸미기", onClick: () => ctx.go("look") },
         { label: "모듈이 꼬였어요, 되돌리고 싶어요", text: "기록 · 되돌리기", onClick: () => ctx.go("settings", "history") },
         { label: "다른 기기로 옮기고 싶어요", text: "전체 백업·복원", onClick: () => fullBackup(ctx) },
         { label: "새 봇을 알아서 잡아 주면 좋겠어요", text: "업데이트 설정", onClick: () => ctx.go("settings", "updset") },
-        { label: "내 채팅 테마를 만들고 싶어요", text: "테마 빌더", onClick: () => ctx.go("settings", "themebuilder") }
+        { label: "내 채팅 테마를 만들고 싶어요", text: "채팅 테마", onClick: () => ctx.go("tools", "chattheme") }
       ])
     ];
   }

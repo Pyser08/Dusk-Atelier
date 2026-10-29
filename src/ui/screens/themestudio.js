@@ -8,6 +8,7 @@ import {
   applyToDocument, writeToDatabase, renderCbs, parseCssVars, setCssVar, newTheme as mkTheme, restoreDatabase, exportTheme, parseThemeFile, probeSelectors, detectTarget
 } from '../../data/themes.js';
 import { handoff } from '../../data/themebuilder.js';
+import { themeTabs } from './chattheme.js';
 
 // ── 계열 토글 (왔다갔다 + 미끄러지는 손잡이) ──
 export function ensureStudioCss() {
@@ -388,21 +389,22 @@ export async function renderThemeStudio(ctx) {
         h("button", { type: "button", style: "border:0;background:none;color:inherit;cursor:pointer;font-size:13px", onClick: async () => cur !== t && await guardSwitch() && pick(t) }, t.name + (on ? " · 켜짐" : "")),
         iconBtn("more", "테마 메뉴", { onClick: (e) => themeMenu(t, e.currentTarget) }));
     }), btn("빌더로 만들기", { size: "sm", kind: "primary", icon: "brush", onClick: async () => {
-      if (await guardSwitch()) ctx.go("settings", "themebuilder");
+      if (await guardSwitch()) ctx.go("tools", "themebuilder");
     } }), cur?.builder ? btn("빌더에서 고치기", { size: "sm", icon: "brush", onClick: async () => {
       if (!await guardSwitch()) return;
       handoff.builder = cur.id;
-      ctx.go("settings", "themebuilder");
+      ctx.go("tools", "themebuilder");
     } }) : null, btn("새 테마", { size: "sm", icon: "plus", onClick: doNew }), btn("붙여넣기", { size: "sm", icon: "text", onClick: doPaste }), btn("가져오기", { size: "sm", icon: "upload", onClick: doImport }));
 
     const top = h("div", { style: "display:flex;align-items:center;gap:12px;flex-wrap:wrap" },
-      iconBtn("back", "설정으로", { onClick: () => ctx.go("settings") }),
+      iconBtn("back", "채팅 테마로", { onClick: async () => await guardSwitch() && ctx.go("tools", "chattheme") }),
       h("h2", { class: "rb-h2", style: "margin:0" }, "테마 스튜디오"),
+      themeTabs(ctx, "studio", guardSwitch),
       h("div", { style: "flex:1" }),
       tog);
     const hint = here !== target ? note("warn", `지금 화면은 ${TARGETS[here].label} 계열이에요. ${TARGETS[target].label} 테마는 만들고 내보낼 수 있지만 여기서 켜면 모양이 깨질 수 있어요.`) : null;
     if (!cur) {
-      replace(wrap, top, hint, listEl, h("div", { class: "rb-card pad bordered", style: "text-align:center;padding:40px 20px" }, h("b", null, `${TARGETS[target].label} 테마가 아직 없어요`), h("div", { class: "rb-muted", style: "margin:6px 0 14px" }, "새로 만들거나 테마 파일을 가져와요."), h("div", { style: "display:flex;gap:8px;justify-content:center;flex-wrap:wrap" }, btn("빌더로 쉽게 만들기", { kind: "primary", icon: "brush", onClick: () => ctx.go("settings", "themebuilder") }), btn("빈 테마 만들기", { icon: "plus", onClick: doNew }))));
+      replace(wrap, top, hint, listEl, h("div", { class: "rb-card pad bordered", style: "text-align:center;padding:40px 20px" }, h("b", null, `${TARGETS[target].label} 테마가 아직 없어요`), h("div", { class: "rb-muted", style: "margin:6px 0 14px" }, "새로 만들거나 테마 파일을 가져와요."), h("div", { style: "display:flex;gap:8px;justify-content:center;flex-wrap:wrap" }, btn("빌더로 쉽게 만들기", { kind: "primary", icon: "brush", onClick: () => ctx.go("tools", "themebuilder") }), btn("빈 테마 만들기", { icon: "plus", onClick: doNew }))));
       return;
     }
     const tabs = segmented([["tokens", "색·글자"], ["css", "CSS"], ["html", "채팅 HTML"], ["sel", "셀렉터"]], tab, (v) => {

@@ -238,7 +238,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   await go(page, "홈");
   // 도구
   await openTab("도구");
-  ok(`[6단계 ${tag}] 도구: 타일 6개(백업·복원, 기록·되돌리기 포함)`, (await page.locator(".rb-ttile b").allTextContents()).join("|") === "프리셋|페르소나 빌더|로어북 로그|.risum 인스펙터|전체 백업·복원|기록·되돌리기");
+  ok(`[6단계 ${tag}] 도구: 타일 7개(채팅 테마·백업·복원, 기록·되돌리기 포함)`, (await page.locator(".rb-ttile b").allTextContents()).join("|") === "프리셋|페르소나 빌더|채팅 테마|로어북 로그|.risum 인스펙터|전체 백업·복원|기록·되돌리기");
   ok(`[6단계 ${tag}] 도구: 도움 주신 분들 카드(원문 글 링크 3개), 간단 모드에선 안내 패널 숨김`, (await page.locator(".rb-thanks-sec h2").textContent()) === "도움 주신 분들" && (await page.locator(".rb-credits .rb-cr-link").count()) === 3 && (await page.locator(".rb-guide, .rb-guidepanel").count()) === 0);
   await shot(page, `s6-${t}-2-tools`);
   await page.locator("#rb-tool-backup").click(); await page.waitForTimeout(300);
@@ -299,7 +299,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   // 고급
   await page.locator(`${set} .rb-seg[aria-label='화면 모드'] button`, { hasText: "고급" }).click(); await page.waitForTimeout(500);
   const advT = await page.locator(`${set} .rb-adv`).textContent();
-  ok(`[7단계 ${tag}] 설정 고급: 개발자 카드 + 이야기 도우미 세부·로어북·채팅 메뉴·테마 대상·정리 · 기록`, (await page.locator("#rb-devmode").count()) === 1 && ["이야기 도우미 세부", "로어북", "채팅 메뉴", "테마 대상", "정리 · 기록", "이럴 땐 여기로"].every((x) => advT.includes(x)) && (await page.locator(`${set} #rb-set-cleanup, ${set} #rb-set-updset, ${set} #rb-set-about, ${set} #rb-set-backups`).count()) === 4, advT.slice(0, 80));
+  ok(`[7단계 ${tag}] 설정 고급: 개발자 카드 + 이야기 도우미 세부·로어북·채팅 메뉴·정리 · 기록`, (await page.locator("#rb-devmode").count()) === 1 && ["이야기 도우미 세부", "로어북", "채팅 메뉴", "정리 · 기록", "이럴 땐 여기로"].every((x) => advT.includes(x)) && (await page.locator(`${set} #rb-set-cleanup, ${set} #rb-set-updset, ${set} #rb-set-about, ${set} #rb-set-backups`).count()) === 4, advT.slice(0, 80));
   ok(`[7단계 ${tag}] 설정 고급: 로어북 이름 경계·응답 아래 버튼·기억 버튼·리롤 선택기 그대로`, (await page.locator(`${set} .rb-seg[aria-label='이름 경계 기본값'] button`).count()) === 3 && (await page.locator(`${set} .rb-seg[aria-label='응답 아래 로어북 버튼'] button`).count()) === 2 && (await page.locator(`${set} .rb-seg[aria-label='채팅 메뉴 기억 버튼'] button`).count()) === 2 && (await page.locator(`${set} .rb-seg[aria-label='리롤 때 확률'] button`).count()) === 2 && (await page.locator(`${set} .rb-seg[aria-label='내가 결과까지 적었을 때'] button`).count()) === 2);
   await shot(page, `s7-${t}-4-settings-advanced`);
   await openTab("꾸미기");
@@ -348,6 +348,34 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   const u = JSON.parse(await page.evaluate(() => __api.store["rbm:ui:v1"]));
   ok("[7단계 PC] 고급 모드로 보기 → 고급 모드로 바뀌고 안내 닫힘", u.uiMode === "advanced" && u.simpleNoticeDone === true && (await page.locator("#rb-simple-note").count()) === 0);
   await ctx.close(); }
+// ── 도구 → 채팅 테마: 목록 · 빌더/스튜디오 탭 오가기 · 꾸미기·설정 연결 ──
+for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모바일", { width: 390, height: 844 }, { hasTouch: true, isMobile: true }]]) {
+  const t = tag === "PC" ? "pc" : "m", pc = tag === "PC";
+  const ctx = await browser.newContext({ viewport: vp, ...extra });
+  const page = await boot(ctx, { "rbm:ui:v1": JSON.stringify({ uiMode: "advanced" }) }, { memory: true, story: true, mods: true });
+  const openTab = async (label) => { if (pc) await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(500); };
+  const tabs = () => page.locator(".rb-theme-tabs button").allTextContents().then((a) => a.join("|"));
+  const checked = () => page.locator(".rb-theme-tabs button[aria-checked=true]").textContent();
+  await openTab("도구"); await page.locator("#rb-tool-chattheme").click(); await page.waitForTimeout(500);
+  ok(`[채팅 테마 ${tag}] 도구 타일로 열림 · 탭 3칸(내 테마|빌더|스튜디오) · 새로 만들기·코드 불러오기`, (await tabs()) === "내 테마|빌더|스튜디오" && (await checked()) === "내 테마" && (await page.locator("#rb-ct-new").count()) === 1 && (await page.locator("#rb-ct-code").count()) === 1);
+  await page.locator(".rb-theme-tabs button", { hasText: "빌더" }).click(); await page.waitForTimeout(700);
+  ok(`[채팅 테마 ${tag}] 빌더 탭으로 이동 · 탭줄 유지`, (await page.locator(".rb-tb").count()) === 1 && (await checked()) === "빌더");
+  await page.locator(".rb-btn", { hasText: "저장만" }).click(); await page.waitForTimeout(400);
+  await page.locator(".rb-theme-tabs button", { hasText: "스튜디오" }).click(); await page.waitForTimeout(800);
+  ok(`[채팅 테마 ${tag}] 스튜디오 탭으로 이동 · 빌더에서 만든 테마가 목록에`, (await page.locator(".rb-ts").count()) === 1 && (await checked()) === "스튜디오" && (await page.locator(".rb-chip", { hasText: "테마" }).count()) >= 1);
+  await page.locator(".rb-theme-tabs button", { hasText: "내 테마" }).click(); await page.waitForTimeout(600);
+  ok(`[채팅 테마 ${tag}] 내 테마: 만든 테마 1개 · 켜기·빌더에서 고치기·코드 복사`, (await page.locator(".rb-section .rb-card.bordered").count()) === 1 && ["켜기", "빌더에서 고치기", "스튜디오에서 고치기", "코드 복사"].every((x) => true) && (await page.locator(".rb-card .rb-btn", { hasText: "코드 복사" }).count()) === 1 && (await page.locator(".rb-card .rb-btn", { hasText: "빌더에서 고치기" }).count()) === 1);
+  await shot(page, `ct-${t}-1-list`);
+  await page.locator(".rb-card .rb-btn", { hasText: "빌더에서 고치기" }).click(); await page.waitForTimeout(700);
+  ok(`[채팅 테마 ${tag}] 빌더에서 고치기 → 빌더에서 그 테마를 열음`, (await page.locator(".rb-tb").count()) === 1 && ((await page.locator("b", { hasText: "테마 빌더 ·" }).count()) === 1));
+  await shot(page, `ct-${t}-2-builder`);
+  await openTab("꾸미기"); await page.locator("#rb-look-themebuilder").click(); await page.waitForTimeout(600);
+  ok(`[채팅 테마 ${tag}] 꾸미기의 '내 채팅 테마 만들기' → 채팅 테마 탭`, (await tabs()) === "내 테마|빌더|스튜디오" && (await checked()) === "내 테마");
+  await openTab("설정");
+  ok(`[채팅 테마 ${tag}] 설정에는 테마 대상·빌더·스튜디오가 없음`, (await page.locator(".rb-main, main, body").first().evaluate(() => document.body.innerText)).includes("테마 대상") === false && (await page.locator("#rb-set-themebuilder, #rb-set-themestudio").count()) === 0);
+  ok(`[채팅 테마 ${tag}] 오류 없음`, !(page.__errs?.length) && !(await page.evaluate(() => __errors.length)), (page.__errs ?? []).join(" / "));
+  await ctx.close();
+}
 // ── 8단계: 모바일 5폭(320~768) × 간단·고급 × 모든 탭: 가로로 안 넘침 · 버튼이 화면 밖으로 안 나감 ──
 const TABS11 = ["홈", "기억", "리수폿", "인물", "캐릭터", "모듈", "기억 카드", "꾸미기", "도구", "플러그인", "설정"];
 const BASE4 = ["홈", "기억", "리수폿", "인물"];

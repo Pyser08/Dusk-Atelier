@@ -15,6 +15,9 @@ import { reload } from './modules.js';
 import { renderPresets } from './presets.js';
 import { renderLoreLog } from './lorelog.js';
 import { renderPersonaBuilder } from './personabuilder.js';
+import { renderChatTheme } from './chattheme.js';
+import { renderThemeBuilder } from './themebuilder.js';
+import { renderThemeStudio } from './themestudio.js';
 
 export function tile(ic, title, desc, onClick, id) {
   return h(
@@ -90,6 +93,9 @@ export function renderTools(ctx) {
   if (ctx.state.sub === "presets") return renderPresets(ctx);
   if (ctx.state.sub === "lorelog") return renderLoreLog(ctx);
   if (ctx.state.sub === "personabuilder") return renderPersonaBuilder(ctx);
+  if (ctx.state.sub === "chattheme") return renderChatTheme(ctx);
+  if (ctx.state.sub === "themebuilder") return renderThemeBuilder(ctx);
+  if (ctx.state.sub === "themestudio") return renderThemeStudio(ctx);
   if (ctx.state.sub === "patchmaker") {
     ctx.go("dev", "patchmaker");
     return;
@@ -110,6 +116,7 @@ export function renderTools(ctx) {
       { class: "rb-tgrid" },
       tile2("preset", "프리셋", "모듈 조합을 저장하고 공유해요", () => ctx.go("tools", "presets"), "rb-tool-presets"),
       tile2("character", "페르소나 빌더", "양식으로 페르소나를 만들어요", () => ctx.go("tools", "personabuilder"), "rb-tool-personabuilder"),
+      tile2("palette", "채팅 테마", "테마 만들기·목록·코드 주고받기", () => ctx.go("tools", "chattheme"), "rb-tool-chattheme"),
       tile2("book", "로어북 로그", "응답에 들어간 로어북 보기", () => ctx.go("tools", "lorelog"), "rb-tool-lorelog"),
       tile2("info", ".risum 인스펙터", "모듈 파일 안을 열어 봐요", () => ctx.go("tools", "inspector"), "rb-tool-inspector"),
       tile2("download", "전체 백업·복원", "설정과 데이터를 저장·복원", (ev) => openMenu(ctx.win, ev.currentTarget, [

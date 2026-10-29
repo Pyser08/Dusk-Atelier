@@ -46,8 +46,8 @@ export var TABS = [
   },
   {
     id: "tools", label: "도구", icon: "tools", group: "more",
-    desc: "프리셋·페르소나·로어북 로그 같은 도구 모음이에요.",
-    card: "프리셋·페르소나·로어북 로그 같은 도구 모음.",
+    desc: "프리셋·페르소나·채팅 테마·로어북 로그 같은 도구 모음이에요.",
+    card: "프리셋·페르소나·채팅 테마·로어북 로그 같은 도구 모음.",
     help: ["타일을 누르면 그 도구가 열려요.", "돌아올 때는 위쪽 줄의 이름을 누르거나 ‘홈’을 눌러요."]
   },
   {
@@ -72,8 +72,8 @@ export var TABS = [
 export var BASE_IDS = TABS.filter((t) => t.group === "base").map((t) => t.id);
 export var MORE_IDS = TABS.filter((t) => t.group === "more").map((t) => t.id);
 export var SUBNAMES = {
-  settings: { theme: "화면 꾸미기", updset: "업데이트 설정", cleanup: "설정 정리", themestudio: "테마 스튜디오", themebuilder: "테마 빌더", history: "기록 · 되돌리기" },
-  tools: { presets: "프리셋", personabuilder: "페르소나 빌더", lorelog: "로어북 로그", inspector: "검사기", history: "기록 · 되돌리기" },
+  settings: { theme: "화면 꾸미기", updset: "업데이트 설정", cleanup: "설정 정리", history: "기록 · 되돌리기" },
+  tools: { presets: "프리셋", personabuilder: "페르소나 빌더", chattheme: "채팅 테마", themebuilder: "테마 빌더", themestudio: "테마 스튜디오", lorelog: "로어북 로그", inspector: "검사기", history: "기록 · 되돌리기" },
   dev: { patchmaker: "패치 만들기" }
 };
 export var subLabel = (tab, sub) => sub ? SUBNAMES[tab]?.[sub] ?? null : null;

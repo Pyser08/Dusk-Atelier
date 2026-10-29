@@ -19,10 +19,21 @@ export function probeLines(content, names = {}) {
   return lines.sort((a, b) => b.length - a.length).slice(0, 3);
 }
 
+// 본문의 모든 의미 있는 줄(긴 순). 비슷한 로어북끼리 겹치는 줄과 이 항목만의 줄을 가르는 데 쓴다.
+export function bodyLines(content, names = {}) {
+  let t = cbsLite(bodyOf(content), names);
+  for (let i = 0; i < 6 && /\{\{[^{}]*\}\}/.test(t); i++) t = t.replace(/\{\{[^{}]*\}\}/g, "\n");
+  return [...new Set(t.split("\n").map(ws).filter((l) => l.length >= 8 && !/^@@/.test(l)))].sort((a, b) => b.length - a.length);
+}
+
+const isConstant = (e) => !!e.alwaysActive || e.mode === "constant";
+// 리스 규칙상 스스로 켜질 수 있는 항목인가: 항상 켜짐 · 키 있음 · @@activate · Dusk 규칙. 아니면 내용이 프롬프트에 비슷하게 있어도 이 항목 때문이 아니다.
+export const canFire = (e) => isConstant(e) || !!ruleOf(e) || !!String(e.key ?? "").trim() || /^\s*@@activate/m.test(e.content ?? "");
+
 const reasonOf = (e, duskWhy) => {
   if (duskWhy) return `Dusk 규칙 · ${duskWhy}`;
   if (ruleOf(e)) return "Dusk 규칙";
-  if (e.alwaysActive) return "항상 켜짐";
+  if (isConstant(e)) return "항상 켜짐";
   return "키 일치";
 };
 
@@ -31,10 +42,27 @@ export function detectInPrompt(tagged, promptText, { names, duskFired = {} } = {
   const hay = ws(promptText);
   const out = [];
   const seen = new Set();
+  // 줄이 몇 개 항목에 들어 있는지: 겹치는 줄(예: SFW/NSFW 두 로어북의 공통 줄)만으로는 어느 항목이 들어갔는지 알 수 없다
+  const lineCount = new Map();
+  const linesOf = new Map();
+  for (const { entry: e } of tagged) {
+    if (!e || e.mode === "folder" || e.enabled === false) continue;
+    const ls = bodyLines(e.content, names);
+    linesOf.set(e, ls);
+    for (const l of ls) lineCount.set(l, (lineCount.get(l) ?? 0) + 1);
+  }
   for (const { entry: e, src } of tagged) {
     if (!e || e.mode === "folder" || e.enabled === false) continue;
-    const probes = probeLines(e.content, names);
-    if (!probes.length || !probes.some((p) => hay.includes(p))) continue;
+    if (!canFire(e)) continue;
+    const ls = linesOf.get(e) ?? [];
+    const own = ls.filter((l) => lineCount.get(l) === 1);
+    let hit;
+    if (own.length) hit = own.slice(0, 3).some((p) => hay.includes(p)); // 이 항목만의 줄이 있으면 그 줄로만 판단
+    else {
+      const probes = probeLines(e.content, names);
+      hit = probes.length > 0 && probes.every((p) => hay.includes(p)); // 전부 겹치는 줄뿐이면 모두 들어 있어야
+    }
+    if (!hit) continue;
     const name = e.comment || ws(e.key).slice(0, 30) || "(이름 없음)";
     const k = `${src}|${name}`;
     if (seen.has(k)) continue;
@@ -58,7 +86,7 @@ export function estimateUsed(tagged, messages, { depth = 5, duskFired = {} } = {
       continue;
     }
     if (/^\s*@@dont_activate/m.test(e.content ?? "")) continue;
-    let on = !!e.alwaysActive;
+    let on = isConstant(e);
     if (!on && !e.useRegex) on = hit(e.key) && (!e.selective || !String(e.secondkey ?? "").trim() || hit(e.secondkey));
     if (on) out.push({ n: name, s: src, w: reasonOf(e) });
   }

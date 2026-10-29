@@ -3,6 +3,7 @@ import { h, replace } from '../dom.js';
 import { btn, iconBtn, segmented, note, chip, switchEl, promptDialog } from '../kit.js';
 import { AI_MODES, runAI } from '../../engine/merge.js';
 import { ensureStudioCss, mockDoc } from './themestudio.js';
+import { themeTabs } from './chattheme.js';
 import { TARGETS, loadThemes, saveThemes, detectTarget } from '../../data/themes.js';
 import { STYLES, styleById, defaultChoice, normalizeChoice, buildTheme, makePalette, thumbHtml, contrast, handoff, DIALS, WIDTHS, AVATARS, FONTS, aiChoose, aiStyle, aiStylePrompt, aiEditPrompt, currentStyleCss, pickAccentFromPixels, shareCode, readShareCode } from '../../data/themebuilder.js';
 
@@ -286,14 +287,15 @@ export async function renderThemeBuilder(ctx) {
     ctx.toast(editing ? "테마를 고쳤어요" : "테마를 만들었어요. 스튜디오에서 적용하거나 더 다듬을 수 있어요");
     if (thenStudio) {
       handoff.studio = t.id;
-      ctx.go("settings", "themestudio");
+      ctx.go("tools", "themestudio");
     }
   };
 
   const top = h("div", { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
-    iconBtn("back", "설정으로", { onClick: () => ctx.go("settings") }),
+    iconBtn("back", "채팅 테마로", { onClick: () => ctx.go("tools", "chattheme") }),
     h("b", { style: "font-size:16px" }, editing ? `테마 빌더 · ${editing.name}` : "테마 빌더"),
     h("span", { class: "rb-muted", style: "font-size:12.5px" }, TARGETS[target].label + "용"),
+    themeTabs(ctx, "builder"),
     h("div", { style: "margin-left:auto" }, viewEl));
   const side = h("div", { class: "rb-tb-side" },
     aiBox,

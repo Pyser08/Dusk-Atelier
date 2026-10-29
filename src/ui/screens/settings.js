@@ -93,7 +93,7 @@ export function renderSettings(ctx) {
     h("div", { class: "rb-card bordered rb-look-prev", "aria-label": "미리보기" }, h("span", { class: "cap" }, "미리보기"), h("div", { class: "rb-bub o" }, "오늘 회의 자료는 준비됐어요."), h("div", { class: "rb-bub m" }, "고마워요, 바로 확인할게요.")),
     h("section", { class: "rb-card bordered rb-lcard" }, h("span", { class: "h" }, "강조 색"), h("div", { class: "rb-accpicks" }, swatches)),
     h("section", { class: "rb-card bordered rb-lcard" }, field("밝기", null, modeSeg, modeNote), field("글자 크기", null, sizeSeg)),
-    btn("내 채팅 테마 만들기", { kind: "primary", onClick: () => ctx.go("settings", "themebuilder"), id: "rb-look-themebuilder" }),
+    btn("내 채팅 테마 만들기", { kind: "primary", onClick: () => ctx.go("tools", "chattheme"), id: "rb-look-themebuilder" }),
     saved
   );
   const adv = advFold(
@@ -105,7 +105,7 @@ export function renderSettings(ctx) {
       field("줄 간격", "목록과 버튼의 여유를 정해요.", densitySeg),
       field("확대율", "막대를 움직이면 창 전체가 함께 커지고 작아져요.", h("div", { style: "display:flex;align-items:center;gap:10px" }, h("span", { class: "rb-muted", "aria-hidden": "true" }, "작게"), zoomRange, h("span", { class: "rb-muted", "aria-hidden": "true" }, "크게"), zoomLabel)),
       hcRow,
-      field("테마 스튜디오", "말풍선·글꼴·CSS를 직접 고치고 공유 코드로 주고받아요.", btn("테마 스튜디오 열기", { onClick: () => ctx.go("settings", "themestudio"), id: "rb-look-themestudio" })),
+      field("테마 스튜디오", "말풍선·글꼴·CSS를 직접 고치고 공유 코드로 주고받아요.", btn("테마 스튜디오 열기", { onClick: () => ctx.go("tools", "themestudio"), id: "rb-look-themestudio" })),
       h("p", { class: "rb-adv-note" }, "모듈 이름 색과 폴더 색은 모듈 목록에서 각 모듈의 ⋯ 메뉴로 바꿔요."),
       h("div", { style: "display:flex;gap:10px;flex-wrap:wrap" }, btn("기본값으로", { onClick: () => update({ ...DEFAULT_THEME }) }))
     ] : [true]
