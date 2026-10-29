@@ -199,6 +199,11 @@ export function themeVars(themeIn, mode) {
     "--rb-shadow": B.shadow,
     "--rb-shadow-sm": B.shadowSm,
     "--rb-shadow-card": B.card,
+    // 예전 화면 코드가 쓰던 이름들(홈 타일 숫자 · 글자 크기 막대 · 테마 빌더 선택 표시 · 에디터 강조): 강조 색을 그대로 따라가게 이어 둔다
+    "--rb-acc": a,
+    "--rb-accent": accText,
+    "--rb-muted": B.mute,
+    "--rb-panel": B.surf,
     "--rb-acc-a": a,
     "--rb-acc-b": b,
     "--rb-acc-grad": hc ? a : `linear-gradient(135deg, ${a}, ${b})`,
