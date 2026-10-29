@@ -8,7 +8,7 @@ import { advancedBot } from "./advanced.js";
 import { scopeChip, tracked, searchBox, openSettingsHistory, shareSection, previewBox } from "./settingstools.js";
 import { pushHist } from "../../../engine/settingsutil.js";
 
-function builders(ctx, idx, redraw, kind = "all") {
+export function builders(ctx, idx, redraw, kind = "all") {
   const M = ctx.memory, S = idx.settings;
   const save = (fn) => M.store.updateIndex((i) => { const before = structuredClone(i.settings); fn(i.settings, i); i.settingsHistory = pushHist(i.settingsHistory, "dusk", before, i.settings); }).then(() => redraw()).catch(fail(ctx));
   const num = (label, get, set, { min = 0, max = 99999, step = 1 } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("input", { class: "rb-input", type: "number", min, max, step, value: get(), onChange: (e) => { const v = Math.min(max, Math.max(min, Number(e.target.value) || 0)); save((s) => set(s, v)); } }));

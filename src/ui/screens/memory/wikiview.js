@@ -42,7 +42,7 @@ const EMPTY = "아직 등록된 내용이 없습니다.";
 // 자동 생성이 지금 어떤 상태인지 한 줄로: 안 만들어질 때 이유가 바로 보이게 한다.
 export function autoStatusOf(M, wikiDocs = 0) {
   const rt = M.flow?.runtime?.();
-  if (!rt?.auto) return { kind: "warn", text: "장기기억이 꺼져 있거나 아직 준비 중이라 위키가 자동으로 만들어지지 않아요. 왼쪽 위 ‘장기기억’ 스위치를 확인해 주세요." };
+  if (!rt?.auto) return { kind: "warn", text: "리수폿이 꺼져 있거나 아직 준비 중이라 위키가 자동으로 만들어지지 않아요. 리수폿 탭의 스위치를 확인해 주세요." };
   const st = rt.auto.status();
   if (!st.globalEnabled) return { kind: "warn", text: "기억 흐름이 꺼져 있어요. 켜면 다음 응답부터 위키가 만들어져요." };
   if (st.hook !== "ready") return { kind: "warn", text: `리스 연결이 아직 준비되지 않았어요(${st.hook || "대기"}). 이 채팅을 열고 새 응답을 한 번 받으면 연결돼요.` };

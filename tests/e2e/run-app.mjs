@@ -19,7 +19,7 @@ const boot = async (ctx, seed = {}, opts = {}) => {
   await page.waitForTimeout(250);
   return page;
 };
-const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png` }); };
+const shot = async (page, name) => { await page.evaluate(() => document.querySelectorAll('.rb-toasts > *').forEach((e) => e.remove())).catch(() => {}); if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png` }); };
 const go = async (page, label) => { await page.evaluate((l) => [...document.querySelectorAll(".rb-nav a, .rb-topnav a, .rb-tabbar a")].filter((a) => a.offsetParent).find((a) => a.textContent.trim().startsWith(l)).click(), label); await page.waitForTimeout(250); };
 const cur = (page) => page.evaluate(() => [...document.querySelectorAll("[aria-current=page]")].filter((a) => a.offsetParent).map((a) => a.textContent.trim().replace(/\d+$/, "")).join("|"));
 const names = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(s)].filter((a) => a.offsetParent).map((a) => a.textContent.trim().replace(/\d+$/, "")), sel);
@@ -92,8 +92,49 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 800 }, {}], ["모�
   const ctx = await browser.newContext({ viewport: vp, ...extra });
   const page = await boot(ctx, {}, { memory: true });
   await go(page, "기억"); await page.waitForTimeout(500);
-  ok(`[${tag}] 기억 탭이 오류 없이 그려짐(스위치·상태 카드)`, (await page.locator(".rb-mem-root").count()) === 1 && (await page.locator(".rb-mem-root .rb-switch").count()) >= 1 && !(page.__errs?.length), (page.__errs ?? []).join(";"));
+  ok(`[${tag}] 기억 탭이 오류 없이 그려짐(스위치·상태 카드)`, (await page.locator(".rb-mem2").count()) === 1 && (await page.locator(".rb-mem2 .rb-switch").count()) >= 1 && !(page.__errs?.length), (page.__errs ?? []).join(";"));
   await shot(page, `${tag === "PC" ? "pc" : "m"}-6-memory`);
+  await ctx.close();
+}
+// ── 3단계: 기억 화면(간단: 스위치 1·동작 3 이하) · 고급 · 기록 보기 · 봇별 기억 ──
+for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모바일", { width: 390, height: 844 }, { hasTouch: true, isMobile: true }]]) {
+  const t = tag === "PC" ? "pc" : "m";
+  const ctx = await browser.newContext({ viewport: vp, ...extra });
+  const page = await boot(ctx, {}, { memory: true, story: true });
+  await go(page, "기억"); await page.waitForTimeout(600);
+  const sw = await page.locator(".rb-mem2 .rb-switch").count(), acts = await page.locator(".rb-mem2 .rb-actions .rb-btn").count();
+  ok(`[3단계 ${tag}] 간단 모드: 스위치 1개·주요 동작 3개 이하`, sw === 1 && acts >= 1 && acts <= 3, `switch ${sw}, actions ${acts}`);
+  ok(`[3단계 ${tag}] 상태 카드·기록 막대(4칸)·최근 기록`, (await page.locator(".rb-mem2 .rb-status.k-on").count()) === 1 && (await page.locator(".rb-mbar i").count()) >= 3 && (await page.locator(".rb-mem-recent .rb-mem-rec").count()) === 3);
+  ok(`[3단계 ${tag}] 상태 줄에 '기억 3건을 넣었어요'`, (await page.locator(".rb-mem2 .rb-status").textContent()).includes("기억 3건을 넣었어요"));
+  ok(`[3단계 ${tag}] 간단 모드에서는 고급 영역 대신 '고급 모드에서 더 보기' 링크`, (await page.locator(".rb-mem2 .rb-adv").count()) === 0 && (await page.locator("#rb-adv-memory").count()) === 1);
+  ok(`[3단계 ${tag}] 미처리 분석 버튼에 개수 표시`, /미처리 \d+개/.test(await page.locator(".rb-mem2 .rb-actions .rb-btn").first().textContent()));
+  await shot(page, `s3-${t}-1-memory-simple`);
+  await page.locator(".rb-mem2 .rb-phead .rb-switch").click(); await page.waitForTimeout(400);
+  ok(`[3단계 ${tag}] 스위치를 끄면 이 봇만 꺼짐 + 상태 카드 꺼짐`, (await page.locator(".rb-mem2 .rb-status.k-off").count()) === 1 && (await page.evaluate(() => __app.ctx.memory.store.getIndex().then((i) => i.bots.c1?.on))) === false);
+  await shot(page, `s3-${t}-2-memory-off`);
+  await page.locator(".rb-mem2 .rb-phead .rb-switch").click(); await page.waitForTimeout(400);
+  ok(`[3단계 ${tag}] 다시 켜면 사용 중`, (await page.locator(".rb-mem2 .rb-status.k-on, .rb-mem2 .rb-status.k-prep").count()) === 1 && (await page.evaluate(() => __app.ctx.memory.store.getIndex().then((i) => i.bots.c1?.on))) === true);
+  // 기록 보기
+  await page.locator(".rb-mem-rechead .rb-btn", { hasText: "전체 보기" }).click(); await page.waitForTimeout(700);
+  ok(`[3단계 ${tag}] 기록 보기: 칩 5개 + ← 기억으로`, (await page.locator(".rb-mem-navtabs .rb-chip").allTextContents()).join("|") === "인물 위키|상황|시간선|열린 항목|관계" && (await page.locator(".rb-mem2-head .rb-btn", { hasText: "기억으로" }).count()) === 1);
+  await shot(page, `s3-${t}-3-detail`);
+  await page.locator(".rb-mem2-head .rb-btn", { hasText: "기억으로" }).click(); await page.waitForTimeout(500);
+  // 봇별 기억
+  await page.locator(".rb-mem2 .rb-actions .rb-btn", { hasText: "다른 채팅 보기" }).click(); await page.waitForTimeout(500);
+  ok(`[3단계 ${tag}] 봇별 기억: 봇마다 스위치·지금 채팅 배지`, (await page.locator(".rb-mbot").count()) === 2 && (await page.locator(".rb-mbot .rb-switch").count()) === 2 && (await page.locator(".rb-mbot .rb-badge", { hasText: "지금 채팅" }).count()) === 1);
+  await page.locator(".rb-mbot .rb-switch").nth(1).click(); await page.waitForTimeout(300);
+  ok(`[3단계 ${tag}] 봇별 스위치가 그 봇만 바꿈`, (await page.evaluate(() => __app.ctx.memory.store.getIndex().then((i) => [i.bots.c2?.on, i.bots.c1?.on]))).join() === "false,true");
+  await shot(page, `s3-${t}-4-bots`);
+  // 고급
+  await page.locator(".rb-mem2-head .rb-btn", { hasText: "기억으로" }).click(); await page.waitForTimeout(400);
+  await go(page, tag === "PC" ? "설정" : "더보기"); 
+  if (tag !== "PC") await page.locator(".rb-morenav .rb-chip", { hasText: "설정" }).click();
+  await page.waitForTimeout(300);
+  await page.locator(".rb-seg[aria-label='화면 모드'] button", { hasText: "고급" }).click(); await page.waitForTimeout(300);
+  await go(page, "기억"); await page.waitForTimeout(700);
+  ok(`[3단계 ${tag}] 고급 모드: 고급 영역에 저장 위치·자동 기록 시점·분석 모델·위험 구역`, (await page.locator(".rb-mem2 .rb-adv").count()) === 1 && (await page.locator(".rb-mem2 .rb-adv").textContent()).match(/자동 기록 시점/) && (await page.locator(".rb-mem2 .rb-adv").textContent()).includes("위험 구역") && (await page.locator(".rb-mem2 .rb-mem-modebar").count()) === 1);
+  ok(`[3단계 ${tag}] 가로로 안 넘침·오류 없음`, (await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)) && !(page.__errs?.length), (page.__errs ?? []).join(";"));
+  await shot(page, `s3-${t}-5-memory-advanced`);
   await ctx.close();
 }
 // ── 장기기억 방식 카드: 간단=숨김+자동, 고급=선택기만(리수폿 스위치 없음) ──
