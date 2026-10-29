@@ -26,7 +26,8 @@ export function createEmbedder(api, { log = (...a) => console.log("[Dusk 임베�
   // texts: 글 배열. opts.groups: 같은 문서(인물)의 글 묶음들(컨텍스트 모드가 묶음 단위로 맥락을 반영). opts.type: document | query.
   async function embed(texts, { timeoutMs, groups = null, type = "document" } = {}) {
     await load(); if (!isReady(cfg, !!key)) throw new Error("임베딩 설정이 비어 있어요.");
-    const out = [], ctxMode = isContextual(cfg);
+    const out = [], ctxMode = isContextual(cfg), isCtxModel = /^voyage-context/i.test(cfg.model);
+    if (ctxMode !== isCtxModel && /voyageai\.com/i.test(cfg.url)) throw new Error(ctxMode ? "컨텍스트 주소(/contextualizedembeddings)에는 voyage-context-* 모델만 쓸 수 있어요. 주소를 …/v1/embeddings로 바꾸거나 모델을 voyage-context-4로 바꾸세요." : "voyage-context-* 모델은 주소를 …/v1/contextualizedembeddings로 바꿔야 해요.");
     const units = groups ? groups.map((g) => g.slice(0, BATCH)) : texts.map((t) => [t]);
     const flat = units.flat(), reqs = ctxMode ? [units] : Array.from({ length: Math.ceil(flat.length / BATCH) }, (_, i) => flat.slice(i * BATCH, (i + 1) * BATCH));
     for (const part of reqs) {
@@ -35,6 +36,7 @@ export function createEmbedder(api, { log = (...a) => console.log("[Dusk 임베�
       const timer = setTimeout(() => ac.abort(), timeoutMs ?? cfg.timeoutMs);
       try {
         const res = await api.nativeFetch(req.url, { method: "POST", headers: req.headers, body: req.body, signal: ac.signal });
+        if (!res?.ok) { let d = ""; try { const j = await res.json(); d = String(j?.detail ?? j?.error?.message ?? j?.message ?? "").slice(0, 160); } catch { /* 본문이 없으면 코드만 */ } if (d) throw new Error(`HTTP ${res?.status}: ${d}`); }
         if (!res?.ok) throw new Error(res?.status === 401 || res?.status === 403 ? `키가 거절됐어요 (HTTP ${res.status}) — 키·주소가 같은 서비스 것인지 확인하세요` : `HTTP ${res?.status ?? "?"}`);
         const rows = parseResponse(await res.json(), count, ctxMode); if (!rows) throw new Error("응답 모양이 달라요");
         out.push(...rows); lastMs = Date.now() - t0; lastError = "";

@@ -70,3 +70,12 @@ test("embedder: 키는 저장 후 다시 열어도 남고, 저장이 안 되면 
   const E2 = createEmbedder(mk(), { log() {} }); const st = await E2.load(); assert.ok(st.hasKey && st.keyTail === "1234" && st.on);
   const E3 = createEmbedder(mk(false), { log() {} }); assert.equal((await E3.save({ key: "x" })).persisted, false);
 });
+test("embedder: 주소·모델 불일치와 서버 오류 본문을 알려 준다", async () => {
+  const store = {}; let body = { detail: "Model voyage-x is not supported" };
+  const api = { safeLocalStorage: { getItem: async (k) => store[k] ?? null, setItem: async (k, v) => { store[k] = v; } }, nativeFetch: async () => ({ ok: false, status: 400, json: async () => body }) };
+  const E = createEmbedder(api, { log() {} });
+  await E.save({ on: true, key: "pa-x", url: "https://api.voyageai.com/v1/contextualizedembeddings", model: "voyage-4-large" });
+  await assert.rejects(E.test(), /voyage-context-\*/);
+  await E.save({ url: "https://api.voyageai.com/v1/embeddings", model: "voyage-4-large" });
+  await assert.rejects(E.test(), /HTTP 400: Model voyage-x/);
+});
