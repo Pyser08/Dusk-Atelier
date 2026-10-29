@@ -99,7 +99,10 @@ export function renderBotAnalysis(env) {
   const from = h("input", { class: "rb-input", type: "number", min: 1, max: total, value: 1, "aria-label": "시작 메시지 번호" }), to = h("input", { class: "rb-input", type: "number", min: 1, max: total, value: total, "aria-label": "끝 메시지 번호" });
   const est = h("div", { class: "rb-muted" }), prog = h("div"), msgs = chatItem.chat?.message ?? [];
   const range = () => ({ from: Math.max(0, +from.value - 1), to: Math.max(0, +to.value - 1) });
-  const paintEst = () => { const p = M.runner.planBackfill(msgs, range(), env.folder); est.textContent = `예상 호출 ${p.calls}회 · 대략 ${p.tokens.toLocaleString()} 토큰`; };
+  const paintEst = () => {
+    const p = M.runner.planBackfill(msgs, range(), env.folder);
+    est.textContent = `AI 응답 ${p.total}개 · 분석됨 ${p.done} · 미처리 ${p.todo}${p.failed ? ` (지난번 실패 ${p.failed})` : ""} → 예상 호출 ${p.calls}회 · 대략 ${p.tokens.toLocaleString()} 토큰`;
+  };
   from.addEventListener("input", paintEst); to.addEventListener("input", paintEst); if (caps.analyze) paintEst();
   let ctrl = null, failed = [];
   const run = async (only) => {
@@ -109,7 +112,7 @@ export function renderBotAnalysis(env) {
       failed = r.failed; ctx.toast(`일괄 분석이 끝났어요 (${r.total - r.failed.length}/${r.total}).`); env.redraw();
     } catch (e) { fail(ctx)(e); env.redraw(); }
   };
-  return section(["지난 대화 분석 (이 채팅 전체)", "chat"], h("div", { class: "rb-mem-range" }, from, "~", to), est, h("div", { class: "rb-mem-sact" }, btn("분석 시작", { kind: "primary", onClick: () => run() }), failed.length ? btn(`실패만 다시 (${failed.length})`, { onClick: () => run(true) }) : null), prog);
+  return section(["지난 대화 분석 (이 채팅 전체)", "chat"], h("div", { class: "rb-mem-range" }, from, "~", to), est, h("div", { class: "rb-mem-sact" }, btn("미처리만 분석", { kind: "primary", onClick: () => run() }), failed.length ? btn(`실패만 다시 (${failed.length})`, { onClick: () => run(true) }) : null), prog);
 }
 
 // ---- 카드 설정: 태그·스탯 정의, 기본 언어, 연결 추가 지시. 카드 만들기와 새 봇 만들기에서 쓴다.

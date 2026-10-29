@@ -83,9 +83,18 @@ export function reconcile(folder, messages) {
     // 버린 분석이 닫은 떡밥은 다시 연다(되돌릴 수 있게 closed는 두고 표시만 한다).
     if (x.closed && dead(x.closedBy, x.closed_ms)) x.closedOrphan = true; else delete x.closedOrphan;
   }
+  if (messages?.length) {  // 분석 완료·실패 목록은 지금 채팅에 있는 응답만 남긴다(리롤·삭제된 것은 걷어 냄)
+    const present = new Set(idx.list.map((x) => x.h));
+    if (Array.isArray(folder.done)) folder.done = folder.done.filter((x) => present.has(x));
+    if (Array.isArray(folder.failedBackfill)) folder.failedBackfill = folder.failedBackfill.filter((x) => present.has(x));
+  }
   if (folder.cursor?.h) {
     const c = { ...folder.cursor }; fix(c, idx);
-    folder.cursor = c.orphan ? null : { ...folder.cursor, at: c.at };
+    if (!c.orphan) folder.cursor = { ...folder.cursor, at: c.at };
+    else {  // 마지막 분석 응답이 사라졌으면(리롤 등) 아직 살아 있는 가장 뒤 기록·장면의 응답으로 옮긴다. 없으면 비운다.
+      const best = items.filter((it) => !it.orphan && it.h && !it.legacy && !it.carried).reduce((b, it) => (!b || (it.at ?? -1) >= (b.at ?? -1) ? it : b), null);
+      folder.cursor = best ? { at: best.at, mid: best.mid ?? null, h: best.h } : null;
+    }
   }
   return orphans;
 }

@@ -8,7 +8,35 @@ export const estimateTokens = (t) => { const s = String(t ?? ""); const ko = (s.
 const norm = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 const oneLine = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
 
-export const shouldInject = (folder, settings, userTurns) => !!(settings?.on !== false && folder?.cursor && userTurns >= (settings?.fromTurn ?? 1));
+// 정리(reconcile) 뒤에도 살아 있는 기억이 하나라도 있는가. 주입 여부는 cursor가 아니라 이것으로 판단한다
+// (마지막으로 분석한 응답을 리롤하면 cursor는 비어도 남은 장면·기록은 그대로 쓸 수 있다).
+const live = (x) => !!x && !x.orphan;
+export function hasLiveMemory(folder) {
+  if (!folder) return false;
+  if ((folder.scenes ?? []).some(live)) return true;
+  if (Object.values(folder.people ?? {}).some((p) => p?.digest || (p?.records ?? []).some(live))) return true;
+  if ((folder.open ?? []).some((x) => live(x) && !x.closed)) return true;
+  return Object.values(folder.rels ?? {}).some((p) => (p?.items ?? []).some(live));
+}
+// 주입 판정: {ok, reason}. reason은 주입하지 않는 이유 코드(화면 문구는 injectReasonText).
+export function injectVerdict(folder, settings, userTurns) {
+  if (settings?.on === false) return { ok: false, reason: "inject-off" };
+  if (!folder) return { ok: false, reason: "no-folder" };
+  if (userTurns < (settings?.fromTurn ?? 1)) return { ok: false, reason: "before-start-turn" };
+  if (!hasLiveMemory(folder)) return { ok: false, reason: "no-memory" };
+  return { ok: true, reason: "" };
+}
+export const shouldInject = (folder, settings, userTurns) => injectVerdict(folder, settings, userTurns).ok;
+const REASON_TEXT = {
+  "backend-off": "기억 저장소가 꺼져 있어요",
+  "inject-off": "주입이 꺼져 있어요",
+  "bot-off": "이 봇의 기억이 꺼져 있어요",
+  "no-folder": "이 채팅에 저장된 기억이 아직 없어요",
+  "before-start-turn": "시작 턴 전이에요",
+  "no-memory": "남은 기억이 없어요(분석 기준 응답이 사라졌거나 아직 기록 전이에요)",
+  "empty": "이번 요청에 맞게 고른 내용이 없어요(관련 없음 또는 예산 제한)"
+};
+export const injectReasonText = (reason) => REASON_TEXT[reason] ?? "";
 
 function sceneLine(s, cap) {
   const place = s.place ? ` (${s.place})` : "", when = s.when ? ` [${oneLine(s.when)}]` : "";

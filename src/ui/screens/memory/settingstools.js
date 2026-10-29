@@ -4,7 +4,7 @@ import { h, replace, fmtWhen, copyText } from "../../dom.js";
 import { btn, modal, note, confirmDialog } from "../../kit.js";
 import { fail } from "./common.js";
 import { liveScope } from "./advanced.js";
-import { estimateTokens } from "../../../engine/memoryinject.js";
+import { estimateTokens, injectReasonText } from "../../../engine/memoryinject.js";
 import { pushHist, applyBefore, encodeShare, decodeShare, matchQuery, scopeChipLabel } from "../../../engine/settingsutil.js";
 
 const AREA = { flow: "기억 흐름", dusk: "기록·주입" };
@@ -98,7 +98,7 @@ export function previewBox(ctx) {
     try {
       const r = await ctx.memory.injector.preview();
       if (!r.ok) return replace(out, note("warn", r.why));
-      if (!r.injected) return replace(out, h("p", { class: "rb-muted" }, "지금은 아무것도 들어가지 않아요(주입이 꺼져 있거나 시작 턴 전이에요)."));
+      if (!r.injected) return replace(out, h("p", { class: "rb-muted" }, `지금은 아무것도 들어가지 않아요${injectReasonText(r.reason) ? ` — ${injectReasonText(r.reason)}` : ""}.`));
       const m = r.manifest ?? {};
       replace(out, h("p", null, h("b", null, `약 ${estimateTokens(r.text).toLocaleString()} 토큰`), h("span", { class: "rb-muted" }, ` · 위치: ${r.position === "beforeLastUser" ? "마지막 내 말 앞" : r.position}`)),
         h("ul", { class: "rb-mem-reclist" }, [...(m.included ?? []).map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...(m.excluded ?? []).map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))),

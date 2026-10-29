@@ -26,6 +26,13 @@ test("reroll makes old record orphan", () => {
   assert.equal(f.people.a.records[0].orphan, true);
   assert.equal(f.cursor, null);
 });
+test("reroll of the last analyzed reply moves the cursor to the latest surviving record", () => {
+  const msgs = [msg("첫 응답"), msg("새로 생성된 응답")];
+  const f = { people: { a: { records: [rec(0, "첫 응답"), rec(1, "이전 응답")] } }, scenes: [{ id: "s", ...rec(0, "첫 응답") }], cursor: { at: 1, h: hashText("이전 응답") } };
+  reconcile(f, msgs);
+  assert.equal(f.people.a.records[1].orphan, true);
+  assert.deepEqual({ at: f.cursor.at, h: f.cursor.h }, { at: 0, h: hashText("첫 응답") });
+});
 test("mid has priority and duplicate/inherited mids are ignored", () => {
   const msgs = [msg("x", "m1"), msg("y", "m2")];
   const f = { people: { a: { records: [rec(0, "y", "m2")] } }, scenes: [] };

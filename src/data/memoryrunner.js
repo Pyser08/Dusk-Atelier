@@ -3,7 +3,7 @@ import { extractMessageText, isUserMessage, hashText, isChatGenerating as isGene
 import { analyze } from "../engine/memoryprompt.js";
 import { reconcile } from "../engine/memoryreconcile.js";
 import { loadReconciled } from "./memoryload.js";
-import { applyAnalysis, knownPeople } from "../engine/memoryapply.js";
+import { applyAnalysis, knownPeople, doneHashes } from "../engine/memoryapply.js";
 import { storyDateOf } from "../engine/storydate.js";
 import { addMilestones } from "../engine/cyclememo.js";
 import { runAI } from "../engine/runai.js";
@@ -179,13 +179,15 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
   }
 
   // 수동·일괄 분석. range: {from,to} 메시지 인덱스(포함). AI 응답 3개씩 묶음.
+  // 반환: groups·calls·tokens + 현황(total 범위 안 AI 응답 수, done 분석됨, todo 미처리, failed 미처리 중 지난번 실패한 것)
   function planBackfill(messages, { from = 0, to = Infinity } = {}, folder = null) {
     const ai = aiIndexes(messages).filter((i) => i >= from && i <= to);
-    const done = new Set(folder?.done ?? []);
-    const todo = ai.filter((i) => !done.has(hashText(extractMessageText(messages[i]))));
+    const done = doneHashes(folder), failedSet = new Set(folder?.failedBackfill ?? []);
+    const hOf = (i) => hashText(extractMessageText(messages[i]));
+    const todo = ai.filter((i) => !done.has(hOf(i)));
     const groups = []; for (let k = 0; k < todo.length; k += 3) groups.push(todo.slice(k, k + 3));
     const chars = groups.reduce((n, g) => n + g.reduce((s, i) => s + extractMessageText(messages[i]).length, 0) + 4000, 0);
-    return { groups, calls: groups.length, tokens: Math.round(chars / 1.5) };
+    return { groups, calls: groups.length, tokens: Math.round(chars / 1.5), total: ai.length, done: ai.length - todo.length, todo: todo.length, failed: todo.filter((i) => failedSet.has(hOf(i))).length };
   }
   async function backfill(charIndex, chatIndex, range, { signal, onProgress } = {}) {
     const chat = await api.getChatFromIndex(charIndex, chatIndex), character = await api.getCharacterFromIndex(charIndex);
@@ -197,6 +199,10 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
       if (isGenerating(await api.getCharacterFromIndex(charIndex))) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
       try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true }); } catch (e) { failed.push(g); if (signal?.aborted) break; }
       onProgress?.(++n, groups.length, failed.length);
+    }
+    if (failed.length) {  // 실패한 응답은 기억해 두었다가 현황에 '실패'로 보여 준다(성공하면 applyAnalysis가 지운다)
+      const msgs = chat.message ?? [], hs = failed.flat().map((i) => hashText(extractMessageText(msgs[i])));
+      await store.updateFolder(String(character.chaId), String(chat.id ?? chatIndex), (f) => { f.failedBackfill = [...new Set([...(f.failedBackfill ?? []), ...hs])].slice(-500); }).catch(() => {});
     }
     return { total: groups.length, failed };
   }

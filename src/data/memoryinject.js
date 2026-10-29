@@ -1,6 +1,6 @@
 // 장기기억 주입 훅: 요청 사본에만 [Dusk Memory] 블록을 넣는다(저장 데이터 불변).
 import { extractMessageText, isUserMessage } from "../engine/chattext.js";
-import { buildBlock, insertBlock, shouldInject, upsertLoreEntry } from "../engine/memoryinject.js";
+import { buildBlock, insertBlock, injectVerdict, upsertLoreEntry } from "../engine/memoryinject.js";
 import { stateText } from "../engine/storytime.js";
 import { loadReconciled } from "./memoryload.js";
 
@@ -20,26 +20,30 @@ export function createMemoryInjector(api, { store, storyNow = null, log = (...a)
       for (const p of Object.values(f.people ?? {})) for (const r of p.records ?? []) if (set.has(r.id) && (r.lu ?? -99) < count - 2) { r.u = (r.u ?? 0) + 1; r.lu = count; }
     }).catch((e) => log("사용 기록 실패", e?.message ?? e));
   }
-  // 블록을 만든다. 주입 조건이 아니면 null.
+  // 블록을 만든다. 주입하지 않으면 text가 빈 글이고 reason에 이유 코드가 들어간다(화면에서 "왜 빠졌는지" 보여 주는 용도).
   async function compose({ character, chat }, { focus = null, mark = true } = {}) {
+    const none = (reason) => ({ text: "", manifest: null, position: null, reason });
     const idx = await store.getIndex();
-    if (idx.settings.backend === "off" || idx.settings.inject.on === false || idx.bots[String(character.chaId)]?.on === false) return null;
+    if (idx.settings.backend === "off") return none("backend-off");
+    if (idx.settings.inject.on === false) return none("inject-off");
+    if (idx.bots[String(character.chaId)]?.on === false) return none("bot-off");
     const msgs = chat.message ?? [];
     const folder = await loadReconciled(store, character.chaId, chat.id, msgs);  // 읽기 시점 대조(저장 안 함)
     const userTurns = msgs.filter(isUserMessage).length;
-    if (!shouldInject(folder, idx.settings.inject, userTurns)) return null;
+    const verdict = injectVerdict(folder, idx.settings.inject, userTurns);
+    if (!verdict.ok) return none(verdict.reason);
     let now = ""; try { const s = await storyNow?.(character.chaId, chat.id); now = s ? stateText(s) : ""; } catch { now = ""; }
     const tail = msgs.slice(-2).map(extractMessageText).join("\n");
     const { text, manifest } = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus, storyNow: now });
     if (mark && text && idx.settings.inject.plus !== false && manifest.recordIds?.length) markUsed(character, chat, manifest.recordIds, msgs.length);
-    return { text, manifest, position: idx.settings.inject.position };
+    return { text, manifest, position: idx.settings.inject.position, reason: text ? "" : "empty" };
   }
   async function beforeRequest(messages, type, { focus = null } = {}) {
     try {
       if (type && type !== "model") return messages;
       const cur = await current(); if (!cur) return messages;
       const c = await compose(cur, { focus });
-      if (!c?.text) { last = { at: Date.now(), injected: false, manifest: c?.manifest ?? null }; return messages; }
+      if (!c?.text) { last = { at: Date.now(), injected: false, manifest: c?.manifest ?? null, reason: c?.reason ?? "" }; return messages; }
       last = { at: Date.now(), injected: true, manifest: c.manifest, text: c.text };
       return insertBlock(messages, c.text, c.position);
     } catch (e) { log("주입 실패", e?.message ?? e); return messages; }
@@ -48,7 +52,7 @@ export function createMemoryInjector(api, { store, storyNow = null, log = (...a)
   async function preview() {
     const cur = await current(); if (!cur) return { ok: false, why: "리스에서 채팅을 연 상태에서 볼 수 있어요." };
     const c = await compose(cur, { mark: false });
-    if (!c?.text) return { ok: true, injected: false, manifest: c?.manifest ?? null };
+    if (!c?.text) return { ok: true, injected: false, manifest: c?.manifest ?? null, reason: c?.reason ?? "" };
     return { ok: true, injected: true, text: c.text, manifest: c.manifest, position: c.position, botId: String(cur.character.chaId), chatId: String(cur.chat.id) };
   }
   // 훅이 없는 환경: 분석 뒤 채팅 localLore의 [Dusk 기억] 항목을 갱신.

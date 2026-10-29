@@ -44,8 +44,19 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
   { const o = applyOpen(folder, result?.open, anchor, now); out.open = o.added; out.closed = o.closed; }
   folder.runs = (folder.runs ?? 0) + 1;
   folder.cursor = { ...anchor };
-  folder.done = [...new Set([...(folder.done ?? []), ...(covered ?? [anchor.h])])].slice(-1000);  // 분석을 마친 응답 해시(일괄 분석 건너뛰기용)
+  // 분석을 마친 응답 해시(일괄 분석 건너뛰기용). 개수 제한 대신 reconcile이 지금 채팅에 없는 해시를 걷어 내서 채팅 길이만큼만 남는다.
+  const cov = covered ?? [anchor.h];
+  folder.done = [...new Set([...(folder.done ?? []), ...cov])].slice(-DONE_MAX);
+  if (folder.failedBackfill?.length) { const c = new Set(cov); folder.failedBackfill = folder.failedBackfill.filter((x) => !c.has(x)); }
   return out;
+}
+export const DONE_MAX = 50000;  // 안전 상한(보통은 채팅 길이를 넘지 않는다)
+// 이미 분석된 것으로 볼 응답 해시: 완료 목록 + 지금 살아 있는 장면·기록의 앵커(예전 1,000개 제한으로 목록에서 밀려난 것을 되살린다).
+export function doneHashes(folder) {
+  const set = new Set(folder?.done ?? []);
+  for (const s of folder?.scenes ?? []) if (s.h && !s.orphan) set.add(s.h);
+  for (const p of Object.values(folder?.people ?? {})) for (const r of p.records ?? []) if (r.h && !r.orphan) set.add(r.h);
+  return set;
 }
 
 // 분석 입력에 넣을 known: 인물명·별칭·마지막 행동 1줄.

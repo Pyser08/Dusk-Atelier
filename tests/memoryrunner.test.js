@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createMemoryStore } from "../src/data/memorystore.js";
 import { createMemoryRunner } from "../src/data/memoryrunner.js";
+import { hashText, extractMessageText } from "../src/engine/chattext.js";
+import { reconcile } from "../src/engine/memoryreconcile.js";
 
 const LONG = "비가 내리는 옥상에서 미나가 하루의 손을 잡고 오래 숨겨 둔 비밀을 처음으로 털어놓았다. 하루는 아무 대답도 하지 못했다. ".repeat(2);
 function setup({ streaming = false } = {}) {
@@ -79,6 +81,29 @@ test("backfill groups AI responses by 3 and skips already-recorded ones", async 
   const r = await runner.backfill(0, 0, {});
   assert.equal(r.total, 3); assert.equal(calls, 3); assert.equal(r.failed.length, 0);
   assert.equal(runner.planBackfill(chat.message, {}, await store.getFolder("c1", "t1")).calls, 0, "already analyzed responses are skipped");
+});
+test("backfill progress is not capped at 1,000 and old ones are restored from anchors", async () => {
+  const { api, store, chat } = setup();
+  chat.message = []; for (let i = 0; i < 1200; i++) { chat.message.push({ role: "user", data: "u" + i }, { role: "char", data: "응답 " + i }); }
+  const runner = createMemoryRunner(api, { store, call: async () => good });
+  const hs = chat.message.filter((m) => m.role === "char").map((m) => hashText(extractMessageText(m)));
+  await store.updateFolder("c1", "t1", (f) => { f.done = hs; });  // 1,200개를 전부 분석한 상태
+  const f = await store.getFolder("c1", "t1");
+  const plan = runner.planBackfill(chat.message, {}, f);
+  assert.equal(plan.total, 1200); assert.equal(plan.done, 1200); assert.equal(plan.calls, 0, "1,000개 넘어도 완료 목록이 유지된다");
+  // 예전 데이터: 완료 목록이 최근 1,000개뿐이어도 오래된 쪽의 장면 앵커는 분석됨으로 본다
+  const old = { done: hs.slice(-1000), scenes: [{ id: "s", h: hs[5] }], people: { a: { records: [{ id: "r", h: hs[7] }, { id: "r2", h: hs[9], orphan: true }] } } };
+  const p2 = runner.planBackfill(chat.message, {}, old);
+  assert.equal(p2.done, 1002); assert.equal(p2.todo, 198); assert.equal(p2.calls, 66);
+  // 실패 표시
+  const p3 = runner.planBackfill(chat.message, {}, { ...old, failedBackfill: [hs[0], hs[1], hs[5]] });
+  assert.equal(p3.failed, 2, "미처리 중 실패한 것만 센다(분석됨인 hs[5]는 제외)");
+});
+test("reconcile trims done to messages still in the chat", async () => {
+  const msgs = [{ role: "char", data: "하나" }, { role: "char", data: "둘" }];
+  const f = { people: {}, scenes: [], done: [hashText("하나"), hashText("사라진 응답")], failedBackfill: [hashText("사라진 응답")] };
+  reconcile(f, msgs);
+  assert.deepEqual(f.done, [hashText("하나")]); assert.deepEqual(f.failedBackfill, []);
 });
 
 test("display hook alone triggers a check for a fresh response (output hook never fires)", async () => {

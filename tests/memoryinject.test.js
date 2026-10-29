@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildBlock, insertBlock, shouldInject, estimateTokens, upsertLoreEntry, MARKER } from "../src/engine/memoryinject.js";
+import { buildBlock, insertBlock, shouldInject, injectVerdict, injectReasonText, estimateTokens, upsertLoreEntry, MARKER } from "../src/engine/memoryinject.js";
 import { needsDigest, digestTargets, applyDigest, undigested } from "../src/engine/memorydigest.js";
 import { createMemoryStore } from "../src/data/memorystore.js";
 import { createMemoryInjector } from "../src/data/memoryinject.js";
@@ -11,8 +11,19 @@ const folder = (people, scenes = [{ id: "s1", at: 1, sum: "비 오는 옥상", f
 test("no injection on the first turn, injection from the 2nd", () => {
   const f = folder({}); const s = { on: true, fromTurn: 2 };
   assert.equal(shouldInject(f, s, 1), false); assert.equal(shouldInject(f, s, 2), true); assert.equal(shouldInject(f, { on: true }, 1), true);
-  assert.equal(shouldInject({ ...f, cursor: null }, s, 5), false);
+  assert.equal(shouldInject({ ...f, cursor: null }, s, 5), true, "cursor가 비어도 남은 기억이 있으면 주입한다(리롤 직후)");
+  assert.equal(shouldInject({ cursor: null, scenes: [], people: {} }, s, 5), false, "남은 기억이 없으면 주입하지 않는다");
+  assert.equal(shouldInject({ cursor: null, scenes: [{ id: "x", orphan: true }], people: {} }, s, 5), false, "고아뿐이면 주입하지 않는다");
   assert.equal(shouldInject(f, { on: false, fromTurn: 2 }, 5), false);
+});
+test("injectVerdict returns a reason code", () => {
+  const f = folder({});
+  assert.deepEqual(injectVerdict(f, { on: false }, 5), { ok: false, reason: "inject-off" });
+  assert.equal(injectVerdict(null, {}, 5).reason, "no-folder");
+  assert.equal(injectVerdict(f, { fromTurn: 3 }, 2).reason, "before-start-turn");
+  assert.equal(injectVerdict({ scenes: [], people: {} }, {}, 5).reason, "no-memory");
+  assert.equal(injectVerdict(f, {}, 5).ok, true);
+  assert.ok(injectReasonText("no-memory"));
 });
 test("block contains scene and key moments; empty folder → empty text", () => {
   const f = folder({ 미나: { name: "미나", records: [rec(1, "A", "비밀을 밝힘"), rec(2, "D", "웃음")] } });
@@ -88,7 +99,10 @@ test("injector hook: modifies only the request copy and ignores non-model types"
   assert.equal(out.length, 2); assert.match(out[0].content, /Current scene: 장면/); assert.equal(req.length, 1);
   assert.equal(await api.rep(req, "memory"), req);
   assert.equal(inj.lastRequest().injected, true);
+  await store.updateFolder("c", "t", (f) => { f.cursor = null; });  // 마지막 분석 응답을 리롤한 직후 상태
+  assert.equal((await api.rep(req, "model")).length, 2, "cursor가 비어도 남은 기억은 주입된다");
   await store.updateIndex((i) => { i.settings.inject.fromTurn = 3; }); assert.equal(await api.rep(req, "model"), req, "before fromTurn → none");
+  assert.equal(inj.lastRequest().reason, "before-start-turn");
 });
 test("injector falls back to lore mode without the hook; syncLore is idempotent", async () => {
   const m = new Map(); let saved = null;
