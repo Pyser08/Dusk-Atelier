@@ -26,6 +26,7 @@ import { renderMemory } from './screens/memory/index.js';
 import { renderCardsTab } from './screens/cards/index.js';
 import { renderHome } from './screens/home.js';
 import { renderPeople, renderPot } from './screens/interim.js';
+import { maybeAskBardWiki } from './screens/memory/modebar.js';
 import { BASE_IDS, MORE_IDS, SEARCH, TABS, subLabel } from './tabs.js';
 
 export function createApp(api, { legacy, version, onPersonaChanged }) {
@@ -436,7 +437,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     await api.showContainer("fullscreen");
     render();
     // 처음 둘러보기는 처음 설치·다시 설치한 사람에게만 (업데이트로 온 사람에게는 띄우지 않는다)
-    maybeShowWhatsNew(ctx).then((fresh) => fresh ? maybeShowTour(ctx) : void 0).catch(() => {
+    // 처음 설치면: 리스바드 감지 시 기억 방식 질문(한 번만) → 둘러보기
+    maybeShowWhatsNew(ctx).then((fresh) => fresh ? maybeAskBardWiki(ctx).catch(() => {}).then(() => maybeShowTour(ctx)) : void 0).catch(() => {
     });
     checkUpdate().catch(() => {
     });

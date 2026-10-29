@@ -96,4 +96,29 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 800 }, {}], ["모�
   await shot(page, `${tag === "PC" ? "pc" : "m"}-6-memory`);
   await ctx.close();
 }
+// ── 장기기억 방식 카드: 간단=숨김+자동, 고급=선택기만(리수폿 스위치 없음) ──
+{ const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await boot(ctx, {}, { memory: true });
+  await page.evaluate(() => __app.ctx.memory.store.updateIndex((i) => { i.settings.backend = "bardwiki"; }));
+  await go(page, "기억"); await page.waitForTimeout(500);
+  ok("[방식] 간단 모드: 장기기억 방식 카드 숨김, 저장소 자동으로 되돌림", (await page.locator(".rb-mem-modebar").count()) === 0 && (await page.evaluate(() => __app.ctx.memory.store.getIndex().then((i) => i.settings.backend))) === "auto");
+  await shot(page, "pc-7-memory-simple");
+  await go(page, "설정");
+  await page.locator(".rb-seg[aria-label='화면 모드'] button", { hasText: "고급" }).click(); await page.waitForTimeout(300);
+  await go(page, "기억"); await page.waitForTimeout(500);
+  ok("[방식] 고급 모드: 선택기 4개만, 리수폿 기능 줄 없음", (await page.locator(".rb-mem-modebar .rb-seg button").allTextContents()).join("|") === "자동|플러그인|BardWiki|끔" && !(await page.locator(".rb-mem-modebar").textContent()).includes("리수폿") && (await page.locator(".rb-mem-modebar .rb-switch").count()) === 0);
+  await shot(page, "pc-8-memory-advanced");
+  await ctx.close(); }
+// ── 처음 설치 + 리스바드 감지: 한 번만 묻는다 ──
+{ const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await boot(ctx, { __bard: 1, "rbm:seenVersion:v1": undefined }, { memory: true, fresh: true });
+  await page.waitForTimeout(500);
+  const dlg = page.locator(".rb-modal", { hasText: "리스바드가 감지됐어요" });
+  ok("[리스바드] 처음 설치 시 물어봄", (await dlg.count()) === 1);
+  await shot(page, "pc-9-bard-ask");
+  await dlg.locator("button", { hasText: "플러그인으로 바꾸기" }).click(); await page.waitForTimeout(400);
+  const st = await page.evaluate(() => __app.ctx.memory.store.getIndex().then((i) => [i.settings.backend, i.bardAsked]));
+  ok("[리스바드] 예 → 플러그인 저장소 + 다시 묻지 않음 표시", st[0] === "local" && st[1] === true, st.join());
+  ok("[리스바드] 오류 없음", !(page.__errs?.length), (page.__errs ?? []).join(";"));
+  await ctx.close(); }
 await browser.close(); process.exit(out.every(Boolean) ? 0 : 1);

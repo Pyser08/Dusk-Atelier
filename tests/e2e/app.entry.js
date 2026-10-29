@@ -18,11 +18,13 @@ export function fakeApi(seed = {}) {
     getDatabase: async () => structuredClone(db), setDatabaseLite: async () => {}, setDatabase: async () => {},
     getCharacterFromIndex: async (i) => structuredClone(chars[i]), setCharacterToIndex: async () => {},
     getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0, getChatFromIndex: async () => ({ message: [] }),
+    ...(seed.__bard ? { bardWiki: { getDocuments: async () => [] } } : {}),
     getRootDocument: async () => null, nativeFetch: async () => ({ status: 404 }), registerButton: async () => {}, registerSetting: async () => {}
   };
 }
 window.bootApp = async (seed, opts = {}) => {
   const api = fakeApi(seed);
+  delete api.store.__bard;
   const errors = (window.__errors = []);
   window.addEventListener("error", (e) => errors.push(e.message));
   window.addEventListener("unhandledrejection", (e) => errors.push(String(e.reason?.message ?? e.reason)));
@@ -34,8 +36,9 @@ window.bootApp = async (seed, opts = {}) => {
   }
   window.__app = app;
   window.__api = api;
+  // (opts.fresh: 처음 설치 흐름을 그대로 탄다)
   // 첫 둘러보기·새로 바뀐 점 창이 화면을 가리지 않게 미리 본 것으로 처리
   await app.open();
-  document.querySelectorAll(".rb-modal, .rb-full").forEach((m) => m.remove());
+  if (!opts.fresh) document.querySelectorAll(".rb-modal, .rb-full").forEach((m) => m.remove());
   return true;
 };
