@@ -3,6 +3,7 @@ import { GRADE_WEIGHT } from "./memorygrade.js";
 import { injectable, trustTag, changeNote } from "./memorytrust.js";
 import { emoLines, hasEmo } from "./memoryemo.js";
 import { keyHits, keyBoost } from "./memorykeys.js";
+import { povLines, innerLines, expLines } from "./memoryinner.js";
 import { lastTouch, strength, forgotten, knowLines, openLines, relLines, sourceLines, currentStoryTime } from "./memoryplus.js";
 
 export const MARKER = "[Dusk Memory";
@@ -110,6 +111,11 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     };
     add("open", "Open threads (unresolved; do not resolve them early):", openLines(folder), settings.openTokens ?? 160);
     add("emo", "Feelings (current gauges 0-10):", emoLines(folder, { relevant: rel.size ? rel : null }), settings.emoTokens ?? 160);
+    if (settings.stage3 !== false) {  // 3단계: 현재 장면의 인물별 인식 · 자기 해석 · 기대 불일치(각자 작은 예산)
+      add("pov", "Perspectives on the current event (each character sees it differently):", povLines(cur), settings.povTokens ?? 120);
+      add("self", "Inner states (own view vs likely real reason; the reason is only inferred):", innerLines(Object.values(folder.people ?? {}).filter((p) => (p.ctx ?? "auto") !== "never"), { relevant: rel.size ? rel : null }), settings.selfTokens ?? 140);
+      add("exp", "Expectation gaps between characters:", expLines(folder, { relevant: rel.size ? rel : null }), settings.expTokens ?? 140);
+    }
     add("rel", "Relationship shifts (recent):", relLines(folder, { relevant: rel.size ? rel : null }), settings.relTokens ?? 140);
     add("know", "Knowledge limits (who knows what):", knowLines(Object.values(folder.people ?? {}).filter((p) => (p.ctx ?? "auto") !== "never")), settings.knowTokens ?? 160);
     if (messages) { const src = sourceLines(folder, messages, { limit: settings.srcCount ?? 2 }); add("src", "Source lines (verbatim from the story):", src.map((x) => x.line), settings.srcTokens ?? 300); manifest.recordIds.push(...src.map((x) => x.id)); }

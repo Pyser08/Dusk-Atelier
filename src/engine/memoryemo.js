@@ -126,6 +126,6 @@ export function undoConversion(folder) {
     const p = folder.emo?.[c.pair];
     if (p && p.tags.affection === c.to.affection && !p.lock?.affection) { delete p.tags.affection; n++; }
   }
-  folder.emoConv = [];
+  folder.emoConv = []; folder.emoConvOff = true;  // 다시 자동 변환하지 않는다
   return n;
 }

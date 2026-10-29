@@ -1,6 +1,7 @@
 // 앵커 정합성. 기록/상황은 {at, mid?, h}를 가진다. 순수 함수 — 폴더를 직접 수정한다.
 // v1.6.5: 관계 변화(rels)·열린 항목(open)도 출처(src, closedBy)로 대조한다.
 import { extractMessageText, hashText } from "./chattext.js";
+import { revertExp } from "./memoryinner.js";
 
 export function indexMessages(messages) {
   const byMid = new Map(), byHash = new Map(), dupMid = new Set();
@@ -86,6 +87,7 @@ export function reconcile(folder, messages) {
       for (const [tag, v] of Object.entries(e.t ?? {})) if (pair.tags[tag] === v && !pair.lock?.[tag]) { if (e.from?.[tag] == null) delete pair.tags[tag]; else pair.tags[tag] = e.from[tag]; }
     }
   }
+  revertExp(folder, (s) => srcAlive(s, idx));  // 사라진 응답에서 생긴 기대 불일치는 직전 값으로
   const dead = (src, ms) => {
     if (hasSrc(src)) return !srcAlive(src, idx);
     const g = ms != null ? byMs.get(ms) : null;
