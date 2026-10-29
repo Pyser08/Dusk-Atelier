@@ -9,6 +9,7 @@ const norm = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 const oneLine = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
 const words = (t) => [...new Set(String(t ?? "").toLowerCase().normalize("NFC").split(/[^\p{L}\p{N}_]+/u).filter((w) => w.length >= 2))];
 
+import { semBoost } from "./embed.js";
 export const RECALL_DEFAULTS = Object.freeze({ tokens: 700, perPerson: 4, sourceCount: 1, forgetAfter: 150 });
 
 // 키워드 보너스: 질의 낱말이 기록 문장에 들어 있을수록 가산(최대 +1.5배)
@@ -48,7 +49,7 @@ export function unknownFor(folder, person, { limit = 3 } = {}) {
 }
 
 // 반환: { items:[{source:"dusk", text}], recordIds, tokens, people:[이름] }
-export function recallFor(folder, { names = [], query = "", messageCount = 0, messages = null, settings = {} } = {}) {
+export function recallFor(folder, { names = [], query = "", messageCount = 0, messages = null, settings = {}, sem = null, semMin = 0.32 } = {}) {
   const cfg = { ...RECALL_DEFAULTS, ...settings }, plus = settings.plus !== false;
   const out = { items: [], recordIds: [], tokens: 0, people: [] };
   if (!folder) return out;
@@ -66,8 +67,9 @@ export function recallFor(folder, { names = [], query = "", messageCount = 0, me
   const cands = people.map((p) => {
     const mine = opens.filter((o) => (o.who ?? []).map(norm).some((w) => [p.name, ...(p.aliases ?? [])].map(norm).includes(w)));
     const recs = (p.records ?? []).filter((r) => !r.orphan && r.valid !== false && !(plus && forgotten(r, messageCount, cfg.forgetAfter)));
-    const scored = recs.map((r) => ({ r, s: scoreRecord(r, { messageCount, qWords, plus, openBonus: mine.length ? 0.5 : 0 }) })).sort((a, b) => b.s - a.s);
+    const scored = recs.map((r) => ({ r, s: scoreRecord(r, { messageCount, qWords, plus, openBonus: mine.length ? 0.5 : 0 }) * semBoost(sem?.get(r.id), semMin) })).sort((a, b) => b.s - a.s);
     const top = scored.slice(0, cfg.perPerson);
+    if (sem) for (const x of scored.slice(cfg.perPerson).filter((y) => (sem.get(y.r.id) ?? 0) >= semMin + 0.15).sort((a, b) => sem.get(b.r.id) - sem.get(a.r.id)).slice(0, 1)) { let i = top.length - 1; while (i >= 0 && top[i].r.pin) i--; if (i >= 0) top.splice(i, 1, x); }
     return { p, top, mine, best: (top[0]?.s ?? 0) + (p.pinned ? 50 : 0) };
   }).sort((a, b) => b.best - a.best);
 

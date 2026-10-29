@@ -48,7 +48,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   await page.locator(".rb-seg[aria-label='화면 모드'] button", { hasText: "고급" }).click(); await page.waitForTimeout(300);
   await go(page, "기억"); await page.waitForTimeout(800);
   ok(`[편집기 ${tag}] 고급 모드: 편집기가 '기억 방식' 박스 바로 아래에 있다`, await page.evaluate(() => { const m = document.querySelector(".rb-mem-modebar"), e = document.querySelector(".rb-mem-ed"); return !!m && !!e && m.parentElement.nextElementSibling === e; }));
-  await page.locator(".rb-mem-ed > summary").click(); await page.waitForTimeout(700);
+  await page.locator(".rb-mem-ed:not(.rb-mem-lore) > summary").click(); await page.waitForTimeout(700);
   ok(`[편집기 ${tag}] 기록 탭: 인물 그룹과 기록 카드`, (await page.locator(".rb-mem-edperson").count()) === 2 && (await page.locator(".rb-mem-edrec").count()) >= 2);
   const R1 = () => page.locator(".rb-mem-edrec[data-rid='r1']");
   await page.locator(".rb-mem-edperson").first().locator("summary").click();

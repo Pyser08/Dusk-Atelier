@@ -4,9 +4,10 @@ import { buildBlock, insertBlock, injectVerdict, upsertLoreEntry } from "../engi
 import { stateText } from "../engine/storytime.js";
 import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
+import { folderIdOf } from "./memorystore.js";
 
 // onRequest: 메인 모델 요청 직전에 부른다(기다리지 않음). 러너가 '다음 입력 때 직전 응답 확정'을 시작하는 데 쓴다.
-export function createMemoryInjector(api, { store, storyNow = null, onRequest = null, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
+export function createMemoryInjector(api, { store, storyNow = null, onRequest = null, embedder = null, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
   let last = null, mode = "none";
 
   async function current() {
@@ -37,7 +38,10 @@ export function createMemoryInjector(api, { store, storyNow = null, onRequest = 
     if (!verdict.ok && !notesOnly) return none(verdict.reason);
     let now = ""; try { const s = await storyNow?.(character.chaId, chat.id); now = s ? stateText(s) : ""; } catch { now = ""; }
     const tail = msgs.slice(-2).map(extractMessageText).join("\n");
-    const built = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus, storyNow: now });
+    let sem = null;  // 임베딩이 켜져 있으면 의미 유사도로 기억 고르기를 돕는다(실패하면 기존 방식 그대로)
+    try { if (embedder && idx.settings.inject.plus !== false) sem = await embedder.scores(folderIdOf(character.chaId, chat.id), folder, tail); } catch { sem = null; }
+    const built = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus, storyNow: now, sem, semMin: embedder?.cfg().minSim });
+    if (built.manifest && sem) built.manifest.sem = sem.size;
     const raw = built.text, manifest = built.manifest;
     const text = applyLore(raw, folder?.lore);  // 주입 로어 편집(줄 수정·숨김·내 로어)
     if (manifest && text !== raw) manifest.tokens = loreTokens(text);
