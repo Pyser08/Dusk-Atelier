@@ -5,6 +5,7 @@ import { icon } from "../../icons.js";
 import { btn, modal, promptDialog, confirmDialog, openMenu, note } from "../../kit.js";
 import { mem, fail, avatar, visibleRecords, potOn } from "./common.js";
 import { findDoc } from "../../../engine/personview.js";
+import { fillPlan, planLine } from "../../../engine/peoplegaps.js";
 import { RECORD_GROUPS, groupInfo, recordGroupOf, targetCandidates } from "../../../engine/personrecords.js";
 import { sectionPinKey, metricPinKey, scopeKeyOf, isPaused, isPinned } from "../../../engine/personedit.js";
 import { deletePersonItem } from "../../../engine/pot/people-records.js";
@@ -81,10 +82,15 @@ export async function renderPeopleTab(env, host) {
   const ui = M.flow?.runtime?.()?.wiki?.userIdentity, userSet = new Set([ui?.title, ...(ui?.aliases ?? []), "{{user}}", "user", "유저"].filter(Boolean).map((x) => String(x).trim().toLowerCase()));
   const isUser = (name) => userSet.has(String(name ?? "").trim().toLowerCase());
   const missing = Object.entries(people).filter(([, p]) => p?.name && !isUser(p.name) && !findDoc(wiki, p) && (visibleRecords(p).length || p.digest));
-  const empties = docs.filter((d) => !isUser(d.title) && !(d.metrics ?? []).length);
+  const plan = fillPlan(wiki, docs.filter((d) => !isUser(d.title)));  // 실제로 비어 있는 칸 기준(수치만 빈 인물은 수치만, 본문·성격까지 빈 인물은 전체)
+  const askFill = async () => {
+    const lines = [...plan.full, ...plan.metricOnly].slice(0, 12).map(planLine), more = plan.total > 12 ? `\n…외 ${plan.total - 12}명` : "";
+    const ok = await confirmDialog(ctx.win, { title: `AI로 빈칸 채우기 · ${plan.total}명`, body: `${lines.join("\n")}${more}\n\n이미 있는 본문·성격은 고치지 않아요. 인물마다 AI 호출이 일어나요.`, ok: "채우기 시작" });
+    if (ok) await fillEmptyPeople(env, plan);
+  };
   const makeMissing = () => commit((w) => { let cur = w; for (const [, p] of missing) { try { cur = createBlankPerson(cur, p.name); } catch { /* 이미 있으면 건너뜀 */ } } return cur; }, `${missing.length}명의 위키 문서를 만들었어요. 수치·성격은 각 인물에서 ‘AI 작성’으로 채워요.`);
   const autoSt = autoStatusOf(M, docs.length);
-  const strip = () => h("div", { class: "rb-wk-auto" }, note(autoSt.kind, autoSt.text), h("span", { class: "rb-mem-rowact" }, empties.length && wikiEditable(env) ? btn(`비어 있는 인물 ${empties.length}명 AI로 채우기`, { size: "sm", kind: "primary", onClick: () => fillEmptyPeople(env, empties).catch(fail(ctx)) }) : null, missing.length && wikiEditable(env) ? btn(`위키 없는 인물 ${missing.length}명 만들기`, { size: "sm", kind: "primary", onClick: () => makeMissing() }) : null, btn("위키 기록·다시 시도", { size: "sm", onClick: () => openWikiLog(env).catch(fail(ctx)) })));
+  const strip = () => h("div", { class: "rb-wk-auto" }, note(autoSt.kind, autoSt.text), h("span", { class: "rb-mem-rowact" }, plan.total && wikiEditable(env) ? btn(`AI로 빈칸 채우기 (${plan.total}명)`, { size: "sm", kind: "primary", title: "비어 있는 수치(와 본문·성격까지 빈 인물)만 채워요. 실행 전에 대상을 보여 드려요.", onClick: () => askFill().catch(fail(ctx)) }) : null, missing.length && wikiEditable(env) ? btn(`위키 없는 인물 ${missing.length}명 만들기`, { size: "sm", kind: "primary", onClick: () => makeMissing() }) : null, btn("위키 기록·다시 시도", { size: "sm", onClick: () => openWikiLog(env).catch(fail(ctx)) })));
   const top = (n) => h("div", { class: "rb-wk-headwrap" }, h("div", { class: "rb-wk-head" }, h("div", null, h("div", { class: "rb-wk-eyebrow rb-muted" }, "CURRENT CHAT / PEOPLE"), h("h2", null, "인물 위키")),
     h("span", { class: "rb-mem-rowact" }, h("span", { class: "rb-wk-n" }, `${n}명`), btn("인물 추가·가져오기", { size: "sm", onClick: () => openImport(env).catch(fail(ctx)) }), btn("빈 인물 직접 추가", { size: "sm", onClick: addBlank }),
       btn("더보기", { size: "sm", icon: "more", onClick: (e) => openMenu(ctx.win, e.currentTarget, peopleMenuItems(env, Object.entries(people).filter(([, p]) => visibleRecords(p).length || p.digest))) }))), strip());

@@ -143,17 +143,21 @@ export async function openImport(env) {
   });
 }
 
-// 수치·성격이 비어 있는 인물들을 차례로 AI가 채운다. 인물마다 변경안을 만들고 곧바로 반영한다(고정한 항목은 엔진이 건드리지 않는다).
-export async function fillEmptyPeople(env, docs) {
+// 비어 있는 칸만 AI가 채운다. plan = fillPlan() 결과.
+//  full(본문·성격이 모두 비어 있는 인물): 개요·성격 등을 전체 채운 뒤 비어 있는 수치도 채운다.
+//  metricOnly(본문·성격은 있고 수치만 빈 인물): 비어 있는 수치 칸만 채운다. 이미 있는 본문·성격은 건드리지 않는다.
+// 인물마다 변경안을 만들고 곧바로 반영한다(고정한 항목은 엔진이 건드리지 않는다).
+export async function fillEmptyPeople(env, plan) {
   const { ctx } = env, chk = await toolsFor(env);
   if (chk.why) return ctx.toast(chk.why, { error: true });
   const { refresh, metric } = chk.tools, groups = PERSON_REFRESH_GROUPS.map((g) => g.id);
   let ok = 0, same = 0, bad = 0, metrics = 0, firstErr = "";
   const keep = (e) => { if (!firstErr && e) firstErr = String(e.message ?? e).slice(0, 90); };
-  for (const [i, doc] of docs.entries()) {
-    ctx.toast(`AI가 인물을 채우는 중이에요 (${i + 1}/${docs.length}) · ${doc.title}`, { seconds: 6 });
-    // 1) 개요·관계·성격 등을 한꺼번에
-    try {
+  const items = [...(plan.full ?? []).map((x) => ({ ...x, full: true })), ...(plan.metricOnly ?? []).map((x) => ({ ...x, full: false }))];
+  for (const [i, { doc, gaps, full }] of items.entries()) {
+    ctx.toast(`AI가 빈칸을 채우는 중이에요 (${i + 1}/${items.length}) · ${doc.title}`, { seconds: 6 });
+    // 1) 본문·성격이 모두 비어 있는 인물만: 개요·관계·성격 등을 한꺼번에
+    if (full) try {
       // 모델이 근거 문장을 정확히 못 옮기면 거절되므로(‘인용이 원문에 없음’) 같은 요청을 두 번까지 더 시도한다.
       let s = null;
       for (let t = 0; t < 3; t++) {
@@ -167,7 +171,7 @@ export async function fillEmptyPeople(env, docs) {
     } catch (e) { bad++; keep(e); }
     // 2) 수치는 따로 하나씩: 위 단계에서 못 만들었거나 비어 있으면 호감도·첫인상·음란도·의심도를 각각 요청한다.
     // 의심도는 두 인물을 짝지어야 해서 일괄에서는 제외한다(인물 페이지에서 따로 지정).
-    for (const slot of ["affinity.score", "affinity.taste_band", "openness.score"]) {
+    for (const slot of gaps.metrics) {
       const now = chk.tools && ctx.memory.flow?.runtime?.()?.wiki?.snapshot?.()?.documents?.[doc.id];
       if ((now?.metrics ?? []).some((m) => m.slotId === slot)) continue;
       try {
