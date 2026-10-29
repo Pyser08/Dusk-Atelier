@@ -29,5 +29,59 @@
   "why": "성공하면 자동 재시도 횟수 초기화",
   "from": "this.phase = 'completed'; this.message = settings.relationshipOnlyMode",
   "to": "this.autoRetries=0;this.phase = 'completed'; this.message = settings.relationshipOnlyMode"
+ },
+ {
+  "file": "src/engine/pot/custom-prompts.js",
+  "why": "추가 프롬프트에 넣을 위치(position: front|middle|back)를 허용",
+  "from": "['id', 'name', 'stages', 'stage', 'scope', 'enabled', 'text'].includes(key)",
+  "to": "['id', 'name', 'stages', 'stage', 'scope', 'enabled', 'text', 'position'].includes(key)"
+ },
+ {
+  "file": "src/engine/pot/custom-prompts.js",
+  "why": "position 검증(없으면 back)",
+  "from": "enabled: item.enabled, text: customPromptText(item.text, CUSTOM_PROMPT_LIMITS_REF.text, label + ' 본문') };",
+  "to": "enabled: item.enabled, text: customPromptText(item.text, CUSTOM_PROMPT_LIMITS_REF.text, label + ' 본문'), position: item.position === undefined ? 'back' : ['front', 'middle', 'back'].includes(item.position) ? item.position : customPromptFail(`추가 프롬프트 ${label}: 넣을 위치가 잘못되었습니다.`) };"
+ },
+ {
+  "file": "src/engine/pot/custom-prompts.js",
+  "why": "위치별로 거르기(position 없으면 전부)",
+  "from": "function activeCustomPrompts(settings, stage, scope) {\n  return (Array.isArray(settings?.customPrompts) ? settings.customPrompts : []).filter(item => item.enabled && item.stages.includes(stage) && item.text.trim() && customPromptApplies(item, scope));\n}",
+  "to": "function activeCustomPrompts(settings, stage, scope, position) {\n  return (Array.isArray(settings?.customPrompts) ? settings.customPrompts : []).filter(item => item.enabled && item.stages.includes(stage) && item.text.trim() && customPromptApplies(item, scope) && (!position || (item.position || 'back') === position));\n}"
+ },
+ {
+  "file": "src/engine/pot/custom-prompts.js",
+  "why": "block이 위치(front·middle·back)별로 만들어지게(내장 규칙은 back에만)",
+  "from": "export function customPromptBlock(settings, stage, scope) {\n  const items = activeCustomPrompts(settings, stage, scope), builtIn = [observerModeBlock(settings, stage, items), cycleBlock(settings, stage), speechVarietyBlock(settings, stage)].filter(Boolean).join('\\n\\n');\n  if (!items.length) return builtIn;\n  return (builtIn ? builtIn + '\\n\\n' : '') + `[USER ADDED RULES · ${stage.toUpperCase()}]\\nThe user added the following rules for this stage. Apply them together with the rules above.",
+  "to": "export function customPromptBlock(settings, stage, scope, position = 'back') {\n  const items = activeCustomPrompts(settings, stage, scope, position), builtIn = position === 'back' ? [observerModeBlock(settings, stage, activeCustomPrompts(settings, stage, scope)), cycleBlock(settings, stage), speechVarietyBlock(settings, stage)].filter(Boolean).join('\\n\\n') : '';\n  if (!items.length) return builtIn;\n  return (builtIn ? builtIn + '\\n\\n' : '') + `[USER ADDED RULES · ${stage.toUpperCase()}]\\nThe user added the following rules for this stage. Apply them together with the rules ${position === 'front' ? 'below' : position === 'middle' ? 'around them' : 'above'}."
+ },
+ {
+  "file": "src/engine/pot/writer-prompt.js",
+  "why": "Writer: 사용자 프롬프트를 앞·중간(기본 규칙 뒤·기능별 규칙 앞)에도 넣을 수 있게",
+  "from": "  const customWriterBlock=customPromptBlock(settings,'writer',wikiScope?.scope);",
+  "to": "  const customWriterMid=customPromptBlock(settings,'writer',wikiScope?.scope,'middle'),customWriterFront=customPromptBlock(settings,'writer',wikiScope?.scope,'front');if(customWriterMid){blocks.splice(1+(sourceLibrary.base.date_rule?1:0),0,customWriterMid);guidanceStats.push({key:'custom:writer:middle',originalChars:customWriterMid.length,sentChars:customWriterMid.length,compacted:false});}if(customWriterFront){blocks.unshift(customWriterFront);guidanceStats.push({key:'custom:writer:front',originalChars:customWriterFront.length,sentChars:customWriterFront.length,compacted:false});}\n  const customWriterBlock=customPromptBlock(settings,'writer',wikiScope?.scope);"
+ },
+ {
+  "file": "src/data/pot/director-runtime.js",
+  "why": "Director: 앞·중간 위치 프롬프트",
+  "from": "  const customBlock=customPromptBlock(settings,'director',settings.customPromptScope);",
+  "to": "  const customBlock=customPromptBlock(settings,'director',settings.customPromptScope),customFront=customPromptBlock(settings,'director',settings.customPromptScope,'front'),customMid=customPromptBlock(settings,'director',settings.customPromptScope,'middle');"
+ },
+ {
+  "file": "src/data/pot/director-runtime.js",
+  "why": "Director(facts): 위치 반영",
+  "from": "blocks:[settings.prompts?.['base:director_facts']??sourceLibrary.base.director_facts??DIRECTOR_FACTS_PROMPT,...(customBlock?[customBlock]:[])]",
+  "to": "blocks:[...(customFront?[customFront]:[]),settings.prompts?.['base:director_facts']??sourceLibrary.base.director_facts??DIRECTOR_FACTS_PROMPT,...(customMid?[customMid]:[]),...(customBlock?[customBlock]:[])]"
+ },
+ {
+  "file": "src/data/pot/director-runtime.js",
+  "why": "Director: 위치 반영",
+  "from": "const blocks = [settings.prompts['base:director'] ?? sourceLibrary.base.director], skills = []",
+  "to": "const blocks = [...(customFront?[customFront]:[]),settings.prompts['base:director'] ?? sourceLibrary.base.director,...(customMid?[customMid]:[])], skills = []"
+ },
+ {
+  "file": "src/data/pot/main-wiki-hook.js",
+  "why": "Router: 앞·중간 위치 프롬프트",
+  "from": "base=(settings.prompts['router:common']??this.sourceLibrary.router.common)+(customPromptBlock(settings,'router',scope.scope)?",
+  "to": "base=(customPromptBlock(settings,'router',scope.scope,'front')?customPromptBlock(settings,'router',scope.scope,'front')+'\\n\\n':'')+(settings.prompts['router:common']??this.sourceLibrary.router.common)+(customPromptBlock(settings,'router',scope.scope,'middle')?'\\n\\n'+customPromptBlock(settings,'router',scope.scope,'middle'):'')+(customPromptBlock(settings,'router',scope.scope)?"
  }
 ]

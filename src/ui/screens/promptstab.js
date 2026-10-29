@@ -9,6 +9,8 @@ import { fromJson, fit, PROMPT_MAX } from '../../engine/promptimport.js';
 
 var STAGES = ["router", "director", "writer"];
 var MAX_ITEMS = 40;
+var POSITIONS = [["front", "앞"], ["middle", "중간"], ["back", "뒤"]];
+var POS_HINT = { front: "기본 규칙보다 앞에 들어가요.", middle: "기본 규칙 뒤, 기능별 규칙 앞에 들어가요.", back: "모든 규칙의 맨 뒤에 들어가요." };
 var newId = (ids) => { let id = `p${Date.now().toString(36)}`; while (ids.has(id)) id += "x"; return id; };
 
 // 파일 → 후보 [{name,text,cut}]. .risup/.risupreset · .json(프리셋이든 목록이든) · .txt/.md
@@ -33,7 +35,7 @@ export async function renderPrompts(ctx) {
   const st = tracked(ctx, await ctx.memory?.flow?.settings?.().catch(() => null));
   const host = h("div", { class: "rb-mem2-main" });
   replace(ctx.main, h("div", { class: "rb-scroll" }, h("div", { class: "rb-mem2", dataset: { page: "prompts" } }, host)));
-  const head = () => pageHead("기억·리수폿 프롬프트", { sub: "기억·리수폿을 쓸 때 기본 규칙 뒤에 덧붙어요.", back: { label: "설정으로", onClick: () => ctx.go("settings") } });
+  const head = () => pageHead("기억·리수폿 프롬프트", { sub: "기억·리수폿을 쓸 때 덧붙는 프롬프트예요. 앞·중간·뒤 위치를 고를 수 있어요.", back: { label: "설정으로", onClick: () => ctx.go("settings") } });
   if (!st) return replace(host, head(), emptyState({ icon: "info", title: "아직 쓸 수 없어요", text: "기억·리수폿을 한 번 켠 뒤에 다시 열어 주세요." }));
   const fail = (e) => ctx.toast(e?.message ?? String(e), { error: true });
   const edit = (fn) => { try { st.update(fn); } catch (e) { fail(e); } paint(); };
@@ -43,7 +45,7 @@ export async function renderPrompts(ctx) {
     if (have + items.length > MAX_ITEMS) return fail(new Error(`프롬프트는 ${MAX_ITEMS}개까지예요. 지금 ${have}개 있어요.`));
     edit((x) => {
       const list = x.customPrompts ?? [], ids = new Set(list.map((p) => p.id));
-      for (const it of items) { const id = newId(ids); ids.add(id); list.push({ id, name: it.name ?? "", stages: it.stages ?? ["writer"], scope: { kind: "all" }, enabled: true, text: it.text ?? "" }); }
+      for (const it of items) { const id = newId(ids); ids.add(id); list.push({ id, name: it.name ?? "", stages: it.stages ?? ["writer"], scope: { kind: "all" }, enabled: true, text: it.text ?? "", position: it.position ?? "back" }); }
       x.customPrompts = list;
     });
   };
@@ -64,6 +66,11 @@ export async function renderPrompts(ctx) {
       if (!next.length) { setSwitch(el, true); return fail(new Error("적용할 단계를 하나는 골라야 해요.")); }
       set("stages", next);
     } })));
+    const pos = p.position || "back";
+    const where = h("div", { class: "rb-mem-field", role: "radiogroup", "aria-label": "넣을 위치", style: "display:flex;gap:6px;align-items:center;flex-wrap:wrap" },
+      h("span", null, "넣을 위치"),
+      ...POSITIONS.map(([k, label]) => btn(label, { size: "sm", kind: pos === k ? "primary" : "", id: `rb-pos-${i}-${k}`, title: POS_HINT[k], onClick: () => set("position", k) })),
+      h("span", { class: "rb-muted" }, POS_HINT[pos]));
     return h("article", { class: ["rb-card", "rb-mem-feat", p.enabled && "on"] },
       h("div", { class: "rb-mem-shead" },
         h("input", { class: "rb-input", value: p.name, placeholder: "이름(선택)", "aria-label": "이름", maxlength: 60, onChange: (e) => set("name", e.target.value.trim()) }),
@@ -71,6 +78,7 @@ export async function renderPrompts(ctx) {
         switchEl(p.enabled, { label: "사용", onChange: (v, el) => { setSwitch(el, v); set("enabled", v); } })),
       p.scope.kind === "all" ? null : h("p", { class: "rb-muted" }, p.scope.kind === "bot" ? `이 봇에만 (${p.scope.label || p.scope.characterId})` : `이 채팅에만 (${p.scope.label || p.scope.characterId})`),
       h("textarea", { class: "rb-input", rows: 5, "aria-label": "프롬프트 본문", maxlength: PROMPT_MAX, placeholder: "AI에게 덧붙일 규칙을 적어요.", onChange: (e) => set("text", e.target.value) }, p.text),
+      where,
       h("div", { class: "rb-mem-chats" }, stages),
       btn("삭제", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "프롬프트를 지울까요?", body: p.name || "이름 없는 프롬프트", ok: "지우기", danger: true })) edit((x) => { x.customPrompts.splice(i, 1); }); } }));
   };

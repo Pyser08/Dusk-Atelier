@@ -386,6 +386,8 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   await page.locator("#rb-set-prompts").click(); await page.waitForTimeout(600);
   ok("[프롬프트] 화면 열림 · 새 프롬프트·파일에서 불러오기 버튼", (await page.locator("#rb-pr-new").count()) === 1 && (await page.locator("#rb-pr-import").count()) === 1);
   await page.locator("#rb-pr-new").click(); await page.waitForTimeout(500);
+  await page.locator("#rb-pos-0-front").click(); await page.waitForTimeout(300);
+  ok("[프롬프트] 위치 앞 선택이 저장됨", (await page.locator("#rb-pos-0-front.primary").count()) === 1);
   ok("[프롬프트] 새 프롬프트 추가 → 카드 1개(단계 3칸)", (await page.locator("article.rb-mem-feat").count()) === 1 && (await page.locator("article.rb-mem-feat .rb-mem-field").count()) === 3);
   await page.locator("article.rb-mem-feat textarea").fill("항상 존댓말로 기록해요."); await page.locator("article.rb-mem-feat textarea").blur(); await page.waitForTimeout(400);
   const saved = await page.evaluate(async () => (await __app.ctx.memory.flow.settings()).rawSnapshot().customPrompts);

@@ -34,7 +34,7 @@ export function normalizeCustomPrompts(raw) {
   const seen = new Set();
   return raw.map((item, index) => {
     const label = `${index + 1}번`;
-    if (!customPromptRecord(item) || Object.keys(item).some(key => !['id', 'name', 'stages', 'stage', 'scope', 'enabled', 'text'].includes(key))) customPromptFail(`추가 프롬프트 ${label}: 항목 형식이 잘못되었습니다.`);
+    if (!customPromptRecord(item) || Object.keys(item).some(key => !['id', 'name', 'stages', 'stage', 'scope', 'enabled', 'text', 'position'].includes(key))) customPromptFail(`추가 프롬프트 ${label}: 항목 형식이 잘못되었습니다.`);
     const id = customPromptText(item.id, CUSTOM_PROMPT_LIMITS_REF.id, label + ' ID', { required: true });
     if (!/^[A-Za-z0-9_-]+$/.test(id) || seen.has(id)) customPromptFail(`추가 프롬프트 ${label}: ID가 잘못되었거나 중복됩니다.`);
     seen.add(id);
@@ -43,7 +43,7 @@ export function normalizeCustomPrompts(raw) {
     if (!Array.isArray(rawStages) || !rawStages.length || rawStages.some(stage => !CUSTOM_PROMPT_STAGES.includes(stage)) || new Set(rawStages).size !== rawStages.length) customPromptFail(`추가 프롬프트 ${label}: 적용 단계(Router·Director·Writer)를 하나 이상 선택해주세요.`);
     const stages = CUSTOM_PROMPT_STAGES.filter(stage => rawStages.includes(stage));
     if (typeof item.enabled !== 'boolean') customPromptFail(`추가 프롬프트 ${label}: 사용 여부는 ON/OFF 값이어야 합니다.`);
-    return { id, name: customPromptText(item.name ?? '', CUSTOM_PROMPT_LIMITS_REF.name, label + ' 이름', { trim: true }), stages, scope: normalizeCustomPromptScope(item.scope, label), enabled: item.enabled, text: customPromptText(item.text, CUSTOM_PROMPT_LIMITS_REF.text, label + ' 본문') };
+    return { id, name: customPromptText(item.name ?? '', CUSTOM_PROMPT_LIMITS_REF.name, label + ' 이름', { trim: true }), stages, scope: normalizeCustomPromptScope(item.scope, label), enabled: item.enabled, text: customPromptText(item.text, CUSTOM_PROMPT_LIMITS_REF.text, label + ' 본문'), position: item.position === undefined ? 'back' : ['front', 'middle', 'back'].includes(item.position) ? item.position : customPromptFail(`추가 프롬프트 ${label}: 넣을 위치가 잘못되었습니다.`) };
   });
 }
 /** scope: the current Wiki scope ({characterId, chatKey}); a bot/chat item never applies without a matching scope. */
@@ -53,12 +53,12 @@ function customPromptApplies(item, scope) {
   if (!characterId || item.scope.characterId !== characterId) return false;
   return item.scope.kind === 'bot' || (Boolean(chatKey) && item.scope.chatKey === chatKey);
 }
-function activeCustomPrompts(settings, stage, scope) {
-  return (Array.isArray(settings?.customPrompts) ? settings.customPrompts : []).filter(item => item.enabled && item.stages.includes(stage) && item.text.trim() && customPromptApplies(item, scope));
+function activeCustomPrompts(settings, stage, scope, position) {
+  return (Array.isArray(settings?.customPrompts) ? settings.customPrompts : []).filter(item => item.enabled && item.stages.includes(stage) && item.text.trim() && customPromptApplies(item, scope) && (!position || (item.position || 'back') === position));
 }
 /** One block appended after the stage's built-in rules, or '' when nothing applies. */
-export function customPromptBlock(settings, stage, scope) {
-  const items = activeCustomPrompts(settings, stage, scope), builtIn = [observerModeBlock(settings, stage, items), cycleBlock(settings, stage), speechVarietyBlock(settings, stage)].filter(Boolean).join('\n\n');
+export function customPromptBlock(settings, stage, scope, position = 'back') {
+  const items = activeCustomPrompts(settings, stage, scope, position), builtIn = position === 'back' ? [observerModeBlock(settings, stage, activeCustomPrompts(settings, stage, scope)), cycleBlock(settings, stage), speechVarietyBlock(settings, stage)].filter(Boolean).join('\n\n') : '';
   if (!items.length) return builtIn;
-  return (builtIn ? builtIn + '\n\n' : '') + `[USER ADDED RULES · ${stage.toUpperCase()}]\nThe user added the following rules for this stage. Apply them together with the rules above. They never change the required output format, JSON contract, evidence rules or safety limits.\n\n` + items.map((item, index) => `## ${item.name || `추가 규칙 ${index + 1}`}\n${item.text.trim()}`).join('\n\n');
+  return (builtIn ? builtIn + '\n\n' : '') + `[USER ADDED RULES · ${stage.toUpperCase()}]\nThe user added the following rules for this stage. Apply them together with the rules ${position === 'front' ? 'below' : position === 'middle' ? 'around them' : 'above'}. They never change the required output format, JSON contract, evidence rules or safety limits.\n\n` + items.map((item, index) => `## ${item.name || `추가 규칙 ${index + 1}`}\n${item.text.trim()}`).join('\n\n');
 }

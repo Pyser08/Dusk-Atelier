@@ -57,9 +57,9 @@ function documentCatalogFromList(documents,settings,peopleProfiles={}) {
   }]));
 }
 function directorBlocks(sourceLibrary, settings) {
-  const customBlock=customPromptBlock(settings,'director',settings.customPromptScope);
-  if(settings.directorRole==='facts')return {blocks:[settings.prompts?.['base:director_facts']??sourceLibrary.base.director_facts??DIRECTOR_FACTS_PROMPT,...(customBlock?[customBlock]:[])],skills:[]};
-  const blocks = [settings.prompts['base:director'] ?? sourceLibrary.base.director], skills = [],perceptionMode=perceptionModeFor(settings);
+  const customBlock=customPromptBlock(settings,'director',settings.customPromptScope),customFront=customPromptBlock(settings,'director',settings.customPromptScope,'front'),customMid=customPromptBlock(settings,'director',settings.customPromptScope,'middle');
+  if(settings.directorRole==='facts')return {blocks:[...(customFront?[customFront]:[]),settings.prompts?.['base:director_facts']??sourceLibrary.base.director_facts??DIRECTOR_FACTS_PROMPT,...(customMid?[customMid]:[]),...(customBlock?[customBlock]:[])],skills:[]};
+  const blocks = [...(customFront?[customFront]:[]),settings.prompts['base:director'] ?? sourceLibrary.base.director,...(customMid?[customMid]:[])], skills = [],perceptionMode=perceptionModeFor(settings);
   for (const id of DIRECTOR_FEATURE_ORDER) {
     const feature = settings.features[id]; if (!feature?.enabled) continue;
     if(id==='perception'&&perceptionMode==='off')continue;
