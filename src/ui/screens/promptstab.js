@@ -1,11 +1,11 @@
 // 설정 → 기억·리수폿 프롬프트 (v1.7.0): 기억·리수폿을 쓸 때 기본 규칙 뒤에 덧붙는 '내 프롬프트'를 모든 사용자가 바로 다룬다.
 // 값은 리수폿 설정 저장소의 customPrompts(모든 채팅 범위)를 그대로 쓴다. JSON·리스 프리셋(.risup)·글 파일에서 불러올 수 있다.
-import { h, replace, pickFiles } from '../dom.js';
+import { h, replace, pickFiles, download } from '../dom.js';
 import { btn, switchEl, setSwitch, pageHead, note, confirmDialog, emptyState, modal } from '../kit.js';
 import { tracked } from './memory/settingstools.js';
 import { STAGE_NAMES } from './memory/advanced.js';
 import { decodePreset } from '../../dev/aibuild/preset-format.js';
-import { fromJson, fit, PROMPT_MAX } from '../../engine/promptimport.js';
+import { fromJson, fit, toJson, PROMPT_MAX } from '../../engine/promptimport.js';
 
 var STAGES = ["router", "director", "writer"];
 var MAX_ITEMS = 40;
@@ -88,8 +88,9 @@ export async function renderPrompts(ctx) {
     replace(host, head(),
       h("div", { class: "rb-mem-sact", style: "display:flex;gap:8px;flex-wrap:wrap" },
         btn("새 프롬프트", { kind: "primary", icon: "plus", id: "rb-pr-new", onClick: () => addMany([{ name: "", text: "" }]) }),
-        btn("파일에서 불러오기", { icon: "upload", id: "rb-pr-import", onClick: doImport })),
-      note("info", "JSON · 리스 프리셋(.risup) · 글 파일(.txt)에서 불러와요. 출력 형식은 바꾸지 못해요. 단계마다 켜고 끌 수 있어요."),
+        btn("파일에서 불러오기", { icon: "upload", id: "rb-pr-import", onClick: doImport }),
+        btn("내보내기", { icon: "download", id: "rb-pr-export", disabled: !list.length, title: "내 프롬프트를 JSON 파일로 저장해요", onClick: () => { download("dusk-prompts.json", toJson(list), "application/json"); ctx.toast(`${list.length}개를 내보냈어요`); } })),
+      note("info", "JSON · 리스 프리셋(.risup) · 글 파일(.txt)에서 불러오고, 내 프롬프트는 JSON으로 내보내요(단계·위치도 함께 저장). 출력 형식은 바꾸지 못해요. 단계마다 켜고 끌 수 있어요."),
       list.length ? h("div", { style: "display:flex;flex-direction:column;gap:12px" }, ...list.map(row)) : h("p", { class: "rb-muted" }, "아직 없어요. 새 프롬프트를 만들거나 파일에서 불러와 보세요."));
   }
   paint();
