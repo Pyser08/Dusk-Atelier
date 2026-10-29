@@ -14,13 +14,14 @@ export function createEmbedder(api, { log = (...a) => console.log("[Dusk 임베�
   const wr = async (k, v) => { try { await (await store()).setItem(k, JSON.stringify(v)); return true; } catch (e) { log("저장 실패", e?.message ?? e); return false; } };
 
   const load = () => loaded ??= (async () => { const r = await rd(CFG_KEY); cfg = normCfg(r?.cfg); key = typeof r?.key === "string" ? r.key : ""; return status(); })();
-  const status = () => ({ ...cfg, hasKey: !!key, ready: isReady(cfg, !!key), lastError, lastMs });
+  const status = () => ({ ...cfg, hasKey: !!key, keyTail: key.slice(-4), ready: isReady(cfg, !!key), lastError, lastMs });
   async function save(patch) {
     await load(); const next = { ...cfg, ...patch }; delete next.key;
     const modelChanged = next.model !== cfg.model || next.url !== cfg.url;
     cfg = normCfg(next); if (typeof patch?.key === "string") key = patch.key.trim();
     if (modelChanged) { vecs.clear(); qcache.clear(); }
-    await wr(CFG_KEY, { cfg, key }); return status();
+    const ok = await wr(CFG_KEY, { cfg, key }), back = ok ? await rd(CFG_KEY) : null;  // 저장 뒤 다시 읽어 실제로 남았는지 확인
+    return { ...status(), persisted: !!back && back.key === key };
   }
   // texts: 글 배열. opts.groups: 같은 문서(인물)의 글 묶음들(컨텍스트 모드가 묶음 단위로 맥락을 반영). opts.type: document | query.
   async function embed(texts, { timeoutMs, groups = null, type = "document" } = {}) {

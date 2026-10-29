@@ -63,3 +63,10 @@ test("embedder: 컨텍스트 모드는 인물별 묶음 + 장면은 query로 보
   assert.ok(s.get("a") > 0.9 && s.get("b") < 0.1 && s.get("c") > 0.9);
   assert.ok(seen.some((b) => b.input_type === "query") && seen.some((b) => b.input_type === "document" && b.inputs.length === 2));
 });
+test("embedder: 키는 저장 후 다시 열어도 남고, 저장이 안 되면 알려 준다", async () => {
+  const store = {}; const mk = (ok = true) => ({ safeLocalStorage: { getItem: async (k) => store[k] ?? null, setItem: async (k, v) => { if (ok) store[k] = v; else throw new Error("full"); } } });
+  const E1 = createEmbedder(mk(), { log() {} }); const s = await E1.save({ on: true, key: "sk-abcd1234" });
+  assert.ok(s.persisted && s.keyTail === "1234");
+  const E2 = createEmbedder(mk(), { log() {} }); const st = await E2.load(); assert.ok(st.hasKey && st.keyTail === "1234" && st.on);
+  const E3 = createEmbedder(mk(false), { log() {} }); assert.equal((await E3.save({ key: "x" })).persisted, false);
+});
