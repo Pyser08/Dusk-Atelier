@@ -35,7 +35,7 @@ export function createEmbedder(api, { log = (...a) => console.log("[Dusk 임베�
       const timer = setTimeout(() => ac.abort(), timeoutMs ?? cfg.timeoutMs);
       try {
         const res = await api.nativeFetch(req.url, { method: "POST", headers: req.headers, body: req.body, signal: ac.signal });
-        if (!res?.ok) throw new Error(`HTTP ${res?.status ?? "?"}`);
+        if (!res?.ok) throw new Error(res?.status === 401 || res?.status === 403 ? `키가 거절됐어요 (HTTP ${res.status}) — 키·주소가 같은 서비스 것인지 확인하세요` : `HTTP ${res?.status ?? "?"}`);
         const rows = parseResponse(await res.json(), count, ctxMode); if (!rows) throw new Error("응답 모양이 달라요");
         out.push(...rows); lastMs = Date.now() - t0; lastError = "";
       } catch (e) { lastError = ac.signal.aborted ? "시간 초과" : String(e?.message ?? e).slice(0, 120); throw new Error(lastError); } finally { clearTimeout(timer); }
