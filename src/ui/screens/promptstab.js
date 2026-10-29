@@ -68,9 +68,9 @@ export async function renderPrompts(ctx) {
       set("stages", next);
     } })));
     const pos = p.position || "back";
-    const where = h("div", { class: "rb-mem-field", role: "radiogroup", "aria-label": "넣을 위치", style: "display:flex;gap:6px;align-items:center;flex-wrap:wrap" },
-      h("span", null, "넣을 위치"),
-      ...POSITIONS.map(([k, label]) => btn(label, { size: "sm", kind: pos === k ? "primary" : "", id: `rb-pos-${i}-${k}`, title: POS_HINT[k], onClick: () => set("position", k) })),
+    const where = h("div", { role: "radiogroup", "aria-label": "넣을 위치", style: "display:flex;flex-direction:row;gap:6px;align-items:center;flex-wrap:wrap" },
+      h("span", { style: "font-weight:600;margin-right:4px" }, "넣을 위치"),
+      ...POSITIONS.map(([k, label]) => btn(label, { size: "sm", kind: pos === k ? "primary" : "", id: `rb-pos-${i}-${k}`, onClick: () => set("position", k) })),
       h("span", { class: "rb-muted" }, POS_HINT[pos]));
     return h("article", { class: ["rb-card", "rb-mem-feat", p.enabled && "on"] },
       where,
