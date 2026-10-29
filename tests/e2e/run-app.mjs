@@ -34,7 +34,7 @@ const names = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(
   ok("[PC] 개발 탭은 간단 모드에서 숨김", !side.includes("개발"));
   await shot(page, "pc-1-home");
   await go(page, "리수폿");
-  ok("[PC] 리수폿 탭 이동", (await cur(page)) === "리수폿" && (await page.locator(".rb-interim h2").textContent()) === "리수폿");
+  ok("[PC] 리수폿 탭 이동", (await cur(page)) === "리수폿" && (await page.locator(".rb-mem2 .rb-phead h2").textContent()) === "리수폿");
   await shot(page, "pc-2-pot");
   await go(page, "인물");
   ok("[PC] 인물 탭 이동", (await cur(page)) === "인물");
@@ -135,6 +135,44 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   ok(`[3단계 ${tag}] 고급 모드: 고급 영역에 저장 위치·자동 기록 시점·분석 모델·위험 구역`, (await page.locator(".rb-mem2 .rb-adv").count()) === 1 && (await page.locator(".rb-mem2 .rb-adv").textContent()).match(/자동 기록 시점/) && (await page.locator(".rb-mem2 .rb-adv").textContent()).includes("위험 구역") && (await page.locator(".rb-mem2 .rb-mem-modebar").count()) === 1);
   ok(`[3단계 ${tag}] 가로로 안 넘침·오류 없음`, (await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)) && !(page.__errs?.length), (page.__errs ?? []).join(";"));
   await shot(page, `s3-${t}-5-memory-advanced`);
+  await ctx.close();
+}
+// ── 4단계: 리수폿 화면(간단: 스위치 1·동작 3·캐릭터별 사용) · 인물 화면·상세 · 변경 비교 ──
+for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모바일", { width: 390, height: 844 }, { hasTouch: true, isMobile: true }]]) {
+  const t = tag === "PC" ? "pc" : "m";
+  const ctx = await browser.newContext({ viewport: vp, ...extra });
+  const page = await boot(ctx, {}, { memory: true, story: true });
+  await page.evaluate(() => __app.ctx.memory.switches.setPot("c1", true)); // 리수폿 켜 두기
+  await go(page, "리수폿"); await page.waitForTimeout(700);
+  const body = ".rb-mem2[data-page=pot]";
+  ok(`[4단계 ${tag}] 리수폿: 머리 스위치 1개 + 주요 동작 3개`, (await page.locator(`${body} .rb-phead .rb-switch`).count()) === 1 && (await page.locator(`${body} .rb-actions .rb-btn`).count()) === 3);
+  ok(`[4단계 ${tag}] 리수폿: 버튼 6개 이하(위키 버튼 33 → 6)`, (await page.locator(`${body} .rb-btn, ${body} button.rb-btn`).count()) <= 6, String(await page.locator(`${body} .rb-btn`).count()));
+  ok(`[4단계 ${tag}] 리수폿: 상태 카드에 위키 문서 2개`, (await page.locator(`${body} .rb-status`).textContent()).includes("위키 문서 2개"));
+  ok(`[4단계 ${tag}] 리수폿: 캐릭터별 사용 2명`, (await page.locator(`${body} .rb-pot-charrow`).count()) === 2);
+  await shot(page, `s4-${t}-1-pot-simple`);
+  await page.locator(`${body} .rb-pot-charrow .rb-switch`).first().click(); await page.waitForTimeout(300);
+  ok(`[4단계 ${tag}] 캐릭터별 스위치가 그 인물만 끔`, (await page.evaluate(() => __app.ctx.memory.store.getIndex().then((i) => Object.values(i.potChars ?? {}).flatMap((x) => x.off ?? []).length))) === 1);
+  await page.locator(`${body} .rb-phead .rb-switch`).click(); await page.waitForTimeout(400);
+  ok(`[4단계 ${tag}] 리수폿 스위치를 끄면 이 봇만 꺼짐 · 기억은 그대로`, (await page.evaluate(() => __app.ctx.memory.store.getIndex().then((i) => [i.potBots?.c1, i.bots?.c1?.on !== false]))).join() === "false,true" && (await page.locator(`${body} .rb-status.k-off`).count()) === 1);
+  await shot(page, `s4-${t}-2-pot-off`);
+  await page.locator(`${body} .rb-phead .rb-switch`).click(); await page.waitForTimeout(400);
+  // 인물
+  await go(page, "인물"); await page.waitForTimeout(900);
+  const ppl = ".rb-mem2[data-page=people]";
+  ok(`[4단계 ${tag}] 인물: 카드 2장 + 수치 비어 있음 배지 + 충돌 알림`, (await page.locator(`${ppl} .rb-pcard`).count()) === 2 && (await page.locator(`${ppl} .rb-pcard .rb-badge`, { hasText: "수치 비어 있음" }).count()) >= 1 && (await page.locator(`${ppl} .rb-conflict`).count()) === 1);
+  ok(`[4단계 ${tag}] 인물: 간단 모드 버튼 6개 이하`, (await page.locator(`${ppl} .rb-btn`).count()) <= 6, String(await page.locator(`${ppl} .rb-btn`).count()));
+  await shot(page, `s4-${t}-3-people`);
+  if (tag === "모바일") { await page.locator(`${ppl} .rb-pcard`).first().click(); await page.waitForTimeout(500); }
+  ok(`[4단계 ${tag}] 인물 상세: 지금 상태·요약·성격 칩·고정하기/기록 쉬기`, (await page.locator(".rb-pdetail .rb-mem-meter").count()) >= 1 && (await page.locator(".rb-pdetail").textContent()).includes("차분하고 성실한") && (await page.locator(".rb-pdetail .rb-chip").count()) === 3 && (await page.locator(".rb-pdetail .rb-btn", { hasText: "고정하기" }).count()) === 1 && (await page.locator(".rb-pdetail .rb-btn", { hasText: "기록 쉬기" }).count()) === 1);
+  await shot(page, `s4-${t}-4-person-detail`);
+  if (tag === "모바일") { await page.locator(".rb-pdetail .rb-btn", { hasText: "← 인물" }).click(); await page.waitForTimeout(500); }
+  // 변경 비교
+  await page.locator(`${ppl} .rb-conflict .rb-btn`, { hasText: "변경 비교" }).click(); await page.waitForTimeout(400);
+  ok(`[4단계 ${tag}] 변경 비교: 원래·AI가 바꿈·지금 + 내가 고친 줄 표시`, (await page.locator(".rb-dialog").textContent()).includes("AI가 바꿈") && (await page.locator(".rb-dialog").textContent()).includes("내가 고친 줄") && (await page.locator(".rb-dialog .rb-mem-pre").allTextContents()).join("|").includes("62"));
+  await shot(page, `s4-${t}-5-compare`);
+  await page.locator(".rb-dialog button", { hasText: "그대로 두기" }).click(); await page.waitForTimeout(700);
+  ok(`[4단계 ${tag}] 그대로 두기: 충돌 알림 사라짐`, (await page.locator(`${ppl} .rb-conflict`).count()) === 0);
+  ok(`[4단계 ${tag}] 가로로 안 넘침·오류 없음`, (await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)) && !(page.__errs?.length), (page.__errs ?? []).join(";"));
   await ctx.close();
 }
 // ── 장기기억 방식 카드: 간단=숨김+자동, 고급=선택기만(리수폿 스위치 없음) ──

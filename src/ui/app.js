@@ -25,7 +25,8 @@ import { renderSettingsTab } from './screens/settingstab.js';
 import { renderMemory } from './screens/memory/index.js';
 import { renderCardsTab } from './screens/cards/index.js';
 import { renderHome } from './screens/home.js';
-import { renderPeople, renderPot } from './screens/interim.js';
+import { renderPot } from './screens/pot.js';
+import { renderPeople } from './screens/peoplescreen.js';
 import { maybeAskBardWiki } from './screens/memory/modebar.js';
 import { BASE_IDS, MORE_IDS, SEARCH, TABS, subLabel } from './tabs.js';
 

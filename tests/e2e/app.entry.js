@@ -2,6 +2,9 @@
 import { createApp } from "../../src/ui/app.js";
 import { createMemory } from "../../src/data/memory.js";
 import POT_PROMPTS from "../../src/data/pot/prompts.json";
+import { createEmptyWikiScope } from "../../src/engine/pot/wiki-schema.js";
+import { createBlankPerson, ensureProfile, editProfile, addMetric } from "../../src/engine/wikiedit.js";
+import { editMetricValue } from "../../src/engine/personedit.js";
 
 export function fakeApi(seed = {}, story = false) {
   const store = { ...seed };
@@ -43,6 +46,19 @@ window.bootApp = async (seed, opts = {}) => {
           sirokko: { name: "시로코", records: [rec("r1", "선생님과 함께 순찰을 나가기로 했다", "B", 4), rec("r2", "교실에서 선생님을 기다렸다", "C", 2), rec("r3", "호시노를 걱정했다", "A", 6), rec("r4", "첫 인사를 나눴다", "D", 1, { digested: true })] },
           hoshino: { name: "호시노", records: [rec("r5", "복도에서 낮잠을 잤다", "C", 6), rec("r6", "선생님에게 잔소리를 들었다", "D", 7)] }
         };
+        // 인물 위키: 시로코(수치·프로필 있음, AI가 40으로 쓴 호감도를 내가 62로 고침 → 롤백 충돌) · 호시노(비어 있음)
+        const pol = JSON.parse(memory.lib.base.policies).policies["affinity.score"];
+        let w = createBlankPerson(createEmptyWikiScope({ characterId: "c1", chatKey: "t1" }), "시로코");
+        const sid = Object.keys(w.documents)[0];
+        w = ensureProfile(w, sid); w = editProfile(w, sid, { summary: "차분하고 성실한 학생. 선생님을 믿고 따른다.", coreTraits: ["성실함", "조심스러움", "다정함"] });
+        w = addMetric(w, sid, { slotId: "affinity.score", targetRefs: ["actor:user"], value: 40, reason: "AI 기록" }, pol);
+        const aiHist = w.history[w.history.length - 1].id, mid = w.documents[sid].metrics[0].id;
+        w = editMetricValue(w, sid, mid, 62, "직접 수정", pol);
+        w = createBlankPerson(w, "호시노");
+        const base = { identity: "x", messageId: "m4", contentHash: "h", requestRef: "req:x", batchRef: "", at: "2026-10-29T01:00:00.000Z", characterIndex: 0, chatIndex: 0, messageIndex: 4, messageKey: "k", documentCount: 1 };
+        w.automation.records.done1 = { ...base, historyIds: [aiHist], status: "completed" };
+        w.automation.records.conf1 = { ...base, historyIds: [], status: "manual", errorCode: "rollback-conflict", documentCount: 0 };
+        f.wiki = w;
       }, { chaId: "c1", chatId: "t1" });
       memory.injector.lastRequest = () => ({ at: Date.now(), injected: true, manifest: { tokens: 420, recordIds: ["r1", "r2", "r3"], included: [{ kind: "person", name: "시로코", tokens: 300 }], excluded: [] } });
     }

@@ -16,8 +16,8 @@ export function advancedBlocks(ctx, { cur, idx, redraw, modeHost }) {
   const sid = h("input", { class: "rb-input", placeholder: "모델 ID", value: S.model.staticModel ?? "", "aria-label": "모델 ID", style: S.model.mode === "static" ? "" : "display:none" });
   const saveModel = () => save((s) => { s.model = { mode: mode.value, ...(mode.value === "static" ? { staticModel: sid.value.trim() } : {}) }; });
   mode.addEventListener("change", saveModel); sid.addEventListener("change", saveModel);
-  // 자동 기록 시점 (4단계에서 리수폿 화면이 자기 값을 따로 갖는다. 그 전까지는 둘을 같이 바꾼다)
-  const confirmSel = h("select", { class: "rb-input", "aria-label": "자동 기록 시점", onChange: (e) => save((s) => { s.confirm = e.target.value; s.potStore = { ...(s.potStore ?? {}), confirm: e.target.value }; }) },
+  // 자동 기록 시점 (리수폿 화면이 자기 값을 따로 갖는다)
+  const confirmSel = h("select", { class: "rb-input", "aria-label": "자동 기록 시점", onChange: (e) => save((s) => { s.confirm = e.target.value; }) },
     [["next", "다음 입력을 보낼 때 (권장)"], ["now", "응답을 받은 직후"]].map(([v, l]) => h("option", { value: v, selected: (S.confirm === "now" ? "now" : "next") === v }, l)));
   const ignIn = h("input", { class: "rb-input", placeholder: "제외할 이름 추가 후 Enter", "aria-label": "제외할 이름", onKeydown: (e) => {
     if (e.key !== "Enter" || !e.target.value.trim()) return;

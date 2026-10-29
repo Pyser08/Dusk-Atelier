@@ -115,6 +115,19 @@ html,body{margin:0;height:100%;background:transparent}
 .rb-mbot-open{flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left;background:none;border:0;padding:4px 0;color:inherit;cursor:pointer}
 .rb-mbot-open .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.rb-mbot-open .name{font-weight:600;display:flex;gap:6px;align-items:center}.rb-mbot-open .meta{font-size:12px;color:var(--rb-mute)}
 .rb-danger-zone h3{color:var(--rb-danger)}
+.rb-pot-chars{display:flex;flex-direction:column;gap:10px;padding:14px 16px}
+.rb-pot-charlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rb-pot-charrow{display:flex;align-items:center;gap:12px;padding:6px 0}.rb-pot-charrow .n{flex:1;min-width:0;font-weight:600}
+.rb-conflict{display:flex;flex-direction:column;gap:8px}
+.rb-psec{display:flex;flex-direction:column;gap:8px;padding:14px 16px}.rb-psec h4{margin:0;font-size:15px}.rb-psec p{margin:0}
+.rb-pcard .rb-mem-meter{grid-template-columns:48px 1fr auto}
+.rb-ppl{display:flex;flex-direction:column;gap:14px;max-width:760px}
+.rb-ppl.wide{display:grid;grid-template-columns:380px minmax(0,1fr);gap:20px;max-width:none;align-items:start}
+.rb-ppl-left,.rb-ppl-right,.rb-ppl-list,.rb-pdetail{display:flex;flex-direction:column;gap:12px;min-width:0}
+.rb-pcard{display:flex;align-items:flex-start;gap:12px;text-align:left;padding:12px 14px;border-radius:var(--rb-r3);border:var(--rb-bw,1px) solid var(--rb-line);background:var(--rb-surf);color:inherit;cursor:pointer;box-shadow:var(--rb-shadow-card)}
+.rb-pcard.is-active{border-color:var(--rb-acc-a);background:var(--rb-acc-soft)}
+.rb-pcard .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}.rb-pcard .name{font-weight:700;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.rb-pcard .meta{font-size:12.5px;color:var(--rb-sub);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
 @media (min-width:1000px){.rb-mem2-grid.has-adv{max-width:none;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}}
 
 .rb-topnav{flex-shrink:0;display:flex;gap:6px;padding:10px 16px;overflow-x:auto;scrollbar-width:thin;background:var(--rb-surf);border-bottom:var(--rb-bw,1px) solid var(--rb-line2)}
