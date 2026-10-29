@@ -1,5 +1,6 @@
 import { CBS } from '../cbs.js';
 import { codeEditor } from '../codeedit.js';
+import { explainIssue, issueKey, splitIssues } from '../../engine/issuehelp.js';
 import { regexRun } from '../../engine/devcheck.js';
 import { newId, stableJson } from '../../engine/util.js';
 import { createStore } from '../../engine/store.js';
@@ -502,9 +503,9 @@ export async function openEditorCore(ctx, cfg) {
     return n;
   }
   function paintHead() {
-    const iss = cfg.validate(draft);
+    const sp = splitIssues(cfg.validate(draft), ignoredList()), iss = sp.active;
     const errs = iss.filter((i) => i.level === "err").length, warns = iss.length - errs;
-    replace(issuesBtn, icon(errs || warns ? "alert" : "check", 16), h("span", null, errs ? `오류 ${errs}` : warns ? `경고 ${warns}` : "검증 통과"));
+    replace(issuesBtn, icon(errs || warns ? "alert" : "check", 16), h("span", null, errs ? `오류 ${errs}` : warns ? `경고 ${warns}` : sp.ignored.length ? `검증 통과 (무시 ${sp.ignored.length})` : "검증 통과"));
     issuesBtn.style.color = errs ? "var(--rb-danger)" : warns ? "var(--rb-warn)" : "var(--rb-teal)";
     const isDirty = dirty();
     applyBtn.disabled = !isDirty;
@@ -2176,29 +2177,51 @@ export async function openEditorCore(ctx, cfg) {
     else if (es.tab === "json") renderJson();
     else renderList(es.tab);
   }
+  // 무시한 경고: 이 캐릭터·모듈 단위로 저장해 다음에 열어도 유지한다
+  const ignoreId = () => `${cfg.idKey ?? "id"}:${draft[cfg.idKey] ?? original[cfg.idKey] ?? ""}`;
+  function ignoredList() { return ctx.prefs?.ui?.ignoredWarn?.[ignoreId()] ?? []; }
+  function setIgnored(list) {
+    const all = { ...(ctx.prefs?.ui?.ignoredWarn ?? {}) };
+    if (list.length) all[ignoreId()] = list.slice(-300); else delete all[ignoreId()];
+    const keep = Object.keys(all).slice(-60);
+    const out = Object.fromEntries(keep.map((k) => [k, all[k]]));
+    if (ctx.prefs?.ui) ctx.prefs.ui.ignoredWarn = out;
+    ctx.prefs?.saveUi?.({ ignoredWarn: out }).catch(() => {});
+    paintHead();
+  }
   function showIssues() {
-    const iss = cfg.validate(draft);
-    const back = h(
-      "div",
-      { class: "rb-modal", onMousedown: (ev) => {
-        if (ev.target === back) back.remove();
-      } },
-      h(
-        "div",
-        { class: "rb-dialog", role: "dialog", "aria-label": "검증 결과" },
-        h("h3", { class: "rb-h3" }, iss.length ? `검증 결과 (${iss.length})` : "문제 없어요"),
-        h("div", { class: "rb-issues rb-scroll", style: "max-height:50vh" }, iss.map((x) => h("button", { type: "button", class: ["rb-issue", x.level], onClick: () => {
-          back.remove();
-          es.tab = x.tab;
-          if (x.index !== void 0) {
-            es.sel[x.tab] = x.index;
-            es.q[x.tab] = "";
-          }
-          render();
-        } }, icon("alert", 14), h("span", null, x.msg)))),
-        h("div", { class: "btns" }, btn("닫기", { onClick: () => back.remove() }))
-      )
-    );
+    const back = h("div", { class: "rb-modal", onMousedown: (ev) => { if (ev.target === back) back.remove(); } });
+    const dlg = h("div", { class: "rb-dialog", role: "dialog", "aria-label": "검증 결과", style: "max-width:640px" });
+    const go = (x) => { back.remove(); es.tab = x.tab; if (x.index !== void 0) { es.sel[x.tab] = x.index; es.q[x.tab] = ""; } render(); };
+    const card = (x, ignored) => {
+      const ex = explainIssue(x), isErr = x.level === "err";
+      return h("details", { class: ["rb-issue", x.level], style: "display:block;text-align:left" },
+        h("summary", { style: "cursor:pointer;display:flex;gap:8px;align-items:flex-start" }, icon("alert", 14), h("span", { style: "flex:1;min-width:0" }, x.msg)),
+        h("div", { style: "margin:8px 0 2px 22px;display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.6" },
+          h("div", null, h("b", null, "왜 떠요? "), ex.why),
+          h("div", null, h("b", null, "어떻게 해요? "), ex.fix),
+          h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;margin-top:4px" },
+            x.tab ? btn("이 항목으로 이동", { size: "sm", onClick: () => go(x) }) : null,
+            isErr ? null : ignored
+              ? btn("무시 해제", { size: "sm", onClick: () => { setIgnored(ignoredList().filter((k) => k !== issueKey(x))); paint(); } })
+              : btn("이 경고 무시", { size: "sm", onClick: () => { setIgnored([...ignoredList(), issueKey(x)]); paint(); } }))));
+    };
+    function paint() {
+      const sp = splitIssues(cfg.validate(draft), ignoredList());
+      const warns = sp.active.filter((x) => x.level !== "err");
+      replace(dlg,
+        h("h3", { class: "rb-h3" }, sp.active.length ? `검증 결과 (${sp.active.length})` : "문제 없어요"),
+        sp.active.length ? h("p", { class: "rb-muted", style: "margin:0 0 8px" }, "항목을 누르면 왜 뜨는지와 해결 방법이 보여요. 경고는 저장을 막지 않아요.") : null,
+        h("div", { class: "rb-issues rb-scroll", style: "max-height:46vh;display:flex;flex-direction:column;gap:6px" }, sp.active.map((x) => card(x, false))),
+        sp.ignored.length ? h("details", { style: "margin-top:10px" }, h("summary", { style: "cursor:pointer" }, `무시한 경고 ${sp.ignored.length}개`),
+          h("div", { class: "rb-issues", style: "display:flex;flex-direction:column;gap:6px;margin-top:6px" }, sp.ignored.map((x) => card(x, true)))) : null,
+        h("div", { class: "btns" },
+          warns.length ? btn(`경고 ${warns.length}개 전체 무시`, { id: "rb-ign-all", onClick: () => { setIgnored([...new Set([...ignoredList(), ...warns.map(issueKey)])]); paint(); } }) : null,
+          sp.ignored.length ? btn("무시 모두 해제", { onClick: () => { setIgnored([]); paint(); } }) : null,
+          btn("닫기", { onClick: () => back.remove() })));
+    }
+    paint();
+    back.appendChild(dlg);
     ctx.win.appendChild(back);
   }
   function cbsPanel() {

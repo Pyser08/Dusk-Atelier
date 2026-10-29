@@ -1,3 +1,4 @@
+import { applyDroppedPatch } from './screens/patchui.js';
 import { maybeShowTour } from './tour.js';
 import { installTooltips } from './tooltip.js';
 import { maybeShowWhatsNew, openChangelog, CHANGELOG } from './whatsnew.js';
@@ -242,7 +243,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     e.preventDefault();
     dragDepth++;
     if (!dropEl) {
-      dropEl = h("div", { class: "rb-drop" }, h("div", null, icon("upload", 20), "놓으면 종류와 대상을 알아서 찾아요"));
+      dropEl = h("div", { class: "rb-drop" }, h("div", null, icon("upload", 20), "놓으면 종류와 대상을 알아서 찾아요 (.rbupatch 패치도 가능)"));
       win.appendChild(dropEl);
     }
   });
@@ -263,7 +264,11 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     dropEl?.remove();
     dropEl = null;
     const files = [...e.dataTransfer.files ?? []];
-    if (files.length) legacy.startWithFiles(files);
+    const patches = files.filter((f) => /\.rbupatch$/i.test(f.name ?? ""));
+    const rest = files.filter((f) => !patches.includes(f));
+    if (rest.length) legacy.startWithFiles(rest);
+    // 패치 파일은 이름이 같은 캐릭터·모듈을 찾아 하나씩 적용한다
+    if (patches.length) (async () => { for (const f of patches) await applyDroppedPatch(ctx, f).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })); })();
   });
   doc.addEventListener("keydown", (e) => {
     if (root.hidden) return;

@@ -6,7 +6,8 @@ import { createStore } from '../../engine/store.js';
 import { Busy, backupSnapshot, isGenerating } from '../../engine/safety.js';
 import { safeFileName } from '../../engine/export.js';
 import { download, pickFiles } from '../dom.js';
-import { confirmDialog } from '../kit.js';
+import { confirmDialog, modal, btn } from '../kit.js';
+import { h } from '../dom.js';
 import { applyPatch, buildPatch, parsePatch, planPatch } from '../../engine/patch.js';
 import { baseViewOf } from './devtools.js';
 
@@ -52,8 +53,8 @@ async function impactOf(ctx, kind, target) {
     return "";
   }
 }
-export async function applyPatchFile(ctx, kind, getTarget, save) {
-  const [f] = await pickFiles({ accept: ".rbupatch,application/json" });
+export async function applyPatchFile(ctx, kind, getTarget, save, dropped = null) {
+  const f = dropped ?? (await pickFiles({ accept: ".rbupatch,application/json" }))[0];
   if (!f) return;
   let patch;
   try {
@@ -99,4 +100,36 @@ export function changedKeys(before, after) {
   const out = {};
   for (const k of /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])) if (k !== "id" && stableJson(before[k] ?? null) !== stableJson(after[k] ?? null)) out[k] = after[k];
   return out;
+}
+
+// 끌어 놓은 .rbupatch: 이름이 같은 캐릭터·모듈을 찾아 같은 순서(미리 보기 → 백업 → 적용)로 적용한다.
+export async function applyDroppedPatch(ctx, file) {
+  let patch;
+  try { patch = parsePatch(await file.text()); } catch (e) { return ctx.toast(e?.message ?? String(e), { error: true }); }
+  const isMod = patch.kind === "module";
+  let cands;
+  try {
+    if (isMod) cands = ((await ctx.svc.load()).entries ?? []).map((x) => ({ id: x.module.id, name: x.module.name ?? "", ns: x.module.namespace ?? "" })).filter((x) => x.name === patch.name);
+    else cands = ((await ctx.api.getDatabase(["characters"]))?.characters ?? []).map((c, i) => ({ i, chaId: c.chaId, name: c.name ?? "" })).filter((x) => x.name === patch.name);
+  } catch (e) { return ctx.toast(`대상을 찾지 못했어요: ${e?.message ?? e}`, { error: true }); }
+  if (isMod && patch.namespace && cands.some((x) => x.ns === patch.namespace)) cands = cands.filter((x) => x.ns === patch.namespace);
+  if (!cands.length) return ctx.toast(`'${patch.name}' 이름의 ${isMod ? "모듈" : "캐릭터"}를 찾지 못했어요. 목록에서 대상의 ⋯ 메뉴 → 패치 적용으로 골라 주세요.`, { error: true });
+  let t = cands[0];
+  if (cands.length > 1) {
+    t = await modal(ctx.win, (done) => h("div", { class: "rb-dialog" }, h("h2", { class: "rb-h2" }, "어디에 적용할까요?"), h("p", { class: "rb-muted" }, `이름이 같은 ${isMod ? "모듈" : "캐릭터"}가 ${cands.length}개 있어요.`),
+      h("div", { style: "display:flex;flex-direction:column;gap:8px;margin:12px 0" }, ...cands.map((c, n) => btn(`${c.name} (${n + 1}번째${isMod && c.ns ? " · " + c.ns : ""})`, { onClick: () => done(c) }))), btn("취소", { onClick: () => done(null) })));
+    if (!t) return;
+  }
+  if (isMod) {
+    const cur = async () => ((await ctx.svc.load()).entries.find((x) => x.module.id === t.id)?.module);
+    await applyPatchFile(ctx, "module", async () => { const m = await cur(); if (!m) throw new Error("모듈을 다시 찾지 못했어요."); return m; }, async (res, c) => {
+      await ctx.svc.run("update", t.id, changedKeys(c, res)); ctx.state.modDirty = true; ctx.refresh();
+    }, file);
+  } else {
+    const full = async () => { const c = await ctx.api.getCharacterFromIndex(t.i); if (!c || c.chaId !== t.chaId) throw new Error("캐릭터를 다시 찾지 못했어요. 목록을 새로 고쳐 주세요."); return c; };
+    await applyPatchFile(ctx, "character", full, async (res) => {
+      if (isGenerating(await full())) throw new Busy();
+      await ctx.api.setCharacterToIndex(t.i, res); ctx.state.charsDirty = true; ctx.refresh();
+    }, file);
+  }
 }
