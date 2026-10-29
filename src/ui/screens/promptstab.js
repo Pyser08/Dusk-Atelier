@@ -72,13 +72,13 @@ export async function renderPrompts(ctx) {
       ...POSITIONS.map(([k, label]) => btn(label, { size: "sm", kind: pos === k ? "primary" : "", id: `rb-pos-${i}-${k}`, title: POS_HINT[k], onClick: () => set("position", k) })),
       h("span", { class: "rb-muted" }, POS_HINT[pos]));
     return h("article", { class: ["rb-card", "rb-mem-feat", p.enabled && "on"] },
+      where,
       h("div", { class: "rb-mem-shead" },
         h("input", { class: "rb-input", value: p.name, placeholder: "이름(선택)", "aria-label": "이름", maxlength: 60, onChange: (e) => set("name", e.target.value.trim()) }),
         h("span", { style: "flex:1" }),
         switchEl(p.enabled, { label: "사용", onChange: (v, el) => { setSwitch(el, v); set("enabled", v); } })),
       p.scope.kind === "all" ? null : h("p", { class: "rb-muted" }, p.scope.kind === "bot" ? `이 봇에만 (${p.scope.label || p.scope.characterId})` : `이 채팅에만 (${p.scope.label || p.scope.characterId})`),
-      h("textarea", { class: "rb-input", rows: 5, "aria-label": "프롬프트 본문", maxlength: PROMPT_MAX, placeholder: "AI에게 덧붙일 규칙을 적어요.", onChange: (e) => set("text", e.target.value) }, p.text),
-      where,
+      h("textarea", { class: "rb-input", rows: 14, style: "min-height:260px;resize:vertical;line-height:1.6", "aria-label": "프롬프트 본문", maxlength: PROMPT_MAX, placeholder: "AI에게 덧붙일 규칙을 적어요.", onChange: (e) => set("text", e.target.value) }, p.text),
       h("div", { class: "rb-mem-chats" }, stages),
       btn("삭제", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "프롬프트를 지울까요?", body: p.name || "이름 없는 프롬프트", ok: "지우기", danger: true })) edit((x) => { x.customPrompts.splice(i, 1); }); } }));
   };
