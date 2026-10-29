@@ -1,4 +1,4 @@
-// 인물 합치기(미리보기 포함): 남길 인물과 합칠 인물을 고르면, 인물 위키 문서가 둘 다 있을 때는 리수폿 통합 규칙으로 변경안을 만들고
+// 인물 합치기(미리보기 포함): 남길 인물과 합칠 인물을 고르면, 인물 문서가 둘 다 있을 때는 리수폿 통합 규칙으로 변경안을 만들고
 // 충돌 항목마다 남길 쪽을 고르게 한다. 사건 기록·별칭은 Dusk 쪽도 함께 합친다.
 import { h, replace } from "../../dom.js";
 import { btn, modal, note, confirmDialog } from "../../kit.js";
@@ -54,7 +54,7 @@ export async function openMerge(env, people) {
         h("p", { class: "rb-muted" }, "합칠 인물은 사라지고, 이름은 별칭으로 남아요. 합치기 전에 변경 내용을 먼저 보여 드려요."),
         pick("남길 인물", () => keepK, (v) => { keepK = v; }), pick("합칠 인물", () => srcK, (v) => { srcK = v; }),
         keepK === srcK ? note("warn", "서로 다른 인물을 골라 주세요.") : null,
-        !both ? note("info", "인물 위키 문서가 둘 다 있을 때만 위키 항목까지 합쳐요. 지금은 사건 기록과 별칭만 합쳐져요.") : null,
+        !both ? note("info", "인물 문서가 둘 다 있을 때만 위키 항목까지 합쳐요. 지금은 사건 기록과 별칭만 합쳐져요.") : null,
         err ? note("err", err) : null,
         both && !plan && keepK !== srcK ? btn("합치기 변경 내용 보기", { onClick: make }) : null,
         plan ? h("div", null,

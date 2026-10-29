@@ -18,12 +18,12 @@ export function createRetryToast(api, { onRetry, onOpen, scheduler = globalThis,
       const wrap = await root.createElement("div"); await wrap.setAttribute(ATTR, "1");
       await wrap.setStyleAttribute("position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(76px,calc(env(safe-area-inset-bottom) + 76px));z-index:999;pointer-events:none;");
       const card = await root.createElement("div"); await card.setStyleAttribute(CARD);
-      const title = await root.createElement("div"); await title.setTextContent("Dusk Atelier · 장기기억"); await title.setStyleAttribute("font-size:11px;font-weight:800;letter-spacing:.08em;color:#a99bff;margin-bottom:6px;");
+      const title = await root.createElement("div"); await title.setTextContent("Dusk Atelier · 기억"); await title.setStyleAttribute("font-size:11px;font-weight:800;letter-spacing:.08em;color:#a99bff;margin-bottom:6px;");
       const text = await root.createElement("div"); await text.setStyleAttribute("font-size:13px;line-height:1.5;word-break:keep-all;margin-bottom:10px;");
       const row = await root.createElement("div"); await row.setStyleAttribute("display:flex;gap:8px;flex-wrap:wrap;");
       const mk = async (label, primary, fn) => { const b = await root.createElement("button"); await b.setTextContent(label); await b.setStyleAttribute(BTN(primary)); await b.addEventListener("click", fn); await row.appendChild(b); return b; };
       const retryBtn = await mk("다시 시도", true, async () => { if (busy) return; busy = true; try { await hide(); await onRetry?.(); } finally { busy = false; } });
-      await mk("장기기억 열기", false, async () => { await hide(); await onOpen?.(); });
+      await mk("기억 열기", false, async () => { await hide(); await onOpen?.(); });
       await mk("닫기", false, () => hide());
       await card.appendChild(title); await card.appendChild(text); await card.appendChild(row); await wrap.appendChild(card); await host.appendChild(wrap);
       return { wrap, text, retryBtn };
@@ -47,10 +47,10 @@ export function judgeAutoResult({ phase, message = "", scope = null }) {
     if (/이전 자동 변경 이후|안전하게 되돌릴 수 없/.test(message)) return { kind: "conflict", retry: false, text: "이 응답을 고치기 전의 자동 기록이 있는데, 그 뒤에 인물 문서를 직접 고쳐서 자동으로 되돌릴 수 없어요. 인물 문서를 확인해 주세요." };
     return { kind: "manual", retry: false, text: String(message).replace(/^수동 확인 필요\s*·\s*/, "").trim().slice(0, 200) || "이 응답은 자동 기록하지 않았어요. 필요하면 직접 확인해 주세요." };
   }
-  if (phase === "failed") return { kind: "failed", retry: true, text: "인물 위키 자동 기록이 실패했어요. 다시 시도할까요?" };
+  if (phase === "failed") return { kind: "failed", retry: true, text: "인물 자동 기록이 실패했어요. 다시 시도할까요?" };
   if (phase !== "completed" || !scope) return null;
   const chars = Object.values(scope.documents ?? {}).filter((d) => d?.type === "Character");
-  if (!chars.length) return { kind: "empty", retry: true, text: "인물 위키 문서가 아직 만들어지지 않았어요. 다시 시도할까요?" };
+  if (!chars.length) return { kind: "empty", retry: true, text: "인물 문서가 아직 만들어지지 않았어요. 다시 시도할까요?" };
   const noMetric = chars.filter((d) => !(d.metrics ?? []).length);
   if (noMetric.length >= 2) return { kind: "nometric", retry: true, text: `수치 상태가 비어 있는 인물이 ${noMetric.length}명이에요(${noMetric.slice(0, 3).map((d) => d.title).join(", ")}). 다시 시도할까요?` };
   return null;

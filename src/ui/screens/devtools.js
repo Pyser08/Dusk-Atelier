@@ -29,7 +29,7 @@ export function devToggleCard(ctx, onChange) {
       "div",
       { style: "flex:1;min-width:0;display:flex;flex-direction:column;gap:2px" },
       h("b", null, "개발자 모드"),
-      h("span", { class: "rb-muted", style: "white-space:normal" }, "모듈·봇 제작자를 위한 기능이에요. 켜면 옆에 개발 탭이 생겨서, 개발 중인 모듈·봇을 모아 두고 검사·테스트·패치 배포를 한곳에서 할 수 있어요.")
+      h("span", { class: "rb-muted", style: "white-space:normal" }, "켜면 캐릭터·모듈 화면에 오른쪽 상세 패널과 패치·개발 목록 기능, 메뉴에 개발 탭이 생겨요.")
     ),
     switchEl(on, { label: "개발자 모드", onChange: async (v) => {
       await ctx.prefs.saveUi({ devMode: v });

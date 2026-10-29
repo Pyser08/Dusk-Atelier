@@ -21,7 +21,7 @@ export async function openSetup(ctx) {
 
   return modal(ctx.win, (done) => {
     const body = h("div", { class: "rb-wiz-body" }), dots = h("ol", { class: "rb-wiz-dots", "aria-label": "진행" });
-    const box = h("div", { class: "rb-dialog rb-wiz", role: "dialog", "aria-modal": "true", "aria-label": "장기기억 처음 설정" }, dots, body);
+    const box = h("div", { class: "rb-dialog rb-wiz", role: "dialog", "aria-modal": "true", "aria-label": "기억 처음 설정" }, dots, body);
     const finish = async () => {
       try {
         let c = await getCfg(ctx.api);
@@ -39,7 +39,7 @@ export async function openSetup(ctx) {
         await M.store.updateIndex((i) => { i.settings.flow = { ...(i.settings.flow ?? {}), on: true, mode: s.mode, setupDone: true }; });
         const ok = await M.flow.apply();
         if (!ok) throw new Error("기억을 켜지 못했어요. 리스를 다시 불러온 뒤 다시 해 주세요.");
-        ctx.toast("장기기억을 켰어요. 다음 응답부터 기록돼요.");
+        ctx.toast("기억을 켰어요. 다음 응답부터 기록돼요.");
         done(true);
       } catch (e) { fail(ctx)(e); }
     };

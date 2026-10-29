@@ -117,7 +117,7 @@ export async function flowSections(ctx, host, { redraw }) {
 
   // ---- 3) 흐름 방식
   const modeHost = h("div");
-  const paintMode = () => replace(modeHost, optionCards([{ value: "fast", label: "빠르게", text: "응답 뒤 모델 호출 1회. 키워드로 인물을 골라요." }, { value: "accurate", label: "더 정확하게", text: "고르기·정리 노트를 더해 기억을 더 잘 찾아요. 호출이 늘어요." }], flow.mode === "accurate" ? "accurate" : "fast", async (v) => { await M.store.updateIndex((i) => { i.settings.flow = { ...(i.settings.flow ?? {}), mode: v }; }); flow.mode = v; await apply(); }, "기억 방식"));
+  const paintMode = () => replace(modeHost, optionCards([{ value: "fast", label: "빠르게", text: "응답 뒤 모델 호출 1회. 키워드로 인물을 골라요." }, { value: "accurate", label: "더 정확하게", text: "관련 인물 찾기·장면 정리를 더해 기억을 더 잘 찾아요. 호출이 늘어요." }], flow.mode === "accurate" ? "accurate" : "fast", async (v) => { await M.store.updateIndex((i) => { i.settings.flow = { ...(i.settings.flow ?? {}), mode: v }; }); flow.mode = v; await apply(); }, "기억 방식"));
   paintMode();
 
   // ---- 3-2) 성인 항목 (기본 꺼짐, 접힌 곳): 욕구 기록 → 월경·임신 기록(스위치 + 임신 확률 배수)

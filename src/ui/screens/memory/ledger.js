@@ -21,7 +21,7 @@ export async function renderOpen(env, host) {
     const v = await promptDialog(env.ctx.win, { title: "열린 항목 추가", label: "약속·복선·의문 (80자)", ok: "추가" }); if (!v?.trim()) return;
     editFolder(env, (f) => { (f.open ??= []).push({ id: "o_" + Date.now().toString(36), text: v.trim().slice(0, 80), kind: "question", who: [], at: f.cursor?.at ?? null, at_ms: Date.now(), closed: false }); });
   } }) : null;
-  replace(host, readonlyNote(env), h("p", { class: "rb-muted" }, "AI 응답에서 아직 풀리지 않은 약속·복선·의문을 모아요. 해결되면 자동으로 닫히고, 열린 항목은 장기기억 주입에 들어가요."), h("div", { class: "rb-mem-tools" }, add),
+  replace(host, readonlyNote(env), h("p", { class: "rb-muted" }, "AI 응답에서 아직 풀리지 않은 약속·복선·의문을 모아요. 해결되면 자동으로 닫히고, 열린 항목은 이번 요청에 넣은 기억에 들어가요."), h("div", { class: "rb-mem-tools" }, add),
     open.length ? h("ul", { class: "rb-mem-reclist" }, open.slice().reverse().map((x) => row(x, false))) : empty("list", "열린 항목이 없어요."),
     done.length ? h("details", { class: "rb-mem-man", open: !!m.openDone, onToggle: (e) => { m.openDone = e.target.open; } }, h("summary", null, `해결된 항목 ${done.length}개`), h("ul", { class: "rb-mem-reclist" }, done.slice().reverse().map((x) => row(x, true)))) : null);
 }
@@ -30,7 +30,7 @@ export async function renderRels(env, host) {
   const { folder } = env, local = env.backend.id === "local";
   const pairs = Object.entries(folder.rels ?? {}).map(([k, p]) => [k, { ...p, items: (p.items ?? []).filter((i) => !i.orphan) }]).filter(([, p]) => p.items.length).sort((a, b) => (b[1].items.at(-1).at_ms ?? 0) - (a[1].items.at(-1).at_ms ?? 0));
   if (!pairs.length) return replace(host, readonlyNote(env), empty("list", "아직 기록된 관계 변화가 없어요."));
-  replace(host, readonlyNote(env), h("p", { class: "rb-muted" }, "두 인물 사이에서 눈에 띄게 달라진 점을 쌍별로 모아요. 최근 변화가 주입에 들어가요."),
+  replace(host, readonlyNote(env), h("p", { class: "rb-muted" }, "두 인물 사이에서 눈에 띄게 달라진 점을 쌍별로 모아요. 최근 변화가 이번 요청에 넣은 기억에 들어가요."),
     pairs.map(([k, p]) => h("article", { class: "rb-card rb-mem-sec" }, h("div", { class: "rb-mem-shead" }, h("b", null, `${p.from} → ${p.to}`), h("span", { style: "flex:1" }), local ? btn("지우기", { size: "sm", onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 관계 기록을 지울까요?", body: `${p.from} → ${p.to} 사이에 쌓인 변화가 모두 사라져요. 되돌릴 수 없어요.`, ok: "삭제", danger: true }))) return; editFolder(env, (f) => { delete f.rels[k]; }); } }) : null),
       wikiNote(folder.wiki, p.from) ? h("p", { class: "rb-mem-wikinote" }, h("b", null, `${p.from}의 현재 관계(위키) `), wikiNote(folder.wiki, p.from)) : null,
       h("ul", { class: "rb-mem-facts" }, p.items.slice().reverse().slice(0, 8).map((i) => h("li", null, `${i.at != null ? at(i.at) + " " : ""}${i.d}${i.dir === "+" ? " ↑" : i.dir === "-" ? " ↓" : ""}`))))));
@@ -39,7 +39,7 @@ export async function renderRels(env, host) {
 export async function renderTimeline(env, host) {
   const m = mem(env.ctx), tl = timelineOf(env.folder);
   if (!tl.length) return replace(host, readonlyNote(env), empty("list", "이야기 속 날짜·시간이 적힌 상황이 아직 없어요."));
-  replace(host, readonlyNote(env), h("p", { class: "rb-muted" }, "본문에 적힌(또는 분명히 알 수 있는) 이야기 속 시각만 기록해요. 현재 시각은 장기기억 주입에 들어가요."),
+  replace(host, readonlyNote(env), h("p", { class: "rb-muted" }, "본문에 적힌(또는 분명히 알 수 있는) 이야기 속 시각만 기록해요. 현재 시각은 이번 요청에 넣은 기억에 들어가요."),
     h("ol", { class: "rb-mem-timeline" }, tl.map((x, i) => h("li", { class: "rb-card rb-mem-scene" }, h("div", { class: "rb-mem-shead" }, h("b", null, x.when), i === tl.length - 1 ? badge("지금", "acc") : null, h("span", { style: "flex:1" }), h("span", { class: "rb-muted" }, `${x.at != null ? at(x.at) : ""}${x.place ? " · " + x.place : ""}`)),
       h("p", null, x.sum), h("div", { class: "rb-mem-sact" }, btn("상황 보기", { size: "sm", onClick: () => { m.tab = "scenes"; m.focusScene = x.id; env.redraw(); } }))))));
 }

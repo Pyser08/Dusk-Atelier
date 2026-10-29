@@ -3,11 +3,11 @@ import { alpha, ensureContrast, isHex, lightnessOf, onAccent, withLightness } fr
 // v1.6.3 UI 리뉴얼: 밝은 회백 + 코랄 포인트가 기본. 색은 전부 여기 토큰에서만 나온다.
 export var PRESETS = [
   { id: "coral", name: "코랄", a: "#cc4b2e", b: "#b93e22" },
-  { id: "teal", name: "테알", a: "#0f766e", b: "#0b5f59" },
+  { id: "teal", name: "청록", a: "#0f766e", b: "#0b5f59" },
   { id: "sage", name: "세이지", a: "#4d7a4f", b: "#3d663f" },
   { id: "lilac", name: "라일락", a: "#7c4fc2", b: "#6840a8" },
   { id: "mono", name: "모노", a: "#3f4650", b: "#2b3038" },
-  { id: "dusk", name: "황혼(예전 색)", a: "#4f63e0", b: "#7c4fe0" }
+  { id: "dusk", name: "황혼", a: "#4f63e0", b: "#7c4fe0" }
 ];
 export var DEFAULT_THEME = { v: 2, preset: "coral", a: "#cc4b2e", b: "#b93e22", mode: "auto", contrast: "normal", layout: "left", density: "roomy", size: "m" };
 // 1.7.0: 'home'(홈 카드) 메뉴 위치는 새 홈 화면이 대신하므로 없앴다. 예전 저장값 home은 left로 옮긴다.

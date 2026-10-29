@@ -39,7 +39,7 @@ const names = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(
   await go(page, "인물");
   ok("[PC] 인물 탭 이동", (await cur(page)) === "인물");
   await go(page, "꾸미기");
-  ok("[PC] 꾸미기 탭 → 화면 꾸미기 화면", (await cur(page)) === "꾸미기" && (await page.locator("h2.rb-h2", { hasText: "화면 꾸미기" }).count()) === 1);
+  ok("[PC] 꾸미기 탭 → 꾸미기 화면", (await cur(page)) === "꾸미기" && (await page.locator(".rb-mem2[data-page=look] h2.rb-h2", { hasText: "꾸미기" }).count()) === 1);
   ok("[PC] 메뉴 위치 선택지에 '홈 카드' 없음", !(await page.locator(".rb-opt, .rb-optcards").allTextContents()).join("").includes("홈 카드"));
   await go(page, "설정");
   ok("[PC] 설정에 '화면 모드' 간단/고급, 개발자 모드 카드는 숨김", (await page.locator(".rb-seg[aria-label='화면 모드'] button").allTextContents()).join("|") === "간단|고급" && (await page.locator("#rb-devmode").count()) === 0);
@@ -250,6 +250,104 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   ok(`[6단계 ${tag}] 가로로 안 넘침·오류 없음`, (await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)) && !(page.__errs?.length) && !(await page.evaluate(() => __errors.length)), (page.__errs ?? []).join(";") + (await page.evaluate(() => __errors.join(";"))));
   await ctx.close();
 }
+// ── 7단계: 꾸미기 · 설정(간단/고급) · 용어 · 처음 둘러보기 · 첫 안내 ──
+const FORBIDDEN = ["장기기억", "장기 기억", "주입", "Writer", "Router", "Director", "digest", "턴 흐름", "정리 노트", "RisuPot", "기록하기", "일괄 분석", "backfill", "CURRENT CHAT", "cursor"];
+// TALL=1 이면 7단계 사진만 세로를 길게 잡아 화면 전체가 보이게 한다(발표용).
+const tallVp = (vp) => process.env.TALL ? { ...vp, height: vp.width > 800 ? 1500 : 1900 } : vp;
+for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모바일", { width: 390, height: 844 }, { hasTouch: true, isMobile: true }]]) {
+  const t = tag === "PC" ? "pc" : "m", pc = tag === "PC";
+  const ctx = await browser.newContext({ viewport: tallVp(vp), ...extra });
+  const page = await boot(ctx, {}, { memory: true, story: true, mods: true });
+  const openTab = async (label) => { if (pc) await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(600); };
+  const ui = async () => JSON.parse(await page.evaluate(() => __api.store["rbm:ui:v1"] ?? "{}"));
+  // 꾸미기 (간단)
+  await openTab("꾸미기");
+  const look = ".rb-mem2[data-page=look]";
+  ok(`[7단계 ${tag}] 꾸미기: 미리보기 말풍선 2 · 강조 색 6개(이름)`, (await page.locator(`${look} .rb-bub`).count()) === 2 && (await page.locator(`${look} .rb-accpick`).allTextContents()).join("|") === "코랄|청록|세이지|라일락|모노|황혼");
+  ok(`[7단계 ${tag}] 꾸미기: 밝기 3칸 · 글자 크기 3칸 · 테마 만들기 버튼 · 고급 영역 대신 링크`, (await page.locator(`${look} .rb-seg[aria-label=밝기] button`).allTextContents()).join("|") === "자동|밝게|어둡게" && (await page.locator(`${look} .rb-seg[aria-label='글자 크기'] button`).allTextContents()).join("|") === "작게|보통|크게" && (await page.locator(`${look} #rb-look-themebuilder`).textContent()).includes("내 채팅 테마 만들기") && (await page.locator(`${look} .rb-adv`).count()) === 0 && (await page.locator("#rb-adv-look").count()) === 1);
+  await shot(page, `s7-${t}-1-look`);
+  await page.locator(`${look} .rb-accpick`, { hasText: "청록" }).click(); await page.waitForTimeout(500);
+  ok(`[7단계 ${tag}] 강조 색을 누르면 바로 적용·저장`, (await page.evaluate(() => getComputedStyle(document.querySelector(".rb-bub.m")).backgroundImage)).includes("rgb(15, 118, 110)") && (await ui()).theme?.preset === "teal" && (await page.locator(`${look} .rb-accpick[aria-pressed=true]`).textContent()) === "청록");
+  await page.locator(`${look} .rb-seg[aria-label=밝기] button`, { hasText: "어둡게" }).click();
+  await page.locator(`${look} .rb-seg[aria-label='글자 크기'] button`, { hasText: "크게" }).click(); await page.waitForTimeout(500);
+  const th = (await ui()).theme;
+  ok(`[7단계 ${tag}] 밝기 어둡게 · 글자 크게(110%) 저장`, th?.mode === "dark" && th?.zoom === 110, JSON.stringify(th));
+  await page.locator(`${look} .rb-seg[aria-label=밝기] button`, { hasText: "밝게" }).click();
+  await page.locator(`${look} .rb-seg[aria-label='글자 크기'] button`, { hasText: "보통" }).click(); await page.waitForTimeout(400);
+  // 설정 (간단)
+  await openTab("설정");
+  const set = ".rb-mem2[data-page=settings]";
+  ok(`[7단계 ${tag}] 설정 간단: 스위치 3(이야기 도우미)만 · 개발자 카드·고급 영역 없음`, (await page.locator(`${set} .rb-switch`).count()) === 3 && (await page.locator(`${set} .rb-scard .h`, { hasText: "이야기 도우미" }).count()) === 1 && (await page.locator("#rb-devmode").count()) === 0 && (await page.locator(`${set} .rb-adv`).count()) === 0 && (await page.locator("#rb-adv-settings").count()) === 1);
+  ok(`[7단계 ${tag}] 설정 간단: 화면 모드 · ${pc ? "메뉴 위치(PC)" : "메뉴 위치 숨김(모바일)"} · 꾸미기 › · 백업 2 · 둘러보기 · 새로 바뀐 점`, (await page.locator(`${set} .rb-seg[aria-label='화면 모드'] button`).allTextContents()).join("|") === "간단|고급" && (await page.locator(`${set} .rb-seg[aria-label='메뉴 위치']`).isVisible()) === pc && (await page.locator(`${set} #rb-set-look`).count()) === 1 && (await page.locator(`${set} #rb-set-fullbackup, ${set} #rb-set-restore`).count()) === 2 && (await page.locator(`${set} #rb-set-tour`).count()) === 1 && (await page.locator(`${set} #rb-set-whatsnew`).textContent()).includes("새로 바뀐 점"));
+  ok(`[7단계 ${tag}] 설정 간단: 눌러서 여는 줄이 모두 44px 이상`, await page.evaluate(() => [...document.querySelectorAll(".rb-mem2[data-page=settings] .rb-srow")].filter((e) => e.offsetParent).every((e) => e.getBoundingClientRect().height >= 44)));
+  await page.locator(`${set} .rb-srow`, { hasText: "공정한 전개" }).locator(".rb-switch").click(); await page.waitForTimeout(300);
+  ok(`[7단계 ${tag}] 공정한 전개 스위치가 켜지고 저장됨`, (await page.locator(`${set} .rb-srow`, { hasText: "공정한 전개" }).locator(".rb-switch").getAttribute("aria-checked")) === "true" && (await page.evaluate(() => __app.ctx.fairPlay ? __app.ctx.fairPlay.get?.() ?? true : (__api.store["dusk.ui.fairPlay"] === "on"))) !== false);
+  await shot(page, `s7-${t}-2-settings`);
+  // 꾸미기 › 이동
+  await page.locator(`${set} #rb-set-look`).click(); await page.waitForTimeout(500);
+  ok(`[7단계 ${tag}] 설정 → 꾸미기 › 로 이동`, (await page.locator(".rb-mem2[data-page=look]").count()) === 1);
+  // 처음 둘러보기
+  await openTab("설정");
+  await page.locator(`${set} #rb-set-tour`).click(); await page.waitForTimeout(400);
+  ok(`[7단계 ${tag}] 처음 둘러보기: 12장 · 첫 장 환영해요`, (await page.locator(".rb-tour-card h2").textContent()) === "환영해요!" && (await page.locator(".rb-tour-card .dots i").count()) === 12);
+  for (let i = 0; i < 2; i++) { await page.locator(".rb-tour-card button.primary").click(); await page.waitForTimeout(150); }
+  ok(`[7단계 ${tag}] 둘러보기 3번째 장 = 기억, 메뉴 버튼 강조`, (await page.locator(".rb-tour-card h2").textContent()) === "기억" && (await page.locator(".rb-tour-hl").count()) === 1);
+  await shot(page, `s7-${t}-3-tour`);
+  for (let i = 0; i < 7; i++) { await page.locator(".rb-tour-card button.primary").click(); await page.waitForTimeout(150); }
+  ok(`[7단계 ${tag}] 둘러보기 10번째 장 = 꾸미기${pc ? "(사이드바 강조)" : "(더보기 강조)"}`, (await page.locator(".rb-tour-card h2").textContent()) === "꾸미기 (더보기)" && (await page.locator(".rb-tour-hl").count()) === 1);
+  await page.keyboard.press("Escape"); await page.waitForTimeout(200);
+  // 고급
+  await page.locator(`${set} .rb-seg[aria-label='화면 모드'] button`, { hasText: "고급" }).click(); await page.waitForTimeout(500);
+  const advT = await page.locator(`${set} .rb-adv`).textContent();
+  ok(`[7단계 ${tag}] 설정 고급: 개발자 카드 + 이야기 도우미 세부·로어북·채팅 메뉴·테마 대상·정리 · 기록`, (await page.locator("#rb-devmode").count()) === 1 && ["이야기 도우미 세부", "로어북", "채팅 메뉴", "테마 대상", "정리 · 기록", "이럴 땐 여기로"].every((x) => advT.includes(x)) && (await page.locator(`${set} #rb-set-cleanup, ${set} #rb-set-updset, ${set} #rb-set-about, ${set} #rb-set-backups`).count()) === 4, advT.slice(0, 80));
+  ok(`[7단계 ${tag}] 설정 고급: 로어북 이름 경계·응답 아래 버튼·기억 버튼·리롤 선택기 그대로`, (await page.locator(`${set} .rb-seg[aria-label='이름 경계 기본값'] button`).count()) === 3 && (await page.locator(`${set} .rb-seg[aria-label='응답 아래 로어북 버튼'] button`).count()) === 2 && (await page.locator(`${set} .rb-seg[aria-label='채팅 메뉴 기억 버튼'] button`).count()) === 2 && (await page.locator(`${set} .rb-seg[aria-label='리롤 때 확률'] button`).count()) === 2 && (await page.locator(`${set} .rb-seg[aria-label='내가 결과까지 적었을 때'] button`).count()) === 2);
+  await shot(page, `s7-${t}-4-settings-advanced`);
+  await openTab("꾸미기");
+  const advL = await page.locator(`${look} .rb-adv`).textContent();
+  ok(`[7단계 ${tag}] 꾸미기 고급: 직접 색 · 메뉴 위치 · 줄 간격 · 확대율 · 고대비 · 테마 스튜디오 · 기본값으로`, ["직접 색 고르기", "메뉴 위치", "줄 간격", "확대율", "고대비", "테마 스튜디오", "기본값으로"].every((x) => advL.includes(x)) && (await page.locator(`${look} input[type=range]`).count()) === 1 && (await page.locator(`${look} .rb-opt`).count()) === 2);
+  await page.locator(`${look} input[type=range]`).evaluate((e) => { e.value = "125"; e.dispatchEvent(new Event("input", { bubbles: true })); }); await page.waitForTimeout(500);
+  ok(`[7단계 ${tag}] 확대율 막대 125% 저장 · 글자 크기 칸은 선택 해제`, (await ui()).theme?.zoom === 125 && (await page.locator(`${look} .rb-seg[aria-label='글자 크기'] button[aria-checked=true]`).count()) === 0);
+  await page.locator(`${look} .rb-adv button`, { hasText: "기본값으로" }).click(); await page.waitForTimeout(500);
+  await shot(page, `s7-${t}-5-look-advanced`);
+  // 용어: 간단·고급 모두에서 내부 용어 0개
+  const scan = async (mode) => {
+    const hits = [];
+    for (const label of ["홈", "기억", "리수폿", "인물", "캐릭터", "모듈", "기억 카드", "꾸미기", "도구", "플러그인", "설정"]) {
+      if (pc) await go(page, label); else if (label === "홈" || label === "기억" || label === "리수폿" || label === "인물") await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); }
+      await page.waitForTimeout(500);
+      const txt = await page.evaluate(() => __app.ctx.main.textContent);
+      for (const w of FORBIDDEN) if (txt.includes(w) && !(label === "플러그인" && w === "RisuPot")) hits.push(`${mode}/${label}: ${w}`);
+    }
+    return hits;
+  };
+  const hitsAdv = await scan("고급");
+  await openTab("설정"); await page.locator(`${set} .rb-seg[aria-label='화면 모드'] button`, { hasText: "간단" }).click(); await page.waitForTimeout(400);
+  const hitsSimple = await scan("간단");
+  ok(`[7단계 ${tag}] 화면 글에 내부 용어 0개(간단·고급 모든 탭)`, hitsAdv.length + hitsSimple.length === 0, [...hitsSimple, ...hitsAdv].join(", "));
+  ok(`[7단계 ${tag}] 가로로 안 넘침·오류 없음`, (await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)) && !(page.__errs?.length) && !(await page.evaluate(() => __errors.length)), (page.__errs ?? []).join(";") + (await page.evaluate(() => __errors.join(";"))));
+  await ctx.close();
+}
+// ── 7단계: 첫 안내(간단해졌어요) — 둘러보기를 마친 사람에게 한 번만 ──
+for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모바일", { width: 390, height: 844 }, { hasTouch: true, isMobile: true }]]) {
+  const t = tag === "PC" ? "pc" : "m";
+  const ctx = await browser.newContext({ viewport: vp, ...extra });
+  const page = await boot(ctx, { "rbm:ui:v1": JSON.stringify({ tourDone: true }) }, { memory: true, story: true });
+  await go(page, "홈"); await page.waitForTimeout(600);
+  ok(`[7단계 ${tag}] 홈: 첫 안내 카드(세부 설정 위치) 보임`, (await page.locator("#rb-simple-note").count()) === 1 && (await page.locator("#rb-simple-note").textContent()).includes("설정 → 화면 모드 → 고급"));
+  await shot(page, `s7-${t}-6-home-notice`);
+  await page.locator("#rb-simple-note .rb-btn", { hasText: "알겠어요" }).click(); await page.waitForTimeout(500);
+  ok(`[7단계 ${tag}] 알겠어요 → 안내 사라지고 다시 안 뜸`, (await page.locator("#rb-simple-note").count()) === 0 && JSON.parse(await page.evaluate(() => __api.store["rbm:ui:v1"])).simpleNoticeDone === true);
+  await go(page, "기억"); await go(page, "홈"); await page.waitForTimeout(400);
+  ok(`[7단계 ${tag}] 다시 홈에 와도 안내 없음`, (await page.locator("#rb-simple-note").count()) === 0);
+  await ctx.close();
+}
+{ const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+  const page = await boot(ctx, { "rbm:ui:v1": JSON.stringify({ tourDone: true }) }, { memory: true });
+  await go(page, "홈"); await page.waitForTimeout(500);
+  await page.locator("#rb-simple-note .rb-btn", { hasText: "고급 모드로 보기" }).click(); await page.waitForTimeout(600);
+  const u = JSON.parse(await page.evaluate(() => __api.store["rbm:ui:v1"]));
+  ok("[7단계 PC] 고급 모드로 보기 → 고급 모드로 바뀌고 안내 닫힘", u.uiMode === "advanced" && u.simpleNoticeDone === true && (await page.locator("#rb-simple-note").count()) === 0);
+  await ctx.close(); }
 // ── 장기기억 방식 카드: 간단=숨김+자동, 고급=선택기만(리수폿 스위치 없음) ──
 { const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await boot(ctx, {}, { memory: true });

@@ -57,6 +57,6 @@ export const potOn = (settings) => settings?.potMode !== false;
 export function askRefresh(ctx) {
   return modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "alertdialog", "aria-modal": "true", "aria-label": "새로고침 안내", style: "max-width:380px;text-align:center;display:flex;flex-direction:column;gap:12px;padding:20px" },
     h("b", { style: "font-size:16px" }, "리스를 새로고침해 주세요"),
-    h("p", { class: "rb-muted", style: "margin:0;line-height:1.6" }, "기억 저장소를 바꾸면 기록·주입 훅은 리스를 다시 불러와야 반영돼요. 새로고침(F5 또는 앱 다시 시작) 전까지는 이전 방식이 계속 동작할 수 있어요."),
+    h("p", { class: "rb-muted", style: "margin:0;line-height:1.6" }, "기억 저장소를 바꾸면 리스를 다시 불러와야 반영돼요. 새로고침(F5 또는 앱 다시 시작) 전까지는 이전 방식이 계속 동작할 수 있어요."),
     h("button", { class: "rb-btn primary", type: "button", onClick: () => done(true) }, "확인")));
 }

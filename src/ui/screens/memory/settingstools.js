@@ -7,7 +7,7 @@ import { liveScope } from "./advanced.js";
 import { estimateTokens, injectReasonText } from "../../../engine/memoryinject.js";
 import { pushHist, applyBefore, encodeShare, decodeShare, matchQuery, scopeChipLabel } from "../../../engine/settingsutil.js";
 
-const AREA = { flow: "기억 흐름", dusk: "기록·주입" };
+const AREA = { flow: "자동 기록", dusk: "기억 기록·넣기" };
 const TITLE = { all: "이 설정은 모든 봇·채팅에 적용돼요", bot: "이 설정은 이 봇에만 적용돼요", chat: "이 설정은 이 채팅에만 적용돼요" };
 
 // 제목 옆에 붙는 ‘어디에 적용되나’ 칩
@@ -103,7 +103,7 @@ export function previewBox(ctx) {
       replace(out, h("p", null, h("b", null, `약 ${estimateTokens(r.text).toLocaleString()} 토큰`), h("span", { class: "rb-muted" }, ` · 위치: ${r.position === "beforeLastUser" ? "마지막 내 말 앞" : r.position}`)),
         h("ul", { class: "rb-mem-reclist" }, [...(m.included ?? []).map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...(m.excluded ?? []).map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))),
         h("details", null, h("summary", null, "들어갈 글 전체"), h("pre", { class: "rb-mem-pre" }, r.text)),
-        h("p", { class: "rb-muted" }, "위키 기억(관련 인물 고르기·정리 노트)은 요청 직전에 AI가 골라서, 여기엔 Dusk 기억 블록만 보여요."));
+        h("p", { class: "rb-muted" }, "위키 기억(관련 인물 찾기·장면 정리)은 요청 직전에 AI가 골라서, 여기엔 Dusk 기억 블록만 보여요."));
     } catch (e) { replace(out, note("err", String(e?.message ?? e))); }
   };
   return h("details", { class: "rb-mem-man" }, h("summary", null, "다음 턴에 이렇게 들어가요 (미리보기)"), h("div", { class: "rb-mem-sact" }, btn("미리 보기", { onClick: run })), out);

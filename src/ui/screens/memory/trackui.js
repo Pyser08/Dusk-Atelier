@@ -16,7 +16,7 @@ export const trackableDocs = (wiki) => Object.values(wiki?.documents ?? {}).filt
 export async function openTracking(env) {
   const { ctx, bot } = env, M = ctx.memory;
   const st = tracked(ctx, await M.flow?.settings?.());
-  if (!st || st.status().blocked) return ctx.toast("기억 흐름 설정을 아직 쓸 수 없어요.", { error: true });
+  if (!st || st.status().blocked) return ctx.toast("자동 기록 설정을 아직 쓸 수 없어요.", { error: true });
   const live = liveScope(M, bot.id);
   if (!live) return ctx.toast("이 채팅을 리스에서 연 상태에서 설정할 수 있어요.", { error: true });
   const scope = M.flow.runtime?.()?.wiki?.scope, key = trackingScopeKey(scope);

@@ -12,7 +12,7 @@ import { RELATIONSHIP_HISTORY_MAX, relationshipHistoryLimit } from "../../../eng
 
 const num = (label, v, set, { min = 0, max = 200, step = 1 } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("input", { class: "rb-input", type: "number", min, max, step, value: v, onChange: (e) => { set(Math.min(max, Math.max(min, Math.round(Number(e.target.value) || 0)))); } }));
 const sec = (title, desc, ...kids) => { const [t, k = "all"] = Array.isArray(title) ? title : [title]; return h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, t, k ? scopeChip(k) : null), desc ? h("p", { class: "rb-muted" }, desc) : null, ...kids); };
-export const STAGE_NAMES = { router: "관련 인물 고르기", director: "정리 노트", writer: "기록하기" };
+export const STAGE_NAMES = { router: "관련 인물 찾기", director: "장면 정리", writer: "자동 기록" };
 
 // 지금 열려 있는 채팅의 리수폿 범위(없으면 null). 봇·채팅 단위 설정은 이 범위가 있어야 저장할 수 있다.
 export function liveScope(M, botId) {
@@ -31,10 +31,10 @@ export async function advancedGlobal(ctx, host, { redraw, st, apply }) {
     const sw = (title, text, key) => toggleRow(title, text, s[key] === true, (v) => ed((x) => { x[key] = v; }));
     const stageCtx = h("div", { class: "rb-mem-grid" }, ["router", "director", "writer"].map((k) => num(`${STAGE_NAMES[k]} · 최근 대화 턴`, s.stageContext?.[k] ?? 2, (n) => ed((x) => { x.stageContext[k] = n; }), { min: 0, max: 200 })));
     const adv = [
-      sec("흐름 세부", "기본값이면 충분해요. 바꾸면 다음 응답부터 적용돼요.",
-        h("div", { class: "rb-mem-field" }, h("span", null, "정리 노트의 역할"), segmented([["directing", "연출 지시"], ["facts", "사실만 전달"]], s.directorRole ?? "directing", (v) => ed((x) => { x.directorRole = v; }), "정리 노트 역할")),
+      sec("자동 기록 세부", "기본값이면 충분해요. 바꾸면 다음 응답부터 적용돼요.",
+        h("div", { class: "rb-mem-field" }, h("span", null, "장면 정리의 역할"), segmented([["directing", "연출 지시"], ["facts", "사실만 전달"]], s.directorRole ?? "directing", (v) => ed((x) => { x.directorRole = v; }), "장면 정리 역할")),
         stageCtx,
-        num("기록하기 입력 예산(토큰)", s.writerInputBudgetTokens ?? 48000, (n) => ed((x) => { x.writerInputBudgetTokens = Math.min(1000000, Math.max(1000, n)); }), { min: 1000, max: 1000000, step: 1000 }),
+        num("자동 기록 입력 예산(토큰)", s.writerInputBudgetTokens ?? 48000, (n) => ed((x) => { x.writerInputBudgetTokens = Math.min(1000000, Math.max(1000, n)); }), { min: 1000, max: 1000000, step: 1000 }),
         sw("본문 변경 검사", "켜면 응답 본문이 도중에 바뀐 경우 기록을 저장하지 않아요.", "writerSourceCheckEnabled"),
         sw("기존 인물 로어북 검색", "인물 후보를 찾을 때 로어북도 함께 살펴요.", "writerSearchExistingLore"),
         h("label", { class: "rb-mem-field" }, h("span", null, "고르기 키워드 고정 (쉼표·줄바꿈, 2,000자까지)"), h("textarea", { class: "rb-input", rows: 3, "aria-label": "고르기 키워드 고정", onChange: (e) => ed((x) => { x.routerFixedKeywords = e.target.value.slice(0, 2000); }) }, s.routerFixedKeywords ?? "")),
@@ -46,7 +46,7 @@ export async function advancedGlobal(ctx, host, { redraw, st, apply }) {
         sw("다른 NPC끼리의 감정·관계 기록", "나(user)가 아닌 인물 사이의 감정도 따라가요.", "npcRelationshipEnabled")),
       sec("실행 기록", "모델이 한 일을 남겨 두는 정도예요. 문제를 찾을 때만 ‘전부’로 바꾸세요.",
         segmented([["off", "안 남김"], ["errors", "오류만"], ["all", "전부"]], s.traceRecordingMode ?? "errors", (v) => ed((x) => { x.traceRecordingMode = v; }), "실행 기록")),
-      sec("리스 기본 메모리 참고 (Hypa)", "Dusk 장기기억이 대신하므로 보통은 꺼 두세요. 리스의 Hypa 요약을 같이 참고하고 싶을 때만 켜요.",
+      sec("리스 기본 메모리 참고 (Hypa)", "Dusk 기억이 대신하므로 보통은 꺼 두세요. 리스의 Hypa 요약을 같이 참고하고 싶을 때만 켜요.",
         segmented([["off", "안 씀"], ["hypa", "Hypa"], ["hypaplus", "Hypa+"]], s.hypaPlusReferenceEnabled ? "hypaplus" : s.hypaReferenceEnabled ? "hypa" : "off", (v) => ed((x) => { x.hypaReferenceEnabled = v === "hypa"; x.hypaPlusReferenceEnabled = v === "hypaplus"; }), "Hypa 참고"),
         num("참고할 항목 수", s.directorMemoryLimit ?? 16, (n) => ed((x) => { x.directorMemoryLimit = n; }), { min: 0, max: HYPA_REFERENCE_MAX_ITEMS })),
       transfer(ctx, st, redraw, apply),

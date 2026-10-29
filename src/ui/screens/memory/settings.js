@@ -30,8 +30,8 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
   const modeLabel = backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드";
 
   const flowHost = h("div"), shareHost = h("div");
-  const adv = h("details", { class: "rb-mem-man rb-mem-adv rb-mem-advfold", open: !!m.advOpen, onToggle: (e) => { m.advOpen = e.target.open; } }, h("summary", null, "고급: 기록·주입 세부 설정"),
-    section("기억 저장소", h("label", { class: "rb-mem-field" }, h("span", null, "저장소"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.backend = e.target.value; }).then(() => askRefresh(ctx)) }, [["auto", "자동"], ["local", "플러그인"], ["bardwiki", "BardWiki"], ["off", "끔"]].map(([v, l]) => h("option", { value: v, selected: S.backend === v }, l)))), h("p", { class: "rb-muted" }, "리스바드에서는 이중 비용을 막으려고 플러그인의 분석·주입을 끄고 위키를 읽어요. 바꾼 뒤에는 RisuAI를 다시 불러와야 훅에 반영돼요.")),
+  const adv = h("details", { class: "rb-mem-man rb-mem-adv rb-mem-advfold", open: !!m.advOpen, onToggle: (e) => { m.advOpen = e.target.open; } }, h("summary", null, "고급: 기록·기억 넣기 세부 설정"),
+    section("기억 저장소", h("label", { class: "rb-mem-field" }, h("span", null, "저장소"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.backend = e.target.value; }).then(() => askRefresh(ctx)) }, [["auto", "자동"], ["local", "플러그인"], ["bardwiki", "BardWiki"], ["off", "끔"]].map(([v, l]) => h("option", { value: v, selected: S.backend === v }, l)))), h("p", { class: "rb-muted" }, "리스바드에서는 이중 비용을 막으려고 플러그인의 분석·기억 넣기을 끄고 위키를 읽어요. 바꾼 뒤에는 RisuAI를 다시 불러와야 훅에 반영돼요.")),
     caps.analyze ? section("분석", h("label", { class: "rb-mem-field" }, h("span", null, "분석 모델"), mode, sid),
       num("보조 모델 제한시간(초, 기본 600)", () => S.modelTimeoutSec ?? 600, (s, v) => { s.modelTimeoutSec = Math.max(10, v); }, { min: 10, max: 3600, step: 10 }),
       h("label", { class: "rb-mem-field" }, h("span", null, "자동 기록 시점"), h("select", { class: "rb-input", "aria-label": "자동 기록 시점", onChange: (e) => save((s) => { s.confirm = e.target.value; s.potStore = { ...(s.potStore ?? {}), confirm: e.target.value }; }) }, [["next", "다음 입력을 보낼 때 (권장)"], ["now", "응답을 받은 직후"]].map(([v, l]) => h("option", { value: v, selected: (S.confirm === "now" ? "now" : "next") === v }, l)))),
@@ -39,13 +39,13 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
       num("디바운스(초)", () => S.debounceSec, (s, v) => { s.debounceSec = v; }, { max: 60 }), num("기록 시작 턴(1=첫 응답부터)", () => S.startTurn ?? 1, (s, v) => { s.startTurn = Math.max(1, v); }, { min: 1, max: 50 }), num("N턴마다 분석", () => S.everyN, (s, v) => { s.everyN = Math.max(1, v); }, { min: 1, max: 20 }),
       num("짧은 응답 기준(글자)", () => S.minChars, (s, v) => { s.minChars = v; }, { max: 2000 }), num("인물당 기록 상한", () => S.personCap, (s, v) => { s.personCap = Math.max(20, v); }, { min: 20, max: 2000 }),
       sw("전체 자동 기록", S.autoRecord !== false, (s, v) => { s.autoRecord = v; })) : null,
-    caps.inject || caps.analyze ? section("장기기억 주입", sw("주입 켜기", S.inject.on !== false, (s, v) => { s.inject.on = v; }),
+    caps.inject || caps.analyze ? section("기억 넣기", sw("기억 넣기 켜기", S.inject.on !== false, (s, v) => { s.inject.on = v; }),
       num("목표 토큰", () => S.inject.targetTokens, (s, v) => { s.inject.targetTokens = v; }, { min: 200, max: 8000 }), num("상한 토큰", () => S.inject.capTokens, (s, v) => { s.inject.capTokens = Math.max(v, s.inject.targetTokens); }, { min: 200, max: 12000 }),
-      num("주입 시작 턴", () => S.inject.fromTurn, (s, v) => { s.inject.fromTurn = Math.max(1, v); }, { min: 1, max: 50 }), num("이야기 요약 토큰", () => S.inject.eventTokens, (s, v) => { s.inject.eventTokens = v; }, { min: 0, max: 4000 }),
-      sw("확장 주입(열린 항목·관계 변화·지식 경계·원문 발췌·시각)", S.inject.plus !== false, (s, v) => { s.inject.plus = v; }), num("오래된 D·C 잊기(메시지 수, 0=끔)", () => S.inject.forgetAfter ?? 150, (s, v) => { s.inject.forgetAfter = v; }, { max: 5000, step: 10 }),
+      num("기억 넣기 시작 턴", () => S.inject.fromTurn, (s, v) => { s.inject.fromTurn = Math.max(1, v); }, { min: 1, max: 50 }), num("이야기 요약 토큰", () => S.inject.eventTokens, (s, v) => { s.inject.eventTokens = v; }, { min: 0, max: 4000 }),
+      sw("확장 기억 넣기(열린 항목·관계 변화·지식 경계·원문 발췌·시각)", S.inject.plus !== false, (s, v) => { s.inject.plus = v; }), num("오래된 D·C 잊기(메시지 수, 0=끔)", () => S.inject.forgetAfter ?? 150, (s, v) => { s.inject.forgetAfter = v; }, { max: 5000, step: 10 }),
       num("최근 메시지 겹침 제외(개)", () => S.inject.recentSkip, (s, v) => { s.inject.recentSkip = v; }, { max: 40 }),
       h("label", { class: "rb-mem-field" }, h("span", null, "삽입 위치"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.inject.position = e.target.value; }) }, [["beforeLastUser", "마지막 사용자 메시지 앞"], ["afterSystem", "시스템 프롬프트 뒤"]].map(([v, l]) => h("option", { value: v, selected: S.inject.position === v }, l)))),
-      h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 들어간 기억 보기"), man ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `주입함 (약 ${man.tokens} 토큰)` : "주입하지 않음"}`),
+      h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 들어간 기억 보기"), man ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `넣음 (약 ${man.tokens} 토큰)` : "넣지 않음"}`),
         h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요.")), potOn(S) ? previewBox(ctx) : null) : null);
   // 흐름 설정·공유 칸은 읽는 데 오래 걸려서 화면을 먼저 보여 주고 뒤에서 채운다. 접힌 설정은 처음 열 때 채운다.
   let loaded = false;
@@ -77,7 +77,7 @@ export function renderBotSettings(env) {
   const ignore = idx.bots[bot.id]?.ignore ?? [];
   const ignIn = h("input", { class: "rb-input", placeholder: "제외할 이름 추가 후 Enter", "aria-label": "제외 이름", onKeydown: (e) => { if (e.key === "Enter" && e.target.value.trim()) { const v = e.target.value.trim(); M.store.updateIndex((i) => { const b = i.bots[bot.id] ??= { on: true, ignore: [], fails: 0 }; b.ignore = [...new Set([...(b.ignore ?? []), v])]; }).then(env.redraw).catch(fail(ctx)); } } });
   const reset = async (scope) => {
-    const ok = await confirmDialog(ctx.win, { title: "기억 초기화", body: scope === "chat" ? "이 채팅의 기억을 모두 지워요." : scope === "bot" ? "이 봇의 모든 채팅 기억을 지워요." : "모든 봇의 장기 기억을 지워요.", ok: "지우기", danger: true }); if (!ok) return;
+    const ok = await confirmDialog(ctx.win, { title: "기억 초기화", body: scope === "chat" ? "이 채팅의 기억을 모두 지워요." : scope === "bot" ? "이 봇의 모든 채팅 기억을 지워요." : "모든 봇의 기억을 지워요.", ok: "지우기", danger: true }); if (!ok) return;
     try { if (scope === "chat") await M.store.deleteFolder(bot.id, chatItem.id); else if (scope === "bot") await M.store.deleteBot(bot.id); else await M.store.resetAll(); env.redraw(); } catch (e) { fail(ctx)(e); }
   };
 
@@ -111,7 +111,7 @@ export function renderBotAnalysis(env) {
     ctrl = new AbortController(); const start = btn("취소", { onClick: () => ctrl.abort() }); replace(prog, progressBar(0), start);
     try {
       const r = await M.runner.backfill(bot.index, chatItem.index, range(), { signal: ctrl.signal, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), start) });
-      failed = r.failed; ctx.toast(`일괄 분석이 끝났어요 (${r.total - r.failed.length}/${r.total}).`); env.redraw();
+      failed = r.failed; ctx.toast(`지난 대화 분석이 끝났어요 (${r.total - r.failed.length}/${r.total}).`); env.redraw();
     } catch (e) { fail(ctx)(e); env.redraw(); }
   };
   return section(["지난 대화 분석 (이 채팅 전체)", "chat"], h("div", { class: "rb-mem-range" }, from, "~", to), est, h("div", { class: "rb-mem-sact" }, btn("미처리만 분석", { kind: "primary", onClick: () => run() }), failed.length ? btn(`실패만 다시 (${failed.length})`, { onClick: () => run(true) }) : null), prog);

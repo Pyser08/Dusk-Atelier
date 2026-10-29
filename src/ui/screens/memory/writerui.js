@@ -29,7 +29,7 @@ export async function openWriter(env) {
   const { ctx } = env, chk = await toolsFor(env);
   if (!chk.tools) return ctx.toast(chk.why, { error: true });
   const w = chk.tools.writer;
-  if (!w) return ctx.toast("이 버전에서는 수동 Writer를 쓸 수 없어요.", { error: true });
+  if (!w) return ctx.toast("이 버전에서는 수동 기록을 쓸 수 없어요.", { error: true });
   let unsub = null;
   await modal(ctx.win, (done) => {
     const body = h("div");
@@ -60,6 +60,6 @@ export async function openWriter(env) {
     };
     unsub = w.subscribe(() => { if (!quiet) paint(); });
     return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(720px,96vw);max-height:90vh;overflow:auto" },
-      h("div", { class: "rb-mem-shead" }, h("h3", null, "수동 Writer · RP 붙여넣어 분석"), h("span", { style: "flex:1" }), btn("닫기", { onClick: close })), body);
+      h("div", { class: "rb-mem-shead" }, h("h3", null, "수동 기록 · RP 붙여넣어 분석"), h("span", { style: "flex:1" }), btn("닫기", { onClick: close })), body);
   });
 }

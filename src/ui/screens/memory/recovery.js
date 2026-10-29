@@ -17,8 +17,8 @@ export async function openRecovery(env) {
     const recoverPane = () => {
       const s = rec.status();
       return h("div", null,
-        h("p", { class: "rb-muted" }, "AI 응답이 깨져 기억에 못 들어갔을 때, 원문 JSON을 붙여넣고 진단·수리한 뒤 반영해요. 최근 Writer 기록에서 불러올 수도 있어요."),
-        s.records.length ? h("label", { class: "rb-mem-field" }, h("span", null, "최근 Writer 기록"), h("select", { class: "rb-input", onChange: (e) => { if (e.target.value) run(rec.fromTrace(e.target.value)); } },
+        h("p", { class: "rb-muted" }, "AI 응답이 깨져 기억에 못 들어갔을 때, 원문 JSON을 붙여넣고 진단·수리한 뒤 반영해요. 최근 자동 기록에서 불러올 수도 있어요."),
+        s.records.length ? h("label", { class: "rb-mem-field" }, h("span", null, "최근 자동 기록"), h("select", { class: "rb-input", onChange: (e) => { if (e.target.value) run(rec.fromTrace(e.target.value)); } },
           h("option", { value: "" }, "불러올 기록 고르기"), s.records.map((r) => h("option", { value: r.id, selected: r.id === s.recordId }, `${r.turn ?? "?"}턴 · ${when(r.at)} · ${r.status}`)))) : null,
         h("textarea", { class: "rb-input", rows: 8, "aria-label": "원문 JSON", value: s.json, onChange: (e) => rec.edit(e.target.value) }),
         s.busy ? h("p", { class: "rb-muted", role: "status" }, "처리 중…") : null,

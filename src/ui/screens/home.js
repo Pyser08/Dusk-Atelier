@@ -139,5 +139,29 @@ export async function renderHome(ctx) {
     h("button", { type: "button", class: "rb-btn ghost sm", onClick: () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록") }, icon("history", 14), `v${ctx.version} · 새로 바뀐 점`)
   );
   void dev;
-  replace(host, head, h("div", { class: "rb-hbody" }, h("div", { class: "rb-hmain" }, status, grid), recent), foot);
+  // 처음 한 번: 화면이 간단해졌다는 안내(숨은 세부 설정이 어디 있는지). 간단 모드이고, 둘러보기를 마친 사람에게만.
+  const noteDone = async () => {
+    try {
+      await ctx.prefs.saveUi({ simpleNoticeDone: true });
+    } catch {
+    }
+  };
+  const notice = !ctx.prefs.advanced && ctx.prefs.ui?.tourDone && !ctx.prefs.ui?.simpleNoticeDone ? h(
+    "div",
+    { class: "rb-simple-note", id: "rb-simple-note", role: "note" },
+    icon("info", 20),
+    h(
+      "div",
+      { class: "t" },
+      h("b", null, "필요한 것만 먼저 보여 드려요"),
+      h("span", null, "예전 세부 설정은 그대로 있어요. 설정 → 화면 모드 → 고급에서 볼 수 있어요."),
+      h(
+        "div",
+        { class: "acts" },
+        btn("고급 모드로 보기", { size: "sm", onClick: async () => { await noteDone(); ctx.setUiMode("advanced"); } }),
+        btn("알겠어요", { size: "sm", kind: "ghost", onClick: async () => { await noteDone(); redraw(); } })
+      )
+    )
+  ) : null;
+  replace(host, head, notice, h("div", { class: "rb-hbody" }, h("div", { class: "rb-hmain" }, status, grid), recent), foot);
 }

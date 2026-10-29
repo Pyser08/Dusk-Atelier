@@ -27,9 +27,9 @@ export async function renderModeBar(ctx, host, { redraw }) {
   const seg = segmented([["auto", "자동"], ["local", "플러그인"], ["bardwiki", "BardWiki"], ["off", "끔"]], S.backend ?? "auto", setBackend, "기억 저장소");
   const label = backend.id === "bardwiki" ? "BardWiki" : backend.id === "off" ? "꺼짐" : "플러그인";
   replace(host, h("section", { class: ["rb-card", "rb-mem-modebar"] },
-    h("div", { class: "rb-mem-mbrow" }, h("span", { class: "ic" }, icon("brain", 20)), h("div", { class: "t" }, h("b", null, "장기기억 방식"), h("small", { class: "rb-muted" }, `지금: ${label} · ${backend.reason}`))),
+    h("div", { class: "rb-mem-mbrow" }, h("span", { class: "ic" }, icon("brain", 20)), h("div", { class: "t" }, h("b", null, "기억 방식"), h("small", { class: "rb-muted" }, `지금: ${label} · ${backend.reason}`))),
     seg,
-    backend.duplicate ? note("warn", "BardWiki와 장기기억이 중복돼요. 비용이 두 번 들 수 있어요.") : null));
+    backend.duplicate ? note("warn", "BardWiki와 기억이 중복돼요. 비용이 두 번 들 수 있어요.") : null));
 }
 
 // 처음 설치했을 때 딱 한 번: 리스바드(BardWiki)가 감지되면 플러그인 기억으로 바꿀지 묻는다.

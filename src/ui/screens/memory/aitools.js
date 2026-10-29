@@ -17,7 +17,7 @@ const busy = (s) => s?.running || ["running", "applying"].includes(s?.phase);
 // 이 인물에 AI 도구를 쓸 수 있는지. 반환: {tools, scope} 또는 {why}
 export async function toolsFor(env) {
   const { ctx, bot, chatItem } = env, M = ctx.memory, tools = M.flow?.tools?.();
-  if (!tools) return { why: "기억 흐름이 켜져 있어야 해요. 설정에서 ‘장기기억 켜기’를 확인해 주세요." };
+  if (!tools) return { why: "기억이 켜져 있어야 해요. 기억 화면의 스위치를 확인해 주세요." };
   // 위키가 이 채팅에 아직 연결되지 않았으면(플러그인을 켠 뒤 응답을 받기 전) 지금 연다.
   let scope = liveScope(M, bot.id);
   if (!scope) { try { await M.flow.runtime()?.wiki?.refresh?.(); } catch { /* 아래에서 안내 */ } scope = liveScope(M, bot.id); }
@@ -135,7 +135,7 @@ export async function openImport(env) {
           h("ul", { class: "rb-mem-reclist" }, cands.map((c) => h("li", { class: "rb-mem-rec" }, h("label", { class: "rb-mem-check" },
             h("input", { type: "checkbox", checked: !!c.selected, disabled: !!c.ambiguous || running, onChange: (e) => imp.toggle(c.id, e.target.checked) }), h("b", null, c.name), (c.aliases ?? []).length ? h("small", { class: "rb-muted" }, ` · ${c.aliases.join(", ")}`) : null, c.ambiguous ? h("small", { class: "rb-muted" }, " · 이름이 겹쳐 고를 수 없어요") : null)))),
           h("div", { class: "rb-mem-sact" }, btn("고른 인물 반영", { kind: "primary", disabled: running || !cands.some((c) => c.selected), onClick: () => run(imp.applySelection()) }))) : null,
-        s.applyReport ? note("ok", "반영했어요. 닫으면 인물 위키에서 볼 수 있어요.") : null);
+        s.applyReport ? note("ok", "반영했어요. 닫으면 인물 화면에서 볼 수 있어요.") : null);
     };
     unsub = imp.subscribe(() => paint());
     return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(680px,96vw);max-height:90vh;overflow:auto" },

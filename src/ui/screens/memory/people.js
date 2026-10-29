@@ -51,7 +51,7 @@ export function peopleMenuItems(env, people) {
   const m = mem(env.ctx), { caps } = env;
   return [
     caps.analyze && { label: "인물 합치기", onClick: () => openMerge(env, people).catch(fail(env.ctx)) },
-    caps.analyze && { label: "RP 붙여넣어 분석 (수동 Writer)", onClick: () => openWriter(env).catch(fail(env.ctx)) },
+    caps.analyze && { label: "RP 붙여넣어 분석 (수동 기록)", onClick: () => openWriter(env).catch(fail(env.ctx)) },
     wikiEditable(env) && { label: "인물 폴더 정리", onClick: () => openFolders(env, people).catch(fail(env.ctx)) },
     caps.analyze && env.backend.id === "local" && { label: "추적 인물 고르기", onClick: () => openTracking(env).catch(fail(env.ctx)) },
     caps.analyze && { label: "합치기 되돌리기", onClick: () => restoreLastMerge(env).catch(fail(env.ctx)) },
@@ -153,7 +153,7 @@ export function personDetail(env, host, key, embedded = false) {
     embedded ? null : h("div", { class: "rb-mem-phead" }, btn("목록", { size: "sm", icon: "back", onClick: () => { m.personKey = ""; env.redraw(); } }), avatar(p.name, topGrade(p)), h("h3", null, p.name, guideBtn(env.ctx, "person")), (p.aliases ?? []).length ? h("span", { class: "rb-muted" }, `별칭: ${p.aliases.join(", ")}`) : null, h("span", { style: "flex:1" }),
       local && btn(p.pinned ? "고정됨" : "고정", { size: "sm", onClick: () => editFolder(env, (f) => { f.people[key].pinned = !f.people[key].pinned; }) }),
       local && btn({ always: "항상 포함", never: "제외", auto: "자동(관련 시)" }[p.ctx ?? (p.pinned ? "always" : "auto")], { size: "sm", title: "프롬프트 포함 방식: 자동 → 항상 → 제외", onClick: () => editFolder(env, (f) => { const q = f.people[key], c = q.ctx ?? (q.pinned ? "always" : "auto"); q.ctx = { auto: "always", always: "never", never: "auto" }[c]; }) }),
-      local && btn(isPaused(env.idx.bots?.[env.bot.id]?.ignore, p) ? "⏸ 기록 쉬는 중" : "⏸ 기록 쉬기", { size: "sm", title: "이 인물의 사건 기록을 새로 만들지 않아요. 이미 쌓인 기록은 그대로고, 인물 위키 수치는 계속 갱신될 수 있어요.", onClick: () => pausePerson(env, p) }),
+      local && btn(isPaused(env.idx.bots?.[env.bot.id]?.ignore, p) ? "⏸ 기록 쉬는 중" : "⏸ 기록 쉬기", { size: "sm", title: "이 인물의 사건 기록을 새로 만들지 않아요. 이미 쌓인 기록은 그대로고, 인물 수치는 계속 갱신될 수 있어요.", onClick: () => pausePerson(env, p) }),
       local && btn("별칭", { size: "sm", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: "별칭 편집", label: "쉼표로 구분", value: (p.aliases ?? []).join(", "), ok: "저장" }); if (v != null) editFolder(env, (f) => { f.people[key].aliases = v.split(",").map((s) => s.trim()).filter(Boolean); }); } }),
       local && doc && wikiEditable(env) && btn("항목 관리", { size: "sm", title: "항목 직접 추가·고치기·지우기 · NPC 감정", onClick: () => openRecords(env, doc).catch(fail(env.ctx)) }),
       env.advanced && local && doc && btn("AI 도구", { size: "sm", title: "전체 다시 정리 · 직접 지시 · 항목 AI 작성 · 수치 제안", onClick: () => openAITools(env, doc, p).catch(fail(env.ctx)) }),
