@@ -23,7 +23,7 @@ test("보야지 컨텍스트 형식", () => {
   const v = (x) => [x, 0, 0, 0];
   const res = { data: [{ index: 1, data: [{ index: 0, embedding: v(3) }] }, { index: 0, data: [{ index: 1, embedding: v(2) }, { index: 0, embedding: v(1) }] }] };
   assert.deepEqual(parseResponse(res, 3, true), [v(1), v(2), v(3)]); assert.equal(parseResponse(res, 2, true), null);
-  assert.equal(normCfg(null).model, "voyage-context-4");
+  assert.equal(normCfg(null).model, "voyage-4-large"); assert.equal(normCfg(null).url, "https://api.voyageai.com/v1/embeddings"); assert.ok(!isContextual(normCfg(null)));
   assert.ok(JSON.parse(buildRequest(normCfg({ url: "https://api.voyageai.com/v1", model: "voyage-4" }), "", ["x"]).body).input_type);
 });
 test("압축·유사도·가중치", () => {
@@ -57,7 +57,7 @@ test("embedder: 컨텍스트 모드는 인물별 묶음 + 장면은 query로 보
   const api = { safeLocalStorage: { getItem: async (k) => store[k] ?? null, setItem: async (k, v) => { store[k] = v; } },
     nativeFetch: async (u, o) => { const b = JSON.parse(o.body); seen.push(b); return { ok: true, json: async () => ({ data: b.inputs.map((g, i) => ({ index: i, data: g.map((t, j) => ({ index: j, embedding: /열쇠/.test(t) ? [1, 0, 0, 0] : [0, 1, 0, 0] })) })) }) }; } };
   const E = createEmbedder(api, { log() {} });
-  await E.save({ on: true, key: "K" });
+  await E.save({ on: true, key: "K", url: "https://api.voyageai.com/v1/contextualizedembeddings", model: "voyage-context-4" });
   const f = { people: { 하루: { name: "하루", records: [{ id: "a", act: "열쇠 발견" }, { id: "b", act: "차 마심" }] }, 미나: { name: "미나", records: [{ id: "c", act: "열쇠 숨김" }] } } };
   const s = await E.scores("g", f, "열쇠");
   assert.ok(s.get("a") > 0.9 && s.get("b") < 0.1 && s.get("c") > 0.9);

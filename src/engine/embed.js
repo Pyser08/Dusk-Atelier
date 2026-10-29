@@ -1,6 +1,6 @@
 // v1.7.1 임베딩(순수): 요청·응답 모양, 벡터 압축, 유사도, 검색 가중치. 네트워크·저장은 data/embed.js.
-// 기본값: 보야지(Voyage AI) 컨텍스트 임베딩. 계정당 200M 토큰 무료(voyage-context-4). voyage-context-3은 구형이라 무료 토큰이 없다.
-export const DEFAULT_EMBED = Object.freeze({ on: false, url: "https://api.voyageai.com/v1/contextualizedembeddings", model: "voyage-context-4", timeoutMs: 4000, minSim: 0.32 });
+// 기본값: 보야지(Voyage AI) voyage-4-large. 계정당 200M 토큰 무료. (컨텍스트 모델은 주소를 /contextualizedembeddings로 바꾸면 쓴다)
+export const DEFAULT_EMBED = Object.freeze({ on: false, url: "https://api.voyageai.com/v1/embeddings", model: "voyage-4-large", timeoutMs: 4000, minSim: 0.32 });
 const num = (v, d, lo, hi) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
 
 export function normCfg(c) {
