@@ -841,4 +841,17 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-cards2{flex:1;overflow:auto;padding:4px 22px 24px;display:flex;flex-direction:column;gap:12px}
 .rb-cards2-top{display:flex}.rb-cards2-pick{display:flex;flex-direction:column;gap:4px;width:100%;max-width:420px}.rb-cards2-pick small{font-size:12px;font-weight:700;color:var(--rb-sub)}
 .rb-cards2 .rb-mem-head{display:none}
+
+/* 도구 탭 '도움 주신 분들': 작고 조용하게 */
+.rb-thanks-sec{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;align-items:stretch}.rb-thanks-sec>.rb-label{grid-column:1/-1}
+.rb-thanks-sec .rb-credits{display:contents}
+.rb-thanks-sec .rb-thanks,.rb-thanks-sec .rb-cr{margin:0;padding:10px 12px;border-radius:12px;box-shadow:none;transform:none}
+.rb-thanks-sec .rb-thanks{padding-bottom:10px}.rb-thanks-sec .rb-thanks-waves,.rb-thanks-sec .rb-cr-fx{display:none}
+.rb-thanks-sec .rb-thanks-body,.rb-thanks-sec .rb-cr-body{gap:10px;align-items:center}
+.rb-thanks-sec .rb-thanks-emoji,.rb-thanks-sec .rb-cr-emoji{font-size:22px;animation:none;filter:none}
+.rb-thanks-sec .rb-thanks-kicker,.rb-thanks-sec .rb-cr-kicker{display:none}
+.rb-thanks-sec .rb-thanks-title,.rb-thanks-sec .rb-cr-title{font-size:14px;animation:none}
+.rb-thanks-sec .rb-thanks-text,.rb-thanks-sec .rb-cr-desc{font-size:11.5px;line-height:1.45}
+.rb-thanks-sec .rb-cr-link{margin-top:2px;padding:2px 8px;font-size:11px}
+@media (hover:hover){.rb-thanks-sec .rb-cr:hover{transform:none;box-shadow:none}}
 `+PROB_CSS;
