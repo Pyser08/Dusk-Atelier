@@ -86,7 +86,7 @@ function harness({ model = {} } = {}) {
   return { api, chat, hooks, calls, mem, say, folder, m };
 }
 const turnOn = async (h, mode = "fast") => {
-  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = mode; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });
+  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = mode; i.settings.confirm = "now"; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });
   assert.equal(await h.mem.start(), "local");
   assert.equal(h.mem.flow.isOn(), true);
 };
@@ -242,4 +242,45 @@ test("리스 기본 메모리(Hypa) 참고는 흐름을 켜면 항상 꺼진다 
   const snap = (await h.mem.flow.settings()).rawSnapshot();
   assert.equal(snap.hypaReferenceEnabled, false);
   assert.equal(snap.hypaPlusReferenceEnabled, false);
+});
+
+test("다음 입력 때 확정(기본): 응답 직후엔 기록하지 않고, 리롤은 건드리지 않으며, 다음 말을 보낼 때 직전 응답을 기록", async () => {
+  const h = harness();
+  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = "fast"; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });  // confirm은 기본(next)
+  assert.equal(await h.mem.start(), "local");
+  const request = (user) => { h.chat.message.push({ role: "user", data: user, chatId: "u" + h.chat.message.length }); return h.hooks["r:beforeRequest"]([{ role: "system", content: "샬레 세계관" }, { role: "user", content: user }], "model"); };
+  const reply = async (text, id) => { const idx = h.chat.message.length; h.chat.message.push({ role: "char", data: text, chatId: id }); h.hooks["c:output"]?.({ characterIndex: 0, chatIndex: 0, messageIndex: idx, chat: structuredClone(h.chat), char: await h.api.getCharacterFromIndex(0) }); h.hooks.output?.(text); return idx; };
+  const idle = () => !h.mem.flow.runtime()?.auto.scopeBusy("0:0") && !h.mem.flow.runtime()?.auto.processingKeys.size;
+  await request("시작하자");
+  const i1 = await reply(SCRIPT.T1.text, "a1");
+  await wait(400);
+  assert.equal(h.calls.length, 0, "응답 직후에는 기록하지 않는다");
+  await request("계속하자");  // 두 번째 입력 → T1 확정
+  assert.ok(await until(async () => (await h.folder())?.cursor?.at === i1 && idle()), "T1이 확정돼 기록돼야 함: " + JSON.stringify(h.mem.runner.session().tick));
+  assert.equal(h.calls.filter((c) => c.kind === "writer").length, 1);
+  assert.equal(h.calls.filter((c) => c.kind === "dusk").length, 0, "기록하기 호출에 Dusk 구획이 실려 따로 부르지 않는다");
+  await reply(SCRIPT.T2.text, "a2"); h.chat.message.pop(); const i3 = await reply(SCRIPT.T3.text, "a3");  // 리롤
+  await wait(400);
+  assert.equal(h.calls.length, 1, "리롤되는 응답은 기록하지 않는다");
+  await request("그다음은?");
+  assert.ok(await until(async () => (await h.folder())?.cursor?.at === i3 && idle()), "리롤된 최종 응답이 확정돼 기록돼야 함: " + JSON.stringify(h.mem.runner.session().tick));
+  assert.equal(h.calls.filter((c) => c.kind === "writer").length, 2);
+  const f = await h.folder();
+  assert.equal(Object.values(f.wiki.documents).filter((d) => d.title === "하야세 유우카").length, 1, "문서가 중복되지 않는다");
+});
+
+test("화면이 저장소에 직접 쓴 위키 문서(위키 없는 인물 만들기)가 런타임 위키 사본에 곧 반영된다", async () => {
+  const { createBlankPerson } = await import("../src/engine/wikiedit.js");
+  const h = harness(); await turnOn(h);
+  await h.say("계속하자 (1)", "T1");
+  const rt = () => h.mem.flow.runtime();
+  const titles = () => Object.values(rt().wiki.snapshot().documents).map((d) => d.title);
+  assert.ok(!titles().includes("새 인물"));
+  let notified = 0; h.mem.store.onWikiWritten(() => { notified++; });
+  await h.mem.store.updateFolder("ba", "t1", (f) => { f.wiki = createBlankPerson(f.wiki, "새 인물"); });  // 인물 위키 화면의 commit과 같은 경로
+  assert.equal(notified, 1, "화면의 직접 쓰기는 알린다");
+  assert.ok(await until(async () => titles().includes("새 인물")), "런타임 사본이 방금 만든 문서를 알아야 한다: " + titles().join(","));
+  const before = notified;
+  await h.say("계속하자 (2)", "T2");  // 런타임 자신의 저장(자동 기록)은 알리지 않는다
+  assert.equal(notified, before, "런타임이 자기 사본을 저장할 땐 알리지 않는다");
 });

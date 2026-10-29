@@ -8,7 +8,7 @@ export const EXT_PREFIX = "dusk.mem.v2.ext.";
 export const LEGACY_KEY = "dusk.episodic-memory.v1";
 
 export const DEFAULT_SETTINGS = Object.freeze({
-  autoRecord: true, startTurn: 1, debounceSec: 4, everyN: 1, minChars: 120, personCap: 300,
+  autoRecord: true, confirm: "next", startTurn: 1, debounceSec: 4, everyN: 1, minChars: 120, personCap: 300,  // confirm: next=다음 입력을 보낼 때 직전 응답을 확정해 기록(리롤 중인 응답은 건드리지 않음) | now=응답 직후
   model: { mode: "memory" }, modelTimeoutSec: 600, backend: "auto", potMode: true,
   inject: { on: true, m1: true, fromTurn: 1, targetTokens: 1200, capTokens: 2500, sceneTokens: 300, eventTokens: 600, recentSkip: 8, position: "beforeLastUser", plus: true, forgetAfter: 150, knowTokens: 160, openTokens: 160, relTokens: 140, srcTokens: 300 },
   loreRef: { on: false, tokens: 600 },

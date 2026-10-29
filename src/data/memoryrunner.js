@@ -1,5 +1,5 @@
 // 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 await 하지 않는다.
-import { extractMessageText, isUserMessage, hashText, isChatGenerating as isGenerating } from "../engine/chattext.js";
+import { extractMessageText, isUserMessage, hashText, confirmedAiIndex, isChatGenerating as isGenerating } from "../engine/chattext.js";
 import { analyze } from "../engine/memoryprompt.js";
 import { reconcile } from "../engine/memoryreconcile.js";
 import { loadReconciled } from "./memoryload.js";
@@ -12,6 +12,8 @@ import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engi
 
 const midOf = (m) => typeof m?.chatId === "string" && m.chatId && !m.chatId.startsWith("inherited:") ? m.chatId : null;
 const MAX_FAILS = 5;
+// 자동 기록 시점: next(기본) = 다음 입력을 보낼 때 직전 응답을 확정해 기록 | now = 응답 직후
+const confirmOf = (idx) => idx?.settings?.confirm === "now" ? "now" : "next";
 
 export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null } = {}) {
   let timer = null, dirty = false, running = false, started = false;
@@ -57,7 +59,7 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
   }
   // 리수폿 Writer 호출에 같이 실을 때 쓰는 준비물. 기록 대상이 아니면 null.
   async function prepareLatest(charIndex, chatIndex) {
-    const i = await latestAiIndex(charIndex, chatIndex); if (i < 0) return null;
+    const i = await targetIndex(charIndex, chatIndex, confirmOf(await store.getIndex())); if (i < 0) return null;
     const g = await gather(charIndex, chatIndex, [i]);
     if (gate(g, false)) return null;
     const existing = await loadReconciled(store, g.chaId, g.chatId, g.messages);  // 옛 장면·떡밥이 새 요약에 섞이지 않게 먼저 대조
@@ -123,6 +125,12 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     const chat = await api.getChatFromIndex(charIndex, chatIndex);
     const ai = aiIndexes(chat?.message ?? []); return ai.at(-1) ?? -1;
   }
+  // 이번에 기록할 응답: now면 가장 최근 AI 응답, next면 마지막 사용자 메시지 앞의 확정된 응답
+  async function targetIndex(charIndex, chatIndex, mode) {
+    if (mode === "now") return latestAiIndex(charIndex, chatIndex);
+    const chat = await api.getChatFromIndex(charIndex, chatIndex);
+    return confirmedAiIndex(chat?.message ?? []);
+  }
 
   // 메인 모델이 생성 중이면 2초마다 다시 확인한다(최대 3분). 훅이 다시 불리지 않아도 놓치지 않는다.
   const WAIT_MS = 180000;
@@ -132,26 +140,32 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     try {
       const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
       if (!(ci >= 0) || !(ti >= 0)) { note("nochat"); return; }
-      const character = await api.getCharacterFromIndex(ci);
-      if (isGenerating(character)) {
+      const character = await api.getCharacterFromIndex(ci), mode = confirmOf(await store.getIndex());
+      // 응답 직후(now) 방식은 생성이 끝나길 기다린다. 다음 입력(next) 방식은 이미 끝난 직전 응답을 보므로 기다리지 않는다.
+      if (mode === "now" && isGenerating(character)) {
         if (Date.now() - since < WAIT_MS) { note("generating"); running = false; timer = setTimeout(() => tick(since), retryMs); } else note("generating-timeout");
         return;
       }
-      const i = await latestAiIndex(ci, ti);
-      if (i < 0) { note("noai"); return; }
+      const i = await targetIndex(ci, ti, mode);
+      if (i < 0) { note(mode === "next" ? "noconfirmed" : "noai"); return; }
       if (link?.settle) await link.settle(ci, ti).catch(() => {});  // 리수폿 Writer가 같은 응답을 처리 중이면 끝날 때까지 기다려 호출을 합친다
       const r = await analyzeAt(ci, ti, [i]);
       note(typeof r === "string" ? r : "ok", { at_msg: i });
     } catch (e) { note("error", { error: String(e?.message ?? e).slice(0, 200) }); log("자동 분석 실패", e?.message ?? e); }
-    finally { if (running) running = false; if (dirty) schedule(); }
+    finally { if (running) running = false; if (dirty) schedule(lastKind).catch(() => {}); }
   }
-  async function schedule() {
-    clearTimeout(timer);
+  // kind: "output"(응답 직후 훅) | "confirm"(다음 입력을 보낼 때). 설정한 자동 기록 시점과 맞는 쪽만 일정을 잡는다.
+  let lastKind = "output";
+  async function schedule(kind = "output") {
     const idx = await store.getIndex().catch(() => null);
+    if ((kind === "confirm") !== (confirmOf(idx) === "next")) return;
+    clearTimeout(timer); dirty = true; lastKind = kind;
     const ms = Math.max(0, Number(idx?.settings?.debounceSec ?? 4) * 1000);
     timer = setTimeout(() => tick(), ms);
   }
-  const onOutput = (text) => { session.hooks++; session.hookAt = Date.now(); dirty = true; schedule().catch(() => {}); return text; };  // 본문은 그대로 반환
+  const onOutput = (text) => { session.hooks++; session.hookAt = Date.now(); schedule("output").catch(() => {}); return text; };  // 본문은 그대로 반환
+  // 사용자가 다음 말을 보내는 순간(요청 직전 훅)에 부른다: 직전 응답을 확정해 기록하기 시작한다.
+  const confirmNext = () => schedule("confirm");
   // 출력 훅이 안 불리는 환경 대비: 화면 갱신 때 30초에 한 번, 현재 채팅의 마지막 AI 응답이 최근 것이면 점검한다(같은 응답은 해시로 중복 방지).
   const onDisplay = (text) => {
     session.displays++;
@@ -207,6 +221,6 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     return { total: groups.length, failed };
   }
 
-  return { start, onOutput, tick, analyzeAt, prepareLatest, analyzeLatest: async (ci, ti) => { const i = await latestAiIndex(ci, ti); if (i < 0) throw new Error("분석할 AI 응답이 없어요."); return analyzeAt(ci, ti, [i], { manual: true }); },
+  return { start, onOutput, confirmNext, tick, analyzeAt, prepareLatest, analyzeLatest: async (ci, ti) => { const i = await latestAiIndex(ci, ti); if (i < 0) throw new Error("분석할 AI 응답이 없어요."); return analyzeAt(ci, ti, [i], { manual: true }); },
     planBackfill, backfill, digestIfNeeded, session: () => ({ ...session }), isStarted: () => started, stop: () => clearTimeout(timer) };
 }

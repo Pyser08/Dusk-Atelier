@@ -35,17 +35,23 @@ export function createMemoryStoreV3(api) {
   const readFolder = async (chaId, chatId) => { const f = await get(FOLDER_PREFIX + folderIdOf(chaId, chatId)); return f?.v === V3 ? f : null; };
   const blank = (chaId, chatId, extra) => ({ ...emptyFolder(chaId, chatId, extra), v: V3, wiki: null });
 
+  // 인물 위키가 '런타임(리수폿 컨트롤러) 밖'에서 바뀌었을 때 알리는 구독자. 화면이 저장소에 직접 쓴 위키를
+  // 기억 흐름 런타임의 사본이 모르면 방금 만든 문서를 AI 도구가 못 찾는다(v1.7.0).
+  const wikiListeners = new Set();
   return {
     serial,
     getIndex: () => readIndex(),
     updateIndex: (fn) => serial(async () => { const idx = await readIndex(); const r = await fn(idx); await set(INDEX_KEY, idx); return r; }),
     getFolder: readFolder,
-    // 임계구역 안에서 읽고-수정-쓰기. LLM 호출은 이 밖에서 할 것.
-    updateFolder: (chaId, chatId, fn, init = {}) => serial(async () => {
+    onWikiWritten: (fn) => { wikiListeners.add(fn); return () => wikiListeners.delete(fn); },
+    // 임계구역 안에서 읽고-수정-쓰기. LLM 호출은 이 밖에서 할 것. opts.fromRuntime: 런타임이 자기 사본을 저장하는 쓰기(알리지 않음)
+    updateFolder: (chaId, chatId, fn, init = {}, opts = {}) => serial(async () => {
       const idx = await readIndex();
       const folder = (await readFolder(chaId, chatId)) ?? blank(chaId, chatId, init);
+      const wiki0 = folder.wiki, rev0 = wiki0?.revision;
       const r = await fn(folder, idx);
       await writeFolder(idx, folder);
+      if (!opts.fromRuntime && folder.wiki && (folder.wiki !== wiki0 || folder.wiki.revision !== rev0)) for (const l of wikiListeners) { try { l(String(chaId), String(chatId)); } catch { /* 알림 실패는 저장에 영향 없음 */ } }
       return r;
     }),
     deleteFolder: (chaId, chatId) => serial(async () => {

@@ -24,7 +24,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 test("10 streaming output hook calls → exactly 1 analysis, text returned unchanged", async () => {
   const { api, store } = setup(); let calls = 0;
   const runner = createMemoryRunner(api, { store, call: async () => { calls++; return good; }, notify: () => {} });
-  await store.updateIndex((i) => { i.settings.debounceSec = 0.02; });
+  await store.updateIndex((i) => { i.settings.confirm = "now"; i.settings.debounceSec = 0.02; });
   assert.equal(await runner.start(), true);
   for (let i = 0; i < 10; i++) assert.equal(api.hooks.output("본문" + i), "본문" + i);
   await wait(150);
@@ -39,7 +39,7 @@ test("10 streaming output hook calls → exactly 1 analysis, text returned uncha
 test("bot switched off → 0 calls; short responses skipped", async () => {
   const { api, store, chat } = setup(); let calls = 0;
   const runner = createMemoryRunner(api, { store, call: async () => { calls++; return good; } });
-  await store.updateIndex((i) => { i.settings.debounceSec = 0.01; i.bots.c1 = { on: false }; });
+  await store.updateIndex((i) => { i.settings.confirm = "now"; i.settings.debounceSec = 0.01; i.bots.c1 = { on: false }; });
   await runner.start(); api.hooks.output("x"); await wait(80);
   assert.equal(calls, 0);
   await store.updateIndex((i) => { i.bots.c1.on = true; });
@@ -50,7 +50,7 @@ test("waits while the main model is generating, then analyzes", async () => {
   const { api, store, chat } = setup(); let calls = 0;
   chat.isStreaming = true;
   const runner = createMemoryRunner(api, { store, retryMs: 20, call: async () => { calls++; return good; } });
-  await store.updateIndex((i) => { i.settings.debounceSec = 0.01; });
+  await store.updateIndex((i) => { i.settings.confirm = "now"; i.settings.debounceSec = 0.01; });
   await runner.start(); api.hooks.output("x"); await wait(60);
   assert.equal(calls, 0);
   chat.isStreaming = false; await wait(80);
@@ -59,7 +59,7 @@ test("waits while the main model is generating, then analyzes", async () => {
 test("5 consecutive failures pause the bot and notify", async () => {
   const { api, store, chat } = setup(); let calls = 0, note = "";
   const runner = createMemoryRunner(api, { store, notify: (t) => { note = t; }, call: async () => { calls++; return "not json"; } });
-  await store.updateIndex((i) => { i.settings.debounceSec = 0.01; });
+  await store.updateIndex((i) => { i.settings.confirm = "now"; i.settings.debounceSec = 0.01; });
   await runner.start();
   for (let n = 0; n < 6; n++) { chat.message[1].chatId = "m" + n; chat.message[1].data = LONG + n; api.hooks.output("x"); await wait(70); }
   assert.equal((await store.getIndex()).bots.c1.paused, true);
@@ -110,7 +110,7 @@ test("display hook alone triggers a check for a fresh response (output hook neve
   const { api, store, chat } = setup(); let calls = 0;
   chat.message[1].time = Date.now();
   const runner = createMemoryRunner(api, { store, call: async () => { calls++; return good; } });
-  await store.updateIndex((i) => { i.settings.debounceSec = 0.01; });
+  await store.updateIndex((i) => { i.settings.confirm = "now"; i.settings.debounceSec = 0.01; });
   await runner.start();
   assert.equal(api.hooks.display("화면"), "화면");
   await wait(120);
@@ -123,7 +123,7 @@ test("display hook ignores old chats (last AI message older than 10 minutes)", a
   const { api, store, chat } = setup(); let calls = 0;
   chat.message[1].time = Date.now() - 30 * 60e3;
   const runner = createMemoryRunner(api, { store, call: async () => { calls++; return good; } });
-  await store.updateIndex((i) => { i.settings.debounceSec = 0.01; });
+  await store.updateIndex((i) => { i.settings.confirm = "now"; i.settings.debounceSec = 0.01; });
   await runner.start(); api.hooks.display("x"); await wait(100);
   assert.equal(calls, 0);
 });
@@ -131,7 +131,7 @@ test("keeps waiting for a long generation (more than 5 retries) and records diag
   const { api, store, chat } = setup(); let calls = 0;
   chat.isStreaming = true;
   const runner = createMemoryRunner(api, { store, retryMs: 10, call: async () => { calls++; return good; } });
-  await store.updateIndex((i) => { i.settings.debounceSec = 0.01; });
+  await store.updateIndex((i) => { i.settings.confirm = "now"; i.settings.debounceSec = 0.01; });
   await runner.start(); api.hooks.output("x"); await wait(150);
   assert.equal(calls, 0);
   assert.equal(runner.session().tick.result, "generating");
@@ -143,7 +143,36 @@ test("keeps waiting for a long generation (more than 5 retries) and records diag
 test("skip reasons are visible in diagnostics (short response)", async () => {
   const { api, store, chat } = setup();
   const runner = createMemoryRunner(api, { store, call: async () => good });
-  await store.updateIndex((i) => { i.settings.debounceSec = 0.01; });
+  await store.updateIndex((i) => { i.settings.confirm = "now"; i.settings.debounceSec = 0.01; });
   await runner.start(); chat.message[1].data = "짧아요"; chat.message[1].chatId = "mm"; api.hooks.output("x"); await wait(80);
   assert.equal(runner.session().tick.result, "short");
+});
+
+test("default timing (next input): output hook alone never analyzes; the next input confirms the previous reply; rerolls are left alone", async () => {
+  const { api, store, chat } = setup(); let calls = 0;
+  const runner = createMemoryRunner(api, { store, call: async () => { calls++; return good; } });
+  await store.updateIndex((i) => { i.settings.debounceSec = 0.01; });  // confirm은 기본값(next)
+  await runner.start();
+  api.hooks.output("x"); api.hooks.display("x"); await wait(80);
+  assert.equal(calls, 0, "응답 직후에는 기록하지 않는다");
+  chat.message.push({ role: "user", data: "다음 말" });  // 다음 입력을 보냄
+  await runner.confirmNext(); await wait(120);
+  assert.equal(calls, 1);
+  const f1 = await store.getFolder("c1", "t1"); assert.equal(f1.cursor.at, 1); assert.equal(f1.scenes.length, 1);
+  // 새 응답 → 리롤 두 번: 다음 입력 전에는 아무것도 하지 않는다
+  chat.message.push({ role: "char", data: LONG + " 새 응답", chatId: "m2" }); api.hooks.output("x"); await wait(60);
+  chat.message[3] = { role: "char", data: LONG + " 리롤된 응답", chatId: "m3" }; api.hooks.output("x"); await wait(60);
+  assert.equal(calls, 1, "리롤되는 응답은 기록하지 않는다");
+  chat.message.push({ role: "user", data: "또 다음 말" });
+  await runner.confirmNext(); await wait(120);
+  assert.equal(calls, 2); const f2 = await store.getFolder("c1", "t1"); assert.equal(f2.cursor.at, 3);
+  await runner.confirmNext(); await wait(120);
+  assert.equal(calls, 2, "같은 응답은 다시 분석하지 않는다");
+});
+test("immediate timing (now): confirmNext does nothing", async () => {
+  const { api, store } = setup(); let calls = 0;
+  const runner = createMemoryRunner(api, { store, call: async () => { calls++; return good; } });
+  await store.updateIndex((i) => { i.settings.confirm = "now"; i.settings.debounceSec = 0.01; });
+  await runner.start(); await runner.confirmNext(); await wait(80);
+  assert.equal(calls, 0);
 });

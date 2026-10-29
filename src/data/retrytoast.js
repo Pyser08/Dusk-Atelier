@@ -39,16 +39,19 @@ export function createRetryToast(api, { onRetry, onOpen, scheduler = globalThis,
 }
 
 // 자동 기록이 끝났을 때 토스트를 띄울지 가른다. 위키 문서가 하나도 없거나, 수치가 비어 있는 인물이 둘 이상이면 알린다.
+// 반환: null(알리지 않음) 또는 {text, retry, kind}. retry=false면 '다시 시도' 버튼을 숨긴다(다시 해도 결과가 같은 경우).
 export function judgeAutoResult({ phase, message = "", scope = null }) {
-  if (phase === "failed" || phase === "manual") {
-    if (/자동 재시도 \d\/2/.test(message)) return null;  // 곧 스스로 다시 시도한다
-    if (/리롤|삭제되어|RP 본문이 바뀌어/.test(message)) return null;
-    return { text: "인물 위키 자동 기록이 실패했어요. 다시 시도할까요?" };
+  if (/자동 재시도 \d\/2/.test(message)) return null;  // 곧 스스로 다시 시도한다
+  if (/리롤|삭제되어|RP 본문이 바뀌어/.test(message)) return null;
+  if (phase === "manual") {  // 사람이 확인해야 하는 상태: 다시 시도해도 같은 결과라 버튼을 숨긴다
+    if (/이전 자동 변경 이후|안전하게 되돌릴 수 없/.test(message)) return { kind: "conflict", retry: false, text: "이 응답을 고치기 전의 자동 기록이 있는데, 그 뒤에 인물 문서를 직접 고쳐서 자동으로 되돌릴 수 없어요. 인물 문서를 확인해 주세요." };
+    return { kind: "manual", retry: false, text: String(message).replace(/^수동 확인 필요\s*·\s*/, "").trim().slice(0, 200) || "이 응답은 자동 기록하지 않았어요. 필요하면 직접 확인해 주세요." };
   }
+  if (phase === "failed") return { kind: "failed", retry: true, text: "인물 위키 자동 기록이 실패했어요. 다시 시도할까요?" };
   if (phase !== "completed" || !scope) return null;
   const chars = Object.values(scope.documents ?? {}).filter((d) => d?.type === "Character");
-  if (!chars.length) return { text: "인물 위키 문서가 아직 만들어지지 않았어요. 다시 시도할까요?" };
+  if (!chars.length) return { kind: "empty", retry: true, text: "인물 위키 문서가 아직 만들어지지 않았어요. 다시 시도할까요?" };
   const noMetric = chars.filter((d) => !(d.metrics ?? []).length);
-  if (noMetric.length >= 2) return { text: `수치 상태가 비어 있는 인물이 ${noMetric.length}명이에요(${noMetric.slice(0, 3).map((d) => d.title).join(", ")}). 다시 시도할까요?` };
+  if (noMetric.length >= 2) return { kind: "nometric", retry: true, text: `수치 상태가 비어 있는 인물이 ${noMetric.length}명이에요(${noMetric.slice(0, 3).map((d) => d.title).join(", ")}). 다시 시도할까요?` };
   return null;
 }

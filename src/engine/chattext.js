@@ -4,6 +4,15 @@ const txt = (v) => typeof v === "string" ? v : Array.isArray(v) ? v.map((p) => t
 export const extractMessageText = (m) => [m?.data, m?.content, m?.text, m?.mes, m?.message].map(txt).find((v) => v.trim()) ?? "";
 export const isUserMessage = (m) => m?.role === "user" || m?.isUser === true || m?.is_user === true || m?.type === "user" || m?.role === "human";
 
+// 확정된 AI 응답의 위치: 마지막 사용자 메시지 바로 앞의 (비어 있지 않은) AI 응답. 없으면 -1.
+// 사용자가 다음 말을 보냈다는 건 직전 응답을 받아들였다는 뜻이라, 그 응답은 더 리롤되지 않는다.
+export function confirmedAiIndex(messages) {
+  const list = messages ?? []; let u = -1;
+  for (let i = list.length - 1; i >= 0; i--) if (isUserMessage(list[i])) { u = i; break; }
+  for (let i = u - 1; i >= 0; i--) if (!isUserMessage(list[i]) && extractMessageText(list[i]).trim()) return i;
+  return -1;
+}
+
 // 앵커용 짧은 해시 (본문 앞 200자, 비암호용 FNV-1a 32비트).
 export function hashText(text, len = 200) {
   const s = String(text ?? "").replace(/\s+/g, " ").trim().slice(0, len);

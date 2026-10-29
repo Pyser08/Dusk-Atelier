@@ -24,6 +24,11 @@ export async function toolsFor(env) {
   const [ci, ti] = await Promise.all([ctx.api.getCurrentCharacterIndex().catch(() => -1), ctx.api.getCurrentChatIndex().catch(() => -1)]);
   if (ci !== bot.index || ti !== chatItem.index) return { why: "리스에서 열려 있는 채팅과 지금 고른 채팅이 달라요. 위에서 열려 있는 채팅을 골라 주세요." };
   if (!scope) return { why: "이 채팅의 위키를 아직 열지 못했어요. 응답을 한 번 받은 뒤 다시 눌러 주세요." };
+  // 저장소에는 있는데 런타임 위키 사본에 없는 문서(방금 만든 문서)가 있으면 사본을 다시 읽는다. 안 그러면 "저장을 완료한 뒤" 안내로 잘못 막힌다.
+  try {
+    const rt = M.flow.runtime(), snap = rt?.wiki?.snapshot?.(), stored = Object.keys(env.folder?.wiki?.documents ?? {});
+    if (snap && stored.some((id) => !snap.documents?.[id])) { await rt.wiki.refresh(); scope = liveScope(M, bot.id) ?? scope; }
+  } catch { /* 컨트롤러가 직접 안내한다 */ }
   return { tools, scope };
 }
 

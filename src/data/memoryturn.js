@@ -19,6 +19,7 @@ import { potModels } from "../engine/modelcfg.js";
 import { recallFor, mergeMemory } from "../engine/recall.js";
 import { createRetryToast, judgeAutoResult } from "./retrytoast.js";
 import { loadReconciled } from "./memoryload.js";
+import { confirmedAiIndex, extractMessageText, hashText } from "../engine/chattext.js";
 import { appendDuskSection, splitDusk, checkDusk, SECTION_MARK } from "../engine/duskwriter.js";
 import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
 import { makeTools } from "./memorytools.js";
@@ -92,7 +93,7 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
       seen = key;
       let scope = null; try { scope = wiki.snapshot(); } catch { /* 아직 준비 전 */ }
       const verdict = judgeAutoResult({ phase: st.phase, message: st.message, scope });
-      if (verdict) toast.show(verdict.text).catch(() => {}); else toast.hide().catch(() => {});
+      if (verdict) toast.show(verdict.text, { retry: verdict.retry !== false }).catch(() => {}); else toast.hide().catch(() => {});
     });
     const main = new MainWikiHook(api, settings, wiki, keys, libFor("fast"), auto, null, trace);
     main.llmCall = stageCall;
@@ -120,9 +121,29 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
       try { out = await main.before(messages, type); } catch (e) { log("위키 주입 실패", e?.message ?? e); }
       const focus = main.last?.at !== before ? (main.last?.documents ?? []).map((d) => d.title) : [];
       lastTurn = { ...(lastTurn ?? {}), at: Date.now(), focus, mode: main.last?.actualMode ?? "", director: main.last?.director?.status ?? "idle" };
-      return pure ? out : injector.beforeRequest(out, type, { focus });
+      const result = pure ? out : await injector.beforeRequest(out, type, { focus });
+      if (!type || type === "model") confirmPrevious().catch((e) => log("직전 응답 확정 실패", e?.message ?? e));  // 요청은 기다리지 않는다
+      return result;
     };
+    // 자동 위키 기록 시점. 기본(next)은 사용자가 다음 말을 보낼 때 직전 응답을 확정해 기록한다(리롤 중인 응답은 건드리지 않음).
+    // 설정이 now(응답 직후)면 예전처럼 출력 훅에서 바로 기록한다.
+    const confirmed = new Set();  // 이미 기록을 맡긴 응답(같은 응답으로 요청마다 다시 맡기지 않는다)
+    async function confirmPrevious() {
+      if ((await store.getIndex()).settings.confirm === "now") return;
+      const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
+      if (!(ci >= 0) || !(ti >= 0)) return;
+      const char = await api.getCharacterFromIndex(ci), chat = await api.getChatFromIndex(ci, ti);
+      const messageIndex = confirmedAiIndex(chat?.message ?? []); if (messageIndex < 0) return;
+      const m = chat.message[messageIndex], key = `${ci}:${ti}:${messageIndex}:${m?.chatId ?? m?.id ?? ""}:${hashText(extractMessageText(m))}`;
+      if (confirmed.has(key)) return;
+      confirmed.add(key); if (confirmed.size > 50) confirmed.delete(confirmed.keys().next().value);
+      auto.schedule({ chat, char, characterIndex: ci, chatIndex: ti, messageIndex });
+    }
     const hooks = new RuntimeHookManager(api, auto, main, { scheduler });
+    hooks.chatListener = (arg) => {  // 출력 훅: now일 때만 바로 기록
+      main.clearDirectorCache?.();
+      store.getIndex().then((idx) => { if (idx.settings.confirm === "now") auto.onOutput(arg); }).catch(() => auto.onOutput(arg));
+    };
     return { settings, wiki, auto, main, hooks, trace, keys, stageCall };
   }
 

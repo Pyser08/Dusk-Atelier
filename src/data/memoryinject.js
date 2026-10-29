@@ -4,7 +4,8 @@ import { buildBlock, insertBlock, injectVerdict, upsertLoreEntry } from "../engi
 import { stateText } from "../engine/storytime.js";
 import { loadReconciled } from "./memoryload.js";
 
-export function createMemoryInjector(api, { store, storyNow = null, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
+// onRequest: 메인 모델 요청 직전에 부른다(기다리지 않음). 러너가 '다음 입력 때 직전 응답 확정'을 시작하는 데 쓴다.
+export function createMemoryInjector(api, { store, storyNow = null, onRequest = null, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
   let last = null, mode = "none";
 
   async function current() {
@@ -43,6 +44,7 @@ export function createMemoryInjector(api, { store, storyNow = null, log = (...a)
       if (type && type !== "model") return messages;
       const cur = await current(); if (!cur) return messages;
       const c = await compose(cur, { focus });
+      try { Promise.resolve(onRequest?.()).catch(() => {}); } catch { /* 요청을 막지 않는다 */ }
       if (!c?.text) { last = { at: Date.now(), injected: false, manifest: c?.manifest ?? null, reason: c?.reason ?? "" }; return messages; }
       last = { at: Date.now(), injected: true, manifest: c.manifest, text: c.text };
       return insertBlock(messages, c.text, c.position);

@@ -32,7 +32,7 @@ export function createPotStorage(api, store) {
           f.wiki = clone(value);
           if (sc?.characterName) f.botName ||= sc.characterName;
           if (sc?.chatName) f.chatName ||= sc.chatName;
-        }, { botName: sc?.characterName ?? "", chatName: sc?.chatName ?? "" });
+        }, { botName: sc?.characterName ?? "", chatName: sc?.chatName ?? "" }, { fromRuntime: true });
         return;
       }
       return raw.setItem(key, value);
@@ -43,7 +43,7 @@ export function createPotStorage(api, store) {
       const ids = scopeIdsOf(key);
       if (ids) {
         if (!(await store.getFolder(ids[0], ids[1]))) return;  // 없던 폴더를 새로 만들지 않는다
-        await store.updateFolder(ids[0], ids[1], (f) => { f.wiki = null; });
+        await store.updateFolder(ids[0], ids[1], (f) => { f.wiki = null; }, {}, { fromRuntime: true });
         return;
       }
       return raw.removeItem?.(key);
