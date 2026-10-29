@@ -9,13 +9,13 @@ const SHOTS = process.env.SHOTS;
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 const out = [], ok = (n, c, x = "") => { out.push(c); console.log((c ? "✔ " : "✘ ") + n + (c ? "" : "  → " + x)); };
 const browser = await chromium.launch();
-const boot = async (ctx, seed = {}) => {
+const boot = async (ctx, seed = {}, opts = {}) => {
   const page = await ctx.newPage(); page.setDefaultTimeout(5000);
   page.on("pageerror", (e) => (page.__errs ??= []).push(e.message));
   await page.setContent("<!doctype html><meta name=viewport content=\"width=device-width,initial-scale=1\"><body style='margin:0'></body>");
   await page.addScriptTag({ content: r.outputFiles[0].text });
   // 처음 둘러보기·새로 바뀐 점 창이 화면을 가리지 않게 '이미 본 버전'으로 시작한다
-  await page.evaluate((s) => window.bootApp({ "rbm:seenVersion:v1": "1.7.0-dev", ...s }), seed);
+  await page.evaluate(([s, o]) => window.bootApp({ "rbm:seenVersion:v1": "1.7.0-dev", ...s }, o), [seed, opts]);
   await page.waitForTimeout(250);
   return page;
 };
@@ -87,4 +87,13 @@ const names = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(
   ok("[모바일] 가로로 안 넘침", await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   ok("[모바일] 오류 없음", !(page.__errs?.length) && !(await page.evaluate(() => __errors.length)), (page.__errs ?? []).join(";"));
   await ctx.close(); }
+// ── 기억 탭(실제 저장소 연결): 2단계 데이터 변경 뒤에도 기존 화면이 그대로 그려지는지 ──
+for (const [tag, vp, extra] of [["PC", { width: 1280, height: 800 }, {}], ["모바일", { width: 390, height: 800 }, { hasTouch: true, isMobile: true }]]) {
+  const ctx = await browser.newContext({ viewport: vp, ...extra });
+  const page = await boot(ctx, {}, { memory: true });
+  await go(page, "기억"); await page.waitForTimeout(500);
+  ok(`[${tag}] 기억 탭이 오류 없이 그려짐(스위치·상태 카드)`, (await page.locator(".rb-mem-root").count()) === 1 && (await page.locator(".rb-mem-root .rb-switch").count()) >= 1 && !(page.__errs?.length), (page.__errs ?? []).join(";"));
+  await shot(page, `${tag === "PC" ? "pc" : "m"}-6-memory`);
+  await ctx.close();
+}
 await browser.close(); process.exit(out.every(Boolean) ? 0 : 1);

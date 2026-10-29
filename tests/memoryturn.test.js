@@ -86,7 +86,7 @@ function harness({ model = {} } = {}) {
   return { api, chat, hooks, calls, mem, say, folder, m };
 }
 const turnOn = async (h, mode = "fast") => {
-  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = mode; i.settings.confirm = "now"; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });
+  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = mode; i.settings.confirm = "now"; i.settings.potStore = { ...i.settings.potStore, confirm: "now" }; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });
   assert.equal(await h.mem.start(), "local");
   assert.equal(h.mem.flow.isOn(), true);
 };
@@ -283,4 +283,31 @@ test("화면이 저장소에 직접 쓴 위키 문서(위키 없는 인물 만�
   const before = notified;
   await h.say("계속하자 (2)", "T2");  // 런타임 자신의 저장(자동 기록)은 알리지 않는다
   assert.equal(notified, before, "런타임이 자기 사본을 저장할 땐 알리지 않는다");
+});
+
+// ── v1.7.0 2단계: 봇별 리수폿 끄기 · 기록 시점 분리 ──
+test("이 봇에서 리수폿만 끄면: 위키 호출·기록은 없고 Dusk 기억은 따로 계속 쌓인다 → 다시 켜면 위키가 쌓인다", async () => {
+  const h = harness(); await turnOn(h);
+  await h.mem.store.updateIndex((i) => { i.potBots = { ba: false }; });
+  await h.say("시작하자", "T1");
+  assert.equal(h.calls.filter((c) => c.kind === "writer").length, 0, "리수폿 기록하기 호출이 없다");
+  assert.ok(h.calls.filter((c) => c.kind === "dusk").length >= 1, "Dusk 기억은 따로 호출해서 쌓는다");
+  let f = await h.folder();
+  assert.ok(f.people[personKey("하야세 유우카")]?.records.length >= 1, "기억은 쌓였다");
+  assert.equal(Object.keys(f.wiki?.documents ?? {}).length, 0, "위키 문서는 만들어지지 않았다");
+  await h.mem.switches.setPot("ba", true);
+  await h.say("계속하자", "T2");
+  f = await h.folder();
+  assert.ok(h.calls.some((c) => c.kind === "writer"), "다시 켜면 기록하기가 돈다");
+  assert.ok(Object.keys(f.wiki.documents).length >= 1, "위키 문서가 쌓인다");
+});
+test("기록 시점이 따로: 리수폿은 응답 직후(now), 기억은 다음 입력 때(next)로 둘 수 있다", async () => {
+  const h = harness();
+  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = "fast"; i.settings.confirm = "next"; i.settings.potStore = { backend: "auto", confirm: "now" }; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });
+  assert.equal(await h.mem.start(), "local");
+  const idx = h.chat.message.length; h.chat.message.push({ role: "user", data: "시작하자", chatId: "u0" });
+  await h.hooks["r:beforeRequest"]([{ role: "system", content: "샬레 세계관" }, { role: "user", content: "시작하자" }], "model");
+  h.chat.message.push({ role: "char", data: SCRIPT.T1.text, chatId: "a1" });
+  h.hooks["c:output"]?.({ characterIndex: 0, chatIndex: 0, messageIndex: idx + 1, chat: structuredClone(h.chat), char: await h.api.getCharacterFromIndex(0) });
+  assert.ok(await until(async () => h.calls.some((c) => c.kind === "writer")), "리수폿은 응답 직후 바로 기록한다(now)");
 });

@@ -6,6 +6,7 @@ import { createBardWikiBackend } from "./memorybackend-bardwiki.js";
 import { selectBackend, capabilitiesOf } from "./memorybackend.js";
 import { createCardStore } from "./cardstore.js";
 import { createTurnFlow } from "./memoryturn.js";
+import { createSwitches } from "./memoryswitches.js";
 
 export function createMemory(api, { storyNow = null, notify = () => {}, log = (...a) => console.log("[Dusk 기억]", ...a), potLibrary = null, onOpen = null } = {}) {
   const store = createMemoryStore(api);
@@ -48,5 +49,6 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
     if (sel.duplicate) notify("BardWiki와 장기기억이 중복돼요. 비용이 두 번 들 수 있어요.");
     return active;
   }
-  return { store, link, cards, runner, injector, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, start, active: () => active };
+  const switches = createSwitches({ api, store, flow });
+  return { store, link, cards, runner, injector, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, active: () => active };
 }

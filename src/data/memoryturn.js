@@ -23,6 +23,7 @@ import { confirmedAiIndex, extractMessageText, hashText } from "../engine/chatte
 import { appendDuskSection, splitDusk, checkDusk, SECTION_MARK } from "../engine/duskwriter.js";
 import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
 import { makeTools } from "./memorytools.js";
+import { potConfirm, potOffForBot } from "../engine/memoryswitch.js";
 
 const READONLY = new Set(["writer_schema", "director_schema", "slots", "policies"]);
 export const promptKeysOf = (lib) => Object.entries(lib).flatMap(([id, parts]) => Object.keys(parts).filter((p) => !READONLY.has(p)).map((p) => `${id}:${p}`));
@@ -114,12 +115,22 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
         return mergeMemory(memory, r);
       } catch (e) { log("회상 실패", e?.message ?? e); return memory; }
     };
+    // 이 봇에서 리수폿만 따로 껐는지(v3.1 봇별 끄기). 끈 봇이 하나도 없으면 봇 정보를 읽지 않는다.
+    const botPotOff = async () => {
+      try {
+        const idx = await store.getIndex();
+        if (!Object.keys(idx.potBots ?? {}).length) return false;
+        const c = await api.getCharacterFromIndex(await api.getCurrentCharacterIndex());
+        return potOffForBot(idx, c?.chaId);
+      } catch { return false; }
+    };
     // 요청 직전 훅은 하나만: 위키(고르기·정리 노트) → Dusk 블록
     main.listener = async (messages, type) => {
       const before = main.last?.at;
       let out = messages;
-      try { out = await main.before(messages, type); } catch (e) { log("위키 주입 실패", e?.message ?? e); }
-      const focus = main.last?.at !== before ? (main.last?.documents ?? []).map((d) => d.title) : [];
+      const potOff = await botPotOff();  // 리수폿이 꺼진 봇은 위키 주입을 건너뛴다(기억은 그대로)
+      if (!potOff) { try { out = await main.before(messages, type); } catch (e) { log("위키 주입 실패", e?.message ?? e); } }
+      const focus = !potOff && main.last?.at !== before ? (main.last?.documents ?? []).map((d) => d.title) : [];
       lastTurn = { ...(lastTurn ?? {}), at: Date.now(), focus, mode: main.last?.actualMode ?? "", director: main.last?.director?.status ?? "idle" };
       const result = pure ? out : await injector.beforeRequest(out, type, { focus });
       if (!type || type === "model") confirmPrevious().catch((e) => log("직전 응답 확정 실패", e?.message ?? e));  // 요청은 기다리지 않는다
@@ -129,7 +140,8 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
     // 설정이 now(응답 직후)면 예전처럼 출력 훅에서 바로 기록한다.
     const confirmed = new Set();  // 이미 기록을 맡긴 응답(같은 응답으로 요청마다 다시 맡기지 않는다)
     async function confirmPrevious() {
-      if ((await store.getIndex()).settings.confirm === "now") return;
+      if (potConfirm((await store.getIndex()).settings) === "now") return;
+      if (await botPotOff()) return;
       const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
       if (!(ci >= 0) || !(ti >= 0)) return;
       const char = await api.getCharacterFromIndex(ci), chat = await api.getChatFromIndex(ci, ti);
@@ -142,7 +154,7 @@ export function createTurnFlow(api, { store, runner, injector, sourceLibrary, li
     const hooks = new RuntimeHookManager(api, auto, main, { scheduler });
     hooks.chatListener = (arg) => {  // 출력 훅: now일 때만 바로 기록
       main.clearDirectorCache?.();
-      store.getIndex().then((idx) => { if (idx.settings.confirm === "now") auto.onOutput(arg); }).catch(() => auto.onOutput(arg));
+      store.getIndex().then(async (idx) => { if (potConfirm(idx.settings) === "now" && !(await botPotOff())) auto.onOutput(arg); }).catch(() => auto.onOutput(arg));
     };
     return { settings, wiki, auto, main, hooks, trace, keys, stageCall };
   }
