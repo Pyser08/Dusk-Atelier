@@ -1,3 +1,4 @@
+import { trustBadges } from "../../../engine/memoryedit.js";
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { btn, badge, chip, openMenu, promptDialog, confirmDialog, modal } from "../../kit.js";
@@ -138,7 +139,9 @@ export function personDetail(env, host, key, embedded = false) {
   recs = m.sort === "grade" ? recs.sort((a, b) => GRADES.indexOf(b.g ?? "") - GRADES.indexOf(a.g ?? "")) : recs;
   const shown = recs.slice(0, m.spage * PAGE);
   const sceneOf = (r) => env.folder.scenes.find((s) => s.id === r.sit);
-  const eventItem = (r) => h("li", { class: "rb-mem-rec" }, gradeBadge(r.g), h("div", { class: "txt" }, h("div", null, r.act, r.pin ? " 📌" : ""),
+  const eventItem = (r) => h("li", { class: "rb-mem-rec" }, gradeBadge(r.g), h("div", { class: "txt", style: r.valid === false ? "opacity:.65" : "" }, h("div", null, r.act, r.pin ? " 📌" : ""),
+    trustBadges(r).length ? h("div", { class: "rb-mem-edhead" }, trustBadges(r).map((b) => h("span", { class: ["rb-mem-tb", `k-${b.kind}`] }, b.text))) : null,
+    r.prev?.act ? h("div", { class: "rb-muted" }, `이전: ${r.prev.act} → 현재`) : null,
     h("div", { class: "rb-muted" }, [r.at != null ? at(r.at) : "", r.know?.length ? `아는 사람 ${r.know.join(", ")}` : "", (r.m ?? 1) > 1 ? `×${r.m} 반복` : "", sceneOf(r) ? h("button", { type: "button", class: "rb-mem-link", onClick: () => { m.tab = "scenes"; m.focusScene = r.sit; env.redraw(); } }, sceneOf(r).place || sceneOf(r).sum.slice(0, 14)) : null, r.wiki ? "위키에서 가져온 요약" : "", r.wikiGrade ? `위키 등급 · ${r.gby === "user" ? "사용자" : "AI"}` : r.gs != null ? "AI 등급 · 플러그인 캐시" : "", r.legacy ? "이전 버전 기록" : ""].filter(Boolean).flatMap((x, i) => i ? [" · ", x] : [x]))),
     h("span", { style: "flex:1" }),
     btn("수정", { size: "sm", icon: "more", onClick: (e) => openMenu(env.ctx.win, e.currentTarget, [
