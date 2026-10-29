@@ -321,7 +321,7 @@ export async function renderThemeBuilder(ctx) {
         }
       } }),
       btn("코드로 불러오기", { size: "sm", icon: "download", onClick: async () => {
-        const text = await promptDialog(ctx.win, { title: "공유 코드 불러오기", label: "DTB1: 로 시작하는 코드를 붙여 넣어요", placeholder: "DTB1:…", ok: "불러오기" });
+        const text = await promptDialog(ctx.win, { title: "공유 코드 불러오기", label: "DTB 로 시작하는 코드를 붙여 넣어요", placeholder: "DTB2:…", ok: "불러오기" });
         if (!text) return;
         try {
           const r = readShareCode(text);

@@ -2,6 +2,7 @@
 // 퀄리티는 미리 만든 스타일이 책임지고, 사용자 선택은 공통 변수(--t-*) 값으로만 바뀐다.
 // 결과는 일반 테마로 저장 → 스튜디오에서 고급 편집 가능.
 import { newTheme } from './themes.js';
+import { deflateSync, inflateSync, strToU8, strFromU8 } from '../vendor/fflate.js';
 
 // ── 색 (OKLCH) ──
 var clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -717,15 +718,68 @@ export function pickAccentFromPixels(data) {
   return rgbToHex([best.r / best.n / 255, best.g / best.n / 255, best.b / best.n / 255]);
 }
 
-// ── 공유 코드: 선택(AI CSS 포함)을 짧은 글자로 ──
+// ── 공유 코드: 고른 값을 바이트 몇 개로 줄여 짧은 글자로 ──
+// DTB2:… (약 20자). 스타일·글꼴 같은 목록은 번호로만 적으니 STYLES·AVATARS·FONTS·WIDTHS는 끝에만 덧붙일 것.
+// 맨 끝 1바이트는 잘못 복사했는지 보는 검사값. 이전 DTB1:…(JSON) 코드도 계속 읽는다.
+var b64u = (u8) => btoa(String.fromCharCode(...u8)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+var unb64u = (t) => Uint8Array.from(atob(String(t).replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+var check8 = (u8, n) => { let a = 7; for (let i = 0; i < n; i++) a = (a * 31 + u8[i]) & 255; return a; };
 export function shareCode(choice, name = "") {
-  const json = JSON.stringify({ ...normalizeChoice(choice), name: String(name).slice(0, 40) });
-  const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(json)));
-  return "DTB1:" + b64;
+  const c = normalizeChoice(choice);
+  const nm = strToU8(String(name).slice(0, 40)).slice(0, 120);
+  const css = c.aiCss ? deflateSync(strToU8(c.aiCss), { level: 9 }) : null;
+  const keys = Object.keys(defaultChoice(c.style).deco);
+  let bits = 0;
+  keys.forEach((k, i) => { if (c.deco[k]) bits |= 1 << i; });
+  const hex = parseInt(c.accent.slice(1), 16);
+  const ix = (list, pick, v) => Math.max(0, list.findIndex((x) => pick(x) === v));
+  const head = [
+    0x20 | (nm.length ? 1 : 0) | (css ? 2 : 0) | (c.mode === "dark" ? 4 : 0),
+    Math.max(0, STYLES.findIndex((s) => s.id === c.style)),
+    hex >> 16 & 255, hex >> 8 & 255, hex & 255,
+    c.vivid, c.round, c.space,
+    ix(AVATARS, (x) => x[0], c.avatar), ix(FONTS, (x) => x.id, c.font), ix(WIDTHS, (x) => x[0], c.width),
+    bits & 255, bits >> 8 & 255
+  ];
+  const out = [...head];
+  if (nm.length) out.push(nm.length, ...nm);
+  if (css) {
+    let n = css.length;
+    while (n > 127) { out.push(n & 127 | 128); n >>= 7; }
+    out.push(n, ...css);
+  }
+  out.push(check8(out, out.length));
+  return "DTB2:" + b64u(Uint8Array.from(out));
 }
 export function readShareCode(text) {
-  const m = String(text ?? "").match(/DTB1:([A-Za-z0-9+/=]+)/);
-  if (!m) throw new Error("테마 빌더 공유 코드(DTB1:…)가 아니에요");
+  const t = String(text ?? "");
+  const m2 = t.match(/DTB2:([A-Za-z0-9_-]+)/);
+  if (m2) {
+    let u;
+    try { u = unb64u(m2[1]); } catch { throw new Error("공유 코드가 깨져 있어요. 다시 복사해 주세요"); }
+    if (u.length < 14 || check8(u, u.length - 1) !== u[u.length - 1]) throw new Error("공유 코드가 깨져 있어요. 끝까지 복사했는지 확인해 주세요");
+    const f = u[0];
+    if ((f >> 4) !== 2) throw new Error("더 새로운 버전에서 만든 코드예요. 플러그인을 업데이트해 주세요");
+    const style = STYLES[u[1]]?.id;
+    const keys = Object.keys(defaultChoice(style).deco);
+    const deco = {};
+    keys.forEach((k, i) => { deco[k] = !!((u[11] | u[12] << 8) >> i & 1); });
+    const raw = {
+      style, accent: "#" + [u[2], u[3], u[4]].map((x) => x.toString(16).padStart(2, "0")).join(""),
+      mode: f & 4 ? "dark" : "light", vivid: u[5], round: u[6], space: u[7],
+      avatar: AVATARS[u[8]]?.[0], font: FONTS[u[9]]?.id, width: WIDTHS[u[10]]?.[0], deco
+    };
+    let i = 13, name = "";
+    if (f & 1) { const n = u[i++]; name = strFromU8(u.slice(i, i + n)); i += n; }
+    if (f & 2) {
+      let n = 0, sh = 0, b;
+      do { b = u[i++]; n |= (b & 127) << sh; sh += 7; } while (b & 128);
+      try { raw.aiCss = strFromU8(inflateSync(u.slice(i, i + n))); } catch { throw new Error("공유 코드가 깨져 있어요. 다시 복사해 주세요"); }
+    }
+    return { choice: normalizeChoice(raw), name };
+  }
+  const m = t.match(/DTB1:([A-Za-z0-9+/=]+)/);
+  if (!m) throw new Error("테마 빌더 공유 코드(DTB2:…)가 아니에요");
   const raw = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(m[1]), (c) => c.charCodeAt(0))));
   return { choice: normalizeChoice(raw), name: typeof raw.name === "string" ? raw.name : "" };
 }

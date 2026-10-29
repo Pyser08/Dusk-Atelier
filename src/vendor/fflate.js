@@ -1150,4 +1150,4 @@
     return Unzip2;
   })();
 
-export { gzipSync, gunzipSync, strFromU8, strToU8 };
+export { gzipSync, gunzipSync, deflateSync, inflateSync, strFromU8, strToU8 };
