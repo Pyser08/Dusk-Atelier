@@ -2492,6 +2492,7 @@ export async function openEditorCore(ctx, cfg) {
     build?.destroy();
     panel.remove();
   }
+  if (cfg.startTab && TABS2.some(([t]) => t === cfg.startTab)) es.tab = cfg.startTab;
   render();
   panel.querySelector(".rb-tabs button[aria-selected=true]")?.focus();
   const handle = { panel, close, get draft() {

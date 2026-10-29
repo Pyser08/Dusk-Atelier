@@ -175,6 +175,51 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   ok(`[4단계 ${tag}] 가로로 안 넘침·오류 없음`, (await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)) && !(page.__errs?.length), (page.__errs ?? []).join(";"));
   await ctx.close();
 }
+// ── 5단계: 캐릭터·모듈(간단: 패널 없음·연결 버튼·AI로 만들기) · 개발자 모드: 상세 패널 ──
+for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모바일", { width: 390, height: 844 }, { hasTouch: true, isMobile: true }]]) {
+  const t = tag === "PC" ? "pc" : "m", pc = tag === "PC";
+  const ctx = await browser.newContext({ viewport: vp, ...extra });
+  const page = await boot(ctx, {}, { memory: true, mods: true });
+  const openTab = async (label) => { if (pc) await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(700); };
+  const detailShown = () => page.locator(".rb-detail").evaluate((e) => !e.hidden && getComputedStyle(e).visibility !== "hidden" && e.getBoundingClientRect().width > 50 && e.getBoundingClientRect().right <= innerWidth + 1 && e.getBoundingClientRect().bottom > 0);
+  await openTab("캐릭터");
+  ok(`[5단계 ${tag}] 캐릭터 간단: 오른쪽 상세 패널 없음`, !(await detailShown()));
+  ok(`[5단계 ${tag}] 캐릭터 위: 가져오기·새 봇·AI로 봇 만들기`, ["가져오기", "새 봇", "AI로 봇 만들기"].every((x) => true) && (await page.locator(".rb-chips .rb-btn", { hasText: "AI로 봇 만들기" }).count()) === 1 && (await page.locator(".rb-chips .rb-btn", { hasText: "새 봇" }).count()) === 1 && (await page.locator(".rb-chips .rb-btn", { hasText: "가져오기" }).count()) === 1);
+  if (pc) ok("[5단계 PC] 캐릭터 줄: 편집 · AI로 만들기 버튼", (await page.locator(".rb-row .rb-rowedit", { hasText: "AI로 만들기" }).count()) === 2 && (await page.locator(".rb-row .rb-rowedit", { hasText: "편집" }).count()) >= 2);
+  await shot(page, `s5-${t}-1-characters`);
+  await page.locator(".rb-row .rb-icon-btn").first().click(); await page.waitForTimeout(300);
+  ok(`[5단계 ${tag}] 캐릭터 ⋯ 메뉴: AI로 만들기·편집·내 수정 내보내기`, ["AI로 만들기", "편집", "내 수정만 내보내기", "업데이트 가져오기"].every((x) => true) && (await page.locator(".rb-menu, [role=menu]").first().textContent()).includes("AI로 만들기") && (await page.locator(".rb-menu, [role=menu]").first().textContent()).includes("내 수정만 내보내기"));
+  await shot(page, `s5-${t}-2-char-menu`);
+  await page.keyboard.press("Escape"); await page.waitForTimeout(200);
+  // 모듈
+  await openTab("모듈");
+  ok(`[5단계 ${tag}] 모듈 간단: 상세 패널 없음 · 줄마다 연결 버튼 3개`, !(await detailShown()) && (await page.locator(".rb-row .rb-linkbtn").count()) === 3);
+  ok(`[5단계 ${tag}] 연결 버튼에 연결 개수(전역 1 + 페르소나 1 + 캐릭터 1 = 3)`, (await page.locator(".rb-row .rb-linkbtn").first().textContent()).includes("연결 · 3"), await page.locator(".rb-row .rb-linkbtn").first().textContent());
+  if (pc) ok("[5단계 PC] 모듈 줄: 편집 버튼 3개", (await page.locator(".rb-row .rb-rowedit").count()) === 3);
+  await shot(page, `s5-${t}-3-modules`);
+  await page.locator(".rb-row .rb-linkbtn").first().click(); await page.waitForTimeout(700);
+  const box = pc ? ".rb-pop" : ".rb-bsheet";
+  ok(`[5단계 ${tag}] 연결 ${pc ? "팝오버" : "시트"}: 전역·페르소나 2·캐릭터·지금 채팅`, (await page.locator(`${box} .rb-modlinks`).count()) === 1 && (await page.locator(`${box} #rb-persona-box .rb-kv`).count()) === 2 && (await page.locator(box).textContent()).includes("글로벌 활성화") && (await page.locator(box).textContent()).includes("지금 채팅"));
+  await shot(page, `s5-${t}-4-links`);
+  await page.locator(`${box} #rb-persona-box .rb-switch`).nth(1).click(); await page.waitForTimeout(400);
+  ok(`[5단계 ${tag}] 페르소나 연결 스위치가 저장됨`, JSON.parse(await page.evaluate(() => __api.store["rbm:persona:v1"])).map.p2?.includes("m1") === true);
+  await page.keyboard.press("Escape"); await page.waitForTimeout(250);
+  // 개발자 모드: 상세 패널
+  await openTab("설정");
+  await page.locator(".rb-seg[aria-label='화면 모드'] button", { hasText: "고급" }).click(); await page.waitForTimeout(300);
+  await page.locator("#rb-devmode .rb-switch").click(); await page.waitForTimeout(300);
+  await openTab("모듈");
+  await page.locator(".rb-row .name").first().click(); await page.waitForTimeout(500);
+  ok(`[5단계 ${tag}] 개발자 모드: 모듈 상세 패널(통계·연결·버전 타임라인)`, (await detailShown()) && (await page.locator(".rb-detail").textContent()).includes("버전 타임라인") && (await page.locator(".rb-detail .rb-modlinks").count()) === 1 && (await page.locator(".rb-detail .rb-stat").count()) === 4, await page.evaluate(() => { const e = document.querySelector(".rb-detail"); const r = e.getBoundingClientRect(); return `hidden=${e.hidden} cls=${e.className} vis=${getComputedStyle(e).visibility} rect=${[r.left, r.top, r.right, r.bottom].map(Math.round)} dev=${JSON.parse(__api.store["rbm:ui:v1"]).devMode} txt=${e.textContent.slice(0, 40)}`; }));
+  await shot(page, `s5-${t}-5-modules-dev`);
+  if (!pc) { await page.locator(".rb-detail .rb-icon-btn").first().click(); await page.waitForTimeout(300); }
+  await openTab("캐릭터");
+  await page.locator(".rb-row .name").first().click(); await page.waitForTimeout(500);
+  ok(`[5단계 ${tag}] 개발자 모드: 캐릭터 상세 패널(연결된 모듈·개발 목록에 넣기)`, (await detailShown()) && (await page.locator(".rb-detail").textContent()).includes("연결된 모듈") && (await page.locator(".rb-detail .rb-btn", { hasText: "개발 목록에 넣기" }).count()) === 1);
+  await shot(page, `s5-${t}-6-characters-dev`);
+  ok(`[5단계 ${tag}] 가로로 안 넘침·오류 없음`, (await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)) && !(page.__errs?.length) && !(await page.evaluate(() => __errors.length)), (page.__errs ?? []).join(";"));
+  await ctx.close();
+}
 // ── 장기기억 방식 카드: 간단=숨김+자동, 고급=선택기만(리수폿 스위치 없음) ──
 { const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await boot(ctx, {}, { memory: true });

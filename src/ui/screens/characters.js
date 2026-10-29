@@ -13,6 +13,7 @@ import { openCharAssets, openCharEditor } from './chareditor.js';
 import { addProjects, findProject } from './dev.js';
 import { isDev, openPatchMaker } from './devtools.js';
 import { applyPatchFile, exportMyChanges } from './patchui.js';
+import { createBotAndEdit } from './newbot.js';
 
 var COARSE = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
 // 카드 크기: 채팅 기록을 뺀 캐릭터 데이터의 크기 (에셋 파일 자체는 포함하지 않음)
@@ -123,6 +124,14 @@ async function drawCharacters(ctx) {
   const collapsed = ctx.prefs.meta.charFoldersCollapsed ?? {};
   const mu = multiOf2(ctx);
   if (filtering) mu.clear();
+  const rowBtn = (label, ic, run) => {
+    const b = btn(label, { size: "sm", icon: ic, onClick: (ev) => {
+      ev.stopPropagation();
+      Promise.resolve(run()).catch((e) => ctx.toast(e?.message ?? String(e), { error: true }));
+    } });
+    b.classList.add("rb-rowedit");
+    return b;
+  };
   const rowOf = (c) => {
     const img = c.image ? h("img", { alt: "", dataset: { path: c.image, ext: "png" }, style: "width:40px;height:40px;border-radius:12px;object-fit:cover;background:var(--rb-surf2);flex-shrink:0" }) : h("span", { style: "width:40px;height:40px;border-radius:12px;background:var(--rb-surf2);display:flex;align-items:center;justify-content:center;color:var(--rb-mute);flex-shrink:0" }, icon("character", 18));
     const grip = filtering ? null : h("span", { class: "grip", title: "끌어서 순서 바꾸기·폴더에 넣기 · Ctrl/⌘·Shift+클릭으로 여러 개", "aria-hidden": "true" }, icon("grip", 14));
@@ -140,6 +149,11 @@ async function drawCharacters(ctx) {
           st.charSel = c.chaId;
           box.querySelectorAll(".rb-row").forEach((r) => r.setAttribute("aria-selected", "false"));
           row2.setAttribute("aria-selected", "true");
+          // 일반 모드: 오른쪽 패널 없이, 모바일은 이름을 누르면 편집. 상세 패널은 개발자 모드에서만.
+          if (!isDev(ctx)) {
+            if (ctx.isMobile()) openCharEditor(ctx, c.i, c.chaId).catch((e) => ctx.toast(e?.message ?? String(e), { error: true }));
+            return;
+          }
           detail2(ctx, c);
           if (ctx.isMobile()) ctx.openSheet();
         },
@@ -159,6 +173,8 @@ async function drawCharacters(ctx) {
         h("div", { class: "ttl" }, h("span", { class: "name" }, c.name || "(이름 없음)"), c.type === "group" && badge("그룹", "mute"), c.streaming && badge("응답 생성 중", "warn")),
         h("span", { class: "meta" }, [c.creator && `제작자 ${c.creator}`, `로어 ${c.lore}`, `에셋 ${c.assets}`, `채팅 ${c.chats}`, sort?.key === "size" && fmtSize(c.size)].filter(Boolean).join(" · "))
       ),
+      ctx.isMobile() ? null : rowBtn("편집", "edit", () => openCharEditor(ctx, c.i, c.chaId)),
+      ctx.isMobile() ? null : rowBtn("AI로 만들기", "sparkle", () => openCharEditor(ctx, c.i, c.chaId, { startTab: "ai" })),
       iconBtn("more", `${c.name} 메뉴`, { onClick: (ev) => {
         ev.stopPropagation();
         charMenu(ctx, c, ev.currentTarget);
@@ -262,6 +278,16 @@ async function drawCharacters(ctx) {
     }),
     h("span", { class: "rb-muted", style: "font-size:12px;white-space:nowrap" }, sort ? "폴더마다 따로 정렬해요 · 끌어서 순서 바꾸기는 원래대로에서" : "끌어서 정한 순서예요")
   ) : null;
+  const makeBtns = [
+    btn("가져오기", { size: "sm", icon: "upload", onClick: () => ctx.legacy.open() }),
+    btn("새 봇", { size: "sm", icon: "plus", onClick: async () => {
+      const name = await promptDialog(ctx.win, { title: "새 봇", label: "봇 이름", value: "새 봇" });
+      if (name?.trim()) createBotAndEdit(ctx, { name });
+    } }),
+    btn("AI로 봇 만들기", { size: "sm", kind: "primary", icon: "sparkle", onClick: () => createBotAndEdit(ctx, { tab: "ai" }) })
+  ];
+  // 모바일: 한 줄에 다 안 들어가서 만들기 버튼을 아래 줄로 (AI로 봇 만들기가 맨 앞)
+  const makeRow = ctx.isMobile() ? h("div", { class: "rb-chips", style: "flex-wrap:wrap;overflow:visible" }, makeBtns[2], makeBtns[1], makeBtns[0]) : null;
   replace(ctx.main, h(
     "div",
     { class: "rb-chips" },
@@ -274,8 +300,8 @@ async function drawCharacters(ctx) {
     h("div", { class: "rb-spacer" }),
     filtering ? null : btn(mu.active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => mu.setMode(!mu.active) }),
     btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newCharFolder(ctx) }),
-    btn("업데이트·새로 넣기", { size: "sm", kind: "primary", icon: "upload", onClick: () => ctx.legacy.open() })
-  ), sortTray, bar, box);
+    ...ctx.isMobile() ? [] : makeBtns
+  ), makeRow, sortTray, bar, box);
   box.scrollTop = keep;
   st.justOpened = null;
   st.justMoved = null;
@@ -283,6 +309,7 @@ async function drawCharacters(ctx) {
   mu.attach(box);
   paintBar2(ctx);
   const sel = st.chars.find((c) => c.chaId === st.charSel);
+  if (!isDev(ctx)) return;
   if (sel) detail2(ctx, sel);
   else ctx.showDetail(h("div", { class: "rb-empty" }, "캐릭터를 고르면 여기에 자세히 보여요."));
 }
@@ -545,6 +572,7 @@ function charMenu(ctx, c, anchor) {
   const cur = folderOf(ctx.state.charOrder, c.chaId);
   openMenu(ctx.win, anchor, [
     { label: "편집", icon: "edit", onClick: () => openCharEditor(ctx, c.i, c.chaId).catch(err) },
+    { label: "AI로 만들기", icon: "sparkle", onClick: () => openCharEditor(ctx, c.i, c.chaId, { startTab: "ai" }).catch(err) },
     { label: "에셋 관리", icon: "image", onClick: () => openCharAssets(ctx, c.i, c.chaId).catch(err) },
     "sep",
     { label: "폴더로 옮기기", icon: "folder", onClick: () => openMenu(ctx.win, anchor, [

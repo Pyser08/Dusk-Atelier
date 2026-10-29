@@ -77,9 +77,10 @@ async function freshChar(ctx, index, chaId) {
   if (!cur || cur.chaId !== chaId) throw new Error("캐릭터를 다시 찾지 못했어요. 목록을 새로 고쳐 주세요.");
   return cur;
 }
-export async function openCharEditor(ctx, index, chaId) {
+export async function openCharEditor(ctx, index, chaId, { startTab } = {}) {
   const ch = await freshChar(ctx, index, chaId);
   return openEditorCore(ctx, {
+    startTab,
     view: charToView(ch),
     kindLabel: "봇 편집",
     idKey: "chaId",

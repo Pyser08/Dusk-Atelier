@@ -12,6 +12,7 @@ import { emptyState, badge, btn, chip, trayBtn, tray, sortChips, sortLabel, sort
 import { FOLDER_SWATCHES, NAME_SWATCHES, folderTint, readableName } from '../theme.js';
 import { loadPersonaMap, setPersonaLink } from '../../data/persona.js';
 import { addProjects, findProject } from './dev.js';
+import { moduleLinks, openModuleLinks } from './modlinks.js';
 
 var FILTERS = [["all", "전체"], ["on", "켜짐"], ["off", "꺼짐"], ["global", "전역"], ["lla", "LLA"], ["mcp", "MCP"]];
 function searchText(m) {
@@ -170,7 +171,8 @@ function draw(ctx) {
   mu.ctx = ctx;
   mu.attach(list);
   paintBar(ctx);
-  showDetail(ctx);
+  if (isDev(ctx)) showDetail(ctx);
+  paintLinkCounts(ctx);
 }
 function multiOf(ctx) {
   const st = ctx.state;
@@ -265,9 +267,12 @@ function row(ctx, e, filtering) {
         f.mcp && badge("MCP", "ok"),
         !e.enabled && badge("꺼짐", "mute")
       ),
-      h("span", { class: "meta" }, meta)
+      h("span", { class: "meta" }, meta),
+      ctx.isMobile() ? h("div", { style: "margin-top:6px" }, linkBtn(ctx, e)) : null
     ),
     sw,
+    ctx.isMobile() ? null : linkBtn(ctx, e),
+    ctx.isMobile() ? null : rowEdit(ctx, m),
     iconBtn("more", `${m.name} 메뉴`, { onClick: (ev) => {
       ev.stopPropagation();
       moduleMenu(ctx, e, ev.currentTarget);
@@ -282,8 +287,56 @@ function select(ctx, id, el) {
   ctx.state.modSel = id;
   ctx.main.querySelectorAll(".rb-row[aria-selected=true]").forEach((r) => r.setAttribute("aria-selected", "false"));
   el?.setAttribute("aria-selected", "true");
+  // 일반 모드: 오른쪽 패널 대신 모바일은 이름을 누르면 편집, PC는 고르기만. 상세 패널은 개발자 모드에서만.
+  if (!isDev(ctx)) {
+    if (ctx.isMobile()) ctx.openEditor(id);
+    return;
+  }
   showDetail(ctx);
   if (ctx.isMobile()) ctx.openSheet();
+}
+function rowEdit(ctx, m) {
+  const b = btn("편집", { size: "sm", icon: "edit", onClick: (ev) => {
+    ev.stopPropagation();
+    ctx.openEditor(m.id);
+  } });
+  b.classList.add("rb-rowedit");
+  return b;
+}
+// 🔗 연결 · N : 누르면 연결 설정(PC 팝오버 · 모바일 시트). 개수는 읽어 둔 뒤 채운다.
+function linkBtn(ctx, e) {
+  const n = ctx.state.modLinkN?.get(e.module.id);
+  const b = btn(n === void 0 ? "연결" : `연결 · ${n}`, { size: "sm", icon: "link", title: "이 모듈을 어디에 켤지 정해요", onClick: (ev) => {
+    ev.stopPropagation();
+    openModuleLinks(ctx, e, ev.currentTarget, { refresh: () => reload(ctx) });
+  } });
+  b.classList.add("rb-linkbtn");
+  b.dataset.mid = e.module.id;
+  return b;
+}
+async function paintLinkCounts(ctx) {
+  const st = ctx.state, data = st.modData;
+  if (!data) return;
+  if (st.modLinkSrc !== data) {
+    st.modLinkSrc = data;
+    const n = /* @__PURE__ */ new Map();
+    for (const e of data.entries) n.set(e.module.id, moduleFlags(e.module, data.globalOn).global ? 1 : 0);
+    try {
+      const pm = await loadPersonaMap(ctx.api);
+      for (const ids of Object.values(pm.map ?? {})) for (const id of ids) if (n.has(id)) n.set(id, n.get(id) + 1);
+      const db = await ctx.api.getDatabase(["characters"]);
+      const list = (await loadCharacters(ctx.api, db?.characters)).list;
+      for (const ch of list) if (ch && !ch.trashTime && ch.type !== "group") for (const id of ch.modules ?? []) if (n.has(id)) n.set(id, n.get(id) + 1);
+    } catch {
+    }
+    if (st.modLinkSrc !== data) return;
+    st.modLinkN = n;
+  }
+  for (const b of ctx.main.querySelectorAll(".rb-linkbtn[data-mid]")) {
+    const v = st.modLinkN?.get(b.dataset.mid);
+    const lab = b.querySelector("span");
+    if (lab) lab.textContent = v === void 0 ? "연결" : `연결 · ${v}`;
+  }
 }
 async function toggleEnabled(ctx, e, on, sw) {
   setSwitch(sw, on);
@@ -405,6 +458,7 @@ async function move(ctx, id, dir) {
 function moduleMenu(ctx, e, anchor) {
   const m = e.module;
   openMenu(ctx.win, anchor, [
+    { label: "연결 설정…", icon: "link", onClick: () => openModuleLinks(ctx, e, anchor, { refresh: () => reload(ctx) }) },
     { label: "편집", icon: "edit", onClick: () => ctx.openEditor(m.id) },
     { label: "에셋 관리", icon: "image", onClick: () => ctx.openAssets(m.id) },
     "sep",
@@ -426,6 +480,10 @@ function moduleMenu(ctx, e, anchor) {
     }) },
     { label: "JSON 복사", icon: "link", onClick: async () => ctx.toast(await copyText(moduleJson(m)) ? "JSON을 복사했어요" : "복사하지 못했어요", { error: false }) },
     { label: "이름 바꾸기", icon: "edit", onClick: () => renameModule(ctx, m) },
+    { label: "기록 보기", icon: "refresh", onClick: () => {
+      ctx.state.histTarget = m.id;
+      ctx.go("history");
+    } },
     "sep",
     { label: "삭제", icon: "trash", danger: true, onClick: () => removeModule(ctx, m) }
   ]);
@@ -571,26 +629,8 @@ async function showDetail(ctx) {
     ctx.showDetail(h("div", { class: "rb-empty" }, "모듈을 고르면 여기에 자세히 보여요."));
     return;
   }
-  const m = e.module, c = moduleCounts(m), f = moduleFlags(m, data.globalOn);
+  const m = e.module, c = moduleCounts(m);
   const stat = (label, v) => h("div", { class: "rb-stat" }, h("small", null, label), h("b", null, String(v)));
-  const globalSw = switchEl(f.global, { label: "글로벌 활성화", disabled: !e.enabled, onChange: async (on) => {
-    setSwitch(globalSw, on);
-    try {
-      await ctx.svc.run("setGlobal", m.id, on);
-      await reload(ctx);
-    } catch (err) {
-      setSwitch(globalSw, !on);
-      ctx.toast(err?.message ?? String(err), { error: true });
-    }
-  } });
-  const links = h(
-    "div",
-    { class: "rb-card" },
-    h("div", { class: "rb-kv" }, h("span", null, "글로벌 활성화", h("br"), h("small", { class: "rb-muted" }, "모든 캐릭터·채팅에서 켜짐")), globalSw)
-  );
-  const personaBox = h("div", { class: "rb-card" }, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted", style: "display:flex;align-items:center;gap:8px" }, spinner(), "불러오는 중")));
-  const charBox = h("div", { class: "rb-card" });
-  const chatBox = h("div", { class: "rb-card" });
   const timeline = h("div", { style: "display:flex;flex-direction:column" });
   ctx.showDetail(
     h(
@@ -602,18 +642,7 @@ async function showDetail(ctx) {
       !e.enabled ? note("info", "꺼진 모듈이에요. 켜면 다시 연결할 수 있어요.") : null
     ),
     h("div", { class: "rb-stats" }, stat("로어북", c.lore), stat("정규식", c.regex), stat("트리거", c.trigger), stat("에셋", c.assets)),
-    h(
-      "div",
-      { class: "rb-field" },
-      h("span", { class: "rb-label" }, "연결"),
-      links,
-      h("span", { class: "rb-label", style: "margin-top:6px" }, "페르소나 — 그 페르소나를 쓰는 동안 자동으로 켜짐"),
-      personaBox,
-      h("span", { class: "rb-label", style: "margin-top:6px" }, "캐릭터 — 그 캐릭터의 모든 채팅에서 켜짐"),
-      charBox,
-      h("span", { class: "rb-label", style: "margin-top:6px" }, "지금 채팅"),
-      chatBox
-    ),
+    moduleLinks(ctx, e, { refresh: () => reload(ctx), refreshDetail: () => showDetail(ctx) }),
     h("div", { class: "rb-field" }, h(
       "div",
       { style: "display:flex;align-items:center" },
@@ -634,86 +663,6 @@ async function showDetail(ctx) {
     ),
     h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, btn("삭제", { kind: "danger", size: "lg", icon: "trash", onClick: () => removeModule(ctx, m) }))
   );
-  (async () => {
-    const [db, pm] = await Promise.all([ctx.api.getDatabase(["personas"]), loadPersonaMap(ctx.api)]);
-    const personas = (db?.personas ?? []).filter((p) => p?.id);
-    const linked = (p) => (pm.map[p.id] ?? []).includes(m.id);
-    personas.sort((a, b) => Number(linked(b)) - Number(linked(a)));
-    const box = h("div", { class: "rb-scroll", style: "max-height:232px;overflow:auto;overscroll-behavior:contain", id: "rb-persona-box" });
-    const q = personas.length > 6 ? h("input", { class: "rb-input", type: "search", placeholder: `페르소나 ${personas.length}개에서 찾기`, "aria-label": "페르소나 찾기", style: "height:36px;border-radius:0;border-width:0 0 1px 0" }) : null;
-    const rows = personas.length ? personas.map((p) => {
-      const on = (pm.map[p.id] ?? []).includes(m.id);
-      const sw = switchEl(on, { label: `${p.name} 페르소나에 연결`, disabled: !e.enabled, onChange: async (v) => {
-        setSwitch(sw, v);
-        try {
-          await setPersonaLink(ctx.api, p.id, m.id, v, data.entries.map((x) => x.module.id));
-          ctx.onPersonaChanged?.();
-          ctx.toast(v ? `'${p.name}' 페르소나를 쓰면 켜져요` : `'${p.name}' 연결을 풀었어요`);
-        } catch (err) {
-          setSwitch(sw, !v);
-          ctx.toast(err?.message ?? String(err), { error: true });
-        }
-      } });
-      const r = h("div", { class: "rb-kv" }, h("span", null, p.name || "(이름 없음)"), sw);
-      r.dataset.name = String(p.name ?? "").toLowerCase();
-      return r;
-    }) : [h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "페르소나가 없어요"))];
-    box.append(...rows);
-    q?.addEventListener("input", () => {
-      const v = q.value.trim().toLowerCase();
-      for (const r of rows) r.hidden = !!v && !r.dataset.name?.includes(v);
-    });
-    replace(personaBox, q, box);
-  })().catch(() => replace(personaBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "페르소나를 읽지 못했어요"))));
-  const loadChars = async () => {
-    replace(charBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted", style: "display:flex;align-items:center;gap:8px" }, spinner(), "캐릭터 불러오는 중")));
-    const db = await ctx.api.getDatabase(["characters"]);
-    db.characters = (await loadCharacters(ctx.api, db?.characters)).list;
-    const chars = (db?.characters ?? []).map((ch, i) => ({ ch, i })).filter((x) => x.ch && !x.ch.trashTime && x.ch.type !== "group");
-    const linked = chars.filter((x) => x.ch.modules?.includes(m.id));
-    const filterBox = h("input", { class: "rb-input", style: "height:36px;margin:8px 14px;width:calc(100% - 28px)", placeholder: "캐릭터 검색", "aria-label": "캐릭터 검색" });
-    const listEl = h("div", { class: "rb-scroll", style: "max-height:240px" });
-    const paint = () => {
-      const q = filterBox.value.trim().toLowerCase();
-      replace(listEl, chars.filter((x) => !q || String(x.ch.name ?? "").toLowerCase().includes(q)).slice(0, 200).map(({ ch, i }) => {
-        const on = ch.modules?.includes(m.id) ?? false;
-        const sw = switchEl(on, { label: `${ch.name}에 연결`, disabled: !e.enabled, onChange: async (v) => {
-          setSwitch(sw, v);
-          try {
-            await ctx.svc.run("setCharacterLink", i, m.id, v);
-            ch.modules = v ? [...ch.modules ?? [], m.id] : (ch.modules ?? []).filter((x) => x !== m.id);
-          } catch (err) {
-            setSwitch(sw, !v);
-            ctx.toast(err?.message ?? String(err), { error: true });
-          }
-        } });
-        return h("div", { class: "rb-kv" }, h("span", null, ch.name || "(이름 없음)"), sw);
-      }));
-    };
-    filterBox.addEventListener("input", paint);
-    replace(charBox, h("div", { class: "rb-kv" }, h("span", null, `연결된 캐릭터 ${linked.length}명`), h("span", null, linked.slice(0, 3).map((x) => x.ch.name).join(", ") + (linked.length > 3 ? " 외" : ""))), filterBox, listEl);
-    paint();
-  };
-  replace(charBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "캐릭터 목록은 눌러서 불러와요"), btn("불러오기", { size: "sm", onClick: () => loadChars().catch((err) => ctx.toast(err?.message ?? String(err), { error: true })) })));
-  (async () => {
-    const ci = await ctx.api.getCurrentCharacterIndex(), chi = await ctx.api.getCurrentChatIndex?.();
-    if (ci < 0 || chi === void 0 || chi < 0) {
-      replace(chatBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "열린 채팅이 없어요")));
-      return;
-    }
-    const chat = await ctx.api.getChatFromIndex(ci, chi);
-    const on = chat?.modules?.includes(m.id);
-    replace(chatBox, h(
-      "div",
-      { class: "rb-kv" },
-      h("span", null, on ? "이 채팅에서 켜짐" : "이 채팅에는 따로 연결 안 됨", h("br"), h("small", { class: "rb-muted" }, "채팅 연결 추가는 RisuAI 채팅 화면에서 해요")),
-      on ? btn("이 채팅에서 해제", { size: "sm", onClick: async () => {
-        await ctx.svc.run("unlinkChat", ci, chi, m.id);
-        ctx.toast("이 채팅에서 해제했어요");
-        showDetail(ctx);
-      } }) : null
-    ));
-  })().catch(() => replace(chatBox, h("div", { class: "rb-kv" }, h("span", { class: "rb-muted" }, "채팅 정보를 읽지 못했어요"))));
   (async () => {
     const list = (await createStore(ctx.api).listBackups()).filter((b) => b.target === m.id).slice(0, 3);
     replace(timeline, list.length ? list.map((b, i) => h(

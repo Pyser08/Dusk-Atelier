@@ -6,7 +6,7 @@ import { createEmptyWikiScope } from "../../src/engine/pot/wiki-schema.js";
 import { createBlankPerson, ensureProfile, editProfile, addMetric } from "../../src/engine/wikiedit.js";
 import { editMetricValue } from "../../src/engine/personedit.js";
 
-export function fakeApi(seed = {}, story = false) {
+export function fakeApi(seed = {}, story = false, mods = false) {
   const store = { ...seed };
   const chars = [
     { chaId: "c1", name: "시로코", creator: "me", globalLore: [], chats: [{ message: [] }], image: "", type: "character" },
@@ -15,6 +15,18 @@ export function fakeApi(seed = {}, story = false) {
   const MSGS = ["교실 문이 열렸다.", "안녕, 시로코. 오늘도 일찍 왔네.", "시로코는 고개를 끄덕였다. \"선생님이 먼저 오셨네요.\"", "같이 순찰 나갈래?", "시로코가 슬쩍 미소 지었다.", "좋아요, 가요.", "복도 끝에서 호시노가 졸고 있었다.", "호시노 선배, 또 여기서 자고 있어요?"];
   if (story) chars[0].chats = [{ id: "t1", name: "교실 이야기", message: MSGS.map((data, i) => ({ role: i % 2 ? "user" : "char", data, time: 1700000000000 + i * 60000 })) }];
   const db = { characters: chars, characterOrder: [], modules: [], plugins: [], personas: [] };
+  if (mods) {  // 5단계 시험·사진용 모듈·페르소나
+    const lore = (n) => Array.from({ length: n }, (_, i) => ({ comment: `항목 ${i + 1}`, key: "k" + i, content: "내용", mode: "normal" }));
+    db.modules = [
+      { id: "m1", name: "학원 세계관", namespace: "school", description: "학원 배경 설정과 용어 모음", lorebook: lore(12), regex: [{ comment: "이모지 제거", in: "x", out: "" }], trigger: [], assets: [] },
+      { id: "m2", name: "전투 규칙", description: "전투 판정 보조", lorebook: lore(4), regex: [], trigger: [{ comment: "t", conditions: [], effect: [] }], assets: [] },
+      { id: "m3", name: "연애 시스템", description: "호감도 연출", lorebook: lore(7), regex: [{ comment: "r", in: "a", out: "b" }, { comment: "r2", in: "c", out: "d" }], trigger: [], assets: [] }
+    ];
+    db.enabledModules = ["m1", "m3"];
+    db.personas = [{ id: "p1", name: "선생님" }, { id: "p2", name: "학생회장" }];
+    chars[0].modules = ["m1", "m3"];
+    store["rbm:persona:v1"] = JSON.stringify({ map: { p1: ["m1"] }, injectedIndex: {}, chatInjected: {} });
+  }
   return {
     store,
     pluginStorage: { getItem: async (k) => store[k] ?? null, setItem: async (k, v) => { store[k] = v; }, removeItem: async (k) => { delete store[k]; }, keys: async () => Object.keys(store) },
@@ -28,7 +40,7 @@ export function fakeApi(seed = {}, story = false) {
   };
 }
 window.bootApp = async (seed, opts = {}) => {
-  const api = fakeApi(seed, !!opts.story);
+  const api = fakeApi(seed, !!opts.story, !!opts.mods);
   delete api.store.__bard;
   const errors = (window.__errors = []);
   window.addEventListener("error", (e) => errors.push(e.message));
