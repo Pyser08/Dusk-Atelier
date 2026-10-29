@@ -9,7 +9,8 @@ UI 전면 개편("간단하게, 바로 쓰게"). 설계·목업·§체크리스�
 4. 모듈 연결은 `screens/modlinks.js`(패널·팝오버·시트 공용), 새 봇·AI로 봇 만들기는 `screens/newbot.js`.
 5. 꾸미기·설정(`screens/settings.js`·`settingstab.js`)은 간단 모드에서 핵심만. 처음 둘러보기 12장(`ui/tour.js`), 홈 첫 안내 1회(`simpleNoticeDone`).
 6. 채팅 테마: 도구 → `chattheme`(`screens/chattheme.js`, 목록·코드·파일), `themebuilder`·`themestudio`도 도구 하위(설정 호출은 `app.js go()`가 도구로 돌림). 세 화면 위에 `themeTabs`. 이 sub들은 목록이 바뀌므로 패널 캐시에서 뺌.
-7. 롤백 충돌 `변경 비교`(`engine/conflict.js`·`memory/conflictui.js`), 테마 공유 코드 `DTB2:`(`data/themebuilder.js`, STYLES·AVATARS·FONTS·WIDTHS는 끝에만 추가).
+7. 기억·리수폿 프롬프트: 설정 → `prompts`(`screens/promptstab.js`), 값은 리수폿 설정 `customPrompts`(모든 채팅 범위). 불러오기 후보 추출은 순수 `engine/promptimport.js`, 처음 켤 때 안내는 `maybePromptIntro`(`ui.promptIntroDone`). e2e 기본 시드는 안내를 꺼 둠(`opts.intro`로 보존).
+8. 롤백 충돌 `변경 비교`(`engine/conflict.js`·`memory/conflictui.js`), 테마 공유 코드 `DTB2:`(`data/themebuilder.js`, STYLES·AVATARS·FONTS·WIDTHS는 끝에만 추가).
 
 ## 8단계에서 한 것
 - 모듈 도구 줄을 칩 줄(`.rb-chips`)과 동작 줄(`.rb-modacts`)로 분리(`.rb-modbar`): 모바일에서 `새 모듈`이 가로 스크롤 밖에 숨던 문제.

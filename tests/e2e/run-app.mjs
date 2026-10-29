@@ -15,7 +15,9 @@ const boot = async (ctx, seed = {}, opts = {}) => {
   await page.setContent("<!doctype html><meta name=viewport content=\"width=device-width,initial-scale=1\"><body style='margin:0'></body>");
   await page.addScriptTag({ content: r.outputFiles[0].text });
   // 처음 둘러보기·새로 바뀐 점 창이 화면을 가리지 않게 '이미 본 버전'으로 시작한다
-  await page.evaluate(([s, o]) => window.bootApp({ "rbm:seenVersion:v1": "1.7.0-dev", ...s }, o), [seed, opts]);
+  // 프롬프트 첫 안내 창은 시험이 스위치를 켤 때마다 화면을 가리므로 기본으로 '이미 봄'. 안내 시험만 opts.intro로 보존
+  const ui = JSON.parse(seed["rbm:ui:v1"] ?? "{}"); if (!opts.intro) ui.promptIntroDone = true;
+  await page.evaluate(([s, o]) => window.bootApp({ "rbm:seenVersion:v1": "1.7.0-dev", ...s }, o), [{ ...seed, "rbm:ui:v1": JSON.stringify(ui) }, opts]);
   await page.waitForTimeout(250);
   return page;
 };
@@ -376,6 +378,37 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   ok(`[채팅 테마 ${tag}] 오류 없음`, !(page.__errs?.length) && !(await page.evaluate(() => __errors.length)), (page.__errs ?? []).join(" / "));
   await ctx.close();
 }
+// ── 설정 → 기억·리수폿 프롬프트 + 처음 켤 때 안내 ──
+{ const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+  const page = await boot(ctx, {}, { memory: true, story: true, mods: true });
+  await go(page, "설정"); await page.waitForTimeout(500);
+  ok("[프롬프트] 설정(간단 모드)에 '기억·리수폿 프롬프트' 줄이 바로 보임", (await page.locator("#rb-set-prompts").count()) === 1);
+  await page.locator("#rb-set-prompts").click(); await page.waitForTimeout(600);
+  ok("[프롬프트] 화면 열림 · 새 프롬프트·파일에서 불러오기 버튼", (await page.locator("#rb-pr-new").count()) === 1 && (await page.locator("#rb-pr-import").count()) === 1);
+  await page.locator("#rb-pr-new").click(); await page.waitForTimeout(500);
+  ok("[프롬프트] 새 프롬프트 추가 → 카드 1개(단계 3칸)", (await page.locator("article.rb-mem-feat").count()) === 1 && (await page.locator("article.rb-mem-feat .rb-mem-field").count()) === 3);
+  await page.locator("article.rb-mem-feat textarea").fill("항상 존댓말로 기록해요."); await page.locator("article.rb-mem-feat textarea").blur(); await page.waitForTimeout(400);
+  const saved = await page.evaluate(async () => (await __app.ctx.memory.flow.settings()).rawSnapshot().customPrompts);
+  ok("[프롬프트] 본문이 저장됨(모든 채팅 범위·자동 기록 단계)", saved.length === 1 && saved[0].text === "항상 존댓말로 기록해요." && saved[0].scope.kind === "all" && saved[0].stages.join() === "writer", JSON.stringify(saved));
+  await shot(page, "pr-pc-1-prompts");
+  await page.locator("article.rb-mem-feat .rb-btn", { hasText: "삭제" }).click(); await page.waitForTimeout(300);
+  await ctx.close(); }
+{ const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+  const page = await boot(ctx, {}, { memory: true, story: true, mods: true, intro: true });
+  await go(page, "리수폿"); await page.waitForTimeout(500);
+  const sw = page.locator(".rb-phead .sw .rb-switch, .rb-phead [role=switch]").first();
+  const wasOn = (await sw.getAttribute("aria-checked")) === "true";
+  if (wasOn) { await sw.click(); await page.waitForTimeout(500); }
+  await sw.click(); await page.waitForTimeout(700);
+  ok("[프롬프트] 리수폿을 처음 켜면 프롬프트 안내가 뜸", (await page.locator("[role=dialog][aria-label='프롬프트 추가 안내']").count()) === 1);
+  await shot(page, "pr-pc-2-intro");
+  await page.locator("#rb-pr-intro-go").click(); await page.waitForTimeout(600);
+  ok("[프롬프트] 안내의 '프롬프트 추가하기' → 프롬프트 화면", (await page.locator("#rb-pr-new").count()) === 1);
+  await go(page, "리수폿"); await page.waitForTimeout(400);
+  const sw2 = page.locator(".rb-phead .sw .rb-switch, .rb-phead [role=switch]").first();
+  await sw2.click(); await page.waitForTimeout(400); await sw2.click(); await page.waitForTimeout(600);
+  ok("[프롬프트] 안내는 한 번만", (await page.locator("[role=dialog][aria-label='프롬프트 추가 안내']").count()) === 0);
+  await ctx.close(); }
 // ── 8단계: 모바일 5폭(320~768) × 간단·고급 × 모든 탭: 가로로 안 넘침 · 버튼이 화면 밖으로 안 나감 ──
 const TABS11 = ["홈", "기억", "리수폿", "인물", "캐릭터", "모듈", "기억 카드", "꾸미기", "도구", "플러그인", "설정"];
 const BASE4 = ["홈", "기억", "리수폿", "인물"];

@@ -1,5 +1,6 @@
 // 설정 탭 (v1.7.0 7단계, 계획 §3.13): 화면(모드·메뉴 위치·꾸미기) → 이야기 도우미 스위치 3 → (고급) 개발자 → 백업 → 둘러보기·새로 바뀐 점.
 // 세부는 고급 모드에서만: 주사위·로어북·기억 버튼·테마 대상·기록·설정 정리·업데이트 설정·정보.
+import { renderPrompts } from './promptstab.js';
 import { h, replace } from '../dom.js';
 import { advFold, guidePanel, pageHead, segmented, switchEl } from '../kit.js';
 import { icon } from '../icons.js';
@@ -16,6 +17,7 @@ import { loadStoryTimeOn } from '../../data/storytime.js';
 import { loadFairOn, loadDiceOn, loadDiceMode, DICE_KEY, DICE_MODE_KEY } from '../../data/fairplay.js';
 
 export async function renderSettingsTab(ctx) {
+  if (ctx.state.sub === "prompts") return renderPrompts(ctx);
   if (ctx.state.sub === "theme") return renderSettings(ctx);
   if (ctx.state.sub === "updset") return renderUpdateSettings(ctx);
   if (ctx.state.sub === "cleanup") return renderCleanup(ctx);
@@ -56,6 +58,10 @@ export async function renderSettingsTab(ctx) {
       segRow("화면 모드", "고급을 켜면 각 화면에 세부 설정이 더 보여요.", segmented([["simple", "간단"], ["advanced", "고급"]], ctx.prefs.uiMode, (v) => ctx.setUiMode(v), "화면 모드")),
       segRow("메뉴 위치", "PC에서 메뉴를 왼쪽 또는 위쪽에 둬요.", layoutSeg, "rb-pc-only"),
       linkRow("꾸미기", "색·밝기·글자 크기", () => ctx.go("look"), "rb-set-look")
+    ),
+    card(
+      "기억 · 리수폿",
+      linkRow("기억·리수폿 프롬프트", "쓸 때 덧붙일 내 프롬프트 · JSON/.risup 불러오기", () => ctx.go("settings", "prompts"), "rb-set-prompts")
     ),
     card(
       "이야기 도우미",

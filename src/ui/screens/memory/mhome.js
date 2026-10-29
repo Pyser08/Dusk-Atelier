@@ -1,4 +1,5 @@
 // 기억 화면 (1.7.0 3단계, 계획 §3.2): 머리(스위치 1) → 상태 카드 → 기록 막대 → 주요 동작 3 → 최근 기록 → 고급.
+import { maybePromptIntro } from '../promptstab.js';
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { actionRow, advFold, btn, confirmDialog, emptyState, note, pageHead, progressBar, statusCard } from "../../kit.js";
@@ -39,7 +40,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   const on = sw.memory.on;
 
   const setOn = async (v) => {
-    try { await M.switches.setMemory(cur.chaId, v); if (v) await M.store.updateIndex((i) => { const b = i.bots[cur.chaId]; if (b) { b.paused = false; b.fails = 0; } }); ctx.toast(v ? "이 채팅에서 기억을 켰어요. 다음 응답부터 기록돼요." : "이 채팅에서 기억을 껐어요."); } catch (e) { fail(ctx)(e); }
+    try { await M.switches.setMemory(cur.chaId, v); if (v) await M.store.updateIndex((i) => { const b = i.bots[cur.chaId]; if (b) { b.paused = false; b.fails = 0; } }); if (v) maybePromptIntro(ctx); ctx.toast(v ? "이 채팅에서 기억을 켰어요. 다음 응답부터 기록돼요." : "이 채팅에서 기억을 껐어요."); } catch (e) { fail(ctx)(e); }
     redraw();
   };
   // 상태 카드: 꺼짐 / 문제(연속 실패로 멈춤) / 준비 중(아직 요청 없음·안 넣음) / 사용 중

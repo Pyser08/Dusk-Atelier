@@ -1,4 +1,5 @@
 // 홈 (v1.7.0 6단계): 지금 열린 채팅 → 상태 3줄(기억·리수폿·인물) → 바로 하기 9칸. PC는 오른쪽에 최근 기록 3개.
+import { maybePromptIntro } from './promptstab.js';
 import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
 import { btn, statusCard } from '../kit.js';
@@ -75,6 +76,7 @@ export async function renderHome(ctx) {
     const turnOn = async (kind) => {
       try {
         await (kind === "memory" ? s.M.switches.setMemory(s.cur.chaId, true) : s.M.switches.setPot(s.cur.chaId, true));
+        maybePromptIntro(ctx);
         ctx.toast(kind === "memory" ? "이 채팅에서 기억을 켰어요." : "이 채팅에서 리수폿을 켰어요.");
       } catch (e) {
         ctx.toast(e?.message ?? String(e), { error: true });

@@ -1,4 +1,5 @@
 // 리수폿 화면 (1.7.0 4단계, 계획 §3.3). 기억과 완전히 따로: 자기 스위치·자기 설정. 머리 → 상태 → 주요 동작 3 → 캐릭터별 사용 → 고급.
+import { maybePromptIntro } from './promptstab.js';
 import { h, replace } from "../dom.js";
 import { actionRow, advFold, btn, emptyState, note, pageHead, statusCard, switchEl, setSwitch } from "../kit.js";
 import { icon } from "../icons.js";
@@ -34,7 +35,7 @@ async function draw(ctx, host, redraw) {
   const rt = M.flow?.runtime?.(), ast = (() => { try { return rt?.auto?.status?.() ?? null; } catch { return null; } })();
   const lastAt = wiki?.automation?.lastStatus?.at;
 
-  const setOn = async (v) => { try { await M.switches.setPot(cur.chaId, v); ctx.toast(v ? "이 채팅에서 리수폿을 켰어요. 다음 응답부터 위키가 쌓여요." : "이 채팅에서 리수폿을 껐어요."); } catch (e) { fail(ctx)(e); } redraw(); };
+  const setOn = async (v) => { try { await M.switches.setPot(cur.chaId, v); if (v) maybePromptIntro(ctx); ctx.toast(v ? "이 채팅에서 리수폿을 켰어요. 다음 응답부터 위키가 쌓여요." : "이 채팅에서 리수폿을 껐어요."); } catch (e) { fail(ctx)(e); } redraw(); };
   let status;
   if (!pot.on) status = statusCard("off", REASON[pot.reason] ?? "꺼져 있어요.", { label: "켜기", kind: "primary", onClick: () => setOn(true) });
   else if (ast?.phase === "failed") status = statusCard("err", "마지막 자동 기록이 실패했어요. 다음 응답에서 다시 해요.");

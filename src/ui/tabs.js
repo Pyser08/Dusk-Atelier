@@ -72,7 +72,7 @@ export var TABS = [
 export var BASE_IDS = TABS.filter((t) => t.group === "base").map((t) => t.id);
 export var MORE_IDS = TABS.filter((t) => t.group === "more").map((t) => t.id);
 export var SUBNAMES = {
-  settings: { theme: "화면 꾸미기", updset: "업데이트 설정", cleanup: "설정 정리", history: "기록 · 되돌리기" },
+  settings: { prompts: "기억·리수폿 프롬프트", theme: "화면 꾸미기", updset: "업데이트 설정", cleanup: "설정 정리", history: "기록 · 되돌리기" },
   tools: { presets: "프리셋", personabuilder: "페르소나 빌더", chattheme: "채팅 테마", themebuilder: "테마 빌더", themestudio: "테마 스튜디오", lorelog: "로어북 로그", inspector: "검사기", history: "기록 · 되돌리기" },
   dev: { patchmaker: "패치 만들기" }
 };

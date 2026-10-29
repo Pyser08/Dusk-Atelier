@@ -348,7 +348,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   let paneReady = false;
   function stashPane() {
     if (!paneReady || !CACHEABLE.has(state.tab) || state.search) return;
-    if (state.tab === "tools" && ["chattheme", "themebuilder", "themestudio"].includes(state.sub)) return; // 목록이 바뀌므로 다시 그린다
+    if (state.tab === "tools" && ["chattheme", "themebuilder", "themestudio"].includes(state.sub) || state.tab === "settings" && state.sub === "prompts") return; // 목록이 바뀌므로 다시 그린다
     paneCache.set(paneKey(), { nodes: [...main.childNodes], at: Date.now() });
   }
   function dropPanes() {
