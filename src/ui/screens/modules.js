@@ -71,7 +71,7 @@ function draw(ctx) {
   if (!st.modSel || !entries.some((e) => e.module.id === st.modSel)) st.modSel = shown[0]?.module.id ?? null;
   const sort = ctx.prefs.ui?.modSort ?? null;
   st.modSorted = !!sort;
-  const toolbar = h(
+  const filterChips = h(
     "div",
     { class: "rb-chips", role: "toolbar", "aria-label": "필터" },
     FILTERS.map(([id, label]) => chip(label, { pressed: st.modFilter === id, count: count(id), onClick: () => {
@@ -81,8 +81,11 @@ function draw(ctx) {
     trayBtn("정렬", { icon: "preset", value: sortShort(sort), title: sortLabel(sort), open: !!st.modTray, active: !!sort, onClick: () => {
       st.modTray = !st.modTray;
       draw(ctx);
-    } }),
-    h("div", { class: "rb-spacer" }),
+    } })
+  );
+  const modActs = h(
+    "div",
+    { class: "rb-modacts", role: "toolbar", "aria-label": "모듈 동작" },
     filtering ? null : btn(multiOf(ctx).active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => {
       const mu2 = multiOf(ctx);
       mu2.setMode(!mu2.active);
@@ -90,6 +93,7 @@ function draw(ctx) {
     btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolder(ctx) }),
     btn("새 모듈", { size: "sm", kind: "primary", icon: "plus", onClick: () => newModule(ctx) })
   );
+  const toolbar = h("div", { class: "rb-modbar" }, filterChips, modActs);
   const sortTray = st.modTray ? tray(
     ...sortChips(sort, (next) => {
       ctx.prefs.saveUi({ modSort: next }).catch(() => {

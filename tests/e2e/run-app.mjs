@@ -348,6 +348,70 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   const u = JSON.parse(await page.evaluate(() => __api.store["rbm:ui:v1"]));
   ok("[7단계 PC] 고급 모드로 보기 → 고급 모드로 바뀌고 안내 닫힘", u.uiMode === "advanced" && u.simpleNoticeDone === true && (await page.locator("#rb-simple-note").count()) === 0);
   await ctx.close(); }
+// ── 8단계: 모바일 5폭(320~768) × 간단·고급 × 모든 탭: 가로로 안 넘침 · 버튼이 화면 밖으로 안 나감 ──
+const TABS11 = ["홈", "기억", "리수폿", "인물", "캐릭터", "모듈", "기억 카드", "꾸미기", "도구", "플러그인", "설정"];
+const BASE4 = ["홈", "기억", "리수폿", "인물"];
+const gotoTab = async (page, label, narrow) => {
+  if (!narrow || BASE4.includes(label)) await go(page, label);
+  else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); }
+  await page.waitForTimeout(450);
+};
+const overflowOf = (page) => page.evaluate(() => {
+  const bad = [], W = innerWidth + 1, main = __app.ctx.main;
+  const scrollAnc = (el) => { for (let a = el.parentElement; a && a !== main; a = a.parentElement) { const o = getComputedStyle(a).overflowX; if ((o === "auto" || o === "scroll") && a.clientWidth <= innerWidth) return true; } return false; };
+  if (document.documentElement.scrollWidth > W) bad.push("페이지 가로 스크롤");
+  if (main.scrollWidth > main.clientWidth + 1) bad.push(`본문 가로 넘침 ${main.scrollWidth}>${main.clientWidth}`);
+  for (const e of main.querySelectorAll("button, input, select, textarea, .rb-btn, .rb-switch, .rb-chip")) {
+    if (!e.offsetParent) continue;
+    const r = e.getBoundingClientRect();
+    if (r.width > 0 && (r.right > W || r.left < -1) && !scrollAnc(e)) bad.push(`${(e.textContent || e.getAttribute("aria-label") || e.tagName).trim().slice(0, 14)} 오른쪽 ${Math.round(r.right)}>${innerWidth}`);
+  }
+  return bad;
+});
+for (const w of [320, 360, 390, 480, 768]) {
+  const narrow = w <= 760;
+  for (const mode of ["simple", "advanced"]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: 800 }, ...(narrow ? { hasTouch: true, isMobile: true } : {}) });
+    const page = await boot(ctx, { "rbm:ui:v1": JSON.stringify({ uiMode: mode }) }, { memory: true, story: true, mods: true });
+    const bad = [];
+    for (const label of TABS11) { await gotoTab(page, label, narrow); for (const b of await overflowOf(page)) bad.push(`${label}: ${b}`); if (mode === "simple" && (w === 320 || w === 768) && ["모듈", "홈"].includes(label)) await shot(page, `s8-w${w}-${label === "모듈" ? "modules" : "home"}`); }
+    ok(`[8단계 ${w}px ${mode === "simple" ? "간단" : "고급"}] 11개 탭 모두 가로로 안 넘침`, bad.length === 0 && !(page.__errs?.length) && !(await page.evaluate(() => __errors.length)), [...bad, ...(page.__errs ?? [])].slice(0, 6).join(" / "));
+    await ctx.close();
+  }
+}
+// ── 8단계: 다크 모드 — 모든 탭의 글자 대비(3:1 미만 0개) + 사진 ──
+const contrastOf = (page) => page.evaluate(() => {
+  const parse = (s) => { const m = s.match(/rgba?\(([^)]+)\)/); if (!m) return null; const p = m[1].split(/[ ,\/]+/).filter(Boolean).map(Number); return { r: p[0], g: p[1], b: p[2], a: p[3] ?? 1 }; };
+  const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
+  const bgOf = (el) => { let acc = null; for (let e = el; e; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.backgroundImage !== "none") return null; const c = parse(cs.backgroundColor); if (c && c.a > 0) { if (c.a >= 0.95) return acc ? { r: acc.r * acc.a + c.r * (1 - acc.a), g: acc.g * acc.a + c.g * (1 - acc.a), b: acc.b * acc.a + c.b * (1 - acc.a) } : c; acc = acc ?? c; } } return null; };
+  const bad = [];
+  for (const e of document.querySelectorAll("body *")) {
+    if (!e.offsetParent || e.closest("svg") || e.disabled) continue;
+    const own = [...e.childNodes].filter((n) => n.nodeType === 3 && n.textContent.trim()).map((n) => n.textContent.trim()).join(" ");
+    if (!own) continue;
+    const cs = getComputedStyle(e); if (cs.visibility === "hidden" || Number(cs.opacity) < 0.5) continue;
+    const fg = parse(cs.color), bg = bgOf(e); if (!fg || !bg) continue;
+    const l1 = lum(fg), l2 = lum(bg), ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    if (ratio < 3) bad.push(`${own.slice(0, 16)} ${ratio.toFixed(1)}`);
+  }
+  return bad;
+});
+for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모바일", { width: 390, height: 844 }, { hasTouch: true, isMobile: true }]]) {
+  const t = tag === "PC" ? "pc" : "m", narrow = tag !== "PC";
+  for (const mode of ["simple", "advanced"]) {
+    const ctx = await browser.newContext({ viewport: vp, ...extra });
+    const page = await boot(ctx, { "rbm:ui:v1": JSON.stringify({ uiMode: mode, theme: { mode: "dark" } }) }, { memory: true, story: true, mods: true });
+    const bad = [];
+    ok(`[8단계 다크 ${tag} ${mode === "simple" ? "간단" : "고급"}] 다크로 열림`, (await page.evaluate(() => getComputedStyle(__app.ctx.win).colorScheme)) === "dark");
+    for (const label of TABS11) {
+      await gotoTab(page, label, narrow);
+      for (const b of await contrastOf(page)) bad.push(`${label}: ${b}`);
+      if (mode === "simple" && ["홈", "기억", "꾸미기", "설정"].includes(label)) await shot(page, `s8-${t}-dark-${label === "홈" ? "home" : label === "기억" ? "memory" : label === "꾸미기" ? "look" : "settings"}`);
+    }
+    ok(`[8단계 다크 ${tag} ${mode === "simple" ? "간단" : "고급"}] 11개 탭 글자 대비 3:1 미만 0개`, bad.length === 0, bad.slice(0, 8).join(" / "));
+    await ctx.close();
+  }
+}
 // ── 장기기억 방식 카드: 간단=숨김+자동, 고급=선택기만(리수폿 스위치 없음) ──
 { const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await boot(ctx, {}, { memory: true });

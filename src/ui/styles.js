@@ -233,6 +233,9 @@ button.rb-srow{width:100%;background:none;border-top:0;border-left:0;border-righ
 .rb-chips{display:flex;align-items:center;gap:8px;padding:12px 22px 10px;flex-wrap:wrap}
 .rb-chips.rb-fchips{padding-top:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
 .rb-chips.rb-fchips .rb-chip{flex-shrink:0}
+.rb-modbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 22px 10px}
+.rb-modbar .rb-chips{padding:0;flex:1 1 auto;min-width:0}
+.rb-modacts{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
 .rb-chip{height:var(--rb-ctl-sm);padding:0 14px;border-radius:999px;border:var(--rb-bw,1px) solid var(--rb-line3);background:var(--rb-surf);color:var(--rb-sub);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 @media (hover: hover){.rb-chip:hover{color:var(--rb-text);border-color:var(--rb-grip)}}
 .rb-chip[aria-pressed=true]{border-color:var(--rb-sel-ring);background:var(--rb-acc-soft);color:var(--rb-text);font-weight:700}
@@ -261,6 +264,7 @@ button.rb-srow{width:100%;background:none;border-top:0;border-left:0;border-righ
 .rb-row .ttl{display:flex;align-items:center;gap:8px;min-width:0}
 .rb-row .name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rb-row .meta{font-size:12px;color:var(--rb-mute)}
+@media (max-width:900px){.rb-row .rb-rowedit{font-size:0;gap:0;padding-inline:10px}.rb-row .name{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}}
 .rb-row.off{background:transparent;box-shadow:none}
 .rb-row.off .name{color:var(--rb-mute)}
 .rb-row{-webkit-touch-callout:none}
@@ -528,6 +532,9 @@ select.rb-input{appearance:auto}
   .rb-tabbar a[aria-current=page]{color:var(--rb-acc-text);font-weight:700}
   .rb-tabbar a[aria-current=page]::before{content:"";position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 4px 4px;background:var(--rb-acc-text)}
   .rb-chips{flex-wrap:nowrap;overflow-x:auto;padding:12px 16px 8px}
+  .rb-modbar{padding:12px 16px 8px;gap:8px 8px}
+  .rb-modbar .rb-chips{flex:1 1 100%;padding:0 0 2px}
+  .rb-modacts{margin-left:0;width:100%;justify-content:flex-end}
   .rb-list{padding:4px 14px 18px}
   .rb-chip{flex-shrink:0}
   .rb-tray{flex-wrap:nowrap;overflow-x:auto;padding:0 16px 10px}
