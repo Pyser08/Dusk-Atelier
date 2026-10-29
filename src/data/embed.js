@@ -1,7 +1,7 @@
 // v1.7.1 임베딩 호출·저장. 설정과 키는 이 기기의 로컬 저장소에만 둔다(백업·공유 내보내기에 안 들어감).
 // 실패·지연은 조용히 건너뛰고 기존 검색키 방식으로 이어 간다(채팅을 막지 않는다).
 import { hashText } from "../engine/chattext.js";
-import { normCfg, buildRequest, parseResponse, pack, unpack, cosine, isReady, recordText, isContextual } from "../engine/embed.js";
+import { DEFAULT_EMBED, normCfg, buildRequest, parseResponse, pack, unpack, cosine, isReady, recordText, isContextual } from "../engine/embed.js";
 
 const CFG_KEY = "dusk.embed.cfg.v1", VEC_PREFIX = "dusk.embed.vec.v1.", BATCH = 32, MAX_NEW = 96;
 
@@ -13,7 +13,10 @@ export function createEmbedder(api, { log = (...a) => console.log("[Dusk 임베�
   const rd = async (k) => { try { const v = await (await store()).getItem(k); return typeof v === "string" ? JSON.parse(v) : v; } catch { return null; } };
   const wr = async (k, v) => { try { await (await store()).setItem(k, JSON.stringify(v)); return true; } catch (e) { log("저장 실패", e?.message ?? e); return false; } };
 
-  const load = () => loaded ??= (async () => { const r = await rd(CFG_KEY); cfg = normCfg(r?.cfg); key = typeof r?.key === "string" ? r.key : ""; return status(); })();
+  const load = () => loaded ??= (async () => { const r = await rd(CFG_KEY); cfg = normCfg(r?.cfg); key = typeof r?.key === "string" ? r.key : "";
+    // 보야지 주소와 모델 종류가 어긋난 저장값(예: 예전 기본 voyage-context-4 + /embeddings)은 새 기본값으로 바로잡는다.
+    if (/voyageai\.com/i.test(cfg.url) && isContextual(cfg) !== /^voyage-context/i.test(cfg.model)) { cfg = normCfg({ ...cfg, url: DEFAULT_EMBED.url, model: DEFAULT_EMBED.model }); await wr(CFG_KEY, { cfg, key }); }
+    return status(); })();
   const status = () => ({ ...cfg, hasKey: !!key, keyTail: key.slice(-4), ready: isReady(cfg, !!key), lastError, lastMs });
   async function save(patch) {
     await load(); const next = { ...cfg, ...patch }; delete next.key;
@@ -80,5 +83,5 @@ export function createEmbedder(api, { log = (...a) => console.log("[Dusk 임베�
     return m.size ? m : null;
   }
   async function clear() { vecs.clear(); qcache.clear(); const s = await store(); try { for (const k of await (s.keys?.() ?? [])) if (String(k).startsWith(VEC_PREFIX)) await s.removeItem(k); } catch { /* 일부만 지워져도 모델이 바뀌면 자동 무시 */ } }
-  return { load, status, save, test, embed, scores, clear, cfg: () => cfg };
+  return { load, status, keyValue: () => key, save, test, embed, scores, clear, cfg: () => cfg };
 }

@@ -2,6 +2,7 @@
 import { h } from "../../dom.js";
 import { btn, modal, switchEl, note } from "../../kit.js";
 import { fail } from "./common.js";
+import { DEFAULT_EMBED } from "../../../engine/embed.js";
 
 export async function openEmbedModal(ctx) {
   const E = ctx.memory.embedder; await E.load();
@@ -11,11 +12,11 @@ export async function openEmbedModal(ctx) {
   const field = (label, el, hint) => h("label", { class: "rb-mem-field", style: "flex-direction:column;align-items:stretch;gap:4px" }, h("span", null, label), el, hint ? h("small", { class: "rb-muted" }, hint) : null);
   const url = h("input", { class: "rb-input", value: f.url, placeholder: "https://api.voyageai.com/v1/embeddings", "aria-label": "임베딩 API 주소", onInput: (e) => { f.url = e.target.value; } });
   const model = h("input", { class: "rb-input", value: f.model, placeholder: "voyage-4-large", "aria-label": "임베딩 모델", onInput: (e) => { f.model = e.target.value; } });
-  const key = h("input", { class: "rb-input", type: "password", autocomplete: "off", placeholder: st.hasKey ? `저장된 키 ••••${st.keyTail} (바꿀 때만 입력)` : "API 키", "aria-label": "임베딩 API 키" });
+  const key = h("input", { class: "rb-input", type: "password", autocomplete: "off", value: E.keyValue(), placeholder: st.hasKey ? `저장된 키 ••••${st.keyTail} (바꿀 때만 입력)` : "API 키", "aria-label": "임베딩 API 키" });
   const sim = h("input", { class: "rb-input", type: "number", min: 0.1, max: 0.8, step: 0.02, value: f.minSim, "aria-label": "유사도 기준", onInput: (e) => { f.minSim = Number(e.target.value); } });
   const wait = h("input", { class: "rb-input", type: "number", min: 1, max: 20, step: 0.5, value: f.timeoutMs / 1000, "aria-label": "대기 시간(초)", onInput: (e) => { f.timeoutMs = Number(e.target.value) * 1000; } });
   const show = (kind, text) => { msg.replaceChildren(note(kind, text)); };
-  const persist = async () => { const patch = { on: f.on, url: f.url, model: f.model, minSim: f.minSim, timeoutMs: f.timeoutMs }; if (key.value.trim()) patch.key = key.value; const s = await E.save(patch); if (patch.key) { key.value = ""; key.placeholder = `저장된 키 ••••${s.keyTail} (바꿀 때만 입력)`; } return s; };
+  const persist = async () => { const patch = { on: f.on, url: f.url, model: f.model, minSim: f.minSim, timeoutMs: f.timeoutMs }; if (key.value.trim()) patch.key = key.value; const s = await E.save(patch); if (patch.key) key.placeholder = `저장된 키 ••••${s.keyTail}`; return s; };
   return modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": "임베딩 설정", style: "max-width:520px;display:flex;flex-direction:column;gap:10px" },
     h("h3", { class: "rb-h3" }, "임베딩 설정"),
     h("p", { class: "rb-muted" }, "현재 장면과 뜻이 비슷한 기억을 찾아 넣을 때 써요. 단어가 달라도 찾을 수 있어요. 실패하거나 느리면 기존 방식으로 넘어가요."),
@@ -23,10 +24,11 @@ export async function openEmbedModal(ctx) {
     field("API 주소", url, "기본은 보야지(Voyage AI)예요. 주소가 /contextualizedembeddings(voyage-context-*)면 그 전용 형식으로, 아니면 일반 /embeddings 형식으로 보내요."),
     field("모델 이름", model, "기본 voyage-4-large는 계정당 2억 토큰까지 무료예요. voyage-context-4도 무료, voyage-context-3은 구형이라 유료예요. 컨텍스트 모델은 주소도 /contextualizedembeddings로 바꾸세요."),
     field("대기 시간(초)", wait, "이 시간 안에 답이 없으면 이번 요청은 기존 방식으로 보내고, 벡터는 뒤에서 계속 만들어요. (1~20초, 기본 4)"),
-    field("API 키", key, "이 기기에만 저장돼요. 로컬 서버(localhost 등)는 비워도 돼요."),
+    field("API 키", key, "이 기기에만 저장돼요. 저장한 키는 점으로 가려져 남아 있어요. 로컬 서버(localhost 등)는 비워도 돼요."),
     h("details", { class: "rb-mem-man" }, h("summary", null, "고급"), field("유사도 기준 (기본 0.32)", sim, "낮출수록 더 많이, 높일수록 확실한 것만 끌어와요. 모델마다 값 범위가 달라요.")),
     msg,
     h("div", { class: "rb-mem-edrow", style: "justify-content:flex-end;flex-wrap:wrap" },
+      btn("기본값으로", { size: "sm", onClick: () => { url.value = f.url = DEFAULT_EMBED.url; model.value = f.model = DEFAULT_EMBED.model; show("info", "주소·모델을 기본값(voyage-4-large)으로 채웠어요. 저장을 눌러야 적용돼요."); } }),
       btn("벡터 지우기", { size: "sm", onClick: async () => { try { await E.clear(); show("info", "저장된 벡터를 지웠어요. 다음 요청 때 다시 만들어요."); } catch (e) { fail(ctx)(e); } } }),
       btn("연결 테스트", { size: "sm", onClick: async () => { show("info", "확인 중…"); try { const s = await persist(); const r = await E.test(); show(s.persisted ? "info" : "err", `연결됐어요 · ${r.dim}차원 · ${r.ms}ms${s.persisted ? " · 키 저장됨" : " · 하지만 이 환경에서는 키가 저장되지 않았어요"}`); } catch (e) { show("err", e?.message ?? String(e)); } } }),
       btn("닫기", { onClick: () => done(true) }),

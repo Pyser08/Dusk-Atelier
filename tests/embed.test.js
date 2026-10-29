@@ -79,3 +79,10 @@ test("embedder: 주소·모델 불일치와 서버 오류 본문을 알려 준�
   await E.save({ url: "https://api.voyageai.com/v1/embeddings", model: "voyage-4-large" });
   await assert.rejects(E.test(), /HTTP 400: Model voyage-x/);
 });
+test("embedder: 어긋난 보야지 저장값은 기본값(라지)으로 바로잡고, 키는 다시 열어도 남는다", async () => {
+  const store = { "dusk.embed.cfg.v1": JSON.stringify({ cfg: { on: true, url: "https://api.voyageai.com/v1/embeddings", model: "voyage-context-4" }, key: "pa-keep1234" }) };
+  const api = { safeLocalStorage: { getItem: async (k) => store[k] ?? null, setItem: async (k, v) => { store[k] = v; } } };
+  const E = createEmbedder(api, { log() {} }); const st = await E.load();
+  assert.equal(st.model, "voyage-4-large"); assert.equal(st.url, "https://api.voyageai.com/v1/embeddings"); assert.equal(E.keyValue(), "pa-keep1234");
+  const E2 = createEmbedder(api, { log() {} }); await E2.load(); assert.equal(E2.keyValue(), "pa-keep1234"); assert.equal(E2.status().model, "voyage-4-large");
+});
