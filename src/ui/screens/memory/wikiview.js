@@ -15,6 +15,7 @@ import { renderPeople, personDetail, wikiEditable, editMetric, editWikiText, pin
 import { openRecords } from "./recordsui.js";
 import { openAITools, openFieldAI, openImport, fillEmptyPeople } from "./aitools.js";
 import { liveScope } from "./advanced.js";
+import { EMO_TAGS, EMO_LABEL, GAUGE_MAX } from "../../../engine/memoryemo.js";
 import { wikiPanel } from "./wikipanel.js";
 import { openWikiLog } from "./wikilog.js";
 
@@ -198,6 +199,16 @@ function personPage(env, r, docs, commit) {
     return out;
   };
 
+  // v1.7.1: 감정 게이지 6가지(읽기 전용). 이 인물이 '느끼는' 쪽(from)인 쌍만, {{user}} 대상이 맨 앞.
+  const emoCards = () => {
+    if (!doc) return [];
+    const nm = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, ""), mine = new Set([doc.title, ...(doc.aliases ?? []), p?.name, ...(p?.aliases ?? [])].map(nm).filter(Boolean));
+    const pairs = Object.values(env.folder.emo ?? {}).filter((x) => mine.has(nm(x.from)) && EMO_TAGS.some((t) => x.tags?.[t] != null)).sort((a, b) => (nm(b.to) === "{{user}}") - (nm(a.to) === "{{user}}"));
+    if (!pairs.length) return [h("div", { class: "rb-card rb-wk-emo" }, h("div", { class: "rb-wk-top" }, h("b", null, "감정 게이지")), h("p", { class: "rb-muted" }, "아직 기록된 감정이 없어요. 대화가 이어지면 기억 분석이 채워 줘요."))];
+    return pairs.map((x) => h("div", { class: "rb-card rb-wk-emo" }, h("div", { class: "rb-wk-top" }, h("b", null, `감정 게이지 · ${x.from} → ${x.to}`)),
+      EMO_TAGS.map((t) => { const v = x.tags?.[t]; return h("div", { class: "rb-wk-emorow" }, h("span", null, EMO_LABEL[t]), h("div", { class: "rb-wk-bar", role: "progressbar", "aria-label": EMO_LABEL[t], "aria-valuemin": 0, "aria-valuemax": GAUGE_MAX, "aria-valuenow": v ?? 0 }, h("i", { style: { width: `${v == null ? 0 : (v / GAUGE_MAX) * 100}%` } })), h("b", null, v == null ? "—" : String(v))); })));
+  };
+
   const groups = {};
   for (const s of doc?.sections ?? []) { if (!s?.body?.trim()) continue; (groups[recordGroupOf(s) ?? "etc"] ??= []).push(s); }
 
@@ -254,7 +265,7 @@ function personPage(env, r, docs, commit) {
   // ---- 항목 묶음 블록
   const blocks = ORDER.map((id) => {
     if (id === "PROFILE") return profileBlock();
-    if (id === "METRICS") return doc ? section("metrics", "수치 상태", h("div", { class: "rb-wk-grid" }, metricCards()), doc.metrics.length) : null;
+    if (id === "METRICS") return doc ? section("metrics", "수치 상태", h("div", { class: "rb-wk-grid" }, [...metricCards(), ...emoCards()]), doc.metrics.length) : null;
     if (!doc) return null;
     const secs = (MEMBERS[id] ?? [id]).flatMap((g) => groups[g] ?? []);
     if (!secs.length && !ALWAYS.has(id)) return null;

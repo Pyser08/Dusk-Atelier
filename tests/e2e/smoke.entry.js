@@ -6,6 +6,7 @@ import { openWriter, previewView } from "../../src/ui/screens/memory/writerui.js
 import { openTracking } from "../../src/ui/screens/memory/trackui.js";
 import { restoreLastMerge } from "../../src/ui/screens/memory/mergeui.js";
 import { layoutOf } from "../../src/engine/peoplegroup.js";
+import { renderPeopleTab } from "../../src/ui/screens/memory/wikiview.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const $ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -77,6 +78,15 @@ window.runSmoke = async () => {
     await restoreLastMerge(env); check("되돌릴 기록 없음 안내", log.some((l) => l[0] === "toast" && String(l[1]).includes("되돌릴")));
     check("미리보기 렌더", previewView({ people: [] }).textContent.includes("없어요"));
   } catch (e) { check("예외", false, e?.stack ?? e); }
+  // v1.7.1: 인물 위키 '수치 상태'에 감정 게이지 6가지(읽기 전용, 간단 모드에서도)
+  try {
+    folder.emo = { "시로코>{{user}}": { from: "시로코", to: "{{user}}", tags: { trust: 7, fear: 2 }, log: [] } };
+    env.ctx.state ??= {}; env.advanced = false; env.idx = { settings: { potMode: true, backend: "auto" } };
+    const host = document.createElement("div"); document.body.appendChild(host); await renderPeopleTab(env, host); await sleep(80);
+    const row = (n) => [...host.querySelectorAll(".rb-wk-emorow")].find((r) => r.textContent.startsWith(n));
+    check("감정 게이지 카드(간단 모드)", !!host.querySelector(".rb-wk-emo") && /시로코 → \{\{user\}\}/.test(host.textContent), host.textContent.slice(0, 200));
+    check("감정 게이지 값·미설정 표시", row("신뢰")?.textContent.endsWith("7") && row("애정")?.textContent.endsWith("—") && row("두려움")?.textContent.endsWith("2"), [...host.querySelectorAll(".rb-wk-emorow")].map((r) => r.textContent).join("|"));
+  } catch (e) { check("감정 게이지 렌더", false, e?.stack ?? e); }
   check("전역 오류 없음", errors.length === 0, errors.join(" | "));
   return out;
 };
