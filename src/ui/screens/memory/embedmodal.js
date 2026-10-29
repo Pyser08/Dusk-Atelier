@@ -9,8 +9,8 @@ export async function openEmbedModal(ctx) {
   const f = { on: st.on, url: st.url, model: st.model, minSim: st.minSim, timeoutMs: st.timeoutMs };
   const msg = h("div", { "aria-live": "polite" });
   const field = (label, el, hint) => h("label", { class: "rb-mem-field", style: "flex-direction:column;align-items:stretch;gap:4px" }, h("span", null, label), el, hint ? h("small", { class: "rb-muted" }, hint) : null);
-  const url = h("input", { class: "rb-input", value: f.url, placeholder: "https://api.openai.com/v1", "aria-label": "임베딩 API 주소", onInput: (e) => { f.url = e.target.value; } });
-  const model = h("input", { class: "rb-input", value: f.model, placeholder: "text-embedding-3-small", "aria-label": "임베딩 모델", onInput: (e) => { f.model = e.target.value; } });
+  const url = h("input", { class: "rb-input", value: f.url, placeholder: "https://api.voyageai.com/v1/contextualizedembeddings", "aria-label": "임베딩 API 주소", onInput: (e) => { f.url = e.target.value; } });
+  const model = h("input", { class: "rb-input", value: f.model, placeholder: "voyage-context-4", "aria-label": "임베딩 모델", onInput: (e) => { f.model = e.target.value; } });
   const key = h("input", { class: "rb-input", type: "password", autocomplete: "off", placeholder: st.hasKey ? "저장된 키가 있어요 (바꿀 때만 입력)" : "API 키", "aria-label": "임베딩 API 키" });
   const sim = h("input", { class: "rb-input", type: "number", min: 0.1, max: 0.8, step: 0.02, value: f.minSim, "aria-label": "유사도 기준", onInput: (e) => { f.minSim = Number(e.target.value); } });
   const wait = h("input", { class: "rb-input", type: "number", min: 1, max: 20, step: 0.5, value: f.timeoutMs / 1000, "aria-label": "대기 시간(초)", onInput: (e) => { f.timeoutMs = Number(e.target.value) * 1000; } });
@@ -20,8 +20,8 @@ export async function openEmbedModal(ctx) {
     h("h3", { class: "rb-h3" }, "임베딩 설정"),
     h("p", { class: "rb-muted" }, "현재 장면과 뜻이 비슷한 기억을 찾아 넣을 때 써요. 단어가 달라도 찾을 수 있어요. 실패하거나 느리면 기존 방식으로 넘어가요."),
     h("div", { class: "rb-mem-field", style: "justify-content:space-between" }, h("span", null, "기본으로 사용"), switchEl(f.on, { label: "임베딩 기본 사용", onChange: (v) => { f.on = v; } })),
-    field("API 주소", url, "OpenAI 호환 주소. /embeddings는 자동으로 붙어요."),
-    field("모델 이름", model),
+    field("API 주소", url, "기본은 보야지(Voyage AI) 컨텍스트 임베딩이에요. 주소가 /contextualizedembeddings면 그 전용 형식으로, 아니면 OpenAI 호환(/embeddings)으로 보내요."),
+    field("모델 이름", model, "기본 voyage-context-4는 계정당 2억 토큰까지 무료예요. voyage-context-3은 구형이라 무료 토큰이 없어요(유료)."),
     field("대기 시간(초)", wait, "이 시간 안에 답이 없으면 이번 요청은 기존 방식으로 보내고, 벡터는 뒤에서 계속 만들어요. (1~20초, 기본 4)"),
     field("API 키", key, "이 기기에만 저장돼요. 로컬 서버(localhost 등)는 비워도 돼요."),
     h("details", { class: "rb-mem-man" }, h("summary", null, "고급"), field("유사도 기준 (기본 0.32)", sim, "낮출수록 더 많이, 높일수록 확실한 것만 끌어와요. 모델마다 값 범위가 달라요.")),

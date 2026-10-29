@@ -1,7 +1,7 @@
 // v1.7.1 임베딩 호출·저장. 설정과 키는 이 기기의 로컬 저장소에만 둔다(백업·공유 내보내기에 안 들어감).
 // 실패·지연은 조용히 건너뛰고 기존 검색키 방식으로 이어 간다(채팅을 막지 않는다).
 import { hashText } from "../engine/chattext.js";
-import { normCfg, buildRequest, parseResponse, pack, unpack, cosine, isReady, recordText } from "../engine/embed.js";
+import { normCfg, buildRequest, parseResponse, pack, unpack, cosine, isReady, recordText, isContextual } from "../engine/embed.js";
 
 const CFG_KEY = "dusk.embed.cfg.v1", VEC_PREFIX = "dusk.embed.vec.v1.", BATCH = 32, MAX_NEW = 96;
 
@@ -22,16 +22,20 @@ export function createEmbedder(api, { log = (...a) => console.log("[Dusk 임베�
     if (modelChanged) { vecs.clear(); qcache.clear(); }
     await wr(CFG_KEY, { cfg, key }); return status();
   }
-  async function embed(texts, { timeoutMs } = {}) {
+  // texts: 글 배열. opts.groups: 같은 문서(인물)의 글 묶음들(컨텍스트 모드가 묶음 단위로 맥락을 반영). opts.type: document | query.
+  async function embed(texts, { timeoutMs, groups = null, type = "document" } = {}) {
     await load(); if (!isReady(cfg, !!key)) throw new Error("임베딩 설정이 비어 있어요.");
-    const out = [];
-    for (let i = 0; i < texts.length; i += BATCH) {
-      const part = texts.slice(i, i + BATCH), req = buildRequest(cfg, key, part), ac = new AbortController(), t0 = Date.now();
+    const out = [], ctxMode = isContextual(cfg);
+    const units = groups ? groups.map((g) => g.slice(0, BATCH)) : texts.map((t) => [t]);
+    const flat = units.flat(), reqs = ctxMode ? [units] : Array.from({ length: Math.ceil(flat.length / BATCH) }, (_, i) => flat.slice(i * BATCH, (i + 1) * BATCH));
+    for (const part of reqs) {
+      const count = ctxMode ? part.reduce((n, g) => n + g.length, 0) : part.length;
+      const req = buildRequest(cfg, key, ctxMode ? { groups: part, type } : { texts: part, type }), ac = new AbortController(), t0 = Date.now();
       const timer = setTimeout(() => ac.abort(), timeoutMs ?? cfg.timeoutMs);
       try {
         const res = await api.nativeFetch(req.url, { method: "POST", headers: req.headers, body: req.body, signal: ac.signal });
         if (!res?.ok) throw new Error(`HTTP ${res?.status ?? "?"}`);
-        const rows = parseResponse(await res.json(), part.length); if (!rows) throw new Error("응답 모양이 달라요");
+        const rows = parseResponse(await res.json(), count, ctxMode); if (!rows) throw new Error("응답 모양이 달라요");
         out.push(...rows); lastMs = Date.now() - t0; lastError = "";
       } catch (e) { lastError = ac.signal.aborted ? "시간 초과" : String(e?.message ?? e).slice(0, 120); throw new Error(lastError); } finally { clearTimeout(timer); }
     }
@@ -50,16 +54,19 @@ export function createEmbedder(api, { log = (...a) => console.log("[Dusk 임베�
   async function scores(fid, folder, queryText, { budgetMs = null } = {}) {
     await load(); if (!isReady(cfg, !!key) || !String(queryText ?? "").trim()) return null;
     const q = String(queryText).slice(-1200), qh = hashText(q), b = await bucket(fid);
-    const items = []; for (const p of Object.values(folder?.people ?? {})) for (const r of p.records ?? []) if (!r.orphan && r.valid !== false) { const t = recordText(p, r); items.push({ id: r.id, h: hashText(t), t }); }
+    const items = []; for (const p of Object.values(folder?.people ?? {})) for (const r of p.records ?? []) if (!r.orphan && r.valid !== false) { const t = recordText(p, r); items.push({ id: r.id, h: hashText(t), t, pk: p.name }); }
     const need = [...new Map(items.filter((x) => !b.v[x.h]).map((x) => [x.h, x])).values()].slice(0, MAX_NEW);
     const qv = qcache.get(qh);
     const jobKey = fid + ":" + qh + ":" + need.length;
     let work = pending.get(jobKey);
     if (!work && (need.length || !qv)) {
       work = (async () => {
-        const texts = [...(qv ? [] : [q]), ...need.map((x) => x.t)], vs = await embed(texts);
-        let i = 0; if (!qv) { qcache.set(qh, unpack(pack(vs[i++]))); if (qcache.size > 20) qcache.delete(qcache.keys().next().value); }
-        for (const x of need) b.v[x.h] = pack(vs[i++]);
+        // 기록은 인물별 묶음(같은 문서의 조각)으로, 장면 글은 따로 query로 보낸다. 두 요청은 동시에 보낸다.
+        const byP = new Map(); for (const x of need) { if (!byP.has(x.pk)) byP.set(x.pk, []); byP.get(x.pk).push(x); }
+        const gs = [...byP.values()].flatMap((g) => Array.from({ length: Math.ceil(g.length / BATCH) }, (_, i) => g.slice(i * BATCH, (i + 1) * BATCH))), order = gs.flat();
+        const [qs, ds] = await Promise.all([qv ? [] : embed([q], { type: "query" }), order.length ? embed(order.map((x) => x.t), { groups: gs.map((g) => g.map((x) => x.t)), type: "document" }) : []]);
+        if (!qv) { qcache.set(qh, unpack(pack(qs[0]))); if (qcache.size > 20) qcache.delete(qcache.keys().next().value); }
+        order.forEach((x, i) => { b.v[x.h] = pack(ds[i]); });
         if (need.length) await wr(VEC_PREFIX + fid, b);
       })().catch((e) => log("임베딩 건너뜀:", e?.message ?? e)).finally(() => pending.delete(jobKey));
       pending.set(jobKey, work);

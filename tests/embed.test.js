@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normCfg, endpointOf, buildRequest, parseResponse, pack, unpack, cosine, semBoost, isReady } from "../src/engine/embed.js";
+import { normCfg, isContextual, endpointOf, buildRequest, parseResponse, pack, unpack, cosine, semBoost, isReady } from "../src/engine/embed.js";
 import { buildBlock } from "../src/engine/memoryinject.js";
 import { createEmbedder } from "../src/data/embed.js";
 
@@ -14,6 +14,17 @@ test("주소·요청·응답", () => {
   assert.equal(parseResponse({ data: [] }, 1), null);
   assert.ok(!isReady(normCfg({ on: true, url: "https://a.com", model: "m" }), false));
   assert.ok(isReady(normCfg({ on: true, url: "http://localhost:11434/v1", model: "m" }), false));
+});
+test("보야지 컨텍스트 형식", () => {
+  const cfg = normCfg({ on: true, url: "https://api.voyageai.com/v1/contextualizedembeddings", model: "voyage-context-4" });
+  assert.ok(isContextual(cfg)); assert.equal(endpointOf(cfg.url), cfg.url);
+  const r = buildRequest(cfg, "K", { groups: [["a", "b"], ["c"]], type: "query" });
+  assert.deepEqual(JSON.parse(r.body), { model: "voyage-context-4", inputs: [["a", "b"], ["c"]], input_type: "query" });
+  const v = (x) => [x, 0, 0, 0];
+  const res = { data: [{ index: 1, data: [{ index: 0, embedding: v(3) }] }, { index: 0, data: [{ index: 1, embedding: v(2) }, { index: 0, embedding: v(1) }] }] };
+  assert.deepEqual(parseResponse(res, 3, true), [v(1), v(2), v(3)]); assert.equal(parseResponse(res, 2, true), null);
+  assert.equal(normCfg(null).model, "voyage-context-4");
+  assert.ok(JSON.parse(buildRequest(normCfg({ url: "https://api.voyageai.com/v1", model: "voyage-4" }), "", ["x"]).body).input_type);
 });
 test("압축·유사도·가중치", () => {
   const a = [0.3, 0.9, -0.2, 0.1], b = unpack(pack(a));
@@ -40,4 +51,15 @@ test("embedder: 호출·캐시·실패 폴백", async () => {
   const n = calls; await E.scores("f", f, "열쇠가 보였다"); assert.equal(calls, n, "캐시");
   fail = true; assert.equal(await E.scores("f", f, "전혀 다른 새 글"), null, "실패하면 null");
   assert.ok(!JSON.stringify(store).includes("Bearer"));
+});
+test("embedder: 컨텍스트 모드는 인물별 묶음 + 장면은 query로 보낸다", async () => {
+  const store = {}, seen = [];
+  const api = { safeLocalStorage: { getItem: async (k) => store[k] ?? null, setItem: async (k, v) => { store[k] = v; } },
+    nativeFetch: async (u, o) => { const b = JSON.parse(o.body); seen.push(b); return { ok: true, json: async () => ({ data: b.inputs.map((g, i) => ({ index: i, data: g.map((t, j) => ({ index: j, embedding: /열쇠/.test(t) ? [1, 0, 0, 0] : [0, 1, 0, 0] })) })) }) }; } };
+  const E = createEmbedder(api, { log() {} });
+  await E.save({ on: true, key: "K" });
+  const f = { people: { 하루: { name: "하루", records: [{ id: "a", act: "열쇠 발견" }, { id: "b", act: "차 마심" }] }, 미나: { name: "미나", records: [{ id: "c", act: "열쇠 숨김" }] } } };
+  const s = await E.scores("g", f, "열쇠");
+  assert.ok(s.get("a") > 0.9 && s.get("b") < 0.1 && s.get("c") > 0.9);
+  assert.ok(seen.some((b) => b.input_type === "query") && seen.some((b) => b.input_type === "document" && b.inputs.length === 2));
 });
