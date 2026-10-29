@@ -1,6 +1,7 @@
 // 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 await 하지 않는다.
 import { extractMessageText, isUserMessage, hashText, confirmedAiIndex, isChatGenerating as isGenerating } from "../engine/chattext.js";
 import { analyze } from "../engine/memoryprompt.js";
+import { customPromptPlain } from "../engine/pot/custom-prompts.js";
 import { reconcile } from "../engine/memoryreconcile.js";
 import { loadReconciled } from "./memoryload.js";
 import { applyAnalysis, knownPeople, doneHashes } from "../engine/memoryapply.js";
@@ -15,7 +16,7 @@ const MAX_FAILS = 5;
 // 자동 기록 시점: next(기본) = 다음 입력을 보낼 때 직전 응답을 확정해 기록 | now = 응답 직후
 const confirmOf = (idx) => idx?.settings?.confirm === "now" ? "now" : "next";
 
-export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null } = {}) {
+export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null } = {}) {
   let timer = null, dirty = false, running = false, started = false;
   let session = { calls: 0, hooks: 0, displays: 0, hookAt: 0, tick: null }; const lastTried = new Map(); let lastTickAt = 0;
   const note = (result, extra = {}) => { session.tick = { at: Date.now(), result, ...extra }; };
@@ -51,6 +52,14 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     if ((g.idx.settings.everyN ?? 1) > 1 && ordinal % g.idx.settings.everyN !== 0) return "skip";
     return null;
   }
+  // 설정의 '내 프롬프트' 중 장기기억 분석에 쓸 것을 위치별로 모은다. 실패해도 기록은 계속한다.
+  async function customOf(chaId, chatId) {
+    try {
+      const s = await prompts?.(); if (!s) return null;
+      const sc = { characterId: chaId, chatKey: chatId };
+      return { front: customPromptPlain(s, "memory", sc, "front"), middle: customPromptPlain(s, "memory", sc, "middle"), back: customPromptPlain(s, "memory", sc, "back") };
+    } catch { return null; }
+  }
   // 분석 모델에 보낼 입력(기존 폴더 기준).
   function inputOf(g, existing, group) {
     const recent = g.messages.slice(Math.max(0, group[0] - 6), group[0]).map((mm, k) => line(mm, Math.max(0, group[0] - 6) + k));
@@ -79,6 +88,7 @@ export function createMemoryRunner(api, { store, afterAnalyze = null, log = (...
     lastTried.set(tryKey, h);
     const firstTime = !existing && !bot.notified;
     const input = inputOf(g, existing, group);
+    input.custom = await customOf(g.chaId, g.chatId);
     let result = manual ? null : link?.take?.(h) ?? null;
     if (result) session.combined = (session.combined ?? 0) + 1;
     else session.calls++;

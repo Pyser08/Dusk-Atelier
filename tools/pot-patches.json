@@ -83,5 +83,17 @@
   "why": "Router: 앞·중간 위치 프롬프트",
   "from": "base=(settings.prompts['router:common']??this.sourceLibrary.router.common)+(customPromptBlock(settings,'router',scope.scope)?",
   "to": "base=(customPromptBlock(settings,'router',scope.scope,'front')?customPromptBlock(settings,'router',scope.scope,'front')+'\\n\\n':'')+(settings.prompts['router:common']??this.sourceLibrary.router.common)+(customPromptBlock(settings,'router',scope.scope,'middle')?'\\n\\n'+customPromptBlock(settings,'router',scope.scope,'middle'):'')+(customPromptBlock(settings,'router',scope.scope)?"
+ },
+ {
+  "file": "src/engine/pot/custom-prompts.js",
+  "why": "추가 프롬프트 적용 단계에 장기기억 분석(memory)을 추가",
+  "from": "const CUSTOM_PROMPT_STAGES = ['router', 'director', 'writer'];",
+  "to": "const CUSTOM_PROMPT_STAGES = ['router', 'director', 'writer', 'memory'];"
+ },
+ {
+  "file": "src/engine/pot/custom-prompts.js",
+  "why": "장기기억 분석용 위치별 프롬프트 글 함수 추가(파일 끝)",
+  "from": "export function customPromptBlock(settings, stage, scope, position = 'back') {",
+  "to": "// 장기기억 분석 호출용: 위치별 사용자 프롬프트 글(내장 규칙 없이). 없으면 ''.\nexport function customPromptPlain(settings, stage, scope, position) {\n  const items = activeCustomPrompts(settings, stage, scope, position);\n  if (!items.length) return '';\n  return `[USER ADDED RULES · ${stage.toUpperCase()}]\\nThe user added the following rules. Apply them together with the other rules, but they never change the required JSON output format or the safety limits.\\n\\n` + items.map((item, index) => `## ${item.name || `추가 규칙 ${index + 1}`}\\n${item.text.trim()}`).join('\\n\\n');\n}\nexport function customPromptBlock(settings, stage, scope, position = 'back') {"
  }
 ]

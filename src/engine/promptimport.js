@@ -5,7 +5,7 @@ const isRec = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const str = (v) => (typeof v === "string" ? v : "");
 const mk = (name, text, extra) => {
   const o = { name: str(name).trim().slice(0, NAME_MAX), text: str(text) };
-  const st = Array.isArray(extra?.stages) ? ["router", "director", "writer"].filter((k) => extra.stages.includes(k)) : [];
+  const st = Array.isArray(extra?.stages) ? ["memory", "router", "director", "writer"].filter((k) => extra.stages.includes(k)) : [];
   if (st.length) o.stages = st;
   if (["front", "middle", "back"].includes(extra?.position)) o.position = extra.position;
   return o;

@@ -4,7 +4,7 @@ import { observerModeBlock } from './observer-mode.js';
 import { speechVarietyBlock } from './speech-variety.js';
 
 // each scoped to every chat, one bot or one chat. They follow the built-in rules and never replace output contracts.
-const CUSTOM_PROMPT_STAGES = ['router', 'director', 'writer'];
+const CUSTOM_PROMPT_STAGES = ['router', 'director', 'writer', 'memory'];
 const CUSTOM_PROMPT_SCOPES = ['all', 'bot', 'chat'];
 const CUSTOM_PROMPT_LIMITS = Object.freeze({ items: 40, id: 40, name: 60, text: 12000, key: 500, label: 200 });
 const CUSTOM_PROMPT_LIMITS_REF = CUSTOM_PROMPT_LIMITS;
@@ -57,6 +57,12 @@ function activeCustomPrompts(settings, stage, scope, position) {
   return (Array.isArray(settings?.customPrompts) ? settings.customPrompts : []).filter(item => item.enabled && item.stages.includes(stage) && item.text.trim() && customPromptApplies(item, scope) && (!position || (item.position || 'back') === position));
 }
 /** One block appended after the stage's built-in rules, or '' when nothing applies. */
+// 장기기억 분석 호출용: 위치별 사용자 프롬프트 글(내장 규칙 없이). 없으면 ''.
+export function customPromptPlain(settings, stage, scope, position) {
+  const items = activeCustomPrompts(settings, stage, scope, position);
+  if (!items.length) return '';
+  return `[USER ADDED RULES · ${stage.toUpperCase()}]\nThe user added the following rules. Apply them together with the other rules, but they never change the required JSON output format or the safety limits.\n\n` + items.map((item, index) => `## ${item.name || `추가 규칙 ${index + 1}`}\n${item.text.trim()}`).join('\n\n');
+}
 export function customPromptBlock(settings, stage, scope, position = 'back') {
   const items = activeCustomPrompts(settings, stage, scope, position), builtIn = position === 'back' ? [observerModeBlock(settings, stage, activeCustomPrompts(settings, stage, scope)), cycleBlock(settings, stage), speechVarietyBlock(settings, stage)].filter(Boolean).join('\n\n') : '';
   if (!items.length) return builtIn;

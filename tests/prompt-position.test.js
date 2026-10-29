@@ -16,3 +16,18 @@ test("프롬프트 위치: 기본은 뒤, 위치별로 나뉘어 들어간다", 
 test("프롬프트 위치: 잘못된 값은 거부", () => {
   assert.throws(() => normalizeCustomPrompts([mk("top", "X")]));
 });
+
+import { withCustom, SYSTEM_PROMPT, buildMessages } from "../src/engine/memoryprompt.js";
+import { customPromptPlain } from "../src/engine/pot/custom-prompts.js";
+test("장기기억 분석: 앞·중간·뒤 위치에 끼워진다", () => {
+  const first = SYSTEM_PROMPT.split("\n")[0];
+  const out = withCustom({ front: "FFF", middle: "MMM", back: "BBB" });
+  assert.ok(out.startsWith("FFF") && out.endsWith("BBB"));
+  assert.ok(out.indexOf(first) < out.indexOf("MMM") && out.indexOf("MMM") < out.indexOf("Return ONE JSON"));
+  assert.equal(withCustom(null), SYSTEM_PROMPT);
+  assert.equal(buildMessages({ bot: "b", newest: { index: 0, text: "x" } })[0].content, SYSTEM_PROMPT);
+  const s = { customPrompts: normalizeCustomPrompts([{ ...mk("middle", "ZZZ"), stages: ["memory"] }]) };
+  assert.ok(customPromptPlain(s, "memory", null, "middle").includes("ZZZ"));
+  assert.equal(customPromptPlain(s, "memory", null, "back"), "");
+  assert.equal(customPromptPlain(s, "writer", null, "middle"), "");
+});

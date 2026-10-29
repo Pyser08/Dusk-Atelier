@@ -94,7 +94,7 @@ function customPrompts(ctx, s, ed, bot, live) {
   const scopeText = (p) => p.scope.kind === "all" ? "모든 봇·채팅" : p.scope.kind === "bot" ? `이 봇 (${p.scope.label || p.scope.characterId})` : `이 채팅 (${p.scope.label || "채팅"})`;
   const row = (p, i) => {
     const set = (k, v) => ed((x) => { x.customPrompts[i][k] = v; });
-    const stages = ["router", "director", "writer"].map((k) => h("label", { class: "rb-mem-field row" }, h("span", null, STAGE_NAMES[k]), switchEl(p.stages.includes(k), { label: STAGE_NAMES[k], onChange: (v, el) => { setSwitch(el, v); const next = ["router", "director", "writer"].filter((z) => (z === k ? v : p.stages.includes(z))); if (!next.length) { ctx.toast("적용할 단계를 하나는 골라 주세요.", { error: true }); return paint(); } set("stages", next); } })));
+    const stages = ["memory", "router", "director", "writer"].map((k) => h("label", { class: "rb-mem-field row" }, h("span", null, k === "memory" ? "장기기억 분석" : STAGE_NAMES[k]), switchEl(p.stages.includes(k), { label: k === "memory" ? "장기기억 분석" : STAGE_NAMES[k], onChange: (v, el) => { setSwitch(el, v); const next = ["memory", "router", "director", "writer"].filter((z) => (z === k ? v : p.stages.includes(z))); if (!next.length) { ctx.toast("적용할 단계를 하나는 골라 주세요.", { error: true }); return paint(); } set("stages", next); } })));
     const paint = () => ed(() => {});
     const text = h("textarea", { class: "rb-input", rows: 5, "aria-label": "추가 프롬프트 본문", maxlength: 12000, onChange: (e) => set("text", e.target.value) }, p.text);
     const nm = h("input", { class: "rb-input", value: p.name, placeholder: "이름(선택)", "aria-label": "이름", maxlength: 60, onChange: (e) => set("name", e.target.value.trim()) });

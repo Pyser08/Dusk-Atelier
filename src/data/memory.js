@@ -14,7 +14,7 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
   let runner = null;  // 아래에서 만든다. 요청 직전 훅은 이 시점 이후에만 불린다.
   const injector = createMemoryInjector(api, { store, storyNow, log, onRequest: () => runner?.confirmNext() });
   const link = {};  // 턴 흐름이 켜지면 채워진다(리수폿 Writer와 기록 호출을 합칠 때 러너가 쓴다)
-  runner = createMemoryRunner(api, { store, log, notify, link, afterAnalyze: async (ci, ti) => { if (injector.mode() === "lore") await injector.syncLore(ci, ti); } });
+  runner = createMemoryRunner(api, { store, log, notify, prompts: async () => (await flow?.settings?.())?.rawSnapshot?.() ?? null, link, afterAnalyze: async (ci, ti) => { if (injector.mode() === "lore") await injector.syncLore(ci, ti); } });
   const bardwiki = createBardWikiBackend(api, { store, log });
   const flow = potLibrary ? createTurnFlow(api, { store, runner, injector, sourceLibrary: potLibrary, link, onOpen, log }) : null;
   // 화면이 저장소에 직접 쓴 위키(문서 만들기·편집·합치기 등)를 기억 흐름 런타임의 사본에도 반영한다.

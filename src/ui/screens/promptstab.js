@@ -7,7 +7,8 @@ import { STAGE_NAMES } from './memory/advanced.js';
 import { decodePreset } from '../../dev/aibuild/preset-format.js';
 import { fromJson, fit, toJson, PROMPT_MAX } from '../../engine/promptimport.js';
 
-var STAGES = ["router", "director", "writer"];
+var STAGES = ["memory", "router", "director", "writer"];
+var SNAMES = { memory: "장기기억 분석", router: STAGE_NAMES.router, director: STAGE_NAMES.director, writer: STAGE_NAMES.writer };
 var MAX_ITEMS = 40;
 var POSITIONS = [["front", "앞"], ["middle", "중간"], ["back", "뒤"]];
 var POS_HINT = { front: "기본 규칙보다 앞에 들어가요.", middle: "기본 규칙 뒤, 기능별 규칙 앞에 들어가요.", back: "모든 규칙의 맨 뒤에 들어가요." };
@@ -45,7 +46,7 @@ export async function renderPrompts(ctx) {
     if (have + items.length > MAX_ITEMS) return fail(new Error(`프롬프트는 ${MAX_ITEMS}개까지예요. 지금 ${have}개 있어요.`));
     edit((x) => {
       const list = x.customPrompts ?? [], ids = new Set(list.map((p) => p.id));
-      for (const it of items) { const id = newId(ids); ids.add(id); list.push({ id, name: it.name ?? "", stages: it.stages ?? ["writer"], scope: { kind: "all" }, enabled: true, text: it.text ?? "", position: it.position ?? "back" }); }
+      for (const it of items) { const id = newId(ids); ids.add(id); list.push({ id, name: it.name ?? "", stages: it.stages ?? ["memory", "writer"], scope: { kind: "all" }, enabled: true, text: it.text ?? "", position: it.position ?? "back" }); }
       x.customPrompts = list;
     });
   };
@@ -61,7 +62,7 @@ export async function renderPrompts(ctx) {
 
   const row = (p, i) => {
     const set = (k, v) => edit((x) => { x.customPrompts[i][k] = v; });
-    const stages = STAGES.map((k) => h("label", { class: "rb-mem-field row" }, h("span", null, STAGE_NAMES[k]), switchEl(p.stages.includes(k), { label: STAGE_NAMES[k], onChange: (v, el) => {
+    const stages = STAGES.map((k) => h("label", { class: "rb-mem-field row" }, h("span", null, SNAMES[k]), switchEl(p.stages.includes(k), { label: SNAMES[k], onChange: (v, el) => {
       const next = STAGES.filter((s) => s === k ? v : p.stages.includes(s));
       if (!next.length) { setSwitch(el, true); return fail(new Error("적용할 단계를 하나는 골라야 해요.")); }
       set("stages", next);

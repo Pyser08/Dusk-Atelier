@@ -21,13 +21,19 @@ export const SYSTEM_PROMPT = [
   "If nothing is worth recording, return people:[]."
 ].join("\n");
 
+// 내 프롬프트(설정)를 정한 위치에 끼운다: 앞=맨 앞, 중간=역할 설명 뒤·출력 형식 앞, 뒤=맨 뒤
+export function withCustom(c) {
+  if (!c || !(c.front || c.middle || c.back)) return SYSTEM_PROMPT;
+  const lines = SYSTEM_PROMPT.split("\n");
+  return [c.front, lines[0], c.middle, ...lines.slice(1), c.back].filter(Boolean).join("\n\n");
+}
 const cut = (v, n) => String(v ?? "").trim().slice(0, n);
-export function buildMessages({ bot, known = [], ignore = [], previousScene = null, openItems = [], recent = [], newest, storyDate = "" }) {
+export function buildMessages({ bot, known = [], ignore = [], previousScene = null, openItems = [], recent = [], newest, storyDate = "", custom = null }) {
   // recent: 뒤에서부터 합계 4000자, newest.text ≤ 6000자
   const kept = []; let total = 0;
   for (let i = recent.length - 1; i >= 0; i--) { total += recent[i].length; if (total > 4000 && kept.length) break; kept.unshift(recent[i].slice(0, 4000)); }
   const payload = { bot: cut(bot, 120), known, ignore, previousScene, ...(openItems.length ? { openItems } : {}), ...(storyDate ? { storyDate } : {}), recent: kept, newest: { index: newest.index, text: cut(newest.text, 6000) } };
-  return [{ role: "system", content: SYSTEM_PROMPT }, { role: "user", content: JSON.stringify(payload) }];
+  return [{ role: "system", content: withCustom(custom) }, { role: "user", content: JSON.stringify(payload) }];
 }
 
 export function parseJson(raw) {
