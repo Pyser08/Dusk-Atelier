@@ -1,4 +1,4 @@
-// 홈 (v1.7.0 6단계): 지금 열린 채팅 → 상태 3줄(기억·리수폿·인물) → 바로 하기 9칸. PC는 오른쪽에 최근 기록 3개.
+// 홈: 지금 열린 채팅 → 기억 상태 → 바로 하기 9칸. PC는 오른쪽에 최근 기록 3개.
 import { maybePromptIntro } from './promptstab.js';
 import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
