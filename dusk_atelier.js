@@ -1852,8 +1852,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-hstat-memory .lab{min-height:36px}.rb-hstat-memory .rb-status{min-height:76px}
 .rb-hstat{display:flex;flex-direction:column;gap:6px;min-width:0}.rb-hstat .lab{display:flex;align-items:center;justify-content:space-between;gap:4px;border:1px solid transparent;border-radius:var(--rb-r2);background:none;padding:2px 4px;color:var(--rb-text);font:inherit;cursor:pointer;min-height:28px;transition:border-color .15s,background .15s}.rb-hstat .lab b{font-size:14px}
 .rb-hstat .rb-status{margin:0;height:100%}
-@media (hover:hover){.rb-hstat-memory .lab:hover{border-color:var(--rb-sel-ring);background:var(--rb-hover)}}
-.rb-hstat-memory .lab:focus-visible{outline:3px solid var(--rb-focus);outline-offset:2px}
+@media (hover:hover){.rb-hstat-memory .rb-status:hover{border-color:var(--rb-sel-ring)}}
+.rb-hstat-memory:focus-visible .rb-status{outline:3px solid var(--rb-focus);outline-offset:2px}
 .rb-hdo h2,.rb-hrecent h2{margin:0 0 10px;font-size:12.5px;font-weight:700;color:var(--rb-sub);letter-spacing:.02em}
 .rb-hgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .rb-htile{position:relative;display:flex;align-items:center;gap:12px;text-align:left;padding:14px;border-radius:var(--rb-r3);border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-surf);color:var(--rb-text);font:inherit;cursor:pointer;min-width:0;min-height:68px}
