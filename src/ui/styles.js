@@ -901,7 +901,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-htile .cnt{position:absolute;top:8px;right:8px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--rb-acc);color:var(--rb-on-acc);font-size:12px;font-weight:700;display:grid;place-items:center}
 @media (hover:hover){.rb-htile:hover{border-color:var(--rb-sel-ring)}}
 .rb-hrecent{display:flex;flex-direction:column;align-items:flex-start;gap:8px}.rb-hrecent .rb-card{width:100%}.rb-hrec-empty{padding:12px 14px;border-radius:12px;border:1px dashed var(--rb-line);width:100%}
-@media (max-width:1000px){.rb-hbody{grid-template-columns:minmax(0,1fr)}.rb-hrecent{display:none}}
+@media (max-width:1000px){.rb-hbody{grid-template-columns:minmax(0,1fr)}.rb-hrecent{display:flex}}
 @media (max-width:760px){.rb-home2{padding:14px 16px 28px;gap:14px}.rb-hhead h1{font-size:20px}.rb-hstats{grid-template-columns:1fr}.rb-hgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
   .rb-htile{flex-direction:column;justify-content:center;text-align:center;gap:6px;padding:12px 4px;min-height:92px}.rb-htile .t{align-items:center}.rb-htile small{display:none}.rb-htile b{font-size:13px}.rb-htile .cnt{top:6px;right:6px}}
 
