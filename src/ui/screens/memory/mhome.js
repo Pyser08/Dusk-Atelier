@@ -9,6 +9,7 @@ import { mem, fail, gradeBadge, at } from "./common.js";
 import { renderModeBar } from "./modebar.js";
 import { advancedBlocks } from "./madv.js";
 import { openEmbedModal } from "./embedmodal.js";
+import { maybeShowEmbeddingGuide } from "./embeddingguide.js";
 import { maybeAskBardWiki } from "./modebar.js";
 
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -99,4 +100,5 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   const adv = advFold(ctx, "memory", ...(ctx.prefs.advanced ? advancedBlocks(ctx, { cur, idx, redraw, modeHost }) : [true]));
   replace(host, h("div", { class: ["rb-mem2-grid", ctx.prefs.advanced && "has-adv"] }, main, adv ? h("div", { class: "rb-mem2-side" }, adv) : null));
+  void maybeShowEmbeddingGuide(ctx).catch(fail(ctx));
 }
