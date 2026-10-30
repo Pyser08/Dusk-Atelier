@@ -2,8 +2,9 @@
 // 메뉴 섹션: 기억 → 관리 → 작업실. 홈은 섹션 바깥에 둔다.
 export var TABS = [
   { id: "home", label: "홈", icon: "home", group: "base", desc: "지금 열린 채팅의 상태를 보고, 하고 싶은 일을 골라요.", help: [] },
+  { id: "memory-home", label: "개요", icon: "home", group: "more", section: "memory", desc: "기억 기능을 골라 열어요.", card: "장기 기억과 기억 카드로 이동해요.", help: ["원하는 기억 기능을 눌러 바로 이동해요."] },
   {
-    id: "memory", label: "장기 기억", icon: "brain", group: "base", section: "memory",
+    id: "memory", label: "장기 기억", icon: "brain", group: "more", section: "memory",
     desc: "응답마다 인물별 기억을 쌓고, 필요할 때 꺼내 써요.",
     card: "응답마다 기억을 쌓고 필요할 때 꺼내 써요.",
     help: ["스위치만 켜면 바로 작동해요. ‘처음 설정하기’는 3단계로 끝나요.", "봇을 고르면 그 채팅에서 만든 기억이 인물별로 보여요.", "카드의 작은 ? 버튼에서 그 자리 설명과 ‘처음 설정 다시 보기’를 볼 수 있어요."]
@@ -14,6 +15,7 @@ export var TABS = [
     card: "기억을 카드로 만들고 새 봇으로 이어 가요.",
     help: ["봇을 고르면 그 봇에서 만든 카드가 보여요.", "‘새 카드·새 봇 만들기’에서 인물과 범위를 골라요.", "카드 설정에서 태그와 기본 언어를 바꿀 수 있어요."]
   },
+  { id: "manage-home", label: "개요", icon: "home", group: "more", section: "manage", desc: "캐릭터·모듈·플러그인을 관리해요.", card: "관리 기능을 골라 열어요.", help: ["원하는 관리 기능을 눌러 바로 이동해요."] },
   {
     id: "characters", label: "캐릭터", icon: "character", group: "more", section: "manage",
     desc: "캐릭터를 폴더로 정리하고 에셋·로어북을 다듬어요.",
@@ -32,12 +34,14 @@ export var TABS = [
     card: "플러그인을 모아 보고 업데이트를 확인해요.",
     help: ["플러그인마다 카테고리를 붙여 정리할 수 있어요.", "‘플러그인 만들기’에서 템플릿으로 내 플러그인을 시작해요.", "DA Interop으로 다른 플러그인과 설정을 주고받아요."]
   },
+  { id: "work-home", label: "개요", icon: "home", group: "more", section: "work", desc: "꾸미기·AI 봇 제작·도구·설정을 모았어요.", card: "작업실 기능을 골라 열어요.", help: ["원하는 작업 기능을 눌러 바로 이동해요."] },
   {
     id: "look", label: "꾸미기", icon: "palette", group: "more", section: "work",
     desc: "색·밝기·글자 크기를 골라요. 바로 바뀌어요.",
     card: "색·밝기·글자 크기를 골라요.",
     help: ["누르면 바로 바뀌고 자동으로 저장돼요.", "‘고급 모드’에서 메뉴 위치·밀도·확대율을 더 바꿔요."]
   },
+  { id: "aibot", label: "AI로 봇 만들기", icon: "sparkle", group: "more", section: "work", desc: "AI 제작 화면으로 새 봇을 만들어요.", card: "AI로 새 봇 만들기", help: ["새 봇을 만든 뒤 AI로 제작 화면을 열어요."] },
   {
     id: "tools", label: "도구", icon: "tools", group: "more", section: "work",
     desc: "프리셋·페르소나·채팅 테마·로어북 로그 같은 도구 모음이에요.",

@@ -346,3 +346,11 @@
 - `src/ui/styles.js`: 기존 Dusk 카드·접이식 UI와 통합 패널의 반응형 배치를 추가한다.
 
 - `src/ui/screens/memory/embeddingguide.js` (신규) 기억 탭에 처음 진입할 때 임베딩(의미 검색)을 한 번 안내한다. 플러그인 저장소의 고정 키로 표시 여부를 기억해 이후 실행·업데이트에서는 다시 띄우지 않는다.
+
+
+## 메뉴 개요 화면 업데이트
+
+- `src/ui/screens/sectionhome.js`: 기억·관리·작업실 그룹별 기능 바로가기 개요 화면.
+- `src/ui/tabs.js`: 각 그룹에 개요 탭 추가, 작업실에서 꾸미기와 도구 사이에 AI로 봇 만들기 탭 배치.
+- `src/ui/app.js`: AI 봇 제작 라우트 및 상단 설정 톱니바퀴 버튼.
+- `src/ui/screens/home.js`: 홈 바로가기를 가져오기·기억·관리·작업실 4개로 정리.

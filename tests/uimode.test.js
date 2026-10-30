@@ -44,12 +44,12 @@ test("메뉴 위치: home(홈 카드)은 없고 예전 저장값은 left로 옮�
 });
 
 test("탭 구성: 기억·관리·작업실 3개 그룹과 홈", () => {
-  assert.deepEqual(BASE_IDS, ["home", "memory"]);
+  assert.deepEqual(BASE_IDS, ["home"]);
   assert.equal(TABS.some((t) => t.id === "pot" || t.id === "people"), false);
-  assert.deepEqual(MORE_IDS, ["cards", "characters", "modules", "plugins", "look", "tools", "settings", "dev"]);
-  assert.deepEqual(TABS.filter((t) => t.section === "memory").map((t) => t.id), ["memory", "cards"]);
-  assert.deepEqual(TABS.filter((t) => t.section === "manage").map((t) => t.id), ["characters", "modules", "plugins"]);
-  assert.deepEqual(TABS.filter((t) => t.section === "work").map((t) => t.id), ["look", "tools", "settings", "dev"]);
+  assert.deepEqual(MORE_IDS, ["memory-home", "memory", "cards", "manage-home", "characters", "modules", "plugins", "work-home", "look", "aibot", "tools", "settings", "dev"]);
+  assert.deepEqual(TABS.filter((t) => t.section === "memory").map((t) => t.id), ["memory-home", "memory", "cards"]);
+  assert.deepEqual(TABS.filter((t) => t.section === "manage").map((t) => t.id), ["manage-home", "characters", "modules", "plugins"]);
+  assert.deepEqual(TABS.filter((t) => t.section === "work").map((t) => t.id), ["work-home", "look", "aibot", "tools", "settings", "dev"]);
   assert.equal(TABS.find((t) => t.id === "dev").dev, true);
   assert.equal(new Set(TABS.map((t) => t.id)).size, TABS.length);
 });

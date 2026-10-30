@@ -26,6 +26,8 @@ import { renderSettingsTab } from './screens/settingstab.js';
 import { renderMemory } from './screens/memory/index.js';
 import { renderCardsTab } from './screens/cards/index.js';
 import { renderHome } from './screens/home.js';
+import { renderSectionHome } from './screens/sectionhome.js';
+import { createBotAndEdit } from './screens/newbot.js';
 import { BASE_IDS, SEARCH, SECTION_IDS, SECTION_NAMES, TABS, subLabel } from './tabs.js';
 
 export function createApp(api, { legacy, version, onPersonaChanged }) {
@@ -127,6 +129,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     updBtn,
     btn("가져오기", { icon: "upload", labelClass: "lbl", onClick: () => legacy.open(), id: "rb-import" }),
     iconBtn("palette", "꾸미기", { onClick: () => go("look"), id: "rb-look" }),
+    iconBtn("gear", "설정", { onClick: () => go("settings"), id: "rb-settings" }),
     iconBtn("x", "닫기", { onClick: () => close(), id: "rb-close" })
   );
   // 메뉴: 왼쪽(left) · 위쪽(top) · 모바일 아래 탭. 어떤 걸 보일지는 win 클래스(rb-lay-*)가 정한다
@@ -313,6 +316,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     }
   }
   function go(tab, sub = null) {
+    if (tab === "aibot") { createBotAndEdit(ctx, { tab: "ai" }); return; }
     // 기록은 설정 탭 안으로 옮겼다 (1.6.1, 그전엔 도구). 예전 go("history")·go("tools","history") 호출도 그대로 동작
     if (tab === "history" || tab === "tools" && sub === "history") {
       tab = "settings";
@@ -418,7 +422,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, look: renderSettings, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { home: renderHome, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, look: renderSettings, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
     Promise.resolve(screen(ctx)).then(() => {
       paneReady = true;
     }).catch((err) => {

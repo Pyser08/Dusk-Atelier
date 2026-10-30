@@ -60,7 +60,7 @@ export async function renderHome(ctx) {
     "div",
     { class: "rb-hhead" },
     h("div", { class: "t" }, h("small", null, "지금 열린 채팅"), h("h1", null, s.cur ? [s.cur.botName || "이름 없는 봇", s.cur.chatName ? ` · ${s.cur.chatName}` : ""].join("") : "열린 채팅이 없어요")),
-    s.M ? btn("바꾸기", { size: "sm", icon: "list", onClick: () => { mem(ctx).page = "bots"; ctx.go("memory"); } }) : null
+    null
   );
 
   // ── 상태 3줄 ──
@@ -80,36 +80,28 @@ export async function renderHome(ctx) {
       }
       redraw();
     };
-    memoryStatus = !memOn ? statusCard("off", "이 채팅에서는 꺼져 있어요.", { label: "켜기", kind: "primary", onClick: turnOn })
+    memoryStatus = !memOn ? statusCard("off", "이 채팅에서는 꺼져 있어요.")
       : idx.bots?.[s.cur.chaId]?.paused ? statusCard("err", "연속으로 실패해서 자동 기록이 멈췄어요.")
       : statusCard(last?.injected ? "on" : "prep", injectLine(last, last ? hhmm(last.at) : "", injectReasonText(last?.reason)));
   }
   const status = h("section", { class: "rb-hstats", "aria-label": "장기 기억 상태" }, line(memoryStatus));
 
-  // ── 바로 하기 9칸 ──
-  const tile = (ic, name, line2, onClick, id, cnt) => h(
+  // 홈 바로가기: 가져오기 → 기억 → 관리 → 작업실.
+  const tile = (ic, name, line2, onClick, id) => h(
     "button",
     { type: "button", class: "rb-htile", onClick, id },
     h("span", { class: "ico" }, icon(ic, 22)),
-    h("span", { class: "t" }, h("b", null, name), line2 ? h("small", null, line2) : null),
-    cnt ? h("span", { class: "cnt" }, String(cnt)) : null
+    h("span", { class: "t" }, h("b", null, name), line2 ? h("small", null, line2) : null)
   );
   const grid = h(
     "section",
-    { class: "rb-hdo", "aria-label": "바로 하기" },
-    h("h2", null, "바로 하기"),
-    h(
-      "div",
-      { class: "rb-hgrid" },
-      tile("character", "캐릭터", "정리·편집", () => ctx.go("characters"), "rb-home-characters"),
-      tile("module", "모듈", "켜기·연결", () => ctx.go("modules"), "rb-home-modules"),
-      tile("sparkle", "기억 카드", "카드로 이어가기", () => ctx.go("cards"), "rb-home-cards"),
-      tile("sparkle", "AI로 봇 만들기", "말로 만들기", () => createBotAndEdit(ctx, { tab: "ai" }), "rb-home-aibot"),
-      tile("upload", "가져오기", "파일 가져오기", () => ctx.legacy.open(), "rb-home-import"),
-      tile("brain", "지난 대화 분석", s.cur ? (s.todo ? `미처리 ${s.todo}개` : "다 분석했어요") : "채팅을 열어 주세요", () => ctx.go("memory"), "rb-home-analyze", s.todo || 0),
-      tile("palette", "꾸미기", "색·글자·테마", () => ctx.go("look"), "rb-home-look"),
-      tile("tools", "도구", "프리셋·백업", () => ctx.go("tools"), "rb-home-tools"),
-      tile("plugin", "플러그인", "목록·업데이트", () => ctx.go("plugins"), "rb-home-plugins")
+    { class: "rb-hdo", "aria-label": "바로가기" },
+    h("h2", null, "바로가기"),
+    h("div", { class: "rb-hgrid" },
+      tile("upload", "가져오기", "봇·모듈·파일 가져오기", () => ctx.legacy.open(), "rb-home-import"),
+      tile("brain", "기억", "장기 기억·기억 카드", () => ctx.go("memory-home"), "rb-home-memory"),
+      tile("module", "관리", "캐릭터·모듈·플러그인", () => ctx.go("manage-home"), "rb-home-manage"),
+      tile("tools", "작업실", "꾸미기·AI 봇 제작·도구", () => ctx.go("work-home"), "rb-home-work")
     )
   );
 
@@ -120,7 +112,7 @@ export async function renderHome(ctx) {
     { class: "rb-hrecent", "aria-label": "최근 기록" },
     h("h2", null, "최근 기록"),
     rec.length ? h("div", { class: "rb-card" }, ...rec.map((r) => h("div", { class: "rb-kv rb-hrec" }, h("span", null, h("b", null, r.who ?? ""), h("br"), h("small", { class: "rb-muted" }, r.act ?? "")), h("small", { class: "rb-muted" }, hhmm(r.ms))))) : h("div", { class: "rb-muted rb-hrec-empty" }, "아직 쌓인 기록이 없어요."),
-    rec.length ? btn("전체 보기", { size: "sm", onClick: () => { mem(ctx).page = "detail"; ctx.go("memory"); } }) : null
+    null
   );
 
   const foot = h(
@@ -155,5 +147,5 @@ export async function renderHome(ctx) {
       )
     )
   ) : null;
-  replace(host, head, notice, h("div", { class: "rb-hbody" }, h("div", { class: "rb-hmain" }, status, grid), recent), foot);
+  replace(host, head, h("div", { class: "rb-hbody" }, h("div", { class: "rb-hmain" }, status, grid), recent));
 }
