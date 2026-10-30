@@ -26,6 +26,7 @@ import { renderSettingsTab } from './screens/settingstab.js';
 import { renderMemory } from './screens/memory/index.js';
 import { renderCardsTab } from './screens/cards/index.js';
 import { renderHome } from './screens/home.js';
+import { renderPersonaBuilder } from './screens/personabuilder.js';
 import { renderPot } from './screens/pot.js';
 import { renderPeople } from './screens/peoplescreen.js';
 import { maybeAskBardWiki } from './screens/memory/modebar.js';
@@ -129,7 +130,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     h("div", { class: "rb-spacer" }),
     updBtn,
     btn("가져오기", { icon: "upload", labelClass: "lbl", onClick: () => legacy.open(), id: "rb-import" }),
-    iconBtn("palette", "꾸미기", { onClick: () => go("look"), id: "rb-look" }),
+    iconBtn("palette", "플러그인 꾸미기", { onClick: () => go("look"), id: "rb-look" }),
     iconBtn("x", "닫기", { onClick: () => close(), id: "rb-close" })
   );
   // 메뉴: 왼쪽(left) · 위쪽(top) · 모바일 아래 탭. 어떤 걸 보일지는 win 클래스(rb-lay-*)가 정한다
@@ -325,7 +326,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       tab = "settings";
       sub = sub === "settings" ? "theme" : sub;
     }
-    // 1.7.0: 테마 빌더·스튜디오는 도구 → 채팅 테마로 옮겼다 (예전 settings 호출도 그대로 동작)
+    if (tab === "tools" && sub === "personabuilder") { tab = "personabuilder"; sub = null; }
+    // 1.7.0: 테마 빌더·스튜디오는 도구 → 채팅 테마 빌더로 옮겼다 (예전 settings 호출도 그대로 동작)
     if (tab === "settings" && ["chattheme", "themebuilder", "themestudio"].includes(sub)) tab = "tools";
     const leaving = tab !== state.tab || sub !== state.sub;
     if (leaving) stashPane();
@@ -414,7 +416,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, pot: renderPot, people: renderPeople, look: renderSettings, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { home: renderHome, personabuilder: renderPersonaBuilder, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, pot: renderPot, people: renderPeople, look: renderSettings, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
     Promise.resolve(screen(ctx)).then(() => {
       paneReady = true;
     }).catch((err) => {
