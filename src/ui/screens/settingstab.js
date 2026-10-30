@@ -44,7 +44,7 @@ export async function renderSettingsTab(ctx) {
       "화면",
       segRow("화면 모드", "고급을 켜면 각 화면에 세부 설정이 더 보여요.", segmented([["simple", "간단"], ["advanced", "고급"]], ctx.prefs.uiMode, (v) => ctx.setUiMode(v), "화면 모드")),
       segRow("메뉴 위치", "PC에서 메뉴를 왼쪽 또는 위쪽에 둬요.", layoutSeg, "rb-pc-only"),
-      linkRow("꾸미기", "색·밝기·글자 크기", () => ctx.go("look"), "rb-set-look")
+      linkRow("플러그인 꾸미기", "색·밝기·글자 크기", () => ctx.go("look"), "rb-set-look")
     ),
     adv ? devToggleCard(ctx, () => {
       ctx.refreshTabs();
@@ -103,7 +103,7 @@ export async function renderSettingsTab(ctx) {
         { label: "모듈이 꼬였어요, 되돌리고 싶어요", text: "기록 · 되돌리기", onClick: () => ctx.go("settings", "history") },
         { label: "다른 기기로 옮기고 싶어요", text: "전체 백업·복원", onClick: () => fullBackup(ctx) },
         { label: "새 봇을 알아서 잡아 주면 좋겠어요", text: "업데이트 설정", onClick: () => ctx.go("settings", "updset") },
-        { label: "내 채팅 테마를 만들고 싶어요", text: "채팅 테마", onClick: () => ctx.go("tools", "chattheme") }
+        { label: "내 채팅 테마를 만들고 싶어요", text: "Risu 테마 꾸미기", onClick: () => ctx.go("tools", "chattheme") }
       ])
     ];
   }
