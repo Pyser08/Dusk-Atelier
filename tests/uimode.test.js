@@ -62,3 +62,5 @@ test("section overview tabs are mobile-only and have the requested icons", () =>
     assert.equal(tab?.icon, icon);
   }
 });
+
+// Build trigger: assertions include the relocated persona-builder tab.
