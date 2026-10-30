@@ -44,7 +44,8 @@ export async function renderModules(ctx) {
     if (!st.modData) replace(ctx.main, loading("모듈을 불러오는 중", { rows: 7 }));
     st.modData = await ctx.svc.load();
     st.modDirty = false;
-    st.modIndex = new Map(st.modData.entries.map((e) => [e.module.id, searchText(e.module)]));
+    // 검색 인덱스는 실제 검색을 시작할 때 만든다. 첫 진입에서 전체 로어북·정규식·트리거를 순회하지 않는다.
+    st.modIndex = null;
   }
   draw(ctx);
 }
@@ -54,6 +55,7 @@ function draw(ctx) {
   const meta = ctx.prefs.meta;
   ctx.setNavCount("modules", entries.length);
   const q = st.search.trim().toLowerCase();
+  if (q && !st.modIndex) st.modIndex = new Map(entries.map((e) => [e.module.id, searchText(e.module)]));
   const filtering = !!q || st.modFilter !== "all";
   if (st.modFolder && !meta.folders.some((f) => f.id === st.modFolder)) st.modFolder = void 0;
   const fv = st.modFolder;
