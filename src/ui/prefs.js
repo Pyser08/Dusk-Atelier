@@ -25,7 +25,14 @@ export function createPrefs(api) {
     async load() {
       ui = await readJson(api, KEYS.ui, {});
       ui.theme = normalizeTheme(ui.theme);
-      ui.uiMode = normalizeUiMode(ui);
+      if (!ui.simpleModeMigrationV1) {
+        ui.uiMode = "simple";
+        ui.devMode = false;
+        ui.simpleModeMigrationV1 = true;
+        await writeJson(api, KEYS.ui, ui);
+      } else {
+        ui.uiMode = normalizeUiMode(ui);
+      }
       meta = await readJson(api, KEYS.meta, defaultsMeta());
       for (const [k, d] of Object.entries(defaultsMeta())) if (!(k in meta) || typeof meta[k] !== typeof d || Array.isArray(meta[k]) !== Array.isArray(d)) meta[k] = d;
       return { ui, meta };
