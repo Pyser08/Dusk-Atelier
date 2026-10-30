@@ -19,7 +19,20 @@ test("화면 모드: 기본은 간단, 개발자 모드를 켠 사람은 고급�
   assert.equal(normalizeUiMode({ uiMode: "엉뚱한값" }), "simple");
 });
 
-test("prefs: 기존 사용자도 최초 1회 간단 모드로 전환되고 이후 선택은 유지됨", async () => {\n  const api = memApi({ "rbm:ui:v1": JSON.stringify({ uiMode: "advanced", devMode: true }) });\n  const p = createPrefs(api);\n  await p.load();\n  assert.equal(p.uiMode, "simple");\n  assert.equal(p.ui.devMode, false);\n  assert.equal(JSON.parse(api.store["rbm:ui:v1"]).simpleModeMigrationV1, true);\n  await p.setUiMode("advanced");\n  const p2 = createPrefs(api);\n  await p2.load();\n  assert.equal(p2.uiMode, "advanced", "마이그레이션 이후 사용자가 고른 모드는 유지된다");\n});\n\ntest("prefs: load → advanced 판정, 간단으로 돌아가면 개발자 모드도 꺼짐", async () => {
+test("prefs: 기존 사용자도 최초 1회 간단 모드로 전환되고 이후 선택은 유지됨", async () => {\n  const api = memApi({ "rbm:ui:v1": JSON.stringify({ uiMode: "advanced", devMode: true }) });\n  const p = createPrefs(api);\n  await p.load();\n  assert.equal(p.uiMode, "simple");\n  assert.equal(p.ui.devMode, false);\n  assert.equal(JSON.parse(api.store["rbm:ui:v1"]).simpleModeMigrationV1, true);\n  await p.setUiMode("advanced");\n  const p2 = createPrefs(api);\n  await p2.load();\n  assert.equal(p2.uiMode, "advanced", "마이그레이션 이후 사용자가 고른 모드는 유지된다");\n});\n\ntest("prefs: 기존 사용자도 최초 1회 간단 모드로 전환되고 이후 선택은 유지됨", async () => {
+  const api = memApi({ "rbm:ui:v1": JSON.stringify({ uiMode: "advanced", devMode: true }) });
+  const p = createPrefs(api);
+  await p.load();
+  assert.equal(p.uiMode, "simple");
+  assert.equal(p.ui.devMode, false);
+  assert.equal(JSON.parse(api.store["rbm:ui:v1"]).simpleModeMigrationV1, true);
+  await p.setUiMode("advanced");
+  const p2 = createPrefs(api);
+  await p2.load();
+  assert.equal(p2.uiMode, "advanced", "마이그레이션 이후 사용자가 고른 모드는 유지된다");
+});
+
+test("prefs: load → advanced 판정, 간단으로 돌아가면 개발자 모드도 꺼짐", async () => {
   const api = memApi({ "rbm:ui:v1": JSON.stringify({ devMode: true }) });
   const p = createPrefs(api);
   await p.load();
