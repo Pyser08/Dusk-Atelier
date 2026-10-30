@@ -96,16 +96,16 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
 
 
 
-  let trackingBox = null;
-  if (!ctx.prefs.advanced) {
-    const loaded = await memoryEnv(ctx, { botId: cur.chaId, chatIndex: cur.ti, redraw });
-    if (loaded.env) trackingBox = await autoTrackingBox(loaded.env);
-  }
+  const trackingHost = !ctx.prefs.advanced ? h("div") : null;
   const main = h("div", { class: "rb-mem2-main" },
     intro,
     pageHead("기억", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"}`, sw: { on, label: "이 채팅에서 사용", onChange: (v) => setOn(v) } }),
-    h("div", { class: "rb-mem-status-row" }, status, btn("인물 Wiki", { kind: "primary", icon: "character", title: "인물 위키 화면으로 이동", onClick: openDetail })), usageCard(usageOf(folder, last?.manifest)), actions, prog, memorySettings, trackingBox, recBox,
+    h("div", { class: "rb-mem-status-row" }, status, btn("인물 Wiki", { kind: "primary", icon: "character", title: "인물 위키 화면으로 이동", onClick: openDetail })), usageCard(usageOf(folder, last?.manifest)), actions, prog, memorySettings, trackingHost, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   const adv = advFold(ctx, "memory", ...(ctx.prefs.advanced ? advancedBlocks(ctx, { cur, idx, redraw, modeHost }) : [true]));
   replace(host, h("div", { class: ["rb-mem2-grid", ctx.prefs.advanced && "has-adv"] }, main, adv ? h("div", { class: "rb-mem2-side" }, adv) : null));
+  if (trackingHost) memoryEnv(ctx, { botId: cur.chaId, chatIndex: cur.ti, redraw })
+    .then((loaded) => loaded.env && autoTrackingBox(loaded.env))
+    .then((box) => { if (box && host.contains(trackingHost)) trackingHost.replaceChildren(box); })
+    .catch(fail(ctx));
 }
