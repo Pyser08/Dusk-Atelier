@@ -942,4 +942,12 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-home2 .rb-htile>.t>small{display:block;font-size:12px;line-height:1.45;color:var(--rb-sub);white-space:normal}
 @media(max-width:760px){.rb-home2 .rb-hgrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px}.rb-home2 .rb-htile{flex-direction:row;justify-content:flex-start;min-height:88px;padding:13px;gap:10px;border-radius:15px}.rb-home2 .rb-htile>.ico{flex-basis:40px;width:40px;height:40px;border-radius:12px}.rb-home2 .rb-htile>.t{align-items:flex-start}.rb-home2 .rb-htile>.t>b{font-size:14px}.rb-home2 .rb-htile>.t>small{font-size:11px}}
 
+/* 홈 이야기 도우미 overflow 방지 */
+.rb-home2 .rb-hbody,.rb-home2 .rb-hmain,.rb-home2 .rb-hrecent{min-width:0;max-width:100%}
+.rb-home2 .rb-story-helper{width:100%;min-width:0;max-width:100%;box-sizing:border-box;overflow:hidden}
+.rb-home2 .rb-story-helper .rb-srow{min-width:0;max-width:100%;gap:10px;flex-wrap:wrap}
+.rb-home2 .rb-story-helper .rb-srow>.t{flex:1 1 180px;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.rb-home2 .rb-story-helper .rb-srow small{display:block;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.rb-home2 .rb-story-helper .rb-srow>.rb-switch,.rb-home2 .rb-story-helper .rb-srow>label{flex:0 0 auto;max-width:100%}
+@media(max-width:560px){.rb-home2 .rb-story-helper .rb-srow{align-items:flex-start}.rb-home2 .rb-story-helper .rb-srow>.t{flex-basis:140px}}
 `+PROB_CSS;

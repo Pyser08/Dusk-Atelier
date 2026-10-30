@@ -61,6 +61,17 @@ export async function renderHome(ctx) {
   } catch {
   }
   const redraw = () => renderHome(ctx);
+  const refreshStatus = async () => {
+    try { s = await readState(ctx); } catch { /* keep last state */ }
+    if (!s.cur) memoryStatus = statusCard("off", "채팅을 열면 여기에 기억 상태가 보여요.");
+    else {
+      const { sw, idx, last } = s;
+      memoryStatus = !sw?.memory?.on ? statusCard("off", "이 채팅에서는 꺼져 있어요.")
+        : idx?.bots?.[s.cur.chaId]?.paused ? statusCard("err", "연속으로 실패해서 자동 기록이 멈췄어요.")
+        : statusCard(last?.injected ? "on" : "prep", injectLine(last, last ? hhmm(last.at) : "", injectReasonText(last?.reason)));
+    }
+    replace(status, line(memoryStatus));
+  };
 
   // ── 머리: 지금 열린 채팅 ──
   const head = h(
@@ -85,7 +96,7 @@ export async function renderHome(ctx) {
       } catch (e) {
         ctx.toast(e?.message ?? String(e), { error: true });
       }
-      redraw();
+      refreshStatus();
     };
     memoryStatus = !memOn ? statusCard("off", "이 채팅에서는 꺼져 있어요.")
       : idx.bots?.[s.cur.chaId]?.paused ? statusCard("err", "연속으로 실패해서 자동 기록이 멈췄어요.")
