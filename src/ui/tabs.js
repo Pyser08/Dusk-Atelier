@@ -3,7 +3,7 @@
 export var TABS = [
   { id: "home", label: "홈", icon: "home", group: "base", desc: "지금 열린 채팅의 상태를 보고, 하고 싶은 일을 골라요.", help: [] },
   {
-    id: "memory", label: "기억", icon: "brain", group: "base",
+    id: "memory", label: "장기 기억", icon: "brain", group: "base",
     desc: "응답마다 인물별 기억을 쌓고, 필요할 때 꺼내 써요.",
     card: "응답마다 기억을 쌓고 필요할 때 꺼내 써요.",
     help: ["스위치만 켜면 바로 작동해요. ‘처음 설정하기’는 3단계로 끝나요.", "봇을 고르면 그 채팅에서 만든 기억이 인물별로 보여요.", "카드의 작은 ? 버튼에서 그 자리 설명과 ‘처음 설정 다시 보기’를 볼 수 있어요."]
