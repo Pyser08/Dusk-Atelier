@@ -38,7 +38,24 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     return replace(host, pageHead("장기 기억"), emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요.",
       actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] }));
   }
-  const [sw, idx, folder, chat] = await Promise.all([M.switches.state(cur.chaId), M.store.getIndex(), M.store.getFolder(cur.chaId, cur.chatId).catch(() => null), ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null)]);
+  // 채팅 본문은 느릴 수 있으므로 화면을 먼저 그리고, 백필 분석용 데이터는 백그라운드에서 읽는다.
+  const cacheKey = `${cur.chaId}:${cur.chatId}:${cur.ci}:${cur.ti}`;
+  let chat = m.homeChatCache?.key === cacheKey ? m.homeChatCache.chat : null;
+  let chatPromise = Promise.resolve(chat);
+  if (!chat) {
+    if (m.homeChatPromise?.key === cacheKey) chatPromise = m.homeChatPromise.promise;
+    else {
+      chatPromise = ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
+      m.homeChatPromise = { key: cacheKey, promise: chatPromise };
+    }
+    chatPromise.then((loaded) => {
+      if (!loaded) return;
+      m.homeChatCache = { key: cacheKey, chat: loaded };
+      if (m.homeChatPromise?.key === cacheKey) m.homeChatPromise = null;
+      if (ctx.state.tab === "memory" && mem(ctx) === m) redraw();
+    }).catch(() => {});
+  }
+  const [sw, idx, folder] = await Promise.all([M.switches.state(cur.chaId), M.store.getIndex(), M.store.getFolder(cur.chaId, cur.chatId).catch(() => null)]);
   const caps = M.capabilities(M.backend(idx.settings).id), msgs = chat?.message ?? [];
   const botCfg = idx.bots[cur.chaId] ?? {}, last = M.injector?.lastRequest?.() ?? null;
   const on = sw.memory.on;
@@ -57,23 +74,29 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   }
 
   // 지난 대화 분석 (미처리만)
-  const plan = caps.analyze && M.runner ? M.runner.planBackfill(msgs, { from: 0, to: Math.max(0, msgs.length - 1) }, folder) : null;
+  const plan = caps.analyze && M.runner && chat ? M.runner.planBackfill(msgs, { from: 0, to: Math.max(0, msgs.length - 1) }, folder) : null;
   const prog = h("div");
   const analyze = async () => {
-    if (!plan?.todo) return ctx.toast("분석할 새 응답이 없어요.");
-    const ok = await confirmDialog(ctx.win, { title: "지난 대화 분석", body: `AI 응답 ${plan.todo}개를 분석해요. 호출 ${plan.calls}회 · 대략 ${plan.tokens.toLocaleString()} 토큰이 들어요.`, ok: "분석하기" });
+    let activeChat = chat, activeMsgs = msgs, activePlan = plan;
+    if (!activeChat) {
+      activeChat = await chatPromise;
+      activeMsgs = activeChat?.message ?? [];
+      activePlan = activeChat && M.runner ? M.runner.planBackfill(activeMsgs, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, folder) : null;
+    }
+    if (!activePlan?.todo) return ctx.toast("분석할 새 응답이 없어요.");
+    const ok = await confirmDialog(ctx.win, { title: "지난 대화 분석", body: `AI 응답 ${activePlan.todo}개를 분석해요. 호출 ${activePlan.calls}회 · 대략 ${activePlan.tokens.toLocaleString()} 토큰이 들어요.`, ok: "분석하기" });
     if (!ok) return;
     const ctrl = new AbortController(), cancel = btn("취소", { size: "sm", onClick: () => ctrl.abort() });
     replace(prog, progressBar(0), cancel);
     try {
-      const r = await M.runner.backfill(cur.ci, cur.ti, { from: 0, to: Math.max(0, msgs.length - 1) }, { signal: ctrl.signal, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), cancel) });
+      const r = await M.runner.backfill(cur.ci, cur.ti, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, { signal: ctrl.signal, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), cancel) });
       ctx.toast(`지난 대화 분석이 끝났어요 (${r.total - r.failed.length}/${r.total}).`);
     } catch (e) { fail(ctx)(e); }
     redraw();
   };
   const openDetail = () => { m.botId = cur.chaId; m.chatIndex = cur.ti; m.tab = "people"; m.personKey = ""; m.page = "detail"; redraw(); };
   const actions = actionRow([
-    plan ? { label: `지난 대화 분석 · 미처리 ${plan.todo}개`, icon: "sparkle", onClick: analyze } : { label: "기록 보기", icon: "brain", onClick: openDetail },
+    caps.analyze && M.runner ? { label: plan ? `지난 대화 분석 · 미처리 ${plan.todo}개` : "지난 대화 분석", icon: "sparkle", onClick: analyze } : { label: "기록 보기", icon: "brain", onClick: openDetail },
     { label: "카드로 만들기", icon: "image", onClick: () => ctx.go("cards") },
     { label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }
   ]);
