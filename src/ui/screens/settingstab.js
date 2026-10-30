@@ -23,11 +23,7 @@ export async function renderSettingsTab(ctx) {
   const adv = ctx.prefs.advanced;
   const fail = (e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
 
-  // ── 고급 이야기 도우미 세부 설정 ──
-  const diceMode = await loadDiceMode(ctx.api);
-  const diceModeSeg = segmented([["reinterpret", "재해석"], ["respect", "존중"]], diceMode, async (v) => {
-    try { if (ctx.fairPlay) await ctx.fairPlay.setDiceMode(v); else await ctx.api.pluginStorage.setItem(DICE_MODE_KEY, v); ctx.toast(v === "respect" ? "내가 적은 결과를 그대로 따를게요." : "내가 적은 결과도 시도로 보고 주사위로 가릴게요."); } catch (e) { fail(e); }
-  }, "내가 결과까지 적었을 때");
+  const diceModePromise = loadDiceMode(ctx.api).catch(() => "reinterpret");
 
   // ── 줄 만들기 ──
   const segRow = (title, text, seg, cls = "") => h("div", { class: ["rb-srow has-seg", cls] }, h("span", { class: "t" }, title, text ? h("small", null, text) : null), seg);
@@ -52,6 +48,21 @@ export async function renderSettingsTab(ctx) {
     card(null, linkRow("백업 만들기", "모듈·에셋·설정을 zip 한 파일로", () => fullBackup(ctx), "rb-set-fullbackup"), linkRow("백업에서 복원", "전체 백업 zip으로 되살리기", () => fullRestore(ctx), "rb-set-restore")),
     card(null, linkRow("처음 둘러보기", null, () => openTour(ctx), "rb-set-tour"), linkRow(`v${ctx.version} 새로 바뀐 점`, null, () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록"), "rb-set-whatsnew"))
   );
+
+  // 기본 설정은 먼저 보여 주고, 고급 설정 데이터는 뒤에서 불러와요.
+  const shell = h("div", { class: "rb-scroll rb-mem2", "data-page": "settings" },
+    h("div", { class: ["rb-mem2-grid", adv && "has-adv"] },
+      main,
+      adv ? h("div", { class: "rb-mem2-side" }, h("div", { class: "rb-card bordered" }, h("span", { class: "h" }, "고급 설정"), h("span", { class: "rb-muted" }, "불러오는 중…"))) : null
+    )
+  );
+  const advSide = shell.querySelector(".rb-mem2-side");
+  replace(ctx.main, shell);
+
+  const diceMode = await diceModePromise;
+  const diceModeSeg = segmented([["reinterpret", "재해석"], ["respect", "존중"]], diceMode, async (v) => {
+    try { if (ctx.fairPlay) await ctx.fairPlay.setDiceMode(v); else await ctx.api.pluginStorage.setItem(DICE_MODE_KEY, v); ctx.toast(v === "respect" ? "내가 적은 결과를 그대로 따를게요." : "내가 적은 결과도 시도로 보고 주사위로 가릴게요."); } catch (e) { fail(e); }
+  }, "내가 결과까지 적었을 때");
 
   // ── 고급 영역 ──
   let advBlocks = [true];
@@ -107,5 +118,5 @@ export async function renderSettingsTab(ctx) {
     ];
   }
   const advEl = advFold(ctx, "settings", ...advBlocks);
-  replace(ctx.main, h("div", { class: "rb-scroll rb-mem2", "data-page": "settings" }, h("div", { class: ["rb-mem2-grid", adv && "has-adv"] }, main, advEl ? h("div", { class: "rb-mem2-side" }, advEl) : null)));
+  if (advSide && advEl) replace(advSide, advEl);
 }
