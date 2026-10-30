@@ -796,7 +796,7 @@ export async function renderPersonaBuilder(ctx) {
     ));
   }
 
-  const back = h("div", { style: "display:flex;align-items:center;gap:10px" }, btn("", { kind: "ghost", icon: "back", onClick: () => ctx.go("tools") }), h("div", null, h("span", { class: "rb-muted" }, "도구"), h("h2", { class: "rb-h2" }, "페르소나 빌더")));
+  const back = h("div", { style: "display:flex;align-items:center;gap:10px" }, btn("", { kind: "ghost", icon: "back", onClick: () => ctx.go("work-home") }), h("div", null, h("span", { class: "rb-muted" }, "작업실"), h("h2", { class: "rb-h2" }, "AI로 페르소나 만들기")));
   back.querySelector("button").setAttribute("aria-label", "도구로 돌아가기");
   drawPersonaSel();
   drawTplSel();
