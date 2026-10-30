@@ -86,16 +86,16 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   // 설정 탭의 '기억 · 리수폿' 카드. 분석 동작과 최근 기록 사이에 둔다.
   const memorySettings = h("section", { class: "rb-card bordered rb-scard rb-mem-integrated-settings" },
     h("span", { class: "h" }, "기억 · 리수폿 설정"),
-    h("button", { type: "button", class: "rb-srow", onClick: () => ctx.go("settings", "prompts") },
-      h("span", { class: "t" }, "기억·리수폿 프롬프트", h("small", null, "쓸 때 덧붙일 프롬프트 · JSON/.risup 불러오기")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))),
-    h("button", { type: "button", class: "rb-srow", onClick: () => { if (ctx.memory?.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); } },
+    ctx.prefs.advanced ? h("button", { type: "button", class: "rb-srow", onClick: () => ctx.go("settings", "prompts") },
+      h("span", { class: "t" }, "기억·리수폿 프롬프트", h("small", null, "쓸 때 덧붙일 프롬프트 · JSON/.risup 불러오기")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))) : null,
+    h("button", { type: "button", class: "rb-srow rb-mem-embed-highlight", onClick: () => { if (ctx.memory?.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); } },
       h("span", { class: "t" }, "임베딩(의미 검색)", h("small", null, "뜻이 비슷한 기억 찾기 · API 주소·키·기본 사용·대기 시간")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))));
 
 
 
   const main = h("div", { class: "rb-mem2-main" },
     pageHead("기억", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"}`, sw: { on, label: "이 채팅에서 사용", onChange: (v) => setOn(v) } }),
-    status, usageCard(usageOf(folder, last?.manifest)), actions, prog, memorySettings, recBox,
+    h("div", { class: "rb-mem-status-row" }, status, btn("인물 Wiki", { kind: "primary", icon: "character", title: "인물 위키 화면으로 이동", onClick: openDetail })), usageCard(usageOf(folder, last?.manifest)), actions, prog, memorySettings, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   const adv = advFold(ctx, "memory", ...(ctx.prefs.advanced ? advancedBlocks(ctx, { cur, idx, redraw, modeHost }) : [true]));
   replace(host, h("div", { class: ["rb-mem2-grid", ctx.prefs.advanced && "has-adv"] }, main, adv ? h("div", { class: "rb-mem2-side" }, adv) : null));
