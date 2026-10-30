@@ -70,8 +70,10 @@ async function draw(ctx, host, redraw) {
 
   if (!wide && detail) return replace(host, detail);   // 모바일: 상세는 한 화면으로
   replace(host, h("div", { class: ["rb-ppl", wide && "wide"] },
-    h("div", { class: "rb-ppl-left" }, head, conflictBox(env), actions, list, adv),
-    wide ? h("div", { class: "rb-ppl-right" }, detail ?? h("div", { class: "rb-empty" }, "왼쪽에서 인물을 골라 주세요.")) : null));
+    h("div", { class: "rb-ppl-left" }, head, conflictBox(env), actions, list, wide ? null : adv),
+    wide ? h("div", { class: "rb-ppl-right" }, detail ?? h("div", { class: "rb-empty" }, "왼쪽에서 인물을 골라 주세요.")) : null,
+    // 넓은 화면: '위키 전체 편집'은 목록·상세 아래 전체 폭에 둔다(왼쪽 좁은 칸에 넣으면 위키 본문이 100px대로 찌그러진다)
+    wide ? h("div", { class: "rb-ppl-full" }, adv) : null));
 }
 
 function personDetail(env, doc, { back, redraw }) {
