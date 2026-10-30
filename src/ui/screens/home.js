@@ -64,7 +64,7 @@ export async function renderHome(ctx) {
   );
 
   // ── 상태 3줄 ──
-  const line = (status) => h("div", { class: "rb-hstat rb-hstat-memory", role: "button", tabindex: "0", onClick: (e) => { if (e.target.closest("button")) return; ctx.go("memory"); }, onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ctx.go("memory"); } } }, h("span", { class: "lab" }, h("b", null, "기억"), icon("chevron", 14)), status);
+  const line = (status) => h("div", { class: "rb-hstat rb-hstat-memory", role: "button", tabindex: "0", onClick: (e) => { if (e.target.closest("button")) return; ctx.go("memory"); }, onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ctx.go("memory"); } } }, h("span", { class: "lab" }, h("b", null, "장기 기억"), icon("chevron", 14)), status);
   let memoryStatus;
   if (!s.cur) memoryStatus = statusCard("off", "채팅을 열면 여기에 기억 상태가 보여요.");
   else {
@@ -84,7 +84,7 @@ export async function renderHome(ctx) {
       : idx.bots?.[s.cur.chaId]?.paused ? statusCard("err", "연속으로 실패해서 자동 기록이 멈췄어요.")
       : statusCard(last?.injected ? "on" : "prep", injectLine(last, last ? hhmm(last.at) : "", injectReasonText(last?.reason)));
   }
-  const status = h("section", { class: "rb-hstats", "aria-label": "기억 상태" }, line(memoryStatus));
+  const status = h("section", { class: "rb-hstats", "aria-label": "장기 기억 상태" }, line(memoryStatus));
 
   // ── 바로 하기 9칸 ──
   const tile = (ic, name, line2, onClick, id, cnt) => h(
