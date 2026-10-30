@@ -53,3 +53,12 @@ test("탭 구성: 기억·관리·작업실 3개 그룹과 홈", () => {
   assert.equal(TABS.find((t) => t.id === "dev").dev, true);
   assert.equal(new Set(TABS.map((t) => t.id)).size, TABS.length);
 });
+
+
+test("section overview tabs are mobile-only and have the requested icons", () => {
+  for (const [id, icon] of [["memory-home", "brain"], ["manage-home", "character"], ["work-home", "tools"]]) {
+    const tab = TABS.find((t) => t.id === id);
+    assert.equal(tab?.mobileOnly, true);
+    assert.equal(tab?.icon, icon);
+  }
+});

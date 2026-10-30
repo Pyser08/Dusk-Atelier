@@ -144,6 +144,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   // 사이드바·위쪽 바는 기억 → 관리 → 작업실 섹션별로 나눈다.
   let currentSection = null;
   for (const t of TABS) {
+    if (t.mobileOnly) continue;
     if (t.section && t.section !== currentSection) {
       currentSection = t.section;
       nav.appendChild(h("div", { class: "rb-nav-lab", "aria-hidden": "true" }, SECTION_NAMES[currentSection]));
@@ -174,7 +175,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     tabbar.appendChild(b);
   }
   for (const section of SECTION_IDS) {
-    const first = TABS.find((t) => t.section === section);
+    const first = TABS.find((t) => t.section === section && t.mobileOnly) ?? TABS.find((t) => t.section === section);
     const b = h("a", { href: "#", dataset: { section }, onClick: (e) => {
       e.preventDefault();
       go(first.id);

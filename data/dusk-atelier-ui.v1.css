@@ -376,3 +376,18 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-pp-bar{position:absolute;right:10px;bottom:10px;z-index:5;padding:7px 12px;border-radius:999px;border:1px solid var(--rb-line3);background:var(--rb-win);color:var(--rb-text);font-weight:600;font-size:13px;box-shadow:var(--rb-shadow);cursor:pointer}
 .rb-pp-bar[hidden]{display:none}
 .rb-pp-prev{padding:10px 12px;border-radius:10px;background:var(--rb-surf);border:1px solid var(--rb-line);font-size:13.5px;line-height:1.6;max-height:96px;overflow:auto;word-break:break-word}
+
+
+/* 홈 바로가기: 4개 그룹을 균형 있는 카드형 2×2 레이아웃으로 표시 */
+.rb-home2 .rb-hdo{margin-top:18px}
+.rb-home2 .rb-hdo>h2{margin:0 0 12px;font-size:14px;font-weight:700;letter-spacing:.02em;color:var(--rb-sub)}
+.rb-home2 .rb-hgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.rb-home2 .rb-htile{position:relative;display:flex;align-items:center;gap:14px;min-width:0;min-height:96px;padding:18px;border:1px solid var(--rb-line2);border-radius:18px;background:linear-gradient(145deg,var(--rb-card),var(--rb-win));color:var(--rb-text);text-align:left;box-shadow:0 3px 12px rgba(0,0,0,.045);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+.rb-home2 .rb-htile:hover{transform:translateY(-2px);border-color:var(--rb-acc);box-shadow:0 8px 22px rgba(0,0,0,.09)}
+.rb-home2 .rb-htile:focus-visible{outline:2px solid var(--rb-acc);outline-offset:2px}
+.rb-home2 .rb-htile>.ico{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border-radius:15px;background:var(--rb-acc-soft);color:var(--rb-acc-text)}
+.rb-home2 .rb-htile>.t{display:flex;flex-direction:column;gap:5px;min-width:0}
+.rb-home2 .rb-htile>.t>b{font-size:15px;font-weight:750;line-height:1.25}
+.rb-home2 .rb-htile>.t>small{font-size:12px;line-height:1.45;color:var(--rb-sub)}
+.rb-home2 .rb-section-tile{min-height:82px}
+@media(max-width:760px){.rb-home2 .rb-hgrid{gap:9px}.rb-home2 .rb-htile{min-height:88px;padding:13px;gap:10px;border-radius:15px}.rb-home2 .rb-htile>.ico{flex-basis:40px;width:40px;height:40px;border-radius:12px}.rb-home2 .rb-htile>.t>b{font-size:14px}.rb-home2 .rb-htile>.t>small{font-size:11px}}
