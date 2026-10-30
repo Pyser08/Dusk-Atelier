@@ -26,7 +26,7 @@ import { renderSettingsTab } from './screens/settingstab.js';
 import { renderMemory } from './screens/memory/index.js';
 import { renderCardsTab } from './screens/cards/index.js';
 import { renderHome } from './screens/home.js';
-import { BASE_IDS, MORE_IDS, SEARCH, TABS, subLabel } from './tabs.js';
+import { BASE_IDS, SEARCH, SECTION_IDS, SECTION_NAMES, TABS, subLabel } from './tabs.js';
 
 export function createApp(api, { legacy, version, onPersonaChanged }) {
   const doc = document;
