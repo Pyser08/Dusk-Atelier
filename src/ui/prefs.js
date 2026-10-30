@@ -15,7 +15,7 @@ async function writeJson(api, key, value) {
   await api.pluginStorage.setItem(key, JSON.stringify(value));
 }
 export var defaultsMeta = () => ({ v: 1, folders: [], mapping: {}, nameColors: {}, links: {}, charAssetFolders: {}, charFoldersCollapsed: {}, moduleAssetFolders: {}, folderPickOthers: "hide" });
-// 1.8.0 화면 모드: 기존 사용자도 최초 1회 간단 모드로 전환한다.
+// 1.7.0 화면 모드: 간단(기본) | 고급. 개발자 모드를 이미 켠 사람은 고급으로 시작한다.
 export var UI_MODES = ["simple", "advanced"];
 export var normalizeUiMode = (ui) => UI_MODES.includes(ui?.uiMode) ? ui.uiMode : ui?.devMode ? "advanced" : "simple";
 export function createPrefs(api) {
@@ -25,14 +25,7 @@ export function createPrefs(api) {
     async load() {
       ui = await readJson(api, KEYS.ui, {});
       ui.theme = normalizeTheme(ui.theme);
-      if (!ui.simpleModeMigrationV1) {
-        ui.uiMode = "simple";
-        ui.devMode = false;
-        ui.simpleModeMigrationV1 = true;
-        await writeJson(api, KEYS.ui, ui);
-      } else {
-        ui.uiMode = normalizeUiMode(ui);
-      }
+      ui.uiMode = normalizeUiMode(ui);
       meta = await readJson(api, KEYS.meta, defaultsMeta());
       for (const [k, d] of Object.entries(defaultsMeta())) if (!(k in meta) || typeof meta[k] !== typeof d || Array.isArray(meta[k]) !== Array.isArray(d)) meta[k] = d;
       return { ui, meta };
