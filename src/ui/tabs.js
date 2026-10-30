@@ -68,7 +68,7 @@ export var SECTION_IDS = ["memory", "manage", "work"];
 export var MORE_IDS = TABS.filter((t) => t.group === "more").map((t) => t.id);
 export var SUBNAMES = {
   settings: { prompts: "기억·리수폿 프롬프트", theme: "플러그인 꾸미기", updset: "업데이트 설정", cleanup: "설정 정리", history: "기록 · 되돌리기" },
-  tools: { presets: "프리셋", personabuilder: "AI로 페르소나 만들기", chattheme: "Risu 테마 꾸미기", themebuilder: "테마 빌더", themestudio: "테마 스튜디오", lorelog: "로어북 로그", inspector: "검사기", history: "기록 · 되돌리기" },
+  tools: { presets: "프리셋", chattheme: "Risu 테마 꾸미기", themebuilder: "테마 빌더", themestudio: "테마 스튜디오", lorelog: "로어북 로그", inspector: "검사기", history: "기록 · 되돌리기" },
   dev: { patchmaker: "패치 만들기" }
 };
 export var subLabel = (tab, sub) => sub ? SUBNAMES[tab]?.[sub] ?? null : null;
