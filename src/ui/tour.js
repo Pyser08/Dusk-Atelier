@@ -8,8 +8,6 @@ export var TOUR = [
   { icon: "home", title: "환영해요!", text: "Dusk Atelier는 봇과 모듈을 가져오고, 정리하고, 이어 쓰게 도와줘요. 버튼을 하나씩 짚어 드릴게요." },
   { icon: "upload", title: "가져오기는 끌어 놓기로", text: "봇·모듈 파일을 창 아무 곳에나 끌어 놓으면 바로 가져와요. 같은 봇이면 알아서 합쳐 줘요.", target: ["#rb-home-import", ".rb-home-import"] },
   { icon: "brain", title: "기억", text: "스위치만 켜면 AI 응답마다 인물의 상태와 있었던 일이 기록돼요. 지난 대화도 한 번에 분석할 수 있어요.", tab: "memory" },
-  { icon: "book", title: "리수폿", text: "인물 위키를 자동으로 정리해요. 기억과 따로 켜고 꺼요.", tab: "pot" },
-  { icon: "users", title: "인물", text: "정리된 인물을 보고 다듬어요. 직접 고친 내용은 AI가 함부로 바꾸지 않아요.", tab: "people" },
   { icon: "character", title: "캐릭터 (더보기)", text: "캐릭터를 폴더로 정리하고, 에셋과 로어북을 다듬어요. ‘AI로 만들기’로 말만 해도 봇을 만들어요.", tab: "characters" },
   { icon: "module", title: "모듈 (더보기)", text: "모듈을 켜고 끄고 순서를 바꿔요. 줄의 ‘연결’ 버튼으로 페르소나·캐릭터·지금 채팅에 이어요.", tab: "modules" },
   { icon: "sparkle", title: "기억 카드 (더보기)", text: "마음에 드는 인물은 카드로 만들어 새 봇으로 이어 갈 수 있어요.", tab: "cards" },
