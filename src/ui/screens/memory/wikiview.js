@@ -98,11 +98,11 @@ export async function renderPeopleTab(env, host) {
   const makeMissing = () => commit((w) => { let cur = w; for (const [, p] of missing) { try { cur = createBlankPerson(cur, p.name); } catch { /* 이미 있으면 건너뜀 */ } } return cur; }, `${missing.length}명의 위키 문서를 만들었어요. 수치·성격은 각 인물에서 ‘AI 작성’으로 채워요.`);
   const autoSt = autoStatusOf(M, docs.length);
   // 리수폿·인물 화면의 고유 기능을 기존 위키 UI 아래에 추가한다. 기존 위키 조작부는 교체하지 않는다.
+  const potState = M.switches?.state ? await M.switches.state(env.bot.id) : null;
+  const trackingStore = M.flow?.settings ? tracked(ctx, await M.flow.settings().catch(() => null)) : null;
+  const charRows = await Promise.all(docs.map(async (d) => ({ d, on: await M.switches.charOn(env.bot.id, env.chatItem.id, d.id) })));
   const integration = () => {
-    const state = M.switches?.state ? M.switches.state(env.bot.id) : null;
-    const st = state?.then ? null : state;
-    const pot = st?.pot;
-    const trackingStore = M.flow?.settings ? tracked(ctx, M.flow.settings()) : null;
+    const pot = potState?.pot;
     const trackOn = trackingStore ? trackingStore.rawSnapshot().autoWriterEnabled !== false : true;
     const setTrack = (v) => {
       try { trackingStore?.update((x) => { x.autoWriterEnabled = v; }); ctx.toast(v ? "새 인물도 자동으로 추적해요." : "고른 인물만 추적해요."); }
@@ -115,8 +115,8 @@ export async function renderPeopleTab(env, host) {
       catch (e) { fail(ctx)(e); }
       again();
     };
-    const charRows = docs.map((d) => h("div", { class: "rb-pot-charrow" }, avatar(d.title), h("span", { class: "n" }, d.title),
-      switchEl(true, { label: `${d.title} 위키 사용`, onChange: async (v, el) => {
+    const charList = charRows.map(({ d, on }) => h("div", { class: "rb-pot-charrow" }, avatar(d.title), h("span", { class: "n" }, d.title),
+      switchEl(on, { label: `${d.title} 위키 사용`, onChange: async (v, el) => {
         setSwitch(el, v);
         try { await M.switches.setChar(env.bot.id, env.chatItem.id, d.id, v); }
         catch (e) { fail(ctx)(e); }
@@ -136,7 +136,7 @@ export async function renderPeopleTab(env, host) {
       h("div", { class: "rb-mem-sact" }, btn("지금 기록", { onClick: () => openWriter(env).catch(fail(ctx)) }), btn("추적 인물 고르기", { onClick: () => openTracking(env).catch(fail(ctx)) })),
       conflictBox(env),
       h("details", { class: "rb-mem-man" }, h("summary", null, `캐릭터별 위키 사용 · ${docs.length}명`),
-        docs.length ? h("div", { class: "rb-pot-charlist" }, charRows) : h("p", { class: "rb-muted" }, "아직 위키 인물이 없어요.")),
+        docs.length ? h("div", { class: "rb-pot-charlist" }, charList) : h("p", { class: "rb-muted" }, "아직 위키 인물이 없어요.")),
       advanced);
   };
   const strip = () => h("div", { class: "rb-wk-auto" }, note(autoSt.kind, autoSt.text), h("span", { class: "rb-mem-rowact" }, plan.total && wikiEditable(env) ? btn(`AI로 빈칸 채우기 (${plan.total}명)`, { size: "sm", kind: "primary", title: "비어 있는 수치(와 본문·성격까지 빈 인물)만 채워요. 실행 전에 대상을 보여 드려요.", onClick: () => askFill().catch(fail(ctx)) }) : null, missing.length && wikiEditable(env) ? btn(`위키 없는 인물 ${missing.length}명 만들기`, { size: "sm", kind: "primary", onClick: () => makeMissing() }) : null, btn("위키 기록·다시 시도", { size: "sm", onClick: () => openWikiLog(env).catch(fail(ctx)) })));
