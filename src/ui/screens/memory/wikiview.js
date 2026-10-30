@@ -91,8 +91,8 @@ export async function renderPeopleTab(env, host) {
   const missing = Object.entries(people).filter(([, p]) => p?.name && !isUser(p.name) && !findDoc(wiki, p) && (visibleRecords(p).length || p.digest));
   const plan = fillPlan(wiki, docs.filter((d) => !isUser(d.title)));  // 원래 위키 기능: 실제 빈칸만 골라 채움
   const askFill = async () => {
-    const lines = [...plan.full, ...plan.metricOnly].slice(0, 12).map(planLine), more = plan.total > 12 ? `\\n…외 ${plan.total - 12}명` : "";
-    const ok = await confirmDialog(ctx.win, { title: `AI로 빈칸 채우기 · ${plan.total}명`, body: `${lines.join("\\n")}${more}\\n\\n이미 있는 본문·성격은 고치지 않아요. 인물마다 AI 호출이 일어나요.`, ok: "채우기 시작" });
+    const lines = [...plan.full, ...plan.metricOnly].slice(0, 12).map(planLine), more = plan.total > 12 ? `\n…외 ${plan.total - 12}명` : "";
+    const ok = await confirmDialog(ctx.win, { title: `AI로 빈칸 채우기 · ${plan.total}명`, body: `${lines.join("\n")}${more}\n\n이미 있는 본문·성격은 고치지 않아요. 인물마다 AI 호출이 일어나요.`, ok: "채우기 시작" });
     if (ok) await fillEmptyPeople(env, plan);
   };
   const makeMissing = () => commit((w) => { let cur = w; for (const [, p] of missing) { try { cur = createBlankPerson(cur, p.name); } catch { /* 이미 있으면 건너뜀 */ } } return cur; }, `${missing.length}명의 위키 문서를 만들었어요. 수치·성격은 각 인물에서 ‘AI 작성’으로 채워요.`);
