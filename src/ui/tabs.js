@@ -34,7 +34,7 @@ export var TABS = [
     card: "플러그인을 모아 보고 업데이트를 확인해요.",
     help: ["플러그인마다 카테고리를 붙여 정리할 수 있어요.", "‘플러그인 만들기’에서 템플릿으로 내 플러그인을 시작해요.", "DA Interop으로 다른 플러그인과 설정을 주고받아요."]
   },
-  { id: "work-home", label: "개요", icon: "tools", mobileOnly: true, group: "more", section: "work", desc: "꾸미기·AI 봇 제작·도구·설정을 모았어요.", card: "작업실 기능을 골라 열어요.", help: ["원하는 작업 기능을 눌러 바로 이동해요."] },
+  { id: "work-home", label: "개요", icon: "tools", mobileOnly: true, group: "more", section: "work", desc: "플러그인 꾸미기·AI 봇 제작·도구·설정을 모았어요.", card: "작업실 기능을 골라 열어요.", help: ["원하는 작업 기능을 눌러 바로 이동해요."] },
   {
     id: "look", label: "플러그인 꾸미기", icon: "palette", group: "more", section: "work",
     desc: "색·밝기·글자 크기를 골라요. 바로 바뀌어요.",
