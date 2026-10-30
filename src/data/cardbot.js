@@ -6,7 +6,7 @@ import { linkLore } from "../engine/card/prompt.js";
 // opts: {source, name, card, link, firstMessage, lorePicks, withRelationship, characters, chatName, minGrade,
 //        imageUse: "source"|"illustration"|"card"|"none", illustrationPath, cardAssetKey, withPng, copyExtras}
 const replaceChar = (value, name) => {
-  if (typeof value === "string") return value.replace(/\\{\\{\\s*char\\s*\\}\\}/gi, name);
+  if (typeof value === "string") return value.replace(/\{\{\s*char\s*\}\}/gi, name);
   if (Array.isArray(value)) return value.map((v) => replaceChar(v, name));
   if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, replaceChar(v, name)]));
   return value;
