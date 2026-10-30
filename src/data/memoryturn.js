@@ -25,6 +25,7 @@ import { appendDuskSection, splitDusk, checkDusk, SECTION_MARK } from "../engine
 import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
 import { makeTools } from "./memorytools.js";
 import { potConfirm, potOffForBot } from "../engine/memoryswitch.js";
+import { MEMORY_DEFAULT_PROMPT_1, MEMORY_DEFAULT_PROMPT_2 } from "./memory-default-prompts.js";
 
 const READONLY = new Set(["writer_schema", "director_schema", "slots", "policies"]);
 export const promptKeysOf = (lib) => Object.entries(lib).flatMap(([id, parts]) => Object.keys(parts).filter((p) => !READONLY.has(p)).map((p) => `${id}:${p}`));
@@ -63,8 +64,8 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       const existing = settings.rawSnapshot().customPrompts ?? [];
       const ids = new Set(existing.map((item) => item.id));
       const defaults = [
-        { id: "dusk-default-front-v1", name: "기본 프롬프트 · 앞", stages: ["memory", "router", "director", "writer"], scope: { kind: "all" }, enabled: true, position: "front", text: "[프롬1]" },
-        { id: "dusk-default-back-v1", name: "기본 프롬프트 · 뒤", stages: ["memory", "router", "director", "writer"], scope: { kind: "all" }, enabled: true, position: "back", text: "[프롬2]" },
+        { id: "dusk-default-front-v1", name: "기본 프롬프트 · 앞", stages: ["memory", "router", "director", "writer"], scope: { kind: "all" }, enabled: true, position: "front", text: MEMORY_DEFAULT_PROMPT_1 },
+        { id: "dusk-default-back-v1", name: "기본 프롬프트 · 뒤", stages: ["memory", "router", "director", "writer"], scope: { kind: "all" }, enabled: true, position: "back", text: MEMORY_DEFAULT_PROMPT_2 },
       ].filter((item) => !ids.has(item.id));
       if (defaults.length) {
         settings.update((value) => { value.customPrompts = [...(value.customPrompts ?? []), ...defaults]; });
