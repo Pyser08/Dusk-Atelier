@@ -18,7 +18,6 @@ import { EMO_TAGS, EMO_LABEL, GAUGE_MAX } from "../../../engine/memoryemo.js";
 import { wikiPanel } from "./wikipanel.js";
 import { openWikiLog } from "./wikilog.js";
 import { liveScope } from "./advanced.js";
-import { tracked } from "./settingstools.js";
 
 const USER = "{{user}}";
 const AXIS_LABEL = { relationalInitiative: "관계 주도성", expressionDirectness: "표현 직접성", emotionalExpressiveness: "감정 표출성", guardedness: "경계 성향", impulsivity: "충동성", relationshipPersistence: "관계 지속성" };
@@ -93,9 +92,6 @@ export async function renderPeopleTab(env, host) {
   const makeMissing = () => commit((w) => { let cur = w; for (const [, p] of missing) { try { cur = createBlankPerson(cur, p.name); } catch { /* 이미 있으면 건너뜀 */ } } return cur; }, `${missing.length}명의 위키 문서를 만들었어요. 수치·성격은 각 인물에서 ‘AI 작성’으로 채워요.`);
   const autoSt = autoStatusOf(M, docs.length);
   // 리수폿·인물 화면의 고유 기능을 기존 위키 UI 아래에 추가한다. 기존 위키 조작부는 교체하지 않는다.
-  const potState = M.switches?.state ? await M.switches.state(env.bot.id) : null;
-  const trackingStore = M.flow?.settings ? tracked(ctx, await M.flow.settings().catch(() => null)) : null;
-  const charRows = await Promise.all(docs.map(async (d) => ({ d, on: await M.switches.charOn(env.bot.id, env.chatItem.id, d.id) })));
   const strip = () => h("div", { class: "rb-wk-auto" }, note(autoSt.kind, autoSt.text), h("span", { class: "rb-mem-rowact" }, plan.total && wikiEditable(env) ? btn(`AI로 빈칸 채우기 (${plan.total}명)`, { size: "sm", kind: "primary", title: "비어 있는 수치(와 본문·성격까지 빈 인물)만 채워요. 실행 전에 대상을 보여 드려요.", onClick: () => askFill().catch(fail(ctx)) }) : null, missing.length && wikiEditable(env) ? btn(`위키 없는 인물 ${missing.length}명 만들기`, { size: "sm", kind: "primary", onClick: () => makeMissing() }) : null, btn("위키 기록·다시 시도", { size: "sm", onClick: () => openWikiLog(env).catch(fail(ctx)) })));
   const top = (n) => h("div", { class: "rb-wk-headwrap" }, h("div", { class: "rb-wk-head" }, h("div", null, h("div", { class: "rb-wk-eyebrow rb-muted" }, "지금 채팅"), h("h2", null, "인물 문서")),
     h("span", { class: "rb-mem-rowact" }, h("span", { class: "rb-wk-n" }, `${n}명`), btn("인물 추가·가져오기", { size: "sm", onClick: () => openImport(env).catch(fail(ctx)) }), btn("빈 인물 직접 추가", { size: "sm", onClick: addBlank }),
@@ -118,12 +114,25 @@ export async function renderPeopleTab(env, host) {
   const shown = rows.filter((r) => !q || [r.name, ...(r.doc?.aliases ?? []), ...(r.doc?.tags ?? [])].some((n) => String(n).toLowerCase().includes(q)) || (r.doc?.sections ?? []).some((s) => String(s.body ?? "").toLowerCase().includes(q)));
   const sel = rows.find((r) => r.id === m.wkSel) ?? shown[0] ?? rows[0];
   m.wkSel = sel.id;
+  let main;
+  const rowButtons = new Map();
+  const selectRow = (r) => {
+    m.wkSel = r.id;
+    for (const [id, el] of rowButtons) el.setAttribute("aria-pressed", id === r.id ? "true" : "false");
+    // 인물 전환은 오른쪽 문서만 교체한다. 목록·검색·상단 상태와 무거운 설정 조회는 다시 실행하지 않는다.
+    replace(main, top(rows.length), personPage(env, r, docs, commit));
+  };
+  const list = h("div", { class: "rb-wk-list" }, ...shown.map((r) => {
+    const el = h("button", { type: "button", class: "rb-wk-row", "aria-pressed": r.id === sel.id ? "true" : "false", onClick: () => selectRow(r) },
+      avatar(r.name, ""), h("span", { class: "txt" }, h("span", { class: "name" }, r.name), h("small", { class: "rb-muted" }, r.doc ? "인물정보 등록됨" : "이야기 기록만")));
+    rowButtons.set(r.id, el);
+    return el;
+  }));
   const side = h("aside", { class: "rb-wk-side" },
     h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "이름·별칭·태그·본문", value: m.personSearch ?? "", "aria-label": "인물 검색", onChange: (e) => { m.personSearch = e.target.value; again(); } })),
-    h("div", { class: "rb-wk-count" }, "등록 인물 ", h("b", null, String(rows.length))),
-    h("div", { class: "rb-wk-list" }, shown.map((r) => h("button", { type: "button", class: "rb-wk-row", "aria-pressed": r.id === sel.id ? "true" : "false", onClick: () => { m.wkSel = r.id; again(); } },
-      avatar(r.name, ""), h("span", { class: "txt" }, h("span", { class: "name" }, r.name), h("small", { class: "rb-muted" }, r.doc ? "인물정보 등록됨" : "이야기 기록만"))))));
-  replace(host, h("div", { class: "rb-wk" }, side, h("div", { class: "rb-wk-main" }, top(rows.length), personPage(env, sel, docs, commit))));
+    h("div", { class: "rb-wk-count" }, "등록 인물 ", h("b", null, String(rows.length))), list);
+  main = h("div", { class: "rb-wk-main" }, top(rows.length), personPage(env, sel, docs, commit));
+  replace(host, h("div", { class: "rb-wk" }, side, main));
 }
 
 function personPage(env, r, docs, commit) {
