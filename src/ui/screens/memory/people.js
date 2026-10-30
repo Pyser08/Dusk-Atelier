@@ -131,6 +131,8 @@ async function cleanOrphans(env) {
 }
 export function personDetail(env, host, key, embedded = false) {
   const m = mem(env.ctx), p = env.folder.people[key], { caps } = env, local = caps.analyze;
+  const refresh = () => embedded ? personDetail(env, host, key, true) : env.redraw();
+  m.spage ??= 1;
   const all = visibleRecords(p);
   const doc = findDoc(env.folder.wiki, p), state = stateOf(doc), tl = timelineOf(env.folder, p, doc), counts = countsOf(tl);
   m.tlFilter ??= "all";
@@ -165,11 +167,11 @@ export function personDetail(env, host, key, embedded = false) {
     !embedded && state ? stateCard(env, state, env.cycleOn ? cycleOf(doc) : null) : null,
     !embedded && env.advanced && doc && wikiEditable(env) ? wikiPanel(env, doc) : null,
     embedded ? null : h("div", { class: "rb-mem-chats rb-mem-tlchips", role: "tablist", "aria-label": "이야기 걸러 보기" }, TL_FILTERS.map(([id, label]) => chip(label, { pressed: m.tlFilter === id && m.sort !== "grade", count: id === "all" ? counts.all : counts[id] ?? 0, onClick: () => { m.tlFilter = id; m.sort = m.sort === "grade" ? "time" : m.sort; m.spage = 1; env.redraw(); } }))),
-    h("div", { class: "rb-mem-tools" }, embedded || m.tlFilter === "all" || m.tlFilter === "event" ? h("div", { class: "rb-mem-chats" }, GRADES.map((g) => chip(g, { pressed: m.grades.includes(g), onClick: () => { m.grades = m.grades.includes(g) ? m.grades.filter((x) => x !== g) : [...m.grades, g]; m.spage = 1; env.redraw(); } }))) : null,
+    h("div", { class: "rb-mem-tools" }, embedded || m.tlFilter === "all" || m.tlFilter === "event" ? h("div", { class: "rb-mem-chats" }, GRADES.map((g) => chip(g, { pressed: m.grades.includes(g), onClick: () => { m.grades = m.grades.includes(g) ? m.grades.filter((x) => x !== g) : [...m.grades, g]; m.spage = 1; refresh(); } }))) : null,
       h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "기록 검색", value: m.search, "aria-label": "기록 검색", onInput: (e) => { m.search = e.target.value; m.spage = 1; env.redraw(); } })),
       h("select", { class: "rb-input", style: "width:auto;height:36px", "aria-label": "정렬", onChange: (e) => { m.sort = e.target.value; env.redraw(); } }, [["time", "시간순"], ["grade", "등급순"]].map(([v, l]) => h("option", { value: v, selected: m.sort === v }, l)))),
     recs.length ? h("ul", { class: "rb-mem-reclist rb-mem-story" }, shown.map((x) => x.kind === "event" ? eventItem(x.rec) : storyItem(env, x))) : h("div", { class: "rb-empty" }, "조건에 맞는 이야기가 없어요."),
-    recs.length > shown.length ? btn(`더 보기 (${recs.length - shown.length})`, { onClick: () => { m.spage++; env.redraw(); } }) : null);
+    recs.length > shown.length ? btn(`더 보기 (${recs.length - shown.length})`, { onClick: () => { m.spage++; refresh(); } }) : null);
 }
 
 const KIND_LABEL = { rel: "관계", state: "상태", open: "약속" };
