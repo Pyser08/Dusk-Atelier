@@ -748,7 +748,7 @@ export async function renderPersonaBuilder(ctx) {
     chatSend.className += " rb-pb-chat-send";
     const paintChat = () => {
       replace(chatLog, ...personaChat.map((m) => h("div", { class: "rb-pb-chat-msg " + (m.role === "user" ? "user" : "assistant") },
-        m.role === "user" ? h("div", { class: "bubble" }, m.content) : h("div", { class: "answer" }, m.content)));
+        m.role === "user" ? h("div", { class: "bubble" }, m.content) : h("div", { class: "answer" }, m.content))));
       chatLog.scrollTop = chatLog.scrollHeight;
     };
     async function sendPersonaMessage() {
