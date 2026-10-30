@@ -954,7 +954,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 @media(max-width:560px){.rb-home2 .rb-story-helper{padding-left:12px;padding-right:12px}.rb-home2 .rb-story-helper .rb-srow{column-gap:8px}.rb-home2 .rb-story-helper .rb-srow>.t{font-size:13px}.rb-home2 .rb-story-helper .rb-srow .t small{font-size:11.5px}}
 
 /* 페르소나 AI 대화: ChatGPT식 비모달 플로팅 패널 */
-.rb-pb-chat-fab{position:fixed!important;right:24px;bottom:22px;z-index:60;border-radius:999px!important;box-shadow:0 5px 18px rgba(0,0,0,.2)}
+.rb-pb-chat-fab{position:absolute!important;right:24px;bottom:22px;z-index:60;border-radius:999px!important;box-shadow:0 5px 18px rgba(0,0,0,.2)}
 .rb-pb-chat{position:fixed;right:24px;bottom:84px;z-index:59;width:min(410px,calc(100vw - 32px));height:min(590px,calc(100dvh - 118px));min-height:300px;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--rb-line2);border-radius:20px;background:var(--rb-surf);color:var(--rb-text);box-shadow:0 14px 48px rgba(0,0,0,.24);animation:rb-pop .16s ease-out}
 .rb-pb-chat[hidden]{display:none!important}
 .rb-pb-chat-head{flex:none;display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--rb-line2)}
@@ -972,5 +972,5 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-pb-chat-input{flex:1;min-width:0;max-height:120px;resize:vertical;border:0!important;outline:0!important;background:transparent!important;color:var(--rb-text);font:inherit;font-size:13px;line-height:1.5;padding:5px 0!important}
 .rb-pb-chat-send{width:36px;height:36px;min-width:36px;padding:0!important;border-radius:50%!important}
 .rb-pb-chat-hint{flex:none;margin:7px 12px 10px;text-align:center;color:var(--rb-mute);font-size:10.5px;line-height:1.4}
-@media(max-width:560px){.rb-pb-chat-fab{right:14px;bottom:14px}.rb-pb-chat{right:10px;bottom:72px;width:calc(100vw - 20px);height:min(72dvh,620px);border-radius:18px}}
+@media(max-width:560px){.rb-pb-chat-fab{right:14px;bottom:14px}.rb-pb-chat{right:10px;bottom:72px;width:calc(100% - 20px);height:min(72%,620px);border-radius:18px}}
 `+PROB_CSS;
