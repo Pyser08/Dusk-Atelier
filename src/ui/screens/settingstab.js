@@ -109,7 +109,7 @@ export async function renderSettingsTab(ctx) {
       sec("채팅 메뉴", lab("기억 버튼", memBtnSeg), note("채팅 입력 옆 메뉴의 [기억] 버튼을 보이거나 숨겨요. 기억 기능 자체는 그대로예요.")),
       sec("정리 · 기록", tiles),
       guidePanel("이럴 땐 여기로", "하고 싶은 일을 누르면 해당 화면으로 가요.", [
-        { label: "색·글자 크기를 바꾸고 싶어요", text: "꾸미기", onClick: () => ctx.go("look") },
+        { label: "색·글자 크기를 바꾸고 싶어요", text: "플러그인 꾸미기", onClick: () => ctx.go("look") },
         { label: "모듈이 꼬였어요, 되돌리고 싶어요", text: "기록 · 되돌리기", onClick: () => ctx.go("settings", "history") },
         { label: "다른 기기로 옮기고 싶어요", text: "전체 백업·복원", onClick: () => fullBackup(ctx) },
         { label: "새 봇을 알아서 잡아 주면 좋겠어요", text: "업데이트 설정", onClick: () => ctx.go("settings", "updset") },
