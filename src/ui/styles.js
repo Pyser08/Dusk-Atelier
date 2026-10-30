@@ -950,7 +950,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-home2 .rb-story-helper .rb-srow{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:4px;width:100%;min-width:0;max-width:100%;box-sizing:border-box}
 .rb-home2 .rb-story-helper .rb-srow>.t{display:flex;flex-direction:column;flex:initial;min-width:0;width:auto;max-width:100%;overflow-wrap:anywhere}
 .rb-home2 .rb-story-helper .rb-srow .t small{display:block;min-width:0;width:auto;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal}
-.rb-home2 .rb-story-helper .rb-srow>button.rb-switch{justify-self:end;flex:none;width:42px;min-width:42px;max-width:42px}
+.rb-home2 .rb-story-helper .rb-srow>button.rb-switch{justify-self:end;flex:none;width:66px;min-width:66px;max-width:66px}
 @media(max-width:560px){.rb-home2 .rb-story-helper{padding-left:12px;padding-right:12px}.rb-home2 .rb-story-helper .rb-srow{column-gap:8px}.rb-home2 .rb-story-helper .rb-srow>.t{font-size:13px}.rb-home2 .rb-story-helper .rb-srow .t small{font-size:11.5px}}
 
 /* 페르소나 AI 대화: ChatGPT식 비모달 플로팅 패널 */
