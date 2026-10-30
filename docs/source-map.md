@@ -1,4 +1,6 @@
-# Dusk Atelier 소스 구조 지도 (v1.7.1 기준, tools/source-map.mjs로 자동 생성)
+# Dusk Atelier 소스 구조 지도 (v1.9.0 기준, tools/source-map.mjs로 자동 생성)
+
+v1.9.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`, 페르소나 화면은 `src/ui/screens/personabuilder.js`, 홈의 이야기 도우미는 `src/ui/screens/home.js`, 설정 지연 로딩은 `src/ui/screens/settingstab.js`에서 관리한다.
 
 새 채팅에서 파일을 찾을 때 먼저 이 문서를 보고, 필요한 파일만 읽는다. 저장소: Pyser08/Dusk-Atelier. 기능 작업은 브랜치에서 하고 main에 push하면 release.yml이 package.json 버전으로 릴리스한다. 갱신: `node tools/source-map.mjs > docs/source-map.md` 후 프로젝트 문서 `claude/source-map.md`로 올린다(`project_write` + `local_path`).
 
