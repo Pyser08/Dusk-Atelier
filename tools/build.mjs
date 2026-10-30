@@ -12,8 +12,8 @@ const version = pkg.version;
 const outFile = path.join(root, 'dusk_atelier.js');
 
 const banner = [
-  '//@name dusk_atelier',
-  '//@display-name Dusk Atelier',
+  '//@name dusk_atelier_1.8.0_UItest',
+  '//@display-name Dusk Atelier_1.8.0_UItest',
   '//@api 3.0',
   `//@version ${version}`,
   '//@update-url https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js',
