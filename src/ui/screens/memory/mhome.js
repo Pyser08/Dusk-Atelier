@@ -40,7 +40,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   }
   // 채팅 본문은 느릴 수 있으므로 화면을 먼저 그리고, 백필 분석용 데이터는 백그라운드에서 읽는다.
   const cacheKey = `${cur.chaId}:${cur.chatId}:${cur.ci}:${cur.ti}`;
-  const hasCachedPlan = m.homeChatPlan?.key === cacheKey;
+  const hasCachedPlan = m.homeChatPlan?.key === cacheKey && Date.now() - m.homeChatPlan.t < 20000;
   const cachedPlan = hasCachedPlan ? m.homeChatPlan.plan : null;
   let chatPromise = Promise.resolve(null);
   if (!hasCachedPlan) {
@@ -56,7 +56,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     if (!loaded) return;
     const loadedMsgs = loaded.message ?? [];
     const nextPlan = caps.analyze && M.runner ? M.runner.planBackfill(loadedMsgs, { from: 0, to: Math.max(0, loadedMsgs.length - 1) }, folder) : null;
-    m.homeChatPlan = { key: cacheKey, plan: nextPlan };
+    m.homeChatPlan = { key: cacheKey, plan: nextPlan, t: Date.now() };
     if (m.homeChatPromise?.key === cacheKey) m.homeChatPromise = null;
     if (ctx.state.tab === "memory" && mem(ctx) === m) redraw();
   }).catch(() => {});
