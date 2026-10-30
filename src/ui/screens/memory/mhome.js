@@ -35,7 +35,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   await renderModeBar(ctx, modeHost, { redraw });  // 간단 모드에서는 저장소를 자동으로 맞추기만 한다
   const cur = await M.switches.currentChat();
   if (!cur) {
-    return replace(host, pageHead("기억"), emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요.",
+    return replace(host, pageHead("장기 기억"), emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요.",
       actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] }));
   }
   const [sw, idx, folder, chat] = await Promise.all([M.switches.state(cur.chaId), M.store.getIndex(), M.store.getFolder(cur.chaId, cur.chatId).catch(() => null), ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null)]);
