@@ -42,7 +42,7 @@ export var TABS = [
     help: ["누르면 바로 바뀌고 자동으로 저장돼요.", "‘고급 모드’에서 메뉴 위치·밀도·확대율을 더 바꿔요."]
   },
   { id: "aibot", label: "AI로 봇 만들기", icon: "sparkle", group: "more", section: "work", desc: "AI 제작 화면으로 새 봇을 만들어요.", card: "AI로 새 봇 만들기", help: ["새 봇을 만든 뒤 AI로 제작 화면을 열어요."] },
-  { id: "personabuilder", label: "AI로 페르소나 만들기", icon: "user", group: "more", section: "work", desc: "양식과 AI를 이용해 페르소나를 만들어요.", card: "AI로 페르소나 만들기", help: ["페르소나 양식을 고르고 AI로 전체 또는 일부 내용을 만들 수 있어요."] },
+  { id: "personabuilder", label: "AI로 페르소나 만들기", icon: "character", group: "more", section: "work", desc: "양식과 AI를 이용해 페르소나를 만들어요.", card: "AI로 페르소나 만들기", help: ["페르소나 양식을 고르고 AI로 전체 또는 일부 내용을 만들 수 있어요."] },
   {
     id: "tools", label: "도구", icon: "tools", group: "more", section: "work",
     desc: "프리셋·Risu 테마 꾸미기·로어북 로그 같은 도구 모음이에요.",
