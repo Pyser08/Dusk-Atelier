@@ -57,6 +57,21 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     const storage = createPotStorage(api, store), keys = await hubKeys(api);
     const settings = new SettingsStore(storage, { promptKeys: promptKeysOf(sourceLibrary) });
     await settings.load();
+    // 첫 실행에 기본 프롬프트 두 개를 한 번만 추가한다. 사용자가 나중에 삭제해도 다시 생성하지 않는다.
+    const promptPresetIndex = await store.getIndex();
+    if (promptPresetIndex.pot?.defaultPromptPresetsV1 !== true) {
+      const existing = settings.rawSnapshot().customPrompts ?? [];
+      const ids = new Set(existing.map((item) => item.id));
+      const defaults = [
+        { id: "dusk-default-front-v1", name: "기본 프롬프트 · 앞", stages: ["memory", "router", "director", "writer"], scope: { kind: "all" }, enabled: true, position: "front", text: "[프롬1]" },
+        { id: "dusk-default-back-v1", name: "기본 프롬프트 · 뒤", stages: ["memory", "router", "director", "writer"], scope: { kind: "all" }, enabled: true, position: "back", text: "[프롬2]" },
+      ].filter((item) => !ids.has(item.id));
+      if (defaults.length) {
+        settings.update((value) => { value.customPrompts = [...(value.customPrompts ?? []), ...defaults]; });
+        await settings.flush();
+      }
+      await store.updateIndex((idx) => { idx.pot ??= {}; idx.pot.defaultPromptPresetsV1 = true; });
+    }
     if (settings.status().blocked) {  // 가져온 설정이 해석되지 않으면 원본은 보관하고 새 설정으로 시작한다
       await store.updateIndex((idx) => { idx.pot ??= {}; idx.pot.settingsBackup = idx.pot.settings; idx.pot.settings = null; });
       await settings.load();
