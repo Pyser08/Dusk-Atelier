@@ -10,8 +10,6 @@ import { renderModeBar } from "./modebar.js";
 import { advancedBlocks } from "./madv.js";
 import { openEmbedModal } from "./embedmodal.js";
 import { maybeAskBardWiki } from "./modebar.js";
-import { memoryEnv } from "./menv.js";
-import { autoTrackingBox } from "./autotrackingbox.js";
 
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
 
@@ -34,10 +32,9 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   await maybeAskBardWiki(ctx).catch(() => {});
   const modeHost = h("div");
   await renderModeBar(ctx, modeHost, { redraw });  // 간단 모드에서는 저장소를 자동으로 맞추기만 한다
-  const intro = !m.homeIntroDismissed ? h("section", { class: "rb-card rb-mem-intro" }, h("b", null, "장기기억 사용 안내"), h("p", { class: "rb-muted" }, "대화에서 중요한 사건과 인물 관계를 기록하고, 다음 요청에 필요한 기억을 골라 넣어요. 아래에서 자동 기록·인물 추적과 기억 방식을 설정할 수 있어요."), btn("확인", { size: "sm", onClick: () => { m.homeIntroDismissed = true; redraw(); } })) : null;
   const cur = await M.switches.currentChat();
   if (!cur) {
-    return replace(host, pageHead("기억"), intro, emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요.",
+    return replace(host, pageHead("기억"), emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요.",
       actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] }));
   }
   const [sw, idx, folder, chat] = await Promise.all([M.switches.state(cur.chaId), M.store.getIndex(), M.store.getFolder(cur.chaId, cur.chatId).catch(() => null), ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null)]);
@@ -96,16 +93,10 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
 
 
 
-  const trackingHost = !ctx.prefs.advanced ? h("div") : null;
   const main = h("div", { class: "rb-mem2-main" },
-    intro,
     pageHead("기억", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"}`, sw: { on, label: "이 채팅에서 사용", onChange: (v) => setOn(v) } }),
-    h("div", { class: "rb-mem-status-row" }, status, btn("인물 Wiki", { kind: "primary", icon: "character", title: "인물 위키 화면으로 이동", onClick: openDetail })), usageCard(usageOf(folder, last?.manifest)), actions, prog, memorySettings, trackingHost, recBox,
+    h("div", { class: "rb-mem-status-row" }, status, btn("인물 Wiki", { kind: "primary", icon: "character", title: "인물 위키 화면으로 이동", onClick: openDetail })), usageCard(usageOf(folder, last?.manifest)), actions, prog, memorySettings, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   const adv = advFold(ctx, "memory", ...(ctx.prefs.advanced ? advancedBlocks(ctx, { cur, idx, redraw, modeHost }) : [true]));
   replace(host, h("div", { class: ["rb-mem2-grid", ctx.prefs.advanced && "has-adv"] }, main, adv ? h("div", { class: "rb-mem2-side" }, adv) : null));
-  if (trackingHost) memoryEnv(ctx, { botId: cur.chaId, chatIndex: cur.ti, redraw })
-    .then((loaded) => loaded.env && autoTrackingBox(loaded.env))
-    .then((box) => { if (box && host.contains(trackingHost)) trackingHost.replaceChildren(box); })
-    .catch(fail(ctx));
 }
