@@ -1,4 +1,4 @@
-// 꾸미기 (v1.7.0 7단계, 계획 §3.12): 미리보기 → 강조 색 6개 → 밝기·글자 크기 → 내 채팅 테마 만들기. 누르는 즉시 적용·자동 저장.
+// 플러그인 꾸미기 (v1.7.0 7단계, 계획 §3.12): 미리보기 → 강조 색 6개 → 밝기·글자 크기 → 내 채팅 테마 만들기. 누르는 즉시 적용·자동 저장.
 // 고급(고급 모드): 직접 색 · 메뉴 위치 · 줄 간격 · 확대율 · 고대비 · 테마 스튜디오 · 기본값으로.
 import { h, replace } from '../dom.js';
 import { advFold, btn, optionCards, pageHead, segmented, toggleRow } from '../kit.js';
@@ -89,7 +89,7 @@ export function renderSettings(ctx) {
   const main = h(
     "div",
     { class: "rb-mem2-main" },
-    pageHead("꾸미기", { sub: "누르면 바로 바뀌고 자동으로 저장돼요.", back: fromSettings ? { label: "설정으로 돌아가기", onClick: () => ctx.go("settings") } : void 0 }),
+    pageHead("플러그인 꾸미기", { sub: "누르면 바로 바뀌고 자동으로 저장돼요.", back: fromSettings ? { label: "설정으로 돌아가기", onClick: () => ctx.go("settings") } : void 0 }),
     h("div", { class: "rb-card bordered rb-look-prev", "aria-label": "미리보기" }, h("span", { class: "cap" }, "미리보기"), h("div", { class: "rb-bub o" }, "오늘 회의 자료는 준비됐어요."), h("div", { class: "rb-bub m" }, "고마워요, 바로 확인할게요.")),
     h("section", { class: "rb-card bordered rb-lcard" }, h("span", { class: "h" }, "강조 색"), h("div", { class: "rb-accpicks" }, swatches)),
     h("section", { class: "rb-card bordered rb-lcard" }, field("밝기", null, modeSeg, modeNote), field("글자 크기", null, sizeSeg)),
