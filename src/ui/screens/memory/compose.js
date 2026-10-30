@@ -30,7 +30,9 @@ export async function renderCompose(env, host) {
   if (!people.length) return replace(host, h("div", { class: "rb-empty" }, "기록된 인물이 있어야 새 봇을 만들 수 있어요."));
   const total = chatItem.chat?.message?.length ?? 0, messages = chatItem.chat?.message ?? [];
   const cfg = await M.cards.getCfg();
-  const c = m.compose ??= {};
+  const sourceKey = JSON.stringify([bot.id, chatItem.id]);
+  if (m.compose?.sourceKey !== sourceKey) m.compose = { sourceKey };
+  const c = m.compose;
   for (const [k, v] of Object.entries({ step: 0, keys: [people[0][0]], minGrade: "C", from: 1, to: total || 9999, gradeSet: null, gradeMode: "auto", aiGrade: null, card: null, mode: "memory", picks: null, entryLevels: [...cfg.entryLevels], lang: cfg.lang, extra: "", linkExtra: cfg.linkExtra ?? "", link: null, first: "", name: "", imageUse: cfg.imageUse, withPng: cfg.withPng, copyExtras: false, withRel: true, calls: 0, assets: null, aiPicks: null, work: Promise.resolve() })) if (!(k in c)) c[k] = v;
   const main = folder.people[c.keys[0]], names = main ? [main.name, ...(main.aliases ?? [])] : [];
   const parsed = parseTags(cfg.tagText);
