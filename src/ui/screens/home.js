@@ -64,7 +64,7 @@ export async function renderHome(ctx) {
   );
 
   // ── 상태 3줄 ──
-  const line = (status) => h("div", { class: "rb-hstat rb-hstat-memory" }, h("button", { type: "button", class: "lab", onClick: () => ctx.go("memory") }, h("b", null, "기억"), icon("chevron", 14)), status);
+  const line = (status) => h("div", { class: "rb-hstat rb-hstat-memory", role: "button", tabindex: "0", onClick: (e) => { if (e.target.closest("button")) return; ctx.go("memory"); }, onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ctx.go("memory"); } } }, h("span", { class: "lab" }, h("b", null, "기억"), icon("chevron", 14)), status);
   let memoryStatus;
   if (!s.cur) memoryStatus = statusCard("off", "채팅을 열면 여기에 기억 상태가 보여요.");
   else {
