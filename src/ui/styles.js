@@ -123,6 +123,7 @@ html,body{margin:0;height:100%;background:transparent}
 .rb-pcard .rb-mem-meter{grid-template-columns:48px 1fr auto}
 .rb-ppl{display:flex;flex-direction:column;gap:14px;max-width:760px}
 .rb-ppl.wide{display:grid;grid-template-columns:380px minmax(0,1fr);gap:20px;max-width:none;align-items:start}
+.rb-ppl-full{grid-column:1/-1;min-width:0}
 .rb-ppl-left,.rb-ppl-right,.rb-ppl-list,.rb-pdetail{display:flex;flex-direction:column;gap:12px;min-width:0}
 .rb-pcard{display:flex;align-items:flex-start;gap:12px;text-align:left;padding:12px 14px;border-radius:var(--rb-r3);border:var(--rb-bw,1px) solid var(--rb-line);background:var(--rb-surf);color:inherit;cursor:pointer;box-shadow:var(--rb-shadow-card)}
 .rb-pcard.is-active{border-color:var(--rb-acc-a);background:var(--rb-acc-soft)}
