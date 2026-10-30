@@ -928,4 +928,18 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-thanks-sec .rb-thanks-text,.rb-thanks-sec .rb-cr-desc{font-size:11.5px;line-height:1.45}
 .rb-thanks-sec .rb-cr-link{margin-top:2px;padding:2px 8px;font-size:11px}
 @media (hover:hover){.rb-thanks-sec .rb-cr:hover{transform:none;box-shadow:none}}
+
+/* 홈 바로가기: 실제 앱에서 사용하는 CSS2에 적용 */
+.rb-home2 .rb-hdo{margin-top:18px}
+.rb-home2 .rb-hdo>h2{margin:0 0 12px;font-size:14px;font-weight:700;letter-spacing:.02em;color:var(--rb-sub)}
+.rb-home2 .rb-hgrid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px}
+.rb-home2 .rb-htile{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:14px;min-width:0;min-height:96px;padding:18px;border:1px solid var(--rb-line2);border-radius:18px;background:linear-gradient(145deg,var(--rb-surf),var(--rb-win));color:var(--rb-text);text-align:left;box-shadow:0 3px 12px rgba(0,0,0,.045);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+.rb-home2 .rb-htile:hover{transform:translateY(-2px);border-color:var(--rb-acc);box-shadow:0 8px 22px rgba(0,0,0,.09)}
+.rb-home2 .rb-htile:focus-visible{outline:2px solid var(--rb-acc);outline-offset:2px}
+.rb-home2 .rb-htile>.ico{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border-radius:15px;background:var(--rb-acc-soft);color:var(--rb-acc-text)}
+.rb-home2 .rb-htile>.t{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+.rb-home2 .rb-htile>.t>b{font-size:15px;font-weight:750;line-height:1.25}
+.rb-home2 .rb-htile>.t>small{display:block;font-size:12px;line-height:1.45;color:var(--rb-sub);white-space:normal}
+@media(max-width:760px){.rb-home2 .rb-hgrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px}.rb-home2 .rb-htile{flex-direction:row;justify-content:flex-start;min-height:88px;padding:13px;gap:10px;border-radius:15px}.rb-home2 .rb-htile>.ico{flex-basis:40px;width:40px;height:40px;border-radius:12px}.rb-home2 .rb-htile>.t{align-items:flex-start}.rb-home2 .rb-htile>.t>b{font-size:14px}.rb-home2 .rb-htile>.t>small{font-size:11px}}
+
 `+PROB_CSS;
