@@ -1,4 +1,4 @@
-// 채팅 테마 (v1.7.0): 도구 안의 한 곳. 만든 테마 목록 · 켜기/끄기 · 코드/파일 내보내기·불러오기 · 빌더/스튜디오 오가기.
+// Risu 테마 꾸미기 (v1.7.0): 도구 안의 한 곳. 만든 테마 목록 · 켜기/끄기 · 코드/파일 내보내기·불러오기 · 빌더/스튜디오 오가기.
 // 빌더·스튜디오 화면 맨 위에도 같은 탭줄(themeTabs)이 붙어 서로 바로 오갈 수 있다.
 import { h, replace, download, pickFiles } from '../dom.js';
 import { btn, iconBtn, segmented, note, confirmDialog, promptDialog, openMenu } from '../kit.js';
@@ -18,7 +18,7 @@ export function themeTabs(ctx, active, guard) {
     }
     if (v === "builder") handoff.builder = null;
     ctx.go("tools", SUBS[v]);
-  }, "채팅 테마 화면");
+  }, "Risu 테마 꾸미기 화면");
   seg.classList.add("rb-theme-tabs");
   seg.style.minWidth = "230px";
   return seg;
@@ -141,7 +141,7 @@ export async function renderChatTheme(ctx) {
     });
     const top = h("div", { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
       iconBtn("back", "도구로", { onClick: () => ctx.go("tools") }),
-      h("h2", { class: "rb-h2", style: "margin:0" }, "채팅 테마"),
+      h("h2", { class: "rb-h2", style: "margin:0" }, "Risu 테마 꾸미기"),
       themeTabs(ctx, "list"),
       h("div", { style: "flex:1" }),
       tog);
