@@ -108,7 +108,7 @@ export async function renderHome(ctx) {
       tile("upload", "가져오기", "봇·모듈·파일 가져오기", () => ctx.legacy.open(), "rb-home-import"),
       tile("brain", "기억", "장기 기억·기억 카드", () => ctx.go("memory-home"), "rb-home-memory"),
       tile("module", "관리", "캐릭터·모듈·플러그인", () => ctx.go("manage-home"), "rb-home-manage"),
-      tile("tools", "작업실", "꾸미기·AI 봇 제작·도구", () => ctx.go("work-home"), "rb-home-work")
+      tile("tools", "작업실", "플러그인 꾸미기·AI 봇 제작·도구", () => ctx.go("work-home"), "rb-home-work")
     )
   );
 
