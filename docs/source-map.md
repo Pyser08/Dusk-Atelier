@@ -335,9 +335,11 @@
 
 ## v1.8.0 구조 변경 메모
 
-- `src/ui/screens/memory/mhome.js`: 기억 홈 설명과 상태·기록·설정을 배치한다. 자동 기록·인물 추적은 간단 모드에서 본문에 표시한다.
+- `src/ui/screens/memory/mhome.js`: 기억 홈의 상태·기록·설정을 배치한다. 기억 탭 첫 진입 안내는 `embeddingguide.js`에서 한 번만 표시한다.
 - `src/ui/screens/pot.js`: `advancedPot()`을 내보내 인물 위키 안에서 기존 자동 기록 고급 설정을 재사용한다.
 - `src/ui/screens/memory/modebar.js`: 저장소 선택을 간단·고급 모드에서 유지하며, BardWiki 최초 선택은 기억 탭 진입 시 안내한다.
 - `src/ui/screens/memory/wikiview.js`: 인물 위키 문서·기록 UI만 담당한다. 자동 기록·인물 추적 설정은 기억 탭의 `autotrackingbox.js`로 분리했다.
 - `src/ui/tabs.js` / `src/ui/app.js`: 외부 인물·리수폿 탭과 화면 라우트를 제거한다.
 - `src/ui/styles.js`: 기존 Dusk 카드·접이식 UI와 통합 패널의 반응형 배치를 추가한다.
+
+- `src/ui/screens/memory/embeddingguide.js` (신규) 기억 탭에 처음 진입할 때 임베딩(의미 검색)을 한 번 안내한다. 플러그인 저장소의 고정 키로 표시 여부를 기억해 이후 실행·업데이트에서는 다시 띄우지 않는다.
