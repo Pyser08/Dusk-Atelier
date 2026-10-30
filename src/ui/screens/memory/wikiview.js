@@ -2,7 +2,7 @@
 // 생김새는 Dusk 토큰·카드 스타일, 배치·항목 순서·수정 규칙(고정·편집 중 변경 거절)은 리수폿을 따른다.
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
-import { btn, modal, promptDialog, confirmDialog, openMenu, note, switchEl, setSwitch } from "../../kit.js";
+import { btn, modal, promptDialog, confirmDialog, openMenu, note } from "../../kit.js";
 import { mem, fail, avatar, visibleRecords, potOn } from "./common.js";
 import { findDoc } from "../../../engine/personview.js";
 import { fillPlan, planLine } from "../../../engine/peoplegaps.js";
@@ -14,16 +14,9 @@ import { createBlankPerson, editDocMeta, removePerson, ensureProfile, editProfil
 import { renderPeople, personDetail, wikiEditable, editMetric, editWikiText, pinBtn, policyOf, editFolder, pausePerson, peopleMenuItems } from "./people.js";
 import { openRecords } from "./recordsui.js";
 import { openAITools, openFieldAI, openImport, fillEmptyPeople } from "./aitools.js";
-import { liveScope } from "./advanced.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX } from "../../../engine/memoryemo.js";
 import { wikiPanel } from "./wikipanel.js";
 import { openWikiLog } from "./wikilog.js";
-import { openWriter } from "./writerui.js";
-import { openTracking } from "./trackui.js";
-import { conflictBox } from "./conflictui.js";
-import { tracked } from "./settingstools.js";
-import { advancedPot } from "../pot.js";
-import { maybePromptIntro } from "../promptstab.js";
 
 const USER = "{{user}}";
 const AXIS_LABEL = { relationalInitiative: "관계 주도성", expressionDirectness: "표현 직접성", emotionalExpressiveness: "감정 표출성", guardedness: "경계 성향", impulsivity: "충동성", relationshipPersistence: "관계 지속성" };
@@ -101,48 +94,10 @@ export async function renderPeopleTab(env, host) {
   const potState = M.switches?.state ? await M.switches.state(env.bot.id) : null;
   const trackingStore = M.flow?.settings ? tracked(ctx, await M.flow.settings().catch(() => null)) : null;
   const charRows = await Promise.all(docs.map(async (d) => ({ d, on: await M.switches.charOn(env.bot.id, env.chatItem.id, d.id) })));
-  const integration = () => {
-    const pot = potState?.pot;
-    const trackOn = trackingStore ? trackingStore.rawSnapshot().autoWriterEnabled !== false : true;
-    const setTrack = (v) => {
-      try { trackingStore?.update((x) => { x.autoWriterEnabled = v; }); ctx.toast(v ? "새 인물도 자동으로 추적해요." : "고른 인물만 추적해요."); }
-      catch (e) { fail(ctx)(e); }
-      again();
-    };
-    const setPot = async (v, el) => {
-      if (el) setSwitch(el, v);
-      try { await M.switches.setPot(env.bot.id, v); if (v) maybePromptIntro(ctx); ctx.toast(v ? "이 채팅에서 리수폿을 켰어요." : "이 채팅에서 리수폿을 껐어요."); }
-      catch (e) { fail(ctx)(e); }
-      again();
-    };
-    const charList = charRows.map(({ d, on }) => h("div", { class: "rb-pot-charrow" }, avatar(d.title), h("span", { class: "n" }, d.title),
-      switchEl(on, { label: `${d.title} 위키 사용`, onChange: async (v, el) => {
-        setSwitch(el, v);
-        try { await M.switches.setChar(env.bot.id, env.chatItem.id, d.id, v); }
-        catch (e) { fail(ctx)(e); }
-      } })));
-    const cur = { chaId: env.bot.id, ti: env.chatItem.index, chatId: env.chatItem.id, botName: env.bot.character?.name ?? "", chatName: env.chatItem.name ?? "" };
-    const adv = h("div"); let loaded = false;
-    const advanced = h("details", { class: "rb-mem-man", onToggle: (e) => {
-      if (e.target.open && !loaded) { loaded = true; replace(adv, ...advancedPot(ctx, env, cur, env.idx, again)); }
-    } }, h("summary", null, "리수폿 고급 설정"), adv);
-    return h("section", { class: "rb-card rb-mem-sec rb-wk-integrated" },
-      h("h3", null, "자동 기록 · 인물 추적"),
-      h("div", { class: "rb-mem-shead" }, h("b", null, "리수폿 사용"), h("span", { style: "flex:1" }),
-        switchEl(pot?.on !== false, { label: "이 채팅에서 리수폿 사용", onChange: (v, el) => setPot(v, el) })),
-      h("p", { class: "rb-muted" }, "기존 인물 위키와 편집 도구는 그대로 유지됩니다. 아래는 별도 화면에 있던 추가 설정입니다."),
-      h("div", { class: "rb-mem-shead" }, h("b", null, "새 인물 자동 추적"), h("span", { style: "flex:1" }),
-        switchEl(trackOn, { label: "새 인물 자동 추적", onChange: (v, el) => { setSwitch(el, v); setTrack(v); } })),
-      h("div", { class: "rb-mem-sact" }, btn("지금 기록", { onClick: () => openWriter(env).catch(fail(ctx)) }), btn("추적 인물 고르기", { onClick: () => openTracking(env).catch(fail(ctx)) })),
-      conflictBox(env),
-      h("details", { class: "rb-mem-man" }, h("summary", null, `캐릭터별 위키 사용 · ${docs.length}명`),
-        docs.length ? h("div", { class: "rb-pot-charlist" }, charList) : h("p", { class: "rb-muted" }, "아직 위키 인물이 없어요.")),
-      advanced);
-  };
   const strip = () => h("div", { class: "rb-wk-auto" }, note(autoSt.kind, autoSt.text), h("span", { class: "rb-mem-rowact" }, plan.total && wikiEditable(env) ? btn(`AI로 빈칸 채우기 (${plan.total}명)`, { size: "sm", kind: "primary", title: "비어 있는 수치(와 본문·성격까지 빈 인물)만 채워요. 실행 전에 대상을 보여 드려요.", onClick: () => askFill().catch(fail(ctx)) }) : null, missing.length && wikiEditable(env) ? btn(`위키 없는 인물 ${missing.length}명 만들기`, { size: "sm", kind: "primary", onClick: () => makeMissing() }) : null, btn("위키 기록·다시 시도", { size: "sm", onClick: () => openWikiLog(env).catch(fail(ctx)) })));
   const top = (n) => h("div", { class: "rb-wk-headwrap" }, h("div", { class: "rb-wk-head" }, h("div", null, h("div", { class: "rb-wk-eyebrow rb-muted" }, "지금 채팅"), h("h2", null, "인물 문서")),
     h("span", { class: "rb-mem-rowact" }, h("span", { class: "rb-wk-n" }, `${n}명`), btn("인물 추가·가져오기", { size: "sm", onClick: () => openImport(env).catch(fail(ctx)) }), btn("빈 인물 직접 추가", { size: "sm", onClick: addBlank }),
-      btn("더보기", { size: "sm", icon: "more", onClick: (e) => openMenu(ctx.win, e.currentTarget, peopleMenuItems(env, Object.entries(people).filter(([, p]) => visibleRecords(p).length || p.digest))) }))), strip(), integration());
+      btn("더보기", { size: "sm", icon: "more", onClick: (e) => openMenu(ctx.win, e.currentTarget, peopleMenuItems(env, Object.entries(people).filter(([, p]) => visibleRecords(p).length || p.digest))) }))), strip());
 
   const keyOfDoc = new Map();
   for (const [k, p] of Object.entries(people)) { const d = findDoc(wiki, p); if (d) keyOfDoc.set(d.id, k); }
