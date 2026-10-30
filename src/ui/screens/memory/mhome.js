@@ -40,23 +40,25 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   }
   // 채팅 본문은 느릴 수 있으므로 화면을 먼저 그리고, 백필 분석용 데이터는 백그라운드에서 읽는다.
   const cacheKey = `${cur.chaId}:${cur.chatId}:${cur.ci}:${cur.ti}`;
-  let chat = m.homeChatCache?.key === cacheKey ? m.homeChatCache.chat : null;
-  let chatPromise = Promise.resolve(chat);
-  if (!chat) {
+  const cachedPlan = m.homeChatPlan?.key === cacheKey ? m.homeChatPlan.plan : null;
+  let chatPromise = Promise.resolve(null);
+  if (!cachedPlan) {
     if (m.homeChatPromise?.key === cacheKey) chatPromise = m.homeChatPromise.promise;
     else {
       chatPromise = ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
       m.homeChatPromise = { key: cacheKey, promise: chatPromise };
     }
-    chatPromise.then((loaded) => {
-      if (!loaded) return;
-      m.homeChatCache = { key: cacheKey, chat: loaded };
-      if (m.homeChatPromise?.key === cacheKey) m.homeChatPromise = null;
-      if (ctx.state.tab === "memory" && mem(ctx) === m) redraw();
-    }).catch(() => {});
   }
   const [sw, idx, folder] = await Promise.all([M.switches.state(cur.chaId), M.store.getIndex(), M.store.getFolder(cur.chaId, cur.chatId).catch(() => null)]);
-  const caps = M.capabilities(M.backend(idx.settings).id), msgs = chat?.message ?? [];
+  const caps = M.capabilities(M.backend(idx.settings).id), msgs = [];
+  if (!cachedPlan) chatPromise.then((loaded) => {
+    if (!loaded) return;
+    const loadedMsgs = loaded.message ?? [];
+    const nextPlan = caps.analyze && M.runner ? M.runner.planBackfill(loadedMsgs, { from: 0, to: Math.max(0, loadedMsgs.length - 1) }, folder) : null;
+    m.homeChatPlan = { key: cacheKey, plan: nextPlan };
+    if (m.homeChatPromise?.key === cacheKey) m.homeChatPromise = null;
+    if (ctx.state.tab === "memory" && mem(ctx) === m) redraw();
+  }).catch(() => {});
   const botCfg = idx.bots[cur.chaId] ?? {}, last = M.injector?.lastRequest?.() ?? null;
   const on = sw.memory.on;
 
@@ -74,14 +76,18 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   }
 
   // 지난 대화 분석 (미처리만)
-  const plan = caps.analyze && M.runner && chat ? M.runner.planBackfill(msgs, { from: 0, to: Math.max(0, msgs.length - 1) }, folder) : null;
+  const plan = caps.analyze && M.runner ? cachedPlan : null;
   const prog = h("div");
   const analyze = async () => {
-    let activeChat = chat, activeMsgs = msgs, activePlan = plan;
-    if (!activeChat) {
+    let activeChat = null, activeMsgs = [], activePlan = plan;
+    if (!activePlan || !activePlan.todo) {
       activeChat = await chatPromise;
+      if (!activeChat) activeChat = await ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
       activeMsgs = activeChat?.message ?? [];
-      activePlan = activeChat && M.runner ? M.runner.planBackfill(activeMsgs, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, folder) : null;
+      activePlan = activeChat && M.runner ? M.runner.planBackfill(activeMsgs, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, folder) : activePlan;
+    } else {
+      activeChat = await ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
+      activeMsgs = activeChat?.message ?? [];
     }
     if (!activePlan?.todo) return ctx.toast("분석할 새 응답이 없어요.");
     const ok = await confirmDialog(ctx.win, { title: "지난 대화 분석", body: `AI 응답 ${activePlan.todo}개를 분석해요. 호출 ${activePlan.calls}회 · 대략 ${activePlan.tokens.toLocaleString()} 토큰이 들어요.`, ok: "분석하기" });
