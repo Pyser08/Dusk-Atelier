@@ -1948,7 +1948,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 /* 홈 이야기 도우미: 실제 스위치가 button.rb-switch인 구조를 기준으로 폭을 분리 */
 .rb-home2 .rb-hbody,.rb-home2 .rb-hmain,.rb-home2 .rb-hrecent{min-width:0;max-width:100%}
 .rb-home2 .rb-hrecent{width:100%}
-.rb-home2 .rb-story-helper{display:flex;flex-direction:column;width:100%;min-width:0;max-width:100%;box-sizing:border-box;overflow:visible;margin-top:8px;padding:0 16px 8px}
+.rb-home2 .rb-story-helper{display:flex;flex-direction:column;width:100%;min-width:0;max-width:100%;box-sizing:border-box;overflow:visible;padding:8px 16px 8px}
 .rb-home2 .rb-story-helper>.h{max-width:100%;overflow-wrap:anywhere}
 .rb-home2 .rb-story-helper .rb-srow{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:4px;width:100%;min-width:0;max-width:100%;box-sizing:border-box}
 .rb-home2 .rb-story-helper .rb-srow>.t{display:flex;flex-direction:column;flex:initial;min-width:0;width:auto;max-width:100%;overflow-wrap:anywhere}
