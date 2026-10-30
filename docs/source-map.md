@@ -334,9 +334,9 @@
 
 ## v1.8.0 구조 변경 메모
 
-- `src/ui/screens/memory/mhome.js`: 기억 화면에 기억·리수폿 설정, 인물 위키, 자동 기록 관리 패널을 배치한다.
-- `src/ui/screens/peoplescreen.js`: `renderPeoplePanel()`로 기존 인물 화면을 기억 탭 안에서 재사용한다.
-- `src/ui/screens/pot.js`: `renderPotPanel()`로 기존 자동 기록 관리 화면을 기억 탭 안에서 재사용한다.
+- `src/ui/screens/memory/mhome.js`: 기억·리수폿 설정 카드를 지난 대화 분석과 최근 기록 사이에 배치한다.
+- `src/ui/screens/pot.js`: `advancedPot()`을 내보내 인물 위키 안에서 기존 자동 기록 고급 설정을 재사용한다.
 - `src/ui/screens/memory/modebar.js`: 저장소 선택을 간단·고급 모드에서 유지하며, BardWiki 최초 선택은 기억 탭 진입 시 안내한다.
+- `src/ui/screens/memory/wikiview.js`: 봇별 기억 상세의 ‘인물 위키’ 영역 안에 자동 기록 스위치, 수동 기록, 빈칸 채우기, 캐릭터별 사용, 위키 이력 및 기존 고급 설정을 박스로 통합한다.
 - `src/ui/tabs.js` / `src/ui/app.js`: 외부 인물·리수폿 탭과 화면 라우트를 제거한다.
 - `src/ui/styles.js`: 기존 Dusk 카드·접이식 UI와 통합 패널의 반응형 배치를 추가한다.

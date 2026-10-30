@@ -18,12 +18,7 @@ import { setPin, isPinned, isPaused, sectionPinKey, metricPinKey } from "../../e
 export async function renderPeople(ctx) {
   const host = h("div", { class: "rb-mem2 rb-scroll", "data-page": "people" });
   replace(ctx.main, host);
-  return renderPeoplePanel(ctx, host);
-}
-
-// 기억 탭 안에 인물 화면을 넣을 때 사용한다. 내부 갱신은 패널 안에서만 끝낸다.
-export async function renderPeoplePanel(ctx, host) {
-  const redraw = () => renderPeoplePanel(ctx, host).catch(fail(ctx));
+  const redraw = () => renderPeople(ctx).catch(fail(ctx));
   try { await draw(ctx, host, redraw); } catch (e) { fail(ctx)(e); }
 }
 

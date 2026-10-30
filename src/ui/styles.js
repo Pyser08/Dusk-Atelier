@@ -727,6 +727,10 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-anchor{scroll-margin-top:64px;display:flex;flex-direction:column;gap:10px;padding-top:6px}.rb-mem-anchor+.rb-mem-anchor{border-top:1px solid var(--rb-line2);margin-top:18px;padding-top:18px}
 .rb-mem-anchortitle{margin:0;font-size:18px}.rb-mem-anchor-body{min-width:0}
 .rb-wk-headwrap{display:flex;flex-direction:column;gap:10px}.rb-wk-auto{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.rb-wk-auto .rb-note{flex:1;min-width:220px;margin:0}
+.rb-wk-auto-controls{display:flex;flex-direction:column;gap:10px;margin:10px 0 14px;padding:12px 14px}
+.rb-wk-char-controls{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--rb-line);padding-top:10px}
+.rb-wk-char-controls>p{margin:0}
+.rb-wk-auto-advanced{border-top:1px solid var(--rb-line);padding-top:8px}
 .rb-wk-foot{display:flex;align-items:center;gap:10px;justify-content:space-between}
 .rb-wk-empty{margin:0;font-size:13px}.rb-wk-form{display:flex;flex-direction:column;gap:10px}
 .rb-wk-head .rb-mem-rowact{flex-wrap:wrap;justify-content:flex-end}

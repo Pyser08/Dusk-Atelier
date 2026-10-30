@@ -19,12 +19,7 @@ const REASON = { "pot-mode-off": "리수폿 기능이 꺼져 있어요.", "flow-
 export async function renderPot(ctx) {
   const host = h("div", { class: "rb-mem2 rb-scroll", "data-page": "pot" });
   replace(ctx.main, host);
-  return renderPotPanel(ctx, host);
-}
-
-// 기억 탭 안에 리수폿 관리 화면을 넣을 때 사용한다. 내부 갱신은 패널 안에서만 끝낸다.
-export async function renderPotPanel(ctx, host) {
-  const redraw = () => renderPotPanel(ctx, host).catch(fail(ctx));
+  const redraw = () => renderPot(ctx).catch(fail(ctx));
   try { await draw(ctx, host, redraw); } catch (e) { fail(ctx)(e); }
 }
 
@@ -48,6 +43,7 @@ async function draw(ctx, host, redraw) {
 
   const plan = gapPlanOf(env);
   const actions = actionRow([
+    { label: "위키 보기", icon: "book", onClick: () => ctx.go("people") },
     { label: "지금 기록", icon: "edit", onClick: () => openWriter(env).catch(fail(ctx)) },
     { label: `AI로 빈칸 채우기 · ${plan.total}명`, icon: "sparkle", onClick: () => askFillGaps(env, plan).catch(fail(ctx)) }
   ]);
@@ -67,7 +63,7 @@ async function draw(ctx, host, redraw) {
 }
 
 // 고급: 리수폿 전용 설정(기억 설정과 따로 저장) · 롤백 충돌 · 되돌리기 기록 · 세부
-function advancedPot(ctx, env, cur, idx, redraw) {
+export function advancedPot(ctx, env, cur, idx, redraw) {
   const M = ctx.memory, S = idx.settings, ps = S.potStore ?? {};
   const savePs = (patch) => M.store.updateIndex((i) => { i.settings.potStore = { ...(i.settings.potStore ?? {}), ...patch }; }).then(() => redraw()).catch(fail(ctx));
   const sel = (label, value, opts, onPick) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("select", { class: "rb-input", "aria-label": label, onChange: (e) => onPick(e.target.value) }, opts.map(([v, l]) => h("option", { value: v, selected: value === v }, l))));

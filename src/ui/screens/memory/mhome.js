@@ -9,8 +9,6 @@ import { mem, fail, gradeBadge, at } from "./common.js";
 import { renderModeBar } from "./modebar.js";
 import { advancedBlocks } from "./madv.js";
 import { openEmbedModal } from "./embedmodal.js";
-import { renderPeoplePanel } from "../peoplescreen.js";
-import { renderPotPanel } from "../pot.js";
 import { maybeAskBardWiki } from "./modebar.js";
 
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -93,31 +91,11 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     h("button", { type: "button", class: "rb-srow", onClick: () => { if (ctx.memory?.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); } },
       h("span", { class: "t" }, "임베딩(의미 검색)", h("small", null, "뜻이 비슷한 기억 찾기 · API 주소·키·기본 사용·대기 시간")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))));
 
-  // 두 화면은 기존 구현을 그대로 재사용하고, 펼칠 때만 읽어 화면을 가볍게 유지한다.
-  const integratedPanel = (key, title, render) => {
-    const body = h("div", { class: "rb-mem-integrated-body" });
-    let loaded = false;
-    const load = () => {
-      if (loaded) return;
-      loaded = true;
-      Promise.resolve(render(body)).catch((e) => { loaded = false; fail(ctx)(e); });
-    };
-    const isOpen = !!m.integratedOpen?.[key];
-    const panel = h("details", { class: "rb-card rb-mem-integrated", open: isOpen, onToggle: (e) => {
-      m.integratedOpen ??= {};
-      m.integratedOpen[key] = e.currentTarget.open;
-      if (e.currentTarget.open) load();
-    } }, h("summary", null, title), body);
-    if (isOpen) queueMicrotask(load);
-    return panel;
-  };
-  const peoplePanel = integratedPanel("people", "인물 위키 · 목록 · 성격 · 관계 · 상태", (body) => renderPeoplePanel(ctx, body));
-  const potPanel = integratedPanel("pot", "자동 기록 관리 · 수동 기록 · 캐릭터별 사용 · 이력", (body) => renderPotPanel(ctx, body));
+
 
   const main = h("div", { class: "rb-mem2-main" },
     pageHead("기억", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"}`, sw: { on, label: "이 채팅에서 사용", onChange: (v) => setOn(v) } }),
     status, usageCard(usageOf(folder, last?.manifest)), actions, prog, memorySettings, recBox,
-    peoplePanel, potPanel,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   const adv = advFold(ctx, "memory", ...(ctx.prefs.advanced ? advancedBlocks(ctx, { cur, idx, redraw, modeHost }) : [true]));
   replace(host, h("div", { class: ["rb-mem2-grid", ctx.prefs.advanced && "has-adv"] }, main, adv ? h("div", { class: "rb-mem2-side" }, adv) : null));
