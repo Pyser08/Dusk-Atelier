@@ -45,8 +45,8 @@ export var TABS = [
   { id: "personabuilder", label: "AI로 페르소나 만들기", icon: "character", group: "more", section: "work", desc: "양식과 AI를 이용해 페르소나를 만들어요.", card: "AI로 페르소나 만들기", help: ["페르소나 양식을 고르고 AI로 전체 또는 일부 내용을 만들 수 있어요."] },
   {
     id: "tools", label: "도구", icon: "tools", group: "more", section: "work",
-    desc: "프리셋·Risu 테마 꾸미기·로어북 로그 같은 도구 모음이에요.",
-    card: "프리셋·Risu 테마 꾸미기·로어북 로그 같은 도구 모음.",
+    desc: "프리셋·채팅 테마 빌더·로어북 로그 같은 도구 모음이에요.",
+    card: "프리셋·채팅 테마 빌더·로어북 로그 같은 도구 모음.",
     help: ["타일을 누르면 그 도구가 열려요.", "돌아올 때는 위쪽 줄의 이름을 누르거나 ‘홈’을 눌러요."]
   },
   {
@@ -68,7 +68,7 @@ export var SECTION_IDS = ["memory", "manage", "work"];
 export var MORE_IDS = TABS.filter((t) => t.group === "more").map((t) => t.id);
 export var SUBNAMES = {
   settings: { prompts: "기억·리수폿 프롬프트", theme: "플러그인 꾸미기", updset: "업데이트 설정", cleanup: "설정 정리", history: "기록 · 되돌리기" },
-  tools: { presets: "프리셋", chattheme: "Risu 테마 꾸미기", themebuilder: "테마 빌더", themestudio: "테마 스튜디오", lorelog: "로어북 로그", inspector: "검사기", history: "기록 · 되돌리기" },
+  tools: { presets: "프리셋", chattheme: "채팅 테마 빌더", themebuilder: "테마 빌더", themestudio: "테마 스튜디오", lorelog: "로어북 로그", inspector: "검사기", history: "기록 · 되돌리기" },
   dev: { patchmaker: "패치 만들기" }
 };
 export var subLabel = (tab, sub) => sub ? SUBNAMES[tab]?.[sub] ?? null : null;
