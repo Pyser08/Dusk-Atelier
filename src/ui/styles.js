@@ -165,7 +165,7 @@ html,body{margin:0;height:100%;background:transparent}
 .rb-scard>.rb-srow:last-child{border-bottom:0}
 .rb-srow .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .rb-srow small{font-size:12.5px;color:var(--rb-mute);font-weight:400;line-height:1.5;word-break:normal;overflow-wrap:anywhere;white-space:normal}
-.rb-mem-embed-highlight{min-width:0;max-width:100%}.rb-mem-embed-highlight .t{min-width:0;overflow-wrap:anywhere}.rb-mem-embed-highlight .go{flex:0 0 auto}
+.rb-mem-embed-highlight{box-sizing:border-box;width:100%;min-width:0;max-width:100%;padding:10px 14px!important;gap:12px}.rb-mem-embed-highlight .t{flex:1 1 0;min-width:0;overflow-wrap:anywhere}.rb-mem-embed-highlight .go{flex:0 0 auto}
 button.rb-srow{width:100%;background:none;border-top:0;border-left:0;border-right:0;text-align:left;color:inherit;font-family:inherit;cursor:pointer}
 .rb-srow .go{color:var(--rb-mute);display:inline-flex}
 .rb-srow>.rb-seg{width:min(260px,100%);flex-shrink:0}
