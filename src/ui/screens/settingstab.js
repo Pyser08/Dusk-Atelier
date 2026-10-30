@@ -13,8 +13,7 @@ import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
 import { openAbout } from './about.js';
 import { loadMemoryButtonOn } from '../../data/memorybutton.js';
-import { loadStoryTimeOn } from '../../data/storytime.js';
-import { loadFairOn, loadDiceOn, loadDiceMode, DICE_KEY, DICE_MODE_KEY } from '../../data/fairplay.js';
+import { loadDiceMode, DICE_MODE_KEY } from '../../data/fairplay.js';
 
 export async function renderSettingsTab(ctx) {
   if (ctx.state.sub === "prompts") return renderPrompts(ctx);
@@ -25,19 +24,7 @@ export async function renderSettingsTab(ctx) {
   const fail = (e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
 
   // ── 이야기 도우미(스위치 3) ──
-  const fairOn = await loadFairOn(ctx.api);
-  const diceOn = await loadDiceOn(ctx.api);
   const diceMode = await loadDiceMode(ctx.api);
-  const stOn = await loadStoryTimeOn(ctx.api);
-  const setFair = async (v) => {
-    try { if (ctx.fairPlay) await ctx.fairPlay.set(v); else await ctx.api.pluginStorage.setItem("dusk.ui.fairPlay", v ? "on" : "off"); ctx.toast(v ? "공정한 전개를 켰어요. 다음 요청부터 적용돼요." : "공정한 전개를 껐어요."); } catch (e) { fail(e); }
-  };
-  const setDice = async (v) => {
-    try { if (ctx.fairPlay) await ctx.fairPlay.setDice(v); else await ctx.api.pluginStorage.setItem(DICE_KEY, v ? "on" : "off"); ctx.toast(v ? "유저 편향 없애기를 켰어요. 공정한 전개가 켜져 있을 때 다음 요청부터 적용돼요." : "유저 편향 없애기를 껐어요."); } catch (e) { fail(e); }
-  };
-  const setStory = async (v) => {
-    try { if (ctx.storyTime) await ctx.storyTime.set(v); else await ctx.api.pluginStorage.setItem("dusk.ui.storyTime", v ? "on" : "off"); ctx.toast(v ? "이야기 시간 삽입을 켰어요. 다음 요청부터 적용돼요." : "이야기 시간 삽입을 껐어요."); } catch (e) { fail(e); }
-  };
   const diceModeSeg = segmented([["reinterpret", "재해석"], ["respect", "존중"]], diceMode, async (v) => {
     try { if (ctx.fairPlay) await ctx.fairPlay.setDiceMode(v); else await ctx.api.pluginStorage.setItem(DICE_MODE_KEY, v); ctx.toast(v === "respect" ? "내가 적은 결과를 그대로 따를게요." : "내가 적은 결과도 시도로 보고 주사위로 가릴게요."); } catch (e) { fail(e); }
   }, "내가 결과까지 적었을 때");
@@ -59,12 +46,6 @@ export async function renderSettingsTab(ctx) {
       segRow("메뉴 위치", "PC에서 메뉴를 왼쪽 또는 위쪽에 둬요.", layoutSeg, "rb-pc-only"),
       linkRow("꾸미기", "색·밝기·글자 크기", () => ctx.go("look"), "rb-set-look")
     ),
-    card(
-      "이야기 도우미",
-      switchRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair),
-      switchRow("유저 편향 없애기", "캐릭터가 나만 편들지 않게 해요.", diceOn, setDice),
-      switchRow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요.", stOn, setStory)
-    ),
     adv ? devToggleCard(ctx, () => {
       ctx.refreshTabs();
       renderSettingsTab(ctx);
@@ -76,8 +57,10 @@ export async function renderSettingsTab(ctx) {
   // ── 고급 영역 ──
   let advBlocks = [true];
   if (adv) {
-    const memBtnOn = await loadMemoryButtonOn(ctx.api);
-    const lore = await loadLoreSettings(ctx.api).catch(() => ({ ...LORE_DEFAULTS }));
+    const [memBtnOn, lore] = await Promise.all([
+      loadMemoryButtonOn(ctx.api),
+      loadLoreSettings(ctx.api).catch(() => ({ ...LORE_DEFAULTS }))
+    ]);
     const saved = h("span", { class: "rb-muted", style: "font-size:12.5px" });
     const setLore = async (patch) => {
       Object.assign(lore, patch);
