@@ -942,12 +942,35 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-home2 .rb-htile>.t>small{display:block;font-size:12px;line-height:1.45;color:var(--rb-sub);white-space:normal}
 @media(max-width:760px){.rb-home2 .rb-hgrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px}.rb-home2 .rb-htile{flex-direction:row;justify-content:flex-start;min-height:88px;padding:13px;gap:10px;border-radius:15px}.rb-home2 .rb-htile>.ico{flex-basis:40px;width:40px;height:40px;border-radius:12px}.rb-home2 .rb-htile>.t{align-items:flex-start}.rb-home2 .rb-htile>.t>b{font-size:14px}.rb-home2 .rb-htile>.t>small{font-size:11px}}
 
-/* 홈 이야기 도우미 overflow 방지 */
+/* 홈 이야기 도우미: 실제 스위치가 button.rb-switch인 구조를 기준으로 폭을 분리 */
 .rb-home2 .rb-hbody,.rb-home2 .rb-hmain,.rb-home2 .rb-hrecent{min-width:0;max-width:100%}
-.rb-home2 .rb-story-helper{width:100%;min-width:0;max-width:100%;box-sizing:border-box;overflow:hidden}
-.rb-home2 .rb-story-helper .rb-srow{min-width:0;max-width:100%;gap:10px;flex-wrap:wrap}
-.rb-home2 .rb-story-helper .rb-srow>.t{flex:1 1 180px;min-width:0;max-width:100%;overflow-wrap:anywhere}
-.rb-home2 .rb-story-helper .rb-srow small{display:block;max-width:100%;white-space:normal;overflow-wrap:anywhere}
-.rb-home2 .rb-story-helper .rb-srow>.rb-switch,.rb-home2 .rb-story-helper .rb-srow>label{flex:0 0 auto;max-width:100%}
-@media(max-width:560px){.rb-home2 .rb-story-helper .rb-srow{align-items:flex-start}.rb-home2 .rb-story-helper .rb-srow>.t{flex-basis:140px}}
+.rb-home2 .rb-hrecent{width:100%}
+.rb-home2 .rb-story-helper{display:flex;flex-direction:column;width:100%;min-width:0;max-width:100%;box-sizing:border-box;overflow:visible}
+.rb-home2 .rb-story-helper>.h{max-width:100%;overflow-wrap:anywhere}
+.rb-home2 .rb-story-helper .rb-srow{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:4px;width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+.rb-home2 .rb-story-helper .rb-srow>.t{display:flex;flex-direction:column;flex:initial;min-width:0;width:auto;max-width:100%;overflow-wrap:anywhere}
+.rb-home2 .rb-story-helper .rb-srow .t small{display:block;min-width:0;width:auto;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal}
+.rb-home2 .rb-story-helper .rb-srow>button.rb-switch{justify-self:end;flex:none;width:42px;min-width:42px;max-width:42px}
+@media(max-width:560px){.rb-home2 .rb-story-helper{padding-left:12px;padding-right:12px}.rb-home2 .rb-story-helper .rb-srow{column-gap:8px}.rb-home2 .rb-story-helper .rb-srow>.t{font-size:13px}.rb-home2 .rb-story-helper .rb-srow .t small{font-size:11.5px}}
+
+/* 페르소나 AI 대화: ChatGPT식 비모달 플로팅 패널 */
+.rb-pb-chat-fab{position:fixed!important;right:24px;bottom:22px;z-index:60;border-radius:999px!important;box-shadow:0 5px 18px rgba(0,0,0,.2)}
+.rb-pb-chat{position:fixed;right:24px;bottom:84px;z-index:59;width:min(410px,calc(100vw - 32px));height:min(590px,calc(100dvh - 118px));min-height:300px;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--rb-line2);border-radius:20px;background:var(--rb-surf);color:var(--rb-text);box-shadow:0 14px 48px rgba(0,0,0,.24);animation:rb-pop .16s ease-out}
+.rb-pb-chat[hidden]{display:none!important}
+.rb-pb-chat-head{flex:none;display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--rb-line2)}
+.rb-pb-chat-brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.rb-pb-chat-brand>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rb-pb-chat-brand b{font-size:14px}.rb-pb-chat-brand small{font-size:11.5px;color:var(--rb-sub)}
+.rb-pb-chat-mark{display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:50%;background:var(--rb-acc-soft);color:var(--rb-acc-text);font-size:19px}
+.rb-pb-chat-log{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:16px;padding:16px 14px;scroll-behavior:smooth}
+.rb-pb-chat-msg{max-width:100%;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.65}
+.rb-pb-chat-msg.user{align-self:flex-end;max-width:88%}
+.rb-pb-chat-msg.user .bubble{padding:9px 13px;border-radius:18px;background:var(--rb-acc-soft);color:var(--rb-text)}
+.rb-pb-chat-msg.assistant{align-self:stretch}
+.rb-pb-chat-msg.assistant .answer{padding:1px 2px}
+.rb-pb-chat-compose{display:flex;align-items:flex-end;gap:8px;margin:0 12px;padding:9px 9px 9px 14px;border:1px solid var(--rb-line3);border-radius:22px;background:var(--rb-bg,transparent);box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.rb-pb-chat-input{flex:1;min-width:0;max-height:120px;resize:vertical;border:0!important;outline:0!important;background:transparent!important;color:var(--rb-text);font:inherit;font-size:13px;line-height:1.5;padding:5px 0!important}
+.rb-pb-chat-send{width:36px;height:36px;min-width:36px;padding:0!important;border-radius:50%!important}
+.rb-pb-chat-hint{flex:none;margin:7px 12px 10px;text-align:center;color:var(--rb-mute);font-size:10.5px;line-height:1.4}
+@media(max-width:560px){.rb-pb-chat-fab{right:14px;bottom:14px}.rb-pb-chat{right:10px;bottom:72px;width:calc(100vw - 20px);height:min(72dvh,620px);border-radius:18px}}
 `+PROB_CSS;
