@@ -26,9 +26,6 @@ import { renderSettingsTab } from './screens/settingstab.js';
 import { renderMemory } from './screens/memory/index.js';
 import { renderCardsTab } from './screens/cards/index.js';
 import { renderHome } from './screens/home.js';
-import { renderPot } from './screens/pot.js';
-import { renderPeople } from './screens/peoplescreen.js';
-import { maybeAskBardWiki } from './screens/memory/modebar.js';
 import { BASE_IDS, MORE_IDS, SEARCH, TABS, subLabel } from './tabs.js';
 
 export function createApp(api, { legacy, version, onPersonaChanged }) {
@@ -414,7 +411,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, pot: renderPot, people: renderPeople, look: renderSettings, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { home: renderHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, look: renderSettings, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
     Promise.resolve(screen(ctx)).then(() => {
       paneReady = true;
     }).catch((err) => {
@@ -446,8 +443,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     await api.showContainer("fullscreen");
     render();
     // 처음 둘러보기: 처음 설치한 사람, 그리고 둘러보기가 새로 바뀐 버전(TOUR_VER)으로 업데이트한 사람에게 한 번 띄운다
-    // 처음 설치면: 리스바드 감지 시 기억 방식 질문(한 번만) → 둘러보기
-    maybeShowWhatsNew(ctx).then((fresh) => (fresh ? maybeAskBardWiki(ctx).catch(() => {}) : void 0)).then(() => maybeShowTour(ctx)).catch(() => {
+    // BardWiki 선택은 기억 탭에 들어갈 때 안내한다.
+    maybeShowWhatsNew(ctx).then(() => maybeShowTour(ctx)).catch(() => {
     });
     checkUpdate().catch(() => {
     });

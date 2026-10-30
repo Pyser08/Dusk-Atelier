@@ -43,8 +43,9 @@ test("메뉴 위치: home(홈 카드)은 없고 예전 저장값은 left로 옮�
   assert.equal(normalizeTheme(undefined).layout, "left");
 });
 
-test("탭 구성: 기본 4개(홈·기억·리수폿·인물) + 더보기 묶음", () => {
-  assert.deepEqual(BASE_IDS, ["home", "memory", "pot", "people"]);
+test("탭 구성: 기본 2개(홈·기억), 인물·리수폿은 기억 탭 안에 통합", () => {
+  assert.deepEqual(BASE_IDS, ["home", "memory"]);
+  assert.equal(TABS.some((t) => t.id === "pot" || t.id === "people"), false);
   assert.deepEqual(MORE_IDS, ["characters", "modules", "cards", "look", "tools", "plugins", "settings", "dev"]);
   assert.equal(TABS.find((t) => t.id === "dev").dev, true);
   assert.equal(new Set(TABS.map((t) => t.id)).size, TABS.length);

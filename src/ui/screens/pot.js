@@ -19,7 +19,12 @@ const REASON = { "pot-mode-off": "리수폿 기능이 꺼져 있어요.", "flow-
 export async function renderPot(ctx) {
   const host = h("div", { class: "rb-mem2 rb-scroll", "data-page": "pot" });
   replace(ctx.main, host);
-  const redraw = () => renderPot(ctx).catch(fail(ctx));
+  return renderPotPanel(ctx, host);
+}
+
+// 기억 탭 안에 리수폿 관리 화면을 넣을 때 사용한다. 내부 갱신은 패널 안에서만 끝낸다.
+export async function renderPotPanel(ctx, host) {
+  const redraw = () => renderPotPanel(ctx, host).catch(fail(ctx));
   try { await draw(ctx, host, redraw); } catch (e) { fail(ctx)(e); }
 }
 
@@ -43,7 +48,6 @@ async function draw(ctx, host, redraw) {
 
   const plan = gapPlanOf(env);
   const actions = actionRow([
-    { label: "위키 보기", icon: "book", onClick: () => ctx.go("people") },
     { label: "지금 기록", icon: "edit", onClick: () => openWriter(env).catch(fail(ctx)) },
     { label: `AI로 빈칸 채우기 · ${plan.total}명`, icon: "sparkle", onClick: () => askFillGaps(env, plan).catch(fail(ctx)) }
   ]);

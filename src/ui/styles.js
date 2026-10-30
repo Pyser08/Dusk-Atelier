@@ -110,6 +110,15 @@ html,body{margin:0;height:100%;background:transparent}
 .rb-mbar-legend{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--rb-sub)}
 .rb-mbar-legend li{display:inline-flex;align-items:center;gap:6px}.rb-mbar-legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
 .rb-mem-usage,.rb-mem-recentbox{display:flex;flex-direction:column;gap:10px;padding:14px 16px}
+.rb-mem-integrated{padding:12px 16px}
+.rb-mem-integrated>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;min-height:28px}
+.rb-mem-integrated>summary::-webkit-details-marker{display:none}
+.rb-mem-integrated>summary:before{content:"＋";display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;flex:none;border-radius:7px;background:var(--rb-surf2);color:var(--rb-acc-text);font-size:14px}
+.rb-mem-integrated[open]>summary:before{content:"−"}
+.rb-mem-integrated-body{min-width:0;padding-top:12px}
+.rb-mem-integrated-body>.rb-mem2-grid{max-width:none}
+.rb-mem-integrated-body>.rb-ppl{max-width:none}
+.rb-mem-integrated-settings{margin:0}
 .rb-mem-rechead{display:flex;align-items:center;justify-content:space-between}
 .rb-mbots{gap:8px}.rb-mbot{display:flex;align-items:center;gap:10px;padding:8px 12px}
 .rb-mbot-open{flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left;background:none;border:0;padding:4px 0;color:inherit;cursor:pointer}
