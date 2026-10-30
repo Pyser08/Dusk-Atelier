@@ -113,7 +113,7 @@ export function renderTools(ctx) {
       "div",
       { class: "rb-tgrid" },
       tile2("preset", "프리셋", "모듈 조합을 저장하고 공유해요", () => ctx.go("tools", "presets"), "rb-tool-presets"),
-      tile2("palette", "Risu 테마 꾸미기", "테마 만들기·목록·코드 주고받기", () => ctx.go("tools", "chattheme"), "rb-tool-chattheme"),
+      tile2("palette", "채팅 테마 빌더", "테마 만들기·목록·코드 주고받기", () => ctx.go("tools", "chattheme"), "rb-tool-chattheme"),
       tile2("book", "로어북 로그", "응답에 들어간 로어북 보기", () => ctx.go("tools", "lorelog"), "rb-tool-lorelog"),
       tile2("info", ".risum 인스펙터", "모듈 파일 안을 열어 봐요", () => ctx.go("tools", "inspector"), "rb-tool-inspector"),
       tile2("download", "전체 백업·복원", "설정과 데이터를 저장·복원", (ev) => openMenu(ctx.win, ev.currentTarget, [
