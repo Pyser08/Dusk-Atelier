@@ -2,13 +2,15 @@
 import { maybePromptIntro } from './promptstab.js';
 import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
-import { btn, statusCard } from '../kit.js';
+import { btn, statusCard, switchEl } from '../kit.js';
 import { CHANGELOG, openChangelog } from '../whatsnew.js';
 import { openTour } from '../tour.js';
 import { injectLine } from '../../engine/memoryusage.js';
 import { injectReasonText } from '../../engine/memoryinject.js';
 import { mem } from './memory/common.js';
 import { createBotAndEdit } from './newbot.js';
+import { loadFairOn, loadDiceOn, DICE_KEY } from '../../data/fairplay.js';
+import { loadStoryTimeOn } from '../../data/storytime.js';
 
 var hhmm = (ms) => ms ? new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
 var recentOf = (folder, n = 3) => {
@@ -48,6 +50,11 @@ export async function renderHome(ctx) {
   const dev = !!ctx.prefs.ui?.devMode;
   const host = h("div", { class: "rb-home rb-home2 rb-scroll" });
   replace(ctx.main, host);
+  const storyStatePromise = Promise.all([
+    loadFairOn(ctx.api).catch(() => false),
+    loadDiceOn(ctx.api).catch(() => false),
+    loadStoryTimeOn(ctx.api).catch(() => false)
+  ]);
   let s = { M: null };
   try {
     s = await readState(ctx);
@@ -107,12 +114,48 @@ export async function renderHome(ctx) {
 
   // ── 최근 기록 (PC 오른쪽) ──
   const rec = s.cur ? recentOf(s.folder) : [];
+  const [fairOn, diceOn, stOn] = await storyStatePromise;
+  const failStory = (e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
+  const setFair = async (v) => {
+    try {
+      if (ctx.fairPlay) await ctx.fairPlay.set(v);
+      else await ctx.api.pluginStorage.setItem("dusk.ui.fairPlay", v ? "on" : "off");
+      ctx.toast(v ? "공정한 전개를 켰어요. 다음 요청부터 적용돼요." : "공정한 전개를 껐어요.");
+    } catch (e) { failStory(e); }
+  };
+  const setDice = async (v) => {
+    try {
+      if (ctx.fairPlay) await ctx.fairPlay.setDice(v);
+      else await ctx.api.pluginStorage.setItem(DICE_KEY, v ? "on" : "off");
+      ctx.toast(v ? "유저 편향 없애기를 켰어요. 공정한 전개가 켜져 있을 때 다음 요청부터 적용돼요." : "유저 편향 없애기를 껐어요.");
+    } catch (e) { failStory(e); }
+  };
+  const setStory = async (v) => {
+    try {
+      if (ctx.storyTime) await ctx.storyTime.set(v);
+      else await ctx.api.pluginStorage.setItem("dusk.ui.storyTime", v ? "on" : "off");
+      ctx.toast(v ? "이야기 시간 삽입을 켰어요. 다음 요청부터 적용돼요." : "이야기 시간 삽입을 껐어요.");
+    } catch (e) { failStory(e); }
+  };
+  const storyRow = (title, text, on, onChange) => h("div", { class: "rb-srow" },
+    h("span", { class: "t" }, title, h("small", null, text)),
+    switchEl(on, { label: title, onChange: (v, el) => {
+      el.setAttribute("aria-checked", v ? "true" : "false");
+      onChange(v);
+    } })
+  );
+  const storyHelper = h("section", { class: "rb-card bordered rb-story-helper" },
+    h("span", { class: "h" }, "이야기 도우미"),
+    storyRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair),
+    storyRow("유저 편향 없애기", "캐릭터가 나만 편들지 않게 해요.", diceOn, setDice),
+    storyRow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요.", stOn, setStory)
+  );
   const recent = h(
     "aside",
     { class: "rb-hrecent", "aria-label": "최근 기록" },
     h("h2", null, "최근 기록"),
     rec.length ? h("div", { class: "rb-card" }, ...rec.map((r) => h("div", { class: "rb-kv rb-hrec" }, h("span", null, h("b", null, r.who ?? ""), h("br"), h("small", { class: "rb-muted" }, r.act ?? "")), h("small", { class: "rb-muted" }, hhmm(r.ms))))) : h("div", { class: "rb-muted rb-hrec-empty" }, "아직 쌓인 기록이 없어요."),
-    null
+    storyHelper
   );
 
   const foot = h(
