@@ -113,7 +113,7 @@ export async function renderSettingsTab(ctx) {
         { label: "모듈이 꼬였어요, 되돌리고 싶어요", text: "기록 · 되돌리기", onClick: () => ctx.go("settings", "history") },
         { label: "다른 기기로 옮기고 싶어요", text: "전체 백업·복원", onClick: () => fullBackup(ctx) },
         { label: "새 봇을 알아서 잡아 주면 좋겠어요", text: "업데이트 설정", onClick: () => ctx.go("settings", "updset") },
-        { label: "내 채팅 테마를 만들고 싶어요", text: "Risu 테마 꾸미기", onClick: () => ctx.go("tools", "chattheme") }
+        { label: "내 채팅 테마를 만들고 싶어요", text: "채팅 테마 빌더", onClick: () => ctx.go("tools", "chattheme") }
       ])
     ];
   }
