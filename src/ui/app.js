@@ -138,10 +138,12 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     e.preventDefault();
     go(t.id);
   } }, icon(t.icon, size), withCount ? h("span", null, t.label) : t.label, withCount ? h("small") : null);
-  // 사이드바: 기본 4개 → "더보기" 라벨 → 더보기 항목. 위쪽 바: 같은 순서, 가운데 세로 줄로 나눈다.
+  // 사이드바·위쪽 바는 기억 → 관리 → 작업실 섹션별로 나눈다.
+  let currentSection = null;
   for (const t of TABS) {
-    if (t.id === MORE_IDS[0]) {
-      nav.appendChild(h("div", { class: "rb-nav-lab", "aria-hidden": "true" }, "더보기"));
+    if (t.section && t.section !== currentSection) {
+      currentSection = t.section;
+      nav.appendChild(h("div", { class: "rb-nav-lab", "aria-hidden": "true" }, SECTION_NAMES[currentSection]));
       topnav.appendChild(h("span", { class: "rb-topsep", "aria-hidden": "true" }));
     }
     const a = mkLink(t, 18, true);
@@ -161,19 +163,22 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     return seg;
   };
   topnav.appendChild(layoutSeg());
-  // 모바일 아래 탭바: 홈 · 기억 · 리수폿 · 인물 · 더보기
-  for (const id of BASE_IDS) {
+  // 모바일 아래 탭바: 홈 + 기억 · 관리 · 작업실
+  for (const id of BASE_IDS.filter((id) => id === "home")) {
     const t = TABS.find((x) => x.id === id);
     const b = mkLink(t, 22, false);
     barLinks.set(id, b);
     tabbar.appendChild(b);
   }
-  const moreLink = h("a", { href: "#", id: "rb-more", onClick: (e) => {
-    e.preventDefault();
-    go(state.lastMore && MORE_IDS.includes(state.lastMore) ? state.lastMore : MORE_IDS[0]);
-  } }, icon("menu", 22), "더보기");
-  tabbar.appendChild(moreLink);
-  barLinks.set("more", moreLink);
+  for (const section of SECTION_IDS) {
+    const first = TABS.find((t) => t.section === section);
+    const b = h("a", { href: "#", dataset: { section }, onClick: (e) => {
+      e.preventDefault();
+      go(first.id);
+    } }, icon(first.icon, 22), SECTION_NAMES[section]);
+    tabbar.appendChild(b);
+    barLinks.set(`section:${section}`, b);
+  }
   const navFoot = h("div", { style: "margin-top:auto;display:flex;flex-direction:column" });
   nav.appendChild(navFoot);
   const moreHost = h("div", { class: "rb-morehost" });
@@ -217,13 +222,13 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   function paintHead() {
     const t = TABS.find((x) => x.id === state.tab) ?? TABS[0];
     const sl = subLabel(state.tab, state.sub);
-    const inMore = MORE_IDS.includes(state.tab);
+    const inMore = !!t.section;
     replace(
       crumb,
       h("button", { type: "button", title: "홈으로", onClick: () => go("home") }, icon("home", 14), "홈"),
       sep(),
       // 더보기 하위 화면은 `더보기 › 화면이름` 경로로 보인다
-      ...inMore ? [h("button", { type: "button", id: "rb-crumb-more", onClick: () => go(state.lastMore) }, "더보기"), sep()] : [],
+      ...inMore ? [h("button", { type: "button", id: "rb-crumb-more", onClick: () => go(TABS.find((x) => x.section === t.section)?.id ?? "home") }, SECTION_NAMES[t.section]), sep()] : [],
       h("button", { type: "button", class: sl ? "" : "cur", "aria-haspopup": "menu", id: "rb-tabmenu", onClick: (e) => {
         const dev = !!prefs.ui?.devMode;
         openMenu(win, e.currentTarget, TABS.filter((x) => x.id !== "home" && (!x.dev || dev)).map((x) => ({ icon: x.icon, label: x.label, onClick: () => go(x.id) })));
@@ -365,7 +370,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     win.classList.toggle("rb-has-dev", on);
     if (!on && state.tab === "dev") go("tools");
   }
-  const MORE = new Set(MORE_IDS);
+  const MORE = new Set(TABS.filter((t) => t.section).map((t) => t.id));
   // 화면 모드(간단/고급) 바꾸기: 고급 영역·개발자 모드가 바로 따라 바뀐다
   async function setUiMode(mode) {
     try {
@@ -382,9 +387,11 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     if (!reuse) dropPanes();
     if (MORE.has(state.tab)) state.lastMore = state.tab;
     win.classList.toggle("rb-in-more", MORE.has(state.tab));
-    replace(moreHost, moreNav(TABS.filter((t) => t.group === "more" && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
+    const activeSection = TABS.find((t) => t.id === state.tab)?.section;
+    replace(moreHost, moreNav(TABS.filter((t) => t.section === activeSection && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
     for (const links of [navLinks, topLinks, barLinks]) for (const [id, a] of links) {
-      const on = id === state.tab || id === "more" && MORE.has(state.tab);
+      const activeTab = TABS.find((t) => t.id === state.tab);
+      const on = id === state.tab || id.startsWith("section:") && activeTab?.section === id.slice("section:".length);
       if (on) a.setAttribute("aria-current", "page");
       else a.removeAttribute("aria-current");
     }
