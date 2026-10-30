@@ -132,8 +132,8 @@ test("카드로 새 봇: 설명·로어북·태그·이미지·에셋, 원본 �
   const card = await newCard({ body, grade: "C", source: {} });
   const source = { name: "원본", image: "i.png", tags: ["x"], globalLore: [{ key: "a", comment: "외모", content: "c" }], chats: [{}] }, snap = JSON.stringify(source);
   const link = { desc: "새 설명", relationship: "관계", entries: [{ id: "E0001", key: "k", content: "c", memory: "M2" }], mode: "memory" };
-  const c = buildCardCharacter({ source, card, link, firstMessage: "fm", lorePicks: [{ entry: source.globalLore[0], checked: true }], characters: [{ name: "원본 · 하나" }], imageUse: "card", cardAssetKey: "card.png", withPng: true, illustrationPath: "il.png" });
-  assert.equal(c.name, "원본 · 하나 (2)"); assert.equal(c.desc, "새 설명"); assert.equal(c.firstMessage, "fm"); assert.match(c.creatorNotes, /카드: 하나 · C · 기억 연결/);
+  const c = buildCardCharacter({ source, card, link: { ...link, desc: "{{char}}의 설명", relationship: "{{char}}와 {{user}}의 관계", entries: [{ id: "e1", key: "{{char}}, 옥상", content: "{{char}}가 기다린다" }] }, firstMessage: "{{char}}가 문을 열었다.", lorePicks: [{ entry: source.globalLore[0], checked: true }], characters: [{ name: "원본 · 하나" }], imageUse: "card", cardAssetKey: "card.png", withPng: true, illustrationPath: "il.png" });
+  assert.equal(c.name, "원본 · 하나 (2)"); assert.equal(c.desc, "원본 · 하나 (2)의 설명"); assert.equal(c.firstMessage, "원본 · 하나 (2)가 문을 열었다."); assert.equal(c.globalLore[1].content, "원본 · 하나 (2)와 {{user}}의 관계"); assert.equal(c.globalLore[2].key, "원본 · 하나 (2), 옥상"); assert.match(c.creatorNotes, /카드: 하나 · C · 기억 연결/);
   assert.equal(c.globalLore.length, 3); assert.equal(c.globalLore[1].alwaysActive, true);
   assert.deepEqual(c.tags, ["x", card.tags[0]]); assert.equal(c.image, "card.png"); assert.deepEqual(c.additionalAssets, [["Dusk 카드 · 하나", "card.png", "png"]]);
   assert.equal(buildCardCharacter({ source, card, link, imageUse: "illustration", illustrationPath: "il.png" }).image, "il.png");
