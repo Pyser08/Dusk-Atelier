@@ -1,8 +1,8 @@
-// 설정 탭 (v1.7.0 7단계, 계획 §3.13): 화면(모드·메뉴 위치·꾸미기) → 이야기 도우미 스위치 3 → (고급) 개발자 → 백업 → 둘러보기·새로 바뀐 점.
+// 설정 탭 (v1.7.0 7단계, 계획 §3.13): 화면(모드·메뉴 위치·플러그인 꾸미기) → (고급) 개발자 → 백업 → 둘러보기·새로 바뀐 점.
 // 세부는 고급 모드에서만: 주사위·로어북·기억 버튼·테마 대상·기록·설정 정리·업데이트 설정·정보.
 import { renderPrompts } from './promptstab.js';
 import { h, replace } from '../dom.js';
-import { advFold, guidePanel, pageHead, segmented, switchEl } from '../kit.js';
+import { advFold, guidePanel, pageHead, segmented } from '../kit.js';
 import { icon } from '../icons.js';
 import { openTour } from '../tour.js';
 import { CHANGELOG, openChangelog } from '../whatsnew.js';
@@ -23,14 +23,13 @@ export async function renderSettingsTab(ctx) {
   const adv = ctx.prefs.advanced;
   const fail = (e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
 
-  // ── 이야기 도우미(스위치 3) ──
+  // ── 고급 이야기 도우미 세부 설정 ──
   const diceMode = await loadDiceMode(ctx.api);
   const diceModeSeg = segmented([["reinterpret", "재해석"], ["respect", "존중"]], diceMode, async (v) => {
     try { if (ctx.fairPlay) await ctx.fairPlay.setDiceMode(v); else await ctx.api.pluginStorage.setItem(DICE_MODE_KEY, v); ctx.toast(v === "respect" ? "내가 적은 결과를 그대로 따를게요." : "내가 적은 결과도 시도로 보고 주사위로 가릴게요."); } catch (e) { fail(e); }
   }, "내가 결과까지 적었을 때");
 
   // ── 줄 만들기 ──
-  const switchRow = (title, text, on, onChange) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, text ? h("small", null, text) : null), switchEl(on, { label: title, onChange: (v, el) => { el.setAttribute("aria-checked", v ? "true" : "false"); onChange(v); } }));
   const segRow = (title, text, seg, cls = "") => h("div", { class: ["rb-srow has-seg", cls] }, h("span", { class: "t" }, title, text ? h("small", null, text) : null), seg);
   const linkRow = (title, text, onClick, id) => h("button", { type: "button", class: "rb-srow", onClick, id }, h("span", { class: "t" }, title, text ? h("small", null, text) : null), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
   const card = (title, ...rows) => h("section", { class: "rb-card bordered rb-scard" }, title ? h("span", { class: "h" }, title) : null, ...rows);
