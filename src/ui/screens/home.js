@@ -64,37 +64,27 @@ export async function renderHome(ctx) {
   );
 
   // ── 상태 3줄 ──
-  const line = (tab, label, status) => h("div", { class: "rb-hstat" }, h("button", { type: "button", class: "lab", onClick: () => ctx.go(tab) }, h("b", null, label), icon("chevron", 14)), status);
-  let rows;
-  if (!s.cur) {
-    const none = statusCard("off", "채팅을 열면 여기에 보여요.");
-    rows = [line("memory", "기억", none), line("pot", "리수폿", statusCard("off", "채팅을 열면 여기에 보여요.")), line("people", "인물", statusCard("off", "채팅을 열면 여기에 보여요."))];
-  } else {
-    const { sw, idx, folder, last, trackOn } = s;
-    const docs = Object.values(folder?.wiki?.documents ?? {}).filter((d) => d?.type === "Character");
-    const memOn = sw.memory.on, potOn = sw.pot.on;
-    const turnOn = async (kind) => {
+  const line = (status) => h("div", { class: "rb-hstat rb-hstat-memory" }, h("button", { type: "button", class: "lab", onClick: () => ctx.go("memory") }, h("b", null, "기억"), icon("chevron", 14)), status);
+  let memoryStatus;
+  if (!s.cur) memoryStatus = statusCard("off", "채팅을 열면 여기에 기억 상태가 보여요.");
+  else {
+    const { sw, idx, last } = s;
+    const memOn = sw.memory.on;
+    const turnOn = async () => {
       try {
-        await (kind === "memory" ? s.M.switches.setMemory(s.cur.chaId, true) : s.M.switches.setPot(s.cur.chaId, true));
+        await s.M.switches.setMemory(s.cur.chaId, true);
         maybePromptIntro(ctx);
-        ctx.toast(kind === "memory" ? "이 채팅에서 기억을 켰어요." : "이 채팅에서 리수폿을 켰어요.");
+        ctx.toast("이 채팅에서 기억을 켰어요.");
       } catch (e) {
         ctx.toast(e?.message ?? String(e), { error: true });
       }
       redraw();
     };
-    const memStatus = !memOn ? statusCard("off", "이 채팅에서는 꺼져 있어요.", { label: "켜기", kind: "primary", onClick: () => turnOn("memory") })
+    memoryStatus = !memOn ? statusCard("off", "이 채팅에서는 꺼져 있어요.", { label: "켜기", kind: "primary", onClick: turnOn })
       : idx.bots?.[s.cur.chaId]?.paused ? statusCard("err", "연속으로 실패해서 자동 기록이 멈췄어요.")
       : statusCard(last?.injected ? "on" : "prep", injectLine(last, last ? hhmm(last.at) : "", injectReasonText(last?.reason)));
-    const wikiAt = folder?.wiki?.automation?.lastStatus?.at;
-    const potStatus = !potOn ? statusCard("off", "이 채팅에서는 꺼져 있어요.", { label: "켜기", kind: "primary", onClick: () => turnOn("pot") })
-      : statusCard(docs.length ? "on" : "prep", `위키 문서 ${docs.length}개 · 자동 기록 ${trackOn ? "켬" : "끔"}${wikiAt ? "" : ""}`);
-    const pplStatus = !potOn ? statusCard("off", "리수폿을 켜면 인물이 쌓여요.")
-      : !trackOn ? statusCard("off", "자동 추적이 꺼져 있어요.", { label: "켜기", kind: "primary", onClick: async () => { try { await s.M.flow.settings().then((st) => st.update((x) => { x.autoWriterEnabled = true; })); } catch (e) { ctx.toast(e?.message ?? String(e), { error: true }); } redraw(); } })
-      : statusCard(docs.length ? "on" : "prep", docs.length ? `인물 ${docs.length}명을 추적해요.` : "아직 인물이 없어요.");
-    rows = [line("memory", "기억", memStatus), line("pot", "리수폿", potStatus), line("people", "인물", pplStatus)];
   }
-  const status = h("section", { class: "rb-hstats", "aria-label": "지금 상태" }, ...rows);
+  const status = h("section", { class: "rb-hstats", "aria-label": "기억 상태" }, line(memoryStatus));
 
   // ── 바로 하기 9칸 ──
   const tile = (ic, name, line2, onClick, id, cnt) => h(
