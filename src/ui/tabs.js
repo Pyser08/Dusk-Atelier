@@ -80,3 +80,5 @@ export var SEARCH = {
 };
 
 // Build trigger: UI relocation changes are already integrated in the v1.9.0 development branch.
+
+// Build trigger: restore the requested v1.8.0 bundle version.
