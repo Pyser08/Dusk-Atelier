@@ -49,8 +49,8 @@ html,body{margin:0;height:100%;background:transparent}
 /* 본문: 왼쪽 메뉴(선택) · 본문 열 · 오른쪽 상세 */
 .rb-body{flex:1;display:flex;min-height:0}
 .rb-col{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
-.rb-nav{width:208px;flex-shrink:0;padding:14px 10px;display:flex;flex-direction:column;gap:4px;border-right:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-win);overflow:auto}
-.rb-nav a{height:calc(var(--rb-ctl) + 2px);display:flex;align-items:center;gap:12px;padding:0 12px;border-radius:var(--rb-r2);color:var(--rb-sub);text-decoration:none;font-size:14px;font-weight:500;cursor:pointer}
+.rb-nav{width:216px;flex-shrink:0;padding:14px 10px;display:flex;flex-direction:column;gap:4px;border-right:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-win);overflow:auto}
+.rb-nav a{height:calc(var(--rb-ctl) + 2px);display:flex;align-items:center;gap:12px;padding:0 12px;border-radius:var(--rb-r2);color:var(--rb-sub);text-decoration:none;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
 @media (hover: hover){.rb-nav a:hover{background:var(--rb-hover);color:var(--rb-text)}}
 .rb-nav a[aria-current=page]{background:var(--rb-surf);color:var(--rb-text);font-weight:700;box-shadow:var(--rb-shadow-card),inset 3px 0 0 var(--rb-acc-text)}
 .rb-nav a[aria-current=page] svg{color:var(--rb-acc-text)}
