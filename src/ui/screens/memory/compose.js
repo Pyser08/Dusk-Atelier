@@ -45,7 +45,7 @@ export async function renderCompose(env, host) {
   const guard = (fn) => async () => { try { await fn(); } catch (e) { fail(ctx)(e); again(); } };
 
   // 카드 편집은 순서대로 한 줄로 처리한다(해시 계산이 비동기라서).
-  const apply = (patch) => { c.work = c.work.then(async () => { c.card = await editCard(c.card, patch); c.link = null; preview.draw(c.card); }).catch(fail(ctx)); return c.work; };
+  const apply = (patch) => { c.work = c.work.then(async () => { c.card = await editCard(c.card, patch); c.link = null; if (Object.hasOwn(patch, "name")) c.picks = null; preview.draw(c.card); }).catch(fail(ctx)); return c.work; };
   const preview = cardPreview(ctx);
 
   const stepper = h("ol", { class: "rb-mem-steps" }, STEPS.map((t, i) => h("li", { "aria-current": i === c.step ? "step" : null, class: i < c.step ? "done" : "" }, `${i + 1}. ${t}`)));
@@ -63,7 +63,7 @@ export async function renderCompose(env, host) {
     if (assets.length && !card.image.ref) c.card = { ...card, image: { ...card.image, ref: assets[0].path } };
     ctx.toast("연결 문서를 만드는 중이에요… (2/3)", { seconds: 60 });
     c.picks = pickLore(bot.character.globalLore, { names: [c.card.name, ...names] });
-    c.link = await generateLink(ctx.api, { card: c.card, mode: c.mode, originalDesc: bot.character.desc ?? "", entryLevels: c.entryLevels, lang: c.lang, extra: cfg.linkExtra ?? "", model }); c.calls++;
+    c.link = await generateLink(ctx.api, { card: c.card, mode: c.mode, originalDesc: bot.character.desc ?? "", entryLevels: c.entryLevels, lang: c.lang, extra: [cfg.linkExtra, c.linkExtra].filter(Boolean).join("\n"), model }); c.calls++;
     ctx.toast("첫 메시지를 쓰는 중이에요… (3/3)", { seconds: 60 });
     c.first = await draftFirstMessage(ctx.api, { name: c.card.name, scene: sceneAt(folder, c.to - 1), relationship: c.link.relationship, model, lang: c.lang }); c.calls++;
     ctx.toast("다 만들었어요. 확인하고 저장하세요.");
@@ -80,8 +80,8 @@ export async function renderCompose(env, host) {
   } else if (c.step === 1) {
     const rs = records(), ex = excerptCount(rs), g = cardGrade();
     body = h("div", null, env.backend.id === "bardwiki" && !rs.length ? note("warn", "BardWiki 기록에는 등급이 없어요. 인물 탭의 더보기에서 '등급 매기기(AI)'를 먼저 해 주세요.") : null,
-      field("기록 등급 하한", h("div", { class: "rb-mem-chats" }, GRADES.map((x) => chip(`${x}+`, { pressed: c.minGrade === x, onClick: () => { c.minGrade = x; c.card = null; c.link = null; again(); } })))),
-      h("div", { class: "rb-mem-range" }, h("label", null, "시작 메시지 ", h("input", { class: "rb-input", type: "number", min: 1, max: total, value: c.from, onChange: (e) => { c.from = Math.max(1, +e.target.value || 1); c.card = null; again(); } })), h("label", null, "끝 메시지 ", h("input", { class: "rb-input", type: "number", min: 1, max: total, value: Math.min(c.to, total || c.to), onChange: (e) => { c.to = Math.max(c.from, +e.target.value || total); c.card = null; again(); } }))),
+      field("기록 등급 하한", h("div", { class: "rb-mem-chats" }, GRADES.map((x) => chip(`${x}+`, { pressed: c.minGrade === x, onClick: () => { c.minGrade = x; c.card = null; c.link = null; c.picks = null; again(); } })))),
+      h("div", { class: "rb-mem-range" }, h("label", null, "시작 메시지 ", h("input", { class: "rb-input", type: "number", min: 1, max: total, value: c.from, onChange: (e) => { c.from = Math.max(1, +e.target.value || 1); c.card = null; c.link = null; c.picks = null; again(); } })), h("label", null, "끝 메시지 ", h("input", { class: "rb-input", type: "number", min: 1, max: total, value: Math.min(c.to, total || c.to), onChange: (e) => { c.to = Math.max(c.from, +e.target.value || total); c.card = null; c.link = null; c.picks = null; again(); } }))),
       field(`카드 등급 (${c.gradeMode === "manual" ? "직접 정함" : c.gradeMode === "ai" ? "카드를 만들 때 AI가 정함 · AI 1회 추가" : "구간의 최고 등급으로 자동"})`, h("div", { class: "rb-mem-chats" }, chip("자동", { pressed: c.gradeMode === "auto", onClick: () => { c.gradeSet = null; c.gradeMode = "auto"; c.card = null; again(); } }), chip("AI", { pressed: c.gradeMode === "ai", onClick: () => { c.gradeSet = null; c.gradeMode = "ai"; c.card = null; again(); } }), GRADES.map((x) => chip(x, { pressed: c.gradeSet === x, onClick: () => { c.gradeSet = x; c.gradeMode = "manual"; c.card = null; again(); } })))),
       h("p", null, `선택된 기록 ${rs.length}개 · 원문 발췌 대상 ${ex}개 · ${c.gradeMode === "ai" ? "카드 등급은 AI가 정해요" : `카드 ${g}등급(태그 ${tagCountOf(g)}개)`}`),
       note("info", "AI 3회 호출: 카드 → 연결 문서 → 첫 메시지(연결·첫 메시지는 건너뛰어도 돼요). 등급 AI 판단·일러스트 AI 고르기는 각각 1회 더 들어요."), quickBox, nav(rs.length > 0));
