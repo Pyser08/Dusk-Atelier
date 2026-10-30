@@ -156,7 +156,6 @@ export async function renderHome(ctx) {
     } })
   );
   const storyHelper = h("section", { class: "rb-card bordered rb-story-helper" },
-    h("span", { class: "h" }, "이야기 도우미"),
     storyRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair),
     storyRow("유저 편향 없애기", "캐릭터가 나만 편들지 않게 해요.", diceOn, setDice),
     storyRow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요.", stOn, setStory)
