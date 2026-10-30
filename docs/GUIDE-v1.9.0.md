@@ -1,4 +1,4 @@
-# Dusk Atelier v1.9.0 안내
+# Dusk Atelier v1.8.0 안내
 
 ## 기억 탭 통합
 
