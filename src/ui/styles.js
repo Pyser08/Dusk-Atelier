@@ -164,7 +164,8 @@ html,body{margin:0;height:100%;background:transparent}
 .rb-srow{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:56px;padding:8px 0;border-bottom:var(--rb-bw,1px) solid var(--rb-line2);font-size:14.5px;font-weight:500}
 .rb-scard>.rb-srow:last-child{border-bottom:0}
 .rb-srow .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.rb-srow small{font-size:12.5px;color:var(--rb-mute);font-weight:400;line-height:1.5;word-break:keep-all}
+.rb-srow small{font-size:12.5px;color:var(--rb-mute);font-weight:400;line-height:1.5;word-break:normal;overflow-wrap:anywhere;white-space:normal}
+.rb-mem-embed-highlight{min-width:0;max-width:100%}.rb-mem-embed-highlight .t{min-width:0;overflow-wrap:anywhere}.rb-mem-embed-highlight .go{flex:0 0 auto}
 button.rb-srow{width:100%;background:none;border-top:0;border-left:0;border-right:0;text-align:left;color:inherit;font-family:inherit;cursor:pointer}
 .rb-srow .go{color:var(--rb-mute);display:inline-flex}
 .rb-srow>.rb-seg{width:min(260px,100%);flex-shrink:0}
@@ -886,7 +887,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-hhead{display:flex;align-items:center;gap:12px}.rb-hhead .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.rb-hhead small{font-size:12px;font-weight:700;color:var(--rb-sub)}
 .rb-hhead h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rb-hbody{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px;align-items:start}.rb-hmain{display:flex;flex-direction:column;gap:20px;min-width:0}
-.rb-hstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.rb-hstats{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.rb-hstat-memory .lab{min-height:36px}.rb-hstat-memory .rb-status{min-height:76px}
 .rb-hstat{display:flex;flex-direction:column;gap:6px;min-width:0}.rb-hstat .lab{display:flex;align-items:center;justify-content:space-between;gap:4px;border:0;background:none;padding:2px 4px;color:var(--rb-text);font:inherit;cursor:pointer;min-height:28px}.rb-hstat .lab b{font-size:14px}
 .rb-hstat .rb-status{margin:0;height:100%}
 .rb-hdo h2,.rb-hrecent h2{margin:0 0 10px;font-size:12.5px;font-weight:700;color:var(--rb-sub);letter-spacing:.02em}
