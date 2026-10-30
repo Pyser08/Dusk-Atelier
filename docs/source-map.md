@@ -344,3 +344,8 @@
 - `src/ui/styles.js`: 기존 Dusk 카드·접이식 UI와 통합 패널의 반응형 배치를 추가한다.
 
 - `src/ui/screens/memory/embeddingguide.js` (신규) 기억 탭에 처음 진입할 때 임베딩(의미 검색)을 한 번 안내한다. 플러그인 저장소의 고정 키로 표시 여부를 기억해 이후 실행·업데이트에서는 다시 띄우지 않는다.
+
+
+## UItest 메모 (2026-10-30)
+- `src/ui/prefs.js`: 기존 설치 사용자도 `simpleModeMigrationV1` 마이그레이션을 최초 1회 적용해 간단 모드로 시작한다. 이후 사용자가 고른 간단/고급 모드는 유지된다.
+- `tools/build.mjs`: 테스트 설치용 플러그인 메타데이터는 `dusk_atelier_1.8.0_UItest` / `Dusk Atelier_1.8.0_UItest`.
