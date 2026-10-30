@@ -78,3 +78,5 @@ export var SEARCH = {
   plugins: "플러그인 이름, 카테고리 검색",
   characters: "캐릭터 이름, 제작자 검색"
 };
+
+// Build trigger: UI relocation changes are already integrated in the v1.9.0 development branch.
