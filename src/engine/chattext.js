@@ -13,13 +13,35 @@ export function confirmedAiIndex(messages) {
   return -1;
 }
 
-// 앵커용 짧은 해시 (본문 앞 200자, 비암호용 FNV-1a 32비트).
+// 예전 데이터 호환용 해시: 기존 버전은 정규화한 본문 앞 200자만 사용했다.
 export function hashText(text, len = 200) {
   const s = String(text ?? "").replace(/\s+/g, " ").trim().slice(0, len);
   let h = 0x811c9dc5;
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
   return h.toString(16).padStart(8, "0");
 }
+
+// 본문 전체를 훑는 64비트(두 개의 32비트 해시 결합) 해시.
+// 암호학적 용도가 아니라 대화 메시지를 구별하기 위한 값이다.
+export function fullTextHash(text) {
+  const s = String(text ?? "").replace(/\s+/g, " ").trim();
+  let a = 0x811c9dc5, b = 0x9e3779b9;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    a ^= c; a = Math.imul(a, 0x01000193) >>> 0;
+    b ^= c; b = Math.imul(b, 0x01000193) >>> 0;
+  }
+  return a.toString(16).padStart(8, "0") + b.toString(16).padStart(8, "0");
+}
+
+// 실제 메시지 ID가 있으면 본문 전체 해시와 함께 식별한다.
+// chatId가 없는 오래된/가져온 메시지는 본문 전체 해시만 사용한다.
+export const messageIdOf = (m) => typeof m?.chatId === "string" && m.chatId && !m.chatId.startsWith("inherited:") ? m.chatId : null;
+export const messageIdentity = (m) => {
+  const mid = messageIdOf(m);
+  return `${mid ? `mid:${mid}:` : "body:"}${fullTextHash(extractMessageText(m))}`;
+};
+export const legacyMessageHash = (m) => hashText(extractMessageText(m));
 export const snippet = (text, n = 80) => { const s = String(text ?? "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
 
 // safety.js의 isGenerating과 같은 판정(그 파일은 TS 모듈을 끌어와 테스트에서 못 쓴다).
