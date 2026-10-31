@@ -2,7 +2,7 @@ name: Validate and build v1.8.1
 on:
   push:
     branches:
-      - fix/1.9.0-noop-toast
+      - fix/1.8.1-noop-toast
 permissions:
   contents: write
 jobs:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: fix/1.9.0-noop-toast
+          ref: fix/1.8.1-noop-toast
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -27,5 +27,5 @@ jobs:
           git add dusk_atelier.js
           if ! git diff --cached --quiet; then
             git commit -m "build: regenerate dusk_atelier.js for v1.8.1"
-            git push origin HEAD:fix/1.9.0-noop-toast
+            git push origin HEAD:fix/1.8.1-noop-toast
           fi
