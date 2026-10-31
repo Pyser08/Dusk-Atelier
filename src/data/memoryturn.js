@@ -20,7 +20,7 @@ import { potModels } from "../engine/modelcfg.js";
 import { recallFor, mergeMemory } from "../engine/recall.js";
 import { createRetryToast, judgeAutoResult } from "./retrytoast.js";
 import { loadReconciled } from "./memoryload.js";
-import { confirmedAiIndex, extractMessageText, hashText } from "../engine/chattext.js";
+import { confirmedAiIndex, extractMessageText, messageIdentity } from "../engine/chattext.js";
 import { appendDuskSection, splitDusk, checkDusk, SECTION_MARK } from "../engine/duskwriter.js";
 import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
 import { makeTools } from "./memorytools.js";
@@ -166,7 +166,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       if (!(ci >= 0) || !(ti >= 0)) return;
       const char = await api.getCharacterFromIndex(ci), chat = await api.getChatFromIndex(ci, ti);
       const messageIndex = confirmedAiIndex(chat?.message ?? []); if (messageIndex < 0) return;
-      const m = chat.message[messageIndex], key = `${ci}:${ti}:${messageIndex}:${m?.chatId ?? m?.id ?? ""}:${hashText(extractMessageText(m))}`;
+      const m = chat.message[messageIndex], key = `${ci}:${ti}:${messageIndex}:${messageIdentity(m)}`;
       if (confirmed.has(key)) return;
       confirmed.add(key); if (confirmed.size > 50) confirmed.delete(confirmed.keys().next().value);
       auto.schedule({ chat, char, characterIndex: ci, chatIndex: ti, messageIndex });
