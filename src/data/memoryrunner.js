@@ -207,7 +207,10 @@ export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = 
   // 반환: groups·calls·tokens + 현황(total 범위 안 AI 응답 수, done 분석됨, todo 미처리, failed 미처리 중 지난번 실패한 것)
   function planBackfill(messages, { from = 0, to = Infinity } = {}, folder = null) {
     const ai = aiIndexes(messages).filter((i) => i >= from && i <= to);
-    const done = doneHashes(folder), failedSet = new Set(folder?.failedBackfill ?? []);
+    // 예전 완료 목록·앵커를 새 식별자로 맞춘 복사본으로 계획한다(저장된 폴더 자체는 여기서 수정하지 않는다).
+    const normalized = folder ? structuredClone(folder) : null;
+    if (normalized) reconcile(normalized, messages);
+    const done = doneHashes(normalized), failedSet = new Set(normalized?.failedBackfill ?? []);
     const hOf = (i) => messageIdentity(messages[i]);
     const todo = ai.filter((i) => !done.has(hOf(i)));
     const groups = []; for (let k = 0; k < todo.length; k += 3) groups.push(todo.slice(k, k + 3));
