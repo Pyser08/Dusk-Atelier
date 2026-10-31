@@ -8,7 +8,9 @@
     "build": "node tools/build.mjs",
     "check": "node tools/build.mjs --check",
     "test": "node --test",
-    "pot:split": "node tools/pot-split.mjs"
+    "pot:split": "node tools/pot-split.mjs",
+    "pretest": "node tools/apply-pot-patches.mjs",
+    "prebuild": "node tools/apply-pot-patches.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
