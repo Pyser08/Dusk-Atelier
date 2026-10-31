@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createMemoryStore } from "../src/data/memorystore.js";
 import { createMemoryRunner } from "../src/data/memoryrunner.js";
-import { hashText, extractMessageText } from "../src/engine/chattext.js";
+import { hashText, extractMessageText, messageIdentity } from "../src/engine/chattext.js";
 import { reconcile } from "../src/engine/memoryreconcile.js";
 
 const LONG = "비가 내리는 옥상에서 미나가 하루의 손을 잡고 오래 숨겨 둔 비밀을 처음으로 털어놓았다. 하루는 아무 대답도 하지 못했다. ".repeat(2);
@@ -20,6 +20,26 @@ function setup({ streaming = false } = {}) {
 }
 const good = JSON.stringify({ people: [{ name: "미나", act: "하루에게 비밀을 털어놓음", p: 2, s: 2, r: 2 }], scene: { sum: "비 오는 옥상", facts: ["비밀 공개"], place: "옥상", who: ["미나", "하루"], changed: true } });
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+test("messages with the same first 200 characters get distinct full identities and backfill state", () => {
+  const prefix = "x".repeat(240);
+  const a = { role: "char", chatId: "same-prefix-a", data: prefix + "tail-A" };
+  const b = { role: "char", chatId: "same-prefix-b", data: prefix + "tail-B" };
+  assert.equal(hashText(a.data), hashText(b.data), "legacy hashes collide on the shared prefix");
+  assert.notEqual(messageIdentity(a), messageIdentity(b), "new identity includes message ID and the full body");
+  const { api, store } = setup();
+  const runner = createMemoryRunner(api, { store, call: async () => good });
+  const plan = runner.planBackfill([a, b]);
+  assert.equal(plan.total, 2);
+  assert.equal(plan.todo, 2);
+  assert.equal(plan.calls, 1);
+  const done = { done: [messageIdentity(a)], people: {}, scenes: [] };
+  const after = runner.planBackfill([a, b], {}, done);
+  assert.equal(after.done, 1);
+  assert.equal(after.todo, 1);
+  assert.equal(after.groups.flat().length, 1);
+  assert.equal([a, b][after.groups[0][0]].chatId, "same-prefix-b");
+});
 
 test("10 streaming output hook calls → exactly 1 analysis, text returned unchanged", async () => {
   const { api, store } = setup(); let calls = 0;
@@ -86,7 +106,7 @@ test("backfill progress is not capped at 1,000 and old ones are restored from an
   const { api, store, chat } = setup();
   chat.message = []; for (let i = 0; i < 1200; i++) { chat.message.push({ role: "user", data: "u" + i }, { role: "char", data: "응답 " + i }); }
   const runner = createMemoryRunner(api, { store, call: async () => good });
-  const hs = chat.message.filter((m) => m.role === "char").map((m) => hashText(extractMessageText(m)));
+  const hs = chat.message.filter((m) => m.role === "char").map((m) => messageIdentity(m));
   await store.updateFolder("c1", "t1", (f) => { f.done = hs; });  // 1,200개를 전부 분석한 상태
   const f = await store.getFolder("c1", "t1");
   const plan = runner.planBackfill(chat.message, {}, f);
@@ -101,9 +121,9 @@ test("backfill progress is not capped at 1,000 and old ones are restored from an
 });
 test("reconcile trims done to messages still in the chat", async () => {
   const msgs = [{ role: "char", data: "하나" }, { role: "char", data: "둘" }];
-  const f = { people: {}, scenes: [], done: [hashText("하나"), hashText("사라진 응답")], failedBackfill: [hashText("사라진 응답")] };
+  const f = { people: {}, scenes: [], done: [messageIdentity(msgs[0]), hashText("사라진 응답")], failedBackfill: [hashText("사라진 응답")] };
   reconcile(f, msgs);
-  assert.deepEqual(f.done, [hashText("하나")]); assert.deepEqual(f.failedBackfill, []);
+  assert.deepEqual(f.done, [messageIdentity(msgs[0])]); assert.deepEqual(f.failedBackfill, []);
 });
 
 test("display hook alone triggers a check for a fresh response (output hook never fires)", async () => {
