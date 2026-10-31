@@ -102,3 +102,24 @@ test("고아 정리: rels/open도 지우고 레거시 판정이 기록·장면 �
   assert.equal(f.open.length, 0);
 });
 test("srcOf는 해시 없으면 undefined", () => { assert.equal(srcOf({ at: 1 }), undefined); assert.equal(srcOf(anchor(2, "z", "m")).chatId, "m"); });
+
+test("legacy anchors migrate to full identity when the matching message is unambiguous", () => {
+  const text = "앞부분 ".repeat(60) + "끝";
+  const m = msg(text, "legacy-mid");
+  const oldHash = hashText(text);
+  const f = { people: { a: { records: [{ id: "old", at: 0, mid: "legacy-mid", h: oldHash }] } }, scenes: [], cursor: { at: 0, mid: "legacy-mid", h: oldHash } };
+  reconcile(f, [m]);
+  assert.equal(f.people.a.records[0].h, messageIdentity(m));
+  assert.equal(f.people.a.records[0].orphan, false);
+  assert.equal(f.cursor.h, messageIdentity(m));
+});
+
+test("ambiguous legacy done hashes are discarded instead of marking colliding messages done", () => {
+  const prefix = "p".repeat(240);
+  const a = msg(prefix + "A", "id-a"), b = msg(prefix + "B", "id-b");
+  assert.equal(hashText(a.data), hashText(b.data));
+  const f = { people: {}, scenes: [], done: [hashText(a.data)], failedBackfill: [hashText(a.data)] };
+  reconcile(f, [a, b]);
+  assert.deepEqual(f.done, []);
+  assert.deepEqual(f.failedBackfill, []);
+});
