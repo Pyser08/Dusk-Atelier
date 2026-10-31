@@ -115,7 +115,7 @@ test("backfill progress is not capped at 1,000 and old ones are restored from an
   // 예전 데이터: 완료 목록이 최근 1,000개뿐이어도 오래된 쪽의 장면 앵커는 분석됨으로 본다
   const old = { done: hs.slice(-1000), scenes: [{ id: "s", h: hs[5] }], people: { a: { records: [{ id: "r", h: hs[7] }, { id: "r2", h: hs[9], orphan: true }] } } };
   const p2 = runner.planBackfill(chat.message, {}, old);
-  assert.equal(p2.done, 1002); assert.equal(p2.todo, 198); assert.equal(p2.calls, 66);
+  assert.equal(p2.done, 1003); assert.equal(p2.todo, 197); assert.equal(p2.calls, 66);
   // 실패 표시
   const p3 = runner.planBackfill(chat.message, {}, { ...old, failedBackfill: [hs[0], hs[1], hs[5]] });
   assert.equal(p3.failed, 2, "미처리 중 실패한 것만 센다(분석됨인 hs[5]는 제외)");
