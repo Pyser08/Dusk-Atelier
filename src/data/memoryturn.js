@@ -20,7 +20,7 @@ import { potModels } from "../engine/modelcfg.js";
 import { recallFor, mergeMemory } from "../engine/recall.js";
 import { createRetryToast, judgeAutoResult } from "./retrytoast.js";
 import { loadReconciled } from "./memoryload.js";
-import { confirmedAiIndex, extractMessageText, messageIdentity } from "../engine/chattext.js";
+import { confirmedAiIndex, messageIdentity } from "../engine/chattext.js";
 import { appendDuskSection, splitDusk, checkDusk, SECTION_MARK } from "../engine/duskwriter.js";
 import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
 import { makeTools } from "./memorytools.js";
