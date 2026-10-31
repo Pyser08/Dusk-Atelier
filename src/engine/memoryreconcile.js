@@ -1,30 +1,49 @@
 // 앵커 정합성. 기록/상황은 {at, mid?, h}를 가진다. 순수 함수 — 폴더를 직접 수정한다.
 // v1.6.5: 관계 변화(rels)·열린 항목(open)도 출처(src, closedBy)로 대조한다.
-import { extractMessageText, hashText } from "./chattext.js";
+import { messageIdentity, messageIdOf, legacyMessageHash } from "./chattext.js";
 import { revertExp } from "./memoryinner.js";
 
 export function indexMessages(messages) {
-  const byMid = new Map(), byHash = new Map(), dupMid = new Set();
+  const byMid = new Map(), byHash = new Map(), byLegacyHash = new Map(), dupMid = new Set();
   const list = (messages ?? []).map((m, i) => {
-    const mid = typeof m?.chatId === "string" && m.chatId && !m.chatId.startsWith("inherited:") ? m.chatId : null;
-    const h = hashText(extractMessageText(m));
+    const mid = messageIdOf(m), h = messageIdentity(m), legacyH = legacyMessageHash(m);
     if (mid) { if (byMid.has(mid)) dupMid.add(mid); else byMid.set(mid, i); }
     if (!byHash.has(h)) byHash.set(h, []);
     byHash.get(h).push(i);
-    return { mid, h };
+    if (!byLegacyHash.has(legacyH)) byLegacyHash.set(legacyH, []);
+    byLegacyHash.get(legacyH).push(i);
+    return { mid, h, legacyH };
   });
   for (const d of dupMid) byMid.delete(d);
-  return { list, byMid, byHash };
+  return { list, byMid, byHash, byLegacyHash };
 }
 
+// 예전 저장 데이터는 200자 해시를 갖고 있을 수 있다. 일치하는 경우에만 새 식별자로 바꾼다.
 function fix(item, idx) {
-  if (item.mid && idx.byMid.has(item.mid)) { item.at = idx.byMid.get(item.mid); item.orphan = false; return; }
-  if (idx.list[item.at]?.h === item.h && (!item.mid || !idx.list[item.at].mid)) { item.orphan = false; return; }
-  const cand = idx.byHash.get(item.h) ?? [];
-  if (cand.length) {
-    item.at = cand.reduce((best, c) => Math.abs(c - item.at) < Math.abs(best - item.at) ? c : best, cand[0]);
-    item.orphan = false; return;
+  const migrateTo = (i) => {
+    item.at = i;
+    item.h = idx.list[i].h;
+    if (!item.mid && idx.list[i].mid) item.mid = idx.list[i].mid;
+    item.orphan = false;
+  };
+  if (item.mid && idx.byMid.has(item.mid)) {
+    const i = idx.byMid.get(item.mid), current = idx.list[i];
+    if (current.h === item.h || current.legacyH === item.h) { migrateTo(i); return; }
+    // 같은 ID라도 본문 전체가 달라졌다면 새 메시지로 취급한다(리롤 안전성).
   }
+  const at = idx.list[item.at];
+  if (at && (at.h === item.h || at.legacyH === item.h) && (!item.mid || !at.mid || item.mid === at.mid)) {
+    migrateTo(item.at); return;
+  }
+  const exact = idx.byHash.get(item.h) ?? [];
+  if (exact.length) {
+    const i = exact.reduce((best, c) => Math.abs(c - (item.at ?? -1)) < Math.abs(best - (item.at ?? -1)) ? c : best, exact[0]);
+    migrateTo(i); return;
+  }
+  // 예전 200자 해시가 여러 메시지와 일치하면 어느 메시지인지 알 수 없다.
+  // 잘못 연결하지 않고 미처리로 두어, 필요한 경우 다시 분석하게 한다.
+  const legacy = idx.byLegacyHash.get(item.h) ?? [];
+  if (legacy.length === 1) { migrateTo(legacy[0]); return; }
   item.orphan = true;
 }
 
@@ -35,7 +54,7 @@ const hasSrc = (s) => !!s?.hash;
 function srcAlive(src, idx) {
   const t = { mid: src.chatId ?? null, h: src.hash, at: src.at ?? -1 };
   fix(t, idx);
-  if (!t.orphan) src.at = t.at;
+  if (!t.orphan) { src.at = t.at; src.hash = t.h; if (t.mid) src.chatId = t.mid; }
   return !t.orphan;
 }
 
@@ -99,14 +118,19 @@ export function reconcile(folder, messages) {
     // 버린 분석이 닫은 떡밥은 다시 연다(되돌릴 수 있게 closed는 두고 표시만 한다).
     if (x.closed && dead(x.closedBy, x.closed_ms)) x.closedOrphan = true; else delete x.closedOrphan;
   }
-  if (messages?.length) {  // 분석 완료·실패 목록은 지금 채팅에 있는 응답만 남긴다(리롤·삭제된 것은 걷어 냄)
+  if (messages?.length) {  // 분석 완료·실패 목록도 새 식별자로 옮긴다. 모호한 옛 해시는 안전のため 버려 재분석한다.
     const present = new Set(idx.list.map((x) => x.h));
-    if (Array.isArray(folder.done)) folder.done = folder.done.filter((x) => present.has(x));
-    if (Array.isArray(folder.failedBackfill)) folder.failedBackfill = folder.failedBackfill.filter((x) => present.has(x));
+    const normalizeHashes = (values) => [...new Set((values ?? []).flatMap((h) => {
+      if (present.has(h)) return [h];
+      const legacy = idx.byLegacyHash.get(h) ?? [];
+      return legacy.length === 1 ? [idx.list[legacy[0]].h] : [];
+    }))];
+    if (Array.isArray(folder.done)) folder.done = normalizeHashes(folder.done);
+    if (Array.isArray(folder.failedBackfill)) folder.failedBackfill = normalizeHashes(folder.failedBackfill);
   }
   if (folder.cursor?.h) {
     const c = { ...folder.cursor }; fix(c, idx);
-    if (!c.orphan) folder.cursor = { ...folder.cursor, at: c.at };
+    if (!c.orphan) folder.cursor = { ...folder.cursor, at: c.at, mid: c.mid ?? folder.cursor.mid ?? null, h: c.h };
     else {  // 마지막 분석 응답이 사라졌으면(리롤 등) 아직 살아 있는 가장 뒤 기록·장면의 응답으로 옮긴다. 없으면 비운다.
       const best = items.filter((it) => !it.orphan && it.h && !it.legacy && !it.carried).reduce((b, it) => (!b || (it.at ?? -1) >= (b.at ?? -1) ? it : b), null);
       folder.cursor = best ? { at: best.at, mid: best.mid ?? null, h: best.h } : null;
