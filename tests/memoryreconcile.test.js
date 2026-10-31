@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { reconcile } from "../src/engine/memoryreconcile.js";
-import { hashText } from "../src/engine/chattext.js";
+import { hashText, messageIdentity } from "../src/engine/chattext.js";
 
 const msg = (text, chatId) => ({ role: "char", data: text, chatId });
-const rec = (at, text, mid) => ({ id: "r" + at, at, mid, h: hashText(text) });
+const rec = (at, text, mid) => ({ id: "r" + at, at, mid, h: messageIdentity(msg(text, mid)) });
 
 test("keeps matching anchors", () => {
   const msgs = [msg("hi"), msg("안녕 세계")];
@@ -31,7 +31,7 @@ test("reroll of the last analyzed reply moves the cursor to the latest surviving
   const f = { people: { a: { records: [rec(0, "첫 응답"), rec(1, "이전 응답")] } }, scenes: [{ id: "s", ...rec(0, "첫 응답") }], cursor: { at: 1, h: hashText("이전 응답") } };
   reconcile(f, msgs);
   assert.equal(f.people.a.records[1].orphan, true);
-  assert.deepEqual({ at: f.cursor.at, h: f.cursor.h }, { at: 0, h: hashText("첫 응답") });
+  assert.deepEqual({ at: f.cursor.at, h: f.cursor.h }, { at: 0, h: messageIdentity(msg("첫 응답")) });
 });
 test("mid has priority and duplicate/inherited mids are ignored", () => {
   const msgs = [msg("x", "m1"), msg("y", "m2")];
@@ -54,7 +54,7 @@ test("legacy items untouched", () => {
 import { cleanOrphans, srcOf } from "../src/engine/memoryreconcile.js";
 import { applyRel, applyOpen, openItems, relLines, isClosed } from "../src/engine/memoryplus.js";
 
-const anchor = (at, text, mid) => ({ at, mid, h: hashText(text) });
+const anchor = (at, text, mid) => ({ at, mid, h: messageIdentity(msg(text, mid)) });
 
 test("src가 있는 rels/open은 출처 응답이 사라지면 고아", () => {
   const f = { people: {}, scenes: [] };
