@@ -40,7 +40,7 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
   const old = panel.querySelector('#rb-ai-popup');
   if (old) return old.closePopup?.();
   const st = build.state;
-  const back = h('div', { id: 'rb-ai-popup', role: 'dialog', 'aria-label': 'AI로 제작', style: 'position:absolute;z-index:40;display:flex;flex-direction:column;background:var(--rb-win,var(--rb-surf));color:var(--rb-text);border:1px solid var(--rb-line2);box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden;box-sizing:border-box' });
+  const back = h('div', { id: 'rb-ai-popup', role: 'dialog', 'aria-label': 'AI 자유 대화', style: 'position:absolute;z-index:40;display:flex;flex-direction:column;background:var(--rb-win,var(--rb-surf));color:var(--rb-text);border:1px solid var(--rb-line2);box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden;box-sizing:border-box' });
   const status = h('small', { class: 'rb-muted', 'aria-live': 'polite' });
   const list = h('div', { class: 'rb-scroll', style: 'flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px' });
   const taskSel = h('select', { class: 'rb-input', 'aria-label': '작업 종류', style: 'flex:1' }, Object.entries(build.TASKS).map(([k, t]) => h('option', { value: k }, t.label)));
@@ -269,7 +269,7 @@ export function openAiPopup(ctx, { panel, build, selection, onClose, bbPresent, 
     };
     el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
   }
-  const hdrTitle = h('b', null, 'AI로 제작');
+  const hdrTitle = h('b', null, '자유 대화');
   const closeB = iconBtn('x', '닫기', { onClick: () => close() });
   const hdr = h('div', { style: 'display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--rb-line2);touch-action:none;user-select:none;-webkit-user-select:none' }, hdrTitle, status, h('span', { style: 'flex:1' }), modelSel, closeB);
   hdr.addEventListener('pointerdown', (ev) => {

@@ -8,6 +8,9 @@ import { USAGE_KINDS, injectLine, usageOf } from "../../../engine/memoryusage.js
 import { mem, fail, gradeBadge, at } from "./common.js";
 import { renderModeBar } from "./modebar.js";
 import { advancedBlocks } from "./madv.js";
+import { openEmbedModal } from "./embedmodal.js";
+import { maybeShowEmbeddingGuide } from "./embeddingguide.js";
+import { maybeAskBardWiki } from "./modebar.js";
 
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
 
@@ -27,15 +30,36 @@ export function usageCard(u) {
 
 export async function renderMemoryHome(ctx, host, { redraw }) {
   const m = mem(ctx), M = ctx.memory;
+  await maybeAskBardWiki(ctx).catch(() => {});
   const modeHost = h("div");
   await renderModeBar(ctx, modeHost, { redraw });  // 간단 모드에서는 저장소를 자동으로 맞추기만 한다
   const cur = await M.switches.currentChat();
   if (!cur) {
-    return replace(host, pageHead("기억"), emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요.",
+    return replace(host, pageHead("장기 기억"), emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요.",
       actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] }));
   }
-  const [sw, idx, folder, chat] = await Promise.all([M.switches.state(cur.chaId), M.store.getIndex(), M.store.getFolder(cur.chaId, cur.chatId).catch(() => null), ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null)]);
-  const caps = M.capabilities(M.backend(idx.settings).id), msgs = chat?.message ?? [];
+  // 채팅 본문은 느릴 수 있으므로 화면을 먼저 그리고, 백필 분석용 데이터는 백그라운드에서 읽는다.
+  const cacheKey = `${cur.chaId}:${cur.chatId}:${cur.ci}:${cur.ti}`;
+  const hasCachedPlan = m.homeChatPlan?.key === cacheKey && Date.now() - m.homeChatPlan.t < 20000;
+  const cachedPlan = hasCachedPlan ? m.homeChatPlan.plan : null;
+  let chatPromise = Promise.resolve(null);
+  if (!hasCachedPlan) {
+    if (m.homeChatPromise?.key === cacheKey) chatPromise = m.homeChatPromise.promise;
+    else {
+      chatPromise = ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
+      m.homeChatPromise = { key: cacheKey, promise: chatPromise };
+    }
+  }
+  const [sw, idx, folder] = await Promise.all([M.switches.state(cur.chaId), M.store.getIndex(), M.store.getFolder(cur.chaId, cur.chatId).catch(() => null)]);
+  const caps = M.capabilities(M.backend(idx.settings).id), msgs = [];
+  if (!hasCachedPlan) chatPromise.then((loaded) => {
+    if (!loaded) return;
+    const loadedMsgs = loaded.message ?? [];
+    const nextPlan = caps.analyze && M.runner ? M.runner.planBackfill(loadedMsgs, { from: 0, to: Math.max(0, loadedMsgs.length - 1) }, folder) : null;
+    m.homeChatPlan = { key: cacheKey, plan: nextPlan, t: Date.now() };
+    if (m.homeChatPromise?.key === cacheKey) m.homeChatPromise = null;
+    if (ctx.state.tab === "memory" && mem(ctx) === m) redraw();
+  }).catch(() => {});
   const botCfg = idx.bots[cur.chaId] ?? {}, last = M.injector?.lastRequest?.() ?? null;
   const on = sw.memory.on;
 
@@ -53,23 +77,33 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   }
 
   // 지난 대화 분석 (미처리만)
-  const plan = caps.analyze && M.runner ? M.runner.planBackfill(msgs, { from: 0, to: Math.max(0, msgs.length - 1) }, folder) : null;
+  const plan = caps.analyze && M.runner ? cachedPlan : null;
   const prog = h("div");
   const analyze = async () => {
-    if (!plan?.todo) return ctx.toast("분석할 새 응답이 없어요.");
-    const ok = await confirmDialog(ctx.win, { title: "지난 대화 분석", body: `AI 응답 ${plan.todo}개를 분석해요. 호출 ${plan.calls}회 · 대략 ${plan.tokens.toLocaleString()} 토큰이 들어요.`, ok: "분석하기" });
+    let activeChat = null, activeMsgs = [], activePlan = plan;
+    if (!activePlan || !activePlan.todo) {
+      activeChat = await chatPromise;
+      if (!activeChat) activeChat = await ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
+      activeMsgs = activeChat?.message ?? [];
+      activePlan = activeChat && M.runner ? M.runner.planBackfill(activeMsgs, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, folder) : activePlan;
+    } else {
+      activeChat = await ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
+      activeMsgs = activeChat?.message ?? [];
+    }
+    if (!activePlan?.todo) return ctx.toast("분석할 새 응답이 없어요.");
+    const ok = await confirmDialog(ctx.win, { title: "지난 대화 분석", body: `AI 응답 ${activePlan.todo}개를 분석해요. 호출 ${activePlan.calls}회 · 대략 ${activePlan.tokens.toLocaleString()} 토큰이 들어요.`, ok: "분석하기" });
     if (!ok) return;
     const ctrl = new AbortController(), cancel = btn("취소", { size: "sm", onClick: () => ctrl.abort() });
     replace(prog, progressBar(0), cancel);
     try {
-      const r = await M.runner.backfill(cur.ci, cur.ti, { from: 0, to: Math.max(0, msgs.length - 1) }, { signal: ctrl.signal, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), cancel) });
+      const r = await M.runner.backfill(cur.ci, cur.ti, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, { signal: ctrl.signal, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), cancel) });
       ctx.toast(`지난 대화 분석이 끝났어요 (${r.total - r.failed.length}/${r.total}).`);
     } catch (e) { fail(ctx)(e); }
     redraw();
   };
   const openDetail = () => { m.botId = cur.chaId; m.chatIndex = cur.ti; m.tab = "people"; m.personKey = ""; m.page = "detail"; redraw(); };
   const actions = actionRow([
-    plan ? { label: `지난 대화 분석 · 미처리 ${plan.todo}개`, icon: "sparkle", onClick: analyze } : { label: "기록 보기", icon: "brain", onClick: openDetail },
+    caps.analyze && M.runner ? { label: plan ? `지난 대화 분석 · 미처리 ${plan.todo}개` : "지난 대화 분석", icon: "sparkle", onClick: analyze } : { label: "기록 보기", icon: "brain", onClick: openDetail },
     { label: "카드로 만들기", icon: "image", onClick: () => ctx.go("cards") },
     { label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }
   ]);
@@ -80,10 +114,21 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
       ? recent.map((r) => h("li", { class: "rb-mem-rec" }, gradeBadge(r.g), h("div", { class: "txt" }, h("div", null, `${r.who}: ${r.act}`), h("div", { class: "rb-muted" }, at(r.at)))))
       : h("li", { class: "rb-muted" }, "아직 쌓인 기록이 없어요.")));
 
+  // 설정 탭의 '기억 · 리수폿' 카드. 분석 동작과 최근 기록 사이에 둔다.
+  const memorySettings = h("section", { class: "rb-card bordered rb-scard rb-mem-integrated-settings" },
+    h("span", { class: "h" }, "기억 · 리수폿 설정"),
+    ctx.prefs.advanced ? h("button", { type: "button", class: "rb-srow", onClick: () => ctx.go("settings", "prompts") },
+      h("span", { class: "t" }, "기억·리수폿 프롬프트", h("small", null, "쓸 때 덧붙일 프롬프트 · JSON/.risup 불러오기")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))) : null,
+    h("button", { type: "button", class: "rb-srow rb-mem-embed-highlight", onClick: () => { if (ctx.memory?.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); } },
+      h("span", { class: "t" }, "임베딩(의미 검색)", h("small", null, "뜻이 비슷한 기억 찾기 · API 주소·키·기본 사용·대기 시간")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))));
+
+
+
   const main = h("div", { class: "rb-mem2-main" },
     pageHead("기억", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"}`, sw: { on, label: "이 채팅에서 사용", onChange: (v) => setOn(v) } }),
-    status, usageCard(usageOf(folder, last?.manifest)), actions, prog, recBox,
+    h("div", { class: "rb-mem-status-row" }, status, btn("인물 Wiki", { kind: "primary", icon: "character", title: "인물 위키 화면으로 이동", onClick: openDetail })), usageCard(usageOf(folder, last?.manifest)), actions, prog, memorySettings, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   const adv = advFold(ctx, "memory", ...(ctx.prefs.advanced ? advancedBlocks(ctx, { cur, idx, redraw, modeHost }) : [true]));
   replace(host, h("div", { class: ["rb-mem2-grid", ctx.prefs.advanced && "has-adv"] }, main, adv ? h("div", { class: "rb-mem2-side" }, adv) : null));
+  void maybeShowEmbeddingGuide(ctx).catch(fail(ctx));
 }

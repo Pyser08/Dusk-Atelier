@@ -3,6 +3,7 @@ import { FIELDS, clone, uid, assert, ARRAY_FIELDS, str, keys, array, object, dan
 import { nativeContent, ridOf, ruleOf } from '../../engine/lorerules.js';
 import { loreSelection, requestLorebook, validLoreIncluded } from './loreselect.js';
 import { DESIGN_FORMAT, DUSK_GUIDE, designExamples, duskContext } from './duskdesign.js';
+import { MEMORY_DEFAULT_PROMPT_1, MEMORY_DEFAULT_PROMPT_2 } from '../../data/memory-default-prompts.js';
 // Dusk 방식 수정안(설계 JSON을 변환한 것)에만 extentions·folder 필드를 허용한다. 일반 방식 응답에는 허용하지 않는다.
 let EXT_OK = false;
 // 편집 대상 종류(v1.6.9): 'character' | 'module'. 모듈에는 첫 메시지·초기 변수·성격 같은 봇 전용 칸이 없다.
@@ -98,7 +99,7 @@ const EXT_KEYS = ['da_rid', 'da_rule', 'da_folder', 'da_parent', 'da_place'];
     };
   }
   var TASKS = {
-    workshop: { label: "설계 대화", hint: "방향을 의논하고, 필요한 경우에만 원고 수정안을 제안합니다.", format: { reply: "대화 답변", changes: [{ task: "description", data: { text: "검토할 설명" } }] }, instruction: "사용자와 대화하며 캐릭터 또는 시뮬레이션을 설계하라. 질문, 설정 점검, 아이디어 논의에는 reply로만 답하고 changes는 빈 배열로 둬라. 제작·수정을 요청했을 때만 필요한 작업별 수정안을 changes에 담아라. 임의로 범위를 확장하지 마라. 시뮬레이션이면 세계 규칙, 사용자 역할, 시작 상황, 진행 조건의 일관성을 검토하라." },
+    workshop: { label: "자유 대화", hint: "봇의 설정과 방향을 자유롭게 이야기하고, 요청할 때만 원고 수정안을 제안합니다.", format: { reply: "대화 답변", changes: [{ task: "description", data: { text: "검토할 설명" } }] }, instruction: "사용자와 대화하며 캐릭터 또는 시뮬레이션을 설계하라. 질문, 설정 점검, 아이디어 논의에는 reply로만 답하고 changes는 빈 배열로 둬라. 제작·수정을 요청했을 때만 필요한 작업별 수정안을 changes에 담아라. 임의로 범위를 확장하지 마라. 시뮬레이션이면 세계 규칙, 사용자 역할, 시작 상황, 진행 조건의 일관성을 검토하라." },
     description: { label: "캐릭터 설명", format: { text: "완성된 설명 본문" }, instruction: "요청한 성격·배경·말투·관계·행동 특성을 캐릭터 설명으로 작성하거나 수정하라. 시뮬레이션의 설명에는 세계 규칙과 진행 방식도 포함하라. data.text에 완성 본문을 반환하라." },
     lorebook: { label: "로어북", format: { upsert: [{ ref: null, entry: { comment: "제목", key: "키워드", content: "내용" } }], remove: [] }, instruction: "키워드·본문·활성화 조건이 일치하는 로어북을 작성하라. 기존 항목은 제공된 ref로 식별하라. 기존 항목을 고칠 때는 entry에 실제로 바뀌는 필드만 담고(예: content만), 바뀌지 않는 필드와 수정하지 않는 항목은 쓰지 마라. 새 항목(ref:null)만 key·content를 모두 써라. 제공되지 않은 ref는 사용하지 마라." },
     regex: { label: "정규식 · HTML/CSS", format: { upsert: [{ ref: null, rule: { comment: "이름", in: "패턴", out: "치환문", type: "editdisplay", flag: "g", ableFlag: true } }], remove: [] }, instruction: "IN 패턴과 OUT의 캡처 참조·HTML/CSS를 일치시켜라. RisuAI 적용 유형은 editinput/editoutput/editprocess/editdisplay다. 생성 HTML은 텍스트 원고로만 검토된다. 기존 규칙의 ref·플래그·유형은 요청에 맞춰 보존하라." },
@@ -193,7 +194,7 @@ workshop의 changes는 task/data 객체 목록이며 task는 중복 없이 최�
     reference.pendingProposals = session.candidates.filter((c) => !c.status).map((c) => ({ id: c.id, task: c.packet.task, data: c.packet.data }));
     reference.pendingProposalNote = "미적용 제안이다. 현재 원고와 구분하고, 새 수정안의 참조는 현재 원고 기준으로 작성하라.";
     values.REFERENCE_CONTEXT = JSON.stringify(reference);
-    return [{ role: "system", content: prompt.system + (KIND === "module" ? MODULE_NOTE : "") + "\n\n" + jsonContract(task) }, { role: "user", content: prompt.user.replace(/<<(TASK_NAME|CURRENT_DRAFT|USER_REQUEST|REFERENCE_CONTEXT|OUTPUT_FORMAT)>>/g, (_, key2) => values[key2]) }];
+    return [{ role: "system", content: MEMORY_DEFAULT_PROMPT_1 + "\n\n" + MEMORY_DEFAULT_PROMPT_2 + "\n\n" + prompt.system + (KIND === "module" ? MODULE_NOTE : "") + "\n\n" + jsonContract(task) }, { role: "user", content: prompt.user.replace(/<<(TASK_NAME|CURRENT_DRAFT|USER_REQUEST|REFERENCE_CONTEXT|OUTPUT_FORMAT)>>/g, (_, key2) => values[key2]) }];
   }
   var LORE_KEYS = ["comment", "key", "secondkey", "content", "insertorder", "mode", "alwaysActive", "selective", "useRegex", "activationPercent"];
   var REGEX_KEYS = ["comment", "in", "out", "flag", "ableFlag", "type"];

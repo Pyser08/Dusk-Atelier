@@ -98,16 +98,17 @@ function customPrompts(ctx, s, ed, bot, live) {
     const paint = () => ed(() => {});
     const text = h("textarea", { class: "rb-input", rows: 5, "aria-label": "추가 프롬프트 본문", maxlength: 12000, onChange: (e) => set("text", e.target.value) }, p.text);
     const nm = h("input", { class: "rb-input", value: p.name, placeholder: "이름(선택)", "aria-label": "이름", maxlength: 60, onChange: (e) => set("name", e.target.value.trim()) });
+    const position = h("label", { class: "rb-mem-field" }, h("span", null, "삽입 위치"), h("select", { class: "rb-input", "aria-label": "프롬프트 삽입 위치", value: p.position ?? "back", onChange: (e) => set("position", e.target.value) }, [["front", "앞"], ["back", "뒤"]].map(([value, label]) => h("option", { value, selected: (p.position ?? "back") === value }, label))));
     return h("article", { class: ["rb-card", "rb-mem-feat", p.enabled && "on"] },
       h("div", { class: "rb-mem-shead" }, nm, h("span", { style: "flex:1" }), switchEl(p.enabled, { label: "사용", onChange: (v, el) => { setSwitch(el, v); set("enabled", v); } })),
-      h("p", { class: "rb-muted" }, scopeText(p)), text, h("div", { class: "rb-mem-chats" }, stages),
+      h("p", { class: "rb-muted" }, scopeText(p)), position, text, h("div", { class: "rb-mem-chats" }, stages),
       btn("삭제", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "추가 프롬프트를 지울까요?", body: p.name || "이름 없는 규칙", ok: "지우기", danger: true })) ed((x) => { x.customPrompts.splice(i, 1); }); } }));
   };
   const add = (kind) => {
     if (list.length >= 40) return ctx.toast("추가 프롬프트는 40개까지예요.", { error: true });
     let id = `p${Date.now().toString(36)}`; while (ids.has(id)) id += "x";
     const scope = kind === "all" ? { kind: "all" } : kind === "bot" ? { kind: "bot", characterId: String(bot.id), label: bot.character?.name ?? "" } : { kind: "chat", characterId: live.characterId, chatKey: live.chatKey, label: live.chat ?? "" };
-    ed((x) => { x.customPrompts = [...(x.customPrompts ?? []), { id, name: "", stages: ["writer"], scope, enabled: true, text: "새 규칙을 여기에 적어 주세요." }]; });
+    ed((x) => { x.customPrompts = [...(x.customPrompts ?? []), { id, name: "", stages: ["writer"], scope, enabled: true, position: "back", text: "새 규칙을 여기에 적어 주세요." }]; });
   };
   return sec(["추가 프롬프트", null], "기본 규칙 뒤에 덧붙는 내 규칙이에요. 출력 형식은 바꾸지 못해요. 단계마다 켜고 끌 수 있어요.",
     list.map(row), list.length ? null : h("p", { class: "rb-muted" }, "아직 없어요."),

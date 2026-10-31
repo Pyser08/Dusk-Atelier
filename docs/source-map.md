@@ -1,4 +1,6 @@
-# Dusk Atelier 소스 구조 지도 (v1.7.1 기준, tools/source-map.mjs로 자동 생성)
+# Dusk Atelier 소스 구조 지도 (v1.8.0 기준, tools/source-map.mjs로 자동 생성)
+
+v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`, 페르소나 화면은 `src/ui/screens/personabuilder.js`, 홈의 이야기 도우미는 `src/ui/screens/home.js`, 설정 지연 로딩은 `src/ui/screens/settingstab.js`에서 관리한다.
 
 새 채팅에서 파일을 찾을 때 먼저 이 문서를 보고, 필요한 파일만 읽는다. 저장소: Pyser08/Dusk-Atelier. 기능 작업은 브랜치에서 하고 main에 push하면 release.yml이 package.json 버전으로 릴리스한다. 갱신: `node tools/source-map.mjs > docs/source-map.md` 후 프로젝트 문서 `claude/source-map.md`로 올린다(`project_write` + `local_path`).
 
@@ -12,8 +14,10 @@
 
 ## 계층 규칙
 - `engine/` 순수 로직(브라우저·api 없이 테스트 가능), `data/` api·저장소 접근, `ui/` 화면(DOM은 `ui/dom.js`의 `h()`/`replace()`, 공용 위젯 `ui/kit.js`), `tide/` RisuTide 통합.
+- UI 메뉴는 `src/ui/tabs.js`의 `section`으로 기억(장기 기억·기억 카드) → 관리(캐릭터·모듈·플러그인) → 작업실(플러그인 꾸미기·도구·설정·개발) 순서로 묶는다. 홈은 그룹 바깥에 둔다. `ui/app.js`가 사이드바·상단 메뉴·모바일 탭바에 같은 그룹 구성을 반영한다.
 - UI 상태는 `ctx.state` 아래 객체(기억 탭은 `ctx.state.mem`, 카드 탭은 `m.ctab`). 화면 전환은 부분 갱신 우선(전체 재렌더 금지: 버벅임 원인). plugins·tools·settings 탭은 DOM을 보존하고 재방문 시 재렌더 생략(`ui/app.js`).
 - 장기기억(v1.6.4): 저장소 `data/memorystore3.js`(키 `dusk.mem.v3.*`) → 턴 흐름 `data/memoryturn.js`(리수폿 컨트롤러 + Dusk 러너/주입, `memory.flow`) → 화면 `ui/screens/memory/`. 설정은 `index.settings.flow`(기본 꺼짐)와 리수폿 설정(`memory.flow.settings()`). 모델은 `data/modelhub.js`(`runAI`의 `pick.mode:"custom"`).
+- 기본 사용자 프롬프트: `data/memoryturn.js`가 최초 1회 앞·뒤 프리셋(`[프롬1]`, `[프롬2]`)을 모든 봇·채팅 범위로 시드하며, 고급 설정 `advanced.js`에서 삽입 위치와 적용 단계를 수정한다.
 
 ## 파일 목록
 ### src/
@@ -45,11 +49,12 @@
 - `memorystore3.js` (134줄) 장기기억 v3 저장소: v2와 같은 메서드 + 채팅별 인물 위키(wiki) + 리수폿 가져오기. 직렬… — INDEX_KEY, FOLDER_PREFIX, createMemoryStoreV3
 - `memoryswitches.js` (44줄) v1.7.0 2단계: 화면이 쓰는 '기억 · 리수폿' 스위치 묶음. 저장은 인덱스(store.upda… — currentChat, createSwitches
 - `memorytools.js` (33줄) 인물 AI 도구(7단계 B): 리수폿 컨트롤러를 한 묶음으로 만든다. 턴 흐름이 켜져 있고 그 채팅이… — makeTools
+- `memory-default-prompts.js` 장기기억 기본 프롬프트 원문 편집 위치. `MEMORY_DEFAULT_PROMPT_1`, `MEMORY_DEFAULT_PROMPT_2`를 수정하면 `memoryturn.js`가 최초 기본 프리셋 생성에 사용한다.
 - `memoryturn.js` (210줄) 턴 흐름 (v1.6.4 4단계): 리수폿 인물 위키(고르기·정리 노트·기록하기)와 Dusk 기록을 한… — promptKeysOf, stageOf, createTurnFlow
 - `modelhub.js` (73줄) 모델 허브 (v1.6.4 3단계): 모델 프리셋 저장·키 보관·내 API 호출·토큰 사용량. 화면은 … — getCfg, saveCfg, keyStore, pickForStage, getUsage
 - `modules.js` (241줄) — loadCharacters, readDb, entriesOf, loadModuleState, moduleCounts
 - `persona.js` (152줄) — loadPersonaMap, savePersonaMap, setPersonaLink, syncPersonaModules
-- `personabuilder.js` (353줄) 페르소나 빌더: 설명 양식(프리셋) 파싱·조립, AI 프롬프트, 저장소, 공유 코드 — parseTemplate, addField, removeField, addSection, removeSection
+- `personabuilder.js` 페르소나 빌더: 설명 양식·AI 작성/번역·공유 코드와 우측 하단 고정 버튼 위에 뜨는 비모달 AI 대화 패널. AI 요청은 memory-default-prompts.js의 기본 프롬프트를 함께 사용한다.
 - `personaroulette.js` (52줄) 페르소나 룰렛: 칸마다 범주를 고르고 무작위로 뽑아 콘셉트에 보탠다. — spin, wheelItems
 - `pluginTemplate.js` (185줄) 플러그인 만들기 — 템플릿, 머리말·등록 코드 동기화, 검사, 설치용 객체, 도움말 — buildTemplate, syncMeta, isValidVersion, cmpVersion, checkCode
 - `plugins.js` (191줄) 플러그인 탭 데이터 계층 — DA Interop v1 호스트 + 플러그인 관리 — listInterop, sendPatch, presetValues, waitAck, pruneInterop
@@ -219,14 +224,14 @@
 - `assetmgr.js` (1063줄) 
 - `characters.js` (633줄) 
 - `chareditor.js` (224줄) 
-- `chattheme.js` (166줄) 채팅 테마 (v1.7.0): 도구 안의 한 곳. 만든 테마 목록 · 켜기/끄기 · 코드/파일 내보내기…
+- `chattheme.js` (166줄) 채팅 테마 빌더 (v1.7.0): 도구 안의 채팅 테마 빌더. 만든 테마 목록 · 켜기/끄기 · 코드/파일 내보내기…
 - `dev.js` (618줄) 
 - `devaff.js` (84줄) 개발 탭 → 봇: 호감도 HUD 기능 프리셋 카드. 설치하면 이 봇 배경 HTML에 ♡ 버튼 HUD가…
 - `devtools.js` (405줄) 
 - `editor.js` (2526줄) 
 - `greetings.js` (203줄) 퍼스트 메시지 관리자 (v1.6.7 6단계): 첫 메시지·추가 인사말·그룹 전용 인사말이 많아도 보기…
 - `history.js` (142줄) 
-- `home.js` (170줄) 홈 (v1.7.0 6단계): 지금 열린 채팅 → 상태 3줄(기억·리수폿·인물) → 바로 하기 9칸. …
+- `home.js` 홈: 채팅·장기기억 상태와 바로가기·최근 기록·이야기 도우미. 장기기억 토글 뒤에는 홈 전체를 다시 읽지 않고 상태 카드만 갱신한다.
 - `infocard.js` (42줄) 봇·모듈 편집기 '정보' 탭이 같이 쓰는 요약 카드·접는 카드 스타일 (v1.6.9: 모듈도 봇과 같…
 - `loredusk.js` (101줄) 로어북 더스크화 창: 구분선 규칙 변환 / AI 분석 → 미리보기(체크한 것만) → 적용
 - `lorelog.js` (107줄) 도구 → 로어북 로그: 응답마다 어떤 로어북이 들어갔는지
@@ -267,6 +272,7 @@
 - `guide.js` (19줄) 작은 ? 가이드 버튼: 누르면 그 자리에 맞는 첫 켜기 안내가 떠요. 홈 안내에서는 처음 설정을 다시…
 - `index.js` (19줄) 기억 탭 진입점 (1.7.0 3단계). 화면은 셋: home(기억) · detail(기록 보기) · …
 - `ledger.js` (46줄) v1.6.2 장부 탭: 열린 항목 · 관계 변화 · 세계 시간선. 로컬 저장소일 때만 고칠 수 있다.
+- `autotrackingbox.js` (신규) 자동 기록·인물 추적 설정 상자: 기억 탭 간단 모드 본문 / 고급 모드 오른쪽 패널의 기억 방식 아래에서 공유한다.
 - `madv.js` (58줄) 기억 화면 '고급' 영역 (1.7.0 3단계). 고급 모드에서만 보인다. 자주 쓰는 것을 위에, 예전…
 - `makebot.js` (24줄) 카드 → 새 봇 만들기(공용). 카드 이미지 PNG를 에셋으로 저장하고, 카드를 저장한 뒤, 봇을 추…
 - `mbots.js` (37줄) 봇별 기억 (1.7.0 3단계, 계획 §3.2): 검색 · 봇마다 사용 스위치 · 눌러서 기록 보기.
@@ -330,3 +336,30 @@
 - 쓰기는 `setCharacterToIndex`/`setDatabaseLite`(둘 다 호스트 차단 시 친절한 오류로 감싸는 래퍼 있음: main.js).
 - 채팅 메뉴 버튼 `registerButton({location:"action"})`(main.js), 우하단 알림은 메인 화면(mainDom) 권한이 있을 때만(`data/retrytoast.js`·`ui/toast.js`).
 
+
+
+## v1.8.0 구조 변경 메모
+
+- `src/ui/screens/memory/mhome.js`: 기억 홈의 상태·기록·설정을 배치한다. 기억 탭 첫 진입 안내는 `embeddingguide.js`에서 한 번만 표시한다.
+- `src/ui/screens/pot.js`: `advancedPot()`을 내보내 인물 위키 안에서 기존 자동 기록 고급 설정을 재사용한다.
+- `src/ui/screens/memory/modebar.js`: 저장소 선택을 간단·고급 모드에서 유지하며, BardWiki 최초 선택은 기억 탭 진입 시 안내한다.
+- `src/ui/screens/memory/wikiview.js`: 인물 위키 문서·기록 UI만 담당한다. 자동 기록·인물 추적 설정은 기억 탭의 `autotrackingbox.js`로 분리했다.
+- `src/ui/tabs.js` / `src/ui/app.js`: 외부 인물·리수폿 탭과 화면 라우트를 제거한다.
+- `src/ui/styles.js`: 기존 Dusk 카드·접이식 UI와 통합 패널의 반응형 배치를 추가한다.
+
+- `src/ui/screens/memory/embeddingguide.js` (신규) 기억 탭에 처음 진입할 때 임베딩(의미 검색)을 한 번 안내한다. 플러그인 저장소의 고정 키로 표시 여부를 기억해 이후 실행·업데이트에서는 다시 띄우지 않는다.
+
+
+## 메뉴 개요 화면 업데이트
+
+- `src/ui/screens/sectionhome.js`: 기억·관리·작업실 그룹별 기능 바로가기 개요 화면.
+- `src/ui/tabs.js`: 각 그룹에 개요 탭 추가, 작업실에서 꾸미기와 도구 사이에 AI로 봇 만들기 탭 배치.
+- `src/ui/app.js`: AI 봇 제작 라우트 및 상단 설정 톱니바퀴 버튼.
+- `src/ui/screens/home.js`: 홈 바로가기를 가져오기·기억·관리·작업실 4개로 정리.
+
+
+## 그룹 개요 및 홈 바로가기 UI 조정
+
+- 그룹 개요 탭(`memory-home`, `manage-home`, `work-home`)은 모바일 전용 메뉴 항목으로 지정. PC 사이드바·상단 메뉴에서는 숨기고, 모바일 하단 그룹 버튼으로 접근.
+- 모바일 그룹 버튼 아이콘: 기억=뇌, 관리=캐릭터, 작업실=몽키렌치(도구).
+- `data/dusk-atelier-ui.v1.css`: 홈 바로가기 4개를 2×2 카드 레이아웃으로 개선하고 간격·아이콘 배경·호버·포커스 상태를 추가.

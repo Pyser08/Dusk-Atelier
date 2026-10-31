@@ -6,6 +6,12 @@ on:
       - 'research/**'
       - 'feature/**'
       - 'feat/**'
+    paths:
+      - 'src/**'
+      - 'tools/**'
+      - 'tests/**'
+      - 'package.json'
+      - '.github/workflows/branch-build.yml'
   pull_request:
     branches: [main]
 

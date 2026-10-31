@@ -7,6 +7,8 @@ import { fail, askRefresh } from "./common.js";
 import { builders, renderGlobalSettings } from "./settings.js";
 import { memoryEditor } from "./editor.js";
 import { loreEditor } from "./loreeditor.js";
+import { memoryEnv } from "./menv.js";
+import { autoTrackingBox } from "./autotrackingbox.js";
 
 export function advancedBlocks(ctx, { cur, idx, redraw, modeHost }) {
   const M = ctx.memory, { S, save, num, sw, section } = builders(ctx, idx, redraw, "");
@@ -35,9 +37,14 @@ export function advancedBlocks(ctx, { cur, idx, redraw, modeHost }) {
   let loaded = false;
   const more = h("details", { class: "rb-mem-man", onToggle: (e) => { if (e.target.open && !loaded) { loaded = true; renderGlobalSettings(ctx, detailHost, { redraw }).catch(fail(ctx)); } } }, h("summary", null, "세부 설정 (추적 수준·기능 카드·모델 상세·가져오기)"), detailHost);
 
+  const trackingHost = h("div");
+  memoryEnv(ctx, { botId: cur.chaId, chatIndex: cur.ti, redraw }).then(async (loaded) => {
+    if (loaded.env) trackingHost.replaceChildren(await autoTrackingBox(loaded.env));
+  }).catch(fail(ctx));
   return [
     modeHost,
     loreEditor(ctx, cur),  // 기억 방식 박스 바로 아래(고급 모드 전용): 대화에 들어가는 로어 편집
+    trackingHost,
     section("저장·기록", h("label", { class: "rb-mem-field" }, h("span", null, "자동 기록 시점"), confirmSel),
       h("label", { class: "rb-mem-field" }, h("span", null, "분석 모델"), mode, sid),
       num("응답 대기 시간(초)", () => S.modelTimeoutSec ?? 600, (s, v) => { s.modelTimeoutSec = Math.max(10, v); }, { min: 10, max: 3600, step: 10 })),

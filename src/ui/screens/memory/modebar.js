@@ -1,5 +1,4 @@
-// 기억 탭 맨 위: 장기기억 방식(저장소). 고급 모드에서만 보인다 (v1.7.0).
-// 간단 모드에서는 화면을 숨기고 저장소를 '자동'으로 맞춘다. 리수폿 기능 스위치는 리수폿 탭으로 옮겨서 여기서 뺐다.
+// 기억 탭 맨 위: 장기기억 방식(저장소). 간단·고급 모드 모두에서 선택을 유지하고 바꿀 수 있다.
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { segmented, note, confirmDialog } from "../../kit.js";
@@ -8,12 +7,6 @@ import { fail, askRefresh } from "./common.js";
 
 export async function renderModeBar(ctx, host, { redraw }) {
   const M = ctx.memory, idx = await M.store.getIndex(), S = idx.settings;
-  // 간단 모드: 저장소는 늘 자동. 예전에 직접 골라 둔 값이 있으면 자동으로 되돌린다(훅은 다음에 불러올 때 반영).
-  if (!ctx.prefs.advanced) {
-    replace(host);
-    if ((S.backend ?? "auto") !== "auto") await M.store.updateIndex((i) => { i.settings.backend = "auto"; }).catch(() => {});
-    return;
-  }
   const backend = M.backend(S);
   const setBackend = async (v) => {
     if (v === (S.backend ?? "auto")) return;
@@ -32,8 +25,8 @@ export async function renderModeBar(ctx, host, { redraw }) {
     backend.duplicate ? note("warn", "BardWiki와 기억이 중복돼요. 비용이 두 번 들 수 있어요.") : null));
 }
 
-// 처음 설치했을 때 딱 한 번: 리스바드(BardWiki)가 감지되면 플러그인 기억으로 바꿀지 묻는다.
-// 어느 쪽을 골라도 다시 묻지 않는다(바꾸고 싶으면 고급 모드의 '장기기억 방식').
+// 기억 탭에 처음 들어왔을 때 딱 한 번: 리스바드(BardWiki)가 감지되면 저장소를 선택한다.
+// 선택은 기억 탭 맨 위에서 언제든 바꿀 수 있다.
 export async function maybeAskBardWiki(ctx) {
   const M = ctx.memory;
   if (!M || !hasBardWiki(ctx.api)) return false;
@@ -43,12 +36,12 @@ export async function maybeAskBardWiki(ctx) {
   if ((idx.settings.backend ?? "auto") !== "auto") return false;  // 이미 직접 고른 사람은 묻지 않는다
   const yes = await confirmDialog(ctx.win, {
     title: "리스바드가 감지됐어요",
-    body: "지금은 리스바드의 기억(BardWiki)을 읽어 써요.\nDusk Atelier의 기억으로 바꿀까요?\n\n바꾸면 응답마다 Dusk가 직접 기억을 쌓고 넣어 줘요. 나중에 고급 모드에서 다시 바꿀 수 있어요.",
-    ok: "플러그인으로 바꾸기", cancel: "그대로 두기"
+    body: "장기기억을 어떤 방식으로 사용할까요?\n\nBardWiki: 리스바드가 관리하는 위키를 읽어요.\nDusk 자체 기억: Dusk가 별도로 기록·분석·주입해요. 두 방식은 동작과 비용이 달라요.\n\n선택은 저장되며 기억 탭 맨 위에서 나중에 바꿀 수 있어요.",
+    ok: "Dusk 자체 기억", cancel: "BardWiki 사용"
   });
-  if (!yes) return false;
-  await M.store.updateIndex((i) => { i.settings.backend = "local"; });
-  ctx.toast("기억을 플러그인으로 바꿨어요.");
+  const backend = yes ? "local" : "bardwiki";
+  await M.store.updateIndex((i) => { i.settings.backend = backend; });
+  ctx.toast(yes ? "Dusk 자체 기억을 선택했어요." : "BardWiki를 선택했어요.");
   askRefresh(ctx);
   return true;
 }

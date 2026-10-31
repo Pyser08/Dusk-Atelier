@@ -43,9 +43,24 @@ test("메뉴 위치: home(홈 카드)은 없고 예전 저장값은 left로 옮�
   assert.equal(normalizeTheme(undefined).layout, "left");
 });
 
-test("탭 구성: 기본 4개(홈·기억·리수폿·인물) + 더보기 묶음", () => {
-  assert.deepEqual(BASE_IDS, ["home", "memory", "pot", "people"]);
-  assert.deepEqual(MORE_IDS, ["characters", "modules", "cards", "look", "tools", "plugins", "settings", "dev"]);
+test("탭 구성: 기억·관리·작업실 3개 그룹과 홈", () => {
+  assert.deepEqual(BASE_IDS, ["home"]);
+  assert.equal(TABS.some((t) => t.id === "pot" || t.id === "people"), false);
+  assert.deepEqual(MORE_IDS, ["memory-home", "memory", "cards", "manage-home", "characters", "modules", "plugins", "work-home", "look", "aibot", "personabuilder", "tools", "settings", "dev"]);
+  assert.deepEqual(TABS.filter((t) => t.section === "memory").map((t) => t.id), ["memory-home", "memory", "cards"]);
+  assert.deepEqual(TABS.filter((t) => t.section === "manage").map((t) => t.id), ["manage-home", "characters", "modules", "plugins"]);
+  assert.deepEqual(TABS.filter((t) => t.section === "work").map((t) => t.id), ["work-home", "look", "aibot", "personabuilder", "tools", "settings", "dev"]);
   assert.equal(TABS.find((t) => t.id === "dev").dev, true);
   assert.equal(new Set(TABS.map((t) => t.id)).size, TABS.length);
 });
+
+
+test("section overview tabs are mobile-only and have the requested icons", () => {
+  for (const [id, icon] of [["memory-home", "brain"], ["manage-home", "character"], ["work-home", "tools"]]) {
+    const tab = TABS.find((t) => t.id === id);
+    assert.equal(tab?.mobileOnly, true);
+    assert.equal(tab?.icon, icon);
+  }
+});
+
+// Build trigger: assertions include the relocated persona-builder tab.

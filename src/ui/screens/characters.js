@@ -40,12 +40,13 @@ function charSummary(c, i) {
     modules: c.modules ?? [],
     streaming: isGenerating(c),
     desc: (c.creatorNotes || c.desc || "").slice(0, 400),
-    size: cardSize(c)
+    size: null
   };
 }
 /** 봇 하나를 저장한 뒤: 전체를 다시 읽지 않고 그 봇만 목록에 바로 반영한다 */
 export function patchSavedChar(ctx, index, saved) {
   const st = ctx.state;
+  st.charSizeDirty = true;
   if (!st.chars || !saved || saved.trashTime) {
     st.charsDirty = true;
   } else {
@@ -96,6 +97,7 @@ function applyChars(ctx, db, lc) {
     st.chars = (db?.characters ?? []).map((c, i) => c && !c.trashTime ? charSummary(c, i) : null).filter(Boolean);
     st.charModNames = new Map((db?.modules ?? []).map((m) => [m.id, m.name]));
     st.charsDirty = false;
+    st.charSizeDirty = true;
     st.charsAt = Date.now();
     st.charOrderStale = false;
   }
@@ -113,6 +115,13 @@ async function drawCharacters(ctx) {
   const q = st.search.trim().toLowerCase();
   const filtering = !!q;
   const sort = ctx.prefs.ui?.charSort ?? null;
+  // 전체 캐릭터 JSON 크기는 기본 목록 렌더링에서 계산하지 않는다. 크기 정렬을 고른 경우에만 읽는다.
+  if (sort?.key === "size" && st.charSizeDirty !== false) {
+    const { lc } = await fetchChars(ctx);
+    const sizes = new Map(lc.list.filter(Boolean).map((c) => [c.chaId, cardSize(c)]));
+    for (const c of st.chars) c.size = sizes.get(c.chaId) ?? 0;
+    st.charSizeDirty = false;
+  }
   st.charSorted = !!sort;
   const srt = (arr, get) => sortBy(arr, sort, (x) => get(x)?.name ?? "", (x) => get(x)?.size ?? 0);
   const list = srt(st.chars, (c) => c).filter((c) => !q || c.name.toLowerCase().includes(q) || String(c.creator ?? "").toLowerCase().includes(q));

@@ -1,9 +1,8 @@
-// 설정 탭 (v1.7.0 7단계, 계획 §3.13): 화면(모드·메뉴 위치·꾸미기) → 이야기 도우미 스위치 3 → (고급) 개발자 → 백업 → 둘러보기·새로 바뀐 점.
+// 설정 탭 (v1.7.0 7단계, 계획 §3.13): 화면(모드·메뉴 위치·플러그인 꾸미기) → (고급) 개발자 → 백업 → 둘러보기·새로 바뀐 점.
 // 세부는 고급 모드에서만: 주사위·로어북·기억 버튼·테마 대상·기록·설정 정리·업데이트 설정·정보.
 import { renderPrompts } from './promptstab.js';
-import { openEmbedModal } from './memory/embedmodal.js';
 import { h, replace } from '../dom.js';
-import { advFold, guidePanel, pageHead, segmented, switchEl } from '../kit.js';
+import { advFold, guidePanel, pageHead, segmented } from '../kit.js';
 import { icon } from '../icons.js';
 import { openTour } from '../tour.js';
 import { CHANGELOG, openChangelog } from '../whatsnew.js';
@@ -14,8 +13,7 @@ import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
 import { openAbout } from './about.js';
 import { loadMemoryButtonOn } from '../../data/memorybutton.js';
-import { loadStoryTimeOn } from '../../data/storytime.js';
-import { loadFairOn, loadDiceOn, loadDiceMode, DICE_KEY, DICE_MODE_KEY } from '../../data/fairplay.js';
+import { loadDiceMode, DICE_MODE_KEY } from '../../data/fairplay.js';
 
 export async function renderSettingsTab(ctx) {
   if (ctx.state.sub === "prompts") return renderPrompts(ctx);
@@ -25,26 +23,9 @@ export async function renderSettingsTab(ctx) {
   const adv = ctx.prefs.advanced;
   const fail = (e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
 
-  // ── 이야기 도우미(스위치 3) ──
-  const fairOn = await loadFairOn(ctx.api);
-  const diceOn = await loadDiceOn(ctx.api);
-  const diceMode = await loadDiceMode(ctx.api);
-  const stOn = await loadStoryTimeOn(ctx.api);
-  const setFair = async (v) => {
-    try { if (ctx.fairPlay) await ctx.fairPlay.set(v); else await ctx.api.pluginStorage.setItem("dusk.ui.fairPlay", v ? "on" : "off"); ctx.toast(v ? "공정한 전개를 켰어요. 다음 요청부터 적용돼요." : "공정한 전개를 껐어요."); } catch (e) { fail(e); }
-  };
-  const setDice = async (v) => {
-    try { if (ctx.fairPlay) await ctx.fairPlay.setDice(v); else await ctx.api.pluginStorage.setItem(DICE_KEY, v ? "on" : "off"); ctx.toast(v ? "유저 편향 없애기를 켰어요. 공정한 전개가 켜져 있을 때 다음 요청부터 적용돼요." : "유저 편향 없애기를 껐어요."); } catch (e) { fail(e); }
-  };
-  const setStory = async (v) => {
-    try { if (ctx.storyTime) await ctx.storyTime.set(v); else await ctx.api.pluginStorage.setItem("dusk.ui.storyTime", v ? "on" : "off"); ctx.toast(v ? "이야기 시간 삽입을 켰어요. 다음 요청부터 적용돼요." : "이야기 시간 삽입을 껐어요."); } catch (e) { fail(e); }
-  };
-  const diceModeSeg = segmented([["reinterpret", "재해석"], ["respect", "존중"]], diceMode, async (v) => {
-    try { if (ctx.fairPlay) await ctx.fairPlay.setDiceMode(v); else await ctx.api.pluginStorage.setItem(DICE_MODE_KEY, v); ctx.toast(v === "respect" ? "내가 적은 결과를 그대로 따를게요." : "내가 적은 결과도 시도로 보고 주사위로 가릴게요."); } catch (e) { fail(e); }
-  }, "내가 결과까지 적었을 때");
+  const diceModePromise = loadDiceMode(ctx.api).catch(() => "reinterpret");
 
   // ── 줄 만들기 ──
-  const switchRow = (title, text, on, onChange) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, text ? h("small", null, text) : null), switchEl(on, { label: title, onChange: (v, el) => { el.setAttribute("aria-checked", v ? "true" : "false"); onChange(v); } }));
   const segRow = (title, text, seg, cls = "") => h("div", { class: ["rb-srow has-seg", cls] }, h("span", { class: "t" }, title, text ? h("small", null, text) : null), seg);
   const linkRow = (title, text, onClick, id) => h("button", { type: "button", class: "rb-srow", onClick, id }, h("span", { class: "t" }, title, text ? h("small", null, text) : null), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
   const card = (title, ...rows) => h("section", { class: "rb-card bordered rb-scard" }, title ? h("span", { class: "h" }, title) : null, ...rows);
@@ -58,18 +39,7 @@ export async function renderSettingsTab(ctx) {
       "화면",
       segRow("화면 모드", "고급을 켜면 각 화면에 세부 설정이 더 보여요.", segmented([["simple", "간단"], ["advanced", "고급"]], ctx.prefs.uiMode, (v) => ctx.setUiMode(v), "화면 모드")),
       segRow("메뉴 위치", "PC에서 메뉴를 왼쪽 또는 위쪽에 둬요.", layoutSeg, "rb-pc-only"),
-      linkRow("꾸미기", "색·밝기·글자 크기", () => ctx.go("look"), "rb-set-look")
-    ),
-    card(
-      "기억 · 리수폿",
-      linkRow("기억·리수폿 프롬프트", "쓸 때 덧붙일 내 프롬프트 · JSON/.risup 불러오기", () => ctx.go("settings", "prompts"), "rb-set-prompts"),
-      linkRow("임베딩(의미 검색)", "뜻이 비슷한 기억 찾기 · API 주소·키·기본 사용·대기 시간", () => { if (ctx.memory?.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, "rb-set-embed")
-    ),
-    card(
-      "이야기 도우미",
-      switchRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair),
-      switchRow("유저 편향 없애기", "캐릭터가 나만 편들지 않게 해요.", diceOn, setDice),
-      switchRow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요.", stOn, setStory)
+      linkRow("플러그인 꾸미기", "색·밝기·글자 크기", () => ctx.go("look"), "rb-set-look")
     ),
     adv ? devToggleCard(ctx, () => {
       ctx.refreshTabs();
@@ -79,11 +49,28 @@ export async function renderSettingsTab(ctx) {
     card(null, linkRow("처음 둘러보기", null, () => openTour(ctx), "rb-set-tour"), linkRow(`v${ctx.version} 새로 바뀐 점`, null, () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록"), "rb-set-whatsnew"))
   );
 
+  // 기본 설정은 먼저 보여 주고, 고급 설정 데이터는 뒤에서 불러와요.
+  const shell = h("div", { class: "rb-scroll rb-mem2", "data-page": "settings" },
+    h("div", { class: ["rb-mem2-grid", adv && "has-adv"] },
+      main,
+      adv ? h("div", { class: "rb-mem2-side" }, h("div", { class: "rb-card bordered" }, h("span", { class: "h" }, "고급 설정"), h("span", { class: "rb-muted" }, "불러오는 중…"))) : null
+    )
+  );
+  const advSide = shell.querySelector(".rb-mem2-side");
+  replace(ctx.main, shell);
+
+  const diceMode = await diceModePromise;
+  const diceModeSeg = segmented([["reinterpret", "재해석"], ["respect", "존중"]], diceMode, async (v) => {
+    try { if (ctx.fairPlay) await ctx.fairPlay.setDiceMode(v); else await ctx.api.pluginStorage.setItem(DICE_MODE_KEY, v); ctx.toast(v === "respect" ? "내가 적은 결과를 그대로 따를게요." : "내가 적은 결과도 시도로 보고 주사위로 가릴게요."); } catch (e) { fail(e); }
+  }, "내가 결과까지 적었을 때");
+
   // ── 고급 영역 ──
   let advBlocks = [true];
   if (adv) {
-    const memBtnOn = await loadMemoryButtonOn(ctx.api);
-    const lore = await loadLoreSettings(ctx.api).catch(() => ({ ...LORE_DEFAULTS }));
+    const [memBtnOn, lore] = await Promise.all([
+      loadMemoryButtonOn(ctx.api),
+      loadLoreSettings(ctx.api).catch(() => ({ ...LORE_DEFAULTS }))
+    ]);
     const saved = h("span", { class: "rb-muted", style: "font-size:12.5px" });
     const setLore = async (patch) => {
       Object.assign(lore, patch);
@@ -122,14 +109,14 @@ export async function renderSettingsTab(ctx) {
       sec("채팅 메뉴", lab("기억 버튼", memBtnSeg), note("채팅 입력 옆 메뉴의 [기억] 버튼을 보이거나 숨겨요. 기억 기능 자체는 그대로예요.")),
       sec("정리 · 기록", tiles),
       guidePanel("이럴 땐 여기로", "하고 싶은 일을 누르면 해당 화면으로 가요.", [
-        { label: "색·글자 크기를 바꾸고 싶어요", text: "꾸미기", onClick: () => ctx.go("look") },
+        { label: "색·글자 크기를 바꾸고 싶어요", text: "플러그인 꾸미기", onClick: () => ctx.go("look") },
         { label: "모듈이 꼬였어요, 되돌리고 싶어요", text: "기록 · 되돌리기", onClick: () => ctx.go("settings", "history") },
         { label: "다른 기기로 옮기고 싶어요", text: "전체 백업·복원", onClick: () => fullBackup(ctx) },
         { label: "새 봇을 알아서 잡아 주면 좋겠어요", text: "업데이트 설정", onClick: () => ctx.go("settings", "updset") },
-        { label: "내 채팅 테마를 만들고 싶어요", text: "채팅 테마", onClick: () => ctx.go("tools", "chattheme") }
+        { label: "내 채팅 테마를 만들고 싶어요", text: "채팅 테마 빌더", onClick: () => ctx.go("tools", "chattheme") }
       ])
     ];
   }
   const advEl = advFold(ctx, "settings", ...advBlocks);
-  replace(ctx.main, h("div", { class: "rb-scroll rb-mem2", "data-page": "settings" }, h("div", { class: ["rb-mem2-grid", adv && "has-adv"] }, main, advEl ? h("div", { class: "rb-mem2-side" }, advEl) : null)));
+  if (advSide && advEl) replace(advSide, advEl);
 }

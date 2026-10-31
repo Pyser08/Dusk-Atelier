@@ -63,7 +63,7 @@ async function draw(ctx, host, redraw) {
 }
 
 // 고급: 리수폿 전용 설정(기억 설정과 따로 저장) · 롤백 충돌 · 되돌리기 기록 · 세부
-function advancedPot(ctx, env, cur, idx, redraw) {
+export function advancedPot(ctx, env, cur, idx, redraw) {
   const M = ctx.memory, S = idx.settings, ps = S.potStore ?? {};
   const savePs = (patch) => M.store.updateIndex((i) => { i.settings.potStore = { ...(i.settings.potStore ?? {}), ...patch }; }).then(() => redraw()).catch(fail(ctx));
   const sel = (label, value, opts, onPick) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("select", { class: "rb-input", "aria-label": label, onChange: (e) => onPick(e.target.value) }, opts.map(([v, l]) => h("option", { value: v, selected: value === v }, l))));
