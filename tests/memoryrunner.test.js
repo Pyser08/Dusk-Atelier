@@ -27,6 +27,7 @@ test("messages with the same first 200 characters get distinct full identities a
   const b = { role: "char", chatId: "same-prefix-b", data: prefix + "tail-B" };
   assert.equal(hashText(a.data), hashText(b.data), "legacy hashes collide on the shared prefix");
   assert.notEqual(messageIdentity(a), messageIdentity(b), "new identity includes message ID and the full body");
+  assert.notEqual(messageIdentity(a), messageIdentity({ ...a, data: prefix + "tail changed" }), "the same ID with a different full body is also a different identity");
   const { api, store } = setup();
   const runner = createMemoryRunner(api, { store, call: async () => good });
   const plan = runner.planBackfill([a, b]);
