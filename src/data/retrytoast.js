@@ -43,6 +43,8 @@ export function createRetryToast(api, { onRetry, onOpen, scheduler = globalThis,
 export function judgeAutoResult({ phase, message = "", scope = null }) {
   if (/자동 재시도 \d\/2/.test(message)) return null;  // 곧 스스로 다시 시도한다
   if (/리롤|삭제되어|RP 본문이 바뀌어/.test(message)) return null;
+  // 관계 전용 모드에서 변화 없음(no_canonical_change)은 정상 완료다. 문서가 없어도 실패로 취급하지 않는다.
+  if (phase === "completed" && /이번 RP에서 새로 반영할 인물관계 변화가 없었습니다/.test(message)) return null;
   if (phase === "manual") {  // 사람이 확인해야 하는 상태: 다시 시도해도 같은 결과라 버튼을 숨긴다
     if (/이전 자동 변경 이후|안전하게 되돌릴 수 없/.test(message)) return { kind: "conflict", retry: false, text: "이 응답을 고치기 전의 자동 기록이 있는데, 그 뒤에 인물 문서를 직접 고쳐서 자동으로 되돌릴 수 없어요. 인물 문서를 확인해 주세요." };
     return { kind: "manual", retry: false, text: String(message).replace(/^수동 확인 필요\s*·\s*/, "").trim().slice(0, 200) || "이 응답은 자동 기록하지 않았어요. 필요하면 직접 확인해 주세요." };
