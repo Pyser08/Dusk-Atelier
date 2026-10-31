@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createMemoryStore } from "../src/data/memorystore.js";
 import { createMemoryRunner } from "../src/data/memoryrunner.js";
-import { hashText, extractMessageText, messageIdentity } from "../src/engine/chattext.js";
+import { hashText, messageIdentity } from "../src/engine/chattext.js";
 import { reconcile } from "../src/engine/memoryreconcile.js";
 
 const LONG = "비가 내리는 옥상에서 미나가 하루의 손을 잡고 오래 숨겨 둔 비밀을 처음으로 털어놓았다. 하루는 아무 대답도 하지 못했다. ".repeat(2);
