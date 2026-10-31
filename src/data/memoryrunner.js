@@ -1,5 +1,5 @@
 // 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 await 하지 않는다.
-import { extractMessageText, isUserMessage, hashText, confirmedAiIndex, isChatGenerating as isGenerating } from "../engine/chattext.js";
+import { extractMessageText, isUserMessage, messageIdentity, messageIdOf, confirmedAiIndex, isChatGenerating as isGenerating } from "../engine/chattext.js";
 import { analyze } from "../engine/memoryprompt.js";
 import { customPromptPlain } from "../engine/pot/custom-prompts.js";
 import { reconcile } from "../engine/memoryreconcile.js";
@@ -13,7 +13,6 @@ import { emoForPrompt } from "../engine/memoryemo.js";
 import { hintsForPrompt } from "../engine/memoryinner.js";
 import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engine/memorydigest.js";
 
-const midOf = (m) => typeof m?.chatId === "string" && m.chatId && !m.chatId.startsWith("inherited:") ? m.chatId : null;
 const MAX_FAILS = 5;
 // 자동 기록 시점: next(기본) = 다음 입력을 보낼 때 직전 응답을 확정해 기록 | now = 응답 직후
 const confirmOf = (idx) => idx?.settings?.confirm === "now" ? "now" : "next";
@@ -40,7 +39,7 @@ export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = 
     const chaId = String(character.chaId ?? charIndex), chatId = String(chat.id ?? chatIndex);
     const messages = chat.message ?? [], last = group.at(-1), m = messages[last];
     const text = group.map((i) => group.length > 1 ? line(messages[i], i, 3000) : extractMessageText(messages[i]).trim()).join("\n\n");
-    const h = hashText(extractMessageText(m)), anchor = { at: last, mid: midOf(m), h };
+    const h = messageIdentity(m), anchor = { at: last, mid: messageIdOf(m), h };
     const idx = await store.getIndex(), bot = idx.bots[chaId] ?? { on: true, ignore: [] };
     return { character, chat, chaId, chatId, messages, last, text, h, anchor, idx, bot };
   }
@@ -106,7 +105,7 @@ export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = 
     const out = await store.updateFolder(chaId, chatId, (folder) => {
       Object.assign(folder, names, { chatIndex });
       reconcile(folder, messages);
-      const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => hashText(extractMessageText(messages[i]))) });
+      const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => messageIdentity(messages[i])) });
       const ev = link?.takeCycle?.() ?? [];
       if (ev.length) res.cycle = addMilestones(folder, ev);
       return res;
@@ -209,7 +208,7 @@ export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = 
   function planBackfill(messages, { from = 0, to = Infinity } = {}, folder = null) {
     const ai = aiIndexes(messages).filter((i) => i >= from && i <= to);
     const done = doneHashes(folder), failedSet = new Set(folder?.failedBackfill ?? []);
-    const hOf = (i) => hashText(extractMessageText(messages[i]));
+    const hOf = (i) => messageIdentity(messages[i]);
     const todo = ai.filter((i) => !done.has(hOf(i)));
     const groups = []; for (let k = 0; k < todo.length; k += 3) groups.push(todo.slice(k, k + 3));
     const chars = groups.reduce((n, g) => n + g.reduce((s, i) => s + extractMessageText(messages[i]).length, 0) + 4000, 0);
@@ -227,7 +226,7 @@ export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = 
       onProgress?.(++n, groups.length, failed.length);
     }
     if (failed.length) {  // 실패한 응답은 기억해 두었다가 현황에 '실패'로 보여 준다(성공하면 applyAnalysis가 지운다)
-      const msgs = chat.message ?? [], hs = failed.flat().map((i) => hashText(extractMessageText(msgs[i])));
+      const msgs = chat.message ?? [], hs = failed.flat().map((i) => messageIdentity(msgs[i]));
       await store.updateFolder(String(character.chaId), String(chat.id ?? chatIndex), (f) => { f.failedBackfill = [...new Set([...(f.failedBackfill ?? []), ...hs])].slice(-500); }).catch(() => {});
     }
     return { total: groups.length, failed };
