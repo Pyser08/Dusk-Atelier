@@ -376,3 +376,4 @@ v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`
 - `homestate.js` (ui) 홈 화면이 읽는 열린 채팅 상태(readState) — 본문·백필 계획 없이 가볍게
 - `staleguard.js` (ui) 낡은 화면의 늦은 그리기 차단 — guardMain, scopeCtx (app.js render가 사용)
 - `memory/chatload.js` (ui) 기억 화면의 채팅 목록 — 보는 채팅 1개만 본문 읽기, countOf
+- `customprompt.js` (engine) 내 프롬프트를 모든 AI 호출에 앞·중간·뒤로 끼움 — applyUserPrompts (runai.js·dev/aibuild/model.js가 사용)

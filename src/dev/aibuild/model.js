@@ -1,5 +1,6 @@
 // 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식. 원작자 허락. 원본은 저장소 ref/botbuilder 브랜치.
 import { assert, bytes } from './util.js';
+import { withUserPrompts } from '../../engine/runai.js';
   async function responseText(result, job) {
     assert(result !== null && result !== void 0, "모델 응답이 없습니다.");
     if (typeof result === "string") {
@@ -37,6 +38,7 @@ import { assert, bytes } from './util.js';
     }
   }
   async function callModel(api2, messages, mode, timeoutSeconds, job) {
+    messages = await withUserPrompts(messages);   // 내 프롬프트를 같은 위치로 (v1.8.1)
     assert(["model", "submodel"].includes(mode), "모델 선택이 올바르지 않습니다.");
     let timer;
     const stopped = new Promise((_, reject) => {

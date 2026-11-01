@@ -7,6 +7,7 @@ import { createBardWikiBackend } from "./memorybackend-bardwiki.js";
 import { selectBackend, capabilitiesOf } from "./memorybackend.js";
 import { createCardStore } from "./cardstore.js";
 import { createTurnFlow } from "./memoryturn.js";
+import { customPromptPlain } from "../engine/pot/custom-prompts.js";
 import { createGaugeService } from "./gauge.js";
 import { createSwitches } from "./memoryswitches.js";
 
@@ -54,5 +55,13 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
     return active;
   }
   const switches = createSwitches({ api, store, flow });
-  return { store, gauge, link, cards, runner, injector, embedder, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, active: () => active };
+  // 내 프롬프트 중 '장기기억 분석' 단계를 켠 것을 위치별 글로 돌려준다. 플러그인의 모든 AI 호출이 같은 위치로 끼운다(runai.js).
+  // 범위(전체·봇·채팅)는 지금 열린 채팅 기준. 열린 채팅이 없으면 '전체' 범위만 적용된다.
+  async function userPrompts() {
+    const s = (await flow?.settings?.())?.rawSnapshot?.();
+    if (!s?.customPrompts?.length) return null;
+    const cur = await switches.currentChat().catch(() => null), sc = cur ? { characterId: cur.chaId, chatKey: cur.chatId } : {};
+    return { front: customPromptPlain(s, "memory", sc, "front"), middle: customPromptPlain(s, "memory", sc, "middle"), back: customPromptPlain(s, "memory", sc, "back") };
+  }
+  return { store, userPrompts, gauge, link, cards, runner, injector, embedder, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, active: () => active };
 }

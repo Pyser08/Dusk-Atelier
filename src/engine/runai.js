@@ -1,4 +1,5 @@
 import { extractRunAIText } from './airesponse.js';
+import { applyUserPrompts } from './customprompt.js';
 
 const isStream = (v) => v && typeof v === "object" && typeof v.getReader === "function";
 // 보조 모델이 {type:"streaming", result: ReadableStream}로 답하면 끝까지 읽어 한 문자열로 만든다.
@@ -26,6 +27,12 @@ export async function settleResponse(res, signal) {
 }
 
 // 내 API 모델(pick.mode === "custom")은 data/modelhub.js가 등록한 실행기로 보낸다. 리스 보조 모델 경로는 그대로.
+// 내 프롬프트 공급자: () => {front, middle, back} | null. 모든 AI 호출 앞에서 같은 위치로 끼운다(customprompt.js).
+let promptProvider = null;
+export function setUserPromptProvider(fn) { promptProvider = fn; }
+export async function withUserPrompts(messages) {
+  try { return applyUserPrompts(messages, await promptProvider?.()); } catch { return messages; }
+}
 let customRunner = null;
 export function setCustomRunner(fn) { customRunner = fn; }
 
@@ -35,6 +42,7 @@ function withTimeout(promise, sec) {
   let t; return Promise.race([promise, new Promise((_, rej) => { t = setTimeout(() => rej(new Error(`보조 모델 응답이 ${sec}초 제한시간을 넘었어요.`)), sec * 1000); })]).finally(() => clearTimeout(t));
 }
 export async function runAI(api, messages, pick, signal) {
+  if (!pick?.noUserPrompts) messages = await withUserPrompts(messages);   // 장기기억 분석은 대상 채팅 기준으로 직접 끼운다
   if (pick?.mode === "custom") {
     if (!customRunner) throw new Error("내 API 모델을 쓸 수 없어요 (모델 설정이 아직 준비되지 않았어요).");
     return customRunner(api, messages, pick, signal);

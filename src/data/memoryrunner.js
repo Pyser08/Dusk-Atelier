@@ -97,7 +97,7 @@ export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = 
     if (gx) Object.assign(input, gx.input);
     if (result) session.combined = (session.combined ?? 0) + 1;
     else session.calls++;
-    try { if (!result) result = await analyze((msgs) => run(msgs, modelOf(idx.settings), signal), input); }
+    try { if (!result) result = await analyze((msgs) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true }, signal), input); }
     catch (e) {
       const fails = await bump(chaId, (b) => ++b.fails);
       await status({ lastError: String(e?.message ?? e).slice(0, 300) });

@@ -36,7 +36,7 @@ export async function renderPrompts(ctx) {
   const st = tracked(ctx, await ctx.memory?.flow?.settings?.().catch(() => null));
   const host = h("div", { class: "rb-mem2-main" });
   replace(ctx.main, h("div", { class: "rb-scroll" }, h("div", { class: "rb-mem2", dataset: { page: "prompts" } }, host)));
-  const head = () => pageHead("기억·리수폿 프롬프트", { sub: "기억·리수폿을 쓸 때 덧붙는 프롬프트예요. 앞·중간·뒤 위치를 고를 수 있어요.", back: { label: "설정으로", onClick: () => ctx.go("settings") } });
+  const head = () => pageHead("기억·리수폿 프롬프트", { sub: "기억·리수폿을 쓸 때 덧붙는 프롬프트예요. 앞·중간·뒤 위치를 고를 수 있어요. ‘장기기억 분석’ 단계를 켠 프롬프트는 페르소나·AI 봇 제작 등 플러그인의 다른 AI 작업에도 같은 위치로 들어가요.", back: { label: "설정으로", onClick: () => ctx.go("settings") } });
   if (!st) return replace(host, head(), emptyState({ icon: "info", title: "아직 쓸 수 없어요", text: "기억·리수폿을 한 번 켠 뒤에 다시 열어 주세요." }));
   const fail = (e) => ctx.toast(e?.message ?? String(e), { error: true });
   const edit = (fn) => { try { st.update(fn); } catch (e) { fail(e); } paint(); };
