@@ -988,6 +988,10 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-sk-pre{margin:8px 0;max-height:150px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:11.5px;line-height:1.5;padding:8px 10px;border-radius:10px;background:var(--rb-bg,transparent);border:1px solid var(--rb-line2)}
 .rb-sk-diag{margin:4px 0;padding-left:16px;font-size:11.5px}.rb-sk-acts{flex-wrap:wrap;gap:6px}.rb-sk-upd{margin-top:6px;font-size:11.5px;color:var(--rb-acc-text)}
 .rb-sk-fab{right:24px}
+.rb-sk-card{display:flex;flex-direction:column;gap:12px;min-width:0}.rb-sk-card>b:first-child,.rb-sk-bar>b{font-size:15px}
+.rb-sk-card .rb-toggle{padding:0;border:0;background:none;box-shadow:none}
+.rb-sk-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}.rb-sk-bar .rb-spacer{flex:1}
+.rb-sk-card .rb-field>div{overflow-wrap:anywhere}.rb-sk-card>button,.rb-sk-card>div>button:only-child{align-self:flex-start}.rb-sk-card>p{margin:0}
 @media(max-width:560px){.rb-pb-chat-fab{right:14px;bottom:14px}.rb-pb-chat{right:10px;bottom:72px;width:calc(100% - 20px);height:min(72%,620px);border-radius:18px}}
 /* v1.8.1 모바일 가독성: 위쪽 영역 줄이기 · 누르는 칸 키우기 · 작은 글씨 올리기 · 칩 줄 끝 표시 · 위키 머리·기록 줄 정리 */
 @media (max-width:760px){

@@ -56,7 +56,7 @@ export function mountSkillChat(ctx, { onSaved } = {}) {
       h("div", { class: "rb-chips" }, st.draft.map((f) => h("button", { type: "button", class: "rb-chip", "aria-pressed": f.path === file.path ? "true" : "false", onClick: () => { st.file = f.path; paintDraft(); } }, f.path))),
       pre,
       warn.length ? h("ul", { class: "rb-muted rb-sk-diag" }, warn.map((d) => h("li", null, d.text))) : null,
-      h("div", { class: "rb-row rb-sk-acts" }, btn("라이브러리에 추가", { size: "sm", kind: "primary", onClick: saveDraft }), btn("ZIP", { size: "sm", onClick: exportDraft("zip") }), btn("JSON", { size: "sm", onClick: exportDraft("json") }), btn("초안 지우기", { size: "sm", onClick: clearDraft }))));
+      h("div", { class: "rb-sk-bar rb-sk-acts" }, btn("라이브러리에 추가", { size: "sm", kind: "primary", onClick: saveDraft }), btn("ZIP", { size: "sm", onClick: exportDraft("zip") }), btn("JSON", { size: "sm", onClick: exportDraft("json") }), btn("초안 지우기", { size: "sm", onClick: clearDraft }))));
   }
   const exportDraft = (kind) => () => { const { set } = draftToSet(st.draft); saveBlob(ctx, `${set.name}.${kind}`, kind === "zip" ? S.zipOfSet(set) : S.exportSet(set), kind === "zip" ? "application/zip" : "application/json"); };
   async function clearDraft() { if (await confirmDialog(ctx.win, { title: "초안을 지울까요?", body: "대화는 남고 초안 파일만 비워요.", ok: "지우기", cancel: "취소", danger: true })) { st.draft = []; st.file = ""; paintDraft(); } }
