@@ -27,7 +27,7 @@ export function patchWorkshop(src) {
     `${ind}  id: ${JSON.stringify(WORKSHOP_INTEROP_ID)}, name: "봇빌더", version: ${JSON.stringify(version)}, pluginName: "risu_story_workshop",`,
     `${ind}  description: "Dusk Atelier에서 봇빌더 화면을 열고, 작업 중인 원고를 넘겨받아요.",`,
     `${ind}  actions: [`,
-    `${ind}    { key: "open", label: "봇빌더 열기", run: async () => { await open(); return { opened: true }; } },`,
+    `${ind}    { key: "open", label: "봇빌더 열기", run: async () => { Promise.resolve().then(open).catch((e) => console.warn("[봇빌더] 열기 실패", e)); return { opened: true }; } },`,
     `${ind}    { key: "draft", label: "작업 중인 원고 보내기", run: async () => this.s?.draft ? { name: String(this.s.draft.name ?? ""), targetId: this.s.targetId ?? null, started: !!this.started, dirty: !!this.dirty?.(), savedAt: this.slots?.autosave?.savedAt ?? null, draft: editable(this.s.draft) } : null }`,
     `${ind}  ]`,
     `${ind}}).catch((e) => console.warn("[봇빌더] DA Interop 등록 실패", e));`
