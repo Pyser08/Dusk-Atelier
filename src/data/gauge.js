@@ -9,8 +9,8 @@ import * as G from "../engine/gauge.js";
 
 const DESIGN_RULES = [
   "You design ONE trackable gauge for a roleplay memory system. Return ONE JSON object only:",
-  '{"name":"","desc":"","min":0,"max":10,"init":0,"step":3,"measure":"what to look at in each response (<=300 chars)","rule":"how the value moves, with examples (<=300 chars)","update":"how to write the per-person change: integer delta, |delta|<=step, evidence required (<=300 chars)","look":{"hue":0-359,"shape":"orb|ring|bar|ticks","icon":"1 emoji"}}',
-  "Keep the user's name and description. Pick a range that fits (small integer scale 0-10 or 0-100). The gauge applies to individual people; no formulas that reference other gauges. Choose a hue and shape that fit the meaning."
+  '{"name":"","desc":"","min":0,"max":10,"init":0,"step":3,"measure":"what to look at in each response (<=300 chars)","rule":"how the value moves, with examples (<=300 chars)","update":"how to write the per-person change: integer delta, |delta|<=step, evidence required (<=300 chars)","look":{"hue":0-359,"shape":"orb|ring|bar|ticks","icon":"1 emoji","c1":"#hex gradient start","c2":"#hex gradient end","text":"#hex title color","card":"inline CSS for the card: background, border, border-radius, box-shadow...","fill":"inline CSS for the filled part: box-shadow, filter, border...","track":"inline CSS for the empty track"}}',
+  "Keep the user's name and description. Pick a range that fits (small integer scale 0-10 or 0-100). The gauge applies to individual people; no formulas that reference other gauges. Design the look yourself so it is original, vivid and fits the meaning (mood, element, season...). `card`/`fill`/`track` are semicolon-separated CSS declarations only (allowed: background, border, border-radius, box-shadow, text-shadow, filter, opacity, outline, clip-path polygon, padding); no url(), var(), or comments. Use dark translucent cards so text stays readable."
 ].join("\n");
 
 export function createGaugeService(api, { store, log = () => {}, call = null } = {}) {

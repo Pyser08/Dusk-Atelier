@@ -82,10 +82,14 @@ export async function openEditor(env, draft, { isNew = false } = {}) {
     const measure = ta("measure"), rule = ta("rule"), update = ta("update");
     const hue = h("input", { type: "range", min: 0, max: 359, value: draft.look.hue, "aria-label": "색" }), shape = h("select", { class: "rb-input" }, G.SHAPES.map((s) => h("option", { value: s, selected: s === draft.look.shape }, { orb: "구슬", ring: "고리", bar: "막대", ticks: "눈금" }[s]))), icon = i("icon", { maxlength: 4 });
     icon.value = draft.look.icon ?? "";
+    const L = draft.look, c1 = h("input", { type: "color", value: /^#[0-9a-f]{6}$/i.test(L.c1) ? L.c1 : "#7c5cf0", "aria-label": "시작 색" }), c2 = h("input", { type: "color", value: /^#[0-9a-f]{6}$/i.test(L.c2) ? L.c2 : "#c9b8ff", "aria-label": "끝 색" });
+    const useC = { v: !!(L.c1 || L.c2) }; [c1, c2].forEach((e) => e.addEventListener("input", () => { useC.v = true; }));
+    const cCard = h("textarea", { class: "rb-input", rows: 2, maxlength: 700 }, L.card ?? ""), cFill = h("textarea", { class: "rb-input", rows: 2, maxlength: 700 }, L.fill ?? ""), cTrack = h("textarea", { class: "rb-input", rows: 2, maxlength: 700 }, L.track ?? "");
+    const regen = h("span");
     const prev = h("div"), msg = h("div");
-    const cur = () => ({ ...draft, name: name.value, desc: desc.value, min: min.value, max: max.value, init: init.value, step: step.value, measure: measure.value, rule: rule.value, update: update.value, look: { hue: +hue.value, shape: shape.value, icon: icon.value } });
+    const cur = () => ({ ...draft, name: name.value, desc: desc.value, min: min.value, max: max.value, init: init.value, step: step.value, measure: measure.value, rule: rule.value, update: update.value, look: { hue: +hue.value, shape: shape.value, icon: icon.value, c1: useC.v ? c1.value : "", c2: useC.v ? c2.value : "", text: L.text, card: cCard.value, fill: cFill.value, track: cTrack.value } });
     const redraw = () => { try { const d = G.normalizeDef(cur(), { id: draft.id }); prev.replaceChildren(html(gaugeBoxHtml({ snap: [{ g: d.id, who: "미리보기", v: d.init }, { g: d.id, who: "다른 인물", v: Math.min(d.max, d.init + d.step) }], items: [] }, [d]).trim())); msg.replaceChildren(); } catch (e) { msg.replaceChildren(note("err", e.message)); } };
-    [name, desc, min, max, init, step, hue, shape, icon].forEach((el) => el.addEventListener("input", redraw)); redraw();
+    [name, desc, min, max, init, step, hue, shape, icon, c1, c2, cCard, cFill, cTrack].forEach((el) => el.addEventListener("input", redraw)); redraw();
     const save = async () => {
       try { const d = G.normalizeDef(cur(), { id: draft.id }); if (isNew) await S.addDef(cha, { ...d, on: false }); else await S.updateDef(cha, d.id, d); S.invalidate(); done(true); }
       catch (e) { msg.replaceChildren(note("err", e?.message ?? String(e))); }
@@ -95,6 +99,10 @@ export async function openEditor(env, draft, { isNew = false } = {}) {
       h("div", { style: "display:grid;grid-template-columns:repeat(4,1fr);gap:6px" }, field("최소", min), field("최대", max), field("처음 값", init), field("한 번에 최대", step)),
       field("무엇을 볼까 (측정)", measure), field("어떻게 움직일까 (변화 규칙)", rule), field("변화 쓰는 법 (갱신)", update),
       h("div", { style: "display:grid;grid-template-columns:1fr 1fr 70px;gap:6px;align-items:end" }, field("색", hue), field("모양", shape), field("아이콘", icon)),
+      h("details", { open: !!(L.card || L.fill || L.track) }, h("summary", null, "디자인 (CSS) — AI가 만든 걸 고칠 수 있어요"),
+        h("div", { style: "display:flex;gap:10px;align-items:center" }, h("span", { class: "rb-muted" }, "그라데이션"), c1, c2, btn("디자인만 AI로 다시", { size: "sm", onClick: async () => { try { msg.replaceChildren(note("info", "AI가 디자인을 다시 만드는 중…")); const d = await S.design({ bot: env.bot?.character?.name, name: name.value, desc: desc.value }, modelOf(env)); const l = d.look; hue.value = l.hue; shape.value = l.shape; icon.value = l.icon; c1.value = /^#[0-9a-f]{6}$/i.test(l.c1) ? l.c1 : c1.value; c2.value = /^#[0-9a-f]{6}$/i.test(l.c2) ? l.c2 : c2.value; useC.v = !!(l.c1 || l.c2); L.text = l.text; cCard.value = l.card; cFill.value = l.fill; cTrack.value = l.track; redraw(); } catch (e) { msg.replaceChildren(note("err", e?.message ?? String(e))); } } })),
+        field("카드 CSS", cCard, "예: background:linear-gradient(135deg,#1b1038,#401a5a);border-radius:16px;box-shadow:0 0 18px #a06cff88"), field("채워진 부분 CSS", cFill), field("빈 칸 CSS", cTrack),
+        h("p", { class: "rb-muted", style: "font-size:11px" }, "안전을 위해 url(), var(), 주석 등은 자동으로 빠져요.")),
       isNew ? h("p", { class: "rb-muted" }, "저장하면 꺼진 상태로 만들어져요. 켜야 8번째 응답마다 자동으로 갱신돼요.") : null, msg,
       h("div", { class: "rb-dialog-actions" }, btn("취소", { onClick: () => done(null) }), btn("저장", { kind: "primary", onClick: save })));
   });

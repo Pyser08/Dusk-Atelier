@@ -12,6 +12,21 @@ const cut = (v, n) => String(v ?? "").trim().slice(0, n);
 export const gkey = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 const rid = (p) => p + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const int = (v, fb) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? n : fb; };
+// AI가 만든 CSS는 채팅 HTML에 들어가므로 허용 속성·안전한 값만 남긴다(url·var·expression·태그·이스케이프 모두 거부).
+const CSS_OK = new Set(["background", "background-color", "background-image", "color", "border", "border-color", "border-width", "border-style", "border-radius", "box-shadow", "text-shadow", "filter", "backdrop-filter", "opacity", "outline", "letter-spacing", "font-weight", "padding", "clip-path"]);
+export function safeCss(v, max = 12) {
+  const out = [];
+  for (const part of String(v ?? "").slice(0, 700).split(";")) {
+    const i = part.indexOf(":"); if (i < 1) continue;
+    const prop = part.slice(0, i).trim().toLowerCase(), val = part.slice(i + 1).trim();
+    if (!CSS_OK.has(prop) || !val || val.length > 160 || /url\(|expression|javascript|@|<|>|\\|var\(|image-set|element\(|attr\(|!important|\/\*/i.test(val)) continue;
+    let d = 0, bad = false; for (const c of val) { if (c === "(") d++; else if (c === ")" && --d < 0) bad = true; } if (bad || d) continue;
+    if (prop === "clip-path" && !/^polygon\(/i.test(val)) continue;
+    out.push(`${prop}:${val}`); if (out.length >= max) break;
+  }
+  return out.join(";");
+}
+const hex = (v) => /^#[0-9a-f]{3,8}$/i.test(String(v ?? "").trim()) ? String(v).trim() : "";
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 
 // ── 정의 검증/정규화. 문제가 있으면 던지고(저장 안 함), 고칠 수 있는 것만 고친다.
@@ -30,7 +45,7 @@ export function normalizeDef(raw, { id = null, now = Date.now() } = {}) {
     id: id ?? (typeof raw?.id === "string" && /^g_[a-z0-9]{6,24}$/.test(raw.id) ? raw.id : rid("g")),
     name, desc: cut(raw?.desc, 200), min, max, init, step,
     rule: cut(raw?.rule, 300), measure: cut(raw?.measure, 400), update: cut(raw?.update, 400),
-    look: { hue: clamp(int(look.hue, 265), 0, 359), shape: SHAPES.includes(look.shape) ? look.shape : "orb", icon: cut(look.icon, 4) },
+    look: { hue: clamp(int(look.hue, 265), 0, 359), shape: SHAPES.includes(look.shape) ? look.shape : "orb", icon: cut(look.icon, 4), c1: hex(look.c1), c2: hex(look.c2), card: safeCss(look.card), fill: safeCss(look.fill), track: safeCss(look.track), text: hex(look.text) },
     targets: targets === "all" || targets.length ? targets : "all",
     on: raw?.on === true,                       // 승인 뒤에만 자동 갱신
     src: ["user", "ai", "suggest"].includes(raw?.src) ? raw.src : "user",

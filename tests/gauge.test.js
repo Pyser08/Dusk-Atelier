@@ -96,3 +96,10 @@ test("삭제 시 값·이력 정리", () => {
   G.removeFromFolder(f, d.id);
   assert.deepEqual(f.gauge.vals, {}); assert.equal(f.gauge.log.length, 0);
 });
+
+test("AI CSS 안전 필터: 허용 속성만, url/var/태그/주석 제거", () => {
+  const css = G.safeCss("background:linear-gradient(#000,#f00);background-image:url(x);color:var(--a);box-shadow:0 0 9px red;width:100%;border:1px solid red<;filter:blur(2px) /*x*/;clip-path:polygon(0 0,100% 0,0 100%);clip-path:circle(1px)");
+  assert.equal(css, "background:linear-gradient(#000,#f00);box-shadow:0 0 9px red;clip-path:polygon(0 0,100% 0,0 100%)");
+  const d = G.normalizeDef({ name: "a", look: { c1: "red", c2: "#abc", card: "border-radius:9px" } });
+  assert.equal(d.look.c1, ""); assert.equal(d.look.c2, "#abc"); assert.equal(d.look.card, "border-radius:9px");
+});
