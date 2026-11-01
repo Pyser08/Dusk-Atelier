@@ -22,18 +22,19 @@ export function createHypaImporter(api, { store, log = (...a) => console.log("[D
   }
   const read = async (key) => { try { const raw = await api.pluginStorage.getItem(key); return readHypaNodes(typeof raw === "string" ? raw : raw ?? null); } catch { return null; } };
   const sum = (a, b) => { for (const k of Object.keys(b)) a[k] = (a[k] ?? 0) + b[k]; return a; };
-  const intoFolder = (chaId, chatId, nodes) => store.updateFolder(String(chaId), String(chatId), (f) => mergeHypaNodes(f, nodes));
+  const intoFolder = (chaId, chatId, nodes, messages = null) => store.updateFolder(String(chaId), String(chatId), (f) => mergeHypaNodes(f, nodes, { messages }));
   const markDone = (total) => store.updateIndex((idx) => { idx.hypa = { state: "done", at: Date.now(), ...total }; });
 
   // 감지된 모든 채팅을 가져온다. onProgress(i, n)로 진행을 알린다.
-  async function importAll(chats, { onProgress = () => {} } = {}) {
-    const total = { chats: 0, scenes: 0, records: 0, people: 0, already: 0, skipped: 0, unreadable: 0 };
+  // messagesFor(chaId, chatId)가 메시지 배열을 주면(지금 열린 채팅) 앵커를 채운다. 그 밖의 채팅은 앵커 없이 넣는다.
+  async function importAll(chats, { onProgress = () => {}, messagesFor = null } = {}) {
+    const total = { chats: 0, scenes: 0, records: 0, people: 0, already: 0, skipped: 0, upgraded: 0, unreadable: 0 };
     for (let i = 0; i < chats.length; i++) {
       onProgress(i, chats.length);
       const nodes = await read(chats[i].key);
       if (!nodes) { total.unreadable++; continue; }
       if (!nodes.length) continue;
-      try { sum(total, await intoFolder(chats[i].chaId, chats[i].chatId, nodes)); total.chats++; } catch (e) { total.unreadable++; log("가져오기 실패", chats[i].key, e?.message ?? e); }
+      try { sum(total, await intoFolder(chats[i].chaId, chats[i].chatId, nodes, (await messagesFor?.(chats[i].chaId, chats[i].chatId).catch(() => null)) ?? null)); total.chats++; } catch (e) { total.unreadable++; log("가져오기 실패", chats[i].key, e?.message ?? e); }
       await new Promise((r) => setTimeout(r, 0));
     }
     onProgress(chats.length, chats.length);
@@ -41,11 +42,11 @@ export function createHypaImporter(api, { store, log = (...a) => console.log("[D
     return total;
   }
   // 백업 파일(JSON 글) 하나를 지정한 채팅에 가져온다.
-  async function importFile(text, chaId, chatId) {
+  async function importFile(text, chaId, chatId, messages = null) {
     const nodes = readHypaNodes(text);
     if (!nodes) throw new Error("HypaPlus 백업 파일이 아니에요.");
     if (!nodes.length) throw new Error("가져올 노드가 없어요.");
-    const r = await intoFolder(chaId, chatId, nodes);
+    const r = await intoFolder(chaId, chatId, nodes, messages);
     await markDone({ chats: 1, ...r });
     return r;
   }

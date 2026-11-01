@@ -44,3 +44,31 @@ test("cut shortens at sentence end when possible", () => {
   const long = "첫 문장이다. ".repeat(60); assert.ok(cut(long, 100).length <= 101);
   assert.equal(cut("짧다", 100), "짧다");
 });
+
+import { messageIdentity } from "../src/engine/chattext.js";
+const withIds = (ids) => ({ chunks: [{ id: "1", chatIds: ids, nodes: [ev("1", "2025-03-01 10:00", ["민지"], "둘은 처음 만났다."), fa("2", ["민지"], "민지는 열쇠를 얻었다.")] }] });
+const msgs = [{ role: "char", data: "첫 응답", chatId: "m0" }, { role: "user", data: "입력", chatId: "m1" }, { role: "char", data: "둘째 응답", chatId: "m2" }];
+test("anchors imported items to the chunk's last message found in the open chat", () => {
+  const f = emptyFolder("c", "t"); mergeHypaNodes(f, readHypaNodes(withIds(["m0", "m1", "m2"])), { messages: msgs });
+  const s = f.scenes[0], r = f.people["민지"].records[0];
+  assert.deepEqual([s.at, s.mid, s.h, s.legacy], [2, "m2", messageIdentity(msgs[2]), undefined]);
+  assert.deepEqual([r.at, r.mid, r.h], [2, "m2", messageIdentity(msgs[2])]);
+});
+test("anchored items follow a reroll (become orphan) but legacy ones do not", () => {
+  const f = emptyFolder("c", "t"); mergeHypaNodes(f, readHypaNodes(withIds(["m2"])), { messages: msgs });
+  reconcile(f, [msgs[0], msgs[1], { role: "char", data: "다시 쓴 응답", chatId: "m2" }]);
+  assert.equal(f.scenes[0].orphan, true);
+});
+test("chunk ids missing from the chat (or the first-message marker) stay legacy", () => {
+  const f = emptyFolder("c", "t"); mergeHypaNodes(f, readHypaNodes(withIds(["__hypaplus_first_message__", "gone"])), { messages: msgs });
+  assert.equal(f.scenes[0].legacy, true); assert.equal(f.scenes[0].h, null);
+  const g = emptyFolder("c", "t"); mergeHypaNodes(g, readHypaNodes(withIds([])), { messages: msgs }); assert.equal(g.scenes[0].legacy, true);
+});
+test("re-import upgrades earlier legacy items once an anchor is available", () => {
+  const f = emptyFolder("c", "t"); const nodes = readHypaNodes(withIds(["m2"]));
+  mergeHypaNodes(f, nodes); assert.equal(f.scenes[0].legacy, true);
+  const r = mergeHypaNodes(f, nodes, { messages: msgs });
+  assert.equal(r.upgraded, 3); assert.equal(r.already, 0, "업그레이드한 것은 '이미 있음'에 세지 않음");
+  assert.equal(f.scenes[0].legacy, undefined); assert.equal(f.scenes[0].at, 2); assert.equal(f.people["민지"].records.length, 2);
+  assert.equal(mergeHypaNodes(f, nodes, { messages: msgs }).already, 2);
+});

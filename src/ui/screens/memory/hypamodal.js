@@ -9,7 +9,7 @@ export async function openHypaModal(ctx, { det, auto = false } = {}) {
   const msg = h("div", { "aria-live": "polite" }), file = h("input", { type: "file", accept: ".json,application/json", "aria-label": "HypaPlus 백업 파일", style: "max-width:100%" });
   let busy = false;
   const show = (kind, text) => msg.replaceChildren(note(kind, text));
-  const report = (r) => `가져왔어요 — 채팅 ${r.chats ?? 1}개 · 장면 ${r.scenes}개 · 기록 ${r.records}개 · 새 인물 ${r.people}명${r.already ? ` · 이미 있던 것 ${r.already}개` : ""}${r.skipped ? ` · 인물이 없어 건너뜀 ${r.skipped}개` : ""}${r.unreadable ? ` · 못 읽음 ${r.unreadable}개` : ""}. 원본 HypaPlus 데이터는 그대로예요. 이제 HypaPlus는 꺼 주세요.`;
+  const report = (r) => `가져왔어요 — 채팅 ${r.chats ?? 1}개 · 장면 ${r.scenes}개 · 기록 ${r.records}개 · 새 인물 ${r.people}명${r.upgraded ? ` · 메시지에 연결 ${r.upgraded}개` : ""}${r.already ? ` · 이미 있던 것 ${r.already}개` : ""}${r.skipped ? ` · 인물이 없어 건너뜀 ${r.skipped}개` : ""}${r.unreadable ? ` · 못 읽음 ${r.unreadable}개` : ""}. 원본 HypaPlus 데이터는 그대로예요. 이제 HypaPlus는 꺼 주세요.`;
   const run = async (fn) => { if (busy) return; busy = true; try { await fn(); } catch (e) { show("err", e?.message ?? String(e)); } finally { busy = false; } };
   return modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": "HypaPlus 가져오기", style: "max-width:540px;display:flex;flex-direction:column;gap:10px" },
     h("h3", { class: "rb-h3" }, auto ? "HypaPlus를 쓰고 계시네요" : "HypaPlus에서 가져오기"),
@@ -19,19 +19,20 @@ export async function openHypaModal(ctx, { det, auto = false } = {}) {
       : note("info", d.installed ? "HypaPlus는 설치돼 있지만 이 기기에서 저장된 기록을 찾지 못했어요. 백업 파일이 있으면 아래에서 가져올 수 있어요." : "저장된 HypaPlus 기록을 찾지 못했어요. 백업 파일이 있으면 아래에서 가져올 수 있어요."),
     d.unparsed ? h("p", { class: "rb-muted" }, `아이디를 나눌 수 없는 기록 ${d.unparsed}개는 건너뛰어요. 백업 파일로 가져와 주세요.`) : null,
     h("p", { class: "rb-muted" }, "프롬프트에 [HypaPlus.memory]·[HypaPlus.cached]를 넣어 뒀다면 [Dusk.memory]로 바꿔 주세요. 그 자리에 Dusk 기억이 들어가요."),
-    h("div", { class: "rb-mem-field", style: "flex-direction:column;align-items:stretch;gap:6px" }, h("span", null, "백업 파일로 가져오기 (지금 열린 채팅에 들어가요)"), file,
+    h("div", { class: "rb-mem-field", style: "flex-direction:column;align-items:stretch;gap:6px" }, h("span", null, "백업 파일로 가져오기 (지금 열린 채팅에 들어가고, 원래 메시지에 연결돼서 리롤·삭제를 따라가요)"), file,
       btn("파일 가져오기", { size: "sm", onClick: () => run(async () => {
         const f = file.files?.[0]; if (!f) return show("info", "HypaPlus 백업(JSON) 파일을 먼저 고르세요.");
         const cur = await M.injector.current(); if (!cur) return show("err", "리수에서 채팅을 연 상태에서 가져올 수 있어요.");
         if (!(await confirmDialog(ctx.win, { title: "이 채팅에 가져올까요?", body: `${cur.character.name} · ${cur.chat.name ?? "채팅"}\n같은 노드는 한 번만 들어가요.`, ok: "가져오기" }))) return;
-        show("info", "가져오는 중…"); show("info", report(await I.importFile(await f.text(), cur.character.chaId, cur.chat.id)));
+        show("info", "가져오는 중…"); show("info", report(await I.importFile(await f.text(), cur.character.chaId, cur.chat.id, cur.chat.message ?? [])));
       }) })),
     msg,
     h("div", { class: "rb-mem-edrow", style: "justify-content:flex-end;flex-wrap:wrap" },
       auto ? btn("다시 보지 않기", { size: "sm", onClick: () => I.dismiss().then(() => done(true)).catch(fail(ctx)) }) : null,
       btn(auto ? "나중에" : "닫기", { onClick: () => done(true) }),
       d.chats.length ? btn("지금 가져오기", { kind: "primary", onClick: () => run(async () => {
-        show("info", "가져오는 중…"); const r = await I.importAll(d.chats, { onProgress: (i, n) => show("info", `가져오는 중… ${i}/${n}`) }); show("info", report(r));
+        show("info", "가져오는 중…"); const cur = await M.injector.current().catch(() => null);  // 지금 열린 채팅은 메시지에 연결(앵커)해서 넣는다
+        const r = await I.importAll(d.chats, { onProgress: (i, n) => show("info", `가져오는 중… ${i}/${n}`), messagesFor: async (a, c) => cur && String(cur.character.chaId) === String(a) && String(cur.chat.id) === String(c) ? cur.chat.message ?? [] : null }); show("info", report(r));
       }) }) : null))).catch(fail(ctx));
 }
 
