@@ -114,7 +114,7 @@ window.runSmoke = async () => {
     const sk = createSkillStore({ pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } }, { log() {} });
     const sctx = { win: document.body, toast: (t) => log.push(["toast", t]), skills: sk, prefs: { advanced: true }, web: createWebTools({ pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } }, { log() {} }), state: {} }, shost = document.createElement("div"); document.body.appendChild(shost);
     await renderMemorySkills(sctx, shost, { redraw() {} }); await sleep(80);
-    check("스킬 탭 렌더", shost.textContent.includes("스킬 주입") && shost.textContent.includes("스킬 세트 0개"), shost.textContent.slice(0, 120));
+    check("스킬 탭 렌더", shost.textContent.includes("코코아 기능 켜기") && shost.textContent.includes("스킬 세트 0개"), shost.textContent.slice(0, 120));
     clickText("찾아보기", shost); await sleep(120);
     check("코코아 데이터 찾기", shost.textContent.includes("스킬 세트 1개 가져오기") && shost.textContent.includes("'Director'의 프롬프트를 스킬로 변환"), shost.textContent.slice(-200));
     clickText("옮기기", shost); await sleep(200);
