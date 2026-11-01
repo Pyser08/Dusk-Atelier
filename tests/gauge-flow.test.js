@@ -67,3 +67,15 @@ test("AI 설계: 이름·설명 유지, 검증 실패는 저장 안 함", async 
   const bad = createGaugeService(api, { store, call: async () => "nope" });
   await assert.rejects(() => bad.design({ name: "a" }));
 });
+
+test("표시 훅은 메시지마다 저장소를 다시 읽지 않는다 (모바일 렌더 지연 방지)", async () => {
+  const { api, store } = setup(2);
+  let reads = 0; const get = api.pluginStorage.getItem; api.pluginStorage.getItem = async (k) => { reads++; return get(k); };
+  const gauge = createGaugeService(api, { store });
+  for (let i = 0; i < 40; i++) assert.equal(await gauge.onDisplay("메시지 " + i + LONG), "메시지 " + i + LONG);
+  assert.ok(reads <= 2, `게이지가 없어도 매번 읽던 문제: ${reads}번 읽음`);
+  await gauge.addDef("c1", { name: "신뢰", min: 0, max: 10, init: 3, step: 3, measure: "m", rule: "r", update: "u", on: true });
+  const before = reads;
+  for (let i = 0; i < 40; i++) await gauge.onDisplay("메시지 " + i + LONG);
+  assert.ok(reads - before <= 4, `게이지를 만든 뒤에도 매번 읽음: ${reads - before}`);
+});

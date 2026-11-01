@@ -20,7 +20,7 @@ export function createGaugeService(api, { store, log = () => {}, call = null } =
 
   const getDefs = async (chaId) => gx(await store.getIndex(), chaId).defs;
   const getSuggest = async (chaId) => gx(await store.getIndex(), chaId).sug;
-  const setDefs = (chaId, fn) => store.updateIndex((idx) => { const g = ensure(idx, chaId); g.defs = fn(g.defs) ?? g.defs; return g.defs; });
+  const setDefs = (chaId, fn) => store.updateIndex((idx) => { const g = ensure(idx, chaId); g.defs = fn(g.defs) ?? g.defs; view = null; return g.defs; });
 
   async function addDef(chaId, raw) {
     return setDefs(chaId, (defs) => {
@@ -120,8 +120,9 @@ export function createGaugeService(api, { store, log = () => {}, call = null } =
   async function onDisplay(text) {
     try {
       if (typeof text !== "string" || text.includes('x-dusk="gauge"')) return text;
-      const idx = await store.getIndex(); if (!Object.keys(idx.gauges ?? {}).length) return text;
-      const v = await ensureView(), r = matchRecord(v.entries, text);
+      const v = await ensureView();   // 메시지마다 불리므로 저장소는 처음 한 번만 읽는다(캐시). 게이지가 없으면 바로 돌려준다
+      if (!v.defs.length) return text;
+      const r = matchRecord(v.entries, text);
       return r ? text + gaugeBoxHtml(r, v.defs) : text;
     } catch { return text; }
   }
