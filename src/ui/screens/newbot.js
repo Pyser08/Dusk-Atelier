@@ -23,14 +23,29 @@ export async function addBlankBot(ctx, name = "새 봇") {
   });
 }
 
-/** 새 봇을 만들고 편집기를 연다. tab: "ai"면 AI로 제작 탭에서 시작 */
+/** 새 봇 편집기를 연다. tab: "ai"면 AI로 제작 탭에서 시작.
+ *  · tab이 "ai"이면 봇을 먼저 만들지 않는다: 초안으로 열고, 사용자가 직접 [저장]할 때 처음 봇을 추가한다(자동 저장 없음).
+ *  · 이름을 직접 정해 만드는 경우(name)는 예전처럼 빈 봇을 바로 추가한다. */
 export async function createBotAndEdit(ctx, { name, tab } = {}) {
   try {
+    if (tab === "ai") {
+      const base = newCharacterBase({ fields: {}, risuFields: {}, refs: {} });
+      base.name = String(name || "새 봇").trim();
+      await openCharEditor(ctx, -1, base.chaId, {
+        startTab: tab, draftChar: base,
+        // 첫 저장으로 봇이 생긴 뒤: 목록 갱신 + 개발 목록에도 넣는다(개발자 모드가 꺼져 있어도 목록에는 쌓아 둔다)
+        onCreated: async (created) => {
+          ctx.state.charsDirty = true;
+          ctx.state.charSel = created.chaId;
+          await addProjects(ctx, [{ kind: "character", id: created.chaId }]).catch(() => {});
+          ctx.refresh();
+        }
+      });
+      return;
+    }
     const { created, idx } = await addBlankBot(ctx, name);
     ctx.state.charsDirty = true;
     ctx.state.charSel = created.chaId;
-    // AI로 봇 만들기: 만든 봇은 개발 목록에도 바로 넣는다(개발자 모드가 꺼져 있어도 목록에는 쌓아 둔다)
-    if (tab === "ai") await addProjects(ctx, [{ kind: "character", id: created.chaId }]).catch(() => {});
     ctx.refresh();
     await openCharEditor(ctx, idx, created.chaId, { startTab: tab });
   } catch (e) {

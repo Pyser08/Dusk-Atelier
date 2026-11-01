@@ -51,14 +51,42 @@ export var modFingerprint = (fields) => fingerprintCard(modHash(fields));
 /** 비교 계획. kind: "c"(캐릭터) | "m"(모듈). current·incoming은 카드 필드 */
 export function makePlan(kind, current, incoming, base) {
   const b = isFingerprintV1(base) ? base : null;
-  if (kind === "c") return planCharacterUpdate({ current, incomingFields: incoming, base: b });
+  if (kind === "c") return regexRule(planCharacterUpdate({ current, incomingFields: incoming, base: b }), current, incoming, b, kind);
   const plan = planCharacterUpdate({ current: modHash(current), incomingFields: modHash(incoming), base: b });
   for (const it of plan.items) if (it.unit === "asset") {
     const ci = plan.listIds?.asset?.current.indexOf(it.id) ?? -1, ni = plan.listIds?.asset?.incoming.indexOf(it.id) ?? -1;
     it.current = ci < 0 ? void 0 : structuredClone(current.additionalAssets[ci]);
     it.incoming = ni < 0 ? void 0 : structuredClone(incoming.additionalAssets[ni]);
   }
+  return regexRule(plan, current, incoming, b, kind);
+}
+
+/**
+ * 정규식은 순서대로 이어서 적용되는 묶음이라, 항목마다 '내 것/새 것'을 섞으면 옛 정규식이 남거나 순서가 꼬여 깨진다.
+ * 그래서 사용자가 정규식을 고친 흔적이 없으면(처음 받은 기록과 지금 정규식의 이름·내용·순서가 같거나, 기록이 없어 알 수 없으면)
+ * 비교 항목을 만들지 않고 새 버전의 정규식 목록을 순서까지 그대로 가져온다. 고친 흔적이 있으면 예전처럼 항목별로 고른다.
+ * plan.regexAuto = {added, changed, removed}: 통째로 바꾼 내용(화면 안내용). 없으면 이 규칙을 쓰지 않은 것.
+ */
+function regexRule(plan, current, incoming, base, kind) {
+  if (!Array.isArray(incoming?.customscript)) return plan;
+  const mine = base ? JSON.stringify(fingerprintCard(kind === "m" ? modHash(current) : current).regex) !== JSON.stringify(base.regex) : false;
+  if (mine) return plan;
+  const rx = plan.items.filter((it) => it.unit === "regex");
+  const real = rx.filter((it) => !String(it.id).startsWith("order:"));
+  plan.regexAuto = {
+    added: real.filter((it) => it.current === void 0 && it.incoming !== void 0).length,
+    removed: real.filter((it) => it.current !== void 0 && it.incoming === void 0).length,
+    changed: real.filter((it) => it.current !== void 0 && it.incoming !== void 0).length
+  };
+  plan.items = plan.items.filter((it) => it.unit !== "regex");
   return plan;
+}
+/** 화면 안내 문구(정규식을 통째로 바꾸는 경우만) */
+export function regexAutoNote(plan) {
+  const a = plan?.regexAuto;
+  if (!a || !(a.added || a.removed || a.changed)) return "";
+  const parts = [a.changed && `바뀜 ${a.changed}`, a.added && `추가 ${a.added}`, a.removed && `삭제 ${a.removed}`].filter(Boolean).join(" · ");
+  return `정규식은 직접 고친 흔적이 없어 새 버전 것으로 통째로 바꿔요 (${parts})`;
 }
 
 /** 고른 내용으로 keep 집합(= "내 것 유지"한 항목 id)을 만든다. choices: id → "cur" | "inc" */
@@ -73,7 +101,10 @@ export function keepSet(plan, choices, keepExistingOnly) {
 }
 
 export function applyPlan(current, incoming, plan, keep) {
-  return applyUpdatePlan({ current, incomingFields: incoming, plan, keep });
+  const out = applyUpdatePlan({ current, incomingFields: incoming, plan, keep });
+  // 정규식 통째 교체: 새 버전 목록을 순서까지 그대로(비교 항목이 없으므로 위 단계에서도 같은 결과지만, 남은 '유지' 표시가 섞이지 않게 못 박는다)
+  if (plan.regexAuto && Array.isArray(incoming?.customscript)) out.customscript = structuredClone(incoming.customscript);
+  return out;
 }
 
 /** 적용 결과(카드 필드)를 실제 캐릭터에 쓴다. 사용자 필드·채팅은 그대로 */

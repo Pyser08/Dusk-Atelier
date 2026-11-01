@@ -21,12 +21,12 @@ const when = (iso) => { try { return new Date(iso).toLocaleString('ko-KR', { mon
 export function renderAiTab(ctx, { build, openPopup, state = {} }) {
   const st = build.state;
   const root = h('div', { class: 'pane', style: 'display:flex;flex-direction:column;gap:14px;max-width:880px' });
-  const content = h('div', { style: 'display:flex;flex-direction:column;gap:14px' });
+  const content = h('div', { style: 'display:flex;flex-direction:column;gap:14px;flex-shrink:0' });
   state.sub ??= 'start';
   const fail = (e) => ctx.toast(e?.message ?? String(e), { error: true });
   const pendingBadge = () => { const n = build.pendingCount(); return n ? badge(`수정안 ${n}`, 'ok') : null; };
 
-  const head = h('div', { style: 'display:flex;align-items:center;gap:10px;flex-wrap:wrap' },
+  const head = h('div', { style: 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0' },
     h('b', { style: 'font-size:16px' }, 'AI로 제작'),
     h('span', { class: 'rb-muted', style: 'flex:1;min-width:120px;font-size:13px' }, '말로 요청하면 AI가 수정안을 만들고, 적용하면 각 탭에 바로 반영돼요.'),
     btn('AI 창 열기', { kind: 'primary', icon: 'sparkle', onClick: () => openPopup() })
@@ -34,6 +34,7 @@ export function renderAiTab(ctx, { build, openPopup, state = {} }) {
   const seg = segmented(SUBS, state.sub, (v) => { state.sub = v; paint(); }, '하위 화면');
   seg.classList.add('rb-seg-nowrap');
   seg.style.overflowX = 'auto';
+  seg.style.flexShrink = '0'; // overflow가 auto면 flex 열에서 최소 높이가 0이 돼, 긴 화면(작업 프롬프트)에서 탭 줄이 세로로 찌그러진다
   // 처음 들어왔을 때 한 번만 3장 안내 (끝내거나 건너뛰면 다시 안 뜨고, [사용법]으로 언제든 다시 볼 수 있다)
   let introOpen = false;
   const saveIntro = () => { try { Promise.resolve(ctx.api.pluginStorage.setItem(INTRO_KEY, '1')).catch(() => {}); } catch { /* 저장 실패는 무시 */ } };

@@ -45,4 +45,6 @@ export const legacyMessageHash = (m) => hashText(extractMessageText(m));
 export const snippet = (text, n = 80) => { const s = String(text ?? "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
 
 // safety.js의 isGenerating과 같은 판정(그 파일은 TS 모듈을 끌어와 테스트에서 못 쓴다).
-export const isChatGenerating = (ch) => (ch?.chats ?? []).some((c) => c?.isStreaming === true || c?.message?.at?.(-1)?.isStreaming === true || c?.message?.at?.(-1)?.streaming === true);
+// 채팅 하나가 생성 중인지 (캐릭터 전체를 가져오지 않고 채팅 하나만으로 판정할 때 쓴다)
+export const isChatStreaming = (c) => c?.isStreaming === true || c?.message?.at?.(-1)?.isStreaming === true || c?.message?.at?.(-1)?.streaming === true;
+export const isChatGenerating = (ch) => (ch?.chats ?? []).some(isChatStreaming);

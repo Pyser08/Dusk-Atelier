@@ -9,6 +9,7 @@
 //   리롤이 실제로 일어났는지는 다음 입력 때 마지막 응답 시각으로 판단해 기록(한 번만·쿨다운)에 반영한다.
 // 발동 기록은 채팅 변수 da_state에 둔다 (채팅 복사·분기에 따라감, 현재 턴 이상 기록은 무시하므로 되돌리기에도 맞다).
 import { STATE_VAR, MAX_HIST, affOf, applySets, collectManaged, evaluate, gateValues, setTargets, setBoundaryMode } from '../engine/lorerules.js';
+import { noteStreamChunk, recentlyStreamed } from './genstate.js';
 
 const sv = (k) => "$" + k;
 
@@ -210,6 +211,8 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
   let settings = null;
   async function prepareReroll() {
     if (busy) return;
+    // 응답이 스트리밍되는 중에는 채팅을 통째로 가져오지 않는다(큰 봇은 한 번에 수백 ms). 잠잠해진 뒤 다시 확인한다.
+    if (recentlyStreamed()) { clearTimeout(prepTimer); prepTimer = setTimeout(() => prepareReroll(), 1500); return; }
     try {
       settings ??= await loadLoreSettings(api);
       // '이전 결과 유지'면 리롤 때도 입력 때 결정을 그대로 쓴다
@@ -250,6 +253,7 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
   async function start() {
     await api.addRisuScriptHandler("input", onInput);
     await api.addRisuScriptHandler("display", onDisplay);
+    try { await api.addRisuScriptHandler("output", (text) => { noteStreamChunk(); return text; }); } catch { /* 출력 훅이 없는 환경: 예전처럼 채팅의 스트리밍 표시로 판단 */ }
   }
 
   return { setSettings(v) {

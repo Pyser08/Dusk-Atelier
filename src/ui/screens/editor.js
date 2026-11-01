@@ -355,7 +355,7 @@ export async function openEditorCore(ctx, cfg) {
   const helpBtn = btn("?", { size: "sm", title: "도움말 (이 화면 설명)", onClick: () => toggleHelp() });
   helpBtn.classList.add("rb-helpbtn");
   helpBtn.setAttribute("aria-pressed", "false");
-  const statusEl = h("div", { class: "rb-statusbar" }, h("span", { class: "dot", "aria-hidden": "true" }, "●"), saveState, h("span", null, "자동 저장 2분"));
+  const statusEl = h("div", { class: "rb-statusbar" }, h("span", { class: "dot", "aria-hidden": "true" }, "●"), saveState, h("span", { class: "rb-autosave-note" }, cfg.unsavedDraft?.() ? "아직 만들어지지 않았어요 · [저장]하면 봇이 생겨요" : "자동 저장 2분"));
   const helpEl = h("aside", { class: "rb-help", "aria-label": "도움말" });
   const head = h(
     "div",
@@ -2362,6 +2362,8 @@ export async function openEditorCore(ctx, cfg) {
     Object.assign(original, structuredClone(draft));
     for (const k of Object.keys(original)) if (!(k in draft)) delete original[k];
     es.savedAt = Date.now();
+    const an = statusEl.querySelector(".rb-autosave-note");
+    if (an && !cfg.unsavedDraft?.()) an.textContent = "자동 저장 2분";  // 첫 저장으로 봇이 생긴 뒤부터 자동 저장
     paintHead();
     paintSaveState();
   }
@@ -2485,7 +2487,7 @@ export async function openEditorCore(ctx, cfg) {
     statusEl.firstChild.style.color = d ? "var(--rb-warn)" : "";
   }
   async function autoSave() {
-    if (autoBusy || !panel.isConnected || !dirty()) return;
+    if (autoBusy || !panel.isConnected || !dirty() || cfg.unsavedDraft?.()) return;  // 아직 DB에 없는 초안(AI로 제작)은 직접 저장하기 전엔 만들지 않는다
     if (Date.now() - lastInput < 4e3) return;
     autoBusy = true;
     try {
@@ -2509,7 +2511,7 @@ export async function openEditorCore(ctx, cfg) {
     paintSaveState();
   }, 1e4);
   async function close() {
-    if (dirty() && !await confirmDialog(ctx.win, { title: "저장하지 않은 변경이 있어요", body: "닫으면 바뀐 내용이 사라져요.", ok: "버리고 닫기", danger: true })) return;
+    if (dirty() && !await confirmDialog(ctx.win, { title: "저장하지 않은 변경이 있어요", body: cfg.unsavedDraft?.() ? "아직 저장하지 않아서 봇이 만들어지지 않았어요. 닫으면 지금까지의 내용이 사라져요." : "닫으면 바뀐 내용이 사라져요.", ok: "버리고 닫기", danger: true })) return;
     clearInterval(autoTimer);
     clearInterval(stateTimer);
     build?.destroy();

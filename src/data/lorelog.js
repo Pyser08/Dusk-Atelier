@@ -5,6 +5,7 @@
 // · 화면에 그릴 때(display): 열쇠가 맞는 응답 아래에 '📖 로어북 N개' 접는 버튼을 붙인다 (저장된 채팅은 건드리지 않음)
 import { detectInPrompt, estimateUsed, headKey, tailKey, loreButtonHtml, matchRecord } from '../engine/lorelog.js';
 import { loadLoreSettings } from './lorerules.js';
+import { noteStreamChunk } from './genstate.js';
 
 export const LORE_LOG_KEY = "dusk-lore-log";
 const MAX_RECS = 300;
@@ -25,7 +26,7 @@ export async function clearLoreLog(api) {
 
 const textOf = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => typeof p === "string" ? p : p?.text ?? "").join("\n") : String(c ?? "");
 
-export function createLoreLog(api, { loreRuntime, log = (...a) => console.log("[Dusk 로그]", ...a) } = {}) {
+export function createLoreLog(api, { loreRuntime, quietMs = 1500, log = (...a) => console.log("[Dusk 로그]", ...a) } = {}) {
   let recs = null;
   let pending = null;
   let saveTimer = null;
@@ -89,13 +90,18 @@ export function createLoreLog(api, { loreRuntime, log = (...a) => console.log("[
   }
 
   // 응답: 기록에 응답 열쇠를 붙여 저장 (스트리밍 중 여러 번 불려도 같은 기록을 갱신)
+  // 무거운 조회(gather = 캐릭터 통째 복사)는 스트리밍 중에는 하지 않는다: 앞부분이 어긋나는 청크는 잠잠해진 뒤 마지막 본문으로 한 번만 처리한다.
+  let quietTimer = null, lastOutAt = 0;
   async function onOutput(text) {
+    noteStreamChunk();
+    const gap = Date.now() - lastOutAt;
+    lastOutAt = Date.now();
     try {
       if ((await conf()).log === false) return text;
       const head = headKey(text);
       if (head.length < 4) return text;
       await ensure();
-      let rec = pending && Date.now() - pending.at < 10 * 60e3 ? pending : null;
+      const rec = pending && Date.now() - pending.at < 10 * 60e3 ? pending : null;
       // 같은 요청의 응답이 이어서 들어옴(스트리밍): 앞부분이 이어지면 같은 기록
       if (rec?.id && (head.startsWith(rec.head) || rec.head.startsWith(head))) {
         rec.head = head;
@@ -104,22 +110,43 @@ export function createLoreLog(api, { loreRuntime, log = (...a) => console.log("[
         return text;
       }
       if (!rec || rec.id) {
-        // 프롬프트 훅이 없는 리스(또는 훅 없이 다시 생성): 키·Dusk 규칙으로 추정
-        const g = await gather();
-        if (!g) return text;
-        rec = { ...g.meta, at: Date.now(), method: "estimate", entries: estimateUsed(g.tagged, g.msgs, { depth: g.depth, duskFired: duskFired() }).slice(0, MAX_ENTRIES) };
-        pending = rec;
+        clearTimeout(quietTimer);
+        // 첫 청크(직전 출력이 한참 전)는 바로 처리하고, 청크가 이어지는 중이면 잠잠해진 뒤 마지막 본문으로 한 번만 처리
+        if (gap >= quietMs) await settle(text);
+        else quietTimer = setTimeout(() => settle(text), quietMs);
+        return text;
       }
-      rec.id = `${rec.at.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-      rec.head = head;
-      rec.tail = tailKey(text);
-      recs.push(rec);
-      if (recs.length > MAX_RECS) recs.splice(0, recs.length - MAX_RECS);
-      save();
+      commit(rec, head, text);
     } catch (e) {
       log("기록 실패", e?.message ?? e);
     }
     return text;
+  }
+  function commit(rec, head, text) {
+    rec.id = `${rec.at.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    rec.head = head;
+    rec.tail = tailKey(text);
+    recs.push(rec);
+    if (recs.length > MAX_RECS) recs.splice(0, recs.length - MAX_RECS);
+    save();
+  }
+  // 스트리밍이 잠잠해진 뒤 한 번: 이어지는 기록이면 갱신하고, 새 응답이면 키·Dusk 규칙으로 추정해 새 기록을 만든다
+  async function settle(text) {
+    try {
+      const head = headKey(text);
+      let rec = pending && Date.now() - pending.at < 10 * 60e3 ? pending : null;
+      if (rec?.id && (head.startsWith(rec.head) || rec.head.startsWith(head))) { rec.head = head; rec.tail = tailKey(text); save(); return; }
+      if (!rec || rec.id) {
+        // 프롬프트 훅이 없는 리스(또는 훅 없이 다시 생성): 키·Dusk 규칙으로 추정
+        const g = await gather();
+        if (!g) return;
+        rec = { ...g.meta, at: Date.now(), method: "estimate", entries: estimateUsed(g.tagged, g.msgs, { depth: g.depth, duskFired: duskFired() }).slice(0, MAX_ENTRIES) };
+        pending = rec;
+      }
+      commit(rec, head, text);
+    } catch (e) {
+      log("기록 실패", e?.message ?? e);
+    }
   }
 
   // 화면: 맞는 기록이 있으면 버튼을 붙인다

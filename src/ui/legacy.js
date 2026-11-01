@@ -5,7 +5,7 @@ import { collectKnownKeys, planAssets } from '../engine/module.js';
 import { buildNewCharacter, characterAssetKeys, characterView, newCharacterBase, planCharacter, uniqueDisplayName, ensureCharacterInOrder } from '../engine/character.js';
 import { uploadAssets } from '../engine/upload.js';
 import { MOD_SPEC, applyView, charIncomingView, charSpec, modIncomingView, pickView } from '../engine/merge3.js';
-import { KIND_KO, applyPlan, changeOf, charFields, fieldsToMod, fingerprintCard, groupOf, itemLabel, keepSet, makePlan, modFields, modFingerprint, remapGreetings, summarizeCharacterUpdate, textOf, wordDiff, writeCharFields } from '../engine/tideplan.js';
+import { KIND_KO, applyPlan, changeOf, charFields, fieldsToMod, fingerprintCard, groupOf, itemLabel, keepSet, makePlan, regexAutoNote, modFields, modFingerprint, remapGreetings, summarizeCharacterUpdate, textOf, wordDiff, writeCharFields } from '../engine/tideplan.js';
 import { createStore } from '../engine/store.js';
 import { iconMarkup } from './icons.js';
 import { persistentWrites, queueTrash, readUi, trashCopy, watchDefaults } from './watch.js';
@@ -528,16 +528,17 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
     const head = `<div id="rv-sum">${summaryHtml(plan, keep, sum2, fieldLabel, ui.open)}</div>
             ${plan.hasBase ? "" : `<div class="warn">처음 받았을 때의 기록이 없어 <b>지금 내용과 새 버전만</b> 비교합니다. 직접 고친 내용도 새 버전으로 바뀔 수 있어요. 이번 업데이트부터 기록이 남아, 다음 업데이트부터는 내 수정을 구분해 지킵니다.</div>
               <label class="chk"><input type="checkbox" id="keep" ${keepExistingOnly ? "checked" : ""}><span>새 버전에 없는 기존 로어북·에셋 유지<br><span class="muted">직접 추가한 항목을 지킵니다. 제작자가 지운 항목도 남을 수 있습니다.</span></span></label>`}`;
-    if (!plan.items.length) return `${head}<div class="muted" style="margin-top:8px">바뀌는 항목이 없어요.</div>`;
+    const rxNote = regexAutoNote(plan) ? `<div class="muted" style="margin-top:8px">${esc(regexAutoNote(plan))}</div>` : "";
+    if (!plan.items.length) return `${head}${rxNote}<div class="muted" style="margin-top:8px">${rxNote ? "그 밖에 바뀌는 항목은 없어요." : "바뀌는 항목이 없어요."}</div>`;
     const conflicts = plan.items.filter((it) => groupOf(it) === "conflict").length;
     const openBtn = `<button class="rv-open${ui.open ? " on" : ""}" id="rv-toggle">
         <span class="oi">${ic(ui.open ? "list" : "split", 20)}</span>
         <span class="ot"><b>${ui.open ? "간단히 보기" : "자세히 보기"}</b><span>${ui.open ? "요약만 보기로 돌아가요" : `항목 ${plan.items.length}개를 나란히 비교하며 고르기${conflicts ? ` · 충돌 ${conflicts}개` : ""}`}</span></span>
         <span class="oc">${ic(ui.open ? "back" : "chevron", 18)}</span></button>`;
-    if (!ui.open) return head + openBtn;
+    if (!ui.open) return head + rxNote + openBtn;
     const n = (g) => plan.items.filter((it) => g === "all" || groupOf(it) === g).length;
     const chips = ["all", "conflict", "mine", "update", "extra"].filter((g) => g === "all" || n(g)).map((g) => `<button class="rv-chip ${g}${ui.f === g ? " on" : ""}" data-f="${g}">${g === "all" ? "전체" : GROUP_KO[g]} <b>${n(g)}</b></button>`).join("");
-    return `${head}${openBtn}
+    return `${head}${rxNote}${openBtn}
       <div class="rv-split">
         <div class="rv-left">
           <div class="rv-tools">

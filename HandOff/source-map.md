@@ -26,7 +26,8 @@ v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`
 - `main.js` (190줄) 
 
 ### src/data/
-- `addcharacter.js` (20줄) 새 봇을 DB에 추가하는 공용 흐름 (legacy.js의 '캐릭터 추가'에서 추출, 동작 동일). — insertCharacter
+- `addcharacter.js` (45줄) 새 봇을 DB에 추가하는 공용 흐름 (legacy.js의 '캐릭터 추가'에서 추출, 동작 동일). `createBotDraft`는 'AI로 제작'처럼 편집기에서 초안으로 시작해 첫 [저장]에서만 봇을 추가한다(v1.8.1). — insertCharacter, createBotDraft
+- `genstate.js` (8줄) 응답 스트리밍 신호(output 훅 청크 시각). 생성 중 캐릭터·채팅 통째 조회를 피하는 데 쓴다(v1.8.1). — noteStreamChunk, recentlyStreamed, resetStreamSignal
 - `affhud.js` (177줄) 호감도 HUD 프리셋 런타임: 응답이 끝나면 호감도를 채팅 변수($aff…)에 써 둔다. — createAffHud
 - `assetfolders.js` (65줄) — foldersOf, childFolders, folderPath, createFolder, renameFolder
 - `cardassets.js` (6줄) 카드 에셋(자동 생성): 기본 프레임 1장(글자 제거·투명 처리, 1024x1536 WebP)과 Gi… — CARD_FRAME_DATA, CARD_FONT_DATA, CARD_FRAME_SIZE
@@ -36,8 +37,8 @@ v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`
 - `charorder.js` (114줄) — layout, moveChar, createFolder2, setMembers, renameFolder2
 - `fairplay.js` (37줄) 공정한 전개 훅 (v1.6.8). 장기기억과 무관하게 설정에서 켜고 끈다. 기본 꺼짐. — FAIR_KEY, DICE_KEY, DICE_MODE_KEY, loadFairOn, loadDiceOn
 - `interopSnippet.js` (4줄) DA Interop v1 스니펫 원본: https://github.com/Pyser08/dusk-at…
-- `lorelog.js` (171줄) 로어북 로그 런타임 — LORE_LOG_KEY, loadLoreLog, clearLoreLog, createLoreLog
-- `lorerules.js` (261줄) 로어북 규칙 런타임 — LORE_SETTINGS_KEY, LORE_DEFAULTS, loadLoreSettings, saveLoreSettings, createLoreRuntime
+- `lorelog.js` (197줄) 로어북 로그 런타임. 스트리밍 중 앞부분이 어긋나는 청크는 잠잠해진 뒤 한 번만 gather한다(v1.8.1). — LORE_LOG_KEY, loadLoreLog, clearLoreLog, createLoreLog
+- `lorerules.js` (264줄) 로어북 규칙 런타임. 스트리밍 신호가 있으면 리롤 준비(채팅 전체 조회)를 미룬다(v1.8.1). — LORE_SETTINGS_KEY, LORE_DEFAULTS, loadLoreSettings, saveLoreSettings, createLoreRuntime
 - `memory.js` (55줄) 장기기억 조립: 저장소·러너·주입·BardWiki 백엔드를 묶고, 선택된 백엔드에 따라 훅을 등록한다… — createMemory
 - `memorybackend-bardwiki.js` (69줄) 리스바드 BardWiki 읽기 어댑터 + 스냅샷 캐시(dusk.mem.v2.ext.<folderId>… — createBardWikiBackend
 - `memorybackend.js` (16줄) 기억 저장소 백엔드 선택. local = 플러그인 자체 저장·분석·주입, bardwiki = 리스바드… — hasBardWiki, selectBackend, CAPABILITIES, capabilitiesOf
@@ -46,7 +47,7 @@ v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`
 - `memoryinject.js` (83줄) 장기기억 주입 훅: 요청 사본에만 [Dusk Memory] 블록을 넣는다(저장 데이터 불변). — createMemoryInjector
 - `memoryload.js` (12줄) v1.6.5 읽기 경로 대조: 폴더를 읽어 메모리 사본에서만 앵커 정합성(reconcile)을 맞춘다… — loadReconciled
 - `memoryrewind.js` (57줄) 저장된 기억으로 새 채팅 만들기. 원본 채팅·봇 데이터는 수정하지 않고 새 채팅만 추가한다. — sliceFolder, sceneAt, draftFirstMessage, createRewindChat
-- `memoryrunner.js` (239줄) 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 … — createMemoryRunner
+- `memoryrunner.js` (242줄) 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 … — createMemoryRunner
 - `memorystore.js` (120줄) 장기기억 v2 저장소: 인덱스 + 폴더별 키 분할, 직렬 쓰기 큐, v1 마이그레이션. — INDEX_KEY, FOLDER_PREFIX, EXT_PREFIX, LEGACY_KEY, DEFAULT_SETTINGS
 - `memorystore3.js` (134줄) 장기기억 v3 저장소: v2와 같은 메서드 + 채팅별 인물 위키(wiki) + 리수폿 가져오기. 직렬… — INDEX_KEY, FOLDER_PREFIX, createMemoryStoreV3
 - `memoryswitches.js` (44줄) v1.7.0 2단계: 화면이 쓰는 '기억 · 리수폿' 스위치 묶음. 저장은 인덱스(store.upda… — currentChat, createSwitches
@@ -96,7 +97,7 @@ v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`
 - `airesponse.js` (30줄) — extractRunAIText
 - `bardwikiadapt.js` (98줄) 리스바드 BardWiki 문서 → 장기기억 폴더(§2.2 모양) 변환. 순수 함수. 필드가 없으면 건… — VIRTUAL_MARK, parseSections, bullets, SUMMARY_TITLES, eventBullets
 - `character.js` (221줄) — characterAssetKeys, characterView, planCharacter, buildMergedCharacter, newCharacterBase
-- `chattext.js` (27줄) 채팅 메시지 텍스트 공통 처리 (장기기억용). — extractMessageText, isUserMessage, confirmedAiIndex, hashText(구 200자), fullTextHash, messageIdOf, messageIdentity, legacyMessageHash, snippet
+- `chattext.js` (50줄) 채팅 메시지 텍스트 공통 처리 (장기기억용). — extractMessageText, isUserMessage, confirmedAiIndex, isChatStreaming, hashText(구 200자), fullTextHash, messageIdOf, messageIdentity, legacyMessageHash, snippet
 - `conflict.js` (52줄) v1.7.0 4단계: 롤백 충돌 '변경 비교'(순수). 응답을 고치기 전의 자동 기록이 있는데 그 뒤… — compareChanges, dismissConflict
 - `cyclememo.js` (47줄) 월경·임신 → Dusk 기록 연결(v1.6.4, 순수): 위키의 월경·임신 구획이 바뀐 것 중 등급이… — cycleStates, cycleMilestones, milestonesBetween, addMilestones
 - `devcheck.js` (153줄) — projView, loreActivation, regexRun, devLint, devStats
@@ -143,6 +144,7 @@ v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`
 - `patch.js` (148줄) — viewKeys, buildPatch, parsePatch, planPatch, applyPatch
 - `peoplegaps.js` (39줄) 인물 위키에서 '무엇이 비어 있는지'를 계산한다(순수). "비어 있는 인물 채우기"가 수치 유무만 보… — PROFILE_TEXT_FIELDS, FILL_METRIC_SLOTS, gapsOf, isFullyEmpty, hasGap
 - `peoplegroup.js` (27줄) 인물 목록 폴더(리수폿 people-folders-ui 대응, 순수 함수). 폴더 배치는 위키 범위의… — UNASSIGNED, layoutOf, hasFolders, newFolderId, groupPeople
+- `peoplemerge.js` (57줄) 인물 합치기 순수 로직(v1.8.1): Dusk 인물 + 짝 없는 위키 문서를 합치기 대상으로 삼고, 위키 병합·Dusk 인물/별칭 정리를 이어 붙인다. — mergeEntries, duskMerge, planEntryMerge, applyEntryMerge
 - `personedit.js` (38줄) 인물 페이지에서 바로 고치는 순수 함수(v1.6.4 ③): ✎ 직접 수정 · 📌 고정 · ⏸ 이 인… — scopeKeyOf, editSectionText, editMetricValue, setPin, isPinned
 - `personrecords.js` (72줄) 인물 항목 직접 추가·편집·삭제(리수폿 people-records-ui · npc-emotion-ui… — RECORD_GROUPS, groupInfo, EMOTION_HINT, recordGroupOf, listRecords
 - `personview.js` (80줄) 인물 페이지용 순수 로직: 위키 문서 찾기 → '지금 상태' 카드, Dusk 기록·위키 변화·관계·약… — TL_FILTERS, findDoc, stateOf, timelineOf, countsOf
@@ -156,7 +158,7 @@ v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`
 - `store.js` (317줄) — createStore
 - `storydate.js` (20줄) 이야기 날짜 공유(v1.6.4): 응답 글에서 날짜를 프로그램이 한 번만 뽑고, 월경·임신 계산과 세… — latestStoryIso, storyDateOf, mergeWhen
 - `storytime.js` (68줄) 이야기 시간 (v1.6.8, 순수). 메인 AI가 응답 맨 위에 적는 상태 줄 `[YYYY-MM-DD… — TIME_MARK, emptyState, timeFromText, parseStatus, latestStoryState
-- `tideplan.js` (156줄) RisuTide 판단 로직(src/tide/)을 Dusk 업데이트 흐름에 잇는 곳. — charFields, modFields, fieldsToMod, makePlan, keepSet
+- `tideplan.js` (186줄) RisuTide 판단 로직(src/tide/)을 Dusk 업데이트 흐름에 잇는 곳. — charFields, modFields, fieldsToMod, makePlan, keepSet 정규식은 사용자가 고친 흔적이 없으면 새 버전 목록을 통째로 가져온다(regexAutoNote).
 - `tidestore.js` (146줄) RisuTide가 남긴 기록을 읽는다 (읽기 전용). — localStore, tideBase, listTideBackups, loadTideBackup, loadProvenance
 - `trackpreset.js` (66줄) 추적 수준 프리셋·기능 카드(순수). 리수폿 features(affinity·register·perc… — FEATURE_IDS, FEATURE_CARDS, LEVELS, levelPatch, applyLevel
 - `upload.js` (61줄) — uploadAssets
@@ -225,7 +227,7 @@ v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`
 - `assetdupes.js` (164줄) 중복 에셋 찾기 (1.4.6)
 - `assetmgr.js` (1063줄) 
 - `characters.js` (633줄) 
-- `chareditor.js` (224줄) 
+- `chareditor.js` (238줄) 
 - `chattheme.js` (166줄) 채팅 테마 빌더 (v1.7.0): 도구 안의 채팅 테마 빌더. 만든 테마 목록 · 켜기/끄기 · 코드/파일 내보내기…
 - `dev.js` (618줄) 
 - `devaff.js` (84줄) 개발 탭 → 봇: 호감도 HUD 기능 프리셋 카드. 설치하면 이 봇 배경 HTML에 ♡ 버튼 HUD가…
@@ -239,7 +241,7 @@ v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`
 - `lorelog.js` (107줄) 도구 → 로어북 로그: 응답마다 어떤 로어북이 들어갔는지
 - `modlinks.js` (130줄) 모듈 연결 (v1.7.0 5단계): 전역 · 페르소나 · 캐릭터 · 지금 채팅.
 - `modules.js` (691줄) 
-- `newbot.js` (40줄) 새 봇 만들기 (v1.7.0 5단계): 빈 봇을 하나 추가하고 편집기를 연다. AI로 만들기는 편집기…
+- `newbot.js` (54줄) 새 봇 만들기 (v1.7.0 5단계): 빈 봇을 하나 추가하고 편집기를 연다. AI로 만들기는 편집기…
 - `patchui.js` (136줄) 
 - `peoplescreen.js` (97줄) 인물 화면 + 인물 상세 (1.7.0 4단계, 계획 §3.4): 위키의 인물 문서를 보고 다듬는다. …
 - `personabuilder.js` (837줄) 페르소나 빌더 화면: 양식(프리셋)의 ### 섹션 = 폴더, * 항목 = 칸.
@@ -280,7 +282,7 @@ v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`
 - `mbots.js` (37줄) 봇별 기억 (1.7.0 3단계, 계획 §3.2): 검색 · 봇마다 사용 스위치 · 눌러서 기록 보기.
 - `mdetail.js` (48줄) 기록 보기 (1.7.0 3단계, 계획 §3.2): 인물 위키 · 상황 · 시간선 · 열린 항목 · 관…
 - `menv.js` (16줄) 열린 봇·채팅의 기억 환경(env)을 만든다. 기록 보기·리수폿·인물 화면이 같이 쓴다 (1.7.0 …
-- `mergeui.js` (86줄) 인물 합치기(미리보기 포함): 남길 인물과 합칠 인물을 고르면, 인물 문서가 둘 다 있을 때는 리수폿…
+- `mergeui.js` (77줄) 인물 합치기(미리보기 포함): 남길 인물과 합칠 인물을 고르면, 인물 문서가 둘 다 있을 때는 리수폿…
 - `mhome.js` (90줄) 기억 화면 (1.7.0 3단계, 계획 §3.2): 머리(스위치 1) → 상태 카드 → 기록 막대 → …
 - `modebar.js` (55줄) 기억 탭 맨 위: 장기기억 방식(저장소). 고급 모드에서만 보인다 (v1.7.0).
 - `modeladv.js` (66줄) 고급 모델 설정(고급 모드): 공급자 전체 · 모델 목록 불러오기 · 온도/최대 출력/문맥/제한시간 …

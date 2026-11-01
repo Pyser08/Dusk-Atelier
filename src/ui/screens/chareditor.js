@@ -11,6 +11,8 @@ import { estimateTokens } from '../../engine/memoryinject.js';
 import { createGreetingManager } from './greetings.js';
 import { openEditorCore, validateModule } from './editor.js';
 import { patchSavedChar } from './characters.js';
+import { createBotDraft } from '../../data/addcharacter.js';
+import { ensureCharacterInOrder, uniqueDisplayName } from '../../engine/character.js';
 import { INFO_CSS } from './infocard.js';
 
 
@@ -77,10 +79,17 @@ async function freshChar(ctx, index, chaId) {
   if (!cur || cur.chaId !== chaId) throw new Error("캐릭터를 다시 찾지 못했어요. 목록을 새로 고쳐 주세요.");
   return cur;
 }
-export async function openCharEditor(ctx, index, chaId, { startTab } = {}) {
-  const ch = await freshChar(ctx, index, chaId);
+// draftChar를 주면 아직 DB에 없는 초안으로 연다: 사용자가 [저장]하기 전에는 봇을 만들지 않고(자동 저장도 꺼짐), 첫 저장에서 한 번 추가한다.
+export async function openCharEditor(ctx, index, chaId, { startTab, draftChar = null, onCreated } = {}) {
+  const ch = draftChar ? structuredClone(draftChar) : await freshChar(ctx, index, chaId);
+  const draftBot = draftChar ? createBotDraft(ctx.api, {
+    base: draftChar, getCharacters: async () => { const db = await ctx.api.getDatabase(["characters"]); return Array.isArray(db?.characters) ? db.characters : []; },
+    merge: (base, view, original) => viewToChar(base, view, original), uniqueName: uniqueDisplayName,
+    hooks: { created: (id) => ctx.watcher?.markKnown?.(id) }, ensureInOrder: (id) => ensureCharacterInOrder(ctx.api, id), isGenerating, Busy, onCreated
+  }) : null;
   return openEditorCore(ctx, {
     startTab,
+    unsavedDraft: () => !!draftBot && !draftBot.saved,
     view: charToView(ch),
     kindLabel: "봇 편집",
     idKey: "chaId",
@@ -178,6 +187,12 @@ export async function openCharEditor(ctx, index, chaId, { startTab } = {}) {
       return [wrap];
     },
     async save(draft, original) {
+      if (draftBot) return draftBot.save(draft, original, (i) => saveExisting(draft, original, i, chaId));
+      return saveExisting(draft, original, index, chaId);
+    }
+  });
+  async function saveExisting(draft, original, index, chaId) {
+    {
       // 빠른 저장: 봇을 한 번만 읽고 곧바로 쓴다 (읽기와 쓰기 사이에 기다리는 일이 없어 두 번 읽어 확인할 필요가 없다).
       // 편집 전 백업은 읽은 그 상태로 뒤에서 남긴다.
       const fresh = await freshChar(ctx, index, chaId);
@@ -188,7 +203,7 @@ export async function openCharEditor(ctx, index, chaId, { startTab } = {}) {
       patchSavedChar(ctx, index, merged);
       createStore(ctx.api).addBackup({ kind: "character", target: chaId, name: fresh.name, snapshot: snap, note: "편집 전" }).catch((e) => ctx.toast(`편집 전 백업을 남기지 못했어요: ${e?.message ?? e}`, { error: true }));
     }
-  });
+  }
 }
 export async function openCharAssets(ctx, index, chaId) {
   const ch = await freshChar(ctx, index, chaId);

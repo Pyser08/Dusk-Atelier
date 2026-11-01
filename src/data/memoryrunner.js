@@ -1,5 +1,6 @@
 // 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 await 하지 않는다.
-import { extractMessageText, isUserMessage, messageIdentity, messageIdOf, confirmedAiIndex, isChatGenerating as isGenerating } from "../engine/chattext.js";
+import { extractMessageText, isUserMessage, messageIdentity, messageIdOf, confirmedAiIndex, isChatGenerating as isGenerating, isChatStreaming } from "../engine/chattext.js";
+import { noteStreamChunk } from "./genstate.js";
 import { analyze } from "../engine/memoryprompt.js";
 import { customPromptPlain } from "../engine/pot/custom-prompts.js";
 import { reconcile } from "../engine/memoryreconcile.js";
@@ -151,9 +152,10 @@ export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = 
     try {
       const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
       if (!(ci >= 0) || !(ti >= 0)) { note("nochat"); return; }
-      const character = await api.getCharacterFromIndex(ci), mode = confirmOf(await store.getIndex());
+      const mode = confirmOf(await store.getIndex());
       // 응답 직후(now) 방식은 생성이 끝나길 기다린다. 다음 입력(next) 방식은 이미 끝난 직전 응답을 보므로 기다리지 않는다.
-      if (mode === "now" && isGenerating(character)) {
+      // 생성 여부는 '현재 채팅 하나'만 읽어 확인한다(getCharacterFromIndex는 딸린 채팅을 전부 복사해 큰 봇에서 수백 ms 걸린다).
+      if (mode === "now" && isChatStreaming(await api.getChatFromIndex(ci, ti))) {
         if (Date.now() - since < WAIT_MS) { note("generating"); running = false; timer = setTimeout(() => tick(since), retryMs); } else note("generating-timeout");
         return;
       }
@@ -174,7 +176,7 @@ export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = 
     const ms = Math.max(0, Number(idx?.settings?.debounceSec ?? 4) * 1000);
     timer = setTimeout(() => tick(), ms);
   }
-  const onOutput = (text) => { session.hooks++; session.hookAt = Date.now(); schedule("output").catch(() => {}); return text; };  // 본문은 그대로 반환
+  const onOutput = (text) => { noteStreamChunk(); session.hooks++; session.hookAt = Date.now(); schedule("output").catch(() => {}); return text; };  // 본문은 그대로 반환
   // 사용자가 다음 말을 보내는 순간(요청 직전 훅)에 부른다: 직전 응답을 확정해 기록하기 시작한다.
   const confirmNext = () => schedule("confirm");
   // 출력 훅이 안 불리는 환경 대비: 화면 갱신 때 30초에 한 번, 현재 채팅의 마지막 AI 응답이 최근 것이면 점검한다(같은 응답은 해시로 중복 방지).

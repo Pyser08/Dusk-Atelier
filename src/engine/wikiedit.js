@@ -15,7 +15,8 @@ export function createBlankPerson(scope, name, { now = new Date().toISOString() 
   const title = String(name ?? "").trim();
   if (!title) throw new Error("이름을 적어 주세요.");
   const cur = normalizeWikiScope(scope);
-  if (Object.values(cur.documents).some((d) => d.type === "Character" && String(d.title).trim().toLowerCase() === title.toLowerCase())) throw new Error("같은 이름의 인물이 이미 있어요.");
+  const lc = title.toLowerCase();
+  if (Object.values(cur.documents).some((d) => d.type === "Character" && [d.title, ...(d.aliases ?? [])].some((n) => String(n).trim().toLowerCase() === lc))) throw new Error("같은 이름(별칭 포함)의 인물이 이미 있어요.");
   return createWikiDocument(cur, { type: "Character", title, aliases: [], tags: [], links: [], sections: [], metrics: [] }, { now });
 }
 
