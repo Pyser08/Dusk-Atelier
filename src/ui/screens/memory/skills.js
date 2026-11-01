@@ -1,7 +1,7 @@
 // 기억 탭 → 스킬 (v1.8.1). 코코아전트 호환 스킬 세트를 가져와 정리 노트·기록하기·기억 분석 프롬프트 뒤에 붙인다. 추가 AI 호출 없음.
 // 화면: 켜기 토글 · 단계별 세트 고르기 · 세트 목록/편집 · 코코아전트에서 옮겨오기. 일부만 다시 그린다(부분 갱신).
 import { h, replace } from "../../dom.js";
-import { btn, chip, note, pageHead, toggleRow, emptyState, confirmDialog, promptDialog, loading, modal } from "../../kit.js";
+import { advFold, btn, chip, note, pageHead, toggleRow, emptyState, confirmDialog, promptDialog, loading, modal } from "../../kit.js";
 import { mem, fail } from "./common.js";
 import { SKILL_STAGES, SKILL_STAGE_LABEL } from "../../../engine/skillcfg.js";
 import { buildSkillIndex, diagnoseSkillSet, normalizeSkillSet, SKILL_MD, SKILL_LIMITS } from "../../../engine/skills.js";
@@ -23,8 +23,8 @@ export async function renderMemorySkills(ctx, host, { redraw }) {
   const S = ctx.skills, m = mem(ctx), st = m.skills ??= { open: "", file: "" };
   const back = { onClick: () => { m.page = "home"; redraw(); }, label: "기억으로" };
   if (!S) return replace(host, pageHead("스킬", { back }), emptyState({ icon: "info", title: "스킬 기능이 아직 준비되지 않았어요", text: "플러그인을 다시 불러와 주세요." }));
-  const topH = h("div"), stagesH = h("div"), libH = h("div"), cocoaH = h("div"), webH = h("div"), callsH = h("div");
-  replace(host, pageHead("스킬", { sub: "코코아전트 스킬과 호환돼요", back }), topH, stagesH, libH, cocoaH, webH, callsH);
+  const dt = (k) => h("div", { "data-tour": k }), topH = dt("sk-toggle"), stagesH = dt("sk-stages"), libH = dt("sk-lib"), cocoaH = dt("sk-cocoa"), webH = dt("sk-web"), callsH = dt("sk-calls");
+  replace(host, pageHead("스킬", { sub: "코코아전트 스킬과 호환돼요", back }), topH, stagesH, libH, cocoaH, advFold(ctx, "memory", h("div", null, webH, callsH)));
   const run = (p) => p.catch(fail(ctx));
 
   async function drawTop() {

@@ -1,5 +1,6 @@
 import { applyDroppedPatch } from './screens/patchui.js';
 import { maybeShowTour } from './tour.js';
+import { runScreenTour } from './screentours.js';
 import { installTooltips } from './tooltip.js';
 import { maybeShowWhatsNew, openChangelog, CHANGELOG } from './whatsnew.js';
 import { btn, iconBtn, moreNav, openMenu, toast } from './kit.js';
@@ -210,20 +211,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     wasLoading = now;
   }).observe(main, { childList: true });
   win.append(head, topnav, body, tabbar);
-  const closeHelp = () => pagehead.querySelector(":scope > .rb-help")?.remove();
-  function toggleHelp() {
-    if (pagehead.querySelector(":scope > .rb-help")) return closeHelp();
-    const t = TABS.find((x) => x.id === state.tab) ?? TABS[0];
-    const tips = t.help ?? [];
-    pagehead.appendChild(h(
-      "div",
-      { class: "rb-help", role: "dialog", "aria-label": `${t.label} 설명` },
-      h("h3", null, icon("help", 18), `${t.label}, 이렇게 써요`),
-      h("p", { class: "rb-p", style: "margin:0" }, t.desc),
-      tips.length ? h("ul", null, ...tips.map((x) => h("li", null, x))) : null,
-      btn("알겠어요", { size: "sm", kind: "primary", onClick: closeHelp })
-    ));
-  }
+  // ? 버튼: 팝업 대신 처음 둘러보기와 같은 하이라이트 방식으로 지금 화면을 짚어 준다(ui/screentours.js)
+  function toggleHelp() { runScreenTour(ctx).catch(() => {}); }
   const sep = () => h("span", { class: "sep", "aria-hidden": "true" }, icon("chevron", 14));
   function paintHead() {
     const t = TABS.find((x) => x.id === state.tab) ?? TABS[0];
@@ -242,7 +231,6 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       ...sl ? [sep(), h("button", { type: "button", class: "cur", onClick: () => go(state.tab) }, sl)] : []
     );
     phDesc.textContent = t.desc;
-    closeHelp();
   }
   let dragDepth = 0, dropEl = null;
   const hasFiles = (e) => [...e.dataTransfer?.types ?? []].includes("Files");
@@ -283,8 +271,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   doc.addEventListener("keydown", (e) => {
     if (root.hidden) return;
     if (e.key === "Escape" && !win.querySelector(".rb-modal, .rb-menu, .rb-full, .rb-lightbox")) {
-      if (pagehead.querySelector(":scope > .rb-help")) closeHelp();
-      else if (detail3.classList.contains("open")) ctx.closeSheet();
+      if (detail3.classList.contains("open")) ctx.closeSheet();
       else close();
     }
     if (e.key === "/" && doc.activeElement?.tagName !== "INPUT" && doc.activeElement?.tagName !== "TEXTAREA") {

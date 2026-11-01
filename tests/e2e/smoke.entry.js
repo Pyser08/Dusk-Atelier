@@ -8,6 +8,10 @@ import { restoreLastMerge } from "../../src/ui/screens/memory/mergeui.js";
 import { layoutOf } from "../../src/engine/peoplegroup.js";
 import { renderPeopleTab } from "../../src/ui/screens/memory/wikiview.js";
 import { renderMemorySkills } from "../../src/ui/screens/memory/skills.js";
+import { runTour } from "../../src/ui/tour.js";
+import { SCREEN_TOURS, screenTourSteps, screenTourKey } from "../../src/ui/screentours.js";
+import { showGuide } from "../../src/ui/screens/memory/guide.js";
+import { icon } from "../../src/ui/icons.js";
 import { createWebTools } from "../../src/data/webtools.js";
 import { createSkillStore, COCOA_LIB_KEY, COCOA_PRESETS_KEY } from "../../src/data/skillstore.js";
 
@@ -104,7 +108,7 @@ window.runSmoke = async () => {
   try {   // 스킬 탭(v1.8.1)
     const store = new Map([[COCOA_LIB_KEY, JSON.stringify({ sets: [{ name: "코코", files: [{ path: "a/SKILL.md", content: "---\nname: A\nskill_format: 2\nsystem_prompt: 지침\n---\n본문" }] }] })], [COCOA_PRESETS_KEY, JSON.stringify({ activePresetId: "p", presets: [{ id: "p", name: "기본", pipeline: { rows: [{ agents: [{ id: "d", name: "Director", mode: "pre", systemPrompt: "규칙", skillSets: ["코코"] }] }] } }] })]]);
     const sk = createSkillStore({ pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } }, { log() {} });
-    const sctx = { win: document.body, toast: (t) => log.push(["toast", t]), skills: sk, web: createWebTools({ pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } }, { log() {} }), state: {} }, shost = document.createElement("div"); document.body.appendChild(shost);
+    const sctx = { win: document.body, toast: (t) => log.push(["toast", t]), skills: sk, prefs: { advanced: true }, web: createWebTools({ pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } }, { log() {} }), state: {} }, shost = document.createElement("div"); document.body.appendChild(shost);
     await renderMemorySkills(sctx, shost, { redraw() {} }); await sleep(80);
     check("스킬 탭 렌더", shost.textContent.includes("스킬 주입") && shost.textContent.includes("스킬 세트 0개"), shost.textContent.slice(0, 120));
     clickText("찾아보기", shost); await sleep(120);
@@ -116,6 +120,37 @@ window.runSmoke = async () => {
     check("웹 도구·호출 기록 카드", shost.textContent.includes("웹 도구 (검색·페이지 읽기)") && shost.textContent.includes("최근 호출 기록") && shost.textContent.includes("Wikipedia"), shost.textContent.slice(-300));
     check("세트 편집기", !!shost.querySelector("textarea") && shost.textContent.includes("진단"), shost.textContent.slice(0, 160));
   } catch (e) { check("스킬 탭", false, e?.stack ?? e); }
+  try {   // 하이라이트 둘러보기(v1.8.1)
+    const w = document.createElement("div"); w.innerHTML = '<button id="t1">A</button><div class="rb-scard"><div class="has-seg">seg</div></div><b id="t2">B</b>'; document.body.appendChild(w);
+    let acted = 0;
+    const done = runTour({ win: document.body }, [{ icon: "home", title: "소개", text: "본문\n둘째 줄" }, { icon: "home", title: "첫째", text: "x", target: ["#t1"] }, { icon: "home", title: "없음", text: "y", target: ["#nope"] }, { icon: "home", title: "둘째", text: "z", target: ["#t2"], action: { label: "실행", onClick: () => { acted++; } } }], { skipMissing: true, doneLabel: "알겠어요" });
+    await sleep(30);
+    check("둘러보기 단계 수(없는 목표 건너뜀)", $(".rb-tour-card .dots i").length === 3 && $(".rb-tour-card.center").length === 1, String($(".rb-tour-card .dots i").length));
+    clickText("다음", document.body); await sleep(20);
+    check("둘러보기 하이라이트", document.getElementById("t1").classList.contains("rb-tour-hl") && !$(".rb-tour-card.center").length);
+    clickText("다음", document.body); await sleep(20);
+    check("둘러보기 이동·동작 버튼", document.getElementById("t2").classList.contains("rb-tour-hl") && !document.getElementById("t1").classList.contains("rb-tour-hl") && $(".rb-tour-card button").some((b) => b.textContent === "실행"));
+    clickText("실행", document.body); await done; await sleep(10);
+    check("둘러보기 끝(정리·동작 실행)", acted === 1 && !$(".rb-tour-card").length && !$(".rb-tour-hl").length);
+    // 화면별 정의: 모든 아이콘이 실제로 있고 목표가 비어 있지 않다
+    const bad = []; for (const [k, defs] of Object.entries(SCREEN_TOURS)) for (const d of defs) { if (!d.target?.length || !d.title || !d.text) bad.push(k + ":" + d.title); if (!icon(d.icon, 22)) bad.push(k + ":icon:" + d.icon); }
+    check("화면별 둘러보기 정의", bad.length === 0, bad.join(","));
+    const sctx0 = { state: { tab: "settings" } };
+    check("화면 키", screenTourKey(sctx0) === "settings" && screenTourKey({ state: { tab: "memory", mem: { page: "skills" } } }) === "memory:skills" && screenTourKey({ state: { tab: "memory" } }) === "memory:home");
+    check("화면별 둘러보기 단계", screenTourSteps(sctx0).length === 1 + SCREEN_TOURS.settings.length && screenTourSteps({ state: { tab: "plugins" } }).length === 1 && /·/.test(screenTourSteps({ state: { tab: "plugins" } })[0].text));
+    // 설정 화면 모양의 DOM에서 실제로 건너뛰며 하이라이트되는지
+    const w2 = document.createElement("div"); w2.innerHTML = '<div class="rb-set-look">꾸미기</div><div class="rb-set-tour">둘러보기</div>'; w2.prepend(w.querySelector(".rb-scard")); document.body.appendChild(w2);
+    const { runScreenTour } = await import("../../src/ui/screentours.js");
+    const p2 = runScreenTour({ win: document.body, state: { tab: "settings" } }); await sleep(30);
+    check("화면별 둘러보기: 있는 것만(소개+3)", $(".rb-tour-card .dots i").length === 4, String($(".rb-tour-card .dots i").length));
+    clickText("건너뛰기", document.body); await p2;
+    // 메모리 ? 가이드: 버튼이 든 카드를 강조
+    const sec = document.createElement("section"); sec.className = "rb-card"; const gb = document.createElement("button"); sec.appendChild(gb); document.body.appendChild(sec);
+    const p3 = showGuide({ win: document.body, memory: {} }, "mode", { anchor: gb }); await sleep(30);
+    check("가이드 하이라이트", sec.classList.contains("rb-tour-hl") && $(".rb-tour-card h2")[0].textContent.includes("기억 방식"));
+    clickText("건너뛰기", document.body); await p3;
+    [w, w2, sec].forEach((x) => x.remove());
+  } catch (e) { check("둘러보기", false, e?.stack ?? e); }
   check("전역 오류 없음", errors.length === 0, errors.join(" | "));
   return out;
 };

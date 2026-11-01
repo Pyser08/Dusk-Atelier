@@ -14,24 +14,30 @@ export var TOUR = [
   { icon: "tools", title: "도구 · 플러그인 (더보기)", text: "프리셋·페르소나 빌더·로어북 로그·백업은 도구에, 설치된 플러그인의 새 버전 확인은 플러그인에 있어요.", tab: "tools" },
   { icon: "palette", title: "꾸미기 (더보기)", text: "강조 색·밝기·글자 크기를 누르면 바로 바뀌어요. 내 채팅 테마도 여기서 만들어요.", tab: "look" },
   { icon: "sliders", title: "설정 (더보기)", text: "화면 모드를 ‘간단’과 ‘고급’ 중에서 골라요. 세부 설정과 개발자 모드는 고급에서 볼 수 있어요. 이 둘러보기도 여기서 다시 봐요.", tab: "settings" },
-  { icon: "help", title: "막히면 ? 버튼", text: "화면 위쪽의 ? 버튼에 그 화면 사용법이 있어요. 이제 시작해 볼까요?", target: ["#rb-help-btn"] }
+  { icon: "help", title: "막히면 ? 버튼", text: "화면 위쪽의 ? 버튼을 누르면 지금 화면을 이렇게 하나씩 짚어 드려요. 이제 시작해 볼까요?", target: ["#rb-help-btn"] }
 ];
 
 var shown = (el) => !!el && el.getClientRects().length > 0 && el.getBoundingClientRect().width > 0;
 
 // 이 단계에서 강조할 버튼 찾기: 지금 보이는 메뉴(왼쪽·위쪽·아래 탭) → 홈 카드 → 더보기 순
 export function findTarget(win, s) {
+  if (s.el && shown(s.el)) return s.el;   // 호출한 쪽이 직접 넘긴 요소(예: ? 버튼이 있는 카드)
   const cands = [];
   if (s.tab) cands.push(...win.querySelectorAll(`[data-tab="${s.tab}"]`), ...win.querySelectorAll(`#rb-home-${s.tab}`), ...(win.querySelector("#rb-more") ? [win.querySelector("#rb-more")] : []));
   for (const q of s.target ?? []) cands.push(...win.querySelectorAll(q));
   return cands.find(shown) ?? null;
 }
 
-export async function openTour(ctx) {
-  const win = ctx.win, doc = win.ownerDocument;
+// 처음 둘러보기와 화면별 둘러보기가 같이 쓰는 하이라이트 안내. steps: [{icon,title,text,target:[css],tab,el,action:{label,onClick}}]
+// 목표(target/tab/el)가 없거나 안 보이면 설명 창이 가운데에 뜬다(skipMissing이면 그 단계를 건너뜀).
+// opts: { label, doneLabel, skipMissing }  skipMissing: 목표가 지금 없으면 건너뜀(첫 단계는 항상 둠). 아니면 가운데에 띄움.
+export async function runTour(ctx, steps, opts = {}) {
+  const win = ctx.win, doc = win.ownerDocument, label = opts.label ?? "둘러보기";
+  const TOUR = opts.skipMissing ? steps.filter((s, k) => k === 0 || !(s.target || s.tab || s.el) || findTarget(win, s)) : steps;
+  if (!TOUR.length) return;
   let i = 0, hl = null;
   await new Promise((resolve) => {
-    const card = h("div", { class: "rb-tour-card", role: "dialog", "aria-label": "처음 둘러보기" });
+    const card = h("div", { class: "rb-tour-card", role: "dialog", "aria-label": label });
     const clear = () => {
       hl?.classList.remove("rb-tour-hl");
       hl = null;
@@ -81,13 +87,15 @@ export async function openTour(ctx) {
       replace(
         card,
         h("div", { class: "head" }, h("span", { class: "ico", "aria-hidden": "true" }, icon(s.icon, 22)), h("h2", null, s.title)),
-        h("p", null, s.text),
+        h("p", { style: "white-space:pre-line" }, s.text),
         h("div", { class: "dots", "aria-label": `${i + 1} / ${TOUR.length}` }, ...TOUR.map((_, k) => h("i", { class: k === i ? "on" : "" }))),
         h(
           "div",
           { class: "acts" },
           last ? h("span") : btn("건너뛰기", { kind: "ghost", onClick: finish }),
-          h("div", { class: "r" }, i > 0 ? btn("이전", { onClick: () => { i--; paint(); } }) : null, btn(last ? "시작하기" : "다음", { kind: "primary", onClick: () => (last ? finish() : (i++, paint())) }))
+          h("div", { class: "r" }, i > 0 ? btn("이전", { onClick: () => { i--; paint(); } }) : null,
+            s.action ? btn(s.action.label, { onClick: () => { finish(); Promise.resolve(s.action.onClick?.()).catch(() => {}); } }) : null,
+            btn(last ? (opts.doneLabel ?? "시작하기") : "다음", { kind: "primary", onClick: () => (last ? finish() : (i++, paint())) }))
         )
       );
       place();
@@ -98,6 +106,10 @@ export async function openTour(ctx) {
     win.appendChild(card);
     paint();
   });
+}
+
+export async function openTour(ctx) {
+  await runTour(ctx, TOUR, { label: "처음 둘러보기" });
   // 끝까지 봤든 건너뛰었든 한 번 보여 줬으면 다시 자동으로 띄우지 않는다.
   ctx.prefs.saveUi({ tourDone: true, tourVer: TOUR_VER }).catch(() => {});
 }

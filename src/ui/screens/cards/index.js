@@ -2,7 +2,8 @@
 // 카드는 기억 기록을 재료로 쓰지만 저장소(cardstore)는 기억 저장소와 완전히 분리돼 있다.
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
-import { advFold, btn, stepsGuide, loading } from "../../kit.js";
+import { advFold, btn, loading } from "../../kit.js";
+import { runScreenTour } from "../../screentours.js";
 import { mem, fail, loadBots, loadChats, countOf, loadFolder } from "../memory/common.js";
 import { renderCards } from "../memory/cards.js";
 import { renderCompose } from "../memory/compose.js";
@@ -29,7 +30,7 @@ export async function renderCardsTab(ctx) {
   replace(ctx.main, h("div", { class: "rb-cards2 rb-scroll" }, top, h("div", { class: "rb-mem-wrap" }, h("div", { class: "rb-mem-root", "data-view": "bot" }, viewHost)), advHost));
   const drawView = (first) => m.botId ? renderBotCards(ctx, viewHost, { redraw, redrawView: () => drawView(false).catch(fail(ctx)), back: () => {}, quiet: !first })
     : Promise.resolve(replace(viewHost, h("div", { class: "rb-empty rb-mem-empty" }, icon("sparkle", 28), h("div", { style: "font-weight:700;color:var(--rb-text);font-size:15px" }, "위에서 봇을 골라 주세요."),
-      stepsGuide("카드는 이 순서로 만들어요", ["위에서 카드를 만들 봇을 골라요.", "‘새 카드·새 봇 만들기’에서 인물과 범위를 골라요.", "카드가 마음에 들면 새 봇으로 이어 가요."]))));
+      h("p", { class: "rb-muted", style: "margin:0" }, "처음이라면 어떻게 만드는지 하나씩 짚어 드릴게요."), btn("카드 만드는 법 둘러보기", { kind: "primary", icon: "help", onClick: () => runScreenTour(ctx) }))));
   await drawView(true);
   // 카드 설정(태그·기본 언어)은 고급에서만
   const sHost = h("div");

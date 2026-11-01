@@ -335,6 +335,7 @@ button.rb-srow{width:100%;background:none;border-top:0;border-left:0;border-righ
 .rb-seg-nowrap .rb-seg button{white-space:nowrap;padding:0 10px}
 .rb-seg button[aria-checked=true]{background:var(--rb-surf);color:var(--rb-text);font-weight:700;box-shadow:var(--rb-shadow-card),inset 0 0 0 1px var(--rb-line3)}
 .rb-empty{padding:44px 20px;text-align:center;color:var(--rb-mute);font-size:13px;line-height:1.7}.rb-empty-card{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:420px;margin:0 auto}.rb-empty-card .ico{width:56px;height:56px;border-radius:18px;background:var(--rb-acc-soft);color:var(--rb-acc-text);display:flex;align-items:center;justify-content:center}.rb-empty-card b{font-size:16px;color:var(--rb-text)}.rb-empty-card p{margin:0;word-break:keep-all}.rb-tour-card{position:absolute;z-index:80;width:min(340px,calc(100% - 24px));display:flex;flex-direction:column;gap:12px;padding:18px 18px 16px;border-radius:var(--rb-r4);background:var(--rb-win);border:var(--rb-bw,1px) solid var(--rb-line3);box-shadow:var(--rb-shadow);animation:rb-in .15s ease-out}
+.rb-home-tourrow{display:flex;justify-content:center;margin-top:10px}
 .rb-tour-card.center{left:50%;top:50%;transform:translate(-50%,-50%);width:min(400px,calc(100% - 24px))}
 .rb-tour-card .head{display:flex;align-items:center;gap:10px}
 .rb-tour-card .ico{width:40px;height:40px;border-radius:13px;background:var(--rb-acc-soft);color:var(--rb-acc-text);display:flex;align-items:center;justify-content:center;flex:none}

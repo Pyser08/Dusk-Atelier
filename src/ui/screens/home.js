@@ -175,5 +175,6 @@ export async function renderHome(ctx) {
       )
     )
   ) : null;
-  replace(host, head, h("div", { class: "rb-hbody" }, h("div", { class: "rb-hmain" }, status, grid), recent));
+  const tourLink = h("div", { class: "rb-home-tourrow" }, h("button", { type: "button", class: "rb-btn ghost sm", id: "rb-home-tour", onClick: () => openTour(ctx) }, icon("help", 14), "처음 둘러보기"));
+  replace(host, head, h("div", { class: "rb-hbody" }, h("div", { class: "rb-hmain" }, status, grid, tourLink), recent));
 }
