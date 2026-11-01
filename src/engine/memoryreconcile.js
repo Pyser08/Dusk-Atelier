@@ -118,7 +118,7 @@ export function reconcile(folder, messages) {
     // 버린 분석이 닫은 떡밥은 다시 연다(되돌릴 수 있게 closed는 두고 표시만 한다).
     if (x.closed && dead(x.closedBy, x.closed_ms)) x.closedOrphan = true; else delete x.closedOrphan;
   }
-  if (messages?.length) {  // 분석 완료·실패 목록도 새 식별자로 옮긴다. 모호한 옛 해시는 안전のため 버려 재분석한다.
+  if (messages?.length) {  // 분석 완료·실패 목록도 새 식별자로 옮긴다. 모호한 옛 해시는 안전을 위해 버려 재분석한다.
     const present = new Set(idx.list.map((x) => x.h));
     const normalizeHashes = (values) => [...new Set((values ?? []).flatMap((h) => {
       if (present.has(h)) return [h];
