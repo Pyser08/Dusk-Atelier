@@ -367,3 +367,9 @@ v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`
 - 그룹 개요 탭(`memory-home`, `manage-home`, `work-home`)은 모바일 전용 메뉴 항목으로 지정. PC 사이드바·상단 메뉴에서는 숨기고, 모바일 하단 그룹 버튼으로 접근.
 - 모바일 그룹 버튼 아이콘: 기억=뇌, 관리=캐릭터, 작업실=몽키렌치(도구).
 - `data/dusk-atelier-ui.v1.css`: 홈 바로가기 4개를 2×2 카드 레이아웃으로 개선하고 간격·아이콘 배경·호버·포커스 상태를 추가.
+
+## 자동 게이지 (v1.8.1)
+- `gauge.js` (engine) v1.8.1 사용자 정의 게이지 순수 로직 — normalizeDef, applyGauge, isDue, undoLast, manualSet, importDefs/exportDefs, 제안 한도(canSuggest/addSuggestion/resolveSuggestion), GAUGE_RULES, validateGaugeOut
+- `gaugeview.js` (engine) 게이지 박스 HTML(인라인 style) — gaugeBoxHtml, shapeHtml
+- `gauge.js` (data) 게이지 서비스 — 정의 저장, AI 설계(MEMORY_DEFAULT_PROMPT_1/2), 분석에 얹기(prepare/apply/afterAnalyze), 채팅 표시(onDisplay), undo
+- `memory/gaugeui.js` (ui) 위키 게이지 블록·추가·편집·관리

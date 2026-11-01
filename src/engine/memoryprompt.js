@@ -3,6 +3,7 @@ import { clampAxis } from "./memorygrade.js";
 import { validateKnow, validatePlus } from "./memoryplus.js";
 import { validateTrust } from "./memorytrust.js";
 import { validateEmo } from "./memoryemo.js";
+import { validateGaugeOut, GAUGE_RULES } from "./gauge.js";
 import { validateKeys } from "./memorykeys.js";
 import { validateSelf, validateInner } from "./memoryinner.js";
 
@@ -37,12 +38,12 @@ export function withCustom(c) {
   return [c.front, lines[0], c.middle, ...lines.slice(1), c.back].filter(Boolean).join("\n\n");
 }
 const cut = (v, n) => String(v ?? "").trim().slice(0, n);
-export function buildMessages({ bot, known = [], ignore = [], previousScene = null, openItems = [], emoState = [], selfHint = [], recent = [], newest, storyDate = "", custom = null }) {
+export function buildMessages({ bot, known = [], ignore = [], previousScene = null, openItems = [], emoState = [], selfHint = [], recent = [], newest, storyDate = "", custom = null, gauges = [], suggestGauge = false }) {
   // recent: 뒤에서부터 합계 4000자, newest.text ≤ 6000자
   const kept = []; let total = 0;
   for (let i = recent.length - 1; i >= 0; i--) { total += recent[i].length; if (total > 4000 && kept.length) break; kept.unshift(recent[i].slice(0, 4000)); }
-  const payload = { bot: cut(bot, 120), known, ignore, previousScene, ...(openItems.length ? { openItems } : {}), ...(emoState.length ? { emoState } : {}), ...(selfHint.length ? { selfHint } : {}), ...(storyDate ? { storyDate } : {}), recent: kept, newest: { index: newest.index, text: cut(newest.text, 6000) } };
-  return [{ role: "system", content: withCustom(custom) }, { role: "user", content: JSON.stringify(payload) }];
+  const payload = { bot: cut(bot, 120), known, ignore, previousScene, ...(openItems.length ? { openItems } : {}), ...(emoState.length ? { emoState } : {}), ...(selfHint.length ? { selfHint } : {}), ...(gauges.length ? { gauges } : {}), ...(suggestGauge ? { suggestGauge: true } : {}), ...(storyDate ? { storyDate } : {}), recent: kept, newest: { index: newest.index, text: cut(newest.text, 6000) } };
+  return [{ role: "system", content: withCustom(custom) + (gauges.length || suggestGauge ? "\n" + GAUGE_RULES : "") }, { role: "user", content: JSON.stringify(payload) }];
 }
 
 export function parseJson(raw) {
@@ -63,7 +64,7 @@ export function validate(obj, { ignore = [] } = {}) {
     sum: cut(sc.sum, 400), facts: (Array.isArray(sc.facts) ? sc.facts : []).map((f) => cut(f, 120)).filter(Boolean).slice(0, 3),
     place: cut(sc.place, 80), when: cut(sc.when, 80), who: (Array.isArray(sc.who) ? sc.who : []).map((w) => cut(w, 120)).filter(Boolean).slice(0, 12), changed: sc.changed === true
   } : null;
-  return { people, scene, ...validatePlus(obj), emo: validateEmo(obj), ...validateInner(obj) };
+  return { people, scene, ...validatePlus(obj), emo: validateEmo(obj), ...validateInner(obj), ...validateGaugeOut(obj) };
 }
 
 // 1회 재요청 포함. call(messages) → 원문 문자열.

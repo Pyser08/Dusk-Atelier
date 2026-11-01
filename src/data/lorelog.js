@@ -26,7 +26,7 @@ export async function clearLoreLog(api) {
 
 const textOf = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => typeof p === "string" ? p : p?.text ?? "").join("\n") : String(c ?? "");
 
-export function createLoreLog(api, { loreRuntime, quietMs = 1500, log = (...a) => console.log("[Dusk 로그]", ...a) } = {}) {
+export function createLoreLog(api, { loreRuntime, above = null, quietMs = 1500, log = (...a) => console.log("[Dusk 로그]", ...a) } = {}) {
   let recs = null;
   let pending = null;
   let saveTimer = null;
@@ -151,15 +151,18 @@ export function createLoreLog(api, { loreRuntime, quietMs = 1500, log = (...a) =
 
   // 화면: 맞는 기록이 있으면 버튼을 붙인다
   async function onDisplay(text) {
+    // 게이지 박스는 로어북 버튼 '위'에 붙인다(above가 text를 받아 text+박스를 돌려줌)
+    let base = text;
+    try { if (above && typeof text === "string") base = (await above(text)) ?? text; } catch { base = text; }
     try {
-      if (!recs) return text;
+      if (!recs) return base;
       const s = await conf();
-      if (s.button === false) return text;
-      if (typeof text !== "string" || text.includes('x-dusk="lore"')) return text;
+      if (s.button === false) return base;
+      if (typeof text !== "string" || text.includes('x-dusk="lore"')) return base;
       const r = matchRecord(recs, text);
-      return r ? text + loreButtonHtml(r) : text;
+      return r ? base + loreButtonHtml(r) : base;
     } catch {
-      return text;
+      return base;
     }
   }
 

@@ -87,6 +87,17 @@ window.runSmoke = async () => {
     check("감정 게이지 카드(간단 모드)", !!host.querySelector(".rb-wk-emo") && /시로코 → \{\{user\}\}/.test(host.textContent), host.textContent.slice(0, 200));
     check("감정 게이지 값·미설정 표시", row("신뢰")?.textContent.endsWith("7") && row("애정")?.textContent.endsWith("—") && row("두려움")?.textContent.endsWith("2"), [...host.querySelectorAll(".rb-wk-emorow")].map((r) => r.textContent).join("|"));
   } catch (e) { check("감정 게이지 렌더", false, e?.stack ?? e); }
+  // v1.8.1: 인물 위키 '수치 상태' 아래 자동 게이지 블록(+ 추가 버튼, 만들어진 게이지 박스)
+  try {
+    const defs = [];
+    env.ctx.memory = { ...(env.ctx.memory ?? {}), gauge: { getDefs: async () => defs, getSuggest: async () => ({ on: false, list: [], sent: [] }), invalidate() {} } };
+    env.bot = { id: "c1", character: { name: "봇" } };
+    const host = document.createElement("div"); document.body.appendChild(host); await renderPeopleTab(env, host); await sleep(120);
+    check("게이지 + 버튼", [...host.querySelectorAll("button")].some((b) => b.textContent.includes("게이지 추가")));
+    defs.push({ id: "g_abcdef12", name: "신뢰", desc: "", min: 0, max: 10, init: 4, step: 3, rule: "", measure: "", update: "", look: { hue: 200, shape: "orb", icon: "" }, targets: "all", on: true, src: "user", at: 1 });
+    const host2 = document.createElement("div"); document.body.appendChild(host2); await renderPeopleTab(env, host2); await sleep(120);
+    check("게이지 박스 렌더", !!host2.querySelector('details[x-dusk="gauge"]'), host2.textContent.slice(0, 120));
+  } catch (e) { check("게이지 렌더", false, e?.stack ?? e); }
   check("전역 오류 없음", errors.length === 0, errors.join(" | "));
   return out;
 };

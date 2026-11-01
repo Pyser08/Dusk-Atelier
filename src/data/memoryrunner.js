@@ -18,7 +18,7 @@ const MAX_FAILS = 5;
 // 자동 기록 시점: next(기본) = 다음 입력을 보낼 때 직전 응답을 확정해 기록 | now = 응답 직후
 const confirmOf = (idx) => idx?.settings?.confirm === "now" ? "now" : "next";
 
-export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null } = {}) {
+export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null, gauge = null } = {}) {
   let timer = null, dirty = false, running = false, started = false;
   let session = { calls: 0, hooks: 0, displays: 0, hookAt: 0, tick: null }; const lastTried = new Map(); let lastTickAt = 0;
   const note = (result, extra = {}) => { session.tick = { at: Date.now(), result, ...extra }; };
@@ -91,7 +91,10 @@ export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = 
     const firstTime = !existing && !bot.notified;
     const input = inputOf(g, existing, group);
     input.custom = await customOf(g.chaId, g.chatId);
+    const ordinalNow = aiIndexes(messages).filter((i) => i <= last).length;
     let result = manual ? null : link?.take?.(h) ?? null;
+    const gx = !result && gauge ? gauge.prepare(idx, existing, chaId, ordinalNow) : null;   // 합친 호출(리수폿)에는 게이지를 얹지 않는다
+    if (gx) Object.assign(input, gx.input);
     if (result) session.combined = (session.combined ?? 0) + 1;
     else session.calls++;
     try { if (!result) result = await analyze((msgs) => run(msgs, modelOf(idx.settings), signal), input); }
@@ -103,14 +106,17 @@ export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = 
       throw e;
     }
     const names = nameOf(character, chat, chatIndex);
+    let gaugeOut = null;
     const out = await store.updateFolder(chaId, chatId, (folder) => {
       Object.assign(folder, names, { chatIndex });
       reconcile(folder, messages);
       const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => messageIdentity(messages[i])) });
       const ev = link?.takeCycle?.() ?? [];
       if (ev.length) res.cycle = addMilestones(folder, ev);
+      if (gx) { try { gaugeOut = gauge.apply(folder, idx, chaId, result, anchor, { ordinal: ordinalNow, text }); } catch (e) { log("게이지 반영 실패", e?.message ?? e); } }
       return res;
     });
+    if (gaugeOut) await gauge.afterAnalyze(chaId, chatId, gaugeOut).catch((e) => log("게이지 후처리 실패", e?.message ?? e));
     await bump(chaId, (b) => { b.fails = 0; b.lastRunAt = Date.now(); b.notified = true; });
     await status({ processed: (idx.status.processed ?? 0) + 1, lastSuccessAt: Date.now(), lastError: "" });
     digestIfNeeded(chaId, chatId, modelOf(idx.settings)).catch((e) => log("digest 실패", e?.message ?? e));

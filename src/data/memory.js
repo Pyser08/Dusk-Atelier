@@ -7,6 +7,7 @@ import { createBardWikiBackend } from "./memorybackend-bardwiki.js";
 import { selectBackend, capabilitiesOf } from "./memorybackend.js";
 import { createCardStore } from "./cardstore.js";
 import { createTurnFlow } from "./memoryturn.js";
+import { createGaugeService } from "./gauge.js";
 import { createSwitches } from "./memoryswitches.js";
 
 export function createMemory(api, { storyNow = null, notify = () => {}, log = (...a) => console.log("[Dusk 기억]", ...a), potLibrary = null, onOpen = null } = {}) {
@@ -15,8 +16,9 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
   let runner = null;  // 아래에서 만든다. 요청 직전 훅은 이 시점 이후에만 불린다.
   const embedder = createEmbedder(api, { log });
   const injector = createMemoryInjector(api, { store, storyNow, log, embedder, onRequest: () => runner?.confirmNext() });
+  const gauge = createGaugeService(api, { store, log });
   const link = {};  // 턴 흐름이 켜지면 채워진다(리수폿 Writer와 기록 호출을 합칠 때 러너가 쓴다)
-  runner = createMemoryRunner(api, { store, log, notify, prompts: async () => (await flow?.settings?.())?.rawSnapshot?.() ?? null, link, afterAnalyze: async (ci, ti) => { if (injector.mode() === "lore") await injector.syncLore(ci, ti); } });
+  runner = createMemoryRunner(api, { store, log, notify, gauge, prompts: async () => (await flow?.settings?.())?.rawSnapshot?.() ?? null, link, afterAnalyze: async (ci, ti) => { if (injector.mode() === "lore") await injector.syncLore(ci, ti); } });
   const bardwiki = createBardWikiBackend(api, { store, log });
   const flow = potLibrary ? createTurnFlow(api, { store, runner, injector, embedder, sourceLibrary: potLibrary, link, onOpen, log }) : null;
   // 화면이 저장소에 직접 쓴 위키(문서 만들기·편집·합치기 등)를 기억 흐름 런타임의 사본에도 반영한다.
@@ -52,5 +54,5 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
     return active;
   }
   const switches = createSwitches({ api, store, flow });
-  return { store, link, cards, runner, injector, embedder, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, active: () => active };
+  return { store, gauge, link, cards, runner, injector, embedder, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, active: () => active };
 }

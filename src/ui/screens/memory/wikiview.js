@@ -15,6 +15,7 @@ import { renderPeople, personDetail, wikiEditable, editMetric, editWikiText, pin
 import { openRecords } from "./recordsui.js";
 import { openAITools, openFieldAI, openImport, fillEmptyPeople } from "./aitools.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX } from "../../../engine/memoryemo.js";
+import { gaugeBlock } from "./gaugeui.js";
 import { wikiPanel } from "./wikipanel.js";
 import { openWikiLog } from "./wikilog.js";
 import { liveScope } from "./advanced.js";
@@ -279,7 +280,7 @@ function personPage(env, r, docs, commit) {
   // ---- 항목 묶음 블록
   const blocks = ORDER.map((id) => {
     if (id === "PROFILE") return profileBlock();
-    if (id === "METRICS") return doc ? section("metrics", "수치 상태", h("div", { class: "rb-wk-grid" }, [...metricCards(), ...emoCards()]), doc.metrics.length) : null;
+    if (id === "METRICS") return doc ? section("metrics", "수치 상태", h("div", { class: "rb-wk-grid" }, [...metricCards(), ...emoCards(), gaugeBlock(env, doc, p)]), doc.metrics.length) : null;
     if (!doc) return null;
     const secs = (MEMBERS[id] ?? [id]).flatMap((g) => groups[g] ?? []);
     if (!secs.length && !ALWAYS.has(id)) return null;

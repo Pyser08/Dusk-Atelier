@@ -117,7 +117,7 @@ async function start() {
   const loreRuntime = createLoreRuntime(api);
   loreRuntime.start().catch((e) => console.log(`[${TITLE}] 로어북 규칙 시작 실패: ${e?.message ?? e}`));
   // 로어북 로그: 응답마다 들어간 로어북을 남기고, 응답 아래에 버튼을 붙인다
-  const loreLog = createLoreLog(api, { loreRuntime });
+  const loreLog = createLoreLog(api, { loreRuntime, above: (t) => memory.gauge.onDisplay(t) });
   loreLog.start().catch((e) => console.log(`[${TITLE}] 로어북 로그 시작 실패: ${e?.message ?? e}`));
   let handlers = null, timer = null;
   const sync = () => app?.ctx.svc.serial(() => syncPersonaModules(api)).catch((e) => console.log("[Dusk Atelier] 페르소나 동기화 실패", e?.message ?? e));
