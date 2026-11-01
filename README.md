@@ -194,8 +194,8 @@ node tools/build.mjs --check   # 빌드 결과가 저장소의 dusk_atelier.js�
 
 ## Special thanks
 - **RisuTide** 개발자님 — 업데이트 판단 로직, 인사말 보호, 백업 방식을 Dusk Atelier로 이어 개발하도록 허락해 주셨어요. (원문 글: https://arca.live/b/characterai/186759072)
-- **cocoA(gent!)** 개발자님 — 스킬 세트(SKILL.md) 형식과 단계별 지침 주입 방식을 참고해 코코아전트의 스킬을 그대로 가져와 쓸 수 있게 했어요. 코드는 복사하지 않고 형식만 따라 새로 작성했어요. (원문 글: https://arca.live/b/characterai/179049659)
-- **HypaPlus** 개발자님 — HypaPlus에 쌓인 기억을 장면·인물 기록으로 가져오는 기능의 데이터 형식을 참고했어요. 코드는 복사하지 않았어요. (원문 글: https://arca.live/b/characterai/180803492)
+- **cocoA(gent!)** 개발자님 — 스킬 세트(SKILL.md)와 단계별 지침 주입 기능을 Dusk Atelier로 옮겨 오도록 허락해 주셨어요. 코코아전트에서 쓰던 스킬은 그대로 가져와 쓸 수 있어요. (원문 글: https://arca.live/b/characterai/179049659)
+- **HypaPlus** 개발자님 — HypaPlus의 기억 가져오기와 정규식 전처리 기능을 Dusk Atelier로 옮겨 오도록 허락해 주셨어요. (원문 글: https://arca.live/b/characterai/180803492)
 - **봇빌더** 원작자님 — AI로 설명·로어북·정규식·Lua를 만드는 엔진과 프리셋 요청 조립을 Dusk Atelier 개발 탭으로 옮기도록 허락해 주셨어요. (원문 글: https://arca.live/b/characterai/187289284)
 
 ## 라이선스
