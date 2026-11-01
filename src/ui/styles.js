@@ -585,12 +585,16 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-cr[data-credit=pot]{background:linear-gradient(135deg,#1a1245 0%,#2e1f7a 48%,#5b34a8 100%)}
 .rb-cr[data-credit=arcana]{background:linear-gradient(135deg,#3a0f3a 0%,#7a1f5c 48%,#c2477a 100%)}
 .rb-cr[data-credit=bb]{background:linear-gradient(135deg,#0b2a30 0%,#12565a 48%,#2f9a8a 100%)}
+.rb-cr[data-credit=cocoa]{background:linear-gradient(135deg,#2a1a0f 0%,#6b3f1d 48%,#c98a4b 100%)}
+.rb-cr[data-credit=hypa]{background:linear-gradient(135deg,#0f1f3a 0%,#1d3f7a 48%,#4b7fd0 100%)}
 @media (hover:hover){.rb-cr:hover{transform:translateY(-3px);box-shadow:0 20px 48px rgba(60,30,120,.45)}}
 .rb-cr-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .rb-cr-glow{position:absolute;width:260px;height:260px;right:-60px;top:-90px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.28),transparent 65%);animation:rb-cr-drift 7s ease-in-out infinite}
 .rb-cr[data-credit=pot] .rb-cr-glow{background:radial-gradient(circle,rgba(150,170,255,.45),transparent 65%)}
 .rb-cr[data-credit=arcana] .rb-cr-glow{background:radial-gradient(circle,rgba(255,190,120,.45),transparent 65%)}
 .rb-cr[data-credit=bb] .rb-cr-glow{background:radial-gradient(circle,rgba(120,240,200,.4),transparent 65%)}
+.rb-cr[data-credit=cocoa] .rb-cr-glow{background:radial-gradient(circle,rgba(255,200,140,.42),transparent 65%)}
+.rb-cr[data-credit=hypa] .rb-cr-glow{background:radial-gradient(circle,rgba(150,190,255,.42),transparent 65%)}
 .rb-cr-shine{position:absolute;top:0;bottom:0;width:38%;left:-45%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.14),transparent);transform:skewX(-18deg);animation:rb-cr-shine 5.5s ease-in-out infinite;animation-delay:calc(var(--rb-ci) * 1.2s)}
 .rb-cr-star{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;box-shadow:0 0 8px 2px rgba(255,255,255,.7);opacity:.2;animation:rb-cr-twinkle 3s ease-in-out infinite}
 .rb-cr-body{position:relative;display:flex;gap:18px;align-items:flex-start}
@@ -600,6 +604,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-cr-title{font-size:24px;font-weight:800;letter-spacing:-.01em;background:linear-gradient(90deg,#fff,#d9c8ff,#fff);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:rb-cr-text 6s linear infinite}
 .rb-cr[data-credit=arcana] .rb-cr-title{background-image:linear-gradient(90deg,#fff,#ffd6a8,#fff)}
 .rb-cr[data-credit=bb] .rb-cr-title{background-image:linear-gradient(90deg,#fff,#b8f5e4,#fff)}
+.rb-cr[data-credit=cocoa] .rb-cr-title{background-image:linear-gradient(90deg,#fff,#ffe0b8,#fff)}
+.rb-cr[data-credit=hypa] .rb-cr-title{background-image:linear-gradient(90deg,#fff,#c4dbff,#fff)}
 .rb-cr-desc{font-size:13.5px;line-height:1.7;color:rgba(255,255,255,.82);word-break:keep-all}
 .rb-cr-link{align-self:flex-start;margin-top:6px;font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);color:#fff;text-decoration:none;backdrop-filter:blur(4px);transition:background .2s,transform .15s}
 .rb-cr-link:hover{background:rgba(255,255,255,.28);transform:translateX(2px)}

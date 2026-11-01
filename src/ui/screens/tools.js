@@ -43,7 +43,8 @@ function thanksCard() {
         null,
         h("span", { class: "rb-thanks-kicker" }, "SPECIAL THANKS"),
         h("b", { class: "rb-thanks-title" }, "RisuTide"),
-        h("span", { class: "rb-thanks-text" }, "채팅을 지키는 업데이트, 꼼꼼한 비교 검토, 다른 봇에서 가져오기·합치기까지 — Dusk Atelier의 업데이트 기능은 RisuTide에서 이어받았어요. 기꺼이 코드를 넘겨주신 RisuTide 개발자님께 깊이 감사드려요.")
+        h("span", { class: "rb-thanks-text" }, "채팅을 지키는 업데이트, 꼼꼼한 비교 검토, 다른 봇에서 가져오기·합치기까지 — Dusk Atelier의 업데이트 기능은 RisuTide에서 이어받았어요. 기꺼이 코드를 넘겨주신 RisuTide 개발자님께 깊이 감사드려요."),
+        h("a", { href: "https://arca.live/b/characterai/186759072", target: "_blank", rel: "noopener noreferrer", style: "display:inline-block;margin-top:6px;color:inherit;font-weight:700;text-decoration:underline;font-size:12px" }, "RisuTide 글 보기 ↗")
       )
     )
   );
@@ -53,7 +54,9 @@ function thanksCard() {
 const CREDITS = [
   { key: "pot", emoji: "📜", kicker: "PORTED WITH PERMISSION", name: "Risupot", desc: "위키 기억 기능의 바탕이에요. 허락을 받아 옮겨 왔어요.", url: "https://arca.live/b/characterai/185024906" },
   { key: "arcana", emoji: "🃏", kicker: "PORTED WITH PERMISSION", name: "Arcana Card", desc: "기억 카드의 바탕이에요. 허락을 받아 옮겨 왔어요.", url: "https://arca.live/b/characterai/185793481" },
-  { key: "bb", emoji: "🛠️", kicker: "PORTED WITH PERMISSION", name: "봇빌더", desc: "AI로 제작 기능을 허락받고 옮겨 왔어요.", url: "https://arca.live/b/characterai/187289284" }
+  { key: "bb", emoji: "🛠️", kicker: "PORTED WITH PERMISSION", name: "봇빌더", desc: "AI로 제작 기능을 허락받고 옮겨 왔어요.", url: "https://arca.live/b/characterai/187289284" },
+  { key: "cocoa", emoji: "🥥", kicker: "SPECIAL THANKS", name: "cocoA(gent!)", desc: "스킬 세트(SKILL.md) 형식과 단계별 지침 주입 방식을 참고해 호환되게 만들었어요.", url: "https://arca.live/b/characterai/179049659" },
+  { key: "hypa", emoji: "📚", kicker: "SPECIAL THANKS", name: "HypaPlus", desc: "HypaPlus에 쌓인 기억을 가져오는 기능의 데이터 형식을 참고했어요.", url: "https://arca.live/b/characterai/180803492" }
 ];
 const STAR_POS = [[8, 22, 0], [18, 70, 1.1], [31, 36, 0.5], [44, 80, 1.7], [57, 18, 0.9], [66, 58, 2.1], [78, 30, 0.3], [88, 74, 1.4], [94, 20, 1.9]];
 function creditFx(key) {
