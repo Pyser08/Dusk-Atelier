@@ -2,7 +2,7 @@
 // 메뉴 섹션: 기억 → 관리 → 작업실. 홈은 섹션 바깥에 둔다.
 export var TABS = [
   { id: "home", label: "홈", icon: "home", group: "base", desc: "지금 열린 채팅의 상태를 보고, 하고 싶은 일을 골라요.", help: [] },
-  { id: "memory-home", label: "개요", icon: "brain", mobileOnly: true, group: "more", section: "memory", desc: "기억 기능을 골라 열어요.", card: "장기 기억과 기억 카드로 이동해요.", help: ["원하는 기억 기능을 눌러 바로 이동해요."] },
+  { id: "memory-home", label: "개요", icon: "brain", mobileOnly: true, group: "more", section: "memory", desc: "기억 기능을 골라 열어요.", card: "장기 기억·기억 카드·코코아로 이동해요.", help: ["원하는 기억 기능을 눌러 바로 이동해요."] },
   {
     id: "memory", label: "장기 기억", icon: "brain", group: "more", section: "memory",
     desc: "응답마다 인물별 기억을 쌓고, 필요할 때 꺼내 써요.",

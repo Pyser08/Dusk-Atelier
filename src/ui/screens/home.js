@@ -92,7 +92,7 @@ export async function renderHome(ctx) {
     h("h2", null, "바로가기"),
     h("div", { class: "rb-hgrid" },
       tile("upload", "가져오기", "봇·모듈·파일 가져오기", () => ctx.legacy.open(), "rb-home-import"),
-      tile("brain", "기억", "장기 기억·기억 카드", () => ctx.go("memory-home"), "rb-home-memory"),
+      tile("brain", "기억", "장기 기억·기억 카드·코코아", () => ctx.go("memory-home"), "rb-home-memory"),
       tile("module", "관리", "캐릭터·모듈·플러그인", () => ctx.go("manage-home"), "rb-home-manage"),
       tile("tools", "작업실", "플러그인 꾸미기·AI 봇 제작·도구", () => ctx.go("work-home"), "rb-home-work")
     )

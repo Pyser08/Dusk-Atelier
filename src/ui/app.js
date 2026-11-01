@@ -498,6 +498,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     go,
     refresh: () => render(),
     close: () => close(),
+    reopen: () => open(),
     applyTheme,
     refreshTabs: () => refreshTabs(),
     setUiMode,

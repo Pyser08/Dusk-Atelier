@@ -10,6 +10,7 @@ export var TOUR = [
   { icon: "brain", title: "기억", text: "스위치만 켜면 AI 응답마다 인물의 상태와 있었던 일이 기록돼요. 지난 대화도 한 번에 분석할 수 있어요.", tab: "memory" },
   { icon: "character", title: "캐릭터 (더보기)", text: "캐릭터를 폴더로 정리하고, 에셋과 로어북을 다듬어요. ‘AI로 만들기’로 말만 해도 봇을 만들어요.", tab: "characters" },
   { icon: "module", title: "모듈 (더보기)", text: "모듈을 켜고 끄고 순서를 바꿔요. 줄의 ‘연결’ 버튼으로 페르소나·캐릭터·지금 채팅에 이어요.", tab: "modules" },
+  { icon: "sliders", title: "코코아 (더보기)", text: "코코아 스킬로 AI 응답의 방향을 잡아요. 켜기만 하면 되고, ‘AI로 스킬 만들기’로 대화하며 만들 수도 있어요.", tab: "cocoa" },
   { icon: "sparkle", title: "기억 카드 (더보기)", text: "마음에 드는 인물은 카드로 만들어 새 봇으로 이어 갈 수 있어요.", tab: "cards" },
   { icon: "tools", title: "도구 · 플러그인 (더보기)", text: "프리셋·페르소나 빌더·로어북 로그·백업은 도구에, 설치된 플러그인의 새 버전 확인은 플러그인에 있어요.", tab: "tools" },
   { icon: "palette", title: "꾸미기 (더보기)", text: "강조 색·밝기·글자 크기를 누르면 바로 바뀌어요. 내 채팅 테마도 여기서 만들어요.", tab: "look" },
@@ -115,7 +116,7 @@ export async function openTour(ctx) {
 }
 
 // 둘러보기를 새로 짠 버전(1.7.0)이면 TOUR_VER를 올려 두었다: 이전 버전에서 업데이트한 사람도 한 번은 자동으로 본다.
-export var TOUR_VER = 2;
+export var TOUR_VER = 3;
 export async function maybeShowTour(ctx) {
   if (ctx.prefs.ui?.tourDone && (ctx.prefs.ui?.tourVer ?? 0) >= TOUR_VER) return;
   await openTour(ctx);

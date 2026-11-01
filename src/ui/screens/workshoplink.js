@@ -23,9 +23,11 @@ export async function startWorkshop(ctx) {
   if (!chars) return false;
   if (st.linked) {
     await L.saveHandoff(chars, "linked");
-    ctx.toast("봇빌더를 여는 중…");
+    // 봇빌더 화면이 Dusk 밑에 깔리지 않도록 Dusk를 먼저 닫고 연다. 실패하면 Dusk를 다시 연다.
+    await ctx.close?.();
     const r = await L.open().catch((e) => ({ ok: false, error: e?.message ?? String(e) }));
-    if (r.ok) { await ctx.close?.(); return true; }
+    if (r.ok) return true;
+    await ctx.reopen?.();
   }
   return askManual(ctx, L, st, chars);
 }
