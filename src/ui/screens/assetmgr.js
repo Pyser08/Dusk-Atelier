@@ -212,9 +212,11 @@ export async function openAssetsCore(ctx, src) {
   });
   panel.addEventListener("drop", (ev) => {
     if (!ev.dataTransfer?.files?.length) return;
+    const all = [...ev.dataTransfer.files], rest = all.filter((f) => !/\.rbupatch$/i.test(f.name ?? ""));
+    if (!rest.length) return;   // .rbupatch만 놓았으면 에셋이 아니라 창 전체 드롭(자동 패치)이 처리하게 둔다
     ev.preventDefault();
     ev.stopPropagation();
-    addFiles([...ev.dataTransfer.files]);
+    addFiles(rest);
   });
   panel.addEventListener("dragenter", (ev) => ev.stopPropagation());
   panel.addEventListener("keydown", (ev) => {

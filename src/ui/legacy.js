@@ -257,7 +257,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
     stopRequested = false;
     frame(`<div class="card"><div class="drop" id="drop"><b>파일을 여기로 끌어 놓거나 아래에서 고르세요</b> (여러 개도 돼요)<br>
               <span class="muted">캐릭터: .charx · .png · .jpg · 카드 .json &nbsp;|&nbsp; 모듈: .risum · .module.charx · 모듈 .json</span>
-              <br><button class="primary" id="pick" style="margin-top:14px;min-width:160px">파일 고르기</button><input type="file" id="file" multiple accept=".charx,.png,.jpg,.jpeg,.risum,.json" style="display:none"></div>
+              <br><button class="primary" id="pick" style="margin-top:14px;min-width:160px">파일 고르기</button><input type="file" id="file" multiple accept=".charx,.png,.jpg,.jpeg,.risum,.json,.rbupatch" style="display:none"></div>
             ${errorText ? `<div class="err">${esc(errorText)}</div>` : ""}
             ${queue.length ? `<div class="muted" style="margin-top:8px">대기 중인 파일 ${queue.length}개</div>` : ""}</div>
           <div class="row"><button id="backups">백업·되돌리기</button>${queue.length ? '<button class="primary" id="nextq">다음 파일</button>' : ""}${closeBtn()}</div>`);
@@ -265,7 +265,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
     pendingOfferCard();
     root.querySelector("#nextq")?.addEventListener("click", () => runQueue());
     const go = (files) => {
-      const list = [...files ?? []];
+      const list = takePatches([...files ?? []]);
       if (!list.length) return;
       queue = [...list, ...queue];
       runQueue();
@@ -283,6 +283,14 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
       drop.classList.remove("over");
       go(e.dataTransfer?.files);
     });
+  }
+  // .rbupatch는 가져오기 대기열이 아니라 '패치 적용'(이름이 같은 봇·모듈을 자동으로 찾음)으로 보낸다
+  let patchSink = null;
+  function takePatches(list) {
+    const patches = list.filter((f) => /\.rbupatch$/i.test(f?.name ?? ""));
+    if (!patches.length) return list;
+    if (patchSink) patchSink(patches);
+    return list.filter((f) => !patches.includes(f));
   }
   function renderProgress(title, pct, detail3) {
     frame(`<div class="card"><div>${esc(title)}</div>
@@ -1811,7 +1819,10 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
     async startWithFile(file) {
       return this.startWithFiles([file]);
     },
+    setPatchSink(fn) { patchSink = fn; },
     async startWithFiles(files) {
+      files = takePatches(files);
+      if (!files.length) return;
       if (busy) {
         queue.push(...files);
         return show();

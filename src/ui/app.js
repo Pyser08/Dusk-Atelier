@@ -264,6 +264,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       dropEl = null;
     }
   });
+  const runPatches = (patches) => (async () => { for (const f of patches) await applyDroppedPatch(ctx, f).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })); })();
+  legacy.setPatchSink?.(runPatches);   // 가져오기 창에 놓은 .rbupatch도 같은 자동 적용으로
   win.addEventListener("drop", (e) => {
     if (!hasFiles(e)) return;
     e.preventDefault();
@@ -275,7 +277,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     const rest = files.filter((f) => !patches.includes(f));
     if (rest.length) legacy.startWithFiles(rest);
     // 패치 파일은 이름이 같은 캐릭터·모듈을 찾아 하나씩 적용한다
-    if (patches.length) (async () => { for (const f of patches) await applyDroppedPatch(ctx, f).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })); })();
+    if (patches.length) runPatches(patches);
   });
   doc.addEventListener("keydown", (e) => {
     if (root.hidden) return;
