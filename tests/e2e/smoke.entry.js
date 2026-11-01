@@ -1,4 +1,5 @@
 // 7-B 새 화면 연기 시험(브라우저에서 실제로 그려 보기): node tests/e2e/run-smoke.mjs 로 실행한다. 가짜 ctx만 쓴다.
+import { TABS } from "../../src/ui/tabs.js";
 import { createEmptyWikiScope, createWikiDocument } from "../../src/engine/pot/wiki-schema.js";
 import { openFolders } from "../../src/ui/screens/memory/folderui.js";
 import { openRecords } from "../../src/ui/screens/memory/recordsui.js";
@@ -12,7 +13,6 @@ import { runTour } from "../../src/ui/tour.js";
 import { SCREEN_TOURS, screenTourSteps, screenTourKey } from "../../src/ui/screentours.js";
 import { showGuide } from "../../src/ui/screens/memory/guide.js";
 import { icon } from "../../src/ui/icons.js";
-import { memoryTabs, showsMemTabs } from "../../src/ui/screens/memory/memtabs.js";
 import { createWebTools } from "../../src/data/webtools.js";
 import { createSkillStore, COCOA_LIB_KEY, COCOA_PRESETS_KEY } from "../../src/data/skillstore.js";
 
@@ -137,7 +137,7 @@ window.runSmoke = async () => {
     const bad = []; for (const [k, defs] of Object.entries(SCREEN_TOURS)) for (const d of defs) { if (!d.target?.length || !d.title || !d.text) bad.push(k + ":" + d.title); if (!icon(d.icon, 22)) bad.push(k + ":icon:" + d.icon); }
     check("화면별 둘러보기 정의", bad.length === 0, bad.join(","));
     const sctx0 = { state: { tab: "settings" } };
-    check("화면 키", screenTourKey(sctx0) === "settings" && screenTourKey({ state: { tab: "memory", mem: { page: "skills" } } }) === "memory:skills" && screenTourKey({ state: { tab: "memory" } }) === "memory:home");
+    check("화면 키", screenTourKey(sctx0) === "settings" && screenTourKey({ state: { tab: "cocoa" } }) === "cocoa" && screenTourKey({ state: { tab: "memory" } }) === "memory:home");
     check("화면별 둘러보기 단계", screenTourSteps(sctx0).length === 1 + SCREEN_TOURS.settings.length && screenTourSteps({ state: { tab: "plugins" } }).length === 1 && /·/.test(screenTourSteps({ state: { tab: "plugins" } })[0].text));
     // 설정 화면 모양의 DOM에서 실제로 건너뛰며 하이라이트되는지
     const w2 = document.createElement("div"); w2.innerHTML = '<div class="rb-set-look">꾸미기</div><div class="rb-set-tour">둘러보기</div>'; w2.prepend(w.querySelector(".rb-scard")); document.body.appendChild(w2);
@@ -152,19 +152,10 @@ window.runSmoke = async () => {
     clickText("건너뛰기", document.body); await p3;
     [w, w2, sec].forEach((x) => x.remove());
   } catch (e) { check("둘러보기", false, e?.stack ?? e); }
-  try {   // 기억 탭 안의 스킬 탭 줄(v1.8.1)
-    const mctx = { state: {} }; let redrawn = 0; const nav = memoryTabs(mctx, "home", () => { redrawn++; }); document.body.appendChild(nav);
-    const chips = $("button", nav);
-    check("기억 탭 줄: 기억·스킬 두 칸", chips.map((b) => b.textContent.trim()).join("|") === "기억|코코아" && chips[0].getAttribute("aria-pressed") === "true");
-    chips[1].click();
-    check("기억 탭 줄: 스킬 누르면 스킬 화면", mctx.state.mem.page === "skills" && redrawn === 1);
-    const nav2 = memoryTabs(mctx, "skills", () => { redrawn++; }); document.body.appendChild(nav2);
-    const chips2 = $("button", nav2); chips2[0].click();
-    check("기억 탭 줄: 기억 누르면 돌아옴", mctx.state.mem.page === "home" && redrawn === 2 && chips2[1].getAttribute("aria-pressed") === "true");
-    nav2.remove();
-    check("기억 탭 줄 표시 화면", showsMemTabs("home") && showsMemTabs("skills") && showsMemTabs("bots") && !showsMemTabs("detail"));
-    nav.remove();
-  } catch (e) { check("기억 탭 줄", false, e?.stack ?? e); }
+  try {   // 코코아 탭(사이드바 기억 섹션)
+    const ids = TABS.filter((x) => x.section === "memory").map((x) => x.id);
+    check("사이드바 기억 섹션에 코코아 탭", ids.includes("memory") && ids.includes("cocoa") && ids.includes("cards"));
+  } catch (e) { check("코코아 탭", false, e?.stack ?? e); }
   check("전역 오류 없음", errors.length === 0, errors.join(" | "));
   return out;
 };

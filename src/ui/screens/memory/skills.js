@@ -19,9 +19,9 @@ function saveBlob(ctx, name, data, type) {
 }
 const pickFile = (ctx, accept, onFile) => { const inp = h("input", { type: "file", accept }); inp.addEventListener("change", () => { const f = inp.files?.[0]; if (f) onFile(f); }); inp.click(); };
 
-export async function renderMemorySkills(ctx, host, { redraw }) {
+export async function renderMemorySkills(ctx, host, { redraw, standalone = false }) {
   const S = ctx.skills, m = mem(ctx), st = m.skills ??= { open: "", file: "" };
-  const back = { onClick: () => { m.page = "home"; redraw(); }, label: "기억으로" };
+  const back = standalone ? undefined : { onClick: () => { m.page = "home"; redraw(); }, label: "기억으로" };
   if (!S) return replace(host, pageHead("코코아", { back }), emptyState({ icon: "info", title: "스킬 기능이 아직 준비되지 않았어요", text: "플러그인을 다시 불러와 주세요." }));
   const dt = (k) => h("div", { "data-tour": k }), topH = dt("sk-toggle"), stagesH = dt("sk-stages"), libH = dt("sk-lib"), cocoaH = dt("sk-cocoa"), webH = dt("sk-web"), callsH = dt("sk-calls");
   replace(host, pageHead("코코아", { sub: "코코아전트 스킬 그대로 쓸 수 있어요", back }), topH, stagesH, libH, advFold(ctx, "memory", h("div", null, cocoaH, webH, callsH)));

@@ -15,15 +15,13 @@ export const SCREEN_TOURS = {
     st("help", "? 버튼", "어느 화면에서든 이 ? 버튼을 누르면 그 화면을 이렇게 하나씩 짚어 드려요.", "#rb-help-btn"),
   ],
   "memory:home": [
-    st("sparkle", "기억 · 코코아", "위쪽 탭으로 기억 화면과 코코아 화면을 오가요. 코코아는 AI에게 줄 추가 지침 세트를 관리하는 곳이에요.", '[data-tour="mem-tabs"]'),
     st("brain", "기억 상태", "기억이 켜져 있는지 보여 줘요. 꺼져 있으면 ‘켜기’ 한 번이면 시작돼요. ‘인물 Wiki’에서 쌓인 기록을 볼 수 있어요.", ".rb-mem-status-row"),
     st("sparkle", "쌓인 기록", "지금까지 쌓인 기록의 종류와 개수예요.", ".rb-mem-usage"),
     st("sliders", "할 수 있는 일", "지난 대화를 한꺼번에 분석하거나, 기록을 보거나, 다른 채팅으로 옮겨 가요.", ".rb-actions"),
     st("history", "최근 기록", "방금 쌓인 기록이에요. ‘전체 보기’로 모두 볼 수 있어요.", ".rb-mem-recentbox"),
     st("tools", "세부 기능", "프롬프트·임베딩(의미 검색)·스킬 같은 기능은 여기서 열어요. 처음엔 하나도 안 만져도 돼요.", ".rb-mem-integrated-settings"),
   ],
-  "memory:skills": [
-    st("sparkle", "기억 · 코코아", "위쪽 탭의 ‘기억’을 누르면 기억 화면으로 돌아가요.", '[data-tour="mem-tabs"]'),
+  cocoa: [
     st("sliders", "코코아 기능 켜기", "스킬 지침을 AI 호출에 붙일지 정해요. 꺼져 있으면 아무것도 붙지 않아요. 별도 AI 호출은 만들지 않아요.", '[data-tour="sk-toggle"]'),
     st("list", "사용할 스킬", "쓸 스킬 세트를 골라요. 고급 모드에서는 정리 노트·기록하기·기억 분석 중 어디에 붙일지도 정할 수 있어요.", '[data-tour="sk-stages"]'),
     st("upload", "스킬 세트", "코코아전트용 스킬 ZIP·JSON을 가져오고, 안의 파일을 고치고, 주입 미리보기로 확인해요.", '[data-tour="sk-lib"]'),

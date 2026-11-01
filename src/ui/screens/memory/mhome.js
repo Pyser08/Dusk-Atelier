@@ -119,7 +119,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     h("span", { class: "h" }, ctx.prefs.advanced ? "기억 · 리수폿 설정" : "기억 세부 설정"),
     h("button", { type: "button", class: "rb-srow", onClick: () => ctx.go("settings", "prompts") },
       h("span", { class: "t" }, "기억·리수폿 프롬프트", h("small", null, "앞·중간·뒤에 덧붙일 프롬프트 · 플러그인의 모든 AI 작업에 적용 · JSON/.risup 불러오기")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))),
-    h("button", { type: "button", class: "rb-srow", onClick: () => { m.page = "skills"; redraw(); } },
+    h("button", { type: "button", class: "rb-srow", onClick: () => ctx.go("cocoa") },
       h("span", { class: "t" }, "코코아 · 스킬", h("small", null, "AI에게 줄 추가 지침 세트 · 코코아전트 스킬 그대로 가져오기")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))),
     h("button", { type: "button", class: "rb-srow", "data-tour": "mem-embed", onClick: () => { if (ctx.memory?.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); } },
       h("span", { class: "t" }, "임베딩(의미 검색)", h("small", null, "뜻이 비슷한 기억 찾기 · API 주소·키·기본 사용·대기 시간")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))));
