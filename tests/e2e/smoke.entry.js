@@ -7,6 +7,8 @@ import { openTracking } from "../../src/ui/screens/memory/trackui.js";
 import { restoreLastMerge } from "../../src/ui/screens/memory/mergeui.js";
 import { layoutOf } from "../../src/engine/peoplegroup.js";
 import { renderPeopleTab } from "../../src/ui/screens/memory/wikiview.js";
+import { renderMemorySkills } from "../../src/ui/screens/memory/skills.js";
+import { createSkillStore, COCOA_LIB_KEY, COCOA_PRESETS_KEY } from "../../src/data/skillstore.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const $ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -98,6 +100,20 @@ window.runSmoke = async () => {
     const host2 = document.createElement("div"); document.body.appendChild(host2); await renderPeopleTab(env, host2); await sleep(120);
     check("게이지 박스 렌더", !!host2.querySelector('details[x-dusk="gauge"]'), host2.textContent.slice(0, 120));
   } catch (e) { check("게이지 렌더", false, e?.stack ?? e); }
+  try {   // 스킬 탭(v1.8.1)
+    const store = new Map([[COCOA_LIB_KEY, JSON.stringify({ sets: [{ name: "코코", files: [{ path: "a/SKILL.md", content: "---\nname: A\nskill_format: 2\nsystem_prompt: 지침\n---\n본문" }] }] })], [COCOA_PRESETS_KEY, JSON.stringify({ activePresetId: "p", presets: [{ id: "p", name: "기본", pipeline: { rows: [{ agents: [{ id: "d", name: "Director", mode: "pre", systemPrompt: "규칙", skillSets: ["코코"] }] }] } }] })]]);
+    const sk = createSkillStore({ pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } }, { log() {} });
+    const sctx = { win: document.body, toast: (t) => log.push(["toast", t]), skills: sk, state: {} }, shost = document.createElement("div"); document.body.appendChild(shost);
+    await renderMemorySkills(sctx, shost, { redraw() {} }); await sleep(80);
+    check("스킬 탭 렌더", shost.textContent.includes("스킬 주입") && shost.textContent.includes("스킬 세트 0개"), shost.textContent.slice(0, 120));
+    clickText("찾아보기", shost); await sleep(120);
+    check("코코아 데이터 찾기", shost.textContent.includes("스킬 세트 1개 가져오기") && shost.textContent.includes("'Director'의 프롬프트를 스킬로 변환"), shost.textContent.slice(-200));
+    clickText("옮기기", shost); await sleep(200);
+    const lib = await sk.getLibrary(), cfg = await sk.getCfg();
+    check("코코아 옮기기", lib.sets.length === 1 && cfg.stages.director.length === 1 && cfg.on === false, JSON.stringify(cfg.stages));
+    clickText("열기", shost); await sleep(80);
+    check("세트 편집기", !!shost.querySelector("textarea") && shost.textContent.includes("진단"), shost.textContent.slice(0, 160));
+  } catch (e) { check("스킬 탭", false, e?.stack ?? e); }
   check("전역 오류 없음", errors.length === 0, errors.join(" | "));
   return out;
 };

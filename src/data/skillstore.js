@@ -5,6 +5,7 @@ import { normalizeSkillLibrary, skillSetFromEntries, applySkillSetImport, parseS
 import { normalizeSkillCfg, stageInjection, injectionBlock } from "../engine/skillcfg.js";
 
 export const SKILL_LIB_KEY = "dusk.skills.v1", SKILL_CFG_KEY = "dusk.skills.cfg.v1";
+export const COCOA_PRESETS_KEY = "risu_agents_pipeline_presets_v1";   // 코코아전트 파이프라인 프리셋(에이전트별 스킬 할당·프롬프트)
 export const COCOA_LIB_KEY = "risu_agents_skill_library_v1";   // 코코아전트가 쓰던 키(있으면 1회 가져오기 제안)
 const parse = (raw) => { try { return raw ? (typeof raw === "string" ? JSON.parse(raw) : raw) : null; } catch { return null; } };
 
@@ -60,7 +61,9 @@ export function createSkillStore(api, { log = (...a) => console.log("[Dusk 스�
   async function detectCocoa() {
     try { const o = parse(await ps().getItem(COCOA_LIB_KEY)); const l = normalizeSkillLibrary(o); return l.sets.length ? l : null; } catch { return null; }
   }
+  // 코코아전트 원본(읽기만): 화면이 readCocoa(engine/cocoamigrate.js)로 해석한다.
+  async function readCocoaRaw() { try { return { library: await ps().getItem(COCOA_LIB_KEY), presets: await ps().getItem(COCOA_PRESETS_KEY) }; } catch { return { library: null, presets: null }; } }
   const zipOfSet = (set) => zipSync(Object.fromEntries(set.files.map((f) => [`${set.name}/${f.path}`, strToU8(f.content)])));
-  return { getLibrary, getCfg, saveLibrary, saveCfg, blockFor, previewFor, readFile, importSet, importLibrary, detectCocoa, zipOfSet,
+  return { getLibrary, getCfg, saveLibrary, saveCfg, blockFor, previewFor, readFile, importSet, importLibrary, detectCocoa, readCocoaRaw, zipOfSet,
     exportSet: (set) => JSON.stringify(exportSkillSet(set), null, 2), exportLibrary: async () => JSON.stringify(exportSkillLibrary(await getLibrary()), null, 2) };
 }

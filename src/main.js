@@ -160,6 +160,7 @@ async function start() {
   app.ctx.loreRuntime = loreRuntime;
   app.ctx.loreLog = loreLog;
   app.ctx.memory = memory;
+  app.ctx.skills = skills;
   app.ctx.storyTime = storyTime;
   app.ctx.fairPlay = fairPlay;
   app.ctx.affhud = affhud;

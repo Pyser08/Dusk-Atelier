@@ -119,6 +119,8 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     h("span", { class: "h" }, "기억 · 리수폿 설정"),
     h("button", { type: "button", class: "rb-srow", onClick: () => ctx.go("settings", "prompts") },
       h("span", { class: "t" }, "기억·리수폿 프롬프트", h("small", null, "앞·중간·뒤에 덧붙일 프롬프트 · 플러그인의 모든 AI 작업에 적용 · JSON/.risup 불러오기")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))),
+    h("button", { type: "button", class: "rb-srow", onClick: () => { m.page = "skills"; redraw(); } },
+      h("span", { class: "t" }, "스킬", h("small", null, "코코아전트 호환 · 정리 노트·기록하기·기억 분석 프롬프트 뒤에 붙일 지침 · 추가 호출 없음")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))),
     h("button", { type: "button", class: "rb-srow", onClick: () => { if (ctx.memory?.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); } },
       h("span", { class: "t" }, "임베딩(의미 검색)", h("small", null, "뜻이 비슷한 기억 찾기 · API 주소·키·기본 사용·대기 시간")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))));
 
