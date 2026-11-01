@@ -46,11 +46,37 @@ export function buildMessages({ bot, known = [], ignore = [], previousScene = nu
   return [{ role: "system", content: withCustom(custom) + (gauges.length || suggestGauge ? "\n" + GAUGE_RULES : "") }, { role: "user", content: JSON.stringify(payload) }];
 }
 
+// 잘린 JSON 끝을 닫는다(문자열·괄호). 마지막 쉼표 쪽으로 물러서며 해석되는 지점을 찾는다.
+function closeTail(s) {
+  const st = []; let inStr = false, esc = false;
+  for (const ch of s) {
+    if (inStr) { if (esc) esc = false; else if (ch === "\\") esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true; else if (ch === "{" || ch === "[") st.push(ch); else if (ch === "}" || ch === "]") st.pop();
+  }
+  return s + (inStr ? '"' : "") + st.reverse().map((c) => (c === "{" ? "}" : "]")).join("");
+}
+function salvage(s) {
+  for (let i = 0; i < 60 && s; i++) {
+    try { return JSON.parse(closeTail(s)); } catch { /* 더 물러선다 */ }
+    const k = s.lastIndexOf(",");
+    if (k < 0) break;
+    s = s.slice(0, k);
+  }
+  return null;
+}
+const looksLikeAnalysis = (o) => o && typeof o === "object" && !Array.isArray(o) && (Array.isArray(o.people) || (o.scene && typeof o.scene === "object"));
 export function parseJson(raw) {
-  let s = String(raw ?? "").replace(/```(?:json)?/gi, "").trim();
+  const s = String(raw ?? "").replace(/```(?:json)?/gi, "").trim();
   const a = s.indexOf("{"), b = s.lastIndexOf("}");
-  if (a < 0 || b <= a) throw new Error("JSON 객체를 찾을 수 없어요.");
-  try { return JSON.parse(s.slice(a, b + 1)); } catch { throw new Error("JSON을 해석할 수 없어요."); }
+  if (a < 0) throw new Error("JSON 객체를 찾을 수 없어요.");
+  if (b > a) {
+    const body = s.slice(a, b + 1);
+    try { return JSON.parse(body); } catch { /* 아래에서 고쳐 본다 */ }
+    try { return JSON.parse(body.replace(/,\s*([}\]])/g, "$1")); } catch { /* 잘렸을 수 있다 */ }
+  }
+  const rest = salvage(s.slice(a));   // 토큰이 모자라 잘린 응답: people·scene이 살아 있을 때만 쓴다
+  if (looksLikeAnalysis(rest)) return rest;
+  throw new Error("JSON을 해석할 수 없어요.");
 }
 
 // 서버 검증: 길이 자르기, p/s/r clamp, 알 수 없는 필드 무시, ignore 필터.
@@ -67,14 +93,27 @@ export function validate(obj, { ignore = [] } = {}) {
   return { people, scene, ...validatePlus(obj), emo: validateEmo(obj), ...validateInner(obj), ...validateGaugeOut(obj) };
 }
 
-// 1회 재요청 포함. call(messages) → 원문 문자열.
+// 모델이 {"result":{…}}나 [ {…} ]로 감싸 보낸 경우 안쪽을 꺼낸다.
+function unwrap(o) {
+  if (Array.isArray(o)) o = o.find((x) => x && typeof x === "object") ?? o;
+  if (o && typeof o === "object" && !looksLikeAnalysis(o)) {
+    const inner = Object.values(o).find((v) => looksLikeAnalysis(Array.isArray(v) ? v[0] : v));
+    if (inner) return Array.isArray(inner) ? inner[0] : inner;
+  }
+  return o;
+}
+// 형식이 틀리면 최대 2번 다시 요청한다(추론이 약한 모델은 군말·잘림이 잦다). call(messages) → 원문 문자열.
 export async function analyze(call, input) {
   const msgs = buildMessages(input);
-  let raw = await call(msgs), parsed;
-  try { parsed = parseJson(raw); }
-  catch {
-    raw = await call([...msgs, { role: "assistant", content: String(raw ?? "").slice(0, 2000) }, { role: "user", content: "Return only the JSON object." }]);
-    parsed = parseJson(raw);
+  let raw = await call(msgs), parsed, err;
+  for (let k = 0; k < 3; k++) {
+    try { parsed = unwrap(parseJson(raw)); err = null; break; }
+    catch (e) {
+      err = e;
+      if (k === 2) break;
+      raw = await call([...msgs, { role: "assistant", content: String(raw ?? "").slice(0, 2000) }, { role: "user", content: "Return only the JSON object." }]);
+    }
   }
+  if (err) throw err;
   return validate(parsed, { ignore: input.ignore });
 }

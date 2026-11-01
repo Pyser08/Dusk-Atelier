@@ -97,7 +97,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     replace(prog, progressBar(0), cancel);
     try {
       const r = await M.runner.backfill(cur.ci, cur.ti, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, { signal: ctrl.signal, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), cancel) });
-      ctx.toast(`지난 대화 분석이 끝났어요 (${r.total - r.failed.length}/${r.total}).`);
+      ctx.toast(`지난 대화 분석이 끝났어요 (${r.total - r.failed.length}/${r.total}).${r.reasons?.length ? ` 실패 이유: ${r.reasons[0]}` : ""}`, r.failed.length ? { error: true } : undefined);
     } catch (e) { fail(ctx)(e); }
     redraw();
   };

@@ -34,3 +34,21 @@ test("analyze retries once on bad JSON", async () => {
   assert.equal(n, 2); assert.equal(r.people.length, 1);
   await assert.rejects(analyze(async () => "bad", { bot: "b", newest: { index: 1, text: "t" } }));
 });
+
+test("parseJson tolerates trailing commas, comments-free single wrapper and truncated tails (low-reasoning models)", () => {
+  assert.deepEqual(parseJson('{"people":[{"name":"A","act":"x",},],"scene":null,}').people[0].name, "A");
+  const cut = parseJson('{"people":[{"name":"A","act":"x"}],"scene":{"sum":"s","facts":["a","b');
+  assert.equal(cut.people[0].act, "x");
+  assert.throws(() => parseJson('{"a":'));
+  assert.throws(() => parseJson('{"foo":[{"b":1'), /JSON/, "people·scene이 없으면 잘린 걸 살리지 않는다");
+});
+test("analyze unwraps {result:{…}} / [ {…} ] and retries twice", async () => {
+  const body = '{"people":[{"name":"A","act":"x","p":2,"s":1,"r":1}],"scene":null}';
+  let r = await analyze(async () => `{"result":${body}}`, { bot: "b", newest: { index: 1, text: "t" } });
+  assert.equal(r.people.length, 1);
+  r = await analyze(async () => `[${body}]`, { bot: "b", newest: { index: 1, text: "t" } });
+  assert.equal(r.people.length, 1);
+  let n = 0;
+  r = await analyze(async () => (++n < 3 ? "죄송해요, 분석할 수 없어요" : body), { bot: "b", newest: { index: 1, text: "t" } });
+  assert.equal(n, 3); assert.equal(r.people.length, 1);
+});

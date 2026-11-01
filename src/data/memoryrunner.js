@@ -21,6 +21,7 @@ const MAX_FAILS = 5;
 // 자동 기록 시점: next(기본) = 다음 입력을 보낼 때 직전 응답을 확정해 기록 | now = 응답 직후
 const confirmOf = (idx) => idx?.settings?.confirm === "now" ? "now" : "next";
 
+const TRANSIENT = /429|rate.?limit|too many|timeout|timed out|overload|busy|unavailable|\b5\d\d\b|ECONN|network|fetch failed|failed to fetch/i;
 export function createMemoryRunner(api, { store, prep = null, prompts = null, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null, gauge = null } = {}) {
   let timer = null, dirty = false, running = false, started = false;
   let session = { calls: 0, hooks: 0, displays: 0, hookAt: 0, tick: null }; const lastTried = new Map(); let lastTickAt = 0;
@@ -234,18 +235,29 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     const chat = await api.getChatFromIndex(charIndex, chatIndex), character = await api.getCharacterFromIndex(charIndex);
     const folder = await store.getFolder(String(character.chaId), String(chat.id ?? chatIndex));
     const { groups } = planBackfill(chat.message ?? [], range, folder);
-    const failed = []; let n = 0;
+    const failed = [], reasons = []; let n = 0;
     for (const g of groups) {
       if (signal?.aborted) break;
       if (isGenerating(await api.getCharacterFromIndex(charIndex))) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
-      try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true }); } catch (e) { failed.push(g); if (signal?.aborted) break; }
+      // 요청 한도·시간 초과·서버 오류 같은 일시적 오류는 간격을 늘려 가며 2번까지 다시 시도한다(실패 원인은 reasons로 돌려준다).
+      for (let attempt = 0; ; attempt++) {
+        try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true }); break; }
+        catch (e) {
+          const msg = String(e?.message ?? e).slice(0, 160);
+          if (signal?.aborted) { failed.push(g); break; }
+          if (attempt < 2 && TRANSIENT.test(msg)) { await new Promise((r) => setTimeout(r, retryMs * (attempt + 1))); continue; }
+          failed.push(g); if (!reasons.includes(msg) && reasons.length < 5) reasons.push(msg);
+          break;
+        }
+      }
+      if (signal?.aborted) break;
       onProgress?.(++n, groups.length, failed.length);
     }
     if (failed.length) {  // 실패한 응답은 기억해 두었다가 현황에 '실패'로 보여 준다(성공하면 applyAnalysis가 지운다)
       const msgs = chat.message ?? [], hs = failed.flat().map((i) => messageIdentity(msgs[i]));
       await store.updateFolder(String(character.chaId), String(chat.id ?? chatIndex), (f) => { f.failedBackfill = [...new Set([...(f.failedBackfill ?? []), ...hs])].slice(-500); }).catch(() => {});
     }
-    return { total: groups.length, failed };
+    return { total: groups.length, failed, reasons };
   }
 
   return { start, onOutput, confirmNext, tick, analyzeAt, prepareLatest, analyzeLatest: async (ci, ti) => { const i = await latestAiIndex(ci, ti); if (i < 0) throw new Error("분석할 AI 응답이 없어요."); return analyzeAt(ci, ti, [i], { manual: true }); },

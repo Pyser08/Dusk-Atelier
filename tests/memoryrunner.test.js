@@ -197,3 +197,23 @@ test("immediate timing (now): confirmNext does nothing", async () => {
   await runner.start(); await runner.confirmNext(); await wait(80);
   assert.equal(calls, 0);
 });
+
+test("backfill retries transient API errors and reports reasons for real failures", async () => {
+  const { api, store, chat } = setup();
+  chat.message = []; for (let i = 0; i < 6; i++) { chat.message.push({ role: "user", data: "u" + i }, { role: "char", data: LONG + i }); }
+  let calls = 0;
+  const runner = createMemoryRunner(api, { store, retryMs: 1, call: async () => { calls++; if (calls <= 2) throw new Error("429 Too Many Requests"); return good; } });
+  const r = await runner.backfill(0, 0, {});
+  assert.equal(r.failed.length, 0, "일시적 오류는 다시 시도해 성공한다");
+  assert.equal(r.total, 2);
+  const r2 = await createMemoryRunner(api, { store, retryMs: 1, call: async () => { throw new Error("401 invalid api key"); } }).backfill(0, 0, { from: 0, to: 0 }, {});
+  assert.ok(Array.isArray(r2.reasons), "reasons 배열");
+});
+test("backfill reports why groups failed", async () => {
+  const { api, store, chat } = setup();
+  chat.message = []; for (let i = 0; i < 6; i++) { chat.message.push({ role: "user", data: "u" + i }, { role: "char", data: LONG + i }); }
+  const runner = createMemoryRunner(api, { store, retryMs: 1, call: async () => "죄송해요, 못 해요" });
+  const r = await runner.backfill(0, 0, {});
+  assert.equal(r.failed.length, 2);
+  assert.match(r.reasons[0], /JSON/);
+});
