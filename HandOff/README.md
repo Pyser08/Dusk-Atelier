@@ -17,7 +17,7 @@ RisuAI 플러그인 **Dusk Atelier** — 모듈·봇 관리, 인물별 장기기
    - 화면 만들기/수정 → `HandOff/UI-STYLE.md`
    - 아카라이브 업데이트 글 HTML → `HandOff/ARCA-POST.md`
    - 어떤 작업이든 api·훅·저장을 건드리면 → `HandOff/HOST-COMPAT.md` (RisuAI·RisuBard·PocketRisu 공통 동작 규칙)
-5. `docs/source-map.md` — 전체 파일 지도 (필요한 줄만 검색해서)
+5. `HandOff/source-map.md` — 전체 파일 지도 (필요한 줄만 검색해서)
 6. 그다음 **필요한 소스 파일만** 읽는다. `dusk_atelier.js`(3.6MB 빌드물)는 절대 읽지 않는다.
 
 ## 3. 환경 준비
@@ -42,7 +42,7 @@ npm ci            # 막히면: esbuild·acorn·eslint-scope를 /opt/npm-tools/no
 3. `npm run build` → `dusk_atelier.js` 재생성, `npm run check`로 "동일함" 확인. **빌드물도 함께 커밋.**
 4. UI를 건드렸으면 `node tests/e2e/run-smoke.mjs`로 연기 시험.
 5. (사용자가 버전 올리라고 했을 때만) `package.json` version + `CHANGELOG.md` 맨 위 `## vX.Y.Z (YYYY-MM-DD)` 섹션 (앱 내 '새로 바뀐 점'에 그대로 표시됨, 사용자 대상 존댓말 "~해요").
-6. 구조(파일 추가/삭제/역할 변경)가 바뀌면 `node tools/source-map.mjs > docs/source-map.md` 재생성 후 커밋.
+6. 구조(파일 추가/삭제/역할 변경)가 바뀌면 `node tools/source-map.mjs > docs/source-map.md && cp docs/source-map.md HandOff/source-map.md`로 재생성(두 파일 동일 유지) 후 커밋.
 7. 참고: main에 push(머지)되면 `release.yml`이 package.json 버전으로 GitHub 릴리스를 자동 생성한다 → 그래서 main은 사용자 지시 없이는 건드리지 않는다.
 
 ## 6. 반드시 지킬 규칙
