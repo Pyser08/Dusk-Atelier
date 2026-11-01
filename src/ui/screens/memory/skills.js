@@ -5,6 +5,9 @@ import { btn, chip, note, pageHead, toggleRow, emptyState, confirmDialog, prompt
 import { mem, fail } from "./common.js";
 import { SKILL_STAGES, SKILL_STAGE_LABEL } from "../../../engine/skillcfg.js";
 import { buildSkillIndex, diagnoseSkillSet, normalizeSkillSet, SKILL_MD, SKILL_LIMITS } from "../../../engine/skills.js";
+import { WEB_PROVIDERS, webReady, formatResults } from "../../../engine/websearch.js";
+import { WEB_STAGES } from "../../../data/webtools.js";
+import { recentCalls, clearCalls } from "../../../engine/skillhook.js";
 import { readCocoa, suggestStageRefs, agentToSkillSet } from "../../../engine/cocoamigrate.js";
 
 const TEMPLATE = (name) => `---\nname: ${name}\ndescription: 언제 쓰는 스킬인지 한 줄로 적어요\nskill_format: 2\ninject_order: 100\nsystem_prompt: |\n  여기에 프롬프트 뒤에 붙일 지침을 적어요.\n---\n# ${name}\n스킬 설명(주입되지 않는 본문)\n`;
@@ -20,8 +23,8 @@ export async function renderMemorySkills(ctx, host, { redraw }) {
   const S = ctx.skills, m = mem(ctx), st = m.skills ??= { open: "", file: "" };
   const back = { onClick: () => { m.page = "home"; redraw(); }, label: "기억으로" };
   if (!S) return replace(host, pageHead("스킬", { back }), emptyState({ icon: "info", title: "스킬 기능이 아직 준비되지 않았어요", text: "플러그인을 다시 불러와 주세요." }));
-  const topH = h("div"), stagesH = h("div"), libH = h("div"), cocoaH = h("div");
-  replace(host, pageHead("스킬", { sub: "코코아전트 스킬과 호환돼요", back }), topH, stagesH, libH, cocoaH);
+  const topH = h("div"), stagesH = h("div"), libH = h("div"), cocoaH = h("div"), webH = h("div"), callsH = h("div");
+  replace(host, pageHead("스킬", { sub: "코코아전트 스킬과 호환돼요", back }), topH, stagesH, libH, cocoaH, webH, callsH);
   const run = (p) => p.catch(fail(ctx));
 
   async function drawTop() {
@@ -142,6 +145,32 @@ export async function renderMemorySkills(ctx, host, { redraw }) {
       h("div", { class: "rb-row" }, btn("옮기기", { kind: "primary", onClick: go }), btn("닫기", { onClick: () => drawCocoa(null) }))));
   }
 
-  await Promise.all([drawTop(), drawStages(), drawLib()]);
-  drawCocoa(null);
+
+  // 웹 검색·가져오기 도구: 기본 꺼짐. 켠 단계에서만 모델이 도구를 부를 수 있고, 부르면 AI 호출이 늘어난다.
+  async function drawWeb() {
+    const W = ctx.web; if (!W) return replace(webH);
+    const c = await W.getCfg(), P = WEB_PROVIDERS[c.provider], save = (patch) => run(W.saveCfg({ ...c, ...patch }).then(drawWeb));
+    const field = (label, key, type = "text", ph = "") => { const el = h("input", { class: "rb-input", type, placeholder: ph, "aria-label": label, autocomplete: "off" }); el.value = c[key] ?? ""; el.addEventListener("change", () => save({ [key]: el.value })); return h("label", { class: "rb-field" }, h("small", { class: "rb-muted" }, label), el); };
+    const test = () => run((async () => {
+      const q = (await promptDialog(ctx.win, { title: "시험 검색", label: "검색어", value: "서울", ok: "검색" }))?.trim(); if (!q) return;
+      const list = await W.search(q); const box = h("textarea", { class: "rb-input", rows: 10, readOnly: true, style: "height:auto;width:100%" }); box.value = formatResults(list);
+      modal(ctx.win, (close) => h("div", { class: "rb-card" }, h("b", null, `'${q}' 결과 ${list.length}건`), box, btn("닫기", { onClick: close })));
+    })());
+    replace(webH, h("section", { class: "rb-card" }, h("b", null, "웹 도구 (검색·페이지 읽기)"),
+      toggleRow("웹 도구 사용", "켠 단계에서 모델이 필요하다고 판단하면 검색·페이지 읽기를 요청해요. 요청이 있으면 그 단계의 AI 호출이 1~2번 늘어요.", c.on, (v) => save({ on: v })),
+      h("div", { class: "rb-chips" }, WEB_STAGES.map((s) => chip(SKILL_STAGE_LABEL[s], { pressed: c.stages.includes(s), onClick: () => save({ stages: c.stages.includes(s) ? c.stages.filter((x) => x !== s) : [...c.stages, s] }) }))),
+      h("div", { class: "rb-chips" }, Object.entries(WEB_PROVIDERS).map(([id, p]) => chip(p.label, { pressed: id === c.provider, onClick: () => save({ provider: id }) }))),
+      P.needsKey ? field("API 키 (이 기기에만 저장돼요)", "key", "password") : null, P.needsUrl ? field("서버 주소", "baseUrl", "text", "https://…") : null, c.provider === "wikipedia" ? field("언어 코드", "lang", "text", "ko") : null,
+      webReady(c) ? note("warn", webReady(c)) : note("info", "페이지 읽기는 http/https 공개 주소만 가능하고, 내부 주소·로그인 정보가 든 주소는 막아요."),
+      h("div", { class: "rb-row" }, btn("시험 검색", { onClick: test, disabled: !!webReady(c) }))));
+  }
+  // 이번 접속 동안의 호출 기록: 스킬 글이 실제로 붙었는지, 도구가 쓰였는지 확인용(저장하지 않아요).
+  function drawCalls() {
+    const list = recentCalls(), t = (ms) => new Date(ms).toLocaleTimeString("ko-KR", { hour12: false });
+    replace(callsH, h("section", { class: "rb-card" }, h("div", { class: "rb-row" }, h("b", null, "최근 호출 기록"), h("span", { class: "rb-spacer" }), btn("새로고침", { size: "sm", onClick: drawCalls }), btn("비우기", { size: "sm", onClick: () => { clearCalls(); drawCalls(); } })),
+      list.length ? h("ul", { class: "rb-mem-reclist" }, list.slice(0, 12).map((e) => h("li", null, h("div", { class: "txt" }, h("b", null, SKILL_STAGE_LABEL[e.stage] ?? e.stage), h("div", { class: "rb-muted" }, `${t(e.at)} · ${e.chars ? `스킬 글 ${e.chars}자 붙음` : "붙은 스킬 글 없음"}${e.tools?.length ? ` · 도구 ${e.tools.join(", ")}` : ""}`)))))
+        : h("p", { class: "rb-muted" }, "아직 호출이 없어요. 대화를 진행하면 여기에 쌓여요.")));
+  }
+  await Promise.all([drawTop(), drawStages(), drawLib(), drawWeb()]);
+  drawCocoa(null); drawCalls();
 }

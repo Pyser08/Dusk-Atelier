@@ -15,6 +15,7 @@ import { RuntimeTraceStore } from "./pot/runtime-trace.js";
 import { RuntimeHookManager } from "./pot/runtime-hooks.js";
 import { callWriterModel } from "./pot/llm-client.js";
 import { skillBlock } from "../engine/skillhook.js";
+import { webWrap } from "../engine/webhook.js";
 import { appendToPrompt } from "../engine/skillcfg.js";
 import { createPotStorage } from "./potstorage.js";
 import { keyStore as hubKeys, getCfg, recordUsage } from "./modelhub.js";
@@ -84,7 +85,11 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     const wiki = new WikiController(api, storage, { isEnabled: () => settings.snapshot().enabled });
     settings.setActiveBotResolver?.(() => wiki.scope?.characterId || "");
 
-    const stageCall = async (a, k, preset, prompt, opts = {}) => callWriterModel(a, k, preset, appendToPrompt(prompt, await skillBlock(stageOf(String(opts.stageLabel ?? "")))), { ...opts, onUsage: (u) => { opts.onUsage?.(u); recordUsage(api, stageOf(String(opts.stageLabel ?? "")), u).catch(() => {}); } });
+    const stageCall = async (a, k, preset, prompt, opts = {}) => {
+      const stage = stageOf(String(opts.stageLabel ?? "")), withSkills = appendToPrompt(prompt, await skillBlock(stage));   // 스킬 주입(꺼짐이면 원문)
+      const send = (text) => callWriterModel(a, k, preset, text, { ...opts, onUsage: (u) => { opts.onUsage?.(u); recordUsage(api, stage, u).catch(() => {}); } });
+      return webWrap(stage, withSkills, send);   // 웹 도구(꺼짐이 기본, 켠 단계만 호출이 늘어남)
+    };
     // 기록하기: Dusk 구획을 같이 싣고, 돌아온 응답에서 떼어 낸다.
     const writerCall = async (a, k, preset, prompt, opts = {}) => {
       const label = String(opts.stageLabel ?? ""); let sent = prompt, prep = null;

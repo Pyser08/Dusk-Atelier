@@ -21,6 +21,8 @@ import './data/modelhub.js';
 import { setUserPromptProvider } from './engine/runai.js';
 import { setSkillBlockProvider } from './engine/skillhook.js';
 import { createSkillStore } from './data/skillstore.js';
+import { setWebWrapProvider } from './engine/webhook.js';
+import { createWebTools } from './data/webtools.js';
 import { restoreActiveTheme } from './ui/screens/themestudio.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
 
@@ -56,6 +58,8 @@ async function start() {
   setUserPromptProvider(() => memory.userPrompts());
   const skills = createSkillStore(api);   // 스킬 라이브러리·주입 (꺼짐이 기본, v1.8.1)
   setSkillBlockProvider((stage) => skills.blockFor(stage));
+  const web = createWebTools(api);   // 웹 검색·가져오기 도구 (꺼짐이 기본, v1.8.1)
+  setWebWrapProvider((stage, prompt, call) => web.wrap(stage, prompt, call));
   memory.start().catch((e) => console.log(`[${TITLE}] 장기기억 시작 실패: ${e?.message ?? e}`));
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {
@@ -161,6 +165,7 @@ async function start() {
   app.ctx.loreLog = loreLog;
   app.ctx.memory = memory;
   app.ctx.skills = skills;
+  app.ctx.web = web;
   app.ctx.storyTime = storyTime;
   app.ctx.fairPlay = fairPlay;
   app.ctx.affhud = affhud;

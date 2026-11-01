@@ -8,6 +8,7 @@ import { restoreLastMerge } from "../../src/ui/screens/memory/mergeui.js";
 import { layoutOf } from "../../src/engine/peoplegroup.js";
 import { renderPeopleTab } from "../../src/ui/screens/memory/wikiview.js";
 import { renderMemorySkills } from "../../src/ui/screens/memory/skills.js";
+import { createWebTools } from "../../src/data/webtools.js";
 import { createSkillStore, COCOA_LIB_KEY, COCOA_PRESETS_KEY } from "../../src/data/skillstore.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -103,7 +104,7 @@ window.runSmoke = async () => {
   try {   // 스킬 탭(v1.8.1)
     const store = new Map([[COCOA_LIB_KEY, JSON.stringify({ sets: [{ name: "코코", files: [{ path: "a/SKILL.md", content: "---\nname: A\nskill_format: 2\nsystem_prompt: 지침\n---\n본문" }] }] })], [COCOA_PRESETS_KEY, JSON.stringify({ activePresetId: "p", presets: [{ id: "p", name: "기본", pipeline: { rows: [{ agents: [{ id: "d", name: "Director", mode: "pre", systemPrompt: "규칙", skillSets: ["코코"] }] }] } }] })]]);
     const sk = createSkillStore({ pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } }, { log() {} });
-    const sctx = { win: document.body, toast: (t) => log.push(["toast", t]), skills: sk, state: {} }, shost = document.createElement("div"); document.body.appendChild(shost);
+    const sctx = { win: document.body, toast: (t) => log.push(["toast", t]), skills: sk, web: createWebTools({ pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } }, { log() {} }), state: {} }, shost = document.createElement("div"); document.body.appendChild(shost);
     await renderMemorySkills(sctx, shost, { redraw() {} }); await sleep(80);
     check("스킬 탭 렌더", shost.textContent.includes("스킬 주입") && shost.textContent.includes("스킬 세트 0개"), shost.textContent.slice(0, 120));
     clickText("찾아보기", shost); await sleep(120);
@@ -112,6 +113,7 @@ window.runSmoke = async () => {
     const lib = await sk.getLibrary(), cfg = await sk.getCfg();
     check("코코아 옮기기", lib.sets.length === 1 && cfg.stages.director.length === 1 && cfg.on === false, JSON.stringify(cfg.stages));
     clickText("열기", shost); await sleep(80);
+    check("웹 도구·호출 기록 카드", shost.textContent.includes("웹 도구 (검색·페이지 읽기)") && shost.textContent.includes("최근 호출 기록") && shost.textContent.includes("Wikipedia"), shost.textContent.slice(-300));
     check("세트 편집기", !!shost.querySelector("textarea") && shost.textContent.includes("진단"), shost.textContent.slice(0, 160));
   } catch (e) { check("스킬 탭", false, e?.stack ?? e); }
   check("전역 오류 없음", errors.length === 0, errors.join(" | "));

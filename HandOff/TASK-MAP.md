@@ -14,6 +14,7 @@
 | 장기기억 — 정규식 전처리·[Dusk.memory]·HypaPlus 가져오기 | `src/engine/regexprep.js`, `src/data/regexprep.js`, `src/engine/memoryinject.js`(insertBlock), `src/engine/hypaimport.js`, `src/data/hypaimport.js`, `src/ui/screens/memory/hypamodal.js` |
 | 장기기억 — 저장소 | `src/data/memorystore3.js` (키 `dusk.mem.v3.*`), 마이그레이션 `src/engine/memoryv3.js` |
 | 장기기억 — 화면 | `src/ui/screens/memory/index.js` → 필요한 하위 파일(`mhome.js`, `wikiview.js`, `settings.js` …) |
+| 스킬(코코아전트 호환)·웹 도구 | `src/engine/skills.js`, `src/engine/skillcfg.js`, `src/engine/skillhook.js`, `src/data/skillstore.js`, `src/engine/cocoamigrate.js`, `src/ui/screens/memory/skills.js` / 웹: `src/engine/websearch.js`, `src/data/webtools.js`, `src/engine/webhook.js` / 주입 지점: `src/data/memoryturn.js`(stageCall), `src/data/memoryrunner.js`(run) |
 | 모델·API 호출 | `src/data/modelhub.js`, `src/engine/runai.js`, `src/engine/modelcfg.js` |
 | 로어북 | `src/engine/lorerules.js`, `src/data/lorerules.js`, `src/ui/screens/loredusk.js` |
 | 페르소나 빌더 | `src/data/personabuilder.js`, `src/ui/screens/personabuilder.js` |
