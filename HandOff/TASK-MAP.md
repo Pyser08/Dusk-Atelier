@@ -17,6 +17,8 @@
 | 스킬(코코아전트 호환)·웹 도구 | `src/engine/skills.js`, `src/engine/skillcfg.js`, `src/engine/skillhook.js`, `src/data/skillstore.js`, `src/engine/cocoamigrate.js`, `src/ui/screens/memory/skills.js` / 웹: `src/engine/websearch.js`, `src/data/webtools.js`, `src/engine/webhook.js` / 주입 지점: `src/data/memoryturn.js`(stageCall), `src/data/memoryrunner.js`(run) |
 | 모델·API 호출 | `src/data/modelhub.js`, `src/engine/runai.js`, `src/engine/modelcfg.js` |
 | 로어북 | `src/engine/lorerules.js`, `src/data/lorerules.js`, `src/ui/screens/loredusk.js` |
+| 로어북 더스크화 규칙 설계 | `src/dev/aibuild/lorerefine.js`(duskdesign.js 규격 재사용), `src/ui/screens/loredusk.js` |
+| 봇빌더 연동(AI로 봇 만들기) | `src/engine/workshop.js`, `src/data/workshop.js`, `src/data/workshoppatch.js`, `src/ui/screens/workshoplink.js`, `src/data/plugins.js`(DA Interop 동작) |
 | 페르소나 빌더 | `src/data/personabuilder.js`, `src/ui/screens/personabuilder.js` |
 | AI로 봇 만들기 | `src/ui/screens/aibuild.js`, `src/ui/screens/newbot.js` |
 | 테마 빌더/꾸미기 | `src/ui/screens/themebuilder.js`, `src/ui/screens/chattheme.js`, `src/ui/theme.js` |

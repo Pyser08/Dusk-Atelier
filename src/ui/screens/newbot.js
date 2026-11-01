@@ -4,6 +4,7 @@ import { ensureCharacterInOrder, newCharacterBase, uniqueDisplayName } from '../
 import { Busy, isGenerating } from '../../engine/safety.js';
 import { openCharEditor } from './chareditor.js';
 import { addProjects } from './dev.js';
+import { startWorkshop } from './workshoplink.js';
 
 /** 빈 봇을 DB에 추가한다. 반환: {created, idx} */
 export async function addBlankBot(ctx, name = "새 봇") {
@@ -29,6 +30,8 @@ export async function addBlankBot(ctx, name = "새 봇") {
 export async function createBotAndEdit(ctx, { name, tab } = {}) {
   try {
     if (tab === "ai") {
+      // 봇빌더가 설치돼 있으면 그 화면으로 보낸다(돌아오면 만든 봇을 개발 목록으로 가져온다). 이름을 정해 만드는 경우는 제외.
+      if (!name && await startWorkshop(ctx).catch(() => false)) return;
       const base = newCharacterBase({ fields: {}, risuFields: {}, refs: {} });
       base.name = String(name || "새 봇").trim();
       await openCharEditor(ctx, -1, base.chaId, {

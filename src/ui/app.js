@@ -26,6 +26,7 @@ import { renderPlugins } from './screens/plugins.js';
 import { renderSettingsTab } from './screens/settingstab.js';
 import { renderMemory } from './screens/memory/index.js';
 import { renderCocoaTab } from './screens/cocoa.js';
+import { checkWorkshopReturn } from './screens/workshoplink.js';
 import { renderCardsTab } from './screens/cards/index.js';
 import { scopeCtx } from './staleguard.js';
 import { renderHome } from './screens/home.js';
@@ -453,6 +454,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     // BardWiki 선택은 기억 탭에 들어갈 때 안내한다.
     maybeShowWhatsNew(ctx).then(() => maybeShowTour(ctx)).catch(() => {
     });
+    checkWorkshopReturn(ctx).catch((e) => console.log("[Dusk Atelier] 봇빌더 결과 확인 실패", e?.message ?? e));
     checkUpdate().catch(() => {
     });
     checkTide();
@@ -495,6 +497,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     navLinks,
     go,
     refresh: () => render(),
+    close: () => close(),
     applyTheme,
     refreshTabs: () => refreshTabs(),
     setUiMode,

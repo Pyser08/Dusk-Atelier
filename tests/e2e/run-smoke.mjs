@@ -2,7 +2,7 @@
 import { createRequire } from "node:module";
 import { build } from "/opt/npm-tools/node_modules/esbuild/lib/main.js";
 const { chromium } = createRequire("/opt/npm-tools/node_modules/")("playwright");
-const r = await build({ entryPoints: ["tests/e2e/smoke.entry.js"], bundle: true, write: false, format: "iife", platform: "browser", logLevel: "error", define: { __VERSION__: '"test"', __CHANGELOG__: '""' } });
+const r = await build({ entryPoints: ["tests/e2e/smoke.entry.js"], bundle: true, write: false, format: "iife", platform: "browser", logLevel: "error", alias: { fflate: new URL("../../src/vendor/fflate.js", import.meta.url).pathname }, define: { __VERSION__: '"test"', __CHANGELOG__: '""' } });
 const browser = await chromium.launch(), page = await browser.newPage();
 const logs = []; page.on("pageerror", (e) => logs.push("pageerror: " + e.message)); page.on("console", (m) => m.type() === "error" && logs.push("console: " + m.text()));
 await page.setContent("<!doctype html><body></body>"); await page.addScriptTag({ content: r.outputFiles[0].text });

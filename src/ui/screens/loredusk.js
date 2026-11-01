@@ -1,10 +1,11 @@
-// 로어북 더스크화 창: 구분선 규칙 변환 / AI 분석 → 미리보기(체크한 것만) → 적용
+// 로어북 더스크화 창: 구분선 규칙 변환 / AI 분석(소속·장소) → [규칙 설계(조건·반복·유지·그룹·배치·연쇄·변수)] → 미리보기(체크한 것만) → 적용
 // 이 창은 목록을 직접 고치지 않는다. 적용할 결과(entries)만 돌려주고, 에디터가 초안에 반영한다(저장 전까지는 되돌릴 수 있다).
 import { h, replace } from '../dom.js';
 import { btn, modal, note, progressBar } from '../kit.js';
 import { applyPlan, batchMessages, batches, mergeAnalysis, parseAnalysis, rulePlan, summaryText } from '../../engine/loredusk.js';
 import { runAI } from '../../engine/runai.js';
 import { loadPB } from '../../data/personabuilder.js';
+import { pickRefine, readRefine, refineChanges, refineMessages, refineStep, refineTargets } from '../../dev/aibuild/lorerefine.js';
 
 const label = (e) => String(e?.comment || e?.key || "(이름 없음)");
 
@@ -30,6 +31,10 @@ export async function openLoreDusk(ctx, { list }) {
         h("div", { class: "rb-card", style: "padding:10px 12px;display:flex;flex-direction:column;gap:8px" },
           h("b", null, "AI로 분석"), h("div", { class: "rb-muted" }, "사람·소속·장소를 나누고, 겹치는 이름은 이름 경계로, 빠진 장소는 새 항목으로 제안해요. 항목이 많으면 120개씩 나눠 보내요."),
           instr, h("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" }, sel, btn("AI 분석 시작", { kind: n ? "" : "primary", onClick: analyze }))),
+        h("div", { class: "rb-card", style: "padding:10px 12px;display:flex;flex-direction:column;gap:8px" },
+          h("b", null, "AI로 규칙 설계 (Dusk 기능 전부)"),
+          h("div", { class: "rb-muted" }, "이미 정리된 로어북이면 바로 여기서 시작해요. 항목마다 조건·확률·반복(한 번만·쉬기)·유지·그룹·배치(깊이)·연쇄·변수·이름 경계와 소속 확률을 설계해요. 내용·키·폴더는 바꾸지 않아요. 40개씩 나눠 보내요."),
+          h("div", null, btn("규칙 설계 시작", { onClick: () => refine(list, "") }))),
         h("div", { class: "btns" }, btn("닫기", { onClick: close })));
     };
 
@@ -74,16 +79,19 @@ export async function openLoreDusk(ctx, { list }) {
       sect("이름 설정", plan.flags.map((f) => chk(f, `${label(list[f.idx])}`, [f.whole && "이름 경계(통단어일 때만)", f.common && `흔한 낱말 이름${f.keys ? ` '${f.keys}'` : ""}`].filter(Boolean).join(" · "))));
       if (plan.notes.length) sect("참고", plan.notes.slice(0, 8).map((t) => h("div", { class: "rb-muted", style: "font-size:12px" }, t)));
       const sum = h("span", { class: "rb-muted" });
-      const ok = btn("적용", { kind: "primary", onClick: apply });
+      const ok = btn("적용", { onClick: apply });
+      // 구조를 적용한 결과 위에서 규칙까지 설계한다 (적용은 마지막에 한 번)
+      const okRefine = btn("적용하고 규칙 설계로", { kind: "primary", onClick: () => { try { const r = applyPlan(list, plan); refine(r.entries, summaryText(r.summary)); } catch (e) { ctx.toast(e?.message ?? String(e), { error: true }); } } });
       const refresh = () => {
         const on = plan.affs.filter((a) => a.checked).length + plan.places.filter((x) => x.checked).length + plan.flags.filter((x) => x.checked).length;
         sum.textContent = `${on}건 선택`;
         ok.disabled = !on;
+        okRefine.disabled = !on;
       };
       replace(body,
         h("p", { class: "rb-p" }, "체크한 것만 적용돼요. 적용해도 저장하기 전에는 '되돌리기'로 원래대로 돌릴 수 있어요."),
         h("div", { class: "rb-scroll", style: "max-height:min(48vh,420px);border:1px solid var(--rb-line);border-radius:12px;padding:6px 10px;overscroll-behavior:contain" }, ...(rows.length ? rows : [note("info", "바꿀 것을 찾지 못했어요.")])),
-        h("div", { class: "btns", style: "align-items:center" }, sum, btn("처음으로", { onClick: start }), ok));
+        h("div", { class: "btns", style: "align-items:center;flex-wrap:wrap" }, sum, btn("처음으로", { onClick: start }), ok, okRefine));
       refresh();
     }
 
@@ -92,6 +100,58 @@ export async function openLoreDusk(ctx, { list }) {
         const r = applyPlan(list, plan);
         done({ entries: r.entries, text: summaryText(r.summary) });
       } catch (e) { ctx.toast(e?.message ?? String(e), { error: true }); }
+    }
+
+    // ---- 규칙 설계: src(구조를 적용했다면 그 결과)의 항목마다 Dusk 규칙을 설계 ----
+    async function refine(src, prefix) {
+      const bs = refineTargets(src);
+      if (!bs.length) { ctx.toast("규칙을 설계할 항목이 없어요", { error: true }); return; }
+      ctrl = new AbortController();
+      const bar = progressBar(0);
+      const msg = h("p", { class: "rb-p" }, `규칙 설계 중… 0/${bs.length}`);
+      replace(body, msg, bar, h("p", { class: "rb-muted", style: "font-size:12px" }, "묶음마다 AI 호출이 한 번씩 생겨요. 결과는 미리보기에서 골라 적용해요."), h("div", { class: "btns" }, btn("취소", { onClick: () => { ctrl.abort(); start(); } })));
+      let work = src;
+      const why = {}, errs = [], warns = [];
+      for (let i = 0; i < bs.length; i++) {
+        try {
+          const msgs = refineMessages(work, bs[i], { instruction: instr.value });
+          let raw = await runAI(ctx.api, msgs, pick(), ctrl.signal), r;
+          try { r = readRefine(raw, work, bs[i]); }
+          catch { raw = await runAI(ctx.api, [...msgs, { role: "assistant", content: String(raw ?? "") }, { role: "user", content: "JSON 객체 하나만 다시 보내 주세요." }], pick(), ctrl.signal); r = readRefine(raw, work, bs[i]); }
+          Object.assign(why, r.why);
+          const st = refineStep(work, r.design);
+          work = st.work; errs.push(...st.errors); warns.push(...st.warnings);
+        } catch (e) {
+          if (ctrl.signal.aborted) return;
+          errs.push(`${i + 1}번째 묶음: ${e?.message ?? e}`);
+        }
+        replace(msg, `규칙 설계 중… ${i + 1}/${bs.length}`);
+        bar.set(Math.round(((i + 1) / bs.length) * 100));
+      }
+      refinePreview(src, work, refineChanges(src, work, why), prefix, errs, warns);
+    }
+    function refinePreview(src, work, changes, prefix, errs, warns) {
+      const KIND = { affiliation: "소속", place: "장소", entry: "항목" };
+      const rows = changes.map((c) => {
+        const cb = h("input", { type: "checkbox", checked: c.checked });
+        cb.addEventListener("change", () => { c.checked = cb.checked; refresh(); });
+        return h("label", { class: "rb-check", style: "align-items:flex-start" }, cb, h("span", { style: "min-width:0;overflow-wrap:anywhere" }, `[${KIND[c.kind]}] ${c.name}`,
+          h("div", { class: "rb-muted", style: "font-size:12px" }, `${c.before} → ${c.after}`), c.why ? h("div", { class: "rb-muted", style: "font-size:12px" }, `💡 ${c.why}`) : null));
+      });
+      const notes = [...new Set(errs)].slice(0, 6).map((t) => h("div", { class: "rb-muted", style: "font-size:12px" }, `⚠ 뺀 것: ${t}`)).concat([...new Set(warns)].slice(0, 4).map((t) => h("div", { class: "rb-muted", style: "font-size:12px" }, `참고: ${t}`)));
+      const sum = h("span", { class: "rb-muted" });
+      const ok = btn("적용", { kind: "primary", onClick: () => {
+        const n = changes.filter((c) => c.checked).length;
+        done({ entries: pickRefine(src, work, changes), text: [prefix, n ? `규칙 ${n}개 설계` : ""].filter(Boolean).join(" · ") || "바뀐 것 없음" });
+      } });
+      const refresh = () => { const n = changes.filter((c) => c.checked).length; sum.textContent = `${n}건 선택`; ok.disabled = !n && !prefix; };
+      const all = (v) => { for (const c of changes) c.checked = v; refinePreview(src, work, changes, prefix, errs, warns); };
+      replace(body,
+        h("p", { class: "rb-p" }, prefix ? `구조 정리(${prefix})에 더해, 체크한 항목의 규칙만 바뀌어요. 저장하기 전에는 '되돌리기'로 원래대로 돌릴 수 있어요.` : "체크한 항목의 규칙만 바뀌어요. 내용·키·폴더는 그대로예요. 저장하기 전에는 '되돌리기'로 원래대로 돌릴 수 있어요."),
+        changes.length ? h("div", { style: "display:flex;gap:6px" }, btn("모두 선택", { size: "sm", onClick: () => all(true) }), btn("모두 해제", { size: "sm", onClick: () => all(false) })) : null,
+        h("div", { class: "rb-scroll", style: "max-height:min(48vh,420px);border:1px solid var(--rb-line);border-radius:12px;padding:6px 10px;overscroll-behavior:contain" }, ...(rows.length ? rows : [note("info", "AI가 바꿀 규칙을 제안하지 않았어요.")]), ...notes),
+        h("div", { class: "btns", style: "align-items:center;flex-wrap:wrap" }, sum, btn("처음으로", { onClick: start }), ok));
+      refresh();
     }
 
     start();

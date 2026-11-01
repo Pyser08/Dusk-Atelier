@@ -6,6 +6,7 @@
 export var SELF_NAME = "dusk_atelier";
 var REG = "da_interop:reg:";
 var PATCH = "da_interop:patch:";
+var ACTION = "da_interop:action:";
 var KEYS = { cats: "rbm:pluginCats:v1" };
 var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 var clone = (v) => JSON.parse(JSON.stringify(v ?? null));
@@ -51,6 +52,7 @@ export async function listInterop(api, installedNames) {
       ...e,
       fields: Array.isArray(e.fields) ? e.fields : [],
       presets: Array.isArray(e.presets) ? e.presets : [],
+      actions: Array.isArray(e.actions) ? e.actions.filter((a) => a && typeof a.key === "string") : [],
       pendingRev: p && p.rev > (e.appliedRev ?? 0) ? p.rev : 0,
       installed: installedNames && e.pluginName ? installedNames.has(e.pluginName) : null
     });
@@ -82,6 +84,37 @@ export async function waitAck(api, id, rev, timeoutMs = 1e4) {
 export async function pruneInterop(api, id) {
   await api.pluginStorage.removeItem(REG + id);
   await api.pluginStorage.removeItem(PATCH + id);
+  await api.pluginStorage.removeItem(ACTION + id);
+}
+
+// ── 동작(선택 기능, 스니펫이 actions를 등록한 플러그인만) ──
+// 등록 정보 하나 읽기 (없거나 규격이 다르면 null)
+export async function readInterop(api, id) {
+  const e = await readJson(api, REG + id, null);
+  return e && e.spec === 1 && e.id === id ? e : null;
+}
+export const hasAction = (entry, key) => Array.isArray(entry?.actions) && entry.actions.some((a) => a?.key === key);
+// 동작 요청을 남긴다. 상대 플러그인은 1초마다 확인하고, 15초가 지난 요청은 실행하지 않는다
+export async function sendAction(api, id, key, args = null) {
+  const prev = await readJson(api, ACTION + id, null);
+  const reg = await readJson(api, REG + id, null);
+  const rev = Math.max(prev?.rev ?? 0, reg?.actionRev ?? 0) + 1;
+  await writeJson(api, ACTION + id, { rev, key, args: clone(args), updatedAt: Date.now() });
+  return rev;
+}
+// 상대 플러그인이 그 요청을 처리했는지 기다린다 → { ok, result, error }
+export async function waitAction(api, id, rev, timeoutMs = 4e3, stepMs = 250) {
+  const end = Date.now() + timeoutMs;
+  while (Date.now() < end) {
+    const e = await readJson(api, REG + id, null);
+    if ((e?.actionRev ?? 0) >= rev) return e.actionRev === rev ? { ok: !e.actionError, result: e.actionResult ?? null, error: e.actionError ?? null } : { ok: false, result: null, error: "superseded" };
+    await sleep(stepMs);
+  }
+  return { ok: false, result: null, error: "timeout" };
+}
+export async function runAction(api, id, key, args = null, timeoutMs) {
+  const rev = await sendAction(api, id, key, args);
+  return waitAction(api, id, rev, timeoutMs);
 }
 
 // ── 플러그인 목록 (읽기) ──

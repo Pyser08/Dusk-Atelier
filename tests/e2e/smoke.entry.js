@@ -1,5 +1,7 @@
 // 7-B 새 화면 연기 시험(브라우저에서 실제로 그려 보기): node tests/e2e/run-smoke.mjs 로 실행한다. 가짜 ctx만 쓴다.
 import { mountSkillChat } from "../../src/ui/screens/memory/skillchat.js";
+import { startWorkshop, checkWorkshopReturn } from "../../src/ui/screens/workshoplink.js";
+import { openLoreDusk } from "../../src/ui/screens/loredusk.js";
 import { TABS } from "../../src/ui/tabs.js";
 import { createEmptyWikiScope, createWikiDocument } from "../../src/engine/pot/wiki-schema.js";
 import { openFolders } from "../../src/ui/screens/memory/folderui.js";
@@ -140,6 +142,55 @@ window.runSmoke = async () => {
     check("스킬 대화: 라이브러리에 추가", l2.sets.length === 1 && l2.sets[0].name === "combat-referee" && saved === 1, JSON.stringify(l2.sets.map((x) => x.name)));
     main.remove();
   } catch (e) { check("스킬 대화", false, e?.stack ?? e); }
+  try {   // 봇빌더 연동(v1.8.1): 연동판 열기 → 돌아오면 개발 목록 / 원본 안내 / 원고 가져오기
+    const store3 = new Map(), meta = { devProjects: [] };
+    let chars = [{ chaId: "a", name: "A", type: "character", chats: [{}] }], order = ["a"], closed = 0, went = null, plugins = [{ name: "risu_story_workshop", displayName: "봇빌더", script: "//@name risu_story_workshop\n/*__DA_WORKSHOP_INTEROP__*/", enabled: true }];
+    const api3 = {
+      pluginStorage: { getItem: async (k) => store3.get(k) ?? null, setItem: async (k, v) => { store3.set(k, v); }, removeItem: async (k) => { store3.delete(k); } },
+      getDatabase: async (keys) => ({ plugins, characters: chars, characterOrder: order }),
+      setDatabaseLite: async (o) => { if (o.characters) chars = o.characters; if (o.characterOrder) order = o.characterOrder; },
+      checkCharOrder: async () => { order = chars.map((c) => c.chaId); }, getCharacterFromIndex: async (i) => chars[i], setChatToIndex: async () => {}
+    };
+    store3.set("da_interop:reg:risu-story-workshop", JSON.stringify({ spec: 1, id: "risu-story-workshop", actions: [{ key: "open" }, { key: "draft" }], actionRev: 0 }));
+    // 연동판 봇빌더 흉내: 동작 요청을 받으면 처리 결과를 등록 정보에 쓴다
+    const fakeWs = setInterval(() => {
+      const req = JSON.parse(store3.get("da_interop:action:risu-story-workshop") ?? "null"), reg = JSON.parse(store3.get("da_interop:reg:risu-story-workshop"));
+      if (req && req.rev > (reg.actionRev ?? 0)) store3.set("da_interop:reg:risu-story-workshop", JSON.stringify({ ...reg, actionRev: req.rev, actionKey: req.key, actionResult: req.key === "open" ? { opened: true } : null, actionError: null }));
+    }, 30);
+    const wctx = { api: api3, win: document.body, state: {}, prefs: { ui: { devMode: true }, meta }, svc: { meta: async (fn) => fn(meta) }, toast: () => {}, close: async () => { closed++; }, go: (t) => { went = t; } };
+    check("봇빌더: 연동판이면 바로 열고 Dusk 닫기", (await startWorkshop(wctx)) === true && closed === 1 && JSON.parse(store3.get("dusk.workshop.handoff.v1")).mode === "linked");
+    chars = [...chars, { chaId: "n1", name: "새 봇", type: "character" }];
+    await checkWorkshopReturn(wctx);
+    check("봇빌더: 돌아오면 새 봇을 개발 목록·개발 탭으로", meta.devProjects.some((p) => p.id === "n1") && went === "dev" && wctx.state.devSel === "c:n1" && !store3.has("dusk.workshop.handoff.v1"));
+    // 원본 봇빌더: 안내 창 → 열러 가기
+    plugins = [{ ...plugins[0], script: "//@name risu_story_workshop\n" }];
+    const p1 = startWorkshop(wctx); await sleep(80);
+    check("봇빌더 원본: 안내 창(연동판 받기 포함)", document.body.textContent.includes("Dusk 연동판이 아니라서") && !!$("button").find((b) => b.textContent.includes("연동판 받기")));
+    clickText("봇빌더 열러 가기"); check("봇빌더 원본: 열러 가기 → 인계 저장", (await p1) === true && closed === 2 && JSON.parse(store3.get("dusk.workshop.handoff.v1")).mode === "manual");
+    // 등록 안 한 원고: 봇빌더 자동 저장에서 읽어 새 봇으로
+    store3.set("risu-character-editor:v1:autosave", JSON.stringify({ schemaVersion: 1, savedAt: new Date(Date.now() + 1000).toISOString(), name: "원고 봇", session: { targetId: null, draft: { name: "원고 봇", desc: "봇빌더에서 쓴 설명", firstMessage: "안녕", chats: [9] } } }));
+    went = null; const p2 = checkWorkshopReturn(wctx); await sleep(80);
+    check("봇빌더 원고: 가져올지 물어봄", document.body.textContent.includes("원고 봇") && document.body.textContent.includes("아직 봇으로 등록되지 않았어요"));
+    clickText("새 봇으로 가져오기"); await p2;
+    const made = chars.find((c) => c.name === "원고 봇");
+    check("봇빌더 원고: 새 봇 생성·개발 목록", !!made && made.desc === "봇빌더에서 쓴 설명" && made.firstMessage === "안녕" && !Array.isArray(made.chats?.[0]) && meta.devProjects.some((p) => p.id === made.chaId) && went === "dev", JSON.stringify(made ?? {}).slice(0, 200));
+    clearInterval(fakeWs);
+  } catch (e) { check("봇빌더 연동", false, e?.stack ?? e); }
+  try {   // 로어북 더스크화 — 규칙 설계(v1.8.1)
+    const lore = [
+      { key: "히나,Hina", comment: "히나", content: "소라사키 히나.", mode: "normal" },
+      { key: "야근,서류", comment: "히나의 피로", content: "히나는 지쳐 있다.", mode: "normal" }
+    ];
+    let sent = "";
+    const reply = JSON.stringify({ design: { entries: [{ ref: "l0", rule: { hold: 3, wholeWord: true } }, { ref: "l1", rule: { conditions: [{ type: "count", words: "야근,서류", min: 3 }], repeat: "once", chain: [{ target: "히나", chance: 100 }] } }] }, why: { l0: "주인공" } });
+    const lctx = { win: document.body, toast: () => {}, api: { pluginStorage: { getItem: async () => null, setItem: async () => {} }, runLLMModel: async (o) => { sent = o.messages.map((m) => m.content).join("\n"); return { type: "success", result: reply }; } } };
+    const pr = openLoreDusk(lctx, { list: lore }); await sleep(80);
+    check("더스크화: 규칙 설계 카드", document.body.textContent.includes("AI로 규칙 설계 (Dusk 기능 전부)"));
+    clickText("규칙 설계 시작"); await sleep(250);
+    check("더스크화: Dusk 안내와 함께 보냄 + 미리보기", sent.includes("[로어북 방식: Dusk]") && document.body.textContent.includes("3턴 유지") && document.body.textContent.includes("💡 주인공"), document.body.textContent.slice(-300));
+    clickText("적용"); const res = await pr;
+    check("더스크화: 규칙 적용 결과", res?.entries?.[0]?.extentions?.da_rule?.hold === 3 && res.entries[1].extentions.da_rule.once === "chat" && /규칙 2개/.test(res.text), JSON.stringify(res?.text));
+  } catch (e) { check("더스크화 규칙 설계", false, e?.stack ?? e); }
   try {   // 하이라이트 둘러보기(v1.8.1)
     const w = document.createElement("div"); w.innerHTML = '<button id="t1">A</button><div class="rb-scard"><div class="has-seg">seg</div></div><b id="t2">B</b>'; document.body.appendChild(w);
     let acted = 0;

@@ -59,7 +59,7 @@
 - `personabuilder.js` (353줄) 페르소나 빌더: 설명 양식(프리셋) 파싱·조립, AI 프롬프트, 저장소, 공유 코드 — parseTemplate, addField, removeField, addSection, removeSection
 - `personaroulette.js` (52줄) 페르소나 룰렛: 칸마다 범주를 고르고 무작위로 뽑아 콘셉트에 보탠다. — spin, wheelItems
 - `pluginTemplate.js` (185줄) 플러그인 만들기 — 템플릿, 머리말·등록 코드 동기화, 검사, 설치용 객체, 도움말 — buildTemplate, syncMeta, isValidVersion, cmpVersion, checkCode
-- `plugins.js` (191줄) 플러그인 탭 데이터 계층 — DA Interop v1 호스트 + 플러그인 관리 — listInterop, sendPatch, presetValues, waitAck, pruneInterop
+- `plugins.js` (224줄) 플러그인 탭 데이터 계층 — DA Interop v1 호스트 + 플러그인 관리 — listInterop, sendPatch, presetValues, waitAck, pruneInterop
 - `potstorage.js` (59줄) 리수폿 컨트롤러가 쓰는 저장소(pluginStorage 모양)를 Dusk 저장소 v3 위에 얹는 어댑… — scopeIdsOf, createPotStorage
 - `presets.js` (140줄) — loadPresets, savePresets, snapshotOf, recordActive, applyPreset
 - `regexprep.js` (25줄) v1.8.1 정규식 전처리 공급자: 이 채팅에 적용할 정규식 목록을 모아 준다. 읽기만 하며 실패하면… — createRegexPrep
@@ -71,6 +71,8 @@
 - `themebuilder.js` (789줄) 테마 빌더: 고르기만 해서 채팅 테마(커스텀 HTML + CSS)를 만든다. — hexToOklch, oklch, contrast, ensureContrast, makePalette
 - `themes.js` (374줄) 테마 스튜디오: 일반 리스 / 포켓리스 계열 테마를 따로 만들고 저장·적용한다. — detectTarget, loadThemes, saveThemes, newTheme, duplicateTheme
 - `webtools.js` (53줄) 웹 검색·가져오기 도구 (v1.8.1). 기본 꺼짐. 켠 단계(기본: 정리 노트)에서만 모델이 도구를… — WEB_KEY, WEB_STAGES, defaultWebCfg, normalizeWebCfg, createWebTools
+- `workshop.js` (57줄) 봇빌더(risu_story_workshop) 연동 (v1.8.1): 설치·연동판 감지, 화면 열기, … — HANDOFF_KEY, WS_PREFIX, createWorkshopLink
+- `workshoppatch.js` (44줄) 봇빌더(risu_story_workshop) DA Interop 연동판 만들기 (v1.8.1) — 순… — MARK, patchWorkshop, isPatchedWorkshop
 
 ### src/data/pot/
 - `pot/*.js` 33개 — 리수폿 저장소·모델 클라이언트·훅·추적(자동 생성, prompts.json·MANIFEST.json 포함)
@@ -82,6 +84,7 @@
 - `duskdesign.js` (621줄) v1.6.7 4단계: 로어북 'Dusk 방식'. — hasDusk, resolveLoreMode, ruleToDesign, ruleLine, duskContext
 - `index.js` (10줄) AI로 제작(봇빌더 v0.3.2 이식) 공개 진입점. 화면 없이 쓸 수 있는 엔진 + 컨트롤러. — createAiBuild, createAiStore, normalizeSettings, DEFAULT_SETTINGS, STORE_PREFIX
 - `limits.js` (35줄) 요청 용량 한도 (v1.6.8). 토큰이 아니라 글자 수·바이트 수로만 잰다(정확한 토큰 계산 없음)… — DEFAULT_INPUT_CHARS, MAX_INPUT_CHARS, MIN_INPUT_CHARS, INPUT_LIMIT_VERSION, PROMPT_BYTES_LIMIT
+- `lorerefine.js` (117줄) 로어북 더스크화 2단계 '규칙 설계' (v1.8.1) — 순수 함수. — REFINE_BATCH, refineTargets, refineMessages, readRefine, refineStep
 - `loreselect.js` (76줄) 로어북 선택·부분 수정 (v1.6.8, 순수). 요청에 실을 로어북을 항목별로 고르고, — loreSelection, validLoreIncluded, reconcileLoreSelection, requestLorebook, assertLoreRefsIncluded
 - `model.js` (62줄) 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식.… — responseText, callModel
 - `modules.js` (111줄) 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식.… — MODULE_LIMIT, badKeys, tree, normalizeModule, normalizeModules
@@ -182,6 +185,7 @@
 - `webhook.js` (5줄) 웹 도구 공급자 연결점 (v1.8.1). 공급자가 없으면 프롬프트를 그대로 한 번 부른다. — setWebWrapProvider, webWrap
 - `websearch.js` (121줄) 웹 검색·가져오기 도구 (v1.8.1, 순수). 검색 서비스별 요청/응답 해석 + 주소 안전 검사(S… — WEB_LIMITS, WEB_PROVIDERS, webReady, buildSearch, parseSearch
 - `wikiedit.js` (66줄) 인물 위키 화면이 쓰는 순수 함수: 빈 인물 만들기 · 문서 관리(이름·별칭·태그·연결 문서) · 인… — PROFILE_FIELDS, PROFILE_AXES, listOf, createBlankPerson, editDocMeta
+- `workshop.js` (56줄) 봇빌더(risu_story_workshop) 연동 — 순수 함수 (v1.8.1) — WORKSHOP_PLUGIN, WORKSHOP_INTEROP_ID, HANDOFF_TTL, WORKSHOP_FIELDS, makeHandoff
 - `zipwrite.js` (71줄) — crc32, createZip
 
 ### src/engine/card/
@@ -207,7 +211,7 @@
 
 ### src/ui/
 - `aifix.js` (52줄) 로어북 '고칠 부분' 공유 상태 (v1.6.8): 편집기 글칸에서 고른 부분 ↔ AI 창 '고칠 부분…
-- `app.js` (532줄) 
+- `app.js` (535줄) 
 - `assets.js` (187줄) 
 - `cbs.js` (80줄) 
 - `codeedit.js` (514줄) 가벼운 코드 편집기: 투명한 textarea 뒤에 색을 입힌 pre를 겹쳐 VS Code처럼 보이게 …
@@ -258,11 +262,11 @@
 - `home.js` (181줄) 홈: 지금 열린 채팅 → 기억 상태 → 바로 하기 9칸. PC는 오른쪽에 최근 기록 3개.
 - `homestate.js` (21줄) 홈 화면이 읽는 열린 채팅 상태(화면 코드와 분리: 무거운 import 없이 테스트하려고).
 - `infocard.js` (42줄) 봇·모듈 편집기 '정보' 탭이 같이 쓰는 요약 카드·접는 카드 스타일 (v1.6.9: 모듈도 봇과 같…
-- `loredusk.js` (101줄) 로어북 더스크화 창: 구분선 규칙 변환 / AI 분석 → 미리보기(체크한 것만) → 적용
+- `loredusk.js` (161줄) 로어북 더스크화 창: 구분선 규칙 변환 / AI 분석(소속·장소) → [규칙 설계(조건·반복·유지·그…
 - `lorelog.js` (107줄) 도구 → 로어북 로그: 응답마다 어떤 로어북이 들어갔는지
 - `modlinks.js` (130줄) 모듈 연결 (v1.7.0 5단계): 전역 · 페르소나 · 캐릭터 · 지금 채팅.
 - `modules.js` (693줄) 
-- `newbot.js` (55줄) 새 봇 만들기 (v1.7.0 5단계): 빈 봇을 하나 추가하고 편집기를 연다. AI로 만들기는 편집기…
+- `newbot.js` (58줄) 새 봇 만들기 (v1.7.0 5단계): 빈 봇을 하나 추가하고 편집기를 연다. AI로 만들기는 편집기…
 - `patchui.js` (136줄) 
 - `peoplescreen.js` (99줄) 인물 화면 + 인물 상세 (1.7.0 4단계, 계획 §3.4): 위키의 인물 문서를 보고 다듬는다. …
 - `personabuilder.js` (900줄) 페르소나 빌더 화면: 양식(프리셋)의 ### 섹션 = 폴더, * 항목 = 칸.
@@ -279,6 +283,7 @@
 - `themestudio.js` (445줄) 테마 스튜디오: 계열(일반 리스/포켓리스)별 테마 편집 · 실시간 미리보기 · 적용 · 공유
 - `tools.js` (454줄) 
 - `updsettings.js` (76줄) 도구 → 업데이트 설정: 새 봇 자동 감지, 받은 사본 정리, 채팅 백업
+- `workshoplink.js` (106줄) 봇빌더 연동 화면 (v1.8.1)
 
 ### src/ui/screens/cards/
 - `index.js` (68줄) 카드 탭(기억 카드): 장기기억과 따로. 봇을 고르면 그 채팅의 기억으로 카드를 만들고, 카드 목록·…
@@ -338,7 +343,7 @@
 - `re2js.js` (6649줄) 봇빌더(BB) v0.3.2의 번들에서 추출한 외부 라이브러리 (MIT). 라이선스: 저장소 NOTIC… — RE2JS
 
 ## Risu 플러그인 API (우리 코드가 쓰는 호출, 횟수순)
-`getCharacterFromIndex`(56), `getDatabase`(44), `getChatFromIndex`(28), `getCurrentCharacterIndex`(22), `getCurrentChatIndex`(18), `setCharacterToIndex`(17), `setDatabaseLite`(16), `addRisuScriptHandler`(10), `setChatToIndex`(7), `saveAsset`(6), `nativeFetch`(5), `toggle`(5), `addRisuReplacer`(4), `registerButton`(3), `getRootDocument`(3), `hideContainer`(3), `requestPluginPermission`(2), `checkCharOrder`(2), `readImage`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `getColorScheme`(2), `showContainer`(2), `getLocalPluginStorage`(1), `getCurrentLorebookEntries`(1), `unregisterUIPart`(1), `runLLMModel`(1), `ordered`(1), `range`(1), `clear`(1)
+`getCharacterFromIndex`(56), `getDatabase`(46), `getChatFromIndex`(28), `getCurrentCharacterIndex`(22), `getCurrentChatIndex`(18), `setCharacterToIndex`(17), `setDatabaseLite`(16), `addRisuScriptHandler`(10), `setChatToIndex`(7), `saveAsset`(6), `nativeFetch`(5), `toggle`(5), `addRisuReplacer`(4), `registerButton`(3), `getRootDocument`(3), `hideContainer`(3), `requestPluginPermission`(2), `checkCharOrder`(2), `readImage`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `getColorScheme`(2), `showContainer`(2), `getLocalPluginStorage`(1), `getCurrentLorebookEntries`(1), `unregisterUIPart`(1), `runLLMModel`(1), `ordered`(1), `range`(1), `clear`(1)
 
 ## RisuAI 본체 구조 (kwaroran/RisuAI, 2026.10.220 기준)
 읽기 전용 클론: `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/kwaroran/risuai` (add_repo로 읽기만 가능, 쓰기 불가). 전체를 읽지 말고 아래 위치만 grep한다.
