@@ -1,7 +1,7 @@
 # HandOff — 다른 AI/새 세션용 시작 문서
 
 > 저장소 `Pyser08/Dusk-Atelier`만 연결하면 이 폴더부터 읽고 바로 작업할 수 있게 정리한 문서.
-> 기준: `feat/1.8.1` 브랜치 (2026-11-01, 커밋 `fc8866e`)
+> 기준: `feat/1.8.1` 브랜치 (2026-11-01 작성)
 
 ## 1. 이 프로젝트는
 RisuAI 플러그인 **Dusk Atelier** — 모듈·봇 관리, 인물별 장기기억, 로어북·테마 도구.
@@ -27,16 +27,23 @@ npm ci            # 막히면: esbuild·acorn·eslint-scope를 /opt/npm-tools/no
 ```
 - Node 22 기준. 얕은 복제라 main과 비교하려면 `git fetch --depth=80 origin main:refs/remotes/origin/main`.
 
-## 4. 작업 루프
-1. 브랜치에서 작업 (`feat/x.y.z`). main 직접 수정 금지.
+## 4. 사용자 허락 없이 하지 말 것 (최우선)
+- **버전 올리기 금지**: `package.json` version, `CHANGELOG.md`의 새 버전 섹션, `docs/GUIDE-v*.md` 새 파일을 사용자가 지시하지 않으면 만들거나 바꾸지 않는다. 기존 버전 섹션에 내용 추가도 지시가 있을 때만.
+- **브랜치 생성·전환 금지**: 사용자가 지정한 브랜치에서만 작업한다. 지정이 없으면 묻는다. 새 브랜치를 임의로 만들지 않는다.
+- **main 수정·머지·태그 금지**: main push는 곧 릴리스(`release.yml`)다. 사용자가 명시적으로 요청할 때만.
+- 파일 삭제·이름 변경, 저장 데이터 형식 변경, 워크플로 수정도 먼저 확인받는다.
+- 판단이 애매하면 작업 전에 한 줄로 묻는다.
+
+## 5. 작업 루프
+1. 사용자가 지정한 브랜치에서 작업한다.
 2. 소스 수정 → `npm test` (현재 443 pass / 9 skip / 0 fail)
 3. `npm run build` → `dusk_atelier.js` 재생성, `npm run check`로 "동일함" 확인. **빌드물도 함께 커밋.**
 4. UI를 건드렸으면 `node tests/e2e/run-smoke.mjs`로 연기 시험.
-5. 버전 올릴 때: `package.json` version + `CHANGELOG.md` 맨 위 `## vX.Y.Z (YYYY-MM-DD)` 섹션 (앱 내 '새로 바뀐 점'에 그대로 표시됨, 사용자 대상 존댓말 "~해요").
+5. (사용자가 버전 올리라고 했을 때만) `package.json` version + `CHANGELOG.md` 맨 위 `## vX.Y.Z (YYYY-MM-DD)` 섹션 (앱 내 '새로 바뀐 점'에 그대로 표시됨, 사용자 대상 존댓말 "~해요").
 6. 구조(파일 추가/삭제/역할 변경)가 바뀌면 `node tools/source-map.mjs > docs/source-map.md` 재생성 후 커밋.
-7. main에 push(머지)하면 `release.yml`이 package.json 버전으로 GitHub 릴리스 자동 생성.
+7. 참고: main에 push(머지)되면 `release.yml`이 package.json 버전으로 GitHub 릴리스를 자동 생성한다 → 그래서 main은 사용자 지시 없이는 건드리지 않는다.
 
-## 5. 반드시 지킬 규칙
+## 6. 반드시 지킬 규칙
 - 계층: `src/engine/` 순수 로직(브라우저·api 없이 테스트) / `src/data/` api·저장소 / `src/ui/` 화면 / `src/tide/` RisuTide.
 - `src/engine/pot/`, `src/data/pot/`는 `tools/pot-split.mjs`가 **자동 생성** → 직접 수정 금지.
 - UI는 부분 갱신 우선(전체 재렌더는 버벅임 원인). DOM은 `ui/dom.js`의 `h()`/`replace()`, 공용 위젯은 `ui/kit.js`.
@@ -45,6 +52,6 @@ npm ci            # 막히면: esbuild·acorn·eslint-scope를 /opt/npm-tools/no
 - `git remote set-url` 차단됨. push 전 `git fetch origin <브랜치>` 후 rebase.
 - 커밋 메시지는 영어 짧게, 사용자 대상 문구(CHANGELOG·UI)는 한국어.
 
-## 6. 참고 문서
+## 7. 참고 문서
 - 이전 인계: `docs/HANDOFF-v1.6.4.md`(리수폿 통합·장기기억 구조), `docs/HANDOFF-v1.6.7.md`
 - 버전 안내: `docs/GUIDE-v*.md`, 아카라이브 글: `docs/arca/v*.html`

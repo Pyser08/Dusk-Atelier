@@ -21,7 +21,7 @@
 | 플러그인 탭·DA Interop | `src/data/plugins.js`, `src/data/interopSnippet.js`, `src/ui/screens/plugins.js` |
 | 설정 | `src/ui/screens/settingstab.js`, `src/ui/screens/settings.js` |
 | 리수폿 통합 (수정 금지 영역) | `tools/pot-split.mjs`, `tools/pot-patches.json` → 원본은 `ref/risupot` 브랜치 |
-| 빌드·릴리스 | `tools/build.mjs`, `.github/workflows/release.yml`, `package.json`, `CHANGELOG.md` |
+| 빌드·릴리스 (릴리스·버전은 사용자 지시 시만) | `tools/build.mjs`, `.github/workflows/release.yml`, `package.json`, `CHANGELOG.md` |
 
 ## 빠른 검색 팁
 - 함수 위치: `grep -rn "export function 이름" src/`

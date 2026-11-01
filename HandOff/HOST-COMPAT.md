@@ -25,7 +25,7 @@ Dusk Atelier는 **세 호스트에서 같은 `dusk_atelier.js` 하나로** 돈�
 5. **저장 쓰기**: `setCharacterToIndex`·`setDatabaseLite`는 `main.js`의 래퍼를 거친다(호스트 차단 오류 처리). 직접 `setDatabase` 전체 저장은 피한다(서버형 호스트에서 느리고 충돌 위험).
 6. **네트워크**: 플러그인 창은 CSP로 `fetch`가 막힐 수 있다 → `api.nativeFetch(url, { method: "GET" })` 먼저(**method 생략 시 POST로 가서 실패**), 실패 시 일반 fetch.
 7. **리스 화면 DOM**: `api.getRootDocument()`는 **비동기 래퍼** — 모든 `querySelector` 등에 await. 셀렉터는 RisuAI/Pocket 둘 다 고려(`data/themes.js` 참고).
-8. **캐릭터 추가 후 순서**: Pocket·Bard는 `checkCharOrder` 반영이 늦거나 빠짐 → `ensureCharacterInOrder`(`ui/legacy.js`) 재사용.
+8. **캐릭터 추가 후 순서**: Pocket·Bard는 `checkCharOrder` 반영이 늦거나 빠짐 → `ensureCharacterInOrder`(`engine/character.js`) 재사용.
 9. **저장 키 이름공간**: pluginStorage 키는 `rbm:*` / `dusk.*` 접두사 유지. 다른 플러그인과 같은 저장소를 공유한다(플러그인 탭이 그대로 노출함).
 10. **다른 플러그인과의 연동**은 DA Interop v1(`data/plugins.js`, `data/interopSnippet.js`)로만. 다른 플러그인의 전역 변수·DOM을 직접 고치지 않는다.
 
