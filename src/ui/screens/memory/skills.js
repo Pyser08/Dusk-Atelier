@@ -13,7 +13,7 @@ import { readCocoa, suggestStageRefs, agentToSkillSet } from "../../../engine/co
 const TEMPLATE = (name) => `---\nname: ${name}\ndescription: 언제 쓰는 스킬인지 한 줄로 적어요\nskill_format: 2\ninject_order: 100\nsystem_prompt: |\n  여기에 프롬프트 뒤에 붙일 지침을 적어요.\n---\n# ${name}\n스킬 설명(주입되지 않는 본문)\n`;
 const stageHint = { router: "관련 인물을 고르는 호출", director: "정리 노트를 만드는 호출", writer: "기록을 쓰는 호출", analysis: "Dusk 기억 분석 호출" };
 
-function saveBlob(ctx, name, data, type) {
+export function saveBlob(ctx, name, data, type) {
   const w = ctx.win, url = w.URL.createObjectURL(new w.Blob([data], { type }));
   const a = h("a", { href: url, download: name }); a.click(); setTimeout(() => w.URL.revokeObjectURL(url), 4000);
 }
@@ -86,8 +86,10 @@ export async function renderMemorySkills(ctx, host, { redraw, standalone = false
       h("div", { class: "rb-row" }, h("b", null, `스킬 세트 ${lib.sets.length}개`), h("span", { class: "rb-spacer" }), btn("가져오기", { size: "sm", kind: "primary", icon: "upload", onClick: imp }), btn("새 세트", { size: "sm", onClick: newSet }), lib.sets.length ? btn("전체 내보내기", { size: "sm", onClick: () => run(exp()) }) : null),
       lib.sets.length ? h("ul", { class: "rb-mem-reclist" }, lib.sets.map((set) => {
         const n = buildSkillIndex([set]).length;
-        return h("li", null, h("div", { class: "txt" }, h("b", null, set.name), h("div", { class: "rb-muted" }, `스킬 ${n}개 · 파일 ${set.files.length}개`)),
+        return h("li", { class: "rb-sk-li" }, h("div", { class: "txt" }, h("b", null, set.name), h("div", { class: "rb-muted" }, `스킬 ${n}개 · 파일 ${set.files.length}개`)),
           btn("열기", { size: "sm", onClick: () => { st.open = set.id; st.file = ""; run(drawLib()); } }),
+          btn("ZIP", { size: "sm", title: "이 세트를 ZIP으로 내보내요 (코코아전트에서 그대로 가져올 수 있어요)", onClick: () => saveBlob(ctx, `${set.name}.zip`, S.zipOfSet(set), "application/zip") }),
+          btn("JSON", { size: "sm", title: "이 세트를 JSON으로 내보내요", onClick: () => saveBlob(ctx, `${set.name}.json`, S.exportSet(set), "application/json") }),
           btn("삭제", { size: "sm", kind: "danger", onClick: () => run((async () => { if (!await confirmDialog(ctx.win, { title: `'${set.name}' 삭제`, body: "세트 안의 파일이 모두 지워져요.", ok: "삭제", cancel: "취소", danger: true })) return; await S.saveLibrary({ ...lib, sets: lib.sets.filter((x) => x.id !== set.id) }); await Promise.all([drawLib(), drawStages()]); })()) }));
       })) : emptyState({ icon: "info", title: "아직 스킬 세트가 없어요", text: "ZIP/JSON을 가져오거나 코코아전트에서 옮겨 올 수 있어요." })));
   }

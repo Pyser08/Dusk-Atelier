@@ -1,4 +1,5 @@
 // 7-B 새 화면 연기 시험(브라우저에서 실제로 그려 보기): node tests/e2e/run-smoke.mjs 로 실행한다. 가짜 ctx만 쓴다.
+import { mountSkillChat } from "../../src/ui/screens/memory/skillchat.js";
 import { TABS } from "../../src/ui/tabs.js";
 import { createEmptyWikiScope, createWikiDocument } from "../../src/engine/pot/wiki-schema.js";
 import { openFolders } from "../../src/ui/screens/memory/folderui.js";
@@ -121,6 +122,24 @@ window.runSmoke = async () => {
     check("웹 도구·호출 기록 카드", shost.textContent.includes("웹 도구 (검색·페이지 읽기)") && shost.textContent.includes("최근 호출 기록") && shost.textContent.includes("Wikipedia"), shost.textContent.slice(-300));
     check("세트 편집기", !!shost.querySelector("textarea") && shost.textContent.includes("진단"), shost.textContent.slice(0, 160));
   } catch (e) { check("스킬 탭", false, e?.stack ?? e); }
+  try {   // AI로 스킬 만들기 대화(v1.8.1)
+    const store2 = new Map(), main = document.createElement("div"); main.style.position = "relative"; document.body.appendChild(main);
+    const reply = '만들었어요.\n<skill-file path="combat-referee/SKILL.md">\n---\nname: combat-referee\ndescription: Combat rules. Use when a fight starts.\nskill_format: 2\nsystem_prompt: |\n  gate\n---\n# Combat\n</skill-file>';
+    const api2 = { pluginStorage: { getItem: async (k) => store2.get(k) ?? null, setItem: async (k, v) => { store2.set(k, v); } }, runLLMModel: async (o) => ({ type: "success", result: o.messages[0].content.includes("# SKILL GUIDE") ? reply : "가이드 없음" }) };
+    const sk2 = createSkillStore(api2, { log() {} });
+    const cctx = { win: document.body, main, api: api2, skills: sk2, state: {}, toast: () => {} };
+    let saved = 0; mountSkillChat(cctx, { onSaved: () => { saved++; } });
+    const fab = main.querySelector(".rb-sk-fab"), panel = main.querySelector(".rb-sk-chat");
+    check("스킬 대화: 우하단 버튼·닫힌 패널", !!fab && panel.hidden === true && fab.textContent.includes("AI로 스킬 만들기"));
+    fab.click(); await sleep(60);
+    check("스킬 대화: 열림 + 안내 글", panel.hidden === false && panel.textContent.includes("어떤 스킬을 만들고 싶으신가요"));
+    panel.querySelector("textarea").value = "전투 판정 스킬"; panel.querySelector(".rb-pb-chat-send").click(); await sleep(150);
+    check("스킬 대화: 초안이 실시간으로 쌓임", panel.textContent.includes("combat-referee/SKILL.md") && panel.textContent.includes("초안 갱신") && !panel.textContent.includes("<skill-file"), panel.textContent.slice(0, 200));
+    clickText("라이브러리에 추가", panel); await sleep(150);
+    const l2 = await sk2.getLibrary();
+    check("스킬 대화: 라이브러리에 추가", l2.sets.length === 1 && l2.sets[0].name === "combat-referee" && saved === 1, JSON.stringify(l2.sets.map((x) => x.name)));
+    main.remove();
+  } catch (e) { check("스킬 대화", false, e?.stack ?? e); }
   try {   // 하이라이트 둘러보기(v1.8.1)
     const w = document.createElement("div"); w.innerHTML = '<button id="t1">A</button><div class="rb-scard"><div class="has-seg">seg</div></div><b id="t2">B</b>'; document.body.appendChild(w);
     let acted = 0;

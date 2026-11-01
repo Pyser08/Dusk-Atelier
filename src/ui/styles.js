@@ -979,6 +979,15 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-pb-chat-input{flex:1;min-width:0;max-height:120px;resize:vertical;border:0!important;outline:0!important;background:transparent!important;color:var(--rb-text);font:inherit;font-size:13px;line-height:1.5;padding:5px 0!important}
 .rb-pb-chat-send{width:36px;height:36px;min-width:36px;padding:0!important;border-radius:50%!important}
 .rb-pb-chat-hint{flex:none;margin:7px 12px 10px;text-align:center;color:var(--rb-mute);font-size:10.5px;line-height:1.4}
+.rb-skills .rb-chips{min-width:0;flex-wrap:wrap;overflow:visible;padding:8px 0 4px}.rb-skills .rb-chip{max-width:100%;height:auto;min-height:var(--rb-ctl-sm);padding-top:5px;padding-bottom:5px;white-space:normal;overflow-wrap:anywhere;text-align:left;line-height:1.35}
+.rb-skills .rb-field,.rb-skills .rb-card{min-width:0;overflow-wrap:anywhere}.rb-skills .rb-note{overflow-wrap:anywhere}
+.rb-sk-li{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.rb-sk-li .txt{flex:1 1 160px;min-width:0;overflow-wrap:anywhere}
+.rb-sk-chat{height:min(680px,calc(100dvh - 118px))}.rb-sk-ai{max-width:132px;height:30px;font-size:12px;padding:0 8px}
+.rb-sk-draft{flex:none;max-height:42%;overflow:auto;margin:0 12px 8px;border:1px solid var(--rb-line2);border-radius:14px;padding:8px 10px;background:var(--rb-surf)}
+.rb-sk-det summary{cursor:pointer;font-size:12.5px;font-weight:600}.rb-sk-warn{color:var(--rb-warn,#b45309)}.rb-sk-empty{margin:0;font-size:12px}
+.rb-sk-pre{margin:8px 0;max-height:150px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:11.5px;line-height:1.5;padding:8px 10px;border-radius:10px;background:var(--rb-bg,transparent);border:1px solid var(--rb-line2)}
+.rb-sk-diag{margin:4px 0;padding-left:16px;font-size:11.5px}.rb-sk-acts{flex-wrap:wrap;gap:6px}.rb-sk-upd{margin-top:6px;font-size:11.5px;color:var(--rb-acc-text)}
+.rb-sk-fab{right:24px}
 @media(max-width:560px){.rb-pb-chat-fab{right:14px;bottom:14px}.rb-pb-chat{right:10px;bottom:72px;width:calc(100% - 20px);height:min(72%,620px);border-radius:18px}}
 /* v1.8.1 모바일 가독성: 위쪽 영역 줄이기 · 누르는 칸 키우기 · 작은 글씨 올리기 · 칩 줄 끝 표시 · 위키 머리·기록 줄 정리 */
 @media (max-width:760px){
