@@ -1,8 +1,9 @@
 // 홈: 지금 열린 채팅 → 기억 상태 → 바로 하기 9칸. PC는 오른쪽에 최근 기록 3개.
 import { maybePromptIntro } from './promptstab.js';
+import { readState } from "./homestate.js";
 import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
-import { btn, statusCard, switchEl } from '../kit.js';
+import { btn, statusCard, switchEl, loading } from '../kit.js';
 import { CHANGELOG, openChangelog } from '../whatsnew.js';
 import { openTour } from '../tour.js';
 import { injectLine } from '../../engine/memoryusage.js';
@@ -19,37 +20,11 @@ var recentOf = (folder, n = 3) => {
   return rows.sort((a, b) => b.ms - a.ms).slice(0, n);
 };
 
-// 열린 채팅의 상태를 한 번에 읽는다. 기억 기능이 없거나 채팅이 없으면 null 칸.
-async function readState(ctx) {
-  const M = ctx.memory;
-  if (!M?.switches) return { M: null };
-  const cur = await M.switches.currentChat();
-  if (!cur) return { M, cur: null };
-  const [sw, idx, folder, chat] = await Promise.all([
-    M.switches.state(cur.chaId),
-    M.store.getIndex(),
-    M.store.getFolder(cur.chaId, cur.chatId).catch(() => null),
-    ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null)
-  ]);
-  const caps = M.capabilities(M.backend(idx.settings).id), msgs = chat?.message ?? [];
-  let todo = 0;
-  try {
-    const plan = caps.analyze && M.runner ? M.runner.planBackfill(msgs, { from: 0, to: Math.max(0, msgs.length - 1) }, folder) : null;
-    todo = plan?.todo ?? 0;
-  } catch {
-  }
-  let trackOn = true;
-  try {
-    trackOn = (await M.flow?.settings?.())?.rawSnapshot?.().autoWriterEnabled !== false;
-  } catch {
-  }
-  return { M, cur, sw, idx, folder, todo, trackOn, last: M.injector?.lastRequest?.() ?? null };
-}
-
 export async function renderHome(ctx) {
   const dev = !!ctx.prefs.ui?.devMode;
   const host = h("div", { class: "rb-home rb-home2 rb-scroll" });
   replace(ctx.main, host);
+  replace(host, loading("불러오는 중", { rows: 3 }));   // 읽는 동안 빈 화면 대신 바로 보이게
   const storyStatePromise = Promise.all([
     loadFairOn(ctx.api).catch(() => false),
     loadDiceOn(ctx.api).catch(() => false),

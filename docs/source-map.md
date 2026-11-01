@@ -373,3 +373,4 @@ v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`
 - `gaugeview.js` (engine) 게이지 박스 HTML(인라인 style) — gaugeBoxHtml, shapeHtml
 - `gauge.js` (data) 게이지 서비스 — 정의 저장, AI 설계(MEMORY_DEFAULT_PROMPT_1/2), 분석에 얹기(prepare/apply/afterAnalyze), 채팅 표시(onDisplay), undo
 - `memory/gaugeui.js` (ui) 위키 게이지 블록·추가·편집·관리
+- `homestate.js` (ui) 홈 화면이 읽는 열린 채팅 상태(readState) — 본문·백필 계획 없이 가볍게
