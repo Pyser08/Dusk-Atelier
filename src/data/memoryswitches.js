@@ -17,9 +17,11 @@ export async function currentChat(api) {
 }
 
 export function createSwitches({ api, store, flow = null }) {
+  let curMemo = null;
   const applyFlow = async () => { try { await flow?.apply?.(); } catch { /* 흐름을 못 바꿔도 저장된 설정은 남는다 */ } };
   return {
-    currentChat: () => currentChat(api),
+    // 한 화면 안에서 여러 곳이 연달아 부르면 채팅 전체 복사를 한 번만 한다(1초 재사용, v1.8.1 속도)
+    currentChat: () => (curMemo && Date.now() - curMemo.t < 1000 ? curMemo.p : (curMemo = { t: Date.now(), p: currentChat(api) }).p),
     // 한 봇의 스위치 상태: 기억 · 리수폿 · 조합(both|memory|pot|none)
     async state(chaId) {
       const idx = await store.getIndex();

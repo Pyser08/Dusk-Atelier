@@ -1,7 +1,7 @@
 // 기록 보기 (1.7.0 3단계, 계획 §3.2): 인물 위키 · 상황 · 시간선 · 열린 항목 · 관계를 한 화면에 쌓고, 위 칩은 그 자리로 스크롤만 한다.
 import { h, replace } from "../../dom.js";
 import { btn, loading, note } from "../../kit.js";
-import { mem, loadBots, loadChats, loadFolder, fail, potOn } from "./common.js";
+import { mem, loadBots, loadChats, countOf, loadFolder, fail, potOn } from "./common.js";
 import { renderPeopleTab } from "./wikiview.js";
 import { renderScenes } from "./scenes.js";
 import { renderOpen, renderRels, renderTimeline } from "./ledger.js";
@@ -27,8 +27,8 @@ export async function renderMemoryDetail(ctx, host, { redraw }) {
   const env = { ctx, bot, chats, advanced, chatItem, folder, view, backend, caps, idx, cycleOn, redraw, redrawView: redraw, sess: M.runner?.session?.().calls ?? 0 };
 
   const chatRow = chats.length > 1 ? (chats.length > 12
-    ? h("select", { class: "rb-input", "aria-label": "채팅 선택", onChange: (e) => { m.chatIndex = +e.target.value; m.personKey = ""; redraw(); } }, chats.map((c) => h("option", { value: c.index, selected: c.index === m.chatIndex }, `${c.name} (${c.count})`)))
-    : h("div", { class: "rb-mem-chats", role: "tablist", "aria-label": "채팅 선택" }, chats.map((c) => h("button", { type: "button", class: "rb-chip", "aria-pressed": c.index === m.chatIndex ? "true" : "false", onClick: () => { m.chatIndex = c.index; m.personKey = ""; redraw(); } }, `${c.name} · ${c.count}`)))) : null;
+    ? h("select", { class: "rb-input", "aria-label": "채팅 선택", onChange: (e) => { m.chatIndex = +e.target.value; m.personKey = ""; redraw(); } }, chats.map((c) => h("option", { value: c.index, selected: c.index === m.chatIndex }, `${c.name}${countOf(c)}`)))
+    : h("div", { class: "rb-mem-chats", role: "tablist", "aria-label": "채팅 선택" }, chats.map((c) => h("button", { type: "button", class: "rb-chip", "aria-pressed": c.index === m.chatIndex ? "true" : "false", onClick: () => { m.chatIndex = c.index; m.personKey = ""; redraw(); } }, `${c.name}${c.count == null ? "" : " · " + c.count}`)))) : null;
 
   const inner = Object.fromEntries(DETAIL_TABS.map(([id]) => [id, h("div", { class: "rb-mem-anchor-body" })]));
   const wraps = Object.fromEntries(DETAIL_TABS.map(([id, label]) => [id, h("section", { class: "rb-mem-anchor", "data-sec": id }, id === "people" ? null : h("h3", { class: "rb-mem-anchortitle" }, label), inner[id])]));

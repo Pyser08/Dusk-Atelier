@@ -3,7 +3,7 @@
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { advFold, btn, stepsGuide, loading } from "../../kit.js";
-import { mem, fail, loadBots, loadChats, loadFolder } from "../memory/common.js";
+import { mem, fail, loadBots, loadChats, countOf, loadFolder } from "../memory/common.js";
 import { renderCards } from "../memory/cards.js";
 import { renderCompose } from "../memory/compose.js";
 import { cardSettings } from "../memory/settings.js";
@@ -57,8 +57,8 @@ async function renderBotCards(ctx, host, { redraw, redrawView, back, quiet }) {
   const env = { ctx, bot, chats, chatItem, folder, view, backend, caps: M.capabilities(backend.id), idx, redraw, redrawView };
   const pick = (i) => { m.chatIndex = i; m.compose = null; redrawView(); };
   const chatRow = chats.length > 12
-    ? h("select", { class: "rb-input", "aria-label": "채팅 선택", onChange: (e) => pick(+e.target.value) }, chats.map((c) => h("option", { value: c.index, selected: c.index === m.chatIndex }, `${c.index + 1}. ${c.name} (${c.count})`)))
-    : h("div", { class: "rb-mem-chats", role: "tablist", "aria-label": "채팅 선택" }, chats.map((c) => h("button", { type: "button", class: "rb-chip", "aria-pressed": c.index === m.chatIndex ? "true" : "false", onClick: () => pick(c.index) }, `${c.index + 1}. ${c.name}`, h("small", null, `${c.count}`))));
+    ? h("select", { class: "rb-input", "aria-label": "채팅 선택", onChange: (e) => pick(+e.target.value) }, chats.map((c) => h("option", { value: c.index, selected: c.index === m.chatIndex }, `${c.index + 1}. ${c.name}${countOf(c)}`)))
+    : h("div", { class: "rb-mem-chats", role: "tablist", "aria-label": "채팅 선택" }, chats.map((c) => h("button", { type: "button", class: "rb-chip", "aria-pressed": c.index === m.chatIndex ? "true" : "false", onClick: () => pick(c.index) }, `${c.index + 1}. ${c.name}`, h("small", null, `${c.count ?? ""}`))));
   const tabs = h("div", { class: "rb-mem-tabs", role: "tablist" }, TABS.map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip", "aria-pressed": m.ctab === id ? "true" : "false", onClick: () => { if (m.ctab === id) return; m.ctab = id; redrawView(); } }, label)));
   const body = h("div", { class: "rb-mem-body" });
   replace(host, h("div", { class: "rb-mem-head" }, h("span", { class: "rb-mem-back" }, btn("뒤로", { size: "sm", icon: "back", onClick: back })), h("h2", null, bot.character.name || "이름 없는 캐릭터")), chatRow, tabs, body);

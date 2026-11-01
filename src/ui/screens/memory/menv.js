@@ -5,7 +5,7 @@ import { loadBots, loadChats, loadFolder, potOn } from "./common.js";
 export async function memoryEnv(ctx, { botId, chatIndex = 0, redraw }) {
   const M = ctx.memory, bots = await loadBots(ctx), bot = bots.find((b) => b.id === botId);
   if (!bot) return { err: "bot" };
-  const chats = await loadChats(ctx, bot), chatItem = chats[chatIndex] ?? chats[0];
+  const chats = await loadChats(ctx, bot, false, chatIndex), chatItem = chats[chatIndex] ?? chats[0];
   if (!chatItem) return { err: "chat", bot, chats };
   const view = await loadFolder(ctx, bot, chatItem);
   const { folder, backend, idx } = view, caps = M.capabilities(backend.id);
