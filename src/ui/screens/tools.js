@@ -55,7 +55,7 @@ const CREDITS = [
   { key: "pot", emoji: "📜", kicker: "PORTED WITH PERMISSION", name: "Risupot", desc: "위키 기억 기능의 바탕이에요. 허락을 받아 옮겨 왔어요.", url: "https://arca.live/b/characterai/185024906" },
   { key: "arcana", emoji: "🃏", kicker: "PORTED WITH PERMISSION", name: "Arcana Card", desc: "기억 카드의 바탕이에요. 허락을 받아 옮겨 왔어요.", url: "https://arca.live/b/characterai/185793481" },
   { key: "bb", emoji: "🛠️", kicker: "PORTED WITH PERMISSION", name: "봇빌더", desc: "AI로 제작 기능을 허락받고 옮겨 왔어요.", url: "https://arca.live/b/characterai/187289284" },
-  { key: "cocoa", emoji: "🥥", kicker: "PORTED WITH PERMISSION", name: "cocoA(gent!)", desc: "스킬 기능의 바탕이에요. 허락을 받아 Dusk Atelier에 맞게 옮겨 왔어요.", url: "https://arca.live/b/characterai/179049659" },
+  { key: "cocoa", emoji: "🥥", kicker: "PORTED WITH PERMISSION", name: "cocoA(gent!)", desc: "스킬 기능의 바탕이에요. 허락을 받아 Dusk Atelier에 맞게 옮겨 왔어요.", url: "https://arca.live/b/characterai/179542646?p=1" },
   { key: "hypa", emoji: "📚", kicker: "PORTED WITH PERMISSION", name: "HypaPlus", desc: "기억 가져오기·정규식 전처리의 바탕이에요. 허락을 받아 옮겨 왔어요.", url: "https://arca.live/b/characterai/180803492" }
 ];
 const STAR_POS = [[8, 22, 0], [18, 70, 1.1], [31, 36, 0.5], [44, 80, 1.7], [57, 18, 0.9], [66, 58, 2.1], [78, 30, 0.3], [88, 74, 1.4], [94, 20, 1.9]];
