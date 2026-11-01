@@ -1,4 +1,6 @@
-# Dusk Atelier 소스 구조 지도 (v1.8.0 기준, tools/source-map.mjs로 자동 생성)
+# Dusk Atelier 소스 구조 지도 (v1.8.1 기준, tools/source-map.mjs로 자동 생성)
+
+> **다른 AI/새 세션 인계:** 먼저 `HandOff/README.md` → `HandOff/STATE.md` → `HandOff/TASK-MAP.md` 순서로 읽는다.
 
 v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`, 페르소나 화면은 `src/ui/screens/personabuilder.js`, 홈의 이야기 도우미는 `src/ui/screens/home.js`, 설정 지연 로딩은 `src/ui/screens/settingstab.js`에서 관리한다.
 
@@ -94,7 +96,7 @@ v1.8.0 UI 변경: 작업실 메뉴 경로는 `src/ui/tabs.js`와 `src/ui/app.js`
 - `airesponse.js` (30줄) — extractRunAIText
 - `bardwikiadapt.js` (98줄) 리스바드 BardWiki 문서 → 장기기억 폴더(§2.2 모양) 변환. 순수 함수. 필드가 없으면 건… — VIRTUAL_MARK, parseSections, bullets, SUMMARY_TITLES, eventBullets
 - `character.js` (221줄) — characterAssetKeys, characterView, planCharacter, buildMergedCharacter, newCharacterBase
-- `chattext.js` (27줄) 채팅 메시지 텍스트 공통 처리 (장기기억용). — extractMessageText, isUserMessage, confirmedAiIndex, hashText, snippet
+- `chattext.js` (27줄) 채팅 메시지 텍스트 공통 처리 (장기기억용). — extractMessageText, isUserMessage, confirmedAiIndex, hashText(구 200자), fullTextHash, messageIdOf, messageIdentity, legacyMessageHash, snippet
 - `conflict.js` (52줄) v1.7.0 4단계: 롤백 충돌 '변경 비교'(순수). 응답을 고치기 전의 자동 기록이 있는데 그 뒤… — compareChanges, dismissConflict
 - `cyclememo.js` (47줄) 월경·임신 → Dusk 기록 연결(v1.6.4, 순수): 위키의 월경·임신 구획이 바뀐 것 중 등급이… — cycleStates, cycleMilestones, milestonesBetween, addMilestones
 - `devcheck.js` (153줄) — projView, loreActivation, regexRun, devLint, devStats
