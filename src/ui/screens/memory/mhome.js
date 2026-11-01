@@ -117,9 +117,9 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   // 설정 탭의 '기억 · 리수폿' 카드. 분석 동작과 최근 기록 사이에 둔다.
   const memorySettings = h("section", { class: "rb-card bordered rb-scard rb-mem-integrated-settings" },
     h("span", { class: "h" }, "기억 · 리수폿 설정"),
-    h("button", { type: "button", class: "rb-srow rb-mem-embed-highlight", onClick: () => ctx.go("settings", "prompts") },
+    h("button", { type: "button", class: "rb-srow", onClick: () => ctx.go("settings", "prompts") },
       h("span", { class: "t" }, "기억·리수폿 프롬프트", h("small", null, "앞·중간·뒤에 덧붙일 프롬프트 · 플러그인의 모든 AI 작업에 적용 · JSON/.risup 불러오기")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))),
-    h("button", { type: "button", class: "rb-srow rb-mem-embed-highlight", onClick: () => { if (ctx.memory?.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); } },
+    h("button", { type: "button", class: "rb-srow", onClick: () => { if (ctx.memory?.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); } },
       h("span", { class: "t" }, "임베딩(의미 검색)", h("small", null, "뜻이 비슷한 기억 찾기 · API 주소·키·기본 사용·대기 시간")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))));
 
 
