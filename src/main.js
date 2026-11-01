@@ -19,6 +19,8 @@ import { createAffHud } from './data/affhud.js';
 import POT_PROMPTS from './data/pot/prompts.json';
 import './data/modelhub.js';
 import { setUserPromptProvider } from './engine/runai.js';
+import { setSkillBlockProvider } from './engine/skillhook.js';
+import { createSkillStore } from './data/skillstore.js';
 import { restoreActiveTheme } from './ui/screens/themestudio.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
 
@@ -52,6 +54,8 @@ async function start() {
   const affhud = createAffHud(api, { store: memory.store, link: memory.link });
   affhud.start().catch((e) => console.log(`[${TITLE}] 호감도 HUD 시작 실패: ${e?.message ?? e}`));
   setUserPromptProvider(() => memory.userPrompts());
+  const skills = createSkillStore(api);   // 스킬 라이브러리·주입 (꺼짐이 기본, v1.8.1)
+  setSkillBlockProvider((stage) => skills.blockFor(stage));
   memory.start().catch((e) => console.log(`[${TITLE}] 장기기억 시작 실패: ${e?.message ?? e}`));
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {

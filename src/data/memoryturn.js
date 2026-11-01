@@ -14,6 +14,8 @@ import { MainWikiHook } from "./pot/main-wiki-hook.js";
 import { RuntimeTraceStore } from "./pot/runtime-trace.js";
 import { RuntimeHookManager } from "./pot/runtime-hooks.js";
 import { callWriterModel } from "./pot/llm-client.js";
+import { skillBlock } from "../engine/skillhook.js";
+import { appendToPrompt } from "../engine/skillcfg.js";
 import { createPotStorage } from "./potstorage.js";
 import { keyStore as hubKeys, getCfg, recordUsage } from "./modelhub.js";
 import { potModels } from "../engine/modelcfg.js";
@@ -82,7 +84,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     const wiki = new WikiController(api, storage, { isEnabled: () => settings.snapshot().enabled });
     settings.setActiveBotResolver?.(() => wiki.scope?.characterId || "");
 
-    const stageCall = async (a, k, preset, prompt, opts = {}) => callWriterModel(a, k, preset, prompt, { ...opts, onUsage: (u) => { opts.onUsage?.(u); recordUsage(api, stageOf(String(opts.stageLabel ?? "")), u).catch(() => {}); } });
+    const stageCall = async (a, k, preset, prompt, opts = {}) => callWriterModel(a, k, preset, appendToPrompt(prompt, await skillBlock(stageOf(String(opts.stageLabel ?? "")))), { ...opts, onUsage: (u) => { opts.onUsage?.(u); recordUsage(api, stageOf(String(opts.stageLabel ?? "")), u).catch(() => {}); } });
     // 기록하기: Dusk 구획을 같이 싣고, 돌아온 응답에서 떼어 낸다.
     const writerCall = async (a, k, preset, prompt, opts = {}) => {
       const label = String(opts.stageLabel ?? ""); let sent = prompt, prep = null;

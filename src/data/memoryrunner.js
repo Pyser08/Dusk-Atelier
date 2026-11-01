@@ -1,5 +1,7 @@
 // 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 await 하지 않는다.
 import { extractMessageText, isUserMessage, messageIdentity, messageIdOf, confirmedAiIndex, isChatGenerating as isGenerating, isChatStreaming } from "../engine/chattext.js";
+import { skillBlock } from "../engine/skillhook.js";
+import { appendToMessages } from "../engine/skillcfg.js";
 import { noteStreamChunk } from "./genstate.js";
 import { analyze } from "../engine/memoryprompt.js";
 import { customPromptPlain } from "../engine/pot/custom-prompts.js";
@@ -25,7 +27,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   const note = (result, extra = {}) => { session.tick = { at: Date.now(), result, ...extra }; };
   // 보조 모델 호출 제한시간(초): 기록·주입 세부 설정에서 바꾼다. 기본 600초
   const modelOf = (s) => ({ ...s.model, timeoutSec: Number.isFinite(s.modelTimeoutSec) ? s.modelTimeoutSec : 600 });
-  const run = call ?? ((msgs, pick, signal) => runAI(api, msgs, pick, signal));
+  const run = call ?? (async (msgs, pick, signal) => runAI(api, appendToMessages(msgs, await skillBlock("analysis")), pick, signal));   // 스킬 주입(꺼짐이면 원문 그대로, v1.8.1)
 
   const aiIndexes = (messages) => messages.map((m, i) => (!isUserMessage(m) && extractMessageText(m).trim() ? i : -1)).filter((i) => i >= 0);
   const clean = (m, rx) => rx?.length ? applyRegex(extractMessageText(m), rx) : extractMessageText(m);  // v1.8.1 정규식 전처리(읽는 글 사본에만)
