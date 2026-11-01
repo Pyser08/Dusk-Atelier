@@ -973,4 +973,33 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-pb-chat-send{width:36px;height:36px;min-width:36px;padding:0!important;border-radius:50%!important}
 .rb-pb-chat-hint{flex:none;margin:7px 12px 10px;text-align:center;color:var(--rb-mute);font-size:10.5px;line-height:1.4}
 @media(max-width:560px){.rb-pb-chat-fab{right:14px;bottom:14px}.rb-pb-chat{right:10px;bottom:72px;width:calc(100% - 20px);height:min(72%,620px);border-radius:18px}}
+/* v1.8.1 모바일 가독성: 위쪽 영역 줄이기 · 누르는 칸 키우기 · 작은 글씨 올리기 · 칩 줄 끝 표시 · 위키 머리·기록 줄 정리 */
+@media (max-width:760px){
+  .rb-crumb{display:none}
+  .rb-pagehead{padding:10px 16px 4px;gap:6px}
+  .rb-ph-text{min-width:0}
+  .rb-nosearch .rb-pagehead{flex-wrap:nowrap;align-items:flex-start}
+  .rb-nosearch .rb-ph-tools{width:auto;flex:none}
+  .rb-ph-desc{font-size:13.5px;line-height:1.45}
+  .rb-btn,.rb-chip,.rb-traybtn{min-height:40px}
+  .rb-btn.sm,.rb-btn.s{min-height:38px}
+  .rb-morenav,.rb-chips,.rb-tray{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent)}
+  .rb-badge,.rb-tabbar a,.rb-cr-kicker,.rb-cr-desc,.rb-cr-link,.rb-thanks-text,.rb-stat small,.rb-home2 .rb-htile>.t>small,.rb-home2 .rb-story-helper .rb-srow .t small,.rb-mem-kind,.rb-mem-scope,.rb-mem-tb,.rb-wk-eyebrow,.rb-nav-lab,.rb-tile .cap small,.rb-grade{font-size:12px}
+  .rb-section-links{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px}
+  .rb-section-tile{min-height:104px}
+  /* 인물 위키: 항목 머리는 '제목 · 개수 · 접기' 한 줄 + 아래 줄에 '직접 추가 · AI 작성' */
+  .rb-wk-sh{row-gap:8px}
+  .rb-wk-sh>div:first-child{order:1;min-width:0;flex:1 1 auto}
+  .rb-wk-sh>.rb-wk-n{order:2}
+  .rb-wk-sh>span[style*="flex"]{display:none}
+  .rb-wk-sh>.rb-btn:last-child{order:3;margin-left:auto}
+  .rb-wk-sh>.rb-mem-rowact{order:4;flex:1 1 100%;display:flex;gap:8px}
+  .rb-wk-sh>.rb-mem-rowact .rb-btn{flex:1 1 0}
+  .rb-wk-sec{gap:8px}
+  .rb-wk-head{flex-wrap:wrap}
+  /* 기록·사건 한 줄: 글이 한 글자씩 꺾이지 않게 글 칸이 남은 폭을 다 쓴다 */
+  .rb-mem-rec{gap:8px;padding:10px}
+  .rb-mem-rec .txt{flex:1 1 0;min-width:0}
+  .rb-mem-rec>span[style*="flex:1"]{display:none}
+}
 `+PROB_CSS;
