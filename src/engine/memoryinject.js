@@ -132,8 +132,24 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
 
 const textOf = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => typeof p === "string" ? p : p?.text ?? "").join("\n") : String(c ?? "");
 // messages 사본에 블록을 삽입(이미 있으면 교체). position: "beforeLastUser" | "afterSystem"
+// v1.8.1 자리표시자: 프롬프트(프리셋·로어북 등)에 [Dusk.memory]를 적어 두면 그 자리에 블록이 들어간다.
+// 첫 번째로 찾은 곳만 채우고 나머지는 지운다. 블록이 비어도 글자가 새지 않게 지운다. 원본 요청은 바꾸지 않는다.
+export const PLACEHOLDER = "[Dusk.memory]";
+function fillPlaceholder(list, text) {
+  let filled = false, found = false;
+  const sub = (s) => { if (typeof s !== "string" || !s.includes(PLACEHOLDER)) return s; found = true; const put = !filled && text ? text : ""; if (put) filled = true; return s.split(PLACEHOLDER).map((part, i) => (i === 0 ? part : (put && i === 1 ? put : "") + part)).join(""); };
+  const out = list.map((m) => {
+    if (!m) return m;
+    if (typeof m.content === "string") { const c = sub(m.content); return c === m.content ? m : { ...m, content: c }; }
+    if (Array.isArray(m.content)) { let ch = false; const parts = m.content.map((p) => { if (typeof p === "string") { const c = sub(p); ch ||= c !== p; return c; } if (p && typeof p.text === "string") { const c = sub(p.text); if (c !== p.text) { ch = true; return { ...p, text: c }; } } return p; }); return ch ? { ...m, content: parts } : m; }
+    return m;
+  });
+  return { out, found, filled };
+}
 export function insertBlock(messages, text, position = "beforeLastUser") {
   const list = (Array.isArray(messages) ? messages : []).filter((m) => !(m?.role === "system" && textOf(m.content).startsWith(MARKER)));
+  const ph = fillPlaceholder(list, text);
+  if (ph.found) return ph.out;  // 자리표시자가 있으면 위치 설정보다 우선
   const block = { role: "system", content: text };
   let at;
   if (position === "afterSystem") { at = 0; while (at < list.length && list[at]?.role === "system") at++; }

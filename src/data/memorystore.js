@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   model: { mode: "memory" }, modelTimeoutSec: 600, backend: "auto", potMode: true,
   inject: { on: true, m1: true, fromTurn: 1, targetTokens: 1200, capTokens: 2500, sceneTokens: 300, eventTokens: 600, recentSkip: 8, position: "beforeLastUser", plus: true, forgetAfter: 150, knowTokens: 160, openTokens: 160, relTokens: 140, srcTokens: 300 },
   loreRef: { on: false, tokens: 600 },
+  regex: { on: false, useChar: true, useModules: true, files: [] },  // v1.8.1 정규식 전처리(기억 분석 입력·임베딩 질의)
   // v1.6.4 턴 흐름: on=리수폿 인물 위키·고르기·정리 노트를 Dusk 기록과 한 흐름으로 돌림, mode=fast(키워드 고르기·호출 1회) | accurate(고르기+정리 노트)
   flow: { on: false, mode: "fast", recallTokens: 700 }
 });

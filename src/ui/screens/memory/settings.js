@@ -1,5 +1,7 @@
 import { h, replace } from "../../dom.js";
 import { openEmbedModal } from "./embedmodal.js";
+import { regexSection } from "./regexui.js";
+import { openHypaModal } from "./hypamodal.js";
 import { btn, switchEl, setSwitch, confirmDialog, progressBar, loading } from "../../kit.js";
 import { AI_MODES } from "../../../engine/merge.js";
 import { mem, fail, potOn, askRefresh } from "./common.js";
@@ -42,6 +44,8 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
       sw("전체 자동 기록", S.autoRecord !== false, (s, v) => { s.autoRecord = v; })) : null,
     caps.inject ? section("임베딩(의미 검색)", h("p", { class: "rb-muted" }, "뜻이 비슷한 기억을 찾아 넣어요. 주소·키를 넣고 기본 사용을 켜면 기억 고르기에 적극 쓰여요."),
       btn("임베딩 설정", { onClick: () => openEmbedModal(ctx) })) : null,
+    caps.analyze ? regexSection(ctx, { S, save, sw, section }) : null,
+    caps.analyze ? section("HypaPlus에서 가져오기", h("p", { class: "rb-muted" }, "HypaPlus에 쌓은 기억을 장면·인물 기록으로 옮겨요. HypaPlus와는 동시에 쓸 수 없어요."), btn("HypaPlus 가져오기", { onClick: () => openHypaModal(ctx, {}) })) : null,
     caps.inject || caps.analyze ? section("기억 넣기", sw("기억 넣기 켜기", S.inject.on !== false, (s, v) => { s.inject.on = v; }),
       num("목표 토큰", () => S.inject.targetTokens, (s, v) => { s.inject.targetTokens = v; }, { min: 200, max: 8000 }), num("상한 토큰", () => S.inject.capTokens, (s, v) => { s.inject.capTokens = Math.max(v, s.inject.targetTokens); }, { min: 200, max: 12000 }),
       num("기억 넣기 시작 턴", () => S.inject.fromTurn, (s, v) => { s.inject.fromTurn = Math.max(1, v); }, { min: 1, max: 50 }), num("이야기 요약 토큰", () => S.inject.eventTokens, (s, v) => { s.inject.eventTokens = v; }, { min: 0, max: 4000 }),

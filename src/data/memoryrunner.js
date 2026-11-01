@@ -9,6 +9,7 @@ import { applyAnalysis, knownPeople, doneHashes } from "../engine/memoryapply.js
 import { storyDateOf } from "../engine/storydate.js";
 import { addMilestones } from "../engine/cyclememo.js";
 import { runAI } from "../engine/runai.js";
+import { applyRegex } from "../engine/regexprep.js";
 import { openForPrompt } from "../engine/memoryplus.js";
 import { emoForPrompt } from "../engine/memoryemo.js";
 import { hintsForPrompt } from "../engine/memoryinner.js";
@@ -18,7 +19,7 @@ const MAX_FAILS = 5;
 // 자동 기록 시점: next(기본) = 다음 입력을 보낼 때 직전 응답을 확정해 기록 | now = 응답 직후
 const confirmOf = (idx) => idx?.settings?.confirm === "now" ? "now" : "next";
 
-export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null, gauge = null } = {}) {
+export function createMemoryRunner(api, { store, prep = null, prompts = null, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null, gauge = null } = {}) {
   let timer = null, dirty = false, running = false, started = false;
   let session = { calls: 0, hooks: 0, displays: 0, hookAt: 0, tick: null }; const lastTried = new Map(); let lastTickAt = 0;
   const note = (result, extra = {}) => { session.tick = { at: Date.now(), result, ...extra }; };
@@ -27,7 +28,8 @@ export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = 
   const run = call ?? ((msgs, pick, signal) => runAI(api, msgs, pick, signal));
 
   const aiIndexes = (messages) => messages.map((m, i) => (!isUserMessage(m) && extractMessageText(m).trim() ? i : -1)).filter((i) => i >= 0);
-  const line = (m, i, n = 1500) => `[${i}] ${isUserMessage(m) ? "{{user}}" : "{{char}}"}: ${extractMessageText(m).trim().slice(0, n)}`;
+  const clean = (m, rx) => rx?.length ? applyRegex(extractMessageText(m), rx) : extractMessageText(m);  // v1.8.1 정규식 전처리(읽는 글 사본에만)
+  const line = (m, i, n = 1500, rx = null) => `[${i}] ${isUserMessage(m) ? "{{user}}" : "{{char}}"}: ${clean(m, rx).trim().slice(0, n)}`;
   const nameOf = (c, chat, i) => ({ botName: String(c?.name ?? "").slice(0, 160), chatName: String(chat?.name ?? chat?.chatName ?? `채팅 ${i + 1}`).slice(0, 160) });
 
   async function bump(chaId, fn) { return store.updateIndex((idx) => { const b = idx.bots[chaId] ??= { on: true, ignore: [], fails: 0 }; return fn(b, idx); }); }
@@ -39,10 +41,11 @@ export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = 
     if (!character || !chat) throw new Error("캐릭터 또는 채팅을 찾지 못했어요.");
     const chaId = String(character.chaId ?? charIndex), chatId = String(chat.id ?? chatIndex);
     const messages = chat.message ?? [], last = group.at(-1), m = messages[last];
-    const text = group.map((i) => group.length > 1 ? line(messages[i], i, 3000) : extractMessageText(messages[i]).trim()).join("\n\n");
+    const rx = prep ? await prep.entriesFor(character, chat) : [];
+    const text = group.map((i) => group.length > 1 ? line(messages[i], i, 3000, rx) : clean(messages[i], rx).trim()).join("\n\n");
     const h = messageIdentity(m), anchor = { at: last, mid: messageIdOf(m), h };
     const idx = await store.getIndex(), bot = idx.bots[chaId] ?? { on: true, ignore: [] };
-    return { character, chat, chaId, chatId, messages, last, text, h, anchor, idx, bot };
+    return { character, chat, chaId, chatId, messages, last, text, h, anchor, idx, bot, rx };
   }
   // 자동 기록 조건. 문자열이면 기록하지 않는 이유, null이면 기록 대상.
   function gate(g, manual) {
@@ -64,7 +67,7 @@ export function createMemoryRunner(api, { store, prompts = null, afterAnalyze = 
   }
   // 분석 모델에 보낼 입력(기존 폴더 기준).
   function inputOf(g, existing, group) {
-    const recent = g.messages.slice(Math.max(0, group[0] - 6), group[0]).map((mm, k) => line(mm, Math.max(0, group[0] - 6) + k));
+    const recent = g.messages.slice(Math.max(0, group[0] - 6), group[0]).map((mm, k) => line(mm, Math.max(0, group[0] - 6) + k, 1500, g.rx));
     return { bot: g.character.name, known: existing ? knownPeople(existing) : [], ignore: [...(g.bot.ignore ?? [])],
       previousScene: existing ? (({ sum, facts, when } = {}) => sum ? { sum, facts, ...(when ? { when } : {}) } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, openItems: existing ? openForPrompt(existing) : [], emoState: existing ? emoForPrompt(existing) : [], selfHint: existing ? hintsForPrompt(existing) : [], recent, newest: { index: g.last, text: g.text }, storyDate: storyDateOf(g.text, existing) };
   }

@@ -11,6 +11,7 @@
 | 장기기억 — 자동 분석 흐름 | `src/data/memoryrunner.js`(분석·백필), `src/data/memoryturn.js`(턴 흐름·확정), `src/engine/memoryapply.js`(결과 반영) |
 | 장기기억 — 프롬프트 | `src/engine/memoryprompt.js`, `src/data/memory-default-prompts.js` |
 | 장기기억 — 주입 | `src/data/memoryinject.js`, `src/engine/memoryinject.js`, `src/engine/recall.js` |
+| 장기기억 — 정규식 전처리·[Dusk.memory]·HypaPlus 가져오기 | `src/engine/regexprep.js`, `src/data/regexprep.js`, `src/engine/memoryinject.js`(insertBlock), `src/engine/hypaimport.js`, `src/data/hypaimport.js`, `src/ui/screens/memory/hypamodal.js` |
 | 장기기억 — 저장소 | `src/data/memorystore3.js` (키 `dusk.mem.v3.*`), 마이그레이션 `src/engine/memoryv3.js` |
 | 장기기억 — 화면 | `src/ui/screens/memory/index.js` → 필요한 하위 파일(`mhome.js`, `wikiview.js`, `settings.js` …) |
 | 모델·API 호출 | `src/data/modelhub.js`, `src/engine/runai.js`, `src/engine/modelcfg.js` |

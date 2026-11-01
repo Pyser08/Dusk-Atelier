@@ -4,6 +4,7 @@ import { mem, fail } from "./common.js";
 import { renderMemoryHome } from "./mhome.js";
 import { renderMemoryDetail } from "./mdetail.js";
 import { renderMemoryBots } from "./mbots.js";
+import { maybeAskHypa } from "./hypamodal.js";
 
 const PAGES = { home: renderMemoryHome, detail: renderMemoryDetail, bots: renderMemoryBots };
 
@@ -15,4 +16,5 @@ export async function renderMemory(ctx) {
   replace(ctx.main, host);
   const redraw = () => renderMemory(ctx).catch(fail(ctx));
   try { await PAGES[page](ctx, host, { redraw }); } catch (e) { fail(ctx)(e); }
+  maybeAskHypa(ctx).catch(() => {});  // 처음 들어갔을 때 HypaPlus가 있으면 안내(화면을 막지 않는다)
 }
