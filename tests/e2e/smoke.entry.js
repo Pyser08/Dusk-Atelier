@@ -155,7 +155,7 @@ window.runSmoke = async () => {
   try {   // 기억 탭 안의 스킬 탭 줄(v1.8.1)
     const mctx = { state: {} }; let redrawn = 0; const nav = memoryTabs(mctx, "home", () => { redrawn++; }); document.body.appendChild(nav);
     const chips = $("button", nav);
-    check("기억 탭 줄: 기억·스킬 두 칸", chips.map((b) => b.textContent.trim()).join("|") === "기억|스킬" && chips[0].getAttribute("aria-pressed") === "true");
+    check("기억 탭 줄: 기억·스킬 두 칸", chips.map((b) => b.textContent.trim()).join("|") === "기억|코코아" && chips[0].getAttribute("aria-pressed") === "true");
     chips[1].click();
     check("기억 탭 줄: 스킬 누르면 스킬 화면", mctx.state.mem.page === "skills" && redrawn === 1);
     const nav2 = memoryTabs(mctx, "skills", () => { redrawn++; }); document.body.appendChild(nav2);

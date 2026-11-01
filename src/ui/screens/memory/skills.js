@@ -22,15 +22,15 @@ const pickFile = (ctx, accept, onFile) => { const inp = h("input", { type: "file
 export async function renderMemorySkills(ctx, host, { redraw }) {
   const S = ctx.skills, m = mem(ctx), st = m.skills ??= { open: "", file: "" };
   const back = { onClick: () => { m.page = "home"; redraw(); }, label: "기억으로" };
-  if (!S) return replace(host, pageHead("스킬", { back }), emptyState({ icon: "info", title: "스킬 기능이 아직 준비되지 않았어요", text: "플러그인을 다시 불러와 주세요." }));
+  if (!S) return replace(host, pageHead("코코아", { back }), emptyState({ icon: "info", title: "스킬 기능이 아직 준비되지 않았어요", text: "플러그인을 다시 불러와 주세요." }));
   const dt = (k) => h("div", { "data-tour": k }), topH = dt("sk-toggle"), stagesH = dt("sk-stages"), libH = dt("sk-lib"), cocoaH = dt("sk-cocoa"), webH = dt("sk-web"), callsH = dt("sk-calls");
-  replace(host, pageHead("스킬", { sub: "코코아전트 스킬과 호환돼요", back }), topH, stagesH, libH, cocoaH, advFold(ctx, "memory", h("div", null, webH, callsH)));
+  replace(host, pageHead("코코아", { sub: "코코아전트 스킬 그대로 쓸 수 있어요", back }), topH, stagesH, libH, advFold(ctx, "memory", h("div", null, cocoaH, webH, callsH)));
   const run = (p) => p.catch(fail(ctx));
 
   async function drawTop() {
     const cfg = await S.getCfg();
     replace(topH, h("section", { class: "rb-card" },
-      toggleRow("스킬 주입", "켜면 아래에서 고른 단계의 프롬프트 뒤에 스킬 지침이 붙어요. 장기기억·코코아전트와 따로 켜고 꺼도 돼요.", cfg.on, (v) => run(S.saveCfg({ ...cfg, on: v }).then(() => { ctx.toast(v ? "스킬 주입을 켰어요." : "스킬 주입을 껐어요."); return drawStages(); }))),
+      toggleRow("코코아 기능 켜기", "켜면 아래에서 쓰기로 한 스킬 지침이 AI에게 가는 글의 뒤에 붙어요. 장기기억·코코아전트와 따로 켜고 꺼도 돼요.", cfg.on, (v) => run(S.saveCfg({ ...cfg, on: v }).then(() => { ctx.toast(v ? "스킬 주입을 켰어요." : "스킬 주입을 껐어요."); return drawStages(); }))),
       note("info", "별도 AI 호출은 만들지 않아요. 이미 하는 호출의 글만 늘어나서 토큰은 그만큼 더 써요.")));
   }
   async function drawStages() {
@@ -41,6 +41,18 @@ export async function renderMemorySkills(ctx, host, { redraw }) {
       await S.saveCfg({ ...cfg, stages: { ...cfg.stages, [stage]: refs } }); await drawStages();
     })());
     const has = (stage, set) => cfg.stages[stage].some((r) => r.id === set.id || r.name.toLowerCase() === set.name.toLowerCase());
+    if (!ctx.prefs.advanced) {   // 간단 모드: 세트별 사용 여부만. 켜면 연출·집필 단계에 붙는다.
+      const basic = ["director", "writer"], on = (set) => basic.every((g) => has(g, set));
+      const toggleSet = (set) => run((async () => {
+        const stages = { ...cfg.stages };
+        for (const g of basic) { stages[g] = stages[g].filter((r) => r.id !== set.id && r.name.toLowerCase() !== set.name.toLowerCase()); if (!on(set)) stages[g].push({ id: set.id, name: set.name }); }
+        await S.saveCfg({ ...cfg, stages }); await drawStages();
+      })());
+      return replace(stagesH, h("section", { class: "rb-card" }, h("b", null, "사용할 스킬"),
+        lib.sets.length ? h("div", { class: "rb-chips" }, lib.sets.map((set) => chip(set.name, { pressed: on(set), onClick: () => toggleSet(set) })))
+          : h("p", { class: "rb-muted" }, "아래에서 스킬을 가져오거나 새로 만들면 여기서 고를 수 있어요."),
+        cfg.on ? null : note("warn", "코코아 기능이 꺼져 있어서 지금은 아무것도 붙지 않아요."), note("info", "어느 호출에 붙일지는 고급 모드에서 세밀하게 정할 수 있어요.")));
+    }
     replace(stagesH, h("section", { class: "rb-card" }, h("b", null, "어느 호출에 붙일까요"),
       lib.sets.length ? SKILL_STAGES.map((stage) => h("div", { class: "rb-field" }, h("div", null, h("b", null, SKILL_STAGE_LABEL[stage]), h("small", { class: "rb-muted" }, ` ${stageHint[stage]}`)),
         h("div", { class: "rb-chips" }, lib.sets.map((set) => chip(set.name, { pressed: has(stage, set), onClick: () => setRef(stage, set, !has(stage, set)) })))))

@@ -134,3 +134,5 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 ## 기억 탭 줄 (스킬 탭 노출)
 - ui/screens/memory/memtabs.js: `기억 | 스킬` 칩 줄. index.js가 home/skills/bots 화면 위에 붙임(채팅 없어도 표시). 스킬 행(mhome)은 그대로 유지.
 - 검증: npm test/build/check/smoke 통과 (실제 호스트 미검증).
+
+- 코코아 탭(skills 페이지): 간단 모드=토글+사용할 스킬(연출·집필에 붙임)+목록/편집, 고급 모드=단계별 붙이기·코코아전트 옮기기·웹 도구·호출 기록(advFold). 탭 이름 `코코아`.
