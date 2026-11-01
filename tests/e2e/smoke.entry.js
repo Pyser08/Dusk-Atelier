@@ -12,6 +12,7 @@ import { runTour } from "../../src/ui/tour.js";
 import { SCREEN_TOURS, screenTourSteps, screenTourKey } from "../../src/ui/screentours.js";
 import { showGuide } from "../../src/ui/screens/memory/guide.js";
 import { icon } from "../../src/ui/icons.js";
+import { memoryTabs, showsMemTabs } from "../../src/ui/screens/memory/memtabs.js";
 import { createWebTools } from "../../src/data/webtools.js";
 import { createSkillStore, COCOA_LIB_KEY, COCOA_PRESETS_KEY } from "../../src/data/skillstore.js";
 
@@ -151,6 +152,19 @@ window.runSmoke = async () => {
     clickText("건너뛰기", document.body); await p3;
     [w, w2, sec].forEach((x) => x.remove());
   } catch (e) { check("둘러보기", false, e?.stack ?? e); }
+  try {   // 기억 탭 안의 스킬 탭 줄(v1.8.1)
+    const mctx = { state: {} }; let redrawn = 0; const nav = memoryTabs(mctx, "home", () => { redrawn++; }); document.body.appendChild(nav);
+    const chips = $("button", nav);
+    check("기억 탭 줄: 기억·스킬 두 칸", chips.map((b) => b.textContent.trim()).join("|") === "기억|스킬" && chips[0].getAttribute("aria-pressed") === "true");
+    chips[1].click();
+    check("기억 탭 줄: 스킬 누르면 스킬 화면", mctx.state.mem.page === "skills" && redrawn === 1);
+    const nav2 = memoryTabs(mctx, "skills", () => { redrawn++; }); document.body.appendChild(nav2);
+    const chips2 = $("button", nav2); chips2[0].click();
+    check("기억 탭 줄: 기억 누르면 돌아옴", mctx.state.mem.page === "home" && redrawn === 2 && chips2[1].getAttribute("aria-pressed") === "true");
+    nav2.remove();
+    check("기억 탭 줄 표시 화면", showsMemTabs("home") && showsMemTabs("skills") && showsMemTabs("bots") && !showsMemTabs("detail"));
+    nav.remove();
+  } catch (e) { check("기억 탭 줄", false, e?.stack ?? e); }
   check("전역 오류 없음", errors.length === 0, errors.join(" | "));
   return out;
 };
