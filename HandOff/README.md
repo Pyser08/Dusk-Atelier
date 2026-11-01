@@ -15,6 +15,7 @@ RisuAI 플러그인 **Dusk Atelier** — 모듈·봇 관리, 인물별 장기기
    - 버그 수정 → `HandOff/DEBUG.md`
    - 외부 JS 병합/기능 추가 → `HandOff/MERGE-JS.md`
    - 화면 만들기/수정 → `HandOff/UI-STYLE.md`
+   - 아카라이브 업데이트 글 HTML → `HandOff/ARCA-POST.md`
    - 어떤 작업이든 api·훅·저장을 건드리면 → `HandOff/HOST-COMPAT.md` (RisuAI·RisuBard·PocketRisu 공통 동작 규칙)
 5. `docs/source-map.md` — 전체 파일 지도 (필요한 줄만 검색해서)
 6. 그다음 **필요한 소스 파일만** 읽는다. `dusk_atelier.js`(3.6MB 빌드물)는 절대 읽지 않는다.
