@@ -25,6 +25,7 @@ import { renderPlugins } from './screens/plugins.js';
 import { renderSettingsTab } from './screens/settingstab.js';
 import { renderMemory } from './screens/memory/index.js';
 import { renderCardsTab } from './screens/cards/index.js';
+import { scopeCtx } from './staleguard.js';
 import { renderHome } from './screens/home.js';
 import { renderPersonaBuilder } from './screens/personabuilder.js';
 import { renderSectionHome } from './screens/sectionhome.js';
@@ -391,7 +392,9 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     dropPanes();
     render();
   }
+  let renderToken = 0;
   function render({ reuse = false } = {}) {
+    const token = ++renderToken;   // 낡은 화면의 늦은 그리기를 막는 번호표(staleguard.js)
     refreshTabs();
     if (!reuse) dropPanes();
     if (MORE.has(state.tab)) state.lastMore = state.tab;
@@ -428,7 +431,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     }
     paneReady = false;
     const screen = { home: renderHome, personabuilder: renderPersonaBuilder, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, look: renderSettings, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
-    Promise.resolve(screen(ctx)).then(() => {
+    Promise.resolve(screen(scopeCtx(ctx, main, () => token !== renderToken))).then(() => {
       paneReady = true;
     }).catch((err) => {
       replace(main, h("div", { class: "rb-section" }, h("div", { class: "rb-note err", role: "alert" }, icon("alert", 18), h("span", null, `화면을 열지 못했어요: ${err?.message ?? err}`))));
