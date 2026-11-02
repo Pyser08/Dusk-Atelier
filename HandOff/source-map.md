@@ -37,7 +37,7 @@
 - `genstate.js` (9줄) 응답 스트리밍 신호. output 훅이 불릴 때마다 시각을 남겨, 생성 중인지 알아보려고 캐릭터·채팅… — noteStreamChunk, recentlyStreamed, resetStreamSignal
 - `hookbus.js` (51줄) 리스 스크립트 훅(input·output·display) 묶음 (v1.8.1 최적화). — createHookBus
 - `hypaimport.js` (57줄) v1.8.1 HypaPlus 가져오기(데이터): 같은 저장소(pluginStorage)에 남은 Hyp… — createHypaImporter
-- `imgtagfix.js` (136줄) v1.8.2 AI 이미지 태그 교정·알림 훅. 설정에서 각각 켜고 끈다(기본 꺼짐). 모델 호출은 늘… — IMGFIX_KEY, IMGFIX_HINT_KEY, IMGFIX_UNKNOWN_KEY, createImgTagFix
+- `imgtagfix.js` (140줄) v1.8.2 AI 이미지 태그 교정·알림 훅. 설정에서 각각 켜고 끈다(기본 꺼짐). 모델 호출은 늘… — IMGFIX_KEY, IMGFIX_HINT_KEY, IMGFIX_UNKNOWN_KEY, createImgTagFix
 - `interopSnippet.js` (4줄) DA Interop v1 스니펫 원본: https://github.com/Pyser08/dusk-at…
 - `lorelog.js` (201줄) 로어북 로그 런타임 — LORE_LOG_KEY, loadLoreLog, clearLoreLog, createLoreLog
 - `lorerules.js` (264줄) 로어북 규칙 런타임 — LORE_SETTINGS_KEY, LORE_DEFAULTS, loadLoreSettings, saveLoreSettings, createLoreRuntime
@@ -126,7 +126,7 @@
 - `hypaimport.js` (84줄) v1.8.1 HypaPlus 가져오기(순수): HypaPlus의 요약 노드(event/facts)를 … — HYPA_STATE_PREFIX, MAX_ACT, parseHypaKey, readHypaNodes, cut
 - `image.js` (177줄) — imageSize, readMetadata, stripMetadata, canEncode, convertImage
 - `imghint.js` (86줄) v1.8.2 이미지 태그 알림 (순수 로직, 추가 AI 호출 없음). — HINT_MARK, textOf, presentChars, buildHint, insertHint
-- `imgtagfix.js` (337줄) v1.8.2 AI 이미지 태그 교정 (순수 로직, 모델 호출 없음). — norm, stem, buildAssetIndex, fixImgTags, readTags
+- `imgtagfix.js` (384줄) v1.8.2 AI 이미지 태그 교정 (순수 로직, 모델 호출 없음). — norm, stem, buildAssetIndex, fixImgTags, readTags
 - `impact.js` (62줄) 업데이트 영향 미리보기 (1.4.6) — moduleImpact, characterImpact, impactHtml, impactText
 - `index.js` (20줄) — rpackDecode, assetKey, sha256, sha256js, Cancelled
 - `issuehelp.js` (40줄) 편집기 검증 경고의 '왜 뜨나요 / 어떻게 하나요' 설명 (순수). 문구 패턴으로 찾고, 없으면 일반… — explainIssue, issueKey, splitIssues

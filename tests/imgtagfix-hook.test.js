@@ -131,3 +131,26 @@ test("while streaming the bot is not re-read once a list exists", async () => {
   assert.equal(await fx.onOutput('<img="kaguya.nude.Smiling">'), '<img="Kaguya.nude.smiling">');
   assert.equal(api.calls.char, 1);
 });
+
+test("three modules pinned to one bot, each with its own naming rule, all work", async () => {
+  const store = new Map([["dusk.ui.imgFix", "on"]]);
+  const mod = (id, names) => ({ id, assets: names.map((n) => [n, "x", "png"]) });
+  const api = {
+    pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async () => {} },
+    getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0,
+    getCharacterFromIndex: async () => ({ additionalAssets: [], modules: ["sfw", "nsfw", "extra"], chats: [{}] }),
+    getDatabase: async () => ({ enabledModules: [], modules: [
+      mod("sfw", ["Amiya_smile", "Amiya_sad", "Amiya_angry"]),
+      mod("nsfw", ["Amiya_missionary_sex", "Amiya_missionary_fingering", "Amiya_doggystyle_sex"]),
+      mod("extra", ["Kaguya.school_uniform.default", "Kaguya.school_uniform.smiling", "Kaguya.nude.default"]),
+      mod("off", ["Ghost_smile"]),
+    ] }),
+    addRisuScriptHandler: async () => {},
+  };
+  const fx = createImgTagFix(api, { log: () => {}, streaming: () => false });
+  await fx.start();
+  assert.equal(await fx.onOutput('<img="amiya_smiling">'), '<img="Amiya_smile">');
+  assert.equal(await fx.onOutput('<img="Amiya_missionary">'), '<img="Amiya_missionary_sex">');
+  assert.equal(await fx.onOutput('<img="kaguya.school_uniform.Smiling">'), '<img="Kaguya.school_uniform.smiling">');
+  assert.equal(await fx.onOutput('<img="Ghost_smile">'), "");   // 연결 안 된 모듈의 캐릭터
+});

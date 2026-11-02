@@ -80,3 +80,39 @@ test("format 4: emotion+skinship merged into one tag keeps the later (action) on
   assert.equal(fixImgTags('<img="[Name]_[tag]">', ID).text, "");
   assert.equal(fixImgTags('<img="[Name]_[emotion]">', ID).text, "");
 });
+
+// 5) 명일방주: <img="Amiya_smile">, 이름에 밑줄이 든 <img="Amiya_Demon_King_sad">, NSFW <img="Amiya_missionary_sex">
+const ST = ["angry", "smile", "sad", "blushing_shyly", "playful_wink"];
+const POS = ["missionary_sex", "missionary_hard_sex", "missionary_fingering", "missionary_ejaculation", "missionary_after_sex", "doggystyle_sex", "cowgirl_sex", "cowgirl_grinding"];
+const K = [];
+for (const c of ["Amiya", "Amiya_Demon_King", "Kal'tsit", "Mudrock", "Skadi", "Skadi_the_Corrupting_Heart"]) for (const k of [...ST, ...POS]) K.push(`${c}_${k}`);
+const IK = buildAssetIndex(K);
+
+test("format 5: names that contain underscores and spaces-for-underscores", () => {
+  assert.equal(fx(IK, "Amiya_Demon_King_sad"), T("Amiya_Demon_King_sad"));
+  assert.equal(fx(IK, "Amiya_Demon_King_smiling"), T("Amiya_Demon_King_smile"));
+  assert.equal(fx(IK, "Kal'tsit_blushing shyly"), T("Kal'tsit_blushing_shyly"));
+  assert.equal(fx(IK, "Skadi the Corrupting Heart_smile"), T("Skadi_the_Corrupting_Heart_smile"));
+  assert.equal(fx(IK, "Amiya smiling"), T("Amiya_smile"));   // 지침의 WRONG 예시
+});
+test("format 5: a cut-off position picks the base variant; merged emotion+position keeps the position", () => {
+  assert.equal(fx(IK, "Amiya_missionary"), T("Amiya_missionary_sex"));   // 지침의 WRONG 예시
+  assert.equal(fx(IK, "Mudrock_smile_missionary_sex"), T("Mudrock_missionary_sex"));
+  assert.equal(fx(IK, "Amiya"), T("Amiya"));   // 무엇을 원했는지 알 수 없으면 그대로
+});
+
+// 모듈이 여러 개: 모듈마다 이름 규칙이 달라도 각각 읽는다(목록을 묶음으로 넘김)
+test("several modules with different naming rules are read separately", () => {
+  const bot = [];
+  const dottedMod = ["Fujiwara_Chika.school_uniform.smiling", "Fujiwara_Chika.school_uniform.default", "Fujiwara_Chika.nude.default", "Fujiwara_Chika.nude.smiling"];
+  const underMod = ["yeri_smile", "yeri_default", "yeri_angry", "bora_smile", "bora_default"];
+  const bgMod = Array.from({ length: 12 }, (_, i) => `bg.room.${i}`);   // 태그와 무관한 배경 에셋 모듈
+  const idx = buildAssetIndex([bot, dottedMod, underMod, bgMod]);
+  assert.equal(fx(idx, "fujiwara_chika.school_uniform.Smiling"), T("Fujiwara_Chika.school_uniform.smiling"));
+  const state = sceneState([T("Fujiwara_Chika.nude.default")], idx);
+  assert.equal(fx(idx, "Fujiwara_Chika.smiling", { state }), T("Fujiwara_Chika.nude.smiling"));
+  assert.equal(fx(idx, "Yeri_smiling"), T("yeri_smile"));
+  assert.equal(fx(idx, "bora_ecstatic"), T("bora_default"));
+  const flat = buildAssetIndex([...dottedMod, ...underMod, ...bgMod]);   // 한 목록으로 섞으면 소수 규칙이 깨질 수 있음(참고)
+  assert.ok(flat.size > 0);
+});

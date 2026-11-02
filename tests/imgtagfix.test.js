@@ -119,7 +119,7 @@ const C = (k, o = "school_uniform") => `<img="Fujiwara_Chika.${o}.${k}">`;
 test("shortened action keywords pick the closest full keyword (fewest extra words)", () => {
   assert.equal(f2(C("missionary")), C("missionary_sex"));
   assert.equal(f2(C("do_fingering")), C("yuri_do_fingering"));
-  assert.equal(f2(C("cowgirl")), C("default"));   // cowgirl_sex·cowgirl_grinding 둘 다 같아서 애매 → 고르지 않음
+  assert.equal(f2(C("cowgirl")), C("cowgirl_sex"));   // 동률이면 이 목록에서 가장 흔한 끝말(sex)을 고름
 });
 
 test("inflected forms and file extensions are understood", () => {

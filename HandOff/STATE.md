@@ -196,3 +196,9 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 고친 것(`engine/imgtagfix.js`): ① 점 구분 판단을 '점 2개 이름이 절반 이상 또는 90% 이상에 점'으로(키워드 속 점 `missionary.sex` 오판 → 정상 태그 삭제되던 문제) ② 구분자 없는 이름 = 이름만 있는 그림(스탠딩), 대체 그림으로도 사용 ③ 밑줄 형식 형태 감지(모든 키워드가 2~6가지 앞말·각 3개 이상 → 옷처럼; (나) 규칙 적용) ④ `fallbackOf`: 그림 1개뿐이면 그것(예외 캐릭터), 끝 낱말 default(`emotion_default`) ⑤ 이름 속 `'`·`&` 보존(SPLIT에서 제외), 조각 해석 실패 시 통째 해석 결과 사용 ⑥ 합친 태그 동률이면 뒤 키워드(감정+동작 순) ⑦ 지침 자리표시 `[Name]`·`[tag]`·`[emotion]`…와 꺾쇠 원문 `<img="<…>_<…>">` 삭제. 알림: 스탠딩 캐릭터 'name only'.
 - 한계: 의미 규칙(해리포터 TS 정체성 전환, 이로하 'NSFW는 real만', 블루아카 '감정·스킨십은 따로 두 태그')은 판단 못 함. 이로하 virtual+NSFW는 (나) 규칙대로 virtual 기본 그림. 블루아카 합친 태그는 둘로 나누지 않고 하나(동작)만 남김.
 - 검증: `npm test` 614 pass / 0 fail, build·check 동일함, smoke 통과.
+
+#### 이미지 태그 4차 — 명일방주 형식·모듈 여러 개 (feat/1.8.2)
+- 명일방주(`Amiya_smile`, 이름에 밑줄이 든 `Amiya_Demon_King_sad`, `Kal'tsit_…`, NSFW `Amiya_missionary_sex`): 지침의 WRONG 예시 `Amiya smiling`(띄어쓰기) → 앞 낱말부터 캐릭터 찾기(`resolveIn` 낱말 분할), `Amiya_missionary`(뒷말 빠짐) → 동률이면 목록에서 가장 흔한 끝말(`sex`)을 고름(`pickKeyword`, 뚜렷할 때만).
+- 모듈 여러 개: `buildAssetIndex`가 묶음 배열([봇, 모듈1, 모듈2…])을 받아 묶음마다 이름 규칙(점/밑줄·형태)을 따로 판단(`parseGroup`), `idx.modes`가 섞이면 `resolveToken`이 두 규칙으로 다 읽어 실제로 맞춘 결과를 우선. `data/imgtagfix.js` `readNames`가 모듈별 묶음을 넘김. 모듈 수 제한 없음(전역+봇 고정+채팅 지정 합집합).
+- 테스트: formats 10, hook 10. `npm test` 618 pass / 0 fail, build·check 동일함, smoke 통과.
+- 한계: '아미야(마왕)를 Amiya로 쓰는' 같은 의미 오류는 못 고침. 연결 안 된 모듈의 캐릭터 태그는 없는 캐릭터로 보고 지움(설정 `dusk.ui.imgFixUnknown=keep`이면 둠, 아직 화면 토글 없음).

@@ -88,7 +88,14 @@ function pickKeyword(raw, pool) {
     const extra = et.length - ct.length;
     if (extra < best) { best = extra; hit = [e]; } else if (extra === best) hit.push(e);
   }
-  return hit.length === 1 ? hit[0] : null;
+  if (hit.length === 1) return hit[0];
+  if (hit.length > 1) {   // 동률(missionary → missionary_sex / missionary_fingering …): 이 목록에서 가장 흔한 끝말을 고른다(뚜렷할 때만)
+    const freq = new Map();
+    for (const e of pool) { const l = stems(e.kw).at(-1); freq.set(l, (freq.get(l) ?? 0) + 1); }
+    const scored = hit.map((e) => ({ e, f: freq.get(stems(e.kw).at(-1)) ?? 0 })).sort((a, b) => b.f - a.f);
+    if (scored[0].f > scored[1].f) return scored[0].e;
+  }
+  return null;
 }
 // 대신 넣을 그림: 그림이 하나뿐이면 그것 → 이름만 있는 그림 → default·neutral… → 끝 낱말이 default인 것(emotion_default)
 function fallbackOf(pool) {
@@ -101,8 +108,24 @@ function fallbackOf(pool) {
 }
 
 // 에셋 이름 목록 → 검색용 색인. 구분자는 목록에서 추정한다(점이 많으면 `캐릭터.옷.키워드`, 아니면 첫 밑줄 `캐릭터_키워드`).
+// names: 이름 배열 하나, 또는 묶음 배열([봇 에셋, 모듈1 에셋, 모듈2 에셋…]) — 묶음마다 이름 규칙을 따로 판단한다(모듈마다 규칙이 다를 수 있음).
 export function buildAssetIndex(names) {
-  const list = [...new Set((names ?? []).map((n) => String(n ?? "").replace(EXT, "")).filter(Boolean))];
+  const input = Array.isArray(names) ? names : [];
+  const groups = input.some((g) => Array.isArray(g)) ? input.filter(Array.isArray) : [input];
+  const seen = new Set(), raw = [], modes = new Set();
+  for (const g of groups) {
+    const list = [...new Set(g.map((n) => String(n ?? "").replace(EXT, "")).filter(Boolean))].filter((n) => !seen.has(n));
+    if (!list.length) continue;
+    list.forEach((n) => seen.add(n));
+    const r = parseGroup(list);
+    modes.add(r.dotted);
+    raw.push(...r.raw);
+  }
+  const dotted = modes.size === 1 && modes.has(true);
+  return indexOf(raw, dotted, modes);
+}
+
+function parseGroup(list) {
   // 점 구분(`캐릭터.옷.키워드`)은 점이 두 개인 이름이 절반 이상이거나 거의 모든 이름에 점이 있을 때만. `karina_missionary.sex`처럼 키워드 안의 점은 구분자가 아니다.
   const two = list.filter((n) => (n.match(/\./g) ?? []).length >= 2).length, one = list.filter((n) => n.includes(".")).length;
   const dotted = list.length > 0 && (two * 2 >= list.length || one >= list.length * 0.9);
@@ -129,6 +152,11 @@ export function buildAssetIndex(names) {
       g.forEach((r, i) => { r.outfit = pre[i]; r.kw = r.kw.slice(pre[i].length + 1); });
     }
   }
+  for (const r of raw) r.dotted = dotted;
+  return { dotted, raw };
+}
+
+function indexOf(raw, dotted, modes) {
   const entries = [], byName = new Map(), chars = new Map(), kwCount = new Map();
   for (const { name, char, outfit, kw } of raw) {
     const e = { name, char, outfit, kw, nk: norm(kw) };
@@ -143,7 +171,7 @@ export function buildAssetIndex(names) {
   }
   for (const c of chars.values()) for (const o of c.outfits.values()) for (const e of o.entries) kwCount.set(e.nk, (kwCount.get(e.nk) ?? 0) + 1);
   const byEntryName = new Map(entries.map((e) => [e.name, e]));
-  return { dotted, entries, byName, byEntryName, chars, kwCount, size: entries.length };
+  return { dotted, modes, entries, byName, byEntryName, chars, kwCount, size: entries.length };
 }
 
 const clean = (s) => String(s ?? "").replace(/[\[\]"'`]/g, "").trim();
@@ -189,19 +217,38 @@ function resolveToken(idx, token, inherit, state) {
     const e = idx.byEntryName.get(whole), c = idx.chars.get(e.char);
     return { entry: e, kind: whole === t ? "exact" : "case", char: c, outfit: c.outfits.get(e.outfit ?? "") };
   }
-  let seg;
-  if (idx.dotted) seg = t.split(".").map((s) => s.trim()).filter(Boolean);
-  else { const i = t.indexOf("_"); seg = i > 0 ? [t.slice(0, i), t.slice(i + 1)] : [t]; }
+  // 모듈마다 이름 규칙이 다르면 두 규칙으로 다 읽어 본다(점이 있으면 점 규칙 먼저). 대체 그림보다 실제로 맞춘 결과를 우선.
+  const modes = idx.modes?.size > 1 ? (t.includes(".") ? [true, false] : [false, true]) : [idx.dotted];
+  let fallback = null;
+  for (const dm of modes) {
+    const r = resolveIn(idx, t, inherit, state, dm);
+    if (!r || r.fail) continue;
+    if (r.kind === "default" || r.keep) { fallback ??= r; continue; }
+    return r;
+  }
+  return fallback ?? { fail: true };
+}
+
+function resolveIn(idx, t, inherit, state, dotted) {
+  const split = (x) => (dotted ? x.split(".").map((s) => s.trim()).filter(Boolean) : (() => { const i = x.indexOf("_"); return i > 0 ? [x.slice(0, i), x.slice(i + 1)] : [x]; })());
+  const seg = split(t);
   let char = null, rest;
   const first = seg.length ? resolveChar(idx, seg[0]) : null;
   if (first) { char = first; rest = seg.slice(1); }
   else if (inherit?.char && seg.length) { char = inherit.char; rest = seg; }   // 합친 두 번째 조각: 앞 조각의 캐릭터를 잇는다
+  else {   // 밑줄 대신 띄어 쓴 경우(Amiya smiling): 앞 낱말부터 캐릭터 이름을 찾는다
+    const words = t.split(/\s+/);
+    for (let k = words.length - 1; k >= 1 && !char; k--) {
+      const c = resolveChar(idx, words.slice(0, k).join(" "));
+      if (c) { char = c; const r = words.slice(k).join(" "); rest = dotted ? r.split(".").filter(Boolean) : [r]; }
+    }
+  }
   if (!char) return { fail: true };
   let outfitRaw = null, kwRaw = null;
   if (rest.length >= 2) { outfitRaw = rest.slice(0, -1).join("."); kwRaw = rest[rest.length - 1]; }
   else if (rest.length === 1) kwRaw = rest[0];
   const outfits = [...char.outfits.values()];
-  if (!idx.dotted && kwRaw && outfits.some((o) => o.name)) {   // 밑줄 형식의 형태: virtual_blushing shyly → 형태 virtual + 키워드
+  if (!dotted && kwRaw && outfits.some((o) => o.name)) {   // 밑줄 형식의 형태: virtual_blushing shyly → 형태 virtual + 키워드
     const i = kwRaw.indexOf("_");
     if (i > 0 && pick(norm(kwRaw.slice(0, i)), outfits.filter((o) => o.name).map((o) => ({ n: o.n, v: o })))) { outfitRaw = kwRaw.slice(0, i); kwRaw = kwRaw.slice(i + 1); }
   }

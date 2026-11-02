@@ -27,7 +27,7 @@ export function createImgTagFix(api, { log = (...a) => console.log("[Dusk 이미
   }
 
   async function readNames() {
-    const names = [], pinned = [];   // 봇에 고정한 모듈 + 이 채팅에 지정한 모듈
+    const names = [], groups = [names], pinned = [];   // 묶음: [봇 에셋, 모듈별 에셋…] — 모듈마다 이름 규칙을 따로 판단. pinned: 봇에 고정한 모듈 + 이 채팅에 지정한 모듈
     const idx = await api.getCurrentCharacterIndex?.();
     if (typeof idx === "number" && idx >= 0 && typeof api.getCharacterFromIndex === "function") {
       const ch = await api.getCharacterFromIndex(idx);
@@ -40,9 +40,13 @@ export function createImgTagFix(api, { log = (...a) => console.log("[Dusk 이미
       const db = typeof api.getDatabase === "function" ? await api.getDatabase(["modules", "enabledModules"]) : null;
       // 전역·봇 고정·채팅 지정을 모두 합친다. 모자라면 멀쩡한 태그를 지우게 되므로 넉넉하게 잡는 쪽이 안전하다.
       const enabled = new Set([...(Array.isArray(db?.enabledModules) ? db.enabledModules : []), ...pinned]);
-      for (const m of Array.isArray(db?.modules) ? db.modules : []) if (enabled.has(m?.id)) for (const a of m?.assets ?? []) if (a?.[0]) names.push(String(a[0]));
+      for (const m of Array.isArray(db?.modules) ? db.modules : []) {
+        if (!enabled.has(m?.id)) continue;
+        const list = (m?.assets ?? []).map((a) => a?.[0]).filter(Boolean).map(String);
+        if (list.length) groups.push(list);
+      }
     } catch { /* 모듈 에셋 없이 진행 */ }
-    return names;
+    return groups;
   }
   function refresh(key) {
     loading ??= (async () => {
