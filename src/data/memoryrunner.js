@@ -32,7 +32,8 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   const run = call ?? (async (msgs, pick, signal) => runAI(api, appendToMessages(msgs, await skillBlock("analysis")), pick, signal));   // 스킬 주입(꺼짐이면 원문 그대로, v1.8.1)
 
   const aiIndexes = (messages) => messages.map((m, i) => (!isUserMessage(m) && extractMessageText(m).trim() ? i : -1)).filter((i) => i >= 0);
-  const clean = (m, rx) => rx?.length ? applyRegex(extractMessageText(m), rx) : extractMessageText(m);  // v1.8.1 정규식 전처리(읽는 글 사본에만)
+  const noRoll = (t) => String(t ?? "").replace(/<!--\s*dusk-roll:[\s\S]*?-->\s*/g, "");   // 주사위 판정 표식은 기억 분석에 안 보낸다(1.8.3)
+  const clean = (m, rx) => noRoll(rx?.length ? applyRegex(extractMessageText(m), rx) : extractMessageText(m));  // v1.8.1 정규식 전처리(읽는 글 사본에만)
   const line = (m, i, n = 1500, rx = null) => `[${i}] ${isUserMessage(m) ? "{{user}}" : "{{char}}"}: ${clean(m, rx).trim().slice(0, n)}`;
   // 지금 페르소나 이름(리스가 {{user}}를 이 이름으로 바꿔 보낼 수 있음) → 분석 결과에서 {{user}}로 모은다
   let userCache = { at: 0, names: [] };

@@ -105,6 +105,9 @@ export async function renderSettingsTab(ctx) {
     advBlocks = [
       card("이야기 도우미",
         segRow("내가 결과까지 적었을 때", "재해석: 시도로 보고 주사위로 가려요 · 존중: 그대로 따라요", diceModeSeg),
+        valRow("캐시 깨짐 알림", "앞부분이 절반도 안 같아 캐시가 깨지면 화면 구석에 잠깐 알려요", [["on", "켜짐"], ["off", "꺼짐"]], ctx.turnInfo?.isCacheAlert?.() === false ? "off" : "on", async (v) => {
+          try { await ctx.turnInfo?.setCacheAlert(v === "on"); ctx.toast(v === "on" ? "캐시 깨짐 알림을 켰어요" : "캐시 깨짐 알림을 껐어요"); } catch (e) { fail(e); }
+        }, "rb-set-cachealert"),
         linkRow("이야기 시간", "응답 첫 줄 상태 줄을 읽어 이어 가요", () => explain("이야기 시간", ["응답 첫 줄 ‘[2026-10-28 15:30 | 교실]’ 같은 상태 줄을 읽어 이어 가요.", "실제 현재 시각이 아니라 이야기 속 시각이에요. 홈의 빠른 설정에서 켜고 꺼요."]), "rb-set-storytime", "설명")),
       card("로어북 · 채팅 메뉴",
         valRow("다시 생성(리롤) 때 로어북", "확률로 켜지는 로어북을 다시 굴릴지", [["new", "새로 굴리기"], ["keep", "이전 결과 유지"]], lore.reroll === "keep" ? "keep" : "new", (v) => setLore({ reroll: v }), "rb-set-reroll"),

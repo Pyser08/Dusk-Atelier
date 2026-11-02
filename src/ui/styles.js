@@ -1423,6 +1423,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-me-sec{display:flex;flex-direction:column;gap:6px}
 .rb-me-kv{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;padding:3px 0;border-bottom:var(--rb-bw,1px) dashed var(--rb-line2)}.rb-me-kv span{color:var(--rb-sub)}.rb-me-kv b{text-align:right;overflow-wrap:anywhere;font-weight:600}
 .rb-me-quote{margin:0;padding:8px 12px;border-left:3px solid var(--rb-acc);background:var(--rb-surf2);border-radius:0 var(--rb-r2) var(--rb-r2) 0;font-size:13.5px}
-.rb-me-foot{display:flex;justify-content:flex-end}.rb-me-foot .rb-textlink{display:inline-flex;align-items:center;gap:2px}
+.rb-me-foot{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.rb-me-dlg{width:min(460px,100%);max-height:calc(100dvh - 32px);overflow-y:auto}
+.rb-me-emo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}@media (max-width:420px){.rb-me-emo{grid-template-columns:repeat(2,minmax(0,1fr))}}.rb-me-foot .rb-textlink{display:inline-flex;align-items:center;gap:2px}
 .rb-me-flags .rb-chip.warn{border-color:var(--rb-warn);color:var(--rb-warn)}
 `+PROB_CSS;

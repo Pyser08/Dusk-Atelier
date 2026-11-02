@@ -29,13 +29,22 @@ const BOX = 'margin-top:8px;font-size:13px;line-height:1.5;border:1px solid rgba
 const SUM = 'cursor:pointer;padding:5px 0;font-weight:700;color:#b8acff;list-style:none';
 const anim = (i) => `animation:dusk-dice-roll .7s ease-out ${i * 0.18}s both`;
 
-// 주사위: 굴림값 + 난이도 4개마다 '목표 vs 실제 → 판정'
-export function diceHtml(rec) {
+// 주사위: 응답에 판정 표식이 있으면 실제 행동·난이도·판정, 없으면 굴림값 + 난이도 4개마다 '목표 vs 실제 → 판정'
+const DIFF_KO = { easy: "쉬움", normal: "보통", hard: "어려움", extreme: "극악" };
+const RESULT_KO = { success: "성공", partial: "부분 성공", fail: "실패" };
+export function diceHtml(rec, marks = []) {
   const d = rec?.dice; if (!d?.rolls?.length) return "";
   const cuts = d.cuts ?? DEFAULT_CUTS;
-  const head = CUTS.map(([k, t]) => `<span style="text-align:center;font-size:11px;opacity:.75">${t} 목표 ${cuts[k]}</span>`).join("");
-  const rows = d.rolls.map((r, i) => `<span style="display:inline-block;${anim(i)};font-weight:800;font-size:16px;text-align:center;min-width:2.2em">🎲 ${r}</span>${CUTS.map(([k]) => { const v = judgeRoll(r, cuts[k]); return `<span style="text-align:center;font-size:12px;font-weight:700;color:${COLOR[v]}">${r} → ${v}</span>`; }).join("")}`).join("");
-  return `\n\n<details x-dusk="dice" style="${BOX}"><summary style="${SUM}">🎲 주사위 ${d.rolls.join(" · ")}</summary><div style="display:grid;grid-template-columns:auto repeat(4,minmax(0,1fr));gap:4px 6px;align-items:center;padding:4px 0"><span></span>${head}${rows}</div><div style="padding:2px 0 4px;font-size:11px;opacity:.6">AI가 행동마다 난이도를 고르고, 굴림은 순서대로 한 번씩 써요. 굴림 ≥ 목표면 성공이에요.</div></details>`;
+  let body;
+  if (marks?.length) {
+    body = `<div style="display:flex;flex-direction:column;gap:4px;padding:4px 0">${marks.map((m, i) => { const target = cuts[m.diff] ?? 50, v = judgeRoll(m.roll, target); return `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="display:inline-block;${anim(i)};font-weight:800;font-size:16px;min-width:2.6em">🎲 ${m.roll}</span><b style="flex:1;min-width:6em">${esc(m.act)}</b><span style="font-size:12px;opacity:.8">${DIFF_KO[m.diff]} 목표 ${target}</span><span style="font-size:12px;font-weight:700;color:${COLOR[v]}">${v}</span><span style="font-size:11px;opacity:.7">(AI 판정: ${RESULT_KO[m.result] ?? m.result})</span></div>`; }).join("")}</div>`;
+  } else {
+    const head = CUTS.map(([k, t]) => `<span style="text-align:center;font-size:11px;opacity:.75">${t} 목표 ${cuts[k]}</span>`).join("");
+    const rows = d.rolls.map((r, i) => `<span style="display:inline-block;${anim(i)};font-weight:800;font-size:16px;text-align:center;min-width:2.2em">🎲 ${r}</span>${CUTS.map(([k]) => { const v = judgeRoll(r, cuts[k]); return `<span style="text-align:center;font-size:12px;font-weight:700;color:${COLOR[v]}">${r} → ${v}</span>`; }).join("")}`).join("");
+    body = `<div style="display:grid;grid-template-columns:auto repeat(4,minmax(0,1fr));gap:4px 6px;align-items:center;padding:4px 0"><span></span>${head}${rows}</div>`;
+  }
+  const note = marks?.length ? "AI가 응답 끝에 남긴 판정 표식 기준이에요." : "AI가 행동마다 난이도를 고르고, 굴림은 순서대로 한 번씩 써요. 굴림 ≥ 목표면 성공이에요.";
+  return `\n\n<details x-dusk="dice" style="${BOX}"><summary style="${SUM}">🎲 주사위 ${d.rolls.join(" · ")}${marks?.length ? ` · 판정 ${marks.length}개` : ""}</summary>${body}<div style="padding:2px 0 4px;font-size:11px;opacity:.6">${note}</div></details>`;
 }
 
 // 모델 호출: 접힌 줄에 요약, 펼치면 상세 + 들어간 로어북

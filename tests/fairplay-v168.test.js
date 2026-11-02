@@ -49,7 +49,8 @@ test("훅: 주사위 켜면 요청마다 굴려 넣고 한 번만 삽입, 공정
   await f.set(true);
   const a = await f.beforeRequest(m, "model"), b = await f.beforeRequest(a, "model");
   assert.equal(a.length, 4); assert.equal(b.length, 4);   // S, 고정 지침, 굴림값, 유저
-  assert.ok(a[1].content.includes("Dice")); assert.ok(a[2].content.includes("use in order")); assert.notEqual(a[2].content, b[2].content);
+  assert.ok(a[1].content.includes("Dice")); assert.ok(a[2].content.includes("use in order")); assert.equal(a[2].content, b[2].content, "같은 턴(재시도)은 같은 값");
+  const c = await f.beforeRequest([...m, { role: "assistant", content: "A" }, { role: "user", content: "또 협박한다" }], "model"); assert.notEqual(c.find((x) => x.content.startsWith("[Dusk Dice]")).content, a[2].content);
   assert.equal(a[1].content, b[1].content); assert.equal(a[3].content, "그를 협박한다");
   assert.ok(a[2].content.includes("likely contains an action"));
   await f.setDiceMode("respect"); assert.equal(store.get(DICE_MODE_KEY), "respect"); assert.ok((await f.beforeRequest(m, "model"))[1].content.includes("do not roll"));
@@ -62,9 +63,9 @@ test("캐시: 굴림값이 달라도 마지막 유저 메시지 앞까지(고정
   await f.start(); await f.set(true); await f.setDice(true);
   const hist = [{ role: "system", content: "S" }, { role: "assistant", content: "A1" }, { role: "user", content: "U1" }, { role: "assistant", content: "A2" }];
   const x = await f.beforeRequest([...hist, { role: "user", content: "그를 설득한다" }], "model");
-  const y = await f.beforeRequest([...hist, { role: "user", content: "그를 설득한다" }], "model");
+  const y = await f.beforeRequest([...hist, { role: "user", content: "그를 다시 설득한다" }], "model");
   const cut = (arr) => arr.slice(0, arr.findIndex((m) => m.content.startsWith("[Dusk Dice]")));
   assert.notEqual(x.find((m) => m.content.startsWith("[Dusk Dice]")).content, y.find((m) => m.content.startsWith("[Dusk Dice]")).content);
   assert.deepEqual(cut(x), cut(y)); assert.equal(cut(x).length, 5);   // S, 고정 지침, A1, U1, A2
-  assert.equal(x[x.length - 1].content, "그를 설득한다"); assert.ok(x[x.length - 2].content.startsWith("[Dusk Dice]"));
+  assert.equal(x[x.length - 1].content, "그를 설득한다");   // (마지막 입력이 달라 새로 굴림) assert.ok(x[x.length - 2].content.startsWith("[Dusk Dice]"));
 });

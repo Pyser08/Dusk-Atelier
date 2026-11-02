@@ -1,11 +1,13 @@
 // '나' 화면 (1.8.3): 다른 인물들이 나({{user}})를 어떻게 기억하는지 한 화면에. 인물 위키와 같은 카드·칩·감정 막대를 쓴다.
 // 맨 위에는 예전에 페르소나 이름으로 따로 쌓인 인물을 '나'로 합치는 카드(미리 보기 → 확인 뒤 실행).
 import { h, replace } from "../../dom.js";
-import { btn, confirmDialog, emptyState, pageHead } from "../../kit.js";
+import { btn, confirmDialog, emptyState, pageHead, modal, segmented, note } from "../../kit.js";
 import { icon } from "../../icons.js";
 import { mem, avatar, fail } from "./common.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX } from "../../../engine/memoryemo.js";
-import { meView, userMergePlan, mergeIntoUser, TONE_LABEL } from "../../../engine/memoryuser.js";
+import { meView, userMergePlan, mergeIntoUser, TONE_LABEL, USER } from "../../../engine/memoryuser.js";
+import { setTag } from "../../../engine/memoryemo.js";
+import { setTalk } from "../../../engine/memoryhuman.js";
 import { dbRead } from "../../../data/dbcache.js";
 
 async function personaNames(ctx) {
@@ -16,7 +18,7 @@ const bar = (t, val) => h("div", { class: "rb-wk2-bar" }, h("i", { class: `dot e
   h("small", null, `${val}/${GAUGE_MAX}`));
 const kv = (k, v) => (v ? h("div", { class: "rb-me-kv" }, h("span", null, k), h("b", null, v)) : null);
 
-function otherCard(o, openWiki) {
+function otherCard(o, openWiki, onEdit) {
   const feelRows = EMO_TAGS.filter((t) => (o.feel[t] ?? 0) > 0).map((t) => bar(t, o.feel[t]));
   return h("article", { class: "rb-card bordered rb-me-card", "data-who": o.name },
     h("header", { class: "rb-me-chead" }, avatar(o.name),
@@ -32,7 +34,30 @@ function otherCard(o, openWiki) {
     o.rifts.length || o.beliefs.length ? h("div", { class: "rb-chips rb-me-flags" },
       ...o.rifts.map((r) => h("span", { class: "rb-chip warn" }, `갈등 · ${r.about || "풀리지 않음"}`)),
       ...o.beliefs.map((b) => h("span", { class: "rb-chip" }, `오해 · ${b}`))) : null,
-    h("footer", { class: "rb-me-foot" }, h("button", { type: "button", class: "rb-textlink", onClick: () => openWiki(o.name) }, `${o.name} 인물 위키`, icon("chevron", 14))));
+    h("footer", { class: "rb-me-foot" }, btn("고치기", { size: "sm", icon: "edit", onClick: () => onEdit(o), class: "rb-me-edit" }), h("button", { type: "button", class: "rb-textlink", onClick: () => openWiki(o.name) }, `${o.name} 인물 위키`, icon("chevron", 14))));
+}
+
+// 고치기 (1.8.3): 이 인물이 나를 부르는 말·말투, 나에게 느끼는 감정. 고친 값은 잠겨서 다음 분석이 덮어쓰지 않는다.
+function editDialog(ctx, o) {
+  return modal(ctx.win, (done) => {
+    const call = h("input", { class: "rb-input", value: o.callsMe, placeholder: "예: 선생님", maxlength: 20, "aria-label": "나를 부르는 말" });
+    let tone = o.toneToMe || "formal";
+    const toneSeg = segmented(Object.entries(TONE_LABEL), tone, (v) => { tone = v; }, "말투");
+    const ins = Object.fromEntries(EMO_TAGS.map((t) => [t, h("input", { class: "rb-input", type: "number", min: 0, max: GAUGE_MAX, inputmode: "numeric", placeholder: "비움", value: o.feel[t] ?? "", "aria-label": EMO_LABEL[t] })]));
+    const msg = h("div");
+    return h("div", { class: "rb-dialog rb-me-dlg", role: "dialog", "aria-modal": "true", "aria-label": `${o.name} 고치기` },
+      h("h3", { class: "rb-h3" }, `${o.name} → 나`),
+      h("label", { class: "rb-mem-field" }, h("span", null, "나를 부르는 말"), call),
+      h("div", { class: "rb-mem-field" }, h("span", null, "말투"), toneSeg),
+      h("span", { class: "rb-muted", style: "font-size:12.5px" }, `나에게 느끼는 감정 (0~${GAUGE_MAX}, 비우면 없음)`),
+      h("div", { class: "rb-wk2-form rb-me-emo" }, EMO_TAGS.map((t) => h("label", { class: "rb-mem-field" }, h("span", null, EMO_LABEL[t]), ins[t]))),
+      h("small", { class: "rb-muted" }, "고친 값은 잠겨서 다음 기억 분석이 바꾸지 않아요."), msg,
+      h("div", { class: "btns" }, btn("취소", { onClick: () => done(null) }), btn("저장", { kind: "primary", id: "rb-me-save", onClick: () => {
+        const vals = {};
+        for (const t of EMO_TAGS) { const raw = ins[t].value.trim(); if (raw === "") { vals[t] = null; continue; } const n = Number(raw); if (!Number.isFinite(n) || n < 0 || n > GAUGE_MAX) { replace(msg, note("warn", `감정 수치는 0~${GAUGE_MAX} 사이로 넣어 주세요.`)); return; } vals[t] = Math.round(n); }
+        done({ call: call.value.trim(), tone, vals });
+      } })));
+  });
 }
 
 export async function renderMemoryMe(ctx, host, { redraw }) {
@@ -43,6 +68,18 @@ export async function renderMemoryMe(ctx, host, { redraw }) {
   const [folder, names] = await Promise.all([M.store.getFolder(cur.chaId, cur.chatId).catch(() => null), personaNames(ctx)]);
   const v = folder ? meView(folder) : { records: 0, moments: [], others: [] };
   const plan = folder ? userMergePlan(folder, names) : { people: [], links: 0 };
+  const onEdit = async (o) => {
+    const r = await editDialog(ctx, o);
+    if (!r) return;
+    try {
+      await M.store.updateFolder(cur.chaId, cur.chatId, (f) => {
+        if (r.call && (r.call !== o.callsMe || r.tone !== o.toneToMe)) setTalk(f, o.name, USER, { call: r.call, tone: r.tone });
+        for (const t of EMO_TAGS) { const before = o.feel[t] ?? null; if (r.vals[t] !== before) setTag(f, o.name, USER, t, r.vals[t]); }
+      });
+      ctx.toast("고쳤어요. 고친 값은 잠겨요.");
+      redraw();
+    } catch (e) { fail(ctx)(e); }
+  };
   const openWiki = (name) => { m.botId = cur.chaId; m.chatIndex = cur.ti; m.tab = "people"; m.personKey = String(name).toLowerCase().replace(/\s+/g, ""); m.page = "detail"; redraw(); };
 
   const merge = plan.people.length || plan.links ? h("section", { class: "rb-card bordered rb-me-merge" },
@@ -71,7 +108,7 @@ export async function renderMemoryMe(ctx, host, { redraw }) {
   const moments = v.moments.length ? h("section", { class: "rb-card bordered rb-me-moments" }, h("span", { class: "h" }, "내가 남긴 순간"),
     h("ul", null, ...v.moments.map(({ r, vague }) => h("li", { class: vague ? "vague" : "" }, h("span", { class: "rb-grade", "data-g": r.g || "-" }, r.g || "–"), h("span", null, r.act ?? ""))))) : null;
   const list = v.others.length
-    ? h("div", { class: "rb-me-grid" }, ...v.others.map((o) => otherCard(o, openWiki)))
+    ? h("div", { class: "rb-me-grid" }, ...v.others.map((o) => otherCard(o, openWiki, onEdit)))
     : emptyState({ icon: "character", title: "아직 나를 기억하는 인물이 없어요", text: "대화가 이어지면 인물들이 나에게 느끼는 감정·호칭이 여기에 쌓여요." });
   replace(host, h("div", { class: "rb-me" }, pageHead("나", { back, sub: "다른 인물들이 나를 어떻게 보고 부르는지 모아 봐요." }), merge, head, moments, list));
 }

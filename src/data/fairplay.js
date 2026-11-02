@@ -1,6 +1,6 @@
 // 공정한 전개 훅 (v1.6.8). 장기기억과 무관하게 설정에서 켜고 끈다. 기본 꺼짐.
 // 유저 편향 없애기(코드 주사위): 공정한 전개가 켜져 있을 때만 작동. 기본 꺼짐, 결과 처리 기본은 '재해석'.
-import { insertFairness, makeDice, resolveDice, normalizeCuts, normalizeCount, DICE_MODES, DICE_LEVEL_IDS } from "../engine/fairplay.js";
+import { insertFairness, makeDice, turnKey, resolveDice, normalizeCuts, normalizeCount, DICE_MODES, DICE_LEVEL_IDS } from "../engine/fairplay.js";
 
 export const FAIR_KEY = "dusk.ui.fairPlay";
 export const DICE_KEY = "dusk.ui.fairDice";
@@ -51,12 +51,19 @@ export function createFairPlay(api, { log = (...a) => console.log("[Dusk 공정]
       clearTimeout(saveTimer); saveTimer = setTimeout(flushLog, saveMs);
     })();
   };
-  let last = null, on = false, hooked = false, dice = false, mode = "reinterpret", level = "normal", custom = { cuts: null, count: 3 };
+  let sameTurn = null, last = null, on = false, hooked = false, dice = false, mode = "reinterpret", level = "normal", custom = { cuts: null, count: 3 };
   async function beforeRequest(messages, type) {
     try {
       if (!on || (type && type !== "model")) return messages;
-      const d = dice ? makeDice(messages, mode, rng, resolveDice(level, custom.cuts, custom.count)) : null;
-      if (d) { last = { at: Date.now(), rolls: d.rolls, cuts: d.cuts, mode: d.mode }; record(d); }   // 응답 아래 '주사위 결과 표시'·기록용
+      let d = null;
+      if (dice) {
+        // 같은 턴을 다시 생성(리롤)·재시도하면 같은 주사위 값을 쓴다: 마음에 드는 판정이 나올 때까지 돌리는 걸 막고 프롬프트도 그대로 둔다
+        const rd = resolveDice(level, custom.cuts, custom.count), tk = turnKey(messages);
+        const same = sameTurn && sameTurn.key === tk && sameTurn.rolls.length === rd.count && Date.now() - sameTurn.at < 6 * 3600e3;
+        d = makeDice(messages, mode, rng, { ...rd, ...(same ? { rolls: sameTurn.rolls } : {}) });
+        if (!same) { sameTurn = { key: tk, rolls: d.rolls, at: Date.now() }; record(d); }
+        last = { at: Date.now(), rolls: d.rolls, cuts: d.cuts, mode: d.mode };   // 응답 아래 '주사위 결과 표시'용
+      }
       return insertFairness(messages, { dice: d });
     } catch (e) { log("지침 삽입 실패", e?.message ?? e); return messages; }
   }

@@ -16,7 +16,7 @@ test("굴릴 때마다 채팅과 함께 기록(최근 300), 주사위 꺼지면 
   const m = [{ role: "user", content: "x" }];
   await f.beforeRequest(m, "model"); await f.flushLog();
   assert.equal((await loadDiceLog(api)).length, 0);
-  await f.setDice(true); await f.beforeRequest(m, "model"); await f.beforeRequest(m, "model"); await f.flushLog();
+  await f.setDice(true); await f.beforeRequest(m, "model"); await f.beforeRequest(m, "model"); await f.beforeRequest([...m, { role: "assistant", content: "a" }, { role: "user", content: "y" }], "model"); await f.flushLog();
   const log = await loadDiceLog(api); assert.equal(log.length, 2); assert.equal(log[0].chaId, "c1"); assert.equal(log[0].rolls.length, 3); assert.ok(log[0].cuts.normal);
   await clearDiceLog(api); assert.equal((await loadDiceLog(api)).length, 0); assert.ok(store.has(DICE_LOG_KEY));
 });

@@ -381,3 +381,11 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 시험: `cache-hit`·`dice-log`·`memory-user-merge`·`chatmenu` 단위, e2e `run-me.mjs`(PC·모바일 16). e2e에서 `.rb-dice .btns button`은 버튼이 2개라 '닫기' 글자로 고름.
 - 확인 못 함: 실제 Claude 캐시 적중(프로바이더 사용량), 채팅 메뉴 버튼이 RisuBard·PocketRisu에 있는지(없으면 조용히 생략), '나' 화면의 실제 데이터 품질.
 - (2026-11-03, 사용자 결정) 주사위 앞 캐시 지점은 리스가 캐시를 안 써도 찍음(`points < 4`면). 리스 캐시를 안 쓰던 Claude 사용자는 그 지점까지 캐시 쓰기 비용(입력 단가의 약 1.25배)이 생기고 다음 턴부터 읽기 할인을 받음.
+
+## 2026-11-03 추가 2 (사용자 지시 1·2·4·5, 3번은 이미 기본값이라 생략)
+- 3번(장기 기억 넣는 위치): 이미 기본 `inject.position = "beforeLastUser"`(마지막 입력 바로 앞), 고급 '삽입 위치'로 변경 가능 → 작업 없음. 리수폿 로어북 방식(lore)은 로어북 위치를 따름.
+- ① 리롤 같은 주사위: `engine/fairplay.js turnKey`(Dusk 메시지 뺀 전체 해시) → `data/fairplay.js` sameTurn(같은 열쇠·같은 개수·6시간 안이면 같은 rolls, 기록은 새 턴만). 기존 시험 3개를 '같은 메시지 = 같은 값'에 맞게 고침.
+- ⑤ 판정 표식: 고정 규칙에 `<!-- dusk-roll: 행동 | easy|normal|hard|extreme | 굴림 | success|partial|fail -->` 남기기 지시(캐시 영향 없음). `parseRollMarks`, `makeDice`가 지난 턴(마지막 user 앞 assistant) 표식을 `prev`로 → `diceRollText` 'Last turn's judged outcomes'. 화면 `diceHtml(rec, marks)`는 표식이 있으면 실제 행동·난이도. 기억 분석 입력에서는 표식 제거(`memoryrunner.js noRoll`). 모델이 표식을 안 지키면 예전처럼 4난이도 표.
+- ② 캐시 깨짐 알림: `data/turninfo.js` `CACHE_ALERT_KEY "dusk.ui.cacheAlert"`(기본 켜짐), 앞부분 < 50% & 전체 ≥ 1500토큰이면 칩 9초(호출 표시가 켜져 있으면 생략). 설정 고급 '이야기 도우미'에 줄(`#rb-set-cachealert`).
+- ④ '나' 고치기: `mepage.js editDialog`(호칭·말투·감정 6개) → `setTalk`/`setTag`(잠김). e2e `run-me.mjs` 22항목.
+- 확인 못 함: 실제 모델이 판정 표식을 잘 남기는지(특히 작은 모델), 리스 화면에서 HTML 주석이 정말 안 보이는지(마크다운 렌더 기준으론 숨김).
