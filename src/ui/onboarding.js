@@ -12,6 +12,7 @@ import { LEVELS } from '../engine/trackpreset.js';
 import { DEFAULT_EMBED } from '../engine/embed.js';
 import { potInstalled } from '../engine/firstrun.js';
 import { loadFairOn, loadDiceOn, DICE_KEY } from '../data/fairplay.js';
+import { diceRow } from './dicedetail.js';
 import { loadStoryTimeOn } from '../data/storytime.js';
 import { readCocoa } from '../engine/cocoamigrate.js';
 
@@ -177,13 +178,11 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
             srow("거짓말·오해 추적", "추리·드라마 봇에 알맞아요", inj.beliefs === true, (v) => setInj("beliefs", v))) : null,
           sec("이야기 도우미",
             fairRow,
-            srow("유저 편향 없애기", "주사위로 성패를 가려요 (켜면 공정한 전개도 켜져요)", st.dice, (v) => {
+            diceRow(ctx, { on: st.dice, fail, setOn: async (v) => {
               st.dice = v;
-              s.saving = (async () => {
-                if (ctx.fairPlay) await ctx.fairPlay.setDice(v); else await ctx.api.pluginStorage.setItem(DICE_KEY, v ? "on" : "off");
-                if (v && !st.fair) { st.fair = true; if (ctx.fairPlay) await ctx.fairPlay.set(true); else await ctx.api.pluginStorage.setItem("dusk.ui.fairPlay", "on"); if (fairSw) setSwitch(fairSw, true); }
-              })().catch(fail);
-            }),
+              if (ctx.fairPlay) await ctx.fairPlay.setDice(v); else await ctx.api.pluginStorage.setItem(DICE_KEY, v ? "on" : "off");
+              if (v && !st.fair) { st.fair = true; if (ctx.fairPlay) await ctx.fairPlay.set(true); else await ctx.api.pluginStorage.setItem("dusk.ui.fairPlay", "on"); if (fairSw) setSwitch(fairSw, true); }
+            } }),
             srow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요", st.time, (v) => { st.time = v; s.saving = (ctx.storyTime ? ctx.storyTime.set(v) : ctx.api.pluginStorage.setItem("dusk.ui.storyTime", v ? "on" : "off")).catch(fail); }),
             ctx.imgFix ? srow("이미지 태그 자동 교정", "틀린 에셋 태그를 실제 이름으로", st.img, (v) => { st.img = v; s.saving = Promise.resolve(ctx.imgFix.set(v)).catch(fail); }) : null)
         ];

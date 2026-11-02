@@ -18,7 +18,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   ok(`[${tag}] 저장된 기억 숫자 = 6`, (await page.locator(".rb-hnum b").first().textContent()) === "6");
   ok(`[${tag}] 바로가기 작은 4칸`, (await vis(".rb-hdo-sm .rb-htile")) === 4);
   ok(`[${tag}] 이어서 하기 칩(인물 위키 2 · 분석 · 가져오기)`, (await page.locator(".rb-hcont .rb-chip").allTextContents()).join("|") === "호시노 인물 위키|시로코 인물 위키|지난 대화 분석|봇·모듈 가져오기", (await page.locator(".rb-hcont .rb-chip").allTextContents()).join("|"));
-  ok(`[${tag}] 빠른 설정 토글 유지 + 처음 둘러보기 유지`, (await page.locator(".rb-story-helper [role=switch]").count()) >= 3 && (await page.locator("#rb-home-tour").count()) === 1);
+  ok(`[${tag}] 빠른 설정 토글 유지 + 처음 둘러보기 유지`, (await page.locator(".rb-story-helper [role=switch]").count()) >= 2 && (await page.locator(".rb-story-helper #rb-dice-row").count()) === 1 && (await page.locator("#rb-home-tour").count()) === 1);
   await page.locator(".rb-hcont .rb-chip", { hasText: "시로코 인물 위키" }).click(); await page.waitForTimeout(700);
   ok(`[${tag}] 인물 위키 칩 → 기억 기록 보기`, await page.evaluate(() => !!document.querySelector(".rb-mem2[data-page=detail]")));
   await nav("홈");

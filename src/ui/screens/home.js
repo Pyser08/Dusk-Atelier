@@ -14,6 +14,7 @@ import { injectReasonText } from '../../engine/memoryinject.js';
 import { mem } from './memory/common.js';
 import { createBotAndEdit } from './newbot.js';
 import { loadFairOn, loadDiceOn, DICE_KEY } from '../../data/fairplay.js';
+import { diceRow } from '../dicedetail.js';
 import { loadStoryTimeOn } from '../../data/storytime.js';
 
 var hhmm = (ms) => ms ? new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
@@ -180,7 +181,7 @@ export async function renderHome(ctx) {
   );
   const storyHelper = h("section", { class: "rb-card bordered rb-story-helper" },
     (() => { const row = storyRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair); fairSw = row.querySelector("[role=switch]"); return row; })(),
-    storyRow("유저 편향 없애기", "캐릭터가 나만 편들지 않게 해요.", diceOn, setDice),
+    diceRow(ctx, { on: diceOn, setOn: setDice, fail: failStory }),
     storyRow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요.", stOn, setStory),
     ctx.imgFix ? storyRow("이미지 태그 자동 교정", "AI가 틀리게 쓴 에셋 이미지 태그를 이 봇의 실제 에셋 이름으로 고쳐요.", ctx.imgFix.isOn(), setImgFix) : null,
     ctx.imgFix ? storyRow("이미지 태그 상황 알림", "직전 옷·동작과 쓸 수 있는 태그를 AI에게 다시 알려줘요.", ctx.imgFix.isHintOn(), setImgHint) : null

@@ -1363,4 +1363,16 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-onb-center>*,.rb-onb-side>*{flex-shrink:0}
 @media (max-width:999px){.rb-onb-top .brand{font-size:0}.rb-onb-top .brand::after{content:"시작 안내";font-size:14px}}
 .rb-onb .rb-accpicks{justify-content:flex-start}
+.rb-onb~.rb-modal,.rb-onb~.rb-bsheet-back{z-index:310}
+.rb-dice{width:min(440px,100%);max-height:calc(100dvh - 32px);overflow-y:auto}
+.rb-dice .hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rb-dice .hd b{font-size:16px}
+.rb-dice .cuts{font-size:12.5px;color:var(--rb-mute);margin-top:6px;line-height:1.5}
+.rb-dice .lv{display:flex;flex-direction:column;gap:6px}
+.rb-dice .lv>.l{font-size:13px;font-weight:600;color:var(--rb-sub)}
+.rb-dice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rb-dice-grid label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--rb-sub)}
+.rb-dice-grid .rb-input{width:100%;min-width:0;box-sizing:border-box}
+.rb-srow .val{color:var(--rb-sub);font-size:13px;font-weight:500;white-space:nowrap}
+.rb-srow.dicebox .end{display:inline-flex;align-items:center;gap:4px}
 `+PROB_CSS;

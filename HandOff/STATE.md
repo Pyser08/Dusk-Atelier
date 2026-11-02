@@ -350,6 +350,11 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 
 ## 다음 작업 (사용자 요청 2026-11-02 22:15, 아직 시작 전)
 - 완료: 장기 기억 진입 시 임베딩 안내 자동 표시 제거(mhome.js).
-- ① **유저 편향 없애기 강도**: 홈 빠른 설정의 '유저 편향 없애기' 줄(토글 말고 박스)을 누르면 상세가 열림 → '약하게·보통·강하게' 버튼. 고급 모드에서는 주사위 수치를 직접 입력(난이도 커트라인 등). 상세의 ?는 작동 방식 설명. 시작 안내 4단계에도 같은 UI. 관련: engine/fairplay.js(makeDice 3×1–100, reinterpret/respect), data/fairplay.js.
+- ① [x] **유저 편향 없애기 강도 (완료 2026-11-02)**: 홈 '유저 편향 없애기' 줄은 스위치 대신 박스 버튼(`#rb-dice-row`, 오른쪽에 꺼짐/강도 표시) → 누르면 상세 창(`ui/dicedetail.js` `diceRow`/`openDiceDetail`, 홈·시작 안내 4단계 공용). 상세 = 사용하기 스위치(켜면 공정한 전개도 같이 켬, 기존 setDice 로직) + 강도 약하게·보통·강하게 + ?(작동 방식) + **고급 모드만** 난이도 수치 4개(쉬움≤보통≤어려움≤극악, 1~100)·주사위 개수(1~6) 직접 입력('직접 입력 적용' → level=custom).
+  - 수치(엔진 `DICE_LEVELS`): 약하게 10/35/60/85 · **보통 20/50/75/95(예전 값 그대로)** · 강하게 30/60/85/98. 개수는 프리셋 3. 지침 문장에 `easy N, normal N, …`로 들어감. 순수 함수 `normalizeCuts/normalizeCount/resolveDice`(engine/fairplay.js).
+  - 저장(추가만, 기존 키 불변·마이그레이션 불필요): `dusk.ui.fairDiceLevel`(weak|normal|strong|custom, 기본 normal) · `dusk.ui.fairDiceCuts`(JSON) · `dusk.ui.fairDiceCount`. `data/fairplay.js`에 `loadDiceLevel/loadDiceCustom`, 훅에 `setDiceLevel/setDiceCustom/diceLevel`.
+  - 같이 고침: 시작 안내(z 300) 위에서 여는 모달(z 50)이 가려지던 문제 → `.rb-onb~.rb-modal{z-index:310}`(HypaPlus 가져오기 창도 해당).
+  - 시험: `tests/fairplay-level.test.js`(6개, 구현 전 실패 확인) · `tests/e2e/run-home-dice.mjs`(간단·고급 25항목) · `run-home-fair`·`run-hubs`·`run-onboard`는 새 박스 구조에 맞춰 고침.
+  - 확인 못 함: 실제 보조모델이 바뀐 수치(약하게/강하게)를 지침대로 따르는지, 실제 RisuAI·RisuBard·PocketRisu 화면.
 - ② **주사위 결과 표시 토글(홈 빠른 설정에 추가)**: 켜면 채팅의 그 응답 아래에 주사위 애니메이션 + 굴린 값, 아래에 목표치 vs 실제값, 판정 '대실패·실패·애매·성공·대성공'. 판정 구간은 엔진에 순수 함수로(테스트 먼저).
 - ③ **모델 호출 표시(홈 빠른 설정 토글, 기본 켜짐, RisuBard 환경에서는 작동 안 함)**: 호출할 때 모델 이름·메인/보조 구분·걸린 시간·예상 토큰·추론 중/출력 중 상태, 눌렀을 때 들어간 로어북 목록. 훅 위치·호스트 차이는 HOST-COMPAT 문서 먼저 확인.

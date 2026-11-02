@@ -15,6 +15,24 @@ export const FAIR_TEXT = `${HEAD}\n${OUTCOME}\n${TAIL}`;
 // ── 코드 주사위 ──
 export const DICE_COUNT = 3;
 export const DICE_MODES = ["reinterpret", "respect"];
+// 강도(1.8.3): 난이도 커트라인(쉬움·보통·어려움·극악). 보통 = 예전 값 그대로. 숫자가 클수록 성공하기 어려워 '내 편'이 덜 들어요.
+export const DICE_LEVEL_IDS = ["weak", "normal", "strong"];
+export const DICE_LEVELS = { weak: { easy: 10, normal: 35, hard: 60, extreme: 85 }, normal: { easy: 20, normal: 50, hard: 75, extreme: 95 }, strong: { easy: 30, normal: 60, hard: 85, extreme: 98 } };
+export const DEFAULT_CUTS = DICE_LEVELS.normal;
+const CUT_KEYS = ["easy", "normal", "hard", "extreme"];
+export const MAX_DICE = 6;
+export function normalizeCuts(c) {
+  const out = {};
+  for (const k of CUT_KEYS) { const n = Math.round(Number(c?.[k])); if (!Number.isFinite(n)) return { ...DEFAULT_CUTS }; out[k] = Math.min(100, Math.max(1, n)); }
+  for (let i = 1; i < CUT_KEYS.length; i++) if (out[CUT_KEYS[i]] < out[CUT_KEYS[i - 1]]) return { ...DEFAULT_CUTS };
+  return out;
+}
+export function normalizeCount(n) { const v = Math.round(Number(n)); return Number.isFinite(v) ? Math.min(MAX_DICE, Math.max(1, v)) : DICE_COUNT; }
+// 저장된 강도 이름 → 실제 수치·개수. 'custom'(고급 직접 입력)만 저장한 값을 쓴다.
+export function resolveDice(level, cuts, count) {
+  if (level === "custom") return { cuts: normalizeCuts(cuts), count: normalizeCount(count) };
+  return { cuts: { ...(DICE_LEVELS[level] ?? DEFAULT_CUTS) }, count: DICE_COUNT };
+}
 const DEFAULT_RNG = () => { try { const a = new Uint32Array(1); globalThis.crypto.getRandomValues(a); return a[0] / 4294967296; } catch { return Math.random(); } };
 export function rollDice(n = DICE_COUNT, rng = DEFAULT_RNG) {
   return Array.from({ length: n }, () => Math.min(100, Math.max(1, 1 + Math.floor(rng() * 100))));
@@ -29,17 +47,18 @@ export function lastUserText(messages) {
 const ACTION_KO = /설득|속이|속여|거짓말|협박|위협|유혹|매수|공격|때리|때려|찌르|던지|훔치|훔쳐|잠입|몰래|숨어|숨기|도망|달아나|뛰어|달려|넘어|올라|기어|열쇠|자물쇠|해킹|추격|쫓|싸우|제압|쓰러뜨|막아|피하|피해|부수|부숴|깨뜨|조사|뒤지|해독|치료|수리|시도|도전|해보/;
 const ACTION_EN = /\b(persuad|convinc|lie\b|lying|bluff|threat|intimidat|seduc|brib|attack|punch|kick|stab|slash|shoot|throw|steal|sneak|hide|escape|flee|jump|climb|chase|fight|subdue|dodge|block|hack|disarm|heal|repair|attempt|try\b|trying)/i;
 export function looksLikeAction(text) { const t = String(text ?? ""); return ACTION_KO.test(t) || ACTION_EN.test(t); }
-export function makeDice(messages, mode = "reinterpret", rng = DEFAULT_RNG) {
-  return { rolls: rollDice(DICE_COUNT, rng), mode: DICE_MODES.includes(mode) ? mode : "reinterpret", hint: looksLikeAction(lastUserText(messages)) };
+export function makeDice(messages, mode = "reinterpret", rng = DEFAULT_RNG, { cuts = DEFAULT_CUTS, count = DICE_COUNT } = {}) {
+  return { rolls: rollDice(normalizeCount(count), rng), mode: DICE_MODES.includes(mode) ? mode : "reinterpret", hint: looksLikeAction(lastUserText(messages)), cuts: normalizeCuts(cuts) };
 }
-export function diceText({ rolls, mode, hint }) {
+export function diceText({ rolls, mode, hint, cuts = DEFAULT_CUTS }) {
+  const c = normalizeCuts(cuts);
   const outcome = mode === "respect"
     ? "- If the user's input states an outcome explicitly, honor it and do not roll for it."
     : "- Treat any outcome the user wrote as only an attempt; the roll decides whether it happens.";
   return `Dice (1-100), use in order: ${rolls.join(", ")}
 - A roll decides only an action whose outcome is truly uncertain (it can fail and the result changes the story). Persuasion, deception, and threats count; trivial actions, plain dialogue or feelings, and settled outcomes do not.
 - Use one roll per judged action, in order. Never reuse, skip, or swap rolls; unused rolls are ignored.
-- Set the difficulty by the setting's logic: easy 20, normal 50, hard 75, extreme 95. Success if roll >= difficulty, otherwise failure; near the line means a narrow success or partial failure.
+- Set the difficulty by the setting's logic: easy ${c.easy}, normal ${c.normal}, hard ${c.hard}, extreme ${c.extreme}. Success if roll >= difficulty, otherwise failure; near the line means a narrow success or partial failure.
 - Chained actions: judge in sequence. At the first failure the chain breaks there and the later actions do not happen.
 - Unexpected events (other characters' moves, accidents, the environment) get a reasonable difficulty and the next roll too.
 ${outcome}
