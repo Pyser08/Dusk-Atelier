@@ -289,18 +289,18 @@ function resolvePayload(idx, payload, state) {
   if (direct?.entry && direct.kind !== "fuzzy" && direct.kind !== "default") return { name: direct.entry.name, kind: direct.kind, entry: direct.entry };
   const pieces = raw.split(SPLIT).map((s) => s.trim()).filter(Boolean);
   const cands = [];
-  let inherit = null, merged = pieces.length > 1, kept = !!direct?.keep;
+  let inherit = null, merged = pieces.length > 1, kept = direct?.keep ? direct.char ?? true : null;
   for (const piece of pieces) {
     if (PLACEHOLDER.test(piece)) continue;
     const r = resolveToken(idx, piece, inherit, state);
     if (!r || r.fail) continue;
-    if (r.keep) { kept = true; continue; }
+    if (r.keep) { kept = r.char ?? kept ?? true; continue; }
     if (r.many) { merged = true; cands.push(...r.many); } else cands.push(r.entry);
     if (r.char && !inherit) inherit = { char: r.char, outfit: r.outfit };
   }
   if (!cands.length) {
     if (direct?.entry) return { name: direct.entry.name, kind: direct.kind, entry: direct.entry };
-    return kept ? { keep: true } : { remove: "unknown" };
+    return kept ? { keep: true, char: kept?.name } : { remove: "unknown" };
   }
   // 가장 드문(구체적인) 키워드, 같으면 뒤에 쓴 것(보통 '감정 + 동작' 순서로 붙여 씀)
   const best = cands.map((e, i) => ({ e, i })).sort((a, b) => rarity(idx, a.e) - rarity(idx, b.e) || b.i - a.i)[0].e;
@@ -387,4 +387,29 @@ export function sceneState(texts, idx) {
     }
   });
   return state;
+}
+
+// ── 수동 교정(도구 탭)용 ──
+// 글 속 이미지 태그 위치. 꺾쇠가 든 지침 원문은 template:true. URL·CBS·다른 속성이 붙은 태그는 뺀다.
+export function tagSpans(text) {
+  const src = String(text ?? ""), out = [];
+  let m;
+  const nested = new RegExp(NESTED.source, "gi");
+  while ((m = nested.exec(src))) out.push({ start: m.index, end: m.index + m[0].length, raw: m[0], template: true });
+  const re = new RegExp(TAG.source, "gi");
+  while ((m = re.exec(src))) {
+    const s = m.index, e = s + m[0].length;
+    if (out.some((o) => o.template && s < o.end && e > o.start)) continue;
+    const parts = INNER.exec(m[1]);
+    if (!parts || skipPayload(parts[3])) continue;
+    out.push({ start: s, end: e, raw: m[0], prefix: parts[1], quote: parts[2], payload: parts[3], slash: !!parts[4] });
+  }
+  return out.sort((a, b) => a.start - b.start);
+}
+export const renderTag = (span, name) => `<img${span.prefix ?? "="}${span.quote ?? ""}${name}${span.quote ?? ""}${span.slash ? " /" : ""}>`;
+// 태그 하나 해석: 이미 정확하면 exact. → { name, kind, entry } | { remove } | { keep, char }
+export function resolveTag(idx, payload, state) {
+  const p = String(payload ?? "");
+  if (idx.byName.get(norm(p)) === p.trim() && p === p.trim()) return { name: p, kind: "exact", entry: idx.byEntryName.get(p) };
+  return resolvePayload(idx, p, state);
 }

@@ -135,5 +135,6 @@ export function createImgTagFix(api, { log = (...a) => console.log("[Dusk 이미
     start, set, setHint, setUnknown, onOutput, beforeRequest,
     isOn: () => on, isHintOn: () => hintOn, unknownMode: () => unknown, recent: () => [...recent],
     invalidate: () => { cache = null; keyMemo = null; },
+    assetIndex: async () => indexFor(await currentKey()),   // 지금 열린 봇·채팅의 에셋 색인(도구 탭 '에셋 태그 고치기'용)
   };
 }

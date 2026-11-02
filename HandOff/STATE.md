@@ -214,5 +214,12 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 
 #### 다음 작업 예정: 도구 탭 '에셋 태그 고치기' (보조모델, 수동)
 - 사용자 결정: 범위는 직접 고르기(최근 N개 응답) · 미리보기 후 적용(되돌리기 포함) · 보조모델은 상황 판단까지 · 평소엔 작동 안 함(버튼 누를 때만).
-- 열린 질문: 보조모델 호출 대상 — (가) 엔진이 못 고친 것만(그대로 둔 태그·default로 대체·삭제·3연속 반복) / (나) 고른 범위 전체 상황 판단 / (다) 박스에서 선택.
+- 결정: (다) 창에서 '엔진이 못 고친 것만 / 상황까지 전부' 선택. → 아래 '구현됨' 참고.
 - 설계 메모: ① 엔진(`fixImgTags`) 먼저 → 남은 것만 보조모델에 (태그 앞뒤 문단 + 현재 태그 + 그 캐릭터·옷의 실제 키워드 목록만 전송, 채팅 전체 X) ② 답한 태그는 에셋 색인으로 재검증, 없는 이름은 버림 ③ 저장된 채팅 메시지를 바꾸므로 미리보기·되돌리기 필수 ④ **장기기억 식별 주의**: `messageIdentity`가 본문 전체 해시라 태그만 바꿔도 다른 메시지로 인식 → 고친 메시지의 앵커(at·h·mid)를 새 해시로 옮기는 처리 필요(`memoryreconcile.js` 레거시 마이그레이션 방식 참고) ⑤ 모델은 기존 보조모델 선택(`modelhub.js`) 재사용.
+
+#### 구현됨: 도구 탭 '에셋 태그 고치기' (feat/1.8.2)
+- 엔진 `engine/assetfix.js`(순수): `scanReplies`(응답별 태그 분류 exact/case/fuzzy/merged/default/keep/template/unknown, unresolved=default·keep·repeat(3연속), 범위 앞 응답으로 직전 옷 기억) · `aiItems`(mode unresolved|all, 최신부터 MAX_ITEMS 80, 키워드 목록은 sets로 공유, 태그 앞 360·뒤 220자 문맥) · `aiMessages`(봇 규칙 botRules) · `parseAiReply`(그 항목의 실제 키워드만, 같으면 버림, notes) · `changeRows`(AI 제안이 엔진 결과보다 우선) · `applyRows`(고른 줄만, 혼자 있는 줄 삭제 정리) · `renameIds`(기억 폴더 식별자 문자열 교체). `imgtagfix.js`에 `tagSpans`·`renderTag`·`resolveTag` 추가, keep 결과에 char 포함.
+- 데이터 `data/assetfix.js`: `loadRange(api,n)`(마지막 n개 AI 응답 + 앞 3개), `applyFix`(다시 읽어 미리보기 뒤 바뀐 응답은 건너뜀, `setChatToIndex`, 기억 폴더가 있을 때만 `messageIdentity` 옛→새 교체, 되돌리기 기록 `dusk.assetfix.undo.v1`), `undoFix`(같은 채팅이 열려 있어야, chatId로 찾음, 그 뒤 바뀐 응답은 건너뜀), `lastUndo`. 에셋 색인은 `ctx.imgFix.assetIndex()`(교정 기능과 같은 캐시·모듈 묶음).
+- 화면 `ui/screens/assetfix.js` `openAssetFix(ctx, {runAI})`(모델 선택은 loredusk와 같은 목록, 설정 `dusk.assetfix.ui.v1`), `tools.js` 타일 `#rb-tool-assetfix`(동적 import).
+- 테스트: `tests/assetfix.test.js` 7, `tests/assetfix-data.test.js` 4, smoke '에셋 고치기' 5항목. `npm test` 632 pass / 0 fail, build·check 동일함, smoke 0 실패.
+- 확인 못 한 것: 실제 RisuAI·RisuBard·PocketRisu에서 `setChatToIndex`로 바꾼 응답이 화면에 바로 반영되는지(새로고침 필요할 수 있음), 실제 보조모델이 JSON 형식을 지키는지·판단 품질, 아주 긴 채팅에서 `getCharacterFromIndex` 지연. 저장된 채팅을 바꾸는 유일한 기능 — '원본 채팅 수정 안 함' 원칙의 예외(사용자 요청, 미리보기·되돌리기로 보완).

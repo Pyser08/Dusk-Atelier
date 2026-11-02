@@ -19,6 +19,8 @@ import { icon } from "../../src/ui/icons.js";
 import { createWebTools } from "../../src/data/webtools.js";
 import { createSkillStore, COCOA_LIB_KEY, COCOA_PRESETS_KEY } from "../../src/data/skillstore.js";
 import { openEmbedModal } from "../../src/ui/screens/memory/embedmodal.js";
+import { openAssetFix } from "../../src/ui/screens/assetfix.js";
+import { buildAssetIndex } from "../../src/engine/imgtagfix.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const $ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -244,6 +246,43 @@ window.runSmoke = async () => {
     check("임베딩 켜짐으로 저장", saved.at(-1)?.on === true, JSON.stringify(saved.at(-1)));
     await pm; host.remove();
   } catch (e) { check("임베딩 설정", false, e?.stack ?? e); }
+  try {   // 도구 탭 '에셋 태그 고치기': 검사 → 미리보기 → 적용 → 되돌리기
+    const st = new Map();
+    const chat = { id: "chatA", message: [
+      { role: "user", data: "안아 줘", chatId: "u1" },
+      { role: "char", data: '안았다.\n\n<img="kaguya.nude.Smiling">\n\n끝', chatId: "c1" },
+    ] };
+    const api = {
+      pluginStorage: { getItem: async (k) => st.get(k) ?? null, setItem: async (k, v) => { st.set(k, v); } },
+      getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0,
+      getCharacterFromIndex: async () => ({ chaId: "botA", chats: [chat] }),
+      getChatFromIndex: async () => JSON.parse(JSON.stringify(chat)),
+      setChatToIndex: async (ci, ti, c) => { chat.message = c.message; },
+    };
+    const idx = buildAssetIndex(["Kaguya.nude.default", "Kaguya.nude.smiling", "Kaguya.nude.hug"]);
+    const host = document.createElement("div"); document.body.appendChild(host);
+    const toasts = []; let aiCalls = 0;
+    const ctx = { api, win: host, toast: (t) => toasts.push(t), imgFix: { assetIndex: async () => idx }, memory: { store: null } };
+    // ① 엔진이 못 고친 것만: 이름만 틀렸으니 AI를 부르지 않는다
+    const p1 = openAssetFix(ctx, { runAI: async () => { aiCalls++; return "{}"; } });
+    await sleep(40);
+    clickText("검사 시작", host); await sleep(60);
+    check("에셋 고치기: AI 없이 엔진만", aiCalls === 0 && $("input[type=checkbox]", host).length === 1, host.textContent.slice(0, 200));
+    clickText("적용", host); await sleep(60); await p1;
+    check("에셋 고치기: 적용", chat.message[1].data.includes('<img="Kaguya.nude.smiling">'), chat.message[1].data);
+    // ② 상황까지 전부: AI가 hug로 바꾸자고 함 → 미리보기 → 적용 → 되돌리기
+    const p2 = openAssetFix(ctx, { runAI: async (a, msgs) => { aiCalls++; return '{"changes":[{"id":1,"kw":"hug","why":"안는 중"}]}'; } });
+    await sleep(40);
+    clickText("상황까지 전부", host); await sleep(10);
+    clickText("검사 시작", host); await sleep(80);
+    check("에셋 고치기: AI 제안 표시", aiCalls === 1 && host.textContent.includes("Kaguya.nude.hug") && host.textContent.includes("AI"), host.textContent.slice(0, 300));
+    clickText("적용", host); await sleep(60); await p2;
+    check("에셋 고치기: AI 제안 적용", chat.message[1].data.includes('<img="Kaguya.nude.hug">'), chat.message[1].data);
+    const p3 = openAssetFix(ctx); await sleep(40);
+    clickText("마지막 적용 되돌리기", host); await sleep(60);
+    check("에셋 고치기: 되돌리기", chat.message[1].data.includes('<img="Kaguya.nude.smiling">'), chat.message[1].data);
+    clickText("닫기", host); await p3; host.remove();
+  } catch (e) { check("에셋 태그 고치기", false, e?.stack ?? e); }
   check("전역 오류 없음", errors.length === 0, errors.join(" | "));
   return out;
 };

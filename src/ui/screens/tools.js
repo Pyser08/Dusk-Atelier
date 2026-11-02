@@ -123,7 +123,8 @@ export function renderTools(ctx) {
         { label: "백업 만들기", icon: "download", onClick: () => fullBackup(ctx) },
         { label: "백업에서 복원", icon: "upload", onClick: () => fullRestore(ctx) }
       ]), "rb-tool-backup"),
-      tile2("history", "기록·되돌리기", "봇·모듈 변경을 되돌려요", () => ctx.go("settings", "history"), "rb-tool-history")
+      tile2("history", "기록·되돌리기", "봇·모듈 변경을 되돌려요", () => ctx.go("settings", "history"), "rb-tool-history"),
+      tile2("image", "에셋 태그 고치기", "열린 채팅의 틀린 이미지 태그를 고쳐요", () => import("./assetfix.js").then((m) => m.openAssetFix(ctx)).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })), "rb-tool-assetfix")
     ),
     h("section", { class: "rb-thanks-sec" }, h("h2", { class: "rb-label" }, "도움 주신 분들"), thanksCard(), creditCards())
   );
