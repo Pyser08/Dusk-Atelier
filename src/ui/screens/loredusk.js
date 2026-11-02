@@ -19,7 +19,7 @@ export async function openLoreDusk(ctx, { list, reference = "" }) {
     let ctrl = null;
     const body = h("div", { style: "display:flex;flex-direction:column;gap:10px" });
     const instr = h("input", { class: "rb-input", placeholder: "예) 학원물이에요. 학생회·동아리를 소속으로 묶어 주세요 (선택)", "aria-label": "AI에게 추가로 알려줄 것" });
-    const optsAll = [...ais.ais.map((a) => ({ v: `pb:${a.id}`, label: a.id === "default" ? "리스 보조 모델 (기본)" : a.name, pick: a })), ...apis.map((p) => ({ v: `api:${p.id}`, label: `내 API · ${p.name}`, pick: { mode: "custom", presetId: p.id } }))];
+    const optsAll = [{ v: "main", label: "리스 메인 모델", pick: { mode: "model" } }, ...ais.ais.map((a) => ({ v: `pb:${a.id}`, label: a.id === "default" ? "리스 보조 모델 (기본)" : a.name, pick: a })), ...apis.map((p) => ({ v: `api:${p.id}`, label: `내 API · ${p.name}`, pick: { mode: "custom", presetId: p.id } }))];
     const sel = h("select", { class: "rb-input", "aria-label": "AI 모델", style: "max-width:260px" }, ...optsAll.map((o) => h("option", { value: o.v, selected: o.v === `pb:${ais.ai}` }, o.label)));
     const pick = () => (optsAll.find((o) => o.v === sel.value) ?? optsAll[0]).pick;
     const close = () => { ctrl?.abort(); done(null); };
