@@ -37,6 +37,9 @@ export function createImgTagFix(api, { log = (...a) => console.log("[Dusk 이미
     return loading;
   }
   async function indexNow() {
+    let cur = null;
+    try { cur = (await api.getCurrentCharacterIndex?.()) ?? null; } catch { cur = null; }
+    if (cache && cur !== cache.key) cache = null;   // 다른 봇으로 바뀌면 앞 봇의 목록을 쓰지 않는다
     if (!cache || now() - cache.at > TTL) {
       const wait = new Promise((r) => setTimeout(() => r("timeout"), WAIT));
       if ((await Promise.race([refresh(), wait])) === "timeout" && !cache) return null;
