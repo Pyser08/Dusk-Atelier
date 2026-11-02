@@ -183,8 +183,8 @@ async function drawCharacters(ctx) {
         h("div", { class: "ttl" }, h("span", { class: "name" }, c.name || "(이름 없음)"), c.type === "group" && badge("그룹", "mute"), c.streaming && badge("응답 생성 중", "warn")),
         h("span", { class: "meta" }, [c.creator && `제작자 ${c.creator}`, `로어 ${c.lore}`, `에셋 ${c.assets}`, `채팅 ${c.chats}`, sort?.key === "size" && fmtSize(c.size)].filter(Boolean).join(" · "))
       ),
-      ctx.isMobile() ? null : rowBtn("편집", "edit", () => openCharEditor(ctx, c.i, c.chaId)),
-      ctx.isMobile() ? null : rowBtn("AI로 만들기", "sparkle", () => openCharEditor(ctx, c.i, c.chaId, { startTab: "ai" })),
+      // 1.8.3(목업 4): 줄에는 '편집'과 ···만. AI로 다듬기·에셋·폴더 이동은 ··· 메뉴에.
+      rowBtn("편집", "edit", () => openCharEditor(ctx, c.i, c.chaId)),
       iconBtn("more", `${c.name} 메뉴`, { onClick: (ev) => {
         ev.stopPropagation();
         charMenu(ctx, c, ev.currentTarget);
@@ -288,30 +288,39 @@ async function drawCharacters(ctx) {
     }),
     h("span", { class: "rb-muted", style: "font-size:12px;white-space:nowrap" }, sort ? "폴더마다 따로 정렬해요 · 끌어서 순서 바꾸기는 원래대로에서" : "끌어서 정한 순서예요")
   ) : null;
-  const makeBtns = [
-    btn("가져오기", { size: "sm", icon: "upload", onClick: () => ctx.legacy.open() }),
-    btn("새 봇", { size: "sm", icon: "plus", onClick: async () => {
-      const name = await promptDialog(ctx.win, { title: "새 봇", label: "봇 이름", value: "새 봇" });
-      if (name?.trim()) createBotAndEdit(ctx, { name });
-    } }),
-    btn("AI로 봇 만들기", { size: "sm", kind: "primary", icon: "sparkle", onClick: () => createBotAndEdit(ctx, { tab: "ai" }) })
-  ];
-  // 모바일: 한 줄에 다 안 들어가서 만들기 버튼을 아래 줄로 (AI로 봇 만들기가 맨 앞)
-  const makeRow = ctx.isMobile() ? h("div", { class: "rb-chips", style: "flex-wrap:wrap;overflow:visible" }, makeBtns[2], makeBtns[1], makeBtns[0]) : null;
+  // 1.8.3(목업 4): 도구는 한 줄 — 정렬·폴더·개수(밖에 그대로) · 'AI로 봇 만들기' · '＋ 새 봇' · ···(선택·가져오기)
+  const aiBot = btn("AI로 봇 만들기", { size: "sm", kind: "primary", icon: "sparkle", onClick: () => createBotAndEdit(ctx, { tab: "ai" }) });
+  const newBot = btn("새 봇", { size: "sm", icon: "plus", onClick: async () => {
+    const name = await promptDialog(ctx.win, { title: "새 봇", label: "봇 이름", value: "새 봇" });
+    if (name?.trim()) createBotAndEdit(ctx, { name });
+  } });
+  const toolMore = iconBtn("more", "캐릭터 더 보기", { id: "rb-char-more", onClick: (ev) => openMenu(ctx.win, ev.currentTarget, [
+    filtering ? null : { label: mu.active ? "선택 끝" : "여러 개 선택하기", icon: "check", onClick: () => mu.setMode(!mu.active) },
+    { label: "가져오기", icon: "upload", onClick: () => ctx.legacy.open() }
+  ]) });
+  // '선택 끝'을 바로 누를 수 있게: 선택 중일 때만 버튼으로 보인다
+  const pickEnd = filtering ? null : btn("선택 끝", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => mu.setMode(false) });
+  if (pickEnd) pickEnd.hidden = !mu.active;
+  const makeRow = ctx.isMobile() ? h("div", { class: "rb-chips", style: "flex-wrap:nowrap;overflow:visible" }, aiBot, newBot, h("div", { class: "rb-spacer" }), toolMore) : null;
   replace(ctx.main, h(
     "div",
     { class: "rb-chips" },
     trayBtn("정렬", { icon: "preset", value: sortShort(sort), title: sortLabel(sort), open: !!st.charTray, active: !!sort, onClick: openTray }),
+    btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newCharFolder(ctx) }),
     h("span", { class: "rb-muted", style: "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto" }, `캐릭터 ${st.chars.length}명${list.length > 600 ? " · 앞쪽 600명만 표시 (검색으로 좁혀 보세요)" : ""}${st.charsUnloaded ? ` · 앱이 아직 불러오는 중인 봇 ${st.charsUnloaded}명은 빠져 있어요` : ""}`),
     st.charsUnloaded ? btn("새로 고침", { size: "sm", icon: "refresh", onClick: () => {
       st.charsDirty = true;
       renderCharacters(ctx);
     } }) : null,
     h("div", { class: "rb-spacer" }),
-    filtering ? null : btn(mu.active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => mu.setMode(!mu.active) }),
-    btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newCharFolder(ctx) }),
-    ...ctx.isMobile() ? [] : makeBtns
-  ), makeRow, sortTray, bar, box);
+    pickEnd,
+    ...ctx.isMobile() ? [] : [aiBot, newBot, toolMore]
+  ), makeRow, sortTray, bar, box, h("p", { class: "rb-muted rb-list-hint" }, "줄의 ··· 에서 ‘AI로 다듬기’·에셋 관리·폴더로 옮기기 등을 해요."));
+  // 지금 열린 채팅의 봇에 '지금 채팅' 라벨(늦게 와도 그 줄에만 붙인다)
+  ctx.memory?.switches?.currentChat?.().then((cur) => {
+    const row = cur && box.querySelector(`.rb-row[data-id="${CSS.escape(String(cur.chaId))}"] .ttl`);
+    if (row && !row.querySelector(".rb-curchat")) { const b = badge("지금 채팅", "ok"); b.classList.add("rb-curchat"); row.appendChild(b); }
+  }).catch(() => {});
   box.scrollTop = keep;
   st.justOpened = null;
   st.justMoved = null;
@@ -360,7 +369,7 @@ function paintBar2(ctx) {
   const mu = multiOf2(ctx), bar = mu.bar;
   if (!bar) return;
   const tb = ctx.main.querySelector("#rb-pick-toggle");
-  if (tb) tb.lastChild.textContent = mu.active ? "선택 끝" : "선택";
+  if (tb) tb.hidden = !mu.active;   // 1.8.3: '선택'은 ··· 메뉴로 옮겼고, 이 버튼은 선택 중에 '선택 끝'으로만 보인다
   bar.hidden = !mu.active;
   if (!mu.active) {
     bar.replaceChildren();
@@ -582,7 +591,7 @@ function charMenu(ctx, c, anchor) {
   const cur = folderOf(ctx.state.charOrder, c.chaId);
   openMenu(ctx.win, anchor, [
     { label: "편집", icon: "edit", onClick: () => openCharEditor(ctx, c.i, c.chaId).catch(err) },
-    { label: "AI로 만들기", icon: "sparkle", onClick: () => openCharEditor(ctx, c.i, c.chaId, { startTab: "ai" }).catch(err) },
+    { label: "AI로 다듬기", icon: "sparkle", onClick: () => openCharEditor(ctx, c.i, c.chaId, { startTab: "ai" }).catch(err) },
     { label: "에셋 관리", icon: "image", onClick: () => openCharAssets(ctx, c.i, c.chaId).catch(err) },
     "sep",
     { label: "폴더로 옮기기", icon: "folder", onClick: () => openMenu(ctx.win, anchor, [

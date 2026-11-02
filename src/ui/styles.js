@@ -1158,7 +1158,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mine{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .rb-mine-name{flex:1 1 120px;display:flex;align-items:center;gap:8px;min-height:36px;background:none;border:0;color:var(--rb-text);font-weight:600;font-size:14px;cursor:pointer;text-align:left;font-family:inherit}
 .rb-mine-name i{width:18px;height:18px;border-radius:50%;flex:none}
-.rb-linkbtn{border:0;background:none;color:var(--rb-mute);text-decoration:underline;font-size:12px;cursor:pointer;padding:2px 4px}
+.rb-textlink{border:0;background:none;color:var(--rb-mute);text-decoration:underline;font-size:12px;cursor:pointer;padding:2px 4px}
 /* 1.8.3 홈(목업 1): 상태 카드 + 숫자, 작은 바로가기 4칸, 이어서 하기 칩, 최근 기록·빠른 설정 */
 .rb-home3 .rb-hstats{padding:14px 16px;gap:12px}
 .rb-home3 .rb-hstats .rb-status{border:0;padding:0;background:none;min-height:0;box-shadow:none}
@@ -1270,4 +1270,14 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-cards3-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important}
 @media (max-width:560px){.rb-cards3-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 .rb-cards3-new{justify-content:center;border-style:dashed!important;color:var(--rb-sub)}
+.rb-list-hint{margin:6px 22px 14px;font-size:12.5px}
+@media (max-width:760px){.rb-list-hint{margin:6px 16px 14px}}
+/* 1.8.3 모듈(목업 4) */
+.rb-linkrow{margin-top:4px}
+.rb-btn.rb-linkchip{height:24px;padding:0 8px;font-size:12px;border-radius:999px;gap:4px;background:var(--rb-surf2);border-color:transparent;color:var(--rb-sub)}
+.rb-btn.rb-linkchip svg{width:12px;height:12px}
+#rb-mod-kind[aria-pressed=true]{border-color:var(--rb-sel-ring);background:var(--rb-acc-soft);color:var(--rb-text);font-weight:700}
+@media (max-width:760px){.rb-modacts{justify-content:flex-start!important;min-width:0}.rb-btn.rb-linkchip{height:26px!important;min-height:26px!important;padding:0 8px!important}}
+.rb-plug-group>summary{list-style:none;cursor:pointer;margin:0 0 6px}.rb-plug-group>summary::-webkit-details-marker{display:none}
+.rb-plug-group:not([open])>summary svg{transform:rotate(-90deg)}
 `+PROB_CSS;

@@ -16,6 +16,8 @@ import { addProjects, findProject } from './dev.js';
 import { moduleLinks, openModuleLinks } from './modlinks.js';
 
 var FILTERS = [["all", "전체"], ["on", "켜짐"], ["off", "꺼짐"], ["global", "전역"], ["lla", "LLA"], ["mcp", "MCP"]];
+// 1.8.3(목업 4): 칩은 전체·켜짐·꺼짐만, 전역·LLA·MCP는 '종류' 한 칸으로
+var KIND_FILTERS = FILTERS.slice(3);
 function searchText(m) {
   const parts = [m.name, m.namespace, m.description];
   for (const l of m.lorebook ?? []) parts.push(l?.comment, l?.key, l?.secondkey);
@@ -74,27 +76,39 @@ function draw(ctx) {
   if (!st.modSel || !entries.some((e) => e.module.id === st.modSel)) st.modSel = shown[0]?.module.id ?? null;
   const sort = ctx.prefs.ui?.modSort ?? null;
   st.modSorted = !!sort;
+  const kindOn = KIND_FILTERS.find(([id]) => id === st.modFilter);
+  const kindBtn = btn(kindOn ? `종류: ${kindOn[1]} · ${count(kindOn[0])}` : "종류", { size: "sm", icon: "down", id: "rb-mod-kind", onClick: (ev) => openMenu(ctx.win, ev.currentTarget, [
+    ...KIND_FILTERS.map(([id, label]) => ({ label: `${st.modFilter === id ? "✓ " : ""}${label} (${count(id)})`, onClick: () => { st.modFilter = id; draw(ctx); } })),
+    kindOn ? "sep" : null,
+    kindOn ? { label: "모든 종류", icon: "x", onClick: () => { st.modFilter = "all"; draw(ctx); } } : null
+  ]) });
+  if (kindOn) kindBtn.setAttribute("aria-pressed", "true");
   const filterChips = h(
     "div",
     { class: "rb-chips", role: "toolbar", "aria-label": "필터" },
-    FILTERS.map(([id, label]) => chip(label, { pressed: st.modFilter === id, count: count(id), onClick: () => {
+    FILTERS.slice(0, 3).map(([id, label]) => chip(label, { pressed: st.modFilter === id, count: count(id), onClick: () => {
       st.modFilter = id;
       draw(ctx);
     } })),
-    trayBtn("정렬", { icon: "preset", value: sortShort(sort), title: sortLabel(sort), open: !!st.modTray, active: !!sort, onClick: () => {
-      st.modTray = !st.modTray;
-      draw(ctx);
-    } })
+    kindBtn
   );
+  const pickEnd = filtering ? null : btn("선택 끝", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => multiOf(ctx).setMode(false) });
+  if (pickEnd) pickEnd.hidden = !multiOf(ctx).active;
   const modActs = h(
     "div",
     { class: "rb-modacts", role: "toolbar", "aria-label": "모듈 동작" },
-    filtering ? null : btn(multiOf(ctx).active ? "선택 끝" : "선택", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => {
-      const mu2 = multiOf(ctx);
-      mu2.setMode(!mu2.active);
+    trayBtn("정렬", { icon: "preset", value: sortShort(sort), title: sortLabel(sort), open: !!st.modTray, active: !!sort, onClick: () => {
+      st.modTray = !st.modTray;
+      draw(ctx);
     } }),
     btn("폴더", { size: "sm", icon: "folderPlus", onClick: () => newFolder(ctx) }),
-    btn("새 모듈", { size: "sm", kind: "primary", icon: "plus", onClick: () => newModule(ctx) })
+    h("span", { class: "rb-muted", style: "white-space:nowrap;font-size:12.5px" }, `모듈 ${entries.length}개`),
+    h("div", { class: "rb-spacer" }),
+    pickEnd,
+    btn("새 모듈", { size: "sm", kind: "primary", icon: "plus", onClick: () => newModule(ctx) }),
+    iconBtn("more", "모듈 더 보기", { id: "rb-mod-more", onClick: (ev) => openMenu(ctx.win, ev.currentTarget, [
+      filtering ? null : { label: multiOf(ctx).active ? "선택 끝" : "여러 개 선택하기", icon: "check", onClick: () => { const mu2 = multiOf(ctx); mu2.setMode(!mu2.active); } }
+    ]) })
   );
   const toolbar = h("div", { class: "rb-modbar" }, filterChips, modActs);
   const sortTray = st.modTray ? tray(
@@ -190,7 +204,7 @@ function paintBar(ctx) {
   const mu = multiOf(ctx), bar = mu.bar;
   if (!bar) return;
   const tb = ctx.main.querySelector("#rb-pick-toggle");
-  if (tb) tb.lastChild.textContent = mu.active ? "선택 끝" : "선택";
+  if (tb) tb.hidden = !mu.active;   // 1.8.3: 선택은 ··· 메뉴로 옮기고, 이 버튼은 선택 중에만 보인다
   bar.hidden = !mu.active;
   if (!mu.active) {
     bar.replaceChildren();
@@ -275,11 +289,11 @@ function row(ctx, e, filtering) {
         !e.enabled && badge("꺼짐", "mute")
       ),
       h("span", { class: "meta" }, meta),
-      ctx.isMobile() ? h("div", { style: "margin-top:6px" }, linkBtn(ctx, e)) : null
+      // '연결 N'은 이름 아래 작은 칩(누르면 연결 창) — 1.8.3(목업 4)
+      h("div", { class: "rb-linkrow" }, linkBtn(ctx, e))
     ),
     sw,
-    ctx.isMobile() ? null : linkBtn(ctx, e),
-    ctx.isMobile() ? null : rowEdit(ctx, m),
+    rowEdit(ctx, m),
     iconBtn("more", `${m.name} 메뉴`, { onClick: (ev) => {
       ev.stopPropagation();
       moduleMenu(ctx, e, ev.currentTarget);
@@ -317,7 +331,7 @@ function linkBtn(ctx, e) {
     ev.stopPropagation();
     openModuleLinks(ctx, e, ev.currentTarget, { refresh: () => reload(ctx) });
   } });
-  b.classList.add("rb-linkbtn");
+  b.classList.add("rb-linkbtn", "rb-linkchip");
   b.dataset.mid = e.module.id;
   return b;
 }

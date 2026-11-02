@@ -202,7 +202,7 @@ export async function renderHome(ctx) {
   const recent = h(
     "aside",
     { class: "rb-hrecent", "aria-label": "최근 기록" },
-    h("div", { class: "rb-hrec-head" }, h("h2", null, "최근 기록"), rec.length ? h("button", { type: "button", class: "rb-linkbtn", id: "rb-home-recall", onClick: () => openWiki("") }, "전체 보기") : null),
+    h("div", { class: "rb-hrec-head" }, h("h2", null, "최근 기록"), rec.length ? h("button", { type: "button", class: "rb-textlink", id: "rb-home-recall", onClick: () => openWiki("") }, "전체 보기") : null),
     rec.length ? h("div", { class: "rb-card bordered" }, ...rec.map((r) => h("div", { class: "rb-kv rb-hrec" }, h("span", null, h("b", null, r.who ?? ""), " ", h("span", { class: "rb-muted" }, r.act ?? "")), h("small", { class: "rb-muted" }, hhmm(r.ms))))) : h("div", { class: "rb-muted rb-hrec-empty" }, "아직 쌓인 기록이 없어요."),
     h("h2", null, "빠른 설정"),
     storyHelper

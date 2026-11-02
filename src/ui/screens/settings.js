@@ -59,7 +59,7 @@ export function renderSettings(ctx) {
     const code = h("small");
     input.addEventListener("input", () => update({ [key]: input.value, ...key === "a" || key === "b" ? { preset: "custom", grad: "" } : {} }));
     const kids = [input, h("span", null, label), code];
-    if (optional) kids.push(h("button", { type: "button", class: "rb-linkbtn", "aria-label": `${label} 자동으로`, onClick: (e) => { e.preventDefault(); update({ [key]: "" }); } }, "자동"));
+    if (optional) kids.push(h("button", { type: "button", class: "rb-textlink", "aria-label": `${label} 자동으로`, onClick: (e) => { e.preventDefault(); update({ [key]: "" }); } }, "자동"));
     const el = h("label", { class: "rb-color" }, ...kids);
     el.sync = () => {
       const eff = optional ? (theme[key] || themeVars(theme, ctx.state.mode).vars[varName] || "#000000") : theme[key];
