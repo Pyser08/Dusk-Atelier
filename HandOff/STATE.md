@@ -406,3 +406,9 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 마스코트 '루네'(사용자 지정 이름, 사용자가 준 캐릭터 시트 그림): 넣을 곳 = 시작 안내 환영 화면 · 빈 화면 안내 · 창 왼쪽 위 로고. 사용자 결정: 목업 먼저 보고 결정 → 목업 완료·확인 대기(실제 앱에 얹어 찍은 '지금/개편안' PC·모바일, 사진이 커서 저장소엔 안 넣음). 쓸 그림: 시트에서 자른 표정 4(기본·웃음·놀람·부끄러움)·SD 루네·고양이 정령(배경 투명)·로고 2(고양이/얼굴), webp로 합계 약 40KB. 구현 시: `ui/mascot.js`에 data URL로 넣고 `.rb-logo`(app.js 132줄)·시작 안내 0단계 `.rb-onb-logo`(onboarding.js 251줄)·kit `emptyState`의 `.ico`를 바꿈. 확인할 것: 말풍선 문구, 빈 화면 표정(같게/상황별), 로고(고양이/얼굴).
 - (2026-11-03) **루네 구현 완료**: 사용자가 GPT로 새로 뽑은 시트 2장(표정·SD 16칸, 로고·아이콘 9칸) 사용. 결정: 로고 = 로고 시트 1번(얼굴 타일), 빈 화면 = 상황별, 환영 말풍선 그대로. `ui/mascot-data.js`(자동 생성 webp data URL, 얼굴 8·wave·logo 약 110KB) · `ui/mascot.js`(`moodFor` 제목으로 표정: 채팅 없음=surprised, 쓸 수 없음/준비 안 됨=sorry, 기억하는 인물=thinking, 그 밖=basic, `mood`로 직접 지정) · kit `emptyState` 아이콘 → 루네 얼굴 · app.js 로고 → `runeLogo()` · 시작 안내 0단계 SD 손 흔들기+말풍선, 6단계(끝) 머리에 윙크. 시험 `tests/mascot.test.js`. 원본 시트는 저장소에 없음(필요하면 사용자에게 다시 받기).
 - (2026-11-03) 루네 추가 자리(사용자 요청 '더 넣어 줘'): 새로 바뀐 점 창 머리 `runeSd("cheer")`(whatsnew.js) · 도구 스페셜 땡스 머리 `runeSd("bow")`(tools.js) · 화면 열기 실패 → `emptyState({mood:"sorry"})`(app.js). mascot-data에 cheer·bow 추가(약 37KB). 확인 못 함: 변경 기록 창 실제 모습(시험 환경에서 버튼 클릭 실패, 빌드·시험은 통과).
+
+## 2026-11-03 아카 글 v1.8.3 디자인 '1+7' 합본 (사용자 요청, 확인 대기)
+- 지난 챗의 시안 6종+7번(1+6)은 세션 파일이 없어 사라짐 → 현재 `docs/arca/v1.8.3.html`을 변환해 새로 만듦: `docs/arca/drafts/v1.8.3-design-1plus7.html`(그림 자리 `{{IMG:이름}}`, 최종 글 아님·`v1.8.3.html`은 안 바꿈). 1번(별빛 클래식 카드·요약·접이식 항목) + 7번(금색 가는 테두리·선·세리프 제목·로마숫자 CHAPTER·LD 머리·땡스 카드 통일). 기능별 4색 → 금/라벤더 2색.
+- 그림 자리: banner·ld·icon·spot-story·spot-memory·spot-screen·spot-cache·sd-wave·sd-bow·sd-cheer. 사용자가 아카에 올린 주소를 받으면 이 자리를 바꿔 `docs/arca/v1.8.3.html`로 반영.
+- 확인: 아카 제약(style·class·script·overflow:hidden) 0건, 360/800px 가로 넘침 없음. 실제 아카 에디터 붙여넣기는 미확인.
+
