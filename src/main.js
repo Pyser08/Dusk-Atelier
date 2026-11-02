@@ -17,6 +17,7 @@ import { createLoreLog } from './data/lorelog.js';
 import { createMemory } from './data/memory.js';
 import { createStoryTime } from './data/storytime.js';
 import { createFairPlay } from './data/fairplay.js';
+import { createImgTagFix } from './data/imgtagfix.js';
 import { createAffHud } from './data/affhud.js';
 import POT_PROMPTS from './data/pot/prompts.json';
 import './data/modelhub.js';
@@ -77,6 +78,8 @@ async function start() {
   storyTime.start().catch((e) => console.log(`[${TITLE}] 이야기 시간 시작 실패: ${e?.message ?? e}`));
   const fairPlay = createFairPlay(api);
   fairPlay.start().catch((e) => console.log(`[${TITLE}] 공정한 전개 시작 실패: ${e?.message ?? e}`));
+  const imgFix = createImgTagFix(api);
+  imgFix.start().catch((e) => console.log(`[${TITLE}] 이미지 태그 교정 시작 실패: ${e?.message ?? e}`));
   const memory = createMemory(api, { storyNow: (c, t) => storyTime.current(c, t), notify: (t) => memoryRef.toast?.(t), potLibrary: POT_PROMPTS, onOpen: () => memoryRef.open?.() });
   const affhud = createAffHud(api, { store: memory.store, link: memory.link });
   affhud.start().catch((e) => console.log(`[${TITLE}] 호감도 HUD 시작 실패: ${e?.message ?? e}`));
@@ -193,6 +196,7 @@ async function start() {
   app.ctx.web = web;
   app.ctx.storyTime = storyTime;
   app.ctx.fairPlay = fairPlay;
+  app.ctx.imgFix = imgFix;
   app.ctx.affhud = affhud;
   memoryRef.toast = (t) => app.ctx.toast(t, { seconds: 8 });
   refreshPersonaHandlers().catch(() => {
