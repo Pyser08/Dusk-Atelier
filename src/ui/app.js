@@ -1,6 +1,7 @@
 import { dbRead } from '../data/dbcache.js';
 import { applyDroppedPatch } from './screens/patchui.js';
 import { maybeShowTour } from './tour.js';
+import { maybeOnboarding, openOnboarding } from './onboarding.js';
 import { runScreenTour } from './screentours.js';
 import { installTooltips } from './tooltip.js';
 import { maybeShowWhatsNew, openChangelog, CHANGELOG } from './whatsnew.js';
@@ -458,7 +459,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     render();
     // 처음 둘러보기: 처음 설치한 사람, 그리고 둘러보기가 새로 바뀐 버전(TOUR_VER)으로 업데이트한 사람에게 한 번 띄운다
     // BardWiki 선택은 기억 탭에 들어갈 때 안내한다.
-    maybeShowWhatsNew(ctx).then(() => maybeShowTour(ctx)).catch(() => {
+    // 1.8.3: 시작 안내가 먼저(이 버전을 처음 열 때 모두에게 한 번). 끝내면 처음 둘러보기는 본 것으로 친다.
+    maybeOnboarding(ctx).catch(() => {}).then(() => maybeShowWhatsNew(ctx)).then(() => maybeShowTour(ctx)).catch(() => {
     });
     checkWorkshopReturn(ctx).catch((e) => console.log("[Dusk Atelier] 봇빌더 결과 확인 실패", e?.message ?? e));
     checkUpdate().catch(() => {
@@ -509,6 +511,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     refreshTabs: () => refreshTabs(),
     setUiMode,
     setLayout,
+    openOnboarding: (opts) => openOnboarding(ctx, opts),
     setNavCount(tab, n) {
       for (const links of [navLinks, topLinks]) {
         const s = links.get(tab)?.querySelector("small");

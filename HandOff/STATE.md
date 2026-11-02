@@ -336,3 +336,14 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - (2026-11-02, 사용자 지시) 시작 안내 임베딩: **기존 기본값을 미리 채움**(`engine/embed.js` DEFAULT_EMBED — 주소 `https://api.voyageai.com/v1/embeddings`, 모델 `voyage-4-large`, 스위치 꺼짐). 키만 넣으면 켤 수 있게. 기존 사용자는 저장된 값이 있으면 그 값을 보여 줌.
 - (2026-11-02, 구현 1차 완료·푸시) **공용 부품 + 꾸미기**: `ui/themekit.js`(카탈로그: 테마 묶음 12·강조 색 18·그라데이션 8·글꼴 5 등) · `ui/theme.js` 확장(새 필드 기본값=예전 모습, 예전 저장 호환, `applySet/randomSet/themeCode/parseThemeCode/pickLook`, 묶음·직접 색 대비 자동 맞춤, 밝기 'time') · `ui/lookparts.js`(꾸미기·시작 안내가 같이 쓸 선택 부품; `lookParts({get,set})`) · `ui/screens/settings.js` 꾸미기 재작성(PC 2열+미리보기 고정, 내 테마, 코드) · `styles.js` 끝에 새 토큰 CSS · `app.js applyTheme`에 rb-glass/rb-calm. 시험: `tests/theme-v2.test.js`, `tests/e2e/run-look.mjs`(PC·모바일 34항목).
 - **남은 구현(순서)**: 홈·기억 개요(목업 1) → 장기 기억(3) → 코코아·기억 카드(2, '1. 1. 인물' 번호 버그) → 관리(4) → 작업실: AI봇·페르소나·도구·설정(5) → 시작 안내(6; 꾸미기 부품 `lookParts` 재사용, `ui/tour.js` 등 자동 안내 5개 정리). 참고: 모바일 아래 탭은 이미 홈·기억·관리·작업실 4칸. 원격에 `build: dusk_atelier.js` 자동 커밋이 올라오니 push 전 `git pull --rebase`(충돌 나면 `npm run build`로 재생성). `tests/e2e/run-app.mjs`는 앞부분이 옛 구조라 '사이드바 순서'에서 막힘(기존 실패).
+- (2026-11-02, **구현 완료** · 목업 1~6 전부) 커밋으로 나눠 푸시함. 파일별 요지:
+  - 홈 `screens/home.js`(상태 카드+숫자 `rb-hnums`, 작은 바로가기 `rb-hdo-sm`, 이어서 하기 `rb-hcont`) · 개요 `screens/sectionhome.js`(목록 행 `rb-hubrow`+개수, 작업실 큰 카드 2, `app.js`가 개요에서 `rb-on-hub`로 칩 줄 숨김).
+  - 장기 기억 `memory/mhome.js`(상태 카드 `rb-mem-statuscard`, 바로가기 4, 고급은 `madv.js advancedGroups()` → 접은 묶음 `rb-mem-grp`; PC 고급은 기억 방식 오른쪽 맨 위) · `mdetail.js`(한 구역씩, 칩 개수, PC 왼쪽 목록) · `ledger.js`/`scenes.js` 빈 구역 한 줄 · `mbots.js` 요약.
+  - 코코아 `memory/skills.js`(한 목록···· 메뉴·고급 묶음) · `cocoa.js`+`skillchat.js`(noFab, 목록 머리 'AI로 만들기'). 기억 카드 `cards/index.js`(한 줄 카드·봇/채팅 고르기 창·segmented) · `memory/compose.js`(동그라미 단계·오른쪽 이전/다음·PC 미리 보기) · `memory/cards.js`.
+  - 관리 `characters.js`·`modules.js`·`plugins.js`(도구 한 줄+···, 편집+···, 지금 채팅 라벨, 종류 필터, 연결 칩).
+  - 작업실 `settings.js`(꾸미기)·`tools.js`(목록 2묶음·도움 주신 분들)·`settingstab.js`(묶음+현재 값 `valRow`)·`aitab.js`(단계 카드·시작하기 상자)·`personabuilder.js`(접기·2열).
+  - 시작 안내 `ui/onboarding.js`(`maybeOnboarding`/`openOnboarding`, `ONBOARD_VER=1`, 끝/나중에 → onboardDone·tourDone·promptIntroDone + 임베딩·AI 제작 안내 키 저장). `app.js` 열 때 시작 안내 → 새로 바뀐 점 → 둘러보기 순. 설정 → 도움말 '시작 안내 다시 보기'(`ctx.openOnboarding`). 기억 처음 설정 저장은 `memory/setup.js applyMemorySetup/readMemorySetup`로 나눠 같이 씀.
+  - 공용: `ui/themekit.js`·`theme.js`·`lookparts.js`, CSS는 `styles.js` 끝부분 '1.8.3' 블록들. 아이콘 `message-circle`·`arrow-up` 추가(`tests/icons-used.test.js`가 없는 아이콘 이름을 잡음).
+  - 시험: `tests/e2e/run-hubs·run-cards·run-manage·run-work·run-onboard·run-look.mjs` 새로. `app.entry.js` bootApp은 시작 안내를 기본 '본 것'으로(시험할 때 `opts.onboard`), 스킬 저장소(`opts.skills`로 세트 3개). `run-memed`는 새 메뉴 구조로 고쳐 통과(32/32). `run-app.mjs`는 앞부분 옛 구조라 여전히 '사이드바 순서'에서 멈춤(기존).
+  - 확인 못 함: 실제 RisuAI·RisuBard·PocketRisu 화면, 기기 글꼴 차이, 시작 안내의 '내 API'·임베딩 연결 테스트 실제 호출.
+- 다음 할 일 후보: `run-app.mjs` 새 메뉴 구조로 정리 · 버전 올리기/릴리스(사용자 지시 때) · 실제 환경 확인 뒤 다듬기.

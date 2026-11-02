@@ -102,5 +102,5 @@ export function lookParts({ get, set }) {
     motion.querySelector("[role=switch]")?.setAttribute("aria-checked", t.motion === "reduce" ? "true" : "false");
     modeNote.textContent = modeNotes[t.mode] ?? "";
   }
-  return { sets, accents, grads, modeSeg, modeNote, sizeSeg, shape, paint, field };
+  return { sets, accents, grads, dirSeg, modeSeg, modeNote, sizeSeg, shape, paint, field };
 }

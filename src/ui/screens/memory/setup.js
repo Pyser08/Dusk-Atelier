@@ -10,6 +10,35 @@ import { addPreset, updatePreset, presetOf } from "../../../engine/modelcfg.js";
 const PROVIDERS = [["openai", "OpenAI"], ["claude", "Claude"], ["google", "Google"], ["deepseek", "DeepSeek"], ["openrouter", "OpenRouter"], ["ollama", "Ollama"], ["custom", "직접 입력(OpenAI 호환)"]];
 const NEEDS_URL = new Set(["ollama", "custom"]);
 
+export { PROVIDERS, NEEDS_URL };
+// 기억 처음 설정의 저장 부분(이 창과 1.8.3 시작 안내가 같이 쓴다): 기록할 AI · 추적 수준 · 기억 흐름 켜기
+export async function applyMemorySetup(ctx, { kind, provider, model, baseUrl, key, level, mode }) {
+  const M = ctx.memory, st = await M.flow.settings();
+  let c = await getCfg(ctx.api);
+  if (kind === "api") {
+    if (!String(model ?? "").trim()) throw new Error("모델 이름을 적어 주세요.");
+    const over = { provider, model: model.trim(), baseUrl: NEEDS_URL.has(provider) ? String(baseUrl ?? "").trim() : "" };
+    let id = c.easy.presetId;
+    if (id && presetOf(c, id)) c = updatePreset(c, id, { ...presetOf(c, id), ...over });
+    else { const r = addPreset(c, "내 API", over.model, over); c = r.cfg; id = r.id; }
+    if (String(key ?? "").trim()) await (await keyStore(ctx.api)).set(provider, key.trim());
+    c = { ...c, easy: { kind: "api", presetId: id } };
+  } else c = { ...c, easy: { kind: "risuai", presetId: "" } };
+  await saveCfg(ctx.api, c);
+  st.update((x) => { x.features = applyLevel(x.features, level); });
+  await M.store.updateIndex((i) => { i.settings.flow = { ...(i.settings.flow ?? {}), on: true, mode: mode ?? i.settings.flow?.mode ?? "fast", setupDone: true }; });
+  const ok = await M.flow.apply();
+  if (!ok) throw new Error("기억을 켜지 못했어요. 리스를 다시 불러온 뒤 다시 해 주세요.");
+}
+// 지금 저장된 값(시작 안내가 미리 골라 두는 용도)
+export async function readMemorySetup(ctx) {
+  const M = ctx.memory, st = await M.flow.settings(), cfg0 = await getCfg(ctx.api);
+  const cur = cfg0.easy.kind === "api" ? presetOf(cfg0, cfg0.easy.presetId) : null;
+  let level = levelOf(firstRunFeatures(st.rawSnapshot().features));
+  if (level === "custom") level = "basic";
+  return { kind: cfg0.easy.kind === "api" ? "api" : "risuai", provider: cur?.provider ?? "openai", model: cur?.model ?? "", baseUrl: cur?.baseUrl ?? "", key: "", level };
+}
+
 export async function openSetup(ctx) {
   const M = ctx.memory, st = await M.flow.settings(), idx = await M.store.getIndex(), cfg0 = await getCfg(ctx.api);
   const db = await ctx.api.getDatabase(["plugins"]).catch(() => null);
@@ -24,21 +53,7 @@ export async function openSetup(ctx) {
     const box = h("div", { class: "rb-dialog rb-wiz", role: "dialog", "aria-modal": "true", "aria-label": "기억 처음 설정" }, dots, body);
     const finish = async () => {
       try {
-        let c = await getCfg(ctx.api);
-        if (s.kind === "api") {
-          if (!f.model.trim()) throw new Error("모델 이름을 적어 주세요.");
-          const over = { provider: f.provider, model: f.model.trim(), baseUrl: NEEDS_URL.has(f.provider) ? f.baseUrl.trim() : "" };
-          let id = c.easy.presetId;
-          if (id && presetOf(c, id)) c = updatePreset(c, id, { ...presetOf(c, id), ...over });
-          else { const r = addPreset(c, "내 API", over.model, over); c = r.cfg; id = r.id; }
-          if (f.key.trim()) await keys.set(f.provider, f.key.trim());
-          c = { ...c, easy: { kind: "api", presetId: id } };
-        } else c = { ...c, easy: { kind: "risuai", presetId: "" } };
-        await saveCfg(ctx.api, c);
-        st.update((x) => { x.features = applyLevel(x.features, s.level); });
-        await M.store.updateIndex((i) => { i.settings.flow = { ...(i.settings.flow ?? {}), on: true, mode: s.mode, setupDone: true }; });
-        const ok = await M.flow.apply();
-        if (!ok) throw new Error("기억을 켜지 못했어요. 리스를 다시 불러온 뒤 다시 해 주세요.");
+        await applyMemorySetup(ctx, { kind: s.kind, ...f, level: s.level, mode: s.mode });
         ctx.toast("기억을 켰어요. 다음 응답부터 기록돼요.");
         done(true);
       } catch (e) { fail(ctx)(e); }

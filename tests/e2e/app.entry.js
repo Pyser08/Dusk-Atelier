@@ -47,6 +47,8 @@ export function fakeApi(seed = {}, story = false, mods = false) {
   };
 }
 window.bootApp = async (seed, opts = {}) => {
+  // 1.8.3 시작 안내는 기본으로 '본 것'으로 시작한다(안내 자체를 시험할 때만 opts.onboard)
+  if (!opts.onboard) { const ui = JSON.parse(seed["rbm:ui:v1"] ?? "{}"); ui.onboardDone ??= true; ui.onboardVer ??= 99; seed = { ...seed, "rbm:ui:v1": JSON.stringify(ui) }; }
   const api = fakeApi(seed, !!opts.story, !!opts.mods);
   delete api.store.__bard;
   const errors = (window.__errors = []);

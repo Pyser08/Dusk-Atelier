@@ -1324,4 +1324,43 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 }
 /* 모바일: 떠 있는 'AI 대화' 버튼이 아래 탭바(68px)를 가리지 않게 위로 올린다 */
 @media (max-width:760px){.rb-pb-chat-fab{bottom:82px!important}.rb-pb-chat{bottom:136px!important;height:min(64%,560px)!important}}
+/* 1.8.3 시작 안내(목업 6): 플러그인 창을 꽉 채운다 */
+.rb-onb{position:absolute;inset:0;z-index:300;background:var(--rb-win);background-image:var(--rb-win-grad,none);display:flex;flex-direction:column;border-radius:inherit;overflow:hidden}
+.rb-onb-top{display:flex;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid var(--rb-line2);flex:none}
+.rb-onb-top .brand{flex:1;font-size:14px}.rb-onb-top .count{font-size:12.5px;color:var(--rb-sub);font-variant-numeric:tabular-nums}
+.rb-onb-welcome{display:flex;flex-direction:column;height:100%}
+.rb-onb-welcome .rb-onb-top{border-bottom:0;justify-content:flex-end}
+.rb-onb-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;text-align:center;max-width:520px;margin:0 auto}
+.rb-onb-hero h2{margin:0;font-size:22px}.rb-onb-hero p{margin:0;color:var(--rb-sub);line-height:1.6}
+.rb-onb-logo{width:60px;height:60px;border-radius:18px;display:grid;place-items:center;background:var(--rb-acc-grad);color:var(--rb-on-acc)}
+.rb-onb-feats{display:flex;flex-direction:column;gap:8px;width:100%;text-align:left}
+.rb-onb-feats>div{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--rb-r3);background:var(--rb-surf);border:1px solid var(--rb-line2)}
+.rb-onb-feats>div>svg{color:var(--rb-acc-text);flex:none}.rb-onb-feats span{display:flex;flex-direction:column;gap:2px}.rb-onb-feats small{color:var(--rb-sub);font-size:12.5px}
+.rb-onb-hero>.rb-btn{min-height:48px;width:100%;justify-content:center;font-size:15px}
+.rb-onb-frame{display:flex;flex-direction:column;height:100%;min-height:0}
+.rb-onb-main{flex:1;min-height:0;display:flex}
+.rb-onb-steps{display:none;list-style:none;margin:0;padding:16px 10px;flex-direction:column;gap:4px;width:200px;border-right:1px solid var(--rb-line2);flex:none}
+.rb-onb-steps button{display:flex;align-items:center;gap:10px;width:100%;height:42px;padding:0 12px;border:0;border-radius:var(--rb-r2);background:none;color:var(--rb-sub);cursor:pointer;font-family:inherit;font-size:14px;text-align:left}
+.rb-onb-steps i{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--rb-line3);font-style:normal;font-size:12px;font-weight:700}
+.rb-onb-steps li.done i{background:var(--rb-acc-soft);border-color:var(--rb-acc-a);color:var(--rb-acc-text)}
+.rb-onb-steps li.on button{background:var(--rb-surf);color:var(--rb-text);font-weight:700;box-shadow:var(--rb-shadow-card)}
+.rb-onb-steps li.on i{background:var(--rb-acc-a);border-color:var(--rb-acc-a);color:var(--rb-on-acc)}
+.rb-onb-center{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;padding:18px 18px 0;overflow:auto}
+.rb-onb-side{width:340px;flex:none;display:flex;flex-direction:column;gap:12px;padding:18px;border-left:1px solid var(--rb-line2);overflow:auto}
+.rb-onb-head .kicker{font-size:12px;font-weight:700;color:var(--rb-acc-text)}.rb-onb-head h2{margin:4px 0 4px;font-size:20px}.rb-onb-head p{margin:0;color:var(--rb-sub);font-size:13.5px;line-height:1.6}
+.rb-onb-sec{padding-bottom:12px!important}.rb-onb-sec .rb-lfield,.rb-onb-sec>.rb-seg{margin-top:6px}
+.rb-onb-field{flex-direction:column!important;align-items:stretch!important;gap:4px!important}
+.rb-onb-row{display:flex;gap:8px;margin-top:6px}
+.rb-onb-nav{position:sticky;bottom:0;display:flex;justify-content:space-between;gap:10px;padding:12px 0 16px;margin-top:auto;background:linear-gradient(transparent,var(--rb-win) 30%)}
+.rb-onb-nav .rb-btn{min-width:110px;justify-content:center}
+.rb-onb-found{display:flex;align-items:center;gap:12px;padding:6px 0}.rb-onb-found .t{flex:1;display:flex;flex-direction:column;gap:2px}.rb-onb-found small{color:var(--rb-sub);font-size:12.5px}
+.rb-onb-found.warn b{color:var(--rb-warn)}
+.rb-onb-sum .rb-btn{flex:none}
+.rb-onb-tip{display:flex;gap:10px;padding:12px 14px;border-radius:var(--rb-r3);background:var(--rb-acc-soft);color:var(--rb-text)}.rb-onb-tip div{display:flex;flex-direction:column;gap:2px}.rb-onb-tip small{color:var(--rb-sub);line-height:1.5}
+.rb-onb-sethead{display:flex;align-items:center;justify-content:space-between}
+@media (min-width:1000px){.rb-onb-steps{display:flex}.rb-onb-center{padding:24px 28px 0}.rb-onb-top .count{display:none}}
+@media (max-width:999px){.rb-onb-side{display:none}}
+.rb-onb-center>*,.rb-onb-side>*{flex-shrink:0}
+@media (max-width:999px){.rb-onb-top .brand{font-size:0}.rb-onb-top .brand::after{content:"시작 안내";font-size:14px}}
+.rb-onb .rb-accpicks{justify-content:flex-start}
 `+PROB_CSS;
