@@ -46,7 +46,7 @@ export async function renderHome(ctx) {
         : idx?.bots?.[s.cur.chaId]?.paused ? statusCard("err", "연속으로 실패해서 자동 기록이 멈췄어요.")
         : statusCard(last?.injected ? "on" : "prep", injectLine(last, last ? hhmm(last.at) : "", injectReasonText(last?.reason)));
     }
-    status.firstElementChild.replaceWith(line(memoryStatus));
+    replace(status, line(memoryStatus));
   };
 
   // ── 머리: 지금 열린 채팅 ──
@@ -58,7 +58,20 @@ export async function renderHome(ctx) {
   );
 
   // ── 상태 3줄 ──
-  const line = (status) => h("div", { class: "rb-hstat rb-hstat-memory", role: "button", tabindex: "0", onClick: (e) => { if (e.target.closest("button")) return; ctx.go("memory"); }, onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ctx.go("memory"); } } }, h("span", { class: "lab" }, h("b", null, "장기 기억"), icon("chevron", 14)), status);
+  // 장기 기억 전체 스위치: 모든 채팅에서 기록·불러오기를 한 번에 켜고 끈다(쌓인 기억·봇별 설정은 그대로)
+  let globalOn = null;
+  if (s.M?.switches) { try { globalOn = memoryGlobalOn(s.idx ?? await s.M.store.getIndex()); } catch { globalOn = null; } }
+  const setMemAll = async (v, el) => {
+    el?.setAttribute("aria-checked", v ? "true" : "false");
+    try {
+      await s.M.switches.setMemoryEverywhere(v);
+      ctx.toast(v ? "모든 채팅에서 장기 기억을 켰어요. 다음 응답부터 기록돼요." : "모든 채팅에서 장기 기억을 껐어요. 쌓인 기억은 그대로예요.");
+    } catch (e) { ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }); }
+    refreshStatus();
+  };
+  // 상태 줄 오른쪽 끝에 붙이는 스위치(줄을 다시 그릴 때마다 새로 만든다)
+  const withAll = (card) => { if (globalOn !== null) card.append(h("span", { class: "rb-hall", title: "모든 채팅에서 사용" }, switchEl(globalOn, { label: "장기 기억 (모든 채팅)", onChange: (v, el) => setMemAll(v, el) }))); return card; };
+  const line = (status) => h("div", { class: "rb-hstat rb-hstat-memory", role: "button", tabindex: "0", onClick: (e) => { if (e.target.closest("button")) return; ctx.go("memory"); }, onKeydown: (e) => { if (e.target.closest("button,[role=switch]")) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ctx.go("memory"); } } }, h("span", { class: "lab" }, h("b", null, "장기 기억"), icon("chevron", 14)), withAll(status));
   let memoryStatus;
   if (!s.cur) memoryStatus = statusCard("off", "채팅을 열면 여기에 기억 상태가 보여요.");
   else {
@@ -78,21 +91,7 @@ export async function renderHome(ctx) {
       : idx.bots?.[s.cur.chaId]?.paused ? statusCard("err", "연속으로 실패해서 자동 기록이 멈췄어요.")
       : statusCard(last?.injected ? "on" : "prep", injectLine(last, last ? hhmm(last.at) : "", injectReasonText(last?.reason)));
   }
-  // 장기 기억 전체 스위치: 모든 채팅에서 기록·불러오기를 한 번에 켜고 끈다(쌓인 기억·봇별 설정은 그대로)
-  let globalOn = null;
-  if (s.M?.switches) { try { globalOn = memoryGlobalOn(s.idx ?? await s.M.store.getIndex()); } catch { globalOn = null; } }
-  const setMemAll = async (v, el) => {
-    el?.setAttribute("aria-checked", v ? "true" : "false");
-    try {
-      await s.M.switches.setMemoryEverywhere(v);
-      ctx.toast(v ? "모든 채팅에서 장기 기억을 켰어요. 다음 응답부터 기록돼요." : "모든 채팅에서 장기 기억을 껐어요. 쌓인 기억은 그대로예요.");
-    } catch (e) { ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }); }
-    refreshStatus();
-  };
-  const allRow = globalOn === null ? null : h("div", { class: "rb-srow rb-hall" },
-    h("span", { class: "t" }, "모든 채팅에서 사용", h("small", null, "끄면 모든 채팅에서 기록·불러오기가 멈춰요.")),
-    switchEl(globalOn, { label: "장기 기억 (모든 채팅)", onChange: (v, el) => setMemAll(v, el) }));
-  const status = h("section", { class: "rb-hstats", "aria-label": "장기 기억 상태" }, line(memoryStatus), allRow);
+  const status = h("section", { class: "rb-hstats", "aria-label": "장기 기억 상태" }, line(memoryStatus));
 
   // 홈 바로가기: 가져오기 → 기억 → 관리 → 작업실.
   const tile = (ic, name, line2, onClick, id) => h(

@@ -895,7 +895,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-hhead h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rb-hbody{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px;align-items:start}.rb-hmain{display:flex;flex-direction:column;gap:20px;min-width:0}
 .rb-hstats{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
-.rb-hstats .rb-hall{min-height:0;padding:10px 14px;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);background:var(--rb-card,transparent)}
+.rb-hstats .rb-hall{flex:none;display:inline-flex;align-items:center;margin-left:auto}
 .rb-hstat-memory .lab{min-height:36px}.rb-hstat-memory .rb-status{min-height:76px}
 .rb-hstat{display:flex;flex-direction:column;gap:6px;min-width:0}.rb-hstat .lab{display:flex;align-items:center;justify-content:space-between;gap:4px;border:1px solid transparent;border-radius:var(--rb-r2);background:none;padding:2px 4px;color:var(--rb-text);font:inherit;cursor:pointer;min-height:28px;transition:border-color .15s,background .15s}.rb-hstat .lab b{font-size:14px}
 .rb-hstat .rb-status{margin:0;height:100%}
