@@ -1,4 +1,4 @@
-// 빠른 설정 묶음 (1.8.3): 홈 '빠른 설정'과 채팅 입력바 옆 메뉴의 'Dusk 빠른 설정' 창이 같이 쓴다.
+// 빠른 설정 묶음 (1.8.3): 홈 '빠른 설정' 카드. 채팅 입력창 옆 메뉴의 토글은 data/chatmenu.js가 따로 맡는다.
 import { h } from './dom.js';
 import { switchEl, setSwitch } from './kit.js';
 import { loadFairOn, loadDiceOn, DICE_KEY } from '../data/fairplay.js';
