@@ -15,6 +15,7 @@ import { mem } from './memory/common.js';
 import { createBotAndEdit } from './newbot.js';
 import { loadFairOn, loadDiceOn, DICE_KEY } from '../../data/fairplay.js';
 import { diceRow } from '../dicedetail.js';
+import { loadDiceShow, loadCallShow, DICE_SHOW_KEY, CALL_SHOW_KEY, isBardHost } from '../../data/turninfo.js';
 import { loadStoryTimeOn } from '../../data/storytime.js';
 
 var hhmm = (ms) => ms ? new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
@@ -32,7 +33,9 @@ export async function renderHome(ctx) {
   const storyStatePromise = Promise.all([
     loadFairOn(ctx.api).catch(() => false),
     loadDiceOn(ctx.api).catch(() => false),
-    loadStoryTimeOn(ctx.api).catch(() => false)
+    loadStoryTimeOn(ctx.api).catch(() => false),
+    loadDiceShow(ctx.api).catch(() => false),
+    loadCallShow(ctx.api).catch(() => true)
   ]);
   let s = { M: null };
   try {
@@ -127,7 +130,7 @@ export async function renderHome(ctx) {
 
   // ── 최근 기록 (PC 오른쪽) ──
   const rec = s.cur ? recentOf(s.folder) : [];
-  const [fairOn, diceOn, stOn] = await storyStatePromise;
+  const [fairOn, diceOn, stOn, diceShowOn, callShowOn] = await storyStatePromise;
   const failStory = (e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
   // 유저 편향 없애기는 공정한 전개 위에서만 작동 → 공정한 전개가 꺼져 있으면 함께 켜고 이유를 알린다
   let fairCur = !!fairOn, fairSw = null;
@@ -149,6 +152,18 @@ export async function renderHome(ctx) {
         fairCur = true; if (fairSw) setSwitch(fairSw, true);
         ctx.toast("유저 편향 없애기를 켰어요. 공정한 전개 위에서 작동해서 공정한 전개도 함께 켰어요.");
       } else ctx.toast(v ? "유저 편향 없애기를 켰어요. 다음 요청부터 적용돼요." : "유저 편향 없애기를 껐어요.");
+    } catch (e) { failStory(e); }
+  };
+  const setDiceShow = async (v) => {
+    try {
+      if (ctx.turnInfo) await ctx.turnInfo.setDiceShow(v); else await ctx.api.pluginStorage.setItem(DICE_SHOW_KEY, v ? "on" : "off");
+      ctx.toast(v ? "주사위 결과 표시를 켰어요. 다음 응답부터 아래에 보여요." : "주사위 결과 표시를 껐어요.");
+    } catch (e) { failStory(e); }
+  };
+  const setCallShow = async (v) => {
+    try {
+      if (ctx.turnInfo) await ctx.turnInfo.setCallShow(v); else await ctx.api.pluginStorage.setItem(CALL_SHOW_KEY, v ? "on" : "off");
+      ctx.toast(v ? "모델 호출 표시를 켰어요. 다음 요청부터 보여요." : "모델 호출 표시를 껐어요.");
     } catch (e) { failStory(e); }
   };
   const setImgFix = async (v) => {
@@ -182,6 +197,8 @@ export async function renderHome(ctx) {
   const storyHelper = h("section", { class: "rb-card bordered rb-story-helper" },
     (() => { const row = storyRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair); fairSw = row.querySelector("[role=switch]"); return row; })(),
     diceRow(ctx, { on: diceOn, setOn: setDice, fail: failStory }),
+    storyRow("주사위 결과 표시", "응답 아래에 굴린 값과 판정을 보여줘요.", diceShowOn, setDiceShow),
+    isBardHost(ctx.api) ? null : storyRow("모델 호출 표시", "모델·걸린 시간·토큰·들어간 로어북을 보여줘요.", callShowOn, setCallShow),
     storyRow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요.", stOn, setStory),
     ctx.imgFix ? storyRow("이미지 태그 자동 교정", "AI가 틀리게 쓴 에셋 이미지 태그를 이 봇의 실제 에셋 이름으로 고쳐요.", ctx.imgFix.isOn(), setImgFix) : null,
     ctx.imgFix ? storyRow("이미지 태그 상황 알림", "직전 옷·동작과 쓸 수 있는 태그를 AI에게 다시 알려줘요.", ctx.imgFix.isHintOn(), setImgHint) : null

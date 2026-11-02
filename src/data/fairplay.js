@@ -28,11 +28,13 @@ export async function loadDiceCustom(api) {
   return { cuts: normalizeCuts(cuts), count: normalizeCount(count) };
 }
 export function createFairPlay(api, { log = (...a) => console.log("[Dusk 공정]", ...a), rng } = {}) {
-  let on = false, hooked = false, dice = false, mode = "reinterpret", level = "normal", custom = { cuts: null, count: 3 };
+  let last = null, on = false, hooked = false, dice = false, mode = "reinterpret", level = "normal", custom = { cuts: null, count: 3 };
   async function beforeRequest(messages, type) {
     try {
       if (!on || (type && type !== "model")) return messages;
-      return insertFairness(messages, { dice: dice ? makeDice(messages, mode, rng, resolveDice(level, custom.cuts, custom.count)) : null });
+      const d = dice ? makeDice(messages, mode, rng, resolveDice(level, custom.cuts, custom.count)) : null;
+      if (d) last = { at: Date.now(), rolls: d.rolls, cuts: d.cuts, mode: d.mode };   // 응답 아래 '주사위 결과 표시'용
+      return insertFairness(messages, { dice: d });
     } catch (e) { log("지침 삽입 실패", e?.message ?? e); return messages; }
   }
   async function hook() {
@@ -51,5 +53,5 @@ export function createFairPlay(api, { log = (...a) => console.log("[Dusk 공정]
     await api.pluginStorage.setItem(DICE_CUTS_KEY, JSON.stringify(custom.cuts)); await api.pluginStorage.setItem(DICE_COUNT_KEY, String(custom.count)); await api.pluginStorage.setItem(DICE_LEVEL_KEY, level);
     return { ...custom };
   }
-  return { start, set, setDice, setDiceMode, setDiceLevel, setDiceCustom, diceLevel: () => level, diceCustom: () => ({ ...custom }), isOn: () => on, isDiceOn: () => dice, diceMode: () => mode, beforeRequest };
+  return { start, set, setDice, setDiceMode, setDiceLevel, setDiceCustom, diceLevel: () => level, lastDice: () => last, diceCustom: () => ({ ...custom }), isOn: () => on, isDiceOn: () => dice, diceMode: () => mode, beforeRequest };
 }

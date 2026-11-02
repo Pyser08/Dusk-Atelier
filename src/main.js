@@ -14,6 +14,7 @@ import { CSS2 } from './ui/styles.js';
 import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets } from './data/presets.js';
 import { createLoreRuntime } from './data/lorerules.js';
 import { createLoreLog } from './data/lorelog.js';
+import { createTurnInfo } from './data/turninfo.js';
 import { createMemory } from './data/memory.js';
 import { createStoryTime } from './data/storytime.js';
 import { createFairPlay } from './data/fairplay.js';
@@ -157,6 +158,8 @@ async function start() {
   // 로어북 로그: 응답마다 들어간 로어북을 남기고, 응답 아래에 버튼을 붙인다
   const loreLog = createLoreLog(api, { loreRuntime, above: (t) => memory.gauge.onDisplay(t) });
   loreLog.start().catch((e) => console.log(`[${TITLE}] 로어북 로그 시작 실패: ${e?.message ?? e}`));
+  const turnInfo = createTurnInfo(api, { diceSource: () => fairPlay.lastDice(), loreFor: (t) => loreLog.recordFor(t), loreLast: () => loreLog.last() });   // 주사위 결과·모델 호출 표시 (1.8.3)
+  turnInfo.start().catch((e) => console.log(`[${TITLE}] 호출 표시 시작 실패: ${e?.message ?? e}`));
   let handlers = null, timer = null;
   const sync = () => app?.ctx.svc.serial(() => syncPersonaModules(api)).catch((e) => console.log("[Dusk Atelier] 페르소나 동기화 실패", e?.message ?? e));
   const onInput = async (text) => {
@@ -191,6 +194,7 @@ async function start() {
   app.ctx.watcher = watcher;
   app.ctx.loreRuntime = loreRuntime;
   app.ctx.loreLog = loreLog;
+  app.ctx.turnInfo = turnInfo;
   app.ctx.memory = memory;
   app.ctx.skills = skills;
   app.ctx.web = web;
