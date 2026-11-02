@@ -14,17 +14,19 @@ export function createImgTagFix(api, { log = (...a) => console.log("[Dusk 이미
 
   async function readNames() {
     const names = [];
-    let chatMods = [];
+    const pinned = [];   // 봇에 고정한 모듈 + 이 채팅에 지정한 모듈
     const idx = await api.getCurrentCharacterIndex?.();
     if (typeof idx === "number" && idx >= 0 && typeof api.getCharacterFromIndex === "function") {
       const ch = await api.getCharacterFromIndex(idx);
       for (const a of ch?.additionalAssets ?? []) if (a?.[0]) names.push(String(a[0]));
       const chat = ch?.chats?.[ch?.chatPage ?? 0];
-      if (Array.isArray(chat?.modules)) chatMods = chat.modules;   // 이 채팅에 지정한 모듈이 있으면 전역 목록보다 우선(정규식 전처리와 같은 규칙)
+      if (Array.isArray(ch?.modules)) pinned.push(...ch.modules);
+      if (Array.isArray(chat?.modules)) pinned.push(...chat.modules);
     }
     try {   // 켜진 모듈의 에셋(읽기만, 실패하면 봇 에셋만 쓴다)
       const db = typeof api.getDatabase === "function" ? await api.getDatabase(["modules", "enabledModules"]) : null;
-      const enabled = new Set(chatMods.length ? chatMods : Array.isArray(db?.enabledModules) ? db.enabledModules : []);
+      // 전역·봇 고정·채팅 지정을 모두 합친다. 모자라면 멀쩡한 태그를 지우게 되므로 넉넉하게 잡는 쪽이 안전하다.
+      const enabled = new Set([...(Array.isArray(db?.enabledModules) ? db.enabledModules : []), ...pinned]);
       for (const m of Array.isArray(db?.modules) ? db.modules : []) if (enabled.has(m?.id)) for (const a of m?.assets ?? []) if (a?.[0]) names.push(String(a[0]));
     } catch { /* 모듈 에셋 없이 진행 */ }
     return { idx, names, chat: await api.getCurrentChatIndex?.() };
