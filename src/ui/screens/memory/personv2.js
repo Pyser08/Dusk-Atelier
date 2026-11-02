@@ -2,6 +2,7 @@
 // 관계 탭은 상대를 고르면 그 둘 사이의 관계 진도·감정·호칭과 말투·둘만의 추억·기대 차이·오해를 카드로 모아 보여 주고 고치게 한다.
 // 기존 위키 블록(기본 성격·수치·항목 묶음·위키 패널)은 '상세 정보', 문서 관리·이야기 기록은 '기록' 탭으로 옮긴다(기능은 그대로).
 import { h, replace } from "../../dom.js";
+import { userLabel } from "./username.js";
 import { btn, modal, confirmDialog } from "../../kit.js";
 import { mem, avatar, fail } from "./common.js";
 import { editFolder } from "./people.js";
@@ -18,7 +19,7 @@ const batchim = (w) => { const c = String(w ?? "").trim().slice(-1).charCodeAt(0
 const subj = (name) => name + (batchim(name) ? "이" : "가");   // 받침 따라 이/가
 const topic = (name) => name + (batchim(name) ? "은" : "는");   // 은/는
 const obj = (name) => { const c = String(name ?? "").trim().slice(-1).charCodeAt(0); return name + (c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 ? "을" : "를"); };
-const shown = (n) => (n === "{{user}}" ? "나" : n);
+const shown = (n) => (n === "{{user}}" ? userLabel() : n);   // {{user}}는 페르소나 이름으로(모르면 '나')
 
 const nk = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, "");
 const pct = (v, min, max) => Math.max(0, Math.min(100, ((v - min) / Math.max(1, max - min)) * 100));

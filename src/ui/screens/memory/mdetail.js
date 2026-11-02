@@ -8,6 +8,7 @@ import { renderScenes } from "./scenes.js";
 import { renderOpen, renderRels, renderTimeline } from "./ledger.js";
 import { openItems, timelineOf } from "../../../engine/memoryplus.js";
 import { renderBotSettings } from "./settings.js";
+import { loadUserName, watchUserName } from "./username.js";
 
 export const DETAIL_TABS = [["people", "인물 위키"], ["scenes", "상황"], ["timeline", "시간선"], ["open", "열린 항목"], ["rels", "관계"]];
 const DRAW = { people: renderPeopleTab, scenes: renderScenes, timeline: renderTimeline, open: renderOpen, rels: renderRels };
@@ -16,6 +17,8 @@ export async function renderMemoryDetail(ctx, host, { redraw }) {
   const m = mem(ctx), M = ctx.memory;
   const back = () => { m.page = "home"; redraw(); };
   replace(host, loading("불러오는 중", { rows: 4 }));
+  await loadUserName(ctx);   // {{user}}를 페르소나 이름으로 보여 주려고(표시만)
+  if (!host.__duskUser) host.__duskUser = watchUserName(host);
   const bots = await loadBots(ctx), bot = bots.find((b) => b.id === m.botId);
   if (!bot) { m.botId = ""; m.page = "home"; return redraw(); }
   const chats = await loadChats(ctx, bot);

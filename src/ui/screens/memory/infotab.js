@@ -2,6 +2,7 @@
 // · 내용 있는 기록 묶음만 카드 · 비어 있는 항목은 맨 아래 칩(누르면 채우기 창). 넓은 화면(@container memwrap)은 왼쪽 바로가기 + 2열.
 // 기능은 예전 블록과 같다(고정·편집·삭제·AI 작성은 각 줄의 '…' 메뉴로 옮김).
 import { h } from "../../dom.js";
+import { userLabel } from "./username.js";
 import { btn, modal, confirmDialog, openMenu } from "../../kit.js";
 import { mem, fail } from "./common.js";
 import { editMetric, editWikiText, policyOf } from "./people.js";
@@ -26,7 +27,7 @@ const DESC = {
   behavior: "자주 보이는 행동 습관을 적는 칸이에요.",
 };
 const nm = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, "");
-const shown = (n) => (n === "{{user}}" ? "나" : n);
+const shown = (n) => (n === "{{user}}" ? userLabel() : n);   // {{user}}는 페르소나 이름으로(모르면 '나')
 const pct = (v, min, max) => Math.max(0, Math.min(100, ((v - min) / Math.max(1, max - min)) * 100));
 
 // B: { doc, p, r, ed, profile, groups, commit, K:{ORDER,MEMBERS,ALWAYS,LABEL,SUB,AXES,AXIS_LABEL,band,METER_SLOTS,TEXT_FIELDS}, nameOf,
