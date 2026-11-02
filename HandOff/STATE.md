@@ -305,3 +305,8 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 발견한 버그(구현 때 수정): 기억 카드 탭 새로 만들기 단계 목록이 '1. 1. 인물'로 번호 이중 표시(`ui/screens/memory/compose.js` `ol.rb-mem-steps`, 카드 탭 `rb-cards2`에서 목록 CSS 미적용 추정).
 - 촬영 요령 추가: 코코아는 `bootApp` 후 `__app.ctx.skills = createSkillStore(__api)`로 스킬 저장소를 넣고 세트를 importSet해야 실제 화면이 나옴(없으면 '준비되지 않았어요'). 경로는 `ctx.go("cocoa")`, `ctx.go("cards")`(state.mem.ctab="compose"로 새로 만들기).
 - (2026-11-02) **목업 2 사용자 승인**("깔끔하고 직관적"). 다음 할 일: 목업 2대로 코코아(`ui/screens/memory/skills.js`, `ui/screens/cocoa.js`)·기억 카드(`ui/screens/cards/index.js`, `memory/cards.js`, `memory/compose.js`) 구현 + 단계 번호 이중 표시 버그 수정. 그다음 목업 3(관리: 캐릭터·모듈·플러그인) → 4(작업실). 목업 1(홈·개요)도 승인 상태라 함께 구현 가능.
+- (2026-11-02, 사용자 결정) **진행 방식 변경: 모든 탭 목업을 먼저 하나씩 만들고 확인받은 뒤, 구현은 한 번에.** (위 '다음 할 일: 목업 2 구현'은 보류)
+  - 완료·승인: 목업 1 홈·개요(`docs/mockups/ui-polish-1-hubs.html`) · 목업 2 코코아·기억 카드(`docs/mockups/ui-polish-2-cocoa-cards.html`).
+  - 남은 목업 순서: ③ 장기 기억 묶음(메인·상황·시간선·열린 항목·관계) → ④ 관리(캐릭터·모듈·플러그인) → ⑤ 작업실(플러그인 꾸미기·AI로 봇 만들기·AI로 페르소나 만들기·도구·설정). 탭마다 '지금(사진) / 개편안' 모바일 390 + PC 1280, 사용자 확인 후 다음.
+  - 목업 공통 규칙(확정): 자주 쓰는 것만 카드 · 부가 동작은 ··· 메뉴 · **? 도움말 버튼은 모든 화면 유지** · 넓으면 2열 · 쉬운 말 · 기존 토큰(--rb-*). 목업 HTML은 scratchpad의 생성 스크립트로 만들고, 저장소엔 사진 뺀 가벼운 판을 `docs/mockups/ui-polish-N-*.html`로 커밋(프로젝트 문서는 용량 가득이라 저장 불가).
+  - 구현 단계에서 할 것: 목업 1~5 전부 + 기억 카드 단계 번호 이중 표시 버그. 공용 부품(목록 줄···· 메뉴·segmented·고급 묶음)은 kit.js로 묶기 검토.
