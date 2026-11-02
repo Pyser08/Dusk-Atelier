@@ -182,3 +182,11 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 봇을 바꾸면 에셋 목록 캐시를 버린다(현재 봇 번호를 매번 비교). 테스트 `tests/imgtagfix.test.js` 12건 + `tests/imgtagfix-hook.test.js` 2건. 검증: `npm test` 586 pass / 0 fail / 9 skipped, build·check "동일함", `run-smoke.mjs` 통과.
 - 확인 못 한 것: 실제 RisuAI·RisuBard·PocketRisu에서 ① output 훅이 스트리밍 조각마다 불리는지·저장 본문에 반영되는지 ② `getCharacterFromIndex` 응답에 additionalAssets가 있는지 ③ 에셋이 많은 봇(수천 개)에서의 속도. 못 고치는 것: 상황에 안 맞는 키워드, 감정 태그만 쓰는 편향(의미 판단 필요 → 별도 설계 필요).
 - 개발 환경 메모: `npm ci`가 막혀서 `/opt/npm-tools/node_modules`의 esbuild·acorn을 `node_modules/`에 링크해 테스트·빌드함(eslint-scope는 없었지만 build·check는 통과).
+
+#### 이미지 태그 2차 (feat/1.8.2)
+- 엔진 보강 `engine/imgtagfix.js`: 키워드 맞추기 `pickKeyword`(정확→어간 `stem`→낱말 순서 무시→오타→낱말 포함·덧붙은 낱말 최소 1개), 확장자 제거, 이름 한쪽(`resolveChar` 낱말 부분일치, 유일할 때만), 대체 표정 `FALLBACK`(default·neutral·idle·normal, 없으면 태그 유지 `keep`), `opts.state`(직전 옷). 옷 결정 규칙(사용자 결정 '나'): 옷이 정해지면 옷을 지키고 없는 동작은 그 옷의 기본 표정. 새 export `readTags`, `sceneState`, `stem`.
+- 알림 `engine/imghint.js`(순수): `hintForMessages(messages, idx)`→`{hint,state}`(이미지 태그를 쓰는 요청에서만), `presentChars`(최근 3개 응답의 태그 → 마지막 두 글에 이름이 나온 캐릭터, 최대 6명), `buildHint`(우선순위·직전 옷·태그·현재 옷 키워드, 같은 목록은 'same as', 2800자 넘으면 키워드 줄 생략), `insertHint`(마지막 user 앞 system, `HINT_MARK`로 중복 제거).
+- 연결 `data/imgtagfix.js`: beforeRequest(type이 model일 때만)로 직전 상황을 뽑아 교정에 넘기고, 알림 켜짐(`dusk.ui.imgFixHint`)이면 요청 사본에 넣음. 교정만 켜도 직전 옷 기억은 동작. 에셋 캐시 5분(봇·채팅 키), 스트리밍 중(`genstate.recentlyStreamed`)엔 새로 읽지 않고 봇 번호 확인도 1초 재사용. 홈 토글 2줄.
+- 테스트: `imgtagfix.test.js` 17, `imghint.test.js` 7, `imgtagfix-hook.test.js` 9. `npm test` 607 pass / 0 fail, build·check 동일함, smoke 통과.
+- 확인 못 한 것: 실제 호스트에서 beforeRequest messages의 role 이름(assistant 외 char/model도 처리)과 마지막 user 앞 system 삽입이 모델별로 문제없는지, 봇의 editprocess 정규식이 기록 속 `<img>`를 지우면 직전 상황을 못 읽음, 알림의 실제 효과(모델이 따르는지).
+- 3번(낱말 단서로 감정→동작 올리기)은 미구현 — 사용자에게 장단점 설명 후 결정 대기.

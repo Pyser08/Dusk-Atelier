@@ -1,20 +1,33 @@
-// v1.8.2 AI 이미지 태그 교정 훅. 설정에서 켜고 끈다(기본 꺼짐).
-// 응답이 저장되기 전(output 훅)에 `<img …>` 태그를 이 봇의 에셋 목록에 맞춰 고친다. 모델은 부르지 않는다.
-// 에셋 목록은 `<img` 가 들어 있는 응답에서만, 20초 캐시로 읽는다(스트리밍 조각마다 읽지 않는다). 읽기가 느리면 이번 응답은 그대로 두고 다음에 고친다.
+// v1.8.2 AI 이미지 태그 교정·알림 훅. 설정에서 각각 켜고 끈다(기본 꺼짐). 모델 호출은 늘지 않는다.
+// - 교정(output 훅): 응답 속 `<img …>` 태그를 이 봇·켜진 모듈의 에셋 이름에 맞춰 고친다.
+// - 알림(beforeRequest): 요청 사본 끝에 지금 장면 캐릭터의 직전 옷·태그와 쓸 수 있는 키워드를 짧게 붙인다.
+// - 직전 상황: 요청 기록에서 캐릭터별 마지막 옷·태그를 읽어(저장 안 함, 리롤 안전) 교정 때 빠진 옷을 채운다.
+// 에셋 목록은 봇·채팅별로 5분 캐시. 응답이 나오는 중(스트리밍)에는 새로 읽지 않는다(getCharacterFromIndex는 채팅 전체를 복사해 무겁다).
 import { buildAssetIndex, fixImgTags } from "../engine/imgtagfix.js";
+import { hintForMessages, insertHint } from "../engine/imghint.js";
+import { recentlyStreamed } from "./genstate.js";
 
 export const IMGFIX_KEY = "dusk.ui.imgFix";
+export const IMGFIX_HINT_KEY = "dusk.ui.imgFixHint";
 export const IMGFIX_UNKNOWN_KEY = "dusk.ui.imgFixUnknown";
 const isOn = (raw) => raw === "on" || raw === true || raw === "true";
-const TTL = 20000, WAIT = 1500, KEEP = 30;
+const TTL = 5 * 60 * 1000, WAIT = 1500, KEEP = 30, KEY_MEMO = 1000;
 
-export function createImgTagFix(api, { log = (...a) => console.log("[Dusk 이미지 태그]", ...a), now = () => Date.now() } = {}) {
-  let on = false, hooked = false, unknown = "remove", cache = null, loading = null;
+export function createImgTagFix(api, { log = (...a) => console.log("[Dusk 이미지 태그]", ...a), now = () => Date.now(), streaming = () => recentlyStreamed() } = {}) {
+  let on = false, hintOn = false, unknown = "remove";
+  let outHooked = false, reqHooked = false, cache = null, loading = null, keyMemo = null, lastState = null;
   const recent = [];
 
+  async function currentKey() {
+    if (keyMemo && now() - keyMemo.at < KEY_MEMO && streaming()) return keyMemo.key;   // 조각마다 호스트에 묻지 않게(스트리밍 중에만 재사용)
+    let key = null;
+    try { key = `${(await api.getCurrentCharacterIndex?.()) ?? null}:${(await api.getCurrentChatIndex?.()) ?? ""}`; } catch { key = null; }
+    keyMemo = { at: now(), key };
+    return key;
+  }
+
   async function readNames() {
-    const names = [];
-    const pinned = [];   // 봇에 고정한 모듈 + 이 채팅에 지정한 모듈
+    const names = [], pinned = [];   // 봇에 고정한 모듈 + 이 채팅에 지정한 모듈
     const idx = await api.getCurrentCharacterIndex?.();
     if (typeof idx === "number" && idx >= 0 && typeof api.getCharacterFromIndex === "function") {
       const ch = await api.getCharacterFromIndex(idx);
@@ -29,52 +42,74 @@ export function createImgTagFix(api, { log = (...a) => console.log("[Dusk 이미
       const enabled = new Set([...(Array.isArray(db?.enabledModules) ? db.enabledModules : []), ...pinned]);
       for (const m of Array.isArray(db?.modules) ? db.modules : []) if (enabled.has(m?.id)) for (const a of m?.assets ?? []) if (a?.[0]) names.push(String(a[0]));
     } catch { /* 모듈 에셋 없이 진행 */ }
-    return { idx, names, chat: await api.getCurrentChatIndex?.() };
+    return names;
   }
-  function refresh() {
+  function refresh(key) {
     loading ??= (async () => {
-      try {
-        const { idx, names, chat } = await readNames();
-        cache = { at: now(), key: `${idx}:${chat ?? ""}`, index: buildAssetIndex(names) };
-      } catch (e) { log("에셋 목록 읽기 실패", e?.message ?? e); cache = { at: now(), key: undefined, index: buildAssetIndex([]) }; }
+      try { cache = { at: now(), key, index: buildAssetIndex(await readNames()) }; }
+      catch (e) { log("에셋 목록 읽기 실패", e?.message ?? e); cache = { at: now(), key, index: buildAssetIndex([]) }; }
       finally { loading = null; }
     })();
     return loading;
   }
-  async function indexNow() {
-    let cur = null;   // 봇·채팅이 바뀌면 목록이 달라질 수 있다(채팅마다 켠 모듈이 다름)
-    try { cur = `${(await api.getCurrentCharacterIndex?.()) ?? null}:${(await api.getCurrentChatIndex?.()) ?? ""}`; } catch { cur = null; }
-    if (cache && cur !== cache.key) cache = null;   // 다른 봇으로 바뀌면 앞 봇의 목록을 쓰지 않는다
-    if (!cache || now() - cache.at > TTL) {
-      const wait = new Promise((r) => setTimeout(() => r("timeout"), WAIT));
-      if ((await Promise.race([refresh(), wait])) === "timeout" && !cache) return null;
-    }
-    return cache?.index ?? null;
+  // wait=true: 목록이 없거나 오래됐으면 잠깐 기다려 새로 읽는다. 스트리밍 중에는 있는 목록(오래됐어도 같은 봇·채팅이면)을 쓴다.
+  async function indexFor(key, { wait = true } = {}) {
+    const same = cache && cache.key === key;
+    if (same && now() - cache.at <= TTL) return cache.index;
+    if (same && streaming()) return cache.index;
+    if (!same && cache) cache = null;   // 다른 봇·채팅: 앞 목록은 쓰지 않는다
+    const job = refresh(key);
+    if (!wait) return null;
+    const t = new Promise((r) => setTimeout(() => r("timeout"), WAIT));
+    await Promise.race([job, t]);
+    return cache?.key === key ? cache.index : null;
   }
 
   async function onOutput(text) {
     try {
       if (!on || typeof text !== "string" || !/<img\b/i.test(text)) return text;
-      const index = await indexNow();
+      const key = await currentKey();
+      const index = await indexFor(key, { wait: !streaming() });
       if (!index?.size) return text;
-      const r = fixImgTags(text, index, { unknown });
+      const state = lastState?.key === key ? lastState.state : undefined;
+      const r = fixImgTags(text, index, { unknown, state });
       if (!r.changed) return text;
-      recent.unshift({ at: now(), fixes: r.fixes });
-      recent.length = Math.min(recent.length, KEEP);
-      log(`태그 ${r.fixes.length}개 교정`, r.fixes.map((f) => `${f.from} → ${f.to ?? "(삭제)"} [${f.kind}]`).join(" | "));
+      if (!streaming()) {   // 기록은 응답이 끝난 뒤 것만(조각마다 쌓이지 않게)
+        recent.unshift({ at: now(), fixes: r.fixes });
+        recent.length = Math.min(recent.length, KEEP);
+        log(`태그 ${r.fixes.length}개 교정`, r.fixes.map((f) => `${f.from} → ${f.to ?? "(삭제)"} [${f.kind}]`).join(" | "));
+      }
       return r.text;
     } catch (e) { log("교정 실패(원문 유지)", e?.message ?? e); return text; }
   }
 
+  async function beforeRequest(messages, type) {
+    try {
+      if ((!on && !hintOn) || (type && type !== "model") || !Array.isArray(messages)) return messages;
+      const key = await currentKey();
+      const index = await indexFor(key);
+      if (!index?.size) return messages;
+      const r = hintForMessages(messages, index);
+      if (!r) return messages;
+      lastState = { key, state: r.state };
+      return hintOn && r.hint ? insertHint(messages, r.hint) : messages;
+    } catch (e) { log("알림 넣기 실패(원문 유지)", e?.message ?? e); return messages; }
+  }
+
   async function hook() {
-    if (hooked || typeof api.addRisuScriptHandler !== "function") return hooked;
-    try { await api.addRisuScriptHandler("output", onOutput); hooked = true; } catch (e) { log("출력 훅 등록 실패", e?.message ?? e); }
-    return hooked;
+    if ((on || hintOn) && !reqHooked && typeof api.addRisuReplacer === "function") {
+      try { await api.addRisuReplacer("beforeRequest", beforeRequest); reqHooked = true; } catch (e) { log("요청 훅 등록 실패(직전 상황·알림 없이 동작)", e?.message ?? e); }
+    }
+    if (on && !outHooked && typeof api.addRisuScriptHandler === "function") {
+      try { await api.addRisuScriptHandler("output", onOutput); outHooked = true; } catch (e) { log("출력 훅 등록 실패", e?.message ?? e); }
+    }
+    return on ? outHooked : true;
   }
   async function start() {
     try { on = isOn(await api.pluginStorage.getItem(IMGFIX_KEY)); } catch { on = false; }
+    try { hintOn = isOn(await api.pluginStorage.getItem(IMGFIX_HINT_KEY)); } catch { hintOn = false; }
     try { unknown = (await api.pluginStorage.getItem(IMGFIX_UNKNOWN_KEY)) === "keep" ? "keep" : "remove"; } catch { unknown = "remove"; }
-    if (on) await hook();
+    if (on || hintOn) await hook();
     return on;
   }
   async function set(v) {
@@ -82,10 +117,19 @@ export function createImgTagFix(api, { log = (...a) => console.log("[Dusk 이미
     await api.pluginStorage.setItem(IMGFIX_KEY, on ? "on" : "off");
     return on ? hook() : true;
   }
+  async function setHint(v) {
+    hintOn = !!v;
+    await api.pluginStorage.setItem(IMGFIX_HINT_KEY, hintOn ? "on" : "off");
+    return hintOn ? hook() : true;
+  }
   async function setUnknown(v) {
     unknown = v === "keep" ? "keep" : "remove";
     await api.pluginStorage.setItem(IMGFIX_UNKNOWN_KEY, unknown);
     return unknown;
   }
-  return { start, set, setUnknown, isOn: () => on, unknownMode: () => unknown, recent: () => [...recent], onOutput, invalidate: () => { cache = null; } };
+  return {
+    start, set, setHint, setUnknown, onOutput, beforeRequest,
+    isOn: () => on, isHintOn: () => hintOn, unknownMode: () => unknown, recent: () => [...recent],
+    invalidate: () => { cache = null; keyMemo = null; },
+  };
 }

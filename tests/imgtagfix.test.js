@@ -101,6 +101,49 @@ test("underscore style assets (name_keyword with spaces in keywords)", () => {
   assert.equal(f("<img src=jiyoon_blushing_shyly>"), "<img src=jiyoon_blushing shyly>");
   assert.equal(f("<img src=Jiyoon_Happy Tears>"), "<img src=jiyoon_happy tears>");
   assert.equal(f("<img src=miro_happy_tears>"), "<img src=miro_default>");
-  assert.equal(f("<img src=jiyoon_ecstatic>"), "");
+  assert.equal(f("<img src=jiyoon_ecstatic>"), "<img src=jiyoon_neutral>");
   assert.equal(f("<img src=jiyoon_blushing shyly>"), "<img src=jiyoon_blushing shyly>");
+});
+
+// ── v1.8.2 2차: 줄임말·활용형·접두어·확장자·이름 반쪽·대체 표정·직전 옷 ──
+const kw2 = (c, o, list) => list.map((k) => `${c}.${o}.${k}`);
+const I2 = buildAssetIndex([
+  ...kw2("Fujiwara_Chika", "school_uniform", ["default", "smiling", "hug", "missionary_sex", "missionary_after_sex", "cowgirl_sex", "cowgirl_grinding", "yuri_do_fingering"]),
+  ...kw2("Fujiwara_Chika", "casual", ["default", "smiling"]),
+  ...kw2("Shirogane_Kei", "school_uniform", ["default", "smiling"]),
+  ...kw2("Karuizawa_Kei", "school_uniform", ["default", "smiling"]),
+]);
+const f2 = (t, o) => fixImgTags(t, I2, o).text;
+const C = (k, o = "school_uniform") => `<img="Fujiwara_Chika.${o}.${k}">`;
+
+test("shortened action keywords pick the closest full keyword (fewest extra words)", () => {
+  assert.equal(f2(C("missionary")), C("missionary_sex"));
+  assert.equal(f2(C("do_fingering")), C("yuri_do_fingering"));
+  assert.equal(f2(C("cowgirl")), C("default"));   // cowgirl_sex·cowgirl_grinding 둘 다 같아서 애매 → 고르지 않음
+});
+
+test("inflected forms and file extensions are understood", () => {
+  assert.equal(f2(C("smile")), C("smiling"));
+  assert.equal(f2(C("hugging")), C("hug"));
+  assert.equal(f2(C("smiling.png")), C("smiling"));
+  assert.equal(f2(C("sex_missionary")), C("missionary_sex"));   // 낱말 순서만 바뀜
+});
+
+test("half of a name works when only one character matches", () => {
+  assert.equal(f2('<img="Chika.school_uniform.smiling">'), C("smiling"));
+  assert.equal(f2('<img="Kei.school_uniform.smiling">'), "");   // Kei가 둘이라 정할 수 없음
+});
+
+test("no default asset: fall back to neutral, otherwise keep the tag as it was", () => {
+  const i = buildAssetIndex(["yeri_neutral", "yeri_smiling", "bora_smiling", "bora_sad"]);
+  assert.equal(fixImgTags("<img src=yeri_happy>", i).text, "<img src=yeri_neutral>");
+  assert.equal(fixImgTags("<img src=bora_happy>", i).text, "<img src=bora_happy>");
+  assert.equal(fixImgTags("<img src=bora_happy>", i).changed, false);
+});
+
+test("missing outfit follows the outfit worn last; an action that outfit lacks becomes its default", () => {
+  const state = { Fujiwara_Chika: { outfit: "casual" } };
+  assert.equal(f2('<img="Fujiwara_Chika.smiling">', { state }), C("smiling", "casual"));
+  assert.equal(f2('<img="Fujiwara_Chika.hug">', { state }), C("default", "casual"));
+  assert.equal(f2('<img="Fujiwara_Chika.hug">'), C("hug"));   // 기록이 없으면 그 동작이 있는 옷
 });

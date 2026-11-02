@@ -137,6 +137,13 @@ export async function renderHome(ctx) {
       ctx.toast(v ? "이미지 태그 교정을 켰어요. 다음 응답부터 적용돼요." : "이미지 태그 교정을 껐어요.");
     } catch (e) { failStory(e); }
   };
+  const setImgHint = async (v) => {
+    try {
+      if (!ctx.imgFix) throw new Error("이 환경에서는 쓸 수 없어요.");
+      await ctx.imgFix.setHint(v);
+      ctx.toast(v ? "이미지 태그 알림을 켰어요. 다음 요청부터 적용돼요." : "이미지 태그 알림을 껐어요.");
+    } catch (e) { failStory(e); }
+  };
   const setStory = async (v) => {
     try {
       if (ctx.storyTime) await ctx.storyTime.set(v);
@@ -155,7 +162,8 @@ export async function renderHome(ctx) {
     storyRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair),
     storyRow("유저 편향 없애기", "캐릭터가 나만 편들지 않게 해요.", diceOn, setDice),
     storyRow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요.", stOn, setStory),
-    ctx.imgFix ? storyRow("이미지 태그 자동 교정", "AI가 틀리게 쓴 에셋 이미지 태그를 이 봇의 실제 에셋 이름으로 고쳐요.", ctx.imgFix.isOn(), setImgFix) : null
+    ctx.imgFix ? storyRow("이미지 태그 자동 교정", "AI가 틀리게 쓴 에셋 이미지 태그를 이 봇의 실제 에셋 이름으로 고쳐요.", ctx.imgFix.isOn(), setImgFix) : null,
+    ctx.imgFix ? storyRow("이미지 태그 상황 알림", "직전 옷·동작과 쓸 수 있는 태그를 AI에게 다시 알려줘요.", ctx.imgFix.isHintOn(), setImgHint) : null
   );
   const recent = h(
     "aside",
