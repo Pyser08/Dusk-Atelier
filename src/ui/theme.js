@@ -1,15 +1,17 @@
-import { alpha, ensureContrast, isHex, lightnessOf, onAccent, withLightness } from './color.js';
+import { alpha, contrast, ensureContrast, isHex, lightnessOf, mixHex, onAccent, withLightness } from './color.js';
+import { ACCENTS, DIRECTIONS, EDGE_V, FONTS, GRADIENTS, ICONW_V, LINEH_V, ROUND_PX, THEME_SETS, VISUAL_KEYS } from './themekit.js';
 
+export { ACCENTS, GRADIENTS, THEME_SETS, FONTS } from './themekit.js';
+export var contrastOf = contrast;
 // v1.6.3 UI 리뉴얼: 밝은 회백 + 코랄 포인트가 기본. 색은 전부 여기 토큰에서만 나온다.
-export var PRESETS = [
-  { id: "coral", name: "코랄", a: "#cc4b2e", b: "#b93e22" },
-  { id: "teal", name: "청록", a: "#0f766e", b: "#0b5f59" },
-  { id: "sage", name: "세이지", a: "#4d7a4f", b: "#3d663f" },
-  { id: "lilac", name: "라일락", a: "#7c4fc2", b: "#6840a8" },
-  { id: "mono", name: "모노", a: "#3f4650", b: "#2b3038" },
-  { id: "dusk", name: "황혼", a: "#4f63e0", b: "#7c4fe0" }
-];
-export var DEFAULT_THEME = { v: 2, preset: "coral", a: "#cc4b2e", b: "#b93e22", mode: "auto", contrast: "normal", layout: "left", density: "roomy", size: "m" };
+// v1.8.3: 강조 색 18개(예전 6개 id 그대로). 화면은 PRESETS를 그대로 쓴다.
+export var PRESETS = ACCENTS.map(({ id, name, g, a, b }) => ({ id, name, g, a, b }));
+export var DEFAULT_THEME = {
+  v: 2, preset: "coral", a: "#cc4b2e", b: "#b93e22", mode: "auto", contrast: "normal", layout: "left", density: "roomy", size: "m",
+  // 1.8.3 꾸미기 확장 (없으면 아래 기본값 = 예전과 똑같은 모습)
+  set: "", grad: "", dir: "d", round: "normal", shadowLv: "soft", edge: "normal", font: "base", weight: "normal", lineH: "normal", iconW: "normal",
+  motion: "normal", pattern: "none", bgGrad: false, glass: false, cBg: "", cCard: "", cText: "", cSide: "", accUse: "all", mine: [], useLight: "", useDark: ""
+};
 // 1.7.0: 'home'(홈 카드) 메뉴 위치는 새 홈 화면이 대신하므로 없앴다. 예전 저장값 home은 left로 옮긴다.
 export var LAYOUTS = [["left", "왼쪽 메뉴"], ["top", "위쪽 메뉴"]];
 export var DENSITIES = [["roomy", "넉넉하게"], ["compact", "촘촘하게"]];
@@ -144,7 +146,7 @@ export function normalizeTheme(t) {
     out.b = DEFAULT_THEME.b;
     out.preset = DEFAULT_THEME.preset;
   }
-  if (!["auto", "dark", "light"].includes(out.mode)) out.mode = "auto";
+  if (!["auto", "dark", "light", "time"].includes(out.mode)) out.mode = "auto";
   out.contrast = out.contrast === "high" ? "high" : "normal";
   out.layout = pick(LAYOUTS, out.layout === "home" ? "left" : out.layout, "left");
   out.density = pick(DENSITIES, out.density, "roomy");
@@ -154,18 +156,129 @@ export function normalizeTheme(t) {
   if (Number.isFinite(z) && z > 0) out.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z / 5) * 5));
   else out.zoom = Math.round((ZOOM[out.size] ?? 1) * 100);
   out.v = 2;
+  return normalizeLook(out);
+}
+var oneOf = (v, list, d) => list.includes(v) ? v : d;
+var hexOr = (v) => isHex(v) ? String(v).toLowerCase().replace(/^([^#])/, "#$1") : "";
+function normalizeLook(out) {
+  out.set = oneOf(out.set, THEME_SETS.map((s) => s.id), "");
+  out.grad = oneOf(out.grad, GRADIENTS.map((g) => g.id), "");
+  out.dir = oneOf(out.dir, DIRECTIONS.map((d) => d[0]), "d");
+  out.round = oneOf(out.round, ["sharp", "normal", "round"], "normal");
+  out.shadowLv = oneOf(out.shadowLv, ["none", "soft", "strong"], "soft");
+  out.edge = oneOf(out.edge, ["none", "normal", "bold"], "normal");
+  out.font = oneOf(out.font, FONTS.map((f) => f.id), "base");
+  out.weight = oneOf(out.weight, ["normal", "bold"], "normal");
+  out.lineH = oneOf(out.lineH, ["tight", "normal", "loose"], "normal");
+  out.iconW = oneOf(out.iconW, ["thin", "normal", "bold"], "normal");
+  out.motion = out.motion === "reduce" ? "reduce" : "normal";
+  out.pattern = oneOf(out.pattern, ["none", "dots", "grid", "paper"], "none");
+  out.bgGrad = out.bgGrad === true;
+  out.glass = out.glass === true;
+  out.accUse = out.accUse === "btn" ? "btn" : "all";
+  for (const k of ["cBg", "cCard", "cText", "cSide"]) out[k] = hexOr(out[k]);
+  out.mine = (Array.isArray(out.mine) ? out.mine : []).filter((m) => m && typeof m === "object" && String(m.name ?? "").trim() && m.theme && typeof m.theme === "object").slice(0, 12).map((m, i) => ({ id: String(m.id ?? "m" + i).slice(0, 32), name: String(m.name).trim().slice(0, 24), theme: pickLook(m.theme) }));
+  const ids = out.mine.map((m) => m.id);
+  out.useLight = ids.includes(out.useLight) ? out.useLight : "";
+  out.useDark = ids.includes(out.useDark) ? out.useDark : "";
   return out;
 }
-export var resolveMode = (theme, risuScheme) => theme.mode === "auto" ? risuScheme === "light" ? "light" : "dark" : theme.mode;
+// 내 테마에 저장되는 '모양' 값만 골라 정리한다 (내 테마 목록·밝기·크기는 넣지 않음)
+export function pickLook(t) {
+  const n = normalizeTheme({ ...t, mine: [], useLight: "", useDark: "" });
+  const o = {};
+  for (const k of VISUAL_KEYS) o[k] = n[k];
+  if (t?.mode && ["light", "dark"].includes(t.mode)) o.mode = t.mode;
+  return o;
+}
+export function resolveMode(theme, risuScheme, now = new Date()) {
+  if (theme.mode === "time") {
+    const hr = now.getHours();
+    return hr >= 7 && hr < 19 ? "light" : "dark";
+  }
+  return theme.mode === "auto" ? risuScheme === "light" ? "light" : "dark" : theme.mode;
+}
+export function applySet(theme, id) {
+  const t = normalizeTheme(theme);
+  const s = THEME_SETS.find((x) => x.id === id);
+  if (!s) return { ...t, set: "" };
+  return normalizeTheme({ ...t, set: s.id, a: s.a, b: s.b, preset: "set", mode: s.mode, grad: "", cBg: "", cCard: "", cText: "" });
+}
+// 🎲 아무거나: 테마 묶음 + (가끔) 그라데이션까지 무작위로
+export function randomSet(theme, rnd = Math.random) {
+  const s = THEME_SETS[Math.floor(rnd() * THEME_SETS.length) % THEME_SETS.length];
+  const t = applySet(theme, s.id);
+  return rnd() > 0.6 ? { ...t, grad: GRADIENTS[Math.floor(rnd() * GRADIENTS.length) % GRADIENTS.length].id } : t;
+}
+// 밝을 때/어두울 때 따로 쓰는 내 테마가 있으면 그 모양을 덮어 쓴다
+function withPair(theme, mode) {
+  const id = mode === "light" ? theme.useLight : theme.useDark;
+  const m = id && theme.mine.find((x) => x.id === id);
+  return m ? { ...theme, ...m.theme, mode: theme.mode } : theme;
+}
+// 테마 코드: 내 테마 한 개를 글자로 만들고 다시 읽는다
+export function themeCode(look) {
+  const json = JSON.stringify(pickLook(look));
+  const bytes = new TextEncoder().encode(json);
+  let bin = "";
+  bytes.forEach((b) => bin += String.fromCharCode(b));
+  return "DA1:" + btoa(bin);
+}
+export function parseThemeCode(code) {
+  const m = /^DA1:([A-Za-z0-9+/=]+)$/.exec(String(code ?? "").trim());
+  if (!m) return null;
+  try {
+    const bin = atob(m[1]);
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    const obj = JSON.parse(new TextDecoder().decode(bytes));
+    return obj && typeof obj === "object" ? pickLook(obj) : null;
+  } catch {
+    return null;
+  }
+}
 function textTone(hex, bg, mode, ratio = 4.5) {
   const seed = mode === "dark" ? withLightness(hex, Math.max(lightnessOf(hex), 0.74)) : withLightness(hex, Math.min(lightnessOf(hex), 0.45));
   return ensureContrast(seed, bg, ratio);
 }
+// 테마 묶음·직접 색(바탕·카드·글자)이 있으면 기본 팔레트 위에 덮어쓰고, 읽기 어려운 조합은 대비를 자동으로 맞춘다
+function customBase(theme, mode) {
+  const set = THEME_SETS.find((s) => s.id === theme.set && s.mode === mode);
+  const seeds = { ...set?.base ?? {} };
+  if (theme.cBg) seeds.win = theme.cBg;
+  if (theme.cCard) seeds.surf = theme.cCard;
+  if (theme.cText) seeds.text = theme.cText;
+  if (!seeds.win && !seeds.surf && !seeds.text) return null;
+  const scheme = theme.cBg ? (lightnessOf(theme.cBg) > 0.5 ? "light" : "dark") : mode;
+  const P = BASE[scheme];
+  const win = seeds.win ?? P.win;
+  const surf = seeds.surf ?? (theme.cBg ? (scheme === "light" ? mixHex(win, "#ffffff", 0.65) : mixHex(win, "#ffffff", 0.06)) : P.surf);
+  const text = ensureContrast(ensureContrast(seeds.text ?? P.text, win, 4.5), surf, 4.5);
+  const dark = scheme === "dark";
+  const fit = (c) => ensureContrast(c, surf, 4.5);
+  return {
+    ...P,
+    win, surf, text,
+    surf2: mixHex(win, text, dark ? 0.1 : 0.07),
+    hover: mixHex(win, text, 0.05),
+    line: mixHex(win, text, 0.14),
+    line2: mixHex(win, text, 0.09),
+    line3: mixHex(win, text, 0.24),
+    sub: fit(mixHex(text, surf, 0.28)),
+    mute: fit(mixHex(text, surf, 0.42)),
+    grip: mixHex(win, text, 0.35),
+    trackOff: mixHex(win, text, 0.22),
+    toast: surf,
+    ok: fit(P.ok), warn: fit(P.warn), danger: fit(P.danger), teal: fit(P.teal), rose: fit(P.rose)
+  };
+}
+var SHADOW_STRONG = { dark: ["0 4px 14px rgba(0, 0, 0, 0.5)", "0 14px 34px rgba(0, 0, 0, 0.55)"], light: ["0 4px 14px rgba(50, 38, 28, 0.2)", "0 14px 34px rgba(50, 38, 28, 0.24)"] };
 export function themeVars(themeIn, mode) {
-  const theme = normalizeTheme(themeIn);
+  const theme = withPair(normalizeTheme(themeIn), mode);
   const hc = theme.contrast === "high";
-  const B = BASE[hc ? mode === "light" ? "hcLight" : "hcDark" : mode] ?? BASE.dark;
-  let { a, b } = theme;
+  let B = BASE[hc ? mode === "light" ? "hcLight" : "hcDark" : mode] ?? BASE.dark;
+  if (!hc) B = customBase(theme, mode) ?? B;
+  const gr = GRADIENTS.find((g) => g.id === theme.grad);
+  let a = gr ? gr.a : theme.a, b = gr ? gr.b : theme.b;
   if (hc) {
     // 고대비에서는 버튼 바탕도 글자와 7:1 이상이 되게 색을 진하게(다크에선 밝게) 맞춘다
     a = ensureContrast(a, mode === "light" ? "#ffffff" : "#000000", 7);
@@ -178,6 +291,8 @@ export function themeVars(themeIn, mode) {
   const decoB = mode === "dark" ? withLightness(b, Math.max(lightnessOf(b), 0.68)) : b;
   const soft = hc ? 0.18 : mode === "dark" ? 0.16 : 0.1;
   const dens = theme.density === "compact";
+  const deg = (DIRECTIONS.find((d) => d[0] === theme.dir) ?? DIRECTIONS[1])[2];
+  const btnOnly = theme.accUse === "btn";
   const v = {
     "--rb-backdrop": B.backdrop,
     "--rb-win": B.win,
@@ -206,15 +321,15 @@ export function themeVars(themeIn, mode) {
     "--rb-panel": B.surf,
     "--rb-acc-a": a,
     "--rb-acc-b": b,
-    "--rb-acc-grad": hc ? a : `linear-gradient(135deg, ${a}, ${b})`,
+    "--rb-acc-grad": hc ? a : `linear-gradient(${deg}, ${a}, ${b})`,
     "--rb-deco-grad": hc ? accText : `linear-gradient(90deg, ${decoA}, ${decoB})`,
     "--rb-on-acc": on.fg,
     "--rb-acc-text": accText,
     "--rb-acc2-text": acc2Text,
-    "--rb-acc-soft": alpha(a, soft),
-    "--rb-acc2-soft": alpha(b, soft),
-    "--rb-sel-bg": alpha(a, hc ? 0.14 : mode === "dark" ? 0.12 : 0.07),
-    "--rb-sel-ring": hc ? accText : alpha(accText, 0.5),
+    "--rb-acc-soft": btnOnly ? alpha(B.text, 0.07) : alpha(a, soft),
+    "--rb-acc2-soft": btnOnly ? alpha(B.text, 0.07) : alpha(b, soft),
+    "--rb-sel-bg": btnOnly ? alpha(B.text, 0.06) : alpha(a, hc ? 0.14 : mode === "dark" ? 0.12 : 0.07),
+    "--rb-sel-ring": hc ? accText : btnOnly ? B.line3 : alpha(accText, 0.5),
     "--rb-focus": hc ? B.text : alpha(accText, 0.7),
     "--rb-ok": B.ok,
     "--rb-warn": B.warn,
@@ -236,8 +351,40 @@ export function themeVars(themeIn, mode) {
     "--rb-ctl-sm": dens ? "30px" : "34px",
     "--rb-row-py": dens ? "8px" : "13px",
     "--rb-gap": dens ? "10px" : "16px",
-    "--rb-zoom": String(zoomOf(theme))
+    "--rb-zoom": String(zoomOf(theme)),
+    // 1.8.3 꾸미기 확장 토큰 (기본값은 예전 모습 그대로)
+    "--rb-font": "inherit",
+    "--rb-fw": "400",
+    "--rb-lh": LINEH_V[theme.lineH],
+    "--rb-icon-w": ICONW_V[theme.iconW],
+    "--rb-motion": theme.motion === "reduce" ? "0.001ms" : "1",
+    "--rb-pattern": "none",
+    "--rb-pattern-size": "auto",
+    "--rb-glass": "none",
+    "--rb-side": theme.cSide || "transparent",
+    "--rb-win-grad": "none"
   };
+  if (!hc) {
+    const px = ROUND_PX[theme.round];
+    ["--rb-r1", "--rb-r2", "--rb-r3", "--rb-r4"].forEach((k, i) => v[k] = px[i]);
+    v["--rb-bw"] = EDGE_V[theme.edge];
+    if (theme.shadowLv === "none") {
+      v["--rb-shadow-card"] = "none";
+      v["--rb-shadow-sm"] = "none";
+    } else if (theme.shadowLv === "strong") {
+      const s2 = SHADOW_STRONG[B.scheme] ?? SHADOW_STRONG.dark;
+      v["--rb-shadow-card"] = s2[0];
+      v["--rb-shadow-sm"] = s2[1];
+    }
+    v["--rb-fw"] = theme.weight === "bold" ? "600" : "400";
+    const pc = alpha(B.text, mode === "dark" ? 0.14 : 0.12);
+    if (theme.pattern === "dots") { v["--rb-pattern"] = `radial-gradient(${pc} 1px, transparent 1.2px)`; v["--rb-pattern-size"] = "18px 18px"; }
+    else if (theme.pattern === "grid") { v["--rb-pattern"] = `linear-gradient(${pc} 1px, transparent 1px), linear-gradient(90deg, ${pc} 1px, transparent 1px)`; v["--rb-pattern-size"] = "24px 24px"; }
+    else if (theme.pattern === "paper") { v["--rb-pattern"] = `repeating-linear-gradient(0deg, ${alpha(B.text, 0.035)} 0 2px, transparent 2px 4px)`; v["--rb-pattern-size"] = "auto"; }
+    if (theme.glass) v["--rb-glass"] = "blur(14px) saturate(1.2)";
+    if (theme.bgGrad) v["--rb-win-grad"] = `linear-gradient(160deg, ${B.win}, ${mixHex(B.win, a, 0.14)})`;
+  }
+  v["--rb-font"] = (FONTS.find((f) => f.id === theme.font) ?? FONTS[0]).stack;
   return { vars: v, scheme: B.scheme, onAccentRatio: on.ratio, mode, hc };
 }
 export function readableName(hex, mode) {
