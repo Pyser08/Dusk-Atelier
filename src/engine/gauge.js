@@ -169,8 +169,8 @@ export function validateGaugeOut(obj) {
   return { ...(g.length ? { gauge: g } : {}), ...(idea ? { gaugeIdea: idea } : {}) };
 }
 
-// ── 자동 제안 제한 (기본 꺼짐). 사용자가 직접 만든 게이지는 이 개수에 넣지 않는다.
-export const newSuggestState = () => ({ on: false, list: [], sent: [] });
+// ── 자동 제안 제한 (기본 켜짐). 사용자가 직접 만든 게이지는 이 개수에 넣지 않는다.
+export const newSuggestState = () => ({ on: true, list: [], sent: [] });
 export function canSuggest(sug, now = Date.now()) {
   if (!sug?.on) return false;
   if ((sug.list ?? []).some((x) => x.status === "pending" || (x.status === "snoozed"))) return false;   // 미처리(연기 포함) 1개 제한

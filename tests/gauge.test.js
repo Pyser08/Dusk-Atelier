@@ -74,7 +74,8 @@ test("AI 설계 검증", () => {
 
 test("제안 제한: 하루 2회·4시간 간격·미처리 1개·나중에 24시간", () => {
   const H = 3600e3, s = G.newSuggestState(); const t0 = 1e12;
-  assert.equal(G.canSuggest(s, t0), false);          // 기본 꺼짐
+  assert.equal(G.canSuggest(s, t0), true);           // 기본 켜짐
+  s.on = false; assert.equal(G.canSuggest(s, t0), false);
   s.on = true;
   const a = G.addSuggestion(s, { name: "경계", desc: "" }, [], t0);
   assert.ok(a);

@@ -40,9 +40,10 @@ test("8번째 AI 응답에서 게이지가 갱신되고 표시용 박스가 생�
   assert.equal(u.restored, 1);
 });
 
-test("제안은 기본 꺼짐이라 요청에 안 얹히고, 켜면 suggestGauge가 얹혀 제안이 쌓인다", async () => {
+test("제안은 기본 켜짐이고, 꺼 두면 요청에 안 얹히고, 켜면 suggestGauge가 얹혀 제안이 쌓인다", async () => {
   const { api, store } = setup(8);
   const gauge = createGaugeService(api, { store });
+  await gauge.setSuggestOn("c1", false);
   let sawSuggest = false;
   const call = async (msgs) => { const p = JSON.parse(msgs[1].content); if (p.suggestGauge) sawSuggest = true;
     return JSON.stringify({ people: [{ name: "미나", act: "x", p: 1, s: 1, r: 1 }], scene: null, ...(p.suggestGauge ? { gaugeIdea: { name: "경계심", desc: "낯선 이에 대한 경계" } } : {}) }); };
