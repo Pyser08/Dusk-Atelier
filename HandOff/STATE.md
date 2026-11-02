@@ -234,3 +234,8 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - `package.json` 1.8.2, CHANGELOG `## v1.8.2 (2026-11-02)`(새로 생긴 것/바뀐 점/가벼워진 점/고친 점으로 정리), 아카 글 `docs/arca/v1.8.2.html`(태그 자동 교정이 중심, 시리즈 20편, v1.8.1 글 https://arca.live/b/characterai/187757569).
 - feat/1.8.2 → main 빨리감기 머지 → release.yml이 v1.8.2 릴리스 생성.
 - 다음 작업은 새 브랜치에서(사용자 지정 필요).
+
+## v1.8.3 개발 중 (feat/1.8.2 브랜치에서 이어서, package.json은 1.8.2 그대로)
+- 옷 규칙 변경(사용자 결정 2026-11-02): **동작 우선** — 옷에 없는 키워드는 그 키워드가 있는 다른 옷으로(`engine/imgtagfix.js` resolveIn, kind "outfit"). 어느 옷에도 없으면 그 옷의 default. 이전 (나) 규칙 문구는 모두 이걸로 대체.
+- 에셋 태그 고치기: AI 키워드 목록이 그 캐릭터의 모든 옷 키워드(중복 제거), 답은 같은 옷 우선 → 없으면 그 키워드가 있는 옷. 상황 알림 문구에 'action only in another outfit → use that outfit' 추가.
+- 테스트 갱신·추가, `npm test` 640 pass / 0 fail.

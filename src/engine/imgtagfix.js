@@ -1,7 +1,7 @@
 // v1.8.2 AI 이미지 태그 교정 (순수 로직, 모델 호출 없음).
 // AI 응답의 `<img="…">` / `<img src=…>` 태그가 실제 에셋 이름과 안 맞을 때(대소문자·오타·줄임말·활용형·없는 키워드·지침 원문 복사·여러 키워드를 한 태그에 합침)
 // 이 봇(과 켜진 모듈)의 에셋 목록을 기준으로 가장 가까운 실제 이름으로 고친다. 이미 맞는 태그·URL·CBS 이미지는 한 글자도 바꾸지 않는다.
-// 옷이 정해져 있으면 옷을 지킨다(그 옷에 없는 동작이면 그 옷의 default). 상황에 안 맞는 키워드 고르기(의미 판단)는 하지 않는다.
+// 동작이 우선: 그 옷에 없는 동작이면 그 동작이 있는 다른 옷으로 바꾼다(어느 옷에도 없으면 그 옷의 default). 상황에 안 맞는 키워드 고르기(의미 판단)는 하지 않는다.
 
 const PLACEHOLDER = /\[\s*(character|char|outfit|keyword|yaoi\s*keyword|charname|name|tag|emotion|skinship|action|form|state|image\s*command)[^\]]*\]|character'?s\s*name|^(character|charname|keyword|outfit)$/i;
 const SPLIT = /[,;|+/"`]|\s+and\s+/i;   // 이름 속 ' 와 & 는 자르지 않는다(Sigrid de L'Azur, freda&georgia)
@@ -262,6 +262,10 @@ function resolveIn(idx, t, inherit, state, dotted) {
   const pool = outfit ? outfit.entries : char.entries;
   let entry = pickKeyword(kwRaw, pool);
   let kind = "fuzzy";
+  if (!entry && kwRaw && outfit && outfits.length > 1) {   // 동작 우선(사용자 결정): 이 옷에 없는 키워드면 그 키워드가 있는 다른 옷으로
+    const other = pickKeyword(kwRaw, char.entries);
+    if (other && !FALLBACK.includes(other.nk)) { entry = other; outfit = char.outfits.get(other.outfit ?? ""); kind = "outfit"; }
+  }
   if (!entry && kwRaw) {
     const parts = splitKeywords(kwRaw, pool);
     if (parts.length) return { many: parts.map((p) => pool.find((e) => e.nk === p)), char, outfit };

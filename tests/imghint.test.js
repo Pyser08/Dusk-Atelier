@@ -26,7 +26,7 @@ test("scene state keeps the last outfit and tag per character (old → new)", ()
 
 test("the remembered outfit is used when the reply forgets it", () => {
   const st = sceneState(['<img="Fujiwara_Chika.nude.smiling">'], idx);
-  assert.equal(fixImgTags('<img="Fujiwara_Chika.hug">', idx, { state: st }).text, '<img="Fujiwara_Chika.nude.default">');
+  assert.equal(fixImgTags('<img="Fujiwara_Chika.hug">', idx, { state: st }).text, '<img="Fujiwara_Chika.school_uniform.hug">');   // 동작 우선: hug가 있는 옷으로
 });
 
 test("present characters: tags in recent replies first, then names mentioned", () => {
@@ -127,4 +127,10 @@ test("only the recent replies are read for the scene state (long chats stay chea
   const r = hintForMessages(m, idx);
   assert.equal(r.state.Hayasaka_Ai, undefined);   // 아주 오래된 태그는 읽지 않음
   assert.equal(r.state.Fujiwara_Chika.outfit, "nude");
+});
+
+test("hint says an action beats the outfit", () => {
+  const texts = ['<img="Fujiwara_Chika.nude.smiling">'];
+  const st = sceneState(texts, idx);
+  assert.match(buildHint({ idx, state: st, present: presentChars(texts, idx, st) }), /If the action keyword you need exists only in another outfit, use that outfit/);
 });

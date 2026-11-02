@@ -109,7 +109,8 @@ test("hint is inserted only for the main model request and the reply's missing o
   const out = await fx.beforeRequest(req, "model");
   assert.equal(out.length, 4);
   assert.match(out[2].content, /Kaguya — outfit: nude/);
-  assert.equal(await fx.onOutput('<img="Kaguya.hug">'), '<img="Kaguya.nude.default">');   // 옷을 지킨다(나)
+  assert.equal(await fx.onOutput('<img="Kaguya.hug">'), '<img="Kaguya.school_uniform.hug">');   // 동작 우선
+  assert.equal(await fx.onOutput('<img="Kaguya.smiling">'), '<img="Kaguya.nude.smiling">');   // 둘 다 있으면 직전 옷
 });
 
 test("hint off: request untouched, but the last outfit is still remembered for fixing", async () => {

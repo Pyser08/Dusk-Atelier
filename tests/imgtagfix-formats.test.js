@@ -57,7 +57,7 @@ test("format 3: form (real/virtual) works like an outfit — kept, remembered, a
   const state = sceneState([T("iroha_virtual_smile")], IC);
   assert.equal(state.iroha.outfit, "virtual");
   assert.equal(fx(IC, "iroha_blushing shyly", { state }), T("iroha_virtual_blushing shyly"));
-  assert.equal(fx(IC, "iroha_virtual_cowgirl sex"), T("iroha_virtual_default"));
+  assert.equal(fx(IC, "iroha_virtual_cowgirl sex"), T("iroha_real_cowgirl sex"));   // 동작 우선: 그 동작이 있는 형태로
   assert.equal(fx(IC, "iroha_cowgirl sex"), T("iroha_real_cowgirl sex"));
 });
 test("format 3: hint shows standing characters as name only", () => {

@@ -46,7 +46,7 @@ test("AI items: 'unresolved' mode only sends what the engine could not settle; '
   const b = aiItems(scan, idx, { mode: "all" });
   assert.equal(b.items.length, 2);
   assert.equal(Object.keys(b.sets).length, 1);
-  assert.deepEqual(b.sets[b.items[0].set], ["default", "smiling", "angry", "hug"]);
+  assert.deepEqual(b.sets[b.items[0].set], ["default", "smiling", "angry", "hug", "missionary_sex", "missionary_ejaculation"]);   // 동작 우선: 그 캐릭터의 모든 옷 키워드
   assert.match(b.items[0].text, /안고 있다/);
   assert.equal(aiItems(scanReplies([{ key: 0, text: T("Kaguya.nude.smiling") }], idx), idx, { mode: "unresolved" }).items.length, 0);
   const m = aiMessages(b, { instruction: "NSFW는 nude만" });
@@ -83,4 +83,11 @@ test("renameIds replaces memory identities anywhere in a folder (and nothing els
   const n = renameIds(folder, new Map([["mid:a:1", "mid:a:9"]]));
   assert.equal(n, 4);
   assert.deepEqual(folder, { recs: [{ h: "mid:a:9", at: 3, text: "mid:a:1 그대로" }], done: ["mid:a:9", "mid:b:2"], cursor: { h: "mid:a:9" }, scene: { src: { hash: "mid:a:9" } } });
+});
+
+test("action first: an AI keyword that only exists in another outfit switches to that outfit; same-outfit keyword is preferred", () => {
+  const scan = scanReplies([{ key: 0, text: `눕혔다. ${T("Kaguya.school_uniform.smiling")} ${T("Kaguya.nude.default")}` }], idx);
+  const a = aiItems(scan, idx, { mode: "all" });
+  const ch = parseAiReply('{"changes":[{"id":1,"kw":"missionary_sex"},{"id":2,"kw":"smiling"}]}', a);
+  assert.deepEqual(ch.map((c) => c.name), ["Kaguya.nude.missionary_sex", "Kaguya.nude.smiling"]);
 });

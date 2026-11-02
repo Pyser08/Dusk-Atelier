@@ -34,7 +34,7 @@ export function buildHint({ idx, state, present }) {
     "Image tags must use the exact asset names below — never invent, translate, abbreviate or merge them. One keyword per tag.",
     "Choose by what the character is doing right now: NSFW action > interaction > emotion > default.",
     "The state below only shows what your last tags were. If the action or its stage changed, switch to the matching tag; if it ended, go back to an emotion tag.",
-    "Keep each character's current outfit unless the story clearly changes their clothes.",
+    "Keep each character's current outfit unless the story clearly changes their clothes. If the action keyword you need exists only in another outfit, use that outfit.",
   ];
   const lastRaw = Object.values(state ?? {}).sort((a, b) => b.turn - a.turn)[0]?.raw;
   if (lastRaw) head.push(`Use the same tag format as before, e.g. ${lastRaw}`);

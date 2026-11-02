@@ -69,7 +69,8 @@ test("default-only characters always resolve to default", () => {
 test("missing or wrong outfit uses the outfit that actually has the keyword", () => {
   assert.equal(fix('<img="Fujiwara_Chika.angry">').text, '<img="Fujiwara_Chika.school_uniform.angry">');
   assert.equal(fix('<img="Shinomiya_Kaguya.bikini.missionary_sex">').text, '<img="Shinomiya_Kaguya.school_uniform.missionary_sex">');
-  assert.equal(fix('<img="Shinomiya_Kaguya.nude.missionary_sex">').text, '<img="Shinomiya_Kaguya.nude.default">');
+  assert.equal(fix('<img="Shinomiya_Kaguya.nude.missionary_sex">').text, '<img="Shinomiya_Kaguya.school_uniform.missionary_sex">');   // 동작 우선
+  assert.equal(fix('<img="Shinomiya_Kaguya.nude.ecstatic">').text, '<img="Shinomiya_Kaguya.nude.default">');   // 어느 옷에도 없으면 그 옷의 기본
 });
 
 test("copied prompt template text is removed together with its empty line", () => {
@@ -144,6 +145,6 @@ test("no default asset: fall back to neutral, otherwise keep the tag as it was",
 test("missing outfit follows the outfit worn last; an action that outfit lacks becomes its default", () => {
   const state = { Fujiwara_Chika: { outfit: "casual" } };
   assert.equal(f2('<img="Fujiwara_Chika.smiling">', { state }), C("smiling", "casual"));
-  assert.equal(f2('<img="Fujiwara_Chika.hug">', { state }), C("default", "casual"));
+  assert.equal(f2('<img="Fujiwara_Chika.hug">', { state }), C("hug"));   // 동작 우선: 직전 옷(casual)에 없으면 hug가 있는 옷으로
   assert.equal(f2('<img="Fujiwara_Chika.hug">'), C("hug"));   // 기록이 없으면 그 동작이 있는 옷
 });

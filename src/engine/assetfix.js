@@ -1,7 +1,7 @@
 // v1.8.2 에셋 태그 고치기(도구 탭, 수동). 순수 로직.
 // 흐름: 고른 범위의 응답을 엔진으로 검사(scanReplies) → (선택) 엔진이 못 고친 것 또는 전부를 보조모델에 물음(aiItems·aiMessages)
 // → 답을 실제 키워드 목록으로 검증(parseAiReply) → 바뀔 줄 목록(changeRows) → 고른 줄만 글에 반영(applyRows).
-// 옷(형태)은 바꾸지 않는다(사용자 결정 '나'). 보조모델은 그 캐릭터·옷의 실제 키워드 중에서만 고를 수 있다.
+// 동작 우선(사용자 결정): 고른 동작이 다른 옷에만 있으면 그 옷으로 바뀐다. 보조모델은 그 캐릭터의 실제 키워드 중에서만 고를 수 있다.
 import { tagSpans, renderTag, resolveTag, sceneState, norm } from "./imgtagfix.js";
 
 export const MAX_ITEMS = 80;
@@ -67,7 +67,7 @@ const contextOf = (text, sp) => {
 export function aiItems(scan, idx, { mode = "unresolved" } = {}) {
   const items = [], sets = {}, sig = new Map();
   const setOf = (pool) => {
-    const kwsList = pool.map((e) => e.kw), key = kwsList.join("\u0001");
+    const kwsList = [...new Set(pool.map((e) => e.kw))], key = kwsList.join("\u0001");
     if (!sig.has(key)) { const id = `S${sig.size + 1}`; sig.set(key, id); sets[id] = kwsList; }
     return sig.get(key);
   };
@@ -78,15 +78,15 @@ export function aiItems(scan, idx, { mode = "unresolved" } = {}) {
     const char = t.entry ? idx.chars.get(t.entry.char) : t.charName ? idx.chars.get(t.charName) : null;
     if (!char) return;
     const outfit = t.entry ? char.outfits.get(t.entry.outfit ?? "") : null;
-    const pool = outfit ? outfit.entries : char.entries;
-    if (pool.length < 2) return;   // 고를 것이 없음(스탠딩·예외 캐릭터)
+    const pool = char.entries;   // 동작 우선: 그 캐릭터의 모든 옷 키워드에서 고를 수 있다(같은 옷에 있으면 그 옷으로)
+    if (new Set(pool.map((e) => e.nk)).size < 2) return;   // 고를 것이 없음(스탠딩·예외 캐릭터)
     cand.push({ mi, si: t.si, t, char, outfit, pool, text: r.text });
   }));
   for (const c of cand.slice(-MAX_ITEMS)) {
     const it = {
       id: items.length + 1, mi: c.mi, si: c.si, char: c.char.name, outfit: c.outfit?.name ?? null,
       kw: c.t.entry?.kw ?? null, wrote: c.t.engine === "exact" ? null : c.t.sp.payload,
-      why: c.t.unresolved ?? null, set: setOf(c.pool), text: contextOf(c.text, c.t.sp), pool: c.pool,
+      why: c.t.unresolved ?? null, set: setOf(c.pool), text: contextOf(c.text, c.t.sp), pool: c.pool, outfitObj: c.outfit,
     };
     items.push(it);
   }
@@ -98,7 +98,7 @@ const SYSTEM = [
   "Change an item only when its keyword clearly does not fit what that character is doing or feeling at that point — e.g. an emotion keyword during an ongoing sexual act or skinship when a matching action keyword exists, the wrong action, or the wrong stage of an action (start / ongoing / climax / after).",
   "Prefer action and interaction keywords over emotions when the text shows that action. If the current keyword is reasonable, leave the item out.",
   "\"why\" on an item explains what the checker noticed: default = the original keyword did not exist and was replaced with default; keep = the tag could not be matched; repeat = the same tag was used in 3+ replies in a row.",
-  "Never change the character or outfit. Use only keywords from that item's allowed set, spelled exactly as listed.",
+  "Never change the character. Keep the outfit unless the action you choose exists only in another outfit (the outfit then follows the action). Use only keywords from that item's allowed set, spelled exactly as listed.",
   'Reply with JSON only: {"changes":[{"id":1,"kw":"keyword","why":"짧은 한국어 이유"}]}. Use an empty list if nothing needs to change.',
 ].join("\n");
 
@@ -127,9 +127,9 @@ export function parseAiReply(raw, req) {
     const it = req.items.find((x) => x.id === Number(c?.id));
     if (!it || seen.has(it.id)) continue;
     const want = norm(c?.kw);
-    const e = it.pool.find((x) => x.nk === want);
+    const e = it.outfitObj?.entries.find((x) => x.nk === want) ?? it.pool.find((x) => x.nk === want);   // 같은 옷에 있으면 그 옷, 없으면 그 동작이 있는 옷
     if (!e) { out.notes.push(`${it.char}: 목록에 없는 키워드 '${String(c?.kw ?? "")}'는 버렸어요.`); continue; }
-    if (e.kw === it.kw) continue;
+    if (e.kw === it.kw && (e.outfit ?? null) === (it.outfit ?? null)) continue;
     seen.add(it.id);
     out.push({ id: it.id, mi: it.mi, si: it.si, name: e.name, why: String(c?.why ?? "").slice(0, 120) });
   }
