@@ -7,6 +7,7 @@ import { btn, statusCard, switchEl, loading } from '../kit.js';
 import { CHANGELOG, openChangelog } from '../whatsnew.js';
 import { openTour } from '../tour.js';
 import { injectLine } from '../../engine/memoryusage.js';
+import { memoryGlobalOn } from '../../engine/memoryswitch.js';
 import { injectReasonText } from '../../engine/memoryinject.js';
 import { mem } from './memory/common.js';
 import { createBotAndEdit } from './newbot.js';
@@ -41,7 +42,7 @@ export async function renderHome(ctx) {
     if (!s.cur) memoryStatus = statusCard("off", "채팅을 열면 여기에 기억 상태가 보여요.");
     else {
       const { sw, idx, last } = s;
-      memoryStatus = !sw?.memory?.on ? statusCard("off", "이 채팅에서는 꺼져 있어요.")
+      memoryStatus = !sw?.memory?.on ? statusCard("off", sw?.memory?.reason === "global-off" ? "모든 채팅에서 꺼져 있어요." : "이 채팅에서는 꺼져 있어요.")
         : idx?.bots?.[s.cur.chaId]?.paused ? statusCard("err", "연속으로 실패해서 자동 기록이 멈췄어요.")
         : statusCard(last?.injected ? "on" : "prep", injectLine(last, last ? hhmm(last.at) : "", injectReasonText(last?.reason)));
     }
@@ -73,7 +74,7 @@ export async function renderHome(ctx) {
       }
       refreshStatus();
     };
-    memoryStatus = !memOn ? statusCard("off", "이 채팅에서는 꺼져 있어요.")
+    memoryStatus = !memOn ? statusCard("off", sw.memory.reason === "global-off" ? "모든 채팅에서 꺼져 있어요." : "이 채팅에서는 꺼져 있어요.")
       : idx.bots?.[s.cur.chaId]?.paused ? statusCard("err", "연속으로 실패해서 자동 기록이 멈췄어요.")
       : statusCard(last?.injected ? "on" : "prep", injectLine(last, last ? hhmm(last.at) : "", injectReasonText(last?.reason)));
   }
@@ -130,7 +131,18 @@ export async function renderHome(ctx) {
       onChange(v);
     } })
   );
+  // 장기 기억 전체 스위치: 모든 채팅에서 기록·불러오기를 한 번에 켜고 끈다(쌓인 기억·봇별 설정은 그대로)
+  let globalOn = null;
+  if (s.M?.switches) { try { globalOn = memoryGlobalOn(s.idx ?? await s.M.store.getIndex()); } catch { globalOn = null; } }
+  const setMemAll = async (v) => {
+    try {
+      await s.M.switches.setMemoryEverywhere(v);
+      ctx.toast(v ? "모든 채팅에서 장기 기억을 켰어요. 다음 응답부터 기록돼요." : "모든 채팅에서 장기 기억을 껐어요. 쌓인 기억은 그대로예요.");
+    } catch (e) { failStory(e); }
+    refreshStatus();
+  };
   const storyHelper = h("section", { class: "rb-card bordered rb-story-helper" },
+    globalOn === null ? null : storyRow("장기 기억 (모든 채팅)", "끄면 모든 채팅에서 기록·불러오기가 멈춰요.", globalOn, setMemAll),
     storyRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair),
     storyRow("유저 편향 없애기", "캐릭터가 나만 편들지 않게 해요.", diceOn, setDice),
     storyRow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요.", stOn, setStory)

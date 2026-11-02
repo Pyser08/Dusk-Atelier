@@ -1,7 +1,7 @@
 // 1.7.0 2단계: 기억/리수폿 스위치 분리 · v3.1 마이그레이션 · 봇별/인물별 끄기 · 지금 채팅
 import test from "node:test";
 import assert from "node:assert/strict";
-import { INDEX_REV, comboOf, memoryState, migrateIndex, potCharOn, potCharsOff, potConfirm, potOffForBot, potState, scopeKeyOf, setMemoryForBot, setMemoryGlobal, setPotChar, setPotForBot, setPotGlobal } from "../src/engine/memoryswitch.js";
+import { INDEX_REV, memoryGlobalOn, comboOf, memoryState, migrateIndex, potCharOn, potCharsOff, potConfirm, potOffForBot, potState, scopeKeyOf, setMemoryForBot, setMemoryGlobal, setPotChar, setPotForBot, setPotGlobal } from "../src/engine/memoryswitch.js";
 import { createMemoryStoreV3, INDEX_KEY } from "../src/data/memorystore3.js";
 import { createSwitches, currentChat } from "../src/data/memoryswitches.js";
 
@@ -124,4 +124,19 @@ test("스위치 묶음: 저장되고, 리수폿을 바꾸면 흐름이 다시 �
   // 열린 채팅이 없거나 오류면 null
   assert.equal(await currentChat({ getCurrentCharacterIndex: async () => -1, getCurrentChatIndex: async () => -1 }), null);
   assert.equal(await currentChat({ getCurrentCharacterIndex: async () => { throw new Error("x"); } }), null);
+});
+
+test("홈 토글: 전체 채팅 기억 켜기/끄기 (봇별 설정은 그대로)", async () => {
+  const m = new Map();
+  const api = { pluginStorage: { getItem: async (k) => m.get(k) ?? null, setItem: async (k, v) => { m.set(k, v); }, removeItem: async (k) => { m.delete(k); } } };
+  const store = createMemoryStoreV3(api), sw = createSwitches({ api, store });
+  assert.equal(memoryGlobalOn(await store.getIndex()), true);
+  await sw.setMemory("b1", false);   // 이 봇만 끔
+  await sw.setMemoryEverywhere(false);
+  assert.equal(memoryGlobalOn(await store.getIndex()), false);
+  assert.deepEqual((await sw.state("b2")).memory, { on: false, reason: "global-off" });
+  await sw.setMemoryEverywhere(true);
+  assert.equal(memoryGlobalOn(await store.getIndex()), true);
+  assert.equal((await sw.state("b2")).memory.on, true);
+  assert.equal((await sw.state("b1")).memory.on, false, "봇별로 끈 건 그대로");
 });

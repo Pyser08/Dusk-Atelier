@@ -36,6 +36,8 @@ export function memoryState(idx, chaId) {
   if (obj(idx?.bots)[String(chaId)]?.on === false) return { on: false, reason: "bot-off" };
   return { on: true, reason: "on" };
 }
+// 전체 기본이 켜져 있는가(저장소 '끔'·기억 넣기 '끔'이 아니면 켜짐). 홈의 '모든 채팅' 토글이 쓴다.
+export var memoryGlobalOn = (idx) => { const s = obj(idx?.settings); return s.backend !== "off" && obj(s.inject).on !== false; };
 // 리수폿 켜짐? reason: pot-mode-off(리수폿 기능 끔) | flow-off(전체 스위치 꺼짐) | bot-off(이 봇에서 끔) | on
 export function potState(idx, chaId) {
   const s = obj(idx?.settings);
