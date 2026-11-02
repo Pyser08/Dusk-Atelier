@@ -202,3 +202,12 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 모듈 여러 개: `buildAssetIndex`가 묶음 배열([봇, 모듈1, 모듈2…])을 받아 묶음마다 이름 규칙(점/밑줄·형태)을 따로 판단(`parseGroup`), `idx.modes`가 섞이면 `resolveToken`이 두 규칙으로 다 읽어 실제로 맞춘 결과를 우선. `data/imgtagfix.js` `readNames`가 모듈별 묶음을 넘김. 모듈 수 제한 없음(전역+봇 고정+채팅 지정 합집합).
 - 테스트: formats 10, hook 10. `npm test` 618 pass / 0 fail, build·check 동일함, smoke 통과.
 - 한계: '아미야(마왕)를 Amiya로 쓰는' 같은 의미 오류는 못 고침. 연결 안 된 모듈의 캐릭터 태그는 없는 캐릭터로 보고 지움(설정 `dusk.ui.imgFixUnknown=keep`이면 둠, 아직 화면 토글 없음).
+
+#### 이미지 태그 알림 — 태그 고정 방지 (feat/1.8.2)
+- `engine/imghint.js`: ① 문장을 '유지하라' → '직전 상태일 뿐, 동작·단계가 바뀌면 바꾸고 끝나면 감정 태그로' ② `sceneState`의 `streak`(같은 태그를 연달아 쓴 응답 수) ≥3이면 'used in N replies in a row — change it if the scene moved on' ③ `age`(마지막 응답 기준 몇 번째 전) >1이면 '마지막 태그' 줄 생략, 옷만 알림. 교정용 옷 기억(state.outfit)은 기간 제한 없음. 테스트 imghint 10.
+- 장기기억 분석에 장면 상태 얹기(4·5번)는 하지 않기로(사용자 결정).
+
+#### 버그: 임베딩 '기본으로 사용' 스위치 (feat/1.8.2)
+- 원인: `ui/kit.js` `switchEl`은 스스로 모양을 바꾸지 않음(호출 쪽이 `setSwitch` 해야 함). `memory/embedmodal.js`가 값(f.on)만 바꿔서 화면은 계속 꺼짐 → 켠 것처럼 안 보이고, 켜진 상태에선 클릭마다 false만 나와 끌 수 없었음. 같은 문제: `devtools.js` 패치 만들기의 `row2` 스위치 2개. 둘 다 `setSwitch(el, v)` 추가.
+- 테스트: `tests/e2e/smoke.entry.js` '임베딩 스위치' 3항목(수정 전 2개 실패 확인). 다른 `switchEl` 사용처는 setSwitch·aria-checked 직접 변경·redraw로 처리하고 있음을 확인(editor.js set은 redraw, promptstab edit은 paint).
+- `npm test` 621 pass / 0 fail, build·check 동일함, smoke 0 실패. 실제 RisuAI에서 저장 후 임베딩이 실제로 쓰이는지는 미확인(저장 로직 자체는 변경 없음).

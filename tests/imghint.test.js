@@ -85,3 +85,36 @@ test("array content parts are read too", () => {
   const m = [{ role: "system", content: [{ type: "text", text: "<img=...> rules" }] }, { role: "assistant", content: [{ type: "text", text: '<img="Fujiwara_Chika.nude.smiling">' }] }, { role: "user", content: "x" }];
   assert.equal(hintForMessages(m, idx).state.Fujiwara_Chika.outfit, "nude");
 });
+
+// ── 태그 고정 방지 ──
+test("hint describes the last state without telling the model to keep it", () => {
+  const texts = ['<img="Fujiwara_Chika.nude.missionary_sex">'];
+  const st = sceneState(texts, idx);
+  const hint = buildHint({ idx, state: st, present: presentChars(texts, idx, st) });
+  assert.doesNotMatch(hint, /keep its keyword/);
+  assert.match(hint, /If the action or its stage changed, switch to the matching tag; if it ended, go back to an emotion tag/);
+});
+
+test("the same tag used in several replies in a row is called out", () => {
+  const t = '<img="Fujiwara_Chika.nude.missionary_sex">';
+  const st = sceneState([t, t, t], idx);
+  assert.equal(st.Fujiwara_Chika.streak, 3);
+  const hint = buildHint({ idx, state: st, present: presentChars([t, t, t], idx, st) });
+  assert.match(hint, /used in 3 replies in a row — change it if the scene moved on/);
+  const st2 = sceneState([t, '<img="Fujiwara_Chika.nude.smiling">', t], idx);
+  assert.equal(st2.Fujiwara_Chika.streak, 1);
+});
+
+test("tags older than the last two replies are not shown as the last tag (outfit still is)", () => {
+  const m = [
+    { role: "system", content: "<img> rules" },
+    { role: "assistant", content: '<img="Fujiwara_Chika.nude.missionary_sex">' },
+    { role: "user", content: "a" }, { role: "assistant", content: "Fujiwara Chika는 말이 없다." },
+    { role: "user", content: "b" }, { role: "assistant", content: "Fujiwara Chika가 웃었다." },
+    { role: "user", content: "c" },
+  ];
+  const r = hintForMessages(m, idx);
+  assert.match(r.hint, /Fujiwara_Chika — outfit: nude/);
+  assert.doesNotMatch(r.hint, /last tag: <img="Fujiwara_Chika\.nude\.missionary_sex">/);
+  assert.equal(r.state.Fujiwara_Chika.outfit, "nude");   // 교정용 옷 기억은 그대로
+});

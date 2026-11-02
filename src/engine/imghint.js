@@ -32,7 +32,8 @@ export function buildHint({ idx, state, present }) {
   const head = [
     HINT_MARK,
     "Image tags must use the exact asset names below — never invent, translate, abbreviate or merge them. One keyword per tag.",
-    "Choose by what the character is doing right now: NSFW action > interaction > emotion > default. If an action from your last reply is still going on, keep its keyword instead of switching to an emotion.",
+    "Choose by what the character is doing right now: NSFW action > interaction > emotion > default.",
+    "The state below only shows what your last tags were. If the action or its stage changed, switch to the matching tag; if it ended, go back to an emotion tag.",
     "Keep each character's current outfit unless the story clearly changes their clothes.",
   ];
   const lastRaw = Object.values(state ?? {}).sort((a, b) => b.turn - a.turn)[0]?.raw;
@@ -44,7 +45,10 @@ export function buildHint({ idx, state, present }) {
     if (isDefaultOnly(c)) { stateLines.push(`- ${c.name} — default only`); continue; }
     const outfits = [...c.outfits.values()];
     const outfit = s ? c.outfits.get(s.outfit ?? "") : outfits.length === 1 ? outfits[0] : null;
-    if (s) stateLines.push(`- ${c.name} — ${s.outfit != null ? `outfit: ${s.outfit} · ` : ""}last tag: ${s.raw}`);
+    const fresh = s && !(s.age > 1);   // 마지막 두 응답보다 오래된 태그는 '마지막 태그'로 알리지 않는다(고정 방지). 옷은 계속 알린다.
+    if (s && fresh) stateLines.push(`- ${c.name} — ${s.outfit != null ? `outfit: ${s.outfit} · ` : ""}last tag: ${s.raw}${s.streak >= 3 ? ` (used in ${s.streak} replies in a row — change it if the scene moved on)` : ""}`);
+    else if (s && s.outfit != null) stateLines.push(`- ${c.name} — outfit: ${s.outfit}`);
+    else if (s) stateLines.push(`- ${c.name}`);
     else if (outfits.length > 1) { stateLines.push(`- ${c.name} — outfits: ${outfits.map((o) => o.name).join(", ")}`); continue; }
     else stateLines.push(`- ${c.name}`);
     if (!outfit) continue;
@@ -76,8 +80,8 @@ export function hintForMessages(messages, idx) {
   const replies = all.filter((m) => m?.role === "assistant" || m?.role === "char" || m?.role === "model").map((m) => textOf(m.content));
   const state = sceneState(replies.length ? replies : texts, idx);
   // 차례 번호를 전체 글 기준으로 맞춘다(presentChars가 '최근 몇 개'를 셀 때 사용)
-  const off = texts.length - (replies.length ? replies.length : texts.length);
-  for (const s of Object.values(state)) s.turn += off;
+  const count = replies.length ? replies.length : texts.length, off = texts.length - count;
+  for (const s of Object.values(state)) { s.age = count - 1 - s.turn; s.turn += off; }
   const hint = buildHint({ idx, state, present: presentChars(texts, idx, state) });
   return { hint, state };
 }

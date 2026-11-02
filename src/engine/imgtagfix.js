@@ -373,11 +373,18 @@ export function readTags(text, idx) {
   return res;
 }
 
-// 직전 상황: 오래된 글부터 읽어 캐릭터마다 마지막 옷·태그를 남긴다. → { 캐릭터: { outfit, kw, name, raw, turn } }
+// 직전 상황: 오래된 글부터 읽어 캐릭터마다 마지막 옷·태그를 남긴다. → { 캐릭터: { outfit, kw, name, raw, turn, streak } }
+// streak = 같은 태그를 연달아 쓴 글 수(바로 앞 글에서도 마지막 태그가 같았을 때만 늘어남). 태그 고정 감지용.
 export function sceneState(texts, idx) {
   const state = {};
   (texts ?? []).forEach((t, turn) => {
-    for (const { raw, entry } of readTags(t, idx)) state[entry.char] = { outfit: entry.outfit, kw: entry.kw, name: entry.name, raw, turn };
+    const lastHere = new Map();
+    for (const { raw, entry } of readTags(t, idx)) lastHere.set(entry.char, { raw, entry });
+    for (const [char, { raw, entry }] of lastHere) {
+      const prev = state[char];
+      const streak = prev && prev.name === entry.name && prev.turn === turn - 1 ? prev.streak + 1 : 1;
+      state[char] = { outfit: entry.outfit, kw: entry.kw, name: entry.name, raw, turn, streak };
+    }
   });
   return state;
 }

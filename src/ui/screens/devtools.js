@@ -8,7 +8,7 @@ import { loadCharacters } from '../../data/modules.js';
 import { download, fmtBytes, fmtWhen, h, pickFiles, replace } from '../dom.js';
 import { WORK_ACCEPT, identityDiff, readWorkFile } from '../../engine/devfile.js';
 import { icon } from '../icons.js';
-import { badge, btn, confirmDialog, loading, note, segmented, switchEl } from '../kit.js';
+import { badge, btn, confirmDialog, loading, note, segmented, setSwitch, switchEl } from '../kit.js';
 
 export var isDev = (ctx) => !!ctx.prefs.ui?.devMode;
 var SKIP_CHAR = ["loreCache", "lowLevelHistory", "chatPage", "chats"];
@@ -181,7 +181,7 @@ export async function renderPatchMaker(ctx, { backTo = "dev", backLabel = "개�
       "div",
       { style: "display:flex;gap:12px;align-items:center" },
       h("div", { style: "flex:1;min-width:0;display:flex;flex-direction:column" }, h("span", null, label), h("span", { class: "rb-muted", style: "white-space:normal" }, desc)),
-      switchEl(on, { label, onChange: (v) => set(v) })
+      switchEl(on, { label, onChange: (v, el) => { setSwitch(el, v); set(v); } })
     );
     const make = btn("패치 파일 만들기", { kind: "primary", size: "lg", icon: "download", id: "rb-pm-make", onClick: async () => {
       make.disabled = true;

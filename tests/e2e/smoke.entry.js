@@ -18,6 +18,7 @@ import { showGuide } from "../../src/ui/screens/memory/guide.js";
 import { icon } from "../../src/ui/icons.js";
 import { createWebTools } from "../../src/data/webtools.js";
 import { createSkillStore, COCOA_LIB_KEY, COCOA_PRESETS_KEY } from "../../src/data/skillstore.js";
+import { openEmbedModal } from "../../src/ui/screens/memory/embedmodal.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const $ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -226,6 +227,23 @@ window.runSmoke = async () => {
     const ids = TABS.filter((x) => x.section === "memory").map((x) => x.id);
     check("사이드바 기억 섹션에 코코아 탭", ids.includes("memory") && ids.includes("cocoa") && ids.includes("cards"));
   } catch (e) { check("코코아 탭", false, e?.stack ?? e); }
+  try {   // 임베딩 설정: '기본으로 사용' 스위치가 눌렀을 때 켜진 모양으로 바뀌고, 저장하면 켜짐으로 저장된다
+    const saved = [];
+    const E = { load: async () => {}, status: () => ({ on: false, url: "https://api.voyageai.com/v1/embeddings", model: "voyage-4-large", minSim: 0.32, timeoutMs: 4000, hasKey: true, keyTail: "abcd" }), keyValue: () => "",
+      save: async (p) => { saved.push(p); return { persisted: true, ready: true, keyTail: "abcd" }; }, clear: async () => {}, test: async () => ({ dim: 1, ms: 1 }) };
+    const host = document.createElement("div"); document.body.appendChild(host);
+    const toasts = [];
+    const pm = openEmbedModal({ win: host, memory: { embedder: E }, toast: (t) => toasts.push(t) });
+    await sleep(30);
+    const sw = $('[role="switch"][aria-label="임베딩 기본 사용"]', host)[0];
+    sw.click(); await sleep(10);
+    check("임베딩 스위치 켜짐 표시", sw.getAttribute("aria-checked") === "true", sw.getAttribute("aria-checked"));
+    sw.click(); await sleep(10); sw.click(); await sleep(10);
+    check("임베딩 스위치 다시 끄고 켜기", sw.getAttribute("aria-checked") === "true");
+    clickText("저장", host); await sleep(30);
+    check("임베딩 켜짐으로 저장", saved.at(-1)?.on === true, JSON.stringify(saved.at(-1)));
+    await pm; host.remove();
+  } catch (e) { check("임베딩 설정", false, e?.stack ?? e); }
   check("전역 오류 없음", errors.length === 0, errors.join(" | "));
   return out;
 };

@@ -1,6 +1,6 @@
 // 임베딩 설정 창: 주소·키·모델 입력, 기본 사용 토글, 연결 테스트. 키는 이 기기에만 저장된다(백업·공유에 안 들어감).
 import { h } from "../../dom.js";
-import { btn, modal, switchEl, note } from "../../kit.js";
+import { btn, modal, switchEl, setSwitch, note } from "../../kit.js";
 import { fail } from "./common.js";
 import { DEFAULT_EMBED } from "../../../engine/embed.js";
 
@@ -20,7 +20,7 @@ export async function openEmbedModal(ctx) {
   return modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": "임베딩 설정", style: "max-width:520px;display:flex;flex-direction:column;gap:10px" },
     h("h3", { class: "rb-h3" }, "임베딩 설정"),
     h("p", { class: "rb-muted" }, "현재 장면과 뜻이 비슷한 기억을 찾아 넣을 때 써요. 단어가 달라도 찾을 수 있어요. 실패하거나 느리면 기존 방식으로 넘어가요."),
-    h("div", { class: "rb-mem-field", style: "justify-content:space-between" }, h("span", null, "기본으로 사용"), switchEl(f.on, { label: "임베딩 기본 사용", onChange: (v) => { f.on = v; } })),
+    h("div", { class: "rb-mem-field", style: "justify-content:space-between" }, h("span", null, "기본으로 사용"), switchEl(f.on, { label: "임베딩 기본 사용", onChange: (v, el) => { f.on = v; setSwitch(el, v); } })),
     field("API 주소", url, "기본은 보야지(Voyage AI)예요. 주소가 /contextualizedembeddings(voyage-context-*)면 그 전용 형식으로, 아니면 일반 /embeddings 형식으로 보내요."),
     field("모델 이름", model, "기본 voyage-4-large는 계정당 2억 토큰까지 무료예요. voyage-context-4도 무료, voyage-context-3은 구형이라 유료예요. 컨텍스트 모델은 주소도 /contextualizedembeddings로 바꾸세요."),
     field("대기 시간(초)", wait, "이 시간 안에 답이 없으면 이번 요청은 기존 방식으로 보내고, 벡터는 뒤에서 계속 만들어요. (1~20초, 기본 4)"),
