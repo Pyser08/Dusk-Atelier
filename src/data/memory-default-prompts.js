@@ -46,3 +46,6 @@ export const MEMORY_DEFAULT_PROMPT_2 = `작성 전에 ᄃ�
 
 7. 활성화된 언어, 분량, 내면 공개와 상태 표시 규칙을 지킨다.
    별도의 분석문, 검토 목록이나 새로운 상태창을 만들지 않고 장면을 출력한다.`;
+
+// 기억/리수폿 단계에서 쓰는 기본 위치: 1은 지침 맨 앞, 2는 맨 끝. '내 프롬프트' 설정을 아직 못 읽었을 때 모든 Dusk AI 호출에 이 위치로 넣는다(runAI → withUserPrompts).
+export const DEFAULT_PROMPT_BLOCKS = Object.freeze({ front: MEMORY_DEFAULT_PROMPT_1, back: MEMORY_DEFAULT_PROMPT_2 });

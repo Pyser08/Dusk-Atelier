@@ -3,7 +3,6 @@ import { FIELDS, clone, uid, assert, ARRAY_FIELDS, str, keys, array, object, dan
 import { nativeContent, ridOf, ruleOf } from '../../engine/lorerules.js';
 import { loreSelection, requestLorebook, validLoreIncluded } from './loreselect.js';
 import { DESIGN_FORMAT, DUSK_GUIDE, designExamples, duskContext } from './duskdesign.js';
-import { MEMORY_DEFAULT_PROMPT_1, MEMORY_DEFAULT_PROMPT_2 } from '../../data/memory-default-prompts.js';
 // Dusk 방식 수정안(설계 JSON을 변환한 것)에만 extentions·folder 필드를 허용한다. 일반 방식 응답에는 허용하지 않는다.
 let EXT_OK = false;
 // 편집 대상 종류(v1.6.9): 'character' | 'module'. 모듈에는 첫 메시지·초기 변수·성격 같은 봇 전용 칸이 없다.
@@ -194,7 +193,7 @@ workshop의 changes는 task/data 객체 목록이며 task는 중복 없이 최�
     reference.pendingProposals = session.candidates.filter((c) => !c.status).map((c) => ({ id: c.id, task: c.packet.task, data: c.packet.data }));
     reference.pendingProposalNote = "미적용 제안이다. 현재 원고와 구분하고, 새 수정안의 참조는 현재 원고 기준으로 작성하라.";
     values.REFERENCE_CONTEXT = JSON.stringify(reference);
-    return [{ role: "system", content: MEMORY_DEFAULT_PROMPT_1 + "\n\n" + MEMORY_DEFAULT_PROMPT_2 + "\n\n" + prompt.system + (KIND === "module" ? MODULE_NOTE : "") + "\n\n" + jsonContract(task) }, { role: "user", content: prompt.user.replace(/<<(TASK_NAME|CURRENT_DRAFT|USER_REQUEST|REFERENCE_CONTEXT|OUTPUT_FORMAT)>>/g, (_, key2) => values[key2]) }];
+    return [{ role: "system", content: prompt.system + (KIND === "module" ? MODULE_NOTE : "") + "\n\n" + jsonContract(task) }, { role: "user", content: prompt.user.replace(/<<(TASK_NAME|CURRENT_DRAFT|USER_REQUEST|REFERENCE_CONTEXT|OUTPUT_FORMAT)>>/g, (_, key2) => values[key2]) }];
   }
   var LORE_KEYS = ["comment", "key", "secondkey", "content", "insertorder", "mode", "alwaysActive", "selective", "useRegex", "activationPercent"];
   var REGEX_KEYS = ["comment", "in", "out", "flag", "ableFlag", "type"];

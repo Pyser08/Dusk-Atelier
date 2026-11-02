@@ -1,4 +1,5 @@
 // 장기기억 조립: 저장소·러너·주입·BardWiki 백엔드를 묶고, 선택된 백엔드에 따라 훅을 등록한다.
+import { DEFAULT_PROMPT_BLOCKS } from "./memory-default-prompts.js";
 import { createMemoryStoreV3 as createMemoryStore } from "./memorystore3.js";
 import { createMemoryRunner } from "./memoryrunner.js";
 import { createMemoryInjector } from "./memoryinject.js";
@@ -62,8 +63,10 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
   // 내 프롬프트 중 '장기기억 분석' 단계를 켠 것을 위치별 글로 돌려준다. 플러그인의 모든 AI 호출이 같은 위치로 끼운다(runai.js).
   // 범위(전체·봇·채팅)는 지금 열린 채팅 기준. 열린 채팅이 없으면 '전체' 범위만 적용된다.
   async function userPrompts() {
-    const s = (await flow?.settings?.())?.rawSnapshot?.();
-    if (!s?.customPrompts?.length) return null;
+    let s = null;
+    try { s = (await flow?.settings?.())?.rawSnapshot?.() ?? null; } catch { s = null; }
+    if (!s) return DEFAULT_PROMPT_BLOCKS;   // 설정을 못 읽으면 기본 프롬프트를 기억/리수폿과 같은 위치(앞·뒤)로
+    if (!s.customPrompts?.length) return null;   // 사용자가 지운 경우는 존중
     const cur = await switches.currentChat().catch(() => null), sc = cur ? { characterId: cur.chaId, chatKey: cur.chatId } : {};
     return { front: customPromptPlain(s, "memory", sc, "front"), middle: customPromptPlain(s, "memory", sc, "middle"), back: customPromptPlain(s, "memory", sc, "back") };
   }

@@ -1,5 +1,4 @@
 // 게이지 서비스: 정의(idx.gauges[chaId]) · 값/이력(folder.gauge) 저장, AI 설계, 분석에 얹기, 채팅 표시용 보기.
-import { MEMORY_DEFAULT_PROMPT_1, MEMORY_DEFAULT_PROMPT_2 } from "./memory-default-prompts.js";
 import { runAI } from "../engine/runai.js";
 import { parseJson } from "../engine/memoryprompt.js";
 import { knownPeople } from "../engine/memoryapply.js";
@@ -46,7 +45,7 @@ export function createGaugeService(api, { store, log = () => {}, call = null } =
   // AI가 이름+설명으로 설계 → 검증 → (저장 안 함) 초안 반환
   async function design({ bot = "", name, desc }, model, signal) {
     const n = String(name ?? "").trim(); if (!n) throw new Error("게이지 이름을 적어 주세요.");
-    const msgs = [{ role: "system", content: MEMORY_DEFAULT_PROMPT_1 + "\n\n" + MEMORY_DEFAULT_PROMPT_2 + "\n\n" + DESIGN_RULES }, { role: "user", content: JSON.stringify({ bot: String(bot).slice(0, 120), name: n.slice(0, 24), desc: String(desc ?? "").slice(0, 200) }) }];
+    const msgs = [{ role: "system", content: DESIGN_RULES }, { role: "user", content: JSON.stringify({ bot: String(bot).slice(0, 120), name: n.slice(0, 24), desc: String(desc ?? "").slice(0, 200) }) }];
     let raw = await run(msgs, model, signal), obj;
     try { obj = parseJson(raw); } catch {
       raw = await run([...msgs, { role: "assistant", content: String(raw ?? "").slice(0, 2000) }, { role: "user", content: "Return only the JSON object." }], model, signal);

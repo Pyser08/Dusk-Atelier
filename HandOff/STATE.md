@@ -223,3 +223,8 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 화면 `ui/screens/assetfix.js` `openAssetFix(ctx, {runAI})`(모델 선택은 loredusk와 같은 목록, 설정 `dusk.assetfix.ui.v1`), `tools.js` 타일 `#rb-tool-assetfix`(동적 import).
 - 테스트: `tests/assetfix.test.js` 7, `tests/assetfix-data.test.js` 4, smoke '에셋 고치기' 5항목. `npm test` 632 pass / 0 fail, build·check 동일함, smoke 0 실패.
 - 확인 못 한 것: 실제 RisuAI·RisuBard·PocketRisu에서 `setChatToIndex`로 바꾼 응답이 화면에 바로 반영되는지(새로고침 필요할 수 있음), 실제 보조모델이 JSON 형식을 지키는지·판단 품질, 아주 긴 채팅에서 `getCharacterFromIndex` 지연. 저장된 채팅을 바꾸는 유일한 기능 — '원본 채팅 수정 안 함' 원칙의 예외(사용자 요청, 미리보기·되돌리기로 보완).
+
+#### 기본 프롬프트 위치 통일 (feat/1.8.2)
+- 규칙: Dusk의 모든 AI 호출은 `runAI`/`callModel`의 `withUserPrompts`가 '내 프롬프트'(기억 단계, 앞·중간·뒤)를 넣는다. 기본 프롬프트 1(앞)·2(뒤)는 그 목록의 기본 항목(`memoryturn.js` dusk-default-front/back-v1). **지침 글에 MEMORY_DEFAULT_PROMPT_1/2를 직접 붙이지 말 것**(중복·위치 깨짐).
+- 바뀐 곳: `data/memory.js` `userPrompts` — 리수폿 설정을 못 읽으면 `DEFAULT_PROMPT_BLOCKS`(앞=1, 뒤=2), 목록이 비어 있으면(사용자가 지움) null. 직접 붙이던 `data/gauge.js` design, `dev/aibuild/core.js` 메시지, `ui/screens/personabuilder.js`(번역·대화 2곳)에서 제거. 장기기억 분석(`noUserPrompts`, 대상 채팅 기준 직접 끼움)은 그대로.
+- 테스트 `tests/defaultprompts.test.js` 3. `npm test` 635 pass / 0 fail, build·check 동일함, smoke 0 실패. 실제 모델 응답 영향은 미확인.
