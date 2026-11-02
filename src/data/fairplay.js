@@ -27,13 +27,36 @@ export async function loadDiceCustom(api) {
   try { count = await api.pluginStorage.getItem(DICE_COUNT_KEY); } catch { /* 기본값 */ }
   return { cuts: normalizeCuts(cuts), count: normalizeCount(count) };
 }
-export function createFairPlay(api, { log = (...a) => console.log("[Dusk 공정]", ...a), rng } = {}) {
+// 주사위 기록 (1.8.3): 굴릴 때마다 채팅과 함께 남긴다(최근 300). 화면 '최근 판정 기록'이 읽는다.
+export const DICE_LOG_KEY = "dusk-dice-log";
+const DICE_LOG_MAX = 300;
+export async function loadDiceLog(api) {
+  try { const raw = await api.pluginStorage.getItem(DICE_LOG_KEY); const v = typeof raw === "string" ? JSON.parse(raw) : raw; return Array.isArray(v?.recs) ? v.recs : []; } catch { return []; }
+}
+export async function clearDiceLog(api) { await api.pluginStorage.setItem(DICE_LOG_KEY, JSON.stringify({ v: 1, recs: [] })); }
+export function createFairPlay(api, { log = (...a) => console.log("[Dusk 공정]", ...a), rng, chatOf = null, saveMs = 1500 } = {}) {
+  // 기록은 요청을 붙잡지 않게 뒤에서 모아 저장한다
+  let queue = [], saveTimer = null, saving = Promise.resolve();
+  const flushLog = () => {
+    clearTimeout(saveTimer); saveTimer = null;
+    if (!queue.length) return saving;
+    const add = queue; queue = [];
+    saving = saving.then(async () => { const recs = await loadDiceLog(api); recs.push(...add); await api.pluginStorage.setItem(DICE_LOG_KEY, JSON.stringify({ v: 1, recs: recs.slice(-DICE_LOG_MAX) })); }).catch((e) => log("주사위 기록 저장 실패", e?.message ?? e));
+    return saving;
+  };
+  const record = (d) => {
+    (async () => {
+      let c = null; try { c = chatOf ? await chatOf() : null; } catch { /* 채팅 정보 없이 */ }
+      queue.push({ at: Date.now(), rolls: d.rolls, cuts: d.cuts, mode: d.mode, ...(c ? { chaId: c.chaId, chatId: c.chatId, botName: c.botName, chatName: c.chatName } : {}) });
+      clearTimeout(saveTimer); saveTimer = setTimeout(flushLog, saveMs);
+    })();
+  };
   let last = null, on = false, hooked = false, dice = false, mode = "reinterpret", level = "normal", custom = { cuts: null, count: 3 };
   async function beforeRequest(messages, type) {
     try {
       if (!on || (type && type !== "model")) return messages;
       const d = dice ? makeDice(messages, mode, rng, resolveDice(level, custom.cuts, custom.count)) : null;
-      if (d) last = { at: Date.now(), rolls: d.rolls, cuts: d.cuts, mode: d.mode };   // 응답 아래 '주사위 결과 표시'용
+      if (d) { last = { at: Date.now(), rolls: d.rolls, cuts: d.cuts, mode: d.mode }; record(d); }   // 응답 아래 '주사위 결과 표시'·기록용
       return insertFairness(messages, { dice: d });
     } catch (e) { log("지침 삽입 실패", e?.message ?? e); return messages; }
   }
@@ -53,5 +76,5 @@ export function createFairPlay(api, { log = (...a) => console.log("[Dusk 공정]
     await api.pluginStorage.setItem(DICE_CUTS_KEY, JSON.stringify(custom.cuts)); await api.pluginStorage.setItem(DICE_COUNT_KEY, String(custom.count)); await api.pluginStorage.setItem(DICE_LEVEL_KEY, level);
     return { ...custom };
   }
-  return { start, set, setDice, setDiceMode, setDiceLevel, setDiceCustom, diceLevel: () => level, lastDice: () => last, diceCustom: () => ({ ...custom }), isOn: () => on, isDiceOn: () => dice, diceMode: () => mode, beforeRequest };
+  return { start, set, setDice, setDiceMode, setDiceLevel, setDiceCustom, diceLevel: () => level, lastDice: () => last, flushLog: async () => { await new Promise((r) => setTimeout(r, 0)); return flushLog(); }, diceCustom: () => ({ ...custom }), isOn: () => on, isDiceOn: () => dice, diceMode: () => mode, beforeRequest };
 }

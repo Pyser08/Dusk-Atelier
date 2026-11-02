@@ -42,7 +42,7 @@ const ui = (page) => page.evaluate(() => JSON.parse(__api.store["rbm:ui:v1"] ?? 
   await page.locator(".rb-dice [role=switch]").click(); await page.waitForTimeout(400);
   await page.locator(".rb-dice .rb-seg button", { hasText: "약하게" }).click(); await page.waitForTimeout(150);
   ok("[4단계] 유저 편향 상세에서 강도(약하게) 저장", (await page.evaluate(() => __api.store["dusk.ui.fairDiceLevel"])) === "weak");
-  await page.locator(".rb-dice .btns button").click(); await page.waitForTimeout(150);
+  await page.locator(".rb-dice:not(.rb-dlog) .btns button", { hasText: "닫기" }).click(); await page.waitForTimeout(150);
   ok("[4단계] 박스에 현재 강도 표시", /약하게/.test(await page.locator(".rb-onb #rb-dice-row").textContent()));
   ok("[4단계] 유저 편향 없애기를 켜면 공정한 전개도 켜짐·저장", (await sw("공정한 전개").getAttribute("aria-checked")) === "true" && await page.evaluate(() => __api.store["dusk.ui.fairPlay"] === "on" && __api.store["dusk.ui.fairDice"] === "on"));
   await page.locator("#rb-onb-next").click(); await page.waitForTimeout(600);

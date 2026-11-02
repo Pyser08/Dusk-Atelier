@@ -160,6 +160,12 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     tile("image", "카드로 만들기", () => ctx.go("cards"), "rb-mem-go-cards"),
     tile("message", "다른 채팅", () => { m.page = "bots"; redraw(); }, "rb-mem-go-bots")));
 
+  // '나' 한 줄 카드 (1.8.3): 다른 인물들이 나를 어떻게 기억하는지
+  const meRow = h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-me", onClick: () => { m.page = "me"; redraw(); } },
+    h("span", { class: "rb-mem-av rb-me-av sm", "aria-hidden": "true" }, "나"),
+    h("span", { class: "t" }, "나에 대한 기억", h("small", null, "다른 인물들이 나를 어떻게 보고 부르는지 모아 봐요.")),
+    h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
+
   const recent = recentOf(folder);
   const recBox = h("section", { class: "rb-card bordered rb-mem-recentbox" }, h("div", { class: "rb-mem-rechead" }, h("b", null, "최근 기록"), recent.length ? h("button", { type: "button", class: "rb-textlink", onClick: () => openDetail() }, "전체 보기") : null),
     h("ul", { class: "rb-mem-reclist rb-mem-recent" }, recent.length
@@ -187,7 +193,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
 
   const main = h("div", { class: "rb-mem2-main" },
     pageHead("장기 기억"),
-    statusBox, bigAct, prog, shortcuts, memOptions, recBox,
+    statusBox, bigAct, prog, shortcuts, meRow, memOptions, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" }, main, h("div", { class: "rb-mem2-side" }, ...side)));
   // 1.8.3: 임베딩 안내 창은 자동으로 띄우지 않는다(시작 안내 3단계에서 설정, 필요하면 설정 줄의 '임베딩'에서)

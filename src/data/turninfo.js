@@ -4,7 +4,7 @@
 // · 화면(display): 열쇠가 맞는 응답 아래에 접는 블록을 붙인다 (저장된 채팅은 건드리지 않음)
 // RisuBard(bardWiki 있음)에서는 쓰지 않는다. 훅 안에서는 오래 기다리지 않는다(HOST-COMPAT 3-3).
 import { headKey, tailKey, matchRecord } from "../engine/lorelog.js";
-import { estimateTokens, diceHtml, callHtml, fmtSec, fmtTokens } from "../engine/turninfo.js";
+import { estimateTokens, diceHtml, callHtml, fmtSec, fmtTokens, prefixInfo, cacheLine } from "../engine/turninfo.js";
 
 export const DICE_SHOW_KEY = "dusk.ui.diceShow";   // 기본 꺼짐
 export const CALL_SHOW_KEY = "dusk.ui.callShow";   // 기본 꺼짐
@@ -21,7 +21,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const textOf = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => typeof p === "string" ? p : p?.text ?? "").join("\n") : String(c ?? "");
 
 export function createTurnInfo(api, { diceSource = () => null, loreFor = () => null, loreLast = () => null, now = Date.now, chip = true, quietMs = 1500, log = (...a) => console.log("[Dusk 호출표시]", ...a) } = {}) {
-  let diceShow = false, callShow = false, recs = null, pending = null, saveTimer = null, hooked = false, quiet = null, names = { at: -Infinity, main: "", sub: "" };
+  let prevMsgs = null, diceShow = false, callShow = false, recs = null, pending = null, saveTimer = null, hooked = false, quiet = null, names = { at: -Infinity, main: "", sub: "" };
   const supported = () => !isBardHost(api);
 
   const ensure = async () => {
@@ -69,7 +69,8 @@ export function createTurnInfo(api, { diceSource = () => null, loreFor = () => n
     if (!chip || !callShow) return;
     stopTick();
     const lore = loreLast?.(); const names = (lore?.entries ?? []).map((e) => esc(e.n)).filter(Boolean);
-    chipSet(`${rec.aux ? "보조" : "메인"} · ${rec.model || "모델"} · 완료 ${fmtSec(rec.lastAt - rec.startAt)} · 입력 약 ${fmtTokens(rec.inTok ?? 0)} · 출력 약 ${fmtTokens(rec.outTok ?? 0)}`, `<div style="font-weight:700;margin-top:2px">들어간 로어북 ${names.length}개</div>${names.length ? names.map((n) => `<div>· ${n}</div>`).join("") : "<div style='opacity:.7'>없어요</div>"}`);
+    const cpct = rec.cache ? ` · 캐시 약 ${Math.round(rec.cache.ratio * 100)}%` : "";
+    chipSet(`${rec.aux ? "보조" : "메인"} · ${rec.model || "모델"} · 완료 ${fmtSec(rec.lastAt - rec.startAt)} · 입력 약 ${fmtTokens(rec.inTok ?? 0)} · 출력 약 ${fmtTokens(rec.outTok ?? 0)}${cpct}`, `${rec.cache ? `<div style="margin-top:2px">캐시(어림) · ${esc(cacheLine(rec.cache))}</div>` : ""}<div style="font-weight:700;margin-top:2px">들어간 로어북 ${names.length}개</div>${names.length ? names.map((n) => `<div>· ${n}</div>`).join("") : "<div style='opacity:.7'>없어요</div>"}`);
     clearTimeout(ui.hide); ui.hide = setTimeout(chipRemove, 15e3);
   }
 
@@ -84,6 +85,10 @@ export function createTurnInfo(api, { diceSource = () => null, loreFor = () => n
         if (callShow && chip) { chipSet(`보조 · ${rec.model || "모델"} · 호출 중 · 입력 약 ${fmtTokens(rec.inTok)}`, ""); clearTimeout(ui.hide); ui.hide = setTimeout(chipRemove, 4e3); }
         return messages;
       }
+      // 캐시 어림: 직전 메인 요청과 앞부분 비교(글만 보관)
+      const flatMsgs = (Array.isArray(messages) ? messages : []).map((m) => ({ role: m?.role, content: textOf(m?.content) }));
+      const pi = prefixInfo(prevMsgs, flatMsgs); prevMsgs = flatMsgs;
+      if (pi) rec.cache = { ratio: pi.ratio, same: pi.same, total: pi.total, breakAt: pi.breakAt, at: pi.at, of: pi.of, dusk: pi.dusk };
       pending = rec; chipRun(rec);
     } catch (e) { log("요청 확인 실패", e?.message ?? e); }
     return messages;
@@ -132,6 +137,8 @@ export function createTurnInfo(api, { diceSource = () => null, loreFor = () => n
       if (typeof api.addRisuReplacer === "function") await api.addRisuReplacer("beforeRequest", beforeRequest);
       if (typeof api.addRisuScriptHandler === "function") { await api.addRisuScriptHandler("output", onOutput); await api.addRisuScriptHandler("display", onDisplay); }
       hooked = true;
+      // 요청 훅은 등록 순서대로 불린다. Dusk의 다른 훅(장기 기억 등)이 나중에 붙어도 최종 프롬프트를 보도록 잠시 뒤 맨 뒤로 다시 단다.
+      setTimeout(async () => { try { if (typeof api.removeRisuReplacer === "function") { await api.removeRisuReplacer("beforeRequest", beforeRequest); await api.addRisuReplacer("beforeRequest", beforeRequest); } } catch { /* 순서만 못 바꿈 */ } }, 5000);
     } catch (e) { log("훅 등록 실패", e?.message ?? e); }
     return hooked;
   }

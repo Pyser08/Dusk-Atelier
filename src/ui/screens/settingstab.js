@@ -67,9 +67,10 @@ export async function renderSettingsTab(ctx) {
   // ── 고급 영역 ──
   let advBlocks = [true];
   if (adv) {
-    const [memBtnOn, lore] = await Promise.all([
+    const [memBtnOn, lore, chatQuickOn] = await Promise.all([
       loadMemoryButtonOn(ctx.api),
-      loadLoreSettings(ctx.api).catch(() => ({ ...LORE_DEFAULTS }))
+      loadLoreSettings(ctx.api).catch(() => ({ ...LORE_DEFAULTS })),
+      ctx.chatMenu ? ctx.chatMenu.isOn().catch(() => true) : Promise.resolve(true)
     ]);
     const saved = h("span", { class: "rb-muted", style: "font-size:12.5px" });
     const setLore = async (patch) => {
@@ -114,6 +115,9 @@ export async function renderSettingsTab(ctx) {
           const ok = await ctx.memoryButton?.set(v === "on");
           ctx.toast(ok === false ? "저장했어요. 이 화면에선 바로 안 바뀌어서 리스를 새로 고치면 적용돼요." : v === "on" ? "채팅 메뉴에 기억 버튼을 보여요" : "채팅 메뉴의 기억 버튼을 숨겼어요");
         }, "rb-set-membtn"),
+        valRow("채팅 메뉴의 빠른 설정", "입력창 옆 메뉴에 공정한 전개·유저 편향·주사위 결과 표시", [["on", "보임"], ["off", "숨김"]], chatQuickOn ? "on" : "off", async (v) => {
+          try { await ctx.chatMenu?.setOn(v === "on"); ctx.toast(v === "on" ? "채팅 메뉴에 빠른 설정을 보여요" : "채팅 메뉴의 빠른 설정을 숨겼어요"); } catch (e) { fail(e); }
+        }, "rb-set-chatquick"),
         saved),
       card("정리 · 기록",
         linkRow("기록 · 되돌리기", `편집·삭제 전 상태 보기${ctx.state.histCount ? ` · ${ctx.state.histCount}개` : ""}`, () => ctx.go("settings", "history"), "rb-set-backups"),

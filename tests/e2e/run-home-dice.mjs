@@ -38,10 +38,10 @@ async function run(advanced) {
     ok(tag + "직접 입력 저장(custom·수치·개수)", (await store("dusk.ui.fairDiceLevel")) === "custom" && (await store("dusk.ui.fairDiceCount")) === "4" && JSON.parse(await store("dusk.ui.fairDiceCuts")).extreme === 90);
     ok(tag + "강도 버튼 선택 해제", (await page.locator(".rb-dice .rb-seg button[aria-checked=true]").count()) === 0);
   }
-  await page.locator(".rb-dice .btns button").click(); await page.waitForTimeout(150);
+  await page.locator(".rb-dice:not(.rb-dlog) .btns button", { hasText: "닫기" }).click(); await page.waitForTimeout(150);
   ok(tag + "닫으면 박스에 현재 강도", new RegExp(advanced ? "직접 입력" : "강하게").test(await row.textContent()), await row.textContent());
   await page.locator("#rb-dice-row").click(); await page.waitForTimeout(100);
-  await page.locator(".rb-dice [role=switch]").click(); await page.waitForTimeout(150); await page.locator(".rb-dice .btns button").click(); await page.waitForTimeout(100);
+  await page.locator(".rb-dice [role=switch]").click(); await page.waitForTimeout(150); await page.locator(".rb-dice:not(.rb-dlog) .btns button", { hasText: "닫기" }).click(); await page.waitForTimeout(100);
   ok(tag + "끄면 박스에 '꺼짐'", /꺼짐/.test(await row.textContent()) && (await store("dusk.ui.fairDice")) === "off");
   ok(tag + "오류 없음", !errs.length, errs.join(";"));
   await page.context().close();

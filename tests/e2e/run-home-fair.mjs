@@ -12,7 +12,7 @@ await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:u
 await page.waitForTimeout(300);
 const sw = (name) => name === "유저 편향 없애기" ? page.locator(`.rb-dice [role=switch]`) : page.locator(`.rb-story-helper [role=switch][aria-label='${name}']`);
 const diceOpen = async () => { await page.locator("#rb-dice-row").click(); await page.waitForTimeout(150); };
-const diceClose = async () => { await page.locator(".rb-dice .btns button").click(); await page.waitForTimeout(100); };
+const diceClose = async () => { await page.locator(".rb-dice:not(.rb-dlog) .btns button", { hasText: "닫기" }).click(); await page.waitForTimeout(100); };
 const store = (k) => page.evaluate((k) => __api.store[k], k);
 await diceOpen();
 ok("처음엔 둘 다 꺼짐", (await sw("공정한 전개").getAttribute("aria-checked")) === "false" && (await sw("유저 편향 없애기").getAttribute("aria-checked")) === "false");

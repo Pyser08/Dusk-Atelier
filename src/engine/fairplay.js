@@ -82,7 +82,15 @@ export function insertFairness(messages, { dice = null } = {}) {
   const out = [...list.slice(0, at), { role: "system", content: buildFairText(dice) }, ...list.slice(at)];
   if (dice) {
     let u = -1; for (let i = out.length - 1; i > at; i--) if (out[i]?.role === "user") { u = i; break; }
-    out.splice(u < 0 ? out.length : u, 0, { role: "system", content: diceRollText(dice) });
+    const di = u < 0 ? out.length : u;
+    out.splice(di, 0, { role: "system", content: diceRollText(dice) });
+    // Claude(리스): 중간 system은 user로 바뀌어 마지막 user와 한 덩어리가 되고, 캐시 지점이 그 덩어리에 찍히면 다음 턴과 앞부분이 어긋난다.
+    // 리스가 이미 캐시를 쓰고 있으면(캐시 지점이 하나라도 있으면) 주사위 바로 앞 assistant에 지점을 하나 더해 그 앞까지는 다음 턴에 재사용되게 한다. Claude 한도 4개.
+    const points = out.filter((m) => m?.cachePoint).length;
+    if (points > 0 && points < 4) {
+      let a = -1; for (let i = di - 1; i > at; i--) { if (out[i]?.role === "assistant") { a = i; break; } if (out[i]?.role === "user") break; }
+      if (a >= 0 && !out[a].cachePoint) out[a] = { ...out[a], cachePoint: true };
+    }
   }
   return out;
 }

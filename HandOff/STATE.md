@@ -370,3 +370,13 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - **{{user}} = 나**: `engine/memoryuser.js normalizeUserNames`(페르소나 이름·user·유저·플레이어 → `{{user}}`, people·rel·emo·scene.who·know) · 분석 지침에 한 줄 추가(memoryprompt.js) · `applyAnalysis({userNames})`, runner가 `getDatabase(["username"])`(60초 캐시)로 넘김 · 위키 라벨 '나와의 관계'. 시험 `tests/memory-user-identity.test.js`. 기존에 갈라져 쌓인 페르소나 이름 인물은 자동 병합 안 함(저장 데이터 변경이라 필요하면 사용자 확인 후).
 - **탭 이동 멈춤**: 원인 추정 = 홈·기억 화면이 탭 진입마다 `currentChat()` → `getCharacterFromIndex`(봇의 모든 채팅 복사, 실제 호스트에서 수백 ms). 수정 = `memoryswitches.js` 위치(ci:ti)별 30초 캐시, 쓰기·창 열기 때 `dbcache.js cacheGen()`으로 비움. 시험 `tests/currentchat-cache.test.js`, 측정 스크립트 `tests/e2e/run-tabperf.mjs`(시험 환경은 API가 즉시라 체감 차이는 실제 호스트에서만 확인 가능).
 - 확인 못 함: 실제 호스트에서 캐시 적중률(프로바이더 로그), 탭 이동 체감, 아이콘·땡스 카드 실제 테마별 모양.
+
+## 2026-11-03 추가 기능 (사용자 지시 1·2·4·5·6, 완료)
+- RisuAI 소스 확인(kwaroran/RisuAI `src/ts/process/index.svelte.ts`·`request/anthropic.ts`·`request.ts`): 캐시 지점(`cachePoint`)은 리스가 먼저 찍고(자동=마지막 user 3개, 프롬프트 템플릿 'cache' 카드=깊이·역할) 플러그인 beforeRequest는 그 뒤에 받음. Claude 변환에서 첫 메시지 이후 system은 "System: …" user로 바뀌고 같은 역할끼리 한 텍스트 블록으로 합쳐짐(캐시 지점은 합친 블록 끝). → 주사위는 마지막 user와 합쳐지므로, `insertFairness`가 캐시 지점이 1~3개 있을 때만 주사위 앞 assistant에 `cachePoint` 추가(4개 한도, 원본 불변). 시험 `tests/cache-hit.test.js`.
+- ① 캐시 적중 어림: `engine/turninfo.js prefixInfo/cacheLine`(직전 메인 요청과 앞부분 같은 토큰·비율, 깨진 메시지 위치, Dusk 표식이면 이름) → `data/turninfo.js` rec.cache, 칩·응답 아래 '캐시(어림)' 줄. 요청 훅은 시작 5초 뒤 remove+add로 맨 뒤로(다른 Dusk 훅 뒤의 최종 프롬프트를 보려고). 실제 프로바이더 적중과 다를 수 있음(어림).
+- ② 주사위 기록: `data/fairplay.js` `DICE_LOG_KEY "dusk-dice-log"`(최근 300, 굴릴 때 채팅 정보와 함께, 1.5초 모아 저장), `loadDiceLog/clearDiceLog`, `engine/turninfo.js diceStats`. 화면 `ui/dicedetail.js openDiceLog`(이 채팅/전체·통계·지우기). main에서 `chatRef`로 `memory.switches.currentChat` 연결.
+- ④ 합치기: `engine/memoryuser.js userMergePlan/mergeIntoUser`(people·emo·talk·rels·faces·exp·bonds·rifts·beliefs·scenes.who). 저장 데이터 변경이라 '나' 화면에서 미리 보기+확인 후에만. 위키(리수폿 문서)는 건드리지 않음.
+- ⑤ '나' 화면: `ui/screens/memory/mepage.js`(m.page="me", 기억 홈 `#rb-mem-go-me` 한 줄 카드), 데이터 `meView`(counterparts/pairView 재사용). CSS `.rb-me*`(styles.js 끝), 넓으면 2열 columns.
+- ⑥ 채팅 메뉴: `data/chatmenu.js`(`registerButton` location "chat", id 고정 `dusk-qt-fair|dice|show`로 다시 등록해 이름 갱신). main에서 fairPlay.set/setDice·turnInfo.setDiceShow를 감싸 어디서 바꿔도 이름 갱신. 설정 '로어북 · 채팅 메뉴'에 보임/숨김(`dusk.ui.chatQuick`, 기본 보임).
+- 시험: `cache-hit`·`dice-log`·`memory-user-merge`·`chatmenu` 단위, e2e `run-me.mjs`(PC·모바일 16). e2e에서 `.rb-dice .btns button`은 버튼이 2개라 '닫기' 글자로 고름.
+- 확인 못 함: 실제 Claude 캐시 적중(프로바이더 사용량), 채팅 메뉴 버튼이 RisuBard·PocketRisu에 있는지(없으면 조용히 생략), '나' 화면의 실제 데이터 품질.

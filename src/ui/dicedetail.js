@@ -4,7 +4,8 @@ import { h, replace } from './dom.js';
 import { btn, iconBtn, modal, note, segmented, switchEl } from './kit.js';
 import { icon } from './icons.js';
 import { DICE_LEVELS, MAX_DICE, resolveDice } from '../engine/fairplay.js';
-import { DICE_LEVEL_KEY, DICE_CUTS_KEY, DICE_COUNT_KEY, loadDiceLevel, loadDiceCustom } from '../data/fairplay.js';
+import { DICE_LEVEL_KEY, DICE_CUTS_KEY, DICE_COUNT_KEY, loadDiceLevel, loadDiceCustom, loadDiceLog, clearDiceLog } from '../data/fairplay.js';
+import { diceStats, judgeRoll, VERDICTS } from '../engine/turninfo.js';
 
 export const LEVEL_LABEL = { weak: "약하게", normal: "보통", strong: "강하게", custom: "직접 입력" };
 const CUT_LABEL = [["easy", "쉬움"], ["normal", "보통"], ["hard", "어려움"], ["extreme", "극악"]];
@@ -71,7 +72,7 @@ export async function openDiceDetail(ctx, st, { setOn, fail = () => {} }) {
       h("div", { class: "rb-srow" }, h("span", { class: "t" }, "사용하기", h("small", null, "공정한 전개가 꺼져 있으면 함께 켜져요.")), sw),
       h("section", { class: "lv" }, h("span", { class: "l" }, "강도"), seg, cutsEl),
       advBox,
-      h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => done(true) })));
+      h("div", { class: "btns" }, btn("최근 판정 기록", { icon: "history", onClick: () => openDiceLog(ctx), id: "rb-dice-logbtn" }), btn("닫기", { kind: "primary", onClick: () => done(true) })));
   });
   return st;
 }
@@ -87,4 +88,38 @@ export function diceRow(ctx, { on, setOn, fail }) {
     h("span", { class: "end" }, val, h("span", { class: "go" }, icon("chevron", 16))));
   row.refresh = (v) => { st.on = !!v; paint(); };
   return row;
+}
+
+// 최근 판정 기록 (1.8.3): 굴린 값을 채팅별로 모아 보고, '보통' 목표 기준으로 얼마나 잘 풀렸는지 숫자로 본다.
+const VCLASS = { 대실패: "vf2", 실패: "vf", 애매: "vm", 성공: "vs", 대성공: "vs2" };
+const hhmm = (ms) => { const d = new Date(ms); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+export async function openDiceLog(ctx) {
+  const all = await loadDiceLog(ctx.api);
+  const cur = await ctx.memory?.switches?.currentChat?.().catch(() => null) ?? null;
+  const st = { scope: cur ? "chat" : "all" };
+  const listHost = h("div", { class: "rb-dlog-list" }), statHost = h("div", { class: "rb-dlog-stat" });
+  const paint = (recs) => {
+    const rows = st.scope === "chat" && cur ? recs.filter((r) => r.chaId === cur.chaId && r.chatId === cur.chatId) : recs;
+    const s = diceStats(rows);
+    replace(statHost, s.n
+      ? h("div", { class: "nums" }, h("span", null, h("b", null, String(s.n)), h("small", null, "굴림")), h("span", null, h("b", null, String(s.avg)), h("small", null, "평균")),
+        ...VERDICTS.map((v) => h("span", { class: VCLASS[v] }, h("b", null, String(s.verdicts[v])), h("small", null, v))))
+      : null,
+      h("small", { class: "rb-muted" }, "판정은 '보통' 목표 기준이에요. 실제로는 AI가 행동마다 난이도를 골라요."));
+    replace(listHost, rows.length ? [...rows].reverse().slice(0, 60).map((r) => h("div", { class: "rb-dlog-row" },
+      h("span", { class: "when" }, hhmm(r.at), st.scope === "all" && r.botName ? h("small", null, `${r.botName}${r.chatName ? " · " + r.chatName : ""}`) : null),
+      h("span", { class: "rolls" }, ...(r.rolls ?? []).map((n) => { const v = judgeRoll(n, (r.cuts ?? {}).normal ?? 50); return h("span", { class: `roll ${VCLASS[v]}`, title: `보통 목표 ${(r.cuts ?? {}).normal ?? 50} → ${v}` }, String(n)); }))))
+      : h("div", { class: "rb-muted rb-dlog-empty" }, st.scope === "chat" ? "이 채팅에서 굴린 기록이 아직 없어요." : "아직 굴린 기록이 없어요."));
+  };
+  let recs = all;
+  await modal(ctx.win, (done) => {
+    paint(recs);
+    return h("div", { class: "rb-dialog rb-dice rb-dlog", role: "dialog", "aria-modal": "true", "aria-label": "최근 판정 기록" },
+      h("div", { class: "hd" }, h("b", null, "최근 판정 기록")),
+      cur ? segmented([["chat", "이 채팅"], ["all", "전체"]], st.scope, (v) => { st.scope = v; paint(recs); }, "보기 범위") : null,
+      statHost, listHost,
+      h("div", { class: "btns" },
+        btn("기록 지우기", { kind: "danger", size: "sm", onClick: async () => { try { await clearDiceLog(ctx.api); recs = []; paint(recs); } catch (e) { ctx.toast?.(`지우지 못했어요: ${e?.message ?? e}`, { error: true }); } } }),
+        btn("닫기", { kind: "primary", onClick: () => done(true) })));
+  });
 }

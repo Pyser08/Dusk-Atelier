@@ -47,5 +47,38 @@ export function callHtml(rec, lore = null) {
   const sum = `⏱ ${kind} · ${esc(rec.model || "모델 알 수 없음")} · ${fmtSec(total)}${rec.inTok != null ? ` · 입력 약 ${fmtTokens(rec.inTok)}` : ""}${rec.outTok != null ? ` · 출력 약 ${fmtTokens(rec.outTok)}` : ""}`;
   const row = (k, v) => `<div style="display:flex;gap:8px;padding:3px 0;border-top:1px solid rgba(157,153,193,.18)"><b style="flex:none;min-width:5em">${k}</b><span style="min-width:0;word-break:break-word">${v}</span></div>`;
   const names = (lore?.entries ?? []).map((e) => esc(e.n)).filter(Boolean);
-  return `\n\n<details x-dusk="turn" style="${BOX}"><summary style="${SUM}">${sum}</summary>${row("구분", `${kind} 모델`)}${row("모델", esc(rec.model || "알 수 없음"))}${row("걸린 시간", `첫 글자까지 ${fmtSec(wait)} (추론·대기) · 출력 ${fmtSec(Math.max(0, total - wait))} · 합계 ${fmtSec(total)}`)}${row("예상 토큰", `입력 약 ${fmtTokens(rec.inTok ?? 0)} · 출력 약 ${fmtTokens(rec.outTok ?? 0)} (글자 수로 어림)`)}${row("로어북", names.length ? `${names.length}개 · ${names.join(", ")}` : "들어간 로어북이 없어요")}</details>`;
+  return `\n\n<details x-dusk="turn" style="${BOX}"><summary style="${SUM}">${sum}</summary>${row("구분", `${kind} 모델`)}${row("모델", esc(rec.model || "알 수 없음"))}${row("걸린 시간", `첫 글자까지 ${fmtSec(wait)} (추론·대기) · 출력 ${fmtSec(Math.max(0, total - wait))} · 합계 ${fmtSec(total)}`)}${row("예상 토큰", `입력 약 ${fmtTokens(rec.inTok ?? 0)} · 출력 약 ${fmtTokens(rec.outTok ?? 0)} (글자 수로 어림)`)}${rec.cache ? row("캐시(어림)", esc(cacheLine(rec.cache))) : ""}${row("로어북", names.length ? `${names.length}개 · ${names.join(", ")}` : "들어간 로어북이 없어요")}</details>`;
+}
+
+// ── 캐시 적중 어림 (1.8.3): 직전 메인 요청과 앞부분이 어디까지 같은지. 프롬프트 캐시는 '앞부분이 글자까지 같은 만큼'만 다시 쓴다. ──
+const DUSK_SRC = [["[Dusk Fairness]", "공정한 전개"], ["[Dusk Dice]", "유저 편향 주사위"], ["[Dusk Time]", "이야기 시간"], ["[Dusk · image tag", "이미지 태그 알림"], ["# Dusk Memory Section", "장기 기억"], ["[USER ADDED RULES", "내 프롬프트"], ["bardwiki-plugin-context", "BardWiki"]];
+const flat = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => typeof p === "string" ? p : p?.text ?? "").join("") : String(c ?? "");
+const duskOf = (m) => { const t = flat(m?.content); const hit = DUSK_SRC.find(([k]) => t.includes(k)); return hit ? hit[1] : null; };
+export function prefixInfo(prev, cur) {
+  if (!Array.isArray(prev) || !Array.isArray(cur) || !prev.length) return null;
+  const ser = (m) => `${m?.role ?? ""}\n${flat(m?.content)}`;
+  let same = 0, total = 0, breakAt = -1;
+  for (const m of cur) total += estimateTokens(ser(m));
+  for (let i = 0; i < cur.length; i++) {
+    const a = i < prev.length ? ser(prev[i]) : null, b = ser(cur[i]);
+    if (a === b) { same += estimateTokens(b); continue; }
+    breakAt = i;
+    if (a != null) { let k = 0; while (k < a.length && k < b.length && a[k] === b[k]) k++; same += estimateTokens(b.slice(0, k)); }
+    break;
+  }
+  const dusk = breakAt < 0 ? null : (duskOf(cur[breakAt]) ?? duskOf(prev[breakAt]));
+  return { same, total, ratio: total ? same / total : 1, breakAt, at: breakAt < 0 ? cur.length : breakAt, of: cur.length, dusk };
+}
+export function cacheLine(p) {
+  if (!p) return "비교할 직전 요청이 없어요";
+  const pct = Math.round(p.ratio * 100);
+  const where = p.breakAt < 0 ? "전부 같음" : `${p.of}개 중 ${p.breakAt + 1}번째 메시지부터 달라짐`;
+  return `앞부분 약 ${pct}% 같음 (${fmtTokens(p.same)} 토큰) · ${where}${p.dusk ? ` · Dusk '${p.dusk}'에서 달라졌어요` : ""}`;
+}
+
+// 주사위 기록 통계: 굴림 수·평균, '보통' 목표 기준 판정 개수(AI가 고른 난이도는 알 수 없어 보통 기준으로 센다)
+export function diceStats(entries) {
+  const verdicts = Object.fromEntries(VERDICTS.map((v) => [v, 0])); let n = 0, sum = 0;
+  for (const e of entries ?? []) for (const r of e?.rolls ?? []) { n++; sum += r; verdicts[judgeRoll(r, (e.cuts ?? DEFAULT_CUTS).normal)]++; }
+  return { n, avg: n ? Math.round(sum / n) : 0, verdicts };
 }
