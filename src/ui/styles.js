@@ -1159,4 +1159,41 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mine-name{flex:1 1 120px;display:flex;align-items:center;gap:8px;min-height:36px;background:none;border:0;color:var(--rb-text);font-weight:600;font-size:14px;cursor:pointer;text-align:left;font-family:inherit}
 .rb-mine-name i{width:18px;height:18px;border-radius:50%;flex:none}
 .rb-linkbtn{border:0;background:none;color:var(--rb-mute);text-decoration:underline;font-size:12px;cursor:pointer;padding:2px 4px}
+/* 1.8.3 홈(목업 1): 상태 카드 + 숫자, 작은 바로가기 4칸, 이어서 하기 칩, 최근 기록·빠른 설정 */
+.rb-home3 .rb-hstats{padding:14px 16px;gap:12px}
+.rb-home3 .rb-hstats .rb-status{border:0;padding:0;background:none;min-height:0;box-shadow:none}
+.rb-home3 .rb-hstat-memory .rb-status{min-height:0}
+.rb-hnums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rb-hnum{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:var(--rb-r2);background:var(--rb-surf2)}
+.rb-hnum b{font-size:20px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}.rb-hnum small{font-size:12px;color:var(--rb-sub)}
+.rb-hnum.only-pc{display:none}
+@media (min-width:1001px){.rb-hnums{grid-template-columns:repeat(4,minmax(0,1fr))}.rb-hnum.only-pc{display:flex}}
+.rb-home3 .rb-hdo-sm .rb-hgrid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px}
+.rb-home3 .rb-hdo-sm .rb-htile{flex-direction:column!important;justify-content:center!important;align-items:center;text-align:center;min-height:76px!important;padding:10px 6px!important;gap:6px!important;border-radius:var(--rb-r3)!important}
+.rb-home3 .rb-hdo-sm .rb-htile>.ico{flex:0 0 36px!important;width:36px!important;height:36px!important;border-radius:11px!important}
+.rb-home3 .rb-hdo-sm .rb-htile>.t{align-items:center!important}.rb-home3 .rb-hdo-sm .rb-htile>.t>small{display:none!important}.rb-home3 .rb-hdo-sm .rb-htile>.t>b{font-size:13px!important}
+.rb-home3 .rb-hdo{margin-top:0}
+.rb-hcont h2{margin:0 0 8px;font-size:14px;font-weight:700;color:var(--rb-sub)}
+.rb-hcont .rb-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0}
+.rb-hrec-head{display:flex;align-items:center;justify-content:space-between;width:100%}
+.rb-home3 .rb-hrecent>h2,.rb-hrec-head h2{margin:0;font-size:14px;font-weight:700;color:var(--rb-sub)}
+.rb-home3 .rb-hrecent>h2{margin-top:8px}
+.rb-home3 .rb-hrec{padding:10px 14px;align-items:center}
+/* 1.8.3 개요(목업 1) */
+.rb-win.rb-on-hub .rb-morenav{display:none!important}
+.rb-hub{display:flex;flex-direction:column;gap:14px;padding:18px 22px 28px;max-width:760px}
+.rb-hub .rb-section-head .rb-p{margin:4px 0 0;color:var(--rb-sub)}
+.rb-hub-body{display:flex;flex-direction:column;gap:14px}
+.rb-hubstat{padding:12px 14px}.rb-hubstat .rb-status{border:0;padding:0;background:none;box-shadow:none;min-height:0}
+.rb-hub-list h2{margin:0 0 8px;font-size:14px;font-weight:700;color:var(--rb-sub)}
+.rb-hubrow{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:0;border-bottom:1px solid var(--rb-line2);background:none;color:var(--rb-text);text-align:left;cursor:pointer;font-family:inherit}
+.rb-hubrow:last-child{border-bottom:0}
+@media (hover:hover){.rb-hubrow:hover{background:var(--rb-hover)}}
+.rb-hubrow .ico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--rb-acc-soft);color:var(--rb-acc-text);flex:none}
+.rb-hubrow .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.rb-hubrow b{font-size:14.5px}.rb-hubrow small{font-size:12.5px;color:var(--rb-sub)}
+.rb-hubrow .go{color:var(--rb-mute)}
+.rb-hub-big{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.rb-hub .rb-hubbig{min-height:96px}
+.rb-hub .rb-hubbig .t small{display:block!important;white-space:normal}
+@media (max-width:760px){.rb-hub{padding:12px 16px 24px}.rb-hub .rb-hubbig{flex-direction:column;align-items:flex-start}}
 `+PROB_CSS;

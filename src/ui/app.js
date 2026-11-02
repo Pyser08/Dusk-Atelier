@@ -391,6 +391,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     if (!reuse) dropPanes();
     if (MORE.has(state.tab)) state.lastMore = state.tab;
     win.classList.toggle("rb-in-more", MORE.has(state.tab));
+    // 개요 화면(기억·관리·작업실)에서는 위 칩 줄을 숨긴다: 목록이 같은 이동을 이미 보여 준다(목업 1)
+    win.classList.toggle("rb-on-hub", String(state.tab).endsWith("-home"));
     const activeSection = TABS.find((t) => t.id === state.tab)?.section;
     replace(moreHost, moreNav(TABS.filter((t) => t.section === activeSection && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
     for (const links of [navLinks, topLinks, barLinks]) for (const [id, a] of links) {
