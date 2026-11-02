@@ -14,31 +14,34 @@ export function createImgTagFix(api, { log = (...a) => console.log("[Dusk 이미
 
   async function readNames() {
     const names = [];
+    let chatMods = [];
     const idx = await api.getCurrentCharacterIndex?.();
     if (typeof idx === "number" && idx >= 0 && typeof api.getCharacterFromIndex === "function") {
       const ch = await api.getCharacterFromIndex(idx);
       for (const a of ch?.additionalAssets ?? []) if (a?.[0]) names.push(String(a[0]));
+      const chat = ch?.chats?.[ch?.chatPage ?? 0];
+      if (Array.isArray(chat?.modules)) chatMods = chat.modules;   // 이 채팅에 지정한 모듈이 있으면 전역 목록보다 우선(정규식 전처리와 같은 규칙)
     }
     try {   // 켜진 모듈의 에셋(읽기만, 실패하면 봇 에셋만 쓴다)
       const db = typeof api.getDatabase === "function" ? await api.getDatabase(["modules", "enabledModules"]) : null;
-      const enabled = new Set(Array.isArray(db?.enabledModules) ? db.enabledModules : []);
+      const enabled = new Set(chatMods.length ? chatMods : Array.isArray(db?.enabledModules) ? db.enabledModules : []);
       for (const m of Array.isArray(db?.modules) ? db.modules : []) if (enabled.has(m?.id)) for (const a of m?.assets ?? []) if (a?.[0]) names.push(String(a[0]));
     } catch { /* 모듈 에셋 없이 진행 */ }
-    return { idx, names };
+    return { idx, names, chat: await api.getCurrentChatIndex?.() };
   }
   function refresh() {
     loading ??= (async () => {
       try {
-        const { idx, names } = await readNames();
-        cache = { at: now(), key: idx, index: buildAssetIndex(names) };
-      } catch (e) { log("에셋 목록 읽기 실패", e?.message ?? e); cache = { at: now(), key: null, index: buildAssetIndex([]) }; }
+        const { idx, names, chat } = await readNames();
+        cache = { at: now(), key: `${idx}:${chat ?? ""}`, index: buildAssetIndex(names) };
+      } catch (e) { log("에셋 목록 읽기 실패", e?.message ?? e); cache = { at: now(), key: undefined, index: buildAssetIndex([]) }; }
       finally { loading = null; }
     })();
     return loading;
   }
   async function indexNow() {
-    let cur = null;
-    try { cur = (await api.getCurrentCharacterIndex?.()) ?? null; } catch { cur = null; }
+    let cur = null;   // 봇·채팅이 바뀌면 목록이 달라질 수 있다(채팅마다 켠 모듈이 다름)
+    try { cur = `${(await api.getCurrentCharacterIndex?.()) ?? null}:${(await api.getCurrentChatIndex?.()) ?? ""}`; } catch { cur = null; }
     if (cache && cur !== cache.key) cache = null;   // 다른 봇으로 바뀌면 앞 봇의 목록을 쓰지 않는다
     if (!cache || now() - cache.at > TTL) {
       const wait = new Promise((r) => setTimeout(() => r("timeout"), WAIT));
