@@ -13,7 +13,7 @@ import { stableJson } from '../engine/util.js';
 // 모듈 목록은 통째로 복사돼 와서 무겁다: 평소엔 가끔, 가져오기 직후(burst)에만 자주
 var KNOWN_MOD_KEY = "rbm:watchMod:v1", MOD_EVERY = 6e4, MOD_BURST = 3e3;
 var KNOWN_KEY = "rbm:watch:v1", UI_KEY = "rbm:ui:v1", TRASH_KEY = "rbm:pendingTrash:v1";
-var SLOW = 8e3, FAST = 4e3, BURST = 1500, BURST_FOR = 3 * 6e4, TRASH_EVERY = 3e4;
+var SLOW = 15e3, FAST = 8e3, BURST = 1500, BURST_FOR = 3 * 6e4, TRASH_EVERY = 3e4;
 var MENU_BTN_ID = "dusk-atelier-addchar";
 
 export async function readUi(api) {
@@ -100,7 +100,7 @@ function modKey(name) {
 export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew, isBusy, onModChanged }) {
   let knownMods = null, lastMod = 0, charCount = null, lastOrder = null;
   let known = null, timer = null, burstUntil = 0, mode = "fast", running = false, checking = false, enabled = true;
-  let doc = null, menuTimer = null;
+  let doc = null, menuTimer = null, lastMenuAt = 0;
   const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
   const ids = async () => flatten((await api.getDatabase(["characterOrder"]))?.characterOrder);
   const saveKnown = () => api.pluginStorage.setItem(KNOWN_KEY, JSON.stringify({ v: 1, ids: [...known] })).catch(() => {
@@ -310,9 +310,13 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
     try {
       doc = await api.getRootDocument();
       if (!doc) throw new Error("no doc");
+      // 리스 화면 아무 곳이나 눌러도 불리므로(호스트에 질의 여러 번) 눌러 둔 뒤 잠깐 기다렸다 한 번만, 2초에 한 번 이하로 확인한다
       await doc.addEventListener("click", () => {
         clearTimeout(menuTimer);
-        menuTimer = setTimeout(decorateMenu, 160);
+        menuTimer = setTimeout(() => {   // 간격이 모자라면 남은 만큼 늦춰서 마지막 클릭 뒤에는 꼭 한 번 확인한다
+          lastMenuAt = Date.now();
+          decorateMenu();
+        }, Math.max(250, 2e3 - (Date.now() - lastMenuAt)));
       }, { capture: true });
       return true;
     } catch {

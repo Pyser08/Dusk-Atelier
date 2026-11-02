@@ -1,4 +1,5 @@
 import { startHostUpdateToast } from './ui/hostupdate.js';
+import { createHookBus } from './data/hookbus.js';
 import { createMemoryButton } from './data/memorybutton.js';
 import * as engine_exports from './engine/index.js';
 import { hostBlockedMessage, isHostBlocked } from './data/modules.js';
@@ -45,6 +46,12 @@ async function start() {
     }
   };
   const wrapped = { setCharacterToIndex: friendly((...a) => raw.setCharacterToIndex(...a)), setDatabaseLite: friendly((...a) => raw.setDatabaseLite(...a)) };
+  // 스크립트 훅(input·output·display)은 종류마다 하나만 호스트에 달고 안에서 나눠 부른다(호스트 왕복 감소, v1.8.1)
+  if (typeof raw.addRisuScriptHandler === "function" && typeof raw.removeRisuScriptHandler === "function") {
+    const bus = createHookBus(raw);
+    wrapped.addRisuScriptHandler = (...a) => bus.add(...a);
+    wrapped.removeRisuScriptHandler = (...a) => bus.remove(...a);
+  }
   const api = new Proxy(raw, { get: (t, k) => k in wrapped ? wrapped[k] : t[k] });
   console.log(`[${TITLE}] 진입 경로`, globalThis.__RBM_ENTRY__ ?? "normal");
   const memoryRef = { toast: null };
