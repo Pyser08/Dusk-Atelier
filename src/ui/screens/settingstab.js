@@ -1,14 +1,14 @@
-// 설정 탭 (v1.7.0 7단계, 계획 §3.13): 화면(모드·메뉴 위치·플러그인 꾸미기) → (고급) 개발자 → 백업 → 둘러보기·새로 바뀐 점.
-// 세부는 고급 모드에서만: 주사위·로어북·기억 버튼·테마 대상·기록·설정 정리·업데이트 설정·정보.
+// 설정 탭 (1.8.3 목업 5): 묶음 이름 달기(화면 · 백업 · 도움말). 고급은 묶음별 한 줄 목록(현재 값 오른쪽, 누르면 바꾸기):
+// 이야기 도우미(재해석/존중은 바로 고르기) · 로어북·채팅 메뉴 · 정리·기록. '이럴 땐 여기로'는 ? 도움말로. PC 2열.
 import { renderPrompts } from './promptstab.js';
 import { h, replace } from '../dom.js';
-import { advFold, guidePanel, pageHead, segmented } from '../kit.js';
+import { advFold, modal, btn, openMenu, pageHead, segmented } from '../kit.js';
 import { icon } from '../icons.js';
 import { openTour } from '../tour.js';
 import { CHANGELOG, openChangelog } from '../whatsnew.js';
 import { LORE_DEFAULTS, loadLoreSettings, saveLoreSettings } from '../../data/lorerules.js';
 import { devToggleCard } from './devtools.js';
-import { renderCleanup, tile, fullBackup, fullRestore } from './tools.js';
+import { renderCleanup, fullBackup, fullRestore } from './tools.js';
 import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
 import { openAbout } from './about.js';
@@ -27,7 +27,8 @@ export async function renderSettingsTab(ctx) {
 
   // ── 줄 만들기 ──
   const segRow = (title, text, seg, cls = "") => h("div", { class: ["rb-srow has-seg", cls] }, h("span", { class: "t" }, title, text ? h("small", null, text) : null), seg);
-  const linkRow = (title, text, onClick, id) => h("button", { type: "button", class: "rb-srow", onClick, id }, h("span", { class: "t" }, title, text ? h("small", null, text) : null), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
+  // id는 클래스로도 붙인다(? 화면 안내가 클래스로 찾는다 — 예전엔 id만 있어서 안내가 그 자리를 못 짚었다)
+  const linkRow = (title, text, onClick, id, value) => h("button", { type: "button", class: ["rb-srow", id], onClick, id }, h("span", { class: "t" }, title, text ? h("small", null, text) : null), value ? h("span", { class: "val" }, value) : null, h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
   const card = (title, ...rows) => h("section", { class: "rb-card bordered rb-scard" }, title ? h("span", { class: "h" }, title) : null, ...rows);
 
   const layoutSeg = segmented([["left", "◧ 왼쪽"], ["top", "⬒ 위쪽"]], ctx.prefs.ui?.theme?.layout === "top" ? "top" : "left", (v) => ctx.setLayout(v), "메뉴 위치");
@@ -41,12 +42,11 @@ export async function renderSettingsTab(ctx) {
       segRow("메뉴 위치", "PC에서 메뉴를 왼쪽 또는 위쪽에 둬요.", layoutSeg, "rb-pc-only"),
       linkRow("플러그인 꾸미기", "색·밝기·글자 크기", () => ctx.go("look"), "rb-set-look")
     ),
-    adv ? devToggleCard(ctx, () => {
-      ctx.refreshTabs();
-      renderSettingsTab(ctx);
-    }) : null,
-    card(null, linkRow("백업 만들기", "모듈·에셋·설정을 zip 한 파일로", () => fullBackup(ctx), "rb-set-fullbackup"), linkRow("백업에서 복원", "전체 백업 zip으로 되살리기", () => fullRestore(ctx), "rb-set-restore")),
-    card(null, linkRow("처음 둘러보기", null, () => openTour(ctx), "rb-set-tour"), linkRow(`v${ctx.version} 새로 바뀐 점`, null, () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록"), "rb-set-whatsnew"))
+    card("백업", linkRow("백업 만들기", "모듈·에셋·설정을 zip 한 파일로", () => fullBackup(ctx), "rb-set-fullbackup"), linkRow("백업에서 복원", "전체 백업 zip으로 되살리기", () => fullRestore(ctx), "rb-set-restore")),
+    card("도움말",
+      ctx.openOnboarding ? linkRow("시작 안내 다시 보기", "처음 설정을 단계별로 다시 해요", () => ctx.openOnboarding(), "rb-set-onboard") : null,
+      linkRow("처음 둘러보기", "버튼을 하나씩 짚어 드려요", () => openTour(ctx), "rb-set-tour"),
+      linkRow("새로 바뀐 점", null, () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록"), "rb-set-whatsnew", `v${ctx.version}`))
   );
 
   // 기본 설정은 먼저 보여 주고, 고급 설정 데이터는 뒤에서 불러와요.
@@ -92,31 +92,40 @@ export async function renderSettingsTab(ctx) {
       const ok = await ctx.memoryButton?.set(v === "on");
       ctx.toast(ok === false ? "저장했어요. 이 화면에선 바로 안 바뀌어서 리스를 새로 고치면 적용돼요." : v === "on" ? "채팅 메뉴에 기억 버튼을 보여요" : "채팅 메뉴의 기억 버튼을 숨겼어요");
     }, "채팅 메뉴 기억 버튼");
-    const note = (...kids) => h("p", { class: "rb-adv-note" }, ...kids);
-    const sec = (title, ...kids) => h("section", { class: "rb-lfield", style: "gap:10px" }, h("b", null, title), ...kids);
-    const lab = (t, seg) => h("div", { style: "display:flex;flex-direction:column;gap:6px" }, h("span", { style: "font-size:13px;font-weight:600" }, t), seg);
-    const tiles = h(
-      "div",
-      { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px" },
-      tile("history", "기록 · 되돌리기", `업데이트·편집·삭제 전 상태 보기와 되돌리기${ctx.state.histCount ? ` · ${ctx.state.histCount}개` : ""}`, () => ctx.go("settings", "history"), "rb-set-backups"),
-      tile("refresh", "업데이트 설정", "새로 가져온 봇 자동 감지, 받은 사본 정리, 채팅 백업", () => ctx.go("settings", "updset"), "rb-set-updset"),
-      tile("trash", "설정 정리", "저장한 순서·폴더·프리셋·연결 정보를 골라서 지우기", () => ctx.go("settings", "cleanup"), "rb-set-cleanup"),
-      tile("info", "정보 · 라이선스", "버전, 라이선스(AGPL-3.0), 소스 위치", () => openAbout(ctx), "rb-set-about")
-    );
+    // 한 줄: 제목·설명 + 현재 값(오른쪽). 누르면 고르는 메뉴가 뜬다.
+    const valRow = (title, sub, options, cur, onPick, id) => {
+      const val = h("span", { class: "val" }, options.find(([v]) => v === cur)?.[1] ?? "");
+      const row = h("button", { type: "button", class: ["rb-srow", id], id, onClick: (ev) => openMenu(ctx.win, ev.currentTarget, options.map(([v, l]) => ({ label: `${v === cur ? "✓ " : ""}${l}`, onClick: async () => { cur = v; val.textContent = l; await onPick(v); } }))) },
+        h("span", { class: "t" }, title, sub ? h("small", null, sub) : null), val, h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
+      return row;
+    };
+    const explain = (title, body) => modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": title }, h("h3", null, title), ...body.map((t) => h("p", { class: "rb-p" }, t)), h("div", { class: "rb-dialog-actions" }, btn("닫기", { kind: "primary", onClick: () => done(null) }))));
+    void rerollSeg; void logSeg; void btnSeg; void bdSeg; void memBtnSeg;
     advBlocks = [
-      sec("이야기 도우미 세부", lab("내가 결과까지 적었을 때", diceModeSeg), note("· 재해석: 내가 ‘쓰러뜨렸다’처럼 결과까지 적어도 시도로 보고 주사위로 가려요. 존중: 내가 적은 결과는 그대로 따라요."), note("· 이야기 시간: 응답 첫 줄 ‘[2026-10-28 15:30 | 교실]’ 같은 상태 줄을 읽어 이어 가요. 실제 현재 시각이 아니라 이야기 속 시각이에요.")),
-      sec("로어북", lab("다시 생성(리롤) 때", rerollSeg), lab("이름 경계", bdSeg), lab("로어북 로그", logSeg), lab("응답 아래 버튼", btnSeg), saved, note("· 이름 경계: 키가 다른 낱말 속에 끼어 잘못 켜지는 걸 막아요. 짧은 이름만: 한글 1~2글자 키에만 자동 적용(추천). 모든 키: 영문 포함 전부."), note("· 로어북 로그: 응답마다 들어간 로어북을 남겨요. 도구 → 로어북 로그와 응답 아래 [📖 로어북] 버튼에서 봐요.")),
-      sec("채팅 메뉴", lab("기억 버튼", memBtnSeg), note("채팅 입력 옆 메뉴의 [기억] 버튼을 보이거나 숨겨요. 기억 기능 자체는 그대로예요.")),
-      sec("정리 · 기록", tiles),
-      guidePanel("이럴 땐 여기로", "하고 싶은 일을 누르면 해당 화면으로 가요.", [
-        { label: "색·글자 크기를 바꾸고 싶어요", text: "플러그인 꾸미기", onClick: () => ctx.go("look") },
-        { label: "모듈이 꼬였어요, 되돌리고 싶어요", text: "기록 · 되돌리기", onClick: () => ctx.go("settings", "history") },
-        { label: "다른 기기로 옮기고 싶어요", text: "전체 백업·복원", onClick: () => fullBackup(ctx) },
-        { label: "새 봇을 알아서 잡아 주면 좋겠어요", text: "업데이트 설정", onClick: () => ctx.go("settings", "updset") },
-        { label: "내 채팅 테마를 만들고 싶어요", text: "채팅 테마 빌더", onClick: () => ctx.go("tools", "chattheme") }
-      ])
+      card("이야기 도우미",
+        segRow("내가 결과까지 적었을 때", "재해석: 시도로 보고 주사위로 가려요 · 존중: 그대로 따라요", diceModeSeg),
+        linkRow("이야기 시간", "응답 첫 줄 상태 줄을 읽어 이어 가요", () => explain("이야기 시간", ["응답 첫 줄 ‘[2026-10-28 15:30 | 교실]’ 같은 상태 줄을 읽어 이어 가요.", "실제 현재 시각이 아니라 이야기 속 시각이에요. 홈의 빠른 설정에서 켜고 꺼요."]), "rb-set-storytime", "설명")),
+      card("로어북 · 채팅 메뉴",
+        valRow("다시 생성(리롤) 때 로어북", "확률로 켜지는 로어북을 다시 굴릴지", [["new", "새로 굴리기"], ["keep", "이전 결과 유지"]], lore.reroll === "keep" ? "keep" : "new", (v) => setLore({ reroll: v }), "rb-set-reroll"),
+        valRow("이름 경계", "키가 다른 낱말 속에 끼어 잘못 켜지는 걸 막아요", [["short", "짧은 이름만 (추천)"], ["all", "모든 키"], ["off", "끄기"]], ["off", "all"].includes(lore.boundary) ? lore.boundary : "short", (v) => setLore({ boundary: v }), "rb-set-boundary"),
+        valRow("로어북 로그", "응답마다 들어간 로어북을 남겨요", [["on", "켜짐"], ["off", "꺼짐"]], lore.log === false ? "off" : "on", (v) => setLore({ log: v === "on" }), "rb-set-lorelog"),
+        valRow("응답 아래 로어북 버튼", "응답 아래 [📖 로어북] 버튼", [["on", "보임"], ["off", "숨김"]], lore.button === false ? "off" : "on", (v) => setLore({ button: v === "on" }), "rb-set-lorebtn"),
+        valRow("채팅 메뉴의 [기억] 버튼", "기억 기능 자체는 그대로예요", [["on", "보임"], ["off", "숨김"]], memBtnOn ? "on" : "off", async (v) => {
+          const ok = await ctx.memoryButton?.set(v === "on");
+          ctx.toast(ok === false ? "저장했어요. 이 화면에선 바로 안 바뀌어서 리스를 새로 고치면 적용돼요." : v === "on" ? "채팅 메뉴에 기억 버튼을 보여요" : "채팅 메뉴의 기억 버튼을 숨겼어요");
+        }, "rb-set-membtn"),
+        saved),
+      card("정리 · 기록",
+        linkRow("기록 · 되돌리기", `편집·삭제 전 상태 보기${ctx.state.histCount ? ` · ${ctx.state.histCount}개` : ""}`, () => ctx.go("settings", "history"), "rb-set-backups"),
+        linkRow("업데이트 설정", "새로 가져온 봇 자동 감지·채팅 백업", () => ctx.go("settings", "updset"), "rb-set-updset"),
+        linkRow("설정 정리", "저장한 순서·폴더·프리셋 골라 지우기", () => ctx.go("settings", "cleanup"), "rb-set-cleanup"),
+        linkRow("정보 · 라이선스", "버전·AGPL-3.0·소스 위치", () => openAbout(ctx), "rb-set-about")),
+      devToggleCard(ctx, () => {
+        ctx.refreshTabs();
+        renderSettingsTab(ctx);
+      })
     ];
   }
-  const advEl = advFold(ctx, "settings", ...advBlocks);
-  if (advSide && advEl) replace(advSide, advEl);
+  // 고급은 점선 '고급' 칸 없이 묶음 카드를 그대로 오른쪽 열에 둔다
+  if (advSide) replace(advSide, ...(adv ? advBlocks : [advFold(ctx, "settings", true)]));
 }

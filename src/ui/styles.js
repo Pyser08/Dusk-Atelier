@@ -1280,4 +1280,48 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 @media (max-width:760px){.rb-modacts{justify-content:flex-start!important;min-width:0}.rb-btn.rb-linkchip{height:26px!important;min-height:26px!important;padding:0 8px!important}}
 .rb-plug-group>summary{list-style:none;cursor:pointer;margin:0 0 6px}.rb-plug-group>summary::-webkit-details-marker{display:none}
 .rb-plug-group:not([open])>summary svg{transform:rotate(-90deg)}
+/* 1.8.3 도구(목업 5) */
+.rb-tools3{padding:18px 22px 28px}
+.rb-tools3-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;max-width:760px}
+.rb-tools3-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+@media (min-width:1000px){.rb-tools3-grid{max-width:none;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);align-items:start}}
+.rb-toolrow{display:flex;align-items:center;gap:12px}
+.rb-toolrow .ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--rb-acc-soft);color:var(--rb-acc-text);flex:none}
+.rb-credit{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--rb-line2)}
+.rb-credit:first-of-type{border-top:0}
+.rb-credit .emo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--rb-surf2);font-size:17px;flex:none}
+.rb-credit .t{display:flex;flex-direction:column;gap:2px;min-width:0}.rb-credit small{font-size:12.5px;color:var(--rb-sub)}
+@media (max-width:760px){.rb-tools3{padding:12px 16px 24px}}
+.rb-srow>.val{flex:none;font-size:13px;color:var(--rb-sub);max-width:46%;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rb-mem2-side>.rb-scard+.rb-scard,.rb-mem2-side>.rb-card+.rb-card{margin-top:0}
+/* 1.8.3 AI로 봇 만들기(목업 5) */
+.rb-ai-stephead{display:flex;align-items:flex-start;gap:10px}
+.rb-ai-stephead .n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--rb-acc-a);color:var(--rb-on-acc);font-weight:700;font-size:13px;flex:none}
+.rb-ai-startgrid{display:flex;flex-direction:column;gap:14px}
+.rb-ai-steps{display:flex;flex-direction:column;gap:14px;min-width:0}
+.rb-ai-start{display:flex;flex-direction:column;gap:8px;position:sticky;bottom:0;z-index:2;box-shadow:var(--rb-shadow-sm)}
+.rb-ai-start .rb-btn{justify-content:center}
+@media (min-width:1000px){.rb-ai-startgrid{display:grid;grid-template-columns:minmax(0,1fr) 260px;align-items:start}.rb-ai-start{top:0;bottom:auto;box-shadow:var(--rb-shadow-card)}}
+@media (max-width:999px){.rb-ai-start{flex-direction:row;flex-wrap:nowrap;align-items:center;padding:10px 12px!important;padding-right:118px!important}.rb-ai-start>b,.rb-ai-start>.rb-muted,.rb-ai-start>div.rb-muted{display:none}.rb-ai-start .rb-btn{flex:1;min-width:0}}
+.rb-chipseg{background:none!important;border:0!important;padding:0!important;gap:6px;grid-auto-columns:max-content!important}
+.rb-chipseg button{border:var(--rb-bw,1px) solid var(--rb-line)!important;border-radius:999px!important;background:var(--rb-surf)!important;height:34px!important;padding:0 14px!important}
+.rb-chipseg button[aria-checked=true]{background:var(--rb-text)!important;color:var(--rb-win)!important;border-color:var(--rb-text)!important}
+/* 1.8.3 AI로 페르소나 만들기(목업 5) */
+.rb-pb-fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px}
+.rb-pb-fold>summary::-webkit-details-marker{display:none}
+.rb-pb-aiset>summary{font-size:12.5px;color:var(--rb-sub);padding:2px 0}
+.rb-pb-aiset[open]>summary{margin-bottom:6px}
+.rb-pb-slot>summary{padding:2px 0}.rb-pb-slot>summary .t{flex:1;display:flex;flex-direction:column;gap:2px}.rb-pb-slot>summary small{font-size:12px}
+.rb-pb-slot>summary .go{color:var(--rb-mute);transition:transform .15s}.rb-pb-slot[open]>summary .go{transform:rotate(90deg)}
+.rb-pb-slot[open]>summary{margin-bottom:10px}
+.rb-pb-aimore{display:flex;flex-direction:column;gap:8px}
+.rb-pb-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.rb-pb-sheethead{margin-top:4px}
+@media (min-width:1000px){
+  .rb-pb3{display:grid!important;grid-template-columns:minmax(0,1fr) 380px;column-gap:16px;align-items:start;max-width:none!important}
+  .rb-pb3>*{grid-column:1}
+  .rb-pb3>.rb-pb-side{grid-column:2;grid-row:1/span 8;position:sticky;top:0}
+}
+/* 모바일: 떠 있는 'AI 대화' 버튼이 아래 탭바(68px)를 가리지 않게 위로 올린다 */
+@media (max-width:760px){.rb-pb-chat-fab{bottom:82px!important}.rb-pb-chat{bottom:136px!important;height:min(64%,560px)!important}}
 `+PROB_CSS;

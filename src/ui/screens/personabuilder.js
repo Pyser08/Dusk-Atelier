@@ -397,10 +397,13 @@ export async function renderPersonaBuilder(ctx) {
       }
     };
     editIn.addEventListener("keydown", editIn.__pbKey);
-    replace(
-      aiBox,
-      h("div", { class: "rb-pb-h" }, "AI로 쓰기", h("span", { class: "rb-muted", style: "font-weight:500;font-size:12px" }, `· ${AI_MODES.find(([v]) => v === P.mode)?.[1] ?? ""}${P.mode === "static" ? ` ${P.staticModel || "(ID 없음)"}` : ""} · 영어로 써요`)),
-      h("div", { class: "rb-pb-bar" },
+    // 1.8.3(목업 5): 글 상자 1개 + '전체 쓰기'·'빈 칸만 채우기'. 모델·프리셋은 머리 요약을 눌러 펼치고, 추가 지시·번역·수정 요청은 ··· 로 펼친다.
+    const setBox = h("details", { class: "rb-pb-fold rb-pb-aiset", open: !!pb.uiAiSet, onToggle: (e) => { pb.uiAiSet = e.target.open; } },
+      h("summary", null, `${AI_MODES.find(([v]) => v === P.mode)?.[1] ?? ""}${P.mode === "static" ? ` ${P.staticModel || "(ID 없음)"}` : ""} · ${aip().name} ▾`));
+    const moreBox = h("div", { class: "rb-pb-aimore", hidden: !pb.uiAiMore });
+    const moreBtn = iconBtn("more", "추가 지시·번역·수정 요청", { boxed: true, onClick: () => { pb.uiAiMore = moreBox.hidden; moreBox.hidden = !moreBox.hidden; moreBtn.setAttribute("aria-expanded", moreBox.hidden ? "false" : "true"); } });
+    moreBtn.setAttribute("aria-expanded", pb.uiAiMore ? "true" : "false");
+    setBox.append(h("div", { class: "rb-pb-bar" },
         h("span", { class: "rb-label", style: "flex:none" }, "AI 모델"),
         (() => {
           const sel = h("select", { class: "rb-input", "aria-label": "AI 모델", style: "max-width:220px" }, ...AI_MODES.map(([v, l]) => h("option", { value: v, selected: P.mode === v }, l)));
@@ -439,11 +442,16 @@ export async function renderPersonaBuilder(ctx) {
             savePB(api, pb).catch(() => {});
             drawAi();
           } }
-        ].filter(Boolean)) })),
+        ].filter(Boolean)) })));
+    moreBox.append(noteIn, h("div", { class: "rb-pb-bar" }, editIn, b3), h("div", { class: "rb-pb-bar" }, h("label", { style: "display:flex;align-items:center;gap:6px;font-size:12.5px" }, koSw, "번역 같이 보기"), h("span", { style: "flex:1" }), b4));
+    replace(
+      aiBox,
+      h("div", { class: "rb-pb-h" }, "AI로 쓰기", h("span", { class: "rb-muted", style: "font-weight:500;font-size:12px" }, "· 영어로 써요")),
+      setBox,
       conceptIn,
-      noteIn,
-      h("div", { class: "rb-pb-bar" }, b1, b2, undoWrap, h("span", { style: "flex:1" }), h("label", { style: "display:flex;align-items:center;gap:6px;font-size:12.5px" }, koSw, "번역 같이 보기"), b4),
-      h("div", { class: "rb-pb-bar" }, editIn, b3),
+      h("div", { class: "rb-pb-bar" }, b1, b2, undoWrap, h("span", { style: "flex:1" }), moreBtn),
+      h("small", { class: "rb-muted", style: "font-size:12px" }, "추가 지시·번역·수정 요청은 ··· 에 있어요."),
+      moreBox,
       msg
     );
     setBusy(busy);
@@ -697,8 +705,12 @@ export async function renderPersonaBuilder(ctx) {
     return b;
   };
   const drawRoulette = () => {
-    replace(rlBox,
-      h("div", { class: "rb-pb-h" }, "🎰 슬롯머신", h("span", { class: "rb-muted", style: "font-weight:500;font-size:12px" }, "· 릴마다 범주를 고르고 레버를 당겨요. 릴을 누르면 그 릴만 돌아요")),
+    // 1.8.3(목업 5): 슬롯머신은 한 줄로 접어 두고 누르면 펼친다
+    const rlFold = h("details", { class: "rb-pb-fold rb-pb-slot", open: !!pb.uiSlotOpen, onToggle: (e) => { pb.uiSlotOpen = e.target.open; } },
+      h("summary", null, h("span", { class: "t" }, h("b", null, "🎰 슬롯머신으로 아이디어 뽑기"), h("small", { class: "rb-muted" }, "릴마다 범주를 골라 레버를 당겨요 · 성격·동기·외모 등")), h("span", { class: "go", "aria-hidden": "true" }, "›")));
+    replace(rlBox, rlFold);
+    rlFold.append(
+      h("div", { class: "rb-muted", style: "font-size:12px" }, "릴을 누르면 그 릴만 돌아요"),
       h("div", { class: "rb-pb-folders" }, h("span", { class: "rb-label" }, "폴더로 채우기"),
         ...groups.map((g) => h("button", { type: "button", class: "rb-pb-chip", title: ROULETTE.filter((c) => c.group === g).map((c) => c.ko).join(", "), onClick: () => fillFolder(g) }, `📁 ${g} (${ROULETTE.filter((c) => c.group === g).length})`)),
         h("button", { type: "button", class: "rb-pb-chip", onClick: () => fillFolder("*") }, "🎲 무작위 5개")),
@@ -861,17 +873,17 @@ export async function renderPersonaBuilder(ctx) {
   drawAi();
   drawSheet();
   drawRoulette();
+  void back;
+  // 1.8.3(목업 5): 제목은 위쪽 도움말 줄 한 번만. 맨 위 한 줄 = 페르소나·이름·양식. PC는 왼쪽 페르소나·항목, 오른쪽 AI로 쓰기·슬롯머신.
   replace(ctx.main, h(
     "div",
     { class: "rb-section rb-scroll", style: "flex:1" },
-    h("div", { class: "rb-pb" },
-      back,
-      h("div", { class: "rb-pb-box" },
-        h("div", { class: "rb-pb-h" }, "페르소나"),
+    h("div", { class: "rb-pb rb-pb3" },
+      h("div", { class: "rb-pb-box rb-pb-top" },
         h("div", { class: "rb-pb-bar" }, personaSel, nameIn),
         h("div", { class: "rb-pb-bar" }, h("span", { class: "rb-label", style: "flex:none" }, "설명 양식"), tplSel, tplMenu)),
-      aiBox,
-      rlBox,
+      h("div", { class: "rb-pb-side" }, aiBox, rlBox),
+      h("div", { class: "rb-pb-h rb-pb-sheethead" }, "설명 항목"),
       sheet,
       h("div", { class: "rb-pb-box" },
         h("div", { class: "rb-pb-h" }, "미리보기", charCount, h("span", { style: "flex:1" }), btn("복사", { size: "sm", onClick: async () => {

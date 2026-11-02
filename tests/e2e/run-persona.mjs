@@ -11,6 +11,8 @@ for (const mobile of [false, true]) {
   await page.setContent("<!doctype html><body></body>"); await page.addScriptTag({ content: r.outputFiles[0].text });
   const has = await page.evaluate(() => T.setup()); const tag = mobile ? "모바일" : "PC";
   ok(`[${tag}] 화면 렌더`, has);
+  // 1.8.3: 수정 요청 칸은 AI로 쓰기의 ··· 안에 있다
+  await page.locator("button[aria-label='추가 지시·번역·수정 요청']").click();
   const inp = page.locator("input[aria-label='AI 수정 요청']");
   await inp.scrollIntoViewIfNeeded(); await inp.click();
   await page.keyboard.type("make it colder");
