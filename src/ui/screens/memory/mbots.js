@@ -11,14 +11,18 @@ export async function renderMemoryBots(ctx, host, { redraw }) {
   const [bots, idx, cur] = await Promise.all([loadBots(ctx), M.store.getIndex(), M.switches.currentChat()]);
   const stat = (id) => { const fs = Object.values(idx.folders).filter((f) => f.chaId === id); return { records: fs.reduce((n, f) => n + (f.counts?.records ?? 0), 0), at: fs.reduce((t, f) => Math.max(t, f.updatedAt ?? 0), 0) }; };
   const list = h("div", { class: "rb-mem-botlist rb-mbots", role: "list" });
+  // 1.8.3(목업 3): '기억 켜짐 N / 전체 M' 요약. 스위치를 누르면 바로 다시 센다.
+  const onMap = Object.fromEntries(bots.map((b) => [b.id, idx.bots[b.id]?.on !== false]));
+  const summary = h("p", { class: "rb-mem-botsum", "aria-live": "polite" });
+  const paintSum = () => { summary.textContent = `기억 켜짐 ${Object.values(onMap).filter(Boolean).length} / 전체 ${bots.length}`; };
   const paint = (q = m.search) => {
     m.search = q; const s = q.trim().toLowerCase();
     const rows = bots.filter((b) => !s || String(b.character.name ?? "").toLowerCase().includes(s)).map((b) => ({ b, st: stat(b.id) })).sort((x, y) => (y.b.id === cur?.chaId) - (x.b.id === cur?.chaId) || y.st.at - x.st.at || x.b.index - y.b.index);
     replace(list, rows.length ? rows.map(({ b, st }) => {
-      const on = idx.bots[b.id]?.on !== false;
+      const on = onMap[b.id];  // 검색으로 다시 그려도 방금 바꾼 값 유지
       const open = () => { m.botId = b.id; m.chatIndex = b.id === cur?.chaId ? cur.ti : 0; m.tab = "people"; m.personKey = ""; m.page = "detail"; redraw(); };
       const sw = switchEl(on, { label: `${b.character.name || "이름 없는 캐릭터"} 기억 사용`, onChange: async (v, el) => {
-        setSwitch(el, v);
+        setSwitch(el, v); onMap[b.id] = v; paintSum();
         try { await M.switches.setMemory(b.id, v); ctx.toast(v ? "이 봇에서 기억을 켰어요." : "이 봇에서 기억을 껐어요."); } catch (e) { fail(ctx)(e); }
       } });
       return h("div", { class: "rb-row rb-mbot", role: "listitem" },
@@ -30,7 +34,9 @@ export async function renderMemoryBots(ctx, host, { redraw }) {
     }) : h("div", { class: "rb-empty" }, "검색 결과가 없어요."));
   };
   replace(host,
-    h("div", { class: "rb-mem2-head" }, btn("← 기억으로", { size: "sm", onClick: () => { m.page = "home"; redraw(); } }), h("h2", { class: "rb-h2" }, "봇별 기억"), h("span", { class: "rb-muted" }, "봇마다 기억을 켜고 꺼요")),
-    h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "봇 검색", value: m.search, "aria-label": "봇 검색", onInput: (e) => paint(e.target.value) })), list);
+    h("div", { class: "rb-mem2-head" }, btn("‹ 장기 기억", { size: "sm", onClick: () => { m.page = "home"; redraw(); } }), h("h2", { class: "rb-h2" }, "봇별 기억"), h("span", { class: "rb-muted" }, "봇마다 기억을 켜고 끄고, 눌러서 기록을 봐요.")),
+    h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "봇 검색", value: m.search, "aria-label": "봇 검색", onInput: (e) => paint(e.target.value) })), summary, list,
+    h("p", { class: "rb-muted", style: "font-size:12.5px;margin:0" }, "봇을 누르면 그 봇의 기록 보기로 가요. 스위치는 봇마다 기억을 켜고 꺼요."));
+  paintSum();
   paint();
 }

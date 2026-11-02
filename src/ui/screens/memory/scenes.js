@@ -1,6 +1,6 @@
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
-import { btn, badge, emptyState } from "../../kit.js";
+import { btn, badge } from "../../kit.js";
 import { mem, avatar, gradeBadge, at, visibleRecords } from "./common.js";
 import { GRADES } from "../../../engine/memorygrade.js";
 import { newChatFrom } from "./people.js";
@@ -9,7 +9,9 @@ import { wikiNote } from "../../../engine/personview.js";
 export async function renderScenes(env, host) {
   const m = mem(env.ctx), { folder, caps } = env;
   const scenes = (folder.scenes ?? []).filter((s) => !s.orphan);
-  if (!scenes.length) return replace(host, emptyState({ icon: "list", title: "아직 기록된 상황이 없어요", text: "대화하면 AI 응답마다 상황이 자동으로 쌓여요. 이미 나눈 대화는 한꺼번에 분석할 수도 있어요.", actions: caps.analyze ? [{ label: "지난 대화 분석하기", onClick: () => { m.settingsOpen = true; env.redraw(); } }] : [] }));
+  // 빈 구역: 한 줄 안내 + 분석 버튼 하나. 분석은 장기 기억 메인의 '지난 대화 분석'에서 한다(예전 settingsOpen은 1.7.0부터 안 쓰여 눌러도 아무 일이 없었다).
+  if (!scenes.length) return replace(host, h("p", { class: "rb-mem-empty1" }, icon("list", 16), "아직 기록된 상황이 없어요. 대화하면 AI 응답마다 쌓여요."),
+    caps.analyze ? btn("지난 대화 분석하기", { size: "sm", kind: "primary", id: "rb-mem-scenes-analyze", onClick: () => { m.page = "home"; env.redraw(); } }) : null);
   const latest = scenes.at(-1)?.id;
   const ordered = m.sceneDesc ? [...scenes].reverse() : scenes;
   const recsOf = (s) => Object.values(folder.people).flatMap((p) => visibleRecords(p).filter((r) => r.sit === s.id));

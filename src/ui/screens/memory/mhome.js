@@ -1,13 +1,14 @@
-// 기억 화면 (1.7.0 3단계, 계획 §3.2): 머리(스위치 1) → 상태 카드 → 기록 막대 → 주요 동작 3 → 최근 기록 → 고급.
+// 기억 화면 (1.8.3 목업 3): 상태 카드 하나(스위치·숫자 3·막대·범례) → 지난 대화 분석(큰 버튼) → 바로가기 4칸 → 기억 옵션 → 최근 기록.
+// 오른쪽(PC)·아래(모바일): (PC 고급) 기억 방식 바로 보임 → 설정 한 줄 목록 → 고급 묶음(한 줄씩 접음).
 import { maybePromptIntro } from '../promptstab.js';
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
-import { actionRow, advFold, btn, confirmDialog, emptyState, note, pageHead, progressBar, statusCard, switchEl, setSwitch } from "../../kit.js";
+import { advFold, btn, confirmDialog, emptyState, note, pageHead, progressBar, statusCard, switchEl, setSwitch } from "../../kit.js";
 import { injectReasonText } from "../../../engine/memoryinject.js";
 import { USAGE_KINDS, injectLine, usageOf } from "../../../engine/memoryusage.js";
 import { mem, fail, gradeBadge, at } from "./common.js";
 import { renderModeBar } from "./modebar.js";
-import { advancedBlocks } from "./madv.js";
+import { advancedGroups } from "./madv.js";
 import { builders } from "./settings.js";
 import { openEmbedModal } from "./embedmodal.js";
 import { maybeShowEmbeddingGuide } from "./embeddingguide.js";
@@ -70,11 +71,12 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   };
   // 상태 카드: 꺼짐 / 문제(연속 실패로 멈춤) / 준비 중(아직 요청 없음·안 넣음) / 사용 중
   let status;
-  if (!on) status = statusCard("off", sw.memory.reason === "bot-off" ? "이 채팅에서는 꺼 두었어요." : "기억이 꺼져 있어요.", { label: "켜기", kind: "primary", onClick: () => setOn(true) });
+  const chatLabel = `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"}`;
+  if (!on) status = statusCard("off", `${chatLabel} · ${sw.memory.reason === "bot-off" ? "이 채팅에서는 꺼 두었어요." : "기억이 꺼져 있어요."}`);
   else if (botCfg.paused) status = statusCard("err", "연속으로 실패해서 자동 기록이 멈췄어요.", { label: "다시 켜기", kind: "primary", onClick: () => setOn(true) });
   else {
     const line = injectLine(last, last ? hhmm(last.at) : "", injectReasonText(last?.reason));
-    status = statusCard(last?.injected ? "on" : "prep", line);
+    status = statusCard(last?.injected ? "on" : "prep", `${chatLabel} · ${line}`);
   }
 
   // 지난 대화 분석 (미처리만)
@@ -102,48 +104,77 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     } catch (e) { fail(ctx)(e); }
     redraw();
   };
-  const openDetail = () => { m.botId = cur.chaId; m.chatIndex = cur.ti; m.tab = "people"; m.personKey = ""; m.page = "detail"; redraw(); };
-  const actions = actionRow([
-    caps.analyze && M.runner ? { label: plan ? `지난 대화 분석 · 미처리 ${plan.todo}개` : "지난 대화 분석", icon: "sparkle", onClick: analyze } : { label: "기록 보기", icon: "brain", onClick: openDetail },
-    { label: "카드로 만들기", icon: "image", onClick: () => ctx.go("cards") },
-    { label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }
-  ]);
+  const openDetail = (tab = "people") => { m.botId = cur.chaId; m.chatIndex = cur.ti; m.tab = tab; m.personKey = ""; m.page = "detail"; redraw(); };
+  const u = usageOf(folder, last?.manifest);
+
+  // ── 상태 카드: 상태·스위치·숫자 3·막대·범례 (머리 스위치와 합침) ──
+  const onSw = switchEl(on, { label: "이 채팅에서 사용", onChange: (v, el) => { setSwitch(el, v); setOn(v); } });
+  const num = (n, lab) => h("div", { class: "rb-hnum" }, h("b", null, String(n)), h("small", null, lab));
+  const bar = u.total ? h("div", { class: "rb-mbar", role: "img", "aria-label": USAGE_KINDS.map(([k, l]) => `${l} ${u[k]}건`).join(", ") }, USAGE_KINDS.filter(([k]) => u[k]).map(([k]) => h("i", { class: `u-${k}`, style: `flex:${u[k]}` }))) : null;
+  const legend = u.total ? h("ul", { class: "rb-mbar-legend" }, USAGE_KINDS.map(([k, l]) => h("li", null, h("i", { class: `u-${k}` }), `${l} ${u[k]}`))) : null;
+  const statusBox = h("section", { class: "rb-card bordered rb-mem-statuscard" },
+    h("div", { class: "rb-mem-statushead" }, status, onSw),
+    h("div", { class: "rb-hnums rb-mem-nums" }, num(u.total, "저장된 기록"), num(last?.injected ? u.used : 0, "이번에 넣음"), num(plan ? plan.todo : "–", "미처리")),
+    bar, legend);
+
+  // ── 큰 버튼 하나 + 바로가기 4칸 ──
+  const bigAct = caps.analyze && M.runner
+    ? btn(plan ? `지난 대화 분석 · 미처리 ${plan.todo}개` : "지난 대화 분석", { kind: "primary", icon: "sparkle", onClick: analyze, id: "rb-mem-analyze" })
+    : btn("기록 보기", { kind: "primary", icon: "brain", onClick: () => openDetail(), id: "rb-mem-analyze" });
+  bigAct.classList.add("rb-bigbtn");
+  const tile = (ic, name, onClick, id) => h("button", { type: "button", class: "rb-htile", onClick, id }, h("span", { class: "ico" }, icon(ic, 20)), h("span", { class: "t" }, h("b", null, name)));
+  const shortcuts = h("section", { class: "rb-hdo rb-hdo-sm rb-mem-short", "aria-label": "바로가기" }, h("h2", null, "바로가기"), h("div", { class: "rb-hgrid" },
+    tile("character", "인물 위키", () => openDetail("people"), "rb-mem-go-wiki"),
+    tile("list", "기록 보기", () => openDetail("scenes"), "rb-mem-go-detail"),
+    tile("image", "카드로 만들기", () => ctx.go("cards"), "rb-mem-go-cards"),
+    tile("message", "다른 채팅", () => { m.page = "bots"; redraw(); }, "rb-mem-go-bots")));
 
   const recent = recentOf(folder);
-  const recBox = h("section", { class: "rb-card rb-mem-recentbox" }, h("div", { class: "rb-mem-rechead" }, h("b", null, "최근 기록"), recent.length ? btn("전체 보기", { size: "sm", onClick: openDetail }) : null),
+  const recBox = h("section", { class: "rb-card bordered rb-mem-recentbox" }, h("div", { class: "rb-mem-rechead" }, h("b", null, "최근 기록"), recent.length ? h("button", { type: "button", class: "rb-linkbtn", onClick: () => openDetail() }, "전체 보기") : null),
     h("ul", { class: "rb-mem-reclist rb-mem-recent" }, recent.length
-      ? recent.map((r) => h("li", { class: "rb-mem-rec" }, gradeBadge(r.g), h("div", { class: "txt" }, h("div", null, `${r.who}: ${r.act}`), h("div", { class: "rb-muted" }, at(r.at)))))
+      ? recent.map((r) => h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("div", null, h("b", null, r.who), " ", r.act), h("div", { class: "rb-muted" }, at(r.at))), gradeBadge(r.g)))
       : h("li", { class: "rb-muted" }, "아직 쌓인 기록이 없어요.")));
 
-  // 설정 탭의 '기억 · 리수폿' 카드. 분석 동작과 최근 기록 사이에 둔다.
+  // ── 설정: 한 줄 요약 목록 ──
+  let embedLine = "뜻이 비슷한 기억 찾기";
+  try { if (M.embedder) { await M.embedder.load(); embedLine += M.embedder.status().on ? " · 켜짐" : " · 꺼짐"; } } catch { /* 요약 없이 */ }
+  const srow = (title, sub, onClick, extra = {}) => h("button", { type: "button", class: "rb-srow", onClick, ...extra }, h("span", { class: "t" }, title, h("small", null, sub)), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
   const memorySettings = h("section", { class: "rb-card bordered rb-scard rb-mem-integrated-settings" },
-    h("span", { class: "h" }, ctx.prefs.advanced ? "기억 · 리수폿 설정" : "기억 세부 설정"),
-    h("button", { type: "button", class: "rb-srow", onClick: () => ctx.go("settings", "prompts") },
-      h("span", { class: "t" }, "기억·리수폿 프롬프트", h("small", null, "앞·중간·뒤에 덧붙일 프롬프트 · 플러그인의 모든 AI 작업에 적용 · JSON/.risup 불러오기")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))),
-    h("button", { type: "button", class: "rb-srow", onClick: () => ctx.go("cocoa") },
-      h("span", { class: "t" }, "코코아 · 스킬", h("small", null, "AI에게 줄 추가 지침 세트 · 코코아전트 스킬 그대로 가져오기")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))),
-    h("button", { type: "button", class: "rb-srow", "data-tour": "mem-embed", onClick: () => { if (ctx.memory?.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); } },
-      h("span", { class: "t" }, "임베딩(의미 검색)", h("small", null, "뜻이 비슷한 기억 찾기 · API 주소·키·기본 사용·대기 시간")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))));
+    h("span", { class: "h" }, "설정"),
+    srow("기억·리수폿 프롬프트", "앞·중간·뒤에 덧붙일 프롬프트", () => ctx.go("settings", "prompts")),
+    srow("임베딩 (의미 검색)", embedLine, () => { if (M.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, { "data-tour": "mem-embed" }));
 
+  // 기억 옵션 3개(고급 모드 '대화에 넣기'와 같은 설정)
+  const { S, save } = builders(ctx, idx, redraw, "");
+  const inj = S.inject ?? {};
+  const orow = (title, text, v0, set) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, h("small", null, text)),
+    switchEl(v0, { label: title, onChange: (v, el) => { setSwitch(el, v); save((st) => { st.inject ??= {}; set(st.inject, v); }); } }));
+  const memOptions = h("section", { class: "rb-card bordered rb-scard rb-mem-options" }, h("span", { class: "h" }, "기억 옵션"),
+    orow("사람다운 기억", "관계 진도·호칭·말투·둘만의 추억 등을 기억해요.", inj.human !== false, (o, v) => { o.human = v; }),
+    orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }),
+    orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
 
-
-  // v1.8.3: 간단 모드에서도 켜고 끌 수 있는 기억 옵션 3개(고급 모드 '대화에 넣기'와 같은 설정)
-  const memOptions = ctx.prefs.advanced ? null : (() => {
-    const { S, save } = builders(ctx, idx, redraw, "");
-    const inj = S.inject ?? {};
-    const row = (title, text, on, set) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, h("small", null, text)),
-      switchEl(on, { label: title, onChange: (v, el) => { setSwitch(el, v); save((st) => { st.inject ??= {}; set(st.inject, v); }); } }));
-    return h("section", { class: "rb-card bordered rb-scard rb-mem-options" }, h("span", { class: "h" }, "기억 옵션"),
-      row("사람다운 기억", "관계 진도·호칭과 말투·둘만의 추억·갈등과 앙금·사람 앞 태도를 기억해요.", inj.human !== false, (o, v) => { o.human = v; }),
-      row("감정이 시간이 지나면 식어요", "화난 마음은 빨리, 애정은 천천히 누그러져요. 신뢰·존경은 그대로예요.", inj.cool !== false, (o, v) => { o.cool = v; }),
-      row("거짓말·오해 추적", "누가 무엇을 잘못 알고 있는지 기억해요. 추리·드라마 봇에 알맞고, 약한 분석 모델에서는 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
-  })();
+  // ── 고급: 한 줄씩 접은 묶음. PC에서는 기억 방식을 접지 않고 오른쪽 맨 위에 둔다 ──
+  const wide = (ctx.win?.ownerDocument?.defaultView?.innerWidth ?? 1280) >= 1000;
+  const fold = (g) => h("details", { class: ["rb-card", "bordered", "rb-mem-grp", g.danger && "is-danger"], dataset: { g: g.id }, onToggle: (e) => { if (e.target.open) g.onOpen?.(); } },
+    h("summary", null, h("span", { class: "t" }, h("b", null, g.title), h("small", null, g.sub)), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))), h("div", { class: "rb-mem-foldbody" }, ...g.kids));
+  let side = [memorySettings];
+  if (ctx.prefs.advanced) {
+    const groups = advancedGroups(ctx, { cur, idx, redraw });
+    const modeLabel = modeHost.querySelector(".rb-mem-mbrow small")?.textContent?.replace(/^지금:\s*/, "") ?? "";
+    side = [
+      wide ? modeHost : null,
+      memorySettings,
+      h("section", { class: "rb-mem-folds", "aria-label": "고급" }, h("h3", { class: "rb-h3" }, "고급"),
+        !wide ? fold({ id: "mode", title: "기억 방식", sub: modeLabel, kids: [modeHost] }) : null,
+        ...groups.map(fold))
+    ];
+  } else side.push(advFold(ctx, "memory", true));
 
   const main = h("div", { class: "rb-mem2-main" },
-    pageHead("기억", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"}`, sw: { on, label: "이 채팅에서 사용", onChange: (v) => setOn(v) } }),
-    h("div", { class: "rb-mem-status-row" }, status, btn("인물 Wiki", { kind: "primary", icon: "character", title: "인물 위키 화면으로 이동", onClick: openDetail })), usageCard(usageOf(folder, last?.manifest)), actions, prog, memorySettings, memOptions, recBox,
+    pageHead("장기 기억"),
+    statusBox, bigAct, prog, shortcuts, memOptions, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
-  const adv = advFold(ctx, "memory", ...(ctx.prefs.advanced ? advancedBlocks(ctx, { cur, idx, redraw, modeHost }) : [true]));
-  replace(host, h("div", { class: ["rb-mem2-grid", ctx.prefs.advanced && "has-adv"] }, main, adv ? h("div", { class: "rb-mem2-side" }, adv) : null));
+  replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" }, main, h("div", { class: "rb-mem2-side" }, ...side)));
   void maybeShowEmbeddingGuide(ctx).catch(fail(ctx));
 }

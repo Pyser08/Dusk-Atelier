@@ -16,12 +16,14 @@ const boot = async (ctx, seed = {}, opts = {}) => {
   await page.addScriptTag({ content: r.outputFiles[0].text });
   // 처음 둘러보기·새로 바뀐 점 창이 화면을 가리지 않게 '이미 본 버전'으로 시작한다
   // 프롬프트 첫 안내 창은 시험이 스위치를 켤 때마다 화면을 가리므로 기본으로 '이미 봄'. 안내 시험만 opts.intro로 보존
-  const ui = JSON.parse(seed["rbm:ui:v1"] ?? "{}"); if (!opts.intro) ui.promptIntroDone = true;
-  await page.evaluate(([s, o]) => window.bootApp({ "rbm:seenVersion:v1": "1.7.0-dev", ...s }, o), [{ ...seed, "rbm:ui:v1": JSON.stringify(ui) }, opts]);
+  const ui = JSON.parse(seed["rbm:ui:v1"] ?? "{}"); if (!opts.intro) ui.promptIntroDone = true; ui.tourDone ??= true; ui.tourVer ??= 99; ui.onboardDone ??= true;
+  await page.evaluate(([s, o]) => window.bootApp({ "rbm:seenVersion:v1": "1.7.0-dev", "rbm:memoryEmbeddingGuide:shown:v1": "1", ...s }, o), [{ ...seed, "rbm:ui:v1": JSON.stringify(ui) }, opts]);
   await page.waitForTimeout(250);
   return page;
 };
 const shot = async (page, name) => { await page.evaluate(() => document.querySelectorAll('.rb-toasts > *').forEach((e) => e.remove())).catch(() => {}); if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png` }); };
+// 1.8: 메뉴가 기억(개요)·장기 기억으로 나뉘었다. PC는 사이드바 '장기 기억', 모바일은 탭 '기억' → 개요 목록 '장기 기억'.
+const goMem = async (page) => { const pc = await page.evaluate(() => !!document.querySelector(".rb-nav")?.offsetParent); if (pc) await go(page, "장기 기억"); else { await go(page, "기억"); await page.locator(".rb-hubrow", { hasText: "장기 기억" }).click(); await page.waitForTimeout(250); } };
 const go = async (page, label) => { await page.evaluate((l) => [...document.querySelectorAll(".rb-nav a, .rb-topnav a, .rb-tabbar a")].filter((a) => a.offsetParent).find((a) => a.textContent.trim().startsWith(l)).click(), label); await page.waitForTimeout(250); };
 const cur = (page) => page.evaluate(() => [...document.querySelectorAll("[aria-current=page]")].filter((a) => a.offsetParent).map((a) => a.textContent.trim().replace(/\d+$/, "")).join("|"));
 const names = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(s)].filter((a) => a.offsetParent).map((a) => a.textContent.trim().replace(/\d+$/, "")), sel);
@@ -40,14 +42,16 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
     f.emo = { "시로코>{{user}}": { from: "시로코", to: "{{user}}", tags: { affection: 7, trust: 1 }, log: [{ t: { affection: 7 }, from: { affection: null }, why: "converted", at_ms: 1 }] } };
     f.emoConv = [{ pair: "시로코>{{user}}", from: "affinity.score", value: 40, min: 0, max: 100, to: { affection: 7 }, at_ms: 1 }];
   }, { chaId: "c1", chatId: "t1" }));
-  await go(page, "기억"); await page.waitForTimeout(600);
+  await goMem(page); await page.waitForTimeout(600);
   ok(`[편집기 ${tag}] 간단 모드에는 편집기가 없다`, (await page.locator(".rb-mem-ed").count()) === 0);
-  await go(page, tag === "PC" ? "설정" : "더보기");
-  if (tag !== "PC") await page.locator(".rb-morenav .rb-chip", { hasText: "설정" }).click();
+  await go(page, tag === "PC" ? "설정" : "작업실");
+  if (tag !== "PC") await page.locator(".rb-hubrow", { hasText: "설정" }).click();
   await page.waitForTimeout(300);
   await page.locator(".rb-seg[aria-label='화면 모드'] button", { hasText: "고급" }).click(); await page.waitForTimeout(300);
-  await go(page, "기억"); await page.waitForTimeout(800);
-  ok(`[편집기 ${tag}] 고급 모드: 편집기가 '기억 방식' 박스 바로 아래에 있다`, await page.evaluate(() => { const m = document.querySelector(".rb-mem-modebar"), e = document.querySelector(".rb-mem-ed"); return !!m && !!e && m.parentElement.nextElementSibling === e; }));
+  await goMem(page); await page.waitForTimeout(800);
+  // 1.8.3(목업 3): 고급 내용은 한 줄씩 접은 묶음. 기록 편집기는 '진단 · 기억 데이터 편집' 묶음 안, PC는 기억 방식이 오른쪽 맨 위에 바로 보인다.
+  ok(`[편집기 ${tag}] 고급 모드: 편집기는 '진단 · 기억 데이터 편집' 묶음 안${tag === "PC" ? " · 기억 방식은 접지 않고 오른쪽 맨 위" : ""}`, await page.evaluate((pc) => { const g = document.querySelector(".rb-mem-grp[data-g=diag]"), e = g?.querySelector(".rb-mem-ed:not(.rb-mem-lore)"), mb = document.querySelector(".rb-mem-modebar"); return !!e && (!pc || (!!mb && !mb.closest("details") && mb.closest(".rb-mem2-side")?.firstElementChild?.contains(mb))); }, tag === "PC"));
+  await page.locator(".rb-mem-grp[data-g=diag] > summary").click(); await page.waitForTimeout(200);
   await page.locator(".rb-mem-ed:not(.rb-mem-lore) > summary").click(); await page.waitForTimeout(700);
   ok(`[편집기 ${tag}] 기록 탭: 인물 그룹과 기록 카드`, (await page.locator(".rb-mem-edperson").count()) === 2 && (await page.locator(".rb-mem-edrec").count()) >= 2);
   const R1 = () => page.locator(".rb-mem-edrec[data-rid='r1']");

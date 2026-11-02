@@ -1196,4 +1196,45 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-hub .rb-hubbig{min-height:96px}
 .rb-hub .rb-hubbig .t small{display:block!important;white-space:normal}
 @media (max-width:760px){.rb-hub{padding:12px 16px 24px}.rb-hub .rb-hubbig{flex-direction:column;align-items:flex-start}}
+/* 1.8.3 장기 기억 메인(목업 3) */
+.rb-mem-statuscard{display:flex;flex-direction:column;gap:12px;padding:14px 16px}
+.rb-mem-statushead{display:flex;align-items:center;gap:12px}
+.rb-mem-statushead .rb-status{flex:1;min-width:0;border:0;padding:0;background:none;box-shadow:none;min-height:0}
+.rb-mem-statuscard .rb-hnums{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.rb-mem-statuscard .rb-mbar-legend{margin:0}
+.rb-mem3 .rb-mem-short .rb-hgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.rb-mem3 .rb-mem-short .rb-htile{flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:76px;padding:10px 6px;gap:6px}
+.rb-mem3 .rb-mem-short .rb-htile .ico{width:36px;height:36px;border-radius:11px}
+.rb-mem3 .rb-mem-short .rb-htile b{font-size:13px;word-break:keep-all}
+.rb-mem3 .rb-mem-short h2{margin:0 0 8px;font-size:14px;font-weight:700;color:var(--rb-sub)}
+.rb-mem-rechead{display:flex;align-items:center;justify-content:space-between}
+.rb-mem-grps{display:flex;flex-direction:column;gap:8px}.rb-mem-grps>.rb-h3{margin:4px 0 2px}
+.rb-mem-grp>summary{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;list-style:none}
+.rb-mem-grp>summary::-webkit-details-marker{display:none}
+.rb-mem-grp>summary .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.rb-mem-grp>summary small{font-size:12.5px;color:var(--rb-sub)}
+.rb-mem-grp>summary .go{color:var(--rb-mute);transition:transform .15s}
+.rb-mem-grp[open]>summary .go{transform:rotate(90deg)}
+.rb-mem-grp.is-danger>summary b{color:var(--rb-danger)}
+.rb-mem-grpbody{display:flex;flex-direction:column;gap:10px;padding:0 12px 12px}
+@media (min-width:1000px){.rb-mem3.rb-mem2-grid{max-width:none;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}}
+/* 1.8.3 기록 보기(목업 3): 한 번에 한 구역, 칩에 개수, PC 왼쪽 구역 목록 */
+.rb-mem-dhead{flex-wrap:wrap}.rb-mem-dhead .rb-mem-chatpick{width:auto;max-width:260px;margin-left:auto}
+.rb-mem-dgrid{display:flex;flex-direction:column;gap:12px;min-width:0}
+.rb-mem-sectabs{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.rb-mem-sectab{white-space:nowrap;flex:none;display:inline-flex;align-items:center;gap:6px}
+.rb-mem-sectab .n{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--rb-surf2);color:var(--rb-sub);font-size:11.5px;font-weight:700;display:inline-grid;place-items:center}
+.rb-mem-sectab[aria-pressed=true] .n{background:var(--rb-acc-a);color:var(--rb-on-acc)}
+.rb-mem-secbody{min-width:0}
+.rb-mem-secbody>.rb-mem-anchor{padding-top:0}
+.rb-mem-empty1{display:flex;align-items:center;gap:8px;margin:0;padding:12px 14px;border-radius:var(--rb-r2);border:1px dashed var(--rb-line3);color:var(--rb-sub);font-size:13.5px}
+.rb-mem-timeline{list-style:none;margin:0;padding:0 0 0 18px;border-left:2px solid var(--rb-line);display:flex;flex-direction:column;gap:10px}
+.rb-mem-timeline>li{position:relative}
+.rb-mem-timeline>li::before{content:"";position:absolute;left:-26px;top:16px;width:12px;height:12px;border-radius:50%;background:var(--rb-surf);border:2px solid var(--rb-line3)}
+.rb-mem-timeline>li:last-child::before{background:var(--rb-acc-a);border-color:var(--rb-acc-a)}
+@media (min-width:1000px){
+  .rb-mem-dgrid{display:grid;grid-template-columns:200px minmax(0,1fr);gap:18px;align-items:start}
+  .rb-mem-sectabs{flex-direction:column;overflow:visible;position:sticky;top:0}
+  .rb-mem-sectab{justify-content:space-between;width:100%;border-radius:var(--rb-r2);height:42px;padding:0 12px}
+}
+.rb-mem-botsum{margin:0;font-size:13px;font-weight:700;color:var(--rb-sub)}
 `+PROB_CSS;
