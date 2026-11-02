@@ -15,13 +15,14 @@ test("앞부분 같음: 완전히 같으면 100%, 마지막만 다르면 높은 
   const q = prefixInfo(c, d); assert.equal(q.breakAt, 1); assert.equal(q.dusk, "이야기 시간");
   assert.ok(prefixInfo([{ role: "user", content: "x".repeat(200) }], [{ role: "user", content: "y".repeat(200) }]).ratio < 0.1);
 });
-test("주사위: 리스가 캐시를 쓰면 주사위 앞 assistant에 캐시 지점을 하나 더한다(4개 한도·원본 불변)", () => {
+test("주사위: 주사위 앞 assistant에 캐시 지점을 하나 찍는다(4개 한도·원본 불변)", () => {
   const m = [{ role: "system", content: "S" }, { role: "user", content: "U1", cachePoint: true }, { role: "assistant", content: "A1" }, { role: "user", content: "U2", cachePoint: true }];
   const out = insertFairness(m, { dice });
   const di = out.findIndex((x) => String(x.content).startsWith("[Dusk Dice]"));
   assert.equal(out[di - 1].content, "A1"); assert.equal(out[di - 1].cachePoint, true); assert.equal(m[2].cachePoint, undefined);
   const noCache = insertFairness(m.map(({ cachePoint, ...x }) => x), { dice });
-  assert.ok(!noCache.some((x) => x.cachePoint), "캐시를 안 쓰면 새로 켜지 않는다");
+  assert.equal(noCache.filter((x) => x.cachePoint).length, 1, "리스가 캐시를 안 써도 주사위 앞에 지점을 찍는다");
+  assert.equal(noCache[noCache.findIndex((x) => String(x.content).startsWith("[Dusk Dice]")) - 1].cachePoint, true);
   const full = [{ role: "system", content: "S", cachePoint: true }, { role: "assistant", content: "A0", cachePoint: true }, { role: "user", content: "U1", cachePoint: true }, { role: "assistant", content: "A1" }, { role: "user", content: "U2", cachePoint: true }];
   assert.equal(insertFairness(full, { dice }).filter((x) => x.cachePoint).length, 4, "4개면 더하지 않는다");
 });

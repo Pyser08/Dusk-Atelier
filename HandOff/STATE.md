@@ -380,3 +380,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - ⑥ 채팅 메뉴: `data/chatmenu.js`(`registerButton` location "chat", id 고정 `dusk-qt-fair|dice|show`로 다시 등록해 이름 갱신). main에서 fairPlay.set/setDice·turnInfo.setDiceShow를 감싸 어디서 바꿔도 이름 갱신. 설정 '로어북 · 채팅 메뉴'에 보임/숨김(`dusk.ui.chatQuick`, 기본 보임).
 - 시험: `cache-hit`·`dice-log`·`memory-user-merge`·`chatmenu` 단위, e2e `run-me.mjs`(PC·모바일 16). e2e에서 `.rb-dice .btns button`은 버튼이 2개라 '닫기' 글자로 고름.
 - 확인 못 함: 실제 Claude 캐시 적중(프로바이더 사용량), 채팅 메뉴 버튼이 RisuBard·PocketRisu에 있는지(없으면 조용히 생략), '나' 화면의 실제 데이터 품질.
+- (2026-11-03, 사용자 결정) 주사위 앞 캐시 지점은 리스가 캐시를 안 써도 찍음(`points < 4`면). 리스 캐시를 안 쓰던 Claude 사용자는 그 지점까지 캐시 쓰기 비용(입력 단가의 약 1.25배)이 생기고 다음 턴부터 읽기 할인을 받음.
