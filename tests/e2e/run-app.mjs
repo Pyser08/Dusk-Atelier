@@ -266,11 +266,11 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   // 꾸미기 (간단)
   await openTab("꾸미기");
   const look = ".rb-mem2[data-page=look]";
-  ok(`[7단계 ${tag}] 꾸미기: 미리보기 말풍선 2 · 강조 색 6개(이름)`, (await page.locator(`${look} .rb-bub`).count()) === 2 && (await page.locator(`${look} .rb-accpick`).allTextContents()).join("|") === "코랄|청록|세이지|라일락|모노|황혼");
-  ok(`[7단계 ${tag}] 꾸미기: 밝기 3칸 · 글자 크기 3칸 · 테마 만들기 버튼 · 고급 영역 대신 링크`, (await page.locator(`${look} .rb-seg[aria-label=밝기] button`).allTextContents()).join("|") === "자동|밝게|어둡게" && (await page.locator(`${look} .rb-seg[aria-label='글자 크기'] button`).allTextContents()).join("|") === "작게|보통|크게" && (await page.locator(`${look} #rb-look-themebuilder`).textContent()).includes("내 채팅 테마 만들기") && (await page.locator(`${look} .rb-adv`).count()) === 0 && (await page.locator("#rb-adv-look").count()) === 1);
+  ok(`[7단계 ${tag}] 꾸미기: 미리보기 말풍선 2 · 강조 색 18개(이름)`, (await page.locator(`${look} .rb-bub`).count()) === 2 && (await page.locator(`${look} .rb-accgroup .rb-accpick`).count()) === 18);
+  ok(`[7단계 ${tag}] 꾸미기: 밝기 4칸 · 글자 크기 4칸 · 테마 만들기 버튼 · 고급 영역 대신 링크`, (await page.locator(`${look} .rb-seg[aria-label=밝기] button`).allTextContents()).join("|") === "자동|밝게|어둡게|시간 따라" && (await page.locator(`${look} .rb-seg[aria-label='글자 크기'] button`).allTextContents()).join("|") === "작게|보통|크게|아주 크게" && (await page.locator(`${look} #rb-look-themebuilder`).textContent()).includes("내 채팅 테마 만들기") && (await page.locator(`${look} .rb-adv`).count()) === 0 && (await page.locator("#rb-adv-look").count()) === 1);
   await shot(page, `s7-${t}-1-look`);
-  await page.locator(`${look} .rb-accpick`, { hasText: "청록" }).click(); await page.waitForTimeout(500);
-  ok(`[7단계 ${tag}] 강조 색을 누르면 바로 적용·저장`, (await page.evaluate(() => getComputedStyle(document.querySelector(".rb-bub.m")).backgroundImage)).includes("rgb(15, 118, 110)") && (await ui()).theme?.preset === "teal" && (await page.locator(`${look} .rb-accpick[aria-pressed=true]`).textContent()) === "청록");
+  await page.locator(`${look} .rb-accgroup .rb-accpick`, { hasText: "청록" }).click(); await page.waitForTimeout(500);
+  ok(`[7단계 ${tag}] 강조 색을 누르면 바로 적용·저장`, (await page.evaluate(() => getComputedStyle(document.querySelector(".rb-bub.m")).backgroundImage)).includes("rgb(15, 118, 110)") && (await ui()).theme?.preset === "teal" && (await page.locator(`${look} .rb-accgroup .rb-accpick[aria-pressed=true]`).textContent()) === "청록");
   await page.locator(`${look} .rb-seg[aria-label=밝기] button`, { hasText: "어둡게" }).click();
   await page.locator(`${look} .rb-seg[aria-label='글자 크기'] button`, { hasText: "크게" }).click(); await page.waitForTimeout(500);
   const th = (await ui()).theme;

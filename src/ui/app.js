@@ -294,6 +294,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     for (const c of [...win.classList]) if (c.startsWith("rb-lay-") || c.startsWith("rb-den-")) win.classList.remove(c);
     win.classList.add(`rb-lay-${th.layout}`, `rb-den-${th.density}`);
     win.classList.toggle("rb-hc", th.contrast === "high");
+    win.classList.toggle("rb-glass", th.glass === true && th.contrast !== "high");
+    win.classList.toggle("rb-calm", th.motion === "reduce");
     paintLay();
   }
   // 메뉴 위치 분할 버튼(사이드바·위쪽 바)의 눌림 표시

@@ -1119,4 +1119,44 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
   .rb-mem-rec .txt{flex:1 1 0;min-width:0}
   .rb-mem-rec>span[style*="flex:1"]{display:none}
 }
+
+/* 1.8.3 꾸미기 확장: 글꼴·줄 높이·글자 굵기·바탕 무늬·유리 카드·사이드바 색·아이콘 굵기·움직임 줄이기 (기본값이면 예전과 똑같음) */
+.rb-win{font-family:var(--rb-font,inherit);line-height:var(--rb-lh,1.5);font-weight:var(--rb-fw,400);background-image:var(--rb-win-grad,none)}
+.rb-main{background-image:var(--rb-pattern,none);background-size:var(--rb-pattern-size,auto)}
+.rb-nav{background:var(--rb-side,transparent)}
+.rb-win svg[stroke-width]{stroke-width:var(--rb-icon-w,2)}
+.rb-win.rb-glass .rb-card,.rb-win.rb-glass .rb-nav-card{background:color-mix(in srgb,var(--rb-surf) 70%,transparent);backdrop-filter:var(--rb-glass);-webkit-backdrop-filter:var(--rb-glass)}
+.rb-win.rb-calm *,.rb-win.rb-calm *::before,.rb-win.rb-calm *::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;scroll-behavior:auto !important}
+
+/* 1.8.3 꾸미기 부품 */
+.rb-setgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.rb-setpick{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:6px 6px 8px;border-radius:var(--rb-r2);border:var(--rb-bw,1px) solid var(--rb-line);background:var(--rb-surf);color:var(--rb-sub);font-size:12.5px;cursor:pointer;font-family:inherit;text-align:center}
+.rb-setpick .mini{display:block;position:relative;height:44px;border-radius:calc(var(--rb-r1) - 2px);border:1px solid var(--rb-line2);overflow:hidden}
+.rb-setpick .mini b{position:absolute;left:6px;right:6px;top:8px;height:16px;border-radius:5px;display:block}
+.rb-setpick .mini u{position:absolute;left:6px;width:34%;bottom:6px;height:8px;border-radius:4px;display:block}
+.rb-setpick .mini.die{display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--rb-surf2)}
+.rb-setpick[aria-pressed=true]{color:var(--rb-text);font-weight:700;border-color:var(--rb-acc-a);box-shadow:0 0 0 2px var(--rb-sel-ring)}
+.rb-accgroups{display:flex;flex-direction:column;gap:10px}.rb-accgroup{display:flex;flex-direction:column;gap:4px}.rb-accgroup>small{font-size:12px;color:var(--rb-mute);font-weight:600}
+.rb-accpick i.none{display:flex;align-items:center;justify-content:center;border:1px dashed var(--rb-line3);color:var(--rb-mute)}
+.rb-seg.is-off{opacity:.55}
+.rb-shape{display:flex;flex-direction:column;gap:14px}
+.rb-morefold{border-top:var(--rb-bw,1px) solid var(--rb-line2);padding-top:10px}
+.rb-morefold>summary{cursor:pointer;font-weight:600;font-size:14px;list-style:none;display:flex;align-items:center;gap:6px;min-height:36px}
+.rb-morefold>summary::-webkit-details-marker{display:none}
+.rb-morefold[open]>summary{margin-bottom:10px}
+.rb-look-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start;max-width:760px}
+.rb-look-side{display:flex;flex-direction:column;gap:14px;min-width:0;order:-1}
+.rb-look-pick{display:flex;flex-direction:column;gap:14px;min-width:0}
+.rb-look-adv{min-width:0;grid-column:1/-1}
+@media (min-width:1000px){.rb-look-grid{max-width:none;grid-template-columns:minmax(0,1.25fr) minmax(300px,.9fr) }.rb-look-side{order:0;position:sticky;top:0}.rb-look-adv{grid-column:1/-1}}
+.rb-look-prev.is-scoped{background:var(--rb-win);color:var(--rb-text)}
+.rb-prev-sample{display:flex;align-items:center;gap:8px}
+.rb-prev-btn{padding:6px 14px;border-radius:var(--rb-r1);background:var(--rb-acc-grad);color:var(--rb-on-acc);font-size:13px;font-weight:600}
+.rb-prev-chip{padding:5px 10px;border-radius:999px;background:var(--rb-acc-soft);color:var(--rb-acc-text);font-size:12.5px}
+.rb-prev-sw{width:38px;height:22px;border-radius:999px;background:var(--rb-acc-a);position:relative}.rb-prev-sw::after{content:"";position:absolute;right:3px;top:3px;width:16px;height:16px;border-radius:50%;background:var(--rb-knob-on)}
+.rb-minelist{display:flex;flex-direction:column;gap:6px}
+.rb-mine{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.rb-mine-name{flex:1 1 120px;display:flex;align-items:center;gap:8px;min-height:36px;background:none;border:0;color:var(--rb-text);font-weight:600;font-size:14px;cursor:pointer;text-align:left;font-family:inherit}
+.rb-mine-name i{width:18px;height:18px;border-radius:50%;flex:none}
+.rb-linkbtn{border:0;background:none;color:var(--rb-mute);text-decoration:underline;font-size:12px;cursor:pointer;padding:2px 4px}
 `+PROB_CSS;
