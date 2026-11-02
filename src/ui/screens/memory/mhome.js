@@ -2,12 +2,13 @@
 import { maybePromptIntro } from '../promptstab.js';
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
-import { actionRow, advFold, btn, confirmDialog, emptyState, note, pageHead, progressBar, statusCard } from "../../kit.js";
+import { actionRow, advFold, btn, confirmDialog, emptyState, note, pageHead, progressBar, statusCard, switchEl, setSwitch } from "../../kit.js";
 import { injectReasonText } from "../../../engine/memoryinject.js";
 import { USAGE_KINDS, injectLine, usageOf } from "../../../engine/memoryusage.js";
 import { mem, fail, gradeBadge, at } from "./common.js";
 import { renderModeBar } from "./modebar.js";
 import { advancedBlocks } from "./madv.js";
+import { builders } from "./settings.js";
 import { openEmbedModal } from "./embedmodal.js";
 import { maybeShowEmbeddingGuide } from "./embeddingguide.js";
 import { maybeAskBardWiki } from "./modebar.js";
@@ -126,9 +127,21 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
 
 
 
+  // v1.8.3: 간단 모드에서도 켜고 끌 수 있는 기억 옵션 3개(고급 모드 '대화에 넣기'와 같은 설정)
+  const memOptions = ctx.prefs.advanced ? null : (() => {
+    const { S, save } = builders(ctx, idx, redraw, "");
+    const inj = S.inject ?? {};
+    const row = (title, text, on, set) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, h("small", null, text)),
+      switchEl(on, { label: title, onChange: (v, el) => { setSwitch(el, v); save((st) => { st.inject ??= {}; set(st.inject, v); }); } }));
+    return h("section", { class: "rb-card bordered rb-scard rb-mem-options" }, h("span", { class: "h" }, "기억 옵션"),
+      row("사람다운 기억", "관계 진도·호칭과 말투·둘만의 추억·갈등과 앙금·사람 앞 태도를 기억해요.", inj.human !== false, (o, v) => { o.human = v; }),
+      row("감정이 시간이 지나면 식어요", "화난 마음은 빨리, 애정은 천천히 누그러져요. 신뢰·존경은 그대로예요.", inj.cool !== false, (o, v) => { o.cool = v; }),
+      row("거짓말·오해 추적", "누가 무엇을 잘못 알고 있는지 기억해요. 추리·드라마 봇에 알맞고, 약한 분석 모델에서는 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
+  })();
+
   const main = h("div", { class: "rb-mem2-main" },
     pageHead("기억", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"}`, sw: { on, label: "이 채팅에서 사용", onChange: (v) => setOn(v) } }),
-    h("div", { class: "rb-mem-status-row" }, status, btn("인물 Wiki", { kind: "primary", icon: "character", title: "인물 위키 화면으로 이동", onClick: openDetail })), usageCard(usageOf(folder, last?.manifest)), actions, prog, memorySettings, recBox,
+    h("div", { class: "rb-mem-status-row" }, status, btn("인물 Wiki", { kind: "primary", icon: "character", title: "인물 위키 화면으로 이동", onClick: openDetail })), usageCard(usageOf(folder, last?.manifest)), actions, prog, memorySettings, memOptions, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   const adv = advFold(ctx, "memory", ...(ctx.prefs.advanced ? advancedBlocks(ctx, { cur, idx, redraw, modeHost }) : [true]));
   replace(host, h("div", { class: ["rb-mem2-grid", ctx.prefs.advanced && "has-adv"] }, main, adv ? h("div", { class: "rb-mem2-side" }, adv) : null));

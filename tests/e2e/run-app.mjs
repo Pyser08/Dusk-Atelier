@@ -104,8 +104,9 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   const ctx = await browser.newContext({ viewport: vp, ...extra });
   const page = await boot(ctx, {}, { memory: true, story: true });
   await go(page, "기억"); await page.waitForTimeout(600);
-  const sw = await page.locator(".rb-mem2 .rb-switch").count(), acts = await page.locator(".rb-mem2 .rb-actions .rb-btn").count();
+  const sw = await page.locator(".rb-mem2 .rb-phead .rb-switch").count(), opts = await page.locator(".rb-mem2 .rb-mem-options .rb-switch").count(), acts = await page.locator(".rb-mem2 .rb-actions .rb-btn").count();
   ok(`[3단계 ${tag}] 간단 모드: 스위치 1개·주요 동작 3개 이하`, sw === 1 && acts >= 1 && acts <= 3, `switch ${sw}, actions ${acts}`);
+  ok(`[3단계 ${tag}] 간단 모드: 기억 옵션 스위치 3개(사람다운 기억·감정 식기·거짓말 추적)`, opts === 3, `options ${opts}`);
   ok(`[3단계 ${tag}] 상태 카드·기록 막대(4칸)·최근 기록`, (await page.locator(".rb-mem2 .rb-status.k-on").count()) === 1 && (await page.locator(".rb-mbar i").count()) >= 3 && (await page.locator(".rb-mem-recent .rb-mem-rec").count()) === 3);
   ok(`[3단계 ${tag}] 상태 줄에 '기억 3건을 넣었어요'`, (await page.locator(".rb-mem2 .rb-status").textContent()).includes("기억 3건을 넣었어요"));
   ok(`[3단계 ${tag}] 간단 모드에서는 고급 영역 대신 '고급 모드에서 더 보기' 링크`, (await page.locator(".rb-mem2 .rb-adv").count()) === 0 && (await page.locator("#rb-adv-memory").count()) === 1);
