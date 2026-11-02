@@ -154,3 +154,26 @@ test("three modules pinned to one bot, each with its own naming rule, all work",
   assert.equal(await fx.onOutput('<img="kaguya.school_uniform.Smiling">'), '<img="Kaguya.school_uniform.smiling">');
   assert.equal(await fx.onOutput('<img="Ghost_smile">'), "");   // 연결 안 된 모듈의 캐릭터
 });
+
+// ── 릴리스 전 점검 ──
+function botApi(ch) {
+  const store = new Map([["dusk.ui.imgFix", "on"]]);
+  return {
+    pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async () => {} },
+    getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0,
+    getCharacterFromIndex: async () => ch,
+    getDatabase: async () => ({ enabledModules: ["m"], modules: [{ id: "m", assets: [["Other_smile"], ["Other_default"]] }] }),
+    addRisuScriptHandler: async () => {},
+  };
+}
+test("emotion images count as assets (tags using them are kept and fixed)", async () => {
+  const fx = createImgTagFix(botApi({ additionalAssets: [], emotionImages: [["Yui_smile", "a"], ["Yui_sad", "b"], ["Yui_default", "c"]], chats: [{}] }), { log: () => {}, streaming: () => false });
+  await fx.start();
+  assert.equal(await fx.onOutput('<img="Yui_smile">'), '<img="Yui_smile">');
+  assert.equal(await fx.onOutput('<img="yui_Smiling">'), '<img="Yui_smile">');
+});
+test("group chats are left alone (member bots' assets are not read)", async () => {
+  const fx = createImgTagFix(botApi({ type: "group", additionalAssets: [], chats: [{}] }), { log: () => {}, streaming: () => false });
+  await fx.start();
+  assert.equal(await fx.onOutput('<img="Member_smile">'), '<img="Member_smile">');
+});

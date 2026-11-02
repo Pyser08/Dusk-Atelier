@@ -4,7 +4,7 @@
 import { readTags, sceneState } from "./imgtagfix.js";
 
 export const HINT_MARK = "[Dusk · image tag check]";
-const MAX = 2800, MAX_CHARS = 6, RECENT = 3;
+const MAX = 2800, MAX_CHARS = 6, RECENT = 3, SCAN = 20;
 const DEFAULTISH = new Set(["default", "neutral", "idle", "normal"]);
 
 export const textOf = (c) => (typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => (typeof p === "string" ? p : p?.text ?? "")).join("\n") : String(c?.text ?? ""));
@@ -77,7 +77,7 @@ export function hintForMessages(messages, idx) {
   const all = messages.filter((m) => !(m?.role === "system" && textOf(m.content).startsWith(HINT_MARK)));
   if (!all.some((m) => /<img\b/i.test(textOf(m?.content)))) return null;
   const texts = all.filter((m) => m?.role !== "system").map((m) => textOf(m.content));
-  const replies = all.filter((m) => m?.role === "assistant" || m?.role === "char" || m?.role === "model").map((m) => textOf(m.content));
+  const replies = all.filter((m) => m?.role === "assistant" || m?.role === "char" || m?.role === "model").map((m) => textOf(m.content)).slice(-SCAN);   // 최근 응답만(긴 채팅에서도 가볍게)
   const state = sceneState(replies.length ? replies : texts, idx);
   // 차례 번호를 전체 글 기준으로 맞춘다(presentChars가 '최근 몇 개'를 셀 때 사용)
   const count = replies.length ? replies.length : texts.length, off = texts.length - count;

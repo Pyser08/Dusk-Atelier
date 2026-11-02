@@ -228,3 +228,9 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 규칙: Dusk의 모든 AI 호출은 `runAI`/`callModel`의 `withUserPrompts`가 '내 프롬프트'(기억 단계, 앞·중간·뒤)를 넣는다. 기본 프롬프트 1(앞)·2(뒤)는 그 목록의 기본 항목(`memoryturn.js` dusk-default-front/back-v1). **지침 글에 MEMORY_DEFAULT_PROMPT_1/2를 직접 붙이지 말 것**(중복·위치 깨짐).
 - 바뀐 곳: `data/memory.js` `userPrompts` — 리수폿 설정을 못 읽으면 `DEFAULT_PROMPT_BLOCKS`(앞=1, 뒤=2), 목록이 비어 있으면(사용자가 지움) null. 직접 붙이던 `data/gauge.js` design, `dev/aibuild/core.js` 메시지, `ui/screens/personabuilder.js`(번역·대화 2곳)에서 제거. 장기기억 분석(`noUserPrompts`, 대상 채팅 기준 직접 끼움)은 그대로.
 - 테스트 `tests/defaultprompts.test.js` 3. `npm test` 635 pass / 0 fail, build·check 동일함, smoke 0 실패. 실제 모델 응답 영향은 미확인.
+
+## 릴리스 v1.8.2 (2026-11-02, 사용자 지시)
+- 릴리스 전 점검으로 추가 수정: 감정 이미지(`emotionImages`)도 에셋으로 읽음(빠지면 정상 태그가 지워질 수 있었음), 그룹 채팅은 교정 안 함, 상황 알림은 최근 응답 20개만 읽음. 테스트 3건 추가(`npm test` 638 pass).
+- `package.json` 1.8.2, CHANGELOG `## v1.8.2 (2026-11-02)`(새로 생긴 것/바뀐 점/가벼워진 점/고친 점으로 정리), 아카 글 `docs/arca/v1.8.2.html`(태그 자동 교정이 중심, 시리즈 20편, v1.8.1 글 https://arca.live/b/characterai/187757569).
+- feat/1.8.2 → main 빨리감기 머지 → release.yml이 v1.8.2 릴리스 생성.
+- 다음 작업은 새 브랜치에서(사용자 지정 필요).

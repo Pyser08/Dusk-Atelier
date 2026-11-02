@@ -31,7 +31,8 @@ export function createImgTagFix(api, { log = (...a) => console.log("[Dusk 이미
     const idx = await api.getCurrentCharacterIndex?.();
     if (typeof idx === "number" && idx >= 0 && typeof api.getCharacterFromIndex === "function") {
       const ch = await api.getCharacterFromIndex(idx);
-      for (const a of ch?.additionalAssets ?? []) if (a?.[0]) names.push(String(a[0]));
+      if (ch?.type === "group") return [];   // 그룹 채팅: 멤버 봇의 에셋을 읽지 않으므로 아무것도 고치지 않는다(멀쩡한 태그를 지우지 않게)
+      for (const a of [...(ch?.additionalAssets ?? []), ...(ch?.emotionImages ?? [])]) if (a?.[0]) names.push(String(a[0]));   // 추가 에셋 + 감정 이미지
       const chat = ch?.chats?.[ch?.chatPage ?? 0];
       if (Array.isArray(ch?.modules)) pinned.push(...ch.modules);
       if (Array.isArray(chat?.modules)) pinned.push(...chat.modules);

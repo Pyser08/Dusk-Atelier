@@ -118,3 +118,13 @@ test("tags older than the last two replies are not shown as the last tag (outfit
   assert.doesNotMatch(r.hint, /last tag: <img="Fujiwara_Chika\.nude\.missionary_sex">/);
   assert.equal(r.state.Fujiwara_Chika.outfit, "nude");   // 교정용 옷 기억은 그대로
 });
+
+test("only the recent replies are read for the scene state (long chats stay cheap)", () => {
+  const m = [{ role: "system", content: "<img> rules" }];
+  m.push({ role: "assistant", content: '<img="Hayasaka_Ai.school_uniform.smiling">' });
+  for (let i = 0; i < 40; i++) { m.push({ role: "user", content: "u" }); m.push({ role: "assistant", content: i === 39 ? '<img="Fujiwara_Chika.nude.smiling">' : "글" }); }
+  m.push({ role: "user", content: "끝" });
+  const r = hintForMessages(m, idx);
+  assert.equal(r.state.Hayasaka_Ai, undefined);   // 아주 오래된 태그는 읽지 않음
+  assert.equal(r.state.Fujiwara_Chika.outfit, "nude");
+});
