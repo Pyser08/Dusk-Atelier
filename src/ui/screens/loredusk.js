@@ -9,7 +9,7 @@ import { pickRefine, readRefine, refineChanges, refineMessages, refineStep, refi
 
 const label = (e) => String(e?.comment || e?.key || "(이름 없음)");
 
-export async function openLoreDusk(ctx, { list }) {
+export async function openLoreDusk(ctx, { list, reference = "" }) {
   const ais = await loadPB(ctx.api).then((d) => ({ ais: d.ais, ai: d.ai })).catch(() => ({ ais: [{ id: "default", name: "기본", mode: "submodel" }], ai: "default" }));
   const base = rulePlan(list);
   return modal(ctx.win, (done) => {
@@ -50,7 +50,7 @@ export async function openLoreDusk(ctx, { list }) {
       const failed = [];
       for (let i = 0; i < bs.length; i++) {
         try {
-          const raw = await runAI(ctx.api, batchMessages(list, work, bs[i], { instruction: instr.value }), pick(), ctrl.signal);
+          const raw = await runAI(ctx.api, batchMessages(list, work, bs[i], { instruction: instr.value, reference }), pick(), ctrl.signal);
           mergeAnalysis(work, parseAnalysis(raw, list, bs[i]), list);
         } catch (e) {
           if (ctrl.signal.aborted) return;
@@ -115,7 +115,7 @@ export async function openLoreDusk(ctx, { list }) {
       const why = {}, errs = [], warns = [];
       for (let i = 0; i < bs.length; i++) {
         try {
-          const msgs = refineMessages(work, bs[i], { instruction: instr.value });
+          const msgs = refineMessages(work, bs[i], { instruction: instr.value, reference });
           let raw = await runAI(ctx.api, msgs, pick(), ctrl.signal), r;
           try { r = readRefine(raw, work, bs[i]); }
           catch { raw = await runAI(ctx.api, [...msgs, { role: "assistant", content: String(raw ?? "") }, { role: "user", content: "JSON 객체 하나만 다시 보내 주세요." }], pick(), ctrl.signal); r = readRefine(raw, work, bs[i]); }

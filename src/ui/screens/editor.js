@@ -23,6 +23,7 @@ import { pickFix, clearFix } from '../aifix.js';
 import { segments, summarize } from '../../engine/regexview.js';
 import { parseVars, serializeVars, duplicateKeys } from '../../engine/vars.js';
 import { openLoreDusk } from './loredusk.js';
+import { referenceText } from '../../engine/loredusk.js';
 import { AFF_PREFIX, COND_TYPES, PLACE_PREFIX, SET_OPS, VAR_OPS, VAR_OP_LABEL, affName, affOf, affsOf, ancestorsOf, applySets, bodyOf, checkExpr, collectManaged, defaultAff, defaultRule, evaluate, folderIdOf, folderMap, gateVar, isAff, isDuskFolder, isFolder, isManaged, isPlace, nativeContent, parentOf, placeLinks, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
 import { FOLDER_SWATCHES, folderTint } from '../theme.js';
 // 관리 항목의 내용 머리(@@activate·{{#if}})를 규칙에 맞춘다
@@ -774,7 +775,7 @@ export async function openEditorCore(ctx, cfg) {
     }
     // 로어북 더스크화: 결과는 초안에만 반영하고, 저장 전에는 되돌릴 수 있다
     async function duskify() {
-      const r = await openLoreDusk(ctx, { list });
+      const r = await openLoreDusk(ctx, { list, reference: referenceText({ regex: draft.regex, trigger: draft.trigger, background: draft.backgroundHTML ?? draft.backgroundEmbedding }) });
       if (!r) return;
       const before = structuredClone(list);
       const cur = selObj();

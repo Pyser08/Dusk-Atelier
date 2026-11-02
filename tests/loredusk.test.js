@@ -122,3 +122,14 @@ test("순환 부모는 막는다", () => {
   const x = plan.affs[0], y = plan.affs[1];
   assert.ok(!(x.parent === y.id && y.parent === x.id));
 });
+
+import { referenceText, batchMessages as _bm, rulePlan as _rp } from "../src/engine/loredusk.js";
+test("참고 글: 정규식·트리거·배경을 줄여 담고, 프롬프트에 참고로 얹힌다", () => {
+  const ref = referenceText({ regex: [{ comment: "말줄임", type: "editdisplay", in: "\\.\\.\\.", out: "…" }, { comment: "끔", type: "disabled", in: "x", out: "y" }], trigger: [{ comment: "턴", type: "start", effect: [{ type: "setvar" }] }], background: "<style>.a{}</style>" });
+  assert.match(ref, /말줄임/); assert.doesNotMatch(ref, /끔/); assert.match(ref, /setvar/); assert.match(ref, /style/);
+  assert.equal(referenceText({}), "");
+  const entries = [{ comment: "a", key: "k", content: "c" }];
+  const m = _bm(entries, _rp(entries), [0], { reference: ref });
+  assert.match(m[1].content, /Reference \(read only\)/);
+  assert.doesNotMatch(_bm(entries, _rp(entries), [0])[1].content, /Reference/);
+});

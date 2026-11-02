@@ -80,12 +80,13 @@ export function batches(entries, size = 120) {
   return out;
 }
 
-export function batchMessages(entries, plan, indices, { instruction = "" } = {}) {
+export function batchMessages(entries, plan, indices, { instruction = "", reference = "" } = {}) {
   const lines = indices.map((i) => `${i} | ${snip(entries[i].comment, 40)} | ${snip(entries[i].key, 40)} | ${snip(entries[i].content, 60)}`);
   const known = plan.affs.map((a) => `${a.name}${a.parent ? ` (in ${plan.affs.find((x) => x.id === a.parent)?.name ?? "?"})` : ""}`);
   const user = [
     known.length ? `Affiliations already known (reuse these exact names; do not repeat their members):\n${known.join("\n")}` : "",
     instruction ? `Extra instruction from the user: ${instruction}` : "",
+    reference ? `Reference (read only):\n${reference}` : "",
     "Entries:",
     lines.join("\n")
   ].filter(Boolean).join("\n\n");
@@ -265,3 +266,14 @@ export const summaryText = (s) => [
   s.affs && `소속 ${s.affs}개`, s.members && `구성원 ${s.members}명`, s.places && `장소 ${s.places}개`,
   s.newPlaces && `새 장소 ${s.newPlaces}개`, s.flags && `이름 설정 ${s.flags}건`, s.dividers && `구분선 ${s.dividers}개 정리`
 ].filter(Boolean).join(" · ") || "바뀐 것 없음";
+
+// 로어북 설계 때 참고할 같은 봇의 정규식·트리거·배경 HTML을 짧게 줄인 글 (AI가 겹치는 처리를 피하도록)
+export function referenceText({ regex = [], trigger = [], background = "" } = {}) {
+  const cut = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
+  const rx = (Array.isArray(regex) ? regex : []).filter((r) => r && r.type !== "disabled" && (r.in || r.out)).slice(0, 40)
+    .map((r) => `- ${cut(r.comment, 30)} | ${cut(r.type, 12)} | /${cut(r.in, 60)}/ → ${cut(r.out, 60)}`);
+  const tg = (Array.isArray(trigger) ? trigger : []).filter((t) => t && t.comment !== undefined || t?.effect).slice(0, 30)
+    .map((t) => `- ${cut(t.comment, 30)} | ${cut(t.type, 16)} | ${(Array.isArray(t.effect) ? t.effect : []).map((e) => e?.type).filter(Boolean).slice(0, 6).join(",")}`);
+  const bg = cut(background, 600);
+  return [rx.length ? `[이 봇의 정규식 (참고만, 로어북으로 중복 처리하지 말 것)]\n${rx.join("\n")}` : "", tg.length ? `[이 봇의 트리거 (참고만)]\n${tg.join("\n")}` : "", bg ? `[배경 HTML 일부 (참고만)]\n${bg}` : ""].filter(Boolean).join("\n\n");
+}

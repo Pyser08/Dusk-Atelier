@@ -36,7 +36,7 @@ export function refineTargets(list, size = REFINE_BATCH) {
   return out;
 }
 
-export function refineMessages(list, batch, { instruction = '' } = {}) {
+export function refineMessages(list, batch, { instruction = '', reference = '' } = {}) {
   const fmap = folderMap(list);
   const folderName = (e) => { const p = parentOf(e); const f = p && fmap.get(p); return f ? affName(f) || f.comment : ''; };
   const all = list.map((e, i) => `l${i} | ${isAff(e) ? 'affiliation' : isFolder(e) ? 'folder' : isPlace(e) ? 'place' : 'entry'} | ${snip(affName(e) || e.comment, 40)}${folderName(e) ? ` | in ${folderName(e)}` : ''}${!isFolder(e) && e.key ? ` | keys ${snip(e.key, 40)}` : ''}`);
@@ -45,6 +45,7 @@ export function refineMessages(list, batch, { instruction = '' } = {}) {
   const targets = batch.map((i) => ctx[i]);
   const user = [
     instruction ? `사용자 추가 요청: ${instruction}` : '',
+    reference ? `[참고: 같은 봇의 다른 설정]\n${reference}` : '',
     `[전체 항목] (ref | 종류 | 이름 | 폴더 | 키)\n${all.join('\n')}`,
     affs.length ? `[소속 폴더]\n${JSON.stringify(affs)}` : '',
     `[이번 묶음: 규칙을 설계할 항목]\n${JSON.stringify(targets)}`
