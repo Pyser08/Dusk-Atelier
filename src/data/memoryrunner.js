@@ -1,5 +1,5 @@
 // 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 await 하지 않는다.
-import { effectiveTags, talkForPrompt, beliefsForPrompt } from "../engine/memoryhuman.js";
+import { effectiveTags, talkForPrompt, beliefsForPrompt, riftsForPrompt } from "../engine/memoryhuman.js";
 import { extractMessageText, isUserMessage, messageIdentity, messageIdOf, confirmedAiIndex, isChatGenerating as isGenerating, isChatStreaming } from "../engine/chattext.js";
 import { skillBlock } from "../engine/skillhook.js";
 import { appendToMessages } from "../engine/skillcfg.js";
@@ -75,7 +75,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   function inputOf(g, existing, group) {
     const recent = g.messages.slice(Math.max(0, group[0] - 6), group[0]).map((mm, k) => line(mm, Math.max(0, group[0] - 6) + k, 1500, g.rx));
     return { bot: g.character.name, known: existing ? knownPeople(existing) : [], ignore: [...(g.bot.ignore ?? [])],
-      previousScene: existing ? (({ sum, facts, when } = {}) => sum ? { sum, facts, ...(when ? { when } : {}) } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, openItems: existing ? openForPrompt(existing) : [], emoState: existing ? emoForPrompt(existing, 6, coolOf(g)) : [], talkState: existing ? talkForPrompt(existing, null) : [], beliefsOn: g.idx.settings?.inject?.beliefs === true, beliefs: existing && g.idx.settings?.inject?.beliefs === true ? beliefsForPrompt(existing) : [], selfHint: existing ? hintsForPrompt(existing) : [], recent, newest: { index: g.last, text: g.text }, storyDate: storyDateOf(g.text, existing) };
+      previousScene: existing ? (({ sum, facts, when } = {}) => sum ? { sum, facts, ...(when ? { when } : {}) } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, openItems: existing ? openForPrompt(existing) : [], emoState: existing ? emoForPrompt(existing, 6, coolOf(g)) : [], talkState: existing ? talkForPrompt(existing, null) : [], rifts: existing ? riftsForPrompt(existing) : [], beliefsOn: g.idx.settings?.inject?.beliefs === true, beliefs: existing && g.idx.settings?.inject?.beliefs === true ? beliefsForPrompt(existing) : [], selfHint: existing ? hintsForPrompt(existing) : [], recent, newest: { index: g.last, text: g.text }, storyDate: storyDateOf(g.text, existing) };
   }
   // 리수폿 Writer 호출에 같이 실을 때 쓰는 준비물. 기록 대상이 아니면 null.
   async function prepareLatest(charIndex, chatIndex) {

@@ -31,6 +31,25 @@ export async function gaugeRows(env, doc, p) {
   return snapFor(env, defs, doc, p).map((s) => { const d = by.get(s.g); return { name: d.name, icon: d.look?.icon || "", hue: d.look?.hue ?? 265, v: s.v, min: d.min, max: d.max }; });
 }
 
+// v1.8.3 상세 정보 탭: 새 게이지 제안 카드만(없으면 빈 칸). 수락·나중에·거절 뒤 after().
+export function gaugeSuggestBox(env, after = () => {}) {
+  const S = svc(env), root = h("div", { class: "rb-wk3-sug" });
+  if (!S) return root;
+  const run = (pr) => Promise.resolve(pr).catch(fail(env.ctx));
+  const paint = async () => {
+    const defs = await S.getDefs(chaOf(env)), sug = await S.getSuggest(chaOf(env)), shown = G.shownSuggestion(sug);
+    if (!shown) return root.replaceChildren();
+    const done = async () => { await paint(); after(); };
+    root.replaceChildren(h("div", { class: "rb-wk3-sugcard" }, h("b", null, `새 게이지 제안: ${shown.name}`), h("p", { class: "rb-muted" }, shown.desc || "(설명 없음)"), G.isDuplicateName(defs, shown.name) ? h("p", { class: "rb-muted" }, "비슷한 게이지가 이미 있어요.") : null,
+      h("div", { class: "rb-mem-rowact" },
+        btn("수락 (모든 인물에게)", { kind: "primary", size: "sm", onClick: () => run((async () => { env.ctx.toast("AI가 게이지를 설계하는 중…"); await S.acceptSuggestion(chaOf(env), shown.id, modelOf(env), env.bot?.character?.name); env.ctx.toast("게이지를 만들었어요."); await done(); })()) }),
+        btn("나중에", { size: "sm", onClick: () => run(S.resolveSuggestion(chaOf(env), shown.id, "later").then(done)) }),
+        btn("거절", { size: "sm", onClick: () => run(S.resolveSuggestion(chaOf(env), shown.id, "dismiss").then(done)) }))));
+  };
+  run(paint());
+  return root;
+}
+
 export function gaugeBlock(env, doc, p) {
   const S = svc(env), root = h("div", { class: "rb-gauge-block", style: "grid-column:1/-1" });
   if (!S) return root;

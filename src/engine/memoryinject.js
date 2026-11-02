@@ -2,7 +2,7 @@
 import { GRADE_WEIGHT } from "./memorygrade.js";
 import { injectable, trustTag, changeNote } from "./memorytrust.js";
 import { emoLines, hasEmo } from "./memoryemo.js";
-import { effectiveTags, returnGap, earlierIds, fading, stageLines, talkLines, bondLines, beliefLines } from "./memoryhuman.js";
+import { effectiveTags, returnGap, earlierIds, fading, stageLines, talkLines, bondLines, beliefLines, riftLines, faceLines } from "./memoryhuman.js";
 import { keyHits, keyBoost } from "./memorykeys.js";
 import { semBoost, semHit } from "./embed.js";
 import { povLines, innerLines, expLines } from "./memoryinner.js";
@@ -126,6 +126,8 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
       if (rel.size) {   // 장면에 관련 인물이 있을 때만
         add("talk", "How they address each other (keep it unless it changes):", talkLines(folder, rel), settings.talkTokens ?? 100);
         add("bond", "Shared memories they might bring up (only if natural):", bondLines(folder, rel, messageCount), settings.bondTokens ?? 80);
+        add("rift", "Conflicts between them (an apology or making up does not erase hurt at once):", riftLines(folder, rel, messageCount), settings.riftTokens ?? 100);
+        add("face", "How they act depending on who is around:", faceLines(folder, rel), settings.faceTokens ?? 90);
       }
     }
     if (settings.beliefs === true && rel.size) add("belief", "False beliefs (each acts on them until learning the truth):", beliefLines(folder, rel), settings.beliefTokens ?? 120);

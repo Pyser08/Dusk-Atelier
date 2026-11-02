@@ -39,11 +39,11 @@ export function withCustom(c, base = SYSTEM_PROMPT) {
   return [c.front, lines[0], c.middle, ...lines.slice(1), c.back].filter(Boolean).join("\n\n");
 }
 const cut = (v, n) => String(v ?? "").trim().slice(0, n);
-export function buildMessages({ bot, known = [], ignore = [], previousScene = null, openItems = [], emoState = [], selfHint = [], recent = [], newest, storyDate = "", custom = null, gauges = [], suggestGauge = false, talkState = [], beliefs = [], beliefsOn = false }) {
+export function buildMessages({ bot, known = [], ignore = [], previousScene = null, openItems = [], emoState = [], selfHint = [], recent = [], newest, storyDate = "", custom = null, gauges = [], suggestGauge = false, talkState = [], rifts = [], beliefs = [], beliefsOn = false }) {
   // recent: 뒤에서부터 합계 4000자, newest.text ≤ 6000자
   const kept = []; let total = 0;
   for (let i = recent.length - 1; i >= 0; i--) { total += recent[i].length; if (total > 4000 && kept.length) break; kept.unshift(recent[i].slice(0, 4000)); }
-  const payload = { bot: cut(bot, 120), known, ignore, previousScene, ...(openItems.length ? { openItems } : {}), ...(emoState.length ? { emoState } : {}), ...(selfHint.length ? { selfHint } : {}), ...(talkState.length ? { talkState } : {}), ...(beliefsOn && beliefs.length ? { beliefs } : {}), ...(gauges.length ? { gauges } : {}), ...(suggestGauge ? { suggestGauge: true } : {}), ...(storyDate ? { storyDate } : {}), recent: kept, newest: { index: newest.index, text: cut(newest.text, 6000) } };
+  const payload = { bot: cut(bot, 120), known, ignore, previousScene, ...(openItems.length ? { openItems } : {}), ...(emoState.length ? { emoState } : {}), ...(selfHint.length ? { selfHint } : {}), ...(talkState.length ? { talkState } : {}), ...(rifts.length ? { rifts } : {}), ...(beliefsOn && beliefs.length ? { beliefs } : {}), ...(gauges.length ? { gauges } : {}), ...(suggestGauge ? { suggestGauge: true } : {}), ...(storyDate ? { storyDate } : {}), recent: kept, newest: { index: newest.index, text: cut(newest.text, 6000) } };
   return [{ role: "system", content: withCustom(custom, SYSTEM_PROMPT + "\n" + humanRules({ beliefs: beliefsOn }) + (gauges.length || suggestGauge ? "\n" + GAUGE_RULES : "")) }, { role: "user", content: JSON.stringify(payload) }];
 }
 

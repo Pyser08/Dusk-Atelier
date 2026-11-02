@@ -101,8 +101,10 @@ export function stageLines(folder, names, now, limit = 3) {
 
 // ── ⑥ 호칭·말투 · ⑩ 둘만의 추억 · ⑤ 잘못된 믿음: 검증 ──
 const TONES = new Set(["formal", "casual", "mixed"]);
+const RIFT_STATES = new Set(["open", "apologized", "resolved"]), GRUDGES = new Set(["none", "some", "deep"]);
+export const GRUDGE_FADE = 200;   // 화해 뒤 '조금 남은' 앙금이 사라지는 응답 수(깊은 앙금은 남는다)
 export function validateHuman(obj, { beliefs = false } = {}) {
-  const talk = [], bond = [], belief = [], cleared = [];
+  const talk = [], bond = [], belief = [], cleared = [], rift = [], face = [];
   for (const x of Array.isArray(obj?.talk) ? obj.talk : []) {
     const from = cut(x?.from, 60), to = cut(x?.to, 60), call = cut(x?.call, 20), tone = String(x?.tone ?? "").toLowerCase();
     if (!from || !to || key(from) === key(to) || !nk(call) || !TONES.has(tone)) continue;
@@ -115,6 +117,18 @@ export function validateHuman(obj, { beliefs = false } = {}) {
     bond.push({ a, b, moment, ...(nk(hook) ? { hook } : {}) });
     break;
   }
+  for (const x of Array.isArray(obj?.rift) ? obj.rift : []) {   // ⑦ 갈등·사과·앙금
+    const a = cut(x?.a, 60), b = cut(x?.b, 60), about = cut(x?.about, 60), state = String(x?.state ?? "").toLowerCase(), grudge = String(x?.grudge ?? "none").toLowerCase(), who = cut(x?.who, 60), id = cut(x?.id, 24);
+    if (!a || !b || key(a) === key(b) || !nk(about) || !RIFT_STATES.has(state)) continue;
+    rift.push({ ...(id ? { id } : {}), a, b, about, state, grudge: GRUDGES.has(grudge) ? grudge : "none", ...(who && (key(who) === key(a) || key(who) === key(b)) ? { who } : {}) });
+    break;
+  }
+  for (const x of Array.isArray(obj?.face) ? obj.face : []) {   // ⑧ 누구 앞에서 달라지는 태도
+    const who = cut(x?.who, 60), to = cut(x?.to, 60), alone = cut(x?.alone, 40), pub = cut(x?.public, 40);
+    if (!who || !to || key(who) === key(to) || !nk(alone) || !nk(pub) || nk(alone) === nk(pub)) continue;
+    face.push({ who, to, alone, public: pub });
+    break;
+  }
   if (beliefs) {
     for (const x of Array.isArray(obj?.belief) ? obj.belief : []) {
       const who = cut(x?.who, 60), thinks = cut(x?.thinks, 60), truth = cut(x?.truth, 60), by = cut(x?.by, 60);
@@ -124,11 +138,13 @@ export function validateHuman(obj, { beliefs = false } = {}) {
     }
     for (const id of Array.isArray(obj?.cleared) ? obj.cleared : []) { const s = cut(id, 24); if (s) cleared.push(s); if (cleared.length >= 4) break; }
   }
-  return { talk, bond, belief, cleared };
+  return { talk, bond, belief, cleared, rift, face };
 }
 
 // ── 반영 ──
-const BOND_MAX = 30, BOND_PAIR = 6, BELIEF_MAX = 20;
+const BOND_MAX = 30, BOND_PAIR = 6, BELIEF_MAX = 20, RIFT_MAX = 20;
+const flat = (x) => { const { back, ...rest } = x ?? {}; return rest; };
+const riftClosed = (r) => r.state === "resolved" && (r.grudge ?? "none") === "none";
 const pairKey = (a, b) => [key(a), key(b)].sort().join("|");
 export function applyHuman(folder, h, anchor, { important = false, now = Date.now() } = {}) {
   if (!h) return 0;
@@ -154,6 +170,29 @@ export function applyHuman(folder, h, anchor, { important = false, now = Date.no
       n++;
     }
   }
+  for (const r of h.rift ?? []) {
+    folder.rifts ??= [];
+    const pk = pairKey(r.a, r.b);
+    const cur = (r.id && folder.rifts.find((x) => x.id === r.id)) || folder.rifts.find((x) => pairKey(x.a, x.b) === pk && nk(x.about) === nk(r.about) && !riftClosed(x));
+    if (cur) {
+      if (cur.lock || (cur.state === r.state && (cur.grudge ?? "none") === r.grudge && key(cur.who) === key(r.who))) continue;
+      const back = flat(cur);
+      Object.assign(cur, { state: r.state, grudge: r.grudge, back, at_ms: now, ...(r.state === "resolved" && cur.state !== "resolved" ? { resolvedAt: at } : {}), ...(src ? { src } : {}) });
+      if (r.who) cur.who = r.who;
+    } else {
+      if (riftClosed(r)) continue;   // 처음 보는 갈등이 이미 깨끗이 풀렸다면 남길 것이 없다
+      folder.rifts.push({ id: rid("rf"), a: r.a, b: r.b, about: r.about, state: r.state, grudge: r.grudge, ...(r.who ? { who: r.who } : {}), ...(r.state === "resolved" ? { resolvedAt: at } : {}), at, at_ms: now, ...(src ? { src } : {}) });
+      folder.rifts = folder.rifts.slice(-RIFT_MAX);
+    }
+    n++;
+  }
+  for (const x of h.face ?? []) {
+    folder.faces ??= {};
+    const k = key(x.who) + ">" + key(x.to), cur = folder.faces[k];
+    if (cur?.lock || (cur && nk(cur.alone) === nk(x.alone) && nk(cur.public) === nk(x.public))) continue;
+    folder.faces[k] = { who: x.who, to: x.to, alone: x.alone, public: x.public, ...(cur ? { back: flat(cur) } : {}), at, at_ms: now, ...(src ? { src } : {}) };
+    n++;
+  }
   if (h.belief?.length || h.cleared?.length) {
     folder.beliefs ??= [];
     for (const b of h.belief ?? []) {
@@ -177,6 +216,20 @@ export function revertHuman(folder, alive) {
     if (t.back) folder.talk[k] = t.back; else delete folder.talk[k];
     n++;
   }
+  for (const [k, x] of Object.entries(folder?.faces ?? {})) {
+    if (x.lock || !x.src || alive(x.src)) continue;
+    if (x.back) folder.faces[k] = x.back; else delete folder.faces[k];
+    n++;
+  }
+  if (folder?.rifts) {
+    const out = [];
+    for (const r of folder.rifts) {
+      if (r.lock || !r.src || alive(r.src)) { out.push(r); continue; }
+      n++;
+      if (r.back) out.push(r.back);
+    }
+    folder.rifts = out;
+  }
   if (folder?.bonds) { const before = folder.bonds.length; folder.bonds = folder.bonds.filter((b) => !b.src || alive(b.src)); n += before - folder.bonds.length; }
   if (folder?.beliefs) {
     const before = folder.beliefs.length;
@@ -194,7 +247,24 @@ export function talkForPrompt(folder, rel, limit = 6) {
 }
 export const beliefsForPrompt = (folder, limit = 6) => (folder?.beliefs ?? []).filter((b) => b.open).slice(-limit).map((b) => ({ id: b.id, who: b.who, thinks: b.thinks }));
 
+const riftLive = (r, now) => !riftClosed(r) && !(r.state === "resolved" && r.grudge === "some" && now != null && r.resolvedAt != null && now - r.resolvedAt > GRUDGE_FADE);
+export const riftsForPrompt = (folder, limit = 6) => (folder?.rifts ?? []).filter((r) => !riftClosed(r)).slice(-limit).map((r) => ({ id: r.id, a: r.a, b: r.b, about: r.about, state: r.state, grudge: r.grudge ?? "none" }));
+
 // ── 주입 문장 ──
+export function riftLines(folder, rel, now, limit = 3) {
+  const STATE = { open: "unresolved", apologized: "apologized, not yet forgiven" };
+  return (folder?.rifts ?? []).filter((r) => rel && has(rel, r.a) && has(rel, r.b) && riftLive(r, now)).slice(-limit).map((r) => {
+    const g = r.grudge ?? "none", who = r.who ?? "";
+    const tail = r.state === "resolved" ? ` — made up, but ${g === "deep" ? "deep" : "some"} resentment lingers${who ? ` in ${who}` : ""}` : ` — ${STATE[r.state]}${who ? `; ${who} still resents it` : ""}`;
+    return `- ${r.a} & ${r.b}: ${oneLine(r.about)}${tail}`;
+  });
+}
+export function faceLines(folder, rel, limit = 3) {
+  if (!rel) return [];
+  const crowd = rel.size > 2;
+  return Object.values(folder?.faces ?? {}).filter((x) => has(rel, x.who) && has(rel, x.to)).slice(-limit)
+    .map((x) => `- ${x.who} toward ${x.to}: alone with ${x.to} → ${oneLine(x.alone)}; with others around → ${oneLine(x.public)}${crowd ? " (others are present now)" : ""}`);
+}
 export function talkLines(folder, rel, limit = 4) {
   return Object.values(folder?.talk ?? {}).filter((t) => has(rel, t.from) && has(rel, t.to)).sort((a, b) => (b.at_ms ?? 0) - (a.at_ms ?? 0)).slice(0, limit)
     .map((t) => `- ${t.from} → ${t.to}: calls them "${oneLine(t.call)}", ${t.tone} speech${t.prev ? ` (was "${oneLine(t.prev.call)}", ${t.prev.tone})` : ""}`);
@@ -222,6 +292,8 @@ export function humanRules({ beliefs = false } = {}) {
     '`talk` (max 2): {"from","to","call":"how from addresses to","tone":"formal|casual|mixed"} only when first seen or when it changes; `talkState` = current. Otherwise omit.',
     '`bond` (max 1, important moments only): {"a","b","moment":"<=60","hook":"<=30 cue"} a shared moment these two would likely bring up later (inside joke, a first time, a kept promise). Otherwise omit.',
   ];
+  r.push('`rift` (max 1): {"id"?,"a","b","about","state":"open|apologized|resolved","grudge":"none|some|deep","who":"hurt one"} on a fight, apology or making up; reuse `id` from `rifts`. Else omit.');
+  r.push('`face` (max 1): {"who","to","alone","public"} only if who clearly acts differently toward to with others around. Else omit.');
   if (beliefs) r.push('`belief` (max 2): {"who","thinks":"<=60 false belief","truth":"<=60","by":"who misled, or empty"} only when the text shows someone now believes something false (lied to or misunderstood). `cleared`: ids from `beliefs` whose holder learned the truth. Otherwise omit.');
   return r.join("\n");
 }
@@ -265,6 +337,10 @@ export function pairView(folder, selfNames, other, now = nowOf(folder)) {
     const e = Object.entries(folder?.talk ?? {}).find(([, t]) => fromSelf ? self.has(key(t.from)) && key(t.to) === ko : key(t.from) === ko && self.has(key(t.to)));
     return e ? { k: e[0], ...e[1] } : null;
   };
+  const faceOf = (fromSelf) => {
+    const e = Object.entries(folder?.faces ?? {}).find(([, x]) => fromSelf ? self.has(key(x.who)) && key(x.to) === ko : key(x.who) === ko && self.has(key(x.to)));
+    return e ? { k: e[0], ...e[1] } : null;
+  };
   const both = (a, b) => (self.has(key(a)) && key(b) === ko) || (self.has(key(b)) && key(a) === ko);
   return {
     stage: stageOf(folder, me, other, now),
@@ -272,6 +348,8 @@ export function pairView(folder, selfNames, other, now = nowOf(folder)) {
     talk: { ab: talkOf(true), ba: talkOf(false) },
     bonds: (folder?.bonds ?? []).filter((b) => both(b.a, b.b)),
     exp: Object.values(folder?.exp ?? {}).find((e) => both(e.a, e.b)) ?? null,
+    rifts: (folder?.rifts ?? []).filter((r) => both(r.a, r.b)).sort((a, b) => riftClosed(a) - riftClosed(b)),
+    face: { ab: faceOf(true), ba: faceOf(false) },
     beliefs: (folder?.beliefs ?? []).filter((b) => self.has(key(b.who)) && (key(b.by) === ko || !b.by) || key(b.who) === ko).sort((a, b) => (b.open === true) - (a.open === true)),
   };
 }
@@ -311,3 +389,14 @@ export function editBond(folder, id, { moment, hook }) {
 export function deleteBond(folder, id) { if (folder?.bonds) folder.bonds = folder.bonds.filter((b) => b.id !== id); }
 export function resolveBelief(folder, id) { const b = (folder?.beliefs ?? []).find((x) => x.id === id); if (b) { b.open = false; b.closedBy = "user"; delete b.closedSrc; } return b; }
 export function deleteBelief(folder, id) { if (folder?.beliefs) folder.beliefs = folder.beliefs.filter((b) => b.id !== id); }
+export function resolveRift(folder, id) { const r = (folder?.rifts ?? []).find((x) => x.id === id); if (r) { Object.assign(r, { state: "resolved", grudge: "none", lock: true, user: true }); delete r.back; delete r.src; } return r; }
+export function deleteRift(folder, id) { if (folder?.rifts) folder.rifts = folder.rifts.filter((r) => r.id !== id); }
+export function setFace(folder, who, to, { alone, public: pub }, nowMs = Date.now()) {
+  const a = cut(alone, 40), p = cut(pub, 40);
+  if (!nk(a) || !nk(p)) throw new Error("두 칸을 모두 적어 주세요.");
+  folder.faces ??= {};
+  const k = key(who) + ">" + key(to), cur = folder.faces[k];
+  folder.faces[k] = { who, to, alone: a, public: p, lock: true, user: true, at: cur?.at ?? null, at_ms: nowMs };
+  return folder.faces[k];
+}
+export function deleteFace(folder, k) { if (folder?.faces) delete folder.faces[k]; }

@@ -6,7 +6,7 @@ import { btn, modal, confirmDialog } from "../../kit.js";
 import { mem, avatar, fail } from "./common.js";
 import { editFolder } from "./people.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX, setTag } from "../../../engine/memoryemo.js";
-import { nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief } from "../../../engine/memoryhuman.js";
+import { nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
 
 const STAGES = [["just met", "처음 봄"], ["acquaintances", "아는 사이"], ["close", "친한 사이"], ["very close", "아주 가까움"]];
 const stageIdx = (s) => Math.max(0, STAGES.findIndex(([k]) => k === s));
@@ -68,7 +68,7 @@ export function personTabs(env, parts) {
       attrs.length ? h("div", { class: "rb-wk2-chips" }, attrs.map((a) => h("span", { class: "rb-wk2-chip" }, h("small", null, a.label), " ", a.v))) : null]),
     numCard,
     changesOf(person).length ? card("이전과 달라진 점", h("div", { class: "rb-wk2-chg" }, changesOf(person).map((c) => [h("small", null, c.label), h("span", null, h("s", null, c.from), h("i", { class: "arr", "aria-hidden": "true" }, "→"), h("b", null, c.to))]).flat())) : null,
-    people.length ? card("관계 한눈에", h("div", { class: "rb-wk2-glance" }, people.slice(0, 6).map((x) => h("button", { type: "button", class: "rb-wk2-gl", onClick: () => goPair(x.name) }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), track(x.stage, true), h("small", { class: `st-${stageIdx(x.stage)}` }, stageName(x.stage)))))) : null,
+    people.length ? card("관계 한눈에", h("div", { class: "rb-wk2-glance" }, people.slice(0, 6).map((x) => h("button", { type: "button", class: "rb-wk2-gl", onClick: () => goPair(x.name) }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), track(x.stage, true), h("small", { class: `st-${stageIdx(x.stage)}` }, stageName(x.stage))))), h("small", { class: "rb-muted" }, "누르면 관계 탭")) : null,
     p ? card("기억에 남은 순간", h("div", { class: "rb-wk2-mom" }, momentsOf(person, now).map(({ r: rec, earlier, vague }) => h("div", { class: ["rb-wk2-mrow", vague && "vague"] }, h("span", { class: `rb-wk2-g g-${rec.g}`, title: GRADE_TIP[rec.g] ?? "" }, rec.g ?? "-"),
       h("span", { class: "t" }, rec.act, earlier ? h("small", { class: "tag old" }, "예전 모습") : null, vague ? h("small", { class: "tag" }, "흐릿한 기억 · 곧 잊혀요") : null)))),
       null, "rb-wk2-moments") : null);
@@ -123,6 +123,32 @@ export function personTabs(env, parts) {
     h("small", null, "실제로는"), h("span", null, b.truth), b.by ? h("small", { class: "rb-muted" }, `${subj(shown(b.by))} 그렇게 말했어요`) : null,
     h("div", { class: "rb-wk2-acts" }, b.open ? btn("진실을 알았어요", { size: "sm", onClick: () => save((fo) => { resolveBelief(fo, b.id); }, "풀린 것으로 표시했어요.") }) : null,
       btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 오해 기록을 지울까요?", body: b.thinks, ok: "지우기", danger: true })) save((fo) => { deleteBelief(fo, b.id); }, "지웠어요."); } })));
+  // ⑦ 갈등·사과·앙금
+  const RIFT_STATE = { open: "안 풀림", apologized: "사과함", resolved: "화해함" };
+  const riftItem = (rf) => {
+    const closed = rf.state === "resolved" && (rf.grudge ?? "none") === "none";
+    const grudge = rf.grudge === "deep" ? "앙금 깊음" : rf.grudge === "some" ? "앙금 조금" : "";
+    return h("div", { class: ["rb-wk2-rift", closed && "done", `s-${rf.state}`] },
+      h("div", { class: "rb-wk2-tline" }, h("small", { class: "rb-wk2-badge st" }, RIFT_STATE[rf.state] ?? rf.state), grudge ? h("small", { class: "rb-wk2-badge gr" }, grudge + (rf.who ? ` · ${shown(rf.who)}` : "")) : null),
+      h("span", { class: "t" }, rf.about),
+      h("div", { class: "rb-wk2-acts" }, closed ? null : btn("풀렸어요", { size: "sm", onClick: () => save((fo) => { resolveRift(fo, rf.id); }, "화해한 것으로 표시했어요.") }),
+        btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 갈등 기록을 지울까요?", body: rf.about, ok: "지우기", danger: true })) save((fo) => { deleteRift(fo, rf.id); }, "지웠어요."); } })));
+  };
+  // ⑧ 사람 앞에서 달라지는 태도
+  const faceRow = (x, who, to) => {
+    const write = () => run(modal(ctx.win, (done) => {
+      const al = h("input", { class: "rb-input", value: x?.alone ?? "", placeholder: "예) 솔직하게 고마워한다", "aria-label": "둘이 있을 때" });
+      const pu = h("input", { class: "rb-input", value: x?.public ?? "", placeholder: "예) 괜히 퉁명스럽게 군다", "aria-label": "다른 사람 앞에서" });
+      return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(440px,94vw)" }, h("h3", null, `${subj(shown(who))} ${shown(to)}에게 보이는 태도`), h("p", { class: "rb-muted" }, "저장하면 잠겨서 AI가 바꾸지 않아요."),
+        h("label", { class: "rb-mem-field" }, h("span", null, "둘이 있을 때"), al), h("label", { class: "rb-mem-field" }, h("span", null, "다른 사람 앞에서"), pu),
+        h("div", { class: "rb-dialog-actions" }, btn("취소", { onClick: () => done(null) }), btn("저장", { kind: "primary", onClick: () => done({ alone: al.value, public: pu.value }) })));
+    }).then((v) => v && save((fo) => { setFace(fo, who, to, v); }, "태도를 저장했어요.")));
+    return h("div", { class: "rb-wk2-talk" },
+      h("small", { class: "rb-muted" }, `${subj(shown(who))} ${shown(to)}에게`),
+      x ? h("div", { class: "rb-wk2-face" }, h("small", null, "둘이 있을 때"), h("span", null, x.alone), h("small", null, "다른 사람 앞에서"), h("span", null, x.public)) : h("p", { class: "rb-muted" }, "아직 기록이 없어요."),
+      h("div", { class: "rb-wk2-acts" }, btn(x ? "고치기" : "직접 적기", { size: "sm", onClick: write }), x?.lock ? h("small", { class: "rb-muted", title: "잠김: AI가 바꾸지 않아요" }, "잠김") : null,
+        x ? btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 태도 기록을 지울까요?", body: x.public, ok: "지우기", danger: true })) save((fo) => { deleteFace(fo, x.k); }, "지웠어요."); } }) : null));
+  };
   const relation = () => {
     if (!people.length) return h("div", { class: "rb-wk2-pane" }, h("p", { class: "rb-muted" }, "아직 함께 기록된 인물이 없어요. 대화가 이어지면 채워져요."));
     const other = people.find((x) => x.name === withSel[pk])?.name ?? people[0].name;
@@ -134,16 +160,19 @@ export function personTabs(env, parts) {
         card("관계 진도", [h("div", { class: "rb-wk2-steps", role: "img", "aria-label": `지금 ${STAGES[si][1]}` }, STAGES.map(([, l], i) => h("span", { class: ["st", i < si && "past", i === si && "now"] }, h("i", null), h("small", null, l)))),
           h("p", { class: "rb-muted" }, `함께한 장면 ${v.stage.shared}번${si <= 1 ? " · 아직 가깝지 않아서, AI가 갑자기 너무 친해지지 않게 해요." : ""}`)]),
         feelCard(v, other),
-        ((ms) => ms.length ? card("수치", ms.map((x) => metricRow(x, true))) : null)(metrics.filter((x) => x.targets.some((t) => nk(t) === nk(other)))),
+        ((ms) => ms.length ? card("수치", [...ms.map((x) => metricRow(x, true)), h("small", { class: "rb-muted" }, "이 상대가 대상인 수치만 보여요.")]) : null)(metrics.filter((x) => x.targets.some((t) => nk(t) === nk(other)))),
         card("호칭 · 말투", [talkRow(v.talk.ab, me, other), h("hr", { class: "rb-wk2-hr" }), talkRow(v.talk.ba, other, me)]),
+        v.rifts?.length ? card("갈등", v.rifts.map(riftItem)) : null,
         card("둘만의 추억", v.bonds.length ? v.bonds.map(bondItem) : h("p", { class: "rb-muted" }, "아직 없어요. 둘에게 의미 있는 순간이 생기면 쌓여요.")),
         v.exp ? card("기대 차이", h("div", { class: "rb-wk2-exp" }, [[v.exp.a, v.exp.ae, v.exp.as], [v.exp.b, v.exp.be, v.exp.bs]].map(([n, e, said]) => h("div", null, h("small", { class: "rb-muted" }, `${topic(shown(n))}`), h("span", null, e), h("small", { class: "rb-muted" }, said ? "말로 했어요" : "말하지 않았어요"))))) : null,
+        v.face?.ab || v.face?.ba ? card("사람 앞 태도", [faceRow(v.face.ab, me, other), h("hr", { class: "rb-wk2-hr" }), faceRow(v.face.ba, other, me)]) : null,
         v.beliefs.length ? card("오해", v.beliefs.map(beliefItem), null, "warn") : null),
       h("p", { class: "rb-wk2-hint rb-muted" }, "이 내용은 AI가 대화할 때 참고해요. 고치면 잠겨서 AI가 바꾸지 않아요."));
   };
 
   // ── 상세 정보 · 기록 ──
-  const info = () => h("div", { class: "rb-wk2-pane" }, ...(parts.infoBlocks ?? []).filter(Boolean));
+  const go = (tab, w) => { if (w) withSel[pk] = w; tabs[pk] = tab; paint(); root.scrollIntoView?.({ block: "start" }); };
+  const info = () => h("div", { class: "rb-wk2-pane" }, typeof parts.info === "function" ? parts.info(go) : (parts.infoBlocks ?? []).filter(Boolean));
   const log = () => h("div", { class: "rb-wk2-pane" }, ...(parts.logBlocks ?? []).filter(Boolean));
 
   function paint() {
