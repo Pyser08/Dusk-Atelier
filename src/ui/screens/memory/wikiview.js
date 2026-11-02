@@ -40,7 +40,7 @@ const TEXT_FIELDS = [["emotionExpression", "감정 표현 방식"], ["defenseRes
 const ORDER = ["overview", "METRICS", "userRelationship", "appraisal", "PROFILE", "speech", "npc", "knowledge", "relationship", "behavior", "secret", "openness", "suspicion", "etc"];
 const MEMBERS = { npc: ["emotion", "npc"] };
 const ALWAYS = new Set(["overview", "userRelationship", "appraisal", "speech", "npc", "knowledge", "relationship", "behavior"]);
-const LABEL = { overview: "인물 개요", userRelationship: `${USER}와의 관계`, appraisal: "상대별 첫인상 설명", speech: "대상별 말투", npc: "다른 NPC 간 감정·관계", knowledge: "알고 있는 정보", relationship: "관계 태도·인지 차이(심리의 실마리)", behavior: "행동 경향", secret: "비밀", openness: "음란도 태도·행동", suspicion: "불륜 의심", etc: "기타 항목" };
+const LABEL = { overview: "인물 개요", userRelationship: "나와의 관계", appraisal: "상대별 첫인상 설명", speech: "대상별 말투", npc: "다른 NPC 간 감정·관계", knowledge: "알고 있는 정보", relationship: "관계 태도·인지 차이(심리의 실마리)", behavior: "행동 경향", secret: "비밀", openness: "음란도 태도·행동", suspicion: "불륜 의심", etc: "기타 항목" };
 const SUB = { npc: "NPC가 다른 NPC에게 느끼는 감정·관계" };
 const EMPTY = "아직 등록된 내용이 없습니다.";
 // 자동 생성이 지금 어떤 상태인지 한 줄로: 안 만들어질 때 이유가 바로 보이게 한다.

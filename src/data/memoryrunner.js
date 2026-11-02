@@ -34,6 +34,15 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   const aiIndexes = (messages) => messages.map((m, i) => (!isUserMessage(m) && extractMessageText(m).trim() ? i : -1)).filter((i) => i >= 0);
   const clean = (m, rx) => rx?.length ? applyRegex(extractMessageText(m), rx) : extractMessageText(m);  // v1.8.1 정규식 전처리(읽는 글 사본에만)
   const line = (m, i, n = 1500, rx = null) => `[${i}] ${isUserMessage(m) ? "{{user}}" : "{{char}}"}: ${clean(m, rx).trim().slice(0, n)}`;
+  // 지금 페르소나 이름(리스가 {{user}}를 이 이름으로 바꿔 보낼 수 있음) → 분석 결과에서 {{user}}로 모은다
+  let userCache = { at: 0, names: [] };
+  async function userNames() {
+    if (Date.now() - userCache.at < 60e3) return userCache.names;
+    let names = [];
+    try { const db = await api.getDatabase?.(["username"]); if (db?.username) names = [String(db.username)]; } catch { /* 없으면 일반 이름만 */ }
+    userCache = { at: Date.now(), names };
+    return names;
+  }
   const nameOf = (c, chat, i) => ({ botName: String(c?.name ?? "").slice(0, 160), chatName: String(chat?.name ?? chat?.chatName ?? `채팅 ${i + 1}`).slice(0, 160) });
 
   async function bump(chaId, fn) { return store.updateIndex((idx) => { const b = idx.bots[chaId] ??= { on: true, ignore: [], fails: 0 }; return fn(b, idx); }); }
@@ -115,11 +124,12 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
       throw e;
     }
     const names = nameOf(character, chat, chatIndex);
+    const uNames = await userNames();
     let gaugeOut = null;
     const out = await store.updateFolder(chaId, chatId, (folder) => {
       Object.assign(folder, names, { chatIndex });
       reconcile(folder, messages);
-      const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => messageIdentity(messages[i])), cool: idx.settings?.inject?.cool !== false });
+      const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => messageIdentity(messages[i])), cool: idx.settings?.inject?.cool !== false, userNames: uNames });
       const ev = link?.takeCycle?.() ?? [];
       if (ev.length) res.cycle = addMilestones(folder, ev);
       if (gx) { try { gaugeOut = gauge.apply(folder, idx, chaId, result, anchor, { ordinal: ordinalNow, text }); } catch (e) { log("게이지 반영 실패", e?.message ?? e); } }

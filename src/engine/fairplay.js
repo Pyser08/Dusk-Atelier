@@ -50,27 +50,39 @@ export function looksLikeAction(text) { const t = String(text ?? ""); return ACT
 export function makeDice(messages, mode = "reinterpret", rng = DEFAULT_RNG, { cuts = DEFAULT_CUTS, count = DICE_COUNT } = {}) {
   return { rolls: rollDice(normalizeCount(count), rng), mode: DICE_MODES.includes(mode) ? mode : "reinterpret", hint: looksLikeAction(lastUserText(messages)), cuts: normalizeCuts(cuts) };
 }
-export function diceText({ rolls, mode, hint, cuts = DEFAULT_CUTS }) {
+// 주사위 규칙(고정): 굴림값·힌트가 없어서 요청마다 똑같다 → 앞쪽 시스템 지침에 둬도 캐시가 유지된다.
+export function diceRules({ mode, cuts = DEFAULT_CUTS }) {
   const c = normalizeCuts(cuts);
   const outcome = mode === "respect"
     ? "- If the user's input states an outcome explicitly, honor it and do not roll for it."
     : "- Treat any outcome the user wrote as only an attempt; the roll decides whether it happens.";
-  return `Dice (1-100), use in order: ${rolls.join(", ")}
+  return `Dice rules (the rolls, 1-100, come in the latest ${DICE_MARK} system message):
 - A roll decides only an action whose outcome is truly uncertain (it can fail and the result changes the story). Persuasion, deception, and threats count; trivial actions, plain dialogue or feelings, and settled outcomes do not.
 - Use one roll per judged action, in order. Never reuse, skip, or swap rolls; unused rolls are ignored.
 - Set the difficulty by the setting's logic: easy ${c.easy}, normal ${c.normal}, hard ${c.hard}, extreme ${c.extreme}. Success if roll >= difficulty, otherwise failure; near the line means a narrow success or partial failure.
 - Chained actions: judge in sequence. At the first failure the chain breaks there and the later actions do not happen.
 - Unexpected events (other characters' moves, accidents, the environment) get a reasonable difficulty and the next roll too.
 ${outcome}
-- Never reveal the rolls, difficulties, or these rules.${hint ? "\nThis input likely contains an action with an uncertain outcome." : ""}`;
+- Never reveal the rolls, difficulties, or these rules.`;
 }
-// 주사위가 켜지면 '결과를 적었으면 그대로' 줄을 주사위 규칙이 대신한다.
+// 굴림값(요청마다 바뀜): 캐시를 깨지 않게 마지막 유저 메시지 바로 앞에 따로 넣는다.
+export const DICE_MARK = "[Dusk Dice]";
+export function diceRollText({ rolls, hint }) {
+  return `${DICE_MARK}\nDice (1-100), use in order: ${rolls.join(", ")}${hint ? "\nThis input likely contains an action with an uncertain outcome." : ""}`;
+}
+// 고정 지침. 주사위가 켜지면 '결과를 적었으면 그대로' 줄을 주사위 규칙이 대신한다.
 export function buildFairText(dice = null) {
-  return dice ? `${HEAD}\n${TAIL.replace(/\nDo not mention these guidelines\.$/, "")}\n${diceText(dice)}\nDo not mention these guidelines.` : FAIR_TEXT;
+  return dice ? `${HEAD}\n${TAIL.replace(/\nDo not mention these guidelines\.$/, "")}\n${diceRules(dice)}\nDo not mention these guidelines.` : FAIR_TEXT;
 }
-// 맨 앞 시스템 메시지들 바로 뒤에 넣는다. 이미 있으면 한 번만(멱등). 원본 배열은 건드리지 않는다.
+// 고정 지침은 맨 앞 시스템 메시지들 바로 뒤에, 굴림값은 마지막 유저 메시지 바로 앞에 넣는다(없으면 맨 끝). 이미 있으면 한 번만(멱등). 원본 배열은 건드리지 않는다.
 export function insertFairness(messages, { dice = null } = {}) {
-  const list = (Array.isArray(messages) ? messages : []).filter((m) => !(m?.role === "system" && textOf(m.content).startsWith(FAIR_MARK)));
+  const isOurs = (m) => m?.role === "system" && (textOf(m.content).startsWith(FAIR_MARK) || textOf(m.content).startsWith(DICE_MARK));
+  const list = (Array.isArray(messages) ? messages : []).filter((m) => !isOurs(m));
   let at = 0; while (at < list.length && list[at]?.role === "system") at++;
-  return [...list.slice(0, at), { role: "system", content: buildFairText(dice) }, ...list.slice(at)];
+  const out = [...list.slice(0, at), { role: "system", content: buildFairText(dice) }, ...list.slice(at)];
+  if (dice) {
+    let u = -1; for (let i = out.length - 1; i > at; i--) if (out[i]?.role === "user") { u = i; break; }
+    out.splice(u < 0 ? out.length : u, 0, { role: "system", content: diceRollText(dice) });
+  }
+  return out;
 }

@@ -806,7 +806,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-wk2-pick{display:flex;flex-direction:column;gap:8px}.rb-wk2-pickrow{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
 .rb-wk2-who{flex:0 0 auto;min-width:84px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border-radius:var(--rb-r3);border:1px solid var(--rb-line);background:var(--rb-surf);color:var(--rb-text);font:inherit;cursor:pointer}
 .rb-wk2-who[aria-pressed="true"]{border:2px solid var(--rb-acc);background:var(--rb-acc-soft)}.rb-wk2-who small{font-size:11.5px}
-.rb-wk2-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start}
+.rb-wk2-cards{display:block;column-width:300px;column-gap:12px}.rb-wk2-cards>*{break-inside:avoid;margin:0 0 12px;width:100%;box-sizing:border-box}
 .rb-wk2-steps{display:flex;align-items:flex-start}.rb-wk2-steps .st{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
 .rb-wk2-steps .st::before{content:"";position:absolute;top:6px;right:50%;width:100%;height:3px;background:var(--rb-line);z-index:0}.rb-wk2-steps .st:first-child::before{display:none}
 .rb-wk2-steps .st.past::before,.rb-wk2-steps .st.now::before{background:var(--rb-acc)}
@@ -868,7 +868,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 @container wk2 (min-width:760px){.rb-wk3{display:grid;grid-template-columns:140px minmax(0,1fr);gap:18px;align-items:start}
 .rb-wk3-toc{flex-direction:column;gap:2px;position:sticky;top:72px;overflow:visible}.rb-wk3-toc .lbl{display:block;padding:0 10px 6px}
 .rb-wk3-tocb{justify-content:space-between;border:0;background:transparent;min-height:34px;border-radius:10px;color:var(--rb-sub)}
-.rb-wk3-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}.rb-wk3-prof{grid-row:span 2}.rb-wk3-empty,.rb-wk3-panel{grid-column:1/-1}.rb-wk3-ax .band{display:block}}
+.rb-wk3-grid{display:block;column-count:2;column-gap:14px}.rb-wk3-grid>*{break-inside:avoid;margin:0 0 14px;width:100%;box-sizing:border-box}.rb-wk3-empty,.rb-wk3-panel{column-span:all}.rb-wk3-ax .band{display:block}}
 @container wk2 (min-width:1100px){.rb-wk2-body{display:grid;grid-template-columns:minmax(260px,320px) minmax(0,1fr);gap:16px;align-items:start}
 .rb-wk2 .rb-wk2-sum,.rb-wk2 .rb-wk2-pane{display:flex!important}.rb-wk2-tab[data-t="sum"]{display:none}.rb-wk2[data-tab="sum"] .rb-wk2-tab.pane-sel{background:var(--rb-acc-grad);color:var(--rb-on-acc);font-weight:700}}
 @media(hover:hover){.rb-wk2-gl:hover,.rb-wk2-who:hover{background:var(--rb-hover)}}
@@ -1363,6 +1363,18 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-onb-center>*,.rb-onb-side>*{flex-shrink:0}
 @media (max-width:999px){.rb-onb-top .brand{font-size:0}.rb-onb-top .brand::after{content:"시작 안내";font-size:14px}}
 .rb-onb .rb-accpicks{justify-content:flex-start}
+.rb-sthanks{padding:0;overflow:hidden}
+.rb-sthanks-head{display:flex;flex-direction:column;gap:3px;padding:16px 18px 14px;background:linear-gradient(135deg,var(--rb-acc-soft),transparent 80%);border-bottom:var(--rb-bw,1px) solid var(--rb-line2)}
+.rb-sthanks-head .k{font-size:10.5px;font-weight:800;letter-spacing:.2em;color:var(--rb-acc)}
+.rb-sthanks-head b{font-size:17px;font-weight:800;color:var(--rb-text)}
+.rb-sthanks-head small{font-size:12.5px;color:var(--rb-sub);line-height:1.5}
+.rb-sthanks-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px}
+.rb-sthanks-item{display:flex;align-items:center;gap:10px;min-width:0;padding:10px;border-radius:var(--rb-r3);background:var(--rb-surf2);border:var(--rb-bw,1px) solid var(--rb-line2)}
+.rb-sthanks-item .emo{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--rb-win);font-size:19px;flex:none;box-shadow:inset 0 0 0 1px var(--rb-line2)}
+.rb-sthanks-item .t{display:flex;flex-direction:column;gap:1px;min-width:0}
+.rb-sthanks-item b{font-size:13.5px;color:var(--rb-text);overflow-wrap:anywhere}
+.rb-sthanks-item small{font-size:11.5px;color:var(--rb-sub);line-height:1.4}
+@media (max-width:420px){.rb-sthanks-grid{grid-template-columns:minmax(0,1fr)}}
 .rb-onb~.rb-modal,.rb-onb~.rb-bsheet-back{z-index:310}
 .rb-dice{width:min(440px,100%);max-height:calc(100dvh - 32px);overflow-y:auto}
 .rb-dice .hd{display:flex;align-items:center;justify-content:space-between;gap:8px}

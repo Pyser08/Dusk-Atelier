@@ -24,17 +24,17 @@ test("주사위·호출 HTML: 굴림값·목표치·판정, 모델·시간·로�
 
 const mem = (extra = {}) => { const store = new Map(); return { store, api: { pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => void store.set(k, v) }, getDatabase: async () => ({ aiModel: "test-main", subModel: "test-sub" }), addRisuReplacer: async () => {}, addRisuScriptHandler: async () => {}, ...extra } }; };
 
-test("설정: 주사위 표시 기본 꺼짐, 모델 호출 표시 기본 켜짐, 저장", async () => {
+test("설정: 주사위 표시·모델 호출 표시 모두 기본 꺼짐, 저장", async () => {
   const { store, api } = mem(); const t = createTurnInfo(api, { chip: false });
-  assert.equal(await loadDiceShow(api), false); assert.equal(await loadCallShow(api), true);
-  await t.start(); await t.setDiceShow(true); await t.setCallShow(false);
+  assert.equal(await loadDiceShow(api), false); assert.equal(await loadCallShow(api), false);
+  await t.start(); await t.setDiceShow(true); await t.setCallShow(true); await t.setCallShow(false);
   assert.equal(store.get(DICE_SHOW_KEY), "on"); assert.equal(store.get(CALL_SHOW_KEY), "off"); assert.equal(t.isDiceShow(), true); assert.equal(t.isCallShow(), false);
 });
 test("한 턴: 요청→출력→화면에 주사위·호출 블록, 저장된 채팅 글은 그대로", async () => {
   const { api } = mem(); let now = 1000;
   const fair = createFairPlay(api, { rng: () => 0.8 }); await fair.start(); await fair.set(true); await fair.setDice(true);
   const t = createTurnInfo(api, { chip: false, now: () => now, diceSource: () => fair.lastDice(), loreFor: () => ({ entries: [{ n: "왕국사" }] }) });
-  await t.start(); await t.setDiceShow(true);
+  await t.start(); await t.setDiceShow(true); await t.setCallShow(true);
   const msgs = [{ role: "system", content: "S" }, { role: "user", content: "그를 협박한다" }];
   const sent = await fair.beforeRequest(msgs, "model"); await t.beforeRequest(sent, "model");
   now = 4000; const resp = "그는 비웃으며 고개를 저었다. 너 따위가 날 위협할 수 있을 것 같나."; await t.onOutput(resp);

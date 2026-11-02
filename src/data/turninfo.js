@@ -7,12 +7,12 @@ import { headKey, tailKey, matchRecord } from "../engine/lorelog.js";
 import { estimateTokens, diceHtml, callHtml, fmtSec, fmtTokens } from "../engine/turninfo.js";
 
 export const DICE_SHOW_KEY = "dusk.ui.diceShow";   // 기본 꺼짐
-export const CALL_SHOW_KEY = "dusk.ui.callShow";   // 기본 켜짐
+export const CALL_SHOW_KEY = "dusk.ui.callShow";   // 기본 꺼짐
 export const TURN_LOG_KEY = "dusk-turn-info";
 const MAX_RECS = 100;
 const isOn = (raw) => raw === "on" || raw === true || raw === "true";
 export async function loadDiceShow(api) { try { return isOn(await api.pluginStorage.getItem(DICE_SHOW_KEY)); } catch { return false; } }
-export async function loadCallShow(api) { try { const v = await api.pluginStorage.getItem(CALL_SHOW_KEY); return v == null ? true : isOn(v); } catch { return true; } }
+export async function loadCallShow(api) { try { return isOn(await api.pluginStorage.getItem(CALL_SHOW_KEY)); } catch { return false; } }
 export const isBardHost = (api) => typeof api?.bardWiki?.getDocuments === "function";
 
 const CHIP_CSS = 'position:fixed;left:12px;bottom:84px;z-index:2147483000;max-width:min(92vw,380px);font:12px/1.5 system-ui,sans-serif;background:rgba(24,22,36,.94);color:#e8e4ff;border:1px solid rgba(124,92,240,.5);border-radius:12px;padding:3px 10px;box-shadow:0 4px 16px rgba(0,0,0,.35)';
@@ -21,7 +21,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const textOf = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => typeof p === "string" ? p : p?.text ?? "").join("\n") : String(c ?? "");
 
 export function createTurnInfo(api, { diceSource = () => null, loreFor = () => null, loreLast = () => null, now = Date.now, chip = true, quietMs = 1500, log = (...a) => console.log("[Dusk 호출표시]", ...a) } = {}) {
-  let diceShow = false, callShow = true, recs = null, pending = null, saveTimer = null, hooked = false, quiet = null, names = { at: -Infinity, main: "", sub: "" };
+  let diceShow = false, callShow = false, recs = null, pending = null, saveTimer = null, hooked = false, quiet = null, names = { at: -Infinity, main: "", sub: "" };
   const supported = () => !isBardHost(api);
 
   const ensure = async () => {

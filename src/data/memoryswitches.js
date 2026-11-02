@@ -1,5 +1,6 @@
 // v1.7.0 2단계: 화면이 쓰는 '기억 · 리수폿' 스위치 묶음. 저장은 인덱스(store.updateIndex)에, 흐름 반영은 flow.apply()로.
 // 화면은 지금 열린 채팅을 기본으로 쓴다(currentChat). 다른 봇은 chaId를 직접 넘기면 된다.
+import { cacheGen } from "./dbcache.js";
 import { comboOf, memoryState, potCharOn, potState, scopeKeyOf, setMemoryForBot, setMemoryGlobal, setPotChar, setPotForBot, setPotGlobal } from "../engine/memoryswitch.js";
 
 // 지금 리스에서 열린 봇·채팅. 열린 채팅이 없으면 null.
@@ -16,12 +17,25 @@ export async function currentChat(api) {
   }
 }
 
-export function createSwitches({ api, store, flow = null }) {
-  let curMemo = null;
+// 열린 채팅 정보 캐시: 봇·채팅 위치(ci:ti)가 같으면 30초 동안 캐릭터 통째 복사(getCharacterFromIndex)를 다시 하지 않는다.
+// 탭을 오갈 때마다 수백 ms씩 리스 화면까지 멈추던 원인(1.8.3). 위치는 가벼운 호출로 매번 확인하고, 쓰기·창 열기 때(cacheGen) 비운다.
+const CUR_TTL = 30e3;
+export function createSwitches({ api, store, flow = null, now = () => Date.now() }) {
+  let curMemo = null, curByPos = null;
+  async function cachedCurrent() {
+    let ci, ti;
+    try { ci = await api.getCurrentCharacterIndex(); ti = await api.getCurrentChatIndex(); } catch { return null; }
+    if (!(ci >= 0) || !(ti >= 0)) return null;
+    const pos = `${ci}:${ti}`, g = cacheGen();
+    if (curByPos && curByPos.pos === pos && curByPos.g === g && now() - curByPos.t < CUR_TTL) return curByPos.v;
+    const v = await currentChat({ getCurrentCharacterIndex: async () => ci, getCurrentChatIndex: async () => ti, getCharacterFromIndex: (i) => api.getCharacterFromIndex(i) });
+    curByPos = v ? { pos, g, t: now(), v } : null;
+    return v;
+  }
   const applyFlow = async () => { try { await flow?.apply?.(); } catch { /* 흐름을 못 바꿔도 저장된 설정은 남는다 */ } };
   return {
-    // 한 화면 안에서 여러 곳이 연달아 부르면 채팅 전체 복사를 한 번만 한다(1초 재사용, v1.8.1 속도)
-    currentChat: () => (curMemo && Date.now() - curMemo.t < 1000 ? curMemo.p : (curMemo = { t: Date.now(), p: currentChat(api) }).p),
+    // 동시에 여러 곳이 부르면 하나로 합친다. 다시 읽기는 위 위치별 캐시가 막는다(1.8.3)
+    currentChat: () => curMemo ??= cachedCurrent().finally(() => { curMemo = null; }),
     // 한 봇의 스위치 상태: 기억 · 리수폿 · 조합(both|memory|pot|none)
     async state(chaId) {
       const idx = await store.getIndex();

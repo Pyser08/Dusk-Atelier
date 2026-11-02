@@ -35,7 +35,7 @@ export async function renderHome(ctx) {
     loadDiceOn(ctx.api).catch(() => false),
     loadStoryTimeOn(ctx.api).catch(() => false),
     loadDiceShow(ctx.api).catch(() => false),
-    loadCallShow(ctx.api).catch(() => true)
+    loadCallShow(ctx.api).catch(() => false)
   ]);
   let s = { M: null };
   try {

@@ -7,13 +7,17 @@
 const clone = (v) => (typeof structuredClone === "function" ? structuredClone(v) : v);
 // 화면 목록·상태처럼 '읽기 전용'으로 쓰는 곳이 부른다. 캐시가 없는 환경(시험 등)에서는 그냥 getDatabase.
 export const dbRead = (api, keys) => (typeof api.getDatabaseCached === "function" ? api.getDatabaseCached(keys) : api.getDatabase(keys));
+// 화면용 짧은 캐시 전체의 세대 번호. 쓰기 계열 호출·invalidate 때 올라가고, 다른 캐시(열린 채팅 등)는 이 값이 바뀌면 버린다.
+let GEN = 0;
+export const cacheGen = () => GEN;
+export const bumpCacheGen = () => ++GEN;
 export const WRITE_RE = /^(set|add|remove|delete|create|import|update|save|replace|move|rename|trash|restore)/i;
 
 export function createDbCache(raw, { ttl = 20000, max = 6, now = () => Date.now() } = {}) {
   const map = new Map();   // keyString → { t, value } | { p: Promise }
   let gen = 0;             // 쓰기·비우기 때마다 올려서, 그 전에 시작한 읽기가 캐시에 남지 않게 한다
   const keyOf = (keys) => (Array.isArray(keys) ? [...keys].sort().join(",") : "*");
-  const invalidate = () => { gen++; map.clear(); };
+  const invalidate = () => { gen++; GEN++; map.clear(); };
   const fresh = (keys) => raw.getDatabase(keys);
 
   async function get(keys) {

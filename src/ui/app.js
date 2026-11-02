@@ -136,7 +136,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     updBtn,
     btn("가져오기", { icon: "upload", labelClass: "lbl", onClick: () => legacy.open(), id: "rb-import" }),
     iconBtn("palette", "플러그인 꾸미기", { onClick: () => go("look"), id: "rb-look" }),
-    iconBtn("gear", "설정", { onClick: () => go("settings"), id: "rb-settings" }),
+    iconBtn("cog", "설정", { onClick: () => go("settings"), id: "rb-settings" }),
     iconBtn("x", "닫기", { onClick: () => close(), id: "rb-close" })
   );
   // 메뉴: 왼쪽(left) · 위쪽(top) · 모바일 아래 탭. 어떤 걸 보일지는 win 클래스(rb-lay-*)가 정한다

@@ -9,7 +9,7 @@ import { USAGE_KINDS, injectLine, usageOf } from "../../../engine/memoryusage.js
 import { mem, fail, gradeBadge, at } from "./common.js";
 import { renderModeBar } from "./modebar.js";
 import { advancedGroups } from "./madv.js";
-import { builders } from "./settings.js";
+import { builders, renderGlobalSettings } from "./settings.js";
 import { openEmbedModal } from "./embedmodal.js";
 import { maybeAskBardWiki } from "./modebar.js";
 
@@ -29,6 +29,29 @@ export function usageCard(u) {
   return h("section", { class: "rb-card rb-mem-usage" }, h("b", null, `저장된 기록 ${u.total}건`), bar, legend);
 }
 
+// 설정 카드(한 줄 요약 목록 + 기억 옵션 3개). 열린 채팅이 없어도 쓸 수 있게 따로 뺐다(전체 설정이라 채팅과 무관).
+async function settingsCards(ctx, M, idx, redraw) {
+  let embedLine = "뜻이 비슷한 기억 찾기";
+  try { if (M.embedder) { await M.embedder.load(); embedLine += M.embedder.status().on ? " · 켜짐" : " · 꺼짐"; } } catch { /* 요약 없이 */ }
+  const srow = (title, sub, onClick, extra = {}) => h("button", { type: "button", class: "rb-srow", onClick, ...extra }, h("span", { class: "t" }, title, h("small", null, sub)), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
+  const memorySettings = h("section", { class: "rb-card bordered rb-scard rb-mem-integrated-settings" },
+    h("span", { class: "h" }, "설정"),
+    srow("기억·리수폿 프롬프트", "앞·중간·뒤에 덧붙일 프롬프트", () => ctx.go("settings", "prompts")),
+    srow("임베딩 (의미 검색)", embedLine, () => { if (M.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, { "data-tour": "mem-embed" }));
+
+  // 기억 옵션 3개(고급 모드 '대화에 넣기'와 같은 설정)
+  const { S, save } = builders(ctx, idx, redraw, "");
+  const inj = S.inject ?? {};
+  const orow = (title, text, v0, set) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, h("small", null, text)),
+    switchEl(v0, { label: title, onChange: (v, el) => { setSwitch(el, v); save((st) => { st.inject ??= {}; set(st.inject, v); }); } }));
+  const memOptions = h("section", { class: "rb-card bordered rb-scard rb-mem-options" }, h("span", { class: "h" }, "기억 옵션"),
+    orow("사람다운 기억", "관계 진도·호칭·말투·둘만의 추억 등을 기억해요.", inj.human !== false, (o, v) => { o.human = v; }),
+    orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }),
+    orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
+
+  return { memorySettings, memOptions };
+}
+
 export async function renderMemoryHome(ctx, host, { redraw }) {
   const m = mem(ctx), M = ctx.memory;
   await maybeAskBardWiki(ctx).catch(() => {});
@@ -36,8 +59,17 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   await renderModeBar(ctx, modeHost, { redraw });  // 간단 모드에서는 저장소를 자동으로 맞추기만 한다
   const cur = await M.switches.currentChat();
   if (!cur) {
-    return replace(host, pageHead("장기 기억"), emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요.",
-      actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] }));
+    // 열린 채팅이 없어도 전체 설정(기억 옵션·임베딩·프롬프트·고급)은 바꿀 수 있다
+    const idx0 = await M.store.getIndex();
+    const { memorySettings, memOptions } = await settingsCards(ctx, M, idx0, redraw);
+    const gHost = h("div");
+    if (ctx.prefs.advanced) await renderGlobalSettings(ctx, gHost, { redraw, panel: true }).catch(() => {});
+    return replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" },
+      h("div", { class: "rb-mem2-main" }, pageHead("장기 기억"),
+        emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요. 아래 설정은 채팅 없이도 바꿀 수 있어요.",
+          actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] }),
+        memOptions),
+      h("div", { class: "rb-mem2-side" }, memorySettings, ctx.prefs.advanced ? gHost : advFold(ctx, "memory", true))));
   }
   // 채팅 본문은 느릴 수 있으므로 화면을 먼저 그리고, 백필 분석용 데이터는 백그라운드에서 읽는다.
   const cacheKey = `${cur.chaId}:${cur.chatId}:${cur.ci}:${cur.ti}`;
@@ -134,24 +166,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
       ? recent.map((r) => h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("div", null, h("b", null, r.who), " ", r.act), h("div", { class: "rb-muted" }, at(r.at))), gradeBadge(r.g)))
       : h("li", { class: "rb-muted" }, "아직 쌓인 기록이 없어요.")));
 
-  // ── 설정: 한 줄 요약 목록 ──
-  let embedLine = "뜻이 비슷한 기억 찾기";
-  try { if (M.embedder) { await M.embedder.load(); embedLine += M.embedder.status().on ? " · 켜짐" : " · 꺼짐"; } } catch { /* 요약 없이 */ }
-  const srow = (title, sub, onClick, extra = {}) => h("button", { type: "button", class: "rb-srow", onClick, ...extra }, h("span", { class: "t" }, title, h("small", null, sub)), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
-  const memorySettings = h("section", { class: "rb-card bordered rb-scard rb-mem-integrated-settings" },
-    h("span", { class: "h" }, "설정"),
-    srow("기억·리수폿 프롬프트", "앞·중간·뒤에 덧붙일 프롬프트", () => ctx.go("settings", "prompts")),
-    srow("임베딩 (의미 검색)", embedLine, () => { if (M.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, { "data-tour": "mem-embed" }));
-
-  // 기억 옵션 3개(고급 모드 '대화에 넣기'와 같은 설정)
-  const { S, save } = builders(ctx, idx, redraw, "");
-  const inj = S.inject ?? {};
-  const orow = (title, text, v0, set) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, h("small", null, text)),
-    switchEl(v0, { label: title, onChange: (v, el) => { setSwitch(el, v); save((st) => { st.inject ??= {}; set(st.inject, v); }); } }));
-  const memOptions = h("section", { class: "rb-card bordered rb-scard rb-mem-options" }, h("span", { class: "h" }, "기억 옵션"),
-    orow("사람다운 기억", "관계 진도·호칭·말투·둘만의 추억 등을 기억해요.", inj.human !== false, (o, v) => { o.human = v; }),
-    orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }),
-    orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
+  const { memorySettings, memOptions } = await settingsCards(ctx, M, idx, redraw);
 
   // ── 고급: 한 줄씩 접은 묶음. PC에서는 기억 방식을 접지 않고 오른쪽 맨 위에 둔다 ──
   const wide = (ctx.win?.ownerDocument?.defaultView?.innerWidth ?? 1280) >= 1000;

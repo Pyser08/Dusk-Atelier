@@ -65,8 +65,9 @@ export function renderTools(ctx) {
             { label: "백업에서 복원", icon: "upload", onClick: () => fullRestore(ctx) }
           ]), "rb-tool-backup"),
           row("history", "기록·되돌리기", "봇·모듈 변경을 되돌려요", () => ctx.go("settings", "history"), "rb-tool-history"))),
-      h("section", { class: "rb-card bordered rb-scard rb-thanks-sec rb-credits" }, h("span", { class: "h" }, "도움 주신 분들"),
-        THANKS.map((c) => h("div", { class: "rb-credit", "data-credit": c.key }, h("span", { class: "emo", "aria-hidden": "true" }, c.emoji), h("span", { class: "t" }, h("b", null, c.name), h("small", null, c.desc))))))
+      h("section", { class: "rb-card bordered rb-sthanks", "aria-label": "스페셜 땡스" },
+        h("div", { class: "rb-sthanks-head" }, h("span", { class: "k" }, "SPECIAL THANKS"), h("b", null, "도움 주신 분들"), h("small", null, "Dusk Atelier는 아래 프로젝트들 덕분에 만들어졌어요.")),
+        h("div", { class: "rb-sthanks-grid" }, THANKS.map((c) => h("div", { class: "rb-sthanks-item", "data-credit": c.key }, h("span", { class: "emo", "aria-hidden": "true" }, c.emoji), h("span", { class: "t" }, h("b", null, c.name), h("small", null, c.desc)))))))
   );
   replace(ctx.main, h("div", { class: "rb-scroll rb-twocol" }, content));
 }

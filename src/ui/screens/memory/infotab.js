@@ -17,7 +17,7 @@ const SHORT = { "affinity.score": "호감도", "affinity.taste_band": "첫인상
 const CHIP = { relationship: "관계 태도·인지 차이" };
 const DESC = {
   overview: "이 인물이 어떤 사람인지 한두 줄로 소개하는 칸이에요.",
-  userRelationship: "{{user}}와 어떤 사이인지, 서로를 어떻게 생각하는지 적는 칸이에요.",
+  userRelationship: "나({{user}})와 어떤 사이인지, 서로를 어떻게 생각하는지 적는 칸이에요.",
   appraisal: "상대마다 받은 첫인상을 적는 칸이에요.",
   speech: "상대마다 다르게 쓰는 말투를 적어 두는 칸이에요.",
   npc: "다른 인물들끼리 느끼는 감정과 관계를 적는 칸이에요.",

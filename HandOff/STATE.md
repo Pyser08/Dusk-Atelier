@@ -356,10 +356,17 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
   - 같이 고침: 시작 안내(z 300) 위에서 여는 모달(z 50)이 가려지던 문제 → `.rb-onb~.rb-modal{z-index:310}`(HypaPlus 가져오기 창도 해당).
   - 시험: `tests/fairplay-level.test.js`(6개, 구현 전 실패 확인) · `tests/e2e/run-home-dice.mjs`(간단·고급 25항목) · `run-home-fair`·`run-hubs`·`run-onboard`는 새 박스 구조에 맞춰 고침.
   - 확인 못 함: 실제 보조모델이 바뀐 수치(약하게/강하게)를 지침대로 따르는지, 실제 RisuAI·RisuBard·PocketRisu 화면.
-- ② [x] **주사위 결과 표시 (완료 2026-11-02)** + ③ [x] **모델 호출 표시 (완료)**: 둘 다 `data/turninfo.js`(`createTurnInfo`, main.js에서 `app.ctx.turnInfo`)와 순수 `engine/turninfo.js`. 홈 빠른 설정 토글 2개(`dusk.ui.diceShow` 기본 꺼짐 · `dusk.ui.callShow` 기본 켜짐, RisuBard=`bardWiki.getDocuments` 있으면 훅 안 달고 모델 호출 토글 숨김).
+- ② [x] **주사위 결과 표시 (완료 2026-11-02)** + ③ [x] **모델 호출 표시 (완료)**: 둘 다 `data/turninfo.js`(`createTurnInfo`, main.js에서 `app.ctx.turnInfo`)와 순수 `engine/turninfo.js`. 홈 빠른 설정 토글 2개(`dusk.ui.diceShow` 기본 꺼짐 · `dusk.ui.callShow` 기본 꺼짐(2026-11-03 사용자 요청으로 변경), RisuBard=`bardWiki.getDocuments` 있으면 훅 안 달고 모델 호출 토글 숨김).
   - 흐름: beforeRequest에서 시작 시각·모델명(`getDatabase(["aiModel","subModel"])`, 30초 캐시)·입력 토큰 어림 → output에서 응답 앞부분 열쇠(`headKey`)·첫/마지막 글자 시각 기록(스트리밍은 앞부분 이어지면 갱신, 1.5초 잠잠하면 완료) → display에서 `matchRecord`로 맞는 응답 아래에 접는 블록(`x-dusk="dice"`/`"turn"`) 붙임. 저장 채팅은 그대로. 기록은 `dusk-turn-info`(최근 100).
   - 주사위: `fairPlay.lastDice()`(요청마다 굴림·수치 보관)를 응답 기록에 붙임. 판정 `judgeRoll(roll, 목표)`: 굴림−목표 ≥20 대성공 · ≥5 성공 · ±5 안 애매 · >−25 실패 · 그 이하 대실패, 1은 늘 대실패·100은 늘 대성공. AI가 어떤 난이도를 골랐는지는 알 수 없어서 4난이도 전부에 대한 판정을 보여줌. 굴러가는 애니메이션은 화면 문서에 심는 keyframes(`dusk-dice-roll`, 움직임 줄이기 존중).
   - 모델 호출: 화면 구석 칩(`x-dusk="callchip"`, 리스 화면 문서에 `getRootDocument` 래퍼로 만듦, `<details>`라 클릭만으로 펼침 → 로어북 목록은 `loreLog.last()`). 완료 15초 뒤 사라짐. 보조 호출은 출력 훅이 없어 4초만 '호출 중'으로 알림. 토큰은 글자 수 어림(`estimateTokens`).
   - 시험: `tests/turninfo.test.js`(6개) · `tests/e2e/run-home-turn.mjs`. lorelog에 `recordFor/last` 추가.
   - 확인 못 한 것(실제 호스트 필요): 모델 이름 필드(`aiModel`/`subModel`)가 RisuAI·PocketRisu에서 맞는지, 화면 구석 칩이 실제 화면에서 위치·표시가 괜찮은지(`getRootDocument` 래퍼의 `setInnerHTML` 등), 응답 아래 블록이 호스트 HTML 정리(sanitize)에서 `<details>`·`animation` 인라인 style이 살아남는지, display 훅이 스트리밍 중 반복 호출될 때 부하.
 - 다음 후보: 위 '확인 못 한 것'을 실제 환경에서 확인 · 버전 올리기/릴리스(사용자 지시 때) · `run-app.mjs` 새 메뉴 구조로 정리.
+
+## 2026-11-03 사용자 요청 묶음 (완료)
+- **캐시 깨짐(치명)**: 원인 = 주사위 굴림값이 맨 앞 시스템 지침(`buildFairText`)에 들어가 요청마다 접두부가 바뀜. 수정 = `engine/fairplay.js` 고정 규칙 `diceRules`(굴림·힌트 없음)는 앞 지침에, 굴림값 `diceRollText`(`[Dusk Dice]`)는 마지막 user 메시지 바로 앞에 별도 system으로(`insertFairness`). 재해석/존중은 고정 문장만 다름 → 원인 아님. 시험 `fairplay-v168` '캐시' 케이스(마지막 user 앞까지 동일).
+- 모델 호출 표시 기본 꺼짐(`loadCallShow`) · 설정 버튼 아이콘 `cog`(icons.js, app.js) · 도구 스페셜 땡스 카드(`tools.js` `.rb-sthanks*`) · 인물 위키 2열을 CSS columns(masonry)로(`.rb-wk3-grid`, `.rb-wk2-cards`) · 열린 채팅 없을 때 기억 홈에 설정 카드·기억 옵션·(고급)전체 설정(`mhome.js settingsCards`).
+- **{{user}} = 나**: `engine/memoryuser.js normalizeUserNames`(페르소나 이름·user·유저·플레이어 → `{{user}}`, people·rel·emo·scene.who·know) · 분석 지침에 한 줄 추가(memoryprompt.js) · `applyAnalysis({userNames})`, runner가 `getDatabase(["username"])`(60초 캐시)로 넘김 · 위키 라벨 '나와의 관계'. 시험 `tests/memory-user-identity.test.js`. 기존에 갈라져 쌓인 페르소나 이름 인물은 자동 병합 안 함(저장 데이터 변경이라 필요하면 사용자 확인 후).
+- **탭 이동 멈춤**: 원인 추정 = 홈·기억 화면이 탭 진입마다 `currentChat()` → `getCharacterFromIndex`(봇의 모든 채팅 복사, 실제 호스트에서 수백 ms). 수정 = `memoryswitches.js` 위치(ci:ti)별 30초 캐시, 쓰기·창 열기 때 `dbcache.js cacheGen()`으로 비움. 시험 `tests/currentchat-cache.test.js`, 측정 스크립트 `tests/e2e/run-tabperf.mjs`(시험 환경은 API가 즉시라 체감 차이는 실제 호스트에서만 확인 가능).
+- 확인 못 함: 실제 호스트에서 캐시 적중률(프로바이더 로그), 탭 이동 체감, 아이콘·땡스 카드 실제 테마별 모양.

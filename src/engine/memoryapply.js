@@ -7,6 +7,7 @@ import { applyEmo, emoForPrompt, convertAffinity } from "./memoryemo.js";
 import { applyPov, applyExp, takeSelf, isImportant, tensionKeys, noteTension, clearHints } from "./memoryinner.js";
 import { trustFields, mergeTrust, resolveConflicts, attrsForPrompt } from "./memorytrust.js";
 import { coolEmo, applyHuman } from "./memoryhuman.js";
+import { normalizeUserNames } from "./memoryuser.js";
 
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 const rid = (p) => p + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -20,7 +21,8 @@ export function findPersonKey(folder, name) {
 export const latestScene = (folder) => [...(folder.scenes ?? [])].reverse().find((s) => !s.orphan) ?? null;
 
 // anchor: {at, mid, h}. 반환: {records, upgraded, scene:'new'|'updated'|null}
-export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null, storyDate = "", cool = true } = {}) {
+export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null, storyDate = "", cool = true, userNames = [] } = {}) {
+  result = normalizeUserNames(result, userNames);   // 플레이어를 가리키는 이름은 모두 {{user}} 한 사람으로
   const ign = new Set(ignore.map(key));
   const out = { records: 0, upgraded: 0, scene: null, rel: 0, open: 0, closed: 0, emo: 0, pov: 0, exp: 0, self: 0, human: 0, cooled: 0, conflicts: [], alerts: [] };
   const prev = latestScene(folder);
