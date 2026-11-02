@@ -1,4 +1,5 @@
 import { h, motion } from './dom.js';
+import { runeFace, moodFor } from './mascot.js';
 import { icon } from './icons.js';
 
 export function btn(label, { kind = "", size = "", icon: ic, onClick, title, disabled, id, labelClass } = {}) {
@@ -611,11 +612,13 @@ export function popover(host, anchor, content, { width = 380, title } = {}) {
 }
 
 // 빈 화면 안내: 무엇을 하는 곳인지 + 첫 행동 버튼 (처음 쓰는 사람이 막히지 않게)
-export function emptyState({ icon: ic = "info", title, text, actions = [] } = {}) {
+// 1.8.3: 아이콘 자리에 마스코트 루네 얼굴(상황별 표정, mood로 직접 고를 수 있음). icon은 예전 호출 호환용으로 남긴다.
+export function emptyState({ icon: ic = "info", title, text, actions = [], mood } = {}) {
+  void ic;
   return h(
     "div",
     { class: "rb-empty rb-empty-card" },
-    h("span", { class: "ico", "aria-hidden": "true" }, icon(ic, 28)),
+    h("span", { class: "rune", "aria-hidden": "true" }, runeFace(moodFor({ title, mood }), 76)),
     h("b", null, title),
     text ? h("p", null, text) : null,
     actions.length ? h("div", { class: "acts" }, ...actions.map((a) => btn(a.label, { kind: a.kind ?? "primary", icon: a.icon, onClick: a.onClick }))) : null

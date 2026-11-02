@@ -1427,4 +1427,12 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-me-dlg{width:min(460px,100%);max-height:calc(100dvh - 32px);overflow-y:auto}
 .rb-me-emo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}@media (max-width:420px){.rb-me-emo{grid-template-columns:repeat(2,minmax(0,1fr))}}.rb-me-foot .rb-textlink{display:inline-flex;align-items:center;gap:2px}
 .rb-me-flags .rb-chip.warn{border-color:var(--rb-warn);color:var(--rb-warn)}
+.rb-rune-logo{display:block;width:34px;height:34px;padding:0;object-fit:cover;background:none;box-shadow:0 0 0 1px var(--rb-line2)}
+.rb-empty-card .rune{display:flex;align-items:center;justify-content:center}
+.rb-rune-face{display:block;width:76px;height:76px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(30,20,60,.18))}
+.rb-onb-rune{display:flex;flex-direction:column;align-items:center;gap:8px}
+.rb-rune-wave{display:block;width:150px;height:auto;filter:drop-shadow(0 8px 16px rgba(30,20,60,.25))}
+.rb-rune-bubble{padding:8px 14px;border-radius:14px;background:var(--rb-acc-soft);color:var(--rb-text);font-size:13.5px;font-weight:600;line-height:1.5;word-break:keep-all}
+.rb-onb-head.has-rune{display:flex;align-items:center;gap:14px}.rb-onb-head.has-rune .rb-rune-face{width:64px;height:64px;flex:none}
+@media (max-width:560px){.rb-rune-wave{width:120px}}
 `+PROB_CSS;

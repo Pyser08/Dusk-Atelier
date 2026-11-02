@@ -1,4 +1,5 @@
 import { dbRead } from '../data/dbcache.js';
+import { runeLogo } from './mascot.js';
 import { applyDroppedPatch } from './screens/patchui.js';
 import { maybeShowTour } from './tour.js';
 import { maybeOnboarding, openOnboarding } from './onboarding.js';
@@ -129,7 +130,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     h(
       "button",
       { type: "button", class: "rb-brand", title: "홈으로", "aria-label": "Dusk Atelier 홈으로", onClick: () => go("home") },
-      h("div", { class: "rb-logo", "aria-hidden": "true" }, icon("module", 18)),
+      runeLogo(),   // 마스코트 루네 로고(1.8.3)
       h("span", null, h("b", null, "Dusk Atelier"), h("small", null, "for RisuBard"))
     ),
     h("div", { class: "rb-spacer" }),

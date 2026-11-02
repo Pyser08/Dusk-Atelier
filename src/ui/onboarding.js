@@ -2,6 +2,7 @@
 // 새로 받은 사람·이미 쓰던 사람 상관없이 이 버전을 처음 열 때 한 번 자동으로 뜬다(지금 설정이 미리 골라진 채, 아무것도 초기화하지 않음).
 // 고르는 즉시 적용. 끝내거나 '나중에 하기'를 누르면 다시 자동으로 뜨지 않고, 화면마다 자동으로 뜨던 안내(처음 둘러보기·임베딩·프롬프트·AI 제작 안내)도 띄우지 않는다.
 import { h, replace } from './dom.js';
+import { runeWave, runeFace } from './mascot.js';
 import { btn, optionCards, segmented, switchEl, setSwitch, note } from './kit.js';
 import { icon } from './icons.js';
 import { normalizeTheme, themeVars, THEME_SETS, ACCENTS } from './theme.js';
@@ -248,7 +249,7 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
         return replace(host, h("div", { class: "rb-onb-welcome" },
           h("div", { class: "rb-onb-top" }, h("span", null), btn("나중에 하기", { kind: "ghost", size: "sm", id: "rb-onb-later", onClick: close })),
           h("div", { class: "rb-onb-hero" },
-            h("span", { class: "rb-onb-logo", "aria-hidden": "true" }, icon("sparkle", 28)),
+            h("div", { class: "rb-onb-rune" }, runeWave(), h("div", { class: "rb-rune-bubble" }, "안녕하세요, 저는 루네예요! 같이 설정해 볼까요?")),
             h("h2", null, "Dusk Atelier에 오신 걸 환영해요"),
             h("p", null, "1분이면 끝나요. 지금 몇 가지만 골라 두면, 화면마다 따로 뜨는 안내 없이 바로 쓸 수 있어요."),
             h("div", { class: "rb-onb-feats" },
@@ -266,7 +267,7 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
       const nav = h("div", { class: "rb-onb-nav" },
         btn("이전", { onClick: () => go(i - 1), id: "rb-onb-prev" }),
         i < 6 ? btn("다음", { kind: "primary", onClick: () => go(i + 1), id: "rb-onb-next" }) : btn("시작하기", { kind: "primary", icon: "check", onClick: close, id: "rb-onb-done" }));
-      const head = h("div", { class: "rb-onb-head" }, h("small", { class: "kicker" }, kicker), h("h2", null, title), h("p", null, sub));
+      const head = h("div", { class: ["rb-onb-head", i === 6 && "has-rune"] }, i === 6 ? runeFace("wink", 64) : null, h("div", null, h("small", { class: "kicker" }, kicker), h("h2", null, title), h("p", null, sub)));
       replace(host, h("div", { class: ["rb-onb-frame", split && "has-side"] },
         h("div", { class: "rb-onb-top" }, h("b", { class: "brand" }, "Dusk Atelier · 시작 안내"), h("span", { class: "count" }, `${i}/6`), i < 6 ? btn("건너뛰기", { kind: "ghost", size: "sm", id: "rb-onb-skip", title: "이 단계는 지금 설정 그대로 두고 넘어가요", onClick: () => go(i + 1) }) : null, btn("나중에 하기", { kind: "ghost", size: "sm", id: "rb-onb-later", onClick: close })),
         h("div", { class: "rb-onb-main" },
