@@ -389,3 +389,14 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - ② 캐시 깨짐 알림: `data/turninfo.js` `CACHE_ALERT_KEY "dusk.ui.cacheAlert"`(기본 켜짐), 앞부분 < 50% & 전체 ≥ 1500토큰이면 칩 9초(호출 표시가 켜져 있으면 생략). 설정 고급 '이야기 도우미'에 줄(`#rb-set-cachealert`).
 - ④ '나' 고치기: `mepage.js editDialog`(호칭·말투·감정 6개) → `setTalk`/`setTag`(잠김). e2e `run-me.mjs` 22항목.
 - 확인 못 함: 실제 모델이 판정 표식을 잘 남기는지(특히 작은 모델), 리스 화면에서 HTML 주석이 정말 안 보이는지(마크다운 렌더 기준으론 숨김).
+
+## 2026-11-03 전체 점검 (사용자 지시)
+- 고친 버그(시험 `tests/audit-183.test.js` 5개 고치기 전 실패 확인 + e2e `run-home-dice` Esc 항목):
+  - turninfo: 응답이 안 오면 '추론 중' 칩 타이머가 영원히 돎 → 5분(`TICK_MAX`) 뒤 멈추고 치움. 호출 표시를 끄면 `stopTick()`. 캐시 알림만 켜져 있으면 `pending`을 안 만들어 응답 기록 저장 안 함.
+  - fairplay `turnKey`: system 메시지(기억·이야기 시간 주입)까지 넣어 리롤 판별이 깨짐 → user·assistant만.
+  - memoryswitches: 30초 캐시가 채팅 삭제 직후 틀릴 수 있음 → `currentChat({ fresh: true })`, 요청마다 쓰는 내 프롬프트 범위(`data/memory.js`)는 fresh.
+  - kit `modal`: 창 위 창에서 Esc가 모든 창을 닫음 → 맨 위 `.rb-modal`만.
+  - chatmenu·quickset: RisuBard(응답 아래 표시 불가)에서 '주사위 결과 표시' 숨김. quickset `setDice` 실패 시 다시 던져(`e.shown`) 상세 창 스위치가 되돌아가게.
+- 리스 소스로 확인한 것: replacer 두 번째 인자 = `'model'|'submodel'|'memory'|'emotion'|'otherAx'|'translate'`(메인 판별 맞음). `cachePoint`는 Claude 요청에서만 쓰이고 OpenAI 계열은 지워서 보냄(Gemini 요청 코드에서는 안 씀) → '항상 찍기'가 다른 프로바이더에 영향 없음.
+- 전체 시험: 단위 719 통과, e2e 18종 통과(`run-tabs`는 4번 중 1번 41줄 모바일 로어북 항목 클릭 타이밍으로 멈춤 — 기존 시험 흔들림, 코드 문제 아님). `run-app.mjs`는 옛 메뉴(리수폿·인물 탭) 기준이라 첫 확인에서 멈춤(기존, 새 시험들이 같은 화면을 다룸).
+- 못 한 것: eslint 등 정적 검사(npm 레지스트리 접속 불가), 실제 호스트 확인.

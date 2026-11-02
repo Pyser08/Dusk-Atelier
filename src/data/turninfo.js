@@ -12,6 +12,7 @@ export const CALL_SHOW_KEY = "dusk.ui.callShow";   // 기본 꺼짐
 export const CACHE_ALERT_KEY = "dusk.ui.cacheAlert";   // 기본 켜짐
 export const TURN_LOG_KEY = "dusk-turn-info";
 const MAX_RECS = 100;
+const TICK_MAX = 5 * 60e3;
 const isOn = (raw) => raw === "on" || raw === true || raw === "true";
 export async function loadDiceShow(api) { try { return isOn(await api.pluginStorage.getItem(DICE_SHOW_KEY)); } catch { return false; } }
 export async function loadCallShow(api) { try { return isOn(await api.pluginStorage.getItem(CALL_SHOW_KEY)); } catch { return false; } }
@@ -68,7 +69,8 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
     clearTimeout(ui.hide); stopTick();
     const label = () => { const el = now() - rec.startAt; return `${rec.aux ? "보조" : "메인"} · ${rec.model || "모델"} · ${rec.firstAt ? "출력 중" : "추론 중"} ${fmtSec(el)}`; };
     chipSet(label(), "");
-    ui.tick = setInterval(() => { if (rec.done) return stopTick(); chipSet(label()); }, 700);
+    // 응답이 안 오면(실패·중단) 5분 뒤 멈추고 칩을 치운다. 끄면 바로 멈춘다.
+    ui.tick = setInterval(() => { if (rec.done || !callShow) return stopTick(); if (now() - rec.startAt > TICK_MAX) { stopTick(); chipRemove(); return; } chipSet(label()); }, 700);
   }
   function chipDone(rec) {
     if (!chip || !callShow) return;
@@ -102,7 +104,7 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
       const pi = prefixInfo(prevMsgs, flatMsgs); prevMsgs = flatMsgs;
       if (pi) rec.cache = { ratio: pi.ratio, same: pi.same, total: pi.total, breakAt: pi.breakAt, at: pi.at, of: pi.of, dusk: pi.dusk };
       if (cacheAlert && pi && pi.total >= ALERT_MIN_TOKENS && pi.ratio < ALERT_RATIO) alertCache(pi);
-      pending = rec; chipRun(rec);
+      if (diceShow || callShow) { pending = rec; chipRun(rec); } else pending = null;   // 캐시 알림만이면 응답 기록은 남기지 않는다
     } catch (e) { log("요청 확인 실패", e?.message ?? e); }
     return messages;
   }
@@ -158,6 +160,6 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
   async function start() { diceShow = await loadDiceShow(api); callShow = await loadCallShow(api); cacheAlert = await loadCacheAlert(api); if (supported() && (diceShow || callShow || cacheAlert)) await hook(); return supported(); }
   async function setCacheAlert(v) { cacheAlert = !!v; await api.pluginStorage.setItem(CACHE_ALERT_KEY, cacheAlert ? "on" : "off"); if (cacheAlert) await hook(); return cacheAlert; }
   async function setDiceShow(v) { diceShow = !!v; await api.pluginStorage.setItem(DICE_SHOW_KEY, diceShow ? "on" : "off"); if (diceShow) await hook(); return diceShow; }
-  async function setCallShow(v) { callShow = !!v; await api.pluginStorage.setItem(CALL_SHOW_KEY, callShow ? "on" : "off"); if (callShow) await hook(); else chipRemove(); return callShow; }
+  async function setCallShow(v) { callShow = !!v; await api.pluginStorage.setItem(CALL_SHOW_KEY, callShow ? "on" : "off"); if (callShow) await hook(); else { stopTick(); chipRemove(); } return callShow; }
   return { start, setCacheAlert, isCacheAlert: () => cacheAlert, setDiceShow, setCallShow, isDiceShow: () => diceShow, isCallShow: () => callShow, supported, beforeRequest, onOutput, onDisplay, settle };
 }

@@ -108,6 +108,9 @@ export function modal(host, build) {
     };
     const onKey = (e) => {
       if (e.key === "Escape") {
+        // 창 위에 창을 연 경우 맨 위 창만 닫는다(1.8.3)
+        const open = host.querySelectorAll(":scope > .rb-modal");
+        if (open.length && open[open.length - 1] !== back) return;
         e.stopPropagation();
         done(null);
       }

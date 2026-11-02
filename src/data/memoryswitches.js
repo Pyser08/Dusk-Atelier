@@ -22,12 +22,12 @@ export async function currentChat(api) {
 const CUR_TTL = 30e3;
 export function createSwitches({ api, store, flow = null, now = () => Date.now() }) {
   let curMemo = null, curByPos = null;
-  async function cachedCurrent() {
+  async function cachedCurrent(fresh = false) {
     let ci, ti;
     try { ci = await api.getCurrentCharacterIndex(); ti = await api.getCurrentChatIndex(); } catch { return null; }
     if (!(ci >= 0) || !(ti >= 0)) return null;
     const pos = `${ci}:${ti}`, g = cacheGen();
-    if (curByPos && curByPos.pos === pos && curByPos.g === g && now() - curByPos.t < CUR_TTL) return curByPos.v;
+    if (!fresh && curByPos && curByPos.pos === pos && curByPos.g === g && now() - curByPos.t < CUR_TTL) return curByPos.v;
     const v = await currentChat({ getCurrentCharacterIndex: async () => ci, getCurrentChatIndex: async () => ti, getCharacterFromIndex: (i) => api.getCharacterFromIndex(i) });
     curByPos = v ? { pos, g, t: now(), v } : null;
     return v;
@@ -35,7 +35,7 @@ export function createSwitches({ api, store, flow = null, now = () => Date.now()
   const applyFlow = async () => { try { await flow?.apply?.(); } catch { /* 흐름을 못 바꿔도 저장된 설정은 남는다 */ } };
   return {
     // 동시에 여러 곳이 부르면 하나로 합친다. 다시 읽기는 위 위치별 캐시가 막는다(1.8.3)
-    currentChat: () => curMemo ??= cachedCurrent().finally(() => { curMemo = null; }),
+    currentChat: ({ fresh = false } = {}) => (fresh ? cachedCurrent(true) : curMemo ??= cachedCurrent().finally(() => { curMemo = null; })),
     // 한 봇의 스위치 상태: 기억 · 리수폿 · 조합(both|memory|pot|none)
     async state(chaId) {
       const idx = await store.getIndex();

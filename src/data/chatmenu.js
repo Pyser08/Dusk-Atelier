@@ -9,7 +9,7 @@ export function createChatMenu(api, { fairPlay, turnInfo, onChange = () => {}, l
     { id: "dusk-qt-fair", key: "fair", title: "공정한 전개", get: () => !!fairPlay?.isOn?.(), set: (v) => fairPlay.set(v) },
     { id: "dusk-qt-dice", key: "dice", title: "유저 편향 없애기", get: () => !!(fairPlay?.isOn?.() && fairPlay?.isDiceOn?.()), set: async (v) => { await fairPlay.setDice(v); if (v && !fairPlay.isOn()) await fairPlay.set(true); } },
     { id: "dusk-qt-show", key: "show", title: "주사위 결과 표시", get: () => !!turnInfo?.isDiceShow?.(), set: (v) => turnInfo.setDiceShow(v) }
-  ].filter((x) => (x.key === "show" ? turnInfo : fairPlay));
+  ].filter((x) => (x.key === "show" ? turnInfo && turnInfo.supported?.() !== false : fairPlay));   // 응답 아래 표시를 못 쓰는 호스트(RisuBard)는 '주사위 결과 표시'를 뺀다
   const nameOf = (x) => `${x.title} · ${x.get() ? "켜짐" : "꺼짐"}`;
   async function put(x, location = "chat") {
     await api.registerButton({ name: nameOf(x), icon: ICON[x.key], iconType: "html", location, id: x.id }, () => toggle(x));

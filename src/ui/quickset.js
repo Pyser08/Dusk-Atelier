@@ -35,7 +35,7 @@ export async function quickSettingsCard(ctx) {
         fairCur = true; if (fairSw) setSwitch(fairSw, true);
         ctx.toast("유저 편향 없애기를 켰어요. 공정한 전개 위에서 작동해서 공정한 전개도 함께 켰어요.");
       } else ctx.toast(v ? "유저 편향 없애기를 켰어요. 다음 요청부터 적용돼요." : "유저 편향 없애기를 껐어요.");
-    } catch (e) { failStory(e); }
+    } catch (e) { failStory(e); if (e && typeof e === "object") e.shown = true; throw e; }   // 상세 창이 실패한 값을 '켜짐'으로 바꾸지 않게 다시 던진다
   };
   const setDiceShow = async (v) => {
     try {
@@ -80,7 +80,7 @@ export async function quickSettingsCard(ctx) {
   return h("section", { class: "rb-card bordered rb-story-helper" },
     (() => { const row = storyRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair); fairSw = row.querySelector("[role=switch]"); return row; })(),
     diceRow(ctx, { on: diceOn, setOn: setDice, fail: failStory }),
-    storyRow("주사위 결과 표시", "응답 아래에 굴린 값과 판정을 보여줘요.", diceShowOn, setDiceShow),
+    isBardHost(ctx.api) ? null : storyRow("주사위 결과 표시", "응답 아래에 굴린 값과 판정을 보여줘요.", diceShowOn, setDiceShow),
     isBardHost(ctx.api) ? null : storyRow("모델 호출 표시", "모델·걸린 시간·토큰·들어간 로어북을 보여줘요.", callShowOn, setCallShow),
     storyRow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요.", stOn, setStory),
     ctx.imgFix ? storyRow("이미지 태그 자동 교정", "AI가 틀리게 쓴 에셋 이미지 태그를 이 봇의 실제 에셋 이름으로 고쳐요.", ctx.imgFix.isOn(), setImgFix) : null,

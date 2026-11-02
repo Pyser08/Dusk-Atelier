@@ -38,6 +38,9 @@ async function run(advanced) {
     ok(tag + "직접 입력 저장(custom·수치·개수)", (await store("dusk.ui.fairDiceLevel")) === "custom" && (await store("dusk.ui.fairDiceCount")) === "4" && JSON.parse(await store("dusk.ui.fairDiceCuts")).extreme === 90);
     ok(tag + "강도 버튼 선택 해제", (await page.locator(".rb-dice .rb-seg button[aria-checked=true]").count()) === 0);
   }
+  await page.locator("#rb-dice-logbtn").click(); await page.waitForTimeout(250);
+  await page.keyboard.press("Escape"); await page.waitForTimeout(150);
+  ok(tag + "기록 창에서 Esc는 기록 창만 닫음(상세 창은 남음)", (await page.locator(".rb-dlog").count()) === 0 && (await page.locator(".rb-dice").count()) === 1);
   await page.locator(".rb-dice:not(.rb-dlog) .btns button", { hasText: "닫기" }).click(); await page.waitForTimeout(150);
   ok(tag + "닫으면 박스에 현재 강도", new RegExp(advanced ? "직접 입력" : "강하게").test(await row.textContent()), await row.textContent());
   await page.locator("#rb-dice-row").click(); await page.waitForTimeout(100);

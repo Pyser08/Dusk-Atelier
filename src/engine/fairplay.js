@@ -65,12 +65,14 @@ export function makeDice(messages, mode = "reinterpret", rng = DEFAULT_RNG, { cu
   const prev = parseRollMarks(lastReply(messages));
   return { rolls: rolls ?? rollDice(normalizeCount(count), rng), mode: DICE_MODES.includes(mode) ? mode : "reinterpret", hint: looksLikeAction(lastUserText(messages)), cuts: normalizeCuts(cuts), ...(prev.length ? { prev } : {}) };
 }
-// 같은 턴(리롤·재시도)인지 알아보는 열쇠: Dusk가 넣은 것을 뺀 메시지 전부
+// 같은 턴(리롤·재시도)인지 알아보는 열쇠: 대화(user·assistant)만 본다. system(장기 기억·이야기 시간·로어북 등)은 리롤 사이에 바뀔 수 있어서 뺀다.
 export function turnKey(messages) {
   let h = 2166136261;
-  for (const m of Array.isArray(messages) ? messages : []) {
+  const list = Array.isArray(messages) ? messages : [];
+  const talk = list.some((m) => m?.role === "user" || m?.role === "assistant");
+  for (const m of list) {
     const t = textOf(m?.content);
-    if (m?.role === "system" && (t.startsWith(FAIR_MARK) || t.startsWith(DICE_MARK))) continue;
+    if (talk ? m?.role !== "user" && m?.role !== "assistant" : t.startsWith(FAIR_MARK) || t.startsWith(DICE_MARK)) continue;
     for (const ch of `${m?.role}\u0001${t}\u0002`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
   }
   return (h >>> 0).toString(36);

@@ -42,7 +42,7 @@ export async function openDiceDetail(ctx, st, { setOn, fail = () => {} }) {
     const help = iconBtn("help", "작동 방식 보기", { onClick: () => { info.hidden = !info.hidden; } });
     const sw = switchEl(st.on, { label: "유저 편향 없애기", onChange: async (v, el) => {
       el.setAttribute("aria-checked", v ? "true" : "false");
-      try { await setOn(v); st.on = v; } catch (e) { fail(e); }
+      try { await setOn(v); st.on = v; } catch (e) { el.setAttribute("aria-checked", st.on ? "true" : "false"); if (!e?.shown) fail(e); }
     } });
     const seg = segmented(Object.entries(LEVEL_LABEL).filter(([k]) => k !== "custom"), st.level, async (v) => {
       try { await saveLevel(ctx, v); st.level = v; paintCuts(); if (advBox) fill(); } catch (e) { fail(e); }
