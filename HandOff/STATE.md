@@ -412,3 +412,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 그림 자리: banner·ld·icon·spot-story·spot-memory·spot-screen·spot-cache·sd-wave·sd-bow·sd-cheer. 사용자가 아카에 올린 주소를 받으면 이 자리를 바꿔 `docs/arca/v1.8.3.html`로 반영.
 - 확인: 아카 제약(style·class·script·overflow:hidden) 0건, 360/800px 가로 넘침 없음. 실제 아카 에디터 붙여넣기는 미확인.
 
+- (2026-11-03) 사용자 요청으로 1번 중심+2번 곁들임 판 추가: `docs/arca/drafts/v1.8.3-design-1plus2.html`(네이비 본문 1번 + 장 머리만 밝은 라벤더 종이 카드·동그란 그림·세리프 2번풍, 금색 테두리·선은 뺌). 그림 자리·제약 검사는 1+7판과 같음(0건, 360/800px 넘침 없음). 둘 중 고르면 `v1.8.3.html`에 반영.
