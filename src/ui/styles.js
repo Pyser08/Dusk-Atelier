@@ -1237,4 +1237,37 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
   .rb-mem-sectab{justify-content:space-between;width:100%;border-radius:var(--rb-r2);height:42px;padding:0 12px}
 }
 .rb-mem-botsum{margin:0;font-size:13px;font-weight:700;color:var(--rb-sub)}
+/* 1.8.3 코코아(목업 2) */
+.rb-sk-top{display:flex;align-items:center;gap:12px;padding:14px 16px}.rb-sk-top .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.rb-sk-top small{font-size:12.5px;color:var(--rb-sub)}
+.rb-sk-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.rb-sk-row{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-top:1px solid var(--rb-line2)}
+.rb-sk-row:first-child{border-top:0}
+.rb-sk-rowmain{display:flex;align-items:center;gap:8px}
+.rb-sk-open{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:0;background:none;color:var(--rb-text);text-align:left;cursor:pointer;padding:4px 0;font-family:inherit}
+.rb-sk-open small{font-size:12.5px;color:var(--rb-sub)}
+.rb-sk-stages{padding:0!important}
+.rb-sk-hint{font-size:12.5px;margin:4px 0 0}
+.rb-sk3 .rb-sk-bar{flex-wrap:nowrap;gap:6px}.rb-sk3 .rb-sk-bar>b{white-space:nowrap}
+@media (max-width:420px){.rb-sk3 .rb-sk-bar .rb-btn.sm{padding:0 10px}}
+/* 1.8.3 기억 카드(목업 2) */
+.rb-cards3-pick{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.rb-cards3-pick .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.rb-cards3-pick small{font-size:12.5px;color:var(--rb-sub)}
+.rb-cards3-av{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--rb-acc-soft);color:var(--rb-acc-text);font-weight:700;flex:none}
+.rb-cards3-seg{max-width:420px}
+.rb-cards3-chats{display:flex;flex-direction:column;max-height:50vh;overflow:auto}
+.rb-mem-steps{list-style:none!important;margin:0;padding:0;display:flex;gap:6px;align-items:flex-start;counter-reset:none}
+.rb-mem-steps>li{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--rb-mute);text-align:center;position:relative;min-width:0}
+.rb-mem-steps>li::before{content:none!important}
+.rb-mem-steps>li .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--rb-line3);background:var(--rb-surf);font-weight:700;font-size:12.5px;color:var(--rb-sub)}
+.rb-mem-steps>li.done .n{background:var(--rb-acc-soft);border-color:var(--rb-acc-a);color:var(--rb-acc-text)}
+.rb-mem-steps>li[aria-current=step]{color:var(--rb-text);font-weight:700}
+.rb-mem-steps>li[aria-current=step] .n{background:var(--rb-acc-a);border-color:var(--rb-acc-a);color:var(--rb-on-acc)}
+.rb-mem-steps>li .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.rb-compose-nav{justify-content:flex-end!important;margin-top:12px}
+.rb-compose-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start;margin-top:12px}
+.rb-compose-prev{display:flex;flex-direction:column;gap:10px;padding:14px;position:sticky;top:0}
+.rb-compose-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;aspect-ratio:3/4;border:1px dashed var(--rb-line3);border-radius:var(--rb-r2)}
+.rb-cards3-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important}
+@media (max-width:560px){.rb-cards3-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+.rb-cards3-new{justify-content:center;border-style:dashed!important;color:var(--rb-sub)}
 `+PROB_CSS;

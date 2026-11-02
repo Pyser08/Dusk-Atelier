@@ -6,16 +6,20 @@ import { cardPreview } from "../../card/preview.js";
 import { cardPng } from "../../card/render.js";
 import { colorOf } from "../../../engine/card/grade.js";
 import { makeBotFromCard } from "./makebot.js";
+import { runScreenTour } from "../../screentours.js";
 
 const when = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? "" : d.toLocaleDateString(); };
 
 export async function renderCards(env, host) {
   const { ctx, bot } = env, M = ctx.memory;
   const list = await M.cards.list(bot.id);
-  if (!list.length) return replace(host, emptyState({ icon: "brain", title: "아직 만든 카드가 없어요", text: "인물의 기억을 카드 한 장으로 만들어 두면, 나중에 그 카드로 새 봇을 만들 수 있어요.", actions: [{ label: "카드 만들기", icon: "plus", onClick: () => { mem(env.ctx).tab = "compose"; env.redraw(); } }] }));
-  replace(host, h("p", { class: "rb-muted" }, `이 봇에서 만든 카드 ${list.length}장`), h("div", { class: "rb-mem-grid" }, list.map((it) =>
+  // 카드 탭은 m.ctab으로 화면을 고른다(예전엔 m.tab을 바꿔서 '카드 만들기'를 눌러도 목록이 다시 그려지기만 했다 — 1.8.3 수정)
+  const toCompose = () => { mem(env.ctx).ctab = "compose"; (env.redrawView ?? env.redraw)(); };
+  if (!list.length) return replace(host, emptyState({ icon: "brain", title: "아직 만든 카드가 없어요", text: "인물의 기억을 카드 한 장으로 만들어 두면, 그 카드로 새 봇을 만들 수 있어요.", actions: [{ label: "카드 만들기", icon: "plus", onClick: toCompose }, { label: "만드는 법 보기", icon: "help", onClick: () => runScreenTour(env.ctx) }] }));
+  replace(host, h("div", { class: "rb-mem-grid rb-cards3-grid" }, list.map((it) =>
     h("button", { type: "button", class: "rb-mem-card rb-card-tile", style: { "--g": colorOf(it.grade) }, onClick: () => openCard(env, it.id) },
-      gradeBadge(it.grade), h("span", { class: "txt" }, h("span", { class: "name" }, it.name), h("span", { class: "meta" }, when(it.createdAt)))))));
+      gradeBadge(it.grade), h("span", { class: "txt" }, h("span", { class: "name" }, it.name), h("span", { class: "meta" }, [when(it.createdAt), it.memories != null ? `기억 ${it.memories}개` : ""].filter(Boolean).join(" · "))))),
+    h("button", { type: "button", class: "rb-mem-card rb-card-tile rb-cards3-new", id: "rb-cards-new", onClick: toCompose }, h("span", { class: "txt" }, h("span", { class: "name" }, "＋ 새 카드")))));
 }
 
 async function openCard(env, id) {

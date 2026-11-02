@@ -1,7 +1,9 @@
 // 기억 탭 → 스킬 (v1.8.1). 코코아전트 호환 스킬 세트를 가져와 정리 노트·기록하기·기억 분석 프롬프트 뒤에 붙인다. 추가 AI 호출 없음.
-// 화면: 켜기 토글 · 단계별 세트 고르기 · 세트 목록/편집 · 코코아전트에서 옮겨오기. 일부만 다시 그린다(부분 갱신).
+// 화면(1.8.3 목업 2): 켜기 카드('N개 중 M개 사용 중') · 내 스킬 한 목록(간단=줄마다 스위치, 고급=줄 아래 붙는 곳 칩 4개, ZIP·JSON·삭제는 ···)
+// · 고급 묶음(옮겨오기·웹 도구·호출 기록)은 한 줄씩 접음. PC 2열. 일부만 다시 그린다(부분 갱신).
 import { h, replace } from "../../dom.js";
-import { advFold, btn, chip, note, pageHead, toggleRow, emptyState, confirmDialog, promptDialog, loading, modal } from "../../kit.js";
+import { advFold, btn, chip, iconBtn, note, openMenu, pageHead, toggleRow, emptyState, confirmDialog, promptDialog, loading, modal, switchEl, setSwitch } from "../../kit.js";
+import { icon } from "../../icons.js";
 import { mem, fail } from "./common.js";
 import { SKILL_STAGES, SKILL_STAGE_LABEL } from "../../../engine/skillcfg.js";
 import { buildSkillIndex, diagnoseSkillSet, normalizeSkillSet, SKILL_MD, SKILL_LIMITS } from "../../../engine/skills.js";
@@ -19,46 +21,29 @@ export function saveBlob(ctx, name, data, type) {
 }
 const pickFile = (ctx, accept, onFile) => { const inp = h("input", { type: "file", accept }); inp.addEventListener("change", () => { const f = inp.files?.[0]; if (f) onFile(f); }); inp.click(); };
 
-export async function renderMemorySkills(ctx, host, { redraw, standalone = false }) {
+export async function renderMemorySkills(ctx, host, { redraw, standalone = false, openAi = null }) {
   const S = ctx.skills, m = mem(ctx), st = m.skills ??= { open: "", file: "" };
   const back = standalone ? undefined : { onClick: () => { m.page = "home"; redraw(); }, label: "기억으로" };
   if (!S) return replace(host, pageHead("코코아", { back }), emptyState({ icon: "info", title: "스킬 기능이 아직 준비되지 않았어요", text: "플러그인을 다시 불러와 주세요." }));
   const dt = (k) => h("div", { "data-tour": k }), topH = dt("sk-toggle"), stagesH = dt("sk-stages"), libH = dt("sk-lib"), cocoaH = dt("sk-cocoa"), webH = dt("sk-web"), callsH = dt("sk-calls");
-  replace(host, pageHead("코코아", { sub: "코코아전트 스킬 그대로 쓸 수 있어요", back }), topH, stagesH, libH, advFold(ctx, "memory", h("div", { style: "display:flex;flex-direction:column;gap:12px;min-width:0" }, cocoaH, webH, callsH)));
+  // 고급 묶음: 한 줄씩 접어 둔다(목업 2). 요약 줄은 그릴 때 채운다.
+  const grp = (id, title, body) => { const sub = h("small"); const d = h("details", { class: "rb-card bordered rb-mem-grp", dataset: { g: id } }, h("summary", null, h("span", { class: "t" }, h("b", null, title), sub), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))), h("div", { class: "rb-mem-foldbody" }, body)); d.sub = sub; return d; };
+  const gCocoa = grp("cocoa", "코코아전트에서 옮겨오기", cocoaH), gWeb = grp("web", "웹 도구 (검색·페이지 읽기)", webH), gCalls = grp("calls", "최근 호출 기록", callsH);
+  gCocoa.sub.textContent = "같은 기기에 남은 스킬·설정을 읽어 와요";
+  const adv = ctx.prefs.advanced ? h("section", { class: "rb-mem-folds", "aria-label": "고급" }, h("h3", { class: "rb-h3" }, "고급"), gCocoa, ctx.web ? gWeb : null, gCalls) : advFold(ctx, "memory", true);
+  replace(host, h("div", { class: "rb-mem2-grid has-adv rb-sk3" }, h("div", { class: "rb-mem2-main" }, pageHead("코코아", { back }), topH, libH), h("div", { class: "rb-mem2-side" }, adv)));
   const run = (p) => p.catch(fail(ctx));
 
+  const usedIds = (cfg) => new Set(SKILL_STAGES.flatMap((g) => cfg.stages[g].map((r) => r.id)));
   async function drawTop() {
-    const cfg = await S.getCfg();
-    replace(topH, h("section", { class: "rb-card bordered pad rb-sk-card" },
-      toggleRow("코코아 기능 켜기", "켜면 아래에서 쓰기로 한 스킬 지침이 AI에게 가는 글의 뒤에 붙어요. 장기기억·코코아전트와 따로 켜고 꺼도 돼요.", cfg.on, (v) => run(S.saveCfg({ ...cfg, on: v }).then(() => { ctx.toast(v ? "스킬 주입을 켰어요." : "스킬 주입을 껐어요."); return drawStages(); }))),
-      note("info", "별도 AI 호출은 만들지 않아요. 이미 하는 호출의 글만 늘어나서 토큰은 그만큼 더 써요.")));
-  }
-  async function drawStages() {
     const [cfg, lib] = [await S.getCfg(), await S.getLibrary()];
-    const setRef = (stage, set, on) => run((async () => {
-      const refs = cfg.stages[stage].filter((r) => r.id !== set.id && r.name.toLowerCase() !== set.name.toLowerCase());
-      if (on) refs.push({ id: set.id, name: set.name });
-      await S.saveCfg({ ...cfg, stages: { ...cfg.stages, [stage]: refs } }); await drawStages();
-    })());
-    const has = (stage, set) => cfg.stages[stage].some((r) => r.id === set.id || r.name.toLowerCase() === set.name.toLowerCase());
-    if (!ctx.prefs.advanced) {   // 간단 모드: 세트별 사용 여부만. 켜면 연출·집필 단계에 붙는다.
-      const basic = ["director", "writer"], on = (set) => basic.every((g) => has(g, set));
-      const toggleSet = (set) => run((async () => {
-        const stages = { ...cfg.stages };
-        for (const g of basic) { stages[g] = stages[g].filter((r) => r.id !== set.id && r.name.toLowerCase() !== set.name.toLowerCase()); if (!on(set)) stages[g].push({ id: set.id, name: set.name }); }
-        await S.saveCfg({ ...cfg, stages }); await drawStages();
-      })());
-      return replace(stagesH, h("section", { class: "rb-card bordered pad rb-sk-card" }, h("b", null, "사용할 스킬"),
-        lib.sets.length ? h("div", { class: "rb-chips" }, lib.sets.map((set) => chip(set.name, { pressed: on(set), onClick: () => toggleSet(set) })))
-          : h("p", { class: "rb-muted" }, "아래에서 스킬을 가져오거나 새로 만들면 여기서 고를 수 있어요."),
-        cfg.on ? null : note("warn", "코코아 기능이 꺼져 있어서 지금은 아무것도 붙지 않아요."), note("info", "어느 호출에 붙일지는 고급 모드에서 세밀하게 정할 수 있어요.")));
-    }
-    replace(stagesH, h("section", { class: "rb-card bordered pad rb-sk-card" }, h("b", null, "어느 호출에 붙일까요"),
-      lib.sets.length ? SKILL_STAGES.map((stage) => h("div", { class: "rb-field" }, h("div", null, h("b", null, SKILL_STAGE_LABEL[stage]), h("small", { class: "rb-muted" }, ` ${stageHint[stage]}`)),
-        h("div", { class: "rb-chips" }, lib.sets.map((set) => chip(set.name, { pressed: has(stage, set), onClick: () => setRef(stage, set, !has(stage, set)) })))))
-        : h("p", { class: "rb-muted" }, "세트를 가져오면 여기서 고를 수 있어요."),
-      cfg.on ? null : note("warn", "코코아 기능이 꺼져 있어서 지금은 아무것도 붙지 않아요.")));
+    const used = lib.sets.filter((x) => usedIds(cfg).has(x.id) || SKILL_STAGES.some((g) => cfg.stages[g].some((r) => r.name.toLowerCase() === x.name.toLowerCase()))).length;
+    const sw = switchEl(cfg.on, { label: "코코아 기능 켜기", onChange: (v, el) => { setSwitch(el, v); run(S.saveCfg({ ...cfg, on: v }).then(() => { ctx.toast(v ? "스킬 주입을 켰어요." : "스킬 주입을 껐어요."); return drawTop(); })); } });
+    replace(topH, h("section", { class: "rb-card bordered rb-sk-top" },
+      h("div", { class: "t" }, h("b", null, "코코아 기능"), h("small", null, `스킬 ${lib.sets.length}개 중 ${used}개 사용 중 · 따로 AI를 부르지 않아요`)), sw));
   }
+  // 예전 '사용할 스킬'·'어느 호출에 붙일까요' 카드는 내 스킬 목록 한 곳으로 합쳤다(1.8.3). 부르는 곳은 그대로 두고 목록을 다시 그린다.
+  async function drawStages() { await Promise.all([drawTop(), drawLib()]); }
 
   async function drawLib() {
     const lib = await S.getLibrary();
@@ -82,16 +67,52 @@ export async function renderMemorySkills(ctx, host, { redraw, standalone = false
       const set = normalizeSkillSet({ name, files: [{ path: `${name}/SKILL.md`, content: TEMPLATE(name) }] }, lib.sets.length);
       await S.importSet(set, "new"); await Promise.all([drawLib(), drawStages()]);
     })());
+    const cfg = await S.getCfg();
+    const has = (stage, set) => cfg.stages[stage].some((r) => r.id === set.id || r.name.toLowerCase() === set.name.toLowerCase());
+    const setRef = (stage, set, on) => run((async () => {
+      const stages = { ...cfg.stages, [stage]: cfg.stages[stage].filter((r) => r.id !== set.id && r.name.toLowerCase() !== set.name.toLowerCase()) };
+      if (on) stages[stage].push({ id: set.id, name: set.name });
+      await S.saveCfg({ ...cfg, stages }); await drawStages();
+    })());
+    // 간단 모드: 줄마다 스위치 하나. 켜면 정리 노트·기록하기 두 호출에 붙는다.
+    const basic = ["director", "writer"];
+    const basicOn = (set) => basic.every((g) => has(g, set));
+    const toggleSet = (set, v) => run((async () => {
+      const stages = { ...cfg.stages };
+      for (const g of basic) { stages[g] = stages[g].filter((r) => r.id !== set.id && r.name.toLowerCase() !== set.name.toLowerCase()); if (v) stages[g].push({ id: set.id, name: set.name }); }
+      await S.saveCfg({ ...cfg, stages }); await drawStages();
+    })());
+    const delSet = (set) => run((async () => { if (!await confirmDialog(ctx.win, { title: `'${set.name}' 삭제`, body: "세트 안의 파일이 모두 지워져요.", ok: "삭제", cancel: "취소", danger: true })) return; await S.saveLibrary({ ...lib, sets: lib.sets.filter((x) => x.id !== set.id) }); await drawStages(); })());
+    const row = (set) => {
+      const n = buildSkillIndex([set]).length;
+      const where = SKILL_STAGES.filter((g) => has(g, set)).map((g) => SKILL_STAGE_LABEL[g]);
+      const sub = ctx.prefs.advanced ? `붙는 곳: ${where.length ? where.join(" · ") : "쓰지 않음"} · 스킬 ${n}개` : `${basicOn(set) ? "사용 중" : "쓰지 않음"} · 스킬 ${n}개`;
+      const open = () => { st.open = set.id; st.file = ""; run(drawLib()); };
+      const more = iconBtn("more", `${set.name} 더 보기`, { onClick: (ev) => openMenu(ctx.win, ev.currentTarget, [
+        { label: "열어서 고치기", icon: "edit", onClick: open },
+        { label: "ZIP으로 내보내기", icon: "download", onClick: () => saveBlob(ctx, `${set.name}.zip`, S.zipOfSet(set), "application/zip") },
+        { label: "JSON으로 내보내기", icon: "download", onClick: () => saveBlob(ctx, `${set.name}.json`, S.exportSet(set), "application/json") },
+        "sep",
+        { label: "삭제", icon: "trash", danger: true, onClick: () => delSet(set) }
+      ]) });
+      const sw = ctx.prefs.advanced ? null : switchEl(basicOn(set), { label: `${set.name} 사용`, onChange: (v, el) => { setSwitch(el, v); toggleSet(set, v); } });
+      return h("li", { class: "rb-sk-row", dataset: { id: set.id } },
+        h("div", { class: "rb-sk-rowmain" },
+          h("button", { type: "button", class: "rb-sk-open", onClick: open, "aria-label": `${set.name} 열기` }, h("b", null, set.name), h("small", null, sub)),
+          sw, more),
+        ctx.prefs.advanced ? h("div", { class: "rb-chips rb-sk-stages", role: "group", "aria-label": `${set.name} 붙는 곳` }, SKILL_STAGES.map((g) => chip(SKILL_STAGE_LABEL[g], { pressed: has(g, set), onClick: () => setRef(g, set, !has(g, set)) }))) : null);
+    };
+    const headMore = iconBtn("more", "스킬 더 보기", { onClick: (ev) => openMenu(ctx.win, ev.currentTarget, [
+      { label: "새 세트 직접 만들기", icon: "plus", onClick: newSet },
+      lib.sets.length ? { label: "전체 내보내기", icon: "download", onClick: () => run(exp()) } : null
+    ]) });
     replace(libH, h("section", { class: "rb-card bordered pad rb-sk-card" },
-      h("div", { class: "rb-sk-bar" }, h("b", null, `스킬 세트 ${lib.sets.length}개`), h("span", { class: "rb-spacer" }), btn("가져오기", { size: "sm", kind: "primary", icon: "upload", onClick: imp }), btn("새 세트", { size: "sm", onClick: newSet }), lib.sets.length ? btn("전체 내보내기", { size: "sm", onClick: () => run(exp()) }) : null),
-      lib.sets.length ? h("ul", { class: "rb-mem-reclist" }, lib.sets.map((set) => {
-        const n = buildSkillIndex([set]).length;
-        return h("li", { class: "rb-sk-li" }, h("div", { class: "txt" }, h("b", null, set.name), h("div", { class: "rb-muted" }, `스킬 ${n}개 · 파일 ${set.files.length}개`)),
-          btn("열기", { size: "sm", onClick: () => { st.open = set.id; st.file = ""; run(drawLib()); } }),
-          btn("ZIP", { size: "sm", title: "이 세트를 ZIP으로 내보내요 (코코아전트에서 그대로 가져올 수 있어요)", onClick: () => saveBlob(ctx, `${set.name}.zip`, S.zipOfSet(set), "application/zip") }),
-          btn("JSON", { size: "sm", title: "이 세트를 JSON으로 내보내요", onClick: () => saveBlob(ctx, `${set.name}.json`, S.exportSet(set), "application/json") }),
-          btn("삭제", { size: "sm", kind: "danger", onClick: () => run((async () => { if (!await confirmDialog(ctx.win, { title: `'${set.name}' 삭제`, body: "세트 안의 파일이 모두 지워져요.", ok: "삭제", cancel: "취소", danger: true })) return; await S.saveLibrary({ ...lib, sets: lib.sets.filter((x) => x.id !== set.id) }); await Promise.all([drawLib(), drawStages()]); })()) }));
-      })) : emptyState({ icon: "info", title: "아직 스킬 세트가 없어요", text: "ZIP/JSON을 가져오거나 코코아전트에서 옮겨 올 수 있어요." })));
+      h("div", { class: "rb-sk-bar" }, h("b", null, `내 스킬 ${lib.sets.length}개`), h("span", { class: "rb-spacer" }),
+        openAi ? btn("AI로 만들기", { size: "sm", icon: "sparkle", onClick: openAi, id: "rb-sk-ai" }) : null,
+        btn("가져오기", { size: "sm", kind: "primary", icon: "upload", onClick: imp, id: "rb-sk-import" }), headMore),
+      lib.sets.length ? h("ul", { class: "rb-sk-list" }, lib.sets.map(row)) : emptyState({ icon: "info", title: "아직 스킬 세트가 없어요", text: "ZIP/JSON을 가져오거나 AI로 만들거나 코코아전트에서 옮겨 올 수 있어요." }),
+      cfg.on ? null : note("warn", "코코아 기능이 꺼져 있어서 지금은 아무것도 붙지 않아요."),
+      h("p", { class: "rb-muted rb-sk-hint" }, ctx.prefs.advanced ? "줄을 누르면 열어서 고쳐요. ··· 에 ZIP·JSON 내보내기, 삭제가 있어요. 칩으로 붙일 호출을 골라요." : "줄을 누르면 열어서 고쳐요. ··· 에 ZIP·JSON 내보내기, 삭제가 있어요. 켜면 정리 노트·기록하기에 붙어요.")));
   }
 
   function drawEditor(set) {
@@ -120,8 +141,12 @@ export async function renderMemorySkills(ctx, host, { redraw, standalone = false
       modal(ctx.win, (close) => h("div", { class: "rb-card pad rb-sk-card" }, h("b", null, "모델이 받는 추가 글"), box, btn("닫기", { onClick: close })));
     })());
     replace(libH, h("section", { class: "rb-card bordered pad rb-sk-card" },
-      h("div", { class: "rb-sk-bar" }, btn("← 목록", { size: "sm", onClick: () => { st.open = ""; run(drawLib()); } }), h("b", null, set.name), h("span", { class: "rb-spacer" }),
-        btn("ZIP 내보내기", { size: "sm", onClick: () => saveBlob(ctx, `${set.name}.zip`, S.zipOfSet(set), "application/zip") }), btn("JSON 내보내기", { size: "sm", onClick: () => saveBlob(ctx, `${set.name}.json`, S.exportSet(set), "application/json") }), btn("주입 미리보기", { size: "sm", onClick: prev })),
+      h("div", { class: "rb-sk-bar" }, btn("‹ 목록", { size: "sm", onClick: () => { st.open = ""; run(drawLib()); } }), h("b", null, set.name), h("span", { class: "rb-spacer" }),
+        iconBtn("more", "세트 더 보기", { onClick: (ev) => openMenu(ctx.win, ev.currentTarget, [
+          { label: "주입 미리보기", icon: "eye", onClick: prev },
+          { label: "ZIP으로 내보내기", icon: "download", onClick: () => saveBlob(ctx, `${set.name}.zip`, S.zipOfSet(set), "application/zip") },
+          { label: "JSON으로 내보내기", icon: "download", onClick: () => saveBlob(ctx, `${set.name}.json`, S.exportSet(set), "application/json") }
+        ]) })),
       diag.length ? h("ul", { class: "rb-muted" }, diag.map((d) => h("li", null, `${d.level === "warn" ? "⚠ " : ""}${d.text}`))) : note("ok", "진단: 문제 없어요."),
       h("div", { class: "rb-chips" }, set.files.map((f) => chip(f.path, { pressed: f === file, onClick: () => { st.file = f.path; run(drawLib()); } })), btn("+ 파일", { size: "sm", onClick: addFile })),
       file ? h("div", null, ta, h("div", { class: "rb-sk-bar" }, btn("저장", { kind: "primary", onClick: save }), btn("파일 삭제", { kind: "danger", onClick: delFile }))) : h("p", { class: "rb-muted" }, "파일이 없어요.")));
@@ -164,6 +189,7 @@ export async function renderMemorySkills(ctx, host, { redraw, standalone = false
   async function drawWeb() {
     const W = ctx.web; if (!W) return replace(webH);
     const c = await W.getCfg(), P = WEB_PROVIDERS[c.provider], save = (patch) => run(W.saveCfg({ ...c, ...patch }).then(drawWeb));
+    gWeb.sub.textContent = c.on ? `켜짐 · ${P?.label ?? c.provider}` : "꺼짐 · 켜면 그 단계 호출이 1~2번 늘어요";
     const field = (label, key, type = "text", ph = "") => { const el = h("input", { class: "rb-input", type, placeholder: ph, "aria-label": label, autocomplete: "off" }); el.value = c[key] ?? ""; el.addEventListener("change", () => save({ [key]: el.value })); return h("label", { class: "rb-field" }, h("small", { class: "rb-muted" }, label), el); };
     const test = () => run((async () => {
       const q = (await promptDialog(ctx.win, { title: "시험 검색", label: "검색어", value: "서울", ok: "검색" }))?.trim(); if (!q) return;
@@ -181,6 +207,7 @@ export async function renderMemorySkills(ctx, host, { redraw, standalone = false
   // 이번 접속 동안의 호출 기록: 스킬 글이 실제로 붙었는지, 도구가 쓰였는지 확인용(저장하지 않아요).
   function drawCalls() {
     const list = recentCalls(), t = (ms) => new Date(ms).toLocaleTimeString("ko-KR", { hour12: false });
+    gCalls.sub.textContent = list.length ? `이번 접속 ${list.length}건` : "아직 없어요";
     replace(callsH, h("section", { class: "rb-card bordered pad rb-sk-card" }, h("div", { class: "rb-sk-bar" }, h("b", null, "최근 호출 기록"), h("span", { class: "rb-spacer" }), btn("새로고침", { size: "sm", onClick: drawCalls }), btn("비우기", { size: "sm", onClick: () => { clearCalls(); drawCalls(); } })),
       list.length ? h("ul", { class: "rb-mem-reclist" }, list.slice(0, 12).map((e) => h("li", null, h("div", { class: "txt" }, h("b", null, SKILL_STAGE_LABEL[e.stage] ?? e.stage), h("div", { class: "rb-muted" }, `${t(e.at)} · ${e.chars ? `스킬 글 ${e.chars}자 붙음` : "붙은 스킬 글 없음"}${e.tools?.length ? ` · 도구 ${e.tools.join(", ")}` : ""}`)))))
         : h("p", { class: "rb-muted" }, "아직 호출이 없어요. 대화를 진행하면 여기에 쌓여요.")));

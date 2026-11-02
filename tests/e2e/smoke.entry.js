@@ -121,13 +121,13 @@ window.runSmoke = async () => {
     const sk = createSkillStore({ pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } }, { log() {} });
     const sctx = { win: document.body, toast: (t) => log.push(["toast", t]), skills: sk, prefs: { advanced: true }, web: createWebTools({ pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } }, { log() {} }), state: {} }, shost = document.createElement("div"); document.body.appendChild(shost);
     await renderMemorySkills(sctx, shost, { redraw() {} }); await sleep(80);
-    check("스킬 탭 렌더", shost.textContent.includes("코코아 기능 켜기") && shost.textContent.includes("스킬 세트 0개"), shost.textContent.slice(0, 120));
+    check("스킬 탭 렌더", shost.textContent.includes("코코아 기능") && shost.textContent.includes("내 스킬 0개") && !!shost.querySelector("[role=switch][aria-label='코코아 기능 켜기']"), shost.textContent.slice(0, 120));
     clickText("찾아보기", shost); await sleep(120);
     check("코코아 데이터 찾기", shost.textContent.includes("스킬 세트 1개 가져오기") && shost.textContent.includes("'Director'의 프롬프트를 스킬로 변환"), shost.textContent.slice(-200));
     clickText("옮기기", shost); await sleep(200);
     const lib = await sk.getLibrary(), cfg = await sk.getCfg();
     check("코코아 옮기기", lib.sets.length === 1 && cfg.stages.director.length === 1 && cfg.on === false, JSON.stringify(cfg.stages));
-    clickText("열기", shost); await sleep(80);
+    shost.querySelector(".rb-sk-open")?.click(); await sleep(80);   // 1.8.3: 줄을 누르면 열린다(열기·ZIP·JSON·삭제 버튼은 ··· 메뉴로)
     check("웹 도구·호출 기록 카드", shost.textContent.includes("웹 도구 (검색·페이지 읽기)") && shost.textContent.includes("최근 호출 기록") && shost.textContent.includes("Wikipedia"), shost.textContent.slice(-300));
     check("세트 편집기", !!shost.querySelector("textarea") && shost.textContent.includes("진단"), shost.textContent.slice(0, 160));
   } catch (e) { check("스킬 탭", false, e?.stack ?? e); }

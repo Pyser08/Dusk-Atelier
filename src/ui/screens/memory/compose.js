@@ -48,8 +48,10 @@ export async function renderCompose(env, host) {
   const apply = (patch) => { c.work = c.work.then(async () => { c.card = await editCard(c.card, patch); c.link = null; if (Object.hasOwn(patch, "name")) c.picks = null; preview.draw(c.card); }).catch(fail(ctx)); return c.work; };
   const preview = cardPreview(ctx);
 
-  const stepper = h("ol", { class: "rb-mem-steps" }, STEPS.map((t, i) => h("li", { "aria-current": i === c.step ? "step" : null, class: i < c.step ? "done" : "" }, `${i + 1}. ${t}`)));
-  const nav = (ok = true, nextLabel = "다음") => h("div", { class: "rb-mem-sact" }, c.step > 0 ? btn("이전", { onClick: () => go(c.step - 1) }) : null, c.step < 4 ? btn(nextLabel, { kind: "primary", disabled: !ok, onClick: () => go(c.step + 1) }) : null);
+  // 단계 표시: 동그라미 번호 + 이름. 예전엔 <ol> 기본 번호와 글자 '1.'이 겹쳐 '1. 1. 인물'로 보였다(1.8.3 수정).
+  const stepper = h("ol", { class: "rb-mem-steps", "aria-label": "만들기 단계" }, STEPS.map((t, i) => h("li", { "aria-current": i === c.step ? "step" : null, class: i < c.step ? "done" : "" }, h("span", { class: "n", "aria-hidden": "true" }, i < c.step ? "✓" : String(i + 1)), h("span", { class: "t" }, t))));
+  // 이전/다음은 아래 오른쪽에 붙인다(목업 2)
+  const nav = (ok = true, nextLabel = "다음") => h("div", { class: "rb-mem-sact rb-compose-nav" }, c.step > 0 ? btn("이전", { onClick: () => go(c.step - 1) }) : null, c.step < 4 ? btn(nextLabel, { kind: "primary", disabled: !ok, onClick: () => go(c.step + 1) }) : null);
   const callNote = h("p", { class: "rb-muted" }, `이번 만들기에서 AI ${c.calls}회 호출했어요.`);
   // 빠르게 만들기: 등급·범위는 자동으로 두고 카드 → 연결(기억 연결) → 첫 메시지를 한 번에 만든 뒤 마지막 확인 단계로 간다. 중간에 실패하면 만든 데까지는 남아서 이어서 할 수 있다.
   const quickMake = async () => {
@@ -92,7 +94,13 @@ export async function renderCompose(env, host) {
   } else {
     body = renderFinish();
   }
-  replace(host, stepper, body);
+  // PC: 카드 미리 보기가 없는 단계(인물·범위·연결)에서도 오른쪽에 미리 보기를 띄운다(목업 2)
+  const wide = (ctx.win?.ownerDocument?.defaultView?.innerWidth ?? 0) >= 1000;
+  if (wide && [0, 1, 3].includes(c.step)) {
+    replace(host, stepper, h("div", { class: "rb-compose-grid" }, body, h("aside", { class: "rb-card bordered rb-compose-prev", "aria-label": "미리 보기" }, h("b", null, "미리 보기"),
+      c.card ? preview.el : h("div", { class: "rb-compose-ph" }, h("b", null, main?.name ?? ""), h("small", { class: "rb-muted" }, "카드 단계에서 채워져요")))));
+    if (c.card) preview.draw(c.card);
+  } else replace(host, stepper, body);
   if (c.card && c.step === 2) preview.draw(c.card);
 
   // ───────── 3단계: 카드 ─────────
