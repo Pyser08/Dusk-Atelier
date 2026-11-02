@@ -133,3 +133,9 @@ test("참고 글: 정규식·트리거·배경을 줄여 담고, 프롬프트에
   assert.match(m[1].content, /Reference \(read only\)/);
   assert.doesNotMatch(_bm(entries, _rp(entries), [0])[1].content, /Reference/);
 });
+
+test("참고 글: 설명·성격·변수 등 기본 설정도 담고, 전체 길이를 제한한다", () => {
+  const ref = referenceText({ fields: { desc: "다정한 선생님", personality: "차분함", defaultVariables: "affinity=0" }, regex: [{ comment: "이름만", type: "editdisplay" }] });
+  assert.match(ref, /다정한 선생님/); assert.match(ref, /affinity=0/); assert.match(ref, /이름만/);
+  assert.ok(referenceText({ fields: { desc: "가".repeat(5000) }, background: "x".repeat(9000), max: 500 }).length <= 500);
+});

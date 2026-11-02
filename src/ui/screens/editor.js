@@ -775,7 +775,7 @@ export async function openEditorCore(ctx, cfg) {
     }
     // 로어북 더스크화: 결과는 초안에만 반영하고, 저장 전에는 되돌릴 수 있다
     async function duskify() {
-      const r = await openLoreDusk(ctx, { list, reference: referenceText({ regex: draft.regex, trigger: draft.trigger, background: draft.backgroundHTML ?? draft.backgroundEmbedding }) });
+      const r = await openLoreDusk(ctx, { list, reference: referenceText({ regex: draft.regex, trigger: draft.trigger, background: draft.backgroundHTML ?? draft.backgroundEmbedding, fields: draft }) });
       if (!r) return;
       const before = structuredClone(list);
       const cur = selObj();

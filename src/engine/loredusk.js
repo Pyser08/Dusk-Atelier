@@ -267,13 +267,16 @@ export const summaryText = (s) => [
   s.newPlaces && `새 장소 ${s.newPlaces}개`, s.flags && `이름 설정 ${s.flags}건`, s.dividers && `구분선 ${s.dividers}개 정리`
 ].filter(Boolean).join(" · ") || "바뀐 것 없음";
 
-// 로어북 설계 때 참고할 같은 봇의 정규식·트리거·배경 HTML을 짧게 줄인 글 (AI가 겹치는 처리를 피하도록)
-export function referenceText({ regex = [], trigger = [], background = "" } = {}) {
+// 더스크화는 이미 만들어진 봇을 바꾸는 일이라, 같은 봇의 설정(설명·성격·시나리오·첫 메시지·변수·정규식·트리거·배경 HTML)을 읽기 전용으로 모두 참고시킨다. 전체 글자 수만 제한한다.
+const REF_FIELDS = [["desc", "설명", 1500], ["personality", "성격", 800], ["scenario", "시나리오", 1000], ["firstMessage", "첫 메시지", 1000], ["systemPrompt", "시스템 프롬프트", 1200], ["globalNote", "전역 노트", 800], ["postHistoryInstructions", "후속 지시", 600], ["defaultVariables", "기본 변수", 1200]];
+export function referenceText({ regex = [], trigger = [], background = "", fields = {}, max = 14000 } = {}) {
   const cut = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
-  const rx = (Array.isArray(regex) ? regex : []).filter((r) => r && r.type !== "disabled" && (r.in || r.out || r.comment)).slice(0, 40)
-    .map((r) => `- ${cut(r.comment || "(이름 없음)", 60)} | ${cut(r.type, 12)} | /${cut(r.in, 60)}/ → ${cut(r.out, 60)}`);
-  const tg = (Array.isArray(trigger) ? trigger : []).filter((t) => t && t.comment !== undefined || t?.effect).slice(0, 30)
-    .map((t) => `- ${cut(t.comment || "(이름 없음)", 60)} | ${cut(t.type, 16)} | ${(Array.isArray(t.effect) ? t.effect : []).map((e) => e?.type).filter(Boolean).slice(0, 6).join(",")}`);
-  const bg = cut(background, 600);
-  return [rx.length ? `[이 봇의 정규식 (참고만, 로어북으로 중복 처리하지 말 것)]\n${rx.join("\n")}` : "", tg.length ? `[이 봇의 트리거 (참고만)]\n${tg.join("\n")}` : "", bg ? `[배경 HTML 일부 (참고만)]\n${bg}` : ""].filter(Boolean).join("\n\n");
+  const info = REF_FIELDS.map(([k, label, n]) => fields?.[k] ? `- ${label}: ${cut(fields[k], n)}` : "").filter(Boolean);
+  const rx = (Array.isArray(regex) ? regex : []).filter((r) => r && r.type !== "disabled" && (r.in || r.out || r.comment)).slice(0, 80)
+    .map((r) => `- ${cut(r.comment || "(이름 없음)", 60)} | ${cut(r.type, 16)} | /${cut(r.in, 160)}/${cut(r.flag, 8)} → ${cut(r.out, 200)}`);
+  const tg = (Array.isArray(trigger) ? trigger : []).filter((t) => t && (t.comment !== undefined || t.effect)).slice(0, 60)
+    .map((t) => `- ${cut(t.comment || "(이름 없음)", 60)} | ${cut(t.type, 16)} | 조건 ${cut(JSON.stringify(t.conditions ?? []), 200)} | 효과 ${cut(JSON.stringify(t.effect ?? []), 300)}`);
+  const bg = cut(background, 3000);
+  const out = [info.length ? `[이 봇의 기본 설정]\n${info.join("\n")}` : "", rx.length ? `[이 봇의 정규식 (참고만, 로어북으로 중복 처리하지 말 것)]\n${rx.join("\n")}` : "", tg.length ? `[이 봇의 트리거 (참고만)]\n${tg.join("\n")}` : "", bg ? `[배경 HTML 일부 (참고만)]\n${bg}` : ""].filter(Boolean).join("\n\n");
+  return out.slice(0, max);
 }
