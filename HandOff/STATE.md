@@ -189,4 +189,10 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 연결 `data/imgtagfix.js`: beforeRequest(type이 model일 때만)로 직전 상황을 뽑아 교정에 넘기고, 알림 켜짐(`dusk.ui.imgFixHint`)이면 요청 사본에 넣음. 교정만 켜도 직전 옷 기억은 동작. 에셋 캐시 5분(봇·채팅 키), 스트리밍 중(`genstate.recentlyStreamed`)엔 새로 읽지 않고 봇 번호 확인도 1초 재사용. 홈 토글 2줄.
 - 테스트: `imgtagfix.test.js` 17, `imghint.test.js` 7, `imgtagfix-hook.test.js` 9. `npm test` 607 pass / 0 fail, build·check 동일함, smoke 통과.
 - 확인 못 한 것: 실제 호스트에서 beforeRequest messages의 role 이름(assistant 외 char/model도 처리)과 마지막 user 앞 system 삽입이 모델별로 문제없는지, 봇의 editprocess 정규식이 기록 속 `<img>`를 지우면 직전 상황을 못 읽음, 알림의 실제 효과(모델이 따르는지).
-- 3번(낱말 단서로 감정→동작 올리기)은 미구현 — 사용자에게 장단점 설명 후 결정 대기.
+- 3번(낱말 단서로 감정→동작 올리기)은 하지 않기로 결정(사용자, 2026-11-02). 1·2번만 사용.
+
+#### 이미지 태그 3차 — 실제 지침 4종 대응 (feat/1.8.2)
+- 사용자 제공 지침 4종(해리포터 `name_emotion_x`/`name_position.sex`/`이름_exception_neutral`, 젠레스 `Astra Yao_Sex_Missionary_Cum`, 이로하 `iroha_real_x`+스탠딩 `akira`, 블루아카 `Mika_smile`)을 `tests/imgtagfix-formats.test.js`로 고정.
+- 고친 것(`engine/imgtagfix.js`): ① 점 구분 판단을 '점 2개 이름이 절반 이상 또는 90% 이상에 점'으로(키워드 속 점 `missionary.sex` 오판 → 정상 태그 삭제되던 문제) ② 구분자 없는 이름 = 이름만 있는 그림(스탠딩), 대체 그림으로도 사용 ③ 밑줄 형식 형태 감지(모든 키워드가 2~6가지 앞말·각 3개 이상 → 옷처럼; (나) 규칙 적용) ④ `fallbackOf`: 그림 1개뿐이면 그것(예외 캐릭터), 끝 낱말 default(`emotion_default`) ⑤ 이름 속 `'`·`&` 보존(SPLIT에서 제외), 조각 해석 실패 시 통째 해석 결과 사용 ⑥ 합친 태그 동률이면 뒤 키워드(감정+동작 순) ⑦ 지침 자리표시 `[Name]`·`[tag]`·`[emotion]`…와 꺾쇠 원문 `<img="<…>_<…>">` 삭제. 알림: 스탠딩 캐릭터 'name only'.
+- 한계: 의미 규칙(해리포터 TS 정체성 전환, 이로하 'NSFW는 real만', 블루아카 '감정·스킨십은 따로 두 태그')은 판단 못 함. 이로하 virtual+NSFW는 (나) 규칙대로 virtual 기본 그림. 블루아카 합친 태그는 둘로 나누지 않고 하나(동작)만 남김.
+- 검증: `npm test` 614 pass / 0 fail, build·check 동일함, smoke 통과.

@@ -3,8 +3,9 @@
 // 이 봇(과 켜진 모듈)의 에셋 목록을 기준으로 가장 가까운 실제 이름으로 고친다. 이미 맞는 태그·URL·CBS 이미지는 한 글자도 바꾸지 않는다.
 // 옷이 정해져 있으면 옷을 지킨다(그 옷에 없는 동작이면 그 옷의 default). 상황에 안 맞는 키워드 고르기(의미 판단)는 하지 않는다.
 
-const PLACEHOLDER = /\[\s*(character|char|outfit|keyword|yaoi\s*keyword|charname)[^\]]*\]|character'?s\s*name|^(character|charname|keyword|outfit)$/i;
-const SPLIT = /[,;|+&/"'`]|\s+and\s+/i;
+const PLACEHOLDER = /\[\s*(character|char|outfit|keyword|yaoi\s*keyword|charname|name|tag|emotion|skinship|action|form|state|image\s*command)[^\]]*\]|character'?s\s*name|^(character|charname|keyword|outfit)$/i;
+const SPLIT = /[,;|+/"`]|\s+and\s+/i;   // 이름 속 ' 와 & 는 자르지 않는다(Sigrid de L'Azur, freda&georgia)
+const NESTED = /<img\b\s*(?:src\s*)?=\s*["']?(?:[^<>"']*<[^<>]*>)+[^<>"']*["']?\s*\/?>/gi;   // <img="<Character Command>_<State Command>">
 const EXT = /\.(png|jpe?g|webp|gif|avif)$/i;
 const FALLBACK = ["default", "neutral", "idle", "normal"];
 
@@ -89,24 +90,47 @@ function pickKeyword(raw, pool) {
   }
   return hit.length === 1 ? hit[0] : null;
 }
-const fallbackOf = (pool) => { for (const f of FALLBACK) { const e = pool.find((x) => x.nk === f); if (e) return e; } return null; };
+// 대신 넣을 그림: 그림이 하나뿐이면 그것 → 이름만 있는 그림 → default·neutral… → 끝 낱말이 default인 것(emotion_default)
+function fallbackOf(pool) {
+  if (pool.length === 1) return pool[0];
+  const bare = pool.find((e) => e.nk === "");
+  if (bare) return bare;
+  for (const f of FALLBACK) { const e = pool.find((x) => x.nk === f); if (e) return e; }
+  for (const f of FALLBACK) { const hit = pool.filter((x) => toks(x.kw).at(-1) === f); if (hit.length === 1) return hit[0]; }
+  return null;
+}
 
 // 에셋 이름 목록 → 검색용 색인. 구분자는 목록에서 추정한다(점이 많으면 `캐릭터.옷.키워드`, 아니면 첫 밑줄 `캐릭터_키워드`).
 export function buildAssetIndex(names) {
   const list = [...new Set((names ?? []).map((n) => String(n ?? "").replace(EXT, "")).filter(Boolean))];
-  const dotted = list.length > 0 && list.filter((n) => n.includes(".")).length * 2 >= list.length;
-  const entries = [], byName = new Map(), chars = new Map(), kwCount = new Map();
+  // 점 구분(`캐릭터.옷.키워드`)은 점이 두 개인 이름이 절반 이상이거나 거의 모든 이름에 점이 있을 때만. `karina_missionary.sex`처럼 키워드 안의 점은 구분자가 아니다.
+  const two = list.filter((n) => (n.match(/\./g) ?? []).length >= 2).length, one = list.filter((n) => n.includes(".")).length;
+  const dotted = list.length > 0 && (two * 2 >= list.length || one >= list.length * 0.9);
+  const raw = [];
   for (const name of list) {
-    let char, outfit = null, kw;
     if (dotted) {
       const seg = name.split(".").filter((s) => s !== "");
-      if (seg.length < 2) continue;
-      char = seg[0]; kw = seg[seg.length - 1]; if (seg.length > 2) outfit = seg.slice(1, -1).join(".");
+      if (seg.length < 2) { raw.push({ name, char: name, outfit: null, kw: "" }); continue; }
+      raw.push({ name, char: seg[0], kw: seg[seg.length - 1], outfit: seg.length > 2 ? seg.slice(1, -1).join(".") : null });
     } else {
       const i = name.indexOf("_");
-      if (i <= 0 || i === name.length - 1) continue;
-      char = name.slice(0, i); kw = name.slice(i + 1);
+      if (i <= 0 || i === name.length - 1) raw.push({ name, char: name, outfit: null, kw: "" });   // 이름만 있는 그림(스탠딩)
+      else raw.push({ name, char: name.slice(0, i), outfit: null, kw: name.slice(i + 1) });
     }
+  }
+  if (!dotted) {   // 밑줄 형식의 형태 구분(iroha_real_…, iroha_virtual_…): 모든 키워드가 2~6가지 앞말로 나뉘고 각각 3개 이상이면 옷처럼 다룬다
+    const groups = new Map();
+    for (const r of raw) if (r.kw) (groups.get(r.char) ?? groups.set(r.char, []).get(r.char)).push(r);
+    for (const g of groups.values()) {
+      const pre = g.map((r) => { const i = r.kw.indexOf("_"); return i > 0 ? r.kw.slice(0, i) : null; });
+      if (pre.some((p) => p === null)) continue;
+      const count = new Map(); for (const p of pre) count.set(p, (count.get(p) ?? 0) + 1);
+      if (count.size < 2 || count.size > 6 || [...count.values()].some((n) => n < 3)) continue;
+      g.forEach((r, i) => { r.outfit = pre[i]; r.kw = r.kw.slice(pre[i].length + 1); });
+    }
+  }
+  const entries = [], byName = new Map(), chars = new Map(), kwCount = new Map();
+  for (const { name, char, outfit, kw } of raw) {
     const e = { name, char, outfit, kw, nk: norm(kw) };
     entries.push(e);
     byName.set(norm(name), name);
@@ -177,6 +201,10 @@ function resolveToken(idx, token, inherit, state) {
   if (rest.length >= 2) { outfitRaw = rest.slice(0, -1).join("."); kwRaw = rest[rest.length - 1]; }
   else if (rest.length === 1) kwRaw = rest[0];
   const outfits = [...char.outfits.values()];
+  if (!idx.dotted && kwRaw && outfits.some((o) => o.name)) {   // 밑줄 형식의 형태: virtual_blushing shyly → 형태 virtual + 키워드
+    const i = kwRaw.indexOf("_");
+    if (i > 0 && pick(norm(kwRaw.slice(0, i)), outfits.filter((o) => o.name).map((o) => ({ n: o.n, v: o })))) { outfitRaw = kwRaw.slice(0, i); kwRaw = kwRaw.slice(i + 1); }
+  }
   const worn = state?.[char.name]?.outfit;   // 직전 응답에서 입고 있던 옷
   const wornOutfit = worn != null ? outfits.find((o) => o.name === worn) ?? null : null;
   let outfit = null;
@@ -192,7 +220,7 @@ function resolveToken(idx, token, inherit, state) {
     if (parts.length) return { many: parts.map((p) => pool.find((e) => e.nk === p)), char, outfit };
   }
   if (!entry) {
-    entry = fallbackOf(outfit ? outfit.entries : outfits[0]?.entries ?? []);
+    entry = fallbackOf(outfit ? outfit.entries : char.entries);
     kind = "default";
     if (!entry) return { keep: true, char };   // 대신 넣을 기본 표정이 없으면 건드리지 않는다
     if (!outfit) outfit = outfits.find((o) => o.entries.includes(entry));
@@ -223,8 +251,12 @@ function resolvePayload(idx, payload, state) {
     if (r.many) { merged = true; cands.push(...r.many); } else cands.push(r.entry);
     if (r.char && !inherit) inherit = { char: r.char, outfit: r.outfit };
   }
-  if (!cands.length) return kept ? { keep: true } : { remove: "unknown" };
-  const best = [...cands].sort((a, b) => rarity(idx, a) - rarity(idx, b))[0];
+  if (!cands.length) {
+    if (direct?.entry) return { name: direct.entry.name, kind: direct.kind, entry: direct.entry };
+    return kept ? { keep: true } : { remove: "unknown" };
+  }
+  // 가장 드문(구체적인) 키워드, 같으면 뒤에 쓴 것(보통 '감정 + 동작' 순서로 붙여 씀)
+  const best = cands.map((e, i) => ({ e, i })).sort((a, b) => rarity(idx, a.e) - rarity(idx, b.e) || b.i - a.i)[0].e;
   const kind = merged && cands.length > 1 ? "merged" : (direct?.kind === "default" && cands.length === 1 ? "default" : cands.length === 1 && pieces.length === 1 ? (direct?.kind ?? "fuzzy") : "merged");
   return { name: best.name, kind, entry: best };
 }
@@ -236,8 +268,9 @@ const skipPayload = (p) => /:\/\/|^\s*(data|blob):|^\s*[/.]|\{\{|=/i.test(p);   
 // 본문 속 이미지 태그를 교정한다. opts.state = { 캐릭터 이름: { outfit } } (직전에 입던 옷), opts.unknown = "keep"이면 없는 캐릭터 태그를 지우지 않는다.
 // 돌려주는 값: { text, changed, fixes:[{ from, to, kind }] }
 export function fixImgTags(text, idx, opts = {}) {
-  const src = typeof text === "string" ? text : "";
-  if (!src || !idx?.size || !/<img\b/i.test(src)) return { text: src, changed: false, fixes: [] };
+  const orig = typeof text === "string" ? text : "";
+  if (!orig || !idx?.size || !/<img\b/i.test(orig)) return { text: orig, changed: false, fixes: [] };
+  const src = orig.replace(NESTED, '<img="[Character]">');   // 꺾쇠가 든 지침 원문 → 아래에서 원문 복사로 지움
   const keepUnknown = opts.unknown === "keep";
   const fixes = [];
   let out = "", last = 0, m;
@@ -272,9 +305,10 @@ export function fixImgTags(text, idx, opts = {}) {
     out += head; last = next; re.lastIndex = next;
     fixes.push({ from, to: null, kind: r.remove });
   }
-  if (!fixes.length) return { text: src, changed: false, fixes: [] };
+  if (!fixes.length) return { text: orig, changed: false, fixes: [] };
   out += src.slice(last);
-  return { text: out, changed: out !== src, fixes };
+  for (const f of fixes) if (f.from === '<img="[Character]">' && src !== orig) f.from = "(지침 원문)";
+  return { text: out, changed: out !== orig, fixes };
 }
 
 // 글 속 이미지 태그를 실제 에셋으로 읽는다(교정 규칙과 같게). → [{ raw, entry }]

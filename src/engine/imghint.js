@@ -40,6 +40,7 @@ export function buildHint({ idx, state, present }) {
   const stateLines = [], kwLines = [], seen = new Map();
   for (const c of present) {
     const s = state?.[c.name];
+    if (c.entries.every((e) => e.nk === "")) { stateLines.push(`- ${c.name} — name only`); continue; }
     if (isDefaultOnly(c)) { stateLines.push(`- ${c.name} — default only`); continue; }
     const outfits = [...c.outfits.values()];
     const outfit = s ? c.outfits.get(s.outfit ?? "") : outfits.length === 1 ? outfits[0] : null;
