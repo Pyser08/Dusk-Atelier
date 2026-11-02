@@ -1,4 +1,5 @@
 import { scanRisum } from '../../engine/formats/risum.js';
+import { runeSd } from '../mascot.js';
 import { readZipDirectory, readZipEntry } from '../../engine/formats/zip.js';
 import { readAssetBytes } from '../../engine/formats/bytes.js';
 import { safeFileName } from '../../engine/export.js';
@@ -66,7 +67,7 @@ export function renderTools(ctx) {
           ]), "rb-tool-backup"),
           row("history", "기록·되돌리기", "봇·모듈 변경을 되돌려요", () => ctx.go("settings", "history"), "rb-tool-history"))),
       h("section", { class: "rb-card bordered rb-sthanks", "aria-label": "스페셜 땡스" },
-        h("div", { class: "rb-sthanks-head" }, h("span", { class: "k" }, "SPECIAL THANKS"), h("b", null, "도움 주신 분들"), h("small", null, "Dusk Atelier는 아래 프로젝트들 덕분에 만들어졌어요.")),
+        h("div", { class: "rb-sthanks-head" }, runeSd("bow", "rb-rune-sd thanks"), h("span", { class: "k" }, "SPECIAL THANKS"), h("b", null, "도움 주신 분들"), h("small", null, "Dusk Atelier는 아래 프로젝트들 덕분에 만들어졌어요.")),
         h("div", { class: "rb-sthanks-grid" }, THANKS.map((c) => h("div", { class: "rb-sthanks-item", "data-credit": c.key }, h("span", { class: "emo", "aria-hidden": "true" }, c.emoji), h("span", { class: "t" }, h("b", null, c.name), h("small", null, c.desc)))))))
   );
   replace(ctx.main, h("div", { class: "rb-scroll rb-twocol" }, content));

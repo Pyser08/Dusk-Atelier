@@ -15,4 +15,5 @@ export function moodFor({ title = "", mood } = {}) {
 const img = (src, cls, size, alt = "") => h("img", { src, class: cls, alt, width: size, height: size, draggable: "false", decoding: "async" });
 export const runeFace = (mood = "basic", size = 72) => img(RUNE["face_" + (MOODS.includes(mood) ? mood : "basic")], "rb-rune-face", size);
 export const runeLogo = () => img(RUNE.logo, "rb-logo rb-rune-logo", 34, "");
+export const runeSd = (kind, cls = "rb-rune-sd") => h("img", { src: RUNE[kind] ?? RUNE.wave, class: cls, alt: "", draggable: "false", decoding: "async" });
 export const runeWave = () => h("img", { src: RUNE.wave, class: "rb-rune-wave", alt: "", draggable: "false", decoding: "async" });

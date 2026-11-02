@@ -1435,4 +1435,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-rune-bubble{padding:8px 14px;border-radius:14px;background:var(--rb-acc-soft);color:var(--rb-text);font-size:13.5px;font-weight:600;line-height:1.5;word-break:keep-all}
 .rb-onb-head.has-rune{display:flex;align-items:center;gap:14px}.rb-onb-head.has-rune .rb-rune-face{width:64px;height:64px;flex:none}
 @media (max-width:560px){.rb-rune-wave{width:120px}}
+.rb-rune-sd{display:block;height:auto;filter:drop-shadow(0 6px 12px rgba(30,20,60,.22))}
+.rb-wn-rune{display:flex;align-items:center;gap:12px}.rb-rune-sd.sm{width:64px;flex:none}
+.rb-sthanks-head{position:relative;padding-right:96px}.rb-rune-sd.thanks{position:absolute;right:14px;bottom:6px;width:70px}
 `+PROB_CSS;

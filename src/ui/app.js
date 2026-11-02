@@ -6,7 +6,7 @@ import { maybeOnboarding, openOnboarding } from './onboarding.js';
 import { runScreenTour } from './screentours.js';
 import { installTooltips } from './tooltip.js';
 import { maybeShowWhatsNew, openChangelog, CHANGELOG } from './whatsnew.js';
-import { btn, iconBtn, moreNav, openMenu, toast } from './kit.js';
+import { btn, iconBtn, moreNav, openMenu, toast, emptyState } from './kit.js';
 import { CSS2, FONT_LINK } from './styles.js';
 import { normalizeTheme, resolveMode, themeVars } from './theme.js';
 import { createPrefs } from './prefs.js';
@@ -430,7 +430,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     Promise.resolve(screen(scopeCtx(ctx, main, () => token !== renderToken))).then(() => {
       paneReady = true;
     }).catch((err) => {
-      replace(main, h("div", { class: "rb-section" }, h("div", { class: "rb-note err", role: "alert" }, icon("alert", 18), h("span", null, `화면을 열지 못했어요: ${err?.message ?? err}`))));
+      replace(main, h("div", { class: "rb-section" }, emptyState({ title: "화면을 열지 못했어요", mood: "sorry", text: String(err?.message ?? err) })));   // 1.8.3: 루네가 미안한 얼굴로
     });
   }
   async function open(opts) {

@@ -1,5 +1,6 @@
 // 업데이트 뒤 처음 열 때 "새로 바뀐 점" 창. 내용은 빌드 때 CHANGELOG.md에서 넣는다 (__CHANGELOG__)
 import { h } from './dom.js';
+import { runeSd } from './mascot.js';
 import { btn, modal } from './kit.js';
 
 var KEY = "rbm:seenVersion:v1";
@@ -66,7 +67,7 @@ export function openChangelog(ctx, entries = LOG.slice(0, 1), title = "새로 �
     cssDone = true;
   }
   return modal(ctx.win, (done) => h("div", { class: "rb-wn", role: "dialog", "aria-label": title },
-    h("div", { class: "rb-wn-top" }, h("b", null, `✨ ${title}`), h("div", { class: "rb-muted", style: "font-size:12px;margin-top:2px" }, `Dusk Atelier v${ctx.version}`)),
+    h("div", { class: "rb-wn-top rb-wn-rune" }, runeSd("cheer", "rb-rune-sd sm"), h("div", null, h("b", null, `✨ ${title}`), h("div", { class: "rb-muted", style: "font-size:12px;margin-top:2px" }, `Dusk Atelier v${ctx.version}`))),
     h("div", { class: "rb-wn-scroll" }, ...entries.flatMap((e) => [h("div", { class: "rb-wn-ver" }, `v${e.v}`, e.date ? h("small", null, e.date) : null), ...body(e.body)])),
     h("div", { class: "rb-wn-foot" }, btn("확인", { kind: "primary", onClick: () => done(true) }))));
 }
