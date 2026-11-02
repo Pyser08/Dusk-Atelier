@@ -403,4 +403,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 
 ## 2026-11-03 {{user}} 이름 표시 · 마스코트 루네
 - 기록 보기에서 {{user}} → 페르소나 이름(`db.username`, 없으면 '나'): `ui/screens/memory/username.js`(userText 조사 맞춤, `watchUserName` MutationObserver로 부분 갱신까지, 입력칸·편집 영역 제외 — 저장 값 불변). mdetail 진입 시 연결, personv2·infotab `shown()`은 `userLabel()`. 시험 `tests/username-display.test.js`, e2e `run-username.mjs`. '나에 대한 기억' 화면은 그대로 '나'.
-- 마스코트 '루네'(사용자 지정 이름, 사용자가 준 캐릭터 시트 그림): 넣을 곳 = 시작 안내 환영 화면 · 빈 화면 안내 · 창 왼쪽 위 로고. 사용자 결정: 목업 먼저 보고 결정 → 목업 진행 중.
+- 마스코트 '루네'(사용자 지정 이름, 사용자가 준 캐릭터 시트 그림): 넣을 곳 = 시작 안내 환영 화면 · 빈 화면 안내 · 창 왼쪽 위 로고. 사용자 결정: 목업 먼저 보고 결정 → 목업 완료·확인 대기(실제 앱에 얹어 찍은 '지금/개편안' PC·모바일, 사진이 커서 저장소엔 안 넣음). 쓸 그림: 시트에서 자른 표정 4(기본·웃음·놀람·부끄러움)·SD 루네·고양이 정령(배경 투명)·로고 2(고양이/얼굴), webp로 합계 약 40KB. 구현 시: `ui/mascot.js`에 data URL로 넣고 `.rb-logo`(app.js 132줄)·시작 안내 0단계 `.rb-onb-logo`(onboarding.js 251줄)·kit `emptyState`의 `.ico`를 바꿈. 확인할 것: 말풍선 문구, 빈 화면 표정(같게/상황별), 로고(고양이/얼굴).
