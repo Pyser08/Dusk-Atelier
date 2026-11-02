@@ -9,7 +9,7 @@ export const AFF_KEYS = ["aff", "aff_d", "aff_min", "aff_max"];
 
 export function hudHtml() {
   return `${MARK_A}<style>
-.dafx-aff{position:fixed;top:12px;right:12px;z-index:50;font:13px/1.3 system-ui,sans-serif;color:#eee}
+.dafx-aff{position:fixed;top:max(112px, calc(env(safe-area-inset-top) + 100px));right:max(12px, env(safe-area-inset-right));z-index:50;font:13px/1.3 system-ui,sans-serif;color:#eee}
 .dafx-aff>summary{list-style:none;cursor:pointer;width:34px;height:34px;border-radius:50%;margin-left:auto;display:flex;align-items:center;justify-content:center;font-size:16px;background:rgba(18,16,28,.78);border:1px solid rgba(160,140,255,.35);backdrop-filter:blur(6px)}
 .dafx-aff>summary::-webkit-details-marker{display:none}
 .dafx-aff[open]>summary{border-color:rgba(180,124,255,.9)}

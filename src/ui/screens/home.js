@@ -39,6 +39,8 @@ export async function renderHome(ctx) {
   const redraw = () => renderHome(ctx);
   const refreshStatus = async () => {
     try { s = await readState(ctx); } catch { /* keep last state */ }
+    // '모든 채팅' 스위치는 다시 그릴 때 새로 만들므로 저장된 최신 값으로 다시 읽는다(예전 값으로 그리면 눌러도 되돌아감)
+    if (globalOn !== null) { try { globalOn = memoryGlobalOn(s.idx ?? await s.M.store.getIndex()); } catch { /* keep last value */ } }
     if (!s.cur) memoryStatus = statusCard("off", "채팅을 열면 여기에 기억 상태가 보여요.");
     else {
       const { sw, idx, last } = s;

@@ -32,7 +32,7 @@ export const DESIGN_SYSTEM = `너는 RisuAI 채팅 화면에 뜨는 호감도 HU
 - {{#if {{greater::{{getvar::aff_d}}::0}}}}…{{/if}} 와 {{#if {{less::{{getvar::aff_d}}::0}}}}…{{/if}} 두 조건 (증가·감소 표시)
 - 게이지 폭: style="width:clamp(0%,{{calc::…}}%,100%)" 모양 (식은 현재 것을 그대로)
 - 바깥은 <details class="dafx-aff"> 하나 + <summary> (작은 버튼을 누르면 카드가 펼쳐진다). 모든 class는 dafx- 로 시작한다.
-- 위치는 position:fixed (기본 우측 상단). 위치를 바꾸라는 요청이 없으면 유지한다.
+- 위치는 position:fixed (기본 우측, 위에서 약 112px 아래 — 우측 상단의 다른 플로팅 버튼과 겹치지 않게). 위치를 바꾸라는 요청이 없으면 유지한다.
 
 [금지] <script>, on*= 속성, javascript:, @import, 외부 주소(http) 이미지·폰트·url(), iframe/form/input. 이미지는 {{source::char}} 하나만 쓴다.
 

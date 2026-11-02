@@ -130,3 +130,12 @@ test("프롬프트: 자리표시자가 모두 채워지고 기준 메모·프로
   assert.ok(!/\{(markA|markB|macros|max|request|current)\}/.test(d));
   assert.match(d, /핑크/); assert.match(d, /DAFX-AFF/);
 });
+
+test("hudHtml: 기본 위치가 우측 상단 플로팅 버튼(Yumi Translator 등)과 겹치지 않게 아래로 내려가 있다", () => {
+  const css = hudHtml().match(/\.dafx-aff\{[^}]*\}/)[0];
+  assert.match(css, /position:fixed/);
+  assert.doesNotMatch(css, /top:12px/);
+  assert.match(css, /top:max\(112px,\s*calc\(env\(safe-area-inset-top\)\s*\+\s*100px\)\)/);
+  assert.match(css, /right:max\(12px,\s*env\(safe-area-inset-right\)\)/);
+  assert.equal(validateHud(hudHtml()).ok, true);
+});

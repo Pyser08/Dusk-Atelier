@@ -1,0 +1,26 @@
+// 홈 '장기 기억(모든 채팅)' 스위치: 누르면 저장되고, 상태 줄을 다시 그린 뒤에도 바뀐 값이 유지되는지 (실제 클릭)
+import { createRequire } from "node:module";
+import { build } from "/opt/npm-tools/node_modules/esbuild/lib/main.js";
+const { chromium } = createRequire("/opt/npm-tools/node_modules/")("playwright");
+const r = await build({ entryPoints: ["tests/e2e/app.entry.js"], bundle: true, write: false, format: "iife", platform: "browser", logLevel: "error", define: { __VERSION__: '"test"', __CHANGELOG__: '""' }, alias: { fflate: process.cwd() + "/src/vendor/fflate.js" }, loader: { ".json": "json" } });
+const out = [], ok = (n, c, x = "") => { out.push(c); console.log((c ? "✔ " : "✘ ") + n + (c ? "" : "  → " + x)); };
+const browser = await chromium.launch();
+const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage(); page.setDefaultTimeout(5000);
+const errs = []; page.on("pageerror", (e) => errs.push(e.message));
+await page.setContent("<!doctype html><body style='margin:0'></body>"); await page.addScriptTag({ content: r.outputFiles[0].text });
+await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true }) }, { memory: true, story: true }));
+await page.waitForTimeout(400);
+const sw = () => page.locator(".rb-hstat-memory [role=switch]");
+const injectOn = () => page.evaluate(async () => (await __app.ctx.memory.store.getIndex()).settings?.inject?.on);
+const statusText = () => page.locator(".rb-hstat-memory").textContent();
+ok("처음엔 켜짐", (await sw().getAttribute("aria-checked")) === "true");
+await sw().click(); await page.waitForTimeout(400);
+ok("끄면 저장됨", (await injectOn()) === false, String(await injectOn()));
+ok("다시 그린 뒤에도 스위치가 꺼짐으로 남음", (await sw().getAttribute("aria-checked")) === "false", await sw().getAttribute("aria-checked"));
+ok("상태 줄도 '꺼져 있어요'", /꺼져 있어요/.test(await statusText()), await statusText());
+await sw().click(); await page.waitForTimeout(400);
+ok("다시 켜면 저장됨", (await injectOn()) === true, String(await injectOn()));
+ok("다시 그린 뒤에도 스위치가 켜짐으로 남음", (await sw().getAttribute("aria-checked")) === "true", await sw().getAttribute("aria-checked"));
+ok("오류 없음", !errs.length, errs.join(";"));
+await browser.close();
+process.exit(out.every(Boolean) ? 0 : 1);
