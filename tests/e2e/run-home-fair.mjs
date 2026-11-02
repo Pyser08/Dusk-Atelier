@@ -1,0 +1,25 @@
+// 홈 빠른 설정: 공정한 전개가 꺼진 채 유저 편향 없애기를 켜면 공정한 전개도 함께 켜지는지 (실제 클릭)
+import { createRequire } from "node:module";
+import { build } from "/opt/npm-tools/node_modules/esbuild/lib/main.js";
+const { chromium } = createRequire("/opt/npm-tools/node_modules/")("playwright");
+const r = await build({ entryPoints: ["tests/e2e/app.entry.js"], bundle: true, write: false, format: "iife", platform: "browser", logLevel: "error", define: { __VERSION__: '"test"', __CHANGELOG__: '""' }, alias: { fflate: process.cwd() + "/src/vendor/fflate.js" }, loader: { ".json": "json" } });
+const out = [], ok = (n, c, x = "") => { out.push(c); console.log((c ? "✔ " : "✘ ") + n + (c ? "" : "  → " + x)); };
+const browser = await chromium.launch();
+const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage(); page.setDefaultTimeout(5000);
+const errs = []; page.on("pageerror", (e) => errs.push(e.message));
+await page.setContent("<!doctype html><body style='margin:0'></body>"); await page.addScriptTag({ content: r.outputFiles[0].text });
+await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true }) }));
+await page.waitForTimeout(300);
+const sw = (name) => page.locator(`.rb-story-helper [role=switch][aria-label='${name}']`);
+const store = (k) => page.evaluate((k) => __api.store[k], k);
+ok("처음엔 둘 다 꺼짐", (await sw("공정한 전개").getAttribute("aria-checked")) === "false" && (await sw("유저 편향 없애기").getAttribute("aria-checked")) === "false");
+await sw("유저 편향 없애기").click(); await page.waitForTimeout(200);
+ok("유저 편향을 켜면 공정한 전개 스위치도 켜짐", (await sw("공정한 전개").getAttribute("aria-checked")) === "true" && (await sw("유저 편향 없애기").getAttribute("aria-checked")) === "true");
+ok("두 설정 모두 저장됨", (await store("dusk.ui.fairPlay")) === "on" && (await store("dusk.ui.fairDice")) === "on", `${await store("dusk.ui.fairPlay")}/${await store("dusk.ui.fairDice")}`);
+ok("이유 안내가 뜸", /공정한 전개도 함께 켰어요/.test(await page.locator(".rb-toasts").textContent()));
+await sw("유저 편향 없애기").click(); await page.waitForTimeout(150);
+await sw("유저 편향 없애기").click(); await page.waitForTimeout(200);
+ok("공정한 전개가 이미 켜져 있으면 함께 켰다는 안내는 다시 안 뜸", /다음 요청부터 적용돼요/.test(await page.locator(".rb-toasts > *").last().textContent()));
+ok("오류 없음", !errs.length, errs.join(";"));
+await browser.close();
+process.exit(out.every(Boolean) ? 0 : 1);

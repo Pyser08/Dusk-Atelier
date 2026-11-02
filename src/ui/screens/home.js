@@ -3,7 +3,7 @@ import { maybePromptIntro } from './promptstab.js';
 import { readState } from "./homestate.js";
 import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
-import { btn, statusCard, switchEl, loading } from '../kit.js';
+import { btn, statusCard, switchEl, setSwitch, loading } from '../kit.js';
 import { CHANGELOG, openChangelog } from '../whatsnew.js';
 import { openTour } from '../tour.js';
 import { injectLine } from '../../engine/memoryusage.js';
@@ -116,10 +116,13 @@ export async function renderHome(ctx) {
   const rec = s.cur ? recentOf(s.folder) : [];
   const [fairOn, diceOn, stOn] = await storyStatePromise;
   const failStory = (e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
+  // 유저 편향 없애기는 공정한 전개 위에서만 작동 → 공정한 전개가 꺼져 있으면 함께 켜고 이유를 알린다
+  let fairCur = !!fairOn, fairSw = null;
   const setFair = async (v) => {
     try {
       if (ctx.fairPlay) await ctx.fairPlay.set(v);
       else await ctx.api.pluginStorage.setItem("dusk.ui.fairPlay", v ? "on" : "off");
+      fairCur = !!v;
       ctx.toast(v ? "공정한 전개를 켰어요. 다음 요청부터 적용돼요." : "공정한 전개를 껐어요.");
     } catch (e) { failStory(e); }
   };
@@ -127,7 +130,12 @@ export async function renderHome(ctx) {
     try {
       if (ctx.fairPlay) await ctx.fairPlay.setDice(v);
       else await ctx.api.pluginStorage.setItem(DICE_KEY, v ? "on" : "off");
-      ctx.toast(v ? "유저 편향 없애기를 켰어요. 공정한 전개가 켜져 있을 때 다음 요청부터 적용돼요." : "유저 편향 없애기를 껐어요.");
+      if (v && !fairCur) {
+        if (ctx.fairPlay) await ctx.fairPlay.set(true);
+        else await ctx.api.pluginStorage.setItem("dusk.ui.fairPlay", "on");
+        fairCur = true; if (fairSw) setSwitch(fairSw, true);
+        ctx.toast("유저 편향 없애기를 켰어요. 공정한 전개 위에서 작동해서 공정한 전개도 함께 켰어요.");
+      } else ctx.toast(v ? "유저 편향 없애기를 켰어요. 다음 요청부터 적용돼요." : "유저 편향 없애기를 껐어요.");
     } catch (e) { failStory(e); }
   };
   const setImgFix = async (v) => {
@@ -159,7 +167,7 @@ export async function renderHome(ctx) {
     } })
   );
   const storyHelper = h("section", { class: "rb-card bordered rb-story-helper" },
-    storyRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair),
+    (() => { const row = storyRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair); fairSw = row.querySelector("[role=switch]"); return row; })(),
     storyRow("유저 편향 없애기", "캐릭터가 나만 편들지 않게 해요.", diceOn, setDice),
     storyRow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요.", stOn, setStory),
     ctx.imgFix ? storyRow("이미지 태그 자동 교정", "AI가 틀리게 쓴 에셋 이미지 태그를 이 봇의 실제 에셋 이름으로 고쳐요.", ctx.imgFix.isOn(), setImgFix) : null,
