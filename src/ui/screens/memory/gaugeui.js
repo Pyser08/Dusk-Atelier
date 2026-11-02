@@ -24,6 +24,13 @@ function snapFor(env, defs, doc, p) {
   return out;
 }
 
+// v1.8.3 인물 위키 요약용: 이 인물에게 적용되는 게이지 값만 가볍게(버튼 없이) 돌려준다.
+export async function gaugeRows(env, doc, p) {
+  const S = svc(env); if (!S) return [];
+  const defs = await S.getDefs(chaOf(env)), by = new Map(defs.map((d) => [d.id, d]));
+  return snapFor(env, defs, doc, p).map((s) => { const d = by.get(s.g); return { name: d.name, icon: d.look?.icon || "", hue: d.look?.hue ?? 265, v: s.v, min: d.min, max: d.max }; });
+}
+
 export function gaugeBlock(env, doc, p) {
   const S = svc(env), root = h("div", { class: "rb-gauge-block", style: "grid-column:1/-1" });
   if (!S) return root;

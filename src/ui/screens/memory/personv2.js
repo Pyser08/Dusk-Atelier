@@ -20,7 +20,10 @@ const topic = (name) => name + (batchim(name) ? "은" : "는");   // 은/는
 const obj = (name) => { const c = String(name ?? "").trim().slice(-1).charCodeAt(0); return name + (c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 ? "을" : "를"); };
 const shown = (n) => (n === "{{user}}" ? "나" : n);
 
-// parts: { r, doc, p, header(액션 버튼 묶음 또는 null), infoBlocks:[], logBlocks:[] }
+const nk = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, "");
+const pct = (v, min, max) => Math.max(0, Math.min(100, ((v - min) / Math.max(1, max - min)) * 100));
+
+// parts: { r, doc, p, header(액션 버튼 묶음 또는 null), metrics:[{label,slot,value,min,max,stage,targets}], gauges:()=>Promise<[{name,icon,hue,v,min,max}]>, infoBlocks:[], logBlocks:[] }
 export function personTabs(env, parts) {
   const { ctx } = env, m = mem(ctx), f = env.folder;
   const { r, doc, p } = parts;
@@ -42,9 +45,28 @@ export function personTabs(env, parts) {
   const profileText = (env.folder.wiki?.people?.profiles?.[doc?.id]?.summary) || p?.digest || "";
   const track = (s, small) => h("span", { class: ["rb-wk2-trk", small && "sm"], role: "img", "aria-label": `관계 진도 ${stageName(s)}` }, STAGES.map((_, i) => h("i", { class: i <= stageIdx(s) ? "on" : "" })));
   const goPair = (name) => { withSel[pk] = name; tabs[pk] = "rel"; paint(); };
+  // 수치(리수폿 호감도·첫인상·음란도·의심도 등)와 직접 만든 게이지
+  const metrics = parts.metrics ?? [];
+  const metricRow = (x, withTarget) => h("div", { class: "rb-wk2-num" }, h("span", { class: "n" }, x.label, withTarget && x.targets.length ? h("small", { class: "rb-muted" }, ` · ${x.targets.map(shown).join(" → ")}`) : null),
+    h("span", { class: "track", role: "progressbar", "aria-label": x.label, "aria-valuemin": x.min, "aria-valuemax": x.max, "aria-valuenow": x.value }, h("i", { style: { width: `${pct(x.value, x.min, x.max)}%` } })),
+    h("small", { class: "v" }, `${x.value}/${x.max}`), x.stage ? h("small", { class: "rb-muted s" }, x.stage) : null);
+  let gauges = null;   // 한 번만 불러온다
+  const gaugeBox = h("div", { class: "rb-wk2-nums" });
+  const fillGauges = () => {
+    const rows = (gauges ?? []).map((g) => h("div", { class: "rb-wk2-num g" }, h("span", { class: "n" }, g.icon ? g.icon + " " : "", g.name),
+      h("span", { class: "track", role: "progressbar", "aria-label": g.name, "aria-valuemin": g.min, "aria-valuemax": g.max, "aria-valuenow": g.v }, h("i", { style: { width: `${pct(g.v, g.min, g.max)}%`, background: `hsl(${g.hue} 70% 62%)` } })),
+      h("small", { class: "v" }, `${g.v}/${g.max}`)));
+    gaugeBox.replaceChildren(...rows);
+    numCard.hidden = !metrics.length && !rows.length;
+  };
+  const numCard = card("수치 한눈에", [h("div", { class: "rb-wk2-nums" }, metrics.map((x) => metricRow(x, true))), gaugeBox],
+    h("button", { type: "button", class: "rb-wk2-link", onClick: () => { tabs[pk] = "info"; paint(); } }, "자세히"));
+  numCard.hidden = !metrics.length;
+  if (parts.gauges) Promise.resolve().then(parts.gauges).then((g) => { gauges = g ?? []; fillGauges(); }).catch(() => {});
   const summary = () => h("div", { class: "rb-wk2-sum" },
     card(`지금의 ${me}`, [profileText ? h("p", { class: "rb-wk2-p" }, profileText) : h("p", { class: "rb-muted" }, "아직 요약이 없어요. 상세 정보에서 기본 성격을 만들거나 ‘요약 정리’를 눌러 보세요."),
       attrs.length ? h("div", { class: "rb-wk2-chips" }, attrs.map((a) => h("span", { class: "rb-wk2-chip" }, h("small", null, a.label), " ", a.v))) : null]),
+    numCard,
     changesOf(person).length ? card("이전과 달라진 점", h("div", { class: "rb-wk2-chg" }, changesOf(person).map((c) => [h("small", null, c.label), h("span", null, h("s", null, c.from), h("i", { class: "arr", "aria-hidden": "true" }, "→"), h("b", null, c.to))]).flat())) : null,
     people.length ? card("관계 한눈에", h("div", { class: "rb-wk2-glance" }, people.slice(0, 6).map((x) => h("button", { type: "button", class: "rb-wk2-gl", onClick: () => goPair(x.name) }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), track(x.stage, true), h("small", { class: `st-${stageIdx(x.stage)}` }, stageName(x.stage)))))) : null,
     p ? card("기억에 남은 순간", h("div", { class: "rb-wk2-mom" }, momentsOf(person, now).map(({ r: rec, earlier, vague }) => h("div", { class: ["rb-wk2-mrow", vague && "vague"] }, h("span", { class: `rb-wk2-g g-${rec.g}`, title: GRADE_TIP[rec.g] ?? "" }, rec.g ?? "-"),
@@ -68,6 +90,7 @@ export function personTabs(env, parts) {
     }) : [];
     return card(`${subj(a)} ${b}에게 느끼는 감정`, [
       rows.length ? rows : h("p", { class: "rb-muted" }, "아직 기록된 감정이 없어요."),
+      rows.length && rows.length < EMO_TAGS.length ? h("small", { class: "rb-muted rb-wk2-unset" }, `아직 없음 · ${EMO_TAGS.filter((t) => fv.stored[t] == null).map((t) => EMO_LABEL[t]).join(" · ")}`) : null,
       ...(fv?.cooled ?? []).map((c) => h("div", { class: "rb-wk2-note cool" }, `${subj(EMO_LABEL[c.tag])} 시간이 지나 ${c.from} → ${c.to}로 식었어요`)),
       h("button", { type: "button", class: "rb-wk2-link", onClick: () => { rev[pk + "|" + other] = !back; paint(); } }, back ? `${subj(me)} ${shown(other)}에게 느끼는 감정 보기` : `${subj(shown(other))} ${me}에게 느끼는 감정 보기`)],
       btn("고치기", { size: "sm", onClick: edit }));
@@ -111,6 +134,7 @@ export function personTabs(env, parts) {
         card("관계 진도", [h("div", { class: "rb-wk2-steps", role: "img", "aria-label": `지금 ${STAGES[si][1]}` }, STAGES.map(([, l], i) => h("span", { class: ["st", i < si && "past", i === si && "now"] }, h("i", null), h("small", null, l)))),
           h("p", { class: "rb-muted" }, `함께한 장면 ${v.stage.shared}번${si <= 1 ? " · 아직 가깝지 않아서, AI가 갑자기 너무 친해지지 않게 해요." : ""}`)]),
         feelCard(v, other),
+        ((ms) => ms.length ? card("수치", ms.map((x) => metricRow(x, true))) : null)(metrics.filter((x) => x.targets.some((t) => nk(t) === nk(other)))),
         card("호칭 · 말투", [talkRow(v.talk.ab, me, other), h("hr", { class: "rb-wk2-hr" }), talkRow(v.talk.ba, other, me)]),
         card("둘만의 추억", v.bonds.length ? v.bonds.map(bondItem) : h("p", { class: "rb-muted" }, "아직 없어요. 둘에게 의미 있는 순간이 생기면 쌓여요.")),
         v.exp ? card("기대 차이", h("div", { class: "rb-wk2-exp" }, [[v.exp.a, v.exp.ae, v.exp.as], [v.exp.b, v.exp.be, v.exp.bs]].map(([n, e, said]) => h("div", null, h("small", { class: "rb-muted" }, `${topic(shown(n))}`), h("span", null, e), h("small", { class: "rb-muted" }, said ? "말로 했어요" : "말하지 않았어요"))))) : null,

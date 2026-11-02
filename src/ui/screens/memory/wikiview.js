@@ -15,7 +15,7 @@ import { renderPeople, personDetail, wikiEditable, editMetric, editWikiText, pin
 import { openRecords } from "./recordsui.js";
 import { openAITools, openFieldAI, openImport, fillEmptyPeople } from "./aitools.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX } from "../../../engine/memoryemo.js";
-import { gaugeBlock } from "./gaugeui.js";
+import { gaugeBlock, gaugeRows } from "./gaugeui.js";
 import { wikiPanel } from "./wikipanel.js";
 import { openWikiLog } from "./wikilog.js";
 import { liveScope } from "./advanced.js";
@@ -300,7 +300,9 @@ function personPage(env, r, docs, commit) {
   // v1.8.3 개편: 탭(요약 / 관계 / 상세 정보 / 기록). 기존 블록은 상세 정보·기록 탭으로 그대로 옮긴다.
   const actions = ed ? h("span", { class: "rb-mem-rowact" }, btn("요약 정리", { size: "sm", onClick: () => aiOpen("refresh") }), btn("직접 지시하기", { size: "sm", onClick: () => aiOpen("command") }),
     btn("인물 삭제", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: `${r.name} 인물을 지울까요?`, body: "인물 문서와 기본 성격이 함께 지워져요. 📌 고정한 항목이 남아 있으면 먼저 풀어야 해요.", ok: "삭제", danger: true })) { m.wkSel = ""; commit((w) => removePerson(w, doc.id), "지웠어요."); } } })) : null;
-  return h("div", { class: "rb-wk-page" }, personTabs(env, { r, doc, p, header: actions,
+  const slotLabel = Object.fromEntries(METER_SLOTS.map(([s, l]) => [s, l]));
+  const metrics = (doc?.metrics ?? []).map((x) => ({ label: slotLabel[x.slotId] ?? x.slotId, slot: x.slotId, value: x.value, min: x.minimum ?? 0, max: x.maximum ?? 100, stage: x.stageLabel ?? "", targets: (x.targetRefs ?? []).map(nameOf).filter(Boolean) }));
+  return h("div", { class: "rb-wk-page" }, personTabs(env, { r, doc, p, header: actions, metrics, gauges: () => gaugeRows(env, doc, p),
     infoBlocks: [...blocks, ed && env.advanced ? wikiPanel(env, doc) : null],
     logBlocks: [manage(), story ? section("story", "이야기 기록", story, null, null, "사건 · 관계 · 상태 · 약속을 한 목록으로 봐요. 항목 오른쪽 ‘수정’으로 고치거나 지워요.") : null] }));
 }
