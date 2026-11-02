@@ -27,7 +27,7 @@ export function sigOf(entries) {
   return `${entries?.length ?? 0}:${h.toString(36)}`;
 }
 
-const emptyPlan = (entries) => ({ sig: sigOf(entries), affs: [], places: [], flags: [], notes: [] });
+const emptyPlan = (entries) => ({ sig: sigOf(entries), affs: [], places: [], flags: [], keyFixes: [], notes: [] });
 const isLeaf = (e) => e && !isFolder(e) && !isPlace(e) && !dividerName(e);
 
 // ---------- 1) 규칙 기반: 구분선 → 소속 ----------
@@ -183,13 +183,94 @@ const withRule = (e, patch) => {
   e.extentions.da_rule = { ...(ruleOf(e) ?? defaultRule()), on: true, ...patch };
 };
 
+// ---------- 키 정리: 정규식으로 쓴 키·소속 이름이 섞인 키를 평범한 이름 키로 ----------
+// 이름 경계·소속·흔한 낱말 이름이 플러그인에서 처리되므로 '피스(?:가|는|…)' 같은 조사 나열은 필요 없다.
+const isRegexKey = (k) => /^\/.+\/[a-z]*$/s.test(k);
+// 쉼표로 나누되 괄호·대괄호·중괄호 안의 쉼표는 나누지 않는다
+export function splitKeyList(str) {
+  const out = []; let depth = 0, cur = "", esc = false;
+  for (const ch of String(str ?? "")) {
+    if (esc) { cur += ch; esc = false; continue; }
+    if (ch === "\\") { cur += ch; esc = true; continue; }
+    if ("([{".includes(ch)) depth++; else if (")]}".includes(ch)) depth = Math.max(0, depth - 1);
+    if (ch === "," && depth === 0) { if (cur.trim()) out.push(cur.trim()); cur = ""; } else cur += ch;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
+// /(?<![가-힣])피스(?:(?![가-힣])|가|는)/ → ["피스"]. 풀 수 없는 정규식이면 null.
+export function plainWordsOfRegex(key) {
+  const m = /^\/(.+)\/([a-z]*)$/s.exec(clean(key));
+  if (!m) return null;
+  let b = m[1].replace(/\(\?<?[=!][^()]*\)/g, "").replace(/\\b/g, "");
+  for (let i = 0; i < 4; i++) b = b.replace(/\(\?:[^()]*\)[?*]?/g, "");
+  b = b.trim();
+  if (!b) return null;
+  const parts = b.split("|").map((x) => x.trim());
+  if (!parts.every((x) => x && !/[\\^$.*+?()[\]{}|]/.test(x))) return null;
+  return parts;
+}
+// 키 하나 항목의 정리안. affNames는 이 항목이 속한 소속(상위 포함)의 이름들.
+export function cleanKeyString(key, affNames = []) {
+  const keys = splitKeyList(key), out = [], why = new Set(); let allPlain = true, korean = false;
+  const aff = affNames.map(normName).filter(Boolean);
+  const push = (w) => { if (w && !out.some((x) => x.toLowerCase() === w.toLowerCase())) out.push(w); };
+  for (const k of keys) {
+    let words = [k];
+    if (isRegexKey(k)) {
+      const w = plainWordsOfRegex(k);
+      if (!w) { allPlain = false; push(k); continue; }
+      words = w; why.add("정규식 키를 이름으로");
+      if (words.some((x) => /[가-힣]/.test(x))) korean = true;
+    }
+    for (let w of words) {
+      const n = normName(w);
+      if (aff.includes(n)) { why.add("소속 이름 키 제거"); continue; }
+      const pre = affNames.find((a) => clean(a) && w.startsWith(clean(a) + " "));
+      if (pre) { w = w.slice(clean(pre).length).trim(); why.add("키에서 소속 이름 뺌"); if (!w) continue; }
+      push(w);
+    }
+  }
+  return { after: out.join(", "), regexOff: allPlain, whole: korean, why: [...why] };
+}
+// 소속 이름 목록: 이 항목이 구성원인 소속과 그 상위 소속
+function affNamesOf(plan, idx) {
+  const names = [], seen = new Set();
+  let a = plan.affs.find((x) => x.members.includes(idx));
+  while (a && !seen.has(a.id)) { seen.add(a.id); names.push(a.name); a = a.parent ? plan.affs.find((x) => x.id === a.parent) : null; }
+  return names;
+}
+export function keyFixes(entries, plan) {
+  const out = [];
+  entries.forEach((e, i) => {
+    if (!isLeaf(e) || !clean(e.key)) return;
+    const r = cleanKeyString(e.key, affNamesOf(plan, i));
+    if (!r.why.length || !r.after) return;
+    const regexChanged = !!e.useRegex && r.regexOff;
+    if (r.after === clean(e.key) && !regexChanged) return;
+    out.push({ idx: i, before: clean(e.key), after: r.after, regexOff: r.regexOff && !!e.useRegex, whole: r.whole, why: r.why, checked: true });
+  });
+  return out;
+}
+export const keyOnlyPlan = (entries) => { const p = emptyPlan(entries); p.keyFixes = keyFixes(entries, p); return p; };
+// 기본 확인 단어: 흔한 낱말 이름이 다른 뜻으로 쓰이지 않게 확인하는 말 (항목 이름·다른 키·소속 이름)
+export function defaultConfirmWords(entry, affNames = []) {
+  const key = splitKeyList(entry?.key).map((k) => (isRegexKey(k) ? (plainWordsOfRegex(k) ?? [k]) : [k])).flat();
+  const nm = clean(entry?.comment).replace(/^\[(소속|장소)\]\s*/, "");
+  const out = [];
+  const add = (w) => { w = clean(w); if (w && w.length >= 2 && !key.some((k) => k === w) && !out.includes(w)) out.push(w); };
+  if (nm && !key.includes(nm)) add(nm);
+  affNames.forEach(add);
+  return out.slice(0, 6).join(", ");
+}
+
 // 체크된 것만 적용. 결과 내용 머리(@@activate·{{#if}})는 에디터의 syncRuleContent가 맞춘다.
 export function applyPlan(entries, plan) {
   if (plan.sig !== sigOf(entries)) throw new Error("분석한 뒤 로어북이 바뀌었어요. 다시 분석해 주세요.");
   const out = structuredClone(entries);
   const on = plan.affs.filter((a) => a.checked);
   const folders = new Map();
-  const sum = { affs: 0, members: 0, places: 0, newPlaces: 0, flags: 0, dividers: 0 };
+  const sum = { affs: 0, members: 0, places: 0, newPlaces: 0, flags: 0, dividers: 0, keys: 0 };
   for (const a of on) {
     const f = newAffEntry(a.name, a.def);
     if (a.max !== "" && a.max != null) f.extentions.da_folder.aff.max = a.max;
@@ -250,8 +331,16 @@ export function applyPlan(entries, plan) {
     if (!out[f.idx]) continue;
     const patch = {};
     if (f.whole) patch.whole = true;
-    if (f.common) Object.assign(patch, { common: true, commonKeys: f.keys ?? "", commonWords: f.words ?? "" });
+    if (f.common) Object.assign(patch, { common: true, commonKeys: f.keys ?? "", commonWords: f.words || defaultConfirmWords(entries[f.idx], plan.affs.filter((a) => a.checked && a.members.includes(f.idx)).map((a) => a.name)) });
     if (Object.keys(patch).length) { withRule(out[f.idx], patch); sum.flags++; }
+  }
+  for (const k of (plan.keyFixes ?? []).filter((x) => x.checked)) {
+    const e = out[k.idx];
+    if (!e) continue;
+    e.key = k.after;
+    if (k.regexOff) e.useRegex = false;
+    if (k.whole) withRule(e, { whole: true });
+    sum.keys++;
   }
   const result = [];
   out.forEach((e, i) => {
@@ -264,7 +353,7 @@ export function applyPlan(entries, plan) {
 
 export const summaryText = (s) => [
   s.affs && `소속 ${s.affs}개`, s.members && `구성원 ${s.members}명`, s.places && `장소 ${s.places}개`,
-  s.newPlaces && `새 장소 ${s.newPlaces}개`, s.flags && `이름 설정 ${s.flags}건`, s.dividers && `구분선 ${s.dividers}개 정리`
+  s.newPlaces && `새 장소 ${s.newPlaces}개`, s.flags && `이름 설정 ${s.flags}건`, s.keys && `키 정리 ${s.keys}건`, s.dividers && `구분선 ${s.dividers}개 정리`
 ].filter(Boolean).join(" · ") || "바뀐 것 없음";
 
 // 더스크화는 이미 만들어진 봇을 바꾸는 일이라, 같은 봇의 설정(설명·성격·시나리오·첫 메시지·변수·정규식·트리거·배경 HTML)을 읽기 전용으로 모두 참고시킨다. 전체 글자 수만 제한한다.

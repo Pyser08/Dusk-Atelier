@@ -139,3 +139,29 @@ test("참고 글: 설명·성격·변수 등 기본 설정도 담고, 전체 길
   assert.match(ref, /다정한 선생님/); assert.match(ref, /affinity=0/); assert.match(ref, /이름만/);
   assert.ok(referenceText({ fields: { desc: "가".repeat(5000) }, background: "x".repeat(9000), max: 500 }).length <= 500);
 });
+
+import { plainWordsOfRegex, cleanKeyString, keyFixes as _kf, keyOnlyPlan as _kop, defaultConfirmWords, applyPlan as _ap, splitKeyList } from "../src/engine/loredusk.js";
+const PEACE = "/(?<![가-힣])피스(?:(?![가-힣])|가|는|를|의|에|한테|께|도|와|랑|하고|만|씨|님|야|여|로|처럼|보다|까지|부터|라고|라는|라면|란|예요|였|다(?![가-힣])|요(?![가-힣])|죠|입니|이라|인|이었|이에|이야|이지|조차|마저|뿐|밖에)/,/(?<![A-Za-z])Pith(?![A-Za-z])/i,/术髓/,/ピス/";
+test("키 정리: 조사 나열 정규식 → 이름 키", () => {
+  assert.deepEqual(plainWordsOfRegex("/(?<![A-Za-z])Pith(?![A-Za-z])/i"), ["Pith"]);
+  assert.equal(plainWordsOfRegex("/a.+b/"), null);
+  assert.equal(splitKeyList(PEACE).length, 4);
+  const r = cleanKeyString(PEACE, []);
+  assert.equal(r.after, "피스, Pith, 术髓, ピス"); assert.equal(r.regexOff, true); assert.equal(r.whole, true);
+});
+test("키 정리: 소속 이름 키 제거·접두 제거, 못 푸는 정규식은 그대로", () => {
+  assert.equal(cleanKeyString("학생회, 학생회 피스, 피스", ["학생회"]).after, "피스");
+  assert.equal(cleanKeyString("/a.+b/, 이름", []).after, "/a.+b/, 이름");
+  assert.equal(cleanKeyString("/a.+b/, 이름", []).regexOff, false);
+});
+test("키 정리: 계획 → 적용, 되돌릴 원본은 건드리지 않음", () => {
+  const entries = [{ comment: "피스", key: PEACE, content: "c", useRegex: true }, { comment: "민", key: "민", content: "d" }];
+  const plan = _kop(entries);
+  assert.equal(plan.keyFixes.length, 1);
+  const r = _ap(entries, plan);
+  assert.equal(r.entries[0].key, "피스, Pith, 术髓, ピス"); assert.equal(r.entries[0].useRegex, false);
+  assert.equal(entries[0].key, PEACE); assert.equal(r.summary.keys, 1);
+});
+test("기본 확인 단어: 항목 이름·소속 이름 (키와 같은 말은 뺌)", () => {
+  assert.equal(defaultConfirmWords({ comment: "강하늘", key: "하늘, 하늘이" }, ["검도부"]), "강하늘, 검도부");
+});

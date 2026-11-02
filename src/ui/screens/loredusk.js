@@ -2,7 +2,7 @@
 // 이 창은 목록을 직접 고치지 않는다. 적용할 결과(entries)만 돌려주고, 에디터가 초안에 반영한다(저장 전까지는 되돌릴 수 있다).
 import { h, replace } from '../dom.js';
 import { btn, modal, note, progressBar } from '../kit.js';
-import { applyPlan, batchMessages, batches, mergeAnalysis, parseAnalysis, rulePlan, summaryText } from '../../engine/loredusk.js';
+import { applyPlan, keyFixes, keyOnlyPlan, batchMessages, batches, mergeAnalysis, parseAnalysis, rulePlan, summaryText } from '../../engine/loredusk.js';
 import { runAI } from '../../engine/runai.js';
 import { loadPB } from '../../data/personabuilder.js';
 import { getCfg as getModelCfg } from '../../data/modelhub.js';
@@ -35,6 +35,9 @@ export async function openLoreDusk(ctx, { list, reference = "" }) {
         h("div", { class: "rb-card", style: "padding:10px 12px;display:flex;flex-direction:column;gap:8px" },
           h("b", null, "AI로 분석"), h("div", { class: "rb-muted" }, "사람·소속·장소를 나누고, 겹치는 이름은 이름 경계로, 빠진 장소는 새 항목으로 제안해요. 항목이 많으면 120개씩 나눠 보내요."),
           instr, h("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" }, btn("AI 분석 시작", { kind: n ? "" : "primary", onClick: analyze }))),
+        h("div", { class: "rb-card", style: "padding:10px 12px" },
+          h("b", null, "키 정리 (AI 없이)"), h("div", { class: "rb-muted" }, "정규식으로 쓴 키(예: /피스(?:가|는|…)/)를 ‘피스’ 같은 이름 키로 바꾸고, 소속 이름이 섞인 키를 정리해요. 조사·이름 경계는 플러그인이 처리해요."),
+          h("div", { style: "margin-top:8px" }, btn("키만 정리", { onClick: () => preview(keyOnlyPlan(list)) }))),
         h("div", { class: "rb-card", style: "padding:10px 12px;display:flex;flex-direction:column;gap:8px" },
           h("b", null, "AI로 규칙 설계 (Dusk 기능 전부)"),
           h("div", { class: "rb-muted" }, "이미 정리된 로어북이면 바로 여기서 시작해요. 항목마다 조건·확률·반복(한 번만·쉬기)·유지·그룹·배치(깊이)·연쇄·변수·이름 경계와 소속 확률을 설계해요. 내용·키·폴더는 바꾸지 않아요. 40개씩 나눠 보내요."),
@@ -67,6 +70,7 @@ export async function openLoreDusk(ctx, { list, reference = "" }) {
     }
 
     function preview(p) {
+      p.keyFixes ??= keyFixes(list, p);
       plan = p;
       const rows = [];
       const sect = (t, items) => items.length ? rows.push(h("div", { class: "rb-muted", style: "margin-top:6px;font-weight:600" }, t), ...items) : null;
@@ -80,14 +84,15 @@ export async function openLoreDusk(ctx, { list, reference = "" }) {
         a.members.slice(0, 8).map((m) => label(list[m])).join(", ") + (a.members.length > 8 ? " …" : "") + (a.def !== 100 || a.max !== "" ? ` — 기본 ${a.def}%${a.max !== "" ? ` · 최대 ${a.max}명` : ""}` : ""))));
       sect("장소", plan.places.filter((x) => x.idx !== void 0).map((x) => chk(x, `[장소] ${label(list[x.idx])}`, x.links.length ? `연결: ${x.links.map(nameOf).join(", ")} (AI 추측이니 확인해 주세요)` : "연결 없음")));
       sect("새 장소 (AI가 제안)", plan.places.filter((x) => x.idx === void 0).map((x) => chk(x, `[장소] ${x.name}`, `키: ${x.keys}${x.links.length ? ` · 연결: ${x.links.map(nameOf).join(", ")}` : ""}`)));
-      sect("이름 설정", plan.flags.map((f) => chk(f, `${label(list[f.idx])}`, [f.whole && "이름 경계(통단어일 때만)", f.common && `흔한 낱말 이름${f.keys ? ` '${f.keys}'` : ""}`].filter(Boolean).join(" · "))));
+      sect("키 정리", plan.keyFixes.map((k) => chk(k, label(list[k.idx]), `${k.before.length > 90 ? k.before.slice(0, 90) + "…" : k.before}  →  ${k.after}${k.whole ? " · 이름 경계 켬" : ""} · ${k.why.join(", ")}`)));
+      sect("이름 설정", plan.flags.map((f) => chk(f, `${label(list[f.idx])}`, [f.whole && "이름 경계(통단어일 때만)", f.common && `흔한 낱말 이름${f.keys ? ` '${f.keys}'` : ""}${f.words ? ` · 확인 단어 ${f.words}` : " · 확인 단어는 기본값(이름·소속)"}`].filter(Boolean).join(" · "))));
       if (plan.notes.length) sect("참고", plan.notes.slice(0, 8).map((t) => h("div", { class: "rb-muted", style: "font-size:12px" }, t)));
       const sum = h("span", { class: "rb-muted" });
       const ok = btn("적용", { onClick: apply });
       // 구조를 적용한 결과 위에서 규칙까지 설계한다 (적용은 마지막에 한 번)
       const okRefine = btn("적용하고 규칙 설계로", { kind: "primary", onClick: () => { try { const r = applyPlan(list, plan); refine(r.entries, summaryText(r.summary)); } catch (e) { ctx.toast(e?.message ?? String(e), { error: true }); } } });
       const refresh = () => {
-        const on = plan.affs.filter((a) => a.checked).length + plan.places.filter((x) => x.checked).length + plan.flags.filter((x) => x.checked).length;
+        const on = plan.affs.filter((a) => a.checked).length + plan.places.filter((x) => x.checked).length + plan.flags.filter((x) => x.checked).length + plan.keyFixes.filter((x) => x.checked).length;
         sum.textContent = `${on}건 선택`;
         ok.disabled = !on;
         okRefine.disabled = !on;
