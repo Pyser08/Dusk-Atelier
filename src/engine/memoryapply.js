@@ -6,6 +6,7 @@ import { isTombed } from "./memorydelete.js";
 import { applyEmo, emoForPrompt, convertAffinity } from "./memoryemo.js";
 import { applyPov, applyExp, takeSelf, isImportant, tensionKeys, noteTension, clearHints } from "./memoryinner.js";
 import { trustFields, mergeTrust, resolveConflicts, attrsForPrompt } from "./memorytrust.js";
+import { coolEmo, applyHuman } from "./memoryhuman.js";
 
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 const rid = (p) => p + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -19,9 +20,9 @@ export function findPersonKey(folder, name) {
 export const latestScene = (folder) => [...(folder.scenes ?? [])].reverse().find((s) => !s.orphan) ?? null;
 
 // anchor: {at, mid, h}. 반환: {records, upgraded, scene:'new'|'updated'|null}
-export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null, storyDate = "" } = {}) {
+export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null, storyDate = "", cool = true } = {}) {
   const ign = new Set(ignore.map(key));
-  const out = { records: 0, upgraded: 0, scene: null, rel: 0, open: 0, closed: 0, emo: 0, pov: 0, exp: 0, self: 0, conflicts: [], alerts: [] };
+  const out = { records: 0, upgraded: 0, scene: null, rel: 0, open: 0, closed: 0, emo: 0, pov: 0, exp: 0, self: 0, human: 0, cooled: 0, conflicts: [], alerts: [] };
   const prev = latestScene(folder);
   const sc = result?.scene;
   if (sc && (sc.changed || !prev)) {
@@ -52,9 +53,11 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
   }
   out.rel = applyRel(folder, result?.rel, anchor, now);
   const tBefore = tensionKeys(folder);
+  if (cool && anchor?.at != null) out.cooled = coolEmo(folder, anchor.at, now);   // v1.8.3: 시간이 지나 식은 감정을 먼저 반영(변화량이 식은 값에 더해지게)
   out.emo = applyEmo(folder, result?.emo, anchor, now);
   if (important) { out.pov = applyPov(latestScene(folder), result?.pov, now); out.exp = applyExp(folder, result?.exp, anchor, now); }
   { const o = applyOpen(folder, result?.open, anchor, now); out.open = o.added; out.closed = o.closed; }
+  out.human = applyHuman(folder, result?.human, anchor, { important, now });   // v1.8.3: 호칭·말투, 둘만의 추억(중요할 때만), 잘못된 믿음
   folder.runs = (folder.runs ?? 0) + 1;
   folder.cursor = { ...anchor };
   noteTension(folder, tBefore); clearHints(folder);  // 7-4: 감정 태그가 새로 어긋나면 자기 감정 기록을 유도

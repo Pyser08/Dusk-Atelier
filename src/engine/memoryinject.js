@@ -2,6 +2,7 @@
 import { GRADE_WEIGHT } from "./memorygrade.js";
 import { injectable, trustTag, changeNote } from "./memorytrust.js";
 import { emoLines, hasEmo } from "./memoryemo.js";
+import { effectiveTags, returnGap, earlierIds, fading, stageLines, talkLines, bondLines, beliefLines } from "./memoryhuman.js";
 import { keyHits, keyBoost } from "./memorykeys.js";
 import { semBoost, semHit } from "./embed.js";
 import { povLines, innerLines, expLines } from "./memoryinner.js";
@@ -57,6 +58,7 @@ function sceneLine(s, cap) {
 export function buildBlock(folder, { messageCount = 0, recentText = "", settings = {}, messages = null, focus = null, storyNow = "", sem = null, semMin = 0.32 } = {}) {
   const target = settings.targetTokens ?? 1200, cap = settings.capTokens ?? 2500, sceneCap = settings.sceneTokens ?? 300, skip = settings.recentSkip ?? 8;
   const manifest = { included: [], excluded: [], tokens: 0, recordIds: [] }, plus = settings.plus !== false;
+  const human = plus && settings.human !== false, cool = settings.cool !== false;   // v1.8.3 사람다운 기억(관계 진도·재등장·이전·흐려짐·호칭·추억) · 감정 식기
   const scenes = (folder.scenes ?? []).filter((s) => !s.orphan);
   const cur = scenes.at(-1);
   const lines = [HEADER];
@@ -95,8 +97,11 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     }
     const dg = p.digest && !p.digestStale ? p.digest : "";  // 재요약 대기 중인 digest는 넣지 않음
     if (!top.length && !dg) continue;
-    const moments = top.sort((a, b) => (a.r.at ?? -1) - (b.r.at ?? -1)).map((x) => `(${x.r.g}) ${oneLine(x.r.act)}${trustTag(x.r)}${changeNote(x.r)}`);
-    const text = `- ${p.name}: ${[dg ? oneLine(dg) : "", moments.length ? "Key moments: " + moments.join(", ") : ""].filter(Boolean).join(" / ")}`;
+    const earlier = human ? earlierIds(p) : null, fadeAt = settings.forgetAfter ?? 150;
+    const tag = (r) => (earlier?.has(r.id) ? "(earlier) " : "") + (human && fading(r, messageCount, fadeAt) ? "(vague) " : "");   // 변화 이전 기록 · 흐릿해진 사소한 기록
+    const moments = top.sort((a, b) => (a.r.at ?? -1) - (b.r.at ?? -1)).map((x) => `(${x.r.g}) ${tag(x.r)}${oneLine(x.r.act)}${trustTag(x.r)}${changeNote(x.r)}`);
+    const gap = human && rel ? returnGap(p, scenes, messageCount) : 0;   // 오랜만에 다시 나온 인물
+    const text = `- ${p.name}${gap ? ` (back after ~${gap} messages away)` : ""}: ${[dg ? oneLine(dg) : "", moments.length ? "Key moments: " + moments.join(", ") : ""].filter(Boolean).join(" / ")}`;
     cands.push({ name: p.name, ids: top.map((x) => x.r.id), group, best: (top[0]?.s ?? 0) + (p.pinned ? 50 : 0), text, tokens: estimateTokens(text) });
   }
   cands.sort((a, b) => a.group - b.group || b.best - a.best);
@@ -115,7 +120,15 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
       if (keep.length) { lines.push(title, ...keep); used += n; manifest.included.push({ kind, tokens: n, count: keep.length }); }
     };
     add("open", "Open threads (unresolved; do not resolve them early):", openLines(folder), settings.openTokens ?? 160);
-    add("emo", "Feelings (current gauges 0-10):", emoLines(folder, { relevant: rel.size ? rel : null }), settings.emoTokens ?? 160);
+    add("emo", "Feelings (current gauges 0-10):", emoLines(folder, { relevant: rel.size ? rel : null, ...(cool ? { now: messageCount, eff: effectiveTags } : {}) }), settings.emoTokens ?? 160);
+    if (human) {
+      add("stage", "Relationship stage (closeness should change gradually):", stageLines(folder, cur?.who ?? [], messageCount), settings.stageTokens ?? 90);
+      if (rel.size) {   // 장면에 관련 인물이 있을 때만
+        add("talk", "How they address each other (keep it unless it changes):", talkLines(folder, rel), settings.talkTokens ?? 100);
+        add("bond", "Shared memories they might bring up (only if natural):", bondLines(folder, rel, messageCount), settings.bondTokens ?? 80);
+      }
+    }
+    if (settings.beliefs === true && rel.size) add("belief", "False beliefs (each acts on them until learning the truth):", beliefLines(folder, rel), settings.beliefTokens ?? 120);
     if (settings.stage3 !== false) {  // 3단계: 현재 장면의 인물별 인식 · 자기 해석 · 기대 불일치(각자 작은 예산)
       add("pov", "Perspectives on the current event (each character sees it differently):", povLines(cur), settings.povTokens ?? 120);
       add("self", "Inner states (own view vs likely real reason; the reason is only inferred):", innerLines(Object.values(folder.people ?? {}).filter((p) => (p.ctx ?? "auto") !== "never"), { relevant: rel.size ? rel : null }), settings.selfTokens ?? 140);

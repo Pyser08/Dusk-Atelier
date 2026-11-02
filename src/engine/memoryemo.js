@@ -87,15 +87,15 @@ export function summaryOf(tags) {
 export const hasEmo = (folder) => Object.values(folder?.emo ?? {}).some((p) => Object.keys(p?.tags ?? {}).length);
 
 // 주입 문장: 관련 있는 쌍 우선, 최근에 움직인 쌍 순.
-export function emoLines(folder, { limit = 5, relevant = null } = {}) {
+export function emoLines(folder, { limit = 5, relevant = null, now = null, eff = null } = {}) {
   const pairs = Object.values(folder?.emo ?? {}).filter((p) => Object.keys(p.tags ?? {}).length && (!relevant || relevant.has(key(p.from)) || relevant.has(key(p.to))));
   pairs.sort((a, b) => (b.log?.at(-1)?.at_ms ?? 0) - (a.log?.at(-1)?.at_ms ?? 0));
-  return pairs.slice(0, limit).map((p) => `- ${p.from} → ${p.to}: ${summaryOf(p.tags)}`);
+  return pairs.slice(0, limit).map((p) => `- ${p.from} → ${p.to}: ${summaryOf(eff && now != null ? eff(p, now) : p.tags)}`);
 }
 // 다음 분석 입력에 넣을 현재 게이지(있을 때만, 최근에 움직인 쌍 n개).
-export function emoForPrompt(folder, n = 6) {
+export function emoForPrompt(folder, n = 6, { now = null, eff = null } = {}) {
   return Object.values(folder?.emo ?? {}).filter((p) => Object.keys(p.tags ?? {}).length)
-    .sort((a, b) => (b.log?.at(-1)?.at_ms ?? 0) - (a.log?.at(-1)?.at_ms ?? 0)).slice(0, n).map((p) => ({ from: p.from, to: p.to, tags: { ...p.tags } }));
+    .sort((a, b) => (b.log?.at(-1)?.at_ms ?? 0) - (a.log?.at(-1)?.at_ms ?? 0)).slice(0, n).map((p) => ({ from: p.from, to: p.to, tags: { ...(eff && now != null ? eff(p, now) : p.tags) } }));
 }
 
 // ── 호감도 → 태그 변환 ──

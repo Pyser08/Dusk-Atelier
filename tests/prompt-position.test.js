@@ -1,3 +1,4 @@
+import { humanRules } from "../src/engine/memoryhuman.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { normalizeCustomPrompts, customPromptBlock } from "../src/engine/pot/custom-prompts.js";
@@ -25,7 +26,11 @@ test("장기기억 분석: 앞·중간·뒤 위치에 끼워진다", () => {
   assert.ok(out.startsWith("FFF") && out.endsWith("BBB"));
   assert.ok(out.indexOf(first) < out.indexOf("MMM") && out.indexOf("MMM") < out.indexOf("Return ONE JSON"));
   assert.equal(withCustom(null), SYSTEM_PROMPT);
-  assert.equal(buildMessages({ bot: "b", newest: { index: 0, text: "x" } })[0].content, SYSTEM_PROMPT);
+  assert.equal(buildMessages({ bot: "b", newest: { index: 0, text: "x" } })[0].content, SYSTEM_PROMPT + "\n" + humanRules({}));
+  // v1.8.3: 추가 규칙(사람다운 기억·게이지)이 붙어도 '뒤' 프롬프트는 맨 끝, '앞'은 맨 앞
+  const withExtra = buildMessages({ bot: "b", newest: { index: 0, text: "x" }, custom: { front: "FFF", back: "BBB" }, suggestGauge: true, beliefsOn: true })[0].content;
+  assert.ok(withExtra.startsWith("FFF") && withExtra.endsWith("BBB"));
+  assert.ok(withExtra.includes("`belief`") && withExtra.includes("`talk`"));
   const s = { customPrompts: normalizeCustomPrompts([{ ...mk("middle", "ZZZ"), stages: ["memory"] }]) };
   assert.ok(customPromptPlain(s, "memory", null, "middle").includes("ZZZ"));
   assert.equal(customPromptPlain(s, "memory", null, "back"), "");

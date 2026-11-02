@@ -2,6 +2,7 @@
 // v1.6.5: 관계 변화(rels)·열린 항목(open)도 출처(src, closedBy)로 대조한다.
 import { messageIdentity, messageIdOf, legacyMessageHash } from "./chattext.js";
 import { revertExp } from "./memoryinner.js";
+import { revertHuman } from "./memoryhuman.js";
 
 export function indexMessages(messages) {
   const byMid = new Map(), byHash = new Map(), byLegacyHash = new Map(), dupMid = new Set();
@@ -107,6 +108,7 @@ export function reconcile(folder, messages) {
     }
   }
   revertExp(folder, (s) => srcAlive(s, idx));  // 사라진 응답에서 생긴 기대 불일치는 직전 값으로
+  revertHuman(folder, (s) => srcAlive(s, idx));  // v1.8.3: 호칭·추억·믿음도
   const dead = (src, ms) => {
     if (hasSrc(src)) return !srcAlive(src, idx);
     const g = ms != null ? byMs.get(ms) : null;

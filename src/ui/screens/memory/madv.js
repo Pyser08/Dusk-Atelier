@@ -50,7 +50,10 @@ export function advancedBlocks(ctx, { cur, idx, redraw, modeHost }) {
       num("응답 대기 시간(초)", () => S.modelTimeoutSec ?? 600, (s, v) => { s.modelTimeoutSec = Math.max(10, v); }, { min: 10, max: 3600, step: 10 })),
     section("대화에 넣기", sw("기억을 대화에 넣기", S.inject.on !== false, (s, v) => { s.inject.on = v; }),
       sw("장부 넣기 (열린 항목·관계 변화·지식 경계)", S.inject.plus !== false, (s, v) => { s.inject.plus = v; }),
-      sw("인물 관점·내면·기대 불일치 넣기 (토큰이 늘 수 있어요)", S.inject.stage3 !== false, (s, v) => { s.inject.stage3 = v; })),
+      sw("인물 관점·내면·기대 불일치 넣기 (토큰이 늘 수 있어요)", S.inject.stage3 !== false, (s, v) => { s.inject.stage3 = v; }),
+      sw("사람다운 기억 (관계 진도·호칭과 말투·둘만의 추억·오랜만의 재등장·흐려진 기억)", S.inject.human !== false, (s, v) => { s.inject.human = v; }),
+      sw("감정이 시간이 지나면 식어요 (적대감·두려움은 빨리, 애정은 천천히, 신뢰·존경은 그대로)", S.inject.cool !== false, (s, v) => { s.inject.cool = v; }),
+      sw("거짓말·오해 추적 (기본 꺼짐 · 추리·드라마용, 약한 분석 모델에서는 틀릴 수 있어요)", S.inject.beliefs === true, (s, v) => { s.inject.beliefs = v; })),
     section(["이 봇에서 기록하지 않을 이름", "bot"], h("div", { class: "rb-mem-chats" }, (bot.ignore ?? []).map((n) => h("button", { type: "button", class: "rb-chip", title: "눌러서 제거", onClick: () => M.store.updateIndex((i) => { i.bots[cur.chaId].ignore = i.bots[cur.chaId].ignore.filter((x) => x !== n); }).then(redraw) }, n, " ✕")), ignIn)),
     section("진단", h("div", { class: "rb-muted rb-mem-diag" }, diagText(M.runner?.session?.() ?? {})),
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 넣은 기억 보기"), man

@@ -9,7 +9,7 @@ import { srcOf } from "./memoryreconcile.js";
 export const CONF_RANK = Object.freeze({ H: 3, M: 2, L: 1 });
 export const CONF_LABEL = Object.freeze({ H: "높음", M: "중간", L: "낮음" });
 export const KIND_LABEL = Object.freeze({ f: "사실", i: "추론" });
-export const ATTR_CATS = Object.freeze({ pref: "취향", rel: "관계", job: "직업", home: "거주", belief: "신념" });
+export const ATTR_CATS = Object.freeze({ pref: "취향", rel: "관계", job: "직업", home: "거주", belief: "신념", look: "외모", trait: "성격", status: "처지" });   // v1.8.3: 외모·성격·처지 변화도 추적
 export const HIST_MAX = 50;  // 안전 상한(보통 속성 하나가 이만큼 바뀌지 않는다)
 
 const cut = (v, n) => String(v ?? "").trim().slice(0, n);
