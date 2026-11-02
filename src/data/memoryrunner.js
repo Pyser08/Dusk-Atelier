@@ -200,7 +200,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   async function recentCheck() {
     const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
     if (!(ci >= 0) || !(ti >= 0)) return;
-    const chat = await api.getChatFromIndex(ci, ti), i = (await latestAiIndex(ci, ti));
+    const chat = await api.getChatFromIndex(ci, ti), i = aiIndexes(chat?.message ?? []).at(-1) ?? -1;
     const t = chat?.message?.[i]?.time;
     if (i < 0 || (typeof t === "number" && Date.now() - t > 10 * 60e3)) return;
     schedule().catch(() => {});

@@ -224,10 +224,9 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
       if (!first || streaming(first)) return;
       const key = `${charIdx}:${chatIdx}:${sig(first)}`;
       if (key === prepKey) return;
-      // 리스가 응답 뒤 처리(출력 트리거 등)를 끝낼 때까지 한 번 더 기다려 같은지 확인
-      await new Promise((r) => setTimeout(r, 1200));
-      const chat = await api.getChatFromIndex(charIdx, chatIdx);
-      if (!chat || streaming(chat) || sig(chat) !== sig(first) || busy) return;
+      // 화면이 2.5초 넘게 잠잠했으므로 응답 뒤 처리도 끝난 것으로 보고 같은 사본을 쓴다(채팅 통째 복사 1회로 줄임)
+      const chat = first;
+      if (busy) return;
       const entries = await loreEntries(charIdx, chatIdx);
       const d = prepare(entries, chat);
       prepKey = key;
@@ -246,7 +245,7 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
   }
   const onDisplay = (text) => {
     clearTimeout(prepTimer);
-    prepTimer = setTimeout(() => prepareReroll(), 900);
+    prepTimer = setTimeout(() => prepareReroll(), 2500);
     return text;
   };
 
