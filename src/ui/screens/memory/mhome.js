@@ -11,7 +11,6 @@ import { renderModeBar } from "./modebar.js";
 import { advancedGroups } from "./madv.js";
 import { builders } from "./settings.js";
 import { openEmbedModal } from "./embedmodal.js";
-import { maybeShowEmbeddingGuide } from "./embeddingguide.js";
 import { maybeAskBardWiki } from "./modebar.js";
 
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -176,5 +175,5 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     statusBox, bigAct, prog, shortcuts, memOptions, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" }, main, h("div", { class: "rb-mem2-side" }, ...side)));
-  void maybeShowEmbeddingGuide(ctx).catch(fail(ctx));
+  // 1.8.3: 임베딩 안내 창은 자동으로 띄우지 않는다(시작 안내 3단계에서 설정, 필요하면 설정 줄의 '임베딩'에서)
 }
