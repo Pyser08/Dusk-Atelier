@@ -225,3 +225,89 @@ export function humanRules({ beliefs = false } = {}) {
   if (beliefs) r.push('`belief` (max 2): {"who","thinks":"<=60 false belief","truth":"<=60","by":"who misled, or empty"} only when the text shows someone now believes something false (lied to or misunderstood). `cleared`: ids from `beliefs` whose holder learned the truth. Otherwise omit.');
   return r.join("\n");
 }
+
+// ── 인물 위키 화면용 (v1.8.3 개편) ──
+import { ATTR_CATS } from "./memorytrust.js";
+const GRADE_RANK = { A: 0, B: 1, C: 2, D: 3 };
+const live = (r) => r && !r.orphan && r.valid !== false;
+// 화면에서 쓰는 '지금' 위치: 마지막으로 분석한 응답(없으면 가장 늦은 기록·장면).
+export function nowOf(folder) {
+  let n = folder?.cursor?.at ?? null;
+  for (const s of folder?.scenes ?? []) if (s.at != null) n = Math.max(n ?? -1, s.at);
+  for (const p of Object.values(folder?.people ?? {})) for (const r of p.records ?? []) if (r.at != null) n = Math.max(n ?? -1, r.at);
+  return n ?? 0;
+}
+const keysOf = (names) => new Set((names ?? []).map(key).filter(Boolean));
+// 이 인물과 얽힌 상대들(장면을 함께한 횟수 → 관계 온도 순). selfNames: 이름·별칭들.
+export function counterparts(folder, selfNames, now = nowOf(folder)) {
+  const self = keysOf(selfNames), found = new Map();
+  const add = (n) => { const k = key(n); if (k && !self.has(k) && !found.has(k)) found.set(k, String(n)); };
+  for (const s of folder?.scenes ?? []) if (!s.orphan && (s.who ?? []).some((w) => self.has(key(w)))) (s.who ?? []).forEach(add);
+  for (const p of Object.values(folder?.emo ?? {})) { if (self.has(key(p.from))) add(p.to); if (self.has(key(p.to))) add(p.from); }
+  for (const t of Object.values(folder?.talk ?? {})) { if (self.has(key(t.from))) add(t.to); if (self.has(key(t.to))) add(t.from); }
+  for (const b of folder?.bonds ?? []) { if (self.has(key(b.a))) add(b.b); if (self.has(key(b.b))) add(b.a); }
+  for (const e of Object.values(folder?.exp ?? {})) { if (self.has(key(e.a))) add(e.b); if (self.has(key(e.b))) add(e.a); }
+  for (const b of folder?.beliefs ?? []) { if (self.has(key(b.who)) && b.by) add(b.by); if (b.by && self.has(key(b.by))) add(b.who); }
+  const me = [...selfNames ?? []][0];
+  return [...found.values()].map((name) => ({ name, ...stageOf(folder, me, name, now) })).sort((a, b) => b.shared - a.shared || b.warmth - a.warmth);
+}
+// 두 사람 사이의 모든 것: 관계 진도 · 감정(양쪽, 식은 것 설명) · 호칭(양쪽) · 추억 · 기대 차이 · 오해.
+export function pairView(folder, selfNames, other, now = nowOf(folder)) {
+  const self = keysOf(selfNames), ko = key(other), me = [...selfNames][0];
+  const feelOf = (fromSelf) => {
+    const p = Object.entries(folder?.emo ?? {}).find(([, x]) => fromSelf ? self.has(key(x.from)) && key(x.to) === ko : key(x.from) === ko && self.has(key(x.to)));
+    if (!p) return null;
+    const [pk, pair] = p, eff = effectiveTags(pair, now);
+    const cooled = Object.entries(eff).filter(([t, v]) => pair.tags[t] != null && v < pair.tags[t]).map(([tag, to]) => ({ tag, from: pair.tags[tag], to }));
+    return { pk, from: pair.from, to: pair.to, tags: eff, stored: { ...pair.tags }, cooled, lock: pair.lock ?? null };
+  };
+  const talkOf = (fromSelf) => {
+    const e = Object.entries(folder?.talk ?? {}).find(([, t]) => fromSelf ? self.has(key(t.from)) && key(t.to) === ko : key(t.from) === ko && self.has(key(t.to)));
+    return e ? { k: e[0], ...e[1] } : null;
+  };
+  const both = (a, b) => (self.has(key(a)) && key(b) === ko) || (self.has(key(b)) && key(a) === ko);
+  return {
+    stage: stageOf(folder, me, other, now),
+    feel: { ab: feelOf(true), ba: feelOf(false) },
+    talk: { ab: talkOf(true), ba: talkOf(false) },
+    bonds: (folder?.bonds ?? []).filter((b) => both(b.a, b.b)),
+    exp: Object.values(folder?.exp ?? {}).find((e) => both(e.a, e.b)) ?? null,
+    beliefs: (folder?.beliefs ?? []).filter((b) => self.has(key(b.who)) && (key(b.by) === ko || !b.by) || key(b.who) === ko).sort((a, b) => (b.open === true) - (a.open === true)),
+  };
+}
+// 요약 탭: 바뀐 것(전 → 지금), 지금 상태, 기억에 남은 순간.
+export function changesOf(person, limit = 6) {
+  return (person?.records ?? []).filter((r) => live(r) && r.attr && r.prev).sort((a, b) => (b.at ?? 0) - (a.at ?? 0)).slice(0, limit)
+    .map((r) => ({ id: r.id, c: r.attr.c, label: ATTR_CATS[r.attr.c] ?? r.attr.c, k: r.attr.k, from: r.prev.v || r.prev.act, to: r.attr.v }));
+}
+export function currentAttrs(person, limit = 8) {
+  const last = new Map();
+  for (const r of [...(person?.records ?? [])].sort((a, b) => (a.at ?? 0) - (b.at ?? 0))) if (live(r) && r.attr && r.attr.tm !== "past") last.set(`${r.attr.c}|${r.attr.k}`, r);
+  return [...last.values()].slice(-limit).map((r) => ({ id: r.id, c: r.attr.c, label: ATTR_CATS[r.attr.c] ?? r.attr.c, k: r.attr.k, v: r.attr.v }));
+}
+export function momentsOf(person, now, { limit = 6, forgetAfter = 150 } = {}) {
+  const earlier = earlierIds(person);
+  return (person?.records ?? []).filter(live).sort((a, b) => (GRADE_RANK[a.g] ?? 4) - (GRADE_RANK[b.g] ?? 4) || (b.at ?? 0) - (a.at ?? 0)).slice(0, limit)
+    .map((r) => ({ r, earlier: earlier.has(r.id), vague: fading(r, now, forgetAfter) }));
+}
+
+// ── 사용자 편집(위키 화면). 사용자가 고친 것은 잠기고, 리롤로 되돌려지지 않는다(src 없음). ──
+export function setTalk(folder, from, to, { call, tone }, nowMs = Date.now()) {
+  folder.talk ??= {};
+  const k = key(from) + ">" + key(to), cur = folder.talk[k];
+  const c = cut(call, 20), t = TONES.has(tone) ? tone : "mixed";
+  if (!nk(c)) throw new Error("부르는 말을 적어 주세요.");
+  folder.talk[k] = { from, to, call: c, tone: t, ...(cur && (cur.call !== c || cur.tone !== t) ? { prev: { call: cur.call, tone: cur.tone } } : cur?.prev ? { prev: cur.prev } : {}), lock: true, user: true, at: cur?.at ?? null, at_ms: nowMs };
+  return folder.talk[k];
+}
+export function toggleTalkLock(folder, k) { const t = folder?.talk?.[k]; if (t) t.lock = !t.lock; return t?.lock ?? false; }
+export function deleteTalk(folder, k) { if (folder?.talk) delete folder.talk[k]; }
+export function editBond(folder, id, { moment, hook }) {
+  const b = (folder?.bonds ?? []).find((x) => x.id === id); if (!b) return null;
+  const m2 = cut(moment, 60); if (!nk(m2)) throw new Error("추억 내용을 적어 주세요.");
+  b.moment = m2; const h2 = cut(hook, 30); if (nk(h2)) b.hook = h2; else delete b.hook;
+  b.user = true; delete b.src; return b;
+}
+export function deleteBond(folder, id) { if (folder?.bonds) folder.bonds = folder.bonds.filter((b) => b.id !== id); }
+export function resolveBelief(folder, id) { const b = (folder?.beliefs ?? []).find((x) => x.id === id); if (b) { b.open = false; b.closedBy = "user"; delete b.closedSrc; } return b; }
+export function deleteBelief(folder, id) { if (folder?.beliefs) folder.beliefs = folder.beliefs.filter((b) => b.id !== id); }

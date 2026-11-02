@@ -19,6 +19,7 @@ import { gaugeBlock } from "./gaugeui.js";
 import { wikiPanel } from "./wikipanel.js";
 import { openWikiLog } from "./wikilog.js";
 import { liveScope } from "./advanced.js";
+import { personTabs } from "./personv2.js";
 
 const USER = "{{user}}";
 const AXIS_LABEL = { relationalInitiative: "관계 주도성", expressionDirectness: "표현 직접성", emotionalExpressiveness: "감정 표출성", guardedness: "경계 성향", impulsivity: "충동성", relationshipPersistence: "관계 지속성" };
@@ -296,11 +297,10 @@ function personPage(env, r, docs, commit) {
   const story = p ? h("div", { class: "rb-wk-story" }) : null;
   if (p) personDetail(env, story, r.pk, true);
 
-  return h("div", { class: "rb-wk-page" },
-    h("div", { class: "rb-wk-title" }, h("h3", null, r.name), h("span", { style: "flex:1" }),
-      ed ? h("span", { class: "rb-mem-rowact" }, btn("요약 정리", { size: "sm", onClick: () => aiOpen("refresh") }), btn("직접 지시하기", { size: "sm", onClick: () => aiOpen("command") }),
-        btn("인물 삭제", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: `${r.name} 인물을 지울까요?`, body: "인물 문서와 기본 성격이 함께 지워져요. 📌 고정한 항목이 남아 있으면 먼저 풀어야 해요.", ok: "삭제", danger: true })) { m.wkSel = ""; commit((w) => removePerson(w, doc.id), "지웠어요."); } } })) : null),
-    manage(), ...blocks,
-    ed && env.advanced ? wikiPanel(env, doc) : null,
-    story ? section("story", "이야기 기록", story, null, null, "사건 · 관계 · 상태 · 약속을 한 목록으로 봐요. 항목 오른쪽 ‘수정’으로 고치거나 지워요.") : null);
+  // v1.8.3 개편: 탭(요약 / 관계 / 상세 정보 / 기록). 기존 블록은 상세 정보·기록 탭으로 그대로 옮긴다.
+  const actions = ed ? h("span", { class: "rb-mem-rowact" }, btn("요약 정리", { size: "sm", onClick: () => aiOpen("refresh") }), btn("직접 지시하기", { size: "sm", onClick: () => aiOpen("command") }),
+    btn("인물 삭제", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: `${r.name} 인물을 지울까요?`, body: "인물 문서와 기본 성격이 함께 지워져요. 📌 고정한 항목이 남아 있으면 먼저 풀어야 해요.", ok: "삭제", danger: true })) { m.wkSel = ""; commit((w) => removePerson(w, doc.id), "지웠어요."); } } })) : null;
+  return h("div", { class: "rb-wk-page" }, personTabs(env, { r, doc, p, header: actions,
+    infoBlocks: [...blocks, ed && env.advanced ? wikiPanel(env, doc) : null],
+    logBlocks: [manage(), story ? section("story", "이야기 기록", story, null, null, "사건 · 관계 · 상태 · 약속을 한 목록으로 봐요. 항목 오른쪽 ‘수정’으로 고치거나 지워요.") : null] }));
 }
