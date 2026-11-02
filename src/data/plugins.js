@@ -1,3 +1,4 @@
+import { dbRead } from './dbcache.js';
 // 플러그인 탭 데이터 계층 — DA Interop v1 호스트 + 플러그인 관리
 // 규격: https://github.com/Pyser08/dusk-atelier-interop
 // 공식 API(getDatabase / setDatabaseLite / pluginStorage / nativeFetch)만 쓴다.
@@ -23,7 +24,7 @@ async function readJson(api, key, fallback) {
 var writeJson = (api, key, v) => api.pluginStorage.setItem(key, JSON.stringify(v));
 
 async function readPlugins(api) {
-  const db = await api.getDatabase(["plugins"]);
+  const db = await dbRead(api, ["plugins"]);
   return Array.isArray(db?.plugins) ? db.plugins : null;
 }
 // 연동 데이터는 pluginStorage(모든 플러그인 공용)에 플러그인마다 키 하나씩 둔다.

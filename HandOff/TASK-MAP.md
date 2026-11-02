@@ -25,7 +25,7 @@
 | 플러그인 탭·DA Interop | `src/data/plugins.js`, `src/data/interopSnippet.js`, `src/ui/screens/plugins.js` |
 | 설정 | `src/ui/screens/settingstab.js`, `src/ui/screens/settings.js` |
 | 리수폿 통합 (수정 금지 영역) | `tools/pot-split.mjs`, `tools/pot-patches.json` → 원본은 `ref/risupot` 브랜치 |
-| 스크립트 훅 합치기·호스트 부담 | `src/data/hookbus.js`(input·output·display 훅을 종류당 1개로), `src/main.js`(api 프록시), `src/ui/watch.js`(폴링 간격) |
+| 스크립트 훅 합치기·호스트 부담 | `src/data/hookbus.js`(input·output·display 훅을 종류당 1개로), `src/main.js`(api 프록시), `src/ui/watch.js`(폴링 간격), `src/data/dbcache.js`(읽기 전용 DB 캐시 `dbRead`) |
 | 빌드·릴리스 (릴리스·버전은 사용자 지시 시만) | `tools/build.mjs`, `.github/workflows/release.yml`, `package.json`, `CHANGELOG.md` |
 
 ## 빠른 검색 팁

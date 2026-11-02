@@ -2,6 +2,7 @@
 //   · 연동판(DA Interop 동작 open·draft가 들어간 봇빌더)이면 Dusk가 화면을 직접 열고 작업 중인 원고를 받아 온다.
 //   · 원본 봇빌더면 열기는 사용자가 리스 메뉴에서 하고, 원고는 봇빌더의 자동 저장(공용 pluginStorage)에서 읽는다.
 // 화면 코드 없음. 공식 플러그인 API(getDatabase·pluginStorage)만 쓴다.
+import { dbRead } from './dbcache.js';
 import { WORKSHOP_INTEROP_ID, WORKSHOP_PLUGIN, makeHandoff, handoffAlive } from "../engine/workshop.js";
 import { isBbName } from "../engine/firstrun.js";
 import { readInterop, hasAction, runAction } from "./plugins.js";
@@ -16,7 +17,7 @@ const isWs = (p) => p && (p.name === WORKSHOP_PLUGIN || isBbName(p.name) || isBb
 export function createWorkshopLink(api) {
   const ps = api.pluginStorage;
   async function plugin() {
-    const db = await api.getDatabase(["plugins"]);
+    const db = await dbRead(api, ["plugins"]);
     return (Array.isArray(db?.plugins) ? db.plugins : []).find(isWs) ?? null;
   }
   // { installed, enabled, patched, linked(동작 open 등록됨), version }

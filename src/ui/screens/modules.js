@@ -1,3 +1,4 @@
+import { dbRead } from '../../data/dbcache.js';
 import { createMulti } from '../multiselect.js';
 import { dragBadge, gripDrag, placeIds } from '../sortable.js';
 import { groupByFolder } from '../../data/service.js';
@@ -330,7 +331,7 @@ async function paintLinkCounts(ctx) {
     try {
       const pm = await loadPersonaMap(ctx.api);
       for (const ids of Object.values(pm.map ?? {})) for (const id of ids) if (n.has(id)) n.set(id, n.get(id) + 1);
-      const db = await ctx.api.getDatabase(["characters"]);
+      const db = await dbRead(ctx.api, ["characters"]);
       const list = (await loadCharacters(ctx.api, db?.characters)).list;
       for (const ch of list) if (ch && !ch.trashTime && ch.type !== "group") for (const id of ch.modules ?? []) if (n.has(id)) n.set(id, n.get(id) + 1);
     } catch {

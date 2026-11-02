@@ -1,3 +1,4 @@
+import { dbRead } from '../../../data/dbcache.js';
 import { h } from '../../dom.js';
 import { modal } from '../../kit.js';
 import { loadCharacters } from '../../../data/modules.js';
@@ -13,7 +14,7 @@ export const at = (n) => n == null ? "" : `#${n + 1}`;
 export async function loadBots(ctx, force = false) {
   const m = mem(ctx);
   if (m.bots && !force) return m.bots;
-  const db = await ctx.api.getDatabase(["characters", "characterOrder"]);
+  const db = await dbRead(ctx.api, ["characters", "characterOrder"]);
   const loaded = await loadCharacters(ctx.api, db?.characters);
   m.bots = loaded.list.map((c, index) => c && !c.trashTime ? { character: c, index, id: String(c.chaId ?? c.id ?? index) } : null).filter(Boolean);
   return m.bots;

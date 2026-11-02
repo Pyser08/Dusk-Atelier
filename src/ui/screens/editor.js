@@ -1,3 +1,4 @@
+import { dbRead } from '../../data/dbcache.js';
 import { CBS } from '../cbs.js';
 import { codeEditor } from '../codeedit.js';
 import { explainIssue, issueKey, splitIssues } from '../../engine/issuehelp.js';
@@ -2432,7 +2433,7 @@ export async function openEditorCore(ctx, cfg) {
   // 느림 개선: 플러그인 전체를 읽는 봇빌더 감지(getDatabase plugins)는 한 번만, 기다리지 않고 한다. AI 엔진·창 위치는 미리 불러 둔다.
   let bbProbe = null;
   function probeBb() {
-    bbProbe ??= Promise.resolve().then(() => ctx.api.getDatabase(["plugins"])).then((d) => { bbPresent = bbInstalled(d?.plugins); return bbPresent; }, () => false);
+    bbProbe ??= Promise.resolve().then(() => dbRead(ctx.api, ["plugins"])).then((d) => { bbPresent = bbInstalled(d?.plugins); return bbPresent; }, () => false);
     return bbProbe;
   }
   let warmed = false;

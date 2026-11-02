@@ -1,3 +1,4 @@
+import { dbRead } from '../data/dbcache.js';
 import { applyDroppedPatch } from './screens/patchui.js';
 import { maybeShowTour } from './tour.js';
 import { runScreenTour } from './screentours.js';
@@ -93,7 +94,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     tideChecked = true;
     setTimeout(async () => {
       try {
-        const db = await api.getDatabase(["plugins"]);
+        const db = await dbRead(api, ["plugins"]);
         const on = (db?.plugins ?? []).some((p) => /^risutide$/i.test(String(p?.name ?? "")) && p.enabled !== false);
         if (on) ctx.toast("RisuTide의 업데이트·백업 기능이 Dusk Atelier로 옮겨왔어요. RisuTide 백업과 기준은 Dusk에서 그대로 보여요. 둘이 함께 켜져 있으면 기록이 꼬일 수 있으니 RisuTide는 꺼 주세요.", { seconds: 14 });
       } catch {
@@ -427,6 +428,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     });
   }
   async function open(opts) {
+    api.invalidateDbCache?.();   // 리스 쪽에서 바뀐 것을 처음 화면에 반영
     try {
       const cs = await api.getColorScheme();
       state.risuScheme = cs?.scheme?.type === "light" ? "light" : "dark";

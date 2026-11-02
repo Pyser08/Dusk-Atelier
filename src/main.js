@@ -1,4 +1,5 @@
 import { startHostUpdateToast } from './ui/hostupdate.js';
+import { createDbCache, WRITE_RE } from './data/dbcache.js';
 import { createHookBus } from './data/hookbus.js';
 import { createMemoryButton } from './data/memorybutton.js';
 import * as engine_exports from './engine/index.js';
@@ -52,7 +53,24 @@ async function start() {
     wrapped.addRisuScriptHandler = (...a) => bus.add(...a);
     wrapped.removeRisuScriptHandler = (...a) => bus.remove(...a);
   }
-  const api = new Proxy(raw, { get: (t, k) => k in wrapped ? wrapped[k] : t[k] });
+  // 화면 목록용 getDatabase 짧은 캐시(getDatabaseCached): 쓰기 계열 호출이 있으면 바로 비운다. Dusk 창을 열 때도 비운다.
+  const dbc = createDbCache(raw);
+  wrapped.getDatabaseCached = (keys) => dbc.get(keys);
+  wrapped.invalidateDbCache = () => dbc.invalidate();
+  for (const name of ["setCharacterToIndex", "setDatabaseLite"]) {
+    const f = wrapped[name];
+    wrapped[name] = async (...a) => { dbc.invalidate(); try { return await f(...a); } finally { dbc.invalidate(); } };
+  }
+  const api = new Proxy(raw, {
+    get: (t, k) => {
+      if (k in wrapped) return wrapped[k];
+      const v = t[k];
+      if (typeof v === "function" && typeof k === "string" && WRITE_RE.test(k)) {
+        return async (...a) => { dbc.invalidate(); try { return await v.apply(t, a); } finally { dbc.invalidate(); } };
+      }
+      return v;
+    }
+  });
   console.log(`[${TITLE}] 진입 경로`, globalThis.__RBM_ENTRY__ ?? "normal");
   const memoryRef = { toast: null };
   const storyTime = createStoryTime(api);

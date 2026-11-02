@@ -1,3 +1,4 @@
+import { dbRead } from '../../data/dbcache.js';
 import { FOLDER_COLORS, FOLDER_COLOR_CSS, FOLDER_COLOR_KO, colorFolder, createFolder2, deleteFolder2, folderOf, layout, moveChar, moveFolder, renameFolder2, setMembers } from '../../data/charorder.js';
 import { newId } from '../../engine/util.js';
 import { characterAssetKeys } from '../../engine/character.js';
@@ -84,7 +85,7 @@ export async function renderCharacters(ctx) {
   return drawCharacters(ctx);
 }
 async function fetchChars(ctx) {
-  const db = await ctx.api.getDatabase(["characters", "modules", "characterOrder"]);
+  const db = await dbRead(ctx.api, ["characters", "modules", "characterOrder"]);
   const lc = await loadCharacters(ctx.api, db?.characters);
   return { lc, db };
 }
