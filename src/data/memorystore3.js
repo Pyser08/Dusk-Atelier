@@ -15,24 +15,26 @@ const wikiDocs = (w) => Object.keys(w?.documents ?? {}).length;
 export function createMemoryStoreV3(api) {
   let chain = Promise.resolve();
   const serial = (fn) => { const run = chain.then(fn, fn); chain = run.then(() => {}, () => {}); return run; };
-  // 인덱스 원문(문자열) 짧은 캐시(v1.8.3, 홈 속도): 홈 한 번에 같은 인덱스를 3~4번 읽던 것을 한 번으로.
-  // 문자열만 캐시하고 읽을 때마다 새로 파싱하므로 받은 쪽이 고쳐도 새지 않는다. 인덱스는 이 저장소만 쓰며,
-  // 쓰기·삭제 때 비우고 실패하면 캐시하지 않는다. 시간 제한(5초)은 다른 기기에서 바뀐 값을 늦게라도 보게 하는 안전장치.
-  const IDX_TTL = 5000;
-  let idxRaw = null;   // { t, p: Promise<raw> }
-  const rawIndex = () => {
-    if (idxRaw && Date.now() - idxRaw.t < IDX_TTL) return idxRaw.p;
-    const p = Promise.resolve(api.pluginStorage.getItem(INDEX_KEY)).then((r) => { if (typeof r !== "string" && idxRaw?.p === p) idxRaw = null; return r; }, (e) => { if (idxRaw?.p === p) idxRaw = null; throw e; });
-    idxRaw = { t: Date.now(), p };
-    return p;
+  // 원문(문자열) 짧은 캐시(v1.8.3, 홈·기억 탭 속도): 인덱스와 채팅 기억 폴더를 같은 화면에서 여러 번 읽던 것을 한 번으로.
+  // 문자열만 캐시하고 읽을 때마다 새로 파싱하므로 받은 쪽이 고쳐도 새지 않는다. 이 저장소만 쓰는 키이고,
+  // 쓰기·삭제 때 비우며 실패하면 캐시하지 않는다. 시간 제한(5초)은 다른 기기에서 바뀐 값을 늦게라도 보게 하는 안전장치.
+  const RAW_TTL = 5000, RAW_MAX = 6;
+  const raws = new Map();   // key → { t, p: Promise<raw> }
+  const rawGet = (k) => {
+    const hit = raws.get(k);
+    if (hit && Date.now() - hit.t < RAW_TTL) return hit.p;
+    const ent = { t: Date.now(), p: null };
+    ent.p = Promise.resolve(api.pluginStorage.getItem(k)).then((r) => { if (typeof r !== "string" && raws.get(k) === ent) raws.delete(k); return r; }, (e) => { if (raws.get(k) === ent) raws.delete(k); throw e; });
+    raws.delete(k); raws.set(k, ent);
+    while (raws.size > RAW_MAX) raws.delete(raws.keys().next().value);
+    return ent.p;
   };
-  const get = async (k) => parse(k === INDEX_KEY ? await rawIndex() : await api.pluginStorage.getItem(k));
+  const get = async (k) => parse(await rawGet(k));
   const set = async (k, v) => {
-    if (k !== INDEX_KEY) return api.pluginStorage.setItem(k, JSON.stringify(v));
-    idxRaw = null;
-    try { return await api.pluginStorage.setItem(k, JSON.stringify(v)); } finally { idxRaw = null; }
+    raws.delete(k);
+    try { return await api.pluginStorage.setItem(k, JSON.stringify(v)); } finally { raws.delete(k); }
   };
-  const rm = (k) => { if (k === INDEX_KEY) idxRaw = null; return api.pluginStorage.removeItem(k); };
+  const rm = (k) => { raws.delete(k); return api.pluginStorage.removeItem(k); };
 
   const readIndex = async () => {
     const raw = await get(INDEX_KEY);

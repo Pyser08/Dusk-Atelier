@@ -87,3 +87,18 @@ test("인덱스 읽기: 짧은 시간 안의 반복 읽기는 저장소를 한 �
   await st.deleteBot("c1");
   assert.equal((await st.getIndex()).bots.c1, undefined);
 });
+
+test("채팅 기억 폴더 읽기도 짧게 합친다: 반복 읽기는 한 번, 쓰면 새 값, 받은 쪽이 고쳐도 새지 않는다 (1.8.3)", async () => {
+  const api = mockApi(); let reads = 0;
+  const get0 = api.pluginStorage.getItem; api.pluginStorage.getItem = async (k) => { if (k.startsWith(FOLDER_PREFIX)) reads++; return get0(k); };
+  const st = createMemoryStoreV3(api);
+  await st.updateFolder("c1", "t1", (f) => { f.botName = "A"; });
+  reads = 0;
+  const [a] = await Promise.all([st.getFolder("c1", "t1"), st.getFolder("c1", "t1")]); await st.getFolder("c1", "t1");
+  assert.equal(reads, 1); assert.equal(a.botName, "A");
+  a.botName = "망가짐"; assert.equal((await st.getFolder("c1", "t1")).botName, "A");
+  await st.updateFolder("c1", "t1", (f) => { f.botName = "B"; });
+  assert.equal((await st.getFolder("c1", "t1")).botName, "B");
+  await st.deleteFolder("c1", "t1");
+  assert.equal(await st.getFolder("c1", "t1"), null);
+});

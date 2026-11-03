@@ -54,10 +54,13 @@ async function settingsCards(ctx, M, idx, redraw) {
 
 export async function renderMemoryHome(ctx, host, { redraw }) {
   const m = mem(ctx), M = ctx.memory;
+  // 열린 채팅 확인(호스트 왕복)을 안내·모드 막대 읽기와 동시에 시작한다(1.8.3 속도). 위치가 같으면 직전 값을 바로 쓴다.
+  const curP = Promise.resolve().then(() => (M.switches.peekCurrent ? M.switches.peekCurrent({ onChange: () => { if (ctx.state.tab === "memory" && mem(ctx) === m) redraw(); } }) : M.switches.currentChat()));
+  curP.catch(() => {});
   await maybeAskBardWiki(ctx).catch(() => {});
   const modeHost = h("div");
   await renderModeBar(ctx, modeHost, { redraw });  // 간단 모드에서는 저장소를 자동으로 맞추기만 한다
-  const cur = await M.switches.currentChat();
+  const cur = await curP;
   if (!cur) {
     // 열린 채팅이 없어도 전체 설정(기억 옵션·임베딩·프롬프트·고급)은 바꿀 수 있다
     const idx0 = await M.store.getIndex();

@@ -11,7 +11,7 @@ import { charFields } from '../engine/tideplan.js';
 import { stableJson } from '../engine/util.js';
 
 // 모듈 목록은 통째로 복사돼 와서 무겁다: 평소엔 가끔, 가져오기 직후(burst)에만 자주
-var KNOWN_MOD_KEY = "rbm:watchMod:v1", MOD_EVERY = 6e4, MOD_BURST = 3e3;
+var KNOWN_MOD_KEY = "rbm:watchMod:v1", MOD_EVERY = 12e4, MOD_BURST = 3e3;
 var KNOWN_KEY = "rbm:watch:v1", UI_KEY = "rbm:ui:v1", TRASH_KEY = "rbm:pendingTrash:v1";
 var SLOW = 15e3, FAST = 8e3, BURST = 1500, BURST_FOR = 3 * 6e4, TRASH_EVERY = 3e4;
 var MENU_BTN_ID = "dusk-atelier-addchar";
