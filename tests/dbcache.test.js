@@ -34,3 +34,33 @@ test("오류는 캐시하지 않고, 쓰기 이름 패턴", async () => {
   for (const n of ["setDatabase", "setCharacterToIndex", "addCharacter", "removeCharacter", "importModule"]) assert.ok(WRITE_RE.test(n), n);
   for (const n of ["getDatabase", "getCharacterFromIndex", "registerButton", "showContainer"]) assert.ok(!WRITE_RE.test(n), n);
 });
+
+test("키마다 따로 담는다: 이미 읽은 키는 다른 묶음에서 다시 읽지 않고, 모자란 키만 읽는다 (1.8.3)", async () => {
+  const s = setup(), c = s.mk();
+  await c.get(["characters"]); assert.equal(s.calls(), 1);
+  const r = await c.get(["characters", "modules"]); assert.equal(s.calls(), 2, "modules만 더 읽음");
+  assert.deepEqual(Object.keys(r).sort(), ["characters", "modules"]);
+  await c.get(["modules"]); await c.get(["characters", "modules"]); assert.equal(s.calls(), 2);
+});
+test("shared 읽기는 복사하지 않지만 최상위 객체는 새로 준다. 감시가 warm으로 읽은 것도 재사용한다 (1.8.3)", async () => {
+  const s = setup(), c = s.mk();
+  const a = await c.get(["characters"], { shared: true }), b = await c.get(["characters"], { shared: true });
+  assert.equal(a.characters, b.characters, "배열을 복사하지 않음"); assert.notEqual(a, b);
+  a.characters = []; assert.equal((await c.get(["characters"], { shared: true })).characters.length, 1, "최상위 교체는 캐시에 안 샌다");
+  const s2 = setup(), c2 = s2.mk(); await c2.warm(["modules"]); await c2.get(["modules"]); assert.equal(s2.calls(), 1);
+});
+test("soften: 최근에 읽은 것은 남기고 오래된 것만 버린다 (1.8.3)", async () => {
+  const s = setup(), c = s.mk(5000);
+  await c.get(["modules"]); s.tick(20000); await c.get(["characters"]);
+  c.soften(15000);
+  assert.equal(c.size(), 1);
+});
+
+test("has·store: 직접 담은 값도 키별 캐시로 쓰인다 (단계별 불러오기, 1.8.3)", async () => {
+  const s = setup(), c = s.mk();
+  assert.equal(c.has(["characters"]), false);
+  c.store(["characters"], { characters: [{ id: 5 }] });
+  assert.equal(c.has(["characters"]), true);
+  assert.deepEqual((await c.get(["characters"])).characters, [{ id: 5 }]); assert.equal(s.calls(), 0);
+  s.tick(2000); assert.equal(c.has(["characters"]), false);
+});

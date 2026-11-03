@@ -97,9 +97,11 @@ window.runSmoke = async () => {
     folder.emo = { "시로코>{{user}}": { from: "시로코", to: "{{user}}", tags: { trust: 7, fear: 2 }, log: [] } };
     env.ctx.state ??= {}; env.advanced = false; env.idx = { settings: { potMode: true, backend: "auto" } };
     const host = document.createElement("div"); document.body.appendChild(host); await renderPeopleTab(env, host); await sleep(80);
-    const row = (n) => [...host.querySelectorAll(".rb-wk-emorow")].find((r) => r.textContent.startsWith(n));
-    check("감정 게이지 카드(간단 모드)", !!host.querySelector(".rb-wk-emo") && /시로코 → \{\{user\}\}/.test(host.textContent), host.textContent.slice(0, 200));
-    check("감정 게이지 값·미설정 표시", row("신뢰")?.textContent.endsWith("7") && row("애정")?.textContent.endsWith("—") && row("두려움")?.textContent.endsWith("2"), [...host.querySelectorAll(".rb-wk-emorow")].map((r) => r.textContent).join("|"));
+    // v1.8.3: 탭 개편 — 감정은 '상세 정보' 탭의 상대별 한 줄(값 있는 감정만)
+    host.querySelector('.rb-wk2-tab[data-t="info"]')?.click(); await sleep(60);
+    const erow = [...host.querySelectorAll(".rb-wk3-emorow")].map((r) => r.textContent);
+    check("감정 카드(간단 모드)", erow.some((t) => t.startsWith("→ 나")), host.textContent.slice(0, 200));
+    check("감정 값·미설정 감정은 숨김", erow.some((t) => t.includes("신뢰 7") && t.includes("두려움 2") && !t.includes("애정")), erow.join("|"));
   } catch (e) { check("감정 게이지 렌더", false, e?.stack ?? e); }
   // v1.8.1: 인물 위키 '수치 상태' 아래 자동 게이지 블록(+ 추가 버튼, 만들어진 게이지 박스)
   try {
@@ -107,23 +109,25 @@ window.runSmoke = async () => {
     env.ctx.memory = { ...(env.ctx.memory ?? {}), gauge: { getDefs: async () => defs, getSuggest: async () => ({ on: false, list: [], sent: [] }), invalidate() {} } };
     env.bot = { id: "c1", character: { name: "봇" } };
     const host = document.createElement("div"); document.body.appendChild(host); await renderPeopleTab(env, host); await sleep(120);
-    check("게이지 + 버튼", [...host.querySelectorAll("button")].some((b) => b.textContent.includes("게이지 추가")));
+    host.querySelector('.rb-wk2-tab[data-t="info"]')?.click(); await sleep(120);
+    check("게이지 + 버튼", [...host.querySelectorAll("button")].some((b) => b.textContent.includes("+ 게이지")));
     defs.push({ id: "g_abcdef12", name: "신뢰", desc: "", min: 0, max: 10, init: 4, step: 3, rule: "", measure: "", update: "", look: { hue: 200, shape: "orb", icon: "" }, targets: "all", on: true, src: "user", at: 1 });
     const host2 = document.createElement("div"); document.body.appendChild(host2); await renderPeopleTab(env, host2); await sleep(120);
-    check("게이지 박스 렌더", !!host2.querySelector('details[x-dusk="gauge"]'), host2.textContent.slice(0, 120));
+    host2.querySelector('.rb-wk2-tab[data-t="info"]')?.click(); await sleep(150);
+    check("게이지 줄 렌더", [...host2.querySelectorAll(".rb-wk3-num.g")].some((b) => b.textContent.includes("신뢰") && b.textContent.includes("4/10")), host2.textContent.slice(0, 160));
   } catch (e) { check("게이지 렌더", false, e?.stack ?? e); }
   try {   // 스킬 탭(v1.8.1)
     const store = new Map([[COCOA_LIB_KEY, JSON.stringify({ sets: [{ name: "코코", files: [{ path: "a/SKILL.md", content: "---\nname: A\nskill_format: 2\nsystem_prompt: 지침\n---\n본문" }] }] })], [COCOA_PRESETS_KEY, JSON.stringify({ activePresetId: "p", presets: [{ id: "p", name: "기본", pipeline: { rows: [{ agents: [{ id: "d", name: "Director", mode: "pre", systemPrompt: "규칙", skillSets: ["코코"] }] }] } }] })]]);
     const sk = createSkillStore({ pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } }, { log() {} });
     const sctx = { win: document.body, toast: (t) => log.push(["toast", t]), skills: sk, prefs: { advanced: true }, web: createWebTools({ pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } }, { log() {} }), state: {} }, shost = document.createElement("div"); document.body.appendChild(shost);
     await renderMemorySkills(sctx, shost, { redraw() {} }); await sleep(80);
-    check("스킬 탭 렌더", shost.textContent.includes("코코아 기능 켜기") && shost.textContent.includes("스킬 세트 0개"), shost.textContent.slice(0, 120));
+    check("스킬 탭 렌더", shost.textContent.includes("코코아 기능") && shost.textContent.includes("내 스킬 0개") && !!shost.querySelector("[role=switch][aria-label='코코아 기능 켜기']"), shost.textContent.slice(0, 120));
     clickText("찾아보기", shost); await sleep(120);
     check("코코아 데이터 찾기", shost.textContent.includes("스킬 세트 1개 가져오기") && shost.textContent.includes("'Director'의 프롬프트를 스킬로 변환"), shost.textContent.slice(-200));
     clickText("옮기기", shost); await sleep(200);
     const lib = await sk.getLibrary(), cfg = await sk.getCfg();
     check("코코아 옮기기", lib.sets.length === 1 && cfg.stages.director.length === 1 && cfg.on === false, JSON.stringify(cfg.stages));
-    clickText("열기", shost); await sleep(80);
+    shost.querySelector(".rb-sk-open")?.click(); await sleep(80);   // 1.8.3: 줄을 누르면 열린다(열기·ZIP·JSON·삭제 버튼은 ··· 메뉴로)
     check("웹 도구·호출 기록 카드", shost.textContent.includes("웹 도구 (검색·페이지 읽기)") && shost.textContent.includes("최근 호출 기록") && shost.textContent.includes("Wikipedia"), shost.textContent.slice(-300));
     check("세트 편집기", !!shost.querySelector("textarea") && shost.textContent.includes("진단"), shost.textContent.slice(0, 160));
   } catch (e) { check("스킬 탭", false, e?.stack ?? e); }

@@ -18,7 +18,7 @@ function luminance(hex) {
   });
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
-function contrast(a, b) {
+export function contrast(a, b) {
   const la = luminance(a), lb = luminance(b);
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
@@ -84,4 +84,9 @@ export function alpha(hex, a) {
   const rgb = parseHex(hex);
   if (!rgb) return hex;
   return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${a})`;
+}
+export function mixHex(a, b, t) {
+  const x = parseHex(a), y = parseHex(b);
+  if (!x || !y) return a;
+  return toHex(x.map((v, i) => v + (y[i] - v) * t));
 }

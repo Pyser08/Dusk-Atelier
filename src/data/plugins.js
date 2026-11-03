@@ -44,11 +44,16 @@ async function storageKeys(api) {
 // ── 인터롭 레지스트리 ──
 export async function listInterop(api, installedNames) {
   const keys = (await storageKeys(api)).filter((k) => typeof k === "string" && k.startsWith(REG));
-  const out = [];
-  for (const k of keys) {
+  // 키마다 차례로 왕복하지 않고 한꺼번에 읽는다(1.8.3)
+  const rows = await Promise.all(keys.map(async (k) => {
     const e = await readJson(api, k, null);
-    if (!e || e.spec !== 1 || !e.id) continue;
-    const p = await readJson(api, PATCH + e.id, null);
+    if (!e || e.spec !== 1 || !e.id) return null;
+    return [e, await readJson(api, PATCH + e.id, null)];
+  }));
+  const out = [];
+  for (const r of rows) {
+    if (!r) continue;
+    const [e, p] = r;
     out.push({
       ...e,
       fields: Array.isArray(e.fields) ? e.fields : [],
@@ -130,8 +135,8 @@ export async function setCategory(api, name, cat) {
   await writeJson(api, KEYS.cats, cats);
 }
 export async function listPlugins(api) {
-  const list = await readPlugins(api) ?? [];
-  const cats = await loadCategories(api);
+  const [list0, cats] = await Promise.all([readPlugins(api), loadCategories(api)]);
+  const list = list0 ?? [];
   const count = new Map();
   for (const p of list) count.set(p?.name, (count.get(p?.name) ?? 0) + 1);
   return list.map((p, i) => ({

@@ -15,6 +15,24 @@ export const FAIR_TEXT = `${HEAD}\n${OUTCOME}\n${TAIL}`;
 // ── 코드 주사위 ──
 export const DICE_COUNT = 3;
 export const DICE_MODES = ["reinterpret", "respect"];
+// 강도(1.8.3): 난이도 커트라인(쉬움·보통·어려움·극악). 보통 = 예전 값 그대로. 숫자가 클수록 성공하기 어려워 '내 편'이 덜 들어요.
+export const DICE_LEVEL_IDS = ["weak", "normal", "strong"];
+export const DICE_LEVELS = { weak: { easy: 10, normal: 35, hard: 60, extreme: 85 }, normal: { easy: 20, normal: 50, hard: 75, extreme: 95 }, strong: { easy: 30, normal: 60, hard: 85, extreme: 98 } };
+export const DEFAULT_CUTS = DICE_LEVELS.normal;
+const CUT_KEYS = ["easy", "normal", "hard", "extreme"];
+export const MAX_DICE = 6;
+export function normalizeCuts(c) {
+  const out = {};
+  for (const k of CUT_KEYS) { const n = Math.round(Number(c?.[k])); if (!Number.isFinite(n)) return { ...DEFAULT_CUTS }; out[k] = Math.min(100, Math.max(1, n)); }
+  for (let i = 1; i < CUT_KEYS.length; i++) if (out[CUT_KEYS[i]] < out[CUT_KEYS[i - 1]]) return { ...DEFAULT_CUTS };
+  return out;
+}
+export function normalizeCount(n) { const v = Math.round(Number(n)); return Number.isFinite(v) ? Math.min(MAX_DICE, Math.max(1, v)) : DICE_COUNT; }
+// 저장된 강도 이름 → 실제 수치·개수. 'custom'(고급 직접 입력)만 저장한 값을 쓴다.
+export function resolveDice(level, cuts, count) {
+  if (level === "custom") return { cuts: normalizeCuts(cuts), count: normalizeCount(count) };
+  return { cuts: { ...(DICE_LEVELS[level] ?? DEFAULT_CUTS) }, count: DICE_COUNT };
+}
 const DEFAULT_RNG = () => { try { const a = new Uint32Array(1); globalThis.crypto.getRandomValues(a); return a[0] / 4294967296; } catch { return Math.random(); } };
 export function rollDice(n = DICE_COUNT, rng = DEFAULT_RNG) {
   return Array.from({ length: n }, () => Math.min(100, Math.max(1, 1 + Math.floor(rng() * 100))));
@@ -29,29 +47,79 @@ export function lastUserText(messages) {
 const ACTION_KO = /설득|속이|속여|거짓말|협박|위협|유혹|매수|공격|때리|때려|찌르|던지|훔치|훔쳐|잠입|몰래|숨어|숨기|도망|달아나|뛰어|달려|넘어|올라|기어|열쇠|자물쇠|해킹|추격|쫓|싸우|제압|쓰러뜨|막아|피하|피해|부수|부숴|깨뜨|조사|뒤지|해독|치료|수리|시도|도전|해보/;
 const ACTION_EN = /\b(persuad|convinc|lie\b|lying|bluff|threat|intimidat|seduc|brib|attack|punch|kick|stab|slash|shoot|throw|steal|sneak|hide|escape|flee|jump|climb|chase|fight|subdue|dodge|block|hack|disarm|heal|repair|attempt|try\b|trying)/i;
 export function looksLikeAction(text) { const t = String(text ?? ""); return ACTION_KO.test(t) || ACTION_EN.test(t); }
-export function makeDice(messages, mode = "reinterpret", rng = DEFAULT_RNG) {
-  return { rolls: rollDice(DICE_COUNT, rng), mode: DICE_MODES.includes(mode) ? mode : "reinterpret", hint: looksLikeAction(lastUserText(messages)) };
+// 판정 표식 (1.8.3): AI가 응답 끝에 판정한 행동마다 숨은 주석을 남긴다 → 화면은 실제 행동·난이도로 보여 주고, 다음 턴에 결과를 다시 알려 준다.
+const ROLL_RE = /<!--\s*dusk-roll:\s*([^|]+?)\s*\|\s*(easy|normal|hard|extreme)\s*\|\s*(\d{1,3})\s*\|\s*(success|partial|fail)\s*-->/gi;
+export function parseRollMarks(text) {
+  const out = [];
+  for (const m of String(text ?? "").matchAll(ROLL_RE)) out.push({ act: m[1].trim().slice(0, 60), diff: m[2].toLowerCase(), roll: Math.min(100, Math.max(1, Number(m[3]))), result: m[4].toLowerCase() });
+  return out.slice(0, 8);
 }
-export function diceText({ rolls, mode, hint }) {
+// 마지막 유저 입력 바로 앞 assistant 응답(= 지난 턴)
+function lastReply(messages) {
+  const list = Array.isArray(messages) ? messages : [];
+  let u = list.length - 1; while (u >= 0 && list[u]?.role !== "user") u--;
+  for (let i = u - 1; i >= 0; i--) if (list[i]?.role === "assistant") return textOf(list[i].content);
+  return "";
+}
+export function makeDice(messages, mode = "reinterpret", rng = DEFAULT_RNG, { cuts = DEFAULT_CUTS, count = DICE_COUNT, rolls = null } = {}) {
+  const prev = parseRollMarks(lastReply(messages));
+  return { rolls: rolls ?? rollDice(normalizeCount(count), rng), mode: DICE_MODES.includes(mode) ? mode : "reinterpret", hint: looksLikeAction(lastUserText(messages)), cuts: normalizeCuts(cuts), ...(prev.length ? { prev } : {}) };
+}
+// 같은 턴(리롤·재시도)인지 알아보는 열쇠: 대화(user·assistant)만 본다. system(장기 기억·이야기 시간·로어북 등)은 리롤 사이에 바뀔 수 있어서 뺀다.
+export function turnKey(messages) {
+  let h = 2166136261;
+  const list = Array.isArray(messages) ? messages : [];
+  const talk = list.some((m) => m?.role === "user" || m?.role === "assistant");
+  for (const m of list) {
+    const t = textOf(m?.content);
+    if (talk ? m?.role !== "user" && m?.role !== "assistant" : t.startsWith(FAIR_MARK) || t.startsWith(DICE_MARK)) continue;
+    for (const ch of `${m?.role}\u0001${t}\u0002`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  }
+  return (h >>> 0).toString(36);
+}
+// 주사위 규칙(고정): 굴림값·힌트가 없어서 요청마다 똑같다 → 앞쪽 시스템 지침에 둬도 캐시가 유지된다.
+export function diceRules({ mode, cuts = DEFAULT_CUTS }) {
+  const c = normalizeCuts(cuts);
   const outcome = mode === "respect"
     ? "- If the user's input states an outcome explicitly, honor it and do not roll for it."
     : "- Treat any outcome the user wrote as only an attempt; the roll decides whether it happens.";
-  return `Dice (1-100), use in order: ${rolls.join(", ")}
+  return `Dice rules (the rolls, 1-100, come in the latest ${DICE_MARK} system message):
 - A roll decides only an action whose outcome is truly uncertain (it can fail and the result changes the story). Persuasion, deception, and threats count; trivial actions, plain dialogue or feelings, and settled outcomes do not.
 - Use one roll per judged action, in order. Never reuse, skip, or swap rolls; unused rolls are ignored.
-- Set the difficulty by the setting's logic: easy 20, normal 50, hard 75, extreme 95. Success if roll >= difficulty, otherwise failure; near the line means a narrow success or partial failure.
+- Set the difficulty by the setting's logic: easy ${c.easy}, normal ${c.normal}, hard ${c.hard}, extreme ${c.extreme}. Success if roll >= difficulty, otherwise failure; near the line means a narrow success or partial failure.
 - Chained actions: judge in sequence. At the first failure the chain breaks there and the later actions do not happen.
 - Unexpected events (other characters' moves, accidents, the environment) get a reasonable difficulty and the next roll too.
 ${outcome}
-- Never reveal the rolls, difficulties, or these rules.${hint ? "\nThis input likely contains an action with an uncertain outcome." : ""}`;
+- Never reveal the rolls, difficulties, or these rules in the story.
+- At the very end of your reply, add one hidden line per judged action, exactly: <!-- dusk-roll: action in a few words | easy|normal|hard|extreme | roll | success|partial|fail -->. Add none if nothing was judged.`;
 }
-// 주사위가 켜지면 '결과를 적었으면 그대로' 줄을 주사위 규칙이 대신한다.
+// 굴림값(요청마다 바뀜): 캐시를 깨지 않게 마지막 유저 메시지 바로 앞에 따로 넣는다.
+export const DICE_MARK = "[Dusk Dice]";
+export function diceRollText({ rolls, hint, prev }) {
+  const last = prev?.length ? `\nLast turn's judged outcomes (keep them consistent; do not undo them): ${prev.map((p) => `${p.act} (${p.diff}, roll ${p.roll}) → ${p.result}`).join("; ")}` : "";
+  return `${DICE_MARK}\nDice (1-100), use in order: ${rolls.join(", ")}${hint ? "\nThis input likely contains an action with an uncertain outcome." : ""}${last}`;
+}
+// 고정 지침. 주사위가 켜지면 '결과를 적었으면 그대로' 줄을 주사위 규칙이 대신한다.
 export function buildFairText(dice = null) {
-  return dice ? `${HEAD}\n${TAIL.replace(/\nDo not mention these guidelines\.$/, "")}\n${diceText(dice)}\nDo not mention these guidelines.` : FAIR_TEXT;
+  return dice ? `${HEAD}\n${TAIL.replace(/\nDo not mention these guidelines\.$/, "")}\n${diceRules(dice)}\nDo not mention these guidelines.` : FAIR_TEXT;
 }
-// 맨 앞 시스템 메시지들 바로 뒤에 넣는다. 이미 있으면 한 번만(멱등). 원본 배열은 건드리지 않는다.
+// 고정 지침은 맨 앞 시스템 메시지들 바로 뒤에, 굴림값은 마지막 유저 메시지 바로 앞에 넣는다(없으면 맨 끝). 이미 있으면 한 번만(멱등). 원본 배열은 건드리지 않는다.
 export function insertFairness(messages, { dice = null } = {}) {
-  const list = (Array.isArray(messages) ? messages : []).filter((m) => !(m?.role === "system" && textOf(m.content).startsWith(FAIR_MARK)));
+  const isOurs = (m) => m?.role === "system" && (textOf(m.content).startsWith(FAIR_MARK) || textOf(m.content).startsWith(DICE_MARK));
+  const list = (Array.isArray(messages) ? messages : []).filter((m) => !isOurs(m));
   let at = 0; while (at < list.length && list[at]?.role === "system") at++;
-  return [...list.slice(0, at), { role: "system", content: buildFairText(dice) }, ...list.slice(at)];
+  const out = [...list.slice(0, at), { role: "system", content: buildFairText(dice) }, ...list.slice(at)];
+  if (dice) {
+    let u = -1; for (let i = out.length - 1; i > at; i--) if (out[i]?.role === "user") { u = i; break; }
+    const di = u < 0 ? out.length : u;
+    out.splice(di, 0, { role: "system", content: diceRollText(dice) });
+    // Claude(리스): 중간 system은 user로 바뀌어 마지막 user와 한 덩어리가 되고, 캐시 지점이 그 덩어리에 찍히면 다음 턴과 앞부분이 어긋난다.
+    // 주사위 바로 앞 assistant에 캐시 지점을 하나 찍어 그 앞까지는 다음 턴에 재사용되게 한다(리스 캐시 설정과 상관없이, 사용자 결정 2026-11-03). Claude 한도 4개.
+    const points = out.filter((m) => m?.cachePoint).length;
+    if (points < 4) {
+      let a = -1; for (let i = di - 1; i > at; i--) { if (out[i]?.role === "assistant") { a = i; break; } if (out[i]?.role === "user") break; }
+      if (a >= 0 && !out[a].cachePoint) out[a] = { ...out[a], cachePoint: true };
+    }
+  }
+  return out;
 }

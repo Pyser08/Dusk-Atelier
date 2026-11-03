@@ -15,10 +15,12 @@ import { renderPeople, personDetail, wikiEditable, editMetric, editWikiText, pin
 import { openRecords } from "./recordsui.js";
 import { openAITools, openFieldAI, openImport, fillEmptyPeople } from "./aitools.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX } from "../../../engine/memoryemo.js";
-import { gaugeBlock } from "./gaugeui.js";
+import { gaugeRows } from "./gaugeui.js";
+import { infoTab } from "./infotab.js";
 import { wikiPanel } from "./wikipanel.js";
 import { openWikiLog } from "./wikilog.js";
 import { liveScope } from "./advanced.js";
+import { personTabs } from "./personv2.js";
 
 const USER = "{{user}}";
 const AXIS_LABEL = { relationalInitiative: "관계 주도성", expressionDirectness: "표현 직접성", emotionalExpressiveness: "감정 표출성", guardedness: "경계 성향", impulsivity: "충동성", relationshipPersistence: "관계 지속성" };
@@ -161,24 +163,10 @@ function personPage(env, r, docs, commit) {
     if (pick) openFieldAI(env, doc, "new:record:" + encodeURIComponent(JSON.stringify({ group: info.id, slotId: pick.slotId, targetRef: pick.targetRef })), `${LABEL[g] ?? g} AI 작성`).catch(fail(ctx));
   };
 
-  // ---- 항목 카드(리수폿: 📌 편집 삭제 AI 작성)
-  const secCard = (s) => {
-    const slot = s.provenance?.slotId, g = recordGroupOf(s), info = RECORD_GROUPS.find((x) => x.id === g)?.slots.find(([id]) => id === slot);
-    const targets = (s.provenance?.targetRefs ?? []).map(nameOf).filter(Boolean).join(", ");
-    const meta = [targets && `대상 · ${targets}`, info?.[1]].filter(Boolean).join(" · ");
-    return h("article", { class: "rb-wk-card" }, h("div", { class: "rb-wk-ch" }, h("b", null, s.heading || s.title || "항목"), h("span", { style: "flex:1" }),
-      ed ? h("span", { class: "rb-mem-rowact" }, pinBtn(env, st, sectionPinKey(s.id)),
-        btn("편집", { size: "sm", onClick: () => run(editWikiText(env, st, { label: s.heading || "항목", body: s.body, sectionId: s.id })) }),
-        btn("삭제", { size: "sm", onClick: async () => { if (!(await confirmDialog(ctx.win, { title: "이 항목을 지울까요?", body: s.heading || "", ok: "삭제", danger: true }))) return; commit((w) => deletePersonItem(w, doc.id, { id: s.id, kind: "section", expected: JSON.stringify(doc.sections.find((x) => x.id === s.id)), scopeKey: scopeKeyOf(w) }), "지웠어요."); } }),
-        btn("AI 작성", { size: "sm", onClick: () => run(openFieldAI(env, doc, `section:${s.id}`, `${s.heading || "항목"} AI 작성`)) })) : null),
-      meta ? h("div", { class: "rb-wk-meta rb-muted" }, meta) : null, h("p", { class: "rb-wk-body" }, s.body));
-  };
-
   const section = (id, title, kids, count, extra, sub) => h("section", { class: "rb-wk-sec" },
     h("div", { class: "rb-wk-sh" }, h("div", null, h("h3", null, h("span", { class: "rb-muted" }, "# "), title), sub ? h("div", { class: "rb-wk-meta rb-muted" }, sub) : null), count != null ? badge(`${count}개`) : null, h("span", { style: "flex:1" }), extra ?? null,
       btn(closed[id] ? "펼치기" : "접기", { size: "sm", onClick: () => { closed[id] = !closed[id]; again(); } })),
     closed[id] ? null : kids);
-  const groupBtns = (g) => !ed ? null : h("span", { class: "rb-mem-rowact" }, btn("직접 추가", { size: "sm", onClick: () => run(openRecords(env, doc, { group: g === "npc" ? "npc" : g })) }), btn("AI 작성", { size: "sm", onClick: () => run(aiNew(g)) }));
 
   // ---- 수치 상태
   const addMetricFlow = async (slotId, label) => {
@@ -193,37 +181,6 @@ function personPage(env, r, docs, commit) {
     });
     if (res) commit((w) => addMetric(w, doc.id, { slotId, ...res }, policy), "수치를 지정했어요.");
   };
-  const metricCard = (x, slotId, label, descSlot) => {
-    if (!x) return h("article", { class: "rb-wk-card" }, h("div", { class: "rb-wk-ch" }, h("b", null, label), h("span", { style: "flex:1" }), ed && policyOf(env, slotId) ? btn("편집", { size: "sm", onClick: () => run(addMetricFlow(slotId, label)) }) : null), h("p", { class: "rb-wk-unset" }, "미지정"));
-    const min = x.minimum ?? 0, max = x.maximum ?? 100, pct = Math.round(((x.value - min) / Math.max(1, max - min)) * 100), item = { label, value: x.value, min, max, metricId: x.id, slotId: x.slotId };
-    const tg = (x.targetRefs ?? []).map(nameOf).filter(Boolean).join(" → "), desc = descSlot ? doc.sections.find((s) => s.provenance?.slotId === descSlot && JSON.stringify(s.provenance?.targetRefs ?? []) === JSON.stringify(x.targetRefs ?? []))?.body : "";
-    return h("article", { class: "rb-wk-card" }, h("div", { class: "rb-wk-ch" }, h("b", null, label), h("span", { style: "flex:1" }),
-      ed ? h("span", { class: "rb-mem-rowact" }, pinBtn(env, st, metricPinKey(x.id)), policyOf(env, x.slotId) ? btn("편집", { size: "sm", onClick: () => run(editMetric(env, st, item)) }) : null,
-        btn("삭제", { size: "sm", onClick: async () => { if (!(await confirmDialog(ctx.win, { title: "이 수치를 지울까요?", body: label, ok: "삭제", danger: true }))) return; commit((w) => deletePersonItem(w, doc.id, { id: x.id, kind: "metric", expected: JSON.stringify(doc.metrics.find((y) => y.id === x.id)), scopeKey: scopeKeyOf(w) }), "지웠어요."); } })) : null,
-      h("b", { class: "rb-wk-val" }, `${x.value}/${max}`)),
-      tg ? h("div", { class: "rb-wk-meta rb-muted" }, `대상 · ${tg}`) : null, x.lastDelta ? h("span", { class: "rb-wk-delta" }, `이번 턴 ${x.lastDelta > 0 ? "+" : ""}${x.lastDelta}`) : null,
-      h("div", { class: "rb-wk-bar", role: "progressbar", "aria-valuemin": min, "aria-valuemax": max, "aria-valuenow": x.value }, h("i", { style: { width: `${Math.max(0, Math.min(100, pct))}%` } })),
-      h("div", { class: "rb-wk-range rb-muted" }, h("span", null, `전체 ${min}~${max}`), h("span", null, x.stageLabel ?? ""), h("span", null, x.lastDelta ? `최근 ${x.lastDelta > 0 ? "+" : ""}${x.lastDelta}` : "")),
-      desc ? h("p", { class: "rb-wk-body" }, desc.length > 200 ? desc.slice(0, 200) + "…" : desc) : null);
-  };
-  const metricCards = () => {
-    if (!doc) return [];
-    const known = new Set(METER_SLOTS.map(([s]) => s)), out = [];
-    for (const [slot, label, desc] of METER_SLOTS) { const list = doc.metrics.filter((x) => x.slotId === slot); if (!list.length) out.push(metricCard(null, slot, label)); else for (const x of list) out.push(metricCard(x, slot, label, desc)); }
-    for (const x of doc.metrics.filter((y) => !known.has(y.slotId))) out.push(metricCard(x, x.slotId, x.slotId));
-    return out;
-  };
-
-  // v1.7.1: 감정 게이지 6가지(읽기 전용). 이 인물이 '느끼는' 쪽(from)인 쌍만, {{user}} 대상이 맨 앞.
-  const emoCards = () => {
-    if (!doc) return [];
-    const nm = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, ""), mine = new Set([doc.title, ...(doc.aliases ?? []), p?.name, ...(p?.aliases ?? [])].map(nm).filter(Boolean));
-    const pairs = Object.values(env.folder.emo ?? {}).filter((x) => mine.has(nm(x.from)) && EMO_TAGS.some((t) => x.tags?.[t] != null)).sort((a, b) => (nm(b.to) === "{{user}}") - (nm(a.to) === "{{user}}"));
-    if (!pairs.length) return [h("div", { class: "rb-card rb-wk-emo" }, h("div", { class: "rb-wk-top" }, h("b", null, "감정 게이지")), h("p", { class: "rb-muted" }, "아직 기록된 감정이 없어요. 대화가 이어지면 기억 분석이 채워 줘요."))];
-    return pairs.map((x) => h("div", { class: "rb-card rb-wk-emo" }, h("div", { class: "rb-wk-top" }, h("b", null, `감정 게이지 · ${x.from} → ${x.to}`)),
-      EMO_TAGS.map((t) => { const v = x.tags?.[t]; return h("div", { class: "rb-wk-emorow" }, h("span", null, EMO_LABEL[t]), h("div", { class: "rb-wk-bar", role: "progressbar", "aria-label": EMO_LABEL[t], "aria-valuemin": 0, "aria-valuemax": GAUGE_MAX, "aria-valuenow": v ?? 0 }, h("i", { style: { width: `${v == null ? 0 : (v / GAUGE_MAX) * 100}%` } })), h("b", null, v == null ? "—" : String(v))); })));
-  };
-
   const groups = {};
   for (const s of doc?.sections ?? []) { if (!s?.body?.trim()) continue; (groups[recordGroupOf(s) ?? "etc"] ??= []).push(s); }
 
@@ -242,22 +199,6 @@ function personPage(env, r, docs, commit) {
     });
     if (res) commit((w) => editProfile(w, doc.id, res), "고쳤어요.");
   };
-  const pin = (key) => ed ? pinBtn(env, st, key) : null;
-  const profileBlock = () => {
-    if (!doc) return null;
-    if (!profile) return section("PROFILE", "기본 성격", h("p", { class: "rb-wk-empty rb-muted" }, "아직 기본 성격이 없습니다. 만든 뒤 직접 쓰거나 AI로 채워요."), null, ed ? btn("기본 성격 만들기", { size: "sm", onClick: () => commit((w) => ensureProfile(w, doc.id), "만들었어요. 이제 직접 수정이나 AI 작성을 쓸 수 있어요.") }) : null);
-    const chips = (a) => h("div", { class: "rb-mem-chats" }, a.map((t) => h("span", { class: "rb-chip" }, `#${t}`)));
-    const card = (title, key, body, wide) => h("article", { class: ["rb-wk-card", wide && "wide"] }, h("div", { class: "rb-wk-ch" }, h("b", null, title), h("span", { style: "flex:1" }), pin(key)), body);
-    return section("PROFILE", "기본 성격", h("div", { class: "rb-wk-grid" },
-      card("성격 요약", "summary", h("p", { class: "rb-wk-body" }, profile.summary || "미작성"), true),
-      (profile.coreTraits ?? []).length ? card("핵심 기질", "coreTraits", chips(profile.coreTraits), true) : null,
-      PROFILE_AXES.map((a) => { const v = profile.axes?.[a] ?? 50; return h("article", { class: "rb-wk-card" }, h("div", { class: "rb-wk-ch" }, h("b", null, AXIS_LABEL[a]), pin(`axis:${a}`), h("span", { style: "flex:1" }), h("b", { class: "rb-wk-val" }, `${v}/100`)), h("div", { class: "rb-wk-bar" }, h("i", { style: { width: `${v}%` } })), h("div", { class: "rb-wk-meta rb-muted" }, band(a, v))); }),
-      (profile.values ?? []).length ? card("중요 가치", "values", h("p", { class: "rb-wk-body" }, profile.values.join(" · "))) : null,
-      TEXT_FIELDS.filter(([k]) => profile[k]).map(([k, l]) => card(l, k, h("p", { class: "rb-wk-body" }, profile[k]))),
-      profile.updatedAt ? h("div", { class: "rb-wk-meta rb-muted wide" }, `마지막 갱신 ${when(profile.updatedAt)}`) : null), null,
-      ed ? h("span", { class: "rb-mem-rowact" }, btn("직접 수정", { size: "sm", onClick: () => run(editProfileAll()) }), btn("AI 작성", { size: "sm", onClick: () => run(openFieldAI(env, doc, "profile:personality", "기본 성격 AI 작성")) })) : null);
-  };
-
   // ---- 문서 관리: 이름 · 별칭 · 태그 · 연결 문서 (+ Dusk 포함 방식·기록 쉬기)
   const manage = () => {
     const nm = h("input", { class: "rb-input", value: doc?.title ?? r.name, "aria-label": "이름" }), al = h("input", { class: "rb-input", value: (doc?.aliases ?? p?.aliases ?? []).join(", "), "aria-label": "별칭" }), tg = h("input", { class: "rb-input", value: (doc?.tags ?? []).join(", "), "aria-label": "태그" });
@@ -277,30 +218,20 @@ function personPage(env, r, docs, commit) {
           btn("이 인물로 새 봇 만들기", { size: "sm", onClick: () => { m.compose = { keys: [r.pk] }; m.ctab = "compose"; ctx.go("cards"); } })) : null));
   };
 
-  // ---- 항목 묶음 블록
-  const blocks = ORDER.map((id) => {
-    if (id === "PROFILE") return profileBlock();
-    if (id === "METRICS") return doc ? section("metrics", "수치 상태", h("div", { class: "rb-wk-grid" }, [...metricCards(), ...emoCards(), gaugeBlock(env, doc, p)]), doc.metrics.length) : null;
-    if (!doc) return null;
-    const secs = (MEMBERS[id] ?? [id]).flatMap((g) => groups[g] ?? []);
-    if (!secs.length && !ALWAYS.has(id)) return null;
-    let list = secs, foot = null;
-    if (id === "speech" && secs.length) {   // 리수폿처럼 ‘나’ 대상 말투를 먼저, 다른 NPC 대상은 펼쳐서 본다
-      const mine = secs.filter((s) => (s.provenance?.targetRefs ?? []).includes("actor:user")), rest = secs.filter((s) => !mine.includes(s)), open = !!(m.wkSpeech ??= {})[doc.id];
-      list = open ? [...mine, ...rest] : mine;
-      if (rest.length) foot = h("div", { class: "rb-wk-foot" }, btn(open ? "접기" : "펼치기", { size: "sm", onClick: () => { m.wkSpeech[doc.id] = !open; again(); } }), h("span", { class: "rb-muted" }, `다른 NPC 대상 말투 ${rest.length}개`));
-    }
-    return section(id, LABEL[id], secs.length ? h("div", { class: "rb-wk-stack" }, list.map(secCard), foot) : h("p", { class: "rb-wk-empty rb-muted" }, EMPTY), secs.length, groupBtns(id), SUB[id]);
-  });
-
   const story = p ? h("div", { class: "rb-wk-story" }) : null;
   if (p) personDetail(env, story, r.pk, true);
 
-  return h("div", { class: "rb-wk-page" },
-    h("div", { class: "rb-wk-title" }, h("h3", null, r.name), h("span", { style: "flex:1" }),
-      ed ? h("span", { class: "rb-mem-rowact" }, btn("요약 정리", { size: "sm", onClick: () => aiOpen("refresh") }), btn("직접 지시하기", { size: "sm", onClick: () => aiOpen("command") }),
-        btn("인물 삭제", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: `${r.name} 인물을 지울까요?`, body: "인물 문서와 기본 성격이 함께 지워져요. 📌 고정한 항목이 남아 있으면 먼저 풀어야 해요.", ok: "삭제", danger: true })) { m.wkSel = ""; commit((w) => removePerson(w, doc.id), "지웠어요."); } } })) : null),
-    manage(), ...blocks,
-    ed && env.advanced ? wikiPanel(env, doc) : null,
-    story ? section("story", "이야기 기록", story, null, null, "사건 · 관계 · 상태 · 약속을 한 목록으로 봐요. 항목 오른쪽 ‘수정’으로 고치거나 지워요.") : null);
+  // v1.8.3 개편: 탭(요약 / 관계 / 상세 정보 / 기록). 기존 블록은 상세 정보·기록 탭으로 그대로 옮긴다.
+  const actions = ed ? h("span", { class: "rb-mem-rowact" }, btn("요약 정리", { size: "sm", onClick: () => aiOpen("refresh") }), btn("직접 지시하기", { size: "sm", onClick: () => aiOpen("command") }),
+    btn("인물 삭제", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: `${r.name} 인물을 지울까요?`, body: "인물 문서와 기본 성격이 함께 지워져요. 📌 고정한 항목이 남아 있으면 먼저 풀어야 해요.", ok: "삭제", danger: true })) { m.wkSel = ""; commit((w) => removePerson(w, doc.id), "지웠어요."); } } })) : null;
+  const slotLabel = Object.fromEntries(METER_SLOTS.map(([s, l]) => [s, l]));
+  const metrics = (doc?.metrics ?? []).map((x) => ({ label: slotLabel[x.slotId] ?? x.slotId, slot: x.slotId, value: x.value, min: x.minimum ?? 0, max: x.maximum ?? 100, stage: x.stageLabel ?? "", targets: (x.targetRefs ?? []).map(nameOf).filter(Boolean) }));
+  return h("div", { class: "rb-wk-page" }, personTabs(env, { r, doc, p, header: actions, metrics, gauges: () => gaugeRows(env, doc, p),
+    info: (go) => infoTab(env, { doc, p, r, ed, profile, groups, commit, nameOf, aiNew, addMetricFlow, editProfileAll, go,
+      K: { ORDER, MEMBERS, ALWAYS, LABEL, SUB, AXES: PROFILE_AXES, AXIS_LABEL, band, METER_SLOTS, TEXT_FIELDS },
+      makeProfile: () => commit((w) => ensureProfile(w, doc.id), "만들었어요. 이제 직접 수정이나 AI 작성을 쓸 수 있어요."),
+      makeDoc: () => commit((w) => createBlankPerson(w, r.name), "위키 문서를 만들었어요."),
+      plan: doc ? fillPlan(wiki, [doc]) : null, askFill: async () => { const plan = fillPlan(wiki, [doc]); if (plan.total && await confirmDialog(ctx.win, { title: `AI로 빈칸 채우기 · ${doc.title}`, body: `${[...plan.full, ...plan.metricOnly].map(planLine).join("\n")}\n\n이미 있는 본문·성격은 고치지 않아요. AI 호출이 일어나요.`, ok: "채우기 시작" })) await fillEmptyPeople(env, plan); },
+      gauges: () => gaugeRows(env, doc, p), panel: ed && env.advanced ? wikiPanel(env, doc) : null }),
+    logBlocks: [manage(), story ? section("story", "이야기 기록", story, null, null, "사건 · 관계 · 상태 · 약속을 한 목록으로 봐요. 항목 오른쪽 ‘수정’으로 고치거나 지워요.") : null] }));
 }

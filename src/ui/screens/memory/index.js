@@ -6,8 +6,9 @@ import { renderMemoryDetail } from "./mdetail.js";
 import { renderMemoryBots } from "./mbots.js";
 import { maybeAskHypa } from "./hypamodal.js";
 import { renderMemorySkills } from "./skills.js";
+import { renderMemoryMe } from "./mepage.js";
 
-const PAGES = { home: renderMemoryHome, detail: renderMemoryDetail, bots: renderMemoryBots, skills: renderMemorySkills };
+const PAGES = { home: renderMemoryHome, detail: renderMemoryDetail, bots: renderMemoryBots, skills: renderMemorySkills, me: renderMemoryMe };
 
 export async function renderMemory(ctx) {
   const m = mem(ctx);

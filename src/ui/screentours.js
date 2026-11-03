@@ -46,8 +46,8 @@ export const SCREEN_TOURS = {
     st("sparkle", "카드 만들기", "봇을 고르면 이미 만든 카드가 보여요. ‘새 카드·새 봇 만들기’에서 인물과 범위를 고르고, 마음에 들면 새 봇으로 이어 가요.", ".rb-cards2 .rb-mem-root"),
   ],
   tools: [
-    st("tools", "도구 모음", "타일을 누르면 그 도구가 열려요. 돌아올 때는 위쪽 줄의 이름이나 ‘홈’을 눌러요.", ".rb-tgrid"),
-    st("sparkle", "고마운 분들", "Dusk Atelier의 바탕이 된 분들이에요. 원문 글 링크로 가 볼 수 있어요.", ".rb-credits", ".rb-thanks"),
+    st("tools", "도구 모음", "자주 쓰는 도구와 확인·복구 도구로 나눠 두었어요. 줄을 누르면 그 도구가 열려요.", ".rb-toolgrp"),
+    st("sparkle", "도움 주신 분들", "Dusk Atelier의 바탕이 된 기능들이에요.", ".rb-credits"),
   ],
   settings: [
     st("sliders", "화면 모드", "‘간단’은 꼭 필요한 것만, ‘고급’은 세부 설정까지 보여요. 처음엔 간단을 권해요.", ".rb-scard .has-seg"),

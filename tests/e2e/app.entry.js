@@ -1,3 +1,5 @@
+import { createSkillStore } from "../../src/data/skillstore.js";
+import { normalizeSkillSet } from "../../src/engine/skills.js";
 // 1.7.0 메뉴 구조 시험용: 가짜 리스 api로 실제 createApp을 띄운다. node tests/e2e/run-app.mjs 로 실행.
 import { createApp } from "../../src/ui/app.js";
 import { createMemory } from "../../src/data/memory.js";
@@ -38,19 +40,29 @@ export function fakeApi(seed = {}, story = false, mods = false) {
     getColorScheme: async () => ({ scheme: { type: "light" } }),
     showContainer: async () => {}, hideContainer: async () => {},
     getDatabase: async () => structuredClone(db), setDatabaseLite: async () => {}, setDatabase: async () => {},
-    getCharacterFromIndex: async (i) => structuredClone(chars[i]), setCharacterToIndex: async () => {},
+    getCharacterFromIndex: async (i) => structuredClone(chars[i]), setCharacterToIndex: async (i, c) => { (window.__charWrites ??= []).push({ i, c: structuredClone(c) }); },
     getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0, getChatFromIndex: async (ci, ti) => structuredClone(chars[ci]?.chats?.[ti] ?? { message: [] }),
     ...(seed.__bard ? { bardWiki: { getDocuments: async () => [] } } : {}),
     getRootDocument: async () => null, nativeFetch: async () => ({ status: 404 }), registerButton: async () => {}, registerSetting: async () => {}
   };
 }
 window.bootApp = async (seed, opts = {}) => {
+  // 1.8.3 시작 안내는 기본으로 '본 것'으로 시작한다(안내 자체를 시험할 때만 opts.onboard)
+  if (!opts.onboard) { const ui = JSON.parse(seed["rbm:ui:v1"] ?? "{}"); ui.onboardDone ??= true; ui.onboardVer ??= 99; seed = { ...seed, "rbm:ui:v1": JSON.stringify(ui) }; }
   const api = fakeApi(seed, !!opts.story, !!opts.mods);
   delete api.store.__bard;
   const errors = (window.__errors = []);
   window.addEventListener("error", (e) => errors.push(e.message));
   window.addEventListener("unhandledrejection", (e) => errors.push(String(e.reason?.message ?? e.reason)));
   const app = createApp(api, { legacy: { open() {}, busy: false, startWithFiles() {} }, version: "1.7.0-dev", onPersonaChanged() {} });
+  // 코코아(스킬) 화면: 실제 스킬 저장소. opts.skills면 세트 3개를 미리 넣는다(첫 세트는 정리 노트·기록하기에 붙임).
+  app.ctx.skills = createSkillStore(api, { log() {} });
+  if (opts.skills) {
+    const md = (n) => `---\nname: ${n}\ndescription: ${n} 설명\nskill_format: 2\ninject_order: 100\nsystem_prompt: |\n  ${n} 지침\n---\n# ${n}\n`;
+    for (const [i, n] of ["문체 다듬기", "전투 묘사", "관계 메모"].entries()) await app.ctx.skills.importSet(normalizeSkillSet({ name: n, files: [{ path: `${n}/SKILL.md`, content: md(n) }] }, i), "new");
+    const lib = await app.ctx.skills.getLibrary(), cfg = await app.ctx.skills.getCfg(), first = lib.sets[0];
+    await app.ctx.skills.saveCfg({ ...cfg, on: true, stages: { ...cfg.stages, director: [{ id: first.id, name: first.name }], writer: [{ id: first.id, name: first.name }] } });
+  }
   if (opts.memory) {  // 기억 탭까지 실제 저장소·흐름으로 띄운다(훅 등록은 가짜 api라 건너뜀)
     const memory = createMemory(api, { potLibrary: POT_PROMPTS });
     await memory.store.getIndex();

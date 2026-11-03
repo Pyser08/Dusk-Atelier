@@ -1,4 +1,5 @@
 import { scanRisum } from '../../engine/formats/risum.js';
+import { runeSd } from '../mascot.js';
 import { readZipDirectory, readZipEntry } from '../../engine/formats/zip.js';
 import { readAssetBytes } from '../../engine/formats/bytes.js';
 import { safeFileName } from '../../engine/export.js';
@@ -6,7 +7,7 @@ import { createZip } from '../../engine/zipwrite.js';
 import { DISABLED_KEY, ORDER_KEY, commit, readDb } from '../../data/modules.js';
 import { download, fmtBytes, h, pickFiles, replace } from '../dom.js';
 import { icon } from '../icons.js';
-import { btn, confirmDialog, guidePanel, note, openMenu, progressBar } from '../kit.js';
+import { btn, confirmDialog, note, openMenu, progressBar } from '../kit.js';
 import { defaultsMeta } from '../prefs.js';
 import { PRESET_KEY, loadPresets, savePresets } from '../../data/presets.js';
 import { INJECTED_KEY, loadPersonaMap, savePersonaMap } from '../../data/persona.js';
@@ -27,69 +28,6 @@ export function tile(ic, title, desc, onClick, id) {
     h("span", { style: "color:var(--rb-mute);display:flex" }, icon("chevron", 16))
   );
 }
-// Special thanks — RisuTide (대표 이모지: 🌊)
-function thanksCard() {
-  const wave = (o, d) => `<path d="M0 ${18 + o} C 40 ${8 + o}, 80 ${28 + o}, 120 ${18 + o} S 200 ${8 + o}, 240 ${18 + o} S 320 ${28 + o}, 360 ${18 + o} S 440 ${8 + o}, 480 ${18 + o} V 60 H 0 Z" fill="currentColor" opacity="${d}"/>`;
-  const box = h(
-    "div",
-    { class: "rb-thanks", id: "rb-thanks" },
-    h("div", { class: "rb-thanks-waves", "aria-hidden": "true", ref: (el) => el.innerHTML = `<svg viewBox="0 0 480 60" preserveAspectRatio="none">${wave(6, 0.18)}${wave(14, 0.28)}${wave(22, 0.45)}</svg>` }),
-    h(
-      "div",
-      { class: "rb-thanks-body" },
-      h("span", { class: "rb-thanks-emoji", "aria-hidden": "true" }, "🌊"),
-      h(
-        "div",
-        null,
-        h("span", { class: "rb-thanks-kicker" }, "SPECIAL THANKS"),
-        h("b", { class: "rb-thanks-title" }, "RisuTide"),
-        h("span", { class: "rb-thanks-text" }, "채팅을 지키는 업데이트, 꼼꼼한 비교 검토, 다른 봇에서 가져오기·합치기까지 — Dusk Atelier의 업데이트 기능은 RisuTide에서 이어받았어요. 기꺼이 코드를 넘겨주신 RisuTide 개발자님께 깊이 감사드려요."),
-        h("a", { href: "https://arca.live/b/characterai/186759072", target: "_blank", rel: "noopener noreferrer", style: "display:inline-block;margin-top:6px;color:inherit;font-weight:700;text-decoration:underline;font-size:12px" }, "RisuTide 글 보기 ↗")
-      )
-    )
-  );
-  return box;
-}
-// 이식 크레딧 카드 — 원작자 이름은 적지 않고 원문 글 링크만 둔다 (RisuTide 감사 카드와 같은 결: 어두운 그라데이션 + 움직이는 배경)
-const CREDITS = [
-  { key: "pot", emoji: "📜", kicker: "PORTED WITH PERMISSION", name: "Risupot", desc: "위키 기억 기능의 바탕이에요. 허락을 받아 옮겨 왔어요.", url: "https://arca.live/b/characterai/185024906" },
-  { key: "arcana", emoji: "🃏", kicker: "PORTED WITH PERMISSION", name: "Arcana Card", desc: "기억 카드의 바탕이에요. 허락을 받아 옮겨 왔어요.", url: "https://arca.live/b/characterai/185793481" },
-  { key: "bb", emoji: "🛠️", kicker: "PORTED WITH PERMISSION", name: "봇빌더", desc: "AI로 제작 기능을 허락받고 옮겨 왔어요.", url: "https://arca.live/b/characterai/187289284" },
-  { key: "cocoa", emoji: "🥥", kicker: "PORTED WITH PERMISSION", name: "cocoA(gent!)", desc: "스킬 기능의 바탕이에요. 허락을 받아 Dusk Atelier에 맞게 옮겨 왔어요.", url: "https://arca.live/b/characterai/179542646?p=1" },
-  { key: "hypa", emoji: "📚", kicker: "PORTED WITH PERMISSION", name: "HypaPlus", desc: "기억 가져오기·정규식 전처리의 바탕이에요. 허락을 받아 옮겨 왔어요.", url: "https://arca.live/b/characterai/180803492" }
-];
-const STAR_POS = [[8, 22, 0], [18, 70, 1.1], [31, 36, 0.5], [44, 80, 1.7], [57, 18, 0.9], [66, 58, 2.1], [78, 30, 0.3], [88, 74, 1.4], [94, 20, 1.9]];
-function creditFx(key) {
-  const fx = h("div", { class: "rb-cr-fx", "aria-hidden": "true" }, h("i", { class: "rb-cr-glow" }), h("i", { class: "rb-cr-shine" }));
-  STAR_POS.forEach(([x, y, d], n) => fx.appendChild(h("i", { class: "rb-cr-star", style: `left:${x}%;top:${y}%;animation-delay:${d}s;${n % 3 === 0 ? "width:5px;height:5px" : ""}` })));
-  return fx;
-}
-function creditCards() {
-  return h(
-    "div",
-    { class: "rb-credits" },
-    ...CREDITS.map((c, i) =>
-      h(
-        "div",
-        { class: "rb-cr", "data-credit": c.key, style: `--rb-ci:${i + 1}` },
-        creditFx(c.key),
-        h(
-          "div",
-          { class: "rb-cr-body" },
-          h("span", { class: "rb-cr-emoji", "aria-hidden": "true" }, c.emoji),
-          h(
-            "div",
-            { class: "rb-cr-txt" },
-            h("span", { class: "rb-cr-kicker" }, c.kicker),
-            h("b", { class: "rb-cr-title" }, c.name),
-            h("span", { class: "rb-cr-desc" }, c.desc),
-            h("a", { class: "rb-cr-link", href: c.url, target: "_blank", rel: "noopener noreferrer" }, "원문 글 보기 ↗")
-          )
-        )
-      )
-    )
-  );
-}
 export function renderTools(ctx) {
   if (ctx.state.sub === "inspector") return renderInspector(ctx);
   if (ctx.state.sub === "presets") return renderPresets(ctx);
@@ -102,40 +40,47 @@ export function renderTools(ctx) {
     return;
   }
 
-  const tile2 = (ic, title, desc, onClick, id) => h(
+  // 1.8.3(목업 5): 같은 크기 타일 7개 → '자주 쓰는 도구 3' + '확인·복구 4' 목록. 도움 주신 분들은 이름·한 줄 설명만(원문 글 링크 없음).
+  const row = (ic, title, desc, onClick, id) => h(
     "button",
-    { type: "button", class: "rb-ttile", onClick, id },
-    h("span", { class: "ico" }, icon(ic, 22)),
-    h("b", null, title),
-    h("small", null, desc)
+    { type: "button", class: "rb-srow rb-toolrow", onClick, id },
+    h("span", { class: "ico", "aria-hidden": "true" }, icon(ic, 18)),
+    h("span", { class: "t" }, title, h("small", null, desc)),
+    h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))
   );
+  const group = (title, ...rows) => h("section", { class: "rb-card bordered rb-scard rb-toolgrp" }, h("span", { class: "h" }, title), ...rows);
   const content = h(
     "div",
-    { class: "rb-section", style: "flex:1;min-width:0" },
-    h(
-      "div",
-      { class: "rb-tgrid" },
-      tile2("preset", "프리셋", "모듈 조합을 저장하고 공유해요", () => ctx.go("tools", "presets"), "rb-tool-presets"),
-      tile2("palette", "채팅 테마 빌더", "테마 만들기·목록·코드 주고받기", () => ctx.go("tools", "chattheme"), "rb-tool-chattheme"),
-      tile2("book", "로어북 로그", "응답에 들어간 로어북 보기", () => ctx.go("tools", "lorelog"), "rb-tool-lorelog"),
-      tile2("info", ".risum 인스펙터", "모듈 파일 안을 열어 봐요", () => ctx.go("tools", "inspector"), "rb-tool-inspector"),
-      tile2("download", "전체 백업·복원", "설정과 데이터를 저장·복원", (ev) => openMenu(ctx.win, ev.currentTarget, [
-        { label: "백업 만들기", icon: "download", onClick: () => fullBackup(ctx) },
-        { label: "백업에서 복원", icon: "upload", onClick: () => fullRestore(ctx) }
-      ]), "rb-tool-backup"),
-      tile2("history", "기록·되돌리기", "봇·모듈 변경을 되돌려요", () => ctx.go("settings", "history"), "rb-tool-history"),
-      tile2("image", "에셋 태그 고치기", "열린 채팅의 틀린 이미지 태그를 고쳐요", () => import("./assetfix.js").then((m) => m.openAssetFix(ctx)).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })), "rb-tool-assetfix")
-    ),
-    h("section", { class: "rb-thanks-sec" }, h("h2", { class: "rb-label" }, "도움 주신 분들"), thanksCard(), creditCards())
+    { class: "rb-section rb-tools3", style: "flex:1;min-width:0" },
+    h("div", { class: "rb-tools3-grid" },
+      h("div", { class: "rb-tools3-col" },
+        group("자주 쓰는 도구",
+          row("preset", "프리셋", "모듈 조합을 저장하고 공유해요", () => ctx.go("tools", "presets"), "rb-tool-presets"),
+          row("palette", "채팅 테마 빌더", "테마 만들기·목록·코드 주고받기", () => ctx.go("tools", "chattheme"), "rb-tool-chattheme"),
+          row("image", "에셋 태그 고치기", "열린 채팅의 틀린 이미지 태그를 고쳐요", () => import("./assetfix.js").then((m) => m.openAssetFix(ctx)).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })), "rb-tool-assetfix")),
+        group("확인 · 복구",
+          row("book", "로어북 로그", "응답에 들어간 로어북 보기", () => ctx.go("tools", "lorelog"), "rb-tool-lorelog"),
+          row("info", ".risum 인스펙터", "모듈 파일 안을 열어 봐요", () => ctx.go("tools", "inspector"), "rb-tool-inspector"),
+          row("download", "전체 백업·복원", "설정과 데이터를 저장·복원", (ev) => openMenu(ctx.win, ev.currentTarget, [
+            { label: "백업 만들기", icon: "download", onClick: () => fullBackup(ctx) },
+            { label: "백업에서 복원", icon: "upload", onClick: () => fullRestore(ctx) }
+          ]), "rb-tool-backup"),
+          row("history", "기록·되돌리기", "봇·모듈 변경을 되돌려요", () => ctx.go("settings", "history"), "rb-tool-history"))),
+      h("section", { class: "rb-card bordered rb-sthanks", "aria-label": "스페셜 땡스" },
+        h("div", { class: "rb-sthanks-head" }, runeSd("bow", "rb-rune-sd thanks"), h("span", { class: "k" }, "SPECIAL THANKS"), h("b", null, "도움 주신 분들"), h("small", null, "Dusk Atelier는 아래 프로젝트들 덕분에 만들어졌어요.")),
+        h("div", { class: "rb-sthanks-grid" }, THANKS.map((c) => h("div", { class: "rb-sthanks-item", "data-credit": c.key }, h("span", { class: "emo", "aria-hidden": "true" }, c.emoji), h("span", { class: "t" }, h("b", null, c.name), h("small", null, c.desc)))))))
   );
-  const adv = ctx.prefs.uiMode === "advanced";
-  const guide = adv ? guidePanel("어떤 도구가 맞을까요?", "하고 싶은 일로 골라 보세요.", [
-    { label: "모듈 켜기 조합을 저장하고 싶어요", text: "프리셋", onClick: () => ctx.go("tools", "presets") },
-    { label: "응답에 어떤 로어북이 들어갔는지 보고 싶어요", text: "로어북 로그", onClick: () => ctx.go("tools", "lorelog") },
-    { label: "모듈 파일 안을 열어 보고 싶어요", text: ".risum 인스펙터", onClick: () => ctx.go("tools", "inspector") }
-  ]) : null;
-  replace(ctx.main, h("div", { class: "rb-scroll rb-twocol" }, content, guide));
+  replace(ctx.main, h("div", { class: "rb-scroll rb-twocol" }, content));
 }
+// 도움 주신 분들(1.8.3): 이름과 한 줄 설명만
+const THANKS = [
+  { key: "tide", emoji: "🌊", name: "RisuTide", desc: "업데이트·병합 기능이 RisuTide에서 이어졌어요" },
+  { key: "pot", emoji: "📜", name: "Risupot", desc: "기억 기능의 바탕" },
+  { key: "arcana", emoji: "🃏", name: "Arcana Card", desc: "기억 카드의 바탕" },
+  { key: "bb", emoji: "🛠️", name: "봇빌더", desc: "AI로 봇 만들기의 바탕" },
+  { key: "cocoa", emoji: "🥥", name: "cocoA(gent!)", desc: "스킬 기능의 바탕" },
+  { key: "hypa", emoji: "📚", name: "HypaPlus", desc: "기억 가져오기·정규식 전처리의 바탕" }
+];
 export async function fullBackup(ctx) {
   const db = await readDb(ctx.api, ["modules", "pluginCustomStorage", "enabledModules"]);
   const on = db.modules ?? [], off = db.pluginCustomStorage?.[DISABLED_KEY] ?? [];

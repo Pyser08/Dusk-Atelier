@@ -1,0 +1,27 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>목업 A · 분할 히어로</title><link rel="stylesheet" href="_base.css"><style>
+body{background:radial-gradient(900px 500px at 85% 0,color-mix(in srgb,var(--g1) 28%,transparent),transparent 70%),radial-gradient(600px 400px at 0 10%,color-mix(in srgb,var(--g3) 12%,transparent),transparent 70%),var(--bg)}
+.w{max-width:1080px;margin:0 auto;padding:0 20px}
+.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:24px;align-items:center;padding:56px 0 30px}
+.ey{display:inline-flex;gap:8px;align-items:center;padding:4px 12px;border:1px solid var(--line);border-radius:999px;font-size:12.5px;font-weight:700;color:var(--g3);background:var(--card)}
+h1{font-size:52px;line-height:1.15;margin:16px 0 14px;letter-spacing:-.02em}h1 span{background:linear-gradient(90deg,var(--g2),var(--g3));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{font-size:18px;color:var(--sub);margin:0 0 26px;max-width:30em}
+.btns{display:flex;gap:10px;flex-wrap:wrap}.b1{padding:13px 24px;border-radius:14px;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;font-weight:800;box-shadow:0 10px 30px color-mix(in srgb,var(--g1) 45%,transparent)}.b2{padding:13px 20px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--sub);font-weight:600}
+.rune{position:relative}.rune img{width:100%;max-width:360px;margin:0 auto;filter:drop-shadow(0 30px 50px color-mix(in srgb,var(--g1) 50%,transparent));animation:fl 6s ease-in-out infinite}@keyframes fl{50%{transform:translateY(-10px)}}
+.rune .bub{position:absolute;left:-14px;bottom:18%;background:var(--card);border:1px solid var(--line);border-radius:16px 16px 16px 4px;padding:10px 14px;font-size:14px;box-shadow:0 10px 30px #0004}
+h2{font-size:13px;letter-spacing:.12em;color:var(--g3);margin:44px 0 14px}
+.paths{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.path{padding:22px;border-radius:20px;border:1px solid var(--line);background:var(--card);transition:.2s}.path:hover{transform:translateY(-3px);border-color:var(--g2)}
+.path .n{font-size:12px;font-weight:800;color:var(--mute)}.path b{display:block;font-size:20px;margin:6px 0}.path p{margin:0;color:var(--mute);font-size:14.5px}.path.main{background:linear-gradient(150deg,color-mix(in srgb,var(--g1) 30%,var(--card)),var(--card))}
+.feat{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}.f{text-align:center;padding:16px 8px;border-radius:16px;background:var(--card);border:1px solid var(--line)}.f img{width:56px;height:56px;object-fit:contain;margin:0 auto 6px}.f b{font-size:14px}
+.new{display:flex;gap:14px;align-items:center;margin:44px 0 60px;padding:18px 20px;border-radius:18px;border:1px dashed color-mix(in srgb,var(--g3) 60%,transparent);background:color-mix(in srgb,var(--g3) 8%,var(--card))}.new b{color:var(--g3)}.new span{color:var(--sub);font-size:14.5px}
+@media(max-width:860px){.hero{grid-template-columns:1fr;padding-top:30px}.rune{order:-1}.rune img{max-width:220px}.rune .bub{display:none}h1{font-size:36px}.paths{grid-template-columns:1fr}.feat{grid-template-columns:repeat(3,1fr)}}
+</style></head><body>
+<div class="bar"><img src="../assets/img/icon.webp" alt=""><b>Dusk Atelier 안내서</b><span class="s"></span><a>🔍 검색</a><a>GitHub</a></div>
+<div class="w">
+<section class="hero"><div><span class="ey">✨ v1.8.3 · 새 화면 · 사람다운 기억</span><h1>모듈은 정리하고,<br><span>인물은 기억해요.</span></h1><p class="lead">RisuAI 플러그인 Dusk Atelier의 안내서예요. 설치부터 장기 기억, 이야기 도우미까지 직접 눌러 보며 익혀요.</p><div class="btns"><a class="b1">🚀 처음 사용자 가이드</a><a class="b2">🔍 검색 · Ctrl K</a></div></div>
+<div class="rune"><div class="bub">처음이라면 저를 따라오세요!</div><img src="../assets/img/ld.webp" alt="루네"></div></section>
+<h2>어디서 시작할까요</h2>
+<div class="paths"><a class="path main"><span class="n">01</span><b>처음 써요</b><p>설치하고 열고, 시작 안내까지 5분이면 돼요.</p></a><a class="path"><span class="n">02</span><b>기능을 알고 싶어요</b><p>장기 기억, 주사위, 스킬, 이미지 태그를 하나씩.</p></a><a class="path"><span class="n">03</span><b>만들고 배포해요</b><p>패치(.rbupatch), 연동, 빌드와 호환 규칙.</p></a></div>
+<h2>기능 가이드</h2>
+<div class="feat"><a class="f"><img src="../assets/img/spot-memory.webp" alt=""><b>장기 기억</b></a><a class="f"><img src="../assets/img/spot-story.webp" alt=""><b>이야기 도우미</b></a><a class="f"><img src="../assets/img/spot-cache.webp" alt=""><b>코코아 · 스킬</b></a><a class="f"><img src="../assets/img/more.webp" alt=""><b>이미지 태그</b></a><a class="f"><img src="../assets/img/spot-screen.webp" alt=""><b>화면 · 꾸미기</b></a><a class="f"><img src="../assets/img/warn.webp" alt=""><b>모듈 · 봇 관리</b></a></div>
+<div class="new"><b>NEW</b><span>리롤해도 같은 주사위 · 판정 결과 이어 주기 · 캐시 적중 표시 · 나에 대한 기억 — <u>이번 버전 바뀐 점 보기</u></span></div>
+</div><div class="tag">목업 A · 분할 히어로</div></body></html>

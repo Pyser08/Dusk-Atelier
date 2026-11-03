@@ -11,7 +11,7 @@ import { charFields } from '../engine/tideplan.js';
 import { stableJson } from '../engine/util.js';
 
 // 모듈 목록은 통째로 복사돼 와서 무겁다: 평소엔 가끔, 가져오기 직후(burst)에만 자주
-var KNOWN_MOD_KEY = "rbm:watchMod:v1", MOD_EVERY = 6e4, MOD_BURST = 3e3;
+var KNOWN_MOD_KEY = "rbm:watchMod:v1", MOD_EVERY = 12e4, MOD_BURST = 3e3;
 var KNOWN_KEY = "rbm:watch:v1", UI_KEY = "rbm:ui:v1", TRASH_KEY = "rbm:pendingTrash:v1";
 var SLOW = 15e3, FAST = 8e3, BURST = 1500, BURST_FOR = 3 * 6e4, TRASH_EVERY = 3e4;
 var MENU_BTN_ID = "dusk-atelier-addchar";
@@ -148,7 +148,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
       const orderSig = cur.join("|");
       const orderMoved = orderSig !== lastOrder;
       if (tailHit || orderMoved || !known || charCount === null || force) {
-        const db = await api.getDatabase(["characters"]);
+        const db = await (api.getDatabaseWarm ?? api.getDatabase).call(api, ["characters"]);
         if (!db || !Array.isArray(db.characters)) throw new Error("봇 목록을 읽지 못했어요");
         charCount = db.characters.length;
         const live = db.characters.filter((c) => c?.chaId && !c.trashTime && c.type !== "group").map((c) => c.chaId);
@@ -193,7 +193,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
   // 모듈: 리스에 .risum을 끌어다 놓거나 가져오면 새 id의 모듈이 생긴다 → 이름이 같은 기존 모듈이 있으면 묻는다
   async function checkModules() {
     lastMod = Date.now();
-    const mdb = await api.getDatabase(["modules"]);
+    const mdb = await (api.getDatabaseWarm ?? api.getDatabase).call(api, ["modules"]);
     if (!mdb || !Array.isArray(mdb.modules)) return;
     const mods = mdb.modules;
     const ids = mods.map((m) => m?.id).filter(Boolean);
@@ -234,7 +234,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
   }
   // 새 봇 중 "기존 봇의 새 버전"으로 보이는 것만 골라 알린다
   async function inspect(added) {
-    const chars = (await api.getDatabase(["characters"]))?.characters ?? [];
+    const chars = (await (api.getDatabaseWarm ?? api.getDatabase).call(api, ["characters"]))?.characters ?? [];
     const items = [], fresh = [];
     for (const id of added) {
       const copy = chars.find((c) => c?.chaId === id);

@@ -67,7 +67,7 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
     try { s = (await flow?.settings?.())?.rawSnapshot?.() ?? null; } catch { s = null; }
     if (!s) return DEFAULT_PROMPT_BLOCKS;   // 설정을 못 읽으면 기본 프롬프트를 기억/리수폿과 같은 위치(앞·뒤)로
     if (!s.customPrompts?.length) return null;   // 사용자가 지운 경우는 존중
-    const cur = await switches.currentChat().catch(() => null), sc = cur ? { characterId: cur.chaId, chatKey: cur.chatId } : {};
+    const cur = await switches.currentChat({ fresh: true }).catch(() => null), sc = cur ? { characterId: cur.chaId, chatKey: cur.chatId } : {};
     return { front: customPromptPlain(s, "memory", sc, "front"), middle: customPromptPlain(s, "memory", sc, "middle"), back: customPromptPlain(s, "memory", sc, "back") };
   }
   return { store, userPrompts, gauge, link, cards, runner, injector, embedder, prep, hypa, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, active: () => active };

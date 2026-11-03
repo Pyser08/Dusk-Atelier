@@ -240,3 +240,207 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 에셋 태그 고치기: AI 키워드 목록이 그 캐릭터의 모든 옷 키워드(중복 제거), 답은 같은 옷 우선 → 없으면 그 키워드가 있는 옷. 상황 알림 문구에 'action only in another outfit → use that outfit' 추가.
 - 테스트 갱신·추가, `npm test` 640 pass / 0 fail.
 - (2026-11-02) 사용자 지시로 **v1.8.2 재릴리스**에 포함: CHANGELOG의 v1.8.3(개발 중) 항목을 v1.8.2로 합침, 아카 글 1-2를 '옷보다 동작이 먼저'로, 3-3 문구 수정. release.yml 주석 한 줄로 재실행(같은 버전 → 파일·설명 교체).
+
+## 다음 후보: 장기기억이 사람 사이 커뮤니케이션을 더 잘 반영하게 (사용자와 검토 중, 2026-11-02)
+- 확인한 현황: 감정 수치(`engine/memoryemo.js`)는 시간 감쇠 없음 · `attr` 종류는 pref|rel|job|home|belief 5가지(외모·성격 없음) · 거짓말/잘못된 믿음 기록 없음(`know`는 '누가 아는가'만) · 호칭·말투는 리수폿 위키 `core.speech`에만 있고 Dusk 분석엔 없음 · 재등장 공백 표시 없음 · 변화는 `memorytrust.js` classify/chain → 주입 때 `changeNote` "(was: …)".
+- 후보: ① 외모·성격·처지 attr 추가 ② 재등장 공백 표시 ③ 변화 이전 기록 '(예전)' 표시 ④ 감정 식기(종류별 속도, 큰 사건은 느리게) ⑤ 잘못된 믿음/거짓말 기록 ⑥ 쌍별 호칭·말투 상태 ⑦ 갈등·사과·앙금 항목 ⑧ '누구 앞에서' 태도. 모두 기존 분석 호출에 얹기(추가 호출 없음). 추천 우선순위: ④·⑥ → ⑤ → ①~③.
+- 새 브랜치에서 진행 권장(사용자가 이름 지정).
+- 추가 후보(인간다움): ⑨ 관계 진도(쌍별 단계 — 감정 수치·함께한 장면·비밀로 코드 계산, '너무 빨리 친밀해지지 않기') ⑩ 둘만의 추억·농담(분석이 가끔 표시, 그 쌍이 함께 나오면 하나 주입) ⑪ 기억 흐려짐(잊기 전 단계에 '(흐릿한 기억)' 표시, 코드만) ⑫ 인물 목표(바라는 것/막는 것 1개) ⑬ 기념일(이야기 시간과 사건 날짜 일치 시 한 줄, 코드만) ⑭ 첫인상(첫 만남에만 기록, 얕은 관계일 때만 주입).
+- 기준 모델: 사용자는 보조모델 하한을 DeepSeek V4 Flash로 봄 → 새 분석 항목은 짧은 규칙·한 줄 예시·'없으면 생략'·항목별 독립 검증(망가져도 기존 people/scene 유지), 판단이 어려운 ⑤는 기본 꺼짐 스위치.
+- 추천 1차 묶음: ④ 감정 식기 · ⑥ 호칭·말투 · ② 재등장 공백 · ⑨ 관계 진도 · ⑪ 기억 흐려짐 · ⑩ 둘만의 추억.
+
+# feat/1.8.3 — 사람다운 기억 (진행 중, 2026-11-02 사용자 지시)
+범위: ①외모·성격·처지 변화 ②재등장 공백 ③변화 이전 기록 '(earlier)' ④감정 식기 ⑤거짓말·잘못된 믿음(기본 꺼짐) ⑥호칭·말투 ⑨관계 진도 ⑩둘만의 추억 ⑪기억 흐려짐. 추가 AI 호출 없음.
+설계:
+- 새 순수 모듈 `engine/memoryhuman.js`: 감정 실효값·식기(종류별 반감기, 바닥값), 재등장 공백, earlier 집합, fading, 관계 진도(공유 장면 수 + 애정·신뢰), talk/bond/belief 검증·반영·되돌리기(src, prev), 분석 입력·주입 문장, 분석 규칙 문장.
+- 저장(폴더에 새 키, 기존 형식 변경 없음): `folder.talk[from>to]={from,to,call,tone,prev,src,at}`, `folder.bonds[]={id,a,b,moment,hook,at,src,used}`, `folder.beliefs[]={id,who,thinks,truth,by,open,src,at}`.
+- 분석: attr 종류에 look·trait·status 추가, `talk`(최대 2, 처음·바뀔 때만), `bond`(중요 응답에서 최대 1), `belief`/`cleared`(설정 켤 때만 규칙·입력 포함). 입력에 talkState·beliefs.
+- 감정 식기: 저장값은 분석 직전에 실효값으로 내려 적고(log why "cooled"), 주입·분석 입력은 실효값. 실제 변화(log why≠cooled) 기준 경과로 계산.
+- 설정(memory inject): human(②③⑨⑪, 기본 켬) · cool(④, 기본 켬) · beliefs(⑤, 기본 끔). 화면은 기억 고급 설정(madv.js).
+
+## feat/1.8.3 결과 (2026-11-02)
+- 구현: `engine/memoryhuman.js`(위 설계 그대로) + 연결: `memoryprompt.js`(규칙 `humanRules`를 본문에 넣은 뒤 `withCustom(custom, base)`로 앞·중간·뒤 적용 — 게이지 규칙이 '뒤' 프롬프트 뒤에 붙던 기존 문제도 함께 해결, 입력 talkState·beliefs·beliefsOn, `validate`→`human`), `memoryapply.js`(applyAnalysis `cool` 옵션: coolEmo 후 applyEmo, applyHuman), `memoryreconcile.js`(revertHuman), `memoryemo.js`(emoForPrompt·emoLines에 `{now, eff}`), `memorytrust.js` ATTR_CATS look·trait·status, `data/memoryrunner.js`(coolOf·talk/belief 입력·cool 옵션), `memoryinject.js`(earlier/vague 표시, 재등장 공백, stage·talk·bond·belief 섹션 각 예산), `ui/screens/memory/madv.js` 스위치 3개(inject.human·cool 기본 켬, beliefs 기본 끔).
+- 분석 지침 증가: 약 +100토큰(거짓말 켜면 +190). 주입은 해당 상황에서만, 기존 예산 상한 안.
+- 테스트: `tests/memoryhuman.test.js` 11, `tests/memoryhuman-flow.test.js` 4, `prompt-position.test.js` 보강. `npm test` 655 pass / 0 fail, build·check 동일함, smoke 0 실패.
+- 확인 못 한 것: 실제 보조모델(특히 DeepSeek V4 Flash 추론 끔/낮음)이 talk·bond·belief 형식을 지키는지와 판단 품질, 실제 대화에서 감정 반감기 값(적대 80·두려움 120·의존 240·애정 400 메시지)이 자연스러운지. 인물 위키 화면에는 talk·bonds·beliefs를 아직 보여 주지 않음(편집 UI 없음) — 필요하면 다음 작업.
+- 리수폿 합친 호출(link.take) 결과에는 새 항목이 없음(그 경로는 사람다운 기억 분석 항목 없이 동작, 코드 계산 기능은 그대로 적용).
+
+## 인물 위키 개편 (구현 완료, 2026-11-02, feat/1.8.3)
+- 새 `ui/screens/memory/personv2.js` `personTabs(env,{r,doc,p,header,infoBlocks,logBlocks})` — `wikiview.js` personPage가 호출. 상태: `m.wkTab2`(sum|rel|info|log) · `m.wkWith`(관계 상대) · `m.wkFeelRev`.
+- 탭 '요약 / 관계 / 상세 정보 / 기록'. 목업의 '달라진 점' 탭 대신 **'상세 정보'**(기존 위키 블록: 프로필·수치·기록 묶음·위키 패널). 달라진 점은 요약 카드 '이전과 달라진 점'에 표시. '기록' = 기존 관리(manage)·이야기 기록.
+- 요약: 지금의 ○○(요약글+성격·처지·외모 칩) · 이전과 달라진 점 · 관계 한눈에(4칸 막대, 누르면 관계 탭) · 기억에 남은 순간(A~D, 예전 모습/흐릿한 기억).
+- 관계: 상대 고르기 → 관계 진도 · 감정(식기 전 흐린 막대·식은 안내·반대 방향 보기·고치기=setTag) · 호칭·말투(고치기/직접 적기·잠그기·지우기) · 둘만의 추억(고치기·지우기) · 기대 차이 · 오해(진실을 알았어요·지우기).
+- 엔진: `engine/memoryhuman.js` 끝 nowOf·counterparts·pairView·changesOf·currentAttrs·momentsOf + 편집 setTalk·toggleTalkLock·deleteTalk·editBond·deleteBond·resolveBelief·deleteBelief(사용자 수정은 user/lock 표시, src 제거). 시험 `tests/memoryhuman-view.test.js`.
+- 수치·게이지: `wikiview.js`가 `parts.metrics`(doc.metrics → label·대상 이름) · `parts.gauges`(=`gaugeui.js` `gaugeRows`, 비동기)를 넘김. 요약 '수치 한눈에'(전부) · 관계 탭 '수치'(대상에 그 상대가 있는 것만) · 감정 카드 '아직 없음' 줄. 원래 카드(수치 상태·감정 게이지·게이지 블록)는 상세 정보에 그대로.
+- CSS: `styles.js` `.rb-wk2-*` 블록(토큰만). `@container memwrap (min-width:1100px)`에서 요약 칸 고정 + 탭 칸 2열(요약 탭 숨김).
+- 단어: 사용자 지시로 "일반적으로 알아들을 수 있을 정도"(관계 진도·감정·호칭·말투·둘만의 추억·기대 차이·오해).
+- 확인: 실제 앱(tests/e2e/app.entry.js 기억+기록 데이터에 사람다운 기억·게이지 추가)으로 모바일 390px·PC 1440px 모든 탭 사진. 참고: 실제 앱 창은 PC에서도 기억 영역이 1100px 미만이라 '요약 왼쪽 고정' 2단은 거의 안 보이고 탭으로 동작. 이전엔 Playwright 가짜 데이터로 390px·1300px 사진(가로 넘침 없음, 오류 없음). 실제 RisuAI/RisuBard/PocketRisu 화면·실제 데이터로는 미확인.
+
+## 1.8.3 추가 (2026-11-02): ⑦ 갈등·사과·앙금 · ⑧ 사람 앞 태도 · 상세 정보 탭 정리
+- 엔진 `engine/memoryhuman.js`: 분석 `rift`(최대 1: id?, a, b, about, state open|apologized|resolved, grudge none|some|deep, who) · `face`(최대 1: who, to, alone, public). 저장 `folder.rifts[]`(back/src로 되돌리기, 깨끗이 화해=닫힘, 'some' 앙금은 화해 후 GRUDGE_FADE=200응답 뒤 주입 안 함) · `folder.faces{who>to}`. 분석 입력 `rifts`(열린 것), 주입 섹션 rift·face(장면에 둘 다 있을 때, 3명 이상이면 '다른 사람 있음'). 스위치는 inject.human. 규칙 길이 680자(시험 상한 700). 편집 resolveRift·deleteRift·setFace·deleteFace(잠금). 시험 `tests/memoryhuman-rift.test.js`.
+- 관계 탭(`personv2.js`): 갈등 카드 · 사람 앞 태도 카드.
+- 상세 정보 탭: 새 `ui/screens/memory/infotab.js` `infoTab(env, B)` — `wikiview.js` personPage가 `info: (go) => infoTab(...)`로 넘김(예전 profileBlock·metricCards·emoCards·secCard·blocks 삭제). `gaugeui.js`에 `gaugeSuggestBox`. 빈 항목 칩 → 채우기 창(좁은 화면은 아래 시트, `:has` 미지원이면 가운데 창). 'AI로 빈칸 채우기'는 기존 fillPlan(이 인물만: 빈 수치·성격) 그대로 — 빈 기록 묶음까지 한꺼번에 채우지는 않음.
+- 레이아웃: 위키 페이지는 `memwrap` 컨테이너 안이 아니었음(→ 예전 `@container memwrap` 규칙이 안 먹던 원인). `.rb-wk2`를 `container:wk2`로 두고 상세 정보 2열은 `@container wk2 (min-width:760px)`, 요약 고정 2단은 `(min-width:1100px)`.
+- 시험: smoke의 감정·게이지 확인 4개가 첫 위키 개편(35566f2)부터 실패하고 있었음(정보가 탭 뒤로 옮겨짐) → 새 구조로 고침, smoke 53/0. `run-app` 사이드바 순서·`run-memed` '기억 방식 아래 편집기'는 main에서도 실패하는 기존 실패.
+- 최종 디자인: 인물 위키 최종안 캔버스(탭 4개 모바일·PC). 구현은 여기에 갈등·사람 앞 태도 카드가 더 있음.
+- (2026-11-02) 간단 모드 기억 화면에 '기억 옵션' 카드(`mhome.js` memOptions, 고급 모드에선 숨김): inject.human·cool·beliefs 스위치 3개(고급 '대화에 넣기'와 같은 설정, `builders().save`). 주의: human은 inject.plus(장부 넣기, 고급 전용·기본 켬)가 켜져 있어야 동작. `run-app.mjs` 3단계 '간단 모드 스위치 1개' 검사는 머리 스위치만 세게 바꾸고 옵션 3개 검사 추가 — 단, run-app은 그 앞 사이드바 검사(기존 실패)에서 멈춰 3단계까지 못 감. 직접 Playwright로 저장·다시 그리기 확인함.
+
+## 다음 작업: 전체 탭 UI 다듬기 (사용자 결정 2026-11-02, 아직 시작 전)
+- 범위: **전체 탭 한 번에** — 홈 / 기억(장기 기억 메인·상황·시간선·열린 항목·관계, 코코아, 기억 카드) / 관리(캐릭터·모듈·플러그인) / 작업실(플러그인 꾸미기·AI로 봇 만들기·AI로 페르소나 만들기·도구·설정). 인물 위키는 끝남.
+- 방식: **목업 먼저 → 사용자 확인 → 구현**. 새 Design 캔버스에 탭마다 '지금 / 개편안' 모바일(390) + PC(1280). 기존 UI 스타일(토큰 --rb-*, 카드·칩)은 유지.
+- 목표 스타일 = 인물 위키 최종안: 자주 쓰는 것만 카드 · 빈 것/드문 것은 칩·한 줄 · 고정/삭제 등 부가 동작은 '…' 메뉴 · 위쪽 바로가기(넓으면 왼쪽 목록) · 넓은 화면 2열 · 쉬운 말(일반적으로 알아들을 정도).
+- 현재 화면 사진: `tests/e2e/app.entry.js`의 `bootApp(seed,{memory:true,story:true})`로 실제 앱을 띄워 찍는다. 모바일은 뷰포트를 7000px로 늘려 요소 사진, PC는 앱 창이 높이 고정이라 안쪽 스크롤 영역을 내려가며 찍어 PIL로 이어 붙임(sticky 요소는 static으로). 첫 둘러보기 '건너뛰기', 임베딩 안내 '나중에'를 먼저 닫아야 함.
+- 결정(2026-11-02, 목업 1 확정): 홈은 PC·모바일 모두 개편안(상태 카드+숫자 3개·이어서 하기·최근 기록, 빠른 설정은 지금 토글 5개 그대로 — 공정한 전개·유저 편향 없애기·이야기 시간 자동 삽입·이미지 태그 자동 교정·상황 알림, PC는 오른쪽 열 최근 기록 아래)이되 **바로가기(작은 4칸)와 '처음 둘러보기'는 유지**. 기억·작업실(·관리) 개요는 개편안(목록형 행+한 줄 요약, 작업실은 자주 쓰는 둘만 큰 카드). **모든 화면의 ? 도움말 버튼은 유지.**
+- 진행: 목업 1 완료(`docs/mockups/ui-polish-1-hubs.html`, 사진 뺀 가벼운 판), 다음은 목업 2(장기 기억 묶음).
+- (이전 기록) 목업 1 제작. 이후 목업 2(장기 기억 메인·상황·시간선·열린 항목·관계, 코코아, 기억 카드) → 3(캐릭터·모듈·플러그인) → 4(꾸미기·AI 봇·AI 페르소나·도구·설정). 구현은 목업 확인 뒤. 소스 코드는 아직 안 건드림.
+- 촬영 요령 실제: 환경은 `npm ci` 불가(lock 없음) → `/opt/npm-tools/node_modules`의 esbuild·acorn·@esbuild·playwright를 `node_modules/`에 심볼릭 링크. 앱 화면은 `bootApp({...},{memory:true,story:true})` 후 '건너뛰기'·'나중에' 버튼을 눌러 닫고 촬영(모바일 390 하위 화면은 개요 카드를 눌러 들어가야 함).
+- 주의: ① 컨테이너 쿼리는 실제 조상에 그 컨테이너가 있는지 확인(위키는 memwrap 밖이었음) ② e2e는 마지막 줄이 아니라 `grep ✘` 전체로 확인 ③ 기존 실패: run-app '사이드바 순서'(여기서 멈춰 뒤 단계 미실행), run-memed '기억 방식 아래 편집기' — main에서도 실패.
+
+## 설정 '이야기 도우미 세부' 설명 정리 (2026-11-02)
+- `ui/screens/settingstab.js` 고급 '이야기 도우미 세부'에서 유저 편향 없애기·공정한 전개 설명 note 2줄 삭제(재해석/존중 segmented와 그 설명, 이야기 시간 설명은 유지). CHANGELOG v1.8.3 '바뀐 점'에 기록.
+- 홈 개편 때 참고: 두 기능 설명(유저 편향=공정한 전개 켜져 있을 때만 작동, 공정한 전개=요청이 조금 길어짐)을 홈 토글 쪽(ⓘ 등)에 붙일지 사용자에게 확인 중. 재해석/존중은 고급 설정에 남기는 쪽으로 제안.
+- (2026-11-02, 사용자 결정) 홈에서 공정한 전개 꺼짐 + 유저 편향 켜기 → 공정한 전개도 함께 켜고 토스트로 이유 안내(`ui/screens/home.js` setDice, fairCur·fairSw). 공정한 전개를 끌 때 유저 편향은 그대로 둠(요청 없음). 시험 `tests/e2e/run-home-fair.mjs`(수정 전 3개 실패 확인).
+- 다음: 전체 탭 UI 다듬기 목업 2 = **코코아 · 기억 카드** 탭부터(사용자 지정).
+- (2026-11-02) 목업 2 '코코아·기억 카드' 제작 → 사용자 확인 대기(`docs/mockups/ui-polish-2-cocoa-cards.html`, 사진 뺀 판). 요지: 코코아 = 제목 1개+? · 켜기 카드에 '3개 중 1개 사용 중' · '사용할 스킬'과 '스킬 세트'를 한 목록으로(간단=줄마다 스위치, 고급=줄 아래 붙는 곳 칩 4개) · ZIP/JSON/삭제는 ··· · 'AI로 만들기'는 목록 머리(떠 있는 버튼이 모바일 탭바와 겹침) · 고급 묶음 한 줄씩 · PC 2열. 기억 카드 = 봇·채팅 한 줄 카드('바꾸기') · 만든 카드/새로 만들기 segmented · 2열 타일+'＋ 새 카드' · 단계 동그라미 5개 · 이전/다음 아래 오른쪽 고정 · PC는 오른쪽 카드 미리 보기.
+- 발견한 버그(구현 때 수정): 기억 카드 탭 새로 만들기 단계 목록이 '1. 1. 인물'로 번호 이중 표시(`ui/screens/memory/compose.js` `ol.rb-mem-steps`, 카드 탭 `rb-cards2`에서 목록 CSS 미적용 추정).
+- 촬영 요령 추가: 코코아는 `bootApp` 후 `__app.ctx.skills = createSkillStore(__api)`로 스킬 저장소를 넣고 세트를 importSet해야 실제 화면이 나옴(없으면 '준비되지 않았어요'). 경로는 `ctx.go("cocoa")`, `ctx.go("cards")`(state.mem.ctab="compose"로 새로 만들기).
+- (2026-11-02) **목업 2 사용자 승인**("깔끔하고 직관적"). 다음 할 일: 목업 2대로 코코아(`ui/screens/memory/skills.js`, `ui/screens/cocoa.js`)·기억 카드(`ui/screens/cards/index.js`, `memory/cards.js`, `memory/compose.js`) 구현 + 단계 번호 이중 표시 버그 수정. 그다음 목업 3(관리: 캐릭터·모듈·플러그인) → 4(작업실). 목업 1(홈·개요)도 승인 상태라 함께 구현 가능.
+- (2026-11-02, 사용자 결정) **진행 방식 변경: 모든 탭 목업을 먼저 하나씩 만들고 확인받은 뒤, 구현은 한 번에.** (위 '다음 할 일: 목업 2 구현'은 보류)
+  - 완료·승인: 목업 1 홈·개요(`docs/mockups/ui-polish-1-hubs.html`) · 목업 2 코코아·기억 카드(`docs/mockups/ui-polish-2-cocoa-cards.html`).
+  - 남은 목업 순서: ③ 장기 기억 묶음(메인·상황·시간선·열린 항목·관계) → ④ 관리(캐릭터·모듈·플러그인) → ⑤ 작업실(플러그인 꾸미기·AI로 봇 만들기·AI로 페르소나 만들기·도구·설정). 탭마다 '지금(사진) / 개편안' 모바일 390 + PC 1280, 사용자 확인 후 다음.
+  - 목업 공통 규칙(확정): 자주 쓰는 것만 카드 · 부가 동작은 ··· 메뉴 · **? 도움말 버튼은 모든 화면 유지** · 넓으면 2열 · 쉬운 말 · 기존 토큰(--rb-*). 목업 HTML은 scratchpad의 생성 스크립트로 만들고, 저장소엔 사진 뺀 가벼운 판을 `docs/mockups/ui-polish-N-*.html`로 커밋(프로젝트 문서는 용량 가득이라 저장 불가).
+  - 구현 단계에서 할 것: 목업 1~5 전부 + 기억 카드 단계 번호 이중 표시 버그. 공용 부품(목록 줄···· 메뉴·segmented·고급 묶음)은 kit.js로 묶기 검토.
+- (2026-11-02) 목업 3 '장기 기억' 제작 → 사용자 확인 대기(`docs/mockups/ui-polish-3-memory.html`, 사진 뺀 판). 목업 1·2·인물 위키 규칙 그대로. 요지: **메인** = 머리 스위치+'사용 중' 카드를 상태 카드 하나(스위치·숫자 3·막대·범례)로 합침 · '지난 대화 분석'만 큰 버튼 · 인물 위키/기록 보기/카드로 만들기/다른 채팅은 작은 바로가기 4칸 · 기억 옵션 토글 3개 유지 · 설정은 한 줄 요약 목록 · 고급은 한 줄씩 접은 묶음 · PC 2열. **기록 보기**(mdetail.js) = 5구역(인물 위키·상황·시간선·열린 항목·관계) 칩에 개수 표시, **한 번에 한 구역만**(지금은 한 페이지 앵커 스크롤 → 동작 변경, 사용자 확인 필요) · 빈 구역은 한 줄 안내 · 상황·시간선은 세로 점 시간선 · 열린 항목 해결 버튼+···(삭제) · PC는 왼쪽 구역 목록+오른쪽 내용. **봇별 기억** = 틀 유지, '기억 켜짐 N/전체' 요약·지금 채팅 고정·? 추가.
+- 촬영 요령 추가: 기록 보기는 `state.mem.page="detail"`만으론 안 열림 → 기억 홈에서 '인물 Wiki' 버튼 클릭으로 진입(botId 설정됨). 테스트 환경에서 봇별 기억·PC 기록 보기는 오류 알림이 섞여 사진 생략.
+- (2026-11-02, 목업 3 확정·사용자 결정) 장기 기억 목업 3 전부 승인. **추가 결정: PC 고급 모드에서 '기억 방식'(자동/플러그인/BardWiki/끔 segmented)은 접지 않고 오른쪽 열 맨 위에 바로 보이게**(고급 묶음 목록에서는 뺌). 모바일 고급은 기존대로 접은 묶음(사용자가 PC만 지정함).
+- 남은 목업: ④ 관리(캐릭터·모듈·플러그인) → ⑤ 작업실(플러그인 꾸미기·AI로 봇 만들기·AI로 페르소나 만들기·도구·설정).
+- (2026-11-02) 목업 4 '관리(캐릭터·모듈·플러그인)' 제작 → 사용자 확인 대기(`docs/mockups/ui-polish-4-manage.html`, 사진 뺀 판). 요지: **캐릭터**(`ui/screens/characters.js`) 도구 두 줄 → 한 줄(개수·정렬 요약 + 'AI로 봇 만들기' + '＋ 새 봇' + ···[선택·폴더·정렬·가져오기]), 줄은 '편집'+···(AI로 다듬기·에셋·폴더 이동은 ···), '지금 채팅' 라벨, PC 2열 카드. **모듈**(`modules.js`) 필터 칩 6→'전체·켜짐·꺼짐'+'종류 ▾'(전역·LLA·MCP), '연결 N'은 이름 아래 작은 칩, 줄은 스위치·편집····, 도구 한 줄('＋ 새 모듈'+···), PC 2열. **플러그인**(`plugins.js`) 제목·설명 중복 제거, 탭(목록·연동 설정·만들기·저장소) 유지, 도구 한 줄('업데이트 확인'+···[새로고침·내보내기]), '미분류 N'은 접는 머리. 개요 화면은 목업 1 기준.
+- 남은 목업: ⑤ 작업실(플러그인 꾸미기·AI로 봇 만들기·AI로 페르소나 만들기·도구·설정).
+- (2026-11-02, 목업 4 수정·사용자 결정) **캐릭터·모듈은 리스트형 유지(PC 2열 카드 안 함), 정렬·폴더 버튼은 밖에 그대로**, 끌어서 순서 바꾸기(⠿)·폴더 머리 줄 유지. ···에는 드문 것만(캐릭터: 선택·가져오기 / 모듈: 선택). 새 디자인 스타일(카드·줄 모양·'지금 채팅' 라벨·'연결 N' 칩·필터 '종류 ▾')은 승인. 플러그인 개편안은 승인("깔끔").
+- (2026-11-02) 목업 4 최종 승인("이대로"). 목업 5 '작업실' 제작 → 사용자 확인 대기(`docs/mockups/ui-polish-5-work.html`). 요지: **꾸미기**(themestudio/look) 제목 1개·색·밝기·글자 크기 한 카드·'내 채팅 테마 만들기'는 한 줄 목록·PC 2열(오른쪽 미리보기 고정). **AI로 봇 만들기**(aitab.js) 1·2·3 번호 단계 카드·'AI 창 열기'는 아래 고정 하나(위쪽 중복 제거)·안쪽 탭 5개는 한 줄 칩·'사용법'은 ?로·봇 편집 머리/탭 줄 유지·PC 오른쪽 시작하기 상자 고정. **AI로 페르소나**(personabuilder.js) 제목 3중 제거·페르소나 한 줄+····AI로 쓰기는 글 상자1+전체 쓰기/빈 칸만 채우기(추가 지시·번역·수정은 ···)·슬롯머신 한 줄로 접기·항목 폴더는 줄(개수·AI·스위치), 누른 것만 펼침·PC 2열·떠 있는 'AI 대화' 유지. **도구**(tools.js) 타일 7개 → '자주 쓰는 도구 3'+'확인·복구 4' 목록·'도움 주신 분들'은 내용 그대로 한 줄 목록·PC 2열. **설정**(settingstab.js) 간단은 묶음 이름만(화면·백업·도움말)·고급은 묶음별 한 줄 목록(현재 값 오른쪽), 재해석/존중은 바로 고르기 유지, 정리·기록 타일→목록, '이럴 땐 여기로'는 ? 안으로·PC 2열.
+- (2026-11-02) 버그 2건 수정(사용자 리포트):
+  - 홈 '장기 기억(모든 채팅)' 스위치: 원인 = `home.js` refreshStatus가 상태 줄을 다시 그릴 때 처음 읽은 `globalOn`으로 스위치를 새로 만들어 눌러도 되돌아감(끈 뒤 다시 켤 수 없음). 수정 = refreshStatus에서 `memoryGlobalOn(최신 idx)`로 다시 읽음. 시험 `tests/e2e/run-home-memall.mjs`(수정 전 2개 실패 확인).
+  - 호감도 HUD가 Yumi Translator 플로팅 버튼과 겹침: 원인 = `engine/affhud.js` 기본 CSS `.dafx-aff{top:12px;right:12px}`. 수정 = `top:max(112px, calc(env(safe-area-inset-top) + 100px)); right:max(12px, env(safe-area-inset-right))`(사용자 제안값), AI 디자인 지침(`affprompts.js`) 위치 문구도 맞춤. 시험 `tests/affhud.test.js` 1개 추가. **이미 설치된 HUD(봇 배경 HTML에 저장됨)는 자동으로 안 바뀜** — 다시 설치해야 적용(자동 마이그레이션은 저장 데이터 변경이라 사용자 확인 필요).
+- (2026-11-02, 목업 5 수정·사용자 지시) 도구 '도움 주신 분들'에서 **원문 글 링크 제거**(이름·한 줄 설명만). **플러그인 꾸미기 폭 확장**: 테마 묶음 6(기본 회백·따뜻한 종이·차가운 회색·숯·미드나잇·보랏빛 밤 = 바탕+강조) · 강조 색 6→12(따뜻한/차분한) · 그라데이션 5(노을·황혼·밤하늘·오로라·복숭아)+직접 · 글자 크기 '아주 크게' · 고급 직접 색에 바탕·카드·글자 색(+대비 검사·자동 맞추기) · 모양(모서리·그림자·테두리·글꼴[기본·기기 글꼴·명조·둥근]) · 움직임 줄이기 · 내 테마(저장·테마 코드 주고받기) · PC 3열(미리보기 고정). 구현 시 `theme.js`에 새 토큰·정규화(예전 저장 테마 호환), 대비 검사, 외부 글꼴 불가(기기 글꼴만).
+- (2026-11-02, 목업 5 수정 2·사용자 지시 "조금 더") 꾸미기 추가 확장: 테마 묶음 12(+벚꽃·민트 크림·세피아·OLED 블랙·숲속·바다)+'🎲 아무거나' · 강조 색 18(파스텔 6 추가, 버튼 글자 자동 어둡게) · 그라데이션 8(+숲·모래·네온)+방향(가로·대각선·세로) · 밝기 '시간 따라' · 고급 '바탕'(무늬 없음·점·모눈·종이 / 바탕 그라데이션 / 카드 유리 효과 / PC 사이드바 색 / 강조 색 쓰는 곳) · 모양에 아이콘 굵기 · 글자(글꼴 5[+고정폭]·굵기·줄 높이) · 내 테마 여러 개 저장·밝을 때/어두울 때 따로 · 미리보기 밝게/어둡게 전환.
+- (2026-11-02, 사용자 요청) 목업 6 '시작 안내'(처음 설치 시 플러그인 창 전체 화면 마법사) 제작 → 확인 대기(`docs/mockups/ui-polish-6-onboarding.html`). 단계: 0 환영('설정하고 시작하기'/'나중에 하기'=기본값) · 1 화면 모드·글자 크기 · 2 테마 묶음·밝기(즉시 미리보기) · 3 장기 기억 켜기·기록할 AI(리스 보조 모델/내 API)·수준(가볍게/기본/전부) · 4 기억 옵션 3·이야기 도우미 4 토글 · 5 이미 쓰던 것(HypaPlus·코코아전트·RisuPot 중복 경고·임베딩, 찾은 것만/없으면 자동 통과) · 6 요약+'바꾸기'+? 안내. 단계마다 건너뛰기·이전, 즉시 적용. PC: 왼쪽 단계 목록·가운데·오른쪽 미리보기.
+  - 합칠 것(자동 표시 중단): 처음 둘러보기(`ui/tour.js` 11단계) · 기억 '처음 설정하기'(`memory/setup.js`, `engine/firstrun.js` WIZARD) · 임베딩 안내(`memory/embeddingguide.js`) · HypaPlus 안내(`memory/hypamodal.js`) · 프롬프트 첫 안내(`promptstab.js` maybePromptIntro). 유지: ? 화면별 둘러보기(`ui/screentours.js`, 누를 때만) · '새로 바뀐 점'.
+  - 대상: 새로 설치한 사람만 자동. 기존 사용자는 '새로 바뀐 점'에 '시작 안내 다시 보기' 버튼, 설정 → 도움말에도 추가. 기존 설정 건드리지 않음.
+- (2026-11-02, 목업 6 승인·수정) 시작 안내 승인. **2단계 꾸미기는 '플러그인 꾸미기' 기본 화면과 같은 선택지**: 미리보기(맨 위) · 테마 묶음 12+🎲 아무거나 · 강조 색 18(따뜻한·차분한·파스텔) · 그라데이션 8+방향 · 밝기 4 · '모양·글꼴 더 고르기' 펼침(모서리·그림자·글꼴·바탕 무늬). 구현 시 꾸미기 화면과 같은 부품을 재사용할 것.
+- **목업 1~6 전부 확정 → 다음은 한 번에 구현**(새 챗 권장). 순서 제안: 공용 부품(kit) → theme.js 확장 → 홈·개요 → 장기 기억 → 코코아·기억 카드 → 관리 → 작업실 → 시작 안내(기존 자동 안내 5개 정리) → e2e/스크린샷 확인.
+- (2026-11-02, 목업 6 수정) PC 시작 안내 2단계: 가운데 = 테마 묶음·강조 색·그라데이션, **오른쪽 = 미리보기 아래에 밝기 → 그라데이션 방향(가로·대각선·세로) → '모양·글꼴 더 고르기'**.
+- (2026-11-02, 사용자 결정·목업 6 최종) **임베딩 설정은 3단계(장기 기억)에서 함께**(5단계에서 빼기). **시작 안내는 기존 사용자·새 사용자 상관없이 처음 한 번은 무조건 자동으로 띄움**(본 적 있는지 저장 키로 한 번만). 앞의 '새로 설치한 사람만' 문구는 이것으로 대체.
+
+# 구현 진행 (목업 1~6, 2026-11-02 시작)
+- (2026-11-02, 목업 6 수정·사용자 결정) **3단계 장기 기억에 임베딩 설정 포함**(쓰기 스위치·API 주소·모델·키(이 기기에만)·연결 테스트, 선택 사항 — 기존 `memory/embedmodal.js` 저장 로직 재사용). 5단계에서는 임베딩 뺌. **표시 대상 변경: 새로 받은 사람·기존 사용자 상관없이 이 버전을 처음 열 때 모두에게 한 번 무조건 표시.** 기존 사용자는 현재 설정이 미리 골라진 채 시작(초기화 없음), 끝내거나 '나중에 하기' 후엔 자동으로 다시 안 뜸, 설정 → 도움말 '시작 안내 다시 보기'. (위 '새로 설치한 사람만' 문구는 이걸로 대체)
+- (2026-11-02, 사용자 지시) 시작 안내 임베딩: **기존 기본값을 미리 채움**(`engine/embed.js` DEFAULT_EMBED — 주소 `https://api.voyageai.com/v1/embeddings`, 모델 `voyage-4-large`, 스위치 꺼짐). 키만 넣으면 켤 수 있게. 기존 사용자는 저장된 값이 있으면 그 값을 보여 줌.
+- (2026-11-02, 구현 1차 완료·푸시) **공용 부품 + 꾸미기**: `ui/themekit.js`(카탈로그: 테마 묶음 12·강조 색 18·그라데이션 8·글꼴 5 등) · `ui/theme.js` 확장(새 필드 기본값=예전 모습, 예전 저장 호환, `applySet/randomSet/themeCode/parseThemeCode/pickLook`, 묶음·직접 색 대비 자동 맞춤, 밝기 'time') · `ui/lookparts.js`(꾸미기·시작 안내가 같이 쓸 선택 부품; `lookParts({get,set})`) · `ui/screens/settings.js` 꾸미기 재작성(PC 2열+미리보기 고정, 내 테마, 코드) · `styles.js` 끝에 새 토큰 CSS · `app.js applyTheme`에 rb-glass/rb-calm. 시험: `tests/theme-v2.test.js`, `tests/e2e/run-look.mjs`(PC·모바일 34항목).
+- **남은 구현(순서)**: 홈·기억 개요(목업 1) → 장기 기억(3) → 코코아·기억 카드(2, '1. 1. 인물' 번호 버그) → 관리(4) → 작업실: AI봇·페르소나·도구·설정(5) → 시작 안내(6; 꾸미기 부품 `lookParts` 재사용, `ui/tour.js` 등 자동 안내 5개 정리). 참고: 모바일 아래 탭은 이미 홈·기억·관리·작업실 4칸. 원격에 `build: dusk_atelier.js` 자동 커밋이 올라오니 push 전 `git pull --rebase`(충돌 나면 `npm run build`로 재생성). `tests/e2e/run-app.mjs`는 앞부분이 옛 구조라 '사이드바 순서'에서 막힘(기존 실패).
+- (2026-11-02, **구현 완료** · 목업 1~6 전부) 커밋으로 나눠 푸시함. 파일별 요지:
+  - 홈 `screens/home.js`(상태 카드+숫자 `rb-hnums`, 작은 바로가기 `rb-hdo-sm`, 이어서 하기 `rb-hcont`) · 개요 `screens/sectionhome.js`(목록 행 `rb-hubrow`+개수, 작업실 큰 카드 2, `app.js`가 개요에서 `rb-on-hub`로 칩 줄 숨김).
+  - 장기 기억 `memory/mhome.js`(상태 카드 `rb-mem-statuscard`, 바로가기 4, 고급은 `madv.js advancedGroups()` → 접은 묶음 `rb-mem-grp`; PC 고급은 기억 방식 오른쪽 맨 위) · `mdetail.js`(한 구역씩, 칩 개수, PC 왼쪽 목록) · `ledger.js`/`scenes.js` 빈 구역 한 줄 · `mbots.js` 요약.
+  - 코코아 `memory/skills.js`(한 목록···· 메뉴·고급 묶음) · `cocoa.js`+`skillchat.js`(noFab, 목록 머리 'AI로 만들기'). 기억 카드 `cards/index.js`(한 줄 카드·봇/채팅 고르기 창·segmented) · `memory/compose.js`(동그라미 단계·오른쪽 이전/다음·PC 미리 보기) · `memory/cards.js`.
+  - 관리 `characters.js`·`modules.js`·`plugins.js`(도구 한 줄+···, 편집+···, 지금 채팅 라벨, 종류 필터, 연결 칩).
+  - 작업실 `settings.js`(꾸미기)·`tools.js`(목록 2묶음·도움 주신 분들)·`settingstab.js`(묶음+현재 값 `valRow`)·`aitab.js`(단계 카드·시작하기 상자)·`personabuilder.js`(접기·2열).
+  - 시작 안내 `ui/onboarding.js`(`maybeOnboarding`/`openOnboarding`, `ONBOARD_VER=1`, 끝/나중에 → onboardDone·tourDone·promptIntroDone + 임베딩·AI 제작 안내 키 저장). `app.js` 열 때 시작 안내 → 새로 바뀐 점 → 둘러보기 순. 설정 → 도움말 '시작 안내 다시 보기'(`ctx.openOnboarding`). 기억 처음 설정 저장은 `memory/setup.js applyMemorySetup/readMemorySetup`로 나눠 같이 씀.
+  - 공용: `ui/themekit.js`·`theme.js`·`lookparts.js`, CSS는 `styles.js` 끝부분 '1.8.3' 블록들. 아이콘 `message-circle`·`arrow-up` 추가(`tests/icons-used.test.js`가 없는 아이콘 이름을 잡음).
+  - 시험: `tests/e2e/run-hubs·run-cards·run-manage·run-work·run-onboard·run-look.mjs` 새로. `app.entry.js` bootApp은 시작 안내를 기본 '본 것'으로(시험할 때 `opts.onboard`), 스킬 저장소(`opts.skills`로 세트 3개). `run-memed`는 새 메뉴 구조로 고쳐 통과(32/32). `run-app.mjs`는 앞부분 옛 구조라 여전히 '사이드바 순서'에서 멈춤(기존).
+  - 확인 못 함: 실제 RisuAI·RisuBard·PocketRisu 화면, 기기 글꼴 차이, 시작 안내의 '내 API'·임베딩 연결 테스트 실제 호출.
+- 다음 할 일 후보: `run-app.mjs` 새 메뉴 구조로 정리 · 버전 올리기/릴리스(사용자 지시 때) · 실제 환경 확인 뒤 다듬기.
+
+## 다음 작업 (사용자 요청 2026-11-02 22:15, 아직 시작 전)
+- 완료: 장기 기억 진입 시 임베딩 안내 자동 표시 제거(mhome.js).
+- ① [x] **유저 편향 없애기 강도 (완료 2026-11-02)**: 홈 '유저 편향 없애기' 줄은 스위치 대신 박스 버튼(`#rb-dice-row`, 오른쪽에 꺼짐/강도 표시) → 누르면 상세 창(`ui/dicedetail.js` `diceRow`/`openDiceDetail`, 홈·시작 안내 4단계 공용). 상세 = 사용하기 스위치(켜면 공정한 전개도 같이 켬, 기존 setDice 로직) + 강도 약하게·보통·강하게 + ?(작동 방식) + **고급 모드만** 난이도 수치 4개(쉬움≤보통≤어려움≤극악, 1~100)·주사위 개수(1~6) 직접 입력('직접 입력 적용' → level=custom).
+  - 수치(엔진 `DICE_LEVELS`): 약하게 10/35/60/85 · **보통 20/50/75/95(예전 값 그대로)** · 강하게 30/60/85/98. 개수는 프리셋 3. 지침 문장에 `easy N, normal N, …`로 들어감. 순수 함수 `normalizeCuts/normalizeCount/resolveDice`(engine/fairplay.js).
+  - 저장(추가만, 기존 키 불변·마이그레이션 불필요): `dusk.ui.fairDiceLevel`(weak|normal|strong|custom, 기본 normal) · `dusk.ui.fairDiceCuts`(JSON) · `dusk.ui.fairDiceCount`. `data/fairplay.js`에 `loadDiceLevel/loadDiceCustom`, 훅에 `setDiceLevel/setDiceCustom/diceLevel`.
+  - 같이 고침: 시작 안내(z 300) 위에서 여는 모달(z 50)이 가려지던 문제 → `.rb-onb~.rb-modal{z-index:310}`(HypaPlus 가져오기 창도 해당).
+  - 시험: `tests/fairplay-level.test.js`(6개, 구현 전 실패 확인) · `tests/e2e/run-home-dice.mjs`(간단·고급 25항목) · `run-home-fair`·`run-hubs`·`run-onboard`는 새 박스 구조에 맞춰 고침.
+  - 확인 못 함: 실제 보조모델이 바뀐 수치(약하게/강하게)를 지침대로 따르는지, 실제 RisuAI·RisuBard·PocketRisu 화면.
+- ② [x] **주사위 결과 표시 (완료 2026-11-02)** + ③ [x] **모델 호출 표시 (완료)**: 둘 다 `data/turninfo.js`(`createTurnInfo`, main.js에서 `app.ctx.turnInfo`)와 순수 `engine/turninfo.js`. 홈 빠른 설정 토글 2개(`dusk.ui.diceShow` 기본 꺼짐 · `dusk.ui.callShow` 기본 꺼짐(2026-11-03 사용자 요청으로 변경), RisuBard=`bardWiki.getDocuments` 있으면 훅 안 달고 모델 호출 토글 숨김).
+  - 흐름: beforeRequest에서 시작 시각·모델명(`getDatabase(["aiModel","subModel"])`, 30초 캐시)·입력 토큰 어림 → output에서 응답 앞부분 열쇠(`headKey`)·첫/마지막 글자 시각 기록(스트리밍은 앞부분 이어지면 갱신, 1.5초 잠잠하면 완료) → display에서 `matchRecord`로 맞는 응답 아래에 접는 블록(`x-dusk="dice"`/`"turn"`) 붙임. 저장 채팅은 그대로. 기록은 `dusk-turn-info`(최근 100).
+  - 주사위: `fairPlay.lastDice()`(요청마다 굴림·수치 보관)를 응답 기록에 붙임. 판정 `judgeRoll(roll, 목표)`: 굴림−목표 ≥20 대성공 · ≥5 성공 · ±5 안 애매 · >−25 실패 · 그 이하 대실패, 1은 늘 대실패·100은 늘 대성공. AI가 어떤 난이도를 골랐는지는 알 수 없어서 4난이도 전부에 대한 판정을 보여줌. 굴러가는 애니메이션은 화면 문서에 심는 keyframes(`dusk-dice-roll`, 움직임 줄이기 존중).
+  - 모델 호출: 화면 구석 칩(`x-dusk="callchip"`, 리스 화면 문서에 `getRootDocument` 래퍼로 만듦, `<details>`라 클릭만으로 펼침 → 로어북 목록은 `loreLog.last()`). 완료 15초 뒤 사라짐. 보조 호출은 출력 훅이 없어 4초만 '호출 중'으로 알림. 토큰은 글자 수 어림(`estimateTokens`).
+  - 시험: `tests/turninfo.test.js`(6개) · `tests/e2e/run-home-turn.mjs`. lorelog에 `recordFor/last` 추가.
+  - 확인 못 한 것(실제 호스트 필요): 모델 이름 필드(`aiModel`/`subModel`)가 RisuAI·PocketRisu에서 맞는지, 화면 구석 칩이 실제 화면에서 위치·표시가 괜찮은지(`getRootDocument` 래퍼의 `setInnerHTML` 등), 응답 아래 블록이 호스트 HTML 정리(sanitize)에서 `<details>`·`animation` 인라인 style이 살아남는지, display 훅이 스트리밍 중 반복 호출될 때 부하.
+- 다음 후보: 위 '확인 못 한 것'을 실제 환경에서 확인 · 버전 올리기/릴리스(사용자 지시 때) · `run-app.mjs` 새 메뉴 구조로 정리.
+
+## 2026-11-03 사용자 요청 묶음 (완료)
+- **캐시 깨짐(치명)**: 원인 = 주사위 굴림값이 맨 앞 시스템 지침(`buildFairText`)에 들어가 요청마다 접두부가 바뀜. 수정 = `engine/fairplay.js` 고정 규칙 `diceRules`(굴림·힌트 없음)는 앞 지침에, 굴림값 `diceRollText`(`[Dusk Dice]`)는 마지막 user 메시지 바로 앞에 별도 system으로(`insertFairness`). 재해석/존중은 고정 문장만 다름 → 원인 아님. 시험 `fairplay-v168` '캐시' 케이스(마지막 user 앞까지 동일).
+- 모델 호출 표시 기본 꺼짐(`loadCallShow`) · 설정 버튼 아이콘 `cog`(icons.js, app.js) · 도구 스페셜 땡스 카드(`tools.js` `.rb-sthanks*`) · 인물 위키 2열을 CSS columns(masonry)로(`.rb-wk3-grid`, `.rb-wk2-cards`) · 열린 채팅 없을 때 기억 홈에 설정 카드·기억 옵션·(고급)전체 설정(`mhome.js settingsCards`).
+- **{{user}} = 나**: `engine/memoryuser.js normalizeUserNames`(페르소나 이름·user·유저·플레이어 → `{{user}}`, people·rel·emo·scene.who·know) · 분석 지침에 한 줄 추가(memoryprompt.js) · `applyAnalysis({userNames})`, runner가 `getDatabase(["username"])`(60초 캐시)로 넘김 · 위키 라벨 '나와의 관계'. 시험 `tests/memory-user-identity.test.js`. 기존에 갈라져 쌓인 페르소나 이름 인물은 자동 병합 안 함(저장 데이터 변경이라 필요하면 사용자 확인 후).
+- **탭 이동 멈춤**: 원인 추정 = 홈·기억 화면이 탭 진입마다 `currentChat()` → `getCharacterFromIndex`(봇의 모든 채팅 복사, 실제 호스트에서 수백 ms). 수정 = `memoryswitches.js` 위치(ci:ti)별 30초 캐시, 쓰기·창 열기 때 `dbcache.js cacheGen()`으로 비움. 시험 `tests/currentchat-cache.test.js`, 측정 스크립트 `tests/e2e/run-tabperf.mjs`(시험 환경은 API가 즉시라 체감 차이는 실제 호스트에서만 확인 가능).
+- 확인 못 함: 실제 호스트에서 캐시 적중률(프로바이더 로그), 탭 이동 체감, 아이콘·땡스 카드 실제 테마별 모양.
+
+## 2026-11-03 추가 기능 (사용자 지시 1·2·4·5·6, 완료)
+- RisuAI 소스 확인(kwaroran/RisuAI `src/ts/process/index.svelte.ts`·`request/anthropic.ts`·`request.ts`): 캐시 지점(`cachePoint`)은 리스가 먼저 찍고(자동=마지막 user 3개, 프롬프트 템플릿 'cache' 카드=깊이·역할) 플러그인 beforeRequest는 그 뒤에 받음. Claude 변환에서 첫 메시지 이후 system은 "System: …" user로 바뀌고 같은 역할끼리 한 텍스트 블록으로 합쳐짐(캐시 지점은 합친 블록 끝). → 주사위는 마지막 user와 합쳐지므로, `insertFairness`가 캐시 지점이 1~3개 있을 때만 주사위 앞 assistant에 `cachePoint` 추가(4개 한도, 원본 불변). 시험 `tests/cache-hit.test.js`.
+- ① 캐시 적중 어림: `engine/turninfo.js prefixInfo/cacheLine`(직전 메인 요청과 앞부분 같은 토큰·비율, 깨진 메시지 위치, Dusk 표식이면 이름) → `data/turninfo.js` rec.cache, 칩·응답 아래 '캐시(어림)' 줄. 요청 훅은 시작 5초 뒤 remove+add로 맨 뒤로(다른 Dusk 훅 뒤의 최종 프롬프트를 보려고). 실제 프로바이더 적중과 다를 수 있음(어림).
+- ② 주사위 기록: `data/fairplay.js` `DICE_LOG_KEY "dusk-dice-log"`(최근 300, 굴릴 때 채팅 정보와 함께, 1.5초 모아 저장), `loadDiceLog/clearDiceLog`, `engine/turninfo.js diceStats`. 화면 `ui/dicedetail.js openDiceLog`(이 채팅/전체·통계·지우기). main에서 `chatRef`로 `memory.switches.currentChat` 연결.
+- ④ 합치기: `engine/memoryuser.js userMergePlan/mergeIntoUser`(people·emo·talk·rels·faces·exp·bonds·rifts·beliefs·scenes.who). 저장 데이터 변경이라 '나' 화면에서 미리 보기+확인 후에만. 위키(리수폿 문서)는 건드리지 않음.
+- ⑤ '나' 화면: `ui/screens/memory/mepage.js`(m.page="me", 기억 홈 `#rb-mem-go-me` 한 줄 카드), 데이터 `meView`(counterparts/pairView 재사용). CSS `.rb-me*`(styles.js 끝), 넓으면 2열 columns.
+- ⑥ 채팅 메뉴: `data/chatmenu.js`(`registerButton` location "chat", id 고정 `dusk-qt-fair|dice|show`로 다시 등록해 이름 갱신). main에서 fairPlay.set/setDice·turnInfo.setDiceShow를 감싸 어디서 바꿔도 이름 갱신. 설정 '로어북 · 채팅 메뉴'에 보임/숨김(`dusk.ui.chatQuick`, 기본 보임).
+- 시험: `cache-hit`·`dice-log`·`memory-user-merge`·`chatmenu` 단위, e2e `run-me.mjs`(PC·모바일 16). e2e에서 `.rb-dice .btns button`은 버튼이 2개라 '닫기' 글자로 고름.
+- 확인 못 함: 실제 Claude 캐시 적중(프로바이더 사용량), 채팅 메뉴 버튼이 RisuBard·PocketRisu에 있는지(없으면 조용히 생략), '나' 화면의 실제 데이터 품질.
+- (2026-11-03, 사용자 결정) 주사위 앞 캐시 지점은 리스가 캐시를 안 써도 찍음(`points < 4`면). 리스 캐시를 안 쓰던 Claude 사용자는 그 지점까지 캐시 쓰기 비용(입력 단가의 약 1.25배)이 생기고 다음 턴부터 읽기 할인을 받음.
+
+## 2026-11-03 추가 2 (사용자 지시 1·2·4·5, 3번은 이미 기본값이라 생략)
+- 3번(장기 기억 넣는 위치): 이미 기본 `inject.position = "beforeLastUser"`(마지막 입력 바로 앞), 고급 '삽입 위치'로 변경 가능 → 작업 없음. 리수폿 로어북 방식(lore)은 로어북 위치를 따름.
+- ① 리롤 같은 주사위: `engine/fairplay.js turnKey`(Dusk 메시지 뺀 전체 해시) → `data/fairplay.js` sameTurn(같은 열쇠·같은 개수·6시간 안이면 같은 rolls, 기록은 새 턴만). 기존 시험 3개를 '같은 메시지 = 같은 값'에 맞게 고침.
+- ⑤ 판정 표식: 고정 규칙에 `<!-- dusk-roll: 행동 | easy|normal|hard|extreme | 굴림 | success|partial|fail -->` 남기기 지시(캐시 영향 없음). `parseRollMarks`, `makeDice`가 지난 턴(마지막 user 앞 assistant) 표식을 `prev`로 → `diceRollText` 'Last turn's judged outcomes'. 화면 `diceHtml(rec, marks)`는 표식이 있으면 실제 행동·난이도. 기억 분석 입력에서는 표식 제거(`memoryrunner.js noRoll`). 모델이 표식을 안 지키면 예전처럼 4난이도 표.
+- ② 캐시 깨짐 알림: `data/turninfo.js` `CACHE_ALERT_KEY "dusk.ui.cacheAlert"`(기본 켜짐), 앞부분 < 50% & 전체 ≥ 1500토큰이면 칩 9초(호출 표시가 켜져 있으면 생략). 설정 고급 '이야기 도우미'에 줄(`#rb-set-cachealert`).
+- ④ '나' 고치기: `mepage.js editDialog`(호칭·말투·감정 6개) → `setTalk`/`setTag`(잠김). e2e `run-me.mjs` 22항목.
+- 확인 못 함: 실제 모델이 판정 표식을 잘 남기는지(특히 작은 모델), 리스 화면에서 HTML 주석이 정말 안 보이는지(마크다운 렌더 기준으론 숨김).
+
+## 2026-11-03 전체 점검 (사용자 지시)
+- 고친 버그(시험 `tests/audit-183.test.js` 5개 고치기 전 실패 확인 + e2e `run-home-dice` Esc 항목):
+  - turninfo: 응답이 안 오면 '추론 중' 칩 타이머가 영원히 돎 → 5분(`TICK_MAX`) 뒤 멈추고 치움. 호출 표시를 끄면 `stopTick()`. 캐시 알림만 켜져 있으면 `pending`을 안 만들어 응답 기록 저장 안 함.
+  - fairplay `turnKey`: system 메시지(기억·이야기 시간 주입)까지 넣어 리롤 판별이 깨짐 → user·assistant만.
+  - memoryswitches: 30초 캐시가 채팅 삭제 직후 틀릴 수 있음 → `currentChat({ fresh: true })`, 요청마다 쓰는 내 프롬프트 범위(`data/memory.js`)는 fresh.
+  - kit `modal`: 창 위 창에서 Esc가 모든 창을 닫음 → 맨 위 `.rb-modal`만.
+  - chatmenu·quickset: RisuBard(응답 아래 표시 불가)에서 '주사위 결과 표시' 숨김. quickset `setDice` 실패 시 다시 던져(`e.shown`) 상세 창 스위치가 되돌아가게.
+- 리스 소스로 확인한 것: replacer 두 번째 인자 = `'model'|'submodel'|'memory'|'emotion'|'otherAx'|'translate'`(메인 판별 맞음). `cachePoint`는 Claude 요청에서만 쓰이고 OpenAI 계열은 지워서 보냄(Gemini 요청 코드에서는 안 씀) → '항상 찍기'가 다른 프로바이더에 영향 없음.
+- 전체 시험: 단위 719 통과, e2e 18종 통과(`run-tabs`는 4번 중 1번 41줄 모바일 로어북 항목 클릭 타이밍으로 멈춤 — 기존 시험 흔들림, 코드 문제 아님). `run-app.mjs`는 옛 메뉴(리수폿·인물 탭) 기준이라 첫 확인에서 멈춤(기존, 새 시험들이 같은 화면을 다룸).
+- 못 한 것: eslint 등 정적 검사(npm 레지스트리 접속 불가), 실제 호스트 확인.
+
+## 2026-11-03 {{user}} 이름 표시 · 마스코트 루네
+- 기록 보기에서 {{user}} → 페르소나 이름(`db.username`, 없으면 '나'): `ui/screens/memory/username.js`(userText 조사 맞춤, `watchUserName` MutationObserver로 부분 갱신까지, 입력칸·편집 영역 제외 — 저장 값 불변). mdetail 진입 시 연결, personv2·infotab `shown()`은 `userLabel()`. 시험 `tests/username-display.test.js`, e2e `run-username.mjs`. '나에 대한 기억' 화면은 그대로 '나'.
+- 마스코트 '루네'(사용자 지정 이름, 사용자가 준 캐릭터 시트 그림): 넣을 곳 = 시작 안내 환영 화면 · 빈 화면 안내 · 창 왼쪽 위 로고. 사용자 결정: 목업 먼저 보고 결정 → 목업 완료·확인 대기(실제 앱에 얹어 찍은 '지금/개편안' PC·모바일, 사진이 커서 저장소엔 안 넣음). 쓸 그림: 시트에서 자른 표정 4(기본·웃음·놀람·부끄러움)·SD 루네·고양이 정령(배경 투명)·로고 2(고양이/얼굴), webp로 합계 약 40KB. 구현 시: `ui/mascot.js`에 data URL로 넣고 `.rb-logo`(app.js 132줄)·시작 안내 0단계 `.rb-onb-logo`(onboarding.js 251줄)·kit `emptyState`의 `.ico`를 바꿈. 확인할 것: 말풍선 문구, 빈 화면 표정(같게/상황별), 로고(고양이/얼굴).
+- (2026-11-03) **루네 구현 완료**: 사용자가 GPT로 새로 뽑은 시트 2장(표정·SD 16칸, 로고·아이콘 9칸) 사용. 결정: 로고 = 로고 시트 1번(얼굴 타일), 빈 화면 = 상황별, 환영 말풍선 그대로. `ui/mascot-data.js`(자동 생성 webp data URL, 얼굴 8·wave·logo 약 110KB) · `ui/mascot.js`(`moodFor` 제목으로 표정: 채팅 없음=surprised, 쓸 수 없음/준비 안 됨=sorry, 기억하는 인물=thinking, 그 밖=basic, `mood`로 직접 지정) · kit `emptyState` 아이콘 → 루네 얼굴 · app.js 로고 → `runeLogo()` · 시작 안내 0단계 SD 손 흔들기+말풍선, 6단계(끝) 머리에 윙크. 시험 `tests/mascot.test.js`. 원본 시트는 저장소에 없음(필요하면 사용자에게 다시 받기).
+- (2026-11-03) 루네 추가 자리(사용자 요청 '더 넣어 줘'): 새로 바뀐 점 창 머리 `runeSd("cheer")`(whatsnew.js) · 도구 스페셜 땡스 머리 `runeSd("bow")`(tools.js) · 화면 열기 실패 → `emptyState({mood:"sorry"})`(app.js). mascot-data에 cheer·bow 추가(약 37KB). 확인 못 함: 변경 기록 창 실제 모습(시험 환경에서 버튼 클릭 실패, 빌드·시험은 통과).
+
+## 2026-11-03 아카 글 v1.8.3 디자인 '1+7' 합본 (사용자 요청, 확인 대기)
+- 지난 챗의 시안 6종+7번(1+6)은 세션 파일이 없어 사라짐 → 현재 `docs/arca/v1.8.3.html`을 변환해 새로 만듦: `docs/arca/drafts/v1.8.3-design-1plus7.html`(그림 자리 `{{IMG:이름}}`, 최종 글 아님·`v1.8.3.html`은 안 바꿈). 1번(별빛 클래식 카드·요약·접이식 항목) + 7번(금색 가는 테두리·선·세리프 제목·로마숫자 CHAPTER·LD 머리·땡스 카드 통일). 기능별 4색 → 금/라벤더 2색.
+- 그림 자리: banner·ld·icon·spot-story·spot-memory·spot-screen·spot-cache·sd-wave·sd-bow·sd-cheer. 사용자가 아카에 올린 주소를 받으면 이 자리를 바꿔 `docs/arca/v1.8.3.html`로 반영.
+- 확인: 아카 제약(style·class·script·overflow:hidden) 0건, 360/800px 가로 넘침 없음. 실제 아카 에디터 붙여넣기는 미확인.
+
+- (2026-11-03) 사용자 요청으로 1번 중심+2번 곁들임 판 추가: `docs/arca/drafts/v1.8.3-design-1plus2.html`(네이비 본문 1번 + 장 머리만 밝은 라벤더 종이 카드·동그란 그림·세리프 2번풍, 금색 테두리·선은 뺌). 그림 자리·제약 검사는 1+7판과 같음(0건, 360/800px 넘침 없음). 둘 중 고르면 `v1.8.3.html`에 반영.
+- (2026-11-03) 사용자 결정: **디자인은 1번(별빛 클래식)으로** → `docs/arca/drafts/v1.8.3-design-1.html`(배너·LD·장별 작은 루네·금/라벤더 2색). **기능 순서: 새 화면 → 기억 → 이야기 도우미 → 캐시**(번호 1~4·항목 1-1.. 모두 새 순서로, 소개 문장·시리즈 줄도 같은 순서). 머리 제목은 아직 '공정한 주사위, 나를 기억하는 인물들.'(순서와 안 맞으면 바꿀지 확인). 1+7·1+2 초안은 비교용으로 남김. 그림 주소를 받으면 `{{IMG:…}}` 10곳을 바꿔 `v1.8.3.html`로 반영.
+- (2026-11-03) **정정**: 사용자가 보낸 실제 1번 시안(`preview-1.html`, 그림 13종 내장)에 순서만 바꿔 `docs/arca/drafts/v1.8.3-design-1-final.html`로 저장 — 위의 `v1.8.3-design-1.html`(내가 다시 만든 판)·1+7·1+2는 쓰지 않음. 순서 새 화면→기억→이야기 도우미→캐시(번호·항목·요약 카드·소개 문장·시리즈 줄 반영). 그림 자리 13곳: icon·guide·banner·ld·spot-screen·spot-memory·spot-story·spot-cache·more·warn·install·thanks·closing(그림 파일은 `arca-images.zip`로 사용자에게 전달, 저장소엔 없음). 머리 제목은 그대로('공정한 주사위, 나를 기억하는 인물들.', 바꿀지 확인 중).
+- (2026-11-03) 아카 에디터(Froala)가 이미지에 `fr-dib`(display:block; margin:5px auto)를 붙여 flex 줄 안 그림이 자동 여백으로 글자를 밀어냄 → **flex 줄 안 `<img>`엔 인라인 `margin:0`을 꼭 넣을 것**(ARCA-POST 제약에 추가 필요). `v1.8.3-design-1-final.html`에 반영.
+- (2026-11-03) 사용자가 올린 그림 주소(아카 에디터가 만든 `//ac.arca.live/…` 링크)를 그대로 쓰기로 함 → `docs/arca/v1.8.3.html`을 사용자가 붙여 넣은 1번 디자인 소스(+flex 줄 그림 `margin:0` 수정)로 교체. 순서 새 화면→기억→이야기 도우미→캐시. 마무리 루네 그림(closing)은 사용자 소스에 없어서 안 넣음. 머리 제목은 그대로.
+
+## 안내서 사이트 (docs/site/)
+- GitHub Pages(feat/1.8.3 · /docs, `docs/.nojekyll` 필수 — Jekyll이 옛 문서의 `{{` 때문에 빌드 실패했음). 주소 `…/Dusk-Atelier/site/`.
+- 13페이지: 허브, guide/(start·memory·story·cocoa·image-tags·look·manage·switches·faq), dev/(index·host·workflow). HTML이 원본(생성기 없음) — 직접 고친다.
+- 공용: `assets/site.css`(v1→v4 덮어쓰기), `assets/site.js`(상단 바·왼쪽 메뉴 NAV), `assets/widgets.js`(검색 Ctrl+K·탭·체크리스트·표 필터·코드 복사·체험 위젯: 주사위/관계/감정/게이지/태그/코코아/꾸미기/패치). 다크·라이트는 브라우저 설정을 따르고, 상단 GitHub 오른쪽 버튼(🌙/☀️)으로 바꾸면 `da-theme`(localStorage)에 저장돼 `:root[data-theme]`가 우선함.
+- 허브는 목업 B(배너 + 큰 검색창 + 낱말 칩 + 벤토 타일). 다른 페이지 제목부는 site.js가 `.phero` 카드(벤토 큰 타일 모양 + 페이지별 루네 그림, IMG 표)로 감싼다. 목업 원본은 `docs/site/mockups/`.
+- 새 페이지: site.js NAV, widgets.js PAGES(검색 색인), 허브 타일, 이전/다음 링크를 함께 고친다. 주사위 위젯의 수치(LV·judge)는 `src/engine/fairplay.js`·`turninfo.js`와 같아야 함.
+- 내용 출처는 README/CHANGELOG/코드 문구만. 버전이 바뀌면 CHANGELOG 기준으로 갱신.
+- **상시 규칙(사용자 지시, 2026-11-03):** 기능 설명이 바뀌거나 새 기능이 생기면 안내서 사이트(docs/site/guide/*.html)의 해당 페이지도 함께 고치고 CHANGELOG에 맞춘다. (아카 글 `docs/arca/v<버전>.html`은 사용자가 요청할 때 갱신.)
+- 이번 대화에서 안내서 story(재해석·존중 위치)·memory(봇 로어북 내보내기)와 아카 v1.8.3 글(2-6 로어북 내보내기, 3-1 재해석·존중, 4-4 속도)을 갱신함. 아카 글 '재해석·존중' 문구는 3-1에 있음.
+- 아카 v1.8.3 글: 맨 위 '처음이라면' 접이식 상자를 안내서 사이트 안내 큰 상자(NEW · GUIDE SITE, 열기 버튼 + 5개 바로가기 + 예전 가이드 2.0 링크)로 교체. 사이트 주소는 Pages 배포 확인 후 게시할 것(`https://pyser08.github.io/Dusk-Atelier/site/`).
+- 채팅 메뉴(입력창 옆, location "chat") 맨 위에 '장기 기억' 바로가기 추가(`data/chatmenu.js` openMemory, main.js에서 memoryRef.open 연결). 토글이 아니라 화면을 여는 버튼(이름에 켜짐/꺼짐 없음), 빠른 설정을 숨기면 함께 숨김. 별도로 location "action"의 기존 '장기기억' 버튼(`memorybutton.js`)은 그대로 — 호스트에서 두 메뉴가 같은 곳으로 보이면 중복이니 실기기 확인 필요(미확인).
+
+- 홈 속도(1.8.3, 이 대화): ① `data/memorystore3.js` 인덱스 원문 5초 캐시(문자열만 캐시·읽을 때마다 파싱, set/rm 때 비움, 문자열 아니면 캐시 안 함) ② `ui/screens/homestate.js` 인덱스·기록 자동 설정 읽기를 currentChat과 동시에 ③ `ui/screens/home.js` quickSettingsCard를 readState와 동시에. 시험: memorystore3·homestate 각 1건. 미측정: PocketRisu 실제 체감. 남은 후보(미착수): watch.js 모듈 전체 폴링(60초) 가볍게, createApp 지연 생성, 번들 데이터(카드 에셋·프롬프트·마스코트 ~1MB) 분리, 홈 상태는 나중에 채우기(골격 먼저), getFolder 대신 최근 기록 요약만 읽기.
+- 홈 속도 2(1.8.3): `data/memoryswitches.js` `peekCurrent`(위치 ci:ti 같으면 직전 currentChat 값을 바로 주고 뒤에서 fresh 확인, 달라지면 onChange → `homestate.js`가 홈 refresh). 시험 1건(memoryswitch). 위험: 봇 순서가 바뀐 직후엔 잠깐 이전 봇 이름이 보였다가 바로 다시 그려짐. PocketRisu 체감 미측정.
+- 속도 3(1.8.3): memorystore3 원문 캐시를 인덱스+폴더(최대 6키, 5초)로 일반화, 기억 홈(mhome) currentChat을 안내·모드 막대와 동시에(peekCurrent), watch.js MOD_EVERY 60s→120s. 의도적으로 안 한 것: createApp 지연 생성(sync가 app.ctx.svc를 써서 창을 열기 전엔 페르소나 동기화가 멈춤 → 별도 분리 필요), 번들 데이터 분리(CSP·로드 방식 확인 필요), 에셋 저장소로 기억 이전(정리 기능에 지워질 위험).
+- 속도 4(1.8.3): `data/dbcache.js` 재작성 — 키별 캐시(TTL 45s), `dbRead`는 shared(복사 없음, 읽기 전용 약속·최상위 객체만 새로 줌), `warm`(watch.js의 characters·modules 읽기가 캐시를 채움), `soften`(창 열 때 15초 안 것 유지; 쓰기 계열은 그대로 hard invalidate). dbRead 호출처(characters·modules·sectionhome·memory/common loadBots·plugins 등)는 값을 고치지 않음을 확인. 새 dbRead 호출처는 반드시 읽기 전용으로. 미측정: 실제 호스트 체감, '응답 없음'의 진짜 원인이 호스트 쪽 복사라면 한계 있음.
+- 속도 5(1.8.3): 캐릭터 탭 첫 읽기 단계별(`characters.js fetchCharsStaged`: 캐시 없음+봇 30개 이상일 때 characterOrder→modules→`loadCharacters(onBatch)` 12개씩, 24개 모이면 먼저 그림, 끝나면 `api.storeDbCache`로 캐시). dbcache에 has/store 추가, main.js hasDbCache/storeDbCache. 모듈·플러그인 탭은 아직 통째 읽기. 호스트 쪽 복사 자체는 못 줄임. 미측정.
+- 홈 골격 먼저(1.8.3): `home.js` — 바로가기(grid)·처음 둘러보기는 정적으로 먼저 그리고, 머리·상태·이어서·최근·빠른 설정은 자리표시(rb-skel) → `adopt(box, el)`로 내용만 교체(refreshStatus는 statusEl에 씀). 빠른 설정은 readState와 따로 qsP가 끝나는 대로 채움(실패 시 안내 글). 확인: e2e run-home-dice 통과, 느린 저장소로 자리표시 화면 사진 확인.
+- CI(1.8.3): `.github/workflows/branch-build.yml`·`build-branch.yml`을 검증만 하도록 바꿈(테스트·빌드·문법, 봇의 '빌드 결과 커밋' 제거, contents: read). 이유: 봇 커밋이 끼어 푸시가 계속 거절됨. 이제 dusk_atelier.js는 로컬 `npm run build` 결과를 직접 커밋. 주의: 봇 빌드가 로컬과 달랐던 원인(번들에 넣는 CHANGELOG 부분 추정) 미확인 → 릴리스 전 release.yml의 `build --check`가 CI에서 통과하는지 확인. release.yml·main은 손대지 않음.
+- 봇 로어북 내보내기(1.8.3): `engine/wikilore.js`(순수: wikiLoreText/Entry/Candidates, upsertWikiLore 멱등, 표식 extentions.da_wiki=인물 이름, 비밀·openness·suspicion 구획 제외, 기본 2000자) + `ui/screens/memory/lorexport.js`(체크 목록·미리보기·확인 후 `setCharacterToIndex`로 globalLore 저장, 생성 중이면 거절) + people.js 더보기 메뉴(local 백엔드+위키 있을 때). 시험: tests/wikilore.test.js, tests/e2e/run-lorexport.mjs(app.entry.js 목 setCharacterToIndex가 window.__charWrites에 기록). 미확인: 실제 RisuAI·RisuBard·PocketRisu에서 봇 로어북 저장·화면 반영, 채팅 보호(RisuVault)가 막는 경우. 위키 상세정보 없을 때 칸이 좁아지는 버그는 PC1280·태블릿820·모바일390·간단/고급·위키 없음/빈 문서에서 재현 안 됨 → 사용자 사진 필요.
+- 모듈·플러그인 속도(1.8.3): `readDb(api,keys,{cached})`(loadModuleState만 캐시, commit은 새로 읽음), modules.js `linkUseCounts`(60초 기억·200ms 뒤 시작·봇 처음 읽으면 storeDbCache), plugins `listInterop`/`listPlugins` 병렬, viewList 병렬. 시험 tests/modplug-load.test.js. 미확인: 실제 PocketRisu 체감 속도.
+- 위키 상세정보 좁아짐 버그(1.8.3): 원인=문서 없을 때 .rb-wk3가 넓은 화면 2칸 grid(140px 목차+본문)에 목차 없이 들어가 카드가 140px. 고침=infotab 없는-문서 뿌리에 rb-wk3-solo + styles.js 덮어쓰기. 시험 tests/wikisolo.test.js(정적). 미확인: 실제 RisuBard PC 화면 재확인.
+- 유저 편향 상세(dicedetail.js)에 재해석/존중 세그먼트를 강도 위에 추가(설정 탭과 같은 DICE_MODE_KEY). e2e run-home-dice 선택자는 '강도' 구획으로 한정.
+- 설정 고급 '이야기 도우미'의 재해석/존중 행 제거(유저 편향 상세로 이동, 저장 키 DICE_MODE_KEY 동일).
+- 버전 1.8.3으로 올림(사용자 지시 2026-11-03): package.json·CHANGELOG 머리(개발 중→2026-11-03)·빌드 산출물. 릴리스는 main push 때만 — 아직 main 머지 안 함.
+- 릴리스 전 점검(2026-11-03): main은 브랜치보다 앞선 커밋 없음·충돌 없음, 사이트 링크 깨짐 0, e2e 23개 중 22개 통과. `tests/e2e/run-app.mjs`는 옛 탭 이름(리수폿·인물·꾸미기) 기준이라 사이드바 확인 2개만 새 구성에 맞췄고 그 뒤 단계는 38줄에서 멈춤 → 새 탭 구성(장기 기억·코코아·기억 카드·플러그인 꾸미기 등)에 맞춰 다시 써야 함(회귀 아님, 이전부터 낡음). 릴리스 뒤 Pages 소스를 main /docs로 바꿀 것.

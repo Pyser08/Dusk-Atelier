@@ -1,6 +1,6 @@
 name: 브랜치 빌드
 
-# feat/* 브랜치에 src/가 바뀌어 푸시되면 dusk_atelier.js를 다시 빌드해 같은 브랜치에 커밋한다 (테스트용 배포 파일)
+# feat/* 브랜치에 src/가 바뀌어 푸시되면 테스트·빌드만 검증한다. 빌드 결과를 브랜치에 다시 커밋하지 않는다(봇 커밋이 끼어 푸시가 거절되던 문제). dusk_atelier.js는 로컬에서 npm run build 해서 직접 올린다.
 # v1.6.3: 변경 기록까지 포함해 최신 소스 상태로 다시 빌드
 on:
   push:
@@ -8,7 +8,7 @@ on:
     paths: ['src/**', 'tools/**', 'tests/**', 'package.json', '.github/workflows/build-branch.yml']
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -22,11 +22,3 @@ jobs:
       - name: 캐릭터 분리 단위 테스트
         run: npm test
       - run: node tools/build.mjs
-      - name: 빌드 결과 커밋
-        run: |
-          if git diff --quiet -- dusk_atelier.js; then echo "변경 없음"; exit 0; fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
-          git add dusk_atelier.js
-          git commit -m "빌드: dusk_atelier.js"
-          git push

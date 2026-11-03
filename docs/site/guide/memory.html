@@ -1,0 +1,44 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><title>장기 기억 · Dusk Atelier</title><link rel="icon" href="../assets/img/icon.webp"><link rel="stylesheet" href="../assets/site.css"></head>
+<body data-root="../" data-page="guide/memory">
+<div class="wrap"><nav class="side"></nav><main>
+<span class="eyebrow">기능 가이드</span><h1>장기 기억</h1>
+<p class="lead">인물과 관계를 기억하는 기능이에요. AI 호출을 늘리지 않고 기존 분석에 얹어서 동작해요.</p>
+<h2 id="what">무엇을 기억하나요</h2>
+<p>대화를 분석해서 인물별 기록, 감정, 관계, 장면을 쌓고, 지금 장면과 관련된 기억을 대화에 넣어 줘요. 쌓인 기억은 장기 기억 화면과 인물 위키에서 볼 수 있어요.</p>
+<div class="tip"><span class="ico">💡</span><div><b>홈</b>의 장기 기억 줄 오른쪽 스위치(모든 채팅에서 사용)로 전체를 한 번에 켜고 끌 수 있어요. 끄면 기록·불러오기가 멈추지만 쌓인 기억은 그대로예요.</div></div>
+<div class="demo"><h4>체크리스트 · 장기 기억 시작하기</h4><p class="cap">누르면 체크돼요. 이 기기의 브라우저에 진행이 저장돼요.</p><ul class="check" data-key="memory"><li><div><b>기록할 AI</b>(보조 모델)를 골라요 — 시작 안내 3단계에서 정해요</div></li><li><div><b>기억 수준</b>을 골라요</div></li><li><div><b>임베딩</b>을 설정해요 (선택 · 의미 검색)</div></li><li><div><b>지난 대화 분석</b>으로 이미 나눈 대화를 기억으로 바꿔요</div></li><li><div><b>인물 위키</b>를 열어 기록이 잘 쌓였는지 봐요</div></li></ul><div class="meter"><i></i></div><small class="meter-l" style="color:var(--mute)"></small></div><h2 id="human">사람다운 기억</h2>
+<p>사람 사이에서 실제로 일어나는 일을 더 잘 반영해요.</p>
+<table><tr><th>기능</th><th>하는 일</th></tr>
+<tr><td>관계 진도</td><td>함께한 장면 수와 애정·신뢰로 '처음 봄 · 아는 사이 · 친한 사이 · 아주 가까운 사이'를 알려 줘서 갑자기 친해지는 일을 줄여요.</td></tr>
+<tr><td>호칭·말투</td><td>누가 누구를 뭐라고 부르는지, 존댓말인지 반말인지 기억해요. 바뀌면 이전 것도 함께 알려 줘요.</td></tr>
+<tr><td>둘만의 추억</td><td>다시 꺼낼 만한 둘의 순간을 기억했다가, 둘이 함께 나오면 하나를 슬쩍 알려 줘요.</td></tr>
+<tr><td>오랜만의 재등장</td><td>오래 안 나오던 인물이 다시 나오면 얼마 만인지 알려 줘요.</td></tr>
+<tr><td>변화 기억</td><td>외모·성격·처지가 바뀌면 '지금은 B (전에는 A)'로 기억해요.</td></tr>
+<tr><td>흐려지는 기억</td><td>오래된 사소한 기억은 잊히기 전에 '흐릿한 기억'으로 표시해요.</td></tr>
+<tr><td>갈등·사과·앙금</td><td>'안 풀림 → 사과함 → 화해함'으로 따라가요. 깊은 앙금은 남아요.</td></tr>
+<tr><td>사람 앞 태도</td><td>둘이 있을 때와 남들 앞에서 태도가 다른 인물을 장면에 맞춰 알려 줘요.</td></tr></table>
+<p><b>감정은 시간이 지나면 식어요.</b> 적대감·두려움은 빨리, 의존·애정은 천천히 누그러지고, 신뢰·존경은 행동으로만 바뀌어요. 직접 정한(잠근) 값은 그대로예요.</p>
+<div class="demo" id="rel-demo"><h4>체험 · 관계 진도</h4><p class="cap">단계를 눌러 보세요. 실제로는 함께한 장면 수와 애정·신뢰를 보고 자동으로 정해져요.</p><div class="stage"><button>처음 봄</button><button>아는 사이</button><button>친한 사이</button><button>아주 가까운 사이</button></div><p class="rd" style="margin:6px 0 0"></p></div><div class="demo" id="emo-demo"><h4>체험 · 감정이 식는 속도</h4><p class="cap">개념을 그림으로 본 거예요. 실제 수치가 아니에요. 직접 정한(잠근) 값은 식지 않아요.</p><div class="row"><button class="chip" data-m="fast" data-d="적대감·두려움은 빨리 누그러져요. 깊은 원한은 조금 남아요.">적대감 · 두려움</button><button class="chip" data-m="slow" data-d="의존·애정은 천천히 누그러져요.">의존 · 애정</button><button class="chip" data-m="act" data-d="신뢰·존경은 시간이 아니라 행동으로만 바뀌어요.">신뢰 · 존경</button></div>
+<canvas width="560" height="170" style="width:100%;max-width:560px;height:auto"></canvas><div class="row"><label>시간</label><input type="range" min="0" max="100" value="30"></div><p class="ed" style="margin:0;color:var(--sub)"></p></div><h3>거짓말·오해 추적 <span class="pill off">기본 꺼짐</span></h3>
+<p>켜면 '누가 무엇을 잘못 믿고 있는지'를 기억해서, 속은 인물이 진실을 알기 전까지 그 믿음대로 행동하게 해요. 추리·드라마 봇에 알맞고, 분석 모델이 약하면 틀릴 수 있어요.</p>
+<p>세 가지(사람다운 기억·감정 식기·거짓말·오해 추적)는 간단 모드의 <b>기억 옵션</b> 카드에서 각각 켜고 끌 수 있어요.</p>
+<h2 id="wiki">인물 위키</h2>
+<p><b>요약 · 관계 · 상세 정보 · 기록</b> 탭으로 나뉘어 있어요.</p>
+<ul><li><b>요약:</b> 지금 모습, 달라진 점, 상대별 관계 진도, 기억에 남은 순간, 수치 한눈에.</li><li><b>관계:</b> 상대를 고르면 관계 진도·감정·호칭·말투·추억·오해·갈등·사람 앞 태도를 카드로 보여 줘요.</li><li>감정·호칭·말투·추억은 직접 고칠 수 있어요. 고친 값은 잠겨서 AI가 다시 바꾸지 않아요.</li></ul>
+<h3>나에 대한 기억</h3>
+<p>다른 인물들이 나에게 느끼는 감정, 나를 부르는 말·말투, 태도, 둘만의 추억, 갈등·오해를 인물별로 모아 봐요. 예전에 페르소나 이름으로 따로 쌓인 기록이 있으면 맨 위에서 '나로 합치기'를 권해요.</p>
+<h3>상세 정보 탭</h3><p>위쪽 바로가기(넓은 화면은 왼쪽 목록), 기본 성격 성향 2열, 값이 있는 수치·게이지만 막대로(미지정은 칩), 감정은 상대별 한 줄, 내용이 있는 기록만 카드로 보여요. 비어 있는 항목은 맨 아래 칩으로 모여 있고, 누르면 '직접 적기 / AI가 대화 보고 채우기'를 골라요. 고정·고치기·삭제는 각 줄의 메뉴에 있어요.</p>
+<h3>봇 로어북으로 내보내기</h3>
+<p>인물 위키 화면의 더보기에서 '봇 로어북으로 내보내기'를 누르고 원하는 인물만 체크하면, 위키에 정리된 개요·관계·말투와 기본 성격만 글로 만들어 그 봇의 로어북에 넣어요. 기억 기록과 사건 목록은 넣지 않아요. 키는 이름·별칭이라 그 인물이 나올 때만 켜지고, 비밀·성적 태도·의심 항목은 빼요. 들어갈 글을 미리 볼 수 있고, 다시 내보내면 같은 인물 항목만 갱신해요(내가 고친 키는 그대로). 누를 때만 동작해요.</p><h2 id="gauge">게이지</h2>
+<p>인물 위키의 수치 상태 아래 <b>+ 게이지 추가</b>에서 이름과 설명만 적으면 AI가 범위·변화 규칙·색과 모양을 설계해요. 저장하기 전에 고칠 수 있어요. 켜 둔 게이지는 응답 8개마다 기존 분석에 얹혀 갱신돼서 AI 호출이 늘지 않아요. 채팅 응답 아래에 구슬·고리·막대·눈금 중 하나로 나와요.</p>
+<div class="demo" id="gauge-demo"><h4>체험 · 게이지 모양</h4><p class="cap">구슬·고리·막대·눈금 네 가지 모양이 있어요. 슬라이더로 값을 바꿔 보세요. 실제 색과 CSS는 게이지마다 달라요.</p><div class="row"><label>값</label><input type="range" min="0" max="100" value="60"><b id="g-val"></b></div>
+<div class="gz"><div><small style="color:var(--mute)">구슬</small><div class="orbs"></div></div><div><small style="color:var(--mute)">고리</small><br><svg id="g-ringsvg" width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--card2)" stroke-width="8"/><circle id="g-ring" cx="32" cy="32" r="26" fill="none" stroke="var(--g2)" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 163.4" transform="rotate(-90 32 32)"/></svg></div><div><small style="color:var(--mute)">막대</small><div class="gbar"><i></i></div></div><div><small style="color:var(--mute)">눈금</small><div class="ticks"></div></div></div></div><h2 id="embed">임베딩(의미 검색)</h2>
+<p>기억 설정의 <b>임베딩 설정</b>에서 API 주소·키·모델을 넣고 <b>기본으로 사용</b>을 켜요. 현재 장면과 뜻이 비슷한 기억을 단어가 없어도 불러와요. 실패하거나 느리면 기존 방식으로 이어가요. 키는 이 기기에만 저장돼요. 기본은 보야지 <code>voyage-4-large</code>예요. OpenAI 호환 주소도 그대로 써요.</p>
+<h2 id="move">다른 기억에서 옮겨오기</h2>
+<p><b>HypaPlus</b>에 쌓은 기억을 장면·인물 기록으로 옮겨요. 같은 기억은 두 번 들어가지 않고 원본은 그대로예요. HypaPlus와 Dusk 기억은 동시에 쓸 수 없으니 한쪽만 켜 주세요.</p>
+<h2 id="tips">알아 두면 좋은 것</h2>
+<ul><li>프롬프트에 <code>[Dusk.memory]</code>를 적으면 기억 블록이 그 자리에 들어가요.</li><li>정규식 전처리(기본 꺼짐)를 켜면 분석 전에 상태창·HTML 같은 군더더기를 지워요. 원본 채팅은 바뀌지 않아요.</li></ul>
+<div class="pager"><a href="start.html"><small>← 이전</small>처음 사용자 가이드</a><a class="n" href="story.html"><small>다음 →</small>이야기 도우미</a></div>
+<footer>이 페이지는 CHANGELOG와 README를 바탕으로 해요. 앱 버전에 따라 화면 이름이 조금 다를 수 있어요.</footer>
+</main><aside class="toc"></aside></div>
+<script src="../assets/site.js"></script></body></html>

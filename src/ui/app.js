@@ -1,10 +1,12 @@
 import { dbRead } from '../data/dbcache.js';
+import { runeLogo } from './mascot.js';
 import { applyDroppedPatch } from './screens/patchui.js';
 import { maybeShowTour } from './tour.js';
+import { maybeOnboarding, openOnboarding } from './onboarding.js';
 import { runScreenTour } from './screentours.js';
 import { installTooltips } from './tooltip.js';
 import { maybeShowWhatsNew, openChangelog, CHANGELOG } from './whatsnew.js';
-import { btn, iconBtn, moreNav, openMenu, toast } from './kit.js';
+import { btn, iconBtn, moreNav, openMenu, toast, emptyState } from './kit.js';
 import { CSS2, FONT_LINK } from './styles.js';
 import { normalizeTheme, resolveMode, themeVars } from './theme.js';
 import { createPrefs } from './prefs.js';
@@ -128,14 +130,14 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     h(
       "button",
       { type: "button", class: "rb-brand", title: "홈으로", "aria-label": "Dusk Atelier 홈으로", onClick: () => go("home") },
-      h("div", { class: "rb-logo", "aria-hidden": "true" }, icon("module", 18)),
+      runeLogo(),   // 마스코트 루네 로고(1.8.3)
       h("span", null, h("b", null, "Dusk Atelier"), h("small", null, "for RisuBard"))
     ),
     h("div", { class: "rb-spacer" }),
     updBtn,
     btn("가져오기", { icon: "upload", labelClass: "lbl", onClick: () => legacy.open(), id: "rb-import" }),
     iconBtn("palette", "플러그인 꾸미기", { onClick: () => go("look"), id: "rb-look" }),
-    iconBtn("gear", "설정", { onClick: () => go("settings"), id: "rb-settings" }),
+    iconBtn("cog", "설정", { onClick: () => go("settings"), id: "rb-settings" }),
     iconBtn("x", "닫기", { onClick: () => close(), id: "rb-close" })
   );
   // 메뉴: 왼쪽(left) · 위쪽(top) · 모바일 아래 탭. 어떤 걸 보일지는 win 클래스(rb-lay-*)가 정한다
@@ -294,6 +296,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     for (const c of [...win.classList]) if (c.startsWith("rb-lay-") || c.startsWith("rb-den-")) win.classList.remove(c);
     win.classList.add(`rb-lay-${th.layout}`, `rb-den-${th.density}`);
     win.classList.toggle("rb-hc", th.contrast === "high");
+    win.classList.toggle("rb-glass", th.glass === true && th.contrast !== "high");
+    win.classList.toggle("rb-calm", th.motion === "reduce");
     paintLay();
   }
   // 메뉴 위치 분할 버튼(사이드바·위쪽 바)의 눌림 표시
@@ -389,6 +393,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     if (!reuse) dropPanes();
     if (MORE.has(state.tab)) state.lastMore = state.tab;
     win.classList.toggle("rb-in-more", MORE.has(state.tab));
+    // 개요 화면(기억·관리·작업실)에서는 위 칩 줄을 숨긴다: 목록이 같은 이동을 이미 보여 준다(목업 1)
+    win.classList.toggle("rb-on-hub", String(state.tab).endsWith("-home"));
     const activeSection = TABS.find((t) => t.id === state.tab)?.section;
     replace(moreHost, moreNav(TABS.filter((t) => t.section === activeSection && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
     for (const links of [navLinks, topLinks, barLinks]) for (const [id, a] of links) {
@@ -424,11 +430,11 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     Promise.resolve(screen(scopeCtx(ctx, main, () => token !== renderToken))).then(() => {
       paneReady = true;
     }).catch((err) => {
-      replace(main, h("div", { class: "rb-section" }, h("div", { class: "rb-note err", role: "alert" }, icon("alert", 18), h("span", null, `화면을 열지 못했어요: ${err?.message ?? err}`))));
+      replace(main, h("div", { class: "rb-section" }, emptyState({ title: "화면을 열지 못했어요", mood: "sorry", text: String(err?.message ?? err) })));   // 1.8.3: 루네가 미안한 얼굴로
     });
   }
   async function open(opts) {
-    api.invalidateDbCache?.();   // 리스 쪽에서 바뀐 것을 처음 화면에 반영
+    api.invalidateDbCache?.({ soft: true, maxAge: 15000 });   // 리스 쪽에서 바뀐 것을 반영하되, 방금(15초 안) 읽은 건 남겨 통째 복사를 되풀이하지 않는다
     try {
       const cs = await api.getColorScheme();
       state.risuScheme = cs?.scheme?.type === "light" ? "light" : "dark";
@@ -454,7 +460,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     render();
     // 처음 둘러보기: 처음 설치한 사람, 그리고 둘러보기가 새로 바뀐 버전(TOUR_VER)으로 업데이트한 사람에게 한 번 띄운다
     // BardWiki 선택은 기억 탭에 들어갈 때 안내한다.
-    maybeShowWhatsNew(ctx).then(() => maybeShowTour(ctx)).catch(() => {
+    // 1.8.3: 시작 안내가 먼저(이 버전을 처음 열 때 모두에게 한 번). 끝내면 처음 둘러보기는 본 것으로 친다.
+    maybeOnboarding(ctx).catch(() => {}).then(() => maybeShowWhatsNew(ctx)).then(() => maybeShowTour(ctx)).catch(() => {
     });
     checkWorkshopReturn(ctx).catch((e) => console.log("[Dusk Atelier] 봇빌더 결과 확인 실패", e?.message ?? e));
     checkUpdate().catch(() => {
@@ -505,6 +512,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     refreshTabs: () => refreshTabs(),
     setUiMode,
     setLayout,
+    openOnboarding: (opts) => openOnboarding(ctx, opts),
     setNavCount(tab, n) {
       for (const links of [navLinks, topLinks]) {
         const s = links.get(tab)?.querySelector("small");

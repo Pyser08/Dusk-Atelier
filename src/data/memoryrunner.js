@@ -1,4 +1,5 @@
 // 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 await 하지 않는다.
+import { effectiveTags, talkForPrompt, beliefsForPrompt, riftsForPrompt } from "../engine/memoryhuman.js";
 import { extractMessageText, isUserMessage, messageIdentity, messageIdOf, confirmedAiIndex, isChatGenerating as isGenerating, isChatStreaming } from "../engine/chattext.js";
 import { skillBlock } from "../engine/skillhook.js";
 import { appendToMessages } from "../engine/skillcfg.js";
@@ -31,8 +32,18 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   const run = call ?? (async (msgs, pick, signal) => runAI(api, appendToMessages(msgs, await skillBlock("analysis")), pick, signal));   // 스킬 주입(꺼짐이면 원문 그대로, v1.8.1)
 
   const aiIndexes = (messages) => messages.map((m, i) => (!isUserMessage(m) && extractMessageText(m).trim() ? i : -1)).filter((i) => i >= 0);
-  const clean = (m, rx) => rx?.length ? applyRegex(extractMessageText(m), rx) : extractMessageText(m);  // v1.8.1 정규식 전처리(읽는 글 사본에만)
+  const noRoll = (t) => String(t ?? "").replace(/<!--\s*dusk-roll:[\s\S]*?-->\s*/g, "");   // 주사위 판정 표식은 기억 분석에 안 보낸다(1.8.3)
+  const clean = (m, rx) => noRoll(rx?.length ? applyRegex(extractMessageText(m), rx) : extractMessageText(m));  // v1.8.1 정규식 전처리(읽는 글 사본에만)
   const line = (m, i, n = 1500, rx = null) => `[${i}] ${isUserMessage(m) ? "{{user}}" : "{{char}}"}: ${clean(m, rx).trim().slice(0, n)}`;
+  // 지금 페르소나 이름(리스가 {{user}}를 이 이름으로 바꿔 보낼 수 있음) → 분석 결과에서 {{user}}로 모은다
+  let userCache = { at: 0, names: [] };
+  async function userNames() {
+    if (Date.now() - userCache.at < 60e3) return userCache.names;
+    let names = [];
+    try { const db = await api.getDatabase?.(["username"]); if (db?.username) names = [String(db.username)]; } catch { /* 없으면 일반 이름만 */ }
+    userCache = { at: Date.now(), names };
+    return names;
+  }
   const nameOf = (c, chat, i) => ({ botName: String(c?.name ?? "").slice(0, 160), chatName: String(chat?.name ?? chat?.chatName ?? `채팅 ${i + 1}`).slice(0, 160) });
 
   async function bump(chaId, fn) { return store.updateIndex((idx) => { const b = idx.bots[chaId] ??= { on: true, ignore: [], fails: 0 }; return fn(b, idx); }); }
@@ -69,10 +80,12 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     } catch { return null; }
   }
   // 분석 모델에 보낼 입력(기존 폴더 기준).
+  // v1.8.3: 감정 식기가 켜져 있으면 분석 입력에도 지금 시점의 식은 값을 준다
+  const coolOf = (g) => (g.idx.settings?.inject?.cool !== false ? { now: g.last, eff: effectiveTags } : {});
   function inputOf(g, existing, group) {
     const recent = g.messages.slice(Math.max(0, group[0] - 6), group[0]).map((mm, k) => line(mm, Math.max(0, group[0] - 6) + k, 1500, g.rx));
     return { bot: g.character.name, known: existing ? knownPeople(existing) : [], ignore: [...(g.bot.ignore ?? [])],
-      previousScene: existing ? (({ sum, facts, when } = {}) => sum ? { sum, facts, ...(when ? { when } : {}) } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, openItems: existing ? openForPrompt(existing) : [], emoState: existing ? emoForPrompt(existing) : [], selfHint: existing ? hintsForPrompt(existing) : [], recent, newest: { index: g.last, text: g.text }, storyDate: storyDateOf(g.text, existing) };
+      previousScene: existing ? (({ sum, facts, when } = {}) => sum ? { sum, facts, ...(when ? { when } : {}) } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, openItems: existing ? openForPrompt(existing) : [], emoState: existing ? emoForPrompt(existing, 6, coolOf(g)) : [], talkState: existing ? talkForPrompt(existing, null) : [], rifts: existing ? riftsForPrompt(existing) : [], beliefsOn: g.idx.settings?.inject?.beliefs === true, beliefs: existing && g.idx.settings?.inject?.beliefs === true ? beliefsForPrompt(existing) : [], selfHint: existing ? hintsForPrompt(existing) : [], recent, newest: { index: g.last, text: g.text }, storyDate: storyDateOf(g.text, existing) };
   }
   // 리수폿 Writer 호출에 같이 실을 때 쓰는 준비물. 기록 대상이 아니면 null.
   async function prepareLatest(charIndex, chatIndex) {
@@ -112,11 +125,12 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
       throw e;
     }
     const names = nameOf(character, chat, chatIndex);
+    const uNames = await userNames();
     let gaugeOut = null;
     const out = await store.updateFolder(chaId, chatId, (folder) => {
       Object.assign(folder, names, { chatIndex });
       reconcile(folder, messages);
-      const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => messageIdentity(messages[i])) });
+      const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => messageIdentity(messages[i])), cool: idx.settings?.inject?.cool !== false, userNames: uNames });
       const ev = link?.takeCycle?.() ?? [];
       if (ev.length) res.cycle = addMilestones(folder, ev);
       if (gx) { try { gaugeOut = gauge.apply(folder, idx, chaId, result, anchor, { ordinal: ordinalNow, text }); } catch (e) { log("게이지 반영 실패", e?.message ?? e); } }

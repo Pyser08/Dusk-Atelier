@@ -1,0 +1,46 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><title>개발자 가이드 · Dusk Atelier</title><link rel="icon" href="../assets/img/icon.webp"><link rel="stylesheet" href="../assets/site.css"></head>
+<body data-root="../" data-page="dev/">
+<div class="wrap"><nav class="side"></nav><main>
+<span class="eyebrow">개발자</span><h1>개발자 가이드</h1>
+<p class="lead">모듈·봇 제작자는 패치 배포를, 플러그인 개발자는 연동과 빌드를 여기서 찾아요.</p>
+<h2 id="devmode">개발자 모드</h2>
+<p>도구 탭 맨 위 스위치로 켜요(고급 모드에서 켜면 캐릭터·모듈 오른쪽 상세 패널과 개발 탭이 생겨요). 수정한 부분만 담은 업데이트 패치를 쉽게 만들어 배포할 수 있어요.</p>
+<h2 id="patch">패치(.rbupatch) 만들기</h2>
+<div class="demo" id="patch-steps"><h4>체험 · 패치 만드는 3단계</h4><p class="cap">단계를 눌러 보세요. 도구 탭, 모듈 메뉴, 봇 상세에서 열어요.</p><div class="stage"><button>1 기준</button><button>2 바뀐 내용</button><button>3 파일</button></div><p class="pp" style="margin:6px 0 0"></p></div>
+<p>만든 뒤 지금 상태를 새 기준으로 옮길 수 있어요. 그러면 다음 패치에는 그 뒤에 고친 것만 들어가요. 바꾼 에셋도 함께 넣을 수 있어요.</p>
+<div class="note"><span class="ico">📦</span><div>바뀐 필드와 바뀐 목록 항목만 담아서 대형 봇·모듈도 패치가 작아요. 예: 276MB 모듈에서 로어 5개 수정 → 약 20KB.</div></div>
+<h3>받는 사람 쪽</h3>
+<p>창 어디에나 <code>.rbupatch</code>를 끌어다 놓거나 "패치 적용"으로 파일을 골라요. 적용 전에 버전과 변경 내용을 보여 주고, 받는 사람이 직접 고친 부분은 그대로 남아요. 같은 이름의 대상이 여러 개면 고르게 해요.</p>
+<h2 id="interop">DA Interop</h2>
+<p><a href="https://github.com/Pyser08/dusk-atelier-interop">DA Interop</a> 코드를 넣은 플러그인은 플러그인 탭에 설정 화면이 자동으로 생겨요. 값·프리셋을 보내면 그 플러그인이 적용하고 결과를 알려 줘요.</p>
+<ul><li><b>동작(actions):</b> 연동 코드를 넣은 플러그인이 '화면 열기' 같은 동작을 등록하면 Dusk가 요청하고 결과를 받아요. 기존 연동 코드는 그대로 동작해요.</li><li><b>만들기:</b> 플러그인 탭의 '만들기'에서 연동 코드가 든 템플릿을 코드 편집기로 고치고, 검사·내려받기·설치(RisuAI 확인 창을 거쳐요)를 해요.</li><li>다른 플러그인과의 연동은 DA Interop v1로만 해요. 다른 플러그인의 전역 변수나 DOM을 직접 고치지 않아요.</li></ul>
+<div class="warn"><span class="ico">⚠️</span><div>RisuAI(PR #1572 이후)와 이를 따르는 포크는 플러그인이 다른 플러그인을 켜고 끄거나 순서·코드를 바꾸는 것을 막아요. 그런 기능은 없어요.</div></div>
+<h2 id="botbuilder">AI로 봇 만들기 · 봇빌더 연동</h2>
+<p>봇빌더가 설치돼 있으면 'AI로 봇 만들기'가 봇빌더 화면을 열어요. 봇빌더에서 작업하고 Dusk로 돌아오면 새로 등록한 봇(또는 편집한 봇)이 개발 목록에 자동으로 들어가고 바로 이어서 편집할 수 있어요. 바로 열기는 '연동판' 봇빌더에서 돼요. 원본 봇빌더라면 안내 창의 '연동판 받기'로 연동판 파일을 받을 수 있어요(원본은 그대로예요).</p>
+<h2 id="build">빌드와 검사</h2>
+<pre><code>npm install                    # esbuild 설치
+node tools/build.mjs           # src/ → dusk_atelier.js (버전은 package.json)
+node tools/build.mjs --check   # 빌드 결과가 저장소의 dusk_atelier.js와 같은지 확인</code></pre>
+<p>테스트는 <code>npm test</code>, 빌드와 확인은 <code>npm run build</code> → <code>npm run check</code>("동일함")예요. 빌드물도 함께 커밋해요. 자세한 흐름은 <a href="workflow.html">작업 흐름</a>을 보세요.</p>
+<h2 id="src">소스 구조</h2>
+<table><tr><th>폴더</th><th>내용</th></tr>
+<tr><td><code>src/engine/</code></td><td>파일 읽기·쓰기(risum·charx·png·jpeg·zip), 매칭, 3방향 병합, 업로드, 백업, 패치, 이미지 도구. 브라우저·api 없이 테스트할 수 있는 순수 로직</td></tr>
+<tr><td><code>src/data/</code></td><td>api·저장소 (모듈·프리셋·페르소나·캐릭터 순서 저장 등)</td></tr>
+<tr><td><code>src/ui/</code></td><td>테마, 공용 부품, 화면(<code>screens/</code>), 가져오기 화면(<code>legacy.js</code>)</td></tr>
+<tr><td><code>src/tide/</code></td><td>RisuTide에서 가져온 업데이트 판단 로직(세 방향 비교·필드 소유권·인사말 보호)</td></tr></table>
+<p><code>src/engine/pot/</code>, <code>src/data/pot/</code>는 <code>tools/pot-split.mjs</code>가 자동 생성하니 직접 고치지 않아요.</p>
+<h2 id="storage">저장 위치</h2>
+<p>모듈 데이터에는 RisuAI 표준 필드만 쓰고, 순서·폴더·꺼짐 같은 관리 정보는 전용 키에 둬요. 설정은 pluginStorage에 저장돼서 다른 기기와 동기화돼요. 키 이름은 <code>rbm:*</code> / <code>dusk.*</code> 접두사를 유지해요.</p>
+<table><tr><th>키</th><th>내용</th></tr>
+<tr><td><code>rbm:ui:v1</code></td><td>테마, 백업 보관 수, 개발자 모드</td></tr>
+<tr><td><code>rbm:moduleMeta:v1</code></td><td>모듈 목록 폴더, 이름 색, 에셋 폴더, 연결 기억</td></tr>
+<tr><td><code>rbm:disabledModules:v1</code></td><td>꺼 둔 모듈 보관함</td></tr>
+<tr><td><code>rbm:moduleOrder:v1</code></td><td>모듈 순서</td></tr>
+<tr><td><code>rbm:personaInjected:v1</code></td><td>페르소나 연결로 넣은 기록</td></tr>
+<tr><td><code>rbm:presets:v1</code></td><td>프리셋</td></tr>
+<tr><td><code>rbm:persona:v1</code></td><td>페르소나 연결</td></tr>
+<tr><td><code>rbu:index:v1</code></td><td>원본 기록, 백업 목록</td></tr></table>
+<div class="pager"><a href="../guide/faq.html"><small>← 이전</small>자주 묻는 질문</a><a class="n" href="host.html"><small>다음 →</small>호스트 호환 규칙</a></div>
+<footer>AGPL-3.0 · <a href="https://github.com/Pyser08/Dusk-Atelier">GitHub</a></footer>
+</main><aside class="toc"></aside></div>
+<script src="../assets/site.js"></script></body></html>

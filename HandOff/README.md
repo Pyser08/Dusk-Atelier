@@ -42,6 +42,7 @@ npm ci            # 막히면: esbuild·acorn·eslint-scope를 /opt/npm-tools/no
 4. UI를 건드렸으면 `node tests/e2e/run-smoke.mjs`로 연기 시험.
 5. (사용자가 버전 올리라고 했을 때만) `package.json` version + `CHANGELOG.md` 맨 위 `## vX.Y.Z (YYYY-MM-DD)` 섹션 (앱 내 '새로 바뀐 점'에 그대로 표시됨, 사용자 대상 존댓말 "~해요").
 6. 구조(파일 추가/삭제/역할 변경)가 바뀌면 `node tools/source-map.mjs > docs/source-map.md && cp docs/source-map.md HandOff/source-map.md`로 재생성(두 파일 동일 유지) 후 커밋.
+6-1. **기능 설명이 바뀌거나 새 기능이 생기면 안내서 사이트(`docs/site/guide/*.html`)도 같이 고친다**(사용자 지시). 내용은 CHANGELOG·코드 문구 기준. 아카 글(`docs/arca/v*.html`)은 사용자가 요청할 때만.
 7. 작업을 마칠 때 **`HandOff/STATE.md`의 "남은 일"과 변경 요약을 최신으로 고친다**(다음 AI가 이어받는 기준. 끝낸 항목은 `[x]`, 새로 발견한 문제는 추가).
 8. 참고: main에 push(머지)되면 `release.yml`이 package.json 버전으로 GitHub 릴리스를 자동 생성한다 → 그래서 main은 사용자 지시 없이는 건드리지 않는다.
 
@@ -57,3 +58,4 @@ npm ci            # 막히면: esbuild·acorn·eslint-scope를 /opt/npm-tools/no
 ## 7. 참고 문서
 - 이전 인계: `docs/HANDOFF-v1.6.4.md`(리수폿 통합·장기기억 구조), `docs/HANDOFF-v1.6.7.md`
 - 버전 안내: `docs/GUIDE-v*.md`, 아카라이브 글: `docs/arca/v*.html`
+- 안내서 사이트: `docs/site/` — 기능 설명이 바뀌면 같이 수정(STATE.md '안내서 사이트' 참고)

@@ -52,7 +52,8 @@ export async function renderPlugins(ctx, { fresh = false } = {}) {
       h(
         "div",
         { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
-        h("div", { style: "flex:1;min-width:200px" }, h("h2", { class: "rb-h2" }, "플러그인"), h("p", { class: "rb-p" }, "설치한 플러그인을 묶어 보고, 연동한 플러그인의 설정을 바꾸거나 새로 만들어요.")),
+        // 설명은 위쪽 도움말 줄에 이미 있어서 제목만 둔다(1.8.3 목업 4)
+        h("div", { style: "flex:1;min-width:120px" }, h("h2", { class: "rb-h2" }, "플러그인")),
         seg
       ),
       h("div", { class: "rb-plugins-body", style: "display:flex;flex-direction:column;gap:14px;transition:opacity .12s" })
@@ -83,8 +84,9 @@ var refresh = (ctx) => renderPlugins(ctx, { fresh: true });
 
 // ── 목록 ──
 async function viewList(ctx, { fresh }) {
-  const plugins = await getPlugins(ctx, fresh);
-  const interop = await getInterop(ctx, fresh);
+  // 플러그인 목록과 연동 값을 동시에 읽는다(1.8.3). 연동의 '설치됨' 표시는 목록이 오면 바로 채운다.
+  const [plugins, interop] = await Promise.all([getPlugins(ctx, fresh), getInterop(ctx, fresh)]);
+  { const names = new Set(plugins.map((p) => p.name)); for (const e of interop) if (e.pluginName) e.installed = names.has(e.pluginName); }
   const upd = ctx.state.pluginUpd ?? {};
   const linked = new Map(interop.filter((e) => e.pluginName).map((e) => [e.pluginName, e]));
   const q = (ctx.state.search ?? "").trim().toLowerCase();
@@ -126,7 +128,9 @@ async function viewList(ctx, { fresh }) {
     { style: "display:flex;flex-direction:column;gap:14px" },
     h(
       "div",
-      { style: "display:flex;gap:8px;flex-wrap:wrap" },
+      { class: "rb-plug-tools", style: "display:flex;gap:8px;align-items:center" },
+      h("span", { class: "rb-muted", style: "font-size:12.5px;white-space:nowrap" }, `설치된 플러그인 ${plugins.length}개`),
+      h("div", { class: "rb-spacer" }),
       btn(updCount ? `업데이트 ${updCount}개` : "업데이트 확인", { size: "sm", icon: "download", onClick: async () => {
         ctx.toast("업데이트를 확인하고 있어요");
         ctx.state.pluginUpd = await P.checkUpdates(ctx.api, plugins).catch(() => ({}));
@@ -134,15 +138,18 @@ async function viewList(ctx, { fresh }) {
         ctx.toast(n ? `새 버전이 있는 플러그인 ${n}개` : "모두 최신이에요 (업데이트 주소가 있는 것만 확인)");
         renderPlugins(ctx);
       } }),
-      btn("새로고침", { size: "sm", icon: "refresh", onClick: () => refresh(ctx) }),
-      btn("내보내기", { size: "sm", icon: "upload", onClick: async () => download(`dusk-plugins-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, await P.exportAll(ctx.api), "application/json") })
+      // 드물게 쓰는 새로고침·내보내기는 ··· 메뉴로
+      iconBtn("more", "플러그인 더 보기", { id: "rb-plug-more", onClick: (ev) => openMenu(ctx.win, ev.currentTarget, [
+        { label: "새로고침", icon: "refresh", onClick: () => refresh(ctx) },
+        { label: "내보내기", icon: "upload", onClick: async () => download(`dusk-plugins-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, await P.exportAll(ctx.api), "application/json") }
+      ]) })
     ),
     shown.length ? null : h("div", { class: "rb-empty" }, q ? "찾는 플러그인이 없어요." : "플러그인이 없어요."),
     keys.map((g) => h(
-      "div",
-      { style: "display:flex;flex-direction:column;gap:4px" },
-      h("h3", { class: "rb-h3", style: "display:flex;gap:6px;align-items:center" }, icon("folder", 16), g, h("small", { class: "rb-muted" }, String(groups.get(g).length))),
-      groups.get(g).map(row)
+      "details",
+      { class: "rb-plug-group", open: !(ctx.state.pluginFold ??= {})[g], onToggle: (e) => { ctx.state.pluginFold[g] = !e.target.open; } },
+      h("summary", { class: "rb-h3", style: "display:flex;gap:6px;align-items:center" }, icon("down", 16), g, h("small", { class: "rb-muted" }, String(groups.get(g).length))),
+      h("div", { style: "display:flex;flex-direction:column;gap:4px" }, groups.get(g).map(row))
     ))
   );
 }

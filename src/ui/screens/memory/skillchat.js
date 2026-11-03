@@ -10,7 +10,8 @@ import { saveBlob } from "./skills.js";
 
 const HELLO = "어떤 스킬을 만들고 싶으신가요? 예를 들어 ‘전투 판정 규칙’, ‘감정 변화 추적’처럼 한 줄로 알려 주시면 필요한 걸 물어보면서 같이 만들어 갈게요. 만드는 동안 아래 ‘초안’에 파일이 실시간으로 쌓여요.";
 
-export function mountSkillChat(ctx, { onSaved } = {}) {
+// noFab: 떠 있는 버튼 없이 열기 함수만 돌려준다(코코아 목록 머리의 'AI로 만들기'가 연다 — 모바일 탭바와 겹치지 않게, 1.8.3).
+export function mountSkillChat(ctx, { onSaved, noFab = false } = {}) {
   const S = ctx.skills; if (!S) return;
   const st = (ctx.state.skillChat ??= { open: false, msgs: [], draft: [], file: "", ai: "", ais: null, busy: false, ctrl: null });
   const fab = btn("AI로 스킬 만들기", { kind: "primary", icon: "message-circle", onClick: () => toggle(!st.open) });
@@ -27,7 +28,7 @@ export function mountSkillChat(ctx, { onSaved } = {}) {
     log, draftBox,
     h("div", { class: "rb-pb-chat-compose" }, input, send),
     h("p", { class: "rb-pb-chat-hint" }, "메시지를 보낼 때마다 AI 호출이 한 번 생겨요 · ⌘/Ctrl + Enter로 전송"));
-  ctx.main.append(panel, fab);
+  if (noFab) ctx.main.append(panel); else ctx.main.append(panel, fab);
 
   async function loadAis() {
     if (!st.ais) st.ais = await loadPB(ctx.api).then((d) => { st.ai ||= d.ai; return d.ais; }).catch(() => [{ id: "default", name: "기본", mode: "submodel" }]);
@@ -89,4 +90,5 @@ export function mountSkillChat(ctx, { onSaved } = {}) {
   }
   input.addEventListener("keydown", (ev) => { if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") { ev.preventDefault(); sendMsg(); } });
   if (st.open) { loadAis(); paint(); } else paintDraft();
+  return { open: () => toggle(true), close: () => toggle(false) };
 }

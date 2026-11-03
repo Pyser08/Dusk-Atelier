@@ -1,13 +1,14 @@
 // v1.6.2 장부 탭: 열린 항목 · 관계 변화 · 세계 시간선. 로컬 저장소일 때만 고칠 수 있다.
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
-import { btn, badge, note, promptDialog, confirmDialog } from "../../kit.js";
+import { btn, badge, iconBtn, note, openMenu, promptDialog, confirmDialog } from "../../kit.js";
 import { mem, at } from "./common.js";
 import { editFolder } from "./people.js";
 import { OPEN_KINDS, openItems, timelineOf } from "../../../engine/memoryplus.js";
 import { wikiNote } from "../../../engine/personview.js";
 
-const empty = (ic, text) => h("div", { class: "rb-empty" }, icon(ic, 24), h("div", null, text));
+// 빈 구역은 큰 그림 대신 한 줄 안내 (목업 3)
+const empty = (ic, text) => h("p", { class: "rb-mem-empty1" }, icon(ic, 16), text);
 const readonlyNote = (env) => env.backend.id !== "local" ? note("info", "BardWiki 모드에서는 위키에 없는 항목이라 비어 있을 수 있고, 고칠 수도 없어요.") : null;
 
 export async function renderOpen(env, host) {
@@ -16,7 +17,7 @@ export async function renderOpen(env, host) {
   const row = (x, closed) => h("li", { class: "rb-mem-rec" }, badge(OPEN_KINDS[x.kind] ?? "항목", x.kind === "promise" ? "acc" : x.kind === "foreshadow" ? "acc2" : "mute"),
     h("div", { class: "txt" }, h("div", null, x.text), h("div", { class: "rb-muted" }, [x.at != null ? at(x.at) : "", (x.who ?? []).join(", "), closed && x.closedAt != null ? `해결 ${at(x.closedAt)}` : ""].filter(Boolean).join(" · "))), h("span", { style: "flex:1" }),
     local ? btn(closed ? "다시 열기" : "해결", { size: "sm", onClick: () => editFolder(env, (f) => { const o = f.open.find((y) => y.id === x.id); if (o) { o.closed = !closed; delete o.closedBy; delete o.closedOrphan; if (!closed) { o.closedAt = f.cursor?.at ?? null; o.closed_ms = Date.now(); } } }) }) : null,
-    local ? btn("삭제", { size: "sm", onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 항목을 지울까요?", body: "지운 항목은 되돌릴 수 없어요. 해결된 일이라면 지우지 말고 '해결'을 눌러 두세요.", ok: "삭제", danger: true }))) return; editFolder(env, (f) => { f.open = f.open.filter((y) => y.id !== x.id); }); } }) : null);
+    local ? iconBtn("more", "더 보기", { onClick: (ev) => openMenu(env.ctx.win, ev.currentTarget, [{ label: "삭제", icon: "trash", danger: true, onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 항목을 지울까요?", body: "지운 항목은 되돌릴 수 없어요. 해결된 일이라면 지우지 말고 '해결'을 눌러 두세요.", ok: "삭제", danger: true }))) return; editFolder(env, (f) => { f.open = f.open.filter((y) => y.id !== x.id); }); } }]) }) : null);
   const add = local ? btn("항목 추가", { size: "sm", icon: "plus", onClick: async () => {
     const v = await promptDialog(env.ctx.win, { title: "열린 항목 추가", label: "약속·복선·의문 (80자)", ok: "추가" }); if (!v?.trim()) return;
     editFolder(env, (f) => { (f.open ??= []).push({ id: "o_" + Date.now().toString(36), text: v.trim().slice(0, 80), kind: "question", who: [], at: f.cursor?.at ?? null, at_ms: Date.now(), closed: false }); });

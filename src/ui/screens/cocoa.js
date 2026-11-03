@@ -7,6 +7,7 @@ export async function renderCocoaTab(ctx) {
   const host = h("div", { class: "rb-mem2 rb-scroll rb-skills", "data-page": "skills" });
   replace(ctx.main, host);
   const redraw = () => renderCocoaTab(ctx).catch((e) => ctx.toast?.(String(e?.message ?? e)));
-  await renderMemorySkills(ctx, host, { redraw, standalone: true });
-  mountSkillChat(ctx, { onSaved: redraw });
+  let chat = null;
+  await renderMemorySkills(ctx, host, { redraw, standalone: true, openAi: () => chat?.open() });
+  chat = mountSkillChat(ctx, { onSaved: redraw, noFab: true });
 }

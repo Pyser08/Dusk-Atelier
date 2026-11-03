@@ -31,8 +31,8 @@ const names = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(
   const page = await boot(ctx);
   ok("[PC] 첫 화면은 홈, 메뉴는 왼쪽 사이드바", (await cur(page)) === "홈" && (await page.locator(".rb-nav").isVisible()) && !(await page.locator(".rb-topnav").isVisible()));
   const side = await names(page, ".rb-nav a");
-  ok("[PC] 사이드바 순서: 홈·기억·리수폿·인물 → 더보기 묶음", side.join("|") === "홈|기억|리수폿|인물|캐릭터|모듈|기억 카드|꾸미기|도구|플러그인|설정", side.join("|"));
-  ok("[PC] '더보기' 라벨과 메뉴 위치 분할 버튼이 사이드바에 있음", (await page.locator(".rb-nav .rb-nav-lab").textContent()) === "더보기" && (await page.locator(".rb-nav .rb-layseg button").count()) === 2);
+  ok("[PC] 사이드바 순서: 홈 → 기억 묶음 → 관리 묶음 → 작업실 묶음 → 도구·설정", side.join("|") === "홈|장기 기억|코코아|기억 카드|캐릭터|모듈|플러그인|플러그인 꾸미기|AI로 봇 만들기|AI로 페르소나 만들기|도구|설정", side.join("|"));
+  ok("[PC] 묶음 라벨(기억·관리·작업실)과 메뉴 위치 분할 버튼이 사이드바에 있음", (await page.locator(".rb-nav .rb-nav-lab").allTextContents()).join("|") === "기억|관리|작업실" && (await page.locator(".rb-nav .rb-layseg button").count()) === 2);
   ok("[PC] 개발 탭은 간단 모드에서 숨김", !side.includes("개발"));
   await shot(page, "pc-1-home");
   await go(page, "리수폿");
@@ -104,8 +104,9 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   const ctx = await browser.newContext({ viewport: vp, ...extra });
   const page = await boot(ctx, {}, { memory: true, story: true });
   await go(page, "기억"); await page.waitForTimeout(600);
-  const sw = await page.locator(".rb-mem2 .rb-switch").count(), acts = await page.locator(".rb-mem2 .rb-actions .rb-btn").count();
+  const sw = await page.locator(".rb-mem2 .rb-phead .rb-switch").count(), opts = await page.locator(".rb-mem2 .rb-mem-options .rb-switch").count(), acts = await page.locator(".rb-mem2 .rb-actions .rb-btn").count();
   ok(`[3단계 ${tag}] 간단 모드: 스위치 1개·주요 동작 3개 이하`, sw === 1 && acts >= 1 && acts <= 3, `switch ${sw}, actions ${acts}`);
+  ok(`[3단계 ${tag}] 간단 모드: 기억 옵션 스위치 3개(사람다운 기억·감정 식기·거짓말 추적)`, opts === 3, `options ${opts}`);
   ok(`[3단계 ${tag}] 상태 카드·기록 막대(4칸)·최근 기록`, (await page.locator(".rb-mem2 .rb-status.k-on").count()) === 1 && (await page.locator(".rb-mbar i").count()) >= 3 && (await page.locator(".rb-mem-recent .rb-mem-rec").count()) === 3);
   ok(`[3단계 ${tag}] 상태 줄에 '기억 3건을 넣었어요'`, (await page.locator(".rb-mem2 .rb-status").textContent()).includes("기억 3건을 넣었어요"));
   ok(`[3단계 ${tag}] 간단 모드에서는 고급 영역 대신 '고급 모드에서 더 보기' 링크`, (await page.locator(".rb-mem2 .rb-adv").count()) === 0 && (await page.locator("#rb-adv-memory").count()) === 1);
@@ -265,11 +266,11 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   // 꾸미기 (간단)
   await openTab("꾸미기");
   const look = ".rb-mem2[data-page=look]";
-  ok(`[7단계 ${tag}] 꾸미기: 미리보기 말풍선 2 · 강조 색 6개(이름)`, (await page.locator(`${look} .rb-bub`).count()) === 2 && (await page.locator(`${look} .rb-accpick`).allTextContents()).join("|") === "코랄|청록|세이지|라일락|모노|황혼");
-  ok(`[7단계 ${tag}] 꾸미기: 밝기 3칸 · 글자 크기 3칸 · 테마 만들기 버튼 · 고급 영역 대신 링크`, (await page.locator(`${look} .rb-seg[aria-label=밝기] button`).allTextContents()).join("|") === "자동|밝게|어둡게" && (await page.locator(`${look} .rb-seg[aria-label='글자 크기'] button`).allTextContents()).join("|") === "작게|보통|크게" && (await page.locator(`${look} #rb-look-themebuilder`).textContent()).includes("내 채팅 테마 만들기") && (await page.locator(`${look} .rb-adv`).count()) === 0 && (await page.locator("#rb-adv-look").count()) === 1);
+  ok(`[7단계 ${tag}] 꾸미기: 미리보기 말풍선 2 · 강조 색 18개(이름)`, (await page.locator(`${look} .rb-bub`).count()) === 2 && (await page.locator(`${look} .rb-accgroup .rb-accpick`).count()) === 18);
+  ok(`[7단계 ${tag}] 꾸미기: 밝기 4칸 · 글자 크기 4칸 · 테마 만들기 버튼 · 고급 영역 대신 링크`, (await page.locator(`${look} .rb-seg[aria-label=밝기] button`).allTextContents()).join("|") === "자동|밝게|어둡게|시간 따라" && (await page.locator(`${look} .rb-seg[aria-label='글자 크기'] button`).allTextContents()).join("|") === "작게|보통|크게|아주 크게" && (await page.locator(`${look} #rb-look-themebuilder`).textContent()).includes("내 채팅 테마 만들기") && (await page.locator(`${look} .rb-adv`).count()) === 0 && (await page.locator("#rb-adv-look").count()) === 1);
   await shot(page, `s7-${t}-1-look`);
-  await page.locator(`${look} .rb-accpick`, { hasText: "청록" }).click(); await page.waitForTimeout(500);
-  ok(`[7단계 ${tag}] 강조 색을 누르면 바로 적용·저장`, (await page.evaluate(() => getComputedStyle(document.querySelector(".rb-bub.m")).backgroundImage)).includes("rgb(15, 118, 110)") && (await ui()).theme?.preset === "teal" && (await page.locator(`${look} .rb-accpick[aria-pressed=true]`).textContent()) === "청록");
+  await page.locator(`${look} .rb-accgroup .rb-accpick`, { hasText: "청록" }).click(); await page.waitForTimeout(500);
+  ok(`[7단계 ${tag}] 강조 색을 누르면 바로 적용·저장`, (await page.evaluate(() => getComputedStyle(document.querySelector(".rb-bub.m")).backgroundImage)).includes("rgb(15, 118, 110)") && (await ui()).theme?.preset === "teal" && (await page.locator(`${look} .rb-accgroup .rb-accpick[aria-pressed=true]`).textContent()) === "청록");
   await page.locator(`${look} .rb-seg[aria-label=밝기] button`, { hasText: "어둡게" }).click();
   await page.locator(`${look} .rb-seg[aria-label='글자 크기'] button`, { hasText: "크게" }).click(); await page.waitForTimeout(500);
   const th = (await ui()).theme;

@@ -2,13 +2,15 @@
 //   ① 시작하기 — 제작 노트·종류·로어북 방식   ② 프롬프트 프리셋   ③ 작업 프롬프트   ④ 설정   ⑤ 저장본
 // 요청을 보내고 수정안을 보는 곳은 우측 하단 AI 창(5단계에서 다듬음)이고, 여기는 '무엇을 어떻게 보낼지'를 준비하는 곳이다.
 import { h, replace } from '../dom.js';
-import { badge, btn, modal, note, segmented, toggleRow } from '../kit.js';
+import { badge, btn, iconBtn, modal, note, segmented, toggleRow } from '../kit.js';
 import { decodePreset } from '../../dev/aibuild/preset-format.js';
 import { toggleDefinitions, BLOCK_TYPES } from '../../dev/aibuild/preset-engine.js';
 import { activeModules, moduleOptions, readInstalledModules, selectInstalledModules } from '../../dev/aibuild/modules.js';
 
 const SUBS = [['start', '시작하기'], ['preset', '프롬프트 프리셋'], ['prompt', '작업 프롬프트'], ['settings', '설정'], ['saves', '저장본']];
 const card = (title, sub, ...kids) => h('section', { class: 'rb-card pad bordered', style: 'display:flex;flex-direction:column;gap:10px' }, h('div', null, h('b', null, title), sub ? h('div', { class: 'rb-muted', style: 'font-size:12px;margin-top:2px' }, sub) : null), ...kids);
+// 1.8.3(목업 5): 시작하기 1·2는 번호 동그라미 단계 카드
+const stepCard = (n, title, sub, ...kids) => h('section', { class: 'rb-card pad bordered rb-ai-step', style: 'display:flex;flex-direction:column;gap:10px' }, h('div', { class: 'rb-ai-stephead' }, h('span', { class: 'n', 'aria-hidden': 'true' }, String(n)), h('div', null, h('b', null, title), sub ? h('div', { class: 'rb-muted', style: 'font-size:12px;margin-top:2px' }, sub) : null)), ...kids);
 const field = (label, input) => h('label', { class: 'rb-field wide' }, h('span', { class: 'rb-label' }, label), input);
 const INTRO_KEY = 'da_aibuild:intro';
 const INTRO = [
@@ -28,11 +30,10 @@ export function renderAiTab(ctx, { build, openPopup, state = {} }) {
 
   const head = h('div', { style: 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0' },
     h('b', { style: 'font-size:16px' }, 'AI로 제작'),
-    h('span', { class: 'rb-muted', style: 'flex:1;min-width:120px;font-size:13px' }, '말로 요청하면 AI가 수정안을 만들고, 적용하면 각 탭에 바로 반영돼요.'),
-    btn('AI 창 열기', { kind: 'primary', icon: 'sparkle', onClick: () => openPopup() })
+    h('span', { class: 'rb-muted', style: 'flex:1;min-width:120px;font-size:13px' }, '말로 요청하면 AI가 수정안을 만들고, 적용하면 각 탭에 바로 반영돼요.')
   );
   const seg = segmented(SUBS, state.sub, (v) => { state.sub = v; paint(); }, '하위 화면');
-  seg.classList.add('rb-seg-nowrap');
+  seg.classList.add('rb-seg-nowrap', 'rb-chipseg');   // 1.8.3: 안쪽 화면 5개는 한 줄 칩(옆으로 밀기)
   seg.style.overflowX = 'auto';
   seg.style.flexShrink = '0'; // overflow가 auto면 flex 열에서 최소 높이가 0이 돼, 긴 화면(작업 프롬프트)에서 탭 줄이 세로로 찌그러진다
   // 처음 들어왔을 때 한 번만 3장 안내 (끝내거나 건너뛰면 다시 안 뜨고, [사용법]으로 언제든 다시 볼 수 있다)
@@ -59,7 +60,8 @@ export function renderAiTab(ctx, { build, openPopup, state = {} }) {
       return box;
     }).then((r) => { introOpen = false; state.intro = null; saveIntro(); if (r === 'start') openPopup(); });
   };
-  head.insertBefore(btn('사용법', { size: 'sm', icon: 'help', onClick: () => showIntro(0) }), head.lastChild);
+  // '사용법'은 ? 하나로(1.8.3). AI 창 열기는 시작하기 상자의 버튼 하나만 둔다.
+  head.appendChild(iconBtn('help', '사용법', { boxed: true, onClick: () => showIntro(0) }));
   root.append(head, seg, content);
   if (state.intro != null) showIntro(state.intro);
   else Promise.resolve(ctx.api.pluginStorage.getItem(INTRO_KEY)).then((v) => { if (!v && root.isConnected !== false && state.intro == null) showIntro(0); }).catch(() => {});
@@ -75,21 +77,22 @@ export function renderAiTab(ctx, { build, openPopup, state = {} }) {
     const mode = build.loreMode();
     const modeSeg = segmented([['dusk', 'Dusk 방식'], ['plain', '일반 방식']], mode, async (v) => { try { await build.setLoreMode(v); paint(); } catch (e) { fail(e); } }, '이 봇의 로어북 방식');
     const defSeg = segmented([['auto', '자동'], ['dusk', 'Dusk'], ['plain', '일반']], st.settings.lore, async (v) => { try { await build.setSettings({ lore: v }); paint(); } catch (e) { fail(e); } }, '새 봇의 기본 방식');
-    return [
-      card('1. 무엇을 만들까요?', '여기에 적은 내용은 모든 요청에 함께 전달돼요. 비워 두고 바로 AI 창에서 말해도 돼요.', kind, brief),
-      card('2. 로어북은 어떻게 만들까요?', `이 ${who}에 대한 선택이에요. ${who}마다 마지막 선택을 기억해요.`, modeSeg,
+    const startBox = h('section', { class: 'rb-card pad bordered rb-ai-start' },
+      h('b', null, '시작하기'),
+      h('div', { class: 'rb-muted', style: 'font-size:12.5px' }, '준비되면 AI 창을 열어 대화로 만들어요. 위 1·2는 비워 둬도 돼요.'),
+      btn('AI 창 열기', { kind: 'primary', icon: 'sparkle', onClick: () => openPopup() }),
+      btn('새 대화 시작', { icon: 'plus', title: '대화와 수정안을 비우고 처음부터 시작해요 (원고는 그대로)', onClick: () => { build.newThread(); ctx.toast('새 대화를 시작했어요'); paint(); } }),
+      build.state.s.thread.length ? h('div', { class: 'rb-muted', style: 'font-size:12px' }, `지금 대화 ${st.s.thread.length}개 · 대기 수정안 ${build.pendingCount()}개`) : null);
+    return [h('div', { class: 'rb-ai-startgrid' }, h('div', { class: 'rb-ai-steps' },
+      stepCard(1, '무엇을 만들까요?', '모든 요청에 함께 전달돼요. 비워 두고 AI 창에서 말해도 돼요.', kind, brief),
+      stepCard(2, '로어북은 어떻게 만들까요?', `${who}마다 마지막 선택을 기억해요.`, modeSeg,
         h('div', { class: 'rb-muted', style: 'font-size:13px;line-height:1.6' },
           mode === 'dusk'
             ? 'Dusk 방식: 폴더·소속·장소와 켜지는 조건(확률·한 번만·연쇄·변수)까지 AI가 설계해요. 적용하기 전에 규칙 시험으로 확인할 수 있어요. Dusk 플러그인이 있어야 규칙대로 작동해요.'
             : '일반 방식: 리스 기본 로어북(키·내용·항상 켜짐)만 만들어요. Dusk 규칙이 이미 있는 항목은 건드리지 않고, 내용만 고쳐도 규칙은 유지돼요.'),
         h('div', { class: 'rb-muted', style: 'font-size:12px' }, `이 ${who}에 Dusk 규칙·폴더가 ` + (build.hasDusk() ? '있어요.' : '아직 없어요.')),
-        field(`새 ${who}의 기본 방식`, defSeg)),
-      card('3. 시작하기', null,
-        h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' },
-          btn('AI 창 열기', { kind: 'primary', icon: 'sparkle', onClick: () => openPopup() }),
-          btn('새 대화 시작', { icon: 'plus', title: '대화와 수정안을 비우고 처음부터 시작해요 (원고는 그대로)', onClick: () => { build.newThread(); ctx.toast('새 대화를 시작했어요'); paint(); } })),
-        build.state.s.thread.length ? h('div', { class: 'rb-muted', style: 'font-size:12px' }, `지금 대화 ${st.s.thread.length}개 · 대기 수정안 ${build.pendingCount()}개`) : null)
-    ];
+        field(`새 ${who}의 기본 방식`, defSeg))),
+      startBox)];
   }
 
   // 블록 편집: 추가·복제·삭제·순서·켜기 끄기·이름/역할/본문, 프리셋 이름, JSON 내보내기

@@ -12,7 +12,8 @@ var strip = (m) => {
   const { enabled, ...rest } = m;
   return rest;
 };
-export async function loadCharacters(api, given) {
+// opts.onBatch(지금까지 읽은 목록): 봇을 12개씩 읽을 때마다 부르고, 그 사이 화면이 숨 쉴 틈을 준다(첫 읽기 단계별 불러오기, 1.8.3)
+export async function loadCharacters(api, given, opts = {}) {
   if (Array.isArray(given)) return { list: given, unloaded: 0 };
   let order = [];
   try {
@@ -31,7 +32,10 @@ export async function loadCharacters(api, given) {
   const get = (i) => api.getCharacterFromIndex(i).catch(() => null);
   const list = [];
   const N = ids.size, CH = 12;
-  for (let i = 0; i < N; i += CH) list.push(...await Promise.all(Array.from({ length: Math.min(CH, N - i) }, (_, k) => get(i + k))));
+  for (let i = 0; i < N; i += CH) {
+    list.push(...await Promise.all(Array.from({ length: Math.min(CH, N - i) }, (_, k) => get(i + k))));
+    if (opts.onBatch && i + CH < N) { try { opts.onBatch(list.slice(), N); } catch { /* 진행 표시 실패는 읽기에 영향 없음 */ } await new Promise((r) => setTimeout(r, 0)); }
+  }
   // 순서 목록에 늦게 들어간 봇: 끝에서 30개 연속 빌 때까지 (최대 200개)
   let miss = 0;
   for (let i = N; i < N + 200 && miss < 30; i += 10) {
@@ -46,9 +50,11 @@ export async function loadCharacters(api, given) {
 }
 export var isHostBlocked = (e) => !!e?.hostBlocked || /still loading|not loaded|history is only partially/i.test(String(e?.message ?? e));
 export var hostBlockedMessage = "이 앱(RisuVault 등)은 대화가 긴 봇을 플러그인이 통째로 저장하지 못하게 막아요(채팅 보호). 이 봇은 앱 기본 화면에서 고쳐 주세요.";
-export async function readDb(api, keys = ["modules", "pluginCustomStorage", "enabledModules", "characters"]) {
+// opts.cached: 읽기 전용 화면용 — 공유 캐시를 쓴다. 고치는 작업(commit)은 항상 새로 읽는다.
+export async function readDb(api, keys = ["modules", "pluginCustomStorage", "enabledModules", "characters"], opts = {}) {
   const wantPcs = keys.includes("pluginCustomStorage");
-  const db = await api.getDatabase(keys.filter((k) => k !== "pluginCustomStorage"));
+  const dbKeys = keys.filter((k) => k !== "pluginCustomStorage");
+  let db = await (opts.cached && typeof api.getDatabaseCached === "function" ? api.getDatabaseCached(dbKeys, { shared: true }) : api.getDatabase(dbKeys));
   if (!db) throw new ModuleError("데이터베이스를 읽을 권한이 없습니다. 플러그인 권한을 허용해 주세요.");
   if (wantPcs) {
     const read = async (k) => {
@@ -67,6 +73,7 @@ export async function readDb(api, keys = ["modules", "pluginCustomStorage", "ena
   }
   if (keys.includes("characters") && !Array.isArray(db.characters)) {
     const r = await loadCharacters(api, db.characters);
+    if (opts.cached) db = { ...db };
     db.characters = r.list;
     db.charsUnloaded = r.unloaded;
   }
@@ -87,7 +94,7 @@ export function entriesOf(db) {
   return all;
 }
 export async function loadModuleState(api, { chars = false } = {}) {
-  const db = await readDb(api, chars ? void 0 : ["modules", "pluginCustomStorage", "enabledModules"]);
+  const db = await readDb(api, chars ? void 0 : ["modules", "pluginCustomStorage", "enabledModules"], { cached: true });
   const entries = entriesOf(db);
   const globalOn = new Set(db.enabledModules ?? []);
   const charUse = /* @__PURE__ */ new Map();

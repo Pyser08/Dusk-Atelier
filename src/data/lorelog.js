@@ -192,6 +192,9 @@ export function createLoreLog(api, { loreRuntime, above = null, quietMs = 1500, 
       pending = null;
       await clearLoreLog(api);
     },
+    // 응답 아래 '모델 호출 표시'가 들어간 로어북 목록을 가져다 쓴다
+    recordFor: (text) => (recs ? matchRecord(recs, text) : null),
+    last: () => (recs && recs.length ? recs[recs.length - 1] : null),
     // 시험용
     beforeRequest,
     onOutput,
