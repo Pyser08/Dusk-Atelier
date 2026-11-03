@@ -78,7 +78,8 @@ await page.locator("#rb-pe-next").click(); await page.waitForSelector("#rb-pe-ap
 ok("바뀐 줄 요약 +1 −1", (await page.locator("#rb-pe-sum").textContent()).includes("+1") && (await page.locator("#rb-pe-sum").textContent()).includes("−1"), await page.locator("#rb-pe-sum").textContent());
 const diffText = await page.locator("#rb-pe-diff").textContent();
 ok("미리 보기에 옛 줄·새 줄", diffText.includes("v1") && diffText.includes("v2"), diffText);
-ok("세이브 백업 체크가 기본 켜짐", await page.locator("#rb-pe-backup").isChecked());
+ok("세이브 백업 체크가 기본 꺼짐", !(await page.locator("#rb-pe-backup").isChecked()));
+await page.locator("#rb-pe-backup").check();
 await page.evaluate(() => { window.__bkJob = { done: 12, total: 12, finishedAt: Date.now() }; });
 await page.locator("#rb-pe-apply").click(); await page.waitForSelector("#rb-pe-result", { timeout: 8000 });
 ok("결과: 고쳤어요", (await page.locator("#rb-pe-result").textContent()).includes("고쳤어요"), await page.locator("#rb-pe-result").textContent());

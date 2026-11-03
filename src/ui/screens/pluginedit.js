@@ -22,7 +22,7 @@ export async function openPluginEdit(ctx, p, st) {
   let closed = false;
   await modal(ctx.win, (done) => {
     const body = h("div", { id: "rb-pe-body", style: "display:flex;flex-direction:column;gap:10px" });
-    let orig = "", sha = "", cur = "", useBackup = canBackup, last = null;
+    let orig = "", sha = "", cur = "", useBackup = false, last = null;
     const show = (...kids) => replace(body, ...kids);
     const closeBtn = (label = "닫기", kind = "") => btn(label, { kind, id: "rb-pe-close", onClick: () => done(true) });
     const actions = (...kids) => h("div", { class: "btns" }, ...kids);
@@ -79,7 +79,7 @@ export async function openPluginEdit(ctx, p, st) {
         h("p", { class: "rb-p", id: "rb-pe-sum" }, `바뀐 줄: +${d.added.toLocaleString()} −${d.removed.toLocaleString()}${d.truncated ? ` (앞쪽 ${d.rows.length}줄만 보여요)` : ""}`),
         diffBox,
         canBackup
-          ? h("label", { class: "rb-p", style: "display:flex;gap:8px;align-items:flex-start" }, box, h("span", null, "고치기 전에 세이브 전체를 백업해요 (권장). 바뀐 파일만 복사하지만 처음에는 오래 걸릴 수 있어요. 최근 5개만 보관하니 오래된 백업이 밀려날 수 있어요."))
+          ? h("label", { class: "rb-p", style: "display:flex;gap:8px;align-items:flex-start" }, box, h("span", null, "고치기 전에 세이브 전체도 백업해요. 파일이 많으면 처음에 아주 오래 걸리고, 최근 5개만 보관해서 오래된 백업이 밀려나요. 설정 파일은 이 체크와 상관없이 항상 복사해 둬요."))
           : note("info", "이 서버는 세이브 백업을 지원하지 않아서 설정 파일만 복사해 둬요."),
         h("ul", { class: "rb-muted", style: "margin:0;padding-left:18px;line-height:1.7" },
           h("li", null, "고치기 전에 설정 파일을 서버에 복사해 둬요(최근 20개)."),
