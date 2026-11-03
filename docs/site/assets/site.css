@@ -205,3 +205,7 @@ pre{position:relative}.cp{position:absolute;top:8px;right:8px;border:1px solid v
 @media(max-width:820px){.bento{grid-auto-rows:128px}.bt .bi{left:12px;top:12px;width:36px;height:36px;font-size:18px}.bt .ch em{font-size:11px;padding:1px 7px}}
 .bt.noimg{padding-top:66px}
 @media(max-width:820px){.bento{grid-auto-rows:minmax(150px,auto)}.bt.noimg{padding-top:58px}.bt.big,.bt.wide{min-height:150px}.bt .ch em:nth-child(3){display:none}}
+/* v7: 모서리 빛 번짐 제거, 테두리는 타일 색으로 */
+.bt.noimg::before{display:none}
+.bt.noimg{border-color:color-mix(in srgb,var(--tint,var(--g1)) 45%,var(--line))}
+.bt.noimg:hover{border-color:var(--tint,var(--g2));box-shadow:0 12px 32px color-mix(in srgb,var(--tint,var(--g1)) 30%,transparent)}
