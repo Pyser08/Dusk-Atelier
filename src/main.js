@@ -209,6 +209,7 @@ async function start() {
   app.ctx.turnInfo = turnInfo;
   app.ctx.chatMenu = chatMenu;
   app.ctx.memory = memory;
+  app.ctx.cellar = memory.cellar;   // 한 곳에서 찾은 Cellar 연결을 화면들이 함께 쓴다
   app.ctx.skills = skills;
   app.ctx.web = web;
   app.ctx.storyTime = storyTime;

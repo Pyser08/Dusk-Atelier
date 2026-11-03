@@ -29,7 +29,8 @@ async function getPlugins(ctx, fresh) {
 var cellarOf = (ctx) => ctx.cellar ??= ctx.memory?.cellar ?? createCellar(ctx.api);
 async function cellarStatus(ctx) {
   const c = cellarOf(ctx);
-  return c.peek() ?? await Promise.race([c.status().catch(() => null), new Promise((r) => setTimeout(() => r(null), 1500))]);
+  const k = c.peek(); if (k?.ok) return k;
+  return await Promise.race([c.status().catch(() => null), new Promise((r) => setTimeout(() => r(null), 1500))]);
 }
 async function getInterop(ctx, fresh) {
   const c = memo(ctx);

@@ -4,7 +4,7 @@
 // 못 찾으면 그냥 '없음' — 다른 기능은 지금처럼 동작한다(Cellar는 선택 기능).
 export const CELLAR_URL_KEY = "dusk.cellar.url";
 export const CELLAR_DEFAULT_URL = "http://127.0.0.1:6011";
-const TIMEOUT = 4000, TTL = 60e3;
+const TIMEOUT = 4000, TTL = 60e3, FAIL_TTL = 3e3;   // 못 찾은 결과는 3초만 기억한다(켜자마자 못 찾았다가 계속 '없음'으로 남지 않게)
 
 export async function loadCellarUrl(api) {
   try { const v = await api.pluginStorage.getItem(CELLAR_URL_KEY); return typeof v === "string" && /^https?:\/\//.test(v.trim()) ? v.trim().replace(/\/+$/, "") : CELLAR_DEFAULT_URL; } catch { return CELLAR_DEFAULT_URL; }
@@ -67,7 +67,7 @@ export function createCellar(api, { now = () => Date.now() } = {}) {
   return {
     peek: () => last,
     async status({ fresh = false } = {}) {
-      if (!fresh && last && now() - at < TTL) return last;
+      if (!fresh && last && now() - at < (last.ok ? TTL : FAIL_TTL)) return last;
       if (pending) return pending;
       pending = (async () => { try { const url = await loadCellarUrl(api); last = await probeCellar(api, url); at = now(); return last; } finally { pending = null; } })();
       return pending;

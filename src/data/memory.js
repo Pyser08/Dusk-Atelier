@@ -52,7 +52,13 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
   async function start() {
     await remote.init().catch((e) => log("기억 서버 표시 읽기 실패", e?.message ?? e));
     await store.migrate().catch((e) => log("v1 이전 실패", e?.message ?? e));
-    remote.detect().catch((e) => log("Dusk Cellar 확인 실패", e?.message ?? e));   // 기다리지 않는다(없으면 몇 초 걸릴 수 있음)
+    // 기다리지 않는다(없으면 몇 초 걸릴 수 있음). 켜자마자는 리스 서버가 바빠 못 찾을 수 있어서, 못 찾으면 3·10·30초 뒤에 다시 찾는다.
+    (async () => {
+      for (const wait of [0, 3e3, 7e3, 20e3]) {
+        if (wait) await new Promise((r) => { const t = setTimeout(r, wait); t.unref?.(); });
+        try { await remote.detect(); if (cellar.peek()?.ok) return; } catch (e) { log("Dusk Cellar 확인 실패", e?.message ?? e); }
+      }
+    })();
     const idx = await store.getIndex(), sel = backend(idx.settings);
     active = sel.id;
     if (sel.id === "local") {
