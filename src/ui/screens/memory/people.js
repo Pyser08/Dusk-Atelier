@@ -54,6 +54,7 @@ export function peopleMenuItems(env, people) {
     caps.analyze && { label: "인물 합치기", onClick: () => openMerge(env, people).catch(fail(env.ctx)) },
     caps.analyze && { label: "RP 붙여넣어 분석 (수동 기록)", onClick: () => openWriter(env).catch(fail(env.ctx)) },
     wikiEditable(env) && { label: "인물 폴더 정리", onClick: () => openFolders(env, people).catch(fail(env.ctx)) },
+    env.backend.id === "local" && env.folder.wiki?.documents && { label: "봇 로어북으로 내보내기", onClick: () => import("./lorexport.js").then((m) => m.openLoreExport(env)).catch(fail(env.ctx)) },
     caps.analyze && env.backend.id === "local" && { label: "추적 인물 고르기", onClick: () => openTracking(env).catch(fail(env.ctx)) },
     caps.analyze && { label: "합치기 되돌리기", onClick: () => restoreLastMerge(env).catch(fail(env.ctx)) },
     caps.analyze && { label: "고아 기록 정리", onClick: () => cleanOrphans(env) },

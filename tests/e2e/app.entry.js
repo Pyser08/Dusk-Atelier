@@ -40,7 +40,7 @@ export function fakeApi(seed = {}, story = false, mods = false) {
     getColorScheme: async () => ({ scheme: { type: "light" } }),
     showContainer: async () => {}, hideContainer: async () => {},
     getDatabase: async () => structuredClone(db), setDatabaseLite: async () => {}, setDatabase: async () => {},
-    getCharacterFromIndex: async (i) => structuredClone(chars[i]), setCharacterToIndex: async () => {},
+    getCharacterFromIndex: async (i) => structuredClone(chars[i]), setCharacterToIndex: async (i, c) => { (window.__charWrites ??= []).push({ i, c: structuredClone(c) }); },
     getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0, getChatFromIndex: async (ci, ti) => structuredClone(chars[ci]?.chats?.[ti] ?? { message: [] }),
     ...(seed.__bard ? { bardWiki: { getDocuments: async () => [] } } : {}),
     getRootDocument: async () => null, nativeFetch: async () => ({ status: 404 }), registerButton: async () => {}, registerSetting: async () => {}
