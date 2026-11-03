@@ -8,7 +8,7 @@ var top=document.createElement("header");top.className="top";
 top.innerHTML='<button class="btn menu" aria-label="메뉴">☰</button><a class="brand" href="'+root+'index.html"><img src="'+root+'assets/img/icon.webp" alt=""><span>Dusk Atelier 안내서</span></a><span class="sp"></span><a class="lnk gh" href="https://github.com/Pyser08/Dusk-Atelier">GitHub</a><button class="btn th" aria-label="밝기 바꾸기">🌓</button>';
 b.insertBefore(top,b.firstChild);
 var side=document.querySelector(".side");
-if(side){var h="";NAV.forEach(function(g){h+="<h4>"+g[0]+"</h4>";g[1].forEach(function(p){var href=root+p[0]+(p[0].slice(-1)=="/"?"index.html":".html");h+=p[2]?'<a style="opacity:.5;pointer-events:none">'+p[1]+" · 준비 중</a>":'<a href="'+href+'"'+(p[0]==cur?' class="on"':"")+">"+p[1]+"</a>"})});side.innerHTML=h;
+if(side){var h="";NAV.forEach(function(g){h+="<h4>"+g[0]+"</h4>";g[1].forEach(function(p){var href=root+p[0]+(p[0].slice(-1)=="/"?"index.html":".html");h+=p[2]?"":'<a href="'+href+'"'+(p[0]==cur?' class="on"':"")+">"+p[1]+"</a>"})});side.innerHTML=h;
 side.addEventListener("click",function(e){if(e.target.tagName=="A")b.classList.remove("open")})}
 top.querySelector(".menu").onclick=function(){b.classList.toggle("open")};
 top.querySelector(".th").onclick=function(){var d=document.documentElement,c=d.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme:light)").matches?"light":"dark"),n=c=="dark"?"light":"dark";d.setAttribute("data-theme",n);localStorage.setItem("da-theme",n)};
