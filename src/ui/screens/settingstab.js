@@ -13,6 +13,7 @@ import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
 import { openAbout } from './about.js';
 import { loadMemoryButtonOn } from '../../data/memorybutton.js';
+import { createCellar, loadCellarUrl, saveCellarUrl, CELLAR_DEFAULT_URL } from '../../data/cellar.js';
 
 export async function renderSettingsTab(ctx) {
   if (ctx.state.sub === "prompts") return renderPrompts(ctx);
@@ -40,6 +41,7 @@ export async function renderSettingsTab(ctx) {
       segRow("메뉴 위치", "PC에서 메뉴를 왼쪽 또는 위쪽에 둬요.", layoutSeg, "rb-pc-only"),
       linkRow("플러그인 꾸미기", "색·밝기·글자 크기", () => ctx.go("look"), "rb-set-look")
     ),
+    cellarCard(ctx, linkRow, card),
     card("백업", linkRow("백업 만들기", "모듈·에셋·설정을 zip 한 파일로", () => fullBackup(ctx), "rb-set-fullbackup"), linkRow("백업에서 복원", "전체 백업 zip으로 되살리기", () => fullRestore(ctx), "rb-set-restore")),
     card("도움말",
       ctx.openOnboarding ? linkRow("시작 안내 다시 보기", "처음 설정을 단계별로 다시 해요", () => ctx.openOnboarding(), "rb-set-onboard") : null,
@@ -128,4 +130,36 @@ export async function renderSettingsTab(ctx) {
   }
   // 고급은 점선 '고급' 칸 없이 묶음 카드를 그대로 오른쪽 열에 둔다
   if (advSide) replace(advSide, ...(adv ? advBlocks : [advFold(ctx, "settings", true)]));
+}
+
+// ── Dusk Cellar (선택 서버) ── 줄 하나: 오른쪽에 상태(확인 중 → 연결됨 vX / 없음). 누르면 상태·주소·다시 확인.
+const cellarText = (st) => (!st ? "확인 중…" : st.ok ? `연결됨 v${st.version}` : "없음");
+function cellarCard(ctx, linkRow, card) {
+  const cel = (ctx.cellar ??= createCellar(ctx.api));
+  const row = linkRow("Dusk Cellar", "리스 서버 옆에서 도는 선택 서버예요. 없어도 모든 기능이 그대로 돼요.", () => openCellar(ctx, cel, paint), "rb-set-cellar", cellarText(cel.peek()));
+  const paint = (st) => { const v = row.querySelector(".val"); if (v) v.textContent = cellarText(st); };
+  cel.status().then(paint).catch(() => paint({ ok: false }));
+  return card("서버", row);
+}
+async function openCellar(ctx, cel, paint) {
+  const url0 = await loadCellarUrl(ctx.api);
+  await modal(ctx.win, (done) => {
+    const stEl = h("p", { class: "rb-p", id: "rb-cellar-st" }, "확인 중…");
+    const show = (st) => {
+      paint(st);
+      replace(stEl, st.ok ? `연결됨 · Dusk Cellar v${st.version}` : `연결 안 됨 · ${st.error ?? ""}`);
+    };
+    const input = h("input", { class: "rb-input", type: "url", value: url0, placeholder: CELLAR_DEFAULT_URL, "aria-label": "Cellar 주소", id: "rb-cellar-url" });
+    const check = async (fresh = true) => { replace(stEl, "확인 중…"); try { show(await cel.status({ fresh })); } catch (e) { show({ ok: false, error: String(e?.message ?? e) }); } };
+    check(false);
+    return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": "Dusk Cellar" },
+      h("h3", null, "Dusk Cellar"),
+      stEl,
+      h("p", { class: "rb-muted" }, "리스를 직접 돌리는 서버(RisuBard 등)에 Dusk Cellar를 설치하면 자동으로 연결돼요. 설치: 리스 폴더에서 git clone https://github.com/Pyser08/Dusk-Cellar → node setup.cjs"),
+      ctx.prefs.advanced ? h("label", { class: "rb-p" }, "주소 (보통은 그대로 두세요)", input) : null,
+      h("div", { class: "rb-dialog-actions" },
+        ctx.prefs.advanced ? btn("주소 저장", { onClick: async () => { try { await saveCellarUrl(ctx.api, input.value); cel.forget(); await check(); } catch (e) { replace(stEl, String(e?.message ?? e)); } } }) : null,
+        btn("다시 확인", { onClick: () => check(true), id: "rb-cellar-recheck" }),
+        btn("닫기", { kind: "primary", onClick: () => done(true) })));
+  });
 }

@@ -43,7 +43,7 @@ export function fakeApi(seed = {}, story = false, mods = false) {
     getCharacterFromIndex: async (i) => structuredClone(chars[i]), setCharacterToIndex: async (i, c) => { (window.__charWrites ??= []).push({ i, c: structuredClone(c) }); },
     getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0, getChatFromIndex: async (ci, ti) => structuredClone(chars[ci]?.chats?.[ti] ?? { message: [] }),
     ...(seed.__bard ? { bardWiki: { getDocuments: async () => [] } } : {}),
-    getRootDocument: async () => null, nativeFetch: async () => ({ status: 404 }), registerButton: async () => {}, registerSetting: async () => {}
+    getRootDocument: async () => null, nativeFetch: async (u, o) => { (window.__nf ??= []).push([u, o?.method]); return window.__cellarOn && /\/cellar\/health$/.test(u) ? { status: 200, json: async () => ({ ok: true, name: "dusk-cellar", version: "0.1.0", auth: true }) } : { status: 404 }; }, registerButton: async () => {}, registerSetting: async () => {}
   };
 }
 window.bootApp = async (seed, opts = {}) => {
