@@ -42,7 +42,7 @@ export function infoTab(env, B) {
   const pinItem = (key) => { const on = isPinned(env.folder.wiki, doc.id, key); return { label: on ? "고정 풀기" : "고정 (AI가 고치지 않게)", onClick: () => commit((w) => setPin(w, doc.id, key, !on), on ? "고정을 풀었어요." : "고정했어요.") }; };
   const pinMark = (key) => (isPinned(env.folder.wiki, doc?.id, key) ? h("small", { class: "rb-wk3-pinned", title: "고정됨: AI가 고치지 않아요" }, "고정") : null);
 
-  if (!doc) return h("div", { class: "rb-wk3" }, h("div", { class: "rb-wk3-grid" }, card("none", "상세 정보", [h("p", { class: "rb-muted" }, "이 인물은 아직 위키 문서가 없어요. 문서를 만들면 기본 성격·수치·기록 항목을 채울 수 있어요."),
+  if (!doc) return h("div", { class: "rb-wk3 rb-wk3-solo" }, h("div", { class: "rb-wk3-grid" }, card("none", "상세 정보", [h("p", { class: "rb-muted" }, "이 인물은 아직 위키 문서가 없어요. 문서를 만들면 기본 성격·수치·기록 항목을 채울 수 있어요."),
     B.makeDoc ? btn("위키 문서 만들기", { kind: "primary", onClick: B.makeDoc }) : null])));
 
   // ── 기본 성격 ──

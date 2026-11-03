@@ -869,6 +869,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-wk3-toc{flex-direction:column;gap:2px;position:sticky;top:72px;overflow:visible}.rb-wk3-toc .lbl{display:block;padding:0 10px 6px}
 .rb-wk3-tocb{justify-content:space-between;border:0;background:transparent;min-height:34px;border-radius:10px;color:var(--rb-sub)}
 .rb-wk3-grid{display:block;column-count:2;column-gap:14px}.rb-wk3-grid>*{break-inside:avoid;margin:0 0 14px;width:100%;box-sizing:border-box}.rb-wk3-empty,.rb-wk3-panel{column-span:all}.rb-wk3-ax .band{display:block}}
+/* 문서가 없는 인물: 목차 칸이 없으니 2칸 배치를 쓰지 않는다(좁아지던 버그) */
+@container wk2 (min-width:760px){.rb-wk3.rb-wk3-solo{display:block}.rb-wk3-solo .rb-wk3-grid{column-count:1}}
 @container wk2 (min-width:1100px){.rb-wk2-body{display:grid;grid-template-columns:minmax(260px,320px) minmax(0,1fr);gap:16px;align-items:start}
 .rb-wk2 .rb-wk2-sum,.rb-wk2 .rb-wk2-pane{display:flex!important}.rb-wk2-tab[data-t="sum"]{display:none}.rb-wk2[data-tab="sum"] .rb-wk2-tab.pane-sel{background:var(--rb-acc-grad);color:var(--rb-on-acc);font-weight:700}}
 @media(hover:hover){.rb-wk2-gl:hover,.rb-wk2-who:hover{background:var(--rb-hover)}}
