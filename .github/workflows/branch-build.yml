@@ -1,5 +1,8 @@
 name: Branch build verification
 
+# 검증만 한다(테스트·빌드·문법). 빌드 결과를 브랜치에 다시 커밋하지 않는다 — 로컬에서 npm run build 한 dusk_atelier.js를 직접 올리므로
+# 봇 커밋이 끼어 푸시가 거절되는 일을 막는다.
+
 on:
   push:
     branches:
@@ -16,7 +19,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -37,21 +40,3 @@ jobs:
         run: node tools/build.mjs
       - name: Syntax check
         run: node --check dusk_atelier.js
-      - name: Commit built plugin to the source branch
-        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-        run: |
-          if git diff --quiet -- dusk_atelier.js; then echo "No bundle changes"; else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
-            git add dusk_atelier.js
-            git commit -m "build: dusk_atelier.js v$(node -p "require('./package.json').version")"
-            if [ "${{ github.event_name }}" = "pull_request" ]; then target="${{ github.event.pull_request.head.ref }}"; else target="${{ github.ref_name }}"; fi
-            git push origin "HEAD:$target"
-          fi
-      - name: Upload built plugin
-        uses: actions/upload-artifact@v4
-        with:
-          name: dusk_atelier-${{ github.sha }}
-          path: dusk_atelier.js
-          if-no-files-found: error
-          retention-days: 14
