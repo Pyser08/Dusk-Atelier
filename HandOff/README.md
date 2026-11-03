@@ -1,7 +1,16 @@
 # HandOff — 다른 AI/새 세션용 시작 문서
 
 > 저장소 `Pyser08/Dusk-Atelier`만 연결하면 이 폴더부터 읽고 바로 작업할 수 있게 정리한 문서.
-> 현재 작업 브랜치: `feat/1.8.1` (당분간 여기서만 작업. 나중에 main에 머지될 예정 — 머지 후엔 브랜치 지정 없이 이 문서부터 읽으면 됨)
+
+## 현재 작업 브랜치 (바뀔 때마다 이 표를 갱신할 것)
+
+| 저장소 | 작업 브랜치 | 비고 |
+|---|---|---|
+| Dusk-Atelier | `feat/1.8.3` | 당분간 여기서만 작업. 나중에 main에 머지될 예정 — 머지 후엔 브랜치 지정 없이 이 문서부터 읽으면 됨 |
+| Dusk-Cellar | `feat/0.1.0` | 기억 저장소(`/cellar/mem`) — Atelier 쪽 연동은 위 Atelier 브랜치에서 작업 |
+
+- **작업 브랜치가 바뀌면(새로 만들거나 옮길 때) 같은 작업 안에서 이 표를 main의 `HandOff/README.md`에 고치고 push한다.** 이 문서는 main에서 읽히므로, 표가 낡으면 다음 AI가 옛 브랜치에서 작업하게 된다. (이 표만 고치는 main 수정은 릴리스가 되지 않는다.)
+- 각 브랜치의 `HandOff/STATE.md`가 진행 상황의 기준이다. 표의 브랜치가 실제 최신인지 의심되면 `git ls-remote --heads origin 'feat/*'`로 확인하고 사용자에게 묻는다.
 
 ## 1. 이 프로젝트는
 RisuAI 플러그인 **Dusk Atelier** — 모듈·봇 관리, 인물별 장기기억, 로어북·테마 도구.
@@ -22,7 +31,7 @@ RisuAI 플러그인 **Dusk Atelier** — 모듈·봇 관리, 인물별 장기기
 
 ## 3. 환경 준비
 ```bash
-git clone --depth 1 -b feat/1.8.1 https://github.com/Pyser08/Dusk-Atelier
+git clone --depth 1 -b <위 표의 작업 브랜치> https://github.com/Pyser08/Dusk-Atelier
 cd Dusk-Atelier
 npm ci            # 막히면: esbuild·acorn·eslint-scope를 /opt/npm-tools/node_modules 등에서 node_modules/로 심볼릭 링크
 ```
