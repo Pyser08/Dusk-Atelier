@@ -421,7 +421,8 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 ## 안내서 사이트 (docs/site/)
 - GitHub Pages(feat/1.8.3 · /docs, `docs/.nojekyll` 필수 — Jekyll이 옛 문서의 `{{` 때문에 빌드 실패했음). 주소 `…/Dusk-Atelier/site/`.
 - 13페이지: 허브, guide/(start·memory·story·cocoa·image-tags·look·manage·switches·faq), dev/(index·host·workflow). HTML이 원본(생성기 없음) — 직접 고친다.
-- 공용: `assets/site.css`(v1→v4 덮어쓰기), `assets/site.js`(상단 바·왼쪽 메뉴 NAV), `assets/widgets.js`(검색 Ctrl+K·탭·체크리스트·표 필터·코드 복사·체험 위젯: 주사위/관계/감정/게이지/태그/코코아/꾸미기/패치). 다크·라이트는 브라우저 설정 자동.
+- 공용: `assets/site.css`(v1→v4 덮어쓰기), `assets/site.js`(상단 바·왼쪽 메뉴 NAV), `assets/widgets.js`(검색 Ctrl+K·탭·체크리스트·표 필터·코드 복사·체험 위젯: 주사위/관계/감정/게이지/태그/코코아/꾸미기/패치). 다크·라이트는 브라우저 설정을 따르고, 상단 GitHub 오른쪽 버튼(🌙/☀️)으로 바꾸면 `da-theme`(localStorage)에 저장돼 `:root[data-theme]`가 우선함.
+- 허브는 목업 B(배너 + 큰 검색창 + 낱말 칩 + 벤토 타일). 다른 페이지 제목부는 site.js가 `.phero` 카드(벤토 큰 타일 모양 + 페이지별 루네 그림, IMG 표)로 감싼다. 목업 원본은 `docs/site/mockups/`.
 - 새 페이지: site.js NAV, widgets.js PAGES(검색 색인), 허브 타일, 이전/다음 링크를 함께 고친다. 주사위 위젯의 수치(LV·judge)는 `src/engine/fairplay.js`·`turninfo.js`와 같아야 함.
 - 내용 출처는 README/CHANGELOG/코드 문구만. 버전이 바뀌면 CHANGELOG 기준으로 갱신.
 - 아카 v1.8.3 글: 맨 위 '처음이라면' 접이식 상자를 안내서 사이트 안내 큰 상자(NEW · GUIDE SITE, 열기 버튼 + 5개 바로가기 + 예전 가이드 2.0 링크)로 교체. 사이트 주소는 Pages 배포 확인 후 게시할 것(`https://pyser08.github.io/Dusk-Atelier/site/`).
