@@ -460,13 +460,9 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 미확인: 실제 RisuBard에서 nativeFetch POST(/proxy2 → Cellar) 동작, 서버 저장 후 기억 화면·주입 체감 속도, 31만 파일 백업 시간, 복원 직후 열린 화면이 옛 DB를 다시 저장하는지.
 - 정리 대기(삭제는 사용자 지시 필요): 이 저장소의 `server/dusk-start.cjs`, `tests/dusk-start.test.js`는 Cellar로 옮겨 가 중복.
 
-## 다음 작업: 플러그인 매니저(v3.0.1) 기능 이식 (사용자 요청 2026-11-03, 아직 시작 전)
-기준 파일: 사용자가 첨부한 `plugin-manager-v3_3.0.1.js`(번들, 647KB). 핵심 제약: 리스가 플러그인의 `plugins` 쓰기를 막아(PR #1572) 목록을 바꾸는 기능은 전부 **Cellar 서버 쪽 쓰기**가 필요하다. 지금 Cellar `/cellar/plugins`는 `script`만 고친다 → 1단계로 `apply`를 일반화(켜짐·표시이름·별칭·인자값·순서·추가·삭제)해야 한다. 순서(사용자 요청 "순서대로"):
-1. Cellar `patch` 일반화(plugins.cjs): 필드 허용 목록, 같은 안전장치(해시·스냅샷·검토 수락). + Atelier 데이터 계층.
-2. 켜기/끄기·순서·삭제·별칭, 파일에서 등록(.js/.ts → TS 변환, API v2.0→v2.1 변환, 기존 인자값·프리셋 유지 옵션), 중복 이름 정리.
-3. 전체 백업·복원(범위: 전체/플러그인만/글로벌 프리셋·카테고리만, 방식: 전체 교체/병합), 메타데이터 정리.
-4. 글로벌 프리셋·카테고리(프리셋 내보내기·가져오기, 중복 이름 덮어쓰기/번호), 디바이스 페어(모바일/데스크탑).
-5. 스토리지 편집기 5종(서버 키별·DB·localStorage·서버 저장소·IndexedDB), 충돌 검사.
-6. 인자 제어 문법(`{{name}} {{divider}} {{divider-after}} {{select}}`… 읽기전용·숨김 인자) 표시.
-이미 있는 것: 카테고리 지정, 스토리지 조회·지우기·내려받기, 내보내기, 업데이트 확인, 만들기(템플릿), 코드 수정.
-기능 목록 추출법: `grep -oP '"[^"]*[가-힣][^"]{2,60}"'`로 UI 문구를 뽑아 대조(번들이라 함수명은 의미 없음).
+## 플러그인 매니저(v3.0.1) 기능 이식 (사용자 요청 2026-11-03) — 1~4단계 구현, 5단계(인자 제어 문법)는 매니저 독자 규격이라 제외(사용자 확인)
+기준: 사용자가 첨부한 `plugin-manager-v3_3.0.1.js`. 리스가 `setDatabaseLite`의 `plugins`를 잘라 내므로(v3.svelte.ts) 목록을 바꾸는 모든 일은 Cellar `/cellar/plugins`의 `mutate`가 한다(RisuBard만, features `plugins`).
+- 데이터: `src/data/pluginmgr.js`(Cellar 호출·`parseRegister`/`buildRegister`/`convertApi21`·`dupPlan`·`makeBackup`/`planRestore`·프리셋 `snapshotPreset`/`presetOps`/`exportPresets`/`importPresets`·카테고리 JSON·`orphanMeta`·`pairTarget`), `src/data/storagemgr.js`(스토리지 저장 충돌 검사·내보내기·가져오기). 화면: `ui/screens/pluginmgr.js`(줄 작업·등록·중복·백업/복원·프리셋·메타 정리), `ui/screens/storageedit.js`(값 수정·새 키·가져오기), `plugins.js`에 연결(줄마다 켜기/끄기 스위치, 줄 메뉴 별칭·위로·아래로·삭제, ··· 메뉴 파일에서 등록·글로벌 프리셋·중복 정리·전체 백업·백업 복원·메타데이터 정리). 시험: tests/pluginmgr.test.js, storagemgr.test.js, e2e run-pluginmgr.mjs.
+- 프리셋 = 켜짐/꺼짐 + 순서 + 카테고리(`rbm:pluginPresets:v1`). 설정값·플러그인 스토리지는 안 넣는다. 디바이스 페어는 이름만 저장(`pair.mobile/desktop`) — **화면 너비에 따라 자동 전환하는 동작은 아직 안 넣음**(`pairTarget`·`deviceKind` 함수만 있음).
+- 하지 못한 것: TypeScript → JavaScript 변환(등록 화면이 TS로 보이면 경고만), 스토리지 5종 중 pluginStorage만(safeLocalStorage·IndexedDB·서버 저장소·DB 저장 데이터는 아직), 백업에 플러그인 스토리지 미포함(매니저와 같음), 실제 RisuBard 서버 확인 전부 미확인(가짜 서버 시험만).
+- 알려진 위험: 백업 복원·통째 바꾸기는 목록 해시로 그새 바뀜을 막지만, 열려 있는 리스 화면이 나중에 저장하면 덮어쓸 수 있다(새로고침 안내).
