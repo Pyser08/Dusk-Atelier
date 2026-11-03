@@ -11,7 +11,7 @@ import { createRewindChat, draftFirstMessage, sceneAt } from "../../../data/memo
 import { isGenerating, Busy } from "../../../engine/safety.js";
 import { findDoc, stateOf, timelineOf, countsOf, filterTimeline, TL_FILTERS, cycleOf } from "../../../engine/personview.js";
 import { openAITools, confirmManual } from "./aitools.js";
-import { openMerge, restoreLastMerge, mergeSameNames } from "./mergeui.js";
+import { openMerge, restoreLastMerge, mergeSameNames, openWikiHealth } from "./mergeui.js";
 import { openTracking } from "./trackui.js";
 import { openRecords } from "./recordsui.js";
 import { openFolders } from "./folderui.js";
@@ -53,6 +53,7 @@ export function peopleMenuItems(env, people) {
   return [
     caps.analyze && { label: "인물 합치기", onClick: () => openMerge(env, people).catch(fail(env.ctx)) },
     caps.analyze && { label: "같은 이름 한 번에 합치기", onClick: () => mergeSameNames(env, people).catch(fail(env.ctx)) },
+    env.folder.wiki?.documents && { label: "위키 점검", onClick: () => openWikiHealth(env, people).catch(fail(env.ctx)) },
     caps.analyze && { label: "RP 붙여넣어 분석 (수동 기록)", onClick: () => openWriter(env).catch(fail(env.ctx)) },
     wikiEditable(env) && { label: "인물 폴더 정리", onClick: () => openFolders(env, people).catch(fail(env.ctx)) },
     env.backend.id === "local" && env.folder.wiki?.documents && { label: "봇 로어북으로 내보내기", onClick: () => import("./lorexport.js").then((m) => m.openLoreExport(env)).catch(fail(env.ctx)) },

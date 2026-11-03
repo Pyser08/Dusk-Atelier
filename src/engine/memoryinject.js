@@ -54,6 +54,22 @@ function sceneLine(s, cap) {
   return `Current scene${when}: ${oneLine(s.sum)}`.slice(0, Math.max(40, Math.floor(cap * 1.5)));
 }
 
+
+// 오래된 장면 중 지금 글과 겹치는 낱말이 많은 순으로 최대 2개. 겹침이 없으면 넣지 않는다. 시간순으로 돌려준다.
+export function pastScenes(older, recentText, capTokens, { max = 2 } = {}) {
+  const hay = norm(recentText);
+  const words = (sc) => [...new Set([sc.sum, ...(sc.facts ?? []), sc.place, ...(sc.who ?? [])].flatMap((x) => String(x ?? "").split(/[^\p{L}\p{N}]+/u)).map(norm).filter((w) => w.length >= 2))];
+  const scored = older.map((sc, i) => ({ sc, i, hit: words(sc).filter((w) => hay.includes(w)).length })).filter((x) => x.hit >= 2).sort((a, b) => b.hit - a.hit || b.i - a.i);
+  const out = []; let used = 0;
+  for (const x of scored) {
+    const t = "- " + oneLine(x.sc.sum) + (x.sc.place ? ` (${x.sc.place})` : ""), n = estimateTokens(t);
+    if (used + n > capTokens) continue;
+    out.push({ i: x.i, t }); used += n; if (out.length >= max) break;
+  }
+  out.sort((a, b) => a.i - b.i);
+  return { lines: out.map((x) => x.t), tokens: used };
+}
+
 // ctx: {messageCount, recentText, settings:{targetTokens,capTokens,sceneTokens,recentSkip}}
 export function buildBlock(folder, { messageCount = 0, recentText = "", settings = {}, messages = null, focus = null, storyNow = "", sem = null, semMin = 0.32 } = {}) {
   const target = settings.targetTokens ?? 1200, cap = settings.capTokens ?? 2500, sceneCap = settings.sceneTokens ?? 300, skip = settings.recentSkip ?? 8;
@@ -73,6 +89,12 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     evLines.unshift(t); evUsed += n;
   }
   if (evLines.length) { lines.push("Story so far:", ...evLines); manifest.included.push({ kind: "events", tokens: evUsed, count: evLines.length }); }
+  // 예산 때문에 빠진 오래된 장면 중, 지금 대화와 관련 있는 것만 골라 짧게 넣는다(질문에 따라 과거 사건을 불러오는 BardWiki 방식의 가벼운 판).
+  const pastCap = settings.pastTokens ?? 200;
+  if (pastCap > 0 && recentText) {
+    const older = scenes.slice(0, Math.max(0, scenes.length - 1 - evLines.length)), picked = pastScenes(older, recentText, pastCap);
+    if (picked.lines.length) { lines.push("Earlier, relevant to now:", ...picked.lines); manifest.included.push({ kind: "past", tokens: picked.tokens, count: picked.lines.length }); }
+  }
   let used = estimateTokens(lines.join("\n")); manifest.included.push(...(cur ? [{ kind: "scene", id: cur.id, tokens: used }] : []));
 
   const recent = norm(recentText), inScene = new Set((cur?.who ?? []).map(norm));

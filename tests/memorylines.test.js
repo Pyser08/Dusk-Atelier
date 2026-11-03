@@ -101,3 +101,46 @@ test("신호 쌓기: 약한 신호는 같은 방향 두 번이어야 움직이�
   assert.equal(f.emo["a>b"].tags.trust, 0, "큰 사건은 한 번에");
   const g = {}; applyEmo(g, e(1), null, 1); assert.equal(g.emo["a>b"].tags.trust, 1, "smooth 꺼짐 = 예전 동작");
 });
+import { failureKind } from "../src/engine/memorylines.js";
+test("실패 종류: 비었음·잘림·형식 오류를 가른다", () => {
+  assert.equal(failureKind("   "), "empty"); assert.equal(failureKind(null), "empty");
+  assert.equal(failureKind('{"people":[{"name":"A"'), "truncated");
+  assert.equal(failureKind("가".repeat(1600)), "truncated");
+  assert.equal(failureKind("그냥 이야기입니다."), "format");
+});
+test("재시도: 잘린 응답은 바로 가장 작은 요청으로, 빈 응답은 최종 답을 요구한다", async () => {
+  const seen = [];
+  const input = { bot: "봇", known: [], ignore: [], recent: [], newest: { text: "민지가 웃었다." } };
+  let n = 0;
+  const call = async (m) => { seen.push(m); n++; if (n === 1) return '{"people":[{"name":"민지"'; return "who|민지|웃었다|2\nscene|웃음|방|저녁|yes"; };
+  const r = await analyze(call, input, { staged: true });
+  assert.ok(r.people.some((p) => p.name === "민지"));
+  assert.match(seen[1][0].content, /cut off/, "잘림이면 더 짧게 답하라고 다시 묻는다");
+  const seen2 = []; let k = 0;
+  await analyze(async (m) => { seen2.push(m); k++; return k === 1 ? "" : "who|민지|웃었다|2\nscene|웃음|방|저녁|yes"; }, input, { staged: true });
+  assert.ok(!seen2[1].some((x) => x.role === "assistant"), "빈 응답은 빈 말을 되돌려 보내지 않는다");
+  assert.match(seen2[1].at(-1).content, /empty/);
+});
+import { isNoneReply } from "../src/engine/memorylines.js";
+test("none 응답: 새로 확인된 게 없으면 재시도 없이 넘어간다", async () => {
+  assert.ok(isNoneReply("none")); assert.ok(isNoneReply(" `없음`. ")); assert.ok(!isNoneReply("none of them smiled"));
+  let calls = 0;
+  const input = { bot: "봇", known: [], ignore: [], recent: [], newest: { text: "민지가 방에 들어와 웃으며 철수에게 인사했다. ".repeat(10) } };
+  const r = await analyze(async (m) => { calls++; return /ONE character/.test(m[0].content) ? "none" : "who|민지|웃었다|3\nscene|인사|방|저녁|yes"; }, input, { staged: true });
+  assert.equal(calls, 2, "개요 1번 + 세부 1번(none이라 재시도 없음)");
+  assert.ok(r.people.some((p) => p.name === "민지"));
+});
+test("이름 보정: 별칭만 겹치는 사람이 여럿이면 합치지 않고, 오타 후보가 여럿이어도 합치지 않는다", () => {
+  const known = [{ name: "철수", aliases: ["별"] }, { name: "영희", aliases: ["별"] }];
+  assert.equal(canonName("별", known), "별");
+  assert.equal(canonName("철수", known), "철수");
+  const k2 = [{ name: "하나오카", aliases: [] }, { name: "하나오키", aliases: [] }];
+  assert.equal(canonName("하나오가", k2), "하나오가", "후보가 둘이면 고르지 않는다");
+  assert.equal(canonName("하나오카", [{ name: "하나오키", aliases: [] }]), "하나오키", "후보가 하나면 오타로 본다");
+});
+test("이름 보정: 성만/이름만 나오면 한 사람일 때만 기존 이름으로 합친다", () => {
+  assert.equal(canonName("유즈", [{ name: "하나오카 유즈", aliases: [] }, { name: "철수", aliases: [] }]), "하나오카 유즈");
+  assert.equal(canonName("유즈", [{ name: "하나오카 유즈", aliases: [] }, { name: "사이바 유즈", aliases: [] }]), "유즈", "둘이면 합치지 않는다");
+  assert.equal(canonName("하나오카 유즈", [{ name: "유즈", aliases: [] }]), "유즈");
+  assert.equal(canonName("민", [{ name: "민지 철", aliases: [] }]), "민", "한 글자는 합치지 않는다");
+});

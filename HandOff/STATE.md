@@ -496,3 +496,12 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - `engine/peopledupe.js`(묶음 찾기·일괄 합치기), UI `mergeui.js mergeSameNames`(더보기 메뉴, 합치기 되돌리기 가능).
 - 인물 위키 왼쪽 목록 sticky + 내부 스크롤(`styles.js .rb-wk-side`), 좁은 화면은 기존 가로 목록.
 - 확인 못 한 것: 실제 화면에서의 sticky 동작·큰 위키(50명+)에서 일괄 합치기 속도·충돌 많은 문서의 결과.
+
+## BardWiki 비교 반영 P1·P2 (2026-11-04, 1.9.1)
+- 실패 종류 구분: `memorylines.js failureKind/RETRY_NOTE/isNoneReply`, `memoryprompt.js askLines`(잘림→최소 요청, 빈 응답→최종 답 요구), 잘린 JSON은 개요 성공으로 치지 않음. 2단계 `none` 응답은 정상(저장 안 함).
+- 이름 보정 `canonName`: 별칭만 겹침·오타 후보 여럿은 합치지 않음, 성/이름만 나오면 유일할 때만 합침. `pot-dedupe.js`: 같은 제목 여럿이면 sections 많은 문서, 별칭만 겹침은 합치지 않고 `ambiguous` 카운트.
+- 과거 장면 회상: `memoryinject.js pastScenes`(settings.pastTokens 기본 200, 겹치는 낱말 2개 이상, 최대 2개).
+- digest 안전: `memorydigest.js coversRecord`(bigram 40%) — 못 담은 기록은 digested 표시 안 함.
+- 위키 점검: `engine/wikihealth.js`, UI `mergeui.js openWikiHealth`(더보기 → 위키 점검).
+- 하지 않은 것: 전체 재분석 교체(Dusk의 backfill은 이미 추가식·재개식이라 덮어쓰지 않음, 별도 '초기화 후 재분석' 기능이 없음), 스키마 강제 출력·재순위·아크 지도(P3).
+- 확인 못 한 것: 실제 모델에서 잘림 판별 휴리스틱(길이 1500자 이상 문장 중간 종료)이 맞는 비율, digest 40% 기준이 한국어 요약에서 너무 엄격한지, 과거 장면 회상의 낱말 겹침 기준(2개) 적정성.

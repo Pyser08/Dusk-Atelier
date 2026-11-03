@@ -5,6 +5,7 @@ import { btn, modal, note, confirmDialog } from "../../kit.js";
 import { fail } from "./common.js";
 import { mergeEntries, planEntryMerge, applyEntryMerge, duskMerge } from "../../../engine/peoplemerge.js";
 import { duplicateGroups, mergeAllDuplicates } from "../../../engine/peopledupe.js";
+import { diagnoseWiki } from "../../../engine/wikihealth.js";
 
 const show = (v) => v == null || v === "" ? "없음" : Array.isArray(v) ? v.map(show).join(" · ") : typeof v === "object" ? Object.values(v).map(show).join(" / ") : String(v);
 const OPT = { keep: "남길 인물 값", source: "합칠 인물 값", exclude: "이 항목 제외" };
@@ -93,4 +94,18 @@ export async function mergeSameNames(env, people) {
   await M.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { res = mergeAllDuplicates(f, { slotDefinitions: slots }); });
   ctx.toast(res.skipped.length ? `${res.merged}명을 합쳤어요. ${res.skipped.length}명은 충돌이 있어 건너뛰었어요(${res.skipped.slice(0, 3).join(", ")}). 직접 합쳐 주세요.` : `${res.merged}명을 합쳤어요.`);
   env.redraw();
+}
+
+// 위키 점검: 중복 이름·빈 문서·끊어진 연결을 보여 준다. 중복이 있으면 바로 한 번에 합치기로 이어진다. 진단만 하고 자동으로 고치지는 않는다.
+export async function openWikiHealth(env, people) {
+  const { ctx } = env, shown = new Set(people.map(([, p]) => p));
+  const r = diagnoseWiki(env.folder, { visible: (p) => shown.has(p) });
+  const rows = [["문서", `${r.documents}개 (인물 ${r.characters}명)`], ["같은 이름", r.duplicates.length ? r.duplicates.slice(0, 8).map((x) => `${x.name} ×${x.count}`).join(", ") + (r.duplicates.length > 8 ? ` 외 ${r.duplicates.length - 8}` : "") : "없음"],
+    ["내용 없는 인물 문서", r.empty.length ? r.empty.slice(0, 8).join(", ") + (r.empty.length > 8 ? ` 외 ${r.empty.length - 8}` : "") : "없음"],
+    ["Dusk 기록과 이어지지 않은 문서", r.unlinked.length ? `${r.unlinked.length}개` : "없음"], ["끊어진 연결", r.broken.length ? r.broken.slice(0, 5).join(", ") + (r.broken.length > 5 ? ` 외 ${r.broken.length - 5}` : "") : "없음"]];
+  const again = await modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(560px,96vw);max-height:90vh;overflow:auto" },
+    h("h3", null, "위키 점검"), r.ok ? note("info", "눈에 띄는 문제가 없어요.") : null,
+    h("div", { style: "display:flex;flex-direction:column;gap:8px;margin:10px 0" }, rows.map(([k, v]) => h("div", null, h("small", { class: "rb-muted" }, k), h("div", null, v)))),
+    h("div", { class: "rb-dialog-actions" }, r.duplicates.length ? btn("같은 이름 한 번에 합치기", { kind: "primary", onClick: () => done(true) }) : null, btn("닫기", { onClick: () => done(null) }))));
+  if (again) await mergeSameNames(env, people);
 }

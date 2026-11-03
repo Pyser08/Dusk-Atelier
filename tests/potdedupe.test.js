@@ -35,3 +35,9 @@ test("Writer 적용 끝까지: 같은 이름을 create로 보내도 문서가 �
   const r = applyWriterProposalAtomic(sc, proposal, { catalog: { documentRefs: {}, documents: {}, entryRefs: {} }, knownCharacterNames: [] }, {});
   assert.deepEqual(Object.values(r.scope.documents).map((x) => x.title), ["텐도 아리스"]);
 });
+test("같은 제목이 여럿이면 내용이 가장 많은 문서로, 별칭만 겹치는 후보가 여럿이면 합치지 않고 센다", () => {
+  const sc = { documents: { a: { id: "a", type: "Character", title: "미도리", aliases: [], sections: [] }, b: { id: "b", type: "Character", title: "미도리", aliases: [], sections: [{}, {}] }, x: { id: "x", type: "Character", title: "철수", aliases: ["별"], sections: [] }, y: { id: "y", type: "Character", title: "영희", aliases: ["별"], sections: [] } } };
+  const r = redirectDuplicateCreates(sc, { documents: [create("n1", "미도리"), create("n2", "별")] }, TYPE);
+  const map = {}; r.link(map); assert.equal(map.n1, "b");
+  assert.equal(r.proposal.documents[1].operation, "create"); assert.equal(r.ambiguous, 1);
+});

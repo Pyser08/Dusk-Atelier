@@ -39,6 +39,7 @@ export function linesStage2(name, { light = false, beliefs = false } = {}) {
     r.push("bond|Other|shared moment (<=60)|cue word                                  (important moments only)");
     if (beliefs) r.push("belief|what they now falsely believe|the truth|who misled (or empty)");
   }
+  r.push(`If nothing new is confirmed for "${name}" in the newest text, reply exactly: none`);
   r.push(`Only ${name} is the subject. Write the player as {{user}}. Use the same spelling as \`known\`.`);
   r.push(`Example:\nto|{{user}}|warm|help|함께 가자고 손을 잡았다\ncall|{{user}}|선배|casual\nkeys|열쇠,옥상`);
   return r.join("\n");
@@ -84,11 +85,30 @@ export function canonName(name, known = [], extra = []) {
   if (!n) return "";
   const k = nk(n);
   const pool = [...known.flatMap((p) => [p.name, ...(p.aliases ?? [])]), ...extra].filter(Boolean);
-  for (const c of pool) if (nk(c) === k) return known.find((p) => nk(p.name) === k || (p.aliases ?? []).some((a) => nk(a) === k))?.name ?? c;
+  // 이름이 정확히 같은 사람이 있으면 그 사람. 별칭으로만 겹치는데 여러 명이면 누구인지 모르니 합치지 않는다(별명이 같은 다른 사람일 수 있음 — BardWiki와 같은 원칙).
+  const byName = known.filter((p) => nk(p.name) === k), byNick = known.filter((p) => (p.aliases ?? []).some((a) => nk(a) === k));
+  if (byName.length) return byName[0].name;
+  if (byNick.length === 1) return byNick[0].name;
+  if (byNick.length > 1) return n.slice(0, 60);
+  for (const c of extra) if (nk(c) === k) return c;
+  // 성만/이름만 나온 경우: 기존 이름의 한 토큰과 정확히 같고(2글자 이상) 그런 사람이 딱 한 명이면 같은 사람. 반대로 새 이름이 더 길고 기존 이름이 그 한 토큰이어도 같다. 여럿이면 합치지 않는다.
+  const toks = (v) => String(v ?? "").split(/\s+/).map(nk).filter((t) => t.length >= 2);
+  if (toks(n).length === 1) {
+    const part = known.filter((p) => { const t = toks(p.name); return t.length > 1 && t.includes(k); });
+    if (part.length === 1) return part[0].name;
+    if (part.length > 1) return n.slice(0, 60);
+  } else if (toks(n).length > 1) {
+    const whole = known.filter((p) => toks(p.name).length === 1 && toks(n).includes(nk(p.name)));
+    if (whole.length === 1) return whole[0].name;
+  }
   // 호칭 꼬리(님·씨 등)를 뗀 값이 기존 이름과 같으면 그쪽으로
   const stripped = k.replace(/(님|씨|군|양|선배|쌤|선생|선생님|공|교수님)$/, "");
   if (stripped !== k && stripped.length >= 2) for (const c of pool) if (nk(c) === stripped) return known.find((p) => nk(p.name) === stripped || (p.aliases ?? []).some((a) => nk(a) === stripped))?.name ?? c;
-  if (k.length >= 3) for (const c of pool) { const ck = nk(c); if (ck.length >= 3 && Math.abs(ck.length - k.length) <= 1 && dist1(ck, k)) return known.find((p) => nk(p.name) === ck || (p.aliases ?? []).some((a) => nk(a) === ck))?.name ?? c; }
+  if (k.length >= 3) {   // 한 글자 오타: 후보가 딱 한 명일 때만
+    const near = known.filter((p) => [p.name, ...(p.aliases ?? [])].some((c) => { const ck = nk(c); return ck.length >= 3 && Math.abs(ck.length - k.length) <= 1 && dist1(ck, k); }));
+    if (near.length === 1) return near[0].name;
+    if (!near.length) for (const c of extra) { const ck = nk(c); if (ck.length >= 3 && Math.abs(ck.length - k.length) <= 1 && dist1(ck, k)) return c; }
+  }
   return n.slice(0, 60);
 }
 function dist1(a, b) {   // 편집 거리가 1 이하인가
@@ -235,3 +255,22 @@ export function normalizeJsonKeys(obj) {
   }
   return obj;
 }
+
+// 실패한 응답이 어떤 종류인지 어림한다(호스트가 종료 사유를 안 주므로 글만 본다): empty=비었음, truncated=잘린 듯함, format=형식 오류.
+// 종류마다 다시 묻는 방법이 달라서 쓴다(리스바드 BardWiki의 empty/truncated/invalid-structure 구분과 같은 생각).
+export function failureKind(raw) {
+  const t = String(raw ?? "").trim();
+  if (!t) return "empty";
+  const open = (t.match(/[{[]/g) ?? []).length, close = (t.match(/[}\]]/g) ?? []).length;
+  if (open > close && /[{[]/.test(t)) return "truncated";             // JSON이 닫히지 않음
+  if (t.length >= 1500 && !/[\n.!?)\]}"'다요]$/.test(t)) return "truncated";  // 길고 문장 중간에서 끝남
+  return "format";
+}
+export const RETRY_NOTE = {
+  empty: "Your previous reply was empty. Give the final answer now, in the exact line format. No commentary.",
+  truncated: "Your previous reply was cut off. Answer again much shorter: only the most important lines, each line brief, and finish every line.",
+  format: "Reply with lines only, in the exact format above. No JSON."
+};
+
+// "none"/"없음" 한 줄만 온 응답 = 새로 확인된 게 없다는 정상 답(재시도하지 않고 저장도 하지 않는다).
+export const isNoneReply = (raw) => /^\s*[`"']*\s*(none|없음|변경\s*없음|no\s*change)\s*[.`"']*\s*$/i.test(String(raw ?? ""));

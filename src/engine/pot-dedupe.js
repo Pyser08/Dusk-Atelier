@@ -7,14 +7,18 @@ const key = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/[\s\
 
 export function redirectDuplicateCreates(scope, proposal, typeName = { character: "Character" }) {
   const docs = Object.values(scope?.documents ?? {}).filter((d) => d && d.type === typeName.character);
+  let ambiguous = 0;   // 별칭만 겹치는 후보가 여럿이라 합치지 못한 수
   const redirects = [];   // {ref, id}  새 문서 ref → 이미 있는 문서
   const merges = [];      // {ref, firstRef} 같은 응답 안의 중복
   const firstByKey = new Map();
   const documents = (proposal?.documents ?? []).map((change) => {
     if (change?.operation !== "create" || change.type !== "character" || !String(change.title ?? "").trim()) return change;
     const tk = key(change.title), ak = new Set((change.aliases_add ?? []).map(key));
-    const byTitle = docs.filter((d) => key(d.title) === tk), byAlias = docs.filter((d) => (d.aliases ?? []).some((a) => key(a) === tk));
+    // 같은 제목이 여럿이면 내용이 가장 많은 문서로
+    const byTitle = docs.filter((d) => key(d.title) === tk).sort((a, b) => (b.sections?.length ?? 0) - (a.sections?.length ?? 0))   // 같은 제목이 여럿이면 내용이 가장 많은 문서로, byAlias = docs.filter((d) => (d.aliases ?? []).some((a) => key(a) === tk));
+    const byAlias = docs.filter((d) => (d.aliases ?? []).some((a) => key(a) === tk));
     const byNick = docs.filter((d) => ak.has(key(d.title)));
+    if (!byTitle.length && (byAlias.length > 1 || byNick.length > 1)) ambiguous++;
     const hit = byTitle[0] ?? (byAlias.length === 1 ? byAlias[0] : null) ?? (byNick.length === 1 ? byNick[0] : null);
     if (hit) { redirects.push({ ref: change.document_ref, id: hit.id }); return { ...change, operation: "update", title: null }; }
     const first = firstByKey.get(tk);
@@ -24,7 +28,7 @@ export function redirectDuplicateCreates(scope, proposal, typeName = { character
   });
   return {
     proposal: redirects.length || merges.length ? { ...proposal, documents } : proposal,
-    count: redirects.length + merges.length,
+    count: redirects.length + merges.length, ambiguous,
     // 새 문서 id를 정한 뒤 부른다: refToId에 연결을 채운다.
     link(refToId) { for (const r of redirects) refToId[r.ref] = r.id; for (const m of merges) refToId[m.ref] = refToId[m.firstRef]; }
   };

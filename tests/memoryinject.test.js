@@ -81,7 +81,7 @@ test("digest conditions: >20 records and 10 runs, user digest protected, failure
   assert.equal(needsDigest({ ...p, records: rs.slice(0, 20) }, 99), false);
   const t = digestTargets(p); assert.equal(t.length, 20);
   assert.throws(() => applyDigest(p, t, "garbage", 10)); assert.equal(undigested(p).length, 25);
-  applyDigest(p, t, '{"digest":"압축"}', 10); assert.equal(p.digest, "압축"); assert.equal(undigested(p).length, 5);
+  applyDigest(p, t, JSON.stringify({ digest: t.map((r) => r.act).join(" ") }), 10); assert.ok(p.digest.startsWith("x0")); assert.equal(undigested(p).length, 5);
   assert.equal(needsDigest(p, 12), false);
 });
 test("injector hook: modifies only the request copy and ignores non-model types", async () => {
@@ -125,4 +125,30 @@ test("budget: a person who does not fit whole keeps their most important moments
   assert.ok(!text.includes("라".repeat(60)), "덜 중요한 순간부터 빠진다");
   assert.ok(estimateTokens(text) <= 140);
   assert.ok(manifest.included.some((x) => x.name === "미나"));
+});
+import { pastScenes } from "../src/engine/memoryinject.js";
+test("과거 회상: 예산 때문에 빠진 오래된 장면 중 지금 글과 겹치는 것만 짧게 넣는다", () => {
+  const scenes = [
+    { id: "s1", at: 1, sum: "옥상에서 우유팩 사건이 벌어짐", facts: ["사과 거부"], place: "옥상", who: ["미나"] },
+    { id: "s2", at: 2, sum: "도서관에서 시험 공부", facts: [], place: "도서관", who: ["하루"] },
+    ...Array.from({ length: 12 }, (_, i) => ({ id: "m" + i, at: 3 + i, sum: "가".repeat(120) + i, facts: [], place: "", who: [] })),
+    { id: "cur", at: 30, sum: "현재", facts: [], place: "", who: [] }
+  ];
+  const f = { cursor: { at: 30 }, scenes, people: {} };
+  const withPast = buildBlock(f, { messageCount: 100, recentText: "우유팩 사건 때 사과 거부한 거 기억나?", settings: { eventTokens: 100 } });
+  assert.match(withPast.text, /Earlier, relevant to now:/); assert.match(withPast.text, /우유팩 사건/); assert.ok(!/시험 공부/.test(withPast.text));
+  const none = buildBlock(f, { messageCount: 100, recentText: "아무 상관 없는 이야기", settings: { eventTokens: 100 } });
+  assert.ok(!/Earlier, relevant/.test(none.text));
+  assert.deepEqual(pastScenes([], "x", 100), { lines: [], tokens: 0 });
+});
+
+import { coversRecord } from "../src/engine/memorydigest.js";
+test("digest 안전: 요약이 담지 못한 기록은 digested로 표시하지 않아 계속 주입된다", () => {
+  assert.ok(coversRecord("미나는 옥상에서 하루에게 비밀을 털어놓았다", "옥상에서 비밀을 털어놓음"));
+  assert.ok(!coversRecord("둘은 친해졌다", "시험 전날 도서관에서 밤을 새웠다"));
+  const rs = [rec(1, "D", "옥상에서 비밀을 털어놓음"), rec(2, "D", "시험 전날 도서관에서 밤을 새웠다")].concat(Array.from({ length: 23 }, (_, i) => rec(10 + i, "D", "기타" + i)));
+  const p = { name: "미나", records: rs };
+  const t = digestTargets(p);
+  applyDigest(p, t, JSON.stringify({ digest: "미나는 옥상에서 비밀을 털어놓았고 이후 친해졌다" }), 10);
+  assert.equal(rs[0].digested, true); assert.ok(!rs[1].digested, "요약에 없는 기록은 남는다");
 });
