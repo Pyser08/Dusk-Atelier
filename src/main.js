@@ -58,8 +58,9 @@ async function start() {
   }
   // 화면 목록용 getDatabase 짧은 캐시(getDatabaseCached): 쓰기 계열 호출이 있으면 바로 비운다. Dusk 창을 열 때도 비운다.
   const dbc = createDbCache(raw);
-  wrapped.getDatabaseCached = (keys) => dbc.get(keys);
-  wrapped.invalidateDbCache = () => dbc.invalidate();
+  wrapped.getDatabaseCached = (keys, opts) => dbc.get(keys, opts);
+  wrapped.getDatabaseWarm = (keys) => dbc.warm(keys);   // 감시가 읽은 것도 캐시에 넣어 탭을 처음 열 때 다시 읽지 않게(1.8.3)
+  wrapped.invalidateDbCache = (opts) => (opts?.soft ? dbc.soften(opts.maxAge) : dbc.invalidate());
   for (const name of ["setCharacterToIndex", "setDatabaseLite"]) {
     const f = wrapped[name];
     wrapped[name] = async (...a) => { dbc.invalidate(); try { return await f(...a); } finally { dbc.invalidate(); } };

@@ -148,7 +148,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
       const orderSig = cur.join("|");
       const orderMoved = orderSig !== lastOrder;
       if (tailHit || orderMoved || !known || charCount === null || force) {
-        const db = await api.getDatabase(["characters"]);
+        const db = await (api.getDatabaseWarm ?? api.getDatabase).call(api, ["characters"]);
         if (!db || !Array.isArray(db.characters)) throw new Error("봇 목록을 읽지 못했어요");
         charCount = db.characters.length;
         const live = db.characters.filter((c) => c?.chaId && !c.trashTime && c.type !== "group").map((c) => c.chaId);
@@ -193,7 +193,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
   // 모듈: 리스에 .risum을 끌어다 놓거나 가져오면 새 id의 모듈이 생긴다 → 이름이 같은 기존 모듈이 있으면 묻는다
   async function checkModules() {
     lastMod = Date.now();
-    const mdb = await api.getDatabase(["modules"]);
+    const mdb = await (api.getDatabaseWarm ?? api.getDatabase).call(api, ["modules"]);
     if (!mdb || !Array.isArray(mdb.modules)) return;
     const mods = mdb.modules;
     const ids = mods.map((m) => m?.id).filter(Boolean);
@@ -234,7 +234,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
   }
   // 새 봇 중 "기존 봇의 새 버전"으로 보이는 것만 골라 알린다
   async function inspect(added) {
-    const chars = (await api.getDatabase(["characters"]))?.characters ?? [];
+    const chars = (await (api.getDatabaseWarm ?? api.getDatabase).call(api, ["characters"]))?.characters ?? [];
     const items = [], fresh = [];
     for (const id of added) {
       const copy = chars.find((c) => c?.chaId === id);

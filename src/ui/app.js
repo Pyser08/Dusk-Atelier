@@ -434,7 +434,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     });
   }
   async function open(opts) {
-    api.invalidateDbCache?.();   // 리스 쪽에서 바뀐 것을 처음 화면에 반영
+    api.invalidateDbCache?.({ soft: true, maxAge: 15000 });   // 리스 쪽에서 바뀐 것을 반영하되, 방금(15초 안) 읽은 건 남겨 통째 복사를 되풀이하지 않는다
     try {
       const cs = await api.getColorScheme();
       state.risuScheme = cs?.scheme?.type === "light" ? "light" : "dark";
