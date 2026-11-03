@@ -1,0 +1,49 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><title>개발자 가이드 · Dusk Atelier</title><link rel="icon" href="../assets/img/icon.webp"><link rel="stylesheet" href="../assets/site.css"></head>
+<body data-root="../" data-page="dev/">
+<div class="wrap"><nav class="side"></nav><main>
+<span class="eyebrow">개발자</span><h1>개발자 가이드</h1>
+<p class="lead">모듈·봇 제작자는 패치 배포를, 플러그인 개발자는 연동과 빌드를 여기서 찾아요.</p>
+<h2 id="devmode">개발자 모드</h2>
+<p>도구 탭 맨 위 스위치로 켜요. 수정한 부분만 담은 업데이트 패치를 쉽게 만들어 배포할 수 있어요.</p>
+<h2 id="patch">패치(.rbupatch) 만들기</h2>
+<p>도구 탭, 모듈 메뉴, 봇 상세에서 열어요.</p>
+<ol class="steps">
+<li><b>배포한 버전(기준)</b>배포한 상태 그대로일 때 "지금 상태를 기준으로 표시"를 눌러요. 이미 고쳤다면 기록에서 수정 전 상태를 고를 수 있어요.</li>
+<li><b>바뀐 내용</b>기준과 비교해 정보·로어북·정규식·트리거·에셋 중 바뀐 곳을 수정/추가/삭제로 보여 주고, 패치 크기를 미리 알려 줘요.</li>
+<li><b>패치 정보</b>버전, 제작자, 변경 내용을 적고 "패치 파일 만들기"를 누르면 <code>이름_v버전.rbupatch</code>가 내려받아져요.</li>
+</ol>
+<p>만든 뒤 지금 상태를 새 기준으로 옮길 수 있어요. 그러면 다음 패치에는 그 뒤에 고친 것만 들어가요.</p>
+<div class="note"><span class="ico">📦</span><div>바뀐 필드와 바뀐 목록 항목만 담아서 대형 봇·모듈도 패치가 작아요. 예: 276MB 모듈에서 로어 5개 수정 → 약 20KB.</div></div>
+<h2 id="apply">받는 사람 쪽</h2>
+<p>"패치 적용"으로 파일을 골라요. 적용 전에 버전과 변경 내용을 보여 주고, 받는 사람이 직접 고친 부분은 그대로 남아요.</p>
+<h2 id="interop">DA Interop</h2>
+<p><a href="https://github.com/Pyser08/dusk-atelier-interop">DA Interop</a> 코드를 넣은 플러그인은 플러그인 탭에 설정 화면이 자동으로 생겨요. 값·프리셋을 보내면 그 플러그인이 적용하고 결과를 알려 줘요. 연동 코드가 든 템플릿은 플러그인 탭의 "만들기"에서 고치고, 검사·내려받기·설치까지 할 수 있어요.</p>
+<div class="warn"><span class="ico">⚠️</span><div>RisuAI(PR #1572 이후)와 이를 따르는 포크는 플러그인이 다른 플러그인을 켜고 끄거나 순서·코드를 바꾸는 것을 막아요. 그런 기능은 없어요.</div></div>
+<h2 id="build">빌드와 검사</h2>
+<pre><code>npm install                    # esbuild 설치
+node tools/build.mjs           # src/ → dusk_atelier.js (버전은 package.json)
+node tools/build.mjs --check   # 빌드 결과가 저장소의 dusk_atelier.js와 같은지 확인</code></pre>
+<p>테스트는 <code>npm test</code>, 빌드와 확인은 <code>npm run build</code> → <code>npm run check</code>("동일함")예요. 빌드물도 함께 커밋해요.</p>
+<h2 id="src">소스 구조</h2>
+<table><tr><th>폴더</th><th>내용</th></tr>
+<tr><td><code>src/engine/</code></td><td>파일 읽기·쓰기(risum·charx·png·jpeg·zip), 매칭, 3방향 병합, 업로드, 백업, 패치, 이미지 도구</td></tr>
+<tr><td><code>src/data/</code></td><td>모듈·프리셋·페르소나·캐릭터 순서 저장</td></tr>
+<tr><td><code>src/ui/</code></td><td>테마, 공용 부품, 화면(<code>screens/</code>), 가져오기 화면(<code>legacy.js</code>)</td></tr>
+<tr><td><code>src/tide/</code></td><td>RisuTide에서 가져온 업데이트 판단 로직</td></tr></table>
+<p><code>src/engine/pot/</code>, <code>src/data/pot/</code>는 <code>tools/pot-split.mjs</code>가 자동 생성하니 직접 고치지 않아요.</p>
+<h2 id="storage">저장 위치</h2>
+<p>모듈 데이터에는 RisuAI 표준 필드만 쓰고, 순서·폴더·꺼짐 같은 관리 정보는 전용 키에 둬요. 설정은 pluginStorage에 저장돼서 다른 기기와 동기화돼요.</p>
+<table><tr><th>키</th><th>내용</th></tr>
+<tr><td><code>rbm:ui:v1</code></td><td>테마, 백업 보관 수, 개발자 모드</td></tr>
+<tr><td><code>rbm:moduleMeta:v1</code></td><td>모듈 목록 폴더, 이름 색, 에셋 폴더, 연결 기억</td></tr>
+<tr><td><code>rbm:disabledModules:v1</code></td><td>꺼 둔 모듈 보관함</td></tr>
+<tr><td><code>rbm:moduleOrder:v1</code></td><td>모듈 순서</td></tr>
+<tr><td><code>rbm:personaInjected:v1</code></td><td>페르소나 연결로 넣은 기록</td></tr>
+<tr><td><code>rbm:presets:v1</code></td><td>프리셋</td></tr>
+<tr><td><code>rbm:persona:v1</code></td><td>페르소나 연결</td></tr>
+<tr><td><code>rbu:index:v1</code></td><td>원본 기록, 백업 목록</td></tr></table>
+<div class="pager"><a href="../guide/start.html"><small>← 이전</small>처음 사용자 가이드</a><a class="n" href="../index.html"><small>처음으로 →</small>안내서 허브</a></div>
+<footer>AGPL-3.0 · <a href="https://github.com/Pyser08/Dusk-Atelier">GitHub</a></footer>
+</main><aside class="toc"></aside></div>
+<script>(function(){var t;try{t=localStorage.getItem("da-theme")}catch(e){}if(t)document.documentElement.setAttribute("data-theme",t)})()</script>
+<script src="../assets/site.js"></script></body></html>

@@ -417,3 +417,7 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - (2026-11-03) **정정**: 사용자가 보낸 실제 1번 시안(`preview-1.html`, 그림 13종 내장)에 순서만 바꿔 `docs/arca/drafts/v1.8.3-design-1-final.html`로 저장 — 위의 `v1.8.3-design-1.html`(내가 다시 만든 판)·1+7·1+2는 쓰지 않음. 순서 새 화면→기억→이야기 도우미→캐시(번호·항목·요약 카드·소개 문장·시리즈 줄 반영). 그림 자리 13곳: icon·guide·banner·ld·spot-screen·spot-memory·spot-story·spot-cache·more·warn·install·thanks·closing(그림 파일은 `arca-images.zip`로 사용자에게 전달, 저장소엔 없음). 머리 제목은 그대로('공정한 주사위, 나를 기억하는 인물들.', 바꿀지 확인 중).
 - (2026-11-03) 아카 에디터(Froala)가 이미지에 `fr-dib`(display:block; margin:5px auto)를 붙여 flex 줄 안 그림이 자동 여백으로 글자를 밀어냄 → **flex 줄 안 `<img>`엔 인라인 `margin:0`을 꼭 넣을 것**(ARCA-POST 제약에 추가 필요). `v1.8.3-design-1-final.html`에 반영.
 - (2026-11-03) 사용자가 올린 그림 주소(아카 에디터가 만든 `//ac.arca.live/…` 링크)를 그대로 쓰기로 함 → `docs/arca/v1.8.3.html`을 사용자가 붙여 넣은 1번 디자인 소스(+flex 줄 그림 `margin:0` 수정)로 교체. 순서 새 화면→기억→이야기 도우미→캐시. 마무리 루네 그림(closing)은 사용자 소스에 없어서 안 넣음. 머리 제목은 그대로.
+
+## 안내서 사이트 (docs/site/) — 시작
+- GitHub Pages용 정적 사이트. 허브(index) + 처음 사용자 가이드(guide/start) + 개발자 가이드(dev/) 완료, 기능 6페이지(memory·story·cocoa·image-tags·look·manage)는 허브에 "준비 중" 카드. 새 페이지 만들면 `assets/site.js` NAV의 세 번째 값(1=준비 중)을 지운다.
+- Pages 켜기(저장소 설정 → Pages → 폴더 /docs)는 사용자가 직접. 워크플로는 건드리지 않음. 내용 출처는 README/CHANGELOG만.
