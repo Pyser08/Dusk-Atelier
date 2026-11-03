@@ -12,7 +12,10 @@ const newIndex = () => ({ v: V3, settings: structuredClone(DEFAULT_SETTINGS), bo
 const parse = (raw) => { try { return typeof raw === "string" ? JSON.parse(raw) : raw && typeof raw === "object" ? raw : null; } catch { return null; } };
 const wikiDocs = (w) => Object.keys(w?.documents ?? {}).length;
 
-export function createMemoryStoreV3(api) {
+// opts.storage: getItem/setItem/removeItem을 가진 저장소(기본 api.pluginStorage). Dusk Cellar가 있으면 memoryremote.js가
+// 채팅 기억 폴더(dusk.mem.v3.f.*)만 서버로 보낸다(1.8.3).
+export function createMemoryStoreV3(api, { storage } = {}) {
+  const ps = storage ?? api.pluginStorage;
   let chain = Promise.resolve();
   const serial = (fn) => { const run = chain.then(fn, fn); chain = run.then(() => {}, () => {}); return run; };
   // 원문(문자열) 짧은 캐시(v1.8.3, 홈·기억 탭 속도): 인덱스와 채팅 기억 폴더를 같은 화면에서 여러 번 읽던 것을 한 번으로.
@@ -24,7 +27,7 @@ export function createMemoryStoreV3(api) {
     const hit = raws.get(k);
     if (hit && Date.now() - hit.t < RAW_TTL) return hit.p;
     const ent = { t: Date.now(), p: null };
-    ent.p = Promise.resolve(api.pluginStorage.getItem(k)).then((r) => { if (typeof r !== "string" && raws.get(k) === ent) raws.delete(k); return r; }, (e) => { if (raws.get(k) === ent) raws.delete(k); throw e; });
+    ent.p = Promise.resolve(ps.getItem(k)).then((r) => { if (typeof r !== "string" && raws.get(k) === ent) raws.delete(k); return r; }, (e) => { if (raws.get(k) === ent) raws.delete(k); throw e; });
     raws.delete(k); raws.set(k, ent);
     while (raws.size > RAW_MAX) raws.delete(raws.keys().next().value);
     return ent.p;
@@ -32,9 +35,9 @@ export function createMemoryStoreV3(api) {
   const get = async (k) => parse(await rawGet(k));
   const set = async (k, v) => {
     raws.delete(k);
-    try { return await api.pluginStorage.setItem(k, JSON.stringify(v)); } finally { raws.delete(k); }
+    try { return await ps.setItem(k, JSON.stringify(v)); } finally { raws.delete(k); }
   };
-  const rm = (k) => { raws.delete(k); return api.pluginStorage.removeItem(k); };
+  const rm = (k) => { raws.delete(k); return ps.removeItem(k); };
 
   const readIndex = async () => {
     const raw = await get(INDEX_KEY);
@@ -59,6 +62,8 @@ export function createMemoryStoreV3(api) {
   const wikiListeners = new Set();
   return {
     serial,
+    // 원문 캐시 비우기(저장 위치가 바뀌었을 때)
+    dropCache: () => raws.clear(),
     getIndex: () => readIndex(),
     updateIndex: (fn) => serial(async () => { const idx = await readIndex(); const r = await fn(idx); await set(INDEX_KEY, idx); return r; }),
     getFolder: readFolder,

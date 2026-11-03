@@ -445,3 +445,34 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 버전 1.8.3으로 올림(사용자 지시 2026-11-03): package.json·CHANGELOG 머리(개발 중→2026-11-03)·빌드 산출물. 릴리스는 main push 때만 — 아직 main 머지 안 함.
 - 릴리스 전 점검(2026-11-03): main은 브랜치보다 앞선 커밋 없음·충돌 없음, 사이트 링크 깨짐 0, e2e 23개 중 22개 통과. `tests/e2e/run-app.mjs`는 옛 탭 이름(리수폿·인물·꾸미기) 기준이라 사이드바 확인 2개만 새 구성에 맞췄고 그 뒤 단계는 38줄에서 멈춤 → 새 탭 구성(장기 기억·코코아·기억 카드·플러그인 꾸미기 등)에 맞춰 다시 써야 함(회귀 아님, 이전부터 낡음). 릴리스 뒤 Pages 소스를 main /docs로 바꿀 것.
 - 자동 릴리스 끔(사용자 지시 2026-11-03): release.yml은 main push로 돌지 않고 `v*` 태그 푸시(package.json 버전과 같아야 함)일 때만 릴리스. 릴리스하려면 사용자가 지시한 뒤 `git tag v1.8.3 <main 커밋> && git push origin v1.8.3`.
+
+## Dusk Cellar (백그라운드 서버, 별도 저장소) — 진행 상황 2026-11-03
+- 저장소: **Pyser08/Dusk-Cellar** (main, b48c204). 리스 폴더 안에 클론 → `node setup.cjs` 한 번으로 설치. 그쪽 `HandOff/STATE.md`가 상세 기준.
+- 지금 있는 것(뼈대): `setup.cjs`(리스 시작 파일 자동 찾기 → pnpm/npm 빌드 → pm2 목록 보여 주고 지울 것 고르기(리스 직접 실행 항목 '추천') → 실행기 pm2 등록·save → 응답 확인), `cellar-start.cjs`(리스+Cellar 함께 켜고 끄기, Cellar만 재시작), `/cellar/health`(토큰 없이), 그 외 주소는 `dusk-data/token.txt` 토큰 필수, 127.0.0.1:6011. 시험 12개 통과(가짜 pm2·npm 전체 흐름 포함).
+- 실제 설치: RisuBard 우분투 서버(pm2)에서 5/5 통과·health 응답(2026-11-03). 미확인: 윈도우·맥·Termux·원본 RisuAI.
+- 결정됨: 이름 Dusk Cellar / 리스 프로세스 안에 섞지 않고 실행기로 함께 실행 / 서버는 선택 기능(없으면 플러그인 지금 방식) / 리스 데이터는 건드리지 않음.
+- 플러그인 연결(2026-11-03): `src/data/cellar.js`(probeCellar: `api.nativeFetch(GET)` → 실패 시 fetch, health의 name==='dusk-cellar'만 연결, createCellar 1분 기억·동시 요청 합치기, 주소 키 `dusk.cellar.url` 기본 http://127.0.0.1:6011) + 설정 탭 '서버' 카드의 Dusk Cellar 줄(상태·다시 확인, 고급은 주소). 원리: 리스 노드 서버에서 nativeFetch는 리스 서버의 /proxy2(리스 암호 필요, 대상 제한 없음)가 대신 보내므로 127.0.0.1 = 그 서버 → Cellar는 loopback 요청을 토큰 없이 받음(`--require-token`이면 토큰 필수). 호스팅 RisuAI·PocketRisu는 '없음'이 정상. 시험 tests/cellar.test.js, e2e tests/e2e/run-cellar.mjs. 실제 RisuBard(Oracle VM)에서 '연결됨' 확인(2026-11-03). 미확인: PocketRisu·PC 앱.
+- 다음: ① 1단계 기억 백업 + 화면에 필요한 조각만 돌려주기(효과 측정) ② (효과 있으면) 분석·임베딩 서버 실행.
+- 장기기억 서버 저장(2026-11-03, 사용자 결정: 서버 감지 시 서버에만, 끊기면 플러그인에 임시 대기열): `src/data/memoryremote.js` — `memorystore3.js`에 `storage`를 주입(get/set/rm 3곳)해 `dusk.mem.v3.f.*`만 서버로. 인덱스·설정은 플러그인. 표시 `dusk.cellar.mem`(공유 저장소라 기기마다 다시 올리지 않음), 대기열 `dusk.cellar.queue`(폴더당 마지막 값, opId, baseRev null=모름 → 받아서 합침). 처음 감지 시 전부 올리고 다시 읽어 확인 후 표시. 옛 플러그인 사본은 지우지 않음(끊겼을 때 읽기, 되돌리기). 충돌은 `mergeFolder`(기록·장면 id 합치기, 위키 revision 큰 쪽, 이 기기 삭제 우선). 연속 2번 실패하면 30초 끊김으로 보고 대기열. `memory.js` start: `remote.init()`(표시만, 빠름) → migrate → `remote.detect()`(기다리지 않음). 설정 '서버' 창에 저장 위치·'기억을 이 기기로 되돌리기'. 시험 tests/memoryremote.test.js(13), e2e run-cellar.
+- 세이브 백업(2026-11-03): Cellar `/cellar/backup`(증분 하드링크 스냅샷, 복원은 실행기가 리스 멈추고 처리) + `src/data/cellarbackup.js` + 설정 '서버' 창의 '세이브 백업…'(features에 backup일 때만). 시험 tests/cellarbackup.test.js, e2e run-cellar.
+- 플러그인 코드 수정(2026-11-03, RisuBard만, 사용자 결정: 리스 암호는 다시 안 묻고 확인 창 + 고치기 전 백업이 대신): 리스가 플러그인의 다른 플러그인 수정을 막아(PR #1572) Cellar `POST /cellar/plugins`(action list·get·apply, features에 `plugins`)가 리스 설정 파일(`settings/app.json`, 비밀 이름이 섞이면 `secrets/credentials.json`)의 그 플러그인 `script`만 고치고 `/api/external-changes/resolve`(accept)로 리스가 받아들이게 한다(자세한 순서·안전장치는 Cellar HandOff/STATE.md). 플러그인 쪽: `src/data/cellarplugins.js`(호출·`lineDiff`·`headerProblem`·`describeEditError`), `src/ui/screens/pluginedit.js`(편집 → 변경 확인 → 백업 선택 → 적용 → 결과·되돌리기), 플러그인 탭 행 메뉴 '코드 수정'(`hasPluginEdit`일 때만). 600KB 넘는 코드는 색 없이 줄 번호만 있는 편집기(측정: 색 편집기는 1MB에 4초·2.3MB에 6초 멈추고, 글자를 칠 때마다 전체를 다시 칠함). 큰 코드는 gzip(scriptZ)으로 주고받는다(리스 프록시가 응답을 조각조각 넘겨 2.3MB가 20~30초 걸린 것이 원인 추정). `cellar.js`: 5xx에도 본문을 오류에 남김(`err.json`), `withTimeout`이 타이머를 지움. 시험 tests/cellarplugins.test.js, e2e run-pluginedit.mjs(+app.entry.js 가짜 /cellar/plugins·__bkJob). CHANGELOG·버전은 건드리지 않음(릴리스 때 반영).
+- 플러그인 수정 미확인(실제 RisuBard 서버, 사용자 확인 필요): ① 우리가 고친 settings/app.json을 리스가 '외부 변경 검토'로 잡고 accept로 받아들이는지(소스상 /api/external-changes[/resolve]), ② 열린 화면이 새로고침 전에 저장할 때 우리 수정이 덮이는지(리스는 409로 막는 구조), ③ nativeFetch POST로 3.6MB 본문이 /proxy2를 지나는지, ④ 고치기 전 세이브 백업 시간(31만 파일)과 백업 5개 보관 한도에 수동 백업이 밀려나는 문제(플러그인 수정 때마다 1개씩 씀). 이 환경에선 npm 레지스트리에 못 닿아 실제 RisuBard 서버를 띄우지 못했다(가짜 서버로만 시험).
+- 미확인: 실제 RisuBard에서 nativeFetch POST(/proxy2 → Cellar) 동작, 서버 저장 후 기억 화면·주입 체감 속도, 31만 파일 백업 시간, 복원 직후 열린 화면이 옛 DB를 다시 저장하는지.
+- 정리 대기(삭제는 사용자 지시 필요): 이 저장소의 `server/dusk-start.cjs`, `tests/dusk-start.test.js`는 Cellar로 옮겨 가 중복.
+
+## 플러그인 매니저(v3.0.1) 기능 이식 (사용자 요청 2026-11-03) — 1~4단계 구현, 5단계(인자 제어 문법)는 매니저 독자 규격이라 제외(사용자 확인)
+기준: 사용자가 첨부한 `plugin-manager-v3_3.0.1.js`. 리스가 `setDatabaseLite`의 `plugins`를 잘라 내므로(v3.svelte.ts) 목록을 바꾸는 모든 일은 Cellar `/cellar/plugins`의 `mutate`가 한다(RisuBard만, features `plugins`).
+- 데이터: `src/data/pluginmgr.js`(Cellar 호출·`parseRegister`/`buildRegister`/`convertApi21`·`dupPlan`·`makeBackup`/`planRestore`·프리셋 `snapshotPreset`/`presetOps`/`exportPresets`/`importPresets`·카테고리 JSON·`orphanMeta`·`pairTarget`), `src/data/storagemgr.js`(스토리지 저장 충돌 검사·내보내기·가져오기). 화면: `ui/screens/pluginmgr.js`(줄 작업·등록·중복·백업/복원·프리셋·메타 정리), `ui/screens/storageedit.js`(값 수정·새 키·가져오기), `plugins.js`에 연결(줄마다 켜기/끄기 스위치, 줄 메뉴 별칭·위로·아래로·삭제, ··· 메뉴 파일에서 등록·글로벌 프리셋·중복 정리·전체 백업·백업 복원·메타데이터 정리). 시험: tests/pluginmgr.test.js, storagemgr.test.js, e2e run-pluginmgr.mjs.
+- 프리셋 = 켜짐/꺼짐 + 순서 + 카테고리(`rbm:pluginPresets:v1`). 설정값·플러그인 스토리지는 안 넣는다. 디바이스 페어는 이름만 저장(`pair.mobile/desktop`) — **화면 너비에 따라 자동 전환하는 동작은 아직 안 넣음**(`pairTarget`·`deviceKind` 함수만 있음).
+- 하지 못한 것: TypeScript → JavaScript 변환(등록 화면이 TS로 보이면 경고만), 스토리지 5종 중 pluginStorage만(safeLocalStorage·IndexedDB·서버 저장소·DB 저장 데이터는 아직), 백업에 플러그인 스토리지 미포함(매니저와 같음), 실제 RisuBard 서버 확인 전부 미확인(가짜 서버 시험만).
+- 알려진 위험: 백업 복원·통째 바꾸기는 목록 해시로 그새 바뀜을 막지만, 열려 있는 리스 화면이 나중에 저장하면 덮어쓸 수 있다(새로고침 안내).
+- (2026-11-03 점검) 플러그인 탭: 서버 기능(Cellar plugins)이 있으면 **서버가 아는 목록**을 보여 준다(`getPlugins`가 `fromServerList`). 리스는 메모리 목록을 들고 있어 Cellar로 바꾼 직후 `getDatabase`는 옛 상태이기 때문. 리스 쪽과 다르면(`needsReload`) '새로고침 필요' 안내. 탭을 열 때 Cellar 확인을 기다리지 않는다(없는 사용자에게 1.5초 지연이 생기던 것 제거; 찾으면 한 번 다시 그림). 자기 자신(dusk_atelier)의 스위치·삭제는 막음. Cellar `replaceAll`(복원)은 머리말 이름 검사를 하지 않음(옛 플러그인 복원용). 백업(`/cellar/backup`)은 호스트 무관(폴더 스냅샷; PocketRisu SQLite는 온라인 백업) — 플러그인 '수정'만 RisuBard 전용.
+
+- Cellar 업데이트 버튼(2026-11-03): `src/data/cellarupdate.js`(check/apply/rollback + 재연결 대기), 설정 → 서버 → Dusk Cellar 창 `rb-cellar-update`(features에 "update"일 때만). 서버는 Dusk-Cellar `update.cjs`·`POST /cellar/update`. 서버 실물 확인은 아직 못 함.
+
+- 플러그인 수정 3호스트(2026-11-03): Cellar `plugins.cjs`가 risubard·risuai·pocketrisu 지원. 결과에 `overwritten`(브라우저가 옛 목록으로 덮어씀) 반영(pluginedit·pluginmgr). 실서버 확인은 아직.
+- 업데이트 적용은 응답을 못 받아도(재시작 중 연결 끊김) 재연결 뒤 check로 끝났는지 확인(cellarupdate.js restarting).
+
+## 1.9.0 — Cellar 새 버전 알림 (2026-11-03)
+- `src/data/cellarlatest.js`: GitHub 최신 릴리스(Dusk-Cellar) 태그 vs 연결된 Cellar 버전 비교 → toast 1회(버전별, `dusk.cellar.notified`) + 설정 Cellar 줄에 '새 버전 vX'(`ctx.cellarNew`). app.js 열 때 호출. 시험: tests/cellarlatest.test.js.
+- 확인 못 한 것: 실제 GitHub API 응답(Cellar 릴리스 v0.1.0이 있어야 동작), 리스 안에서 nativeFetch가 api.github.com을 통과하는지.

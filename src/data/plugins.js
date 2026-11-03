@@ -141,7 +141,8 @@ export async function listPlugins(api) {
   for (const p of list) count.set(p?.name, (count.get(p?.name) ?? 0) + 1);
   return list.map((p, i) => ({
     name: p?.name ?? "",
-    displayName: p?.displayName || p?.name || "(이름 없음)",
+    displayName: p?.alias || p?.displayName || p?.name || "(이름 없음)",
+    alias: typeof p?.alias === "string" ? p.alias : "",
     version: p?.versionOfPlugin ?? "",
     apiVersion: p?.version,
     updateURL: p?.updateURL ?? "",

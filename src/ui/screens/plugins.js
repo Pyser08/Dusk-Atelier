@@ -5,6 +5,13 @@ import { badge, btn, confirmDialog, iconBtn, loading, note, openMenu, promptDial
 import * as P from '../../data/plugins.js';
 import * as T from '../../data/pluginTemplate.js';
 import { codeEditor, highlight } from '../codeedit.js';
+import { createCellar } from '../../data/cellar.js';
+import { hasPluginEdit } from '../../data/cellarplugins.js';
+import { openPluginEdit } from './pluginedit.js';
+import * as MG from './pluginmgr.js';
+import * as M from '../../data/pluginmgr.js';
+import * as SM from '../../data/storagemgr.js';
+import { openStorageNew, openStorageImport, editStorageItem } from './storageedit.js';
 
 var VIEWS = [["list", "목록"], ["interop", "연동 설정"], ["create", "만들기"], ["storage", "저장소"]];
 var INTEROP_URL = "https://pyser08.github.io/dusk-atelier-interop/";
@@ -15,11 +22,28 @@ var memo = (ctx) => ctx.state.pluginCache ??= {};
 async function getPlugins(ctx, fresh) {
   const c = memo(ctx);
   if (fresh || !c.plugins || Date.now() - c.pluginsAt > PLUGINS_TTL) {
-    c.plugins = await P.listPlugins(ctx.api).catch(() => []);
+    const db = await P.listPlugins(ctx.api).catch(() => []);
+    c.plugins = db; c.reloadNeeded = false; c.serverList = false;
+    // 서버(Cellar)가 목록 수정을 지원하면 서버가 아는 목록을 보여 준다(리스는 새로고침 전까지 옛 목록을 들고 있어서)
+    const st = cellarOf(ctx).peek();
+    if (hasPluginEdit(st)) {
+      try {
+        const sv = M.fromServerList((await MG.mgrOf(ctx, st).list()).plugins, await P.loadCategories(ctx.api));
+        c.reloadNeeded = M.needsReload(db, sv); c.plugins = sv; c.serverList = true;
+      } catch { /* 서버를 못 읽으면 리스 쪽 목록 그대로 */ }
+    }
     c.pluginsAt = Date.now();
     ctx.setNavCount("plugins", c.plugins.length || void 0);
   }
   return c.plugins;
+}
+// Cellar가 플러그인 코드 수정을 지원하는지(1.8.3). 목록 화면을 막지 않도록 화면을 열 때 미리 한 번 물어 두고(1분 기억),
+// ··· 메뉴를 열 때는 있는 값을 쓴다. 아직 답이 없으면 잠깐만 기다리고, 없으면 '코드 수정'을 보여 주지 않는다.
+var cellarOf = (ctx) => ctx.cellar ??= ctx.memory?.cellar ?? createCellar(ctx.api);
+async function cellarStatus(ctx) {
+  const c = cellarOf(ctx);
+  const k = c.peek(); if (k?.ok) return k;
+  return await Promise.race([c.status().catch(() => null), new Promise((r) => setTimeout(() => r(null), 1500))]);
 }
 async function getInterop(ctx, fresh) {
   const c = memo(ctx);
@@ -84,6 +108,10 @@ var refresh = (ctx) => renderPlugins(ctx, { fresh: true });
 
 // ── 목록 ──
 async function viewList(ctx, { fresh }) {
+  // 서버 기능은 이미 찾은 값만 쓴다(기다리지 않는다). 아직 못 찾았으면 찾은 뒤에 한 번 다시 그린다.
+  const cellar0 = cellarOf(ctx).peek();
+  const canMgr = hasPluginEdit(cellar0);
+  if (!canMgr) cellarOf(ctx).status().then((st) => { if (hasPluginEdit(st) && ctx.state.pluginView === "list" && ctx.main?.querySelector(".rb-plugins")) renderPlugins(ctx, { fresh: true }); }).catch(() => {});
   // 플러그인 목록과 연동 값을 동시에 읽는다(1.8.3). 연동의 '설치됨' 표시는 목록이 오면 바로 채운다.
   const [plugins, interop] = await Promise.all([getPlugins(ctx, fresh), getInterop(ctx, fresh)]);
   { const names = new Set(plugins.map((p) => p.name)); for (const e of interop) if (e.pluginName) e.installed = names.has(e.pluginName); }
@@ -120,7 +148,11 @@ async function viewList(ctx, { fresh }) {
         ),
         h("span", { class: "meta" }, [p.name, p.version && `v${p.version}`, fmtBytes(p.size)].filter(Boolean).join(" · "))
       ),
-      iconBtn("more", `${p.displayName} 메뉴`, { onClick: (ev) => rowMenu(ctx, p, linked.get(p.name), ev.currentTarget) })
+      canMgr ? switchEl(p.enabled, { disabled: p.self, label: `${p.displayName} ${p.enabled ? "끄기" : "켜기"}`, onChange: (on) => MG.toggleEnabled(ctx, cellar0, p, on, () => refresh(ctx)).then((ok) => { if (!ok) renderPlugins(ctx); }) }) : null,
+      iconBtn("more", `${p.displayName} 메뉴`, { onClick: async (ev) => {
+        const anchor = ev.currentTarget;
+        rowMenu(ctx, p, linked.get(p.name), anchor, await cellarStatus(ctx), plugins);
+      } })
     );
   };
   return h(
@@ -141,9 +173,16 @@ async function viewList(ctx, { fresh }) {
       // 드물게 쓰는 새로고침·내보내기는 ··· 메뉴로
       iconBtn("more", "플러그인 더 보기", { id: "rb-plug-more", onClick: (ev) => openMenu(ctx.win, ev.currentTarget, [
         { label: "새로고침", icon: "refresh", onClick: () => refresh(ctx) },
+        canMgr && { label: "파일에서 등록", icon: "plus", onClick: () => MG.openRegister(ctx, cellar0, () => refresh(ctx)) },
+        canMgr && { label: "글로벌 프리셋", icon: "sliders", onClick: () => MG.openPresets(ctx, cellar0, () => refresh(ctx)) },
+        canMgr && { label: "중복 정리", icon: "trash", onClick: () => MG.openDup(ctx, cellar0, () => refresh(ctx)) },
+        canMgr && { label: "전체 백업", icon: "download", onClick: () => MG.backupAll(ctx, cellar0) },
+        canMgr && { label: "백업 복원", icon: "upload", onClick: () => MG.openRestore(ctx, cellar0, () => refresh(ctx)) },
+        canMgr && { label: "메타데이터 정리", icon: "refresh", onClick: () => MG.openMetaClean(ctx, cellar0, () => refresh(ctx)) },
         { label: "내보내기", icon: "upload", onClick: async () => download(`dusk-plugins-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, await P.exportAll(ctx.api), "application/json") }
       ]) })
     ),
+    memo(ctx).reloadNeeded ? note("warn", "서버에서 바꾼 내용이 있어요. 리스를 새로고침(F5 또는 앱 다시 시작)하면 적용돼요. 지금 목록은 서버 기준이에요.") : null,
     shown.length ? null : h("div", { class: "rb-empty" }, q ? "찾는 플러그인이 없어요." : "플러그인이 없어요."),
     keys.map((g) => h(
       "details",
@@ -154,13 +193,19 @@ async function viewList(ctx, { fresh }) {
   );
 }
 
-function rowMenu(ctx, p, entry, anchor) {
+function rowMenu(ctx, p, entry, anchor, cellar, all = []) {
   openMenu(ctx.win, anchor, [
     entry && { label: "연동 설정 열기", icon: "sliders", onClick: () => {
       ctx.state.pluginView = "interop";
       ctx.state.pluginOpen = entry.id;
       renderPlugins(ctx);
     } },
+    // 리스는 플러그인이 다른 플러그인을 고치지 못하게 막아서, 서버(Dusk Cellar)가 대신 고친다(RisuBard·PocketRisu·순정 리스AI)
+    hasPluginEdit(cellar) && { label: "코드 수정", icon: "code", onClick: () => openPluginEdit(ctx, p, cellar) },
+    hasPluginEdit(cellar) && { label: p.alias ? "별칭 바꾸기" : "별칭 추가", icon: "edit", onClick: () => MG.editAlias(ctx, cellar, p, () => refresh(ctx)) },
+    hasPluginEdit(cellar) && p.order > 0 && { label: "위로", icon: "up", onClick: () => MG.movePlugin(ctx, cellar, p, -1, () => refresh(ctx)) },
+    hasPluginEdit(cellar) && p.order < all.length - 1 && { label: "아래로", icon: "down", onClick: () => MG.movePlugin(ctx, cellar, p, 1, () => refresh(ctx)) },
+    hasPluginEdit(cellar) && !p.self && { label: "삭제", icon: "trash", onClick: () => MG.removePlugin(ctx, cellar, p, () => refresh(ctx)) },
     { label: p.category ? `카테고리: ${p.category}` : "카테고리 지정", icon: "folder", onClick: async () => {
       const c = await promptDialog(ctx.win, { title: "카테고리", label: "비우면 미분류로 돌아가요", value: p.category, placeholder: "예: 번역, UI" });
       if (c === null) return;
@@ -425,6 +470,9 @@ async function viewStorage(ctx, { fresh }) {
       "div",
       { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" },
       h("p", { class: "rb-muted", style: "flex:1;min-width:200px" }, `플러그인 저장소 키 ${keys.length}개. 모든 플러그인이 함께 쓰는 저장소예요. 누르면 값을 읽어요. 다른 플러그인 값을 지우면 그 플러그인 설정이 사라질 수 있어요.`),
+      btn("＋ 새 키", { size: "sm", id: "rb-st-new", onClick: () => openStorageNew(ctx, () => refresh(ctx)) }),
+      btn("내보내기", { size: "sm", id: "rb-st-export", onClick: async () => download(`dusk-plugin-storage-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, await SM.exportStorage(ctx.api, shown), "application/json") }),
+      btn("가져오기", { size: "sm", id: "rb-st-import", onClick: () => openStorageImport(ctx, keys, () => refresh(ctx)) }),
       btn("새로고침", { size: "sm", icon: "refresh", onClick: () => refresh(ctx) })
     ),
     shown.length ? null : h("div", { class: "rb-empty" }, q ? "찾는 키가 없어요." : "저장된 값이 없어요."),
@@ -467,6 +515,7 @@ function showStorageItem(ctx, it) {
       "div",
       { style: "display:flex;gap:8px" },
       btn("내려받기", { size: "sm", icon: "download", onClick: () => download(`${it.key.replace(/[^\w.-]+/g, "_")}.json`, text, "application/json") }),
+      raw.length <= 2e6 && btn("수정", { size: "sm", icon: "edit", id: "rb-st-edit", onClick: () => editStorageItem(ctx, it, () => { ctx.closeSheet(); refresh(ctx); }) }),
       btn("지우기", { size: "sm", kind: "danger", icon: "trash", onClick: async () => {
         if (!await confirmDialog(ctx.win, { title: `'${it.key}'을(를) 지울까요?`, body: "이 값을 쓰는 플러그인의 설정이나 기록이 사라질 수 있어요.", ok: "지우기", danger: true })) return;
         await ctx.api.pluginStorage.removeItem(it.key);

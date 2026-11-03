@@ -2,7 +2,7 @@
 // 이야기 도우미(재해석/존중은 바로 고르기) · 로어북·채팅 메뉴 · 정리·기록. '이럴 땐 여기로'는 ? 도움말로. PC 2열.
 import { renderPrompts } from './promptstab.js';
 import { h, replace } from '../dom.js';
-import { advFold, modal, btn, openMenu, pageHead, segmented } from '../kit.js';
+import { advFold, modal, btn, openMenu, pageHead, segmented, confirmDialog, fmtSize } from '../kit.js';
 import { icon } from '../icons.js';
 import { openTour } from '../tour.js';
 import { CHANGELOG, openChangelog } from '../whatsnew.js';
@@ -13,6 +13,9 @@ import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
 import { openAbout } from './about.js';
 import { loadMemoryButtonOn } from '../../data/memorybutton.js';
+import { createCellar, loadCellarUrl, saveCellarUrl, CELLAR_DEFAULT_URL } from '../../data/cellar.js';
+import { createCellarBackups } from '../../data/cellarbackup.js';
+import { createCellarUpdate } from '../../data/cellarupdate.js';
 
 export async function renderSettingsTab(ctx) {
   if (ctx.state.sub === "prompts") return renderPrompts(ctx);
@@ -40,6 +43,7 @@ export async function renderSettingsTab(ctx) {
       segRow("메뉴 위치", "PC에서 메뉴를 왼쪽 또는 위쪽에 둬요.", layoutSeg, "rb-pc-only"),
       linkRow("플러그인 꾸미기", "색·밝기·글자 크기", () => ctx.go("look"), "rb-set-look")
     ),
+    cellarCard(ctx, linkRow, card),
     card("백업", linkRow("백업 만들기", "모듈·에셋·설정을 zip 한 파일로", () => fullBackup(ctx), "rb-set-fullbackup"), linkRow("백업에서 복원", "전체 백업 zip으로 되살리기", () => fullRestore(ctx), "rb-set-restore")),
     card("도움말",
       ctx.openOnboarding ? linkRow("시작 안내 다시 보기", "처음 설정을 단계별로 다시 해요", () => ctx.openOnboarding(), "rb-set-onboard") : null,
@@ -128,4 +132,128 @@ export async function renderSettingsTab(ctx) {
   }
   // 고급은 점선 '고급' 칸 없이 묶음 카드를 그대로 오른쪽 열에 둔다
   if (advSide) replace(advSide, ...(adv ? advBlocks : [advFold(ctx, "settings", true)]));
+}
+
+// ── Dusk Cellar (선택 서버) ── 줄 하나: 오른쪽에 상태(확인 중 → 연결됨 vX / 없음). 누르면 상태·주소·다시 확인.
+const cellarText = (st, newV) => (!st ? "확인 중…" : st.ok ? `연결됨 v${st.version}${newV ? ` · 새 버전 v${newV}` : ""}` : "없음");
+function cellarCard(ctx, linkRow, card) {
+  const cel = (ctx.cellar ??= ctx.memory?.cellar ?? createCellar(ctx.api));
+  const row = linkRow("Dusk Cellar", "리스 서버 옆에서 도는 선택 서버예요. 없어도 모든 기능이 그대로 돼요.", () => openCellar(ctx, cel, paint), "rb-set-cellar", cellarText(cel.peek(), ctx.cellarNew));
+  const paint = (st) => { const v = row.querySelector(".val"); if (v) v.textContent = cellarText(st, ctx.cellarNew); };
+  cel.status().then(paint).catch(() => paint({ ok: false }));
+  return card("서버", row);
+}
+async function openCellar(ctx, cel, paint) {
+  const url0 = await loadCellarUrl(ctx.api);
+  await modal(ctx.win, (done) => {
+    const stEl = h("p", { class: "rb-p", id: "rb-cellar-st" }, "확인 중…");
+    const bkBtn = btn("세이브 백업…", { id: "rb-cellar-backup", onClick: () => { const st = cel.peek(); if (st?.ok) openCellarBackup(ctx, st); } });
+    bkBtn.hidden = true;
+    const upBtn = btn("업데이트 확인", { id: "rb-cellar-update", onClick: async () => {
+      const st = cel.peek(); if (!st?.ok) return;
+      const up = createCellarUpdate(ctx.api, { url: st.url, via: st.via });
+      upBtn.disabled = true; replace(stEl, "업데이트 확인 중…");
+      try {
+        const c = await up.check();
+        if (!c.behind) { replace(stEl, `최신 버전이에요 (${c.head})`); return; }
+        if (!c.canApply) { replace(stEl, c.dirty?.length ? `서버에서 직접 고친 파일이 있어 자동 업데이트를 할 수 없어요: ${c.dirty.slice(0, 3).join(", ")}` : "이 서버의 Cellar는 원격보다 앞서 있어서 자동 업데이트를 할 수 없어요"); return; }
+        const ok = await confirmDialog(ctx.win, { title: "Dusk Cellar를 업데이트할까요?", body: `새 변경 ${c.behind}건 (${c.head} → ${c.latest})\n${c.commits.slice(0, 8).map((x) => `· ${x}`).join("\n")}\n\nCellar만 잠깐 다시 켜져요. 리스는 그대로 돌아요. 새 버전이 안 불러지면 자동으로 이전 버전으로 돌아가요.`, ok: "업데이트" });
+        if (!ok) { replace(stEl, "업데이트를 취소했어요"); return; }
+        replace(stEl, "업데이트 중…");
+        const r = await up.apply({ onWait: (i) => replace(stEl, `Cellar를 다시 켜는 중… (${Math.round((i + 1) * 1.5)}초)`) });
+        replace(stEl, !r.back ? "업데이트했지만 Cellar가 아직 응답하지 않아요. 잠시 뒤 '다시 확인'을 눌러 주세요." : r.fullRestart ? `v${r.back.version}로 업데이트했어요. 실행기도 바뀌어서 서버에서 pm2 restart(또는 리스 재시작)를 한 번 해야 모두 적용돼요.` : `v${r.back.version}로 업데이트했어요.`);
+        cel.forget(); await check();
+      } catch (e) { replace(stEl, String(e?.message ?? e)); } finally { upBtn.disabled = false; }
+    } });
+    upBtn.hidden = true;
+    const show = (st) => {
+      paint(st);
+      replace(stEl, st.ok ? `연결됨 · Dusk Cellar v${st.version}` : `연결 안 됨 · ${st.error ?? ""}`);
+      bkBtn.hidden = !(st.ok && st.features?.includes("backup"));
+      upBtn.hidden = !(st.ok && st.features?.includes("update"));
+    };
+    const input = h("input", { class: "rb-input", type: "url", value: url0, placeholder: CELLAR_DEFAULT_URL, "aria-label": "Cellar 주소", id: "rb-cellar-url" });
+    // 장기기억 저장 위치(1.8.3): Cellar가 기억 저장을 지원하면 서버에만 저장, 끊기면 잠깐 이 기기에 쌓았다가 다시 올린다
+    const remote = ctx.memory?.remote;
+    const memEl = h("p", { class: "rb-p", id: "rb-cellar-mem" });
+    const backBtn = remote ? btn("기억을 이 기기로 되돌리기", { id: "rb-cellar-memback", onClick: async () => {
+      const m = remote.state();
+      const ok = await confirmDialog(ctx.win, { title: "기억을 이 기기로 되돌릴까요?", body: m.online ? "서버에 있는 장기기억을 모두 플러그인 저장소로 받아 오고, 이후엔 플러그인에 저장해요. 서버의 기억은 지우지 않아요." : "지금 서버에 연결되지 않아요. 서버로 옮기기 전의 기억과 끊긴 동안 쌓인 변경만 남아요(서버에만 있는 최신 기억은 빠져요).", ok: "되돌리기", danger: !m.online });
+      if (!ok) return;
+      try { const r = await remote.disable({ force: !m.online }); replace(memEl, `되돌렸어요 · ${r.pulled}개`); } catch (e) { replace(memEl, String(e?.message ?? e)); }
+      paintMem();
+    } }) : null;
+    const paintMem = () => {
+      if (!remote) return;
+      const m = remote.state();
+      replace(memEl, m.mode !== "remote" ? "기억 저장: 이 기기(플러그인)" : m.online ? `기억 저장: 서버(Dusk Cellar)${m.queued ? ` · 올릴 변경 ${m.queued}건` : ""}` : `기억 저장: 서버 — 연결 끊김, 변경 ${m.queued}건을 잠시 이 기기에 모아 두는 중`);
+      if (backBtn) backBtn.hidden = m.mode !== "remote";
+    };
+    paintMem();
+    const check = async (fresh = true) => { replace(stEl, "확인 중…"); try { show(await cel.status({ fresh })); if (fresh) await remote?.detect?.().catch(() => {}); } catch (e) { show({ ok: false, error: String(e?.message ?? e) }); } paintMem(); };
+    check(false);
+    return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": "Dusk Cellar" },
+      h("h3", null, "Dusk Cellar"),
+      stEl,
+      memEl,
+      h("p", { class: "rb-muted" }, "리스를 직접 돌리는 서버(RisuBard 등)에 Dusk Cellar를 설치하면 자동으로 연결되고, 장기기억은 서버에만 저장돼요. 설치: github.com/Pyser08/Dusk-Cellar/releases/latest 에서 설치 파일(윈도우 install.bat · 맥 install.command)을 받아 리스 폴더에서 실행해요(git·Node 없이도 돼요)."),
+      ctx.prefs.advanced ? h("label", { class: "rb-p" }, "주소 (보통은 그대로 두세요)", input) : null,
+      h("div", { class: "rb-dialog-actions" },
+        ctx.prefs.advanced ? btn("주소 저장", { onClick: async () => { try { await saveCellarUrl(ctx.api, input.value); cel.forget(); await check(); } catch (e) { replace(stEl, String(e?.message ?? e)); } } }) : null,
+        bkBtn,
+        upBtn,
+        backBtn,
+        btn("다시 확인", { onClick: () => check(true), id: "rb-cellar-recheck" }),
+        btn("닫기", { kind: "primary", onClick: () => done(true) })));
+  });
+}
+
+// ── 세이브 백업(Dusk Cellar) ── 리스 세이브 폴더 + 서버 기억을 통째로. 바뀐 파일만 복사해서 빠르다.
+const bkWhen = (it) => { try { return new Date(it.at).toLocaleString(); } catch { return it.id; } };
+async function openCellarBackup(ctx, st) {
+  const bk = createCellarBackups(ctx.api, { url: st.url, via: st.via });
+  let closed = false, timer = null;
+  await modal(ctx.win, (done) => {
+    const stEl = h("p", { class: "rb-p", id: "rb-bk-st" }, "불러오는 중…");
+    const listEl = h("div", { id: "rb-bk-list", style: "display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto" });
+    let busy = false;
+    const nowBtn = btn("지금 백업", { kind: "primary", id: "rb-bk-now", onClick: async () => {
+      try { await bk.create("수동"); load(); } catch (e) { replace(stEl, String(e?.message ?? e)); }
+    } });
+    const row = (it) => h("div", { class: "rb-row", style: "display:flex;align-items:center;gap:10px" },
+      h("div", { style: "flex:1;min-width:0" },
+        h("div", null, bkWhen(it), it.label ? h("span", { class: "rb-muted" }, ` · ${it.label}`) : null),
+        h("div", { class: "rb-muted" }, `파일 ${it.files.toLocaleString()}개 · ${fmtSize(it.bytes)} · ${(it.ms / 1000).toFixed(1)}초`),
+        it.unstable ? h("div", { class: "rb-muted", style: "color:var(--rb-warn,#c97a00)" }, "백업 중에도 세이브가 계속 바뀌어서 일부 파일이 서로 안 맞을 수 있어요") : null),
+      btn("복원", { size: "sm", onClick: () => doRestore(it) }));
+    async function doRestore(it) {
+      if (busy) return;
+      const ok = await confirmDialog(ctx.win, { title: "이 백업으로 되돌릴까요?", body: `${bkWhen(it)} 상태로 리스 세이브 전체와 서버 기억을 되돌려요.\n· 리스가 잠깐 꺼졌다 다시 켜져요.\n· 지금 상태는 '복원 전 자동' 백업으로 남겨요.\n· 끝나면 리스를 열어 둔 화면(다른 기기 포함)을 모두 새로고침해 주세요. 새로고침 전 화면이 옛 데이터를 다시 저장할 수 있어요.`, ok: "복원", danger: true });
+      if (!ok) return;
+      busy = true; clearTimeout(timer); nowBtn.disabled = true;
+      replace(stEl, "복원 중… 리스를 다시 켜는 중이에요");
+      try {
+        const back = await bk.restore(it.id, { onWait: (i) => replace(stEl, `복원 중… 리스를 다시 켜는 중이에요 (${(i + 1) * 2}초)`) });
+        replace(stEl, back ? "복원했어요. 지금 리스를 새로고침해 주세요(F5 또는 앱 다시 시작)." : "리스가 아직 응답하지 않아요. 잠시 뒤 새로고침해 주세요.");
+      } catch (e) { replace(stEl, `복원 실패 · ${String(e?.message ?? e)}`); busy = false; nowBtn.disabled = false; }
+    }
+    async function load() {
+      if (closed || busy) return;
+      try {
+        const { items, job } = await bk.list();
+        const running = job && !job.finishedAt;
+        nowBtn.disabled = !!running;
+        replace(stEl, running ? `백업 중… ${job.done.toLocaleString()} / ${job.total.toLocaleString()}개` : job?.error ? `마지막 백업 실패 · ${job.error}` : `백업 ${items.length}개 · 바뀐 파일만 복사해서 두 번째부터는 빨라요`);
+        replace(listEl, ...(items.length ? items.map(row) : [h("p", { class: "rb-muted" }, "아직 백업이 없어요.")]));
+        if (running) timer = setTimeout(load, 1000);
+      } catch (e) { replace(stEl, String(e?.message ?? e)); }
+    }
+    load();
+    return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": "세이브 백업" },
+      h("h3", null, "세이브 백업"),
+      h("p", { class: "rb-muted" }, "리스 세이브 폴더 전체(캐릭터·채팅·에셋·설정)와 서버의 장기기억을 서버에 백업해요. 최근 5개를 보관해요."),
+      stEl, listEl,
+      h("div", { class: "rb-dialog-actions" }, nowBtn, btn("닫기", { onClick: () => done(true) })));
+  });
+  closed = true; clearTimeout(timer);
 }
