@@ -84,8 +84,9 @@ var refresh = (ctx) => renderPlugins(ctx, { fresh: true });
 
 // ── 목록 ──
 async function viewList(ctx, { fresh }) {
-  const plugins = await getPlugins(ctx, fresh);
-  const interop = await getInterop(ctx, fresh);
+  // 플러그인 목록과 연동 값을 동시에 읽는다(1.8.3). 연동의 '설치됨' 표시는 목록이 오면 바로 채운다.
+  const [plugins, interop] = await Promise.all([getPlugins(ctx, fresh), getInterop(ctx, fresh)]);
+  { const names = new Set(plugins.map((p) => p.name)); for (const e of interop) if (e.pluginName) e.installed = names.has(e.pluginName); }
   const upd = ctx.state.pluginUpd ?? {};
   const linked = new Map(interop.filter((e) => e.pluginName).map((e) => [e.pluginName, e]));
   const q = (ctx.state.search ?? "").trim().toLowerCase();

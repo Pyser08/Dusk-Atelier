@@ -335,6 +335,35 @@ function linkBtn(ctx, e) {
   b.dataset.mid = e.module.id;
   return b;
 }
+// 봇·페르소나가 모듈을 몇 개나 쓰는지는 모듈을 켜고 끌 때마다 다시 셀 필요가 없다 → 1분 동안 기억한다(1.8.3).
+// 봇을 처음 읽어야 하면 12개씩 끊어 읽고, 다 읽으면 캐시에 넣어 봇 탭이 다시 읽지 않게 한다.
+var LINK_TTL = 6e4;
+async function linkUseCounts(ctx) {
+  const st = ctx.state, api = ctx.api;
+  if (st.modUse && Date.now() - st.modUse.at < LINK_TTL) return st.modUse.n;
+  if (st.modUse?.p) return st.modUse.p;
+  const p = (async () => {
+    await new Promise((r) => setTimeout(r, 200));
+    const n = /* @__PURE__ */ new Map();
+    const pm = await loadPersonaMap(api);
+    for (const ids of Object.values(pm.map ?? {})) for (const id of ids) n.set(id, (n.get(id) ?? 0) + 1);
+    const cached = typeof api.hasDbCache === "function" && api.hasDbCache(["characters"]);
+    const db = await dbRead(api, ["characters"]);
+    const lc = await loadCharacters(api, db?.characters);
+    if (!cached && !lc.unloaded) api.storeDbCache?.(["characters"], { characters: lc.list });
+    for (const ch of lc.list) if (ch && !ch.trashTime && ch.type !== "group") for (const id of ch.modules ?? []) n.set(id, (n.get(id) ?? 0) + 1);
+    return n;
+  })();
+  st.modUse = { ...st.modUse, p };
+  try {
+    const n = await p;
+    st.modUse = { at: Date.now(), n };
+    return n;
+  } catch (e) {
+    st.modUse = null;
+    throw e;
+  }
+}
 async function paintLinkCounts(ctx) {
   const st = ctx.state, data = st.modData;
   if (!data) return;
@@ -343,11 +372,8 @@ async function paintLinkCounts(ctx) {
     const n = /* @__PURE__ */ new Map();
     for (const e of data.entries) n.set(e.module.id, moduleFlags(e.module, data.globalOn).global ? 1 : 0);
     try {
-      const pm = await loadPersonaMap(ctx.api);
-      for (const ids of Object.values(pm.map ?? {})) for (const id of ids) if (n.has(id)) n.set(id, n.get(id) + 1);
-      const db = await dbRead(ctx.api, ["characters"]);
-      const list = (await loadCharacters(ctx.api, db?.characters)).list;
-      for (const ch of list) if (ch && !ch.trashTime && ch.type !== "group") for (const id of ch.modules ?? []) if (n.has(id)) n.set(id, n.get(id) + 1);
+      const use = await linkUseCounts(ctx);
+      for (const [id, v] of use) if (n.has(id)) n.set(id, n.get(id) + v);
     } catch {
     }
     if (st.modLinkSrc !== data) return;
