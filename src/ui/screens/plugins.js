@@ -200,7 +200,7 @@ function rowMenu(ctx, p, entry, anchor, cellar, all = []) {
       ctx.state.pluginOpen = entry.id;
       renderPlugins(ctx);
     } },
-    // 리스는 플러그인이 다른 플러그인을 고치지 못하게 막아서, 서버(Dusk Cellar)가 대신 고친다(RisuBard 서버만)
+    // 리스는 플러그인이 다른 플러그인을 고치지 못하게 막아서, 서버(Dusk Cellar)가 대신 고친다(RisuBard·PocketRisu·순정 리스AI)
     hasPluginEdit(cellar) && { label: "코드 수정", icon: "code", onClick: () => openPluginEdit(ctx, p, cellar) },
     hasPluginEdit(cellar) && { label: p.alias ? "별칭 바꾸기" : "별칭 추가", icon: "edit", onClick: () => MG.editAlias(ctx, cellar, p, () => refresh(ctx)) },
     hasPluginEdit(cellar) && p.order > 0 && { label: "위로", icon: "up", onClick: () => MG.movePlugin(ctx, cellar, p, -1, () => refresh(ctx)) },

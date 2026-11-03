@@ -126,13 +126,15 @@ export async function openPluginEdit(ctx, p, st) {
     // ── 4. 결과 ──
     function viewDone(r, backedUp, undone) {
       const res = r.results?.[0];
-      const unsure = !r.adopted || r.stillPending;
+      const lost = r.overwritten === true;
+      const unsure = !lost && (!r.adopted || r.stillPending);
       show(
         h("p", { class: "rb-p", id: "rb-pe-result", style: "font-weight:600" }, `${undone ? "이전 코드로 되돌렸어요" : "고쳤어요"} · ${p.displayName}`),
         res ? h("p", { class: "rb-muted" }, `코드 크기 ${fmtBytes(undone ? cur.length : orig.length)} → ${fmtBytes(res.bytes)}`) : null,
         h("p", { class: "rb-muted" }, `고치기 전 설정 파일 복사본: ${r.snapshot}${backedUp ? " · 세이브 백업도 해 뒀어요" : ""}`),
+        lost ? note("warn", "열려 있는 리스 화면이 방금 옛 플러그인 목록으로 다시 저장해서 변경이 사라졌어요. 리스를 새로고침(F5)한 뒤 다시 고쳐 주세요.") : null,
         unsure ? note("warn", "리스가 새 파일을 아직 받아들이지 않은 것 같아요. 리스 화면에 '외부 변경 검토' 창이 뜨면 받아들이기를 눌러 주세요.") : null,
-        note("warn", "리스를 새로고침(F5 또는 앱 다시 시작)하면 새 코드로 돌아요. 열어 둔 다른 화면(다른 기기 포함)도 모두 새로고침해 주세요."),
+        lost ? null : note("warn", "리스를 새로고침(F5 또는 앱 다시 시작)하면 새 코드로 돌아요. 열어 둔 다른 화면(다른 기기 포함)도 모두 새로고침해 주세요."),
         actions(undone ? null : btn("되돌리기", { id: "rb-pe-undo", onClick: undo }), closeBtn("닫기", "primary"))
       );
     }

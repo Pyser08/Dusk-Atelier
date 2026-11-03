@@ -15,7 +15,8 @@ var fail = (ctx, e) => ctx.toast?.(describeEditError(e).text);
 export async function runOps(ctx, cellar, ops, { expectListSha, ok = "바꿨어요", refresh } = {}) {
   try {
     const r = await mgrOf(ctx, cellar).mutate(ops, expectListSha);
-    ctx.toast?.(`${ok} · 리스를 새로고침하면 적용돼요${!r.adopted || r.stillPending ? " (리스의 '외부 변경 검토'에서 받아들여 주세요)" : ""}`);
+    if (r.overwritten) ctx.toast?.("열려 있는 리스 화면이 옛 목록으로 다시 저장해서 변경이 사라졌어요. 리스를 새로고침(F5)한 뒤 다시 해 주세요");
+    else ctx.toast?.(`${ok} · 리스를 새로고침하면 적용돼요${!r.adopted || r.stillPending ? " (리스의 '외부 변경 검토'에서 받아들여 주세요)" : ""}`);
     await refresh?.();
     return true;
   } catch (e) { fail(ctx, e); return false; }

@@ -1,7 +1,7 @@
 // 플러그인 코드 수정 (1.8.3): 리스는 플러그인이 다른 플러그인을 고치지 못하게 막았다(RisuAI PR #1572).
 // 그래서 서버(Dusk Cellar, plugins.cjs)가 리스 설정 파일의 그 플러그인 코드만 대신 고치고 리스가 받아들이게 한다.
 // 플러그인(이 파일)은 코드를 받아 오고, 고친 코드를 보내고, 결과를 알려 주는 일만 한다.
-// 지금은 RisuBard 서버만 지원한다(Cellar의 features에 "plugins"가 있을 때).
+// RisuBard·PocketRisu·순정 리스AI 서버를 지원한다(Cellar의 features에 "plugins"가 있을 때).
 import { cellarRequest } from "./cellar.js";
 
 export const hasPluginEdit = (st) => Boolean(st?.ok && Array.isArray(st.features) && st.features.includes("plugins"));

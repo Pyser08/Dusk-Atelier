@@ -469,3 +469,5 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - (2026-11-03 점검) 플러그인 탭: 서버 기능(Cellar plugins)이 있으면 **서버가 아는 목록**을 보여 준다(`getPlugins`가 `fromServerList`). 리스는 메모리 목록을 들고 있어 Cellar로 바꾼 직후 `getDatabase`는 옛 상태이기 때문. 리스 쪽과 다르면(`needsReload`) '새로고침 필요' 안내. 탭을 열 때 Cellar 확인을 기다리지 않는다(없는 사용자에게 1.5초 지연이 생기던 것 제거; 찾으면 한 번 다시 그림). 자기 자신(dusk_atelier)의 스위치·삭제는 막음. Cellar `replaceAll`(복원)은 머리말 이름 검사를 하지 않음(옛 플러그인 복원용). 백업(`/cellar/backup`)은 호스트 무관(폴더 스냅샷; PocketRisu SQLite는 온라인 백업) — 플러그인 '수정'만 RisuBard 전용.
 
 - Cellar 업데이트 버튼(2026-11-03): `src/data/cellarupdate.js`(check/apply/rollback + 재연결 대기), 설정 → 서버 → Dusk Cellar 창 `rb-cellar-update`(features에 "update"일 때만). 서버는 Dusk-Cellar `update.cjs`·`POST /cellar/update`. 서버 실물 확인은 아직 못 함.
+
+- 플러그인 수정 3호스트(2026-11-03): Cellar `plugins.cjs`가 risubard·risuai·pocketrisu 지원. 결과에 `overwritten`(브라우저가 옛 목록으로 덮어씀) 반영(pluginedit·pluginmgr). 실서버 확인은 아직.
