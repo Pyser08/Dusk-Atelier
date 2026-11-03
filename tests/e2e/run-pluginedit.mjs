@@ -18,7 +18,7 @@ await page.evaluate(() => {
   window.__hash = hash;
   window.__st = {
     risupot: "//@name risupot\n//@api 3.0\nconsole.log('v1');\nconst keep = 1;\n",
-    dusk_atelier: "//@name dusk_atelier\n//@api 3.0\n" + "console.log('x');\n".repeat(30000),
+    dusk_atelier: "//@name dusk_atelier\n//@api 3.0\n" + "console.log('x');\n".repeat(250000),
     tts_helper: "//@name tts_helper\n//@api 3.0\nspeak();\n",
   };
   window.__cpMode = "";
@@ -63,7 +63,7 @@ const taVal = () => page.locator("#rb-pe-editor textarea").inputValue();
 ok("코드를 불러와 편집기에 채움", (await taVal()).includes("console.log('v1')"), (await taVal()).slice(0, 60));
 ok("처음엔 '변경 확인'이 꺼져 있음", await page.locator("#rb-pe-next").isDisabled());
 const calls0 = await page.evaluate(() => window.__cpCalls);
-ok("get 요청: 이름만(겹치지 않으므로 index 없음)", JSON.stringify(calls0[0]) === JSON.stringify({ action: "get", name: "risupot" }), JSON.stringify(calls0[0]));
+ok("get 요청: 이름만(겹치지 않으므로 index 없음)", JSON.stringify(calls0[0]) === JSON.stringify({ action: "get", name: "risupot", gzip: true }), JSON.stringify(calls0[0]));
 
 // 4) 머리말 이름을 바꾸면 변경 확인에서 막는다
 const orig = await taVal();
@@ -127,7 +127,7 @@ await page.locator("#rb-pe-close").click(); await page.waitForTimeout(200);
 await page.evaluate(() => { window.__cpMode = ""; });
 
 // 9) 큰 코드(Atelier 자신): 색 없는 편집기 + 자기 자신 경고
-await menuOf("Dusk Atelier"); await page.locator('.rb-menu button:has-text("코드 수정")').click(); await page.waitForSelector("#rb-pe-editor textarea");
+await menuOf("Dusk Atelier"); await page.locator('.rb-menu button:has-text("코드 수정")').click({ timeout: 90000 }); await page.waitForSelector("#rb-pe-editor textarea", { timeout: 90000 });
 ok("큰 코드는 색 입히기 없는 일반 편집기", (await page.locator("#rb-pe-editor .rb-code").count()) === 0 && (await page.locator("#rb-pe-editor textarea.rb-input").count()) === 1);
 ok("자기 자신 경고", (await dlg().textContent()).includes("자신을 고치고"));
 if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });

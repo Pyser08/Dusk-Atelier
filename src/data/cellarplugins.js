@@ -6,6 +6,18 @@ import { cellarRequest } from "./cellar.js";
 
 export const hasPluginEdit = (st) => Boolean(st?.ok && Array.isArray(st.features) && st.features.includes("plugins"));
 
+// gzip + base64 (브라우저 CompressionStream). 없으면 압축 없이 보낸다.
+const canGzip = () => typeof CompressionStream === "function" && typeof DecompressionStream === "function";
+async function pipeAll(bytes, stream) {
+  const w = stream.writable.getWriter();
+  w.write(bytes).catch(() => {}); w.close().catch(() => {});
+  return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+}
+const toB64 = (u8) => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const fromB64 = (b) => { const s = atob(b), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
+export const gzipB64 = async (text) => toB64(await pipeAll(new TextEncoder().encode(text), new CompressionStream("gzip")));
+export const gunzipB64 = async (b64) => new TextDecoder().decode(await pipeAll(fromB64(b64), new DecompressionStream("gzip")));
+
 // Cellar의 /cellar/plugins 호출. 실패는 Error: status(HTTP), info(서버가 준 본문), network(연결 문제면 true)
 export function createCellarPlugins(api, conn) {
   const post = async (body, timeout = 20000) => {
@@ -18,9 +30,22 @@ export function createCellarPlugins(api, conn) {
   return {
     list: () => post({ action: "list" }),
     // 코드 읽기 → { script, sha256, index }. 이름이 겹치면 index(목록 순서)로 고른다
-    get: (name, index) => post({ action: "get", name, ...(index === undefined ? {} : { index }) }),
+    // 큰 코드는 리스 프록시가 조각조각 넘겨서 느리므로 gzip으로 받는다(브라우저가 풀 수 있을 때만; 서버가 옛 버전이면 그냥 받는다)
+    async get(name, index) {
+      const z = canGzip();
+      const r = await post({ action: "get", name, ...(index === undefined ? {} : { index }), ...(z ? { gzip: true } : {}) }, 120000);
+      if (typeof r.scriptZ === "string") { const { scriptZ, ...rest } = r; return { ...rest, script: await gunzipB64(scriptZ) }; }
+      return r;
+    },
     // edits: [{ name, index?, expectSha(지금 코드의 sha256), script }] — 해시가 다르면(그새 바뀜) 서버가 거절한다
-    apply: (edits) => post({ action: "apply", edits }, 180000),
+    async apply(edits) {
+      const body = await Promise.all(edits.map(async (e) => {
+        if (!canGzip() || (e.script?.length ?? 0) <= 5e4) return e;   // 작은 코드는 그대로
+        const { script, ...rest } = e;
+        return { ...rest, scriptZ: await gzipB64(script) };
+      }));
+      return post({ action: "apply", edits: body }, 180000);
+    },
   };
 }
 

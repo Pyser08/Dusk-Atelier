@@ -21,8 +21,8 @@ test("list·get·apply: /cellar/plugins로 POST JSON을 보낸다(get은 index�
   await p.apply([{ name: "a", expectSha: "x", script: "s" }]);
   assert.deepEqual(calls.map((c) => [c[0], c[1]]), Array(4).fill(["POST", "/cellar/plugins"]));
   assert.deepEqual(calls[0][2], { action: "list" });
-  assert.deepEqual(calls[1][2], { action: "get", name: "a" });
-  assert.deepEqual(calls[2][2], { action: "get", name: "a", index: 2 });
+  assert.deepEqual(calls[1][2], { action: "get", name: "a", gzip: true });
+  assert.deepEqual(calls[2][2], { action: "get", name: "a", index: 2, gzip: true });
   assert.deepEqual(calls[3][2], { action: "apply", edits: [{ name: "a", expectSha: "x", script: "s" }] });
 });
 
@@ -99,4 +99,20 @@ test("lineDiff: 큰 코드의 한 곳만 바뀌면 앞뒤를 떼어 내서 정�
   const d = lineDiff(a, b);
   assert.ok(Date.now() - t0 < 2000);
   assert.equal(d.added, 1); assert.equal(d.removed, 1); assert.equal(d.rows.length, 8, "문맥 3+3 + 바뀐 2줄");
+});
+
+test("get: 압축(scriptZ)으로 받으면 풀어서 script로 돌려준다 / apply: 큰 코드는 압축해서 보낸다", async () => {
+  const { gzipB64, gunzipB64 } = await import("../src/data/cellarplugins.js");
+  const big = "const a = 1;\n".repeat(20000);
+  assert.equal(await gunzipB64(await gzipB64(big)), big);
+  assert.equal(await gunzipB64(await gzipB64("한글 ✓")), "한글 ✓");
+  const calls = [];
+  const api = { nativeFetch: async (u, o) => { const b = JSON.parse(o.body); calls.push(b); return res(200, b.action === "get" ? { ok: true, name: "a", index: 0, sha256: "x", scriptZ: await gzipB64(big) } : { ok: true, results: [] }); } };
+  const p = createCellarPlugins(api, conn);
+  const g = await p.get("a");
+  assert.equal(calls[0].gzip, true); assert.equal(g.script, big); assert.equal(g.scriptZ, undefined);
+  await p.apply([{ name: "a", expectSha: "y", script: big }, { name: "b", expectSha: "z", script: "small" }]);
+  const e = calls[1].edits;
+  assert.equal(e[0].script, undefined); assert.equal(await gunzipB64(e[0].scriptZ), big);
+  assert.equal(e[1].script, "small"); assert.equal(e[1].scriptZ, undefined);
 });
