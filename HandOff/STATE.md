@@ -442,3 +442,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 위키 상세정보 좁아짐 버그(1.8.3): 원인=문서 없을 때 .rb-wk3가 넓은 화면 2칸 grid(140px 목차+본문)에 목차 없이 들어가 카드가 140px. 고침=infotab 없는-문서 뿌리에 rb-wk3-solo + styles.js 덮어쓰기. 시험 tests/wikisolo.test.js(정적). 미확인: 실제 RisuBard PC 화면 재확인.
 - 유저 편향 상세(dicedetail.js)에 재해석/존중 세그먼트를 강도 위에 추가(설정 탭과 같은 DICE_MODE_KEY). e2e run-home-dice 선택자는 '강도' 구획으로 한정.
 - 설정 고급 '이야기 도우미'의 재해석/존중 행 제거(유저 편향 상세로 이동, 저장 키 DICE_MODE_KEY 동일).
+- 버전 1.8.3으로 올림(사용자 지시 2026-11-03): package.json·CHANGELOG 머리(개발 중→2026-11-03)·빌드 산출물. 릴리스는 main push 때만 — 아직 main 머지 안 함.
