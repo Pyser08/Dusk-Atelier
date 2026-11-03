@@ -36,10 +36,27 @@ export async function probeCellar(api, url) {
       if (!res || !(res.status >= 200 && res.status < 300)) { error = res ? `응답 ${res.status}` : "응답이 없어요"; continue; }
       const j = await readJson(res);
       if (j?.name !== "dusk-cellar") { error = "Dusk Cellar가 아닌 곳이 응답했어요"; continue; }
-      return { ok: true, version: String(j.version ?? ""), url, via, auth: j.auth !== false };
+      return { ok: true, version: String(j.version ?? ""), url, via, auth: j.auth !== false, features: Array.isArray(j.features) ? j.features.map(String) : [] };
     } catch (e) { error = String(e?.message ?? e); }
   }
   return { ok: false, url, error };
+}
+
+// 기억 저장 등 데이터 요청. health를 통과한 같은 길(via)로만 보낸다 — nativeFetch가 되는 곳에서 일반 fetch로 바꾸면
+// 다른 기기(이 PC)의 Cellar로 갈 수 있다. 리스 프록시(/proxy2)는 GET·POST만 확실히 넘기므로 쓰기는 POST만 쓴다.
+// 연결 문제(응답 없음·5xx·401·JSON 아님)는 err.network = true. 반환: { status, json }
+export async function cellarRequest(api, { url, via = "native" }, path, { method = "GET", body, timeout = TIMEOUT } = {}) {
+  const target = url + path;
+  const init = method === "GET" ? { method: "GET" } : { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body ?? {}) };
+  const go = via === "fetch" ? (typeof fetch === "function" ? () => fetch(target, { ...init, cache: "no-store" }) : null) : (typeof api.nativeFetch === "function" ? () => api.nativeFetch(target, init) : null);
+  const net = (msg, status = 0) => Object.assign(new Error(msg), { network: true, status });
+  if (!go) throw net("연결할 방법이 없어요");
+  let res;
+  try { res = await withTimeout(Promise.resolve().then(go), timeout); } catch (e) { throw net(String(e?.message ?? e)); }
+  const status = Number(res?.status) || 0;
+  const json = await readJson(res);
+  if (!status || status >= 500 || status === 401 || !json || typeof json !== "object") throw net(json?.error ?? `응답 ${status || "없음"}`, status);
+  return { status, json };
 }
 
 // 화면이 여러 번 물어도 1분에 한 번만 실제로 확인한다. 동시에 물으면 한 번만 보낸다.

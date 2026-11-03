@@ -2,7 +2,7 @@
 // 이야기 도우미(재해석/존중은 바로 고르기) · 로어북·채팅 메뉴 · 정리·기록. '이럴 땐 여기로'는 ? 도움말로. PC 2열.
 import { renderPrompts } from './promptstab.js';
 import { h, replace } from '../dom.js';
-import { advFold, modal, btn, openMenu, pageHead, segmented } from '../kit.js';
+import { advFold, modal, btn, openMenu, pageHead, segmented, confirmDialog } from '../kit.js';
 import { icon } from '../icons.js';
 import { openTour } from '../tour.js';
 import { CHANGELOG, openChangelog } from '../whatsnew.js';
@@ -135,7 +135,7 @@ export async function renderSettingsTab(ctx) {
 // ── Dusk Cellar (선택 서버) ── 줄 하나: 오른쪽에 상태(확인 중 → 연결됨 vX / 없음). 누르면 상태·주소·다시 확인.
 const cellarText = (st) => (!st ? "확인 중…" : st.ok ? `연결됨 v${st.version}` : "없음");
 function cellarCard(ctx, linkRow, card) {
-  const cel = (ctx.cellar ??= createCellar(ctx.api));
+  const cel = (ctx.cellar ??= ctx.memory?.cellar ?? createCellar(ctx.api));
   const row = linkRow("Dusk Cellar", "리스 서버 옆에서 도는 선택 서버예요. 없어도 모든 기능이 그대로 돼요.", () => openCellar(ctx, cel, paint), "rb-set-cellar", cellarText(cel.peek()));
   const paint = (st) => { const v = row.querySelector(".val"); if (v) v.textContent = cellarText(st); };
   cel.status().then(paint).catch(() => paint({ ok: false }));
@@ -150,15 +150,34 @@ async function openCellar(ctx, cel, paint) {
       replace(stEl, st.ok ? `연결됨 · Dusk Cellar v${st.version}` : `연결 안 됨 · ${st.error ?? ""}`);
     };
     const input = h("input", { class: "rb-input", type: "url", value: url0, placeholder: CELLAR_DEFAULT_URL, "aria-label": "Cellar 주소", id: "rb-cellar-url" });
-    const check = async (fresh = true) => { replace(stEl, "확인 중…"); try { show(await cel.status({ fresh })); } catch (e) { show({ ok: false, error: String(e?.message ?? e) }); } };
+    // 장기기억 저장 위치(1.8.3): Cellar가 기억 저장을 지원하면 서버에만 저장, 끊기면 잠깐 이 기기에 쌓았다가 다시 올린다
+    const remote = ctx.memory?.remote;
+    const memEl = h("p", { class: "rb-p", id: "rb-cellar-mem" });
+    const backBtn = remote ? btn("기억을 이 기기로 되돌리기", { id: "rb-cellar-memback", onClick: async () => {
+      const m = remote.state();
+      const ok = await confirmDialog(ctx.win, { title: "기억을 이 기기로 되돌릴까요?", body: m.online ? "서버에 있는 장기기억을 모두 플러그인 저장소로 받아 오고, 이후엔 플러그인에 저장해요. 서버의 기억은 지우지 않아요." : "지금 서버에 연결되지 않아요. 서버로 옮기기 전의 기억과 끊긴 동안 쌓인 변경만 남아요(서버에만 있는 최신 기억은 빠져요).", ok: "되돌리기", danger: !m.online });
+      if (!ok) return;
+      try { const r = await remote.disable({ force: !m.online }); replace(memEl, `되돌렸어요 · ${r.pulled}개`); } catch (e) { replace(memEl, String(e?.message ?? e)); }
+      paintMem();
+    } }) : null;
+    const paintMem = () => {
+      if (!remote) return;
+      const m = remote.state();
+      replace(memEl, m.mode !== "remote" ? "기억 저장: 이 기기(플러그인)" : m.online ? `기억 저장: 서버(Dusk Cellar)${m.queued ? ` · 올릴 변경 ${m.queued}건` : ""}` : `기억 저장: 서버 — 연결 끊김, 변경 ${m.queued}건을 잠시 이 기기에 모아 두는 중`);
+      if (backBtn) backBtn.hidden = m.mode !== "remote";
+    };
+    paintMem();
+    const check = async (fresh = true) => { replace(stEl, "확인 중…"); try { show(await cel.status({ fresh })); if (fresh) await remote?.detect?.().catch(() => {}); } catch (e) { show({ ok: false, error: String(e?.message ?? e) }); } paintMem(); };
     check(false);
     return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": "Dusk Cellar" },
       h("h3", null, "Dusk Cellar"),
       stEl,
-      h("p", { class: "rb-muted" }, "리스를 직접 돌리는 서버(RisuBard 등)에 Dusk Cellar를 설치하면 자동으로 연결돼요. 설치: 리스 폴더에서 git clone https://github.com/Pyser08/Dusk-Cellar → node setup.cjs"),
+      memEl,
+      h("p", { class: "rb-muted" }, "리스를 직접 돌리는 서버(RisuBard 등)에 Dusk Cellar를 설치하면 자동으로 연결되고, 장기기억은 서버에만 저장돼요. 설치: 리스 폴더에서 git clone https://github.com/Pyser08/Dusk-Cellar → node setup.cjs"),
       ctx.prefs.advanced ? h("label", { class: "rb-p" }, "주소 (보통은 그대로 두세요)", input) : null,
       h("div", { class: "rb-dialog-actions" },
         ctx.prefs.advanced ? btn("주소 저장", { onClick: async () => { try { await saveCellarUrl(ctx.api, input.value); cel.forget(); await check(); } catch (e) { replace(stEl, String(e?.message ?? e)); } } }) : null,
+        backBtn,
         btn("다시 확인", { onClick: () => check(true), id: "rb-cellar-recheck" }),
         btn("닫기", { kind: "primary", onClick: () => done(true) })));
   });

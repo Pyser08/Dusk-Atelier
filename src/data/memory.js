@@ -13,9 +13,15 @@ import { createTurnFlow } from "./memoryturn.js";
 import { customPromptPlain } from "../engine/pot/custom-prompts.js";
 import { createGaugeService } from "./gauge.js";
 import { createSwitches } from "./memoryswitches.js";
+import { createCellar } from "./cellar.js";
+import { createMemoryRemote, REMOTE_PREFIX } from "./memoryremote.js";
 
 export function createMemory(api, { storyNow = null, notify = () => {}, log = (...a) => console.log("[Dusk 기억]", ...a), potLibrary = null, onOpen = null } = {}) {
-  const store = createMemoryStore(api);
+  // Dusk Cellar가 있으면 채팅 기억 폴더는 서버에만 저장한다(memoryremote.js). 없으면 지금처럼 플러그인 저장소.
+  const cellar = createCellar(api);
+  const remote = createMemoryRemote(api, { cellar, notify, log });
+  const store = createMemoryStore(api, { storage: remote.storage });
+  remote.attach({ serial: store.serial, dropCache: () => store.dropCache(), folderKeys: async () => Object.keys((await store.getIndex()).folders ?? {}).map((id) => REMOTE_PREFIX + id) });
   const cards = createCardStore(api);
   let runner = null;  // 아래에서 만든다. 요청 직전 훅은 이 시점 이후에만 불린다.
   const embedder = createEmbedder(api, { log });
@@ -44,7 +50,9 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
   let active = "off";
   // 반환: 선택된 백엔드 id. bardwiki/off면 러너·주입 훅을 등록하지 않는다(이중 비용·이중 주입 방지).
   async function start() {
+    await remote.init().catch((e) => log("기억 서버 표시 읽기 실패", e?.message ?? e));
     await store.migrate().catch((e) => log("v1 이전 실패", e?.message ?? e));
+    remote.detect().catch((e) => log("Dusk Cellar 확인 실패", e?.message ?? e));   // 기다리지 않는다(없으면 몇 초 걸릴 수 있음)
     const idx = await store.getIndex(), sel = backend(idx.settings);
     active = sel.id;
     if (sel.id === "local") {
@@ -70,5 +78,5 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
     const cur = await switches.currentChat({ fresh: true }).catch(() => null), sc = cur ? { characterId: cur.chaId, chatKey: cur.chatId } : {};
     return { front: customPromptPlain(s, "memory", sc, "front"), middle: customPromptPlain(s, "memory", sc, "middle"), back: customPromptPlain(s, "memory", sc, "back") };
   }
-  return { store, userPrompts, gauge, link, cards, runner, injector, embedder, prep, hypa, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, active: () => active };
+  return { store, cellar, remote, userPrompts, gauge, link, cards, runner, injector, embedder, prep, hypa, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, active: () => active };
 }
