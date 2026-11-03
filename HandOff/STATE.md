@@ -429,3 +429,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 채팅 메뉴(입력창 옆, location "chat") 맨 위에 '장기 기억' 바로가기 추가(`data/chatmenu.js` openMemory, main.js에서 memoryRef.open 연결). 토글이 아니라 화면을 여는 버튼(이름에 켜짐/꺼짐 없음), 빠른 설정을 숨기면 함께 숨김. 별도로 location "action"의 기존 '장기기억' 버튼(`memorybutton.js`)은 그대로 — 호스트에서 두 메뉴가 같은 곳으로 보이면 중복이니 실기기 확인 필요(미확인).
 
 - 홈 속도(1.8.3, 이 대화): ① `data/memorystore3.js` 인덱스 원문 5초 캐시(문자열만 캐시·읽을 때마다 파싱, set/rm 때 비움, 문자열 아니면 캐시 안 함) ② `ui/screens/homestate.js` 인덱스·기록 자동 설정 읽기를 currentChat과 동시에 ③ `ui/screens/home.js` quickSettingsCard를 readState와 동시에. 시험: memorystore3·homestate 각 1건. 미측정: PocketRisu 실제 체감. 남은 후보(미착수): watch.js 모듈 전체 폴링(60초) 가볍게, createApp 지연 생성, 번들 데이터(카드 에셋·프롬프트·마스코트 ~1MB) 분리, 홈 상태는 나중에 채우기(골격 먼저), getFolder 대신 최근 기록 요약만 읽기.
+- 홈 속도 2(1.8.3): `data/memoryswitches.js` `peekCurrent`(위치 ci:ti 같으면 직전 currentChat 값을 바로 주고 뒤에서 fresh 확인, 달라지면 onChange → `homestate.js`가 홈 refresh). 시험 1건(memoryswitch). 위험: 봇 순서가 바뀐 직후엔 잠깐 이전 봇 이름이 보였다가 바로 다시 그려짐. PocketRisu 체감 미측정.

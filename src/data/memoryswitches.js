@@ -36,6 +36,17 @@ export function createSwitches({ api, store, flow = null, now = () => Date.now()
   return {
     // 동시에 여러 곳이 부르면 하나로 합친다. 다시 읽기는 위 위치별 캐시가 막는다(1.8.3)
     currentChat: ({ fresh = false } = {}) => (fresh ? cachedCurrent(true) : curMemo ??= cachedCurrent().finally(() => { curMemo = null; })),
+    // 홈 속도(1.8.3): 봇·채팅 위치가 직전과 같으면 채팅 통째 복사를 기다리지 않고 직전 값을 바로 준다(시간·세대 무시).
+    // 뒤에서 새로 확인해 봇/채팅이 달라졌으면 onChange(새 값)을 부른다(순서가 바뀌어 위치가 같은 다른 봇인 경우 대비). 직전 값이 없으면 평소처럼 읽는다.
+    async peekCurrent({ onChange } = {}) {
+      let ci, ti;
+      try { ci = await api.getCurrentCharacterIndex(); ti = await api.getCurrentChatIndex(); } catch { return null; }
+      if (!(ci >= 0) || !(ti >= 0)) return null;
+      const last = curByPos?.pos === `${ci}:${ti}` ? curByPos.v : null;
+      if (!last) return this.currentChat();
+      cachedCurrent(true).then((v) => { if (v && (v.chaId !== last.chaId || v.chatId !== last.chatId || v.botName !== last.botName || v.chatName !== last.chatName)) onChange?.(v); }).catch(() => {});
+      return last;
+    },
     // 한 봇의 스위치 상태: 기억 · 리수폿 · 조합(both|memory|pot|none)
     async state(chaId) {
       const idx = await store.getIndex();
