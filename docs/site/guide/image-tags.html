@@ -1,0 +1,20 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><title>이미지 태그 · Dusk Atelier</title><link rel="icon" href="../assets/img/icon.webp"><link rel="stylesheet" href="../assets/site.css"></head>
+<body data-root="../" data-page="guide/image-tags">
+<div class="wrap"><nav class="side"></nav><main>
+<span class="eyebrow">기능 가이드</span><h1>이미지 태그</h1>
+<p class="lead">AI가 이미지 태그를 틀리게 써도 실제 에셋 이름에 맞춰 고쳐 줘요.</p>
+<h2 id="fix">자동 교정 <span class="pill off">기본 꺼짐</span></h2>
+<p>홈의 '이미지 태그 자동 교정'을 켜면, AI가 <code>&lt;img="…"&gt;</code> 태그를 틀리게 써도 응답이 저장되기 전에 이 봇·고정한 모듈·켜진 모듈의 실제 에셋 이름에 맞춰 고쳐요. AI 호출은 늘지 않아요.</p>
+<ul><li>대소문자·띄어쓰기·밑줄 차이, 오타, 줄여 쓴 동작, 활용형, 빠진 접두어, 확장자를 알아봐요.</li><li><b>옷보다 동작이 먼저:</b> 지금 옷에 없는 동작 태그는 그 동작이 있는 다른 옷의 그림으로 바꿔요.</li><li>없는 키워드는 <code>default</code>(없으면 <code>neutral</code>)로, 여러 키워드를 합친 태그는 가장 구체적인 하나로 바꿔요.</li><li>봇마다 다른 이름 규칙을 에셋 목록에서 알아서 읽어요. 그룹 채팅에서는 건드리지 않아요.</li></ul>
+<h2 id="notice">상황 알림 <span class="pill off">기본 꺼짐</span></h2>
+<p>켜면 요청 끝에 장면 캐릭터의 직전 옷·태그와 쓸 수 있는 키워드, '동작 &gt; 감정' 우선순위를 짧게 다시 알려 줘요. 긴 지침이 묻혀 표정 태그만 쓰는 일을 줄여요. 같은 태그를 3번 연속 쓰면 짚어 주고, 오래된 태그는 알리지 않아요. 요청 글만 조금 길어지고 AI 호출은 늘지 않아요.</p>
+<h2 id="tool">에셋 태그 고치기</h2>
+<p>도구 → 에셋 태그 고치기는 누를 때만 작동해요. 열린 채팅의 최근 응답(1~50개)을 검사해요.</p>
+<table><tr><th>방식</th><th>하는 일</th></tr>
+<tr><td>엔진이 못 고친 것만</td><td>이름이 틀린 태그는 AI 없이 고치고, 못 고친 것만 보조모델에 물어요. 없으면 AI를 부르지 않아요.</td></tr>
+<tr><td>상황까지 전부</td><td>보조모델이 태그를 모두 보고 상황에 안 맞는 것만 바꾸자고 해요. 누를 때마다 AI를 한 번 불러요.</td></tr></table>
+<p>바뀔 태그를 미리보기에서 보고 고른 것만 적용해요. 마지막 적용은 되돌릴 수 있어요.</p>
+<div class="pager"><a href="cocoa.html"><small>← 이전</small>코코아 · 스킬</a><a class="n" href="look.html"><small>다음 →</small>화면 · 꾸미기</a></div>
+<footer>이 페이지는 CHANGELOG와 README를 바탕으로 해요. 앱 버전에 따라 화면 이름이 조금 다를 수 있어요.</footer>
+</main><aside class="toc"></aside></div>
+<script src="../assets/site.js"></script></body></html>

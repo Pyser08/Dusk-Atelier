@@ -418,6 +418,8 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - (2026-11-03) 아카 에디터(Froala)가 이미지에 `fr-dib`(display:block; margin:5px auto)를 붙여 flex 줄 안 그림이 자동 여백으로 글자를 밀어냄 → **flex 줄 안 `<img>`엔 인라인 `margin:0`을 꼭 넣을 것**(ARCA-POST 제약에 추가 필요). `v1.8.3-design-1-final.html`에 반영.
 - (2026-11-03) 사용자가 올린 그림 주소(아카 에디터가 만든 `//ac.arca.live/…` 링크)를 그대로 쓰기로 함 → `docs/arca/v1.8.3.html`을 사용자가 붙여 넣은 1번 디자인 소스(+flex 줄 그림 `margin:0` 수정)로 교체. 순서 새 화면→기억→이야기 도우미→캐시. 마무리 루네 그림(closing)은 사용자 소스에 없어서 안 넣음. 머리 제목은 그대로.
 
-## 안내서 사이트 (docs/site/) — 시작
-- GitHub Pages용 정적 사이트. 허브(index) + 처음 사용자 가이드(guide/start) + 개발자 가이드(dev/) 완료, 기능 6페이지(memory·story·cocoa·image-tags·look·manage)는 허브에 "준비 중" 카드. 새 페이지 만들면 `assets/site.js` NAV의 세 번째 값(1=준비 중)을 지운다.
-- Pages 켜기(저장소 설정 → Pages → 폴더 /docs)는 사용자가 직접. 워크플로는 건드리지 않음. 내용 출처는 README/CHANGELOG만.
+## 안내서 사이트 (docs/site/)
+- GitHub Pages용 정적 사이트(허브·처음 사용자 가이드·기능 6페이지·개발자 가이드, 총 9페이지). 다크/라이트는 브라우저 설정(prefers-color-scheme)을 따라가고 수동 토글은 없음.
+- 공용: `assets/site.css`(v1→v3 덮어쓰기 구조), `assets/site.js`(상단 바·왼쪽 메뉴 NAV). 새 페이지는 NAV와 허브 타일, 이전/다음 링크를 함께 고친다.
+- 내용 출처는 README/CHANGELOG/코드 문구만. 버전이 바뀌면 해당 페이지(story·memory 등)를 CHANGELOG 기준으로 갱신.
+- Pages 켜기(저장소 설정 → Pages, 폴더 /docs → 주소 `/site/`)는 사용자가 직접. 워크플로는 건드리지 않음.

@@ -1,0 +1,31 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><title>이야기 도우미 · Dusk Atelier</title><link rel="icon" href="../assets/img/icon.webp"><link rel="stylesheet" href="../assets/site.css"></head>
+<body data-root="../" data-page="guide/story">
+<div class="wrap"><nav class="side"></nav><main>
+<span class="eyebrow">기능 가이드</span><h1>이야기 도우미</h1>
+<p class="lead">공정한 주사위로 이야기가 내 뜻대로만 흐르지 않게 하고, 프롬프트 캐시를 확인해요.</p>
+<h2 id="fair">공정한 전개</h2>
+<p>이야기가 내 뜻대로만 흐르지 않게 해요. 홈 빠른 설정이나 채팅 입력창 옆 메뉴에서 바로 켜고 끌 수 있어요.</p>
+<h2 id="dice">유저 편향 없애기</h2>
+<p>요청을 보낼 때마다 프로그램이 1~100 주사위를 굴려 AI에게 함께 줘요. AI는 성공할지 불확실한 행동만 이 값으로 가려요. 행동마다 쉬움·보통·어려움·극악 중 난이도 수치가 정해지고, 굴림이 그 수치 이상이면 성공이에요. 공정한 전개가 켜져 있을 때만 작동해요.</p>
+<table><tr><th>강도</th><th>효과</th></tr><tr><td>약하게</td><td>성공하기 쉬워요.</td></tr><tr><td>보통</td><td>기본값이에요.</td></tr><tr><td>강하게</td><td>난이도 수치가 높아 실패가 늘어요.</td></tr></table>
+<p>홈 빠른 설정의 '유저 편향 없애기' 박스를 누르면 상세 창이 열려요. 고급 모드에서는 난이도 수치와 주사위 개수를 직접 넣을 수 있어요.</p>
+<h3>리롤해도 같은 주사위</h3>
+<p>같은 턴을 다시 생성(리롤)하면 같은 주사위 값을 써요. 마음에 드는 판정이 나올 때까지 돌리는 걸 막고, 프롬프트도 그대로라 캐시도 덜 깨져요. 새 입력을 보내면 새로 굴려요.</p>
+<h3>판정 결과 이어 주기</h3>
+<p>AI가 응답 끝에 판정한 행동마다 숨은 표식(화면엔 안 보여요)을 남기고, 다음 턴에 그 결과(예: 경비병 설득 → 실패)를 다시 알려 줘요. 실패한 일을 없던 일처럼 넘기지 않아요.</p>
+<h3>주사위 결과 표시 <span class="pill off">기본 꺼짐</span></h3>
+<p>켜면 응답 아래에 굴린 주사위 값이 굴러가는 모양으로 나오고, 난이도 목표치와 견줘 '대실패 · 실패 · 애매 · 성공 · 대성공'으로 보여 줘요. 채팅에 저장된 글은 바뀌지 않아요. 상세 창의 '최근 판정 기록'에서 굴린 값과 평균도 볼 수 있어요.</p>
+<h2 id="time">이야기 시간</h2>
+<p>'이야기 시간 자동 삽입'을 켜면 이야기 속 시각을 AI에게 알려 줘요.</p>
+<h2 id="cache">캐시 확인하기</h2>
+<h3>모델 호출 표시 <span class="pill off">기본 꺼짐</span></h3>
+<p>요청을 보내면 화면 구석에 메인/보조 구분, 모델 이름, '추론 중/출력 중'과 흐른 시간이 떠요. 끝나면 걸린 시간과 입력·출력 토큰(글자 수로 어림)을 보여 주고, 눌러서 펼치면 그때 들어간 로어북 목록이 나와요.</p>
+<h3>캐시 적중 표시</h3>
+<p>이번 요청이 직전 요청과 앞부분이 얼마나 같은지(프롬프트 캐시를 다시 쓸 수 있는 정도)를 어림해서 보여 줘요. 달라지기 시작한 위치와, Dusk가 넣은 내용(이야기 시간·장기 기억 등) 때문이면 그 이름도 알려 줘요.</p>
+<h3>캐시 깨짐 알림 <span class="pill on">기본 켜짐</span></h3>
+<p>앞부분이 절반도 안 같아 캐시가 깨지면 모델 호출 표시를 꺼 둬도 화면 구석에 이유를 잠깐 알려 줘요. 고급 설정 → 이야기 도우미에서 끌 수 있어요.</p>
+<div class="warn"><span class="ico">⚠️</span><div>모델 호출 표시는 RisuBard에서는 동작하지 않아요.</div></div>
+<div class="pager"><a href="memory.html"><small>← 이전</small>장기 기억</a><a class="n" href="cocoa.html"><small>다음 →</small>코코아 · 스킬</a></div>
+<footer>이 페이지는 CHANGELOG와 README를 바탕으로 해요. 앱 버전에 따라 화면 이름이 조금 다를 수 있어요.</footer>
+</main><aside class="toc"></aside></div>
+<script src="../assets/site.js"></script></body></html>
