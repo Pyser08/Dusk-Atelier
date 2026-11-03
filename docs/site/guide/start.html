@@ -7,24 +7,25 @@
 <p>RisuAI 용 모듈·캐릭터 관리·업데이트 플러그인이에요. 모듈 켜기·끄기, 폴더, 순서, 연결, 프리셋, 편집, 에셋 관리와 봇·모듈의 빠른 업데이트를 해요. 장기 기억, 이야기 도우미 같은 기능도 함께 있어요.</p>
 <div class="note"><span class="ico">🛡️</span><div>다른 관리 플러그인과 저장 칸을 나눠 쓰지 않아요. 함께 설치해도 서로의 설정·꺼진 모듈·순서를 건드리지 않아요.</div></div>
 <h2 id="install">설치</h2>
-<ol class="steps">
-<li><b>파일 받기</b><a href="https://github.com/Pyser08/Dusk-Atelier/releases/latest/download/dusk_atelier.js">dusk_atelier.js 내려받기</a> (최신 릴리스)</li>
-<li><b>플러그인 추가</b>RisuAI 설정 → 플러그인에서 <code>dusk_atelier.js</code>를 추가해요. API 3.0을 써요.</li>
-<li><b>예전 이름이라면</b>예전 이름(<b>Dusk Manager</b>)으로 설치했다면 그 플러그인은 지우고 <code>dusk_atelier.js</code>를 새로 추가하세요. 설정·폴더·백업 기록은 같은 저장소를 쓰므로 그대로 이어져요.</li>
-</ol>
-<h2 id="open">열기</h2>
+<div class="demo"><h4>체크리스트 · 설치하고 열기</h4><p class="cap">누르면 체크돼요. 이 기기의 브라우저에 진행이 저장돼요.</p><ul class="check" data-key="install"><li><div><a href="https://github.com/Pyser08/Dusk-Atelier/releases/latest/download/dusk_atelier.js">dusk_atelier.js 내려받기</a> (최신 릴리스)</div></li><li><div>RisuAI 설정 → 플러그인에서 <code>dusk_atelier.js</code>를 추가해요. API 3.0을 써요.</div></li><li><div>예전 이름(<b>Dusk Manager</b>)으로 설치했다면 그 플러그인은 지워요. 설정·폴더·백업 기록은 같은 저장소를 쓰므로 그대로 이어져요.</div></li><li><div>왼쪽 사이드바(햄버거 메뉴)의 <b>Dusk Atelier</b>를 눌러 열어요.</div></li></ul><div class="meter"><i></i></div><small class="meter-l" style="color:var(--mute)"></small></div>
+<h2 id="open">여는 방법</h2>
 <ul><li>왼쪽 사이드바(햄버거 메뉴)의 <b>Dusk Atelier</b>를 눌러요.</li><li>또는 설정 메뉴에서 열어요.</li><li>창 안 어디에 파일을 끌어다 놓아도 바로 가져와요.</li></ul>
 <h2 id="onboarding">시작 안내 따라가기</h2>
-<p>처음 열면 플러그인 창을 꽉 채운 시작 안내가 떠요. 루네가 인사하고, 아래 순서로 안내해요.</p>
-<ol><li>화면 모드 · 글자 크기</li><li>꾸미기 (꾸미기 화면과 같은 선택지)</li><li>장기 기억 (기록할 AI · 기억 수준 · 임베딩)</li></ol>
-<div class="tip"><span class="ico">💡</span><div>장기 기억의 임베딩은 이 시작 안내 3단계에서 설정해요. 나중에 바꾸고 싶으면 장기 기억 화면에서 다시 바꿀 수 있어요.</div></div>
+<p>처음 열면 플러그인 창을 꽉 채운 시작 안내가 떠요. 루네가 손을 흔들며 인사해요. 고르는 즉시 적용되고, 이미 쓰던 분은 지금 설정이 골라진 채로 시작해요(아무것도 초기화하지 않아요). 단계를 눌러 보세요.</p>
+<div class="tabs"><div class="tb"><button>① 화면</button><button>② 꾸미기</button><button>③ 장기 기억</button><button>④ 이야기 도우미</button><button>⑤ 쓰던 것</button><button>⑥ 요약</button></div>
+<div class="tp"><b>화면 모드 · 글자 크기</b><br>간단 모드(필요한 것만)와 고급 모드(세부 설정까지) 중에서 골라요. 나중에 설정 → 화면 모드에서 바꿀 수 있어요.</div>
+<div class="tp"><b>꾸미기</b><br>꾸미기 화면과 같은 선택지예요. 테마와 강조 색을 골라요.</div>
+<div class="tp"><b>장기 기억</b><br>기록할 AI, 기억 수준, 임베딩을 정해요. 임베딩 기본 주소와 모델은 미리 채워져 있어요.</div>
+<div class="tp"><b>이야기 도우미</b><br>공정한 전개, 유저 편향 없애기, 이야기 시간, 이미지 태그 교정을 켜고 꺼요.</div>
+<div class="tp"><b>이미 쓰던 것</b><br>HypaPlus·코코아전트·RisuPot을 쓰던 기록이 있으면 찾은 것만 보여 줘요.</div>
+<div class="tp"><b>요약</b><br>고른 내용을 한눈에 보여 줘요. 끝내거나 '나중에 하기'를 누르면 화면마다 따로 뜨던 안내는 자동으로 띄우지 않아요.</div></div>
+<div class="tip"><span class="ico">💡</span><div>설정 → 도움말 → '시작 안내 다시 보기'로 언제든 다시 볼 수 있어요. 화면 위쪽 <b>?</b> 버튼은 지금 화면의 각 부분을 하나씩 강조하며 안내해요.</div></div>
 <h2 id="mode">간단 모드와 고급 모드</h2>
-<p>기본은 필요한 것만 보이는 간단 모드예요. 자세한 설정이 필요하면 고급 모드로 바꿔 쓰면 돼요. 두 모드는 같은 데이터를 써요.</p>
+<div class="tabs"><div class="tb"><button>간단 모드</button><button>고급 모드</button></div><div class="tp">기본이에요. 꼭 필요한 것만 보이고, 가끔 쓰는 버튼은 ··· 메뉴에 모여 있어요.</div><div class="tp">세부 설정이 모두 보여요. 개발자 모드는 고급 모드에서만 켤 수 있어요. 각 화면 맨 아래 '고급 모드에서 더 보기'로도 바꿔요. 두 모드는 같은 데이터를 써요.</div></div>
 <h2 id="compat">호환</h2>
-<table><tr><th>환경</th><th>상태</th></tr>
-<tr><td>RisuBard</td><td>기준 환경이에요.</td></tr>
-<tr><td>원본 RisuAI</td><td>모든 기능이 동작해요. 처음 쓸 때 데이터베이스 접근 권한을 물으면 허용해 주세요.</td></tr>
-<tr><td>RisuVault</td><td>모듈 기능은 모두 동작해요. 대화가 긴 봇의 편집·에셋·업데이트·패치 적용은 RisuVault가 막고, 이때는 안내만 보여 주고 아무것도 바꾸지 않아요.</td></tr></table>
+<div class="tabs"><div class="tb"><button>RisuBard</button><button>원본 RisuAI</button><button>RisuVault</button></div><div class="tp">기준 환경이에요. <b>모델 호출 표시는 동작하지 않아요.</b></div><div class="tp">모든 기능이 동작해요. 처음 쓸 때 데이터베이스 접근 권한을 물으면 허용해 주세요.</div><div class="tp">모듈 기능은 모두 동작해요. 대화가 긴 봇의 편집·에셋·업데이트·패치 적용은 RisuVault가 채팅 보호로 막아요. 이때는 안내만 보여 주고 아무것도 바꾸지 않아요.</div></div>
+<h2 id="next">다음에 볼 것</h2>
+<div class="cards"><a class="card" href="memory.html"><img src="../assets/img/spot-memory.webp" alt=""><div><b>장기 기억</b><span>인물을 기억해요</span></div></a><a class="card" href="story.html"><img src="../assets/img/spot-story.webp" alt=""><div><b>이야기 도우미</b><span>주사위를 굴려 봐요</span></div></a><a class="card" href="faq.html"><img src="../assets/img/warn.webp" alt=""><div><b>자주 묻는 질문</b><span>막혔을 때</span></div></a></div>
 <h2 id="license">라이선스와 도움 주신 분들</h2>
 <p>AGPL-3.0 라이선스예요. 업데이트 판단 로직의 <b>RisuTide</b>, 스킬 세트의 <b>cocoA(gent!)</b>, 기억 가져오기의 <b>HypaPlus</b>, AI 봇 만들기의 <b>봇빌더</b> 개발자님들께 감사드려요.</p>
 <div class="pager"><a href="../index.html"><small>← 처음으로</small>안내서 허브</a><a class="n" href="memory.html"><small>다음 →</small>장기 기억</a></div>

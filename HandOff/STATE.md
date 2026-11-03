@@ -419,7 +419,8 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - (2026-11-03) 사용자가 올린 그림 주소(아카 에디터가 만든 `//ac.arca.live/…` 링크)를 그대로 쓰기로 함 → `docs/arca/v1.8.3.html`을 사용자가 붙여 넣은 1번 디자인 소스(+flex 줄 그림 `margin:0` 수정)로 교체. 순서 새 화면→기억→이야기 도우미→캐시. 마무리 루네 그림(closing)은 사용자 소스에 없어서 안 넣음. 머리 제목은 그대로.
 
 ## 안내서 사이트 (docs/site/)
-- GitHub Pages용 정적 사이트(허브·처음 사용자 가이드·기능 6페이지·개발자 가이드, 총 9페이지). 다크/라이트는 브라우저 설정(prefers-color-scheme)을 따라가고 수동 토글은 없음.
-- 공용: `assets/site.css`(v1→v3 덮어쓰기 구조), `assets/site.js`(상단 바·왼쪽 메뉴 NAV). 새 페이지는 NAV와 허브 타일, 이전/다음 링크를 함께 고친다.
-- 내용 출처는 README/CHANGELOG/코드 문구만. 버전이 바뀌면 해당 페이지(story·memory 등)를 CHANGELOG 기준으로 갱신.
-- Pages 켜기(저장소 설정 → Pages, 폴더 /docs → 주소 `/site/`)는 사용자가 직접. 워크플로는 건드리지 않음.
+- GitHub Pages(feat/1.8.3 · /docs, `docs/.nojekyll` 필수 — Jekyll이 옛 문서의 `{{` 때문에 빌드 실패했음). 주소 `…/Dusk-Atelier/site/`.
+- 13페이지: 허브, guide/(start·memory·story·cocoa·image-tags·look·manage·switches·faq), dev/(index·host·workflow). HTML이 원본(생성기 없음) — 직접 고친다.
+- 공용: `assets/site.css`(v1→v4 덮어쓰기), `assets/site.js`(상단 바·왼쪽 메뉴 NAV), `assets/widgets.js`(검색 Ctrl+K·탭·체크리스트·표 필터·코드 복사·체험 위젯: 주사위/관계/감정/게이지/태그/코코아/꾸미기/패치). 다크·라이트는 브라우저 설정 자동.
+- 새 페이지: site.js NAV, widgets.js PAGES(검색 색인), 허브 타일, 이전/다음 링크를 함께 고친다. 주사위 위젯의 수치(LV·judge)는 `src/engine/fairplay.js`·`turninfo.js`와 같아야 함.
+- 내용 출처는 README/CHANGELOG/코드 문구만. 버전이 바뀌면 CHANGELOG 기준으로 갱신.

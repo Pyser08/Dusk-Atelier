@@ -1,0 +1,23 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><title>작업 흐름과 파일 찾기 · Dusk Atelier</title><link rel="icon" href="../assets/img/icon.webp"><link rel="stylesheet" href="../assets/site.css"></head>
+<body data-root="../" data-page="dev/workflow">
+<div class="wrap"><nav class="side"></nav><main>
+<span class="eyebrow">개발자</span><h1>작업 흐름과 파일 찾기</h1>
+<p class="lead">고칠 때의 순서와, 작업별로 어떤 파일부터 읽으면 되는지 모았어요.</p>
+<h2 id="loop">작업 루프</h2>
+<ol class="steps"><li><b>소스 수정 → 테스트</b><code>npm test</code>로 확인해요. 테스트는 <code>tests/&lt;이름&gt;.test.js</code>에 있어요.</li><li><b>빌드와 확인</b><code>npm run build</code>로 <code>dusk_atelier.js</code>를 다시 만들고, <code>npm run check</code>가 "동일함"인지 봐요. 빌드물도 함께 커밋해요.</li><li><b>UI를 건드렸다면</b><code>node tests/e2e/run-smoke.mjs</code>로 연기 시험을 해요.</li><li><b>구조가 바뀌었다면</b><code>node tools/source-map.mjs &gt; docs/source-map.md</code>로 소스 지도를 다시 만들어요.</li></ol>
+<div class="tip"><span class="ico">💡</span><div>Node 22 기준이에요. 3.6MB가 넘는 빌드물 <code>dusk_atelier.js</code>는 읽지 말고 <code>src/</code>를 보세요.</div></div>
+<h2 id="rules">지켜야 할 규칙</h2>
+<ul><li><b>계층:</b> <code>engine/</code>은 순수 로직, <code>data/</code>는 api·저장소, <code>ui/</code>는 화면, <code>tide/</code>는 RisuTide예요.</li><li><b>자동 생성 폴더:</b> <code>src/engine/pot/</code>, <code>src/data/pot/</code>는 직접 고치지 않아요.</li><li><b>UI:</b> 부분 갱신을 우선해요(전체 재렌더는 버벅임 원인). DOM은 <code>ui/dom.js</code>의 <code>h()</code>/<code>replace()</code>, 공용 위젯은 <code>ui/kit.js</code>를 써요.</li><li><b>데이터:</b> 장기 기억 저장 데이터는 사용자 기기에 이미 쌓여 있으니, 식별자·스키마를 바꾸면 예전 데이터 마이그레이션과 테스트를 함께 만들어요.</li><li><b>원본 보호:</b> 원본 봇·채팅은 수정하지 않고 새 객체만 만들어요.</li></ul>
+<h2 id="map">작업별로 읽을 파일</h2>
+<input class="filt" data-filter="tm" placeholder="작업 이름으로 찾기 (예: 기억, 테마, 로어북)" aria-label="표 검색">
+<table id="tm"><thead><tr><th>작업</th><th>먼저 읽을 파일</th></tr></thead><tbody><tr><td>앱 진입·훅 등록</td><td><code>src/main.js</code></td></tr><tr><td>메뉴·탭 구성</td><td><code>src/ui/tabs.js</code><br><code>src/ui/app.js</code></td></tr><tr><td>홈 화면</td><td><code>src/ui/screens/home.js</code></td></tr><tr><td>장기기억 — 자동 분석 흐름</td><td><code>src/data/memoryrunner.js</code><br><code>src/data/memoryturn.js</code><br><code>src/engine/memoryapply.js</code></td></tr><tr><td>장기기억 — 프롬프트</td><td><code>src/engine/memoryprompt.js</code><br><code>src/data/memory-default-prompts.js</code></td></tr><tr><td>장기기억 — 주입</td><td><code>src/data/memoryinject.js</code><br><code>src/engine/memoryinject.js</code><br><code>src/engine/recall.js</code></td></tr><tr><td>장기기억 — 저장소</td><td><code>src/data/memorystore3.js (키 dusk.mem.v3.*)</code><br><code>마이그레이션 src/engine/memoryv3.js</code></td></tr><tr><td>스킬(코코아전트 호환)·웹 도구</td><td><code>src/engine/skills.js</code><br><code>src/engine/skillcfg.js</code><br><code>src/engine/skillhook.js</code><br><code>src/data/skillstore.js</code></td></tr><tr><td>모델·API 호출</td><td><code>src/data/modelhub.js</code><br><code>src/engine/runai.js</code><br><code>src/engine/modelcfg.js</code></td></tr><tr><td>로어북</td><td><code>src/engine/lorerules.js</code><br><code>src/data/lorerules.js</code><br><code>src/ui/screens/loredusk.js</code></td></tr><tr><td>봇빌더 연동</td><td><code>src/engine/workshop.js</code><br><code>src/data/workshop.js</code><br><code>src/ui/screens/workshoplink.js</code><br><code>src/data/plugins.js</code></td></tr><tr><td>테마 빌더·꾸미기</td><td><code>src/ui/screens/themebuilder.js</code><br><code>src/ui/screens/chattheme.js</code><br><code>src/ui/theme.js</code></td></tr><tr><td>플러그인 탭·DA Interop</td><td><code>src/data/plugins.js</code><br><code>src/data/interopSnippet.js</code><br><code>src/ui/screens/plugins.js</code></td></tr><tr><td>설정</td><td><code>src/ui/screens/settingstab.js</code><br><code>src/ui/screens/settings.js</code></td></tr><tr><td>빌드</td><td><code>tools/build.mjs</code><br><code>package.json</code></td></tr></tbody></table>
+<h3>검색 팁</h3>
+<pre><code>grep -rn "export function 이름" src/      # 함수 위치
+grep -rln "이름" src/ tests/               # 사용처</code></pre>
+<p>큰 파일은 필요한 줄 범위만 읽어요.</p>
+<h2 id="hosts">호스트 호환</h2>
+<p>api·훅·저장을 건드리면 <a href="host.html">호스트 호환 규칙</a>을 먼저 확인하세요.</p>
+<div class="pager"><a href="host.html"><small>← 이전</small>호스트 호환 규칙</a><a class="n" href="../index.html"><small>다음 →</small>안내서 허브</a></div>
+<footer>AGPL-3.0 · <a href="https://github.com/Pyser08/Dusk-Atelier">GitHub</a></footer>
+</main><aside class="toc"></aside></div>
+<script src="../assets/site.js"></script></body></html>

@@ -3,13 +3,14 @@
 <div class="wrap"><nav class="side"></nav><main>
 <span class="eyebrow">기능 가이드</span><h1>이야기 도우미</h1>
 <p class="lead">공정한 주사위로 이야기가 내 뜻대로만 흐르지 않게 하고, 프롬프트 캐시를 확인해요.</p>
-<h2 id="fair">공정한 전개</h2>
+<div class="demo"><h4>체크리스트 · 이야기 도우미 켜기</h4><p class="cap">누르면 체크돼요. 이 기기의 브라우저에 진행이 저장돼요.</p><ul class="check" data-key="story"><li><div>홈 → 빠른 설정에서 <b>공정한 전개</b>를 켜요</div></li><li><div><b>유저 편향 없애기</b> 박스를 눌러 강도(약하게·보통·강하게)를 골라요</div></li><li><div><b>주사위 결과 표시</b>를 켜고 응답 아래에서 굴림을 확인해요</div></li><li><div><b>모델 호출 표시</b>를 켜서 캐시 적중이 얼마나 되는지 봐요</div></li></ul><div class="meter"><i></i></div><small class="meter-l" style="color:var(--mute)"></small></div><h2 id="fair">공정한 전개</h2>
 <p>이야기가 내 뜻대로만 흐르지 않게 해요. 홈 빠른 설정이나 채팅 입력창 옆 메뉴에서 바로 켜고 끌 수 있어요.</p>
 <h2 id="dice">유저 편향 없애기</h2>
 <p>요청을 보낼 때마다 프로그램이 1~100 주사위를 굴려 AI에게 함께 줘요. AI는 성공할지 불확실한 행동만 이 값으로 가려요. 행동마다 쉬움·보통·어려움·극악 중 난이도 수치가 정해지고, 굴림이 그 수치 이상이면 성공이에요. 공정한 전개가 켜져 있을 때만 작동해요.</p>
 <table><tr><th>강도</th><th>효과</th></tr><tr><td>약하게</td><td>성공하기 쉬워요.</td></tr><tr><td>보통</td><td>기본값이에요.</td></tr><tr><td>강하게</td><td>난이도 수치가 높아 실패가 늘어요.</td></tr></table>
 <p>홈 빠른 설정의 '유저 편향 없애기' 박스를 누르면 상세 창이 열려요. 고급 모드에서는 난이도 수치와 주사위 개수를 직접 넣을 수 있어요.</p>
-<h3>리롤해도 같은 주사위</h3>
+<div class="demo" id="dice-sim"><h4>체험 · 주사위 굴려 보기</h4><p class="cap">기본 주사위 3개를 굴려 선택한 강도·난이도의 목표치와 견줘요. 이 화면은 연습용이에요.</p><div class="row"><label>강도 <select id="ds-level"><option value="weak">약하게</option><option value="normal" selected>보통</option><option value="strong">강하게</option></select></label><label>난이도 <select id="ds-diff"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option><option value="extreme">극악</option></select></label><button class="go" id="ds-go">🎲 굴리기</button></div>
+<div class="dice"></div><div class="dist"></div><small id="ds-cut" style="color:var(--mute)"></small><br><small id="ds-out" style="color:var(--mute)"></small></div><h3>리롤해도 같은 주사위</h3>
 <p>같은 턴을 다시 생성(리롤)하면 같은 주사위 값을 써요. 마음에 드는 판정이 나올 때까지 돌리는 걸 막고, 프롬프트도 그대로라 캐시도 덜 깨져요. 새 입력을 보내면 새로 굴려요.</p>
 <h3>판정 결과 이어 주기</h3>
 <p>AI가 응답 끝에 판정한 행동마다 숨은 표식(화면엔 안 보여요)을 남기고, 다음 턴에 그 결과(예: 경비병 설득 → 실패)를 다시 알려 줘요. 실패한 일을 없던 일처럼 넘기지 않아요.</p>

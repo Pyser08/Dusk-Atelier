@@ -3,10 +3,11 @@
 <div class="wrap"><nav class="side"></nav><main>
 <span class="eyebrow">기능 가이드</span><h1>이미지 태그</h1>
 <p class="lead">AI가 이미지 태그를 틀리게 써도 실제 에셋 이름에 맞춰 고쳐 줘요.</p>
-<h2 id="fix">자동 교정 <span class="pill off">기본 꺼짐</span></h2>
+<div class="tabs"><div class="tb"><button>자동 교정</button><button>상황 알림</button><button>에셋 태그 고치기</button></div><div class="tp"><b>평소에 틀린 이름만 고치고 싶다면</b><br>AI 호출이 늘지 않고, 응답이 저장되기 전에 알아서 고쳐요. 그림이 많은 봇에 알맞아요.</div><div class="tp"><b>표정 태그만 쓰거나 동작 태그를 빼먹는다면</b><br>요청 끝에 직전 옷·태그와 쓸 수 있는 키워드를 짧게 다시 알려 줘서 AI가 상황에 맞게 고르도록 도와요.</div><div class="tp"><b>이미 나온 응답을 한 번에 손보고 싶다면</b><br>누를 때만 최근 응답 1~50개를 검사해요. 미리보기에서 고른 것만 적용하고, 마지막 적용은 되돌릴 수 있어요.</div></div><h2 id="fix">자동 교정 <span class="pill off">기본 꺼짐</span></h2>
 <p>홈의 '이미지 태그 자동 교정'을 켜면, AI가 <code>&lt;img="…"&gt;</code> 태그를 틀리게 써도 응답이 저장되기 전에 이 봇·고정한 모듈·켜진 모듈의 실제 에셋 이름에 맞춰 고쳐요. AI 호출은 늘지 않아요.</p>
 <ul><li>대소문자·띄어쓰기·밑줄 차이, 오타, 줄여 쓴 동작, 활용형, 빠진 접두어, 확장자를 알아봐요.</li><li><b>옷보다 동작이 먼저:</b> 지금 옷에 없는 동작 태그는 그 동작이 있는 다른 옷의 그림으로 바꿔요.</li><li>없는 키워드는 <code>default</code>(없으면 <code>neutral</code>)로, 여러 키워드를 합친 태그는 가장 구체적인 하나로 바꿔요.</li><li>봇마다 다른 이름 규칙을 에셋 목록에서 알아서 읽어요. 그룹 채팅에서는 건드리지 않아요.</li></ul>
-<h2 id="notice">상황 알림 <span class="pill off">기본 꺼짐</span></h2>
+<div class="demo" id="tag-demo"><h4>체험 · 태그 고치기 예시</h4><p class="cap">자주 있는 틀린 태그가 어떻게 바뀌는지 예시로 보여 드려요. 실제 결과는 봇의 에셋 이름에 따라 달라요.</p><div class="row"><label>예시 <select><option value="0">대소문자 · 줄여 쓴 동작</option><option value="1">활용형</option><option value="2">빠진 접두어</option><option value="3">없는 키워드</option></select></label></div>
+<div class="ba"><code class="bad"></code><span class="ar">→</span><code class="good"></code></div><p class="why" style="margin:0;color:var(--sub)"></p></div><h2 id="notice">상황 알림 <span class="pill off">기본 꺼짐</span></h2>
 <p>켜면 요청 끝에 장면 캐릭터의 직전 옷·태그와 쓸 수 있는 키워드, '동작 &gt; 감정' 우선순위를 짧게 다시 알려 줘요. 긴 지침이 묻혀 표정 태그만 쓰는 일을 줄여요. 같은 태그를 3번 연속 쓰면 짚어 주고, 오래된 태그는 알리지 않아요. 요청 글만 조금 길어지고 AI 호출은 늘지 않아요.</p>
 <h2 id="tool">에셋 태그 고치기</h2>
 <p>도구 → 에셋 태그 고치기는 누를 때만 작동해요. 열린 채팅의 최근 응답(1~50개)을 검사해요.</p>
