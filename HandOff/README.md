@@ -57,3 +57,4 @@ npm ci            # 막히면: esbuild·acorn·eslint-scope를 /opt/npm-tools/no
 ## 7. 참고 문서
 - 이전 인계: `docs/HANDOFF-v1.6.4.md`(리수폿 통합·장기기억 구조), `docs/HANDOFF-v1.6.7.md`
 - 버전 안내: `docs/GUIDE-v*.md`, 아카라이브 글: `docs/arca/v*.html`
+- 안내서 사이트: `docs/site/` — 기능 설명이 바뀌면 같이 수정(STATE.md '안내서 사이트' 참고)
