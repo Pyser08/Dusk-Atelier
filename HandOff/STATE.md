@@ -449,7 +449,7 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 ## Dusk Cellar (백그라운드 서버, 별도 저장소) — 진행 상황 2026-11-03
 - 저장소: **Pyser08/Dusk-Cellar** (main, b48c204). 리스 폴더 안에 클론 → `node setup.cjs` 한 번으로 설치. 그쪽 `HandOff/STATE.md`가 상세 기준.
 - 지금 있는 것(뼈대): `setup.cjs`(리스 시작 파일 자동 찾기 → pnpm/npm 빌드 → pm2 목록 보여 주고 지울 것 고르기(리스 직접 실행 항목 '추천') → 실행기 pm2 등록·save → 응답 확인), `cellar-start.cjs`(리스+Cellar 함께 켜고 끄기, Cellar만 재시작), `/cellar/health`(토큰 없이), 그 외 주소는 `dusk-data/token.txt` 토큰 필수, 127.0.0.1:6011. 시험 12개 통과(가짜 pm2·npm 전체 흐름 포함).
-- 미확인: 실제 RisuAI·RisuBard 폴더·진짜 pm2·윈도우에서 실행. RisuBard 시작 파일 경로.
+- 실제 설치: RisuBard 우분투 서버(pm2)에서 5/5 통과·health 응답(2026-11-03). 미확인: 윈도우·맥·Termux·원본 RisuAI.
 - 결정됨: 이름 Dusk Cellar / 리스 프로세스 안에 섞지 않고 실행기로 함께 실행 / 서버는 선택 기능(없으면 플러그인 지금 방식) / 리스 데이터는 건드리지 않음.
-- 다음: ① 사용자 RisuBard 서버에서 실제 설치 시험 ② 플러그인 연결 설정(주소·토큰, 있으면 쓰고 없으면 지금 방식, HOST-COMPAT) ③ 1단계 기억 백업 + 화면에 필요한 조각만 돌려주기(효과 측정) ④ 필요하면 분석·임베딩 서버 실행. HTTPS 리스는 프록시 `/cellar/` 안내.
+- 다음: ① 플러그인 연결 설정(주소·토큰, 있으면 쓰고 없으면 지금 방식, HOST-COMPAT) ③ 1단계 기억 백업 + 화면에 필요한 조각만 돌려주기(효과 측정) ④ 필요하면 분석·임베딩 서버 실행. HTTPS 리스는 프록시 `/cellar/` 안내.
 - 정리 대기(삭제는 사용자 지시 필요): 이 저장소의 `server/dusk-start.cjs`, `tests/dusk-start.test.js`는 Cellar로 옮겨 가 중복.
