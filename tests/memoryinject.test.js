@@ -116,3 +116,13 @@ test("injector falls back to lore mode without the hook; syncLore is idempotent"
   assert.equal(await inj.syncLore(0, 0), true); assert.equal(chat.localLore.length, 1);
   assert.equal(await inj.syncLore(0, 0), false);
 });
+test("budget: a person who does not fit whole keeps their most important moments instead of vanishing", () => {
+  const recs = [rec(1, "S", "가".repeat(60)), rec(2, "A", "나".repeat(60)), rec(3, "C", "다".repeat(60)), rec(4, "D", "라".repeat(60))];
+  const people = { 미나: { name: "미나", ctx: "always", records: recs } };
+  const { text, manifest } = buildBlock(folder(people), { messageCount: 200, settings: { targetTokens: 140, capTokens: 140, sceneTokens: 60, eventTokens: 0 } });
+  assert.match(text, /- 미나/, "예산이 빡빡해도 인물이 통째로 빠지지 않는다");
+  assert.ok(text.includes("가".repeat(60)), "가장 중요한 순간은 남는다");
+  assert.ok(!text.includes("라".repeat(60)), "덜 중요한 순간부터 빠진다");
+  assert.ok(estimateTokens(text) <= 140);
+  assert.ok(manifest.included.some((x) => x.name === "미나"));
+});

@@ -101,15 +101,31 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     const tag = (r) => (earlier?.has(r.id) ? "(earlier) " : "") + (human && fading(r, messageCount, fadeAt) ? "(vague) " : "");   // 변화 이전 기록 · 흐릿해진 사소한 기록
     const moments = top.sort((a, b) => (a.r.at ?? -1) - (b.r.at ?? -1)).map((x) => `(${x.r.g}) ${tag(x.r)}${oneLine(x.r.act)}${trustTag(x.r)}${changeNote(x.r)}`);
     const gap = human && rel ? returnGap(p, scenes, messageCount) : 0;   // 오랜만에 다시 나온 인물
-    const text = `- ${p.name}${gap ? ` (back after ~${gap} messages away)` : ""}: ${[dg ? oneLine(dg) : "", moments.length ? "Key moments: " + moments.join(", ") : ""].filter(Boolean).join(" / ")}`;
-    cands.push({ name: p.name, ids: top.map((x) => x.r.id), group, best: (top[0]?.s ?? 0) + (p.pinned ? 50 : 0), text, tokens: estimateTokens(text) });
+    const mk = (ms, withDg) => `- ${p.name}${gap ? ` (back after ~${gap} messages away)` : ""}: ${[withDg && dg ? oneLine(dg) : "", ms.length ? "Key moments: " + ms.join(", ") : ""].filter(Boolean).join(" / ")}`;
+    const text = mk(moments, true);
+    // 예산이 모자라면 사람을 통째로 빼기 전에 덜 중요한 순간부터 줄여 본다(문장은 자르지 않고 순간 단위로만 줄임).
+    const items = top.map((x, i) => ({ id: x.r.id, s: x.s, m: moments[i] }));   // top은 위에서 시간순으로 정렬돼 moments와 같은 순서
+    cands.push({ name: p.name, ids: top.map((x) => x.r.id), group, best: (top[0]?.s ?? 0) + (p.pinned ? 50 : 0), text, tokens: estimateTokens(text), mk, items, hasDg: !!dg });
   }
   cands.sort((a, b) => a.group - b.group || b.best - a.best);
   const chars = [], included = new Set();
+  const headTok = estimateTokens("Characters (current state):");
   for (const c of cands) {
-    const limit = c.group === 0 ? cap : target;
-    if (used + c.tokens + 4 > limit) { manifest.excluded.push({ kind: "person", name: c.name, tokens: c.tokens, reason: "budget" }); continue; }  // 잘라 넣지 않고 통째로 제외
-    chars.push(c.text); used += c.tokens; manifest.included.push({ kind: "person", name: c.name, tokens: c.tokens, group: c.group }); manifest.recordIds.push(...c.ids); included.add(norm(c.name));
+    const limit = (c.group === 0 ? cap : target) - (chars.length ? 0 : headTok);   // 첫 인물은 제목 줄 몫도 예산에서 뺀다
+    let text = c.text, tokens = c.tokens, ids = c.ids;
+    if (used + tokens + 4 > limit) {
+      // 덜 중요한 순간부터 하나씩 빼며 맞는 가장 큰 모양을 찾는다. 요약(digest)만 남기는 것도 마지막에 시도한다.
+      const drop = [...c.items].sort((a, b) => a.s - b.s).map((x) => x.id); let fit = null;
+      for (let n = 1; n <= c.items.length; n++) {
+        const gone = new Set(drop.slice(0, n)), rest = c.items.filter((x) => !gone.has(x.id));
+        if (!rest.length && !c.hasDg) break;
+        const t = c.mk(rest.map((x) => x.m), true), k = estimateTokens(t);
+        if (used + k + 4 <= limit) { fit = { text: t, tokens: k, ids: rest.map((x) => x.id) }; break; }
+      }
+      if (!fit) { manifest.excluded.push({ kind: "person", name: c.name, tokens: c.tokens, reason: "budget" }); continue; }
+      ({ text, tokens, ids } = fit);
+    }
+    chars.push(text); used += tokens; manifest.included.push({ kind: "person", name: c.name, tokens, group: c.group }); manifest.recordIds.push(...ids); included.add(norm(c.name));
   }
   if (chars.length) lines.push("Characters (current state):", ...chars);
   if (plus) {  // v1.6.2: 열린 항목 · 관계 변화량 · 지식 경계 · 원문 발췌. 각각 자기 예산 안에서 줄 단위로, 전체 상한을 넘으면 통째로 뺀다.
