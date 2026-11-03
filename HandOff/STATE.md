@@ -439,3 +439,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 모듈·플러그인 속도(1.8.3): `readDb(api,keys,{cached})`(loadModuleState만 캐시, commit은 새로 읽음), modules.js `linkUseCounts`(60초 기억·200ms 뒤 시작·봇 처음 읽으면 storeDbCache), plugins `listInterop`/`listPlugins` 병렬, viewList 병렬. 시험 tests/modplug-load.test.js. 미확인: 실제 PocketRisu 체감 속도.
 - 위키 상세정보 좁아짐 버그(1.8.3): 원인=문서 없을 때 .rb-wk3가 넓은 화면 2칸 grid(140px 목차+본문)에 목차 없이 들어가 카드가 140px. 고침=infotab 없는-문서 뿌리에 rb-wk3-solo + styles.js 덮어쓰기. 시험 tests/wikisolo.test.js(정적). 미확인: 실제 RisuBard PC 화면 재확인.
 - 유저 편향 상세(dicedetail.js)에 재해석/존중 세그먼트를 강도 위에 추가(설정 탭과 같은 DICE_MODE_KEY). e2e run-home-dice 선택자는 '강도' 구획으로 한정.
+- 설정 고급 '이야기 도우미'의 재해석/존중 행 제거(유저 편향 상세로 이동, 저장 키 DICE_MODE_KEY 동일).

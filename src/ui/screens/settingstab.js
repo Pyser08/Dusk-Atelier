@@ -13,7 +13,6 @@ import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
 import { openAbout } from './about.js';
 import { loadMemoryButtonOn } from '../../data/memorybutton.js';
-import { loadDiceMode, DICE_MODE_KEY } from '../../data/fairplay.js';
 
 export async function renderSettingsTab(ctx) {
   if (ctx.state.sub === "prompts") return renderPrompts(ctx);
@@ -23,7 +22,6 @@ export async function renderSettingsTab(ctx) {
   const adv = ctx.prefs.advanced;
   const fail = (e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
 
-  const diceModePromise = loadDiceMode(ctx.api).catch(() => "reinterpret");
 
   // ── 줄 만들기 ──
   const segRow = (title, text, seg, cls = "") => h("div", { class: ["rb-srow has-seg", cls] }, h("span", { class: "t" }, title, text ? h("small", null, text) : null), seg);
@@ -59,10 +57,6 @@ export async function renderSettingsTab(ctx) {
   const advSide = shell.querySelector(".rb-mem2-side");
   replace(ctx.main, shell);
 
-  const diceMode = await diceModePromise;
-  const diceModeSeg = segmented([["reinterpret", "재해석"], ["respect", "존중"]], diceMode, async (v) => {
-    try { if (ctx.fairPlay) await ctx.fairPlay.setDiceMode(v); else await ctx.api.pluginStorage.setItem(DICE_MODE_KEY, v); ctx.toast(v === "respect" ? "내가 적은 결과를 그대로 따를게요." : "내가 적은 결과도 시도로 보고 주사위로 가릴게요."); } catch (e) { fail(e); }
-  }, "내가 결과까지 적었을 때");
 
   // ── 고급 영역 ──
   let advBlocks = [true];
@@ -104,7 +98,6 @@ export async function renderSettingsTab(ctx) {
     void rerollSeg; void logSeg; void btnSeg; void bdSeg; void memBtnSeg;
     advBlocks = [
       card("이야기 도우미",
-        segRow("내가 결과까지 적었을 때", "재해석: 시도로 보고 주사위로 가려요 · 존중: 그대로 따라요", diceModeSeg),
         valRow("캐시 깨짐 알림", "앞부분이 절반도 안 같아 캐시가 깨지면 화면 구석에 잠깐 알려요", [["on", "켜짐"], ["off", "꺼짐"]], ctx.turnInfo?.isCacheAlert?.() === false ? "off" : "on", async (v) => {
           try { await ctx.turnInfo?.setCacheAlert(v === "on"); ctx.toast(v === "on" ? "캐시 깨짐 알림을 켰어요" : "캐시 깨짐 알림을 껐어요"); } catch (e) { fail(e); }
         }, "rb-set-cachealert"),
