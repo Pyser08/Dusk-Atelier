@@ -19,14 +19,15 @@ const docs = [
 
 test("backend auto-selection by BardWiki detection", () => {
   assert.equal(selectBackend({}, "auto").id, "local");
-  assert.equal(selectBackend({ bardWiki: { getDocuments() {} } }, "auto").id, "bardwiki");
+  assert.equal(selectBackend({ bardWiki: { getDocuments() {} } }, "auto").id, "local");
+  assert.equal(selectBackend({ bardWiki: { getDocuments() {} } }, "bardwiki").id, "bardwiki");
   assert.equal(selectBackend({}, "bardwiki").id, "local");
   assert.equal(selectBackend({ bardWiki: { getDocuments() {} } }, "local").duplicate, true);
   assert.equal(selectBackend({}, "off").id, "off");
   assert.equal(capabilitiesOf("bardwiki").analyze, false); assert.equal(capabilitiesOf("local").inject, true);
 });
 test("runner and injection hooks are not registered on bardwiki (caller gates by selectBackend)", async () => {
-  const api = { bardWiki: { getDocuments() {} } }; const b = selectBackend(api, "auto");
+  const api = { bardWiki: { getDocuments() {} } }; const b = selectBackend(api, "bardwiki");
   assert.equal(b.id, "bardwiki"); assert.equal(capabilitiesOf(b.id).analyze || capabilitiesOf(b.id).inject, false);
 });
 test("section parsing in ko/en and without headings", () => {

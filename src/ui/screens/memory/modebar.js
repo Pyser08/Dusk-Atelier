@@ -29,6 +29,7 @@ export async function renderModeBar(ctx, host, { redraw }) {
 // 선택은 기억 탭 맨 위에서 언제든 바꿀 수 있다.
 export async function maybeAskBardWiki(ctx) {
   const M = ctx.memory;
+  return false;  // 기본 저장소는 플러그인이라 더 이상 묻지 않는다(저장소는 기억 탭 맨 위에서 바꿀 수 있다).
   if (!M || !hasBardWiki(ctx.api)) return false;
   const idx = await M.store.getIndex();
   if (idx.bardAsked) return false;

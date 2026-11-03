@@ -482,3 +482,10 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 수정: `memoryprompt.js` `analyzeStaged` — 1단계(개요: 인물 name/act/p/s/r + 장면·관계·떡밥·게이지) 1번 + 점수 ≥1인 인물마다 세부 1번(최대 6명). 세부 실패는 개요만 남기고 계속(`onWarn` 로그). 설정 `settings.staged`(기본 true, 기억 설정에서 끔 → 예전 한 번 호출). 러너 analyzeAt가 사용(자동 기록·지난 대화 전체 분석 모두).
 - 시험: tests/memoryprompt-staged.test.js. 한 번 호출을 전제로 한 기존 시험은 `staged=false` 고정.
 - 확인 못 한 것: 실제 모델에서의 실패율 변화·호출 시간/비용, 개요 단계가 세부 필드를 안 내보내는지(프롬프트 준수), Risupot 합친 호출(link)은 그대로.
+
+## 줄 형식 분석·가벼운 모드 (2026-11-04, 1.9.1)
+- `engine/memorylines.js`: 줄 형식 파서/보정(`who|`,`rel|`,`to|…|인용`), 인용 검증, 이름 정규화. `memoryprompt.js analyzeLines`(1단계 개요→인물별 2단계, 200자 미만은 1단계만, 실패 시 형식 재안내→축소 재시도, 오류에 응답 앞부분). `settings.format="json"`이면 옛 JSON 경로.
+- `applyEmo` smooth: ±1 약신호는 같은 방향 2회 누적 시 1칸, 반대는 상쇄, |d|≥2는 즉시, 잠금 값 불변.
+- 가벼운 모드: `settings.light===true`일 때만(자동 판별 제거). 기억 설정 스위치.
+- 저장소 `auto` = 항상 local(BardWiki는 직접 선택). 첫 진입 BardWiki 질문 제거(`modebar.js maybeAskBardWiki`는 no-op).
+- 확인 못 한 것: 실제 약한 모델(DeepSeek flash 등)에서의 준수율·인용 검증 엄격도.
