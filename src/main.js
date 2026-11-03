@@ -164,7 +164,7 @@ async function start() {
   const turnInfo = createTurnInfo(api, { diceSource: () => fairPlay.lastDice(), loreFor: (t) => loreLog.recordFor(t), loreLast: () => loreLog.last() });   // 주사위 결과·모델 호출 표시 (1.8.3)
   turnInfo.start().catch((e) => console.log(`[${TITLE}] 호출 표시 시작 실패: ${e?.message ?? e}`));
   // 채팅 입력창 옆 메뉴의 빠른 설정 (1.8.3). 어디서 바꾸든(홈·시작 안내·메뉴) 버튼 이름이 따라 바뀌게 설정 함수를 감싼다.
-  const chatMenu = createChatMenu(api, { fairPlay, turnInfo });
+  const chatMenu = createChatMenu(api, { fairPlay, turnInfo, openMemory: () => memoryRef.open?.() });   // 맨 위에 '장기 기억' 바로가기
   for (const [obj, names] of [[fairPlay, ["set", "setDice"]], [turnInfo, ["setDiceShow"]]]) for (const n of names) {
     const f = obj[n]; obj[n] = async (...a) => { const r = await f(...a); chatMenu.refresh().catch(() => {}); return r; };
   }

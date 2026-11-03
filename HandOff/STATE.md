@@ -425,3 +425,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 새 페이지: site.js NAV, widgets.js PAGES(검색 색인), 허브 타일, 이전/다음 링크를 함께 고친다. 주사위 위젯의 수치(LV·judge)는 `src/engine/fairplay.js`·`turninfo.js`와 같아야 함.
 - 내용 출처는 README/CHANGELOG/코드 문구만. 버전이 바뀌면 CHANGELOG 기준으로 갱신.
 - 아카 v1.8.3 글: 맨 위 '처음이라면' 접이식 상자를 안내서 사이트 안내 큰 상자(NEW · GUIDE SITE, 열기 버튼 + 5개 바로가기 + 예전 가이드 2.0 링크)로 교체. 사이트 주소는 Pages 배포 확인 후 게시할 것(`https://pyser08.github.io/Dusk-Atelier/site/`).
+- 채팅 메뉴(입력창 옆, location "chat") 맨 위에 '장기 기억' 바로가기 추가(`data/chatmenu.js` openMemory, main.js에서 memoryRef.open 연결). 토글이 아니라 화면을 여는 버튼(이름에 켜짐/꺼짐 없음), 빠른 설정을 숨기면 함께 숨김. 별도로 location "action"의 기존 '장기기억' 버튼(`memorybutton.js`)은 그대로 — 호스트에서 두 메뉴가 같은 곳으로 보이면 중복이니 실기기 확인 필요(미확인).
