@@ -1,0 +1,42 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>목업 B2 · 검색 + 벤토 + 루네</title><link rel="stylesheet" href="_base.css"><style>
+.w{max-width:1100px;margin:0 auto;padding:0 20px}
+.ban{position:relative;margin:20px 0 0;border-radius:28px;overflow:hidden;border:1px solid var(--line)}.ban img{width:100%;aspect-ratio:24/9;object-fit:cover;object-position:center 30%}
+.ban::after{content:"";position:absolute;inset:auto 0 0 0;height:45%;background:linear-gradient(transparent,var(--bg))}
+.sbox{position:relative;z-index:2;max-width:680px;margin:-46px auto 0;padding:0 4px}
+.sbox .in{display:flex;align-items:center;gap:12px;padding:16px 20px;border-radius:18px;background:var(--card);border:1px solid var(--line);box-shadow:0 20px 50px #0005;font-size:17px;color:var(--mute)}.sbox .in kbd{margin-left:auto;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:0 6px}
+.pop{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0 6px}.pop a{padding:5px 13px;border-radius:999px;background:var(--card2);color:var(--sub);font-size:13.5px}
+.sub{text-align:center;color:var(--mute);font-size:14.5px;margin:8px 0 34px}
+.bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:150px;gap:12px;margin-bottom:60px}
+.t{position:relative;overflow:hidden;padding:18px;border-radius:22px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;justify-content:flex-end;transition:.2s}.t:hover{border-color:var(--g2);transform:translateY(-2px)}
+.t img{position:absolute;right:-6px;bottom:-6px;width:96px;opacity:.95}.t b{font-size:17px;position:relative}.t span{color:var(--mute);font-size:13.5px;position:relative;max-width:70%}
+.big{grid-column:span 2;grid-row:span 2;background:linear-gradient(150deg,color-mix(in srgb,var(--g1) 45%,var(--card)),var(--card) 75%)}.big img{width:200px}.big span{max-width:52%}.big b{font-size:28px}.big span{font-size:15px}.big .go{position:relative;display:inline-block;margin-top:12px;width:max-content;padding:9px 18px;border-radius:12px;background:#fff;color:#2a2050;font-weight:800;font-size:14px}
+.wide{grid-column:span 2}.dev{background:linear-gradient(150deg,color-mix(in srgb,var(--g3) 20%,var(--card)),var(--card))}
+@media(max-width:820px){.bento{grid-template-columns:repeat(2,1fr);grid-auto-rows:130px}.big{grid-column:span 2;grid-row:span 2}.wide{grid-column:span 2}.ban img{aspect-ratio:16/9}.t img{width:80px}.big img{width:160px}}
+.sbox{max-width:760px}.srow{position:relative;display:flex;align-items:flex-end;gap:0}.srow .in{flex:1}
+.ld{position:absolute;right:-150px;bottom:-24px;width:170px;z-index:3;pointer-events:none;filter:drop-shadow(0 18px 30px color-mix(in srgb,var(--g1) 55%,transparent));animation:fl 6s ease-in-out infinite}
+@keyframes fl{50%{transform:translateY(-6px)}}
+.bub{position:absolute;right:6px;top:-44px;z-index:4;background:var(--card);border:1px solid var(--line);border-radius:14px 14px 4px 14px;padding:6px 12px;font-size:13px;color:var(--sub);white-space:nowrap;box-shadow:0 8px 20px #0004}
+@media(max-width:1120px){.ld{right:-40px;width:120px;bottom:-14px}.srow .in{padding-right:96px}}
+@media(max-width:620px){.ld{right:-6px;width:96px;bottom:-8px}.srow .in{padding-right:80px}.bub{display:none}}
+.big{overflow:visible}.big .ldt{position:absolute;right:10px;bottom:0;width:auto;height:108%;max-width:none;opacity:1;filter:drop-shadow(0 16px 30px color-mix(in srgb,var(--g1) 55%,transparent));animation:fl 6s ease-in-out infinite}
+.bub2{position:absolute;right:230px;top:40px;z-index:3;background:var(--bg);border:1px solid var(--line);border-radius:14px 14px 4px 14px;padding:6px 12px;font-size:13px;color:var(--sub);white-space:nowrap;box-shadow:0 8px 20px #0004}
+.bento{margin-top:20px}
+.big b,.big span{z-index:2;text-shadow:0 2px 12px var(--bg)}
+@media(max-width:820px){.big .ldt{height:100%;right:-8px}.bub2{right:150px;top:16px}.big b{font-size:24px}.big b,.big span{max-width:58%}}
+@media(max-width:420px){.bub2{display:none}.big span{max-width:58%}}
+</style></head><body>
+<div class="bar"><img src="../assets/img/icon.webp" alt=""><b>Dusk Atelier 안내서</b><span class="s"></span><a>GitHub</a></div>
+<div class="w"><div class="ban"><img src="../assets/img/banner.webp" alt="Dusk Atelier"></div>
+<div class="sbox"><div class="srow"><div class="in">🔍 무엇이 궁금하세요? <kbd>Ctrl K</kbd></div></div></div>
+<div class="pop"><a>🎲 주사위</a><a>🧠 임베딩</a><a>💾 백업</a><a>📦 패치</a><a>🖼️ 이미지 태그</a><a>❓ RisuVault</a></div>
+<p class="sub">RisuAI에서 모듈·봇을 관리하고, 인물을 기억하는 플러그인 Dusk Atelier 안내서예요.</p>
+<div class="bento">
+<a class="t big"><div class="bub2">처음이라면 여기부터!</div><img class="ldt" src="../assets/img/ld.webp" alt="루네"><b>처음 사용자 가이드</b><span>설치 → 열기 → 시작 안내. 체크리스트를 따라 하면 끝나요.</span><span class="go">시작하기 →</span></a>
+<a class="t"><img src="../assets/img/spot-memory.webp" alt=""><b>장기 기억</b><span>관계·호칭·추억</span></a>
+<a class="t"><img src="../assets/img/spot-story.webp" alt=""><b>이야기 도우미</b><span>주사위 체험</span></a>
+<a class="t"><img src="../assets/img/spot-cache.webp" alt=""><b>코코아 · 스킬</b><span>단계별 지침</span></a>
+<a class="t"><img src="../assets/img/more.webp" alt=""><b>이미지 태그</b><span>자동 교정</span></a>
+<a class="t wide"><img src="../assets/img/spot-screen.webp" alt=""><b>화면 · 꾸미기 / 모듈 · 봇 관리</b><span>테마 12 · 강조 색 18 · 폴더 · 백업 · 되돌리기</span></a>
+<a class="t"><img src="../assets/img/warn.webp" alt=""><b>자주 묻는 질문</b><span>막혔을 때</span></a>
+<a class="t dev"><img src="../assets/img/install.webp" alt=""><b>개발자</b><span>패치 · 호환 · 빌드</span></a>
+</div></div><div class="tag">목업 B2 · 검색 + 벤토 + 루네</div></body></html>
