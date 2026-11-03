@@ -27,3 +27,25 @@ test("서버가 거절하면 그 이유로 실패", async () => {
   const bk = createCellarBackups(api, { url: "http://c" }, { sleep: async () => {} });
   await assert.rejects(bk.restore("x"), /백업이 끝난 뒤/);
 });
+
+test("서버가 복원 실패를 알리면 성공으로 보지 않고 이유와 함께 실패", async () => {
+  const api = { nativeFetch: async (u, o) => {
+    if (u.endsWith("/cellar/health")) return res(200, { name: "dusk-cellar", version: "0.1.0" });
+    if (o.method === "GET") return res(200, { ok: true, items: [], job: null, restore: { id: "a", phase: "failed", error: "디스크가 부족해요" } });
+    return res(200, { ok: true, restarting: true });
+  } };
+  const bk = createCellarBackups(api, { url: "http://c" }, { sleep: async () => {} });
+  await assert.rejects(bk.restore("a"), /디스크가 부족/);
+});
+
+test("복원이 진행 중(running)이면 끝날 때까지 기다린다", async () => {
+  let n = 0;
+  const api = { nativeFetch: async (u, o) => {
+    if (u.endsWith("/cellar/health")) return res(200, { name: "dusk-cellar", version: "0.1.0" });
+    if (o.method === "GET") return res(200, { ok: true, items: [], job: null, restore: { id: "a", phase: ++n < 3 ? "running" : "done" } });
+    return res(200, { ok: true, restarting: true });
+  } };
+  const bk = createCellarBackups(api, { url: "http://c" }, { sleep: async () => {} });
+  assert.equal(await bk.restore("a"), true);
+  assert.ok(n >= 3);
+});

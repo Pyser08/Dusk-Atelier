@@ -223,7 +223,8 @@ async function openCellarBackup(ctx, st) {
     const row = (it) => h("div", { class: "rb-row", style: "display:flex;align-items:center;gap:10px" },
       h("div", { style: "flex:1;min-width:0" },
         h("div", null, bkWhen(it), it.label ? h("span", { class: "rb-muted" }, ` · ${it.label}`) : null),
-        h("div", { class: "rb-muted" }, `파일 ${it.files.toLocaleString()}개 · ${fmtSize(it.bytes)} · ${(it.ms / 1000).toFixed(1)}초`)),
+        h("div", { class: "rb-muted" }, `파일 ${it.files.toLocaleString()}개 · ${fmtSize(it.bytes)} · ${(it.ms / 1000).toFixed(1)}초`),
+        it.unstable ? h("div", { class: "rb-muted", style: "color:var(--rb-warn,#c97a00)" }, "백업 중에도 세이브가 계속 바뀌어서 일부 파일이 서로 안 맞을 수 있어요") : null),
       btn("복원", { size: "sm", onClick: () => doRestore(it) }));
     async function doRestore(it) {
       if (busy) return;
@@ -234,7 +235,7 @@ async function openCellarBackup(ctx, st) {
       try {
         const back = await bk.restore(it.id, { onWait: (i) => replace(stEl, `복원 중… 리스를 다시 켜는 중이에요 (${(i + 1) * 2}초)`) });
         replace(stEl, back ? "복원했어요. 지금 리스를 새로고침해 주세요(F5 또는 앱 다시 시작)." : "리스가 아직 응답하지 않아요. 잠시 뒤 새로고침해 주세요.");
-      } catch (e) { replace(stEl, String(e?.message ?? e)); busy = false; nowBtn.disabled = false; }
+      } catch (e) { replace(stEl, `복원 실패 · ${String(e?.message ?? e)}`); busy = false; nowBtn.disabled = false; }
     }
     async function load() {
       if (closed || busy) return;

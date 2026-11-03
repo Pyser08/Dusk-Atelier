@@ -6,7 +6,7 @@ export function createCellarBackups(api, conn, { sleep = (ms) => new Promise((r)
   const get = async () => {
     const { status, json } = await cellarRequest(api, conn, "/cellar/backup", { timeout: 15000 });
     if (status !== 200 || !json.ok) throw new Error(json.error ?? `응답 ${status}`);
-    return { items: Array.isArray(json.items) ? json.items : [], job: json.job ?? null };
+    return { items: Array.isArray(json.items) ? json.items : [], job: json.job ?? null, restore: json.restore ?? null };
   };
   const post = async (body) => {
     const { status, json } = await cellarRequest(api, conn, "/cellar/backup", { method: "POST", body, timeout: 15000 });
@@ -24,7 +24,13 @@ export function createCellarBackups(api, conn, { sleep = (ms) => new Promise((r)
       for (let i = 0; i < tries; i++) {
         onWait(i);
         const st = await probeCellar(api, conn.url).catch(() => null);
-        if (st?.ok) return true;
+        if (st?.ok) {
+          // 서버가 복원 상태를 알려 주면 그걸 따른다(실패를 '복원했어요'로 착각하지 않게). 옛 서버는 상태가 없어 연결만 보고 끝낸다.
+          const r = (await get().catch(() => null))?.restore;
+          if (!r || r.id !== id) return true;
+          if (r.phase === "done") return true;
+          if (r.phase === "failed") throw new Error(r.error || "복원에 실패했어요");
+        }
         await sleep(wait);
       }
       return false;
