@@ -129,6 +129,10 @@ await page.evaluate(() => { window.__cpMode = ""; });
 // 9) 큰 코드(Atelier 자신): 색 없는 편집기 + 자기 자신 경고
 await menuOf("Dusk Atelier"); await page.locator('.rb-menu button:has-text("코드 수정")').click({ timeout: 90000 }); await page.waitForSelector("#rb-pe-editor textarea", { timeout: 90000 });
 ok("큰 코드는 색 입히기 없는 일반 편집기", (await page.locator("#rb-pe-editor .rb-code").count()) === 0 && (await page.locator("#rb-pe-editor textarea.rb-input").count()) === 1);
+{ const g = await page.locator("#rb-pe-gutter").textContent(); const n = (await page.locator("#rb-pe-editor textarea").inputValue()).split("\n").length;
+  ok("큰 코드에도 줄 번호가 있고 줄 수와 같음", g.split("\n").length === n && g.startsWith("1\n2\n") && g.endsWith(String(n)), `${g.split("\n").length} vs ${n}`);
+  await page.locator("#rb-pe-editor textarea").evaluate((t) => { t.value = t.value + "\nnew line"; t.dispatchEvent(new Event("input")); });
+  ok("줄을 더하면 줄 번호도 늘어남", (await page.locator("#rb-pe-gutter").textContent()).split("\n").length === n + 1); }
 ok("자기 자신 경고", (await dlg().textContent()).includes("자신을 고치고"));
 if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
 await page.locator("#rb-pe-close").click();

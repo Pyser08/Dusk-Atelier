@@ -43,10 +43,16 @@ export async function openPluginEdit(ctx, p, st) {
       const sync = (v) => { cur = v; next.disabled = v === orig; };
       let editor;
       if (big) {
-        const ta = h("textarea", { class: "rb-input", spellcheck: "false", wrap: "off", "aria-label": "플러그인 코드", style: `width:100%;box-sizing:border-box;min-height:300px;max-height:46vh;font:12.5px/1.6 ${MONO};white-space:pre;overflow:auto` });
-        ta.value = cur;
-        ta.addEventListener("input", () => sync(ta.value));
-        editor = h("div", { id: "rb-pe-editor" }, ta);
+        // 큰 코드: 색 없이 일반 입력칸 + 줄 번호만(줄 번호는 글자 하나 칠 때 줄 수가 바뀔 때만 다시 만든다)
+        const FONT = `font:12.5px/1.6 ${MONO}`;
+        const ta = h("textarea", { class: "rb-input", spellcheck: "false", wrap: "off", "aria-label": "플러그인 코드", style: `flex:1;min-width:0;box-sizing:border-box;min-height:300px;max-height:46vh;${FONT};white-space:pre;overflow:auto;padding:8px 10px;border-radius:0 8px 8px 0` });
+        const gut = h("pre", { "aria-hidden": "true", id: "rb-pe-gutter", style: `margin:0;padding:8px 8px 24px 10px;${FONT};text-align:right;color:var(--rb-sub);background:var(--rb-bg2,rgba(127,127,127,.08));overflow:hidden;user-select:none;border-radius:8px 0 0 8px;min-width:4ch;box-sizing:border-box;max-height:46vh` });
+        let lines = 0;
+        const num = (v) => { let n = 1; for (let i = v.indexOf("\n"); i !== -1; i = v.indexOf("\n", i + 1)) n++; if (n === lines) return; lines = n; const a = new Array(n); for (let i = 0; i < n; i++) a[i] = i + 1; gut.textContent = a.join("\n"); };
+        ta.value = cur; num(cur);
+        ta.addEventListener("input", () => { sync(ta.value); num(ta.value); gut.scrollTop = ta.scrollTop; });
+        ta.addEventListener("scroll", () => { gut.scrollTop = ta.scrollTop; });
+        editor = h("div", { id: "rb-pe-editor", style: "display:flex;align-items:stretch" }, gut, ta);
       } else {
         editor = h("div", { id: "rb-pe-editor" }, codeEditor(cur, { onChange: sync, label: "플러그인 코드", minHeight: "300px", maxHeight: "46vh", lang: "js" }).el);
       }
@@ -54,7 +60,7 @@ export async function openPluginEdit(ctx, p, st) {
         h("p", { class: "rb-muted" }, [p.name, p.version && `v${p.version}`, fmtBytes(orig.length)].filter(Boolean).join(" · ")),
         h("p", { class: "rb-p" }, "코드를 고치면 리스 설정 파일(settings/app.json)에 있는 이 플러그인의 코드만 바뀌어요. 다른 플러그인과 설정은 그대로예요. 맨 위의 머리말(//@name 등)은 그대로 두세요."),
         p.self ? note("warn", "지금 이 플러그인(Dusk Atelier) 자신을 고치고 있어요. 잘못 고치면 Atelier가 열리지 않을 수 있어요. 고치기 전에 설정 파일이 서버에 복사되니, 문제가 생기면 그 복사본으로 되돌릴 수 있어요.") : null,
-        big ? note("info", `코드가 커서(${fmtBytes(orig.length)}) 색 표시 없이 보여 줘요.`) : null,
+        big ? note("info", `코드가 커서(${fmtBytes(orig.length)}) 색 표시 없이 줄 번호만 보여 줘요.`) : null,
         problem ? note("err", problem) : null,
         editor,
         actions(next, closeBtn())
