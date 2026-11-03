@@ -57,5 +57,8 @@ export function createDbCache(raw, { ttl = 45000, max = 12, now = () => Date.now
   }
   // 감시처럼 '항상 최신'으로 읽어야 하는 곳이 읽은 결과도 캐시에 넣어 둔다(탭을 처음 열 때 다시 읽지 않게)
   async function warm(keys) { const g = gen, v = await raw.getDatabase(keys); if (g === gen && isList(keys)) put(keys, v); return v; }
-  return { get, fresh, warm, invalidate, soften, size: () => map.size };
+  // 이미 (유효하게) 담겨 있는지 / 다른 경로로 읽은 값을 직접 담기(단계별로 읽은 봇 목록 등)
+  const has = (keys) => isList(keys) && keys.every((k) => { const e = map.get(k); return e && now() - e.t < ttl; });
+  const store = (keys, value) => { if (isList(keys)) put(keys, value); };
+  return { get, fresh, warm, has, store, invalidate, soften, size: () => map.size };
 }

@@ -79,10 +79,34 @@ export async function renderCharacters(ctx) {
   }
   if (!st.chars || st.charsDirty) {
     replace(ctx.main, loading("캐릭터를 불러오는 중", { rows: 7 }));
-    const { lc, db } = await fetchChars(ctx);
+    const { lc, db } = await fetchCharsStaged(ctx);
     applyChars(ctx, db, lc);
   }
   return drawCharacters(ctx);
+}
+// 처음 읽을 때(캐시 없음) 봇이 많으면 한 번에 통째로 받지 않고 단계별로 읽는다(1.8.3, '응답 없음' 방지):
+// 순서 → 모듈 → 봇을 12개씩(사이사이 화면에 숨 쉴 틈) — 24개가 모이면 일단 목록을 보여 주고 끝나면 다시 그린다.
+// 다 읽으면 캐시에 넣어 다른 탭이 다시 읽지 않게 한다. 봇이 적거나 캐시가 있으면 평소처럼 읽는다.
+var STAGE_MIN = 30, STAGE_SHOW = 24;
+async function fetchCharsStaged(ctx) {
+  const api = ctx.api;
+  if (typeof api.hasDbCache !== "function" || api.hasDbCache(["characters"])) return fetchChars(ctx);
+  let order = [];
+  try { order = (await api.getDatabase(["characterOrder"]))?.characterOrder ?? []; } catch { return fetchChars(ctx); }
+  const count = (o) => (Array.isArray(o) ? o.reduce((n, x) => n + (typeof x === "string" ? 1 : x && Array.isArray(x.data) ? count(x.data) : 0), 0) : 0);
+  if (count(order) < STAGE_MIN) return fetchChars(ctx);
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  const modules = (await dbRead(api, ["modules"]))?.modules ?? [];
+  await tick();
+  let shown = false;
+  const lc = await loadCharacters(api, undefined, { onBatch: (list) => {
+    if (shown || list.length < STAGE_SHOW || ctx.state.tab !== "characters") return;
+    shown = true;
+    applyChars(ctx, { characterOrder: order, modules, characters: null }, { list: list.slice(), unloaded: 0 });
+    drawCharacters(ctx).catch(() => {});
+  } });
+  api.storeDbCache?.(["characters"], { characters: lc.list });
+  return { lc, db: { characters: lc.list, modules, characterOrder: order } };
 }
 async function fetchChars(ctx) {
   const db = await dbRead(ctx.api, ["characters", "modules", "characterOrder"]);

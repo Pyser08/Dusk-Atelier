@@ -60,6 +60,8 @@ async function start() {
   const dbc = createDbCache(raw);
   wrapped.getDatabaseCached = (keys, opts) => dbc.get(keys, opts);
   wrapped.getDatabaseWarm = (keys) => dbc.warm(keys);   // 감시가 읽은 것도 캐시에 넣어 탭을 처음 열 때 다시 읽지 않게(1.8.3)
+  wrapped.hasDbCache = (keys) => dbc.has(keys);
+  wrapped.storeDbCache = (keys, value) => dbc.store(keys, value);
   wrapped.invalidateDbCache = (opts) => (opts?.soft ? dbc.soften(opts.maxAge) : dbc.invalidate());
   for (const name of ["setCharacterToIndex", "setDatabaseLite"]) {
     const f = wrapped[name];

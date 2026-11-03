@@ -12,7 +12,8 @@ var strip = (m) => {
   const { enabled, ...rest } = m;
   return rest;
 };
-export async function loadCharacters(api, given) {
+// opts.onBatch(지금까지 읽은 목록): 봇을 12개씩 읽을 때마다 부르고, 그 사이 화면이 숨 쉴 틈을 준다(첫 읽기 단계별 불러오기, 1.8.3)
+export async function loadCharacters(api, given, opts = {}) {
   if (Array.isArray(given)) return { list: given, unloaded: 0 };
   let order = [];
   try {
@@ -31,7 +32,10 @@ export async function loadCharacters(api, given) {
   const get = (i) => api.getCharacterFromIndex(i).catch(() => null);
   const list = [];
   const N = ids.size, CH = 12;
-  for (let i = 0; i < N; i += CH) list.push(...await Promise.all(Array.from({ length: Math.min(CH, N - i) }, (_, k) => get(i + k))));
+  for (let i = 0; i < N; i += CH) {
+    list.push(...await Promise.all(Array.from({ length: Math.min(CH, N - i) }, (_, k) => get(i + k))));
+    if (opts.onBatch && i + CH < N) { try { opts.onBatch(list.slice(), N); } catch { /* 진행 표시 실패는 읽기에 영향 없음 */ } await new Promise((r) => setTimeout(r, 0)); }
+  }
   // 순서 목록에 늦게 들어간 봇: 끝에서 30개 연속 빌 때까지 (최대 200개)
   let miss = 0;
   for (let i = N; i < N + 200 && miss < 30; i += 10) {

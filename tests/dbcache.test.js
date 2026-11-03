@@ -55,3 +55,12 @@ test("soften: 최근에 읽은 것은 남기고 오래된 것만 버린다 (1.8.
   c.soften(15000);
   assert.equal(c.size(), 1);
 });
+
+test("has·store: 직접 담은 값도 키별 캐시로 쓰인다 (단계별 불러오기, 1.8.3)", async () => {
+  const s = setup(), c = s.mk();
+  assert.equal(c.has(["characters"]), false);
+  c.store(["characters"], { characters: [{ id: 5 }] });
+  assert.equal(c.has(["characters"]), true);
+  assert.deepEqual((await c.get(["characters"])).characters, [{ id: 5 }]); assert.equal(s.calls(), 0);
+  s.tick(2000); assert.equal(c.has(["characters"]), false);
+});
