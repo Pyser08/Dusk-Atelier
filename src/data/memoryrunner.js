@@ -5,6 +5,7 @@ import { skillBlock } from "../engine/skillhook.js";
 import { appendToMessages } from "../engine/skillcfg.js";
 import { noteStreamChunk } from "./genstate.js";
 import { analyze } from "../engine/memoryprompt.js";
+import { isLightModel } from "../engine/memorylines.js";
 import { customPromptPlain } from "../engine/pot/custom-prompts.js";
 import { reconcile } from "../engine/memoryreconcile.js";
 import { loadReconciled } from "./memoryload.js";
@@ -116,7 +117,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     if (gx) Object.assign(input, gx.input);
     if (result) session.combined = (session.combined ?? 0) + 1;
     else session.calls++;
-    try { if (!result) result = await analyze((msgs) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true }, signal), input); }
+    try { if (!result) result = await analyze((msgs) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true }, signal), input, { staged: idx.settings?.staged !== false, format: idx.settings?.format, light: isLightModel(idx.settings), onWarn: (name, e) => log(`${name} 세부 분석 실패(개요만 기록)`, String(e?.message ?? e).slice(0, 120)) }); }
     catch (e) {
       const fails = await bump(chaId, (b) => ++b.fails);
       await status({ lastError: String(e?.message ?? e).slice(0, 300) });
@@ -130,7 +131,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     const out = await store.updateFolder(chaId, chatId, (folder) => {
       Object.assign(folder, names, { chatIndex });
       reconcile(folder, messages);
-      const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => messageIdentity(messages[i])), cool: idx.settings?.inject?.cool !== false, userNames: uNames });
+      const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => messageIdentity(messages[i])), cool: idx.settings?.inject?.cool !== false, smooth: idx.settings?.staged !== false, userNames: uNames });
       const ev = link?.takeCycle?.() ?? [];
       if (ev.length) res.cycle = addMilestones(folder, ev);
       if (gx) { try { gaugeOut = gauge.apply(folder, idx, chaId, result, anchor, { ordinal: ordinalNow, text }); } catch (e) { log("게이지 반영 실패", e?.message ?? e); } }

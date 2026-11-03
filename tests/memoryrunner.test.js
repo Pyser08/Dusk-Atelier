@@ -4,6 +4,7 @@ import { createMemoryStore } from "../src/data/memorystore.js";
 import { createMemoryRunner } from "../src/data/memoryrunner.js";
 import { hashText, messageIdentity } from "../src/engine/chattext.js";
 import { reconcile } from "../src/engine/memoryreconcile.js";
+const legacy = (st) => { st.updateIndex((i) => { i.settings.staged = false; }); return st; };   // 이 시험은 한 번 호출(예전 방식)을 전제로 한다
 
 const LONG = "비가 내리는 옥상에서 미나가 하루의 손을 잡고 오래 숨겨 둔 비밀을 처음으로 털어놓았다. 하루는 아무 대답도 하지 못했다. ".repeat(2);
 function setup({ streaming = false } = {}) {
@@ -16,7 +17,7 @@ function setup({ streaming = false } = {}) {
     getCharacterFromIndex: async () => character, getChatFromIndex: async () => chat,
     addRisuScriptHandler: async (n, f) => { api.hooks[n] = f; }, hooks: {}
   };
-  return { api, chat, character, store: createMemoryStore(api), m };
+  return { api, chat, character, store: legacy(createMemoryStore(api)), m };
 }
 const good = JSON.stringify({ people: [{ name: "미나", act: "하루에게 비밀을 털어놓음", p: 2, s: 2, r: 2 }], scene: { sum: "비 오는 옥상", facts: ["비밀 공개"], place: "옥상", who: ["미나", "하루"], changed: true } });
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));

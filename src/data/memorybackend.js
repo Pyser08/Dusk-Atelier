@@ -5,7 +5,7 @@ export function selectBackend(api, setting = "auto") {
   if (setting === "off") return { id: "off", reason: "사용자가 기억 저장소를 껐어요." };
   if (setting === "local") return { id: "local", reason: hasBardWiki(api) ? "직접 선택했어요. BardWiki와 장기기억이 중복돼요." : "직접 선택했어요.", duplicate: hasBardWiki(api) };
   if (setting === "bardwiki") return hasBardWiki(api) ? { id: "bardwiki", reason: "직접 선택했어요." } : { id: "local", reason: "BardWiki를 찾지 못해 플러그인 저장소를 써요." };
-  return hasBardWiki(api) ? { id: "bardwiki", reason: "리스바드의 BardWiki를 감지했어요." } : { id: "local", reason: "BardWiki가 없어 플러그인 저장소를 써요." };
+  return { id: "local", reason: hasBardWiki(api) ? "기본값은 플러그인 저장소예요. BardWiki는 직접 고르면 쓸 수 있어요." : "BardWiki가 없어 플러그인 저장소를 써요." };
 }
 export const CAPABILITIES = {
   local: { analyze: true, inject: true, write: true, grades: "auto", anchors: "own" },

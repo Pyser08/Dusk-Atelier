@@ -31,15 +31,24 @@ export function validateEmo(obj) {
 
 // 변화량을 쌍별 게이지에 병합한다. 반환: 바뀐 태그 수.
 // 미설정 태그는 올라갈 때만 0에서 시작해 시작한다(내려가는 변화만 있으면 '없음 0'으로 시작).
-export function applyEmo(folder, emos, anchor, now = Date.now()) {
+// smooth: 약한 신호(±1)는 같은 방향으로 두 번 쌓여야 한 칸 움직이고(반대 신호는 쌓인 것을 지운다), ±2 이상의 큰 사건은 바로 반영한다.
+// 약한 모델이 장면마다 관계를 오락가락 판단해도 게이지가 흔들리지 않게 한다.
+export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = false } = {}) {
   folder.emo ??= {};
   const src = srcOf(anchor);
   let changed = 0;
   for (const e of emos ?? []) {
     const k = key(e.from) + ">" + key(e.to), pair = folder.emo[k] ??= { from: e.from, to: e.to, tags: {}, log: [] };
     const prev = {}, next = {};
-    for (const [tag, d] of Object.entries(e.t)) {
+    for (let [tag, d] of Object.entries(e.t)) {
       if (pair.lock?.[tag]) continue;  // 사용자가 정한 태그는 자동 갱신하지 않는다
+      if (smooth) {
+        const pend = pair.pend?.[tag] ?? 0;
+        if (Math.abs(d) >= 2) { if (pend) delete pair.pend[tag]; }
+        else if (pend && Math.sign(pend) !== Math.sign(d)) { delete pair.pend[tag]; continue; }
+        else if (pend) { delete pair.pend[tag]; }
+        else { (pair.pend ??= {})[tag] = d; continue; }
+      }
       const before = pair.tags[tag];
       const v = clampG((before ?? 0) + d);
       if (v === before) continue;

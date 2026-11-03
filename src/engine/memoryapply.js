@@ -21,7 +21,7 @@ export function findPersonKey(folder, name) {
 export const latestScene = (folder) => [...(folder.scenes ?? [])].reverse().find((s) => !s.orphan) ?? null;
 
 // anchor: {at, mid, h}. 반환: {records, upgraded, scene:'new'|'updated'|null}
-export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null, storyDate = "", cool = true, userNames = [] } = {}) {
+export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null, storyDate = "", cool = true, userNames = [], smooth = false } = {}) {
   result = normalizeUserNames(result, userNames);   // 플레이어를 가리키는 이름은 모두 {{user}} 한 사람으로
   const ign = new Set(ignore.map(key));
   const out = { records: 0, upgraded: 0, scene: null, rel: 0, open: 0, closed: 0, emo: 0, pov: 0, exp: 0, self: 0, human: 0, cooled: 0, conflicts: [], alerts: [] };
@@ -56,7 +56,7 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
   out.rel = applyRel(folder, result?.rel, anchor, now);
   const tBefore = tensionKeys(folder);
   if (cool && anchor?.at != null) out.cooled = coolEmo(folder, anchor.at, now);   // v1.8.3: 시간이 지나 식은 감정을 먼저 반영(변화량이 식은 값에 더해지게)
-  out.emo = applyEmo(folder, result?.emo, anchor, now);
+  out.emo = applyEmo(folder, result?.emo, anchor, now, { smooth });
   if (important) { out.pov = applyPov(latestScene(folder), result?.pov, now); out.exp = applyExp(folder, result?.exp, anchor, now); }
   { const o = applyOpen(folder, result?.open, anchor, now); out.open = o.added; out.closed = o.closed; }
   out.human = applyHuman(folder, result?.human, anchor, { important, now });   // v1.8.3: 호칭·말투, 둘만의 추억(중요할 때만), 잘못된 믿음

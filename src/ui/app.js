@@ -479,13 +479,14 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   async function close() {
     if (legacy.busy || closing) return;
     closing = true;
-    const out = motion(win, [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(8px) scale(.99)" }], { duration: 130, fill: "forwards" });
-    motion(root, [{ opacity: 1 }, { opacity: 0 }], { duration: 130, fill: "forwards" });
-    if (out) await out.finished.catch(() => {
-    });
-    root.hidden = true;
-    for (const a of [...win.getAnimations(), ...root.getAnimations()]) a.cancel();
-    closing = false;
+    try {
+      const out = motion(win, [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(8px) scale(.99)" }], { duration: 130, fill: "forwards" });
+      motion(root, [{ opacity: 1 }, { opacity: 0 }], { duration: 130, fill: "forwards" });
+      // 애니메이션이 끝났다는 신호가 안 오는 환경(백그라운드 탭 등)에서도 창이 닫히도록 시간 제한을 둔다.
+      if (out) await Promise.race([out.finished.catch(() => {}), new Promise((r) => setTimeout(r, 400))]);
+      root.hidden = true;
+      for (const a of [...win.getAnimations(), ...root.getAnimations()]) a.cancel();
+    } finally { closing = false; }
     await api.hideContainer();
   }
   let lastDetail = "";

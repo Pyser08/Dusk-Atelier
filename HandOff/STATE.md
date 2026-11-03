@@ -476,3 +476,32 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 ## 1.9.0 — Cellar 새 버전 알림 (2026-11-03)
 - `src/data/cellarlatest.js`: GitHub 최신 릴리스(Dusk-Cellar) 태그 vs 연결된 Cellar 버전 비교 → toast 1회(버전별, `dusk.cellar.notified`) + 설정 Cellar 줄에 '새 버전 vX'(`ctx.cellarNew`). app.js 열 때 호출. 시험: tests/cellarlatest.test.js.
 - 확인 못 한 것: 실제 GitHub API 응답(Cellar 릴리스 v0.1.0이 있어야 동작), 리스 안에서 nativeFetch가 api.github.com을 통과하는지.
+
+## 단계별 분석 (2026-11-04, 1.9.0)
+- 원인(추정): 분석 프롬프트가 한 응답에 장면·인물·관계·감정·속마음·신뢰도…를 전부 요구해 길어지면 잘리거나 JSON이 깨져 실패/연속 실패(자동 기록 중단).
+- 수정: `memoryprompt.js` `analyzeStaged` — 1단계(개요: 인물 name/act/p/s/r + 장면·관계·떡밥·게이지) 1번 + 점수 ≥1인 인물마다 세부 1번(최대 6명). 세부 실패는 개요만 남기고 계속(`onWarn` 로그). 설정 `settings.staged`(기본 true, 기억 설정에서 끔 → 예전 한 번 호출). 러너 analyzeAt가 사용(자동 기록·지난 대화 전체 분석 모두).
+- 시험: tests/memoryprompt-staged.test.js. 한 번 호출을 전제로 한 기존 시험은 `staged=false` 고정.
+- 확인 못 한 것: 실제 모델에서의 실패율 변화·호출 시간/비용, 개요 단계가 세부 필드를 안 내보내는지(프롬프트 준수), Risupot 합친 호출(link)은 그대로.
+
+## 줄 형식 분석·가벼운 모드 (2026-11-04, 1.9.1)
+- `engine/memorylines.js`: 줄 형식 파서/보정(`who|`,`rel|`,`to|…|인용`), 인용 검증, 이름 정규화. `memoryprompt.js analyzeLines`(1단계 개요→인물별 2단계, 200자 미만은 1단계만, 실패 시 형식 재안내→축소 재시도, 오류에 응답 앞부분). `settings.format="json"`이면 옛 JSON 경로.
+- `applyEmo` smooth: ±1 약신호는 같은 방향 2회 누적 시 1칸, 반대는 상쇄, |d|≥2는 즉시, 잠금 값 불변.
+- 가벼운 모드: `settings.light===true`일 때만(자동 판별 제거). 기억 설정 스위치.
+- 저장소 `auto` = 항상 local(BardWiki는 직접 선택). 첫 진입 BardWiki 질문 제거(`modebar.js maybeAskBardWiki`는 no-op).
+- 확인 못 한 것: 실제 약한 모델(DeepSeek flash 등)에서의 준수율·인용 검증 엄격도.
+
+## 중복 인물 방지·한 번에 합치기 (2026-11-04, 1.9.1)
+- 원인: Writer가 모델의 `create`를 그대로 믿어 같은 인물이 새 문서로 또 생김(구간이 겹치는 분석 등). 리스바드 BardWiki는 후보의 action을 믿지 않고 서버가 id→제목·별칭 키→별칭=제목→id 오타 순으로 대상을 다시 찾는다(`risubard-memory-analysis.ts resolveCanonicalTarget`), 모호하면 새로 만들지 않고 경고.
+- 수정: `engine/pot-dedupe.js redirectDuplicateCreates`(character만) + `tools/pot-patches.json` 패치 2개(writer-apply.js에 import·호출). 이식 원본은 이 환경에 없어 생성 파일에 같은 문자열로 직접 적용 — 다음에 pot-split을 돌릴 때 패치가 같은 결과를 낸다.
+- `engine/peopledupe.js`(묶음 찾기·일괄 합치기), UI `mergeui.js mergeSameNames`(더보기 메뉴, 합치기 되돌리기 가능).
+- 인물 위키 왼쪽 목록 sticky + 내부 스크롤(`styles.js .rb-wk-side`), 좁은 화면은 기존 가로 목록.
+- 확인 못 한 것: 실제 화면에서의 sticky 동작·큰 위키(50명+)에서 일괄 합치기 속도·충돌 많은 문서의 결과.
+
+## BardWiki 비교 반영 P1·P2 (2026-11-04, 1.9.1)
+- 실패 종류 구분: `memorylines.js failureKind/RETRY_NOTE/isNoneReply`, `memoryprompt.js askLines`(잘림→최소 요청, 빈 응답→최종 답 요구), 잘린 JSON은 개요 성공으로 치지 않음. 2단계 `none` 응답은 정상(저장 안 함).
+- 이름 보정 `canonName`: 별칭만 겹침·오타 후보 여럿은 합치지 않음, 성/이름만 나오면 유일할 때만 합침. `pot-dedupe.js`: 같은 제목 여럿이면 sections 많은 문서, 별칭만 겹침은 합치지 않고 `ambiguous` 카운트.
+- 과거 장면 회상: `memoryinject.js pastScenes`(settings.pastTokens 기본 200, 겹치는 낱말 2개 이상, 최대 2개).
+- digest 안전: `memorydigest.js coversRecord`(bigram 40%) — 못 담은 기록은 digested 표시 안 함.
+- 위키 점검: `engine/wikihealth.js`, UI `mergeui.js openWikiHealth`(더보기 → 위키 점검).
+- 하지 않은 것: 전체 재분석 교체(Dusk의 backfill은 이미 추가식·재개식이라 덮어쓰지 않음, 별도 '초기화 후 재분석' 기능이 없음), 스키마 강제 출력·재순위·아크 지도(P3).
+- 확인 못 한 것: 실제 모델에서 잘림 판별 휴리스틱(길이 1500자 이상 문장 중간 종료)이 맞는 비율, digest 40% 기준이 한국어 요약에서 너무 엄격한지, 과거 장면 회상의 낱말 겹침 기준(2개) 적정성.

@@ -95,5 +95,17 @@
   "why": "장기기억 분석용 위치별 프롬프트 글 함수 추가(파일 끝)",
   "from": "export function customPromptBlock(settings, stage, scope, position = 'back') {",
   "to": "// 장기기억 분석 호출용: 위치별 사용자 프롬프트 글(내장 규칙 없이). 없으면 ''.\nexport function customPromptPlain(settings, stage, scope, position) {\n  const items = activeCustomPrompts(settings, stage, scope, position);\n  if (!items.length) return '';\n  return `[USER ADDED RULES · ${stage.toUpperCase()}]\\nThe user added the following rules. Apply them together with the other rules, but they never change the required JSON output format or the safety limits.\\n\\n` + items.map((item, index) => `## ${item.name || `추가 규칙 ${index + 1}`}\\n${item.text.trim()}`).join('\\n\\n');\n}\nexport function customPromptBlock(settings, stage, scope, position = 'back') {"
+ },
+ {
+  "file": "src/engine/pot/writer-apply.js",
+  "why": "같은 이름 인물을 새 문서로 또 만들지 않고 기존 문서 갱신으로 바꾸는 Dusk 보정(리스바드 BardWiki 방식, src/engine/pot-dedupe.js)",
+  "from": "import { applySpeechSign } from './speech-variety.js';",
+  "to": "import { applySpeechSign } from './speech-variety.js';\nimport { redirectDuplicateCreates } from '../pot-dedupe.js';"
+ },
+ {
+  "file": "src/engine/pot/writer-apply.js",
+  "why": "위 보정 호출: 새 문서 id를 정하기 전에 중복 create를 update로 바꾸고, 정한 뒤 id를 연결",
+  "from": "for(const change of proposal.documents)if(change.operation==='create')refToId[change.document_ref]=idFactory();",
+  "to": "const duskDedupe=redirectDuplicateCreates(next,proposal,TYPE_NAME);proposal=duskDedupe.proposal;for(const change of proposal.documents)if(change.operation==='create')refToId[change.document_ref]=idFactory();duskDedupe.link(refToId);"
  }
 ]

@@ -9,6 +9,7 @@ import { personKey } from "../src/data/memorystore.js";
 import { createPotStorage, scopeIdsOf } from "../src/data/potstorage.js";
 import { stageOf, promptKeysOf } from "../src/data/memoryturn.js";
 import { SECTION_MARK } from "../src/engine/duskwriter.js";
+const legacy = (st) => { st.updateIndex((i) => { i.settings.staged = false; }); return st; };   // 이 시험은 한 번 호출(예전 방식)을 전제로 한다
 
 const LIB = JSON.parse(fs.readFileSync(new URL("../src/data/pot/prompts.json", import.meta.url), "utf8"));
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -86,7 +87,7 @@ function harness({ model = {} } = {}) {
   return { api, chat, hooks, calls, mem, say, folder, m };
 }
 const turnOn = async (h, mode = "fast") => {
-  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = mode; i.settings.confirm = "now"; i.settings.potStore = { ...i.settings.potStore, confirm: "now" }; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });
+  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = mode; i.settings.confirm = "now"; i.settings.staged = false; i.settings.potStore = { ...i.settings.potStore, confirm: "now" }; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });
   assert.equal(await h.mem.start(), "local");
   assert.equal(h.mem.flow.isOn(), true);
 };
@@ -191,7 +192,7 @@ test("리롤: 같은 자리의 응답이 바뀌면 Dusk 기록은 새 글 기준
 test("정확하게 모드: 고르기·정리 노트 호출이 일어나고 정리 노트 입력에 Dusk 회상이 장기기억 참고로 들어감", async () => {
   const h = harness(); await turnOn(h);
   for (let n = 1; n <= 4; n++) await h.say(`계속하자 (${n})`, "T" + n);
-  await h.mem.store.updateIndex((i) => { i.settings.flow.mode = "accurate"; });
+  await h.mem.store.updateIndex((i) => { i.settings.flow.mode = "accurate"; i.settings.staged = false; });
   await h.mem.flow.apply();
   const before = h.calls.length;
   await h.say("유우카, 아까 그 장부 말이야.", "T5", { requestOnly: true });
@@ -214,7 +215,7 @@ test("프롬프트 라이브러리 키·단계 이름 보조 함수", () => {
 test("저장소 어댑터: 설정·카탈로그·위키는 Dusk v3 저장소로, 나머지는 pluginStorage로", async () => {
   const m = new Map();
   const api = { pluginStorage: { getItem: async (k) => m.get(k) ?? null, setItem: async (k, v) => { m.set(k, v); }, removeItem: async (k) => { m.delete(k); }, keys: async () => [...m.keys()] } };
-  const store = createMemoryStoreV3(api), st = createPotStorage(api, store);
+  const store = legacy(createMemoryStoreV3(api)), st = createPotStorage(api, store);
   assert.equal(await st.getItem("risupot.settings"), null);
   await st.setItem("risupot.settings", { schemaVersion: 9, revision: 3, settings: { a: 1 } });
   assert.equal((await store.getIndex()).pot.settings.revision, 3);

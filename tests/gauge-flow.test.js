@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createMemoryStoreV3 } from "../src/data/memorystore3.js";
 import { createMemoryRunner } from "../src/data/memoryrunner.js";
 import { createGaugeService } from "../src/data/gauge.js";
+const legacy = (st) => { st.updateIndex((i) => { i.settings.staged = false; }); return st; };   // 이 시험은 한 번 호출(예전 방식)을 전제로 한다
 
 const LONG = "비가 내리는 옥상에서 미나가 하루의 손을 잡고 오래 숨겨 둔 비밀을 처음으로 털어놓았다. 하루는 아무 대답도 하지 못했다. ".repeat(2);
 function setup(n) {
@@ -12,7 +13,7 @@ function setup(n) {
   const api = { pluginStorage: { getItem: async (k) => m.get(k) ?? null, setItem: async (k, v) => { m.set(k, v); }, removeItem: async (k) => { m.delete(k); } },
     getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0, getCharacterFromIndex: async () => character, getChatFromIndex: async () => chat,
     addRisuScriptHandler: async () => {}, hooks: {} };
-  return { api, store: createMemoryStoreV3(api) };
+  return { api, store: legacy(createMemoryStoreV3(api)) };
 }
 
 test("8번째 AI 응답에서 게이지가 갱신되고 표시용 박스가 생긴다 (한 번 호출에 얹힘)", async () => {

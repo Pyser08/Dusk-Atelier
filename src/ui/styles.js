@@ -711,7 +711,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-fold>summary .rb-mem-mode{margin-left:8px}
 .rb-mem-setpanel{width:100%;max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:12px;padding:6px 4px 20px}.rb-mem-sethead{display:flex;align-items:center;gap:10px;font-size:17px;padding:6px 0}.rb-mem-sethead .rb-btn{margin-left:auto}
 .rb-wk{display:grid;grid-template-columns:210px minmax(0,1fr);gap:16px;align-items:start}
-.rb-wk-side{display:flex;flex-direction:column;gap:8px;min-width:0}
+.rb-wk-side{display:flex;flex-direction:column;gap:8px;min-width:0;position:sticky;top:0;max-height:calc(100dvh - 120px)}
+.rb-wk-side .rb-wk-list{overflow-y:auto;min-height:0;padding-bottom:4px}
 .rb-wk-count{display:flex;justify-content:space-between;font-size:12px;color:var(--rb-mute);padding:0 4px}
 .rb-wk-list{display:flex;flex-direction:column;gap:6px}
 .rb-wk-row{display:flex;align-items:center;gap:8px;min-height:48px;padding:6px 10px;border:1px solid var(--rb-line2);border-radius:12px;background:var(--rb-surf);color:inherit;text-align:left;cursor:pointer}
@@ -774,8 +775,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-navtabs .rb-chip[aria-pressed=true]{background:var(--rb-acc-grad);color:var(--rb-on-acc);border-color:transparent}
 .rb-wk-bar{height:6px;border-radius:99px;background:var(--rb-surf2);overflow:hidden}.rb-wk-bar i{display:block;height:100%;border-radius:99px;background:var(--rb-text);opacity:.7}
 .rb-wk-range{display:flex;justify-content:space-between;gap:8px;font-size:12px}
-@container memwrap (max-width:900px){.rb-wk{grid-template-columns:1fr}.rb-wk-list{flex-direction:row;overflow-x:auto}.rb-wk-row{flex:0 0 auto}.rb-wk-grid{grid-template-columns:1fr}.rb-wk-emo{grid-template-columns:1fr}}
-@media(max-width:900px){.rb-wk{grid-template-columns:1fr}.rb-wk-list{flex-direction:row;overflow-x:auto}.rb-wk-row{flex:0 0 auto}.rb-wk-grid{grid-template-columns:1fr}.rb-wk-emo{grid-template-columns:1fr}}
+@container memwrap (max-width:900px){.rb-wk{grid-template-columns:1fr}.rb-wk-side{position:static;max-height:none}.rb-wk-side .rb-wk-list{overflow-y:visible}.rb-wk-list{flex-direction:row;overflow-x:auto}.rb-wk-row{flex:0 0 auto}.rb-wk-grid{grid-template-columns:1fr}.rb-wk-emo{grid-template-columns:1fr}}
+@media(max-width:900px){.rb-wk{grid-template-columns:1fr}.rb-wk-side{position:static;max-height:none}.rb-wk-side .rb-wk-list{overflow-y:visible}.rb-wk-list{flex-direction:row;overflow-x:auto}.rb-wk-row{flex:0 0 auto}.rb-wk-grid{grid-template-columns:1fr}.rb-wk-emo{grid-template-columns:1fr}}
 /* v1.8.3 인물 위키 개편(personv2.js): 머리 · 탭 · 요약 · 관계 카드. 넓으면 요약 왼쪽 고정 + 오른쪽 탭 */
 .rb-wk2{display:flex;flex-direction:column;gap:12px;min-width:0;container:wk2/inline-size}
 .rb-wk2-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0}

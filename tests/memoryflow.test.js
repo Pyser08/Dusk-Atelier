@@ -5,6 +5,7 @@ import { createMemoryStoreV3 } from "../src/data/memorystore3.js";
 import { createMemoryRunner } from "../src/data/memoryrunner.js";
 import { createMemoryInjector } from "../src/data/memoryinject.js";
 import { createEmbedder } from "../src/data/embed.js";
+const legacy = (st) => { st.updateIndex((i) => { i.settings.staged = false; }); return st; };   // 이 시험은 한 번 호출(예전 방식)을 전제로 한다
 
 const LONG = "비가 내리는 옥상에서 미나가 하루의 손을 잡고 오래 숨겨 둔 비밀을 처음으로 털어놓았다. 하루는 아무 대답도 하지 못했다. ".repeat(2);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -19,7 +20,7 @@ function setup() {
     getCharacterFromIndex: async () => character, getChatFromIndex: async () => chat,
     addRisuScriptHandler: async (n, f) => { api.hooks[n] = f; }, hooks: {}
   };
-  return { api, chat, store: createMemoryStoreV3(api) };
+  return { api, chat, store: legacy(createMemoryStoreV3(api)) };
 }
 const rich = JSON.stringify({
   people: [{ name: "미나", act: "하루에게 오래 숨긴 비밀을 털어놓음", p: 3, s: 3, r: 2, kd: "f", fc: "H", keys: ["비밀", "옥상"], attr: { c: "rel", k: "trust→하루", v: "신뢰함" }, self: { feel: "불안", cause: "거절당할까 봐", ic: "M" } }],

@@ -6,6 +6,7 @@ import { applyMetricOperations } from './metric-engine.js';
 import { preservePeoplePins } from './people-pins.js';
 import { applyPeopleOperations } from './people-profile.js';
 import { applySpeechSign } from './speech-variety.js';
+import { redirectDuplicateCreates } from '../pot-dedupe.js';
 import { createWikiDocument, makeWikiId, normalizeWikiScope, updateWikiDocument } from './wiki-schema.js';
 import { WRITER_MANUAL_IMPORT, writerManualReason } from './writer-import-mode.js';
 
@@ -23,7 +24,7 @@ export function applyWriterProposalAtomic(scope,proposal,contract,options={}){
   let next=normalizeWikiScope(scope);const now=options.now||new Date().toISOString(),idFactory=options.idFactory||(()=>makeWikiId('doc')),sectionIdFactory=options.sectionIdFactory||(()=>makeWikiId('section')),entryIdFactory=options.entryIdFactory||(()=>`entry:${makeWikiId('writer')}`),batchRef=options.batchRef||`batch:${makeWikiId('writer')}`,refToId={...contract.catalog.documentRefs};
   const cycleReports=new Map();
   if(contract.cycle)proposal={...proposal,documents:proposal.documents.map(change=>({...change,entries:change.entries.flatMap(entry=>{if(entry.slot_id!=='core.current_state'||typeof entry.text!=='string')return[entry];const taken=takeCycleMarkers(entry.text);if(!taken.report)return[entry];const prior=cycleReports.get(change.document_ref);cycleReports.set(change.document_ref,prior?{adult:prior.adult||taken.report.adult,sex:[...prior.sex,...taken.report.sex],known:prior.known||taken.report.known,birth:prior.birth||taken.report.birth}:taken.report);return taken.text?[{...entry,text:taken.text}]:[];})}))};
-  for(const change of proposal.documents)if(change.operation==='create')refToId[change.document_ref]=idFactory();
+  const duskDedupe=redirectDuplicateCreates(next,proposal,TYPE_NAME);proposal=duskDedupe.proposal;for(const change of proposal.documents)if(change.operation==='create')refToId[change.document_ref]=idFactory();duskDedupe.link(refToId);
   const aliasKey=value=>String(value||'').normalize('NFC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'');
   // Names already owned by someone else (existing documents, the user, other documents created in this proposal) are never attached.
   const takenAliasKeys=documentRef=>{const taken=new Set((contract.knownCharacterNames||[]).map(aliasKey));for(const document of Object.values(next.documents))for(const name of [document.title,...(document.aliases||[])])taken.add(aliasKey(name));for(const other of proposal.documents)if(other.operation==='create'&&other.document_ref!==documentRef)for(const name of [other.title,...(other.aliases_add||[])])taken.add(aliasKey(name));taken.delete('');return taken;};

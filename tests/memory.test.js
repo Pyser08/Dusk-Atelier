@@ -12,6 +12,7 @@ test("local backend registers runner and injection hooks", async () => {
 });
 test("BardWiki detected → no runner or injection hook (no double cost/injection)", async () => {
   const api = mkApi({ bardWiki: { getDocuments: async () => [] } }), mem = createMemory(api);
+  await mem.store.updateIndex((i) => { i.settings.backend = "bardwiki"; });
   assert.equal(await mem.start(), "bardwiki"); assert.equal(api.hooks.output, undefined); assert.equal(api.hooks["r:beforeRequest"], undefined);
   assert.equal((await mem.store.getIndex()).status.hook, "bardwiki");
 });
