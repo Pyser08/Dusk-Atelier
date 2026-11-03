@@ -33,6 +33,7 @@
 - `cellar.js` (78줄) Dusk Cellar 연결 (1.8.3): 리스 서버 옆에서 도는 선택 서버(Pyser08/Dusk-… — CELLAR_URL_KEY, CELLAR_DEFAULT_URL, loadCellarUrl, saveCellarUrl, probeCellar
 - `cellarbackup.js` (34줄) Dusk Cellar 세이브 백업·복원 (1.8.3). 실제 일은 서버가 한다(바뀐 파일만 복사하는 … — createCellarBackups
 - `cellarplugins.js` (121줄) 플러그인 코드 수정 (1.8.3): 리스는 플러그인이 다른 플러그인을 고치지 못하게 막았다(RisuA… — hasPluginEdit, gzipB64, gunzipB64, createCellarPlugins, headerProblem
+- `cellarupdate.js` (28줄) Dusk Cellar 자체 업데이트(1.8.3). 실제 일은 서버가 한다(git으로 받기 → 불러오기… — createCellarUpdate
 - `charorder.js` (114줄) — layout, moveChar, createFolder2, setMembers, renameFolder2
 - `chatmenu.js` (44줄) 채팅 입력창 옆 메뉴(≡)의 빠른 설정 (1.8.3): [장기 기억 바로가기] · 공정한 전개 · 유… — CHAT_MENU_KEY, createChatMenu
 - `dbcache.js` (65줄) 읽기 전용 getDatabase 짧은 캐시 (v1.8.1 최적화). — dbRead, cacheGen, bumpCacheGen, WRITE_RE, createDbCache
@@ -68,7 +69,7 @@
 - `personabuilder.js` (353줄) 페르소나 빌더: 설명 양식(프리셋) 파싱·조립, AI 프롬프트, 저장소, 공유 코드 — parseTemplate, addField, removeField, addSection, removeSection
 - `personaroulette.js` (52줄) 페르소나 룰렛: 칸마다 범주를 고르고 무작위로 뽑아 콘셉트에 보탠다. — spin, wheelItems
 - `pluginTemplate.js` (185줄) 플러그인 만들기 — 템플릿, 머리말·등록 코드 동기화, 검사, 설치용 객체, 도움말 — buildTemplate, syncMeta, isValidVersion, cmpVersion, checkCode
-- `pluginmgr.js` (199줄) 플러그인 매니저 기능 (1.8.3): 켜기/끄기·순서·별칭·삭제·등록·중복 정리·백업/복원·글로벌 프… — createPluginMgr, parseRegister, buildRegister, convertApi21, dupPlan
+- `pluginmgr.js` (217줄) 플러그인 매니저 기능 (1.8.3): 켜기/끄기·순서·별칭·삭제·등록·중복 정리·백업/복원·글로벌 프… — createPluginMgr, parseRegister, buildRegister, convertApi21, dupPlan
 - `plugins.js` (231줄) 플러그인 탭 데이터 계층 — DA Interop v1 호스트 + 플러그인 관리 — listInterop, sendPatch, presetValues, waitAck, pruneInterop
 - `potstorage.js` (59줄) 리수폿 컨트롤러가 쓰는 저장소(pluginStorage 모양)를 Dusk 저장소 v3 위에 얹는 어댑… — scopeIdsOf, createPotStorage
 - `presets.js` (140줄) — loadPresets, savePresets, snapshotOf, recordActive, applyPreset
@@ -298,16 +299,16 @@
 - `peoplescreen.js` (99줄) 인물 화면 + 인물 상세 (1.7.0 4단계, 계획 §3.4): 위키의 인물 문서를 보고 다듬는다. …
 - `personabuilder.js` (908줄) 페르소나 빌더 화면: 양식(프리셋)의 ### 섹션 = 폴더, * 항목 = 칸.
 - `placeholder.js` (21줄) 
-- `pluginedit.js` (164줄) 플러그인 코드 수정 창 (1.8.3) — 플러그인 탭의 ··· 메뉴 → '코드 수정'.
+- `pluginedit.js` (170줄) 플러그인 코드 수정 창 (1.8.3) — 플러그인 탭의 ··· 메뉴 → '코드 수정'.
 - `pluginmgr.js` (247줄) 플러그인 매니저 기능 화면 (1.8.3): 켜기/끄기·별칭·순서·삭제 / 파일에서 등록 / 중복 정리…
-- `plugins.js` (672줄) 플러그인 탭 — 목록·카테고리·업데이트 확인 / DA Interop 연동 설정 / 플러그인 만들기 /…
+- `plugins.js` (683줄) 플러그인 탭 — 목록·카테고리·업데이트 확인 / DA Interop 연동 설정 / 플러그인 만들기 /…
 - `pot.js` (82줄) 리수폿 화면 (1.7.0 4단계, 계획 §3.3). 기억과 완전히 따로: 자기 스위치·자기 설정. 머…
 - `presets.js` (217줄) 
 - `promptstab.js` (129줄) 설정 → 기억·리수폿 프롬프트 (v1.7.0): 기억·리수폿을 쓸 때 기본 규칙 뒤에 덧붙는 '내 프…
 - `roulettepop.js` (64줄) 봇 편집 도구 → 룰렛: 범주별로 무작위 특징을 뽑아 복사하거나 설명 끝에 붙인다.
 - `sectionhome.js` (73줄) 그룹 개요(기억·관리·작업실, 1.8.3 목업 1): 한 줄 안내 → (기억) 상태 카드 → 목록형 …
 - `settings.js` (178줄) 플러그인 꾸미기 (v1.7.0 7단계, 계획 §3.12 → v1.8.3 확장): 미리보기 → 테마 묶…
-- `settingstab.js` (239줄) 설정 탭 (1.8.3 목업 5): 묶음 이름 달기(화면 · 백업 · 도움말). 고급은 묶음별 한 줄 …
+- `settingstab.js` (259줄) 설정 탭 (1.8.3 목업 5): 묶음 이름 달기(화면 · 백업 · 도움말). 고급은 묶음별 한 줄 …
 - `storageedit.js` (81줄) 플러그인 스토리지 편집 화면 (1.8.3): 값 수정 · 새 키 · 가져오기. 모든 플러그인이 함께 …
 - `themebuilder.js` (348줄) 테마 빌더 화면: 스타일 → 대표색 → 밝기만 고르면 테마 완성. 결과는 일반 테마로 저장된다.
 - `themestudio.js` (445줄) 테마 스튜디오: 계열(일반 리스/포켓리스)별 테마 편집 · 실시간 미리보기 · 적용 · 공유

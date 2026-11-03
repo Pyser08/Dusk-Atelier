@@ -15,6 +15,7 @@ import { openAbout } from './about.js';
 import { loadMemoryButtonOn } from '../../data/memorybutton.js';
 import { createCellar, loadCellarUrl, saveCellarUrl, CELLAR_DEFAULT_URL } from '../../data/cellar.js';
 import { createCellarBackups } from '../../data/cellarbackup.js';
+import { createCellarUpdate } from '../../data/cellarupdate.js';
 
 export async function renderSettingsTab(ctx) {
   if (ctx.state.sub === "prompts") return renderPrompts(ctx);
@@ -148,10 +149,28 @@ async function openCellar(ctx, cel, paint) {
     const stEl = h("p", { class: "rb-p", id: "rb-cellar-st" }, "확인 중…");
     const bkBtn = btn("세이브 백업…", { id: "rb-cellar-backup", onClick: () => { const st = cel.peek(); if (st?.ok) openCellarBackup(ctx, st); } });
     bkBtn.hidden = true;
+    const upBtn = btn("업데이트 확인", { id: "rb-cellar-update", onClick: async () => {
+      const st = cel.peek(); if (!st?.ok) return;
+      const up = createCellarUpdate(ctx.api, { url: st.url, via: st.via });
+      upBtn.disabled = true; replace(stEl, "업데이트 확인 중…");
+      try {
+        const c = await up.check();
+        if (!c.behind) { replace(stEl, `최신 버전이에요 (${c.head})`); return; }
+        if (!c.canApply) { replace(stEl, c.dirty?.length ? `서버에서 직접 고친 파일이 있어 자동 업데이트를 할 수 없어요: ${c.dirty.slice(0, 3).join(", ")}` : "이 서버의 Cellar는 원격보다 앞서 있어서 자동 업데이트를 할 수 없어요"); return; }
+        const ok = await confirmDialog(ctx.win, { title: "Dusk Cellar를 업데이트할까요?", body: `새 변경 ${c.behind}건 (${c.head} → ${c.latest})\n${c.commits.slice(0, 8).map((x) => `· ${x}`).join("\n")}\n\nCellar만 잠깐 다시 켜져요. 리스는 그대로 돌아요. 새 버전이 안 불러지면 자동으로 이전 버전으로 돌아가요.`, ok: "업데이트" });
+        if (!ok) { replace(stEl, "업데이트를 취소했어요"); return; }
+        replace(stEl, "업데이트 중…");
+        const r = await up.apply({ onWait: (i) => replace(stEl, `Cellar를 다시 켜는 중… (${Math.round((i + 1) * 1.5)}초)`) });
+        replace(stEl, !r.back ? "업데이트했지만 Cellar가 아직 응답하지 않아요. 잠시 뒤 '다시 확인'을 눌러 주세요." : r.fullRestart ? `v${r.back.version}로 업데이트했어요. 실행기도 바뀌어서 서버에서 pm2 restart(또는 리스 재시작)를 한 번 해야 모두 적용돼요.` : `v${r.back.version}로 업데이트했어요.`);
+        cel.forget(); await check();
+      } catch (e) { replace(stEl, String(e?.message ?? e)); } finally { upBtn.disabled = false; }
+    } });
+    upBtn.hidden = true;
     const show = (st) => {
       paint(st);
       replace(stEl, st.ok ? `연결됨 · Dusk Cellar v${st.version}` : `연결 안 됨 · ${st.error ?? ""}`);
       bkBtn.hidden = !(st.ok && st.features?.includes("backup"));
+      upBtn.hidden = !(st.ok && st.features?.includes("update"));
     };
     const input = h("input", { class: "rb-input", type: "url", value: url0, placeholder: CELLAR_DEFAULT_URL, "aria-label": "Cellar 주소", id: "rb-cellar-url" });
     // 장기기억 저장 위치(1.8.3): Cellar가 기억 저장을 지원하면 서버에만 저장, 끊기면 잠깐 이 기기에 쌓았다가 다시 올린다
@@ -182,6 +201,7 @@ async function openCellar(ctx, cel, paint) {
       h("div", { class: "rb-dialog-actions" },
         ctx.prefs.advanced ? btn("주소 저장", { onClick: async () => { try { await saveCellarUrl(ctx.api, input.value); cel.forget(); await check(); } catch (e) { replace(stEl, String(e?.message ?? e)); } } }) : null,
         bkBtn,
+        upBtn,
         backBtn,
         btn("다시 확인", { onClick: () => check(true), id: "rb-cellar-recheck" }),
         btn("닫기", { kind: "primary", onClick: () => done(true) })));

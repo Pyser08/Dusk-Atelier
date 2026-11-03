@@ -467,3 +467,5 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 하지 못한 것: TypeScript → JavaScript 변환(등록 화면이 TS로 보이면 경고만), 스토리지 5종 중 pluginStorage만(safeLocalStorage·IndexedDB·서버 저장소·DB 저장 데이터는 아직), 백업에 플러그인 스토리지 미포함(매니저와 같음), 실제 RisuBard 서버 확인 전부 미확인(가짜 서버 시험만).
 - 알려진 위험: 백업 복원·통째 바꾸기는 목록 해시로 그새 바뀜을 막지만, 열려 있는 리스 화면이 나중에 저장하면 덮어쓸 수 있다(새로고침 안내).
 - (2026-11-03 점검) 플러그인 탭: 서버 기능(Cellar plugins)이 있으면 **서버가 아는 목록**을 보여 준다(`getPlugins`가 `fromServerList`). 리스는 메모리 목록을 들고 있어 Cellar로 바꾼 직후 `getDatabase`는 옛 상태이기 때문. 리스 쪽과 다르면(`needsReload`) '새로고침 필요' 안내. 탭을 열 때 Cellar 확인을 기다리지 않는다(없는 사용자에게 1.5초 지연이 생기던 것 제거; 찾으면 한 번 다시 그림). 자기 자신(dusk_atelier)의 스위치·삭제는 막음. Cellar `replaceAll`(복원)은 머리말 이름 검사를 하지 않음(옛 플러그인 복원용). 백업(`/cellar/backup`)은 호스트 무관(폴더 스냅샷; PocketRisu SQLite는 온라인 백업) — 플러그인 '수정'만 RisuBard 전용.
+
+- Cellar 업데이트 버튼(2026-11-03): `src/data/cellarupdate.js`(check/apply/rollback + 재연결 대기), 설정 → 서버 → Dusk Cellar 창 `rb-cellar-update`(features에 "update"일 때만). 서버는 Dusk-Cellar `update.cjs`·`POST /cellar/update`. 서버 실물 확인은 아직 못 함.
