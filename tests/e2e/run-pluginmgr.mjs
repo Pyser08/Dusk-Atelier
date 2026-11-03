@@ -20,7 +20,7 @@ await page.evaluate(() => {
     const L = window.__ml;
     if (b.action === "list") return { status: 200, body: { ok: true, host: "risubard", listSha: "L" + L.map((p) => p.name).join(), plugins: L } };
     if (b.action === "export") return { status: 200, body: { ok: true, listSha: "L" + L.map((p) => p.name).join(), plugins: L.map((p) => ({ name: p.name, displayName: p.name, script: "//@name " + p.name + "\n", enabled: p.enabled, arguments: {}, realArg: {} })) } };
-    if (b.action === "mutate") { window.__ops.push(b); return { status: 200, body: { ok: true, host: "risubard", file: "settings/app.json", snapshot: "snap", results: [], adopted: true, reload: true, stillPending: false, needsReload: true } }; }
+    if (b.action === "mutate") { window.__ops.push(b); for (const o of b.ops) if (o.op === "set") { const t = L.find((p) => p.name === o.name); if (t && "enabled" in o.fields) t.enabled = o.fields.enabled; }  return { status: 200, body: { ok: true, host: "risubard", file: "settings/app.json", snapshot: "snap", results: [], adopted: true, reload: true, stillPending: false, needsReload: true } }; }
     return { status: 400, body: { ok: false, error: "action" } };
   };
   window.__cellarOn = true; window.__cellarFeat = ["mem", "backup", "plugins"]; __app.ctx.cellar?.forget();
@@ -29,35 +29,38 @@ const lastOps = () => page.evaluate(() => window.__ops.at(-1));
 const menuItems = () => page.locator(".rb-menu button").allTextContents();
 const toast = async () => (await page.locator(".rb-toast").allTextContents()).join("|");
 
-await page.evaluate(() => __app.ctx.go("plugins")); await page.waitForTimeout(1200);
+await page.evaluate(() => __app.ctx.go("plugins")); await page.waitForTimeout(1500)
 
 // 1) 켜기/끄기 스위치
-const sw = page.locator('[role="switch"][aria-label="RisuPot 끄기"]');
+const sw = page.locator('[role="switch"][aria-label="risupot 끄기"]');
 ok("서버 기능이 있으면 줄마다 켜기/끄기 스위치가 보임", (await sw.count()) === 1);
 await sw.click(); await page.waitForTimeout(500);
 let op = await lastOps();
 ok("끄기 → mutate set enabled:false", op?.action === "mutate" && op.ops[0].op === "set" && op.ops[0].name === "risupot" && op.ops[0].fields.enabled === false, JSON.stringify(op));
 
+ok("끈 뒤 목록이 서버 기준으로 바뀌고(스위치가 '켜기'로) 새로고침 안내가 보임", (await page.locator('[role="switch"][aria-label="risupot 켜기"]').count()) === 1 && (await page.locator(".rb-plugins").textContent()).includes("새로고침"));
+ok("Dusk Atelier 자신의 스위치는 막혀 있음", await page.locator('[role="switch"][aria-label="dusk_atelier 끄기"]').isDisabled());
+
 // 2) 줄 메뉴: 별칭·위로·아래로·삭제 (맨 위 줄은 '위로' 없음)
-await page.locator('button[aria-label="RisuPot 메뉴"]').click(); await page.waitForTimeout(300);
+await page.locator('button[aria-label="risupot 메뉴"]').click(); await page.waitForTimeout(300);
 let mi = await menuItems();
 ok("줄 메뉴에 별칭·삭제·위로·아래로가 있음", mi.some((t) => t.includes("별칭")) && mi.some((t) => t.includes("삭제")) && mi.includes("위로") && mi.includes("아래로"), mi.join("|"));
 await page.locator('.rb-menu button:has-text("아래로")').click(); await page.waitForTimeout(500);
 op = await lastOps();
 ok("아래로 → order 작업과 목록 해시", op.ops[0].op === "order" && JSON.stringify(op.ops[0].order) === "[0,2,1]" && op.expectListSha.startsWith("L"), JSON.stringify(op));
-await page.locator('button[aria-label="RisuPot 메뉴"]').click(); await page.waitForTimeout(300);
+await page.locator('button[aria-label="risupot 메뉴"]').click(); await page.waitForTimeout(300);
 await page.locator('.rb-menu button:has-text("별칭")').click(); await page.waitForTimeout(300);
 await page.locator(".rb-dialog input").fill("팟"); await page.locator(".rb-dialog button.primary").click(); await page.waitForTimeout(500);
 op = await lastOps();
 ok("별칭 → set alias", op.ops[0].fields.alias === "팟", JSON.stringify(op));
-await page.locator('button[aria-label="TTS 도우미 메뉴"]').click(); await page.waitForTimeout(300);
+await page.locator('button[aria-label="tts_helper 메뉴"]').click(); await page.waitForTimeout(300);
 await page.locator('.rb-menu button:has-text("삭제")').click(); await page.waitForTimeout(300);
 await page.locator(".rb-dialog button.danger, .rb-dialog button.primary").last().click(); await page.waitForTimeout(500);
 op = await lastOps();
 ok("삭제 → remove 작업", op.ops[0].op === "remove" && op.ops[0].name === "tts_helper", JSON.stringify(op));
-await page.locator('button[aria-label="Dusk Atelier 메뉴"]').click(); await page.waitForTimeout(300);
+await page.locator('button[aria-label="dusk_atelier 메뉴"]').click(); await page.waitForTimeout(300);
 mi = await menuItems();
-ok("자기 자신(Dusk Atelier)은 삭제 메뉴가 없고, 맨 위 줄이라 '위로'도 없음", !mi.some((t) => t.includes("삭제")) && !mi.includes("위로"), mi.join("|"));
+ok("자기 자신(dusk_atelier)은 삭제 메뉴가 없고, 맨 위 줄이라 '위로'도 없음", !mi.some((t) => t.includes("삭제")) && !mi.includes("위로"), mi.join("|"));
 await page.keyboard.press("Escape");
 
 // 3) 툴바 메뉴 항목
@@ -90,7 +93,7 @@ ok("덮어쓰기 → add replace keepSettings", op.ops[0].replace === true && op
 await open("중복 정리");
 ok("중복이 없으면 안내", (await page.locator("#rb-pm-nodup").count()) === 1);
 await page.keyboard.press("Escape");
-await page.evaluate(() => { window.__ml.push({ index: 3, name: "risupot", displayName: "risupot", enabled: true, sha256: "x", bytes: 1, argNames: [] }); });
+await page.evaluate(() => { window.__ml[1].enabled = true; window.__ml.push({ index: 3, name: "risupot", displayName: "risupot", enabled: true, sha256: "x", bytes: 1, argNames: [] }); });
 await open("중복 정리");
 await page.locator("#rb-pm-dupgo").click(); await page.waitForTimeout(500);
 op = await lastOps();
@@ -131,7 +134,7 @@ ok("정리 후 ghost만 사라짐", !String(cats).includes("ghost") && String(ca
 
 // 9) 서버 기능이 없으면 아무것도 안 보임
 await page.evaluate(() => { window.__cellarFeat = ["mem"]; __app.ctx.cellar?.forget(); __app.ctx.go("settings"); }); await page.waitForTimeout(400);
-await page.evaluate(() => __app.ctx.go("plugins")); await page.waitForTimeout(1200);
+await page.evaluate(() => __app.ctx.go("plugins")); await page.waitForTimeout(1500)
 await open("새로고침"); await page.waitForTimeout(1200);
 ok("서버 기능이 없으면 스위치 없음", (await page.locator("[role=switch]").evaluateAll((a) => a.map((x) => x.getAttribute("aria-label")))).filter((t) => /(끄기|켜기)$/.test(t || "")).length === 0, await page.locator("[role=switch]").evaluateAll((a) => a.map((x) => x.getAttribute("aria-label")).join("|")));
 

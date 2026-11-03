@@ -9,6 +9,7 @@ import { createCellar } from '../../data/cellar.js';
 import { hasPluginEdit } from '../../data/cellarplugins.js';
 import { openPluginEdit } from './pluginedit.js';
 import * as MG from './pluginmgr.js';
+import * as M from '../../data/pluginmgr.js';
 import * as SM from '../../data/storagemgr.js';
 import { openStorageNew, openStorageImport, editStorageItem } from './storageedit.js';
 
@@ -21,7 +22,16 @@ var memo = (ctx) => ctx.state.pluginCache ??= {};
 async function getPlugins(ctx, fresh) {
   const c = memo(ctx);
   if (fresh || !c.plugins || Date.now() - c.pluginsAt > PLUGINS_TTL) {
-    c.plugins = await P.listPlugins(ctx.api).catch(() => []);
+    const db = await P.listPlugins(ctx.api).catch(() => []);
+    c.plugins = db; c.reloadNeeded = false; c.serverList = false;
+    // 서버(Cellar)가 목록 수정을 지원하면 서버가 아는 목록을 보여 준다(리스는 새로고침 전까지 옛 목록을 들고 있어서)
+    const st = cellarOf(ctx).peek();
+    if (hasPluginEdit(st)) {
+      try {
+        const sv = M.fromServerList((await MG.mgrOf(ctx, st).list()).plugins, await P.loadCategories(ctx.api));
+        c.reloadNeeded = M.needsReload(db, sv); c.plugins = sv; c.serverList = true;
+      } catch { /* 서버를 못 읽으면 리스 쪽 목록 그대로 */ }
+    }
     c.pluginsAt = Date.now();
     ctx.setNavCount("plugins", c.plugins.length || void 0);
   }
@@ -98,10 +108,10 @@ var refresh = (ctx) => renderPlugins(ctx, { fresh: true });
 
 // ── 목록 ──
 async function viewList(ctx, { fresh }) {
-  const cellar0 = await cellarStatus(ctx);   // 코드 수정·켜기/끄기 등 서버 기능이 있는지(있는 값을 쓰고, 없으면 잠깐만 기다린다)
+  // 서버 기능은 이미 찾은 값만 쓴다(기다리지 않는다). 아직 못 찾았으면 찾은 뒤에 한 번 다시 그린다.
+  const cellar0 = cellarOf(ctx).peek();
   const canMgr = hasPluginEdit(cellar0);
-  // 켜자마자라 아직 못 찾았으면, 나중에 찾았을 때 한 번 다시 그린다(스위치·메뉴가 나타나도록)
-  if (!canMgr) setTimeout(() => cellarOf(ctx).status({ fresh: true }).then((st) => { if (hasPluginEdit(st) && ctx.state.pluginView === "list" && ctx.main?.querySelector(".rb-plugins")) renderPlugins(ctx); }).catch(() => {}), 4000);
+  if (!canMgr) cellarOf(ctx).status().then((st) => { if (hasPluginEdit(st) && ctx.state.pluginView === "list" && ctx.main?.querySelector(".rb-plugins")) renderPlugins(ctx, { fresh: true }); }).catch(() => {});
   // 플러그인 목록과 연동 값을 동시에 읽는다(1.8.3). 연동의 '설치됨' 표시는 목록이 오면 바로 채운다.
   const [plugins, interop] = await Promise.all([getPlugins(ctx, fresh), getInterop(ctx, fresh)]);
   { const names = new Set(plugins.map((p) => p.name)); for (const e of interop) if (e.pluginName) e.installed = names.has(e.pluginName); }
@@ -138,7 +148,7 @@ async function viewList(ctx, { fresh }) {
         ),
         h("span", { class: "meta" }, [p.name, p.version && `v${p.version}`, fmtBytes(p.size)].filter(Boolean).join(" · "))
       ),
-      canMgr ? switchEl(p.enabled, { label: `${p.displayName} ${p.enabled ? "끄기" : "켜기"}`, onChange: (on) => MG.toggleEnabled(ctx, cellar0, p, on, () => refresh(ctx)).then((ok) => { if (!ok) renderPlugins(ctx); }) }) : null,
+      canMgr ? switchEl(p.enabled, { disabled: p.self, label: `${p.displayName} ${p.enabled ? "끄기" : "켜기"}`, onChange: (on) => MG.toggleEnabled(ctx, cellar0, p, on, () => refresh(ctx)).then((ok) => { if (!ok) renderPlugins(ctx); }) }) : null,
       iconBtn("more", `${p.displayName} 메뉴`, { onClick: async (ev) => {
         const anchor = ev.currentTarget;
         rowMenu(ctx, p, linked.get(p.name), anchor, await cellarStatus(ctx), plugins);
@@ -172,6 +182,7 @@ async function viewList(ctx, { fresh }) {
         { label: "내보내기", icon: "upload", onClick: async () => download(`dusk-plugins-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, await P.exportAll(ctx.api), "application/json") }
       ]) })
     ),
+    memo(ctx).reloadNeeded ? note("warn", "서버에서 바꾼 내용이 있어요. 리스를 새로고침(F5 또는 앱 다시 시작)하면 적용돼요. 지금 목록은 서버 기준이에요.") : null,
     shown.length ? null : h("div", { class: "rb-empty" }, q ? "찾는 플러그인이 없어요." : "플러그인이 없어요."),
     keys.map((g) => h(
       "details",

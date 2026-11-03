@@ -196,3 +196,21 @@ export function orphanMeta(list, { categories = {}, presets = emptyPresets() } =
   for (const [pn, p] of Object.entries(presets.presets)) { const m = Object.keys(p.enabled ?? {}).filter((n) => !names.has(n)); if (m.length) presetMissing[pn] = m; }
   return { categories: cats, presets: presetMissing };
 }
+
+// ── 서버(Cellar)가 아는 목록 ──
+// 리스는 메모리에 있는 목록을 쓰므로, Cellar로 바꾼 직후에는 리스 쪽 목록(getDatabase)이 옛 상태다. 서버를 진실로 보여 주고
+// 리스 쪽과 다르면(=새로고침이 필요하면) 알려 준다.
+export function fromServerList(sp, categories = {}, selfName = "dusk_atelier") {
+  const count = new Map();
+  for (const p of sp) count.set(p.name, (count.get(p.name) ?? 0) + 1);
+  return sp.map((p, i) => ({
+    name: p.name, displayName: p.alias || p.displayName || p.name || "(이름 없음)", alias: p.alias ?? "",
+    version: p.versionOfPlugin ?? "", apiVersion: p.version, updateURL: p.updateURL ?? "", enabled: p.enabled !== false,
+    size: p.bytes ?? 0, order: i, dup: (count.get(p.name) ?? 0) > 1, category: categories[p.name] ?? "", self: p.name === selfName,
+  }));
+}
+// 리스 쪽(db)과 서버 목록이 다른가: 이름·순서·켜짐·별칭이 하나라도 다르면 true
+export function needsReload(db, server) {
+  if (db.length !== server.length) return true;
+  return db.some((d, i) => d.name !== server[i].name || d.enabled !== server[i].enabled || (d.alias || "") !== (server[i].alias || "") || d.size !== server[i].size);
+}

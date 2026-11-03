@@ -8,7 +8,7 @@ import { codeEditor } from "../codeedit.js";
 import { createCellarPlugins, describeEditError, headerProblem, lineDiff } from "../../data/cellarplugins.js";
 import { createCellarBackups } from "../../data/cellarbackup.js";
 
-var BIG = 4e6;   // 이보다 큰 코드는 색 입히기 없이 보여 준다(사용자 요청: 4MB까지는 색을 입힌다)
+var BIG = 6e5;   // 이보다 큰 코드는 색 입히기 없이 보여 준다. 색 편집기는 글자를 칠 때마다 전체를 다시 칠해서 1MB에 4초, 2.3MB에 6초 멈춘다(측정)
 var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 var MONO = 'ui-monospace,"Cascadia Code","D2Coding",Menlo,Consolas,monospace';
 var ROW = { "+": "background:rgba(46,160,67,.18)", "-": "background:rgba(248,81,73,.18)", " ": "", "…": "color:var(--rb-sub);text-align:center" };

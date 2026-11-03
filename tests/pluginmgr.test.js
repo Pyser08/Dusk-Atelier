@@ -71,3 +71,14 @@ test("카테고리 JSON·디바이스·메타 정리", () => {
   const o = M.orphanMeta([L("a")], { categories: { a: "1", gone: "2" }, presets: { ...M.emptyPresets(), presets: { p: { enabled: { a: true, gone: false } } } } });
   assert.deepEqual(o.categories, ["gone"]); assert.deepEqual(o.presets, { p: ["gone"] });
 });
+
+test("fromServerList·needsReload: 서버 목록을 화면 모양으로, 리스 쪽과 다르면 새로고침 필요", () => {
+  const sp = [{ name: "a", displayName: "A", alias: "에이", enabled: false, bytes: 5, versionOfPlugin: "1.0", version: "3.0" }, { name: "a", displayName: "A2", bytes: 7 }, { name: "dusk_atelier", displayName: "D", bytes: 9 }];
+  const l = M.fromServerList(sp, { a: "UI" });
+  assert.equal(l[0].displayName, "에이"); assert.equal(l[0].enabled, false); assert.equal(l[0].dup, true); assert.equal(l[0].category, "UI"); assert.equal(l[2].self, true); assert.equal(l[1].order, 1);
+  const same = l.map((p) => ({ ...p }));
+  assert.equal(M.needsReload(same, l), false);
+  assert.equal(M.needsReload(same.slice(1), l), true, "개수 다름");
+  assert.equal(M.needsReload(same.map((p, i) => (i === 0 ? { ...p, enabled: true } : p)), l), true, "켜짐 다름");
+  assert.equal(M.needsReload(same.map((p, i) => (i === 1 ? { ...p, alias: "x" } : p)), l), true, "별칭 다름");
+});
