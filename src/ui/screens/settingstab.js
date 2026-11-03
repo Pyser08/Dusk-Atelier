@@ -2,7 +2,7 @@
 // 이야기 도우미(재해석/존중은 바로 고르기) · 로어북·채팅 메뉴 · 정리·기록. '이럴 땐 여기로'는 ? 도움말로. PC 2열.
 import { renderPrompts } from './promptstab.js';
 import { h, replace } from '../dom.js';
-import { advFold, modal, btn, openMenu, pageHead, segmented, confirmDialog } from '../kit.js';
+import { advFold, modal, btn, openMenu, pageHead, segmented, confirmDialog, fmtSize } from '../kit.js';
 import { icon } from '../icons.js';
 import { openTour } from '../tour.js';
 import { CHANGELOG, openChangelog } from '../whatsnew.js';
@@ -14,6 +14,7 @@ import { renderUpdateSettings } from './updsettings.js';
 import { openAbout } from './about.js';
 import { loadMemoryButtonOn } from '../../data/memorybutton.js';
 import { createCellar, loadCellarUrl, saveCellarUrl, CELLAR_DEFAULT_URL } from '../../data/cellar.js';
+import { createCellarBackups } from '../../data/cellarbackup.js';
 
 export async function renderSettingsTab(ctx) {
   if (ctx.state.sub === "prompts") return renderPrompts(ctx);
@@ -145,9 +146,12 @@ async function openCellar(ctx, cel, paint) {
   const url0 = await loadCellarUrl(ctx.api);
   await modal(ctx.win, (done) => {
     const stEl = h("p", { class: "rb-p", id: "rb-cellar-st" }, "확인 중…");
+    const bkBtn = btn("세이브 백업…", { id: "rb-cellar-backup", onClick: () => { const st = cel.peek(); if (st?.ok) openCellarBackup(ctx, st); } });
+    bkBtn.hidden = true;
     const show = (st) => {
       paint(st);
       replace(stEl, st.ok ? `연결됨 · Dusk Cellar v${st.version}` : `연결 안 됨 · ${st.error ?? ""}`);
+      bkBtn.hidden = !(st.ok && st.features?.includes("backup"));
     };
     const input = h("input", { class: "rb-input", type: "url", value: url0, placeholder: CELLAR_DEFAULT_URL, "aria-label": "Cellar 주소", id: "rb-cellar-url" });
     // 장기기억 저장 위치(1.8.3): Cellar가 기억 저장을 지원하면 서버에만 저장, 끊기면 잠깐 이 기기에 쌓았다가 다시 올린다
@@ -177,8 +181,58 @@ async function openCellar(ctx, cel, paint) {
       ctx.prefs.advanced ? h("label", { class: "rb-p" }, "주소 (보통은 그대로 두세요)", input) : null,
       h("div", { class: "rb-dialog-actions" },
         ctx.prefs.advanced ? btn("주소 저장", { onClick: async () => { try { await saveCellarUrl(ctx.api, input.value); cel.forget(); await check(); } catch (e) { replace(stEl, String(e?.message ?? e)); } } }) : null,
+        bkBtn,
         backBtn,
         btn("다시 확인", { onClick: () => check(true), id: "rb-cellar-recheck" }),
         btn("닫기", { kind: "primary", onClick: () => done(true) })));
   });
+}
+
+// ── 세이브 백업(Dusk Cellar) ── 리스 세이브 폴더 + 서버 기억을 통째로. 바뀐 파일만 복사해서 빠르다.
+const bkWhen = (it) => { try { return new Date(it.at).toLocaleString(); } catch { return it.id; } };
+async function openCellarBackup(ctx, st) {
+  const bk = createCellarBackups(ctx.api, { url: st.url, via: st.via });
+  let closed = false, timer = null;
+  await modal(ctx.win, (done) => {
+    const stEl = h("p", { class: "rb-p", id: "rb-bk-st" }, "불러오는 중…");
+    const listEl = h("div", { id: "rb-bk-list", style: "display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto" });
+    let busy = false;
+    const nowBtn = btn("지금 백업", { kind: "primary", id: "rb-bk-now", onClick: async () => {
+      try { await bk.create("수동"); load(); } catch (e) { replace(stEl, String(e?.message ?? e)); }
+    } });
+    const row = (it) => h("div", { class: "rb-row", style: "display:flex;align-items:center;gap:10px" },
+      h("div", { style: "flex:1;min-width:0" },
+        h("div", null, bkWhen(it), it.label ? h("span", { class: "rb-muted" }, ` · ${it.label}`) : null),
+        h("div", { class: "rb-muted" }, `파일 ${it.files.toLocaleString()}개 · ${fmtSize(it.bytes)} · ${(it.ms / 1000).toFixed(1)}초`)),
+      btn("복원", { size: "sm", onClick: () => doRestore(it) }));
+    async function doRestore(it) {
+      if (busy) return;
+      const ok = await confirmDialog(ctx.win, { title: "이 백업으로 되돌릴까요?", body: `${bkWhen(it)} 상태로 리스 세이브 전체와 서버 기억을 되돌려요.\n· 리스가 잠깐 꺼졌다 다시 켜져요.\n· 지금 상태는 '복원 전 자동' 백업으로 남겨요.\n· 끝나면 리스를 열어 둔 화면(다른 기기 포함)을 모두 새로고침해 주세요. 새로고침 전 화면이 옛 데이터를 다시 저장할 수 있어요.`, ok: "복원", danger: true });
+      if (!ok) return;
+      busy = true; clearTimeout(timer); nowBtn.disabled = true;
+      replace(stEl, "복원 중… 리스를 다시 켜는 중이에요");
+      try {
+        const back = await bk.restore(it.id, { onWait: (i) => replace(stEl, `복원 중… 리스를 다시 켜는 중이에요 (${(i + 1) * 2}초)`) });
+        replace(stEl, back ? "복원했어요. 지금 리스를 새로고침해 주세요(F5 또는 앱 다시 시작)." : "리스가 아직 응답하지 않아요. 잠시 뒤 새로고침해 주세요.");
+      } catch (e) { replace(stEl, String(e?.message ?? e)); busy = false; nowBtn.disabled = false; }
+    }
+    async function load() {
+      if (closed || busy) return;
+      try {
+        const { items, job } = await bk.list();
+        const running = job && !job.finishedAt;
+        nowBtn.disabled = !!running;
+        replace(stEl, running ? `백업 중… ${job.done.toLocaleString()} / ${job.total.toLocaleString()}개` : job?.error ? `마지막 백업 실패 · ${job.error}` : `백업 ${items.length}개 · 바뀐 파일만 복사해서 두 번째부터는 빨라요`);
+        replace(listEl, ...(items.length ? items.map(row) : [h("p", { class: "rb-muted" }, "아직 백업이 없어요.")]));
+        if (running) timer = setTimeout(load, 1000);
+      } catch (e) { replace(stEl, String(e?.message ?? e)); }
+    }
+    load();
+    return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": "세이브 백업" },
+      h("h3", null, "세이브 백업"),
+      h("p", { class: "rb-muted" }, "리스 세이브 폴더 전체(캐릭터·채팅·에셋·설정)와 서버의 장기기억을 서버에 백업해요. 최근 5개를 보관해요."),
+      stEl, listEl,
+      h("div", { class: "rb-dialog-actions" }, nowBtn, btn("닫기", { onClick: () => done(true) })));
+  });
+  closed = true; clearTimeout(timer);
 }
