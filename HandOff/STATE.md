@@ -472,3 +472,7 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 
 - 플러그인 수정 3호스트(2026-11-03): Cellar `plugins.cjs`가 risubard·risuai·pocketrisu 지원. 결과에 `overwritten`(브라우저가 옛 목록으로 덮어씀) 반영(pluginedit·pluginmgr). 실서버 확인은 아직.
 - 업데이트 적용은 응답을 못 받아도(재시작 중 연결 끊김) 재연결 뒤 check로 끝났는지 확인(cellarupdate.js restarting).
+
+## 1.9.0 — Cellar 새 버전 알림 (2026-11-03)
+- `src/data/cellarlatest.js`: GitHub 최신 릴리스(Dusk-Cellar) 태그 vs 연결된 Cellar 버전 비교 → toast 1회(버전별, `dusk.cellar.notified`) + 설정 Cellar 줄에 '새 버전 vX'(`ctx.cellarNew`). app.js 열 때 호출. 시험: tests/cellarlatest.test.js.
+- 확인 못 한 것: 실제 GitHub API 응답(Cellar 릴리스 v0.1.0이 있어야 동작), 리스 안에서 nativeFetch가 api.github.com을 통과하는지.

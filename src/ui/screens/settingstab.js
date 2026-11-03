@@ -135,11 +135,11 @@ export async function renderSettingsTab(ctx) {
 }
 
 // ── Dusk Cellar (선택 서버) ── 줄 하나: 오른쪽에 상태(확인 중 → 연결됨 vX / 없음). 누르면 상태·주소·다시 확인.
-const cellarText = (st) => (!st ? "확인 중…" : st.ok ? `연결됨 v${st.version}` : "없음");
+const cellarText = (st, newV) => (!st ? "확인 중…" : st.ok ? `연결됨 v${st.version}${newV ? ` · 새 버전 v${newV}` : ""}` : "없음");
 function cellarCard(ctx, linkRow, card) {
   const cel = (ctx.cellar ??= ctx.memory?.cellar ?? createCellar(ctx.api));
-  const row = linkRow("Dusk Cellar", "리스 서버 옆에서 도는 선택 서버예요. 없어도 모든 기능이 그대로 돼요.", () => openCellar(ctx, cel, paint), "rb-set-cellar", cellarText(cel.peek()));
-  const paint = (st) => { const v = row.querySelector(".val"); if (v) v.textContent = cellarText(st); };
+  const row = linkRow("Dusk Cellar", "리스 서버 옆에서 도는 선택 서버예요. 없어도 모든 기능이 그대로 돼요.", () => openCellar(ctx, cel, paint), "rb-set-cellar", cellarText(cel.peek(), ctx.cellarNew));
+  const paint = (st) => { const v = row.querySelector(".val"); if (v) v.textContent = cellarText(st, ctx.cellarNew); };
   cel.status().then(paint).catch(() => paint({ ok: false }));
   return card("서버", row);
 }
@@ -196,7 +196,7 @@ async function openCellar(ctx, cel, paint) {
       h("h3", null, "Dusk Cellar"),
       stEl,
       memEl,
-      h("p", { class: "rb-muted" }, "리스를 직접 돌리는 서버(RisuBard 등)에 Dusk Cellar를 설치하면 자동으로 연결되고, 장기기억은 서버에만 저장돼요. 설치: 리스 폴더에서 git clone https://github.com/Pyser08/Dusk-Cellar → node setup.cjs"),
+      h("p", { class: "rb-muted" }, "리스를 직접 돌리는 서버(RisuBard 등)에 Dusk Cellar를 설치하면 자동으로 연결되고, 장기기억은 서버에만 저장돼요. 설치: github.com/Pyser08/Dusk-Cellar/releases/latest 에서 설치 파일(윈도우 install.bat · 맥 install.command)을 받아 리스 폴더에서 실행해요(git·Node 없이도 돼요)."),
       ctx.prefs.advanced ? h("label", { class: "rb-p" }, "주소 (보통은 그대로 두세요)", input) : null,
       h("div", { class: "rb-dialog-actions" },
         ctx.prefs.advanced ? btn("주소 저장", { onClick: async () => { try { await saveCellarUrl(ctx.api, input.value); cel.forget(); await check(); } catch (e) { replace(stEl, String(e?.message ?? e)); } } }) : null,

@@ -1,3 +1,4 @@
+import { checkCellarUpdate } from '../data/cellarlatest.js';
 import { dbRead } from '../data/dbcache.js';
 import { runeLogo } from './mascot.js';
 import { applyDroppedPatch } from './screens/patchui.js';
@@ -466,6 +467,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     checkWorkshopReturn(ctx).catch((e) => console.log("[Dusk Atelier] 봇빌더 결과 확인 실패", e?.message ?? e));
     checkUpdate().catch(() => {
     });
+    if (ctx.cellar) checkCellarUpdate(api, ctx.cellar, { toast: (t) => ctx.toast(t, { seconds: 12 }) }).then((v) => { ctx.cellarNew = v; }).catch(() => {});
     checkTide();
     ctx.watcher?.check();
     motion(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
