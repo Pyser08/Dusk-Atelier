@@ -471,3 +471,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - Cellar 업데이트 버튼(2026-11-03): `src/data/cellarupdate.js`(check/apply/rollback + 재연결 대기), 설정 → 서버 → Dusk Cellar 창 `rb-cellar-update`(features에 "update"일 때만). 서버는 Dusk-Cellar `update.cjs`·`POST /cellar/update`. 서버 실물 확인은 아직 못 함.
 
 - 플러그인 수정 3호스트(2026-11-03): Cellar `plugins.cjs`가 risubard·risuai·pocketrisu 지원. 결과에 `overwritten`(브라우저가 옛 목록으로 덮어씀) 반영(pluginedit·pluginmgr). 실서버 확인은 아직.
+- 업데이트 적용은 응답을 못 받아도(재시작 중 연결 끊김) 재연결 뒤 check로 끝났는지 확인(cellarupdate.js restarting).

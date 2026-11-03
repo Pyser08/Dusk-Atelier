@@ -17,7 +17,7 @@ export async function saveCellarUrl(api, url) {
 }
 
 // 응답이 오면 타이머를 지운다(긴 제한 시간이 남아 시험·프로세스를 붙잡지 않게)
-const withTimeout = (p, ms) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error("응답이 없어요")), ms); })]).finally(() => clearTimeout(t)); };
+const withTimeout = (p, ms) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error("응답이 없어요")), ms); t?.unref?.(); })]).finally(() => clearTimeout(t)); };
 async function readJson(res) {
   if (!res) return null;
   try { if (typeof res.json === "function") return await res.json(); } catch { /* 아래에서 글자로 */ }

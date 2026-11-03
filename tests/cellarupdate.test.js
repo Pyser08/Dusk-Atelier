@@ -27,3 +27,32 @@ test("서버가 거절하면 그 이유로 실패", async () => {
   const api = { nativeFetch: async () => res(409, { ok: false, error: "고친 파일이 있어서 업데이트하지 않았어요" }) };
   await assert.rejects(createCellarUpdate(api, { url: "http://c" }).apply(), /고친 파일/);
 });
+
+test("적용 응답이 끝내 안 오거나 연결이 끊겨도, 다시 연결된 뒤 check로 끝난 걸 확인한다", async () => {
+  for (const hang of [true, false]) {
+    let down = 2;
+    const api = { nativeFetch: async (u, o) => {
+      if (u.endsWith("/cellar/health")) return down-- > 0 ? res(502, {}) : res(200, { name: "dusk-cellar", version: "0.1.1" });
+      const b = JSON.parse(o.body);
+      if (b.action === "apply") { if (hang) return new Promise(() => {}); throw new Error("connection reset"); }
+      return res(200, { ok: true, behind: 0, canApply: false });
+    } };
+    const up = createCellarUpdate(api, { url: "http://c", via: "native" }, { sleep: async () => {} });
+    const r = await up.apply({ firstWait: 1 });
+    assert.equal(r.back.version, "0.1.1"); assert.equal(r.recovered, true);
+  }
+});
+
+test("연결이 끊겼는데 아직 새 변경이 남아 있으면 실패로 알린다", async () => {
+  const api = { nativeFetch: async (u, o) => {
+    if (u.endsWith("/cellar/health")) return res(200, { name: "dusk-cellar", version: "0.1.0" });
+    if (JSON.parse(o.body).action === "apply") throw new Error("connection reset");
+    return res(200, { ok: true, behind: 2 });
+  } };
+  await assert.rejects(createCellarUpdate(api, { url: "http://c" }, { sleep: async () => {} }).apply({ firstWait: 1 }), /업데이트하지 못한/);
+});
+
+test("서버가 5xx로 이유를 보내면(되돌렸어요 등) 재시작을 기다리지 않고 그 이유로 실패", async () => {
+  const api = { nativeFetch: async () => res(500, { ok: false, error: "새 버전을 불러오지 못해서 이전 버전으로 되돌렸어요" }) };
+  await assert.rejects(createCellarUpdate(api, { url: "http://c" }, { sleep: async () => { throw new Error("기다리면 안 돼요"); } }).apply({ firstWait: 1 }), /되돌렸어요/);
+});
