@@ -21,8 +21,9 @@ async function run(advanced) {
   ok(tag + "? 누르면 작동 방식 설명", await (async () => { const info = page.locator(".rb-dice-info"); const before = await info.isHidden(); await page.locator(".rb-dice .hd button").click(); return before && await info.isVisible(); })());
   await page.locator(".rb-dice [role=switch]").click(); await page.waitForTimeout(200);
   ok(tag + "상세에서 켜면 저장 + 공정한 전개도 켜짐", (await store("dusk.ui.fairDice")) === "on" && (await store("dusk.ui.fairPlay")) === "on");
-  ok(tag + "기본 강도 '보통' 선택", (await page.locator(".rb-dice .rb-seg button[aria-checked=true]").textContent()) === "보통");
-  await page.locator(".rb-dice .rb-seg button", { hasText: "강하게" }).click(); await page.waitForTimeout(150);
+  ok(tag + "기본 강도 '보통' 선택", (await page.locator(".rb-dice .lv:has(.l:text-is('강도')) .rb-seg button[aria-checked=true]").textContent()) === "보통");
+  ok(tag + "재해석·존중이 강도 위에 있다", (await page.locator(".rb-dice .lv").first().textContent()).includes("내가 결과까지 적었을 때") && (await page.locator('.rb-dice .lv:has(.l:text-is("내가 결과까지 적었을 때")) .rb-seg button[aria-checked=true]').textContent()) === "재해석");
+  await page.locator(".rb-dice .lv:has(.l:text-is('강도')) .rb-seg button", { hasText: "강하게" }).click(); await page.waitForTimeout(150);
   ok(tag + "강하게 저장", (await store("dusk.ui.fairDiceLevel")) === "strong", await store("dusk.ui.fairDiceLevel"));
   ok(tag + "수치 줄이 바뀜", /쉬움 30 · 보통 60 · 어려움 85 · 극악 98/.test(await page.locator(".rb-dice .cuts").textContent()));
   const hasAdv = (await page.locator(".rb-dice-grid").count()) === 1;
@@ -36,7 +37,7 @@ async function run(advanced) {
     for (const [i, v] of [10, 40, 65, 90, 4].entries()) await num.nth(i).fill(String(v));
     await page.locator(".rb-dice section.lv button", { hasText: "직접 입력 적용" }).click(); await page.waitForTimeout(200);
     ok(tag + "직접 입력 저장(custom·수치·개수)", (await store("dusk.ui.fairDiceLevel")) === "custom" && (await store("dusk.ui.fairDiceCount")) === "4" && JSON.parse(await store("dusk.ui.fairDiceCuts")).extreme === 90);
-    ok(tag + "강도 버튼 선택 해제", (await page.locator(".rb-dice .rb-seg button[aria-checked=true]").count()) === 0);
+    ok(tag + "강도 버튼 선택 해제", (await page.locator(".rb-dice .lv:has(.l:text-is('강도')) .rb-seg button[aria-checked=true]").count()) === 0);
   }
   await page.locator("#rb-dice-logbtn").click(); await page.waitForTimeout(250);
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);

@@ -4,7 +4,7 @@ import { h, replace } from './dom.js';
 import { btn, iconBtn, modal, note, segmented, switchEl } from './kit.js';
 import { icon } from './icons.js';
 import { DICE_LEVELS, MAX_DICE, resolveDice } from '../engine/fairplay.js';
-import { DICE_LEVEL_KEY, DICE_CUTS_KEY, DICE_COUNT_KEY, loadDiceLevel, loadDiceCustom, loadDiceLog, clearDiceLog } from '../data/fairplay.js';
+import { DICE_LEVEL_KEY, DICE_CUTS_KEY, DICE_COUNT_KEY, DICE_MODE_KEY, loadDiceMode, loadDiceLevel, loadDiceCustom, loadDiceLog, clearDiceLog } from '../data/fairplay.js';
 import { diceStats, judgeRoll, VERDICTS } from '../engine/turninfo.js';
 
 export const LEVEL_LABEL = { weak: "약하게", normal: "보통", strong: "강하게", custom: "직접 입력" };
@@ -35,6 +35,7 @@ export function parseCustom(raw) {
 export async function openDiceDetail(ctx, st, { setOn, fail = () => {} }) {
   const custom = await loadDiceCustom(ctx.api);
   const adv = !!ctx.prefs?.advanced;
+  const mode0 = await loadDiceMode(ctx.api).catch(() => "reinterpret");
   await modal(ctx.win, (done) => {
     const cutsEl = h("div", { class: "cuts" });
     const paintCuts = () => replace(cutsEl, cutsLine(resolveDice(st.level, custom.cuts, custom.count).cuts));
@@ -47,6 +48,10 @@ export async function openDiceDetail(ctx, st, { setOn, fail = () => {} }) {
     const seg = segmented(Object.entries(LEVEL_LABEL).filter(([k]) => k !== "custom"), st.level, async (v) => {
       try { await saveLevel(ctx, v); st.level = v; paintCuts(); if (advBox) fill(); } catch (e) { fail(e); }
     }, "강도");
+    // 내가 결과까지 적었을 때(재해석·존중): 이야기 도우미 설정과 같은 값을 쓴다
+    const modeSeg = segmented([["reinterpret", "재해석"], ["respect", "존중"]], mode0, async (v) => {
+      try { if (ctx.fairPlay) await ctx.fairPlay.setDiceMode(v); else await ctx.api.pluginStorage.setItem(DICE_MODE_KEY, v); } catch (e) { fail(e); }
+    }, "내가 결과까지 적었을 때");
     const inputs = {}; let advBox = null, msg = null;
     const fill = () => { const r = resolveDice(st.level, custom.cuts, custom.count); for (const [k] of CUT_LABEL) inputs[k].value = r.cuts[k]; inputs.count.value = r.count; };
     if (adv) {
@@ -70,6 +75,7 @@ export async function openDiceDetail(ctx, st, { setOn, fail = () => {} }) {
       h("div", { class: "hd" }, h("b", null, "유저 편향 없애기"), help),
       info,
       h("div", { class: "rb-srow" }, h("span", { class: "t" }, "사용하기", h("small", null, "공정한 전개가 꺼져 있으면 함께 켜져요.")), sw),
+      h("section", { class: "lv" }, h("span", { class: "l" }, "내가 결과까지 적었을 때"), modeSeg, h("small", { class: "rb-muted" }, "재해석: 시도로 보고 주사위로 가려요 · 존중: 내가 적은 대로 따라요")),
       h("section", { class: "lv" }, h("span", { class: "l" }, "강도"), seg, cutsEl),
       advBox,
       h("div", { class: "btns" }, btn("최근 판정 기록", { icon: "history", onClick: () => openDiceLog(ctx), id: "rb-dice-logbtn" }), btn("닫기", { kind: "primary", onClick: () => done(true) })));
