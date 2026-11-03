@@ -489,3 +489,10 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 가벼운 모드: `settings.light===true`일 때만(자동 판별 제거). 기억 설정 스위치.
 - 저장소 `auto` = 항상 local(BardWiki는 직접 선택). 첫 진입 BardWiki 질문 제거(`modebar.js maybeAskBardWiki`는 no-op).
 - 확인 못 한 것: 실제 약한 모델(DeepSeek flash 등)에서의 준수율·인용 검증 엄격도.
+
+## 중복 인물 방지·한 번에 합치기 (2026-11-04, 1.9.1)
+- 원인: Writer가 모델의 `create`를 그대로 믿어 같은 인물이 새 문서로 또 생김(구간이 겹치는 분석 등). 리스바드 BardWiki는 후보의 action을 믿지 않고 서버가 id→제목·별칭 키→별칭=제목→id 오타 순으로 대상을 다시 찾는다(`risubard-memory-analysis.ts resolveCanonicalTarget`), 모호하면 새로 만들지 않고 경고.
+- 수정: `engine/pot-dedupe.js redirectDuplicateCreates`(character만) + `tools/pot-patches.json` 패치 2개(writer-apply.js에 import·호출). 이식 원본은 이 환경에 없어 생성 파일에 같은 문자열로 직접 적용 — 다음에 pot-split을 돌릴 때 패치가 같은 결과를 낸다.
+- `engine/peopledupe.js`(묶음 찾기·일괄 합치기), UI `mergeui.js mergeSameNames`(더보기 메뉴, 합치기 되돌리기 가능).
+- 인물 위키 왼쪽 목록 sticky + 내부 스크롤(`styles.js .rb-wk-side`), 좁은 화면은 기존 가로 목록.
+- 확인 못 한 것: 실제 화면에서의 sticky 동작·큰 위키(50명+)에서 일괄 합치기 속도·충돌 많은 문서의 결과.

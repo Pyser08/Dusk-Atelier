@@ -4,6 +4,7 @@ import { h, replace } from "../../dom.js";
 import { btn, modal, note, confirmDialog } from "../../kit.js";
 import { fail } from "./common.js";
 import { mergeEntries, planEntryMerge, applyEntryMerge, duskMerge } from "../../../engine/peoplemerge.js";
+import { duplicateGroups, mergeAllDuplicates } from "../../../engine/peopledupe.js";
 
 const show = (v) => v == null || v === "" ? "없음" : Array.isArray(v) ? v.map(show).join(" · ") : typeof v === "object" ? Object.values(v).map(show).join(" / ") : String(v);
 const OPT = { keep: "남길 인물 값", source: "합칠 인물 값", exclude: "이 항목 제외" };
@@ -74,4 +75,22 @@ export async function restoreLastMerge(env) {
   });
   await M.store.updateIndex((i) => { i.mergeBackups = (i.mergeBackups ?? []).filter((x) => x !== snap && x.at !== snap.at); });
   ctx.toast("합치기 전으로 되돌렸어요."); env.redraw();
+}
+
+// 같은 이름 인물 한 번에 합치기: 이름이 같은 항목을 묶어 보여 주고, 확인하면 한꺼번에 합친다(겹치는 값은 남길 쪽). 합치기 되돌리기로 복원할 수 있다.
+export async function mergeSameNames(env, people) {
+  const { ctx } = env, M = ctx.memory, shown = new Set(people.map(([, p]) => p));
+  const groups = duplicateGroups(env.folder, { visible: (p) => shown.has(p) });
+  if (!groups.length) return ctx.toast("이름이 같은 인물이 없어요.");
+  const list = groups.slice(0, 12).map((g) => `· ${g[0].name} ×${g.length}`).join("\n") + (groups.length > 12 ? `\n… 외 ${groups.length - 12}묶음` : "");
+  if (!(await confirmDialog(ctx.win, { title: "같은 이름 인물을 합칠까요?", body: `${groups.length}묶음, 모두 ${groups.reduce((n, g) => n + g.length - 1, 0)}명이 사라지고 이름은 별칭으로 남아요.\n겹치는 항목은 내용이 많은 쪽 값을 써요.\n\n${list}\n\n합친 뒤 인물 메뉴의 ‘합치기 되돌리기’로 돌릴 수 있어요.`, ok: "합치기" }))) return;
+  const slots = (() => { try { return JSON.parse(M.lib.base.slots).slots; } catch { return []; } })();
+  const clone = (v) => v == null ? null : JSON.parse(JSON.stringify(v)), ents = groups.flat();
+  const snap = { at: Date.now(), botId: env.bot.id, chatId: env.chatItem.id, keepK: groups[0][0].pk, srcK: groups[0][1].pk, keepName: groups[0][0].name, srcName: `같은 이름 ${groups.length}묶음`,
+    people: Object.fromEntries(ents.filter((e) => e.pk && env.folder.people[e.pk]).map((e) => [e.pk, clone(env.folder.people[e.pk])])), docs: Object.fromEntries(ents.filter((e) => e.docId && env.folder.wiki?.documents?.[e.docId]).map((e) => [e.docId, clone(env.folder.wiki.documents[e.docId])])) };
+  await M.store.updateIndex((i) => { i.mergeBackups = [snap, ...(i.mergeBackups ?? [])].slice(0, 5); });
+  let res = { merged: 0, skipped: [] };
+  await M.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { res = mergeAllDuplicates(f, { slotDefinitions: slots }); });
+  ctx.toast(res.skipped.length ? `${res.merged}명을 합쳤어요. ${res.skipped.length}명은 충돌이 있어 건너뛰었어요(${res.skipped.slice(0, 3).join(", ")}). 직접 합쳐 주세요.` : `${res.merged}명을 합쳤어요.`);
+  env.redraw();
 }
