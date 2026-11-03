@@ -16,7 +16,8 @@ export async function saveCellarUrl(api, url) {
   return api.pluginStorage.setItem(CELLAR_URL_KEY, v);
 }
 
-const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("응답이 없어요")), ms))]);
+// 응답이 오면 타이머를 지운다(긴 제한 시간이 남아 시험·프로세스를 붙잡지 않게)
+const withTimeout = (p, ms) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error("응답이 없어요")), ms); })]).finally(() => clearTimeout(t)); };
 async function readJson(res) {
   if (!res) return null;
   try { if (typeof res.json === "function") return await res.json(); } catch { /* 아래에서 글자로 */ }
@@ -49,13 +50,14 @@ export async function cellarRequest(api, { url, via = "native" }, path, { method
   const target = url + path;
   const init = method === "GET" ? { method: "GET" } : { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body ?? {}) };
   const go = via === "fetch" ? (typeof fetch === "function" ? () => fetch(target, { ...init, cache: "no-store" }) : null) : (typeof api.nativeFetch === "function" ? () => api.nativeFetch(target, init) : null);
-  const net = (msg, status = 0) => Object.assign(new Error(msg), { network: true, status });
+  // json: 서버가 보낸 본문(있으면). 플러그인 수정처럼 5xx에도 '쓰였는지' 같은 상세를 담아 보내는 요청이 쓴다
+  const net = (msg, status = 0, json = null) => Object.assign(new Error(msg), { network: true, status, json });
   if (!go) throw net("연결할 방법이 없어요");
   let res;
   try { res = await withTimeout(Promise.resolve().then(go), timeout); } catch (e) { throw net(String(e?.message ?? e)); }
   const status = Number(res?.status) || 0;
   const json = await readJson(res);
-  if (!status || status >= 500 || status === 401 || !json || typeof json !== "object") throw net(json?.error ?? `응답 ${status || "없음"}`, status);
+  if (!status || status >= 500 || status === 401 || !json || typeof json !== "object") throw net(json?.error ?? `응답 ${status || "없음"}`, status, json && typeof json === "object" ? json : null);
   return { status, json };
 }
 

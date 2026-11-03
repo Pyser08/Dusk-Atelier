@@ -23,6 +23,7 @@
 | AI로 봇 만들기 | `src/ui/screens/aibuild.js`, `src/ui/screens/newbot.js` |
 | 테마 빌더/꾸미기 | `src/ui/screens/themebuilder.js`, `src/ui/screens/chattheme.js`, `src/ui/theme.js` |
 | 플러그인 탭·DA Interop | `src/data/plugins.js`, `src/data/interopSnippet.js`, `src/ui/screens/plugins.js` |
+| 플러그인 코드 수정(Cellar가 대신 고침, RisuBard) | `src/data/cellarplugins.js`, `src/ui/screens/pluginedit.js`, `src/ui/screens/plugins.js`(행 메뉴), Cellar 저장소 `plugins.cjs` |
 | 설정 | `src/ui/screens/settingstab.js`, `src/ui/screens/settings.js` |
 | 리수폿 통합 (수정 금지 영역) | `tools/pot-split.mjs`, `tools/pot-patches.json` → 원본은 `ref/risupot` 브랜치 |
 | 스크립트 훅 합치기·호스트 부담 | `src/data/hookbus.js`(input·output·display 훅을 종류당 1개로), `src/main.js`(api 프록시), `src/ui/watch.js`(폴링 간격), `src/data/dbcache.js`(읽기 전용 DB 캐시 `dbRead`) |

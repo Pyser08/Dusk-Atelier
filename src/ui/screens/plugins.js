@@ -5,6 +5,9 @@ import { badge, btn, confirmDialog, iconBtn, loading, note, openMenu, promptDial
 import * as P from '../../data/plugins.js';
 import * as T from '../../data/pluginTemplate.js';
 import { codeEditor, highlight } from '../codeedit.js';
+import { createCellar } from '../../data/cellar.js';
+import { hasPluginEdit } from '../../data/cellarplugins.js';
+import { openPluginEdit } from './pluginedit.js';
 
 var VIEWS = [["list", "목록"], ["interop", "연동 설정"], ["create", "만들기"], ["storage", "저장소"]];
 var INTEROP_URL = "https://pyser08.github.io/dusk-atelier-interop/";
@@ -20,6 +23,13 @@ async function getPlugins(ctx, fresh) {
     ctx.setNavCount("plugins", c.plugins.length || void 0);
   }
   return c.plugins;
+}
+// Cellar가 플러그인 코드 수정을 지원하는지(1.8.3). 목록 화면을 막지 않도록 화면을 열 때 미리 한 번 물어 두고(1분 기억),
+// ··· 메뉴를 열 때는 있는 값을 쓴다. 아직 답이 없으면 잠깐만 기다리고, 없으면 '코드 수정'을 보여 주지 않는다.
+var cellarOf = (ctx) => ctx.cellar ??= ctx.memory?.cellar ?? createCellar(ctx.api);
+async function cellarStatus(ctx) {
+  const c = cellarOf(ctx);
+  return c.peek() ?? await Promise.race([c.status().catch(() => null), new Promise((r) => setTimeout(() => r(null), 1500))]);
 }
 async function getInterop(ctx, fresh) {
   const c = memo(ctx);
@@ -84,6 +94,7 @@ var refresh = (ctx) => renderPlugins(ctx, { fresh: true });
 
 // ── 목록 ──
 async function viewList(ctx, { fresh }) {
+  cellarOf(ctx).status().catch(() => null);   // 코드 수정 메뉴용으로 미리 확인(기다리지 않는다)
   // 플러그인 목록과 연동 값을 동시에 읽는다(1.8.3). 연동의 '설치됨' 표시는 목록이 오면 바로 채운다.
   const [plugins, interop] = await Promise.all([getPlugins(ctx, fresh), getInterop(ctx, fresh)]);
   { const names = new Set(plugins.map((p) => p.name)); for (const e of interop) if (e.pluginName) e.installed = names.has(e.pluginName); }
@@ -120,7 +131,10 @@ async function viewList(ctx, { fresh }) {
         ),
         h("span", { class: "meta" }, [p.name, p.version && `v${p.version}`, fmtBytes(p.size)].filter(Boolean).join(" · "))
       ),
-      iconBtn("more", `${p.displayName} 메뉴`, { onClick: (ev) => rowMenu(ctx, p, linked.get(p.name), ev.currentTarget) })
+      iconBtn("more", `${p.displayName} 메뉴`, { onClick: async (ev) => {
+        const anchor = ev.currentTarget;
+        rowMenu(ctx, p, linked.get(p.name), anchor, await cellarStatus(ctx));
+      } })
     );
   };
   return h(
@@ -154,13 +168,15 @@ async function viewList(ctx, { fresh }) {
   );
 }
 
-function rowMenu(ctx, p, entry, anchor) {
+function rowMenu(ctx, p, entry, anchor, cellar) {
   openMenu(ctx.win, anchor, [
     entry && { label: "연동 설정 열기", icon: "sliders", onClick: () => {
       ctx.state.pluginView = "interop";
       ctx.state.pluginOpen = entry.id;
       renderPlugins(ctx);
     } },
+    // 리스는 플러그인이 다른 플러그인을 고치지 못하게 막아서, 서버(Dusk Cellar)가 대신 고친다(RisuBard 서버만)
+    hasPluginEdit(cellar) && { label: "코드 수정", icon: "code", onClick: () => openPluginEdit(ctx, p, cellar) },
     { label: p.category ? `카테고리: ${p.category}` : "카테고리 지정", icon: "folder", onClick: async () => {
       const c = await promptDialog(ctx.win, { title: "카테고리", label: "비우면 미분류로 돌아가요", value: p.category, placeholder: "예: 번역, UI" });
       if (c === null) return;
