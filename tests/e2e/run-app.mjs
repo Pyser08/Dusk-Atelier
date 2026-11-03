@@ -31,8 +31,8 @@ const names = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(
   const page = await boot(ctx);
   ok("[PC] 첫 화면은 홈, 메뉴는 왼쪽 사이드바", (await cur(page)) === "홈" && (await page.locator(".rb-nav").isVisible()) && !(await page.locator(".rb-topnav").isVisible()));
   const side = await names(page, ".rb-nav a");
-  ok("[PC] 사이드바 순서: 홈·기억·리수폿·인물 → 더보기 묶음", side.join("|") === "홈|기억|리수폿|인물|캐릭터|모듈|기억 카드|꾸미기|도구|플러그인|설정", side.join("|"));
-  ok("[PC] '더보기' 라벨과 메뉴 위치 분할 버튼이 사이드바에 있음", (await page.locator(".rb-nav .rb-nav-lab").textContent()) === "더보기" && (await page.locator(".rb-nav .rb-layseg button").count()) === 2);
+  ok("[PC] 사이드바 순서: 홈 → 기억 묶음 → 관리 묶음 → 작업실 묶음 → 도구·설정", side.join("|") === "홈|장기 기억|코코아|기억 카드|캐릭터|모듈|플러그인|플러그인 꾸미기|AI로 봇 만들기|AI로 페르소나 만들기|도구|설정", side.join("|"));
+  ok("[PC] 묶음 라벨(기억·관리·작업실)과 메뉴 위치 분할 버튼이 사이드바에 있음", (await page.locator(".rb-nav .rb-nav-lab").allTextContents()).join("|") === "기억|관리|작업실" && (await page.locator(".rb-nav .rb-layseg button").count()) === 2);
   ok("[PC] 개발 탭은 간단 모드에서 숨김", !side.includes("개발"));
   await shot(page, "pc-1-home");
   await go(page, "리수폿");
