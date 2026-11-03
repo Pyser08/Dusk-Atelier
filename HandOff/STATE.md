@@ -446,9 +446,10 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 릴리스 전 점검(2026-11-03): main은 브랜치보다 앞선 커밋 없음·충돌 없음, 사이트 링크 깨짐 0, e2e 23개 중 22개 통과. `tests/e2e/run-app.mjs`는 옛 탭 이름(리수폿·인물·꾸미기) 기준이라 사이드바 확인 2개만 새 구성에 맞췄고 그 뒤 단계는 38줄에서 멈춤 → 새 탭 구성(장기 기억·코코아·기억 카드·플러그인 꾸미기 등)에 맞춰 다시 써야 함(회귀 아님, 이전부터 낡음). 릴리스 뒤 Pages 소스를 main /docs로 바꿀 것.
 - 자동 릴리스 끔(사용자 지시 2026-11-03): release.yml은 main push로 돌지 않고 `v*` 태그 푸시(package.json 버전과 같아야 함)일 때만 릴리스. 릴리스하려면 사용자가 지시한 뒤 `git tag v1.8.3 <main 커밋> && git push origin v1.8.3`.
 
-## Dusk 서버 (시작, 2026-11-03)
-- `server/dusk-start.cjs` 한 파일: 실행기 + Dusk 서버(같은 파일을 `--role-server`로 자식 실행). 리스 폴더에 두고 `node dusk-start.cjs`(pm2면 이 파일을 등록). 리스 시작 파일은 `--risu`·`DUSK_RISU_ENTRY`·`server/node/server.cjs` 순으로 찾고, 리스는 리스 폴더를 작업 폴더로 실행. `--` 뒤 인자는 리스로.
-- 리스가 꺼지면 Dusk도 끄고 같은 코드로 종료, Dusk만 죽으면 최대 5번 다시 켬(1·2·4·8·16초, 1분 넘게 돌면 초기화), 포트 사용 중(78)이면 리스만 돌림.
-- Dusk 서버: 127.0.0.1:6011, `GET /dusk/health`(토큰 없이 됨, 데이터 없음), 그 외는 `Authorization: Bearer <dusk-data/token.txt>` 필수. CORS 열림(보호는 토큰). Node 기본 모듈만.
-- 시험 tests/dusk-start.test.js(가짜 리스로 함께 켜짐·작업 폴더·인자 전달·토큰·리스 종료 전파·시작 파일 없음). 수동 확인: Dusk 자식 강제 종료 → 1초 뒤 다시 켜짐.
-- 다음: 플러그인 연결(주소·토큰 설정, 있으면 쓰고 없으면 지금 방식), 1단계 기억 백업 + 필요한 조각만 돌려주기. HTTPS로 리스를 쓰는 경우(mixed content) 리버스 프록시 `/dusk/` 안내 필요. RisuBard 실제 시작 파일 경로 미확인.
+## Dusk Cellar (백그라운드 서버, 별도 저장소) — 진행 상황 2026-11-03
+- 저장소: **Pyser08/Dusk-Cellar** (main, b48c204). 리스 폴더 안에 클론 → `node setup.cjs` 한 번으로 설치. 그쪽 `HandOff/STATE.md`가 상세 기준.
+- 지금 있는 것(뼈대): `setup.cjs`(리스 시작 파일 자동 찾기 → pnpm/npm 빌드 → pm2 목록 보여 주고 지울 것 고르기(리스 직접 실행 항목 '추천') → 실행기 pm2 등록·save → 응답 확인), `cellar-start.cjs`(리스+Cellar 함께 켜고 끄기, Cellar만 재시작), `/cellar/health`(토큰 없이), 그 외 주소는 `dusk-data/token.txt` 토큰 필수, 127.0.0.1:6011. 시험 12개 통과(가짜 pm2·npm 전체 흐름 포함).
+- 미확인: 실제 RisuAI·RisuBard 폴더·진짜 pm2·윈도우에서 실행. RisuBard 시작 파일 경로.
+- 결정됨: 이름 Dusk Cellar / 리스 프로세스 안에 섞지 않고 실행기로 함께 실행 / 서버는 선택 기능(없으면 플러그인 지금 방식) / 리스 데이터는 건드리지 않음.
+- 다음: ① 사용자 RisuBard 서버에서 실제 설치 시험 ② 플러그인 연결 설정(주소·토큰, 있으면 쓰고 없으면 지금 방식, HOST-COMPAT) ③ 1단계 기억 백업 + 화면에 필요한 조각만 돌려주기(효과 측정) ④ 필요하면 분석·임베딩 서버 실행. HTTPS 리스는 프록시 `/cellar/` 안내.
+- 정리 대기(삭제는 사용자 지시 필요): 이 저장소의 `server/dusk-start.cjs`, `tests/dusk-start.test.js`는 Cellar로 옮겨 가 중복.
