@@ -71,3 +71,19 @@ test("bot-wide people merge keeps chatId on records", async () => {
   assert.equal((await st.botFolders("c")).length, 2);
   assert.equal(botPeople([null]).a, undefined);
 });
+
+test("인덱스 읽기: 짧은 시간 안의 반복 읽기는 저장소를 한 번만 부르고, 쓰면 바로 새 값이 보인다 (홈 속도, 1.8.3)", async () => {
+  const api = mockApi(); let reads = 0;
+  const get0 = api.pluginStorage.getItem; api.pluginStorage.getItem = async (k) => { if (k === INDEX_KEY) reads++; return get0(k); };
+  const st = createMemoryStoreV3(api);
+  await st.migrate(); reads = 0;
+  const [a, b] = await Promise.all([st.getIndex(), st.getIndex()]); await st.getIndex();
+  assert.equal(reads, 1, "같은 인덱스를 세 번 읽어도 저장소는 한 번");
+  a.bots.zz = { on: true };   // 받은 쪽이 고쳐도 다음 읽기에 새지 않는다
+  assert.equal((await st.getIndex()).bots.zz, undefined);
+  assert.notEqual(a, b);
+  await st.updateIndex((idx) => { idx.bots.c1 = { on: true }; });
+  assert.equal((await st.getIndex()).bots.c1.on, true, "쓴 직후 읽으면 새 값");
+  await st.deleteBot("c1");
+  assert.equal((await st.getIndex()).bots.c1, undefined);
+});

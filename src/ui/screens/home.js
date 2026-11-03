@@ -29,6 +29,8 @@ export async function renderHome(ctx) {
   replace(ctx.main, host);
   replace(host, loading("불러오는 중", { rows: 3 }));   // 읽는 동안 빈 화면 대신 바로 보이게
   let s = { M: null };
+  const qsP = quickSettingsCard(ctx);   // 빠른 설정 읽기도 열린 채팅 읽기와 동시에 시작한다(v1.8.3, 홈 속도)
+  qsP.catch(() => {});
   try {
     s = await readState(ctx);
   } catch {
@@ -121,7 +123,7 @@ export async function renderHome(ctx) {
 
   // ── 최근 기록 (PC 오른쪽) ──
   const rec = s.cur ? recentOf(s.folder) : [];
-  const storyHelper = await quickSettingsCard(ctx);
+  const storyHelper = await qsP;
   // 기억 '기록 보기'(인물 위키)로 바로 가기. 사람 이름을 주면 그 사람 문서를 연다.
   const openWiki = (name) => {
     const m = mem(ctx);

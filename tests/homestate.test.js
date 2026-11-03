@@ -16,3 +16,14 @@ test("홈 상태 읽기: 쓰지 않는 백필 계획·채팅 통째 읽기를 �
   const s = await readState(ctx);
   assert.equal(planned, 0); assert.equal(chatReads, 0); assert.equal(s.cur.chaId, "c");
 });
+
+test("홈 상태 읽기: 열린 채팅 확인을 기다리는 동안 인덱스 읽기를 같이 시작한다 (홈 속도, 1.8.3)", async () => {
+  const order = [];
+  const ctx = { memory: {
+    switches: { currentChat: async () => { order.push("cur:start"); await new Promise((r) => setTimeout(r, 5)); order.push("cur:end"); return { chaId: "c", chatId: "t" }; }, state: async () => ({}) },
+    store: { getIndex: async () => { order.push("index"); return {}; }, getFolder: async () => null },
+    flow: null, injector: null
+  } };
+  await (await import("../src/ui/screens/homestate.js")).readState(ctx);
+  assert.ok(order.indexOf("index") < order.indexOf("cur:end"), order.join(","));
+});
