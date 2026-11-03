@@ -104,8 +104,62 @@ function unwrap(o) {
   }
   return o;
 }
+// ── 단계별 분석(1.9.0): 한 번에 모든 것을 요구하면 응답이 길어져 잘리거나 형식이 깨진다.
+// 1단계: 누가 나오는지(이름·행동·점수)와 전반적인 상황(장면·관계·떡밥·게이지)만. 2단계: 인물마다 한 번씩 세부(신뢰도·속성·감정·속마음…).
+// 2단계가 실패해도 1단계 결과는 남긴다(그 인물의 세부만 빠짐).
+const STAGE1 = "STAGE 1 of 2 — overview only. Return people (each with only name, act, p, s, r), scene, rel, open and any requested gauge output. Do NOT include kd, fc, ic, know, attr, pat, mean, keys, self, emo, pov, exp or any other optional per-character field; they are collected in a second step.";
+const stage2 = (name) => `STAGE 2 of 2 — detail for one character only: "${name}". The overview of this response is in \`overview\`; do not repeat it. Return people with EXACTLY one entry for "${name}" (same name, with its optional fields such as kd, fc, ic, know, attr, pat, mean, keys, self), plus emo, pov, exp and the character-state fields only where they concern "${name}". Do NOT output scene, rel or open.`;
+function stageMessages(msgs, suffix, extra) {
+  const [sys, usr] = msgs;
+  let payload; try { payload = JSON.parse(usr.content); } catch { payload = {}; }
+  return [{ ...sys, content: `${sys.content}\n${suffix}` }, { ...usr, content: JSON.stringify(extra ? { ...payload, ...extra } : payload) }];
+}
+const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
+function mergeInto(a, b) {
+  for (const [k, v] of Object.entries(b ?? {})) {
+    if (v == null) continue;
+    if (Array.isArray(v)) a[k] = [...(Array.isArray(a[k]) ? a[k] : []), ...v];
+    else if (isObj(v)) a[k] = mergeInto(isObj(a[k]) ? a[k] : {}, v);
+    else if (a[k] === undefined || a[k] === "") a[k] = v;
+  }
+  return a;
+}
+const normName = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
+const MAX_DETAIL = 6;
+async function askJson(call, msgs) {
+  let raw = await call(msgs), parsed, err;
+  for (let k = 0; k < 3; k++) {
+    try { parsed = unwrap(parseJson(raw)); err = null; break; }
+    catch (e) {
+      err = e;
+      if (k === 2) break;
+      raw = await call([...msgs, { role: "assistant", content: String(raw ?? "").slice(0, 2000) }, { role: "user", content: "Return only the JSON object." }]);
+    }
+  }
+  if (err) throw err;
+  return parsed;
+}
+export async function analyzeStaged(call, input, { onWarn = () => {}, maxDetail = MAX_DETAIL } = {}) {
+  const base = buildMessages(input);
+  const overview = await askJson(call, stageMessages(base, STAGE1));
+  const people = (Array.isArray(overview?.people) ? overview.people : []).filter((e) => e && typeof e === "object");
+  const merged = { ...overview, people: people.map((e) => ({ ...e })) };
+  const targets = people.filter((e) => e.name && Math.max(Number(e.p) || 0, Number(e.s) || 0, Number(e.r) || 0) >= 1).slice(0, maxDetail);
+  for (const t of targets) {
+    try {
+      const det = await askJson(call, stageMessages(base, stage2(t.name), { overview: { scene: overview.scene ?? null, act: t.act ?? "" } }));
+      const mine = (Array.isArray(det?.people) ? det.people : []).find((e) => normName(e?.name) === normName(t.name)) ?? null;
+      const slot = merged.people.find((e) => normName(e?.name) === normName(t.name));
+      if (mine && slot) for (const [k, v] of Object.entries(mine)) if (!["name", "act", "p", "s", "r"].includes(k) && v != null) slot[k] = v;
+      const { people: _p, scene: _s, rel: _r, open: _o, ...rest } = det ?? {};
+      mergeInto(merged, rest);
+    } catch (e) { onWarn(t.name, e); }
+  }
+  return validate(merged, { ignore: input.ignore, beliefs: !!input.beliefsOn });
+}
 // 형식이 틀리면 최대 2번 다시 요청한다(추론이 약한 모델은 군말·잘림이 잦다). call(messages) → 원문 문자열.
-export async function analyze(call, input) {
+export async function analyze(call, input, { staged = false, onWarn } = {}) {
+  if (staged) return analyzeStaged(call, input, { onWarn });
   const msgs = buildMessages(input);
   let raw = await call(msgs), parsed, err;
   for (let k = 0; k < 3; k++) {

@@ -476,3 +476,9 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 ## 1.9.0 — Cellar 새 버전 알림 (2026-11-03)
 - `src/data/cellarlatest.js`: GitHub 최신 릴리스(Dusk-Cellar) 태그 vs 연결된 Cellar 버전 비교 → toast 1회(버전별, `dusk.cellar.notified`) + 설정 Cellar 줄에 '새 버전 vX'(`ctx.cellarNew`). app.js 열 때 호출. 시험: tests/cellarlatest.test.js.
 - 확인 못 한 것: 실제 GitHub API 응답(Cellar 릴리스 v0.1.0이 있어야 동작), 리스 안에서 nativeFetch가 api.github.com을 통과하는지.
+
+## 단계별 분석 (2026-11-04, 1.9.0)
+- 원인(추정): 분석 프롬프트가 한 응답에 장면·인물·관계·감정·속마음·신뢰도…를 전부 요구해 길어지면 잘리거나 JSON이 깨져 실패/연속 실패(자동 기록 중단).
+- 수정: `memoryprompt.js` `analyzeStaged` — 1단계(개요: 인물 name/act/p/s/r + 장면·관계·떡밥·게이지) 1번 + 점수 ≥1인 인물마다 세부 1번(최대 6명). 세부 실패는 개요만 남기고 계속(`onWarn` 로그). 설정 `settings.staged`(기본 true, 기억 설정에서 끔 → 예전 한 번 호출). 러너 analyzeAt가 사용(자동 기록·지난 대화 전체 분석 모두).
+- 시험: tests/memoryprompt-staged.test.js. 한 번 호출을 전제로 한 기존 시험은 `staged=false` 고정.
+- 확인 못 한 것: 실제 모델에서의 실패율 변화·호출 시간/비용, 개요 단계가 세부 필드를 안 내보내는지(프롬프트 준수), Risupot 합친 호출(link)은 그대로.

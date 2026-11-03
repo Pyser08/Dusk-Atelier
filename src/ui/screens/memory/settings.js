@@ -41,6 +41,8 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
       h("p", { class: "rb-muted" }, "‘다음 입력을 보낼 때’는 내가 다음 말을 보내는 순간 직전 응답을 확정해서 기록해요. 리롤하거나 고치는 중인 응답은 기록하지 않아서 되돌릴 일이 거의 없어요. 대신 마지막 응답은 다음 말을 보낼 때까지 기록되지 않아요."),
       num("디바운스(초)", () => S.debounceSec, (s, v) => { s.debounceSec = v; }, { max: 60 }), num("기록 시작 턴(1=첫 응답부터)", () => S.startTurn ?? 1, (s, v) => { s.startTurn = Math.max(1, v); }, { min: 1, max: 50 }), num("N턴마다 분석", () => S.everyN, (s, v) => { s.everyN = Math.max(1, v); }, { min: 1, max: 20 }),
       num("짧은 응답 기준(글자)", () => S.minChars, (s, v) => { s.minChars = v; }, { max: 2000 }), num("인물당 기록 상한", () => S.personCap, (s, v) => { s.personCap = Math.max(20, v); }, { min: 20, max: 2000 }),
+      sw("단계별 분석 (안정적, 호출은 늘어요)", S.staged !== false, (s, v) => { s.staged = v; }),
+      h("p", { class: "rb-muted" }, "먼저 한 번 호출해 누가 나오는지·전반적인 상황을 파악하고, 이어서 중요한 인물마다 한 번씩(최대 6명) 세부를 분석해요. 응답이 길어 형식이 깨지거나 실패하는 걸 줄여요. 한 인물의 세부 분석이 실패해도 나머지는 기록돼요."),
       sw("전체 자동 기록", S.autoRecord !== false, (s, v) => { s.autoRecord = v; })) : null,
     caps.inject ? section("임베딩(의미 검색)", h("p", { class: "rb-muted" }, "뜻이 비슷한 기억을 찾아 넣어요. 주소·키를 넣고 기본 사용을 켜면 기억 고르기에 적극 쓰여요."),
       btn("임베딩 설정", { onClick: () => openEmbedModal(ctx) })) : null,

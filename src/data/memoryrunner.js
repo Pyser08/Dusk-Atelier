@@ -116,7 +116,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     if (gx) Object.assign(input, gx.input);
     if (result) session.combined = (session.combined ?? 0) + 1;
     else session.calls++;
-    try { if (!result) result = await analyze((msgs) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true }, signal), input); }
+    try { if (!result) result = await analyze((msgs) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true }, signal), input, { staged: idx.settings?.staged !== false, onWarn: (name, e) => log(`${name} 세부 분석 실패(개요만 기록)`, String(e?.message ?? e).slice(0, 120)) }); }
     catch (e) {
       const fails = await bump(chaId, (b) => ++b.fails);
       await status({ lastError: String(e?.message ?? e).slice(0, 300) });
