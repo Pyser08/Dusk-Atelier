@@ -193,3 +193,4 @@ pre{position:relative}.cp{position:absolute;top:8px;right:8px;border:1px solid v
 .bt.wide{grid-column:span 2}.bt.gold{background:linear-gradient(150deg,color-mix(in srgb,var(--g3) 20%,var(--card)),var(--card))}
 @media(max-width:820px){.bento{grid-template-columns:repeat(2,1fr);grid-auto-rows:130px}.bt img{width:68px}.bt span{max-width:64%}.bt b{max-width:80%}.bt.big img{width:150px}.bt.big b{font-size:24px}.hub .ban img{aspect-ratio:16/9}}
 @media(max-width:400px){.bt{padding:14px}.bt b{font-size:15.5px}}
+.bt.noimg span,.bt.noimg b{max-width:none}
