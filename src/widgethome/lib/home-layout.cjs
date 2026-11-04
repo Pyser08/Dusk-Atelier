@@ -56,14 +56,14 @@
     const app=await doc.querySelector('#app');if(!app)return null;
     const abox=rect(await app.getBoundingClientRect());if(!abox)return null;
     const side=await doc.querySelector('#app .risu-sidebar,#app .rs-sidebar');
-    const pool=[...(side?await nodes(await side.querySelectorAll('div'),80):[]),...await nodes(await doc.querySelectorAll('#app > div, #app > div > div, #app > div > div > div, #app > div > div > div > div, #app > div > div > div > div > div'),160)];
+    const pool=[...(side?await nodes(await side.querySelectorAll('div,aside,nav,section,ul'),100):[]),...await nodes(await doc.querySelectorAll('#app > div, #app > div > div, #app > div > div > div, #app > div > div > div > div, #app > div > div > div > div > div, #app aside, #app nav'),180)];
     let edge=null;
     for(const node of pool){
       const b=rawRect(await node.getBoundingClientRect());if(!b)continue;
       if(b.left>abox.left+8||b.width<32||b.width>140||b.height<abox.height*0.6)continue;
       const right=b.left+b.width;if(edge===null||right>edge)edge=right;
     }
-    return edge;
+    return edge===null?null:Math.ceil(edge)+1;
   }
   async function homePane(doc){return(await findHome(doc))?.pane||null;}
   class HomeLayout{

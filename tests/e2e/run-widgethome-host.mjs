@@ -44,12 +44,12 @@ ok("설정에서 나오면 다시 뜸", await p.evaluate(() => wh.isVisible()));
 await p.evaluate(() => { document.querySelector(".risu-sidebar").style.width = "60px"; });
 await p.waitForTimeout(2600);
 fb = await frameBox();
-ok("사이드바 크기가 바뀌면 위젯 자리도 따라감", fb.left === 60 && fb.width === 1140, JSON.stringify(fb));
+ok("사이드바 크기가 바뀌면 위젯 자리도 따라감", fb.left === 61 && fb.width === 1139, JSON.stringify(fb));
 // 리스바드: 사이드바 = 좁은 아이콘 줄(44px) + 최근 대화 칸 → 아이콘 줄 바로 오른쪽부터 끝까지 덮음
 await p.evaluate(() => { const sb = document.querySelector(".risu-sidebar"); sb.style.width = "300px"; sb.style.display = "flex"; const r = document.createElement("div"); r.style.cssText = "width:44px;height:100%;flex-shrink:0;background:#111"; sb.prepend(r); });
 await p.waitForTimeout(2600);
 fb = await frameBox();
-ok("아이콘 줄(44px)만 남기고 최근 대화 칸까지 덮음", fb.left === 44 && fb.width === 1156, JSON.stringify(fb));
+ok("아이콘 줄(44px)만 남기고 최근 대화 칸까지 덮음", fb.left === 45 && fb.width === 1155, JSON.stringify(fb));
 // 설정 시트(누르면 바로 적용·저장)
 const S = (js) => p.evaluate(js);
 await S(() => document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".tools-open").click()); await p.waitForTimeout(250);
