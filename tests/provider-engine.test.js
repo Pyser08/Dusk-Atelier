@@ -235,3 +235,13 @@ test("생각 강도(none·low·medium·high·xhigh)가 형식마다 맞게 들�
   assert.equal(mk("google", "gemini", "gemini-3-pro", "xhigh").generationConfig.thinkingConfig.thinkingLevel, "HIGH");
   assert.equal(mk("google", "gemini", "gemini-3-pro", "medium").generationConfig.thinkingConfig.thinkingLevel, "MEDIUM");
 });
+
+test("공급자 순서를 직접 적어도 빠른 설정이 지우지 않고, 요청 본문에 그대로 들어간다", () => {
+  const base = { tier: "", params: { provider: { order: ["parasail/fp8", "venice/fp8", "novita/fp8"] } }, headers: {} };
+  const f = PRESETS.find((p) => p.id === "or-fallback"), pr = PRESETS.find((p) => p.id === "or-price");
+  let p = apply(base, f, true); assert.deepEqual(p.params.provider, { order: ["parasail/fp8", "venice/fp8", "novita/fp8"], allow_fallbacks: true });
+  p = apply(p, pr, true); assert.equal(p.params.provider.sort, "price"); assert.equal(isOn(p, f), true);
+  p = apply(p, f, false); assert.equal(p.params.provider.allow_fallbacks, undefined); assert.equal(p.params.provider.order.length, 3);
+  const body = buildRequest({ conn: { id: "c", kind: "openrouter", format: "openai", keyIds: [], params: {}, headers: {} }, profile: { model: "x/y", sampling: {}, thinking: {}, cache: {}, params: apply(base, f, true).params, headers: {} }, messages: [{ role: "user", content: "hi" }], cred: "k" }).body;
+  assert.deepEqual(body.provider, { order: ["parasail/fp8", "venice/fp8", "novita/fp8"], allow_fallbacks: true });
+});

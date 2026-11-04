@@ -18,11 +18,12 @@ export const presetsFor = (kind) => PRESETS.filter((p) => !p.kinds || p.kinds.in
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const LIST = new Set(["anthropic-beta"]);   // 쉼표로 여러 값을 겹쳐 쓰는 헤더
 const lst = (v) => String(v ?? "").split(",").map((x) => x.trim()).filter(Boolean);
-const sub = (have, want) => Object.entries(want ?? {}).every(([k, v]) => same(have?.[k], v));
+const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
+const sub = (have, want) => Object.entries(want ?? {}).every(([k, v]) => (isObj(v) ? isObj(have?.[k]) && sub(have[k], v) : same(have?.[k], v)));
 const subH = (have, want) => Object.entries(want ?? {}).every(([k, v]) => (LIST.has(k) ? lst(v).every((x) => lst(have?.[k]).includes(x)) : same(have?.[k], v)));
 export const isOn = (profile, p) => (!p.tier || profile.tier === p.tier) && sub(profile.params, p.params) && subH(profile.headers, p.headers);
 // 같은 묶음(같은 키를 건드리는 항목)끼리는 하나만 켜지게 한다
-const touches = (p) => [...(p.tier ? ["tier"] : []), ...Object.keys(p.params ?? {}).map((k) => `p:${k}`), ...Object.keys(p.headers ?? {}).filter((k) => !LIST.has(k)).map((k) => `h:${k}`)];
+const touches = (p) => [...(p.tier ? ["tier"] : []), ...Object.entries(p.params ?? {}).flatMap(([k, v]) => (isObj(v) ? Object.keys(v).map((i) => `p:${k}.${i}`) : [`p:${k}`])), ...Object.keys(p.headers ?? {}).filter((k) => !LIST.has(k)).map((k) => `h:${k}`)];
 export function apply(profile, p, on) {
   const q = JSON.parse(JSON.stringify(profile)); q.params ??= {}; q.headers ??= {};
   if (on) {
@@ -33,7 +34,11 @@ export function apply(profile, p, on) {
 }
 function apply0(q, p, on) {
   if (p.tier) q.tier = on ? p.tier : "";
-  for (const [k, v] of Object.entries(p.params ?? {})) { if (on) q.params[k] = v; else delete q.params[k]; }
+  // 객체 값(provider 등)은 안쪽 키만 넣고 뺀다 — 직접 적은 공급자 순서가 프리셋을 눌러도 지워지지 않게
+  for (const [k, v] of Object.entries(p.params ?? {})) {
+    if (isObj(v)) { const cur = isObj(q.params[k]) ? { ...q.params[k] } : {}; for (const ik of Object.keys(v)) { if (on) cur[ik] = v[ik]; else delete cur[ik]; } if (Object.keys(cur).length) q.params[k] = cur; else delete q.params[k]; }
+    else if (on) q.params[k] = v; else delete q.params[k];
+  }
   for (const [k, v] of Object.entries(p.headers ?? {})) {
     if (LIST.has(k)) { const cur = lst(q.headers[k]), next = on ? [...new Set([...cur, ...lst(v)])] : cur.filter((x) => !lst(v).includes(x)); if (next.length) q.headers[k] = next.join(","); else delete q.headers[k]; }
     else if (on) q.headers[k] = v; else delete q.headers[k];
