@@ -72,7 +72,7 @@ export function pastScenes(older, recentText, capTokens, { max = 2 } = {}) {
 
 // ctx: {messageCount, recentText, settings:{targetTokens,capTokens,sceneTokens,recentSkip}}
 export function buildBlock(folder, { messageCount = 0, recentText = "", settings = {}, messages = null, focus = null, storyNow = "", sem = null, semMin = 0.32 } = {}) {
-  const target = settings.targetTokens ?? 1200, cap = settings.capTokens ?? 2500, sceneCap = settings.sceneTokens ?? 300, skip = settings.recentSkip ?? 8;
+  const target = settings.targetTokens ?? 2000, cap = settings.capTokens ?? 8000, sceneCap = settings.sceneTokens ?? 300, skip = settings.recentSkip ?? 8;
   const manifest = { included: [], excluded: [], tokens: 0, recordIds: [] }, plus = settings.plus !== false;
   const human = plus && settings.human !== false, cool = settings.cool !== false;   // v1.8.3 사람다운 기억(관계 진도·재등장·이전·흐려짐·호칭·추억) · 감정 식기
   const scenes = (folder.scenes ?? []).filter((s) => !s.orphan);
@@ -82,7 +82,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   if (storyNow) lines.push(`Story time (now): ${oneLine(storyNow)}`); // 이야기 시간 설정이 켜져 있으면 그 값이 기준
   else if (plus && cur && !cur.when && currentStoryTime(folder)) lines.push(`Story time (last known): ${oneLine(currentStoryTime(folder))}`);
   // Story so far: 이전 장면을 최신부터 이벤트 예산 안에서 채우고 시간순으로 출력(통째로만 포함)
-  const evCap = settings.eventTokens ?? 600, evLines = []; let evUsed = 0;
+  const evCap = settings.eventTokens ?? 2000, evLines = []; let evUsed = 0;
   for (const s of scenes.slice(0, -1).reverse()) {
     const t = "- " + oneLine(s.sum) + (s.place ? ` (${s.place})` : ""), n = estimateTokens(t);
     if (evUsed + n > evCap) { manifest.excluded.push({ kind: "event", name: oneLine(s.sum).slice(0, 20), tokens: n, reason: "budget" }); break; }

@@ -9,21 +9,33 @@ export const scopeIdsOf = (key) => {
   if (parts.length !== 2) return null;
   try { return [decodeURIComponent(parts[0]), decodeURIComponent(parts[1])]; } catch { return null; }
 };
+import { followDefaults, noteEdits, POT_FOLLOW, POT_DEFAULTS } from "../engine/defaultfollow.js";
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 const clone = (v) => v == null ? v : structuredClone(v);
+
+// 직접 바꾸지 않은 리수폿 설정(기존 인물 로어북 검색)은 기본값을 따라간다. idx.pot.edited = 직접 바꾼 키
+const followed = (v, edited) => { if (isObj(v?.settings)) followDefaults(v.settings, POT_DEFAULTS, Array.isArray(edited) ? edited : [], POT_FOLLOW); return v; };
 
 export function createPotStorage(api, store) {
   const raw = api.pluginStorage;
   return {
     async getItem(key) {
-      if (key === SETTINGS_KEY) return clone((await store.getIndex()).pot?.settings ?? null);
+      if (key === SETTINGS_KEY) { const idx = await store.getIndex(); return followed(clone(idx.pot?.settings ?? null), idx.pot?.edited); }
       if (key === CATALOG_KEY) return clone((await store.getIndex()).pot?.catalog ?? null);
       const ids = scopeIdsOf(key);
       if (ids) return clone(await store.getWiki(ids[0], ids[1]));
       return raw.getItem(key);
     },
     async setItem(key, value) {
-      if (key === SETTINGS_KEY) { await store.updateIndex((idx) => { idx.pot ??= {}; idx.pot.settings = clone(value); }); return; }
+      if (key === SETTINGS_KEY) {
+        await store.updateIndex((idx) => {
+          idx.pot ??= {};
+          const prev = followed(clone(idx.pot.settings ?? null), idx.pot.edited);
+          if (isObj(prev?.settings) && isObj(value?.settings)) idx.pot.edited = noteEdits(prev.settings, value.settings, idx.pot.edited, POT_FOLLOW);
+          idx.pot.settings = clone(value);
+        });
+        return;
+      }
       if (key === CATALOG_KEY) { await store.updateIndex((idx) => { idx.pot ??= {}; idx.pot.catalog = clone(value); }); return; }
       const ids = scopeIdsOf(key);
       if (ids) {

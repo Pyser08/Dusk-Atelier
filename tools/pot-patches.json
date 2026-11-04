@@ -107,5 +107,11 @@
   "why": "위 보정 호출: 새 문서 id를 정하기 전에 중복 create를 update로 바꾸고, 정한 뒤 id를 연결",
   "from": "for(const change of proposal.documents)if(change.operation==='create')refToId[change.document_ref]=idFactory();",
   "to": "const duskDedupe=redirectDuplicateCreates(next,proposal,TYPE_NAME);proposal=duskDedupe.proposal;for(const change of proposal.documents)if(change.operation==='create')refToId[change.document_ref]=idFactory();duskDedupe.link(refToId);"
+ },
+ {
+  "file": "src/engine/pot/settings.js",
+  "why": "기존 인물 로어북 검색을 기본으로 켬(직접 끈 적 없으면 켜짐: data/potstorage.js + engine/defaultfollow.js)",
+  "from": "    writerSearchExistingLore: false,",
+  "to": "    writerSearchExistingLore: true,"
  }
 ]

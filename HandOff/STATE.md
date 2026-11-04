@@ -1,3 +1,20 @@
+# 현재 상태 — feat/1.9.3
+
+## 2026-11-04 기본값 변경 (버전 미변경)
+- 기억 넣기 기본값: 목표 2000 · 상한 8000 · 이야기 요약 2000 토큰 (`data/memorystore.js` DEFAULT_SETTINGS, `engine/memoryinject.js` 대체값).
+- 기존 인물 로어북 검색(`writerSearchExistingLore`) 기본 켜짐: 생성물 `engine/pot/settings.js`는 `tools/pot-patches.json` 패치로 바꿈(직접 고치지 말 것).
+- **직접 안 바꾼 값은 기본값을 따라감**: `engine/defaultfollow.js`(`followDefaults`·`noteEdits`, 표 `DUSK_FOLLOW`·`POT_FOLLOW`).
+  - Dusk 설정: 읽을 때 `memorystore3.js` `withFollow`가 적용, 직접 바꾼 키는 `settings.edited`에 기록(`ui/screens/memory/settings.js` save에서 `noteEdits`). 기록이 없던 예전 사용자는 값이 예전 기본값(1200/2500/600)이면 새 기본값으로, 다르면 직접 바꾼 것으로 기록해 지킴.
+  - 리수폿 설정: `data/potstorage.js`가 읽을 때 적용, 저장 때 바뀐 키를 `idx.pot.edited`에 기록.
+  - 기본값을 또 바꿀 때: DEFAULT_SETTINGS(또는 POT_DEFAULTS)를 고치고, 표의 `old`에 이전 기본값을 추가.
+- 테스트 `tests/defaultfollow.test.js`. 검증: npm test 846 pass / 0 fail, build·check "동일함 (v1.9.1)", e2e smoke·memed 통과. `run-app.mjs`는 변경 전에도 같은 오류(`reading 'click'`)로 실패(기존 문제).
+- 이 브랜치의 package.json은 아직 1.9.1. CHANGELOG는 맨 위 v1.9.1 섹션에 적었음 — 버전 올릴 때 옮길 것.
+
+## 다음 작업 후보: 인물 관계도(반3D)
+- 목업: 프로젝트 문서 `claude/mockup-relmap.html`, 계획: `claude/relmap-plan.md`(데이터 확인 결과·장기기억에 추가할 필드·기본/고급 화면 구분).
+
+---
+
 # 현재 상태 — feat/1.8.1 (main v1.8.0 대비)
 
 검증(2026-11-01): `npm test` 462 pass / 0 fail / 9 skipped(471), `npm run build` 후 `npm run check` → "동일함 (v1.8.1)" (빌드물 최신). 버그 5건 수정분은 아래 "추가 수정" 참고(미커밋 상태일 수 있음: git status 확인).

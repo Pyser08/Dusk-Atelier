@@ -4,6 +4,7 @@ import { pruneRecords } from "../engine/memorygrade.js";
 import { DEFAULT_SETTINGS, INDEX_KEY as V2_INDEX, FOLDER_PREFIX as V2_FOLDER, LEGACY_KEY, folderIdOf, emptyFolder, countsOf, migrateV1 } from "./memorystore.js";
 import { V3, indexV2toV3, folderV2toV3, parsePotBundle, botPeople } from "../engine/memoryv3.js";
 import { migrateIndex } from "../engine/memoryswitch.js";
+import { followDefaults, DUSK_FOLLOW } from "../engine/defaultfollow.js";
 
 export const INDEX_KEY = "dusk.mem.v3.index";
 export const FOLDER_PREFIX = "dusk.mem.v3.f.";
@@ -39,12 +40,14 @@ export function createMemoryStoreV3(api, { storage } = {}) {
   };
   const rm = (k) => { raws.delete(k); return ps.removeItem(k); };
 
+  // 직접 바꾸지 않은 기억 넣기 토큰은 기본값을 따라간다(settings.edited = 직접 바꾼 키)
+  const withFollow = (idx) => { idx.settings.edited = followDefaults(idx.settings, DEFAULT_SETTINGS, idx.settings.edited, DUSK_FOLLOW); return idx; };
   const readIndex = async () => {
     const raw = await get(INDEX_KEY);
-    if (!raw || raw.v !== V3) return migrateIndex(newIndex());
+    if (!raw || raw.v !== V3) return withFollow(migrateIndex(newIndex()));
     const base = newIndex();
     // v3.1(rev 1): 리수폿 설정·봇별/인물별 끄기 칸을 채운다. 켜져 있던 것은 그대로다(memoryswitch.js)
-    return migrateIndex({ ...base, ...raw, settings: { ...base.settings, ...raw.settings, inject: { ...base.settings.inject, ...raw.settings?.inject }, loreRef: { ...base.settings.loreRef, ...raw.settings?.loreRef }, model: { ...base.settings.model, ...raw.settings?.model }, flow: { ...base.settings.flow, ...raw.settings?.flow } }, bots: raw.bots ?? {}, folders: raw.folders ?? {}, status: { ...base.status, ...raw.status }, pot: { ...base.pot, ...raw.pot } });
+    return withFollow(migrateIndex({ ...base, ...raw, settings: { ...base.settings, ...raw.settings, inject: { ...base.settings.inject, ...raw.settings?.inject }, loreRef: { ...base.settings.loreRef, ...raw.settings?.loreRef }, model: { ...base.settings.model, ...raw.settings?.model }, flow: { ...base.settings.flow, ...raw.settings?.flow } }, bots: raw.bots ?? {}, folders: raw.folders ?? {}, status: { ...base.status, ...raw.status }, pot: { ...base.pot, ...raw.pot } }));
   };
   const writeFolder = async (idx, folder) => {
     for (const p of Object.values(folder.people)) p.records = pruneRecords(p.records ?? [], idx.settings.personCap);

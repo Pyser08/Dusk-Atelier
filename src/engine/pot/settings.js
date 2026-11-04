@@ -54,7 +54,7 @@ function createDefaults() {
     trackedCharactersByScope: {},
     manualAIReferencesByScope: {},
     personaNamesByScope: {},
-    writerSearchExistingLore: false,
+    writerSearchExistingLore: true,
     writerInputBudgetTokens: WRITER_INPUT_BUDGET_DEFAULT,
     relationshipOnlyMode: false,
     relationshipPerceptionMode: 'light',
