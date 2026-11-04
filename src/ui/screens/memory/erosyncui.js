@@ -1,6 +1,6 @@
 // 기억 설정의 'Erosync(NSFW 장면 강화)' 카드: 켜기/끄기, 비용 안내, 상태. 본체는 src/erosync/, 컨트롤러는 data/erosync.js.
 import { h } from "../../dom.js";
-import { switchEl, setSwitch } from "../../kit.js";
+import { btn, switchEl, setSwitch } from "../../kit.js";
 
 export const EROSYNC_COST_NOTE = "켜면 AI 호출이 늘어요. 인물 프로필을 만들 때 호출이 여러 번 들어가고, 응답이 끝날 때마다 장면을 읽는 호출이 한 번 더 들어가요. 모델은 Erosync 설정에서 따로 고를 수 있고, 쓰는 만큼 토큰·요금이 더 들어요.";
 
@@ -18,8 +18,15 @@ export function erosyncSection(ctx) {
       overlap.textContent = both ? "월경 주기는 Dusk의 ‘월경·임신 기록’(성인 항목)에도 있어요. 둘을 같이 켜 두면 몸 상태가 두 번 들어가니, Dusk의 ‘월경·임신 기록’이나 Erosync 설정의 ‘생리 주기 사용’ 중 한쪽만 켜 주세요." : "";
     } catch { overlap.hidden = true; }
   };
+  // Erosync 자체 설정 화면(프로필·장면·프롬프트·AI 모델·설정)을 여는 버튼: 켜져 있을 때만
+  const openBtn = btn("Erosync 설정 열기", { id: "rb-erosync-open", onClick: async () => {
+    const ok = typeof ctx.openErosync === "function" ? await ctx.openErosync().catch(() => false) : false;
+    if (!ok) ctx.toast("Erosync 화면을 열지 못했어요. 채팅 메뉴의 ‘에로싱크’ 버튼을 써 보세요.", { error: true });
+  } });
+  openBtn.hidden = true;
   const paint = async () => {
     void checkOverlap();
+    openBtn.hidden = !(er.on() && er.isRunning());
     if (!er.on()) { note.textContent = ""; return; }
     if (er.isRunning()) { note.textContent = "켜져 있어요. 채팅 메뉴의 ‘에로싱크’ 버튼이나 리스 설정의 ‘Erosync’에서 설정을 열 수 있어요."; return; }
     note.textContent = er.lastError() || "시작하는 중이에요…";
@@ -40,5 +47,6 @@ export function erosyncSection(ctx) {
     h("p", { class: "rb-muted", style: "white-space:normal" }, "인물 성향·목표는 인물 위키(요약·관계·상세 정보)에서, 관계망은 인물 관계도의 ‘Erosync 목표·경쟁만 보기’에서 봐요. 읽기만 하고, 고치기는 Erosync 화면에서 해요."),
     overlap,
     h("p", { class: "rb-muted", style: "white-space:normal" }, "원래 ‘Erosync’ 플러그인과 같이 켜 둘 수 없어요. 저장된 프로필·기록은 같은 키를 써서 이어서 읽어요."),
+    h("div", { class: "rb-mem-sact" }, openBtn),
     note);
 }

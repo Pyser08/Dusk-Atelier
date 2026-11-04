@@ -1,6 +1,7 @@
 # 현재 상태 — feat/1.9.2
 
 ## 2026-11-04 Erosync 2차: 위키·관계도 연동 + 기억 방식 기본값 (버전 미변경)
+- **Erosync 설정 열기 버튼**: `erosyncui.js` 카드에 켜져 있을 때만 보임 → `ctx.openErosync()`(Dusk 창 닫고 `erosync.open()`). Erosync 설정 자체는 원본 화면 그대로(Dusk로 옮기지 않음).
 - **Erosync 카드 위치**: 접힌 ‘설정/세부 설정’ 안(`settings.js` body)에 있어 안 보였음 → `mhome.js` `settingsCards`가 만들어 ‘기억 옵션’ 바로 아래(main 칸)에 둠(간단·고급 모드, 채팅 유무 모두). `settings.js`에서는 뺌.
 - **리수폿 사용 스위치 이동**: `autotrackingbox.js`(고급 → 자동 기록 · 인물 추적)에서 빼서 `mhome.js` `settingsCards`의 ‘기억 옵션’ 박스 맨 아래로(열린 채팅이 있을 때만; `M.switches.setPot(cur.chaId, v)`, 상태는 `sw.pot.on`). 열린 채팅이 없으면 안 보임.
 - **기억 방식 기본 `fast`→`accurate`**: `DEFAULT_SETTINGS.flow.mode`(memorystore.js)·`flowOf`/`setPotGlobal`/`stepsOf` 폴백·설정 화면(flowsettings)·시작 안내(setup)에서 ‘더 정확하게 (권장)’을 앞에. `DUSK_FOLLOW`에 `"flow.mode": { old: ["fast"] }` 추가 → 기록(`settings.edited`)이 없는 예전 fast는 새 기본으로 따라감. **직접 고르는 두 곳(flowsettings·setup)은 `noteEdits`로 `flow.mode`를 직접 수정으로 기록**(안 하면 고른 fast가 다음 읽기에 accurate로 되돌아감). 테스트 `memoryturn.test.js`의 `turnOn`·fast 직접 설정은 `edited`에 `flow.mode`를 넣도록 고침.

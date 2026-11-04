@@ -18,6 +18,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   ok(`[${tag}] 가로로 넘치지 않음`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await sw().click(); await page.waitForTimeout(200);
   ok(`[${tag}] 켜기 → 시작·저장`, await page.evaluate(() => c.boots.n === 1 && c.er.isRunning() && c.mem.get("dusk.erosync.on") === "on"));
+  ok(`[${tag}] 켜면 ‘Erosync 설정 열기’ 버튼이 보임`, await page.locator("#rb-erosync-open").isVisible());
   await sw().click(); await page.waitForTimeout(200);
   ok(`[${tag}] 끄기 → 정리·저장`, await page.evaluate(() => c.boots.off === 1 && !c.er.isRunning() && c.mem.get("dusk.erosync.on") === "off"));
   await page.evaluate(() => { window.c = makeCase({ original: true }); });
