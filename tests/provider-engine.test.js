@@ -221,3 +221,17 @@ test("빠른 설정: 켜고 끄면 값이 들어갔다 빠지고, 같은 묶음�
   p = apply(p, a, false); assert.equal(p.headers["anthropic-beta"], "interleaved-thinking-2025-05-14");
   assert.ok(presetsFor("vertex").some((x) => x.id === "vx-flex")); assert.ok(!presetsFor("anthropic").some((x) => x.id === "vx-flex"));
 });
+
+test("생각 강도(none·low·medium·high·xhigh)가 형식마다 맞게 들어간다", () => {
+  const msgs = [{ role: "user", content: "hi" }], mk = (kind, format, model, effort, extra = {}) => buildRequest({ conn: { id: "c", kind, format, baseUrl: kind === "vertex" ? "" : undefined, vertex: { projectId: "p", location: "global" }, keyIds: [], params: {}, headers: {} }, profile: { model, sampling: {}, thinking: { mode: "", effort, ...extra }, cache: {}, params: {}, headers: {} }, messages: msgs, cred: "k" }).body;
+  assert.equal(mk("openai", "openai", "gpt-5.5", "xhigh").reasoning_effort, "xhigh");
+  assert.equal(mk("openai", "openai", "gpt-5.5", "none").reasoning_effort, "none");
+  const a = mk("anthropic", "anthropic", "claude-x", "high"); assert.equal(a.thinking.type, "adaptive"); assert.equal(a.output_config.effort, "high");
+  assert.equal(mk("anthropic", "anthropic", "claude-x", "none").thinking, undefined);
+  assert.equal(mk("anthropic", "anthropic", "claude-x", "none", { mode: "budget", budget: 4000 }).thinking, undefined);
+  assert.equal(mk("anthropic", "anthropic", "claude-x", "").thinking, undefined);
+  assert.equal(mk("google", "gemini", "gemini-2.5-pro", "none").generationConfig.thinkingConfig.thinkingBudget, 0);
+  assert.equal(mk("google", "gemini", "gemini-3-pro", "none").generationConfig.thinkingConfig.thinkingLevel, "MINIMAL");
+  assert.equal(mk("google", "gemini", "gemini-3-pro", "xhigh").generationConfig.thinkingConfig.thinkingLevel, "HIGH");
+  assert.equal(mk("google", "gemini", "gemini-3-pro", "medium").generationConfig.thinkingConfig.thinkingLevel, "MEDIUM");
+});

@@ -68,9 +68,10 @@ function buildAnthropicBody(p, msgs, o, { vertex = false } = {}) {
   }
   const sys = system.length ? system.map((x, i) => ({ type: "text", text: x, ...(cc && i === system.length - 1 ? { cache_control: cc } : {}) })) : undefined;
   const body = { ...(vertex ? { anthropic_version: "vertex-2023-10-16" } : { model: p.model }), max_tokens: s.maxTokens || 4096, system: sys, messages, stream: !!o.stream };
-  const budget = t.mode === "budget" && t.budget >= 1024, adaptive = t.mode === "adaptive";
+  const eff = ["low", "medium", "high", "xhigh", "max"].includes(t.effort) ? t.effort : "", budget = t.mode === "budget" && t.budget >= 1024 && t.effort !== "none";
+  const adaptive = !budget && t.effort !== "none" && (t.mode === "adaptive" || !!eff);   // 강도만 골라도 알아서(적응형) 생각해요, none이면 생각 없이
   if (budget) { body.thinking = { type: "enabled", budget_tokens: t.budget, ...(t.display ? { display: t.display } : {}) }; body.max_tokens = Math.max(body.max_tokens, t.budget + 1024); }
-  else if (adaptive) { body.thinking = { type: "adaptive", ...(t.display ? { display: t.display } : {}) }; if (t.effort && t.effort !== "default") body.output_config = { effort: t.effort }; }
+  else if (adaptive) { body.thinking = { type: "adaptive", ...(t.display ? { display: t.display } : {}) }; if (eff) body.output_config = { effort: eff }; }
   else { body.temperature = s.temperature; body.top_p = s.topP; }
   if (!budget && !adaptive) body.top_k = s.topK;
   body.stop_sequences = s.stop;
@@ -87,7 +88,10 @@ function buildGeminiBody(p, msgs, o) {
   const contents = startWithUser(rest).map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: geminiParts(m) }));
   const generationConfig = { temperature: s.temperature, topP: s.topP, topK: s.topK, maxOutputTokens: s.maxTokens, stopSequences: s.stop, seed: s.seed, frequencyPenalty: s.frequencyPenalty, presencePenalty: s.presencePenalty };
   const tc = {};
-  if (t.level && t.level !== "off") tc.thinkingLevel = String(t.level).toUpperCase(); else if (Number.isFinite(t.budget) && t.budget !== null && t.budget !== "") tc.thinkingBudget = Number(t.budget);
+  const g3 = /gemini-3/i.test(p.model);
+  if (t.effort === "none") { if (g3) tc.thinkingLevel = "MINIMAL"; else tc.thinkingBudget = 0; }
+  else if (["low", "medium", "high", "xhigh"].includes(t.effort)) tc.thinkingLevel = t.effort === "xhigh" ? "HIGH" : t.effort.toUpperCase();
+  else if (t.level && t.level !== "off") tc.thinkingLevel = String(t.level).toUpperCase(); else if (Number.isFinite(t.budget) && t.budget !== null && t.budget !== "") tc.thinkingBudget = Number(t.budget);
   if (t.include || t.showThinking) tc.includeThoughts = true;
   if (Object.keys(tc).length) generationConfig.thinkingConfig = tc;
   const body = { contents, systemInstruction: system.length ? { parts: [{ text: system.join("\n\n") }] } : undefined, generationConfig: clean(generationConfig) };

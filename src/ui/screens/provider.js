@@ -126,9 +126,7 @@ export async function renderProvider(ctx) {
       field("Top P", num(p.sampling.topP, (v) => set((q) => { q.sampling.topP = v; }))),
       field("Top K", num(p.sampling.topK, (v) => set((q) => { q.sampling.topK = v; }), { step: "1" }))));
     card.append(grid(
-      field("생각(추론)", segmented([["", "끔"], ["budget", "예산"], ["adaptive", "알아서"]], th.mode, (v) => set((q) => { q.thinking.mode = v; }), "생각 방식"), reasoning ? "이 모델은 추론 모델이에요" : "지원하는 모델에서만 켜져요", true),
-      th.mode === "budget" ? field("생각 토큰 예산", num(th.budget, (v) => set((q) => { q.thinking.budget = v; }), { step: "1" })) : null,
-      th.mode === "adaptive" || reasoning ? field("생각 강도", select([["", "기본"], ["low", "낮음"], ["medium", "보통"], ["high", "높음"]], th.effort, (v) => set((q) => { q.thinking.effort = v; }), "생각 강도")) : null,
+      field("생각(추론)", segmented([["", "기본"], ["none", "끔"], ["low", "약하게"], ["medium", "중간"], ["high", "강하게"], ["xhigh", "최고"]], th.effort || "", (v) => set((q) => { q.thinking.effort = v; if (v) q.thinking.mode = q.thinking.mode === "budget" ? "budget" : ""; }), "생각 강도"), reasoning ? "추론 모델이에요. ‘기본’은 모델 기본값을 따라요." : "지원하는 모델에서만 먹혀요. ‘기본’은 아무것도 보내지 않아요(none·low·medium·high·xhigh)", true),
       field("답 속 생각 보이기", segmented([["off", "숨김"], ["on", "보임"]], th.showThinking ? "on" : "off", (v) => set((q) => { q.thinking.showThinking = v === "on"; }), "생각 보이기"), "보이면 <Thoughts>…</Thoughts> 로 감싸서 줘요", true),
       field("받는 방식", segmented([["", "기본"], ["stream", "스트림"], ["buffered", "한번에"]], p.stream, (v) => set((q) => { q.stream = v; }), "받는 방식"), "메인 대화에만 적용돼요. 보조 요청은 한번에 받아요", true),
       field("웹 검색(모델 내장)", segmented([["off", "끔"], ["auto", "켬"]], p.search, (v) => set((q) => { q.search = v; }), "내장 웹 검색"), "Claude·Gemini만 지원해요", true)));
@@ -142,6 +140,7 @@ export async function renderProvider(ctx) {
     card.append(advFold(ctx, "provprof", grid(
       field("입력 단가 ($/100만 토큰)", num(p.pricing.input, (v) => set((q) => { q.pricing.input = v ?? 0; }))), field("출력 단가", num(p.pricing.output, (v) => set((q) => { q.pricing.output = v ?? 0; }))),
       field("캐시 읽기 단가", num(p.pricing.cached, (v) => set((q) => { q.pricing.cached = v; }))), field("캐시 쓰기 단가", num(p.pricing.cwrite, (v) => set((q) => { q.pricing.cwrite = v; }))),
+      field("생각 토큰 예산(직접)", num(p.thinking.budget, (v) => set((q) => { q.thinking.budget = v; q.thinking.mode = v ? "budget" : ""; }), { step: "1" }), "Claude(1024 이상)·Gemini 2.5용. 있으면 강도보다 먼저 쓰여요(Claude는 ‘끔’이면 안 써요)"),
       field("재시도 횟수", num(p.retry, (v) => set((q) => { q.retry = v; }), { step: "1" }), "비우면 공통 값"), field("서비스 등급(tier)", text(p.tier, (v) => set((q) => { q.tier = v.trim(); })), "예: priority, flex"),
       field("안전 필터", text(p.safety, (v) => set((q) => { q.safety = v.trim(); })), "Gemini: off · BLOCK_NONE 등"), field("Frequency / Presence", h("div", { style: "display:flex;gap:8px" }, num(p.sampling.frequencyPenalty, (v) => set((q) => { q.sampling.frequencyPenalty = v; }), { ph: "freq" }), num(p.sampling.presencePenalty, (v) => set((q) => { q.sampling.presencePenalty = v; }), { ph: "pres" }))),
       field("추가 요청 값(JSON)", area(JSON.stringify(p.params ?? {}), (v) => { try { set((q) => { q.params = JSON.parse(v || "{}"); }); } catch { toast("JSON 모양이 아니에요", { error: true }); } }, { rows: 2 }), "", true))));

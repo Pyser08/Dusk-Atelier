@@ -29,7 +29,7 @@ async function use({ ctx, cfg, mutate, draw, toast }) {
         field("프로필", select(profOpts(cfg, p === "main" ? "(없음)" : "(메인과 같게)"), cur.profileId, async (v) => { await mutate((x) => { x.purposes[p].profileId = v; }); draw(); }, "프로필")),
         field("온도 덮어쓰기", num(over.sampling?.temperature, mix("sampling", "temperature"))),
         field("최대 토큰 덮어쓰기", num(over.sampling?.maxTokens, mix("sampling", "maxTokens"), { step: "1" })),
-        field("생각 덮어쓰기", select([["", "프로필 그대로"], ["budget", "예산"], ["adaptive", "알아서"]], over.thinking?.mode ?? "", (v) => setOver("thinking", v === "" ? "" : { ...(over.thinking ?? {}), mode: v }), "생각"))));
+        field("생각 덮어쓰기", select([["", "프로필 그대로"], ["none", "끔"], ["low", "약하게"], ["medium", "중간"], ["high", "강하게"], ["xhigh", "최고"]], over.thinking?.effort ?? "", (v) => setOver("thinking", v === "" ? "" : { effort: v }), "생각"))));
   });
   out.push(note("info", "‘Dusk 자체 AI’에 프로필을 지정하면, 보조 모델로 보내던 Dusk의 AI 작업(지난 대화 분석 등)이 이 프로필로 돌고 Cellar 서버 분석에도 그대로 쓰여요. 내 API 모델을 따로 고른 작업은 그대로예요."), ...rows);
   // 사슬
