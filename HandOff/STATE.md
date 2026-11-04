@@ -1,5 +1,14 @@
 # 현재 상태 — feat/1.9.2
 
+## 2026-11-04 도구 → 용량 측정 (RisuMeter 참고, 버전 미변경)
+- 사용자가 준 `risu-meter.js`(v0.6.0)를 분석해 **읽기 전용 측정 부분만** 새로 씀(코드 이식 아님 → NOTICE 불필요, 스페셜 땡스에 `RisuMeter`만 추가: tools.js `THANKS`, README, 안내서 start.html). 버린 것: 연결 편집 모달(전체 `setDatabase` fallback 위험 — 연결 편집은 기존 `modlinks.js`), 바로가기 4종, 자체 CSS·테마, 저장 방식 감지·전송/원본 기준 전환(추정 상수 의존).
+- 구조: 순수 `src/engine/sizemeter.js`(바이트·분해·렌더 진단·리포트) / 수집 `src/data/sizemeter.js`(`scanSizes`) / 화면 `src/ui/screens/sizemeter.js` + `sizemeter/css.js`(`SIZE_CSS`, styles.js에서 합침) / 진입 도구 탭 '확인·복구' 행 `rb-tool-sizemeter`(`ctx.go("tools","sizemeter")`).
+- 읽기: 봇은 `characterOrder`로 순서를 얻고 `getCharacterFromIndex`를 4개씩 읽자마자 `measureCharacter`로 크기만 남기고 버림(전체 `getDatabase(['characters'])` 안 씀). 채팅은 한 번만 직렬화. 모듈·플러그인은 한 번의 `getDatabase`. Dusk가 꺼 둔 모듈(`rbm:disabledModules:v1`)은 `parked`로 포함하고 그 키는 저장소 목록에서 뺌(중복 방지). 저장소는 `storageKeyList`+`storageGet`을 6개씩.
+- 활성 판정: 글로벌(`enabledModules`) · 캐릭터 연결 · 채팅 연결 · 네임스페이스(`moduleIntergration`) 중 하나. 없는 모듈 id(고아)는 캐릭터의 '연결된 모듈'에서 제외.
+- 렌더 진단 개선점: display 핸들러 **호출 범위 안**의 `getDatabase/getChar*`만 '고부하'(원본은 스크립트 전체). 주석은 지우고 문자열 안 `//`는 유지. 핸들러를 이름으로만 넘기면 고부하로 단정 안 함(score 2). 화면 감시는 `getRootDocument`+`MutationObserver`/`createMutationObserver`. 모듈은 Lua editDisplay·display 트리거·editdisplay 정규식(8개 이상이면 개입).
+- 테스트 `tests/sizemeter.test.js`(16) · `sizemeter-data.test.js`(6, 동시 읽기 ≤4·쓰기 0·취소·저장소 실패), e2e `tests/e2e/run-sizemeter.mjs`(PC·모바일 28개). `run-work.mjs` 기대값을 도구 행 5개·땡스 8줄로 고침(땡스는 이전부터 낡은 값이었음).
+- 못 한 것/미확인: 세 호스트 실기기에서 측정 시간·메모리(특히 큰 봇 수백 개), 호스트가 `getCharacterFromIndex`에 채팅 스텁을 줄 때의 크기 해석(스텁이면 채팅이 작게 나옴 — 화면 문구는 'JSON 크기 기준'), 기타 설정(페르소나·CSS)·프롬프트 프리셋은 측정 안 함.
+
 ## 2026-11-04 위젯 홈 원본 v1.0.34 병합
 - 방법: 원본 v18·v34에 같은 1단계 변환(scratchpad의 port 스크립트)을 적용한 뒤 `git merge-file`로 우리 수정과 3방향 병합. 충돌은 core(themePreset·dusk + photoSlotsRevision), widget-layout(IDS 14개: 원본 realm·photo2·photo3 + Dusk 5개, ORIGINAL 기준 예전 배치 허용), home.js 6곳(툴바 옵션·extras 삽입·Editor 문서 어댑터·realm import·hideBox·dispose)을 손으로 합침. style.js는 v34 CSS로 다시 만들고 우리 수정(overflow-x:clip, overscroll 제거, 편집 CSS) 재적용.
 - 새 `lib/realm.cjs`: 소개 창을 Shadow DOM에 붙임(`getRootNode`), 홈 영역 찾기는 전역이 없으면 `home-layout.cjs` require(실패해도 무시). 사진 2·3 파일 입력 복제본도 `sr`에 붙임. 포켓리스 문구 2곳 중립화.
