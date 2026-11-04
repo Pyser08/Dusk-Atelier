@@ -104,3 +104,14 @@ test("findPath: 가장 짧은 경로, 없으면 null, 약한 관계 숨기기 �
   assert.deepEqual(findPath(edges, "a", "b", 50), ["a", "b"]);
   assert.equal(findPath(edges, "a", "y"), null);
 });
+
+test("큰 기억(인물 300·장면 2000)에서도 빠르게 계산한다 (브라우저 멈춤 방지)", () => {
+  const P = 300, S = 2000, f = { people: {}, emo: {}, rels: {}, scenes: [], talk: {}, cursor: { at: S } };
+  const names = Array.from({ length: P }, (_, i) => "인물" + i);
+  names.forEach((n, i) => { f.people[n] = { name: n, records: Array.from({ length: 15 }, (_, k) => rec((i * 7 + k * 13) % S)) }; f.emo[n] = { from: n, to: "{{user}}", tags: { affection: 3 } }; });
+  for (let s = 0; s < S; s++) f.scenes.push({ at: s, who: [names[s % P], names[(s * 3) % P], "{{user}}"] });
+  for (let r = 0; r < 800; r++) f.rels["r" + r] = { from: names[r % P], to: names[(r * 5 + 1) % P], items: [{ d: "x", dir: "+", at: r % S }] };
+  const t = performance.now(), m = buildRelMap(f), ms = performance.now() - t;
+  assert.equal(m.nodes.length, RM.MAX_NODES);
+  assert.ok(ms < 1500, `계산 ${Math.round(ms)}ms`);
+});

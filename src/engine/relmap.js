@@ -1,7 +1,7 @@
 // 인물 관계도(반3D) 데이터 계산 (v1.9.3, 순수 함수). 화면 코드 없음.
 // 장기기억 폴더(folder.people · emo · rels · scenes · rifts · beliefs)에서 노드와 선을 만든다.
 // 새 필드가 없어도 그려지게 기본 모양을 쓰고, 나중에 person.faction · person.status가 생기면 그대로 반영한다.
-import { counterparts, pairView, nowOf } from "./memoryhuman.js";
+import { pairView, nowOf } from "./memoryhuman.js";
 import { STAGE_LABEL, USER } from "./memoryuser.js";
 
 export const RM = Object.freeze({ RMIN: 70, RMAX: 300, HH: 120, MIN_GAP: 34, MAX_NODES: 40 });
@@ -29,37 +29,47 @@ export function importanceOf(records, nowAt) {
 
 export function buildRelMap(folder, { max = RM.MAX_NODES } = {}) {
   const nowAt = nowOf(folder);
+  const uk = key(USER);
+  // 1) 후보 이름: 기록 있는 인물 · 관계 선 양끝 · {{user}}와 감정이 오간 인물 (counterparts는 인물 수 × 장면 수만큼 돌아서 쓰지 않는다)
   const names = new Map();
-  const add = (n) => { const k = key(n); if (k && k !== key(USER) && !names.has(k)) names.set(k, String(n)); };
-  for (const p of Object.values(folder?.people ?? {})) if (p && key(p.name) !== key(USER) && (p.records ?? []).some(live)) add(p.name);
-  for (const c of counterparts(folder, [USER], nowAt)) add(c.name);
-  for (const x of Object.values(folder?.rels ?? {})) { add(x.from); add(x.to); }
-
+  const add = (n) => { const k = key(n); if (k && k !== uk && !names.has(k)) names.set(k, String(n)); };
   const peopleByKey = {};
-  for (const [pk, p] of Object.entries(folder?.people ?? {})) { peopleByKey[key(p?.name ?? pk)] = p; peopleByKey[pk] = p; }
-  const turnAt = nowAt;
+  for (const [pk, p] of Object.entries(folder?.people ?? {})) {
+    if (!p) continue;
+    peopleByKey[key(p.name ?? pk)] = p; peopleByKey[pk] = p;
+    if (key(p.name) !== uk && (p.records ?? []).some(live)) add(p.name);
+  }
+  for (const x of Object.values(folder?.rels ?? {})) { add(x?.from); add(x?.to); }
+  for (const x of Object.values(folder?.emo ?? {})) { if (key(x?.to) === uk) add(x?.from); else if (key(x?.from) === uk) add(x?.to); }
+  // 2) 값싼 중요도로 먼저 상위 max명만 고른다. 비싼 계산(pairView)은 이 사람들에게만 한다.
+  const cand = [...names].map(([k, name]) => {
+    const recs = (peopleByKey[k]?.records ?? []).filter(live);
+    return { k, name, recs, imp: importanceOf(recs, nowAt) };
+  }).sort((a, b) => b.imp - a.imp || a.name.localeCompare(b.name, "ko")).slice(0, max);
+  const sceneNow = new Set();
+  if (nowAt > 0) for (const sc of folder?.scenes ?? []) if (!sc.orphan && sc.at === nowAt) for (const w of sc.who ?? []) sceneNow.add(key(w));
   const nodes = [];
-  for (const [k, name] of names) {
-    const p = peopleByKey[k] ?? null, recs = (p?.records ?? []).filter(live);
+  for (const { k, name, recs, imp } of cand) {
+    const p = peopleByKey[k] ?? null;
     const pv = pairView(folder, [USER], name, nowAt);
-    const hasFeel = !!pv.feel.ba;
-    const aff = affinityOf(pv.feel.ba?.tags, hasFeel);
-    const inScene = (folder?.scenes ?? []).some((s) => !s.orphan && s.at === turnAt && (s.who ?? []).some((w) => key(w) === k));
-    const thisTurn = turnAt > 0 && (recs.some((r) => r.at === turnAt) || inScene);
+    const aff = affinityOf(pv.feel.ba?.tags, !!pv.feel.ba);
+    const thisTurn = nowAt > 0 && (recs.some((r) => r.at === nowAt) || sceneNow.has(k));
     const sorted = recs.slice().sort((a, b) => (b.at ?? -1) - (a.at ?? -1));
-    const open = pv.rifts.some((r) => !(r.state === "resolved")) || pv.beliefs.some((b) => b.open);
+    const lastAt = recs.reduce((m, r) => Math.max(m, r.at ?? -1), -1);
     nodes.push({
       id: k, name, faction: String(p?.faction ?? "").trim(), status: STATUS_LABEL[p?.status] ? p.status : "",
-      aff, imp: importanceOf(recs, nowAt), thisTurn, records: recs.length,
+      aff, imp, thisTurn, records: recs.length,
       sum: cut(pv.bonds.at(-1)?.moment || sorted[0]?.act || "", 90),
       rec: sorted.slice(0, 3).map((r) => [r.at != null ? `#${r.at + 1}` : "", cut(r.act, 70)]),
       // {{user}}와의 선
       uLabel: pv.talk.ba?.call ? `${STAGE_LABEL[pv.stage.stage] ?? ""} · ${pv.talk.ba.call}라고 부름` : STAGE_LABEL[pv.stage.stage] ?? "관계",
-      uStrength: clamp(0.25 + (pv.stage.shared ?? 0) * 0.12, 0.25, 1), uSpecial: open, uRecent: thisTurn || (recs[0]?.at != null && nowAt - Math.max(...recs.map((r) => r.at ?? -1)) <= 3)
+      uStrength: clamp(0.25 + (pv.stage.shared ?? 0) * 0.12, 0.25, 1),
+      uSpecial: pv.rifts.some((r) => r.state !== "resolved") || pv.beliefs.some((b) => b.open),
+      uRecent: thisTurn || (lastAt >= 0 && nowAt - lastAt <= 3)
     });
   }
   nodes.sort((a, b) => b.imp - a.imp || b.aff - a.aff || a.name.localeCompare(b.name, "ko"));
-  const kept = nodes.slice(0, max), keep = new Set(kept.map((n) => n.id));
+  const keep = new Set(nodes.map((n) => n.id));
 
   const edges = [];
   for (const [rk, pair] of Object.entries(folder?.rels ?? {})) {
@@ -75,7 +85,7 @@ export function buildRelMap(folder, { max = RM.MAX_NODES } = {}) {
       items: items.slice(-3).reverse().map((i) => [i.at != null ? `#${i.at + 1}` : "", cut(i.d, 80)])
     });
   }
-  return { nodes: kept, edges, nowAt, empty: !kept.length };
+  return { nodes, edges, nowAt, empty: !nodes.length };
 }
 
 // 위치(순수): 소속(없으면 전체)별 부채꼴 + 호감도 거리. 겹치면 서로 밀어낸다. 노드에 tx·tz·ty를 넣는다.

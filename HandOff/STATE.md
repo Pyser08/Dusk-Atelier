@@ -21,6 +21,7 @@
 - 버그 수정(2026-11-04): ① 2단계 줄 파서가 'Other'(프롬프트 예시)를 상대 이름으로 저장 → `memorylines.js` `targetName`/`realText`로 거름 ② `stageOf`(memoryhuman.js)가 장면 수만 봐서 친한 사이로 시작해도 '처음 봄' → 추억·rels·반말이 있으면 '처음 봄'만 벗김(그 위 단계는 장면 수·감정 그대로). 테스트 `tests/memory-stage-placeholder.test.js`. 이미 저장된 'Other' 항목은 자동 정리 안 함.
 - 초기 관계 감지(2026-11-04): 2단계 줄 `start|상대|close or friendly|원문 인용`(사전관계) → `folder.start[쌍키]={a,b,level,q}`(처음 한 번, 인용이 본문에 있어야 함) → `stageOf`가 close=최소 '친한 사이', friendly=최소 '아는 사이'로 바닥을 깖. 가벼운 모델 모드에서는 이 줄을 안 물음. JSON 응답 경로도 `start` 통과. {{user}}로 합치기(`memoryuser.js` rekey)·`pairView().start`·'나' 화면 칩까지 반영. 아직 안 한 것: 일반 인물 합치기(`peoplemerge.js`)는 emo 등과 마찬가지로 별칭에 의존, 인물 위키 관계 탭 표시.
 - 다시 분석(2026-11-04): `memoryrunner.js` `planBackfill(.., {all:true})`·`backfill(.., {redo:true})`·`analyzeAt({redo})`(cursor 중복 방지 우회). 홈의 '지난 대화 분석'(`mhome.js` analyze)에서 미처리가 0이면 "이미 모두 분석했어요" 확인창 → 전체 재분석. 설정 폴드의 '미처리만 분석'(`settings.js`)은 그대로. 테스트 `tests/memoryrunner.test.js`.
+- 관계도 성능(2026-11-04): `buildRelMap`이 모든 인물에 `counterparts`·`pairView`를 돌려 큰 기억(인물 400·장면 3000)에서 3.7초 걸림 → 값싼 중요도(기록만)로 상위 40명을 먼저 고른 뒤 그 40명에만 `pairView`(0.2초). `tests/relmap.test.js`에 시간 상한 테스트. 아직 안 본 것: 실제 브라우저에서 그리기 루프 프레임 비용(저사양 폰), 폴더 JSON 읽기 자체의 시간.
 - 이 브랜치의 package.json은 아직 1.9.1. CHANGELOG 항목은 맨 위 v1.9.1 섹션에 있음 — 버전 올릴 때 옮길 것.
 
 ---
