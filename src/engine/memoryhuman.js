@@ -90,8 +90,8 @@ export function stageOf(folder, a, b, now) {
   let evidence = (folder?.bonds ?? []).filter((x) => pair(x.a, x.b)).length;
   for (const r of Object.values(folder?.rels ?? {})) if (pair(r.from, r.to)) evidence += (r.items ?? []).filter((i) => !i.orphan).length;
   if (Object.values(folder?.talk ?? {}).some((t) => pair(t.from, t.to) && t.tone === "casual")) evidence += 2;
-  const known = shared + evidence;
-  const stage = known <= 1 && warmth < 3 ? "just met" : known < 5 || warmth < 4 ? "acquaintances" : warmth < 7 ? "close" : "very close";
+  // 근거는 '처음 봄'만 벗겨 준다. '친한 사이' 이상은 여전히 함께한 장면 수와 감정으로만 오른다.
+  const stage = shared + evidence <= 1 && warmth < 3 ? "just met" : shared < 5 || warmth < 4 ? "acquaintances" : warmth < 7 ? "close" : "very close";
   return { stage, shared, warmth };
 }
 export function stageLines(folder, names, now, limit = 3) {
