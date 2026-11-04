@@ -40,5 +40,5 @@ test("예전 배치(6개)도 살리고 새 위젯은 아래에 붙인다", () =>
   const items = Object.values(fit.items);
   for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) assert.ok(!L.overlap(items[i], items[j]));
   const def = L.defaults("mobile", L.metrics(390, "mobile"));
-  assert.equal(Object.keys(def.items).length, 11);
+  assert.equal(Object.keys(def.items).length, L.IDS.length);
 });

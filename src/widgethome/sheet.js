@@ -24,7 +24,7 @@ export const PRESETS = Object.freeze([
 export const presetById = (id) => PRESETS.find((p) => p.id === id) || null;
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-const WIDGETS = [["music", "음악"], ["photo", "사진"], ["clock", "시계"], ["recent", "최근 대화"], ["added", "최근 봇"], ["memo", "메모·할 일"], ["dusk", "Dusk 바로가기"], ["dday", "D-day"], ["timer", "타이머"], ["dice", "주사위·뽑기"], ["stats", "한눈에"]];
+const WIDGETS = [["music", "음악"], ["photo", "사진"], ["clock", "시계"], ["recent", "최근 대화"], ["added", "최근 봇"], ["memo", "메모·할 일"], ["realm", "리스 렐름"], ["photo2", "사진 2"], ["photo3", "사진 3"], ["dusk", "Dusk 바로가기"], ["dday", "D-day"], ["timer", "타이머"], ["dice", "주사위·뽑기"], ["stats", "한눈에"]];
 
 export function sheetHtml() {
   const sw = (p) => `<button class="sw" data-preset="${p.id}" aria-pressed="false" title="${esc(p.name)}"><span class="sw-chip" style="background:${p.base.bg}"><i style="background:${p.base.surface}"></i><i style="background:${p.base.accent}"></i></span><span class="sw-name">${esc(p.name)}</span></button>`;

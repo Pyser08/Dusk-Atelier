@@ -1,0 +1,17 @@
+const assert=require('assert'),fs=require('fs'),R=require('../src/widgethome/lib/realm.cjs');
+(async()=>{
+assert.equal(R.officialPage({id:'abc-123',name:'Other'}).url,'https://realm.risuai.net/character/abc-123');
+for(const name of ['한글 이름','A&B / ? #','<script>alert(1)</script>']){const p=R.officialPage({name});assert(!p.exact);assert.equal(new URL(p.url).searchParams.get('q'),name);assert.equal(new URL(p.url).origin,'https://realm.risuai.net')}
+assert(!R.officialPage({id:'https://evil.test',name:'Name'}).exact);
+let preserveTarget=true;const nodes=[],links=[],body={appendChild:async n=>{n.attached=true}};
+function node(tag){const n={setInnerHTML:async html=>{const a=node('a');a.url=html.match(/href="([^"]*)"/)[1].replace(/&amp;/g,'&');a.text='렐름 새 탭으로 열기 ↗';a.matches=async()=>preserveTarget;n.children=[a];links.push(a)},querySelector:async()=>n.children[0],tag,children:[],text:'',removed:false,setAttribute:async k=>assert(k.startsWith('x-')),setStyleAttribute:async()=>{},setTextContent:async v=>{n.text=v},appendChild:async x=>n.children.push(x),addEventListener:async(t,fn)=>{n.click=fn;return 'event'},removeEventListener:async()=>{n.click=null},remove:async()=>{n.removed=true}};nodes.push(n);return n}
+const doc={querySelector:async()=>body,createElement:async tag=>node(tag),createAnchorElement:async url=>{const n=node('a');n.url=url;links.push(n);return n}};
+const elements=new Map(),q=s=>{if(!elements.has(s))elements.set(s,{focus(){},select(){this.selected=true}});return elements.get(s)};
+const ctx=Object.assign(Object.create(R.Widget.prototype),{closed:false,detailSerial:0,pageSerial:0,pagePanel:null,pageListener:null,dq:q,api:{getRootDocument:async()=>doc},dialog:{open:false,showModal(){this.open=true}},openNative(){throw Error('no home navigation')}});
+ctx.showDetail({name:'한글 봇',description:'Intro',image:''});assert.equal(links.length,0);assert.match(q('.realm-detail-status').textContent,/이름을 검색/);assert.equal(q('.realm-page-url').value,'https://realm.risuai.net/?q='+encodeURIComponent('한글 봇'));
+await q('.realm-download').onclick();assert.equal(links.length,1);assert.equal(links[0].url,q('.realm-page-url').value);assert(ctx.pagePanel.attached);assert.match(links[0].text,/새 탭/);const panel=ctx.pagePanel;await ctx.clearOfficialPage();assert(panel.removed);assert.equal(ctx.pagePanel,null);
+await Promise.all([ctx.showOfficialPage({name:'A'}),ctx.showOfficialPage({name:'B'})]);assert.equal(nodes.filter(n=>n.tag==='div'&&n.attached&&!n.removed).length,1);await ctx.clearOfficialPage();
+preserveTarget=false;await ctx.showOfficialPage({name:'Blocked target'});assert.equal(ctx.pagePanel,null);assert.equal(nodes.filter(n=>n.tag==='div'&&n.attached&&!n.removed).length,0);assert.match(q('.realm-detail-status').textContent,/새 탭 연결이 제한/);preserveTarget=true;ctx.api.getRootDocument=async()=>null;await ctx.showOfficialPage({name:'Name'});assert.match(q('.realm-detail-status').textContent,/주소 복사/);
+const source=fs.readFileSync(require('path').join(__dirname,'../src/widgethome/lib/realm.cjs'),'utf8');assert(!source.includes('createAnchorElement'));assert(!source.includes('nativeFetch'));assert(!source.includes('ID가 없어'));assert(!source.includes('downloadRealmCharacter'));assert(!source.includes('bindDownload(row.node)'));
+console.log('PASS: official URLs, encoded search, actual host anchor, cleanup, racing opens, missing permission fallback, no direct fetch/home navigation');
+})().catch(e=>{console.error(e);process.exitCode=1});

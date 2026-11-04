@@ -1,5 +1,11 @@
 # 현재 상태 — feat/1.9.2
 
+## 2026-11-04 위젯 홈 원본 v1.0.34 병합
+- 방법: 원본 v18·v34에 같은 1단계 변환(scratchpad의 port 스크립트)을 적용한 뒤 `git merge-file`로 우리 수정과 3방향 병합. 충돌은 core(themePreset·dusk + photoSlotsRevision), widget-layout(IDS 14개: 원본 realm·photo2·photo3 + Dusk 5개, ORIGINAL 기준 예전 배치 허용), home.js 6곳(툴바 옵션·extras 삽입·Editor 문서 어댑터·realm import·hideBox·dispose)을 손으로 합침. style.js는 v34 CSS로 다시 만들고 우리 수정(overflow-x:clip, overscroll 제거, 편집 CSS) 재적용.
+- 새 `lib/realm.cjs`: 소개 창을 Shadow DOM에 붙임(`getRootNode`), 홈 영역 찾기는 전역이 없으면 `home-layout.cjs` require(실패해도 무시). 사진 2·3 파일 입력 복제본도 `sr`에 붙임. 포켓리스 문구 2곳 중립화.
+- 원본 테스트 test_photos·test_realm·test_realm_download·test_realm_mobile 이식(`tests/widgethome-*.test.cjs`). test_realm의 dock 기대값은 우리 설정 시트(`openSheet`)로 바꿈.
+- 다음에 원본이 또 오면: 같은 방법(1단계 변환 → merge-file). 변환 스크립트는 리포에 없음 → `HandOff`에 옮길지 결정 필요.
+
 ## 2026-11-04 채팅 메뉴 버튼 id
 - `memorybutton.js` registerButton에 `id:"dusk-memory-button"`, 메인 햄버거 버튼 `id:"dusk-atelier-open"`. 포켓리스의 떠 있는 버튼 위치 옮기기·기억이 id 기준이라는 추정(기기 확인 필요).
 

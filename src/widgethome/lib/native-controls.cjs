@@ -18,14 +18,14 @@
     const body=await doc.querySelector('body');if(!body)return false;
     const buttons=await array(await pane.querySelectorAll('button:has(h2)')),found=new Set(),bindings=new Map();
     await mark(layer,'x-widget-controls',owner);
-    for(const button of buttons){const title=await button.querySelector('h2');if(!title)continue;const label=String(await title.textContent()||'').trim();for(const key of KEYS)if(!found.has(key)&&labels[key].test(label)){found.add(key);bindings.set(key,button);await mark(button,'x-widget-related',owner+'-'+key);break;}}
+    for(const button of buttons){const title=await button.querySelector('h2');if(!title)continue;const label=String(await title.textContent()||'').trim();for(const key of KEYS)if(!found.has(key)&&labels[key]?.test(label)){found.add(key);bindings.set(key,button);await mark(button,'x-widget-related',owner+'-'+key);break;}}
     // Probe each button's own fixed containing block, never its animated position.
     for(const [key,button] of bindings){const hostParent=await button.getParent(),probe=await doc.createElement('span');probes.set(key,probe);await probe.setAttribute('x-widget-origin',owner);await probe.setStyleAttribute('position:fixed!important;left:0!important;top:0!important;right:auto!important;bottom:auto!important;width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;transform:none!important;translate:none!important;scale:none!important;rotate:none!important;transition:none!important;animation:none!important;visibility:hidden!important;pointer-events:none!important;');await hostParent.appendChild(probe);}
     sheet=await doc.createElement('style');await sheet.setAttribute('x-widget-controls-style',owner);
     if(this.disposed||generation!==this.generation)throw Error('stale');
     await body.appendChild(sheet);
     if(this.disposed||generation!==this.generation)throw Error('stale');
-    this.sheet=sheet;this.marked=marked;this.owner=owner;this.found=found;this.buttons=bindings;this.probes=probes;this.origins=new Map();this.originDirty=true;this.connected=true;this.visible=false;this.signature='';this.request();return true;
+    this.doc=doc;this.sheet=sheet;this.marked=marked;this.owner=owner;this.found=found;this.buttons=bindings;this.probes=probes;this.origins=new Map();this.originDirty=true;this.connected=true;this.visible=false;this.signature='';this.request();return true;
    }catch{
     for(const probe of probes.values())try{await probe.remove();}catch{}
     for(const item of marked)try{if(await item.node.getAttribute(item.key)===item.value)await item.node.setAttribute(item.key,'');}catch{}
@@ -44,8 +44,10 @@
    // Only the iframe paints the tiles; originals are transparent trusted click targets.
    css+=`${related}::before,${related}::after{display:none!important;}${related}>*{opacity:0!important;}${related}:focus-visible{outline:2px solid ${safe('accent','#8aaaf3')}!important;outline-offset:-3px!important;}`;
    const slots=this.options.slots?.()||{},box=this.box;
+   this.activeKeys=new Set();
    for(const key of KEYS){
     const slot=slots[key],b=slot?.getBoundingClientRect();if(!(visible||this.visible&&this.options.allowBlockedLink?.(key))||!this.origins.has(key)||!box||!b||b.width<=0||b.height<=0||b.bottom<=0||b.top>=box.height||b.right<=0||b.left>=box.width)continue;
+    this.activeKeys.add(key);
     const desired={left:Math.round((box.left+b.left)*100)/100,top:Math.round((box.top+b.top)*100)/100,width:b.width,height:b.height};const origin=this.origins.get(key),x=desired.left-origin.x,y=desired.top-origin.y;
     css+=`${layer} [x-widget-related="${owner}-${key}"]{visibility:visible!important;pointer-events:auto!important;left:${x}px!important;top:${y}px!important;width:${Math.round(b.width*100)/100}px!important;height:${Math.round(b.height*100)/100}px!important;clip-path:inset(${Math.max(0,-b.top)}px ${Math.max(0,b.right-box.width)}px ${Math.max(0,b.bottom-box.height)}px ${Math.max(0,-b.left)}px)!important;}`;
    }
@@ -69,7 +71,7 @@
    }})().catch(()=>{}).finally(()=>{this.writing=null;});return this.writing;
   }
   coverSlots(){
-   const slots=this.options.slots?.()||{},current=new Set([...this.origins.keys()].map(key=>slots[key]).filter(Boolean));
+   const slots=this.options.slots?.()||{},current=new Set([...(this.activeKeys||[])].map(key=>slots[key]).filter(Boolean));
    for(const [slot,previous]of this.covered)if(!current.has(slot)){slot.dataset.nativeBound='false';slot.disabled=previous.disabled;slot.tabIndex=previous.tabIndex;slot.setAttribute('aria-hidden','false');this.covered.delete(slot);}
    for(const slot of current){if(this.covered.has(slot))continue;this.covered.set(slot,{disabled:slot.disabled,tabIndex:slot.tabIndex});slot.dataset.nativeBound='true';slot.disabled=true;slot.tabIndex=-1;slot.setAttribute('aria-hidden','true');}
   }

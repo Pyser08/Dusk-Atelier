@@ -4,8 +4,8 @@
   const Layout=typeof module!=='undefined'&&module.exports?require('./widget-layout.cjs'):root.PocketRisuWidgetLayoutModel;
   const PREFIX='pocketrisu.basic-home.v1.';
   const NAVY=Object.freeze({background:'#282a36',surface:'#21222c',border:'#4b5563',selected:'#44475a',text:'#f8f8f2',muted:'#a5adbf',button:'#374151',accent:'#3b82f6'});
-  const BLOCK_DEFAULTS=Object.freeze({music:'#21222c',photo:'#6a748d',clock:'#21222c',recent:'#21222c',added:'#21222c',memo:'#21222c',shortcutPhoto:'#21222c',shortcutBackground:'#21222c',shortcutRefresh:'#21222c',shortcutNative:'#21222c',linkGithub:'#21222c',linkFeedback:'#21222c',linkEmail:'#21222c',linkArca:'#21222c'});
-  const BLOCK_LABELS=Object.freeze({music:'음악',photo:'사진 테두리·빈칸',clock:'시계',recent:'최근 대화',added:'최근 봇',memo:'메모',shortcutPhoto:'사진 편집 버튼',shortcutBackground:'배경 변경 버튼',shortcutRefresh:'목록 새로고침 버튼',linkGithub:'GitHub',linkFeedback:'의견 보내기',linkEmail:'개발자 이메일',linkArca:'아카라이브'});
+  const BLOCK_DEFAULTS=Object.freeze({music:'#21222c',photo:'#6a748d',clock:'#21222c',recent:'#21222c',added:'#21222c',memo:'#21222c',realm:'#21222c',shortcutPhoto:'#21222c',shortcutBackground:'#21222c',shortcutRefresh:'#21222c',shortcutNative:'#21222c',linkGithub:'#21222c',linkFeedback:'#21222c',linkEmail:'#21222c',linkArca:'#21222c'});
+  const BLOCK_LABELS=Object.freeze({music:'음악',photo:'사진 테두리·빈칸',clock:'시계',recent:'최근 대화',added:'최근 봇',memo:'메모',realm:'리스 렐름',shortcutPhoto:'사진 편집 버튼',shortcutBackground:'배경 변경 버튼',shortcutRefresh:'목록 새로고침 버튼',linkGithub:'GitHub',linkFeedback:'의견 보내기',linkEmail:'개발자 이메일',linkArca:'아카라이브'});
   function color(value,fallback='#21222c'){
     if(typeof value!=='string')return fallback;const s=value.trim().toLowerCase();
     if(/^#[0-9a-f]{6}$/.test(s))return s;
@@ -26,14 +26,14 @@
     const proposed=luminance(ink)<.1?'#254e9c':'#abc6ff',accent=contrast(surface,proposed)>=4.5?proposed:ink;
     return{surface,ink,muted,accent,line:blend(surface,ink,.25),soft:blend(surface,ink,.085),button:blend(surface,ink,.14),bg:blend(surface,ink,.035)};
   }
-  const DEFAULTS=Object.freeze({followTheme:true,title:'오늘은 어떤 이야기를 해볼까요?',includeLegacy:true,catalogFilterVersion:1,autoHome:true,subtitle:'나만의 속도로, 좋아하는 이야기와 함께',clock:'analog',photoShape:'landscape',colors:BLOCK_DEFAULTS,layouts:Object.freeze({desktop:null,mobile:null}),musicWidthRevision:1,hiddenWidgets:Object.freeze([]),surface:'navy'});
+  const DEFAULTS=Object.freeze({followTheme:true,title:'오늘은 어떤 이야기를 해볼까요?',includeLegacy:true,catalogFilterVersion:1,autoHome:true,subtitle:'나만의 속도로, 좋아하는 이야기와 함께',clock:'analog',photoShape:'landscape',colors:BLOCK_DEFAULTS,layouts:Object.freeze({desktop:null,mobile:null}),musicWidthRevision:1,photoSlotsRevision:1,hiddenWidgets:Object.freeze(['photo2','photo3']),surface:'navy'});
   const normalize=v=>String(v??'').replace(/\s+/g,' ').trim();
   function settings(value){const v=value&&typeof value==='object'?value:{};const layouts=Layout.profiles(v.layouts);if(v.musicWidthRevision!==1&&layouts.desktop?.items.music.w>6)layouts.desktop.items.music.w=6;return{
     followTheme:v.followTheme!==false,title:typeof v.title==='string'?normalize(v.title).slice(0,80)||DEFAULTS.title:DEFAULTS.title,
     subtitle:typeof v.subtitle==='string'?normalize(v.subtitle).slice(0,120):DEFAULTS.subtitle,
     clock:['analog','calendar','digital'].includes(v.clock)?v.clock:DEFAULTS.clock,
     photoShape:['landscape','square'].includes(v.photoShape)?v.photoShape:DEFAULTS.photoShape,
-    includeLegacy:v.catalogFilterVersion===1?v.includeLegacy!==false:true,catalogFilterVersion:1,autoHome:v.autoHome!==false,colors:blockColors(v.colors),layouts,themePreset:typeof v.themePreset==='string'?v.themePreset.slice(0,30):'',musicWidthRevision:1,hiddenWidgets:Layout.hidden(v.hiddenWidgets),surface:['glass','dusk'].includes(v.surface)?v.surface:'navy'};}
+    includeLegacy:v.catalogFilterVersion===1?v.includeLegacy!==false:true,catalogFilterVersion:1,autoHome:v.autoHome!==false,colors:blockColors(v.colors),layouts,themePreset:typeof v.themePreset==='string'?v.themePreset.slice(0,30):'',musicWidthRevision:1,photoSlotsRevision:1,hiddenWidgets:Layout.hidden(v.photoSlotsRevision===1?v.hiddenWidgets:[...(Array.isArray(v.hiddenWidgets)?v.hiddenWidgets:[]),'photo2','photo3']),surface:['glass','dusk'].includes(v.surface)?v.surface:'navy'};}
   function imageError(file){
     if(!file||!Number.isFinite(file.size)||file.size<=0||file.size>20*1024*1024)return '20MB 이하의 사진을 선택해 주세요.';
     const type=String(file.type||'').toLowerCase().split(';')[0].trim();
