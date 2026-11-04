@@ -25,6 +25,12 @@
         const r=await node.getBoundingClientRect();if(r&&r.width>=ab.width*0.6&&r.height>=ab.height*0.6)return false;
       }
     }
+    // 리스바드 설정 화면: '설정 검색' 입력칸이나 '앱으로 돌아가기' 버튼이 보이면 홈이 아니다.
+    for(const node of await array(await doc.querySelectorAll('#app input[placeholder*="설정 검색"],#app input[placeholder*="earch setting" i]'),8))if(await visible(node))return false;
+    for(const node of await array(await doc.querySelectorAll('#app button,#app a,#app [role="button"]'),200)){
+      const t=String(await node.textContent()||'').replace(/\s+/g,' ').trim();
+      if(t.length<20&&/^(앱으로 돌아가기|Back to app)$/i.test(t)&&await visible(node))return false;
+    }
     // A previous server-installed widget hides the native MainMenu; detect its visible host.
     if(await visible(await doc.querySelector('#app #pocketrisu-butter-home')))return true;
     const headings=await array(await doc.querySelectorAll('#app h1,#app h2,#app h3,#app [data-home-title]'));
