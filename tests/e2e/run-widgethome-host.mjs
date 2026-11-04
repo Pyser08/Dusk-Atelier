@@ -32,6 +32,14 @@ await p.waitForFunction(() => wh.isVisible(), null, { timeout: 9000 }).catch(() 
 await p.waitForTimeout(600);
 fb = await frameBox();
 ok("사이드바에서 홈으로 돌아오면 다시 자동으로 뜸", await p.evaluate(() => wh.isVisible()) && fb.left === 240, JSON.stringify(fb));
+// 리스바드 설정 화면(설정 검색 입력칸)으로 가면 닫히고, 나오면 다시 뜸
+await p.evaluate(() => { const i = document.createElement("input"); i.id = "sset"; i.placeholder = "설정 검색..."; document.getElementById("main").before(i); });
+await p.waitForFunction(() => !wh.isVisible(), null, { timeout: 6000 }).catch(() => {});
+ok("설정 화면이 열리면 위젯 홈이 닫힘", await p.evaluate(() => !wh.isVisible()));
+await p.evaluate(() => document.getElementById("sset").remove());
+await p.waitForFunction(() => wh.isVisible(), null, { timeout: 9000 }).catch(() => {});
+await p.waitForTimeout(600);
+ok("설정에서 나오면 다시 뜸", await p.evaluate(() => wh.isVisible()));
 // 사이드바를 닫으면(너비 0) 본문이 넓어지고 위젯도 따라 넓어짐
 await p.evaluate(() => { document.querySelector(".risu-sidebar").style.width = "60px"; });
 await p.waitForTimeout(2600);

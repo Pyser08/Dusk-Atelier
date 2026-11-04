@@ -11,26 +11,30 @@
     if(await node.matches('[hidden],.hidden,[aria-hidden="true"]'))return false;
     const rect=await node.getBoundingClientRect();return Boolean(rect&&rect.width>0&&rect.height>0);
   }
-  async function isHome(api,doc){
-    const index=Number(await api.getCurrentCharacterIndex());
-    if(!Number.isFinite(index)||index>=0)return false;
-    const blockers=await array(await doc.querySelectorAll('#app .rs-setting-cont,#app [role="dialog"],#app [role="alertdialog"],#app dialog[open]'));
-    for(const node of blockers)if(await visible(node))return false;
-    // 설정 화면: 클래스 이름에 setting이 들어 있고 화면 한 장만큼 큰 요소가 보이면 홈이 아니다.
+  async function settingsOpen(doc){
+    // 설정 화면: 클래스 이름에 setting이 들어 있고 화면 한 장만큼 큰 요소가 보이면 설정 화면.
     const app=await doc.querySelector('#app'),ab=app?await app.getBoundingClientRect():null;
     if(ab&&ab.width>0){
       const big=await array(await doc.querySelectorAll('#app [class*="setting" i],#app [id*="setting" i]'),60);
       for(const node of big){
         if(!await visible(node))continue;
-        const r=await node.getBoundingClientRect();if(r&&r.width>=ab.width*0.6&&r.height>=ab.height*0.6)return false;
+        const r=await node.getBoundingClientRect();if(r&&r.width>=ab.width*0.6&&r.height>=ab.height*0.6)return true;
       }
     }
-    // 리스바드 설정 화면: '설정 검색' 입력칸이나 '앱으로 돌아가기' 버튼이 보이면 홈이 아니다.
-    for(const node of await array(await doc.querySelectorAll('#app input[placeholder*="설정 검색"],#app input[placeholder*="earch setting" i]'),8))if(await visible(node))return false;
+    // 리스바드 설정 화면: '설정 검색' 입력칸이나 '앱으로 돌아가기' 버튼이 보이면 설정 화면.
+    for(const node of await array(await doc.querySelectorAll('#app input[placeholder*="설정 검색"],#app input[placeholder*="earch setting" i]'),8))if(await visible(node))return true;
     for(const node of await array(await doc.querySelectorAll('#app button,#app a,#app [role="button"]'),200)){
       const t=String(await node.textContent()||'').replace(/\s+/g,' ').trim();
-      if(t.length<20&&/^(앱으로 돌아가기|Back to app)$/i.test(t)&&await visible(node))return false;
+      if(t.length<20&&/^(앱으로 돌아가기|Back to app)$/i.test(t)&&await visible(node))return true;
     }
+    return false;
+  }
+  async function isHome(api,doc){
+    const index=Number(await api.getCurrentCharacterIndex());
+    if(!Number.isFinite(index)||index>=0)return false;
+    const blockers=await array(await doc.querySelectorAll('#app .rs-setting-cont,#app [role="dialog"],#app [role="alertdialog"],#app dialog[open]'));
+    for(const node of blockers)if(await visible(node))return false;
+    if(await settingsOpen(doc))return false;
     // A previous server-installed widget hides the native MainMenu; detect its visible host.
     if(await visible(await doc.querySelector('#app #pocketrisu-butter-home')))return true;
     const headings=await array(await doc.querySelectorAll('#app h1,#app h2,#app h3,#app [data-home-title]'));
@@ -90,12 +94,17 @@
     async check(){
       if(this.disposed||!this.enabled||!this.doc||this.busy||this.failurePaused)return;
       // The mounted home is tracked by HomeLayout. Native drawers/dialogs do not require closing/reopening it.
-      if(this.options.isVisible?.()&&this.options.isInlineActive?.())return;
+      if(this.options.isVisible?.()&&this.options.isInlineActive?.()){
+        // 떠 있는 동안에도 설정 화면으로 가면 닫는다(대화상자·서랍은 그대로 둔다).
+        if(this.busy)return;this.busy=true;
+        try{if(await settingsOpen(this.doc)){this.autoOwned=false;await this.options.onLeave?.();}}catch{}finally{this.busy=false;}
+        return;
+      }
       this.busy=true;const generation=this.generation;
       try{
         const home=await isHome(this.api,this.doc);
         if(this.disposed||!this.enabled||generation!==this.generation)return;
-        if(!home){await this.options.onRouteAway?.();this.suppressed=false;if(this.autoOwned){this.autoOwned=false;await this.options.onLeave?.();}return;}
+        if(!home){await this.options.onRouteAway?.();this.suppressed=false;if(this.autoOwned||this.options.isPlaced?.()){this.autoOwned=false;await this.options.onLeave?.();}return;}
         if(this.suppressed||this.options.isVisible?.()||this.options.isOpening?.())return;
         const allow=async()=>{if(this.disposed||!this.enabled||generation!==this.generation||this.suppressed)return false;const current=await isHome(this.api,this.doc);return current&&!this.disposed&&this.enabled&&generation===this.generation&&!this.suppressed;};
         const opened=await this.options.onOpen?.(allow);
@@ -109,6 +118,6 @@
     async disconnect(){this.cancel(this.timer);this.timer=null;this.clearInterval(this.poll);this.poll=null;this.doc=null;const listeners=this.listeners.splice(0);for(const item of listeners)try{await item.doc.removeEventListener(item.type,item.id,{capture:true});}catch{}const observer=this.observer;this.observer=null;if(observer)try{await observer.disconnect();}catch{}}
     async dispose(){this.disposed=true;this.enabled=false;this.generation++;await this.disconnect();}
   }
-  const api={AutoHome,isHome};
+  const api={AutoHome,isHome,settingsOpen};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.PocketRisuHomeAuto=api;
 })(globalThis);

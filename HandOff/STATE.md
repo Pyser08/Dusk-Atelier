@@ -616,3 +616,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 다음 아카 글의 SPECIAL THANKS 블록에는 위젯 홈 원작 글 링크 사용: https://arca.live/b/characterai/188006855
 - 위젯 홈 덮는 범위: `home-layout.cjs` `railEdge`/`boxOf`(generic일 때 아이콘 줄 오른쪽부터), `auto-home.cjs` isHome에 'setting' 클래스 큰 요소 차단 추가. 실제 RisuBard 클래스명은 미검증.
 - 리스바드 실제 화면 기준: 아이콘 줄은 CSS 약 44px → railEdge 최소 너비 32px. 설정 화면은 '설정 검색' 입력칸/'앱으로 돌아가기' 버튼으로 감지.
+- 원인: 홈 자리에 떠 있으면 auto-home check가 바로 return해서 설정 이동을 못 봄 → 떠 있을 땐 settingsOpen만 검사해 닫음. host e2e에 설정 화면 2항목 추가.
