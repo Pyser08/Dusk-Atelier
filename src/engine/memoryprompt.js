@@ -1,4 +1,5 @@
 // 장기기억 분석 프롬프트·응답 파싱·검증.
+import { COLLECTIVE_RULE } from "./collective.js";
 import { clampAxis } from "./memorygrade.js";
 import { validateKnow, validatePlus } from "./memoryplus.js";
 import { validateTrust } from "./memorytrust.js";
@@ -24,6 +25,7 @@ export const SYSTEM_PROMPT = [
   "`emo` (max 3): feeling changes in this response. `t` = integer deltas -3..3 of trust, affection, hostility, dependence, respect, fear (they coexist); `why` = evidence (event importance, reaction, behavior change). Omit small shifts and unchanged tags; never absolute values (`emoState` = current 0-10 gauges).",
   "Important moments only (scene changed or act B+), else omit: `pov` = two participants who really perceive the same event differently (view one line, why they differ). `self` in a people entry = {feel, cause (probable real reason, never certain), ic H|M|L required}, only if feel and cause differ. `exp` (max 1) = two characters' expectations: ae/be, as/bs = said aloud, gap true only if they clash, viol one line (only if gap). If `selfHint` names a character, consider `self` for them.",
   "{{user}} is the player: the real person reading and writing the user turns (the user's character / persona). Always write the player as exactly \"{{user}}\" in every name field (name, from, to, who, know), never as their persona name, \"user\", \"유저\" or \"나\". Everyone else is a story character.",
+  COLLECTIVE_RULE,
   "`known` lists existing characters (use the same name, do not duplicate under another name). Never record names in `ignore`.",
   "scene.changed is true only if place, participants, ongoing event or shared state meaningfully changed versus previousScene; otherwise false. `when` only if written in the text.",
   "`know` is optional: list who witnessed or knows this act ONLY when it is a secret or seen by a limited set; omit it for public acts. Never mark someone as knowing what they could not have seen or heard.",

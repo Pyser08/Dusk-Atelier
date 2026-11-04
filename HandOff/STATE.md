@@ -1,5 +1,11 @@
 # 현재 상태 — feat/1.9.2
 
+## 2026-11-04 {{user}} 표시·집단 이름 걸러내기
+- `memory/common.js` `avatar`·`isMe`·`shownName`: {{user}} 동그라미는 `userLabel()` 첫 글자 + `data-me`(강조색, styles.js `.rb-mem-av[data-me]`). `people.js` 카드에 `me` 클래스·‘나’ 배지·맨 앞 정렬, 상세 제목도 표시 이름.
+- `engine/collective.js` `isCollectiveName`/`COLLECTIVE_RULE`: 반·학년·동급생·…들 같은 집단 이름. 지난 대화 분석(`memoryprompt.js` 규칙 + `memoryapply.js` 필터)과 위키 writer(`tools/pot-patches.json`에 writer-prompt.js 패치 2개: import + 요청의 `dusk_character_rule`)에 적용. 원본 pot 소스가 없어 pot-split 재생성은 못 돌려 봄 → 다음에 원본이 있으면 패치 일치 확인.
+- 로어북 읽기: `writerSearchExistingLore`는 이미 기본 켜짐(기존 인물을 찾는 용도라 집단 이름을 막지 못함). 그래서 규칙+필터로 처리.
+- 테스트 `tests/collective.test.js`, e2e `tests/e2e/run-useravatar.mjs`.
+
 ## 2026-11-04 위젯 홈 이식 (PocketRisu 위젯 홈 v1.0.18, 격리 이식)
 - 원본(사용자 제작, zip)을 `src/widgethome/`로 옮김: `lib/*.cjs`(원본 모듈 14개, require 경로만 .cjs로), `style.js`(원본 style.css의 :root/html/body → :host, `:host([hidden])` 추가), `home.js`(원본 view.js를 `bootWidgetHome(api, hostOpts)`로). 원본 대비 바뀐 곳은 home.js 안에서 `sr`(shadowRoot)·`hostEl`·`showBox/hideBox`·`dispose`를 찾으면 돼요. layout-editor에는 `document:{createElement, querySelector→sr}` 어댑터를 넘김.
 - 격리: 문서 body에 `<div data-dusk-widgethome hidden>` + Shadow DOM. 위젯 CSS는 Dusk 화면에 새지 않음(e2e로 확인). 같은 플러그인 iframe을 번갈아 쓰므로 Dusk 창을 열기 전 `widgetHome.yieldToDusk()`로 위젯 홈을 닫음(`main.js`에서 `app.open` 감쌈). 위젯 홈을 Dusk에서 열 때는 `ctx.openWidgetHome()`(Dusk 닫고 열기).

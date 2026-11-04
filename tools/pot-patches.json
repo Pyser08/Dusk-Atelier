@@ -113,5 +113,17 @@
   "why": "기존 인물 로어북 검색을 기본으로 켬(직접 끈 적 없으면 켜짐: data/potstorage.js + engine/defaultfollow.js)",
   "from": "    writerSearchExistingLore: false,",
   "to": "    writerSearchExistingLore: true,"
+ },
+ {
+  "file": "src/engine/pot/writer-prompt.js",
+  "why": "집단·반·역할 이름(1학년 A반, 동급생…)은 인물 문서로 만들지 않게 요청에 규칙을 더함(engine/collective.js)",
+  "from": "import { overviewNeedsFill, overviewSourceRefs } from './character-overview.js';",
+  "to": "import { COLLECTIVE_RULE } from '../collective.js';\nimport { overviewNeedsFill, overviewSourceRefs } from './character-overview.js';"
+ },
+ {
+  "file": "src/engine/pot/writer-prompt.js",
+  "why": "위와 같음: 요청에 dusk_character_rule 추가",
+  "from": "    contextual_identity_rule:'Before creating",
+  "to": "    dusk_character_rule:COLLECTIVE_RULE,\n    contextual_identity_rule:'Before creating"
  }
 ]
