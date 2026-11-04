@@ -10,9 +10,15 @@
 - 테스트 `tests/defaultfollow.test.js`. 검증: npm test 846 pass / 0 fail, build·check "동일함 (v1.9.1)", e2e smoke·memed 통과. `run-app.mjs`는 변경 전에도 같은 오류(`reading 'click'`)로 실패(기존 문제).
 - 이 브랜치의 package.json은 아직 1.9.1. CHANGELOG는 맨 위 v1.9.1 섹션에 적었음 — 버전 올릴 때 옮길 것.
 
-## 다음 작업 후보: 인물 관계도(반3D)
-- 목업: 프로젝트 문서 `claude/mockup-relmap.html`, 계획: `claude/relmap-plan.md`(데이터 확인 결과·장기기억에 추가할 필드·기본/고급 화면 구분).
-- 확정(2026-11-04): 관계도 전용 탭 + 동그란 플로팅 버튼(바로 관계도 탭) + 장기기억 홈 "나에 대한 기억" 아래 관계도 박스. 같은 채팅 동안 화면 유지. 플로팅 버튼 = 설정의 채팅 메뉴 [기억] 버튼(`data/memorybutton.js`, location "action", 호스트가 떠 있는 버튼으로 그림) → 이름·아이콘을 관계도로 바꾸고 관계도 탭으로 연결.
+## 인물 관계도(반3D) — 1차 구현 완료 (2026-11-04, 미릴리스)
+- 목업: 프로젝트 문서 `claude/mockup-relmap.html`, 계획: `claude/relmap-plan.md`.
+- 구현: 탭 `relmap`(기억 그룹, `ui/tabs.js`·`ui/app.js`) / 화면 `ui/screens/relmap.js` / canvas `ui/screens/relmap/canvas.js` / CSS `ui/screens/relmap/css.js`(styles.js에서 합침) / 데이터 `engine/relmap.js`(순수, `tests/relmap.test.js`) / e2e `tests/e2e/run-relmap.mjs`.
+- 진입: ① 채팅 메뉴 떠 있는 버튼(`data/memorybutton.js`, main.js `openRelMap`, 설정 키 `dusk.ui.memoryButton` 그대로, 이름·아이콘만 관계도로) ② 장기기억 홈 '나에 대한 기억' 아래 줄(`mhome.js` `mapRow`) ③ 사이드 메뉴 탭.
+- 빨리 뜨게: `peekCurrent` 캐시 사용, 같은 채팅이면 만든 DOM 재사용(`ctx.state.relmap.view`) + 뒤에서 폴더만 다시 읽어 서명이 바뀔 때만 다시 그림, 탭에서 떨어지면 rAF 루프 정지(`stage.isConnected`), 열 때 `getCharacterFromIndex` 호출 없음.
+- 데이터(새 필드 없이 기존 기억만): 호감도 = `folder.emo`(그 인물→{{user}}) 좋은 쪽(애정·신뢰·존경) − 나쁜 쪽(적대·두려움)을 0~100으로, 감정 없으면 50. 중요도 = 기록 수 + 최근 20응답 기록. 이번 턴 = 마지막 분석 응답(`nowOf`)에 기록·장면이 있는 인물. NPC 선 = `folder.rels`(+/− 개수로 색, 개수로 굵기, 최근 5응답 변화는 빛남). 점선 = 풀리지 않은 갈등·오해(rifts/beliefs). 인물 최대 40명(중요도 순).
+- 아직 안 한 것(다음): ① 소속(`person.faction`)·상태(`person.status`)는 화면이 읽을 준비만 됨, 추출 안 함(없으면 소속 없이 고르게 배치, 필터 숨김) ② 턴 되감기·▲▼ 변화(턴별 호감도 스냅숏 필요) ③ 선의 특수 관계 종류·원문 인용(`kind`/`q`) ④ 실제 터치 기기의 길게 누르기·두 번 누르기·핀치 미확인(헤드리스에서 포인터 이벤트만 확인) ⑤ BardWiki 저장소일 때의 폴더 읽기는 `M.store.getFolder`만 사용(장기기억 홈과 동일).
+- 검증: npm test 전부 통과(tests/uimode.test.js 탭 목록 기대값에 relmap 추가), build·check "동일함", e2e `run-relmap.mjs` 22개 통과(PC·모바일).
+- 이 브랜치의 package.json은 아직 1.9.1. CHANGELOG 항목은 맨 위 v1.9.1 섹션에 있음 — 버전 올릴 때 옮길 것.
 
 ---
 

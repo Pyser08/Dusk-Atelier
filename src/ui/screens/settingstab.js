@@ -89,8 +89,8 @@ export async function renderSettingsTab(ctx) {
     const bdSeg = segmented([["off", "끄기"], ["short", "짧은 이름만"], ["all", "모든 키"]], ["off", "all"].includes(lore.boundary) ? lore.boundary : "short", (v) => setLore({ boundary: v }), "이름 경계 기본값");
     const memBtnSeg = segmented([["on", "보이기"], ["off", "숨기기"]], memBtnOn ? "on" : "off", async (v) => {
       const ok = await ctx.memoryButton?.set(v === "on");
-      ctx.toast(ok === false ? "저장했어요. 이 화면에선 바로 안 바뀌어서 리스를 새로 고치면 적용돼요." : v === "on" ? "채팅 메뉴에 기억 버튼을 보여요" : "채팅 메뉴의 기억 버튼을 숨겼어요");
-    }, "채팅 메뉴 기억 버튼");
+      ctx.toast(ok === false ? "저장했어요. 이 화면에선 바로 안 바뀌어서 리스를 새로 고치면 적용돼요." : v === "on" ? "채팅 메뉴에 관계도 버튼을 보여요" : "채팅 메뉴의 관계도 버튼을 숨겼어요");
+    }, "채팅 메뉴 관계도 버튼");
     // 한 줄: 제목·설명 + 현재 값(오른쪽). 누르면 고르는 메뉴가 뜬다.
     const valRow = (title, sub, options, cur, onPick, id) => {
       const val = h("span", { class: "val" }, options.find(([v]) => v === cur)?.[1] ?? "");
@@ -111,9 +111,9 @@ export async function renderSettingsTab(ctx) {
         valRow("이름 경계", "키가 다른 낱말 속에 끼어 잘못 켜지는 걸 막아요", [["short", "짧은 이름만 (추천)"], ["all", "모든 키"], ["off", "끄기"]], ["off", "all"].includes(lore.boundary) ? lore.boundary : "short", (v) => setLore({ boundary: v }), "rb-set-boundary"),
         valRow("로어북 로그", "응답마다 들어간 로어북을 남겨요", [["on", "켜짐"], ["off", "꺼짐"]], lore.log === false ? "off" : "on", (v) => setLore({ log: v === "on" }), "rb-set-lorelog"),
         valRow("응답 아래 로어북 버튼", "응답 아래 [📖 로어북] 버튼", [["on", "보임"], ["off", "숨김"]], lore.button === false ? "off" : "on", (v) => setLore({ button: v === "on" }), "rb-set-lorebtn"),
-        valRow("채팅 메뉴의 [기억] 버튼", "기억 기능 자체는 그대로예요", [["on", "보임"], ["off", "숨김"]], memBtnOn ? "on" : "off", async (v) => {
+        valRow("채팅 메뉴의 [관계도] 버튼", "누르면 인물 관계도가 열려요. 기억 기능 자체는 그대로예요", [["on", "보임"], ["off", "숨김"]], memBtnOn ? "on" : "off", async (v) => {
           const ok = await ctx.memoryButton?.set(v === "on");
-          ctx.toast(ok === false ? "저장했어요. 이 화면에선 바로 안 바뀌어서 리스를 새로 고치면 적용돼요." : v === "on" ? "채팅 메뉴에 기억 버튼을 보여요" : "채팅 메뉴의 기억 버튼을 숨겼어요");
+          ctx.toast(ok === false ? "저장했어요. 이 화면에선 바로 안 바뀌어서 리스를 새로 고치면 적용돼요." : v === "on" ? "채팅 메뉴에 관계도 버튼을 보여요" : "채팅 메뉴의 관계도 버튼을 숨겼어요");
         }, "rb-set-membtn"),
         valRow("채팅 메뉴의 빠른 설정", "입력창 옆 메뉴에 공정한 전개·유저 편향·주사위 결과 표시", [["on", "보임"], ["off", "숨김"]], chatQuickOn ? "on" : "off", async (v) => {
           try { await ctx.chatMenu?.setOn(v === "on"); ctx.toast(v === "on" ? "채팅 메뉴에 빠른 설정을 보여요" : "채팅 메뉴의 빠른 설정을 숨겼어요"); } catch (e) { fail(e); }

@@ -19,7 +19,7 @@
 
 ## 파일 목록
 ### src/
-- `main.js` (249줄) 
+- `main.js` (251줄) 
 
 ### src/data/
 - `addcharacter.js` (46줄) 새 봇을 DB에 추가하는 공용 흐름 (legacy.js의 '캐릭터 추가'에서 추출, 동작 동일). — insertCharacter, createBotDraft
@@ -53,7 +53,7 @@
 - `memorybackend-bardwiki.js` (69줄) 리스바드 BardWiki 읽기 어댑터 + 스냅샷 캐시(dusk.mem.v2.ext.<folderId>… — createBardWikiBackend
 - `memorybackend.js` (16줄) 기억 저장소 백엔드 선택. local = 플러그인 자체 저장·분석·주입, bardwiki = 리스바드… — hasBardWiki, selectBackend, CAPABILITIES, capabilitiesOf
 - `memorybot.js` (22줄) 장기기억에서 합성한 새 봇 객체 만들기. 원본 봇은 수정하지 않는다(새 객체만 반환). — buildMemoryCharacter
-- `memorybutton.js` (49줄) 채팅 메뉴(입력 옆)의 '장기기억' 버튼을 설정에서 켜고 끄기 (v1.6.5). 기본 켜짐. — MEMORY_BUTTON_KEY, loadMemoryButtonOn, createMemoryButton
+- `memorybutton.js` (49줄) 채팅 메뉴(입력 옆)의 떠 있는 버튼(v1.9.3부터 인물 관계도로 연결)을 설정에서 켜고 끄기 (v… — MEMORY_BUTTON_KEY, loadMemoryButtonOn, createMemoryButton
 - `memoryinject.js` (93줄) 장기기억 주입 훅: 요청 사본에만 [Dusk Memory] 블록을 넣는다(저장 데이터 불변). — createMemoryInjector
 - `memoryload.js` (12줄) v1.6.5 읽기 경로 대조: 폴더를 읽어 메모리 사본에서만 앵커 정합성(reconcile)을 맞춘다… — loadReconciled
 - `memoryremote.js` (267줄) 장기기억을 Dusk Cellar에 저장 (1.8.3) — FLAG_KEY, QUEUE_KEY, REMOTE_PREFIX, mergeFolder, createMemoryRemote
@@ -188,6 +188,7 @@
 - `recall.js` (107줄) v1.6.4 회상(Recall, 순수): 리수폿이 고른 인물의 Dusk 기록을 골라 Director에… — RECALL_DEFAULTS, keywordBoost, scoreRecord, pickPeople, unknownFor
 - `regexprep.js` (46줄) v1.8.1 정규식 전처리(순수): 기억 분석 입력과 임베딩 질의에서 상태창·HTML 같은 군더더기를… — DEFAULT_REGEX, normEntry, normEntries, parseRegexFile, collectEntries
 - `regexview.js` (28줄) 정규식 '바로 시험' 결과 보기 (v1.6.7 7단계): 입력 글을 일치 위치로 잘라 강조·요약한다.… — segments, describeMatch, summarize
+- `relmap.js` (119줄) 인물 관계도(반3D) 데이터 계산 (v1.9.3, 순수 함수). 화면 코드 없음. — RM, STATUS_LABEL, affinityOf, importanceOf, buildRelMap
 - `rpack.js` (13줄) — rpackDecode
 - `runai.js` (73줄) 보조 모델이 {type:"streaming", result: ReadableStream}로 답하면 끝… — drainStream, settleResponse, setUserPromptProvider, withUserPrompts, setCustomRunner
 - `safety.js` (32줄) — restoreFromBackup
@@ -237,7 +238,7 @@
 
 ### src/ui/
 - `aifix.js` (52줄) 로어북 '고칠 부분' 공유 상태 (v1.6.8): 편집기 글칸에서 고른 부분 ↔ AI 창 '고칠 부분…
-- `app.js` (549줄) 
+- `app.js` (550줄) 
 - `assets.js` (187줄) 
 - `cbs.js` (80줄) 
 - `codeedit.js` (514줄) 가벼운 코드 편집기: 투명한 textarea 뒤에 색을 입힌 pre를 겹쳐 VS Code처럼 보이게 …
@@ -246,7 +247,7 @@
 - `dom.js` (133줄) 
 - `entrypicker.js` (73줄) 항목 고르기: 폴더 트리 + 검색 모달. 드롭다운(select) 대신 쓴다.
 - `hostupdate.js` (85줄) 리스를 켤 때 새 버전이 있으면 메인 화면 오른쪽 위에 큰 알림 카드를 잠깐 띄운다 (닫기 버튼 · …
-- `icons.js` (72줄) 
+- `icons.js` (73줄) 
 - `kit.js` (627줄) 
 - `legacy.js` (1876줄) 
 - `lookparts.js` (107줄) 꾸미기 화면과 시작 안내(2단계)가 함께 쓰는 선택 부품: 테마 묶음 · 강조 색 · 그라데이션 · …
@@ -261,8 +262,8 @@
 - `screentours.js` (76줄) 화면별 둘러보기 (v1.8.1): ? 버튼과 각 화면의 '둘러보기' 버튼이 같은 하이라이트 방식(처음…
 - `sortable.js` (167줄) 마우스·펜: 줄 어디를 잡아도 5px 움직이면 끌기 시작 (클릭은 그대로 클릭).
 - `staleguard.js` (24줄) 화면 그리기 경쟁 방지(v1.8.1): 탭 A를 불러오는 중에 탭 B로 가면, 늦게 끝난 A의 그리기…
-- `styles.js` (1445줄) 
-- `tabs.js` (91줄) 탭 목록과 설명 문구 (홈 카드·위쪽 줄·도움말이 같이 쓴다). 화면 코드 없음.
+- `styles.js` (1446줄) 
+- `tabs.js` (97줄) 탭 목록과 설명 문구 (홈 카드·위쪽 줄·도움말이 같이 쓴다). 화면 코드 없음.
 - `theme.js` (400줄) v1.6.3 UI 리뉴얼: 밝은 회백 + 코랄 포인트가 기본. 색은 전부 여기 토큰에서만 나온다.
 - `themekit.js` (79줄) v1.8.3 꾸미기 카탈로그: 테마 묶음 · 강조 색 · 그라데이션 · 모양 · 글꼴. 순수 데이터라…
 - `toast.js` (61줄) 리스 메인 화면 오른쪽 위에 띄우는 알림 (메인 화면 접근 권한이 있을 때만)
@@ -311,6 +312,7 @@
 - `pot.js` (82줄) 리수폿 화면 (1.7.0 4단계, 계획 §3.3). 기억과 완전히 따로: 자기 스위치·자기 설정. 머…
 - `presets.js` (217줄) 
 - `promptstab.js` (129줄) 설정 → 기억·리수폿 프롬프트 (v1.7.0): 기억·리수폿을 쓸 때 기본 규칙 뒤에 덧붙는 '내 프…
+- `relmap.js` (225줄) 인물 관계도 탭 (v1.9.3): {{user}}를 가운데 두고 인물을 거리(호감도)·높이(중요도)·…
 - `roulettepop.js` (64줄) 봇 편집 도구 → 룰렛: 범주별로 무작위 특징을 뽑아 복사하거나 설명 끝에 붙인다.
 - `sectionhome.js` (73줄) 그룹 개요(기억·관리·작업실, 1.8.3 목업 1): 한 줄 안내 → (기억) 상태 카드 → 목록형 …
 - `settings.js` (178줄) 플러그인 꾸미기 (v1.7.0 7단계, 계획 §3.12 → v1.8.3 확장): 미리보기 → 테마 묶…
@@ -356,7 +358,7 @@
 - `menv.js` (16줄) 열린 봇·채팅의 기억 환경(env)을 만든다. 기록 보기·리수폿·인물 화면이 같이 쓴다 (1.7.0 …
 - `mepage.js` (115줄) '나' 화면 (1.8.3): 다른 인물들이 나({{user}})를 어떻게 기억하는지 한 화면에. 인물…
 - `mergeui.js` (112줄) 인물 합치기(미리보기 포함): 남길 인물과 합칠 인물을 고르면, 인물 문서가 둘 다 있을 때는 리수폿…
-- `mhome.js` (204줄) 기억 화면 (1.8.3 목업 3): 상태 카드 하나(스위치·숫자 3·막대·범례) → 지난 대화 분석(…
+- `mhome.js` (211줄) 기억 화면 (1.8.3 목업 3): 상태 카드 하나(스위치·숫자 3·막대·범례) → 지난 대화 분석(…
 - `modebar.js` (49줄) 기억 탭 맨 위: 장기기억 방식(저장소). 간단·고급 모드 모두에서 선택을 유지하고 바꿀 수 있다.
 - `modeladv.js` (66줄) 고급 모델 설정(고급 모드): 공급자 전체 · 모델 목록 불러오기 · 온도/최대 출력/문맥/제한시간 …
 - `people.js` (248줄) 
@@ -376,6 +378,10 @@
 - `wikipanel.js` (42줄) 인물 페이지 ‘위키 항목 전체’(고급 모드): 위키 문서의 모든 항목(감정·관계·행동 경향·비밀 …)…
 - `wikiview.js` (238줄) 인물 위키 화면: 리수폿의 배치(왼쪽 인물 목록 + 오른쪽 인물 문서)와 기능에 Dusk의 이야기 기…
 - `writerui.js` (66줄) 수동 Writer(리수폿 writer-ui 대응): RP 본문을 붙여넣거나 최근 응답을 불러와 AI로…
+
+### src/ui/screens/relmap/
+- `canvas.js` (420줄) 인물 관계도 그리기(반3D canvas). 데이터는 engine/relmap.js가 만들고, 여기서는…
+- `css.js` (44줄) 인물 관계도 전용 CSS. 색은 --rb-* 토큰만 쓴다(꾸미기 자동 적용).
 
 ### src/vendor/
 - `fflate-full.js` (1109줄) 봇빌더(BB) v0.3.2의 번들에서 추출한 외부 라이브러리 (MIT). 라이선스: 저장소 NOTIC… — Decompress, strFromU8, strToU8, unzipSync, zipSync

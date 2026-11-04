@@ -240,7 +240,9 @@ async function start() {
   // 채팅창 입력 옆 메뉴에서 바로 장기기억으로
   const openMemory = () => app.open({ tab: "memory" }).catch((e) => console.log(`[${TITLE}] 열기 실패: ${e?.message ?? e}`));
   memoryRef.open = openMemory;
-  const memBtn = createMemoryButton(api, { name: "장기기억", icon: iconMarkup("brain", 20), open: openMemory, log: (m) => console.log(`[${TITLE}] ${m}`) });
+  // 채팅 메뉴의 떠 있는 버튼 = 인물 관계도로 바로 (v1.9.3). 설정 키(dusk.ui.memoryButton)는 그대로라 켜고 끈 값이 이어진다.
+  const openRelMap = () => app.open({ tab: "relmap" }).catch((e) => console.log(`[${TITLE}] 열기 실패: ${e?.message ?? e}`));
+  const memBtn = createMemoryButton(api, { name: "인물 관계도", icon: iconMarkup("network", 20), open: openRelMap, log: (m) => console.log(`[${TITLE}] ${m}`) });
   app.ctx.memoryButton = memBtn;
   await memBtn.start();
 }

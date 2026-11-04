@@ -169,6 +169,13 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     h("span", { class: "t" }, "나에 대한 기억", h("small", null, "다른 인물들이 나를 어떻게 보고 부르는지 모아 봐요.")),
     h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
 
+  // 인물 관계도 한 줄 카드 (1.9.3): '나에 대한 기억' 바로 아래. 누르면 관계도 탭으로 바로
+  const npcN = Object.values(folder?.people ?? {}).filter((p) => p && String(p.name).toLowerCase().replace(/\s+/g, "") !== "{{user}}" && (p.records ?? []).some((r) => !r.orphan)).length;
+  const mapRow = h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-relmap", onClick: () => ctx.go("relmap") },
+    h("span", { class: "rb-mem-av rb-me-av sm", "aria-hidden": "true" }, icon("network", 18)),
+    h("span", { class: "t" }, "인물 관계도", h("small", null, npcN ? `인물 ${npcN}명의 거리와 관계를 한눈에 봐요.` : "인물이 쌓이면 거리와 관계를 한눈에 볼 수 있어요.")),
+    h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
+
   const recent = recentOf(folder);
   const recBox = h("section", { class: "rb-card bordered rb-mem-recentbox" }, h("div", { class: "rb-mem-rechead" }, h("b", null, "최근 기록"), recent.length ? h("button", { type: "button", class: "rb-textlink", onClick: () => openDetail() }, "전체 보기") : null),
     h("ul", { class: "rb-mem-reclist rb-mem-recent" }, recent.length
@@ -196,7 +203,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
 
   const main = h("div", { class: "rb-mem2-main" },
     pageHead("장기 기억"),
-    statusBox, bigAct, prog, shortcuts, meRow, memOptions, recBox,
+    statusBox, bigAct, prog, shortcuts, meRow, mapRow, memOptions, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" }, main, h("div", { class: "rb-mem2-side" }, ...side)));
   // 1.8.3: 임베딩 안내 창은 자동으로 띄우지 않는다(시작 안내 3단계에서 설정, 필요하면 설정 줄의 '임베딩'에서)

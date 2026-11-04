@@ -9,7 +9,7 @@ import { dbRead } from '../../data/dbcache.js';
 
 // 목록 줄의 한 줄 요약 (개수는 읽을 수 있을 때만 붙인다)
 var LINE = {
-  memory: "인물별 기억을 보고 고쳐요", cocoa: "AI에게 줄 추가 지침", cards: "기억을 카드로 묶어 봐요",
+  memory: "인물별 기억을 보고 고쳐요", relmap: "인물 관계를 한눈에 봐요", cocoa: "AI에게 줄 추가 지침", cards: "기억을 카드로 묶어 봐요",
   characters: "폴더로 정리하고 에셋·로어북 다듬기", modules: "켜고 끄고 순서 정하기", plugins: "모아 보고 업데이트 확인",
   look: "색·글꼴·메뉴 위치", aibot: "말로 요청해 만들기", personabuilder: "내 페르소나를 AI와 함께", tools: "로어북·에셋 태그 고치기 등", settings: "화면 모드·저장·백업"
 };

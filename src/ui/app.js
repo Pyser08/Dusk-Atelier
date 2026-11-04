@@ -30,6 +30,7 @@ import { renderPlugins } from './screens/plugins.js';
 import { renderSettingsTab } from './screens/settingstab.js';
 import { renderMemory } from './screens/memory/index.js';
 import { renderCocoaTab } from './screens/cocoa.js';
+import { renderRelMap } from './screens/relmap.js';
 import { checkWorkshopReturn } from './screens/workshoplink.js';
 import { renderCardsTab } from './screens/cards/index.js';
 import { scopeCtx } from './staleguard.js';
@@ -427,7 +428,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, personabuilder: renderPersonaBuilder, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, cocoa: renderCocoaTab, look: renderSettings, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { home: renderHome, personabuilder: renderPersonaBuilder, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, relmap: renderRelMap, cocoa: renderCocoaTab, look: renderSettings, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
     Promise.resolve(screen(scopeCtx(ctx, main, () => token !== renderToken))).then(() => {
       paneReady = true;
     }).catch((err) => {
