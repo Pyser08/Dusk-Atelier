@@ -70,3 +70,29 @@ export async function listModels(api, presetId, { signal } = {}) {
 export async function recordUsage(api, stage, usage) { const s = await hub(api); noteUsage(api, s, stage, usage); }
 export const copilotLogin = (api, opts) => copilotLoginStep(api, opts);
 export { defaultCfg };
+
+// Dusk Cellar 서버 분석(1.9.3)이 쓸 수 있는 모델인지 보고, 쓸 수 있으면 서버에 보낼 정보(주소·키·모델)를 만든다.
+// 서버는 리스 보조 모델을 못 부르고, 요청 모양을 바꾸는 설정(추론 설정·추가 본문)이 있으면 기기와 결과가 달라질 수 있어 기기에서 돌린다.
+// 반환: { ok:true, model:{kind,url,key,model,maxTokens,temperature} } | { ok:false, reason }
+const OPENAI_LIKE = new Set(["openai", "openrouter", "ollama"]);
+const OPENAI_REASONING = /(?:^|\/)(?:gpt-(?:[5-9]|[1-9]\d)|o[1-4])(?:[.\-/]|$)/i;
+export async function serverModelOf(api, pick) {
+  if (pick?.mode !== "custom") return { ok: false, reason: "리스 보조 모델은 서버에서 부를 수 없어요" };
+  const s = await hub(api), preset = presetOf(s.cfg, pick.presetId);
+  if (!preset) return { ok: false, reason: "모델 프리셋을 찾을 수 없어요" };
+  const p = String(preset.provider ?? "");
+  const kind = p === "claude" ? "anthropic" : (OPENAI_LIKE.has(p) || /^custom\d*$/.test(p)) ? "openai" : null;
+  if (!kind) return { ok: false, reason: "이 모델 종류는 서버에서 부를 수 없어요" };
+  if (String(preset.extraBodyJson ?? "").trim() || (preset.reasoningQuickSetting && preset.reasoningQuickSetting !== "default")) return { ok: false, reason: "추가 요청 설정이 있어 기기에서 분석해요" };
+  if (OPENAI_REASONING.test(String(preset.model ?? "")) && (p === "openai" || /openai\.com/.test(String(preset.baseUrl)))) return { ok: false, reason: "추론 모델은 기기에서 분석해요" };
+  let base; try { base = new URL(preset.baseUrl); } catch { return { ok: false, reason: "모델 주소가 올바르지 않아요" }; }
+  if (!preset.model) return { ok: false, reason: "모델 이름이 없어요" };
+  const suffix = kind === "anthropic" ? "/messages" : "/chat/completions", path = base.pathname.replace(/\/+$/, "");
+  base.pathname = path.endsWith(suffix) ? path : path + suffix;
+  let key = "";
+  try {
+    await s.keys.load();
+    if (!(p === "ollama" && !s.keys.has("ollama"))) key = await s.keys.use(p, (c) => c);
+  } catch { return { ok: false, reason: "이 모델의 API 키가 없어요" }; }
+  return { ok: true, model: { kind, url: base.toString(), key, model: String(preset.model), ...(preset.maxTokens ? { maxTokens: preset.maxTokens } : {}), ...(Number.isFinite(preset.temperature) ? { temperature: preset.temperature } : {}) } };
+}

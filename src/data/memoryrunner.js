@@ -25,7 +25,7 @@ const MAX_FAILS = 5;
 const confirmOf = (idx) => idx?.settings?.confirm === "now" ? "now" : "next";
 
 const TRANSIENT = /429|rate.?limit|too many|timeout|timed out|overload|busy|unavailable|\b5\d\d\b|ECONN|network|fetch failed|failed to fetch/i;
-export function createMemoryRunner(api, { store, prep = null, prompts = null, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null, gauge = null } = {}) {
+export function createMemoryRunner(api, { store, prep = null, prompts = null, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null, server = null, gauge = null } = {}) {
   let timer = null, dirty = false, running = false, started = false;
   let session = { calls: 0, hooks: 0, displays: 0, hookAt: 0, tick: null }; const lastTried = new Map(); let lastTickAt = 0;
   const note = (result, extra = {}) => { session.tick = { at: Date.now(), result, ...extra }; };
@@ -253,6 +253,23 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     const folder = await store.getFolder(String(character.chaId), String(chat.id ?? chatIndex));
     const { groups } = planBackfill(chat.message ?? [], { ...range, all: redo }, folder);
     if (groups.length && isGenerating(character)) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
+    // Dusk Cellar 서버 분석: 쓸 수 있으면(서버 연결·기억이 서버에 저장·서버가 부를 수 있는 모델) 서버에서 돌린다. 아니면 아래 기기 방식.
+    if (server && groups.length && (await store.getIndex()).settings?.serverAnalysis !== false) {
+      const idx = await store.getIndex(), chaId = String(character.chaId), chatId = String(chat.id ?? chatIndex);
+      const prep0 = await server.prepare(modelOf(idx.settings));
+      if (prep0) {
+        const out = await server.run(prep0, {
+          chaId, chatId, charName: character.name, chatName: chat.name ?? chat.chatName ?? "", messages: server.slim(chat.message ?? []),
+          settings: idx.settings, bot: { ...(idx.bots[chaId] ?? {}), paused: false }, userNames: await userNames(), regex: prep ? await prep.entriesFor(character, chat) : [],
+          prompts: await prompts?.().catch(() => null) ?? null, range: { from: range?.from ?? 0, to: Number.isFinite(range?.to) ? range.to : null, all: redo }, redo
+        }, { signal, onProgress });
+        if (out) {
+          store.dropCache?.();   // 서버가 쓴 기억을 다시 읽게 하고, 인덱스의 폴더 요약을 맞춘다
+          await store.updateFolder(chaId, chatId, () => {}).catch(() => {});
+          return out;
+        }
+      }
+    }
     const shared = { character, chat };
     const failed = [], reasons = []; let n = 0;
     for (const g of groups) {

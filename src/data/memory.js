@@ -15,6 +15,7 @@ import { createGaugeService } from "./gauge.js";
 import { createSwitches } from "./memoryswitches.js";
 import { createCellar } from "./cellar.js";
 import { createMemoryRemote, REMOTE_PREFIX } from "./memoryremote.js";
+import { createServerAnalysis } from "./cellaranalysis.js";
 
 export function createMemory(api, { storyNow = null, notify = () => {}, log = (...a) => console.log("[Dusk 기억]", ...a), potLibrary = null, onOpen = null } = {}) {
   // Dusk Cellar가 있으면 채팅 기억 폴더는 서버에만 저장한다(memoryremote.js). 없으면 지금처럼 플러그인 저장소.
@@ -30,7 +31,7 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
   const injector = createMemoryInjector(api, { store, prep, storyNow, log, embedder, onRequest: () => runner?.confirmNext() });
   const gauge = createGaugeService(api, { store, log });
   const link = {};  // 턴 흐름이 켜지면 채워진다(리수폿 Writer와 기록 호출을 합칠 때 러너가 쓴다)
-  runner = createMemoryRunner(api, { store, prep, log, notify, gauge, prompts: async () => (await flow?.settings?.())?.rawSnapshot?.() ?? null, link, afterAnalyze: async (ci, ti) => { if (injector.mode() === "lore") await injector.syncLore(ci, ti); } });
+  runner = createMemoryRunner(api, { store, prep, log, notify, gauge, server: createServerAnalysis(api, { cellar, remote }), prompts: async () => (await flow?.settings?.())?.rawSnapshot?.() ?? null, link, afterAnalyze: async (ci, ti) => { if (injector.mode() === "lore") await injector.syncLore(ci, ti); } });
   const bardwiki = createBardWikiBackend(api, { store, log });
   const flow = potLibrary ? createTurnFlow(api, { store, runner, injector, embedder, sourceLibrary: potLibrary, link, onOpen, log }) : null;
   // 화면이 저장소에 직접 쓴 위키(문서 만들기·편집·합치기 등)를 기억 흐름 런타임의 사본에도 반영한다.
