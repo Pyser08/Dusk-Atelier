@@ -11,21 +11,22 @@
     if(await node.matches('[hidden],.hidden,[aria-hidden="true"]'))return false;
     const rect=await node.getBoundingClientRect();return Boolean(rect&&rect.width>0&&rect.height>0);
   }
+  async function onScreen(node,ab){if(!await visible(node))return false;const r=await node.getBoundingClientRect();if(!r||!ab)return true;return r.left+r.width>ab.left+4&&r.left<ab.left+ab.width-4&&r.top+r.height>ab.top+4&&r.top<ab.top+ab.height-4;}
   async function settingsOpen(doc){
     // 설정 화면: 클래스 이름에 setting이 들어 있고 화면 한 장만큼 큰 요소가 보이면 설정 화면.
     const app=await doc.querySelector('#app'),ab=app?await app.getBoundingClientRect():null;
     if(ab&&ab.width>0){
       const big=await array(await doc.querySelectorAll('#app [class*="setting" i],#app [id*="setting" i]'),60);
       for(const node of big){
-        if(!await visible(node))continue;
+        if(!await onScreen(node,ab))continue;
         const r=await node.getBoundingClientRect();if(r&&r.width>=ab.width*0.6&&r.height>=ab.height*0.6)return true;
       }
     }
     // 리스바드 설정 화면: '설정 검색' 입력칸이나 '앱으로 돌아가기' 버튼이 보이면 설정 화면.
-    for(const node of await array(await doc.querySelectorAll('#app input[placeholder*="설정 검색"],#app input[placeholder*="earch setting" i]'),8))if(await visible(node))return true;
+    for(const node of await array(await doc.querySelectorAll('#app input[placeholder*="설정 검색"],#app input[placeholder*="earch setting" i]'),8))if(await onScreen(node,ab))return true;
     for(const node of await array(await doc.querySelectorAll('#app button,#app a,#app [role="button"]'),200)){
       const t=String(await node.textContent()||'').replace(/\s+/g,' ').trim();
-      if(t.length<20&&/^(앱으로 돌아가기|Back to app)$/i.test(t)&&await visible(node))return true;
+      if(t.length<20&&/^(앱으로 돌아가기|Back to app)$/i.test(t)&&await onScreen(node,ab))return true;
     }
     return false;
   }
@@ -80,7 +81,7 @@
         }catch{/* Older hosts can still use the bounded polling fallback. */}
         if(this.disposed||!this.enabled||generation!==this.generation)return;
         for(const type of ['click','keyup']){
-          try{const id=await doc.addEventListener(type,()=>this.schedule(),{capture:true});this.listeners.push({doc,type,id});}catch{}
+          try{const id=await doc.addEventListener(type,()=>{this.schedule();this.delay(()=>this.schedule(),700);this.delay(()=>this.schedule(),1600);},{capture:true});this.listeners.push({doc,type,id});}catch{}
         }
         this.poll=this.interval(()=>{if(!this.options.isPageHidden?.())void this.check();},4000);
         this.status('홈 자동 열기 연결됨');await this.check();

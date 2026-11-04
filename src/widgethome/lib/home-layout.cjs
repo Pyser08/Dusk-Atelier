@@ -49,14 +49,18 @@
     return{pane:best,marker:null,generic:true};
   }
   // 리스·리스바드: 왼쪽 아이콘 줄(좁은 세로 띠)만 남기고 그 오른쪽 전부를 덮는다. 못 찾으면 null.
+  function rawRect(v){if(!v)return null;const left=Number(v.left??v.x),top=Number(v.top??v.y),width=Number(v.width),height=Number(v.height);return[left,top,width,height].every(Number.isFinite)&&width>0&&height>0?{left,top,width,height}:null;}
+  // 리스·리스바드: 왼쪽 아이콘 줄(좁은 세로 띠)만 남기고 그 오른쪽 전부를 덮는다. 못 찾으면 null.
+  // (rect()는 160px 미만을 버리므로 아이콘 줄은 rawRect로 잰다)
   async function railEdge(doc){
     const app=await doc.querySelector('#app');if(!app)return null;
     const abox=rect(await app.getBoundingClientRect());if(!abox)return null;
-    const pool=await nodes(await doc.querySelectorAll('#app > div, #app > div > div, #app > div > div > div, #app > div > div > div > div'),80);
+    const side=await doc.querySelector('#app .risu-sidebar,#app .rs-sidebar');
+    const pool=[...(side?await nodes(await side.querySelectorAll('div'),80):[]),...await nodes(await doc.querySelectorAll('#app > div, #app > div > div, #app > div > div > div, #app > div > div > div > div, #app > div > div > div > div > div'),160)];
     let edge=null;
     for(const node of pool){
-      const b=rect(await node.getBoundingClientRect());if(!b)continue;
-      if(b.left>abox.left+2||b.width<32||b.width>140||b.height<abox.height*0.85)continue;
+      const b=rawRect(await node.getBoundingClientRect());if(!b)continue;
+      if(b.left>abox.left+8||b.width<32||b.width>140||b.height<abox.height*0.6)continue;
       const right=b.left+b.width;if(edge===null||right>edge)edge=right;
     }
     return edge;
@@ -69,7 +73,7 @@
       // 리스·리스바드: 왼쪽 아이콘 줄만 남기고, 그 오른쪽 전부(위~아래)를 덮는다.
       try{
         const app=await this.doc.querySelector('#app'),ab=app&&rect(await app.getBoundingClientRect());
-        if(ab){const edge=(await railEdge(this.doc))??(this.nocover?ab.left+88:box.left);return{left:edge,top:ab.top,width:ab.left+ab.width-edge,height:ab.height};}
+        if(ab){this.railPoll=(this.railPoll||0)+1;if(this.railKey!==ab.width+'x'+ab.height||this.dirty||this.railEdge==null||this.railPoll%3===0){this.railEdge=await railEdge(this.doc);this.railKey=ab.width+'x'+ab.height;}const edge=this.railEdge??(this.nocover?ab.left+88:box.left);return{left:edge,top:ab.top,width:ab.left+ab.width-edge,height:ab.height};}
       }catch{}
       return box;
     }

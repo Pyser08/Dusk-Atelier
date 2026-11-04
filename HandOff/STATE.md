@@ -617,3 +617,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 위젯 홈 덮는 범위: `home-layout.cjs` `railEdge`/`boxOf`(generic일 때 아이콘 줄 오른쪽부터), `auto-home.cjs` isHome에 'setting' 클래스 큰 요소 차단 추가. 실제 RisuBard 클래스명은 미검증.
 - 리스바드 실제 화면 기준: 아이콘 줄은 CSS 약 44px → railEdge 최소 너비 32px. 설정 화면은 '설정 검색' 입력칸/'앱으로 돌아가기' 버튼으로 감지.
 - 원인: 홈 자리에 떠 있으면 auto-home check가 바로 return해서 설정 이동을 못 봄 → 떠 있을 땐 settingsOpen만 검사해 닫음. host e2e에 설정 화면 2항목 추가.
+- 위젯 홈 리스바드 3건(2026-11-04 20시): ①새로고침 시 전체 화면 → boot는 화면 접근 되면 `open(false,{automatic,quiet})`로 홈 자리에만 6회 재시도 ②홈 복귀 시 안 뜸 → 자동 열기 실패 시 pause+alert 하던 것 제거(다음 감지 때 재시도), 클릭 후 0.7·1.6초 재검사, 설정 감지는 화면 안에 보이는 요소만 ③아이콘 줄 못 찾음 → `rect()`가 160px 미만을 버려서였음, `rawRect`로 측정(3번에 1번 재측정). host e2e에 44px 아이콘 줄 항목 추가.

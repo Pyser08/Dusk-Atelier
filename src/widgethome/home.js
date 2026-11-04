@@ -191,10 +191,11 @@ ${sheetHtml()}
         try{inline=await layout.prepare(auto.doc);}
         catch(error){recordError(stage,error);await layout.stop();}
       }
+      if(options.quiet&&!inline){await layout.stop();return false;}
       if(options.automatic&&!inline){
-        auto?.pause();text('.auto-status','홈 영역 연결에 실패했어요. 메뉴의 위젯 홈에서는 전체 화면으로 열 수 있어요.');
-        const note=state.errors.at(-1)||recordError(stage,Error('현재 홈 영역 또는 플러그인 프레임을 찾지 못했어요.'));
-        try{await api.alert(`홈 영역을 연결하지 못했어요. 메뉴에서 위젯을 직접 열 수 있어요.\n\n${note}`);}catch{}
+        // 홈 자리를 아직 못 찾음(화면 전환 중 등): 멈추지 않고 다음 감지 때 다시 시도한다.
+        if(!state.errors.length)recordError(stage,Error('현재 홈 영역 또는 플러그인 프레임을 찾지 못했어요.'));
+        text('.auto-status','홈 자리를 찾는 중이에요. 메뉴의 위젯 홈에서는 전체 화면으로 열 수 있어요.');
         return false;
       }
       if(options.allow&&!await options.allow()){await layout.stop();return false;}
@@ -426,5 +427,5 @@ ${sheetHtml()}
  async function setPrefs(patch){const before=state.prefs,next=C.settings({...state.prefs,...patch});state.prefs=next;applyDesign();try{await store.set('settings',next);}catch(error){state.prefs=before;applyDesign();throw error;}if(before.autoHome!==next.autoHome)await auto.configure(next.autoHome);if(before.includeLegacy!==next.includeLegacy)void reloadCatalog({force:true});return next;}
  const qsheet=createSheet({sr,toast,getPrefs:()=>state.prefs,setPrefs,actions:{layout:()=>$('.layout-open').click(),photo:()=>openEditor('photo'),background:()=>openEditor('background'),refresh:()=>{$('.tools-dialog').showModal();$('.shortcut-refresh').click();},custom:()=>openSettings(),advanced:()=>openTools()}});
  function openSheet(tab){if(layoutEditor.editing){toast('배치를 저장하거나 취소한 뒤 설정을 열어 주세요.');return;}for(const d of sr.querySelectorAll('dialog[open]'))d.close();qsheet.open(tab);}
- return{ready:()=>autoReady.catch(()=>{}),getPrefs:()=>({surface:state.prefs.surface,autoHome:state.prefs.autoHome}),setPrefs,openSettings:()=>open().then(ok=>{if(ok)openSettings();return ok;}),open:(...a)=>open(...a),close:(...a)=>close(...a),dispose,isVisible:()=>state.visible,isOpening:()=>state.opening,autoStatus:()=>sr.querySelector('.auto-status')?.textContent||'',hostEl,sr};
+ return{ready:()=>autoReady.catch(()=>{}),getPrefs:()=>({surface:state.prefs.surface,autoHome:state.prefs.autoHome}),setPrefs,openSettings:()=>open().then(ok=>{if(ok)openSettings();return ok;}),open:(...a)=>open(...a),close:(...a)=>close(...a),dispose,isVisible:()=>state.visible,isOpening:()=>state.opening,autoConnected:()=>Boolean(auto?.doc),autoStatus:()=>sr.querySelector('.auto-status')?.textContent||'',hostEl,sr};
 }

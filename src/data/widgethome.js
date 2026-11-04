@@ -65,7 +65,12 @@ export function createWidgetHome(api, { log = () => {}, boot = bootWidgetHome, l
         // 홈 자동 감지가 연결되면 사이드바 옆(홈 자리)에 열리도록 잠깐 기다린다. 이미 자동으로 열렸으면 그대로.
         const cur = inst;
         Promise.race([cur?.ready?.(), new Promise((r) => setTimeout(r, 2500))])
-          .then(() => (cur === inst && !cur.isVisible?.() && !cur.isOpening?.() ? cur.open() : null))
+          .then(async () => {
+            if (cur !== inst || cur.isVisible?.() || cur.isOpening?.()) return;
+            // 홈 자리를 찾을 수 있으면 사이드바 옆에만 연다(전체 화면으로 덮지 않음). 화면 접근이 안 되면 전체 화면.
+            if (cur.autoConnected?.()) { for (let i = 0; i < 6 && cur === inst && !cur.isVisible?.(); i++) { if (!cur.isOpening?.() && await cur.open(false, { automatic: true, quiet: true })) return; await new Promise((r) => setTimeout(r, 700)); } return; }
+            return cur.open();
+          })
           .catch((e) => log(`위젯 홈 바로 열기 실패 ${e?.message ?? e}`));
       }
     },
