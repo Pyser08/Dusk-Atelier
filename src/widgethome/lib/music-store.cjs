@@ -44,7 +44,7 @@
       const key='music-track-'+track.id;
       await this.storage.set(key,track);
       try{
-        const saved=await this.storage.get(key);if(!(saved?.blob instanceof Blob)||saved.blob.size!==track.blob.size)throw Error('이 포켓리스 저장소에서는 음악 파일 저장을 지원하지 않아요.');
+        const saved=await this.storage.get(key);if(!(saved?.blob instanceof Blob)||saved.blob.size!==track.blob.size)throw Error('이 환경의 저장소에서는 음악 파일 저장을 지원하지 않아요.');
         await this.storage.set('music-index',[...ids,track.id]);
       }catch(error){await this.storage.remove(key).catch(()=>{});throw error;}
     }

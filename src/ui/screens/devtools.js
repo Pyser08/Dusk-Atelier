@@ -448,7 +448,9 @@ export function widgetHomeCard(ctx, onChange) {
       h("b", null, "위젯 홈"),
       h("span", { class: "rb-muted", style: "white-space:normal" }, "음악·사진·시계·최근 대화·메모를 한 화면에 모아 보는 홈이에요. 켜면 리스 메뉴에 ‘위젯 홈’ 버튼이 생기고, 포켓리스에서는 홈 화면에 자동으로 열 수 있어요. 리스·리스바드에서는 메뉴 버튼으로 열어요."),
       noteEl,
-      h("div", { style: "margin-top:6px" }, openBtn)
+      h("div", { style: "margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
+        openBtn,
+        h("span", { class: "rb-muted", style: "display:inline-flex;align-items:center;gap:8px" }, "리스를 켜면 바로 열기", switchEl(wh.openOnLoad(), { label: "리스를 켜면 바로 열기", onChange: async (v, el) => { setSwitch(el, v); await wh.setOpenOnLoad(v); ctx.toast(v ? "리스를 켜면 위젯 홈이 바로 떠요" : "리스를 켜도 자동으로 열지 않아요"); } })))
     ),
     switchEl(wh.on(), { label: "위젯 홈", onChange: async (v, el) => {
       setSwitch(el, v);

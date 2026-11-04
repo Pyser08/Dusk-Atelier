@@ -3,6 +3,7 @@
 import { bootWidgetHome } from "../widgethome/home.js";
 import { listPlugins } from "./plugins.js";
 export const WH_KEY = "dusk.widgethome.on";
+export const WH_ONLOAD_KEY = "dusk.widgethome.onload";   // 리스를 켜면 바로 열기 (기본 켜짐)
 export const WH_ORIGINAL = "pocketrisu_basic_home";
 export async function loadWidgetHomeOn(api) {
   try {
@@ -12,8 +13,16 @@ export async function loadWidgetHomeOn(api) {
     return false;
   }
 }
-export function createWidgetHome(api, { log = () => {}, boot = bootWidgetHome, load = loadWidgetHomeOn } = {}) {
-  let inst = null, starting = null, error = "", onNow = false;
+export async function loadOpenOnLoad(api) {
+  try {
+    const raw = await api.pluginStorage.getItem(WH_ONLOAD_KEY);
+    return !(raw === "off" || raw === false || raw === "false");
+  } catch {
+    return true;
+  }
+}
+export function createWidgetHome(api, { log = () => {}, boot = bootWidgetHome, load = loadWidgetHomeOn, loadOnLoad = loadOpenOnLoad } = {}) {
+  let inst = null, starting = null, error = "", onNow = false, onLoadNow = true;
   async function startNow() {
     if (inst) return true;
     try {
@@ -47,7 +56,15 @@ export function createWidgetHome(api, { log = () => {}, boot = bootWidgetHome, l
       try { return (await listPlugins(api)).some((p) => p.name === WH_ORIGINAL && p.enabled); } catch { return false; }
     },
     // 실행 시: 저장된 값이 켜짐이면 시작
-    async boot() { onNow = await load(api); if (onNow) await start(); },
+    // 실행 시: 저장된 값이 켜짐이면 시작하고, '바로 열기'가 켜져 있으면 곧장 연다(플러그인이 로드되자마자)
+    async boot() {
+      onNow = await load(api); onLoadNow = await loadOnLoad(api);
+      if (!onNow) return;
+      const ok = await start();
+      if (ok && onLoadNow) inst?.open?.().catch((e) => log(`위젯 홈 바로 열기 실패 ${e?.message ?? e}`));
+    },
+    openOnLoad: () => onLoadNow,
+    async setOpenOnLoad(next) { onLoadNow = !!next; try { await api.pluginStorage.setItem(WH_ONLOAD_KEY, next ? "on" : "off"); } catch { /* 이번 실행에는 반영 */ } },
     on: () => onNow,
     // 설정에서 바꿀 때: 저장하고 바로 반영
     async set(next) {

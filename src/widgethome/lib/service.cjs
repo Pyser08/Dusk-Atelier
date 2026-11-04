@@ -17,7 +17,7 @@
       await this.set('audio-candidate',record);
       try{
         const saved=await this.get('audio-candidate');
-        if(!(saved?.blob instanceof Blob)||saved.blob.size!==record.blob.size)throw Error('이 포켓리스 버전에서는 음악 파일 저장을 지원하지 않아요.');
+        if(!(saved?.blob instanceof Blob)||saved.blob.size!==record.blob.size)throw Error('이 환경에서는 음악 파일 저장을 지원하지 않아요.');
         await this.set('audio',record);
       }finally{await this.remove('audio-candidate').catch(()=>{});}
     }

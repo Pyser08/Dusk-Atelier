@@ -115,3 +115,24 @@ test("원본 플러그인(pocketrisu_basic_home)이 켜져 있으면 감지한�
   const broken = createWidgetHome(fakeApi({ getDatabase: async () => { throw new Error("x"); } }), { boot });
   assert.equal(await broken.originalInstalled(), false);
 });
+
+test("바로 열기: 켜져 있으면 boot()가 곧장 열고, 끄면 열지 않는다", async () => {
+  const a1 = fakeApi(); a1.mem.set(WH_KEY, "on");
+  const f1 = fakeBoot(); const w1 = createWidgetHome(a1, { boot: f1.boot });
+  await w1.boot(); await new Promise((r) => setTimeout(r, 5));
+  assert.equal(w1.openOnLoad(), true);
+  assert.equal(f1.log.visible, true);
+  const a2 = fakeApi(); a2.mem.set(WH_KEY, "on"); a2.mem.set("dusk.widgethome.onload", "off");
+  const f2 = fakeBoot(); const w2 = createWidgetHome(a2, { boot: f2.boot });
+  await w2.boot(); await new Promise((r) => setTimeout(r, 5));
+  assert.equal(w2.openOnLoad(), false);
+  assert.equal(f2.log.visible, false);
+  assert.equal(w2.isRunning(), true);
+});
+test("바로 열기 설정은 저장되고, 꺼진 상태(위젯 홈 꺼짐)에서는 아무것도 열지 않는다", async () => {
+  const api = fakeApi(), f = fakeBoot(); const w = createWidgetHome(api, { boot: f.boot });
+  await w.setOpenOnLoad(false);
+  assert.equal(api.mem.get("dusk.widgethome.onload"), "off");
+  await w.boot();
+  assert.equal(f.log.boots, 0);
+});

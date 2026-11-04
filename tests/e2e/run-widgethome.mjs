@@ -5,10 +5,11 @@ const { chromium } = createRequire("/opt/npm-tools/node_modules/")("playwright")
 const r = await build({ entryPoints: ["tests/e2e/widgethome.entry.js"], bundle: true, write: false, format: "iife", platform: "browser", logLevel: "error", define: { __VERSION__: '"test"', __CHANGELOG__: '""' }, alias: { fflate: process.cwd() + "/src/vendor/fflate.js" } });
 const out = [], ok = (n, c, x = "") => { out.push(c); console.log((c ? "✔ " : "✘ ") + n + (c ? "" : "  → " + x)); };
 const browser = await chromium.launch(), errs = [];
+
 for (const [tag, vp, touch] of [["PC", { width: 1280, height: 800 }, false], ["모바일", { width: 390, height: 844 }, true]]) {
   const page = await (await browser.newContext({ viewport: vp, ...touch ? { hasTouch: true, isMobile: true } : {} })).newPage(); page.setDefaultTimeout(5000);
   page.on("pageerror", (e) => errs.push(e.message));
-  await page.setContent("<!doctype html><body style='margin:0'><button id=outer style='min-height:0;padding:0;border:0;width:50px;height:20px'>x</button></body>");
+  await page.setContent("<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'><body style='margin:0'><button id=outer style='min-height:0;padding:0;border:0;width:50px;height:20px'>x</button></body>");
   await page.addScriptTag({ content: r.outputFiles[0].text });
   const outerBefore = await page.evaluate(() => { const b = document.getElementById("outer"); const s = getComputedStyle(b); return [s.borderRadius, s.minHeight, s.height].join("|"); });
   await page.evaluate(() => { window.api = makeApi({ localStorage: true }); window.wh = makeWH(api); });
@@ -24,6 +25,22 @@ for (const [tag, vp, touch] of [["PC", { width: 1280, height: 800 }, false], ["�
   ok(`[${tag}] 위젯 스타일이 바깥 버튼을 바꾸지 않음`, outerBefore === outerAfter, `${outerBefore} → ${outerAfter}`);
   ok(`[${tag}] 위젯 안 버튼에는 위젯 스타일이 적용됨`, await page.evaluate(() => { const b = document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector("button.pill"); return !!b && getComputedStyle(b).minHeight !== "0px"; }));
   ok(`[${tag}] 호스트 크기: 화면 안에 보임`, await page.evaluate(() => { const r = document.querySelector("[data-dusk-widgethome]").getBoundingClientRect(); return r.width > 100 && r.height > 100; }));
+  ok(`[${tag}] 화면 문구에 '포켓리스'가 없음`, await page.evaluate(() => { const sr = document.querySelector("[data-dusk-widgethome]").shadowRoot; return !/포켓리스|PocketRisu/.test(sr.textContent) && sr.querySelector(".related-links").hidden === true; }));
+  await page.evaluate(() => scrollTo(0, 0)); await page.mouse.move(vp.width / 2, 300); await page.mouse.wheel(0, 300); await page.waitForTimeout(300);
+  ok(`[${tag}] 휠로 스크롤됨(위젯 영역이 스크롤을 막지 않음)`, tag === "모바일" ? (await page.evaluate(() => { scrollTo({ top: 250, behavior: "instant" }); return scrollY; })) > 100 : (await page.evaluate(() => scrollY)) > 100, JSON.stringify(await page.evaluate(() => [scrollY, document.documentElement.scrollHeight, innerHeight, document.body.scrollHeight])));
+  await page.evaluate(() => scrollTo(0, 0));
+  if (!touch) { // 위젯 배치 편집: 카드 어디든 끌어서 옮기고, 놓으면 칸에 맞춰짐
+    await page.evaluate(() => document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".layout-open").click()); await page.waitForTimeout(400);
+    const area0 = await page.evaluate(() => document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".widget-clock").style.gridArea);
+    const box = await page.evaluate(() => { const r = document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".widget-clock").getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+    await page.mouse.move(box.x, box.y); await page.mouse.down(); await page.mouse.move(box.x - 140, box.y + 90, { steps: 6 }); await page.waitForTimeout(120);
+    const mid = await page.evaluate(() => { const f = document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".widget-clock"); return { t: f.style.transform, d: f.classList.contains("dragging") }; });
+    ok(`[${tag}] 끄는 동안 카드가 손을 따라옴`, mid.d && /translate/.test(mid.t), JSON.stringify(mid));
+    await page.mouse.up(); await page.waitForTimeout(300);
+    const after = await page.evaluate(() => { const f = document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".widget-clock"); return { a: f.style.gridArea, t: f.style.transform, d: f.classList.contains("dragging") }; });
+    ok(`[${tag}] 놓으면 칸에 스냅(자리가 바뀌고 따라옴 표시 해제)`, after.a !== area0 && after.t === "" && !after.d, JSON.stringify({ area0, after }));
+    await page.evaluate(() => document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".layout-cancel").click()); await page.waitForTimeout(300);
+  }
   await page.evaluate(async () => { await wh.close(); });
   ok(`[${tag}] 닫기 → hideContainer + 호스트 숨김`, await page.evaluate(() => api.calls.includes("hide") && document.querySelector("[data-dusk-widgethome]").hidden === true));
   await page.evaluate(async () => { await wh.open(); await wh.yieldToDusk(); });
@@ -51,16 +68,16 @@ for (const [tag, vp, touch] of [["PC", { width: 1280, height: 800 }, false], ["�
   await page.evaluate(() => __app.ctx.go("tools")); await page.waitForTimeout(300);
   ok("[설정] 꺼짐이면 도구에 위젯 홈 행 없음", (await vis("#rb-tool-widgethome")) === 0);
   await page.evaluate(() => __app.ctx.go("settings")); await page.waitForTimeout(400);
-  ok("[설정] 위젯 홈 카드가 보임(켜짐 아님)", (await vis("#rb-widgethome")) === 1 && (await page.locator("#rb-widgethome [role=switch]").getAttribute("aria-checked")) === "false");
-  await page.locator("#rb-widgethome [role=switch]").click(); await page.waitForTimeout(500);
-  ok("[설정] 스위치를 켜면 시작됨", (await page.evaluate(() => __wh.boots)) === 1 && (await page.locator("#rb-widgethome [role=switch]").getAttribute("aria-checked")) === "true");
+  ok("[설정] 위젯 홈 카드가 보임(켜짐 아님)", (await vis("#rb-widgethome")) === 1 && (await page.locator("#rb-widgethome [role=switch][aria-label='위젯 홈']").getAttribute("aria-checked")) === "false");
+  await page.locator("#rb-widgethome [role=switch][aria-label='위젯 홈']").click(); await page.waitForTimeout(500);
+  ok("[설정] 스위치를 켜면 시작됨", (await page.evaluate(() => __wh.boots)) === 1 && (await page.locator("#rb-widgethome [role=switch][aria-label='위젯 홈']").getAttribute("aria-checked")) === "true");
   await page.evaluate(() => __app.ctx.go("tools")); await page.waitForTimeout(300);
   ok("[설정] 켜면 도구에 위젯 홈 행", (await vis("#rb-tool-widgethome")) === 1);
   await page.locator("#rb-tool-widgethome").click(); await page.waitForTimeout(400);
   ok("[설정] 행을 누르면 Dusk가 닫히고 위젯 홈 열기", (await page.evaluate(() => __wh.opened)) === 1 && (await vis(".rb-root")) === 0);
   await page.evaluate(() => __app.open()); await page.waitForTimeout(400);
   await page.evaluate(() => __app.ctx.go("settings")); await page.waitForTimeout(400);
-  await page.locator("#rb-widgethome [role=switch]").click(); await page.waitForTimeout(500);
+  await page.locator("#rb-widgethome [role=switch][aria-label='위젯 홈']").click(); await page.waitForTimeout(500);
   ok("[설정] 끄면 정리됨", (await page.evaluate(() => __wh.disposed)) === 1);
   await page.close();
 }

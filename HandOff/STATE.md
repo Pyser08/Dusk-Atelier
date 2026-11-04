@@ -1,5 +1,13 @@
 # 현재 상태 — feat/1.9.2
 
+## 2026-11-04 위젯 홈 수정(속도·스크롤·드래그·바로 열기)
+- 스크롤: `:host`에 overflow-x:hidden/overscroll-behavior를 주면 호스트가 스크롤 상자가 돼 휠이 문서로 안 이어짐 → `overflow-x:clip`만 사용(style.js 머리 주석 참고). e2e가 휠 스크롤을 확인.
+- 속도: `open()`이 목록(`reloadCatalog`)을 기다리지 않음(60초 안 캐시면 생략), `themeFollower.refresh`·`auto.configure`도 비동기. boot 때 `restore()`→`reloadCatalog` 미리 읽기. 느린 가짜 호스트(getDatabase 1.5초)에서 열기 1987ms→213ms.
+- 바로 열기: `data/widgethome.js` `boot()`가 시작 뒤 `inst.open()`(키 `dusk.widgethome.onload`, 기본 켜짐, 카드에 스위치).
+- 드래그: `lib/layout-editor.cjs` — `layout-hit`에 마우스·펜 pointerdown→`begin(move)`, `follow()`가 transform으로 손을 따라가고 `release()`가 놓을 때 해제(CSS transition으로 스냅). 터치는 hit이 `touch-action:pan-y`라 스크롤과 충돌하므로 ⠿ 손잡이만.
+- 문구: h1 ‘위젯 홈’, `.related-links`는 `onPane`(포켓리스 홈에 겹칠 때)에서만 표시.
+- 자동 열기(inline) 안 되는 원인 후보: 호스트의 화면 접근(`getRootDocument`) 권한이 Dusk 플러그인에 없을 때. 카드의 안내 줄과 위젯 홈 설정의 `.auto-status`에 이유가 뜸. 기기 확인 필요.
+
 ## 2026-11-04 {{user}} 표시·집단 이름 걸러내기
 - `memory/common.js` `avatar`·`isMe`·`shownName`: {{user}} 동그라미는 `userLabel()` 첫 글자 + `data-me`(강조색, styles.js `.rb-mem-av[data-me]`). `people.js` 카드에 `me` 클래스·‘나’ 배지·맨 앞 정렬, 상세 제목도 표시 이름.
 - `engine/collective.js` `isCollectiveName`/`COLLECTIVE_RULE`: 반·학년·동급생·…들 같은 집단 이름. 지난 대화 분석(`memoryprompt.js` 규칙 + `memoryapply.js` 필터)과 위키 writer(`tools/pot-patches.json`에 writer-prompt.js 패치 2개: import + 요청의 `dusk_character_rule`)에 적용. 원본 pot 소스가 없어 pot-split 재생성은 못 돌려 봄 → 다음에 원본이 있으면 패치 일치 확인.

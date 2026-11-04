@@ -9,7 +9,7 @@
    this.nodes=new Map();this.q=s=>{if(!this.nodes.has(s))this.nodes.set(s,this.doc.querySelector(s));return this.nodes.get(s);};this.grid.classList.add('layout-grid');
    for(const id of M.IDS){const frame=this.frames[id];frame.classList.add('widget-frame','widget-'+id);frame.dataset.widget=id;
     const controls=this.doc.createElement('div');controls.className='layout-controls';
-    const hit=this.doc.createElement('button');hit.type='button';hit.className='layout-hit';hit.setAttribute('aria-label',M.LABELS[id]+' 위젯 선택');hit.onclick=()=>this.select(id);
+    const hit=this.doc.createElement('button');hit.type='button';hit.className='layout-hit';hit.setAttribute('aria-label',M.LABELS[id]+' 위젯 선택');hit.onclick=()=>this.select(id);hit.onpointerdown=e=>{if(e.pointerType==='touch')return;this.begin(id,'move',e);};
     const move=this.doc.createElement('button');move.type='button';move.className='layout-move';move.textContent='⠿ '+M.LABELS[id];move.setAttribute('aria-label',M.LABELS[id]+' 이동. 방향키로도 옮길 수 있어요.');move.onpointerdown=e=>this.begin(id,'move',e);move.onkeydown=e=>this.key(id,'move',e);
     const size=this.doc.createElement('button');size.type='button';size.className='layout-resize';size.textContent='↘';size.setAttribute('aria-label',M.LABELS[id]+' 크기 조절. 방향키로 너비와 높이를 조절합니다.');size.onpointerdown=e=>this.begin(id,'resize',e);size.onkeydown=e=>this.key(id,'resize',e);
     const archive=this.doc.createElement('button');archive.type='button';archive.className='layout-archive';archive.textContent='×';archive.setAttribute('aria-label',M.LABELS[id]+' 위젯 보관');archive.onclick=()=>this.archive(id,true);controls.append(hit,move,size,archive);frame.append(controls);
@@ -59,11 +59,13 @@
   move(event){const g=this.gesture;if(!g||g.pointerId!==event.pointerId)return;event.preventDefault?.();g.x=event.clientX;g.y=event.clientY;const box=this.options.scrollElement?.getBoundingClientRect(),top=Math.max(0,box?.top||0),bottom=Math.min(this.win.innerHeight,box?.bottom||this.win.innerHeight);g.edge=g.y<top+64?-14:g.y>bottom-64?14:0;this.queueGesture();}
   queueGesture(){if(this.animation!==null||!this.gesture)return;this.animation=this.raf(()=>{this.animation=null;const g=this.gesture;if(!g||this.disposed)return;const scroll=this.scrollTop();if(g.edge)this.scrollBy(g.edge);const after=this.scrollTop(),dx=Math.round((g.x-g.startX)/this.m.pitch),dy=Math.round((g.y-g.startY+after-g.scroll)/this.m.rowPitch),key=dx+','+dy;
    if(key!==g.lastKey){g.lastKey=key;const item=g.base.items[g.id];this.draft=M.change(g.base,g.id,g.kind==='resize'?{w:item.w+dx,h:item.h+dy}:{x:item.x+dx,y:item.y+dy},this.profile,this.m,this.draftHidden);this.render(this.draft);}
-   if(g.edge&&after!==scroll)this.queueGesture();
+   this.follow(g,after);if(g.edge&&after!==scroll)this.queueGesture();
   });}
+  follow(g,after){if(g.kind!=='move')return;const frame=this.frames[g.id],item=this.draft.items[g.id],base=g.base.items[g.id];if(!frame||!item||!base)return;frame.classList.add('dragging');frame.style.transform='translate('+Math.round(g.x-g.startX-(item.x-base.x)*this.m.pitch)+'px,'+Math.round(g.y-g.startY+after-g.scroll-(item.y-base.y)*this.m.rowPitch)+'px)';}
+  release(g){const frame=this.frames[g.id];if(frame){frame.classList.remove('dragging');frame.style.transform='';}}
   finish(cancel){const g=this.gesture;if(!g)return;if(this.animation!==null){this.caf(this.animation);this.animation=null;}
    if(!cancel){const dx=Math.round((g.x-g.startX)/this.m.pitch),dy=Math.round((g.y-g.startY+(this.scrollTop())-g.scroll)/this.m.rowPitch),item=g.base.items[g.id];this.draft=M.change(g.base,g.id,g.kind==='resize'?{w:item.w+dx,h:item.h+dy}:{x:item.x+dx,y:item.y+dy},this.profile,this.m,this.draftHidden);}else this.draft=g.base;
-   this.gesture=null;try{g.target.releasePointerCapture(g.pointerId);}catch{}this.render(this.draft);
+   this.gesture=null;try{g.target.releasePointerCapture(g.pointerId);}catch{}this.release(g);this.render(this.draft);
   }
   archive(id,value){if(!this.editing||this.saving||!M.IDS.includes(id))return;this.finish(false);this.draftHidden=M.hidden(value?[...this.draftHidden,id]:this.draftHidden.filter(key=>key!==id));this.hidden=this.draftHidden;this.draft=value?M.compact(this.draft,this.profile,this.m,this.draftHidden):M.fit(this.draft,this.profile,this.m,this.draftHidden);if(value&&this.selected===id)this.selected=M.IDS.find(key=>!this.draftHidden.includes(key))||null;this.render(this.draft);}
   reset(){if(!this.editing||this.saving)return;this.finish(false);this.draft=M.defaults(this.profile,this.m,this.options.getShape(),this.options.getClock(),this.draftHidden);this.render(this.draft);}
