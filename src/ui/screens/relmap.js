@@ -10,6 +10,8 @@ import { chip, emptyState, loading, pageHead } from "../kit.js";
 import { buildRelMap, STATUS_LABEL } from "../../engine/relmap.js";
 import { mem } from "./memory/common.js";
 import { createRelMapCanvas } from "./relmap/canvas.js";
+import { eroLoad } from "./memory/erosyncwiki.js";
+import { eroRelmapData } from "../../engine/erosyncview.js";
 
 const sigOf = (m) => `${m.nowAt}|${m.nodes.map((n) => `${n.id}:${n.aff}:${n.imp}:${n.records}`).join(",")}|${m.edges.map((e) => `${e.id}:${e.w}:${e.items.length}`).join(",")}`;
 const HELP = [["가운데", "{{user}}"], ["거리", "호감도가 높을수록 가까이"], ["높이", "지금 대화에서 중요할수록 위로"], ["방향", "같은 소속끼리 한쪽으로 (소속이 없으면 고르게)"], ["선 색", "따뜻한 관계는 붉게, 차가운 관계는 파랗게"], ["굵기", "관계의 강도"], ["점선", "풀리지 않은 갈등·오해가 있는 관계"], ["빛남", "최근에 바뀐 관계"], ["모양", "점선 빈 원은 실종, ?는 정체 불명"], ["조작", "누르면 확대, 두 번 누르면 위키로, 끌면 회전, 휠·두 손가락으로 확대·축소"]];
@@ -27,6 +29,7 @@ export async function renderRelMap(ctx) {
   // 같은 채팅이면 만든 화면을 그대로 붙이고, 뒤에서 새 데이터만 확인
   if (st.view?.key === key) {
     replace(ctx.main, st.view.root); st.view.ctrl.start(); st.view.ctrl.resize();
+    if (st.eroOnOpen) { st.eroOnOpen = false; st.view.ero?.(); }
     M.store.getFolder(cur.chaId, cur.chatId).catch(() => null).then((f) => { const v = st.view; if (v?.key === key && ctx.state.tab === "relmap") v.update(buildRelMap(f)); });
     return;
   }
@@ -47,6 +50,7 @@ export async function renderRelMap(ctx) {
   st.view = buildView(ctx, win, cur, key, data, uname);
   replace(ctx.main, st.view.root);
   st.view.ctrl.start();
+  if (st.eroOnOpen) { st.eroOnOpen = false; st.view.ero?.(); }
 }
 
 function buildView(ctx, win, cur, key, data, uname) {
@@ -90,11 +94,30 @@ function buildView(ctx, win, cur, key, data, uname) {
   const clearBtn = chip("선택 해제", { onClick: () => choose(null) }); clearBtn.hidden = true;
   const turnBtn = chip("이번 턴 등장 강조", { pressed: true, onClick: () => { hl = !hl; ctrl.setHighlight(hl); syncBtns(); } });
   let spin = true, hl = true;
-  ctrlsEl.append(flatBtn, ...(spinBtn ? [spinBtn] : []), clearBtn, turnBtn);
+  // Erosync 목표·경쟁만 보기(Erosync가 켜져 있을 때만 버튼이 보인다). 같은 화면에서 Erosync 층만 남긴다.
+  let eroOn = false, eroSnap = null;
+  const legendDefault = [...legendEl.childNodes];
+  const eroLegend = [h("span", null, h("i", { style: "border-color:var(--rb-rose)" }), "목표 (노리는 쪽 → 대상)"), h("span", null, h("i", { style: "border-color:var(--rb-blue);border-top-style:dashed" }), "경쟁"), h("span", null, "굵기 = 우선도·세기")];
+  const applyEro = () => {
+    const mapped = eroOn ? eroRelmapData(data0, eroSnap) : data0;
+    ctrl.setData(mapped); buildFilters(); curSel = null; ctrl.select(null);
+    legendEl.replaceChildren(...(eroOn ? eroLegend : legendDefault));
+    syncBtns(); paint();
+  };
+  const eroBtn = ctx.erosync?.isRunning?.() ? chip("Erosync 목표·경쟁만 보기", { onClick: async () => {
+    if (eroOn) { eroOn = false; applyEro(); return; }
+    eroSnap = await eroLoad(ctx);
+    const probe = eroSnap ? eroRelmapData(data0, eroSnap) : null;
+    if (!probe || probe.empty) { toast(eroSnap ? `Erosync 목표·경쟁이 없거나, 위키에 없는 인물이에요${probe?.missing ? ` (${probe.missing}명)` : ""}.` : "Erosync 값을 읽지 못했어요. 이 채팅에서 한 턴 이상 진행했는지 확인해 주세요."); return; }
+    eroOn = true; applyEro();
+    if (probe.missing) toast(`위키에 없는 인물 ${probe.missing}명은 빠졌어요.`);
+  } }) : null;
+  ctrlsEl.append(flatBtn, ...(spinBtn ? [spinBtn] : []), clearBtn, turnBtn, ...(eroBtn ? [eroBtn] : []));
   function syncBtns() {
     flatBtn.firstChild.textContent = ctrl.flat ? "입체로 보기" : "정면으로 보기";
     flatBtn.setAttribute("aria-pressed", "false");
     turnBtn.setAttribute("aria-pressed", hl ? "true" : "false");
+    if (typeof eroBtn !== "undefined" && eroBtn) eroBtn.setAttribute("aria-pressed", eroOn ? "true" : "false");
     if (spinBtn) { spinBtn.setAttribute("aria-pressed", spin ? "true" : "false"); spinBtn.disabled = ctrl.flat; spinBtn.style.opacity = ctrl.flat ? 0.45 : 1; }
   }
   syncBtns();
@@ -128,8 +151,8 @@ function buildView(ctx, win, cur, key, data, uname) {
       h("p", null, n.faction ? h("span", { class: "rb-rm-badge" }, n.faction) : null, n.thisTurn ? h("span", { class: "rb-rm-badge new" }, "이번 턴 등장") : null, n.status ? h("span", { class: "rb-rm-badge" }, STATUS_LABEL[n.status]) : null),
       n.sum ? h("p", null, n.sum) : null,
       meter("호감도", n.aff), meter("중요도", n.imp),
-      h("h3", null, "{{user}}와의 관계"),
-      h("ul", { class: "rb-rm-list" }, li(rowBtn(h("span", null, dot(ctrl.warmth(ue.w)), `${ue.label}${ue.sp ? " · 갈등 중" : ""}`), `${ue.rc ? "최근 변화 · " : ""}자세히`, () => goEdge(ue.id)))),
+      ...(ue ? [h("h3", null, "{{user}}와의 관계"),
+      h("ul", { class: "rb-rm-list" }, li(rowBtn(h("span", null, dot(ctrl.warmth(ue.w)), `${ue.label}${ue.sp ? " · 갈등 중" : ""}`), `${ue.rc ? "최근 변화 · " : ""}자세히`, () => goEdge(ue.id))))] : []),
       h("h3", null, "NPC 간 관계"),
       h("ul", { class: "rb-rm-list" }, ...(rel.length ? rel.map((e) => { const o = e.a.id === n.id ? e.b : e.a; return li(rowBtn(h("span", null, dot(ctrl.warmth(e.w)), dn(o)), `${e.label}${e.rc ? " · 최근" : ""}`, () => goEdge(e.id))); }) : [h("li", { style: "color:var(--rb-muted)" }, "기록된 관계가 없어요.")])),
       n.rec.length ? h("h3", null, "최근 기록") : null, ...recs(n.rec),
@@ -223,6 +246,7 @@ function buildView(ctx, win, cur, key, data, uname) {
   function update(next) {
     if (next.empty || sigOf(next) === sig) return;
     sig = sigOf(next); data0 = next;
+    if (eroOn) { applyEro(); return; }
     const keep = curSel?.type === "node" ? curSel.id : "";
     ctrl.setData(next); buildFilters();
     curSel = keep && ctrl.nodeById(keep) ? { type: "node", id: keep } : null;
@@ -230,5 +254,7 @@ function buildView(ctx, win, cur, key, data, uname) {
   }
   void data0;
   const dispose = () => { nameWatch?.disconnect?.(); ctrl.destroy(); clearTimeout(toastT); win.document.removeEventListener("pointerdown", onDoc); win.document.removeEventListener("keydown", onKey, true); };
-  return { key, root, ctrl, update, dispose };
+  // Erosync 화면의 ‘관계망’ 탭에서 넘어왔을 때: 자동으로 Erosync 층 켜기
+  const ero = () => { if (!eroOn && eroBtn) eroBtn.click(); };
+  return { key, root, ctrl, update, dispose, ero };
 }

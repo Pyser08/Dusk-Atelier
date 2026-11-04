@@ -3,7 +3,7 @@ export const STEP_LABELS = { pick: "고르기", recall: "회상", note: "정리"
 const SKIP_DIRECTOR = new Set(["", "idle", "skipped", "disabled", "off", "none"]);
 
 // state: "done" | "skip" | "wait"
-export function stepsOf({ on = false, mode = "fast", last = null, inject = null, session = null, lastSuccessAt = 0 } = {}) {
+export function stepsOf({ on = false, mode = "accurate", last = null, inject = null, session = null, lastSuccessAt = 0 } = {}) {
   if (!on) return Object.keys(STEP_LABELS).map((id) => ({ id, label: STEP_LABELS[id], state: "wait", hint: "" }));
   const had = !!last?.at, focus = last?.focus ?? [];
   const accurate = mode === "accurate";

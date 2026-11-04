@@ -2,7 +2,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import crypto from "node:crypto";
 import { bootErosync } from "../src/erosync/erosync.js";
 import { UI_AMBIENT_TAPE, UI_AMBIENT_TAPE_BYTES, UI_AMBIENT_TAPE_SHA256 } from "../src/erosync/tape.js";
 
@@ -42,13 +41,30 @@ test("api가 없으면 던진다", async () => {
   await assert.rejects(() => bootErosync(null), /unavailable/);
 });
 
-test("배경음 자료는 길이·지문이 원본과 같다", () => {
-  const bytes = Buffer.from(UI_AMBIENT_TAPE, "base64");
-  assert.equal(bytes.length, UI_AMBIENT_TAPE_BYTES);
-  assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"), UI_AMBIENT_TAPE_SHA256);
+test("배경음 자료는 비어 있고(은하 화면을 쓰지 않음) 본체는 문자열이 아니면 배경음을 건너뛴다", () => {
+  assert.equal(UI_AMBIENT_TAPE, null);
+  assert.equal(UI_AMBIENT_TAPE_BYTES, 0);
+  assert.equal(UI_AMBIENT_TAPE_SHA256, "");
+  const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
+  assert.ok(src.includes("typeof UI_AMBIENT_TAPE !== 'string'"), "문자열 검사가 있어야 null이어도 안전");
+});
+
+test("관계망 탭: host.openRelmap이 있으면 안내 화면, 없으면 원래 화면", () => {
+  const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
+  assert.ok(/tab === 'records'\) return typeof host\.openRelmap === 'function' \? duskRenderRelationLauncher\(pane\) : renderRecordsPage\(pane, context\)/.test(src));
 });
 
 test("소스에 줄 맨 앞 //@ 머리말이 없다(빌드가 막는 것)", () => {
   const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
   assert.equal(src.split("\n").filter((l) => /^\s*\/\/@/.test(l)).length, 0);
+});
+
+test("읽기 연결부: 채팅을 못 읽는 환경에서도 던지지 않고 빈 모양을 돌려준다", async () => {
+  const { api } = fakeApi();
+  const e = await bootErosync(api);
+  assert.equal(typeof e.read, "function");
+  const r = await e.read();
+  assert.equal(r.ok, false);
+  for (const k of ["people", "goals", "rivalries", "relations"]) assert.ok(Array.isArray(r[k]), k);
+  await e.dispose();
 });

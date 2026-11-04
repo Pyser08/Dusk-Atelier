@@ -246,8 +246,12 @@ async function start() {
   app.ctx.onClosed = () => widgetHome.resume();   // Dusk 창을 닫으면 떠 있던 위젯 홈을 다시 띄운다
   widgetHome.boot().catch((e) => console.log(`[${TITLE}] 위젯 홈 시작 실패 ${e?.message ?? e}`));
   // Erosync(v1.9.2): 기본 꺼짐. 켜져 있으면 시작(본체는 켤 때만 불러옴). 기억 설정에서 켜고 끈다.
-  const erosync = createErosync(api, { log: (m) => console.log(`[${TITLE}] ${m}`) });
+  const erosync = createErosync(api, { log: (m) => console.log(`[${TITLE}] ${m}`),
+    // Erosync 안의 ‘관계망’ 탭 → Dusk 인물 관계도(Erosync 층)
+    host: { openRelmap: () => { (app.ctx.state.relmap ??= {}).eroOnOpen = true; app.open({ tab: "relmap" }).catch(() => {}); } } });
   app.ctx.erosync = erosync;
+  // Erosync 자체 화면은 같은 플러그인 iframe을 쓰므로 Dusk 창을 먼저 닫고 연다
+  app.ctx.openErosync = async () => { try { await app.close(); } catch { /* 이미 닫힘 */ } return erosync.open(); };
   erosync.boot().catch((e) => console.log(`[${TITLE}] Erosync 시작 실패 ${e?.message ?? e}`));
   app.ctx.cellar = memory.cellar;   // 한 곳에서 찾은 Cellar 연결을 화면들이 함께 쓴다
   app.ctx.skills = skills;

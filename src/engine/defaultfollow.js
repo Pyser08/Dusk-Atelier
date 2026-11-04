@@ -4,7 +4,8 @@
 export const DUSK_FOLLOW = Object.freeze({
   "inject.targetTokens": { old: [1200] },
   "inject.capTokens": { old: [2500] },
-  "inject.eventTokens": { old: [600] }
+  "inject.eventTokens": { old: [600] },
+  "flow.mode": { old: ["fast"] }
 });
 export const POT_FOLLOW = Object.freeze({ writerSearchExistingLore: { old: [false] } });
 export const POT_DEFAULTS = Object.freeze({ writerSearchExistingLore: true });

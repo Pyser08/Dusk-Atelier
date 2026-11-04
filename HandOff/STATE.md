@@ -1,11 +1,22 @@
 # 현재 상태 — feat/1.9.2
 
-## 2026-11-04 Erosync 격리 이식 (V0.9.1, 버전·CHANGELOG 미변경)
+## 2026-11-04 Erosync 2차: 위키·관계도 연동 + 기억 방식 기본값 (버전 미변경)
+- **기억 방식 기본 `fast`→`accurate`**: `DEFAULT_SETTINGS.flow.mode`(memorystore.js)·`flowOf`/`setPotGlobal`/`stepsOf` 폴백·설정 화면(flowsettings)·시작 안내(setup)에서 ‘더 정확하게 (권장)’을 앞에. `DUSK_FOLLOW`에 `"flow.mode": { old: ["fast"] }` 추가 → 기록(`settings.edited`)이 없는 예전 fast는 새 기본으로 따라감. **직접 고르는 두 곳(flowsettings·setup)은 `noteEdits`로 `flow.mode`를 직접 수정으로 기록**(안 하면 고른 fast가 다음 읽기에 accurate로 되돌아감). 테스트 `memoryturn.test.js`의 `turnOn`·fast 직접 설정은 `edited`에 `flow.mode`를 넣도록 고침.
+- **읽기 연결부**: 본체 반환 객체에 `read()`(= `duskReadSnapshot`)·`open()` 추가. `read()`는 원본 프로필 화면 경로(`getUiContext`→`contextProfiles`→`uiProfileViewOf`)를 그대로 써서 현재 봇·채팅의 인물(8축 원값/현재값·성적 축·선호·판정)·목표·경쟁·관계를 일반 JSON으로 돌려줌(3초 캐시, 쓰기 없음). `getUiContext`는 원본 UI 경로라 카탈로그 갱신 등 부수 효과가 있음(위키를 열 때만 호출). 컨트롤러 `read()/open()`(꺼져 있으면 `{ok:false, reason:"off"}`/false). `app.ctx.openErosync`는 Dusk 창을 먼저 닫고 연다(같은 iframe).
+- **순수 함수** `src/engine/erosyncview.js`: `eroPerson`(이름·별칭이 정확히 같고 유일할 때만 맞춤)·`eroAxes`·`eroAdult`(SFW·비인물이면 null)·`eroGoalsOf`·`eroPair`·`eroRelmapLayer`·`eroRelmapData`(관계도 데이터에서 Erosync 층만 남김, `noUser`).
+- **위키(1단계, 읽기만)**: `memory/erosyncwiki.js` + `personv2.js` — 요약 ‘지금 노리는 목표’, 관계 ‘Erosync 목표·경쟁’(Dusk 상대가 없으면 Erosync 상대별 카드), 상세 정보 ‘Erosync 성향’(8축, 바뀐 축은 옅은 막대로 원래 값, 성인 항목은 `<details>` 접힘). Erosync 꺼짐·이름 안 맞음이면 칸 없음. 고치기는 ‘Erosync에서 고치기’→Erosync 화면(저장은 `erosync_*` 그대로). **2단계(저장을 `dusk.mem.v3.*`로 옮기기)와 기록 탭 ‘성향 변화’는 미구현.**
+- **관계도**: `relmap.js`에 ‘Erosync 목표·경쟁만 보기’ 칩(Erosync 켜짐일 때만). 인물은 이름·별칭으로 위키와 맞추고 못 맞춘 인물 수는 토스트. `canvas.js` `setData`가 `map.noUser`면 {{user}} 선을 만들지 않음. Erosync 화면의 ‘관계망’ 탭은 `bootErosync(api, host)`의 `host.openRelmap`이 있으면 안내 화면으로 바뀌어 `st.relmap.eroOnOpen`을 세우고 관계도를 열어 자동으로 Erosync 층을 켬(원래 은하 화면은 호출 안 됨, 코드만 남음).
+- **배경음 제거**: `tape.js`는 `null`로 비움(본체가 문자열이 아니면 건너뜀) → 번들 7.1MB→5.9MB. 저장 복구 화면은 body 전체 대신 `.es-shell/.es-app`만 비움(Dusk 화면 보존).
+- **겹치는 기능 정리(결과)**: ① 관계망 → Dusk 관계도로 일원화(위). ② 인물 성향 화면 → Dusk 위키 칸으로 읽기 연동(Erosync 자체 프로필 화면은 편집용으로 유지). ③ **월경 주기**: Dusk(`openness.cycle`, pot 코드 `cycle-tracking.js`는 자동 생성·수정 금지: 날짜 기반 프로그램 계산·임신 판정·위키 기록)와 Erosync(`cycleEnabled`: AI 관찰·장면 판단 반영)는 강점이 달라 한쪽을 자동으로 끄지 않고, **둘 다 켜지면 Erosync 카드에 겹침 안내**만 띄움. ④ **AI 제공자 설정**: Erosync는 자체 AI 탭(기본 ‘RisuAI 보조 모델’)을 유지. Dusk 모델 허브 연결은 `runProviderOnce`(erosync.js `providerId` 분기)에 `dusk` 제공자를 추가하면 됨 — 미구현.
+- 테스트: `erosyncview.test.js`(5) · `erosync.test.js`(+read) · `erosync-vendor.test.js`(+read·관계망 분기) · e2e `run-erosync-ui.mjs`(PC·모바일 28: 관계도 버튼·자동 켜짐·위키 3탭·고치기 호출) · `run-erosync.mjs`(+겹침 안내). 
+- 못 한 것/미확인: 세 호스트 실기기, 실제 모델로 `read()` 값(축·목표) 채워진 상태, `getLocalPluginStorage`가 플러그인별로 나뉘는지(원본 Erosync 데이터 이어받기), Erosync 화면이 Dusk 창과 같은 iframe에서 겹칠 때 실제 모양(Dusk 창을 닫고 여는 것까지만 구현).
+
+## 2026-11-04 Erosync 격리 이식 (V0.9.1, 버전 미변경; CHANGELOG는 ‘(개발 중) v1.9.2’ 섹션)
 - 원작자에게 제공받은 `Erosync V0.9.1.js`(36.8k줄, api 3.0)를 위젯 홈처럼 격리 이식. 기억 설정(전체 설정)의 ‘Erosync (NSFW 장면 강화)’ 카드에서 켜고 끔(키 `dusk.erosync.on`, 기본 꺼짐). **비용 안내 문구 포함**(`EROSYNC_COST_NOTE`). 성인 인물 한정 문구·검사는 사용자 결정으로 넣지 않음(Erosync에 원래 없음).
 - 구조: `src/erosync/erosync.js`=원본 본문 그대로 + 3곳만 변경(머리말 `//@` 제거, 즉시실행 함수→`bootErosync(api)`, `R`을 api 프록시로 바꿔 `onUnload`를 가로챔 → 끌 때 `dispose()`가 원본 정리 함수를 부름), `tape.js`=배경음 base64 분리(886KB). `src/data/erosync.js`=컨트롤러(`createErosync`, 본체는 켤 때만 `import()`), `src/ui/screens/memory/erosyncui.js`=카드, `main.js`에서 `app.ctx.erosync`로 연결·`boot()`.
 - 원본 `erosync` 플러그인이 켜져 있으면 시작하지 않고 안내(같은 요청 이중 주입·같은 저장 키 방지). 요청 훅(`addRisuReplacer`)이 없으면 시작 안 함. 켜기 실패하면 스위치를 되돌리고 저장값도 off.
 - Erosync 자체 UI(채팅 ‘에로싱크’ 버튼, 리스 설정 ‘Erosync’ 항목, 관계 그래프)는 원본 그대로 동작. Dusk 주입(`[Dusk Memory]`)과는 별도 `beforeRequest` 훅 두 개가 나란히 돎(마커가 달라 서로 안 지움).
-- 번들 크기 4.9MB → 7.6MB(+2.7MB). 빌드 경고 1건은 원본의 중복 키 `model`(src/erosync/erosync.js 3890, 원본도 동일).
+- 번들 크기 4.9MB → 7.6MB(+2.7MB) → 배경음 제거 뒤 5.9MB. 빌드 경고 1건은 원본의 중복 키 `model`(src/erosync/erosync.js 3890, 원본도 동일).
 - 테스트: `tests/erosync.test.js`(컨트롤러 7) · `erosync-vendor.test.js`(실제 본체를 가짜 api로 올려 훅 등록·해제, 지문 5) · e2e `tests/e2e/run-erosync.mjs`(PC·모바일 14). npm test 1013 pass / 9 skip / 0 fail, check 동일함.
 - 못 한 것/미확인: 세 호스트 실기기(특히 `getLocalPluginStorage`가 플러그인별로 나뉘면 원본 Erosync의 기존 데이터가 안 보일 수 있음 — 기존 사용자는 확인 필요), Erosync 설정 화면이 Dusk 창과 겹칠 때의 화면 겹침, 켜진 상태에서 Dusk 기억 훅과의 순서·토큰 합산. 비용은 안내 문구만(호출 수 제한 없음). 안내서(`docs/site/guide/memory.html`)·NOTICE.md 갱신함, CHANGELOG는 버전 지시가 없어 안 건드림.
 

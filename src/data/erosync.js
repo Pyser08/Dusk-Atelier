@@ -13,7 +13,7 @@ export async function loadErosyncOn(api) {
 }
 // 본체는 켤 때만 불러온다(번들 안에서도 처음 부를 때까지 실행되지 않는다).
 const loadBoot = async () => (await import("../erosync/erosync.js")).bootErosync;
-export function createErosync(api, { log = () => {}, boot = null, load = loadErosyncOn } = {}) {
+export function createErosync(api, { log = () => {}, boot = null, load = loadErosyncOn, host = {} } = {}) {
   let inst = null, starting = null, error = "", onNow = false;
   async function originalOn() {
     try { return (await listPlugins(api)).some((p) => p.name === ERO_ORIGINAL && p.enabled); } catch { return false; }
@@ -25,7 +25,7 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
       // 원본 Erosync 플러그인이 같이 켜져 있으면 같은 요청에 두 번 들어가고 같은 저장 키를 같이 써서 꼬인다 → 이쪽을 시작하지 않는다.
       if (await originalOn()) throw new Error("원래 ‘Erosync’ 플러그인이 켜져 있어요. 둘이 같이 돌면 같은 요청에 두 번 들어가니, 원래 플러그인을 끄고 다시 켜 주세요.");
       const run = boot ?? (await loadBoot());
-      const next = await run(api);
+      const next = await run(api, host);
       if (next?.loaded && !next.loaded()) {
         await next.dispose?.().catch(() => {});
         throw new Error("Erosync 초기화가 끝까지 가지 못했어요. 리스 개발자 콘솔의 [Erosync] 로그를 확인해 주세요.");
@@ -65,6 +65,16 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
       onNow = !!next;
       try { await api.pluginStorage.setItem(ERO_KEY, next ? "on" : "off"); } catch { /* 저장 못 해도 이번 실행에는 반영 */ }
       return next ? start() : stop();
+    },
+    // 현재 봇·채팅의 Erosync 값(읽기 전용 JSON). 꺼져 있거나 못 읽으면 { ok:false, reason }
+    async read() {
+      if (!inst || typeof inst.read !== "function") return { ok: false, reason: "off", people: [], goals: [], rivalries: [], relations: [] };
+      try { return await inst.read(); } catch (e) { return { ok: false, reason: String(e?.message ?? e), people: [], goals: [], rivalries: [], relations: [] }; }
+    },
+    // Erosync 자체 화면(프로필 고치기·장면 등)을 연다. 꺼져 있으면 false
+    async open() {
+      if (!inst || typeof inst.open !== "function") return false;
+      try { await inst.open(); return true; } catch (e) { log(`Erosync 화면 열기 실패 ${e?.message ?? e}`); return false; }
     },
     stop
   };

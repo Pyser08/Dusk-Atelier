@@ -45,7 +45,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
   const putStash = (h, v) => { stash.set(h, v); while (stash.size > STASH_MAX) stash.delete(stash.keys().next().value); };
   const libFor = (mode) => mode === "accurate" ? sourceLibrary : { ...sourceLibrary, base: { ...sourceLibrary.base, director: undefined } };
 
-  const flowOf = async () => { const f = (await store.getIndex()).settings.flow ?? {}; return { on: f.on === true, advanced: f.advanced === true, mode: f.mode === "accurate" ? "accurate" : "fast", recallTokens: f.recallTokens }; };
+  const flowOf = async () => { const f = (await store.getIndex()).settings.flow ?? {}; return { on: f.on === true, advanced: f.advanced === true, mode: f.mode === "fast" ? "fast" : "accurate", recallTokens: f.recallTokens }; };
 
   async function syncPot(settings, f) {
     const cfg = await getCfg(api), m = potModels(cfg);

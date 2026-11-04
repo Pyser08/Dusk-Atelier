@@ -71,3 +71,13 @@ test("시작 중 예외가 나도 던지지 않고 lastError에 남긴다", asyn
   assert.equal(await er.set(true), false);
   assert.equal(er.lastError(), "boom");
 });
+
+test("컨트롤러 read: 꺼져 있으면 off, 켜져 있으면 본체의 read 결과", async () => {
+  const api = { pluginStorage: { getItem: async () => null, setItem: async () => {} }, addRisuReplacer: async () => {}, getDatabase: async () => ({ plugins: [] }) };
+  const er = createErosync(api, { boot: async () => ({ loaded: () => true, dispose: async () => {}, read: async () => ({ ok: true, people: [{ id: "a" }], goals: [], rivalries: [], relations: [] }) }) });
+  assert.equal((await er.read()).reason, "off");
+  assert.equal(await er.set(true), true);
+  assert.equal((await er.read()).people[0].id, "a");
+  await er.stop();
+  assert.equal((await er.read()).ok, false);
+});

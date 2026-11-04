@@ -1,5 +1,6 @@
 // 기억 탭 설정: 추적 수준 3종 · 기능 카드 6장 · AI 모델(쉬운/고급) · 가져오기·사용량.
 // 리수폿 기능과 Dusk 기능을 구분 없이 "무엇을 기억하나"로 보여 준다. 저장 버튼 없이 바로 저장, 다음 턴부터 적용.
+import { noteEdits, DUSK_FOLLOW } from "../../../engine/defaultfollow.js";
 import { h, replace, pickFiles } from "../../dom.js";
 import { btn, switchEl, setSwitch, segmented, optionCards, toggleRow, note, confirmDialog } from "../../kit.js";
 import { scopeChip, tracked } from "./settingstools.js";
@@ -117,7 +118,7 @@ export async function flowSections(ctx, host, { redraw }) {
 
   // ---- 3) 흐름 방식
   const modeHost = h("div");
-  const paintMode = () => replace(modeHost, optionCards([{ value: "fast", label: "빠르게", text: "응답 뒤 모델 호출 1회. 키워드로 인물을 골라요." }, { value: "accurate", label: "더 정확하게", text: "관련 인물 찾기·장면 정리를 더해 기억을 더 잘 찾아요. 호출이 늘어요." }], flow.mode === "accurate" ? "accurate" : "fast", async (v) => { await M.store.updateIndex((i) => { i.settings.flow = { ...(i.settings.flow ?? {}), mode: v }; }); flow.mode = v; await apply(); }, "기억 방식"));
+  const paintMode = () => replace(modeHost, optionCards([{ value: "accurate", label: "더 정확하게 (권장)", text: "관련 인물 찾기·장면 정리를 더해 기억을 더 잘 찾아요. 호출이 늘어요." }, { value: "fast", label: "빠르게", text: "응답 뒤 모델 호출 1회. 키워드로 인물을 골라요. 오류가 더 잦을 수 있어요." }], flow.mode === "fast" ? "fast" : "accurate", async (v) => { await M.store.updateIndex((i) => { const before = structuredClone(i.settings); i.settings.flow = { ...(i.settings.flow ?? {}), mode: v }; i.settings.edited = noteEdits(before, i.settings, i.settings.edited, DUSK_FOLLOW); }); flow.mode = v; await apply(); }, "기억 방식"));
   paintMode();
 
   // ---- 3-2) 성인 항목 (기본 꺼짐, 접힌 곳): 욕구 기록 → 월경·임신 기록(스위치 + 임신 확률 배수)

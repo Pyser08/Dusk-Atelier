@@ -14,7 +14,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   loreRef: { on: false, tokens: 600 },
   regex: { on: false, useChar: true, useModules: true, files: [] },  // v1.8.1 정규식 전처리(기억 분석 입력·임베딩 질의)
   // v1.6.4 턴 흐름: on=리수폿 인물 위키·고르기·정리 노트를 Dusk 기록과 한 흐름으로 돌림, mode=fast(키워드 고르기·호출 1회) | accurate(고르기+정리 노트)
-  flow: { on: false, mode: "fast", recallTokens: 700 }
+  flow: { on: false, mode: "accurate", recallTokens: 700 }
 });
 const newIndex = () => ({ v: 2, settings: structuredClone(DEFAULT_SETTINGS), bots: {}, folders: {}, status: { hook: "pending", processed: 0, lastSuccessAt: 0, lastError: "" } });
 

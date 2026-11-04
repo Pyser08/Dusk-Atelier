@@ -1,10 +1,11 @@
 // Erosync V0.9.1 격리 이식 — 원작자에게 제공받은 플러그인(erosync, api 3.0)을 Dusk 안에서 켜고 끌 수 있게 감싼 것.
 // 원본 대비 바뀐 곳: (1) //@ 머리말 제거 (2) 즉시 실행 함수 → bootErosync(api) (3) R을 주입받은 api의 프록시로(onUnload를 가로챔)
-// (4) 배경음 자료(UI_AMBIENT_TAPE*)를 tape.js로 분리. 그 밖의 본문은 원본 그대로이니 고칠 때는 원본과 비교할 것.
+// (4) 배경음 자료(UI_AMBIENT_TAPE*)를 tape.js로 분리 (5) 끝에 읽기 연결부 duskReadSnapshot 추가(반환 객체의 read)·open (6) 저장 복구 화면이 body 전체 대신 Erosync 요소만 비우도록 (7) bootErosync(api, host): 관계망 탭을 host.openRelmap 안내 화면으로(은하 화면은 쓰지 않음), 배경음 자료는 비움(tape.js). 그 밖의 본문은 원본 그대로이니 고칠 때는 원본과 비교할 것.
 import { UI_AMBIENT_TAPE_BYTES, UI_AMBIENT_TAPE_SHA256, UI_AMBIENT_TAPE } from "./tape.js";
 
-export async function bootErosync(api) {
+export async function bootErosync(api, hostArg) {
   'use strict';
+  const host = hostArg || {};
   if (!api) throw new Error('[Erosync] RisuAI Plugin API v3 is unavailable.');
   // Dusk 안에서 돌 때: 원본이 R.onUnload로 맡기는 정리 함수를 가로채 두었다가 끌 때 부른다. 나머지 api는 그대로 넘긴다.
   const unloadFns = [];
@@ -33303,6 +33304,16 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
     return uiProfileViewOf(profile, context, uiRelationModelFor(context));
   }
 
+  // Dusk 이식: 은하 관계망 대신 Dusk 인물 관계도(Erosync 목표·경쟁 층)로 보내는 안내 화면. host.openRelmap이 없으면 원래 화면.
+  function duskRenderRelationLauncher(root) {
+    root.replaceChildren();
+    const wrap = uiAppend(root, 'div', '', 'es-wrap');
+    const head = uiAppend(wrap, 'div', '', 'es-phead');
+    uiAppend(uiAppend(head, 'div', '', 'es-ptitle'), 'h1', '관계망');
+    uiAppend(wrap, 'div', '관계망은 Dusk의 인물 관계도에서 봐요. 거기서 ‘Erosync 목표·경쟁만 보기’를 누르면 이 채팅의 목표와 경쟁만 남아요.', 'es-empty');
+    createButton(wrap, 'Dusk 인물 관계도에서 보기', 'secondary', async () => { await closeSettingsPanel(); try { host.openRelmap(); } catch (_) {} });
+  }
+
   function renderRecordsPage(root, context) {
     uiPageKeys.records = uiNetKeys;
     const scopeKey = JSON.stringify([context.selectedBotKey, context.selectedScopeKey, context.scope?.variantKey]);
@@ -36041,7 +36052,7 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
   async function openSettingsPanel() {
     if (transferBusy || unloaded) return;
     if (stateRecoveryFault) {
-      document.body.replaceChildren();
+      document.querySelectorAll('.es-shell,.es-app').forEach(node => node.remove()); // Dusk 이식: body 전체를 비우면 Dusk 화면도 지워져 Erosync 것만 지운다
       installUiStyles();
       const app = uiAppend(document.body, 'div', '', 'es-app es-shell');
       app.dataset.shell = 'recovery';
@@ -36349,7 +36360,7 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
   function uiRenderPane(pane, tab, context) {
     if (tab === 'home') return renderHomePage(pane, context);
     if (tab === 'profiles') return renderProfilesPage(pane, context);
-    if (tab === 'records') return renderRecordsPage(pane, context);
+    if (tab === 'records') return typeof host.openRelmap === 'function' ? duskRenderRelationLauncher(pane) : renderRecordsPage(pane, context);
     if (tab === 'behind') return renderBehindPage(pane, context);
     pane.replaceChildren();
     if (tab === 'scene') return renderScenePage(pane, context);
@@ -36834,9 +36845,59 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
     try { await removeRegisteredCoreHooks(); } catch (_) {}
     console.error(LOG_PREFIX, 'initialization failed:', error);
   }
+  // ── Dusk 이식 추가(2026-11-04): 읽기 연결부 ──────────────────────────────────────────
+  // 인물 위키·관계도가 Erosync 값을 "읽기만" 하도록 현재 봇·채팅의 값을 일반 JSON으로 돌려준다.
+  // 원본의 프로필 화면이 쓰는 경로(getUiContext → contextProfiles → uiProfileViewOf)를 그대로 쓰므로 값이 화면과 같다.
+  // 3초 안에 다시 부르면 같은 결과를 돌려준다. 쓰기는 하지 않는다(고치기는 Erosync 자체 화면의 몫).
+  let duskReadCache = null;
+  const duskPlain = (value) => { try { return JSON.parse(JSON.stringify(value ?? null)); } catch { return null; } };
+  async function duskReadSnapshot() {
+    if (duskReadCache && Date.now() - duskReadCache.at < 3000) return duskReadCache.value;
+    const out = { ok: false, reason: '', scope: null, turnIndex: 0, contentMode: '', people: [], goals: [], rivalries: [], relations: [] };
+    try {
+      const context = await getUiContext();
+      if (!context?.scope || !context.session) { out.reason = context?.scopeUnavailable || 'no-chat'; }
+      else {
+        const session = context.session;
+        out.ok = true;
+        out.scope = { botKey: String(context.scope.sourceBundleKey || ''), scopeKey: String(context.scope.scopeKey || ''), chatName: String(context.scope.chatName || ''), variantKey: String(context.scope.variantKey || '') };
+        out.turnIndex = Number(session.turnIndex || 0);
+        out.contentMode = String(contentPolicyFor(context.botOverride).contentMode || '');
+        const nameOf = (id) => id === 'user' ? '당신' : String(uiPersonName(context, id) || id);
+        out.people = contextProfiles(context).map((profile) => {
+          const v = uiProfileViewOf(profile, context, null);
+          return duskPlain({
+            id: v.profileId, name: v.name, aliases: v.aliases, role: v.roleLabel, category: v.category, gender: v.g,
+            nonPerson: v.nonPerson, sfw: v.sfw, confidence: v.confidence,
+            axes: v.axes, interest: v.interest, sexual: v.sexual, motive: v.motive, pref: v.pref,
+            overridden: isPlainObject(profile.userOverrides) && Object.keys(profile.userOverrides).length > 0,
+            verdict: v.verdict?.status || '',
+          });
+        });
+        const alive = (g) => !['complete', 'abandon'].includes(g?.status);
+        out.goals = duskPlain(Object.values(session.goals || {}).filter((g) => g?.actor && g.actor !== 'user' && alive(g)).map((g) => ({
+          id: g.goalId, actor: g.actor, actorName: nameOf(g.actor), target: g.target, targetName: nameOf(g.target), type: g.type, typeLabel: goalTypeLabel(g.type),
+          status: g.status, priority: g.priority, persistence: g.persistence, desire: g.desire ?? null, objective: g.objective || '', nextMove: g.nextMove || '', lastAttemptTurn: g.lastAttemptTurn ?? 0
+        })));
+        out.rivalries = duskPlain(Object.values(session.rivalries || {}).filter((r) => r?.actor && r.actor !== 'user' && r.rival && clampNumber(r.intensity, 0) > 0).map((r) => ({
+          actor: r.actor, actorName: nameOf(r.actor), rival: r.rival, rivalName: nameOf(r.rival), intensity: Math.round(clampNumber(r.intensity, 0)), reason: r.reason || '', lastUpdatedTurn: r.lastUpdatedTurn ?? 0
+        })));
+        out.relations = duskPlain(Object.values(session.relations || {}).filter((r) => r?.from && r?.to).map((r) => ({
+          from: r.from, fromName: nameOf(r.from), to: r.to, toName: nameOf(r.to), affection: Math.round(clampNumber(r.affection, 50)), eroticAttraction: Math.round(clampNumber(r.eroticAttraction, 50)), hatred: Math.round(clampNumber(r.hatred, 0)), lastUpdatedTurn: r.lastUpdatedTurn ?? 0
+        })));
+      }
+    } catch (error) { out.ok = false; out.reason = String(error?.message || error); }
+    duskReadCache = { at: Date.now(), value: out };
+    return out;
+  }
+
   return {
     // 원본이 끝까지 올라왔는지(정리 함수를 맡겼으면 초기화가 끝까지 간 것)
     loaded: () => unloadFns.length > 0,
+    // Dusk 읽기 연결부(위 duskReadSnapshot)
+    read: duskReadSnapshot,
+    // Erosync 자체 화면 열기(원본이 설정 항목으로 등록한 것과 같은 함수)
+    open: () => openSettingsPanel(),
     async dispose() {
       for (const fn of unloadFns.splice(0).reverse()) { try { await fn(); } catch (e) { console.log('[Erosync] 정리 중 오류', e?.message ?? e); } }
     },

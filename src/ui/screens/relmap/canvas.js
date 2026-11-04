@@ -65,7 +65,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
     for (const n of nodes) { byId[n.id] = n; n.x = n.tx; n.z = n.tz; n.y = n.ty; }
     void prev;
     edges = [];
-    for (const n of nodes) edges.push({ id: "u~" + n.id, a: user, b: n, w: (n.aff - 50) / 50, s: n.uStrength, sp: n.uSpecial ? 1 : 0, rc: n.uRecent ? 1 : 0, user: true, label: n.uLabel });
+    if (!map.noUser) for (const n of nodes) edges.push({ id: "u~" + n.id, a: user, b: n, w: (n.aff - 50) / 50, s: n.uStrength, sp: n.uSpecial ? 1 : 0, rc: n.uRecent ? 1 : 0, user: true, label: n.uLabel });
     for (const e of map.edges) if (byId[e.a] && byId[e.b]) edges.push({ ...e, a: byId[e.a], b: byId[e.b] });
     st.sel = null; pathRes = null;
     st.faction = factions.includes(st.faction) ? st.faction : "";

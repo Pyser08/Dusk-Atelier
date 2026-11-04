@@ -23,6 +23,12 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   await page.evaluate(() => { window.c = makeCase({ original: true }); });
   await sw().click(); await page.waitForTimeout(300);
   ok(`[${tag}] 원본이 켜져 있으면 못 켜고 스위치가 꺼진 채로 돌아옴`, await page.evaluate(() => c.boots.n === 0 && c.mem.get("dusk.erosync.on") === "off" && c.toasts.some((t) => t[1])));
+  await page.evaluate(() => { window.c = makeCase({ cycle: true }); });
+  ok(`[${tag}] 꺼져 있으면 월경 겹침 안내는 숨김`, await page.locator("#rb-erosync-overlap").isHidden());
+  await sw().click(); await page.waitForTimeout(400);
+  ok(`[${tag}] Erosync를 켜고 Dusk 월경·임신 기록도 켜져 있으면 겹침 안내`, (await page.locator("#rb-erosync-overlap").isVisible()) && /두 번 들어가니/.test(await page.locator("#rb-erosync-overlap").textContent()));
+  await page.evaluate(() => { window.c = makeCase({ original: true }); });
+  await sw().click(); await page.waitForTimeout(300);
   ok(`[${tag}] 실패 이유가 카드에 보임`, /원래/.test(await page.locator("#rb-erosync-note").textContent()));
 }
 await browser.close();

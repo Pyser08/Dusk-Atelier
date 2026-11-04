@@ -6,6 +6,8 @@ import { userLabel } from "./username.js";
 import { btn, modal, confirmDialog } from "../../kit.js";
 import { mem, avatar, fail } from "./common.js";
 import { editFolder } from "./people.js";
+import { eroLoad, eroInfoCard, eroSumCard, eroPairCard, eroPartnerCards } from "./erosyncwiki.js";
+import { eroPerson, eroPersonByName } from "../../../engine/erosyncview.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX, setTag } from "../../../engine/memoryemo.js";
 import { nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
 
@@ -34,6 +36,10 @@ export function personTabs(env, parts) {
   const tabs = (m.wkTab2 ??= {}), withSel = (m.wkWith ??= {}), rev = (m.wkFeelRev ??= {});
   const run = (pr) => Promise.resolve(pr).catch(fail(ctx));
   const save = (fn, ok) => editFolder(env, fn).then(() => ok && ctx.toast(ok));
+  // Erosync(켜져 있을 때만): 읽어 오면 한 번 다시 그린다. 이름이 맞는 인물에게만 칸이 생긴다.
+  let ero = null;
+  const eroSelf = () => (ero ? eroPerson(ero, selfNames) : null);
+  eroLoad(ctx).then((snap) => { if (snap) { ero = snap; if (eroSelf()) paint(); } }).catch(() => {});
 
   const people = counterparts(f, selfNames, now);
   const person = p ?? { name: me, records: [] };
@@ -68,6 +74,7 @@ export function personTabs(env, parts) {
     card(`지금의 ${me}`, [profileText ? h("p", { class: "rb-wk2-p" }, profileText) : h("p", { class: "rb-muted" }, "아직 요약이 없어요. 상세 정보에서 기본 성격을 만들거나 ‘요약 정리’를 눌러 보세요."),
       attrs.length ? h("div", { class: "rb-wk2-chips" }, attrs.map((a) => h("span", { class: "rb-wk2-chip" }, h("small", null, a.label), " ", a.v))) : null]),
     numCard,
+    (() => { const e = eroSelf(); return e ? eroSumCard(ctx, card, ero, e) : null; })(),
     changesOf(person).length ? card("이전과 달라진 점", h("div", { class: "rb-wk2-chg" }, changesOf(person).map((c) => [h("small", null, c.label), h("span", null, h("s", null, c.from), h("i", { class: "arr", "aria-hidden": "true" }, "→"), h("b", null, c.to))]).flat())) : null,
     people.length ? card("관계 한눈에", h("div", { class: "rb-wk2-glance" }, people.slice(0, 6).map((x) => h("button", { type: "button", class: "rb-wk2-gl", onClick: () => goPair(x.name) }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), track(x.stage, true), h("small", { class: `st-${stageIdx(x.stage)}` }, stageName(x.stage))))), h("small", { class: "rb-muted" }, "누르면 관계 탭")) : null,
     p ? card("기억에 남은 순간", h("div", { class: "rb-wk2-mom" }, momentsOf(person, now).map(({ r: rec, earlier, vague }) => h("div", { class: ["rb-wk2-mrow", vague && "vague"] }, h("span", { class: `rb-wk2-g g-${rec.g}`, title: GRADE_TIP[rec.g] ?? "" }, rec.g ?? "-"),
@@ -151,7 +158,7 @@ export function personTabs(env, parts) {
         x ? btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 태도 기록을 지울까요?", body: x.public, ok: "지우기", danger: true })) save((fo) => { deleteFace(fo, x.k); }, "지웠어요."); } }) : null));
   };
   const relation = () => {
-    if (!people.length) return h("div", { class: "rb-wk2-pane" }, h("p", { class: "rb-muted" }, "아직 함께 기록된 인물이 없어요. 대화가 이어지면 채워져요."));
+    if (!people.length) return h("div", { class: "rb-wk2-pane" }, h("p", { class: "rb-muted" }, "아직 함께 기록된 인물이 없어요. 대화가 이어지면 채워져요."), ...(eroSelf() ? [h("div", { class: "rb-wk2-cards" }, eroPartnerCards(ctx, card, ero, eroSelf()))] : []));
     const other = people.find((x) => x.name === withSel[pk])?.name ?? people[0].name;
     const v = pairView(f, selfNames, other, now), si = stageIdx(v.stage.stage);
     return h("div", { class: "rb-wk2-pane" },
@@ -167,13 +174,14 @@ export function personTabs(env, parts) {
         card("둘만의 추억", v.bonds.length ? v.bonds.map(bondItem) : h("p", { class: "rb-muted" }, "아직 없어요. 둘에게 의미 있는 순간이 생기면 쌓여요.")),
         v.exp ? card("기대 차이", h("div", { class: "rb-wk2-exp" }, [[v.exp.a, v.exp.ae, v.exp.as], [v.exp.b, v.exp.be, v.exp.bs]].map(([n, e, said]) => h("div", null, h("small", { class: "rb-muted" }, `${topic(shown(n))}`), h("span", null, e), h("small", { class: "rb-muted" }, said ? "말로 했어요" : "말하지 않았어요"))))) : null,
         v.face?.ab || v.face?.ba ? card("사람 앞 태도", [faceRow(v.face.ab, me, other), h("hr", { class: "rb-wk2-hr" }), faceRow(v.face.ba, other, me)]) : null,
-        v.beliefs.length ? card("오해", v.beliefs.map(beliefItem), null, "warn") : null),
+        v.beliefs.length ? card("오해", v.beliefs.map(beliefItem), null, "warn") : null,
+        eroPairCard(ctx, card, ero, eroSelf(), ero ? eroPersonByName(ero, other) : null)),
       h("p", { class: "rb-wk2-hint rb-muted" }, "이 내용은 AI가 대화할 때 참고해요. 고치면 잠겨서 AI가 바꾸지 않아요."));
   };
 
   // ── 상세 정보 · 기록 ──
   const go = (tab, w) => { if (w) withSel[pk] = w; tabs[pk] = tab; paint(); root.scrollIntoView?.({ block: "start" }); };
-  const info = () => h("div", { class: "rb-wk2-pane" }, typeof parts.info === "function" ? parts.info(go) : (parts.infoBlocks ?? []).filter(Boolean));
+  const info = () => h("div", { class: "rb-wk2-pane" }, typeof parts.info === "function" ? parts.info(go) : (parts.infoBlocks ?? []).filter(Boolean), (() => { const e = eroSelf(); return e ? eroInfoCard(ctx, card, e) : null; })());
   const log = () => h("div", { class: "rb-wk2-pane" }, ...(parts.logBlocks ?? []).filter(Boolean));
 
   function paint() {
