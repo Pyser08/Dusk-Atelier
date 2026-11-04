@@ -99,12 +99,12 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   }
 
   // 한 메시지(또는 묶음)를 분석해 반영. group: 같은 입력에 합칠 메시지 인덱스들(마지막이 앵커).
-  async function analyzeAt(charIndex, chatIndex, group, { signal, manual = false } = {}) {
+  async function analyzeAt(charIndex, chatIndex, group, { signal, manual = false, redo = false } = {}) {
     const g = await gather(charIndex, chatIndex, group);
     const { character, chat, chaId, chatId, messages, last, text, h, anchor, idx, bot } = g;
     const why = gate(g, manual); if (why) return why;
     const existing = await loadReconciled(store, chaId, chatId, messages);  // 옛 장면·떡밥이 새 요약에 섞이지 않게 먼저 대조
-    if (existing?.cursor?.h === h && existing.cursor.at === last) return "done";
+    if (!redo && existing?.cursor?.h === h && existing.cursor.at === last) return "done";   // redo: 사용자가 이미 분석한 응답을 다시 분석하라고 한 경우
     const tryKey = chaId + "::" + chatId;
     if (!manual && lastTried.get(tryKey) === h) return "done";
     lastTried.set(tryKey, h);
@@ -234,29 +234,29 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
 
   // 수동·일괄 분석. range: {from,to} 메시지 인덱스(포함). AI 응답 3개씩 묶음.
   // 반환: groups·calls·tokens + 현황(total 범위 안 AI 응답 수, done 분석됨, todo 미처리, failed 미처리 중 지난번 실패한 것)
-  function planBackfill(messages, { from = 0, to = Infinity } = {}, folder = null) {
+  function planBackfill(messages, { from = 0, to = Infinity, all = false } = {}, folder = null) {   // all: 이미 분석한 응답도 포함(다시 분석)
     const ai = aiIndexes(messages).filter((i) => i >= from && i <= to);
     // 예전 완료 목록·앵커를 새 식별자로 맞춘 복사본으로 계획한다(저장된 폴더 자체는 여기서 수정하지 않는다).
     const normalized = folder ? structuredClone(folder) : null;
     if (normalized) reconcile(normalized, messages);
     const done = doneHashes(normalized), failedSet = new Set(normalized?.failedBackfill ?? []);
     const hOf = (i) => messageIdentity(messages[i]);
-    const todo = ai.filter((i) => !done.has(hOf(i)));
+    const todo = all ? ai : ai.filter((i) => !done.has(hOf(i)));
     const groups = []; for (let k = 0; k < todo.length; k += 3) groups.push(todo.slice(k, k + 3));
     const chars = groups.reduce((n, g) => n + g.reduce((s, i) => s + extractMessageText(messages[i]).length, 0) + 4000, 0);
     return { groups, calls: groups.length, tokens: Math.round(chars / 1.5), total: ai.length, done: ai.length - todo.length, todo: todo.length, failed: todo.filter((i) => failedSet.has(hOf(i))).length };
   }
-  async function backfill(charIndex, chatIndex, range, { signal, onProgress } = {}) {
+  async function backfill(charIndex, chatIndex, range, { signal, onProgress, redo = false } = {}) {
     const chat = await api.getChatFromIndex(charIndex, chatIndex), character = await api.getCharacterFromIndex(charIndex);
     const folder = await store.getFolder(String(character.chaId), String(chat.id ?? chatIndex));
-    const { groups } = planBackfill(chat.message ?? [], range, folder);
+    const { groups } = planBackfill(chat.message ?? [], { ...range, all: redo }, folder);
     const failed = [], reasons = []; let n = 0;
     for (const g of groups) {
       if (signal?.aborted) break;
       if (isGenerating(await api.getCharacterFromIndex(charIndex))) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
       // 요청 한도·시간 초과·서버 오류 같은 일시적 오류는 간격을 늘려 가며 2번까지 다시 시도한다(실패 원인은 reasons로 돌려준다).
       for (let attempt = 0; ; attempt++) {
-        try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true }); break; }
+        try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true, redo }); break; }
         catch (e) {
           const msg = String(e?.message ?? e).slice(0, 160);
           if (signal?.aborted) { failed.push(g); break; }

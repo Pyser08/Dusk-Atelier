@@ -127,13 +127,22 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
       activeChat = await ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
       activeMsgs = activeChat?.message ?? [];
     }
-    if (!activePlan?.todo) return ctx.toast("분석할 새 응답이 없어요.");
-    const ok = await confirmDialog(ctx.win, { title: "지난 대화 분석", body: `AI 응답 ${activePlan.todo}개를 분석해요. 호출 ${activePlan.calls}회 · 대략 ${activePlan.tokens.toLocaleString()} 토큰이 들어요.`, ok: "분석하기" });
-    if (!ok) return;
+    let redo = false;
+    if (!activePlan?.todo) {
+      // 새로 분석할 응답이 없어도, 눌렀다면 처음부터 다시 분석할지 묻는다
+      const all = activeMsgs.length && M.runner ? M.runner.planBackfill(activeMsgs, { from: 0, to: Math.max(0, activeMsgs.length - 1), all: true }, folder) : null;
+      if (!all?.total) return ctx.toast("분석할 AI 응답이 없어요.");
+      const again = await confirmDialog(ctx.win, { title: "이미 모두 분석했어요", body: `AI 응답 ${all.total}개가 모두 분석돼 있어요. 처음부터 다시 분석할까요? 호출 ${all.calls}회 · 대략 ${all.tokens.toLocaleString()} 토큰이 들어요. 기존 기록은 지워지지 않고, 새로 확인된 내용이 더해지거나 바뀔 수 있어요.`, ok: "다시 분석" });
+      if (!again) return;
+      redo = true;
+    } else {
+      const ok = await confirmDialog(ctx.win, { title: "지난 대화 분석", body: `AI 응답 ${activePlan.todo}개를 분석해요. 호출 ${activePlan.calls}회 · 대략 ${activePlan.tokens.toLocaleString()} 토큰이 들어요.`, ok: "분석하기" });
+      if (!ok) return;
+    }
     const ctrl = new AbortController(), cancel = btn("취소", { size: "sm", onClick: () => ctrl.abort() });
     replace(prog, progressBar(0), cancel);
     try {
-      const r = await M.runner.backfill(cur.ci, cur.ti, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, { signal: ctrl.signal, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), cancel) });
+      const r = await M.runner.backfill(cur.ci, cur.ti, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, { signal: ctrl.signal, redo, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), cancel) });
       ctx.toast(`지난 대화 분석이 끝났어요 (${r.total - r.failed.length}/${r.total}).${r.reasons?.length ? ` 실패 이유: ${r.reasons[0]}` : ""}`, r.failed.length ? { error: true } : undefined);
     } catch (e) { fail(ctx)(e); }
     redraw();

@@ -67,3 +67,18 @@ test("friendly는 최소 '아는 사이'", () => {
   applyHuman(f, validateHuman({ start: [{ a: "카이", b: "하연", level: "friendly", q: "같은 반 친구" }] }), { at: 1 }, { now: 1 });
   assert.equal(stageOf(f, "카이", "하연", 1).stage, "acquaintances");
 });
+
+import { mergeIntoUser, userMergePlan } from "../src/engine/memoryuser.js";
+import { pairView } from "../src/engine/memoryhuman.js";
+test("{{user}}로 합칠 때 처음부터 알던 사이 기록도 따라간다(더 가까운 단계 유지)", () => {
+  const f = { people: { sensei: { name: "Sensei", aliases: [], records: [] }, "{{user}}": { name: "{{user}}", aliases: [], records: [] } }, start: { "sensei|하연": { a: "Sensei", b: "하연", level: "friendly", q: "같은 반" }, "{{user}}|하연": { a: "{{user}}", b: "하연", level: "close", q: "소꿉친구" } } };
+  assert.ok(userMergePlan(f, ["Sensei"]).links >= 1);
+  mergeIntoUser(f, ["Sensei"]);
+  assert.deepEqual(Object.keys(f.start), ["{{user}}|하연"]);
+  assert.equal(f.start["{{user}}|하연"].level, "close");
+});
+test("pairView가 처음부터 알던 사이를 돌려준다", () => {
+  const f = { scenes: [], emo: {}, talk: {}, rels: {}, bonds: [], start: { "카이|하연": { a: "카이", b: "하연", level: "close", q: "소꿉친구" } } };
+  assert.equal(pairView(f, ["하연"], "카이").start.q, "소꿉친구");
+  assert.equal(pairView(f, ["하연"], "다른이").start, null);
+});

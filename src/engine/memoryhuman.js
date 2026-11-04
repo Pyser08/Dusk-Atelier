@@ -365,6 +365,7 @@ export function pairView(folder, selfNames, other, now = nowOf(folder)) {
   const both = (a, b) => (self.has(key(a)) && key(b) === ko) || (self.has(key(b)) && key(a) === ko);
   return {
     stage: stageOf(folder, me, other, now),
+    start: folder?.start?.[pairKey(me, other)] ?? null,   // 이야기 시작 전부터 알던 사이(본문 인용)
     feel: { ab: feelOf(true), ba: feelOf(false) },
     talk: { ab: talkOf(true), ba: talkOf(false) },
     bonds: (folder?.bonds ?? []).filter((b) => both(b.a, b.b)),

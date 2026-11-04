@@ -31,7 +31,8 @@ function otherCard(o, openWiki, onEdit) {
       kv("내가 부르는 말", o.iCall),
       o.face ? kv("둘이 있을 때", o.face.alone) : null, o.face ? kv("남들 앞에서", o.face.public) : null) : null,
     o.bond ? h("section", { class: "rb-me-sec" }, h("span", { class: "h" }, "둘만의 추억"), h("p", { class: "rb-me-quote" }, o.bond)) : null,
-    o.rifts.length || o.beliefs.length ? h("div", { class: "rb-chips rb-me-flags" },
+    o.rifts.length || o.beliefs.length || o.start ? h("div", { class: "rb-chips rb-me-flags" },
+      o.start ? h("span", { class: "rb-chip", title: `본문 근거: ${o.start.q}` }, `처음부터 알던 사이 · ${o.start.level === "close" ? "친함" : "아는 사이"}`) : null,
       ...o.rifts.map((r) => h("span", { class: "rb-chip warn" }, `갈등 · ${r.about || "풀리지 않음"}`)),
       ...o.beliefs.map((b) => h("span", { class: "rb-chip" }, `오해 · ${b}`))) : null,
     h("footer", { class: "rb-me-foot" }, btn("고치기", { size: "sm", icon: "edit", onClick: () => onEdit(o), class: "rb-me-edit" }), h("button", { type: "button", class: "rb-textlink", onClick: () => openWiki(o.name) }, `${o.name} 인물 위키`, icon("chevron", 14))));
