@@ -33,7 +33,7 @@
     subtitle:typeof v.subtitle==='string'?normalize(v.subtitle).slice(0,120):DEFAULTS.subtitle,
     clock:['analog','calendar','digital'].includes(v.clock)?v.clock:DEFAULTS.clock,
     photoShape:['landscape','square'].includes(v.photoShape)?v.photoShape:DEFAULTS.photoShape,
-    includeLegacy:v.catalogFilterVersion===1?v.includeLegacy!==false:true,catalogFilterVersion:1,autoHome:v.autoHome!==false,colors:blockColors(v.colors),layouts,musicWidthRevision:1,hiddenWidgets:Layout.hidden(v.hiddenWidgets),surface:['glass','dusk'].includes(v.surface)?v.surface:'navy'};}
+    includeLegacy:v.catalogFilterVersion===1?v.includeLegacy!==false:true,catalogFilterVersion:1,autoHome:v.autoHome!==false,colors:blockColors(v.colors),layouts,themePreset:typeof v.themePreset==='string'?v.themePreset.slice(0,30):'',musicWidthRevision:1,hiddenWidgets:Layout.hidden(v.hiddenWidgets),surface:['glass','dusk'].includes(v.surface)?v.surface:'navy'};}
   function imageError(file){
     if(!file||!Number.isFinite(file.size)||file.size<=0||file.size>20*1024*1024)return '20MB 이하의 사진을 선택해 주세요.';
     const type=String(file.type||'').toLowerCase().split(';')[0].trim();

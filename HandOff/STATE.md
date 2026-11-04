@@ -1,5 +1,10 @@
 # 현재 상태 — feat/1.9.2
 
+## 2026-11-04 위젯 홈 설정 시트·색 테마
+- `src/widgethome/sheet.js`: `PRESETS`(18개, 앱 팔레트 형식) · 시트 HTML/CSS · `createSheet`. 위쪽 설정/홈 꾸미기·독 홈 꾸미기·제목 연필이 시트를 연다(제목 연필은 홈 탭). 바꾸면 `setPrefs`로 바로 저장.
+- 색: core settings에 `themePreset`. `applyColors`가 리스 색을 따르지 않으면 `presetById(themePreset).base`를 앱 팔레트처럼 써서 모든 위젯에 적용. ‘위젯마다 직접’ = themePreset 비움 + 예전 꾸미기 창.
+- Dusk 설정 카드의 위젯 디자인·자동 열기·꾸미기 버튼은 사용자 요청으로 뺌(위젯 홈 안에서 바꿈).
+
 ## 2026-11-04 위젯 홈: 사이드바 옆 배치·Dusk 디자인
 - `lib/home-layout.cjs` `mainPane()`: 포켓리스 홈이 아니면 `.risu-sidebar/.rs-sidebar` 오른쪽의 가장 큰 본문 요소를 홈 자리로(사이드바를 품은 감싸개 제외). `found.generic`이면 관련 링크·네이티브 컨트롤 안 씀. 프레임 찾기는 `iframe[srcdoc*="dusk-widgethome-open"]`(원본 플러그인과 구분), 속성 접두사 `x-dusk-wh-`. **리스·리스바드의 실제 클래스명(`.risu-sidebar`)은 기기 확인 필요**(PocketRisu 원본 코드가 쓰던 이름).
 - `lib/auto-home.cjs` `isHome`: 포켓리스 제목이 없어도 캐릭터 미선택(index<0)+설정/대화상자 없음이면 홈.

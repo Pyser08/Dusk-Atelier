@@ -37,22 +37,40 @@ await p.evaluate(() => { document.querySelector(".risu-sidebar").style.width = "
 await p.waitForTimeout(2600);
 fb = await frameBox();
 ok("사이드바 크기가 바뀌면 위젯 자리도 따라감", fb.left === 60 && fb.width === 1140, JSON.stringify(fb));
-// 디자인·설정
-const st = await p.evaluate(async () => {
-  await wh.setPrefs({ surface: "dusk" });
-  const sr = document.querySelector("[data-dusk-widgethome]").shadowRoot, app = sr.querySelector(".app");
-  const accent = getComputedStyle(app).getPropertyValue("--accent").trim();
-  const saved = JSON.parse(JSON.stringify(api.mem.get("pocketrisu.basic-home.v1.settings") || {})).surface;
-  sr.querySelector(".tools-open").click(); await new Promise((r) => setTimeout(r, 200));
-  const dlg = [...sr.querySelectorAll("dialog")].find((d) => d.open);
-  const chk = sr.querySelector(".check input[type=checkbox]"), app2 = getComputedStyle(chk).appearance;
-  const box = dlg.getBoundingClientRect();
-  return { surface: app.dataset.surface, accent, saved, open: !!dlg, app2, bx: box.left, by: box.top };
+// 설정 시트(누르면 바로 적용·저장)
+const S = (js) => p.evaluate(js);
+await S(() => document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".tools-open").click()); await p.waitForTimeout(250);
+ok("설정 버튼 → 설정 시트가 열림", await S(() => !document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".qs").hidden));
+const pr = await S(async () => {
+  const sr = document.querySelector("[data-dusk-widgethome]").shadowRoot;
+  const n = sr.querySelectorAll(".sw[data-preset]").length;
+  sr.querySelector('.sw[data-preset="sakura"]').click(); await new Promise((r) => setTimeout(r, 150));
+  const accent = getComputedStyle(sr.querySelector(".memo-card")).getPropertyValue("--accent").trim();
+  const st = api.mem.get("pocketrisu.basic-home.v1.settings");
+  sr.querySelector('.qs .seg[data-key="surface"] [data-v="dusk"]').click(); await new Promise((r) => setTimeout(r, 120));
+  return { n, accent, preset: st.themePreset, follow: st.followTheme, surface: sr.querySelector(".app").dataset.surface, pressed: sr.querySelector('.sw[data-preset="sakura"]').getAttribute("aria-pressed") };
 });
-ok("Dusk 디자인 적용·저장", st.surface === "dusk" && st.accent === "#d8b678" && st.saved === "dusk", JSON.stringify(st));
-ok("설정 창 체크박스가 스위치 모양", st.open && st.app2 === "none", JSON.stringify(st));
-await p.mouse.click(5, 790); await p.waitForTimeout(200);
-ok("설정 창 바깥을 누르면 닫힘", await p.evaluate(() => ![...document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelectorAll("dialog")].some((d) => d.open)));
-ok("홈 자동 열기 끄기도 저장", await p.evaluate(async () => { await wh.setPrefs({ autoHome: false }); return wh.prefs().autoHome === false; }));
+ok("색 프리셋 15개 이상 · 누르면 바로 적용·저장", pr.n >= 17 && pr.accent === "#f49ac1" && pr.preset === "sakura" && pr.follow === false && pr.pressed === "true" && pr.surface === "dusk", JSON.stringify(pr));
+const wd = await S(async () => {
+  const sr = document.querySelector("[data-dusk-widgethome]").shadowRoot;
+  sr.querySelector('.qs-tabs [data-tab="widgets"]').click();
+  const c = sr.querySelector('.qs-w[data-w="timer"]'); c.click(); await new Promise((r) => setTimeout(r, 200));
+  const hid = sr.querySelector(".timer-card").hidden || getComputedStyle(sr.querySelector(".timer-card")).display === "none";
+  c.click(); await new Promise((r) => setTimeout(r, 200));
+  const back = !(sr.querySelector(".timer-card").hidden || getComputedStyle(sr.querySelector(".timer-card")).display === "none");
+  sr.querySelector('.qs .seg[data-key="clock"] [data-v="digital"]').click(); await new Promise((r) => setTimeout(r, 120));
+  return { hid, back, clock: !sr.querySelector(".digital-view").hidden, sw: getComputedStyle(c).appearance };
+});
+ok("위젯 끄고 켜기·시계 모양 바로 반영", wd.hid && wd.back && wd.clock && wd.sw === "none", JSON.stringify(wd));
+const hm = await S(async () => {
+  const sr = document.querySelector("[data-dusk-widgethome]").shadowRoot;
+  sr.querySelector('.qs-tabs [data-tab="home"]').click();
+  const t = sr.querySelector(".qs-title"); t.value = "어서 와요"; t.dispatchEvent(new Event("change")); await new Promise((r) => setTimeout(r, 150));
+  return sr.querySelector(".greeting-title").textContent;
+});
+ok("제목 문구 바로 바뀜", hm === "어서 와요", hm);
+await p.mouse.click(10, 400); await p.waitForTimeout(200);
+ok("바깥을 누르면 시트가 닫힘", await S(() => document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".qs").hidden));
+ok("홈 자동 열기 끄기도 저장", await S(async () => { await wh.setPrefs({ autoHome: false }); return wh.prefs().autoHome === false; }));
 ok("페이지 오류 없음", errs.length === 0, errs.join(" / "));
 await b.close(); process.exit(out.every(Boolean) ? 0 : 1);

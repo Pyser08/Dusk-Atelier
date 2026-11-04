@@ -325,7 +325,7 @@
 - `cocoa.js` (14줄) 사이드바 '기억' 섹션의 코코아 탭(v1.8.1): 장기 기억·기억 카드와 같은 단계. 화면 본체는 …
 - `dev.js` (618줄) 
 - `devaff.js` (84줄) 개발 탭 → 봇: 호감도 HUD 기능 프리셋 카드. 설치하면 이 봇 배경 HTML에 ♡ 버튼 HUD가…
-- `devtools.js` (473줄) 
+- `devtools.js` (465줄) 
 - `editor.js` (2530줄) 
 - `greetings.js` (203줄) 퍼스트 메시지 관리자 (v1.6.7 6단계): 첫 메시지·추가 인사말·그룹 전용 인사말이 많아도 보기…
 - `history.js` (142줄) 
@@ -434,7 +434,8 @@
 ### src/widgethome/
 - `dusk-style.js` (34줄) 위젯 홈 'Dusk' 디자인 + 설정 창을 Dusk 화면처럼(스위치·알약 선택·둥근 대화상자). 모든… — DUSK_CSS
 - `extras.js` (193줄) 위젯 홈 추가 위젯(Dusk): Dusk 바로가기 · D-day · 타이머 · 주사위·뽑기 · 한눈에… — EXTRA_IDS, extraHtml, EXTRA_CSS, parseDice, rollDice
-- `home.js` (416줄) 위젯 홈(PocketRisu 위젯 홈 v1.0.18 이식). Shadow DOM 안에서만 그려서 Du… — WH_VERSION, bootWidgetHome
+- `home.js` (420줄) 위젯 홈(PocketRisu 위젯 홈 v1.0.18 이식). Shadow DOM 안에서만 그려서 Du… — WH_VERSION, bootWidgetHome
+- `sheet.js` (147줄) 위젯 홈 '설정' 시트: 오른쪽(휴대폰은 아래)에서 열리는 한 장짜리 설정. 누르면 바로 적용·저장돼… — PRESETS, presetById, sheetHtml, SHEET_CSS, createSheet
 - `style.js` (4줄) 주의: :host에 overflow:hidden/auto나 overscroll-behavior를 주면… — WH_CSS
 
 ## Risu 플러그인 API (우리 코드가 쓰는 호출, 횟수순)
