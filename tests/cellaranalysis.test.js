@@ -109,8 +109,9 @@ test("serverModelOf: 리스 보조 모델·미지원 종류·추가 설정은 �
   const reasonOf = async (over) => { store.clear(); await put(over); return serverModelOf(api, pickOf()); };
   const g = await reasonOf({ provider: "google", baseUrl: "https://g.example/v1" });
   assert.equal(g.ok, false); assert.match(g.reason, /종류/);
-  assert.match((await reasonOf({ provider: "custom", baseUrl: "https://c.example/v1", extraBodyJson: '{"a":1}' })).reason, /추가 요청/);
-  assert.match((await reasonOf({ provider: "openai", baseUrl: "https://api.openai.com/v1", model: "gpt-5" })).reason, /추론/);
+  assert.match((await reasonOf({ provider: "custom", baseUrl: "https://c.example/v1", extraBodyJson: '{"model":"x"}' })).reason, /추가 요청/, "필수 항목 덮어쓰기는 기기에서도 거절");
+  assert.match((await reasonOf({ provider: "vertex-ai", baseUrl: "https://v.example" })).reason, /종류/);
   assert.match((await reasonOf({ provider: "custom", baseUrl: "not a url" })).reason, /프리셋/, "검증을 통과하지 못한 프리셋은 없는 것으로 본다");
   assert.match((await reasonOf({ provider: "custom", baseUrl: "https://c.example/v1" })).reason, /키/, "지원 종류는 키 단계까지 간다(키가 없으면 키 없음)");
+  assert.match((await reasonOf({ provider: "openai", baseUrl: "https://api.openai.com/v1", model: "gpt-5", extraBodyJson: '{"top_p":0.5}', reasoningQuickSetting: "low" })).reason, /키/, "추가 JSON·추론 설정·추론 모델도 서버로 보낼 수 있다");
 });

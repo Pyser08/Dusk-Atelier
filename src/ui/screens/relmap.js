@@ -2,6 +2,9 @@
 // 관계도에서 직접 고치지 않는다. 인물·선을 누르면 오른쪽에 위키 요약, 두 번 누르면 인물 위키로 이동.
 // 빨리 뜨게: 같은 채팅이면 만든 화면을 그대로 다시 붙이고(ctx.state.relmap), 뒤에서 데이터만 새로 읽어 바뀐 때만 다시 그린다.
 // 탭이 안 보이면 그리기 루프는 알아서 멈춘다(canvas.js).
+import { loadUserName, watchUserName, userLabel } from "./memory/username.js";
+import { loadUserNames } from "../../data/usernames.js";
+import { autoMergeUser } from "../../data/usermerge.js";
 import { h, replace } from "../dom.js";
 import { chip, emptyState, loading, pageHead } from "../kit.js";
 import { buildRelMap, STATUS_LABEL } from "../../engine/relmap.js";
@@ -28,19 +31,25 @@ export async function renderRelMap(ctx) {
     return;
   }
   replace(ctx.main, h("div", { class: "rb-rm" }, loading("관계도를 불러오는 중")));
-  const folder = await M.store.getFolder(cur.chaId, cur.chatId).catch(() => null);
+  let folder = await M.store.getFolder(cur.chaId, cur.chatId).catch(() => null);
+  // 페르소나 이름으로 따로 쌓인 옛 기록은 {{user}}로 자동으로 합친다. 가운데에는 그 채팅의 페르소나 이름을 보여 준다.
+  const [uname, unames] = await Promise.all([loadUserName(ctx), loadUserNames(ctx.api)]);
+  try {
+    const merged = await autoMergeUser(M.store, cur.chaId, cur.chatId, folder, unames);
+    if (merged) { folder = await M.store.getFolder(cur.chaId, cur.chatId).catch(() => folder); ctx.toast?.(`'${merged.names.join("', '") || "다른 이름"}' 기록을 {{user}}(${uname})로 합쳤어요.`); }
+  } catch { /* 합치기에 실패해도 관계도는 그대로 보여 준다 */ }
   const data = buildRelMap(folder);
   if (ctx.state.tab !== "relmap") return;
   if (data.empty) {
     return replace(ctx.main, h("div", { class: "rb-rm" }, pageHead("인물 관계도"), emptyState({ icon: "users", title: "아직 그릴 인물이 없어요", text: "대화가 쌓이고 장기 기억이 인물을 기록하면 여기에 관계도가 그려져요.", actions: [{ label: "장기 기억 열기", icon: "brain", onClick: () => ctx.go("memory") }] })));
   }
   st.view?.dispose();
-  st.view = buildView(ctx, win, cur, key, data);
+  st.view = buildView(ctx, win, cur, key, data, uname);
   replace(ctx.main, st.view.root);
   st.view.ctrl.start();
 }
 
-function buildView(ctx, win, cur, key, data) {
+function buildView(ctx, win, cur, key, data, uname) {
   const adv = !!ctx.prefs.advanced;
   const canvas = h("canvas", { "aria-label": "인물 관계도" });
   const ctrlsEl = h("div", { class: "rb-rm-ctrls" });
@@ -58,8 +67,9 @@ function buildView(ctx, win, cur, key, data) {
 
   let toastT = 0, pathFrom = "", data0 = data, pathNote = null;
   const toast = (m) => { toastEl.textContent = m; toastEl.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { toastEl.hidden = true; }, 1800); };
-  const ctrl = createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, win, onSelect: (sel) => choose(sel, true), onOpenWiki: (id) => openWiki(id), onToast: toast });
+  const ctrl = createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, win, onSelect: (sel) => choose(sel, true), onOpenWiki: (id) => openWiki(id), onToast: toast, userName: userLabel() });
   ctrl.setData(data);
+  const nameWatch = watchUserName(root);   // 안내 글의 {{user}}도 페르소나 이름으로
 
   function setHelp(open) { helpPop.hidden = !open; helpBtn.setAttribute("aria-expanded", open ? "true" : "false"); }
   const onDoc = (ev) => { if (!helpPop.hidden && ev.target !== helpBtn && !helpPop.contains(ev.target)) setHelp(false); };
@@ -219,6 +229,6 @@ function buildView(ctx, win, cur, key, data) {
     ctrl.select(curSel); paint();
   }
   void data0;
-  const dispose = () => { ctrl.destroy(); clearTimeout(toastT); win.document.removeEventListener("pointerdown", onDoc); win.document.removeEventListener("keydown", onKey, true); };
+  const dispose = () => { nameWatch?.disconnect?.(); ctrl.destroy(); clearTimeout(toastT); win.document.removeEventListener("pointerdown", onDoc); win.document.removeEventListener("keydown", onKey, true); };
   return { key, root, ctrl, update, dispose };
 }

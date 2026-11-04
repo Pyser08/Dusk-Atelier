@@ -12,6 +12,15 @@ export function userNameList(db) {
   for (const n of [...out]) { const w = n.split(/\s+/); if (w.length > 1 && w[0].length >= 2) add(w[0]); }
   return out;
 }
+// 화면에 {{user}} 대신 보여 줄 이름: 지금 고른 페르소나 → username
+export function primaryUserName(db) {
+  const list = Array.isArray(db?.personas) ? db.personas : [];
+  const n = list[db?.selectedPersona ?? 0]?.name;
+  return ok(n) ? n.trim() : ok(db?.username) ? db.username.trim() : "";
+}
+export async function loadPrimaryUserName(api) {
+  try { return primaryUserName(await dbRead(api, ["username", "personas", "selectedPersona"])); } catch { return ""; }
+}
 export async function loadUserNames(api) {
   try { return userNameList(await dbRead(api, ["username", "personas", "selectedPersona"])); } catch { return []; }
 }

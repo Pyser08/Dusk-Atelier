@@ -6,7 +6,7 @@ const TAU = Math.PI * 2, { RMIN, RMAX, HH } = RM;
 const lerp = (a, b, t) => a + (b - a) * t;
 const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
 
-export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, win = window, onSelect, onOpenWiki, onToast }) {
+export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, win = window, onSelect, onOpenWiki, onToast, userName = "" }) {
   const ctx = canvas.getContext("2d");
   const reduce = !!win.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   const colorCache = new Map();
@@ -41,7 +41,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
   }
   readTH();
 
-  let nodes = [], edges = [], byId = {}, factions = [], facAng = {}, user = { id: "u", name: "{{user}}", x: 0, y: 0, z: 0, user: true };
+  let nodes = [], edges = [], byId = {}, factions = [], facAng = {}, user = { id: "u", name: userName || "나", x: 0, y: 0, z: 0, user: true };
   let W = 0, H = 0, dpr = 1;
   const mobile = !!win.matchMedia?.("(max-width: 800px)").matches;
   const st = { uz: 1, vyaw: 0, vp: 0, idleUntil: 0, yaw: -0.5, pitch: 0.72, flat: mobile ? 1 : 0, flatT: mobile ? 1 : 0, spin: !reduce, sel: null, drag: false, hl: true, minS: 0, faction: "" };

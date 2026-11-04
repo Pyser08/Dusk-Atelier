@@ -1,6 +1,6 @@
 // 기억 화면에서 {{user}}를 지금 페르소나 이름으로 보여 준다(1.8.3, 사용자 요청). 표시만 바꾸고 저장된 데이터는 그대로.
 // 이름 뒤 조사(와/과·이/가·은/는·을/를)는 받침에 맞춰 고친다. 이름을 모르면 '나'.
-import { dbRead } from "../../../data/dbcache.js";
+import { loadPrimaryUserName } from "../../../data/usernames.js";
 
 let NAME = "";
 export const setUserName = (n) => { NAME = String(n ?? "").trim(); };
@@ -12,7 +12,7 @@ export function userText(s) {
   return String(s ?? "").replace(/\{\{user\}\}(와|과|이|가|은|는|을|를)?/gi, (_, p) => name + (p ? PAIRS[p][b ? 0 : 1] : ""));
 }
 export async function loadUserName(ctx) {
-  try { const db = await dbRead(ctx.api, ["username"]); setUserName(db?.username ?? ""); } catch { /* 이름 없이 '나' */ }
+  try { setUserName(await loadPrimaryUserName(ctx.api)); } catch { /* 이름 없이 '나' */ }
   return userLabel();
 }
 // 화면 조각 안의 글자를 바꾼다(입력칸·편집 영역은 건드리지 않음 — 저장 값이 바뀌면 안 되니까). 부분 갱신도 따라가게 지켜본다.

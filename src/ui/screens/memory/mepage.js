@@ -9,6 +9,7 @@ import { meView, userMergePlan, mergeIntoUser, TONE_LABEL, USER } from "../../..
 import { setTag } from "../../../engine/memoryemo.js";
 import { setTalk } from "../../../engine/memoryhuman.js";
 import { loadUserNames } from "../../../data/usernames.js";
+import { autoMergeUser } from "../../../data/usermerge.js";
 
 async function personaNames(ctx) {
   return loadUserNames(ctx.api);
@@ -66,7 +67,11 @@ export async function renderMemoryMe(ctx, host, { redraw }) {
   const back = { label: "장기 기억으로", onClick: () => { m.page = "home"; redraw(); } };
   const cur = await M.switches.currentChat();
   if (!cur) return replace(host, h("div", { class: "rb-me" }, pageHead("나", { back }), emptyState({ icon: "character", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅에서 다른 인물들이 나를 어떻게 기억하는지 보여 줘요." })));
-  const [folder, names] = await Promise.all([M.store.getFolder(cur.chaId, cur.chatId).catch(() => null), personaNames(ctx)]);
+  let [folder, names] = await Promise.all([M.store.getFolder(cur.chaId, cur.chatId).catch(() => null), personaNames(ctx)]);
+  try {   // 페르소나 이름으로 따로 쌓인 옛 기록은 자동으로 {{user}}에 합친다(합칠 게 없으면 아무것도 안 함)
+    const merged = await autoMergeUser(M.store, cur.chaId, cur.chatId, folder, names);
+    if (merged) { folder = await M.store.getFolder(cur.chaId, cur.chatId).catch(() => folder); ctx.toast?.(`'${merged.names.join("', '") || "다른 이름"}' 기록을 '나'로 합쳤어요.`); }
+  } catch { /* 실패하면 아래 '나로 합치기' 버튼으로 직접 */ }
   const v = folder ? meView(folder) : { records: 0, moments: [], others: [] };
   const plan = folder ? userMergePlan(folder, names) : { people: [], links: 0 };
   const onEdit = async (o) => {

@@ -3,6 +3,7 @@
 import { LocalKeyStore } from "./pot/local-keys.js";
 import { callWriterModel, testModelConnection, providerModelList, copilotLoginStep } from "./pot/llm-client.js";
 import { setCustomRunner } from "../engine/runai.js";
+import { parseExtraBodyJson, usesDeepSeekThinkingOff, withoutDeepSeekThinkingOffFields } from "../engine/pot/model-options.js";
 import { defaultCfg, normalizeCfg, presetOf, pickFor, toPrompt, fromReply, emptyUsage, addUsage } from "../engine/modelcfg.js";
 
 const CFG_KEY = "dusk.models.v1", USAGE_KEY = "dusk.models.usage.v1";
@@ -71,11 +72,15 @@ export async function recordUsage(api, stage, usage) { const s = await hub(api);
 export const copilotLogin = (api, opts) => copilotLoginStep(api, opts);
 export { defaultCfg };
 
-// Dusk Cellar 서버 분석(1.9.3)이 쓸 수 있는 모델인지 보고, 쓸 수 있으면 서버에 보낼 정보(주소·키·모델)를 만든다.
-// 서버는 리스 보조 모델을 못 부르고, 요청 모양을 바꾸는 설정(추론 설정·추가 본문)이 있으면 기기와 결과가 달라질 수 있어 기기에서 돌린다.
-// 반환: { ok:true, model:{kind,url,key,model,maxTokens,temperature} } | { ok:false, reason }
-const OPENAI_LIKE = new Set(["openai", "openrouter", "ollama"]);
+// Dusk Cellar 서버 분석(1.9.3)이 쓸 수 있는 모델인지 보고, 쓸 수 있으면 서버에 보낼 정보(주소·키·모델·요청 옵션)를 만든다.
+// 서버가 요청을 직접 만들 수 있는 종류(Claude 형식·OpenAI 호환: openai·openrouter·deepseek·ollama·custom)만 보낸다.
+// 리스 보조 모델(리스 안에서만 부를 수 있음)과 Google·Vertex·Copilot(별도 인증·요청 방식)은 기기에서 돌린다.
+// 요청 모양(추가 JSON·추론 설정·DeepSeek 사고 끄기·OpenAI 추론 모델)은 llm-client.js와 같은 규칙으로 옵션만 실어 보내고, 서버(Cellar analysis.cjs)가 같은 규칙으로 본문을 만든다.
+// 반환: { ok:true, model:{kind,url,key,model,maxTokens,temperature,extraBody,extraHeaders,reasoningEffort,openrouter,openaiReasoning} } | { ok:false, reason }
+const OPENAI_LIKE = new Set(["openai", "openrouter", "deepseek", "ollama"]);
 const OPENAI_REASONING = /(?:^|\/)(?:gpt-(?:[5-9]|[1-9]\d)|o[1-4])(?:[.\-/]|$)/i;
+const BLOCKED_BODY = new Set(["model", "messages", "system", "max_tokens"]);
+const BLOCKED_HEADER = /^(authorization|proxy-authorization|x-api-key|api-key|host|content-length|content-type|anthropic-version|connection|transfer-encoding|accept-encoding|origin|referer|user-agent)$/i;
 export async function serverModelOf(api, pick) {
   if (pick?.mode !== "custom") return { ok: false, reason: "리스 보조 모델은 서버에서 부를 수 없어요" };
   const s = await hub(api), preset = presetOf(s.cfg, pick.presetId);
@@ -83,10 +88,23 @@ export async function serverModelOf(api, pick) {
   const p = String(preset.provider ?? "");
   const kind = p === "claude" ? "anthropic" : (OPENAI_LIKE.has(p) || /^custom\d*$/.test(p)) ? "openai" : null;
   if (!kind) return { ok: false, reason: "이 모델 종류는 서버에서 부를 수 없어요" };
-  if (String(preset.extraBodyJson ?? "").trim() || (preset.reasoningQuickSetting && preset.reasoningQuickSetting !== "default")) return { ok: false, reason: "추가 요청 설정이 있어 기기에서 분석해요" };
-  if (OPENAI_REASONING.test(String(preset.model ?? "")) && (p === "openai" || /openai\.com/.test(String(preset.baseUrl)))) return { ok: false, reason: "추론 모델은 기기에서 분석해요" };
   let base; try { base = new URL(preset.baseUrl); } catch { return { ok: false, reason: "모델 주소가 올바르지 않아요" }; }
   if (!preset.model) return { ok: false, reason: "모델 이름이 없어요" };
+  // 추가 JSON: 기기와 같은 규칙으로 읽는다(필수 항목 덮어쓰기·streaming은 기기에서도 거절되므로 서버로도 안 보낸다)
+  let parsed, extraHeaders;
+  try {
+    parsed = parseExtraBodyJson(preset.extraBodyJson || "");
+    extraHeaders = parsed.__headers || {};
+    parsed = { ...parsed }; delete parsed.__headers;
+    if (Object.keys(parsed).some((k) => BLOCKED_BODY.has(k)) || Object.keys(extraHeaders).some((n) => BLOCKED_HEADER.test(n)) || (parsed.stream !== undefined && parsed.stream !== false)) return { ok: false, reason: "추가 요청 설정을 서버에서 쓸 수 없어요" };
+  } catch { return { ok: false, reason: "추가 요청 설정을 읽지 못했어요" }; }
+  const thinkingOff = kind === "openai" && usesDeepSeekThinkingOff(preset);
+  const extraBody = thinkingOff ? { ...parsed } : withoutDeepSeekThinkingOffFields(parsed);
+  if (thinkingOff) { delete extraBody.reasoning; delete extraBody.reasoning_effort; extraBody.thinking = { type: "disabled" }; extraBody.response_format = { type: "json_object" }; }
+  const effort = kind === "openai" && !thinkingOff && preset.reasoningQuickSetting && preset.reasoningQuickSetting !== "default" ? String(preset.reasoningQuickSetting) : null;
+  if (kind === "anthropic" && preset.reasoningQuickSetting && preset.reasoningQuickSetting !== "default") { /* 기기도 Claude에는 추론 설정을 본문에 넣지 않는다 */ }
+  const host = base.hostname;
+  const openaiReasoning = kind === "openai" && (p === "openai" || (/^custom\d*$/.test(p) && host === "api.openai.com")) && OPENAI_REASONING.test(String(preset.model));
   const suffix = kind === "anthropic" ? "/messages" : "/chat/completions", path = base.pathname.replace(/\/+$/, "");
   base.pathname = path.endsWith(suffix) ? path : path + suffix;
   let key = "";
@@ -94,5 +112,6 @@ export async function serverModelOf(api, pick) {
     await s.keys.load();
     if (!(p === "ollama" && !s.keys.has("ollama"))) key = await s.keys.use(p, (c) => c);
   } catch { return { ok: false, reason: "이 모델의 API 키가 없어요" }; }
-  return { ok: true, model: { kind, url: base.toString(), key, model: String(preset.model), ...(preset.maxTokens ? { maxTokens: preset.maxTokens } : {}), ...(Number.isFinite(preset.temperature) ? { temperature: preset.temperature } : {}) } };
+  return { ok: true, model: { kind, url: base.toString(), key, model: String(preset.model), ...(preset.maxTokens ? { maxTokens: preset.maxTokens } : {}), ...(Number.isFinite(preset.temperature) ? { temperature: preset.temperature } : {}),
+    ...(Object.keys(extraBody).length ? { extraBody } : {}), ...(Object.keys(extraHeaders).length ? { extraHeaders } : {}), ...(effort ? { reasoningEffort: effort } : {}), ...(p === "openrouter" ? { openrouter: true } : {}), ...(openaiReasoning ? { openaiReasoning: true } : {}) } };
 }

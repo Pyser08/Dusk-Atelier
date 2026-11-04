@@ -24,11 +24,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.evaluate(() => __app.ctx.go("memory")); await page.waitForTimeout(600);
   ok(`[${tag}] 기억 홈에 '나에 대한 기억' 줄`, (await page.locator("#rb-mem-go-me").count()) === 1);
   await page.locator("#rb-mem-go-me").click(); await page.waitForTimeout(500);
-  ok(`[${tag}] '나' 화면 + 합치기 카드(Sensei 기록 1개)`, (await page.locator(".rb-me-merge").count()) === 1 && /Sensei/.test(await page.locator(".rb-me-merge").textContent()));
-  await page.locator("#rb-me-merge").click(); await page.waitForTimeout(200);
-  await page.locator(".rb-dialog button", { hasText: "합치기" }).click(); await page.waitForTimeout(600);
+  // 1.9.3: '나' 화면을 열면 페르소나 이름(Sensei)으로 갈라진 기록을 자동으로 합친다
   const f = await page.evaluate(async () => { const x = await __app.ctx.memory.store.getFolder("c1", "t1"); return { keys: Object.keys(x.people), emo: Object.keys(x.emo ?? {}) }; });
-  ok(`[${tag}] 합친 뒤 Sensei 인물이 사라지고 {{user}}로`, !f.keys.includes("sensei") && f.keys.includes("{{user}}") && f.emo.includes("시로코>{{user}}"), JSON.stringify(f));
+  ok(`[${tag}] 자동으로 합쳐져 Sensei 인물이 사라지고 {{user}}로`, !f.keys.includes("sensei") && f.keys.includes("{{user}}") && f.emo.includes("시로코>{{user}}"), JSON.stringify(f));
   ok(`[${tag}] 합친 뒤 합치기 카드 없음 · 시로코 카드(호칭 선생님·감정 막대)`, (await page.locator(".rb-me-merge").count()) === 0 && /선생님/.test(await page.locator(".rb-me-card[data-who='시로코']").textContent()) && (await page.locator(".rb-me-card[data-who='시로코'] .rb-wk2-bar").count()) >= 2);
   await page.locator(".rb-me-card[data-who='시로코'] .rb-me-foot .rb-btn").click(); await page.waitForTimeout(200);
   await page.locator(".rb-me-dlg input[aria-label='나를 부르는 말']").fill("쌤");
