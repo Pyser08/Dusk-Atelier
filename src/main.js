@@ -269,7 +269,7 @@ async function start() {
   })().catch((e) => console.log("[Dusk Atelier] 디바이스 페어 확인 실패", e?.message ?? e));
   restoreActiveTheme(api).catch((e) => console.log("[Dusk Atelier] 테마 적용 실패", e?.message ?? e));
   const open = () => app.open().catch((e) => console.log(`[${TITLE}] 열기 실패: ${e?.message ?? e}`));
-  await api.registerButton({ name: TITLE, icon: ICON, iconType: "html", location: "hamburger" }, open);
+  await api.registerButton({ name: TITLE, icon: ICON, iconType: "html", location: "hamburger", id: "dusk-atelier-open" }, open);
   await api.registerSetting(TITLE, open, ICON, "html");
   // 채팅창 입력 옆 메뉴에서 바로 장기기억으로
   const openMemory = () => app.open({ tab: "memory" }).catch((e) => console.log(`[${TITLE}] 열기 실패: ${e?.message ?? e}`));

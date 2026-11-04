@@ -13,7 +13,7 @@ export function createMemoryButton(api, { name, icon, open, log }) {
   async function show() {
     if (on) return true;
     try {
-      part = await api.registerButton({ name, icon, iconType: "html", location: "action" }, open);
+      part = await api.registerButton({ name, icon, iconType: "html", location: "action", id: "dusk-memory-button" }, open);   // id가 있어야 포켓리스가 떠 있는 버튼 위치를 옮기고 기억해요
       on = true;
       return true;
     } catch (e) {

@@ -1,5 +1,8 @@
 # 현재 상태 — feat/1.9.2
 
+## 2026-11-04 채팅 메뉴 버튼 id
+- `memorybutton.js` registerButton에 `id:"dusk-memory-button"`, 메인 햄버거 버튼 `id:"dusk-atelier-open"`. 포켓리스의 떠 있는 버튼 위치 옮기기·기억이 id 기준이라는 추정(기기 확인 필요).
+
 ## 2026-11-04 위젯 홈 설정 시트·색 테마
 - `src/widgethome/sheet.js`: `PRESETS`(18개, 앱 팔레트 형식) · 시트 HTML/CSS · `createSheet`. 위쪽 설정/홈 꾸미기·독 홈 꾸미기·제목 연필이 시트를 연다(제목 연필은 홈 탭). 바꾸면 `setPrefs`로 바로 저장.
 - 색: core settings에 `themePreset`. `applyColors`가 리스 색을 따르지 않으면 `presetById(themePreset).base`를 앱 팔레트처럼 써서 모든 위젯에 적용. ‘위젯마다 직접’ = themePreset 비움 + 예전 꾸미기 창.
