@@ -25,6 +25,7 @@ import POT_PROMPTS from './data/pot/prompts.json';
 import './data/modelhub.js';
 import { createProvider } from './data/provider/index.js';
 import { createWidgetHome } from './data/widgethome.js';
+import { createErosync } from './data/erosync.js';
 import { setDuskRoute } from './engine/runai.js';
 import { setDuskServerModel } from './data/modelhub.js';
 import { setUserPromptProvider } from './engine/runai.js';
@@ -244,6 +245,10 @@ async function start() {
   app.open = async (o) => { await widgetHome.yieldToDusk().catch(() => {}); return duskOpen(o); };
   app.ctx.onClosed = () => widgetHome.resume();   // Dusk 창을 닫으면 떠 있던 위젯 홈을 다시 띄운다
   widgetHome.boot().catch((e) => console.log(`[${TITLE}] 위젯 홈 시작 실패 ${e?.message ?? e}`));
+  // Erosync(v1.9.2): 기본 꺼짐. 켜져 있으면 시작(본체는 켤 때만 불러옴). 기억 설정에서 켜고 끈다.
+  const erosync = createErosync(api, { log: (m) => console.log(`[${TITLE}] ${m}`) });
+  app.ctx.erosync = erosync;
+  erosync.boot().catch((e) => console.log(`[${TITLE}] Erosync 시작 실패 ${e?.message ?? e}`));
   app.ctx.cellar = memory.cellar;   // 한 곳에서 찾은 Cellar 연결을 화면들이 함께 쓴다
   app.ctx.skills = skills;
   app.ctx.web = web;

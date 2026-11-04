@@ -6,6 +6,7 @@ Dusk Atelier 자체는 **GNU Affero General Public License v3.0 (AGPL-3.0)** 입
 RisuBard 프리셋 해석 코드는 GPL-3.0이며, GPLv3 제13조에 따라 AGPL-3.0과 결합해 배포할 수 있습니다.
 fflate 0.8.2 (MIT, https://github.com/101arrowz/fflate)는 기존 번들과 같은 버전입니다.
 위젯 홈(src/widgethome/)은 PocketRisu 위젯 홈 v1.0.34(제작자 본인 제공)을 이 저장소로 옮긴 것입니다. 그 안의 design.js(시계·달력·할 일 도우미)는 원본 주석에 ‘Butter Home v8에서 옮김’이라고 적혀 있어, 해당 코드의 라이선스는 제작자 확인이 필요합니다.
+Erosync(src/erosync/)는 Erosync V0.9.1(원작자에게 제공받음)을 Dusk 안에서 켜고 끌 수 있게 감싼 것입니다. 본문은 원본 그대로이고 바뀐 곳은 파일 머리 주석에 적었습니다.
 
 ---
 

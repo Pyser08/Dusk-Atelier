@@ -1,5 +1,14 @@
 # 현재 상태 — feat/1.9.2
 
+## 2026-11-04 Erosync 격리 이식 (V0.9.1, 버전·CHANGELOG 미변경)
+- 원작자에게 제공받은 `Erosync V0.9.1.js`(36.8k줄, api 3.0)를 위젯 홈처럼 격리 이식. 기억 설정(전체 설정)의 ‘Erosync (NSFW 장면 강화)’ 카드에서 켜고 끔(키 `dusk.erosync.on`, 기본 꺼짐). **비용 안내 문구 포함**(`EROSYNC_COST_NOTE`). 성인 인물 한정 문구·검사는 사용자 결정으로 넣지 않음(Erosync에 원래 없음).
+- 구조: `src/erosync/erosync.js`=원본 본문 그대로 + 3곳만 변경(머리말 `//@` 제거, 즉시실행 함수→`bootErosync(api)`, `R`을 api 프록시로 바꿔 `onUnload`를 가로챔 → 끌 때 `dispose()`가 원본 정리 함수를 부름), `tape.js`=배경음 base64 분리(886KB). `src/data/erosync.js`=컨트롤러(`createErosync`, 본체는 켤 때만 `import()`), `src/ui/screens/memory/erosyncui.js`=카드, `main.js`에서 `app.ctx.erosync`로 연결·`boot()`.
+- 원본 `erosync` 플러그인이 켜져 있으면 시작하지 않고 안내(같은 요청 이중 주입·같은 저장 키 방지). 요청 훅(`addRisuReplacer`)이 없으면 시작 안 함. 켜기 실패하면 스위치를 되돌리고 저장값도 off.
+- Erosync 자체 UI(채팅 ‘에로싱크’ 버튼, 리스 설정 ‘Erosync’ 항목, 관계 그래프)는 원본 그대로 동작. Dusk 주입(`[Dusk Memory]`)과는 별도 `beforeRequest` 훅 두 개가 나란히 돎(마커가 달라 서로 안 지움).
+- 번들 크기 4.9MB → 7.6MB(+2.7MB). 빌드 경고 1건은 원본의 중복 키 `model`(src/erosync/erosync.js 3890, 원본도 동일).
+- 테스트: `tests/erosync.test.js`(컨트롤러 7) · `erosync-vendor.test.js`(실제 본체를 가짜 api로 올려 훅 등록·해제, 지문 5) · e2e `tests/e2e/run-erosync.mjs`(PC·모바일 14). npm test 1013 pass / 9 skip / 0 fail, check 동일함.
+- 못 한 것/미확인: 세 호스트 실기기(특히 `getLocalPluginStorage`가 플러그인별로 나뉘면 원본 Erosync의 기존 데이터가 안 보일 수 있음 — 기존 사용자는 확인 필요), Erosync 설정 화면이 Dusk 창과 겹칠 때의 화면 겹침, 켜진 상태에서 Dusk 기억 훅과의 순서·토큰 합산. 비용은 안내 문구만(호출 수 제한 없음). 안내서(`docs/site/guide/memory.html`)·NOTICE.md 갱신함, CHANGELOG는 버전 지시가 없어 안 건드림.
+
 ## 2026-11-04 도구 → 용량 측정 (RisuMeter 참고, 버전 미변경)
 - 사용자가 준 `risu-meter.js`(v0.6.0)를 분석해 **읽기 전용 측정 부분만** 새로 씀(코드 이식 아님 → NOTICE 불필요, 스페셜 땡스에 `RisuMeter`만 추가: tools.js `THANKS`, README, 안내서 start.html). 버린 것: 연결 편집 모달(전체 `setDatabase` fallback 위험 — 연결 편집은 기존 `modlinks.js`), 바로가기 4종, 자체 CSS·테마, 저장 방식 감지·전송/원본 기준 전환(추정 상수 의존).
 - 구조: 순수 `src/engine/sizemeter.js`(바이트·분해·렌더 진단·리포트) / 수집 `src/data/sizemeter.js`(`scanSizes`) / 화면 `src/ui/screens/sizemeter.js` + `sizemeter/css.js`(`SIZE_CSS`, styles.js에서 합침) / 진입 도구 탭 '확인·복구' 행 `rb-tool-sizemeter`(`ctx.go("tools","sizemeter")`).
