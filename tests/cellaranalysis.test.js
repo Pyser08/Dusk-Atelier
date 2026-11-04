@@ -98,22 +98,27 @@ import { serverModelOf, saveCfg, keyStore } from "../src/data/modelhub.js";
 import { createModelPreset } from "../src/engine/pot/model-options.js";
 import { defaultCfg } from "../src/engine/modelcfg.js";
 
-test("serverModelOf: 리스 보조 모델·미지원 종류·추가 설정은 거절, 지원 모델은 주소·형식을 만든다", async () => {
-  const store = new Map();
-  const api = { pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); }, removeItem: async (k) => { store.delete(k); } } };
+test("serverModelOf: 리스 쪽 모델은 거절, '내 API' 프리셋은 종류와 상관없이 프리셋·키를 서버로 보낸다", async () => {
+  const store = new Map(), local = new Map();
+  const api = { pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); }, removeItem: async (k) => { store.delete(k); } },
+    getLocalPluginStorage: async () => ({ getItem: async (k) => local.get(k) ?? null, setItem: async (k, v) => { local.set(k, v); } }) };
   assert.equal((await serverModelOf(api, { mode: "submodel" })).ok, false);
   const cfg = defaultCfg();
   const mkp = (over) => ({ ...createModelPreset("t", "m1"), ...over });
   const put = async (over) => { const c = JSON.parse(JSON.stringify(cfg)); c.presets = [{ id: "p1", name: "t", preset: mkp(over) }]; await saveCfg(api, c); };
   const pickOf = () => ({ mode: "custom", presetId: "p1" });
   const reasonOf = async (over) => { store.clear(); await put(over); return serverModelOf(api, pickOf()); };
-  const g = await reasonOf({ provider: "google", baseUrl: "https://g.example/v1/openai" });
-  assert.equal(g.ok, false); assert.match(g.reason, /키/, "Google은 OpenAI 호환 주소로 서버가 직접 부른다(키 단계까지 감)");
-  assert.match((await reasonOf({ provider: "custom", baseUrl: "https://c.example/v1", extraBodyJson: '{"model":"x"}' })).reason, /추가 요청/, "필수 항목 덮어쓰기는 기기에서도 거절");
-  assert.match((await reasonOf({ provider: "vertex-ai", baseUrl: "https://v.example" })).reason, /종류/);
+  assert.match((await reasonOf({ provider: "risuai", baseUrl: "" })).reason, /리스/);
   assert.match((await reasonOf({ provider: "custom", baseUrl: "not a url" })).reason, /프리셋/, "검증을 통과하지 못한 프리셋은 없는 것으로 본다");
-  assert.match((await reasonOf({ provider: "custom", baseUrl: "https://c.example/v1" })).reason, /키/, "지원 종류는 키 단계까지 간다(키가 없으면 키 없음)");
-  assert.match((await reasonOf({ provider: "openai", baseUrl: "https://api.openai.com/v1", model: "gpt-5", extraBodyJson: '{"top_p":0.5}', reasoningQuickSetting: "low" })).reason, /키/, "추가 JSON·추론 설정·추론 모델도 서버로 보낼 수 있다");
+  for (const over of [{ provider: "custom", baseUrl: "https://c.example/v1" }, { provider: "vertex-ai", baseUrl: "https://v.example" }, { provider: "copilot", baseUrl: "https://api.githubcopilot.com" }, { provider: "google", baseUrl: "https://g.example/v1/openai" }, { provider: "openai", baseUrl: "https://api.openai.com/v1", model: "gpt-5", extraBodyJson: '{"top_p":0.5}', reasoningQuickSetting: "low" }]) {
+    const r = await reasonOf(over);
+    assert.equal(r.ok, false); assert.match(r.reason, /키/, `${over.provider}: 키 단계까지 간다(키가 없으면 키 없음)`);
+  }
+  // 키가 있으면 프리셋과 키가 그대로 간다
+  store.clear(); await put({ provider: "custom", baseUrl: "https://c.example/v1" });
+  const keys = await keyStore(api); await keys.set("custom", "sk-abc");
+  const ok = await serverModelOf(api, pickOf());
+  assert.equal(ok.ok, true); assert.equal(ok.model.kind, "preset"); assert.equal(ok.model.key, "sk-abc"); assert.equal(ok.model.preset.provider, "custom");
 });
 
 test("중계: 서버가 요청한 모델 호출을 플러그인이 하고 결과·오류를 돌려준다", async () => {
