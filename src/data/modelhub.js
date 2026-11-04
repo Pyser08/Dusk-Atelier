@@ -73,11 +73,11 @@ export const copilotLogin = (api, opts) => copilotLoginStep(api, opts);
 export { defaultCfg };
 
 // Dusk Cellar 서버 분석(1.9.3)이 쓸 수 있는 모델인지 보고, 쓸 수 있으면 서버에 보낼 정보(주소·키·모델·요청 옵션)를 만든다.
-// 서버가 요청을 직접 만들 수 있는 종류(Claude 형식·OpenAI 호환: openai·openrouter·deepseek·ollama·custom)만 보낸다.
-// 리스 보조 모델(리스 안에서만 부를 수 있음)과 Google·Vertex·Copilot(별도 인증·요청 방식)은 기기에서 돌린다.
+// 서버가 요청을 직접 만들 수 있는 종류(Claude 형식·OpenAI 호환: openai·google·openrouter·deepseek·llmgateway·ollama·custom)만 보낸다.
+// 리스 보조 모델(리스 안에서만 부를 수 있음)과 Vertex·Copilot(별도 인증 흐름)은 서버가 직접 못 불러 '중계'(cellaranalysis.js)로 처리한다.
 // 요청 모양(추가 JSON·추론 설정·DeepSeek 사고 끄기·OpenAI 추론 모델)은 llm-client.js와 같은 규칙으로 옵션만 실어 보내고, 서버(Cellar analysis.cjs)가 같은 규칙으로 본문을 만든다.
 // 반환: { ok:true, model:{kind,url,key,model,maxTokens,temperature,extraBody,extraHeaders,reasoningEffort,openrouter,openaiReasoning} } | { ok:false, reason }
-const OPENAI_LIKE = new Set(["openai", "openrouter", "deepseek", "ollama"]);
+const OPENAI_LIKE = new Set(["openai", "openrouter", "deepseek", "ollama", "google", "llmgateway"]);   // google은 PDF 없이는 OpenAI 호환 주소(…/openai)로 부른다(llm-client.js와 같음)
 const OPENAI_REASONING = /(?:^|\/)(?:gpt-(?:[5-9]|[1-9]\d)|o[1-4])(?:[.\-/]|$)/i;
 const BLOCKED_BODY = new Set(["model", "messages", "system", "max_tokens"]);
 const BLOCKED_HEADER = /^(authorization|proxy-authorization|x-api-key|api-key|host|content-length|content-type|anthropic-version|connection|transfer-encoding|accept-encoding|origin|referer|user-agent)$/i;

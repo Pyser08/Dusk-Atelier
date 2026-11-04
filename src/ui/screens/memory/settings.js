@@ -47,7 +47,7 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
       sw("단계별 분석 (안정적, 호출은 늘어요)", S.staged !== false, (s, v) => { s.staged = v; }),
       h("p", { class: "rb-muted" }, "먼저 한 번 호출해 누가 나오는지·전반적인 상황을 파악하고, 이어서 중요한 인물마다 한 번씩(최대 6명) 세부를 분석해요. 응답이 길어 형식이 깨지거나 실패하는 걸 줄여요. 한 인물의 세부 분석이 실패해도 나머지는 기록돼요."),
       sw("서버에서 지난 대화 분석 (Dusk Cellar)", S.serverAnalysis !== false, (s, v) => { s.serverAnalysis = v; }),
-      h("p", { class: "rb-muted" }, "Dusk Cellar가 연결돼 있고 기억이 서버에 저장될 때, '지난 대화 분석'을 서버에서 계산해요(기기 메모리·배터리 절약). 서버가 직접 못 부르는 모델(리스 보조 모델·Google·Vertex·Copilot)은 모델 호출만 기기가 하니 끝날 때까지 창을 열어 두세요. 끄면 항상 기기에서 분석해요."),
+      h("p", { class: "rb-muted" }, "Dusk Cellar가 연결돼 있고 기억이 서버에 저장될 때, '지난 대화 분석'을 서버에서 계산해요(기기 메모리·배터리 절약). 서버가 직접 못 부르는 모델(리스 보조 모델·Vertex·Copilot)은 모델 호출만 이 기기가 하고, 리스 화면이 꺼지면 서버가 기다렸다가 다시 열면 이어서 해요. 끄면 항상 기기에서 분석해요."),
       sw("전체 자동 기록", S.autoRecord !== false, (s, v) => { s.autoRecord = v; })) : null,
     caps.inject ? section("임베딩(의미 검색)", h("p", { class: "rb-muted" }, "뜻이 비슷한 기억을 찾아 넣어요. 주소·키를 넣고 기본 사용을 켜면 기억 고르기에 적극 쓰여요."),
       btn("임베딩 설정", { onClick: () => openEmbedModal(ctx) })) : null,

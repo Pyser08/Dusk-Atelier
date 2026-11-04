@@ -247,6 +247,21 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     const chars = groups.reduce((n, g) => n + g.reduce((s, i) => s + extractMessageText(messages[i]).length, 0) + 4000, 0);
     return { groups, calls: groups.length, tokens: Math.round(chars / 1.5), total: ai.length, done: ai.length - todo.length, todo: todo.length, failed: todo.filter((i) => failedSet.has(hOf(i))).length };
   }
+  // 서버 분석 중계: 서버가 요청한 모델 호출을 기존 방식(리스 보조 모델·내 API 모델·인증 포함)으로 한다
+  const relayCall = (settings, signal) => (msgs, pick) => run(msgs, { ...modelOf(settings), noUserPrompts: true, ...(pick?.timeoutSec ? { timeoutSec: pick.timeoutSec } : {}) }, signal);
+  // 리스 화면을 다시 열었을 때 서버에서 중계를 기다리던 분석을 이어서 한다
+  async function resumeServer({ signal } = {}) {
+    if (!server?.resume) return null;
+    const idx = await store.getIndex();
+    if (idx.settings?.serverAnalysis === false) return null;
+    const out = await server.resume({ relay: relayCall(idx.settings, signal), signal });
+    if (out?.job?.chaId) {
+      store.dropCache?.();
+      await store.updateFolder(String(out.job.chaId), String(out.job.chatId), () => {}).catch(() => {});
+      notify(`서버에서 이어서 한 지난 대화 분석이 끝났어요 (${out.total - out.failed.length}/${out.total}).`);
+    }
+    return out;
+  }
   async function backfill(charIndex, chatIndex, range, { signal, onProgress, redo = false } = {}) {
     // 캐릭터·채팅·폴더는 처음에 한 번만 읽는다(묶음마다 읽으면 수백 번 통째 복사 → 모바일 메모리 부족).
     const chat = await api.getChatFromIndex(charIndex, chatIndex), character = await api.getCharacterFromIndex(charIndex);
@@ -262,7 +277,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
           chaId, chatId, charName: character.name, chatName: chat.name ?? chat.chatName ?? "", messages: server.slim(chat.message ?? []),
           settings: idx.settings, bot: { ...(idx.bots[chaId] ?? {}), paused: false }, userNames: await userNames(), regex: prep ? await prep.entriesFor(character, chat) : [],
           prompts: await prompts?.().catch(() => null) ?? null, range: { from: range?.from ?? 0, to: Number.isFinite(range?.to) ? range.to : null, all: redo }, redo
-        }, { signal, onProgress, relay: (msgs, pick) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true, ...(pick?.timeoutSec ? { timeoutSec: pick.timeoutSec } : {}) }, signal) });
+        }, { signal, onProgress, relay: relayCall(idx.settings, signal) });
         if (out) {
           store.dropCache?.();   // 서버가 쓴 기억을 다시 읽게 하고, 인덱스의 폴더 요약을 맞춘다
           await store.updateFolder(chaId, chatId, () => {}).catch(() => {});
@@ -298,5 +313,5 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   }
 
   return { start, onOutput, confirmNext, tick, analyzeAt, prepareLatest, analyzeLatest: async (ci, ti) => { const i = await latestAiIndex(ci, ti); if (i < 0) throw new Error("분석할 AI 응답이 없어요."); return analyzeAt(ci, ti, [i], { manual: true }); },
-    planBackfill, backfill, digestIfNeeded, session: () => ({ ...session }), isStarted: () => started, stop: () => clearTimeout(timer) };
+    planBackfill, backfill, resumeServer, digestIfNeeded, session: () => ({ ...session }), isStarted: () => started, stop: () => clearTimeout(timer) };
 }

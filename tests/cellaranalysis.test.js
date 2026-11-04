@@ -107,8 +107,8 @@ test("serverModelOf: 리스 보조 모델·미지원 종류·추가 설정은 �
   const put = async (over) => { const c = JSON.parse(JSON.stringify(cfg)); c.presets = [{ id: "p1", name: "t", preset: mkp(over) }]; await saveCfg(api, c); };
   const pickOf = () => ({ mode: "custom", presetId: "p1" });
   const reasonOf = async (over) => { store.clear(); await put(over); return serverModelOf(api, pickOf()); };
-  const g = await reasonOf({ provider: "google", baseUrl: "https://g.example/v1" });
-  assert.equal(g.ok, false); assert.match(g.reason, /종류/);
+  const g = await reasonOf({ provider: "google", baseUrl: "https://g.example/v1/openai" });
+  assert.equal(g.ok, false); assert.match(g.reason, /키/, "Google은 OpenAI 호환 주소로 서버가 직접 부른다(키 단계까지 감)");
   assert.match((await reasonOf({ provider: "custom", baseUrl: "https://c.example/v1", extraBodyJson: '{"model":"x"}' })).reason, /추가 요청/, "필수 항목 덮어쓰기는 기기에서도 거절");
   assert.match((await reasonOf({ provider: "vertex-ai", baseUrl: "https://v.example" })).reason, /종류/);
   assert.match((await reasonOf({ provider: "custom", baseUrl: "not a url" })).reason, /프리셋/, "검증을 통과하지 못한 프리셋은 없는 것으로 본다");
@@ -138,4 +138,22 @@ test("prepare: 직접 못 부르는 모델은 서버가 중계를 지원할 때 
   const p = await createServerAnalysis(api, { cellar: relayCellar, remote: remoteOk }).prepare({ mode: "submodel" });
   assert.equal(p.relay, true); assert.equal(p.model.kind, "relay");
   assert.equal(await createServerAnalysis(api, { cellar: cellarOk, remote: remoteOk }).prepare({ mode: "submodel" }), null);
+});
+
+test("resume: 서버가 중계를 기다리는 작업이 있으면 이어서 하고, 없거나 이미 따라가는 중이면 null", async () => {
+  const posted = []; let n = 0;
+  const api = { nativeFetch: async (u, init) => {
+    const b = JSON.parse(init.body);
+    if (b.action === "result") { posted.push(b.callId); return reply(200, { ok: true, accepted: true }); }
+    n++;
+    if (b.claim !== true) return reply(200, { ok: true, job: { state: "running", relay: true, chaId: "c1", chatId: "t1", total: 2, done: 0, failed: 0 } });
+    return n < 3 ? reply(200, { ok: true, job: { state: "running", relay: true, total: 2, done: 0, failed: 0 }, calls: [{ id: "k7", messages: [{ role: "user", content: "x" }], pick: {} }] })
+      : reply(200, { ok: true, job: { state: "done", relay: true, chaId: "c1", chatId: "t1", total: 2, done: 2, failed: 0, reasons: [] }, calls: [] });
+  } };
+  const sa = createServerAnalysis(api, { cellar: { status: async () => ({ ok: true, url: "http://x", via: "native", features: ["mem", "analysis", "analysis-relay"] }) }, remote: remoteOk, pollMs: 0, sleep: sleep0 });
+  const out = await sa.resume({ relay: async () => "답" });
+  assert.equal(out.server, true); assert.equal(out.job.chaId, "c1"); assert.deepEqual(posted, ["k7"]);
+  const none = { nativeFetch: async () => reply(200, { ok: true, job: null }) };
+  assert.equal(await createServerAnalysis(none, { cellar: cellarOk, remote: remoteOk }).resume({ relay: async () => "" }), null);
+  assert.equal(await sa.resume({}), null, "중계 함수가 없으면 하지 않는다");
 });

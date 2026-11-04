@@ -34,7 +34,7 @@
 - `cardflow.js` (78줄) 카드 만들기 흐름(AI 호출 3회: 카드·연결·첫 메시지)과 에셋 고르기. 화면 코드 없이 api만 … — roleNamesOf, generateCard, generateLink, listBotImages, pickIllustrations
 - `cardstore.js` (42줄) 카드 저장소: 카드 본문(dusk.mem.v2.card.<id>), 목록 인덱스, 카드 설정. 직렬 … — CARD_PREFIX, CARD_INDEX_KEY, CARD_CFG_KEY, DEFAULT_CARD_CFG, createCardStore
 - `cellar.js` (78줄) Dusk Cellar 연결 (1.8.3): 리스 서버 옆에서 도는 선택 서버(Pyser08/Dusk-… — CELLAR_URL_KEY, CELLAR_DEFAULT_URL, loadCellarUrl, saveCellarUrl, probeCellar
-- `cellaranalysis.js` (64줄) Dusk Cellar 서버 분석 (1.9.3, Cellar 0.1.1~): '지난 대화 분석'을 서버… — slimMessages, createServerAnalysis
+- `cellaranalysis.js` (87줄) Dusk Cellar 서버 분석 (1.9.3, Cellar 0.1.1~): '지난 대화 분석'을 서버… — slimMessages, createServerAnalysis
 - `cellarbackup.js` (40줄) Dusk Cellar 세이브 백업·복원 (1.8.3). 실제 일은 서버가 한다(바뀐 파일만 복사하는 … — createCellarBackups
 - `cellarlatest.js` (38줄) Dusk Cellar 새 버전 알림 (1.9.0). Cellar가 연결돼 있을 때만, GitHub 최… — CELLAR_NOTIFIED_KEY, semverNewer, latestCellarVersion, checkCellarUpdate
 - `cellarplugins.js` (121줄) 플러그인 코드 수정 (1.8.3): 리스는 플러그인이 다른 플러그인을 고치지 못하게 막았다(RisuA… — hasPluginEdit, gzipB64, gunzipB64, createCellarPlugins, headerProblem
@@ -62,7 +62,7 @@
 - `memoryload.js` (12줄) v1.6.5 읽기 경로 대조: 폴더를 읽어 메모리 사본에서만 앵커 정합성(reconcile)을 맞춘다… — loadReconciled
 - `memoryremote.js` (267줄) 장기기억을 Dusk Cellar에 저장 (1.8.3) — FLAG_KEY, QUEUE_KEY, REMOTE_PREFIX, mergeFolder, createMemoryRemote
 - `memoryrewind.js` (57줄) 저장된 기억으로 새 채팅 만들기. 원본 채팅·봇 데이터는 수정하지 않고 새 채팅만 추가한다. — sliceFolder, sceneAt, draftFirstMessage, createRewindChat
-- `memoryrunner.js` (303줄) 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 … — createMemoryRunner
+- `memoryrunner.js` (318줄) 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 … — createMemoryRunner
 - `memorystore.js` (121줄) 장기기억 v2 저장소: 인덱스 + 폴더별 키 분할, 직렬 쓰기 큐, v1 마이그레이션. — INDEX_KEY, FOLDER_PREFIX, EXT_PREFIX, LEGACY_KEY, DEFAULT_SETTINGS
 - `memorystore3.js` (159줄) 장기기억 v3 저장소: v2와 같은 메서드 + 채팅별 인물 위키(wiki) + 리수폿 가져오기. 직렬… — INDEX_KEY, FOLDER_PREFIX, createMemoryStoreV3
 - `memoryswitches.js` (71줄) v1.7.0 2단계: 화면이 쓰는 '기억 · 리수폿' 스위치 묶음. 저장은 인덱스(store.upda… — currentChat, createSwitches

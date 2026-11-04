@@ -57,7 +57,7 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
     (async () => {
       for (const wait of [0, 3e3, 7e3, 20e3]) {
         if (wait) await new Promise((r) => { const t = setTimeout(r, wait); t.unref?.(); });
-        try { await remote.detect(); if (cellar.peek()?.ok) return; } catch (e) { log("Dusk Cellar 확인 실패", e?.message ?? e); }
+        try { await remote.detect(); runner?.resumeServer?.().catch(() => {}); if (cellar.peek()?.ok) return; } catch (e) { log("Dusk Cellar 확인 실패", e?.message ?? e); }
       }
     })();
     const idx = await store.getIndex(), sel = backend(idx.settings);
