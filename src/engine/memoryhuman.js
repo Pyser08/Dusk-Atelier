@@ -92,7 +92,9 @@ export function stageOf(folder, a, b, now) {
   if (Object.values(folder?.talk ?? {}).some((t) => pair(t.from, t.to) && t.tone === "casual")) evidence += 2;
   // 근거는 '처음 봄'만 벗겨 준다. '친한 사이' 이상은 여전히 함께한 장면 수와 감정으로만 오른다.
   const stage = shared + evidence <= 1 && warmth < 3 ? "just met" : shared < 5 || warmth < 4 ? "acquaintances" : warmth < 7 ? "close" : "very close";
-  return { stage, shared, warmth };
+  const floor = folder?.start?.[[ka, kb].sort().join("|")]?.level;   // 본문이 '이미 아는 사이'라고 밝힌 경우의 바닥
+  const RANK = ["just met", "acquaintances", "close", "very close"], min = floor === "close" ? 2 : floor === "friendly" ? 1 : 0;
+  return { stage: RANK[Math.max(RANK.indexOf(stage), min)], shared, warmth };
 }
 export function stageLines(folder, names, now, limit = 3) {
   const list = [...new Map((names ?? []).filter(Boolean).map((n) => [key(n), n])).values()], out = [];
@@ -110,7 +112,7 @@ const TONES = new Set(["formal", "casual", "mixed"]);
 const RIFT_STATES = new Set(["open", "apologized", "resolved"]), GRUDGES = new Set(["none", "some", "deep"]);
 export const GRUDGE_FADE = 200;   // 화해 뒤 '조금 남은' 앙금이 사라지는 응답 수(깊은 앙금은 남는다)
 export function validateHuman(obj, { beliefs = false } = {}) {
-  const talk = [], bond = [], belief = [], cleared = [], rift = [], face = [];
+  const talk = [], bond = [], belief = [], cleared = [], rift = [], face = [], start = [];
   for (const x of Array.isArray(obj?.talk) ? obj.talk : []) {
     const from = cut(x?.from, 60), to = cut(x?.to, 60), call = cut(x?.call, 20), tone = String(x?.tone ?? "").toLowerCase();
     if (!from || !to || key(from) === key(to) || !nk(call) || !TONES.has(tone)) continue;
@@ -121,6 +123,12 @@ export function validateHuman(obj, { beliefs = false } = {}) {
     const a = cut(x?.a, 60), b = cut(x?.b, 60), moment = cut(x?.moment, 60), hook = cut(x?.hook, 30);
     if (!a || !b || key(a) === key(b) || !nk(moment)) continue;
     bond.push({ a, b, moment, ...(nk(hook) ? { hook } : {}) });
+    break;
+  }
+  for (const x of Array.isArray(obj?.start) ? obj.start : []) {   // 이야기 시작 전부터의 관계(본문 인용 필수)
+    const a = cut(x?.a, 60), b = cut(x?.b, 60), level = String(x?.level ?? "").toLowerCase(), q = cut(x?.q, 60);
+    if (!a || !b || key(a) === key(b) || !nk(q) || (level !== "close" && level !== "friendly")) continue;
+    start.push({ a, b, level, q });
     break;
   }
   for (const x of Array.isArray(obj?.rift) ? obj.rift : []) {   // ⑦ 갈등·사과·앙금
@@ -144,7 +152,7 @@ export function validateHuman(obj, { beliefs = false } = {}) {
     }
     for (const id of Array.isArray(obj?.cleared) ? obj.cleared : []) { const s = cut(id, 24); if (s) cleared.push(s); if (cleared.length >= 4) break; }
   }
-  return { talk, bond, belief, cleared, rift, face };
+  return { talk, bond, belief, cleared, rift, face, start };
 }
 
 // ── 반영 ──
@@ -162,6 +170,13 @@ export function applyHuman(folder, h, anchor, { important = false, now = Date.no
     if (cur?.lock || (cur && cur.call === t.call && cur.tone === t.tone)) continue;
     const { back, ...curFlat } = cur ?? {};
     folder.talk[k] = { from: t.from, to: t.to, call: t.call, tone: t.tone, ...(cur ? { prev: { call: cur.call, tone: cur.tone }, back: curFlat } : {}), at, at_ms: now, ...(src ? { src } : {}) };
+    n++;
+  }
+  for (const x of h.start ?? []) {   // 처음 한 번만, 이미 있으면 덮어쓰지 않는다
+    folder.start ??= {};
+    const pk = pairKey(x.a, x.b);
+    if (folder.start[pk]) continue;
+    folder.start[pk] = { a: x.a, b: x.b, level: x.level, q: x.q, at, at_ms: now, ...(src ? { src } : {}) };
     n++;
   }
   if (important && h.bond?.length) {

@@ -38,3 +38,32 @@ test("함께한 추억·관계 변화 기록이 쌓여 있으면 처음 봄이 �
   const g = base(); g.rels = { r: { from: "카이", to: "하연", items: [{ d: "절친", dir: "+" }, { d: "믿음", dir: "+" }] } };
   assert.notEqual(stageOf(g, "카이", "하연", 1).stage, "just met");
 });
+
+// ── 초기 입력에서 명백한 기존 관계 감지 ──
+import { applyHuman, validateHuman } from "../src/engine/memoryhuman.js";
+const src2 = "카이와 하연은 어릴 때부터 함께 자란 소꿉친구였다. 카이가 웃었다.";
+test("start 줄: 본문 근거(인용)가 있을 때만 받는다", () => {
+  const ok = run("start|하연|close|함께 자란 소꿉친구", "카이", src2);
+  assert.equal(ok.start.length, 1);
+  assert.deepEqual([ok.start[0].a, ok.start[0].b, ok.start[0].level], ["카이", "하연", "close"]);
+  assert.deepEqual(run("start|하연|close|서로 사랑하는 연인", "카이", src2).start, [], "본문에 없는 인용");
+  assert.deepEqual(run("start|하연|close", "카이", src2).start, [], "인용 없음");
+  assert.deepEqual(run("start|Other|close|함께 자란 소꿉친구", "카이", src2).start, [], "자리표시자 이름");
+});
+test("한국어 단계 이름도 받는다", () => {
+  assert.equal(run("start|하연|친한|함께 자란 소꿉친구", "카이", src2).start[0].level, "close");
+});
+test("start가 반영되면 처음 봄이 아니라 '친한 사이'로 시작한다", () => {
+  const f = { scenes: [{ who: ["카이", "하연"], at: 1 }], emo: {}, talk: {}, rels: {}, bonds: [] };
+  const h = validateHuman({ start: [{ a: "카이", b: "하연", level: "close", q: "함께 자란 소꿉친구" }] });
+  assert.equal(h.start.length, 1);
+  applyHuman(f, h, { at: 1 }, { now: 1 });
+  assert.equal(stageOf(f, "하연", "카이", 1).stage, "close");
+  applyHuman(f, validateHuman({ start: [{ a: "카이", b: "하연", level: "friendly", q: "아는 사이" }] }), { at: 2 }, { now: 2 });
+  assert.equal(f.start["카이|하연"].level, "close", "이미 있으면 덮어쓰지 않는다");
+});
+test("friendly는 최소 '아는 사이'", () => {
+  const f = { scenes: [], emo: {}, talk: {}, rels: {}, bonds: [] };
+  applyHuman(f, validateHuman({ start: [{ a: "카이", b: "하연", level: "friendly", q: "같은 반 친구" }] }), { at: 1 }, { now: 1 });
+  assert.equal(stageOf(f, "카이", "하연", 1).stage, "acquaintances");
+});

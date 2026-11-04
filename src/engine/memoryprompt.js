@@ -193,7 +193,7 @@ async function analyzeLines(call, input, { onWarn = () => {}, light = false, max
     const j = jsonFrom(raw);   // 강한 모델이 JSON으로 답해도 받는다
     return j && (Array.isArray(j.people) || j.scene) ? j : null;
   }, { minimal: LINES_STAGE1_MIN });
-  const merged = { ...overview, people: (overview.people ?? []).map((e) => ({ ...e })), emo: [], talk: [], rift: [], bond: [], belief: [] };
+  const merged = { ...overview, people: (overview.people ?? []).map((e) => ({ ...e })), emo: [], talk: [], rift: [], bond: [], belief: [], start: [] };
   const targets = merged.people.filter((e) => e.name && Math.max(Number(e.p) || 0, Number(e.s) || 0, Number(e.r) || 0) >= 1).slice(0, cap);
   if (newest.length >= SHORT) for (const t of targets) {
     const mine = (arr) => (arr ?? []).filter((x) => JSON.stringify(x).includes(t.name));
@@ -201,15 +201,15 @@ async function analyzeLines(call, input, { onWarn = () => {}, light = false, max
     const m2 = [{ role: "system", content: linesStage2(t.name, { light, beliefs: !!input.beliefsOn }) }, { role: "user", content: JSON.stringify(payload) }];
     try {
       const got = await askLines(call, m2, (raw) => {
-        if (isNoneReply(raw)) return { entry: {}, emo: [], talk: [], rift: [], bond: [], belief: [] };   // 새로 확인된 게 없음
+        if (isNoneReply(raw)) return { entry: {}, emo: [], talk: [], rift: [], bond: [], belief: [], start: [] };   // 새로 확인된 게 없음
         const lines = parseLines(raw);
         if (lines.length) return fromStage2(lines, t.name, { known, source, light });
         const j = jsonFrom(raw), me = (j?.people ?? []).find((e) => String(e?.name ?? "").replace(/\s+/g, "") === t.name.replace(/\s+/g, ""));
-        return j ? { entry: me ? Object.fromEntries(Object.entries(me).filter(([k]) => !["name", "act", "p", "s", "r"].includes(k))) : {}, emo: j.emo ?? [], talk: j.talk ?? [], rift: j.rift ?? [], bond: j.bond ?? [], belief: j.belief ?? [] } : null;
+        return j ? { entry: me ? Object.fromEntries(Object.entries(me).filter(([k]) => !["name", "act", "p", "s", "r"].includes(k))) : {}, emo: j.emo ?? [], talk: j.talk ?? [], rift: j.rift ?? [], bond: j.bond ?? [], belief: j.belief ?? [], start: j.start ?? [] } : null;
       });
       const slot = merged.people.find((e) => e.name === t.name);
       if (slot) Object.assign(slot, got.entry);
-      for (const k of ["emo", "talk", "rift", "bond", "belief"]) merged[k].push(...(got[k] ?? []));
+      for (const k of ["emo", "talk", "rift", "bond", "belief", "start"]) merged[k].push(...(got[k] ?? []));
     } catch (e) { onWarn(t.name, e); }
   }
   return validate(merged, { ignore: input.ignore, beliefs: !!input.beliefsOn });

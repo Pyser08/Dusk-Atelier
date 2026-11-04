@@ -37,6 +37,7 @@ export function linesStage2(name, { light = false, beliefs = false } = {}) {
     r.push(`feel|what "${name}" really feels|probable reason|H or M or L   (only if it differs from the act)`);
     r.push("rift|Other|what about|open or apologized or resolved|none or some or deep   (fight, apology, making up)");
     r.push("bond|Other|shared moment (<=60)|cue word                                  (important moments only)");
+    r.push(`start|Other|close or friendly|exact quote   (ONLY when the text itself states "${name}" and Other already knew each other BEFORE this scene: childhood friends, family, lovers, colleagues. Omit if they just met or it is unclear)`);
     if (beliefs) r.push("belief|what they now falsely believe|the truth|who misled (or empty)");
   }
   r.push(`If nothing new is confirmed for "${name}" in the newest text, reply exactly: none`);
@@ -59,8 +60,8 @@ function targetName(raw, known, source) {
 
 // ── 줄 해석 ──
 const SEP = /[|｜¦]/;
-const TAGS = new Set(["scene", "who", "rel", "open", "trust", "attr", "keys", "to", "call", "feel", "rift", "bond", "belief"]);
-const ALIAS = { 장면: "scene", 인물: "who", 사람: "who", 관계변화: "rel", 관계: "rel", 떡밥: "open", 확신: "trust", 속성: "attr", 키워드: "keys", 태도: "to", 호칭: "call", 속마음: "feel", 갈등: "rift", 추억: "bond", 오해: "belief", person: "who", scene_summary: "scene" };
+const TAGS = new Set(["scene", "who", "rel", "open", "trust", "attr", "keys", "to", "call", "feel", "rift", "bond", "belief", "start"]);
+const ALIAS = { 장면: "scene", 인물: "who", 사람: "who", 관계변화: "rel", 관계: "rel", 떡밥: "open", 확신: "trust", 속성: "attr", 키워드: "keys", 태도: "to", 호칭: "call", 속마음: "feel", 갈등: "rift", 추억: "bond", 오해: "belief", 사전관계: "start", person: "who", scene_summary: "scene" };
 // 원문 → [{tag, f:[필드…]}]. 코드펜스·번호·글머리표·"tag:" 꼴을 너그럽게 받는다.
 export function parseLines(raw) {
   const out = [];
@@ -202,12 +203,13 @@ const DEED = {
 };
 const ATT = { warm: { affection: 1 }, cold: { affection: -1, hostility: 1 }, same: {} };
 const DEED_ALIAS = { 도움: "help", 공격: "attack", 고백: "confess", 거절: "refuse", 약속: "promise", 사과: "apologize", 스킨십: "touch", 없음: "none" };
+const START_ALIAS = { 친함: "close", 친한: "close", 가까움: "close", 가족: "close", 연인: "close", 아는: "friendly", 지인: "friendly", 안면: "friendly" };
 const ATT_ALIAS = { 따뜻: "warm", 따뜻함: "warm", 차가움: "cold", 차갑: "cold", 같음: "same", 보통: "same" };
 const ATTR_CATS = new Set(["pref", "rel", "job", "home", "belief", "look", "trait", "status"]);
 
 // 반환: { entry: 인물 항목에 덧붙일 필드, emo, talk, rift, bond, belief }
 export function fromStage2(lines, name, { known = [], source = "", light = false } = {}) {
-  const entry = {}, emo = [], talk = [], rift = [], bond = [], belief = [];
+  const entry = {}, emo = [], talk = [], rift = [], bond = [], belief = [], start = [];
   const attrs = [];
   for (const { tag, f } of lines) {
     if (tag === "trust") {
@@ -242,13 +244,16 @@ export function fromStage2(lines, name, { known = [], source = "", light = false
     } else if (tag === "bond" && !light && !bond.length) {
       const b = targetName(f[0], known, source), moment = (f[1] ?? "").slice(0, 60), hook = (f[2] ?? "").slice(0, 30);
       if (b && realText(moment) && nk(b) !== nk(name)) bond.push({ a: name, b, moment, ...(realText(hook) && hook ? { hook } : {}) });
+    } else if (tag === "start" && !light && !start.length) {
+      const b = targetName(f[0], known, source), q = (f[2] ?? "").trim(), level = START_ALIAS[(f[1] ?? "").trim()] ?? YN3(f[1], ["close", "friendly"], "");
+      if (b && level && q && source && quoteOk(q, source) && nk(b) !== nk(name)) start.push({ a: name, b, level, q: q.slice(0, 60) });   // 본문 인용이 있어야만(추측 금지)
     } else if (tag === "belief" && !light && belief.length < 2) {
       const thinks = (f[0] ?? "").slice(0, 60), truth = (f[1] ?? "").slice(0, 60), by = (f[2] ?? "").slice(0, 60);
       if (thinks && truth) belief.push({ who: name, thinks, truth, ...(by ? { by } : {}) });
     }
   }
   if (attrs.length) entry.attr = attrs;
-  return { entry, emo, talk, rift, bond, belief };
+  return { entry, emo, talk, rift, bond, belief, start };
 }
 
 // JSON으로 와도 쓸 수 있게: 흔한 다른 필드 이름을 정해진 이름으로 맞춘다(약한 모델 보정).
