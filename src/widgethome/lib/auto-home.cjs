@@ -17,10 +17,13 @@
     const blockers=await array(await doc.querySelectorAll('#app .rs-setting-cont,#app [role="dialog"],#app [role="alertdialog"],#app dialog[open]'));
     for(const node of blockers)if(await visible(node))return false;
     // 설정 화면: 클래스 이름에 setting이 들어 있고 화면 한 장만큼 큰 요소가 보이면 홈이 아니다.
-    const big=await array(await doc.querySelectorAll('#app [class*="setting" i],#app [class*="Setting"],#app [id*="setting" i]'),60);
-    for(const node of big){
-      if(!await visible(node))continue;
-      const r=await node.getBoundingClientRect();if(r&&r.width>=300&&r.height>=300)return false;
+    const app=await doc.querySelector('#app'),ab=app?await app.getBoundingClientRect():null;
+    if(ab&&ab.width>0){
+      const big=await array(await doc.querySelectorAll('#app [class*="setting" i],#app [id*="setting" i]'),60);
+      for(const node of big){
+        if(!await visible(node))continue;
+        const r=await node.getBoundingClientRect();if(r&&r.width>=ab.width*0.6&&r.height>=ab.height*0.6)return false;
+      }
     }
     // A previous server-installed widget hides the native MainMenu; detect its visible host.
     if(await visible(await doc.querySelector('#app #pocketrisu-butter-home')))return true;
