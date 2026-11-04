@@ -42,7 +42,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   const names = await page.evaluate(() => window.__providers);
   ok(`[${tag}] 켜면 리스에 등록: ${names.join(",")}`, names.includes("Dusk 자동") && names.some((n) => n.startsWith("Dusk · gpt-test-mini")));
   ok(`[${tag}] 사용 중 상태 카드`, (await vis(".rb-status.k-on")) === 1);
-  for (const t of ["용도", "도구·검색", "번역기", "규칙", "사용량", "비교"]) { await page.locator(".rb-prov .rb-seg button", { hasText: t }).first().click(); await page.waitForTimeout(250); ok(`[${tag}] ‘${t}’ 탭이 그려짐`, (await vis(".rb-prov-body > *")) >= 1); }
+  for (const t of ["용도", "규칙", "사용량", "비교"]) { await page.locator(".rb-prov .rb-seg button", { hasText: t }).first().click(); await page.waitForTimeout(250); ok(`[${tag}] ‘${t}’ 탭이 그려짐`, (await vis(".rb-prov-body > *")) >= 1); }
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   ok(`[${tag}] 가로 넘침 없음`, !overflow);
   await page.close();

@@ -5,6 +5,7 @@
 - 구조: 순수 `src/engine/provider/`(catalog·sse·messages·build·repeat·keypool·chain·cost·profile·transforms·tools·translate), 호스트 연결 `src/data/provider/`(keyvault·store·transport·gemcache·risutools·runner·toolexec·models·register·index), 화면 `src/ui/screens/provider.js`+`provider/{more,ui,css}.js`.
 - 화면 이동: `look`(플러그인 꾸미기) 탭은 `hide:true`로 목록에서 숨기고(id 유지: 위쪽 팔레트·설정 링크 그대로) 도구 화면에 행 추가, 작업실 큰 카드는 `provider`. 숨김 필터는 app.js 3곳·sectionhome.js.
 - Dusk 자체 AI 연결: 용도 `analysis` 프로필 지정 시 `engine/runai.js` `duskPickFor`가 보조 모델 호출을 프로필로 보냄, `modelhub.js` `serverModelOf`는 `provider.serverModel`(Vertex·Responses는 서버 직접 호출 불가 → 중계).
+- (2026-11-04 화면에서 제거) 도구·검색·번역기 탭은 사용자 요청으로 화면에서 뺌. 엔진·runner·risutools·translate 코드는 그대로 남아 있고 설정 `tools.enabled`/`translator.enabled`가 기본 꺼짐이라 동작하지 않음(필요하면 more.js에 탭을 다시 달면 됨, git 이력 참고).
 - 번역기 다듬기는 runner `handle`에서(서식 보호 토큰·용어집·안내문). `req.__purpose`/`req.__profile`로 용도·프로필 강제.
 - 쓰기 도구 안전장치: 설정에서 따로 켬 · 매번 확인 · 바꾸기 전 백업(실패하면 중단, 되돌리기 목록에 뜸) · 요청당 3번. (웹 도구와 같은 요청에서 쓰기 막기는 **의도적으로 넣지 않음**, 화면에 경고 문구만.)
 - 검증: provider-engine 29 · provider-runner 26 pass, e2e `run-provider.mjs` PC·모바일 통과. `run-look`은 꾸미기 진입을 `__app.ctx.go("look")`로 바꿈. `run-app.mjs`·`run-hubs.mjs`(기억 개요 3줄)는 변경 전에도 실패하던 낡은 기대값.
