@@ -8,7 +8,6 @@ import { getCfg as getModelCfg } from "../../../data/modelhub.js";
 import { mem, fail, potOn, askRefresh } from "./common.js";
 import { parseTags, DEFAULT_TAG_TEXT } from "../../../engine/card/tags.js";
 import { flowSections } from "./flowsettings.js";
-import { erosyncSection } from "./erosyncui.js";
 import { advancedBot } from "./advanced.js";
 import { scopeChip, tracked, searchBox, openSettingsHistory, shareSection, previewBox } from "./settingstools.js";
 import { pushHist } from "../../../engine/settingsutil.js";
@@ -78,7 +77,7 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
     if (M.flow) (async () => { try { const st = await M.flow.settings(); if (!st.status().blocked) replace(shareHost, shareSection(ctx, tracked(ctx, st), { apply: () => M.flow.apply().catch(fail(ctx)), redraw })); } catch { /* 흐름 설정을 못 읽으면 공유 칸만 뺀다 */ } })();
   };
   const tools = h("div", { class: "rb-mem-tools" });
-  const body = h("div", { class: "rb-mem-foldbody" }, h("div", { class: "rb-mem-modeline" }, h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), h("span", { class: "rb-muted" }, backend.reason)), tools, flowHost, shareHost, erosyncSection(ctx), adv);
+  const body = h("div", { class: "rb-mem-foldbody" }, h("div", { class: "rb-mem-modeline" }, h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), h("span", { class: "rb-muted" }, backend.reason)), tools, flowHost, shareHost, adv);
   tools.append(searchBox(body), btn("설정 변경 이력", { size: "sm", onClick: () => openSettingsHistory(ctx, { apply: () => M.flow?.apply?.(), redraw }).catch(fail(ctx)) }));
   if (panel) {
     // 넓은 화면: 설정을 오른쪽(가운데) 칸에 크게 펼친다.

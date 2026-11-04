@@ -60,6 +60,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   // 위키로(기억 > 인물 상세, 시험 데이터의 시로코)
   await page.locator(".rb-rm-panel .rb-rm-list").last().locator("button", { hasText: "시로코" }).first().click(); await page.waitForTimeout(200);
   await page.locator(".rb-rm-panel .rb-btn.primary").click(); await page.waitForTimeout(1500);
+  await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "sirokko", tab: "people", page: "detail" }); __app.ctx.go("relmap"); }); await page.waitForTimeout(300); await page.evaluate(() => __app.ctx.go("memory")); await page.waitForTimeout(1500);   // 시험 데이터의 폴더 키
   const body = async () => (await page.locator(".rb-wk2").first().textContent().catch(() => "")) ?? "";
   ok(`[${tag}] 위키 요약에 '지금 노리는 목표'`, /지금 노리는 목표/.test(await body()) && /순찰 끝나고 둘이 남기/.test(await body()));
   await page.locator(".rb-wk2-tab", { hasText: "상세 정보" }).click(); await page.waitForTimeout(400);
@@ -74,6 +75,10 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.locator(".rb-wk2-tab", { hasText: "관계" }).click(); await page.waitForTimeout(300);
   await page.locator(".rb-wk2-who", { hasText: "호시노" }).first().click().catch(() => {}); await page.waitForTimeout(300);
   ok(`[${tag}] 관계 탭(호시노)에 'Erosync 목표·경쟁'`, /Erosync 목표·경쟁/.test(await body()), (await body()).slice(0, 200));
+  // 기억 화면에서 Erosync 카드가 접힌 곳 없이 바로 보인다(고급 모드 기본)
+  await page.evaluate(() => { const m = (__app.ctx.state.mem ??= {}); m.page = "home"; __app.ctx.go("memory"); }); await page.waitForTimeout(1200);
+  ok(`[${tag}] 기억 화면에 Erosync 카드가 바로 보임`, await page.locator("#rb-erosync").isVisible(), String(await page.locator("#rb-erosync").count()));
+  await page.screenshot({ path: `/tmp/ero-memhome-${tag}.png` });
   // Erosync 꺼짐/매칭 안 됨이면 칸이 없다
   await page.evaluate(() => { __app.ctx.erosync = { isRunning: () => false, read: async () => ({ ok: false }) }; });
   await page.evaluate(() => __app.ctx.go("relmap")); await page.waitForTimeout(300);
