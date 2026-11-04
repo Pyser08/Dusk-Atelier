@@ -242,6 +242,7 @@ async function start() {
   app.ctx.openWidgetHome = async () => { try { await app.close(); } catch { /* 이미 닫힘 */ } return widgetHome.open(); };
   const duskOpen = app.open;
   app.open = async (o) => { await widgetHome.yieldToDusk().catch(() => {}); return duskOpen(o); };
+  app.ctx.onClosed = () => widgetHome.resume();   // Dusk 창을 닫으면 떠 있던 위젯 홈을 다시 띄운다
   widgetHome.boot().catch((e) => console.log(`[${TITLE}] 위젯 홈 시작 실패 ${e?.message ?? e}`));
   app.ctx.cellar = memory.cellar;   // 한 곳에서 찾은 Cellar 연결을 화면들이 함께 쓴다
   app.ctx.skills = skills;

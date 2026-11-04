@@ -497,6 +497,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       for (const a of [...win.getAnimations(), ...root.getAnimations()]) a.cancel();
     } finally { closing = false; }
     await api.hideContainer();
+    try { await ctx.onClosed?.(); } catch { /* 닫힌 뒤 알림은 실패해도 무시 */ }
   }
   let lastDetail = "";
   // 프로바이더 쓰기 도구의 확인창: Dusk 창이 닫혀 있어도(채팅 중) 확인창만 잠깐 띄운다. 띄울 수 없으면 허락하지 않은 것으로 본다.

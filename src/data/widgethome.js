@@ -22,7 +22,7 @@ export async function loadOpenOnLoad(api) {
   }
 }
 export function createWidgetHome(api, { log = () => {}, boot = bootWidgetHome, load = loadWidgetHomeOn, loadOnLoad = loadOpenOnLoad, openDusk = null } = {}) {
-  let inst = null, starting = null, error = "", onNow = false, onLoadNow = true;
+  let resumeAfterDusk = false, inst = null, starting = null, error = "", onNow = false, onLoadNow = true;
   async function startNow() {
     if (inst) return true;
     try {
@@ -90,7 +90,15 @@ export function createWidgetHome(api, { log = () => {}, boot = bootWidgetHome, l
     async setPrefs(patch) { if (!inst) throw new Error("위젯 홈이 켜져 있지 않아요."); return inst.setPrefs(patch); },
     async openSettings() { if (!inst && !(await start())) return false; return inst.openSettings(); },
     // Dusk 창을 열기 전에: 떠 있는 위젯 홈은 먼저 닫는다(같은 플러그인 화면을 번갈아 써요)
-    async yieldToDusk() { if (inst?.isVisible?.()) await inst.close(); },
+    async yieldToDusk() { if (inst?.isVisible?.()) { resumeAfterDusk = true; await inst.close(); } },
+    // Dusk 창을 닫은 뒤: 위젯 홈이 떠 있었다면 다시 띄운다(홈 자리에만. 홈이 아니면 뜨지 않음)
+    async resume() {
+      if (!resumeAfterDusk) return false;
+      resumeAfterDusk = false;
+      const cur = inst; if (!cur || cur.isVisible?.() || cur.isOpening?.()) return false;
+      try { return cur.autoConnected?.() ? await cur.open(false, { automatic: true, quiet: true }) : await cur.open(); }
+      catch (e) { log(`위젯 홈 다시 열기 실패 ${e?.message ?? e}`); return false; }
+    },
     stop
   };
 }

@@ -103,6 +103,21 @@ test("Dusk 창을 열기 전: 떠 있는 위젯 홈만 닫는다", async () => {
   assert.equal(log.closed, 1);
 });
 
+test("Dusk 창을 닫으면 떠 있던 위젯 홈이 다시 뜬다(안 떠 있었으면 안 뜸)", async () => {
+  const api = fakeApi(), { log, boot } = fakeBoot();
+  const wh = createWidgetHome(api, { boot });
+  await wh.set(true);
+  await wh.yieldToDusk();               // 안 떠 있었음
+  assert.equal(await wh.resume(), false);
+  assert.equal(log.visible, false);
+  log.visible = true;
+  await wh.yieldToDusk();               // Dusk 열기 → 위젯 홈 닫힘
+  assert.equal(log.visible, false);
+  assert.equal(await wh.resume(), true); // Dusk 닫기 → 다시 뜸
+  assert.equal(log.visible, true);
+  assert.equal(await wh.resume(), false); // 한 번만
+});
+
 test("원본 플러그인(pocketrisu_basic_home)이 켜져 있으면 감지한다", async () => {
   const mk = (plugins) => fakeApi({ getDatabase: async () => ({ plugins }) });
   const { boot } = fakeBoot();
