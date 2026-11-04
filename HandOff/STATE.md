@@ -619,3 +619,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 원인: 홈 자리에 떠 있으면 auto-home check가 바로 return해서 설정 이동을 못 봄 → 떠 있을 땐 settingsOpen만 검사해 닫음. host e2e에 설정 화면 2항목 추가.
 - 위젯 홈 리스바드 3건(2026-11-04 20시): ①새로고침 시 전체 화면 → boot는 화면 접근 되면 `open(false,{automatic,quiet})`로 홈 자리에만 6회 재시도 ②홈 복귀 시 안 뜸 → 자동 열기 실패 시 pause+alert 하던 것 제거(다음 감지 때 재시도), 클릭 후 0.7·1.6초 재검사, 설정 감지는 화면 안에 보이는 요소만 ③아이콘 줄 못 찾음 → `rect()`가 160px 미만을 버려서였음, `rawRect`로 측정(3번에 1번 재측정). host e2e에 44px 아이콘 줄 항목 추가.
 - 아이콘 줄 끝 +1px 여유, aside/nav 등도 후보(사이드바 삐짐 대응).
+- 리스바드 실측: 아이콘 줄 = `.rs-sidebar.character-list-sidebar`(80px), 안쪽 `.character-list` 72px → 사이드바 자체가 좁으면 그 끝을 경계로.

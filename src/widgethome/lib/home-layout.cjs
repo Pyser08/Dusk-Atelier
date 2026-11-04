@@ -57,6 +57,8 @@
     const abox=rect(await app.getBoundingClientRect());if(!abox)return null;
     const side=await doc.querySelector('#app .risu-sidebar,#app .rs-sidebar');
     const pool=[...(side?await nodes(await side.querySelectorAll('div,aside,nav,section,ul'),100):[]),...await nodes(await doc.querySelectorAll('#app > div, #app > div > div, #app > div > div > div, #app > div > div > div > div, #app > div > div > div > div > div, #app aside, #app nav'),180)];
+    // 리스바드: .rs-sidebar(character-list-sidebar)가 곧 아이콘 줄이다(실측 너비 80px).
+    if(side){const sb=rawRect(await side.getBoundingClientRect());if(sb&&sb.left<=abox.left+8&&sb.width>=32&&sb.width<=160&&sb.height>=abox.height*0.6)return Math.ceil(sb.left+sb.width);}
     let edge=null;
     for(const node of pool){
       const b=rawRect(await node.getBoundingClientRect());if(!b)continue;
