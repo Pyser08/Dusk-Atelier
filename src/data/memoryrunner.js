@@ -51,8 +51,9 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   async function status(patch) { return store.updateIndex((idx) => { Object.assign(idx.status, patch); }).catch(() => {}); }
 
   // 분석 대상 한 묶음의 공통 자료(채팅·앵커·설정). 모델 호출 없음.
-  async function gather(charIndex, chatIndex, group) {
-    const character = await api.getCharacterFromIndex(charIndex), chat = await api.getChatFromIndex(charIndex, chatIndex);
+  // shared: 일괄 분석이 한 번만 읽어 둔 {character, chat}. 묶음마다 캐릭터·채팅을 통째로 다시 복사하면 큰 봇에서 메모리가 폭증한다(아이폰 OOM).
+  async function gather(charIndex, chatIndex, group, shared = null) {
+    const character = shared?.character ?? await api.getCharacterFromIndex(charIndex), chat = shared?.chat ?? await api.getChatFromIndex(charIndex, chatIndex);
     if (!character || !chat) throw new Error("캐릭터 또는 채팅을 찾지 못했어요.");
     const chaId = String(character.chaId ?? charIndex), chatId = String(chat.id ?? chatIndex);
     const messages = chat.message ?? [], last = group.at(-1), m = messages[last];
@@ -99,8 +100,8 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   }
 
   // 한 메시지(또는 묶음)를 분석해 반영. group: 같은 입력에 합칠 메시지 인덱스들(마지막이 앵커).
-  async function analyzeAt(charIndex, chatIndex, group, { signal, manual = false, redo = false } = {}) {
-    const g = await gather(charIndex, chatIndex, group);
+  async function analyzeAt(charIndex, chatIndex, group, { signal, manual = false, redo = false, shared = null } = {}) {
+    const g = await gather(charIndex, chatIndex, group, shared);
     const { character, chat, chaId, chatId, messages, last, text, h, anchor, idx, bot } = g;
     const why = gate(g, manual); if (why) return why;
     const existing = await loadReconciled(store, chaId, chatId, messages);  // 옛 장면·떡밥이 새 요약에 섞이지 않게 먼저 대조
@@ -247,16 +248,20 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     return { groups, calls: groups.length, tokens: Math.round(chars / 1.5), total: ai.length, done: ai.length - todo.length, todo: todo.length, failed: todo.filter((i) => failedSet.has(hOf(i))).length };
   }
   async function backfill(charIndex, chatIndex, range, { signal, onProgress, redo = false } = {}) {
+    // 캐릭터·채팅·폴더는 처음에 한 번만 읽는다(묶음마다 읽으면 수백 번 통째 복사 → 모바일 메모리 부족).
     const chat = await api.getChatFromIndex(charIndex, chatIndex), character = await api.getCharacterFromIndex(charIndex);
     const folder = await store.getFolder(String(character.chaId), String(chat.id ?? chatIndex));
     const { groups } = planBackfill(chat.message ?? [], { ...range, all: redo }, folder);
+    if (groups.length && isGenerating(character)) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
+    const shared = { character, chat };
     const failed = [], reasons = []; let n = 0;
     for (const g of groups) {
       if (signal?.aborted) break;
-      if (isGenerating(await api.getCharacterFromIndex(charIndex))) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
+      // 생성 중인지는 현재 채팅 하나만 5묶음마다 확인한다(캐릭터 전체 복사 금지).
+      if (n > 0 && n % 5 === 0 && isChatStreaming(await api.getChatFromIndex(charIndex, chatIndex))) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
       // 요청 한도·시간 초과·서버 오류 같은 일시적 오류는 간격을 늘려 가며 2번까지 다시 시도한다(실패 원인은 reasons로 돌려준다).
       for (let attempt = 0; ; attempt++) {
-        try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true, redo }); break; }
+        try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true, redo, shared }); break; }
         catch (e) {
           const msg = String(e?.message ?? e).slice(0, 160);
           if (signal?.aborted) { failed.push(g); break; }

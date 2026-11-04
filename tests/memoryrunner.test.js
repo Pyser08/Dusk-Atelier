@@ -118,6 +118,19 @@ test("backfill redo: 이미 모두 분석했어도 다시 분석할 수 있다 (
   const r2 = await runner.backfill(0, 0, {});
   assert.equal(r2.total, 0, "redo 없이는 여전히 건너뜀");
 });
+test("backfill: 묶음마다 캐릭터·채팅을 통째로 다시 읽지 않는다 (모바일 메모리 폭증 방지)", async () => {
+  const { api, store, chat } = setup();
+  chat.message = []; for (let i = 0; i < 31; i++) { chat.message.push({ role: "user", data: "u" + i }, { role: "char", data: LONG + i }); }
+  let chars = 0, chats = 0; const gc = api.getCharacterFromIndex, gt = api.getChatFromIndex;
+  api.getCharacterFromIndex = async (...a) => { chars++; return gc.apply(api, a); };
+  api.getChatFromIndex = async (...a) => { chats++; return gt.apply(api, a); };
+  let calls = 0;
+  const runner = createMemoryRunner(api, { store, call: async () => { calls++; return good.replace("하루에게", "하루에게 " + calls); } });
+  const r = await runner.backfill(0, 0, {});
+  assert.equal(r.total, 11); assert.equal(r.failed.length, 0);
+  assert.equal(chars, 1, "캐릭터는 처음 한 번만 읽는다");
+  assert.ok(chats <= 1 + Math.ceil(11 / 5), `채팅 읽기 ${chats}번`);
+});
 test("backfill progress is not capped at 1,000 and old ones are restored from anchors", async () => {
   const { api, store, chat } = setup();
   chat.message = []; for (let i = 0; i < 1200; i++) { chat.message.push({ role: "user", data: "u" + i }, { role: "char", data: "응답 " + i }); }

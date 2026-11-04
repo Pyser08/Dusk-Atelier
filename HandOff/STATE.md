@@ -22,6 +22,7 @@
 - 초기 관계 감지(2026-11-04): 2단계 줄 `start|상대|close or friendly|원문 인용`(사전관계) → `folder.start[쌍키]={a,b,level,q}`(처음 한 번, 인용이 본문에 있어야 함) → `stageOf`가 close=최소 '친한 사이', friendly=최소 '아는 사이'로 바닥을 깖. 가벼운 모델 모드에서는 이 줄을 안 물음. JSON 응답 경로도 `start` 통과. {{user}}로 합치기(`memoryuser.js` rekey)·`pairView().start`·'나' 화면 칩까지 반영. 아직 안 한 것: 일반 인물 합치기(`peoplemerge.js`)는 emo 등과 마찬가지로 별칭에 의존, 인물 위키 관계 탭 표시.
 - 다시 분석(2026-11-04): `memoryrunner.js` `planBackfill(.., {all:true})`·`backfill(.., {redo:true})`·`analyzeAt({redo})`(cursor 중복 방지 우회). 홈의 '지난 대화 분석'(`mhome.js` analyze)에서 미처리가 0이면 "이미 모두 분석했어요" 확인창 → 전체 재분석. 설정 폴드의 '미처리만 분석'(`settings.js`)은 그대로. 테스트 `tests/memoryrunner.test.js`.
 - 관계도 성능(2026-11-04): `buildRelMap`이 모든 인물에 `counterparts`·`pairView`를 돌려 큰 기억(인물 400·장면 3000)에서 3.7초 걸림 → 값싼 중요도(기록만)로 상위 40명을 먼저 고른 뒤 그 40명에만 `pairView`(0.2초). `tests/relmap.test.js`에 시간 상한 테스트. 아직 안 본 것: 실제 브라우저에서 그리기 루프 프레임 비용(저사양 폰), 폴더 JSON 읽기 자체의 시간.
+- 분석 메모리(2026-11-04): `memoryrunner.js` `backfill`이 묶음(3응답)마다 `getCharacterFromIndex`(딸린 채팅 전부 복사)·`getChatFromIndex`를 다시 읽어 큰 채팅에서 OOM 의심 → 시작 때 1번만 읽고 `analyzeAt({shared})`로 넘김, 생성 확인은 5묶음마다 현재 채팅만. 테스트 `memoryrunner.test.js`(호출 횟수). 실기기(아이폰) 효과는 미확인. 다음 후보: Cellar 서버에서 분석 실행(사용자 결정: 서버 사용자만 더 가볍게, Cellar가 리스 데이터를 읽는 것은 허용).
 - 이 브랜치의 package.json은 아직 1.9.1. CHANGELOG 항목은 맨 위 v1.9.1 섹션에 있음 — 버전 올릴 때 옮길 것.
 
 ---
