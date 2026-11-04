@@ -30,7 +30,7 @@ export function usageCard(u) {
 }
 
 // 설정 카드(한 줄 요약 목록 + 기억 옵션 3개). 열린 채팅이 없어도 쓸 수 있게 따로 뺐다(전체 설정이라 채팅과 무관).
-async function settingsCards(ctx, M, idx, redraw) {
+async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   let embedLine = "뜻이 비슷한 기억 찾기";
   try { if (M.embedder) { await M.embedder.load(); embedLine += M.embedder.status().on ? " · 켜짐" : " · 꺼짐"; } } catch { /* 요약 없이 */ }
   const srow = (title, sub, onClick, extra = {}) => h("button", { type: "button", class: "rb-srow", onClick, ...extra }, h("span", { class: "t" }, title, h("small", null, sub)), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
@@ -48,6 +48,16 @@ async function settingsCards(ctx, M, idx, redraw) {
     orow("사람다운 기억", "관계 진도·호칭·말투·둘만의 추억 등을 기억해요.", inj.human !== false, (o, v) => { o.human = v; }),
     orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }),
     orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
+  // 리수폿 사용(이 채팅 단위라 열린 채팅이 있을 때만). 예전 '자동 기록 · 인물 추적'에 있던 스위치를 옮겼다.
+  if (cur) {
+    memOptions.append(h("div", { class: "rb-srow" }, h("span", { class: "t" }, "리수폿 사용", h("small", null, "이 채팅에서 리수폿(위키 기록)을 써요.")),
+      switchEl(sw?.pot?.on !== false, { label: "이 채팅에서 리수폿 사용", onChange: async (v, el) => {
+        setSwitch(el, v);
+        try { await M.switches.setPot(cur.chaId, v); if (v) maybePromptIntro(ctx); ctx.toast(v ? "이 채팅에서 리수폿을 켰어요." : "이 채팅에서 리수폿을 껐어요."); }
+        catch (e) { fail(ctx)(e); }
+        redraw();
+      } })));
+  }
 
   return { memorySettings, memOptions };
 }
@@ -191,7 +201,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
       ? recent.map((r) => h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("div", null, h("b", null, r.who), " ", r.act), h("div", { class: "rb-muted" }, at(r.at))), gradeBadge(r.g)))
       : h("li", { class: "rb-muted" }, "아직 쌓인 기록이 없어요.")));
 
-  const { memorySettings, memOptions } = await settingsCards(ctx, M, idx, redraw);
+  const { memorySettings, memOptions } = await settingsCards(ctx, M, idx, redraw, cur, sw);
 
   // ── 고급: 한 줄씩 접은 묶음. PC에서는 기억 방식을 접지 않고 오른쪽 맨 위에 둔다 ──
   const wide = (ctx.win?.ownerDocument?.defaultView?.innerWidth ?? 1280) >= 1000;
