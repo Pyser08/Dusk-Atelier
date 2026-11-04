@@ -614,3 +614,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 ## 스페셜 땡스: 위젯 홈 (v1.9.1 작업 중)
 - `src/ui/screens/tools.js` THANKS에 `widgethome` 추가(플러그인 안에는 링크 없음).
 - 다음 아카 글의 SPECIAL THANKS 블록에는 위젯 홈 원작 글 링크 사용: https://arca.live/b/characterai/188006855
+- 위젯 홈 덮는 범위: `home-layout.cjs` `railEdge`/`boxOf`(generic일 때 아이콘 줄 오른쪽부터), `auto-home.cjs` isHome에 'setting' 클래스 큰 요소 차단 추가. 실제 RisuBard 클래스명은 미검증.

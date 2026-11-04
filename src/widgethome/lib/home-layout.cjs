@@ -48,16 +48,34 @@
     if(!best&&!sbox)best=app;
     return best?{pane:best,marker:null,generic:true}:null;
   }
+  // 리스·리스바드: 왼쪽 아이콘 줄(좁은 세로 띠)만 남기고 그 오른쪽 전부를 덮는다. 못 찾으면 null.
+  async function railEdge(doc){
+    const app=await doc.querySelector('#app');if(!app)return null;
+    const abox=rect(await app.getBoundingClientRect());if(!abox)return null;
+    const pool=await nodes(await doc.querySelectorAll('#app > div, #app > div > div, #app > div > div > div, #app > div > div > div > div'),80);
+    let edge=null;
+    for(const node of pool){
+      const b=rect(await node.getBoundingClientRect());if(!b)continue;
+      if(b.left>abox.left+2||b.width<48||b.width>140||b.height<abox.height*0.7)continue;
+      const right=b.left+b.width;if(edge===null||right<edge)edge=right;
+    }
+    return edge;
+  }
   async function homePane(doc){return(await findHome(doc))?.pane||null;}
   class HomeLayout{
     constructor(api,options={}){this.api=api;this.options=options;this.doc=null;this.sheet=null;this.nativeSheet=null;this.nativePane=null;this.pane=null;this.frame=null;this.marker=null;this.markerPoll=0;this.resizeTimer=null;this.active=false;this.busy=false;this.timer=null;this.signature='';this.mode='sheet';this.generation=0;this.boxKey='';this.inlineStyle='';this.dirty=false;this.candidateKey='';this.candidatePasses=0;this.missingPasses=0;this.coverOwner='';this.coverSerial=0;this.nativeControls=false;this.interval=options.setInterval?options.setInterval.bind(options):root.setInterval.bind(root);this.clear=options.clearInterval?options.clearInterval.bind(options):root.clearInterval.bind(root);this.delay=options.setTimeout?options.setTimeout.bind(options):root.setTimeout.bind(root);this.cancel=options.clearTimeout?options.clearTimeout.bind(options):root.clearTimeout.bind(root);}
+    async boxOf(pane){
+      const box=rect(await pane.getBoundingClientRect());if(!box||!this.generic)return box;
+      try{const edge=await railEdge(this.doc);if(edge!==null&&edge<box.left){const right=box.left+box.width;return{...box,left:edge,width:right-edge};}}catch{}
+      return box;
+    }
     async prepare(doc){
       await this.stop();await this.clearNativeScroll();if(!doc)return false;this.doc=doc;
       const found=await findHome(doc);if(!found)return false;const{pane,marker}=found;this.generic=!!found.generic;
       let frames=await nodes(await doc.querySelectorAll(MARK),2);
       if(!frames.length)frames=await nodes(await doc.querySelectorAll('iframe[srcdoc*="dusk-widgethome-open"]'),2);
       if(frames.length!==1)return false;
-      const frame=frames[0],box=rect(await pane.getBoundingClientRect());if(!box)return false;
+      const frame=frames[0],box=await this.boxOf(pane);if(!box)return false;
       await frame.setAttribute('x-dusk-wh-basic-home','1');
       this.frame=frame;this.pane=pane;this.marker=marker;this.markerPoll=0;this.mode='sheet';
       if(!this.sheet){
@@ -104,7 +122,7 @@
       this.signature=signature;this.boxKey=this.geometryKey(box);this.dirty=false;
     }
     async start(){
-      if(!this.pane)return false;const box=rect(await this.pane.getBoundingClientRect());if(!box){await this.stop();return false;}
+      if(!this.pane)return false;const box=await this.boxOf(this.pane);if(!box){await this.stop();return false;}
       await this.write(box);this.active=true;this.timer=this.interval(()=>{if(!this.options.isPageHidden?.())void this.sync();},1000);return true;
     }
     async cover(pane){const owner=this.generation+'.'+(++this.coverSerial);await pane.setAttribute('x-dusk-wh-home-owner',owner);await pane.setAttribute('x-dusk-wh-widget-covered','1');return owner;}
@@ -122,7 +140,7 @@
         if(selected>=0){await this.options.onLost?.();return null;}
         const found=await findHome(this.doc);
         if(!this.active||generation!==this.generation)return null;
-        const box=found&&rect(await found.pane.getBoundingClientRect());
+        const box=found&&await this.boxOf(found.pane);
         if(!this.active||generation!==this.generation)return null;
         if(box){
           const previous=this.pane,previousOwner=this.coverOwner;let owner='';
@@ -138,10 +156,10 @@
     async sync(){
       if(!this.active||this.busy||this.resizeTimer!==null)return;this.busy=true;const generation=this.generation;
       try{
-        const boxRead=this.pane.getBoundingClientRect().catch(()=>null),selected=Number(await this.api.getCurrentCharacterIndex());
+        const boxRead=this.boxOf(this.pane).catch(()=>null),selected=Number(await this.api.getCurrentCharacterIndex());
         if(!this.active||generation!==this.generation||this.resizeTimer!==null)return;
         if(selected>=0){await this.options.onLost?.();return;}
-        let box=rect(await boxRead);if(!this.active||generation!==this.generation||this.resizeTimer!==null)return;
+        let box=await boxRead;if(!this.active||generation!==this.generation||this.resizeTimer!==null)return;
         let missing=!box;
         if(!missing&&this.marker&&(this.dirty||++this.markerPoll%5===0)){
           const landmark=await this.marker.getBoundingClientRect().catch(()=>null);
