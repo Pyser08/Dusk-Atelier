@@ -61,7 +61,13 @@ export function createWidgetHome(api, { log = () => {}, boot = bootWidgetHome, l
       onNow = await load(api); onLoadNow = await loadOnLoad(api);
       if (!onNow) return;
       const ok = await start();
-      if (ok && onLoadNow) inst?.open?.().catch((e) => log(`위젯 홈 바로 열기 실패 ${e?.message ?? e}`));
+      if (ok && onLoadNow) {
+        // 홈 자동 감지가 연결되면 사이드바 옆(홈 자리)에 열리도록 잠깐 기다린다. 이미 자동으로 열렸으면 그대로.
+        const cur = inst;
+        Promise.race([cur?.ready?.(), new Promise((r) => setTimeout(r, 2500))])
+          .then(() => (cur === inst && !cur.isVisible?.() && !cur.isOpening?.() ? cur.open() : null))
+          .catch((e) => log(`위젯 홈 바로 열기 실패 ${e?.message ?? e}`));
+      }
     },
     openOnLoad: () => onLoadNow,
     async setOpenOnLoad(next) { onLoadNow = !!next; try { await api.pluginStorage.setItem(WH_ONLOAD_KEY, next ? "on" : "off"); } catch { /* 이번 실행에는 반영 */ } },
@@ -74,6 +80,10 @@ export function createWidgetHome(api, { log = () => {}, boot = bootWidgetHome, l
     },
     async open() { if (!inst && !(await start())) return false; return inst.open(); },
     async close() { return inst?.close?.(); },
+    // Dusk 설정 카드에서: 디자인·홈 자동 열기 읽고 바꾸기, 위젯 홈 꾸미기 열기
+    prefs: () => inst?.getPrefs?.() ?? null,
+    async setPrefs(patch) { if (!inst) throw new Error("위젯 홈이 켜져 있지 않아요."); return inst.setPrefs(patch); },
+    async openSettings() { if (!inst && !(await start())) return false; return inst.openSettings(); },
     // Dusk 창을 열기 전에: 떠 있는 위젯 홈은 먼저 닫는다(같은 플러그인 화면을 번갈아 써요)
     async yieldToDusk() { if (inst?.isVisible?.()) await inst.close(); },
     stop

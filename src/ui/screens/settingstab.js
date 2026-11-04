@@ -43,7 +43,7 @@ export async function renderSettingsTab(ctx) {
       segRow("메뉴 위치", "PC에서 메뉴를 왼쪽 또는 위쪽에 둬요.", layoutSeg, "rb-pc-only"),
       linkRow("플러그인 꾸미기", "색·밝기·글자 크기", () => ctx.go("look"), "rb-set-look")
     ),
-    ctx.widgetHome ? widgetHomeCard(ctx) : null,
+    ctx.widgetHome ? widgetHomeCard(ctx, () => renderSettingsTab(ctx)) : null,
     cellarCard(ctx, linkRow, card),
     card("백업", linkRow("백업 만들기", "모듈·에셋·설정을 zip 한 파일로", () => fullBackup(ctx), "rb-set-fullbackup"), linkRow("백업에서 복원", "전체 백업 zip으로 되살리기", () => fullRestore(ctx), "rb-set-restore")),
     card("도움말",

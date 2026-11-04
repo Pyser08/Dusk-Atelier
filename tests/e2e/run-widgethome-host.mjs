@@ -1,0 +1,58 @@
+// 위젯 홈 × 리스 화면(가짜 SafeDocument): 홈이면 사이드바 옆 본문 자리에 배치, 캐릭터를 고르면 닫히고 홈으로 돌아오면 다시 뜸.
+// Dusk 디자인·설정 창 스타일·바깥 누르면 닫기도 확인.
+import { createRequire } from "node:module";
+import { build } from "/opt/npm-tools/node_modules/esbuild/lib/main.js";
+const { chromium } = createRequire("/opt/npm-tools/node_modules/")("playwright");
+const r = await build({ entryPoints: ["tests/e2e/widgethome.entry.js"], bundle: true, write: false, format: "iife", platform: "browser", logLevel: "error", define: { __VERSION__: '"t"', __CHANGELOG__: '""' }, alias: { fflate: process.cwd() + "/src/vendor/fflate.js" } });
+const out = [], ok = (n, c, x = "") => { out.push(c); console.log((c ? "✔ " : "✘ ") + n + (c ? "" : "  → " + x)); };
+const b = await chromium.launch(), errs = [];
+const p = await (await b.newContext({ viewport: { width: 1200, height: 800 } })).newPage(); p.setDefaultTimeout(8000);
+p.on("pageerror", (e) => errs.push(e.message));
+await p.setContent(`<!doctype html><body style="margin:0"><div id="app" style="display:flex;height:100vh"><div class="risu-sidebar" style="width:240px;flex-shrink:0;background:#222">사이드바<button id="home">홈</button></div><div id="main" style="flex:1;min-width:0;background:#333"><h2>Welcome</h2></div></div><iframe id="pf" srcdoc="<b>dusk-widgethome-open</b>" style="display:none"></iframe></body>`);
+await p.addScriptTag({ content: r.outputFiles[0].text });
+await p.evaluate(async () => {
+  window.sel = -1;
+  window.api = makeApi({ localStorage: true });
+  api.getCurrentCharacterIndex = async () => window.sel;
+  api.getRootDocument = async () => fakeRoot();
+  api.createMutationObserver = async (cb) => ({ observe: async () => {}, disconnect: async () => {} });
+  window.wh = makeWH(api); await wh.set(true);
+});
+const frameBox = () => p.evaluate(() => { const f = document.getElementById("pf"), s = getComputedStyle(f); return { left: Math.round(parseFloat(s.left)), width: Math.round(parseFloat(s.width)), vis: s.visibility, pos: s.position, disp: s.display }; });
+await p.waitForFunction(() => wh.isVisible(), null, { timeout: 8000 }).catch(() => {});
+await p.waitForTimeout(1200);
+let fb = await frameBox();
+ok("홈(캐릭터 안 고름)이면 자동으로 사이드바 옆 자리에 뜸", await p.evaluate(() => wh.isVisible()) && fb.pos === "fixed" && fb.left === 240 && fb.width === 960 && fb.vis === "visible", JSON.stringify(fb));
+ok("본문(원래 홈)은 가려지고 사이드바는 그대로", await p.evaluate(() => getComputedStyle(document.getElementById("main")).visibility === "hidden" && getComputedStyle(document.querySelector(".risu-sidebar")).visibility === "visible"));
+await p.evaluate(() => { window.sel = 3; });
+await p.waitForFunction(() => !wh.isVisible(), null, { timeout: 6000 }).catch(() => {});
+ok("캐릭터를 고르면(채팅으로 가면) 위젯 홈이 닫힘", await p.evaluate(() => !wh.isVisible()));
+await p.evaluate(() => { window.sel = -1; });
+await p.waitForFunction(() => wh.isVisible(), null, { timeout: 9000 }).catch(() => {});
+await p.waitForTimeout(600);
+fb = await frameBox();
+ok("사이드바에서 홈으로 돌아오면 다시 자동으로 뜸", await p.evaluate(() => wh.isVisible()) && fb.left === 240, JSON.stringify(fb));
+// 사이드바를 닫으면(너비 0) 본문이 넓어지고 위젯도 따라 넓어짐
+await p.evaluate(() => { document.querySelector(".risu-sidebar").style.width = "60px"; });
+await p.waitForTimeout(2600);
+fb = await frameBox();
+ok("사이드바 크기가 바뀌면 위젯 자리도 따라감", fb.left === 60 && fb.width === 1140, JSON.stringify(fb));
+// 디자인·설정
+const st = await p.evaluate(async () => {
+  await wh.setPrefs({ surface: "dusk" });
+  const sr = document.querySelector("[data-dusk-widgethome]").shadowRoot, app = sr.querySelector(".app");
+  const accent = getComputedStyle(app).getPropertyValue("--accent").trim();
+  const saved = JSON.parse(JSON.stringify(api.mem.get("pocketrisu.basic-home.v1.settings") || {})).surface;
+  sr.querySelector(".tools-open").click(); await new Promise((r) => setTimeout(r, 200));
+  const dlg = [...sr.querySelectorAll("dialog")].find((d) => d.open);
+  const chk = sr.querySelector(".check input[type=checkbox]"), app2 = getComputedStyle(chk).appearance;
+  const box = dlg.getBoundingClientRect();
+  return { surface: app.dataset.surface, accent, saved, open: !!dlg, app2, bx: box.left, by: box.top };
+});
+ok("Dusk 디자인 적용·저장", st.surface === "dusk" && st.accent === "#d8b678" && st.saved === "dusk", JSON.stringify(st));
+ok("설정 창 체크박스가 스위치 모양", st.open && st.app2 === "none", JSON.stringify(st));
+await p.mouse.click(5, 790); await p.waitForTimeout(200);
+ok("설정 창 바깥을 누르면 닫힘", await p.evaluate(() => ![...document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelectorAll("dialog")].some((d) => d.open)));
+ok("홈 자동 열기 끄기도 저장", await p.evaluate(async () => { await wh.setPrefs({ autoHome: false }); return wh.prefs().autoHome === false; }));
+ok("페이지 오류 없음", errs.length === 0, errs.join(" / "));
+await b.close(); process.exit(out.every(Boolean) ? 0 : 1);

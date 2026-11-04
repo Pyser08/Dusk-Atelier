@@ -1,5 +1,13 @@
 # 현재 상태 — feat/1.9.2
 
+## 2026-11-04 위젯 홈: 사이드바 옆 배치·Dusk 디자인
+- `lib/home-layout.cjs` `mainPane()`: 포켓리스 홈이 아니면 `.risu-sidebar/.rs-sidebar` 오른쪽의 가장 큰 본문 요소를 홈 자리로(사이드바를 품은 감싸개 제외). `found.generic`이면 관련 링크·네이티브 컨트롤 안 씀. 프레임 찾기는 `iframe[srcdoc*="dusk-widgethome-open"]`(원본 플러그인과 구분), 속성 접두사 `x-dusk-wh-`. **리스·리스바드의 실제 클래스명(`.risu-sidebar`)은 기기 확인 필요**(PocketRisu 원본 코드가 쓰던 이름).
+- `lib/auto-home.cjs` `isHome`: 포켓리스 제목이 없어도 캐릭터 미선택(index<0)+설정/대화상자 없음이면 홈.
+- 바로 열기는 자동 감지 연결(`inst.ready()`, 최대 2.5초)을 기다린 뒤 아직 안 떴으면 연다.
+- `dusk-style.js`: 설정 창 공통 스타일(스위치·알약 라디오·대화상자)과 `data-surface="dusk"`. surface 값 navy/glass/dusk. 대화상자 바깥 클릭 닫기. 인스턴스 `getPrefs/setPrefs/openSettings` → Dusk 카드(디자인 segmented·홈 자동 열기 스위치·위젯 꾸미기 버튼).
+- e2e `tests/e2e/run-widgethome-host.mjs`(가짜 SafeDocument로 사이드바 옆 배치·캐릭터 선택 시 닫힘·홈 복귀 시 다시 열림·사이드바 크기 추적·Dusk 디자인·설정 창).
+- 남은 것: Dusk 디자인에서 음악 재생 버튼·시계 바늘·하단 독 활성색 등 원본 고정색 일부는 파란색 그대로.
+
 ## 2026-11-04 위젯 추가·크기 조절·스크롤 유지
 - 새 위젯 `src/widgethome/extras.js`(HTML·CSS·동작·순수 함수): dusk·dday·timer·dice·stats. `widget-layout.cjs` IDS 11개, `ORIGINAL`(6개)만 있으면 예전 배치로 인정하고 없는 새 위젯은 맨 아래에 붙임. 저장 키 ddays·dice·visits(같은 접두사). Dusk 바로가기는 `createWidgetHome({openDusk})` → main.js `app.open({tab})`.
 - 크기 조절: hit의 오른쪽 아래 28px를 마우스로 잡으면 resize, `follow()`가 width/height calc로 따라감. 스냅 히스테리시스 0.65칸, 끄는 동안 격자 min-height 고정(스크롤 되먹임 방지), 가장자리 스크롤 48px·거리 비례.

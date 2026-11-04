@@ -446,10 +446,18 @@ export function widgetHomeCard(ctx, onChange) {
       "div",
       { style: "flex:1;min-width:0;display:flex;flex-direction:column;gap:2px" },
       h("b", null, "위젯 홈"),
-      h("span", { class: "rb-muted", style: "white-space:normal" }, "음악·사진·시계·최근 대화·메모를 한 화면에 모아 보는 홈이에요. 켜면 리스 메뉴에 ‘위젯 홈’ 버튼이 생기고, 포켓리스에서는 홈 화면에 자동으로 열 수 있어요. 리스·리스바드에서는 메뉴 버튼으로 열어요."),
+      h("span", { class: "rb-muted", style: "white-space:normal" }, "음악·사진·시계·최근 대화·메모·D-day·타이머 등을 한 화면에 모은 홈이에요. 켜면 리스 메뉴에 ‘위젯 홈’ 버튼이 생기고, 홈 화면으로 가면 사이드바 옆 홈 자리에 자동으로 떠요(화면 접근 권한이 필요해요). 권한이 없으면 전체 화면으로 열려요."),
       noteEl,
+      wh.isRunning() && wh.prefs() ? (() => {
+        const p = wh.prefs(), save = async (patch, msg) => { try { await wh.setPrefs(patch); ctx.toast(msg); } catch (e) { ctx.toast(e?.message ?? String(e), { error: true }); } await refreshNote(); };
+        return h("div", { style: "margin-top:10px;display:flex;flex-direction:column;gap:8px" },
+          h("div", { style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap" }, h("span", { class: "rb-muted" }, "위젯 디자인"),
+            segmented([["navy", "기본"], ["glass", "글래스"], ["dusk", "Dusk"]], p.surface, (v) => save({ surface: v }, "위젯 디자인을 바꿨어요"), "위젯 디자인")),
+          h("span", { class: "rb-muted", style: "display:inline-flex;align-items:center;gap:8px" }, "홈 화면으로 가면 자동으로 열기(사이드바는 그대로 보여요)", switchEl(p.autoHome, { label: "홈 화면으로 가면 자동으로 열기", onChange: async (v, el) => { setSwitch(el, v); await save({ autoHome: v }, v ? "홈 화면으로 가면 위젯 홈을 띄워요" : "홈 자동 열기를 껐어요"); } })));
+      })() : null,
       h("div", { style: "margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap" },
         openBtn,
+        wh.isRunning() ? btn("위젯 꾸미기", { size: "sm", id: "rb-wh-settings", onClick: async () => { try { await ctx.close?.(); } catch {} const ok = await wh.openSettings(); if (!ok) ctx.toast(wh.lastError() || "위젯 홈을 열지 못했어요", { error: true }); } }) : null,
         h("span", { class: "rb-muted", style: "display:inline-flex;align-items:center;gap:8px" }, "리스를 켜면 바로 열기", switchEl(wh.openOnLoad(), { label: "리스를 켜면 바로 열기", onChange: async (v, el) => { setSwitch(el, v); await wh.setOpenOnLoad(v); ctx.toast(v ? "리스를 켜면 위젯 홈이 바로 떠요" : "리스를 켜도 자동으로 열지 않아요"); } })))
     ),
     switchEl(wh.on(), { label: "위젯 홈", onChange: async (v, el) => {

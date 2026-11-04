@@ -19,3 +19,15 @@ window.makeApi = (opts = {}) => {
 window.makeWH = (api, o = {}) => createWidgetHome(api, { log: (m) => (window.__logs ??= []).push(m), ...o });
 import { bootWidgetHome } from "../../src/widgethome/home.js";
 window.rawBoot = (api) => bootWidgetHome(api, {}).catch((e) => ({ err: e.stack }));
+// 가짜 SafeDocument: 같은 페이지의 진짜 DOM을 비동기 메서드로 감싼다(리스의 getRootDocument 흉내)
+const wrap = (n) => n && {
+  _n: n,
+  querySelector: async (s) => wrap(n.querySelector(s)), querySelectorAll: async (s) => [...n.querySelectorAll(s)].map(wrap),
+  getBoundingClientRect: async () => { const r = n.getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height, right: r.right, bottom: r.bottom }; },
+  textContent: async () => n.textContent, matches: async (s) => n.matches(s), getParent: async () => wrap(n.parentElement),
+  setAttribute: async (k, v) => n.setAttribute(k, v), getAttribute: async (k) => n.getAttribute(k), appendChild: async (c) => n.appendChild(c._n),
+  createElement: async (t) => wrap(document.createElement(t)), setTextContent: async (t) => { n.textContent = t; }, remove: async () => n.remove(),
+  setStyleAttribute: async (s) => n.setAttribute("style", s), getStyleAttribute: async () => n.getAttribute("style") || "",
+  addEventListener: async () => 1, removeEventListener: async () => {}
+};
+window.fakeRoot = () => wrap(document);

@@ -27,7 +27,8 @@
       if(/^(Related Links|관련 링크)$/i.test(value))links=true;
       if(title&&links)return true;
     }
-    return false;
+    // 리스·리스바드: 캐릭터를 고르지 않은 상태가 홈. 설정창·대화상자는 위에서 이미 걸렀다.
+    return Boolean(await doc.querySelector('#app'));
   }
   class AutoHome{
     constructor(api,options={}){
