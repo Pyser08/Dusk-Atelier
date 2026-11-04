@@ -630,3 +630,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 아이콘 줄 끝 +1px 여유, aside/nav 등도 후보(사이드바 삐짐 대응).
 - 리스바드 실측: 아이콘 줄 = `.rs-sidebar.character-list-sidebar`(80px), 안쪽 `.character-list` 72px → 사이드바 자체가 좁으면 그 끝을 경계로.
 - Dusk 열었다 닫기: controller yieldToDusk가 resumeAfterDusk 표시 → app.js close() 끝에 ctx.onClosed → main.js에서 widgetHome.resume(). 홈 배치 코드는 건드리지 않음.
+- 열린 항목 중복: applyOpen이 닫기를 먼저 처리, 중복 판정에 닫힌 항목 포함(같은 kind 0.5/다른 kind 0.8), openForPrompt 24개, 프롬프트 문구 보강. 모델이 안 닫아 주면 자동으론 안 닫힘(미해결).

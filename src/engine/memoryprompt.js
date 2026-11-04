@@ -32,7 +32,7 @@ export const SYSTEM_PROMPT = [
   "`when` is the in-story date/time (e.g. '3월 2일 저녁', 'Day 3 night') only if written or clearly implied; reuse the format of previousScene.when.",
   "If the input has `storyDate` (YYYY-MM-DD), the program already extracted the story date from the text: do not guess another date, and in `when` write only the time of day or leave it empty.",
   "`rel` lists at most 4 relationship changes between two characters that visibly happened in this response (dir: + warmer/closer, - colder/worse, 0 just different). Omit if none.",
-  "`open.add` records at most 3 promises, foreshadowing or unanswered questions that matter later. `open.close` lists ids from `openItems` that this response resolved. Omit both if none.",
+  "`open.add` records at most 3 promises, foreshadowing or unanswered questions that matter later; never add something already in `openItems`, even reworded. `open.close` lists ids from `openItems` that this response resolved, answered, kept or made moot — close them instead of adding a new item. Omit both if none.",
   "If nothing is worth recording, return people:[]."
 ].join("\n");
 
