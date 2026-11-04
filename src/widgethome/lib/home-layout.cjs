@@ -56,8 +56,8 @@
     let edge=null;
     for(const node of pool){
       const b=rect(await node.getBoundingClientRect());if(!b)continue;
-      if(b.left>abox.left+2||b.width<48||b.width>140||b.height<abox.height*0.7)continue;
-      const right=b.left+b.width;if(edge===null||right<edge)edge=right;
+      if(b.left>abox.left+2||b.width<56||b.width>140||b.height<abox.height*0.85)continue;
+      const right=b.left+b.width;if(edge===null||right>edge)edge=right;
     }
     return edge;
   }
