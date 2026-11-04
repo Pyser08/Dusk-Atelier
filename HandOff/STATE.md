@@ -1,5 +1,14 @@
 # 현재 상태 — feat/1.9.2
 
+## 2026-11-04 위젯 홈 이식 (PocketRisu 위젯 홈 v1.0.18, 격리 이식)
+- 원본(사용자 제작, zip)을 `src/widgethome/`로 옮김: `lib/*.cjs`(원본 모듈 14개, require 경로만 .cjs로), `style.js`(원본 style.css의 :root/html/body → :host, `:host([hidden])` 추가), `home.js`(원본 view.js를 `bootWidgetHome(api, hostOpts)`로). 원본 대비 바뀐 곳은 home.js 안에서 `sr`(shadowRoot)·`hostEl`·`showBox/hideBox`·`dispose`를 찾으면 돼요. layout-editor에는 `document:{createElement, querySelector→sr}` 어댑터를 넘김.
+- 격리: 문서 body에 `<div data-dusk-widgethome hidden>` + Shadow DOM. 위젯 CSS는 Dusk 화면에 새지 않음(e2e로 확인). 같은 플러그인 iframe을 번갈아 쓰므로 Dusk 창을 열기 전 `widgetHome.yieldToDusk()`로 위젯 홈을 닫음(`main.js`에서 `app.open` 감쌈). 위젯 홈을 Dusk에서 열 때는 `ctx.openWidgetHome()`(Dusk 닫고 열기).
+- 켜고 끄기: `src/data/widgethome.js` `createWidgetHome`(키 `dusk.widgethome.on`, 기본 꺼짐). 설정 탭 맨 위 카드(`devtools.js` `widgetHomeCard`, 고급 모드 아니어도 보임) + 도구 화면 ‘위젯 홈’ 행. 끄면 `dispose`가 호스트 제거·메뉴 버튼 해제(`unregisterUIPart`).
+- 메뉴 버튼 id `dusk-widgethome-open`(원본의 `pocketrisu-basic-home-open`과 다름). 원본 플러그인(`pocketrisu_basic_home`)이 켜져 있어도 Dusk 쪽이 그대로 동작하고, 카드에 끄라는 안내만 뜸. 저장 접두사 `pocketrisu.basic-home.v1.` 그대로라 기존 데이터를 이어 씀.
+- 호스트 대응: 저장은 `getLocalPluginStorage`→`pluginStorage` 대체(원본 동작). `getRootDocument`·`createMutationObserver`가 없으면 자동 열기만 못 하고 메뉴 버튼은 됨(e2e: 최소 api에서 열림·경고창 없음). 자동 열기 감지(`auto-home.cjs` `isHome`)는 PocketRisu 홈 화면의 ‘PocketRisu’ 제목 + ‘Related Links/관련 링크’ + `getCurrentCharacterIndex()<0` 기준이라 **리스·리스바드에서는 화면이 달라 자동으로 안 열릴 수 있음(기기 확인 필요)**.
+- 테스트: `tests/widgethome-*.test.cjs`(원본 4개 이식) · `widgethome-ctrl.test.js`(컨트롤러 9) · e2e `tests/e2e/run-widgethome.mjs`(격리·열기/닫기·정리·최소 api·설정 카드·도구 행, PC/모바일).
+- 못 한 것: 세 호스트 실제 기기 확인(특히 홈 영역 배치·자동 열기·음악 파일 저장), 원본 design.js의 Butter Home v8 출처 라이선스 확인(NOTICE.md에 메모).
+
 ## 2026-11-04 프로바이더는 실험 기능으로만 노출
 - `prefs.ui.experimental`(설정→실험 기능, `devtools.js` `experimentalCard`). 꺼짐이면: provider 탭 숨김(`tabs.js` `exp`·`tabHidden`), 꾸미기는 원래 자리(큰 카드), registrar·Dusk 자체 AI 경로 모두 막음(`createProvider({allowed})`, main.js `providerRef.exp`). 켜면 꾸미기는 도구로 이동(`hideWhenExp`). 한 번 등록된 이름은 리스를 다시 열 때까지 남음(removeProvider 없음).
 

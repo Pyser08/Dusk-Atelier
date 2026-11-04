@@ -19,7 +19,7 @@
 
 ## 파일 목록
 ### src/
-- `main.js` (277줄) 
+- `main.js` (285줄) 
 
 ### src/cellar/
 - `node-entry.js` (9줄) Dusk Cellar(서버)에서 장기 기억 분석을 돌리는 Node용 진입점 (v1.9.3, Cella… — createMemoryRunner, createMemoryStoreV3, INDEX_KEY, FOLDER_PREFIX, callWriterModel
@@ -91,6 +91,7 @@
 - `usermerge.js` (13줄) 페르소나 이름(·user·유저 등)으로 따로 쌓인 옛 기록을 {{user}} 하나로 자동으로 합친다 … — autoMergeUser
 - `usernames.js` (27줄) {{user}}(플레이어)를 가리키는 이름 모으기 (v1.9.3). db.username 하나만 보면… — userNameList, primaryUserName, loadPrimaryUserName, loadUserNames
 - `webtools.js` (53줄) 웹 검색·가져오기 도구 (v1.8.1). 기본 꺼짐. 켠 단계(기본: 정리 노트)에서만 모델이 도구를… — WEB_KEY, WEB_STAGES, defaultWebCfg, normalizeWebCfg, createWebTools
+- `widgethome.js` (65줄) 위젯 홈(PocketRisu 위젯 홈 이식) 켜기/끄기와 수명 관리. 기본 꺼짐, 키 dusk.wid… — WH_KEY, WH_ORIGINAL, loadWidgetHomeOn, createWidgetHome
 - `workshop.js` (58줄) 봇빌더(risu_story_workshop) 연동 (v1.8.1): 설치·연동판 감지, 화면 열기, … — HANDOFF_KEY, WS_PREFIX, createWorkshopLink
 - `workshoppatch.js` (44줄) 봇빌더(risu_story_workshop) DA Interop 연동판 만들기 (v1.8.1) — 순… — MARK, patchWorkshop, isPatchedWorkshop
 
@@ -271,7 +272,7 @@
 
 ### src/ui/
 - `aifix.js` (52줄) 로어북 '고칠 부분' 공유 상태 (v1.6.8): 편집기 글칸에서 고른 부분 ↔ AI 창 '고칠 부분…
-- `app.js` (566줄) 
+- `app.js` (567줄) 
 - `assets.js` (187줄) 
 - `cbs.js` (80줄) 
 - `codeedit.js` (514줄) 가벼운 코드 편집기: 투명한 textarea 뒤에 색을 입힌 pre를 겹쳐 VS Code처럼 보이게 …
@@ -323,7 +324,7 @@
 - `cocoa.js` (14줄) 사이드바 '기억' 섹션의 코코아 탭(v1.8.1): 장기 기억·기억 카드와 같은 단계. 화면 본체는 …
 - `dev.js` (618줄) 
 - `devaff.js` (84줄) 개발 탭 → 봇: 호감도 HUD 기능 프리셋 카드. 설치하면 이 봇 배경 HTML에 ♡ 버튼 HUD가…
-- `devtools.js` (424줄) 
+- `devtools.js` (463줄) 
 - `editor.js` (2530줄) 
 - `greetings.js` (203줄) 퍼스트 메시지 관리자 (v1.6.7 6단계): 첫 메시지·추가 인사말·그룹 전용 인사말이 많아도 보기…
 - `history.js` (142줄) 
@@ -350,11 +351,11 @@
 - `roulettepop.js` (64줄) 봇 편집 도구 → 룰렛: 범주별로 무작위 특징을 뽑아 복사하거나 설명 끝에 붙인다.
 - `sectionhome.js` (73줄) 그룹 개요(기억·관리·작업실, 1.8.3 목업 1): 한 줄 안내 → (기억) 상태 카드 → 목록형 …
 - `settings.js` (178줄) 플러그인 꾸미기 (v1.7.0 7단계, 계획 §3.12 → v1.8.3 확장): 미리보기 → 테마 묶…
-- `settingstab.js` (265줄) 설정 탭 (1.8.3 목업 5): 묶음 이름 달기(화면 · 백업 · 도움말). 고급은 묶음별 한 줄 …
+- `settingstab.js` (266줄) 설정 탭 (1.8.3 목업 5): 묶음 이름 달기(화면 · 백업 · 도움말). 고급은 묶음별 한 줄 …
 - `storageedit.js` (81줄) 플러그인 스토리지 편집 화면 (1.8.3): 값 수정 · 새 키 · 가져오기. 모든 플러그인이 함께 …
 - `themebuilder.js` (348줄) 테마 빌더 화면: 스타일 → 대표색 → 밝기만 고르면 테마 완성. 결과는 일반 테마로 저장된다.
 - `themestudio.js` (445줄) 테마 스튜디오: 계열(일반 리스/포켓리스)별 테마 편집 · 실시간 미리보기 · 적용 · 공유
-- `tools.js` (401줄) 
+- `tools.js` (402줄) 
 - `updsettings.js` (76줄) 도구 → 업데이트 설정: 새 봇 자동 감지, 받은 사본 정리, 채팅 백업
 - `workshoplink.js` (108줄) 봇빌더 연동 화면 (v1.8.1)
 
@@ -429,8 +430,12 @@
 - `noble.js` (877줄) 봇빌더(BB) v0.3.2의 번들에서 추출한 외부 라이브러리 (MIT). 라이선스: 저장소 NOTIC… — sha2562, gcm
 - `re2js.js` (6649줄) 봇빌더(BB) v0.3.2의 번들에서 추출한 외부 라이브러리 (MIT). 라이선스: 저장소 NOTIC… — RE2JS
 
+### src/widgethome/
+- `home.js` (408줄) 위젯 홈(PocketRisu 위젯 홈 v1.0.18 이식). Shadow DOM 안에서만 그려서 Du… — WH_VERSION, bootWidgetHome
+- `style.js` (3줄) 위젯 홈 스타일(원본 style.css를 Shadow DOM용으로 바꾼 것: :root/html/bo… — WH_CSS
+
 ## Risu 플러그인 API (우리 코드가 쓰는 호출, 횟수순)
-`getCharacterFromIndex`(62), `getDatabase`(42), `getChatFromIndex`(29), `getCurrentCharacterIndex`(25), `getCurrentChatIndex`(21), `setCharacterToIndex`(19), `setDatabaseLite`(16), `addRisuScriptHandler`(13), `nativeFetch`(11), `setChatToIndex`(9), `addRisuReplacer`(7), `saveAsset`(6), `toggle`(5), `registerButton`(4), `hideContainer`(4), `getRootDocument`(3), `showContainer`(3), `getDatabaseCached`(2), `getLocalPluginStorage`(2), `requestPluginPermission`(2), `checkCharOrder`(2), `readImage`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `getColorScheme`(2), `hasDbCache`(2), `getCurrentLorebookEntries`(1), `unregisterUIPart`(1), `addProvider`(1), `risuFetch`(1)
+`getCharacterFromIndex`(62), `getDatabase`(42), `getChatFromIndex`(29), `getCurrentCharacterIndex`(25), `getCurrentChatIndex`(21), `setCharacterToIndex`(19), `setDatabaseLite`(16), `addRisuScriptHandler`(13), `nativeFetch`(11), `setChatToIndex`(9), `addRisuReplacer`(7), `saveAsset`(6), `hideContainer`(6), `registerButton`(5), `toggle`(5), `showContainer`(4), `getRootDocument`(3), `readImage`(3), `alert`(3), `getDatabaseCached`(2), `getLocalPluginStorage`(2), `unregisterUIPart`(2), `requestPluginPermission`(2), `checkCharOrder`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `getColorScheme`(2), `hasDbCache`(2), `getCurrentLorebookEntries`(1), `addProvider`(1)
 
 ## RisuAI 본체 구조 (kwaroran/RisuAI, 2026.10.220 기준)
 읽기 전용 클론: `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/kwaroran/risuai` (add_repo로 읽기만 가능, 쓰기 불가). 전체를 읽지 말고 아래 위치만 grep한다.

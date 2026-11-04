@@ -3,6 +3,7 @@ import { normalizeSkillSet } from "../../src/engine/skills.js";
 // 1.7.0 메뉴 구조 시험용: 가짜 리스 api로 실제 createApp을 띄운다. node tests/e2e/run-app.mjs 로 실행.
 import { createApp } from "../../src/ui/app.js";
 import { createProvider } from "../../src/data/provider/index.js";
+import { createWidgetHome } from "../../src/data/widgethome.js";
 import { createStore as createBackupStore, backupSnapshot } from "../../src/engine/index.js";
 import { createMemory } from "../../src/data/memory.js";
 import POT_PROMPTS from "../../src/data/pot/prompts.json";
@@ -64,6 +65,13 @@ window.bootApp = async (seed, opts = {}) => {
   }
   const app = createApp(api, { legacy: { open() {}, busy: false, startWithFiles() {} }, version: "1.7.0-dev", onPersonaChanged() {} });
   if (opts.provider) { app.ctx.provider = createProvider(api, { confirm: async () => false, createStore: createBackupStore, backupSnapshot }); }
+  if (opts.widgetHome) {  // 위젯 홈 설정 카드·도구 행 시험: 실제 컨트롤러 + 가짜 화면
+    window.__wh = { boots: 0, disposed: 0, opened: 0 };
+    const store = {}; api.pluginStorage = api.pluginStorage ?? { getItem: async (k) => store[k] ?? null, setItem: async (k, v) => { store[k] = v; } };
+    api.showContainer = api.showContainer ?? (async () => {}); api.registerButton = api.registerButton ?? (async () => ({}));
+    app.ctx.widgetHome = createWidgetHome(api, { boot: async () => { __wh.boots++; return { dispose: async () => { __wh.disposed++; }, isVisible: () => false, close: async () => {}, open: async () => { __wh.opened++; return true; }, autoStatus: () => "" }; } });
+    app.ctx.openWidgetHome = async () => { try { await app.close(); } catch {} return app.ctx.widgetHome.open(); };
+  }
   // 코코아(스킬) 화면: 실제 스킬 저장소. opts.skills면 세트 3개를 미리 넣는다(첫 세트는 정리 노트·기록하기에 붙임).
   app.ctx.skills = createSkillStore(api, { log() {} });
   if (opts.skills) {

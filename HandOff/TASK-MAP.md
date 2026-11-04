@@ -7,6 +7,8 @@
 | 앱 진입·훅 등록 | `src/main.js` |
 | 메뉴·탭 구성 | `src/ui/tabs.js`, `src/ui/app.js` |
 | 홈 화면 | `src/ui/screens/home.js` |
+| 위젯 홈(켜고 끄기·수명) | `src/data/widgethome.js`, 설정 카드 `src/ui/screens/devtools.js` `widgetHomeCard`, 테스트 `tests/widgethome-ctrl.test.js` |
+| 위젯 홈 화면·자동 열기·음악·배치 | `src/widgethome/home.js`(원본 view.js), `src/widgethome/lib/*.cjs`, `style.js`, 테스트 `tests/widgethome-*.test.cjs`, e2e `tests/e2e/run-widgethome.mjs` |
 | 프로바이더(요청 만들기·해독·키·사슬·예산) | `src/engine/provider/*`(순수), `src/data/provider/runner.js`·`index.js`, 테스트 `tests/provider-*.test.js` |
 | 프로바이더 화면 | `src/ui/screens/provider.js`, `provider/more.js`, e2e `tests/e2e/run-provider.mjs` |
 | 장기기억 — 메시지 식별/앵커 | `src/engine/chattext.js`, `src/engine/memoryreconcile.js`, `src/data/memoryload.js` |

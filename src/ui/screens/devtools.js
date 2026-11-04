@@ -421,3 +421,42 @@ export function openPatchMaker(ctx, target) {
   ctx.state.pm = { ...ctx.state.pm ?? {}, kind: target.kind, target, q: "" };
   ctx.go("dev", "patchmaker");
 }
+// 위젯 홈 카드 (설정 탭): 켜고 끄기 · 지금 열기 · 원본 플러그인과 같이 켜진 경우 안내
+export function widgetHomeCard(ctx, onChange) {
+  const wh = ctx.widgetHome;
+  const noteEl = h("span", { class: "rb-muted", style: "white-space:normal;display:block;margin-top:4px" });
+  const openBtn = btn("지금 열기", { size: "sm", id: "rb-wh-open", onClick: async () => {
+    if (!wh.on()) return ctx.toast("먼저 위젯 홈을 켜 주세요");
+    const ok = await ctx.openWidgetHome();
+    if (!ok) ctx.toast(wh.lastError() || "위젯 홈을 열지 못했어요", { error: true });
+  } });
+  const refreshNote = async () => {
+    const running = wh.isRunning();
+    const orig = running ? await wh.originalInstalled() : false;
+    noteEl.textContent = orig
+      ? "원래 ‘위젯 홈’ 플러그인도 켜져 있어요. Dusk 쪽이 우선이라 그대로 동작하지만, 메뉴에 버튼이 두 개 보일 수 있으니 원래 플러그인은 끄는 걸 권해요. 저장된 내용은 같이 써요."
+      : running && wh.autoStatus() ? wh.autoStatus() : wh.lastError() || "";
+  };
+  void refreshNote();
+  return h(
+    "div",
+    { class: "rb-card pad bordered", style: "display:flex;gap:14px;align-items:center", id: "rb-widgethome" },
+    h("span", { style: "width:40px;height:40px;border-radius:12px;background:var(--rb-acc-soft);color:var(--rb-acc-text);display:flex;align-items:center;justify-content:center;flex-shrink:0" }, icon("grid", 20)),
+    h(
+      "div",
+      { style: "flex:1;min-width:0;display:flex;flex-direction:column;gap:2px" },
+      h("b", null, "위젯 홈"),
+      h("span", { class: "rb-muted", style: "white-space:normal" }, "음악·사진·시계·최근 대화·메모를 한 화면에 모아 보는 홈이에요. 켜면 리스 메뉴에 ‘위젯 홈’ 버튼이 생기고, 포켓리스에서는 홈 화면에 자동으로 열 수 있어요. 리스·리스바드에서는 메뉴 버튼으로 열어요."),
+      noteEl,
+      h("div", { style: "margin-top:6px" }, openBtn)
+    ),
+    switchEl(wh.on(), { label: "위젯 홈", onChange: async (v, el) => {
+      setSwitch(el, v);
+      const ok = await wh.set(v);
+      ctx.toast(v ? (ok ? "위젯 홈을 켰어요" : "위젯 홈을 켜지 못했어요") : "위젯 홈을 껐어요. 메뉴 버튼은 리스를 새로 열면 사라질 수 있어요", v && !ok ? { error: true } : undefined);
+      ctx.dropPanes?.();   // 도구 화면의 위젯 홈 행이 바로 따라 바뀌도록
+      await refreshNote();
+      onChange?.(v);
+    } })
+  );
+}

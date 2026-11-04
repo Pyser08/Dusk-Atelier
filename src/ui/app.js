@@ -530,6 +530,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     reopen: () => open(),
     applyTheme,
     refreshTabs: () => refreshTabs(),
+    dropPanes: () => dropPanes(),
     setUiMode,
     setLayout,
     openOnboarding: (opts) => openOnboarding(ctx, opts),

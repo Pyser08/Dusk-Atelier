@@ -24,6 +24,7 @@ import { createAffHud } from './data/affhud.js';
 import POT_PROMPTS from './data/pot/prompts.json';
 import './data/modelhub.js';
 import { createProvider } from './data/provider/index.js';
+import { createWidgetHome } from './data/widgethome.js';
 import { setDuskRoute } from './engine/runai.js';
 import { setDuskServerModel } from './data/modelhub.js';
 import { setUserPromptProvider } from './engine/runai.js';
@@ -235,6 +236,13 @@ async function start() {
   providerRef.confirm = (o) => app.ctx.confirmAnywhere(o);
   providerRef.exp = () => !!app?.ctx?.prefs?.ui?.experimental;
   provider.sync().catch(() => {});   // 실험 기능이 켜져 있으면 이제 등록
+  // 위젯 홈(v1.9.2): 기본 꺼짐. 켜져 있으면 시작해서 메뉴 버튼을 달고, Dusk 창을 열 땐 먼저 닫아 같은 플러그인 화면을 번갈아 쓴다
+  const widgetHome = createWidgetHome(api, { log: (m) => console.log(`[${TITLE}] ${m}`) });
+  app.ctx.widgetHome = widgetHome;
+  app.ctx.openWidgetHome = async () => { try { await app.close(); } catch { /* 이미 닫힘 */ } return widgetHome.open(); };
+  const duskOpen = app.open;
+  app.open = async (o) => { await widgetHome.yieldToDusk().catch(() => {}); return duskOpen(o); };
+  widgetHome.boot().catch((e) => console.log(`[${TITLE}] 위젯 홈 시작 실패 ${e?.message ?? e}`));
   app.ctx.cellar = memory.cellar;   // 한 곳에서 찾은 Cellar 연결을 화면들이 함께 쓴다
   app.ctx.skills = skills;
   app.ctx.web = web;

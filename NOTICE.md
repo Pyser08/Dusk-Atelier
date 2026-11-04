@@ -5,6 +5,7 @@ Dusk Atelier 자체는 **GNU Affero General Public License v3.0 (AGPL-3.0)** 입
 아래는 번들에 함께 들어 있는 외부 코드의 고지입니다. 봇빌더(v0.3.2, 원작자 허락) 번들에서 가져온 것은 원문 고지를 그대로 옮겼습니다.
 RisuBard 프리셋 해석 코드는 GPL-3.0이며, GPLv3 제13조에 따라 AGPL-3.0과 결합해 배포할 수 있습니다.
 fflate 0.8.2 (MIT, https://github.com/101arrowz/fflate)는 기존 번들과 같은 버전입니다.
+위젯 홈(src/widgethome/)은 PocketRisu 위젯 홈 v1.0.18(제작자 본인 제공)을 이 저장소로 옮긴 것입니다. 그 안의 design.js(시계·달력·할 일 도우미)는 원본 주석에 ‘Butter Home v8에서 옮김’이라고 적혀 있어, 해당 코드의 라이선스는 제작자 확인이 필요합니다.
 
 ---
 
