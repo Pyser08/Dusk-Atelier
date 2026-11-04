@@ -75,7 +75,7 @@
       // 리스·리스바드: 왼쪽 아이콘 줄만 남기고, 그 오른쪽 전부(위~아래)를 덮는다.
       try{
         const app=await this.doc.querySelector('#app'),ab=app&&rect(await app.getBoundingClientRect());
-        if(ab){this.railPoll=(this.railPoll||0)+1;if(this.railKey!==ab.width+'x'+ab.height||this.dirty||this.railEdge==null||this.railPoll%3===0){this.railEdge=await railEdge(this.doc);this.railKey=ab.width+'x'+ab.height;}const edge=this.railEdge??(this.nocover?ab.left+88:box.left);return{left:edge,top:ab.top,width:ab.left+ab.width-edge,height:ab.height};}
+        if(ab){this.railPoll=(this.railPoll||0)+1;if(this.railKey!==ab.width+'x'+ab.height||this.dirty||this.railEdge==null||this.railPoll%3===0){this.railEdge=await railEdge(this.doc);this.railKey=ab.width+'x'+ab.height;}const edge=this.railEdge??(this.nocover?ab.left:box.left);return{left:edge,top:ab.top,width:ab.left+ab.width-edge,height:ab.height};}
       }catch{}
       return box;
     }
