@@ -40,3 +40,9 @@ Dusk Atelier는 **세 호스트에서 같은 `dusk_atelier.js` 하나로** 돈�
 - [ ] 저장 데이터 형식이 바뀌면 예전 데이터 읽기·마이그레이션 테스트가 있는가?
 - [ ] 모바일(좁은 폭, 터치)에서도 쓸 수 있는가?
 - [ ] 원본 봇·채팅을 수정하지 않는가(새 객체/요청 사본만)?
+
+## addProvider (프로바이더, v1.9.3)
+- `api.addProvider(name, handler, {tokenizer})`로 'Dusk 자동'·'Dusk · 프로필'을 등록(`data/provider/register.js`). **세 호스트(RisuAI·RisuBard·PocketRisu) 지원 여부는 아직 실제 기기에서 확인 못 함.** 없으면 `supported()`가 false가 되어 등록을 건너뛰고 화면에 안내만 띄움(설정은 저장 가능).
+- 전송은 `nativeFetch` → 실패하면 `risuFetch`(`data/provider/transport.js`). 스트림은 `nativeFetch`일 때만 이어 받고 `risuFetch`는 통째로 받음.
+- 키 값은 `getLocalPluginStorage` → `safeLocalStorage` 순으로 로컬에만 저장(`data/provider/keyvault.js`). 둘 다 없으면 키 추가가 실패함.
+- 쓰기 도구 확인창은 Dusk 창이 닫혀 있어도 `ctx.confirmAnywhere`(app.js)가 잠깐 띄움. 못 띄우면 허락 안 한 것으로 처리.

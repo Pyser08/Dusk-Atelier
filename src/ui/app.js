@@ -7,13 +7,14 @@ import { maybeOnboarding, openOnboarding } from './onboarding.js';
 import { runScreenTour } from './screentours.js';
 import { installTooltips } from './tooltip.js';
 import { maybeShowWhatsNew, openChangelog, CHANGELOG } from './whatsnew.js';
-import { btn, iconBtn, moreNav, openMenu, toast, emptyState } from './kit.js';
+import { btn, iconBtn, moreNav, openMenu, toast, emptyState, confirmDialog } from './kit.js';
 import { CSS2, FONT_LINK } from './styles.js';
 import { normalizeTheme, resolveMode, themeVars } from './theme.js';
 import { createPrefs } from './prefs.js';
 import { renderModules } from './screens/modules.js';
 import { renderSettings } from './screens/settings.js';
 import { renderTools } from './screens/tools.js';
+import { renderProvider } from './screens/provider.js';
 import { renderPlaceholder } from './screens/placeholder.js';
 import { renderPresets } from './screens/presets.js';
 import { renderCharacters } from './screens/characters.js';
@@ -154,7 +155,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   // 사이드바·위쪽 바는 기억 → 관리 → 작업실 섹션별로 나눈다.
   let currentSection = null;
   for (const t of TABS) {
-    if (t.mobileOnly) continue;
+    if (t.mobileOnly || t.hide) continue;
     if (t.section && t.section !== currentSection) {
       currentSection = t.section;
       nav.appendChild(h("div", { class: "rb-nav-lab", "aria-hidden": "true" }, SECTION_NAMES[currentSection]));
@@ -233,7 +234,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       ...inMore ? [h("button", { type: "button", id: "rb-crumb-more", onClick: () => go(TABS.find((x) => x.section === t.section)?.id ?? "home") }, SECTION_NAMES[t.section]), sep()] : [],
       h("button", { type: "button", class: sl ? "" : "cur", "aria-haspopup": "menu", id: "rb-tabmenu", onClick: (e) => {
         const dev = !!prefs.ui?.devMode;
-        openMenu(win, e.currentTarget, TABS.filter((x) => x.id !== "home" && (!x.dev || dev)).map((x) => ({ icon: x.icon, label: x.label, onClick: () => go(x.id) })));
+        openMenu(win, e.currentTarget, TABS.filter((x) => x.id !== "home" && !x.hide && (!x.dev || dev)).map((x) => ({ icon: x.icon, label: x.label, onClick: () => go(x.id) })));
       } }, t.label, icon("down", 14)),
       ...sl ? [sep(), h("button", { type: "button", class: "cur", onClick: () => go(state.tab) }, sl)] : []
     );
@@ -398,7 +399,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     // 개요 화면(기억·관리·작업실)에서는 위 칩 줄을 숨긴다: 목록이 같은 이동을 이미 보여 준다(목업 1)
     win.classList.toggle("rb-on-hub", String(state.tab).endsWith("-home"));
     const activeSection = TABS.find((t) => t.id === state.tab)?.section;
-    replace(moreHost, moreNav(TABS.filter((t) => t.section === activeSection && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
+    replace(moreHost, moreNav(TABS.filter((t) => t.section === activeSection && !t.hide && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
     for (const links of [navLinks, topLinks, barLinks]) for (const [id, a] of links) {
       const activeTab = TABS.find((t) => t.id === state.tab);
       const on = id === state.tab || id.startsWith("section:") && activeTab?.section === id.slice("section:".length);
@@ -428,7 +429,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, personabuilder: renderPersonaBuilder, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, relmap: renderRelMap, cocoa: renderCocoaTab, look: renderSettings, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { home: renderHome, personabuilder: renderPersonaBuilder, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, relmap: renderRelMap, cocoa: renderCocoaTab, look: renderSettings, provider: renderProvider, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
     Promise.resolve(screen(scopeCtx(ctx, main, () => token !== renderToken))).then(() => {
       paneReady = true;
     }).catch((err) => {
@@ -491,8 +492,17 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     await api.hideContainer();
   }
   let lastDetail = "";
+  // 프로바이더 쓰기 도구의 확인창: Dusk 창이 닫혀 있어도(채팅 중) 확인창만 잠깐 띄운다. 띄울 수 없으면 허락하지 않은 것으로 본다.
+  async function confirmAnywhere(opts) {
+    if (!root.hidden) return confirmDialog(win, opts);
+    const prev = win.style.visibility; win.style.visibility = "hidden"; root.hidden = false;
+    try { await api.showContainer("fullscreen"); return await confirmDialog(root, opts); }
+    catch { return false; }
+    finally { root.hidden = true; win.style.visibility = prev; try { await api.hideContainer(); } catch { /* 이미 닫힘 */ } }
+  }
   const ctx = {
     api,
+    confirmAnywhere,
     prefs,
     svc,
     assets,

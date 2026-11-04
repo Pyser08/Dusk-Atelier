@@ -35,6 +35,14 @@ export async function withUserPrompts(messages) {
 }
 let customRunner = null;
 export function setCustomRunner(fn) { customRunner = fn; }
+// Dusk 프로바이더(1.9.3): '자체 AI 작업' 용도에 프로필을 지정했다면 보조 모델 대신 그 프로필로 보낸다. 내 API 모델·리스 메인 모델을 직접 고른 호출은 건드리지 않는다.
+let duskPicker = null, duskRunner = null;
+export function setDuskRoute(picker, runner) { duskPicker = picker; duskRunner = runner; }
+export async function duskPickFor(pick) {
+  if (pick?.mode === "dusk") return pick;
+  if (!duskPicker || pick?.noDusk || (pick?.mode && pick.mode !== "submodel")) return null;
+  try { return (await duskPicker()) ?? null; } catch { return null; }
+}
 
 // pick.timeoutSec(초)가 있으면 그 시간 안에 못 끝난 호출을 실패로 본다 (없으면 기다리기만 한다)
 function withTimeout(promise, sec) {
@@ -43,6 +51,8 @@ function withTimeout(promise, sec) {
 }
 export async function runAI(api, messages, pick, signal) {
   if (!pick?.noUserPrompts) messages = await withUserPrompts(messages);   // 장기기억 분석은 대상 채팅 기준으로 직접 끼운다
+  const dp = await duskPickFor(pick);
+  if (dp && duskRunner) return duskRunner(api, messages, dp, signal);
   if (pick?.mode === "custom") {
     if (!customRunner) throw new Error("내 API 모델을 쓸 수 없어요 (모델 설정이 아직 준비되지 않았어요).");
     return customRunner(api, messages, pick, signal);

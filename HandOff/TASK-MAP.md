@@ -7,6 +7,8 @@
 | 앱 진입·훅 등록 | `src/main.js` |
 | 메뉴·탭 구성 | `src/ui/tabs.js`, `src/ui/app.js` |
 | 홈 화면 | `src/ui/screens/home.js` |
+| 프로바이더(요청 만들기·해독·키·사슬·예산) | `src/engine/provider/*`(순수), `src/data/provider/runner.js`·`index.js`, 테스트 `tests/provider-*.test.js` |
+| 프로바이더 화면 | `src/ui/screens/provider.js`, `provider/more.js`, e2e `tests/e2e/run-provider.mjs` |
 | 장기기억 — 메시지 식별/앵커 | `src/engine/chattext.js`, `src/engine/memoryreconcile.js`, `src/data/memoryload.js` |
 | 장기기억 — 자동 분석 흐름 | `src/data/memoryrunner.js`(분석·백필), `src/data/memoryturn.js`(턴 흐름·확정), `src/engine/memoryapply.js`(결과 반영) |
 | 장기기억 — 프롬프트 | `src/engine/memoryprompt.js`, `src/data/memory-default-prompts.js` |

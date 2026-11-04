@@ -22,7 +22,7 @@ const boot = async (ctx, seed = {}, opts = {}) => {
   return page;
 };
 const shot = async (page, name) => { await page.evaluate(() => document.querySelectorAll('.rb-toasts > *').forEach((e) => e.remove())).catch(() => {}); if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png` }); };
-const go = async (page, label) => { await page.evaluate((l) => [...document.querySelectorAll(".rb-nav a, .rb-topnav a, .rb-tabbar a")].filter((a) => a.offsetParent).find((a) => a.textContent.trim().startsWith(l)).click(), label); await page.waitForTimeout(250); };
+const go = async (page, label) => { if (label === "꾸미기") { await page.evaluate(() => window.__app.ctx.go("look")); await page.waitForTimeout(250); return; } await page.evaluate((l) => [...document.querySelectorAll(".rb-nav a, .rb-topnav a, .rb-tabbar a")].filter((a) => a.offsetParent).find((a) => a.textContent.trim().startsWith(l)).click(), label); await page.waitForTimeout(250); };
 const cur = (page) => page.evaluate(() => [...document.querySelectorAll("[aria-current=page]")].filter((a) => a.offsetParent).map((a) => a.textContent.trim().replace(/\d+$/, "")).join("|"));
 const names = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(s)].filter((a) => a.offsetParent).map((a) => a.textContent.trim().replace(/\d+$/, "")), sel);
 
@@ -183,7 +183,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   const t = tag === "PC" ? "pc" : "m", pc = tag === "PC";
   const ctx = await browser.newContext({ viewport: vp, ...extra });
   const page = await boot(ctx, {}, { memory: true, mods: true });
-  const openTab = async (label) => { if (pc) await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(700); };
+  const openTab = async (label) => { if (pc || label === "꾸미기") await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(700); };
   const detailShown = () => page.locator(".rb-detail").evaluate((e) => !e.hidden && getComputedStyle(e).visibility !== "hidden" && e.getBoundingClientRect().width > 50 && e.getBoundingClientRect().right <= innerWidth + 1 && e.getBoundingClientRect().bottom > 0);
   await openTab("캐릭터");
   ok(`[5단계 ${tag}] 캐릭터 간단: 오른쪽 상세 패널 없음`, !(await detailShown()));
@@ -228,7 +228,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   const t = tag === "PC" ? "pc" : "m", pc = tag === "PC";
   const ctx = await browser.newContext({ viewport: vp, ...extra });
   const page = await boot(ctx, {}, { memory: true, story: true, mods: true });
-  const openTab = async (label) => { if (pc) await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(700); };
+  const openTab = async (label) => { if (pc || label === "꾸미기") await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(700); };
   await go(page, "홈"); await page.waitForTimeout(800);
   ok(`[6단계 ${tag}] 홈: 지금 열린 채팅 머리(봇·채팅 이름) + 바꾸기`, (await page.locator(".rb-hhead h1").textContent()).includes("시로코 · 교실 이야기") && (await page.locator(".rb-hhead .rb-btn", { hasText: "바꾸기" }).count()) === 1);
   ok(`[6단계 ${tag}] 홈: 상태 3줄(기억·리수폿·인물)`, (await page.locator(".rb-hstat").count()) === 3 && (await page.locator(".rb-hstat .lab b").allTextContents()).join("|") === "기억|리수폿|인물");
@@ -261,7 +261,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   const t = tag === "PC" ? "pc" : "m", pc = tag === "PC";
   const ctx = await browser.newContext({ viewport: tallVp(vp), ...extra });
   const page = await boot(ctx, {}, { memory: true, story: true, mods: true });
-  const openTab = async (label) => { if (pc) await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(600); };
+  const openTab = async (label) => { if (pc || label === "꾸미기") await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(600); };
   const ui = async () => JSON.parse(await page.evaluate(() => __api.store["rbm:ui:v1"] ?? "{}"));
   // 꾸미기 (간단)
   await openTab("꾸미기");
@@ -356,7 +356,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   const t = tag === "PC" ? "pc" : "m", pc = tag === "PC";
   const ctx = await browser.newContext({ viewport: vp, ...extra });
   const page = await boot(ctx, { "rbm:ui:v1": JSON.stringify({ uiMode: "advanced" }) }, { memory: true, story: true, mods: true });
-  const openTab = async (label) => { if (pc) await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(500); };
+  const openTab = async (label) => { if (pc || label === "꾸미기") await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(500); };
   const tabs = () => page.locator(".rb-theme-tabs button").allTextContents().then((a) => a.join("|"));
   const checked = () => page.locator(".rb-theme-tabs button[aria-checked=true]").textContent();
   await openTab("도구"); await page.locator("#rb-tool-chattheme").click(); await page.waitForTimeout(500);

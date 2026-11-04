@@ -1,5 +1,5 @@
 // 그룹 개요(기억·관리·작업실, 1.8.3 목업 1): 한 줄 안내 → (기억) 상태 카드 → 목록형 행(이름·한 줄 요약·개수).
-// 작업실은 자주 쓰는 둘(플러그인 꾸미기·AI로 봇 만들기)만 큰 카드, 나머지는 '더 보기' 목록. 위 칩 줄은 숨긴다(app.js rb-on-hub).
+// 작업실은 자주 쓰는 둘(프로바이더·AI로 봇 만들기)만 큰 카드, 나머지는 '더 보기' 목록. 위 칩 줄은 숨긴다(app.js rb-on-hub).
 import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
 import { statusCard } from '../kit.js';
@@ -11,9 +11,9 @@ import { dbRead } from '../../data/dbcache.js';
 var LINE = {
   memory: "인물별 기억을 보고 고쳐요", relmap: "인물 관계를 한눈에 봐요", cocoa: "AI에게 줄 추가 지침", cards: "기억을 카드로 묶어 봐요",
   characters: "폴더로 정리하고 에셋·로어북 다듬기", modules: "켜고 끄고 순서 정하기", plugins: "모아 보고 업데이트 확인",
-  look: "색·글꼴·메뉴 위치", aibot: "말로 요청해 만들기", personabuilder: "내 페르소나를 AI와 함께", tools: "로어북·에셋 태그 고치기 등", settings: "화면 모드·저장·백업"
+  look: "색·글꼴·메뉴 위치", provider: "키·모델·용도별 설정, 리스 모델 목록에 추가", aibot: "말로 요청해 만들기", personabuilder: "내 페르소나를 AI와 함께", tools: "로어북·에셋 태그 고치기 등", settings: "화면 모드·저장·백업"
 };
-var BIG = { work: ["look", "aibot"] };
+var BIG = { work: ["provider", "aibot"] };
 
 async function readCounts(ctx, section) {
   const out = {};
@@ -40,7 +40,7 @@ async function readCounts(ctx, section) {
 
 export async function renderSectionHome(ctx) {
   const section = TABS.find((t) => t.id === ctx.state.tab)?.section;
-  const tabs = TABS.filter((t) => t.section === section && !t.id.endsWith('-home') && (!t.dev || ctx.prefs.ui?.devMode));
+  const tabs = TABS.filter((t) => t.section === section && !t.id.endsWith('-home') && !t.hide && (!t.dev || ctx.prefs.ui?.devMode));
   const listHost = h('div', { class: 'rb-hub-body' });
   const host = h('div', { class: 'rb-section rb-scroll rb-hub', 'data-section': section ?? '' },
     h('div', { class: 'rb-section-head' },

@@ -1,0 +1,25 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><title>프로바이더 · Dusk Atelier</title><link rel="icon" href="../assets/img/icon.webp"><link rel="stylesheet" href="../assets/site.css"></head>
+<body data-root="../" data-page="guide/provider">
+<div class="wrap"><nav class="side"></nav><main>
+<span class="eyebrow">기능 가이드</span><h1>프로바이더</h1>
+<p class="lead">리스의 모델 목록에 <b>Dusk 자동</b>과 <b>Dusk · 프로필이름</b>을 더해요. 키·모델·생각·캐시·번역·도구를 한곳에서 정하고, 리스에서는 모델만 고르면 돼요.</p>
+<div class="tip"><span class="ico">⚠️</span><div>모델 목록에 직접 더하는 기능(addProvider)이 RisuAI·RisuBard·PocketRisu에서 모두 되는지는 아직 기기에서 확인하지 못했어요. 목록에 안 보이면 이 화면 위쪽 상태 카드에 안내가 떠요.</div></div>
+<h2 id="start">처음 쓰기</h2>
+<ol><li><b>작업실 → 프로바이더</b>를 열고 <b>연결 추가</b>에서 공급자(OpenAI·Anthropic·Gemini·OpenRouter·DeepSeek·Vertex·Copilot·직접 입력 등)를 골라요.</li><li>API 키를 붙여 넣고 <b>키 추가</b>. 키는 <b>이 기기의 로컬 저장소에만</b> 저장돼요(동기화·내보내기 없음, 목록엔 끝 4자리만 보여요).</li><li><b>모델 불러오기</b>를 누르고 모델을 누르면 프로필이 만들어져요.</li><li>위쪽 <b>사용</b> 스위치를 켜면 리스 모델 목록에 나타나요. <b>연결 시험</b>으로 먼저 확인해 보세요.</li></ol>
+<h2 id="profile">프로필</h2>
+<p>프로필은 모델 하나에 대한 설정 묶음이에요. 온도·최대 토큰·Top P/K, <b>생각(추론)</b> 예산·강도, 답 속 생각 보이기(<code>&lt;Thoughts&gt;</code>), 받는 방식(스트림/한번에), 모델 내장 웹 검색, <b>캐시</b>(Claude 5분·1시간 / OpenAI / Gemini 관찰·자동·수동), 반복 감지, 프리필을 정해요. 고급 모드에서는 단가·재시도·서비스 등급·안전 필터·추가 요청 값(JSON)도 보여요.</p>
+<h2 id="purpose">용도별 지정</h2>
+<p>메인 대화·번역·감정·메모리(요약)·보조·<b>Dusk 자체 AI</b>마다 다른 프로필을 쓸 수 있어요. 비워 두면 메인을 따라요. 용도마다 온도·최대 토큰·생각을 덮어쓸 수 있어요.</p>
+<ul><li><b>Dusk 자체 AI</b>: 지난 대화 분석처럼 Dusk가 직접 AI를 부르는 일이 이 프로필로 돌아요. Cellar 서버 분석에도 그대로 쓰여요(Vertex·Responses 연결은 서버가 직접 못 불러서 플러그인이 중계해요). 내 API 모델을 따로 고른 작업은 그대로예요.</li><li><b>실패하면 다음 프로필로</b>: 차단·한도·서버 오류일 때 정한 순서대로 시도해요. 글이 나오기 시작한 뒤에는 넘기지 않아요.</li><li><b>봇마다 다른 프로필</b>: 지금 연 봇에 프로필을 지정해요.</li><li><b>예산</b>: 하루·한 달 한도를 넘으면 알려 주기 / 싼 프로필로 바꾸기 / 막기 중에서 골라요.</li></ul>
+<h2 id="tools">도구·검색</h2>
+<p>꺼짐이 기본이에요. 켜면 모델이 날짜·계산기·주사위·웹 검색·주소 읽기·리스 정보 읽기·장기기억 검색을 부를 수 있어요. 도구를 쓰는 답은 한번에 받아요. 웹 검색을 못 쓰는 모델을 위해 <b>미리 검색해 두기</b>도 있어요.</p>
+<p><b>리스 정보 고치기</b>(캐릭터 정보·로어북 항목·채팅 노트)는 따로 켜야 하고, 켜도 안전장치가 있어요: 바꿀 때마다 <b>확인창</b>, 바꾸기 전 <b>자동 백업</b>(‘기록 · 되돌리기’에서 복구, 백업이 안 되면 바꾸지 않아요), 한 요청에 <b>최대 3번</b>.</p>
+<h2 id="more">번역기·규칙·사용량·비교</h2>
+<ul><li><b>번역기</b>: 번역 요청에서 HTML 태그·{{변수}}·코드·링크를 가렸다가 되돌리고, 용어집(‘원문 = 번역’)·안내문을 붙여요.</li><li><b>규칙</b>: 모든 요청(또는 고른 용도·모델·봇)에 글을 앞/뒤/마지막 앞에 끼워 넣어요.</li><li><b>사용량</b>: 오늘·이번 달 비용, 용도·프로필·모델별 토큰, 캐시로 아낀 돈. 비용은 프로필에 단가를 적었을 때만 계산돼요.</li><li><b>비교</b>: 같은 말을 두 프로필에 보내 나란히 봐요.</li></ul>
+<div class="tip"><span class="ico">💡</span><div>키가 여러 개면 무작위·돌아가며·봇마다 고정 중에서 고르고, 한 키가 막히면 잠시 쉬고 다른 키로 넘어가요. 오류 글에는 키 값이 ***로 가려져요.</div></div>
+<h2 id="limits">아직 안 되는 것</h2>
+<p>Bedrock·NovelAI 연결, 배치(Anthropic·OpenRouter), 참고자료 PDF 변환, Cellar를 거쳐 대화를 보내는 방식은 이번 버전에 없어요. 웹 검색 키는 설정에 저장돼서 기기 간 동기화될 수 있어요.</p>
+<div class="pager"><a href="look.html"><small>← 이전</small>화면 · 꾸미기</a><a class="n" href="manage.html"><small>다음 →</small>모듈 · 봇 관리</a></div>
+<footer>이 페이지는 CHANGELOG와 README를 바탕으로 해요. 앱 버전에 따라 화면 이름이 조금 다를 수 있어요.</footer>
+</main><aside class="toc"></aside></div>
+<script src="../assets/site.js"></script></body></html>

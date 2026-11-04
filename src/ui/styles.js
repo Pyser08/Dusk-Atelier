@@ -1,5 +1,6 @@
 import { PROB_CSS } from './probpick.js';
 import { RELMAP_CSS } from './screens/relmap/css.js';
+import { PROVIDER_CSS } from './screens/provider/css.js';
 export var FONT_LINK = "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap";
 export var CSS2 = `
 *{box-sizing:border-box}
@@ -1442,4 +1443,4 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-rune-sd{display:block;height:auto;filter:drop-shadow(0 6px 12px rgba(30,20,60,.22))}
 .rb-wn-rune{display:flex;align-items:center;gap:12px}.rb-rune-sd.sm{width:64px;flex:none}
 .rb-sthanks-head{position:relative;padding-right:96px}.rb-rune-sd.thanks{position:absolute;right:14px;bottom:6px;width:70px}
-`+PROB_CSS+RELMAP_CSS;
+`+PROB_CSS+RELMAP_CSS+PROVIDER_CSS;

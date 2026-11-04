@@ -2,6 +2,8 @@ import { createSkillStore } from "../../src/data/skillstore.js";
 import { normalizeSkillSet } from "../../src/engine/skills.js";
 // 1.7.0 메뉴 구조 시험용: 가짜 리스 api로 실제 createApp을 띄운다. node tests/e2e/run-app.mjs 로 실행.
 import { createApp } from "../../src/ui/app.js";
+import { createProvider } from "../../src/data/provider/index.js";
+import { createStore as createBackupStore, backupSnapshot } from "../../src/engine/index.js";
 import { createMemory } from "../../src/data/memory.js";
 import POT_PROMPTS from "../../src/data/pot/prompts.json";
 import { createEmptyWikiScope } from "../../src/engine/pot/wiki-schema.js";
@@ -54,7 +56,14 @@ window.bootApp = async (seed, opts = {}) => {
   const errors = (window.__errors = []);
   window.addEventListener("error", (e) => errors.push(e.message));
   window.addEventListener("unhandledrejection", (e) => errors.push(String(e.reason?.message ?? e.reason)));
+  if (opts.provider) {  // 프로바이더 화면 시험: 가짜 호스트에 addProvider·nativeFetch·로컬 저장소를 붙인다
+    window.__providers = []; const local = {};
+    api.addProvider = async (name) => { window.__providers.push(name); };
+    api.getLocalPluginStorage = async () => ({ getItem: async (k) => local[k] ?? null, setItem: async (k, v) => { local[k] = v; } });
+    api.nativeFetch = async (url) => new Response(JSON.stringify({ data: [{ id: "gpt-test-mini" }, { id: "gpt-test-large" }] }), { status: 200, headers: { "content-type": "application/json" } });
+  }
   const app = createApp(api, { legacy: { open() {}, busy: false, startWithFiles() {} }, version: "1.7.0-dev", onPersonaChanged() {} });
+  if (opts.provider) { app.ctx.provider = createProvider(api, { confirm: async () => false, createStore: createBackupStore, backupSnapshot }); }
   // 코코아(스킬) 화면: 실제 스킬 저장소. opts.skills면 세트 3개를 미리 넣는다(첫 세트는 정리 노트·기록하기에 붙임).
   app.ctx.skills = createSkillStore(api, { log() {} });
   if (opts.skills) {

@@ -23,6 +23,9 @@ import { createImgTagFix } from './data/imgtagfix.js';
 import { createAffHud } from './data/affhud.js';
 import POT_PROMPTS from './data/pot/prompts.json';
 import './data/modelhub.js';
+import { createProvider } from './data/provider/index.js';
+import { setDuskRoute } from './engine/runai.js';
+import { setDuskServerModel } from './data/modelhub.js';
 import { setUserPromptProvider } from './engine/runai.js';
 import { setSkillBlockProvider } from './engine/skillhook.js';
 import { createSkillStore } from './data/skillstore.js';
@@ -96,6 +99,24 @@ async function start() {
   const web = createWebTools(api);   // 웹 검색·가져오기 도구 (꺼짐이 기본, v1.8.1)
   setWebWrapProvider((stage, prompt, call) => web.wrap(stage, prompt, call));
   memory.start().catch((e) => console.log(`[${TITLE}] 장기기억 시작 실패: ${e?.message ?? e}`));
+  // Dusk 프로바이더 (1.9.3): 리스 모델 목록에 Dusk 자동·프로필 등록, 쓰기 도구 확인은 창이 닫혀 있어도 뜬다
+  const providerRef = { confirm: null };
+  const provider = createProvider(api, {
+    notify: (t) => memoryRef.toast?.(t),
+    confirm: (o) => (providerRef.confirm ? providerRef.confirm(o) : Promise.resolve(false)),
+    memory: { search: async (q) => {
+      const cur = await memory.switches?.currentChat?.(); if (!cur) return [];
+      const f = await memory.store.getFolder(cur.chaId, cur.chatId), want = String(q ?? "").trim().toLowerCase(); if (!f?.people || !want) return [];
+      return Object.values(f.people).filter((p) => String(p.name ?? "").toLowerCase().includes(want) || JSON.stringify(p.records ?? []).toLowerCase().includes(want)).slice(0, 5).map((p) => ({ name: p.name, records: (p.records ?? []).slice(-6).map((r) => (typeof r === "string" ? r : r?.text ?? r?.summary ?? JSON.stringify(r)).slice(0, 300)) }));
+    } },
+    createStore: engine_exports.createStore,
+    backupSnapshot: engine_exports.backupSnapshot,
+    log: (m) => console.log(`[${TITLE}] ${m}`)
+  });
+  setDuskRoute(() => provider.analysisPick(), (a, msgs, pick, signal) => provider.run(msgs, pick, signal));
+  setDuskServerModel((id) => provider.serverModel(id));
+  provider.store.get().then(() => provider.sync()).catch((e) => console.log(`[${TITLE}] 프로바이더 시작 실패: ${e?.message ?? e}`));
+  provider.store.subscribe(() => provider.sync().catch(() => {}));
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {
     if (!document.getElementById("rb-style")) document.head.appendChild(h("style", { id: "rb-style" }, CSS2));
@@ -209,6 +230,8 @@ async function start() {
   app.ctx.turnInfo = turnInfo;
   app.ctx.chatMenu = chatMenu;
   app.ctx.memory = memory;
+  app.ctx.provider = provider;
+  providerRef.confirm = (o) => app.ctx.confirmAnywhere(o);
   app.ctx.cellar = memory.cellar;   // 한 곳에서 찾은 Cellar 연결을 화면들이 함께 쓴다
   app.ctx.skills = skills;
   app.ctx.web = web;

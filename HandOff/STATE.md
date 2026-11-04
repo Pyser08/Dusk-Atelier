@@ -1,5 +1,18 @@
 # 현재 상태 — feat/1.9.3
 
+## 2026-11-04 프로바이더(Dusk provider) 1차 구현 (버전 미변경, 미커밋 → 이 커밋에 포함)
+- 계획 문서: 프로젝트 문서 `claude/provider-plan.md`. CPM v1.99.7·LBI-pre34-plus는 **기능·구조 분석만** 했고 코드는 가져오지 않음(CPM은 분석만 허락받음, UI·설정 가져오기 제외).
+- 구조: 순수 `src/engine/provider/`(catalog·sse·messages·build·repeat·keypool·chain·cost·profile·transforms·tools·translate), 호스트 연결 `src/data/provider/`(keyvault·store·transport·gemcache·risutools·runner·toolexec·models·register·index), 화면 `src/ui/screens/provider.js`+`provider/{more,ui,css}.js`.
+- 화면 이동: `look`(플러그인 꾸미기) 탭은 `hide:true`로 목록에서 숨기고(id 유지: 위쪽 팔레트·설정 링크 그대로) 도구 화면에 행 추가, 작업실 큰 카드는 `provider`. 숨김 필터는 app.js 3곳·sectionhome.js.
+- Dusk 자체 AI 연결: 용도 `analysis` 프로필 지정 시 `engine/runai.js` `duskPickFor`가 보조 모델 호출을 프로필로 보냄, `modelhub.js` `serverModelOf`는 `provider.serverModel`(Vertex·Responses는 서버 직접 호출 불가 → 중계).
+- 번역기 다듬기는 runner `handle`에서(서식 보호 토큰·용어집·안내문). `req.__purpose`/`req.__profile`로 용도·프로필 강제.
+- 쓰기 도구 안전장치: 설정에서 따로 켬 · 매번 확인 · 바꾸기 전 백업(실패하면 중단, 되돌리기 목록에 뜸) · 요청당 3번. (웹 도구와 같은 요청에서 쓰기 막기는 **의도적으로 넣지 않음**, 화면에 경고 문구만.)
+- 검증: provider-engine 29 · provider-runner 26 pass, e2e `run-provider.mjs` PC·모바일 통과. `run-look`은 꾸미기 진입을 `__app.ctx.go("look")`로 바꿈. `run-app.mjs`·`run-hubs.mjs`(기억 개요 3줄)는 변경 전에도 실패하던 낡은 기대값.
+- **못 한 것/미확인**: ① 호스트 `addProvider` 실제 동작(RisuAI·RisuBard·PocketRisu) ② 실제 공급자 계정으로 호출 ③ iOS 백그라운드 ④ Bedrock·NovelAI 연결 ⑤ 배치(Anthropic·OpenRouter) ⑥ 참고자료 PDF 변환 ⑦ Cellar 경유 대화 전달(서버 분석만 연결됨) ⑧ 키 암호화·동기화 ⑨ 웹 검색 키는 pluginStorage(동기화될 수 있음) ⑩ Cellar 쪽 시험 추가 없음.
+- 안내서 `docs/site/guide/provider.html` 추가, CHANGELOG는 v1.9.1 섹션에 적음(버전 올릴 때 옮길 것).
+
+---
+
 ## 2026-11-04 기본값 변경 (버전 미변경)
 - 기억 넣기 기본값: 목표 2000 · 상한 8000 · 이야기 요약 2000 토큰 (`data/memorystore.js` DEFAULT_SETTINGS, `engine/memoryinject.js` 대체값).
 - 기존 인물 로어북 검색(`writerSearchExistingLore`) 기본 켜짐: 생성물 `engine/pot/settings.js`는 `tools/pot-patches.json` 패치로 바꿈(직접 고치지 말 것).

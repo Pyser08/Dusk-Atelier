@@ -2,7 +2,7 @@
 // 키는 리수폿 방식 그대로 플러그인 로컬 저장소에만 두고, 설정·백업·공유 코드에는 절대 넣지 않는다.
 import { LocalKeyStore } from "./pot/local-keys.js";
 import { callWriterModel, testModelConnection, providerModelList, copilotLoginStep } from "./pot/llm-client.js";
-import { setCustomRunner } from "../engine/runai.js";
+import { setCustomRunner, duskPickFor } from "../engine/runai.js";
 import { defaultCfg, normalizeCfg, presetOf, pickFor, toPrompt, fromReply, emptyUsage, addUsage } from "../engine/modelcfg.js";
 
 const CFG_KEY = "dusk.models.v1", USAGE_KEY = "dusk.models.usage.v1";
@@ -75,7 +75,11 @@ export { defaultCfg };
 // 서버는 플러그인과 같은 모델 호출 코드(llm-client.js)를 그대로 돌리므로 '내 API' 프리셋은 종류(Vertex·Copilot·Google·Claude·OpenAI…)와 상관없이 쓸 수 있다.
 // 리스 보조 모델(리스 화면 안에서만 부를 수 있음)과 리스 쪽 모델 mode는 서버가 못 부른다 → 중계(cellaranalysis.js).
 // 반환: { ok:true, model:{kind:"preset", preset, key} } | { ok:false, reason }
+let duskServerModel = null;
+export function setDuskServerModel(fn) { duskServerModel = fn; }
 export async function serverModelOf(api, pick) {
+  const dp = await duskPickFor(pick);
+  if (dp) return duskServerModel ? duskServerModel(dp.profileId) : { ok: false, reason: "Dusk 프로바이더를 쓸 수 없어요" };
   if (pick?.mode !== "custom") return { ok: false, reason: "리스 쪽 모델은 서버에서 부를 수 없어요" };
   const s = await hub(api), preset = presetOf(s.cfg, pick.presetId);
   if (!preset) return { ok: false, reason: "모델 프리셋을 찾을 수 없어요" };
