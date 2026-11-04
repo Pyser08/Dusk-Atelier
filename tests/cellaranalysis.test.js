@@ -115,3 +115,27 @@ test("serverModelOf: 리스 보조 모델·미지원 종류·추가 설정은 �
   assert.match((await reasonOf({ provider: "custom", baseUrl: "https://c.example/v1" })).reason, /키/, "지원 종류는 키 단계까지 간다(키가 없으면 키 없음)");
   assert.match((await reasonOf({ provider: "openai", baseUrl: "https://api.openai.com/v1", model: "gpt-5", extraBodyJson: '{"top_p":0.5}', reasoningQuickSetting: "low" })).reason, /키/, "추가 JSON·추론 설정·추론 모델도 서버로 보낼 수 있다");
 });
+
+test("중계: 서버가 요청한 모델 호출을 플러그인이 하고 결과·오류를 돌려준다", async () => {
+  const posted = []; let n = 0;
+  const api = { nativeFetch: async (u, init) => {
+    const b = JSON.parse(init.body);
+    if (b.action === "start") { assert.equal(b.model.kind, "relay"); return reply(200, { ok: true, job: { state: "running" } }); }
+    if (b.action === "result") { posted.push(b); return reply(200, { ok: true, accepted: true }); }
+    n++; assert.equal(b.claim, true);
+    if (n === 1) return reply(200, { ok: true, job: { state: "running", total: 2, done: 0, failed: 0 }, calls: [{ id: "k1", messages: [{ role: "user", content: "a" }], pick: {} }, { id: "k2", messages: [], pick: {} }] });
+    return reply(200, { ok: true, job: { state: "done", total: 2, done: 2, failed: 0, reasons: [] }, calls: [] });
+  } };
+  const out = await mk(api).run({ conn: CONN.conn, model: { kind: "relay" }, relay: true }, {}, { relay: async (msgs) => { if (!msgs.length) throw new Error("모델 실패"); return "응답:" + msgs[0].content; } });
+  assert.equal(out.server, true);
+  assert.deepEqual(posted.map((x) => [x.callId, x.text ?? null, x.error ?? null]), [["k1", "응답:a", null], ["k2", null, "모델 실패"]]);
+  assert.equal(await mk(api).run({ conn: CONN.conn, model: { kind: "relay" }, relay: true }, {}, {}), null, "중계 함수가 없으면 기기에서");
+});
+
+test("prepare: 직접 못 부르는 모델은 서버가 중계를 지원할 때 중계로, 아니면 null", async () => {
+  const api = { pluginStorage: { getItem: async () => null } };
+  const relayCellar = { status: async () => ({ ok: true, url: "http://x", via: "native", features: ["mem", "analysis", "analysis-relay"] }) };
+  const p = await createServerAnalysis(api, { cellar: relayCellar, remote: remoteOk }).prepare({ mode: "submodel" });
+  assert.equal(p.relay, true); assert.equal(p.model.kind, "relay");
+  assert.equal(await createServerAnalysis(api, { cellar: cellarOk, remote: remoteOk }).prepare({ mode: "submodel" }), null);
+});

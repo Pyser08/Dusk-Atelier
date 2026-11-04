@@ -262,7 +262,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
           chaId, chatId, charName: character.name, chatName: chat.name ?? chat.chatName ?? "", messages: server.slim(chat.message ?? []),
           settings: idx.settings, bot: { ...(idx.bots[chaId] ?? {}), paused: false }, userNames: await userNames(), regex: prep ? await prep.entriesFor(character, chat) : [],
           prompts: await prompts?.().catch(() => null) ?? null, range: { from: range?.from ?? 0, to: Number.isFinite(range?.to) ? range.to : null, all: redo }, redo
-        }, { signal, onProgress });
+        }, { signal, onProgress, relay: (msgs, pick) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true, ...(pick?.timeoutSec ? { timeoutSec: pick.timeoutSec } : {}) }, signal) });
         if (out) {
           store.dropCache?.();   // 서버가 쓴 기억을 다시 읽게 하고, 인덱스의 폴더 요약을 맞춘다
           await store.updateFolder(chaId, chatId, () => {}).catch(() => {});

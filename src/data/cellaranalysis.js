@@ -16,13 +16,17 @@ export function createServerAnalysis(api, { cellar, remote, pollMs = POLL_MS, sl
       if (st?.mode !== "remote" || !st.online) return null;
       const c = await cellar.status();
       if (!c?.ok || !c.features?.includes("analysis")) return null;
+      const conn = { url: c.url, via: c.via };
+      // 서버가 직접 부를 수 있는 모델이면 서버가 호출한다(플러그인 창이 꺼져도 계속 돎). 아니면 모델 호출만 플러그인이 대신 한다(중계).
       const m = await serverModelOf(api, pick);
-      if (!m.ok) return null;
-      return { conn: { url: c.url, via: c.via }, model: m.model };
+      if (m.ok) return { conn, model: m.model };
+      if (c.features.includes("analysis-relay")) return { conn, model: { kind: "relay" }, relay: true };
+      return null;
     } catch { return null; }
   }
   // payload: Cellar start 입력(model 제외). 시작 전 실패(연결·미지원)는 null → 기기 방식. 시작한 뒤의 문제는 오류로 알린다.
-  async function run(prep, payload, { signal, onProgress } = {}) {
+  async function run(prep, payload, { signal, onProgress, relay = null } = {}) {
+    if (prep.relay && !relay) return null;
     const req = (body, timeout) => cellarRequest(api, prep.conn, "/cellar/analysis", { method: "POST", body, timeout });
     let started;
     try { started = await req({ action: "start", ...payload, model: prep.model }, 120e3); }
@@ -35,13 +39,22 @@ export function createServerAnalysis(api, { cellar, remote, pollMs = POLL_MS, sl
     for (;;) {
       if (signal?.aborted && !cancelled) { cancelled = true; try { await req({ action: "cancel" }, 8000); } catch { /* 아래 상태 확인에서 */ } }
       if (j.state !== "running") break;
-      await sleep(pollMs);
+      let handled = 0;
       try {
-        const r = await req({ action: "status" }, 15000);
+        const r = await req({ action: "status", ...(prep.relay ? { claim: true } : {}) }, 15000);
         if (r.json?.job) { j = r.json.job; bad = 0; if (j.total) onProgress?.(j.done, j.total, j.failed); }
+        // 중계: 서버가 요청한 모델 호출을 이 기기가 기존 방식(리스 보조 모델·내 API 모델·인증 포함)으로 하고 결과를 돌려준다
+        for (const c of prep.relay ? (r.json?.calls ?? []) : []) {
+          let body;
+          try { body = { action: "result", callId: c.id, text: await relay(c.messages, c.pick) }; }
+          catch (e) { body = { action: "result", callId: c.id, error: String(e?.message ?? e).slice(0, 300) }; }
+          try { await req(body, 30000); } catch { /* 서버가 시간 초과로 다시 시도한다 */ }
+          handled++;
+        }
       } catch (e) {
         if (++bad >= POLL_FAILS) throw new Error("서버와 연결이 끊겼어요. 서버에서는 분석이 계속될 수 있으니 잠시 뒤 기억 탭에서 확인해 주세요.");
       }
+      if (!handled) await sleep(pollMs);
     }
     if (j.state === "error") throw new Error(j.error || "서버 분석에 실패했어요");
     return { total: j.total ?? 0, failed: Array.from({ length: j.failed ?? 0 }, () => []), reasons: j.reasons ?? [], server: true };
