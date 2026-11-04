@@ -31,8 +31,13 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   ok(`[${tag}] 키는 끝 4자리만 보임`, tail === "…1234" && !(await page.content()).includes("sk-test-abcdefgh"), tail);
   await page.locator("[data-conn] button", { hasText: "모델 불러오기" }).click(); await page.waitForTimeout(500);
   ok(`[${tag}] 모델 칩 2개`, (await vis("[data-conn] .rb-chip")) === 2);
+  await page.locator('[data-conn] input[type=search]').fill("large"); await page.waitForTimeout(150);
+  ok(`[${tag}] 모델 검색: large만 남음`, (await vis("[data-conn] .rb-chip")) === 1 && /gpt-test-large/.test(await page.locator("[data-conn] .rb-chip").first().textContent()));
+  await page.locator('[data-conn] input[type=search]').fill("mini"); await page.waitForTimeout(150);
   await page.locator("[data-conn] .rb-chip", { hasText: "gpt-test-mini" }).click(); await page.waitForTimeout(500);
   ok(`[${tag}] 프로필이 만들어지고 프로필 탭으로`, (await vis("[data-prof]")) === 1);
+  await page.locator('[data-prof] button.rb-chip[data-preset="oa-flex"]').click(); await page.waitForTimeout(400);
+  ok(`[${tag}] 플렉스 프리셋이 켜짐`, (await page.locator('[data-preset="oa-flex"]').getAttribute("aria-pressed")) === "true");
   await page.locator('.rb-phead [role=switch]').click(); await page.waitForTimeout(600);
   const names = await page.evaluate(() => window.__providers);
   ok(`[${tag}] 켜면 리스에 등록: ${names.join(",")}`, names.includes("Dusk 자동") && names.some((n) => n.startsWith("Dusk · gpt-test-mini")));

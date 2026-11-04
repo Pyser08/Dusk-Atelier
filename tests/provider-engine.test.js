@@ -208,3 +208,16 @@ test("번역 보조: 마크업 보호 복원·누락 보고·용어집/기록 �
   const m = translationMessages({ text: "hi {{user}}", lang: "Korean", glossary: "<glossary>\nA = a\n</glossary>" }); assert.equal(m.messages[0].role, "system"); assert.ok(m.messages[0].content.includes("<glossary>")); assert.ok(m.map.length >= 1);
 });
 test("리스 mode → 용도", () => { assert.equal(purposeOfMode("model"), "main"); assert.equal(purposeOfMode("submodel"), "other"); assert.equal(purposeOfMode("memory"), "memory"); assert.equal(purposeOfMode("???"), "main"); });
+
+import { presetsFor, isOn, apply, PRESETS } from "../src/engine/provider/presets.js";
+test("빠른 설정: 켜고 끄면 값이 들어갔다 빠지고, 같은 묶음은 하나만 켜진다", () => {
+  const base = { tier: "", params: {}, headers: {} }, f = PRESETS.find((p) => p.id === "or-fallback"), nf = PRESETS.find((p) => p.id === "or-nofallback");
+  let p = apply(base, f, true); assert.equal(isOn(p, f), true); assert.equal(p.params.provider.allow_fallbacks, true);
+  p = apply(p, nf, true); assert.equal(isOn(p, f), false); assert.equal(isOn(p, nf), true);
+  p = apply(p, nf, false); assert.deepEqual(p.params, {});
+  const fx = PRESETS.find((x) => x.id === "oa-flex"); assert.equal(apply(base, fx, true).tier, "flex"); assert.equal(apply(apply(base, fx, true), fx, false).tier, "");
+  const a = PRESETS.find((x) => x.id === "an-1m"), b = PRESETS.find((x) => x.id === "an-interleave");
+  p = apply(apply(base, a, true), b, true); assert.equal(isOn(p, a) && isOn(p, b), true); assert.match(p.headers["anthropic-beta"], /context-1m.*interleaved|interleaved.*context-1m/);
+  p = apply(p, a, false); assert.equal(p.headers["anthropic-beta"], "interleaved-thinking-2025-05-14");
+  assert.ok(presetsFor("vertex").some((x) => x.id === "vx-flex")); assert.ok(!presetsFor("anthropic").some((x) => x.id === "vx-flex"));
+});

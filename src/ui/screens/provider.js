@@ -6,6 +6,7 @@ import { btn, confirmDialog, emptyState, openMenu, pageHead, segmented, statusCa
 import { KINDS, kindOf, isReasoningModel } from "../../engine/provider/catalog.js";
 import { normalizeConnection, normalizeProfile } from "../../engine/provider/profile.js";
 import { field, text, num, area, select, grid } from "./provider/ui.js";
+import { presetsFor, isOn, apply } from "../../engine/provider/presets.js";
 import { renderMore, MORE_TABS } from "./provider/more.js";
 
 const TABS = [["conn", "연결"], ["prof", "프로필"], ...MORE_TABS];
@@ -78,7 +79,14 @@ export async function renderProvider(ctx) {
         btn("모델 불러오기", { icon: "refresh", onClick: async () => { try { st.models[c.id] = await P.models(c); toast(`모델 ${st.models[c.id].length}개를 불러왔어요`); draw(); } catch (e) { fail(e); } } }),
         P.hasBalance(c.kind) ? btn("잔액 보기", { onClick: async () => { try { const b = await P.balance(c); bal.textContent = `${b.label}: ${Number.isFinite(b.value) ? b.value.toFixed(2) : "?"} ${b.unit}`; } catch (e) { fail(e); } } }) : null,
         btn("연결 지우기", { kind: "danger", icon: "trash", onClick: async () => { if (!await confirmDialog(ctx.win, { title: "이 연결을 지울까요?", body: "이 연결을 쓰는 프로필도 함께 지워져요. 키는 따로 지워야 해요.", ok: "지우기", danger: true })) return; await mutate((x) => { x.connections = x.connections.filter((q) => q.id !== c.id); }); draw(); } })), bal);
-      if (models.length) card.append(h("div", { class: "rb-pfield wide" }, h("span", { class: "rb-label" }, `모델을 누르면 프로필이 만들어져요 (${models.length})`), h("div", { style: "display:flex;flex-wrap:wrap;gap:6px;max-height:180px;overflow:auto" }, models.slice(0, 200).map((m) => h("button", { type: "button", class: "rb-chip", onClick: () => newProfile(c, m) }, m)))));
+      if (models.length) {
+        const chips = h("div", { style: "display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto" }), cnt = h("span", { class: "rb-label" });
+        const paint = (q) => { const w = q.trim().toLowerCase().split(/\s+/).filter(Boolean), list = models.filter((m) => w.every((x) => m.toLowerCase().includes(x))); cnt.textContent = `모델을 누르면 프로필이 만들어져요 (${list.length}/${models.length})`; replace(chips, ...(list.length ? list.slice(0, 300).map((m) => h("button", { type: "button", class: "rb-chip", onClick: () => newProfile(c, m) }, m)) : [h("small", { class: "rb-muted" }, "맞는 모델이 없어요. 아래 ‘프로필 직접 만들기’로 이름을 적을 수도 있어요.")])); };
+        const q = h("input", { class: "rb-input", type: "search", placeholder: "모델 검색 (예: claude opus, gpt-5, flash)", "aria-label": "모델 검색", value: st.modelQ?.[c.id] ?? "", autocomplete: "off", spellcheck: "false" });
+        q.addEventListener("input", () => { (st.modelQ ??= {})[c.id] = q.value; paint(q.value); });
+        paint(q.value);
+        card.append(h("div", { class: "rb-pfield wide" }, cnt, q, chips), h("div", { class: "acts" }, btn("프로필 직접 만들기", { onClick: () => newProfile(c, "") })));
+      }
       else card.append(h("div", { class: "acts" }, btn("프로필 직접 만들기", { onClick: () => newProfile(c, "") })));
       card.append(advFold(ctx, "provconn", grid(
         field("프록시 주소", text(c.proxyUrl, (v) => set({ proxyUrl: v.trim() }), { ph: "https://…{url}" }), "CORS가 막히는 곳용. {url} 자리에 주소가 들어가요", true),
@@ -124,6 +132,8 @@ export async function renderProvider(ctx) {
       field("답 속 생각 보이기", segmented([["off", "숨김"], ["on", "보임"]], th.showThinking ? "on" : "off", (v) => set((q) => { q.thinking.showThinking = v === "on"; }), "생각 보이기"), "보이면 <Thoughts>…</Thoughts> 로 감싸서 줘요", true),
       field("받는 방식", segmented([["", "기본"], ["stream", "스트림"], ["buffered", "한번에"]], p.stream, (v) => set((q) => { q.stream = v; }), "받는 방식"), "메인 대화에만 적용돼요. 보조 요청은 한번에 받아요", true),
       field("웹 검색(모델 내장)", segmented([["off", "끔"], ["auto", "켬"]], p.search, (v) => set((q) => { q.search = v; }), "내장 웹 검색"), "Claude·Gemini만 지원해요", true)));
+    const pre = presetsFor(kind);
+    if (pre.length) card.append(h("div", { class: "rb-pfield wide" }, h("span", { class: "rb-label" }, "빠른 설정"), h("div", { style: "display:flex;flex-wrap:wrap;gap:6px" }, pre.map((x) => h("button", { type: "button", class: "rb-chip", title: x.desc, "aria-pressed": isOn(p, x) ? "true" : "false", dataset: { preset: x.id }, onClick: async () => { const on = !isOn(p, x); await mutate((c) => { const i = c.profiles.findIndex((r) => r.id === p.id); if (i >= 0) c.profiles[i] = apply(c.profiles[i], x, on); }); draw(); } }, x.label))), h("small", { class: "rb-muted" }, "누르면 켜지고 다시 누르면 꺼져요. 설명은 마우스를 올리면 보여요. 세부 값은 고급의 ‘추가 요청 값’에서 볼 수 있어요.")));
     const cacheOpts = kind === "anthropic" || kind === "vertex" || kind === "openrouter" ? field("Claude 캐시", segmented([["off", "끔"], ["5m", "5분"], ["1h", "1시간"]], p.cache.claude, (v) => set((q) => { q.cache.claude = v; }), "Claude 캐시"), "반복되는 앞부분을 싸게 읽어요", true) : kind === "google" ? field("Gemini 캐시", segmented([["off", "끔"], ["observe", "관찰"], ["auto", "자동"], ["manual", "수동"]], p.cache.gemini, (v) => set((q) => { q.cache.gemini = v; }), "Gemini 캐시"), "자동은 같은 앞부분이 반복되면 캐시를 만들어요", true) : kind === "openai" ? field("OpenAI 캐시", segmented([["off", "끔"], ["in_memory", "메모리"], ["24h", "24시간"]], p.cache.openai, (v) => set((q) => { q.cache.openai = v; }), "OpenAI 캐시"), "", true) : null;
     if (cacheOpts) card.append(grid(cacheOpts));
     card.append(grid(
