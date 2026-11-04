@@ -1,6 +1,7 @@
 // 인물 관계도 전용 CSS. 색은 --rb-* 토큰만 쓴다(꾸미기 자동 적용).
 export const RELMAP_CSS = `
-.rb-rm{display:flex;flex-direction:column;gap:12px;padding-bottom:20px;min-width:0}
+.rb-rm{display:flex;flex-direction:column;gap:12px;padding:18px 22px 20px;min-width:0}
+@media (max-width:720px){.rb-rm{padding:12px 16px 20px}}
 .rb-rm-app{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:12px;min-width:0}
 .rb-rm-stage{position:relative;min-width:0;background:radial-gradient(100% 85% at 50% 45%,var(--rb-surf) 0%,var(--rb-win) 100%);border:1px solid var(--rb-line2);border-radius:var(--rb-r3);box-shadow:var(--rb-card);overflow:hidden;height:min(68vh,660px);min-height:420px}
 .rb-rm-stage canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}

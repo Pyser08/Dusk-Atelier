@@ -1,5 +1,12 @@
 # 현재 상태 — feat/1.9.2
 
+## 2026-11-04 위젯 추가·크기 조절·스크롤 유지
+- 새 위젯 `src/widgethome/extras.js`(HTML·CSS·동작·순수 함수): dusk·dday·timer·dice·stats. `widget-layout.cjs` IDS 11개, `ORIGINAL`(6개)만 있으면 예전 배치로 인정하고 없는 새 위젯은 맨 아래에 붙임. 저장 키 ddays·dice·visits(같은 접두사). Dusk 바로가기는 `createWidgetHome({openDusk})` → main.js `app.open({tab})`.
+- 크기 조절: hit의 오른쪽 아래 28px를 마우스로 잡으면 resize, `follow()`가 width/height calc로 따라감. 스냅 히스테리시스 0.65칸, 끄는 동안 격자 min-height 고정(스크롤 되먹임 방지), 가장자리 스크롤 48px·거리 비례.
+- 스크롤 유지: `ui/dom.js` `replace()`가 `data-keep-scroll`(app main) 안에서 같은 화면(`data-view`=tab|sub, 첫 자식 data-page/class 같음)을 다시 그리면 `.rb-scroll`·main 스크롤을 복원(불러오는 중 화면을 거쳐도 기억).
+- 관계도: `.rb-rm`에 padding(18px 22px, 모바일 12px 16px).
+- 테스트 `widgethome-extras.test.js`, e2e 위젯 49개(크기 조절·되돌이 깜빡임·새 위젯·Dusk 바로가기).
+
 ## 2026-11-04 위젯 홈 수정(속도·스크롤·드래그·바로 열기)
 - 스크롤: `:host`에 overflow-x:hidden/overscroll-behavior를 주면 호스트가 스크롤 상자가 돼 휠이 문서로 안 이어짐 → `overflow-x:clip`만 사용(style.js 머리 주석 참고). e2e가 휠 스크롤을 확인.
 - 속도: `open()`이 목록(`reloadCatalog`)을 기다리지 않음(60초 안 캐시면 생략), `themeFollower.refresh`·`auto.configure`도 비동기. boot 때 `restore()`→`reloadCatalog` 미리 읽기. 느린 가짜 호스트(getDatabase 1.5초)에서 열기 1987ms→213ms.

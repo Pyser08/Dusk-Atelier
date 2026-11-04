@@ -6,7 +6,7 @@ assert.equal(C.colorPresets([{id:'a',name:' sample ',colors:{music:'#abc'}}])[0]
 const M=L('widget-layout');
 for(const profile of ['mobile','desktop'])for(const width of [320,390,768,1024,1440])for(const clock of ['analog','digital','calendar'])for(const shape of ['square','landscape']){
  const layout=M.defaults(profile,{...M.metrics(width,profile),clock},shape,clock,[]);
- assert.equal(Object.keys(layout.items).length,6);
+ assert.equal(Object.keys(layout.items).length,M.IDS.length);
  const items=Object.values(layout.items);for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++)assert(!M.overlap(items[i],items[j]));
 }
 let visible=false,calls=0,id=0;const live=new Set();

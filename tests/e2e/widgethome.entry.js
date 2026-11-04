@@ -16,6 +16,6 @@ window.makeApi = (opts = {}) => {
   if (opts.localStorage) api.getLocalPluginStorage = async () => store;
   return api;
 };
-window.makeWH = (api) => createWidgetHome(api, { log: (m) => (window.__logs ??= []).push(m) });
+window.makeWH = (api, o = {}) => createWidgetHome(api, { log: (m) => (window.__logs ??= []).push(m), ...o });
 import { bootWidgetHome } from "../../src/widgethome/home.js";
 window.rawBoot = (api) => bootWidgetHome(api, {}).catch((e) => ({ err: e.stack }));

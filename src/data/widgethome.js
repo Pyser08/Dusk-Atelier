@@ -21,13 +21,13 @@ export async function loadOpenOnLoad(api) {
     return true;
   }
 }
-export function createWidgetHome(api, { log = () => {}, boot = bootWidgetHome, load = loadWidgetHomeOn, loadOnLoad = loadOpenOnLoad } = {}) {
+export function createWidgetHome(api, { log = () => {}, boot = bootWidgetHome, load = loadWidgetHomeOn, loadOnLoad = loadOpenOnLoad, openDusk = null } = {}) {
   let inst = null, starting = null, error = "", onNow = false, onLoadNow = true;
   async function startNow() {
     if (inst) return true;
     try {
       if (typeof api.showContainer !== "function" || typeof api.registerButton !== "function") throw new Error("이 환경에서는 위젯 홈을 쓸 수 없어요.");
-      inst = await boot(api, { log });
+      inst = await boot(api, { log, openDusk: openDusk ? (tab) => openDusk(tab) : undefined });
       error = "";
       return true;
     } catch (e) {

@@ -197,7 +197,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const navFoot = h("div", { style: "margin-top:auto;display:flex;flex-direction:column" });
   nav.appendChild(navFoot);
   const moreHost = h("div", { class: "rb-morehost" });
-  const main = h("section", { class: "rb-main", "aria-live": "polite" });
+  const main = h("section", { class: "rb-main", "aria-live": "polite", "data-keep-scroll": "" });
   const detail3 = h("aside", { class: "rb-detail rb-scroll", "aria-label": "상세" });
   const sheetBack = h("div", { class: "rb-sheet-back", onClick: () => ctx.closeSheet() });
   // 탭마다 맨 위 줄: 홈 › 탭(눌러서 다른 탭으로) · 한 줄 설명 · 검색 · 도움말
@@ -427,6 +427,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     paintHead();
     replace(detail3);
     detail3.hidden = true;
+    main.setAttribute("data-view", String(paneKey()));   // 같은 화면 다시 그리기면 replace가 스크롤을 지킨다
     const hit = reuse ? paneCache.get(paneKey()) : null;
     if (hit) {
       paneCache.delete(paneKey());

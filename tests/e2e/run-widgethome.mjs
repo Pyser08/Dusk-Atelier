@@ -40,7 +40,40 @@ for (const [tag, vp, touch] of [["PC", { width: 1280, height: 800 }, false], ["�
     const after = await page.evaluate(() => { const f = document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".widget-clock"); return { a: f.style.gridArea, t: f.style.transform, d: f.classList.contains("dragging") }; });
     ok(`[${tag}] 놓으면 칸에 스냅(자리가 바뀌고 따라옴 표시 해제)`, after.a !== area0 && after.t === "" && !after.d, JSON.stringify({ area0, after }));
     await page.evaluate(() => document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".layout-cancel").click()); await page.waitForTimeout(300);
+    // 모서리 잡고 크기 조절(마우스): 손을 따라 커지다가 놓으면 칸에 맞춰짐
+    await page.evaluate(() => document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".layout-open").click()); await page.waitForTimeout(400);
+    const rs0 = await page.evaluate(() => { const f = document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".widget-memo"); f.scrollIntoView({ block: "center" }); const r = f.getBoundingClientRect(); return { a: f.style.gridArea, x: r.right - 10, y: r.bottom - 10 }; });
+    await page.waitForTimeout(100);
+    const rs0b = await page.evaluate(() => { const r = document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".widget-memo").getBoundingClientRect(); return { x: r.right - 10, y: r.bottom - 10 }; });
+    await page.mouse.move(rs0b.x, rs0b.y); await page.mouse.down(); await page.mouse.move(rs0b.x + 160, rs0b.y + 120, { steps: 6 }); await page.waitForTimeout(120);
+    const rsMid = await page.evaluate(() => document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".widget-memo").style.width);
+    await page.mouse.up(); await page.waitForTimeout(300);
+    const rs1 = await page.evaluate(() => { const f = document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".widget-memo"); return { a: f.style.gridArea, w: f.style.width }; });
+    ok(`[${tag}] 모서리를 끌어 크기 조절 + 스냅`, /100%/.test(rsMid) && rs1.a !== rs0.a && rs1.w === "", JSON.stringify({ rs0, rsMid, rs1 }));
+    // 스크롤을 내린 상태에서 카드를 위로 끌어도 자리가 오락가락(발광)하지 않음
+    await page.evaluate(() => scrollTo({ top: 400, behavior: "instant" })); await page.waitForTimeout(100);
+    const up = await page.evaluate(() => { const r = document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".widget-stats").getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + 30 }; });
+    await page.mouse.move(up.x, up.y); await page.mouse.down();
+    await page.mouse.move(up.x, 20, { steps: 8 });
+    const seen = await page.evaluate(async () => { const f = document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".widget-stats"), out = []; for (let i = 0; i < 40; i++) { await new Promise((r) => requestAnimationFrame(r)); out.push(f.style.gridArea); } return out; });
+    const flips = seen.filter((v, i) => i && v !== seen[i - 1]).length, back = seen.filter((v, i) => i > 1 && v === seen[i - 2] && v !== seen[i - 1]).length;
+    await page.mouse.up(); await page.waitForTimeout(200);
+    ok(`[${tag}] 스크롤된 상태로 위로 끌어도 되돌이 깜빡임 없음`, back === 0, JSON.stringify({ flips, back }));
+    await page.evaluate(() => document.querySelector("[data-dusk-widgethome]").shadowRoot.querySelector(".layout-cancel").click()); await page.waitForTimeout(300);
+    await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
   }
+  // 새 위젯: 주사위·D-day·타이머·한눈에·Dusk 바로가기(이 하네스는 Dusk 열기 없음 → 안내)
+  const ex = await page.evaluate(async () => {
+    const sr = document.querySelector("[data-dusk-widgethome]").shadowRoot, q = (s) => sr.querySelector(s);
+    q(".dice-expr").value = "2d6"; q(".dice-roll").click();
+    const dice = q(".dice-result").textContent;
+    q(".dday-add-open").click(); q(".dday-title").value = "마감"; q(".dday-date").value = "2099-01-01"; q(".dday-form").requestSubmit();
+    await new Promise((r) => setTimeout(r, 50));
+    const dday = q(".dday-list").textContent;
+    q('.timer-presets [data-min="5"]').click(); q(".timer-start").click(); await new Promise((r) => setTimeout(r, 1300)); const timer = q(".timer-display").textContent; q(".timer-reset").click();
+    return { dice, dday, timer, stats: q(".st-streak").textContent, duskNone: !q(".dusk-none").hidden, saved: !!api.mem.get("pocketrisu.basic-home.v1.ddays") };
+  });
+  ok(`[${tag}] 새 위젯 동작(주사위·D-day 저장·타이머·연속 접속)`, /^\d+/.test(ex.dice) && /마감/.test(ex.dday) && /D-\d+/.test(ex.dday) && ex.saved && /^04:5[89]$/.test(ex.timer) && ex.stats === "1일" && ex.duskNone, JSON.stringify(ex));
   await page.evaluate(async () => { await wh.close(); });
   ok(`[${tag}] 닫기 → hideContainer + 호스트 숨김`, await page.evaluate(() => api.calls.includes("hide") && document.querySelector("[data-dusk-widgethome]").hidden === true));
   await page.evaluate(async () => { await wh.open(); await wh.yieldToDusk(); });
@@ -51,6 +84,8 @@ for (const [tag, vp, touch] of [["PC", { width: 1280, height: 800 }, false], ["�
   const bare = await page.evaluate(async () => { window.api2 = makeApi({}); window.wh2 = makeWH(api2); await wh2.set(true); const o = await wh2.open(); const t = wh2.autoStatus(); await wh2.set(false); return { o, t, running: wh2.isRunning(), alerts: api2.calls.filter((c) => c.startsWith("alert:")) }; });
   ok(`[${tag}] 최소 api(RisuBard류)에서도 열림, 경고창 없음`, bare.o === true && bare.alerts.length === 0, JSON.stringify(bare));
   const noShow = await page.evaluate(async () => { const a = makeApi({}); delete a.showContainer; const w = makeWH(a); const ok1 = await w.set(true); return { ok1, err: w.lastError(), running: w.isRunning() }; });
+  const dz = await page.evaluate(async () => { const a = makeApi({}); const calls = []; const w = makeWH(a, { openDusk: (t) => calls.push(t) }); await w.set(true); await w.open(); const sr = [...document.querySelectorAll("[data-dusk-widgethome]")].pop().shadowRoot; sr.querySelector('.dusk-go[data-tab="relmap"]').click(); await w.set(false); return calls; });
+  ok(`[${tag}] Dusk 바로가기 → 해당 화면 열기 요청`, dz.join() === "relmap", JSON.stringify(dz));
   ok(`[${tag}] showContainer가 없으면 켜지지 않고 이유를 알려줌`, noShow.ok1 === false && /쓸 수 없/.test(noShow.err) && !noShow.running, JSON.stringify(noShow));
   // 켜진 채로 저장된 값이 있으면 boot()가 시작
   ok(`[${tag}] 저장된 켜짐 → boot()가 시작`, await page.evaluate(async () => { const a = makeApi({}); a.mem.set("dusk.widgethome.on", "on"); const w = makeWH(a); await w.boot(); const r1 = w.isRunning() && a.parts.length === 1; await w.stop(); return r1; }));

@@ -237,7 +237,7 @@ async function start() {
   providerRef.exp = () => !!app?.ctx?.prefs?.ui?.experimental;
   provider.sync().catch(() => {});   // 실험 기능이 켜져 있으면 이제 등록
   // 위젯 홈(v1.9.2): 기본 꺼짐. 켜져 있으면 시작해서 메뉴 버튼을 달고, Dusk 창을 열 땐 먼저 닫아 같은 플러그인 화면을 번갈아 쓴다
-  const widgetHome = createWidgetHome(api, { log: (m) => console.log(`[${TITLE}] ${m}`) });
+  const widgetHome = createWidgetHome(api, { log: (m) => console.log(`[${TITLE}] ${m}`), openDusk: (tab) => app.open(tab && tab !== "home" ? { tab } : undefined).catch(() => {}) });
   app.ctx.widgetHome = widgetHome;
   app.ctx.openWidgetHome = async () => { try { await app.close(); } catch { /* 이미 닫힘 */ } return widgetHome.open(); };
   const duskOpen = app.open;

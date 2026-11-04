@@ -1,8 +1,9 @@
 /* Pure layout math. Every widget keeps its DOM and data while its grid area changes. */
 (function(root){
  'use strict';
- const IDS=Object.freeze(['music','photo','clock','recent','added','memo']);
- const LABELS=Object.freeze({music:'음악',photo:'사진',clock:'시계',recent:'최근 대화',added:'최근 봇',memo:'메모'});
+ const IDS=Object.freeze(['music','photo','clock','recent','added','memo','dusk','dday','timer','dice','stats']);
+ const ORIGINAL=Object.freeze(['music','photo','clock','recent','added','memo']);
+ const LABELS=Object.freeze({music:'음악',photo:'사진',clock:'시계',recent:'최근 대화',added:'최근 봇',memo:'메모',dusk:'Dusk 바로가기',dday:'D-day',timer:'타이머',dice:'주사위·뽑기',stats:'한눈에'});
  const hidden=value=>IDS.filter(id=>Array.isArray(value)&&value.includes(id));
  const MAX_ROWS=240,MAX_H=24;
  const integer=(value,low,high,fallback)=>{const n=Number(value);return Number.isFinite(n)?Math.max(low,Math.min(high,Math.round(n))):fallback;};
@@ -24,9 +25,9 @@
   return null;
  }
  function normalize(profile,value){
-  if(!value||typeof value!=='object'||!value.items||IDS.some(id=>!value.items[id]||typeof value.items[id]!=='object'))return null;
-  const cols=columns(profile),items={};
-  for(const id of IDS){const v=value.items[id],w=integer(v.w,minimumWidth(id,profile),cols,minimumWidth(id,profile)),h=integer(v.h,2,MAX_H,4);items[id]={x:integer(v.x,0,cols-w,0),y:integer(v.y,0,MAX_ROWS-h,0),w,h};}
+  if(!value||typeof value!=='object'||!value.items||ORIGINAL.some(id=>!value.items[id]||typeof value.items[id]!=='object'))return null;
+  const cols=columns(profile),items={};let bottom=0;for(const id of IDS){const v=value.items[id];if(v&&typeof v==='object')bottom=Math.max(bottom,(Number(v.y)||0)+(Number(v.h)||0));}
+  for(const id of IDS){const v=value.items[id]&&typeof value.items[id]==='object'?value.items[id]:{x:0,y:bottom,w:profile==='mobile'?2:4,h:6},w=integer(v.w,minimumWidth(id,profile),cols,minimumWidth(id,profile)),h=integer(v.h,2,MAX_H,4);items[id]={x:integer(v.x,0,cols-w,0),y:integer(v.y,0,MAX_ROWS-h,0),w,h};}
   return{version:1,items};
  }
  function profiles(value){const v=value&&typeof value==='object'?value:{};return{desktop:normalize('desktop',v.desktop),mobile:normalize('mobile',v.mobile)};}
@@ -52,7 +53,7 @@
  function defaults(profile,m,shape='landscape',clock='analog',archived=[]){
   const items={},placed=[],cols=columns(profile);
   for(const id of IDS){
-   const w=profile==='mobile'?(['clock','memo'].includes(id)?2:4):({music:6,photo:5,clock:3,recent:4,added:7,memo:5}[id]);
+   const w=profile==='mobile'?(['clock','memo'].includes(id)?2:4):({music:6,photo:5,clock:3,recent:4,added:7,memo:5,dusk:4,dday:4,timer:4,dice:4,stats:4}[id]);
    const minimum=limits(id,profile,m,w),desired=id==='music'?minimum.minH:id==='photo'?(shape==='square'?2*w:Math.round(2*w/1.65)):id==='clock'?Math.ceil(((clock==='digital'?190:250)+m.gap)/m.rowPitch):Math.ceil((210+m.gap)/m.rowPitch);
    const h=Math.min(MAX_H,Math.max(minimum.minH,desired)),candidate={x:0,y:0,w,h};
    const next=firstFree(candidate,placed,cols);items[id]=next;placed.push(id==='music'?{...next,w:cols}:next);
@@ -72,6 +73,6 @@
  }
  function change(value,id,patch,profile,m,archived=[]){const clean=fit(value,profile,m,archived);if(!IDS.includes(id)||archived.includes(id)||!clean)return clean;clean.items[id]=constrain(id,{...clean.items[id],...patch},profile,m);return resolve(clean,profile,id,archived);}
  function compact(value,profile,m,archived=[]){const clean=m?fit(value,profile,m,archived):resolve(normalize(profile,value),profile,null,archived),placed=[],items=Object.fromEntries(IDS.map(id=>[id,{...clean.items[id]}]));for(const id of IDS.filter(id=>!archived.includes(id)).sort((a,b)=>clean.items[a].y-clean.items[b].y||clean.items[a].x-clean.items[b].x)){const item=clean.items[id];const next=firstFree(item,placed,columns(profile),0,item.x)||firstFree(item,placed,columns(profile));items[id]=next;placed.push(next);}return{version:1,items};}
- const api={IDS,LABELS,hidden,MAX_ROWS,MAX_H,columns,metrics,pixels,limits,normalize,profiles,overlap,fit,defaults,change,compact};
+ const api={IDS,ORIGINAL,LABELS,hidden,MAX_ROWS,MAX_H,columns,metrics,pixels,limits,normalize,profiles,overlap,fit,defaults,change,compact};
  if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.PocketRisuWidgetLayoutModel=api;
 })(globalThis);
