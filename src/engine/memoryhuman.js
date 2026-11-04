@@ -85,7 +85,13 @@ export function stageOf(folder, a, b, now) {
     const t = effectiveTags(p, now);
     warmth = Math.max(warmth, t.affection ?? 0, t.trust ?? 0);
   }
-  const stage = shared <= 1 && warmth < 3 ? "just met" : shared < 5 || warmth < 4 ? "acquaintances" : warmth < 7 ? "close" : "very close";
+  // 장면 수만으로 보면 처음부터 친한 사이로 시작한 관계가 '처음 봄'이 된다 → 쌓인 추억·관계 변화·편한 말투도 친숙함 근거로 센다.
+  const pair = (x, y) => (key(x) === ka && key(y) === kb) || (key(x) === kb && key(y) === ka);
+  let evidence = (folder?.bonds ?? []).filter((x) => pair(x.a, x.b)).length;
+  for (const r of Object.values(folder?.rels ?? {})) if (pair(r.from, r.to)) evidence += (r.items ?? []).filter((i) => !i.orphan).length;
+  if (Object.values(folder?.talk ?? {}).some((t) => pair(t.from, t.to) && t.tone === "casual")) evidence += 2;
+  const known = shared + evidence;
+  const stage = known <= 1 && warmth < 3 ? "just met" : known < 5 || warmth < 4 ? "acquaintances" : warmth < 7 ? "close" : "very close";
   return { stage, shared, warmth };
 }
 export function stageLines(folder, names, now, limit = 3) {

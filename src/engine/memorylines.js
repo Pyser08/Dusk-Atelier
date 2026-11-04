@@ -45,6 +45,18 @@ export function linesStage2(name, { light = false, beliefs = false } = {}) {
   return r.join("\n");
 }
 
+// 프롬프트 예시에 쓴 자리표시자('Other', 'shared moment')를 모델이 그대로 베껴 쓰는 경우를 걸러낸다.
+// 상대 이름은 {{user}} · 이미 아는 사람 · 본문에 나온 이름만 받는다(지어낸 이름 = 기록하지 않음).
+const PLACEHOLDER_NAME = /^(other|others|someone|somebody|name|target|him|her|them|상대|누군가)$/i;
+const PLACEHOLDER_TEXT = /^(shared moment|cue word|what about|deed|exact quote)$/i;
+const realText = (t) => !!t && !PLACEHOLDER_TEXT.test(String(t).trim());
+function targetName(raw, known, source) {
+  const n = canonName(raw, known);
+  if (!n || PLACEHOLDER_NAME.test(n.trim())) return "";
+  if (n === "{{user}}" || known.some((p) => nk(p.name) === nk(n))) return n;
+  return !source || inText(n, source) ? n : "";
+}
+
 // ── 줄 해석 ──
 const SEP = /[|｜¦]/;
 const TAGS = new Set(["scene", "who", "rel", "open", "trust", "attr", "keys", "to", "call", "feel", "rift", "bond", "belief"]);
@@ -172,7 +184,7 @@ export function fromStage1(lines, { known = [], source = "" } = {}) {
       seen.add(nk(name));
       raw.people.push({ name, act, p, s, r });
     } else if (tag === "rel" && raw.rel.length < 4) {
-      const from = canonName(f[0], known), to = canonName(f[1], known), d = (f[2] ?? "").slice(0, 40);
+      const from = targetName(f[0], known, source), to = targetName(f[1], known, source), d = (f[2] ?? "").slice(0, 40);
       if (from && to && nk(from) !== nk(to) && d) raw.rel.push({ from, to, d, dir: /^[+\-0]$/.test((f[3] ?? "").trim()) ? f[3].trim() : "0" });
     } else if (tag === "open" && raw.open.add.length < 3) {
       const text = (f[0] ?? "").slice(0, 80);
@@ -209,7 +221,7 @@ export function fromStage2(lines, name, { known = [], source = "", light = false
       const ks = (f[0] ?? "").split(/[,，、/]/).map((x) => x.trim()).filter(Boolean).slice(0, 3);
       if (ks.length) entry.keys = ks;
     } else if (tag === "to" && emo.length < 3) {
-      const to = canonName(f[0], known);
+      const to = targetName(f[0], known, source);
       if (!to || nk(to) === nk(name)) continue;
       const att = ATT_ALIAS[f[1]] ?? YN3(f[1], Object.keys(ATT), "same"), deed = DEED_ALIAS[f[2]] ?? YN3(f[2], Object.keys(DEED), "none"), q = (f[3] ?? "").trim();
       if (q && source && !quoteOk(q, source)) continue;   // 본문에 없는 근거 = 지어낸 판단
@@ -219,17 +231,17 @@ export function fromStage2(lines, name, { known = [], source = "", light = false
       if (!q) for (const k of Object.keys(t)) t[k] = Math.max(-1, Math.min(1, t[k]));   // 근거가 없으면 약한 신호만
       if (Object.keys(t).length) emo.push({ from: name, to, t, why: (q || `${att} ${deed}`).slice(0, 40) });
     } else if (tag === "call" && talk.length < 2) {
-      const to = canonName(f[0], known), call = (f[1] ?? "").slice(0, 20), tone = YN3(f[2], ["formal", "casual", "mixed"], ({ 존댓말: "formal", 존대: "formal", 반말: "casual" })[f[2]] ?? "");
+      const to = targetName(f[0], known, source), call = (f[1] ?? "").slice(0, 20), tone = YN3(f[2], ["formal", "casual", "mixed"], ({ 존댓말: "formal", 존대: "formal", 반말: "casual" })[f[2]] ?? "");
       if (to && call && tone && nk(to) !== nk(name)) talk.push({ from: name, to, call, tone });
     } else if (tag === "feel" && !light) {
       const feel = (f[0] ?? "").slice(0, 40), cause = (f[1] ?? "").slice(0, 60), ic = (f[2] ?? "").trim().toUpperCase();
       if (feel && cause && /^[HML]$/.test(ic)) entry.self = { feel, cause, ic };
     } else if (tag === "rift" && !light && !rift.length) {
-      const b = canonName(f[0], known), about = (f[1] ?? "").slice(0, 60), state = YN3(f[2], ["open", "apologized", "resolved"], ""), grudge = YN3(f[3], ["none", "some", "deep"], "none");
-      if (b && about && state && nk(b) !== nk(name)) rift.push({ a: name, b, about, state, grudge });
+      const b = targetName(f[0], known, source), about = (f[1] ?? "").slice(0, 60), state = YN3(f[2], ["open", "apologized", "resolved"], ""), grudge = YN3(f[3], ["none", "some", "deep"], "none");
+      if (b && realText(about) && state && nk(b) !== nk(name)) rift.push({ a: name, b, about, state, grudge });
     } else if (tag === "bond" && !light && !bond.length) {
-      const b = canonName(f[0], known), moment = (f[1] ?? "").slice(0, 60), hook = (f[2] ?? "").slice(0, 30);
-      if (b && moment && nk(b) !== nk(name)) bond.push({ a: name, b, moment, ...(hook ? { hook } : {}) });
+      const b = targetName(f[0], known, source), moment = (f[1] ?? "").slice(0, 60), hook = (f[2] ?? "").slice(0, 30);
+      if (b && realText(moment) && nk(b) !== nk(name)) bond.push({ a: name, b, moment, ...(realText(hook) && hook ? { hook } : {}) });
     } else if (tag === "belief" && !light && belief.length < 2) {
       const thinks = (f[0] ?? "").slice(0, 60), truth = (f[1] ?? "").slice(0, 60), by = (f[2] ?? "").slice(0, 60);
       if (thinks && truth) belief.push({ who: name, thinks, truth, ...(by ? { by } : {}) });
