@@ -100,7 +100,7 @@ async function start() {
   setWebWrapProvider((stage, prompt, call) => web.wrap(stage, prompt, call));
   memory.start().catch((e) => console.log(`[${TITLE}] 장기기억 시작 실패: ${e?.message ?? e}`));
   // Dusk 프로바이더 (1.9.3): 리스 모델 목록에 Dusk 자동·프로필 등록, 쓰기 도구 확인은 창이 닫혀 있어도 뜬다
-  const providerRef = { confirm: null };
+  const providerRef = { confirm: null, exp: () => false };
   const provider = createProvider(api, {
     notify: (t) => memoryRef.toast?.(t),
     confirm: (o) => (providerRef.confirm ? providerRef.confirm(o) : Promise.resolve(false)),
@@ -109,6 +109,7 @@ async function start() {
       const f = await memory.store.getFolder(cur.chaId, cur.chatId), want = String(q ?? "").trim().toLowerCase(); if (!f?.people || !want) return [];
       return Object.values(f.people).filter((p) => String(p.name ?? "").toLowerCase().includes(want) || JSON.stringify(p.records ?? []).toLowerCase().includes(want)).slice(0, 5).map((p) => ({ name: p.name, records: (p.records ?? []).slice(-6).map((r) => (typeof r === "string" ? r : r?.text ?? r?.summary ?? JSON.stringify(r)).slice(0, 300)) }));
     } },
+    allowed: () => providerRef.exp(),
     createStore: engine_exports.createStore,
     backupSnapshot: engine_exports.backupSnapshot,
     log: (m) => console.log(`[${TITLE}] ${m}`)
@@ -232,6 +233,8 @@ async function start() {
   app.ctx.memory = memory;
   app.ctx.provider = provider;
   providerRef.confirm = (o) => app.ctx.confirmAnywhere(o);
+  providerRef.exp = () => !!app?.ctx?.prefs?.ui?.experimental;
+  provider.sync().catch(() => {});   // 실험 기능이 켜져 있으면 이제 등록
   app.ctx.cellar = memory.cellar;   // 한 곳에서 찾은 Cellar 연결을 화면들이 함께 쓴다
   app.ctx.skills = skills;
   app.ctx.web = web;

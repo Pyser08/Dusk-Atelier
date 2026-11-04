@@ -3,7 +3,7 @@
 import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
 import { statusCard } from '../kit.js';
-import { TABS, SECTION_NAMES } from '../tabs.js';
+import { TABS, SECTION_NAMES, tabHidden } from '../tabs.js';
 import { usageOf } from '../../engine/memoryusage.js';
 import { dbRead } from '../../data/dbcache.js';
 
@@ -40,7 +40,7 @@ async function readCounts(ctx, section) {
 
 export async function renderSectionHome(ctx) {
   const section = TABS.find((t) => t.id === ctx.state.tab)?.section;
-  const tabs = TABS.filter((t) => t.section === section && !t.id.endsWith('-home') && !t.hide && (!t.dev || ctx.prefs.ui?.devMode));
+  const tabs = TABS.filter((t) => t.section === section && !t.id.endsWith('-home') && !tabHidden(t, ctx.prefs.ui) && (!t.dev || ctx.prefs.ui?.devMode));
   const listHost = h('div', { class: 'rb-hub-body' });
   const host = h('div', { class: 'rb-section rb-scroll rb-hub', 'data-section': section ?? '' },
     h('div', { class: 'rb-section-head' },
@@ -58,7 +58,7 @@ export async function renderSectionHome(ctx) {
       h('span', { class: 'go', 'aria-hidden': 'true' }, icon('chevron', 16)));
     const big = (t) => h('button', { type: 'button', class: 'rb-htile rb-section-tile rb-hubbig', onClick: () => ctx.go(t.id), 'aria-label': t.label, dataset: { tab: t.id } },
       h('span', { class: 'ico' }, icon(t.icon, 22)), h('span', { class: 't' }, h('b', null, t.label), h('small', null, LINE[t.id] ?? t.card ?? '')));
-    const bigIds = BIG[section] ?? [];
+    const bigIds = section === 'work' ? (ctx.prefs.ui?.experimental ? ['provider', 'aibot'] : ['look', 'aibot']) : (BIG[section] ?? []);
     const memCard = section === 'memory' && counts._mem ? h('section', { class: 'rb-card bordered rb-hubstat' },
       counts._mem.cur ? statusCard(counts._mem.on ? 'on' : 'off', `이 채팅 · 기억 ${counts._mem.total}건`) : statusCard('off', '채팅을 열면 기억 상태가 보여요.')) : null;
     replace(listHost,

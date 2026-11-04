@@ -55,7 +55,7 @@ export function renderTools(ctx) {
     h("div", { class: "rb-tools3-grid" },
       h("div", { class: "rb-tools3-col" },
         group("자주 쓰는 도구",
-          row("palette", "플러그인 꾸미기", "색·밝기·글자 크기·글꼴 바꾸기", () => ctx.go("look"), "rb-tool-look"),
+          ctx.prefs.ui?.experimental ? row("palette", "플러그인 꾸미기", "색·밝기·글자 크기·글꼴 바꾸기", () => ctx.go("look"), "rb-tool-look") : null,
           row("preset", "프리셋", "모듈 조합을 저장하고 공유해요", () => ctx.go("tools", "presets"), "rb-tool-presets"),
           row("palette", "채팅 테마 빌더", "테마 만들기·목록·코드 주고받기", () => ctx.go("tools", "chattheme"), "rb-tool-chattheme"),
           row("image", "에셋 태그 고치기", "열린 채팅의 틀린 이미지 태그를 고쳐요", () => import("./assetfix.js").then((m) => m.openAssetFix(ctx)).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })), "rb-tool-assetfix")),

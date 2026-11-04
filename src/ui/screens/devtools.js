@@ -38,6 +38,25 @@ export function devToggleCard(ctx, onChange) {
     } })
   );
 }
+export function experimentalCard(ctx, onChange) {
+  const on = !!ctx.prefs.ui?.experimental;
+  return h(
+    "div",
+    { class: "rb-card pad bordered", style: "display:flex;gap:14px;align-items:center;margin-bottom:14px", id: "rb-experimental" },
+    h("span", { style: "width:40px;height:40px;border-radius:12px;background:var(--rb-acc-soft);color:var(--rb-acc-text);display:flex;align-items:center;justify-content:center;flex-shrink:0" }, icon("zap", 20)),
+    h(
+      "div",
+      { style: "flex:1;min-width:0;display:flex;flex-direction:column;gap:2px" },
+      h("b", null, "실험 기능"),
+      h("span", { class: "rb-muted", style: "white-space:normal" }, "아직 다듬는 중인 기능을 켜요. 지금은 ‘프로바이더’(리스 모델 목록에 Dusk 추가)가 있어요. 켜면 작업실에 프로바이더가 생기고, 플러그인 꾸미기는 도구 안으로 옮겨져요. 끈 뒤에는 이미 등록된 이름이 리스를 다시 열 때 사라져요.")
+    ),
+    switchEl(on, { label: "실험 기능", onChange: async (v) => {
+      await ctx.prefs.saveUi({ experimental: v });
+      ctx.toast(v ? "실험 기능을 켰어요" : "실험 기능을 껐어요");
+      onChange?.(v);
+    } })
+  );
+}
 async function loadTargets(ctx) {
   const { entries } = await ctx.svc.load();
   const mods = entries.map((e) => ({ kind: "module", key: `m:${e.module.id}`, id: e.module.id, name: e.module.name ?? "", sub: e.module.namespace || "" }));

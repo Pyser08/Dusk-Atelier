@@ -64,3 +64,11 @@ test("section overview tabs are mobile-only and have the requested icons", () =>
 });
 
 // Build trigger: assertions include the relocated persona-builder tab.
+
+test("실험 기능: 프로바이더는 켰을 때만 보이고, 꾸미기는 켜면 도구로 옮겨진다", async () => {
+  const { tabHidden } = await import("../src/ui/tabs.js");
+  const prov = TABS.find((t) => t.id === "provider"), look = TABS.find((t) => t.id === "look"), aibot = TABS.find((t) => t.id === "aibot");
+  assert.equal(tabHidden(prov, {}), true); assert.equal(tabHidden(prov, { experimental: true }), false);
+  assert.equal(tabHidden(look, {}), false); assert.equal(tabHidden(look, { experimental: true }), true);
+  assert.equal(tabHidden(aibot, {}), false); assert.equal(tabHidden(aibot, { experimental: true }), false);
+});

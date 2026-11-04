@@ -1,5 +1,8 @@
 # 현재 상태 — feat/1.9.2
 
+## 2026-11-04 프로바이더는 실험 기능으로만 노출
+- `prefs.ui.experimental`(설정→실험 기능, `devtools.js` `experimentalCard`). 꺼짐이면: provider 탭 숨김(`tabs.js` `exp`·`tabHidden`), 꾸미기는 원래 자리(큰 카드), registrar·Dusk 자체 AI 경로 모두 막음(`createProvider({allowed})`, main.js `providerRef.exp`). 켜면 꾸미기는 도구로 이동(`hideWhenExp`). 한 번 등록된 이름은 리스를 다시 열 때까지 남음(removeProvider 없음).
+
 ## 2026-11-04 프로바이더(Dusk provider) 1차 구현 (버전 미변경, 미커밋 → 이 커밋에 포함)
 - 계획 문서: 프로젝트 문서 `claude/provider-plan.md`. CPM v1.99.7·LBI-pre34-plus는 **기능·구조 분석만** 했고 코드는 가져오지 않음(CPM은 분석만 허락받음, UI·설정 가져오기 제외).
 - 구조: 순수 `src/engine/provider/`(catalog·sse·messages·build·repeat·keypool·chain·cost·profile·transforms·tools·translate), 호스트 연결 `src/data/provider/`(keyvault·store·transport·gemcache·risutools·runner·toolexec·models·register·index), 화면 `src/ui/screens/provider.js`+`provider/{more,ui,css}.js`.

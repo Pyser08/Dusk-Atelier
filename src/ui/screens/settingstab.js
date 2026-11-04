@@ -7,7 +7,7 @@ import { icon } from '../icons.js';
 import { openTour } from '../tour.js';
 import { CHANGELOG, openChangelog } from '../whatsnew.js';
 import { LORE_DEFAULTS, loadLoreSettings, saveLoreSettings } from '../../data/lorerules.js';
-import { devToggleCard } from './devtools.js';
+import { devToggleCard, experimentalCard } from './devtools.js';
 import { renderCleanup, fullBackup, fullRestore } from './tools.js';
 import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
@@ -124,6 +124,11 @@ export async function renderSettingsTab(ctx) {
         linkRow("업데이트 설정", "새로 가져온 봇 자동 감지·채팅 백업", () => ctx.go("settings", "updset"), "rb-set-updset"),
         linkRow("설정 정리", "저장한 순서·폴더·프리셋 골라 지우기", () => ctx.go("settings", "cleanup"), "rb-set-cleanup"),
         linkRow("정보 · 라이선스", "버전·AGPL-3.0·소스 위치", () => openAbout(ctx), "rb-set-about")),
+      experimentalCard(ctx, () => {
+        ctx.refreshTabs();
+        ctx.provider?.sync?.().catch(() => {});
+        renderSettingsTab(ctx);
+      }),
       devToggleCard(ctx, () => {
         ctx.refreshTabs();
         renderSettingsTab(ctx);

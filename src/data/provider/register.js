@@ -3,7 +3,7 @@
 import { createProviderStore } from "./store.js";
 const AUTO = "Dusk 자동";
 export const providerName = (p) => `Dusk · ${p.name}`;
-export function createRegistrar(api, { runner, store, log = () => {} }) {
+export function createRegistrar(api, { runner, store, log = () => {}, allowed = () => true }) {
   const registered = new Map(); // 이름 → 프로필 ID("" = 자동)
   const supported = () => typeof api.addProvider === "function";
   async function add(name, profileId) {
@@ -13,6 +13,7 @@ export function createRegistrar(api, { runner, store, log = () => {} }) {
   }
   async function sync() {
     if (!supported()) return { supported: false, names: [] };
+    if (!allowed()) return { supported: true, names: [...registered.keys()] };   // 실험 기능이 꺼져 있으면 새로 등록하지 않는다
     const cfg = await store.get(); if (!cfg.enabled) return { supported: true, names: [...registered.keys()] };
     await add(AUTO, ""); for (const p of cfg.profiles) await add(providerName(p), p.id);
     return { supported: true, names: [...registered.keys()] };

@@ -39,7 +39,7 @@ import { renderHome } from './screens/home.js';
 import { renderPersonaBuilder } from './screens/personabuilder.js';
 import { renderSectionHome } from './screens/sectionhome.js';
 import { createBotAndEdit } from './screens/newbot.js';
-import { BASE_IDS, SEARCH, SECTION_IDS, SECTION_NAMES, TABS, subLabel } from './tabs.js';
+import { BASE_IDS, SEARCH, SECTION_IDS, SECTION_NAMES, TABS, subLabel, tabHidden } from './tabs.js';
 
 export function createApp(api, { legacy, version, onPersonaChanged }) {
   const doc = document;
@@ -155,7 +155,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   // 사이드바·위쪽 바는 기억 → 관리 → 작업실 섹션별로 나눈다.
   let currentSection = null;
   for (const t of TABS) {
-    if (t.mobileOnly || t.hide) continue;
+    if (t.mobileOnly) continue;
     if (t.section && t.section !== currentSection) {
       currentSection = t.section;
       nav.appendChild(h("div", { class: "rb-nav-lab", "aria-hidden": "true" }, SECTION_NAMES[currentSection]));
@@ -234,7 +234,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       ...inMore ? [h("button", { type: "button", id: "rb-crumb-more", onClick: () => go(TABS.find((x) => x.section === t.section)?.id ?? "home") }, SECTION_NAMES[t.section]), sep()] : [],
       h("button", { type: "button", class: sl ? "" : "cur", "aria-haspopup": "menu", id: "rb-tabmenu", onClick: (e) => {
         const dev = !!prefs.ui?.devMode;
-        openMenu(win, e.currentTarget, TABS.filter((x) => x.id !== "home" && !x.hide && (!x.dev || dev)).map((x) => ({ icon: x.icon, label: x.label, onClick: () => go(x.id) })));
+        openMenu(win, e.currentTarget, TABS.filter((x) => x.id !== "home" && !tabHidden(x, prefs.ui) && (!x.dev || dev)).map((x) => ({ icon: x.icon, label: x.label, onClick: () => go(x.id) })));
       } }, t.label, icon("down", 14)),
       ...sl ? [sep(), h("button", { type: "button", class: "cur", onClick: () => go(state.tab) }, sl)] : []
     );
@@ -344,6 +344,10 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     }
     if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsBg = true;
     if (tab === "characters") state.charOrderStale = true;
+    if (tab === "provider" && !prefs.ui?.experimental) {
+      tab = "work-home";
+      sub = null;
+    }
     if (tab === "dev" && !prefs.ui?.devMode) {
       tab = "tools";
       sub = null;
@@ -374,6 +378,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       const a = links.get("dev");
       if (a) a.hidden = !on;
     }
+    for (const t of TABS) for (const links of [navLinks, topLinks]) { const a = links.get(t.id); if (a && (t.exp || t.hideWhenExp)) a.hidden = tabHidden(t, prefs.ui); }
+    if (state.tab === "provider" && !prefs.ui?.experimental) go("tools");
     win.classList.toggle("rb-has-dev", on);
     if (!on && state.tab === "dev") go("tools");
   }
@@ -399,7 +405,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     // 개요 화면(기억·관리·작업실)에서는 위 칩 줄을 숨긴다: 목록이 같은 이동을 이미 보여 준다(목업 1)
     win.classList.toggle("rb-on-hub", String(state.tab).endsWith("-home"));
     const activeSection = TABS.find((t) => t.id === state.tab)?.section;
-    replace(moreHost, moreNav(TABS.filter((t) => t.section === activeSection && !t.hide && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
+    replace(moreHost, moreNav(TABS.filter((t) => t.section === activeSection && !tabHidden(t, prefs.ui) && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
     for (const links of [navLinks, topLinks, barLinks]) for (const [id, a] of links) {
       const activeTab = TABS.find((t) => t.id === state.tab);
       const on = id === state.tab || id.startsWith("section:") && activeTab?.section === id.slice("section:".length);
