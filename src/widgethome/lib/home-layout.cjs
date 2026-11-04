@@ -45,8 +45,8 @@
       if(await node.querySelector('.risu-sidebar,.rs-sidebar,.rs-setting-cont,.setting-area'))continue;
       const area=box.width*box.height;if(area>bestArea){best=node;bestArea=area;}
     }
-    if(!best&&!sbox)best=app;
-    return best?{pane:best,marker:null,generic:true}:null;
+    if(!best)return{pane:app,marker:null,generic:true,nocover:true};
+    return{pane:best,marker:null,generic:true};
   }
   // 리스·리스바드: 왼쪽 아이콘 줄(좁은 세로 띠)만 남기고 그 오른쪽 전부를 덮는다. 못 찾으면 null.
   async function railEdge(doc){
@@ -66,12 +66,16 @@
     constructor(api,options={}){this.api=api;this.options=options;this.doc=null;this.sheet=null;this.nativeSheet=null;this.nativePane=null;this.pane=null;this.frame=null;this.marker=null;this.markerPoll=0;this.resizeTimer=null;this.active=false;this.busy=false;this.timer=null;this.signature='';this.mode='sheet';this.generation=0;this.boxKey='';this.inlineStyle='';this.dirty=false;this.candidateKey='';this.candidatePasses=0;this.missingPasses=0;this.coverOwner='';this.coverSerial=0;this.nativeControls=false;this.interval=options.setInterval?options.setInterval.bind(options):root.setInterval.bind(root);this.clear=options.clearInterval?options.clearInterval.bind(options):root.clearInterval.bind(root);this.delay=options.setTimeout?options.setTimeout.bind(options):root.setTimeout.bind(root);this.cancel=options.clearTimeout?options.clearTimeout.bind(options):root.clearTimeout.bind(root);}
     async boxOf(pane){
       const box=rect(await pane.getBoundingClientRect());if(!box||!this.generic)return box;
-      try{const edge=await railEdge(this.doc);if(edge!==null&&edge<box.left){const right=box.left+box.width;return{...box,left:edge,width:right-edge};}}catch{}
+      // 리스·리스바드: 왼쪽 아이콘 줄만 남기고, 그 오른쪽 전부(위~아래)를 덮는다.
+      try{
+        const app=await this.doc.querySelector('#app'),ab=app&&rect(await app.getBoundingClientRect());
+        if(ab){const edge=(await railEdge(this.doc))??(this.nocover?ab.left+88:box.left);return{left:edge,top:ab.top,width:ab.left+ab.width-edge,height:ab.height};}
+      }catch{}
       return box;
     }
     async prepare(doc){
       await this.stop();await this.clearNativeScroll();if(!doc)return false;this.doc=doc;
-      const found=await findHome(doc);if(!found)return false;const{pane,marker}=found;this.generic=!!found.generic;
+      const found=await findHome(doc);if(!found)return false;const{pane,marker}=found;this.generic=!!found.generic;this.nocover=!!found.nocover;
       let frames=await nodes(await doc.querySelectorAll(MARK),2);
       if(!frames.length)frames=await nodes(await doc.querySelectorAll('iframe[srcdoc*="dusk-widgethome-open"]'),2);
       if(frames.length!==1)return false;
@@ -89,7 +93,7 @@
           this.mode='inline';this.options.onWarning?.('스타일 요소 연결',error);
         }
       }
-      if(this.mode==='sheet')try{this.coverOwner=await this.cover(pane);}catch{}
+      if(this.mode==='sheet'&&!this.nocover)try{this.coverOwner=await this.cover(pane);}catch{}
       try{this.nativeControls=Boolean(await this.options.onPane?.(pane,doc,this.generic));await this.write(box,true);return true;}
       catch(error){await this.stop();throw error;}
     }
@@ -144,9 +148,9 @@
         if(!this.active||generation!==this.generation)return null;
         if(box){
           const previous=this.pane,previousOwner=this.coverOwner;let owner='';
-          if(this.mode==='sheet')owner=await this.cover(found.pane);
+          if(this.mode==='sheet'&&!found.nocover)owner=await this.cover(found.pane);
           if(!this.active||generation!==this.generation){if(owner)await this.uncover(found.pane,owner);return null;}
-          this.coverOwner=owner;this.pane=found.pane;this.generic=!!found.generic;this.nativeControls=Boolean(await this.options.onPane?.(found.pane,this.doc,this.generic));this.marker=found.marker;this.markerPoll=0;this.missingPasses=0;this.dirty=true;
+          this.coverOwner=owner;this.pane=found.pane;this.generic=!!found.generic;this.nocover=!!found.nocover;this.nativeControls=Boolean(await this.options.onPane?.(found.pane,this.doc,this.generic));this.marker=found.marker;this.markerPoll=0;this.missingPasses=0;this.dirty=true;
           if(previous&&previousOwner)await this.uncover(previous,previousOwner);
           return box;
         }
