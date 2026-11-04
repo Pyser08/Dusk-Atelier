@@ -18,6 +18,7 @@ import { openForPrompt } from "../engine/memoryplus.js";
 import { emoForPrompt } from "../engine/memoryemo.js";
 import { hintsForPrompt } from "../engine/memoryinner.js";
 import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engine/memorydigest.js";
+import { loadUserNames } from "./usernames.js";
 
 const MAX_FAILS = 5;
 // 자동 기록 시점: next(기본) = 다음 입력을 보낼 때 직전 응답을 확정해 기록 | now = 응답 직후
@@ -40,8 +41,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   let userCache = { at: 0, names: [] };
   async function userNames() {
     if (Date.now() - userCache.at < 60e3) return userCache.names;
-    let names = [];
-    try { const db = await api.getDatabase?.(["username"]); if (db?.username) names = [String(db.username)]; } catch { /* 없으면 일반 이름만 */ }
+    const names = await loadUserNames(api);   // 없으면 일반 이름만
     userCache = { at: Date.now(), names };
     return names;
   }

@@ -9,7 +9,7 @@ import { mem } from "./memory/common.js";
 import { createRelMapCanvas } from "./relmap/canvas.js";
 
 const sigOf = (m) => `${m.nowAt}|${m.nodes.map((n) => `${n.id}:${n.aff}:${n.imp}:${n.records}`).join(",")}|${m.edges.map((e) => `${e.id}:${e.w}:${e.items.length}`).join(",")}`;
-const HELP = [["가운데", "{{user}}"], ["거리", "호감도가 높을수록 가까이"], ["높이", "지금 대화에서 중요할수록 위로"], ["방향", "같은 소속끼리 한쪽으로 (소속이 없으면 고르게)"], ["선 색", "따뜻한 관계는 붉게, 차가운 관계는 청록으로"], ["굵기", "관계의 강도"], ["점선", "풀리지 않은 갈등·오해가 있는 관계"], ["빛남", "최근에 바뀐 관계"], ["모양", "점선 빈 원은 실종, ?는 정체 불명"], ["조작", "누르면 확대, 두 번 누르면 위키로, 끌면 회전, 휠·두 손가락으로 확대·축소"]];
+const HELP = [["가운데", "{{user}}"], ["거리", "호감도가 높을수록 가까이"], ["높이", "지금 대화에서 중요할수록 위로"], ["방향", "같은 소속끼리 한쪽으로 (소속이 없으면 고르게)"], ["선 색", "따뜻한 관계는 붉게, 차가운 관계는 파랗게"], ["굵기", "관계의 강도"], ["점선", "풀리지 않은 갈등·오해가 있는 관계"], ["빛남", "최근에 바뀐 관계"], ["모양", "점선 빈 원은 실종, ?는 정체 불명"], ["조작", "누르면 확대, 두 번 누르면 위키로, 끌면 회전, 휠·두 손가락으로 확대·축소"]];
 
 export async function renderRelMap(ctx) {
   const M = ctx.memory, st = (ctx.state.relmap ??= {});
@@ -45,7 +45,7 @@ function buildView(ctx, win, cur, key, data) {
   const canvas = h("canvas", { "aria-label": "인물 관계도" });
   const ctrlsEl = h("div", { class: "rb-rm-ctrls" });
   const legendEl = h("div", { class: "rb-rm-legend" },
-    h("span", null, h("i", { style: "border-color:var(--rb-rose)" }), "따뜻한 관계"), h("span", null, h("i", { style: "border-color:var(--rb-teal)" }), "차가운 관계"),
+    h("span", null, h("i", { style: "border-color:var(--rb-rose)" }), "따뜻한 관계"), h("span", null, h("i", { style: "border-color:var(--rb-blue)" }), "차가운 관계"),
     h("span", null, h("i", { style: "border-color:var(--rb-acc);border-top-style:dashed" }), "풀리지 않은 갈등"), h("span", null, "굵기 = 강도"));
   const tipEl = h("div", { class: "rb-rm-tip", hidden: true }), toastEl = h("div", { class: "rb-rm-toast", hidden: true });
   const helpPop = h("div", { class: "rb-rm-pop", role: "dialog", "aria-label": "관계도 읽는 법", hidden: true }, h("h3", null, "관계도 읽는 법"), h("ul", null, ...HELP.map(([a, b]) => h("li", null, h("b", null, a), b))));

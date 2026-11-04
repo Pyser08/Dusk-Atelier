@@ -34,7 +34,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
     TH = {
       text: g("--rb-text", "#eee"), sub: g("--rb-sub", "#aaa"), mute: g("--rb-muted", "#999"), surf: g("--rb-surf", "#222"), win: winBg,
       acc: g("--rb-acc", "#e5694a"), accb: g("--rb-acc-b", "#cc4b2e"), ok: g("--rb-ok", "#5fd3a5"), bad: g("--rb-danger", "#f4867a"),
-      warm: g("--rb-rose", "#f2896a"), cool: g("--rb-teal", "#6fd8c4"), warn: g("--rb-warn", "#f2c066"),
+      warm: g("--rb-rose", "#f2896a"), cool: g("--rb-blue", "#6fa8f2"), warn: g("--rb-warn", "#f2c066"),
       dark: (0.299 * r + 0.587 * gg + 0.114 * b) < 128
     };
     TH.pal = [TH.acc, TH.cool, TH.warn, TH.warm, TH.ok, TH.sub];
