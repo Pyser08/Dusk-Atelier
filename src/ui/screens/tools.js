@@ -81,7 +81,8 @@ const THANKS = [
   { key: "arcana", emoji: "🃏", name: "Arcana Card", desc: "기억 카드의 바탕" },
   { key: "bb", emoji: "🛠️", name: "봇빌더", desc: "AI로 봇 만들기의 바탕" },
   { key: "cocoa", emoji: "🥥", name: "cocoA(gent!)", desc: "스킬 기능의 바탕" },
-  { key: "hypa", emoji: "📚", name: "HypaPlus", desc: "기억 가져오기·정규식 전처리의 바탕" }
+  { key: "hypa", emoji: "📚", name: "HypaPlus", desc: "기억 가져오기·정규식 전처리의 바탕" },
+  { key: "widgethome", emoji: "🏠", name: "위젯 홈", desc: "위젯 홈 화면의 바탕" }
 ];
 export async function fullBackup(ctx) {
   const db = await readDb(ctx.api, ["modules", "pluginCustomStorage", "enabledModules"]);
