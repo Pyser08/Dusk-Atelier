@@ -10,6 +10,7 @@
 - 쓰기 도구 안전장치: 설정에서 따로 켬 · 매번 확인 · 바꾸기 전 백업(실패하면 중단, 되돌리기 목록에 뜸) · 요청당 3번. (웹 도구와 같은 요청에서 쓰기 막기는 **의도적으로 넣지 않음**, 화면에 경고 문구만.)
 - 검증: provider-engine 29 · provider-runner 26 pass, e2e `run-provider.mjs` PC·모바일 통과. `run-look`은 꾸미기 진입을 `__app.ctx.go("look")`로 바꿈. `run-app.mjs`·`run-hubs.mjs`(기억 개요 3줄)는 변경 전에도 실패하던 낡은 기대값.
 - **못 한 것/미확인**: ① 호스트 `addProvider` 실제 동작(RisuAI·RisuBard·PocketRisu) ② 실제 공급자 계정으로 호출 ③ iOS 백그라운드 ④ Bedrock·NovelAI 연결 ⑤ 배치(Anthropic·OpenRouter) ⑥ 참고자료 PDF 변환 ⑦ Cellar 경유 대화 전달(서버 분석만 연결됨) ⑧ 키 암호화·동기화 ⑨ 웹 검색 키는 pluginStorage(동기화될 수 있음) ⑩ Cellar 쪽 시험 추가 없음.
+- 메인/보조: `cfg.subProfileId`(profile.js). resolve: 메인=봇별→메인, 그 밖=용도 지정→보조→메인. `analysisPick`(index.js)은 analysis 지정 또는 보조가 있을 때 Dusk 자체 AI를 프로필로 보냄(둘 다 없으면 기존 보조 모델 경로).
 - OpenRouter 공급자 순서/폴백 입력(provider.js, `params.provider.{order,allow_fallbacks}`), 프리셋은 params 객체 값을 안쪽 키만 넣고 뺌(presets.js).
 - 생각 강도: `thinking.effort` ∈ ""(안 보냄)·none·low·medium·high·xhigh 하나로 통일(build.js: OpenAI 그대로 / Claude 적응형+output_config, none이면 생각 끔 / Gemini 3=thinkingLevel·2.5=thinkingBudget 0). `mode`·`budget`은 고급의 토큰 예산용으로만 남음.
 - 빠른 설정 프리셋 `engine/provider/presets.js`(프로필 params·headers·tier에 넣고 뺌, anthropic-beta는 쉼표로 겹침) + 연결 카드 모델 검색(화면 안에서만 거름). 프리셋을 늘리려면 PRESETS 배열에 항목 추가.

@@ -19,19 +19,22 @@ export async function renderMore(tab, env) {
 async function use({ ctx, cfg, mutate, draw, toast }) {
   const out = [];
   if (!cfg.profiles.length) return [emptyState({ icon: "sliders", title: "먼저 프로필을 만들어 주세요", text: "‘연결’ → 모델 불러오기 → 모델 누르기로 만들 수 있어요." })];
+  const sub = h("section", { class: "rb-pcard", dataset: { purpose: "sub" } },
+    h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, "보조"), h("small", { class: "rb-muted" }, "번역·감정·메모리·보조·Dusk 자체 AI가 기본으로 쓰는 프로필이에요. 비워 두면 메인을 따라요."))),
+    grid(field("프로필", select(profOpts(cfg, "(메인과 같게)"), cfg.subProfileId, async (v) => { await mutate((x) => { x.subProfileId = v; }); draw(); }, "보조 프로필"))));
   const rows = PURPOSES.map((p) => {
     const cur = cfg.purposes[p] ?? { profileId: "", over: {} }, over = cur.over ?? {};
     const mix = (k, key) => (v) => { const o = { ...(over[k] ?? {}) }; if (v === null || v === "" || v === undefined) delete o[key]; else o[key] = v; setOver(k, Object.keys(o).length ? o : ""); };
     const setOver = (k, v) => mutate((x) => { const o = (x.purposes[p].over ??= {}); if (v === "" || v === null) delete o[k]; else o[k] = v; });
     return h("section", { class: "rb-pcard", dataset: { purpose: p } },
-      h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, PURPOSE_LABEL[p]), h("small", { class: "rb-muted" }, p === "main" ? "리스 대화·재생성에 쓰여요" : p === "analysis" ? "Dusk가 직접 AI를 부르는 일(기억 분석·관계도 등)에 쓰여요" : "비워 두면 메인 프로필을 따라요"))),
+      h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, PURPOSE_LABEL[p]), h("small", { class: "rb-muted" }, p === "main" ? "리스 대화·재생성에 쓰여요" : p === "analysis" ? "Dusk가 직접 AI를 부르는 일(기억 분석·관계도 등). 비워 두면 보조를 따라요" : "비워 두면 보조 프로필을 따라요"))),
       grid(
-        field("프로필", select(profOpts(cfg, p === "main" ? "(없음)" : "(메인과 같게)"), cur.profileId, async (v) => { await mutate((x) => { x.purposes[p].profileId = v; }); draw(); }, "프로필")),
+        field("프로필", select(profOpts(cfg, p === "main" ? "(없음)" : "(보조와 같게)"), cur.profileId, async (v) => { await mutate((x) => { x.purposes[p].profileId = v; }); draw(); }, "프로필")),
         field("온도 덮어쓰기", num(over.sampling?.temperature, mix("sampling", "temperature"))),
         field("최대 토큰 덮어쓰기", num(over.sampling?.maxTokens, mix("sampling", "maxTokens"), { step: "1" })),
         field("생각 덮어쓰기", select([["", "프로필 그대로"], ["none", "끔"], ["low", "약하게"], ["medium", "중간"], ["high", "강하게"], ["xhigh", "최고"]], over.thinking?.effort ?? "", (v) => setOver("thinking", v === "" ? "" : { effort: v }), "생각"))));
   });
-  out.push(note("info", "‘Dusk 자체 AI’에 프로필을 지정하면, 보조 모델로 보내던 Dusk의 AI 작업(지난 대화 분석 등)이 이 프로필로 돌고 Cellar 서버 분석에도 그대로 쓰여요. 내 API 모델을 따로 고른 작업은 그대로예요."), ...rows);
+  out.push(note("info", "먼저 위의 메인·보조 프로필을 정하세요. 아래 용도는 따로 지정하지 않으면 보조(보조가 없으면 메인)를 따라요."), note("info", "‘Dusk 자체 AI’에 프로필을 지정하면, 보조 모델로 보내던 Dusk의 AI 작업(지난 대화 분석 등)이 이 프로필로 돌고 Cellar 서버 분석에도 그대로 쓰여요. 내 API 모델을 따로 고른 작업은 그대로예요."), rows[0], sub, ...rows.slice(1));
   // 사슬
   const chain = cfg.chain ?? [];
   out.push(h("section", { class: "rb-pcard" },

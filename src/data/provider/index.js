@@ -39,7 +39,7 @@ export function createProvider(api, { notify = () => {}, confirm, memory = null,
     async balance(conn, signal) { return fetchBalance(transport, conn, await credOf(conn), signal); },
     hasBalance,
     // Dusk 자체 AI 작업(기억 분석 등)에 지정한 프로필이 있으면 그 pick을 돌려준다
-    async analysisPick() { const c = await store.get(); const id = c.purposes?.analysis?.profileId; return c.enabled && id && c.profiles.some((p) => p.id === id) ? { mode: "dusk", profileId: id } : null; },
+    async analysisPick() { const c = await store.get(); const id = c.purposes?.analysis?.profileId || c.subProfileId; return c.enabled && id && c.profiles.some((p) => p.id === id) ? { mode: "dusk", profileId: id } : null; },
     async run(messages, pick, signal) {
       const r = await runner.handle({ mode: "other", __purpose: "analysis", __profile: pick.profileId, prompt_chat: messages }, signal);
       if (!r?.success) throw new Error(String(r?.content ?? "Dusk 프로바이더 호출에 실패했어요"));

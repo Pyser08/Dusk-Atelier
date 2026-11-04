@@ -10,7 +10,7 @@ const pick = (v, list, d) => (list.includes(v) ? v : d);
 
 export const defaultConfig = () => ({
   v: 1, enabled: false, connections: [], profiles: [], purposes: Object.fromEntries(PURPOSES.map((p) => [p, { profileId: "", over: {} }])),
-  chain: [], chainOn: false, budget: { dailyUsd: 0, monthlyUsd: 0, action: "warn", switchProfileId: "" }, perChar: {},
+  subProfileId: "", chain: [], chainOn: false, budget: { dailyUsd: 0, monthlyUsd: 0, action: "warn", switchProfileId: "" }, perChar: {},
   defaults: { stream: "stream", retry: 2, timeoutSec: 300, repetition: { on: true, charRun: 240, minRepeats: 6, minChars: 400 }, keepPartial: true, keyCooldownSec: 60 },
   transforms: { rules: [], cacheOrder: false },
   tools: { enabled: false, datetime: true, calculator: true, dice: true, webSearch: false, fetchUrl: false, maxDepth: 4, timeoutSec: 30, search: { provider: "brave", url: "", key: "", cx: "" }, prefetch: { enabled: false, position: "beforeLast", maxResults: 3, snippetOnly: true, keywords: "" }, risuRead: false, risuWrite: false, memoryTools: false },
@@ -44,7 +44,7 @@ export function normalizeConfig(raw) {
   const pid = new Set(profiles.map((p) => p.id));
   const purposes = {}; for (const k of PURPOSES) { const r = raw.purposes?.[k]; purposes[k] = { profileId: pid.has(r?.profileId) ? r.profileId : "", over: sanitizeOver(r?.over) }; }
   const b = raw.budget ?? {};
-  return { ...d, v: 1, enabled: !!raw.enabled, connections, profiles, purposes, chain: (Array.isArray(raw.chain) ? raw.chain : []).filter((x) => pid.has(x)), chainOn: !!raw.chainOn,
+  return { ...d, v: 1, enabled: !!raw.enabled, connections, profiles, purposes, subProfileId: pid.has(raw.subProfileId) ? raw.subProfileId : "", chain: (Array.isArray(raw.chain) ? raw.chain : []).filter((x) => pid.has(x)), chainOn: !!raw.chainOn,
     budget: { dailyUsd: numOrNull(b.dailyUsd) ?? 0, monthlyUsd: numOrNull(b.monthlyUsd) ?? 0, action: pick(b.action, ["warn", "switch", "block"], "warn"), switchProfileId: pid.has(b.switchProfileId) ? b.switchProfileId : "" },
     perChar: Object.fromEntries(Object.entries(obj(raw.perChar)).filter(([, v]) => pid.has(v?.profileId)).map(([k, v]) => [k, { profileId: v.profileId }])),
     defaults: { ...d.defaults, ...obj(raw.defaults), repetition: { ...d.defaults.repetition, ...obj(raw.defaults?.repetition) } }, transforms: { rules: (raw.transforms?.rules ?? []).map(normalizeRule).slice(0, 40), cacheOrder: !!raw.transforms?.cacheOrder },
@@ -58,7 +58,9 @@ export function normalizeRule(r) {
 }
 // 용도에 덮어쓰기를 적용한 유효 프로필 + 연결. 상속: 기본값(defaults) → 프로필 → 용도 over
 export function resolve(cfg, purpose, { chaId = "", profileId = "" } = {}) {
-  const pid = profileId || cfg.perChar?.[chaId]?.profileId || cfg.purposes?.[purpose]?.profileId || cfg.purposes?.main?.profileId || "";
+  // 메인: 봇별 → 메인 프로필. 그 밖의 용도: 용도에 지정한 것 → 보조 프로필 → 메인 프로필.
+  const main = cfg.purposes?.main?.profileId || "", own = cfg.purposes?.[purpose]?.profileId || "";
+  const pid = profileId || (purpose === "main" ? cfg.perChar?.[chaId]?.profileId || main : own || cfg.subProfileId || main) || "";
   const base = cfg.profiles.find((p) => p.id === pid); if (!base) return null;
   const conn = cfg.connections.find((c) => c.id === base.connectionId); if (!conn) return null;
   const over = cfg.purposes?.[purpose]?.over ?? {}, eff = JSON.parse(JSON.stringify(base));

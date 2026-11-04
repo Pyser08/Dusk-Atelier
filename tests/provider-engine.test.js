@@ -245,3 +245,13 @@ test("공급자 순서를 직접 적어도 빠른 설정이 지우지 않고, �
   const body = buildRequest({ conn: { id: "c", kind: "openrouter", format: "openai", keyIds: [], params: {}, headers: {} }, profile: { model: "x/y", sampling: {}, thinking: {}, cache: {}, params: apply(base, f, true).params, headers: {} }, messages: [{ role: "user", content: "hi" }], cred: "k" }).body;
   assert.deepEqual(body.provider, { order: ["parasail/fp8", "venice/fp8", "novita/fp8"], allow_fallbacks: true });
 });
+
+test("보조 프로필: 메인 외 용도는 지정 → 보조 → 메인 순으로 따르고, 봇별 지정은 메인에만 쓴다", async () => {
+  const { resolve, normalizeConfig } = await import("../src/engine/provider/profile.js");
+  const raw = { enabled: true, connections: [{ id: "c", kind: "openai" }], profiles: [{ id: "m", connectionId: "c", model: "a" }, { id: "s", connectionId: "c", model: "b" }, { id: "x", connectionId: "c", model: "c" }], purposes: { main: { profileId: "m" }, emotion: { profileId: "x" } }, subProfileId: "s", perChar: { bot1: { profileId: "x" } } };
+  const cfg = normalizeConfig(raw), id = (purpose, o) => resolve(cfg, purpose, o).profileId;
+  assert.equal(id("main"), "m"); assert.equal(id("translate"), "s"); assert.equal(id("memory"), "s"); assert.equal(id("analysis"), "s"); assert.equal(id("emotion"), "x");
+  assert.equal(id("main", { chaId: "bot1" }), "x"); assert.equal(id("translate", { chaId: "bot1" }), "s");
+  const none = normalizeConfig({ ...raw, subProfileId: "" }); assert.equal(resolve(none, "translate").profileId, "m");
+  assert.equal(normalizeConfig({ ...raw, subProfileId: "nope" }).subProfileId, "");
+});
