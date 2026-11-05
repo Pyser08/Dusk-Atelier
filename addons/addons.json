@@ -4,13 +4,13 @@
     {
       "id": "hello",
       "name": "애드온 시험",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "minCore": "1.9.2",
       "hooks": false,
       "desc": "로더가 제대로 도는지 확인하는 시험용 애드온이에요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/hello.js",
-      "sha256": "6b2ca600eca65c9ba7ec6776e1519a4ce77e6f42a5e135d8ef23dfd0bb80f21c",
-      "size": 631
+      "sha256": "4f59a61ef832360a4959224dfdcbbb7c68fe5e7ab8b00167584dfaa8848c065f",
+      "size": 633
     }
   ]
 }

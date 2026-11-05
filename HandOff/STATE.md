@@ -7,6 +7,7 @@
 - 화면: 설정 탭 '애드온 (시험)' 카드(`ui/screens/addonsui.js`). main.js에서 boot.
 - 테스트: `tests/addons.test.js`(8), e2e `run-addon-loader.mjs`(리스와 같은 sandbox·CSP에서 실제 blob import), `run-addons-ui.mjs`(PC·모바일 12).
 - 고침: v3 api의 getLocalPluginStorage()는 Promise로 와서 `d.setItem is not a function` → await 후 메서드 확인, 없으면 pluginStorage, 값은 문자열로만 저장.
+- 고침: 버튼 콜백이 toast 반환값(DOM)을 돌려줘 호스트 복제 실패(`failed to post message to parent`) → 콜백·ctx.toast는 아무것도 돌려주지 않게, hello v0.1.1. 애드온 규칙: api에 넘기는 콜백 반환값은 복제 가능한 값만.
 - 미확인: 실제 RisuAI·RisuBard·PocketRisu, **iOS Safari·Firefox의 import(blob:)**(Chromium만 확인), 실제 nativeFetch로 raw.githubusercontent 받기. 실패 시 대체 경로(자기 재조립·nonce script) 아직 없음.
 - 다음: 실기기 확인 → 실제 기능 하나(작은 것)를 애드온으로 분리, 공유 코드(`ctx.lib`) 구조.
 

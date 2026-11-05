@@ -5,12 +5,14 @@ window.runAddonLoader = async ({ manifest, files }) => {
   const store = { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } };
   const api = { getLocalPluginStorage: async () => store, pluginStorage: store,   // 실제 호스트처럼 Promise
     nativeFetch: async (url, init) => { calls.push(["fetch", init?.method]); const body = url.endsWith("addons.json") ? manifest : files[url]; return body == null ? { ok: false, status: 404 } : { ok: true, status: 200, text: async () => body }; },
-    registerButton: async (o) => { calls.push(["button", o.name]); return "b1"; }, unregisterUIPart: (id) => calls.push(["unreg", id]) };
+    registerButton: async (o, cb) => { calls.push(["button", o.name]); window.__cb = cb; return "b1"; }, unregisterUIPart: (id) => calls.push(["unreg", id]) };
   const toasts = [];
   try { eval("1"); out.evalBlocked = false; } catch { out.evalBlocked = true; }
-  const A = createAddons(api, { core: "2.0.0", ctx: { toast: (t) => toasts.push(t) }, log: (m) => toasts.push("log:" + m) });
+  const A = createAddons(api, { core: "2.0.0", ctx: { toast: (t) => { toasts.push(t); return document.createElement("div"); } }, log: (m) => toasts.push("log:" + m) });
   try { await A.install("hello"); out.installed = A.running("hello"); } catch (e) { out.err = String(e?.message ?? e); }
   out.button = calls.some((c) => c[0] === "button");
+  // 호스트는 콜백 반환값을 postMessage로 복제한다 → 복제할 수 있어야 함
+  try { structuredClone(await window.__cb?.()); out.cbCloneable = true; } catch (e) { out.cbCloneable = false; out.err = "콜백 반환값 복제 불가 " + e.message; }
   out.getMethod = calls.filter((c) => c[0] === "fetch").every((c) => c[1] === "GET");
   await A.dispose(); out.unreg = calls.some((c) => c[0] === "unreg");
   calls.length = 0; await A.boot(); out.rebooted = A.running("hello") && calls.some((c) => c[0] === "button");

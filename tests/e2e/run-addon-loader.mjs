@@ -17,6 +17,6 @@ const res = await page.evaluate(({ srcdoc, csp, go }) => new Promise((ok) => {
   addEventListener("message", (e) => { if (e.data?.ready) f.contentWindow.postMessage({ go }, "*"); if (e.data?.res) ok(e.data.res); });
   document.body.appendChild(f); f.srcdoc = srcdoc; setTimeout(() => ok({ timeout: true }), 10000);
 }), { srcdoc, csp, go: { manifest, files } });
-const checks = [["CSP가 eval을 막는 환경(리스와 같음)", res.evalBlocked], ["받기 → import(blob:)로 켜짐", res.installed, res.err], ["애드온이 같은 api로 버튼 등록", res.button], ["nativeFetch는 GET으로", res.getMethod], ["끄면 정리(버튼 해제)", res.unreg], ["다시 시작하면 저장본으로 켜짐", res.rebooted]];
+const checks = [["CSP가 eval을 막는 환경(리스와 같음)", res.evalBlocked], ["받기 → import(blob:)로 켜짐", res.installed, res.err], ["애드온이 같은 api로 버튼 등록", res.button], ["nativeFetch는 GET으로", res.getMethod], ["버튼 콜백 반환값을 호스트로 복제 가능", res.cbCloneable, res.err], ["끄면 정리(버튼 해제)", res.unreg], ["다시 시작하면 저장본으로 켜짐", res.rebooted]];
 for (const [n, c, x] of checks) console.log((c ? "✔ " : "✘ ") + n + (c ? "" : "  → " + (x ?? JSON.stringify(res))));
 await browser.close(); process.exit(checks.every((c) => c[1]) ? 0 : 1);
