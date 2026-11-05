@@ -1,5 +1,11 @@
 # 현재 상태 — feat/2.0.0
 
+## 다음 작업: 기능 애드온 분리 (2026-11-06 확정 — 새 챗에서 시작)
+- 묶음·크기·의존: 프로젝트 문서 claude/addon-plan.md. 장기기억·관계도 / 기억카드(+cardassets, 장기기억 필요) / 에로싱크(장기기억 필요) / AI로 봇·페르소나 만들기 / 위젯 / 채팅테마 만들기. **코코아·ProtLink+는 코어에 남김.**
+- 규칙: 애드온이 없으면 쓸 수 없는 것(탭·하위 화면·버튼·채팅 메뉴·위젯 칸·설정 행·안내/투어 항목·홈 바로가기)은 전부 그 애드온 쪽으로 옮겨서, 없을 땐 코어에 흔적이 안 남게(숨김). 데이터·설정 키는 그대로(애드온을 다시 받으면 이어서 쓰게).
+- 순서: ① 로더 확장 — manifest `requires`(필요 애드온 같이 받기), 코어가 애드온에 넘기는 `ctx.lib`(dom·kit·icons 등, esbuild로 애드온 빌드 때 external→ctx.lib 매핑), 애드온이 탭·화면·메뉴를 코어에 등록하는 자리(registerTab 등) ② 채팅테마로 첫 분리 ③ AI 제작·위젯 ④ 장기기억·관계도 → 기억카드·에로싱크 ⑤ 2.0.0 첫 실행 때 쓰던 기능 애드온 자동 받기.
+- 매 단계 끝: 애드온 없이 코어만으로 npm test·e2e 통과 + 애드온 켠 상태 e2e 통과 확인.
+
 ## 2026-11-05 애드온 로더 시험판 (버전 미변경)
 - 설계: 프로젝트 문서 claude/addon-plan.md(1순위 방식). 애드온은 리스 플러그인 목록에 안 뜨고, Dusk가 받아 같은 iframe에서 `import(blob:)`로 켠다.
 - 순수 `src/engine/addons.js`(parseManifest·cmpVer·pickUpdates·rowState) / 데이터 `src/data/addons.js` `createAddons(api,{core,ctx})`: boot(저장본으로 바로 켬, 3초 뒤 확인)·check(6시간마다, 바뀐 것만 받기·sha256 검사)·install·setOn·remove·되돌리기(prev). 훅 있는 애드온(`hooks:true`) 업데이트는 다음 시작부터(pendingRestart). 저장 키 `dusk.addon.index`·`dusk.addon.code.<id>`·`dusk.addon.prev.<id>`(getLocalPluginStorage→pluginStorage), 목록 주소 키 `dusk.addon.manifestUrl`(기본 feat/2.0.0 raw).
