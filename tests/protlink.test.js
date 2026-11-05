@@ -97,3 +97,18 @@ test("Proton 연결 부분이 단독으로 불러와지고 필요한 함수를 �
   const fs = await import("node:fs");
   assert.ok(!/^\/\/@/m.test(fs.readFileSync(new URL("../src/protlink/protlink.js", import.meta.url), "utf8")), "//@ 머리말 없음");
 });
+test("Proton 연결부: 주소에서 링크 아이디를 읽고, 네트워크가 막히면 안내 문구, 폴더를 끝까지 훑음", async () => {
+  const m = await import("../src/protlink/protlink.js");
+  globalThis.document ??= { getElementById: () => null };
+  const urls = [], warn = console.warn; console.warn = () => {};
+  try {
+    const d = m.loadProtLinkDriver({ nativeFetch: async (u) => { urls.push(String(u)); throw new Error("network down"); } });
+    assert.equal(d.Pa("https://drive.proton.me/urls/ABC#x"), "ABC");
+    const kv = { getItem: async () => null, setItem: async () => {}, removeItem: async () => {} };
+    await assert.rejects(() => d.G3({ kv }).open("https://drive.proton.me/urls/ABCDEFGH#pass1234567", new AbortController().signal), (e) => /인터넷 연결/.test(d.Ln(e)));
+    assert.ok(urls.some((u) => u.includes("drive-api.proton.me/drive/urls/ABCDEFGH")), "Proton API 주소로 요청");
+    const share = { root: { type: "folder", uid: "r", name: "x" }, list: async (uid) => (uid === "r" ? [{ type: "file", uid: "f1", name: "a.risum", size: 3, modifiedAt: 1 }, { type: "folder", uid: "d", name: "sub" }] : [{ type: "file", uid: "f2", name: "b.js" }]), commitScan: async () => {} };
+    const r = await d.Sp(share, { full: true });
+    assert.deepEqual(r.files.map((f) => [f.name, f.path.join("/")]), [["a.risum", ""], ["b.js", "sub"]]); assert.equal(r.folders, 1); assert.equal(r.partial, false);
+  } finally { console.warn = warn; }
+});

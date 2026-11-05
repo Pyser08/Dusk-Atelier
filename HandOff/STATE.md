@@ -1,13 +1,12 @@
 # 현재 상태 — feat/1.9.2
 
 ## 2026-11-05 ProtLink+ 통합 (v1.9.2) — Dusk 방식으로 다시 만듦
-- `src/protlink/protlink.js`: 원작자 제공 v1.0.0에서 **Proton 연결부만** 쓴다(`loadProtLinkDriver(api)` → `{G3, Sp, Ln, Pa, PZ, Ot}`; G3({kv}).open(url,signal,pw) → share{list,download,thumbnail}, Sp = 폴더 훑기). 원본 화면·앱 로직은 안 쓰지만 minified 번들 안에 죽은 코드로 남아 있다. 고지 `NOTICES.txt`.
+- `src/protlink/protlink.js`: 원작자 제공 v1.0.0에서 **Proton 연결부만** 쓴다(`loadProtLinkDriver(api)` → `{G3, Sp, Ln, Pa, PZ, Ot}`; G3({kv}).open(url,signal,pw) → share{list,download,thumbnail}, Sp = 폴더 훑기). 원본 화면·앱 로직은 안 쓴다. `node tools/protlink-prune.mjs --write`로 쓰이지 않는 선언을 걷어 냈다(1089KB→912KB, 이름 기준 도달성이라 더 남기는 쪽으로만 틀림). 번들 6.3MB. 고지 `NOTICES.txt`.
 - 순수 로직 `src/engine/protlink.js`(파일 종류·연결 후보 순위·스냅샷 비교), 데이터 `src/data/protlink.js`(링크 저장 `dusk.protlink.links.v1`, 설정 `dusk.protlink.settings.v1`, on 키 `dusk.protlink.on` 기본 켜짐, 확인·받기·연결). 원본 `protlink_plus` 켜져 있으면 시작 안 함.
 - 화면 `ui/screens/protlink.js`(관리 탭 `protlink`, 플러그인 아래): 링크 추가(주소 → 파일 확인 → 종류·연결 항목 고르기), 목록(새 파일 배지·받아서 업데이트·확인·연결 바꾸기·이름·해제), 시작 확인 설정. 위젯 `protlink`(연결 항목·새 파일 배지, 누르면 탭 열기).
 - 받기: 캐릭터·모듈은 `legacy.startWithFiles(files, {target:{kind,id}})` → 가져오기 창에서 연결 항목이 맨 위 후보(`File.protlinkTarget`, legacy.js `candidatesFor`). 플러그인은 파일 저장만(플러그인 목록 쓰기 불가).
 - 테스트: `tests/protlink.test.js`, `protlink-engine.test.js`, e2e `run-protlink.mjs`(38), `run-widgethome.mjs`. 스페셜 땡스에 Erosync·ProtLink+ 추가.
 - 미확인: 실제 Proton 링크 열기·받기·비밀번호 링크, 받은 파일의 가져오기 창 후보 순위(실제 .risum/.charx), RisuAI/RisuBard/PocketRisu 실기기, 모바일 실기기. 원본 플러그인 저장소의 링크는 자동 이전 안 됨.
-- 다음: minified 번들의 죽은 앱 코드(약 330KB) 걷어내기(acorn 도달성 분석).
 - 참고: `run-app.mjs`(리수폿 탭 없음)·`run-tabs.mjs`·`run-hubs.mjs` 첫 항목은 이 작업 이전부터 낡아서 실패/중단.
 
 ## 2026-11-05 Erosync 검토 탭·NSFW 기본 칸 (v1.9.2)
