@@ -32,7 +32,8 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
     ], goals: [{ id: "g2", actor: "p3", actorName: "시로코", target: "p4", targetName: "호시노", type: "flirt", typeLabel: "플러팅", status: "active", priority: 55, objective: "순찰 끝나고 둘이 남기", nextMove: "" },{ id: "g1", actor: "p1", actorName: "리안", target: "p2", targetName: "카엘", type: "sexual_intercourse", typeLabel: "성관계 목표", status: "active", priority: 70, objective: "단둘이 되기", nextMove: "자리를 옮기자고 한다" }],
     rivalries: [{ actor: "p2", actorName: "카엘", rival: "p1", rivalName: "리안", intensity: 40, reason: "" }], relations: [] };
     window.__opened = 0;
-    __app.ctx.erosync = { isRunning: () => true, on: () => true, read: async () => snap, open: async () => true };
+    __app.ctx.erosync = { isRunning: () => true, on: () => true, read: async () => snap, open: async () => true,
+      content: async (patch) => { const st = (window.__lv ??= { ok: true, contentMode: "nsfw", extremityLimit: "unlimited", nsfwPlus: false, recheck: false, limits: [{ key: "moderate", cap: 20, label: "대화 안에서만" }, { key: "unlimited", cap: 100, label: "제한 없음" }] }); if (patch) Object.assign(st, patch); return { ...st }; } };
     __app.ctx.openErosync = async () => { window.__opened++; return true; };
   });
   // ── 인물 위키: 리안
@@ -80,6 +81,11 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 기억 화면에 Erosync 줄이 바로 보임`, await page.locator("#rb-mem-go-erosync").isVisible(), String(await page.locator("#rb-mem-go-erosync").count()));
   await page.locator("#rb-mem-go-erosync").click(); await page.waitForTimeout(600);
   ok(`[${tag}] 줄을 누르면 Erosync 설정 화면(켜기 스위치)이 열림`, await page.locator("#rb-erosync").isVisible());
+  ok(`[${tag}] 수위 카드가 보임`, await page.locator("#rb-erosync-level").isVisible());
+  await page.locator("#rb-erosync-level .rb-seg button[data-v=sfw]").click(); await page.waitForTimeout(300);
+  ok(`[${tag}] SFW를 고르면 저장되고 극단 행동 수위 칸이 잠김`, (await page.evaluate(() => window.__lv.contentMode)) === "sfw" && await page.locator("#rb-erosync-limit").isDisabled());
+  await page.locator("#rb-erosync-level .rb-seg button[data-v=plus]").click(); await page.waitForTimeout(300);
+  ok(`[${tag}] NSFW+를 고르면 nsfwPlus가 켜짐`, await page.evaluate(() => window.__lv.nsfwPlus === true));
   await page.screenshot({ path: `/tmp/ero-memhome-${tag}.png` });
   // Erosync 꺼짐/매칭 안 됨이면 칸이 없다
   await page.evaluate(() => { __app.ctx.erosync = { isRunning: () => false, read: async () => ({ ok: false }) }; });

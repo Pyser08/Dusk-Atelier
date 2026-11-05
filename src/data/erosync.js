@@ -71,6 +71,11 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
       if (!inst || typeof inst.read !== "function") return { ok: false, reason: "off", people: [], goals: [], rivalries: [], relations: [] };
       try { return await inst.read(); } catch (e) { return { ok: false, reason: String(e?.message ?? e), people: [], goals: [], rivalries: [], relations: [] }; }
     },
+    // 지금 열린 봇의 수위 설정(읽기·쓰기). 꺼져 있으면 { ok:false, reason:"off" }
+    async content(patch = null) {
+      if (!inst?.content) return { ok: false, reason: "off", limits: [] };
+      try { return patch ? await inst.content.set(patch) : await inst.content.get(); } catch (e) { return { ok: false, reason: String(e?.message ?? e), limits: [] }; }
+    },
     // Erosync 자체 화면(프로필 고치기·장면 등)을 연다. 꺼져 있으면 false
     async open() {
       if (!inst || typeof inst.open !== "function") return false;

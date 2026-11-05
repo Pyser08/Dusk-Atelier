@@ -36891,11 +36891,38 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
     return out;
   }
 
+  // Dusk 설정 화면 연결부: 지금 열린 봇의 수위(콘텐츠 모드·극단 행동 수위·NSFW+)를 읽고 바꾼다. 허용된 키만 받는다.
+  async function duskContentGet() {
+    const context = await getUiContext();
+    const key = String(context?.scope?.sourceBundleKey || '');
+    if (!key) return { ok: false, reason: context?.scopeUnavailable || 'no-chat', limits: [] };
+    const bot = await getBotOverride(key);
+    const policy = contentPolicyFor(bot);
+    return {
+      ok: true, botKey: key, contentMode: policy.contentMode, extremityLimit: policy.extremityLimit, nsfwPlus: policy.nsfwPlus, recheck: policy.recheck,
+      limits: EXTREMITY_LIMIT_KEYS.map((k) => ({ key: k, cap: EXTREMITY_LIMITS[k].cap, label: EXTREMITY_LIMITS[k].label })),
+    };
+  }
+  async function duskContentSet(patch) {
+    const context = await getUiContext();
+    const key = String(context?.scope?.sourceBundleKey || '');
+    if (!key) throw new Error('열린 채팅이 없어요');
+    const next = {};
+    if (patch && 'contentMode' in patch) next.contentMode = normalizeContentMode(patch.contentMode);
+    if (patch && 'extremityLimit' in patch) next.extremityLimit = normalizeExtremityLimit(patch.extremityLimit);
+    if (patch && 'nsfwPlus' in patch) next.nsfwPlus = patch.nsfwPlus === true;
+    if (patch && 'nsfwPlusRecheck' in patch) next.nsfwPlusRecheck = patch.nsfwPlusRecheck === true;
+    await updateBotOverride(key, next);
+    duskReadCache = null;
+    return duskContentGet();
+  }
+
   return {
     // 원본이 끝까지 올라왔는지(정리 함수를 맡겼으면 초기화가 끝까지 간 것)
     loaded: () => unloadFns.length > 0,
     // Dusk 읽기 연결부(위 duskReadSnapshot)
     read: duskReadSnapshot,
+    content: { get: duskContentGet, set: duskContentSet },
     // Erosync 자체 화면 열기(원본이 설정 항목으로 등록한 것과 같은 함수)
     open: () => openSettingsPanel(),
     async dispose() {

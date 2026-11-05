@@ -3,6 +3,7 @@ import { h, replace } from "../../dom.js";
 import { pageHead } from "../../kit.js";
 import { mem } from "./common.js";
 import { erosyncSection } from "./erosyncui.js";
+import { erosyncLevelCard } from "./erosynclevel.js";
 import { scanOriginalErosync } from "../../../data/erosyncmigrate.js";
 
 export const scanLine = (s) => !s?.found ? "" : `원래 Erosync에서 쓰던 기록을 찾았어요 — 인물 프로필 ${s.profiles}개${s.canListSessions ? ` · 채팅 기록 ${s.sessions}개` : ""}${s.botSettings ? ` · 봇별 설정 ${s.botSettings}개` : ""}. 같은 저장 공간을 쓰니 따로 옮길 필요 없이 켜면 그대로 이어져요. 원래 플러그인은 끄고 쓰세요.`;
@@ -16,5 +17,6 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
   replace(host, h("div", { class: "rb-me rb-ero-page" },
     pageHead("Erosync", { back }),
     line ? h("p", { class: "rb-card bordered rb-muted", id: "rb-erosync-found", style: "white-space:normal;padding:12px" }, line) : null,
-    sec));
+    sec,
+    erosyncLevelCard(ctx)));
 }
