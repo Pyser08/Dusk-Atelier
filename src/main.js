@@ -272,6 +272,16 @@ async function start() {
       // Dusk ‘이야기 시간’이 켜져 있으면 Erosync 주기 시계가 같은 상태 줄(날짜)을 읽는다
       storyStatus: (text, prevDate) => (storyTime.isOn() ? parseStoryStatus(text, { date: prevDate || "", time: "", place: "" }) : null) } });
   app.ctx.erosync = erosync;
+  // 지난 대화 분석이 끝나면 Erosync도: 이 채팅의 인물 성향이 아직 비어 있으면 전체 분석을 한 번 돌린다(이미 있으면 그대로)
+  memory.link.backfillErosync = async () => {
+    if (!erosync.isRunning()) return false;
+    const r = await erosync.read();
+    if (r?.ok && (r.people ?? []).length) return false;
+    const st = await erosync.profile("status");
+    if (st?.running) return false;
+    const res = await erosync.profile("start", "full");
+    return !!res?.ok;
+  };
   protlink.boot().catch((e) => console.log(`[${TITLE}] ProtLink+ 시작 실패 ${e?.message ?? e}`));
   erosync.boot().catch((e) => console.log(`[${TITLE}] Erosync 시작 실패 ${e?.message ?? e}`));
   app.ctx.cellar = memory.cellar;   // 한 곳에서 찾은 Cellar 연결을 화면들이 함께 쓴다

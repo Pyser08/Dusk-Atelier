@@ -116,3 +116,28 @@ export function regressLine(folder) {
     ? `Regression: ${list.join(", ")} have returned from a previous timeline and still remember everything from it (the memories below). No one else remembers that timeline.`
     : `Regression: ${list[0]} has returned from a previous timeline and still remembers everything from it (the memories below). No one else remembers that timeline.`;
 }
+
+// 이어서 하기: 인물을 전부 고르면 회귀가 아니라 지금까지의 기억 전체(장면·열린 항목·관계·위키·게이지·나에 대한 기억까지)를
+// 새 채팅으로 옮긴다. 긴 채팅을 새 채팅에서 기억만 들고 이어 가 토큰을 아끼려는 용도.
+const DROP = new Set(["cursor", "runs", "failedBackfill", "undo", "tomb", "imports", "alerts", "hints", "regress", "chaId", "chatId", "botName", "chatName", "chatIndex", "v", "wiki"]);
+export function continueSlice(folder, { scope = null, now = Date.now() } = {}) {
+  if (!folder) return null;
+  const out = {};
+  for (const [k, v] of Object.entries(folder)) if (!DROP.has(k)) out[k] = detach(v);
+  out.people = Object.fromEntries(Object.entries(folder.people ?? {}).map(([k, p]) => [k, { ...detach(p), records: (p.records ?? []).filter((r) => !r.orphan).map(carry) }]));
+  out.scenes = (folder.scenes ?? []).filter((s) => !s.orphan).map(carry);
+  for (const key of ["rels"]) for (const v of Object.values(out[key] ?? {})) v.items = (v.items ?? []).filter((x) => !x.orphan).map((x) => ({ ...x, at: null, carried: true }));
+  out.open = (folder.open ?? []).filter((x) => !x.orphan).map((x) => ({ ...detach(x), at: null, carried: true }));
+  out.hints = [];
+  out.continued = { at_ms: now };
+  let wikiDocs = 0;
+  if (folder.wiki && scope) {
+    const w = clone(folder.wiki);
+    delete w.automation; delete w.writerReceipts;
+    w.scope = { ...w.scope, characterId: String(scope.characterId), chatKey: String(scope.chatKey), characterName: String(scope.characterName ?? "").slice(0, 200), chatName: String(scope.chatName ?? "").slice(0, 200) };
+    delete w.scope.forkedFrom;
+    out.wiki = w; wikiDocs = Object.keys(w.documents ?? {}).length;
+  }
+  const people = Object.values(out.people);
+  return { slice: out, counts: { people: people.length, records: people.reduce((n, p) => n + p.records.length, 0), scenes: out.scenes.length, wiki: wikiDocs > 0, wikiDocs } };
+}

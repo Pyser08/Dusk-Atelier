@@ -41,7 +41,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   const fb = await page.evaluate(() => { const f = document.querySelector(".rb-rg-full"), c = f?.querySelector(".rb-rg-big")?.getBoundingClientRect(), b = f?.getBoundingClientRect(); return f ? { fw: b.width, fh: b.height, cw: c.width, vw: innerWidth, vh: innerHeight } : null; });
   ok(`[${tag}] 화면 전체를 덮는 큰 시계(화면 짧은 변의 70% 이상)`, !!fb && fb.fw >= fb.vw - 1 && fb.fh >= fb.vh - 1 && fb.cw >= Math.min(fb.vw, fb.vh) * 0.7, JSON.stringify(fb));
   await page.screenshot({ path: `/tmp/regress-${tag}-spin.png` });
-  await page.waitForSelector(".rb-rg-full.tick", { timeout: 9000 }); await page.waitForTimeout(350);
+  await page.waitForSelector(".rb-rg-full.tick", { timeout: 9000 }); await page.waitForTimeout(700);
   const hands = await page.evaluate(() => [...document.querySelectorAll(".rb-rg-big > g[transform]")].map((g) => g.getAttribute("transform")));
   await page.screenshot({ path: `/tmp/regress-${tag}-tick.png` });
   ok(`[${tag}] 끝날 때 '딸깍' 하며 두 바늘이 12시`, hands.length === 2 && hands.every((t) => /^rotate\(0 100 100\)$/.test(t)), hands.join(" | "));
@@ -54,6 +54,22 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   });
   ok(`[${tag}] 새 채팅이 생김(메시지 없음 → 첫 메시지로 시작)`, res.n === 2 && res.name === "회귀 · 시로코 · 카엘" && res.msgs === 0, JSON.stringify(res));
   ok(`[${tag}] 새 기억 폴더엔 고른 둘만, 원래 기억은 그대로`, res.people.sort().join() === "시로코,카엘" && res.reg === "시로코, 카엘" && res.orig >= 2, JSON.stringify(res));
+  // 전체 선택 → 이어서 하기
+  await page.evaluate(() => { const c = document.querySelector(".rb-modal"); if (c) c.remove(); });
+  await page.locator(".rb-btn", { hasText: "⏳ 회귀" }).first().click(); await page.waitForTimeout(500);
+  await page.locator(".rb-rg-all").click(); await page.waitForTimeout(150);
+  ok(`[${tag}] 전체 선택 → '이어서 하기' 제목·버튼·이름`, (await page.locator(".rb-rg h3").textContent()) === "이어서 하기" && (await page.locator(".rb-rg-go").textContent()) === "이어서 하기" && /^이어서 · /.test(await page.locator(".rb-rg-field input").inputValue()) && (await page.locator(".rb-rg-p[aria-pressed=true]").count()) === (await page.locator(".rb-rg-p").count()));
+  await page.locator(".rb-rg-go").click(); await page.waitForTimeout(400);
+  ok(`[${tag}] 연출 글자 CONTINUE`, /C|O|N|T|I|U|E/.test(await page.locator(".rb-rg-word").textContent()) && (await page.locator(".rb-rg-word").getAttribute("data-t")).length === 8);
+  await page.waitForSelector(".rb-rg-full.tick", { timeout: 9000 }); await page.waitForTimeout(3200);
+  const cres = await page.evaluate(async () => {
+    const ch = await __app.ctx.api.getCharacterFromIndex(0), c = ch.chats[0];
+    const f = await __app.ctx.memory.store.getFolder("c1", c.id), orig = await __app.ctx.memory.store.getFolder("c1", "t1");
+    const src = ch.chats.find((x) => x.id === "t1"), lastChar = [...src.message].reverse().find((m) => m.role !== "user");
+    return { name: c.name, msgs: c.message.length, same: c.message[0]?.data === lastChar?.data, cur: f?.cursor?.at, people: Object.keys(f?.people ?? {}).length, orig: Object.keys(orig.people).length, scenes: (f?.scenes ?? []).length, origScenes: (orig.scenes ?? []).filter((x) => !x.orphan).length, word: document.querySelector(".rb-rg-word")?.textContent ?? "" };
+  });
+  ok(`[${tag}] 이어서 하기: 인물·장면을 전부 가져옴`, /^이어서 · /.test(cres.name) && cres.people === cres.orig && cres.scenes === cres.origScenes, JSON.stringify(cres));
+  ok(`[${tag}] 이어서 하기: 원래 채팅 마지막 봇 응답이 새 채팅 첫 메시지(분석 위치도 맞춤)`, cres.msgs === 1 && cres.same && cres.cur === 0, JSON.stringify(cres));
   ok(`[${tag}] 페이지 오류 없음`, !errs.length, errs.join(" | "));
   await page.close();
 }

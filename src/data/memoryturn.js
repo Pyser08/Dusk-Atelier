@@ -6,6 +6,7 @@
 //  [응답 뒤] 기록하기(Writer): 리수폿 Writer 호출에 Dusk 기록 구획(dusk)을 같이 실어 한 번에 받는다.
 //    - 두 구획은 따로 검증한다. dusk 구획이 없거나 틀리면 기존 방식(따로 한 번 더 호출)으로 대신한다.
 //  빠른 모드: 모델 호출 없이 키워드로 인물을 고르고 정리 노트를 건너뛴다(응답 뒤 호출 1회). 정확하게: 고르기+정리 노트 사용.
+import { potState } from "../engine/memoryswitch.js";
 import { folderIdOf } from "./memorystore.js";
 import { SettingsStore } from "../engine/pot/settings.js";
 import { WikiController } from "./pot/wiki-controller.js";
@@ -203,13 +204,24 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       };
       link.takeCycle = () => cycleEvents.splice(0);
       link.take = (h) => { const v = stash.get(h); if (v) stash.delete(h); return v ?? null; };
+      // 지난 대화 분석에 리수폿 위키 기록도 함께: 묶음 끝 응답을 자동 기록 큐에 넣고, 끝나면 큐가 빌 때까지 기다린다.
+      link.backfillPotReady = async (character) => {
+        const idx = await store.getIndex();
+        return potState(idx, character?.chaId).on && r.auto.enabled();
+      };
+      link.backfillPot = (ci, ti, messageIndex, shared) => r.auto.schedule({ chat: shared.chat, char: shared.character, characterIndex: ci, chatIndex: ti, messageIndex });
+      link.backfillPotWait = (ci, ti, signal) => new Promise((res) => {
+        const p = r.auto.waitForScope(ci, ti, { timeoutMs: 10 * 60 * 1000 }).then(res, () => res(false));
+        signal?.addEventListener?.("abort", () => res(false), { once: true });
+        return p;
+      });
       rt = r; return r;
     })();
     try { return await starting; } finally { starting = null; }
   }
   async function stop() {
     if (!rt) return false;
-    const r = rt; rt = null; try { r.tools?.dispose(); } catch {} delete link.settle; delete link.take; delete link.takeCycle; stash.clear(); cycleEvents.length = 0; cyclePending = null;
+    const r = rt; rt = null; try { r.tools?.dispose(); } catch {} delete link.settle; delete link.take; delete link.takeCycle; delete link.backfillPot; delete link.backfillPotWait; delete link.backfillPotReady; stash.clear(); cycleEvents.length = 0; cyclePending = null;
     await r.hooks.dispose().catch(() => {});
     if (!pure) await injector.start();
     return true;

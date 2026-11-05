@@ -44,20 +44,22 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   const inj = S.inject ?? {};
   const orow = (title, text, v0, set) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, h("small", null, text)),
     switchEl(v0, { label: title, onChange: (v, el) => { setSwitch(el, v); save((st) => { st.inject ??= {}; set(st.inject, v); }); } }));
+  const orowS = (title, text, v0, set) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, h("small", null, text)),
+    switchEl(v0, { label: title, onChange: (v, el) => { setSwitch(el, v); save((st) => set(st, v)); } }));
   const memOptions = h("section", { class: "rb-card bordered rb-scard rb-mem-options" }, h("span", { class: "h" }, "기억 옵션"),
     orow("사람다운 기억", "관계 진도·호칭·말투·둘만의 추억 등을 기억해요.", inj.human !== false, (o, v) => { o.human = v; }),
     orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }),
     orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
-  // 리수폿 사용(이 채팅 단위라 열린 채팅이 있을 때만). 예전 '자동 기록 · 인물 추적'에 있던 스위치를 옮겼다.
-  if (cur) {
-    memOptions.append(h("div", { class: "rb-srow" }, h("span", { class: "t" }, "리수폿 사용", h("small", null, "이 채팅에서 리수폿(위키 기록)을 써요.")),
-      switchEl(sw?.pot?.on !== false, { label: "이 채팅에서 리수폿 사용", onChange: async (v, el) => {
-        setSwitch(el, v);
-        try { await M.switches.setPot(cur.chaId, v); if (v) maybePromptIntro(ctx); ctx.toast(v ? "이 채팅에서 리수폿을 켰어요." : "이 채팅에서 리수폿을 껐어요."); }
-        catch (e) { fail(ctx)(e); }
-        redraw();
-      } })));
-  }
+  memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 리수폿 위키 기록과 Erosync도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
+  // 리수폿 일괄 켜기·끄기(모든 봇·채팅). 예전엔 열린 채팅의 봇 하나만 바꿨다.
+  let potAll = true; try { potAll = await M.switches.potAllOn(); } catch { /* 기본 켜짐으로 표시 */ }
+  memOptions.append(h("div", { class: "rb-srow" }, h("span", { class: "t" }, "리수폿 일괄 사용", h("small", null, "모든 봇·채팅에서 리수폿(위키 기록)을 한꺼번에 켜고 꺼요.")),
+    switchEl(potAll, { label: "리수폿 일괄 사용", onChange: async (v, el) => {
+      setSwitch(el, v);
+      try { await M.switches.setPotAll(v); if (v) maybePromptIntro(ctx); ctx.toast(v ? "모든 봇에서 리수폿을 켰어요." : "모든 봇에서 리수폿을 껐어요."); }
+      catch (e) { fail(ctx)(e); }
+      redraw();
+    } })));
 
   return { memorySettings, memOptions };
 }
@@ -156,11 +158,11 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
       // 새로 분석할 응답이 없어도, 눌렀다면 처음부터 다시 분석할지 묻는다
       const all = activeMsgs.length && M.runner ? M.runner.planBackfill(activeMsgs, { from: 0, to: Math.max(0, activeMsgs.length - 1), all: true }, folder) : null;
       if (!all?.total) return ctx.toast("분석할 AI 응답이 없어요.");
-      const again = await confirmDialog(ctx.win, { title: "이미 모두 분석했어요", body: `AI 응답 ${all.total}개가 모두 분석돼 있어요. 처음부터 다시 분석할까요? 호출 ${all.calls}회 · 대략 ${all.tokens.toLocaleString()} 토큰이 들어요. 기존 기록은 지워지지 않고, 새로 확인된 내용이 더해지거나 바뀔 수 있어요.`, ok: "다시 분석" });
+      const again = await confirmDialog(ctx.win, { title: "미분석 응답이 없어요", body: `AI 응답 ${all.total}개가 모두 분석돼 있어서 전체를 다시 분석해요. 호출 ${all.calls}회 · 대략 ${all.tokens.toLocaleString()} 토큰이 들어요. 기존 기록은 지워지지 않고, 새로 확인된 내용이 더해지거나 바뀔 수 있어요.`, ok: "전체 분석" });
       if (!again) return;
       redo = true;
     } else {
-      const ok = await confirmDialog(ctx.win, { title: "지난 대화 분석", body: `AI 응답 ${activePlan.todo}개를 분석해요. 호출 ${activePlan.calls}회 · 대략 ${activePlan.tokens.toLocaleString()} 토큰이 들어요.`, ok: "분석하기" });
+      const ok = await confirmDialog(ctx.win, { title: "지난 대화 분석", body: `미분석 AI 응답 ${activePlan.todo}개만 분석해요. 호출 ${activePlan.calls}회 · 대략 ${activePlan.tokens.toLocaleString()} 토큰이 들어요.`, ok: "분석하기" });
       if (!ok) return;
     }
     const ctrl = new AbortController(), cancel = btn("취소", { size: "sm", onClick: () => ctrl.abort() });

@@ -1,6 +1,8 @@
 # 현재 상태 — feat/1.9.2
 
 - 회귀(2026-11-05): `engine/regress.js`(regressSlice·regressCandidates·regressLine, 순수) · `data/regress.js`(createRegressChat: 새 채팅 append+chatPage 이동, risupotWikiScopeId=새 id, 폴더 먼저 쓰고 실패 시 deleteFolder) · `ui/screens/regress.js`(신비 창, .rb-rg 범위 CSS) · 진입: chatmenu `dusk-qt-regress`, people.js 더보기·인물 상세, wikiview 헤더. carried 기록은 at:null(주입 최근 제외 회피)·src/hs 제거(대조 되돌림 회피)·회귀자 ctx=always, memoryinject에 Regression 줄. Erosync 값은 옮기지 않음. 테스트 tests/regress.test.js, e2e run-regress.mjs(22). 실기기 미확인.
+- 지난 대화 분석 함께 기록(2026-11-05): memoryrunner `backfillExtras`(settings.backfillExtras 기본 true) → link.backfillPot(묶음 끝 index를 auto.schedule)·backfillPotWait(waitForScope 10분)·backfillPotReady(potState+auto.enabled) — memoryturn rt 시작 시 채움. 끝나면 link.backfillErosync(main.js: Erosync 켜짐+read().people 비었을 때 profile start "full"). Erosync 턴 단위 기록은 planner pending 구조라 과거 재생 불가 → 성향 전체 분석으로 대체. 서버 분석 경로는 함께 기록 안 함. 리수폿 일괄: switches.setPotAll/potAllOn(potBots 초기화).
+- 이어서 하기(2026-11-05): 회귀 창에서 전부 고르면 `engine/regress.js continueSlice`(폴더 전체 detach·carried, cursor/runs/undo 등 제외, 위키 scope 교체·automation 제거) → `createRegressChat(mode:"continue")`. UI 전체 선택 버튼(.rb-rg-all), 글자 CONTINUE. e2e run-regress 36.
 ## 2026-11-05 ProtLink+ 통합 (v1.9.2) — Dusk 방식으로 다시 만듦
 - `src/protlink/protlink.js`: 원작자 제공 v1.0.0에서 **Proton 연결부만** 쓴다(`loadProtLinkDriver(api)` → `{G3, Sp, Ln, Pa, PZ, Ot}`; G3({kv}).open(url,signal,pw) → share{list,download,thumbnail}, Sp = 폴더 훑기). 원본 화면·앱 로직은 안 쓴다. `node tools/protlink-prune.mjs --write`로 쓰이지 않는 선언을 걷어 냈다(1089KB→912KB, 이름 기준 도달성이라 더 남기는 쪽으로만 틀림). 번들 6.3MB. 고지 `NOTICES.txt`.
 - 업데이트 알림: `src/data/updatetoast.js`(retrytoast 방식, mainDom 권한, 실패 시 false→main.js가 앱 내 toast로 대체) + `engine/protlink.js updateMessage`. 실제 호스트(RisuAI/RisuBard/PocketRisu) 동작은 미확인.
@@ -706,3 +708,5 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 못 한 것/미확인: 실제 채팅·모델에서 장면 되돌리기·관계 온도 기록·태그 주입·이야기 날짜 시계가 도는지(엔진 함수는 단위 시험·소스 확인만), 세 호스트 실기기. 관계 온도의 ‘반감’은 엔진의 hatred 값(별도 ‘긴장’ 값은 없음). 되돌리기 뒤 집착 방지 상태(`duskGuard`)와 온도 기록은 같은 턴 이상만 다음 기록 때 정리됨.
 - **값 입력 칸 UI(2026-11-05)**: `src/ui/fields.js`(sliderField·selectField·controlField·toggleField) + `styles.js`의 `.rb-fld`·`.rb-range`. Erosync 수위/동작/분석/집착 방지 카드가 사용. 다른 화면의 기본 모양 input은 이번에 건드리지 않음.
 - 집착성 상한 기본 20(엔진·컨트롤러·UI). 선택 칸은 `choiceField`(optionCards+설명), 스위치는 `.rb-toggle`(장기 기억과 같은 모양). '검토 후 반영'(기본값)은 Dusk에 확인 화면이 없어 후보만 쌓임 → 설명에 적어 둠, 기본값 변경은 사용자 결정 필요.
+
+- Erosync 수위 일괄화: 엔진 `globalContent` 오버레이(getBotOverride) + `inst.content.global()`, 값은 dusk.erosync.level(src/data/erosync.js). 봇별 저장은 더 안 씀(기존 봇별 값은 일괄 값이 있으면 가려짐). 지난 대화 분석: 미분석만, 없으면 전체 재분석(안내 후 확인).

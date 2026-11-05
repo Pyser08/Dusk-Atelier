@@ -288,13 +288,14 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     }
     const shared = { character, chat };
     const failed = [], reasons = []; let n = 0;
+    const extras = await backfillExtras(charIndex, chatIndex, shared, groups.length);
     for (const g of groups) {
       if (signal?.aborted) break;
       // 생성 중인지는 현재 채팅 하나만 5묶음마다 확인한다(캐릭터 전체 복사 금지).
       if (n > 0 && n % 5 === 0 && isChatStreaming(await api.getChatFromIndex(charIndex, chatIndex))) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
       // 요청 한도·시간 초과·서버 오류 같은 일시적 오류는 간격을 늘려 가며 2번까지 다시 시도한다(실패 원인은 reasons로 돌려준다).
       for (let attempt = 0; ; attempt++) {
-        try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true, redo, shared }); break; }
+        try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true, redo, shared }); if (extras) extras.pot(g.at(-1)); break; }
         catch (e) {
           const msg = String(e?.message ?? e).slice(0, 160);
           if (signal?.aborted) { failed.push(g); break; }
@@ -310,7 +311,25 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
       const msgs = chat.message ?? [], hs = failed.flat().map((i) => messageIdentity(msgs[i]));
       await store.updateFolder(String(character.chaId), String(chat.id ?? chatIndex), (f) => { f.failedBackfill = [...new Set([...(f.failedBackfill ?? []), ...hs])].slice(-500); }).catch(() => {});
     }
+    if (extras && !signal?.aborted) await extras.finish({ signal });
     return { total: groups.length, failed, reasons };
+  }
+  // 지난 대화 분석에 리수폿 위키 기록·Erosync도 함께(설정 '지난 대화 분석에 함께 기록', 기본 켜짐).
+  // 리수폿: 묶음마다 마지막 응답을 리수폿 Writer에 맡긴다(묶음당 호출 1번 더). Erosync: 끝나고 한 번, 인물 성향이 비어 있으면 전체 분석.
+  // 둘 다 꺼져 있거나 쓸 수 없으면 아무것도 하지 않는다(지금처럼 기억만).
+  async function backfillExtras(charIndex, chatIndex, shared, count) {
+    if (!count) return null;
+    let on = true; try { on = (await store.getIndex()).settings?.backfillExtras !== false; } catch { /* 기본 켜짐 */ }
+    if (!on) return null;
+    let potOk = typeof link?.backfillPot === "function";
+    if (potOk && typeof link.backfillPotReady === "function") { try { potOk = await link.backfillPotReady(shared.character) !== false; } catch { potOk = false; } }
+    return {
+      pot: (i) => { if (!potOk) return; try { link.backfillPot(charIndex, chatIndex, i, shared); } catch (e) { log("리수폿 함께 기록 실패", e?.message ?? e); } },
+      async finish({ signal } = {}) {
+        if (potOk && typeof link.backfillPotWait === "function") { try { await link.backfillPotWait(charIndex, chatIndex, signal); } catch (e) { log("리수폿 기록 대기 실패", e?.message ?? e); } }
+        if (typeof link?.backfillErosync === "function") { try { await link.backfillErosync(); } catch (e) { log("Erosync 함께 분석 실패", e?.message ?? e); } }
+      }
+    };
   }
 
   return { start, onOutput, confirmNext, tick, analyzeAt, prepareLatest, analyzeLatest: async (ci, ti) => { const i = await latestAiIndex(ci, ti); if (i < 0) throw new Error("분석할 AI 응답이 없어요."); return analyzeAt(ci, ti, [i], { manual: true }); },

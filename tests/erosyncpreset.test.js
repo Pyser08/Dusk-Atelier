@@ -28,7 +28,7 @@ test("컨트롤러: 꺼져 있으면 저장·적용은 off, 켜져 있으면 지
   const api = mem(); const calls = [];
   let level = { ok: true, contentMode: "nsfw", extremityLimit: "mild", nsfwPlus: false };
   const inst = { loaded: () => true, dispose: async () => {}, guard: { set: (g) => calls.push(["guard", g]) }, flags: { set() {} },
-    content: { get: async () => level, set: async (p) => { calls.push(["content", p]); level = { ...level, ...p }; return level; } },
+    content: { get: async () => level, set: async (p) => { level = { ...level, ...p }; return level; }, global: (p) => { calls.push(["content", p]); level = { ...level, ...p }; } },
     config: { get: async () => ({ ok: true, values: { frequency: 3 } }), set: async (p) => { calls.push(["config", p]); return {}; } } };
   const er = createErosync(api, { boot: async () => inst, load: async () => true });
   assert.equal((await er.savePreset("x")).reason, "off");
@@ -39,9 +39,26 @@ test("컨트롤러: 꺼져 있으면 저장·적용은 off, 켜져 있으면 지
   await er.setGuard({ on: true, restTurns: 9 });
   level = { ...level, contentMode: "sfw" };
   const a = await er.applyPreset(p.id); assert.ok(a.ok);
-  assert.ok(calls.some((c) => c[0] === "content" && c[1].contentMode === "nsfw"));
+  assert.ok(calls.some((c) => c[0] === "content" && c[1]?.contentMode === "nsfw"));
   assert.ok(calls.some((c) => c[0] === "config" && c[1].frequency === 3));
   assert.equal((await er.applyPreset("none")).ok, false);
   assert.equal((await er.deletePreset(p.id)).length, 0);
   await er.stop();
+});
+
+test("수위는 일괄 값으로 저장되고 다시 켜면 엔진에 넣는다", async () => {
+  const api = mem(); const globals = [];
+  const inst = { loaded: () => true, dispose: async () => {}, guard: { set() {} }, flags: { set() {} },
+    content: { get: async () => ({ ok: true, contentMode: "nsfw", extremityLimit: "mild", nsfwPlus: false, recheck: false }), set: async () => { throw new Error("봇별 저장 금지"); }, global: (v) => globals.push(v) },
+    config: { get: async () => ({ ok: true, values: {} }), set: async () => ({}) } };
+  const er = createErosync(api, { boot: async () => inst, load: async () => true });
+  await er.boot();
+  await er.content({ contentMode: "sfw", nsfwPlus: false });
+  assert.deepEqual(globals.at(-1), { contentMode: "sfw", nsfwPlus: false, extremityLimit: "mild", nsfwPlusRecheck: false });
+  assert.equal(JSON.parse(api.pluginStorage.getItem.length ? await api.pluginStorage.getItem("dusk.erosync.level") : "{}").contentMode, "sfw");
+  await er.stop();
+  const er2 = createErosync(api, { boot: async () => inst, load: async () => true });
+  await er2.boot();
+  assert.equal(globals.at(-1).contentMode, "sfw");
+  await er2.stop();
 });
