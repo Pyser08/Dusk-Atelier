@@ -1,6 +1,7 @@
 # 현재 상태 — feat/1.9.2
 
 - 회귀(2026-11-05): `engine/regress.js`(regressSlice·regressCandidates·regressLine, 순수) · `data/regress.js`(createRegressChat: 새 채팅 append+chatPage 이동, risupotWikiScopeId=새 id, 폴더 먼저 쓰고 실패 시 deleteFolder) · `ui/screens/regress.js`(신비 창, .rb-rg 범위 CSS) · 진입: chatmenu `dusk-qt-regress`, people.js 더보기·인물 상세, wikiview 헤더. carried 기록은 at:null(주입 최근 제외 회피)·src/hs 제거(대조 되돌림 회피)·회귀자 ctx=always, memoryinject에 Regression 줄. Erosync 값은 옮기지 않음. 테스트 tests/regress.test.js, e2e run-regress.mjs(22). 실기기 미확인.
+- 이어서 하기(2026-11-05): 회귀 창에서 전부 고르면 `engine/regress.js continueSlice`(폴더 전체 detach·carried, cursor/runs/undo 등 제외, 위키 scope 교체·automation 제거) → `createRegressChat(mode:"continue")`. UI 전체 선택 버튼(.rb-rg-all), 글자 CONTINUE. e2e run-regress 36.
 ## 2026-11-05 ProtLink+ 통합 (v1.9.2) — Dusk 방식으로 다시 만듦
 - `src/protlink/protlink.js`: 원작자 제공 v1.0.0에서 **Proton 연결부만** 쓴다(`loadProtLinkDriver(api)` → `{G3, Sp, Ln, Pa, PZ, Ot}`; G3({kv}).open(url,signal,pw) → share{list,download,thumbnail}, Sp = 폴더 훑기). 원본 화면·앱 로직은 안 쓴다. `node tools/protlink-prune.mjs --write`로 쓰이지 않는 선언을 걷어 냈다(1089KB→912KB, 이름 기준 도달성이라 더 남기는 쪽으로만 틀림). 번들 6.3MB. 고지 `NOTICES.txt`.
 - 업데이트 알림: `src/data/updatetoast.js`(retrytoast 방식, mainDom 권한, 실패 시 false→main.js가 앱 내 toast로 대체) + `engine/protlink.js updateMessage`. 실제 호스트(RisuAI/RisuBard/PocketRisu) 동작은 미확인.

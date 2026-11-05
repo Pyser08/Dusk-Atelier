@@ -23,6 +23,10 @@ const CSS = `
 .rb-rg-eyebrow{font-size:11px;font-weight:700;letter-spacing:.32em;color:var(--rb-acc-text);text-transform:uppercase}
 .rb-rg h3{margin:0;font-size:22px;font-weight:700;color:var(--rb-text)}
 .rb-rg-sub{margin:0;max-width:42ch;font-size:13.5px;line-height:1.65;color:var(--rb-sub)}
+.rb-rg-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 0;font-size:12.5px;color:var(--rb-sub)}
+.rb-rg button.rb-rg-all{min-height:32px;padding:0 14px;border-radius:999px;border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-surf);color:var(--rb-text);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.rb-rg button.rb-rg-all:hover{background:var(--rb-hover)}
+.rb-rg button.rb-rg-all[aria-pressed=true]{border-color:var(--rb-acc);color:var(--rb-acc-text);background:var(--rb-acc-soft)}
 .rb-rg-list{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:6px 0 14px}
 .rb-rg-p{display:flex;align-items:center;gap:10px;min-height:56px;padding:10px 12px;border-radius:var(--rb-r3,14px);cursor:pointer;text-align:left;color:var(--rb-text);font:inherit;
   background:var(--rb-surf);border:var(--rb-bw,1px) solid var(--rb-line2);transition:border-color .15s,background .15s}
@@ -251,7 +255,9 @@ export async function openRegress(ctx, src) {
   const folder = src.folder ?? await M.store.getFolder(src.chaId, src.chatId).catch(() => null);
   const people = regressCandidates(folder);
   const pick = new Set(src.who && people.some((p) => p.key === src.who) ? [src.who] : people[0] ? [people[0].key] : []);
-  const label = () => `회귀 · ${people.filter((p) => pick.has(p.key)).map((p) => p.name).join(" · ")}`;
+  // 전부 고르면 회귀가 아니라 '이어서 하기'(기억 전체를 새 채팅으로)
+  const isAll = () => people.length > 0 && pick.size === people.length;
+  const label = () => isAll() ? `이어서 · ${folder?.chatName || folder?.botName || "기억"}` : `회귀 · ${people.filter((p) => pick.has(p.key)).map((p) => p.name).join(" · ")}`;
   return modal(ctx.win, (done) => {
     const root = h("div", { class: "rb-rg", role: "dialog", "aria-modal": "true", "aria-labelledby": "rb-rg-title" });
     const list = h("div", { class: "rb-rg-list", role: "group", "aria-label": "회귀할 인물" });
@@ -259,11 +265,23 @@ export async function openRegress(ctx, src) {
     const nm = h("input", { value: pick.size ? label() : "", "aria-label": "새 채팅 이름", maxlength: 120 });
     let touched = false; nm.addEventListener("input", () => { touched = true; });
     const go = h("button", { type: "button", class: "rb-rg-go", disabled: !pick.size || null }, "회귀한다");
-    const paint = () => replace(list, people.map((p) => h("button", {
+    const NOTE_REG = "고른 인물의 장기 기억·인물 위키·관계와 감정이 새 채팅으로 함께 가요. 장면과 진행 중인 일은 새로 시작해요. 지금 채팅은 그대로 남아요.";
+    const NOTE_ALL = "모두 골랐어요. 회귀 대신 지금까지 기록된 전부(상황·장면·열린 항목·관계도·인물 위키·게이지·나에 대한 기억)를 새 채팅으로 가져가 이어서 해요. 긴 대화를 새 채팅에서 기억만 들고 이어 가면 토큰을 아낄 수 있어요. 지금 채팅은 그대로 남아요.";
+    const note = h("p", { class: "rb-rg-note" }, NOTE_REG);
+    const allBtn = h("button", { type: "button", class: "rb-rg-all" }, "전체 선택");
+    const sync = () => {
+      const all = isAll();
+      go.textContent = all ? "이어서 하기" : "회귀한다"; go.disabled = !pick.size;
+      note.textContent = all ? NOTE_ALL : NOTE_REG;
+      allBtn.textContent = all ? "선택 해제" : "전체 선택"; allBtn.setAttribute("aria-pressed", String(all));
+      if (!touched) nm.value = pick.size ? label() : "";
+    };
+    allBtn.addEventListener("click", () => { if (isAll()) pick.clear(); else people.forEach((p) => pick.add(p.key)); paint(); });
+    const paint = () => { sync(); replace(list, people.map((p) => h("button", {
       type: "button", class: "rb-rg-p", "aria-pressed": String(pick.has(p.key)),
-      onClick: () => { pick.has(p.key) ? pick.delete(p.key) : pick.add(p.key); if (!touched) nm.value = pick.size ? label() : ""; go.disabled = !pick.size; paint(); }
+      onClick: () => { pick.has(p.key) ? pick.delete(p.key) : pick.add(p.key); paint(); }
     }, h("span", { class: "rb-rg-av", "aria-hidden": "true" }, p.name.trim().slice(0, 1) || "?"),
-      h("span", null, h("b", null, p.name), h("small", null, `기억 ${p.records}개${p.digest ? " · 요약" : ""}`)))));
+      h("span", null, h("b", null, p.name), h("small", null, `기억 ${p.records}개${p.digest ? " · 요약" : ""}`))))); };
     paint();
     let busy = false;
     const close = () => { if (!busy) done(null); };
@@ -277,7 +295,8 @@ export async function openRegress(ctx, src) {
       const sparks = Array.from({ length: 18 }, (_, k) => h("i", { class: "rb-rg-spark", style: `--a:${k * 20 + (k % 2) * 7}deg;--d:${28 + (k % 3) * 9}vmin` }));
       const dust = Array.from({ length: 22 }, (_, k) => h("i", { class: "rb-rg-dust", style: `left:${(k * 37) % 100}%;top:${60 + (k * 13) % 40}%;--t:${3 + (k % 5) * 0.7}s;--dl:${(k % 7) * 0.35}s` }));
       const stageWrap = h("div", { class: "rb-rg-stagewrap" }, h("div", { class: "rb-rg-halo" }), h("div", { class: "rb-rg-rays" }), big.svg, fxLayer(doc), h("i", { class: "rb-rg-wave" }), h("i", { class: "rb-rg-wave w2" }), ...sparks);
-      const word = h("div", { class: "rb-rg-word", "aria-hidden": "true", "data-t": "RETURN" }, "RETURN"), gw = glitchWord(word);
+      const cont = isAll(), W = cont ? "CONTINUE" : "RETURN";
+      const word = h("div", { class: "rb-rg-word", "aria-hidden": "true", "data-t": W }, W), gw = glitchWord(word, W);
       const full = h("div", { class: "rb-rg-full glitch", role: "status" }, h("style", null, CSS), ...dust, h("div", { class: "rb-rg-flash", "aria-hidden": "true" }), stageWrap, word, fstage);
       (doc.body ?? ctx.win).appendChild(full);
       requestAnimationFrame(() => full.classList.add("on"));
@@ -287,12 +306,12 @@ export async function openRegress(ctx, src) {
       const tick = setInterval(() => { i = (i + 1) % STAGES.length; stage.textContent = fstage.textContent = STAGES[i]; }, 900);
       try {
         const [res] = await Promise.all([
-          createRegressChat(ctx.api, src.ci, { store: M.store, folder, who: [...pick], name: nm.value.trim(), isGenerating, Busy }),
+          createRegressChat(ctx.api, src.ci, { store: M.store, folder, who: [...pick], mode: cont ? "continue" : "regress", name: nm.value.trim(), isGenerating, Busy }),
           sleep(2800)   // 연출: 시계가 충분히 돌아가게
         ]);
         clearInterval(tick); fstage.textContent = "XII…";
         await spin.land();   // 느려지다가 딸깍, 12시
-        fstage.textContent = stage.textContent = `${res.person}의 기억과 함께, 처음으로 돌아왔어요.`;
+        fstage.textContent = stage.textContent = cont ? "모든 기억을 들고, 새 채팅에서 이어 가요." : `${res.person}의 기억과 함께, 처음으로 돌아왔어요.`;
         await sleep(1500);
         await endFull();
         busy = false; done(res);
@@ -305,11 +324,12 @@ export async function openRegress(ctx, src) {
       h("style", null, CSS),
       h("button", { type: "button", class: "rb-rg-x", "aria-label": "닫기", onClick: close }, "✕"),
       h("div", { class: "rb-rg-head" }, clockSvg(ctx.win.ownerDocument ?? document), h("span", { class: "rb-rg-eyebrow" }, "Regression"), h("h3", { id: "rb-rg-title" }, "회귀"),
-        h("p", { class: "rb-rg-sub" }, "회귀할 사람을 고르세요. 여러 명도 돼요. 고른 사람만 지금까지의 기억을 안고 처음으로 돌아가고, 다른 이들은 아무것도 기억하지 못해요.")),
+        h("p", { class: "rb-rg-sub" }, "회귀할 사람을 고르세요. 여러 명도 돼요. 고른 사람만 지금까지의 기억을 안고 처음으로 돌아가고, 다른 이들은 아무것도 기억하지 못해요. 전부 고르면 기억 전체를 들고 ‘이어서 하기’가 돼요.")),
       ...(people.length ? [
+        h("div", { class: "rb-rg-bar" }, h("span", null, `인물 ${people.length}명`), allBtn),
         list,
         h("label", { class: "rb-rg-field" }, "새 채팅 이름", nm),
-        h("p", { class: "rb-rg-note" }, "고른 인물의 장기 기억·인물 위키·관계와 감정이 새 채팅으로 함께 가요. 장면과 진행 중인 일은 새로 시작해요. 지금 채팅은 그대로 남아요."),
+        note,
         go, stage
       ] : [h("div", { class: "rb-rg-empty" }, "이 채팅에는 아직 기억된 인물이 없어요.", h("br"), "대화가 조금 쌓인 뒤에 다시 와 주세요.")])
     );

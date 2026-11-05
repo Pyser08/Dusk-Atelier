@@ -1,6 +1,6 @@
 // 회귀 (v1.9.2): 고른 인물의 기억만 들고 같은 봇에 새 채팅을 만든다. 원래 채팅과 그 기억은 건드리지 않는다.
 import { newId } from "../engine/util.js";
-import { regressSlice } from "../engine/regress.js";
+import { regressSlice, continueSlice } from "../engine/regress.js";
 import { normalizeWikiScope } from "../engine/pot/wiki-schema.js";
 import { CHAT_SCOPE_FIELD } from "../engine/pot/chat-scope.js";
 
@@ -12,10 +12,13 @@ export async function createRegressChat(api, charIndex, opts) {
   if (String(ch.chaId) !== String(folder.chaId)) throw new Error("기억과 캐릭터가 맞지 않아요. 다시 열어 주세요.");
   if (isGenerating(ch)) throw new Busy();
   const id = newId();
-  const probe = regressSlice(folder, who);
+  // mode "continue": 기억 전체를 들고 이어서 하기 · 그 밖: 고른 인물만 회귀
+  const cont = opts.mode === "continue";
+  const probe = cont ? continueSlice(folder) : regressSlice(folder, who);
   if (!probe) throw new Error("그 인물의 기억을 찾지 못했어요.");
-  const label = (opts.name || `회귀 · ${probe.person}`).slice(0, 120);
-  const plan = regressSlice(folder, who, { scope: { characterId: ch.chaId, chatKey: id, characterName: ch.name ?? "", chatName: label }, fromChat: folder.chatName ?? "" });
+  const label = (opts.name || (cont ? `이어서 · ${folder.chatName || ch.name || "기억"}` : `회귀 · ${probe.person}`)).slice(0, 120);
+  const scope = { characterId: ch.chaId, chatKey: id, characterName: ch.name ?? "", chatName: label };
+  const plan = cont ? { ...continueSlice(folder, { scope }), person: "모두" } : regressSlice(folder, who, { scope, fromChat: folder.chatName ?? "" });
   let wikiOk = !!plan.slice.wiki;
   if (wikiOk) { try { plan.slice.wiki = normalizeWikiScope(plan.slice.wiki); } catch { delete plan.slice.wiki; wikiOk = false; } }
   // 새 채팅: 메시지 없이 시작 → 봇의 첫 메시지가 나온다. 위키 범위 ID를 채팅 ID로 고정해 이 위키가 이 채팅에 붙게 한다.

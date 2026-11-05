@@ -84,3 +84,17 @@ test("createRegressChat: 메시지 없는 새 채팅을 덧붙이고 새 폴더�
   assert.equal(res.counts.wiki, true); assert.equal(Object.keys(nf.wiki.documents).length, 1);
   assert.equal(Object.keys(src.people).length, 2, "원래 기억은 그대로");
 });
+
+import { continueSlice } from "../src/engine/regress.js";
+test("이어서 하기: 장면·열린 항목·관계·위키·게이지·나까지 전부, 출처를 떼어 새 채팅에서 그대로", () => {
+  const f = folder(); f.people["{{user}}"] = { name: "{{user}}", records: [{ id: "u1", act: "나", g: "B", at: 3, h: "u" }] };
+  const out = continueSlice(f, { scope: { characterId: "c1", chatKey: "n" } }), s = out.slice;
+  assert.deepEqual(Object.keys(s.people).sort(), ["{{user}}", "시로코", "호시노"].sort());
+  assert.equal(s.scenes.length, 1); assert.equal(s.scenes[0].carried, true); assert.equal(s.scenes[0].at, null);
+  assert.equal(s.open.length, 1); assert.equal(Object.keys(s.rels).length, 2); assert.equal(s.bonds.length, 2);
+  assert.deepEqual(Object.keys(s.wiki.documents).sort(), ["a", "b"]); assert.equal(s.wiki.scope.chatKey, "n");
+  assert.equal(s.regress, undefined); assert.equal(s.cursor, undefined);
+  const nf = structuredClone(s); reconcile(nf, [{ role: "char", data: "새 채팅", chatId: "z" }]);
+  assert.equal(nf.emo["시로코>{{user}}"].tags.trust, 3); assert.equal(nf.scenes[0].orphan, false);
+  assert.match(String(buildBlock(nf, { messageCount: 1 }).text), /옛 장면|은행을 털었다/);
+});
