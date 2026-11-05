@@ -8,6 +8,7 @@
   ② 채팅테마 분리 끝 — `addons/chattheme/index.js`(v1.0.0, minCore 1.9.2 — 지금 코어 버전이 1.9.2라 실기기 시험용, 2.0.0 출시 때 minCore 2.0.0으로, 84KB, 코어 모듈 7개 공유). 코어에서 tools.js 화면·줄, settings.js 꾸미기 버튼(slot look.mine)·스튜디오 칸(slot look.adv), tabs.js·tour.js 안내 글 제거. 시작 때 테마 적용(restoreActiveTheme)은 `data/themes.js`로 옮겨 코어에 남김.
   e2e `app.entry.js`는 기본으로 기능 애드온 소스를 켜고(`FEATURE_ADDONS`), `coreOnly`면 코어만. `run-addon-chattheme.mjs`(코어만/켬/배포 파일 14개).
   참고: `run-app.mjs`는 수정 전에도 실패(오래된 시험).
+  고침(11-06): 애드온 켜고 끌 때 전체 다시 그리기·스크롤 튐 → ext는 지금 화면이 읽은 자리만 다시 그림, 스크롤 지킴이는 클릭 대신 `ctx.go` 화면 이동(markNav)만 맨 위로. 규칙은 UI-STYLE.md 4-1.
 - 매 단계 끝: 애드온 없이 코어만으로 npm test·e2e 통과 + 애드온 켠 상태 e2e 통과 확인.
 
 ## 2026-11-05 애드온 로더 시험판 (버전 미변경)

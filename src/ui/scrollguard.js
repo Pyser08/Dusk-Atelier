@@ -9,15 +9,14 @@
 //   ② 기존 영역이 끝에 붙은 채 기억보다 위에 있을 때(내용이 짧아졌다 다시 늘어남).
 // - 사용자가 직접 스크롤하는 중에는 건드리지 않는다. 메인 화면(data-view)이 바뀌면 기억을 비운다.
 export const SCROLLER = ".rb-main,.rb-scroll,[data-keep-scroll-item],.rb-modal>*";
-const INTENT_MS = 700, CLICK_MS = 3000, PENDING_MS = 8000;
-// 설정을 바꾸는 입력(스위치·체크·선택칸)은 화면 이동이 아니므로 클릭 뒤에도 되돌린다. 그 밖의 버튼·링크는 이동일 수 있어 3초간 새 영역을 되돌리지 않는다.
-const SETTING = "[role=switch],input,select,textarea,label,[role=radio],[role=checkbox],[role=slider]";
+const INTENT_MS = 700, PENDING_MS = 8000;
+// 화면 이동(ctx.go)은 markNav()로 알려 준다 → 그 화면의 기억을 비워서 새 화면은 맨 위에서 시작. 그 밖의 다시 그리기(버튼·스위치·불러오기·애드온 켜고 끄기)는 위치를 지킨다.
 
 export function installScrollGuard(win, main) {
   if (!win) return null;
   if (win.__scrollGuard) return win.__scrollGuard;
   const saved = new Map(); let present = new Set(); const pending = new WeakMap();   // pending: 끝으로 밀려난(튄) 영역 → 그때 시각
-  let intentAt = 0, clickAt = 0, view = main?.getAttribute("data-view") ?? "", queued = false;
+  let intentAt = 0, view = main?.getAttribute("data-view") ?? "", queued = false;
   const now = () => Date.now();
   const atMax = (n) => n.scrollHeight - n.clientHeight - n.scrollTop <= 2;
   const base = (n) => {
@@ -56,7 +55,7 @@ export function installScrollGuard(win, main) {
       if (!want || n.scrollTop >= want - 2) { pending.delete(n); continue; }
       if (!fresh && atMax(n)) { pending.set(n, pending.get(n) ?? now()); n.scrollTop = want; continue; }   // 짧아진 채: 할 수 있는 만큼, 늘어나면 마저
       const p = pending.get(n);
-      if (fresh ? now() - clickAt > CLICK_MS : p && now() - p < PENDING_MS) { n.scrollTop = want; if (n.scrollTop >= want - 2) pending.delete(n); }
+      if (fresh || (p && now() - p < PENDING_MS)) { n.scrollTop = want; if (n.scrollTop >= want - 2) pending.delete(n); }
     }
   };
   const schedule = () => {
@@ -67,7 +66,7 @@ export function installScrollGuard(win, main) {
   };
   const intent = () => { intentAt = now(); };
   const onKey = (e) => { if (/^(Arrow(Up|Down)|Page(Up|Down)|Home|End| )$/.test(e.key) && !/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName ?? "")) intent(); };
-  const onDown = (e) => { if (!e.target?.closest?.(SETTING)) clickAt = now(); if (e.target?.matches?.(SCROLLER)) intent(); };   // 스크롤바 끌기
+  const onDown = (e) => { if (e.target?.matches?.(SCROLLER)) intent(); };   // 스크롤바 끌기
   const opt = { passive: true, capture: true };
   win.addEventListener("wheel", intent, opt);
   win.addEventListener("touchmove", intent, opt);
@@ -78,6 +77,7 @@ export function installScrollGuard(win, main) {
   try { mo = new MutationObserver(schedule); mo.observe(win, { childList: true, subtree: true }); } catch { /* MutationObserver 없는 환경 */ }
   const guard = {
     saved,
+    markNav() { saved.clear(); },   // 다른 화면으로 옮김: 기억을 비운다
     dispose() {
       mo?.disconnect();
       win.removeEventListener("wheel", intent, opt); win.removeEventListener("touchmove", intent, opt);

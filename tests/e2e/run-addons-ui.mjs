@@ -27,6 +27,22 @@ for (const mobile of [false, true]) {
   await row.getByRole("button", { name: "지우기" }).click(); await page.waitForTimeout(400);
   ok(`[${tag}] 지우기 → 다시 받을 수 있어요`, /받을 수 있어요/.test(await row.textContent()));
   await page.getByRole("button", { name: "업데이트 확인" }).click(); await page.waitForTimeout(400);
+  const sc = () => page.evaluate(() => { const n = [...document.querySelectorAll(".rb-main,.rb-main .rb-scroll")].sort((a, b) => b.scrollHeight - a.scrollHeight)[0]; return { top: n.scrollTop, id: (n.__tid ??= Math.random()) }; });
+  for (const aid of ["hello", "chattheme"]) {
+    const row = page.locator(`[data-addon=${aid}]`);
+  // 켜고 끌 때 창을 다시 불러오지 않고 스크롤도 그대로
+  await page.evaluate((aid) => document.querySelector(`[data-addon=${aid}]`).scrollIntoView({ block: "center" }), aid); await page.waitForTimeout(300);
+  const s0 = await sc(); const mark = await page.evaluate(() => { const m = document.querySelector(".rb-main").firstElementChild; m.__keepMark = 1; return !!m; });
+  await row.getByRole("button", { name: "받기" }).click(); await page.waitForTimeout(600);
+  await row.locator("[role=switch]").click(); await page.waitForTimeout(600);
+  await row.locator("[role=switch]").click(); await page.waitForTimeout(600);
+  await row.getByRole("button", { name: "지우기" }).click(); await page.waitForTimeout(600);
+  const s1 = await sc();
+  ok(`[${tag}] ${aid} 받기·끄기·켜기·지우기 동안 스크롤 그대로`, s0.top > 0 && Math.abs(s1.top - s0.top) < 20, `${s0.top} → ${s1.top}`);
+  ok(`[${tag}] ${aid} 켜고 끌 때 창을 다시 불러오지 않음`, await page.evaluate(() => document.querySelector(".rb-main").firstElementChild?.__keepMark === 1));
+  await page.evaluate(() => window.__app.ctx.go("tools")); await page.waitForTimeout(400); await page.evaluate(() => window.__app.ctx.go("settings")); await page.waitForTimeout(500);
+  }
+  ok(`[${tag}] 다른 화면으로 갔다 오면 맨 위에서 시작`, (await sc()).top < 20, (await sc()).top);
   ok(`[${tag}] 오류 없음`, !errs.length, errs.join(";"));
   await page.close();
 }

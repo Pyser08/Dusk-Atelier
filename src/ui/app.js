@@ -322,6 +322,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     }
   }
   function go(tab, sub = null) {
+    if (tab !== state.tab || sub !== state.sub) win.__scrollGuard?.markNav();   // 화면 이동만 맨 위에서 시작(다시 그리기는 위치 유지)
     if (tab === "aibot") { createBotAndEdit(ctx, { tab: "ai" }); return; }
     if (tab === "tools" && sub === "personabuilder") { tab = "personabuilder"; sub = null; }
     // 기록은 설정 탭 안으로 옮겼다 (1.6.1, 그전엔 도구). 예전 go("history")·go("tools","history") 호출도 그대로 동작
@@ -402,6 +403,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   let renderToken = 0;
   function render({ reuse = false } = {}) {
     const token = ++renderToken;   // 낡은 화면의 늦은 그리기를 막는 번호표(staleguard.js)
+    try { ctx.ext?.beginRender(); } catch { /* ctx 만들기 전 */ }   // 이 화면이 읽는 애드온 자리만 다시 그리기 대상
     refreshTabs();
     if (!reuse) dropPanes();
     if (MORE.has(state.tab)) state.lastMore = state.tab;
