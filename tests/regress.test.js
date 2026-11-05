@@ -48,6 +48,18 @@ test("고른 인물의 기억만 옮기고, 출처를 떼어 새 채팅에서 �
   assert.match(String(block), /은행을 털었다/);
 });
 
+test("여러 명 회귀: 고른 인물 모두의 기억·위키 문서·관계, {{user}}는 대상에서 뺌", () => {
+  const f = folder(); f.people["{{user}}"] = { name: "{{user}}", records: [{ id: "u1", act: "나", g: "B" }] };
+  assert.ok(!regressCandidates(f).some((p) => p.name === "{{user}}"));
+  assert.equal(regressSlice(f, "{{user}}"), null);
+  const out = regressSlice(f, ["시로코", "호시노", "{{user}}"], { scope: { characterId: "c1", chatKey: "n" } });
+  assert.deepEqual(Object.keys(out.slice.people).sort(), ["시로코", "호시노"]);
+  assert.deepEqual(Object.keys(out.slice.wiki.documents).sort(), ["a", "b"]);
+  assert.equal(Object.keys(out.slice.talk).length, 3); assert.equal(out.slice.bonds.length, 2);
+  assert.deepEqual(out.slice.regress.persons, ["시로코", "호시노"]);
+  assert.match(regressLine(out.slice), /시로코, 호시노 have returned/);
+});
+
 test("후보는 기억 있는 인물, 고정·기록 많은 순 · 없는 인물은 null", () => {
   assert.deepEqual(regressCandidates(folder()).map((p) => p.name), ["시로코", "호시노"]);
   assert.equal(regressSlice(folder(), "없음"), null);

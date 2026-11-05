@@ -33,9 +33,11 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 화면 밖으로 넘치지 않음`, w.right <= w.vw + 1 && w.sw <= w.vw + 1, JSON.stringify(w));
   await page.screenshot({ path: `/tmp/regress-${tag}.png` });
   await page.locator(".rb-rg-p", { hasText: "카엘" }).click();
-  ok(`[${tag}] 다른 인물을 누르면 이름도 바뀜`, (await page.locator(".rb-rg-field input").inputValue()) === "회귀 · 카엘");
+  ok(`[${tag}] 여러 명 고르기: 이름에 둘 다`, (await page.locator(".rb-rg-field input").inputValue()) === "회귀 · 시로코 · 카엘" && (await page.locator(".rb-rg-p[aria-pressed=true]").count()) === 2);
+  ok(`[${tag}] {{user}}는 목록에 없음`, !(await page.locator(".rb-rg-list").textContent()).includes("{{user}}"));
   await page.locator(".rb-rg-go").click(); await page.waitForTimeout(400);
   ok(`[${tag}] 시계 연출(spinning) + 진행 문구`, (await page.locator(".rb-rg.spinning").count()) === 1 && /되감는|모으는|여는/.test(await page.locator(".rb-rg-fstage").textContent()));
+  ok(`[${tag}] 뒤 화면이 보이게 연출 배경은 투명, 회귀 창은 숨김`, await page.evaluate(() => getComputedStyle(document.querySelector(".rb-rg-full")).backgroundColor === "rgba(0, 0, 0, 0)" && getComputedStyle(document.querySelector(".rb-rg")).opacity === "0"));
   const fb = await page.evaluate(() => { const f = document.querySelector(".rb-rg-full"), c = f?.querySelector(".rb-rg-clock")?.getBoundingClientRect(), b = f?.getBoundingClientRect(); return f ? { fw: b.width, fh: b.height, cw: c.width, vw: innerWidth, vh: innerHeight } : null; });
   ok(`[${tag}] 화면 전체를 덮는 큰 시계(화면 짧은 변의 70% 이상)`, !!fb && fb.fw >= fb.vw - 1 && fb.fh >= fb.vh - 1 && fb.cw >= Math.min(fb.vw, fb.vh) * 0.7, JSON.stringify(fb));
   await page.screenshot({ path: `/tmp/regress-${tag}-spin.png` });
@@ -46,8 +48,8 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
     const f = await __app.ctx.memory.store.getFolder("c1", c.id), orig = await __app.ctx.memory.store.getFolder("c1", "t1");
     return { n: ch.chats.length, name: c.name, msgs: c.message.length, people: Object.keys(f?.people ?? {}).map((k) => f.people[k].name), reg: f?.regress?.person, orig: Object.keys(orig.people).length };
   });
-  ok(`[${tag}] 새 채팅이 생김(메시지 없음 → 첫 메시지로 시작)`, res.n === 2 && res.name === "회귀 · 카엘" && res.msgs === 0, JSON.stringify(res));
-  ok(`[${tag}] 새 기억 폴더엔 카엘만, 원래 기억은 그대로`, res.people.join() === "카엘" && res.reg === "카엘" && res.orig >= 2, JSON.stringify(res));
+  ok(`[${tag}] 새 채팅이 생김(메시지 없음 → 첫 메시지로 시작)`, res.n === 2 && res.name === "회귀 · 시로코 · 카엘" && res.msgs === 0, JSON.stringify(res));
+  ok(`[${tag}] 새 기억 폴더엔 고른 둘만, 원래 기억은 그대로`, res.people.sort().join() === "시로코,카엘" && res.reg === "시로코, 카엘" && res.orig >= 2, JSON.stringify(res));
   ok(`[${tag}] 페이지 오류 없음`, !errs.length, errs.join(" | "));
   await page.close();
 }

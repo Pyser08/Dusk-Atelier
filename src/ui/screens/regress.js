@@ -55,14 +55,15 @@ const CSS = `
 .rb-rg.done .rb-rg-flash{animation:rg-flash 1s ease-out}
 @keyframes rg-flash{30%{opacity:1}to{opacity:0}}
 .rb-rg-full{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(14px,3vh,28px);padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
-  background:radial-gradient(90% 70% at 50% 40%,#3a2a78 0%,#1d1543 45%,#07051a 100%);color:#f6dc9a;font-family:"Nanum Myeongjo","Noto Serif KR",Georgia,serif;opacity:0;transition:opacity .45s ease}
+  background:transparent;pointer-events:auto;color:#f6dc9a;font-family:"Nanum Myeongjo","Noto Serif KR",Georgia,serif;opacity:0;transition:opacity .45s ease}
 .rb-rg-full.on{opacity:1}
-.rb-rg-full .rb-rg-stars{opacity:.9}
+.rb-modal:has(.rb-rg.spinning){background:transparent!important;backdrop-filter:none!important}
+.rb-rg.spinning{opacity:0!important;pointer-events:none}
 .rb-rg-full .rb-rg-clock{position:relative;width:min(78vmin,640px);height:min(78vmin,640px);filter:drop-shadow(0 0 40px rgba(226,189,107,.45));animation:rg-pulse 1.2s ease-in-out infinite}
 .rb-rg-full .rb-rg-clock .ring{animation:rg-slow 1.6s linear infinite reverse}
 .rb-rg-full .rb-rg-clock .hand-m{animation:rg-slow .35s linear infinite reverse}
 .rb-rg-full .rb-rg-clock .hand-h{animation:rg-slow 1.1s linear infinite reverse}
-.rb-rg-full .rb-rg-fstage{position:relative;min-height:1.6em;font-size:clamp(16px,2.6vmin,24px);letter-spacing:.12em;text-align:center;text-shadow:0 0 18px rgba(226,189,107,.5)}
+.rb-rg-full .rb-rg-fstage{position:relative;min-height:1.6em;padding:6px 16px;border-radius:999px;background:rgba(13,11,31,.55);font-size:clamp(16px,2.6vmin,24px);letter-spacing:.12em;text-align:center;text-shadow:0 0 18px rgba(226,189,107,.5)}
 .rb-rg-full .rb-rg-flash{opacity:0}
 .rb-rg-full.done .rb-rg-flash{animation:rg-flash 1s ease-out}
 .rb-rg-full.done .rb-rg-clock{animation:none}
@@ -99,30 +100,30 @@ export async function openRegress(ctx, src) {
   const M = ctx.memory;
   const folder = src.folder ?? await M.store.getFolder(src.chaId, src.chatId).catch(() => null);
   const people = regressCandidates(folder);
-  let pick = src.who && people.find((p) => p.key === src.who) ? src.who : people[0]?.key ?? null;
+  const pick = new Set(src.who && people.some((p) => p.key === src.who) ? [src.who] : people[0] ? [people[0].key] : []);
+  const label = () => `회귀 · ${people.filter((p) => pick.has(p.key)).map((p) => p.name).join(" · ")}`;
   return modal(ctx.win, (done) => {
     const root = h("div", { class: "rb-rg", role: "dialog", "aria-modal": "true", "aria-labelledby": "rb-rg-title" });
     const list = h("div", { class: "rb-rg-list", role: "group", "aria-label": "회귀할 인물" });
     const stage = h("div", { class: "rb-rg-stage", "aria-live": "polite" });
-    const nameOf = () => people.find((p) => p.key === pick)?.name ?? "";
-    const nm = h("input", { value: pick ? `회귀 · ${people.find((p) => p.key === pick).me ? "나" : nameOf()}` : "", "aria-label": "새 채팅 이름", maxlength: 120 });
+    const nm = h("input", { value: pick.size ? label() : "", "aria-label": "새 채팅 이름", maxlength: 120 });
     let touched = false; nm.addEventListener("input", () => { touched = true; });
-    const go = h("button", { type: "button", class: "rb-rg-go", disabled: !pick || null }, "회귀한다");
+    const go = h("button", { type: "button", class: "rb-rg-go", disabled: !pick.size || null }, "회귀한다");
     const paint = () => replace(list, people.map((p) => h("button", {
-      type: "button", class: "rb-rg-p", "aria-pressed": String(p.key === pick),
-      onClick: () => { pick = p.key; if (!touched) nm.value = `회귀 · ${p.me ? "나" : p.name}`; go.disabled = false; paint(); }
-    }, h("span", { class: "rb-rg-av", "aria-hidden": "true" }, (p.me ? "나" : p.name).trim().slice(0, 1) || "?"),
-      h("span", null, h("b", null, p.me ? `나 (${p.name})` : p.name), h("small", null, `기억 ${p.records}개${p.digest ? " · 요약" : ""}`)))));
+      type: "button", class: "rb-rg-p", "aria-pressed": String(pick.has(p.key)),
+      onClick: () => { pick.has(p.key) ? pick.delete(p.key) : pick.add(p.key); if (!touched) nm.value = pick.size ? label() : ""; go.disabled = !pick.size; paint(); }
+    }, h("span", { class: "rb-rg-av", "aria-hidden": "true" }, p.name.trim().slice(0, 1) || "?"),
+      h("span", null, h("b", null, p.name), h("small", null, `기억 ${p.records}개${p.digest ? " · 요약" : ""}`)))));
     paint();
     let busy = false;
     const close = () => { if (!busy) done(null); };
     go.addEventListener("click", async () => {
-      if (!pick || busy) return;
+      if (!pick.size || busy) return;
       busy = true; root.classList.add("spinning"); go.disabled = true;
       // 화면 전체를 덮는 큰 시계 연출(모달 밖, 문서 맨 위에 붙인다)
       const doc = ctx.win.ownerDocument ?? document;
       const fstage = h("div", { class: "rb-rg-fstage", "aria-live": "polite" }, STAGES[0]);
-      const full = h("div", { class: "rb-rg-full", role: "status" }, h("style", null, CSS), h("div", { class: "rb-rg-stars", "aria-hidden": "true" }), h("div", { class: "rb-rg-flash", "aria-hidden": "true" }), clockSvg(doc), fstage);
+      const full = h("div", { class: "rb-rg-full", role: "status" }, h("style", null, CSS), h("div", { class: "rb-rg-flash", "aria-hidden": "true" }), clockSvg(doc), fstage);
       (doc.body ?? ctx.win).appendChild(full);
       requestAnimationFrame(() => full.classList.add("on"));
       const endFull = async () => { full.classList.remove("on"); await sleep(450); full.remove(); };
@@ -130,7 +131,7 @@ export async function openRegress(ctx, src) {
       const tick = setInterval(() => { i = (i + 1) % STAGES.length; stage.textContent = fstage.textContent = STAGES[i]; }, 900);
       try {
         const [res] = await Promise.all([
-          createRegressChat(ctx.api, src.ci, { store: M.store, folder, who: pick, name: nm.value.trim(), isGenerating, Busy }),
+          createRegressChat(ctx.api, src.ci, { store: M.store, folder, who: [...pick], name: nm.value.trim(), isGenerating, Busy }),
           sleep(2800)   // 연출: 시계가 충분히 돌아가게
         ]);
         clearInterval(tick); full.classList.add("done");
@@ -147,7 +148,7 @@ export async function openRegress(ctx, src) {
       h("style", null, CSS), h("div", { class: "rb-rg-stars", "aria-hidden": "true" }), h("div", { class: "rb-rg-flash", "aria-hidden": "true" }),
       h("button", { type: "button", class: "rb-rg-x", "aria-label": "닫기", onClick: close }, "✕"),
       h("div", { class: "rb-rg-head" }, clockSvg(ctx.win.ownerDocument ?? document), h("span", { class: "rb-rg-eyebrow" }, "Regression"), h("h3", { id: "rb-rg-title" }, "회귀"),
-        h("p", { class: "rb-rg-sub" }, "한 사람을 고르세요. 그 사람만 지금까지의 기억을 안고 처음으로 돌아가요. 다른 이들은 아무것도 기억하지 못해요.")),
+        h("p", { class: "rb-rg-sub" }, "회귀할 사람을 고르세요. 여러 명도 돼요. 고른 사람만 지금까지의 기억을 안고 처음으로 돌아가고, 다른 이들은 아무것도 기억하지 못해요.")),
       ...(people.length ? [
         list,
         h("label", { class: "rb-rg-field" }, "새 채팅 이름", nm),

@@ -32,31 +32,38 @@ export function findPerson(folder, who) {
 // 그 인물을 가리키는 이름들
 const namesOf = (k, p) => new Set([k, p?.name, ...(p?.aliases ?? [])].map(norm).filter(Boolean));
 
-/** 위키에서 그 인물의 Character 문서와 프로필만 남긴 새 범위. 문서가 없으면 null */
-export function regressWiki(wiki, names, scope, now = new Date().toISOString()) {
+const isUser = (k, p, user = "{{user}}") => norm(p?.name || k) === norm(user) || norm(k) === norm(user);
+
+/** 위키에서 고른 인물들의 Character 문서와 프로필만 남긴 새 범위. 문서가 하나도 없으면 null */
+export function regressWiki(wiki, nameSets, scope, now = new Date().toISOString()) {
   const docs = Object.values(wiki?.documents ?? {}).filter((d) => d?.type === "Character");
-  const doc = docs.find((d) => names.has(norm(d.title))) ?? docs.find((d) => (d.aliases ?? []).some((a) => names.has(norm(a))));
-  if (!doc) return null;
-  const d = clone(doc);
+  const picked = [];
+  for (const names of nameSets) {
+    const doc = docs.find((d) => names.has(norm(d.title))) ?? docs.find((d) => (d.aliases ?? []).some((a) => names.has(norm(a))));
+    if (doc && !picked.includes(doc)) picked.push(doc);
+  }
+  if (!picked.length) return null;
+  const ids = picked.map((d) => d.id);
   const out = {
     schemaVersion: wiki.schemaVersion, revision: 1,
     scope: { characterId: String(scope.characterId), chatKey: String(scope.chatKey), characterName: String(scope.characterName ?? "").slice(0, 200), chatName: String(scope.chatName ?? "").slice(0, 200), createdAt: now, updatedAt: now },
-    documents: { [d.id]: d }, history: []
+    documents: Object.fromEntries(picked.map((d) => [d.id, clone(d)])), history: []
   };
-  const prof = wiki?.people?.profiles?.[d.id];
-  if (prof) out.people = { ...clone(wiki.people), profiles: { [d.id]: clone(prof) }, candidates: {}, pins: wiki.people.pins?.[d.id] ? { [d.id]: clone(wiki.people.pins[d.id]) } : {} };
+  const pick = (m) => Object.fromEntries(ids.filter((id) => m?.[id]).map((id) => [id, clone(m[id])]));
+  if (wiki?.people?.profiles && ids.some((id) => wiki.people.profiles[id])) out.people = { ...clone(wiki.people), profiles: pick(wiki.people.profiles), candidates: {}, pins: pick(wiki.people.pins) };
   if (wiki.relationshipHistoryLimit !== undefined) out.relationshipHistoryLimit = wiki.relationshipHistoryLimit;
-  return { wiki: out, docId: d.id };
+  return { wiki: out, docIds: ids };
 }
 
 /**
- * 새 폴더 내용. folder = 원래 채팅 기억, who = 인물 키나 이름.
- * 반환 { slice, person, counts } · 인물이 없으면 null
+ * 새 폴더 내용. folder = 원래 채팅 기억, who = 인물 키·이름 하나 또는 여러 개({{user}}는 뺀다).
+ * 반환 { slice, persons, keys, person(이름들 ·로), counts } · 고른 인물이 하나도 없으면 null
  */
 export function regressSlice(folder, who, { scope = null, fromChat = "", now = Date.now() } = {}) {
-  const hit = findPerson(folder, who);
-  if (!hit) return null;
-  const [pk, p] = hit, names = namesOf(pk, p);
+  const hits = [];
+  for (const w of Array.isArray(who) ? who : [who]) { const hit = findPerson(folder, w); if (hit && !isUser(...hit) && !hits.some(([k]) => k === hit[0])) hits.push(hit); }
+  if (!hits.length) return null;
+  const sets = hits.map(([k, p]) => namesOf(k, p)), names = new Set(sets.flatMap((x) => [...x])), keys = hits.map(([k]) => k);
   const has = (n) => names.has(norm(n));
   const pairMap = (map, a, b) => {
     const out = {};
@@ -64,7 +71,7 @@ export function regressSlice(folder, who, { scope = null, fromChat = "", now = D
     return out;
   };
   // 새 채팅엔 장면이 없어 '관련 있을 때만'이면 기억이 안 들어간다 → 회귀자는 항상 포함(직접 '제외'로 둔 경우는 존중)
-  const people = { [pk]: { ...detach(p), ctx: p.ctx === "never" ? "never" : "always", records: (p.records ?? []).filter((r) => !r.orphan).map(carry) } };
+  const people = Object.fromEntries(hits.map(([k, p]) => [k, { ...detach(p), ctx: p.ctx === "never" ? "never" : "always", records: (p.records ?? []).filter((r) => !r.orphan).map(carry) }]));
   const rels = {};
   for (const [k, v] of Object.entries(folder.rels ?? {})) {
     if (!v || !(has(v.from) || has(v.to))) continue;
@@ -74,32 +81,38 @@ export function regressSlice(folder, who, { scope = null, fromChat = "", now = D
   const emo = {};
   for (const [k, v] of Object.entries(folder.emo ?? {})) if (v && (has(v.from) || has(v.to))) emo[k] = { ...detach(v), log: (v.log ?? []).filter((e) => !e.orphan).map(detach) };
   const list = (arr, ...f) => (arr ?? []).filter((x) => x && f.some((k) => has(x[k]))).map(detach);
-  const gauge = folder.gauge?.vals ? { vals: Object.fromEntries(Object.entries(folder.gauge.vals).map(([def, m]) => [def, Object.fromEntries(Object.entries(m ?? {}).filter(([k]) => names.has(norm(k)) || k === pk))]).filter(([, m]) => Object.keys(m).length)), log: [], run: 0 } : undefined;
+  const gauge = folder.gauge?.vals ? { vals: Object.fromEntries(Object.entries(folder.gauge.vals).map(([def, m]) => [def, Object.fromEntries(Object.entries(m ?? {}).filter(([k]) => names.has(norm(k)) || keys.includes(k)))]).filter(([, m]) => Object.keys(m).length)), log: [], run: 0 } : undefined;
+  const persons = hits.map(([k, p]) => p.name || k);
   const slice = {
     people, rels, emo,
     talk: pairMap(folder.talk, "from", "to"), faces: pairMap(folder.faces, "who", "to"),
     exp: pairMap(folder.exp, "a", "b"), start: pairMap(folder.start, "a", "b"),
     bonds: list(folder.bonds, "a", "b"), rifts: list(folder.rifts, "a", "b"), beliefs: list(folder.beliefs, "who", "by"),
     scenes: [], open: [], hints: [],
-    regress: { person: p.name || pk, key: pk, fromChat: String(fromChat ?? ""), at_ms: now }
+    regress: { person: persons.join(", "), persons, keys, fromChat: String(fromChat ?? ""), at_ms: now }
   };
   if (gauge && Object.keys(gauge.vals).length) slice.gauge = gauge;
-  let docId = null;
-  if (folder.wiki && scope) { const w = regressWiki(folder.wiki, names, scope); if (w) { slice.wiki = w.wiki; docId = w.docId; } }
-  const counts = { records: people[pk].records.length, links: Object.keys(rels).length + Object.keys(emo).length + slice.bonds.length + slice.rifts.length + slice.beliefs.length, wiki: !!docId };
-  return { slice, person: p.name || pk, key: pk, counts };
+  let wikiDocs = 0;
+  if (folder.wiki && scope) { const w = regressWiki(folder.wiki, sets, scope); if (w) { slice.wiki = w.wiki; wikiDocs = w.docIds.length; } }
+  const counts = { people: hits.length, records: Object.values(people).reduce((n, p) => n + p.records.length, 0), links: Object.keys(rels).length + Object.keys(emo).length + slice.bonds.length + slice.rifts.length + slice.beliefs.length, wiki: wikiDocs > 0, wikiDocs };
+  return { slice, persons, keys, person: persons.join(" · "), key: keys[0], counts };
 }
 
-/** 회귀 고를 인물 목록: 기록 많은 순. {key,name,records,digest} */
+/** 회귀 고를 인물 목록({{user}} 제외): 고정·기록 많은 순. {key,name,records,digest} */
 export function regressCandidates(folder, { user = "{{user}}" } = {}) {
   return Object.entries(folder?.people ?? {})
-    .filter(([, p]) => p)
-    .map(([k, p]) => ({ key: k, name: p.name || k, me: norm(p.name || k) === norm(user), records: (p.records ?? []).filter((r) => !r.orphan).length, digest: !!p.digest, pinned: !!p.pinned }))
+    .filter(([k, p]) => p && !isUser(k, p, user))
+    .map(([k, p]) => ({ key: k, name: p.name || k, records: (p.records ?? []).filter((r) => !r.orphan).length, digest: !!p.digest, pinned: !!p.pinned }))
     .filter((x) => x.records || x.digest)
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.records - a.records);
 }
 
 /** 프롬프트 한 줄 */
-export const regressLine = (folder) => folder?.regress?.person
-  ? `Regression: ${folder.regress.person} has returned from a previous timeline and still remembers everything from it (the memories below). No one else remembers that timeline.`
-  : "";
+export function regressLine(folder) {
+  const r = folder?.regress;
+  if (!r?.person) return "";
+  const list = Array.isArray(r.persons) && r.persons.length ? r.persons : [r.person];
+  return list.length > 1
+    ? `Regression: ${list.join(", ")} have returned from a previous timeline and still remember everything from it (the memories below). No one else remembers that timeline.`
+    : `Regression: ${list[0]} has returned from a previous timeline and still remembers everything from it (the memories below). No one else remembers that timeline.`;
+}
