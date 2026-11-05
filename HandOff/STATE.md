@@ -2,6 +2,7 @@
 
 ## 2026-11-05 ProtLink+ 통합 (v1.9.2) — Dusk 방식으로 다시 만듦
 - `src/protlink/protlink.js`: 원작자 제공 v1.0.0에서 **Proton 연결부만** 쓴다(`loadProtLinkDriver(api)` → `{G3, Sp, Ln, Pa, PZ, Ot}`; G3({kv}).open(url,signal,pw) → share{list,download,thumbnail}, Sp = 폴더 훑기). 원본 화면·앱 로직은 안 쓴다. `node tools/protlink-prune.mjs --write`로 쓰이지 않는 선언을 걷어 냈다(1089KB→912KB, 이름 기준 도달성이라 더 남기는 쪽으로만 틀림). 번들 6.3MB. 고지 `NOTICES.txt`.
+- 업데이트 알림: `src/data/updatetoast.js`(retrytoast 방식, mainDom 권한, 실패 시 false→main.js가 앱 내 toast로 대체) + `engine/protlink.js updateMessage`. 실제 호스트(RisuAI/RisuBard/PocketRisu) 동작은 미확인.
 - 순수 로직 `src/engine/protlink.js`(파일 종류·연결 후보 순위·스냅샷 비교), 데이터 `src/data/protlink.js`(링크 저장 `dusk.protlink.links.v1`, 설정 `dusk.protlink.settings.v1`, on 키 `dusk.protlink.on` 기본 켜짐, 확인·받기·연결). 원본 `protlink_plus` 켜져 있으면 시작 안 함.
 - 화면 `ui/screens/protlink.js`(관리 탭 `protlink`, 플러그인 아래): 링크 추가(주소 → 파일 확인 → 종류·연결 항목 고르기), 목록(새 파일 배지·받아서 업데이트·확인·연결 바꾸기·이름·해제), 시작 확인 설정. 위젯 `protlink`(연결 항목·새 파일 배지, 누르면 탭 열기).
 - 받기: 캐릭터·모듈은 `legacy.startWithFiles(files, {target:{kind,id}})` → 가져오기 창에서 연결 항목이 맨 위 후보(`File.protlinkTarget`, legacy.js `candidatesFor`). 플러그인은 파일 저장만(플러그인 목록 쓰기 불가).

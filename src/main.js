@@ -28,6 +28,8 @@ import { createProvider } from './data/provider/index.js';
 import { createWidgetHome } from './data/widgethome.js';
 import { createErosync } from './data/erosync.js';
 import { createProtLink } from './data/protlink.js';
+import { createUpdateToast } from './data/updatetoast.js';
+import { updateMessage } from './engine/protlink.js';
 import { download as downloadFile } from './ui/dom.js';
 import { setDuskRoute, runAI } from './engine/runai.js';
 import { setDuskServerModel } from './data/modelhub.js';
@@ -242,10 +244,15 @@ async function start() {
   provider.sync().catch(() => {});   // 실험 기능이 켜져 있으면 이제 등록
   // 위젯 홈(v1.9.2): 기본 꺼짐. 켜져 있으면 시작해서 메뉴 버튼을 달고, Dusk 창을 열 땐 먼저 닫아 같은 플러그인 화면을 번갈아 쓴다
   // ProtLink+(v1.9.2): 기본 켜짐. Proton Drive 링크를 캐릭터·모듈·플러그인에 연결해 두고 새 파일을 받아 Dusk 업데이트로 넘긴다.
+  const updateToast = createUpdateToast(api, { onOpen: () => app.open({ tab: "protlink" }).catch(() => {}) });
   const protlink = createProtLink(api, { log: (m) => console.log(`[${TITLE}] ${m}`), hooks: {
     importFiles: (files, opts) => legacy.startWithFiles(files, opts),
     saveFile: (name, bytes) => downloadFile(name, new Blob([bytes])),
-    onChecked: (rows) => { const n = rows.filter((r) => r.update).length; if (n) app?.ctx?.toast?.(`ProtLink+: 새 파일이 올라온 링크가 ${n}개 있어요.`); } } });
+    onChecked: async (rows) => {
+      const msg = updateMessage(rows); if (!msg) return;
+      // 리스 화면(플러그인 밖) 알림. 권한이 없거나 못 띄우면 플러그인 안 알림으로 대신한다.
+      if (!(await updateToast.show(msg).catch(() => false))) app?.ctx?.toast?.(`ProtLink+: ${msg}`);
+    } } });
   const widgetHome = createWidgetHome(api, { log: (m) => console.log(`[${TITLE}] ${m}`), openDusk: (tab) => app.open(tab && tab !== "home" ? { tab } : undefined).catch(() => {}),
     protLink: { links: () => protlink.list(), open: () => app.open({ tab: "protlink" }).then(() => true).catch(() => false), on: () => protlink.on(), error: () => protlink.lastError() } });
   app.ctx.protlink = protlink;

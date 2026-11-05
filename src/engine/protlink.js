@@ -67,3 +67,10 @@ export function pendingOf(diff, kind) {
   return fitFiles([...(diff?.changed ?? []), ...(diff?.added ?? [])], kind);
 }
 export const fmtBytes = (n) => (n == null ? "" : n < 1024 ? `${n}B` : n < 1048576 ? `${(n / 1024).toFixed(1)}KB` : `${(n / 1048576).toFixed(1)}MB`);
+// 리스 화면 밖에 띄울 알림 문구: ‘캐릭터 시로코 · 모듈 A · 플러그인 B 외 2개’
+export function updateMessage(rows, max = 3) {
+  const list = (rows ?? []).filter((r) => r?.update);
+  if (!list.length) return "";
+  const parts = list.slice(0, max).map((r) => `${KIND_LABEL[r.kind] ?? ""} ${r.target?.name || r.name}`.trim());
+  return `새 업데이트가 있어요: ${parts.join(" · ")}${list.length > max ? ` 외 ${list.length - max}개` : ""}`;
+}

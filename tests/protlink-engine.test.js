@@ -35,3 +35,10 @@ test("연결한 종류에 맞는 파일만, 새 것 먼저", () => {
   assert.deepEqual(pendingOf({ changed: [files[0]], added: [files[1], files[2]] }, "module").map((f) => f.name), ["c.risum", "a.risum"]);
   assert.deepEqual(pendingOf({ changed: [], added: [] }, "plugin"), []);
 });
+import { updateMessage } from "../src/engine/protlink.js";
+test("밖에 띄울 알림 문구: 연결 항목 이름, 3개까지·나머지는 외 N개, 없으면 빈 글", () => {
+  const row = (kind, name, update = true) => ({ kind, name: "링크", target: { name }, update });
+  assert.equal(updateMessage([row("character", "시로코"), row("module", "A", false)]), "새 업데이트가 있어요: 캐릭터 시로코");
+  assert.equal(updateMessage([row("character", "a"), row("module", "b"), row("plugin", "c"), row("module", "d")]), "새 업데이트가 있어요: 캐릭터 a · 모듈 b · 플러그인 c 외 1개");
+  assert.equal(updateMessage([]), ""); assert.equal(updateMessage([row("module", "x", false)]), "");
+});
