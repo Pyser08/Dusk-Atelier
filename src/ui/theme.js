@@ -46,6 +46,7 @@ var BASE = {
     warn: "#f2c066",
     danger: "#f4867a",
     teal: "#6fd8c4",
+    blue: "#6fa8f2",
     rose: "#f28fa8",
     border: "1px",
     toast: "#2b2926"
@@ -74,6 +75,7 @@ var BASE = {
     warn: "#8a5a00",
     danger: "#bd2a4a",
     teal: "#0e7466",
+    blue: "#2a62b8",
     rose: "#ad2347",
     border: "1px",
     toast: "#ffffff"
@@ -103,6 +105,7 @@ var BASE = {
     warn: "#ffd75e",
     danger: "#ff8a8a",
     teal: "#5df0dc",
+    blue: "#8ec5ff",
     rose: "#ff9ab8",
     border: "2px",
     toast: "#000000"
@@ -132,6 +135,7 @@ var BASE = {
     warn: "#6b4300",
     danger: "#a30f33",
     teal: "#005a4e",
+    blue: "#0b3f94",
     rose: "#8f1237",
     border: "2px",
     toast: "#ffffff"
@@ -268,7 +272,7 @@ function customBase(theme, mode) {
     grip: mixHex(win, text, 0.35),
     trackOff: mixHex(win, text, 0.22),
     toast: surf,
-    ok: fit(P.ok), warn: fit(P.warn), danger: fit(P.danger), teal: fit(P.teal), rose: fit(P.rose)
+    ok: fit(P.ok), warn: fit(P.warn), danger: fit(P.danger), teal: fit(P.teal), blue: fit(P.blue), rose: fit(P.rose)
   };
 }
 var SHADOW_STRONG = { dark: ["0 4px 14px rgba(0, 0, 0, 0.5)", "0 14px 34px rgba(0, 0, 0, 0.55)"], light: ["0 4px 14px rgba(50, 38, 28, 0.2)", "0 14px 34px rgba(50, 38, 28, 0.24)"] };
@@ -335,11 +339,13 @@ export function themeVars(themeIn, mode) {
     "--rb-warn": B.warn,
     "--rb-danger": B.danger,
     "--rb-teal": B.teal,
+    "--rb-blue": B.blue,
     "--rb-rose": B.rose,
     "--rb-ok-soft": alpha(B.ok, 0.13),
     "--rb-warn-soft": alpha(B.warn, 0.13),
     "--rb-danger-soft": alpha(B.danger, 0.13),
     "--rb-teal-soft": alpha(B.teal, 0.12),
+    "--rb-blue-soft": alpha(B.blue, 0.12),
     "--rb-rose-soft": alpha(B.rose, 0.13),
     "--rb-toast": B.toast,
     // 모양·크기 토큰: 둥글기 4단계, 컨트롤 높이, 줄 여백, 글자 배율

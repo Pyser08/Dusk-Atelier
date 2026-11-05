@@ -4,16 +4,18 @@ import { regexSection } from "./regexui.js";
 import { openHypaModal } from "./hypamodal.js";
 import { btn, switchEl, setSwitch, confirmDialog, progressBar, loading } from "../../kit.js";
 import { AI_MODES } from "../../../engine/merge.js";
+import { getCfg as getModelCfg } from "../../../data/modelhub.js";
 import { mem, fail, potOn, askRefresh } from "./common.js";
 import { parseTags, DEFAULT_TAG_TEXT } from "../../../engine/card/tags.js";
 import { flowSections } from "./flowsettings.js";
 import { advancedBot } from "./advanced.js";
 import { scopeChip, tracked, searchBox, openSettingsHistory, shareSection, previewBox } from "./settingstools.js";
 import { pushHist } from "../../../engine/settingsutil.js";
+import { noteEdits, DUSK_FOLLOW } from "../../../engine/defaultfollow.js";
 
 export function builders(ctx, idx, redraw, kind = "all") {
   const M = ctx.memory, S = idx.settings;
-  const save = (fn) => M.store.updateIndex((i) => { const before = structuredClone(i.settings); fn(i.settings, i); i.settingsHistory = pushHist(i.settingsHistory, "dusk", before, i.settings); }).then(() => redraw()).catch(fail(ctx));
+  const save = (fn) => M.store.updateIndex((i) => { const before = structuredClone(i.settings); fn(i.settings, i); i.settings.edited = noteEdits(before, i.settings, i.settings.edited, DUSK_FOLLOW); i.settingsHistory = pushHist(i.settingsHistory, "dusk", before, i.settings); }).then(() => redraw()).catch(fail(ctx));
   const num = (label, get, set, { min = 0, max = 99999, step = 1 } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("input", { class: "rb-input", type: "number", min, max, step, value: get(), onChange: (e) => { const v = Math.min(max, Math.max(min, Number(e.target.value) || 0)); save((s) => set(s, v)); } }));
   const sw = (label, on, set) => h("div", { class: "rb-mem-field row" }, h("span", null, label), switchEl(on, { label, onChange: (v, el) => { setSwitch(el, v); save((s) => set(s, v)); } }));
   const section = (title, ...kids) => { const [t, k = kind] = Array.isArray(title) ? title : [title]; return h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, t, k ? scopeChip(k) : null), ...kids); };
@@ -29,6 +31,9 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
   const sid = h("input", { class: "rb-input", placeholder: "모델 ID", value: S.model.staticModel ?? "", "aria-label": "모델 ID", style: S.model.mode === "static" ? "" : "display:none" });
   const saveModel = () => save((s) => { s.model = { mode: mode.value, ...(mode.value === "static" ? { staticModel: sid.value.trim() } : {}) }; });
   mode.addEventListener("change", saveModel); sid.addEventListener("change", saveModel);
+  const mcfg = await getModelCfg(ctx.api).catch(() => ({ presets: [] }));
+  const smSel = h("select", { class: "rb-input", "aria-label": "서버 분석에 쓸 모델", onChange: () => save((s) => { s.serverModel = { presetId: smSel.value }; }) },
+    h("option", { value: "" }, "지금 분석 모델 그대로"), ...(mcfg.presets ?? []).filter((p) => p.preset?.provider !== "risuai").map((p) => h("option", { value: p.id, selected: S.serverModel?.presetId === p.id }, `${p.name} · ${p.preset.provider} / ${p.preset.model}`)));
   const last = M.injector?.lastRequest?.(), man = last?.manifest;
   const modeLabel = backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드";
 
@@ -45,6 +50,10 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
       h("p", { class: "rb-muted" }, "가벼운 모델(flash·mini 등)이 형식을 잘 못 맞출 때 직접 켜세요. 세부 분석을 최대 3명으로 줄이고 속마음·갈등·추억은 요구하지 않아요."),
       sw("단계별 분석 (안정적, 호출은 늘어요)", S.staged !== false, (s, v) => { s.staged = v; }),
       h("p", { class: "rb-muted" }, "먼저 한 번 호출해 누가 나오는지·전반적인 상황을 파악하고, 이어서 중요한 인물마다 한 번씩(최대 6명) 세부를 분석해요. 응답이 길어 형식이 깨지거나 실패하는 걸 줄여요. 한 인물의 세부 분석이 실패해도 나머지는 기록돼요."),
+      sw("서버에서 지난 대화 분석 (Dusk Cellar)", S.serverAnalysis !== false, (s, v) => { s.serverAnalysis = v; }),
+      h("p", { class: "rb-muted" }, "Dusk Cellar가 연결돼 있고 기억이 서버에 저장될 때, '지난 대화 분석'을 서버에서 계산해요(기기 메모리·배터리 절약). 끄면 항상 기기에서 분석해요. 끄면 항상 기기에서 분석해요."),
+      h("label", { class: "rb-mem-field" }, h("span", null, "서버 분석에 쓸 모델"), smSel),
+      h("p", { class: "rb-muted" }, "'내 API' 모델을 고르면 서버가 직접 불러서 리스 화면을 닫거나 다른 앱을 봐도 끝까지 돌아요. '지금 분석 모델 그대로'이고 그게 리스 쪽 모델이면 리스 화면이 켜져 있을 때만 진행돼요(꺼지면 서버가 기다려요)."),
       sw("전체 자동 기록", S.autoRecord !== false, (s, v) => { s.autoRecord = v; })) : null,
     caps.inject ? section("임베딩(의미 검색)", h("p", { class: "rb-muted" }, "뜻이 비슷한 기억을 찾아 넣어요. 주소·키를 넣고 기본 사용을 켜면 기억 고르기에 적극 쓰여요."),
       btn("임베딩 설정", { onClick: () => openEmbedModal(ctx) })) : null,
@@ -122,7 +131,7 @@ export function renderBotAnalysis(env) {
     ctrl = new AbortController(); const start = btn("취소", { onClick: () => ctrl.abort() }); replace(prog, progressBar(0), start);
     try {
       const r = await M.runner.backfill(bot.index, chatItem.index, range(), { signal: ctrl.signal, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), start) });
-      failed = r.failed; ctx.toast(`지난 대화 분석이 끝났어요 (${r.total - r.failed.length}/${r.total}).${r.reasons?.length ? ` 실패 이유: ${r.reasons[0]}` : ""}`, r.failed.length ? { error: true } : undefined); env.redraw();
+      failed = r.failed; ctx.toast(`지난 대화 분석이 끝났어요${r.server ? " (서버)" : ""} (${r.total - r.failed.length}/${r.total}).${r.reasons?.length ? ` 실패 이유: ${r.reasons[0]}` : ""}`, r.failed.length ? { error: true } : undefined); env.redraw();
     } catch (e) { fail(ctx)(e); env.redraw(); }
   };
   return section(["지난 대화 분석 (이 채팅 전체)", "chat"], h("div", { class: "rb-mem-range" }, from, "~", to), est, h("div", { class: "rb-mem-sact" }, btn("미처리만 분석", { kind: "primary", onClick: () => run() }), failed.length ? btn(`실패만 다시 (${failed.length})`, { onClick: () => run(true) }) : null), prog);

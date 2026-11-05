@@ -83,7 +83,7 @@ export function setPotChar(idx, scopeKey, docId, on) {
 // 리수폿 전체 스위치: 켜면 기능(potMode)도 함께 켜고, 끄면 흐름만 끈다(기능 끔은 기억 화면 고급에서)
 export function setPotGlobal(idx, on) {
   idx.settings.potMode = on ? true : idx.settings.potMode;
-  idx.settings.flow = { ...obj(idx.settings.flow), on: !!on, mode: obj(idx.settings.flow).mode ?? "fast" };
+  idx.settings.flow = { ...obj(idx.settings.flow), on: !!on, mode: obj(idx.settings.flow).mode ?? "accurate" };
   return idx;
 }
 // 기억 전체 스위치: 주입을 켜고 끈다. 저장소 '끔'(backend off)이었다면 켤 때 자동으로 되돌린다.

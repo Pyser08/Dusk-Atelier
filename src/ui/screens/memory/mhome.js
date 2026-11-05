@@ -3,7 +3,7 @@
 import { maybePromptIntro } from '../promptstab.js';
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
-import { advFold, btn, confirmDialog, emptyState, note, pageHead, progressBar, statusCard, switchEl, setSwitch } from "../../kit.js";
+import { advFold, btn, confirmDialog, emptyState, note, openMenu, pageHead, progressBar, statusCard, switchEl, setSwitch } from "../../kit.js";
 import { injectReasonText } from "../../../engine/memoryinject.js";
 import { USAGE_KINDS, injectLine, usageOf } from "../../../engine/memoryusage.js";
 import { mem, fail, gradeBadge, at } from "./common.js";
@@ -30,7 +30,7 @@ export function usageCard(u) {
 }
 
 // 설정 카드(한 줄 요약 목록 + 기억 옵션 3개). 열린 채팅이 없어도 쓸 수 있게 따로 뺐다(전체 설정이라 채팅과 무관).
-async function settingsCards(ctx, M, idx, redraw) {
+async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   let embedLine = "뜻이 비슷한 기억 찾기";
   try { if (M.embedder) { await M.embedder.load(); embedLine += M.embedder.status().on ? " · 켜짐" : " · 꺼짐"; } } catch { /* 요약 없이 */ }
   const srow = (title, sub, onClick, extra = {}) => h("button", { type: "button", class: "rb-srow", onClick, ...extra }, h("span", { class: "t" }, title, h("small", null, sub)), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
@@ -48,8 +48,32 @@ async function settingsCards(ctx, M, idx, redraw) {
     orow("사람다운 기억", "관계 진도·호칭·말투·둘만의 추억 등을 기억해요.", inj.human !== false, (o, v) => { o.human = v; }),
     orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }),
     orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
+  // 리수폿 사용(이 채팅 단위라 열린 채팅이 있을 때만). 예전 '자동 기록 · 인물 추적'에 있던 스위치를 옮겼다.
+  if (cur) {
+    memOptions.append(h("div", { class: "rb-srow" }, h("span", { class: "t" }, "리수폿 사용", h("small", null, "이 채팅에서 리수폿(위키 기록)을 써요.")),
+      switchEl(sw?.pot?.on !== false, { label: "이 채팅에서 리수폿 사용", onChange: async (v, el) => {
+        setSwitch(el, v);
+        try { await M.switches.setPot(cur.chaId, v); if (v) maybePromptIntro(ctx); ctx.toast(v ? "이 채팅에서 리수폿을 켰어요." : "이 채팅에서 리수폿을 껐어요."); }
+        catch (e) { fail(ctx)(e); }
+        redraw();
+      } })));
+  }
 
   return { memorySettings, memOptions };
+}
+
+// Erosync 한 줄 카드: 인물 관계도 줄과 같은 모양. 누르면 켜기·설정 화면(page "erosync")
+// 장기 기억 머리(파일 내보내기·불러오기는 인물 위키의 ‘더보기’로 옮겼다)
+function memHead() {
+  return pageHead("장기 기억");
+}
+
+function erosyncRow(ctx, m, redraw) {
+  if (!ctx.erosync) return null;
+  return h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-erosync", onClick: () => { m.page = "erosync"; redraw(); } },
+    h("span", { class: "rb-mem-av rb-me-av sm", "aria-hidden": "true" }, icon("shield", 18)),
+    h("span", { class: "t" }, "Erosync", h("small", null, ctx.erosync.on() ? "켜져 있어요. 설정을 열어 봐요." : "NSFW 장면 강화. 켜고 설정할 수 있어요.")),
+    h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
 }
 
 export async function renderMemoryHome(ctx, host, { redraw }) {
@@ -68,10 +92,10 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     const gHost = h("div");
     if (ctx.prefs.advanced) await renderGlobalSettings(ctx, gHost, { redraw, panel: true }).catch(() => {});
     return replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" },
-      h("div", { class: "rb-mem2-main" }, pageHead("장기 기억"),
+      h("div", { class: "rb-mem2-main" }, memHead(ctx, redraw),
         emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요. 아래 설정은 채팅 없이도 바꿀 수 있어요.",
           actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] }),
-        memOptions),
+        erosyncRow(ctx, m, redraw), memOptions),
       h("div", { class: "rb-mem2-side" }, memorySettings, ctx.prefs.advanced ? gHost : advFold(ctx, "memory", true))));
   }
   // 채팅 본문은 느릴 수 있으므로 화면을 먼저 그리고, 백필 분석용 데이터는 백그라운드에서 읽는다.
@@ -127,14 +151,23 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
       activeChat = await ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
       activeMsgs = activeChat?.message ?? [];
     }
-    if (!activePlan?.todo) return ctx.toast("분석할 새 응답이 없어요.");
-    const ok = await confirmDialog(ctx.win, { title: "지난 대화 분석", body: `AI 응답 ${activePlan.todo}개를 분석해요. 호출 ${activePlan.calls}회 · 대략 ${activePlan.tokens.toLocaleString()} 토큰이 들어요.`, ok: "분석하기" });
-    if (!ok) return;
+    let redo = false;
+    if (!activePlan?.todo) {
+      // 새로 분석할 응답이 없어도, 눌렀다면 처음부터 다시 분석할지 묻는다
+      const all = activeMsgs.length && M.runner ? M.runner.planBackfill(activeMsgs, { from: 0, to: Math.max(0, activeMsgs.length - 1), all: true }, folder) : null;
+      if (!all?.total) return ctx.toast("분석할 AI 응답이 없어요.");
+      const again = await confirmDialog(ctx.win, { title: "이미 모두 분석했어요", body: `AI 응답 ${all.total}개가 모두 분석돼 있어요. 처음부터 다시 분석할까요? 호출 ${all.calls}회 · 대략 ${all.tokens.toLocaleString()} 토큰이 들어요. 기존 기록은 지워지지 않고, 새로 확인된 내용이 더해지거나 바뀔 수 있어요.`, ok: "다시 분석" });
+      if (!again) return;
+      redo = true;
+    } else {
+      const ok = await confirmDialog(ctx.win, { title: "지난 대화 분석", body: `AI 응답 ${activePlan.todo}개를 분석해요. 호출 ${activePlan.calls}회 · 대략 ${activePlan.tokens.toLocaleString()} 토큰이 들어요.`, ok: "분석하기" });
+      if (!ok) return;
+    }
     const ctrl = new AbortController(), cancel = btn("취소", { size: "sm", onClick: () => ctrl.abort() });
     replace(prog, progressBar(0), cancel);
     try {
-      const r = await M.runner.backfill(cur.ci, cur.ti, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, { signal: ctrl.signal, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), cancel) });
-      ctx.toast(`지난 대화 분석이 끝났어요 (${r.total - r.failed.length}/${r.total}).${r.reasons?.length ? ` 실패 이유: ${r.reasons[0]}` : ""}`, r.failed.length ? { error: true } : undefined);
+      const r = await M.runner.backfill(cur.ci, cur.ti, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, { signal: ctrl.signal, redo, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), cancel) });
+      ctx.toast(`지난 대화 분석이 끝났어요${r.server ? " (서버)" : ""} (${r.total - r.failed.length}/${r.total}).${r.reasons?.length ? ` 실패 이유: ${r.reasons[0]}` : ""}`, r.failed.length ? { error: true } : undefined);
     } catch (e) { fail(ctx)(e); }
     redraw();
   };
@@ -169,13 +202,20 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     h("span", { class: "t" }, "나에 대한 기억", h("small", null, "다른 인물들이 나를 어떻게 보고 부르는지 모아 봐요.")),
     h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
 
+  // 인물 관계도 한 줄 카드 (1.9.3): '나에 대한 기억' 바로 아래. 누르면 관계도 탭으로 바로
+  const npcN = Object.values(folder?.people ?? {}).filter((p) => p && String(p.name).toLowerCase().replace(/\s+/g, "") !== "{{user}}" && (p.records ?? []).some((r) => !r.orphan)).length;
+  const mapRow = h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-relmap", onClick: () => ctx.go("relmap") },
+    h("span", { class: "rb-mem-av rb-me-av sm", "aria-hidden": "true" }, icon("network", 18)),
+    h("span", { class: "t" }, "인물 관계도", h("small", null, npcN ? `인물 ${npcN}명의 거리와 관계를 한눈에 봐요.` : "인물이 쌓이면 거리와 관계를 한눈에 볼 수 있어요.")),
+    h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
+
   const recent = recentOf(folder);
   const recBox = h("section", { class: "rb-card bordered rb-mem-recentbox" }, h("div", { class: "rb-mem-rechead" }, h("b", null, "최근 기록"), recent.length ? h("button", { type: "button", class: "rb-textlink", onClick: () => openDetail() }, "전체 보기") : null),
     h("ul", { class: "rb-mem-reclist rb-mem-recent" }, recent.length
       ? recent.map((r) => h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("div", null, h("b", null, r.who), " ", r.act), h("div", { class: "rb-muted" }, at(r.at))), gradeBadge(r.g)))
       : h("li", { class: "rb-muted" }, "아직 쌓인 기록이 없어요.")));
 
-  const { memorySettings, memOptions } = await settingsCards(ctx, M, idx, redraw);
+  const { memorySettings, memOptions } = await settingsCards(ctx, M, idx, redraw, cur, sw);
 
   // ── 고급: 한 줄씩 접은 묶음. PC에서는 기억 방식을 접지 않고 오른쪽 맨 위에 둔다 ──
   const wide = (ctx.win?.ownerDocument?.defaultView?.innerWidth ?? 1280) >= 1000;
@@ -195,8 +235,8 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   } else side.push(advFold(ctx, "memory", true));
 
   const main = h("div", { class: "rb-mem2-main" },
-    pageHead("장기 기억"),
-    statusBox, bigAct, prog, shortcuts, meRow, memOptions, recBox,
+    memHead(ctx, redraw),
+    statusBox, bigAct, prog, shortcuts, meRow, mapRow, erosyncRow(ctx, m, redraw), memOptions, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" }, main, h("div", { class: "rb-mem2-side" }, ...side)));
   // 1.8.3: 임베딩 안내 창은 자동으로 띄우지 않는다(시작 안내 3단계에서 설정, 필요하면 설정 줄의 '임베딩'에서)

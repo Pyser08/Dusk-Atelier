@@ -46,10 +46,10 @@ test("메뉴 위치: home(홈 카드)은 없고 예전 저장값은 left로 옮�
 test("탭 구성: 기억·관리·작업실 3개 그룹과 홈", () => {
   assert.deepEqual(BASE_IDS, ["home"]);
   assert.equal(TABS.some((t) => t.id === "pot" || t.id === "people"), false);
-  assert.deepEqual(MORE_IDS, ["memory-home", "memory", "cocoa", "cards", "manage-home", "characters", "modules", "plugins", "work-home", "look", "aibot", "personabuilder", "tools", "settings", "dev"]);
-  assert.deepEqual(TABS.filter((t) => t.section === "memory").map((t) => t.id), ["memory-home", "memory", "cocoa", "cards"]);
-  assert.deepEqual(TABS.filter((t) => t.section === "manage").map((t) => t.id), ["manage-home", "characters", "modules", "plugins"]);
-  assert.deepEqual(TABS.filter((t) => t.section === "work").map((t) => t.id), ["work-home", "look", "aibot", "personabuilder", "tools", "settings", "dev"]);
+  assert.deepEqual(MORE_IDS, ["memory-home", "memory", "relmap", "cocoa", "cards", "manage-home", "characters", "modules", "plugins", "protlink", "work-home", "provider", "look", "aibot", "personabuilder", "tools", "settings", "dev"]);
+  assert.deepEqual(TABS.filter((t) => t.section === "memory").map((t) => t.id), ["memory-home", "memory", "relmap", "cocoa", "cards"]);
+  assert.deepEqual(TABS.filter((t) => t.section === "manage").map((t) => t.id), ["manage-home", "characters", "modules", "plugins", "protlink"]);
+  assert.deepEqual(TABS.filter((t) => t.section === "work").map((t) => t.id), ["work-home", "provider", "look", "aibot", "personabuilder", "tools", "settings", "dev"]);
   assert.equal(TABS.find((t) => t.id === "dev").dev, true);
   assert.equal(new Set(TABS.map((t) => t.id)).size, TABS.length);
 });
@@ -64,3 +64,11 @@ test("section overview tabs are mobile-only and have the requested icons", () =>
 });
 
 // Build trigger: assertions include the relocated persona-builder tab.
+
+test("실험 기능: 프로바이더는 켰을 때만 보이고, 꾸미기는 켜면 도구로 옮겨진다", async () => {
+  const { tabHidden } = await import("../src/ui/tabs.js");
+  const prov = TABS.find((t) => t.id === "provider"), look = TABS.find((t) => t.id === "look"), aibot = TABS.find((t) => t.id === "aibot");
+  assert.equal(tabHidden(prov, {}), true); assert.equal(tabHidden(prov, { experimental: true }), false);
+  assert.equal(tabHidden(look, {}), false); assert.equal(tabHidden(look, { experimental: true }), true);
+  assert.equal(tabHidden(aibot, {}), false); assert.equal(tabHidden(aibot, { experimental: true }), false);
+});

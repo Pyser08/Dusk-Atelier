@@ -10,6 +10,12 @@ export var TABS = [
     help: ["스위치만 켜면 바로 작동해요. ‘처음 설정하기’는 3단계로 끝나요.", "봇을 고르면 그 채팅에서 만든 기억이 인물별로 보여요.", "카드의 작은 ? 버튼에서 그 자리 설명과 ‘처음 설정 다시 보기’를 볼 수 있어요."]
   },
   {
+    id: "relmap", label: "인물 관계도", icon: "network", group: "more", section: "memory",
+    desc: "{{user}}를 가운데 두고 인물들의 거리·관계를 한눈에 봐요.",
+    card: "인물들의 거리·관계를 한눈에 봐요.",
+    help: ["가까울수록 호감이 높고, 위에 있을수록 지금 중요한 인물이에요.", "인물이나 선을 누르면 오른쪽에 위키 요약이 나와요. 두 번 누르면 인물 위키로 가요.", "오른쪽 위 ? 버튼에서 읽는 법을 볼 수 있어요."]
+  },
+  {
     id: "cocoa", label: "코코아", icon: "sliders", group: "more", section: "memory",
     desc: "AI에게 줄 추가 지침(스킬)을 켜고, 코코아전트 스킬을 그대로 가져와요.",
     card: "스킬 지침을 켜고 코코아전트 스킬을 가져와요.",
@@ -40,9 +46,21 @@ export var TABS = [
     card: "플러그인을 모아 보고 업데이트를 확인해요.",
     help: ["플러그인마다 카테고리를 붙여 정리할 수 있어요.", "‘플러그인 만들기’에서 템플릿으로 내 플러그인을 시작해요.", "DA Interop으로 다른 플러그인과 설정을 주고받아요."]
   },
-  { id: "work-home", label: "개요", icon: "tools", mobileOnly: true, group: "more", section: "work", desc: "플러그인 꾸미기·AI 봇 제작·도구·설정을 모았어요.", card: "작업실 기능을 골라 열어요.", help: ["원하는 작업 기능을 눌러 바로 이동해요."] },
   {
-    id: "look", label: "플러그인 꾸미기", icon: "palette", group: "more", section: "work",
+    id: "protlink", label: "ProtLink+", icon: "link", group: "more", section: "manage",
+    desc: "Proton Drive 링크를 캐릭터·모듈·플러그인에 연결해 두고, 새 파일이 올라오면 받아서 업데이트해요.",
+    card: "Proton Drive 링크를 항목에 연결해 새 파일을 받아요.",
+    help: ["링크를 붙여 넣으면 안의 파일을 확인하고, 어느 캐릭터·모듈·플러그인에 연결할지 물어봐요.", "연결하면 다음부터 새 파일이 올라올 때 알려 주고, 받으면 그 항목의 업데이트(영향 미리보기 → 백업 → 적용)로 넘어가요.", "플러그인은 리스가 목록을 바꾸지 못하게 막혀 있어서 파일로 저장돼요. 시작 확인은 이 화면 설정에서 끌 수 있고, 위젯 홈에도 ProtLink+ 위젯이 있어요."]
+  },
+  { id: "work-home", label: "개요", icon: "tools", mobileOnly: true, group: "more", section: "work", desc: "프로바이더·AI 봇 제작·도구·설정을 모았어요.", card: "작업실 기능을 골라 열어요.", help: ["원하는 작업 기능을 눌러 바로 이동해요."] },
+  {
+    id: "provider", label: "프로바이더", icon: "network", group: "more", section: "work", exp: true,
+    desc: "리스의 모델 목록에 Dusk를 더해요. 키·모델·용도별 설정을 한곳에서 관리해요.",
+    card: "키·모델·용도별 설정을 한곳에서.",
+    help: ["연결(키)과 프로필(모델·생각·캐시)을 만들면 리스 모델 목록에 ‘Dusk 자동’이 생겨요.", "키는 이 기기에만 저장돼요. 번역·감정·기억 등 용도마다 다른 프로필을 쓸 수 있어요."]
+  },
+  {
+    id: "look", label: "플러그인 꾸미기", icon: "palette", group: "more", section: "work", hideWhenExp: true,
     desc: "색·밝기·글자 크기를 골라요. 바로 바뀌어요.",
     card: "색·밝기·글자 크기를 골라요.",
     help: ["누르면 바로 바뀌고 자동으로 저장돼요.", "‘고급 모드’에서 메뉴 위치·밀도·확대율을 더 바꿔요."]
@@ -88,3 +106,6 @@ export var SEARCH = {
 // Build trigger: UI relocation changes are already integrated in the v1.9.0 development branch.
 
 // Build trigger: restore the requested v1.8.0 bundle version.
+
+// 실험 기능(설정 → 실험 기능)에 따라 숨기는 탭: exp는 켜야 보이고, hideWhenExp는 켜면 다른 곳(도구)으로 옮겨진다.
+export const tabHidden = (t, ui) => (!!t.exp && !ui?.experimental) || (!!t.hideWhenExp && !!ui?.experimental);

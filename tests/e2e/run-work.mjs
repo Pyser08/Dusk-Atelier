@@ -18,8 +18,8 @@ for (const [tag, vp, mode] of [["PC 고급", { width: 1280, height: 800 }, "adva
     await page.waitForTimeout(800);
   };
   await open("도구");
-  ok(`[${tag}] 도구: 자주 쓰는 3 + 확인·복구 4`, (await page.locator(".rb-toolgrp").nth(0).locator(".rb-toolrow").count()) === 3 && (await page.locator(".rb-toolgrp").nth(1).locator(".rb-toolrow").count()) === 4);
-  ok(`[${tag}] 도움 주신 분들 6줄, 원문 링크 없음`, (await page.locator(".rb-sthanks-item").count()) === 6 && (await page.locator(".rb-sthanks a").count()) === 0);
+  ok(`[${tag}] 도구: 자주 쓰는 3 + 확인·복구 5`, (await page.locator(".rb-toolgrp").nth(0).locator(".rb-toolrow").count()) === 3 && (await page.locator(".rb-toolgrp").nth(1).locator(".rb-toolrow").count()) === 5);
+  ok(`[${tag}] 도움 주신 분들 10줄, 원문 링크 없음`, (await page.locator(".rb-sthanks-item").count()) === 10 && (await page.locator(".rb-sthanks a").count()) === 0);
   await open("설정");
   const heads = await page.locator("[data-page=settings] .rb-scard > .h").allTextContents();
   ok(`[${tag}] 설정 묶음 이름`, ["화면", "백업", "도움말"].every((x) => heads.includes(x)) && (mode === "advanced" ? ["이야기 도우미", "로어북 · 채팅 메뉴", "정리 · 기록"].every((x) => heads.includes(x)) : !heads.includes("정리 · 기록")), heads.join("|"));

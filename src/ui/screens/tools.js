@@ -18,6 +18,7 @@ import { renderLoreLog } from './lorelog.js';
 import { renderChatTheme } from './chattheme.js';
 import { renderThemeBuilder } from './themebuilder.js';
 import { renderThemeStudio } from './themestudio.js';
+import { renderSizeMeter } from './sizemeter.js';
 
 export function tile(ic, title, desc, onClick, id) {
   return h(
@@ -35,6 +36,7 @@ export function renderTools(ctx) {
   if (ctx.state.sub === "chattheme") return renderChatTheme(ctx);
   if (ctx.state.sub === "themebuilder") return renderThemeBuilder(ctx);
   if (ctx.state.sub === "themestudio") return renderThemeStudio(ctx);
+  if (ctx.state.sub === "sizemeter") return renderSizeMeter(ctx);
   if (ctx.state.sub === "patchmaker") {
     ctx.go("dev", "patchmaker");
     return;
@@ -55,11 +57,14 @@ export function renderTools(ctx) {
     h("div", { class: "rb-tools3-grid" },
       h("div", { class: "rb-tools3-col" },
         group("자주 쓰는 도구",
+          ctx.prefs.ui?.experimental ? row("palette", "플러그인 꾸미기", "색·밝기·글자 크기·글꼴 바꾸기", () => ctx.go("look"), "rb-tool-look") : null,
+          ctx.widgetHome?.on?.() ? row("grid", "위젯 홈", "음악·사진·시계·메모를 한 화면에 모은 홈 열기", () => ctx.openWidgetHome().then((ok) => { if (!ok) ctx.toast(ctx.widgetHome.lastError() || "위젯 홈을 열지 못했어요", { error: true }); }), "rb-tool-widgethome") : null,
           row("preset", "프리셋", "모듈 조합을 저장하고 공유해요", () => ctx.go("tools", "presets"), "rb-tool-presets"),
           row("palette", "채팅 테마 빌더", "테마 만들기·목록·코드 주고받기", () => ctx.go("tools", "chattheme"), "rb-tool-chattheme"),
           row("image", "에셋 태그 고치기", "열린 채팅의 틀린 이미지 태그를 고쳐요", () => import("./assetfix.js").then((m) => m.openAssetFix(ctx)).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })), "rb-tool-assetfix")),
         group("확인 · 복구",
           row("book", "로어북 로그", "응답에 들어간 로어북 보기", () => ctx.go("tools", "lorelog"), "rb-tool-lorelog"),
+          row("size", "용량 측정", "봇·모듈·플러그인 용량과 느려지는 원인 찾기", () => ctx.go("tools", "sizemeter"), "rb-tool-sizemeter"),
           row("info", ".risum 인스펙터", "모듈 파일 안을 열어 봐요", () => ctx.go("tools", "inspector"), "rb-tool-inspector"),
           row("download", "전체 백업·복원", "설정과 데이터를 저장·복원", (ev) => openMenu(ctx.win, ev.currentTarget, [
             { label: "백업 만들기", icon: "download", onClick: () => fullBackup(ctx) },
@@ -79,7 +84,11 @@ const THANKS = [
   { key: "arcana", emoji: "🃏", name: "Arcana Card", desc: "기억 카드의 바탕" },
   { key: "bb", emoji: "🛠️", name: "봇빌더", desc: "AI로 봇 만들기의 바탕" },
   { key: "cocoa", emoji: "🥥", name: "cocoA(gent!)", desc: "스킬 기능의 바탕" },
-  { key: "hypa", emoji: "📚", name: "HypaPlus", desc: "기억 가져오기·정규식 전처리의 바탕" }
+  { key: "hypa", emoji: "📚", name: "HypaPlus", desc: "기억 가져오기·정규식 전처리의 바탕" },
+  { key: "widgethome", emoji: "🏠", name: "위젯 홈", desc: "위젯 홈 화면의 바탕" },
+  { key: "meter", emoji: "📊", name: "RisuMeter", desc: "용량 측정의 바탕" },
+  { key: "erosync", emoji: "🌙", name: "Erosync", desc: "NSFW 장면 디렉터의 바탕" },
+  { key: "protlink", emoji: "🔗", name: "ProtLink+", desc: "링크로 받기·업데이트 연결의 바탕" }
 ];
 export async function fullBackup(ctx) {
   const db = await readDb(ctx.api, ["modules", "pluginCustomStorage", "enabledModules"]);

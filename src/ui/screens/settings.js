@@ -147,7 +147,7 @@ export function renderSettings(ctx) {
   const pick = h(
     "div",
     { class: "rb-mem2-main rb-look-pick" },
-    pageHead("플러그인 꾸미기", { sub: "누르면 바로 바뀌고 자동으로 저장돼요.", back: fromSettings ? { label: "설정으로 돌아가기", onClick: () => ctx.go("settings") } : void 0 }),
+    pageHead("플러그인 꾸미기", { sub: "누르면 바로 바뀌고 자동으로 저장돼요.", back: fromSettings ? { label: "설정으로 돌아가기", onClick: () => ctx.go("settings") } : ctx.prefs.ui?.experimental ? { label: "도구로 돌아가기", onClick: () => ctx.go("tools") } : void 0 }),
     card("테마 묶음", parts.sets),
     card("강조 색", parts.accents),
     card("그라데이션", parts.grads),

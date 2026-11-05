@@ -1,9 +1,10 @@
+import { memoryFileItems } from "./memoryfileui.js";
 import { trustBadges } from "../../../engine/memoryedit.js";
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { btn, badge, chip, openMenu, promptDialog, confirmDialog, modal } from "../../kit.js";
 import { guideBtn } from "./guide.js";
-import { mem, fail, gradeBadge, avatar, at, visibleRecords, topGrade, lastAt, potOn } from "./common.js";
+import { mem, fail, gradeBadge, avatar, isMe, shownName, at, visibleRecords, topGrade, lastAt, potOn } from "./common.js";
 import { GRADES } from "../../../engine/memorygrade.js";
 import { cleanOrphans as cleanOrphansIn } from "../../../engine/memoryreconcile.js";
 import { personKey } from "../../../data/memorystore.js";
@@ -51,6 +52,7 @@ export async function newChatFrom(env, atIdx) {
 export function peopleMenuItems(env, people) {
   const m = mem(env.ctx), { caps } = env;
   return [
+    ...memoryFileItems(env.ctx, env.redraw),
     caps.analyze && { label: "인물 합치기", onClick: () => openMerge(env, people).catch(fail(env.ctx)) },
     caps.analyze && { label: "같은 이름 한 번에 합치기", onClick: () => mergeSameNames(env, people).catch(fail(env.ctx)) },
     env.folder.wiki?.documents && { label: "위키 점검", onClick: () => openWikiHealth(env, people).catch(fail(env.ctx)) },
@@ -75,12 +77,12 @@ export async function renderPeople(env, host) {
     caps.analyze ? h("div", { class: "rb-mem-sact" }, btn("지난 대화 전체 분석하기", { kind: "primary", onClick: () => { m.settingsOpen = true; env.redraw(); } }), btn("마지막 응답만 분석", { onClick: () => analyzeNow(env) }), btn("RP 붙여넣어 분석", { onClick: () => openWriter(env).catch(fail(env.ctx)) })) : h("div", { class: "rb-muted" }, "리스바드가 위키를 쌓으면 여기서 볼 수 있어요. 채팅을 열고 새로고침해 주세요.")));
   const q = m.personSearch.trim().toLowerCase();
   let rows = people.filter(([, p]) => !q || [p.name, ...(p.aliases ?? [])].some((n) => String(n).toLowerCase().includes(q)));
-  rows = rows.sort(([, a], [, b]) => m.sort === "count" ? visibleRecords(b).length - visibleRecords(a).length : m.sort === "grade" ? GRADES.indexOf(topGrade(b) || "D") - GRADES.indexOf(topGrade(a) || "D") : lastAt(b) - lastAt(a));
+  rows = rows.sort(([, a], [, b]) => (isMe(b.name) - isMe(a.name)) || (m.sort === "count" ? visibleRecords(b).length - visibleRecords(a).length : m.sort === "grade" ? GRADES.indexOf(topGrade(b) || "D") - GRADES.indexOf(topGrade(a) || "D") : lastAt(b) - lastAt(a)));   // {{user}}(나)는 늘 맨 앞
   const card = ([k, p]) => {
     const recs = visibleRecords(p), tg = topGrade(p);
     const dist = GRADES.map((g) => recs.filter((r) => r.g === g).length);
-    return h("button", { type: "button", class: "rb-mem-card", onClick: () => { m.personKey = k; m.grades = []; m.search = ""; m.page = 1; env.redraw(); } },
-      avatar(p.name, tg), h("span", { class: "txt" }, h("span", { class: "name" }, p.name, " ", gradeBadge(tg)), h("span", { class: "meta" }, `기록 ${recs.length}${lastAt(p) >= 0 ? ` · 마지막 ${at(lastAt(p))}` : ""}${p.wiki ? " · 위키 요약" : ""}`),
+    return h("button", { type: "button", class: ["rb-mem-card", isMe(p.name) && "me"], onClick: () => { m.personKey = k; m.grades = []; m.search = ""; m.page = 1; env.redraw(); } },
+      avatar(p.name, tg), h("span", { class: "txt" }, h("span", { class: "name" }, shownName(p.name), isMe(p.name) ? badge("나", "on") : null, " ", gradeBadge(tg)), h("span", { class: "meta" }, `기록 ${recs.length}${lastAt(p) >= 0 ? ` · 마지막 ${at(lastAt(p))}` : ""}${p.wiki ? " · 위키 요약" : ""}`),
         h("span", { class: "rb-mem-minibar", "aria-label": "등급 분포" }, GRADES.map((g, i) => h("i", { "data-g": g, style: { flex: String(Math.max(dist[i], 0.0001)) }, title: `${g} ${dist[i]}` })))));
   };
   const wk = env.folder.wiki, grouped = wikiEditable(env) && hasFolders(wk);
@@ -158,7 +160,7 @@ export function personDetail(env, host, key, embedded = false) {
       r.at != null && { label: "여기서 새 채팅", onClick: () => newChatFrom(env, r.at) }
     ].filter(Boolean)) }));
   replace(host,
-    embedded ? null : h("div", { class: "rb-mem-phead" }, btn("목록", { size: "sm", icon: "back", onClick: () => { m.personKey = ""; env.redraw(); } }), avatar(p.name, topGrade(p)), h("h3", null, p.name, guideBtn(env.ctx, "person")), (p.aliases ?? []).length ? h("span", { class: "rb-muted" }, `별칭: ${p.aliases.join(", ")}`) : null, h("span", { style: "flex:1" }),
+    embedded ? null : h("div", { class: "rb-mem-phead" }, btn("목록", { size: "sm", icon: "back", onClick: () => { m.personKey = ""; env.redraw(); } }), avatar(p.name, topGrade(p)), h("h3", null, shownName(p.name), guideBtn(env.ctx, "person")), (p.aliases ?? []).length ? h("span", { class: "rb-muted" }, `별칭: ${p.aliases.join(", ")}`) : null, h("span", { style: "flex:1" }),
       local && btn(p.pinned ? "고정됨" : "고정", { size: "sm", onClick: () => editFolder(env, (f) => { f.people[key].pinned = !f.people[key].pinned; }) }),
       local && btn({ always: "항상 포함", never: "제외", auto: "자동(관련 시)" }[p.ctx ?? (p.pinned ? "always" : "auto")], { size: "sm", title: "프롬프트 포함 방식: 자동 → 항상 → 제외", onClick: () => editFolder(env, (f) => { const q = f.people[key], c = q.ctx ?? (q.pinned ? "always" : "auto"); q.ctx = { auto: "always", always: "never", never: "auto" }[c]; }) }),
       local && btn(isPaused(env.idx.bots?.[env.bot.id]?.ignore, p) ? "⏸ 기록 쉬는 중" : "⏸ 기록 쉬기", { size: "sm", title: "이 인물의 사건 기록을 새로 만들지 않아요. 이미 쌓인 기록은 그대로고, 인물 수치는 계속 갱신될 수 있어요.", onClick: () => pausePerson(env, p) }),

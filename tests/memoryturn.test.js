@@ -87,7 +87,7 @@ function harness({ model = {} } = {}) {
   return { api, chat, hooks, calls, mem, say, folder, m };
 }
 const turnOn = async (h, mode = "fast") => {
-  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = mode; i.settings.confirm = "now"; i.settings.staged = false; i.settings.potStore = { ...i.settings.potStore, confirm: "now" }; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });
+  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = mode; i.settings.edited = [...(i.settings.edited ?? []), "flow.mode"]; i.settings.confirm = "now"; i.settings.staged = false; i.settings.potStore = { ...i.settings.potStore, confirm: "now" }; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });
   assert.equal(await h.mem.start(), "local");
   assert.equal(h.mem.flow.isOn(), true);
 };
@@ -247,7 +247,7 @@ test("리스 기본 메모리(Hypa) 참고는 흐름을 켜면 항상 꺼진다 
 
 test("다음 입력 때 확정(기본): 응답 직후엔 기록하지 않고, 리롤은 건드리지 않으며, 다음 말을 보낼 때 직전 응답을 기록", async () => {
   const h = harness();
-  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = "fast"; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });  // confirm은 기본(next)
+  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = "fast"; i.settings.edited = [...(i.settings.edited ?? []), "flow.mode"]; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });  // confirm은 기본(next)
   assert.equal(await h.mem.start(), "local");
   const request = (user) => { h.chat.message.push({ role: "user", data: user, chatId: "u" + h.chat.message.length }); return h.hooks["r:beforeRequest"]([{ role: "system", content: "샬레 세계관" }, { role: "user", content: user }], "model"); };
   const reply = async (text, id) => { const idx = h.chat.message.length; h.chat.message.push({ role: "char", data: text, chatId: id }); h.hooks["c:output"]?.({ characterIndex: 0, chatIndex: 0, messageIndex: idx, chat: structuredClone(h.chat), char: await h.api.getCharacterFromIndex(0) }); h.hooks.output?.(text); return idx; };
@@ -304,11 +304,23 @@ test("이 봇에서 리수폿만 끄면: 위키 호출·기록은 없고 Dusk �
 });
 test("기록 시점이 따로: 리수폿은 응답 직후(now), 기억은 다음 입력 때(next)로 둘 수 있다", async () => {
   const h = harness();
-  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = "fast"; i.settings.confirm = "next"; i.settings.potStore = { backend: "auto", confirm: "now" }; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });
+  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.flow.mode = "fast"; i.settings.edited = [...(i.settings.edited ?? []), "flow.mode"]; i.settings.confirm = "next"; i.settings.potStore = { backend: "auto", confirm: "now" }; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });
   assert.equal(await h.mem.start(), "local");
   const idx = h.chat.message.length; h.chat.message.push({ role: "user", data: "시작하자", chatId: "u0" });
   await h.hooks["r:beforeRequest"]([{ role: "system", content: "샬레 세계관" }, { role: "user", content: "시작하자" }], "model");
   h.chat.message.push({ role: "char", data: SCRIPT.T1.text, chatId: "a1" });
   h.hooks["c:output"]?.({ characterIndex: 0, chatIndex: 0, messageIndex: idx + 1, chat: structuredClone(h.chat), char: await h.api.getCharacterFromIndex(0) });
   assert.ok(await until(async () => h.calls.some((c) => c.kind === "writer")), "리수폿은 응답 직후 바로 기록한다(now)");
+});
+
+test("기억 방식 기본은 더 정확하게: 손대지 않은 예전 fast는 따라가고, 직접 고른 fast는 지킨다", async () => {
+  const { followDefaults, DUSK_FOLLOW } = await import("../src/engine/defaultfollow.js");
+  const { DEFAULT_SETTINGS } = await import("../src/data/memorystore.js");
+  assert.equal(DEFAULT_SETTINGS.flow.mode, "accurate");
+  const old = { flow: { mode: "fast" } };
+  followDefaults(old, DEFAULT_SETTINGS, undefined, DUSK_FOLLOW);
+  assert.equal(old.flow.mode, "accurate", "기록이 없는 예전 fast는 새 기본을 따른다");
+  const kept = { flow: { mode: "fast" } };
+  followDefaults(kept, DEFAULT_SETTINGS, ["flow.mode"], DUSK_FOLLOW);
+  assert.equal(kept.flow.mode, "fast", "직접 고른 빠르게는 그대로");
 });

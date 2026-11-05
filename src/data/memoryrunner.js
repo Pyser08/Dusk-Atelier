@@ -18,13 +18,14 @@ import { openForPrompt } from "../engine/memoryplus.js";
 import { emoForPrompt } from "../engine/memoryemo.js";
 import { hintsForPrompt } from "../engine/memoryinner.js";
 import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engine/memorydigest.js";
+import { loadUserNames } from "./usernames.js";
 
 const MAX_FAILS = 5;
 // 자동 기록 시점: next(기본) = 다음 입력을 보낼 때 직전 응답을 확정해 기록 | now = 응답 직후
 const confirmOf = (idx) => idx?.settings?.confirm === "now" ? "now" : "next";
 
 const TRANSIENT = /429|rate.?limit|too many|timeout|timed out|overload|busy|unavailable|\b5\d\d\b|ECONN|network|fetch failed|failed to fetch/i;
-export function createMemoryRunner(api, { store, prep = null, prompts = null, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null, gauge = null } = {}) {
+export function createMemoryRunner(api, { store, prep = null, prompts = null, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null, server = null, gauge = null } = {}) {
   let timer = null, dirty = false, running = false, started = false;
   let session = { calls: 0, hooks: 0, displays: 0, hookAt: 0, tick: null }; const lastTried = new Map(); let lastTickAt = 0;
   const note = (result, extra = {}) => { session.tick = { at: Date.now(), result, ...extra }; };
@@ -40,8 +41,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   let userCache = { at: 0, names: [] };
   async function userNames() {
     if (Date.now() - userCache.at < 60e3) return userCache.names;
-    let names = [];
-    try { const db = await api.getDatabase?.(["username"]); if (db?.username) names = [String(db.username)]; } catch { /* 없으면 일반 이름만 */ }
+    const names = await loadUserNames(api);   // 없으면 일반 이름만
     userCache = { at: Date.now(), names };
     return names;
   }
@@ -51,8 +51,9 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   async function status(patch) { return store.updateIndex((idx) => { Object.assign(idx.status, patch); }).catch(() => {}); }
 
   // 분석 대상 한 묶음의 공통 자료(채팅·앵커·설정). 모델 호출 없음.
-  async function gather(charIndex, chatIndex, group) {
-    const character = await api.getCharacterFromIndex(charIndex), chat = await api.getChatFromIndex(charIndex, chatIndex);
+  // shared: 일괄 분석이 한 번만 읽어 둔 {character, chat}. 묶음마다 캐릭터·채팅을 통째로 다시 복사하면 큰 봇에서 메모리가 폭증한다(아이폰 OOM).
+  async function gather(charIndex, chatIndex, group, shared = null) {
+    const character = shared?.character ?? await api.getCharacterFromIndex(charIndex), chat = shared?.chat ?? await api.getChatFromIndex(charIndex, chatIndex);
     if (!character || !chat) throw new Error("캐릭터 또는 채팅을 찾지 못했어요.");
     const chaId = String(character.chaId ?? charIndex), chatId = String(chat.id ?? chatIndex);
     const messages = chat.message ?? [], last = group.at(-1), m = messages[last];
@@ -99,12 +100,12 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   }
 
   // 한 메시지(또는 묶음)를 분석해 반영. group: 같은 입력에 합칠 메시지 인덱스들(마지막이 앵커).
-  async function analyzeAt(charIndex, chatIndex, group, { signal, manual = false } = {}) {
-    const g = await gather(charIndex, chatIndex, group);
+  async function analyzeAt(charIndex, chatIndex, group, { signal, manual = false, redo = false, shared = null } = {}) {
+    const g = await gather(charIndex, chatIndex, group, shared);
     const { character, chat, chaId, chatId, messages, last, text, h, anchor, idx, bot } = g;
     const why = gate(g, manual); if (why) return why;
     const existing = await loadReconciled(store, chaId, chatId, messages);  // 옛 장면·떡밥이 새 요약에 섞이지 않게 먼저 대조
-    if (existing?.cursor?.h === h && existing.cursor.at === last) return "done";
+    if (!redo && existing?.cursor?.h === h && existing.cursor.at === last) return "done";   // redo: 사용자가 이미 분석한 응답을 다시 분석하라고 한 경우
     const tryKey = chaId + "::" + chatId;
     if (!manual && lastTried.get(tryKey) === h) return "done";
     lastTried.set(tryKey, h);
@@ -234,29 +235,66 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
 
   // 수동·일괄 분석. range: {from,to} 메시지 인덱스(포함). AI 응답 3개씩 묶음.
   // 반환: groups·calls·tokens + 현황(total 범위 안 AI 응답 수, done 분석됨, todo 미처리, failed 미처리 중 지난번 실패한 것)
-  function planBackfill(messages, { from = 0, to = Infinity } = {}, folder = null) {
+  function planBackfill(messages, { from = 0, to = Infinity, all = false } = {}, folder = null) {   // all: 이미 분석한 응답도 포함(다시 분석)
     const ai = aiIndexes(messages).filter((i) => i >= from && i <= to);
     // 예전 완료 목록·앵커를 새 식별자로 맞춘 복사본으로 계획한다(저장된 폴더 자체는 여기서 수정하지 않는다).
     const normalized = folder ? structuredClone(folder) : null;
     if (normalized) reconcile(normalized, messages);
     const done = doneHashes(normalized), failedSet = new Set(normalized?.failedBackfill ?? []);
     const hOf = (i) => messageIdentity(messages[i]);
-    const todo = ai.filter((i) => !done.has(hOf(i)));
+    const todo = all ? ai : ai.filter((i) => !done.has(hOf(i)));
     const groups = []; for (let k = 0; k < todo.length; k += 3) groups.push(todo.slice(k, k + 3));
     const chars = groups.reduce((n, g) => n + g.reduce((s, i) => s + extractMessageText(messages[i]).length, 0) + 4000, 0);
     return { groups, calls: groups.length, tokens: Math.round(chars / 1.5), total: ai.length, done: ai.length - todo.length, todo: todo.length, failed: todo.filter((i) => failedSet.has(hOf(i))).length };
   }
-  async function backfill(charIndex, chatIndex, range, { signal, onProgress } = {}) {
+  // 서버 분석 중계: 서버가 요청한 모델 호출을 기존 방식(리스 보조 모델·내 API 모델·인증 포함)으로 한다
+  const relayCall = (settings, signal) => (msgs, pick) => run(msgs, { ...modelOf(settings), noUserPrompts: true, ...(pick?.timeoutSec ? { timeoutSec: pick.timeoutSec } : {}) }, signal);
+  // 리스 화면을 다시 열었을 때 서버에서 중계를 기다리던 분석을 이어서 한다
+  async function resumeServer({ signal } = {}) {
+    if (!server?.resume) return null;
+    const idx = await store.getIndex();
+    if (idx.settings?.serverAnalysis === false) return null;
+    const out = await server.resume({ relay: relayCall(idx.settings, signal), signal });
+    if (out?.job?.chaId) {
+      store.dropCache?.();
+      await store.updateFolder(String(out.job.chaId), String(out.job.chatId), () => {}).catch(() => {});
+      notify(`서버에서 이어서 한 지난 대화 분석이 끝났어요 (${out.total - out.failed.length}/${out.total}).`);
+    }
+    return out;
+  }
+  async function backfill(charIndex, chatIndex, range, { signal, onProgress, redo = false } = {}) {
+    // 캐릭터·채팅·폴더는 처음에 한 번만 읽는다(묶음마다 읽으면 수백 번 통째 복사 → 모바일 메모리 부족).
     const chat = await api.getChatFromIndex(charIndex, chatIndex), character = await api.getCharacterFromIndex(charIndex);
     const folder = await store.getFolder(String(character.chaId), String(chat.id ?? chatIndex));
-    const { groups } = planBackfill(chat.message ?? [], range, folder);
+    const { groups } = planBackfill(chat.message ?? [], { ...range, all: redo }, folder);
+    if (groups.length && isGenerating(character)) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
+    // Dusk Cellar 서버 분석: 쓸 수 있으면(서버 연결·기억이 서버에 저장·서버가 부를 수 있는 모델) 서버에서 돌린다. 아니면 아래 기기 방식.
+    if (server && groups.length && (await store.getIndex()).settings?.serverAnalysis !== false) {
+      const idx = await store.getIndex(), chaId = String(character.chaId), chatId = String(chat.id ?? chatIndex);
+      const smId = idx.settings?.serverModel?.presetId;   // 서버 분석 전용 '내 API' 프리셋(없으면 분석 모델 그대로 → 리스 쪽 모델이면 중계)
+      const prep0 = await server.prepare(smId ? { mode: "custom", presetId: smId } : modelOf(idx.settings));
+      if (prep0) {
+        const out = await server.run(prep0, {
+          chaId, chatId, charName: character.name, chatName: chat.name ?? chat.chatName ?? "", messages: server.slim(chat.message ?? []),
+          settings: idx.settings, bot: { ...(idx.bots[chaId] ?? {}), paused: false }, userNames: await userNames(), regex: prep ? await prep.entriesFor(character, chat) : [],
+          prompts: await prompts?.().catch(() => null) ?? null, range: { from: range?.from ?? 0, to: Number.isFinite(range?.to) ? range.to : null, all: redo }, redo
+        }, { signal, onProgress, relay: relayCall(idx.settings, signal) });
+        if (out) {
+          store.dropCache?.();   // 서버가 쓴 기억을 다시 읽게 하고, 인덱스의 폴더 요약을 맞춘다
+          await store.updateFolder(chaId, chatId, () => {}).catch(() => {});
+          return out;
+        }
+      }
+    }
+    const shared = { character, chat };
     const failed = [], reasons = []; let n = 0;
     for (const g of groups) {
       if (signal?.aborted) break;
-      if (isGenerating(await api.getCharacterFromIndex(charIndex))) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
+      // 생성 중인지는 현재 채팅 하나만 5묶음마다 확인한다(캐릭터 전체 복사 금지).
+      if (n > 0 && n % 5 === 0 && isChatStreaming(await api.getChatFromIndex(charIndex, chatIndex))) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
       // 요청 한도·시간 초과·서버 오류 같은 일시적 오류는 간격을 늘려 가며 2번까지 다시 시도한다(실패 원인은 reasons로 돌려준다).
       for (let attempt = 0; ; attempt++) {
-        try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true }); break; }
+        try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true, redo, shared }); break; }
         catch (e) {
           const msg = String(e?.message ?? e).slice(0, 160);
           if (signal?.aborted) { failed.push(g); break; }
@@ -276,5 +314,5 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   }
 
   return { start, onOutput, confirmNext, tick, analyzeAt, prepareLatest, analyzeLatest: async (ci, ti) => { const i = await latestAiIndex(ci, ti); if (i < 0) throw new Error("분석할 AI 응답이 없어요."); return analyzeAt(ci, ti, [i], { manual: true }); },
-    planBackfill, backfill, digestIfNeeded, session: () => ({ ...session }), isStarted: () => started, stop: () => clearTimeout(timer) };
+    planBackfill, backfill, resumeServer, digestIfNeeded, session: () => ({ ...session }), isStarted: () => started, stop: () => clearTimeout(timer) };
 }

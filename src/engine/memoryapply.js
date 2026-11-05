@@ -1,4 +1,5 @@
 // 분석 결과를 폴더에 반영하는 순수 함수.
+import { isCollectiveName } from "./collective.js";
 import { gradeResponse, findDuplicate, gradeRank } from "./memorygrade.js";
 import { applyRel, applyOpen, reinforce } from "./memoryplus.js";
 import { mergeWhen } from "./storydate.js";
@@ -36,7 +37,7 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
     prev.updated_ms = now; out.scene = "updated";
   }
   const sit = latestScene(folder)?.id ?? null;
-  const graded = gradeResponse((result?.people ?? []).filter((p) => !ign.has(key(p.name))));
+  const graded = gradeResponse((result?.people ?? []).filter((p) => !ign.has(key(p.name)) && !isCollectiveName(p.name)));   // 반·학년·동급생 같은 집단 이름은 인물로 만들지 않는다
   const important = isImportant(graded, out.scene === "new");  // 3단계(관점·내면)는 중요한 응답에서만 받는다
   for (const e of graded) {
     let pk = findPersonKey(folder, e.name);

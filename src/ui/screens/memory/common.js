@@ -1,5 +1,6 @@
 import { dbRead } from '../../../data/dbcache.js';
 import { h } from '../../dom.js';
+import { userLabel } from './username.js';
 import { modal } from '../../kit.js';
 import { loadCharacters } from '../../../data/modules.js';
 import { emptyFolder } from '../../../data/memorystore.js';
@@ -8,7 +9,10 @@ import { reconcile } from '../../../engine/memoryreconcile.js';
 export const mem = (ctx) => ctx.state.mem ??= { view: "bots", botId: "", chatIndex: 0, tab: "people", personKey: "", grades: [], search: "", personSearch: "", sort: "time", sceneDesc: true, page: 1, bots: null, showHidden: false, compose: null };
 export const fail = (ctx) => (e) => ctx.toast(e?.message ?? String(e), { error: true, seconds: 8 });
 export const gradeBadge = (g) => h("span", { class: "rb-grade", "data-g": g || "-", title: g ? `등급 ${g}` : "등급 없음" }, g || "–");
-export const avatar = (name, g) => h("span", { class: "rb-mem-av", "data-g": g || "-", "aria-hidden": "true" }, [...String(name || "?")][0]);
+export const isMe = (n) => /^\{\{user\}\}$/i.test(String(n ?? "").trim());
+// {{user}}는 동그라미에 '{'가 아니라 지금 페르소나 이름의 첫 글자를 넣고, 강조색으로 구분한다
+export const shownName = (n) => (isMe(n) ? userLabel() : n);
+export const avatar = (name, g) => h("span", { class: "rb-mem-av", "data-g": g || "-", ...(isMe(name) ? { "data-me": "1" } : {}), "aria-hidden": "true" }, [...String(shownName(name) || "?")][0]);
 export const at = (n) => n == null ? "" : `#${n + 1}`;
 
 export async function loadBots(ctx, force = false) {

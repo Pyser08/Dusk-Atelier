@@ -1,4 +1,4 @@
-// 채팅 메뉴(입력 옆)의 '장기기억' 버튼을 설정에서 켜고 끄기 (v1.6.5). 기본 켜짐.
+// 채팅 메뉴(입력 옆)의 떠 있는 버튼(v1.9.3부터 인물 관계도로 연결)을 설정에서 켜고 끄기 (v1.6.5). 기본 켜짐.
 export const MEMORY_BUTTON_KEY = "dusk.ui.memoryButton";
 export async function loadMemoryButtonOn(api) {
   try {
@@ -13,7 +13,7 @@ export function createMemoryButton(api, { name, icon, open, log }) {
   async function show() {
     if (on) return true;
     try {
-      part = await api.registerButton({ name, icon, iconType: "html", location: "action" }, open);
+      part = await api.registerButton({ name, icon, iconType: "html", location: "action", id: "dusk-memory-button" }, open);   // id가 있어야 포켓리스가 떠 있는 버튼 위치를 옮기고 기억해요
       on = true;
       return true;
     } catch (e) {

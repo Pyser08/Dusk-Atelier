@@ -8,10 +8,11 @@ import { EMO_TAGS, EMO_LABEL, GAUGE_MAX } from "../../../engine/memoryemo.js";
 import { meView, userMergePlan, mergeIntoUser, TONE_LABEL, USER } from "../../../engine/memoryuser.js";
 import { setTag } from "../../../engine/memoryemo.js";
 import { setTalk } from "../../../engine/memoryhuman.js";
-import { dbRead } from "../../../data/dbcache.js";
+import { loadUserNames } from "../../../data/usernames.js";
+import { autoMergeUser } from "../../../data/usermerge.js";
 
 async function personaNames(ctx) {
-  try { const db = await dbRead(ctx.api, ["username"]); return db?.username ? [String(db.username)] : []; } catch { return []; }
+  return loadUserNames(ctx.api);
 }
 const bar = (t, val) => h("div", { class: "rb-wk2-bar" }, h("i", { class: `dot e-${t}`, "aria-hidden": "true" }), h("span", null, EMO_LABEL[t]),
   h("span", { class: "track", role: "progressbar", "aria-label": EMO_LABEL[t], "aria-valuemin": 0, "aria-valuemax": GAUGE_MAX, "aria-valuenow": val }, h("i", { class: `e-${t}`, style: { width: `${(val / GAUGE_MAX) * 100}%` } })),
@@ -31,7 +32,8 @@ function otherCard(o, openWiki, onEdit) {
       kv("내가 부르는 말", o.iCall),
       o.face ? kv("둘이 있을 때", o.face.alone) : null, o.face ? kv("남들 앞에서", o.face.public) : null) : null,
     o.bond ? h("section", { class: "rb-me-sec" }, h("span", { class: "h" }, "둘만의 추억"), h("p", { class: "rb-me-quote" }, o.bond)) : null,
-    o.rifts.length || o.beliefs.length ? h("div", { class: "rb-chips rb-me-flags" },
+    o.rifts.length || o.beliefs.length || o.start ? h("div", { class: "rb-chips rb-me-flags" },
+      o.start ? h("span", { class: "rb-chip", title: `본문 근거: ${o.start.q}` }, `처음부터 알던 사이 · ${o.start.level === "close" ? "친함" : "아는 사이"}`) : null,
       ...o.rifts.map((r) => h("span", { class: "rb-chip warn" }, `갈등 · ${r.about || "풀리지 않음"}`)),
       ...o.beliefs.map((b) => h("span", { class: "rb-chip" }, `오해 · ${b}`))) : null,
     h("footer", { class: "rb-me-foot" }, btn("고치기", { size: "sm", icon: "edit", onClick: () => onEdit(o), class: "rb-me-edit" }), h("button", { type: "button", class: "rb-textlink", onClick: () => openWiki(o.name) }, `${o.name} 인물 위키`, icon("chevron", 14))));
@@ -65,7 +67,11 @@ export async function renderMemoryMe(ctx, host, { redraw }) {
   const back = { label: "장기 기억으로", onClick: () => { m.page = "home"; redraw(); } };
   const cur = await M.switches.currentChat();
   if (!cur) return replace(host, h("div", { class: "rb-me" }, pageHead("나", { back }), emptyState({ icon: "character", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅에서 다른 인물들이 나를 어떻게 기억하는지 보여 줘요." })));
-  const [folder, names] = await Promise.all([M.store.getFolder(cur.chaId, cur.chatId).catch(() => null), personaNames(ctx)]);
+  let [folder, names] = await Promise.all([M.store.getFolder(cur.chaId, cur.chatId).catch(() => null), personaNames(ctx)]);
+  try {   // 페르소나 이름으로 따로 쌓인 옛 기록은 자동으로 {{user}}에 합친다(합칠 게 없으면 아무것도 안 함)
+    const merged = await autoMergeUser(M.store, cur.chaId, cur.chatId, folder, names);
+    if (merged) { folder = await M.store.getFolder(cur.chaId, cur.chatId).catch(() => folder); ctx.toast?.(`'${merged.names.join("', '") || "다른 이름"}' 기록을 '나'로 합쳤어요.`); }
+  } catch { /* 실패하면 아래 '나로 합치기' 버튼으로 직접 */ }
   const v = folder ? meView(folder) : { records: 0, moments: [], others: [] };
   const plan = folder ? userMergePlan(folder, names) : { people: [], links: 0 };
   const onEdit = async (o) => {

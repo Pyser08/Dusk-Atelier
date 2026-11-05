@@ -10,7 +10,7 @@ const rid = (p) => p + "_" + Date.now().toString(36) + Math.random().toString(36
 const names = (v, n = 6) => [...new Set((Array.isArray(v) ? v : []).map((x) => cut(x, 60)).filter(Boolean))].slice(0, n);
 
 export const OPEN_KINDS = Object.freeze({ promise: "약속", foreshadow: "복선", question: "의문" });
-export const OPEN_CAP = 60, REL_CAP = 20;
+export const OPEN_CAP = 60, REL_CAP = 20, DUP_SAME_KIND = 0.5;
 
 // ── 분석 응답 검증: validate()가 부른다. people[].know 와 최상위 rel/open ──
 export const validateKnow = (v) => names(v);
@@ -42,16 +42,19 @@ export function applyOpen(folder, open, anchor, now = Date.now()) {
   folder.open ??= [];
   let added = 0, closed = 0;
   const src = srcOf(anchor);
-  for (const a of open?.add ?? []) {
-    if (folder.open.some((x) => !x.orphan && !isClosed(x) && similarity(x.text, a.text) >= 0.8)) continue;
-    folder.open.push({ id: rid("o"), text: a.text, kind: a.kind, who: a.who ?? [], at: anchor?.at ?? null, at_ms: now, closed: false, ...(src ? { src } : {}) }); added++;
-  }
+  // 해결 닫기를 먼저 처리한다: 같은 응답에서 닫고 다시 쓴 항목이 새 항목으로 생기지 않게.
   for (const id of open?.close ?? []) {
     const x = folder.open.find((o) => o.id === id && !o.orphan && !isClosed(o));
     if (x) {
       x.closed = true; x.closedAt = anchor?.at ?? null; x.closed_ms = now; closed++;
       delete x.closedOrphan; if (src) x.closedBy = src; else delete x.closedBy;
     }
+  }
+  // 중복 판정: 열린 것뿐 아니라 이미 해결된 것과도 비교한다(같은 종류면 표현이 조금 달라도 같은 항목으로 본다).
+  const dup = (a) => folder.open.some((x) => !x.orphan && similarity(x.text, a.text) >= (x.kind === a.kind ? DUP_SAME_KIND : 0.8));
+  for (const a of open?.add ?? []) {
+    if (dup(a)) continue;
+    folder.open.push({ id: rid("o"), text: a.text, kind: a.kind, who: a.who ?? [], at: anchor?.at ?? null, at_ms: now, closed: false, ...(src ? { src } : {}) }); added++;
   }
   if (folder.open.length > OPEN_CAP) {  // 해결된 것부터 오래된 순으로 정리
     const drop = new Set(folder.open.filter((x) => x.orphan || isClosed(x)).slice(0, folder.open.length - OPEN_CAP));
@@ -64,7 +67,7 @@ export function applyOpen(folder, open, anchor, now = Date.now()) {
 export const isClosed = (x) => !!x.closed && !x.closedOrphan;
 export const openItems = (folder, { closed = false } = {}) => (folder.open ?? []).filter((x) => !x.orphan && isClosed(x) === closed);
 // 분석 입력에 넣을 열린 항목(모델이 id로 닫는다)
-export const openForPrompt = (folder, n = 12) => openItems(folder).slice(-n).map((x) => ({ id: x.id, kind: x.kind, text: x.text }));
+export const openForPrompt = (folder, n = 24) => openItems(folder).slice(-n).map((x) => ({ id: x.id, kind: x.kind, text: x.text }));
 
 // 기억 강화: 같은 행동이 다시 기록되면 언급 횟수(m)와 마지막 언급 위치(lm)를 올린다.
 // v1.7.1: 같은 출처 응답(재분석·리롤 전후 같은 자리)은 횟수에 더하지 않는다.

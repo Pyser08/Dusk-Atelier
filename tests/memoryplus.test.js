@@ -33,11 +33,31 @@ test("분석 반영: know 저장, 중복은 강화(m·lm), 관계·열린 항목
   assert.equal(r.m, 2); assert.equal(r.lm, 9); assert.equal(f.open[0].closed, true); assert.equal(f.open[0].closedAt, 9);
   assert.equal(openItems(f).length, 0); assert.equal(openItems(f, { closed: true }).length, 1);
 });
+test("열린 항목: 해결(닫힘)된 것과 같은 내용은 다시 만들지 않는다", () => {
+  const f = base();
+  applyOpen(f, { add: [{ text: "민수가 편지를 전해 주기로 약속했다", kind: "promise", who: [] }] }, { at: 1 });
+  const id = f.open[0].id;
+  applyOpen(f, { add: [], close: [id] }, { at: 2 });
+  assert.equal(applyOpen(f, { add: [{ text: "민수가 편지를 전해 주기로 약속했다", kind: "promise", who: [] }] }, { at: 3 }).added, 0);
+  assert.equal(f.open.length, 1);
+});
+test("열린 항목: 같은 응답에서 닫고 다시 쓴 항목은 새로 만들지 않는다(닫기를 먼저 처리)", () => {
+  const f = base();
+  applyOpen(f, { add: [{ text: "편지의 정체는 무엇일까?", kind: "question", who: [] }] }, { at: 1 });
+  const id = f.open[0].id;
+  const r = applyOpen(f, { add: [{ text: "편지의 정체는 무엇일까", kind: "question", who: [] }], close: [id] }, { at: 2 });
+  assert.deepEqual(r, { added: 0, closed: 1 });
+});
+test("열린 항목: 표현만 조금 바뀐 같은 항목은 중복으로 본다", () => {
+  const f = base();
+  applyOpen(f, { add: [{ text: "민수가 내일 도서관에서 만나자고 약속했다", kind: "promise", who: [] }] }, { at: 1 });
+  assert.equal(applyOpen(f, { add: [{ text: "민수가 내일 도서관에서 만나기로 약속했다", kind: "promise", who: [] }] }, { at: 2 }).added, 0);
+});
 test("열린 항목: 중복 추가 금지, 알 수 없는 id는 무시, 상한 정리는 해결된 것부터", () => {
   const f = base();
   applyOpen(f, { add: [{ text: "편지의 정체는?", kind: "question", who: [] }] }, { at: 1 });
   assert.deepEqual(applyOpen(f, { add: [{ text: "편지의 정체는?", kind: "question", who: [] }], close: ["없는id"] }, { at: 2 }), { added: 0, closed: 0 });
-  for (let i = 0; i < 70; i++) applyOpen(f, { add: [{ text: "서로 다른 항목 번호 " + "가나다라마바사아자차"[i % 10] + i + "ㅋ".repeat(i % 7), kind: "promise" }] }, { at: i });
+  for (let i = 0; i < 70; i++) applyOpen(f, { add: [{ text: String.fromCharCode(0xac00 + i * 37, 0xac00 + i * 53 + 7, 0xac00 + i * 71 + 3, 0xac00 + i * 29 + 11, 0xac00 + i * 97 + 5), kind: "promise" }] }, { at: i });
   assert.ok(f.open.length <= 60); assert.equal(openForPrompt(f, 3).length, 3);
 });
 test("관계 변화량: 같은 변화 반복은 한 번만, 쌍별 20개 상한", () => {

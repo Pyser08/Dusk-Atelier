@@ -12,8 +12,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   await page.setContent("<!doctype html><meta name=viewport content=\"width=device-width,initial-scale=1\"><body style='margin:0'></body>"); await page.addScriptTag({ content: r.outputFiles[0].text });
   await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99 }) }));
   await page.waitForTimeout(300);
-  if (tag === "PC") await page.locator(".rb-nav a", { hasText: "꾸미기" }).click();
-  else { await page.evaluate(() => [...document.querySelectorAll(".rb-tabbar a")].find((a) => a.textContent.trim().startsWith("작업실")).click()); await page.waitForTimeout(250); await page.locator(".rb-section-tile", { hasText: "플러그인 꾸미기" }).click(); }
+  await page.evaluate(() => window.__app.ctx.go("look"));
   await page.waitForTimeout(300);
   const look = ".rb-mem2[data-page=look]";
   const ui = () => page.evaluate(() => JSON.parse(__api.store["rbm:ui:v1"] ?? "{}"));

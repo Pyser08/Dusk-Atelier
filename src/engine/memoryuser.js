@@ -36,6 +36,7 @@ export function userMergePlan(folder, names = []) {
   for (const x of Object.values(folder?.exp ?? {})) touch(x.a, x.b);
   for (const x of [...(folder?.bonds ?? []), ...(folder?.rifts ?? [])]) touch(x.a, x.b);
   for (const x of folder?.beliefs ?? []) touch(x.who, x.by);
+  for (const x of Object.values(folder?.start ?? {})) touch(x.a, x.b);
   return { people, links };
 }
 // 맵(키 = 이름 키 조합)을 새 이름으로 다시 키를 매긴다. 겹치면 merge(old, incoming)로 합친다.
@@ -70,6 +71,7 @@ export function mergeIntoUser(folder, names = []) {
   folder.talk = rekey(folder.talk, set, ["from", "to"], (x) => pair(x.from, x.to), newer);
   folder.rels = rekey(folder.rels, set, ["from", "to"], (x) => pair(x.from, x.to), (keep, add) => ({ ...keep, items: [...(add.items ?? []), ...(keep.items ?? [])] }));
   folder.faces = rekey(folder.faces, set, ["who", "to"], (x) => pair(x.who, x.to), newer);
+  folder.start = rekey(folder.start, set, ["a", "b"], (x) => [key(x.a), key(x.b)].sort().join("|"), (keep, add) => (keep.level === "close" || add.level !== "close" ? keep : add));   // 처음부터 알던 사이: 더 가까운 단계를 남긴다
   folder.exp = rekey(folder.exp, set, ["a", "b"], (x) => [key(x.a), key(x.b)].sort().join("|"), newer);
   for (const x of [...(folder.bonds ?? []), ...(folder.rifts ?? [])]) { x.a = sideOf(set, x.a); x.b = sideOf(set, x.b); }
   for (const x of folder.beliefs ?? []) { x.who = sideOf(set, x.who); if (x.by) x.by = sideOf(set, x.by); }
@@ -91,7 +93,7 @@ export function meView(folder, now = nowOf(folder)) {
       callsMe: pv.talk.ba?.call ?? "", toneToMe: pv.talk.ba?.tone ?? "", iCall: pv.talk.ab?.call ?? "",
       face: pv.face.ba ? { alone: pv.face.ba.alone ?? "", public: pv.face.ba.public ?? "" } : null,
       rifts: pv.rifts.filter((r) => !(r.state === "resolved" && (r.grudge ?? "none") === "none")).map((r) => ({ about: r.about ?? "", state: r.state })),
-      bond: pv.bonds.at(-1)?.moment ?? "",
+      bond: pv.bonds.at(-1)?.moment ?? "", start: pv.start,
       beliefs: pv.beliefs.filter((b) => b.open && key(b.who) === key(c.name)).map((b) => b.thinks)
     };
   });

@@ -22,7 +22,7 @@ const boot = async (ctx, seed = {}, opts = {}) => {
   return page;
 };
 const shot = async (page, name) => { await page.evaluate(() => document.querySelectorAll('.rb-toasts > *').forEach((e) => e.remove())).catch(() => {}); if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png` }); };
-const go = async (page, label) => { await page.evaluate((l) => [...document.querySelectorAll(".rb-nav a, .rb-topnav a, .rb-tabbar a")].filter((a) => a.offsetParent).find((a) => a.textContent.trim().startsWith(l)).click(), label); await page.waitForTimeout(250); };
+const go = async (page, label) => { if (label === "꾸미기") { await page.evaluate(() => window.__app.ctx.go("look")); await page.waitForTimeout(250); return; } await page.evaluate((l) => [...document.querySelectorAll(".rb-nav a, .rb-topnav a, .rb-tabbar a")].filter((a) => a.offsetParent).find((a) => a.textContent.trim().startsWith(l)).click(), label); await page.waitForTimeout(250); };
 const cur = (page) => page.evaluate(() => [...document.querySelectorAll("[aria-current=page]")].filter((a) => a.offsetParent).map((a) => a.textContent.trim().replace(/\d+$/, "")).join("|"));
 const names = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(s)].filter((a) => a.offsetParent).map((a) => a.textContent.trim().replace(/\d+$/, "")), sel);
 
@@ -31,7 +31,7 @@ const names = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(
   const page = await boot(ctx);
   ok("[PC] 첫 화면은 홈, 메뉴는 왼쪽 사이드바", (await cur(page)) === "홈" && (await page.locator(".rb-nav").isVisible()) && !(await page.locator(".rb-topnav").isVisible()));
   const side = await names(page, ".rb-nav a");
-  ok("[PC] 사이드바 순서: 홈 → 기억 묶음 → 관리 묶음 → 작업실 묶음 → 도구·설정", side.join("|") === "홈|장기 기억|코코아|기억 카드|캐릭터|모듈|플러그인|플러그인 꾸미기|AI로 봇 만들기|AI로 페르소나 만들기|도구|설정", side.join("|"));
+  ok("[PC] 사이드바 순서: 홈 → 기억 묶음 → 관리 묶음 → 작업실 묶음 → 도구·설정", side.join("|") === "홈|장기 기억|인물 관계도|코코아|기억 카드|캐릭터|모듈|플러그인|ProtLink+|플러그인 꾸미기|AI로 봇 만들기|AI로 페르소나 만들기|도구|설정", side.join("|"));
   ok("[PC] 묶음 라벨(기억·관리·작업실)과 메뉴 위치 분할 버튼이 사이드바에 있음", (await page.locator(".rb-nav .rb-nav-lab").allTextContents()).join("|") === "기억|관리|작업실" && (await page.locator(".rb-nav .rb-layseg button").count()) === 2);
   ok("[PC] 개발 탭은 간단 모드에서 숨김", !side.includes("개발"));
   await shot(page, "pc-1-home");
@@ -183,7 +183,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   const t = tag === "PC" ? "pc" : "m", pc = tag === "PC";
   const ctx = await browser.newContext({ viewport: vp, ...extra });
   const page = await boot(ctx, {}, { memory: true, mods: true });
-  const openTab = async (label) => { if (pc) await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(700); };
+  const openTab = async (label) => { if (pc || label === "꾸미기") await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(700); };
   const detailShown = () => page.locator(".rb-detail").evaluate((e) => !e.hidden && getComputedStyle(e).visibility !== "hidden" && e.getBoundingClientRect().width > 50 && e.getBoundingClientRect().right <= innerWidth + 1 && e.getBoundingClientRect().bottom > 0);
   await openTab("캐릭터");
   ok(`[5단계 ${tag}] 캐릭터 간단: 오른쪽 상세 패널 없음`, !(await detailShown()));
@@ -228,7 +228,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   const t = tag === "PC" ? "pc" : "m", pc = tag === "PC";
   const ctx = await browser.newContext({ viewport: vp, ...extra });
   const page = await boot(ctx, {}, { memory: true, story: true, mods: true });
-  const openTab = async (label) => { if (pc) await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(700); };
+  const openTab = async (label) => { if (pc || label === "꾸미기") await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(700); };
   await go(page, "홈"); await page.waitForTimeout(800);
   ok(`[6단계 ${tag}] 홈: 지금 열린 채팅 머리(봇·채팅 이름) + 바꾸기`, (await page.locator(".rb-hhead h1").textContent()).includes("시로코 · 교실 이야기") && (await page.locator(".rb-hhead .rb-btn", { hasText: "바꾸기" }).count()) === 1);
   ok(`[6단계 ${tag}] 홈: 상태 3줄(기억·리수폿·인물)`, (await page.locator(".rb-hstat").count()) === 3 && (await page.locator(".rb-hstat .lab b").allTextContents()).join("|") === "기억|리수폿|인물");
@@ -261,7 +261,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   const t = tag === "PC" ? "pc" : "m", pc = tag === "PC";
   const ctx = await browser.newContext({ viewport: tallVp(vp), ...extra });
   const page = await boot(ctx, {}, { memory: true, story: true, mods: true });
-  const openTab = async (label) => { if (pc) await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(600); };
+  const openTab = async (label) => { if (pc || label === "꾸미기") await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(600); };
   const ui = async () => JSON.parse(await page.evaluate(() => __api.store["rbm:ui:v1"] ?? "{}"));
   // 꾸미기 (간단)
   await openTab("꾸미기");
@@ -303,7 +303,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   await page.locator(`${set} .rb-seg[aria-label='화면 모드'] button`, { hasText: "고급" }).click(); await page.waitForTimeout(500);
   const advT = await page.locator(`${set} .rb-adv`).textContent();
   ok(`[7단계 ${tag}] 설정 고급: 개발자 카드 + 이야기 도우미 세부·로어북·채팅 메뉴·정리 · 기록`, (await page.locator("#rb-devmode").count()) === 1 && ["이야기 도우미 세부", "로어북", "채팅 메뉴", "정리 · 기록", "이럴 땐 여기로"].every((x) => advT.includes(x)) && (await page.locator(`${set} #rb-set-cleanup, ${set} #rb-set-updset, ${set} #rb-set-about, ${set} #rb-set-backups`).count()) === 4, advT.slice(0, 80));
-  ok(`[7단계 ${tag}] 설정 고급: 로어북 이름 경계·응답 아래 버튼·기억 버튼·리롤 선택기 그대로`, (await page.locator(`${set} .rb-seg[aria-label='이름 경계 기본값'] button`).count()) === 3 && (await page.locator(`${set} .rb-seg[aria-label='응답 아래 로어북 버튼'] button`).count()) === 2 && (await page.locator(`${set} .rb-seg[aria-label='채팅 메뉴 기억 버튼'] button`).count()) === 2 && (await page.locator(`${set} .rb-seg[aria-label='리롤 때 확률'] button`).count()) === 2 && (await page.locator(`${set} .rb-seg[aria-label='내가 결과까지 적었을 때'] button`).count()) === 2);
+  ok(`[7단계 ${tag}] 설정 고급: 로어북 이름 경계·응답 아래 버튼·관계도 버튼·리롤 선택기 그대로`, (await page.locator(`${set} .rb-seg[aria-label='이름 경계 기본값'] button`).count()) === 3 && (await page.locator(`${set} .rb-seg[aria-label='응답 아래 로어북 버튼'] button`).count()) === 2 && (await page.locator(`${set} .rb-seg[aria-label='채팅 메뉴 관계도 버튼'] button`).count()) === 2 && (await page.locator(`${set} .rb-seg[aria-label='리롤 때 확률'] button`).count()) === 2 && (await page.locator(`${set} .rb-seg[aria-label='내가 결과까지 적었을 때'] button`).count()) === 2);
   await shot(page, `s7-${t}-4-settings-advanced`);
   await openTab("꾸미기");
   const advL = await page.locator(`${look} .rb-adv`).textContent();
@@ -356,7 +356,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   const t = tag === "PC" ? "pc" : "m", pc = tag === "PC";
   const ctx = await browser.newContext({ viewport: vp, ...extra });
   const page = await boot(ctx, { "rbm:ui:v1": JSON.stringify({ uiMode: "advanced" }) }, { memory: true, story: true, mods: true });
-  const openTab = async (label) => { if (pc) await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(500); };
+  const openTab = async (label) => { if (pc || label === "꾸미기") await go(page, label); else { await go(page, "더보기"); await page.locator(".rb-morenav .rb-chip", { hasText: label }).click(); } await page.waitForTimeout(500); };
   const tabs = () => page.locator(".rb-theme-tabs button").allTextContents().then((a) => a.join("|"));
   const checked = () => page.locator(".rb-theme-tabs button[aria-checked=true]").textContent();
   await openTab("도구"); await page.locator("#rb-tool-chattheme").click(); await page.waitForTimeout(500);

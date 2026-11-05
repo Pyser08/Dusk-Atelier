@@ -7,6 +7,11 @@
 | 앱 진입·훅 등록 | `src/main.js` |
 | 메뉴·탭 구성 | `src/ui/tabs.js`, `src/ui/app.js` |
 | 홈 화면 | `src/ui/screens/home.js` |
+| 위젯 홈(켜고 끄기·수명) | `src/data/widgethome.js`, 설정 카드 `src/ui/screens/devtools.js` `widgetHomeCard`, 테스트 `tests/widgethome-ctrl.test.js` |
+| 위젯 홈 화면·자동 열기·음악·배치 | `src/widgethome/home.js`(원본 view.js), `src/widgethome/lib/*.cjs`, `style.js`, 테스트 `tests/widgethome-*.test.cjs`, e2e `tests/e2e/run-widgethome.mjs` |
+| 프로바이더(요청 만들기·해독·키·사슬·예산) | `src/engine/provider/*`(순수), `src/data/provider/runner.js`·`index.js`, 테스트 `tests/provider-*.test.js` |
+| 용량 측정(도구 탭) | `src/engine/sizemeter.js`(순수), `src/data/sizemeter.js`, `src/ui/screens/sizemeter.js`, 테스트 `tests/sizemeter*.test.js`, e2e `tests/e2e/run-sizemeter.mjs` |
+| 프로바이더 화면 | `src/ui/screens/provider.js`, `provider/more.js`, e2e `tests/e2e/run-provider.mjs` |
 | 장기기억 — 메시지 식별/앵커 | `src/engine/chattext.js`, `src/engine/memoryreconcile.js`, `src/data/memoryload.js` |
 | 장기기억 — 자동 분석 흐름 | `src/data/memoryrunner.js`(분석·백필), `src/data/memoryturn.js`(턴 흐름·확정), `src/engine/memoryapply.js`(결과 반영) |
 | 장기기억 — 프롬프트 | `src/engine/memoryprompt.js`, `src/data/memory-default-prompts.js` |
@@ -22,6 +27,7 @@
 | 페르소나 빌더 | `src/data/personabuilder.js`, `src/ui/screens/personabuilder.js` |
 | AI로 봇 만들기 | `src/ui/screens/aibuild.js`, `src/ui/screens/newbot.js` |
 | 테마 빌더/꾸미기 | `src/ui/screens/themebuilder.js`, `src/ui/screens/chattheme.js`, `src/ui/theme.js` |
+| Erosync(NSFW 장면 강화, 격리 이식) | `src/erosync/erosync.js`(본체, 원본 그대로·고치지 말고 비교만), `src/data/erosync.js`(켜기/끄기), `src/ui/screens/memory/erosyncui.js`(기억 설정 카드) · 위키/관계도 연동: `src/engine/erosyncview.js`, `src/ui/screens/memory/erosyncwiki.js`(+`personv2.js`), `src/ui/screens/relmap.js`(Erosync 층 칩) |
 | 플러그인 탭·DA Interop | `src/data/plugins.js`, `src/data/interopSnippet.js`, `src/ui/screens/plugins.js` |
 | 플러그인 코드 수정(Cellar가 대신 고침, RisuBard) | `src/data/cellarplugins.js`, `src/ui/screens/pluginedit.js`, `src/ui/screens/plugins.js`(행 메뉴), Cellar 저장소 `plugins.cjs` |
 | 플러그인 매니저 기능(켜기/끄기·별칭·순서·삭제·등록·중복·백업복원·프리셋·메타·스토리지 편집) | `src/data/pluginmgr.js`, `storagemgr.js`, `ui/screens/pluginmgr.js`, `storageedit.js`, `plugins.js`, Cellar `plugins.cjs` mutate | tests/pluginmgr·storagemgr, e2e run-pluginmgr |

@@ -1,4 +1,5 @@
 // 장기기억 분석 프롬프트·응답 파싱·검증.
+import { COLLECTIVE_RULE } from "./collective.js";
 import { clampAxis } from "./memorygrade.js";
 import { validateKnow, validatePlus } from "./memoryplus.js";
 import { validateTrust } from "./memorytrust.js";
@@ -24,13 +25,14 @@ export const SYSTEM_PROMPT = [
   "`emo` (max 3): feeling changes in this response. `t` = integer deltas -3..3 of trust, affection, hostility, dependence, respect, fear (they coexist); `why` = evidence (event importance, reaction, behavior change). Omit small shifts and unchanged tags; never absolute values (`emoState` = current 0-10 gauges).",
   "Important moments only (scene changed or act B+), else omit: `pov` = two participants who really perceive the same event differently (view one line, why they differ). `self` in a people entry = {feel, cause (probable real reason, never certain), ic H|M|L required}, only if feel and cause differ. `exp` (max 1) = two characters' expectations: ae/be, as/bs = said aloud, gap true only if they clash, viol one line (only if gap). If `selfHint` names a character, consider `self` for them.",
   "{{user}} is the player: the real person reading and writing the user turns (the user's character / persona). Always write the player as exactly \"{{user}}\" in every name field (name, from, to, who, know), never as their persona name, \"user\", \"유저\" or \"나\". Everyone else is a story character.",
+  COLLECTIVE_RULE,
   "`known` lists existing characters (use the same name, do not duplicate under another name). Never record names in `ignore`.",
   "scene.changed is true only if place, participants, ongoing event or shared state meaningfully changed versus previousScene; otherwise false. `when` only if written in the text.",
   "`know` is optional: list who witnessed or knows this act ONLY when it is a secret or seen by a limited set; omit it for public acts. Never mark someone as knowing what they could not have seen or heard.",
   "`when` is the in-story date/time (e.g. '3월 2일 저녁', 'Day 3 night') only if written or clearly implied; reuse the format of previousScene.when.",
   "If the input has `storyDate` (YYYY-MM-DD), the program already extracted the story date from the text: do not guess another date, and in `when` write only the time of day or leave it empty.",
   "`rel` lists at most 4 relationship changes between two characters that visibly happened in this response (dir: + warmer/closer, - colder/worse, 0 just different). Omit if none.",
-  "`open.add` records at most 3 promises, foreshadowing or unanswered questions that matter later. `open.close` lists ids from `openItems` that this response resolved. Omit both if none.",
+  "`open.add` records at most 3 promises, foreshadowing or unanswered questions that matter later; never add something already in `openItems`, even reworded. `open.close` lists ids from `openItems` that this response resolved, answered, kept or made moot — close them instead of adding a new item. Omit both if none.",
   "If nothing is worth recording, return people:[]."
 ].join("\n");
 
@@ -193,7 +195,7 @@ async function analyzeLines(call, input, { onWarn = () => {}, light = false, max
     const j = jsonFrom(raw);   // 강한 모델이 JSON으로 답해도 받는다
     return j && (Array.isArray(j.people) || j.scene) ? j : null;
   }, { minimal: LINES_STAGE1_MIN });
-  const merged = { ...overview, people: (overview.people ?? []).map((e) => ({ ...e })), emo: [], talk: [], rift: [], bond: [], belief: [] };
+  const merged = { ...overview, people: (overview.people ?? []).map((e) => ({ ...e })), emo: [], talk: [], rift: [], bond: [], belief: [], start: [] };
   const targets = merged.people.filter((e) => e.name && Math.max(Number(e.p) || 0, Number(e.s) || 0, Number(e.r) || 0) >= 1).slice(0, cap);
   if (newest.length >= SHORT) for (const t of targets) {
     const mine = (arr) => (arr ?? []).filter((x) => JSON.stringify(x).includes(t.name));
@@ -201,15 +203,15 @@ async function analyzeLines(call, input, { onWarn = () => {}, light = false, max
     const m2 = [{ role: "system", content: linesStage2(t.name, { light, beliefs: !!input.beliefsOn }) }, { role: "user", content: JSON.stringify(payload) }];
     try {
       const got = await askLines(call, m2, (raw) => {
-        if (isNoneReply(raw)) return { entry: {}, emo: [], talk: [], rift: [], bond: [], belief: [] };   // 새로 확인된 게 없음
+        if (isNoneReply(raw)) return { entry: {}, emo: [], talk: [], rift: [], bond: [], belief: [], start: [] };   // 새로 확인된 게 없음
         const lines = parseLines(raw);
         if (lines.length) return fromStage2(lines, t.name, { known, source, light });
         const j = jsonFrom(raw), me = (j?.people ?? []).find((e) => String(e?.name ?? "").replace(/\s+/g, "") === t.name.replace(/\s+/g, ""));
-        return j ? { entry: me ? Object.fromEntries(Object.entries(me).filter(([k]) => !["name", "act", "p", "s", "r"].includes(k))) : {}, emo: j.emo ?? [], talk: j.talk ?? [], rift: j.rift ?? [], bond: j.bond ?? [], belief: j.belief ?? [] } : null;
+        return j ? { entry: me ? Object.fromEntries(Object.entries(me).filter(([k]) => !["name", "act", "p", "s", "r"].includes(k))) : {}, emo: j.emo ?? [], talk: j.talk ?? [], rift: j.rift ?? [], bond: j.bond ?? [], belief: j.belief ?? [], start: j.start ?? [] } : null;
       });
       const slot = merged.people.find((e) => e.name === t.name);
       if (slot) Object.assign(slot, got.entry);
-      for (const k of ["emo", "talk", "rift", "bond", "belief"]) merged[k].push(...(got[k] ?? []));
+      for (const k of ["emo", "talk", "rift", "bond", "belief", "start"]) merged[k].push(...(got[k] ?? []));
     } catch (e) { onWarn(t.name, e); }
   }
   return validate(merged, { ignore: input.ignore, beliefs: !!input.beliefsOn });

@@ -1,5 +1,6 @@
 // 기억 화면 '고급' 영역 (1.7.0 3단계). 고급 모드에서만 보인다. 자주 쓰는 것을 위에, 예전 세부 설정은 맨 아래 '세부'에 접어 둔다.
 import { h, replace } from "../../dom.js";
+import { clearErosyncFlow } from "./memoryfileui.js";
 import { btn, confirmDialog } from "../../kit.js";
 import { AI_MODES } from "../../../engine/merge.js";
 import { diagText } from "../../../engine/memorydiag.js";
@@ -64,7 +65,7 @@ export function advancedGroups(ctx, { cur, idx, redraw }) {
       loreEditor(ctx, cur)] },  // 대화에 들어가는 로어 편집
     { id: "diag", title: "진단 · 기억 데이터 편집", sub: "마지막 요청에 넣은 기억 보기", kids: [diag, memoryEditor(ctx, cur, { redraw })] },
     { id: "danger", title: "위험 구역", sub: "기억 지우기 · 초기화", danger: true, kids: [h("section", { class: "rb-card rb-mem-sec rb-danger-zone" }, h("h3", null, "위험 구역"),
-      h("div", { class: "rb-mem-sact" }, btn("이 채팅 기억 지우기", { onClick: () => reset("chat") }), btn("이 봇 기억 지우기", { onClick: () => reset("bot") }), btn("기억 초기화 (전체)", { onClick: () => reset("all") })))] },
+      h("div", { class: "rb-mem-sact" }, btn("이 채팅 기억 지우기", { onClick: () => reset("chat") }), btn("이 봇 기억 지우기", { onClick: () => reset("bot") }), btn("기억 초기화 (전체)", { onClick: () => reset("all") }), ctx.erosync ? btn("Erosync 값 지우기", { id: "rb-erosync-clear", onClick: () => clearErosyncFlow(ctx, redraw) }) : null))] },
     { id: "more", title: "세부 설정", sub: "추적 수준·기능 카드·모델 상세·가져오기", kids: [detailHost], onOpen: loadMore }
   ];
 }

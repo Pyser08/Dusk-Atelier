@@ -7,24 +7,15 @@ import { openTracking } from "./trackui.js";
 import { conflictBox } from "./conflictui.js";
 import { tracked } from "./settingstools.js";
 import { advancedPot } from "../pot.js";
-import { maybePromptIntro } from "../promptstab.js";
 
 export async function autoTrackingBox(env) {
   const { ctx } = env, M = ctx.memory;
   const docs = Object.values(env.folder.wiki?.documents ?? {}).filter((d) => d?.type === "Character");
-  const potState = M.switches?.state ? await M.switches.state(env.bot.id) : null;
   const trackingStore = M.flow?.settings ? tracked(ctx, await M.flow.settings().catch(() => null)) : null;
   const charRows = await Promise.all(docs.map(async (d) => ({ d, on: await M.switches.charOn(env.bot.id, env.chatItem.id, d.id) })));
-  const pot = potState?.pot;
   const trackOn = trackingStore ? trackingStore.rawSnapshot().autoWriterEnabled !== false : true;
   const setTrack = (v) => {
     try { trackingStore?.update((x) => { x.autoWriterEnabled = v; }); ctx.toast(v ? "새 인물도 자동으로 추적해요." : "고른 인물만 추적해요."); }
-    catch (e) { fail(ctx)(e); }
-    env.redraw?.();
-  };
-  const setPot = async (v, el) => {
-    if (el) setSwitch(el, v);
-    try { await M.switches.setPot(env.bot.id, v); if (v) maybePromptIntro(ctx); ctx.toast(v ? "이 채팅에서 리수폿을 켰어요." : "이 채팅에서 리수폿을 껐어요."); }
     catch (e) { fail(ctx)(e); }
     env.redraw?.();
   };
@@ -41,8 +32,6 @@ export async function autoTrackingBox(env) {
   } }, h("summary", null, "리수폿 고급 설정"), adv);
   return h("section", { class: "rb-card rb-mem-sec rb-wk-integrated" },
     h("h3", null, "자동 기록 · 인물 추적"),
-    h("div", { class: "rb-mem-shead" }, h("b", null, "리수폿 사용"), h("span", { style: "flex:1" }),
-      switchEl(pot?.on !== false, { label: "이 채팅에서 리수폿 사용", onChange: (v, el) => setPot(v, el) })),
     h("div", { class: "rb-mem-shead" }, h("b", null, "새 인물 자동 추적"), h("span", { style: "flex:1" }),
       switchEl(trackOn, { label: "새 인물 자동 추적", onChange: (v, el) => { setSwitch(el, v); setTrack(v); } })),
     h("div", { class: "rb-mem-sact" }, btn("지금 기록", { onClick: () => openWriter(env).catch(fail(ctx)) }), btn("추적 인물 고르기", { onClick: () => openTracking(env).catch(fail(ctx)) })),

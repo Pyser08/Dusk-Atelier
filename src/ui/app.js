@@ -7,13 +7,14 @@ import { maybeOnboarding, openOnboarding } from './onboarding.js';
 import { runScreenTour } from './screentours.js';
 import { installTooltips } from './tooltip.js';
 import { maybeShowWhatsNew, openChangelog, CHANGELOG } from './whatsnew.js';
-import { btn, iconBtn, moreNav, openMenu, toast, emptyState } from './kit.js';
+import { btn, iconBtn, moreNav, openMenu, toast, emptyState, confirmDialog } from './kit.js';
 import { CSS2, FONT_LINK } from './styles.js';
 import { normalizeTheme, resolveMode, themeVars } from './theme.js';
 import { createPrefs } from './prefs.js';
 import { renderModules } from './screens/modules.js';
 import { renderSettings } from './screens/settings.js';
 import { renderTools } from './screens/tools.js';
+import { renderProvider } from './screens/provider.js';
 import { renderPlaceholder } from './screens/placeholder.js';
 import { renderPresets } from './screens/presets.js';
 import { renderCharacters } from './screens/characters.js';
@@ -27,9 +28,11 @@ import { createAssetLoader } from './assets.js';
 import { openAssets } from './screens/assetmgr.js';
 import { renderDev } from './screens/dev.js';
 import { renderPlugins } from './screens/plugins.js';
+import { renderProtLink } from './screens/protlink.js';
 import { renderSettingsTab } from './screens/settingstab.js';
 import { renderMemory } from './screens/memory/index.js';
 import { renderCocoaTab } from './screens/cocoa.js';
+import { renderRelMap } from './screens/relmap.js';
 import { checkWorkshopReturn } from './screens/workshoplink.js';
 import { renderCardsTab } from './screens/cards/index.js';
 import { scopeCtx } from './staleguard.js';
@@ -37,7 +40,7 @@ import { renderHome } from './screens/home.js';
 import { renderPersonaBuilder } from './screens/personabuilder.js';
 import { renderSectionHome } from './screens/sectionhome.js';
 import { createBotAndEdit } from './screens/newbot.js';
-import { BASE_IDS, SEARCH, SECTION_IDS, SECTION_NAMES, TABS, subLabel } from './tabs.js';
+import { BASE_IDS, SEARCH, SECTION_IDS, SECTION_NAMES, TABS, subLabel, tabHidden } from './tabs.js';
 
 export function createApp(api, { legacy, version, onPersonaChanged }) {
   const doc = document;
@@ -195,7 +198,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const navFoot = h("div", { style: "margin-top:auto;display:flex;flex-direction:column" });
   nav.appendChild(navFoot);
   const moreHost = h("div", { class: "rb-morehost" });
-  const main = h("section", { class: "rb-main", "aria-live": "polite" });
+  const main = h("section", { class: "rb-main", "aria-live": "polite", "data-keep-scroll": "" });
   const detail3 = h("aside", { class: "rb-detail rb-scroll", "aria-label": "상세" });
   const sheetBack = h("div", { class: "rb-sheet-back", onClick: () => ctx.closeSheet() });
   // 탭마다 맨 위 줄: 홈 › 탭(눌러서 다른 탭으로) · 한 줄 설명 · 검색 · 도움말
@@ -232,7 +235,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       ...inMore ? [h("button", { type: "button", id: "rb-crumb-more", onClick: () => go(TABS.find((x) => x.section === t.section)?.id ?? "home") }, SECTION_NAMES[t.section]), sep()] : [],
       h("button", { type: "button", class: sl ? "" : "cur", "aria-haspopup": "menu", id: "rb-tabmenu", onClick: (e) => {
         const dev = !!prefs.ui?.devMode;
-        openMenu(win, e.currentTarget, TABS.filter((x) => x.id !== "home" && (!x.dev || dev)).map((x) => ({ icon: x.icon, label: x.label, onClick: () => go(x.id) })));
+        openMenu(win, e.currentTarget, TABS.filter((x) => x.id !== "home" && !tabHidden(x, prefs.ui) && (!x.dev || dev)).map((x) => ({ icon: x.icon, label: x.label, onClick: () => go(x.id) })));
       } }, t.label, icon("down", 14)),
       ...sl ? [sep(), h("button", { type: "button", class: "cur", onClick: () => go(state.tab) }, sl)] : []
     );
@@ -342,6 +345,10 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     }
     if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsBg = true;
     if (tab === "characters") state.charOrderStale = true;
+    if (tab === "provider" && !prefs.ui?.experimental) {
+      tab = "work-home";
+      sub = null;
+    }
     if (tab === "dev" && !prefs.ui?.devMode) {
       tab = "tools";
       sub = null;
@@ -372,6 +379,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       const a = links.get("dev");
       if (a) a.hidden = !on;
     }
+    for (const t of TABS) for (const links of [navLinks, topLinks]) { const a = links.get(t.id); if (a && (t.exp || t.hideWhenExp)) a.hidden = tabHidden(t, prefs.ui); }
+    if (state.tab === "provider" && !prefs.ui?.experimental) go("tools");
     win.classList.toggle("rb-has-dev", on);
     if (!on && state.tab === "dev") go("tools");
   }
@@ -397,7 +406,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     // 개요 화면(기억·관리·작업실)에서는 위 칩 줄을 숨긴다: 목록이 같은 이동을 이미 보여 준다(목업 1)
     win.classList.toggle("rb-on-hub", String(state.tab).endsWith("-home"));
     const activeSection = TABS.find((t) => t.id === state.tab)?.section;
-    replace(moreHost, moreNav(TABS.filter((t) => t.section === activeSection && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
+    replace(moreHost, moreNav(TABS.filter((t) => t.section === activeSection && !tabHidden(t, prefs.ui) && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
     for (const links of [navLinks, topLinks, barLinks]) for (const [id, a] of links) {
       const activeTab = TABS.find((t) => t.id === state.tab);
       const on = id === state.tab || id.startsWith("section:") && activeTab?.section === id.slice("section:".length);
@@ -419,6 +428,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     paintHead();
     replace(detail3);
     detail3.hidden = true;
+    main.setAttribute("data-view", String(paneKey()));   // 같은 화면 다시 그리기면 replace가 스크롤을 지킨다
     const hit = reuse ? paneCache.get(paneKey()) : null;
     if (hit) {
       paneCache.delete(paneKey());
@@ -427,7 +437,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, personabuilder: renderPersonaBuilder, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, characters: renderCharacters, memory: renderMemory, cocoa: renderCocoaTab, look: renderSettings, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { home: renderHome, personabuilder: renderPersonaBuilder, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, protlink: renderProtLink, characters: renderCharacters, memory: renderMemory, relmap: renderRelMap, cocoa: renderCocoaTab, look: renderSettings, provider: renderProvider, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
     Promise.resolve(screen(scopeCtx(ctx, main, () => token !== renderToken))).then(() => {
       paneReady = true;
     }).catch((err) => {
@@ -488,10 +498,20 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       for (const a of [...win.getAnimations(), ...root.getAnimations()]) a.cancel();
     } finally { closing = false; }
     await api.hideContainer();
+    try { await ctx.onClosed?.(); } catch { /* 닫힌 뒤 알림은 실패해도 무시 */ }
   }
   let lastDetail = "";
+  // 프로바이더 쓰기 도구의 확인창: Dusk 창이 닫혀 있어도(채팅 중) 확인창만 잠깐 띄운다. 띄울 수 없으면 허락하지 않은 것으로 본다.
+  async function confirmAnywhere(opts) {
+    if (!root.hidden) return confirmDialog(win, opts);
+    const prev = win.style.visibility; win.style.visibility = "hidden"; root.hidden = false;
+    try { await api.showContainer("fullscreen"); return await confirmDialog(root, opts); }
+    catch { return false; }
+    finally { root.hidden = true; win.style.visibility = prev; try { await api.hideContainer(); } catch { /* 이미 닫힘 */ } }
+  }
   const ctx = {
     api,
+    confirmAnywhere,
     prefs,
     svc,
     assets,
@@ -513,6 +533,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     reopen: () => open(),
     applyTheme,
     refreshTabs: () => refreshTabs(),
+    dropPanes: () => dropPanes(),
     setUiMode,
     setLayout,
     openOnboarding: (opts) => openOnboarding(ctx, opts),

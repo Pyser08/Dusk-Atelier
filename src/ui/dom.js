@@ -34,9 +34,30 @@ function clear(el) {
   while (el.firstChild) el.removeChild(el.firstChild);
   return el;
 }
+// 같은 화면을 다시 그릴 때(설정 바꾸기 등) 스크롤 위치를 지켜 '창을 다시 불러온' 듯 튀지 않게 한다.
+// data-keep-scroll이 붙은 곳(메인 영역)에서, 새 첫 자식의 화면 표시(data-page 또는 class)가 이전과 같을 때만.
+const sig = (n) => n && n.nodeType === 1 ? (n.getAttribute("data-page") || n.getAttribute("class") || n.tagName) : "";
+function scrollState(el) {
+  const list = [el, ...el.querySelectorAll(".rb-scroll,[data-keep-scroll-item]")];
+  return list.map((n) => [n.scrollTop, n.scrollLeft]);
+}
+function restoreScroll(el, st) {
+  const apply = () => { const list = [el, ...el.querySelectorAll(".rb-scroll,[data-keep-scroll-item]")]; st.forEach(([t, l], i) => { const n = list[i]; if (n && (t || l)) { n.scrollTop = t; n.scrollLeft = l; } }); };
+  apply();
+  try { requestAnimationFrame(apply); } catch { /* 테스트 환경 */ }
+}
 export function replace(el, ...children) {
+  if (!el?.hasAttribute?.("data-keep-scroll")) { clear(el); return append(el, children); }
+  const view = el.getAttribute("data-view") || "";
+  if (el.__keep && el.__keep.view !== view) el.__keep = null;
+  const old = sig(el.firstElementChild), st = scrollState(el);
+  if (st.some(([t, l]) => t || l)) el.__keep = { view, sig: old, st };   // 불러오는 중 화면을 거쳐도 마지막 위치를 기억
+  else if (el.__keep?.sig === old) el.__keep = null;
   clear(el);
-  return append(el, children);
+  const out = append(el, children);
+  const k = el.__keep;
+  if (k && k.view === view && k.sig === sig(el.firstElementChild)) restoreScroll(el, k.st);
+  return out;
 }
 var tpl = typeof document !== "undefined" ? document.createElement("template") : null;
 export function svgFrom(markup) {

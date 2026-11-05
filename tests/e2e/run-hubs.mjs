@@ -29,7 +29,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
     ok(`[모바일] 작업실 개요: 큰 카드 2 + 더 보기 3줄`, (await vis(".rb-hubbig")) === 2 && (await vis(".rb-hubrow")) === 3);
     await nav("관리");
     ok(`[모바일] 관리 개요: 개수 표시`, /· \d+개/.test(await page.locator(".rb-hubrow", { hasText: "캐릭터" }).textContent()));
-    await page.locator(".rb-hubrow", { hasText: "모듈" }).click(); await page.waitForTimeout(500);
+    await page.locator(".rb-hubrow", { hasText: /^모듈/ }).click(); await page.waitForTimeout(500);
     ok(`[모바일] 안쪽 화면에서는 위 칩 줄 보임`, (await vis(".rb-morenav")) === 1);
   }
   await page.close();

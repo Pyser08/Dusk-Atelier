@@ -1,3 +1,4 @@
+import { parseStatus as parseStoryStatus } from "./engine/storytime.js";
 import { startHostUpdateToast } from './ui/hostupdate.js';
 import { createDbCache, WRITE_RE } from './data/dbcache.js';
 import { createHookBus } from './data/hookbus.js';
@@ -23,6 +24,15 @@ import { createImgTagFix } from './data/imgtagfix.js';
 import { createAffHud } from './data/affhud.js';
 import POT_PROMPTS from './data/pot/prompts.json';
 import './data/modelhub.js';
+import { createProvider } from './data/provider/index.js';
+import { createWidgetHome } from './data/widgethome.js';
+import { createErosync } from './data/erosync.js';
+import { createProtLink } from './data/protlink.js';
+import { createUpdateToast } from './data/updatetoast.js';
+import { updateMessage } from './engine/protlink.js';
+import { download as downloadFile } from './ui/dom.js';
+import { setDuskRoute, runAI } from './engine/runai.js';
+import { setDuskServerModel } from './data/modelhub.js';
 import { setUserPromptProvider } from './engine/runai.js';
 import { setSkillBlockProvider } from './engine/skillhook.js';
 import { createSkillStore } from './data/skillstore.js';
@@ -96,6 +106,25 @@ async function start() {
   const web = createWebTools(api);   // 웹 검색·가져오기 도구 (꺼짐이 기본, v1.8.1)
   setWebWrapProvider((stage, prompt, call) => web.wrap(stage, prompt, call));
   memory.start().catch((e) => console.log(`[${TITLE}] 장기기억 시작 실패: ${e?.message ?? e}`));
+  // Dusk 프로바이더 (1.9.3): 리스 모델 목록에 Dusk 자동·프로필 등록, 쓰기 도구 확인은 창이 닫혀 있어도 뜬다
+  const providerRef = { confirm: null, exp: () => false };
+  const provider = createProvider(api, {
+    notify: (t) => memoryRef.toast?.(t),
+    confirm: (o) => (providerRef.confirm ? providerRef.confirm(o) : Promise.resolve(false)),
+    memory: { search: async (q) => {
+      const cur = await memory.switches?.currentChat?.(); if (!cur) return [];
+      const f = await memory.store.getFolder(cur.chaId, cur.chatId), want = String(q ?? "").trim().toLowerCase(); if (!f?.people || !want) return [];
+      return Object.values(f.people).filter((p) => String(p.name ?? "").toLowerCase().includes(want) || JSON.stringify(p.records ?? []).toLowerCase().includes(want)).slice(0, 5).map((p) => ({ name: p.name, records: (p.records ?? []).slice(-6).map((r) => (typeof r === "string" ? r : r?.text ?? r?.summary ?? JSON.stringify(r)).slice(0, 300)) }));
+    } },
+    allowed: () => providerRef.exp(),
+    createStore: engine_exports.createStore,
+    backupSnapshot: engine_exports.backupSnapshot,
+    log: (m) => console.log(`[${TITLE}] ${m}`)
+  });
+  setDuskRoute(() => provider.analysisPick(), (a, msgs, pick, signal) => provider.run(msgs, pick, signal));
+  setDuskServerModel((id) => provider.serverModel(id));
+  provider.store.get().then(() => provider.sync()).catch((e) => console.log(`[${TITLE}] 프로바이더 시작 실패: ${e?.message ?? e}`));
+  provider.store.subscribe(() => provider.sync().catch(() => {}));
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {
     if (!document.getElementById("rb-style")) document.head.appendChild(h("style", { id: "rb-style" }, CSS2));
@@ -209,6 +238,42 @@ async function start() {
   app.ctx.turnInfo = turnInfo;
   app.ctx.chatMenu = chatMenu;
   app.ctx.memory = memory;
+  app.ctx.provider = provider;
+  providerRef.confirm = (o) => app.ctx.confirmAnywhere(o);
+  providerRef.exp = () => !!app?.ctx?.prefs?.ui?.experimental;
+  provider.sync().catch(() => {});   // 실험 기능이 켜져 있으면 이제 등록
+  // 위젯 홈(v1.9.2): 기본 꺼짐. 켜져 있으면 시작해서 메뉴 버튼을 달고, Dusk 창을 열 땐 먼저 닫아 같은 플러그인 화면을 번갈아 쓴다
+  // ProtLink+(v1.9.2): 기본 켜짐. Proton Drive 링크를 캐릭터·모듈·플러그인에 연결해 두고 새 파일을 받아 Dusk 업데이트로 넘긴다.
+  const updateToast = createUpdateToast(api, { onOpen: () => app.open({ tab: "protlink" }).catch(() => {}) });
+  const protlink = createProtLink(api, { log: (m) => console.log(`[${TITLE}] ${m}`), hooks: {
+    importFiles: (files, opts) => legacy.startWithFiles(files, opts),
+    saveFile: (name, bytes) => downloadFile(name, new Blob([bytes])),
+    onChecked: async (rows) => {
+      const msg = updateMessage(rows); if (!msg) return;
+      // 리스 화면(플러그인 밖) 알림. 권한이 없거나 못 띄우면 플러그인 안 알림으로 대신한다.
+      if (!(await updateToast.show(msg).catch(() => false))) app?.ctx?.toast?.(`ProtLink+: ${msg}`);
+    } } });
+  const widgetHome = createWidgetHome(api, { log: (m) => console.log(`[${TITLE}] ${m}`), openDusk: (tab) => app.open(tab && tab !== "home" ? { tab } : undefined).catch(() => {}),
+    protLink: { links: () => protlink.list(), open: () => app.open({ tab: "protlink" }).then(() => true).catch(() => false), on: () => protlink.on(), error: () => protlink.lastError() } });
+  app.ctx.protlink = protlink;
+  app.ctx.widgetHome = widgetHome;
+  app.ctx.openWidgetHome = async () => { try { await app.close(); } catch { /* 이미 닫힘 */ } return widgetHome.open(); };
+  const duskOpen = app.open;
+  app.open = async (o) => { await widgetHome.yieldToDusk().catch(() => {}); return duskOpen(o); };
+  app.ctx.onClosed = () => widgetHome.resume();   // Dusk 창을 닫으면 떠 있던 위젯 홈을 다시 띄운다
+  widgetHome.boot().catch((e) => console.log(`[${TITLE}] 위젯 홈 시작 실패 ${e?.message ?? e}`));
+  // Erosync(v1.9.2): 기본 꺼짐. 켜져 있으면 시작(본체는 켤 때만 불러옴). 기억 설정에서 켜고 끈다.
+  const erosync = createErosync(api, { log: (m) => console.log(`[${TITLE}] ${m}`),
+    // Dusk ‘월경·임신 기록’(성인 항목) 켜짐 여부 → 켜져 있으면 Erosync의 주기는 쉰다
+    cycleProbe: async () => { const r = (await memory.flow?.settings?.())?.rawSnapshot?.(); return r?.features?.openness?.cycle === true && r?.sexualDesireEnabled === true; },
+    // Erosync 안의 ‘관계망’ 탭 → Dusk 인물 관계도(Erosync 층)
+    // Erosync의 AI 호출을 Dusk 모델 설정(‘자체 AI 작업’ 프로필 → 없으면 리스 보조 모델)으로 보낸다. Dusk 사용자 프롬프트는 끼우지 않는다.
+    host: { runAI: (messages, role, signal) => runAI(api, messages, { stage: `erosync-${role}`, noUserPrompts: true }, signal),
+      // Dusk ‘이야기 시간’이 켜져 있으면 Erosync 주기 시계가 같은 상태 줄(날짜)을 읽는다
+      storyStatus: (text, prevDate) => (storyTime.isOn() ? parseStoryStatus(text, { date: prevDate || "", time: "", place: "" }) : null) } });
+  app.ctx.erosync = erosync;
+  protlink.boot().catch((e) => console.log(`[${TITLE}] ProtLink+ 시작 실패 ${e?.message ?? e}`));
+  erosync.boot().catch((e) => console.log(`[${TITLE}] Erosync 시작 실패 ${e?.message ?? e}`));
   app.ctx.cellar = memory.cellar;   // 한 곳에서 찾은 Cellar 연결을 화면들이 함께 쓴다
   app.ctx.skills = skills;
   app.ctx.web = web;
@@ -235,12 +300,14 @@ async function start() {
   })().catch((e) => console.log("[Dusk Atelier] 디바이스 페어 확인 실패", e?.message ?? e));
   restoreActiveTheme(api).catch((e) => console.log("[Dusk Atelier] 테마 적용 실패", e?.message ?? e));
   const open = () => app.open().catch((e) => console.log(`[${TITLE}] 열기 실패: ${e?.message ?? e}`));
-  await api.registerButton({ name: TITLE, icon: ICON, iconType: "html", location: "hamburger" }, open);
+  await api.registerButton({ name: TITLE, icon: ICON, iconType: "html", location: "hamburger", id: "dusk-atelier-open" }, open);
   await api.registerSetting(TITLE, open, ICON, "html");
   // 채팅창 입력 옆 메뉴에서 바로 장기기억으로
   const openMemory = () => app.open({ tab: "memory" }).catch((e) => console.log(`[${TITLE}] 열기 실패: ${e?.message ?? e}`));
   memoryRef.open = openMemory;
-  const memBtn = createMemoryButton(api, { name: "장기기억", icon: iconMarkup("brain", 20), open: openMemory, log: (m) => console.log(`[${TITLE}] ${m}`) });
+  // 채팅 메뉴의 떠 있는 버튼 = 인물 관계도로 바로 (v1.9.3). 설정 키(dusk.ui.memoryButton)는 그대로라 켜고 끈 값이 이어진다.
+  const openRelMap = () => app.open({ tab: "relmap" }).catch((e) => console.log(`[${TITLE}] 열기 실패: ${e?.message ?? e}`));
+  const memBtn = createMemoryButton(api, { name: "인물 관계도", icon: iconMarkup("network", 20), open: openRelMap, log: (m) => console.log(`[${TITLE}] ${m}`) });
   app.ctx.memoryButton = memBtn;
   await memBtn.start();
 }

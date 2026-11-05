@@ -1,3 +1,173 @@
+# 현재 상태 — feat/1.9.2
+
+## 2026-11-05 ProtLink+ 통합 (v1.9.2) — Dusk 방식으로 다시 만듦
+- `src/protlink/protlink.js`: 원작자 제공 v1.0.0에서 **Proton 연결부만** 쓴다(`loadProtLinkDriver(api)` → `{G3, Sp, Ln, Pa, PZ, Ot}`; G3({kv}).open(url,signal,pw) → share{list,download,thumbnail}, Sp = 폴더 훑기). 원본 화면·앱 로직은 안 쓴다. `node tools/protlink-prune.mjs --write`로 쓰이지 않는 선언을 걷어 냈다(1089KB→912KB, 이름 기준 도달성이라 더 남기는 쪽으로만 틀림). 번들 6.3MB. 고지 `NOTICES.txt`.
+- 업데이트 알림: `src/data/updatetoast.js`(retrytoast 방식, mainDom 권한, 실패 시 false→main.js가 앱 내 toast로 대체) + `engine/protlink.js updateMessage`. 실제 호스트(RisuAI/RisuBard/PocketRisu) 동작은 미확인.
+- 순수 로직 `src/engine/protlink.js`(파일 종류·연결 후보 순위·스냅샷 비교), 데이터 `src/data/protlink.js`(링크 저장 `dusk.protlink.links.v1`, 설정 `dusk.protlink.settings.v1`, on 키 `dusk.protlink.on` 기본 켜짐, 확인·받기·연결). 원본 `protlink_plus` 켜져 있으면 시작 안 함.
+- 화면 `ui/screens/protlink.js`(관리 탭 `protlink`, 플러그인 아래): 링크 추가(주소 → 파일 확인 → 종류·연결 항목 고르기), 목록(새 파일 배지·받아서 업데이트·확인·연결 바꾸기·이름·해제), 시작 확인 설정. 위젯 `protlink`(연결 항목·새 파일 배지, 누르면 탭 열기).
+- 받기: 캐릭터·모듈은 `legacy.startWithFiles(files, {target:{kind,id}})` → 가져오기 창에서 연결 항목이 맨 위 후보(`File.protlinkTarget`, legacy.js `candidatesFor`). 플러그인은 파일 저장만(플러그인 목록 쓰기 불가).
+- 테스트: `tests/protlink.test.js`, `protlink-engine.test.js`, e2e `run-protlink.mjs`(38), `run-widgethome.mjs`. 스페셜 땡스에 Erosync·ProtLink+ 추가.
+- 미확인: 실제 Proton 링크 열기·받기·비밀번호 링크, 받은 파일의 가져오기 창 후보 순위(실제 .risum/.charx), RisuAI/RisuBard/PocketRisu 실기기, 모바일 실기기. 원본 플러그인 저장소의 링크는 자동 이전 안 됨.
+- 참고: `run-app.mjs`(리수폿 탭 없음)·`run-tabs.mjs`·`run-hubs.mjs` 첫 항목은 이 작업 이전부터 낡아서 실패/중단.
+
+## 2026-11-05 Erosync 검토 탭·NSFW 기본 칸 (v1.9.2)
+- 엔진 `review.list/act`(duskReviewList/Act) → 컨트롤러 `review(op,id)` → `erosyncreviewui.js`(검토 탭). 선호 후보(preferenceState)는 검토 대상 아님.
+- 기본 developmentMode = standard_auto(저장값 없는 사용자만 영향). 극단 행동 수위 select는 NSFW+에서만.
+- NSFW 탭은 정보 없어도 기본 칸(personv2 `nsfw()`, `.rb-nsfw-base`). 파일 내보내기·불러오기는 인물 위키 ‘더보기’(`peopleMenuItems`).
+- 미확인: 실제 호스트(RisuAI/RisuBard/PocketRisu)·실채팅에서 검토 반영/무시, 모바일 실기기 화면. `src/erosync/tape.js` 미사용(삭제는 지시 시).
+
+## Erosync 전체 이전 — 1단계(저장·이전) 완료, 다음은 2단계
+- 결정: 저장 키는 원본과 같은 `erosync_*`를 그대로 쓴다(`dusk.ero.v1.*` 이름 변경 안 함). 원본 사용자의 프로필·세션·봇 설정은 복사 없이 이어진다. 기기별 설정(`getLocalPluginStorage`)만 따로일 수 있음.
+- `src/data/erosyncmigrate.js` `scanOriginalErosync(api)` — 원본 기록 개수 감지(읽기 전용, 삭제 없음). 테스트 `tests/erosyncmigrate.test.js`.
+- 원본 플러그인이 켜져 있으면 시작 막는 동작 유지.
+- 2단계 일부 완료: 장기 기억 홈에 "Erosync" 줄(`#rb-mem-go-erosync`, 관계도 줄 옆) → `memory` page `"erosync"`(`erosyncpage.js`: 원본 기록 감지 문구 + 기존 켜기 카드). 홈의 예전 카드는 제거.
+- 수위 카드 완료: `erosynclevel.js`(SFW/NSFW/NSFW+, 극단 행동 수위 6단계, NSFW+ 재검사). 엔진 쪽 연결부 `content.get/set`(erosync.js, 허용 키만) → `data/erosync.js content(patch)`.
+- 집착 방지 완료: 엔진 `duskGuard`(집착성 상한 clamp + 같은 대상 연속 목표 턴 초과 시 쉬는 턴 동안 pause, `commitPlannedGoals`/`effectiveProfileForDirector`), 저장 키 `dusk.erosync.guard`, 카드 `erosyncguard.js`. 기본 꺼짐.
+- 인물 위키 NSFW 탭 완료(상세 정보와 기록 사이, 항상 보임): `personv2.js nsfw()` — Dusk 월경·임신(`parts.adult.cyc`), 성적 욕망·이상성향 후보(`wikiPanel(env,doc,{adult:true})`, 일반 패널에서는 제외), Erosync 성적 항목(`eroNsfwCard`, 켜짐일 때만). 상세 정보의 Erosync 카드는 8축만.
+- 데이터 이전 구현 완료: `data/memoryfile.js`(buildMemoryFile/readMemoryFile/applyMemoryFile/clearErosyncData, 파일 kind `dusk-memory-data` v1), `memoryfileui.js`(장기 기억 홈 `#rb-mem-more` 더보기 → 내보내기·불러오기, 위험 구역 `#rb-erosync-clear`). Erosync 켜짐이면 잠깐 멈췄다 다시 켬. 테스트 `tests/memoryfile.test.js`.
+- (결정 기록) Erosync "데이터"는 별도 카드 없이 장기 기억 고급의 설정 내보내기·가져오기(`advanced.js`)와 위험 구역 초기화(`madv.js`)에 합친다(Erosync가 꺼져 있어도 저장된 값은 남아 있으므로 엔진 `exportBackup`을 쓰지 않고 저장소의 `erosync_*` 키를 직접 읽고 쓴다. 내보내기에 항상 포함, 가져오기는 같은 키로 복원, 초기화에 "Erosync 값도 지우기" 선택[기본 해제, 켜져 있으면 먼저 끔]. 채팅별 기록은 `keys()` 지원 호스트에서만 찾음).
+- AI 제공자 → Dusk 모델 허브 연결 완료: 엔진 `runProviderOnce`에서 기본 제공자(risu)이고 `host.runAI`가 있으면 그쪽으로(main.js `host.runAI` = Dusk `runAI`, stage `erosync-<role>`, noUserPrompts). Erosync 자체 AI 설정에서 다른 제공자를 고른 사람은 그대로 그 경로. 미확인: 실제 모델 호출·동시 호출 충돌(원래 risu 경로의 busy/preempt 처리는 거치지 않음).
+- 월경 주기 합치기(방식: Dusk 우선): Dusk ‘월경·임신 기록’(features.openness.cycle && sexualDesireEnabled)이 켜져 있으면 엔진 `cycleOff()`가 참이 되어 Erosync 자체 주기가 쉰다(`flags.set({duskCycle})`, `createErosync cycleProbe` 30초마다 확인). 저장값은 건드리지 않고, Dusk를 끄면 Erosync 주기가 다시 일한다. 미구현: Dusk 날짜를 Erosync 주기 계산에 먹이는 것.
+- 동작·분석 / 프롬프트 카드 완료: 엔진 연결부 `config.get/set`(허용 키 11개, normalizeConfig가 범위 정리)·`prompts.get/set`(promptOverrides, 칸 id·갈래 검증) → `data/erosync.js config()/prompts()` → `erosyncconfig.js`·`erosyncprompts.js`. 실제 엔진 대상 테스트는 `tests/erosync-vendor.test.js` 마지막 항목. 이펙트·소리·인트로·화면 배율 등 화면 설정과 시험 도구·초기화·고급 항목은 옮기지 않음(원본 창).
+- 원본 UI 제거는 보류: erosync.js 2.6MB 중 화면 코드(약 26000~36800줄, 0.8MB)에 프로필 만들기·분석 실행·값 고치기·비하인드·시험 도구가 있고, Dusk NSFW 탭은 아직 읽기 전용이라 지금 지우면 기능이 사라진다. 먼저 NSFW 탭에 직접 고치기·AI 값으로·다시 분석 연결부를 만든 뒤 제거할 것(이펙트·소리 코드는 이미 쓰지 않음: tape 비움).
+- 남은 일: 세 호스트 실기기 확인, 실제 모델 값 확인. (UI·카드·NSFW 탭·원본 UI 제거는 끝)
+- 리수폿 성인 항목 기본값은 켜짐 유지(`src/engine/pot/settings.js:163`).
+
+## 2026-11-04 Erosync 2차: 위키·관계도 연동 + 기억 방식 기본값 (버전 미변경)
+- **원본 UI 제거(완료)**: `tools/erosync-prune.mjs`(acorn 도달성 가지치기)로 `src/erosync/erosync.js`에서 설정 창·이펙트·소리·관계망·열기 진입점(725문장, 982KB)을 걷어냄. 스텁: scheduleUiRefresh/uiWorkSchedule/openSettingsPanel/renderSettingsApp/scheduleCompatibilityUiRefresh. `ctx.openErosync`·`erosync.open`·`host.openRelmap`·설정 항목 등록 삭제. 엔진 본문을 다시 갱신할 땐 원본에 같은 명령으로 재적용. `tape.js`는 이제 미사용(삭제는 사용자 지시 대기). 번들 5.97→5.35MB.
+- **Erosync 카드 위치**: 접힌 ‘설정/세부 설정’ 안(`settings.js` body)에 있어 안 보였음 → `mhome.js` `settingsCards`가 만들어 ‘기억 옵션’ 바로 아래(main 칸)에 둠(간단·고급 모드, 채팅 유무 모두). `settings.js`에서는 뺌.
+- **리수폿 사용 스위치 이동**: `autotrackingbox.js`(고급 → 자동 기록 · 인물 추적)에서 빼서 `mhome.js` `settingsCards`의 ‘기억 옵션’ 박스 맨 아래로(열린 채팅이 있을 때만; `M.switches.setPot(cur.chaId, v)`, 상태는 `sw.pot.on`). 열린 채팅이 없으면 안 보임.
+- **기억 방식 기본 `fast`→`accurate`**: `DEFAULT_SETTINGS.flow.mode`(memorystore.js)·`flowOf`/`setPotGlobal`/`stepsOf` 폴백·설정 화면(flowsettings)·시작 안내(setup)에서 ‘더 정확하게 (권장)’을 앞에. `DUSK_FOLLOW`에 `"flow.mode": { old: ["fast"] }` 추가 → 기록(`settings.edited`)이 없는 예전 fast는 새 기본으로 따라감. **직접 고르는 두 곳(flowsettings·setup)은 `noteEdits`로 `flow.mode`를 직접 수정으로 기록**(안 하면 고른 fast가 다음 읽기에 accurate로 되돌아감). 테스트 `memoryturn.test.js`의 `turnOn`·fast 직접 설정은 `edited`에 `flow.mode`를 넣도록 고침.
+- **읽기 연결부**: 본체 반환 객체에 `read()`(= `duskReadSnapshot`)·`open()` 추가. `read()`는 원본 프로필 화면 경로(`getUiContext`→`contextProfiles`→`uiProfileViewOf`)를 그대로 써서 현재 봇·채팅의 인물(8축 원값/현재값·성적 축·선호·판정)·목표·경쟁·관계를 일반 JSON으로 돌려줌(3초 캐시, 쓰기 없음). `getUiContext`는 원본 UI 경로라 카탈로그 갱신 등 부수 효과가 있음(위키를 열 때만 호출). 컨트롤러 `read()/open()`(꺼져 있으면 `{ok:false, reason:"off"}`/false). `app.ctx.openErosync`는 Dusk 창을 먼저 닫고 연다(같은 iframe).
+- **순수 함수** `src/engine/erosyncview.js`: `eroPerson`(이름·별칭이 정확히 같고 유일할 때만 맞춤)·`eroAxes`·`eroAdult`(SFW·비인물이면 null)·`eroGoalsOf`·`eroPair`·`eroRelmapLayer`·`eroRelmapData`(관계도 데이터에서 Erosync 층만 남김, `noUser`).
+- **위키(1단계, 읽기만)**: `memory/erosyncwiki.js` + `personv2.js` — 요약 ‘지금 노리는 목표’, 관계 ‘Erosync 목표·경쟁’(Dusk 상대가 없으면 Erosync 상대별 카드), 상세 정보 ‘Erosync 성향’(8축, 바뀐 축은 옅은 막대로 원래 값, 성인 항목은 `<details>` 접힘). Erosync 꺼짐·이름 안 맞음이면 칸 없음. 고치기는 ‘Erosync에서 고치기’→Erosync 화면(저장은 `erosync_*` 그대로). **2단계(저장을 `dusk.mem.v3.*`로 옮기기)와 기록 탭 ‘성향 변화’는 미구현.**
+- **관계도**: `relmap.js`에 ‘Erosync 목표·경쟁만 보기’ 칩(Erosync 켜짐일 때만). 인물은 이름·별칭으로 위키와 맞추고 못 맞춘 인물 수는 토스트. `canvas.js` `setData`가 `map.noUser`면 {{user}} 선을 만들지 않음. Erosync 화면의 ‘관계망’ 탭은 `bootErosync(api, host)`의 `host.openRelmap`이 있으면 안내 화면으로 바뀌어 `st.relmap.eroOnOpen`을 세우고 관계도를 열어 자동으로 Erosync 층을 켬(원래 은하 화면은 호출 안 됨, 코드만 남음).
+- **배경음 제거**: `tape.js`는 `null`로 비움(본체가 문자열이 아니면 건너뜀) → 번들 7.1MB→5.9MB. 저장 복구 화면은 body 전체 대신 `.es-shell/.es-app`만 비움(Dusk 화면 보존).
+- **겹치는 기능 정리(결과)**: ① 관계망 → Dusk 관계도로 일원화(위). ② 인물 성향 화면 → Dusk 위키 칸으로 읽기 연동(Erosync 자체 프로필 화면은 편집용으로 유지). ③ **월경 주기**: Dusk(`openness.cycle`, pot 코드 `cycle-tracking.js`는 자동 생성·수정 금지: 날짜 기반 프로그램 계산·임신 판정·위키 기록)와 Erosync(`cycleEnabled`: AI 관찰·장면 판단 반영)는 강점이 달라 한쪽을 자동으로 끄지 않고, **둘 다 켜지면 Erosync 카드에 겹침 안내**만 띄움. ④ **AI 제공자 설정**: Erosync는 자체 AI 탭(기본 ‘RisuAI 보조 모델’)을 유지. Dusk 모델 허브 연결은 `runProviderOnce`(erosync.js `providerId` 분기)에 `dusk` 제공자를 추가하면 됨 — 미구현.
+- 테스트: `erosyncview.test.js`(5) · `erosync.test.js`(+read) · `erosync-vendor.test.js`(+read·관계망 분기) · e2e `run-erosync-ui.mjs`(PC·모바일 28: 관계도 버튼·자동 켜짐·위키 3탭·고치기 호출) · `run-erosync.mjs`(+겹침 안내). 
+- 못 한 것/미확인: 세 호스트 실기기, 실제 모델로 `read()` 값(축·목표) 채워진 상태, `getLocalPluginStorage`가 플러그인별로 나뉘는지(원본 Erosync 데이터 이어받기), Erosync 화면이 Dusk 창과 같은 iframe에서 겹칠 때 실제 모양(Dusk 창을 닫고 여는 것까지만 구현).
+
+## 2026-11-04 Erosync 격리 이식 (V0.9.1, 버전 미변경; CHANGELOG는 ‘(개발 중) v1.9.2’ 섹션)
+- 원작자에게 제공받은 `Erosync V0.9.1.js`(36.8k줄, api 3.0)를 위젯 홈처럼 격리 이식. 기억 설정(전체 설정)의 ‘Erosync (NSFW 장면 강화)’ 카드에서 켜고 끔(키 `dusk.erosync.on`, 기본 꺼짐). **비용 안내 문구 포함**(`EROSYNC_COST_NOTE`). 성인 인물 한정 문구·검사는 사용자 결정으로 넣지 않음(Erosync에 원래 없음).
+- 구조: `src/erosync/erosync.js`=원본 본문 그대로 + 3곳만 변경(머리말 `//@` 제거, 즉시실행 함수→`bootErosync(api)`, `R`을 api 프록시로 바꿔 `onUnload`를 가로챔 → 끌 때 `dispose()`가 원본 정리 함수를 부름), `tape.js`=배경음 base64 분리(886KB). `src/data/erosync.js`=컨트롤러(`createErosync`, 본체는 켤 때만 `import()`), `src/ui/screens/memory/erosyncui.js`=카드, `main.js`에서 `app.ctx.erosync`로 연결·`boot()`.
+- 원본 `erosync` 플러그인이 켜져 있으면 시작하지 않고 안내(같은 요청 이중 주입·같은 저장 키 방지). 요청 훅(`addRisuReplacer`)이 없으면 시작 안 함. 켜기 실패하면 스위치를 되돌리고 저장값도 off.
+- Erosync 자체 UI(채팅 ‘에로싱크’ 버튼, 리스 설정 ‘Erosync’ 항목, 관계 그래프)는 원본 그대로 동작. Dusk 주입(`[Dusk Memory]`)과는 별도 `beforeRequest` 훅 두 개가 나란히 돎(마커가 달라 서로 안 지움).
+- 번들 크기 4.9MB → 7.6MB(+2.7MB) → 배경음 제거 뒤 5.9MB. 빌드 경고 1건은 원본의 중복 키 `model`(src/erosync/erosync.js 3890, 원본도 동일).
+- 테스트: `tests/erosync.test.js`(컨트롤러 7) · `erosync-vendor.test.js`(실제 본체를 가짜 api로 올려 훅 등록·해제, 지문 5) · e2e `tests/e2e/run-erosync.mjs`(PC·모바일 14). npm test 1013 pass / 9 skip / 0 fail, check 동일함.
+- 못 한 것/미확인: 세 호스트 실기기(특히 `getLocalPluginStorage`가 플러그인별로 나뉘면 원본 Erosync의 기존 데이터가 안 보일 수 있음 — 기존 사용자는 확인 필요), Erosync 설정 화면이 Dusk 창과 겹칠 때의 화면 겹침, 켜진 상태에서 Dusk 기억 훅과의 순서·토큰 합산. 비용은 안내 문구만(호출 수 제한 없음). 안내서(`docs/site/guide/memory.html`)·NOTICE.md 갱신함, CHANGELOG는 버전 지시가 없어 안 건드림.
+
+## 2026-11-04 도구 → 용량 측정 (RisuMeter 참고, 버전 미변경)
+- 사용자가 준 `risu-meter.js`(v0.6.0)를 분석해 **읽기 전용 측정 부분만** 새로 씀(코드 이식 아님 → NOTICE 불필요, 스페셜 땡스에 `RisuMeter`만 추가: tools.js `THANKS`, README, 안내서 start.html). 버린 것: 연결 편집 모달(전체 `setDatabase` fallback 위험 — 연결 편집은 기존 `modlinks.js`), 바로가기 4종, 자체 CSS·테마, 저장 방식 감지·전송/원본 기준 전환(추정 상수 의존).
+- 구조: 순수 `src/engine/sizemeter.js`(바이트·분해·렌더 진단·리포트) / 수집 `src/data/sizemeter.js`(`scanSizes`) / 화면 `src/ui/screens/sizemeter.js` + `sizemeter/css.js`(`SIZE_CSS`, styles.js에서 합침) / 진입 도구 탭 '확인·복구' 행 `rb-tool-sizemeter`(`ctx.go("tools","sizemeter")`).
+- 읽기: 봇은 `characterOrder`로 순서를 얻고 `getCharacterFromIndex`를 4개씩 읽자마자 `measureCharacter`로 크기만 남기고 버림(전체 `getDatabase(['characters'])` 안 씀). 채팅은 한 번만 직렬화. 모듈·플러그인은 한 번의 `getDatabase`. Dusk가 꺼 둔 모듈(`rbm:disabledModules:v1`)은 `parked`로 포함하고 그 키는 저장소 목록에서 뺌(중복 방지). 저장소는 `storageKeyList`+`storageGet`을 6개씩.
+- 활성 판정: 글로벌(`enabledModules`) · 캐릭터 연결 · 채팅 연결 · 네임스페이스(`moduleIntergration`) 중 하나. 없는 모듈 id(고아)는 캐릭터의 '연결된 모듈'에서 제외.
+- 렌더 진단 개선점: display 핸들러 **호출 범위 안**의 `getDatabase/getChar*`만 '고부하'(원본은 스크립트 전체). 주석은 지우고 문자열 안 `//`는 유지. 핸들러를 이름으로만 넘기면 고부하로 단정 안 함(score 2). 화면 감시는 `getRootDocument`+`MutationObserver`/`createMutationObserver`. 모듈은 Lua editDisplay·display 트리거·editdisplay 정규식(8개 이상이면 개입).
+- 테스트 `tests/sizemeter.test.js`(16) · `sizemeter-data.test.js`(6, 동시 읽기 ≤4·쓰기 0·취소·저장소 실패), e2e `tests/e2e/run-sizemeter.mjs`(PC·모바일 28개). `run-work.mjs` 기대값을 도구 행 5개·땡스 8줄로 고침(땡스는 이전부터 낡은 값이었음).
+- 못 한 것/미확인: 세 호스트 실기기에서 측정 시간·메모리(특히 큰 봇 수백 개), 호스트가 `getCharacterFromIndex`에 채팅 스텁을 줄 때의 크기 해석(스텁이면 채팅이 작게 나옴 — 화면 문구는 'JSON 크기 기준'), 기타 설정(페르소나·CSS)·프롬프트 프리셋은 측정 안 함.
+
+## 2026-11-04 위젯 홈 원본 v1.0.34 병합
+- 방법: 원본 v18·v34에 같은 1단계 변환(scratchpad의 port 스크립트)을 적용한 뒤 `git merge-file`로 우리 수정과 3방향 병합. 충돌은 core(themePreset·dusk + photoSlotsRevision), widget-layout(IDS 14개: 원본 realm·photo2·photo3 + Dusk 5개, ORIGINAL 기준 예전 배치 허용), home.js 6곳(툴바 옵션·extras 삽입·Editor 문서 어댑터·realm import·hideBox·dispose)을 손으로 합침. style.js는 v34 CSS로 다시 만들고 우리 수정(overflow-x:clip, overscroll 제거, 편집 CSS) 재적용.
+- 새 `lib/realm.cjs`: 소개 창을 Shadow DOM에 붙임(`getRootNode`), 홈 영역 찾기는 전역이 없으면 `home-layout.cjs` require(실패해도 무시). 사진 2·3 파일 입력 복제본도 `sr`에 붙임. 포켓리스 문구 2곳 중립화.
+- 원본 테스트 test_photos·test_realm·test_realm_download·test_realm_mobile 이식(`tests/widgethome-*.test.cjs`). test_realm의 dock 기대값은 우리 설정 시트(`openSheet`)로 바꿈.
+- 다음에 원본이 또 오면: 같은 방법(1단계 변환 → merge-file). 변환 스크립트는 리포에 없음 → `HandOff`에 옮길지 결정 필요.
+
+## 2026-11-04 채팅 메뉴 버튼 id
+- `memorybutton.js` registerButton에 `id:"dusk-memory-button"`, 메인 햄버거 버튼 `id:"dusk-atelier-open"`. 포켓리스의 떠 있는 버튼 위치 옮기기·기억이 id 기준이라는 추정(기기 확인 필요).
+
+## 2026-11-04 위젯 홈 설정 시트·색 테마
+- `src/widgethome/sheet.js`: `PRESETS`(18개, 앱 팔레트 형식) · 시트 HTML/CSS · `createSheet`. 위쪽 설정/홈 꾸미기·독 홈 꾸미기·제목 연필이 시트를 연다(제목 연필은 홈 탭). 바꾸면 `setPrefs`로 바로 저장.
+- 색: core settings에 `themePreset`. `applyColors`가 리스 색을 따르지 않으면 `presetById(themePreset).base`를 앱 팔레트처럼 써서 모든 위젯에 적용. ‘위젯마다 직접’ = themePreset 비움 + 예전 꾸미기 창.
+- Dusk 설정 카드의 위젯 디자인·자동 열기·꾸미기 버튼은 사용자 요청으로 뺌(위젯 홈 안에서 바꿈).
+
+## 2026-11-04 위젯 홈: 사이드바 옆 배치·Dusk 디자인
+- `lib/home-layout.cjs` `mainPane()`: 포켓리스 홈이 아니면 `.risu-sidebar/.rs-sidebar` 오른쪽의 가장 큰 본문 요소를 홈 자리로(사이드바를 품은 감싸개 제외). `found.generic`이면 관련 링크·네이티브 컨트롤 안 씀. 프레임 찾기는 `iframe[srcdoc*="dusk-widgethome-open"]`(원본 플러그인과 구분), 속성 접두사 `x-dusk-wh-`. **리스·리스바드의 실제 클래스명(`.risu-sidebar`)은 기기 확인 필요**(PocketRisu 원본 코드가 쓰던 이름).
+- `lib/auto-home.cjs` `isHome`: 포켓리스 제목이 없어도 캐릭터 미선택(index<0)+설정/대화상자 없음이면 홈.
+- 바로 열기는 자동 감지 연결(`inst.ready()`, 최대 2.5초)을 기다린 뒤 아직 안 떴으면 연다.
+- `dusk-style.js`: 설정 창 공통 스타일(스위치·알약 라디오·대화상자)과 `data-surface="dusk"`. surface 값 navy/glass/dusk. 대화상자 바깥 클릭 닫기. 인스턴스 `getPrefs/setPrefs/openSettings` → Dusk 카드(디자인 segmented·홈 자동 열기 스위치·위젯 꾸미기 버튼).
+- e2e `tests/e2e/run-widgethome-host.mjs`(가짜 SafeDocument로 사이드바 옆 배치·캐릭터 선택 시 닫힘·홈 복귀 시 다시 열림·사이드바 크기 추적·Dusk 디자인·설정 창).
+- 남은 것: Dusk 디자인에서 음악 재생 버튼·시계 바늘·하단 독 활성색 등 원본 고정색 일부는 파란색 그대로.
+
+## 2026-11-04 위젯 추가·크기 조절·스크롤 유지
+- 새 위젯 `src/widgethome/extras.js`(HTML·CSS·동작·순수 함수): dusk·dday·timer·dice·stats. `widget-layout.cjs` IDS 11개, `ORIGINAL`(6개)만 있으면 예전 배치로 인정하고 없는 새 위젯은 맨 아래에 붙임. 저장 키 ddays·dice·visits(같은 접두사). Dusk 바로가기는 `createWidgetHome({openDusk})` → main.js `app.open({tab})`.
+- 크기 조절: hit의 오른쪽 아래 28px를 마우스로 잡으면 resize, `follow()`가 width/height calc로 따라감. 스냅 히스테리시스 0.65칸, 끄는 동안 격자 min-height 고정(스크롤 되먹임 방지), 가장자리 스크롤 48px·거리 비례.
+- 스크롤 유지: `ui/dom.js` `replace()`가 `data-keep-scroll`(app main) 안에서 같은 화면(`data-view`=tab|sub, 첫 자식 data-page/class 같음)을 다시 그리면 `.rb-scroll`·main 스크롤을 복원(불러오는 중 화면을 거쳐도 기억).
+- 관계도: `.rb-rm`에 padding(18px 22px, 모바일 12px 16px).
+- 테스트 `widgethome-extras.test.js`, e2e 위젯 49개(크기 조절·되돌이 깜빡임·새 위젯·Dusk 바로가기).
+
+## 2026-11-04 위젯 홈 수정(속도·스크롤·드래그·바로 열기)
+- 스크롤: `:host`에 overflow-x:hidden/overscroll-behavior를 주면 호스트가 스크롤 상자가 돼 휠이 문서로 안 이어짐 → `overflow-x:clip`만 사용(style.js 머리 주석 참고). e2e가 휠 스크롤을 확인.
+- 속도: `open()`이 목록(`reloadCatalog`)을 기다리지 않음(60초 안 캐시면 생략), `themeFollower.refresh`·`auto.configure`도 비동기. boot 때 `restore()`→`reloadCatalog` 미리 읽기. 느린 가짜 호스트(getDatabase 1.5초)에서 열기 1987ms→213ms.
+- 바로 열기: `data/widgethome.js` `boot()`가 시작 뒤 `inst.open()`(키 `dusk.widgethome.onload`, 기본 켜짐, 카드에 스위치).
+- 드래그: `lib/layout-editor.cjs` — `layout-hit`에 마우스·펜 pointerdown→`begin(move)`, `follow()`가 transform으로 손을 따라가고 `release()`가 놓을 때 해제(CSS transition으로 스냅). 터치는 hit이 `touch-action:pan-y`라 스크롤과 충돌하므로 ⠿ 손잡이만.
+- 문구: h1 ‘위젯 홈’, `.related-links`는 `onPane`(포켓리스 홈에 겹칠 때)에서만 표시.
+- 자동 열기(inline) 안 되는 원인 후보: 호스트의 화면 접근(`getRootDocument`) 권한이 Dusk 플러그인에 없을 때. 카드의 안내 줄과 위젯 홈 설정의 `.auto-status`에 이유가 뜸. 기기 확인 필요.
+
+## 2026-11-04 {{user}} 표시·집단 이름 걸러내기
+- `memory/common.js` `avatar`·`isMe`·`shownName`: {{user}} 동그라미는 `userLabel()` 첫 글자 + `data-me`(강조색, styles.js `.rb-mem-av[data-me]`). `people.js` 카드에 `me` 클래스·‘나’ 배지·맨 앞 정렬, 상세 제목도 표시 이름.
+- `engine/collective.js` `isCollectiveName`/`COLLECTIVE_RULE`: 반·학년·동급생·…들 같은 집단 이름. 지난 대화 분석(`memoryprompt.js` 규칙 + `memoryapply.js` 필터)과 위키 writer(`tools/pot-patches.json`에 writer-prompt.js 패치 2개: import + 요청의 `dusk_character_rule`)에 적용. 원본 pot 소스가 없어 pot-split 재생성은 못 돌려 봄 → 다음에 원본이 있으면 패치 일치 확인.
+- 로어북 읽기: `writerSearchExistingLore`는 이미 기본 켜짐(기존 인물을 찾는 용도라 집단 이름을 막지 못함). 그래서 규칙+필터로 처리.
+- 테스트 `tests/collective.test.js`, e2e `tests/e2e/run-useravatar.mjs`.
+
+## 2026-11-04 위젯 홈 이식 (PocketRisu 위젯 홈 v1.0.18, 격리 이식)
+- 원본(사용자 제작, zip)을 `src/widgethome/`로 옮김: `lib/*.cjs`(원본 모듈 14개, require 경로만 .cjs로), `style.js`(원본 style.css의 :root/html/body → :host, `:host([hidden])` 추가), `home.js`(원본 view.js를 `bootWidgetHome(api, hostOpts)`로). 원본 대비 바뀐 곳은 home.js 안에서 `sr`(shadowRoot)·`hostEl`·`showBox/hideBox`·`dispose`를 찾으면 돼요. layout-editor에는 `document:{createElement, querySelector→sr}` 어댑터를 넘김.
+- 격리: 문서 body에 `<div data-dusk-widgethome hidden>` + Shadow DOM. 위젯 CSS는 Dusk 화면에 새지 않음(e2e로 확인). 같은 플러그인 iframe을 번갈아 쓰므로 Dusk 창을 열기 전 `widgetHome.yieldToDusk()`로 위젯 홈을 닫음(`main.js`에서 `app.open` 감쌈). 위젯 홈을 Dusk에서 열 때는 `ctx.openWidgetHome()`(Dusk 닫고 열기).
+- 켜고 끄기: `src/data/widgethome.js` `createWidgetHome`(키 `dusk.widgethome.on`, 기본 꺼짐). 설정 탭 맨 위 카드(`devtools.js` `widgetHomeCard`, 고급 모드 아니어도 보임) + 도구 화면 ‘위젯 홈’ 행. 끄면 `dispose`가 호스트 제거·메뉴 버튼 해제(`unregisterUIPart`).
+- 메뉴 버튼 id `dusk-widgethome-open`(원본의 `pocketrisu-basic-home-open`과 다름). 원본 플러그인(`pocketrisu_basic_home`)이 켜져 있어도 Dusk 쪽이 그대로 동작하고, 카드에 끄라는 안내만 뜸. 저장 접두사 `pocketrisu.basic-home.v1.` 그대로라 기존 데이터를 이어 씀.
+- 호스트 대응: 저장은 `getLocalPluginStorage`→`pluginStorage` 대체(원본 동작). `getRootDocument`·`createMutationObserver`가 없으면 자동 열기만 못 하고 메뉴 버튼은 됨(e2e: 최소 api에서 열림·경고창 없음). 자동 열기 감지(`auto-home.cjs` `isHome`)는 PocketRisu 홈 화면의 ‘PocketRisu’ 제목 + ‘Related Links/관련 링크’ + `getCurrentCharacterIndex()<0` 기준이라 **리스·리스바드에서는 화면이 달라 자동으로 안 열릴 수 있음(기기 확인 필요)**.
+- 테스트: `tests/widgethome-*.test.cjs`(원본 4개 이식) · `widgethome-ctrl.test.js`(컨트롤러 9) · e2e `tests/e2e/run-widgethome.mjs`(격리·열기/닫기·정리·최소 api·설정 카드·도구 행, PC/모바일).
+- 못 한 것: 세 호스트 실제 기기 확인(특히 홈 영역 배치·자동 열기·음악 파일 저장), 원본 design.js의 Butter Home v8 출처 라이선스 확인(NOTICE.md에 메모).
+
+## 2026-11-04 프로바이더는 실험 기능으로만 노출
+- `prefs.ui.experimental`(설정→실험 기능, `devtools.js` `experimentalCard`). 꺼짐이면: provider 탭 숨김(`tabs.js` `exp`·`tabHidden`), 꾸미기는 원래 자리(큰 카드), registrar·Dusk 자체 AI 경로 모두 막음(`createProvider({allowed})`, main.js `providerRef.exp`). 켜면 꾸미기는 도구로 이동(`hideWhenExp`). 한 번 등록된 이름은 리스를 다시 열 때까지 남음(removeProvider 없음).
+
+## 2026-11-04 프로바이더(Dusk provider) 1차 구현 (버전 미변경, 미커밋 → 이 커밋에 포함)
+- 계획 문서: 프로젝트 문서 `claude/provider-plan.md`. CPM v1.99.7·LBI-pre34-plus는 **기능·구조 분석만** 했고 코드는 가져오지 않음(CPM은 분석만 허락받음, UI·설정 가져오기 제외).
+- 구조: 순수 `src/engine/provider/`(catalog·sse·messages·build·repeat·keypool·chain·cost·profile·transforms·tools·translate), 호스트 연결 `src/data/provider/`(keyvault·store·transport·gemcache·risutools·runner·toolexec·models·register·index), 화면 `src/ui/screens/provider.js`+`provider/{more,ui,css}.js`.
+- 화면 이동: `look`(플러그인 꾸미기) 탭은 `hide:true`로 목록에서 숨기고(id 유지: 위쪽 팔레트·설정 링크 그대로) 도구 화면에 행 추가, 작업실 큰 카드는 `provider`. 숨김 필터는 app.js 3곳·sectionhome.js.
+- Dusk 자체 AI 연결: 용도 `analysis` 프로필 지정 시 `engine/runai.js` `duskPickFor`가 보조 모델 호출을 프로필로 보냄, `modelhub.js` `serverModelOf`는 `provider.serverModel`(Vertex·Responses는 서버 직접 호출 불가 → 중계).
+- (2026-11-04 화면에서 제거) 도구·검색·번역기 탭은 사용자 요청으로 화면에서 뺌. 엔진·runner·risutools·translate 코드는 그대로 남아 있고 설정 `tools.enabled`/`translator.enabled`가 기본 꺼짐이라 동작하지 않음(필요하면 more.js에 탭을 다시 달면 됨, git 이력 참고).
+- 번역기 다듬기는 runner `handle`에서(서식 보호 토큰·용어집·안내문). `req.__purpose`/`req.__profile`로 용도·프로필 강제.
+- 쓰기 도구 안전장치: 설정에서 따로 켬 · 매번 확인 · 바꾸기 전 백업(실패하면 중단, 되돌리기 목록에 뜸) · 요청당 3번. (웹 도구와 같은 요청에서 쓰기 막기는 **의도적으로 넣지 않음**, 화면에 경고 문구만.)
+- 검증: provider-engine 29 · provider-runner 26 pass, e2e `run-provider.mjs` PC·모바일 통과. `run-look`은 꾸미기 진입을 `__app.ctx.go("look")`로 바꿈. `run-app.mjs`·`run-hubs.mjs`(기억 개요 3줄)는 변경 전에도 실패하던 낡은 기대값.
+- **못 한 것/미확인**: ① 호스트 `addProvider` 실제 동작(RisuAI·RisuBard·PocketRisu) ② 실제 공급자 계정으로 호출 ③ iOS 백그라운드 ④ Bedrock·NovelAI 연결 ⑤ 배치(Anthropic·OpenRouter) ⑥ 참고자료 PDF 변환 ⑦ Cellar 경유 대화 전달(서버 분석만 연결됨) ⑧ 키 암호화·동기화 ⑨ 웹 검색 키는 pluginStorage(동기화될 수 있음) ⑩ Cellar 쪽 시험 추가 없음.
+- 메인/보조: `cfg.subProfileId`(profile.js). resolve: 메인=봇별→메인, 그 밖=용도 지정→보조→메인. `analysisPick`(index.js)은 analysis 지정 또는 보조가 있을 때 Dusk 자체 AI를 프로필로 보냄(둘 다 없으면 기존 보조 모델 경로).
+- OpenRouter 공급자 순서/폴백 입력(provider.js, `params.provider.{order,allow_fallbacks}`), 프리셋은 params 객체 값을 안쪽 키만 넣고 뺌(presets.js).
+- 생각 강도: `thinking.effort` ∈ ""(안 보냄)·none·low·medium·high·xhigh 하나로 통일(build.js: OpenAI 그대로 / Claude 적응형+output_config, none이면 생각 끔 / Gemini 3=thinkingLevel·2.5=thinkingBudget 0). `mode`·`budget`은 고급의 토큰 예산용으로만 남음.
+- 빠른 설정 프리셋 `engine/provider/presets.js`(프로필 params·headers·tier에 넣고 뺌, anthropic-beta는 쉼표로 겹침) + 연결 카드 모델 검색(화면 안에서만 거름). 프리셋을 늘리려면 PRESETS 배열에 항목 추가.
+- 안내서 `docs/site/guide/provider.html` 추가, CHANGELOG는 v1.9.1 섹션에 적음(버전 올릴 때 옮길 것).
+
+---
+
+## 2026-11-04 기본값 변경 (버전 미변경)
+- 기억 넣기 기본값: 목표 2000 · 상한 8000 · 이야기 요약 2000 토큰 (`data/memorystore.js` DEFAULT_SETTINGS, `engine/memoryinject.js` 대체값).
+- 기존 인물 로어북 검색(`writerSearchExistingLore`) 기본 켜짐: 생성물 `engine/pot/settings.js`는 `tools/pot-patches.json` 패치로 바꿈(직접 고치지 말 것).
+- **직접 안 바꾼 값은 기본값을 따라감**: `engine/defaultfollow.js`(`followDefaults`·`noteEdits`, 표 `DUSK_FOLLOW`·`POT_FOLLOW`).
+  - Dusk 설정: 읽을 때 `memorystore3.js` `withFollow`가 적용, 직접 바꾼 키는 `settings.edited`에 기록(`ui/screens/memory/settings.js` save에서 `noteEdits`). 기록이 없던 예전 사용자는 값이 예전 기본값(1200/2500/600)이면 새 기본값으로, 다르면 직접 바꾼 것으로 기록해 지킴.
+  - 리수폿 설정: `data/potstorage.js`가 읽을 때 적용, 저장 때 바뀐 키를 `idx.pot.edited`에 기록.
+  - 기본값을 또 바꿀 때: DEFAULT_SETTINGS(또는 POT_DEFAULTS)를 고치고, 표의 `old`에 이전 기본값을 추가.
+- 테스트 `tests/defaultfollow.test.js`. 검증: npm test 846 pass / 0 fail, build·check "동일함 (v1.9.1)", e2e smoke·memed 통과. `run-app.mjs`는 변경 전에도 같은 오류(`reading 'click'`)로 실패(기존 문제).
+- 이 브랜치의 package.json은 아직 1.9.1. CHANGELOG는 맨 위 v1.9.1 섹션에 적었음 — 버전 올릴 때 옮길 것.
+
+## 인물 관계도(반3D) — 1차 구현 완료 (2026-11-04, 미릴리스)
+- 목업: 프로젝트 문서 `claude/mockup-relmap.html`, 계획: `claude/relmap-plan.md`.
+- 구현: 탭 `relmap`(기억 그룹, `ui/tabs.js`·`ui/app.js`) / 화면 `ui/screens/relmap.js` / canvas `ui/screens/relmap/canvas.js` / CSS `ui/screens/relmap/css.js`(styles.js에서 합침) / 데이터 `engine/relmap.js`(순수, `tests/relmap.test.js`) / e2e `tests/e2e/run-relmap.mjs`.
+- 진입: ① 채팅 메뉴 떠 있는 버튼(`data/memorybutton.js`, main.js `openRelMap`, 설정 키 `dusk.ui.memoryButton` 그대로, 이름·아이콘만 관계도로) ② 장기기억 홈 '나에 대한 기억' 아래 줄(`mhome.js` `mapRow`) ③ 사이드 메뉴 탭.
+- 빨리 뜨게: `peekCurrent` 캐시 사용, 같은 채팅이면 만든 DOM 재사용(`ctx.state.relmap.view`) + 뒤에서 폴더만 다시 읽어 서명이 바뀔 때만 다시 그림, 탭에서 떨어지면 rAF 루프 정지(`stage.isConnected`), 열 때 `getCharacterFromIndex` 호출 없음.
+- 데이터(새 필드 없이 기존 기억만): 호감도 = `folder.emo`(그 인물→{{user}}) 좋은 쪽(애정·신뢰·존경) − 나쁜 쪽(적대·두려움)을 0~100으로, 감정 없으면 50. 중요도 = 기록 수 + 최근 20응답 기록. 이번 턴 = 마지막 분석 응답(`nowOf`)에 기록·장면이 있는 인물. NPC 선 = `folder.rels`(+/− 개수로 색, 개수로 굵기, 최근 5응답 변화는 빛남). 점선 = 풀리지 않은 갈등·오해(rifts/beliefs). 인물 최대 40명(중요도 순).
+- 아직 안 한 것(다음): ① 소속(`person.faction`)·상태(`person.status`)는 화면이 읽을 준비만 됨, 추출 안 함(없으면 소속 없이 고르게 배치, 필터 숨김) ② 턴 되감기·▲▼ 변화(턴별 호감도 스냅숏 필요) ③ 선의 특수 관계 종류·원문 인용(`kind`/`q`) ④ 실제 터치 기기의 길게 누르기·두 번 누르기·핀치 미확인(헤드리스에서 포인터 이벤트만 확인) ⑤ BardWiki 저장소일 때의 폴더 읽기는 `M.store.getFolder`만 사용(장기기억 홈과 동일).
+- 검증: npm test 전부 통과(tests/uimode.test.js 탭 목록 기대값에 relmap 추가), build·check "동일함", e2e `run-relmap.mjs` 22개 통과(PC·모바일).
+- 2026-11-04 추가: 관계도 차가운 색 파랑(`--rb-blue` 토큰, theme.js 팔레트 4종) · {{user}} 이름 모으기를 `data/usernames.js`로 통일(username + 선택/전체 페르소나 + 첫 단어; memoryrunner·mepage가 사용). 테스트 `tests/usernames.test.js`.
+- 2026-11-04 추가: 관계도 가운데·안내 글을 페르소나 이름으로 표시(`usernames.js` `primaryUserName`, `username.js` loadUserName), 옛 기록 자동 합치기 `data/usermerge.js` `autoMergeUser`(관계도·'나' 화면을 열 때; '나로 합치기' 버튼은 실패 대비로 남김). 테스트 `tests/usermerge.test.js`.
+- Cellar 서버 분석(2026-11-04, Cellar 브랜치 0.1.1): 엔진 묶음 `src/cellar/node-entry.js`(러너·저장소·`callWriterModel`·`toPrompt/fromReply`·`folderIdOf`) + `tools/build-cellar-engine.mjs`(분석·모델 호출 코드를 바꾸면 다시 빌드해 Cellar `engine/atelier-engine.mjs`에 커밋). **연결:** `data/cellaranalysis.js`(`prepare`: 기억이 서버 모드·온라인·features analysis일 때만; 서버가 직접 부를 수 있으면 직접, 아니면 `analysis-relay`면 중계; `run`: start → 폴링 → 취소 시 cancel, 시작 전 실패·501은 null → 기기 방식, 시작 뒤 오류는 던짐, 상태 6번 연속 실패면 '연결 끊김'; `resume`: 리스 화면을 다시 열면 `memory.js` detect 뒤 `runner.resumeServer()`가 중계 대기 작업을 이어받음), `modelhub.js` `serverModelOf`(**중요: 기억 분석의 기본 모델 mode는 리스 쪽(submodel 등)이라 custom이 아님 → 설정 `serverModel.presetId`(기억 설정 '서버 분석에 쓸 모델')로 '내 API' 프리셋을 고른 경우에만 직접 호출.** 프리셋·키를 `{kind:"preset"}`로 보내면 Cellar가 같은 llm-client 코드로 호출 — risuai 프리셋만 거절), `memoryrunner.js` backfill 앞 훅(`server` 옵션, 설정 `serverAnalysis` 기본 true, 끝나면 dropCache + 빈 updateFolder로 인덱스 요약 갱신), 설정 스위치·모델 선택(memory/settings.js). 기억 손실 방지(Cellar): 충돌 시 모델 재호출 없이 새로 읽은 폴더에 재적용, 분석 전 폴더 사본 `dusk-data/analysis-backups/`(최근 5개). 시험 `tests/cellaranalysis.test.js` 11개 + Cellar 동시 쓰기·취소 후 재시작·백업·Vertex JWT 시험. 자동 기록은 서버로 안 보냄. 실제 서버 미확인.
+- 버그 수정(2026-11-04): ① 2단계 줄 파서가 'Other'(프롬프트 예시)를 상대 이름으로 저장 → `memorylines.js` `targetName`/`realText`로 거름 ② `stageOf`(memoryhuman.js)가 장면 수만 봐서 친한 사이로 시작해도 '처음 봄' → 추억·rels·반말이 있으면 '처음 봄'만 벗김(그 위 단계는 장면 수·감정 그대로). 테스트 `tests/memory-stage-placeholder.test.js`. 이미 저장된 'Other' 항목은 자동 정리 안 함.
+- 초기 관계 감지(2026-11-04): 2단계 줄 `start|상대|close or friendly|원문 인용`(사전관계) → `folder.start[쌍키]={a,b,level,q}`(처음 한 번, 인용이 본문에 있어야 함) → `stageOf`가 close=최소 '친한 사이', friendly=최소 '아는 사이'로 바닥을 깖. 가벼운 모델 모드에서는 이 줄을 안 물음. JSON 응답 경로도 `start` 통과. {{user}}로 합치기(`memoryuser.js` rekey)·`pairView().start`·'나' 화면 칩까지 반영. 아직 안 한 것: 일반 인물 합치기(`peoplemerge.js`)는 emo 등과 마찬가지로 별칭에 의존, 인물 위키 관계 탭 표시.
+- 다시 분석(2026-11-04): `memoryrunner.js` `planBackfill(.., {all:true})`·`backfill(.., {redo:true})`·`analyzeAt({redo})`(cursor 중복 방지 우회). 홈의 '지난 대화 분석'(`mhome.js` analyze)에서 미처리가 0이면 "이미 모두 분석했어요" 확인창 → 전체 재분석. 설정 폴드의 '미처리만 분석'(`settings.js`)은 그대로. 테스트 `tests/memoryrunner.test.js`.
+- 관계도 성능(2026-11-04): `buildRelMap`이 모든 인물에 `counterparts`·`pairView`를 돌려 큰 기억(인물 400·장면 3000)에서 3.7초 걸림 → 값싼 중요도(기록만)로 상위 40명을 먼저 고른 뒤 그 40명에만 `pairView`(0.2초). `tests/relmap.test.js`에 시간 상한 테스트. 아직 안 본 것: 실제 브라우저에서 그리기 루프 프레임 비용(저사양 폰), 폴더 JSON 읽기 자체의 시간.
+- 분석 메모리(2026-11-04): `memoryrunner.js` `backfill`이 묶음(3응답)마다 `getCharacterFromIndex`(딸린 채팅 전부 복사)·`getChatFromIndex`를 다시 읽어 큰 채팅에서 OOM 의심 → 시작 때 1번만 읽고 `analyzeAt({shared})`로 넘김, 생성 확인은 5묶음마다 현재 채팅만. 테스트 `memoryrunner.test.js`(호출 횟수). 실기기(아이폰) 효과는 미확인. 다음 후보: Cellar 서버에서 분석 실행(사용자 결정: 서버 사용자만 더 가볍게, Cellar가 리스 데이터를 읽는 것은 허용).
+- 이 브랜치의 package.json은 아직 1.9.1. CHANGELOG 항목은 맨 위 v1.9.1 섹션에 있음 — 버전 올릴 때 옮길 것.
+
+---
+
 # 현재 상태 — feat/1.8.1 (main v1.8.0 대비)
 
 검증(2026-11-01): `npm test` 462 pass / 0 fail / 9 skipped(471), `npm run build` 후 `npm run check` → "동일함 (v1.8.1)" (빌드물 최신). 버그 5건 수정분은 아래 "추가 수정" 참고(미커밋 상태일 수 있음: git status 확인).
@@ -505,3 +675,33 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 위키 점검: `engine/wikihealth.js`, UI `mergeui.js openWikiHealth`(더보기 → 위키 점검).
 - 하지 않은 것: 전체 재분석 교체(Dusk의 backfill은 이미 추가식·재개식이라 덮어쓰지 않음, 별도 '초기화 후 재분석' 기능이 없음), 스키마 강제 출력·재순위·아크 지도(P3).
 - 확인 못 한 것: 실제 모델에서 잘림 판별 휴리스틱(길이 1500자 이상 문장 중간 종료)이 맞는 비율, digest 40% 기준이 한국어 요약에서 너무 엄격한지, 과거 장면 회상의 낱말 겹침 기준(2개) 적정성.
+
+## 스페셜 땡스: 위젯 홈 (v1.9.1 작업 중)
+- `src/ui/screens/tools.js` THANKS에 `widgethome` 추가(플러그인 안에는 링크 없음).
+- 다음 아카 글의 SPECIAL THANKS 블록에는 위젯 홈 원작 글 링크 사용: https://arca.live/b/characterai/188006855
+- 위젯 홈 덮는 범위: `home-layout.cjs` `railEdge`/`boxOf`(generic일 때 아이콘 줄 오른쪽부터), `auto-home.cjs` isHome에 'setting' 클래스 큰 요소 차단 추가. 실제 RisuBard 클래스명은 미검증.
+- 리스바드 실제 화면 기준: 아이콘 줄은 CSS 약 44px → railEdge 최소 너비 32px. 설정 화면은 '설정 검색' 입력칸/'앱으로 돌아가기' 버튼으로 감지.
+- 원인: 홈 자리에 떠 있으면 auto-home check가 바로 return해서 설정 이동을 못 봄 → 떠 있을 땐 settingsOpen만 검사해 닫음. host e2e에 설정 화면 2항목 추가.
+- 위젯 홈 리스바드 3건(2026-11-04 20시): ①새로고침 시 전체 화면 → boot는 화면 접근 되면 `open(false,{automatic,quiet})`로 홈 자리에만 6회 재시도 ②홈 복귀 시 안 뜸 → 자동 열기 실패 시 pause+alert 하던 것 제거(다음 감지 때 재시도), 클릭 후 0.7·1.6초 재검사, 설정 감지는 화면 안에 보이는 요소만 ③아이콘 줄 못 찾음 → `rect()`가 160px 미만을 버려서였음, `rawRect`로 측정(3번에 1번 재측정). host e2e에 44px 아이콘 줄 항목 추가.
+- 아이콘 줄 끝 +1px 여유, aside/nav 등도 후보(사이드바 삐짐 대응).
+- 리스바드 실측: 아이콘 줄 = `.rs-sidebar.character-list-sidebar`(80px), 안쪽 `.character-list` 72px → 사이드바 자체가 좁으면 그 끝을 경계로.
+- Dusk 열었다 닫기: controller yieldToDusk가 resumeAfterDusk 표시 → app.js close() 끝에 ctx.onClosed → main.js에서 widgetHome.resume(). 홈 배치 코드는 건드리지 않음.
+- 열린 항목 중복: applyOpen이 닫기를 먼저 처리, 중복 판정에 닫힌 항목 포함(같은 kind 0.5/다른 kind 0.8), openForPrompt 24개, 프롬프트 문구 보강. 모델이 안 닫아 주면 자동으론 안 닫힘(미해결).
+
+## 다음 작업(NSFW 추가 기능, 사용자 승인됨: "저거 다 만들고")
+1. Dusk 이야기 날짜를 Erosync 주기 계산에 반영(지금은 Dusk 월경 기록이 켜져 있으면 Erosync 주기만 쉼; `cycleProbe`/`duskFlagsSet` 참고)
+2. 봇별 수위 프리셋(수위·동작·집착 방지 값 묶음 저장/적용; `erosynclevel.js`·`erosyncconfig.js`·`erosyncguard.js`)
+3. 장면 되돌리기(직전 장면 판단·프로필 변화 한 턴 되돌림)
+4. 인물 위키 NSFW 탭 위쪽 한 줄 요약(지금 목표·최근 변화·쉬는 턴; `erosyncwiki.js` `eroNsfwCard`)
+5. 인물 1명 NSFW 프로필만 내보내기/가져오기(`memoryfile.js` 재사용)
+6. NSFW 기록 확장(아래): 장면 타임라인, 관계 수위 변화 그래프, 비하인드 검색·고정, 장면 메모, 직전 판단 이유 보기, 기록 CSV/MD 내보내기 — 모두 AI 추가 호출 없이 이미 저장된 값만 사용.
+규칙: 비용 늘리는 기능(장면마다 AI 추가 호출)은 넣지 않음. 시작 전 STATE.md·`erosyncwiki.js`부터 읽을 것.
+
+## NSFW 추가 기능 구현 완료(2026-11-05, 같은 브랜치)
+- 새 데이터 모듈: `src/data/erosyncpreset.js`(프리셋 `dusk.erosync.presets`), `erosynctags.js`(태그 `erosync_dusk_tags_v1` → 장기 기억 파일에 자동 포함), `eroprofilefile.js`(인물 1명 파일 `dusk-ero-profile` v1). 컨트롤러 `createErosync`에 presets/savePreset/applyPreset/deletePreset/tags/setTags/tempTrend/undoScene 추가.
+- 엔진(`src/erosync/erosync.js`) 추가: `duskTags*`(선호·금기를 `selectedProfileSummary`에 넣음), `duskTempRecord/Line/Series`(확정 때 관계 온도 기록 `state.duskTemp`, 최근 120턴, 되돌린 뒤 앞선 기록 무시, `flags.tempTrend`), `duskUndoLastScene`(`undo.lastScene`: `undoCommitEntries` + 최신 응답을 읽은 것으로 표시), `duskStoryAbsolute`(`host.storyStatus`로 Dusk 이야기 시간 날짜를 주기 시계에 우선 적용; main.js에서 연결), 읽기 값에 `rests`·`temp` 추가.
+- **버그 수정**: `normalizeSessionState`가 `state.duskGuard`를 떨어뜨려 집착 방지 연속/쉬는 턴이 턴을 넘어 이어지지 않았음 → 보존하도록 수정(테스트 있음).
+- UI: 수위 탭 `erosyncpresetui.js`, 동작 탭 `erosyncundoui.js`, NSFW 탭 `eroSummaryCard`(erosyncwiki.js)·`erosynctempui.js`·`erosynctagsui.js`·프로필 내보내기/가져오기 버튼(`erosyncprofilefileui.js`). 순수 함수 `eroSummary/eroTemp/tempPath`는 `src/engine/erosyncview.js`.
+- 못 한 것/미확인: 실제 채팅·모델에서 장면 되돌리기·관계 온도 기록·태그 주입·이야기 날짜 시계가 도는지(엔진 함수는 단위 시험·소스 확인만), 세 호스트 실기기. 관계 온도의 ‘반감’은 엔진의 hatred 값(별도 ‘긴장’ 값은 없음). 되돌리기 뒤 집착 방지 상태(`duskGuard`)와 온도 기록은 같은 턴 이상만 다음 기록 때 정리됨.
+- **값 입력 칸 UI(2026-11-05)**: `src/ui/fields.js`(sliderField·selectField·controlField·toggleField) + `styles.js`의 `.rb-fld`·`.rb-range`. Erosync 수위/동작/분석/집착 방지 카드가 사용. 다른 화면의 기본 모양 input은 이번에 건드리지 않음.
+- 집착성 상한 기본 20(엔진·컨트롤러·UI). 선택 칸은 `choiceField`(optionCards+설명), 스위치는 `.rb-toggle`(장기 기억과 같은 모양). '검토 후 반영'(기본값)은 Dusk에 확인 화면이 없어 후보만 쌓임 → 설명에 적어 둠, 기본값 변경은 사용자 결정 필요.

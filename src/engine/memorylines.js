@@ -37,6 +37,7 @@ export function linesStage2(name, { light = false, beliefs = false } = {}) {
     r.push(`feel|what "${name}" really feels|probable reason|H or M or L   (only if it differs from the act)`);
     r.push("rift|Other|what about|open or apologized or resolved|none or some or deep   (fight, apology, making up)");
     r.push("bond|Other|shared moment (<=60)|cue word                                  (important moments only)");
+    r.push(`start|Other|close or friendly|exact quote   (ONLY when the text itself states "${name}" and Other already knew each other BEFORE this scene: childhood friends, family, lovers, colleagues. Omit if they just met or it is unclear)`);
     if (beliefs) r.push("belief|what they now falsely believe|the truth|who misled (or empty)");
   }
   r.push(`If nothing new is confirmed for "${name}" in the newest text, reply exactly: none`);
@@ -45,10 +46,22 @@ export function linesStage2(name, { light = false, beliefs = false } = {}) {
   return r.join("\n");
 }
 
+// 프롬프트 예시에 쓴 자리표시자('Other', 'shared moment')를 모델이 그대로 베껴 쓰는 경우를 걸러낸다.
+// 상대 이름은 {{user}} · 이미 아는 사람 · 본문에 나온 이름만 받는다(지어낸 이름 = 기록하지 않음).
+const PLACEHOLDER_NAME = /^(other|others|someone|somebody|name|target|him|her|them|상대|누군가)$/i;
+const PLACEHOLDER_TEXT = /^(shared moment|cue word|what about|deed|exact quote)$/i;
+const realText = (t) => !!t && !PLACEHOLDER_TEXT.test(String(t).trim());
+function targetName(raw, known, source) {
+  const n = canonName(raw, known);
+  if (!n || PLACEHOLDER_NAME.test(n.trim())) return "";
+  if (n === "{{user}}" || known.some((p) => nk(p.name) === nk(n))) return n;
+  return !source || inText(n, source) ? n : "";
+}
+
 // ── 줄 해석 ──
 const SEP = /[|｜¦]/;
-const TAGS = new Set(["scene", "who", "rel", "open", "trust", "attr", "keys", "to", "call", "feel", "rift", "bond", "belief"]);
-const ALIAS = { 장면: "scene", 인물: "who", 사람: "who", 관계변화: "rel", 관계: "rel", 떡밥: "open", 확신: "trust", 속성: "attr", 키워드: "keys", 태도: "to", 호칭: "call", 속마음: "feel", 갈등: "rift", 추억: "bond", 오해: "belief", person: "who", scene_summary: "scene" };
+const TAGS = new Set(["scene", "who", "rel", "open", "trust", "attr", "keys", "to", "call", "feel", "rift", "bond", "belief", "start"]);
+const ALIAS = { 장면: "scene", 인물: "who", 사람: "who", 관계변화: "rel", 관계: "rel", 떡밥: "open", 확신: "trust", 속성: "attr", 키워드: "keys", 태도: "to", 호칭: "call", 속마음: "feel", 갈등: "rift", 추억: "bond", 오해: "belief", 사전관계: "start", person: "who", scene_summary: "scene" };
 // 원문 → [{tag, f:[필드…]}]. 코드펜스·번호·글머리표·"tag:" 꼴을 너그럽게 받는다.
 export function parseLines(raw) {
   const out = [];
@@ -172,7 +185,7 @@ export function fromStage1(lines, { known = [], source = "" } = {}) {
       seen.add(nk(name));
       raw.people.push({ name, act, p, s, r });
     } else if (tag === "rel" && raw.rel.length < 4) {
-      const from = canonName(f[0], known), to = canonName(f[1], known), d = (f[2] ?? "").slice(0, 40);
+      const from = targetName(f[0], known, source), to = targetName(f[1], known, source), d = (f[2] ?? "").slice(0, 40);
       if (from && to && nk(from) !== nk(to) && d) raw.rel.push({ from, to, d, dir: /^[+\-0]$/.test((f[3] ?? "").trim()) ? f[3].trim() : "0" });
     } else if (tag === "open" && raw.open.add.length < 3) {
       const text = (f[0] ?? "").slice(0, 80);
@@ -190,12 +203,13 @@ const DEED = {
 };
 const ATT = { warm: { affection: 1 }, cold: { affection: -1, hostility: 1 }, same: {} };
 const DEED_ALIAS = { 도움: "help", 공격: "attack", 고백: "confess", 거절: "refuse", 약속: "promise", 사과: "apologize", 스킨십: "touch", 없음: "none" };
+const START_ALIAS = { 친함: "close", 친한: "close", 가까움: "close", 가족: "close", 연인: "close", 아는: "friendly", 지인: "friendly", 안면: "friendly" };
 const ATT_ALIAS = { 따뜻: "warm", 따뜻함: "warm", 차가움: "cold", 차갑: "cold", 같음: "same", 보통: "same" };
 const ATTR_CATS = new Set(["pref", "rel", "job", "home", "belief", "look", "trait", "status"]);
 
 // 반환: { entry: 인물 항목에 덧붙일 필드, emo, talk, rift, bond, belief }
 export function fromStage2(lines, name, { known = [], source = "", light = false } = {}) {
-  const entry = {}, emo = [], talk = [], rift = [], bond = [], belief = [];
+  const entry = {}, emo = [], talk = [], rift = [], bond = [], belief = [], start = [];
   const attrs = [];
   for (const { tag, f } of lines) {
     if (tag === "trust") {
@@ -209,7 +223,7 @@ export function fromStage2(lines, name, { known = [], source = "", light = false
       const ks = (f[0] ?? "").split(/[,，、/]/).map((x) => x.trim()).filter(Boolean).slice(0, 3);
       if (ks.length) entry.keys = ks;
     } else if (tag === "to" && emo.length < 3) {
-      const to = canonName(f[0], known);
+      const to = targetName(f[0], known, source);
       if (!to || nk(to) === nk(name)) continue;
       const att = ATT_ALIAS[f[1]] ?? YN3(f[1], Object.keys(ATT), "same"), deed = DEED_ALIAS[f[2]] ?? YN3(f[2], Object.keys(DEED), "none"), q = (f[3] ?? "").trim();
       if (q && source && !quoteOk(q, source)) continue;   // 본문에 없는 근거 = 지어낸 판단
@@ -219,24 +233,27 @@ export function fromStage2(lines, name, { known = [], source = "", light = false
       if (!q) for (const k of Object.keys(t)) t[k] = Math.max(-1, Math.min(1, t[k]));   // 근거가 없으면 약한 신호만
       if (Object.keys(t).length) emo.push({ from: name, to, t, why: (q || `${att} ${deed}`).slice(0, 40) });
     } else if (tag === "call" && talk.length < 2) {
-      const to = canonName(f[0], known), call = (f[1] ?? "").slice(0, 20), tone = YN3(f[2], ["formal", "casual", "mixed"], ({ 존댓말: "formal", 존대: "formal", 반말: "casual" })[f[2]] ?? "");
+      const to = targetName(f[0], known, source), call = (f[1] ?? "").slice(0, 20), tone = YN3(f[2], ["formal", "casual", "mixed"], ({ 존댓말: "formal", 존대: "formal", 반말: "casual" })[f[2]] ?? "");
       if (to && call && tone && nk(to) !== nk(name)) talk.push({ from: name, to, call, tone });
     } else if (tag === "feel" && !light) {
       const feel = (f[0] ?? "").slice(0, 40), cause = (f[1] ?? "").slice(0, 60), ic = (f[2] ?? "").trim().toUpperCase();
       if (feel && cause && /^[HML]$/.test(ic)) entry.self = { feel, cause, ic };
     } else if (tag === "rift" && !light && !rift.length) {
-      const b = canonName(f[0], known), about = (f[1] ?? "").slice(0, 60), state = YN3(f[2], ["open", "apologized", "resolved"], ""), grudge = YN3(f[3], ["none", "some", "deep"], "none");
-      if (b && about && state && nk(b) !== nk(name)) rift.push({ a: name, b, about, state, grudge });
+      const b = targetName(f[0], known, source), about = (f[1] ?? "").slice(0, 60), state = YN3(f[2], ["open", "apologized", "resolved"], ""), grudge = YN3(f[3], ["none", "some", "deep"], "none");
+      if (b && realText(about) && state && nk(b) !== nk(name)) rift.push({ a: name, b, about, state, grudge });
     } else if (tag === "bond" && !light && !bond.length) {
-      const b = canonName(f[0], known), moment = (f[1] ?? "").slice(0, 60), hook = (f[2] ?? "").slice(0, 30);
-      if (b && moment && nk(b) !== nk(name)) bond.push({ a: name, b, moment, ...(hook ? { hook } : {}) });
+      const b = targetName(f[0], known, source), moment = (f[1] ?? "").slice(0, 60), hook = (f[2] ?? "").slice(0, 30);
+      if (b && realText(moment) && nk(b) !== nk(name)) bond.push({ a: name, b, moment, ...(realText(hook) && hook ? { hook } : {}) });
+    } else if (tag === "start" && !light && !start.length) {
+      const b = targetName(f[0], known, source), q = (f[2] ?? "").trim(), level = START_ALIAS[(f[1] ?? "").trim()] ?? YN3(f[1], ["close", "friendly"], "");
+      if (b && level && q && source && quoteOk(q, source) && nk(b) !== nk(name)) start.push({ a: name, b, level, q: q.slice(0, 60) });   // 본문 인용이 있어야만(추측 금지)
     } else if (tag === "belief" && !light && belief.length < 2) {
       const thinks = (f[0] ?? "").slice(0, 60), truth = (f[1] ?? "").slice(0, 60), by = (f[2] ?? "").slice(0, 60);
       if (thinks && truth) belief.push({ who: name, thinks, truth, ...(by ? { by } : {}) });
     }
   }
   if (attrs.length) entry.attr = attrs;
-  return { entry, emo, talk, rift, bond, belief };
+  return { entry, emo, talk, rift, bond, belief, start };
 }
 
 // JSON으로 와도 쓸 수 있게: 흔한 다른 필드 이름을 정해진 이름으로 맞춘다(약한 모델 보정).

@@ -1,4 +1,5 @@
 // 처음 설정하기: 3단계(AI 고르기 → 무엇을 기억할까요 → 켜기). 읽을 글은 한 줄씩, 버튼은 크게.
+import { noteEdits, DUSK_FOLLOW } from "../../../engine/defaultfollow.js";
 import { h, replace } from "../../dom.js";
 import { btn, modal, optionCards, note } from "../../kit.js";
 import { fail } from "./common.js";
@@ -26,7 +27,7 @@ export async function applyMemorySetup(ctx, { kind, provider, model, baseUrl, ke
   } else c = { ...c, easy: { kind: "risuai", presetId: "" } };
   await saveCfg(ctx.api, c);
   st.update((x) => { x.features = applyLevel(x.features, level); });
-  await M.store.updateIndex((i) => { i.settings.flow = { ...(i.settings.flow ?? {}), on: true, mode: mode ?? i.settings.flow?.mode ?? "fast", setupDone: true }; });
+  await M.store.updateIndex((i) => { const before = structuredClone(i.settings); i.settings.flow = { ...(i.settings.flow ?? {}), on: true, mode: mode ?? i.settings.flow?.mode ?? "accurate", setupDone: true }; i.settings.edited = noteEdits(before, i.settings, i.settings.edited, DUSK_FOLLOW); });
   const ok = await M.flow.apply();
   if (!ok) throw new Error("기억을 켜지 못했어요. 리스를 다시 불러온 뒤 다시 해 주세요.");
 }
@@ -42,7 +43,7 @@ export async function readMemorySetup(ctx) {
 export async function openSetup(ctx) {
   const M = ctx.memory, st = await M.flow.settings(), idx = await M.store.getIndex(), cfg0 = await getCfg(ctx.api);
   const db = await ctx.api.getDatabase(["plugins"]).catch(() => null);
-  const s = { step: 0, kind: cfg0.easy.kind === "api" ? "api" : "risuai", level: levelOf(firstRunFeatures(st.rawSnapshot().features)), mode: idx.settings.flow?.mode === "accurate" ? "accurate" : "fast", pot: potInstalled(db?.plugins) };
+  const s = { step: 0, kind: cfg0.easy.kind === "api" ? "api" : "risuai", level: levelOf(firstRunFeatures(st.rawSnapshot().features)), mode: idx.settings.flow?.mode === "fast" ? "fast" : "accurate", pot: potInstalled(db?.plugins) };
   if (s.level === "custom") s.level = "basic";
   const cur = cfg0.easy.kind === "api" ? presetOf(cfg0, cfg0.easy.presetId) : null;
   const keys = await keyStore(ctx.api);
@@ -80,7 +81,7 @@ export async function openSetup(ctx) {
       } else {
         replace(body, h("h3", { class: "rb-h3" }, w.title), h("p", { class: "rb-p" }, w.text),
           h("div", { class: "rb-wiz-sum" }, wizardSummary({ easyKind: s.kind, level: s.level, mode: s.mode })),
-          optionCards([{ value: "fast", label: "빠르게 (권장)", text: "응답 뒤 호출 1회." }, { value: "accurate", label: "더 정확하게", text: "호출이 늘어요." }], s.mode, (v) => { s.mode = v; draw(); }, "기억 방식"),
+          optionCards([{ value: "accurate", label: "더 정확하게 (권장)", text: "호출이 늘어요." }, { value: "fast", label: "빠르게", text: "응답 뒤 호출 1회." }], s.mode, (v) => { s.mode = v; draw(); }, "기억 방식"),
           s.pot ? note("warn", "리수폿 플러그인이 같이 켜져 있어요. 기록이 두 번 쌓이지 않게, 데이터를 가져온 뒤 리수폿은 꺼 주세요. (설정 → 가져오기)") : null,
           nav(btn("켜기", { kind: "primary", icon: "brain", onClick: finish })));
       }
