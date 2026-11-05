@@ -6,7 +6,7 @@ import { userLabel } from "./username.js";
 import { btn, modal, confirmDialog } from "../../kit.js";
 import { mem, avatar, fail } from "./common.js";
 import { editFolder } from "./people.js";
-import { eroLoad, eroInfoCard, eroSumCard, eroPairCard, eroPartnerCards } from "./erosyncwiki.js";
+import { eroLoad, eroNsfwCard, eroInfoCard, eroSumCard, eroPairCard, eroPartnerCards } from "./erosyncwiki.js";
 import { eroPerson, eroPersonByName } from "../../../engine/erosyncview.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX, setTag } from "../../../engine/memoryemo.js";
 import { nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
@@ -15,7 +15,7 @@ const STAGES = [["just met", "처음 봄"], ["acquaintances", "아는 사이"], 
 const stageIdx = (s) => Math.max(0, STAGES.findIndex(([k]) => k === s));
 const stageName = (s) => STAGES[stageIdx(s)][1];
 const TONE = { formal: "존댓말", casual: "반말", mixed: "섞어 씀" };
-const TABS = [["sum", "요약"], ["rel", "관계"], ["info", "상세 정보"], ["log", "기록"]];
+const TABS = [["sum", "요약"], ["rel", "관계"], ["info", "상세 정보"], ["nsfw", "NSFW"], ["log", "기록"]];
 const GRADE_TIP = { A: "가장 중요한 순간", B: "중요한 순간", C: "보통", D: "사소한 일" };
 const batchim = (w) => { const c = String(w ?? "").trim().slice(-1).charCodeAt(0); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 > 0; };
 const subj = (name) => name + (batchim(name) ? "이" : "가");   // 받침 따라 이/가
@@ -182,6 +182,13 @@ export function personTabs(env, parts) {
   // ── 상세 정보 · 기록 ──
   const go = (tab, w) => { if (w) withSel[pk] = w; tabs[pk] = tab; paint(); root.scrollIntoView?.({ block: "start" }); };
   const info = () => h("div", { class: "rb-wk2-pane" }, typeof parts.info === "function" ? parts.info(go) : (parts.infoBlocks ?? []).filter(Boolean), (() => { const e = eroSelf(); return e ? eroInfoCard(ctx, card, e) : null; })());
+  // NSFW 탭: Dusk 성인 항목(월경·임신, 성적 욕망·이상성향 후보) + Erosync 성적 항목(켜져 있을 때만). 항상 보인다.
+  const nsfw = () => {
+    const a = parts.adult ?? {}, e = eroSelf(), eroCard = e ? eroNsfwCard(ctx, card, e) : null;
+    const cyc = a.cyc ? h("div", { class: "rb-mem-cycle", role: "note" }, h("b", null, "월경·임신 "), a.cyc.lines.join(" · "), a.cyc.date ? h("small", { class: "rb-muted" }, ` (${a.cyc.date} 기준)`) : null) : null;
+    const kids = [cyc ? card("월경·임신", [cyc]) : null, a.panel ?? null, eroCard].filter(Boolean);
+    return h("div", { class: "rb-wk2-pane", id: "rb-wk2-nsfw" }, kids.length ? kids : h("p", { class: "rb-muted" }, "아직 NSFW 항목이 없어요. 성적 욕망·이상성향·월경 기록이 쌓이거나 Erosync를 켜면 여기에 모여요."));
+  };
   const log = () => h("div", { class: "rb-wk2-pane" }, ...(parts.logBlocks ?? []).filter(Boolean));
 
   function paint() {
@@ -191,7 +198,7 @@ export function personTabs(env, parts) {
       h("div", { class: "rb-wk2-head" }, avatar(me, ""), h("div", { class: "rb-wk2-name" }, h("h3", null, me), subline ? h("small", { class: "rb-muted" }, subline) : null), h("span", { style: "flex:1" }), parts.header ?? null),
       gap ? h("div", { class: "rb-wk2-gap", role: "note" }, `오랜만에 다시 나왔어요 · 응답 ${gap}개 만`) : null,
       h("div", { class: "rb-wk2-tabs", role: "tablist", "aria-label": "인물 정보" }, TABS.map(([k, l]) => h("button", { type: "button", role: "tab", class: ["rb-wk2-tab", k === paneTab && "pane-sel"], "data-t": k, "aria-selected": tab === k ? "true" : "false", onClick: () => { tabs[pk] = k; paint(); } }, l))),
-      h("div", { class: "rb-wk2-body" }, summary(), paneTab === "rel" ? relation() : paneTab === "info" ? info() : log()));
+      h("div", { class: "rb-wk2-body" }, summary(), paneTab === "rel" ? relation() : paneTab === "info" ? info() : paneTab === "nsfw" ? nsfw() : log()));
   }
   paint();
   return root;

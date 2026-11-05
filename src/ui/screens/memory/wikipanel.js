@@ -11,12 +11,14 @@ import { updatePersonCandidateText, deletePersonCandidate } from "../../../engin
 const AXIS = { sexual_desire: "성적 욕망", paraphilia: "이상성향", qualitative: "성격 변화" };
 const STATUS = { collecting: "근거 모으는 중", review: "검토 필요", approved: "반영됨", rejected: "거부됨", reverted: "되돌림" };
 
-export function wikiPanel(env, doc) {
+// 성적 욕망·이상성향 후보는 NSFW 탭으로 옮겼다. opts.adult=true면 그 후보만(NSFW 탭용), 아니면 그 후보를 뺀 나머지.
+export const ADULT_AXES = ["sexual_desire", "paraphilia"];
+export function wikiPanel(env, doc, opts = {}) {
   const { ctx } = env, M = ctx.memory;
   const edit = (fn, ok) => M.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { f.wiki = fn(f.wiki); }).then(() => { if (ok) ctx.toast(ok); env.redraw(); }).catch(fail(ctx));
   const wiki = env.folder.wiki, sk = scopeKeyOf(wiki);
   const sections = (doc.sections ?? []).filter((s) => s?.body?.trim());
-  const cands = Object.values(wiki?.people?.candidates ?? {}).filter((c) => c.documentId === doc.id);
+  const cands = Object.values(wiki?.people?.candidates ?? {}).filter((c) => c.documentId === doc.id && ADULT_AXES.includes(c.axis) === (opts.adult === true));
   const pinB = (key) => { const on = isPinned(wiki, doc.id, key); return btn(on ? "📌" : "📍", { size: "sm", title: on ? "고정됨 — 눌러서 해제" : "고정하면 AI가 고치지 않아요", "aria-pressed": on ? "true" : "false", onClick: () => edit((w) => setPin(w, doc.id, key, !on)) }); };
 
   const secRow = (s) => h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("b", null, s.heading || s.title || "항목"), h("div", { style: "white-space:pre-wrap" }, s.body.length > 400 ? s.body.slice(0, 400) + "…" : s.body)),
@@ -34,6 +36,8 @@ export function wikiPanel(env, doc) {
   };
   const addCand = btn("변화 후보 직접 추가", { size: "sm", onClick: async () => { const v = await promptDialog(ctx.win, { title: "장기 변화 후보", label: "이 인물의 달라진 점 (400자까지)", ok: "추가" }); if (v?.trim()) edit((w) => updatePersonCandidateText(w, doc.id, { text: v, scopeKey: sk }), "후보로 넣었어요. 검토 후 반영하세요."); } });
 
+  if (opts.adult) return h("section", { class: "rb-card rb-mem-man rb-mem-wikipanel", id: "rb-nsfw-cands" }, h("h4", null, `성적 욕망 · 이상성향 후보 (${cands.length})`),
+    cands.length ? h("ul", { class: "rb-mem-reclist" }, cands.map(candRow)) : h("p", { class: "rb-muted" }, "후보가 없어요."));
   return h("details", { class: "rb-card rb-mem-man rb-mem-wikipanel rb-mem-advfold" }, h("summary", null, "위키 항목 전체 · 성격 변화 (고급)"),
     h("p", { class: "rb-muted" }, "AI가 쌓은 인물 문서의 모든 항목이에요. 고치면 다음 응답부터 반영되고, 📌으로 고정하면 AI가 덮어쓰지 않아요."),
     h("h4", null, `성격 변화 후보 (${cands.length})`), cands.length ? h("ul", { class: "rb-mem-reclist" }, cands.map(candRow)) : h("p", { class: "rb-muted" }, "후보가 없어요."), addCand,

@@ -4,7 +4,7 @@ import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { btn, modal, promptDialog, confirmDialog, openMenu, note } from "../../kit.js";
 import { mem, fail, avatar, visibleRecords, potOn } from "./common.js";
-import { findDoc } from "../../../engine/personview.js";
+import { findDoc, cycleOf } from "../../../engine/personview.js";
 import { fillPlan, planLine } from "../../../engine/peoplegaps.js";
 import { RECORD_GROUPS, groupInfo, recordGroupOf, targetCandidates } from "../../../engine/personrecords.js";
 import { sectionPinKey, metricPinKey, scopeKeyOf, isPaused, isPinned } from "../../../engine/personedit.js";
@@ -233,5 +233,6 @@ function personPage(env, r, docs, commit) {
       makeDoc: () => commit((w) => createBlankPerson(w, r.name), "위키 문서를 만들었어요."),
       plan: doc ? fillPlan(wiki, [doc]) : null, askFill: async () => { const plan = fillPlan(wiki, [doc]); if (plan.total && await confirmDialog(ctx.win, { title: `AI로 빈칸 채우기 · ${doc.title}`, body: `${[...plan.full, ...plan.metricOnly].map(planLine).join("\n")}\n\n이미 있는 본문·성격은 고치지 않아요. AI 호출이 일어나요.`, ok: "채우기 시작" })) await fillEmptyPeople(env, plan); },
       gauges: () => gaugeRows(env, doc, p), panel: ed && env.advanced ? wikiPanel(env, doc) : null }),
+    adult: { cyc: env.cycleOn && doc ? cycleOf(doc) : null, panel: ed && env.advanced && doc ? wikiPanel(env, doc, { adult: true }) : null },
     logBlocks: [manage(), story ? section("story", "이야기 기록", story, null, null, "사건 · 관계 · 상태 · 약속을 한 목록으로 봐요. 항목 오른쪽 ‘수정’으로 고치거나 지워요.") : null] }));
 }

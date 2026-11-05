@@ -18,15 +18,20 @@ const bar = (label, v, hint, ghost) => h("div", { class: "rb-wk2-num g" }, h("sp
 const tag = () => h("small", { class: "rb-wk2-badge" }, "Erosync");
 const fix = (ctx) => (typeof ctx.openErosync === "function" ? h("button", { type: "button", class: "rb-wk2-link", onClick: () => ctx.openErosync().catch(() => {}) }, "Erosync에서 고치기") : null);
 
-// 상세 정보: 8축 + (접힌) 성인 항목
+// 상세 정보: 8축
 export function eroInfoCard(ctx, card, person) {
-  const ax = eroAxes(person), ad = eroAdult(person);
-  if (!ax.length && !ad) return null;
+  const ax = eroAxes(person);
+  if (!ax.length) return null;
   const rows = ax.map((a) => bar(a.label + (a.changed ? " ·바뀜" : ""), a.value, a.hint, a.changed ? a.base : null));
-  const adult = ad ? h("details", { class: "rb-mem-man" }, h("summary", null, "성인 항목"),
-    h("div", { class: "rb-wk2-nums" }, ad.rows.map((r) => bar(r.label, r.value)),
-      ad.pref ? h("small", { class: "rb-muted" }, `끌리는 상대 · 여성 ${ad.pref.f}% · 남성 ${ad.pref.m}% · 그 외 ${ad.pref.x}%`) : null)) : null;
-  return card("Erosync 성향", [h("div", { class: "rb-wk2-nums" }, rows), adult, h("small", { class: "rb-muted" }, "AI가 읽은 값에서 고친 곳은 옅은 막대로 원래 값을 보여 줘요.")], fix(ctx), "rb-wk2-ero");
+  return card("Erosync 성향", [h("div", { class: "rb-wk2-nums" }, rows), h("small", { class: "rb-muted" }, "AI가 읽은 값에서 고친 곳은 옅은 막대로 원래 값을 보여 줘요. 성적 항목은 NSFW 탭에 있어요.")], fix(ctx), "rb-wk2-ero");
+}
+
+// NSFW 탭: 성적 항목(성적 관심·선호 등). Erosync가 켜져 있고 이름이 맞는 인물에게만.
+export function eroNsfwCard(ctx, card, person) {
+  const ad = eroAdult(person);
+  if (!ad) return null;
+  return card("Erosync 성적 항목", [h("div", { class: "rb-wk2-nums" }, ad.rows.map((r) => bar(r.label, r.value)),
+    ad.pref ? h("small", { class: "rb-muted" }, `끌리는 상대 · 여성 ${ad.pref.f}% · 남성 ${ad.pref.m}% · 그 외 ${ad.pref.x}%`) : null)], fix(ctx), "rb-wk2-ero");
 }
 
 // 요약: 지금 노리는 것

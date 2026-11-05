@@ -67,10 +67,11 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 위키 요약에 '지금 노리는 목표'`, /지금 노리는 목표/.test(await body()) && /순찰 끝나고 둘이 남기/.test(await body()));
   await page.locator(".rb-wk2-tab", { hasText: "상세 정보" }).click(); await page.waitForTimeout(400);
   ok(`[${tag}] 상세 정보에 'Erosync 성향' 8축 게이지`, (await page.locator(".rb-wk2-ero").filter({ hasText: "Erosync 성향" }).count()) === 1 && /주도성/.test(await body()));
-  const adult = page.locator(".rb-wk2-ero details summary", { hasText: "성인 항목" });
-  ok(`[${tag}] 성인 항목은 접혀 있다`, (await adult.count()) === 1 && !(await page.locator(".rb-wk2-ero details").first().evaluate((d) => d.open)));
-  await adult.click(); await page.waitForTimeout(150);
-  ok(`[${tag}] 펼치면 성적 관심`, /성적 관심/.test(await body()));
+  ok(`[${tag}] 상세 정보에는 성적 항목이 없다`, !/성적 관심/.test(await body()));
+  await page.locator(".rb-wk2-tab", { hasText: "NSFW" }).click(); await page.waitForTimeout(300);
+  ok(`[${tag}] NSFW 탭이 상세 정보와 기록 사이에 있다`, (await page.locator(".rb-wk2-tab").allTextContents()).join("|").replace(/\s+/g, "").includes("상세정보|NSFW|기록"));
+  ok(`[${tag}] NSFW 탭에 Erosync 성적 항목(성적 관심)`, /Erosync 성적 항목/.test(await body()) && /성적 관심/.test(await body()));
+  await page.locator(".rb-wk2-tab", { hasText: "상세 정보" }).click(); await page.waitForTimeout(300);
   await page.screenshot({ path: `/tmp/ero-wiki-info-${tag}.png` });
   await page.locator(".rb-wk2-ero .rb-wk2-link", { hasText: "Erosync에서 고치기" }).click(); await page.waitForTimeout(150);
   ok(`[${tag}] 'Erosync에서 고치기'가 Erosync 화면 열기를 부른다`, (await page.evaluate(() => window.__opened)) === 1);
@@ -93,6 +94,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.screenshot({ path: `/tmp/ero-memhome-${tag}.png` });
   // Erosync 꺼짐/매칭 안 됨이면 칸이 없다
   await page.evaluate(() => { __app.ctx.erosync = { isRunning: () => false, read: async () => ({ ok: false }) }; });
+  await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "sirokko", tab: "people", page: "detail" }); __app.ctx.go("memory"); }); await page.waitForTimeout(1200);
+  await page.locator(".rb-wk2-tab", { hasText: "NSFW" }).click(); await page.waitForTimeout(300);
+  ok(`[${tag}] Erosync 꺼져도 NSFW 탭은 있고 Erosync 칸만 없다`, (await page.locator("#rb-wk2-nsfw").count()) === 1 && (await page.locator("#rb-wk2-nsfw .rb-wk2-ero").count()) === 0, `${await page.locator("#rb-wk2-nsfw").count()} ${await page.locator("#rb-wk2-nsfw").textContent().catch(() => "?")}`);
   await page.evaluate(() => __app.ctx.go("relmap")); await page.waitForTimeout(300);
   ok(`[${tag}] 페이지 오류 없음`, errs.length === 0, errs.join(" | "));
   await page.context().close();
