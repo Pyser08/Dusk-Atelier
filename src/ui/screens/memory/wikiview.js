@@ -11,7 +11,7 @@ import { sectionPinKey, metricPinKey, scopeKeyOf, isPaused, isPinned } from "../
 import { deletePersonItem } from "../../../engine/pot/people-records.js";
 import { createEmptyWikiScope } from "../../../engine/pot/wiki-schema.js";
 import { createBlankPerson, editDocMeta, removePerson, ensureProfile, editProfile, addMetric, listOf, PROFILE_AXES } from "../../../engine/wikiedit.js";
-import { renderPeople, personDetail, wikiEditable, editMetric, editWikiText, pinBtn, policyOf, editFolder, pausePerson, peopleMenuItems } from "./people.js";
+import { renderPeople, personDetail, wikiEditable, editMetric, editWikiText, pinBtn, policyOf, editFolder, pausePerson, peopleMenuItems, regressFrom } from "./people.js";
 import { openRecords } from "./recordsui.js";
 import { openAITools, openFieldAI, openImport, fillEmptyPeople } from "./aitools.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX } from "../../../engine/memoryemo.js";
@@ -226,7 +226,7 @@ function personPage(env, r, docs, commit) {
     btn("인물 삭제", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: `${r.name} 인물을 지울까요?`, body: "인물 문서와 기본 성격이 함께 지워져요. 📌 고정한 항목이 남아 있으면 먼저 풀어야 해요.", ok: "삭제", danger: true })) { m.wkSel = ""; commit((w) => removePerson(w, doc.id), "지웠어요."); } } })) : null;
   const slotLabel = Object.fromEntries(METER_SLOTS.map(([s, l]) => [s, l]));
   const metrics = (doc?.metrics ?? []).map((x) => ({ label: slotLabel[x.slotId] ?? x.slotId, slot: x.slotId, value: x.value, min: x.minimum ?? 0, max: x.maximum ?? 100, stage: x.stageLabel ?? "", targets: (x.targetRefs ?? []).map(nameOf).filter(Boolean) }));
-  return h("div", { class: "rb-wk-page" }, personTabs(env, { r, doc, p, header: actions, metrics, gauges: () => gaugeRows(env, doc, p),
+  return h("div", { class: "rb-wk-page" }, personTabs(env, { r, doc, p, header: h("span", { class: "rb-mem-rowact" }, p && env.backend?.id === "local" ? btn("⏳ 회귀", { size: "sm", title: "이 인물만 기억을 안고 처음으로 돌아간 새 채팅을 만들어요", onClick: () => regressFrom(env, r.pk).catch(fail(ctx)) }) : null, actions), metrics, gauges: () => gaugeRows(env, doc, p),
     info: (go) => infoTab(env, { doc, p, r, ed, profile, groups, commit, nameOf, aiNew, addMetricFlow, editProfileAll, go,
       K: { ORDER, MEMBERS, ALWAYS, LABEL, SUB, AXES: PROFILE_AXES, AXIS_LABEL, band, METER_SLOTS, TEXT_FIELDS },
       makeProfile: () => commit((w) => ensureProfile(w, doc.id), "만들었어요. 이제 직접 수정이나 AI 작성을 쓸 수 있어요."),

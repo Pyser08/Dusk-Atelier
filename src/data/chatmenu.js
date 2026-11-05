@@ -2,12 +2,13 @@
 // 누르면 켜고/끄고, 같은 id로 다시 등록해 그 자리에서 이름(켜짐/꺼짐)을 바꾼다(registerButton id 교체).
 // 버튼 API가 없는 호스트에선 조용히 넘어간다. 설정에서 숨길 수 있다(기본 보임).
 export const CHAT_MENU_KEY = "dusk.ui.chatQuick";
-const ICON = { memory: "🧠", fair: "⚖️", dice: "🎲", show: "📊" };
-export function createChatMenu(api, { fairPlay, turnInfo, openMemory, onChange = () => {}, log = (...a) => console.log("[Dusk 채팅 메뉴]", ...a) } = {}) {
+const ICON = { memory: "🧠", regress: "⏳", fair: "⚖️", dice: "🎲", show: "📊" };
+export function createChatMenu(api, { fairPlay, turnInfo, openMemory, openRegress, onChange = () => {}, log = (...a) => console.log("[Dusk 채팅 메뉴]", ...a) } = {}) {
   let shown = false;
   const items = [
     // 맨 위(등록 순서 = 메뉴 순서). 켜고 끄는 게 아니라 장기 기억 화면을 여는 바로가기라 이름에 켜짐/꺼짐이 없다.
     ...(typeof openMemory === "function" ? [{ id: "dusk-qt-memory", key: "memory", title: "장기 기억", link: true, open: openMemory }] : []),
+    ...(typeof openRegress === "function" ? [{ id: "dusk-qt-regress", key: "regress", title: "회귀", link: true, open: openRegress }] : []),
     { id: "dusk-qt-fair", key: "fair", title: "공정한 전개", get: () => !!fairPlay?.isOn?.(), set: (v) => fairPlay.set(v) },
     { id: "dusk-qt-dice", key: "dice", title: "유저 편향 없애기", get: () => !!(fairPlay?.isOn?.() && fairPlay?.isDiceOn?.()), set: async (v) => { await fairPlay.setDice(v); if (v && !fairPlay.isOn()) await fairPlay.set(true); } },
     { id: "dusk-qt-show", key: "show", title: "주사위 결과 표시", get: () => !!turnInfo?.isDiceShow?.(), set: (v) => turnInfo.setDiceShow(v) }
