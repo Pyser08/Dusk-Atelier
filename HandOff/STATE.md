@@ -1,5 +1,12 @@
 # 현재 상태 — feat/1.9.2
 
+## Erosync 전체 이전 — 1단계(저장·이전) 완료, 다음은 2단계
+- 결정: 저장 키는 원본과 같은 `erosync_*`를 그대로 쓴다(`dusk.ero.v1.*` 이름 변경 안 함). 원본 사용자의 프로필·세션·봇 설정은 복사 없이 이어진다. 기기별 설정(`getLocalPluginStorage`)만 따로일 수 있음.
+- `src/data/erosyncmigrate.js` `scanOriginalErosync(api)` — 원본 기록 개수 감지(읽기 전용, 삭제 없음). 테스트 `tests/erosyncmigrate.test.js`.
+- 원본 플러그인이 켜져 있으면 시작 막는 동작 유지.
+- 남은 일: 2) 장기 기억 홈 "Erosync" 줄 → 설정 페이지(수위·집착 방지·동작·프롬프트·데이터[감지 결과 표시/내보내기/초기화]) 3) 인물 위키 "NSFW" 탭(상세 정보~기록 사이) 4) AI 제공자→Dusk 모델 허브, 월경 주기 합침 5) 원본 UI·이펙트·소리 제거, 세 호스트 확인.
+- 리수폿 성인 항목 기본값은 켜짐 유지(`src/engine/pot/settings.js:163`).
+
 ## 2026-11-04 Erosync 2차: 위키·관계도 연동 + 기억 방식 기본값 (버전 미변경)
 - **Erosync 설정 열기 버튼**: `erosyncui.js` 카드에 켜져 있을 때만 보임 → `ctx.openErosync()`(Dusk 창 닫고 `erosync.open()`). Erosync 설정 자체는 원본 화면 그대로(Dusk로 옮기지 않음).
 - **Erosync 카드 위치**: 접힌 ‘설정/세부 설정’ 안(`settings.js` body)에 있어 안 보였음 → `mhome.js` `settingsCards`가 만들어 ‘기억 옵션’ 바로 아래(main 칸)에 둠(간단·고급 모드, 채팅 유무 모두). `settings.js`에서는 뺌.
