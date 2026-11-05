@@ -26,7 +26,7 @@ import './data/modelhub.js';
 import { createProvider } from './data/provider/index.js';
 import { createWidgetHome } from './data/widgethome.js';
 import { createErosync } from './data/erosync.js';
-import { setDuskRoute } from './engine/runai.js';
+import { setDuskRoute, runAI } from './engine/runai.js';
 import { setDuskServerModel } from './data/modelhub.js';
 import { setUserPromptProvider } from './engine/runai.js';
 import { setSkillBlockProvider } from './engine/skillhook.js';
@@ -248,7 +248,9 @@ async function start() {
   // Erosync(v1.9.2): 기본 꺼짐. 켜져 있으면 시작(본체는 켤 때만 불러옴). 기억 설정에서 켜고 끈다.
   const erosync = createErosync(api, { log: (m) => console.log(`[${TITLE}] ${m}`),
     // Erosync 안의 ‘관계망’ 탭 → Dusk 인물 관계도(Erosync 층)
-    host: { openRelmap: () => { (app.ctx.state.relmap ??= {}).eroOnOpen = true; app.open({ tab: "relmap" }).catch(() => {}); } } });
+    // Erosync의 AI 호출을 Dusk 모델 설정(‘자체 AI 작업’ 프로필 → 없으면 리스 보조 모델)으로 보낸다. Dusk 사용자 프롬프트는 끼우지 않는다.
+    host: { runAI: (messages, role, signal) => runAI(api, messages, { stage: `erosync-${role}`, noUserPrompts: true }, signal),
+      openRelmap: () => { (app.ctx.state.relmap ??= {}).eroOnOpen = true; app.open({ tab: "relmap" }).catch(() => {}); } } });
   app.ctx.erosync = erosync;
   // Erosync 자체 화면은 같은 플러그인 iframe을 쓰므로 Dusk 창을 먼저 닫고 연다
   app.ctx.openErosync = async () => { try { await app.close(); } catch { /* 이미 닫힘 */ } return erosync.open(); };

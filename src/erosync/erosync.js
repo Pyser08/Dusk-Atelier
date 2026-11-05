@@ -6715,7 +6715,13 @@ export async function bootErosync(api, hostArg) {
     debug(config, `${role} provider request`, { provider: providerId, model: profile.model || '(configured auxiliary)', format: profile.apiFormat });
     requestGuard?.throwIfAborted(`${role} provider`);
     let providerPromise;
-    if (providerId === 'risu') providerPromise = runRisuProvider(messages, profile, config, requestGuard, executionRole);
+    // Dusk 연결: 호스트가 runAI를 주면 기본 제공자(risu)를 Dusk의 AI 호출 경로로 보낸다(Dusk 모델 설정을 따른다). 없으면 원래 경로.
+    if (providerId === 'risu' && typeof host.runAI === 'function') providerPromise = Promise.resolve(host.runAI(messages, role, requestGuard?.signal)).then((text) => {
+      const out = typeof text === 'string' ? text : String(text?.text ?? '');
+      if (!out.trim()) throw new Error('Dusk 모델이 빈 응답을 돌려줬어요');
+      return out;
+    });
+    else if (providerId === 'risu') providerPromise = runRisuProvider(messages, profile, config, requestGuard, executionRole);
     else if (providerId === 'ollama_cloud' || profile.apiFormat === 'ollama_chat') providerPromise = runOllamaCloudProvider(messages, profile, requestGuard);
     else if (providerId === 'claude' || profile.apiFormat === 'claude') providerPromise = runClaudeProvider(messages, profile, requestGuard, providerId);
     else if (providerId === 'vertex' || profile.apiFormat === 'vertex') providerPromise = runVertexProvider(messages, profile, requestGuard, transportObserver);

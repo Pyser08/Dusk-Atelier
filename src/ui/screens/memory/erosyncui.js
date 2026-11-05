@@ -2,7 +2,7 @@
 import { h } from "../../dom.js";
 import { btn, switchEl, setSwitch } from "../../kit.js";
 
-export const EROSYNC_COST_NOTE = "켜면 AI 호출이 늘어요. 인물 프로필을 만들 때 호출이 여러 번 들어가고, 응답이 끝날 때마다 장면을 읽는 호출이 한 번 더 들어가요. 모델은 Erosync 설정에서 따로 고를 수 있고, 쓰는 만큼 토큰·요금이 더 들어요.";
+export const EROSYNC_COST_NOTE = "켜면 AI 호출이 늘어요. 인물 프로필을 만들 때 호출이 여러 번 들어가고, 응답이 끝날 때마다 장면을 읽는 호출이 한 번 더 들어가요. 기본으로 Dusk의 모델 설정(‘자체 AI 작업’ 모델, 없으면 리스 보조 모델)을 따르고, 쓰는 만큼 토큰·요금이 더 들어요.";
 
 export function erosyncSection(ctx) {
   const er = ctx.erosync;

@@ -68,3 +68,9 @@ test("읽기 연결부: 채팅을 못 읽는 환경에서도 던지지 않고 �
   for (const k of ["people", "goals", "rivalries", "relations"]) assert.ok(Array.isArray(r[k]), k);
   await e.dispose();
 });
+test("Dusk 연결: 기본 제공자가 host.runAI(Dusk AI 호출)로 간다", () => {
+  const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
+  assert.match(src, /providerId === 'risu' && typeof host\.runAI === 'function'/);
+  const main = fs.readFileSync(new URL("../src/main.js", import.meta.url), "utf8");
+  assert.match(main, /host: \{ runAI:/);
+});

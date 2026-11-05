@@ -10,6 +10,7 @@
 - 인물 위키 NSFW 탭 완료(상세 정보와 기록 사이, 항상 보임): `personv2.js nsfw()` — Dusk 월경·임신(`parts.adult.cyc`), 성적 욕망·이상성향 후보(`wikiPanel(env,doc,{adult:true})`, 일반 패널에서는 제외), Erosync 성적 항목(`eroNsfwCard`, 켜짐일 때만). 상세 정보의 Erosync 카드는 8축만.
 - 데이터 이전 구현 완료: `data/memoryfile.js`(buildMemoryFile/readMemoryFile/applyMemoryFile/clearErosyncData, 파일 kind `dusk-memory-data` v1), `memoryfileui.js`(장기 기억 홈 `#rb-mem-more` 더보기 → 내보내기·불러오기, 위험 구역 `#rb-erosync-clear`). Erosync 켜짐이면 잠깐 멈췄다 다시 켬. 테스트 `tests/memoryfile.test.js`.
 - (결정 기록) Erosync "데이터"는 별도 카드 없이 장기 기억 고급의 설정 내보내기·가져오기(`advanced.js`)와 위험 구역 초기화(`madv.js`)에 합친다(Erosync가 꺼져 있어도 저장된 값은 남아 있으므로 엔진 `exportBackup`을 쓰지 않고 저장소의 `erosync_*` 키를 직접 읽고 쓴다. 내보내기에 항상 포함, 가져오기는 같은 키로 복원, 초기화에 "Erosync 값도 지우기" 선택[기본 해제, 켜져 있으면 먼저 끔]. 채팅별 기록은 `keys()` 지원 호스트에서만 찾음).
+- AI 제공자 → Dusk 모델 허브 연결 완료: 엔진 `runProviderOnce`에서 기본 제공자(risu)이고 `host.runAI`가 있으면 그쪽으로(main.js `host.runAI` = Dusk `runAI`, stage `erosync-<role>`, noUserPrompts). Erosync 자체 AI 설정에서 다른 제공자를 고른 사람은 그대로 그 경로. 미확인: 실제 모델 호출·동시 호출 충돌(원래 risu 경로의 busy/preempt 처리는 거치지 않음).
 - 남은 일: 2) 설정 페이지 안에 동작·프롬프트·데이터(내보내기/초기화)를 Dusk 모양으로 직접 넣기(지금은 'Erosync 설정 열기'로 원본 창) 3) 인물 위키 "NSFW" 탭(상세 정보~기록 사이) 4) AI 제공자→Dusk 모델 허브, 월경 주기 합침 5) 원본 UI·이펙트·소리 제거, 세 호스트 확인.
 - 리수폿 성인 항목 기본값은 켜짐 유지(`src/engine/pot/settings.js:163`).
 
