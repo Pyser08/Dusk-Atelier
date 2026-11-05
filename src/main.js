@@ -1,3 +1,4 @@
+import { parseStatus as parseStoryStatus } from "./engine/storytime.js";
 import { startHostUpdateToast } from './ui/hostupdate.js';
 import { createDbCache, WRITE_RE } from './data/dbcache.js';
 import { createHookBus } from './data/hookbus.js';
@@ -251,7 +252,9 @@ async function start() {
     cycleProbe: async () => { const r = (await memory.flow?.settings?.())?.rawSnapshot?.(); return r?.features?.openness?.cycle === true && r?.sexualDesireEnabled === true; },
     // Erosync 안의 ‘관계망’ 탭 → Dusk 인물 관계도(Erosync 층)
     // Erosync의 AI 호출을 Dusk 모델 설정(‘자체 AI 작업’ 프로필 → 없으면 리스 보조 모델)으로 보낸다. Dusk 사용자 프롬프트는 끼우지 않는다.
-    host: { runAI: (messages, role, signal) => runAI(api, messages, { stage: `erosync-${role}`, noUserPrompts: true }, signal) } });
+    host: { runAI: (messages, role, signal) => runAI(api, messages, { stage: `erosync-${role}`, noUserPrompts: true }, signal),
+      // Dusk ‘이야기 시간’이 켜져 있으면 Erosync 주기 시계가 같은 상태 줄(날짜)을 읽는다
+      storyStatus: (text, prevDate) => (storyTime.isOn() ? parseStoryStatus(text, { date: prevDate || "", time: "", place: "" }) : null) } });
   app.ctx.erosync = erosync;
   erosync.boot().catch((e) => console.log(`[${TITLE}] Erosync 시작 실패 ${e?.message ?? e}`));
   app.ctx.cellar = memory.cellar;   // 한 곳에서 찾은 Cellar 연결을 화면들이 함께 쓴다

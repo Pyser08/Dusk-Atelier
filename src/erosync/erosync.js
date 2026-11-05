@@ -9372,8 +9372,9 @@ Constraint: {{constraint}}
 
   // Dusk ‘월경·임신 기록’(성인 항목)이 켜져 있으면 몸 상태·주기는 Dusk의 날짜 계산이 맡고, Erosync 쪽 주기는 쉰다(같은 몸 상태가 두 번 들어가지 않게). 저장값은 건드리지 않는다.
   let duskCycleOwns = false;
+  let duskTempTrend = true;   // 관계 온도 변화(최근 몇 턴)를 장면 판단 입력에 넣을지
   function cycleOff(config) { return duskCycleOwns || config?.cycleEnabled === false; }
-  function duskFlagsSet(v) { duskCycleOwns = v?.duskCycle === true; duskReadCache = null; return { duskCycle: duskCycleOwns }; }
+  function duskFlagsSet(v) { if (v && 'duskCycle' in v) duskCycleOwns = v.duskCycle === true; if (v && 'tempTrend' in v) duskTempTrend = v.tempTrend !== false; duskReadCache = null; return { duskCycle: duskCycleOwns, tempTrend: duskTempTrend }; }
   function currentCycle(profile, state, amplitude = cycleAmplitudeFactor(configCache)) {
     const settings = cycleProfileFor(profile);
     if (!settings.applicable) return null;
@@ -9558,10 +9559,24 @@ Constraint: {{constraint}}
       sheKnows: !record.aware ? 'no' : record.knowsPartner ? 'yes' : 'not who it was' }));
   }
 
+  // 직전 응답(state.lastCommittedOutput)의 상태 줄에서 이야기 날짜를 읽는다. Dusk 이야기 시간이 꺼져 있거나 줄이 없으면 null.
+  function duskStoryAbsolute(state) {
+    if (typeof host.storyStatus !== 'function') return null;
+    try {
+      const clock = cycleClock(state);
+      const prevDate = clock.absolute === null ? '' : new Date(clock.absolute * 60000).toISOString().slice(0, 10);
+      const r = host.storyStatus(String(state?.lastCommittedOutput || ''), prevDate);
+      if (!r || !/^\d{4}-\d{2}-\d{2}$/.test(String(r.date || ''))) return null;
+      return `${r.date}T${/^\d{2}:\d{2}$/.test(String(r.time || '')) ? r.time : '00:00'}`;
+    } catch { return null; }
+  }
   function applyCycleObservation(update, state, registry, profiles, policy = null) {
     const commit = latestCommitJournalEntry(state);
     if (!commit?.commitId || state.cycleState && state.cycleState.schemaVersion !== 1) return;
-    const time = isPlainObject(update.storyTime) ? update.storyTime : null;
+    let time = isPlainObject(update.storyTime) ? update.storyTime : null;
+    // Dusk 이식: Dusk ‘이야기 시간’이 켜져 있으면 응답 맨 위 상태 줄([YYYY-MM-DD HH:MM | 장소])을 같은 규칙으로 읽어 시계를 맞춘다(AI가 따로 적은 날짜보다 우선). 같은 날짜 계산을 두 기능이 함께 쓴다.
+    const duskTime = duskStoryAbsolute(state);
+    if (duskTime) time = { currentScene: true, evidence: '', absoluteDateTime: duskTime, elapsedMinutes: 0, fromDusk: true };
     const changes = Array.isArray(update.cycleEvents) ? update.cycleEvents.slice(0, 8) : [];
     const sfw = policy?.contentMode === 'sfw';
     const data = cycleStateForRead(state), previous = JSON.stringify(data);
@@ -9579,7 +9594,7 @@ Constraint: {{constraint}}
     if (!changes.length && !time && JSON.stringify(data) === previous) return;
     state.cycleState = data;
     const visible = String(state.lastCommittedOutput || ''), supported = evidence => typeof evidence === 'string' && evidence.trim() && (!visible || visible.includes(evidence.trim()));
-    if (time?.currentScene === true && supported(time.evidence) && !data.clockEvents.some(e => e.commitId === commit.commitId)) {
+    if (time?.currentScene === true && (time.fromDusk === true || supported(time.evidence)) && !data.clockEvents.some(e => e.commitId === commit.commitId)) {
       const clock = cycleClock(state), text = String(time.absoluteDateTime || '');
       let absolute = null;
       if (/^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})?)?$/.test(text)) {
@@ -11487,6 +11502,18 @@ Constraint: {{constraint}}
         })() : action?.goal,
       })),
     } : null;
+    // Dusk 이식: 집착 방지의 연속 횟수·쉬는 턴(applyDuskGuard)이 턴을 넘어 이어지도록 보존한다(없으면 매 턴 처음부터라 켜져도 쉬지 않음).
+    if (isPlainObject(source.duskGuard)) {
+      const keep = (o) => Object.fromEntries(Object.entries(isPlainObject(o) ? o : {}).slice(-200));
+      next.duskGuard = { streak: keep(source.duskGuard.streak), rest: keep(source.duskGuard.rest) };
+    }
+    // Dusk 이식: 관계 온도 기록(턴별 호감·끌림·반감). [turn, rel:[[from,to,호감,끌림,반감]...]] 최근 120턴
+    if (Array.isArray(source.duskTemp)) {
+      next.duskTemp = source.duskTemp.filter((e) => isPlainObject(e) && Number.isFinite(Number(e.turn)) && Array.isArray(e.rel)).slice(-120).map((e) => ({
+        turn: clampInt(e.turn, 0, 0, 100000000),
+        rel: e.rel.slice(0, 40).filter((r) => Array.isArray(r) && r.length >= 5).map((r) => [String(r[0]).slice(0, 200), String(r[1]).slice(0, 200), clampInt(r[2], 50, 0, 100), clampInt(r[3], 50, 0, 100), clampInt(r[4], 0, 0, 100)]),
+      }));
+    }
     next.lastInjection = truncate(source.lastInjection, MAX_INJECTION_CHARS);
     next.lastCommittedOutput = truncate(source.lastCommittedOutput, 7000);
     next.lastCommittedMessageIndex = Number.isInteger(source.lastCommittedMessageIndex) ? source.lastCommittedMessageIndex : -1;
@@ -17087,6 +17114,51 @@ Constraint: {{constraint}}
     return `Scene-relevant preference reference only: ${items.map(item => `${item.preference}: ${item.label}`).join('; ')}. Preference is not proficiency; disliked means lower preference, not an automatic prohibition. Use only details that fit this approach and scene.`;
   }
 
+  // Dusk 이식: 인물별 선호·금기 태그(사용자가 직접 적은 글). Dusk가 profileId → { likes, limits } 맵을 넣어 준다. 선호는 NSFW 이상에서만, 금기는 모든 수위에서 넣는다.
+  let duskTags = {};
+  function duskTagsSet(map) {
+    const out = {};
+    for (const [id, v] of Object.entries(isPlainObject(map) ? map : {}).slice(0, 500)) {
+      const list = (x) => (Array.isArray(x) ? x : []).map((t) => String(t ?? '').replace(/\s+/g, ' ').trim().slice(0, 30)).filter(Boolean).slice(0, 12);
+      const likes = list(v?.likes), limits = list(v?.limits);
+      if (likes.length || limits.length) out[String(id)] = { likes, limits };
+    }
+    duskTags = out; duskReadCache = null;
+    return Object.keys(out).length;
+  }
+  function duskTagsLines(profileId, sfw) {
+    const t = duskTags[String(profileId || '')];
+    if (!t) return [];
+    return [!sfw && t.likes.length ? `user-set likes: ${t.likes.join('; ')}` : '', t.limits.length ? `user-set limits (never include or escalate to these): ${t.limits.join('; ')}` : ''].filter(Boolean);
+  }
+  // 관계 온도: 확정할 때마다 모든 관계의 호감·끌림·반감을 한 줄 남긴다(AI 호출 없음). 같은 턴 이상의 기록은 되돌리기·다시 쓰기에서 지운다.
+  function duskTempRecord(state) {
+    try {
+      const turn = clampInt(state.turnIndex, 0, 0, 100000000);
+      const rel = Object.values(isPlainObject(state.relations) ? state.relations : {}).filter((r) => r?.from && r?.to).slice(0, 40)
+        .map((r) => [String(r.from), String(r.to), Math.round(clampNumber(r.affection, 50)), Math.round(clampNumber(r.eroticAttraction, 50)), Math.round(clampNumber(r.hatred, 0))]);
+      const keep = (Array.isArray(state.duskTemp) ? state.duskTemp : []).filter((e) => Number(e?.turn) < turn);
+      keep.push({ turn, rel });
+      state.duskTemp = keep.slice(-120);
+    } catch { /* 기록은 실패해도 본체는 계속 */ }
+  }
+  function duskTempSeries(state, from, to) {
+    const pts = [];
+    for (const e of Array.isArray(state?.duskTemp) ? state.duskTemp : []) {
+      if (Number.isFinite(Number(state?.turnIndex)) && Number(e.turn) > Number(state.turnIndex)) continue;   // 되돌린 뒤 남은 앞선 기록은 보지 않는다
+      const r = (e.rel || []).find((x) => x[0] === from && x[1] === to);
+      if (r) pts.push({ turn: e.turn, a: r[2], e: r[3], h: r[4] });
+    }
+    return pts;
+  }
+  function duskTempLine(state, actorId, targetId) {
+    if (!duskTempTrend || !actorId || !targetId) return '';
+    const pts = duskTempSeries(state, String(actorId), String(targetId)).slice(-4);
+    if (pts.length < 2) return '';
+    const a = pts[0], b = pts[pts.length - 1], d = (x, y) => y - x;
+    const word = (name, v) => `${name} ${Math.abs(v) < 5 ? 'steady' : (v > 0 ? '+' : '') + v}`;
+    return `relationship trend toward the target over the last ${b.turn - a.turn} turns: ${word('affection', d(a.a, b.a))}; ${word('attraction', d(a.e, b.e))}; ${word('hostility', d(a.h, b.h))}`;
+  }
   function selectedProfileSummary(profile, state, actorId, targetId, action = null, policy = null) {
     const base = effectiveProfileForDirector(profile, state, actorId, targetId);
     const resolved = policy || contentPolicyFor(null);
@@ -17103,6 +17175,8 @@ Constraint: {{constraint}}
     return [
       numbers,
       !sfw && base.sexualPreferences?.length ? `preferences/tendencies: ${base.sexualPreferences.slice(0, 8).join('; ')}` : '',
+      ...duskTagsLines(profile?.id || actorId, sfw),
+      duskTempLine(state, actorId, targetId),
       sfw ? '' : positionPreferencesForAction(profile, state, action),
       body ? promptFill(promptSectionText('inject.body', 'common'), { body: JSON.stringify(body) }) : '',
       !sfw && base.sexualHumor?.styles?.length ? `sexual-humor style: ${base.sexualHumor.styles.slice(0, 5).join('; ')}` : '',
@@ -19352,6 +19426,7 @@ Constraint: {{constraint}}
           if (isPlainObject(pending.manualCatchUp)) appendEvent(state, { type: 'scene_manual', manual: true, summary: `수동 따라잡기 · 건너뛴 응답 ${Number(pending.manualCatchUp.skipped || 0)}개` }, config);
           syncKocoState(state, kocoCommittedSnapshot(pending.scope, content, { messageId, messageIndex }), pending.botOverride?.koco, profileStore, registry, config);
           commitPlannedGoals(state, pending.decision);
+          duskTempRecord(state);
           // 확률 탈락 계획(2026-10-22, 계획서 7절): 장면 판단이 제안했으나 실행 확률(또는 대상의 원함)에서 떨어진 행동을 기록으로 남긴다(판단 입력에는 넣지 않는다).
           for (const item of Array.isArray(pending.decision.dropped) ? pending.decision.dropped : []) {
             appendEvent(state, { type: 'plan_dropped', actor: item.actor, target: item.target, mode: item.mode, intent: item.intent, gate: item.gate, activationChance: item.activationChance, roll: item.roll,
@@ -23447,7 +23522,7 @@ Constraint: {{constraint}}
   const duskPlain = (value) => { try { return JSON.parse(JSON.stringify(value ?? null)); } catch { return null; } };
   async function duskReadSnapshot() {
     if (duskReadCache && Date.now() - duskReadCache.at < 3000) return duskReadCache.value;
-    const out = { ok: false, reason: '', scope: null, turnIndex: 0, contentMode: '', people: [], goals: [], rivalries: [], relations: [] };
+    const out = { ok: false, reason: '', scope: null, turnIndex: 0, contentMode: '', people: [], goals: [], rivalries: [], relations: [], rests: [], temp: [] };
     try {
       const context = await getUiContext();
       if (!context?.scope || !context.session) { out.reason = context?.scopeUnavailable || 'no-chat'; }
@@ -23476,6 +23551,14 @@ Constraint: {{constraint}}
         out.rivalries = duskPlain(Object.values(session.rivalries || {}).filter((r) => r?.actor && r.actor !== 'user' && r.rival && clampNumber(r.intensity, 0) > 0).map((r) => ({
           actor: r.actor, actorName: nameOf(r.actor), rival: r.rival, rivalName: nameOf(r.rival), intensity: Math.round(clampNumber(r.intensity, 0)), reason: r.reason || '', lastUpdatedTurn: r.lastUpdatedTurn ?? 0
         })));
+        // 집착 방지가 쉬게 한 (행동 인물 > 대상)과 남은 턴
+        out.rests = duskPlain(Object.entries(isPlainObject(session.duskGuard?.rest) ? session.duskGuard.rest : {}).map(([key, until]) => {
+          const [a, t] = key.split('>'); return { actor: a, actorName: nameOf(a), target: t, targetName: nameOf(t), until: Number(until) || 0, left: Math.max(0, (Number(until) || 0) - out.turnIndex) };
+        }).filter((r) => r.left > 0));
+        // 관계 온도 기록(그래프용): 현재 관계가 있는 (from→to)마다 턴별 호감·끌림·반감
+        out.temp = duskPlain(Object.values(session.relations || {}).filter((r) => r?.from && r?.to && r.from !== 'user').map((r) => ({
+          from: r.from, fromName: nameOf(r.from), to: r.to, toName: nameOf(r.to), points: duskTempSeries(session, r.from, r.to),
+        })).filter((x) => x.points.length > 0));
         out.relations = duskPlain(Object.values(session.relations || {}).filter((r) => r?.from && r?.to).map((r) => ({
           from: r.from, fromName: nameOf(r.from), to: r.to, toName: nameOf(r.to), affection: Math.round(clampNumber(r.affection, 50)), eroticAttraction: Math.round(clampNumber(r.eroticAttraction, 50)), hatred: Math.round(clampNumber(r.hatred, 0)), lastUpdatedTurn: r.lastUpdatedTurn ?? 0
         })));
@@ -23623,6 +23706,58 @@ Constraint: {{constraint}}
     return duskBehindList();
   }
 
+  // 직전 장면 판단 되돌리기: 마지막으로 확정된 한 건(관계·목표·프로필 변화와 계획)을 지우고, 채팅에 남은 최신 응답은 '이미 읽은 것'으로 둬서 다음 요청에서 그 응답부터 이어 간다.
+  // 리롤·삭제·스와이프로 채팅이 바뀐 경우의 자동 되돌리기(syncCommitJournalWithChat)와 같은 되돌리기 함수를 쓴다. 채팅 글 자체는 건드리지 않는다.
+  async function duskUndoLastScene() {
+    const context = await getUiContext();
+    if (!context?.scope || !context.session) throw new Error('열린 채팅이 없어요');
+    if (context.scope.chat?.isStreaming === true) throw new Error('응답이 나오는 중이에요. 끝난 뒤에 다시 눌러 주세요');
+    const scope = safeClone({ ...context.scope, chat: null }) || { ...context.scope, chat: null };
+    const scopeKey = String(scope.scopeKey || '');
+    const chatMessages = (Array.isArray(context.scope.chat?.message) ? context.scope.chat.message : []).map((message) => ({
+      role: message?.role, data: chatMessageText(message), id: message?.id, messageId: message?.messageId, chatId: message?.chatId, swipeId: message?.swipeId,
+    }));
+    const token = { lifecycleEpoch, scopeEpoch: currentScopeEpoch(scope), backgroundFence: captureBackgroundFence(scope) };
+    const result = await enqueueCoordinatedStateWrite(scope, async () => {
+      assertResyncFence(scope, token, 'scene undo start');
+      const config = await loadConfig();
+      const [originalProfileStore, originalRegistry, originalState] = await Promise.all([loadProfileStore(), loadRegistry(), loadExistingSession(scope)]);
+      assertResyncFence(scope, token, 'scene undo read');
+      if (!originalState) return { ok: false, reason: '되돌릴 장면이 없어요' };
+      const profileStore = safeClone(originalProfileStore) || originalProfileStore;
+      const registry = safeClone(originalRegistry) || originalRegistry;
+      const state = normalizeSessionState(safeClone(originalState), scopeKey, config);
+      const journal = Array.isArray(state.commitJournal) ? state.commitJournal : [];
+      if (!journal.length) return { ok: false, reason: '되돌릴 장면이 없어요' };
+      const removed = journal.slice(-1);
+      undoCommitEntries(state, registry, profileStore, removed, config);
+      state.commitJournal = journal.slice(0, -1);
+      // 채팅의 최신 응답은 이미 읽은 것으로 둔다(없으면 직전 생존 응답으로)
+      const latest = latestChatCommit(chatMessages);
+      if (latest && Number.isInteger(latest.index)) {
+        state.lastCommittedMessageIndex = latest.index;
+        state.lastCommittedOutput = truncate(chatMessageText(chatMessages[latest.index]), 7000);
+      }
+      state.lastInjection = ''; state.lastPlan = null; state.preparedLookahead = null;
+      appendEvent(state, { type: 'chat_resync', summary: '사용자가 직전 장면 판단을 되돌렸습니다', detail: 'user_undo' }, config || configCache || DEFAULT_CONFIG);
+      assertResyncFence(scope, token, 'scene undo recompute');
+      const durableState = prepareSessionForSave(scope, state);
+      await commitStateTransactionWithinLock('scene undo apply', [
+        { key: PROFILE_STORE_KEY, value: normalizeProfileStore(profileStore) },
+        { key: REGISTRY_STORE_KEY, value: normalizeRegistryStore(registry) },
+        { key: `${SESSION_KEY_PREFIX}${scope.scopeKey}`, value: durableState },
+      ], { fence: token.backgroundFence });
+      return { ok: true, removedCommitIds: removed.map((e) => String(e?.commitId || '')).filter(Boolean), removedTurnKeys: removed.map((e) => String(e?.turnKey || '')).filter(Boolean), turnIndex: durableState.turnIndex, left: state.commitJournal.length };
+    });
+    if (result?.ok) {
+      invalidateDecisionStateForScope(scope, result.removedTurnKeys);
+      try { observeCompatibility('invalidate', scope, result.removedCommitIds); } catch { /* 무시 */ }
+      try { await removeBehindScenesForCommits(scope, result.removedCommitIds); } catch (error) { warn('scene undo behind cleanup skipped:', error?.message || error); }
+      duskReadCache = null;
+    }
+    return result || { ok: false, reason: '되돌리지 못했어요' };
+  }
+
   async function duskContentSet(patch) {
     const context = await getUiContext();
     const key = String(context?.scope?.sourceBundleKey || '');
@@ -23648,6 +23783,8 @@ Constraint: {{constraint}}
     profiles: { get: duskProfileGet, edit: duskProfileEdit, reset: duskProfileReset, status: duskAnalysisStatus, start: duskAnalysisStart, cancel: () => { requestAnalysisCancel(); return duskAnalysisStatus(); } },
     prompts: { get: duskPromptsGet, set: duskPromptSet },
     guard: { set: duskGuardSet },
+    tags: { set: duskTagsSet },
+    undo: { lastScene: duskUndoLastScene },
     flags: { set: duskFlagsSet },
     async dispose() {
       for (const fn of unloadFns.splice(0).reverse()) { try { await fn(); } catch (e) { console.log('[Erosync] 정리 중 오류', e?.message ?? e); } }

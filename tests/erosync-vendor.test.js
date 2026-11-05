@@ -85,7 +85,8 @@ test("Dusk 연결부(실제 엔진): 동작 설정·지시문·집착 방지·�
   assert.equal(p3.pages[0].sections[0].texts[b].changed, false);
   await assert.rejects(() => e.prompts.set("nope", "common", "x"), /알 수 없는/);
   assert.equal(e.guard.set({ on: true, obsessionCap: 500 }).obsessionCap, 100);
-  assert.deepEqual(e.flags.set({ duskCycle: true }), { duskCycle: true });
+  assert.deepEqual(e.flags.set({ duskCycle: true }), { duskCycle: true, tempTrend: true });
+  assert.deepEqual(e.flags.set({ tempTrend: false }), { duskCycle: true, tempTrend: false });   // 한쪽만 바꿔도 다른 쪽은 그대로
   await e.dispose();
 });
 test("Dusk 프로필 연결부(실제 엔진): 채팅이 없으면 이유를 알리고, 분석 상태 모양을 돌려준다", async () => {
@@ -106,4 +107,77 @@ test("Dusk 비하인드 연결부(실제 엔진): 채팅이 없으면 빈 목록
   assert.equal(r.ok, false); assert.deepEqual(r.entries, []);
   await assert.rejects(() => e.behind.remove("x"), /채팅/);
   await e.dispose();
+});
+
+test("Dusk 이야기 시간: 켜져 있으면 주기 시계가 응답 상태 줄 날짜를 우선 쓴다(host.storyStatus)", () => {
+  const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
+  assert.ok(src.includes("function duskStoryAbsolute(state)") && src.includes("host.storyStatus(") && src.includes("fromDusk: true"));
+  assert.ok(src.includes("(time.fromDusk === true || supported(time.evidence))"));
+  const main = fs.readFileSync(new URL("../src/main.js", import.meta.url), "utf8");
+  assert.ok(/storyStatus: \(text, prevDate\) => \(storyTime\.isOn\(\)/.test(main));
+});
+
+test("집착 방지 상태(state.duskGuard)가 저장 때 정리 과정에서 떨어지지 않는다(턴을 넘어 연속 횟수·쉬는 턴이 이어져야 함)", () => {
+  const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
+  const i = src.indexOf("function normalizeSessionState(");
+  const body = src.slice(i, src.indexOf("\n  }\n", i));
+  assert.ok(/next\.duskGuard\s*=/.test(body), "normalizeSessionState가 duskGuard를 옮겨 담아야 한다");
+});
+
+test("Dusk 태그 연결부(실제 엔진): 맵을 받아 비지 않은 인물 수를 돌려주고, 장면 요약에는 선호(NSFW↑)·금기(전체)로 들어간다", async () => {
+  const { api } = fakeApi();
+  const e = await bootErosync(api);
+  assert.equal(e.tags.set({ a: { likes: ["x"], limits: [] }, b: { likes: [], limits: [] }, c: "bad" }), 1);
+  assert.equal(e.tags.set({}), 0);
+  await e.dispose();
+  const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
+  assert.ok(src.includes("...duskTagsLines(profile?.id || actorId, sfw)"));
+  assert.ok(/!sfw && t\.likes\.length \? `user-set likes/.test(src) && src.includes("user-set limits (never include"));
+});
+
+test("관계 온도 연결부(실제 엔진): 읽기 값에 temp가 있고, 저장 정리·기록·반영 코드가 있다", async () => {
+  const { api } = fakeApi();
+  const e = await bootErosync(api);
+  const r = await e.read();
+  assert.ok(Array.isArray(r.temp) && Array.isArray(r.rests));
+  await e.dispose();
+  const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
+  assert.ok(src.includes("next.duskTemp = source.duskTemp"), "저장 정리에서 duskTemp가 떨어지면 안 된다");
+  assert.ok(src.includes("          duskTempRecord(state);"), "확정 때 기록해야 한다");
+  assert.ok(src.includes("      duskTempLine(state, actorId, targetId),"), "장면 요약에 넣어야 한다");
+});
+
+test("관계 온도 기록·변화 문구(엔진 함수를 꺼내 실행): 같은 턴 이상은 덮어쓰고, 5 미만 변화는 steady, 되돌린 뒤 앞선 기록은 무시", () => {
+  const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
+  const a = src.indexOf("  function duskTempRecord(state)"), b = src.indexOf("  function selectedProfileSummary(");
+  const body = src.slice(a, b);
+  const clampInt = (v, d, lo, hi) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
+  const clampNumber = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
+  const isPlainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+  const make = new Function("clampInt", "clampNumber", "isPlainObject", "duskTempTrend", `${body}\nreturn { duskTempRecord, duskTempLine, duskTempSeries };`);
+  const { duskTempRecord, duskTempLine, duskTempSeries } = make(clampInt, clampNumber, isPlainObject, true);
+  const st = { turnIndex: 1, relations: { k: { from: "a", to: "b", affection: 50, eroticAttraction: 50, hatred: 0 } } };
+  assert.equal(duskTempLine(st, "a", "b"), "");
+  duskTempRecord(st);
+  st.turnIndex = 2; st.relations.k.affection = 70; st.relations.k.hatred = 3; duskTempRecord(st);
+  st.turnIndex = 3; st.relations.k.affection = 80; duskTempRecord(st);
+  assert.deepEqual(duskTempSeries(st, "a", "b").map((p) => p.a), [50, 70, 80]);
+  assert.equal(duskTempLine(st, "a", "b"), "relationship trend toward the target over the last 2 turns: affection +30; attraction steady; hostility steady");
+  st.turnIndex = 2; duskTempRecord(st);   // 되돌린 뒤 같은 턴을 다시 쓰면 앞선 기록(3턴)은 버려진다
+  assert.deepEqual(st.duskTemp.map((e) => e.turn), [1, 2]);
+  st.turnIndex = 1; assert.deepEqual(duskTempSeries(st, "a", "b").map((p) => p.turn), [1]);
+  assert.equal(make(clampInt, clampNumber, isPlainObject, false).duskTempLine(st, "a", "b"), "");
+});
+
+test("장면 되돌리기 연결부(실제 엔진): 채팅이 없으면 이유를 던지고, 컨트롤러는 off/이유를 { ok:false }로 돌려준다", async () => {
+  const { api } = fakeApi();
+  const e = await bootErosync(api);
+  await assert.rejects(() => e.undo.lastScene(), /열린 채팅이 없어요/);
+  await e.dispose();
+  const { createErosync } = await import("../src/data/erosync.js");
+  const mk = (inst) => createErosync({ pluginStorage: { getItem: async () => null, setItem: async () => {} }, addRisuReplacer: async () => {} }, { boot: async () => inst, load: async () => true });
+  const off = mk(null); assert.deepEqual(await off.undoScene(), { ok: false, reason: "off" });
+  const on = mk({ loaded: () => true, dispose: async () => {}, undo: { lastScene: async () => { throw new Error("열린 채팅이 없어요"); } } });
+  await on.boot(); assert.deepEqual(await on.undoScene(), { ok: false, reason: "열린 채팅이 없어요" });
+  await on.stop();
 });

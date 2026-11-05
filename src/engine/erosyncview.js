@@ -98,3 +98,28 @@ export function eroRelmapData(data, snap) {
   out.empty = !out.edges.length;
   return out;
 }
+
+// NSFW 탭 위쪽 한 줄 요약: 지금 노리는 목표 · 가장 높은 관계 수치 · 집착 방지로 쉬는 턴. 읽어 온 값만 모은다(AI 호출 없음).
+export function eroSummary(snap, id) {
+  const g = eroGoalsOf(snap, id), lines = [];
+  const top = [...g.aiming].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0];
+  if (top) lines.push({ k: "goal", text: `${top.targetName}에게 ${top.typeLabel}${top.objective ? ` — ${top.objective}` : ""}` });
+  if (g.aimedAt.length) lines.push({ k: "aimed", text: `${g.aimedAt.map((x) => x.actorName).join(", ")}이(가) 이 인물을 노려요` });
+  if (g.rivals.length) lines.push({ k: "rival", text: `경쟁 ${g.rivals.length}건` });
+  const rel = arr(snap?.relations).filter((r) => r.from === id).sort((a, b) => (b.eroticAttraction + b.affection) - (a.eroticAttraction + a.affection))[0];
+  if (rel) lines.push({ k: "rel", text: `${rel.toName}에게 호감 ${rel.affection} · 끌림 ${rel.eroticAttraction}${rel.hatred > 0 ? ` · 증오 ${rel.hatred}` : ""}` });
+  for (const r of arr(snap?.rests).filter((x) => x.actor === id)) lines.push({ k: "rest", text: `${r.targetName} 쪽 목표는 ${r.left}턴 쉬는 중이에요(집착 방지)` });
+  return lines;
+}
+
+// 관계 온도 그래프: 이 인물이 상대별로 어떻게 느껴 왔는지(턴별 호감·끌림·반감). 점이 2개 이상인 상대만.
+export function eroTemp(snap, id) {
+  return arr(snap?.temp).filter((t) => t.from === id && arr(t.points).length >= 2).map((t) => ({ to: t.to, toName: t.toName, points: t.points }));
+}
+// 점들을 SVG polyline 좌표로(0~100 → 위가 큼). w×h 안, 턴 간격 그대로 가로에 펼친다.
+export function tempPath(points, key, w = 240, h = 70) {
+  const pts = arr(points);
+  if (!pts.length) return "";
+  const t0 = pts[0].turn, span = Math.max(1, pts[pts.length - 1].turn - t0);
+  return pts.map((p) => `${(((p.turn - t0) / span) * w).toFixed(1)},${(h - (Math.max(0, Math.min(100, Number(p[key]) || 0)) / 100) * h).toFixed(1)}`).join(" ");
+}

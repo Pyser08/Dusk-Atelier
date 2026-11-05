@@ -30,7 +30,10 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
       { id: "p4", name: "호시노", aliases: [], role: "주요", axes: [{ axis: "initiative", base: 40, value: 40 }], sexual: null, nonPerson: false, sfw: false },
       { id: "p5", name: "엑스트라", aliases: [], axes: [], sexual: null }
     ], goals: [{ id: "g2", actor: "p3", actorName: "시로코", target: "p4", targetName: "호시노", type: "flirt", typeLabel: "플러팅", status: "active", priority: 55, objective: "순찰 끝나고 둘이 남기", nextMove: "" },{ id: "g1", actor: "p1", actorName: "리안", target: "p2", targetName: "카엘", type: "sexual_intercourse", typeLabel: "성관계 목표", status: "active", priority: 70, objective: "단둘이 되기", nextMove: "자리를 옮기자고 한다" }],
-    rivalries: [{ actor: "p2", actorName: "카엘", rival: "p1", rivalName: "리안", intensity: 40, reason: "" }], relations: [] };
+    rivalries: [{ actor: "p2", actorName: "카엘", rival: "p1", rivalName: "리안", intensity: 40, reason: "" }],
+    relations: [{ from: "p3", fromName: "시로코", to: "p4", toName: "호시노", affection: 70, eroticAttraction: 60, hatred: 0 }],
+    rests: [{ actor: "p3", actorName: "시로코", target: "p4", targetName: "호시노", until: 8, left: 3 }],
+    temp: [{ from: "p3", fromName: "시로코", to: "p4", toName: "호시노", points: [{ turn: 1, a: 50, e: 40, h: 0 }, { turn: 3, a: 60, e: 50, h: 5 }, { turn: 5, a: 70, e: 60, h: 0 }] }] };
     window.__opened = 0;
     __app.ctx.erosync = { isRunning: () => true, on: () => true, read: async () => snap, open: async () => true,
       config: async (patch) => { const st = (window.__cf ??= { mode: "normal", frequency: 55, autonomy: 70, goalPersistence: 70, cooldownTurns: 2, maxActorsPerTurn: 2, recentMessages: 14, progressiveFollowUp: true, autoVerifyCharacters: true, autoRefreshProfiles: false, developmentMode: "review" }); if (patch) Object.assign(st, patch); return { ok: true, maxActors: 10, values: { ...st } }; },
@@ -44,6 +47,14 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
         if (op === "start") return { ok: true, running: true };
         return { ok: true }; },
       guard: () => window.__gd ?? { on: false, obsessionCap: 60, sameTargetTurns: 3, restTurns: 4 }, loadGuard: async () => {}, setGuard: async (v) => { window.__gd = { ...(window.__gd ?? { on: false, obsessionCap: 60, sameTargetTurns: 3, restTurns: 4 }), ...v }; },
+      presets: async () => (window.__ps ??= []).slice(),
+      savePreset: async (name) => { if (!name.trim()) return { ok: false, reason: "이름을 적어 주세요" }; (window.__ps ??= []).push({ id: "x" + window.__ps.length, name, level: { contentMode: "nsfw" }, config: {}, guard: null }); return { ok: true, replaced: false, list: window.__ps.slice() }; },
+      applyPreset: async (id) => { window.__psApplied = id; return { ok: true, name: id }; },
+      deletePreset: async (id) => { window.__ps = (window.__ps ?? []).filter((p) => p.id !== id); return window.__ps.slice(); },
+      tags: async (id) => (window.__tg ??= {})[id] ?? { likes: [], limits: [] },
+      setTags: async (id, v) => { (window.__tg ??= {})[id] = v; window.__tgCalls = (window.__tgCalls ?? 0) + 1; return { ok: true, value: v }; },
+      tempTrend: async (v) => { if (typeof v === "boolean") window.__tt = v; return window.__tt ?? true; },
+      undoScene: async () => { window.__undo = (window.__undo ?? 0) + 1; return { ok: true, left: 2, turnIndex: 4 }; },
       content: async (patch) => { const st = (window.__lv ??= { ok: true, contentMode: "nsfw", extremityLimit: "unlimited", nsfwPlus: false, recheck: false, limits: [{ key: "moderate", cap: 20, label: "대화 안에서만" }, { key: "unlimited", cap: 100, label: "제한 없음" }] }); if (patch) Object.assign(st, patch); return { ...st }; } };
     __app.ctx.openErosync = async () => { window.__opened++; return true; };
   });
@@ -87,6 +98,17 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 저장하면 바뀐 칸만 엔진으로 전달됨`, await page.evaluate(() => JSON.stringify(window.__pf.ov) === '{"initiative":90}'), JSON.stringify(await page.evaluate(() => window.__pf.ov)));
   await page.locator("#rb-ero-reanalyze").click(); await page.waitForTimeout(300);
   ok(`[${tag}] 다시 분석을 누르면 start(single)가 불림`, await page.evaluate(() => window.__pf.calls.some((c) => c[0] === "start" && c[1] === "single")));
+  ok(`[${tag}] NSFW 탭 위에 '지금 상태' 요약(목표·관계·쉬는 턴)`, /지금 상태/.test(await body()) && (await page.locator("#rb-ero-summary li[data-k=rest]").count()) === 1 && /3턴 쉬는 중/.test(await page.locator("#rb-ero-summary").textContent()) && (await page.locator("#rb-ero-summary li[data-k=rel]").count()) === 1);
+  ok(`[${tag}] 관계 온도 그래프(호감·끌림·반감 선 3개)`, (await page.locator(".rb-ero-temp svg polyline").count()) === 3 && /호시노/.test(await page.locator(".rb-ero-temp").first().textContent()));
+  await page.locator("#rb-ero-temp-inject [role=switch]").click(); await page.waitForTimeout(200);
+  ok(`[${tag}] 온도 반영 스위치를 끄면 tempTrend(false)`, await page.evaluate(() => window.__tt === false));
+  await page.locator("#rb-ero-tags-likes").fill("목덜미, 느린 전개, 목덜미"); await page.locator("#rb-ero-tags-limits").fill("공개된 장소"); await page.locator("#rb-ero-tags-save").click(); await page.waitForTimeout(300);
+  ok(`[${tag}] 태그 저장: 중복 빼고 선호 2개·금기 1개가 엔진으로`, await page.evaluate(() => JSON.stringify(window.__tg.p3) === '{"likes":["목덜미","느린 전개"],"limits":["공개된 장소"]}'), JSON.stringify(await page.evaluate(() => window.__tg)));
+  ok(`[${tag}] 태그 칩이 보임(금기는 따로 표시)`, (await page.locator("#rb-ero-tags-chips [data-kind=like]").count()) === 2 && (await page.locator("#rb-ero-tags-chips [data-kind=limit]").count()) === 1);
+  ok(`[${tag}] 프로필 내보내기·가져오기 버튼`, (await page.locator("#rb-ero-export").count()) === 1 && (await page.locator("#rb-ero-import").count()) === 1);
+  const [pdl] = await Promise.all([page.waitForEvent("download", { timeout: 4000 }).catch(() => null), page.locator("#rb-ero-export").click()]);
+  ok(`[${tag}] 프로필 내보내기가 파일을 내려줌(헤드리스 크롬은 한글 파일명을 'download'로 보고하므로 내려받기 자체만 확인)`, !!pdl, pdl?.suggestedFilename());
+  await page.screenshot({ path: `/tmp/ero-nsfw-${tag}.png`, fullPage: true });
   await page.locator(".rb-wk2-tab", { hasText: "상세 정보" }).click(); await page.waitForTimeout(300);
   await page.screenshot({ path: `/tmp/ero-wiki-info-${tag}.png` });
   ok(`[${tag}] 원본 창을 여는 링크는 없다(NSFW 탭에서 바로 고친다)`, (await page.locator(".rb-wk2-ero .rb-wk2-link", { hasText: "Erosync에서 고치기" }).count()) === 0);
@@ -118,6 +140,20 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 집착 방지 카드가 보임`, await page.locator("#rb-erosync-guard").isVisible());
   await page.locator("#rb-erosync-guard [role=switch]").first().click(); await page.locator("#rb-erosync-g-cap").fill("40"); await page.locator("#rb-erosync-g-cap").blur(); await page.waitForTimeout(200);
   ok(`[${tag}] 집착 방지 켜기·상한 40이 저장됨`, await page.evaluate(() => window.__gd?.on === true && window.__gd.obsessionCap === 40), JSON.stringify(await page.evaluate(() => window.__gd)));
+  ok(`[${tag}] 프리셋 카드가 수위 탭에 있음`, await page.locator("#rb-erosync-presets").isVisible());
+  await page.locator("#rb-erosync-preset-name").fill("순한맛"); await page.locator("#rb-erosync-preset-save").click(); await page.waitForTimeout(300);
+  ok(`[${tag}] 프리셋 저장하면 목록에 보임`, (await page.locator("#rb-erosync-preset-list [data-preset]").count()) === 1 && /순한맛/.test(await page.locator("#rb-erosync-preset-list").textContent()));
+  await page.locator("#rb-erosync-preset-list [data-act=apply]").click(); await page.waitForTimeout(400);
+  ok(`[${tag}] 적용을 누르면 applyPreset이 불림`, await page.evaluate(() => window.__psApplied === "x0"));
+  await tabTo("수위");
+  await page.locator("#rb-erosync-preset-list [data-act=del]").click(); await page.waitForTimeout(300);
+  ok(`[${tag}] 삭제하면 목록이 비어 안내 문구가 보임`, (await page.locator("#rb-erosync-preset-empty").count()) === 1);
+  await tabTo("동작");
+  ok(`[${tag}] 동작 탭에 장면 되돌리기 카드`, await page.locator("#rb-erosync-undo-card").isVisible());
+  await page.locator("#rb-erosync-undo").click(); await page.waitForTimeout(300);
+  await page.locator(".rb-dialog button", { hasText: "되돌리기" }).last().click(); await page.waitForTimeout(400);
+  ok(`[${tag}] 확인하면 undoScene이 불리고 결과가 보임`, (await page.evaluate(() => window.__undo)) === 1 && /되돌렸어요/.test(await page.locator("#rb-erosync-undo-note").textContent()));
+  await tabTo("수위");
   ok(`[${tag}] NSFW+를 고르면 nsfwPlus가 켜짐`, await page.evaluate(() => window.__lv.nsfwPlus === true));
   await page.screenshot({ path: `/tmp/ero-memhome-${tag}.png` });
   await tabTo("개요"); await page.locator("#rb-erosync").scrollIntoViewIfNeeded(); await page.screenshot({ path: `/tmp/ero-home-${tag}.png` });

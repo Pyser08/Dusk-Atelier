@@ -6,7 +6,9 @@ import { userLabel } from "./username.js";
 import { btn, modal, confirmDialog } from "../../kit.js";
 import { mem, avatar, fail } from "./common.js";
 import { editFolder } from "./people.js";
-import { eroLoad, eroNsfwCard, eroInfoCard, eroSumCard, eroPairCard, eroPartnerCards } from "./erosyncwiki.js";
+import { eroTagsCard } from "./erosynctagsui.js";
+import { eroTempCard } from "./erosynctempui.js";
+import { eroLoad, eroNsfwCard, eroInfoCard, eroSumCard, eroPairCard, eroPartnerCards, eroSummaryCard } from "./erosyncwiki.js";
 import { eroPerson, eroPersonByName } from "../../../engine/erosyncview.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX, setTag } from "../../../engine/memoryemo.js";
 import { nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
@@ -186,7 +188,8 @@ export function personTabs(env, parts) {
   const nsfw = () => {
     const a = parts.adult ?? {}, e = eroSelf(), eroCard = e ? eroNsfwCard(ctx, card, e, () => { ero = null; eroLoad(ctx).then((snap) => { if (snap) { ero = snap; paint(); } }); }) : null;
     const cyc = a.cyc ? h("div", { class: "rb-mem-cycle", role: "note" }, h("b", null, "월경·임신 "), a.cyc.lines.join(" · "), a.cyc.date ? h("small", { class: "rb-muted" }, ` (${a.cyc.date} 기준)`) : null) : null;
-    const kids = [cyc ? card("월경·임신", [cyc]) : null, a.panel ?? null, eroCard].filter(Boolean);
+    const sumCard = e && ero ? eroSummaryCard(ctx, card, ero, e) : null;
+     const kids = [sumCard, cyc ? card("월경·임신", [cyc]) : null, a.panel ?? null, eroCard, e && ero ? eroTempCard(ctx, card, ero, e) : null, e ? eroTagsCard(ctx, card, e) : null].filter(Boolean);
     return h("div", { class: "rb-wk2-pane", id: "rb-wk2-nsfw" }, kids.length ? kids : h("p", { class: "rb-muted" }, "아직 NSFW 항목이 없어요. 성적 욕망·이상성향·월경 기록이 쌓이거나 Erosync를 켜면 여기에 모여요."));
   };
   const log = () => h("div", { class: "rb-wk2-pane" }, ...(parts.logBlocks ?? []).filter(Boolean));

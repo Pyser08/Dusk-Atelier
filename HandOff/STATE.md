@@ -680,3 +680,10 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 5. 인물 1명 NSFW 프로필만 내보내기/가져오기(`memoryfile.js` 재사용)
 6. NSFW 기록 확장(아래): 장면 타임라인, 관계 수위 변화 그래프, 비하인드 검색·고정, 장면 메모, 직전 판단 이유 보기, 기록 CSV/MD 내보내기 — 모두 AI 추가 호출 없이 이미 저장된 값만 사용.
 규칙: 비용 늘리는 기능(장면마다 AI 추가 호출)은 넣지 않음. 시작 전 STATE.md·`erosyncwiki.js`부터 읽을 것.
+
+## NSFW 추가 기능 구현 완료(2026-11-05, 같은 브랜치)
+- 새 데이터 모듈: `src/data/erosyncpreset.js`(프리셋 `dusk.erosync.presets`), `erosynctags.js`(태그 `erosync_dusk_tags_v1` → 장기 기억 파일에 자동 포함), `eroprofilefile.js`(인물 1명 파일 `dusk-ero-profile` v1). 컨트롤러 `createErosync`에 presets/savePreset/applyPreset/deletePreset/tags/setTags/tempTrend/undoScene 추가.
+- 엔진(`src/erosync/erosync.js`) 추가: `duskTags*`(선호·금기를 `selectedProfileSummary`에 넣음), `duskTempRecord/Line/Series`(확정 때 관계 온도 기록 `state.duskTemp`, 최근 120턴, 되돌린 뒤 앞선 기록 무시, `flags.tempTrend`), `duskUndoLastScene`(`undo.lastScene`: `undoCommitEntries` + 최신 응답을 읽은 것으로 표시), `duskStoryAbsolute`(`host.storyStatus`로 Dusk 이야기 시간 날짜를 주기 시계에 우선 적용; main.js에서 연결), 읽기 값에 `rests`·`temp` 추가.
+- **버그 수정**: `normalizeSessionState`가 `state.duskGuard`를 떨어뜨려 집착 방지 연속/쉬는 턴이 턴을 넘어 이어지지 않았음 → 보존하도록 수정(테스트 있음).
+- UI: 수위 탭 `erosyncpresetui.js`, 동작 탭 `erosyncundoui.js`, NSFW 탭 `eroSummaryCard`(erosyncwiki.js)·`erosynctempui.js`·`erosynctagsui.js`·프로필 내보내기/가져오기 버튼(`erosyncprofilefileui.js`). 순수 함수 `eroSummary/eroTemp/tempPath`는 `src/engine/erosyncview.js`.
+- 못 한 것/미확인: 실제 채팅·모델에서 장면 되돌리기·관계 온도 기록·태그 주입·이야기 날짜 시계가 도는지(엔진 함수는 단위 시험·소스 확인만), 세 호스트 실기기. 관계 온도의 ‘반감’은 엔진의 hatred 값(별도 ‘긴장’ 값은 없음). 되돌리기 뒤 집착 방지 상태(`duskGuard`)와 온도 기록은 같은 턴 이상만 다음 기록 때 정리됨.

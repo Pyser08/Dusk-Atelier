@@ -6,6 +6,8 @@ import { mem } from "./common.js";
 import { erosyncSection } from "./erosyncui.js";
 import { erosyncLevelCard } from "./erosynclevel.js";
 import { erosyncGuardCard } from "./erosyncguard.js";
+import { erosyncPresetCard } from "./erosyncpresetui.js";
+import { erosyncUndoCard } from "./erosyncundoui.js";
 import { erosyncConfigCard } from "./erosyncconfig.js";
 import { erosyncPromptsCard } from "./erosyncprompts.js";
 import { erosyncBehindCard } from "./erosyncbehind.js";
@@ -49,8 +51,8 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
       h("li", null, "인물 관계도 → ‘Erosync 목표·경쟁만 보기’: 목표 화살표와 경쟁선")));
   const panes = {
     home: () => [homeExtra()],
-    safety: () => [erosyncLevelCard(ctx), typeof er?.setGuard === "function" ? erosyncGuardCard(ctx) : null],
-    act: () => [erosyncConfigCard(ctx, "act")],
+    safety: () => [erosyncLevelCard(ctx), typeof er?.setGuard === "function" ? erosyncGuardCard(ctx) : null, typeof er?.presets === "function" ? erosyncPresetCard(ctx, redraw) : null],
+    act: () => [erosyncConfigCard(ctx, "act"), typeof er?.undoScene === "function" ? erosyncUndoCard(ctx) : null],
     ana: () => [analysisCard(), erosyncConfigCard(ctx, "ana")],
     prompt: () => [erosyncPromptsCard(ctx)],
     behind: () => [erosyncBehindCard(ctx)],

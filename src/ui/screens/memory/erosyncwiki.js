@@ -2,8 +2,9 @@
 // 고치기는 Erosync 자체 화면으로 보낸다(저장은 Erosync의 erosync_* 키 그대로).
 import { h } from "../../dom.js";
 import { btn } from "../../kit.js";
+import { exportProfile, importProfile } from "./erosyncprofilefileui.js";
 import { openProfileEditor, resetProfile, analysisLine } from "./erosynceditor.js";
-import { eroReady, eroAxes, eroAdult, eroGoalsOf, eroPair } from "../../../engine/erosyncview.js";
+import { eroReady, eroAxes, eroAdult, eroGoalsOf, eroPair, eroSummary } from "../../../engine/erosyncview.js";
 
 // 켜져 있을 때만 읽는다. 실패하면 null(위키는 원래대로).
 export async function eroLoad(ctx) {
@@ -36,7 +37,9 @@ export function eroNsfwCard(ctx, card, person, redraw) {
     btn("직접 고치기", { size: "sm", id: "rb-ero-edit", onClick: () => openProfileEditor(ctx, person, redraw) }),
     person.overridden ? btn("AI 값으로", { size: "sm", id: "rb-ero-reset", onClick: () => resetProfile(ctx, person, redraw) }) : null,
     btn("다시 분석", { size: "sm", id: "rb-ero-reanalyze", title: "이 인물만 AI로 다시 분석해요(호출 2번)", onClick: () => line.start("single", person.id) }),
-    btn("축만 다시 채점", { size: "sm", id: "rb-ero-rescore", title: "8축 점수만 다시 매겨요(호출 1~2번)", onClick: () => line.start("axes", person.id) }));
+    btn("축만 다시 채점", { size: "sm", id: "rb-ero-rescore", title: "8축 점수만 다시 매겨요(호출 1~2번)", onClick: () => line.start("axes", person.id) }),
+    btn("프로필 내보내기", { size: "sm", id: "rb-ero-export", title: "직접 고친 값과 선호·금기 태그를 파일로 저장해요", onClick: () => exportProfile(ctx, person) }),
+    btn("프로필 가져오기", { size: "sm", id: "rb-ero-import", title: "내보낸 파일로 이 인물의 직접 고친 값과 태그를 덮어써요", onClick: () => importProfile(ctx, person, redraw) }));
   const rows = ad ? [h("div", { class: "rb-wk2-nums" }, ad.rows.map((r) => bar(r.label, r.value)),
     ad.pref ? h("small", { class: "rb-muted" }, `끌리는 상대 · 여성 ${ad.pref.f}% · 남성 ${ad.pref.m}% · 그 외 ${ad.pref.x}%`) : null)] : [h("small", { class: "rb-muted" }, "성적 항목이 아직 없어요.")];
   return card("Erosync 성적 항목", [...rows, person.overridden ? h("small", { class: "rb-muted" }, "직접 고친 값이 있어요. AI가 다시 분석해도 고친 값이 우선이에요.") : null, act, line.el], null, "rb-wk2-ero");
@@ -76,4 +79,11 @@ export function eroPartnerCards(ctx, card, snap, self) {
   for (const g of snap.goals ?? []) { if (g.actor === self.id) ids.add(g.target); else if (g.target === self.id) ids.add(g.actor); }
   for (const r of snap.rivalries ?? []) { if (r.actor === self.id) ids.add(r.rival); else if (r.rival === self.id) ids.add(r.actor); }
   return [...ids].map((id) => eroPairCard(ctx, card, snap, self, (snap.people ?? []).find((p) => p.id === id))).filter(Boolean);
+}
+
+// NSFW 탭 맨 위 한 줄 요약(지금 목표·관계·쉬는 턴). 보여 줄 게 없으면 null.
+export function eroSummaryCard(ctx, card, snap, person) {
+  const lines = eroSummary(snap, person.id);
+  if (!lines.length) return null;
+  return card("지금 상태", [h("ul", { class: "rb-muted", style: "white-space:normal;padding-left:18px;margin:0", id: "rb-ero-summary" }, ...lines.map((l) => h("li", { "data-k": l.k }, l.text)))], tag(), "rb-wk2-ero");
 }
