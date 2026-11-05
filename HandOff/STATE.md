@@ -6,7 +6,8 @@
 - 원본 플러그인이 켜져 있으면 시작 막는 동작 유지.
 - 2단계 일부 완료: 장기 기억 홈에 "Erosync" 줄(`#rb-mem-go-erosync`, 관계도 줄 옆) → `memory` page `"erosync"`(`erosyncpage.js`: 원본 기록 감지 문구 + 기존 켜기 카드). 홈의 예전 카드는 제거.
 - 수위 카드 완료: `erosynclevel.js`(SFW/NSFW/NSFW+, 극단 행동 수위 6단계, NSFW+ 재검사). 엔진 쪽 연결부 `content.get/set`(erosync.js, 허용 키만) → `data/erosync.js content(patch)`.
-- 남은 일: 2) 설정 페이지 안에 집착 방지·동작·프롬프트·데이터(내보내기/초기화)를 Dusk 모양으로 직접 넣기(지금은 'Erosync 설정 열기'로 원본 창) 3) 인물 위키 "NSFW" 탭(상세 정보~기록 사이) 4) AI 제공자→Dusk 모델 허브, 월경 주기 합침 5) 원본 UI·이펙트·소리 제거, 세 호스트 확인.
+- 집착 방지 완료: 엔진 `duskGuard`(집착성 상한 clamp + 같은 대상 연속 목표 턴 초과 시 쉬는 턴 동안 pause, `commitPlannedGoals`/`effectiveProfileForDirector`), 저장 키 `dusk.erosync.guard`, 카드 `erosyncguard.js`. 기본 꺼짐.
+- 남은 일: 2) 설정 페이지 안에 동작·프롬프트·데이터(내보내기/초기화)를 Dusk 모양으로 직접 넣기(지금은 'Erosync 설정 열기'로 원본 창) 3) 인물 위키 "NSFW" 탭(상세 정보~기록 사이) 4) AI 제공자→Dusk 모델 허브, 월경 주기 합침 5) 원본 UI·이펙트·소리 제거, 세 호스트 확인.
 - 리수폿 성인 항목 기본값은 켜짐 유지(`src/engine/pot/settings.js:163`).
 
 ## 2026-11-04 Erosync 2차: 위키·관계도 연동 + 기억 방식 기본값 (버전 미변경)

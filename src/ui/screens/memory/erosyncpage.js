@@ -4,6 +4,7 @@ import { pageHead } from "../../kit.js";
 import { mem } from "./common.js";
 import { erosyncSection } from "./erosyncui.js";
 import { erosyncLevelCard } from "./erosynclevel.js";
+import { erosyncGuardCard } from "./erosyncguard.js";
 import { scanOriginalErosync } from "../../../data/erosyncmigrate.js";
 
 export const scanLine = (s) => !s?.found ? "" : `원래 Erosync에서 쓰던 기록을 찾았어요 — 인물 프로필 ${s.profiles}개${s.canListSessions ? ` · 채팅 기록 ${s.sessions}개` : ""}${s.botSettings ? ` · 봇별 설정 ${s.botSettings}개` : ""}. 같은 저장 공간을 쓰니 따로 옮길 필요 없이 켜면 그대로 이어져요. 원래 플러그인은 끄고 쓰세요.`;
@@ -11,6 +12,7 @@ export const scanLine = (s) => !s?.found ? "" : `원래 Erosync에서 쓰던 기
 export async function renderMemoryErosync(ctx, host, { redraw }) {
   const m = mem(ctx);
   const back = { label: "장기 기억으로", onClick: () => { m.page = "home"; redraw(); } };
+  await ctx.erosync?.loadGuard?.().catch(() => {});
   const sec = erosyncSection(ctx);
   const s = await scanOriginalErosync(ctx.api).catch(() => null);
   const line = scanLine(s);
@@ -18,5 +20,6 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
     pageHead("Erosync", { back }),
     line ? h("p", { class: "rb-card bordered rb-muted", id: "rb-erosync-found", style: "white-space:normal;padding:12px" }, line) : null,
     sec,
-    erosyncLevelCard(ctx)));
+    erosyncLevelCard(ctx),
+    typeof ctx.erosync?.setGuard === "function" ? erosyncGuardCard(ctx) : null));
 }

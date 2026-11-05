@@ -17740,6 +17740,26 @@ Constraint: {{constraint}}
     else profile[trait] = value;
   }
 
+  // Dusk 집착 방지(Erosync 설정 화면). 꺼짐이 기본이다. 켜면 (1) 집착성 값을 상한으로 눌러 장면 판단에 넘기고 (2) 같은 대상으로 목표가 연속되면 쉬게 한다.
+  let duskGuard = { on: false, obsessionCap: 60, sameTargetTurns: 3, restTurns: 4 };
+  function normalizeDuskGuard(v) {
+    const n = (x, d, lo, hi) => Math.round(clampNumber(x, d, lo, hi));
+    return { on: v?.on === true, obsessionCap: n(v?.obsessionCap, 60, 0, 100), sameTargetTurns: n(v?.sameTargetTurns, 3, 1, 20), restTurns: n(v?.restTurns, 4, 1, 50) };
+  }
+  function duskGuardSet(v) { duskGuard = normalizeDuskGuard(v); duskReadCache = null; return { ...duskGuard }; }
+  // 같은 행동 인물이 같은 대상으로 목표를 이어 갈 때 연속 턴 수를 세고, 넘으면 쉬는 턴 동안 목표를 멈춘다(상태: state.duskGuard)
+  function applyDuskGuard(state, action, goal) {
+    if (!duskGuard.on || !goal) return goal;
+    const g = (state.duskGuard ??= { streak: {}, rest: {} });
+    const turn = Number(state.turnIndex || 0), key = `${action.actor}>${action.target}`;
+    if (Number(g.rest[key] || 0) > turn) return { ...goal, status: 'pause' };
+    const prev = g.streak[action.actor];
+    const n = prev && prev.target === action.target && prev.turn >= turn - 1 ? prev.n + (prev.turn === turn ? 0 : 1) : 1;
+    g.streak[action.actor] = { target: action.target, turn, n };
+    if (n > duskGuard.sameTargetTurns) { g.rest[key] = turn + duskGuard.restTurns; delete g.streak[action.actor]; return { ...goal, status: 'pause' }; }
+    return goal;
+  }
+
   function effectiveProfileForDirector(profile, state, actorId, targetId = '') {
     const base = profile?.baseProfile || normalizeEroticProfile({});
     const development = normalizeDevelopmentState(state?.development);
@@ -17759,6 +17779,7 @@ Constraint: {{constraint}}
     const motiveOverride = normalizeSexualMotive(global.motiveOverride);
     if (motiveOverride) effective.sexualMotive = motiveOverride;
     const overridden = applyProfileOverrides(effective, profile?.userOverrides);
+    if (duskGuard.on && Number.isFinite(overridden.obsessiveness)) overridden.obsessiveness = Math.min(overridden.obsessiveness, duskGuard.obsessionCap);
     overridden.developmentPatterns = [...(global.patterns || []), ...(relation.patterns || [])]
       .slice(-12)
       .map((item) => ({ label: item.label, direction: item.direction, confidence: item.confidence }));
@@ -19190,12 +19211,13 @@ Constraint: {{constraint}}
     for (const action of decision.actions || []) {
       if (!action.goal) continue;
       const current = state.goals[action.goal.goalId] || {};
+      const goalIn = applyDuskGuard(state, action, action.goal);
       state.goals[action.goal.goalId] = {
         ...current,
-        ...action.goal,
+        ...goalIn,
         actor: action.actor,
         target: action.target,
-        status: action.goal.status === 'start' ? 'active' : action.goal.status,
+        status: goalIn.status === 'start' ? 'active' : goalIn.status,
         createdTurn: current.createdTurn || state.turnIndex,
         lastAttemptTurn: state.turnIndex,
         ...(action.kocoRefs?.length ? { kocoRefs: normalizeKocoRefs(action.kocoRefs) } : {}),
@@ -36923,6 +36945,7 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
     // Dusk 읽기 연결부(위 duskReadSnapshot)
     read: duskReadSnapshot,
     content: { get: duskContentGet, set: duskContentSet },
+    guard: { set: duskGuardSet },
     // Erosync 자체 화면 열기(원본이 설정 항목으로 등록한 것과 같은 함수)
     open: () => openSettingsPanel(),
     async dispose() {

@@ -81,3 +81,16 @@ test("컨트롤러 read: 꺼져 있으면 off, 켜져 있으면 본체의 read �
   await er.stop();
   assert.equal((await er.read()).ok, false);
 });
+import { normGuard, GUARD_KEY } from "../src/data/erosync.js";
+test("집착 방지: 값 범위 정리와 저장·반영", async () => {
+  assert.deepEqual(normGuard({ on: true, obsessionCap: 500, sameTargetTurns: 0, restTurns: "x" }), { on: true, obsessionCap: 100, sameTargetTurns: 1, restTurns: 4 });
+  const store = {}, api = { addRisuReplacer() {}, pluginStorage: { getItem: async (k) => store[k] ?? null, setItem: async (k, v) => { store[k] = v; } } };
+  const sent = [];
+  const boot = async () => ({ loaded: () => true, dispose: async () => {}, guard: { set: (v) => sent.push(v) } });
+  const er = createErosync(api, { boot, load: async () => true });
+  await er.boot();
+  await er.setGuard({ on: true, obsessionCap: 40 });
+  assert.equal(JSON.parse(store[GUARD_KEY]).obsessionCap, 40);
+  assert.equal(sent.at(-1).on, true);
+  assert.equal(er.guard().sameTargetTurns, 3);
+});

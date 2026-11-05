@@ -11,10 +11,21 @@ export async function loadErosyncOn(api) {
     return false;
   }
 }
+export const GUARD_KEY = "dusk.erosync.guard";
+export const GUARD_DEFAULT = Object.freeze({ on: false, obsessionCap: 60, sameTargetTurns: 3, restTurns: 4 });
+export function normGuard(v) {
+  const n = (x, d, lo, hi) => { const k = Number(x); return Number.isFinite(k) ? Math.min(hi, Math.max(lo, Math.round(k))) : d; };
+  return { on: v?.on === true, obsessionCap: n(v?.obsessionCap, 60, 0, 100), sameTargetTurns: n(v?.sameTargetTurns, 3, 1, 20), restTurns: n(v?.restTurns, 4, 1, 50) };
+}
 // 본체는 켤 때만 불러온다(번들 안에서도 처음 부를 때까지 실행되지 않는다).
 const loadBoot = async () => (await import("../erosync/erosync.js")).bootErosync;
 export function createErosync(api, { log = () => {}, boot = null, load = loadErosyncOn, host = {} } = {}) {
-  let inst = null, starting = null, error = "", onNow = false;
+  let inst = null, starting = null, error = "", onNow = false, guardNow = { ...GUARD_DEFAULT };
+  async function loadGuard() {
+    try { const raw = await api.pluginStorage.getItem(GUARD_KEY); guardNow = normGuard(typeof raw === "string" ? JSON.parse(raw) : raw); } catch { guardNow = { ...GUARD_DEFAULT }; }
+    try { inst?.guard?.set?.(guardNow); } catch { /* 무시 */ }
+    return { ...guardNow };
+  }
   async function originalOn() {
     try { return (await listPlugins(api)).some((p) => p.name === ERO_ORIGINAL && p.enabled); } catch { return false; }
   }
@@ -32,6 +43,7 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
       }
       inst = next;
       error = "";
+      try { next.guard?.set?.(guardNow); } catch { /* 집착 방지는 실패해도 본체는 계속 */ }
       return true;
     } catch (e) {
       inst = null;
@@ -57,8 +69,18 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
     // 실행 시: 저장된 값이 켜짐이면 시작
     async boot() {
       onNow = await load(api);
+      await loadGuard();
       if (!onNow) return false;
       return start();
+    },
+    // 집착 방지 설정(Dusk 쪽에 저장, 켜져 있으면 엔진에도 바로 반영)
+    guard: () => ({ ...guardNow }),
+    loadGuard,
+    async setGuard(v) {
+      guardNow = normGuard({ ...guardNow, ...v });
+      try { await api.pluginStorage.setItem(GUARD_KEY, JSON.stringify(guardNow)); } catch { /* 저장 못 해도 이번 실행에는 반영 */ }
+      try { inst?.guard?.set?.(guardNow); } catch { /* 무시 */ }
+      return { ...guardNow };
     },
     // 설정에서 바꿀 때: 저장하고 바로 반영
     async set(next) {
