@@ -65,6 +65,7 @@ export const EXTRA_CSS = `
 .pl-item{width:100%;display:flex;align-items:center;gap:10px;text-align:left;padding:8px 10px;border-radius:12px;background:var(--soft);border:1px solid transparent}
 .pl-item:hover{border-color:var(--accent)}.pl-item .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .pl-item b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.pl-item small{font-size:11px;color:var(--muted)}
+.pl-item .k.new{color:var(--accent);border-color:var(--accent);font-weight:700}
 .pl-item .k{flex:none;font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
 .pl-note{margin:6px 0 0}`;
 
@@ -105,7 +106,7 @@ export function catalogStats(model, visits = [], now = Date.now()) {
   return { chars: model?.counts?.characters ?? null, today: todayBots.size, week: weekCount, streak, top };
 }
 
-export const PL_KINDS = { bot: "봇", module: "모듈", preset: "프리셋", plugin: "플러그인", file: "파일" };
+export const PL_KINDS = { character: "캐릭터", module: "모듈", plugin: "플러그인" };
 export const plKind = (k) => PL_KINDS[k] ?? "";
 export function createExtras({ sr, store, toast, openDusk, protLink = null, now = () => Date.now() }) {
   const $ = (s) => sr.querySelector(s), $$ = (s) => [...sr.querySelectorAll(s)];
@@ -200,11 +201,11 @@ export function createExtras({ sr, store, toast, openDusk, protLink = null, now 
     if (!protLink) { list.innerHTML = ""; open.disabled = true; note.hidden = false; note.textContent = "이 환경에서는 ProtLink+를 열 수 없어요."; return; }
     const on = protLink.on();
     open.disabled = !on;
-    const items = on && r?.ok ? r.items : [];
-    list.innerHTML = items.slice(0, 5).map((x) => `<li><button class="pl-item" type="button" data-id="${esc(x.id)}"><span class="t"><b>${esc(x.name)}</b><small>${x.count ? `${x.count}개 파일` : "아직 확인 전"}${x.error ? " · 확인 실패" : ""}</small></span>${plKind(x.kind) ? `<span class="k">${plKind(x.kind)}</span>` : ""}</button></li>`).join("");
+    const items = on && r?.ok ? [...r.items].sort((a, b) => Number(b.update) - Number(a.update)) : [];
+    list.innerHTML = items.slice(0, 5).map((x) => `<li><button class="pl-item" type="button" data-id="${esc(x.id)}"><span class="t"><b>${esc(x.name)}</b><small>${esc(plKind(x.kind))}${x.target ? ` → ${esc(x.target.name)}` : ""}${x.error ? " · 확인 실패" : ""}</small></span>${x.update ? `<span class="k new">새 파일 ${x.pending.length}</span>` : ""}</button></li>`).join("");
     for (const b of $$(".pl-item")) b.onclick = () => openPl(b.dataset.id);
     note.hidden = items.length > 0 && on;
-    note.textContent = !on ? "ProtLink+가 꺼져 있어요. Dusk의 ProtLink+ 화면에서 켜요." : r && !r.ok ? "링크를 읽지 못했어요." : items.length ? "" : "Proton Drive 링크를 추가해 보세요. ‘열기’를 누르면 돼요.";
+    note.textContent = !on ? "ProtLink+가 꺼져 있어요. Dusk의 ProtLink+ 화면에서 켜요." : r && !r.ok ? "링크를 읽지 못했어요." : items.length ? "" : "연결한 링크가 아직 없어요. ‘열기’에서 링크를 연결해 보세요.";
     if (items.length > 5 && on) { note.hidden = false; note.textContent = `외 ${items.length - 5}개 · ‘열기’에서 모두 볼 수 있어요.`; }
   };
   const loadPl = async () => {

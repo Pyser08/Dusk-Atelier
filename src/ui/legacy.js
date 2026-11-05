@@ -364,7 +364,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
     busy = false;
     renderChoose(file, incoming, db);
   }
-  function candidatesFor(incoming, db) {
+  function candidatesFor(incoming, db, forcedId = "") {
     const hashes = new Set(incoming.assets.map((a) => a.hash).filter(Boolean));
     const list = incoming.module ? findCandidates(db.modules, incoming.module, hashes).map((c) => ({ ...c, kind: "module", label: c.module.name })) : [];
     if (incoming.character) {
@@ -375,7 +375,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
       for (const c of findCandidates(views, inView, chHashes)) list.push({ ...c, kind: "character", label: db.characters[c.index].name, module: void 0 });
     }
     const prefer = !incoming.character || /\.module\.charx$/i.test(incoming.fileName ?? "") ? "module" : "character";
-    const remembered = links?.get(linkKey(incoming));
+    const remembered = forcedId || links?.get(linkKey(incoming));
     if (remembered) {
       let c = list.find((x) => (x.kind === "module" ? x.module?.id : db.characters[x.index]?.chaId) === remembered);
       if (!c) {
@@ -392,7 +392,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
       if (c) {
         c.score += 1e3;
         c.confidence = "high";
-        c.reasons = ["지난번에 이 파일로 업데이트함", ...c.reasons];
+        c.reasons = [forcedId ? "ProtLink+ 링크로 연결한 항목" : "지난번에 이 파일로 업데이트함", ...c.reasons];
       }
     }
     return list.sort((a, b) => b.score - a.score || (b.kind === prefer) - (a.kind === prefer));
@@ -402,7 +402,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
   }
   function renderChoose(file, incoming, db) {
     incoming.fileName = file.name;
-    const cands = candidatesFor(incoming, db);
+    const cands = candidatesFor(incoming, db, file.protlinkTarget?.id ?? "");
     const top = cands.slice(0, 6);
     const sizeOf = (c) => c.kind === "character" ? `에셋 ${characterAssetKeys(db.characters[c.index]).length}개 · 로어북 ${(db.characters[c.index].globalLore ?? []).length}개` : `에셋 ${(c.module.assets ?? []).length}개 · 로어북 ${(c.module.lorebook ?? []).length}개`;
     const opts = top.map((c, i) => `
@@ -1820,8 +1820,10 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
       return this.startWithFiles([file]);
     },
     setPatchSink(fn) { patchSink = fn; },
-    async startWithFiles(files) {
+    // opts.target({kind,id}): ProtLink+ 링크에 연결해 둔 항목. 있으면 그 항목을 맨 위 후보(‘ProtLink+ 링크로 연결한 항목’)로 올린다.
+    async startWithFiles(files, opts) {
       files = takePatches(files);
+      if (opts?.target?.id) for (const f of files) { try { f.protlinkTarget = { kind: opts.target.kind, id: String(opts.target.id) }; } catch { /* 무시 */ } }
       if (!files.length) return;
       if (busy) {
         queue.push(...files);

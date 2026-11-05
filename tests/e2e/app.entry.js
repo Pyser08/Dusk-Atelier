@@ -73,13 +73,14 @@ window.bootApp = async (seed, opts = {}) => {
     app.ctx.widgetHome = createWidgetHome(api, { boot: async () => { __wh.boots++; return { dispose: async () => { __wh.disposed++; }, isVisible: () => false, close: async () => {}, open: async () => { __wh.opened++; return true; }, autoStatus: () => "" }; } });
     app.ctx.openWidgetHome = async () => { try { await app.close(); } catch {} return app.ctx.widgetHome.open(); };
   }
-  if (opts.protlink) {  // ProtLink+ 화면 시험: 실제 컨트롤러 + 가짜 본체
-    window.__pl = { boots: 0, opened: [], stopped: 0 };
-    const store = { "protlink-plus:v1": JSON.stringify({ version: 1, folders: [], links: [{ id: "a", url: "https://x", name: "내 봇 모음", kind: "bot", snapshot: [1, 2], updatedAt: Date.now() - 7200e3 }] }) };
+  if (opts.protlink) {  // ProtLink+ 화면 시험: 실제 컨트롤러 + 가짜 Proton 연결부
+    window.__pl = { opened: [], imported: [], saved: [], files: [{ uid: "a", name: "시로코.risum", size: 2048, modifiedAt: 1, path: [] }], state: "ready" };
     const base = api.pluginStorage;
-    api.pluginStorage = { ...base, getItem: async (k) => (k in store ? store[k] : base.getItem(k)), setItem: async (k, v) => (k.startsWith("protlink-plus") ? void (store[k] = v) : base.setItem(k, v)) };
+    api.pluginStorage = { ...base };
+    api.getDatabase = async () => ({ characters: [{ chaId: "c1", name: "시로코" }, { chaId: "c2", name: "호시노" }], modules: [{ id: "m1", name: "시로코 모듈" }, { id: "m2", name: "다른 모듈" }], plugins: [{ name: "plug_a", displayName: "내 플러그인", versionOfPlugin: "1.0.0" }] });
     api.showContainer = api.showContainer ?? (async () => {}); api.hideContainer = api.hideContainer ?? (async () => {});
-    app.ctx.protlink = createProtLink(api, { originalProbe: async () => !!window.__plOriginal, boot: async () => { __pl.boots++; return { open: async (id) => { __pl.opened.push(id ?? ""); }, close: async () => { __pl.stopped++; } }; }, hooks: { beforeOpen: async () => { await app.close().catch(() => {}); } } });
+    const driver = { PZ: () => ({}), Ln: (e) => String(e?.message ?? e), G3: () => ({ open: async () => (__pl.state === "ready" ? { kind: "ready", share: { root: { name: "시로코 모음" }, download: async (f) => new Uint8Array([1, 2, 3]) } } : { kind: __pl.state }), drop() {} }), Sp: async () => ({ files: __pl.files.slice(), folders: 0, partial: false }) };
+    app.ctx.protlink = createProtLink(api, { driver, originalProbe: async () => !!window.__plOriginal, startDelay: 1e9, hooks: { importFiles: async (f, t) => { __pl.imported.push([f.map((x) => x.name), t]); }, saveFile: async (n) => { __pl.saved.push(n); } } });
     await app.ctx.protlink.boot();
   }
   // 코코아(스킬) 화면: 실제 스킬 저장소. opts.skills면 세트 3개를 미리 넣는다(첫 세트는 정리 노트·기록하기에 붙임).

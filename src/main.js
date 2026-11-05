@@ -28,6 +28,7 @@ import { createProvider } from './data/provider/index.js';
 import { createWidgetHome } from './data/widgethome.js';
 import { createErosync } from './data/erosync.js';
 import { createProtLink } from './data/protlink.js';
+import { download as downloadFile } from './ui/dom.js';
 import { setDuskRoute, runAI } from './engine/runai.js';
 import { setDuskServerModel } from './data/modelhub.js';
 import { setUserPromptProvider } from './engine/runai.js';
@@ -240,14 +241,13 @@ async function start() {
   providerRef.exp = () => !!app?.ctx?.prefs?.ui?.experimental;
   provider.sync().catch(() => {});   // 실험 기능이 켜져 있으면 이제 등록
   // 위젯 홈(v1.9.2): 기본 꺼짐. 켜져 있으면 시작해서 메뉴 버튼을 달고, Dusk 창을 열 땐 먼저 닫아 같은 플러그인 화면을 번갈아 쓴다
-  // ProtLink+(v1.9.2): 기본 켜짐. Proton Drive 링크로 봇·모듈·프리셋·플러그인을 받아요. 열 땐 Dusk 창·위젯 홈을 먼저 닫고, 닫으면 위젯 홈을 되살린다.
-  let widgetHomeRef = null;
+  // ProtLink+(v1.9.2): 기본 켜짐. Proton Drive 링크를 캐릭터·모듈·플러그인에 연결해 두고 새 파일을 받아 Dusk 업데이트로 넘긴다.
   const protlink = createProtLink(api, { log: (m) => console.log(`[${TITLE}] ${m}`), hooks: {
-    beforeOpen: async () => { try { await app.close(); } catch { /* 이미 닫힘 */ } await widgetHomeRef?.yieldToDusk().catch(() => {}); },
-    onClosed: () => { widgetHomeRef?.resume().catch(() => {}); } } });
+    importFiles: (files, opts) => legacy.startWithFiles(files, opts),
+    saveFile: (name, bytes) => downloadFile(name, new Blob([bytes])),
+    onChecked: (rows) => { const n = rows.filter((r) => r.update).length; if (n) app?.ctx?.toast?.(`ProtLink+: 새 파일이 올라온 링크가 ${n}개 있어요.`); } } });
   const widgetHome = createWidgetHome(api, { log: (m) => console.log(`[${TITLE}] ${m}`), openDusk: (tab) => app.open(tab && tab !== "home" ? { tab } : undefined).catch(() => {}),
-    protLink: { links: () => protlink.links(), open: (id) => protlink.open(id), on: () => protlink.on(), error: () => protlink.lastError() } });
-  widgetHomeRef = widgetHome;
+    protLink: { links: () => protlink.list(), open: () => app.open({ tab: "protlink" }).then(() => true).catch(() => false), on: () => protlink.on(), error: () => protlink.lastError() } });
   app.ctx.protlink = protlink;
   app.ctx.widgetHome = widgetHome;
   app.ctx.openWidgetHome = async () => { try { await app.close(); } catch { /* 이미 닫힘 */ } return widgetHome.open(); };

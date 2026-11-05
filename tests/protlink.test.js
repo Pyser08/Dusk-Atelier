@@ -1,77 +1,99 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { PL_KEY, PL_SEED_KEY, PL_STORE_KEY, createProtLink, loadProtLinkOn, summarizeLinks, wrapApi } from "../src/data/protlink.js";
+import { PL_KEY, PL_LINKS, createProtLink, loadProtLinkOn, normLink, summary } from "../src/data/protlink.js";
 
-const fakeApi = (init = {}) => {
-  const mem = new Map(Object.entries(init)), calls = [];
-  return { mem, calls,
-    pluginStorage: { getItem: async (k) => mem.get(k) ?? null, setItem: async (k, v) => { mem.set(k, v); } },
-    showContainer: async () => { calls.push("show"); }, hideContainer: async () => { calls.push("hide"); },
-    registerSetting: async () => { calls.push("setting"); }, registerButton: async () => { calls.push("button"); },
-    onUnload: async () => { calls.push("unload"); }, tag: "ok", who() { return this.tag; } };
-};
-const store = { version: 1, folders: [{ id: "f1" }, { id: "f2", deleted: true }], links: [
-  { id: "a", url: "https://x#pw", name: "내 봇 모음", kind: "bot", snapshot: [1, 2, 3], updatedAt: 50 },
-  { id: "b", url: "", name: "지워짐", deleted: true, updatedAt: 90 },
-  { id: "c", url: "https://y", name: "", kind: "plugin", snapshot: [], lastError: "x", updatedAt: 70 }] };
+const F = (uid, name, size = 10, modifiedAt = 1, path = []) => ({ uid, name, size, modifiedAt, path });
+function fakeEnv({ files = [F("a", "시로코.risum")], state = "ready", plugins = [] } = {}) {
+  const mem = new Map(), env = { files, state, downloads: [], imported: [], saved: [], dropped: 0 };
+  const api = { pluginStorage: { getItem: async (k) => mem.get(k) ?? null, setItem: async (k, v) => { mem.set(k, v); } },
+    getDatabase: async () => ({ characters: [{ chaId: "c1", name: "시로코" }, { chaId: "c2", name: "휴지통", trashTime: 1 }, { chaId: "g", name: "그룹", type: "group" }], modules: [{ id: "m1", name: "시로코 모듈" }], plugins }) };
+  const share = () => ({ root: { name: "시로코 모음" }, download: async (f, o) => { env.downloads.push(f.name); o?.onProgress?.(1, 1); return new Uint8Array([1, 2, 3]); } });
+  const driver = { PZ: () => ({}), Ln: (e) => `오류:${e?.message ?? e}`, G3: () => ({ open: async () => (env.state === "ready" ? { kind: "ready", share: share() } : { kind: env.state }), drop: () => { env.dropped++; } }), Sp: async () => { if (env.fail) throw new Error("끊김"); return { files: env.files, folders: 0, partial: false }; } };
+  const checked = [];
+  const pl = createProtLink(api, { driver, originalProbe: async () => !!env.original, startDelay: 5, hooks: { importFiles: async (f, t) => { env.imported.push([f.map((x) => x.name), t]); }, saveFile: async (n) => { env.saved.push(n); }, onChecked: (r) => checked.push(r) } });
+  return { api, mem, env, pl, checked };
+}
 
-test("링크 요약: 지운 것·빈 주소 제외, 주소는 넣지 않고 최근 순", () => {
-  const r = summarizeLinks(JSON.stringify(store));
-  assert.deepEqual(r.items.map((x) => x.id), ["c", "a"]);
-  assert.equal(r.items[0].name, "이름 없는 링크"); assert.equal(r.items[0].error, true); assert.equal(r.items[1].count, 3);
-  assert.equal(r.folders, 1);
-  assert.ok(!JSON.stringify(r).includes("https://"));
-  assert.deepEqual(summarizeLinks("깨진 글"), { items: [], folders: 0 });
-});
 test("기본은 켜짐, off일 때만 꺼짐", async () => {
-  assert.equal(await loadProtLinkOn(fakeApi()), true);
-  assert.equal(await loadProtLinkOn(fakeApi({ [PL_KEY]: "off" })), false);
-  assert.equal(await loadProtLinkOn(fakeApi({ [PL_KEY]: "on" })), true);
-});
-test("본체에 넘기는 api: 자체 설정·버튼은 막고 나머지는 그대로(this 유지)", async () => {
-  const api = fakeApi(); let closed = 0, unload = null;
-  const w = wrapApi(api, { onClosed: () => closed++, onUnload: (f) => { unload = f; } });
-  await w.registerSetting(); await w.registerButton();
-  assert.deepEqual(api.calls, []);
-  assert.equal(w.who(), "ok");
-  await w.hideContainer(); await new Promise((r) => setTimeout(r, 420));
-  assert.equal(closed, 1);
-  await w.hideContainer(); await w.showContainer(); await new Promise((r) => setTimeout(r, 420));
-  assert.equal(closed, 1, "곧바로 다시 보이면 닫힌 게 아니다");
-  const f = () => {}; await w.onUnload(f); assert.equal(unload, f); assert.ok(api.calls.includes("unload"));
-});
-test("시작: 자체 업데이트 링크 심기 건너뜀 표시, 열 때 beforeOpen 호출·링크 id 전달", async () => {
-  const api = fakeApi({ [PL_STORE_KEY]: JSON.stringify(store) }); const seen = []; let before = 0;
-  const pl = createProtLink(api, { boot: async () => ({ open: async (id) => { seen.push(id); }, close: async () => {} }), originalProbe: async () => false, hooks: { beforeOpen: async () => { before++; } } });
-  assert.equal(await pl.boot(), true);
-  assert.equal(api.mem.get(PL_SEED_KEY), "1");
-  assert.equal(await pl.open("a"), true); assert.equal(await pl.open(), true);
-  assert.deepEqual(seen, ["a", undefined]); assert.equal(before, 2);
-  assert.equal((await pl.links()).items.length, 2);
+  assert.equal(await loadProtLinkOn(fakeEnv().api), true);
+  const e = fakeEnv(); e.mem.set(PL_KEY, "off"); assert.equal(await loadProtLinkOn(e.api), false);
 });
 test("원본 ProtLink+가 켜져 있으면 시작하지 않고 이유를 알려 줌", async () => {
-  let booted = 0;
-  const pl = createProtLink(fakeApi(), { boot: async () => { booted++; return { open() {} }; }, originalProbe: async () => true });
-  assert.equal(await pl.boot(), false); assert.equal(booted, 0); assert.match(pl.lastError(), /원래 ‘ProtLink\+’/);
-  assert.equal(await pl.open(), false);
+  const e = fakeEnv(); e.env.original = true;
+  assert.equal(await e.pl.boot(), false); assert.match(e.pl.lastError(), /원래 ‘ProtLink\+’/); assert.equal(e.pl.isRunning(), false);
 });
-test("끄면 정리하고 열기를 거절, 켜면 다시 시작", async () => {
-  const api = fakeApi(); let closed = 0, cleaned = 0;
-  const pl = createProtLink(api, { boot: async (a) => { await a.onUnload(async () => { cleaned++; }); return { open: async () => {}, close: async () => { closed++; } }; }, originalProbe: async () => false });
-  await pl.boot(); assert.equal(pl.isRunning(), true);
-  await pl.set(false); assert.equal(pl.isRunning(), false); assert.equal(closed, 1); assert.equal(cleaned, 1); assert.equal(api.mem.get(PL_KEY), "off");
-  assert.equal(await pl.open(), false);
-  await pl.set(true); assert.equal(pl.isRunning(), true);
+test("링크 열어 보기: 파일 목록·비밀번호 필요·주소 오류", async () => {
+  const e = fakeEnv(); await e.pl.boot();
+  const r = await e.pl.inspect("https://drive.proton.me/urls/X#y"); assert.equal(r.status, "ready"); assert.equal(r.rootName, "시로코 모음"); assert.equal(r.files.length, 1);
+  e.env.state = "password"; assert.equal((await e.pl.inspect("https://x.y/z")).status, "password");
+  e.env.state = "wrongPassword"; assert.equal((await e.pl.inspect("https://x.y/z", "pw")).status, "wrongPassword");
+  await assert.rejects(() => e.pl.inspect("링크 아님"), /주소가 올바르지 않아요/);
 });
-test("꺼짐 저장값이면 boot가 시작하지 않음", async () => {
-  let booted = 0; const pl = createProtLink(fakeApi({ [PL_KEY]: "off" }), { boot: async () => { booted++; return { open() {} }; } });
-  assert.equal(await pl.boot(), false); assert.equal(booted, 0);
+test("연결 후보: 휴지통·그룹 캐릭터 제외, 모듈, 플러그인(자기 자신 제외)", async () => {
+  const e = fakeEnv({ plugins: [{ name: "a_plug", displayName: "A", versionOfPlugin: "1.0" }, { name: "dusk_atelier", displayName: "Dusk" }] }); await e.pl.boot();
+  assert.deepEqual((await e.pl.targets("character")).map((t) => t.id), ["c1"]);
+  assert.deepEqual((await e.pl.targets("module")).map((t) => t.id), ["m1"]);
+  assert.deepEqual((await e.pl.targets("plugin")).map((t) => t.id), ["a_plug"]);
 });
-test("가져온 본체 모듈이 불러와지고 bootProtLink 함수를 내보냄", async () => {
-  const m = await import("../src/protlink/protlink.js"); assert.equal(typeof m.bootProtLink, "function");
+test("연결 저장: 요약에 주소·비밀번호가 없고, 같은 링크 중복은 거절, 저장 값이 다시 읽힘", async () => {
+  const e = fakeEnv(); await e.pl.boot();
+  const s = await e.pl.add({ url: "https://x/y#k", password: "비번", name: "시로코", kind: "module", target: { id: "m1", name: "시로코 모듈" }, files: [F("a", "시로코.risum"), F("b", "readme.txt")] });
+  assert.equal(s.fileCount, 1); assert.ok(!JSON.stringify(s).includes("비번") && !JSON.stringify(s).includes("https://"));
+  await assert.rejects(() => e.pl.add({ url: "https://x/y#k", kind: "module", target: { id: "m1" }, files: [] }), /이미 연결/);
+  const saved = JSON.parse(e.mem.get(PL_LINKS)); assert.equal(saved.length, 1); assert.equal(normLink(saved[0]).target.id, "m1");
+  assert.equal(summary(normLink(saved[0])).update, false);
 });
-test("본체 파일에 //@ 머리말이 없음(플러그인 머리말과 섞이지 않게)", async () => {
+test("확인: 처음엔 새 파일 없음, 파일이 올라오면 알림, 실패하면 오류 문구만 남김", async () => {
+  const e = fakeEnv(); await e.pl.boot();
+  const s = await e.pl.add({ url: "https://x/1", name: "n", kind: "module", target: { id: "m1", name: "m" }, files: e.env.files });
+  assert.equal((await e.pl.check(s.id)).update, false);
+  e.env.files = [F("a", "시로코.risum", 12, 2), F("n", "new.risum", 5, 3)];
+  const r = await e.pl.check(s.id); assert.equal(r.update, true); assert.deepEqual(r.pending.sort(), ["new.risum", "시로코.risum"]);
+  e.env.fail = true; const f = await e.pl.check(s.id); assert.match(f.error, /^오류:끊김/); assert.equal(f.update, true, "실패해도 이전 알림은 유지");
+});
+test("받아서 업데이트(모듈): 가져오기 창으로 넘기며 연결 항목을 알려 주고, 받은 뒤엔 최신 상태", async () => {
+  const e = fakeEnv(); await e.pl.boot();
+  const s = await e.pl.add({ url: "https://x/1", name: "n", kind: "module", target: { id: "m1", name: "m" }, files: e.env.files });
+  e.env.files = [F("a", "시로코.risum", 12, 2)]; await e.pl.check(s.id);
+  const r = await e.pl.apply(s.id);
+  assert.deepEqual(r.names, ["시로코.risum"]); assert.deepEqual(e.env.imported, [[["시로코.risum"], { kind: "module", id: "m1" }]]);
+  assert.equal(r.summary.update, false); assert.equal((await e.pl.check(s.id)).update, false);
+});
+test("받아서 저장(플러그인): 가져오기 창이 아니라 파일로 저장", async () => {
+  const e = fakeEnv({ files: [F("p", "plug.js")] }); await e.pl.boot();
+  const s = await e.pl.add({ url: "https://x/p", name: "p", kind: "plugin", target: { id: "plug", name: "plug" }, files: [] });
+  const r = await e.pl.apply(s.id); assert.deepEqual(e.env.saved, ["plug.js"]); assert.deepEqual(e.env.imported, []); assert.equal(r.kind, "plugin");
+});
+test("연결 없이 한 번만: .js는 저장, 나머지는 대상 없이 가져오기 창으로", async () => {
+  const e = fakeEnv(); await e.pl.boot();
+  await e.pl.once("https://x/o", "", [F("a", "a.risum"), F("p", "p.js")]);
+  assert.deepEqual(e.env.saved, ["p.js"]); assert.deepEqual(e.env.imported, [[["a.risum"], undefined]]);
+});
+test("연결 바꾸기·이름 바꾸기·지우기", async () => {
+  const e = fakeEnv(); await e.pl.boot();
+  const s = await e.pl.add({ url: "https://x/1", name: "n", kind: "module", target: { id: "m1", name: "m" }, files: e.env.files });
+  const r = await e.pl.relink(s.id, "character", { id: "c1", name: "시로코" }); assert.equal(r.kind, "character"); assert.equal(r.fileCount, 0);
+  assert.equal((await e.pl.rename(s.id, "새 이름")).name, "새 이름");
+  assert.equal(await e.pl.remove(s.id), true); assert.equal((await e.pl.list()).items.length, 0); assert.equal(await e.pl.remove("없음"), false);
+});
+test("시작 확인: 설정이 켜져 있으면 잠시 뒤 한 번 확인해 알려 주고, 끄면 확인하지 않음", async () => {
+  const e = fakeEnv(); await e.pl.boot();
+  await e.pl.add({ url: "https://x/1", name: "n", kind: "module", target: { id: "m1", name: "m" }, files: e.env.files });
+  await e.pl.setSettings({ check: true }); await new Promise((r) => setTimeout(r, 60));
+  assert.equal(e.checked.length, 1);
+  await e.pl.setSettings({ check: false }); await new Promise((r) => setTimeout(r, 60)); assert.equal(e.checked.length, 1);
+  await e.pl.stop();
+});
+test("끄면 정리하고 켜면 다시 시작", async () => {
+  const e = fakeEnv(); await e.pl.boot(); assert.equal(e.pl.isRunning(), true);
+  await e.pl.set(false); assert.equal(e.pl.isRunning(), false); assert.equal(e.mem.get(PL_KEY), "off");
+  await e.pl.set(true); assert.equal(e.pl.isRunning(), true);
+});
+test("Proton 연결 부분이 단독으로 불러와지고 필요한 함수를 내보냄", async () => {
+  const m = await import("../src/protlink/protlink.js");
+  globalThis.document ??= { getElementById: () => null };
+  const d = m.loadProtLinkDriver({ nativeFetch() {} });
+  for (const k of ["G3", "Sp", "Ln", "Pa", "PZ"]) assert.equal(typeof d[k], "function", k);
   const fs = await import("node:fs");
-  const src = fs.readFileSync(new URL("../src/protlink/protlink.js", import.meta.url), "utf8");
-  assert.ok(!/^\/\/@/m.test(src));
+  assert.ok(!/^\/\/@/m.test(fs.readFileSync(new URL("../src/protlink/protlink.js", import.meta.url), "utf8")), "//@ 머리말 없음");
 });
