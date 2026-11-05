@@ -181,3 +181,8 @@ test("장면 되돌리기 연결부(실제 엔진): 채팅이 없으면 이유�
   await on.boot(); assert.deepEqual(await on.undoScene(), { ok: false, reason: "열린 채팅이 없어요" });
   await on.stop();
 });
+
+test("기본 성격 변화 반영은 표준 자동", async () => {
+  const src = (await import("node:fs")).readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
+  assert.match(src, /developmentMode:\s*'standard_auto'/);
+});

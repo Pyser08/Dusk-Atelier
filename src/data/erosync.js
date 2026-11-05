@@ -104,6 +104,12 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
       try { inst?.guard?.set?.(guardNow); } catch { /* 무시 */ }
       return { ...guardNow };
     },
+    // 성격 변화 검토: op "list" | "apply" | "reject"(id). 꺼져 있으면 { ok:false, reason:"off", items:[] }
+    async review(op, id = "") {
+      const R = inst?.review;
+      if (!R) return { ok: false, reason: "off", items: [] };
+      try { return op === "list" ? await R.list() : await R.act(id, op); } catch (e) { return { ok: false, reason: String(e?.message ?? e), items: [] }; }
+    },
     // 직전 장면 판단 되돌리기(지금 열린 채팅). 꺼져 있으면 { ok:false, reason:"off" }
     async undoScene() {
       const U = inst?.undo;

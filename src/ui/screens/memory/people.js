@@ -1,3 +1,4 @@
+import { memoryFileItems } from "./memoryfileui.js";
 import { trustBadges } from "../../../engine/memoryedit.js";
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
@@ -51,6 +52,7 @@ export async function newChatFrom(env, atIdx) {
 export function peopleMenuItems(env, people) {
   const m = mem(env.ctx), { caps } = env;
   return [
+    ...memoryFileItems(env.ctx, env.redraw),
     caps.analyze && { label: "인물 합치기", onClick: () => openMerge(env, people).catch(fail(env.ctx)) },
     caps.analyze && { label: "같은 이름 한 번에 합치기", onClick: () => mergeSameNames(env, people).catch(fail(env.ctx)) },
     env.folder.wiki?.documents && { label: "위키 점검", onClick: () => openWikiHealth(env, people).catch(fail(env.ctx)) },

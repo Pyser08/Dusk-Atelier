@@ -36,8 +36,8 @@ export function wikiPanel(env, doc, opts = {}) {
   };
   const addCand = btn("변화 후보 직접 추가", { size: "sm", onClick: async () => { const v = await promptDialog(ctx.win, { title: "장기 변화 후보", label: "이 인물의 달라진 점 (400자까지)", ok: "추가" }); if (v?.trim()) edit((w) => updatePersonCandidateText(w, doc.id, { text: v, scopeKey: sk }), "후보로 넣었어요. 검토 후 반영하세요."); } });
 
-  if (opts.adult) return h("section", { class: "rb-card rb-mem-man rb-mem-wikipanel", id: "rb-nsfw-cands" }, h("h4", null, `성적 욕망 · 이상성향 후보 (${cands.length})`),
-    cands.length ? h("ul", { class: "rb-mem-reclist" }, cands.map(candRow)) : h("p", { class: "rb-muted" }, "후보가 없어요."));
+  if (opts.adult) return h("section", { class: "rb-wk2-card rb-mem-wikipanel", id: "rb-nsfw-cands" }, h("div", { class: "rb-wk2-ch" }, h("b", null, `성적 욕망 · 이상성향 후보 (${cands.length})`)),
+    cands.length ? h("ul", { class: "rb-mem-reclist" }, cands.map(candRow)) : h("p", { class: "rb-muted", style: "margin:0" }, "후보가 없어요. 대화에서 성적 욕망이나 취향이 드러나면 여기에 쌓여요."));
   return h("details", { class: "rb-card rb-mem-man rb-mem-wikipanel rb-mem-advfold" }, h("summary", null, "위키 항목 전체 · 성격 변화 (고급)"),
     h("p", { class: "rb-muted" }, "AI가 쌓은 인물 문서의 모든 항목이에요. 고치면 다음 응답부터 반영되고, 📌으로 고정하면 AI가 덮어쓰지 않아요."),
     h("h4", null, `성격 변화 후보 (${cands.length})`), cands.length ? h("ul", { class: "rb-mem-reclist" }, cands.map(candRow)) : h("p", { class: "rb-muted" }, "후보가 없어요."), addCand,

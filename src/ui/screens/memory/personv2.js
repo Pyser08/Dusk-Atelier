@@ -189,8 +189,18 @@ export function personTabs(env, parts) {
     const a = parts.adult ?? {}, e = eroSelf(), eroCard = e ? eroNsfwCard(ctx, card, e, () => { ero = null; eroLoad(ctx).then((snap) => { if (snap) { ero = snap; paint(); } }); }) : null;
     const cyc = a.cyc ? h("div", { class: "rb-mem-cycle", role: "note" }, h("b", null, "월경·임신 "), a.cyc.lines.join(" · "), a.cyc.date ? h("small", { class: "rb-muted" }, ` (${a.cyc.date} 기준)`) : null) : null;
     const sumCard = e && ero ? eroSummaryCard(ctx, card, ero, e) : null;
-     const kids = [sumCard, cyc ? card("월경·임신", [cyc]) : null, a.panel ?? null, eroCard, e && ero ? eroTempCard(ctx, card, ero, e) : null, e ? eroTagsCard(ctx, card, e) : null].filter(Boolean);
-    return h("div", { class: "rb-wk2-pane", id: "rb-wk2-nsfw" }, kids.length ? kids : h("p", { class: "rb-muted" }, "아직 NSFW 항목이 없어요. 성적 욕망·이상성향·월경 기록이 쌓이거나 Erosync를 켜면 여기에 모여요."));
+    const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, t);
+    const er = ctx.erosync, live = !!(er?.on?.() && er?.isRunning?.());
+    // 값이 없어도 기본 칸은 보인다: 월경·임신 / 성적 욕망·이상성향 후보 / Erosync 성적 항목 / 선호·금기 태그
+    const cycCard = card("월경·임신", [cyc ?? note("아직 기록이 없어요. 장기 기억 설정에서 ‘월경·임신 기록’(성인 항목)을 켜면 이야기 속 날짜로 따라가요.")], null, "rb-nsfw-base");
+    const candCard = a.panel ?? card("성적 욕망 · 이상성향 후보", [note("후보가 없어요. 대화에서 성적 욕망이나 취향이 드러나면 여기에 쌓여요.")], null, "rb-nsfw-base");
+    const openEro = () => { (ctx.state.mem ??= {}).page = "erosync"; ctx.go("memory"); };
+    const eroBase = eroCard ?? card("Erosync 성적 항목", [
+      note(!live ? "Erosync가 꺼져 있어요. 켜면 인물의 성적 항목을 읽고 직접 고치거나 다시 분석할 수 있어요." : "이 인물의 Erosync 값이 아직 없어요. 인물 분석을 하면 채워져요."),
+      h("div", { class: "rb-mem-sact" }, btn(live ? "Erosync 분석 열기" : "Erosync 켜러 가기", { size: "sm", id: "rb-ero-open", onClick: openEro }))], h("small", { class: "rb-wk2-badge" }, "Erosync"), "rb-wk2-ero rb-nsfw-base");
+    const tagBase = e ? eroTagsCard(ctx, card, e) : card("선호·금기 태그", [note("Erosync가 이 인물을 읽으면 선호·금기 태그를 적을 수 있어요.")], h("small", { class: "rb-wk2-badge" }, "Erosync"), "rb-wk2-ero rb-nsfw-base");
+    const kids = [sumCard, cycCard, candCard, eroBase, e && ero ? eroTempCard(ctx, card, ero, e) : null, tagBase].filter(Boolean);
+    return h("div", { class: "rb-wk2-pane", id: "rb-wk2-nsfw" }, kids);
   };
   const log = () => h("div", { class: "rb-wk2-pane" }, ...(parts.logBlocks ?? []).filter(Boolean));
 

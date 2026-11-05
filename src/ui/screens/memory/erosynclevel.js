@@ -18,8 +18,8 @@ export function erosyncLevelCard(ctx) {
     replace(body,
       h("p", { class: "rb-muted", style: "white-space:normal" }, "이 봇에만 적용돼요. SFW는 성적인 내용을 읽지도 넣지도 않고, NSFW+는 극단 행동 수위가 ‘제한 없음’일 때만 켜져요."),
       choiceField({ id: "rb-erosync-mode-level", label: "내용 수위", options: [["sfw", "SFW", "성적인 내용을 읽지도 넣지도 않아요"], ["nsfw", "NSFW", "성적인 장면을 다뤄요"], ["plus", "NSFW+", "극단 행동까지 열어요(극단 행동 수위 ‘제한 없음’으로 맞춰져요)"]], value: mode, onChange: (v) => save(patchOfMode(v)) }),
-      selectField({ id: "rb-erosync-limit", label: "극단 행동 수위", hint: sfw ? "SFW에서는 쓰지 않아요" : "장면에서 허용하는 행동의 상한이에요", disabled: sfw, value: c.extremityLimit,
-        options: c.limits.map((l) => [l.key, l.cap == null ? l.label : `${l.label} (${l.cap})`]), onChange: (val) => save({ extremityLimit: val }) }),
+      mode === "plus" ? selectField({ id: "rb-erosync-limit", label: "극단 행동 수위", hint: "NSFW+에서 장면이 어디까지 갈 수 있는지 상한을 정해요. ‘제한 없음’ 밖으로 내리면 NSFW+가 꺼져요", value: c.extremityLimit,
+        options: c.limits.map((l) => [l.key, l.cap == null ? l.label : `${l.label} (${l.cap})`]), onChange: (val) => save({ extremityLimit: val }) }) : null,
       mode === "plus" ? toggleField({ id: "rb-erosync-recheck", label: "NSFW+ 재검사", hint: "NSFW+ 장면을 한 번 더 확인해 수위를 맞춰요", on: c.recheck, onChange: (v) => save({ nsfwPlusRecheck: v }) }) : null);
   }
   paint({ ok: false, reason: er.on() && er.isRunning() ? "" : "off" });

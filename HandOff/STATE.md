@@ -1,5 +1,11 @@
 # 현재 상태 — feat/1.9.2
 
+## 2026-11-05 Erosync 검토 탭·NSFW 기본 칸 (v1.9.2)
+- 엔진 `review.list/act`(duskReviewList/Act) → 컨트롤러 `review(op,id)` → `erosyncreviewui.js`(검토 탭). 선호 후보(preferenceState)는 검토 대상 아님.
+- 기본 developmentMode = standard_auto(저장값 없는 사용자만 영향). 극단 행동 수위 select는 NSFW+에서만.
+- NSFW 탭은 정보 없어도 기본 칸(personv2 `nsfw()`, `.rb-nsfw-base`). 파일 내보내기·불러오기는 인물 위키 ‘더보기’(`peopleMenuItems`).
+- 미확인: 실제 호스트(RisuAI/RisuBard/PocketRisu)·실채팅에서 검토 반영/무시, 모바일 실기기 화면. `src/erosync/tape.js` 미사용(삭제는 지시 시).
+
 ## Erosync 전체 이전 — 1단계(저장·이전) 완료, 다음은 2단계
 - 결정: 저장 키는 원본과 같은 `erosync_*`를 그대로 쓴다(`dusk.ero.v1.*` 이름 변경 안 함). 원본 사용자의 프로필·세션·봇 설정은 복사 없이 이어진다. 기기별 설정(`getLocalPluginStorage`)만 따로일 수 있음.
 - `src/data/erosyncmigrate.js` `scanOriginalErosync(api)` — 원본 기록 개수 감지(읽기 전용, 삭제 없음). 테스트 `tests/erosyncmigrate.test.js`.

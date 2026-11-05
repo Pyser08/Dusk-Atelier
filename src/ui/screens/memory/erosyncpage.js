@@ -8,14 +8,15 @@ import { erosyncLevelCard } from "./erosynclevel.js";
 import { erosyncGuardCard } from "./erosyncguard.js";
 import { erosyncPresetCard } from "./erosyncpresetui.js";
 import { erosyncUndoCard } from "./erosyncundoui.js";
+import { erosyncReviewCard } from "./erosyncreviewui.js";
 import { erosyncConfigCard } from "./erosyncconfig.js";
 import { erosyncPromptsCard } from "./erosyncprompts.js";
 import { erosyncBehindCard } from "./erosyncbehind.js";
 import { analysisLine } from "./erosynceditor.js";
-import { memoryFileItems, clearErosyncFlow } from "./memoryfileui.js";
+import { clearErosyncFlow } from "./memoryfileui.js";
 import { scanOriginalErosync } from "../../../data/erosyncmigrate.js";
 
-export const TABS = [["home", "개요"], ["safety", "수위"], ["act", "동작"], ["ana", "분석"], ["prompt", "프롬프트"], ["behind", "비하인드"], ["data", "데이터"]];
+export const TABS = [["home", "개요"], ["safety", "수위"], ["act", "동작"], ["ana", "분석"], ["review", "검토"], ["prompt", "프롬프트"], ["behind", "비하인드"], ["data", "데이터"]];
 export const scanLine = (s) => !s?.found ? "" : `원래 Erosync에서 쓰던 기록을 찾았어요 — 인물 프로필 ${s.profiles}개${s.canListSessions ? ` · 채팅 기록 ${s.sessions}개` : ""}${s.botSettings ? ` · 봇별 설정 ${s.botSettings}개` : ""}. 같은 저장 공간을 쓰니 따로 옮길 필요 없이 켜면 그대로 이어져요. 원래 플러그인은 끄고 쓰세요.`;
 const p = (t, id) => h("p", { class: "rb-muted", style: "white-space:normal;margin:0", id }, t);
 
@@ -37,11 +38,9 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
       live ? h("div", { class: "rb-mem-sact" }, run) : p("Erosync를 켜면 분석할 수 있어요."), line.el);
   };
   const dataCard = () => {
-    const [exp, imp] = memoryFileItems(ctx, redraw);
     return h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync-data" }, h("h3", null, "데이터"),
-      p("Erosync가 저장한 값(인물 프로필·채팅 기록·봇별 설정)은 장기 기억 파일에 함께 담겨요. Erosync를 꺼 두었어도 저장된 값은 같이 옮겨져요."),
+      p("Erosync가 저장한 값(인물 프로필·채팅 기록·봇별 설정)은 장기 기억 파일에 함께 담겨요. Erosync를 꺼 두었어도 저장된 값은 같이 옮겨져요. 파일 내보내기·불러오기는 인물 위키의 ‘더보기’에 있어요."),
       scan?.found ? p(scanLine(scan), "rb-erosync-found") : p("원래 Erosync 플러그인에서 쓰던 기록은 찾지 못했어요.", "rb-erosync-found"),
-      h("div", { class: "rb-mem-sact" }, btn("장기 기억 파일로 내보내기", { icon: "download", onClick: exp.onClick }), btn("장기 기억 파일 불러오기", { icon: "upload", onClick: imp.onClick })),
       h("div", { class: "rb-mem-sact" }, btn("Erosync 값 지우기", { id: "rb-erosync-clear", onClick: () => clearErosyncFlow(ctx, redraw) })));
   };
   const homeExtra = () => h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync-guide" }, h("h3", null, "어디서 봐요?"),
@@ -54,6 +53,7 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
     safety: () => [erosyncLevelCard(ctx), typeof er?.setGuard === "function" ? erosyncGuardCard(ctx) : null, typeof er?.presets === "function" ? erosyncPresetCard(ctx, redraw) : null],
     act: () => [erosyncConfigCard(ctx, "act"), typeof er?.undoScene === "function" ? erosyncUndoCard(ctx) : null],
     ana: () => [analysisCard(), erosyncConfigCard(ctx, "ana")],
+    review: () => [typeof er?.review === "function" ? erosyncReviewCard(ctx) : null],
     prompt: () => [erosyncPromptsCard(ctx)],
     behind: () => [erosyncBehindCard(ctx)],
     data: () => [dataCard()]

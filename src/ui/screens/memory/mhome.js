@@ -1,6 +1,5 @@
 // 기억 화면 (1.8.3 목업 3): 상태 카드 하나(스위치·숫자 3·막대·범례) → 지난 대화 분석(큰 버튼) → 바로가기 4칸 → 기억 옵션 → 최근 기록.
 // 오른쪽(PC)·아래(모바일): (PC 고급) 기억 방식 바로 보임 → 설정 한 줄 목록 → 고급 묶음(한 줄씩 접음).
-import { memoryFileItems } from "./memoryfileui.js";
 import { maybePromptIntro } from '../promptstab.js';
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
@@ -64,11 +63,9 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
 }
 
 // Erosync 한 줄 카드: 인물 관계도 줄과 같은 모양. 누르면 켜기·설정 화면(page "erosync")
-// 장기 기억 머리: 오른쪽 ‘더보기’(파일 내보내기·불러오기)
-function memHead(ctx, redraw) {
-  const head = pageHead("장기 기억");
-  head.appendChild(btn("더보기", { size: "sm", icon: "more", id: "rb-mem-more", onClick: (e) => openMenu(ctx.win, e.currentTarget, memoryFileItems(ctx, redraw)) }));
-  return head;
+// 장기 기억 머리(파일 내보내기·불러오기는 인물 위키의 ‘더보기’로 옮겼다)
+function memHead() {
+  return pageHead("장기 기억");
 }
 
 function erosyncRow(ctx, m, redraw) {

@@ -2596,7 +2596,7 @@ export async function bootErosync(api, hostArg) {
     autoVerifyCharacters: true,
     verificationBatchSize: 12,
     autoRefreshProfiles: false,
-    developmentMode: 'review',
+    developmentMode: 'standard_auto',
     developmentMinEvidence: 4,
     developmentMinScenes: 3,
     developmentAutoConfidence: 90,
@@ -3244,7 +3244,7 @@ export async function bootErosync(api, hostArg) {
       autoVerifyCharacters: source.autoVerifyCharacters !== false,
       verificationBatchSize: clampInt(source.verificationBatchSize, 12, 4, 30),
       autoRefreshProfiles: source.autoRefreshProfiles === true,
-      developmentMode: ['candidates', 'review', 'cautious_auto', 'standard_auto', 'loose_auto', 'custom'].includes(source.developmentMode) ? source.developmentMode : 'review',
+      developmentMode: ['candidates', 'review', 'cautious_auto', 'standard_auto', 'loose_auto', 'custom'].includes(source.developmentMode) ? source.developmentMode : 'standard_auto',
       preferenceChangeMode: ['off', 'candidates', 'review', 'auto'].includes(source.preferenceChangeMode) ? source.preferenceChangeMode : 'auto',
       preferenceChangePace: ['cautious', 'standard', 'fast', 'custom'].includes(source.preferenceChangePace) ? source.preferenceChangePace : 'standard',
       preferenceMinEvidence: clampInt(source.preferenceMinEvidence, 2, 1, 20),
@@ -15537,6 +15537,8 @@ Constraint: {{constraint}}
         id: candidateId, actor, target, scope, trait, direction, pattern, status: 'collecting', evidenceIds: [], sceneKeys: [], createdAt: evidence.at,
       };
       const previousStatus = candidate.status;
+      // 검토 화면에서 ‘무시’한 후보는 근거가 더 쌓여도 다시 올리지 않는다
+      if (candidate.status === 'rejected') { dev.candidates[candidateId] = candidate; continue; }
       candidate.evidenceIds = [...new Set([...(candidate.evidenceIds || []), evidence.id])].slice(-100);
       if (evidence.qualifies) candidate.sceneKeys = [...new Set([...(candidate.sceneKeys || []), sceneKey])].slice(-40);
       const qualified = dev.evidence.filter((item) => candidate.evidenceIds.includes(item.id) && item.qualifies);
@@ -15658,7 +15660,7 @@ Constraint: {{constraint}}
       candidate.reasons = [...new Set(qualified.slice(-6).map((item) => item.summary).filter(Boolean))].slice(-2);
       candidate.updatedAt = evidence.at;
       // 자동 반영은 없다: 문턱을 넘으면 검토 대기(후보만 표시 방식에서는 표시만). 이미 반영된 후보는 그대로 둔다.
-      if (candidate.qualifiedEvidenceCount >= minEvidence && candidate.sceneKeys.length >= minScenes && !['approved', 'auto_applied'].includes(candidate.status)) {
+      if (candidate.qualifiedEvidenceCount >= minEvidence && candidate.sceneKeys.length >= minScenes && !['approved', 'auto_applied', 'rejected'].includes(candidate.status)) {
         candidate.status = config.developmentMode === 'candidates' ? 'ready' : 'pending_review';
       }
       dev.candidates[candidateId] = candidate;
@@ -23758,6 +23760,63 @@ Constraint: {{constraint}}
     return result || { ok: false, reason: '되돌리지 못했어요' };
   }
 
+  // 같은 채팅의 세션을 한 번 읽고 고쳐 저장하는 공통 틀(검토 화면 등). mutate(state, profileStore, registry, config)가 { ok:true, ... }를 돌려주면 저장한다.
+  async function duskMutateSession(label, mutate) {
+    const context = await getUiContext();
+    if (!context?.scope || !context.session) throw new Error('열린 채팅이 없어요');
+    const scope = safeClone({ ...context.scope, chat: null }) || { ...context.scope, chat: null };
+    const scopeKey = String(scope.scopeKey || '');
+    const token = { lifecycleEpoch, scopeEpoch: currentScopeEpoch(scope), backgroundFence: captureBackgroundFence(scope) };
+    const result = await enqueueCoordinatedStateWrite(scope, async () => {
+      assertResyncFence(scope, token, `${label} start`);
+      const config = await loadConfig();
+      const [originalProfileStore, originalRegistry, originalState] = await Promise.all([loadProfileStore(), loadRegistry(), loadExistingSession(scope)]);
+      assertResyncFence(scope, token, `${label} read`);
+      if (!originalState) return { ok: false, reason: '이 채팅의 Erosync 기록이 아직 없어요' };
+      const profileStore = safeClone(originalProfileStore) || originalProfileStore;
+      const registry = safeClone(originalRegistry) || originalRegistry;
+      const state = normalizeSessionState(safeClone(originalState), scopeKey, config);
+      const out = mutate(state, profileStore, registry, config);
+      if (!out?.ok) return out || { ok: false, reason: '바꾸지 못했어요' };
+      assertResyncFence(scope, token, `${label} recompute`);
+      const durableState = prepareSessionForSave(scope, state);
+      await commitStateTransactionWithinLock(label, [{ key: `${SESSION_KEY_PREFIX}${scope.scopeKey}`, value: durableState }], { fence: token.backgroundFence });
+      return out;
+    });
+    if (result?.ok) { invalidateDecisionStateForScope(scope, []); duskReadCache = null; }
+    return result || { ok: false, reason: '바꾸지 못했어요' };
+  }
+  // 성격 변화 검토: 반영을 기다리는 후보(근거가 문턱을 넘었지만 자동 반영 기준에 못 미치거나 ‘검토 후 반영’·‘후보만 쌓기’ 방식인 것)를 보여 주고 반영·무시한다.
+  const DEV_REVIEW_STATUS = Object.freeze(['ready', 'pending_review']);
+  async function duskReviewList() {
+    const context = await getUiContext();
+    if (!context?.scope || !context.session) return { ok: false, reason: context?.scopeUnavailable === 'no-chat' || !context?.scope ? '열린 채팅이 없어요' : '채팅 상태를 읽지 못했어요', items: [] };
+    const dev = normalizeDevelopmentState(context.session.development), config = context.config || configCache || DEFAULT_CONFIG;
+    const evById = new Map(dev.evidence.map((e) => [e.id, e]));
+    const nameOf = (id) => id === 'user' ? '당신' : String(uiPersonName(context, id) || id);
+    const items = Object.values(dev.candidates).filter((c) => isPlainObject(c) && DEV_REVIEW_STATUS.includes(c.status)).map((c) => {
+      const label = c.trait === 'sexualMotive' ? '성적 동기' : c.trait === 'qualitative' ? '행동 경향' : ((AXIS_DEFINITIONS[c.trait] || SEX_AXIS_DEFINITIONS[c.trait])?.label || c.trait);
+      const reasons = (Array.isArray(c.reasons) && c.reasons.length ? c.reasons : (c.evidenceIds || []).slice(-2).map((id) => evById.get(id)?.summary).filter(Boolean)).slice(-2);
+      return { id: String(c.id), actor: c.actor, actorName: nameOf(c.actor), target: c.target || '', targetName: c.target ? nameOf(c.target) : '', scope: c.scope || 'global', trait: c.trait || '', label,
+        direction: c.direction === 'decrease' ? 'decrease' : 'increase', pattern: String(c.pattern || ''), motive: String(c.motive || ''), stage: String(c.stage || ''),
+        confidence: Math.round(clampNumber(c.confidence, 0)), evidenceCount: Math.round(clampNumber(c.qualifiedEvidenceCount, 0)), scenes: Array.isArray(c.sceneKeys) ? c.sceneKeys.length : 0,
+        step: DEVELOPMENT_NUMERIC_TRAITS.includes(c.trait) ? developmentStepFor(c, config) : 0, reasons: reasons.map((r) => String(r).slice(0, 200)), status: c.status };
+    });
+    return duskPlain({ ok: true, items, mode: config.developmentMode });
+  }
+  async function duskReviewAct(id, action) {
+    if (!['apply', 'reject'].includes(action)) throw new Error('알 수 없는 동작이에요');
+    const out = await duskMutateSession('development review', (state, profileStore, registry, config) => {
+      const dev = state.development = normalizeDevelopmentState(state.development), c = dev.candidates[String(id)];
+      if (!c || !DEV_REVIEW_STATUS.includes(c.status)) return { ok: false, reason: '이미 처리됐거나 없는 후보예요' };
+      if (action === 'reject') { c.status = 'rejected'; c.rejectedAt = new Date().toISOString(); dev.updatedAt = c.rejectedAt; return { ok: true, action }; }
+      if (!applyDevelopmentCandidate(state, String(id), 'review', config, profileStore)) return { ok: false, reason: '이 후보는 반영하지 못했어요' };
+      state.preparedLookahead = null;
+      return { ok: true, action };
+    });
+    return out;
+  }
+
   async function duskContentSet(patch) {
     const context = await getUiContext();
     const key = String(context?.scope?.sourceBundleKey || '');
@@ -23785,6 +23844,7 @@ Constraint: {{constraint}}
     guard: { set: duskGuardSet },
     tags: { set: duskTagsSet },
     undo: { lastScene: duskUndoLastScene },
+    review: { list: duskReviewList, act: duskReviewAct },
     flags: { set: duskFlagsSet },
     async dispose() {
       for (const fn of unloadFns.splice(0).reverse()) { try { await fn(); } catch (e) { console.log('[Erosync] 정리 중 오류', e?.message ?? e); } }
