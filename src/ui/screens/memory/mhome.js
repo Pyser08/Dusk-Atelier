@@ -11,7 +11,6 @@ import { renderModeBar } from "./modebar.js";
 import { advancedGroups } from "./madv.js";
 import { builders, renderGlobalSettings } from "./settings.js";
 import { openEmbedModal } from "./embedmodal.js";
-import { erosyncSection } from "./erosyncui.js";
 import { maybeAskBardWiki } from "./modebar.js";
 
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -60,8 +59,16 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
       } })));
   }
 
-  // Erosync 카드는 접힌 설정 안이 아니라 기억 옵션 바로 아래에 보이게 둔다(간단·고급 모드 모두)
-  return { memorySettings, memOptions, erosync: erosyncSection(ctx) };
+  return { memorySettings, memOptions };
+}
+
+// Erosync 한 줄 카드: 인물 관계도 줄과 같은 모양. 누르면 켜기·설정 화면(page "erosync")
+function erosyncRow(ctx, m, redraw) {
+  if (!ctx.erosync) return null;
+  return h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-erosync", onClick: () => { m.page = "erosync"; redraw(); } },
+    h("span", { class: "rb-mem-av rb-me-av sm", "aria-hidden": "true" }, icon("shield", 18)),
+    h("span", { class: "t" }, "Erosync", h("small", null, ctx.erosync.on() ? "켜져 있어요. 설정을 열어 봐요." : "NSFW 장면 강화. 켜고 설정할 수 있어요.")),
+    h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
 }
 
 export async function renderMemoryHome(ctx, host, { redraw }) {
@@ -76,14 +83,14 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   if (!cur) {
     // 열린 채팅이 없어도 전체 설정(기억 옵션·임베딩·프롬프트·고급)은 바꿀 수 있다
     const idx0 = await M.store.getIndex();
-    const { memorySettings, memOptions, erosync } = await settingsCards(ctx, M, idx0, redraw);
+    const { memorySettings, memOptions } = await settingsCards(ctx, M, idx0, redraw);
     const gHost = h("div");
     if (ctx.prefs.advanced) await renderGlobalSettings(ctx, gHost, { redraw, panel: true }).catch(() => {});
     return replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" },
       h("div", { class: "rb-mem2-main" }, pageHead("장기 기억"),
         emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요. 아래 설정은 채팅 없이도 바꿀 수 있어요.",
           actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] }),
-        memOptions, erosync),
+        erosyncRow(ctx, m, redraw), memOptions),
       h("div", { class: "rb-mem2-side" }, memorySettings, ctx.prefs.advanced ? gHost : advFold(ctx, "memory", true))));
   }
   // 채팅 본문은 느릴 수 있으므로 화면을 먼저 그리고, 백필 분석용 데이터는 백그라운드에서 읽는다.
@@ -203,7 +210,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
       ? recent.map((r) => h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("div", null, h("b", null, r.who), " ", r.act), h("div", { class: "rb-muted" }, at(r.at))), gradeBadge(r.g)))
       : h("li", { class: "rb-muted" }, "아직 쌓인 기록이 없어요.")));
 
-  const { memorySettings, memOptions, erosync } = await settingsCards(ctx, M, idx, redraw, cur, sw);
+  const { memorySettings, memOptions } = await settingsCards(ctx, M, idx, redraw, cur, sw);
 
   // ── 고급: 한 줄씩 접은 묶음. PC에서는 기억 방식을 접지 않고 오른쪽 맨 위에 둔다 ──
   const wide = (ctx.win?.ownerDocument?.defaultView?.innerWidth ?? 1280) >= 1000;
@@ -224,7 +231,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
 
   const main = h("div", { class: "rb-mem2-main" },
     pageHead("장기 기억"),
-    statusBox, bigAct, prog, shortcuts, meRow, mapRow, memOptions, erosync, recBox,
+    statusBox, bigAct, prog, shortcuts, meRow, mapRow, erosyncRow(ctx, m, redraw), memOptions, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" }, main, h("div", { class: "rb-mem2-side" }, ...side)));
   // 1.8.3: 임베딩 안내 창은 자동으로 띄우지 않는다(시작 안내 3단계에서 설정, 필요하면 설정 줄의 '임베딩'에서)

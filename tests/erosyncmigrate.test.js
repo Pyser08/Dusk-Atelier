@@ -23,3 +23,8 @@ test("저장소가 없거나 깨진 값이어도 안전", async () => {
   assert.equal((await scanOriginalErosync(null)).found, false);
   assert.equal((await scanOriginalErosync(mk({ erosync_profiles_v3: "{깨짐" }))).profiles, 0);
 });
+import { scanLine } from "../src/ui/screens/memory/erosyncpage.js";
+test("scanLine: 기록 없으면 빈 문자열, 있으면 개수 안내", () => {
+  assert.equal(scanLine({ found: false }), "");
+  assert.match(scanLine({ found: true, profiles: 3, sessions: 2, canListSessions: true, botSettings: 0 }), /프로필 3개.*채팅 기록 2개/);
+});

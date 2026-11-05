@@ -77,7 +77,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 관계 탭(호시노)에 'Erosync 목표·경쟁'`, /Erosync 목표·경쟁/.test(await body()), (await body()).slice(0, 200));
   // 기억 화면에서 Erosync 카드가 접힌 곳 없이 바로 보인다(고급 모드 기본)
   await page.evaluate(() => { const m = (__app.ctx.state.mem ??= {}); m.page = "home"; __app.ctx.go("memory"); }); await page.waitForTimeout(1200);
-  ok(`[${tag}] 기억 화면에 Erosync 카드가 바로 보임`, await page.locator("#rb-erosync").isVisible(), String(await page.locator("#rb-erosync").count()));
+  ok(`[${tag}] 기억 화면에 Erosync 줄이 바로 보임`, await page.locator("#rb-mem-go-erosync").isVisible(), String(await page.locator("#rb-mem-go-erosync").count()));
+  await page.locator("#rb-mem-go-erosync").click(); await page.waitForTimeout(600);
+  ok(`[${tag}] 줄을 누르면 Erosync 설정 화면(켜기 스위치)이 열림`, await page.locator("#rb-erosync").isVisible());
   await page.screenshot({ path: `/tmp/ero-memhome-${tag}.png` });
   // Erosync 꺼짐/매칭 안 됨이면 칸이 없다
   await page.evaluate(() => { __app.ctx.erosync = { isRunning: () => false, read: async () => ({ ok: false }) }; });
