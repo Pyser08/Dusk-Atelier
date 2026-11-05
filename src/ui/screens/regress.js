@@ -195,13 +195,21 @@ function fxLayer(doc) {
 // 깨진 글자: 잠시 기호로 깨져 있다가 끝에 RETURN으로 맞춰진다
 function glitchWord(el, target = "RETURN") {
   const junk = "@#%!$&*?/<>";
-  let on = true;
-  const id = setInterval(() => { if (!on) return; const t = [...target].map((c, i) => (Math.random() < .45 ? junk[(Math.random() * junk.length) | 0] : c)).join(""); el.textContent = t; el.dataset.t = t; }, 110);
-  return { settle() { on = false; clearInterval(id); el.textContent = target; el.dataset.t = target; }, stop() { clearInterval(id); } };
+  let on = true, slow = 0, timer = 0;
+  // slow(0~1): 바늘이 느려지는 만큼 글자 바뀌는 간격이 길어지고, 깨진 글자도 줄어든다
+  const step = () => {
+    if (!on) return;
+    const p = 0.45 * (1 - slow) + 0.14 * slow;
+    const t = [...target].map((c) => (Math.random() < p ? junk[(Math.random() * junk.length) | 0] : c)).join("");
+    el.textContent = t; el.dataset.t = t;
+    timer = setTimeout(step, 110 + 520 * slow * slow);
+  };
+  step();
+  return { slow(k) { slow = Math.max(0, Math.min(1, k)); }, settle() { on = false; clearTimeout(timer); el.textContent = target; el.dataset.t = target; }, stop() { on = false; clearTimeout(timer); } };
 }
 
 // 바늘 돌리기: 거꾸로(시간을 되감듯) 빠르게 돌다가, land()를 부르면 느려지며 12시 바로 앞에서 멈칫한 뒤 '딸깍' 12시에 맞는다
-function spinner(clock, { reduced = false, onTick = () => {} } = {}) {
+function spinner(clock, { reduced = false, onTick = () => {}, onSlow = () => {} } = {}) {
   let m = 300, hr = 300 / 12 + 150, speed = 0, raf = 0, last = 0, mode = "spin";
   const now = () => (globalThis.performance?.now?.() ?? Date.now());
   const frame = (t) => {
@@ -219,7 +227,7 @@ function spinner(clock, { reduced = false, onTick = () => {} } = {}) {
       const tm = Math.floor((m - 540) / 360) * 360, th = Math.floor((hr - 200) / 360) * 360;
       const m0 = m, h0 = hr, nearM = tm + 9, nearH = th + 4;   // 12시 바로 앞(9°)에서 멈칫
       const ease = (k) => 1 - Math.pow(1 - k, 4);
-      await tween(1700, (k) => clock.set(m0 + (nearM - m0) * ease(k), h0 + (nearH - h0) * ease(k)));
+      await tween(1700, (k) => { clock.set(m0 + (nearM - m0) * ease(k), h0 + (nearH - h0) * ease(k)); onSlow(ease(k)); });
       await new Promise((r) => setTimeout(r, 260));
       // 딸깍: 짧게 넘어갔다 돌아와 12시에 고정
       await tween(70, (k) => clock.set(nearM + (tm - 2.5 - nearM) * k, nearH + (th - 1 - nearH) * k));
@@ -273,7 +281,7 @@ export async function openRegress(ctx, src) {
       const full = h("div", { class: "rb-rg-full glitch", role: "status" }, h("style", null, CSS), ...dust, h("div", { class: "rb-rg-flash", "aria-hidden": "true" }), stageWrap, word, fstage);
       (doc.body ?? ctx.win).appendChild(full);
       requestAnimationFrame(() => full.classList.add("on"));
-      const spin = spinner(big, { reduced, onTick: () => { gw.settle(); full.classList.add("tick"); } });
+      const spin = spinner(big, { reduced, onSlow: (k) => gw.slow(k), onTick: () => { gw.settle(); full.classList.add("tick"); } });
       const endFull = async () => { full.classList.remove("on"); await sleep(450); full.remove(); };
       let i = 0; stage.textContent = STAGES[0];
       const tick = setInterval(() => { i = (i + 1) % STAGES.length; stage.textContent = fstage.textContent = STAGES[i]; }, 900);
