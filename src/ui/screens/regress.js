@@ -83,13 +83,15 @@ const CSS = `
 @keyframes rg-dust{0%{opacity:0;transform:translateY(0)}15%{opacity:.9}100%{opacity:0;transform:translateY(-38vh)}}
 .rb-rg-full .rb-rg-fstage{position:relative;min-height:1.6em;padding:8px 22px;border-radius:999px;background:rgba(13,11,31,.82);border:1px solid rgba(226,189,107,.45);box-shadow:0 0 24px rgba(140,100,255,.35);max-width:min(92vw,560px);word-break:keep-all;font-size:clamp(16px,2.6vmin,24px);letter-spacing:.14em;text-align:center;text-shadow:0 0 18px rgba(226,189,107,.7)}
 /* 글리치 공명: 크림색 선화 + 색수차, 금 간 유리, 사슬, 깨진 글자가 RETURN으로 맞춰진다 */
-.rb-rg-full.glitch .rb-rg-big{filter:drop-shadow(-2.5px 0 0 rgba(255,70,140,.75)) drop-shadow(2.5px 0 0 rgba(70,225,255,.7)) drop-shadow(0 0 16px rgba(255,236,200,.65));animation:rg-gl 2.2s steps(1) infinite}
+.rb-rg-full.glitch .rb-rg-big{filter:drop-shadow(0 0 1.2px rgba(30,18,6,.95)) drop-shadow(0 0 3px rgba(30,18,6,.6)) drop-shadow(-2.5px 0 0 rgba(255,70,140,.75)) drop-shadow(2.5px 0 0 rgba(70,225,255,.7)) drop-shadow(0 0 16px rgba(255,236,200,.65));animation:rg-gl 2.2s steps(1) infinite}
 @keyframes rg-gl{0%,100%{transform:none}91%{transform:translate(3px,-2px) skewX(-2deg)}93%{transform:translate(-4px,1px)}95%{transform:none}}
-.rb-rg-full.glitch .rb-rg-big .face{fill:rgba(16,11,6,.72);stroke:#fff1d6}
+.rb-rg-full.glitch .rb-rg-big .face{fill:none;stroke:#fff1d6}
+.rb-rg-big .orn{transform-origin:100px 100px;animation:rg-slow 40s linear infinite}
+.rb-rg-big .orn2{transform-origin:100px 100px;animation:rg-slow 26s linear infinite reverse}
 .rb-rg-full.glitch .rb-rg-big text{fill:#fff1d6}
 .rb-rg-full.glitch .rb-rg-halo{background:radial-gradient(circle,rgba(255,236,200,.22) 0%,rgba(255,236,200,.06) 45%,transparent 68%)}
 .rb-rg-full.glitch .rb-rg-rays{opacity:.35}
-.rb-rg-fx{position:absolute;inset:-16%;width:132%;height:132%;pointer-events:none;overflow:visible;filter:drop-shadow(-2px 0 0 rgba(255,70,140,.7)) drop-shadow(2px 0 0 rgba(70,225,255,.65)) drop-shadow(0 0 10px rgba(255,236,200,.6))}
+.rb-rg-fx{position:absolute;inset:-16%;width:132%;height:132%;pointer-events:none;overflow:visible;filter:drop-shadow(0 0 1px rgba(30,18,6,.9)) drop-shadow(-2px 0 0 rgba(255,70,140,.7)) drop-shadow(2px 0 0 rgba(70,225,255,.65)) drop-shadow(0 0 10px rgba(255,236,200,.6))}
 .rb-rg-fx .crack{fill:none;stroke:#fffaf0;stroke-width:.55;stroke-linecap:round;stroke-dasharray:var(--l);stroke-dashoffset:var(--l);animation:rg-crack .5s ease-out var(--dl) forwards}
 @keyframes rg-crack{to{stroke-dashoffset:0}}
 .rb-rg-full.tick .rb-rg-fx .crack{animation:rg-crack .5s ease-out var(--dl) forwards,rg-crackflash .6s ease-out}
@@ -103,7 +105,7 @@ const CSS = `
 @keyframes rg-snapl{to{transform:translate(-26px,18px) rotate(-14deg);opacity:0}}
 @keyframes rg-snapr{to{transform:translate(26px,18px) rotate(14deg);opacity:0}}
 .rb-rg-word{position:relative;margin-top:clamp(-40px,-4vmin,-10px);font-family:Impact,"Arial Black","Bebas Neue",system-ui,sans-serif;font-weight:900;font-size:clamp(48px,13vmin,128px);letter-spacing:.08em;line-height:1;color:#ffe9ef;
-  text-shadow:-4px 0 0 rgba(255,70,140,.8),4px 0 0 rgba(70,225,255,.75),0 0 22px rgba(255,236,200,.8);animation:rg-wjit .14s steps(2) infinite}
+  -webkit-text-stroke:1.5px rgba(40,22,10,.85);paint-order:stroke fill;text-shadow:-4px 0 0 rgba(255,70,140,.8),4px 0 0 rgba(70,225,255,.75),0 0 22px rgba(255,236,200,.8);animation:rg-wjit .14s steps(2) infinite}
 @keyframes rg-wjit{50%{transform:translate(1px,-1px) skewX(-1.5deg)}}
 .rb-rg-word::after{content:attr(data-t);position:absolute;inset:0;color:#fff;clip-path:inset(40% 0 42% 0);transform:translateX(6px);opacity:.85;animation:rg-slice 1.3s steps(1) infinite}
 @keyframes rg-slice{0%{clip-path:inset(40% 0 42% 0);transform:translateX(6px)}25%{clip-path:inset(10% 0 78% 0);transform:translateX(-7px)}50%{clip-path:inset(70% 0 12% 0);transform:translateX(4px)}75%{clip-path:inset(0 0 100% 0)}}
@@ -156,15 +158,29 @@ function bigClock(doc) {
   const nums = el("g", {}, NUMS.map((t, i) => { const [x, y] = pt(60, i * 30); return txt(x.toFixed(1), y.toFixed(1), t, { "font-size": i === 0 ? 10 : 8, fill: "#f6dc9a", "font-family": "Georgia,serif", class: i === 0 ? "xii" : "" }); }));
   const orbit = el("g", { class: "orbit" }, [0, 120, 240].map((d) => { const [x, y] = pt(80, d); return el("circle", { cx: x, cy: y, r: 1.6, fill: "#fff6d8", filter: "url(#rg-glow)" }); }));
   const orbit2 = el("g", { class: "orbit2" }, [60, 200, 300].map((d) => { const [x, y] = pt(66, d); return el("circle", { cx: x, cy: y, r: 1.1, fill: "#cfc2ff", filter: "url(#rg-glow)" }); }));
-  const hh = el("g", {}, [el("path", { d: `M${C} ${C + 8} L${C - 3.2} ${C} L${C} ${C - 40} L${C + 3.2} ${C} Z`, fill: "url(#rg-gold)" })]);
-  const mh = el("g", {}, [el("path", { d: `M${C} ${C + 12} L${C - 2} ${C} L${C} ${C - 62} L${C + 2} ${C} Z`, fill: "#fff1c4" }), el("circle", { cx: C, cy: C - 50, r: 2.4, fill: "none", stroke: "#fff1c4", "stroke-width": .8 })]);
+  const LINE = { fill: "none", stroke: "#fff1d6", "stroke-linejoin": "round", "stroke-linecap": "round" };
+  // 시침: 가는 대에 마름모 머리·고리, 분침: 길고 끝이 화살촉, 반대편에 균형추 고리
+  const hh = el("g", {}, [el("path", { ...LINE, "stroke-width": 1.6, d: `M${C} ${C + 10} L${C} ${C - 22}` }), el("path", { ...LINE, "stroke-width": 1.3, d: `M${C} ${C - 22} L${C - 5} ${C - 30} L${C} ${C - 42} L${C + 5} ${C - 30} Z` }), el("circle", { ...LINE, "stroke-width": 1, cx: C, cy: C - 30, r: 1.8 })]);
+  const mh = el("g", {}, [el("path", { ...LINE, "stroke-width": 1.2, d: `M${C} ${C + 18} L${C} ${C - 58}` }), el("path", { ...LINE, "stroke-width": 1.2, d: `M${C - 4} ${C - 52} L${C} ${C - 64} L${C + 4} ${C - 52}` }), el("circle", { ...LINE, "stroke-width": 1, cx: C, cy: C + 22, r: 4 }), el("circle", { ...LINE, "stroke-width": .8, cx: C, cy: C - 40, r: 2.4 })]);
+  // 판 장식(선화만): 12각 별·안쪽 고리·초승달·작은 별 점
+  const star = (r1, r2, n, rot = 0) => { let d = ""; for (let i = 0; i < n * 2; i++) { const [x, y] = pt(i % 2 ? r2 : r1, rot + i * 180 / n); d += `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)} `; } return d + "Z"; };
+  const orn = el("g", { class: "orn" }, [
+    el("path", { ...LINE, "stroke-width": .6, opacity: .75, d: star(46, 30, 12) }),
+    el("path", { ...LINE, "stroke-width": .45, opacity: .55, d: star(38, 24, 12, 15) }),
+    el("circle", { ...LINE, "stroke-width": .5, cx: C, cy: C, r: 22, "stroke-dasharray": "0.8 2.2", opacity: .8 })
+  ]);
+  const orn2 = el("g", { class: "orn2" }, [
+    el("circle", { ...LINE, "stroke-width": .6, cx: C, cy: C, r: 50, opacity: .6 }),
+    ...[0, 90, 180, 270].map((d) => { const [x, y] = pt(50, d); return el("path", { ...LINE, "stroke-width": .7, d: `M${x} ${(y - 3).toFixed(1)} L${(x + 3).toFixed(1)} ${y} L${x} ${(y + 3).toFixed(1)} L${(x - 3).toFixed(1)} ${y} Z` }); })
+  ]);
+  const moon = el("path", { ...LINE, "stroke-width": .8, d: `M${C - 4} ${C + 30} A6 6 0 1 0 ${C + 4} ${C + 30} A4.6 4.6 0 1 1 ${C - 4} ${C + 30} Z`, opacity: .9 });
+
   const svg = el("svg", { class: "rb-rg-big", viewBox: "0 0 200 200", "aria-hidden": "true" }, [
     defs, runes, gear,
-    el("circle", { class: "face", cx: C, cy: C, r: 80, fill: "url(#rg-face)", stroke: "url(#rg-gold)", "stroke-width": 3 }),
+    el("circle", { class: "face", cx: C, cy: C, r: 80, fill: "none", stroke: "#fff1d6", "stroke-width": 1.6 }), el("circle", { cx: C, cy: C, r: 82.5, fill: "none", stroke: "#fff1d6", "stroke-width": .5, opacity: .7 }),
     el("circle", { cx: C, cy: C, r: 77, fill: "none", stroke: "rgba(226,189,107,.4)", "stroke-width": .6 }),
-    orbit, ticks, nums, orbit2,
-    el("circle", { cx: C, cy: C, r: 30, fill: "none", stroke: "rgba(207,194,255,.25)", "stroke-width": .6, "stroke-dasharray": "1 3" }),
-    hh, mh, el("circle", { cx: C, cy: C, r: 4.5, fill: "url(#rg-gold)" }), el("circle", { cx: C, cy: C, r: 1.6, fill: "#08061a" })
+    orn2, orn, moon, orbit, ticks, nums, orbit2,
+    hh, mh, el("circle", { cx: C, cy: C, r: 4.2, fill: "none", stroke: "#fff1d6", "stroke-width": 1.4 }), el("circle", { cx: C, cy: C, r: 1.4, fill: "#fff1d6" })
   ]);
   const set = (m, hr) => { mh.setAttribute("transform", `rotate(${m} ${C} ${C})`); hh.setAttribute("transform", `rotate(${hr} ${C} ${C})`); };
   return { svg, set };
