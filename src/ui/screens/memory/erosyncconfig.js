@@ -18,10 +18,11 @@ export const TOGGLES = [
 export const DEV_MODES = [["candidates", "후보만 쌓기"], ["review", "검토 후 반영"], ["cautious_auto", "신중하게 자동 반영"], ["standard_auto", "표준 자동 반영"], ["loose_auto", "넉넉하게 자동 반영"]];
 export const MODES = [["normal", "보통"], ["proof", "검증"], ["off", "쉬기"]];
 
-export function erosyncConfigCard(ctx) {
+// group: "act"(동작: 방식·빈도 등) | "ana"(분석: 점진 분석·성격 변화 반영) | 없으면 전부
+export function erosyncConfigCard(ctx, group = "") {
   const er = ctx.erosync;
-  const body = h("div", { class: "rb-mem-fields" });
-  const card = h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync-config" }, h("h3", null, "동작 · 분석"), body);
+  const body = h("div", { class: "rb-mem-fields", style: "display:grid;gap:14px" });
+  const card = h("section", { class: "rb-card rb-mem-sec", id: group ? `rb-erosync-config-${group}` : "rb-erosync-config" }, h("h3", null, group === "act" ? "동작" : group === "ana" ? "분석" : "동작 · 분석"), body);
   const save = async (patch) => { const r = typeof er.config === "function" ? await er.config(patch) : { ok: false, reason: "off" }; if (!r.ok) ctx.toast(r.reason || "설정을 바꾸지 못했어요", { error: true }); return paint(r); };
   function paint(c) {
     if (!c?.ok) { replace(body, h("p", { class: "rb-muted", style: "white-space:normal" }, "Erosync를 켜면 여기서 동작과 분석 방식을 정할 수 있어요.")); return; }
@@ -30,13 +31,13 @@ export function erosyncConfigCard(ctx) {
       h("select", { id, onChange: (e) => save({ [key]: e.target.value }) }, ...opts.map(([val, text]) => h("option", { value: val, selected: v[key] === val }, text))));
     replace(body,
       h("p", { class: "rb-muted", style: "white-space:normal" }, "이 기기에만 저장돼요. 값을 바꾸면 다음 응답부터 반영돼요."),
-      sel("rb-erosync-mode", "동작 방식", MODES, "mode"),
-      ...NUMS.map(([key, label, lo, hi, hint]) => { const top = key === "maxActorsPerTurn" ? Math.min(hi, max) : hi;
+      ...(group === "ana" ? [] : [sel("rb-erosync-mode", "동작 방식", MODES, "mode")]),
+      ...(group === "ana" ? [] : NUMS).map(([key, label, lo, hi, hint]) => { const top = key === "maxActorsPerTurn" ? Math.min(hi, max) : hi;
         return h("div", { class: "rb-mem-field" }, h("span", null, label, h("small", { class: "rb-muted" }, ` ${hint} (${lo}~${top})`)),
           h("input", { type: "number", id: `rb-erosync-c-${key}`, min: lo, max: top, value: v[key], onChange: (e) => { const n = Math.min(top, Math.max(lo, Math.round(Number(e.target.value) || lo))); e.target.value = n; save({ [key]: n }); } })); }),
-      ...TOGGLES.map(([key, label, hint]) => h("div", { class: "rb-mem-field row" }, h("span", null, label, h("small", { class: "rb-muted" }, ` ${hint}`)),
+      ...(group === "act" ? [] : TOGGLES).map(([key, label, hint]) => h("div", { class: "rb-mem-field row" }, h("span", null, label, h("small", { class: "rb-muted" }, ` ${hint}`)),
         switchEl(v[key] === true, { label, onChange: (on, el) => { setSwitch(el, on); save({ [key]: on }); } }))),
-      sel("rb-erosync-dev", "성격 변화 반영", DEV_MODES, "developmentMode"));
+      ...(group === "act" ? [] : [sel("rb-erosync-dev", "성격 변화 반영", DEV_MODES, "developmentMode")]));
   }
   paint({ ok: false });
   if (er.on() && er.isRunning() && typeof er.config === "function") er.config().then(paint);

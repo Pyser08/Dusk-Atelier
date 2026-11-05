@@ -120,6 +120,26 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
       if (!inst?.prompts) return { ok: false, reason: "off", pages: [] };
       try { return patch ? await inst.prompts.set(patch.id, patch.branch, patch.text) : await inst.prompts.get(); } catch (e) { return { ok: false, reason: String(e?.message ?? e), pages: [] }; }
     },
+    // NSFW 탭용: 인물 값 읽기·고치기·되돌리기, 분석 시작·취소·상태. 꺼져 있으면 { ok:false, reason:"off" }
+    async profile(op, ...args) {
+      const P = inst?.profiles;
+      if (!P) return { ok: false, reason: "off" };
+      try {
+        if (op === "get") return await P.get(args[0]);
+        if (op === "edit") return await P.edit(args[0], args[1]);
+        if (op === "reset") return await P.reset(args[0]);
+        if (op === "status") return { ok: true, ...P.status() };
+        if (op === "start") return { ok: true, ...(await P.start(args[0], args[1])) };
+        if (op === "cancel") return { ok: true, ...P.cancel() };
+        return { ok: false, reason: "알 수 없는 동작이에요" };
+      } catch (e) { return { ok: false, reason: String(e?.message ?? e) }; }
+    },
+    // 비하인드: op "list" | "remove"(id 비우면 현재 채팅 전부)
+    async behind(op, id = "") {
+      const B = inst?.behind;
+      if (!B) return { ok: false, reason: "off", entries: [] };
+      try { return op === "remove" ? await B.remove(id) : await B.list(); } catch (e) { return { ok: false, reason: String(e?.message ?? e), entries: [] }; }
+    },
     // Erosync 자체 화면(프로필 고치기·장면 등)을 연다. 꺼져 있으면 false
     async open() {
       if (!inst || typeof inst.open !== "function") return false;

@@ -2,6 +2,7 @@
 // 고치기는 Erosync 자체 화면으로 보낸다(저장은 Erosync의 erosync_* 키 그대로).
 import { h } from "../../dom.js";
 import { btn } from "../../kit.js";
+import { openProfileEditor, resetProfile, analysisLine } from "./erosynceditor.js";
 import { eroReady, eroAxes, eroAdult, eroGoalsOf, eroPair } from "../../../engine/erosyncview.js";
 
 // 켜져 있을 때만 읽는다. 실패하면 null(위키는 원래대로).
@@ -16,7 +17,7 @@ const bar = (label, v, hint, ghost) => h("div", { class: "rb-wk2-num g" }, h("sp
     ghost != null && ghost !== v ? h("i", { class: "ghost", style: { width: `${ghost}%`, opacity: 0.35 } }) : null, h("i", { style: { width: `${v}%` } })),
   h("small", { class: "v" }, `${v}/100`));
 const tag = () => h("small", { class: "rb-wk2-badge" }, "Erosync");
-const fix = (ctx) => (typeof ctx.openErosync === "function" ? h("button", { type: "button", class: "rb-wk2-link", onClick: () => ctx.openErosync().catch(() => {}) }, "Erosync에서 고치기") : null);
+const fix = () => null;   // 값 고치기는 NSFW 탭에서 바로 한다(원본 창을 열지 않는다)
 
 // 상세 정보: 8축
 export function eroInfoCard(ctx, card, person) {
@@ -26,12 +27,19 @@ export function eroInfoCard(ctx, card, person) {
   return card("Erosync 성향", [h("div", { class: "rb-wk2-nums" }, rows), h("small", { class: "rb-muted" }, "AI가 읽은 값에서 고친 곳은 옅은 막대로 원래 값을 보여 줘요. 성적 항목은 NSFW 탭에 있어요.")], fix(ctx), "rb-wk2-ero");
 }
 
-// NSFW 탭: 성적 항목(성적 관심·선호 등). Erosync가 켜져 있고 이름이 맞는 인물에게만.
-export function eroNsfwCard(ctx, card, person) {
-  const ad = eroAdult(person);
-  if (!ad) return null;
-  return card("Erosync 성적 항목", [h("div", { class: "rb-wk2-nums" }, ad.rows.map((r) => bar(r.label, r.value)),
-    ad.pref ? h("small", { class: "rb-muted" }, `끌리는 상대 · 여성 ${ad.pref.f}% · 남성 ${ad.pref.m}% · 그 외 ${ad.pref.x}%`) : null)], fix(ctx), "rb-wk2-ero");
+// NSFW 탭: 성적 항목(성적 관심·선호 등) + 직접 고치기·AI 값으로·다시 분석. Erosync가 켜져 있고 이름이 맞는 인물에게만.
+export function eroNsfwCard(ctx, card, person, redraw) {
+  const ad = eroAdult(person), ax = eroAxes(person);
+  if (!ad && !ax.length) return null;
+  const line = analysisLine(ctx, () => redraw?.());
+  const act = h("div", { class: "rb-mem-sact" },
+    btn("직접 고치기", { size: "sm", id: "rb-ero-edit", onClick: () => openProfileEditor(ctx, person, redraw) }),
+    person.overridden ? btn("AI 값으로", { size: "sm", id: "rb-ero-reset", onClick: () => resetProfile(ctx, person, redraw) }) : null,
+    btn("다시 분석", { size: "sm", id: "rb-ero-reanalyze", title: "이 인물만 AI로 다시 분석해요(호출 2번)", onClick: () => line.start("single", person.id) }),
+    btn("축만 다시 채점", { size: "sm", id: "rb-ero-rescore", title: "8축 점수만 다시 매겨요(호출 1~2번)", onClick: () => line.start("axes", person.id) }));
+  const rows = ad ? [h("div", { class: "rb-wk2-nums" }, ad.rows.map((r) => bar(r.label, r.value)),
+    ad.pref ? h("small", { class: "rb-muted" }, `끌리는 상대 · 여성 ${ad.pref.f}% · 남성 ${ad.pref.m}% · 그 외 ${ad.pref.x}%`) : null)] : [h("small", { class: "rb-muted" }, "성적 항목이 아직 없어요.")];
+  return card("Erosync 성적 항목", [...rows, person.overridden ? h("small", { class: "rb-muted" }, "직접 고친 값이 있어요. AI가 다시 분석해도 고친 값이 우선이에요.") : null, act, line.el], null, "rb-wk2-ero");
 }
 
 // 요약: 지금 노리는 것

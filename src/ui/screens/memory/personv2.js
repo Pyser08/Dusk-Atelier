@@ -184,7 +184,7 @@ export function personTabs(env, parts) {
   const info = () => h("div", { class: "rb-wk2-pane" }, typeof parts.info === "function" ? parts.info(go) : (parts.infoBlocks ?? []).filter(Boolean), (() => { const e = eroSelf(); return e ? eroInfoCard(ctx, card, e) : null; })());
   // NSFW 탭: Dusk 성인 항목(월경·임신, 성적 욕망·이상성향 후보) + Erosync 성적 항목(켜져 있을 때만). 항상 보인다.
   const nsfw = () => {
-    const a = parts.adult ?? {}, e = eroSelf(), eroCard = e ? eroNsfwCard(ctx, card, e) : null;
+    const a = parts.adult ?? {}, e = eroSelf(), eroCard = e ? eroNsfwCard(ctx, card, e, () => { ero = null; eroLoad(ctx).then((snap) => { if (snap) { ero = snap; paint(); } }); }) : null;
     const cyc = a.cyc ? h("div", { class: "rb-mem-cycle", role: "note" }, h("b", null, "월경·임신 "), a.cyc.lines.join(" · "), a.cyc.date ? h("small", { class: "rb-muted" }, ` (${a.cyc.date} 기준)`) : null) : null;
     const kids = [cyc ? card("월경·임신", [cyc]) : null, a.panel ?? null, eroCard].filter(Boolean);
     return h("div", { class: "rb-wk2-pane", id: "rb-wk2-nsfw" }, kids.length ? kids : h("p", { class: "rb-muted" }, "아직 NSFW 항목이 없어요. 성적 욕망·이상성향·월경 기록이 쌓이거나 Erosync를 켜면 여기에 모여요."));

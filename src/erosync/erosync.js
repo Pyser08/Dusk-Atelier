@@ -36936,7 +36936,7 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
     };
   }
   // Dusk ‘동작·분석’ 카드 연결부: 허용된 설정 키만 읽고 쓴다(저장 때 normalizeConfig가 범위를 다시 맞춘다).
-  const DUSK_CONFIG_KEYS = Object.freeze(['mode', 'frequency', 'autonomy', 'goalPersistence', 'cooldownTurns', 'maxActorsPerTurn', 'recentMessages', 'progressiveFollowUp', 'autoVerifyCharacters', 'autoRefreshProfiles', 'developmentMode']);
+  const DUSK_CONFIG_KEYS = Object.freeze(['mode', 'frequency', 'autonomy', 'goalPersistence', 'cooldownTurns', 'maxActorsPerTurn', 'recentMessages', 'progressiveFollowUp', 'autoVerifyCharacters', 'autoRefreshProfiles', 'developmentMode', 'behindEnabled']);
   async function duskConfigGet() {
     const c = await loadConfig();
     return { ok: true, maxActors: MAX_ACTIONS_PER_TURN, values: Object.fromEntries(DUSK_CONFIG_KEYS.map((k) => [k, c[k]])) };
@@ -36978,6 +36978,89 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
     await saveConfig({ ...c, promptOverrides: over });
     return duskPromptsGet();
   }
+  // ── Dusk NSFW 탭 연결부: 프로필 값 읽기·고치기·되돌리기, 분석 시작·취소·상태 ──
+  async function duskProfileCtx(profileId) {
+    const context = await getUiContext();
+    if (!context?.scope || !context.session) throw new Error(context?.scopeUnavailable === 'no-chat' || !context?.scope ? '열린 채팅이 없어요' : '채팅 상태를 읽지 못했어요');
+    const profile = profileId ? contextProfiles(context).find((p) => p.id === profileId) : null;
+    if (profileId && !profile) throw new Error('이 채팅에서 그 인물을 찾지 못했어요');
+    return { context, profile };
+  }
+  const DUSK_EDIT_SCALARS = Object.freeze([...AXIS_SCALAR_KEYS, ...SEX_AXIS_SCALAR_KEYS]);
+  async function duskProfileGet(profileId) {
+    const { context, profile } = await duskProfileCtx(profileId);
+    const view = uiProfileViewOf(profile, context, null), base = view.base || {}, ov = isPlainObject(profile.userOverrides) ? profile.userOverrides : {};
+    const scalars = DUSK_EDIT_SCALARS.filter((k) => !view.sfw || AXIS_SCALAR_KEYS.includes(k)).map((k) => ({
+      key: k, label: (AXIS_DEFINITIONS[k] || SEX_AXIS_DEFINITIONS[k])?.label || k, base: Number.isFinite(base[k]) ? base[k] : null, override: Number.isFinite(ov[k]) ? ov[k] : null, sexual: SEX_AXIS_SCALAR_KEYS.includes(k),
+    }));
+    const analysed = genderDisplay(base.genderIdentity), pref = normalizeTargetGenderPreference(base.targetGenderPreference, normalizeGenderIdentity(ov.genderIdentity || base.genderIdentity));
+    return duskPlain({
+      ok: true, id: profile.id, name: profile.name, sfw: !!view.sfw, nonPerson: !!view.nonPerson, scalars,
+      eroticInterest: view.sfw ? null : { base: Number.isFinite(base.eroticInterest?.level) ? base.eroticInterest.level : 50, override: Number.isFinite(ov.eroticInterest?.level) ? ov.eroticInterest.level : null },
+      gender: { analysed: analysed.label, override: ov.genderIdentity ? normalizeGenderIdentity(ov.genderIdentity).value : '' },
+      cycle: { override: typeof ov.menstrualCycle?.applicable === 'boolean' ? (ov.menstrualCycle.applicable ? 'on' : 'off') : '' },
+      pref: { base: { female: pref.femalePercent ?? 0, male: pref.malePercent ?? 0, genderless: pref.genderlessPercent ?? 0 },
+        override: isPlainObject(ov.targetGenderPreference) ? { female: ov.targetGenderPreference.femalePercent ?? null, male: ov.targetGenderPreference.malePercent ?? null, genderless: ov.targetGenderPreference.genderlessPercent ?? null } : null },
+      changed: Object.keys(ov).length > 0,
+    });
+  }
+  // patch: 숫자 키는 값(0~100) 또는 null(분석값으로), eroticInterest, gender('female'|'male'|'genderless'|''), cycle('on'|'off'|''), pref({female,male,genderless}|null)
+  async function duskProfileEdit(profileId, patch) {
+    const { context, profile } = await duskProfileCtx(profileId);
+    const draft = safeClone(isPlainObject(profile.userOverrides) ? profile.userOverrides : {});
+    const blank = (v) => v === null || v === undefined || String(v).trim() === '';
+    for (const k of DUSK_EDIT_SCALARS) if (patch && k in patch) { if (blank(patch[k])) delete draft[k]; else draft[k] = clampInt(patch[k], 50, 0, 100); }
+    if (patch && 'eroticInterest' in patch) { if (blank(patch.eroticInterest)) delete draft.eroticInterest; else draft.eroticInterest = { ...(isPlainObject(draft.eroticInterest) ? draft.eroticInterest : {}), level: clampInt(patch.eroticInterest, 50, 0, 100) }; }
+    if (patch && 'gender' in patch) { if (['female', 'male', 'genderless'].includes(patch.gender)) draft.genderIdentity = { value: patch.gender }; else delete draft.genderIdentity; }
+    if (patch && 'cycle' in patch) {
+      const rest = isPlainObject(draft.menstrualCycle) ? Object.fromEntries(Object.entries(draft.menstrualCycle).filter(([key]) => key !== 'applicable')) : {};
+      if (patch.cycle === 'on' || patch.cycle === 'off') draft.menstrualCycle = { ...rest, applicable: patch.cycle === 'on' };
+      else if (Object.keys(rest).length) draft.menstrualCycle = rest; else delete draft.menstrualCycle;
+    }
+    if (patch && 'pref' in patch) {
+      const q = patch.pref, vals = q ? { femalePercent: q.female, malePercent: q.male, genderlessPercent: q.genderless } : null;
+      if (!vals || Object.values(vals).every(blank)) delete draft.targetGenderPreference;
+      else draft.targetGenderPreference = normalizePreferencePercents(Object.fromEntries(Object.entries(vals).map(([n, v]) => [n, blank(v) ? 0 : Number(v)])));
+    }
+    await saveProfileOverrides(profileId, context, draft, 'user_edit');
+    duskReadCache = null;
+    return duskProfileGet(profileId);
+  }
+  async function duskProfileReset(profileId) {
+    const { context } = await duskProfileCtx(profileId);
+    await saveProfileOverrides(profileId, context, {}, 'user_reset');
+    duskReadCache = null;
+    return duskProfileGet(profileId);
+  }
+  function duskAnalysisStatus() {
+    const a = analysisRuntime;
+    return { running: !!a.running, cancelRequested: !!a.cancelRequested, phase: String(a.phase || ''), detail: String(a.detail || ''), completed: Number(a.completed || 0), total: Number(a.total || 0), failed: Number(a.failed || 0), message: String(uiStatusMessage || ''), tone: String(uiStatusTone || 'info') };
+  }
+  // 시작만 하고 바로 돌려준다(진행은 status로). 이미 다른 분석이 돌고 있으면 이유를 던진다.
+  async function duskAnalysisStart(kind, profileId) {
+    const { context } = await duskProfileCtx(profileId || '');
+    if (analysisRuntime.running) throw new Error('이미 다른 분석이 진행 중이에요');
+    const fail = (e) => { setUiStatus(String(e?.message || e), 'error'); };
+    if (kind === 'single' || kind === 'axes') void startSingleProfileReanalysis(context, profileId, kind === 'axes' ? 'axes' : 'full', { config: context.config }).catch(fail);
+    else if (kind === 'full') void startFullCharacterAnalysis(context, true).catch(fail);
+    else throw new Error('알 수 없는 분석 종류예요');
+    return duskAnalysisStatus();
+  }
+
+  // 비하인드(장면 뒷이야기) 읽기·지우기
+  async function duskBehindList() {
+    const context = await getUiContext();
+    if (!context?.scope) return { ok: false, reason: '열린 채팅이 없어요', entries: [] };
+    const entries = [...(context.behindScenes?.entries || [])].sort((a, b) => Number(a.turn || 0) - Number(b.turn || 0));
+    return { ok: true, entries: entries.map((e) => ({ id: String(e.id), turn: e.turn ?? null, text: String(e.text || ''), createdAt: e.createdAt || '' })) };
+  }
+  async function duskBehindRemove(id = '') {
+    const context = await getUiContext();
+    if (!context?.scope) throw new Error('열린 채팅이 없어요');
+    await deleteBehindEntry(context, String(id || ''));
+    return duskBehindList();
+  }
+
   async function duskContentSet(patch) {
     const context = await getUiContext();
     const key = String(context?.scope?.sourceBundleKey || '');
@@ -36999,6 +37082,8 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
     read: duskReadSnapshot,
     content: { get: duskContentGet, set: duskContentSet },
     config: { get: duskConfigGet, set: duskConfigSet },
+    behind: { list: duskBehindList, remove: duskBehindRemove },
+    profiles: { get: duskProfileGet, edit: duskProfileEdit, reset: duskProfileReset, status: duskAnalysisStatus, start: duskAnalysisStart, cancel: () => { requestAnalysisCancel(); return duskAnalysisStatus(); } },
     prompts: { get: duskPromptsGet, set: duskPromptSet },
     guard: { set: duskGuardSet },
     flags: { set: duskFlagsSet },

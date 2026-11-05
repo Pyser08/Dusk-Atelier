@@ -8,7 +8,7 @@ export function erosyncGuardCard(ctx) {
   const num = (id, label, key, lo, hi, hint) => h("div", { class: "rb-mem-field" }, h("span", null, label, h("small", { class: "rb-muted" }, ` ${hint}`)),
     h("input", { type: "number", id, min: lo, max: hi, value: g[key], onChange: (e) => { const v = Math.min(hi, Math.max(lo, Math.round(Number(e.target.value) || lo))); e.target.value = v; er.setGuard({ [key]: v }); } }));
   const sw = switchEl(g.on, { label: "집착 방지", onChange: (v, el) => { setSwitch(el, v); er.setGuard({ on: v }); } });
-  return h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync-guard" }, h("h3", null, "집착 방지"),
+  return h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync-guard", style: "display:grid;gap:14px" }, h("h3", null, "집착 방지"),
     h("p", { class: "rb-muted", style: "white-space:normal" }, "켜면 인물의 집착성 값을 상한으로 눌러 장면 판단에 넘기고, 한 인물이 같은 대상으로 목표를 너무 오래 이어 가면 잠시 쉬게 해요. 껐을 때는 평소처럼 움직여요."),
     h("div", { class: "rb-mem-field row" }, h("span", null, "집착 방지 켜기"), sw),
     num("rb-erosync-g-cap", "집착성 상한", "obsessionCap", 0, 100, "(0~100, 기본 60)"),

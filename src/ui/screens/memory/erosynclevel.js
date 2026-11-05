@@ -8,7 +8,7 @@ export const patchOfMode = (m) => (m === "sfw" ? { contentMode: "sfw", nsfwPlus:
 
 export function erosyncLevelCard(ctx) {
   const er = ctx.erosync;
-  const body = h("div", { class: "rb-mem-fields" });
+  const body = h("div", { class: "rb-mem-fields", style: "display:grid;gap:14px" });
   const card = h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync-level" }, h("h3", null, "수위"), body);
   const save = async (patch) => { const r = typeof er.content === "function" ? await er.content(patch) : { ok: false, reason: "off" }; if (!r.ok) ctx.toast(r.reason || "수위를 바꾸지 못했어요", { error: true }); return paint(r); };
   function paint(c) {

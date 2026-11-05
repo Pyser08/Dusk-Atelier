@@ -13,12 +13,12 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   const sw = () => page.locator("#rb-erosync .rb-switch, #rb-erosync [role=switch]").first();
   await page.evaluate(() => { window.c = makeCase(); });
   const text = await page.evaluate(() => document.getElementById("rb-erosync").textContent);
-  ok(`[${tag}] 카드·제목·기본 꺼짐 문구`, /Erosync \(NSFW 장면 강화\)/.test(text) && /기본 꺼짐/.test(text));
+  ok(`[${tag}] 카드·제목·기본 꺼짐 문구`, /Erosync \(NSFW 장면 강화\)/.test(text) && /기본은 꺼짐/.test(text) && (await page.locator("#rb-erosync-state").textContent()).includes("꺼짐"));
   ok(`[${tag}] 비용 안내가 보임`, /AI 호출이 늘어요/.test(text) && /토큰·요금/.test(text), text);
   ok(`[${tag}] 가로로 넘치지 않음`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await sw().click(); await page.waitForTimeout(200);
   ok(`[${tag}] 켜기 → 시작·저장`, await page.evaluate(() => c.boots.n === 1 && c.er.isRunning() && c.mem.get("dusk.erosync.on") === "on"));
-  ok(`[${tag}] 켜면 ‘Erosync 설정 열기’ 버튼이 보임`, await page.locator("#rb-erosync-open").isVisible());
+  ok(`[${tag}] 켜면 상태 카드가 ‘사용 중’으로 바뀜`, (await page.locator("#rb-erosync-state").textContent()).includes("사용 중"));
   await sw().click(); await page.waitForTimeout(200);
   ok(`[${tag}] 끄기 → 정리·저장`, await page.evaluate(() => c.boots.off === 1 && !c.er.isRunning() && c.mem.get("dusk.erosync.on") === "off"));
   await page.evaluate(() => { window.c = makeCase({ original: true }); });

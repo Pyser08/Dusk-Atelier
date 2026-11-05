@@ -96,3 +96,22 @@ test("Dusk 연결부(실제 엔진): 동작 설정·지시문·집착 방지·�
   assert.deepEqual(e.flags.set({ duskCycle: true }), { duskCycle: true });
   await e.dispose();
 });
+test("Dusk 프로필 연결부(실제 엔진): 채팅이 없으면 이유를 알리고, 분석 상태 모양을 돌려준다", async () => {
+  const { api } = fakeApi();
+  const e = await bootErosync(api);
+  const st = e.profiles.status();
+  assert.equal(st.running, false);
+  for (const k of ["phase", "detail", "completed", "total", "failed", "message", "tone"]) assert.ok(k in st, k);
+  await assert.rejects(() => e.profiles.get("x"), /채팅|인물/);
+  await assert.rejects(() => e.profiles.start("bogus", ""), /채팅|종류/);
+  assert.equal(e.profiles.cancel().running, false);
+  await e.dispose();
+});
+test("Dusk 비하인드 연결부(실제 엔진): 채팅이 없으면 빈 목록", async () => {
+  const { api } = fakeApi();
+  const e = await bootErosync(api);
+  const r = await e.behind.list();
+  assert.equal(r.ok, false); assert.deepEqual(r.entries, []);
+  await assert.rejects(() => e.behind.remove("x"), /채팅/);
+  await e.dispose();
+});

@@ -35,6 +35,14 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
     __app.ctx.erosync = { isRunning: () => true, on: () => true, read: async () => snap, open: async () => true,
       config: async (patch) => { const st = (window.__cf ??= { mode: "normal", frequency: 55, autonomy: 70, goalPersistence: 70, cooldownTurns: 2, maxActorsPerTurn: 2, recentMessages: 14, progressiveFollowUp: true, autoVerifyCharacters: true, autoRefreshProfiles: false, developmentMode: "review" }); if (patch) Object.assign(st, patch); return { ok: true, maxActors: 10, values: { ...st } }; },
       prompts: async (patch) => { const st = (window.__pr ??= { changed: false, text: "기본 글" }); if (patch) { st.changed = !!patch.text; st.text = patch.text || "기본 글"; window.__prLast = patch; } return { ok: true, pages: [{ id: "director", name: "장면 판단", use: "", branchy: true, sections: [{ id: "director.role", title: "역할", desc: "", kind: "common", branches: ["common"], texts: { common: { text: st.text, base: "기본 글", changed: st.changed, missing: [] } } }] }] }; },
+      profile: async (op, ...a) => { const w = window; w.__pf ??= { ov: {}, calls: [] }; w.__pf.calls.push([op, ...a]);
+        if (op === "get") return { ok: true, id: a[0], name: "시로코", sfw: false, scalars: [{ key: "initiative", label: "주도성", base: 40, override: w.__pf.ov.initiative ?? null, sexual: false }, { key: "sexualOpenness", label: "성적 개방성", base: 55, override: null, sexual: true }],
+          eroticInterest: { base: 50, override: null }, gender: { analysed: "여자", override: "" }, cycle: { override: "" }, pref: { base: { female: 10, male: 80, genderless: 10 }, override: null }, changed: false };
+        if (op === "edit") { Object.assign(w.__pf.ov, a[1]); return { ok: true }; }
+        if (op === "reset") { w.__pf.ov = {}; return { ok: true }; }
+        if (op === "status") return { ok: true, running: false, message: "" };
+        if (op === "start") return { ok: true, running: true };
+        return { ok: true }; },
       guard: () => window.__gd ?? { on: false, obsessionCap: 60, sameTargetTurns: 3, restTurns: 4 }, loadGuard: async () => {}, setGuard: async (v) => { window.__gd = { ...(window.__gd ?? { on: false, obsessionCap: 60, sameTargetTurns: 3, restTurns: 4 }), ...v }; },
       content: async (patch) => { const st = (window.__lv ??= { ok: true, contentMode: "nsfw", extremityLimit: "unlimited", nsfwPlus: false, recheck: false, limits: [{ key: "moderate", cap: 20, label: "대화 안에서만" }, { key: "unlimited", cap: 100, label: "제한 없음" }] }); if (patch) Object.assign(st, patch); return { ...st }; } };
     __app.ctx.openErosync = async () => { window.__opened++; return true; };
@@ -73,10 +81,15 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.locator(".rb-wk2-tab", { hasText: "NSFW" }).click(); await page.waitForTimeout(300);
   ok(`[${tag}] NSFW 탭이 상세 정보와 기록 사이에 있다`, (await page.locator(".rb-wk2-tab").allTextContents()).join("|").replace(/\s+/g, "").includes("상세정보|NSFW|기록"));
   ok(`[${tag}] NSFW 탭에 Erosync 성적 항목(성적 관심)`, /Erosync 성적 항목/.test(await body()) && /성적 관심/.test(await body()));
+  await page.locator("#rb-ero-edit").click(); await page.waitForTimeout(300);
+  ok(`[${tag}] 고치기 창이 열리고 8축·성적 칸이 있음`, (await page.locator("#rb-ero-editor input[data-k=initiative]").count()) === 1 && (await page.locator("#rb-ero-editor input[data-k=sexualOpenness]").count()) === 1);
+  await page.locator("#rb-ero-editor input[data-k=initiative]").fill("90"); await page.locator("#rb-ero-editor-save").click(); await page.waitForTimeout(400);
+  ok(`[${tag}] 저장하면 바뀐 칸만 엔진으로 전달됨`, await page.evaluate(() => JSON.stringify(window.__pf.ov) === '{"initiative":90}'), JSON.stringify(await page.evaluate(() => window.__pf.ov)));
+  await page.locator("#rb-ero-reanalyze").click(); await page.waitForTimeout(300);
+  ok(`[${tag}] 다시 분석을 누르면 start(single)가 불림`, await page.evaluate(() => window.__pf.calls.some((c) => c[0] === "start" && c[1] === "single")));
   await page.locator(".rb-wk2-tab", { hasText: "상세 정보" }).click(); await page.waitForTimeout(300);
   await page.screenshot({ path: `/tmp/ero-wiki-info-${tag}.png` });
-  await page.locator(".rb-wk2-ero .rb-wk2-link", { hasText: "Erosync에서 고치기" }).click(); await page.waitForTimeout(150);
-  ok(`[${tag}] 'Erosync에서 고치기'가 Erosync 화면 열기를 부른다`, (await page.evaluate(() => window.__opened)) === 1);
+  ok(`[${tag}] 원본 창을 여는 링크는 없다(NSFW 탭에서 바로 고친다)`, (await page.locator(".rb-wk2-ero .rb-wk2-link", { hasText: "Erosync에서 고치기" }).count()) === 0);
   await page.locator(".rb-wk2-tab", { hasText: "관계" }).click(); await page.waitForTimeout(300);
   await page.locator(".rb-wk2-who", { hasText: "호시노" }).first().click().catch(() => {}); await page.waitForTimeout(300);
   ok(`[${tag}] 관계 탭(호시노)에 'Erosync 목표·경쟁'`, /Erosync 목표·경쟁/.test(await body()), (await body()).slice(0, 200));
@@ -85,22 +98,30 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 기억 화면에 Erosync 줄이 바로 보임`, await page.locator("#rb-mem-go-erosync").isVisible(), String(await page.locator("#rb-mem-go-erosync").count()));
   await page.locator("#rb-mem-go-erosync").click(); await page.waitForTimeout(600);
   ok(`[${tag}] 줄을 누르면 Erosync 설정 화면(켜기 스위치)이 열림`, await page.locator("#rb-erosync").isVisible());
+  const tabTo = async (t) => { await page.locator("#rb-erosync-tabs button", { hasText: t }).click(); await page.waitForTimeout(350); };
+  ok(`[${tag}] 탭 줄이 보임(개요·수위·동작·분석·프롬프트·비하인드·데이터)`, (await page.locator("#rb-erosync-tabs button").count()) === 7);
+  await tabTo("수위");
   ok(`[${tag}] 수위 카드가 보임`, await page.locator("#rb-erosync-level").isVisible());
   await page.locator("#rb-erosync-level .rb-seg button[data-v=sfw]").click(); await page.waitForTimeout(300);
   ok(`[${tag}] SFW를 고르면 저장되고 극단 행동 수위 칸이 잠김`, (await page.evaluate(() => window.__lv.contentMode)) === "sfw" && await page.locator("#rb-erosync-limit").isDisabled());
   await page.locator("#rb-erosync-level .rb-seg button[data-v=plus]").click(); await page.waitForTimeout(300);
-  ok(`[${tag}] 동작·분석 카드가 보임`, await page.locator("#rb-erosync-config").isVisible());
+  await tabTo("동작");
+  ok(`[${tag}] 동작 카드가 보임`, await page.locator("#rb-erosync-config-act").isVisible());
   await page.locator("#rb-erosync-c-frequency").fill("80"); await page.locator("#rb-erosync-c-frequency").blur(); await page.waitForTimeout(200);
   await page.locator("#rb-erosync-mode").selectOption("off"); await page.waitForTimeout(200);
   ok(`[${tag}] 장면 빈도 80·동작 방식 쉬기가 저장됨`, await page.evaluate(() => window.__cf.frequency === 80 && window.__cf.mode === "off"), JSON.stringify(await page.evaluate(() => window.__cf)));
+  await tabTo("프롬프트");
   ok(`[${tag}] 프롬프트 카드가 보임`, await page.locator("#rb-erosync-prompts").isVisible());
   await page.locator("#rb-erosync-prompts summary", { hasText: "역할" }).click(); await page.locator("#rb-erosync-prompts textarea").fill("고친 글"); await page.locator("#rb-erosync-prompts .rb-btn", { hasText: "저장" }).first().click(); await page.waitForTimeout(300);
   ok(`[${tag}] 지시문 저장이 엔진 쪽으로 전달됨`, await page.evaluate(() => window.__prLast?.id === "director.role" && window.__prLast.text === "고친 글"), JSON.stringify(await page.evaluate(() => window.__prLast)));
+  await tabTo("수위");
   ok(`[${tag}] 집착 방지 카드가 보임`, await page.locator("#rb-erosync-guard").isVisible());
   await page.locator("#rb-erosync-guard [role=switch]").first().click(); await page.locator("#rb-erosync-g-cap").fill("40"); await page.locator("#rb-erosync-g-cap").blur(); await page.waitForTimeout(200);
   ok(`[${tag}] 집착 방지 켜기·상한 40이 저장됨`, await page.evaluate(() => window.__gd?.on === true && window.__gd.obsessionCap === 40), JSON.stringify(await page.evaluate(() => window.__gd)));
   ok(`[${tag}] NSFW+를 고르면 nsfwPlus가 켜짐`, await page.evaluate(() => window.__lv.nsfwPlus === true));
   await page.screenshot({ path: `/tmp/ero-memhome-${tag}.png` });
+  await tabTo("개요"); await page.locator("#rb-erosync").scrollIntoViewIfNeeded(); await page.screenshot({ path: `/tmp/ero-home-${tag}.png` });
+  await tabTo("데이터"); await page.screenshot({ path: `/tmp/ero-data-${tag}.png` });
   // 장기 기억 더보기: 파일 내보내기·불러오기
   await page.evaluate(() => { __app.ctx.state.mem.page = "home"; __app.ctx.go("memory"); }); await page.waitForTimeout(1000);
   await page.locator("#rb-mem-more").click(); await page.waitForTimeout(200);
