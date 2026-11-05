@@ -55,7 +55,7 @@ const CSS = `
 .rb-rg.done .rb-rg-flash{animation:rg-flash 1s ease-out}
 @keyframes rg-flash{30%{opacity:1}to{opacity:0}}
 .rb-rg-full{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(14px,3vh,28px);padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
-  background:transparent;pointer-events:auto;color:#f6dc9a;font-family:"Nanum Myeongjo","Noto Serif KR",Georgia,serif;opacity:0;transition:opacity .45s ease}
+  background:rgba(4,3,8,.62);pointer-events:auto;color:#f6dc9a;font-family:"Nanum Myeongjo","Noto Serif KR",Georgia,serif;opacity:0;transition:opacity .45s ease}
 .rb-rg-full.on{opacity:1}
 .rb-modal:has(.rb-rg.spinning){background:transparent!important;backdrop-filter:none!important}
 .rb-rg.spinning{opacity:0!important;pointer-events:none}
@@ -94,22 +94,22 @@ const CSS = `
 .rb-rg-fx{position:absolute;inset:-16%;width:132%;height:132%;pointer-events:none;overflow:visible;filter:drop-shadow(0 0 1px rgba(30,18,6,.9)) drop-shadow(-2px 0 0 rgba(255,70,140,.7)) drop-shadow(2px 0 0 rgba(70,225,255,.65)) drop-shadow(0 0 10px rgba(255,236,200,.6))}
 .rb-rg-fx .crack{fill:none;stroke:#fffaf0;stroke-width:.55;stroke-linecap:round;stroke-dasharray:var(--l);stroke-dashoffset:var(--l);animation:rg-crack .5s ease-out var(--dl) forwards}
 @keyframes rg-crack{to{stroke-dashoffset:0}}
-.rb-rg-full.tick .rb-rg-fx .crack{animation:rg-crack .5s ease-out var(--dl) forwards,rg-crackflash .6s ease-out}
-@keyframes rg-crackflash{0%{stroke:#fff;stroke-width:1.4}100%{stroke-width:.55}}
-.rb-rg-fx .chain{transform-origin:100px 100px;animation:rg-sway 2.6s ease-in-out infinite alternate}
-.rb-rg-fx .chain.r{animation-delay:-1.3s}
-@keyframes rg-sway{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
-.rb-rg-fx .chain ellipse{fill:none;stroke:#fff1d6;stroke-width:1.6}
-.rb-rg-full.tick .rb-rg-fx .chain.l{animation:rg-snapl .9s cubic-bezier(.2,.8,.3,1) forwards}
-.rb-rg-full.tick .rb-rg-fx .chain.r{animation:rg-snapr .9s cubic-bezier(.2,.8,.3,1) forwards}
-@keyframes rg-snapl{to{transform:translate(-26px,18px) rotate(-14deg);opacity:0}}
-@keyframes rg-snapr{to{transform:translate(26px,18px) rotate(14deg);opacity:0}}
+.rb-rg-fx{transition:opacity .9s ease .1s}
+.rb-rg-full.tick .rb-rg-fx{opacity:0}   /* 12시: 금이 아물듯 사라진다 */
 .rb-rg-word{position:relative;margin-top:clamp(-40px,-4vmin,-10px);font-family:Impact,"Arial Black","Bebas Neue",system-ui,sans-serif;font-weight:900;font-size:clamp(48px,13vmin,128px);letter-spacing:.08em;line-height:1;color:#ffe9ef;
   -webkit-text-stroke:1.5px rgba(40,22,10,.85);paint-order:stroke fill;text-shadow:-4px 0 0 rgba(255,70,140,.8),4px 0 0 rgba(70,225,255,.75),0 0 22px rgba(255,236,200,.8);animation:rg-wjit .14s steps(2) infinite}
 @keyframes rg-wjit{50%{transform:translate(1px,-1px) skewX(-1.5deg)}}
 .rb-rg-word::after{content:attr(data-t);position:absolute;inset:0;color:#fff;clip-path:inset(40% 0 42% 0);transform:translateX(6px);opacity:.85;animation:rg-slice 1.3s steps(1) infinite}
 @keyframes rg-slice{0%{clip-path:inset(40% 0 42% 0);transform:translateX(6px)}25%{clip-path:inset(10% 0 78% 0);transform:translateX(-7px)}50%{clip-path:inset(70% 0 12% 0);transform:translateX(4px)}75%{clip-path:inset(0 0 100% 0)}}
-.rb-rg-full.tick .rb-rg-word{animation:rg-wsettle .5s ease-out forwards}
+.rb-rg-full.tick .rb-rg-word{animation:rg-wgold 1.4s ease-out forwards;color:#ffd77a;-webkit-text-stroke:1px rgba(90,55,10,.9);text-shadow:0 2px 0 #8a5a12,0 0 14px rgba(255,215,122,.55)}
+@keyframes rg-wgold{0%{transform:scale(1.12);filter:brightness(1.8) drop-shadow(0 0 0 rgba(255,215,122,0))}35%{transform:scale(1);filter:brightness(1.25) drop-shadow(0 0 28px rgba(255,215,122,.95)) drop-shadow(0 0 60px rgba(255,190,80,.6))}100%{transform:none;filter:none}}
+/* 완성: 글리치·흔들림이 멎고 깨끗한 금빛으로 */
+.rb-rg-full.tick .rb-rg-big{animation:none;filter:drop-shadow(0 0 2px rgba(30,18,6,.8)) drop-shadow(0 0 22px rgba(255,215,122,.8)) drop-shadow(0 0 60px rgba(255,190,80,.4))}
+.rb-rg-full.tick .rb-rg-big [stroke="#fff1d6"],.rb-rg-full.tick .rb-rg-big .face{stroke:#ffe1a0}
+.rb-rg-full.tick .rb-rg-big text{fill:#ffe1a0}
+.rb-rg-full.tick .rb-rg-halo{animation:none;background:radial-gradient(circle,rgba(255,215,122,.35) 0%,rgba(255,190,80,.12) 45%,transparent 70%);transition:background .6s}
+.rb-rg-full.tick .rb-rg-rays{opacity:.8}
+.rb-rg-full.tick .rb-rg-dust{animation-play-state:paused;opacity:0;transition:opacity .6s}
 @keyframes rg-wsettle{0%{transform:scale(1.18);filter:brightness(2)}100%{transform:none;filter:none}}
 .rb-rg-full.tick .rb-rg-word::after{animation:none;opacity:0}
 .rb-rg-full.glitch .rb-rg-fstage{font-size:clamp(13px,2vmin,17px);padding:5px 16px}
@@ -186,7 +186,7 @@ function bigClock(doc) {
   return { svg, set };
 }
 
-// 금 간 유리 + 사슬(시계 위에 겹치는 선화). 무작위 대신 고정 씨앗으로 매번 같은 모양
+// 금 간 유리(시계 위에 겹치는 선화). 무작위 대신 고정 씨앗으로 매번 같은 모양
 function fxLayer(doc) {
   const ns = "http://www.w3.org/2000/svg";
   const el = (t, a = {}, kids = []) => { const n = doc.createElementNS(ns, t); for (const [k, v] of Object.entries(a)) n.setAttribute(k, v); kids.forEach((c) => n.appendChild(c)); return n; };
@@ -199,13 +199,7 @@ function fxLayer(doc) {
       if (rnd() < .35) { const b = a + (rnd() < .5 ? -1 : 1) * (.6 + rnd() * .6), r2 = 6 + rnd() * 10; cracks.push(el("path", { class: "crack", d: `M${x.toFixed(1)} ${y.toFixed(1)} L${(x + Math.cos(b) * r2).toFixed(1)} ${(y + Math.sin(b) * r2).toFixed(1)}`, style: `--l:${r2.toFixed(0)};--dl:${(.5 + k * .18 + i * .03).toFixed(2)}s` })); } }
     cracks.unshift(el("path", { class: "crack", d, style: `--l:${len.toFixed(0)};--dl:${(.25 + i * .05).toFixed(2)}s` }));
   }
-  const chain = (side) => {   // 시계 옆을 감싸는 사슬(타원 고리를 호를 따라 늘어놓음)
-    const links = [];
-    for (let k = 0; k < 24; k++) { const t = side === "l" ? 196 + k * 5.6 : 30 + k * 5.6, a = (t - 90) * Math.PI / 180, R = 90 + Math.sin(k * .5) * 3, x = 100 + Math.cos(a) * R, y = 100 + Math.sin(a) * R;
-      links.push(el("ellipse", { cx: x.toFixed(1), cy: y.toFixed(1), rx: k % 2 ? 2.2 : 5.4, ry: k % 2 ? 1.2 : 2.5, transform: `rotate(${(t).toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})` })); }
-    return el("g", { class: `chain ${side}` }, links);
-  };
-  return el("svg", { class: "rb-rg-fx", viewBox: "0 0 200 200", "aria-hidden": "true" }, [el("g", {}, cracks), chain("l"), chain("r")]);
+  return el("svg", { class: "rb-rg-fx", viewBox: "0 0 200 200", "aria-hidden": "true" }, [el("g", {}, cracks)]);
 }
 
 // 깨진 글자: 잠시 기호로 깨져 있다가 끝에 RETURN으로 맞춰진다
