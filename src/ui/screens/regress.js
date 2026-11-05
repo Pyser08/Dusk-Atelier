@@ -59,14 +59,31 @@ const CSS = `
 .rb-rg-full.on{opacity:1}
 .rb-modal:has(.rb-rg.spinning){background:transparent!important;backdrop-filter:none!important}
 .rb-rg.spinning{opacity:0!important;pointer-events:none}
-.rb-rg-full .rb-rg-clock{position:relative;width:min(78vmin,640px);height:min(78vmin,640px);filter:drop-shadow(0 0 40px rgba(226,189,107,.45));animation:rg-pulse 1.2s ease-in-out infinite}
-.rb-rg-full .rb-rg-clock .ring{animation:rg-slow 1.6s linear infinite reverse}
-.rb-rg-full .rb-rg-clock .hand-m{animation:rg-slow .35s linear infinite reverse}
-.rb-rg-full .rb-rg-clock .hand-h{animation:rg-slow 1.1s linear infinite reverse}
-.rb-rg-full .rb-rg-fstage{position:relative;min-height:1.6em;padding:6px 16px;border-radius:999px;background:rgba(13,11,31,.55);font-size:clamp(16px,2.6vmin,24px);letter-spacing:.12em;text-align:center;text-shadow:0 0 18px rgba(226,189,107,.5)}
-.rb-rg-full .rb-rg-flash{opacity:0}
-.rb-rg-full.done .rb-rg-flash{animation:rg-flash 1s ease-out}
-.rb-rg-full.done .rb-rg-clock{animation:none}
+.rb-rg-stagewrap{position:relative;width:min(80vmin,660px);aspect-ratio:1;display:grid;place-items:center}
+.rb-rg-rays{position:absolute;inset:-18%;border-radius:50%;pointer-events:none;mix-blend-mode:screen;opacity:.75;
+  background:repeating-conic-gradient(from 0deg,rgba(246,220,154,.0) 0deg 7deg,rgba(246,220,154,.22) 9deg,rgba(246,220,154,0) 11deg 22deg);
+  -webkit-mask:radial-gradient(circle,transparent 30%,#000 46%,transparent 70%);mask:radial-gradient(circle,transparent 30%,#000 46%,transparent 70%);animation:rg-slow 9s linear infinite}
+.rb-rg-halo{position:absolute;inset:4%;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(180,140,255,.35) 0%,rgba(90,60,200,.18) 40%,transparent 68%);animation:rg-breathe 2.4s ease-in-out infinite}
+@keyframes rg-breathe{50%{transform:scale(1.06);opacity:.7}}
+.rb-rg-big{position:relative;width:100%;height:100%;filter:drop-shadow(0 0 28px rgba(226,189,107,.55)) drop-shadow(0 0 70px rgba(140,100,255,.35));transition:transform .25s cubic-bezier(.2,1.6,.4,1)}
+.rb-rg-big .runes{transform-origin:100px 100px;animation:rg-slow 14s linear infinite}
+.rb-rg-big .gear{transform-origin:100px 100px;animation:rg-slow 6s linear infinite reverse}
+.rb-rg-big .orbit{transform-origin:100px 100px;animation:rg-slow 3.2s linear infinite}
+.rb-rg-big .orbit2{transform-origin:100px 100px;animation:rg-slow 5.5s linear infinite reverse}
+.rb-rg-full.tick .rb-rg-big{transform:scale(1.07)}
+.rb-rg-full.tick .rb-rg-big .xii{fill:#fff;filter:url(#rg-glow)}
+.rb-rg-wave{position:absolute;left:50%;top:50%;width:40%;aspect-ratio:1;border-radius:50%;border:2px solid rgba(246,220,154,.9);transform:translate(-50%,-50%) scale(.6);opacity:0;pointer-events:none;box-shadow:0 0 30px rgba(246,220,154,.6),inset 0 0 30px rgba(246,220,154,.4)}
+.rb-rg-full.tick .rb-rg-wave{animation:rg-wave 1.1s cubic-bezier(.1,.7,.3,1) forwards}
+.rb-rg-full.tick .rb-rg-wave.w2{animation-delay:.12s}
+@keyframes rg-wave{0%{opacity:1;transform:translate(-50%,-50%) scale(.6)}100%{opacity:0;transform:translate(-50%,-50%) scale(3.2)}}
+.rb-rg-spark{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#fff6d8;box-shadow:0 0 10px 3px rgba(246,220,154,.9);opacity:0;pointer-events:none}
+.rb-rg-full.tick .rb-rg-spark{animation:rg-spark 1.2s cubic-bezier(.15,.8,.3,1) forwards}
+@keyframes rg-spark{0%{opacity:1;transform:rotate(var(--a)) translateY(0) scale(1)}100%{opacity:0;transform:rotate(var(--a)) translateY(calc(var(--d) * -1)) scale(.2)}}
+.rb-rg-dust{position:absolute;width:3px;height:3px;border-radius:50%;background:#f6dc9a;box-shadow:0 0 8px #f6dc9a;opacity:0;pointer-events:none;animation:rg-dust var(--t) linear var(--dl) infinite}
+@keyframes rg-dust{0%{opacity:0;transform:translateY(0)}15%{opacity:.9}100%{opacity:0;transform:translateY(-38vh)}}
+.rb-rg-full .rb-rg-fstage{position:relative;min-height:1.6em;padding:8px 22px;border-radius:999px;background:rgba(13,11,31,.82);border:1px solid rgba(226,189,107,.45);box-shadow:0 0 24px rgba(140,100,255,.35);max-width:min(92vw,560px);word-break:keep-all;font-size:clamp(16px,2.6vmin,24px);letter-spacing:.14em;text-align:center;text-shadow:0 0 18px rgba(226,189,107,.7)}
+.rb-rg-full .rb-rg-flash{position:fixed;inset:0;opacity:0;background:radial-gradient(circle at 50% 45%,rgba(255,246,214,.85),rgba(246,220,154,.25) 30%,transparent 60%)}
+.rb-rg-full.tick .rb-rg-flash{animation:rg-flash .9s ease-out}
 @media (prefers-reduced-motion:reduce){.rb-rg-full,.rb-rg-full *{animation:none!important;transition:none!important}}
 @media (prefers-reduced-motion:reduce){.rb-rg *,.rb-rg-stars{animation:none!important;transition:none!important}}
 `;
@@ -87,6 +104,71 @@ function clockSvg(doc) {
     el("line", { class: "hand-m", x1: 60, y1: 64, x2: 60, y2: 28, stroke: "#e2bd6b", "stroke-width": 1.6, "stroke-linecap": "round" }),
     el("circle", { cx: 60, cy: 60, r: 3, fill: "#f6dc9a" })
   ]);
+}
+
+// 화면 가운데 큰 시계: 금빛 테·룬 고리·톱니·눈금·떠도는 빛. 바늘은 JS가 돌린다(멈출 때 12시에 '딸깍' 맞추려고)
+function bigClock(doc) {
+  const ns = "http://www.w3.org/2000/svg";
+  const el = (t, a = {}, kids = []) => { const n = doc.createElementNS(ns, t); for (const [k, v] of Object.entries(a)) n.setAttribute(k, v); kids.forEach((c) => n.appendChild(c)); return n; };
+  const txt = (x, y, t, a) => { const n = el("text", { x, y, "text-anchor": "middle", "dominant-baseline": "middle", ...a }); n.textContent = t; return n; };
+  const C = 100, pt = (r, deg) => [C + Math.cos((deg - 90) * Math.PI / 180) * r, C + Math.sin((deg - 90) * Math.PI / 180) * r];
+  const defs = el("defs", {}, [
+    el("radialGradient", { id: "rg-face", cx: "50%", cy: "42%", r: "60%" }, [el("stop", { offset: "0", "stop-color": "#3b2b7a" }), el("stop", { offset: ".6", "stop-color": "#17113a" }), el("stop", { offset: "1", "stop-color": "#08061a" })]),
+    el("linearGradient", { id: "rg-gold", x1: "0", y1: "0", x2: "1", y2: "1" }, [el("stop", { offset: "0", "stop-color": "#fff1c4" }), el("stop", { offset: ".45", "stop-color": "#e2bd6b" }), el("stop", { offset: "1", "stop-color": "#9b7330" })]),
+    el("filter", { id: "rg-glow", x: "-50%", y: "-50%", width: "200%", height: "200%" }, [el("feGaussianBlur", { stdDeviation: "1.6", result: "b" }), el("feMerge", {}, [el("feMergeNode", { in: "b" }), el("feMergeNode", { in: "SourceGraphic" })])])
+  ]);
+  const RUNES = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ";
+  const runes = el("g", { class: "runes" }, [el("circle", { cx: C, cy: C, r: 96, fill: "none", stroke: "rgba(226,189,107,.35)", "stroke-width": .6 }), el("circle", { cx: C, cy: C, r: 88, fill: "none", stroke: "rgba(226,189,107,.35)", "stroke-width": .6 }),
+    ...[...RUNES].map((r, i) => { const [x, y] = pt(92, i * 15); return txt(x.toFixed(1), y.toFixed(1), r, { "font-size": 6, fill: "rgba(246,220,154,.8)", transform: `rotate(${i * 15} ${x.toFixed(1)} ${y.toFixed(1)})` }); })]);
+  const gear = el("g", { class: "gear" }, Array.from({ length: 48 }, (_, i) => { const [x1, y1] = pt(84, i * 7.5), [x2, y2] = pt(86.5, i * 7.5); return el("line", { x1, y1, x2, y2, stroke: "#e2bd6b", "stroke-width": 1.4, opacity: .7 }); }));
+  const ticks = el("g", {}, Array.from({ length: 60 }, (_, i) => { const big = i % 5 === 0, [x1, y1] = pt(big ? 70 : 73, i * 6), [x2, y2] = pt(76, i * 6); return el("line", { x1, y1, x2, y2, stroke: big ? "#f6dc9a" : "rgba(246,220,154,.5)", "stroke-width": big ? 1.6 : .6 }); }));
+  const NUMS = ["XII", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"];
+  const nums = el("g", {}, NUMS.map((t, i) => { const [x, y] = pt(60, i * 30); return txt(x.toFixed(1), y.toFixed(1), t, { "font-size": i === 0 ? 10 : 8, fill: "#f6dc9a", "font-family": "Georgia,serif", class: i === 0 ? "xii" : "" }); }));
+  const orbit = el("g", { class: "orbit" }, [0, 120, 240].map((d) => { const [x, y] = pt(80, d); return el("circle", { cx: x, cy: y, r: 1.6, fill: "#fff6d8", filter: "url(#rg-glow)" }); }));
+  const orbit2 = el("g", { class: "orbit2" }, [60, 200, 300].map((d) => { const [x, y] = pt(66, d); return el("circle", { cx: x, cy: y, r: 1.1, fill: "#cfc2ff", filter: "url(#rg-glow)" }); }));
+  const hh = el("g", {}, [el("path", { d: `M${C} ${C + 8} L${C - 3.2} ${C} L${C} ${C - 40} L${C + 3.2} ${C} Z`, fill: "url(#rg-gold)" })]);
+  const mh = el("g", {}, [el("path", { d: `M${C} ${C + 12} L${C - 2} ${C} L${C} ${C - 62} L${C + 2} ${C} Z`, fill: "#fff1c4" }), el("circle", { cx: C, cy: C - 50, r: 2.4, fill: "none", stroke: "#fff1c4", "stroke-width": .8 })]);
+  const svg = el("svg", { class: "rb-rg-big", viewBox: "0 0 200 200", "aria-hidden": "true" }, [
+    defs, runes, gear,
+    el("circle", { cx: C, cy: C, r: 80, fill: "url(#rg-face)", stroke: "url(#rg-gold)", "stroke-width": 3 }),
+    el("circle", { cx: C, cy: C, r: 77, fill: "none", stroke: "rgba(226,189,107,.4)", "stroke-width": .6 }),
+    orbit, ticks, nums, orbit2,
+    el("circle", { cx: C, cy: C, r: 30, fill: "none", stroke: "rgba(207,194,255,.25)", "stroke-width": .6, "stroke-dasharray": "1 3" }),
+    hh, mh, el("circle", { cx: C, cy: C, r: 4.5, fill: "url(#rg-gold)" }), el("circle", { cx: C, cy: C, r: 1.6, fill: "#08061a" })
+  ]);
+  const set = (m, hr) => { mh.setAttribute("transform", `rotate(${m} ${C} ${C})`); hh.setAttribute("transform", `rotate(${hr} ${C} ${C})`); };
+  return { svg, set };
+}
+
+// 바늘 돌리기: 거꾸로(시간을 되감듯) 빠르게 돌다가, land()를 부르면 느려지며 12시 바로 앞에서 멈칫한 뒤 '딸깍' 12시에 맞는다
+function spinner(clock, { reduced = false, onTick = () => {} } = {}) {
+  let m = 300, hr = 300 / 12 + 150, speed = 0, raf = 0, last = 0, mode = "spin";
+  const now = () => (globalThis.performance?.now?.() ?? Date.now());
+  const frame = (t) => {
+    const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t;
+    if (mode === "spin") { speed = Math.min(1800, speed + 2600 * dt); m -= speed * dt; hr -= speed / 9 * dt; clock.set(m, hr); }
+    raf = requestAnimationFrame(frame);
+  };
+  if (!reduced) { last = now(); raf = requestAnimationFrame(frame); } else clock.set(0, 0);
+  const tween = (ms, fn) => new Promise((res) => { const t0 = now(); const step = () => { const k = Math.min(1, (now() - t0) / ms); fn(k); if (k < 1) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); });
+  return {
+    async land() {
+      mode = "land"; cancelAnimationFrame(raf);
+      if (reduced) { clock.set(0, 0); onTick(); return; }
+      // 거꾸로 돌고 있으므로 지금보다 작은(1바퀴 반 이상 남은) 360의 배수로
+      const tm = Math.floor((m - 540) / 360) * 360, th = Math.floor((hr - 200) / 360) * 360;
+      const m0 = m, h0 = hr, nearM = tm + 9, nearH = th + 4;   // 12시 바로 앞(9°)에서 멈칫
+      const ease = (k) => 1 - Math.pow(1 - k, 4);
+      await tween(1700, (k) => clock.set(m0 + (nearM - m0) * ease(k), h0 + (nearH - h0) * ease(k)));
+      await new Promise((r) => setTimeout(r, 260));
+      // 딸깍: 짧게 넘어갔다 돌아와 12시에 고정
+      await tween(70, (k) => clock.set(nearM + (tm - 2.5 - nearM) * k, nearH + (th - 1 - nearH) * k));
+      onTick();
+      await tween(140, (k) => clock.set(tm - 2.5 + 2.5 * k, th - 1 + 1 * k));
+      clock.set(0, 0);
+    },
+    stop() { cancelAnimationFrame(raf); }
+  };
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -123,9 +205,14 @@ export async function openRegress(ctx, src) {
       // 화면 전체를 덮는 큰 시계 연출(모달 밖, 문서 맨 위에 붙인다)
       const doc = ctx.win.ownerDocument ?? document;
       const fstage = h("div", { class: "rb-rg-fstage", "aria-live": "polite" }, STAGES[0]);
-      const full = h("div", { class: "rb-rg-full", role: "status" }, h("style", null, CSS), h("div", { class: "rb-rg-flash", "aria-hidden": "true" }), clockSvg(doc), fstage);
+      const big = bigClock(doc), reduced = !!ctx.win.ownerDocument?.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      const sparks = Array.from({ length: 18 }, (_, k) => h("i", { class: "rb-rg-spark", style: `--a:${k * 20 + (k % 2) * 7}deg;--d:${28 + (k % 3) * 9}vmin` }));
+      const dust = Array.from({ length: 22 }, (_, k) => h("i", { class: "rb-rg-dust", style: `left:${(k * 37) % 100}%;top:${60 + (k * 13) % 40}%;--t:${3 + (k % 5) * 0.7}s;--dl:${(k % 7) * 0.35}s` }));
+      const stageWrap = h("div", { class: "rb-rg-stagewrap" }, h("div", { class: "rb-rg-halo" }), h("div", { class: "rb-rg-rays" }), big.svg, h("i", { class: "rb-rg-wave" }), h("i", { class: "rb-rg-wave w2" }), ...sparks);
+      const full = h("div", { class: "rb-rg-full", role: "status" }, h("style", null, CSS), ...dust, h("div", { class: "rb-rg-flash", "aria-hidden": "true" }), stageWrap, fstage);
       (doc.body ?? ctx.win).appendChild(full);
       requestAnimationFrame(() => full.classList.add("on"));
+      const spin = spinner(big, { reduced, onTick: () => full.classList.add("tick") });
       const endFull = async () => { full.classList.remove("on"); await sleep(450); full.remove(); };
       let i = 0; stage.textContent = STAGES[0];
       const tick = setInterval(() => { i = (i + 1) % STAGES.length; stage.textContent = fstage.textContent = STAGES[i]; }, 900);
@@ -134,13 +221,14 @@ export async function openRegress(ctx, src) {
           createRegressChat(ctx.api, src.ci, { store: M.store, folder, who: [...pick], name: nm.value.trim(), isGenerating, Busy }),
           sleep(2800)   // 연출: 시계가 충분히 돌아가게
         ]);
-        clearInterval(tick); full.classList.add("done");
+        clearInterval(tick); fstage.textContent = "XII…";
+        await spin.land();   // 느려지다가 딸깍, 12시
         fstage.textContent = stage.textContent = `${res.person}의 기억과 함께, 처음으로 돌아왔어요.`;
-        await sleep(1300);
+        await sleep(1500);
         await endFull();
         busy = false; done(res);
       } catch (e) {
-        clearInterval(tick); await endFull(); root.classList.remove("spinning"); busy = false; go.disabled = false;
+        clearInterval(tick); spin.stop(); await endFull(); root.classList.remove("spinning"); busy = false; go.disabled = false;
         stage.textContent = e instanceof Busy ? "응답이 나오는 중이에요. 끝난 뒤에 다시 시도해 주세요." : `회귀하지 못했어요: ${e?.message ?? e}`;
       }
     });

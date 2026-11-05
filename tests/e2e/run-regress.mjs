@@ -38,10 +38,14 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.locator(".rb-rg-go").click(); await page.waitForTimeout(400);
   ok(`[${tag}] 시계 연출(spinning) + 진행 문구`, (await page.locator(".rb-rg.spinning").count()) === 1 && /되감는|모으는|여는/.test(await page.locator(".rb-rg-fstage").textContent()));
   ok(`[${tag}] 뒤 화면이 보이게 연출 배경은 투명, 회귀 창은 숨김`, await page.evaluate(() => getComputedStyle(document.querySelector(".rb-rg-full")).backgroundColor === "rgba(0, 0, 0, 0)" && getComputedStyle(document.querySelector(".rb-rg")).opacity === "0"));
-  const fb = await page.evaluate(() => { const f = document.querySelector(".rb-rg-full"), c = f?.querySelector(".rb-rg-clock")?.getBoundingClientRect(), b = f?.getBoundingClientRect(); return f ? { fw: b.width, fh: b.height, cw: c.width, vw: innerWidth, vh: innerHeight } : null; });
+  const fb = await page.evaluate(() => { const f = document.querySelector(".rb-rg-full"), c = f?.querySelector(".rb-rg-big")?.getBoundingClientRect(), b = f?.getBoundingClientRect(); return f ? { fw: b.width, fh: b.height, cw: c.width, vw: innerWidth, vh: innerHeight } : null; });
   ok(`[${tag}] 화면 전체를 덮는 큰 시계(화면 짧은 변의 70% 이상)`, !!fb && fb.fw >= fb.vw - 1 && fb.fh >= fb.vh - 1 && fb.cw >= Math.min(fb.vw, fb.vh) * 0.7, JSON.stringify(fb));
   await page.screenshot({ path: `/tmp/regress-${tag}-spin.png` });
-  await page.waitForTimeout(5000);
+  await page.waitForSelector(".rb-rg-full.tick", { timeout: 9000 }); await page.waitForTimeout(350);
+  const hands = await page.evaluate(() => [...document.querySelectorAll(".rb-rg-big > g[transform]")].map((g) => g.getAttribute("transform")));
+  await page.screenshot({ path: `/tmp/regress-${tag}-tick.png` });
+  ok(`[${tag}] 끝날 때 '딸깍' 하며 두 바늘이 12시`, hands.length === 2 && hands.every((t) => /^rotate\(0 100 100\)$/.test(t)), hands.join(" | "));
+  await page.waitForTimeout(2600);
   ok(`[${tag}] 끝나면 창과 전체 화면 연출이 닫힘`, (await page.locator(".rb-rg").count()) === 0 && (await page.locator(".rb-rg-full").count()) === 0);
   const res = await page.evaluate(async () => {
     const ch = await __app.ctx.api.getCharacterFromIndex(0), c = ch.chats[0];
