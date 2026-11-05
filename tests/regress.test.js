@@ -65,8 +65,8 @@ test("createRegressChat: 메시지 없는 새 채팅을 덧붙이고 새 폴더�
   w = createWikiDocument(w, { type: "Character", title: "호시노", sections: [] });
   src.wiki = w;
   const res = await createRegressChat(api, 0, { store, folder: src, who: "시로코" });
-  assert.equal(ch.chats.length, 2); assert.deepEqual(ch.chats[1].message, []); assert.equal(ch.chats[1].name, "회귀 · 시로코");
-  assert.equal(ch.chats[1].risupotWikiScopeId, ch.chats[1].id); assert.equal(ch.chatPage, 1);
+  assert.equal(ch.chats.length, 2); assert.deepEqual(ch.chats[0].message, []); assert.equal(ch.chats[0].name, "회귀 · 시로코"); assert.equal(ch.chats[1].id, "t1", "새 채팅은 목록 맨 위");
+  assert.equal(ch.chats[0].risupotWikiScopeId, ch.chats[0].id); assert.equal(ch.chatPage, 0);
   const nf = folders[`c1/${res.chat.id}`];
   assert.deepEqual(Object.keys(nf.people), ["시로코"]); assert.equal(nf.wiki.scope.chatKey, res.chat.id);
   assert.equal(res.counts.wiki, true); assert.equal(Object.keys(nf.wiki.documents).length, 1);

@@ -54,6 +54,19 @@ const CSS = `
 .rb-rg-flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 22%,rgba(246,220,154,.9),rgba(246,220,154,0) 60%)}
 .rb-rg.done .rb-rg-flash{animation:rg-flash 1s ease-out}
 @keyframes rg-flash{30%{opacity:1}to{opacity:0}}
+.rb-rg-full{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(14px,3vh,28px);padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+  background:radial-gradient(90% 70% at 50% 40%,#3a2a78 0%,#1d1543 45%,#07051a 100%);color:#f6dc9a;font-family:"Nanum Myeongjo","Noto Serif KR",Georgia,serif;opacity:0;transition:opacity .45s ease}
+.rb-rg-full.on{opacity:1}
+.rb-rg-full .rb-rg-stars{opacity:.9}
+.rb-rg-full .rb-rg-clock{position:relative;width:min(78vmin,640px);height:min(78vmin,640px);filter:drop-shadow(0 0 40px rgba(226,189,107,.45));animation:rg-pulse 1.2s ease-in-out infinite}
+.rb-rg-full .rb-rg-clock .ring{animation:rg-slow 1.6s linear infinite reverse}
+.rb-rg-full .rb-rg-clock .hand-m{animation:rg-slow .35s linear infinite reverse}
+.rb-rg-full .rb-rg-clock .hand-h{animation:rg-slow 1.1s linear infinite reverse}
+.rb-rg-full .rb-rg-fstage{position:relative;min-height:1.6em;font-size:clamp(16px,2.6vmin,24px);letter-spacing:.12em;text-align:center;text-shadow:0 0 18px rgba(226,189,107,.5)}
+.rb-rg-full .rb-rg-flash{opacity:0}
+.rb-rg-full.done .rb-rg-flash{animation:rg-flash 1s ease-out}
+.rb-rg-full.done .rb-rg-clock{animation:none}
+@media (prefers-reduced-motion:reduce){.rb-rg-full,.rb-rg-full *{animation:none!important;transition:none!important}}
 @media (prefers-reduced-motion:reduce){.rb-rg *,.rb-rg-stars{animation:none!important;transition:none!important}}
 `;
 
@@ -106,19 +119,27 @@ export async function openRegress(ctx, src) {
     go.addEventListener("click", async () => {
       if (!pick || busy) return;
       busy = true; root.classList.add("spinning"); go.disabled = true;
+      // 화면 전체를 덮는 큰 시계 연출(모달 밖, 문서 맨 위에 붙인다)
+      const doc = ctx.win.ownerDocument ?? document;
+      const fstage = h("div", { class: "rb-rg-fstage", "aria-live": "polite" }, STAGES[0]);
+      const full = h("div", { class: "rb-rg-full", role: "status" }, h("style", null, CSS), h("div", { class: "rb-rg-stars", "aria-hidden": "true" }), h("div", { class: "rb-rg-flash", "aria-hidden": "true" }), clockSvg(doc), fstage);
+      (doc.body ?? ctx.win).appendChild(full);
+      requestAnimationFrame(() => full.classList.add("on"));
+      const endFull = async () => { full.classList.remove("on"); await sleep(450); full.remove(); };
       let i = 0; stage.textContent = STAGES[0];
-      const tick = setInterval(() => { i = (i + 1) % STAGES.length; stage.textContent = STAGES[i]; }, 900);
+      const tick = setInterval(() => { i = (i + 1) % STAGES.length; stage.textContent = fstage.textContent = STAGES[i]; }, 900);
       try {
         const [res] = await Promise.all([
           createRegressChat(ctx.api, src.ci, { store: M.store, folder, who: pick, name: nm.value.trim(), isGenerating, Busy }),
-          sleep(2600)   // 연출: 시계가 충분히 돌아가게
+          sleep(2800)   // 연출: 시계가 충분히 돌아가게
         ]);
-        clearInterval(tick); root.classList.remove("spinning"); root.classList.add("done");
-        stage.textContent = `${res.person}의 기억과 함께, 처음으로 돌아왔어요.`;
-        await sleep(1100);
+        clearInterval(tick); full.classList.add("done");
+        fstage.textContent = stage.textContent = `${res.person}의 기억과 함께, 처음으로 돌아왔어요.`;
+        await sleep(1300);
+        await endFull();
         busy = false; done(res);
       } catch (e) {
-        clearInterval(tick); root.classList.remove("spinning"); busy = false; go.disabled = false;
+        clearInterval(tick); await endFull(); root.classList.remove("spinning"); busy = false; go.disabled = false;
         stage.textContent = e instanceof Busy ? "응답이 나오는 중이에요. 끝난 뒤에 다시 시도해 주세요." : `회귀하지 못했어요: ${e?.message ?? e}`;
       }
     });

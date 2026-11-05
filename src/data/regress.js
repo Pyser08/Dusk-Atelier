@@ -23,13 +23,13 @@ export async function createRegressChat(api, charIndex, opts) {
   const fresh = await api.getCharacterFromIndex(charIndex);
   if (!fresh || fresh.chaId !== ch.chaId) throw new Error("캐릭터가 그 사이 바뀌었어요. 다시 시도해 주세요.");
   if (isGenerating(fresh)) throw new Busy();
-  const before = (fresh.chats ?? []).length;
   // 기억을 먼저 써 둔다(채팅이 생기자마자 열려도 기억이 있게). 채팅 추가에 실패하면 지운다.
-  await store.updateFolder(String(ch.chaId), id, (f) => { Object.assign(f, plan.slice, { botName: ch.name ?? "", chatName: label, chatIndex: before, cursor: null }); });
+  await store.updateFolder(String(ch.chaId), id, (f) => { Object.assign(f, plan.slice, { botName: ch.name ?? "", chatName: label, chatIndex: 0, cursor: null }); });
   try {
-    await api.setCharacterToIndex(charIndex, { ...fresh, chats: [...(fresh.chats ?? []), chat], chatPage: before });
+    // 리스가 새 채팅을 만들 때처럼 목록 맨 위(0번)에 넣고 그 채팅으로 이동한다
+    await api.setCharacterToIndex(charIndex, { ...fresh, chats: [chat, ...(fresh.chats ?? [])], chatPage: 0 });
     const check = await api.getCharacterFromIndex(charIndex);
     if (check?.chaId !== ch.chaId || !(check.chats ?? []).some((c) => c?.id === id)) throw new Error("새 채팅을 추가한 뒤 확인에서 보이지 않아요. 채팅 목록을 확인해 주세요.");
   } catch (e) { await store.deleteFolder?.(String(ch.chaId), id).catch(() => {}); throw e; }
-  return { chat, chatIndex: before, person: plan.person, counts: { ...plan.counts, wiki: wikiOk } };
+  return { chat, chatIndex: 0, person: plan.person, counts: { ...plan.counts, wiki: wikiOk } };
 }

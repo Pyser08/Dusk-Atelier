@@ -35,12 +35,14 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.locator(".rb-rg-p", { hasText: "카엘" }).click();
   ok(`[${tag}] 다른 인물을 누르면 이름도 바뀜`, (await page.locator(".rb-rg-field input").inputValue()) === "회귀 · 카엘");
   await page.locator(".rb-rg-go").click(); await page.waitForTimeout(400);
-  ok(`[${tag}] 시계 연출(spinning) + 진행 문구`, (await page.locator(".rb-rg.spinning").count()) === 1 && /되감는|모으는|여는/.test(await page.locator(".rb-rg-stage").textContent()));
+  ok(`[${tag}] 시계 연출(spinning) + 진행 문구`, (await page.locator(".rb-rg.spinning").count()) === 1 && /되감는|모으는|여는/.test(await page.locator(".rb-rg-fstage").textContent()));
+  const fb = await page.evaluate(() => { const f = document.querySelector(".rb-rg-full"), c = f?.querySelector(".rb-rg-clock")?.getBoundingClientRect(), b = f?.getBoundingClientRect(); return f ? { fw: b.width, fh: b.height, cw: c.width, vw: innerWidth, vh: innerHeight } : null; });
+  ok(`[${tag}] 화면 전체를 덮는 큰 시계(화면 짧은 변의 70% 이상)`, !!fb && fb.fw >= fb.vw - 1 && fb.fh >= fb.vh - 1 && fb.cw >= Math.min(fb.vw, fb.vh) * 0.7, JSON.stringify(fb));
   await page.screenshot({ path: `/tmp/regress-${tag}-spin.png` });
-  await page.waitForTimeout(4200);
-  ok(`[${tag}] 끝나면 창이 닫힘`, (await page.locator(".rb-rg").count()) === 0);
+  await page.waitForTimeout(5000);
+  ok(`[${tag}] 끝나면 창과 전체 화면 연출이 닫힘`, (await page.locator(".rb-rg").count()) === 0 && (await page.locator(".rb-rg-full").count()) === 0);
   const res = await page.evaluate(async () => {
-    const ch = await __app.ctx.api.getCharacterFromIndex(0), c = ch.chats.at(-1);
+    const ch = await __app.ctx.api.getCharacterFromIndex(0), c = ch.chats[0];
     const f = await __app.ctx.memory.store.getFolder("c1", c.id), orig = await __app.ctx.memory.store.getFolder("c1", "t1");
     return { n: ch.chats.length, name: c.name, msgs: c.message.length, people: Object.keys(f?.people ?? {}).map((k) => f.people[k].name), reg: f?.regress?.person, orig: Object.keys(orig.people).length };
   });
