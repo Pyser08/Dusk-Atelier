@@ -84,3 +84,12 @@ test("플러그인 용량: 코드의 줄바꿈·따옴표 이스케이프를 더
   assert.equal(m.parts.find((p) => p.label === "스크립트 코드").bytes, 6000);
   assert.ok(m.bytes < 6100, `총 ${m.bytes}`);
 });
+test("모듈 에셋은 실제 파일 크기를 읽어 더한다(같은 경로는 한 번)", async () => {
+  const mods = [{ id: "m1", name: "M1", assets: [["a", "assets/a.png", "png"], ["a2", "assets/a.png", "png"], ["b", "assets/b.png", "png"]] }];
+  const { api } = fakeApi({ db: { modules: mods } });
+  api.readImage = async (p) => new Uint8Array(p.endsWith("a.png") ? 50000 : 20000);
+  const r = await scanSizes(api);
+  const m = r.report.items.modules.find((x) => x.id === "m1");
+  assert.ok(m.bytes >= 70000 && m.bytes < 71000, String(m.bytes));
+  assert.equal(m.parts[0].label, "에셋 파일 · 2개");
+});

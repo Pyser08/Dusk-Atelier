@@ -64,6 +64,33 @@ async function measureStorage(api, { cancelled, onProgress } = {}) {
   return out;
 }
 
+/** 모듈 에셋은 목록에 경로만 있고 실제 파일은 따로 저장돼서, 파일을 읽어 크기를 더한다(읽자마자 버림). 같은 경로는 한 번만 */
+export async function addModuleAssetBytes(api, mods, raw, { onProgress, cancelled } = {}) {
+  if (typeof api.readImage !== "function") return false;
+  const paths = [...new Set(raw.flatMap((m) => arr(m?.assets).map((a) => (Array.isArray(a) ? a[1] : a?.path ?? a?.data)).filter((p) => typeof p === "string" && p && !p.startsWith("data:"))))];
+  const size = new Map();
+  let done = 0;
+  for (let i = 0; i < paths.length && !cancelled?.(); i += 4) {
+    await Promise.all(paths.slice(i, i + 4).map(async (p) => {
+      try {
+        const d = await Promise.race([api.readImage(p), new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 1e4))]);
+        size.set(p, d == null ? 0 : typeof d === "string" ? utf8Len(d) : d.byteLength ?? d.length ?? 0);
+      } catch { size.set(p, 0); }
+    }));
+    done = Math.min(paths.length, i + 4);
+    try { onProgress?.({ done, total: paths.length }); } catch { /* 표시 실패 무시 */ }
+    await tick();
+  }
+  mods.forEach((m, i) => {
+    const seen = new Set(); let b = 0, n = 0;
+    for (const a of arr(raw[i]?.assets)) { const p = Array.isArray(a) ? a[1] : a?.path ?? a?.data; if (typeof p === "string" && size.has(p) && !seen.has(p)) { seen.add(p); b += size.get(p); n++; } }
+    if (!b) return;
+    m.bytes += b;
+    m.parts = [...(m.parts ?? []), { label: `에셋 파일 · ${n}개`, bytes: b }].sort((x, y) => y.bytes - x.bytes);
+  });
+  return true;
+}
+
 /** 전체를 재서 리포트를 만든다. 쓰기는 하지 않는다 */
 export async function scanSizes(api, opts = {}) {
   const db = await api.getDatabase(["modules", "plugins", "enabledModules", "moduleIntergration", "characterOrder"]);
@@ -78,7 +105,10 @@ export async function scanSizes(api, opts = {}) {
     parked = arr(v).filter((m) => m && typeof m === "object" && m.id);
   } catch { /* 없으면 없는 대로 */ }
   const known = new Set(modules.map((m) => m.id));
-  parked.forEach((m, i) => { if (!known.has(m.id)) modules.push({ ...measureModule(m, modules.length + i), parked: true }); });
+  const rawMods = arr(db.modules).filter((m) => m && typeof m === "object");
+  parked.forEach((m, i) => { if (!known.has(m.id)) { modules.push({ ...measureModule(m, modules.length + i), parked: true }); rawMods.push(m); } });
+  opts.onProgress?.({ phase: "assets" });
+  await addModuleAssetBytes(api, modules, rawMods, { cancelled: opts.cancelled, onProgress: (p) => opts.onProgress?.({ phase: "assets", ...p }) });
   const plugins = arr(db.plugins).filter((p) => p && typeof p === "object").map((p, i) => measurePlugin(p, i));
   const ids = orderIds(db.characterOrder);
   const chars = await measureAllCharacters(api, ids, { onProgress: (p) => opts.onProgress?.({ phase: "chars", ...p }), cancelled: opts.cancelled });
