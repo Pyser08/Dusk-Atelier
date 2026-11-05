@@ -671,3 +671,12 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 리스바드 실측: 아이콘 줄 = `.rs-sidebar.character-list-sidebar`(80px), 안쪽 `.character-list` 72px → 사이드바 자체가 좁으면 그 끝을 경계로.
 - Dusk 열었다 닫기: controller yieldToDusk가 resumeAfterDusk 표시 → app.js close() 끝에 ctx.onClosed → main.js에서 widgetHome.resume(). 홈 배치 코드는 건드리지 않음.
 - 열린 항목 중복: applyOpen이 닫기를 먼저 처리, 중복 판정에 닫힌 항목 포함(같은 kind 0.5/다른 kind 0.8), openForPrompt 24개, 프롬프트 문구 보강. 모델이 안 닫아 주면 자동으론 안 닫힘(미해결).
+
+## 다음 작업(NSFW 추가 기능, 사용자 승인됨: "저거 다 만들고")
+1. Dusk 이야기 날짜를 Erosync 주기 계산에 반영(지금은 Dusk 월경 기록이 켜져 있으면 Erosync 주기만 쉼; `cycleProbe`/`duskFlagsSet` 참고)
+2. 봇별 수위 프리셋(수위·동작·집착 방지 값 묶음 저장/적용; `erosynclevel.js`·`erosyncconfig.js`·`erosyncguard.js`)
+3. 장면 되돌리기(직전 장면 판단·프로필 변화 한 턴 되돌림)
+4. 인물 위키 NSFW 탭 위쪽 한 줄 요약(지금 목표·최근 변화·쉬는 턴; `erosyncwiki.js` `eroNsfwCard`)
+5. 인물 1명 NSFW 프로필만 내보내기/가져오기(`memoryfile.js` 재사용)
+6. NSFW 기록 확장(아래): 장면 타임라인, 관계 수위 변화 그래프, 비하인드 검색·고정, 장면 메모, 직전 판단 이유 보기, 기록 CSV/MD 내보내기 — 모두 AI 추가 호출 없이 이미 저장된 값만 사용.
+규칙: 비용 늘리는 기능(장면마다 AI 추가 호출)은 넣지 않음. 시작 전 STATE.md·`erosyncwiki.js`부터 읽을 것.
