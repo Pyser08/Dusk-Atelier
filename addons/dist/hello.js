@@ -1,0 +1,2 @@
+/* Dusk Atelier 애드온 hello v0.1.0 — 소스: addons/hello (AGPL-3.0-only) */
+var o={id:"hello",name:"애드온 시험",version:"0.1.0"};async function r(a,t){t.toast?.(`애드온 시험 v${t.version} 켜졌어요`);let e=null;try{e=await a.registerButton?.({name:"Dusk 애드온 시험",icon:"🧵",iconType:"html",location:"hamburger"},()=>t.toast?.("애드온에서 눌렀어요 — 같은 창·같은 api로 돌고 있어요"))}catch(n){console.log("[Dusk Atelier] 애드온 시험: 버튼 등록 실패",n?.message??n)}return{deactivate(){try{if(e!=null)a.unregisterUIPart?.(e)}catch{}}}}export{r as activate,o as meta};

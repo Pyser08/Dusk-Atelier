@@ -16,6 +16,7 @@ import { loadMemoryButtonOn } from '../../data/memorybutton.js';
 import { createCellar, loadCellarUrl, saveCellarUrl, CELLAR_DEFAULT_URL } from '../../data/cellar.js';
 import { createCellarBackups } from '../../data/cellarbackup.js';
 import { createCellarUpdate } from '../../data/cellarupdate.js';
+import { addonCard } from './addonsui.js';
 
 export async function renderSettingsTab(ctx) {
   if (ctx.state.sub === "prompts") return renderPrompts(ctx);
@@ -45,6 +46,7 @@ export async function renderSettingsTab(ctx) {
     ),
     ctx.widgetHome ? widgetHomeCard(ctx, () => renderSettingsTab(ctx)) : null,
     cellarCard(ctx, linkRow, card),
+    addonCard(ctx, card),
     card("백업", linkRow("백업 만들기", "모듈·에셋·설정을 zip 한 파일로", () => fullBackup(ctx), "rb-set-fullbackup"), linkRow("백업에서 복원", "전체 백업 zip으로 되살리기", () => fullRestore(ctx), "rb-set-restore")),
     card("도움말",
       ctx.openOnboarding ? linkRow("시작 안내 다시 보기", "처음 설정을 단계별로 다시 해요", () => ctx.openOnboarding(), "rb-set-onboard") : null,

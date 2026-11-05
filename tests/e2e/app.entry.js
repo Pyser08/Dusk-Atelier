@@ -1,3 +1,4 @@
+import { createAddons } from "../../src/data/addons.js";
 import { createSkillStore } from "../../src/data/skillstore.js";
 import { normalizeSkillSet } from "../../src/engine/skills.js";
 // 1.7.0 메뉴 구조 시험용: 가짜 리스 api로 실제 createApp을 띄운다. node tests/e2e/run-app.mjs 로 실행.
@@ -119,6 +120,10 @@ window.bootApp = async (seed, opts = {}) => {
       }, { chaId: "c1", chatId: "t1" });
       memory.injector.lastRequest = () => ({ at: Date.now(), injected: true, manifest: { tokens: 420, recordIds: ["r1", "r2", "r3"], included: [{ kind: "person", name: "시로코", tokens: 300 }], excluded: [] } });
     }
+  }
+  if (opts.addons) {  // 애드온 카드 시험: 파일은 실행기가 window.__addonFiles로 넣어 준다(주소 → 내용)
+    app.ctx.addons = createAddons(api, { core: "2.0.0", ctx: { toast: (t, o) => app.ctx.toast?.(t, o) }, fetcher: async (_a, url) => (url.endsWith("addons.json") ? window.__addonFiles?.manifest : window.__addonFiles?.[url]) ?? null });
+    await app.ctx.addons.boot();
   }
   window.__app = app;
   window.__api = api;

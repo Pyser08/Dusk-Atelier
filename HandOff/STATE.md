@@ -1,5 +1,14 @@
 # 현재 상태 — feat/2.0.0
 
+## 2026-11-05 애드온 로더 시험판 (버전 미변경)
+- 설계: 프로젝트 문서 claude/addon-plan.md(1순위 방식). 애드온은 리스 플러그인 목록에 안 뜨고, Dusk가 받아 같은 iframe에서 `import(blob:)`로 켠다.
+- 순수 `src/engine/addons.js`(parseManifest·cmpVer·pickUpdates·rowState) / 데이터 `src/data/addons.js` `createAddons(api,{core,ctx})`: boot(저장본으로 바로 켬, 3초 뒤 확인)·check(6시간마다, 바뀐 것만 받기·sha256 검사)·install·setOn·remove·되돌리기(prev). 훅 있는 애드온(`hooks:true`) 업데이트는 다음 시작부터(pendingRestart). 저장 키 `dusk.addon.index`·`dusk.addon.code.<id>`·`dusk.addon.prev.<id>`(getLocalPluginStorage→pluginStorage), 목록 주소 키 `dusk.addon.manifestUrl`(기본 feat/2.0.0 raw).
+- 애드온 소스 `addons/<id>/index.js`(export activate(api, ctx) → {deactivate}) → `node tools/build-addons.mjs`로 `addons/dist/<id>.js` + `addons/addons.json`(sha256·주소) 생성, `--check`로 확인. 목록 원본 `addons/addons.src.json`. 시험 애드온 `hello`(켜지면 알림 + 햄버거 버튼).
+- 화면: 설정 탭 '애드온 (시험)' 카드(`ui/screens/addonsui.js`). main.js에서 boot.
+- 테스트: `tests/addons.test.js`(8), e2e `run-addon-loader.mjs`(리스와 같은 sandbox·CSP에서 실제 blob import), `run-addons-ui.mjs`(PC·모바일 12).
+- 미확인: 실제 RisuAI·RisuBard·PocketRisu, **iOS Safari·Firefox의 import(blob:)**(Chromium만 확인), 실제 nativeFetch로 raw.githubusercontent 받기. 실패 시 대체 경로(자기 재조립·nonce script) 아직 없음.
+- 다음: 실기기 확인 → 실제 기능 하나(작은 것)를 애드온으로 분리, 공유 코드(`ctx.lib`) 구조.
+
 ## 2026-11-05 버그 정리 (2.0.0 애드온 작업 전, 버전 미변경)
 - 스크롤 튐: `src/ui/scrollguard.js` `installScrollGuard(win, main)`(app.js에서 설치). 안쪽 영역이 '불러오는 중'으로 짧아지거나 떼었다 다시 붙으면 스크롤이 0으로 가던 문제 — 영역별 마지막 위치를 기억해 되돌림. 사용자가 직접 굴린 스크롤·코드의 scrollTop=0/scrollIntoView는 존중, 버튼·링크 클릭 뒤 3초는 새 영역 되돌리지 않음(화면 이동). e2e `run-scrollkeep.mjs`(NOGUARD=1이면 버그 재현).
 - 중복 스위치: 기억 고급(`madv.js` 대화에 넣기)의 사람다운 기억·감정 식음·거짓말 추적 제거(간단 '기억 옵션'에만), 예전 세부(`settings.js` renderGlobalSettings)의 기억 넣기 켜기·확장 기억 넣기 제거(고급 '대화에 넣기'에만). e2e `run-dupes.mjs`(탭별 같은 이름 스위치 검사).

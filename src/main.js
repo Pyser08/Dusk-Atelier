@@ -1,4 +1,5 @@
 import { parseStatus as parseStoryStatus } from "./engine/storytime.js";
+import { createAddons } from "./data/addons.js";
 import { startHostUpdateToast } from './ui/hostupdate.js';
 import { createDbCache, WRITE_RE } from './data/dbcache.js';
 import { createHookBus } from './data/hookbus.js';
@@ -284,6 +285,10 @@ async function start() {
   };
   protlink.boot().catch((e) => console.log(`[${TITLE}] ProtLink+ 시작 실패 ${e?.message ?? e}`));
   erosync.boot().catch((e) => console.log(`[${TITLE}] Erosync 시작 실패 ${e?.message ?? e}`));
+  // 애드온(2.0.0 시험): 받아 둔 애드온을 같은 창에서 불러온다. 리스 플러그인 목록에는 안 뜬다.
+  const addons = createAddons(api, { core: VERSION, ctx: { toast: (t, o) => app.ctx.toast?.(t, o) } });
+  app.ctx.addons = addons;
+  addons.boot().catch((e) => console.log(`[${TITLE}] 애드온 시작 실패 ${e?.message ?? e}`));
   app.ctx.cellar = memory.cellar;   // 한 곳에서 찾은 Cellar 연결을 화면들이 함께 쓴다
   app.ctx.skills = skills;
   app.ctx.web = web;
