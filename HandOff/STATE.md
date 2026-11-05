@@ -5,7 +5,7 @@
 - 규칙: 애드온이 없으면 쓸 수 없는 것(탭·하위 화면·버튼·채팅 메뉴·위젯 칸·설정 행·안내/투어 항목·홈 바로가기)은 전부 그 애드온 쪽으로 옮겨서, 없을 땐 코어에 흔적이 안 남게(숨김). 데이터·설정 키는 그대로(애드온을 다시 받으면 이어서 쓰게).
 - 순서: ① 로더 확장 — manifest `requires`(필요 애드온 같이 받기), 코어가 애드온에 넘기는 `ctx.lib`(dom·kit·icons 등, esbuild로 애드온 빌드 때 external→ctx.lib 매핑), 애드온이 탭·화면·메뉴를 코어에 등록하는 자리(registerTab 등) ② 채팅테마로 첫 분리 ③ AI 제작·위젯 ④ 장기기억·관계도 → 기억카드·에로싱크 ⑤ 2.0.0 첫 실행 때 쓰던 기능 애드온 자동 받기.
 - 진행: ① 로더 확장(일부) — `src/ui/ext.js` `ctx.ext`(screen·row·slot 자리, add()는 되돌리기 반환), 코어 모듈 공유(`tools/build-addons.mjs`가 코어에 있는 모듈은 애드온에 넣지 않고 `globalThis.__duskLib`로 받게 빌드, 넘겨 줄 목록 `src/addonlib.gen.js` 자동 생성 — 바뀌면 코어 재빌드+minCore 올림). `requires`·첫 실행 자동 받기는 아직.
-  ② 채팅테마 분리 끝 — `addons/chattheme/index.js`(v1.0.0, minCore 2.0.0, 84KB, 코어 모듈 7개 공유). 코어에서 tools.js 화면·줄, settings.js 꾸미기 버튼(slot look.mine)·스튜디오 칸(slot look.adv), tabs.js·tour.js 안내 글 제거. 시작 때 테마 적용(restoreActiveTheme)은 `data/themes.js`로 옮겨 코어에 남김.
+  ② 채팅테마 분리 끝 — `addons/chattheme/index.js`(v1.0.0, minCore 1.9.2 — 지금 코어 버전이 1.9.2라 실기기 시험용, 2.0.0 출시 때 minCore 2.0.0으로, 84KB, 코어 모듈 7개 공유). 코어에서 tools.js 화면·줄, settings.js 꾸미기 버튼(slot look.mine)·스튜디오 칸(slot look.adv), tabs.js·tour.js 안내 글 제거. 시작 때 테마 적용(restoreActiveTheme)은 `data/themes.js`로 옮겨 코어에 남김.
   e2e `app.entry.js`는 기본으로 기능 애드온 소스를 켜고(`FEATURE_ADDONS`), `coreOnly`면 코어만. `run-addon-chattheme.mjs`(코어만/켬/배포 파일 14개).
   참고: `run-app.mjs`는 수정 전에도 실패(오래된 시험).
 - 매 단계 끝: 애드온 없이 코어만으로 npm test·e2e 통과 + 애드온 켠 상태 e2e 통과 확인.

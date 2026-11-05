@@ -16,7 +16,7 @@
       "id": "chattheme",
       "name": "채팅 테마 만들기",
       "version": "1.0.0",
-      "minCore": "2.0.0",
+      "minCore": "1.9.2",
       "hooks": false,
       "desc": "채팅 테마 빌더·테마 스튜디오로 내 채팅 테마를 만들고 주고받아요. 만든 테마는 이 애드온이 없어도 계속 적용돼요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/chattheme.js",
