@@ -1,4 +1,5 @@
 // 장기기억 주입: 고정 예산으로 [Dusk Memory] 블록을 조립한다. 순수 함수.
+import { regressLine } from "./regress.js";
 import { GRADE_WEIGHT } from "./memorygrade.js";
 import { injectable, trustTag, changeNote } from "./memorytrust.js";
 import { emoLines, hasEmo } from "./memoryemo.js";
@@ -78,6 +79,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   const scenes = (folder.scenes ?? []).filter((s) => !s.orphan);
   const cur = scenes.at(-1);
   const lines = [HEADER];
+  if (folder.regress?.person) lines.push(regressLine(folder));   // 회귀: 이 인물만 이전 타임라인을 기억한다
   if (cur) lines.push(sceneLine(cur, sceneCap));
   if (storyNow) lines.push(`Story time (now): ${oneLine(storyNow)}`); // 이야기 시간 설정이 켜져 있으면 그 값이 기준
   else if (plus && cur && !cur.when && currentStoryTime(folder)) lines.push(`Story time (last known): ${oneLine(currentStoryTime(folder))}`);

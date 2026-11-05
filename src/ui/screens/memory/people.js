@@ -48,11 +48,22 @@ export async function newChatFrom(env, atIdx) {
   } catch (e) { fail(ctx)(e); }
 }
 
+// 회귀: 인물 하나의 기억만 들고 새 채팅(인물 상세·더보기에서)
+export async function regressFrom(env, who = null) {
+  const { openRegress } = await import("../regress.js");
+  const res = await openRegress(env.ctx, { ci: env.bot.index, chaId: env.bot.id, chatId: env.chatItem.id, folder: env.folder, who });
+  if (!res) return;
+  mem(env.ctx).bots = null;
+  env.ctx.toast(`‘${res.chat.name}’ 채팅을 만들었어요. 채팅 목록에서 열어 보세요.`);
+  env.redraw();
+}
+
 // 인물 목록 ‘더보기’ 메뉴: 합치기·폴더·추적·정리 등. 위키 화면에서도 같이 쓴다.
 export function peopleMenuItems(env, people) {
   const m = mem(env.ctx), { caps } = env;
   return [
     ...memoryFileItems(env.ctx, env.redraw),
+    env.backend.id === "local" && { label: "회귀 (인물 골라 새 채팅)", onClick: () => regressFrom(env).catch(fail(env.ctx)) },
     caps.analyze && { label: "인물 합치기", onClick: () => openMerge(env, people).catch(fail(env.ctx)) },
     caps.analyze && { label: "같은 이름 한 번에 합치기", onClick: () => mergeSameNames(env, people).catch(fail(env.ctx)) },
     env.folder.wiki?.documents && { label: "위키 점검", onClick: () => openWikiHealth(env, people).catch(fail(env.ctx)) },
@@ -167,6 +178,7 @@ export function personDetail(env, host, key, embedded = false) {
       local && btn("별칭", { size: "sm", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: "별칭 편집", label: "쉼표로 구분", value: (p.aliases ?? []).join(", "), ok: "저장" }); if (v != null) editFolder(env, (f) => { f.people[key].aliases = v.split(",").map((s) => s.trim()).filter(Boolean); }); } }),
       local && doc && wikiEditable(env) && btn("항목 관리", { size: "sm", title: "항목 직접 추가·고치기·지우기 · NPC 감정", onClick: () => openRecords(env, doc).catch(fail(env.ctx)) }),
       env.advanced && local && doc && btn("AI 도구", { size: "sm", title: "전체 다시 정리 · 직접 지시 · 항목 AI 작성 · 수치 제안", onClick: () => openAITools(env, doc, p).catch(fail(env.ctx)) }),
+      local && btn("⏳ 회귀", { size: "sm", title: "이 인물만 기억을 안고 처음으로 돌아간 새 채팅을 만들어요", onClick: () => regressFrom(env, key).catch(fail(env.ctx)) }),
       btn("이 인물로 새 봇 만들기", { kind: "primary", size: "sm", onClick: () => { m.compose = { keys: [key] }; m.ctab = "compose"; env.ctx.go("cards"); } })),
     p.digest ? h("div", { class: "rb-card rb-mem-digest" }, h("b", null, "요약 "), p.digest) : null,
     !embedded && state ? stateCard(env, state, env.cycleOn ? cycleOf(doc) : null) : null,
