@@ -59,10 +59,10 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
       btn("임베딩 설정", { onClick: () => openEmbedModal(ctx) })) : null,
     caps.analyze ? regexSection(ctx, { S, save, sw, section }) : null,
     caps.analyze ? section("HypaPlus에서 가져오기", h("p", { class: "rb-muted" }, "HypaPlus에 쌓은 기억을 장면·인물 기록으로 옮겨요. HypaPlus와는 동시에 쓸 수 없어요."), btn("HypaPlus 가져오기", { onClick: () => openHypaModal(ctx, {}) })) : null,
-    caps.inject || caps.analyze ? section("기억 넣기", sw("기억 넣기 켜기", S.inject.on !== false, (s, v) => { s.inject.on = v; }),
+    caps.inject || caps.analyze ? section("기억 넣기",   // 켜기·확장 넣기 스위치는 고급 '대화에 넣기'에만 둔다
       num("목표 토큰", () => S.inject.targetTokens, (s, v) => { s.inject.targetTokens = v; }, { min: 200, max: 8000 }), num("상한 토큰", () => S.inject.capTokens, (s, v) => { s.inject.capTokens = Math.max(v, s.inject.targetTokens); }, { min: 200, max: 12000 }),
       num("기억 넣기 시작 턴", () => S.inject.fromTurn, (s, v) => { s.inject.fromTurn = Math.max(1, v); }, { min: 1, max: 50 }), num("이야기 요약 토큰", () => S.inject.eventTokens, (s, v) => { s.inject.eventTokens = v; }, { min: 0, max: 4000 }),
-      sw("확장 기억 넣기(열린 항목·관계 변화·지식 경계·원문 발췌·시각)", S.inject.plus !== false, (s, v) => { s.inject.plus = v; }), num("오래된 D·C 잊기(메시지 수, 0=끔)", () => S.inject.forgetAfter ?? 150, (s, v) => { s.inject.forgetAfter = v; }, { max: 5000, step: 10 }),
+      num("오래된 D·C 잊기(메시지 수, 0=끔)", () => S.inject.forgetAfter ?? 150, (s, v) => { s.inject.forgetAfter = v; }, { max: 5000, step: 10 }),
       num("최근 메시지 겹침 제외(개)", () => S.inject.recentSkip, (s, v) => { s.inject.recentSkip = v; }, { max: 40 }),
       h("label", { class: "rb-mem-field" }, h("span", null, "삽입 위치"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.inject.position = e.target.value; }) }, [["beforeLastUser", "마지막 사용자 메시지 앞"], ["afterSystem", "시스템 프롬프트 뒤"]].map(([v, l]) => h("option", { value: v, selected: S.inject.position === v }, l)))),
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 들어간 기억 보기"), man ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `넣음 (약 ${man.tokens} 토큰)` : "넣지 않음"}`),

@@ -38,6 +38,7 @@ import { renderCardsTab } from './screens/cards/index.js';
 import { scopeCtx } from './staleguard.js';
 import { renderHome } from './screens/home.js';
 import { renderPersonaBuilder } from './screens/personabuilder.js';
+import { installScrollGuard } from './scrollguard.js';
 import { renderSectionHome } from './screens/sectionhome.js';
 import { createBotAndEdit } from './screens/newbot.js';
 import { BASE_IDS, SEARCH, SECTION_IDS, SECTION_NAMES, TABS, subLabel, tabHidden } from './tabs.js';
@@ -220,6 +221,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     wasLoading = now;
   }).observe(main, { childList: true });
   win.append(head, topnav, body, tabbar);
+  installScrollGuard(win, main);   // 다시 그리기·불러오기 때 스크롤이 맨 위로 튀지 않게
   // ? 버튼: 팝업 대신 처음 둘러보기와 같은 하이라이트 방식으로 지금 화면을 짚어 준다(ui/screentours.js)
   function toggleHelp() { runScreenTour(ctx).catch(() => {}); }
   const sep = () => h("span", { class: "sep", "aria-hidden": "true" }, icon("chevron", 14));

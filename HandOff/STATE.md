@@ -1,4 +1,11 @@
-# 현재 상태 — feat/1.9.2
+# 현재 상태 — feat/2.0.0
+
+## 2026-11-05 버그 정리 (2.0.0 애드온 작업 전, 버전 미변경)
+- 스크롤 튐: `src/ui/scrollguard.js` `installScrollGuard(win, main)`(app.js에서 설치). 안쪽 영역이 '불러오는 중'으로 짧아지거나 떼었다 다시 붙으면 스크롤이 0으로 가던 문제 — 영역별 마지막 위치를 기억해 되돌림. 사용자가 직접 굴린 스크롤·코드의 scrollTop=0/scrollIntoView는 존중, 버튼·링크 클릭 뒤 3초는 새 영역 되돌리지 않음(화면 이동). e2e `run-scrollkeep.mjs`(NOGUARD=1이면 버그 재현).
+- 중복 스위치: 기억 고급(`madv.js` 대화에 넣기)의 사람다운 기억·감정 식음·거짓말 추적 제거(간단 '기억 옵션'에만), 예전 세부(`settings.js` renderGlobalSettings)의 기억 넣기 켜기·확장 기억 넣기 제거(고급 '대화에 넣기'에만). e2e `run-dupes.mjs`(탭별 같은 이름 스위치 검사).
+- 미확인: 실기기(세 호스트·모바일 터치 스크롤), 하위 화면(봇 세부 설정 등)의 중복.
+- 다음: 애드온 구조(프로젝트 문서 claude/addon-plan.md, 1순위 blob import 로더 PoC).
+
 
 - 회귀(2026-11-05): `engine/regress.js`(regressSlice·regressCandidates·regressLine, 순수) · `data/regress.js`(createRegressChat: 새 채팅 append+chatPage 이동, risupotWikiScopeId=새 id, 폴더 먼저 쓰고 실패 시 deleteFolder) · `ui/screens/regress.js`(신비 창, .rb-rg 범위 CSS) · 진입: chatmenu `dusk-qt-regress`, people.js 더보기·인물 상세, wikiview 헤더. carried 기록은 at:null(주입 최근 제외 회피)·src/hs 제거(대조 되돌림 회피)·회귀자 ctx=always, memoryinject에 Regression 줄. Erosync 값은 옮기지 않음. 테스트 tests/regress.test.js, e2e run-regress.mjs(22). 실기기 미확인.
 - 지난 대화 분석 함께 기록(2026-11-05): memoryrunner `backfillExtras`(settings.backfillExtras 기본 true) → link.backfillPot(묶음 끝 index를 auto.schedule)·backfillPotWait(waitForScope 10분)·backfillPotReady(potState+auto.enabled) — memoryturn rt 시작 시 채움. 끝나면 link.backfillErosync(main.js: Erosync 켜짐+read().people 비었을 때 profile start "full"). Erosync 턴 단위 기록은 planner pending 구조라 과거 재생 불가 → 성향 전체 분석으로 대체. 서버 분석 경로는 함께 기록 안 함. 리수폿 일괄: switches.setPotAll/potAllOn(potBots 초기화).

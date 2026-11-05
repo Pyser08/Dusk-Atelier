@@ -58,10 +58,7 @@ export function advancedGroups(ctx, { cur, idx, redraw }) {
         num("응답 대기 시간(초)", () => S.modelTimeoutSec ?? 600, (s, v) => { s.modelTimeoutSec = Math.max(10, v); }, { min: 10, max: 3600, step: 10 })),
       section("대화에 넣기", sw("기억을 대화에 넣기", S.inject.on !== false, (s, v) => { s.inject.on = v; }),
         sw("장부 넣기 (열린 항목·관계 변화·지식 경계)", S.inject.plus !== false, (s, v) => { s.inject.plus = v; }),
-        sw("인물 관점·내면·기대 불일치 넣기 (토큰이 늘 수 있어요)", S.inject.stage3 !== false, (s, v) => { s.inject.stage3 = v; }),
-        sw("사람다운 기억 (관계 진도·호칭과 말투·둘만의 추억·갈등과 앙금·사람 앞 태도·오랜만의 재등장·흐려진 기억)", S.inject.human !== false, (s, v) => { s.inject.human = v; }),
-        sw("감정이 시간이 지나면 식어요 (적대감·두려움은 빨리, 애정은 천천히, 신뢰·존경은 그대로)", S.inject.cool !== false, (s, v) => { s.inject.cool = v; }),
-        sw("거짓말·오해 추적 (기본 꺼짐 · 추리·드라마용, 약한 분석 모델에서는 틀릴 수 있어요)", S.inject.beliefs === true, (s, v) => { s.inject.beliefs = v; })),
+        sw("인물 관점·내면·기대 불일치 넣기 (토큰이 늘 수 있어요)", S.inject.stage3 !== false, (s, v) => { s.inject.stage3 = v; })),  // 사람다운 기억·감정 식음·거짓말 추적은 간단 모드 '기억 옵션'에만 둔다
       loreEditor(ctx, cur)] },  // 대화에 들어가는 로어 편집
     { id: "diag", title: "진단 · 기억 데이터 편집", sub: "마지막 요청에 넣은 기억 보기", kids: [diag, memoryEditor(ctx, cur, { redraw })] },
     { id: "danger", title: "위험 구역", sub: "기억 지우기 · 초기화", danger: true, kids: [h("section", { class: "rb-card rb-mem-sec rb-danger-zone" }, h("h3", null, "위험 구역"),
