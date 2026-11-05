@@ -110,6 +110,16 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
       if (!inst?.content) return { ok: false, reason: "off", limits: [] };
       try { return patch ? await inst.content.set(patch) : await inst.content.get(); } catch (e) { return { ok: false, reason: String(e?.message ?? e), limits: [] }; }
     },
+    // 동작·분석 설정(읽기·쓰기, 허용된 키만). 꺼져 있으면 { ok:false, reason:"off" }
+    async config(patch = null) {
+      if (!inst?.config) return { ok: false, reason: "off", values: {} };
+      try { return patch ? await inst.config.set(patch) : await inst.config.get(); } catch (e) { return { ok: false, reason: String(e?.message ?? e), values: {} }; }
+    },
+    // 지시문(프롬프트) 칸 읽기·고치기. patch = { id, branch, text } (text 비우면 기본으로)
+    async prompts(patch = null) {
+      if (!inst?.prompts) return { ok: false, reason: "off", pages: [] };
+      try { return patch ? await inst.prompts.set(patch.id, patch.branch, patch.text) : await inst.prompts.get(); } catch (e) { return { ok: false, reason: String(e?.message ?? e), pages: [] }; }
+    },
     // Erosync 자체 화면(프로필 고치기·장면 등)을 연다. 꺼져 있으면 false
     async open() {
       if (!inst || typeof inst.open !== "function") return false;

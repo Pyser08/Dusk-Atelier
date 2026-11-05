@@ -36935,6 +36935,49 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
       limits: EXTREMITY_LIMIT_KEYS.map((k) => ({ key: k, cap: EXTREMITY_LIMITS[k].cap, label: EXTREMITY_LIMITS[k].label })),
     };
   }
+  // Dusk ‘동작·분석’ 카드 연결부: 허용된 설정 키만 읽고 쓴다(저장 때 normalizeConfig가 범위를 다시 맞춘다).
+  const DUSK_CONFIG_KEYS = Object.freeze(['mode', 'frequency', 'autonomy', 'goalPersistence', 'cooldownTurns', 'maxActorsPerTurn', 'recentMessages', 'progressiveFollowUp', 'autoVerifyCharacters', 'autoRefreshProfiles', 'developmentMode']);
+  async function duskConfigGet() {
+    const c = await loadConfig();
+    return { ok: true, maxActors: MAX_ACTIONS_PER_TURN, values: Object.fromEntries(DUSK_CONFIG_KEYS.map((k) => [k, c[k]])) };
+  }
+  async function duskConfigSet(patch) {
+    const c = await loadConfig();
+    const next = { ...c };
+    for (const k of DUSK_CONFIG_KEYS) if (patch && k in patch) next[k] = patch[k];
+    await saveConfig(next);
+    duskReadCache = null;
+    return duskConfigGet();
+  }
+  // Dusk ‘프롬프트’ 카드 연결부: 지시문 칸의 현재 글·기본 글을 읽고, 고치거나 기본으로 되돌린다(promptOverrides).
+  async function duskPromptsGet() {
+    await loadConfig();
+    const over = promptOverridesNow();
+    return {
+      ok: true, branches: ['sfw', 'nsfw', 'plus'],
+      pages: PROMPT_PAGES.map((page) => ({
+        id: page.id, name: page.name, use: page.use || '', branchy: page.branchy === true,
+        sections: page.sections.filter((x) => x.id && !x.part).map((x) => {
+          const kind = promptSectionKind(x.id), own = isPlainObject(over[x.id]) ? over[x.id] : {};
+          const branches = kind === 'common' ? ['common'] : ['sfw', 'nsfw', 'plus'].filter((b) => promptDefaultText(x.id, b) !== undefined);
+          return {
+            id: x.id, title: x.title, desc: x.desc || '', kind, branches,
+            texts: Object.fromEntries(branches.map((b) => [b, { text: promptSectionText(x.id, b) ?? '', base: promptDefaultText(x.id, b) ?? '', changed: typeof own[b] === 'string' && own[b].length > 0, missing: promptSlotsMissing(x.id, promptSectionText(x.id, b) ?? '') }])),
+          };
+        }),
+      })),
+    };
+  }
+  async function duskPromptSet(id, branch, text) {
+    if (!PROMPT_SECTION_INDEX.has(id) || !['common', 'sfw', 'nsfw', 'plus'].includes(branch)) throw new Error('알 수 없는 지시문 칸이에요');
+    const c = await loadConfig();
+    const over = normalizePromptOverrides(c.promptOverrides), entry = { ...(over[id] || {}) };
+    const t = String(text ?? '');
+    if (t.length && t !== promptDefaultText(id, branch)) entry[branch] = t; else delete entry[branch];
+    if (Object.keys(entry).length) over[id] = entry; else delete over[id];
+    await saveConfig({ ...c, promptOverrides: over });
+    return duskPromptsGet();
+  }
   async function duskContentSet(patch) {
     const context = await getUiContext();
     const key = String(context?.scope?.sourceBundleKey || '');
@@ -36955,6 +36998,8 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
     // Dusk 읽기 연결부(위 duskReadSnapshot)
     read: duskReadSnapshot,
     content: { get: duskContentGet, set: duskContentSet },
+    config: { get: duskConfigGet, set: duskConfigSet },
+    prompts: { get: duskPromptsGet, set: duskPromptSet },
     guard: { set: duskGuardSet },
     flags: { set: duskFlagsSet },
     // Erosync 자체 화면 열기(원본이 설정 항목으로 등록한 것과 같은 함수)

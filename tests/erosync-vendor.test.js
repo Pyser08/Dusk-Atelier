@@ -74,3 +74,25 @@ test("Dusk 연결: 기본 제공자가 host.runAI(Dusk AI 호출)로 간다", ()
   const main = fs.readFileSync(new URL("../src/main.js", import.meta.url), "utf8");
   assert.match(main, /host: \{ runAI:/);
 });
+test("Dusk 연결부(실제 엔진): 동작 설정·지시문·집착 방지·주기 플래그", async () => {
+  const { api } = fakeApi();
+  const e = await bootErosync(api);
+  const c = await e.config.get();
+  assert.equal(c.values.frequency, 55);
+  const c2 = await e.config.set({ frequency: 999, mode: "bogus", notAllowed: 1 });
+  assert.equal(c2.values.frequency, 100);          // 범위 밖은 맞춘다
+  assert.equal(c2.values.mode, "normal");           // 잘못된 값은 기본으로
+  assert.equal("notAllowed" in c2.values, false);   // 허용 목록 밖은 무시
+  const p = await e.prompts.get();
+  assert.ok(p.ok && p.pages.length > 0 && p.pages[0].sections.length > 0);
+  const sec = p.pages[0].sections[0], b = sec.branches[0];
+  assert.equal(sec.texts[b].changed, false);
+  const p2 = await e.prompts.set(sec.id, b, sec.texts[b].text + "\n(시험)");
+  assert.equal(p2.pages[0].sections[0].texts[b].changed, true);
+  const p3 = await e.prompts.set(sec.id, b, "");
+  assert.equal(p3.pages[0].sections[0].texts[b].changed, false);
+  await assert.rejects(() => e.prompts.set("nope", "common", "x"), /알 수 없는/);
+  assert.equal(e.guard.set({ on: true, obsessionCap: 500 }).obsessionCap, 100);
+  assert.deepEqual(e.flags.set({ duskCycle: true }), { duskCycle: true });
+  await e.dispose();
+});

@@ -33,6 +33,8 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
     rivalries: [{ actor: "p2", actorName: "카엘", rival: "p1", rivalName: "리안", intensity: 40, reason: "" }], relations: [] };
     window.__opened = 0;
     __app.ctx.erosync = { isRunning: () => true, on: () => true, read: async () => snap, open: async () => true,
+      config: async (patch) => { const st = (window.__cf ??= { mode: "normal", frequency: 55, autonomy: 70, goalPersistence: 70, cooldownTurns: 2, maxActorsPerTurn: 2, recentMessages: 14, progressiveFollowUp: true, autoVerifyCharacters: true, autoRefreshProfiles: false, developmentMode: "review" }); if (patch) Object.assign(st, patch); return { ok: true, maxActors: 10, values: { ...st } }; },
+      prompts: async (patch) => { const st = (window.__pr ??= { changed: false, text: "기본 글" }); if (patch) { st.changed = !!patch.text; st.text = patch.text || "기본 글"; window.__prLast = patch; } return { ok: true, pages: [{ id: "director", name: "장면 판단", use: "", branchy: true, sections: [{ id: "director.role", title: "역할", desc: "", kind: "common", branches: ["common"], texts: { common: { text: st.text, base: "기본 글", changed: st.changed, missing: [] } } }] }] }; },
       guard: () => window.__gd ?? { on: false, obsessionCap: 60, sameTargetTurns: 3, restTurns: 4 }, loadGuard: async () => {}, setGuard: async (v) => { window.__gd = { ...(window.__gd ?? { on: false, obsessionCap: 60, sameTargetTurns: 3, restTurns: 4 }), ...v }; },
       content: async (patch) => { const st = (window.__lv ??= { ok: true, contentMode: "nsfw", extremityLimit: "unlimited", nsfwPlus: false, recheck: false, limits: [{ key: "moderate", cap: 20, label: "대화 안에서만" }, { key: "unlimited", cap: 100, label: "제한 없음" }] }); if (patch) Object.assign(st, patch); return { ...st }; } };
     __app.ctx.openErosync = async () => { window.__opened++; return true; };
@@ -87,6 +89,13 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.locator("#rb-erosync-level .rb-seg button[data-v=sfw]").click(); await page.waitForTimeout(300);
   ok(`[${tag}] SFW를 고르면 저장되고 극단 행동 수위 칸이 잠김`, (await page.evaluate(() => window.__lv.contentMode)) === "sfw" && await page.locator("#rb-erosync-limit").isDisabled());
   await page.locator("#rb-erosync-level .rb-seg button[data-v=plus]").click(); await page.waitForTimeout(300);
+  ok(`[${tag}] 동작·분석 카드가 보임`, await page.locator("#rb-erosync-config").isVisible());
+  await page.locator("#rb-erosync-c-frequency").fill("80"); await page.locator("#rb-erosync-c-frequency").blur(); await page.waitForTimeout(200);
+  await page.locator("#rb-erosync-mode").selectOption("off"); await page.waitForTimeout(200);
+  ok(`[${tag}] 장면 빈도 80·동작 방식 쉬기가 저장됨`, await page.evaluate(() => window.__cf.frequency === 80 && window.__cf.mode === "off"), JSON.stringify(await page.evaluate(() => window.__cf)));
+  ok(`[${tag}] 프롬프트 카드가 보임`, await page.locator("#rb-erosync-prompts").isVisible());
+  await page.locator("#rb-erosync-prompts summary", { hasText: "역할" }).click(); await page.locator("#rb-erosync-prompts textarea").fill("고친 글"); await page.locator("#rb-erosync-prompts .rb-btn", { hasText: "저장" }).first().click(); await page.waitForTimeout(300);
+  ok(`[${tag}] 지시문 저장이 엔진 쪽으로 전달됨`, await page.evaluate(() => window.__prLast?.id === "director.role" && window.__prLast.text === "고친 글"), JSON.stringify(await page.evaluate(() => window.__prLast)));
   ok(`[${tag}] 집착 방지 카드가 보임`, await page.locator("#rb-erosync-guard").isVisible());
   await page.locator("#rb-erosync-guard [role=switch]").first().click(); await page.locator("#rb-erosync-g-cap").fill("40"); await page.locator("#rb-erosync-g-cap").blur(); await page.waitForTimeout(200);
   ok(`[${tag}] 집착 방지 켜기·상한 40이 저장됨`, await page.evaluate(() => window.__gd?.on === true && window.__gd.obsessionCap === 40), JSON.stringify(await page.evaluate(() => window.__gd)));
