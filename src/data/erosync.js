@@ -140,11 +140,6 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
       if (!B) return { ok: false, reason: "off", entries: [] };
       try { return op === "remove" ? await B.remove(id) : await B.list(); } catch (e) { return { ok: false, reason: String(e?.message ?? e), entries: [] }; }
     },
-    // Erosync 자체 화면(프로필 고치기·장면 등)을 연다. 꺼져 있으면 false
-    async open() {
-      if (!inst || typeof inst.open !== "function") return false;
-      try { await inst.open(); return true; } catch (e) { log(`Erosync 화면 열기 실패 ${e?.message ?? e}`); return false; }
-    },
     stop
   };
 }

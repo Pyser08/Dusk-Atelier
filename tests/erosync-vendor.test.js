@@ -3,7 +3,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { bootErosync } from "../src/erosync/erosync.js";
-import { UI_AMBIENT_TAPE, UI_AMBIENT_TAPE_BYTES, UI_AMBIENT_TAPE_SHA256 } from "../src/erosync/tape.js";
 
 function fakeApi() {
   const store = new Map(), calls = [];
@@ -23,7 +22,8 @@ test("본체를 올리면 요청·응답 훅과 설정 항목을 등록하고, �
   const e = await bootErosync(api);
   assert.equal(e.loaded(), true);
   const names = calls.map((c) => c.join(":"));
-  for (const n of ["add:beforeRequest", "add:afterRequest", "addLis:output", "setting:Erosync"]) assert.ok(names.includes(n), n);
+  for (const n of ["add:beforeRequest", "add:afterRequest", "addLis:output"]) assert.ok(names.includes(n), n);
+  assert.ok(!names.includes("setting:Erosync"), "원래 설정 항목은 등록하지 않는다(Dusk 화면만 사용)");
   await e.dispose();
   const after = calls.map((c) => c.join(":"));
   for (const n of ["rm:beforeRequest", "rm:afterRequest", "rmLis:output"]) assert.ok(after.includes(n), n);
@@ -41,17 +41,9 @@ test("api가 없으면 던진다", async () => {
   await assert.rejects(() => bootErosync(null), /unavailable/);
 });
 
-test("배경음 자료는 비어 있고(은하 화면을 쓰지 않음) 본체는 문자열이 아니면 배경음을 건너뛴다", () => {
-  assert.equal(UI_AMBIENT_TAPE, null);
-  assert.equal(UI_AMBIENT_TAPE_BYTES, 0);
-  assert.equal(UI_AMBIENT_TAPE_SHA256, "");
+test("원래 화면(설정 창·배경음·관계망 안내)은 걷어냈다", () => {
   const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
-  assert.ok(src.includes("typeof UI_AMBIENT_TAPE !== 'string'"), "문자열 검사가 있어야 null이어도 안전");
-});
-
-test("관계망 탭: host.openRelmap이 있으면 안내 화면, 없으면 원래 화면", () => {
-  const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
-  assert.ok(/tab === 'records'\) return typeof host\.openRelmap === 'function' \? duskRenderRelationLauncher\(pane\) : renderRecordsPage\(pane, context\)/.test(src));
+  for (const w of ["UI_AMBIENT_TAPE", "duskRenderRelationLauncher", "openSettingsPanel", "function esSound", "host.openRelmap"]) assert.ok(!src.includes(w), w);
 });
 
 test("소스에 줄 맨 앞 //@ 머리말이 없다(빌드가 막는 것)", () => {

@@ -14,11 +14,11 @@
 - 월경 주기 합치기(방식: Dusk 우선): Dusk ‘월경·임신 기록’(features.openness.cycle && sexualDesireEnabled)이 켜져 있으면 엔진 `cycleOff()`가 참이 되어 Erosync 자체 주기가 쉰다(`flags.set({duskCycle})`, `createErosync cycleProbe` 30초마다 확인). 저장값은 건드리지 않고, Dusk를 끄면 Erosync 주기가 다시 일한다. 미구현: Dusk 날짜를 Erosync 주기 계산에 먹이는 것.
 - 동작·분석 / 프롬프트 카드 완료: 엔진 연결부 `config.get/set`(허용 키 11개, normalizeConfig가 범위 정리)·`prompts.get/set`(promptOverrides, 칸 id·갈래 검증) → `data/erosync.js config()/prompts()` → `erosyncconfig.js`·`erosyncprompts.js`. 실제 엔진 대상 테스트는 `tests/erosync-vendor.test.js` 마지막 항목. 이펙트·소리·인트로·화면 배율 등 화면 설정과 시험 도구·초기화·고급 항목은 옮기지 않음(원본 창).
 - 원본 UI 제거는 보류: erosync.js 2.6MB 중 화면 코드(약 26000~36800줄, 0.8MB)에 프로필 만들기·분석 실행·값 고치기·비하인드·시험 도구가 있고, Dusk NSFW 탭은 아직 읽기 전용이라 지금 지우면 기능이 사라진다. 먼저 NSFW 탭에 직접 고치기·AI 값으로·다시 분석 연결부를 만든 뒤 제거할 것(이펙트·소리 코드는 이미 쓰지 않음: tape 비움).
-- 남은 일: 2) 설정 페이지 안에 동작·프롬프트·데이터(내보내기/초기화)를 Dusk 모양으로 직접 넣기(지금은 'Erosync 설정 열기'로 원본 창) 3) 인물 위키 "NSFW" 탭(상세 정보~기록 사이) 4) AI 제공자→Dusk 모델 허브, 월경 주기 합침 5) 원본 UI·이펙트·소리 제거, 세 호스트 확인.
+- 남은 일: 세 호스트 실기기 확인, 실제 모델 값 확인. (UI·카드·NSFW 탭·원본 UI 제거는 끝)
 - 리수폿 성인 항목 기본값은 켜짐 유지(`src/engine/pot/settings.js:163`).
 
 ## 2026-11-04 Erosync 2차: 위키·관계도 연동 + 기억 방식 기본값 (버전 미변경)
-- **Erosync 설정 열기 버튼**: `erosyncui.js` 카드에 켜져 있을 때만 보임 → `ctx.openErosync()`(Dusk 창 닫고 `erosync.open()`). Erosync 설정 자체는 원본 화면 그대로(Dusk로 옮기지 않음).
+- **원본 UI 제거(완료)**: `tools/erosync-prune.mjs`(acorn 도달성 가지치기)로 `src/erosync/erosync.js`에서 설정 창·이펙트·소리·관계망·열기 진입점(725문장, 982KB)을 걷어냄. 스텁: scheduleUiRefresh/uiWorkSchedule/openSettingsPanel/renderSettingsApp/scheduleCompatibilityUiRefresh. `ctx.openErosync`·`erosync.open`·`host.openRelmap`·설정 항목 등록 삭제. 엔진 본문을 다시 갱신할 땐 원본에 같은 명령으로 재적용. `tape.js`는 이제 미사용(삭제는 사용자 지시 대기). 번들 5.97→5.35MB.
 - **Erosync 카드 위치**: 접힌 ‘설정/세부 설정’ 안(`settings.js` body)에 있어 안 보였음 → `mhome.js` `settingsCards`가 만들어 ‘기억 옵션’ 바로 아래(main 칸)에 둠(간단·고급 모드, 채팅 유무 모두). `settings.js`에서는 뺌.
 - **리수폿 사용 스위치 이동**: `autotrackingbox.js`(고급 → 자동 기록 · 인물 추적)에서 빼서 `mhome.js` `settingsCards`의 ‘기억 옵션’ 박스 맨 아래로(열린 채팅이 있을 때만; `M.switches.setPot(cur.chaId, v)`, 상태는 `sw.pot.on`). 열린 채팅이 없으면 안 보임.
 - **기억 방식 기본 `fast`→`accurate`**: `DEFAULT_SETTINGS.flow.mode`(memorystore.js)·`flowOf`/`setPotGlobal`/`stepsOf` 폴백·설정 화면(flowsettings)·시작 안내(setup)에서 ‘더 정확하게 (권장)’을 앞에. `DUSK_FOLLOW`에 `"flow.mode": { old: ["fast"] }` 추가 → 기록(`settings.edited`)이 없는 예전 fast는 새 기본으로 따라감. **직접 고르는 두 곳(flowsettings·setup)은 `noteEdits`로 `flow.mode`를 직접 수정으로 기록**(안 하면 고른 fast가 다음 읽기에 accurate로 되돌아감). 테스트 `memoryturn.test.js`의 `turnOn`·fast 직접 설정은 `edited`에 `flow.mode`를 넣도록 고침.
