@@ -9,7 +9,8 @@
 - 고침: v3 api의 getLocalPluginStorage()는 Promise로 와서 `d.setItem is not a function` → await 후 메서드 확인, 없으면 pluginStorage, 값은 문자열로만 저장.
 - 고침: 버튼 콜백이 toast 반환값(DOM)을 돌려줘 호스트 복제 실패(`failed to post message to parent`) → 콜백·ctx.toast는 아무것도 돌려주지 않게, hello v0.1.1. 애드온 규칙: api에 넘기는 콜백 반환값은 복제 가능한 값만.
 - 고침: 알림(ctx.toast)은 Dusk 창 안에만 떠서 창이 닫혀 있으면 안 보임 → 애드온 ctx에 openDusk(tab) 추가, hello v0.1.2는 버튼을 누르면 설정 탭을 연 뒤 알림.
-- 미확인: 실제 RisuAI·RisuBard·PocketRisu, **iOS Safari·Firefox의 import(blob:)**(Chromium만 확인), 실제 nativeFetch로 raw.githubusercontent 받기. 실패 시 대체 경로(자기 재조립·nonce script) 아직 없음.
+- 2026-11-06 사용자 실기기 확인: 아이패드(WebKit)에서 받기·켜기·햄버거 버튼·Dusk 열기·알림 모두 됨 → blob import 방식 확정.
+- 미확인: Firefox, 호스트별(RisuAI·RisuBard·PocketRisu) 차이, 실제 nativeFetch로 raw.githubusercontent 받기. 실패 시 대체 경로(자기 재조립·nonce script) 아직 없음.
 - 다음: 실기기 확인 → 실제 기능 하나(작은 것)를 애드온으로 분리, 공유 코드(`ctx.lib`) 구조.
 
 ## 2026-11-05 버그 정리 (2.0.0 애드온 작업 전, 버전 미변경)
