@@ -58,7 +58,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.evaluate(() => { const c = document.querySelector(".rb-modal"); if (c) c.remove(); });
   await page.locator(".rb-btn", { hasText: "⏳ 회귀" }).first().click(); await page.waitForTimeout(500);
   await page.locator(".rb-rg-all").click(); await page.waitForTimeout(150);
-  ok(`[${tag}] 전체 선택 → '이어서 하기' 버튼·이름`, (await page.locator(".rb-rg-go").textContent()) === "이어서 하기" && /^이어서 · /.test(await page.locator(".rb-rg-field input").inputValue()) && (await page.locator(".rb-rg-p[aria-pressed=true]").count()) === (await page.locator(".rb-rg-p").count()));
+  ok(`[${tag}] 전체 선택 → '이어서 하기' 제목·버튼·이름`, (await page.locator(".rb-rg h3").textContent()) === "이어서 하기" && (await page.locator(".rb-rg-go").textContent()) === "이어서 하기" && /^이어서 · /.test(await page.locator(".rb-rg-field input").inputValue()) && (await page.locator(".rb-rg-p[aria-pressed=true]").count()) === (await page.locator(".rb-rg-p").count()));
   await page.locator(".rb-rg-go").click(); await page.waitForTimeout(400);
   ok(`[${tag}] 연출 글자 CONTINUE`, /C|O|N|T|I|U|E/.test(await page.locator(".rb-rg-word").textContent()) && (await page.locator(".rb-rg-word").getAttribute("data-t")).length === 8);
   await page.waitForSelector(".rb-rg-full.tick", { timeout: 9000 }); await page.waitForTimeout(3200);
