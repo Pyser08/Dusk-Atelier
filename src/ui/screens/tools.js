@@ -15,9 +15,6 @@ import { isDev } from './devtools.js';
 import { reload } from './modules.js';
 import { renderPresets } from './presets.js';
 import { renderLoreLog } from './lorelog.js';
-import { renderChatTheme } from './chattheme.js';
-import { renderThemeBuilder } from './themebuilder.js';
-import { renderThemeStudio } from './themestudio.js';
 import { renderSizeMeter } from './sizemeter.js';
 
 export function tile(ic, title, desc, onClick, id) {
@@ -33,9 +30,8 @@ export function renderTools(ctx) {
   if (ctx.state.sub === "inspector") return renderInspector(ctx);
   if (ctx.state.sub === "presets") return renderPresets(ctx);
   if (ctx.state.sub === "lorelog") return renderLoreLog(ctx);
-  if (ctx.state.sub === "chattheme") return renderChatTheme(ctx);
-  if (ctx.state.sub === "themebuilder") return renderThemeBuilder(ctx);
-  if (ctx.state.sub === "themestudio") return renderThemeStudio(ctx);
+  const extScreen = ctx.ext?.get("screen", `tools/${ctx.state.sub}`);   // 애드온 화면(채팅 테마 등)
+  if (extScreen) return extScreen(ctx);
   if (ctx.state.sub === "sizemeter") return renderSizeMeter(ctx);
   if (ctx.state.sub === "patchmaker") {
     ctx.go("dev", "patchmaker");
@@ -60,7 +56,7 @@ export function renderTools(ctx) {
           ctx.prefs.ui?.experimental ? row("palette", "플러그인 꾸미기", "색·밝기·글자 크기·글꼴 바꾸기", () => ctx.go("look"), "rb-tool-look") : null,
           ctx.widgetHome?.on?.() ? row("grid", "위젯 홈", "음악·사진·시계·메모를 한 화면에 모은 홈 열기", () => ctx.openWidgetHome().then((ok) => { if (!ok) ctx.toast(ctx.widgetHome.lastError() || "위젯 홈을 열지 못했어요", { error: true }); }), "rb-tool-widgethome") : null,
           row("preset", "프리셋", "모듈 조합을 저장하고 공유해요", () => ctx.go("tools", "presets"), "rb-tool-presets"),
-          row("palette", "채팅 테마 빌더", "테마 만들기·목록·코드 주고받기", () => ctx.go("tools", "chattheme"), "rb-tool-chattheme"),
+          ...(ctx.ext?.list("row", "tools.frequent") ?? []).map((r) => row(r.icon, r.title, r.desc, () => r.onClick(ctx), r.id)),   // 애드온 도구(채팅 테마 빌더 등)
           row("image", "에셋 태그 고치기", "열린 채팅의 틀린 이미지 태그를 고쳐요", () => import("./assetfix.js").then((m) => m.openAssetFix(ctx)).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })), "rb-tool-assetfix")),
         group("확인 · 복구",
           row("book", "로어북 로그", "응답에 들어간 로어북 보기", () => ctx.go("tools", "lorelog"), "rb-tool-lorelog"),

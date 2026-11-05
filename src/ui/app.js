@@ -39,6 +39,7 @@ import { scopeCtx } from './staleguard.js';
 import { renderHome } from './screens/home.js';
 import { renderPersonaBuilder } from './screens/personabuilder.js';
 import { installScrollGuard } from './scrollguard.js';
+import { createExt } from './ext.js';
 import { renderSectionHome } from './screens/sectionhome.js';
 import { createBotAndEdit } from './screens/newbot.js';
 import { BASE_IDS, SEARCH, SECTION_IDS, SECTION_NAMES, TABS, subLabel, tabHidden } from './tabs.js';
@@ -531,6 +532,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     navLinks,
     go,
     refresh: () => render(),
+    ext: createExt(() => render()),   // 애드온이 끼어드는 자리(ui/ext.js)
     close: () => close(),
     reopen: () => open(),
     applyTheme,

@@ -9,8 +9,19 @@
       "hooks": false,
       "desc": "로더가 제대로 도는지 확인하는 시험용 애드온이에요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/hello.js",
-      "sha256": "15d1ff8a15f3c25d0bea2253f57a6db5f2240d22e7f2b3bcdca9151e1f5af173",
-      "size": 669
+      "sha256": "bf97e4893bf6b65d614126008d61d5470633cd5a0f96a8e40d44b4a959140b2a",
+      "size": 667
+    },
+    {
+      "id": "chattheme",
+      "name": "채팅 테마 만들기",
+      "version": "1.0.0",
+      "minCore": "2.0.0",
+      "hooks": false,
+      "desc": "채팅 테마 빌더·테마 스튜디오로 내 채팅 테마를 만들고 주고받아요. 만든 테마는 이 애드온이 없어도 계속 적용돼요.",
+      "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/chattheme.js",
+      "sha256": "87ce221ef6d0936efc2ece91b5ecbdb4fe3b3cb13b4b8bf78e3c342b696af9a5",
+      "size": 85941
     }
   ]
 }

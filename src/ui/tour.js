@@ -13,7 +13,7 @@ export var TOUR = [
   { icon: "sliders", title: "코코아 (더보기)", text: "코코아 스킬로 AI 응답의 방향을 잡아요. 켜기만 하면 되고, ‘AI로 스킬 만들기’로 대화하며 만들 수도 있어요.", tab: "cocoa" },
   { icon: "sparkle", title: "기억 카드 (더보기)", text: "마음에 드는 인물은 카드로 만들어 새 봇으로 이어 갈 수 있어요.", tab: "cards" },
   { icon: "tools", title: "도구 · 플러그인 (더보기)", text: "프리셋·페르소나 빌더·로어북 로그·백업은 도구에, 설치된 플러그인의 새 버전 확인은 플러그인에 있어요.", tab: "tools" },
-  { icon: "palette", title: "꾸미기 (작업실 → 도구)", text: "강조 색·밝기·글자 크기를 누르면 바로 바뀌어요. 내 채팅 테마도 여기서 만들어요.", tab: "look" },
+  { icon: "palette", title: "꾸미기 (작업실 → 도구)", text: "강조 색·밝기·글자 크기를 누르면 바로 바뀌어요.", tab: "look" },
   { icon: "sliders", title: "설정 (더보기)", text: "화면 모드를 ‘간단’과 ‘고급’ 중에서 골라요. 세부 설정과 개발자 모드는 고급에서 볼 수 있어요. 이 둘러보기도 여기서 다시 봐요.", tab: "settings" },
   { icon: "help", title: "막히면 ? 버튼", text: "화면 위쪽의 ? 버튼을 누르면 지금 화면을 이렇게 하나씩 짚어 드려요. 이제 시작해 볼까요?", target: ["#rb-help-btn"] }
 ];
