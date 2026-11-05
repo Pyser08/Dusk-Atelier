@@ -77,3 +77,10 @@ test("중간에 취소하면 읽은 만큼만 돌려준다", async () => {
   assert.equal(r.cancelled, true);
   assert.ok(r.report.counts.characters < 20);
 });
+import { measurePlugin } from "../src/engine/sizemeter.js";
+test("플러그인 용량: 코드의 줄바꿈·따옴표 이스케이프를 더해 세지 않음", () => {
+  const script = 'a\n"b"\n'.repeat(1000); // 6000바이트
+  const m = measurePlugin({ name: "x", script, enabled: true });
+  assert.equal(m.parts.find((p) => p.label === "스크립트 코드").bytes, 6000);
+  assert.ok(m.bytes < 6100, `총 ${m.bytes}`);
+});

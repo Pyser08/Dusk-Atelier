@@ -200,13 +200,16 @@ export function measureModule(m, idx = 0) {
 
 export function measurePlugin(p, idx = 0) {
   const name = p?.name || `plugin_${idx}`;
-  const total = jsonBytes(p), script = utf8Len(p?.script);
+  // JSON.stringify는 코드 안의 줄바꿈·따옴표를 \n·\" 로 늘려 세서 실제보다 커진다. 코드는 원문 그대로, 나머지만 JSON으로 잰다
+  const script = utf8Len(p?.script);
+  const { script: _s, ...rest } = p && typeof p === "object" ? p : {};
+  const meta = jsonBytes(rest), total = script + meta;
   const ver = p?.versionOfPlugin || p?.version || "";
   return {
     key: `plug:${name}:${idx}`, kind: "plugins", kindLabel: "플러그인", idx, id: name,
     name: p?.displayName || name, bytes: total, active: p?.enabled !== false,
     badge: ver ? `v${String(ver).replace(/^v/i, "")}` : "",
-    parts: keep([{ label: "스크립트 코드", bytes: script }, { label: "설정·메타", bytes: Math.max(0, total - script) }]),
+    parts: keep([{ label: "스크립트 코드", bytes: script }, { label: "설정·메타", bytes: meta }]),
     render: inspectPluginRender(p?.script)
   };
 }

@@ -45,18 +45,20 @@ export async function measureAllCharacters(api, ids, { onProgress, cancelled } =
   return { list: out, missing: Math.max(0, N - out.filter((c) => ids.has(c.id)).length) };
 }
 
-async function measureStorage(api, { cancelled } = {}) {
+async function measureStorage(api, { cancelled, onProgress } = {}) {
   let keys;
   try { keys = (await storageKeyList(api)).filter((k) => k !== DISABLED_KEY && k !== ORDER_KEY); } catch { return null; }
   const out = [];
   for (let i = 0; i < keys.length && !cancelled?.(); i += 6) {
     const rows = await Promise.all(keys.slice(i, i + 6).map(async (key) => {
       try {
-        const v = (await storageGet(api, key)).value;
+        // storageGet은 크기를 한 번 더 JSON.stringify 해서 큰 값에서 오래 걸리므로 값만 읽는다(키당 최대 10초)
+        const v = await Promise.race([api.pluginStorage.getItem(key), new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 1e4))]);
         return { key, bytes: v == null ? 0 : typeof v === "string" ? utf8Len(v) : jsonBytes(v) };
       } catch { return { key, bytes: 0, failed: true }; }
     }));
     out.push(...rows);
+    try { onProgress?.({ done: Math.min(keys.length, i + 6), total: keys.length }); } catch { /* 표시 실패는 재기에 영향 없음 */ }
     await tick();
   }
   return out;
@@ -81,7 +83,7 @@ export async function scanSizes(api, opts = {}) {
   const ids = orderIds(db.characterOrder);
   const chars = await measureAllCharacters(api, ids, { onProgress: (p) => opts.onProgress?.({ phase: "chars", ...p }), cancelled: opts.cancelled });
   opts.onProgress?.({ phase: "storage" });
-  const stor = await measureStorage(api, opts);
+  const stor = await measureStorage(api, { cancelled: opts.cancelled, onProgress: (p) => opts.onProgress?.({ phase: "storage", ...p }) });
   const report = buildReport({ characters: chars.list, modules, plugins, storage: stor ? storageItems(stor) : [], db });
   return { report, at: Date.now(), charsMissing: chars.missing, storageOk: !!stor, cancelled: !!opts.cancelled?.() };
 }
