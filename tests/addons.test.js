@@ -83,3 +83,18 @@ test("끄기·지우기", async () => {
   await A.setOn("a", false); assert.ok(!A.running("a")); assert.deepEqual(log.at(-1), ["off", "ok:1"]);
   await A.remove("a"); assert.equal(kv.has("dusk.addon.code.a"), false); assert.deepEqual(await A.getIndex(), {});
 });
+test("호스트처럼 getLocalPluginStorage()가 Promise로 와도 저장된다(d.setItem is not a function)", async () => {
+  const kv = new Map(), store = { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } };
+  const body = "ok:1", sha = await H(body);
+  const files = { manifest: JSON.stringify({ format: 1, addons: [{ id: "a", version: "1.0.0", url: "https://x/a.js", sha256: sha }] }), "https://x/a.js": body };
+  const fetcher = async (_a, u) => (u.endsWith("addons.json") ? files.manifest : files[u]);
+  const importer = async () => ({ activate: async () => ({}) });
+  for (const api of [{ getLocalPluginStorage: async () => store, pluginStorage: null }, { getLocalPluginStorage: async () => ({}), pluginStorage: store }]) {
+    kv.clear();
+    const A = createAddons(api, { core: "2.0.0", fetcher, importer, log: () => {} });
+    await A.install("a");
+    assert.equal(kv.get("dusk.addon.code.a"), body);
+    assert.equal(typeof kv.get("dusk.addon.index"), "string");
+    await A.dispose();
+  }
+});

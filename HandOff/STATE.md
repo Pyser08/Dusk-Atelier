@@ -6,6 +6,7 @@
 - 애드온 소스 `addons/<id>/index.js`(export activate(api, ctx) → {deactivate}) → `node tools/build-addons.mjs`로 `addons/dist/<id>.js` + `addons/addons.json`(sha256·주소) 생성, `--check`로 확인. 목록 원본 `addons/addons.src.json`. 시험 애드온 `hello`(켜지면 알림 + 햄버거 버튼).
 - 화면: 설정 탭 '애드온 (시험)' 카드(`ui/screens/addonsui.js`). main.js에서 boot.
 - 테스트: `tests/addons.test.js`(8), e2e `run-addon-loader.mjs`(리스와 같은 sandbox·CSP에서 실제 blob import), `run-addons-ui.mjs`(PC·모바일 12).
+- 고침: v3 api의 getLocalPluginStorage()는 Promise로 와서 `d.setItem is not a function` → await 후 메서드 확인, 없으면 pluginStorage, 값은 문자열로만 저장.
 - 미확인: 실제 RisuAI·RisuBard·PocketRisu, **iOS Safari·Firefox의 import(blob:)**(Chromium만 확인), 실제 nativeFetch로 raw.githubusercontent 받기. 실패 시 대체 경로(자기 재조립·nonce script) 아직 없음.
 - 다음: 실기기 확인 → 실제 기능 하나(작은 것)를 애드온으로 분리, 공유 코드(`ctx.lib`) 구조.
 

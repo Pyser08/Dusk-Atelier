@@ -12,7 +12,12 @@ export const ADDON_URL_KEY = "dusk.addon.manifestUrl";
 const INDEX_KEY = "dusk.addon.index", CODE = (id) => `dusk.addon.code.${id}`, PREV = (id) => `dusk.addon.prev.${id}`;
 const CHECK_EVERY = 6 * 3600e3;
 
-const storeOf = (api) => { try { return api.getLocalPluginStorage?.() ?? api.pluginStorage; } catch { return api.pluginStorage; } };
+// v3 api는 다리(postMessage)를 건너 오므로 getLocalPluginStorage()가 Promise로 온다 → await 후 메서드가 있는지 확인, 없으면 pluginStorage.
+const usable = (s) => s && typeof s.getItem === "function" && typeof s.setItem === "function";
+async function storeOf(api) {
+  try { const s = await api.getLocalPluginStorage?.(); if (usable(s)) return s; } catch { /* 아래로 */ }
+  return api.pluginStorage;
+}
 
 async function readText(res) {
   if (res == null) return null;
@@ -41,7 +46,14 @@ export async function importCode(code, id = "addon") {
 }
 
 export function createAddons(api, { core, ctx = {}, fetcher = fetchText, importer = importCode, hasher = sha256, now = () => Date.now(), log = (m) => console.log(`[Dusk Atelier] 애드온: ${m}`) } = {}) {
-  const store = storeOf(api);
+  let storeP = null;
+  const S = () => (storeP ??= storeOf(api));
+  // 값은 문자열로만 저장한다(호스트마다 객체 저장 방식이 달라서)
+  const store = {
+    getItem: async (k) => (await S()).getItem(k),
+    setItem: async (k, v) => (await S()).setItem(k, typeof v === "string" ? v : JSON.stringify(v)),
+    removeItem: async (k) => { const s = await S(); return typeof s.removeItem === "function" ? s.removeItem(k) : s.setItem(k, ""); }
+  };
   const running = new Map();   // id → { mod, handle, version }
   const listeners = new Set();
   let manifest = null, lastCheck = 0, lastError = "";
@@ -141,7 +153,7 @@ export function createAddons(api, { core, ctx = {}, fetcher = fetchText, importe
   async function remove(id) {
     await stop(id);
     const idx = await getIndex(); delete idx[id]; await setIndex(idx);
-    await store.removeItem?.(CODE(id)); await store.removeItem?.(PREV(id));
+    await store.removeItem(CODE(id)); await store.removeItem(PREV(id));
     emit();
   }
 

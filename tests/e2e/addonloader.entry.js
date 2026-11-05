@@ -3,7 +3,7 @@ import { createAddons } from "../../src/data/addons.js";
 window.runAddonLoader = async ({ manifest, files }) => {
   const out = {}, kv = new Map(), calls = [];
   const store = { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } };
-  const api = { getLocalPluginStorage: () => store, pluginStorage: store,
+  const api = { getLocalPluginStorage: async () => store, pluginStorage: store,   // 실제 호스트처럼 Promise
     nativeFetch: async (url, init) => { calls.push(["fetch", init?.method]); const body = url.endsWith("addons.json") ? manifest : files[url]; return body == null ? { ok: false, status: 404 } : { ok: true, status: 200, text: async () => body }; },
     registerButton: async (o) => { calls.push(["button", o.name]); return "b1"; }, unregisterUIPart: (id) => calls.push(["unreg", id]) };
   const toasts = [];
