@@ -10,7 +10,7 @@ export function erosyncPresetCard(ctx, redraw) {
   const name = h("input", { type: "text", class: "rb-input", id: "rb-erosync-preset-name", maxlength: 40, placeholder: "프리셋 이름 (예: 순한맛, 강하게)", style: "flex:1;min-width:0" });
   const paint = (items) => replace(list, ...(items.length ? items.map((p) => h("div", { class: "rb-mem-field row", "data-preset": p.id, style: "gap:8px" },
     h("span", { style: "flex:1;min-width:0" }, p.name, h("small", { class: "rb-muted" }, `  ${p.level.contentMode === "sfw" ? "SFW" : p.level.nsfwPlus ? "NSFW+" : p.level.contentMode ? "NSFW" : "수위 그대로"}${p.guard?.on ? " · 집착 방지" : ""}`)),
-    act(btn("적용", { disabled: !live, onClick: async () => { const r = await er.applyPreset(p.id); ctx.toast(r.ok ? `‘${p.name}’을 이 봇에 적용했어요` : r.reason === "off" ? "Erosync를 켜야 적용할 수 있어요" : r.reason, r.ok ? undefined : { error: true }); if (r.ok) redraw?.(); } }), "apply"),
+    act(btn("적용", { disabled: !live, onClick: async () => { const r = await er.applyPreset(p.id); ctx.toast(r.ok ? `‘${p.name}’을 모든 봇에 적용했어요` : r.reason === "off" ? "Erosync를 켜야 적용할 수 있어요" : r.reason, r.ok ? undefined : { error: true }); if (r.ok) redraw?.(); } }), "apply"),
     act(btn("삭제", { onClick: async () => { paint(await er.deletePreset(p.id)); } }), "del"))) : [h("p", { class: "rb-muted", style: "margin:0", id: "rb-erosync-preset-empty" }, "저장한 프리셋이 없어요.")]));
   er.presets().then(paint);
   const save = btn("지금 설정 저장", { id: "rb-erosync-preset-save", disabled: !live, onClick: async () => {

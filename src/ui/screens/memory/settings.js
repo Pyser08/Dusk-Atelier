@@ -128,13 +128,17 @@ export function renderBotAnalysis(env) {
   from.addEventListener("input", paintEst); to.addEventListener("input", paintEst); if (caps.analyze) paintEst();
   let ctrl = null, failed = [];
   const run = async (only) => {
+    const pl = M.runner.planBackfill(msgs, range(), env.folder);
+    const redo = !pl.todo && pl.total > 0;   // 미분석이 없으면 전체를 다시 분석한다
+    if (!pl.total) return ctx.toast("분석할 AI 응답이 없어요.");
+    if (redo) ctx.toast("미분석 응답이 없어요. 전체를 다시 분석해요.");
     ctrl = new AbortController(); const start = btn("취소", { onClick: () => ctrl.abort() }); replace(prog, progressBar(0), start);
     try {
-      const r = await M.runner.backfill(bot.index, chatItem.index, range(), { signal: ctrl.signal, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), start) });
+      const r = await M.runner.backfill(bot.index, chatItem.index, range(), { signal: ctrl.signal, redo, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), start) });
       failed = r.failed; ctx.toast(`지난 대화 분석이 끝났어요${r.server ? " (서버)" : ""} (${r.total - r.failed.length}/${r.total}).${r.reasons?.length ? ` 실패 이유: ${r.reasons[0]}` : ""}`, r.failed.length ? { error: true } : undefined); env.redraw();
     } catch (e) { fail(ctx)(e); env.redraw(); }
   };
-  return section(["지난 대화 분석 (이 채팅 전체)", "chat"], h("div", { class: "rb-mem-range" }, from, "~", to), est, h("div", { class: "rb-mem-sact" }, btn("미처리만 분석", { kind: "primary", onClick: () => run() }), failed.length ? btn(`실패만 다시 (${failed.length})`, { onClick: () => run(true) }) : null), prog);
+  return section(["지난 대화 분석 (이 채팅 전체)", "chat"], h("div", { class: "rb-mem-range" }, from, "~", to), est, h("div", { class: "rb-mem-sact" }, btn("지난 대화 분석", { kind: "primary", onClick: () => run() }), failed.length ? btn(`실패만 다시 (${failed.length})`, { onClick: () => run(true) }) : null), prog);
 }
 
 // ---- 카드 설정: 태그·스탯 정의, 기본 언어, 연결 추가 지시. 카드 만들기와 새 봇 만들기에서 쓴다.

@@ -14,6 +14,7 @@ export async function loadErosyncOn(api) {
   }
 }
 export const GUARD_KEY = "dusk.erosync.guard";
+export const LEVEL_KEY = "dusk.erosync.level";   // 수위 일괄 값(모든 봇·채팅에 적용)
 export const TEMP_KEY = "dusk.erosync.tempTrend";   // 관계 온도 변화를 장면 판단 입력에 넣을지(기본 켜짐)
 export const GUARD_DEFAULT = Object.freeze({ on: false, obsessionCap: 20, sameTargetTurns: 3, restTurns: 4 });
 export function normGuard(v) {
@@ -24,7 +25,7 @@ export function normGuard(v) {
 const loadBoot = async () => (await import("../erosync/erosync.js")).bootErosync;
 export function createErosync(api, { log = () => {}, boot = null, load = loadErosyncOn, host = {}, cycleProbe = null } = {}) {
   let timer = null, duskCycle = false, tempTrend = true;
-  let inst = null, starting = null, error = "", onNow = false, guardNow = { ...GUARD_DEFAULT }, tagsNow = {};
+  let levelNow = null, inst = null, starting = null, error = "", onNow = false, guardNow = { ...GUARD_DEFAULT }, tagsNow = {};
   async function loadGuard() {
     try { const raw = await api.pluginStorage.getItem(GUARD_KEY); guardNow = normGuard(typeof raw === "string" ? JSON.parse(raw) : raw); } catch { guardNow = { ...GUARD_DEFAULT }; }
     try { inst?.guard?.set?.(guardNow); } catch { /* 무시 */ }
@@ -36,6 +37,14 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
     try { const raw = await api.pluginStorage.getItem(TEMP_KEY); tempTrend = !(raw === "off" || raw === false || raw === "false"); } catch { tempTrend = true; }
     try { inst?.flags?.set?.({ duskCycle, tempTrend }); } catch { /* 무시 */ }
     return duskCycle;
+  }
+  const LEVEL_FIELDS = ["contentMode", "extremityLimit", "nsfwPlus", "nsfwPlusRecheck"];
+  const pickLevel = (v) => Object.fromEntries(LEVEL_FIELDS.filter((k) => v && k in v).map((k) => [k, v[k]]));
+  async function loadLevel() {
+    try { const raw = await api.pluginStorage.getItem(LEVEL_KEY); const v = typeof raw === "string" ? JSON.parse(raw) : raw; levelNow = v && typeof v === "object" ? pickLevel(v) : null; } catch { levelNow = null; }
+    if (levelNow && !Object.keys(levelNow).length) levelNow = null;
+    try { inst?.content?.global?.(levelNow); } catch { /* 이번 실행에는 못 넣어도 본체는 계속 */ }
+    return levelNow;
   }
   async function originalOn() {
     try { return (await listPlugins(api)).some((p) => p.name === ERO_ORIGINAL && p.enabled); } catch { return false; }
@@ -57,6 +66,7 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
       try { next.guard?.set?.(guardNow); } catch { /* 집착 방지는 실패해도 본체는 계속 */ }
       try { tagsNow = await loadTags(api); next.tags?.set?.(tagsNow); } catch { /* 태그는 실패해도 본체는 계속 */ }
       await refreshFlags();
+      await loadLevel();
       if (!timer && cycleProbe) timer = setInterval(() => { void refreshFlags(); }, 30000);
       return true;
     } catch (e) {
@@ -145,7 +155,7 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
       try {
         const c = await inst.content.get();
         if (!c?.ok) return { ok: false, reason: c?.reason || "열린 채팅이 없어요" };
-        if (Object.keys(p.level).length) await inst.content.set(p.level);
+        if (Object.keys(p.level).length) await this.content(p.level);
         if (Object.keys(p.config).length) await inst.config.set(p.config);
         if (p.guard) { guardNow = normGuard(p.guard); try { await api.pluginStorage.setItem(GUARD_KEY, JSON.stringify(guardNow)); } catch { /* 이번 실행에는 반영 */ } try { inst.guard?.set?.(guardNow); } catch { /* 무시 */ } }
         return { ok: true, name: p.name };
@@ -166,7 +176,15 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
     // 지금 열린 봇의 수위 설정(읽기·쓰기). 꺼져 있으면 { ok:false, reason:"off" }
     async content(patch = null) {
       if (!inst?.content) return { ok: false, reason: "off", limits: [] };
-      try { return patch ? await inst.content.set(patch) : await inst.content.get(); } catch (e) { return { ok: false, reason: String(e?.message ?? e), limits: [] }; }
+      try {
+        if (!patch) return await inst.content.get();
+        // 일괄 값: 처음엔 지금 열린 봇의 값에서 시작해, 바꾼 항목만 덮어쓴다. 저장하면 모든 봇·채팅에 적용돼요.
+        if (!levelNow) { const c = await inst.content.get(); levelNow = c?.ok ? pickLevel({ contentMode: c.contentMode, extremityLimit: c.extremityLimit, nsfwPlus: c.nsfwPlus, nsfwPlusRecheck: c.recheck }) : {}; }
+        levelNow = { ...levelNow, ...pickLevel(patch) };
+        try { await api.pluginStorage.setItem(LEVEL_KEY, JSON.stringify(levelNow)); } catch { /* 저장 못 해도 이번 실행에는 반영 */ }
+        inst.content.global(levelNow);
+        return await inst.content.get();
+      } catch (e) { return { ok: false, reason: String(e?.message ?? e), limits: [] }; }
     },
     // 동작·분석 설정(읽기·쓰기, 허용된 키만). 꺼져 있으면 { ok:false, reason:"off" }
     async config(patch = null) {

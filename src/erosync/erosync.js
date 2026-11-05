@@ -4121,7 +4121,22 @@ export async function bootErosync(api, hostArg) {
     }
   }
 
+  // 수위(내용 모드·극단 행동 수위·NSFW+)는 모든 봇·채팅에 같이 적용하는 일괄 값(Dusk가 저장해 두고 켤 때 넣어 준다). 없으면 봇별 값을 그대로 쓴다.
+  let globalContent = null;
+  function globalContentFields(value) {
+    if (!isPlainObject(value)) return null;
+    const out = {};
+    if ('contentMode' in value) out.contentMode = normalizeContentMode(value.contentMode);
+    if ('extremityLimit' in value) out.extremityLimit = normalizeExtremityLimit(value.extremityLimit);
+    if ('nsfwPlus' in value) out.nsfwPlus = value.nsfwPlus === true;
+    if ('nsfwPlusRecheck' in value) out.nsfwPlusRecheck = value.nsfwPlusRecheck === true;
+    return Object.keys(out).length ? out : null;
+  }
   async function getBotOverride(sourceBundleKey) {
+    const base = await getBotOverrideOwn(sourceBundleKey);
+    return globalContent ? { ...base, ...globalContent } : base;
+  }
+  async function getBotOverrideOwn(sourceBundleKey) {
     const store = await loadBotOverrides();
     return store.bots[sourceBundleKey] || {
       koco: normalizeKocoOptions(null),
@@ -23574,8 +23589,8 @@ Constraint: {{constraint}}
   async function duskContentGet() {
     const context = await getUiContext();
     const key = String(context?.scope?.sourceBundleKey || '');
-    if (!key) return { ok: false, reason: context?.scopeUnavailable || 'no-chat', limits: [] };
-    const bot = await getBotOverride(key);
+    if (!key && !globalContent) return { ok: false, reason: context?.scopeUnavailable || 'no-chat', limits: [] };
+    const bot = await getBotOverride(key || '__global__');
     const policy = contentPolicyFor(bot);
     return {
       ok: true, botKey: key, contentMode: policy.contentMode, extremityLimit: policy.extremityLimit, nsfwPlus: policy.nsfwPlus, recheck: policy.recheck,
@@ -23817,16 +23832,24 @@ Constraint: {{constraint}}
     return out;
   }
 
+  // 일괄 수위 값을 넣는다(null이면 해제). 계획해 둔 장면 판단은 새 값으로 다시 짠다.
+  function duskContentGlobal(value) {
+    const next = globalContentFields(value);
+    if (JSON.stringify(next) === JSON.stringify(globalContent)) return;
+    globalContent = next;
+    duskReadCache = null;
+    try { invalidateAllPreparedDecisionState('content level changed', { replan: true }); } catch { /* 다음 요청에서 다시 계획 */ }
+  }
   async function duskContentSet(patch) {
     const context = await getUiContext();
     const key = String(context?.scope?.sourceBundleKey || '');
-    if (!key) throw new Error('열린 채팅이 없어요');
+    if (!key && !globalContent) throw new Error('열린 채팅이 없어요');
     const next = {};
     if (patch && 'contentMode' in patch) next.contentMode = normalizeContentMode(patch.contentMode);
     if (patch && 'extremityLimit' in patch) next.extremityLimit = normalizeExtremityLimit(patch.extremityLimit);
     if (patch && 'nsfwPlus' in patch) next.nsfwPlus = patch.nsfwPlus === true;
     if (patch && 'nsfwPlusRecheck' in patch) next.nsfwPlusRecheck = patch.nsfwPlusRecheck === true;
-    await updateBotOverride(key, next);
+    if (key) await updateBotOverride(key, next);
     duskReadCache = null;
     return duskContentGet();
   }
@@ -23836,7 +23859,7 @@ Constraint: {{constraint}}
     loaded: () => unloadFns.length > 0,
     // Dusk 읽기 연결부(위 duskReadSnapshot)
     read: duskReadSnapshot,
-    content: { get: duskContentGet, set: duskContentSet },
+    content: { get: duskContentGet, set: duskContentSet, global: duskContentGlobal },
     config: { get: duskConfigGet, set: duskConfigSet },
     behind: { list: duskBehindList, remove: duskBehindRemove },
     profiles: { get: duskProfileGet, edit: duskProfileEdit, reset: duskProfileReset, status: duskAnalysisStatus, start: duskAnalysisStart, cancel: () => { requestAnalysisCancel(); return duskAnalysisStatus(); } },
