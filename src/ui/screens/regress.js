@@ -7,6 +7,7 @@ import { createRegressChat } from "../../data/regress.js";
 import { isGenerating, Busy } from "../../engine/safety.js";
 
 const CSS = `
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&display=swap");
 .rb-rg{--rg-ink:#efe6cf;--rg-dim:#b8ad95;--rg-gold:#e2bd6b;--rg-gold2:#f6dc9a;--rg-deep:#0d0b1f;--rg-violet:#2a1f55;--rg-line:rgba(226,189,107,.28);
   position:relative;width:min(560px,94vw);max-height:min(88vh,760px);overflow:hidden auto;border-radius:22px;color:var(--rg-ink);
   background:radial-gradient(120% 80% at 50% -10%,#3a2a78 0%,var(--rg-violet) 38%,var(--rg-deep) 78%);
@@ -96,7 +97,7 @@ const CSS = `
 @keyframes rg-crack{to{stroke-dashoffset:0}}
 .rb-rg-fx{transition:opacity .9s ease .1s}
 .rb-rg-full.tick .rb-rg-fx{opacity:0}   /* 12시: 금이 아물듯 사라진다 */
-.rb-rg-word{position:relative;margin-top:clamp(-40px,-4vmin,-10px);font-family:Impact,"Arial Black","Bebas Neue",system-ui,sans-serif;font-weight:900;font-size:clamp(48px,13vmin,128px);letter-spacing:.08em;line-height:1;color:#ffe9ef;
+.rb-rg-word{position:relative;margin-top:clamp(-40px,-4vmin,-10px);font-family:"Cinzel","Trajan Pro","Cormorant SC",Georgia,serif;font-weight:800;font-size:clamp(44px,12vmin,118px);letter-spacing:.22em;padding-left:.22em;line-height:1;color:#ffe9ef;
   -webkit-text-stroke:1.5px rgba(40,22,10,.85);paint-order:stroke fill;text-shadow:-4px 0 0 rgba(255,70,140,.8),4px 0 0 rgba(70,225,255,.75),0 0 22px rgba(255,236,200,.8);animation:rg-wjit .14s steps(2) infinite}
 @keyframes rg-wjit{50%{transform:translate(1px,-1px) skewX(-1.5deg)}}
 .rb-rg-word::after{content:attr(data-t);position:absolute;inset:0;color:#fff;clip-path:inset(40% 0 42% 0);transform:translateX(6px);opacity:.85;animation:rg-slice 1.3s steps(1) infinite}
