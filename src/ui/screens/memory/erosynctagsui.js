@@ -7,7 +7,7 @@ import { normTagList, MAX_TAGS, MAX_TAG_LEN } from "../../../data/erosynctags.js
 export function eroTagsCard(ctx, card, person) {
   const er = ctx.erosync;
   if (typeof er?.setTags !== "function" || !person?.id) return null;
-  const mk = (id, label, ph) => ({ id, label, el: h("input", { type: "text", id, placeholder: ph, style: "width:100%;min-width:0" }) });
+  const mk = (id, label, ph) => ({ id, label, el: h("input", { type: "text", class: "rb-input", id, placeholder: ph, style: "width:100%;min-width:0" }) });
   const likes = mk("rb-ero-tags-likes", "선호", "쉼표로 구분 (예: 목덜미, 느린 전개)");
   const limits = mk("rb-ero-tags-limits", "금기", "쉼표로 구분 (여기 적은 건 넣지 않아요)");
   const chips = h("div", { id: "rb-ero-tags-chips", style: "display:flex;flex-wrap:wrap;gap:6px" });

@@ -129,8 +129,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.locator("#rb-erosync-level .rb-seg button[data-v=plus]").click(); await page.waitForTimeout(300);
   await tabTo("동작");
   ok(`[${tag}] 동작 카드가 보임`, await page.locator("#rb-erosync-config-act").isVisible());
+  await page.locator("#rb-erosync-config-act").screenshot({ path: `/tmp/ero-act-${tag}.png` });
   await page.locator("#rb-erosync-c-frequency").fill("80"); await page.locator("#rb-erosync-c-frequency").blur(); await page.waitForTimeout(200);
-  await page.locator("#rb-erosync-mode").selectOption("off"); await page.waitForTimeout(200);
+  await page.locator("#rb-erosync-mode button[data-v=off]").click(); await page.waitForTimeout(200);
   ok(`[${tag}] 장면 빈도 80·동작 방식 쉬기가 저장됨`, await page.evaluate(() => window.__cf.frequency === 80 && window.__cf.mode === "off"), JSON.stringify(await page.evaluate(() => window.__cf)));
   await tabTo("프롬프트");
   ok(`[${tag}] 프롬프트 카드가 보임`, await page.locator("#rb-erosync-prompts").isVisible());
@@ -138,6 +139,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 지시문 저장이 엔진 쪽으로 전달됨`, await page.evaluate(() => window.__prLast?.id === "director.role" && window.__prLast.text === "고친 글"), JSON.stringify(await page.evaluate(() => window.__prLast)));
   await tabTo("수위");
   ok(`[${tag}] 집착 방지 카드가 보임`, await page.locator("#rb-erosync-guard").isVisible());
+  await page.locator("#rb-erosync-level").screenshot({ path: `/tmp/ero-level-${tag}.png` }); await page.locator("#rb-erosync-guard").screenshot({ path: `/tmp/ero-guard-${tag}.png` });
   await page.locator("#rb-erosync-guard [role=switch]").first().click(); await page.locator("#rb-erosync-g-cap").fill("40"); await page.locator("#rb-erosync-g-cap").blur(); await page.waitForTimeout(200);
   ok(`[${tag}] 집착 방지 켜기·상한 40이 저장됨`, await page.evaluate(() => window.__gd?.on === true && window.__gd.obsessionCap === 40), JSON.stringify(await page.evaluate(() => window.__gd)));
   ok(`[${tag}] 프리셋 카드가 수위 탭에 있음`, await page.locator("#rb-erosync-presets").isVisible());

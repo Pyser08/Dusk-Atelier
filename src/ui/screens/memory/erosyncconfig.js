@@ -1,6 +1,7 @@
 // Erosync 화면의 '동작·분석' 카드: 장면 빈도·자율성·끈기, 읽는 범위, 분석·성격 변화 반영 방식. 값은 이 기기의 Erosync 설정(erosync_local_config_v3)에 저장된다.
 import { h, replace } from "../../dom.js";
-import { switchEl, setSwitch } from "../../kit.js";
+import { switchEl, setSwitch, segmented } from "../../kit.js";
+import { sliderField, selectField, controlField, toggleField } from "../../fields.js";
 
 export const NUMS = [
   ["frequency", "장면 빈도", 0, 100, "높을수록 장면이 자주 움직여요"],
@@ -27,17 +28,13 @@ export function erosyncConfigCard(ctx, group = "") {
   function paint(c) {
     if (!c?.ok) { replace(body, h("p", { class: "rb-muted", style: "white-space:normal" }, "Erosync를 켜면 여기서 동작과 분석 방식을 정할 수 있어요.")); return; }
     const v = c.values, max = c.maxActors || 10;
-    const sel = (id, label, opts, key) => h("div", { class: "rb-mem-field" }, h("span", null, label),
-      h("select", { id, onChange: (e) => save({ [key]: e.target.value }) }, ...opts.map(([val, text]) => h("option", { value: val, selected: v[key] === val }, text))));
     replace(body,
-      h("p", { class: "rb-muted", style: "white-space:normal" }, "이 기기에만 저장돼요. 값을 바꾸면 다음 응답부터 반영돼요."),
-      ...(group === "ana" ? [] : [sel("rb-erosync-mode", "동작 방식", MODES, "mode")]),
+      h("p", { class: "rb-muted", style: "white-space:normal;margin:0" }, "이 기기에만 저장돼요. 값을 바꾸면 다음 응답부터 반영돼요."),
+      ...(group === "ana" ? [] : [controlField({ id: "rb-erosync-mode-field", label: "동작 방식", control: (() => { const seg = segmented(MODES, v.mode, (val) => save({ mode: val }), "동작 방식"); seg.id = "rb-erosync-mode"; return seg; })() })]),
       ...(group === "ana" ? [] : NUMS).map(([key, label, lo, hi, hint]) => { const top = key === "maxActorsPerTurn" ? Math.min(hi, max) : hi;
-        return h("div", { class: "rb-mem-field" }, h("span", null, label, h("small", { class: "rb-muted" }, ` ${hint} (${lo}~${top})`)),
-          h("input", { type: "number", id: `rb-erosync-c-${key}`, min: lo, max: top, value: v[key], onChange: (e) => { const n = Math.min(top, Math.max(lo, Math.round(Number(e.target.value) || lo))); e.target.value = n; save({ [key]: n }); } })); }),
-      ...(group === "act" ? [] : TOGGLES).map(([key, label, hint]) => h("div", { class: "rb-mem-field row" }, h("span", null, label, h("small", { class: "rb-muted" }, ` ${hint}`)),
-        switchEl(v[key] === true, { label, onChange: (on, el) => { setSwitch(el, on); save({ [key]: on }); } }))),
-      ...(group === "act" ? [] : [sel("rb-erosync-dev", "성격 변화 반영", DEV_MODES, "developmentMode")]));
+        return sliderField({ id: `rb-erosync-c-${key}`, label, hint, value: v[key], min: lo, max: top, onCommit: (n) => save({ [key]: n }) }); }),
+      ...(group === "act" ? [] : TOGGLES).map(([key, label, hint]) => toggleField({ id: `rb-erosync-t-${key}`, label, hint, on: v[key] === true, onChange: (on) => save({ [key]: on }) })),
+      ...(group === "act" ? [] : [selectField({ id: "rb-erosync-dev", label: "성격 변화 반영", hint: "성격 변화를 얼마나 자동으로 반영할지 정해요", options: DEV_MODES, value: v.developmentMode, onChange: (val) => save({ developmentMode: val }) })]));
   }
   paint({ ok: false });
   if (er.on() && er.isRunning() && typeof er.config === "function") er.config().then(paint);
