@@ -57,7 +57,7 @@ export function renderSizeMeter(ctx) {
     const r = st.run;
     if (!r) { replace(runBox); return; }
     const p = r.progress, bar = progressBar(p?.total ? (p.done / p.total) * 100 : 5);
-    const label = p?.phase === "chars" ? `봇 ${p.done}/${p.total}개 재는 중` : p?.phase === "storage" ? (p.total ? `플러그인 저장소 ${p.done}/${p.total}개 재는 중` : "플러그인 저장소 재는 중") : "모듈·플러그인 재는 중";
+    const label = p?.phase === "chars" ? `봇 ${p.done}/${p.total}개 재는 중` : p?.phase === "assets" ? (p.total ? `모듈 에셋 파일 ${p.done}/${p.total}개 재는 중` : "모듈 에셋 파일 재는 중") : p?.phase === "storage" ? (p.total ? `플러그인 저장소 ${p.done}/${p.total}개 재는 중` : "플러그인 저장소 재는 중") : "모듈·플러그인 재는 중";
     replace(runBox, h("section", { class: "rb-card bordered rb-sz-run", "aria-live": "polite" }, h("b", null, "용량을 재는 중이에요"), h("span", { class: "rb-muted" }, `${label} · 읽기만 하고 아무것도 바꾸지 않아요`), bar, btn("멈추기", { kind: "ghost", size: "sm", onClick: () => { r.cancel = true; } })));
   };
 
