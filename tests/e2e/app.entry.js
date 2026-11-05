@@ -4,6 +4,7 @@ import { normalizeSkillSet } from "../../src/engine/skills.js";
 import { createApp } from "../../src/ui/app.js";
 import { createProvider } from "../../src/data/provider/index.js";
 import { createWidgetHome } from "../../src/data/widgethome.js";
+import { createProtLink } from "../../src/data/protlink.js";
 import { createStore as createBackupStore, backupSnapshot } from "../../src/engine/index.js";
 import { createMemory } from "../../src/data/memory.js";
 import POT_PROMPTS from "../../src/data/pot/prompts.json";
@@ -71,6 +72,15 @@ window.bootApp = async (seed, opts = {}) => {
     api.showContainer = api.showContainer ?? (async () => {}); api.registerButton = api.registerButton ?? (async () => ({}));
     app.ctx.widgetHome = createWidgetHome(api, { boot: async () => { __wh.boots++; return { dispose: async () => { __wh.disposed++; }, isVisible: () => false, close: async () => {}, open: async () => { __wh.opened++; return true; }, autoStatus: () => "" }; } });
     app.ctx.openWidgetHome = async () => { try { await app.close(); } catch {} return app.ctx.widgetHome.open(); };
+  }
+  if (opts.protlink) {  // ProtLink+ 화면 시험: 실제 컨트롤러 + 가짜 본체
+    window.__pl = { boots: 0, opened: [], stopped: 0 };
+    const store = { "protlink-plus:v1": JSON.stringify({ version: 1, folders: [], links: [{ id: "a", url: "https://x", name: "내 봇 모음", kind: "bot", snapshot: [1, 2], updatedAt: Date.now() - 7200e3 }] }) };
+    const base = api.pluginStorage;
+    api.pluginStorage = { ...base, getItem: async (k) => (k in store ? store[k] : base.getItem(k)), setItem: async (k, v) => (k.startsWith("protlink-plus") ? void (store[k] = v) : base.setItem(k, v)) };
+    api.showContainer = api.showContainer ?? (async () => {}); api.hideContainer = api.hideContainer ?? (async () => {});
+    app.ctx.protlink = createProtLink(api, { originalProbe: async () => !!window.__plOriginal, boot: async () => { __pl.boots++; return { open: async (id) => { __pl.opened.push(id ?? ""); }, close: async () => { __pl.stopped++; } }; }, hooks: { beforeOpen: async () => { await app.close().catch(() => {}); } } });
+    await app.ctx.protlink.boot();
   }
   // 코코아(스킬) 화면: 실제 스킬 저장소. opts.skills면 세트 3개를 미리 넣는다(첫 세트는 정리 노트·기록하기에 붙임).
   app.ctx.skills = createSkillStore(api, { log() {} });

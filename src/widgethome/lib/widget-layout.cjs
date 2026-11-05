@@ -1,9 +1,9 @@
 /* Pure layout math. Every widget keeps its DOM and data while its grid area changes. */
 (function(root){
  'use strict';
- const IDS=Object.freeze(['music','photo','clock','recent','added','memo','realm','photo2','photo3','dusk','dday','timer','dice','stats']);
+ const IDS=Object.freeze(['music','photo','clock','recent','added','memo','realm','photo2','photo3','dusk','dday','timer','dice','stats','protlink']);
  const ORIGINAL=Object.freeze(['music','photo','clock','recent','added','memo']);
- const LABELS=Object.freeze({music:'음악',photo:'사진',clock:'시계',recent:'최근 대화',added:'최근 봇',memo:'메모',realm:'리스 렐름',photo2:'사진 2',photo3:'사진 3',dusk:'Dusk 바로가기',dday:'D-day',timer:'타이머',dice:'주사위·뽑기',stats:'한눈에'});
+ const LABELS=Object.freeze({music:'음악',photo:'사진',clock:'시계',recent:'최근 대화',added:'최근 봇',memo:'메모',realm:'리스 렐름',photo2:'사진 2',photo3:'사진 3',dusk:'Dusk 바로가기',dday:'D-day',timer:'타이머',dice:'주사위·뽑기',stats:'한눈에',protlink:'ProtLink+'});
  const hidden=value=>IDS.filter(id=>Array.isArray(value)&&value.includes(id));
  const MAX_ROWS=240,MAX_H=24;
  const integer=(value,low,high,fallback)=>{const n=Number(value);return Number.isFinite(n)?Math.max(low,Math.min(high,Math.round(n))):fallback;};
@@ -53,7 +53,7 @@
  function defaults(profile,m,shape='landscape',clock='analog',archived=[]){
   const items={},placed=[],cols=columns(profile);
   for(const id of IDS.filter(id=>!['photo2','photo3'].includes(id))){
-   const w=profile==='mobile'?(['clock','memo'].includes(id)?2:4):({music:6,photo:5,clock:3,recent:4,added:7,memo:5,realm:12,dusk:4,dday:4,timer:4,dice:4,stats:4}[id]);
+   const w=profile==='mobile'?(['clock','memo'].includes(id)?2:4):({music:6,photo:5,clock:3,recent:4,added:7,memo:5,realm:12,dusk:4,dday:4,timer:4,dice:4,stats:4,protlink:4}[id]);
    const minimum=limits(id,profile,m,w),desired=id==='music'?minimum.minH:id.startsWith('photo')?(shape==='square'?2*w:Math.round(2*w/1.65)):id==='clock'?Math.ceil(((clock==='digital'?190:250)+m.gap)/m.rowPitch):Math.ceil((210+m.gap)/m.rowPitch);
    const h=Math.min(MAX_H,Math.max(minimum.minH,desired)),candidate={x:0,y:0,w,h};
    const next=firstFree(candidate,placed,cols);items[id]=next;placed.push(id==='music'?{...next,w:cols}:next);

@@ -12,7 +12,7 @@ for (const [tag, vp, touch] of [["PC", { width: 1280, height: 800 }, false], ["�
   await page.setContent("<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'><body style='margin:0'><button id=outer style='min-height:0;padding:0;border:0;width:50px;height:20px'>x</button></body>");
   await page.addScriptTag({ content: r.outputFiles[0].text });
   const outerBefore = await page.evaluate(() => { const b = document.getElementById("outer"); const s = getComputedStyle(b); return [s.borderRadius, s.minHeight, s.height].join("|"); });
-  await page.evaluate(() => { window.api = makeApi({ localStorage: true }); window.wh = makeWH(api); });
+  await page.evaluate(() => { window.api = makeApi({ localStorage: true }); window.__plOpen = []; window.wh = makeWH(api, { protLink: { on: () => true, error: () => "", links: async () => ({ ok: true, items: [{ id: "a", name: "내 봇 모음", kind: "bot", count: 3, at: 1, error: false }, { id: "b", name: "모듈 링크", kind: "module", count: 0, at: 0, error: false }] }), open: async (id) => { __plOpen.push(id ?? "(열기)"); return true; } } }); });
   ok(`[${tag}] 기본 꺼짐: 켜기 전엔 아무것도 안 만들어짐`, await page.evaluate(() => !document.querySelector("[data-dusk-widgethome]") && api.parts.length === 0 && !wh.on()));
   ok(`[${tag}] 켜기`, await page.evaluate(async () => (await wh.set(true)) === true && wh.isRunning() && api.mem.get("dusk.widgethome.on") === "on"));
   ok(`[${tag}] 메뉴 버튼(dusk-widgethome-open) 등록 + 호스트 숨김 상태`, await page.evaluate(() => api.parts.some((p) => p.id === "dusk-widgethome-open" && p.spec.location === "hamburger") && document.querySelector("[data-dusk-widgethome]").hidden === true));
@@ -74,6 +74,14 @@ for (const [tag, vp, touch] of [["PC", { width: 1280, height: 800 }, false], ["�
     return { dice, dday, timer, stats: q(".st-streak").textContent, duskNone: !q(".dusk-none").hidden, saved: !!api.mem.get("pocketrisu.basic-home.v1.ddays") };
   });
   ok(`[${tag}] 새 위젯 동작(주사위·D-day 저장·타이머·연속 접속)`, /^\d+/.test(ex.dice) && /마감/.test(ex.dday) && /D-\d+/.test(ex.dday) && ex.saved && /^04:5[89]$/.test(ex.timer) && ex.stats === "1일" && ex.duskNone, JSON.stringify(ex));
+  const pw = await page.evaluate(async () => {
+    const sr = document.querySelector("[data-dusk-widgethome]").shadowRoot, q = (s) => sr.querySelector(s);
+    await new Promise((r) => setTimeout(r, 100));
+    const names = [...sr.querySelectorAll(".pl-item b")].map((e) => e.textContent), kinds = [...sr.querySelectorAll(".pl-item .k")].map((e) => e.textContent);
+    sr.querySelector(".pl-item").click(); q(".pl-open").click(); await new Promise((r) => setTimeout(r, 50));
+    return { names, kinds, opened: __plOpen.slice(), card: !!q(".protlink-card.widget-frame, .widget-protlink") };
+  });
+  ok(`[${tag}] ProtLink+ 위젯: 링크 목록·종류 표시, 누르면 그 링크·열기 버튼은 전체 화면 열기`, pw.names.join() === "내 봇 모음,모듈 링크" && pw.kinds.join() === "봇,모듈" && pw.opened.join() === "a,(열기)" && pw.card, JSON.stringify(pw));
   await page.evaluate(async () => { await wh.close(); });
   ok(`[${tag}] 닫기 → hideContainer + 호스트 숨김`, await page.evaluate(() => api.calls.includes("hide") && document.querySelector("[data-dusk-widgethome]").hidden === true));
   await page.evaluate(async () => { await wh.open(); await wh.yieldToDusk(); });

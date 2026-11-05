@@ -1,5 +1,13 @@
 # 현재 상태 — feat/1.9.2
 
+## 2026-11-05 ProtLink+ 통합 (v1.9.2)
+- 본체: `src/protlink/protlink.js`(원작자 제공 v1.0.0 minified 번들, `bootProtLink(api)`로만 감쌈, 고지 `NOTICES.txt`). 번들 +1.1MB(5.7→6.9MB), 처음 열 때까지 실행 안 됨.
+- 컨트롤러 `src/data/protlink.js`: 기본 켜짐(`dusk.protlink.on`), 원본 `protlink_plus` 켜져 있으면 시작 안 함, `wrapApi`가 자체 설정·햄버거 버튼 등록을 막고 화면 닫힘을 알림, 자체 업데이트 링크 심기는 `protlink-plus:selfSeeded:v1`로 건너뜀. 링크 목록은 저장소 `protlink-plus:v1`을 읽기만(주소·비밀번호 제외).
+- 화면 `ui/screens/protlink.js`(관리 탭 `protlink`), 위젯 `protlink`(widget-layout IDS·sheet·extras·home), main.js에서 열 때 Dusk·위젯 홈을 먼저 닫고 닫히면 위젯 홈 복귀.
+- 테스트: `tests/protlink.test.js`, e2e `run-protlink.mjs`(16), `run-widgethome.mjs`. 실제 번들은 headless에서 열림·닫힘·훅 확인함.
+- 미확인: 실제 Proton 링크 받기·업데이트 알림, RisuAI/RisuBard/PocketRisu 실기기, 모바일 실기기. 원본 플러그인 저장소의 링크는 자동 이전 안 됨.
+- 참고: `run-app.mjs`(리수폿 탭 없음)·`run-tabs.mjs`·`run-hubs.mjs` 첫 항목은 이 작업 이전부터 낡아서 실패/중단.
+
 ## 2026-11-05 Erosync 검토 탭·NSFW 기본 칸 (v1.9.2)
 - 엔진 `review.list/act`(duskReviewList/Act) → 컨트롤러 `review(op,id)` → `erosyncreviewui.js`(검토 탭). 선호 후보(preferenceState)는 검토 대상 아님.
 - 기본 developmentMode = standard_auto(저장값 없는 사용자만 영향). 극단 행동 수위 select는 NSFW+에서만.

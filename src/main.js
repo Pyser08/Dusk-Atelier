@@ -27,6 +27,7 @@ import './data/modelhub.js';
 import { createProvider } from './data/provider/index.js';
 import { createWidgetHome } from './data/widgethome.js';
 import { createErosync } from './data/erosync.js';
+import { createProtLink } from './data/protlink.js';
 import { setDuskRoute, runAI } from './engine/runai.js';
 import { setDuskServerModel } from './data/modelhub.js';
 import { setUserPromptProvider } from './engine/runai.js';
@@ -239,7 +240,15 @@ async function start() {
   providerRef.exp = () => !!app?.ctx?.prefs?.ui?.experimental;
   provider.sync().catch(() => {});   // 실험 기능이 켜져 있으면 이제 등록
   // 위젯 홈(v1.9.2): 기본 꺼짐. 켜져 있으면 시작해서 메뉴 버튼을 달고, Dusk 창을 열 땐 먼저 닫아 같은 플러그인 화면을 번갈아 쓴다
-  const widgetHome = createWidgetHome(api, { log: (m) => console.log(`[${TITLE}] ${m}`), openDusk: (tab) => app.open(tab && tab !== "home" ? { tab } : undefined).catch(() => {}) });
+  // ProtLink+(v1.9.2): 기본 켜짐. Proton Drive 링크로 봇·모듈·프리셋·플러그인을 받아요. 열 땐 Dusk 창·위젯 홈을 먼저 닫고, 닫으면 위젯 홈을 되살린다.
+  let widgetHomeRef = null;
+  const protlink = createProtLink(api, { log: (m) => console.log(`[${TITLE}] ${m}`), hooks: {
+    beforeOpen: async () => { try { await app.close(); } catch { /* 이미 닫힘 */ } await widgetHomeRef?.yieldToDusk().catch(() => {}); },
+    onClosed: () => { widgetHomeRef?.resume().catch(() => {}); } } });
+  const widgetHome = createWidgetHome(api, { log: (m) => console.log(`[${TITLE}] ${m}`), openDusk: (tab) => app.open(tab && tab !== "home" ? { tab } : undefined).catch(() => {}),
+    protLink: { links: () => protlink.links(), open: (id) => protlink.open(id), on: () => protlink.on(), error: () => protlink.lastError() } });
+  widgetHomeRef = widgetHome;
+  app.ctx.protlink = protlink;
   app.ctx.widgetHome = widgetHome;
   app.ctx.openWidgetHome = async () => { try { await app.close(); } catch { /* 이미 닫힘 */ } return widgetHome.open(); };
   const duskOpen = app.open;
@@ -256,6 +265,7 @@ async function start() {
       // Dusk ‘이야기 시간’이 켜져 있으면 Erosync 주기 시계가 같은 상태 줄(날짜)을 읽는다
       storyStatus: (text, prevDate) => (storyTime.isOn() ? parseStoryStatus(text, { date: prevDate || "", time: "", place: "" }) : null) } });
   app.ctx.erosync = erosync;
+  protlink.boot().catch((e) => console.log(`[${TITLE}] ProtLink+ 시작 실패 ${e?.message ?? e}`));
   erosync.boot().catch((e) => console.log(`[${TITLE}] Erosync 시작 실패 ${e?.message ?? e}`));
   app.ctx.cellar = memory.cellar;   // 한 곳에서 찾은 Cellar 연결을 화면들이 함께 쓴다
   app.ctx.skills = skills;

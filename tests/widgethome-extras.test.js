@@ -34,7 +34,7 @@ test("예전 배치(6개)도 살리고 새 위젯은 아래에 붙인다", () =>
   const n = L.normalize("desktop", old);
   assert.ok(n);
   assert.deepEqual(n.items.music, old.items.music);
-  for (const id of ["dusk", "dday", "timer", "dice", "stats"]) assert.ok(n.items[id].y >= 16, id);
+  for (const id of ["dusk", "dday", "timer", "dice", "stats", "protlink"]) assert.ok(n.items[id].y >= 16, id);
   const m = L.metrics(1200, "desktop");
   const fit = L.fit(old, "desktop", m);
   const items = Object.values(fit.items);

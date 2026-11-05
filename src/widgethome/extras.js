@@ -1,6 +1,6 @@
 // 위젯 홈 추가 위젯(Dusk): Dusk 바로가기 · D-day · 타이머 · 주사위·뽑기 · 한눈에(통계).
 // 원본 위젯과 같은 카드 모양(.card .card-head)을 쓰고, 저장은 위젯 홈 저장소(store, 접두사 pocketrisu.basic-home.v1.)의 새 키만 쓴다.
-export const EXTRA_IDS = ["dusk", "dday", "timer", "dice", "stats"];
+export const EXTRA_IDS = ["dusk", "dday", "timer", "dice", "stats", "protlink"];
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -13,6 +13,8 @@ export function extraHtml(icon) {
     <button class="dusk-go" data-tab="cocoa"><b>코코아</b><small>스킬·프롬프트</small></button>
     <button class="dusk-go" data-tab="home"><b>Dusk 열기</b><small>모듈·봇 관리</small></button>
    </div><p class="subtle dusk-none" hidden>이 환경에서는 Dusk 화면을 바로 열 수 없어요.</p></section>
+  <section class="card extra-card protlink-card" aria-label="ProtLink+"><div class="card-head"><h2>${icon("link")}ProtLink+</h2><button class="pl-open pill" type="button">열기</button></div>
+   <ul class="pl-list"></ul><p class="subtle pl-note">링크를 불러오는 중…</p></section>
   <section class="card extra-card dday-card" aria-label="D-day"><div class="card-head"><h2>${icon("edit")}D-day</h2><button class="dday-add-open pill" aria-expanded="false">추가</button></div>
    <form class="dday-form" hidden><input class="dday-title" maxlength="40" placeholder="이름 (예: 이벤트 마감)" aria-label="D-day 이름"><input class="dday-date" type="date" aria-label="날짜"><button class="primary dday-save" type="submit">저장</button></form>
    <ul class="dday-list"></ul><p class="subtle dday-empty">기억하고 싶은 날을 추가해 보세요.</p></section>
@@ -58,7 +60,13 @@ export const EXTRA_CSS = `
 .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .stats-grid>div{padding:10px;border-radius:14px;background:var(--soft);display:flex;flex-direction:column;gap:2px}
 .stats-grid b{font-size:22px;font-variant-numeric:tabular-nums}.stats-grid small{font-size:11px;color:var(--muted)}
-.st-top{margin-top:8px}`;
+.st-top{margin-top:8px}
+.pl-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.pl-item{width:100%;display:flex;align-items:center;gap:10px;text-align:left;padding:8px 10px;border-radius:12px;background:var(--soft);border:1px solid transparent}
+.pl-item:hover{border-color:var(--accent)}.pl-item .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.pl-item b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.pl-item small{font-size:11px;color:var(--muted)}
+.pl-item .k{flex:none;font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.pl-note{margin:6px 0 0}`;
 
 // 2d6+1, d20, 3d8-2 (최대 20개, 최대 1000면)
 export function parseDice(expr) {
@@ -97,7 +105,9 @@ export function catalogStats(model, visits = [], now = Date.now()) {
   return { chars: model?.counts?.characters ?? null, today: todayBots.size, week: weekCount, streak, top };
 }
 
-export function createExtras({ sr, store, toast, openDusk, now = () => Date.now() }) {
+export const PL_KINDS = { bot: "봇", module: "모듈", preset: "프리셋", plugin: "플러그인", file: "파일" };
+export const plKind = (k) => PL_KINDS[k] ?? "";
+export function createExtras({ sr, store, toast, openDusk, protLink = null, now = () => Date.now() }) {
   const $ = (s) => sr.querySelector(s), $$ = (s) => [...sr.querySelectorAll(s)];
   const timers = new Set(); let disposed = false;
   // ── Dusk 바로가기
@@ -183,10 +193,35 @@ export function createExtras({ sr, store, toast, openDusk, now = () => Date.now(
     if (!visits.some((t) => dayStart(t) === today)) { visits = [...visits, now()].slice(-60); void store.set("visits", visits).catch(() => {}); }
     paintStats();
   })().catch(() => {});
+  // ── ProtLink+ (링크 목록은 ProtLink+ 저장소에서 읽기만 하고, 누르면 ProtLink+ 화면이 열려요)
+  let plAt = 0, plBusy = false;
+  const paintPl = (r) => {
+    const list = $(".pl-list"), note = $(".pl-note"), open = $(".pl-open");
+    if (!protLink) { list.innerHTML = ""; open.disabled = true; note.hidden = false; note.textContent = "이 환경에서는 ProtLink+를 열 수 없어요."; return; }
+    const on = protLink.on();
+    open.disabled = !on;
+    const items = on && r?.ok ? r.items : [];
+    list.innerHTML = items.slice(0, 5).map((x) => `<li><button class="pl-item" type="button" data-id="${esc(x.id)}"><span class="t"><b>${esc(x.name)}</b><small>${x.count ? `${x.count}개 파일` : "아직 확인 전"}${x.error ? " · 확인 실패" : ""}</small></span>${plKind(x.kind) ? `<span class="k">${plKind(x.kind)}</span>` : ""}</button></li>`).join("");
+    for (const b of $$(".pl-item")) b.onclick = () => openPl(b.dataset.id);
+    note.hidden = items.length > 0 && on;
+    note.textContent = !on ? "ProtLink+가 꺼져 있어요. Dusk의 ProtLink+ 화면에서 켜요." : r && !r.ok ? "링크를 읽지 못했어요." : items.length ? "" : "Proton Drive 링크를 추가해 보세요. ‘열기’를 누르면 돼요.";
+    if (items.length > 5 && on) { note.hidden = false; note.textContent = `외 ${items.length - 5}개 · ‘열기’에서 모두 볼 수 있어요.`; }
+  };
+  const loadPl = async () => {
+    if (plBusy || disposed) return; plBusy = true; plAt = now();
+    try { paintPl(protLink?.on() ? await protLink.links() : null); } catch { paintPl({ ok: false, items: [] }); } finally { plBusy = false; }
+  };
+  const openPl = async (id) => {
+    if (!protLink) return;
+    const ok = await protLink.open(id).catch(() => false);
+    if (ok === false) toast(protLink.error?.() || "ProtLink+를 열지 못했어요.");
+  };
+  $(".pl-open").onclick = () => openPl();
+  void loadPl();
   paintTimer();
   return {
-    onCatalog(model) { lastModel = model; paintStats(); },
-    refresh() { paintDdays(); paintStats(); },   // 날짜가 바뀌었을 때(시계가 부름)
+    onCatalog(model) { lastModel = model; paintStats(); if (now() - plAt > 5000) void loadPl(); },
+    refresh() { paintDdays(); paintStats(); void loadPl(); },   // 날짜가 바뀌었을 때(시계가 부름)
     dispose() { disposed = true; for (const t of timers) clearInterval(t); timers.clear(); }
   };
 }

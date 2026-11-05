@@ -46,6 +46,12 @@ export var TABS = [
     card: "플러그인을 모아 보고 업데이트를 확인해요.",
     help: ["플러그인마다 카테고리를 붙여 정리할 수 있어요.", "‘플러그인 만들기’에서 템플릿으로 내 플러그인을 시작해요.", "DA Interop으로 다른 플러그인과 설정을 주고받아요."]
   },
+  {
+    id: "protlink", label: "ProtLink+", icon: "link", group: "more", section: "manage",
+    desc: "Proton Drive 링크로 봇·모듈·프리셋·플러그인을 받고 새 버전을 알려 줘요.",
+    card: "Proton Drive 링크로 봇·모듈을 받고 업데이트를 확인해요.",
+    help: ["링크를 추가하면 안에 든 봇·모듈·프리셋·플러그인을 미리 보고 골라서 받을 수 있어요.", "시작할 때 링크에 새 파일이 있는지 확인하고, 있으면 알려 줘요. 꺼 두면 확인하지 않아요.", "위젯 홈에도 ProtLink+ 위젯이 있어요. 위젯 홈 설정에서 보이게 켤 수 있어요."]
+  },
   { id: "work-home", label: "개요", icon: "tools", mobileOnly: true, group: "more", section: "work", desc: "프로바이더·AI 봇 제작·도구·설정을 모았어요.", card: "작업실 기능을 골라 열어요.", help: ["원하는 작업 기능을 눌러 바로 이동해요."] },
   {
     id: "provider", label: "프로바이더", icon: "network", group: "more", section: "work", exp: true,
