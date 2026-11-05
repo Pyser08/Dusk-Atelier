@@ -41,7 +41,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   const fb = await page.evaluate(() => { const f = document.querySelector(".rb-rg-full"), c = f?.querySelector(".rb-rg-big")?.getBoundingClientRect(), b = f?.getBoundingClientRect(); return f ? { fw: b.width, fh: b.height, cw: c.width, vw: innerWidth, vh: innerHeight } : null; });
   ok(`[${tag}] 화면 전체를 덮는 큰 시계(화면 짧은 변의 70% 이상)`, !!fb && fb.fw >= fb.vw - 1 && fb.fh >= fb.vh - 1 && fb.cw >= Math.min(fb.vw, fb.vh) * 0.7, JSON.stringify(fb));
   await page.screenshot({ path: `/tmp/regress-${tag}-spin.png` });
-  await page.waitForSelector(".rb-rg-full.tick", { timeout: 9000 }); await page.waitForTimeout(350);
+  await page.waitForSelector(".rb-rg-full.tick", { timeout: 9000 }); await page.waitForTimeout(700);
   const hands = await page.evaluate(() => [...document.querySelectorAll(".rb-rg-big > g[transform]")].map((g) => g.getAttribute("transform")));
   await page.screenshot({ path: `/tmp/regress-${tag}-tick.png` });
   ok(`[${tag}] 끝날 때 '딸깍' 하며 두 바늘이 12시`, hands.length === 2 && hands.every((t) => /^rotate\(0 100 100\)$/.test(t)), hands.join(" | "));
@@ -65,9 +65,11 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   const cres = await page.evaluate(async () => {
     const ch = await __app.ctx.api.getCharacterFromIndex(0), c = ch.chats[0];
     const f = await __app.ctx.memory.store.getFolder("c1", c.id), orig = await __app.ctx.memory.store.getFolder("c1", "t1");
-    return { name: c.name, people: Object.keys(f?.people ?? {}).length, orig: Object.keys(orig.people).length, scenes: (f?.scenes ?? []).length, origScenes: (orig.scenes ?? []).filter((x) => !x.orphan).length, word: document.querySelector(".rb-rg-word")?.textContent ?? "" };
+    const src = ch.chats.find((x) => x.id === "t1"), lastChar = [...src.message].reverse().find((m) => m.role !== "user");
+    return { name: c.name, msgs: c.message.length, same: c.message[0]?.data === lastChar?.data, cur: f?.cursor?.at, people: Object.keys(f?.people ?? {}).length, orig: Object.keys(orig.people).length, scenes: (f?.scenes ?? []).length, origScenes: (orig.scenes ?? []).filter((x) => !x.orphan).length, word: document.querySelector(".rb-rg-word")?.textContent ?? "" };
   });
   ok(`[${tag}] 이어서 하기: 인물·장면을 전부 가져옴`, /^이어서 · /.test(cres.name) && cres.people === cres.orig && cres.scenes === cres.origScenes, JSON.stringify(cres));
+  ok(`[${tag}] 이어서 하기: 원래 채팅 마지막 봇 응답이 새 채팅 첫 메시지(분석 위치도 맞춤)`, cres.msgs === 1 && cres.same && cres.cur === 0, JSON.stringify(cres));
   ok(`[${tag}] 페이지 오류 없음`, !errs.length, errs.join(" | "));
   await page.close();
 }

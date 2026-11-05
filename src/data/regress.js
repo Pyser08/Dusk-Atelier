@@ -3,6 +3,8 @@ import { newId } from "../engine/util.js";
 import { regressSlice, continueSlice } from "../engine/regress.js";
 import { normalizeWikiScope } from "../engine/pot/wiki-schema.js";
 import { CHAT_SCOPE_FIELD } from "../engine/pot/chat-scope.js";
+import { isUserMessage, messageIdentity, messageIdOf } from "../engine/chattext.js";
+import { stripVirtualContext } from "../engine/bardwikiadapt.js";
 
 // opts: { store, folder, who, name, isGenerating(ch), Busy }
 export async function createRegressChat(api, charIndex, opts) {
@@ -22,17 +24,26 @@ export async function createRegressChat(api, charIndex, opts) {
   let wikiOk = !!plan.slice.wiki;
   if (wikiOk) { try { plan.slice.wiki = normalizeWikiScope(plan.slice.wiki); } catch { delete plan.slice.wiki; wikiOk = false; } }
   // 새 채팅: 메시지 없이 시작 → 봇의 첫 메시지가 나온다. 위키 범위 ID를 채팅 ID로 고정해 이 위키가 이 채팅에 붙게 한다.
-  const chat = { id, message: [], note: "", name: label, localLore: [], supaMemory: false, fmIndex: -1, [CHAT_SCOPE_FIELD]: id };
+  // 이어서 하기: 원래 채팅의 마지막 봇 응답을 새 채팅 첫 메시지로 옮겨, 방금 출력된 것처럼 이어 간다.
+  // 이미 기억에 반영된 응답이므로 분석 위치(cursor)를 그 메시지로 맞춰 다시 분석하지 않게 한다.
+  let carryMsg = null;
+  if (cont && opts.carryLast !== false) {
+    const srcChat = (ch.chats ?? []).find((c) => String(c?.id) === String(folder.chatId));
+    const msgs = srcChat ? stripVirtualContext({ message: srcChat.message ?? [] }).message ?? [] : [];
+    for (let i = msgs.length - 1; i >= 0; i--) if (msgs[i] && !isUserMessage(msgs[i]) && String(msgs[i].data ?? "").trim()) { carryMsg = structuredClone(msgs[i]); break; }
+    if (carryMsg) { carryMsg.time = Date.now(); delete carryMsg.generationInfo; }
+  }
+  const chat = { id, message: carryMsg ? [carryMsg] : [], note: "", name: label, localLore: [], supaMemory: false, fmIndex: -1, [CHAT_SCOPE_FIELD]: id };
   const fresh = await api.getCharacterFromIndex(charIndex);
   if (!fresh || fresh.chaId !== ch.chaId) throw new Error("캐릭터가 그 사이 바뀌었어요. 다시 시도해 주세요.");
   if (isGenerating(fresh)) throw new Busy();
   // 기억을 먼저 써 둔다(채팅이 생기자마자 열려도 기억이 있게). 채팅 추가에 실패하면 지운다.
-  await store.updateFolder(String(ch.chaId), id, (f) => { Object.assign(f, plan.slice, { botName: ch.name ?? "", chatName: label, chatIndex: 0, cursor: null }); });
+  await store.updateFolder(String(ch.chaId), id, (f) => { Object.assign(f, plan.slice, { botName: ch.name ?? "", chatName: label, chatIndex: 0, cursor: carryMsg ? { at: 0, mid: messageIdOf(carryMsg) ?? null, h: messageIdentity(carryMsg) } : null }); });
   try {
     // 리스가 새 채팅을 만들 때처럼 목록 맨 위(0번)에 넣고 그 채팅으로 이동한다
     await api.setCharacterToIndex(charIndex, { ...fresh, chats: [chat, ...(fresh.chats ?? [])], chatPage: 0 });
     const check = await api.getCharacterFromIndex(charIndex);
     if (check?.chaId !== ch.chaId || !(check.chats ?? []).some((c) => c?.id === id)) throw new Error("새 채팅을 추가한 뒤 확인에서 보이지 않아요. 채팅 목록을 확인해 주세요.");
   } catch (e) { await store.deleteFolder?.(String(ch.chaId), id).catch(() => {}); throw e; }
-  return { chat, chatIndex: 0, person: plan.person, counts: { ...plan.counts, wiki: wikiOk } };
+  return { chat, chatIndex: 0, carried: !!carryMsg, person: plan.person, counts: { ...plan.counts, wiki: wikiOk } };
 }

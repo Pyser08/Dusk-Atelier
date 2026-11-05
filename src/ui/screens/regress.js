@@ -266,7 +266,7 @@ export async function openRegress(ctx, src) {
     let touched = false; nm.addEventListener("input", () => { touched = true; });
     const go = h("button", { type: "button", class: "rb-rg-go", disabled: !pick.size || null }, "회귀한다");
     const NOTE_REG = "고른 인물의 장기 기억·인물 위키·관계와 감정이 새 채팅으로 함께 가요. 장면과 진행 중인 일은 새로 시작해요. 지금 채팅은 그대로 남아요.";
-    const NOTE_ALL = "모두 골랐어요. 회귀 대신 지금까지 기록된 전부(상황·장면·열린 항목·관계도·인물 위키·게이지·나에 대한 기억)를 새 채팅으로 가져가 이어서 해요. 긴 대화를 새 채팅에서 기억만 들고 이어 가면 토큰을 아낄 수 있어요. 지금 채팅은 그대로 남아요.";
+    const NOTE_ALL = "모두 골랐어요. 회귀 대신 지금까지 기록된 전부(상황·장면·열린 항목·관계도·인물 위키·게이지·나에 대한 기억)를 새 채팅으로 가져가 이어서 해요. 긴 대화를 새 채팅에서 기억만 들고 이어 가면 토큰을 아낄 수 있어요. 원래 채팅의 마지막 응답이 새 채팅 첫 메시지로 들어가요. 지금 채팅은 그대로 남아요.";
     const note = h("p", { class: "rb-rg-note" }, NOTE_REG);
     const allBtn = h("button", { type: "button", class: "rb-rg-all" }, "전체 선택");
     const sync = () => {
