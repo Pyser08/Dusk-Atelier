@@ -92,6 +92,13 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 집착 방지 켜기·상한 40이 저장됨`, await page.evaluate(() => window.__gd?.on === true && window.__gd.obsessionCap === 40), JSON.stringify(await page.evaluate(() => window.__gd)));
   ok(`[${tag}] NSFW+를 고르면 nsfwPlus가 켜짐`, await page.evaluate(() => window.__lv.nsfwPlus === true));
   await page.screenshot({ path: `/tmp/ero-memhome-${tag}.png` });
+  // 장기 기억 더보기: 파일 내보내기·불러오기
+  await page.evaluate(() => { __app.ctx.state.mem.page = "home"; __app.ctx.go("memory"); }); await page.waitForTimeout(1000);
+  await page.locator("#rb-mem-more").click(); await page.waitForTimeout(200);
+  const menuText = await page.locator("[role=menu]").first().textContent().catch(() => "");
+  ok(`[${tag}] 더보기 메뉴에 파일 내보내기·불러오기`, /내보내기/.test(menuText) && /불러오기/.test(menuText), menuText);
+  const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 4000 }).catch(() => null), page.locator("[role=menuitem]", { hasText: "내보내기" }).first().click()]);
+  ok(`[${tag}] 내보내기가 dusk-memory 파일을 내려줌`, !!dl && /^dusk-memory-.*\.json$/.test(dl.suggestedFilename()), dl?.suggestedFilename());
   // Erosync 꺼짐/매칭 안 됨이면 칸이 없다
   await page.evaluate(() => { __app.ctx.erosync = { isRunning: () => false, read: async () => ({ ok: false }) }; });
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "sirokko", tab: "people", page: "detail" }); __app.ctx.go("memory"); }); await page.waitForTimeout(1200);

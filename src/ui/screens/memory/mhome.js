@@ -1,9 +1,10 @@
 // 기억 화면 (1.8.3 목업 3): 상태 카드 하나(스위치·숫자 3·막대·범례) → 지난 대화 분석(큰 버튼) → 바로가기 4칸 → 기억 옵션 → 최근 기록.
 // 오른쪽(PC)·아래(모바일): (PC 고급) 기억 방식 바로 보임 → 설정 한 줄 목록 → 고급 묶음(한 줄씩 접음).
+import { memoryFileItems } from "./memoryfileui.js";
 import { maybePromptIntro } from '../promptstab.js';
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
-import { advFold, btn, confirmDialog, emptyState, note, pageHead, progressBar, statusCard, switchEl, setSwitch } from "../../kit.js";
+import { advFold, btn, confirmDialog, emptyState, note, openMenu, pageHead, progressBar, statusCard, switchEl, setSwitch } from "../../kit.js";
 import { injectReasonText } from "../../../engine/memoryinject.js";
 import { USAGE_KINDS, injectLine, usageOf } from "../../../engine/memoryusage.js";
 import { mem, fail, gradeBadge, at } from "./common.js";
@@ -63,6 +64,13 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
 }
 
 // Erosync 한 줄 카드: 인물 관계도 줄과 같은 모양. 누르면 켜기·설정 화면(page "erosync")
+// 장기 기억 머리: 오른쪽 ‘더보기’(파일 내보내기·불러오기)
+function memHead(ctx, redraw) {
+  const head = pageHead("장기 기억");
+  head.appendChild(btn("더보기", { size: "sm", icon: "more", id: "rb-mem-more", onClick: (e) => openMenu(ctx.win, e.currentTarget, memoryFileItems(ctx, redraw)) }));
+  return head;
+}
+
 function erosyncRow(ctx, m, redraw) {
   if (!ctx.erosync) return null;
   return h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-erosync", onClick: () => { m.page = "erosync"; redraw(); } },
@@ -87,7 +95,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     const gHost = h("div");
     if (ctx.prefs.advanced) await renderGlobalSettings(ctx, gHost, { redraw, panel: true }).catch(() => {});
     return replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" },
-      h("div", { class: "rb-mem2-main" }, pageHead("장기 기억"),
+      h("div", { class: "rb-mem2-main" }, memHead(ctx, redraw),
         emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요. 아래 설정은 채팅 없이도 바꿀 수 있어요.",
           actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] }),
         erosyncRow(ctx, m, redraw), memOptions),
@@ -230,7 +238,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   } else side.push(advFold(ctx, "memory", true));
 
   const main = h("div", { class: "rb-mem2-main" },
-    pageHead("장기 기억"),
+    memHead(ctx, redraw),
     statusBox, bigAct, prog, shortcuts, meRow, mapRow, erosyncRow(ctx, m, redraw), memOptions, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" }, main, h("div", { class: "rb-mem2-side" }, ...side)));
