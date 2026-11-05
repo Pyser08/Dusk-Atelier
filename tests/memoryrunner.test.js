@@ -245,3 +245,20 @@ test("backfill reports why groups failed", async () => {
   assert.equal(r.failed.length, 2);
   assert.match(r.reasons[0], /JSON/);
 });
+test("지난 대화 분석에 함께 기록: 묶음마다 리수폿에 맡기고 끝나면 Erosync, 설정을 끄면 기억만", async () => {
+  const run = async (off) => {
+    const { api, store, chat } = setup();
+    chat.message = []; for (let i = 0; i < 7; i++) chat.message.push({ role: "user", data: "u" + i }, { role: "char", data: LONG + i });
+    if (off) await store.updateIndex((i) => { i.settings.backfillExtras = false; });
+    const pot = [], ev = [];
+    const link = { backfillPotReady: async () => true, backfillPot: (ci, ti, i) => pot.push(i), backfillPotWait: async () => { ev.push("wait"); return true; }, backfillErosync: async () => { ev.push("ero"); } };
+    const runner = createMemoryRunner(api, { store, link, call: async () => good });
+    await runner.backfill(0, 0, {});
+    return { pot, ev };
+  };
+  const on = await run(false);
+  assert.equal(on.pot.length, 3, "묶음 3개 → 리수폿 3번"); assert.deepEqual(on.ev, ["wait", "ero"]);
+  assert.ok(on.pot.every((i) => i % 2 === 1), "묶음 끝 AI 응답 위치");
+  const off = await run(true);
+  assert.equal(off.pot.length, 0); assert.deepEqual(off.ev, []);
+});

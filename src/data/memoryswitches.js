@@ -62,6 +62,9 @@ export function createSwitches({ api, store, flow = null, now = () => Date.now()
     },
     // 전체 기본(모든 봇): 화면의 고급에서만 쓴다
     async setMemoryEverywhere(on) { await store.updateIndex((idx) => setMemoryGlobal(idx, on)); },
+    // 리수폿 일괄: 모든 봇·채팅을 한꺼번에 켜고 끈다(봇별로 따로 끈 것도 지운다)
+    async setPotAll(on) { await store.updateIndex((idx) => { setPotGlobal(idx, on); if (!on) idx.settings.potMode = false; else idx.settings.potMode = true; idx.potBots = {}; }); await applyFlow(); },
+    async potAllOn() { const idx = await store.getIndex(); return potState(idx, "").on && !Object.values(idx.potBots ?? {}).some((v) => v === false); },
     async setPotEverywhere(on) { await store.updateIndex((idx) => setPotGlobal(idx, on)); await applyFlow(); },
     // 위키 인물(캐릭터)별 켜기/끄기: 범위는 이 봇의 이 채팅
     async charOn(chaId, chatId, docId) { return potCharOn(await store.getIndex(), scopeKeyOf(chaId, chatId), docId); },
