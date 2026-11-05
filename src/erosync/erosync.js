@@ -10344,6 +10344,10 @@ Constraint: {{constraint}}
     return hash % 100 < 25 ? 30 + Math.floor(hash / 256) % 61 : 0;
   }
 
+  // Dusk ‘월경·임신 기록’(성인 항목)이 켜져 있으면 몸 상태·주기는 Dusk의 날짜 계산이 맡고, Erosync 쪽 주기는 쉰다(같은 몸 상태가 두 번 들어가지 않게). 저장값은 건드리지 않는다.
+  let duskCycleOwns = false;
+  function cycleOff(config) { return duskCycleOwns || config?.cycleEnabled === false; }
+  function duskFlagsSet(v) { duskCycleOwns = v?.duskCycle === true; duskReadCache = null; return { duskCycle: duskCycleOwns }; }
   function currentCycle(profile, state, amplitude = cycleAmplitudeFactor(configCache)) {
     const settings = cycleProfileFor(profile);
     if (!settings.applicable) return null;
@@ -10803,7 +10807,7 @@ Constraint: {{constraint}}
   function cycleAdjustmentForAction(action, profile, state, config, allowFertility = true) {
     const proposal = action?.cycleAdjustment;
     const no = { delta: 0, kind: '', reason: '' };
-    if (config?.cycleEnabled === false || config?.cycleGoalInfluence === false || !isPlainObject(proposal) || !String(proposal.reason || '').trim()) return no;
+    if (cycleOff(config) || config?.cycleGoalInfluence === false || !isPlainObject(proposal) || !String(proposal.reason || '').trim()) return no;
     if (!allowFertility && proposal.kind === 'fertility') return no;
     const amplitude = cycleAmplitudeFactor(config);
     const cycle = currentCycle(profile, state, amplitude), limit = clampInt(config?.cycleMaxAdjustment, 5, 0, 5);
@@ -16998,7 +17002,7 @@ Constraint: {{constraint}}
   function applyPreviousTurnUpdate(rawUpdate, state, registry, profileStore, config, botOverride = null, externalEvent = null, dynamicsBasis = null, candidateIds = null) {
     const identityContext = bindRuntimeIdentity(registry, profileStore, state, null, { candidateIds }); // 이름 조각(2026-10-31): 후보 id를 묶음에 둔다
     const update = isPlainObject(rawUpdate) ? rawUpdate : {};
-    if (!externalEvent && configCache?.cycleEnabled !== false && (!dynamicsBasis || dynamicsBasis.cycle === Number(state.cycleState?.revision || 0))) applyCycleObservation(update, state, registry, profileStore, contentPolicyFor(botOverride)); // 생리 주기를 끄면 주기 사건으로 상태를 바꾸지 않음 · 생리 2차: 관계·확인은 NSFW에서만
+    if (!externalEvent && !cycleOff(configCache) && (!dynamicsBasis || dynamicsBasis.cycle === Number(state.cycleState?.revision || 0))) applyCycleObservation(update, state, registry, profileStore, contentPolicyFor(botOverride)); // 생리 주기를 끄면 주기 사건으로 상태를 바꾸지 않음 · 생리 2차: 관계·확인은 NSFW에서만
     const sceneEnd = isPlainObject(update.sceneEnd) ? update.sceneEnd : {};
     const discoveredIds = [];
     for (const discovered of Array.isArray(update.discoveredCharacters) ? update.discoveredCharacters : []) {
@@ -17848,10 +17852,10 @@ Constraint: {{constraint}}
     delete result.userOverrides.menstrualCycle;
     if (sfw) for (const field of ['sexualPreferences', 'eroticInterest', 'sexualHumor', 'seduction']) delete result.userOverrides[field];
     if (policy && policy.extremityCap === null) delete result.userOverrides.extremity;
-    const cycleContext = configCache?.cycleGoalInfluence === false || configCache?.cycleEnabled === false ? null : cycleContextForActor(profile, state, policy);
+    const cycleContext = configCache?.cycleGoalInfluence === false || cycleOff(configCache) ? null : cycleContextForActor(profile, state, policy);
     if (cycleContext) result.temporaryBodyContext = cycleContext;
     // 생리 2차: 상대 쪽(그가 아는 "임신이 될 수 있는 관계")
-    const partnerRisks = configCache?.cycleGoalInfluence === false || configCache?.cycleEnabled === false ? null : cyclePartnerContext(profile, state, policy, profileStore);
+    const partnerRisks = configCache?.cycleGoalInfluence === false || cycleOff(configCache) ? null : cyclePartnerContext(profile, state, policy, profileStore);
     if (partnerRisks) result.knownPregnancyRisks = partnerRisks;
     const preferenceAction = sfw ? null : (state?.lastPlan?.actions || []).find(action => action.actor === entity.id && (['flirt', 'seduce'].includes(action.mode) || normalizeGoalType(action.goal?.type) === 'sexual_intercourse'))
       || Object.values(state?.goals || {}).filter(goal => goal.actor === entity.id && ['active', 'continue_later'].includes(goal.status) && normalizeGoalType(goal.type) === 'sexual_intercourse').map(goal => ({ goal }))[0];
@@ -18918,7 +18922,7 @@ Constraint: {{constraint}}
     const base = effectiveProfileForDirector(profile, state, actorId, targetId);
     const resolved = policy || contentPolicyFor(null);
     const sfw = resolved.contentMode === 'sfw';
-    const body = configCache?.cycleGoalInfluence === false || configCache?.cycleEnabled === false ? null : cycleBodyContextForInjection(profile, state, resolved);
+    const body = configCache?.cycleGoalInfluence === false || cycleOff(configCache) ? null : cycleBodyContextForInjection(profile, state, resolved);
     // 메인 모델에는 숫자만 넣고 정의·답 문장은 넣지 않는다. 극단성은 수위 상한을 적용한 값이며,
     // 미분석 축과 수위 "사용 안 함"인 극단성은 줄에서 뺀다.
     const extremity = cappedExtremity(base.extremity, resolved);
@@ -30777,7 +30781,7 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
   const uiCycleProtection = value => value === true ? '피임 있음' : value === false ? '피임 없음' : '피임 모름';
 
   function uiProfileCycle(parent, context, profile, view) {
-    if (context.config?.cycleDisplay === false || context.config?.cycleEnabled === false) return; // 생리 주기를 끄면 주기 칸도 숨김
+    if (context.config?.cycleDisplay === false || cycleOff(context.config)) return; // 생리 주기를 끄면 주기 칸도 숨김
     const cycle = currentCycle(profile, context.session, cycleAmplitudeFactor(context.config));
     const sec = uiAppend(parent, 'section', '', 'es-sec es-cyc');
     const head = uiAppend(sec, 'h4', '생리 주기');
@@ -30972,7 +30976,7 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
 
   // 상대 쪽 칸(NSFW, 기록이 있을 때만): 그가 상대였던 "임신이 될 수 있는 관계". 그녀가 상대를 모르거나 관계 자체를 모르는 기록은 빨강.
   function uiProfilePregnancyRisk(parent, context, profile) {
-    if (context.config?.cycleDisplay === false || context.config?.cycleEnabled === false || !context.session) return;
+    if (context.config?.cycleDisplay === false || cycleOff(context.config) || !context.session) return;
     if (contentPolicyFor(context.botOverride).contentMode === 'sfw') return;
     const records = cyclePartnerRecords(profile.id, context.session, context.profiles);
     if (!records.length) return;
@@ -36952,6 +36956,7 @@ html.es-mobile-simple .es-iring,html.es-mobile-simple .es-iburst{display:none}
     read: duskReadSnapshot,
     content: { get: duskContentGet, set: duskContentSet },
     guard: { set: duskGuardSet },
+    flags: { set: duskFlagsSet },
     // Erosync 자체 화면 열기(원본이 설정 항목으로 등록한 것과 같은 함수)
     open: () => openSettingsPanel(),
     async dispose() {

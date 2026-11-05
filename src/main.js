@@ -247,6 +247,8 @@ async function start() {
   widgetHome.boot().catch((e) => console.log(`[${TITLE}] 위젯 홈 시작 실패 ${e?.message ?? e}`));
   // Erosync(v1.9.2): 기본 꺼짐. 켜져 있으면 시작(본체는 켤 때만 불러옴). 기억 설정에서 켜고 끈다.
   const erosync = createErosync(api, { log: (m) => console.log(`[${TITLE}] ${m}`),
+    // Dusk ‘월경·임신 기록’(성인 항목) 켜짐 여부 → 켜져 있으면 Erosync의 주기는 쉰다
+    cycleProbe: async () => { const r = (await memory.flow?.settings?.())?.rawSnapshot?.(); return r?.features?.openness?.cycle === true && r?.sexualDesireEnabled === true; },
     // Erosync 안의 ‘관계망’ 탭 → Dusk 인물 관계도(Erosync 층)
     // Erosync의 AI 호출을 Dusk 모델 설정(‘자체 AI 작업’ 프로필 → 없으면 리스 보조 모델)으로 보낸다. Dusk 사용자 프롬프트는 끼우지 않는다.
     host: { runAI: (messages, role, signal) => runAI(api, messages, { stage: `erosync-${role}`, noUserPrompts: true }, signal),

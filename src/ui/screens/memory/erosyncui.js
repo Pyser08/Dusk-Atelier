@@ -15,7 +15,7 @@ export function erosyncSection(ctx) {
       const r = (await ctx.memory?.flow?.settings?.())?.rawSnapshot?.();
       const both = er.on() && r?.features?.openness?.cycle === true && r?.sexualDesireEnabled === true;
       overlap.hidden = !both;
-      overlap.textContent = both ? "월경 주기는 Dusk의 ‘월경·임신 기록’(성인 항목)에도 있어요. 둘을 같이 켜 두면 몸 상태가 두 번 들어가니, Dusk의 ‘월경·임신 기록’이나 Erosync 설정의 ‘생리 주기 사용’ 중 한쪽만 켜 주세요." : "";
+      overlap.textContent = both ? "월경 주기는 Dusk의 ‘월경·임신 기록’(성인 항목)이 이야기 속 날짜로 계산해요. 켜져 있는 동안 Erosync의 자체 주기는 쉬어서 몸 상태가 두 번 들어가지 않아요. Dusk 쪽을 끄면 Erosync의 주기가 다시 일해요." : "";
     } catch { overlap.hidden = true; }
   };
   // Erosync 자체 설정 화면(프로필·장면·프롬프트·AI 모델·설정)을 여는 버튼: 켜져 있을 때만

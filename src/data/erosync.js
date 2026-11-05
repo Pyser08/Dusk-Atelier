@@ -19,12 +19,19 @@ export function normGuard(v) {
 }
 // 본체는 켤 때만 불러온다(번들 안에서도 처음 부를 때까지 실행되지 않는다).
 const loadBoot = async () => (await import("../erosync/erosync.js")).bootErosync;
-export function createErosync(api, { log = () => {}, boot = null, load = loadErosyncOn, host = {} } = {}) {
+export function createErosync(api, { log = () => {}, boot = null, load = loadErosyncOn, host = {}, cycleProbe = null } = {}) {
+  let timer = null, duskCycle = false;
   let inst = null, starting = null, error = "", onNow = false, guardNow = { ...GUARD_DEFAULT };
   async function loadGuard() {
     try { const raw = await api.pluginStorage.getItem(GUARD_KEY); guardNow = normGuard(typeof raw === "string" ? JSON.parse(raw) : raw); } catch { guardNow = { ...GUARD_DEFAULT }; }
     try { inst?.guard?.set?.(guardNow); } catch { /* 무시 */ }
     return { ...guardNow };
+  }
+  // Dusk ‘월경·임신 기록’이 켜져 있으면 주기는 Dusk가 맡는다(엔진의 주기는 쉼). 시작할 때와 가끔 다시 확인한다.
+  async function refreshFlags() {
+    try { duskCycle = cycleProbe ? !!(await cycleProbe()) : false; } catch { duskCycle = false; }
+    try { inst?.flags?.set?.({ duskCycle }); } catch { /* 무시 */ }
+    return duskCycle;
   }
   async function originalOn() {
     try { return (await listPlugins(api)).some((p) => p.name === ERO_ORIGINAL && p.enabled); } catch { return false; }
@@ -44,6 +51,8 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
       inst = next;
       error = "";
       try { next.guard?.set?.(guardNow); } catch { /* 집착 방지는 실패해도 본체는 계속 */ }
+      await refreshFlags();
+      if (!timer && cycleProbe) timer = setInterval(() => { void refreshFlags(); }, 30000);
       return true;
     } catch (e) {
       inst = null;
@@ -55,6 +64,7 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
   const start = () => (starting ??= startNow().finally(() => { starting = null; }));
   async function stop() {
     if (starting) await starting.catch(() => {});
+    if (timer) { clearInterval(timer); timer = null; }
     const cur = inst;
     inst = null;
     if (!cur) return true;
@@ -63,6 +73,8 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
   }
   return {
     isRunning: () => !!inst,
+    refreshFlags,
+    cycleByDusk: () => duskCycle,
     lastError: () => error,
     on: () => onNow,
     originalInstalled: originalOn,

@@ -94,3 +94,14 @@ test("집착 방지: 값 범위 정리와 저장·반영", async () => {
   assert.equal(sent.at(-1).on, true);
   assert.equal(er.guard().sameTargetTurns, 3);
 });
+test("월경 주기: Dusk 기록이 켜져 있으면 엔진에 알리고, 끄면 되돌린다", async () => {
+  const api = { addRisuReplacer() {}, pluginStorage: { getItem: async () => null, setItem: async () => {} } };
+  const sent = []; let probe = true;
+  const boot = async () => ({ loaded: () => true, dispose: async () => {}, flags: { set: (v) => sent.push(v.duskCycle) } });
+  const er = createErosync(api, { boot, load: async () => true, cycleProbe: async () => probe });
+  await er.boot();
+  assert.equal(sent.at(-1), true); assert.equal(er.cycleByDusk(), true);
+  probe = false; await er.refreshFlags();
+  assert.equal(sent.at(-1), false);
+  await er.stop();
+});
