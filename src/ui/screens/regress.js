@@ -8,50 +8,39 @@ import { isGenerating, Busy } from "../../engine/safety.js";
 
 const CSS = `
 @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&display=swap");
-.rb-rg{--rg-ink:#efe6cf;--rg-dim:#b8ad95;--rg-gold:#e2bd6b;--rg-gold2:#f6dc9a;--rg-deep:#0d0b1f;--rg-violet:#2a1f55;--rg-line:rgba(226,189,107,.28);
-  position:relative;width:min(560px,94vw);max-height:min(88vh,760px);overflow:hidden auto;border-radius:22px;color:var(--rg-ink);
-  background:radial-gradient(120% 80% at 50% -10%,#3a2a78 0%,var(--rg-violet) 38%,var(--rg-deep) 78%);
-  border:1px solid var(--rg-line);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 30px 80px rgba(8,4,30,.7),inset 0 0 60px rgba(120,90,220,.18);
-  font-family:"Nanum Myeongjo","Noto Serif KR",Georgia,serif;padding:22px 20px 18px;box-sizing:border-box}
+.rb-rg{position:relative;width:min(560px,94vw);max-height:min(88vh,760px);overflow:hidden auto;border-radius:var(--rb-r4,22px);color:var(--rb-text);
+  background:var(--rb-win,var(--rb-surf));border:var(--rb-bw,1px) solid var(--rb-line2);box-shadow:var(--rb-shadow-card,0 20px 60px rgba(0,0,0,.25));padding:22px 20px 18px;box-sizing:border-box}
 .rb-rg *{box-sizing:border-box}
-.rb-rg-stars{position:absolute;inset:0;pointer-events:none;opacity:.75;
-  background-image:radial-gradient(1px 1px at 12% 18%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 72% 12%,#fff 50%,transparent 51%),radial-gradient(1.5px 1.5px at 40% 62%,#f6dc9a 50%,transparent 51%),radial-gradient(1px 1px at 88% 48%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 22% 82%,#cfc2ff 50%,transparent 51%),radial-gradient(1.5px 1.5px at 60% 88%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 6% 52%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 94% 80%,#f6dc9a 50%,transparent 51%);
-  animation:rg-twinkle 5s ease-in-out infinite alternate}
-@keyframes rg-twinkle{from{opacity:.45}to{opacity:.9}}
-.rb-rg-x{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;border:1px solid var(--rg-line);background:rgba(13,11,31,.5);color:var(--rg-dim);font-size:16px;cursor:pointer;z-index:2}
-.rb-rg-x:hover{color:var(--rg-gold2);border-color:var(--rg-gold)}
+.rb-rg-x{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-surf);color:var(--rb-sub);font-size:15px;cursor:pointer;z-index:2}
+.rb-rg-x:hover{background:var(--rb-hover);color:var(--rb-text)}
 .rb-rg-head{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;margin-bottom:14px}
-.rb-rg-clock{width:132px;height:132px;filter:drop-shadow(0 0 18px rgba(226,189,107,.35))}
+.rb-rg-clock{width:112px;height:112px;color:var(--rb-acc)}
 .rb-rg-clock .ring{transform-origin:60px 60px;animation:rg-slow 60s linear infinite}
 .rb-rg-clock .hand-m{transform-origin:60px 60px;animation:rg-slow 24s linear infinite reverse}
 .rb-rg-clock .hand-h{transform-origin:60px 60px;animation:rg-slow 120s linear infinite reverse}
 @keyframes rg-slow{to{transform:rotate(360deg)}}
-.rb-rg.spinning .rb-rg-clock .ring{animation:rg-slow 1.6s linear infinite reverse}
-.rb-rg.spinning .rb-rg-clock .hand-m{animation:rg-slow .35s linear infinite reverse}
-.rb-rg.spinning .rb-rg-clock .hand-h{animation:rg-slow 1.1s linear infinite reverse}
-.rb-rg.spinning .rb-rg-clock{animation:rg-pulse 1.2s ease-in-out infinite}
 @keyframes rg-pulse{50%{filter:drop-shadow(0 0 34px rgba(246,220,154,.75))}}
-.rb-rg-eyebrow{font-size:11px;letter-spacing:.42em;color:var(--rg-gold);text-transform:uppercase;font-family:system-ui,sans-serif}
-.rb-rg h3{margin:0;font-size:24px;font-weight:700;letter-spacing:.08em;color:var(--rg-gold2);text-shadow:0 0 18px rgba(226,189,107,.4)}
-.rb-rg-sub{margin:0;max-width:40ch;font-size:13.5px;line-height:1.65;color:var(--rg-dim)}
-.rb-rg-list{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:6px 0 14px}
-.rb-rg-p{display:flex;align-items:center;gap:10px;min-height:58px;padding:10px 12px;border-radius:14px;cursor:pointer;text-align:left;color:var(--rg-ink);font:inherit;
-  background:rgba(13,11,31,.45);border:1px solid rgba(226,189,107,.16);transition:border-color .2s,background .2s,transform .2s}
-.rb-rg-p:hover{border-color:var(--rg-line);transform:translateY(-1px)}
-.rb-rg-p[aria-pressed=true]{border-color:var(--rg-gold);background:linear-gradient(135deg,rgba(226,189,107,.18),rgba(90,60,180,.25));box-shadow:0 0 22px rgba(226,189,107,.22)}
-.rb-rg-av{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:var(--rg-deep);background:radial-gradient(circle at 35% 30%,var(--rg-gold2),var(--rg-gold) 60%,#a07b33)}
+.rb-rg-eyebrow{font-size:11px;font-weight:700;letter-spacing:.32em;color:var(--rb-acc-text);text-transform:uppercase}
+.rb-rg h3{margin:0;font-size:22px;font-weight:700;color:var(--rb-text)}
+.rb-rg-sub{margin:0;max-width:42ch;font-size:13.5px;line-height:1.65;color:var(--rb-sub)}
+.rb-rg-list{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:6px 0 14px}
+.rb-rg-p{display:flex;align-items:center;gap:10px;min-height:56px;padding:10px 12px;border-radius:var(--rb-r3,14px);cursor:pointer;text-align:left;color:var(--rb-text);font:inherit;
+  background:var(--rb-surf);border:var(--rb-bw,1px) solid var(--rb-line2);transition:border-color .15s,background .15s}
+.rb-rg-p:hover{background:var(--rb-hover)}
+.rb-rg-p[aria-pressed=true]{border-color:var(--rb-acc);background:var(--rb-acc-soft);box-shadow:0 0 0 2px var(--rb-sel-ring,transparent)}
+.rb-rg-av{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:var(--rb-acc-text);background:var(--rb-acc-soft);border:1px solid var(--rb-line2)}
+.rb-rg-p[aria-pressed=true] .rb-rg-av{background:var(--rb-acc);color:var(--rb-on-acc,#fff);border-color:transparent}
 .rb-rg-p b{display:block;font-size:14.5px;line-height:1.25;word-break:keep-all}
-.rb-rg-p small{display:block;font-size:11.5px;color:var(--rg-dim);font-family:system-ui,sans-serif;margin-top:2px}
-.rb-rg-field{position:relative;display:flex;flex-direction:column;gap:6px;margin-bottom:12px;font-size:12px;color:var(--rg-dim);font-family:system-ui,sans-serif}
-.rb-rg-field input{min-height:42px;padding:0 14px;border-radius:12px;border:1px solid var(--rg-line);background:rgba(13,11,31,.55);color:var(--rg-ink);font:15px "Nanum Myeongjo","Noto Serif KR",Georgia,serif}
-.rb-rg-field input:focus{outline:none;border-color:var(--rg-gold);box-shadow:0 0 0 3px rgba(226,189,107,.18)}
-.rb-rg-note{position:relative;margin:0 0 14px;padding:10px 12px;border-left:2px solid var(--rg-gold);font-size:12.5px;line-height:1.6;color:var(--rg-dim);background:rgba(13,11,31,.35);border-radius:0 10px 10px 0;font-family:system-ui,sans-serif}
-.rb-rg button.rb-rg-go{position:relative;display:block;width:100%;min-height:50px;border-radius:999px;border:1px solid var(--rg-gold2);cursor:pointer;font:700 16px "Nanum Myeongjo","Noto Serif KR",Georgia,serif;letter-spacing:.2em;color:#20170a!important;-webkit-text-fill-color:#20170a;text-shadow:0 1px 0 rgba(255,240,200,.5);
-  background:linear-gradient(180deg,var(--rg-gold2),var(--rg-gold) 55%,#b98c3c);box-shadow:0 8px 28px rgba(226,189,107,.3)}
-.rb-rg button.rb-rg-go:disabled{opacity:.45;cursor:default;box-shadow:none}
-.rb-rg-stage{position:relative;min-height:22px;margin-top:10px;text-align:center;font-size:13.5px;color:var(--rg-gold2);letter-spacing:.06em}
-.rb-rg-empty{position:relative;text-align:center;color:var(--rg-dim);font-size:14px;line-height:1.7;padding:14px 4px 6px}
-.rb-rg.spinning .rb-rg-list,.rb-rg.spinning .rb-rg-field,.rb-rg.spinning .rb-rg-note,.rb-rg.spinning .rb-rg-go{opacity:.25;pointer-events:none;transition:opacity .4s}
+.rb-rg-p small{display:block;font-size:11.5px;color:var(--rb-mute);margin-top:2px}
+.rb-rg-field{position:relative;display:flex;flex-direction:column;gap:6px;margin-bottom:12px;font-size:12px;color:var(--rb-sub)}
+.rb-rg-field input{min-height:42px;padding:0 14px;border-radius:var(--rb-r2,12px);border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-ctl,var(--rb-surf));color:var(--rb-text);font:inherit;font-size:15px}
+.rb-rg-field input:focus{outline:none;border-color:var(--rb-acc);box-shadow:0 0 0 3px var(--rb-acc-soft)}
+.rb-rg-note{position:relative;margin:0 0 14px;padding:10px 12px;border-left:3px solid var(--rb-acc);font-size:12.5px;line-height:1.6;color:var(--rb-sub);background:var(--rb-surf2,var(--rb-surf));border-radius:0 var(--rb-r2,10px) var(--rb-r2,10px) 0}
+.rb-rg button.rb-rg-go{position:relative;display:block;width:100%;min-height:48px;border-radius:999px;border:0;cursor:pointer;font:inherit;font-size:16px;font-weight:700;letter-spacing:.12em;color:var(--rb-on-acc,#fff);
+  background:var(--rb-acc-grad,var(--rb-acc));box-shadow:var(--rb-shadow-sm,none)}
+.rb-rg button.rb-rg-go:disabled{opacity:.45;cursor:default}
+.rb-rg-stage{position:relative;min-height:22px;margin-top:10px;text-align:center;font-size:13.5px;color:var(--rb-acc-text)}
+.rb-rg-empty{position:relative;text-align:center;color:var(--rb-sub);font-size:14px;line-height:1.7;padding:14px 4px 6px}
 .rb-rg-flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 22%,rgba(246,220,154,.9),rgba(246,220,154,0) 60%)}
 .rb-rg.done .rb-rg-flash{animation:rg-flash 1s ease-out}
 @keyframes rg-flash{30%{opacity:1}to{opacity:0}}
@@ -126,16 +115,16 @@ function clockSvg(doc) {
   const el = (t, a, kids = []) => { const n = doc.createElementNS(ns, t); for (const [k, v] of Object.entries(a)) n.setAttribute(k, v); kids.forEach((c) => n.appendChild(c)); return n; };
   const nums = ["XII", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"];
   const ring = el("g", { class: "ring" }, [
-    el("circle", { cx: 60, cy: 60, r: 56, fill: "none", stroke: "#e2bd6b", "stroke-width": 1.2, "stroke-dasharray": "2 4" }),
-    ...nums.map((t, i) => { const a = (i * 30 - 90) * Math.PI / 180; const x = el("text", { x: (60 + Math.cos(a) * 47).toFixed(1), y: (60 + Math.sin(a) * 47 + 3).toFixed(1), "text-anchor": "middle", "font-size": 7.5, fill: "#f6dc9a", "font-family": "Georgia,serif" }); x.textContent = t; return x; })
+    el("circle", { cx: 60, cy: 60, r: 56, fill: "none", stroke: "currentColor", "stroke-width": 1.2, "stroke-dasharray": "2 4" }),
+    ...nums.map((t, i) => { const a = (i * 30 - 90) * Math.PI / 180; const x = el("text", { x: (60 + Math.cos(a) * 47).toFixed(1), y: (60 + Math.sin(a) * 47 + 3).toFixed(1), "text-anchor": "middle", "font-size": 7.5, fill: "currentColor", "font-family": "Georgia,serif" }); x.textContent = t; return x; })
   ]);
   return el("svg", { class: "rb-rg-clock", viewBox: "0 0 120 120", "aria-hidden": "true" }, [
-    el("circle", { cx: 60, cy: 60, r: 40, fill: "rgba(13,11,31,.65)", stroke: "#e2bd6b", "stroke-width": 1.5 }),
-    el("circle", { cx: 60, cy: 60, r: 36, fill: "none", stroke: "rgba(226,189,107,.35)", "stroke-width": .8 }),
+    el("circle", { cx: 60, cy: 60, r: 40, fill: "none", stroke: "currentColor", "stroke-width": 1.5 }),
+    el("circle", { cx: 60, cy: 60, r: 36, fill: "none", stroke: "currentColor", "stroke-width": .8 }),
     ring,
-    el("line", { class: "hand-h", x1: 60, y1: 60, x2: 60, y2: 38, stroke: "#f6dc9a", "stroke-width": 2.6, "stroke-linecap": "round" }),
-    el("line", { class: "hand-m", x1: 60, y1: 64, x2: 60, y2: 28, stroke: "#e2bd6b", "stroke-width": 1.6, "stroke-linecap": "round" }),
-    el("circle", { cx: 60, cy: 60, r: 3, fill: "#f6dc9a" })
+    el("line", { class: "hand-h", x1: 60, y1: 60, x2: 60, y2: 38, stroke: "currentColor", "stroke-width": 2.6, "stroke-linecap": "round" }),
+    el("line", { class: "hand-m", x1: 60, y1: 64, x2: 60, y2: 28, stroke: "currentColor", "stroke-width": 1.6, "stroke-linecap": "round" }),
+    el("circle", { cx: 60, cy: 60, r: 3, fill: "currentColor" })
   ]);
 }
 
@@ -305,7 +294,7 @@ export async function openRegress(ctx, src) {
       }
     });
     root.append(
-      h("style", null, CSS), h("div", { class: "rb-rg-stars", "aria-hidden": "true" }), h("div", { class: "rb-rg-flash", "aria-hidden": "true" }),
+      h("style", null, CSS),
       h("button", { type: "button", class: "rb-rg-x", "aria-label": "닫기", onClick: close }, "✕"),
       h("div", { class: "rb-rg-head" }, clockSvg(ctx.win.ownerDocument ?? document), h("span", { class: "rb-rg-eyebrow" }, "Regression"), h("h3", { id: "rb-rg-title" }, "회귀"),
         h("p", { class: "rb-rg-sub" }, "회귀할 사람을 고르세요. 여러 명도 돼요. 고른 사람만 지금까지의 기억을 안고 처음으로 돌아가고, 다른 이들은 아무것도 기억하지 못해요.")),
