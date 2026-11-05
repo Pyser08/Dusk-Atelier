@@ -29,5 +29,5 @@ export function eroTempCard(ctx, card, snap, person) {
   const sw = switchEl(true, { label: "관계 온도 변화를 장면 판단에 반영", onChange: async (v, el) => { setSwitch(el, v); await er?.tempTrend?.(v); } });
   er?.tempTrend?.().then((v) => setSwitch(sw, !!v)).catch(() => {});
   return card("관계 온도", [h("small", { class: "rb-muted" }, "턴마다 이 인물이 상대에게 느끼는 호감·끌림·반감을 적어 둔 거예요. AI를 더 부르지 않아요."), ...rows, legend,
-    h("div", { class: "rb-mem-field row", id: "rb-ero-temp-inject" }, h("span", null, "최근 몇 턴의 변화를 장면 판단에 알려 주기"), sw)], h("small", { class: "rb-wk2-badge" }, "Erosync"), "rb-wk2-ero");
+    h("div", { class: "rb-toggle", id: "rb-ero-temp-inject" }, h("div", { class: "t" }, h("b", null, "장면 판단에 반영"), h("small", null, "최근 몇 턴의 변화량을 함께 알려 줘요")), sw)], h("small", { class: "rb-wk2-badge" }, "Erosync"), "rb-wk2-ero");
 }

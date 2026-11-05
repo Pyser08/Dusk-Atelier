@@ -12,7 +12,7 @@ export function erosyncBehindCard(ctx) {
     const entries = list?.ok ? list.entries : [];
     replace(body,
       h("p", { class: "rb-muted", style: "white-space:normal" }, "켜면 응답이 끝날 때마다 AI가 장면의 뒷이야기를 짧게 적어 둬요. AI 호출이 한 번 더 들어가요. 메인 응답에는 들어가지 않아요."),
-      h("div", { class: "rb-mem-field row" }, h("span", null, "비하인드 기록"), sw),
+      h("div", { class: "rb-toggle" }, h("div", { class: "t" }, h("b", null, "비하인드 기록"), h("small", null, "응답마다 장면 뒷이야기를 짧게 적어요 · AI 호출 +1")), sw),
       !list?.ok ? h("p", { class: "rb-muted" }, list?.reason || "채팅을 열면 그 채팅의 비하인드를 볼 수 있어요.")
         : entries.length ? h("ul", { class: "rb-mem-reclist", id: "rb-erosync-behind-list" }, entries.map((e) => h("li", { class: "rb-mem-rec" },
           h("div", { class: "txt" }, h("b", null, `턴 ${e.turn ?? "?"}`), h("div", { style: "white-space:pre-wrap" }, e.text)),

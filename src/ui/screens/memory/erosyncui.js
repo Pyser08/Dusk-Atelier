@@ -39,7 +39,7 @@ export function erosyncSection(ctx, onChange = () => {}) {
   return h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync", style: "display:grid;gap:10px" },
     h("h3", null, "Erosync (NSFW 장면 강화)"),
     stateBox,
-    h("div", { class: "rb-mem-field row" }, h("span", null, "Erosync 켜기"), sw),
+    h("div", { class: "rb-toggle" }, h("div", { class: "t" }, h("b", null, "Erosync 켜기"), h("small", null, "켜면 다음 응답부터 장면 계획이 요청에 들어가요")), sw),
     h("p", { class: "rb-muted", style: "white-space:normal;margin:0" }, "인물마다 성향·관계를 따로 읽어 두고, 다음 응답에서 누가 무엇을 향해 움직일지 계획해 요청에 넣어요. 성적인 내용을 다루는 기능이라 기본은 꺼짐이에요."),
     h("p", { class: "rb-muted", style: "white-space:normal;margin:0" }, EROSYNC_COST_NOTE),
     overlap,

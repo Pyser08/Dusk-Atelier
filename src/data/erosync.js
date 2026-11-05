@@ -15,10 +15,10 @@ export async function loadErosyncOn(api) {
 }
 export const GUARD_KEY = "dusk.erosync.guard";
 export const TEMP_KEY = "dusk.erosync.tempTrend";   // 관계 온도 변화를 장면 판단 입력에 넣을지(기본 켜짐)
-export const GUARD_DEFAULT = Object.freeze({ on: false, obsessionCap: 60, sameTargetTurns: 3, restTurns: 4 });
+export const GUARD_DEFAULT = Object.freeze({ on: false, obsessionCap: 20, sameTargetTurns: 3, restTurns: 4 });
 export function normGuard(v) {
   const n = (x, d, lo, hi) => { const k = Number(x); return Number.isFinite(k) ? Math.min(hi, Math.max(lo, Math.round(k))) : d; };
-  return { on: v?.on === true, obsessionCap: n(v?.obsessionCap, 60, 0, 100), sameTargetTurns: n(v?.sameTargetTurns, 3, 1, 20), restTurns: n(v?.restTurns, 4, 1, 50) };
+  return { on: v?.on === true, obsessionCap: n(v?.obsessionCap, 20, 0, 100), sameTargetTurns: n(v?.sameTargetTurns, 3, 1, 20), restTurns: n(v?.restTurns, 4, 1, 50) };
 }
 // 본체는 켤 때만 불러온다(번들 안에서도 처음 부를 때까지 실행되지 않는다).
 const loadBoot = async () => (await import("../erosync/erosync.js")).bootErosync;

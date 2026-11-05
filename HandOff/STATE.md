@@ -688,3 +688,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - UI: 수위 탭 `erosyncpresetui.js`, 동작 탭 `erosyncundoui.js`, NSFW 탭 `eroSummaryCard`(erosyncwiki.js)·`erosynctempui.js`·`erosynctagsui.js`·프로필 내보내기/가져오기 버튼(`erosyncprofilefileui.js`). 순수 함수 `eroSummary/eroTemp/tempPath`는 `src/engine/erosyncview.js`.
 - 못 한 것/미확인: 실제 채팅·모델에서 장면 되돌리기·관계 온도 기록·태그 주입·이야기 날짜 시계가 도는지(엔진 함수는 단위 시험·소스 확인만), 세 호스트 실기기. 관계 온도의 ‘반감’은 엔진의 hatred 값(별도 ‘긴장’ 값은 없음). 되돌리기 뒤 집착 방지 상태(`duskGuard`)와 온도 기록은 같은 턴 이상만 다음 기록 때 정리됨.
 - **값 입력 칸 UI(2026-11-05)**: `src/ui/fields.js`(sliderField·selectField·controlField·toggleField) + `styles.js`의 `.rb-fld`·`.rb-range`. Erosync 수위/동작/분석/집착 방지 카드가 사용. 다른 화면의 기본 모양 input은 이번에 건드리지 않음.
+- 집착성 상한 기본 20(엔진·컨트롤러·UI). 선택 칸은 `choiceField`(optionCards+설명), 스위치는 `.rb-toggle`(장기 기억과 같은 모양). '검토 후 반영'(기본값)은 Dusk에 확인 화면이 없어 후보만 쌓임 → 설명에 적어 둠, 기본값 변경은 사용자 결정 필요.

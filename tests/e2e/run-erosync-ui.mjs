@@ -46,7 +46,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
         if (op === "status") return { ok: true, running: false, message: "" };
         if (op === "start") return { ok: true, running: true };
         return { ok: true }; },
-      guard: () => window.__gd ?? { on: false, obsessionCap: 60, sameTargetTurns: 3, restTurns: 4 }, loadGuard: async () => {}, setGuard: async (v) => { window.__gd = { ...(window.__gd ?? { on: false, obsessionCap: 60, sameTargetTurns: 3, restTurns: 4 }), ...v }; },
+      guard: () => window.__gd ?? { on: false, obsessionCap: 20, sameTargetTurns: 3, restTurns: 4 }, loadGuard: async () => {}, setGuard: async (v) => { window.__gd = { ...(window.__gd ?? { on: false, obsessionCap: 20, sameTargetTurns: 3, restTurns: 4 }), ...v }; },
       presets: async () => (window.__ps ??= []).slice(),
       savePreset: async (name) => { if (!name.trim()) return { ok: false, reason: "이름을 적어 주세요" }; (window.__ps ??= []).push({ id: "x" + window.__ps.length, name, level: { contentMode: "nsfw" }, config: {}, guard: null }); return { ok: true, replaced: false, list: window.__ps.slice() }; },
       applyPreset: async (id) => { window.__psApplied = id; return { ok: true, name: id }; },
@@ -124,14 +124,14 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 탭 줄이 보임(개요·수위·동작·분석·프롬프트·비하인드·데이터)`, (await page.locator("#rb-erosync-tabs button").count()) === 7);
   await tabTo("수위");
   ok(`[${tag}] 수위 카드가 보임`, await page.locator("#rb-erosync-level").isVisible());
-  await page.locator("#rb-erosync-level .rb-seg button[data-v=sfw]").click(); await page.waitForTimeout(300);
+  await page.locator("#rb-erosync-mode-level .rb-opt[data-v=sfw]").click(); await page.waitForTimeout(300);
   ok(`[${tag}] SFW를 고르면 저장되고 극단 행동 수위 칸이 잠김`, (await page.evaluate(() => window.__lv.contentMode)) === "sfw" && await page.locator("#rb-erosync-limit").isDisabled());
-  await page.locator("#rb-erosync-level .rb-seg button[data-v=plus]").click(); await page.waitForTimeout(300);
+  await page.locator("#rb-erosync-mode-level .rb-opt[data-v=plus]").click(); await page.waitForTimeout(300);
   await tabTo("동작");
   ok(`[${tag}] 동작 카드가 보임`, await page.locator("#rb-erosync-config-act").isVisible());
   await page.locator("#rb-erosync-config-act").screenshot({ path: `/tmp/ero-act-${tag}.png` });
   await page.locator("#rb-erosync-c-frequency").fill("80"); await page.locator("#rb-erosync-c-frequency").blur(); await page.waitForTimeout(200);
-  await page.locator("#rb-erosync-mode button[data-v=off]").click(); await page.waitForTimeout(200);
+  await page.locator("#rb-erosync-mode .rb-opt[data-v=off]").click(); await page.waitForTimeout(200);
   ok(`[${tag}] 장면 빈도 80·동작 방식 쉬기가 저장됨`, await page.evaluate(() => window.__cf.frequency === 80 && window.__cf.mode === "off"), JSON.stringify(await page.evaluate(() => window.__cf)));
   await tabTo("프롬프트");
   ok(`[${tag}] 프롬프트 카드가 보임`, await page.locator("#rb-erosync-prompts").isVisible());

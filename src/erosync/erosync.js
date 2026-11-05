@@ -16451,10 +16451,10 @@ Constraint: {{constraint}}
   }
 
   // Dusk 집착 방지(Erosync 설정 화면). 꺼짐이 기본이다. 켜면 (1) 집착성 값을 상한으로 눌러 장면 판단에 넘기고 (2) 같은 대상으로 목표가 연속되면 쉬게 한다.
-  let duskGuard = { on: false, obsessionCap: 60, sameTargetTurns: 3, restTurns: 4 };
+  let duskGuard = { on: false, obsessionCap: 20, sameTargetTurns: 3, restTurns: 4 };
   function normalizeDuskGuard(v) {
     const n = (x, d, lo, hi) => Math.round(clampNumber(x, d, lo, hi));
-    return { on: v?.on === true, obsessionCap: n(v?.obsessionCap, 60, 0, 100), sameTargetTurns: n(v?.sameTargetTurns, 3, 1, 20), restTurns: n(v?.restTurns, 4, 1, 50) };
+    return { on: v?.on === true, obsessionCap: n(v?.obsessionCap, 20, 0, 100), sameTargetTurns: n(v?.sameTargetTurns, 3, 1, 20), restTurns: n(v?.restTurns, 4, 1, 50) };
   }
   function duskGuardSet(v) { duskGuard = normalizeDuskGuard(v); duskReadCache = null; return { ...duskGuard }; }
   // 같은 행동 인물이 같은 대상으로 목표를 이어 갈 때 연속 턴 수를 세고, 넘으면 쉬는 턴 동안 목표를 멈춘다(상태: state.duskGuard)
