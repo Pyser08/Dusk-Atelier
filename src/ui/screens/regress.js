@@ -82,6 +82,36 @@ const CSS = `
 .rb-rg-dust{position:absolute;width:3px;height:3px;border-radius:50%;background:#f6dc9a;box-shadow:0 0 8px #f6dc9a;opacity:0;pointer-events:none;animation:rg-dust var(--t) linear var(--dl) infinite}
 @keyframes rg-dust{0%{opacity:0;transform:translateY(0)}15%{opacity:.9}100%{opacity:0;transform:translateY(-38vh)}}
 .rb-rg-full .rb-rg-fstage{position:relative;min-height:1.6em;padding:8px 22px;border-radius:999px;background:rgba(13,11,31,.82);border:1px solid rgba(226,189,107,.45);box-shadow:0 0 24px rgba(140,100,255,.35);max-width:min(92vw,560px);word-break:keep-all;font-size:clamp(16px,2.6vmin,24px);letter-spacing:.14em;text-align:center;text-shadow:0 0 18px rgba(226,189,107,.7)}
+/* 글리치 공명: 크림색 선화 + 색수차, 금 간 유리, 사슬, 깨진 글자가 RETURN으로 맞춰진다 */
+.rb-rg-full.glitch .rb-rg-big{filter:drop-shadow(-2.5px 0 0 rgba(255,70,140,.75)) drop-shadow(2.5px 0 0 rgba(70,225,255,.7)) drop-shadow(0 0 16px rgba(255,236,200,.65));animation:rg-gl 2.2s steps(1) infinite}
+@keyframes rg-gl{0%,100%{transform:none}91%{transform:translate(3px,-2px) skewX(-2deg)}93%{transform:translate(-4px,1px)}95%{transform:none}}
+.rb-rg-full.glitch .rb-rg-big .face{fill:rgba(16,11,6,.72);stroke:#fff1d6}
+.rb-rg-full.glitch .rb-rg-big text{fill:#fff1d6}
+.rb-rg-full.glitch .rb-rg-halo{background:radial-gradient(circle,rgba(255,236,200,.22) 0%,rgba(255,236,200,.06) 45%,transparent 68%)}
+.rb-rg-full.glitch .rb-rg-rays{opacity:.35}
+.rb-rg-fx{position:absolute;inset:-16%;width:132%;height:132%;pointer-events:none;overflow:visible;filter:drop-shadow(-2px 0 0 rgba(255,70,140,.7)) drop-shadow(2px 0 0 rgba(70,225,255,.65)) drop-shadow(0 0 10px rgba(255,236,200,.6))}
+.rb-rg-fx .crack{fill:none;stroke:#fffaf0;stroke-width:.55;stroke-linecap:round;stroke-dasharray:var(--l);stroke-dashoffset:var(--l);animation:rg-crack .5s ease-out var(--dl) forwards}
+@keyframes rg-crack{to{stroke-dashoffset:0}}
+.rb-rg-full.tick .rb-rg-fx .crack{animation:rg-crack .5s ease-out var(--dl) forwards,rg-crackflash .6s ease-out}
+@keyframes rg-crackflash{0%{stroke:#fff;stroke-width:1.4}100%{stroke-width:.55}}
+.rb-rg-fx .chain{transform-origin:100px 100px;animation:rg-sway 2.6s ease-in-out infinite alternate}
+.rb-rg-fx .chain.r{animation-delay:-1.3s}
+@keyframes rg-sway{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
+.rb-rg-fx .chain ellipse{fill:none;stroke:#fff1d6;stroke-width:1.6}
+.rb-rg-full.tick .rb-rg-fx .chain.l{animation:rg-snapl .9s cubic-bezier(.2,.8,.3,1) forwards}
+.rb-rg-full.tick .rb-rg-fx .chain.r{animation:rg-snapr .9s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes rg-snapl{to{transform:translate(-26px,18px) rotate(-14deg);opacity:0}}
+@keyframes rg-snapr{to{transform:translate(26px,18px) rotate(14deg);opacity:0}}
+.rb-rg-word{position:relative;margin-top:clamp(-40px,-4vmin,-10px);font-family:Impact,"Arial Black","Bebas Neue",system-ui,sans-serif;font-weight:900;font-size:clamp(48px,13vmin,128px);letter-spacing:.08em;line-height:1;color:#ffe9ef;
+  text-shadow:-4px 0 0 rgba(255,70,140,.8),4px 0 0 rgba(70,225,255,.75),0 0 22px rgba(255,236,200,.8);animation:rg-wjit .14s steps(2) infinite}
+@keyframes rg-wjit{50%{transform:translate(1px,-1px) skewX(-1.5deg)}}
+.rb-rg-word::after{content:attr(data-t);position:absolute;inset:0;color:#fff;clip-path:inset(40% 0 42% 0);transform:translateX(6px);opacity:.85;animation:rg-slice 1.3s steps(1) infinite}
+@keyframes rg-slice{0%{clip-path:inset(40% 0 42% 0);transform:translateX(6px)}25%{clip-path:inset(10% 0 78% 0);transform:translateX(-7px)}50%{clip-path:inset(70% 0 12% 0);transform:translateX(4px)}75%{clip-path:inset(0 0 100% 0)}}
+.rb-rg-full.tick .rb-rg-word{animation:rg-wsettle .5s ease-out forwards}
+@keyframes rg-wsettle{0%{transform:scale(1.18);filter:brightness(2)}100%{transform:none;filter:none}}
+.rb-rg-full.tick .rb-rg-word::after{animation:none;opacity:0}
+.rb-rg-full.glitch .rb-rg-fstage{font-size:clamp(13px,2vmin,17px);padding:5px 16px}
+@media (prefers-reduced-motion:reduce){.rb-rg-fx .crack{stroke-dashoffset:0}}
 .rb-rg-full .rb-rg-flash{position:fixed;inset:0;opacity:0;background:radial-gradient(circle at 50% 45%,rgba(255,246,214,.85),rgba(246,220,154,.25) 30%,transparent 60%)}
 .rb-rg-full.tick .rb-rg-flash{animation:rg-flash .9s ease-out}
 @media (prefers-reduced-motion:reduce){.rb-rg-full,.rb-rg-full *{animation:none!important;transition:none!important}}
@@ -130,7 +160,7 @@ function bigClock(doc) {
   const mh = el("g", {}, [el("path", { d: `M${C} ${C + 12} L${C - 2} ${C} L${C} ${C - 62} L${C + 2} ${C} Z`, fill: "#fff1c4" }), el("circle", { cx: C, cy: C - 50, r: 2.4, fill: "none", stroke: "#fff1c4", "stroke-width": .8 })]);
   const svg = el("svg", { class: "rb-rg-big", viewBox: "0 0 200 200", "aria-hidden": "true" }, [
     defs, runes, gear,
-    el("circle", { cx: C, cy: C, r: 80, fill: "url(#rg-face)", stroke: "url(#rg-gold)", "stroke-width": 3 }),
+    el("circle", { class: "face", cx: C, cy: C, r: 80, fill: "url(#rg-face)", stroke: "url(#rg-gold)", "stroke-width": 3 }),
     el("circle", { cx: C, cy: C, r: 77, fill: "none", stroke: "rgba(226,189,107,.4)", "stroke-width": .6 }),
     orbit, ticks, nums, orbit2,
     el("circle", { cx: C, cy: C, r: 30, fill: "none", stroke: "rgba(207,194,255,.25)", "stroke-width": .6, "stroke-dasharray": "1 3" }),
@@ -138,6 +168,36 @@ function bigClock(doc) {
   ]);
   const set = (m, hr) => { mh.setAttribute("transform", `rotate(${m} ${C} ${C})`); hh.setAttribute("transform", `rotate(${hr} ${C} ${C})`); };
   return { svg, set };
+}
+
+// 금 간 유리 + 사슬(시계 위에 겹치는 선화). 무작위 대신 고정 씨앗으로 매번 같은 모양
+function fxLayer(doc) {
+  const ns = "http://www.w3.org/2000/svg";
+  const el = (t, a = {}, kids = []) => { const n = doc.createElementNS(ns, t); for (const [k, v] of Object.entries(a)) n.setAttribute(k, v); kids.forEach((c) => n.appendChild(c)); return n; };
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const cracks = [];
+  for (let i = 0; i < 16; i++) {   // 가운데서 뻗는 금 + 가지
+    let a = (i / 16) * Math.PI * 2 + rnd() * .3, x = 100 + Math.cos(a) * 8, y = 100 + Math.sin(a) * 8, d = `M${x.toFixed(1)} ${y.toFixed(1)}`, len = 0;
+    const steps = 4 + Math.floor(rnd() * 4);
+    for (let k = 0; k < steps; k++) { const r = 6 + rnd() * 9; a += (rnd() - .5) * .7; x += Math.cos(a) * r; y += Math.sin(a) * r; len += r; d += ` L${x.toFixed(1)} ${y.toFixed(1)}`;
+      if (rnd() < .35) { const b = a + (rnd() < .5 ? -1 : 1) * (.6 + rnd() * .6), r2 = 6 + rnd() * 10; cracks.push(el("path", { class: "crack", d: `M${x.toFixed(1)} ${y.toFixed(1)} L${(x + Math.cos(b) * r2).toFixed(1)} ${(y + Math.sin(b) * r2).toFixed(1)}`, style: `--l:${r2.toFixed(0)};--dl:${(.5 + k * .18 + i * .03).toFixed(2)}s` })); } }
+    cracks.unshift(el("path", { class: "crack", d, style: `--l:${len.toFixed(0)};--dl:${(.25 + i * .05).toFixed(2)}s` }));
+  }
+  const chain = (side) => {   // 시계 옆을 감싸는 사슬(타원 고리를 호를 따라 늘어놓음)
+    const links = [];
+    for (let k = 0; k < 24; k++) { const t = side === "l" ? 196 + k * 5.6 : 30 + k * 5.6, a = (t - 90) * Math.PI / 180, R = 90 + Math.sin(k * .5) * 3, x = 100 + Math.cos(a) * R, y = 100 + Math.sin(a) * R;
+      links.push(el("ellipse", { cx: x.toFixed(1), cy: y.toFixed(1), rx: k % 2 ? 2.2 : 5.4, ry: k % 2 ? 1.2 : 2.5, transform: `rotate(${(t).toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})` })); }
+    return el("g", { class: `chain ${side}` }, links);
+  };
+  return el("svg", { class: "rb-rg-fx", viewBox: "0 0 200 200", "aria-hidden": "true" }, [el("g", {}, cracks), chain("l"), chain("r")]);
+}
+
+// 깨진 글자: 잠시 기호로 깨져 있다가 끝에 RETURN으로 맞춰진다
+function glitchWord(el, target = "RETURN") {
+  const junk = "@#%!$&*?/<>";
+  let on = true;
+  const id = setInterval(() => { if (!on) return; const t = [...target].map((c, i) => (Math.random() < .45 ? junk[(Math.random() * junk.length) | 0] : c)).join(""); el.textContent = t; el.dataset.t = t; }, 110);
+  return { settle() { on = false; clearInterval(id); el.textContent = target; el.dataset.t = target; }, stop() { clearInterval(id); } };
 }
 
 // 바늘 돌리기: 거꾸로(시간을 되감듯) 빠르게 돌다가, land()를 부르면 느려지며 12시 바로 앞에서 멈칫한 뒤 '딸깍' 12시에 맞는다
@@ -208,11 +268,12 @@ export async function openRegress(ctx, src) {
       const big = bigClock(doc), reduced = !!ctx.win.ownerDocument?.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
       const sparks = Array.from({ length: 18 }, (_, k) => h("i", { class: "rb-rg-spark", style: `--a:${k * 20 + (k % 2) * 7}deg;--d:${28 + (k % 3) * 9}vmin` }));
       const dust = Array.from({ length: 22 }, (_, k) => h("i", { class: "rb-rg-dust", style: `left:${(k * 37) % 100}%;top:${60 + (k * 13) % 40}%;--t:${3 + (k % 5) * 0.7}s;--dl:${(k % 7) * 0.35}s` }));
-      const stageWrap = h("div", { class: "rb-rg-stagewrap" }, h("div", { class: "rb-rg-halo" }), h("div", { class: "rb-rg-rays" }), big.svg, h("i", { class: "rb-rg-wave" }), h("i", { class: "rb-rg-wave w2" }), ...sparks);
-      const full = h("div", { class: "rb-rg-full", role: "status" }, h("style", null, CSS), ...dust, h("div", { class: "rb-rg-flash", "aria-hidden": "true" }), stageWrap, fstage);
+      const stageWrap = h("div", { class: "rb-rg-stagewrap" }, h("div", { class: "rb-rg-halo" }), h("div", { class: "rb-rg-rays" }), big.svg, fxLayer(doc), h("i", { class: "rb-rg-wave" }), h("i", { class: "rb-rg-wave w2" }), ...sparks);
+      const word = h("div", { class: "rb-rg-word", "aria-hidden": "true", "data-t": "RETURN" }, "RETURN"), gw = glitchWord(word);
+      const full = h("div", { class: "rb-rg-full glitch", role: "status" }, h("style", null, CSS), ...dust, h("div", { class: "rb-rg-flash", "aria-hidden": "true" }), stageWrap, word, fstage);
       (doc.body ?? ctx.win).appendChild(full);
       requestAnimationFrame(() => full.classList.add("on"));
-      const spin = spinner(big, { reduced, onTick: () => full.classList.add("tick") });
+      const spin = spinner(big, { reduced, onTick: () => { gw.settle(); full.classList.add("tick"); } });
       const endFull = async () => { full.classList.remove("on"); await sleep(450); full.remove(); };
       let i = 0; stage.textContent = STAGES[0];
       const tick = setInterval(() => { i = (i + 1) % STAGES.length; stage.textContent = fstage.textContent = STAGES[i]; }, 900);
@@ -228,7 +289,7 @@ export async function openRegress(ctx, src) {
         await endFull();
         busy = false; done(res);
       } catch (e) {
-        clearInterval(tick); spin.stop(); await endFull(); root.classList.remove("spinning"); busy = false; go.disabled = false;
+        clearInterval(tick); spin.stop(); gw.stop(); await endFull(); root.classList.remove("spinning"); busy = false; go.disabled = false;
         stage.textContent = e instanceof Busy ? "응답이 나오는 중이에요. 끝난 뒤에 다시 시도해 주세요." : `회귀하지 못했어요: ${e?.message ?? e}`;
       }
     });
