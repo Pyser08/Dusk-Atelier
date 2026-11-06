@@ -1,5 +1,5 @@
 // 요청 만들기 (v1.9.3, 순수): 연결+프로필+메시지 → {url, method, headers, body}. 네트워크 없음.
-import { kindOf, isReasoningModel } from "./catalog.js";
+import { kindOf, isReasoningModel, baseUrlOf } from "./catalog.js";
 import { normalize, mergeSame, splitSystem, startWithUser } from "./messages.js";
 
 const join = (base, path) => `${String(base || "").replace(/\/+$/, "")}${path}`;
@@ -55,6 +55,10 @@ function buildResponses(conn, p, msgs, o) {
   if (tools.length) body.tools = tools;
   return { path: "/responses", body };
 }
+const hash = (str) => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+const turnHashes = (turns) => turns.map((m) => hash(`${m.role}|${m.text}|${m.images.length}`));
+// 캐시 학습용: 요청 메시지 → 턴별 해시(다음 요청과 앞부분을 견주는 데 쓴다)
+export const turnHashesOf = (messages) => turnHashes(startWithUser(splitSystem(mergeSame(normalize(messages))).rest));
 // Anthropic: 캐시 TTL·중단점. system의 마지막 블록과 최근 사용자 메시지에 cache_control
 function buildAnthropicBody(p, msgs, o, { vertex = false } = {}) {
   const s = sampling(p), t = think(p), c = p.cache ?? {};
@@ -62,9 +66,16 @@ function buildAnthropicBody(p, msgs, o, { vertex = false } = {}) {
   const turns = startWithUser(rest);
   const cc = c.claude && c.claude !== "off" ? { type: "ephemeral", ...(c.claude === "1h" ? { ttl: "1h" } : {}) } : null;
   const messages = turns.map((m) => ({ role: m.role, content: [...m.images.map((im) => ({ type: "image", source: { type: "base64", media_type: im.mime, data: im.data } })), ...(m.text ? [{ type: "text", text: m.text }] : [])] }));
-  if (cc) { // 중단점 최대 4개: system 1 + 사용자 메시지 끝에서부터 최대 3
-    const users = messages.map((m, i) => (m.role === "user" ? i : -1)).filter((i) => i >= 0).slice(-Math.min(3, c.breakpoints ?? 2));
-    for (const i of users) { const blocks = messages[i].content; if (blocks.length) blocks[blocks.length - 1] = { ...blocks[blocks.length - 1], cache_control: cc }; }
+  if (cc) { // 중단점 최대 4개: system 1 + (격자·학습 지점) + 사용자 메시지 끝에서부터 나머지
+    const mark = (i) => { const blocks = messages[i]?.content; if (blocks?.length) blocks[blocks.length - 1] = { ...blocks[blocks.length - 1], cache_control: cc }; };
+    const fixed = new Set();
+    // 격자: grid개 메시지마다의 마지막 지점 중 가장 뒤 것 하나 — 대화가 길어져도 같은 자리라 캐시가 안 깨진다
+    if (c.grid > 0) { let g = -1; for (let i = 0; i < messages.length - 1; i++) if ((i + 1) % c.grid === 0) g = i; if (g >= 0) fixed.add(g); }
+    // 학습: 이전 요청과 같았던 앞부분의 끝(그 뒤부터는 바뀐 부분)
+    if (c.learn && o.prevTurnHashes?.length) { const h = turnHashes(turns); let same = 0; while (same < h.length && same < o.prevTurnHashes.length && h[same] === o.prevTurnHashes[same]) same++; if (same > 0 && same < messages.length) fixed.add(same - 1); }
+    const room = Math.max(1, 3 - fixed.size);
+    const users = messages.map((m, i) => (m.role === "user" ? i : -1)).filter((i) => i >= 0 && !fixed.has(i)).slice(-Math.min(room, c.breakpoints ?? 2));
+    for (const i of [...fixed, ...users]) mark(i);
   }
   const sys = system.length ? system.map((x, i) => ({ type: "text", text: x, ...(cc && i === system.length - 1 ? { cache_control: cc } : {}) })) : undefined;
   const body = { ...(vertex ? { anthropic_version: "vertex-2023-10-16" } : { model: p.model }), max_tokens: s.maxTokens || 4096, system: sys, messages, stream: !!o.stream };
@@ -87,6 +98,7 @@ function buildGeminiBody(p, msgs, o) {
   const { system, rest } = splitSystem(mergeSame(msgs));
   const contents = startWithUser(rest).map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: geminiParts(m) }));
   const generationConfig = { temperature: s.temperature, topP: s.topP, topK: s.topK, maxOutputTokens: s.maxTokens, stopSequences: s.stop, seed: s.seed, frequencyPenalty: s.frequencyPenalty, presencePenalty: s.presencePenalty };
+  if (p.mediaResolution) generationConfig.mediaResolution = `MEDIA_RESOLUTION_${String(p.mediaResolution).toUpperCase()}`;   // 이미지·PDF를 얼마나 자세히 읽을지
   const tc = {};
   const g3 = /gemini-3/i.test(p.model);
   if (t.effort === "none") { if (g3) tc.thinkingLevel = "MINIMAL"; else tc.thinkingBudget = 0; }
@@ -122,14 +134,14 @@ function buildVertex(conn, p, msgs, o) {
 }
 
 /** 요청 만들기. cred = 인증 값(키 또는 Vertex 토큰). 반환 {url, method, headers, body, format} */
-export function buildRequest({ conn, profile, messages, stream = false, cred = "", tools = [], reasoningState = [], cachedContent = "", extraMessages = [] }) {
+export function buildRequest({ conn, profile, messages, stream = false, cred = "", tools = [], reasoningState = [], cachedContent = "", extraMessages = [], prevTurnHashes = null }) {
   const k = kindOf(conn.kind), format = conn.format || k.format;
   const msgs = normalize(messages);
-  const o = { stream, tools, reasoningState, cachedContent, extraMessages };
+  const o = { stream, tools, reasoningState, cachedContent, extraMessages, prevTurnHashes };
   const b = { openai: buildOpenAI, responses: buildResponses, anthropic: buildAnthropic, gemini: buildGemini, vertex: buildVertex }[format];
   if (!b) throw new Error(`지원하지 않는 요청 형식이에요: ${format}`);
   const r = b(conn, profile, msgs, o);
-  const base = r.base ?? conn.baseUrl ?? k.baseUrl;
+  const base = r.base ?? baseUrlOf(conn);
   if (!base) throw new Error("연결 주소가 비어 있어요");
   if (format === "vertex" && !conn.vertex?.projectId) throw new Error("Vertex 프로젝트 ID가 필요해요");
   const extra = safeExtra({ ...(conn.params ?? {}), ...(profile.params ?? {}) }, { ...(conn.headers ?? {}), ...(profile.headers ?? {}) });

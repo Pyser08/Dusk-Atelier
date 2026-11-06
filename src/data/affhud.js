@@ -7,6 +7,7 @@ import { runAI } from "../engine/runai.js";
 import { pickForStage } from "./modelhub.js";
 import { readDb, entriesOf, ops as moduleOps } from "./modules.js";
 import { AFF_DEFAULTS, buildAffMessages, clampAff, designMessages, designRetry, extractHud, hasHud, hudHtml, installHud, installHudModule, uninstallHudModule, parseDelta, readPotAffinity, uninstallHud, validateHud } from "../engine/affhud.js";
+import { chatKeyOf } from "../engine/chatkey.js";
 
 const sv = (n) => "$" + n;
 const num = (v) => { const n = Number(v); return v !== "" && v != null && Number.isFinite(n) ? n : null; };
@@ -130,7 +131,7 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
     const potOn = idx.settings?.flow?.on === true;
 
     if (cfg.source !== "own" && potOn) {
-      const r = readPotAffinity(await store.getWiki(chaId, String(chat.id ?? ti)), character.name);
+      const r = readPotAffinity(await store.getWiki(chaId, chatKeyOf(chat, ti)), character.name);
       if (r) {
         const min = r.min ?? cfg.min, max = r.max ?? cfg.max, had = ss[sv("aff_h")] !== void 0;
         await writeVars(ci, ti, { aff: r.value, aff_d: had ? r.value - cur : r.delta, aff_min: min, aff_max: max, aff_h: hash, aff_n: i });

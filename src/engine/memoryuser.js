@@ -40,16 +40,37 @@ export function userMergePlan(folder, names = []) {
   return { people, links };
 }
 // 맵(키 = 이름 키 조합)을 새 이름으로 다시 키를 매긴다. 겹치면 merge(old, incoming)로 합친다.
-function rekey(map, set, fields, keyOf, merge) {
+function rekey(map, set, fields, keyOf, merge, to = USER, hit = isU) {
   if (!map) return map;
   const out = {};
   for (const v of Object.values(map)) {
     const nv = { ...v }; let moved = false;
-    for (const f of fields) if (isU(set, nv[f])) { nv[f] = USER; moved = true; }
+    for (const f of fields) if (hit(set, nv[f])) { nv[f] = to; moved = true; }
     const k = keyOf(nv);
     out[k] = out[k] ? (moved ? merge(out[k], nv) : merge(nv, out[k])) : nv;
   }
   return out;
+}
+
+// 관계·감정·말투 등 이름으로 이어진 기록을 names → to 이름으로 옮긴다(겹치면 합침). {{user}} 합치기와 인물 합치기가 같이 쓴다.
+function relinkWith(folder, set, to, hit) {
+  const side = (n) => (hit(set, n) ? to : n);
+  const pair = (a, b) => key(a) + ">" + key(b);
+  const newer = (a, b) => ((b.at_ms ?? 0) >= (a.at_ms ?? 0) ? b : a);
+  folder.emo = rekey(folder.emo, set, ["from", "to"], (x) => pair(x.from, x.to), (keep, add) => ({ ...keep, tags: { ...add.tags, ...keep.tags }, log: [...(add.log ?? []), ...(keep.log ?? [])] }), to, hit);
+  folder.talk = rekey(folder.talk, set, ["from", "to"], (x) => pair(x.from, x.to), newer, to, hit);
+  folder.rels = rekey(folder.rels, set, ["from", "to"], (x) => pair(x.from, x.to), (keep, add) => ({ ...keep, items: [...(add.items ?? []), ...(keep.items ?? [])] }), to, hit);
+  folder.faces = rekey(folder.faces, set, ["who", "to"], (x) => pair(x.who, x.to), newer, to, hit);
+  folder.start = rekey(folder.start, set, ["a", "b"], (x) => [key(x.a), key(x.b)].sort().join("|"), (keep, add) => (keep.level === "close" || add.level !== "close" ? keep : add), to, hit);   // 처음부터 알던 사이: 더 가까운 단계를 남긴다
+  folder.exp = rekey(folder.exp, set, ["a", "b"], (x) => [key(x.a), key(x.b)].sort().join("|"), newer, to, hit);
+  for (const x of [...(folder.bonds ?? []), ...(folder.rifts ?? [])]) { x.a = side(x.a); x.b = side(x.b); }
+  for (const x of folder.beliefs ?? []) { x.who = side(x.who); if (x.by) x.by = side(x.by); }
+  for (const s of folder.scenes ?? []) if (Array.isArray(s.who)) s.who = [...new Set(s.who.map((w) => side(w)))];
+}
+export function relinkNames(folder, names = [], to) {
+  const tk = key(to), set = new Set(names.map(key).filter((k) => k && k !== tk));
+  if (!set.size || !folder) return;
+  relinkWith(folder, set, to, (st, n) => typeof n === "string" && st.has(key(n)));
 }
 export function mergeIntoUser(folder, names = []) {
   const set = userKeySet(names);
@@ -65,17 +86,7 @@ export function mergeIntoUser(folder, names = []) {
     delete folder.people[pk];
   }
   u.records.sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
-  const pair = (a, b) => key(a) + ">" + key(b);
-  const newer = (a, b) => ((b.at_ms ?? 0) >= (a.at_ms ?? 0) ? b : a);
-  folder.emo = rekey(folder.emo, set, ["from", "to"], (x) => pair(x.from, x.to), (keep, add) => ({ ...keep, tags: { ...add.tags, ...keep.tags }, log: [...(add.log ?? []), ...(keep.log ?? [])] }));
-  folder.talk = rekey(folder.talk, set, ["from", "to"], (x) => pair(x.from, x.to), newer);
-  folder.rels = rekey(folder.rels, set, ["from", "to"], (x) => pair(x.from, x.to), (keep, add) => ({ ...keep, items: [...(add.items ?? []), ...(keep.items ?? [])] }));
-  folder.faces = rekey(folder.faces, set, ["who", "to"], (x) => pair(x.who, x.to), newer);
-  folder.start = rekey(folder.start, set, ["a", "b"], (x) => [key(x.a), key(x.b)].sort().join("|"), (keep, add) => (keep.level === "close" || add.level !== "close" ? keep : add));   // 처음부터 알던 사이: 더 가까운 단계를 남긴다
-  folder.exp = rekey(folder.exp, set, ["a", "b"], (x) => [key(x.a), key(x.b)].sort().join("|"), newer);
-  for (const x of [...(folder.bonds ?? []), ...(folder.rifts ?? [])]) { x.a = sideOf(set, x.a); x.b = sideOf(set, x.b); }
-  for (const x of folder.beliefs ?? []) { x.who = sideOf(set, x.who); if (x.by) x.by = sideOf(set, x.by); }
-  for (const s of folder.scenes ?? []) if (Array.isArray(s.who)) s.who = [...new Set(s.who.map((w) => sideOf(set, w)))];
+  relinkWith(folder, set, USER, isU);
   return { people: src.length, links: plan.links };
 }
 

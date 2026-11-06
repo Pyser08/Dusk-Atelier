@@ -1,4 +1,79 @@
-# 현재 상태 — feat/1.9.2
+# 현재 상태 — feat/2.0.0
+
+## 로드맵 (2026-11-06 정리 — 새 챗은 여기부터)
+### 끝난 것
+- 애드온 구조: 로더(blob import)·requires(받기·시작 순서·끄기 연쇄)·동시 시작·1시간/창 열 때 업데이트 확인·캐시 우회·훅 애드온 새로고침 알림·첫 실행 자동 받기(adopt)·코어 모듈 전부 공유(애드온만 고쳐도 됨).
+- 애드온(배포: `addons` 브랜치, `node tools/publish-addons.mjs`): memory(장기기억·관계도·회귀·HUD) · cards · erosync · manage(캐릭터·모듈·플러그인) · protlink · provider(실험) · widgets · aibuild · chattheme. 코어만으로 홈·가져오기·편집기·코코아·꾸미기·도구·설정 동작.
+- 장기기억 → 리수폿 화면(Erosync 짜임, 채팅 없이도 켜기·설정), 기능 맛보기(engine/discover.js 표), 시작 안내 v2(애드온 고르기), 화면별 ? 안내 보강.
+- 버그: 폴더 키 통일+예전 기억 이전, 기억 파일 v3, 합치기 관계, 페르소나 중앙, 리수폿 일괄, 월경 cycle_report, 모바일 스크롤, 새로고침 직후 먹통.
+### 남은 것 (순서대로)
+1. **실기기 확인**(RisuAI·RisuBard·PocketRisu, PC·모바일): 애드온 받기·자동 받기·동시 시작 속도·기억 훅 순서·예전 기억 이전·리수폿 개요·새로고침 알림·월경 cycle_report 실제 응답. 문제 나오면 DEBUG.md 순서로(실패 시험 먼저).
+2. **2.0.0 출시 준비**(사용자가 시킬 때만): package 버전 2.0.0 → 모든 애드온 minCore 2.0.0·버전 정리 → build·check → publish-addons → main 머지 → `v2.0.0` 태그. 아카 글(docs/arca)은 요청 시.
+3. **넘어오는 유저용 패치**(사용자 결정 대기): 원본 플러그인(리수폿·Erosync·HypaPlus 등) 느낌 살리기 — 어떤 기능을 맞출지 사용자가 정함.
+4. **프로바이더 보완**(docs/PLAN-provider-pm.md, Provider Manager v1.19.3 — 원작자 허락, 참고·일부 코드 가져오기 가능, 가져오면 파일 머리에 출처 + NOTICE.md. 원본 파일은 사용자에게 다시 받아야 함): 1~11단계(…·확장·다른 플러그인 창구, 프로바이더 애드온 0.2.1, 스킬은 뺌) 끝(남은 것: 실제 리스에서 다른 플러그인끼리 pluginStorage 칸이 보이는지 확인). 11단계: engine/provider/mailbox.js(키·요청 읽기·결과 정리·설정) + data/provider/mailbox.js(감시기: 동시 처리 수·허용 묻기·결과 쓰기, 요청 칸은 안 건드림, 처리한 id는 결과 칸 보고 기억) + 확장 탭 카드, 규칙 docs/IPC-provider.md. 10단계: engine/provider/{mcp,hooks}.js + data/provider/mcpclient.js + ui/screens/provider/ext.js, MCP는 streamable-http만(레거시 SSE 없음), 토큰은 vault, 실제 MCP 서버로는 확인 못 함(가짜 전송으로만). 9단계: engine/provider/router.js, 우선순위 = 예산 전환 > 요청 지정 > 라우터 > 용도·봇별. 8단계: Anthropic만(engine/provider/batch.js, 진행 중 배치 저장 dusk.prov.batch.v1), OpenAI 배치(파일 업로드)·Cellar 대기는 안 함. 7단계: Claude만(격자 cache.grid, 학습 cache.learn=직전 요청 턴 해시 메모리 보관). Gemini 캐시 학습은 기존 gemcache(observe/auto). 6단계: 토큰은 어림값(engine/provider/tokens.js), 추론 요약/생략=Claude만, 해상도=Gemini generationConfig.mediaResolution. 5단계 한계: Bedrock IAM(SigV4)·네이티브 invoke는 안 함, OpenCode Zen·Gemini Express 주소는 실제 호출로 확인 못 함. 로그는 engine/provider/errlog.js + 저장 dusk.prov.log.v1. 진행 창 카드→로그 바로 열기는 창이 리스 쪽 DOM이라 못 함(로그 탭에서 보기).
+5. 정리 후보: cards·memory가 비코어 공유 모듈을 각자 들고 있음(크기 중복), 원래부터 실패하는 e2e 6개(run-app·run-hubs·run-tabs·run-editor-ai·run-lorereq·run-popup) 고치기, 기능 맛보기 숫자 조정(사용자 피드백).
+### 애드온만 고칠 때
+소스 수정 → `addons/addons.src.json` 버전 올림 → `node tools/build-addons.mjs` → (빌드가 "코어가 넘겨 줄 모듈이 바뀌었어요"라고 하면 코어도 내고 해당 애드온 minCore 올림) → `node tools/publish-addons.mjs`. 훅 애드온(memory·erosync·provider)은 새로고침해야 적용.
+
+## 기록: 기능 애드온 분리 (2026-11-06, 위 로드맵이 최신)
+- 묶음·크기·의존: 프로젝트 문서 claude/addon-plan.md. 장기기억·관계도 / 기억카드(+cardassets, 장기기억 필요) / 에로싱크(장기기억 필요) / AI로 봇·페르소나 만들기 / 위젯 / 채팅테마 만들기. **코코아·ProtLink+는 코어에 남김.**
+- 규칙: 애드온이 없으면 쓸 수 없는 것(탭·하위 화면·버튼·채팅 메뉴·위젯 칸·설정 행·안내/투어 항목·홈 바로가기)은 전부 그 애드온 쪽으로 옮겨서, 없을 땐 코어에 흔적이 안 남게(숨김). 데이터·설정 키는 그대로(애드온을 다시 받으면 이어서 쓰게).
+- 순서: ① 로더 확장 — manifest `requires`(필요 애드온 같이 받기), 코어가 애드온에 넘기는 `ctx.lib`(dom·kit·icons 등, esbuild로 애드온 빌드 때 external→ctx.lib 매핑), 애드온이 탭·화면·메뉴를 코어에 등록하는 자리(registerTab 등) ② 채팅테마로 첫 분리 ③ AI 제작·위젯 ④ 장기기억·관계도 → 기억카드·에로싱크 ⑤ 2.0.0 첫 실행 때 쓰던 기능 애드온 자동 받기.
+- 진행: ① 로더 확장(일부) — `src/ui/ext.js` `ctx.ext`(screen·row·slot 자리, add()는 되돌리기 반환), 코어 모듈 공유(`tools/build-addons.mjs`가 코어에 있는 모듈은 애드온에 넣지 않고 `globalThis.__duskLib`로 받게 빌드, 넘겨 줄 목록 `src/addonlib.gen.js` 자동 생성 — 바뀌면 코어 재빌드+minCore 올림). `requires`·첫 실행 자동 받기는 아직.
+  ② 채팅테마 분리 끝 — `addons/chattheme/index.js`(v1.0.0, minCore 1.9.2 — 지금 코어 버전이 1.9.2라 실기기 시험용, 2.0.0 출시 때 minCore 2.0.0으로, 84KB, 코어 모듈 7개 공유). 코어에서 tools.js 화면·줄, settings.js 꾸미기 버튼(slot look.mine)·스튜디오 칸(slot look.adv), tabs.js·tour.js 안내 글 제거. 시작 때 테마 적용(restoreActiveTheme)은 `data/themes.js`로 옮겨 코어에 남김.
+  e2e `app.entry.js`는 기본으로 기능 애드온 소스를 켜고(`FEATURE_ADDONS`), `coreOnly`면 코어만. `run-addon-chattheme.mjs`(코어만/켬/배포 파일 14개).
+  참고: `run-app.mjs`는 수정 전에도 실패(오래된 시험).
+  ③ AI 제작·위젯 분리 끝(11-06) — `addons/aibuild`(152KB: 편집기 AI는 svc "aibuild" = {load, aitab, openAiPopup, loadPopupGeom}, editor.js `hasAi = !!ctx.ext.get("svc","aibuild")`; 페르소나 빌더는 tab "personabuilder"; tabs.js `addon:` 표시 탭은 `setAddonCheck`로 svc가 있을 때만 보임; characters 버튼·onboarding 소개도 svc 기준. data/personabuilder.js·regextest·lorerefine·preset-format은 코어). `addons/widgets`(246KB: data/widgethome.js+src/widgethome 통째, svc "widgethome"·도구 row(when)·설정 slot "settings.cards"; 카드는 `addons/widgets/card.js`로 옮김(원래 devtools.js widgetHomeCard), 켜고 끄면 카드만 다시 그림). main.js는 `ctx.widgetHome` getter(svc)·openWidgetHome·app.open의 yieldToDusk·onClosed resume만 남김. 애드온 ctx에 `app`(앱 ctx) 추가. ext 변경이 tab·svc뿐이면 메뉴만 고침(refreshTabs). e2e `run-addon-aibuild.mjs`(13)·`run-addon-widgets.mjs`(9). 코어 번들 6,271KB.
+  다음: 세 호스트 실기기 확인 → 2.0.0 출시 준비(minCore 2.0.0, 매니페스트 주소 main으로). 사용자 결정 대기: 다른 플러그인에서 넘어오는 유저용 패치(원본 느낌 살리기).
+  ④ 조사 결과(11-06, 아직 코드 안 바꿈):
+  - main.js 연결: createMemory(L100) · chatRef.of(L101) · affhud(store·link, L102) · setUserPromptProvider(L104) · memory.start(L109) · 위젯 홈 memory.search(L115) · loreLog gauge(L195) · chatMenu openMemory/openRegress(L200) · app.ctx.memory(L241) · erosync cycleProbe·memory.link.backfillErosync(L266~286) · app.ctx.cellar = memory.cellar(L292) · openMemory/regress(L321~) · createMemoryButton 관계도 버튼(L330) · POT_PROMPTS(prompts.json 244KB) · app.js renderMemory·renderRelMap.
+  - 코어에 남길 것: data/cellar.js(설정·플러그인 탭은 이미 `ctx.memory?.cellar ?? createCellar()`), data/memoryswitches.js currentChat(provider가 직접 import), pot/의 LLM 클라이언트(llm-client·local-keys·vertex·copilot·model-options — provider·modelhub가 씀), 코코아(cocoa.js → memory/skills.js, data/skillstore·engine/skillhook).
+  - 코어 화면의 ctx.memory 사용은 대부분 `?.`라 없으면 건너뜀: settingstab(memoryButton·remote), sectionhome(기억 통계), assetfix(store), promptstab(flow.settings), homestate, characters, onboarding, dicedetail(switches.currentChat). → 애드온이 svc "memory"로 등록하고 main.js는 `ctx.memory` getter(svc)로.
+  - 애드온 쪽: data/memory.js와 runner·inject·flow, ui/screens/memory/*(skills.js 제외), relmap, regress, peoplescreen, pot.js, 관계도 버튼(memorybutton), chatMenu의 기억·회귀 항목(slot/svc로), loreLog gauge 연결, userPrompts 공급.
+  - 확인할 것: affhud(호감도 HUD, 개발 탭 기능 프리셋)가 memory.store 없이 어떻게 동작할지, memory/skills.js가 기억 모듈을 import하는지, 훅(beforeRequest 주입)이 data/memory.js 안에서 등록되는지(main.js hooks 객체).
+  - 에로싱크·기억카드: requires ["memory"], svc "memory"로 flow·link·store 받기.
+  ④⑤ 완료(11-06, 2번째 세션): 장기기억·관계도 `addons/memory`(1,491KB, hooks:true: createMemory+affhud+관계도 버튼+userPrompts, svc memory·affhud·memoryButton·memoryui{tracked,STAGE_NAMES,cardSettings}, tab memory·relmap, needsMemory 표시, 채팅 메뉴 `chatMenu.addLink`로 장기 기억·회귀), 기억카드 `addons/cards`(640KB, requires memory, tab cards — cardSettings는 svc memoryui로), Erosync `addons/erosync`(826KB, hooks:true, requires memory, svc erosync). main.js의 ctx.memory·affhud·memoryButton·erosync·cellar는 svc getter. 코어 6,280KB→3,270KB(남은 큰 것: 없음 — cardassets·erosync·pot은 빠짐).
+  - manifest `requires`: engine/addons.js `installOrder`·`bootOrder`, data/addons.js install(필요 것 먼저)·boot(순서, 필요 것이 안 켜졌으면 건너뜀)·setOn(켜면 필요 것도 켬, 끄면 의존하는 것도 끔)·remove(의존하는 것도). 설치 기록에 requires 저장.
+  - 첫 실행 자동 받기 `addons.adopt(probes)`(키 `dusk.addon.adopted.v2`, 하나라도 실패하면 다음 시작에 재시도): main.js ADOPT — memory(dusk.mem.v3/v2 index·risupot.settings) · cards(cardidx 목록) · erosync(dusk.erosync.on) · widgets(dusk.widgethome.on). 주의: 첫 실행 한 번은 받는 동안 기억 훅이 없음.
+  - app.js: 기억 화면은 `ctx.memory.ready()`(memory.js start를 한 번만, 실패해도 풀림)를 최대 20초 기다림(needsMemory). 화면 오류에 '다시 시도'.
+  - e2e app.entry.js: opts.memory면 실제 memory·cards 애드온(app.memoryForTest), 아니면 탭 자리만. 2.0.0 출시 때 각 애드온 minCore 2.0.0으로.
+  - 남은 것: 실기기(세 호스트)에서 기억 훅이 애드온 로드 뒤에 붙는 순서·첫 실행 자동 받기, cards와 memory가 비코어 공유 모듈을 각자 들고 있음(상태 없는 것뿐이라 동작 문제는 없지만 크기 중복 — 애드온 간 모듈 공유는 미구현).
+  프로바이더 애드온(11-06): `addons/provider`(101KB, hooks:true — addProvider는 뺄 수 없음, svc provider·tab provider, setDuskRoute·setDuskServerModel을 애드온이 설정·끌 때 null, adopt 조건 = 실험 기능 켬 + dusk.prov.v1 있음). tabs provider는 exp+addon. 코어 2,024KB.
+  기억 이전(11-06): chatKeyOf로 바꾼 뒤 원래 리수폿을 쓰던 채팅(scopeId≠chat.id)은 예전 기억이 chat.id 폴더에 남아 화면이 비었음 → adoptFolder를 모든 칸 일반 병합(빈 칸·없는 항목만, wiki는 지금 것 유지, adoptedFrom으로 1회)으로, switches.cachedCurrent·chatload(고른 채팅)·runner·aitools에서 호출. currentChat 결과에 숨은 legacyId. memoryswitches·memorystore3는 코어 모듈 → 코어도 교체 필요.
+  애드온 동시 시작(11-06): boot가 코드를 한꺼번에 읽고(Promise.all) 각 애드온은 requires의 시작 약속만 기다림(launch 메모). bootOrder는 이제 안 씀(engine에 남김). memory 애드온의 chatMenu.addLink는 기다리지 않음.
+  애드온 확인 주기(11-06): 켤 때 1번 + 1시간마다(setInterval, timers 주입 가능) + Dusk 창 열 때 checkSoon(10분). 목록 주소엔 ?t=시각, 파일 주소엔 ?v=sha 앞 12자(GitHub raw 캐시 우회). 시험 가짜 fetcher는 ? 뒤를 떼고 비교.
+  4차(11-06): 관리 애드온 `addons/manage`(72KB: characters·modules·plugins 화면 탭, svc manage, adopt 조건 rbm:ui:v1 있음). legacy(가져오기)·editor·assetmgr·백업은 코어. app.js 기본 탭 home. 모바일 탭바·홈 '관리' 칸은 보일 탭 없으면 숨김. tour.js visibleTour(애드온 없는 탭 단계 뺌). build-addons: 코어 모듈 전부를 addonlib으로 넘김(279개, 코어 +46KB) → 애드온이 새 코어 모듈을 써도 코어 재배포 불필요(ext 자리·api가 바뀔 때만 코어). 코어 2,120KB.
+  코어만 확인(11-06): 애드온 0개로 PC·모바일 전 탭 열기 오류 0, 메뉴는 홈·코코아·캐릭터·모듈·플러그인·꾸미기·도구·설정·개발만(모바일 홈·기억·관리·작업실). 숨긴 탭을 주소로 열면 '준비 중'.
+  다음 후보(보류 — 사용자가 '코어만으로도 작동'을 원해 1번안+관리 애드온으로 진행함. 아래는 참고): 코어 = 로더+ext+최소 화면만, 지금 코어 기능(관리·화면 공용 모듈)은 기본 애드온 base로 → 첫 실행 자동 받기(인터넷 필요), 이후 저장본으로 켬, 실패 시 되돌리기, 그래도 안 되면 코어가 '기본 기능 다시 받기' 버튼. 애드온 간 모듈 공유(requires 대상이 모듈을 넘겨주는 구조)가 필요함. 새 챗에서 시작.
+  버전(11-06): 애드온 버전 전부 0.1.0으로 초기화(사용자 지시). 주의: 시험으로 1.0.0을 받아 둔 기기는 pickUpdates가 낮은 버전으로 내리지 않으므로 애드온을 지우고 다시 받아야 함. 배포 위치: 전용 브랜치 `addons`(빌드 결과·목록만). 기본 목록 주소 ADDON_MANIFEST_URL·build-addons 기본 BRANCH = addons. 올리기: `node tools/publish-addons.mjs`(--dry 가능, 먼저 build-addons --check). 애드온만 고칠 땐 소스 수정 → addons.src.json 버전 올림 → build-addons → publish-addons. 본체 모듈 목록(addonlib.gen.js)이 바뀌면 본체도 내고 minCore 올림.
+  3차(11-06): ProtLink+ 애드온 `addons/protlink`(947KB, svc protlink·tab protlink, 코어 app.ctx.updatePluginScript를 씀, 위젯 애드온은 ctx.app.protlink를 그때그때 읽음, adopt 조건 = 링크 있음). 코어 2,136KB. 장기 기억 → 리수폿 화면 `memory/potpage.js`(page "pot", 탭 개요=pot.js potOverview · 설정=flowSections · 자동 기록=autoTrackingBox(noAdvanced) · 고급=advancedPot), 홈 줄 #rb-mem-go-pot. madv '자동 기록 · 인물 추적'과 settings '세부 설정'의 흐름 칸은 리수폿 화면으로 가는 버튼만 남김. 기능 맛보기: `engine/discover.js`(DISCOVER 목록·pickDiscover) + `ui/discovercard.js`(홈 카드, prefs.ui.discover {seen,off,snoozeUntil}, prefs.ui.opens는 app.open마다 +1, prefs.ui.visited는 app render·memory 페이지에서). 설정 '기능 맛보기 다시 켜기'. screentours: memory:home 선택자 고침, memory:detail·pot·erosync·relmap·protlink·plugins 추가. e2e run-potpage·run-discover.
+  시작 안내(11-06): ONBOARD_VER 2(모두에게 한 번 더), 1단계 ‘기능’ = 애드온 고르기(onboarding.js addonStep: 켜면 install/setOn(true), 끄면 setOn(false)만, 목록 못 받으면 안내), 이후 단계 번호 +1(7단계), 요약에 기능 줄. e2e run-onboard는 가짜 ctx.addons(app.entry opts.onboard).
+  버그 수정(11-06, 사용자 제보): ① 폴더 키 규칙 `engine/chatkey.js chatKeyOf`(risupotWikiScopeId→id→index)를 runner·inject·turn·switches·affhud·assetfix·rewind·hypa·chatload가 같이 씀, 예전 키 폴더는 `store.adoptFolder`로 빈 칸만 옮김(러너·aitools), aitools는 범위 불일치를 따로 안내, memorystore3 set·potstorage가 setItem===false를 실패로. ② memoryfile v2만 받던 것 → v2·v3, `only`(열린 채팅만)·`target`(열린 채팅에 넣기). 합치기 `relinkNames`(memoryuser.js, {{user}} 합치기와 공용)로 rels·emo·talk 등 이름 옮김, peopledupe `fullAndGiven`(성+이름). ③ usernames `primaryUserName(db, chat)` 채팅 묶인 페르소나 우선·fresh 읽기, relmap 화면 키에 이름. ④ switches.setPot = setPotAll. ⑤ `engine/cyclereport.js`: 월경 추적 켜짐이면 Writer에 `cycle_report` 칸 요구 → 표식 줄로 바꿔 current_state 항목에 붙임(없으면 같은 제목 create → dedupe가 update로). pot 코드는 안 건드림. 스크롤: scrollguard가 목록 밖 rb- 스크롤 영역을 배움(learned), relmap canvas 모바일 flat 클래스 처음부터. 기억 넣기 토큰 → mhome 기억 옵션. ProtLink 플러그인: hooks.updatePlugin(main.js, Cellar 플러그인 편집 있으면 바로 교체, 없으면 파일).
+  - 실기기 미확인: 위 전부. 월경 cycle_report는 실제 모델 응답 미확인.
+  - 참고: run-app·run-hubs·run-tabs·run-editor-ai·run-lorereq·run-popup은 이 작업 전부터 실패(원래 브랜치에서 같은 결과 확인). run-info 모바일 한 항목은 가끔 실패(재실행하면 통과).
+  할 일(11-06, 사용자 요청 '필요한 부분 말고는 다시 그리지 않게'): 화면이 자기 전체를 다시 그리는 곳을 바뀐 부분만 그리게 바꾸기 — characters.js(11곳)·presets.js(7)·plugins.js(7)·dev.js(7)·history.js(6)·lorelog.js(4)·settingstab.js(3)·tools/relmap/pot/people/memory/home/cocoa/cards(각 1), ctx.refresh: patchui·newbot(2)·characters(1). 지금은 스크롤 지킴이로 위치만 지켜짐. 기억 화면들은 애드온으로 옮길 때 같이.
+  고침(11-06): 애드온 켜고 끌 때 전체 다시 그리기·스크롤 튐 → ext는 지금 화면이 읽은 자리만 다시 그림, 스크롤 지킴이는 클릭 대신 `ctx.go` 화면 이동(markNav)만 맨 위로. 규칙은 UI-STYLE.md 4-1.
+- 매 단계 끝: 애드온 없이 코어만으로 npm test·e2e 통과 + 애드온 켠 상태 e2e 통과 확인.
+
+## 2026-11-05 애드온 로더 시험판 (버전 미변경)
+- 설계: 프로젝트 문서 claude/addon-plan.md(1순위 방식). 애드온은 리스 플러그인 목록에 안 뜨고, Dusk가 받아 같은 iframe에서 `import(blob:)`로 켠다.
+- 순수 `src/engine/addons.js`(parseManifest·cmpVer·pickUpdates·rowState) / 데이터 `src/data/addons.js` `createAddons(api,{core,ctx})`: boot(저장본으로 바로 켬, 3초 뒤 확인)·check(6시간마다, 바뀐 것만 받기·sha256 검사)·install·setOn·remove·되돌리기(prev). 훅 있는 애드온(`hooks:true`) 업데이트는 다음 시작부터(pendingRestart). 저장 키 `dusk.addon.index`·`dusk.addon.code.<id>`·`dusk.addon.prev.<id>`(getLocalPluginStorage→pluginStorage), 목록 주소 키 `dusk.addon.manifestUrl`(기본 feat/2.0.0 raw).
+- 애드온 소스 `addons/<id>/index.js`(export activate(api, ctx) → {deactivate}) → `node tools/build-addons.mjs`로 `addons/dist/<id>.js` + `addons/addons.json`(sha256·주소) 생성, `--check`로 확인. 목록 원본 `addons/addons.src.json`. 시험 애드온 `hello`(켜지면 알림 + 햄버거 버튼).
+- 화면: 설정 탭 '애드온 (시험)' 카드(`ui/screens/addonsui.js`). main.js에서 boot.
+- 테스트: `tests/addons.test.js`(8), e2e `run-addon-loader.mjs`(리스와 같은 sandbox·CSP에서 실제 blob import), `run-addons-ui.mjs`(PC·모바일 12).
+- 고침: v3 api의 getLocalPluginStorage()는 Promise로 와서 `d.setItem is not a function` → await 후 메서드 확인, 없으면 pluginStorage, 값은 문자열로만 저장.
+- 고침: 버튼 콜백이 toast 반환값(DOM)을 돌려줘 호스트 복제 실패(`failed to post message to parent`) → 콜백·ctx.toast는 아무것도 돌려주지 않게, hello v0.1.1. 애드온 규칙: api에 넘기는 콜백 반환값은 복제 가능한 값만.
+- 고침: 알림(ctx.toast)은 Dusk 창 안에만 떠서 창이 닫혀 있으면 안 보임 → 애드온 ctx에 openDusk(tab) 추가, hello v0.1.2는 버튼을 누르면 설정 탭을 연 뒤 알림.
+- 2026-11-06 사용자 실기기 확인: 아이패드(WebKit)에서 받기·켜기·햄버거 버튼·Dusk 열기·알림 모두 됨 → blob import 방식 확정.
+- 미확인: Firefox, 호스트별(RisuAI·RisuBard·PocketRisu) 차이, 실제 nativeFetch로 raw.githubusercontent 받기. 실패 시 대체 경로(자기 재조립·nonce script) 아직 없음.
+- 다음: 실기기 확인 → 실제 기능 하나(작은 것)를 애드온으로 분리, 공유 코드(`ctx.lib`) 구조.
+
+## 2026-11-05 버그 정리 (2.0.0 애드온 작업 전, 버전 미변경)
+- 스크롤 튐: `src/ui/scrollguard.js` `installScrollGuard(win, main)`(app.js에서 설치). 안쪽 영역이 '불러오는 중'으로 짧아지거나 떼었다 다시 붙으면 스크롤이 0으로 가던 문제 — 영역별 마지막 위치를 기억해 되돌림. 사용자가 직접 굴린 스크롤·코드의 scrollTop=0/scrollIntoView는 존중, 버튼·링크 클릭 뒤 3초는 새 영역 되돌리지 않음(화면 이동). e2e `run-scrollkeep.mjs`(NOGUARD=1이면 버그 재현).
+- 중복 스위치: 기억 고급(`madv.js` 대화에 넣기)의 사람다운 기억·감정 식음·거짓말 추적 제거(간단 '기억 옵션'에만), 예전 세부(`settings.js` renderGlobalSettings)의 기억 넣기 켜기·확장 기억 넣기 제거(고급 '대화에 넣기'에만). e2e `run-dupes.mjs`(탭별 같은 이름 스위치 검사).
+- 미확인: 실기기(세 호스트·모바일 터치 스크롤), 하위 화면(봇 세부 설정 등)의 중복.
+- 다음: 애드온 구조(프로젝트 문서 claude/addon-plan.md, 1순위 blob import 로더 PoC).
+
 
 - 회귀(2026-11-05): `engine/regress.js`(regressSlice·regressCandidates·regressLine, 순수) · `data/regress.js`(createRegressChat: 새 채팅 append+chatPage 이동, risupotWikiScopeId=새 id, 폴더 먼저 쓰고 실패 시 deleteFolder) · `ui/screens/regress.js`(신비 창, .rb-rg 범위 CSS) · 진입: chatmenu `dusk-qt-regress`, people.js 더보기·인물 상세, wikiview 헤더. carried 기록은 at:null(주입 최근 제외 회피)·src/hs 제거(대조 되돌림 회피)·회귀자 ctx=always, memoryinject에 Regression 줄. Erosync 값은 옮기지 않음. 테스트 tests/regress.test.js, e2e run-regress.mjs(22). 실기기 미확인.
 - 지난 대화 분석 함께 기록(2026-11-05): memoryrunner `backfillExtras`(settings.backfillExtras 기본 true) → link.backfillPot(묶음 끝 index를 auto.schedule)·backfillPotWait(waitForScope 10분)·backfillPotReady(potState+auto.enabled) — memoryturn rt 시작 시 채움. 끝나면 link.backfillErosync(main.js: Erosync 켜짐+read().people 비었을 때 profile start "full"). Erosync 턴 단위 기록은 planner pending 구조라 과거 재생 불가 → 성향 전체 분석으로 대체. 서버 분석 경로는 함께 기록 안 함. 리수폿 일괄: switches.setPotAll/potAllOn(potBots 초기화).

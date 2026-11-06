@@ -153,7 +153,7 @@ export function renderSettings(ctx) {
     card("그라데이션", parts.grads),
     card("밝기 · 글자 크기", field("밝기", parts.modeSeg, parts.modeNote), field("글자 크기", parts.sizeSeg)),
     h("section", { class: "rb-card bordered rb-lcard" }, h("details", { class: "rb-morefold", id: "rb-look-shape" }, h("summary", null, "모양 · 글꼴 더 고르기"), parts.shape({ full: true }))),
-    btn("내 채팅 테마 만들기", { kind: "primary", onClick: () => ctx.go("tools", "chattheme"), id: "rb-look-themebuilder" }),
+    ...(ctx.ext?.render("slot", "look.mine", ctx) ?? []),   // 애드온: 내 채팅 테마 만들기
     saved
   );
   const side = h("div", { class: "rb-look-side" }, prev, mineCard);
@@ -167,7 +167,7 @@ export function renderSettings(ctx) {
       field("줄 간격", h("small", null, "목록과 버튼의 여유를 정해요."), densitySeg),
       field("확대율", h("small", null, "막대를 움직이면 창 전체가 함께 커지고 작아져요."), h("div", { style: "display:flex;align-items:center;gap:10px" }, h("span", { class: "rb-muted", "aria-hidden": "true" }, "작게"), zoomRange, h("span", { class: "rb-muted", "aria-hidden": "true" }, "크게"), zoomLabel)),
       hcRow,
-      field("테마 스튜디오", h("small", null, "말풍선·글꼴·CSS를 직접 고치고 공유 코드로 주고받아요."), btn("테마 스튜디오 열기", { onClick: () => ctx.go("tools", "themestudio"), id: "rb-look-themestudio" })),
+      ...(ctx.ext?.render("slot", "look.adv", ctx) ?? []),   // 애드온: 테마 스튜디오
       h("p", { class: "rb-adv-note" }, "모듈 이름 색과 폴더 색은 모듈 목록에서 각 모듈의 ⋯ 메뉴로 바꿔요."),
       h("div", { style: "display:flex;gap:10px;flex-wrap:wrap" }, btn("기본값으로", { onClick: () => update({ ...DEFAULT_THEME, mine: theme.mine }) }))
     ] : [true]

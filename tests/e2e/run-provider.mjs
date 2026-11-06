@@ -60,7 +60,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   const order = await page.evaluate(() => [...document.querySelectorAll("[data-purpose]")].slice(0, 3).map((e) => e.dataset.purpose).join(","));
   ok(`[${tag}] 용도 맨 위가 메인 → 보조: ${order}`, order === "main,sub,translate");
   ok(`[${tag}] 다른 용도의 기본 문구는 ‘보조와 같게’`, /보조와 같게/.test(await page.locator('[data-purpose="translate"] select').first().evaluate((e) => e.options[0].textContent)));
-  for (const t of ["용도", "규칙", "사용량", "비교"]) { await page.locator(".rb-prov .rb-seg button", { hasText: t }).first().click(); await page.waitForTimeout(250); ok(`[${tag}] ‘${t}’ 탭이 그려짐`, (await vis(".rb-prov-body > *")) >= 1); }
+  for (const t of ["용도", "규칙", "사용량", "확장", "로그", "비교"]) { await page.locator(".rb-prov .rb-seg button", { hasText: t }).first().click(); await page.waitForTimeout(250); ok(`[${tag}] ‘${t}’ 탭이 그려짐`, (await vis(".rb-prov-body > *")) >= 1); }
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   ok(`[${tag}] 가로 넘침 없음`, !overflow);
   await page.close();

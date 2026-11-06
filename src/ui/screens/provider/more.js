@@ -3,16 +3,19 @@ import { h } from "../../dom.js";
 import { btn, confirmDialog, emptyState, note, segmented, toggleRow, advFold } from "../../kit.js";
 import { PURPOSES, PURPOSE_LABEL } from "../../../engine/provider/catalog.js";
 import { normalizeRule } from "../../../engine/provider/profile.js";
+import { normalizeRouteRule } from "../../../engine/provider/router.js";
 import { summarize, budgetState } from "../../../engine/provider/cost.js";
 import { currentChat } from "../../../data/memoryswitches.js";
 import { field, text, num, area, select, grid, usd, kfmt } from "./ui.js";
+import { formatLog, kindLabel } from "../../../engine/provider/errlog.js";
+import { ext } from "./ext.js";
 
-export const MORE_TABS = [["use", "용도"], ["rule", "규칙"], ["usage", "사용량"], ["cmp", "비교"]];
+export const MORE_TABS = [["use", "용도"], ["rule", "규칙"], ["usage", "사용량"], ["ext", "확장"], ["log", "로그"], ["cmp", "비교"]];
 const pname = (cfg, id) => cfg.profiles.find((p) => p.id === id)?.name ?? "";
 const profOpts = (cfg, none = "(지정 안 함)") => [["", none], ...cfg.profiles.map((p) => [p.id, p.name])];
 
 export async function renderMore(tab, env) {
-  return ({ use, rule, usage, cmp })[tab]?.(env) ?? [];
+  return ({ use, rule, usage, ext, log, cmp })[tab]?.(env) ?? [];
 }
 
 // ── 용도: 메인·번역·감정·기억·보조·분석에 어떤 프로필을 쓸지 + 사슬(대체) + 봇별 + 예산 ──
@@ -41,6 +44,20 @@ async function use({ ctx, cfg, mutate, draw, toast }) {
     toggleRow("실패하면 다음 프로필로 넘기기", "차단·한도·서버 오류일 때 아래 순서대로 시도해요. 글이 나오기 시작한 뒤에는 넘기지 않아요.", cfg.chainOn, async (v) => { await mutate((x) => { x.chainOn = v; }); draw(); }),
     h("div", { class: "rb-pkeys" }, chain.map((id, i) => h("div", { class: "rb-pkey" }, h("span", { class: "n" }, `${i + 1}. ${pname(cfg, id)}`), btn("", { icon: "up", size: "sm", title: "위로", onClick: async () => { await mutate((x) => { if (i > 0) [x.chain[i - 1], x.chain[i]] = [x.chain[i], x.chain[i - 1]]; }); draw(); } }), btn("", { icon: "trash", size: "sm", title: "빼기", onClick: async () => { await mutate((x) => { x.chain.splice(i, 1); }); draw(); } })))),
     field("사슬에 더하기", select([["", "(고르기)"], ...cfg.profiles.filter((p) => !chain.includes(p.id)).map((p) => [p.id, p.name])], "", async (v) => { if (!v) return; await mutate((x) => { x.chain.push(v); }); draw(); }, "사슬 추가"))));
+  // 라우터(2.0.0): 조건에 맞으면 그 프로필로 — 용도·봇별 프로필 위에 얹는 규칙. 위에서부터 첫 일치, 요청이 직접 고른 프로필·예산 전환이 우선
+  const rr = cfg.router ?? { enabled: false, rules: [] }, setRr = async (fn) => { await mutate((x) => { x.router ??= { enabled: false, rules: [] }; fn(x.router); }); };
+  out.push(h("section", { class: "rb-pcard" },
+    toggleRow("조건으로 프로필 고르기(라우터)", "글자 수·들어 있는 글·용도가 맞으면 지정한 프로필로 보내요. 위에서부터 처음 맞는 규칙을 써요. 조건이 하나도 없는 규칙은 쓰지 않아요.", rr.enabled, async (v) => { await setRr((r) => { r.enabled = v; }); draw(); }),
+    ...rr.rules.map((r, i) => h("div", { class: "rb-pcard", dataset: { route: r.id } },
+      h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, `${i + 1}. ${r.name}`), h("small", { class: "rb-muted" }, pname(cfg, r.profileId))),
+        btn("", { icon: "up", size: "sm", title: "위로", onClick: async () => { await setRr((x) => { if (i > 0) [x.rules[i - 1], x.rules[i]] = [x.rules[i], x.rules[i - 1]]; }); draw(); } }),
+        btn("", { icon: "trash", size: "sm", title: "지우기", onClick: async () => { await setRr((x) => { x.rules.splice(i, 1); }); draw(); } })),
+      grid(field("이름", text(r.name, (v) => setRr((x) => { x.rules[i].name = v || "규칙"; }))),
+        field("용도", select([["", "모든 용도"], ...PURPOSES.map((p) => [p, PURPOSE_LABEL[p]])], r.purposes[0] ?? "", (v) => setRr((x) => { x.rules[i].purposes = v ? [v] : []; }), "용도 조건")),
+        field("글자 수 이상", num(r.minChars, (v) => setRr((x) => { x.rules[i].minChars = v; }), { step: "1" })), field("글자 수 이하", num(r.maxChars, (v) => setRr((x) => { x.rules[i].maxChars = v; }), { step: "1" })),
+        field("들어 있는 글", text(r.contains, (v) => setRr((x) => { x.rules[i].contains = v; }), { ph: "쉼표로 여럿(하나라도 있으면)" })),
+        field("보낼 프로필", select(profOpts(cfg, "(고르기)"), r.profileId, (v) => setRr((x) => { x.rules[i].profileId = v; }), "보낼 프로필"))))),
+    h("div", { class: "rb-actions" }, btn("규칙 추가", { icon: "plus", onClick: async () => { if (!cfg.profiles.length) return toast("먼저 프로필을 만들어 주세요"); await setRr((x) => { x.rules.push(normalizeRouteRule({ name: "새 규칙", profileId: cfg.profiles[0].id })); }); draw(); } }))));
   // 봇별 프로필
   const cur = await currentChat(ctx.api);
   let names = {}; try { for (const c of (await ctx.api.getDatabase(["characters"]))?.characters ?? []) names[c.chaId] = c.name; } catch { /* 이름은 없어도 된다 */ }
@@ -54,6 +71,15 @@ async function use({ ctx, cfg, mutate, draw, toast }) {
     grid(field("하루 한도($)", num(b.dailyUsd, (v) => mutate((x) => { x.budget.dailyUsd = v ?? 0; }))), field("한 달 한도($)", num(b.monthlyUsd, (v) => mutate((x) => { x.budget.monthlyUsd = v ?? 0; }))),
       field("넘으면", select([["warn", "알려만 주기"], ["switch", "싼 프로필로 바꾸기"], ["block", "막기"]], b.action, async (v) => { await mutate((x) => { x.budget.action = v; }); draw(); }, "예산 초과 동작")),
       b.action === "switch" ? field("바꿀 프로필", select(profOpts(cfg), b.switchProfileId, (v) => mutate((x) => { x.budget.switchProfileId = v; }), "바꿀 프로필")) : null)));
+  // 재시도(2.0.0): 어떤 실패를 같은 곳에 다시 보낼지. 원본 Provider Manager의 재시도 대상 고르기를 참고
+  out.push(h("section", { class: "rb-pcard" }, h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, "다시 시도할 오류"), h("small", { class: "rb-muted" }, "프로필의 ‘재시도 횟수’만큼, 고른 오류일 때 잠깐 쉬었다가 같은 곳에 다시 보내요. 키가 여럿이면 429·인증 오류는 먼저 다른 키로 넘어가요."))),
+    grid(field("대상", select([["server", "서버 오류·끊김·시간 초과(기본)"], ["rate", "429(요청 한도)만"], ["both", "429와 서버 오류 모두"]], cfg.defaults?.retryOn ?? "server", (v) => mutate((x) => { x.defaults.retryOn = v; }), "재시도 대상")),
+      field("키 쉬는 시간(초)", num(cfg.defaults?.keyCooldownSec ?? 60, (v) => mutate((x) => { x.defaults.keyCooldownSec = v ?? 60; }))))));
+  // 배치(2.0.0): Claude 프로필의 ‘배치로 보내기’를 켰을 때 기다리는 방식
+  out.push(h("section", { class: "rb-pcard" }, h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, "배치 기다리기"), h("small", { class: "rb-muted" }, "프로필에서 ‘배치로 보내기 → 끝날 때까지 기다리기’를 켰을 때만 써요. 같은 메시지는 새 배치를 만들지 않고 이어서 확인해요."))),
+    grid(field("최대 기다림(분)", num(cfg.defaults?.batchWaitMin ?? 60, (v) => mutate((x) => { x.defaults.batchWaitMin = v ?? 60; }), { step: "1" })), field("확인 간격(초)", num(cfg.defaults?.batchPollSec ?? 15, (v) => mutate((x) => { x.defaults.batchPollSec = v ?? 15; }), { step: "1" })))));
+  // 진행 창(2.0.0): 리스 화면 오른쪽 아래에 요청별 카드(동시 요청도 따로). 끄면 창만 숨기고 진행 상태는 그대로
+  out.push(toggleRow("진행 창 보이기", "요청마다 카드로 보여요(보내는 중·다시 시도·받은 글자 수). 동시에 여러 요청이 와도 따로 보이고, 끝난 카드만 5초 뒤 닫혀요.", cfg.defaults?.progress !== false, (v) => mutate((x) => { x.defaults.progress = v; })));
   return out;
 }
 
@@ -77,17 +103,35 @@ async function rule({ ctx, cfg, mutate, draw, toast }) {
 }
 
 // ── 사용량 ──
+// 기간(오늘·7일·30일·전체)을 고르면 아래 통계가 그 기간만 합쳐요. 날짜별·모델별 표에 캐시 읽기·쓰기·아낀 돈도 함께 보여요. 요청 내용은 저장하지 않아요.
+let usageDays = 7;
 async function usage({ ctx, P, cfg, draw, toast }) {
-  const log = await P.store.usage(), sum = summarize(log), bs = budgetState(sum, cfg.budget), tot = sum.total;
+  const log = await P.store.usage(), all = summarize(log), bs = budgetState(all, cfg.budget), sum = summarize(log, { days: usageDays }), tot = sum.total;
   const out = [];
   if (bs.state !== "ok") out.push(note(bs.state === "over" ? "err" : "warn", bs.why));
-  out.push(h("div", { class: "rb-pstat" }, [["오늘", usd(tot.today)], ["이번 달", usd(tot.month)], ["호출", String(tot.calls)], ["입력 토큰", kfmt(tot.input)], ["출력 토큰", kfmt(tot.output)], ["캐시로 아낀 돈", usd(tot.saved)]].map(([l, v]) => h("div", null, h("b", null, v), h("span", null, l)))));
-  const grp = (by, label, nameOf) => { const s = summarize(log, { by }).groups, rows = Object.entries(s).sort((a, b) => b[1].cost - a[1].cost); return rows.length ? h("section", { class: "rb-pcard" }, h("b", null, label), h("table", { class: "rb-ptable" }, h("tr", null, ...["", "호출", "입력", "출력", "비용"].map((x) => h("th", null, x))), ...rows.map(([k, g]) => h("tr", null, h("td", null, nameOf(k)), h("td", null, String(g.calls)), h("td", null, kfmt(g.input)), h("td", null, kfmt(g.output)), h("td", null, usd(g.cost)))))) : null; };
-  out.push(grp("purpose", "용도별", (k) => PURPOSE_LABEL[k] ?? k), grp("profile", "프로필별", (k) => pname(cfg, k) || k || "-"), grp("model", "모델별", (k) => k || "-"));
+  out.push(segmented([["1", "오늘"], ["7", "7일"], ["30", "30일"], ["0", "전체"]], String(usageDays), (v) => { usageDays = Number(v); draw(); }, "기간"));
+  out.push(h("div", { class: "rb-pstat" }, [["비용", usd(tot.all)], ["호출", String(tot.calls)], ["입력 토큰", kfmt(tot.input)], ["출력 토큰", kfmt(tot.output)], ["캐시 읽기", kfmt(tot.cached)], ["캐시 쓰기", kfmt(tot.cwrite)], ["캐시로 아낀 돈", usd(tot.saved)]].map(([l, v]) => h("div", null, h("b", null, v), h("span", null, l)))));
+  const grp = (by, label, nameOf, { desc = false } = {}) => { const s = summarize(log, { by, days: usageDays }).groups, rows = Object.entries(s).sort((a, b) => (desc ? b[0].localeCompare(a[0]) : b[1].cost - a[1].cost)); return rows.length ? h("section", { class: "rb-pcard" }, h("b", null, label), h("div", { class: "rb-pscroll" }, h("table", { class: "rb-ptable" }, h("tr", null, ...["", "호출", "입력", "출력", "캐시 읽기", "캐시 쓰기", "아낀 돈", "비용"].map((x) => h("th", null, x))), ...rows.map(([k, g]) => h("tr", null, h("td", null, nameOf(k)), h("td", null, String(g.calls)), h("td", null, kfmt(g.input)), h("td", null, kfmt(g.output)), h("td", null, kfmt(g.cached)), h("td", null, kfmt(g.cwrite)), h("td", null, usd(g.saved)), h("td", null, usd(g.cost))))))) : null; };
+  out.push(grp("d", "날짜별", (k) => k, { desc: true }), grp("model", "모델별", (k) => k || "-"), grp("purpose", "용도별", (k) => PURPOSE_LABEL[k] ?? k), grp("profile", "프로필별", (k) => pname(cfg, k) || k || "-"));
   if (!log.length) out.push(emptyState({ icon: "info", title: "아직 기록이 없어요", text: "Dusk 프로바이더로 요청하면 여기에 쌓여요. 비용은 프로필의 단가를 적었을 때만 계산돼요." }));
+  else if (!tot.calls) out.push(note("info", "이 기간에는 기록이 없어요. 다른 기간을 골라 보세요."));
   out.push(h("div", { class: "acts" }, btn("기록 지우기", { kind: "danger", icon: "trash", onClick: async () => { if (!await confirmDialog(ctx.win, { title: "사용량 기록을 지울까요?", ok: "지우기", danger: true })) return; await P.store.clearUsage(); draw(); } })));
   out.push(toggleRow("요청 미리보기 알림", "요청을 보낼 때 모델·메시지 수를 알림으로 보여요(문제 확인용).", cfg.debug.preview, (v) => P.store.update((x) => { x.debug.preview = v; })));
   return out.filter(Boolean);
+}
+
+// ── 로그: 최근 요청·오류(키는 가려지고, 요청·응답 내용은 저장하지 않아요) ──
+let logOnlyErr = false;
+async function log({ ctx, P, cfg, draw, toast }) {
+  const all = P.errlog?.list() ?? [], rows = (logOnlyErr ? all.filter((r) => r.kind !== "ok") : all).slice(0, 100), out = [];
+  out.push(note("info", "최근 요청과 다시 시도한 오류를 한 줄씩 남겨요. 키는 ***로 가려지고 보낸 글·받은 글은 저장하지 않아요."));
+  out.push(h("div", { class: "rb-actions" }, segmented([["all", "전부"], ["err", "오류만"]], logOnlyErr ? "err" : "all", (v) => { logOnlyErr = v === "err"; draw(); }, "로그 거르기"),
+    btn("복사", { icon: "download", onClick: async () => { try { await navigator.clipboard.writeText(formatLog(rows)); toast("복사했어요"); } catch { toast("복사하지 못했어요"); } } }),
+    btn("지우기", { kind: "danger", icon: "trash", onClick: async () => { if (!await confirmDialog(ctx.win, { title: "로그를 지울까요?", ok: "지우기", danger: true })) return; P.errlog?.clear(); draw(); } })));
+  out.push(field("보관 개수", select([["50", "50개"], ["200", "200개"], ["500", "500개"]], String(cfg.defaults?.logMax ?? 200), (v) => P.store.update((x) => { x.defaults.logMax = Number(v); }), "로그 보관 개수")));
+  out.push(rows.length ? h("section", { class: "rb-pcard" }, h("div", { class: "rb-pscroll" }, h("table", { class: "rb-ptable" }, h("tr", null, ...["시각", "결과", "모델", "코드", "시도", "시간", "내용"].map((x) => h("th", null, x))),
+    ...rows.map((r) => h("tr", null, h("td", null, new Date(r.at).toLocaleString("ko-KR", { hour12: false })), h("td", null, kindLabel(r.kind)), h("td", null, r.model || "-"), h("td", null, r.status || "-"), h("td", null, String(r.attempt)), h("td", null, r.ms ? `${(r.ms / 1000).toFixed(1)}초` : "-"), h("td", null, r.message || r.action || "")))))) : emptyState({ icon: "info", title: "아직 기록이 없어요", text: "Dusk 프로바이더로 요청하면 여기에 쌓여요." }));
+  return out;
 }
 
 // ── 비교: 같은 말을 두 프로필에 보내 나란히 보기 ──

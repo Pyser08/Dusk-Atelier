@@ -38,6 +38,14 @@ export function createChatMenu(api, { fairPlay, turnInfo, openMemory, openRegres
     async start() { return (await isOnSaved()) ? show() : false; },
     async setOn(v) { await api.pluginStorage.setItem(CHAT_MENU_KEY, v ? "on" : "off"); return v ? show() : hide(); },
     isOn: isOnSaved,
+    // 애드온이 바로가기(링크)를 맨 위에 붙인다(장기 기억·회귀 → 장기기억 애드온). 반환: 떼기. 메뉴 순서를 지키려고 다시 등록한다.
+    async addLink(item) {
+      const x = { link: true, ...item };
+      const at = items.filter((i) => i.link).length;
+      items.splice(at, 0, x);
+      if (shown) { await hide(); await show(); }
+      return async () => { const i = items.indexOf(x); if (i < 0) return; items.splice(i, 1); try { await api.unregisterUIPart?.(x.id); } catch { /* 이미 없음 */ } };
+    },
     refresh,
     toggle: (key) => { const x = items.find((i) => i.key === key); return x ? (x.link ? openLink(x) : toggle(x)) : null; }
   };

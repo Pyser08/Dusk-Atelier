@@ -40,7 +40,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     srow("임베딩 (의미 검색)", embedLine, () => { if (M.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, { "data-tour": "mem-embed" }));
 
   // 기억 옵션 3개(고급 모드 '대화에 넣기'와 같은 설정)
-  const { S, save } = builders(ctx, idx, redraw, "");
+  const { S, save, num } = builders(ctx, idx, redraw, "");
   const inj = S.inject ?? {};
   const orow = (title, text, v0, set) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, h("small", null, text)),
     switchEl(v0, { label: title, onChange: (v, el) => { setSwitch(el, v); save((st) => { st.inject ??= {}; set(st.inject, v); }); } }));
@@ -50,6 +50,11 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     orow("사람다운 기억", "관계 진도·호칭·말투·둘만의 추억 등을 기억해요.", inj.human !== false, (o, v) => { o.human = v; }),
     orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }),
     orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
+  // 기억 넣기 최소(목표)·최대(상한) 토큰 — 접힌 세부 설정 안에 있어서 못 찾는 사람이 많아 여기로 꺼냈다(2.0.0)
+  memOptions.append(h("div", { class: "rb-srow rb-mem-tokens", id: "rb-mem-tokens" }, h("span", { class: "t" }, "기억 넣기 토큰", h("small", null, "응답마다 넣는 기억의 양이에요. 목표만큼 채우고, 중요한 게 많으면 상한까지 늘어나요.")),
+    h("div", { class: "rb-mem-tokpair", style: "display:flex;gap:8px;flex-wrap:wrap" },
+      num("목표(최소)", () => inj.targetTokens ?? 2000, (s, v) => { s.inject ??= {}; s.inject.targetTokens = v; if ((s.inject.capTokens ?? 0) < v) s.inject.capTokens = v; }, { min: 200, max: 8000, step: 100 }),
+      num("상한(최대)", () => inj.capTokens ?? 8000, (s, v) => { s.inject ??= {}; s.inject.capTokens = Math.max(v, s.inject.targetTokens ?? 0); }, { min: 200, max: 12000, step: 100 }))));
   memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 리수폿 위키 기록과 Erosync도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
   // 리수폿 일괄 켜기·끄기(모든 봇·채팅). 예전엔 열린 채팅의 봇 하나만 바꿨다.
   let potAll = true; try { potAll = await M.switches.potAllOn(); } catch { /* 기본 켜짐으로 표시 */ }
@@ -70,6 +75,13 @@ function memHead() {
   return pageHead("장기 기억");
 }
 
+// 리수폿 한 줄 카드(2.0.0): Erosync 줄과 같은 모양. 누르면 리수폿 화면(page "pot": 개요·설정·자동 기록·고급)
+function potRow(ctx, m, redraw) {
+  return h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-pot", "data-tour": "mem-pot", onClick: () => { m.page = "pot"; redraw(); } },
+    h("span", { class: "rb-mem-av rb-me-av sm", "aria-hidden": "true" }, icon("book", 18)),
+    h("span", { class: "t" }, "리수폿", h("small", null, "인물 위키를 자동으로 쌓아요. 설정·자동 기록·고급을 여기서 바꿔요.")),
+    h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
+}
 function erosyncRow(ctx, m, redraw) {
   if (!ctx.erosync) return null;
   return h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-erosync", onClick: () => { m.page = "erosync"; redraw(); } },
@@ -97,7 +109,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
       h("div", { class: "rb-mem2-main" }, memHead(ctx, redraw),
         emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요. 아래 설정은 채팅 없이도 바꿀 수 있어요.",
           actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] }),
-        erosyncRow(ctx, m, redraw), memOptions),
+        potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memOptions),
       h("div", { class: "rb-mem2-side" }, memorySettings, ctx.prefs.advanced ? gHost : advFold(ctx, "memory", true))));
   }
   // 채팅 본문은 느릴 수 있으므로 화면을 먼저 그리고, 백필 분석용 데이터는 백그라운드에서 읽는다.
@@ -238,7 +250,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
 
   const main = h("div", { class: "rb-mem2-main" },
     memHead(ctx, redraw),
-    statusBox, bigAct, prog, shortcuts, meRow, mapRow, erosyncRow(ctx, m, redraw), memOptions, recBox,
+    statusBox, bigAct, prog, shortcuts, meRow, mapRow, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memOptions, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" }, main, h("div", { class: "rb-mem2-side" }, ...side)));
   // 1.8.3: 임베딩 안내 창은 자동으로 띄우지 않는다(시작 안내 3단계에서 설정, 필요하면 설정 줄의 '임베딩'에서)
