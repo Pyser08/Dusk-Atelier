@@ -4,51 +4,51 @@
     {
       "id": "hello",
       "name": "애드온 시험",
-      "version": "0.1.2",
+      "version": "0.1.0",
       "minCore": "1.9.2",
       "hooks": false,
       "desc": "로더가 제대로 도는지 확인하는 시험용 애드온이에요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/hello.js",
-      "sha256": "bf97e4893bf6b65d614126008d61d5470633cd5a0f96a8e40d44b4a959140b2a",
+      "sha256": "196b6c1af63fa4863b9cf4df60ddbf82c0ef8810d3a39c018b5863ca79204e97",
       "size": 667
     },
     {
       "id": "chattheme",
       "name": "채팅 테마 만들기",
-      "version": "1.0.0",
+      "version": "0.1.0",
       "minCore": "1.9.2",
       "hooks": false,
       "desc": "채팅 테마 빌더·테마 스튜디오로 내 채팅 테마를 만들고 주고받아요. 만든 테마는 이 애드온이 없어도 계속 적용돼요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/chattheme.js",
-      "sha256": "87ce221ef6d0936efc2ece91b5ecbdb4fe3b3cb13b4b8bf78e3c342b696af9a5",
+      "sha256": "48dd04eb22c056263685823ced30a6e617e440ed4ab3c48336669abcacc1ce77",
       "size": 85941
     },
     {
       "id": "aibuild",
       "name": "AI로 봇·페르소나 만들기",
-      "version": "1.0.0",
+      "version": "0.1.0",
       "minCore": "1.9.2",
       "hooks": false,
       "desc": "말로 요청해 봇·모듈을 만들고 고치는 AI 창·AI로 제작 탭, AI로 페르소나 만들기를 써요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/aibuild.js",
-      "sha256": "2e19a11ea2584008c7eb022814f85428fd271f933b3578d22d2ab439207ebf5d",
+      "sha256": "ecd077124c22a1173d1357dfd86576d087caf955fa2d3256427e2c2ea01c41d6",
       "size": 155194
     },
     {
       "id": "memory",
       "name": "장기기억·관계도",
-      "version": "1.0.0",
+      "version": "0.1.0",
       "minCore": "1.9.2",
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/memory.js",
-      "sha256": "92eb77d4ad008918ccc9c48daa039e8fee5a72a4f994cbb22038488332723dae",
+      "sha256": "4d853e3ac14e75200c257e426977e1d01c55ea326a429497ef7ce6cd7cebd6bf",
       "size": 1532499
     },
     {
       "id": "cards",
       "name": "기억카드",
-      "version": "1.0.0",
+      "version": "0.1.0",
       "minCore": "1.9.2",
       "hooks": false,
       "requires": [
@@ -56,13 +56,13 @@
       ],
       "desc": "장기 기억으로 카드를 만들고 꾸미고, 그 카드로 새 봇을 이어 가요. 장기기억·관계도 애드온이 필요해요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/cards.js",
-      "sha256": "9490e4a669efb33e37f9507ba458f8fbb2d7262f515d365e645ffa952d56455d",
+      "sha256": "ad81dcd5b3a498a061800cd7b4a7467effe92f3b456bfaa776deeaf84732ccb1",
       "size": 654973
     },
     {
       "id": "erosync",
       "name": "Erosync",
-      "version": "1.0.0",
+      "version": "0.1.0",
       "minCore": "1.9.2",
       "hooks": true,
       "requires": [
@@ -70,29 +70,29 @@
       ],
       "desc": "NSFW 장면 강화 — 인물 성향·목표를 읽어 다음 응답의 장면 계획을 넣어요. 장기기억·관계도 애드온이 필요해요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/erosync.js",
-      "sha256": "e962dfdfd215cbfb1b21d1de503cdf9a635687548f0d6751df8e4fef66265056",
+      "sha256": "2a274fbbb9696be6ca499a538df4d0de2f8636c108d454636beca2b6951d3902",
       "size": 845801
     },
     {
       "id": "protlink",
       "name": "ProtLink+",
-      "version": "1.0.0",
+      "version": "0.1.0",
       "minCore": "1.9.2",
       "hooks": false,
       "desc": "Proton Drive 공유 링크를 캐릭터·모듈·플러그인에 연결해 두고, 새 파일이 올라오면 알려 주고 받아서 업데이트로 넘겨요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/protlink.js",
-      "sha256": "84658324c574078495bd0db4e9c59dcf8be532a71e717e26b2aa49b42c40577b",
+      "sha256": "060f49f7eb07b939000574c458af1b7db8d78734cbd5f40c58c3b135bc9d0f16",
       "size": 969623
     },
     {
       "id": "widgets",
       "name": "위젯",
-      "version": "1.0.0",
+      "version": "0.1.0",
       "minCore": "1.9.2",
       "hooks": false,
       "desc": "음악·사진·시계·최근 대화·메모·D-day·타이머 등을 한 화면에 모은 위젯 홈을 써요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/widgets.js",
-      "sha256": "154f35c9dc731ffe888875443d789e6fbd3ecdba03503373a8ba2b65310e5c2c",
+      "sha256": "c88509896441aa3d2115a89c184211306e91078db50dff7e4c344dac7141eb1b",
       "size": 252119
     }
   ]
