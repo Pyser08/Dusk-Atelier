@@ -2,6 +2,7 @@
 // 화면은 지금 열린 채팅을 기본으로 쓴다(currentChat). 다른 봇은 chaId를 직접 넘기면 된다.
 import { cacheGen } from "./dbcache.js";
 import { comboOf, memoryState, potCharOn, potState, scopeKeyOf, setMemoryForBot, setMemoryGlobal, setPotChar, setPotForBot, setPotGlobal } from "../engine/memoryswitch.js";
+import { chatKeyOf } from "../engine/chatkey.js";
 
 // 지금 리스에서 열린 봇·채팅. 열린 채팅이 없으면 null.
 export async function currentChat(api) {
@@ -11,7 +12,7 @@ export async function currentChat(api) {
     const c = await api.getCharacterFromIndex(ci);
     if (!c?.chaId) return null;
     const chat = c.chats?.[ti];
-    return { ci, ti, chaId: String(c.chaId), botName: c.name ?? "", chatId: String(chat?.id ?? ti), chatName: chat?.name ?? "" };
+    return { ci, ti, chaId: String(c.chaId), botName: c.name ?? "", chatId: chatKeyOf(chat, ti), chatName: chat?.name ?? "" };
   } catch {
     return null;
   }
@@ -56,10 +57,8 @@ export function createSwitches({ api, store, flow = null, now = () => Date.now()
     async setMemory(chaId, on) {
       await store.updateIndex((idx) => { setMemoryForBot(idx, chaId, on); if (on) setMemoryGlobal(idx, true); });
     },
-    async setPot(chaId, on) {
-      await store.updateIndex((idx) => { setPotForBot(idx, chaId, on); if (on) setPotGlobal(idx, true); });
-      await applyFlow();
-    },
+    // 리수폿 켜기·끄기는 언제나 모든 채팅 일괄(2.0.0 버그 4). chaId는 예전 호출과 맞추려고 받기만 한다.
+    async setPot(_chaId, on) { return this.setPotAll(on); },
     // 전체 기본(모든 봇): 화면의 고급에서만 쓴다
     async setMemoryEverywhere(on) { await store.updateIndex((idx) => setMemoryGlobal(idx, on)); },
     // 리수폿 일괄: 모든 봇·채팅을 한꺼번에 켜고 끈다(봇별로 따로 끈 것도 지운다)

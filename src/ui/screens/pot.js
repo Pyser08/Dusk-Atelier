@@ -35,7 +35,7 @@ async function draw(ctx, host, redraw) {
   const rt = M.flow?.runtime?.(), ast = (() => { try { return rt?.auto?.status?.() ?? null; } catch { return null; } })();
   const lastAt = wiki?.automation?.lastStatus?.at;
 
-  const setOn = async (v) => { try { await M.switches.setPot(cur.chaId, v); if (v) maybePromptIntro(ctx); ctx.toast(v ? "이 채팅에서 리수폿을 켰어요. 다음 응답부터 위키가 쌓여요." : "이 채팅에서 리수폿을 껐어요."); } catch (e) { fail(ctx)(e); } redraw(); };
+  const setOn = async (v) => { try { await M.switches.setPot(cur.chaId, v); if (v) maybePromptIntro(ctx); ctx.toast(v ? "모든 채팅에서 리수폿을 켰어요. 다음 응답부터 위키가 쌓여요." : "모든 채팅에서 리수폿을 껐어요."); } catch (e) { fail(ctx)(e); } redraw(); };
   let status;
   if (!pot.on) status = statusCard("off", REASON[pot.reason] ?? "꺼져 있어요.", { label: "켜기", kind: "primary", onClick: () => setOn(true) });
   else if (ast?.phase === "failed") status = statusCard("err", "마지막 자동 기록이 실패했어요. 다음 응답에서 다시 해요.");
@@ -56,7 +56,7 @@ async function draw(ctx, host, redraw) {
       : h("p", { class: "rb-muted" }, "아직 위키 인물이 없어요. 응답이 쌓이면 생겨요."));
 
   const main = h("div", { class: "rb-mem2-main" },
-    pageHead("리수폿", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"} · 기억과 별도로 켜고 꺼요`, sw: { on: pot.on, label: "이 채팅에서 사용", onChange: (v) => setOn(v) } }),
+    pageHead("리수폿", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"} · 기억과 별도로 켜고 꺼요`, sw: { on: pot.on, label: "모든 채팅에서 사용", onChange: (v) => setOn(v) } }),
     status, actions, perChar);
   const adv = advFold(ctx, "pot", ...(ctx.prefs.advanced ? advancedPot(ctx, env, cur, idx, redraw) : [true]));
   replace(host, h("div", { class: ["rb-mem2-grid", ctx.prefs.advanced && "has-adv"] }, main, adv ? h("div", { class: "rb-mem2-side" }, adv) : null));

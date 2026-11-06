@@ -3,6 +3,17 @@
 import { mergeEntries, planEntryMerge, applyEntryMerge } from "./peoplemerge.js";
 
 const key = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/[\s\p{P}\p{S}]+/gu, "");
+// 성+이름과 이름만(예: 김민지 · 민지, 남궁민 · 민은 제외 — 이름이 두 글자 이상일 때만). 서양식은 'John Smith' · 'John'.
+const HANGUL = /^[\uAC00-\uD7A3]+$/u;
+export function fullAndGiven(a, b) {
+  const ka = key(a), kb = key(b);
+  if (!ka || !kb || ka === kb) return false;
+  const [long, short] = ka.length > kb.length ? [ka, kb] : [kb, ka];
+  if (HANGUL.test(long) && HANGUL.test(short) && short.length >= 2 && long.length - short.length <= 2 && long.endsWith(short)) return true;
+  const wa = String(a ?? "").trim().split(/\s+/), wb = String(b ?? "").trim().split(/\s+/);
+  const [many, one] = wa.length > wb.length ? [wa, wb] : [wb, wa];
+  return one.length === 1 && many.length === 2 && key(one[0]).length >= 3 && key(many[0]) === key(one[0]);
+}
 
 // 항목 목록 → 중복 묶음 [[entry, entry, ...], ...]. 각 묶음의 첫 항목이 '남길 인물'이다.
 export function duplicateGroups(folder, { visible } = {}) {
@@ -13,12 +24,13 @@ export function duplicateGroups(folder, { visible } = {}) {
   for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
     const a = items[i], b = items[j], ka = key(a.name), kb = key(b.name);
     if (!ka || !kb) continue;
-    if (ka === kb || nick(a).has(kb) || nick(b).has(ka)) parent[find(j)] = find(i);
+    if (ka === kb || nick(a).has(kb) || nick(b).has(ka) || fullAndGiven(a.name, b.name)) parent[find(j)] = find(i);
   }
   const groups = new Map();
   items.forEach((e, i) => { const r = find(i); groups.set(r, [...(groups.get(r) ?? []), e]); });
   const size = (e) => (docOf(e)?.sections?.length ?? 0) + (e.pk ? 1 : 0);
-  return [...groups.values()].filter((g) => g.length > 1).map((g) => [...g].sort((a, b) => (b.docId ? 1 : 0) - (a.docId ? 1 : 0) || size(b) - size(a)));
+  // 남길 쪽: 문서 있는 쪽 → 내용 많은 쪽 → 이름이 긴 쪽(성+이름)
+  return [...groups.values()].filter((g) => g.length > 1).map((g) => [...g].sort((a, b) => (b.docId ? 1 : 0) - (a.docId ? 1 : 0) || size(b) - size(a) || key(b.name).length - key(a.name).length));
 }
 
 // folder를 직접 고친다(updateFolder 안에서 부른다). 겹치는 항목은 남길 쪽 값을 쓴다.

@@ -4,6 +4,7 @@
 import { h, replace } from "../../dom.js";
 import { btn, modal, note, segmented, confirmDialog } from "../../kit.js";
 import { fail } from "./common.js";
+import { chatKeyOf, legacyChatKeyOf } from "../../../engine/chatkey.js";
 import { liveScope } from "./advanced.js";
 import { PERSON_REFRESH_GROUPS } from "../../../data/pot/person-refresh.js";
 import { PEOPLE_AI_METRIC_NAMES } from "../../../data/pot/people-metric-ai.js";
@@ -24,6 +25,15 @@ export async function toolsFor(env) {
   const [ci, ti] = await Promise.all([ctx.api.getCurrentCharacterIndex().catch(() => -1), ctx.api.getCurrentChatIndex().catch(() => -1)]);
   if (ci !== bot.index || ti !== chatItem.index) return { why: "리스에서 열려 있는 채팅과 지금 고른 채팅이 달라요. 위에서 열려 있는 채팅을 골라 주세요." };
   if (!scope) return { why: "이 채팅의 위키를 아직 열지 못했어요. 응답을 한 번 받은 뒤 다시 눌러 주세요." };
+  // 화면 폴더와 런타임 범위가 다르면(복사·분기 채팅을 런타임이 새 범위로 가른 직후 등) "저장 대기"가 아니라 범위 문제로 안내한다.
+  let live = null; try { live = await ctx.api.getChatFromIndex(ci, ti); } catch { live = null; }
+  const want = chatKeyOf(live ?? chatItem.chat, chatItem.index);
+  if (String(scope.chatKey) !== want) {
+    try { await M.flow.runtime()?.wiki?.refresh?.(); } catch { /* 아래에서 안내 */ }
+    scope = liveScope(M, bot.id) ?? scope;
+    if (String(scope.chatKey) !== want) return { why: "이 채팅은 복사·분기된 채팅이라 기억 범위가 아직 나뉘는 중이에요. 응답을 한 번 받은 뒤 다시 눌러 주세요. (저장 대기 아님)" };
+  }
+  if (live && want !== legacyChatKeyOf(live, chatItem.index)) { try { if (await M.store.adoptFolder?.(bot.id, legacyChatKeyOf(live, chatItem.index), want)) await M.flow.runtime()?.wiki?.refresh?.(); } catch { /* 옮기기 실패는 막지 않음 */ } }
   // 저장소에는 있는데 런타임 위키 사본에 없는 문서(방금 만든 문서)가 있으면 사본을 다시 읽는다. 안 그러면 "저장을 완료한 뒤" 안내로 잘못 막힌다.
   try {
     const rt = M.flow.runtime(), snap = rt?.wiki?.snapshot?.(), stored = Object.keys(env.folder?.wiki?.documents ?? {});
