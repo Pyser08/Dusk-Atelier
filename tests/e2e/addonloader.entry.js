@@ -4,7 +4,7 @@ window.runAddonLoader = async ({ manifest, files }) => {
   const out = {}, kv = new Map(), calls = [];
   const store = { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } };
   const api = { getLocalPluginStorage: async () => store, pluginStorage: store,   // 실제 호스트처럼 Promise
-    nativeFetch: async (url, init) => { calls.push(["fetch", init?.method]); const body = url.endsWith("addons.json") ? manifest : files[url]; return body == null ? { ok: false, status: 404 } : { ok: true, status: 200, text: async () => body }; },
+    nativeFetch: async (url0, init) => { calls.push(["fetch", init?.method]); const url = url0.split("?")[0]; const body = url.endsWith("addons.json") ? manifest : files[url]; return body == null ? { ok: false, status: 404 } : { ok: true, status: 200, text: async () => body }; },
     registerButton: async (o, cb) => { calls.push(["button", o.name]); window.__cb = cb; return "b1"; }, unregisterUIPart: (id) => calls.push(["unreg", id]) };
   const toasts = [];
   try { eval("1"); out.evalBlocked = false; } catch { out.evalBlocked = true; }

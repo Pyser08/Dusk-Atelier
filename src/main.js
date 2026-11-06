@@ -249,7 +249,7 @@ async function start() {
   Object.defineProperty(app.ctx, "widgetHome", { configurable: true, get: wh });
   app.ctx.openWidgetHome = async () => { const w = wh(); if (!w) return false; try { await app.close(); } catch { /* 이미 닫힘 */ } return w.open(); };
   const duskOpen = app.open;
-  app.open = async (o) => { await wh()?.yieldToDusk?.().catch(() => {}); return duskOpen(o); };
+  app.open = async (o) => { await wh()?.yieldToDusk?.().catch(() => {}); app.ctx.addons?.checkSoon?.().catch?.(() => {}); return duskOpen(o); };   // 창을 열 때 애드온 업데이트도 확인(10분 넘었으면)
   app.ctx.onClosed = () => wh()?.resume?.();   // Dusk 창을 닫으면 떠 있던 위젯 홈을 다시 띄운다
   // Erosync는 애드온(addons/erosync, 2.0.0). 기억 화면들은 ctx.erosync가 없으면 Erosync 칸을 숨긴다.
   Object.defineProperty(app.ctx, "erosync", { configurable: true, get: () => app.ctx.ext.get("svc", "erosync") ?? null });

@@ -11,7 +11,7 @@ async function setup({ hooks = false } = {}) {
   const files = {}, log = [];
   const api = { getLocalPluginStorage: () => store, pluginStorage: store };
   const put = async (version, body) => { files["https://x/a.js"] = body; files.manifest = JSON.stringify({ format: 1, addons: [{ id: "a", name: "A", version, minCore: "2.0.0", url: "https://x/a.js", sha256: await H(body), hooks }] }); };
-  const fetcher = async (_api, url) => (url.endsWith("addons.json") ? files.manifest : files[url] ?? null);
+  const fetcher = async (_api, url0) => { const url = url0.split("?")[0]; return url.endsWith("addons.json") ? files.manifest : files[url] ?? null; };   // 주소 뒤 캐시 우회 값은 떼고 본다
   // 코드 문자열의 첫 줄로 동작을 정한다: "ok:<v>" 정상, "bad" activate에서 오류
   const importer = async (code) => ({ activate: async (_api, ctx) => { if (code.startsWith("bad")) throw new Error("터짐"); log.push(["on", code, ctx.version]); return { deactivate: () => log.push(["off", code]) }; } });
   const A = createAddons(api, { core: "2.0.0", fetcher, importer, log: () => {} });
@@ -87,7 +87,7 @@ test("호스트처럼 getLocalPluginStorage()가 Promise로 와도 저장된다(
   const kv = new Map(), store = { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } };
   const body = "ok:1", sha = await H(body);
   const files = { manifest: JSON.stringify({ format: 1, addons: [{ id: "a", version: "1.0.0", url: "https://x/a.js", sha256: sha }] }), "https://x/a.js": body };
-  const fetcher = async (_a, u) => (u.endsWith("addons.json") ? files.manifest : files[u]);
+  const fetcher = async (_a, u0) => { const u = u0.split("?")[0]; return u.endsWith("addons.json") ? files.manifest : files[u]; };
   const importer = async () => ({ activate: async () => ({}) });
   for (const api of [{ getLocalPluginStorage: async () => store, pluginStorage: null }, { getLocalPluginStorage: async () => ({}), pluginStorage: store }]) {
     kv.clear();
@@ -116,7 +116,7 @@ test("첫 실행 자동 받기(adopt): 쓰던 기능만 받고, 다 받으면 �
   const { sha256 } = await import("../src/engine/hash.js");
   const h = await sha256(new TextEncoder().encode(code));
   const manifest = JSON.stringify({ format: 1, addons: [{ id: "memory", version: "1.0.0", sha256: h, url: "https://x/m.js" }, { id: "cards", version: "1.0.0", sha256: h, url: "https://x/c.js", requires: ["memory"] }, { id: "widgets", version: "1.0.0", sha256: h, url: "https://x/w.js" }] });
-  const A = createAddons({ pluginStorage: store }, { core: "2.0.0", storage: store, fetcher: async (_a, url) => (url.endsWith(".json") ? manifest : code), importer: async () => ({ activate: async () => ({ deactivate() {} }) }) });
+  const A = createAddons({ pluginStorage: store }, { core: "2.0.0", storage: store, fetcher: async (_a, url) => (url.split("?")[0].endsWith(".json") ? manifest : code), importer: async () => ({ activate: async () => ({ deactivate() {} }) }) });
   const r = await A.adopt([["memory", async () => false], ["cards", async () => true], ["widgets", async () => false]]);
   assert.deepEqual(r.got, ["cards"]);
   const idx = await A.getIndex();
@@ -132,7 +132,7 @@ test("훅 있는 애드온을 켜진 채 업데이트하면 새로고침 안내�
   let ver = "0.1.0"; const code = () => `// ${ver}`;
   const man = async () => JSON.stringify({ format: 1, addons: [{ id: "memory", name: "장기기억", version: ver, hooks: true, sha256: await sha256(new TextEncoder().encode(code())), url: "https://x/m.js" }] });
   const asked = [];
-  const mk = () => createAddons({ pluginStorage: store }, { core: "2.0.0", onPendingRestart: (x) => asked.push(x), fetcher: async (_a, url) => (url.endsWith(".js") ? code() : await man()), importer: async () => ({ activate: async () => ({ deactivate() {} }) }) });
+  const mk = () => createAddons({ pluginStorage: store }, { core: "2.0.0", onPendingRestart: (x) => asked.push(x), fetcher: async (_a, url) => (url.split("?")[0].endsWith(".js") ? code() : await man()), importer: async () => ({ activate: async () => ({ deactivate() {} }) }) });
   const A = mk(); await A.loadManifest(); await A.install("memory");
   assert.equal(asked.length, 0, "처음 받기는 바로 켜짐");
   ver = "0.1.1"; await A.loadManifest(); await A.install("memory");
@@ -140,4 +140,20 @@ test("훅 있는 애드온을 켜진 채 업데이트하면 새로고침 안내�
   assert.equal((await A.getIndex()).memory.pendingRestart, true);
   const B = mk(); await B.boot();
   assert.equal((await B.getIndex()).memory.pendingRestart, undefined);
+});
+
+test("실행 중에도 주기적으로 확인하고, 목록·파일은 캐시를 건너뛴 주소로 받는다", async () => {
+  const { createAddons } = await import("../src/data/addons.js");
+  const files = new Map(), store = { getItem: async (k) => files.get(k) ?? null, setItem: async (k, v) => { files.set(k, v); }, removeItem: async (k) => { files.delete(k); } };
+  const urls = [], ticks = []; let t = 1e12;
+  const A = createAddons({ pluginStorage: store }, { core: "2.0.0", now: () => t, timers: { setTimeout: (f) => { ticks.push(["once", f]); return 0; }, setInterval: (f, ms) => { ticks.push(["every", f, ms]); return 0; } },
+    fetcher: async (_a, url) => { urls.push(url); return JSON.stringify({ format: 1, addons: [] }); } });
+  await A.boot();
+  const every = ticks.find((x) => x[0] === "every");
+  assert.ok(every && every[2] <= 3600e3, "주기 확인이 걸림(1시간 이하)");
+  await A.check({ force: true });
+  assert.match(urls.at(-1), /[?&]t=\d+/, "목록 주소에 캐시 우회 값");
+  const n = urls.length; t += 3600e3 + 1; await every[1](); assert.ok(urls.length > n, "한 시간 지나면 주기 확인이 실제로 목록을 받음");
+  const m = urls.length; t += 60e3; await A.checkSoon(); assert.equal(urls.length, m, "방금 확인했으면 창을 열어도 다시 안 받음");
+  t += 11 * 60e3; await A.checkSoon(); assert.ok(urls.length > m, "10분 지나면 창을 열 때 확인");
 });

@@ -12,7 +12,11 @@ export const ADDON_MANIFEST_URL = "https://raw.githubusercontent.com/Pyser08/Dus
 export const ADDON_URL_KEY = "dusk.addon.manifestUrl";
 export const ADOPT_KEY = "dusk.addon.adopted.v2";
 const INDEX_KEY = "dusk.addon.index", CODE = (id) => `dusk.addon.code.${id}`, PREV = (id) => `dusk.addon.prev.${id}`;
-const CHECK_EVERY = 6 * 3600e3;
+// 업데이트 확인: 켜질 때 한 번 + 실행 중 1시간마다 + Dusk 창을 열 때(마지막 확인이 10분 넘었으면).
+// 예전엔 켜질 때 한 번뿐이라 리스를 켜 둔 채로는 새 애드온을 못 받았다.
+const CHECK_EVERY = 3600e3, SOON_EVERY = 10 * 60e3;
+// GitHub raw는 몇 분 동안 옛 파일을 돌려주므로 주소에 값을 붙여 캐시를 건너뛴다(파일은 sha256으로 따로 확인)
+const bust = (u, v) => u + (u.includes("?") ? "&" : "?") + v;
 
 // v3 api는 다리(postMessage)를 건너 오므로 getLocalPluginStorage()가 Promise로 온다 → await 후 메서드가 있는지 확인, 없으면 pluginStorage.
 const usable = (s) => s && typeof s.getItem === "function" && typeof s.setItem === "function";
@@ -47,7 +51,7 @@ export async function importCode(code, id = "addon") {
   try { return await import(/* webpackIgnore: true */ url); } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
 }
 
-export function createAddons(api, { core, ctx = {}, onPendingRestart = null, fetcher = fetchText, importer = importCode, hasher = sha256, now = () => Date.now(), log = (m) => console.log(`[Dusk Atelier] 애드온: ${m}`) } = {}) {
+export function createAddons(api, { core, ctx = {}, onPendingRestart = null, timers = globalThis, fetcher = fetchText, importer = importCode, hasher = sha256, now = () => Date.now(), log = (m) => console.log(`[Dusk Atelier] 애드온: ${m}`) } = {}) {
   let storeP = null;
   const S = () => (storeP ??= storeOf(api));
   // 값은 문자열로만 저장한다(호스트마다 객체 저장 방식이 달라서)
@@ -96,8 +100,12 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, fet
       }
     }
     emit();
-    setTimeout(() => { check().catch(() => {}); }, 3000);
+    timers.setTimeout(() => { check().catch(() => {}); }, 3000);
+    if (!autoTimer) { autoTimer = timers.setInterval(() => check().catch(() => {}), CHECK_EVERY); autoTimer?.unref?.(); }
   }
+  let autoTimer = null;
+  // Dusk 창을 열 때 부른다: 마지막 확인이 10분 넘었으면 확인
+  const checkSoon = () => (now() - lastCheck >= SOON_EVERY ? check({ force: true }) : Promise.resolve({ updates: [], held: [] }));
 
   async function rollback(id, idx) {
     const v = idx[id], code = await store.getItem(PREV(id)).catch(() => null);
@@ -111,7 +119,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, fet
   }
 
   async function loadManifest() {
-    const text = await fetcher(api, await manifestUrl());
+    const text = await fetcher(api, bust(await manifestUrl(), `t=${now()}`));
     if (text == null) throw new Error("목록을 받지 못했어요");
     const m = parseManifest(text);
     if (m.errors.length) log(`목록 오류 ${m.errors.join(", ")}`);
@@ -120,7 +128,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, fet
   }
 
   async function download(a) {
-    const code = await fetcher(api, a.url);
+    const code = await fetcher(api, bust(a.url, `v=${a.sha256.slice(0, 12)}`));
     if (typeof code !== "string") throw new Error("파일을 받지 못했어요");
     const got = await hasher(new TextEncoder().encode(code));
     if (got !== a.sha256) throw new Error("파일 확인값이 목록과 달라요");
@@ -183,9 +191,9 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, fet
     emit();
   }
 
-  // 업데이트 확인(뒤에서). force가 아니면 6시간에 한 번.
+  // 업데이트 확인(뒤에서). force가 아니면 1시간에 한 번.
   async function check({ force = false } = {}) {
-    if (!force && now() - lastCheck < CHECK_EVERY) return { updates: [], held: [] };
+    if (!force && now() - lastCheck < CHECK_EVERY - 60e3) return { updates: [], held: [] };
     lastCheck = now();
     try {
       const list = await loadManifest();
@@ -212,7 +220,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, fet
   }
 
   return {
-    boot, check, install, remove, setOn, getIndex, loadManifest, adopt,
+    boot, check, checkSoon, install, remove, setOn, getIndex, loadManifest, adopt,
     core: () => core,
     manifest: () => manifest,
     running: (id) => running.has(id),
