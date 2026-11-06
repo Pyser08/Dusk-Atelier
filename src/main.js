@@ -4,6 +4,7 @@ import { LIB as ADDON_LIB } from "./addonlib.gen.js";
 import { startHostUpdateToast } from './ui/hostupdate.js';
 import { createDbCache, WRITE_RE } from './data/dbcache.js';
 import { createHookBus } from './data/hookbus.js';
+import { createHostGate } from './data/hostgate.js';
 import * as engine_exports from './engine/index.js';
 import { hostBlockedMessage, isHostBlocked } from './data/modules.js';
 import { createLegacy } from './ui/legacy.js';
@@ -34,8 +35,10 @@ import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModu
 var VERSION = typeof __VERSION__ !== "undefined" ? __VERSION__ : "dev";
 var TITLE = "Dusk Atelier";
 async function start() {
-  const raw = globalThis.risuai ?? globalThis.Risuai;
-  if (!raw) return;
+  const host = globalThis.risuai ?? globalThis.Risuai;
+  if (!host) return;
+  // 무거운 호스트 호출(데이터베이스·봇·채팅 읽기/쓰기)은 동시에 3개까지만 — 여러 기능이 몰려도 리스 화면이 멈추지 않게(2.0.1)
+  const raw = createHostGate(host);
   const friendly = (fn) => async (...args) => {
     try {
       return await fn(...args);
