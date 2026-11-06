@@ -2,7 +2,7 @@
 
 ## 원칙
 - 지금 Dusk 프로바이더(공급자 14종·키 순환·대체 사슬·캐시·도구·번역기·예산)를 **보완**한다. 새로 갈아엎지 않는다.
-- Provider Manager(PM)는 **동작만 참고**하고 코드·문구는 가져오지 않는다(라이선스·허락 미확인, 저장소는 AGPL — HandOff/MERGE-JS.md). 받은 파일은 저장소에 넣지 않는다.
+- Provider Manager(PM)는 **원작자 허락을 받음**(2026-11-06 사용자 확인) → 참고하거나 일부 코드를 가져와도 된다. 가져온 파일은 머리 주석에 “Yumi Provider Manager v1.19.3에서 가져옴/참고” 출처를 적고, NOTICE.md에 고지함. 받은 원본 파일 자체는 저장소에 넣지 않는다(참고용은 작업 폴더에만).
 - 화면은 Dusk 방식(kit.js, UI-STYLE.md). 애드온 `addons/provider`(hooks:true) 안에서만 바뀐다 → 고칠 때 애드온만 배포.
 - 각 단계: 실패 시험 → 구현 → npm test·build·check·e2e(run-provider) → 애드온 버전 올려 배포.
 
