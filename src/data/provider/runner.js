@@ -13,7 +13,6 @@ import { protect, restore, guideBlock, glossaryBlock } from "../../engine/provid
 import { HttpError, errorFromResponse, redact } from "./transport.js";
 import { PURPOSE_LABEL } from "../../engine/provider/catalog.js";
 import { mcpToolDefs } from "../../engine/provider/mcp.js";
-import { skillBlock } from "../../engine/provider/skills.js";
 import { applyPre, applyPost, hasPost } from "../../engine/provider/hooks.js";
 import { pickByRules } from "../../engine/provider/router.js";
 import { estimateTokens } from "../../engine/provider/tokens.js";
@@ -227,7 +226,7 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     for (let i = 0; i < order.length; i++) {
       const res = i === 0 ? first : resolve(cfg, purpose, { profileId: order[i] }); if (!res) continue;
       const mdl = res.profile.model, post = hasPost(cfg.hooks, mdl);
-      const sk = skillBlock(cfg.skills, { model: mdl }); messages = applyPre(sk ? [{ role: "system", content: sk }, ...baseMessages] : baseMessages, cfg.hooks, mdl);   // 스킬·훅(앞처리)은 보낼 모델 기준
+      messages = applyPre(baseMessages, cfg.hooks, mdl);   // 훅(앞처리)은 보낼 모델 기준
       const stream = !wantMain || useTools || post ? (res.profile.stream === "off" ? "off" : "buffered") : res.profile.stream;   // 응답 훅이 있으면 한번에 받아서 처리
       if (!useTools) {
         const r = await attemptTarget(res, { req, reqId, messages, signal, cha, aff, wantStream: stream, extra: { reasoningState: res.profile.thinking?.continuation ? reasoningMemo.get(akey) : undefined } }, cfg);

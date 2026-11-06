@@ -1,8 +1,7 @@
-// 프로바이더 화면 ‘확장’ 탭(2.0.0): MCP 서버 · 스킬 · 훅. 비밀(MCP 토큰)은 키 보관함에, 설정에는 안 둔다.
+// 프로바이더 화면 ‘확장’ 탭(2.0.0): MCP 서버 · 훅 · 다른 플러그인 창구. 비밀(MCP 토큰)은 키 보관함에, 설정에는 안 둔다.
 import { h } from "../../dom.js";
 import { btn, note, toggleRow } from "../../kit.js";
 import { normalizeMcpServer } from "../../../engine/provider/mcp.js";
-import { normalizeSkill } from "../../../engine/provider/skills.js";
 import { normalizeHook } from "../../../engine/provider/hooks.js";
 import { field, text, num, area, grid, select } from "./ui.js";
 import { safeName, reqKey, resKey } from "../../../engine/provider/mailbox.js";
@@ -25,15 +24,6 @@ export async function ext({ P, cfg, mutate, draw, toast }) {
       s.tools.length ? h("small", { class: "rb-muted" }, `도구 ${s.tools.length}개: ${names}`) : h("small", { class: "rb-muted" }, "도구를 아직 불러오지 않았어요"));
   });
   out.push(h("section", { class: "rb-pcard" }, h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, "MCP 서버"))), ...srvCards, h("div", { class: "rb-actions" }, btn("서버 추가", { icon: "plus", onClick: async () => { await mutate((x) => { x.mcp.servers.push(normalizeMcpServer({ name: "새 서버" })); }); draw(); } }))));
-  // ── 스킬 ──
-  const skills = cfg.skills ?? [], setSk = (i, fn) => mutate((x) => { fn(x.skills[i]); });
-  out.push(h("section", { class: "rb-pcard" }, h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, "스킬"), h("small", { class: "rb-muted" }, "요청마다 끼워 넣는 짧은 지침이에요. 모델 이름 조건(정규식)을 비우면 모든 모델에, 적으면 맞는 모델에만 넣어요. 스킬마다 토큰 상한이 있어요."))),
-    ...skills.map((k, i) => h("div", { class: "rb-pcard", dataset: { skill: k.id } },
-      h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, k.name)), btn("", { icon: "trash", size: "sm", title: "지우기", onClick: async () => { await mutate((x) => { x.skills.splice(i, 1); }); draw(); } })),
-      grid(field("이름", text(k.name, (v) => setSk(i, (q) => { q.name = v || "스킬"; }))), field("모델 조건", text(k.models, (v) => setSk(i, (q) => { q.models = v; }), { ph: "예: claude|gemini (비우면 전부)" })), field("최대 토큰", num(k.maxTokens, (v) => setSk(i, (q) => { q.maxTokens = v ?? 1000; }), { step: "50" }))),
-      field("내용", area(k.text, (v) => setSk(i, (q) => { q.text = v; }), { rows: 4, ph: "모델에게 알려 줄 지침" })),
-      toggleRow("사용", "", k.enabled, (v) => setSk(i, (q) => { q.enabled = v; })))),
-    h("div", { class: "rb-actions" }, btn("스킬 추가", { icon: "plus", onClick: async () => { await mutate((x) => { x.skills.push(normalizeSkill({ name: "새 스킬" })); }); draw(); } }))));
   // ── 훅 ──
   const hooks = cfg.hooks ?? [], setHk = (i, fn) => mutate((x) => { fn(x.hooks[i]); });
   out.push(h("section", { class: "rb-pcard" }, h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, "훅(앞·뒤 처리)"), h("small", { class: "rb-muted" }, "모델별로 보내기 전 글과 받은 글을 정규식으로 찾아 바꿔요. 코드는 실행하지 않아요. 뒤 처리가 있으면 그 모델의 응답은 한번에 받아서 고쳐요(스트림 불가)."))),

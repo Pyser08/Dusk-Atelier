@@ -1,8 +1,7 @@
-// 10단계(2.0.0): MCP·스킬·훅
+// 10단계(2.0.0): MCP·훅
 import test from "node:test";
 import assert from "node:assert/strict";
 import { rpcRequest, parseRpc, mcpToolDefs, isMcpWrite, normalizeMcpServer, mcpNameOf } from "../src/engine/provider/mcp.js";
-import { skillBlock, normalizeSkill } from "../src/engine/provider/skills.js";
 import { applyPre, applyPost, hasPost, normalizeHook } from "../src/engine/provider/hooks.js";
 import { createMcpClient } from "../src/data/provider/mcpclient.js";
 import { normalizeConfig } from "../src/engine/provider/profile.js";
@@ -24,12 +23,6 @@ test("MCP: 도구 이름·쓰기 판별·서버 정리", () => {
   assert.equal(isMcpWrite({ annotations: { readOnlyHint: true } }), false); assert.equal(isMcpWrite({}), true);
   assert.equal(normalizeMcpServer({ id: "a", url: "javascript:alert(1)" }).url, "");
 });
-test("스킬: 모델 조건·토큰 상한", () => {
-  const skills = [normalizeSkill({ id: "a", name: "말투", text: "존댓말을 써요", models: "" }), normalizeSkill({ id: "b", name: "클로드용", text: "x".repeat(4000), models: "claude", maxTokens: 100 }), normalizeSkill({ id: "c", name: "꺼짐", text: "no", enabled: false })];
-  const g = skillBlock(skills, { model: "gpt-4o" }); assert.ok(g.includes("존댓말") && !g.includes("xxxx") && !g.includes("no"));
-  const c = skillBlock(skills, { model: "claude-sonnet-4" }); assert.ok(c.includes("xxxx") && c.length < 900);
-  assert.equal(skillBlock([], { model: "m" }), "");
-});
 test("훅: 모델별 앞·뒤 처리, 잘못된 정규식은 건너뜀", () => {
   const hooks = [normalizeHook({ id: "h1", name: "호칭", modelRegex: "gpt", pre: { find: "주인님", replace: "당신" } }), normalizeHook({ id: "h2", name: "꼬리", modelRegex: "", post: { find: "\\s*\\(끝\\)$", replace: "" } }), normalizeHook({ id: "h3", name: "깨짐", post: { find: "(", replace: "" } })];
   const msgs = [{ role: "user", content: "주인님 안녕" }];
@@ -47,8 +40,8 @@ test("MCP 클라이언트: 초기화 → 목록 → 호출(세션 헤더 유지)
   const tools = await c.list(srv); assert.equal(tools[0].name, "echo"); assert.equal(seen[0].headers.authorization, "Bearer T"); assert.equal(seen[1].headers["mcp-session-id"], "S1");
   assert.equal(await c.call(srv, "echo", { q: "hi" }), "echo:hi");
 });
-test("설정 정리: mcp·skills·hooks 기본값", () => {
-  const d = normalizeConfig({}); assert.deepEqual(d.mcp.servers, []); assert.deepEqual(d.skills, []); assert.deepEqual(d.hooks, []);
-  const c = normalizeConfig({ skills: [{ id: "a", name: "x", text: "t" }], hooks: [{ id: "h", name: "n" }], mcp: { servers: [{ id: "s", url: "https://a.test/m" }] } });
-  assert.equal(c.skills.length, 1); assert.equal(c.mcp.servers[0].transport, "http");
+test("설정 정리: mcp·hooks 기본값", () => {
+  const d = normalizeConfig({}); assert.deepEqual(d.mcp.servers, []); assert.deepEqual(d.hooks, []);
+  const c = normalizeConfig({ hooks: [{ id: "h", name: "n" }], mcp: { servers: [{ id: "s", url: "https://a.test/m" }] } });
+  assert.equal(c.mcp.servers[0].transport, "http");
 });
