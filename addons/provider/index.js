@@ -27,5 +27,5 @@ export async function activate(api, ctx) {
   const unsub = provider.store.subscribe(() => provider.sync().catch(() => {}));
   provider.store.get().then(() => provider.sync()).catch((e) => log(`프로바이더 시작 실패: ${e?.message ?? e}`));
   const off = [ext.add("svc", "provider", provider), ext.add("tab", "provider", renderProvider)];
-  return { async deactivate() { off.forEach((f) => f()); try { unsub?.(); } catch { /* 이미 해제 */ } setDuskRoute(null, null); setDuskServerModel(null); } };
+  return { async deactivate() { off.forEach((f) => f()); try { await provider.progress?.stop?.(); } catch { /* 창 없음 */ } try { unsub?.(); } catch { /* 이미 해제 */ } setDuskRoute(null, null); setDuskServerModel(null); } };
 }

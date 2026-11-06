@@ -11,7 +11,7 @@ const pick = (v, list, d) => (list.includes(v) ? v : d);
 export const defaultConfig = () => ({
   v: 1, enabled: false, connections: [], profiles: [], purposes: Object.fromEntries(PURPOSES.map((p) => [p, { profileId: "", over: {} }])),
   subProfileId: "", chain: [], chainOn: false, budget: { dailyUsd: 0, monthlyUsd: 0, action: "warn", switchProfileId: "" }, perChar: {},
-  defaults: { stream: "stream", retry: 2, timeoutSec: 300, repetition: { on: true, charRun: 240, minRepeats: 6, minChars: 400 }, keepPartial: true, keyCooldownSec: 60 },
+  defaults: { stream: "stream", retry: 2, timeoutSec: 300, repetition: { on: true, charRun: 240, minRepeats: 6, minChars: 400 }, keepPartial: true, keyCooldownSec: 60, progress: true },   // progress: 리스 화면 진행 창(2.0.0)
   transforms: { rules: [], cacheOrder: false },
   tools: { enabled: false, datetime: true, calculator: true, dice: true, webSearch: false, fetchUrl: false, maxDepth: 4, timeoutSec: 30, search: { provider: "brave", url: "", key: "", cx: "" }, prefetch: { enabled: false, position: "beforeLast", maxResults: 3, snippetOnly: true, keywords: "" }, risuRead: false, risuWrite: false, memoryTools: false },
   translator: { enabled: false, protect: true, glossary: true, history: 2, maxBytes: 8192, guide: "", glossaryText: "" },

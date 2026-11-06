@@ -10,7 +10,8 @@
 1. **실기기 확인**(RisuAI·RisuBard·PocketRisu, PC·모바일): 애드온 받기·자동 받기·동시 시작 속도·기억 훅 순서·예전 기억 이전·리수폿 개요·새로고침 알림·월경 cycle_report 실제 응답. 문제 나오면 DEBUG.md 순서로(실패 시험 먼저).
 2. **2.0.0 출시 준비**(사용자가 시킬 때만): package 버전 2.0.0 → 모든 애드온 minCore 2.0.0·버전 정리 → build·check → publish-addons → main 머지 → `v2.0.0` 태그. 아카 글(docs/arca)은 요청 시.
 3. **넘어오는 유저용 패치**(사용자 결정 대기): 원본 플러그인(리수폿·Erosync·HypaPlus 등) 느낌 살리기 — 어떤 기능을 맞출지 사용자가 정함.
-4. 정리 후보: cards·memory가 비코어 공유 모듈을 각자 들고 있음(크기 중복), 원래부터 실패하는 e2e 6개(run-app·run-hubs·run-tabs·run-editor-ai·run-lorereq·run-popup) 고치기, 기능 맛보기 숫자 조정(사용자 피드백).
+4. **프로바이더 보완**(docs/PLAN-provider-pm.md, Provider Manager v1.19.3 동작 참고·코드 안 가져옴): 1단계 진행 창 끝 → 2단계 재시도·키 회전부터.
+5. 정리 후보: cards·memory가 비코어 공유 모듈을 각자 들고 있음(크기 중복), 원래부터 실패하는 e2e 6개(run-app·run-hubs·run-tabs·run-editor-ai·run-lorereq·run-popup) 고치기, 기능 맛보기 숫자 조정(사용자 피드백).
 ### 애드온만 고칠 때
 소스 수정 → `addons/addons.src.json` 버전 올림 → `node tools/build-addons.mjs` → (빌드가 "코어가 넘겨 줄 모듈이 바뀌었어요"라고 하면 코어도 내고 해당 애드온 minCore 올림) → `node tools/publish-addons.mjs`. 훅 애드온(memory·erosync·provider)은 새로고침해야 적용.
 

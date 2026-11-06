@@ -11,6 +11,7 @@ import { applyRules, anatomy, orderForCache } from "../../engine/provider/transf
 import { enabledTools, parseArgs } from "../../engine/provider/tools.js";
 import { protect, restore, guideBlock, glossaryBlock } from "../../engine/provider/translate.js";
 import { HttpError, errorFromResponse, redact } from "./transport.js";
+import { PURPOSE_LABEL } from "../../engine/provider/catalog.js";
 
 const nz = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== undefined && !(Array.isArray(v) && !v.length)));
 const TOOL_RE = /<tool_call\s+name="([^"]+)">([\s\S]*?)<\/tool_call>/g;
@@ -18,7 +19,7 @@ export const toolPrompt = (defs) => `[도구 사용]\n필요할 때만 아래 �
 export const parseToolCalls = (text) => [...String(text).matchAll(TOOL_RE)].map((m) => ({ name: m[1], args: parseArgs(m[2]) }));
 export const stripToolCalls = (text) => String(text).replace(TOOL_RE, "").trim();
 
-export function createProviderRunner({ api, store, vault, transport, gemcache = null, risuTools = null, toolExec = null, vertex = null, copilot = null, currentChar = async () => null, notify = () => {}, now = () => Date.now(), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), log = () => {} }) {
+export function createProviderRunner({ api, store, vault, transport, gemcache = null, risuTools = null, toolExec = null, vertex = null, copilot = null, currentChar = async () => null, notify = () => {}, board = null, now = () => Date.now(), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), log = () => {} }) {
   const pools = new Map(); const prevAnatomy = new Map(); const reasoningMemo = new Map(); let warnedDay = "";
   const poolFor = async (conn, cfg) => {
     const vals = await vault.values(conn.keyIds), sig = `${conn.id}|${conn.keyMode}|${vals.join("\n")}`;
@@ -114,6 +115,7 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     for (let n = 0; n < 24; n++) {
       let key = ""; // 이 시도에서 쓴 키
       try {
+        board?.update(ctx.reqId, { phase: "send", model: profile.model, label: `${PURPOSE_LABEL[res.purpose] ?? res.purpose} · ${profile.name || profile.model}`, waitUntil: 0 });
         const out = await once({ ...ctx, conn, profile: effectiveProfile(profile, ctx.req), pool, cfg, purpose: res.purpose });
         if (out.key) pool.ok(out.key); return { ok: true, out };
       } catch (e) {
@@ -124,14 +126,44 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
         if (key && (kind === "rate" || kind === "auth")) pool.fail(key, { ms: (cfg.defaults.keyCooldownSec || 60) * 1000 });
         const plan = planAfterFailure(kind, { retriesLeft: retries, keysLeft, chainLeft: 0 });
         if (e.setup) return { ok: false, kind, error: e };
-        if (plan === "switch-key") continue;
-        if (plan === "retry") { retries--; await sleep(backoffMs(Math.max(0, (profile.retry ?? 2) - retries - 1))); continue; }
+        if (plan === "switch-key") { board?.update(ctx.reqId, { phase: "retry", attempt: (n + 2), note: "다른 키로 다시" }); continue; }
+        if (plan === "retry") { retries--; const ms = backoffMs(Math.max(0, (profile.retry ?? 2) - retries - 1)); board?.update(ctx.reqId, { phase: "retry", attempt: (n + 2), waitUntil: now() + ms, note: e.status ? `HTTP ${e.status}` : "" }); await sleep(ms); continue; }
         return { ok: false, kind, error: e };
       }
     }
     return { ok: false, kind: "client", error: last };
   }
+  // 진행 창(board): 요청마다 카드 하나. 끝나는 길(성공·실패·취소·스트림 끝)마다 end를 부른다.
+  let reqSeq = 0;
   async function handle(req, signal) {
+    const reqId = `r${now().toString(36)}-${++reqSeq}`, purpose0 = req.__purpose || purposeOfMode(req.mode);
+    board?.start(reqId, { label: PURPOSE_LABEL[purpose0] ?? purpose0 });
+    let out;
+    try { out = await handleInner(req, signal, reqId); }
+    catch (e) { board?.end(reqId, "error", String(e?.message ?? e).slice(0, 120)); throw e; }
+    if (!out?.success) { board?.end(reqId, "error", String(out?.content ?? "").slice(0, 120)); return out; }
+    const c = out.content;
+    if (c && typeof c.getReader === "function" && typeof ReadableStream === "function") {
+      // 스트림: 다 받으면 완료, 오류면 실패, 리스가 끊으면 취소로 카드를 닫는다(어느 길로 끝나도 카드가 남지 않게). 받은 글자 수도 보여 준다.
+      board?.update(reqId, { phase: "recv" }); let chars = 0, last = 0; const rd = c.getReader();
+      const piped = new ReadableStream({
+        async pull(ctl) {
+          try {
+            const { done, value } = await rd.read();
+            if (done) { board?.update(reqId, { chars }); board?.end(reqId, "ok"); ctl.close(); return; }
+            chars += String(typeof value === "string" ? value : value?.text ?? "").length;
+            if (now() - last > 500) { last = now(); board?.update(reqId, { chars }); }
+            ctl.enqueue(value);
+          } catch (e) { board?.end(reqId, signal?.aborted ? "abort" : "error", String(e?.message ?? e).slice(0, 120)); ctl.error(e); }
+        },
+        cancel(reason) { board?.end(reqId, "abort"); try { rd.cancel(reason); } catch { /* 이미 끝남 */ } }
+      });
+      return { ...out, content: piped };
+    }
+    board?.end(reqId, signal?.aborted || c === "" ? "abort" : "ok");
+    return out;
+  }
+  async function handleInner(req, signal, reqId) {
     const cfg = await store.get(), purpose = req.__purpose || purposeOfMode(req.mode);
     const cha = await currentChar().catch(() => null);
     const sum = summarize(await store.usage(), { now: now() }), bs = budgetState(sum, cfg.budget); let forced = "";
@@ -160,7 +192,7 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
       const res = i === 0 ? first : resolve(cfg, purpose, { profileId: order[i] }); if (!res) continue;
       const stream = !wantMain || useTools ? (res.profile.stream === "off" ? "off" : "buffered") : res.profile.stream;
       if (!useTools) {
-        const r = await attemptTarget(res, { req, messages, signal, cha, aff, wantStream: stream, extra: { reasoningState: res.profile.thinking?.continuation ? reasoningMemo.get(akey) : undefined } }, cfg);
+        const r = await attemptTarget(res, { req, reqId, messages, signal, cha, aff, wantStream: stream, extra: { reasoningState: res.profile.thinking?.continuation ? reasoningMemo.get(akey) : undefined } }, cfg);
         if (r.ok) { if (r.out.reasoningState?.length) reasoningMemo.set(akey, r.out.reasoningState); return { success: true, content: r.out.stream ?? fixT(r.out.text) }; }
         lastFail = r; if (r.kind === "abort") return { success: true, content: "" };
         if (planAfterFailure(r.kind, { chainLeft: order.length - i - 1, chainOn: cfg.chainOn }) !== "next-target") break;
@@ -169,7 +201,7 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
       // 도구 루프(글 프로토콜, 한번에 받기)
       let msgs = messages; const counter = { n: 0 }; let result = null;
       for (let depth = 0; depth <= (cfg.tools.maxDepth ?? 4); depth++) {
-        const r = await attemptTarget(res, { req, messages: msgs, signal, cha, aff, wantStream: "buffered" }, cfg);
+        const r = await attemptTarget(res, { req, reqId, messages: msgs, signal, cha, aff, wantStream: "buffered" }, cfg);
         if (!r.ok) { result = r; break; }
         const calls = depth < (cfg.tools.maxDepth ?? 4) ? parseToolCalls(r.out.text) : [];
         if (!calls.length) { return { success: true, content: stripToolCalls(r.out.text) || r.out.text }; }

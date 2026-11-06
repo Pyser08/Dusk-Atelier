@@ -6,6 +6,8 @@ import { createGeminiCache } from "./gemcache.js";
 import { createRisuTools } from "./risutools.js";
 import { createToolExec } from "./toolexec.js";
 import { createProviderRunner } from "./runner.js";
+import { createBoard } from "../../engine/provider/board.js";
+import { createProgressWindow } from "./progress.js";
 import { createRegistrar } from "./register.js";
 import { listModels, fetchBalance, hasBalance } from "./models.js";
 import { parseVertexAccount, vertexAccessToken } from "../pot/vertex-client.js";
@@ -15,7 +17,7 @@ import { toPotPreset } from "../../engine/provider/profile.js";
 import { validateModelPreset } from "../../engine/pot/model-options.js";
 import { kindOf } from "../../engine/provider/catalog.js";
 
-export function createProvider(api, { notify = () => {}, confirm, memory = null, createStore, backupSnapshot, compat = () => false, allowed = () => true, log = () => {} } = {}) {
+export function createProvider(api, { notify = () => {}, confirm, memory = null, createStore, backupSnapshot, compat = () => false, allowed = () => true, log = () => {}, getDoc = null } = {}) {
   const store = createProviderStore(api), vault = createKeyVault(api), transport = createTransport(api, { compat });
   const owner = {};   // 인증 캐시 주인(이 묶음 하나당 하나)
   const fetchLike = (url, options) => api.nativeFetch(url, options);
@@ -27,11 +29,17 @@ export function createProvider(api, { notify = () => {}, confirm, memory = null,
   const risuTools = createRisuTools(api, { confirm, memory, log, store: createStore(api), backupSnapshot, currentIdx: null });
   const toolExec = createToolExec({ api });
   const gemcache = createGeminiCache();
-  const runner = createProviderRunner({ api, store, vault, transport, gemcache, risuTools, toolExec, vertex, copilot, currentChar: () => currentChat(api), notify, log });
+  // 진행 창(2.0.0): 요청별 카드. 설정 '진행 창 보이기'(defaults.progress)를 끄면 창만 숨기고 상태는 그대로
+  const board = createBoard();
+  let progressOn = true; store.get().then((c) => { progressOn = c.defaults?.progress !== false; }).catch(() => {});
+  const docOf = getDoc ?? (async () => { try { return await api.getRootDocument?.(); } catch { return null; } });
+  const progress = createProgressWindow({ getDoc: docOf, board, enabled: () => progressOn, log });
+  store.subscribe((c) => { progressOn = c?.defaults?.progress !== false; progress.refresh(); });
+  const runner = createProviderRunner({ api, store, vault, transport, gemcache, risuTools, toolExec, vertex, copilot, currentChar: () => currentChat(api), notify, board, log });
   const registrar = createRegistrar(api, { runner, store, log, allowed });
   const credOf = async (conn) => { const v = await vault.values(conn.keyIds); return v[0] ?? ""; };
   return {
-    store, vault, runner, registrar, risuTools,
+    store, vault, runner, registrar, risuTools, board, progress,
     supported: () => registrar.supported(),
     sync: () => registrar.sync(),
     names: () => registrar.names(),

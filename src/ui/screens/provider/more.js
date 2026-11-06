@@ -54,6 +54,8 @@ async function use({ ctx, cfg, mutate, draw, toast }) {
     grid(field("하루 한도($)", num(b.dailyUsd, (v) => mutate((x) => { x.budget.dailyUsd = v ?? 0; }))), field("한 달 한도($)", num(b.monthlyUsd, (v) => mutate((x) => { x.budget.monthlyUsd = v ?? 0; }))),
       field("넘으면", select([["warn", "알려만 주기"], ["switch", "싼 프로필로 바꾸기"], ["block", "막기"]], b.action, async (v) => { await mutate((x) => { x.budget.action = v; }); draw(); }, "예산 초과 동작")),
       b.action === "switch" ? field("바꿀 프로필", select(profOpts(cfg), b.switchProfileId, (v) => mutate((x) => { x.budget.switchProfileId = v; }), "바꿀 프로필")) : null)));
+  // 진행 창(2.0.0): 리스 화면 오른쪽 아래에 요청별 카드(동시 요청도 따로). 끄면 창만 숨기고 진행 상태는 그대로
+  out.push(toggleRow("진행 창 보이기", "요청마다 카드로 보여요(보내는 중·다시 시도·받은 글자 수). 동시에 여러 요청이 와도 따로 보이고, 끝난 카드만 5초 뒤 닫혀요.", cfg.defaults?.progress !== false, (v) => mutate((x) => { x.defaults.progress = v; })));
   return out;
 }
 
