@@ -54,7 +54,7 @@ export var TABS = [
   },
   { id: "work-home", label: "개요", icon: "tools", mobileOnly: true, group: "more", section: "work", desc: "프로바이더·AI 봇 제작·도구·설정을 모았어요.", card: "작업실 기능을 골라 열어요.", help: ["원하는 작업 기능을 눌러 바로 이동해요."] },
   {
-    id: "provider", label: "프로바이더", icon: "network", group: "more", section: "work", exp: true,
+    id: "provider", addon: "provider", label: "프로바이더", icon: "network", group: "more", section: "work", exp: true,
     desc: "리스의 모델 목록에 Dusk를 더해요. 키·모델·용도별 설정을 한곳에서 관리해요.",
     card: "키·모델·용도별 설정을 한곳에서.",
     help: ["연결(키)과 프로필(모델·생각·캐시)을 만들면 리스 모델 목록에 ‘Dusk 자동’이 생겨요.", "키는 이 기기에만 저장돼요. 번역·감정·기억 등 용도마다 다른 프로필을 쓸 수 있어요."]

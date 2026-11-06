@@ -22,7 +22,6 @@ import { createStoryTime } from './data/storytime.js';
 import { createFairPlay } from './data/fairplay.js';
 import { createImgTagFix } from './data/imgtagfix.js';
 import './data/modelhub.js';
-import { createProvider } from './data/provider/index.js';
 import { setDuskRoute, runAI } from './engine/runai.js';
 import { setDuskServerModel } from './data/modelhub.js';
 import { setSkillBlockProvider } from './engine/skillhook.js';
@@ -94,25 +93,7 @@ async function start() {
   setSkillBlockProvider((stage) => skills.blockFor(stage));
   const web = createWebTools(api);   // 웹 검색·가져오기 도구 (꺼짐이 기본, v1.8.1)
   setWebWrapProvider((stage, prompt, call) => web.wrap(stage, prompt, call));
-  // Dusk 프로바이더 (1.9.3): 리스 모델 목록에 Dusk 자동·프로필 등록, 쓰기 도구 확인은 창이 닫혀 있어도 뜬다
-  const providerRef = { confirm: null, exp: () => false };
-  const provider = createProvider(api, {
-    notify: (t) => memoryRef.toast?.(t),
-    confirm: (o) => (providerRef.confirm ? providerRef.confirm(o) : Promise.resolve(false)),
-    memory: { search: async (q) => {
-      const memory = mem(); const cur = await memory?.switches?.currentChat?.(); if (!cur) return [];
-      const f = await memory.store.getFolder(cur.chaId, cur.chatId), want = String(q ?? "").trim().toLowerCase(); if (!f?.people || !want) return [];
-      return Object.values(f.people).filter((p) => String(p.name ?? "").toLowerCase().includes(want) || JSON.stringify(p.records ?? []).toLowerCase().includes(want)).slice(0, 5).map((p) => ({ name: p.name, records: (p.records ?? []).slice(-6).map((r) => (typeof r === "string" ? r : r?.text ?? r?.summary ?? JSON.stringify(r)).slice(0, 300)) }));
-    } },
-    allowed: () => providerRef.exp(),
-    createStore: engine_exports.createStore,
-    backupSnapshot: engine_exports.backupSnapshot,
-    log: (m) => console.log(`[${TITLE}] ${m}`)
-  });
-  setDuskRoute(() => provider.analysisPick(), (a, msgs, pick, signal) => provider.run(msgs, pick, signal));
-  setDuskServerModel((id) => provider.serverModel(id));
-  provider.store.get().then(() => provider.sync()).catch((e) => console.log(`[${TITLE}] 프로바이더 시작 실패: ${e?.message ?? e}`));
-  provider.store.subscribe(() => provider.sync().catch(() => {}));
+  // Dusk 프로바이더는 애드온(addons/provider, 2.0.0 실험 기능). 설정 화면의 동기화는 ctx.provider(애드온 서비스)로.
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {
     if (!document.getElementById("rb-style")) document.head.appendChild(h("style", { id: "rb-style" }, CSS2));
@@ -226,10 +207,7 @@ async function start() {
   app.ctx.turnInfo = turnInfo;
   app.ctx.chatMenu = chatMenu;
   for (const [k, id] of [["memory", "memory"], ["affhud", "affhud"], ["memoryButton", "memoryButton"]]) Object.defineProperty(app.ctx, k, { configurable: true, get: () => app.ctx.ext.get("svc", id) ?? null });
-  app.ctx.provider = provider;
-  providerRef.confirm = (o) => app.ctx.confirmAnywhere(o);
-  providerRef.exp = () => !!app?.ctx?.prefs?.ui?.experimental;
-  provider.sync().catch(() => {});   // 실험 기능이 켜져 있으면 이제 등록
+  Object.defineProperty(app.ctx, "provider", { configurable: true, get: () => app.ctx.ext.get("svc", "provider") ?? null });
   // 위젯 홈(v1.9.2): 기본 꺼짐. 켜져 있으면 시작해서 메뉴 버튼을 달고, Dusk 창을 열 땐 먼저 닫아 같은 플러그인 화면을 번갈아 쓴다
   // ProtLink+(v1.9.2): 기본 켜짐. Proton Drive 링크를 캐릭터·모듈·플러그인에 연결해 두고 새 파일을 받아 Dusk 업데이트로 넘긴다.
   // ProtLink+는 애드온(addons/protlink, 2.0.0). 위젯 홈 등은 ctx.protlink가 없으면 그 칸을 숨긴다.
@@ -274,6 +252,8 @@ async function start() {
     ["cards", async () => { const v = await rawOf("dusk.mem.v2.cardidx"); try { return (typeof v === "string" ? JSON.parse(v) : v)?.list?.length > 0; } catch { return false; } }],
     ["erosync", async () => on(await rawOf("dusk.erosync.on"))],
     ["widgets", async () => on(await rawOf("dusk.widgethome.on"))],
+    // 프로바이더(실험): 실험 기능을 켜 두고 프로필을 만들어 둔 사람
+    ["provider", async () => { try { const ui = JSON.parse((await rawOf("rbm:ui:v1")) || "{}"); return ui.experimental === true && !!(await rawOf("dusk.prov.v1")); } catch { return false; } }],
     // ProtLink+: 연결해 둔 링크가 있으면
     ["protlink", async () => { const v = await rawOf("dusk.protlink.links.v1"); try { const d = typeof v === "string" ? JSON.parse(v) : v; return (Array.isArray(d) ? d : d?.links ?? []).length > 0; } catch { return false; } }]
   ];

@@ -7,6 +7,8 @@ import { activate as manageAddon } from "../../addons/manage/index.js";
 import { activate as memoryAddon } from "../../addons/memory/index.js";
 import { activate as cardsAddon } from "../../addons/cards/index.js";
 import { activate as protlinkAddon } from "../../addons/protlink/index.js";
+import { activate as providerAddon } from "../../addons/provider/index.js";
+import { renderProvider as _rpv } from "../../src/ui/screens/provider.js";
 import { renderProtLink as _rp } from "../../src/ui/screens/protlink.js";
 import { renderMemory as _rm } from "../../src/ui/screens/memory/index.js";
 import { renderRelMap as _rr } from "../../src/ui/screens/relmap.js";
@@ -141,6 +143,9 @@ window.bootApp = async (seed, opts = {}) => {
   // 아니면 예전처럼 기억 없이 탭만 보이게(화면은 '준비되지 않았어요') 자리만 채운다.
   if (!opts.coreOnly) {
     const actx = { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async () => {} };
+    // 프로바이더(실험): opts.provider면 위에서 만든 것으로 애드온을, 아니면 탭 자리만
+    if (app.ctx.provider) { app.ctx.providerForTest = app.ctx.provider; await providerAddon(api, actx); }
+    else { app.ctx.ext.add("tab", "provider", _rpv); app.ctx.ext.add("svc", "provider", {}); }
     // ProtLink+: opts.protlink면 위에서 만든 컨트롤러로 애드온을 켜고, 아니면 탭 자리만(예전처럼 ctx.protlink 없음)
     if (app.ctx.protlink) { app.ctx.protlinkForTest = app.ctx.protlink; await protlinkAddon(api, actx); }
     else { app.ctx.ext.add("tab", "protlink", _rp); app.ctx.ext.add("svc", "protlink", { on: () => false, list: async () => ({ ok: false, items: [] }), lastError: () => "", targets: async () => [] }); }
