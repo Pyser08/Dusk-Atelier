@@ -59,8 +59,10 @@ for (const a of src.addons) {
   if (!check) console.log(`${a.id} v${a.version} ${(Buffer.byteLength(code) / 1024).toFixed(1)}KB · 코어 모듈 ${shared.size}개 공유`);
 }
 
-// 2) 코어가 넘겨 줄 모듈 목록
-const libs = [...usedLib].sort();
+// 2) 코어가 넘겨 줄 모듈 목록: 코어에 든 모듈 전부(2.0.0). 애드온이 나중에 새 코어 모듈을 써도 코어를 다시 내지 않아도 되게.
+//    (예전: 애드온이 지금 쓰는 것만 → 새로 쓰면 옛 코어에서 "코어에 ○○가 없어요")
+//    코어 진입점·이 목록 자신·바깥 패키지(node_modules)는 뺀다.
+const libs = [...new Set([...usedLib, ...[...coreSet].filter((f) => /^src\//.test(f) && /\.(js|ts)$/.test(f) && !/^src\/(main\.js|addonlib\.gen\.js)$/.test(f))])].sort();
 const libCode = `// 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어 모듈을 이름으로 넘겨 준다.\n${libs.map((f, i) => `import * as m${i} from ${JSON.stringify("./" + f.replace(/^src\//, ""))};`).join("\n")}\nexport const LIB = {\n${libs.map((f, i) => `  ${JSON.stringify(f)}: m${i}`).join(",\n")}\n};\n`;
 const json = JSON.stringify(out, null, 2) + "\n", mf = path.join(root, "addons/addons.json");
 if (check) {

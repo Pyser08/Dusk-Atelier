@@ -29,19 +29,19 @@ export var TABS = [
   },
   { id: "manage-home", label: "개요", icon: "character", mobileOnly: true, group: "more", section: "manage", desc: "캐릭터·모듈·플러그인을 관리해요.", card: "관리 기능을 골라 열어요.", help: ["원하는 관리 기능을 눌러 바로 이동해요."] },
   {
-    id: "characters", label: "캐릭터", icon: "character", group: "more", section: "manage",
+    id: "characters", addon: "manage", label: "캐릭터", icon: "character", group: "more", section: "manage",
     desc: "캐릭터를 폴더로 정리하고 에셋·로어북을 다듬어요.",
     card: "캐릭터를 폴더로 정리하고 에셋·로어북을 다듬어요.",
     help: ["폴더를 만들어 캐릭터를 묶고, 줄을 끌어 옮겨요.", "캐릭터를 누르면 에셋 관리·편집 메뉴가 열려요.", "이름이나 제작자로 검색할 수 있어요."]
   },
   {
-    id: "modules", label: "모듈", icon: "module", group: "more", section: "manage",
+    id: "modules", addon: "manage", label: "모듈", icon: "module", group: "more", section: "manage",
     desc: "모듈을 켜고 끄고, 순서를 정하고, 로어북·정규식을 고쳐요.",
     card: "모듈을 켜고 끄고 순서를 정해요. 로어북·정규식도 여기서 고쳐요.",
     help: ["줄 어디를 잡아도 끌어서 순서를 바꿀 수 있어요.", "오른쪽 스위치로 모듈을 켜고 꺼요. 켜짐·꺼짐 글자로도 보여요.", "줄을 누르면 자세한 내용과 편집 버튼이 나와요.", "검색창에 모듈 이름이나 로어북 키워드를 넣어 찾아요."]
   },
   {
-    id: "plugins", label: "플러그인", icon: "plugin", group: "more", section: "manage",
+    id: "plugins", addon: "manage", label: "플러그인", icon: "plugin", group: "more", section: "manage",
     desc: "설치된 플러그인을 모아 보고 새 버전이 있는지 확인해요.",
     card: "플러그인을 모아 보고 업데이트를 확인해요.",
     help: ["플러그인마다 카테고리를 붙여 정리할 수 있어요.", "‘플러그인 만들기’에서 템플릿으로 내 플러그인을 시작해요.", "DA Interop으로 다른 플러그인과 설정을 주고받아요."]

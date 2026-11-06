@@ -11,13 +11,11 @@ import { btn, iconBtn, moreNav, openMenu, toast, emptyState, confirmDialog } fro
 import { CSS2, FONT_LINK } from './styles.js';
 import { normalizeTheme, resolveMode, themeVars } from './theme.js';
 import { createPrefs } from './prefs.js';
-import { renderModules } from './screens/modules.js';
 import { renderSettings } from './screens/settings.js';
 import { renderTools } from './screens/tools.js';
 import { renderProvider } from './screens/provider.js';
 import { renderPlaceholder } from './screens/placeholder.js';
 import { renderPresets } from './screens/presets.js';
-import { renderCharacters } from './screens/characters.js';
 import { renderHistory } from './screens/history.js';
 import { onNotice } from '../data/modules.js';
 import { fadeUp, h, motion, replace } from './dom.js';
@@ -27,7 +25,6 @@ import { openEditor } from './screens/editor.js';
 import { createAssetLoader } from './assets.js';
 import { openAssets } from './screens/assetmgr.js';
 import { renderDev } from './screens/dev.js';
-import { renderPlugins } from './screens/plugins.js';
 import { renderSettingsTab } from './screens/settingstab.js';
 import { renderCocoaTab } from './screens/cocoa.js';
 import { checkWorkshopReturn } from './screens/workshoplink.js';
@@ -48,7 +45,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const prefs = createPrefs(api);
   const svc = createService(api, prefs);
   const assets = createAssetLoader(api);
-  const state = { tab: "modules", search: "", risuScheme: "dark", mode: "dark", sub: null, opened: false, layout: "left", lastMore: "characters" };
+  const state = { tab: "home", search: "", risuScheme: "dark", mode: "dark", sub: null, opened: false, layout: "left", lastMore: "tools" };
   const root = h("div", { class: "rb-root", hidden: true });
   installTooltips(root);
   const win = h("div", { class: "rb-win", role: "dialog", "aria-modal": "true", "aria-label": "Dusk Atelier" });
@@ -380,6 +377,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       if (a) a.hidden = !on;
     }
     for (const t of TABS) for (const links of [navLinks, topLinks]) { const a = links.get(t.id); if (a && (t.exp || t.hideWhenExp || t.addon)) a.hidden = tabHidden(t, prefs.ui); }
+    // 모바일 아래 탭바: 보일 탭이 하나도 없는 묶음(예: 관리 애드온·ProtLink+가 다 없을 때 '관리')은 숨긴다
+    for (const section of SECTION_IDS) { const b = barLinks.get(`section:${section}`); if (b) b.hidden = !TABS.some((t) => t.section === section && !t.mobileOnly && !tabHidden(t, prefs.ui) && (!t.dev || prefs.ui?.devMode)); }
     if (state.tab === "provider" && !prefs.ui?.experimental) go("tools");
     win.classList.toggle("rb-has-dev", on);
     if (!on && state.tab === "dev") go("tools");
@@ -448,7 +447,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins,  characters: renderCharacters,  cocoa: renderCocoaTab, look: renderSettings, provider: renderProvider,  presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? ctx.ext.get("tab", state.tab) ?? renderPlaceholder;   // 애드온 탭(AI로 페르소나 만들기 등)
+    const screen = { home: renderHome, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome,      cocoa: renderCocoaTab, look: renderSettings, provider: renderProvider,  presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? ctx.ext.get("tab", state.tab) ?? renderPlaceholder;   // 애드온 탭(AI로 페르소나 만들기 등)
     // 장기기억을 쓰는 화면은 기억 시작이 끝난 뒤 그린다(새로고침 직후 먹통 방지). 최대 20초, 넘으면 그냥 그린다.
     const needsMem = ["memory-home"].includes(state.tab) || ctx.ext.get("needsMemory", state.tab);
     const waitMem = needsMem && ctx.memory?.isReady && !ctx.memory.isReady()

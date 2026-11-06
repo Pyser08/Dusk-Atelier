@@ -13,6 +13,17 @@
       "size": 667
     },
     {
+      "id": "manage",
+      "name": "캐릭터·모듈·플러그인 관리",
+      "version": "0.1.0",
+      "minCore": "1.9.2",
+      "hooks": false,
+      "desc": "캐릭터를 폴더로 정리하고 에셋·로어북을 다듬고, 모듈을 켜고 끄고 연결하고, 플러그인 새 버전을 확인해요. 가져오기는 이 애드온 없이도 돼요.",
+      "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/manage.js",
+      "sha256": "55058617a791d172343ec994a79d67b9f6e14308a2f46393571de70d0c996f56",
+      "size": 74279
+    },
+    {
       "id": "chattheme",
       "name": "채팅 테마 만들기",
       "version": "0.1.0",
@@ -42,8 +53,8 @@
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "4d853e3ac14e75200c257e426977e1d01c55ea326a429497ef7ce6cd7cebd6bf",
-      "size": 1532499
+      "sha256": "6fac67620eed2aab258fb34aca0d536f2226b6dc83649f66880da595cf2bee37",
+      "size": 1532514
     },
     {
       "id": "cards",

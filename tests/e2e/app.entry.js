@@ -3,6 +3,7 @@ globalThis.__duskLib = ADDON_LIB;   // 배포용 애드온 파일(addons/dist) �
 import { activate as chatthemeAddon } from "../../addons/chattheme/index.js";
 import { activate as aibuildAddon } from "../../addons/aibuild/index.js";
 import { activate as widgetsAddon } from "../../addons/widgets/index.js";
+import { activate as manageAddon } from "../../addons/manage/index.js";
 import { activate as memoryAddon } from "../../addons/memory/index.js";
 import { activate as cardsAddon } from "../../addons/cards/index.js";
 import { activate as protlinkAddon } from "../../addons/protlink/index.js";
@@ -10,7 +11,7 @@ import { renderProtLink as _rp } from "../../src/ui/screens/protlink.js";
 import { renderMemory as _rm } from "../../src/ui/screens/memory/index.js";
 import { renderRelMap as _rr } from "../../src/ui/screens/relmap.js";
 import { renderCardsTab as _rc } from "../../src/ui/screens/cards/index.js";
-const FEATURE_ADDONS = [chatthemeAddon, aibuildAddon, widgetsAddon];
+const FEATURE_ADDONS = [manageAddon, chatthemeAddon, aibuildAddon, widgetsAddon];
 import { createAddons } from "../../src/data/addons.js";
 import { createSkillStore } from "../../src/data/skillstore.js";
 import { normalizeSkillSet } from "../../src/engine/skills.js";

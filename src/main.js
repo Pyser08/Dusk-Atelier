@@ -261,6 +261,8 @@ async function start() {
   const rawOf = async (k) => { try { const v = await api.pluginStorage.getItem(k); return v == null || v === "" ? null : v; } catch { return null; } };
   const on = (v) => v === true || v === "on" || v === "true";
   const ADOPT = [
+    // 관리(캐릭터·모듈·플러그인): 예전 버전을 쓰던 사람이면(화면 설정이 있으면) 받는다
+    ["manage", async () => !!(await rawOf("rbm:ui:v1"))],
     ["memory", async () => !!((await rawOf("dusk.mem.v3.index")) || (await rawOf("dusk.mem.v2.index")) || (await rawOf("risupot.settings")))],
     ["cards", async () => { const v = await rawOf("dusk.mem.v2.cardidx"); try { return (typeof v === "string" ? JSON.parse(v) : v)?.list?.length > 0; } catch { return false; } }],
     ["erosync", async () => on(await rawOf("dusk.erosync.on"))],

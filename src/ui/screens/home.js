@@ -13,6 +13,8 @@ import { memoryGlobalOn } from '../../engine/memoryswitch.js';
 import { injectReasonText } from '../../engine/memoryinject.js';
 import { mem } from './memory/common.js';
 import { discoverCard } from '../discovercard.js';
+import { TABS, tabHidden } from '../tabs.js';
+const sectionLive = (ctx, section) => TABS.some((t) => t.section === section && !t.mobileOnly && !tabHidden(t, ctx.prefs.ui));
 import { createBotAndEdit } from './newbot.js';
 import { quickSettingsCard } from '../quickset.js';
 import { loadStoryTimeOn } from '../../data/storytime.js';
@@ -45,7 +47,7 @@ export async function renderHome(ctx) {
     h("div", { class: "rb-hgrid" },
       tile("upload", "가져오기", "봇·모듈·파일 가져오기", () => ctx.legacy.open(), "rb-home-import"),
       tile("brain", "기억", "장기 기억·기억 카드·코코아", () => ctx.go("memory-home"), "rb-home-memory"),
-      tile("module", "관리", "캐릭터·모듈·플러그인", () => ctx.go("manage-home"), "rb-home-manage"),
+      sectionLive(ctx, "manage") ? tile("module", "관리", "캐릭터·모듈·플러그인", () => ctx.go("manage-home"), "rb-home-manage") : null,   // 관리 애드온·ProtLink+가 다 없으면 숨김
       tile("tools", "작업실", "프로바이더·AI 봇 제작·도구", () => ctx.go("work-home"), "rb-home-work")
     )
   );

@@ -114,7 +114,7 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
     const sec = (title, ...kids) => h("section", { class: "rb-card bordered rb-scard rb-onb-sec" }, title ? h("span", { class: "h" }, title) : null, ...kids);
 
     // ── 1단계: 기능(애드온) 고르기. 켜면 바로 받아서 켠다(필요한 애드온도 같이), 끄면 꺼 두기만 한다(지우지 않음). ──
-    const ADDON_TIPS = { memory: "추천", cards: "장기기억 필요", erosync: "장기기억 필요 · 성인용" };
+    const ADDON_TIPS = { memory: "추천", manage: "추천", cards: "장기기억 필요", erosync: "장기기억 필요 · 성인용" };
     async function addonState() {
       const A = ctx.addons; if (!A) return null;
       const [list, idx] = await Promise.all([A.loadManifest().catch(() => null), A.getIndex().catch(() => ({}))]);

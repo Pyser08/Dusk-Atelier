@@ -2,6 +2,8 @@
 // 한 번에 하나만, 조건이 맞은 것 중 앞의 것부터. 해 봤거나(seen) '그만'(off) 하면 다시 안 권하고, '나중에'는 하루 쉰다.
 // 상태 s: { opens, records, wikiDocs, hasChat, addons:Set, visited:Set(탭·페이지), advanced, potOn, erosyncOn }
 export const DISCOVER = [
+  { id: "manage", icon: "character", title: "캐릭터·모듈 정리하기", text: "캐릭터를 폴더로 묶고, 모듈을 켜고 끄고 연결하는 관리 화면이에요. 봇이 많아지면 편해요.",
+    when: (s) => s.opens >= 2, needs: "manage", go: { tab: "characters" }, done: (s) => s.visited.has("characters") || s.visited.has("modules") },
   { id: "memory-on", icon: "brain", title: "장기 기억 켜 보기", text: "켜 두기만 하면 인물마다 있었던 일을 기억해서 다음 응답에 넣어 줘요. 처음엔 이것 하나면 충분해요.",
     when: (s) => s.addons.has("memory") && !s.memoryOn, go: { tab: "memory" } },
   { id: "wiki", icon: "character", title: "인물 위키 열어 보기", text: "대화에서 쌓인 인물의 성격·관계·최근 일을 정리해 둔 곳이에요. 직접 고칠 수도 있어요.",

@@ -3,6 +3,7 @@
 import { h, replace } from './dom.js';
 import { icon } from './icons.js';
 import { btn } from './kit.js';
+import { TABS } from './tabs.js';
 
 export var TOUR = [
   { icon: "home", title: "환영해요!", text: "Dusk Atelier는 봇과 모듈을 가져오고, 정리하고, 이어 쓰게 도와줘요. 버튼을 하나씩 짚어 드릴게요." },
@@ -18,6 +19,10 @@ export var TOUR = [
   { icon: "help", title: "막히면 ? 버튼", text: "화면 위쪽의 ? 버튼을 누르면 지금 화면을 이렇게 하나씩 짚어 드려요. 이제 시작해 볼까요?", target: ["#rb-help-btn"] }
 ];
 
+// 애드온 탭(tabs.js addon:)인데 그 애드온이 없으면 둘러보기에서 뺀다(2.0.0)
+export function visibleTour(ctx, steps = TOUR) {
+  return steps.filter((s) => { if (!s.tab) return true; const t = TABS.find((x) => x.id === s.tab); return !t?.addon || !!ctx?.ext?.get?.("svc", t.addon); });
+}
 var shown = (el) => !!el && el.getClientRects().length > 0 && el.getBoundingClientRect().width > 0;
 
 // 이 단계에서 강조할 버튼 찾기: 지금 보이는 메뉴(왼쪽·위쪽·아래 탭) → 홈 카드 → 더보기 순
@@ -110,7 +115,7 @@ export async function runTour(ctx, steps, opts = {}) {
 }
 
 export async function openTour(ctx) {
-  await runTour(ctx, TOUR, { label: "처음 둘러보기" });
+  await runTour(ctx, visibleTour(ctx), { label: "처음 둘러보기" });
   // 끝까지 봤든 건너뛰었든 한 번 보여 줬으면 다시 자동으로 띄우지 않는다.
   ctx.prefs.saveUi({ tourDone: true, tourVer: TOUR_VER }).catch(() => {});
 }
