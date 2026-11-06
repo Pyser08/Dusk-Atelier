@@ -83,16 +83,25 @@ export function createMemoryStoreV3(api, { storage } = {}) {
       return r;
     }),
     // 예전 키(chat.id)로 쌓인 기억을 지금 범위 키 폴더로 옮긴다(engine/chatkey.js). 비어 있는 칸만 채우고 원래 폴더는 둔다.
+    // 예전 키(chat.id)로 쌓인 기억을 지금 범위 키 폴더로 옮긴다(engine/chatkey.js). 모든 칸을 보고, 비어 있는 칸·없는 항목만 채운다.
+    // 위키는 지금 폴더에 이미 있으면(런타임이 쓴 것) 그대로 둔다. 원래 폴더는 지우지 않는다. 한 번 옮기면 adoptedFrom으로 다시 안 함.
     adoptFolder: (chaId, fromChatId, toChatId) => serial(async () => {
       if (!fromChatId || String(fromChatId) === String(toChatId)) return false;
+      const existing = await readFolder(chaId, toChatId);
+      if (existing?.adoptedFrom === String(fromChatId)) return false;
       const old = await readFolder(chaId, fromChatId); if (!old) return false;
       const idx = await readIndex();
-      const cur = (await readFolder(chaId, toChatId)) ?? blank(chaId, toChatId, { botName: old.botName, chatName: old.chatName });
-      if (cur.adoptedFrom === String(fromChatId)) return false;
+      const cur = existing ?? blank(chaId, toChatId, { botName: old.botName, chatName: old.chatName });
+      const empty = (v) => v == null || v === "" || (Array.isArray(v) ? !v.length : typeof v === "object" && !Object.keys(v).length);
+      const plain = (v) => v && typeof v === "object" && !Array.isArray(v);
       let moved = false;
-      for (const [k, p] of Object.entries(old.people ?? {})) if (!cur.people[k]) { cur.people[k] = p; moved = true; }
-      if (!(cur.scenes?.length) && old.scenes?.length) { cur.scenes = old.scenes; cur.cursor ??= old.cursor; moved = true; }
-      if (!cur.wiki && old.wiki) { cur.wiki = old.wiki; moved = true; }
+      for (const [k, ov] of Object.entries(old)) {
+        if (["v", "chaId", "chatId", "adoptedFrom"].includes(k) || empty(ov)) continue;
+        const cv = cur[k];
+        if (empty(cv)) { cur[k] = ov; moved = true; continue; }
+        if (k === "wiki") continue;
+        if (plain(cv) && plain(ov)) for (const [sk, sv] of Object.entries(ov)) if (!(sk in cv)) { cv[sk] = sv; moved = true; }
+      }
       cur.adoptedFrom = String(fromChatId);
       await writeFolder(idx, cur);
       return moved;

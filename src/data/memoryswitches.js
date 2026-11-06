@@ -2,7 +2,7 @@
 // 화면은 지금 열린 채팅을 기본으로 쓴다(currentChat). 다른 봇은 chaId를 직접 넘기면 된다.
 import { cacheGen } from "./dbcache.js";
 import { comboOf, memoryState, potCharOn, potState, scopeKeyOf, setMemoryForBot, setMemoryGlobal, setPotChar, setPotForBot, setPotGlobal } from "../engine/memoryswitch.js";
-import { chatKeyOf } from "../engine/chatkey.js";
+import { chatKeyOf, legacyChatKeyOf } from "../engine/chatkey.js";
 
 // 지금 리스에서 열린 봇·채팅. 열린 채팅이 없으면 null.
 export async function currentChat(api) {
@@ -12,7 +12,9 @@ export async function currentChat(api) {
     const c = await api.getCharacterFromIndex(ci);
     if (!c?.chaId) return null;
     const chat = c.chats?.[ti];
-    return { ci, ti, chaId: String(c.chaId), botName: c.name ?? "", chatId: chatKeyOf(chat, ti), chatName: chat?.name ?? "" };
+    const out = { ci, ti, chaId: String(c.chaId), botName: c.name ?? "", chatId: chatKeyOf(chat, ti), chatName: chat?.name ?? "" };
+    Object.defineProperty(out, "legacyId", { value: legacyChatKeyOf(chat, ti), enumerable: false });   // 예전 키(옮기기용, 비교·저장에는 안 나옴)
+    return out;
   } catch {
     return null;
   }
@@ -30,6 +32,8 @@ export function createSwitches({ api, store, flow = null, now = () => Date.now()
     const pos = `${ci}:${ti}`, g = cacheGen();
     if (!fresh && curByPos && curByPos.pos === pos && curByPos.g === g && now() - curByPos.t < CUR_TTL) return curByPos.v;
     const v = await currentChat({ getCurrentCharacterIndex: async () => ci, getCurrentChatIndex: async () => ti, getCharacterFromIndex: (i) => api.getCharacterFromIndex(i) });
+    // 예전 키(chat.id) 폴더에 쌓인 기억을 지금 범위 키 폴더로 옮긴다(한 번만). 화면이 빈 폴더를 보던 문제(2.0.0)
+    if (v && v.legacyId && v.legacyId !== v.chatId) { try { await store.adoptFolder?.(v.chaId, v.legacyId, v.chatId); } catch { /* 옮기기 실패는 막지 않음 */ } }
     curByPos = v ? { pos, g, t: now(), v } : null;
     return v;
   }
