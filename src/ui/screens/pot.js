@@ -64,7 +64,7 @@ async function draw(ctx, host, redraw, { bare = false } = {}) {
   const main = h("div", { class: "rb-mem2-main" },
     pageHead("리수폿", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"} · 기억과 별도로 켜고 꺼요`, sw: { on: pot.on, text: pot.on ? "켜짐" : "꺼짐", label: "리수폿 켜기", onChange: (v) => setOn(v) } }),
     status, actions, perChar);
-  if (bare) return { nodes: [status, actions, perChar], env, cur, idx, pot, setOn };
+  if (bare) return { nodes: [actions, perChar], status, env, cur, idx, pot, setOn };   // 장기 기억 → 리수폿 화면: 상태는 위 큰 카드로
   const adv = advFold(ctx, "pot", ...(ctx.prefs.advanced ? advancedPot(ctx, env, cur, idx, redraw) : [true]));
   replace(host, h("div", { class: ["rb-mem2-grid", ctx.prefs.advanced && "has-adv"] }, main, adv ? h("div", { class: "rb-mem2-side" }, adv) : null));
 }

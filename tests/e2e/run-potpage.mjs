@@ -16,7 +16,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.locator("#rb-mem-go-pot").click(); await page.waitForTimeout(900);
   ok(`[${tag}] 리수폿 화면·탭 4개`, (await page.locator("#rb-mem-pot").count()) === 1 && (await page.locator("#rb-mem-pot .rb-seg button").count()) === 4);
   ok(`[${tag}] 개요 탭: 상태·동작·캐릭터별 사용`, /위키 보기/.test(await page.locator(".rb-pot-pane").textContent()) && /캐릭터별 사용/.test(await page.locator(".rb-pot-pane").textContent()), (await page.locator(".rb-pot-pane").textContent()).slice(0, 120));
-  ok(`[${tag}] 스위치 글자는 켜기·끄기만(‘이 채팅에서’ 없음)`, !/이 채팅에서 사용/.test(await page.locator("#rb-mem-pot .rb-phead").textContent()), await page.locator("#rb-mem-pot .rb-phead").textContent());
+  ok(`[${tag}] Erosync처럼: 큰 카드(상태·켜기·설명) → 탭 순서`, await page.evaluate(() => { const hero = document.querySelector("#rb-pot-hero"), tabs = document.querySelector("#rb-pot-tabs"); return !!hero && !!tabs && !!hero.querySelector(".rb-status, [class*=status]") && !!hero.querySelector("[role=switch]") && !!(hero.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING); }));
+  ok(`[${tag}] 개요에 ‘어디서 봐요?’ 안내`, (await page.locator("#rb-pot-guide").count()) === 1);
+  ok(`[${tag}] ‘이 채팅에서 사용’ 문구 없음`, !/이 채팅에서 사용/.test(await page.locator("#rb-mem-pot").textContent()));
   const tab = async (n) => { await page.locator("#rb-mem-pot .rb-seg button", { hasText: n }).click(); await page.waitForTimeout(900); };
   await tab("설정");
   ok(`[${tag}] 설정 탭: 추적 수준·AI 모델`, /무엇을 기억할까요/.test(await page.locator(".rb-pot-pane").textContent()), (await page.locator(".rb-pot-pane").textContent()).slice(0, 120));
@@ -29,10 +31,10 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   // 열린 채팅이 없을 때도 리수폿 화면이 열려야 한다(예전: "a.nodes is not iterable")
   await page.evaluate(() => { window.__api.getCurrentChatIndex = async () => -1; window.__api.getCurrentCharacterIndex = async () => -1; const m = __app.ctx.state.mem; m.page = "pot"; m.potTab = "home"; __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);
-  ok(`[${tag}] 열린 채팅 없음: 리수폿 화면이 안내와 함께 열림`, (await page.locator("#rb-mem-pot").count()) === 1 && /열린 채팅이 없어요/.test(await page.locator("#rb-mem-pot").textContent()), await page.locator(".rb-main").textContent());
-  ok(`[${tag}] 열린 채팅 없음: 전체 켜기 스위치`, (await page.locator("#rb-mem-pot .rb-phead [role=switch]").count()) === 1);
+  ok(`[${tag}] 열린 채팅 없음: 리수폿 화면이 큰 카드와 함께 열림`, (await page.locator("#rb-pot-hero").count()) === 1 && /열린 채팅이 없어요/.test(await page.locator("#rb-mem-pot").textContent()), await page.locator(".rb-main").textContent());
+  ok(`[${tag}] 열린 채팅 없음: 전체 켜기 스위치`, (await page.locator("#rb-pot-hero [role=switch]").count()) === 1);
   const before = await page.evaluate(() => __app.ctx.memory.switches.potAllOn());
-  await page.locator("#rb-mem-pot .rb-phead [role=switch]").click(); await page.waitForTimeout(700);
+  await page.locator("#rb-pot-hero [role=switch]").click(); await page.waitForTimeout(700);
   ok(`[${tag}] 열린 채팅 없음: 스위치로 전체 켜고 끄기`, (await page.evaluate(() => __app.ctx.memory.switches.potAllOn())) === !before);
   await page.locator("#rb-mem-pot .rb-seg button", { hasText: "설정" }).click(); await page.waitForTimeout(1200);
   ok(`[${tag}] 열린 채팅 없음: 설정 탭`, /무엇을 기억할까요/.test(await page.locator(".rb-pot-pane").textContent()), (await page.locator(".rb-pot-pane").textContent()).slice(0, 100));
