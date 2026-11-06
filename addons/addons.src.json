@@ -1,4 +1,6 @@
 { "format": 1, "addons": [
   { "id": "hello", "name": "애드온 시험", "version": "0.1.2", "minCore": "1.9.2", "hooks": false, "desc": "로더가 제대로 도는지 확인하는 시험용 애드온이에요." },
-  { "id": "chattheme", "name": "채팅 테마 만들기", "version": "1.0.0", "minCore": "1.9.2", "hooks": false, "desc": "채팅 테마 빌더·테마 스튜디오로 내 채팅 테마를 만들고 주고받아요. 만든 테마는 이 애드온이 없어도 계속 적용돼요." }
+  { "id": "chattheme", "name": "채팅 테마 만들기", "version": "1.0.0", "minCore": "1.9.2", "hooks": false, "desc": "채팅 테마 빌더·테마 스튜디오로 내 채팅 테마를 만들고 주고받아요. 만든 테마는 이 애드온이 없어도 계속 적용돼요." },
+  { "id": "aibuild", "name": "AI로 봇·페르소나 만들기", "version": "1.0.0", "minCore": "1.9.2", "hooks": false, "desc": "말로 요청해 봇·모듈을 만들고 고치는 AI 창·AI로 제작 탭, AI로 페르소나 만들기를 써요." },
+  { "id": "widgets", "name": "위젯", "version": "1.0.0", "minCore": "1.9.2", "hooks": false, "desc": "음악·사진·시계·최근 대화·메모·D-day·타이머 등을 한 화면에 모은 위젯 홈을 써요." }
 ] }

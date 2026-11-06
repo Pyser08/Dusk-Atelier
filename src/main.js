@@ -27,7 +27,6 @@ import { createAffHud } from './data/affhud.js';
 import POT_PROMPTS from './data/pot/prompts.json';
 import './data/modelhub.js';
 import { createProvider } from './data/provider/index.js';
-import { createWidgetHome } from './data/widgethome.js';
 import { createErosync } from './data/erosync.js';
 import { createProtLink } from './data/protlink.js';
 import { createUpdateToast } from './data/updatetoast.js';
@@ -255,15 +254,14 @@ async function start() {
       // 리스 화면(플러그인 밖) 알림. 권한이 없거나 못 띄우면 플러그인 안 알림으로 대신한다.
       if (!(await updateToast.show(msg).catch(() => false))) app?.ctx?.toast?.(`ProtLink+: ${msg}`);
     } } });
-  const widgetHome = createWidgetHome(api, { log: (m) => console.log(`[${TITLE}] ${m}`), openDusk: (tab) => app.open(tab && tab !== "home" ? { tab } : undefined).catch(() => {}),
-    protLink: { links: () => protlink.list(), open: () => app.open({ tab: "protlink" }).then(() => true).catch(() => false), on: () => protlink.on(), error: () => protlink.lastError() } });
   app.ctx.protlink = protlink;
-  app.ctx.widgetHome = widgetHome;
-  app.ctx.openWidgetHome = async () => { try { await app.close(); } catch { /* 이미 닫힘 */ } return widgetHome.open(); };
+  // 위젯 홈은 애드온(addons/widgets). 코어는 켜져 있을 때만 그 기능을 부른다.
+  const wh = () => app.ctx.ext.get("svc", "widgethome") ?? null;
+  Object.defineProperty(app.ctx, "widgetHome", { configurable: true, get: wh });
+  app.ctx.openWidgetHome = async () => { const w = wh(); if (!w) return false; try { await app.close(); } catch { /* 이미 닫힘 */ } return w.open(); };
   const duskOpen = app.open;
-  app.open = async (o) => { await widgetHome.yieldToDusk().catch(() => {}); return duskOpen(o); };
-  app.ctx.onClosed = () => widgetHome.resume();   // Dusk 창을 닫으면 떠 있던 위젯 홈을 다시 띄운다
-  widgetHome.boot().catch((e) => console.log(`[${TITLE}] 위젯 홈 시작 실패 ${e?.message ?? e}`));
+  app.open = async (o) => { await wh()?.yieldToDusk?.().catch(() => {}); return duskOpen(o); };
+  app.ctx.onClosed = () => wh()?.resume?.();   // Dusk 창을 닫으면 떠 있던 위젯 홈을 다시 띄운다
   // Erosync(v1.9.2): 기본 꺼짐. 켜져 있으면 시작(본체는 켤 때만 불러옴). 기억 설정에서 켜고 끈다.
   const erosync = createErosync(api, { log: (m) => console.log(`[${TITLE}] ${m}`),
     // Dusk ‘월경·임신 기록’(성인 항목) 켜짐 여부 → 켜져 있으면 Erosync의 주기는 쉰다
@@ -288,7 +286,7 @@ async function start() {
   erosync.boot().catch((e) => console.log(`[${TITLE}] Erosync 시작 실패 ${e?.message ?? e}`));
   // 애드온(2.0.0): 받아 둔 애드온을 같은 창에서 불러온다. 리스 플러그인 목록에는 안 뜬다.
   globalThis.__duskLib = ADDON_LIB; globalThis.__duskVersion = VERSION;   // 애드온이 코어 모듈을 다시 넣지 않고 함께 쓴다(tools/build-addons.mjs)
-  const addons = createAddons(api, { core: VERSION, ctx: { ext: app.ctx.ext, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async (tab) => { await app.open(tab ? { tab } : undefined).catch(() => {}); } } });   // 반환값 없음: 애드온 콜백이 그대로 돌려주면 호스트로 복제가 안 돼요
+  const addons = createAddons(api, { core: VERSION, ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async (tab) => { await app.open(tab ? { tab } : undefined).catch(() => {}); } } });   // 반환값 없음: 애드온 콜백이 그대로 돌려주면 호스트로 복제가 안 돼요
   app.ctx.addons = addons;
   addons.boot().catch((e) => console.log(`[${TITLE}] 애드온 시작 실패 ${e?.message ?? e}`));
   app.ctx.cellar = memory.cellar;   // 한 곳에서 찾은 Cellar 연결을 화면들이 함께 쓴다

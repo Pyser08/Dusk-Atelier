@@ -255,7 +255,7 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
             h("div", { class: "rb-onb-feats" },
               h("div", null, icon("brain", 20), h("span", null, h("b", null, "장기 기억"), h("small", null, "인물마다 있었던 일·관계를 기억해요"))),
               h("div", null, icon("module", 20), h("span", null, h("b", null, "봇·모듈 정리"), h("small", null, "폴더·연결·가져오기를 한곳에서"))),
-              h("div", null, icon("sparkle", 20), h("span", null, h("b", null, "AI로 만들기"), h("small", null, "봇·페르소나를 말로 만들어요")))),
+              ctx.ext?.get("svc", "aibuild") ? h("div", null, icon("sparkle", 20), h("span", null, h("b", null, "AI로 만들기"), h("small", null, "봇·페르소나를 말로 만들어요"))) : null),   // AI 제작 애드온이 있을 때만
             btn("설정하고 시작하기", { kind: "primary", id: "rb-onb-start", onClick: () => go(1) }))));
       }
       const [kicker, title, sub] = TITLES[i];

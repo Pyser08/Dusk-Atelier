@@ -1,7 +1,9 @@
 import { LIB as ADDON_LIB } from "../../src/addonlib.gen.js";
 globalThis.__duskLib = ADDON_LIB;   // 배포용 애드온 파일(addons/dist) 시험용
 import { activate as chatthemeAddon } from "../../addons/chattheme/index.js";
-const FEATURE_ADDONS = [chatthemeAddon];
+import { activate as aibuildAddon } from "../../addons/aibuild/index.js";
+import { activate as widgetsAddon } from "../../addons/widgets/index.js";
+const FEATURE_ADDONS = [chatthemeAddon, aibuildAddon, widgetsAddon];
 import { createAddons } from "../../src/data/addons.js";
 import { createSkillStore } from "../../src/data/skillstore.js";
 import { normalizeSkillSet } from "../../src/engine/skills.js";
@@ -126,7 +128,7 @@ window.bootApp = async (seed, opts = {}) => {
     }
   }
   // 기능 애드온: 실제 사용자처럼 켜 둔 상태로 시험(소스를 바로 불러 같은 모듈 사용). coreOnly면 코어만.
-  if (!opts.coreOnly) for (const act of FEATURE_ADDONS) await act(api, { ext: app.ctx.ext, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async () => {} });
+  if (!opts.coreOnly) for (const act of FEATURE_ADDONS) await act(api, { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async () => {} });
   if (opts.addons) {  // 애드온 카드 시험: 파일은 실행기가 window.__addonFiles로 넣어 준다(주소 → 내용)
     app.ctx.addons = createAddons(api, { core: "2.0.0", ctx: { toast: (t, o) => app.ctx.toast?.(t, o) }, fetcher: async (_a, url) => (url.endsWith("addons.json") ? window.__addonFiles?.manifest : window.__addonFiles?.[url]) ?? null });
     await app.ctx.addons.boot();

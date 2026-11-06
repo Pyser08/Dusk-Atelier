@@ -70,5 +70,10 @@ test("실험 기능: 프로바이더는 켰을 때만 보이고, 꾸미기는 �
   const prov = TABS.find((t) => t.id === "provider"), look = TABS.find((t) => t.id === "look"), aibot = TABS.find((t) => t.id === "aibot");
   assert.equal(tabHidden(prov, {}), true); assert.equal(tabHidden(prov, { experimental: true }), false);
   assert.equal(tabHidden(look, {}), false); assert.equal(tabHidden(look, { experimental: true }), true);
+  // 2.0.0: AI로 봇 만들기는 애드온 탭 — 애드온이 없으면 숨김, 있으면 실험 기능과 상관없이 보임
+  const { setAddonCheck } = await import("../src/ui/tabs.js");
+  assert.equal(tabHidden(aibot, {}), true);
+  setAddonCheck((id) => id === "aibuild");
   assert.equal(tabHidden(aibot, {}), false); assert.equal(tabHidden(aibot, { experimental: true }), false);
+  setAddonCheck(() => false);
 });

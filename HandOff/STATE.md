@@ -8,6 +8,9 @@
   ② 채팅테마 분리 끝 — `addons/chattheme/index.js`(v1.0.0, minCore 1.9.2 — 지금 코어 버전이 1.9.2라 실기기 시험용, 2.0.0 출시 때 minCore 2.0.0으로, 84KB, 코어 모듈 7개 공유). 코어에서 tools.js 화면·줄, settings.js 꾸미기 버튼(slot look.mine)·스튜디오 칸(slot look.adv), tabs.js·tour.js 안내 글 제거. 시작 때 테마 적용(restoreActiveTheme)은 `data/themes.js`로 옮겨 코어에 남김.
   e2e `app.entry.js`는 기본으로 기능 애드온 소스를 켜고(`FEATURE_ADDONS`), `coreOnly`면 코어만. `run-addon-chattheme.mjs`(코어만/켬/배포 파일 14개).
   참고: `run-app.mjs`는 수정 전에도 실패(오래된 시험).
+  ③ AI 제작·위젯 분리 끝(11-06) — `addons/aibuild`(152KB: 편집기 AI는 svc "aibuild" = {load, aitab, openAiPopup, loadPopupGeom}, editor.js `hasAi = !!ctx.ext.get("svc","aibuild")`; 페르소나 빌더는 tab "personabuilder"; tabs.js `addon:` 표시 탭은 `setAddonCheck`로 svc가 있을 때만 보임; characters 버튼·onboarding 소개도 svc 기준. data/personabuilder.js·regextest·lorerefine·preset-format은 코어). `addons/widgets`(246KB: data/widgethome.js+src/widgethome 통째, svc "widgethome"·도구 row(when)·설정 slot "settings.cards"; 카드는 `addons/widgets/card.js`로 옮김(원래 devtools.js widgetHomeCard), 켜고 끄면 카드만 다시 그림). main.js는 `ctx.widgetHome` getter(svc)·openWidgetHome·app.open의 yieldToDusk·onClosed resume만 남김. 애드온 ctx에 `app`(앱 ctx) 추가. ext 변경이 tab·svc뿐이면 메뉴만 고침(refreshTabs). e2e `run-addon-aibuild.mjs`(13)·`run-addon-widgets.mjs`(9). 코어 번들 6,271KB.
+  다음: ④ 장기기억·관계도 → 기억카드·에로싱크(+ manifest requires), ⑤ 첫 실행 자동 받기.
+  할 일(11-06, 사용자 요청 '필요한 부분 말고는 다시 그리지 않게'): 화면이 자기 전체를 다시 그리는 곳을 바뀐 부분만 그리게 바꾸기 — characters.js(11곳)·presets.js(7)·plugins.js(7)·dev.js(7)·history.js(6)·lorelog.js(4)·settingstab.js(3)·tools/relmap/pot/people/memory/home/cocoa/cards(각 1), ctx.refresh: patchui·newbot(2)·characters(1). 지금은 스크롤 지킴이로 위치만 지켜짐. 기억 화면들은 애드온으로 옮길 때 같이.
   고침(11-06): 애드온 켜고 끌 때 전체 다시 그리기·스크롤 튐 → ext는 지금 화면이 읽은 자리만 다시 그림, 스크롤 지킴이는 클릭 대신 `ctx.go` 화면 이동(markNav)만 맨 위로. 규칙은 UI-STYLE.md 4-1.
 - 매 단계 끝: 애드온 없이 코어만으로 npm test·e2e 통과 + 애드온 켠 상태 e2e 통과 확인.
 

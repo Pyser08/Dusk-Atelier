@@ -37,12 +37,11 @@ import { checkWorkshopReturn } from './screens/workshoplink.js';
 import { renderCardsTab } from './screens/cards/index.js';
 import { scopeCtx } from './staleguard.js';
 import { renderHome } from './screens/home.js';
-import { renderPersonaBuilder } from './screens/personabuilder.js';
 import { installScrollGuard } from './scrollguard.js';
 import { createExt } from './ext.js';
 import { renderSectionHome } from './screens/sectionhome.js';
 import { createBotAndEdit } from './screens/newbot.js';
-import { BASE_IDS, SEARCH, SECTION_IDS, SECTION_NAMES, TABS, subLabel, tabHidden } from './tabs.js';
+import { BASE_IDS, SEARCH, SECTION_IDS, SECTION_NAMES, TABS, subLabel, tabHidden, setAddonCheck } from './tabs.js';
 
 export function createApp(api, { legacy, version, onPersonaChanged }) {
   const doc = document;
@@ -223,6 +222,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   }).observe(main, { childList: true });
   win.append(head, topnav, body, tabbar);
   installScrollGuard(win, main);   // 다시 그리기·불러오기 때 스크롤이 맨 위로 튀지 않게
+  setAddonCheck((id) => !!ctx.ext.get("svc", id));   // 애드온 탭은 그 애드온이 켜졌을 때만
   // ? 버튼: 팝업 대신 처음 둘러보기와 같은 하이라이트 방식으로 지금 화면을 짚어 준다(ui/screentours.js)
   function toggleHelp() { runScreenTour(ctx).catch(() => {}); }
   const sep = () => h("span", { class: "sep", "aria-hidden": "true" }, icon("chevron", 14));
@@ -323,7 +323,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   }
   function go(tab, sub = null) {
     if (tab !== state.tab || sub !== state.sub) win.__scrollGuard?.markNav();   // 화면 이동만 맨 위에서 시작(다시 그리기는 위치 유지)
-    if (tab === "aibot") { createBotAndEdit(ctx, { tab: "ai" }); return; }
+    if (tab === "aibot") { if (ctx.ext.get("svc", "aibuild")) createBotAndEdit(ctx, { tab: "ai" }); return; }
     if (tab === "tools" && sub === "personabuilder") { tab = "personabuilder"; sub = null; }
     // 기록은 설정 탭 안으로 옮겼다 (1.6.1, 그전엔 도구). 예전 go("history")·go("tools","history") 호출도 그대로 동작
     if (tab === "history" || tab === "tools" && sub === "history") {
@@ -383,7 +383,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       const a = links.get("dev");
       if (a) a.hidden = !on;
     }
-    for (const t of TABS) for (const links of [navLinks, topLinks]) { const a = links.get(t.id); if (a && (t.exp || t.hideWhenExp)) a.hidden = tabHidden(t, prefs.ui); }
+    for (const t of TABS) for (const links of [navLinks, topLinks]) { const a = links.get(t.id); if (a && (t.exp || t.hideWhenExp || t.addon)) a.hidden = tabHidden(t, prefs.ui); }
     if (state.tab === "provider" && !prefs.ui?.experimental) go("tools");
     win.classList.toggle("rb-has-dev", on);
     if (!on && state.tab === "dev") go("tools");
@@ -442,7 +442,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, personabuilder: renderPersonaBuilder, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, protlink: renderProtLink, characters: renderCharacters, memory: renderMemory, relmap: renderRelMap, cocoa: renderCocoaTab, look: renderSettings, provider: renderProvider, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? renderPlaceholder;
+    const screen = { home: renderHome, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, protlink: renderProtLink, characters: renderCharacters, memory: renderMemory, relmap: renderRelMap, cocoa: renderCocoaTab, look: renderSettings, provider: renderProvider, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? ctx.ext.get("tab", state.tab) ?? renderPlaceholder;   // 애드온 탭(AI로 페르소나 만들기 등)
     Promise.resolve(screen(scopeCtx(ctx, main, () => token !== renderToken))).then(() => {
       paneReady = true;
     }).catch((err) => {
@@ -534,7 +534,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     navLinks,
     go,
     refresh: () => render(),
-    ext: createExt(() => render()),   // 애드온이 끼어드는 자리(ui/ext.js)
+    ext: createExt((keys) => { if (keys.every((k) => k.startsWith("tab|") || k.startsWith("svc|"))) { refreshTabs(); if (MORE.has(state.tab)) render({ reuse: true }); } else render(); }),   // 애드온이 끼어드는 자리(ui/ext.js) — 탭만 바뀌면 메뉴만 고친다
     close: () => close(),
     reopen: () => open(),
     applyTheme,

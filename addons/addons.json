@@ -22,6 +22,28 @@
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/chattheme.js",
       "sha256": "87ce221ef6d0936efc2ece91b5ecbdb4fe3b3cb13b4b8bf78e3c342b696af9a5",
       "size": 85941
+    },
+    {
+      "id": "aibuild",
+      "name": "AI로 봇·페르소나 만들기",
+      "version": "1.0.0",
+      "minCore": "1.9.2",
+      "hooks": false,
+      "desc": "말로 요청해 봇·모듈을 만들고 고치는 AI 창·AI로 제작 탭, AI로 페르소나 만들기를 써요.",
+      "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/aibuild.js",
+      "sha256": "2e19a11ea2584008c7eb022814f85428fd271f933b3578d22d2ab439207ebf5d",
+      "size": 155194
+    },
+    {
+      "id": "widgets",
+      "name": "위젯",
+      "version": "1.0.0",
+      "minCore": "1.9.2",
+      "hooks": false,
+      "desc": "음악·사진·시계·최근 대화·메모·D-day·타이머 등을 한 화면에 모은 위젯 홈을 써요.",
+      "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/dist/widgets.js",
+      "sha256": "427698ffe80e6b9773a65d3fb48e963e7c179295f178ae857e616525b33d3f8d",
+      "size": 251992
     }
   ]
 }

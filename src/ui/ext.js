@@ -2,6 +2,8 @@
 // - screen  "탭/하위" → (ctx) => 화면 그리기      예: ext.add("screen", "tools/chattheme", renderChatTheme)
 // - row     "자리"    → { id, icon, title, desc, onClick(ctx), order? }  목록 한 줄(도구 탭 등)
 // - slot    "자리"    → (ctx) => Node | null       화면 안 정해진 자리에 끼울 부품
+// - tab     "탭 id"   → (ctx) => 탭 화면           tabs.js에 addon 표시가 있는 탭
+// - svc     "이름"    → 아무 값                    코어 화면이 쓰는 애드온 기능(예: 편집기의 AI)
 // add()는 되돌리기 함수를 돌려준다(애드온 끌 때 부름).
 // 바뀌면 onChange — 단, 지금 화면이 그 자리를 읽었을 때만(beginRender() 뒤에 읽힌 자리). 다른 화면(예: 설정에서 애드온 켜고 끄기)은 다시 그리지 않는다.
 export function createExt(onChange = () => {}) {
@@ -10,7 +12,7 @@ export function createExt(onChange = () => {}) {
   const changed = (k) => {
     dirty.add(k);
     if (queued) return; queued = true;
-    queueMicrotask(() => { queued = false; const hit = [...dirty].some((x) => read.has(x)); dirty = new Set(); if (hit) { try { onChange(); } catch { /* 화면 오류 무시 */ } } });
+    queueMicrotask(() => { queued = false; const hit = [...dirty].filter((x) => read.has(x)); dirty = new Set(); if (hit.length) { try { onChange(hit); } catch { /* 화면 오류 무시 */ } } });
   };
   const bucket = (kind, key, mark = true) => { const k = `${kind}|${key}`; if (mark) read.add(k); if (!reg.has(k)) reg.set(k, []); return reg.get(k); };
   return {

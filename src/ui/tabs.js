@@ -65,8 +65,8 @@ export var TABS = [
     card: "색·밝기·글자 크기를 골라요.",
     help: ["누르면 바로 바뀌고 자동으로 저장돼요.", "‘고급 모드’에서 메뉴 위치·밀도·확대율을 더 바꿔요."]
   },
-  { id: "aibot", label: "AI로 봇 만들기", icon: "sparkle", group: "more", section: "work", desc: "AI 제작 화면으로 새 봇을 만들어요.", card: "AI로 새 봇 만들기", help: ["새 봇을 만든 뒤 AI로 제작 화면을 열어요."] },
-  { id: "personabuilder", label: "AI로 페르소나 만들기", icon: "character", group: "more", section: "work", desc: "양식과 AI를 이용해 페르소나를 만들어요.", card: "AI로 페르소나 만들기", help: ["페르소나 양식을 고르고 AI로 전체 또는 일부 내용을 만들 수 있어요."] },
+  { id: "aibot", addon: "aibuild", label: "AI로 봇 만들기", icon: "sparkle", group: "more", section: "work", desc: "AI 제작 화면으로 새 봇을 만들어요.", card: "AI로 새 봇 만들기", help: ["새 봇을 만든 뒤 AI로 제작 화면을 열어요."] },
+  { id: "personabuilder", addon: "aibuild", label: "AI로 페르소나 만들기", icon: "character", group: "more", section: "work", desc: "양식과 AI를 이용해 페르소나를 만들어요.", card: "AI로 페르소나 만들기", help: ["페르소나 양식을 고르고 AI로 전체 또는 일부 내용을 만들 수 있어요."] },
   {
     id: "tools", label: "도구", icon: "tools", group: "more", section: "work",
     desc: "프리셋·로어북 로그·용량 측정 같은 도구 모음이에요.",
@@ -108,4 +108,7 @@ export var SEARCH = {
 // Build trigger: restore the requested v1.8.0 bundle version.
 
 // 실험 기능(설정 → 실험 기능)에 따라 숨기는 탭: exp는 켜야 보이고, hideWhenExp는 켜면 다른 곳(도구)으로 옮겨진다.
-export const tabHidden = (t, ui) => (!!t.exp && !ui?.experimental) || (!!t.hideWhenExp && !!ui?.experimental);
+// 애드온 탭(addon: "<서비스 이름>"): 그 애드온이 켜져 있을 때만 보인다. app.js가 setAddonCheck로 ctx.ext를 잇는다.
+let addonOn = () => false;
+export const setAddonCheck = (fn) => { addonOn = fn; };
+export const tabHidden = (t, ui) => (!!t.exp && !ui?.experimental) || (!!t.hideWhenExp && !!ui?.experimental) || (!!t.addon && !addonOn(t.addon));
