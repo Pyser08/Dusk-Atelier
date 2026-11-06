@@ -196,7 +196,9 @@ ${inputBlock}`,
     `<div class="st-btns"><risubuttons></risubuttons></div>`,
     `</div>`
   ].filter(Boolean).join("\n");
-  return { name: STEALTH_PREFIX + P.label, css, html };
+  // 최소 모드: 리스 전체 화면(html·body·:root·대화 화면·입력창)을 건드리는 규칙을 빼고 말풍선 꾸밈만 남긴다(스크롤·표시 문제를 가려낼 때)
+  const out = opts.minimal ? css.replace(/^(?:html, body|html|body|button, input, textarea, select|div:has\(> \.default-chat-screen\)|\.default-chat-screen|\.text-input-area[^{]*)\s*\{[^}]*\}\n?/gm, "").replace(/^div:has\(> \.text-input-area\) \{[\s\S]*?^\}\n?/m, "").replace(/^:root \{\n  --risu-theme[\s\S]*?^\}\n?/m, "") : css;
+  return { name: STEALTH_PREFIX + P.label, css: out, html };
 }
 
 /** 기존 테마 시스템 형식의 테마로(세 번째 인자 target은 리스 계열). */
@@ -221,7 +223,7 @@ export function normalizeStealthState(raw) {
   return {
     v: 1, active: PRESETS[raw.active] ? raw.active : null,
     scheme: ["auto", "light", "dark"].includes(raw.scheme) ? raw.scheme : "auto",
-    hideImages: raw.hideImages !== false, blurAvatars: raw.blurAvatars !== false, hideSidebar: !!raw.hideSidebar, labels
+    hideImages: raw.hideImages !== false, blurAvatars: raw.blurAvatars !== false, hideSidebar: !!raw.hideSidebar, minimal: !!raw.minimal, labels
   };
 }
-export var optsOf = (state, id) => ({ scheme: state.scheme, hideImages: state.hideImages, blurAvatars: state.blurAvatars, hideSidebar: state.hideSidebar, labels: state.labels?.[id] ?? {} });
+export var optsOf = (state, id) => ({ scheme: state.scheme, hideImages: state.hideImages, blurAvatars: state.blurAvatars, hideSidebar: state.hideSidebar, minimal: state.minimal, labels: state.labels?.[id] ?? {} });

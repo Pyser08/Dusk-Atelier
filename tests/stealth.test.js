@@ -223,3 +223,21 @@ test("이미지는 '명령어 N개 실행함' 한 줄로 접힌다(N은 1~9)", (
   assert.match(css, /:hover img/);
   assert.ok(!buildStealth("claude", { hideImages: false }).css.includes("실행함  ▸"));
 });
+
+test("호스트가 채팅 정보를 읽다 오류를 내도 사이드바는 그려진다", async () => {
+  const boom = async () => { throw new Error("Cannot read properties of undefined (reading 'chatPage')"); };
+  const api = shellApi({ getCurrentChatIndex: boom, getCharacterFromIndex: boom });
+  const sh = createShell(api, { kind: "claude", poll: 60000, log: () => {} });
+  await new Promise((r) => setTimeout(r, 60));
+  assert.ok(api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb"));
+  await sh.destroy();
+});
+
+test("최소 모드는 화면 전체 규칙을 뺀다", () => {
+  for (const id of ["claude", "claudecode", "gpt"]) {
+    const full = buildStealth(id, {}).css, min = buildStealth(id, { minimal: true }).css;
+    assert.match(full, /^body \{/m); assert.match(full, /text-input-area/);
+    assert.ok(!/^body \{|^html|\.text-input-area|--risu-theme|default-chat-screen/m.test(min), id);
+    assert.ok(min.includes(".st-body"), id);
+  }
+});

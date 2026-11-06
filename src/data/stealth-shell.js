@@ -111,7 +111,7 @@ export function topHtml(model) {
 }
 
 // ── 화면에 붙이기 ──
-export var shellInfo = { draws: 0, error: "" };   // 진단용: 마지막으로 그린 결과
+export var shellInfo = { draws: 0, error: "", warn: "" };   // 진단용: 마지막으로 그린 결과
 var ROOT = "stealth-sb", NOTE = "stealth-note", TOP = "stealth-top", POP = "stealth-pop", STY = "stealth-shell-css";
 
 /**
@@ -126,12 +126,13 @@ export function createShell(api, opts = {}) {
   const kind = opts.kind ?? "claude";
   async function ensureDoc() { if (doc) return doc; doc = await api.getRootDocument?.(); return doc; }
   // 봇 전체 읽기는 채팅이 많으면 무겁다 → 지금 봇·채팅 번호가 같으면 FRESH 동안 지난 결과를 그대로 쓴다. 번호는 가벼운 호출이라 자주 본다.
+  const safe = async (fn) => { try { return await fn(); } catch (e) { shellInfo.warn = String(e?.message ?? e); return undefined; } };   // 호스트가 채팅이 없을 때 던지는 오류는 목록만 비우고 넘어간다
   async function chatInfo(force = false) {
-    const ci = await api.getCurrentCharacterIndex?.(), ti = await api.getCurrentChatIndex?.();
+    const ci = await safe(() => api.getCurrentCharacterIndex?.()), ti = await safe(() => api.getCurrentChatIndex?.());
     if (!Number.isInteger(ci) || ci < 0) return { ci: -1, ti: -1, char: null, light: true };
     const idx = `${ci}:${ti}`, now = Date.now();
     if (!force && cache.char && cache.idx === idx && now - cache.at < FRESH) return { ci, ti, char: cache.char, light: true };
-    const char = await api.getCharacterFromIndex(ci);
+    const char = await safe(() => api.getCharacterFromIndex(ci));
     cache.idx = idx; cache.at = now; cache.char = char ? { name: char.name, chats: (char.chats ?? []).map((c) => ({ name: c?.name ?? c?.title ?? "", lastDate: c?.lastDate ?? c?.date ?? 0 })) } : null;
     return { ci, ti, char: cache.char, light: false };
   }
@@ -183,7 +184,7 @@ export function createShell(api, opts = {}) {
     } catch (e) { shellInfo.error = String(e?.message ?? e); log("스텔스 사이드바 그리기 실패", e?.message ?? e); }
   }
   async function switchChat(ci, idx) {
-    const char = await api.getCharacterFromIndex(ci);
+    const char = await safe(() => api.getCharacterFromIndex(ci));
     if (!char || !Array.isArray(char.chats) || !char.chats[idx]) return;
     char.chatPage = idx;
     await api.setCharacterToIndex(ci, char);

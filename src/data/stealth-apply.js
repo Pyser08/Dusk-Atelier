@@ -82,7 +82,7 @@ export async function runDiagnosis(api) {
   const counts = await probeSelectors(doc, DIAG_SELECTORS);
   const db = await api.getDatabase(["customCSS", "guiHTML", "theme"]).catch(() => ({}));
   const info = { theme: db?.theme ?? "", htmlLen: String(db?.guiHTML ?? "").length, cssLen: String(db?.customCSS ?? "").length, hasWrapper: /st-msg/.test(db?.guiHTML ?? ""), hasStealthCss: /Dusk Stealth/.test(db?.customCSS ?? "") };
-  info.shell = shellState() ? `켜짐(${shellState()}) · 그린 횟수 ${shellInfo.draws}${shellInfo.error ? " · 오류: " + shellInfo.error : ""}` : "꺼짐(켜진 클로드 계열 모양이 없거나 시작 전)";
+  info.shell = shellState() ? `켜짐(${shellState()}) · 그린 횟수 ${shellInfo.draws}${shellInfo.error ? " · 오류: " + shellInfo.error : ""}${shellInfo.warn ? " · 주의: " + shellInfo.warn : ""}` : "꺼짐(켜진 클로드 계열 모양이 없거나 시작 전)";
   const target = await detectTarget(doc, api).catch(() => null);
   return { counts, db: info, target: target ? (TARGETS[target]?.label ?? target) : null, lines: diagnose(counts, info) };
 }
