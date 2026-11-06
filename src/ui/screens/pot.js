@@ -62,7 +62,7 @@ async function draw(ctx, host, redraw, { bare = false } = {}) {
       : h("p", { class: "rb-muted" }, "아직 위키 인물이 없어요. 응답이 쌓이면 생겨요."));
 
   const main = h("div", { class: "rb-mem2-main" },
-    pageHead("리수폿", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"} · 기억과 별도로 켜고 꺼요`, sw: { on: pot.on, label: "모든 채팅에서 사용", onChange: (v) => setOn(v) } }),
+    pageHead("리수폿", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"} · 기억과 별도로 켜고 꺼요`, sw: { on: pot.on, text: pot.on ? "켜짐" : "꺼짐", label: "리수폿 켜기", onChange: (v) => setOn(v) } }),
     status, actions, perChar);
   if (bare) return { nodes: [status, actions, perChar], env, cur, idx, pot, setOn };
   const adv = advFold(ctx, "pot", ...(ctx.prefs.advanced ? advancedPot(ctx, env, cur, idx, redraw) : [true]));

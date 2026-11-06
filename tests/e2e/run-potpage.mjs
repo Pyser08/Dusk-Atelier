@@ -15,6 +15,8 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 장기 기억 홈에 리수폿 줄`, (await page.locator("#rb-mem-go-pot").count()) === 1);
   await page.locator("#rb-mem-go-pot").click(); await page.waitForTimeout(900);
   ok(`[${tag}] 리수폿 화면·탭 4개`, (await page.locator("#rb-mem-pot").count()) === 1 && (await page.locator("#rb-mem-pot .rb-seg button").count()) === 4);
+  ok(`[${tag}] 개요 탭: 상태·동작·캐릭터별 사용`, /위키 보기/.test(await page.locator(".rb-pot-pane").textContent()) && /캐릭터별 사용/.test(await page.locator(".rb-pot-pane").textContent()), (await page.locator(".rb-pot-pane").textContent()).slice(0, 120));
+  ok(`[${tag}] 스위치 글자는 켜기·끄기만(‘이 채팅에서’ 없음)`, !/이 채팅에서 사용/.test(await page.locator("#rb-mem-pot .rb-phead").textContent()), await page.locator("#rb-mem-pot .rb-phead").textContent());
   const tab = async (n) => { await page.locator("#rb-mem-pot .rb-seg button", { hasText: n }).click(); await page.waitForTimeout(900); };
   await tab("설정");
   ok(`[${tag}] 설정 탭: 추적 수준·AI 모델`, /무엇을 기억할까요/.test(await page.locator(".rb-pot-pane").textContent()), (await page.locator(".rb-pot-pane").textContent()).slice(0, 120));

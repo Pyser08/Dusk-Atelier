@@ -13,18 +13,21 @@ export async function renderMemoryPot(ctx, host, { redraw }) {
   const m = mem(ctx);
   const back = { label: "장기 기억으로", onClick: () => { m.page = "home"; redraw(); } };
   const tab = POT_TABS.some(([k]) => k === m.potTab) ? m.potTab : "home";
-  replace(host, loading("리수폿을 불러오는 중", { rows: 3 }));
-  const ov = await potOverview(ctx, redraw);
-  const { env, cur, idx } = ov, M = ctx.memory;
-  const sub = cur ? `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"} · 인물별 위키를 자동으로 쌓아요` : "인물별 위키를 자동으로 쌓아요 · 설정은 채팅을 안 열어도 바꿀 수 있어요";
-  // 전체 켜기·끄기는 채팅과 상관없이(모든 채팅 일괄)
+  const M = ctx.memory;
+  // 머리·탭을 먼저 그린다(개요를 못 그려도 설정·켜기는 쓸 수 있게). 스위치는 켜기·끄기만(모든 채팅 일괄).
   let allOn = true; try { allOn = await M.switches.potAllOn(); } catch { /* 켜짐으로 표시 */ }
-  const setAll = async (v) => { try { await M.switches.setPotAll(v); ctx.toast(v ? "모든 채팅에서 리수폿을 켰어요." : "모든 채팅에서 리수폿을 껐어요."); } catch (e) { fail(ctx)(e); } redraw(); };
-  const head = pageHead("리수폿", { sub, back, sw: { on: allOn, label: "모든 채팅에서 사용", onChange: (v) => setAll(v) } });
+  const setAll = async (v) => { try { await M.switches.setPotAll(v); ctx.toast(v ? "리수폿을 켰어요." : "리수폿을 껐어요."); } catch (e) { fail(ctx)(e); } redraw(); };
+  const head = pageHead("리수폿", { sub: "인물별 위키를 자동으로 쌓아요 · 켜기·끄기와 설정은 모든 채팅에 함께 적용돼요", back, sw: { on: allOn, text: allOn ? "켜짐" : "꺼짐", label: "리수폿 켜기", onChange: (v) => setAll(v) } });
   const seg = segmented(POT_TABS, tab, (v) => { m.potTab = v; redraw(); }, "리수폿 화면");
-  const pane = h("div", { class: "rb-pot-pane", style: "display:grid;gap:12px", "data-pot-tab": tab });
+  const pane = h("div", { class: "rb-pot-pane", style: "display:grid;gap:12px", "data-pot-tab": tab }, loading("불러오는 중", { rows: 3 }));
   replace(host, h("div", { class: "rb-mem2-main", id: "rb-mem-pot" }, head, seg, pane));
-  if (tab === "home") return replace(pane, ...ov.nodes);
+  let ov = { nodes: [] };
+  if (tab !== "settings") {
+    try { ov = await potOverview(ctx, redraw); }
+    catch (e) { console.log("[Dusk Atelier] 리수폿 개요 오류", e); return replace(pane, note("err", `리수폿 개요를 그리지 못했어요: ${e?.message ?? e}`)); }
+  }
+  const { env, cur, idx } = ov;
+  if (tab === "home") return replace(pane, ...(ov.nodes?.length ? ov.nodes : [note("info", "보여 줄 내용이 없어요. 채팅을 연 뒤 다시 열어 주세요.")]));
   // 설정(무엇을 기억할지·AI 모델 등)은 전체 설정이라 채팅이 없어도 바꾼다
   if (tab === "settings") {
     replace(pane, loading("불러오는 중", { rows: 3 }));
