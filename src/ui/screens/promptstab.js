@@ -2,13 +2,11 @@
 // 값은 리수폿 설정 저장소의 customPrompts(모든 채팅 범위)를 그대로 쓴다. JSON·리스 프리셋(.risup)·글 파일에서 불러올 수 있다.
 import { h, replace, pickFiles, download } from '../dom.js';
 import { btn, switchEl, setSwitch, pageHead, note, confirmDialog, emptyState, modal } from '../kit.js';
-import { tracked } from './memory/settingstools.js';
-import { STAGE_NAMES } from './memory/advanced.js';
 import { decodePreset } from '../../dev/aibuild/preset-format.js';
 import { fromJson, fit, toJson, PROMPT_MAX } from '../../engine/promptimport.js';
 
 var STAGES = ["memory", "router", "director", "writer"];
-var SNAMES = { memory: "장기기억 분석", router: STAGE_NAMES.router, director: STAGE_NAMES.director, writer: STAGE_NAMES.writer };
+var SNAMES = { memory: "장기기억 분석", router: "관련 인물 찾기", director: "장면 정리", writer: "자동 기록" };   // memory/advanced.js STAGE_NAMES와 같게
 var MAX_ITEMS = 40;
 var POSITIONS = [["front", "앞"], ["middle", "중간"], ["back", "뒤"]];
 var POS_HINT = { front: "기본 규칙보다 앞에 들어가요.", middle: "기본 규칙 뒤, 기능별 규칙 앞에 들어가요.", back: "모든 규칙의 맨 뒤에 들어가요." };
@@ -33,7 +31,8 @@ export async function readPromptFile(file) {
 function preset(p) { return fromJson({ promptTemplate: p.promptTemplate }).map(fit); }
 
 export async function renderPrompts(ctx) {
-  const st = tracked(ctx, await ctx.memory?.flow?.settings?.().catch(() => null));
+  const tracked = ctx.ext.get("svc", "memoryui")?.tracked;   // 장기기억 애드온
+  const st = tracked ? tracked(ctx, await ctx.memory?.flow?.settings?.().catch(() => null)) : null;
   const host = h("div", { class: "rb-mem2-main" });
   replace(ctx.main, h("div", { class: "rb-scroll" }, h("div", { class: "rb-mem2", dataset: { page: "prompts" } }, host)));
   const head = () => pageHead("기억·리수폿 프롬프트", { sub: "기억·리수폿을 쓸 때 덧붙는 프롬프트예요. 앞·중간·뒤 위치를 고를 수 있어요. ‘장기기억 분석’ 단계를 켠 프롬프트는 페르소나·AI 봇 제작 등 플러그인의 다른 AI 작업에도 같은 위치로 들어가요.", back: { label: "설정으로", onClick: () => ctx.go("settings") } });

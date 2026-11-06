@@ -27,7 +27,7 @@ export async function toolsFor(env) {
   if (!scope) return { why: "이 채팅의 위키를 아직 열지 못했어요. 응답을 한 번 받은 뒤 다시 눌러 주세요." };
   // 화면 폴더와 런타임 범위가 다르면(복사·분기 채팅을 런타임이 새 범위로 가른 직후 등) "저장 대기"가 아니라 범위 문제로 안내한다.
   let live = null; try { live = await ctx.api.getChatFromIndex(ci, ti); } catch { live = null; }
-  const want = chatKeyOf(live ?? chatItem.chat, chatItem.index);
+  const src = live ?? chatItem.chat, want = src && (src.risupotWikiScopeId || src.id) ? chatKeyOf(src, chatItem.index) : String(chatItem.id);
   if (String(scope.chatKey) !== want) {
     try { await M.flow.runtime()?.wiki?.refresh?.(); } catch { /* 아래에서 안내 */ }
     scope = liveScope(M, bot.id) ?? scope;

@@ -79,6 +79,13 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
     if (sel.duplicate) notify("BardWiki와 장기기억이 중복돼요. 비용이 두 번 들 수 있어요.");
     return active;
   }
+  // 애드온을 끌 때: 요청 훅·타이머를 내린다(데이터는 그대로)
+  async function stop() {
+    try { await flow?.stop?.(); } catch (e) { log("턴 흐름 정지 실패", e?.message ?? e); }
+    try { await injector.stop?.(); } catch (e) { log("주입 정지 실패", e?.message ?? e); }
+    try { runner.stop?.(); } catch { /* 이미 멈춤 */ }
+    active = "off"; readyP = null; readyDone = false;
+  }
   const switches = createSwitches({ api, store, flow });
   // 내 프롬프트 중 '장기기억 분석' 단계를 켠 것을 위치별 글로 돌려준다. 플러그인의 모든 AI 호출이 같은 위치로 끼운다(runai.js).
   // 범위(전체·봇·채팅)는 지금 열린 채팅 기준. 열린 채팅이 없으면 '전체' 범위만 적용된다.
@@ -90,5 +97,5 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
     const cur = await switches.currentChat({ fresh: true }).catch(() => null), sc = cur ? { characterId: cur.chaId, chatKey: cur.chatId } : {};
     return { front: customPromptPlain(s, "memory", sc, "front"), middle: customPromptPlain(s, "memory", sc, "middle"), back: customPromptPlain(s, "memory", sc, "back") };
   }
-  return { store, cellar, remote, userPrompts, gauge, link, cards, runner, injector, embedder, prep, hypa, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, ready, isReady: () => readyDone || !readyP, active: () => active };
+  return { store, cellar, remote, userPrompts, gauge, link, cards, runner, injector, embedder, prep, hypa, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, stop, ready, isReady: () => readyDone || !readyP, active: () => active };
 }

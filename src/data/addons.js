@@ -5,10 +5,11 @@
 // - 새 버전이 켜지다 실패하면 바로 전 버전으로 되돌린다. 확인 실패는 조용히 넘어간다(지금 버전 그대로).
 // - 저장: getLocalPluginStorage(RisuAI=콜드스토리지·동기화, Bard/Pocket=서버 KV) → 없으면 pluginStorage.
 import { sha256 } from "../engine/hash.js";
-import { parseManifest, pickUpdates, fitsCore } from "../engine/addons.js";
+import { parseManifest, pickUpdates, fitsCore, installOrder, bootOrder } from "../engine/addons.js";
 
 export const ADDON_MANIFEST_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/addons.json";
 export const ADDON_URL_KEY = "dusk.addon.manifestUrl";
+export const ADOPT_KEY = "dusk.addon.adopted.v2";
 const INDEX_KEY = "dusk.addon.index", CODE = (id) => `dusk.addon.code.${id}`, PREV = (id) => `dusk.addon.prev.${id}`;
 const CHECK_EVERY = 6 * 3600e3;
 
@@ -79,14 +80,18 @@ export function createAddons(api, { core, ctx = {}, fetcher = fetchText, importe
   // 시작: 저장해 둔 코드로 바로 켠다(네트워크 기다리지 않음). 실패하면 전 버전으로.
   async function boot() {
     const idx = await getIndex();
-    await Promise.all(Object.entries(idx).filter(([, v]) => v.on !== false).map(async ([id, v]) => {
+    // 필요 애드온(requires, 설치 기록에 저장)이 먼저 켜지게 순서대로. 서로 상관없는 것끼리는 기다리지 않아도 되지만 단순하게 차례로.
+    const ids = bootOrder(Object.entries(idx).filter(([, v]) => v.on !== false).map(([id]) => id), (id) => idx[id]?.requires);
+    for (const id of ids) {
+      const v = idx[id];
+      if ((v.requires ?? []).some((r) => !running.has(r))) { log(`${id}: 필요한 애드온(${v.requires.join(", ")})이 켜져 있지 않아 시작하지 않았어요`); continue; }
       try { await start(id, await store.getItem(CODE(id)), v.version); }
       catch (e) {
         log(`${id} v${v.version} 시작 실패 ${e?.message ?? e}`);
-        if (v.prev && await rollback(id, idx)) return;
+        if (v.prev && await rollback(id, idx)) continue;
         idx[id] = { ...v, on: false, error: String(e?.message ?? e) }; await setIndex(idx);
       }
-    }));
+    }
     emit();
     setTimeout(() => { check().catch(() => {}); }, 3000);
   }
@@ -120,16 +125,26 @@ export function createAddons(api, { core, ctx = {}, fetcher = fetchText, importe
   }
 
   // 받기·업데이트 한 개. 훅이 있는 애드온 업데이트는 다음 시작부터(applyNow:false).
-  async function install(id, { applyNow } = {}) {
+  async function install(id, { applyNow, withRequires = true } = {}) {
     const list = manifest ?? await loadManifest();
     const a = list.find((x) => x.id === id);
     if (!a) throw new Error("목록에 없는 애드온이에요");
+    // 필요 애드온을 먼저 받는다(이미 있으면 켜기만)
+    if (withRequires && a.requires?.length) {
+      const { order, missing } = installOrder(id, list);
+      if (missing.length) throw new Error(`필요한 애드온(${missing.join(", ")})이 목록에 없어요`);
+      const have = await getIndex();
+      for (const r of order.filter((x) => x !== id)) {
+        if (!have[r]) await install(r, { withRequires: false });
+        else if (have[r].on === false) await setOn(r, true);
+      }
+    }
     if (!fitsCore(a, core)) throw new Error(`Dusk v${a.minCore} 이상이 필요해요`);
     const code = await download(a);
     const idx = await getIndex(), cur = idx[id];
     if (cur) { const old = await store.getItem(CODE(id)).catch(() => null); if (typeof old === "string") { await store.setItem(PREV(id), old); } }
     await store.setItem(CODE(id), code);
-    idx[id] = { version: a.version, sha256: a.sha256, on: cur?.on ?? true, at: now(), prev: cur ? { version: cur.version, sha256: cur.sha256 } : undefined };
+    idx[id] = { version: a.version, sha256: a.sha256, on: cur?.on ?? true, at: now(), prev: cur ? { version: cur.version, sha256: cur.sha256 } : undefined, requires: a.requires?.length ? a.requires : undefined };
     await setIndex(idx);
     const now_ = applyNow ?? (!a.hooks || !running.has(id));
     if (idx[id].on && now_) {
@@ -144,6 +159,9 @@ export function createAddons(api, { core, ctx = {}, fetcher = fetchText, importe
   async function setOn(id, on) {
     const idx = await getIndex();
     if (!idx[id]) return;
+    // 켜기: 필요 애드온도 켠다 / 끄기: 이 애드온이 필요한 애드온도 끈다
+    if (on) for (const r of idx[id].requires ?? []) if (idx[r] && idx[r].on === false) await setOn(r, true);
+    if (!on) for (const [other, v] of Object.entries(idx)) if (other !== id && v.on !== false && (v.requires ?? []).includes(id)) await setOn(other, false);
     idx[id] = { ...idx[id], on, error: undefined };
     await setIndex(idx);
     if (on) await start(id, await store.getItem(CODE(id)), idx[id].version); else await stop(id);
@@ -151,6 +169,7 @@ export function createAddons(api, { core, ctx = {}, fetcher = fetchText, importe
   }
 
   async function remove(id) {
+    for (const [other, v] of Object.entries(await getIndex())) if (other !== id && (v.requires ?? []).includes(id)) await remove(other);   // 이 애드온이 필요한 것도 함께
     await stop(id);
     const idx = await getIndex(); delete idx[id]; await setIndex(idx);
     await store.removeItem(CODE(id)); await store.removeItem(PREV(id));
@@ -170,8 +189,23 @@ export function createAddons(api, { core, ctx = {}, fetcher = fetchText, importe
     } catch (e) { lastError = String(e?.message ?? e); emit(); return { updates: [], held: [], error: lastError }; }
   }
 
+  // 2.0.0 첫 실행: 코어에서 빠진 기능 중 쓰던 것(켜 두었거나 데이터가 있는 것)의 애드온을 자동으로 받는다.
+  // probes: [[id, async () => bool], …]. 다 받으면 표시를 남겨 다시 하지 않고, 하나라도 실패하면 다음 시작에 다시 시도한다.
+  async function adopt(probes) {
+    try { if (await store.getItem(ADOPT_KEY)) return { done: true, got: [] }; } catch { /* 처음 */ }
+    const idx = await getIndex(), got = [], failed = [];
+    for (const [id, probe] of probes) {
+      if (idx[id]) continue;
+      let used = false; try { used = !!(await probe()); } catch { used = false; }
+      if (!used) continue;
+      try { await install(id); got.push(id); } catch (e) { failed.push(id); log(`${id} 자동 받기 실패 ${e?.message ?? e}`); }
+    }
+    if (!failed.length) await store.setItem(ADOPT_KEY, "1");
+    return { done: !failed.length, got, failed };
+  }
+
   return {
-    boot, check, install, remove, setOn, getIndex, loadManifest,
+    boot, check, install, remove, setOn, getIndex, loadManifest, adopt,
     core: () => core,
     manifest: () => manifest,
     running: (id) => running.has(id),

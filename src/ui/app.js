@@ -30,11 +30,8 @@ import { renderDev } from './screens/dev.js';
 import { renderPlugins } from './screens/plugins.js';
 import { renderProtLink } from './screens/protlink.js';
 import { renderSettingsTab } from './screens/settingstab.js';
-import { renderMemory } from './screens/memory/index.js';
 import { renderCocoaTab } from './screens/cocoa.js';
-import { renderRelMap } from './screens/relmap.js';
 import { checkWorkshopReturn } from './screens/workshoplink.js';
-import { renderCardsTab } from './screens/cards/index.js';
 import { scopeCtx } from './staleguard.js';
 import { renderHome } from './screens/home.js';
 import { installScrollGuard } from './scrollguard.js';
@@ -442,9 +439,9 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, protlink: renderProtLink, characters: renderCharacters, memory: renderMemory, relmap: renderRelMap, cocoa: renderCocoaTab, look: renderSettings, provider: renderProvider, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? ctx.ext.get("tab", state.tab) ?? renderPlaceholder;   // 애드온 탭(AI로 페르소나 만들기 등)
+    const screen = { home: renderHome, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, protlink: renderProtLink, characters: renderCharacters,  cocoa: renderCocoaTab, look: renderSettings, provider: renderProvider,  presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? ctx.ext.get("tab", state.tab) ?? renderPlaceholder;   // 애드온 탭(AI로 페르소나 만들기 등)
     // 장기기억을 쓰는 화면은 기억 시작이 끝난 뒤 그린다(새로고침 직후 먹통 방지). 최대 20초, 넘으면 그냥 그린다.
-    const needsMem = ["memory", "relmap", "memory-home"].includes(state.tab) || ctx.ext.get("needsMemory", state.tab);
+    const needsMem = ["memory-home"].includes(state.tab) || ctx.ext.get("needsMemory", state.tab);
     const waitMem = needsMem && ctx.memory?.isReady && !ctx.memory.isReady()
       ? (replace(main, h("div", { class: "rb-section" }, h("p", { class: "rb-muted", role: "status" }, "장기기억을 준비하는 중이에요…"))), Promise.race([ctx.memory.ready().catch(() => {}), new Promise((r) => setTimeout(r, 20000))]))
       : null;

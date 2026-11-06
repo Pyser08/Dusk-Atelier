@@ -3,6 +3,11 @@ globalThis.__duskLib = ADDON_LIB;   // 배포용 애드온 파일(addons/dist) �
 import { activate as chatthemeAddon } from "../../addons/chattheme/index.js";
 import { activate as aibuildAddon } from "../../addons/aibuild/index.js";
 import { activate as widgetsAddon } from "../../addons/widgets/index.js";
+import { activate as memoryAddon } from "../../addons/memory/index.js";
+import { activate as cardsAddon } from "../../addons/cards/index.js";
+import { renderMemory as _rm } from "../../src/ui/screens/memory/index.js";
+import { renderRelMap as _rr } from "../../src/ui/screens/relmap.js";
+import { renderCardsTab as _rc } from "../../src/ui/screens/cards/index.js";
 const FEATURE_ADDONS = [chatthemeAddon, aibuildAddon, widgetsAddon];
 import { createAddons } from "../../src/data/addons.js";
 import { createSkillStore } from "../../src/data/skillstore.js";
@@ -129,6 +134,16 @@ window.bootApp = async (seed, opts = {}) => {
   }
   // 기능 애드온: 실제 사용자처럼 켜 둔 상태로 시험(소스를 바로 불러 같은 모듈 사용). coreOnly면 코어만.
   if (!opts.coreOnly) for (const act of FEATURE_ADDONS) await act(api, { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async () => {} });
+  // 장기기억·기억카드 애드온(2.0.0): opts.memory면 위에서 만든 기억으로 실제 애드온을 켠다.
+  // 아니면 예전처럼 기억 없이 탭만 보이게(화면은 '준비되지 않았어요') 자리만 채운다.
+  if (!opts.coreOnly) {
+    const actx = { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async () => {} };
+    if (app.ctx.memory) { app.ctx.memoryForTest = app.ctx.memory; await memoryAddon(api, actx); await cardsAddon(api, actx); }
+    else {
+      app.ctx.ext.add("tab", "memory", _rm); app.ctx.ext.add("tab", "relmap", _rr); app.ctx.ext.add("tab", "cards", _rc);
+      app.ctx.ext.add("svc", "memory", {}); app.ctx.ext.add("svc", "cards", {}); app.ctx.ext.add("svc", "memoryui", { tracked: () => null, STAGE_NAMES: {} });
+    }
+  }
   if (opts.addons) {  // 애드온 카드 시험: 파일은 실행기가 window.__addonFiles로 넣어 준다(주소 → 내용)
     app.ctx.addons = createAddons(api, { core: "2.0.0", ctx: { toast: (t, o) => app.ctx.toast?.(t, o) }, fetcher: async (_a, url) => (url.endsWith("addons.json") ? window.__addonFiles?.manifest : window.__addonFiles?.[url]) ?? null });
     await app.ctx.addons.boot();

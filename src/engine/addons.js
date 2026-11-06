@@ -22,9 +22,29 @@ export function parseManifest(raw) {
     const bad = !a || !ID.test(a.id ?? "") ? "id" : !VER.test(a.version ?? "") ? "version" : !HEX.test(a.sha256 ?? "") ? "sha256" : !/^https:\/\//.test(a.url ?? "") ? "url" : a.minCore && !VER.test(a.minCore) ? "minCore" : ids.has(a.id) ? "중복 id" : "";
     if (bad) { errors.push(`${a?.id ?? "?"}: ${bad}`); continue; }
     ids.add(a.id);
-    addons.push({ id: a.id, name: String(a.name || a.id), version: a.version, minCore: a.minCore || "0.0.0", url: a.url, sha256: a.sha256, size: Number(a.size) || 0, desc: String(a.desc ?? ""), hooks: !!a.hooks });
+    addons.push({ id: a.id, name: String(a.name || a.id), version: a.version, minCore: a.minCore || "0.0.0", url: a.url, sha256: a.sha256, size: Number(a.size) || 0, desc: String(a.desc ?? ""), hooks: !!a.hooks, requires: Array.isArray(a.requires) ? a.requires.filter((r) => ID.test(String(r)) && r !== a.id) : [] });
   }
   return { addons, errors };
+}
+
+// 필요 애드온(requires)까지 포함해 받을 순서(먼저 받을 것부터). 목록에 없는 필요 애드온은 missing으로.
+export function installOrder(id, addons) {
+  const by = new Map(addons.map((a) => [a.id, a])), out = [], seen = new Set(), missing = [];
+  const visit = (x, stack = new Set()) => {
+    if (seen.has(x) || stack.has(x)) return;
+    const a = by.get(x); if (!a) { missing.push(x); return; }
+    stack.add(x); for (const r of a.requires ?? []) visit(r, stack); stack.delete(x);
+    seen.add(x); out.push(x);
+  };
+  visit(id);
+  return { order: out, missing };
+}
+// 켜 둔 애드온을 시작할 순서: 필요 애드온이 먼저. requiresOf(id) → 필요 id 목록(모르면 [])
+export function bootOrder(ids, requiresOf = () => []) {
+  const set = new Set(ids), out = [], seen = new Set();
+  const visit = (x, stack = new Set()) => { if (seen.has(x) || stack.has(x) || !set.has(x)) return; stack.add(x); for (const r of requiresOf(x) ?? []) visit(r, stack); stack.delete(x); seen.add(x); out.push(x); };
+  for (const x of ids) visit(x);
+  return out;
 }
 
 // 코어 버전으로 쓸 수 있는가

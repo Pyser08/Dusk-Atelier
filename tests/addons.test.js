@@ -98,3 +98,29 @@ test("호스트처럼 getLocalPluginStorage()가 Promise로 와도 저장된다(
     await A.dispose();
   }
 });
+
+import { installOrder, bootOrder, parseManifest as pm2 } from "../src/engine/addons.js";
+test("필요 애드온(requires): 받을 순서·시작 순서", () => {
+  const list = [{ id: "memory", requires: [] }, { id: "cards", requires: ["memory"] }, { id: "erosync", requires: ["memory"] }];
+  assert.deepEqual(installOrder("cards", list).order, ["memory", "cards"]);
+  assert.deepEqual(installOrder("x", list).missing, ["x"]);
+  assert.deepEqual(bootOrder(["erosync", "cards", "memory"], (id) => list.find((a) => a.id === id).requires), ["memory", "erosync", "cards"]);
+  const m = pm2({ format: 1, addons: [{ id: "cards", version: "1.0.0", sha256: "a".repeat(64), url: "https://x", requires: ["memory", "cards", "BAD!"] }] });
+  assert.deepEqual(m.addons[0].requires, ["memory"]);
+});
+
+test("첫 실행 자동 받기(adopt): 쓰던 기능만 받고, 다 받으면 다시 하지 않는다", async () => {
+  const { createAddons, ADOPT_KEY } = await import("../src/data/addons.js");
+  const files = new Map(), store = { getItem: async (k) => files.get(k) ?? null, setItem: async (k, v) => { files.set(k, v); }, removeItem: async (k) => { files.delete(k); } };
+  const code = "export async function activate(){ return { deactivate(){} }; }";
+  const { sha256 } = await import("../src/engine/hash.js");
+  const h = await sha256(new TextEncoder().encode(code));
+  const manifest = JSON.stringify({ format: 1, addons: [{ id: "memory", version: "1.0.0", sha256: h, url: "https://x/m.js" }, { id: "cards", version: "1.0.0", sha256: h, url: "https://x/c.js", requires: ["memory"] }, { id: "widgets", version: "1.0.0", sha256: h, url: "https://x/w.js" }] });
+  const A = createAddons({ pluginStorage: store }, { core: "2.0.0", storage: store, fetcher: async (_a, url) => (url.endsWith(".json") ? manifest : code), importer: async () => ({ activate: async () => ({ deactivate() {} }) }) });
+  const r = await A.adopt([["memory", async () => false], ["cards", async () => true], ["widgets", async () => false]]);
+  assert.deepEqual(r.got, ["cards"]);
+  const idx = await A.getIndex();
+  assert.ok(idx.memory && idx.cards && !idx.widgets, "필요 애드온(memory)도 같이 받음");
+  assert.equal(files.get(ADOPT_KEY), "1");
+  assert.deepEqual((await A.adopt([["widgets", async () => true]])).got, []);
+});
