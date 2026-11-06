@@ -8,10 +8,9 @@ import { runScreenTour } from "../../screentours.js";
 import { mem, fail, loadBots, loadChats, countOf, loadFolder } from "../memory/common.js";
 import { renderCards } from "../memory/cards.js";
 import { renderCompose } from "../memory/compose.js";
+import { cardSettings } from "../memory/settings.js";
 
 const TABS = [["list", "만든 카드"], ["compose", "새로 만들기"]];
-// 카드 설정 칸은 장기기억 애드온의 화면 코드(memory/settings.js)에 있어 그쪽 서비스로 받는다
-const cardSettings = (ctx, ...a) => ctx.ext.get("svc", "memoryui")?.cardSettings?.(ctx, ...a) ?? null;
 
 export async function renderCardsTab(ctx) {
   const m = mem(ctx);

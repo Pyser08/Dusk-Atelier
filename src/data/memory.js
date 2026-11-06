@@ -50,12 +50,7 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
   const backend = (settings) => selectBackend(api, settings?.backend ?? "auto");
   let active = "off";
   // 반환: 선택된 백엔드 id. bardwiki/off면 러너·주입 훅을 등록하지 않는다(이중 비용·이중 주입 방지).
-  // 시작이 끝나기 전에 화면이 저장소·흐름을 쓰면(새로고침 직후 바로 열어 버튼을 누르는 경우) 원격 저장 전환·이전과 겹쳐
-  // 먹통이 되던 문제(2.0.0) → 화면은 ready()를 기다린다. 실패해도 풀린다(화면은 지금처럼 동작).
-  let readyP = null, readyDone = false;
-  function start() { if (!readyP) readyP = run().finally(() => { readyDone = true; }); return readyP; }
-  const ready = () => readyP ?? Promise.resolve();
-  async function run() {
+  async function start() {
     await remote.init().catch((e) => log("기억 서버 표시 읽기 실패", e?.message ?? e));
     await store.migrate().catch((e) => log("v1 이전 실패", e?.message ?? e));
     // 기다리지 않는다(없으면 몇 초 걸릴 수 있음). 켜자마자는 리스 서버가 바빠 못 찾을 수 있어서, 못 찾으면 3·10·30초 뒤에 다시 찾는다.
@@ -79,13 +74,6 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
     if (sel.duplicate) notify("BardWiki와 장기기억이 중복돼요. 비용이 두 번 들 수 있어요.");
     return active;
   }
-  // 애드온을 끌 때: 요청 훅·타이머를 내린다(데이터는 그대로)
-  async function stop() {
-    try { await flow?.stop?.(); } catch (e) { log("턴 흐름 정지 실패", e?.message ?? e); }
-    try { await injector.stop?.(); } catch (e) { log("주입 정지 실패", e?.message ?? e); }
-    try { runner.stop?.(); } catch { /* 이미 멈춤 */ }
-    active = "off"; readyP = null; readyDone = false;
-  }
   const switches = createSwitches({ api, store, flow });
   // 내 프롬프트 중 '장기기억 분석' 단계를 켠 것을 위치별 글로 돌려준다. 플러그인의 모든 AI 호출이 같은 위치로 끼운다(runai.js).
   // 범위(전체·봇·채팅)는 지금 열린 채팅 기준. 열린 채팅이 없으면 '전체' 범위만 적용된다.
@@ -97,5 +85,5 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
     const cur = await switches.currentChat({ fresh: true }).catch(() => null), sc = cur ? { characterId: cur.chaId, chatKey: cur.chatId } : {};
     return { front: customPromptPlain(s, "memory", sc, "front"), middle: customPromptPlain(s, "memory", sc, "middle"), back: customPromptPlain(s, "memory", sc, "back") };
   }
-  return { store, cellar, remote, userPrompts, gauge, link, cards, runner, injector, embedder, prep, hypa, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, stop, ready, isReady: () => readyDone || !readyP, active: () => active };
+  return { store, cellar, remote, userPrompts, gauge, link, cards, runner, injector, embedder, prep, hypa, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, active: () => active };
 }

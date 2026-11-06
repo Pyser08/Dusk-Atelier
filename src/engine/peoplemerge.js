@@ -3,7 +3,6 @@
 // 위키 문서 합치기는 리수폿 엔진(pot/person-merge.js)이 맡고, 여기서는 Dusk 인물·별칭 정리를 이어 붙인다.
 import { findDoc } from "./personview.js";
 import { planPersonMerge, applyPersonMerge } from "./pot/person-merge.js";
-import { relinkNames } from "./memoryuser.js";
 
 const keyOf = (s) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, "");
 
@@ -28,7 +27,6 @@ export function duskMerge(f, ka, kb) {
   const seen = new Set(pa.records.map((r) => r.act));
   for (const r of pb.records) if (!seen.has(r.act)) pa.records.push(r);
   pa.records.sort((x, y) => (x.at ?? -1) - (y.at ?? -1)); delete f.people[kb];
-  relinkNames(f, [pb.name, ...(pb.aliases ?? [])], pa.name);  // 버그 2: 관계·감정 기록이 합친 이름으로 남아 관계도에 둘 다 보이던 문제
 }
 
 const sameEntry = (a, b) => a.id === b.id || (a.pk && a.pk === b.pk);
@@ -56,6 +54,4 @@ export function applyEntryMerge(folder, keep, src, plan, choices = {}) {
   else if (kp) addAliases(keep.pk, [src.name, ...names(sd)]);          // 합칠 쪽이 문서뿐: 이름을 별칭으로 남겨 이후 분석이 같은 인물로 이어지게
   else if (sp) addAliases(src.pk, [keep.name, ...names(kd)]);          // 남길 쪽이 문서뿐: 남은 문서와 인물을 별칭으로 잇는다
   if (kp) addAliases(keep.pk, names(kd).concat(names(sd)));
-  const keepName = folder.people?.[keep.pk]?.name ?? kd?.title ?? keep.name;
-  if (keepName) relinkNames(folder, [src.name, ...names(sd)], keepName);
 }

@@ -2,11 +2,7 @@
 // 저장 모양: { v:1, connections:[{id,name,kind,format,baseUrl,keyIds[],keyMode,proxyUrl,headers,params,vertex,...}],
 //   profiles:[{id,name,connectionId,model,sampling,thinking,stream,cache,tier,safety,search,repetition,prefill,pricing,retry,params,headers}],
 //   purposes:{main:{profileId,over},...}, chain:[profileId], chainOn, budget, perChar:{}, transforms:{rules:[]}, tools:{...}, translator:{...}, debug }
-import { KINDS, PURPOSES, kindOf, baseUrlOf } from "./catalog.js";
-import { normalizeRouteRule } from "./router.js";
-import { normalizeMcpServer } from "./mcp.js";
-import { normalizeHook } from "./hooks.js";
-import { normalizeIpc } from "./mailbox.js";
+import { KINDS, PURPOSES, kindOf } from "./catalog.js";
 const uid = () => Math.random().toString(36).slice(2, 10);
 const str = (v, d = "") => (typeof v === "string" ? v : d);
 const numOrNull = (v) => (v === "" || v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v));
@@ -15,8 +11,7 @@ const pick = (v, list, d) => (list.includes(v) ? v : d);
 export const defaultConfig = () => ({
   v: 1, enabled: false, connections: [], profiles: [], purposes: Object.fromEntries(PURPOSES.map((p) => [p, { profileId: "", over: {} }])),
   subProfileId: "", chain: [], chainOn: false, budget: { dailyUsd: 0, monthlyUsd: 0, action: "warn", switchProfileId: "" }, perChar: {},
-  defaults: { stream: "stream", retry: 2, timeoutSec: 300, repetition: { on: true, charRun: 240, minRepeats: 6, minChars: 400 }, keepPartial: true, keyCooldownSec: 60, progress: true, retryOn: "server", logMax: 200, batchWaitMin: 60, batchPollSec: 15 },   // progress: 리스 화면 진행 창(2.0.0)
-  router: { enabled: false, rules: [] }, mcp: { servers: [] }, hooks: [], ipc: normalizeIpc(),
+  defaults: { stream: "stream", retry: 2, timeoutSec: 300, repetition: { on: true, charRun: 240, minRepeats: 6, minChars: 400 }, keepPartial: true, keyCooldownSec: 60 },
   transforms: { rules: [], cacheOrder: false },
   tools: { enabled: false, datetime: true, calculator: true, dice: true, webSearch: false, fetchUrl: false, maxDepth: 4, timeoutSec: 30, search: { provider: "brave", url: "", key: "", cx: "" }, prefetch: { enabled: false, position: "beforeLast", maxResults: 3, snippetOnly: true, keywords: "" }, risuRead: false, risuWrite: false, memoryTools: false },
   translator: { enabled: false, protect: true, glossary: true, history: 2, maxBytes: 8192, guide: "", glossaryText: "" },
@@ -26,9 +21,9 @@ export const defaultConfig = () => ({
 export function normalizeConnection(c) {
   const kind = KINDS[c?.kind] ? c.kind : "custom", k = kindOf(kind);
   return { id: str(c?.id) || uid(), name: str(c?.name, k.label).slice(0, 40) || k.label, kind, format: pick(c?.format, ["openai", "responses", "anthropic", "gemini", "vertex"], k.format),
-    baseUrl: str(c?.baseUrl, k.baseUrl).trim(), keyIds: Array.isArray(c?.keyIds) ? c.keyIds.map(String).slice(0, 40) : [], keyMode: pick(c?.keyMode, ["random", "rotate", "affinity", "on-error"], "random"),
+    baseUrl: str(c?.baseUrl, k.baseUrl).trim(), keyIds: Array.isArray(c?.keyIds) ? c.keyIds.map(String).slice(0, 40) : [], keyMode: pick(c?.keyMode, ["random", "rotate", "affinity"], "random"),
     proxyUrl: str(c?.proxyUrl).trim(), headers: obj(c?.headers), params: obj(c?.params), vertex: { projectId: str(c?.vertex?.projectId), location: str(c?.vertex?.location, "global") || "global" },
-    providerSlug: str(c?.providerSlug), region: str(c?.region).trim(), balanceKeyId: str(c?.balanceKeyId), copilotEngine: str(c?.copilotEngine, "vscode"), hidden: Array.isArray(c?.hidden) ? c.hidden.map(String) : [], userModels: Array.isArray(c?.userModels) ? c.userModels.map(String) : [] };
+    providerSlug: str(c?.providerSlug), copilotEngine: str(c?.copilotEngine, "vscode"), hidden: Array.isArray(c?.hidden) ? c.hidden.map(String) : [], userModels: Array.isArray(c?.userModels) ? c.userModels.map(String) : [] };
 }
 const obj = (v) => (v && typeof v === "object" && !Array.isArray(v) ? { ...v } : {});
 export function normalizeProfile(p) {
@@ -36,9 +31,9 @@ export function normalizeProfile(p) {
   return { id: str(p?.id) || uid(), name: str(p?.name, "프로필").slice(0, 40) || "프로필", connectionId: str(p?.connectionId), model: str(p?.model).trim(),
     sampling: { temperature: numOrNull(s.temperature), topP: numOrNull(s.topP), topK: numOrNull(s.topK), frequencyPenalty: numOrNull(s.frequencyPenalty), presencePenalty: numOrNull(s.presencePenalty), maxTokens: numOrNull(s.maxTokens), seed: numOrNull(s.seed), stop: Array.isArray(s.stop) ? s.stop.map(String).filter(Boolean).slice(0, 8) : [] },
     thinking: { mode: pick(t.mode, ["", "budget", "adaptive"], ""), budget: numOrNull(t.budget), effort: str(t.effort), level: str(t.level), display: pick(t.display, ["", "summarized", "omitted"], ""), include: !!t.include, showThinking: !!t.showThinking, continuation: !!t.continuation },
-    stream: pick(p?.stream, ["", "stream", "buffered", "off"], ""), cache: { claude: pick(c.claude, ["off", "5m", "1h"], "off"), breakpoints: numOrNull(c.breakpoints) ?? 2, grid: Math.max(0, Math.min(200, Math.floor(numOrNull(c.grid) ?? 0))), learn: !!c.learn, openai: pick(c.openai, ["off", "in_memory", "24h"], "off"), gemini: pick(c.gemini, ["off", "observe", "auto", "manual"], "off"), geminiTtl: numOrNull(c.geminiTtl) ?? 1800, geminiMinRepeats: numOrNull(c.geminiMinRepeats) ?? 3, geminiMarker: str(c.geminiMarker, "{{cache_marker}}") },
+    stream: pick(p?.stream, ["", "stream", "buffered", "off"], ""), cache: { claude: pick(c.claude, ["off", "5m", "1h"], "off"), breakpoints: numOrNull(c.breakpoints) ?? 2, openai: pick(c.openai, ["off", "in_memory", "24h"], "off"), gemini: pick(c.gemini, ["off", "observe", "auto", "manual"], "off"), geminiTtl: numOrNull(c.geminiTtl) ?? 1800, geminiMinRepeats: numOrNull(c.geminiMinRepeats) ?? 3, geminiMarker: str(c.geminiMarker, "{{cache_marker}}") },
     tier: str(p?.tier), verbosity: str(p?.verbosity), safety: str(p?.safety), search: pick(p?.search, ["off", "auto"], "off"),
-    repetition: pick(p?.repetition, ["inherit", "on", "off"], "inherit"), prefill: str(p?.prefill), pdf: pick(p?.pdf, ["off", "full"], "off"), mediaResolution: pick(p?.mediaResolution, ["", "low", "medium", "high"], ""), batch: pick(p?.batch, ["off", "wait", "create"], "off"),
+    repetition: pick(p?.repetition, ["inherit", "on", "off"], "inherit"), prefill: str(p?.prefill), pdf: pick(p?.pdf, ["off", "full"], "off"),
     pricing: { input: numOrNull(pr.input) ?? 0, output: numOrNull(pr.output) ?? 0, cached: numOrNull(pr.cached), cwrite: numOrNull(pr.cwrite) }, retry: numOrNull(p?.retry), params: obj(p?.params), headers: obj(p?.headers) };
 }
 export function normalizeConfig(raw) {
@@ -52,10 +47,7 @@ export function normalizeConfig(raw) {
   return { ...d, v: 1, enabled: !!raw.enabled, connections, profiles, purposes, subProfileId: pid.has(raw.subProfileId) ? raw.subProfileId : "", chain: (Array.isArray(raw.chain) ? raw.chain : []).filter((x) => pid.has(x)), chainOn: !!raw.chainOn,
     budget: { dailyUsd: numOrNull(b.dailyUsd) ?? 0, monthlyUsd: numOrNull(b.monthlyUsd) ?? 0, action: pick(b.action, ["warn", "switch", "block"], "warn"), switchProfileId: pid.has(b.switchProfileId) ? b.switchProfileId : "" },
     perChar: Object.fromEntries(Object.entries(obj(raw.perChar)).filter(([, v]) => pid.has(v?.profileId)).map(([k, v]) => [k, { profileId: v.profileId }])),
-    mcp: { servers: (Array.isArray(raw.mcp?.servers) ? raw.mcp.servers : []).map(normalizeMcpServer).slice(0, 12) }, hooks: (Array.isArray(raw.hooks) ? raw.hooks : []).map(normalizeHook).slice(0, 30),
-    ipc: normalizeIpc(raw.ipc),
-    router: { enabled: !!raw.router?.enabled, rules: (Array.isArray(raw.router?.rules) ? raw.router.rules : []).map(normalizeRouteRule).filter((r) => pid.has(r.profileId)).slice(0, 30) },
-    defaults: { ...d.defaults, ...obj(raw.defaults), retryOn: pick(raw.defaults?.retryOn, ["server", "rate", "both"], "server"), logMax: [50, 200, 500].includes(Number(raw.defaults?.logMax)) ? Number(raw.defaults.logMax) : 200, batchWaitMin: Math.max(1, Math.min(1440, Math.floor(numOrNull(raw.defaults?.batchWaitMin) ?? 60))), batchPollSec: Math.max(5, Math.min(300, Math.floor(numOrNull(raw.defaults?.batchPollSec) ?? 15))), repetition: { ...d.defaults.repetition, ...obj(raw.defaults?.repetition) } }, transforms: { rules: (raw.transforms?.rules ?? []).map(normalizeRule).slice(0, 40), cacheOrder: !!raw.transforms?.cacheOrder },
+    defaults: { ...d.defaults, ...obj(raw.defaults), repetition: { ...d.defaults.repetition, ...obj(raw.defaults?.repetition) } }, transforms: { rules: (raw.transforms?.rules ?? []).map(normalizeRule).slice(0, 40), cacheOrder: !!raw.transforms?.cacheOrder },
     tools: { ...d.tools, ...obj(raw.tools), search: { ...d.tools.search, ...obj(raw.tools?.search) }, prefetch: { ...d.tools.prefetch, ...obj(raw.tools?.prefetch) } }, translator: { ...d.translator, ...obj(raw.translator) }, debug: { preview: !!raw.debug?.preview } };
 }
 const OVER_KEYS = ["sampling", "thinking", "stream", "cache", "tier", "verbosity", "safety", "search", "repetition", "prefill", "retry", "pdf"];
@@ -83,8 +75,8 @@ export function chainOrder(cfg, firstId) { return [firstId, ...(cfg.chainOn ? cf
 export const hasUsableProfile = (cfg) => cfg.profiles.length > 0;
 // 프로필 → 기존 모델 프리셋(기억 분석·Cellar 서버 분석이 쓰는 모양). 지원 안 하는 형식이면 null.
 export function toPotPreset(conn, profile) {
-  const k = conn.kind, map = { openai: "openai", anthropic: "claude", google: "google", vertex: "vertex-ai", deepseek: "deepseek", openrouter: "openrouter", ollama: "ollama", llmgateway: "llmgateway", copilot: "copilot", custom: "custom", bedrock: "custom", novelai: "custom", opencode: "custom", nanogpt: "custom", vercel: "custom", neuralwatt: "custom", wellspring: "custom" };
+  const k = conn.kind, map = { openai: "openai", anthropic: "claude", google: "google", vertex: "vertex-ai", deepseek: "deepseek", openrouter: "openrouter", ollama: "ollama", llmgateway: "llmgateway", copilot: "copilot", custom: "custom", nanogpt: "custom", vercel: "custom", neuralwatt: "custom", wellspring: "custom" };
   const provider = map[k]; if (!provider || conn.format === "responses") return null;
   if (provider === "google" && !/openai/.test(conn.baseUrl)) return { provider, baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: profile.model };
-  return { provider, baseUrl: baseUrlOf(conn), model: profile.model };
+  return { provider, baseUrl: conn.baseUrl, model: profile.model };
 }

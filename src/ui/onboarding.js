@@ -1,4 +1,4 @@
-// 시작 안내 (1.8.3 목업 6, 2.0.0 기능 고르기 추가): 0 환영 → 1 기능(애드온) → 2 화면 → 3 꾸미기 → 4 장기 기억 → 5 이야기 도우미 → 6 가져오기 → 7 끝.
+// 시작 안내 (1.8.3 목업 6): 플러그인 창을 꽉 채우는 단계별 설정. 0 환영 → 1 화면 → 2 꾸미기 → 3 장기 기억 → 4 이야기 도우미 → 5 가져오기 → 6 끝.
 // 새로 받은 사람·이미 쓰던 사람 상관없이 이 버전을 처음 열 때 한 번 자동으로 뜬다(지금 설정이 미리 골라진 채, 아무것도 초기화하지 않음).
 // 고르는 즉시 적용. 끝내거나 '나중에 하기'를 누르면 다시 자동으로 뜨지 않고, 화면마다 자동으로 뜨던 안내(처음 둘러보기·임베딩·프롬프트·AI 제작 안내)도 띄우지 않는다.
 import { h, replace } from './dom.js';
@@ -17,8 +17,8 @@ import { diceRow } from './dicedetail.js';
 import { loadStoryTimeOn } from '../data/storytime.js';
 import { readCocoa } from '../engine/cocoamigrate.js';
 
-export var ONBOARD_VER = 2;   // 2.0.0: 애드온 고르기가 생겨 모두에게 한 번 더 띄운다
-var STEPS = ["기능", "화면", "꾸미기", "장기 기억", "이야기 도우미", "가져오기", "끝"];
+export var ONBOARD_VER = 1;
+var STEPS = ["화면", "꾸미기", "장기 기억", "이야기 도우미", "가져오기", "끝"];
 // 시작 안내를 마치면 화면마다 자동으로 뜨던 안내는 더 띄우지 않는다(각 화면의 ?로는 언제든 볼 수 있다)
 var AUTO_KEYS = ["rbm:memoryEmbeddingGuide:shown:v1", "da_aibuild:intro"];
 
@@ -39,7 +39,7 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
   ctx.win.querySelector(":scope > .rb-onb")?.remove();
   return new Promise((resolve) => {
     const s = { step, mem: null, story: null, found: null, saving: Promise.resolve() };
-    let M = ctx.memory;   // 기능 단계에서 장기기억 애드온을 받으면 생긴다(그릴 때마다 다시 읽음)
+    const M = ctx.memory;
     const host = h("div", { class: "rb-onb", role: "dialog", "aria-modal": "true", "aria-label": "시작 안내" });
     const close = async () => {
       await s.saving.catch(() => {});
@@ -113,51 +113,9 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
     const srow = (title, text, on, onChange) => { const sw = switchEl(on, { label: title, onChange: (v, el) => { setSwitch(el, v); onChange(v, el); } }); return h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, text ? h("small", null, text) : null), sw); };
     const sec = (title, ...kids) => h("section", { class: "rb-card bordered rb-scard rb-onb-sec" }, title ? h("span", { class: "h" }, title) : null, ...kids);
 
-    // ── 1단계: 기능(애드온) 고르기. 켜면 바로 받아서 켠다(필요한 애드온도 같이), 끄면 꺼 두기만 한다(지우지 않음). ──
-    const ADDON_TIPS = { memory: "추천", manage: "추천", cards: "장기기억 필요", erosync: "장기기억 필요 · 성인용" };
-    async function addonState() {
-      const A = ctx.addons; if (!A) return null;
-      const [list, idx] = await Promise.all([A.loadManifest().catch(() => null), A.getIndex().catch(() => ({}))]);
-      return { list: (list ?? []).filter((a) => a.id !== "hello"), idx, offline: !list };
-    }
-    async function addonSummary() {
-      try { const st = await addonState(); if (!st) return "애드온을 쓸 수 없는 환경이에요"; const on = Object.entries(st.idx).filter(([id, v]) => v.on !== false && id !== "hello").map(([id]) => st.list.find((a) => a.id === id)?.name ?? id); return on.length ? on.join(" · ") : "고른 기능 없음"; } catch { return "확인하지 못했어요"; }
-    }
-    async function addonStep() {
-      const A = ctx.addons;
-      if (!A) return [note("info", "이 환경에서는 애드온을 받을 수 없어요. 이 단계는 건너뛰어요.")];
-      const st = await addonState();
-      if (st.offline && !Object.keys(st.idx).length) return [note("err", "애드온 목록을 받지 못했어요. 인터넷 연결을 확인하고 ‘이전’→‘다음’으로 다시 열거나, 나중에 설정 → 애드온에서 받아 주세요.")];
-      const list = st.list.length ? st.list : Object.entries(st.idx).map(([id, v]) => ({ id, name: id, version: v.version, desc: "", requires: v.requires ?? [] }));
-      const msg = h("small", { class: "rb-muted", "aria-live": "polite", id: "rb-onb-addon-msg" }, "");
-      const sws = new Map();
-      const isOn = (id, idx) => !!idx[id] && idx[id].on !== false;
-      const repaint = async () => { const idx = await A.getIndex().catch(() => ({})); for (const [id, el] of sws) setSwitch(el, isOn(id, idx)); };
-      let busyN = 0;
-      const toggle = async (a, v) => {
-        busyN++; msg.textContent = v ? `${a.name} 받는 중…` : `${a.name} 끄는 중…`;
-        try {
-          const idx = await A.getIndex();
-          if (v) { if (!idx[a.id]) await A.install(a.id); else await A.setOn(a.id, true); }
-          else await A.setOn(a.id, false);
-          msg.textContent = v ? `${a.name}을(를) 켰어요.${a.requires?.length ? " 필요한 기능도 같이 켰어요." : ""}` : `${a.name}을(를) 껐어요. 데이터는 그대로예요.`;
-        } catch (e) { msg.textContent = `${a.name}: ${e?.message ?? e}`; }
-        finally { busyN--; await repaint(); }
-      };
-      const rows = list.map((a) => {
-        const sw = switchEl(isOn(a.id, st.idx), { label: a.name, onChange: (v, el) => { setSwitch(el, v); toggle(a, v); } });
-        sws.set(a.id, sw);
-        const tip = ADDON_TIPS[a.id];
-        return h("div", { class: "rb-srow rb-onb-addon", "data-addon": a.id }, h("span", { class: "t" }, h("b", null, a.name, tip ? h("small", { class: "rb-chip", style: "margin-left:6px" }, tip) : null), a.desc ? h("small", null, a.desc) : null), sw);
-      });
-      s.addonBusy = () => busyN > 0;
-      return [sec("기능 애드온", ...rows), msg, note("info", "애드온을 꺼도 쌓아 둔 기억·카드·설정은 지워지지 않아요. 다시 켜면 이어서 써요.")];
-    }
-
     // ── 단계별 내용 ──
     async function stepBody(i) {
-      if (i === 1) return addonStep();
-      if (i === 2) {
+      if (i === 1) {
         const size = lookParts({ get: () => theme, set: setTheme });
         parts = size;
         return [
@@ -165,7 +123,7 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
           sec("글자 크기", size.sizeSeg)
         ];
       }
-      if (i === 3) {
+      if (i === 2) {
         parts = lookParts({ get: () => theme, set: setTheme });
         paintPreview();
         const more = h("details", { class: "rb-morefold rb-onb-more" }, h("summary", null, "모양·글꼴 더 고르기", h("small", { class: "rb-muted" }, " 모서리·그림자·글꼴·바탕 무늬")), parts.shape({ full: false }));
@@ -175,7 +133,7 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
         const side = [preview, sec("밝기", parts.modeSeg, parts.modeNote), sec("그라데이션 방향", parts.dirSeg), more];
         return wide() ? { center, side } : [preview, ...center, sec("밝기", parts.modeSeg, parts.modeNote), more];
       }
-      if (i === 4) {
+      if (i === 3) {
         if (!M) return [note("info", "기억 기능이 아직 준비되지 않았어요. 이 단계는 건너뛰어요.")];
         const m = await loadMem();
         const apiBox = h("div", { class: "rb-onb-api" });
@@ -207,7 +165,7 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
             h("div", { class: "rb-onb-row" }, test), embMsg)
         ];
       }
-      if (i === 5) {
+      if (i === 4) {
         const st = await loadStory();
         const idx = M ? await M.store.getIndex() : null, inj = idx?.settings?.inject ?? {};
         const setInj = (key, v) => { if (!M) return; s.saving = M.store.updateIndex((x) => { x.settings.inject ??= {}; x.settings.inject[key] = v; }).catch(fail); };
@@ -230,7 +188,7 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
             ctx.imgFix ? srow("이미지 태그 자동 교정", "틀린 에셋 태그를 실제 이름으로", st.img, (v) => { st.img = v; s.saving = Promise.resolve(ctx.imgFix.set(v)).catch(fail); }) : null)
         ];
       }
-      if (i === 6) {
+      if (i === 5) {
         const f = await loadFound();
         const rows = [];
         if (f.hypa) rows.push(sec(null, h("div", { class: "rb-onb-found" }, h("span", { class: "t" }, h("b", null, "HypaPlus 기억"), h("small", null, f.hypa.chats ? `채팅 ${f.hypa.chats}개에서 찾았어요` : "이 기기에서 찾았어요")),
@@ -250,13 +208,12 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
     }
     const TITLES = [
       null,
-      ["1단계 · 기능", "쓸 기능을 골라요", "켜는 기능은 바로 받아서 켜요(인터넷 필요). 나중에 설정 → 애드온에서 언제든 바꿀 수 있어요."],
-      ["2단계 · 화면", "화면을 골라요", "언제든 설정에서 바꿀 수 있어요."],
-      ["3단계 · 꾸미기", "분위기를 골라요", "누르면 이 화면이 바로 바뀌어요. ‘플러그인 꾸미기’와 같은 선택지예요."],
-      ["4단계 · 장기 기억", "장기 기억을 켤까요?", "AI 응답마다 인물의 상태와 있었던 일을 기억해서, 다음 대화에 알맞게 넣어 줘요."],
-      ["5단계 · 이야기 도우미", "이야기를 어떻게 이어 갈까요", "모두 나중에 홈에서 켜고 끌 수 있어요."],
-      ["6단계 · 가져오기", "이미 쓰던 게 있나요?", "이 기기에서 찾은 것만 보여요."],
-      ["7단계 · 끝", "준비됐어요!", "고른 내용이에요. ‘바꾸기’를 누르면 그 단계로 돌아가요."]
+      ["1단계 · 화면", "화면을 골라요", "언제든 설정에서 바꿀 수 있어요."],
+      ["2단계 · 꾸미기", "분위기를 골라요", "누르면 이 화면이 바로 바뀌어요. ‘플러그인 꾸미기’와 같은 선택지예요."],
+      ["3단계 · 장기 기억", "장기 기억을 켤까요?", "AI 응답마다 인물의 상태와 있었던 일을 기억해서, 다음 대화에 알맞게 넣어 줘요."],
+      ["4단계 · 이야기 도우미", "이야기를 어떻게 이어 갈까요", "모두 나중에 홈에서 켜고 끌 수 있어요."],
+      ["5단계 · 가져오기", "이미 쓰던 게 있나요?", "이 기기에서 찾은 것만 보여요."],
+      ["6단계 · 끝", "준비됐어요!", "고른 내용이에요. ‘바꾸기’를 누르면 그 단계로 돌아가요."]
     ];
     async function summary() {
       const m = s.mem ?? (M ? await loadMem().catch(() => null) : null), st = s.story ?? await loadStory(), f = s.found ?? await loadFound();
@@ -268,27 +225,26 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
       const row = (label, text, step) => h("div", { class: "rb-srow rb-onb-sum" }, h("span", { class: "t" }, label, h("small", null, text)), btn("바꾸기", { size: "sm", onClick: () => go(step) }));
       return [
         sec(null,
-          row("기능", await addonSummary(), 1),
-          row("화면", `${ctx.prefs.uiMode === "advanced" ? "고급" : "간단"} · 글자 ${sizeName}`, 2),
-          row("분위기", `${setName} · 밝기 ${modeName}`, 3),
-          m ? row("장기 기억", m.on ? `켜짐 · ${m.kind === "api" ? "내 API" : "리스 보조 모델"} · ${LEVELS.find((l) => l.id === m.level)?.label ?? "기본"} · 임베딩 ${m.emb.on ? "켜짐" : "꺼짐"}` : "꺼짐", 4) : null,
-          row("이야기", story.length ? story.join(" · ") : "모두 꺼짐", 5),
-          row("가져오기", imp.length ? imp.join(" · ") : "찾은 것 없음", 6)),
+          row("화면", `${ctx.prefs.uiMode === "advanced" ? "고급" : "간단"} · 글자 ${sizeName}`, 1),
+          row("분위기", `${setName} · 밝기 ${modeName}`, 2),
+          m ? row("장기 기억", m.on ? `켜짐 · ${m.kind === "api" ? "내 API" : "리스 보조 모델"} · ${LEVELS.find((l) => l.id === m.level)?.label ?? "기본"} · 임베딩 ${m.emb.on ? "켜짐" : "꺼짐"}` : "꺼짐", 3) : null,
+          row("이야기", story.length ? story.join(" · ") : "모두 꺼짐", 4),
+          row("가져오기", imp.length ? imp.join(" · ") : "찾은 것 없음", 5)),
         h("div", { class: "rb-onb-tip" }, icon("help", 18), h("div", null, h("b", null, "막히면 ? 버튼"), h("small", null, "화면마다 오른쪽 위 ?를 누르면 그 화면만 짚어 드려요. 이 안내는 설정 → ‘시작 안내 다시 보기’에서 다시 볼 수 있어요.")))
       ];
     }
 
     let drawTok = 0;
     async function go(i) {
-      if (s.step === 4 && i !== 4) { try { await saveMem(); } catch (e) { fail(e); } }
-      // 6단계(가져오기)에 찾은 게 없으면 자동으로 넘어간다
-      if (i === 6) { const f = await loadFound(); if (!f.hypa && !f.cocoa && !f.pot) i = s.step > 6 ? 5 : 7; }
+      if (s.step === 3 && i !== 3) { try { await saveMem(); } catch (e) { fail(e); } }
+      // 5단계(가져오기)에 찾은 게 없으면 자동으로 넘어간다
+      if (i === 5) { const f = await loadFound(); if (!f.hypa && !f.cocoa && !f.pot) i = s.step > 5 ? 4 : 6; }
       s.step = i;
       await draw();
     }
     async function draw() {
       const tok = ++drawTok, i = s.step;
-      parts = null; M = ctx.memory;
+      parts = null;
       if (i === 0) {
         return replace(host, h("div", { class: "rb-onb-welcome" },
           h("div", { class: "rb-onb-top" }, h("span", null), btn("나중에 하기", { kind: "ghost", size: "sm", id: "rb-onb-later", onClick: close })),
@@ -299,21 +255,21 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
             h("div", { class: "rb-onb-feats" },
               h("div", null, icon("brain", 20), h("span", null, h("b", null, "장기 기억"), h("small", null, "인물마다 있었던 일·관계를 기억해요"))),
               h("div", null, icon("module", 20), h("span", null, h("b", null, "봇·모듈 정리"), h("small", null, "폴더·연결·가져오기를 한곳에서"))),
-              ctx.ext?.get("svc", "aibuild") ? h("div", null, icon("sparkle", 20), h("span", null, h("b", null, "AI로 만들기"), h("small", null, "봇·페르소나를 말로 만들어요"))) : null),   // AI 제작 애드온이 있을 때만
+              h("div", null, icon("sparkle", 20), h("span", null, h("b", null, "AI로 만들기"), h("small", null, "봇·페르소나를 말로 만들어요")))),
             btn("설정하고 시작하기", { kind: "primary", id: "rb-onb-start", onClick: () => go(1) }))));
       }
       const [kicker, title, sub] = TITLES[i];
-      const body = i === 7 ? await summary() : await stepBody(i);
+      const body = i === 6 ? await summary() : await stepBody(i);
       if (tok !== drawTok) return;
       const split = body && !Array.isArray(body);
       const steps = h("ol", { class: "rb-onb-steps", "aria-label": "단계" }, STEPS.map((t, k) => h("li", { class: k + 1 < i ? "done" : k + 1 === i ? "on" : "", "aria-current": k + 1 === i ? "step" : null },
         h("button", { type: "button", onClick: () => go(k + 1) }, h("i", { "aria-hidden": "true" }, k + 1 < i ? "✓" : String(k + 1)), t))));
       const nav = h("div", { class: "rb-onb-nav" },
         btn("이전", { onClick: () => go(i - 1), id: "rb-onb-prev" }),
-        i < 7 ? btn("다음", { kind: "primary", onClick: () => go(i + 1), id: "rb-onb-next" }) : btn("시작하기", { kind: "primary", icon: "check", onClick: close, id: "rb-onb-done" }));
-      const head = h("div", { class: ["rb-onb-head", i === 7 && "has-rune"] }, i === 7 ? runeFace("wink", 64) : null, h("div", null, h("small", { class: "kicker" }, kicker), h("h2", null, title), h("p", null, sub)));
+        i < 6 ? btn("다음", { kind: "primary", onClick: () => go(i + 1), id: "rb-onb-next" }) : btn("시작하기", { kind: "primary", icon: "check", onClick: close, id: "rb-onb-done" }));
+      const head = h("div", { class: ["rb-onb-head", i === 6 && "has-rune"] }, i === 6 ? runeFace("wink", 64) : null, h("div", null, h("small", { class: "kicker" }, kicker), h("h2", null, title), h("p", null, sub)));
       replace(host, h("div", { class: ["rb-onb-frame", split && "has-side"] },
-        h("div", { class: "rb-onb-top" }, h("b", { class: "brand" }, "Dusk Atelier · 시작 안내"), h("span", { class: "count" }, `${i}/7`), i < 7 ? btn("건너뛰기", { kind: "ghost", size: "sm", id: "rb-onb-skip", title: "이 단계는 지금 설정 그대로 두고 넘어가요", onClick: () => go(i + 1) }) : null, btn("나중에 하기", { kind: "ghost", size: "sm", id: "rb-onb-later", onClick: close })),
+        h("div", { class: "rb-onb-top" }, h("b", { class: "brand" }, "Dusk Atelier · 시작 안내"), h("span", { class: "count" }, `${i}/6`), i < 6 ? btn("건너뛰기", { kind: "ghost", size: "sm", id: "rb-onb-skip", title: "이 단계는 지금 설정 그대로 두고 넘어가요", onClick: () => go(i + 1) }) : null, btn("나중에 하기", { kind: "ghost", size: "sm", id: "rb-onb-later", onClick: close })),
         h("div", { class: "rb-onb-main" },
           steps,
           h("div", { class: "rb-onb-center rb-scroll" }, head, ...(split ? body.center : body), nav),

@@ -18,12 +18,10 @@ export async function listEroKeys(api) {
 }
 
 
-// only: {chaId, chatId} → 그 채팅 하나만 담는다(채팅 하나 내보내기)
-export async function buildMemoryFile(api, store, { erosync = true, only = null } = {}) {
+export async function buildMemoryFile(api, store, { erosync = true } = {}) {
   const idx = await store.getIndex();
   const folders = [];
   for (const f of Object.values(idx.folders ?? {})) {
-    if (only && (String(f.chaId) !== String(only.chaId) || String(f.chatId) !== String(only.chatId))) continue;
     const folder = await store.getFolder(f.chaId, f.chatId).catch(() => null);
     if (folder) folders.push(folder);
   }
@@ -54,22 +52,11 @@ export const summarize = (d) => ({
 });
 
 // 같은 채팅의 기억이 이미 있으면 파일 내용으로 바꾼다. 없는 채팅은 추가. 파일에 없는 채팅은 그대로 둔다.
-// target: {chaId, chatId, chatIndex?, chatName?} → 파일의 채팅 하나를 그 채팅(예: 복사한 채팅)에 넣는다.
-// 버그 2: 예전에는 v2 폴더만 받아서 지금(v3) 내보낸 파일의 기억이 전부 건너뛰어지고 Erosync 값만 덮어써졌다.
-export const FOLDER_VERSIONS = [2, 3];
-export async function applyMemoryFile(api, store, d, { erosync = true, target = null } = {}) {
+export async function applyMemoryFile(api, store, d, { erosync = true } = {}) {
   let chats = 0, ero = 0;
-  const list = d.folders.filter((f) => f?.chaId && f?.chatId && FOLDER_VERSIONS.includes(f.v));
-  if (target && list.length !== 1) throw new Error("채팅 하나만 담긴 파일만 열린 채팅에 넣을 수 있어요.");
-  for (const f of list) {
-    const to = target ?? f;
-    await store.updateFolder(to.chaId, to.chatId, (cur) => {
-      const v = cur.v;
-      for (const k of Object.keys(cur)) delete cur[k];
-      Object.assign(cur, JSON.parse(JSON.stringify(f)), { v, chaId: String(to.chaId), chatId: String(to.chatId) });
-      cur.wiki ??= null;
-      if (target) { if (target.chatIndex != null) cur.chatIndex = target.chatIndex; if (target.chatName) cur.chatName = target.chatName; if (cur.wiki?.scope) cur.wiki.scope = { ...cur.wiki.scope, characterId: String(to.chaId), chatKey: String(to.chatId) }; }
-    });
+  for (const f of d.folders) {
+    if (!f?.chaId || !f?.chatId || f.v !== 2) continue;
+    await store.updateFolder(f.chaId, f.chatId, (cur) => { for (const k of Object.keys(cur)) delete cur[k]; Object.assign(cur, JSON.parse(JSON.stringify(f))); });
     chats++;
   }
   await store.updateIndex((i) => { for (const [id, b] of Object.entries(d.bots ?? {})) if (!i.bots[id]) i.bots[id] = b; });

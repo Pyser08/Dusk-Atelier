@@ -5,12 +5,7 @@ import { createTransport } from "./transport.js";
 import { createGeminiCache } from "./gemcache.js";
 import { createRisuTools } from "./risutools.js";
 import { createToolExec } from "./toolexec.js";
-import { createMcpClient } from "./mcpclient.js";
 import { createProviderRunner } from "./runner.js";
-import { createMailbox } from "./mailbox.js";
-import { createBoard } from "../../engine/provider/board.js";
-import { createErrorLog } from "../../engine/provider/errlog.js";
-import { createProgressWindow } from "./progress.js";
 import { createRegistrar } from "./register.js";
 import { listModels, fetchBalance, hasBalance } from "./models.js";
 import { parseVertexAccount, vertexAccessToken } from "../pot/vertex-client.js";
@@ -20,7 +15,7 @@ import { toPotPreset } from "../../engine/provider/profile.js";
 import { validateModelPreset } from "../../engine/pot/model-options.js";
 import { kindOf } from "../../engine/provider/catalog.js";
 
-export function createProvider(api, { notify = () => {}, confirm, memory = null, createStore, backupSnapshot, compat = () => false, allowed = () => true, log = () => {}, getDoc = null } = {}) {
+export function createProvider(api, { notify = () => {}, confirm, memory = null, createStore, backupSnapshot, compat = () => false, allowed = () => true, log = () => {} } = {}) {
   const store = createProviderStore(api), vault = createKeyVault(api), transport = createTransport(api, { compat });
   const owner = {};   // 인증 캐시 주인(이 묶음 하나당 하나)
   const fetchLike = (url, options) => api.nativeFetch(url, options);
@@ -32,32 +27,16 @@ export function createProvider(api, { notify = () => {}, confirm, memory = null,
   const risuTools = createRisuTools(api, { confirm, memory, log, store: createStore(api), backupSnapshot, currentIdx: null });
   const toolExec = createToolExec({ api });
   const gemcache = createGeminiCache();
-  // 진행 창(2.0.0): 요청별 카드. 설정 '진행 창 보이기'(defaults.progress)를 끄면 창만 숨기고 상태는 그대로
-  const board = createBoard();
-  let progressOn = true; store.get().then((c) => { progressOn = c.defaults?.progress !== false; }).catch(() => {});
-  const docOf = getDoc ?? (async () => { try { return await api.getRootDocument?.(); } catch { return null; } });
-  const progress = createProgressWindow({ getDoc: docOf, board, enabled: () => progressOn, log });
-  store.subscribe((c) => { progressOn = c?.defaults?.progress !== false; progress.refresh(); });
-  // 요청·오류 기록(키 가림, 요청 내용 없음): 시작할 때 불러오고, 바뀌면 2초 뒤 저장. 보관 개수는 설정(defaults.logMax)
-  const errlog = createErrorLog(); let saveT = null;
-  store.get().then((c) => { errlog.setMax(c.defaults?.logMax); return store.loadLog(); }).then((rows) => { if (!errlog.list().length) errlog.load(rows); }).catch(() => {});
-  errlog.subscribe((rows) => { clearTimeout(saveT); saveT = setTimeout(() => store.saveLog(rows), 2000); });
-  store.subscribe((c) => errlog.setMax(c?.defaults?.logMax));
-  // MCP 인증 토큰은 설정이 아니라 키 보관함(vault)에 둔다(기기 간 동기화되는 설정에 비밀이 안 들어가게)
-  const mcpRaw = createMcpClient({ transport });
-  const withAuth = async (srv) => { if (!srv.keyId) return srv; const t = (await vault.values([srv.keyId]))[0]; return t ? { ...srv, headers: { ...srv.headers, authorization: /^bearer\s/i.test(t) ? t : `Bearer ${t}` } } : srv; };
-  const mcp = { list: async (srv) => mcpRaw.list(await withAuth(srv)), call: async (srv, tool, args) => mcpRaw.call(await withAuth(srv), tool, args), forget: (id) => mcpRaw.forget(id) };
-  const runner = createProviderRunner({ api, store, mcp, confirm, vault, transport, gemcache, risuTools, toolExec, vertex, copilot, currentChar: () => currentChat(api), notify, board, errlog, log });
-  const mailbox = createMailbox(api, { store, runner, confirm, allowed, notify, log });   // 다른 플러그인 창구(11단계)
+  const runner = createProviderRunner({ api, store, vault, transport, gemcache, risuTools, toolExec, vertex, copilot, currentChar: () => currentChat(api), notify, log });
   const registrar = createRegistrar(api, { runner, store, log, allowed });
   const credOf = async (conn) => { const v = await vault.values(conn.keyIds); return v[0] ?? ""; };
   return {
-    store, vault, runner, registrar, risuTools, board, progress, errlog, mcp, mailbox,
+    store, vault, runner, registrar, risuTools,
     supported: () => registrar.supported(),
     sync: () => registrar.sync(),
     names: () => registrar.names(),
     async models(conn, signal) { return listModels(transport, conn, await credOf(conn), signal); },
-    async balance(conn, signal) { const own = conn.balanceKeyId ? (await vault.values([conn.balanceKeyId]))[0] : ""; return fetchBalance(transport, conn, own || await credOf(conn), signal); },   // 잔액 전용 토큰이 있으면 그걸로
+    async balance(conn, signal) { return fetchBalance(transport, conn, await credOf(conn), signal); },
     hasBalance,
     // Dusk 자체 AI 작업(기억 분석 등)에 지정한 프로필이 있으면 그 pick을 돌려준다
     async analysisPick() { const c = await store.get(); const id = c.purposes?.analysis?.profileId || c.subProfileId; return allowed() && c.enabled && id && c.profiles.some((p) => p.id === id) ? { mode: "dusk", profileId: id } : null; },

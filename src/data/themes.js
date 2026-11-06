@@ -371,14 +371,3 @@ export async function probeSelectors(doc, selectors) {
   }));
   return r;
 }
-
-// 시작할 때 쓰던 채팅 테마를 다시 적용한다(코어). 테마를 만드는 화면은 채팅 테마 애드온.
-export async function restoreActiveTheme(api) {
-  const data = await loadThemes(api);
-  const doc = await api.getRootDocument?.().catch(() => null);
-  if (!doc) return;
-  const here = await detectTarget(doc, api);
-  const pickT = data.forceApply ? data.target ?? here : here;
-  const t = data.themes[pickT]?.find((x) => x.id === data.active[pickT]);
-  if (t) await applyToDocument(doc, t);
-}

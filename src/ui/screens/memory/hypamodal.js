@@ -2,7 +2,6 @@
 import { h } from "../../dom.js";
 import { btn, modal, note, confirmDialog } from "../../kit.js";
 import { mem, fail } from "./common.js";
-import { chatKeyOf } from "../../../engine/chatkey.js";
 
 const plural = (n, t) => `${n}${t}`;
 export async function openHypaModal(ctx, { det, auto = false } = {}) {
@@ -25,7 +24,7 @@ export async function openHypaModal(ctx, { det, auto = false } = {}) {
         const f = file.files?.[0]; if (!f) return show("info", "HypaPlus 백업(JSON) 파일을 먼저 고르세요.");
         const cur = await M.injector.current(); if (!cur) return show("err", "리수에서 채팅을 연 상태에서 가져올 수 있어요.");
         if (!(await confirmDialog(ctx.win, { title: "이 채팅에 가져올까요?", body: `${cur.character.name} · ${cur.chat.name ?? "채팅"}\n같은 노드는 한 번만 들어가요.`, ok: "가져오기" }))) return;
-        show("info", "가져오는 중…"); show("info", report(await I.importFile(await f.text(), cur.character.chaId, chatKeyOf(cur.chat, cur.ti ?? 0), cur.chat.message ?? [])));
+        show("info", "가져오는 중…"); show("info", report(await I.importFile(await f.text(), cur.character.chaId, cur.chat.id, cur.chat.message ?? [])));
       }) })),
     msg,
     h("div", { class: "rb-mem-edrow", style: "justify-content:flex-end;flex-wrap:wrap" },
@@ -33,7 +32,7 @@ export async function openHypaModal(ctx, { det, auto = false } = {}) {
       btn(auto ? "나중에" : "닫기", { onClick: () => done(true) }),
       d.chats.length ? btn("지금 가져오기", { kind: "primary", onClick: () => run(async () => {
         show("info", "가져오는 중…"); const cur = await M.injector.current().catch(() => null);  // 지금 열린 채팅은 메시지에 연결(앵커)해서 넣는다
-        const r = await I.importAll(d.chats, { onProgress: (i, n) => show("info", `가져오는 중… ${i}/${n}`), messagesFor: async (a, c) => cur && String(cur.character.chaId) === String(a) && chatKeyOf(cur.chat, cur.ti ?? 0) === String(c) ? cur.chat.message ?? [] : null }); show("info", report(r));
+        const r = await I.importAll(d.chats, { onProgress: (i, n) => show("info", `가져오는 중… ${i}/${n}`), messagesFor: async (a, c) => cur && String(cur.character.chaId) === String(a) && String(cur.chat.id) === String(c) ? cur.chat.message ?? [] : null }); show("info", report(r));
       }) }) : null))).catch(fail(ctx));
 }
 

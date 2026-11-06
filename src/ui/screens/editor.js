@@ -14,6 +14,7 @@ import { sortLoreByName } from '../../engine/lorelist.js';
 import { estimateTokens } from '../../engine/memoryinject.js';
 import { reload } from './modules.js';
 import { attachUndo } from '../undo.js';
+import { openAiPopup, loadPopupGeom } from './aibuild.js';
 import { openRoulette } from './roulettepop.js';
 import { bbInstalled } from '../../engine/firstrun.js';
 import { infoCard, infoStat, ensureInfoStyle } from './infocard.js';
@@ -374,9 +375,7 @@ export async function openEditorCore(ctx, cfg) {
   const body = h("div", { class: "rb-split" });
   // 우측 하단 버튼 하나: 누르면 [AI 창 · 규칙 시험] 두 개가 펼쳐진다 (AI 창은 봇 편집에서만, 모듈은 규칙 시험만)
   const isBot = cfg.idKey === "chaId";
-  // AI 창·룰렛·AI로 제작 탭: 'AI로 봇·페르소나 만들기' 애드온이 있을 때만(2.0.0). ai = { load(), openAiPopup, loadPopupGeom, renderAiTab }
-  const ai = ctx.ext?.get("svc", "aibuild") ?? null;
-  const hasAi = !!ai;
+  const hasAi = true; // v1.6.9: AI 창·룰렛·AI로 제작 탭은 봇·모듈 모두
   const descKey = isBot ? "desc" : "description"; // 룰렛 등이 글을 넣는 설명 칸
   const fabItem = (label, ic, title, fn) => {
     const b = btn(label, { kind: "primary", icon: ic, title, onClick: () => { closeDial(); fn(); } });
@@ -2416,7 +2415,7 @@ export async function openEditorCore(ctx, cfg) {
   // AI 엔진(요청 조립·프리셋·암호/압축 라이브러리)은 AI를 처음 쓸 때만 불러온다 → 편집기를 여는 속도는 그대로
   let build = null, buildInit = null, buildP = null, bbPresent = false;
   function ensureBuild() {
-    buildP ??= ai.load().then(([c, br]) => {
+    buildP ??= Promise.all([import('../../dev/aibuild/controller.js'), import('../../dev/aibuild/bridge.js')]).then(([c, br]) => {
       build = c.createAiBuild({ api: ctx.api, host: br.hostFromEditor(handle, { targetId: () => draft[cfg.idKey], kind: isBot ? "character" : "module" }) });
       buildInit = build.init().catch((err) => ctx.toast(`AI 설정을 불러오지 못했어요: ${err?.message ?? err}`, { error: true }));
       let lastPending = 0;
@@ -2444,7 +2443,7 @@ export async function openEditorCore(ctx, cfg) {
     warmed = true;
     ensureBuild().catch(() => { warmed = false; });
     probeBb();
-    ai.loadPopupGeom(ctx).catch(() => {});
+    loadPopupGeom(ctx).catch(() => {});
   }
   async function aiWindow(opts) {
     // 'AI로 다시 쓰기'는 창이 이미 열려 있으면 닫지 않고 상자만 보여 준다
@@ -2455,9 +2454,9 @@ export async function openEditorCore(ctx, cfg) {
     try { b = await ensureBuild(); } catch (e) { return ctx.toast(`AI 도구를 불러오지 못했어요: ${e?.message ?? e}`, { error: true }); }
     // 봇빌더 감지는 미리 해 둔 결과를 쓴다. 아직 안 끝났어도 최대 0.25초만 기다리고 연다.
     await Promise.race([probeBb(), new Promise((r) => setTimeout(r, 250))]);
-    await ai.loadPopupGeom(ctx);
+    await loadPopupGeom(ctx);
     testFab.style.visibility = "hidden";
-    ai.openAiPopup(ctx, { panel, build: b, selection: () => es.sel, bbPresent, tab: es.tab, onClose: () => { testFab.style.visibility = ""; paintFab(); },
+    openAiPopup(ctx, { panel, build: b, selection: () => es.sel, bbPresent, tab: es.tab, onClose: () => { testFab.style.visibility = ""; paintFab(); },
       // 수정안을 적용하기 전에 그 상태 그대로 규칙 시험 (시험 창에서 [수정안으로 돌아가기]로 AI 창에 되돌아와요)
       onRuleTest: (lorebook) => { panel.querySelector("#rb-ai-popup")?.closePopup?.(); ruleTester({ lorebook, onBack: () => aiWindow() }); } });
   }
@@ -2466,7 +2465,7 @@ export async function openEditorCore(ctx, cfg) {
     const mine = es.aiRoot = h("div", { class: "pane" }, loading("AI 도구를 불러오는 중"));
     replace(body, mine);
     let b, tabMod;
-    try { [b, tabMod] = await Promise.all([ensureBuild(), ai.aitab()]); await buildInit; } catch (e) {
+    try { [b, tabMod] = await Promise.all([ensureBuild(), import("./aitab.js")]); await buildInit; } catch (e) {
       if (es.aiRoot === mine) replace(mine, note("err", `AI 도구를 불러오지 못했어요: ${e?.message ?? e}`));
       return;
     }

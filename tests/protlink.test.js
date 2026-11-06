@@ -3,14 +3,14 @@ import assert from "node:assert/strict";
 import { PL_KEY, PL_LINKS, createProtLink, loadProtLinkOn, normLink, summary } from "../src/data/protlink.js";
 
 const F = (uid, name, size = 10, modifiedAt = 1, path = []) => ({ uid, name, size, modifiedAt, path });
-function fakeEnv({ files = [F("a", "시로코.risum")], state = "ready", plugins = [], extraHooks = {} } = {}) {
+function fakeEnv({ files = [F("a", "시로코.risum")], state = "ready", plugins = [] } = {}) {
   const mem = new Map(), env = { files, state, downloads: [], imported: [], saved: [], dropped: 0 };
   const api = { pluginStorage: { getItem: async (k) => mem.get(k) ?? null, setItem: async (k, v) => { mem.set(k, v); } },
     getDatabase: async () => ({ characters: [{ chaId: "c1", name: "시로코" }, { chaId: "c2", name: "휴지통", trashTime: 1 }, { chaId: "g", name: "그룹", type: "group" }], modules: [{ id: "m1", name: "시로코 모듈" }], plugins }) };
   const share = () => ({ root: { name: "시로코 모음" }, download: async (f, o) => { env.downloads.push(f.name); o?.onProgress?.(1, 1); return new Uint8Array([1, 2, 3]); } });
   const driver = { PZ: () => ({}), Ln: (e) => `오류:${e?.message ?? e}`, G3: () => ({ open: async () => (env.state === "ready" ? { kind: "ready", share: share() } : { kind: env.state }), drop: () => { env.dropped++; } }), Sp: async () => { if (env.fail) throw new Error("끊김"); return { files: env.files, folders: 0, partial: false }; } };
   const checked = [];
-  const pl = createProtLink(api, { driver, originalProbe: async () => !!env.original, startDelay: 5, hooks: { importFiles: async (f, t) => { env.imported.push([f.map((x) => x.name), t]); }, saveFile: async (n) => { env.saved.push(n); }, onChecked: (r) => checked.push(r), ...extraHooks } });
+  const pl = createProtLink(api, { driver, originalProbe: async () => !!env.original, startDelay: 5, hooks: { importFiles: async (f, t) => { env.imported.push([f.map((x) => x.name), t]); }, saveFile: async (n) => { env.saved.push(n); }, onChecked: (r) => checked.push(r) } });
   return { api, mem, env, pl, checked };
 }
 
@@ -111,14 +111,4 @@ test("Proton 연결부: 주소에서 링크 아이디를 읽고, 네트워크가
     const r = await d.Sp(share, { full: true });
     assert.deepEqual(r.files.map((f) => [f.name, f.path.join("/")]), [["a.risum", ""], ["b.js", "sub"]]); assert.equal(r.folders, 1); assert.equal(r.partial, false);
   } finally { console.warn = warn; }
-});
-test("받아서 바로 갱신(플러그인): 코드 바꿀 길(updatePlugin)이 있으면 파일 저장 없이 연결한 플러그인을 바꾼다", async () => {
-  const calls = [];
-  const e = fakeEnv({ files: [F("p", "plug.js")], extraHooks: { updatePlugin: async (n, code) => { calls.push([n, typeof code]); return true; } } }); await e.pl.boot();
-  const s = await e.pl.add({ url: "https://x/p", name: "p", kind: "plugin", target: { id: "plug", name: "plug" }, files: [] });
-  const r = await e.pl.apply(s.id);
-  assert.deepEqual(calls, [["plug", "string"]]); assert.deepEqual(e.env.saved, []); assert.equal(r.pluginUpdated, true);
-  const e2 = fakeEnv({ files: [F("p", "plug.js")], extraHooks: { updatePlugin: async () => { throw new Error("서버 없음"); } } }); await e2.pl.boot();
-  const s2 = await e2.pl.add({ url: "https://x/p", name: "p", kind: "plugin", target: { id: "plug", name: "plug" }, files: [] });
-  assert.equal((await e2.pl.apply(s2.id)).pluginUpdated, false); assert.deepEqual(e2.env.saved, ["plug.js"], "실패하면 파일로 저장");
 });

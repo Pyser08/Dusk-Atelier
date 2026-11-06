@@ -24,10 +24,7 @@ export async function renderRelMap(ctx) {
 
   const cur = await (M.switches.peekCurrent ? M.switches.peekCurrent({ onChange: () => { if (ctx.state.tab === "relmap") { st.view = null; redraw(); } } }) : M.switches.currentChat());
   if (!cur) return replace(ctx.main, h("div", { class: "rb-rm" }, pageHead("인물 관계도"), emptyState({ icon: "users", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 인물 관계를 보여 줘요." })));
-  // 가운데 이름(페르소나)도 화면 키에 넣는다 — 페르소나가 바뀌면 만든 화면을 버리고 다시 그린다(버그 3).
-  let liveChat = null; try { liveChat = await ctx.api.getChatFromIndex(cur.ci, cur.ti); } catch { liveChat = null; }
-  const uname = await loadUserName(ctx, { fresh: true, chat: liveChat });
-  const key = `${cur.chaId}:${cur.chatId}:${ctx.prefs.advanced ? 1 : 0}:${uname}`;
+  const key = `${cur.chaId}:${cur.chatId}:${ctx.prefs.advanced ? 1 : 0}`;
 
   // 같은 채팅이면 만든 화면을 그대로 붙이고, 뒤에서 새 데이터만 확인
   if (st.view?.key === key) {
@@ -39,7 +36,7 @@ export async function renderRelMap(ctx) {
   replace(ctx.main, h("div", { class: "rb-rm" }, loading("관계도를 불러오는 중")));
   let folder = await M.store.getFolder(cur.chaId, cur.chatId).catch(() => null);
   // 페르소나 이름으로 따로 쌓인 옛 기록은 {{user}}로 자동으로 합친다. 가운데에는 그 채팅의 페르소나 이름을 보여 준다.
-  const unames = await loadUserNames(ctx.api);
+  const [uname, unames] = await Promise.all([loadUserName(ctx), loadUserNames(ctx.api)]);
   try {
     const merged = await autoMergeUser(M.store, cur.chaId, cur.chatId, folder, unames);
     if (merged) { folder = await M.store.getFolder(cur.chaId, cur.chatId).catch(() => folder); ctx.toast?.(`'${merged.names.join("', '") || "다른 이름"}' 기록을 {{user}}(${uname})로 합쳤어요.`); }

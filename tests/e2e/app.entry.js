@@ -1,20 +1,3 @@
-import { LIB as ADDON_LIB } from "../../src/addonlib.gen.js";
-globalThis.__duskLib = ADDON_LIB;   // 배포용 애드온 파일(addons/dist) 시험용
-import { activate as chatthemeAddon } from "../../addons/chattheme/index.js";
-import { activate as aibuildAddon } from "../../addons/aibuild/index.js";
-import { activate as widgetsAddon } from "../../addons/widgets/index.js";
-import { activate as manageAddon } from "../../addons/manage/index.js";
-import { activate as memoryAddon } from "../../addons/memory/index.js";
-import { activate as cardsAddon } from "../../addons/cards/index.js";
-import { activate as protlinkAddon } from "../../addons/protlink/index.js";
-import { activate as providerAddon } from "../../addons/provider/index.js";
-import { renderProvider as _rpv } from "../../src/ui/screens/provider.js";
-import { renderProtLink as _rp } from "../../src/ui/screens/protlink.js";
-import { renderMemory as _rm } from "../../src/ui/screens/memory/index.js";
-import { renderRelMap as _rr } from "../../src/ui/screens/relmap.js";
-import { renderCardsTab as _rc } from "../../src/ui/screens/cards/index.js";
-const FEATURE_ADDONS = [manageAddon, chatthemeAddon, aibuildAddon, widgetsAddon];
-import { createAddons } from "../../src/data/addons.js";
 import { createSkillStore } from "../../src/data/skillstore.js";
 import { normalizeSkillSet } from "../../src/engine/skills.js";
 // 1.7.0 메뉴 구조 시험용: 가짜 리스 api로 실제 createApp을 띄운다. node tests/e2e/run-app.mjs 로 실행.
@@ -136,35 +119,6 @@ window.bootApp = async (seed, opts = {}) => {
       }, { chaId: "c1", chatId: "t1" });
       memory.injector.lastRequest = () => ({ at: Date.now(), injected: true, manifest: { tokens: 420, recordIds: ["r1", "r2", "r3"], included: [{ kind: "person", name: "시로코", tokens: 300 }], excluded: [] } });
     }
-  }
-  // 기능 애드온: 실제 사용자처럼 켜 둔 상태로 시험(소스를 바로 불러 같은 모듈 사용). coreOnly면 코어만.
-  if (!opts.coreOnly) for (const act of FEATURE_ADDONS) await act(api, { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async () => {} });
-  // 장기기억·기억카드 애드온(2.0.0): opts.memory면 위에서 만든 기억으로 실제 애드온을 켠다.
-  // 아니면 예전처럼 기억 없이 탭만 보이게(화면은 '준비되지 않았어요') 자리만 채운다.
-  if (!opts.coreOnly) {
-    const actx = { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async () => {} };
-    // 프로바이더(실험): opts.provider면 위에서 만든 것으로 애드온을, 아니면 탭 자리만
-    if (app.ctx.provider) { app.ctx.providerForTest = app.ctx.provider; await providerAddon(api, actx); }
-    else { app.ctx.ext.add("tab", "provider", _rpv); app.ctx.ext.add("svc", "provider", {}); }
-    // ProtLink+: opts.protlink면 위에서 만든 컨트롤러로 애드온을 켜고, 아니면 탭 자리만(예전처럼 ctx.protlink 없음)
-    if (app.ctx.protlink) { app.ctx.protlinkForTest = app.ctx.protlink; await protlinkAddon(api, actx); }
-    else { app.ctx.ext.add("tab", "protlink", _rp); app.ctx.ext.add("svc", "protlink", { on: () => false, list: async () => ({ ok: false, items: [] }), lastError: () => "", targets: async () => [] }); }
-    if (app.ctx.memory) { app.ctx.memoryForTest = app.ctx.memory; await memoryAddon(api, actx); await cardsAddon(api, actx); }
-    else {
-      app.ctx.ext.add("tab", "memory", _rm); app.ctx.ext.add("tab", "relmap", _rr); app.ctx.ext.add("tab", "cards", _rc);
-      app.ctx.ext.add("svc", "memory", {}); app.ctx.ext.add("svc", "cards", {}); app.ctx.ext.add("svc", "memoryui", { tracked: () => null, STAGE_NAMES: {} });
-    }
-  }
-  if (opts.onboard && !opts.addons) {  // 시작 안내 '기능' 단계용 가짜 애드온 관리자(받기·켜기만 기록)
-    const idx = {}, man = [{ id: "memory", name: "장기기억·관계도", version: "1.0.0", desc: "기억", requires: [] }, { id: "cards", name: "기억카드", version: "1.0.0", desc: "카드", requires: ["memory"] }];
-    window.__addonLog = [];
-    app.ctx.addons = { loadManifest: async () => man, manifest: () => man, getIndex: async () => ({ ...idx }), core: () => "2.0.0", lastError: () => "", running: () => [], check: async () => ({ updates: [], held: [] }), remove: async () => {}, subscribe: () => () => {},
-      install: async (id) => { for (const r of man.find((a) => a.id === id).requires) idx[r] ??= { version: "1.0.0", on: true }; idx[id] = { version: "1.0.0", on: true }; window.__addonLog.push(["install", id]); },
-      setOn: async (id, on) => { idx[id] = { ...idx[id], on }; window.__addonLog.push(["setOn", id, on]); } };
-  }
-  if (opts.addons) {  // 애드온 카드 시험: 파일은 실행기가 window.__addonFiles로 넣어 준다(주소 → 내용)
-    app.ctx.addons = createAddons(api, { core: "2.0.0", ctx: { toast: (t, o) => app.ctx.toast?.(t, o) }, fetcher: async (_a, url0) => { const url = url0.split("?")[0]; return (url.endsWith("addons.json") ? window.__addonFiles?.manifest : window.__addonFiles?.[url]) ?? null; } });
-    await app.ctx.addons.boot();
   }
   window.__app = app;
   window.__api = api;

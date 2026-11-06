@@ -3,7 +3,6 @@ import { newId } from "../engine/util.js";
 import { firstMessagePrompt } from "../engine/memorycompose.js";
 import { runAI } from "../engine/runai.js";
 import { stripVirtualContext } from "../engine/bardwikiadapt.js";
-import { chatKeyOf } from "../engine/chatkey.js";
 
 // 지점(at) 이하의 기억만 복사한 새 폴더 내용(순수). 앵커 없는 legacy 기록은 지점 상황 시각 이전 것만.
 export function sliceFolder(folder, at, { carried = true } = {}) {
@@ -50,7 +49,7 @@ export async function createRewindChat(api, charIndex, chatIndex, opts) {
   const check = await api.getCharacterFromIndex(charIndex);
   if (check?.chaId !== ch.chaId || (check.chats ?? []).length !== before + 1) throw new Error("새 채팅을 추가한 뒤 확인에서 예상과 다르게 보여요. 채팅 목록을 확인해 주세요.");
   const slice = sliceFolder(folder, at, { carried: !copyMessages });
-  await store.updateFolder(String(ch.chaId), chatKeyOf(chat), (f) => {
+  await store.updateFolder(String(ch.chaId), String(chat.id), (f) => {
     Object.assign(f, slice, { botName: ch.name ?? "", chatName: label, chatIndex: before, cursor: { at: Math.max(0, message.length - 1), h: "rewind" } });
   });
   return { chat, chatIndex: before };

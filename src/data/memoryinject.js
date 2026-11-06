@@ -5,7 +5,6 @@ import { stateText } from "../engine/storytime.js";
 import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
 import { folderIdOf } from "./memorystore.js";
-import { chatKeyOf } from "../engine/chatkey.js";
 
 // onRequest: 메인 모델 요청 직전에 부른다(기다리지 않음). 러너가 '다음 입력 때 직전 응답 확정'을 시작하는 데 쓴다.
 export function createMemoryInjector(api, { store, prep = null, storyNow = null, onRequest = null, embedder = null, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
@@ -20,7 +19,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
   // 기억 강화: 이번 요청에 실제로 들어간 기록의 사용 횟수(u)와 마지막 사용 위치(lu)를 올린다. 요청을 막지 않게 기다리지 않는다.
   function markUsed(character, chat, ids, count) {
     const set = new Set(ids);
-    store.updateFolder(String(character.chaId), chatKeyOf(chat), (f) => {
+    store.updateFolder(String(character.chaId), String(chat.id), (f) => {
       for (const p of Object.values(f.people ?? {})) for (const r of p.records ?? []) if (set.has(r.id) && (r.lu ?? -99) < count - 2) { r.u = (r.u ?? 0) + 1; r.lu = count; }
     }).catch((e) => log("사용 기록 실패", e?.message ?? e));
   }
@@ -32,16 +31,16 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     if (idx.settings.inject.on === false) return none("inject-off");
     if (idx.bots[String(character.chaId)]?.on === false) return none("bot-off");
     const msgs = chat.message ?? [];
-    const folder = await loadReconciled(store, character.chaId, chatKeyOf(chat), msgs);  // 읽기 시점 대조(저장 안 함)
+    const folder = await loadReconciled(store, character.chaId, chat.id, msgs);  // 읽기 시점 대조(저장 안 함)
     const userTurns = msgs.filter(isUserMessage).length;
     const verdict = injectVerdict(folder, idx.settings.inject, userTurns);
     const notesOnly = !verdict.ok && verdict.reason === "no-memory" && (folder?.lore?.add ?? []).some((n) => n.on !== false);  // 내가 쓴 로어만 있어도 넣는다
     if (!verdict.ok && !notesOnly) return none(verdict.reason);
-    let now = ""; try { const s = await storyNow?.(character.chaId, chatKeyOf(chat)); now = s ? stateText(s) : ""; } catch { now = ""; }
+    let now = ""; try { const s = await storyNow?.(character.chaId, chat.id); now = s ? stateText(s) : ""; } catch { now = ""; }
     const rx = prep ? await prep.entriesFor(character, chat) : [];  // v1.8.1 정규식 전처리: 임베딩·키워드 질의 글에서 군더더기 제거
     const tail = msgs.slice(-2).map((m) => rx.length ? prep.apply(extractMessageText(m), rx) : extractMessageText(m)).join("\n");
     let sem = null;  // 임베딩이 켜져 있으면 의미 유사도로 기억 고르기를 돕는다(실패하면 기존 방식 그대로)
-    try { if (embedder && idx.settings.inject.plus !== false) sem = await embedder.scores(folderIdOf(character.chaId, chatKeyOf(chat)), folder, tail); } catch { sem = null; }
+    try { if (embedder && idx.settings.inject.plus !== false) sem = await embedder.scores(folderIdOf(character.chaId, chat.id), folder, tail); } catch { sem = null; }
     const built = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus, storyNow: now, sem, semMin: embedder?.cfg().minSim });
     if (built.manifest && sem) built.manifest.sem = sem.size;
     const raw = built.text, manifest = built.manifest;
@@ -66,7 +65,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     const cur = await current(); if (!cur) return { ok: false, why: "리스에서 채팅을 연 상태에서 볼 수 있어요." };
     const c = await compose(cur, { mark: false });
     if (!c?.text) return { ok: true, injected: false, raw: c?.raw ?? "", manifest: c?.manifest ?? null, reason: c?.reason ?? "" };
-    return { ok: true, injected: true, text: c.text, raw: c.raw, manifest: c.manifest, position: c.position, botId: String(cur.character.chaId), chatId: chatKeyOf(cur.chat, cur.ti ?? 0) };
+    return { ok: true, injected: true, text: c.text, raw: c.raw, manifest: c.manifest, position: c.position, botId: String(cur.character.chaId), chatId: String(cur.chat.id) };
   }
   // 훅이 없는 환경: 분석 뒤 채팅 localLore의 [Dusk 기억] 항목을 갱신.
   async function syncLore(ci, ti) {

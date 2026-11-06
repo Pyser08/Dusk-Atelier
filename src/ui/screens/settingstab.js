@@ -7,7 +7,7 @@ import { icon } from '../icons.js';
 import { openTour } from '../tour.js';
 import { CHANGELOG, openChangelog } from '../whatsnew.js';
 import { LORE_DEFAULTS, loadLoreSettings, saveLoreSettings } from '../../data/lorerules.js';
-import { devToggleCard, experimentalCard } from './devtools.js';
+import { devToggleCard, experimentalCard, widgetHomeCard } from './devtools.js';
 import { renderCleanup, fullBackup, fullRestore } from './tools.js';
 import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
@@ -16,7 +16,6 @@ import { loadMemoryButtonOn } from '../../data/memorybutton.js';
 import { createCellar, loadCellarUrl, saveCellarUrl, CELLAR_DEFAULT_URL } from '../../data/cellar.js';
 import { createCellarBackups } from '../../data/cellarbackup.js';
 import { createCellarUpdate } from '../../data/cellarupdate.js';
-import { addonCard } from './addonsui.js';
 
 export async function renderSettingsTab(ctx) {
   if (ctx.state.sub === "prompts") return renderPrompts(ctx);
@@ -44,13 +43,11 @@ export async function renderSettingsTab(ctx) {
       segRow("메뉴 위치", "PC에서 메뉴를 왼쪽 또는 위쪽에 둬요.", layoutSeg, "rb-pc-only"),
       linkRow("플러그인 꾸미기", "색·밝기·글자 크기", () => ctx.go("look"), "rb-set-look")
     ),
-    ...(ctx.ext?.render("slot", "settings.cards", ctx) ?? []),   // 애드온 카드(위젯 홈 등)
+    ctx.widgetHome ? widgetHomeCard(ctx, () => renderSettingsTab(ctx)) : null,
     cellarCard(ctx, linkRow, card),
-    addonCard(ctx, card),
     card("백업", linkRow("백업 만들기", "모듈·에셋·설정을 zip 한 파일로", () => fullBackup(ctx), "rb-set-fullbackup"), linkRow("백업에서 복원", "전체 백업 zip으로 되살리기", () => fullRestore(ctx), "rb-set-restore")),
     card("도움말",
       ctx.openOnboarding ? linkRow("시작 안내 다시 보기", "처음 설정을 단계별로 다시 해요", () => ctx.openOnboarding(), "rb-set-onboard") : null,
-      linkRow("기능 맛보기 다시 켜기", "홈에서 다음에 써 볼 기능을 하나씩 다시 권해요", async () => { await ctx.prefs.saveUi({ discover: {} }); ctx.toast("홈에서 다시 권해 드릴게요."); }, "rb-set-discover"),
       linkRow("처음 둘러보기", "버튼을 하나씩 짚어 드려요", () => openTour(ctx), "rb-set-tour"),
       linkRow("새로 바뀐 점", null, () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록"), "rb-set-whatsnew", `v${ctx.version}`))
   );

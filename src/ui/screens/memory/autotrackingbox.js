@@ -8,7 +8,7 @@ import { conflictBox } from "./conflictui.js";
 import { tracked } from "./settingstools.js";
 import { advancedPot } from "../pot.js";
 
-export async function autoTrackingBox(env, { noAdvanced = false } = {}) {
+export async function autoTrackingBox(env) {
   const { ctx } = env, M = ctx.memory;
   const docs = Object.values(env.folder.wiki?.documents ?? {}).filter((d) => d?.type === "Character");
   const trackingStore = M.flow?.settings ? tracked(ctx, await M.flow.settings().catch(() => null)) : null;
@@ -38,5 +38,5 @@ export async function autoTrackingBox(env, { noAdvanced = false } = {}) {
     conflictBox(env),
     h("details", { class: "rb-mem-man" }, h("summary", null, `캐릭터별 위키 사용 · ${docs.length}명`),
       docs.length ? h("div", { class: "rb-pot-charlist" }, charList) : h("p", { class: "rb-muted" }, "아직 위키 인물이 없어요.")),
-    noAdvanced ? null : advanced);
+    advanced);
 }

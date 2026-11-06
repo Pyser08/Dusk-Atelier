@@ -1,5 +1,5 @@
 // 모델 목록·잔액 조회 (v1.9.3). 공급자가 지원하는 것만. 실패는 메시지로 돌려준다.
-import { kindOf, baseUrlOf } from "../../engine/provider/catalog.js";
+import { kindOf } from "../../engine/provider/catalog.js";
 const hdr = (conn, cred) => (conn.format === "anthropic" ? { "x-api-key": cred, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" } : conn.format === "gemini" ? { "x-goog-api-key": cred } : { authorization: `Bearer ${cred}` });
 async function getJson(transport, url, headers, signal, proxyUrl) { const r = await transport.send({ url, method: "GET", headers, body: undefined }, { signal, proxyUrl }); if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }
 export function parseModels(conn, j) {
@@ -8,7 +8,7 @@ export function parseModels(conn, j) {
 }
 export async function listModels(transport, conn, cred, signal) {
   const k = kindOf(conn.kind); if (!k.models) throw new Error("이 공급자는 모델 목록을 불러올 수 없어요");
-  const url = `${String(baseUrlOf(conn)).replace(/\/+$/, "")}${k.models}${conn.format === "gemini" ? "?pageSize=200" : ""}`;
+  const url = `${String(conn.baseUrl || k.baseUrl).replace(/\/+$/, "")}${k.models}${conn.format === "gemini" ? "?pageSize=200" : ""}`;
   const ids = parseModels(conn, await getJson(transport, url, cred ? hdr(conn, cred) : {}, signal, conn.proxyUrl));
   const hide = new Set(conn.hidden ?? []); return [...new Set([...(conn.userModels ?? []), ...ids])].filter((m) => !hide.has(m));
 }

@@ -433,5 +433,12 @@ export async function renderThemeStudio(ctx) {
 }
 
 // 시작할 때: 켜 둔 테마를 화면에 다시 입힌다
-// 시작할 때 쓰던 테마 적용은 코어(data/themes.js)에 있다 — 채팅 테마 애드온이 없어도 만든 테마는 계속 적용돼요.
-export { restoreActiveTheme } from '../../data/themes.js';
+export async function restoreActiveTheme(api) {
+  const data = await loadThemes(api);
+  const doc = await api.getRootDocument?.().catch(() => null);
+  if (!doc) return;
+  const here = await detectTarget(doc, api);
+  const pickT = data.forceApply ? data.target ?? here : here;
+  const t = data.themes[pickT]?.find((x) => x.id === data.active[pickT]);
+  if (t) await applyToDocument(doc, t);
+}

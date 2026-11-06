@@ -43,7 +43,6 @@ export function createMemoryButton(api, { name, icon, open, log }) {
     },
     async start() {
       if (await loadMemoryButtonOn(api)) await show();
-    },
-    hide   // 애드온을 끌 때 버튼만 내린다(설정값은 그대로)
+    }
   };
 }

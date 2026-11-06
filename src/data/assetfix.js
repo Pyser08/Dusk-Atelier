@@ -3,7 +3,6 @@
 // 장기기억은 메시지를 '본문 전체 해시'로 알아보므로, 바뀐 응답의 식별자를 새 것으로 옮겨 다시 분석·연결 끊김을 막는다.
 import { extractMessageText, isUserMessage, messageIdentity } from "../engine/chattext.js";
 import { renameIds } from "../engine/assetfix.js";
-import { chatKeyOf } from "../engine/chatkey.js";
 
 export const UNDO_KEY = "dusk.assetfix.undo.v1";
 const TEXT_FIELDS = ["data", "content", "text", "mes", "message"];
@@ -15,7 +14,7 @@ async function openChat(api) {
   const character = await api.getCharacterFromIndex(ci);
   const chat = (typeof api.getChatFromIndex === "function" ? await api.getChatFromIndex(ci, ti) : null) ?? character?.chats?.[ti];
   if (!chat || !Array.isArray(chat.message)) throw new Error("채팅을 읽지 못했어요.");
-  return { ci, ti, character, chat, chaId: String(character?.chaId ?? ci), chatId: chatKeyOf(chat, ti) };
+  return { ci, ti, character, chat, chaId: String(character?.chaId ?? ci), chatId: String(chat.id ?? ti) };
 }
 
 // 마지막 n개 AI 응답(오래된 것 → 최신)과 그 앞 응답 몇 개(직전 옷 기억용)

@@ -63,7 +63,7 @@ test("읽기 연결부: 채팅을 못 읽는 환경에서도 던지지 않고 �
 test("Dusk 연결: 기본 제공자가 host.runAI(Dusk AI 호출)로 간다", () => {
   const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
   assert.match(src, /providerId === 'risu' && typeof host\.runAI === 'function'/);
-  const main = fs.readFileSync(new URL("../addons/erosync/index.js", import.meta.url), "utf8");   // 2.0.0: Erosync는 애드온에서 만든다
+  const main = fs.readFileSync(new URL("../src/main.js", import.meta.url), "utf8");
   assert.match(main, /host: \{ runAI:/);
 });
 test("Dusk 연결부(실제 엔진): 동작 설정·지시문·집착 방지·주기 플래그", async () => {
@@ -113,8 +113,8 @@ test("Dusk 이야기 시간: 켜져 있으면 주기 시계가 응답 상태 줄
   const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
   assert.ok(src.includes("function duskStoryAbsolute(state)") && src.includes("host.storyStatus(") && src.includes("fromDusk: true"));
   assert.ok(src.includes("(time.fromDusk === true || supported(time.evidence))"));
-  const main = fs.readFileSync(new URL("../addons/erosync/index.js", import.meta.url), "utf8");
-  assert.ok(/storyStatus: \(text, prevDate\) => \(app\.storyTime\?\.isOn\?\.\(\)/.test(main));
+  const main = fs.readFileSync(new URL("../src/main.js", import.meta.url), "utf8");
+  assert.ok(/storyStatus: \(text, prevDate\) => \(storyTime\.isOn\(\)/.test(main));
 });
 
 test("집착 방지 상태(state.duskGuard)가 저장 때 정리 과정에서 떨어지지 않는다(턴을 넘어 연속 횟수·쉬는 턴이 이어져야 함)", () => {

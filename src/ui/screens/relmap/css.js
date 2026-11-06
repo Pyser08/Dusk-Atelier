@@ -5,7 +5,7 @@ export const RELMAP_CSS = `
 .rb-rm-app{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:12px;min-width:0}
 .rb-rm-stage{position:relative;min-width:0;background:radial-gradient(100% 85% at 50% 45%,var(--rb-surf) 0%,var(--rb-win) 100%);border:1px solid var(--rb-line2);border-radius:var(--rb-r3);box-shadow:var(--rb-card);overflow:hidden;height:min(68vh,660px);min-height:420px}
 .rb-rm-stage canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
-.rb-rm-stage canvas.flat{touch-action:pan-y;cursor:default}@media (pointer:coarse){.rb-rm-stage{height:min(56vh,560px);min-height:320px}}.rb-rm-stage canvas.hit{cursor:pointer}
+.rb-rm-stage canvas.flat{touch-action:pan-y;cursor:default}.rb-rm-stage canvas.hit{cursor:pointer}
 .rb-rm-ctrls{position:absolute;top:10px;left:10px;right:54px;display:flex;flex-wrap:wrap;gap:8px;pointer-events:none}.rb-rm-ctrls .rb-chip{pointer-events:auto}
 .rb-rm-legend{position:absolute;left:12px;right:12px;bottom:10px;display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px;color:var(--rb-sub);pointer-events:none}
 .rb-rm-legend span{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;background:var(--rb-surf);opacity:.92}

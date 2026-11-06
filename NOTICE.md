@@ -10,8 +10,6 @@ Erosync(src/erosync/)는 Erosync V0.9.1(원작자에게 제공받음)을 Dusk �
 
 ProtLink+(src/protlink/)는 ProtLink+ v1.0.0(원작자에게 제공받음)에서 Proton Drive에 연결하는 부분(공유 링크 열기·비밀번호·폴더 훑기·파일 받기)만 그대로 가져온 것입니다. 링크 목록·연결·업데이트 확인·화면은 Dusk 방식으로 새로 만들었습니다. 원문은 GPL-3.0-or-later(PocketRisu/RisuAI/RisuTide 코드 포함)이며 GPLv3 제13조에 따라 AGPL-3.0과 결합해 배포합니다. 함께 들어 있는 패키지(@aws-crypto/sha256-js Apache-2.0, @protontech/crypto GPL-3.0, @protontech/openpgp LGPL-3.0+ 등)의 고지 전문은 src/protlink/NOTICES.txt에 원문 그대로 있습니다.
 
-Dusk 프로바이더(src/data/provider/, src/engine/provider/, addons/provider/)는 Yumi Provider Manager v1.19.3(원작자 허락)의 기능과 일부 코드를 참고·가져와 보완합니다. 가져온 부분은 해당 파일 머리 주석에 출처를 적습니다.
-
 ---
 
 /*

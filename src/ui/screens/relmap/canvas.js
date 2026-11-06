@@ -352,8 +352,6 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
   let down = null, pinch = null;
   const pts = {};
   const clampZ = (v) => clampN(v, 0.5, 3);
-  // 모바일은 평면(flat)으로 시작하는데 클래스가 안 붙어 touch-action:none이 그대로라 화면 스크롤이 막혔다.
-  canvas.classList.toggle("flat", !!st.flat);
   const local = (ev) => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
   const on = (type, fn, opts) => { canvas.addEventListener(type, fn, opts); return () => canvas.removeEventListener(type, fn, opts); };
   const offs = [

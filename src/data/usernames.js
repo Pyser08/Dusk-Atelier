@@ -13,17 +13,13 @@ export function userNameList(db) {
   return out;
 }
 // 화면에 {{user}} 대신 보여 줄 이름: 지금 고른 페르소나 → username
-// chat.bindedPersona(채팅에 묶인 페르소나)가 있으면 그쪽이 먼저(버그 3: 페르소나를 바꿔도 예전 이름이 가운데 남던 문제)
-export function primaryUserName(db, chat = null) {
+export function primaryUserName(db) {
   const list = Array.isArray(db?.personas) ? db.personas : [];
-  const bound = chat?.bindedPersona ? list.find((p) => p?.id === chat.bindedPersona) : null;
-  const n = bound?.name ?? list[db?.selectedPersona ?? 0]?.name;
+  const n = list[db?.selectedPersona ?? 0]?.name;
   return ok(n) ? n.trim() : ok(db?.username) ? db.username.trim() : "";
 }
-// fresh: 캐시(45초)를 건너뛴다 — 리스 화면에서 페르소나를 바꾸면 api를 거치지 않아 캐시가 모른다.
-export async function loadPrimaryUserName(api, { fresh = false, chat = null } = {}) {
-  const keys = ["username", "personas", "selectedPersona"];
-  try { return primaryUserName(fresh && typeof api.getDatabase === "function" ? await api.getDatabase(keys) : await dbRead(api, keys), chat); } catch { return ""; }
+export async function loadPrimaryUserName(api) {
+  try { return primaryUserName(await dbRead(api, ["username", "personas", "selectedPersona"])); } catch { return ""; }
 }
 export async function loadUserNames(api) {
   try { return userNameList(await dbRead(api, ["username", "personas", "selectedPersona"])); } catch { return []; }

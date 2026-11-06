@@ -215,7 +215,7 @@ window.runSmoke = async () => {
     check("화면별 둘러보기 정의", bad.length === 0, bad.join(","));
     const sctx0 = { state: { tab: "settings" } };
     check("화면 키", screenTourKey(sctx0) === "settings" && screenTourKey({ state: { tab: "cocoa" } }) === "cocoa" && screenTourKey({ state: { tab: "memory" } }) === "memory:home");
-    check("화면별 둘러보기 단계", screenTourSteps(sctx0).length === 1 + SCREEN_TOURS.settings.length && screenTourSteps({ state: { tab: "provider" } }).length === 1 && /·/.test(screenTourSteps({ state: { tab: "provider" } })[0].text));
+    check("화면별 둘러보기 단계", screenTourSteps(sctx0).length === 1 + SCREEN_TOURS.settings.length && screenTourSteps({ state: { tab: "plugins" } }).length === 1 && /·/.test(screenTourSteps({ state: { tab: "plugins" } })[0].text));
     // 설정 화면 모양의 DOM에서 실제로 건너뛰며 하이라이트되는지
     const w2 = document.createElement("div"); w2.innerHTML = '<div class="rb-set-look">꾸미기</div><div class="rb-set-tour">둘러보기</div>'; w2.prepend(w.querySelector(".rb-scard")); document.body.appendChild(w2);
     const { runScreenTour } = await import("../../src/ui/screentours.js");

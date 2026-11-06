@@ -26,13 +26,10 @@ import { createRetryToast, judgeAutoResult } from "./retrytoast.js";
 import { loadReconciled } from "./memoryload.js";
 import { confirmedAiIndex, messageIdentity } from "../engine/chattext.js";
 import { appendDuskSection, splitDusk, checkDusk, SECTION_MARK } from "../engine/duskwriter.js";
-import { CYCLE_BLOCK_MARK, CYCLE_FIELD_PROMPT, applyCycleReport } from "../engine/cyclereport.js";
-import { parseJson } from "../engine/memoryprompt.js";
 import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
 import { makeTools } from "./memorytools.js";
 import { potConfirm, potOffForBot } from "../engine/memoryswitch.js";
 import { MEMORY_DEFAULT_PROMPT_1, MEMORY_DEFAULT_PROMPT_2 } from "./memory-default-prompts.js";
-import { chatKeyOf } from "../engine/chatkey.js";
 
 const READONLY = new Set(["writer_schema", "director_schema", "slots", "policies"]);
 export const promptKeysOf = (lib) => Object.entries(lib).flatMap(([id, parts]) => Object.keys(parts).filter((p) => !READONLY.has(p)).map((p) => `${id}:${p}`));
@@ -103,16 +100,12 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
         try { prep = await runner.prepareLatest(await api.getCurrentCharacterIndex(), await api.getCurrentChatIndex()); } catch { prep = null; }
         if (prep && !had && !stash.has(prep.h)) sent = appendDuskSection(prompt, prep.input);
       }
-      // 월경 추적이 켜져 있으면 보고를 별도 칸(cycle_report)으로도 받는다(버그 5)
-      const cyc = /^writer/i.test(label) && String(prompt).includes(CYCLE_BLOCK_MARK);
-      if (cyc) sent += CYCLE_FIELD_PROMPT;
-      let text = await stageCall(a, k, preset, sent, opts);
+      const text = await stageCall(a, k, preset, sent, opts);
       if (prep && (sent !== prompt || had)) {
         const { raw, dusk } = splitDusk(text), ok = checkDusk(dusk, { ignore: prep.ignore });
         if (ok) putStash(prep.h, ok);
-        text = raw;
+        return raw;
       }
-      if (cyc) { try { text = applyCycleReport(text, wiki.snapshot(), parseJson).raw; } catch { /* 보고 줄 없이 그대로 */ } }
       return text;
     };
 
@@ -135,10 +128,10 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       try {
         const idx = await store.getIndex(), character = await api.getCharacterFromIndex(ctx.characterIndex);
         const msgs = ctx.chat?.message ?? [];
-        const folder = await loadReconciled(store, character?.chaId ?? ctx.characterIndex, chatKeyOf(ctx.chat, ctx.chatIndex), msgs);  // 읽기 시점 대조(저장 안 함)
+        const folder = await loadReconciled(store, character?.chaId ?? ctx.characterIndex, ctx.chat?.id ?? ctx.chatIndex, msgs);  // 읽기 시점 대조(저장 안 함)
         if (!folder) return memory;
         const query = [ctx.currentUser, ...(ctx.recentChat ?? []).map((m) => m.text)].join("\n");
-        let sem = null; try { if (embedder) sem = await embedder.scores(folderIdOf(character?.chaId ?? ctx.characterIndex, chatKeyOf(ctx.chat, ctx.chatIndex)), folder, query); } catch { sem = null; }
+        let sem = null; try { if (embedder) sem = await embedder.scores(folderIdOf(character?.chaId ?? ctx.characterIndex, ctx.chat?.id ?? ctx.chatIndex), folder, query); } catch { sem = null; }
         const r = recallFor(folder, {
           sem, semMin: embedder?.cfg().minSim,
           names: (ctx.documents ?? []).flatMap((d) => [d.title, ...(d.aliases ?? [])]),

@@ -12,9 +12,6 @@ import { openItems } from '../../engine/memoryplus.js';
 import { memoryGlobalOn } from '../../engine/memoryswitch.js';
 import { injectReasonText } from '../../engine/memoryinject.js';
 import { mem } from './memory/common.js';
-import { discoverCard } from '../discovercard.js';
-import { TABS, tabHidden } from '../tabs.js';
-const sectionLive = (ctx, section) => TABS.some((t) => t.section === section && !t.mobileOnly && !tabHidden(t, ctx.prefs.ui));
 import { createBotAndEdit } from './newbot.js';
 import { quickSettingsCard } from '../quickset.js';
 import { loadStoryTimeOn } from '../../data/storytime.js';
@@ -47,7 +44,7 @@ export async function renderHome(ctx) {
     h("div", { class: "rb-hgrid" },
       tile("upload", "가져오기", "봇·모듈·파일 가져오기", () => ctx.legacy.open(), "rb-home-import"),
       tile("brain", "기억", "장기 기억·기억 카드·코코아", () => ctx.go("memory-home"), "rb-home-memory"),
-      sectionLive(ctx, "manage") ? tile("module", "관리", "캐릭터·모듈·플러그인", () => ctx.go("manage-home"), "rb-home-manage") : null,   // 관리 애드온·ProtLink+가 다 없으면 숨김
+      tile("module", "관리", "캐릭터·모듈·플러그인", () => ctx.go("manage-home"), "rb-home-manage"),
       tile("tools", "작업실", "프로바이더·AI 봇 제작·도구", () => ctx.go("work-home"), "rb-home-work")
     )
   );
@@ -58,10 +55,7 @@ export async function renderHome(ctx) {
   const contEl = h("section", { class: "rb-hcont", "aria-label": "이어서 하기" }, h("h2", null, "이어서 하기"), h("div", { class: "rb-chips" }, h("button", { type: "button", class: "rb-chip rb-hcont-chip", onClick: () => ctx.legacy.open() }, "봇·모듈 가져오기")));
   const qsHold = h("div", { class: "rb-card bordered", style: "width:100%;padding:12px 14px", "aria-busy": "true" }, bar("80%"));
   const recentEl = h("aside", { class: "rb-hrecent", "aria-label": "최근 기록" }, h("div", { class: "rb-hrec-head" }, h("h2", null, "최근 기록")), h("div", { class: "rb-card bordered", style: "width:100%;padding:12px 14px", "aria-busy": "true" }, bar("85%"), h("div", { style: "height:8px" }), bar("55%", 12)), h("h2", null, "빠른 설정"), qsHold);
-  // 기능 맛보기(2.0.0): 쓰는 만큼 다음 기능을 하나씩 권한다. 읽은 뒤 채운다(없으면 빈 자리).
-  const discoverEl = h("div", { class: "rb-discover-slot" });
-  discoverCard(ctx, { onChange: () => discoverCard(ctx).then((c) => replace(discoverEl, ...(c ? [c] : []))).catch(() => {}) }).then((c) => { if (c) replace(discoverEl, c); }).catch(() => {});
-  replace(host, headEl, h("div", { class: "rb-hbody" }, h("div", { class: "rb-hmain" }, statusEl, discoverEl, grid, contEl, tourLink), recentEl));
+  replace(host, headEl, h("div", { class: "rb-hbody" }, h("div", { class: "rb-hmain" }, statusEl, grid, contEl, tourLink), recentEl));
   // 읽은 뒤: 새로 만든 칸의 내용물만 옮겨 담는다(바로가기 등은 그대로 두어 깜빡이지 않는다)
   const adopt = (box, el) => { for (const a of [...el.attributes]) box.setAttribute(a.name, a.value); box.removeAttribute("aria-busy"); replace(box, ...Array.from(el.childNodes)); };
   let s = { M: null };

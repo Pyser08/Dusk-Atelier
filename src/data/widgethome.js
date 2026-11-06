@@ -48,7 +48,6 @@ export function createWidgetHome(api, { log = () => {}, boot = bootWidgetHome, l
   }
   return {
     isRunning: () => !!inst,
-    shutdown: () => stop(),   // 애드온을 끌 때: 켜기 설정은 그대로 두고 화면만 정리
     isVisible: () => !!inst?.isVisible?.(),
     lastError: () => error,
     autoStatus: () => inst?.autoStatus?.() ?? "",

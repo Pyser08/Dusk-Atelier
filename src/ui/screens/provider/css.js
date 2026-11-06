@@ -17,7 +17,7 @@ textarea.rb-input.area{height:auto;min-height:84px;padding:10px 14px;line-height
 .rb-pstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
 .rb-pstat>div{padding:10px 12px;border-radius:var(--rb-r2);background:var(--rb-surf);border:var(--rb-bw,1px) solid var(--rb-line2);display:flex;flex-direction:column;gap:2px}
 .rb-pstat b{font-size:17px}.rb-pstat span{font-size:12px;color:var(--rb-mute)}
-.rb-pscroll{overflow-x:auto;max-width:100%}.rb-ptable{width:100%;border-collapse:collapse;font-size:13px}.rb-ptable td,.rb-ptable th{padding:6px 8px;text-align:left;border-bottom:var(--rb-bw,1px) solid var(--rb-line2)}.rb-ptable th{font-size:12px;color:var(--rb-mute);font-weight:600}
+.rb-ptable{width:100%;border-collapse:collapse;font-size:13px}.rb-ptable td,.rb-ptable th{padding:6px 8px;text-align:left;border-bottom:var(--rb-bw,1px) solid var(--rb-line2)}.rb-ptable th{font-size:12px;color:var(--rb-mute);font-weight:600}
 .rb-pwarn{padding:10px 12px;border-radius:var(--rb-r2);border:var(--rb-bw,1px) solid var(--rb-line3);font-size:12.5px;line-height:1.55;color:var(--rb-sub)}
 .rb-pdiff{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}@media (max-width:560px){.rb-pdiff{grid-template-columns:minmax(0,1fr)}}
 .rb-pdiff pre{margin:0;padding:10px 12px;border-radius:var(--rb-r2);background:var(--rb-surf);border:var(--rb-bw,1px) solid var(--rb-line2);white-space:pre-wrap;word-break:break-word;font:12.5px/1.55 inherit;max-height:320px;overflow:auto}

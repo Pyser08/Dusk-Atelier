@@ -1,7 +1,7 @@
 // 프로바이더 실행기 (v1.9.3): 요청 받기 → 프로필 고르기 → 키 고르기 → 보내기 → 해독 → 대체·재시도 → 사용량 기록.
 import { purposeOfMode, kindOf } from "../../engine/provider/catalog.js";
 import { resolve, chainOrder } from "../../engine/provider/profile.js";
-import { buildRequest, turnHashesOf } from "../../engine/provider/build.js";
+import { buildRequest } from "../../engine/provider/build.js";
 import { createStreamDecoder, parseResponse } from "../../engine/provider/sse.js";
 import { detectRepetition, trimRepetition } from "../../engine/provider/repeat.js";
 import { createKeyPool } from "../../engine/provider/keypool.js";
@@ -11,12 +11,6 @@ import { applyRules, anatomy, orderForCache } from "../../engine/provider/transf
 import { enabledTools, parseArgs } from "../../engine/provider/tools.js";
 import { protect, restore, guideBlock, glossaryBlock } from "../../engine/provider/translate.js";
 import { HttpError, errorFromResponse, redact } from "./transport.js";
-import { PURPOSE_LABEL } from "../../engine/provider/catalog.js";
-import { mcpToolDefs } from "../../engine/provider/mcp.js";
-import { applyPre, applyPost, hasPost } from "../../engine/provider/hooks.js";
-import { pickByRules } from "../../engine/provider/router.js";
-import { estimateTokens } from "../../engine/provider/tokens.js";
-import { batchKey, batchCreateRequest, batchStatusRequest, batchResultsRequest, parseBatchStatus, parseBatchResults } from "../../engine/provider/batch.js";
 
 const nz = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== undefined && !(Array.isArray(v) && !v.length)));
 const TOOL_RE = /<tool_call\s+name="([^"]+)">([\s\S]*?)<\/tool_call>/g;
@@ -24,9 +18,8 @@ export const toolPrompt = (defs) => `[도구 사용]\n필요할 때만 아래 �
 export const parseToolCalls = (text) => [...String(text).matchAll(TOOL_RE)].map((m) => ({ name: m[1], args: parseArgs(m[2]) }));
 export const stripToolCalls = (text) => String(text).replace(TOOL_RE, "").trim();
 
-export function createProviderRunner({ api, store, vault, transport, gemcache = null, risuTools = null, toolExec = null, vertex = null, copilot = null, currentChar = async () => null, notify = () => {}, board = null, errlog = null, mcp = null, confirm = null, now = () => Date.now(), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), log = () => {} }) {
-  const pools = new Map(); const prevAnatomy = new Map(); const prevTurns = new Map();   // 캐시 학습: 채팅·용도·프로필마다 직전 요청의 턴 해시
-  const reasoningMemo = new Map(); let warnedDay = "";
+export function createProviderRunner({ api, store, vault, transport, gemcache = null, risuTools = null, toolExec = null, vertex = null, copilot = null, currentChar = async () => null, notify = () => {}, now = () => Date.now(), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), log = () => {} }) {
+  const pools = new Map(); const prevAnatomy = new Map(); const reasoningMemo = new Map(); let warnedDay = "";
   const poolFor = async (conn, cfg) => {
     const vals = await vault.values(conn.keyIds), sig = `${conn.id}|${conn.keyMode}|${vals.join("\n")}`;
     let p = pools.get(conn.id); if (!p || p.sig !== sig) { p = { sig, pool: createKeyPool(vals, { mode: conn.keyMode, now }) }; pools.set(conn.id, p); }
@@ -46,40 +39,15 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     if (!key) { if (k.keyOptional && !conn.keyIds.length) return { cred: "", key: "" }; throw new HttpError(pool.size() ? "모든 키가 잠시 쉬는 중이에요" : "API 키를 추가해 주세요", pool.size() ? 429 : 401, { setup: !pool.size() }); }
     return { cred: key, key };
   }
-  // 배치(Anthropic Message Batches, 값 절반·최대 24시간). 같은 입력은 저장해 둔 배치를 이어서 확인하고 새로 만들지 않는다.
-  async function onceBatch({ reqObj, profile, conn, signal, cfg, purpose, cha, c, secrets, t0 }) {
-    const bo = { signal, proxyUrl: conn.proxyUrl, secrets }, key = batchKey(reqObj.body), map = await store.loadBatches();
-    const stale = now() - 26 * 3600e3; for (const k of Object.keys(map)) if ((map[k]?.at ?? 0) < stale) delete map[k];
-    const call = async (r) => { const res = await transport.send(r, bo); if (!res.ok) { const err = await errorFromResponse(res, secrets); err.key = c.key; throw err; } return res; };
-    const pendingErr = (id) => Object.assign(new HttpError(`배치(${id})가 아직 진행 중이에요. 같은 메시지로 다시 보내면 이어서 확인해요`, 0), { batchPending: true, key: c.key });
-    let ent = map[key];
-    if (!ent) { const cid = `dusk-${now().toString(36)}`; const j = await (await call(batchCreateRequest(reqObj, cid))).json(); ent = map[key] = { id: String(j?.id ?? ""), cid, at: now() }; if (!ent.id) throw new HttpError("배치를 만들지 못했어요", 0, { key: c.key }); await store.saveBatches(map); notify(`배치를 만들었어요(${ent.id}). 값이 절반이고 오래 걸릴 수 있어요`); }
-    const until = now() + (cfg.defaults.batchWaitMin || 60) * 60e3, maxPolls = Math.ceil(((cfg.defaults.batchWaitMin || 60) * 60) / (cfg.defaults.batchPollSec || 15)) + 2;
-    for (let poll = 0; ; poll++) {
-      if (signal?.aborted) throw Object.assign(new Error("aborted"), { aborted: true });
-      const st = parseBatchStatus(await (await call(batchStatusRequest(reqObj, ent.id))).json());
-      if (st.ended) {
-        const text = await (await call(batchResultsRequest(reqObj, { ...st, id: ent.id }))).text(); delete map[key]; await store.saveBatches(map);
-        const r = parseBatchResults(text, ent.cid); if (r.error) throw new HttpError(redact(r.error, secrets), 0, { key: c.key, batchFailed: true });
-        errlog?.add({ model: profile.model, purpose, kind: "ok", status: 200, attempt: 0, ms: now() - t0, action: "batch", message: `배치 완료 · 입력 ${r.usage?.input ?? 0} · 출력 ${r.usage?.output ?? 0}` });
-        store.addUsage({ at: now(), purpose, profile: profile.id, model: profile.model, cha: cha?.chaId ?? "", usage: r.usage, cost: costOf(r.usage, profile.pricing) * 0.5, saved: savedByCache(r.usage, profile.pricing) * 0.5, ms: now() - t0, via: "batch" }).catch(() => {});
-        return { text: r.text, thinking: r.thinking, key: c.key, reasoningState: [] };
-      }
-      if (profile.batch !== "wait" || now() >= until || poll >= maxPolls) throw pendingErr(ent.id);
-      await sleep((cfg.defaults.batchPollSec || 15) * 1000);
-    }
-  }
   // 한 번 시도. 스트림이면 첫 이벤트까지 읽고(여기서 실패하면 대체 가능) 나머지는 넘겨 준다.
   async function once({ conn, profile, messages, signal, cfg, purpose, cha, aff, pool, wantStream, extra = {} }) {
     const c = await credential(conn, pool, signal, aff);
     let gc = { messages }; if (gemcache && conn.kind === "google") gc = await gemcache.prepare({ conn, profile, messages, cred: c.cred, transport, signal });
     const upstreamStream = wantStream !== "off";
-    const learnKey = `${cha?.chaId ?? ""}|${purpose}|${profile.id}`, learnOn = !!profile.cache?.learn; const prevTurnHashes = learnOn ? prevTurns.get(learnKey) ?? null : null; if (learnOn) { try { prevTurns.set(learnKey, turnHashesOf(gc.messages)); } catch { /* 학습만 건너뜀 */ } }
-    let reqObj = buildRequest({ conn, profile, messages: gc.messages, prevTurnHashes, stream: upstreamStream, cred: c.copilot ? "" : c.cred, cachedContent: gc.cachedContent, reasoningState: extra.reasoningState });
+    let reqObj = buildRequest({ conn, profile, messages: gc.messages, stream: upstreamStream, cred: c.copilot ? "" : c.cred, cachedContent: gc.cachedContent, reasoningState: extra.reasoningState });
     if (c.copilot) { reqObj = { ...reqObj, url: c.copilot.origin + new URL(reqObj.url).pathname, headers: { ...reqObj.headers, ...c.copilot.headers } }; }
     if (cfg.debug?.preview) notify(`요청 미리보기: ${profile.model} · ${gc.messages.length}개 메시지`);
     const t0 = now(), secrets = [c.cred];
-    if (profile.batch && profile.batch !== "off" && reqObj.format === "anthropic") return onceBatch({ reqObj, profile, conn, signal, cfg, purpose, cha, c, secrets, t0 });
     const ctl = new AbortController(); const onAbort = () => ctl.abort(signal.reason); if (signal) { if (signal.aborted) ctl.abort(); else signal.addEventListener("abort", onAbort, { once: true }); }
     const to = setTimeout(() => ctl.abort(new Error("timeout")), (cfg.defaults.timeoutSec || 300) * 1000);
     const done = () => { clearTimeout(to); signal?.removeEventListener?.("abort", onAbort); };
@@ -88,7 +56,7 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     catch (e) { done(); if (signal?.aborted) throw Object.assign(new Error("aborted"), { aborted: true }); throw e instanceof HttpError ? e : new HttpError(redact(e?.message, secrets), 0, { network: true, timeout: /timeout/i.test(String(e?.message)) }); }
     if (!res.ok) { done(); const err = await errorFromResponse(res, secrets); err.key = c.key; if (res.status === 401 && c.copilot) c.copilot.invalidate?.(); throw err; }
     const format = reqObj.format, rep = { ...cfg.defaults.repetition, on: profile.repetitionOn };
-    const finish = (acc, { factor = 1, via = "device" } = {}) => { const u = acc.usage; const cost = costOf(u, profile.pricing) * factor, saved = savedByCache(u, profile.pricing) * factor; errlog?.add({ model: profile.model, purpose, kind: "ok", status: 200, attempt: 0, ms: now() - t0, action: "done", message: `입력 ${u?.input ?? 0} · 출력 ${u?.output ?? 0}` }); store.addUsage({ at: now(), purpose, profile: profile.id, model: profile.model, cha: cha?.chaId ?? "", usage: u, cost, saved, ms: now() - t0, via }).catch(() => {}); };
+    const finish = (acc) => { const u = acc.usage; const cost = costOf(u, profile.pricing), saved = savedByCache(u, profile.pricing); store.addUsage({ at: now(), purpose, profile: profile.id, model: profile.model, cha: cha?.chaId ?? "", usage: u, cost, saved, ms: now() - t0, via: "device" }).catch(() => {}); };
     // 스트림 아님(응답이 JSON 통째)
     if (!upstreamStream || !res.body?.getReader) {
       done(); let j; try { j = await res.json(); } catch { throw new HttpError("응답을 읽지 못했어요", res.status); }
@@ -146,64 +114,30 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     for (let n = 0; n < 24; n++) {
       let key = ""; // 이 시도에서 쓴 키
       try {
-        board?.update(ctx.reqId, { phase: "send", model: profile.model, label: `${PURPOSE_LABEL[res.purpose] ?? res.purpose} · ${profile.name || profile.model}`, waitUntil: 0 });
         const out = await once({ ...ctx, conn, profile: effectiveProfile(profile, ctx.req), pool, cfg, purpose: res.purpose });
         if (out.key) pool.ok(out.key); return { ok: true, out };
       } catch (e) {
         last = e; key = e.key ?? "";
-        const kind = classifyFailure({ status: e.status, message: e.message, aborted: e.aborted, empty: e.empty, blocked: e.blocked, pending: e.batchPending, terminal: e.batchFailed });
+        const kind = classifyFailure({ status: e.status, message: e.message, aborted: e.aborted, empty: e.empty, blocked: e.blocked });
         if (kind === "abort") return { ok: false, kind, error: e };
         const keysLeft = Math.max(0, pool.ready() - (key ? 1 : 0));
         if (key && (kind === "rate" || kind === "auth")) pool.fail(key, { ms: (cfg.defaults.keyCooldownSec || 60) * 1000 });
-        const plan = planAfterFailure(kind, { retriesLeft: retries, keysLeft, chainLeft: 0, retryOn: cfg.defaults.retryOn });
-        errlog?.add({ model: profile.model, purpose: res.purpose, kind, status: e.status, attempt: n + 1, action: plan, message: e.message });
+        const plan = planAfterFailure(kind, { retriesLeft: retries, keysLeft, chainLeft: 0 });
         if (e.setup) return { ok: false, kind, error: e };
-        if (plan === "switch-key") { board?.update(ctx.reqId, { phase: "retry", attempt: (n + 2), note: "다른 키로 다시" }); continue; }
-        if (plan === "retry") { retries--; if (key && kind === "rate") pool.ok(key);   // 429 재시도: 잠깐 기다린 뒤 같은 키를 다시 쓴다
-          const ms = backoffMs(Math.max(0, (profile.retry ?? 2) - retries - 1)); board?.update(ctx.reqId, { phase: "retry", attempt: (n + 2), waitUntil: now() + ms, note: e.status ? `HTTP ${e.status}` : "" }); await sleep(ms); continue; }
+        if (plan === "switch-key") continue;
+        if (plan === "retry") { retries--; await sleep(backoffMs(Math.max(0, (profile.retry ?? 2) - retries - 1))); continue; }
         return { ok: false, kind, error: e };
       }
     }
     return { ok: false, kind: "client", error: last };
   }
-  // 진행 창(board): 요청마다 카드 하나. 끝나는 길(성공·실패·취소·스트림 끝)마다 end를 부른다.
-  let reqSeq = 0;
   async function handle(req, signal) {
-    const reqId = `r${now().toString(36)}-${++reqSeq}`, purpose0 = req.__purpose || purposeOfMode(req.mode);
-    board?.start(reqId, { label: PURPOSE_LABEL[purpose0] ?? purpose0 });
-    let out;
-    try { out = await handleInner(req, signal, reqId); }
-    catch (e) { board?.end(reqId, "error", String(e?.message ?? e).slice(0, 120)); throw e; }
-    if (!out?.success) { board?.end(reqId, "error", String(out?.content ?? "").slice(0, 120)); return out; }
-    const c = out.content;
-    if (c && typeof c.getReader === "function" && typeof ReadableStream === "function") {
-      // 스트림: 다 받으면 완료, 오류면 실패, 리스가 끊으면 취소로 카드를 닫는다(어느 길로 끝나도 카드가 남지 않게). 받은 글자 수도 보여 준다.
-      board?.update(reqId, { phase: "recv" }); let chars = 0, toks = 0, last = 0; const rd = c.getReader();
-      const piped = new ReadableStream({
-        async pull(ctl) {
-          try {
-            const { done, value } = await rd.read();
-            if (done) { board?.update(reqId, { chars, tokens: toks }); board?.end(reqId, "ok"); ctl.close(); return; }
-            const piece = String(typeof value === "string" ? value : value?.text ?? ""); chars += piece.length; toks += estimateTokens(piece);
-            if (now() - last > 500) { last = now(); board?.update(reqId, { chars, tokens: toks }); }
-            ctl.enqueue(value);
-          } catch (e) { board?.end(reqId, signal?.aborted ? "abort" : "error", String(e?.message ?? e).slice(0, 120)); ctl.error(e); }
-        },
-        cancel(reason) { board?.end(reqId, "abort"); try { rd.cancel(reason); } catch { /* 이미 끝남 */ } }
-      });
-      return { ...out, content: piped };
-    }
-    board?.end(reqId, signal?.aborted || c === "" ? "abort" : "ok");
-    return out;
-  }
-  async function handleInner(req, signal, reqId) {
     const cfg = await store.get(), purpose = req.__purpose || purposeOfMode(req.mode);
     const cha = await currentChar().catch(() => null);
     const sum = summarize(await store.usage(), { now: now() }), bs = budgetState(sum, cfg.budget); let forced = "";
     if (bs.state === "over") { if (cfg.budget.action === "block") return fail(`예산을 넘었어요: ${bs.why}`); if (cfg.budget.action === "switch" && cfg.budget.switchProfileId) forced = cfg.budget.switchProfileId; else if (warnedDay !== String(new Date(now()).toDateString())) { notify(`예산을 넘었어요: ${bs.why}`); warnedDay = String(new Date(now()).toDateString()); } }
     else if (bs.state === "warn" && warnedDay !== String(new Date(now()).toDateString())) { notify(bs.why); warnedDay = String(new Date(now()).toDateString()); }
-    const routed = forced || req.__profile ? "" : pickByRules(cfg.router, { purpose, messages: req.prompt_chat ?? [] });   // 라우터: 예산 전환·요청 지정이 없을 때만
-    const first = resolve(cfg, purpose, { chaId: cha?.chaId, profileId: forced || req.__profile || routed }); if (!first) return fail("Dusk 프로바이더에 프로필이 없어요. 작업실 → 프로바이더에서 만들어 주세요.");
+    const first = resolve(cfg, purpose, { chaId: cha?.chaId, profileId: forced || req.__profile || "" }); if (!first) return fail("Dusk 프로바이더에 프로필이 없어요. 작업실 → 프로바이더에서 만들어 주세요.");
     let messages = applyRules(req.prompt_chat ?? [], cfg.transforms.rules, { purpose, model: first.profile.model, charName: cha?.botName ?? "" });
     // 번역기 다듬기: 서식 보호 토큰 · 용어집 · 안내문(켜 두었을 때만)
     let tmap = null;
@@ -217,20 +151,17 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     const akey = `${cha?.chaId ?? ""}|${purpose}`;
     if (cfg.transforms.cacheOrder) messages = orderForCache(messages, prevAnatomy.get(akey));
     prevAnatomy.set(akey, anatomy(messages, prevAnatomy.get(akey)));
-    const defs = purpose === "main" ? allTools(cfg) : []; const useTools = defs.length > 0;
+    const defs = purpose === "main" ? enabledTools(cfg.tools) : []; const useTools = defs.length > 0;
     if (useTools) messages = [...messages, { role: "system", content: toolPrompt(defs) }];
-    const baseMessages = messages;
     const order = chainOrder(cfg, first.profileId), aff = cha?.chaId ?? "";
     const wantMain = purpose === "main";
     let lastFail = null;
     for (let i = 0; i < order.length; i++) {
       const res = i === 0 ? first : resolve(cfg, purpose, { profileId: order[i] }); if (!res) continue;
-      const mdl = res.profile.model, post = hasPost(cfg.hooks, mdl);
-      messages = applyPre(baseMessages, cfg.hooks, mdl);   // 훅(앞처리)은 보낼 모델 기준
-      const stream = !wantMain || useTools || post ? (res.profile.stream === "off" ? "off" : "buffered") : res.profile.stream;   // 응답 훅이 있으면 한번에 받아서 처리
+      const stream = !wantMain || useTools ? (res.profile.stream === "off" ? "off" : "buffered") : res.profile.stream;
       if (!useTools) {
-        const r = await attemptTarget(res, { req, reqId, messages, signal, cha, aff, wantStream: stream, extra: { reasoningState: res.profile.thinking?.continuation ? reasoningMemo.get(akey) : undefined } }, cfg);
-        if (r.ok) { if (r.out.reasoningState?.length) reasoningMemo.set(akey, r.out.reasoningState); return { success: true, content: r.out.stream ?? fixT(applyPost(r.out.text, cfg.hooks, mdl)) }; }
+        const r = await attemptTarget(res, { req, messages, signal, cha, aff, wantStream: stream, extra: { reasoningState: res.profile.thinking?.continuation ? reasoningMemo.get(akey) : undefined } }, cfg);
+        if (r.ok) { if (r.out.reasoningState?.length) reasoningMemo.set(akey, r.out.reasoningState); return { success: true, content: r.out.stream ?? fixT(r.out.text) }; }
         lastFail = r; if (r.kind === "abort") return { success: true, content: "" };
         if (planAfterFailure(r.kind, { chainLeft: order.length - i - 1, chainOn: cfg.chainOn }) !== "next-target") break;
         notify(`'${res.profile.name}' 실패 → 다음 프로필로 넘겨요`); continue;
@@ -238,10 +169,10 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
       // 도구 루프(글 프로토콜, 한번에 받기)
       let msgs = messages; const counter = { n: 0 }; let result = null;
       for (let depth = 0; depth <= (cfg.tools.maxDepth ?? 4); depth++) {
-        const r = await attemptTarget(res, { req, reqId, messages: msgs, signal, cha, aff, wantStream: "buffered" }, cfg);
+        const r = await attemptTarget(res, { req, messages: msgs, signal, cha, aff, wantStream: "buffered" }, cfg);
         if (!r.ok) { result = r; break; }
         const calls = depth < (cfg.tools.maxDepth ?? 4) ? parseToolCalls(r.out.text) : [];
-        if (!calls.length) { return { success: true, content: applyPost(stripToolCalls(r.out.text) || r.out.text, cfg.hooks, mdl) }; }
+        if (!calls.length) { return { success: true, content: stripToolCalls(r.out.text) || r.out.text }; }
         const outs = []; for (const c of calls) outs.push(`<tool_result name="${c.name}">${await runTool(c, cfg, counter)}</tool_result>`);
         msgs = [...msgs, { role: "assistant", content: r.out.text }, { role: "user", content: outs.join("\n") }];
       }
@@ -250,14 +181,8 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     }
     const e = lastFail?.error; return fail(e?.setup ? e.message : `요청에 실패했어요${e?.status ? ` (HTTP ${e.status})` : ""}: ${e?.message ?? "원인을 알 수 없어요"}`);
   }
-  const allTools = (cfg) => [...enabledTools(cfg.tools), ...mcpToolDefs(cfg.mcp?.servers)];
   async function runTool(c, cfg, counter) {
-    const t0 = allTools(cfg).find((d) => d.name === c.name); if (!t0) return "이 도구는 꺼져 있어요";
-    if (t0.mcp) {
-      const srv = cfg.mcp.servers.find((x) => x.id === t0.mcp.server); if (!srv || !mcp) return "MCP 서버를 쓸 수 없어요";
-      if (t0.mcp.write) { const okc = confirm ? await confirm({ title: "MCP 쓰기 도구를 실행할까요?", text: `${srv.name} · ${t0.mcp.tool}\n${JSON.stringify(c.args).slice(0, 300)}` }) : false; if (!okc) return "사용자가 거절했어요"; }
-      try { return String(await mcp.call(srv, t0.mcp.tool, c.args)).slice(0, 6000); } catch (e) { return `실패: ${String(e?.message ?? e).slice(0, 200)}`; }
-    }
+    const t0 = enabledTools(cfg.tools).find((d) => d.name === c.name); if (!t0) return "이 도구는 꺼져 있어요";
     try { if (toolExec) { const r = await toolExec(c.name, c.args, cfg, counter); if (r !== undefined) return String(r).slice(0, 6000); } if (risuTools) return String(await risuTools.run(c.name, c.args, counter)).slice(0, 6000); } catch (e) { return `실패: ${String(e?.message ?? e).slice(0, 200)}`; }
     return "도구를 실행할 수 없어요";
   }
