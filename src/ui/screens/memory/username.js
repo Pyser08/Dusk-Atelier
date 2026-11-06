@@ -11,8 +11,18 @@ export function userText(s) {
   const name = userLabel(), b = hasBatchim(name);
   return String(s ?? "").replace(/\{\{user\}\}(와|과|이|가|은|는|을|를)?/gi, (_, p) => name + (p ? PAIRS[p][b ? 0 : 1] : ""));
 }
+// 채팅에 묶인 페르소나(bindedPersona)가 있으면 그 이름이 먼저다. chat을 안 주면 지금 열린 채팅을 직접 읽는다 —
+// 안 그러면 기본 페르소나 이름이 {{user}} 자리에 들어가고, 화면마다 이름이 다른 채팅 것으로 남는다(1.9.4).
+// 리스 화면에서 페르소나를 바꾸면 api를 거치지 않아 캐시가 모르므로 항상 새로 읽는다.
 export async function loadUserName(ctx, opts = {}) {
-  try { setUserName(await loadPrimaryUserName(ctx.api, opts)); } catch { /* 이름 없이 '나' */ }
+  let chat = opts.chat ?? null;
+  if (!chat) {
+    try {
+      const cur = await (ctx.memory?.switches?.peekCurrent ? ctx.memory.switches.peekCurrent() : ctx.memory?.switches?.currentChat?.());
+      if (cur && Number.isInteger(cur.ci) && Number.isInteger(cur.ti)) chat = await ctx.api.getChatFromIndex(cur.ci, cur.ti);
+    } catch { chat = null; }
+  }
+  try { setUserName(await loadPrimaryUserName(ctx.api, { fresh: true, ...opts, chat })); } catch { setUserName(""); }
   return userLabel();
 }
 // 화면 조각 안의 글자를 바꾼다(입력칸·편집 영역은 건드리지 않음 — 저장 값이 바뀌면 안 되니까). 부분 갱신도 따라가게 지켜본다.
