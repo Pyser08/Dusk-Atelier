@@ -18,6 +18,18 @@ export function installScrollGuard(win, main) {
   const saved = new Map(); let present = new Set(); const pending = new WeakMap();   // pending: 끝으로 밀려난(튄) 영역 → 그때 시각
   let intentAt = 0, view = main?.getAttribute("data-view") ?? "", queued = false;
   const now = () => Date.now();
+  // 목록에 없는 스크롤 영역(모바일의 .rb-mem-col·.rb-home·.rb-cards2 등)도 사용자가 한 번 굴리면 그 클래스를 배워서 지킨다.
+  // (모바일에서 버튼·설정 하나만 바꿔도 맨 위로 튀던 문제 — 그 영역들이 SCROLLER에 없어서 기억 자체가 안 됐다)
+  const learned = new Set();
+  const cssEsc = (c) => String(c).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+  const sel = () => learned.size ? `${SCROLLER},${[...learned].map((c) => "." + cssEsc(c)).join(",")}` : SCROLLER;
+  const scrollable = (n) => { try { const v = (n.ownerDocument?.defaultView ?? globalThis).getComputedStyle(n).overflowY; return v === "auto" || v === "scroll"; } catch { return false; } };
+  const learn = (n) => {
+    if (n?.matches?.(sel())) return true;
+    const c = typeof n?.className === "string" ? n.className.trim().split(/\s+/)[0] : "";
+    if (!c || !c.startsWith("rb-") || !win.contains?.(n) || !scrollable(n)) return false;
+    learned.add(c); return true;
+  };
   const atMax = (n) => n.scrollHeight - n.clientHeight - n.scrollTop <= 2;
   const base = (n) => {
     const page = n.closest("[data-page]")?.getAttribute("data-page") ?? "";
@@ -27,7 +39,7 @@ export function installScrollGuard(win, main) {
   const keyOf = (n) => {
     const b = base(n);
     let i = 0;
-    for (const x of win.querySelectorAll(SCROLLER)) { if (x === n) break; if (base(x) === b) i++; }
+    for (const x of win.querySelectorAll(sel())) { if (x === n) break; if (base(x) === b) i++; }
     return `${b}|${i}`;
   };
   const syncView = () => {
@@ -36,7 +48,7 @@ export function installScrollGuard(win, main) {
   };
   const onScroll = (e) => {
     const n = e.target;
-    if (!n?.matches?.(SCROLLER)) return;
+    if (!learn(n)) return;
     syncView();
     if (now() - intentAt < INTENT_MS) { pending.delete(n); saved.set(keyOf(n), n.scrollTop); return; }
     if (!atMax(n)) { if (!pending.has(n)) saved.set(keyOf(n), n.scrollTop); return; }
@@ -47,7 +59,7 @@ export function installScrollGuard(win, main) {
     queued = false;
     syncView();
     if (now() - intentAt < INTENT_MS) return;
-    const list = [...win.querySelectorAll(SCROLLER)], was = present;
+    const list = [...win.querySelectorAll(sel())], was = present;
     present = new Set(list);   // 지난번에 없던 영역(새로 생겼거나 떼었다 다시 붙음 → 스크롤이 0으로 돌아감)
     for (const n of list) {
       const fresh = !was.has(n);
@@ -66,7 +78,7 @@ export function installScrollGuard(win, main) {
   };
   const intent = () => { intentAt = now(); };
   const onKey = (e) => { if (/^(Arrow(Up|Down)|Page(Up|Down)|Home|End| )$/.test(e.key) && !/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName ?? "")) intent(); };
-  const onDown = (e) => { if (e.target?.matches?.(SCROLLER)) intent(); };   // 스크롤바 끌기
+  const onDown = (e) => { if (e.target?.matches?.(sel())) intent(); };   // 스크롤바 끌기
   const opt = { passive: true, capture: true };
   win.addEventListener("wheel", intent, opt);
   win.addEventListener("touchmove", intent, opt);
@@ -76,7 +88,7 @@ export function installScrollGuard(win, main) {
   let mo = null;
   try { mo = new MutationObserver(schedule); mo.observe(win, { childList: true, subtree: true }); } catch { /* MutationObserver 없는 환경 */ }
   const guard = {
-    saved,
+    saved, learned,
     markNav() { saved.clear(); },   // 다른 화면으로 옮김: 기억을 비운다
     dispose() {
       mo?.disconnect();

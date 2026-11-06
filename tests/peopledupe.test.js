@@ -9,8 +9,8 @@ test("같은 이름(띄어쓰기·기호 무시)과 '제목=상대 별칭'은 �
   const f = folder([doc("a", "텐도 아리스", [], 3), doc("b", "텐도아리스", [], 1), doc("c", "아리스짱", ["아리스"]), doc("d", "아리스", [], 0), doc("e", "유즈", ["별"]), doc("f", "모모", ["별"])]);
   const g = duplicateGroups(f);
   const names = g.map((x) => x.map((e) => e.name).sort());
-  assert.ok(names.some((n) => n.join() === ["텐도 아리스", "텐도아리스"].sort().join()));
-  assert.ok(names.some((n) => n.includes("아리스") && n.includes("아리스짱")));
+  // 2.0.0: 성+이름(텐도 아리스)과 이름만(아리스)도 같은 사람으로 묶는다 → 아리스 묶음 하나
+  assert.ok(names.some((n) => ["텐도 아리스", "텐도아리스", "아리스", "아리스짱"].every((x) => n.includes(x))));
   assert.ok(!names.some((n) => n.includes("유즈") || n.includes("모모")), "별칭끼리만 겹치면 합치지 않음");
   assert.equal(g.find((x) => x.some((e) => e.name === "텐도 아리스"))[0].name, "텐도 아리스", "내용이 많은 쪽이 남는다");
 });

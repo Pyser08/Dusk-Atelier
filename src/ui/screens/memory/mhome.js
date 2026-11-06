@@ -40,7 +40,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     srow("임베딩 (의미 검색)", embedLine, () => { if (M.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, { "data-tour": "mem-embed" }));
 
   // 기억 옵션 3개(고급 모드 '대화에 넣기'와 같은 설정)
-  const { S, save } = builders(ctx, idx, redraw, "");
+  const { S, save, num } = builders(ctx, idx, redraw, "");
   const inj = S.inject ?? {};
   const orow = (title, text, v0, set) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, h("small", null, text)),
     switchEl(v0, { label: title, onChange: (v, el) => { setSwitch(el, v); save((st) => { st.inject ??= {}; set(st.inject, v); }); } }));
@@ -50,6 +50,11 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     orow("사람다운 기억", "관계 진도·호칭·말투·둘만의 추억 등을 기억해요.", inj.human !== false, (o, v) => { o.human = v; }),
     orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }),
     orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
+  // 기억 넣기 최소(목표)·최대(상한) 토큰 — 접힌 세부 설정 안에 있어서 못 찾는 사람이 많아 여기로 꺼냈다(2.0.0)
+  memOptions.append(h("div", { class: "rb-srow rb-mem-tokens", id: "rb-mem-tokens" }, h("span", { class: "t" }, "기억 넣기 토큰", h("small", null, "응답마다 넣는 기억의 양이에요. 목표만큼 채우고, 중요한 게 많으면 상한까지 늘어나요.")),
+    h("div", { class: "rb-mem-tokpair", style: "display:flex;gap:8px;flex-wrap:wrap" },
+      num("목표(최소)", () => inj.targetTokens ?? 2000, (s, v) => { s.inject ??= {}; s.inject.targetTokens = v; if ((s.inject.capTokens ?? 0) < v) s.inject.capTokens = v; }, { min: 200, max: 8000, step: 100 }),
+      num("상한(최대)", () => inj.capTokens ?? 8000, (s, v) => { s.inject ??= {}; s.inject.capTokens = Math.max(v, s.inject.targetTokens ?? 0); }, { min: 200, max: 12000, step: 100 }))));
   memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 리수폿 위키 기록과 Erosync도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
   // 리수폿 일괄 켜기·끄기(모든 봇·채팅). 예전엔 열린 채팅의 봇 하나만 바꿨다.
   let potAll = true; try { potAll = await M.switches.potAllOn(); } catch { /* 기본 켜짐으로 표시 */ }

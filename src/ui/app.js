@@ -443,10 +443,15 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     }
     paneReady = false;
     const screen = { home: renderHome, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, protlink: renderProtLink, characters: renderCharacters, memory: renderMemory, relmap: renderRelMap, cocoa: renderCocoaTab, look: renderSettings, provider: renderProvider, cards: renderCardsTab, presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? ctx.ext.get("tab", state.tab) ?? renderPlaceholder;   // 애드온 탭(AI로 페르소나 만들기 등)
-    Promise.resolve(screen(scopeCtx(ctx, main, () => token !== renderToken))).then(() => {
+    // 장기기억을 쓰는 화면은 기억 시작이 끝난 뒤 그린다(새로고침 직후 먹통 방지). 최대 20초, 넘으면 그냥 그린다.
+    const needsMem = ["memory", "relmap", "memory-home"].includes(state.tab) || ctx.ext.get("needsMemory", state.tab);
+    const waitMem = needsMem && ctx.memory?.isReady && !ctx.memory.isReady()
+      ? (replace(main, h("div", { class: "rb-section" }, h("p", { class: "rb-muted", role: "status" }, "장기기억을 준비하는 중이에요…"))), Promise.race([ctx.memory.ready().catch(() => {}), new Promise((r) => setTimeout(r, 20000))]))
+      : null;
+    Promise.resolve(waitMem).then(() => token === renderToken ? screen(scopeCtx(ctx, main, () => token !== renderToken)) : null).then(() => {
       paneReady = true;
     }).catch((err) => {
-      replace(main, h("div", { class: "rb-section" }, emptyState({ title: "화면을 열지 못했어요", mood: "sorry", text: String(err?.message ?? err) })));   // 1.8.3: 루네가 미안한 얼굴로
+      replace(main, h("div", { class: "rb-section" }, emptyState({ title: "화면을 열지 못했어요", mood: "sorry", text: String(err?.message ?? err) }), h("p", null, h("button", { type: "button", class: "rb-btn", onClick: () => render() }, "다시 시도"))));   // 1.8.3: 루네가 미안한 얼굴로
     });
   }
   async function open(opts) {
