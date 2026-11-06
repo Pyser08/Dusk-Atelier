@@ -11,6 +11,12 @@ export function addonCard(ctx, card) {
   const body = h("div", { class: "rb-addons", id: "rb-addons" });
   const fail = (e) => ctx.toast(`애드온: ${e?.message ?? e}`, { error: true });
   const busy = async (fn) => { try { await fn(); } catch (e) { fail(e); } await paint(); };
+  // 받기·업데이트: 그 줄에 '받는 중…'을 띄우고 버튼을 잠근다(다른 줄·화면은 그대로)
+  const getting = (id, label) => async (ev) => {
+    const row = ev?.currentTarget?.closest?.("[data-addon]");
+    if (row) { row.querySelectorAll("button,[role=switch]").forEach((b) => { b.disabled = true; }); const sm = row.querySelector(".t small"); if (sm) sm.textContent = `${label} 중…`; }
+    await busy(() => A.install(id));
+  };
   async function paint() {
     const idx = await A.getIndex();
     let list = A.manifest();
@@ -22,8 +28,8 @@ export function addonCard(ctx, card) {
       return h("div", { class: "rb-srow", dataset: { addon: a.id } },
         h("span", { class: "t" }, a.name, h("small", null, `${a.desc ? a.desc + " " : ""}${info}`)),
         h("span", { style: "display:flex;gap:6px;align-items:center" },
-          !cur && st === "available" ? btn("받기", { size: "sm", kind: "primary", onClick: () => busy(() => A.install(a.id)) }) : null,
-          st === "update" ? btn("업데이트", { size: "sm", kind: "primary", onClick: () => busy(() => A.install(a.id)) }) : null,
+          !cur && st === "available" ? btn("받기", { size: "sm", kind: "primary", onClick: getting(a.id, "받는") }) : null,
+          st === "update" ? btn("업데이트", { size: "sm", kind: "primary", onClick: getting(a.id, "업데이트하는") }) : null,
           cur ? switchEl(on, { label: `${a.name} 켜기`, onChange: (v) => busy(() => A.setOn(a.id, v)) }) : null,
           cur ? btn("지우기", { size: "sm", onClick: () => busy(() => A.remove(a.id)) }) : null));
     });
