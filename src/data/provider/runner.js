@@ -12,6 +12,9 @@ import { enabledTools, parseArgs } from "../../engine/provider/tools.js";
 import { protect, restore, guideBlock, glossaryBlock } from "../../engine/provider/translate.js";
 import { HttpError, errorFromResponse, redact } from "./transport.js";
 import { PURPOSE_LABEL } from "../../engine/provider/catalog.js";
+import { mcpToolDefs } from "../../engine/provider/mcp.js";
+import { skillBlock } from "../../engine/provider/skills.js";
+import { applyPre, applyPost, hasPost } from "../../engine/provider/hooks.js";
 import { pickByRules } from "../../engine/provider/router.js";
 import { estimateTokens } from "../../engine/provider/tokens.js";
 import { batchKey, batchCreateRequest, batchStatusRequest, batchResultsRequest, parseBatchStatus, parseBatchResults } from "../../engine/provider/batch.js";
@@ -22,7 +25,7 @@ export const toolPrompt = (defs) => `[도구 사용]\n필요할 때만 아래 �
 export const parseToolCalls = (text) => [...String(text).matchAll(TOOL_RE)].map((m) => ({ name: m[1], args: parseArgs(m[2]) }));
 export const stripToolCalls = (text) => String(text).replace(TOOL_RE, "").trim();
 
-export function createProviderRunner({ api, store, vault, transport, gemcache = null, risuTools = null, toolExec = null, vertex = null, copilot = null, currentChar = async () => null, notify = () => {}, board = null, errlog = null, now = () => Date.now(), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), log = () => {} }) {
+export function createProviderRunner({ api, store, vault, transport, gemcache = null, risuTools = null, toolExec = null, vertex = null, copilot = null, currentChar = async () => null, notify = () => {}, board = null, errlog = null, mcp = null, confirm = null, now = () => Date.now(), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), log = () => {} }) {
   const pools = new Map(); const prevAnatomy = new Map(); const prevTurns = new Map();   // 캐시 학습: 채팅·용도·프로필마다 직전 요청의 턴 해시
   const reasoningMemo = new Map(); let warnedDay = "";
   const poolFor = async (conn, cfg) => {
@@ -215,17 +218,20 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     const akey = `${cha?.chaId ?? ""}|${purpose}`;
     if (cfg.transforms.cacheOrder) messages = orderForCache(messages, prevAnatomy.get(akey));
     prevAnatomy.set(akey, anatomy(messages, prevAnatomy.get(akey)));
-    const defs = purpose === "main" ? enabledTools(cfg.tools) : []; const useTools = defs.length > 0;
+    const defs = purpose === "main" ? allTools(cfg) : []; const useTools = defs.length > 0;
     if (useTools) messages = [...messages, { role: "system", content: toolPrompt(defs) }];
+    const baseMessages = messages;
     const order = chainOrder(cfg, first.profileId), aff = cha?.chaId ?? "";
     const wantMain = purpose === "main";
     let lastFail = null;
     for (let i = 0; i < order.length; i++) {
       const res = i === 0 ? first : resolve(cfg, purpose, { profileId: order[i] }); if (!res) continue;
-      const stream = !wantMain || useTools ? (res.profile.stream === "off" ? "off" : "buffered") : res.profile.stream;
+      const mdl = res.profile.model, post = hasPost(cfg.hooks, mdl);
+      const sk = skillBlock(cfg.skills, { model: mdl }); messages = applyPre(sk ? [{ role: "system", content: sk }, ...baseMessages] : baseMessages, cfg.hooks, mdl);   // 스킬·훅(앞처리)은 보낼 모델 기준
+      const stream = !wantMain || useTools || post ? (res.profile.stream === "off" ? "off" : "buffered") : res.profile.stream;   // 응답 훅이 있으면 한번에 받아서 처리
       if (!useTools) {
         const r = await attemptTarget(res, { req, reqId, messages, signal, cha, aff, wantStream: stream, extra: { reasoningState: res.profile.thinking?.continuation ? reasoningMemo.get(akey) : undefined } }, cfg);
-        if (r.ok) { if (r.out.reasoningState?.length) reasoningMemo.set(akey, r.out.reasoningState); return { success: true, content: r.out.stream ?? fixT(r.out.text) }; }
+        if (r.ok) { if (r.out.reasoningState?.length) reasoningMemo.set(akey, r.out.reasoningState); return { success: true, content: r.out.stream ?? fixT(applyPost(r.out.text, cfg.hooks, mdl)) }; }
         lastFail = r; if (r.kind === "abort") return { success: true, content: "" };
         if (planAfterFailure(r.kind, { chainLeft: order.length - i - 1, chainOn: cfg.chainOn }) !== "next-target") break;
         notify(`'${res.profile.name}' 실패 → 다음 프로필로 넘겨요`); continue;
@@ -236,7 +242,7 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
         const r = await attemptTarget(res, { req, reqId, messages: msgs, signal, cha, aff, wantStream: "buffered" }, cfg);
         if (!r.ok) { result = r; break; }
         const calls = depth < (cfg.tools.maxDepth ?? 4) ? parseToolCalls(r.out.text) : [];
-        if (!calls.length) { return { success: true, content: stripToolCalls(r.out.text) || r.out.text }; }
+        if (!calls.length) { return { success: true, content: applyPost(stripToolCalls(r.out.text) || r.out.text, cfg.hooks, mdl) }; }
         const outs = []; for (const c of calls) outs.push(`<tool_result name="${c.name}">${await runTool(c, cfg, counter)}</tool_result>`);
         msgs = [...msgs, { role: "assistant", content: r.out.text }, { role: "user", content: outs.join("\n") }];
       }
@@ -245,8 +251,14 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     }
     const e = lastFail?.error; return fail(e?.setup ? e.message : `요청에 실패했어요${e?.status ? ` (HTTP ${e.status})` : ""}: ${e?.message ?? "원인을 알 수 없어요"}`);
   }
+  const allTools = (cfg) => [...enabledTools(cfg.tools), ...mcpToolDefs(cfg.mcp?.servers)];
   async function runTool(c, cfg, counter) {
-    const t0 = enabledTools(cfg.tools).find((d) => d.name === c.name); if (!t0) return "이 도구는 꺼져 있어요";
+    const t0 = allTools(cfg).find((d) => d.name === c.name); if (!t0) return "이 도구는 꺼져 있어요";
+    if (t0.mcp) {
+      const srv = cfg.mcp.servers.find((x) => x.id === t0.mcp.server); if (!srv || !mcp) return "MCP 서버를 쓸 수 없어요";
+      if (t0.mcp.write) { const okc = confirm ? await confirm({ title: "MCP 쓰기 도구를 실행할까요?", text: `${srv.name} · ${t0.mcp.tool}\n${JSON.stringify(c.args).slice(0, 300)}` }) : false; if (!okc) return "사용자가 거절했어요"; }
+      try { return String(await mcp.call(srv, t0.mcp.tool, c.args)).slice(0, 6000); } catch (e) { return `실패: ${String(e?.message ?? e).slice(0, 200)}`; }
+    }
     try { if (toolExec) { const r = await toolExec(c.name, c.args, cfg, counter); if (r !== undefined) return String(r).slice(0, 6000); } if (risuTools) return String(await risuTools.run(c.name, c.args, counter)).slice(0, 6000); } catch (e) { return `실패: ${String(e?.message ?? e).slice(0, 200)}`; }
     return "도구를 실행할 수 없어요";
   }

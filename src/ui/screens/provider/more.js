@@ -8,13 +8,14 @@ import { summarize, budgetState } from "../../../engine/provider/cost.js";
 import { currentChat } from "../../../data/memoryswitches.js";
 import { field, text, num, area, select, grid, usd, kfmt } from "./ui.js";
 import { formatLog, kindLabel } from "../../../engine/provider/errlog.js";
+import { ext } from "./ext.js";
 
-export const MORE_TABS = [["use", "용도"], ["rule", "규칙"], ["usage", "사용량"], ["log", "로그"], ["cmp", "비교"]];
+export const MORE_TABS = [["use", "용도"], ["rule", "규칙"], ["usage", "사용량"], ["ext", "확장"], ["log", "로그"], ["cmp", "비교"]];
 const pname = (cfg, id) => cfg.profiles.find((p) => p.id === id)?.name ?? "";
 const profOpts = (cfg, none = "(지정 안 함)") => [["", none], ...cfg.profiles.map((p) => [p.id, p.name])];
 
 export async function renderMore(tab, env) {
-  return ({ use, rule, usage, log, cmp })[tab]?.(env) ?? [];
+  return ({ use, rule, usage, ext, log, cmp })[tab]?.(env) ?? [];
 }
 
 // ── 용도: 메인·번역·감정·기억·보조·분석에 어떤 프로필을 쓸지 + 사슬(대체) + 봇별 + 예산 ──

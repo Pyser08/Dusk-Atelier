@@ -240,3 +240,20 @@ test("라우터: 조건에 맞으면 그 프로필, 요청이 직접 고른 프�
   const r2 = await h2.runner.handle(req({ __profile: "p1", prompt_chat: [{ role: "user", content: "열 글자가 넘는 아주 긴 메시지입니다" }] })); if (typeof r2.content !== "string") await collect(r2.content);
   assert.doesNotMatch(h2.calls[0].req.url, /anthropic/);
 });
+
+test("스킬·훅: 보낼 모델 기준으로 끼워 넣고, 응답 훅이 있으면 한번에 받아 고침", async () => {
+  const cfgOver = { skills: [{ id: "s", name: "말투", text: "존댓말을 써요", models: "gpt" }], hooks: [{ id: "h", name: "꼬리", post: { find: "\\s*\\(끝\\)$", replace: "" } }] };
+  const h = harness({ cfgOver, script: [sseRes([oa("안녕 (끝)"), oaEnd()])] }); await h.ready;
+  const r = await h.runner.handle(req()); assert.equal(typeof r.content, "string"); assert.equal(r.content, "안녕");
+  assert.ok(JSON.stringify(h.calls[0].req.body).includes("존댓말을 써요"));
+  const h2 = harness({ cfgOver: { ...cfgOver, profiles: [{ id: "p1", connectionId: "c2", model: "claude-x" }] }, script: [sseRes([`event: content_block_delta\ndata: {"type":"content_block_delta","delta":{"type":"text_delta","text":"ok"}}\n\nevent: message_stop\ndata: {"type":"message_stop"}\n\n`])] }); await h2.ready;
+  await h2.runner.handle(req()); assert.ok(!JSON.stringify(h2.calls[0].req.body).includes("존댓말을 써요"));   // 모델 조건이 안 맞으면 안 넣음
+});
+test("MCP 도구: 읽기 전용은 바로, 쓰기는 확인을 거침", async () => {
+  const mcpSrv = { id: "m", name: "메모", url: "https://x.test/mcp", tools: [{ name: "get", description: "읽기", inputSchema: { type: "object", properties: {} }, annotations: { readOnlyHint: true } }, { name: "put", description: "쓰기", inputSchema: { type: "object", properties: {} } }], allowWrite: true };
+  const called = []; const mcp = { call: async (srv, tool, args) => { called.push(tool); return `결과:${tool}`; } }; let asked = 0;
+  const toolText = (name) => `<tool_call name="${name}">{}</tool_call>`;
+  harness.extra = { mcp, confirm: async () => { asked++; return false; } };
+  const h = harness({ cfgOver: { mcp: { servers: [mcpSrv] } }, script: [sseRes([oa(toolText("mcp_m_get")), oaEnd()]), sseRes([oa(toolText("mcp_m_put")), oaEnd()]), sseRes([oa("끝"), oaEnd()])] }); delete harness.extra; await h.ready;
+  const r = await h.runner.handle(req()); assert.equal(r.content, "끝"); assert.deepEqual(called, ["get"]); assert.equal(asked, 1);   // put은 거절되어 실행 안 됨
+});

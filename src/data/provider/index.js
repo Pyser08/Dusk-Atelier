@@ -5,6 +5,7 @@ import { createTransport } from "./transport.js";
 import { createGeminiCache } from "./gemcache.js";
 import { createRisuTools } from "./risutools.js";
 import { createToolExec } from "./toolexec.js";
+import { createMcpClient } from "./mcpclient.js";
 import { createProviderRunner } from "./runner.js";
 import { createBoard } from "../../engine/provider/board.js";
 import { createErrorLog } from "../../engine/provider/errlog.js";
@@ -41,11 +42,15 @@ export function createProvider(api, { notify = () => {}, confirm, memory = null,
   store.get().then((c) => { errlog.setMax(c.defaults?.logMax); return store.loadLog(); }).then((rows) => { if (!errlog.list().length) errlog.load(rows); }).catch(() => {});
   errlog.subscribe((rows) => { clearTimeout(saveT); saveT = setTimeout(() => store.saveLog(rows), 2000); });
   store.subscribe((c) => errlog.setMax(c?.defaults?.logMax));
-  const runner = createProviderRunner({ api, store, vault, transport, gemcache, risuTools, toolExec, vertex, copilot, currentChar: () => currentChat(api), notify, board, errlog, log });
+  // MCP 인증 토큰은 설정이 아니라 키 보관함(vault)에 둔다(기기 간 동기화되는 설정에 비밀이 안 들어가게)
+  const mcpRaw = createMcpClient({ transport });
+  const withAuth = async (srv) => { if (!srv.keyId) return srv; const t = (await vault.values([srv.keyId]))[0]; return t ? { ...srv, headers: { ...srv.headers, authorization: /^bearer\s/i.test(t) ? t : `Bearer ${t}` } } : srv; };
+  const mcp = { list: async (srv) => mcpRaw.list(await withAuth(srv)), call: async (srv, tool, args) => mcpRaw.call(await withAuth(srv), tool, args), forget: (id) => mcpRaw.forget(id) };
+  const runner = createProviderRunner({ api, store, mcp, confirm, vault, transport, gemcache, risuTools, toolExec, vertex, copilot, currentChar: () => currentChat(api), notify, board, errlog, log });
   const registrar = createRegistrar(api, { runner, store, log, allowed });
   const credOf = async (conn) => { const v = await vault.values(conn.keyIds); return v[0] ?? ""; };
   return {
-    store, vault, runner, registrar, risuTools, board, progress, errlog,
+    store, vault, runner, registrar, risuTools, board, progress, errlog, mcp,
     supported: () => registrar.supported(),
     sync: () => registrar.sync(),
     names: () => registrar.names(),
