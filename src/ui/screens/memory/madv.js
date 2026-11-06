@@ -8,8 +8,6 @@ import { fail, askRefresh } from "./common.js";
 import { builders, renderGlobalSettings } from "./settings.js";
 import { memoryEditor } from "./editor.js";
 import { loreEditor } from "./loreeditor.js";
-import { memoryEnv } from "./menv.js";
-import { autoTrackingBox } from "./autotrackingbox.js";
 
 // 1.8.3(목업 3): 고급 내용을 한 줄씩 접은 묶음으로 돌려준다. [{ id, title, sub, kids }]. 기억 방식(modeHost)은 화면이 따로 놓는다.
 export function advancedGroups(ctx, { cur, idx, redraw }) {
@@ -39,10 +37,9 @@ export function advancedGroups(ctx, { cur, idx, redraw }) {
   let loaded = false;
   const loadMore = () => { if (!loaded) { loaded = true; renderGlobalSettings(ctx, detailHost, { redraw }).catch(fail(ctx)); } };
 
-  const trackingHost = h("div");
-  memoryEnv(ctx, { botId: cur.chaId, chatIndex: cur.ti, redraw }).then(async (loaded) => {
-    if (loaded.env) trackingHost.replaceChildren(await autoTrackingBox(loaded.env));
-  }).catch(fail(ctx));
+  // 자동 기록·인물 추적·리수폿 고급 설정은 장기 기억 → 리수폿 화면으로 옮겼다(2.0.0)
+  const trackingHost = h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "자동 기록 · 인물 추적"), h("p", { class: "rb-muted" }, "리수폿 화면으로 옮겼어요."),
+    h("div", { class: "rb-mem-sact" }, btn("리수폿 화면 열기", { onClick: () => { const m = ctx.state.mem ??= {}; m.page = "pot"; m.potTab = "track"; redraw(); } })));
   const diag = section("진단", h("div", { class: "rb-muted rb-mem-diag" }, diagText(M.runner?.session?.() ?? {})),
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 넣은 기억 보기"), man
         ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `넣음 (약 ${man.tokens} 토큰)` : "넣지 않음"}`),

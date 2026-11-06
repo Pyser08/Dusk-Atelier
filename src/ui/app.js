@@ -28,7 +28,6 @@ import { createAssetLoader } from './assets.js';
 import { openAssets } from './screens/assetmgr.js';
 import { renderDev } from './screens/dev.js';
 import { renderPlugins } from './screens/plugins.js';
-import { renderProtLink } from './screens/protlink.js';
 import { renderSettingsTab } from './screens/settingstab.js';
 import { renderCocoaTab } from './screens/cocoa.js';
 import { checkWorkshopReturn } from './screens/workshoplink.js';
@@ -439,7 +438,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins, protlink: renderProtLink, characters: renderCharacters,  cocoa: renderCocoaTab, look: renderSettings, provider: renderProvider,  presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? ctx.ext.get("tab", state.tab) ?? renderPlaceholder;   // 애드온 탭(AI로 페르소나 만들기 등)
+    const screen = { home: renderHome, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, modules: renderModules, plugins: renderPlugins,  characters: renderCharacters,  cocoa: renderCocoaTab, look: renderSettings, provider: renderProvider,  presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? ctx.ext.get("tab", state.tab) ?? renderPlaceholder;   // 애드온 탭(AI로 페르소나 만들기 등)
     // 장기기억을 쓰는 화면은 기억 시작이 끝난 뒤 그린다(새로고침 직후 먹통 방지). 최대 20초, 넘으면 그냥 그린다.
     const needsMem = ["memory-home"].includes(state.tab) || ctx.ext.get("needsMemory", state.tab);
     const waitMem = needsMem && ctx.memory?.isReady && !ctx.memory.isReady()

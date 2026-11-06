@@ -6,12 +6,12 @@ import { widgetHomeCard } from "./card.js";
 export async function activate(api, ctx) {
   const ext = ctx.ext;
   if (!ext) throw new Error("Dusk가 애드온 자리(ext)를 지원하지 않아요 — Dusk를 업데이트해 주세요");
-  const pl = ctx.app?.protlink;
+  const pl = { list: () => ctx.app?.protlink?.list() ?? Promise.resolve({ ok: false, items: [] }), on: () => !!ctx.app?.protlink?.on?.(), lastError: () => ctx.app?.protlink?.lastError?.() ?? "" };   // ProtLink+ 애드온은 나중에 켜질 수 있어 그때그때 읽는다
   // 이미 만들어 둔 컨트롤러가 있으면 그것을 쓴다(시험에서 가짜 화면을 끼울 때). 실제 코어의 ctx.widgetHome은 이 애드온이 등록하기 전엔 null.
   const wh = ctx.app?.widgetHome ?? createWidgetHome(api, {
     log: (m) => console.log(`[Dusk Atelier] ${m}`),
     openDusk: (tab) => ctx.openDusk?.(tab && tab !== "home" ? tab : undefined),
-    protLink: pl ? { links: () => pl.list(), open: () => Promise.resolve(ctx.openDusk?.("protlink")).then(() => true, () => false), on: () => pl.on(), error: () => pl.lastError() } : undefined
+    protLink: { links: () => pl.list(), open: () => Promise.resolve(ctx.openDusk?.("protlink")).then(() => true, () => false), on: () => pl.on(), error: () => pl.lastError() }
   });
   const card = (c) => { const el = widgetHomeCard(c, () => el.replaceWith(card(c)), wh); return el; };   // 켜고 끄면 이 카드만 다시 그림
   const off = [

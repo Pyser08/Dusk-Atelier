@@ -23,10 +23,6 @@ import { createFairPlay } from './data/fairplay.js';
 import { createImgTagFix } from './data/imgtagfix.js';
 import './data/modelhub.js';
 import { createProvider } from './data/provider/index.js';
-import { createProtLink } from './data/protlink.js';
-import { createUpdateToast } from './data/updatetoast.js';
-import { updateMessage } from './engine/protlink.js';
-import { download as downloadFile } from './ui/dom.js';
 import { setDuskRoute, runAI } from './engine/runai.js';
 import { setDuskServerModel } from './data/modelhub.js';
 import { setSkillBlockProvider } from './engine/skillhook.js';
@@ -236,26 +232,18 @@ async function start() {
   provider.sync().catch(() => {});   // 실험 기능이 켜져 있으면 이제 등록
   // 위젯 홈(v1.9.2): 기본 꺼짐. 켜져 있으면 시작해서 메뉴 버튼을 달고, Dusk 창을 열 땐 먼저 닫아 같은 플러그인 화면을 번갈아 쓴다
   // ProtLink+(v1.9.2): 기본 켜짐. Proton Drive 링크를 캐릭터·모듈·플러그인에 연결해 두고 새 파일을 받아 Dusk 업데이트로 넘긴다.
-  const updateToast = createUpdateToast(api, { onOpen: () => app.open({ tab: "protlink" }).catch(() => {}) });
-  const protlink = createProtLink(api, { log: (m) => console.log(`[${TITLE}] ${m}`), hooks: {
-    importFiles: (files, opts) => legacy.startWithFiles(files, opts),
-    saveFile: (name, bytes) => downloadFile(name, new Blob([bytes])),
-    // Dusk Cellar 플러그인 편집이 켜져 있으면 연결한 플러그인 코드를 바로 바꾼다(없으면 false → 파일 저장)
-    updatePlugin: async (name, script) => {
-      const { createCellar } = await import("./data/cellar.js"), { createCellarPlugins, hasPluginEdit } = await import("./data/cellarplugins.js");
-      const cel = app.ctx.cellar ?? (app.ctx.cellar = createCellar(api));
-      const st = await cel.status?.().catch(() => null);
-      if (!hasPluginEdit(st)) return false;
-      const cp = createCellarPlugins(api, { url: st.url, via: st.via }), cur = await cp.get(name);
-      await cp.apply([{ name, ...(cur.index === undefined ? {} : { index: cur.index }), expectSha: cur.sha256, script }]);
-      return true;
-    },
-    onChecked: async (rows) => {
-      const msg = updateMessage(rows); if (!msg) return;
-      // 리스 화면(플러그인 밖) 알림. 권한이 없거나 못 띄우면 플러그인 안 알림으로 대신한다.
-      if (!(await updateToast.show(msg).catch(() => false))) app?.ctx?.toast?.(`ProtLink+: ${msg}`);
-    } } });
-  app.ctx.protlink = protlink;
+  // ProtLink+는 애드온(addons/protlink, 2.0.0). 위젯 홈 등은 ctx.protlink가 없으면 그 칸을 숨긴다.
+  Object.defineProperty(app.ctx, "protlink", { configurable: true, get: () => app.ctx.ext.get("svc", "protlink") ?? null });
+  // Dusk Cellar 플러그인 편집이 켜져 있으면 플러그인 코드를 바로 바꾼다(ProtLink+ 애드온이 쓴다). 못 하면 false.
+  app.ctx.updatePluginScript = async (name, script) => {
+    const { createCellar } = await import("./data/cellar.js"), { createCellarPlugins, hasPluginEdit } = await import("./data/cellarplugins.js");
+    const cel = app.ctx.cellar ?? (app.ctx.cellar = createCellar(api));
+    const st = await cel.status?.().catch(() => null);
+    if (!hasPluginEdit(st)) return false;
+    const cp = createCellarPlugins(api, { url: st.url, via: st.via }), cur = await cp.get(name);
+    await cp.apply([{ name, ...(cur.index === undefined ? {} : { index: cur.index }), expectSha: cur.sha256, script }]);
+    return true;
+  };
   // 위젯 홈은 애드온(addons/widgets). 코어는 켜져 있을 때만 그 기능을 부른다.
   const wh = () => app.ctx.ext.get("svc", "widgethome") ?? null;
   Object.defineProperty(app.ctx, "widgetHome", { configurable: true, get: wh });
@@ -265,7 +253,6 @@ async function start() {
   app.ctx.onClosed = () => wh()?.resume?.();   // Dusk 창을 닫으면 떠 있던 위젯 홈을 다시 띄운다
   // Erosync는 애드온(addons/erosync, 2.0.0). 기억 화면들은 ctx.erosync가 없으면 Erosync 칸을 숨긴다.
   Object.defineProperty(app.ctx, "erosync", { configurable: true, get: () => app.ctx.ext.get("svc", "erosync") ?? null });
-  protlink.boot().catch((e) => console.log(`[${TITLE}] ProtLink+ 시작 실패 ${e?.message ?? e}`));
   // 애드온(2.0.0): 받아 둔 애드온을 같은 창에서 불러온다. 리스 플러그인 목록에는 안 뜬다.
   globalThis.__duskLib = ADDON_LIB; globalThis.__duskVersion = VERSION;   // 애드온이 코어 모듈을 다시 넣지 않고 함께 쓴다(tools/build-addons.mjs)
   const addons = createAddons(api, { core: VERSION, ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async (tab) => { await app.open(tab ? { tab } : undefined).catch(() => {}); } } });   // 반환값 없음: 애드온 콜백이 그대로 돌려주면 호스트로 복제가 안 돼요
@@ -277,7 +264,9 @@ async function start() {
     ["memory", async () => !!((await rawOf("dusk.mem.v3.index")) || (await rawOf("dusk.mem.v2.index")) || (await rawOf("risupot.settings")))],
     ["cards", async () => { const v = await rawOf("dusk.mem.v2.cardidx"); try { return (typeof v === "string" ? JSON.parse(v) : v)?.list?.length > 0; } catch { return false; } }],
     ["erosync", async () => on(await rawOf("dusk.erosync.on"))],
-    ["widgets", async () => on(await rawOf("dusk.widgethome.on"))]
+    ["widgets", async () => on(await rawOf("dusk.widgethome.on"))],
+    // ProtLink+: 연결해 둔 링크가 있으면
+    ["protlink", async () => { const v = await rawOf("dusk.protlink.links.v1"); try { const d = typeof v === "string" ? JSON.parse(v) : v; return (Array.isArray(d) ? d : d?.links ?? []).length > 0; } catch { return false; } }]
   ];
   addons.boot().then(() => addons.adopt(ADOPT)).then((r) => { if (r?.got?.length) console.log(`[${TITLE}] 쓰던 기능 애드온을 받았어요: ${r.got.join(", ")}`); })
     .catch((e) => console.log(`[${TITLE}] 애드온 시작 실패 ${e?.message ?? e}`));

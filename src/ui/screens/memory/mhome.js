@@ -75,6 +75,13 @@ function memHead() {
   return pageHead("장기 기억");
 }
 
+// 리수폿 한 줄 카드(2.0.0): Erosync 줄과 같은 모양. 누르면 리수폿 화면(page "pot": 개요·설정·자동 기록·고급)
+function potRow(ctx, m, redraw) {
+  return h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-pot", "data-tour": "mem-pot", onClick: () => { m.page = "pot"; redraw(); } },
+    h("span", { class: "rb-mem-av rb-me-av sm", "aria-hidden": "true" }, icon("book", 18)),
+    h("span", { class: "t" }, "리수폿", h("small", null, "인물 위키를 자동으로 쌓아요. 설정·자동 기록·고급을 여기서 바꿔요.")),
+    h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
+}
 function erosyncRow(ctx, m, redraw) {
   if (!ctx.erosync) return null;
   return h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-erosync", onClick: () => { m.page = "erosync"; redraw(); } },
@@ -102,7 +109,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
       h("div", { class: "rb-mem2-main" }, memHead(ctx, redraw),
         emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요. 아래 설정은 채팅 없이도 바꿀 수 있어요.",
           actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] }),
-        erosyncRow(ctx, m, redraw), memOptions),
+        potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memOptions),
       h("div", { class: "rb-mem2-side" }, memorySettings, ctx.prefs.advanced ? gHost : advFold(ctx, "memory", true))));
   }
   // 채팅 본문은 느릴 수 있으므로 화면을 먼저 그리고, 백필 분석용 데이터는 백그라운드에서 읽는다.
@@ -243,7 +250,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
 
   const main = h("div", { class: "rb-mem2-main" },
     memHead(ctx, redraw),
-    statusBox, bigAct, prog, shortcuts, meRow, mapRow, erosyncRow(ctx, m, redraw), memOptions, recBox,
+    statusBox, bigAct, prog, shortcuts, meRow, mapRow, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memOptions, recBox,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
   replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" }, main, h("div", { class: "rb-mem2-side" }, ...side)));
   // 1.8.3: 임베딩 안내 창은 자동으로 띄우지 않는다(시작 안내 3단계에서 설정, 필요하면 설정 줄의 '임베딩'에서)

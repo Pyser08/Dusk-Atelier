@@ -47,7 +47,7 @@ export var TABS = [
     help: ["플러그인마다 카테고리를 붙여 정리할 수 있어요.", "‘플러그인 만들기’에서 템플릿으로 내 플러그인을 시작해요.", "DA Interop으로 다른 플러그인과 설정을 주고받아요."]
   },
   {
-    id: "protlink", label: "ProtLink+", icon: "link", group: "more", section: "manage",
+    id: "protlink", addon: "protlink", label: "ProtLink+", icon: "link", group: "more", section: "manage",
     desc: "Proton Drive 링크를 캐릭터·모듈·플러그인에 연결해 두고, 새 파일이 올라오면 받아서 업데이트해요.",
     card: "Proton Drive 링크를 항목에 연결해 새 파일을 받아요.",
     help: ["링크를 붙여 넣으면 안의 파일을 확인하고, 어느 캐릭터·모듈·플러그인에 연결할지 물어봐요.", "연결하면 다음부터 새 파일이 올라올 때 알려 주고, 받으면 그 항목의 업데이트(영향 미리보기 → 백업 → 적용)로 넘어가요.", "플러그인은 리스가 목록을 바꾸지 못하게 막혀 있어서 파일로 저장돼요. 시작 확인은 이 화면 설정에서 끌 수 있고, 위젯 홈에도 ProtLink+ 위젯이 있어요."]

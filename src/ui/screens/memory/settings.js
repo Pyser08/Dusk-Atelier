@@ -7,7 +7,6 @@ import { AI_MODES } from "../../../engine/merge.js";
 import { getCfg as getModelCfg } from "../../../data/modelhub.js";
 import { mem, fail, potOn, askRefresh } from "./common.js";
 import { parseTags, DEFAULT_TAG_TEXT } from "../../../engine/card/tags.js";
-import { flowSections } from "./flowsettings.js";
 import { advancedBot } from "./advanced.js";
 import { scopeChip, tracked, searchBox, openSettingsHistory, shareSection, previewBox } from "./settingstools.js";
 import { pushHist } from "../../../engine/settingsutil.js";
@@ -72,8 +71,9 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
   const loadHeavy = () => {
     if (loaded) return; loaded = true;
     if (backend.id !== "local" || !potOn(S)) return;
-    replace(flowHost, loading("불러오는 중", { rows: 3 }));
-    flowSections(ctx, flowHost, { redraw }).catch(fail(ctx));
+    // 리수폿 설정(수준·기능·방식·성인·모델·가져오기·고급)은 장기 기억 → 리수폿 화면의 '설정' 탭으로 옮겼다(2.0.0)
+    replace(flowHost, h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "리수폿 설정"), h("p", { class: "rb-muted" }, "추적 수준·기능 카드·AI 모델·가져오기는 리수폿 화면의 ‘설정’ 탭에 있어요."),
+      h("div", { class: "rb-mem-sact" }, btn("리수폿 설정 열기", { onClick: () => { const mm = mem(ctx); mm.page = "pot"; mm.potTab = "settings"; ctx.go?.("memory"); redraw(); } }))));
     if (M.flow) (async () => { try { const st = await M.flow.settings(); if (!st.status().blocked) replace(shareHost, shareSection(ctx, tracked(ctx, st), { apply: () => M.flow.apply().catch(fail(ctx)), redraw })); } catch { /* 흐름 설정을 못 읽으면 공유 칸만 뺀다 */ } })();
   };
   const tools = h("div", { class: "rb-mem-tools" });

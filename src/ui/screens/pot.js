@@ -10,7 +10,6 @@ import { conflictBox } from "./memory/conflictui.js";
 import { openWriter } from "./memory/writerui.js";
 import { openWikiLog } from "./memory/wikilog.js";
 import { openTracking } from "./memory/trackui.js";
-import { flowSections } from "./memory/flowsettings.js";
 import { potConfirm } from "../../engine/memoryswitch.js";
 
 const hhmm = (iso) => { const t = Date.parse(iso); return t ? new Date(t).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false }) : ""; };
@@ -23,7 +22,12 @@ export async function renderPot(ctx) {
   try { await draw(ctx, host, redraw); } catch (e) { fail(ctx)(e); }
 }
 
-async function draw(ctx, host, redraw) {
+// 리수폿 개요(상태·동작·캐릭터별 사용). 장기 기억 → 리수폿 탭의 '개요'에서도 쓴다. 반환: {nodes, env, cur, idx} 또는 {nodes}
+export async function potOverview(ctx, redraw) {
+  const host = h("div"); const out = await draw(ctx, host, redraw, { bare: true });
+  return out ?? { nodes: [...host.childNodes] };
+}
+async function draw(ctx, host, redraw, { bare = false } = {}) {
   const M = ctx.memory;
   if (!M) return replace(host, pageHead("리수폿"), h("div", { class: "rb-empty" }, "리수폿 기능이 아직 준비되지 않았어요. 플러그인을 다시 불러와 주세요."));
   const cur = await M.switches.currentChat();
@@ -58,6 +62,7 @@ async function draw(ctx, host, redraw) {
   const main = h("div", { class: "rb-mem2-main" },
     pageHead("리수폿", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"} · 기억과 별도로 켜고 꺼요`, sw: { on: pot.on, label: "모든 채팅에서 사용", onChange: (v) => setOn(v) } }),
     status, actions, perChar);
+  if (bare) return { nodes: [status, actions, perChar], env, cur, idx, pot, setOn };
   const adv = advFold(ctx, "pot", ...(ctx.prefs.advanced ? advancedPot(ctx, env, cur, idx, redraw) : [true]));
   replace(host, h("div", { class: ["rb-mem2-grid", ctx.prefs.advanced && "has-adv"] }, main, adv ? h("div", { class: "rb-mem2-side" }, adv) : null));
 }
@@ -68,14 +73,10 @@ export function advancedPot(ctx, env, cur, idx, redraw) {
   const savePs = (patch) => M.store.updateIndex((i) => { i.settings.potStore = { ...(i.settings.potStore ?? {}), ...patch }; }).then(() => redraw()).catch(fail(ctx));
   const sel = (label, value, opts, onPick) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("select", { class: "rb-input", "aria-label": label, onChange: (e) => onPick(e.target.value) }, opts.map(([v, l]) => h("option", { value: v, selected: value === v }, l))));
   const sec = (title, ...kids) => h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, title), ...kids);
-  const detail = h("div"); let loaded = false;
-  const more = h("details", { class: "rb-mem-man", onToggle: (e) => { if (e.target.open && !loaded) { loaded = true; replace(detail, h("div", { class: "rb-mem-sact" }, btn("추적 인물 고르기", { onClick: () => openTracking(env).catch(fail(ctx)) })), (() => { const f = h("div"); flowSections(ctx, f, { redraw }).catch(fail(ctx)); return f; })()); } } },
-    h("summary", null, "세부 설정 (추적 수준·기능 카드·AI 모델)"), detail);
   return [
     sec("저장·기록", sel("저장 위치", ps.backend ?? "auto", [["auto", "자동"], ["local", "플러그인"], ["bardwiki", "BardWiki"]], (v) => savePs({ backend: v })),
       sel("자동 기록 시점", potConfirm(S), [["next", "다음 입력을 보낼 때 (권장)"], ["now", "응답을 받은 직후"]], (v) => savePs({ confirm: v }))),
     sec("롤백 충돌 안내", conflictBox(env) ?? h("p", { class: "rb-muted" }, "겹친 기록이 없어요.")),
-    sec("자동 기록 되돌리기", h("p", { class: "rb-muted" }, "위키가 바뀐 기록을 보고 되돌려요."), h("div", { class: "rb-mem-sact" }, btn("되돌리기 기록 열기", { icon: "history", onClick: () => openWikiLog(env).catch(fail(ctx)) }))),
-    more
+    sec("자동 기록 되돌리기", h("p", { class: "rb-muted" }, "위키가 바뀐 기록을 보고 되돌려요."), h("div", { class: "rb-mem-sact" }, btn("되돌리기 기록 열기", { icon: "history", onClick: () => openWikiLog(env).catch(fail(ctx)) })))
   ];
 }
