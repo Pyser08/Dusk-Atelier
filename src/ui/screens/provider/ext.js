@@ -4,7 +4,8 @@ import { btn, note, toggleRow } from "../../kit.js";
 import { normalizeMcpServer } from "../../../engine/provider/mcp.js";
 import { normalizeSkill } from "../../../engine/provider/skills.js";
 import { normalizeHook } from "../../../engine/provider/hooks.js";
-import { field, text, num, area, grid } from "./ui.js";
+import { field, text, num, area, grid, select } from "./ui.js";
+import { safeName, reqKey, resKey } from "../../../engine/provider/mailbox.js";
 
 export async function ext({ P, cfg, mutate, draw, toast }) {
   const out = [], fail = (e) => toast(e?.message ?? String(e), { error: true });
@@ -43,5 +44,22 @@ export async function ext({ P, cfg, mutate, draw, toast }) {
         field("받은 뒤: 찾기", text(k.post.find, (v) => setHk(i, (q) => { q.post.find = v; }))), field("받은 뒤: 바꾸기", text(k.post.replace, (v) => setHk(i, (q) => { q.post.replace = v; })))),
       toggleRow("사용", "", k.enabled, (v) => setHk(i, (q) => { q.enabled = v; })))),
     h("div", { class: "rb-actions" }, btn("훅 추가", { icon: "plus", onClick: async () => { await mutate((x) => { x.hooks.push(normalizeHook({ name: "새 훅" })); }); draw(); } }))));
+  // ── 다른 플러그인 창구(11단계) ──
+  const ipc = cfg.ipc, setIpc = (fn) => mutate((x) => { fn(x.ipc); }), mb = P.mailbox?.status?.() ?? { inflight: 0, queued: 0, plugins: [] };
+  const names = [...new Set([...Object.keys(ipc.plugins), ...(mb.plugins ?? [])])];
+  const addIn = h("input", { class: "rb-input", placeholder: "플러그인 이름(미리 허용하려면)", "aria-label": "허용할 플러그인 이름", autocomplete: "off" });
+  out.push(h("section", { class: "rb-pcard", dataset: { ipc: "1" } },
+    h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, "다른 플러그인 창구"), h("small", { class: "rb-muted" }, "다른 플러그인이 Dusk 프로바이더로 모델을 부를 수 있게 해요. 플러그인 저장소에 요청을 적으면 Dusk가 처리해 결과 칸에 돌려줘요. 기본은 꺼짐이고, 처음 보는 플러그인은 허용 여부를 물어요."))),
+    toggleRow("창구 켜기", "켜면 몇 초마다 요청 칸을 살펴요. 끄면 아무것도 읽지 않아요.", ipc.enabled, async (v) => { await setIpc((q) => { q.enabled = v; }); draw(); }),
+    grid(field("동시에 처리", num(ipc.concurrency, (v) => setIpc((q) => { q.concurrency = v ?? 2; }), { step: "1", ph: "2" }), "1~8. 넘치는 요청은 줄을 서요"),
+      field("살피는 간격(초)", num(ipc.pollSec, (v) => setIpc((q) => { q.pollSec = v ?? 3; }), { step: "1", ph: "3" }), "1~30"),
+      field("기본 프로필", select([["", "(용도 ‘보조·기타’와 같게)"], ...cfg.profiles.map((p) => [p.id, p.name])], ipc.profileId, (v) => setIpc((q) => { q.profileId = v; }), "창구 기본 프로필"), "요청이 프로필을 지정하지 않을 때")),
+    ...names.map((n) => { const a = ipc.plugins[n]?.allow; return h("div", { class: "rb-pcard", dataset: { ipcPlugin: n } },
+      h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, n), h("small", { class: "rb-muted" }, a === true ? "허용됨" : a === false ? "거절됨" : "아직 안 물어봤어요")),
+        btn("", { icon: "trash", size: "sm", title: "목록에서 지우기", onClick: async () => { await setIpc((q) => { delete q.plugins[n]; }); P.mailbox?.forget?.(n); draw(); } })),
+      toggleRow("허용", "끄면 이 플러그인의 요청은 거절 결과로 돌려줘요.", a === true, async (v) => { await setIpc((q) => { q.plugins[n] = { allow: v }; }); draw(); }),
+      h("small", { class: "rb-muted" }, `요청 칸 ${reqKey(n)} · 결과 칸 ${resKey(n)}`)); }),
+    h("div", { class: "rb-actions" }, addIn, btn("미리 허용", { icon: "plus", onClick: async () => { const n = safeName(addIn.value); if (!n) return toast("플러그인 이름을 적어 주세요", { error: true }); await setIpc((q) => { q.plugins[n] = { allow: true }; }); draw(); } })),
+    h("small", { class: "rb-muted" }, `지금 처리 중 ${mb.inflight}개 · 대기 ${mb.queued}개. 재시도·키 순환·대체 사슬·예산은 다른 요청과 똑같이 적용돼요.`)));
   return out;
 }

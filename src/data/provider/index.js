@@ -7,6 +7,7 @@ import { createRisuTools } from "./risutools.js";
 import { createToolExec } from "./toolexec.js";
 import { createMcpClient } from "./mcpclient.js";
 import { createProviderRunner } from "./runner.js";
+import { createMailbox } from "./mailbox.js";
 import { createBoard } from "../../engine/provider/board.js";
 import { createErrorLog } from "../../engine/provider/errlog.js";
 import { createProgressWindow } from "./progress.js";
@@ -47,10 +48,11 @@ export function createProvider(api, { notify = () => {}, confirm, memory = null,
   const withAuth = async (srv) => { if (!srv.keyId) return srv; const t = (await vault.values([srv.keyId]))[0]; return t ? { ...srv, headers: { ...srv.headers, authorization: /^bearer\s/i.test(t) ? t : `Bearer ${t}` } } : srv; };
   const mcp = { list: async (srv) => mcpRaw.list(await withAuth(srv)), call: async (srv, tool, args) => mcpRaw.call(await withAuth(srv), tool, args), forget: (id) => mcpRaw.forget(id) };
   const runner = createProviderRunner({ api, store, mcp, confirm, vault, transport, gemcache, risuTools, toolExec, vertex, copilot, currentChar: () => currentChat(api), notify, board, errlog, log });
+  const mailbox = createMailbox(api, { store, runner, confirm, allowed, notify, log });   // 다른 플러그인 창구(11단계)
   const registrar = createRegistrar(api, { runner, store, log, allowed });
   const credOf = async (conn) => { const v = await vault.values(conn.keyIds); return v[0] ?? ""; };
   return {
-    store, vault, runner, registrar, risuTools, board, progress, errlog, mcp,
+    store, vault, runner, registrar, risuTools, board, progress, errlog, mcp, mailbox,
     supported: () => registrar.supported(),
     sync: () => registrar.sync(),
     names: () => registrar.names(),
