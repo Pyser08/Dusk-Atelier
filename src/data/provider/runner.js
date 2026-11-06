@@ -13,6 +13,7 @@ import { protect, restore, guideBlock, glossaryBlock } from "../../engine/provid
 import { HttpError, errorFromResponse, redact } from "./transport.js";
 import { PURPOSE_LABEL } from "../../engine/provider/catalog.js";
 import { estimateTokens } from "../../engine/provider/tokens.js";
+import { batchKey, batchCreateRequest, batchStatusRequest, batchResultsRequest, parseBatchStatus, parseBatchResults } from "../../engine/provider/batch.js";
 
 const nz = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== undefined && !(Array.isArray(v) && !v.length)));
 const TOOL_RE = /<tool_call\s+name="([^"]+)">([\s\S]*?)<\/tool_call>/g;
@@ -42,6 +43,29 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     if (!key) { if (k.keyOptional && !conn.keyIds.length) return { cred: "", key: "" }; throw new HttpError(pool.size() ? "모든 키가 잠시 쉬는 중이에요" : "API 키를 추가해 주세요", pool.size() ? 429 : 401, { setup: !pool.size() }); }
     return { cred: key, key };
   }
+  // 배치(Anthropic Message Batches, 값 절반·최대 24시간). 같은 입력은 저장해 둔 배치를 이어서 확인하고 새로 만들지 않는다.
+  async function onceBatch({ reqObj, profile, conn, signal, cfg, purpose, cha, c, secrets, t0 }) {
+    const bo = { signal, proxyUrl: conn.proxyUrl, secrets }, key = batchKey(reqObj.body), map = await store.loadBatches();
+    const stale = now() - 26 * 3600e3; for (const k of Object.keys(map)) if ((map[k]?.at ?? 0) < stale) delete map[k];
+    const call = async (r) => { const res = await transport.send(r, bo); if (!res.ok) { const err = await errorFromResponse(res, secrets); err.key = c.key; throw err; } return res; };
+    const pendingErr = (id) => Object.assign(new HttpError(`배치(${id})가 아직 진행 중이에요. 같은 메시지로 다시 보내면 이어서 확인해요`, 0), { batchPending: true, key: c.key });
+    let ent = map[key];
+    if (!ent) { const cid = `dusk-${now().toString(36)}`; const j = await (await call(batchCreateRequest(reqObj, cid))).json(); ent = map[key] = { id: String(j?.id ?? ""), cid, at: now() }; if (!ent.id) throw new HttpError("배치를 만들지 못했어요", 0, { key: c.key }); await store.saveBatches(map); notify(`배치를 만들었어요(${ent.id}). 값이 절반이고 오래 걸릴 수 있어요`); }
+    const until = now() + (cfg.defaults.batchWaitMin || 60) * 60e3, maxPolls = Math.ceil(((cfg.defaults.batchWaitMin || 60) * 60) / (cfg.defaults.batchPollSec || 15)) + 2;
+    for (let poll = 0; ; poll++) {
+      if (signal?.aborted) throw Object.assign(new Error("aborted"), { aborted: true });
+      const st = parseBatchStatus(await (await call(batchStatusRequest(reqObj, ent.id))).json());
+      if (st.ended) {
+        const text = await (await call(batchResultsRequest(reqObj, { ...st, id: ent.id }))).text(); delete map[key]; await store.saveBatches(map);
+        const r = parseBatchResults(text, ent.cid); if (r.error) throw new HttpError(redact(r.error, secrets), 0, { key: c.key, batchFailed: true });
+        errlog?.add({ model: profile.model, purpose, kind: "ok", status: 200, attempt: 0, ms: now() - t0, action: "batch", message: `배치 완료 · 입력 ${r.usage?.input ?? 0} · 출력 ${r.usage?.output ?? 0}` });
+        store.addUsage({ at: now(), purpose, profile: profile.id, model: profile.model, cha: cha?.chaId ?? "", usage: r.usage, cost: costOf(r.usage, profile.pricing) * 0.5, saved: savedByCache(r.usage, profile.pricing) * 0.5, ms: now() - t0, via: "batch" }).catch(() => {});
+        return { text: r.text, thinking: r.thinking, key: c.key, reasoningState: [] };
+      }
+      if (profile.batch !== "wait" || now() >= until || poll >= maxPolls) throw pendingErr(ent.id);
+      await sleep((cfg.defaults.batchPollSec || 15) * 1000);
+    }
+  }
   // 한 번 시도. 스트림이면 첫 이벤트까지 읽고(여기서 실패하면 대체 가능) 나머지는 넘겨 준다.
   async function once({ conn, profile, messages, signal, cfg, purpose, cha, aff, pool, wantStream, extra = {} }) {
     const c = await credential(conn, pool, signal, aff);
@@ -52,6 +76,7 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     if (c.copilot) { reqObj = { ...reqObj, url: c.copilot.origin + new URL(reqObj.url).pathname, headers: { ...reqObj.headers, ...c.copilot.headers } }; }
     if (cfg.debug?.preview) notify(`요청 미리보기: ${profile.model} · ${gc.messages.length}개 메시지`);
     const t0 = now(), secrets = [c.cred];
+    if (profile.batch && profile.batch !== "off" && reqObj.format === "anthropic") return onceBatch({ reqObj, profile, conn, signal, cfg, purpose, cha, c, secrets, t0 });
     const ctl = new AbortController(); const onAbort = () => ctl.abort(signal.reason); if (signal) { if (signal.aborted) ctl.abort(); else signal.addEventListener("abort", onAbort, { once: true }); }
     const to = setTimeout(() => ctl.abort(new Error("timeout")), (cfg.defaults.timeoutSec || 300) * 1000);
     const done = () => { clearTimeout(to); signal?.removeEventListener?.("abort", onAbort); };
@@ -60,7 +85,7 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     catch (e) { done(); if (signal?.aborted) throw Object.assign(new Error("aborted"), { aborted: true }); throw e instanceof HttpError ? e : new HttpError(redact(e?.message, secrets), 0, { network: true, timeout: /timeout/i.test(String(e?.message)) }); }
     if (!res.ok) { done(); const err = await errorFromResponse(res, secrets); err.key = c.key; if (res.status === 401 && c.copilot) c.copilot.invalidate?.(); throw err; }
     const format = reqObj.format, rep = { ...cfg.defaults.repetition, on: profile.repetitionOn };
-    const finish = (acc) => { const u = acc.usage; const cost = costOf(u, profile.pricing), saved = savedByCache(u, profile.pricing); errlog?.add({ model: profile.model, purpose, kind: "ok", status: 200, attempt: 0, ms: now() - t0, action: "done", message: `입력 ${u?.input ?? 0} · 출력 ${u?.output ?? 0}` }); store.addUsage({ at: now(), purpose, profile: profile.id, model: profile.model, cha: cha?.chaId ?? "", usage: u, cost, saved, ms: now() - t0, via: "device" }).catch(() => {}); };
+    const finish = (acc, { factor = 1, via = "device" } = {}) => { const u = acc.usage; const cost = costOf(u, profile.pricing) * factor, saved = savedByCache(u, profile.pricing) * factor; errlog?.add({ model: profile.model, purpose, kind: "ok", status: 200, attempt: 0, ms: now() - t0, action: "done", message: `입력 ${u?.input ?? 0} · 출력 ${u?.output ?? 0}` }); store.addUsage({ at: now(), purpose, profile: profile.id, model: profile.model, cha: cha?.chaId ?? "", usage: u, cost, saved, ms: now() - t0, via }).catch(() => {}); };
     // 스트림 아님(응답이 JSON 통째)
     if (!upstreamStream || !res.body?.getReader) {
       done(); let j; try { j = await res.json(); } catch { throw new HttpError("응답을 읽지 못했어요", res.status); }
@@ -123,7 +148,7 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
         if (out.key) pool.ok(out.key); return { ok: true, out };
       } catch (e) {
         last = e; key = e.key ?? "";
-        const kind = classifyFailure({ status: e.status, message: e.message, aborted: e.aborted, empty: e.empty, blocked: e.blocked });
+        const kind = classifyFailure({ status: e.status, message: e.message, aborted: e.aborted, empty: e.empty, blocked: e.blocked, pending: e.batchPending, terminal: e.batchFailed });
         if (kind === "abort") return { ok: false, kind, error: e };
         const keysLeft = Math.max(0, pool.ready() - (key ? 1 : 0));
         if (key && (kind === "rate" || kind === "auth")) pool.fail(key, { ms: (cfg.defaults.keyCooldownSec || 60) * 1000 });

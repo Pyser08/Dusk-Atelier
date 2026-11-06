@@ -1,7 +1,7 @@
 // 프로바이더 설정·사용량 저장 (v1.9.3). 설정은 pluginStorage(기기 간 동기화 대상, 키 값은 없음).
 import { normalizeConfig, defaultConfig } from "../../engine/provider/profile.js";
 import { addRecord } from "../../engine/provider/cost.js";
-export const CFG_KEY = "dusk.prov.v1", USAGE_KEY = "dusk.prov.usage.v1", LOG_KEY = "dusk.prov.log.v1";
+export const CFG_KEY = "dusk.prov.v1", USAGE_KEY = "dusk.prov.usage.v1", LOG_KEY = "dusk.prov.log.v1", BATCH_KEY = "dusk.prov.batch.v1";
 export function createProviderStore(api) {
   let cfg = null, usage = null; const subs = new Set();
   const read = async (k) => { try { const r = await api.pluginStorage.getItem(k); return typeof r === "string" ? JSON.parse(r) : r ?? null; } catch { return null; } };
@@ -16,6 +16,8 @@ export function createProviderStore(api) {
     async clearUsage() { usage = []; await write(USAGE_KEY, usage); },
     async loadLog() { const r = await read(LOG_KEY); return Array.isArray(r) ? r : []; },
     async saveLog(rows) { try { await write(LOG_KEY, rows); } catch { /* 기록 저장 실패는 무시 */ } },
+    async loadBatches() { const r = await read(BATCH_KEY); return r && typeof r === "object" && !Array.isArray(r) ? r : {}; },
+    async saveBatches(m) { try { await write(BATCH_KEY, m); } catch { /* 저장 실패는 무시 */ } },
     defaults: defaultConfig
   };
 }

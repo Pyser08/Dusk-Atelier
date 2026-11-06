@@ -132,6 +132,7 @@ export async function renderProvider(ctx) {
       field("답 속 생각 보이기", segmented([["off", "숨김"], ["on", "보임"]], th.showThinking ? "on" : "off", (v) => set((q) => { q.thinking.showThinking = v === "on"; }), "생각 보이기"), "보이면 <Thoughts>…</Thoughts> 로 감싸서 줘요", true),
       kind === "anthropic" || kind === "vertex" ? field("추론 과정 받는 방식(Claude)", segmented([["", "기본"], ["summarized", "요약"], ["omitted", "생략"]], th.display || "", (v) => set((q) => { q.thinking.display = v; }), "추론 표시"), "생략하면 추론 글을 안 받아서 더 빨리 시작해요. 요약은 짧게 정리된 글만 와요", true) : null,
       kind === "google" || kind === "geminiexpress" || kind === "vertex" ? field("이미지·PDF 해상도(Gemini)", segmented([["", "기본"], ["low", "낮음"], ["medium", "중간"], ["high", "높음"]], p.mediaResolution || "", (v) => set((q) => { q.mediaResolution = v; }), "미디어 해상도"), "높을수록 자세히 읽지만 토큰을 더 써요", true) : null,
+      kind === "anthropic" ? field("배치로 보내기(값 절반)", segmented([["off", "끔"], ["wait", "끝날 때까지 기다리기"], ["create", "만들고 끝내기"]], p.batch || "off", (v) => set((q) => { q.batch = v; }), "배치"), "몇 분~최대 24시간 걸려요. ‘만들고 끝내기’는 일단 실패로 알리고, 같은 메시지로 다시 보내면 결과를 가져와요. 스트림은 안 돼요", true) : null,
       field("받는 방식", segmented([["", "기본"], ["stream", "스트림"], ["buffered", "한번에"]], p.stream, (v) => set((q) => { q.stream = v; }), "받는 방식"), "메인 대화에만 적용돼요. 보조 요청은 한번에 받아요", true),
       field("웹 검색(모델 내장)", segmented([["off", "끔"], ["auto", "켬"]], p.search, (v) => set((q) => { q.search = v; }), "내장 웹 검색"), "Claude·Gemini만 지원해요", true)));
     if (kind === "openrouter") {

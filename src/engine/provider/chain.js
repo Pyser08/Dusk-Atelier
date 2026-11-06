@@ -1,7 +1,9 @@
 // 실패 분류와 대체 사슬 (v1.9.3, 순수)
-export function classifyFailure({ status = 0, message = "", code = "", aborted = false, empty = false, blocked = false } = {}) {
+export function classifyFailure({ status = 0, message = "", code = "", aborted = false, empty = false, blocked = false, pending = false, terminal = false } = {}) {
   const m = String(message).toLowerCase();
   if (aborted) return "abort";
+  if (terminal) return "client";   // 다시 보내도 소용없는 실패(배치 결과 오류 등)
+  if (pending) return "pending";   // 배치가 아직 끝나지 않음 — 다시 시도·대체 대상이 아님
   if (blocked || /safety|blocked|prohibited|content[_ ]filter|차단/.test(m) || code === "blocked") return "blocked";
   if (empty) return "empty";
   if (status === 429 || /rate.?limit|quota|resource.?exhausted|too many|overloaded_error/.test(m)) return "rate";
