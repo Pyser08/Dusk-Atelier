@@ -3,8 +3,9 @@ import { h, replace } from "../dom.js";
 import { btn, segmented, note, toggleRow, confirmDialog } from "../kit.js";
 import { PRESETS, PRESET_IDS, mergeLabels } from "../../data/stealth.js";
 import { loadStealth, saveStealth, enableStealth, disableStealth } from "../../data/stealth-apply.js";
+import { syncShell } from "../../data/stealth-shell.js";
 
-var LABEL_FIELDS = [["title", "상단 제목"], ["model", "입력창 아래 문구"], ["tool", "답변 앞 작업 줄"], ["think", "생성 중 문구"]];
+var LABEL_FIELDS = [["title", "상단 제목 (비우면 봇 이름)"], ["sub", "상단 제목 뒤 글"], ["model", "입력창 옆 문구"], ["left", "입력창 왼쪽 아래 문구"], ["note", "화면 아래 안내 글"], ["tool", "답변 앞 작업 줄"], ["think", "생성 중 문구"], ["user", "사이드바 사용자 이름 (비우면 페르소나)"], ["plan", "사이드바 요금제 글"]];
 
 export async function renderStealth(ctx) {
   let st = await loadStealth(ctx.api);
@@ -12,7 +13,7 @@ export async function renderStealth(ctx) {
   const wrap = h("div", { class: "rb-section", style: "display:flex;flex-direction:column;gap:12px" });
   const persist = () => saveStealth(ctx.api, st).catch((e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }));
   const run = async (fn, okMsg) => {
-    try { st = await fn(); await persist(); if (okMsg) ctx.toast(okMsg); }
+    try { st = await fn(); await persist(); await syncShell(ctx.api, st).catch(() => {}); if (okMsg) ctx.toast(okMsg); }
     catch (e) { ctx.toast(`적용하지 못했어요: ${e?.message ?? e}`, { error: true }); }
     draw();
   };

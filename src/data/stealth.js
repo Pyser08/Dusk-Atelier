@@ -17,11 +17,18 @@ var MONO = `"JetBrains Mono", "Cascadia Code", "D2Coding", Consolas, monospace`;
 // 프리셋마다 다른 것: 색(라이트/다크), 글꼴, 모양 값, 기본 문구, 말투 줄(html)과 장식
 export var PRESETS = {
   claude: {
-    label: "클로드", desc: "따뜻한 주황 포인트, 오른쪽 둥근 말풍선, 도구 호출 줄",
-    font: SANS, accent: "#d97757", radius: 16, input: 20, width: 820,
+    label: "클로드", desc: "클로드 앱: 왼쪽 사이드바(최근 항목=채팅 목록), 둥근 입력창, 작업 줄",
+    font: SANS, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "claude",
     light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f3f3f3", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#666666", dim: "#787878", line: "#ebebeb", line2: "#cecece" },
-    dark: { bg: "#191919", side: "#151515", bubble: "#2a2a2a", inputBg: "#202020", fg: "#ededed", fg2: "#9b9b9b", dim: "#757575", line: "#2a2a2a", line2: "#474747" },
-    labels: { title: "Refactor session handler   ·   api-server", model: "Opus 5.5  ⌄      ⚑ Ask permissions", tool: "파일 읽음 2회, 명령 실행함 1회", think: "✻  Thinking…" }
+    dark: { bg: "#1a1a1a", side: "#1f1f1f", bubble: "#2b2b2b", inputBg: "#262626", fg: "#ececec", fg2: "#a0a0a0", dim: "#8c8c8c", line: "#2e2e2e", line2: "#3d3d3d" },
+    labels: { title: "", sub: "", tool: "명령어 13개 실행함", model: "Sonnet 5.5 낮음   자동", note: "Claude는 AI이므로 실수를 할 수 있습니다.", left: "", think: "✻  Thinking…", user: "", plan: "Pro" }
+  },
+  claudecode: {
+    label: "클로드 코드", desc: "클로드 앱의 Code 탭: 세션 목록 사이드바, 작업 입력창, 하단 모델 줄",
+    font: SANS, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "code",
+    light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f3f3f3", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#666666", dim: "#787878", line: "#ebebeb", line2: "#cecece" },
+    dark: { bg: "#1a1a1a", side: "#1f1f1f", bubble: "#2b2b2b", inputBg: "#262626", fg: "#ececec", fg2: "#a0a0a0", dim: "#8c8c8c", line: "#2e2e2e", line2: "#3d3d3d" },
+    labels: { title: "새 세션", sub: "", tool: "파일 읽음 2회, 명령 실행함 1회", model: "Opus 5.5 중간   자동", note: "", left: "자동 ⌄      저장소 ⌄", think: "✻  Thinking…", user: "", plan: "Pro" }
   },
   gpt: {
     label: "GPT", desc: "흑백, 오른쪽 회색 말풍선, 알약 모양 입력창",
@@ -53,6 +60,7 @@ export var PRESETS = {
   }
 };
 export var PRESET_IDS = Object.keys(PRESETS);
+export var LABEL_KEYS = ["title", "sub", "tool", "model", "note", "left", "think", "user", "plan"];
 
 var vars = (p, c, scheme) => Object.entries({
   bg: c.bg, side: c.side, bubble: c.bubble, input: c.inputBg, fg: c.fg, fg2: c.fg2, dim: c.dim, line: c.line, line2: c.line2
@@ -62,7 +70,7 @@ var vars = (p, c, scheme) => Object.entries({
 export function mergeLabels(id, custom = {}) {
   const base = PRESETS[id]?.labels ?? {};
   const out = {};
-  for (const k of Object.keys(base)) out[k] = typeof custom?.[k] === "string" ? custom[k] : base[k];
+  for (const k of LABEL_KEYS) out[k] = typeof custom?.[k] === "string" ? custom[k] : (base[k] ?? "");
   return out;
 }
 
@@ -105,15 +113,20 @@ body, body *:not(code):not(pre):not(pre *) { font-family: ${code ? "var(--st-mon
 body { background: var(--st-bg) !important; color: var(--st-fg); }
 div:has(> .default-chat-screen) { background: var(--st-bg) !important; background-image: none !important; }
 .default-chat-screen { font-size: ${code ? 14 : 15}px; line-height: ${code ? 1.55 : 1.65}; }`,
-    hideSidebar
-      ? `.rs-sidebar, .risu-sidebar { display: none !important; }`
+    hideSidebar || P.shell
+      ? (P.shell ? `@media (min-width: 761px) { body:has([x-dusk="stealth-sb"]) .rs-sidebar, body:has([x-dusk="stealth-sb"]) .risu-sidebar { display: none !important; } }` : `.rs-sidebar, .risu-sidebar { display: none !important; }`)
       : `.rs-sidebar, .risu-sidebar { background: var(--st-side) !important; box-shadow: none !important; border-right: 1px solid var(--st-line); }`,
     blurAvatars ? `.sidebar-avatar, .avatar img, .avatar div { filter: grayscale(1) blur(4px) opacity(.4); }` : "",
-    L.title ? `.default-chat-screen::after {
-  content: "${cssText(L.title)}"; display: block; position: sticky; top: 0; z-index: 5; margin-bottom: auto;
-  padding: 12px 24px; background: var(--st-bg); border-bottom: 1px solid var(--st-line);
-  color: var(--st-fg2); font-size: 13px; font-weight: 500; white-space: pre; overflow: hidden; text-overflow: ellipsis;
-}` : "",
+    P.shell
+      ? `:root { --st-sw: clamp(220px, 16vw, 290px); }
+body:has([x-dusk="stealth-sb"]) { padding-left: var(--st-sw) !important; box-sizing: border-box; }
+body:has([x-dusk="stealth-sb"]) .default-chat-screen { padding-top: 48px !important; }
+@media (max-width: 760px) { body:has([x-dusk="stealth-sb"]) { padding-left: 0 !important; } }`
+      : (L.title ? `body::before { content: "${cssText(L.title)}"; position: fixed; top: 0; left: 0; right: 0; height: 44px; z-index: 30; display: flex; align-items: center; padding: 0 24px; background: var(--st-bg); border-bottom: 1px solid var(--st-line); color: var(--st-fg2); font-size: 13px; font-weight: 500; white-space: pre; overflow: hidden; pointer-events: none; }
+.default-chat-screen { padding-top: 48px !important; }` : ""),
+    // 스크롤: 대화 영역이 늘어나도 안에서 스크롤되게(고정 줄·입력창을 얹어도 막히지 않게)
+    `.default-chat-screen { overflow-y: auto !important; min-height: 0 !important; overscroll-behavior: contain; }
+div:has(> .default-chat-screen) { min-height: 0 !important; }`,
     `.risu-chat > div { margin: 0 auto !important; padding: 6px 24px !important; max-width: var(--st-w); width: 100%; }
 .st-msg { width: 100%; min-width: 0; position: relative; color: var(--st-fg); display: flex; flex-direction: column; }
 .st-body { min-width: 0; }
@@ -145,13 +158,16 @@ div:has(> .default-chat-screen) { background: var(--st-bg) !important; backgroun
 .st-body textarea { background: var(--st-input) !important; color: var(--st-fg) !important; font-size: 15px !important; border: 1px solid var(--st-line2) !important; border-radius: 10px !important; }
 div:has(> .text-input-area) {
   position: relative; box-sizing: border-box; width: calc(100% - 48px) !important; max-width: calc(var(--st-w) - 48px);
-  margin: 8px auto 20px !important; padding: 10px 10px ${L.model ? 8 : 10}px 6px !important;
+  margin: 8px auto ${P.shell ? 52 : 20}px !important; padding: 10px 10px ${L.model && !P.shell ? 8 : 10}px 6px !important;
   background: var(--st-input) !important; border: 1px solid var(--st-line2); border-radius: var(--st-ri);
   box-shadow: 0 2px 10px rgba(0, 0, 0, .06); align-items: flex-start !important;
 }
 div:has(> .text-input-area):focus-within { border-color: var(--st-dim); }`,
-    L.model ? `div:has(> .text-input-area)::after { content: "${cssText(L.model)}"; position: absolute; left: 56px; bottom: 12px; color: var(--st-dim); font-size: 12.5px; white-space: pre; pointer-events: none; }` : "",
-    `.text-input-area { margin: 0 0 ${L.model ? 34 : 0}px 0 !important; padding: 4px 10px !important; font-size: 15px !important; color: var(--st-fg) !important; border: none !important; border-radius: 0 !important; background: transparent !important; }
+    L.model ? (P.shell
+      ? `div:has(> .text-input-area)::after { content: "${cssText(L.model)}"; position: absolute; right: 6px; bottom: -30px; color: var(--st-fg2); font-size: 12.5px; white-space: pre; pointer-events: none; }`
+      : `div:has(> .text-input-area)::after { content: "${cssText(L.model)}"; position: absolute; left: 56px; bottom: 12px; color: var(--st-dim); font-size: 12.5px; white-space: pre; pointer-events: none; }`) : "",
+    P.shell && L.left ? `div:has(> .text-input-area)::before { content: "${cssText(L.left)}"; position: absolute; left: 12px; bottom: -30px; color: var(--st-fg2); font-size: 12.5px; white-space: pre; pointer-events: none; }` : "",
+    `.text-input-area { margin: 0 0 ${L.model && !P.shell ? 34 : 0}px 0 !important; padding: 4px 10px !important; font-size: 15px !important; color: var(--st-fg) !important; border: none !important; border-radius: 0 !important; background: transparent !important; }
 .text-input-area::placeholder { color: var(--st-dim); }
 div:has(> .text-input-area) > div, div:has(> .text-input-area) > button {
   margin: 0 0 0 4px !important; border: none !important; border-radius: 10px !important; background: transparent !important;
@@ -194,7 +210,7 @@ export function normalizeStealthState(raw) {
     const src = raw.labels?.[id];
     if (src && typeof src === "object") {
       labels[id] = {};
-      for (const k of ["title", "model", "tool", "think"]) if (typeof src[k] === "string") labels[id][k] = src[k].slice(0, 80);
+      for (const k of LABEL_KEYS) if (typeof src[k] === "string") labels[id][k] = src[k].slice(0, 80);
     }
   }
   return {
