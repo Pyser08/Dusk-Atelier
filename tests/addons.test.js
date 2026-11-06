@@ -124,3 +124,20 @@ test("첫 실행 자동 받기(adopt): 쓰던 기능만 받고, 다 받으면 �
   assert.equal(files.get(ADOPT_KEY), "1");
   assert.deepEqual((await A.adopt([["widgets", async () => true]])).got, []);
 });
+
+test("훅 있는 애드온을 켜진 채 업데이트하면 새로고침 안내를 부르고, 다시 시작하면 표시를 지운다", async () => {
+  const { createAddons } = await import("../src/data/addons.js");
+  const { sha256 } = await import("../src/engine/hash.js");
+  const files = new Map(), store = { getItem: async (k) => files.get(k) ?? null, setItem: async (k, v) => { files.set(k, v); }, removeItem: async (k) => { files.delete(k); } };
+  let ver = "0.1.0"; const code = () => `// ${ver}`;
+  const man = async () => JSON.stringify({ format: 1, addons: [{ id: "memory", name: "장기기억", version: ver, hooks: true, sha256: await sha256(new TextEncoder().encode(code())), url: "https://x/m.js" }] });
+  const asked = [];
+  const mk = () => createAddons({ pluginStorage: store }, { core: "2.0.0", onPendingRestart: (x) => asked.push(x), fetcher: async (_a, url) => (url.endsWith(".js") ? code() : await man()), importer: async () => ({ activate: async () => ({ deactivate() {} }) }) });
+  const A = mk(); await A.loadManifest(); await A.install("memory");
+  assert.equal(asked.length, 0, "처음 받기는 바로 켜짐");
+  ver = "0.1.1"; await A.loadManifest(); await A.install("memory");
+  assert.deepEqual(asked, [{ id: "memory", name: "장기기억", version: "0.1.1" }]);
+  assert.equal((await A.getIndex()).memory.pendingRestart, true);
+  const B = mk(); await B.boot();
+  assert.equal((await B.getIndex()).memory.pendingRestart, undefined);
+});

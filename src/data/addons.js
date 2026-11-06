@@ -47,7 +47,7 @@ export async function importCode(code, id = "addon") {
   try { return await import(/* webpackIgnore: true */ url); } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
 }
 
-export function createAddons(api, { core, ctx = {}, fetcher = fetchText, importer = importCode, hasher = sha256, now = () => Date.now(), log = (m) => console.log(`[Dusk Atelier] 애드온: ${m}`) } = {}) {
+export function createAddons(api, { core, ctx = {}, onPendingRestart = null, fetcher = fetchText, importer = importCode, hasher = sha256, now = () => Date.now(), log = (m) => console.log(`[Dusk Atelier] 애드온: ${m}`) } = {}) {
   let storeP = null;
   const S = () => (storeP ??= storeOf(api));
   // 값은 문자열로만 저장한다(호스트마다 객체 저장 방식이 달라서)
@@ -81,6 +81,8 @@ export function createAddons(api, { core, ctx = {}, fetcher = fetchText, importe
   // 시작: 저장해 둔 코드로 바로 켠다(네트워크 기다리지 않음). 실패하면 전 버전으로.
   async function boot() {
     const idx = await getIndex();
+    // 다시 시작했으니 저장된(새) 버전으로 켜진다 → '새로고침하면 적용' 표시를 지운다
+    if (Object.values(idx).some((v) => v?.pendingRestart)) { for (const v of Object.values(idx)) if (v) delete v.pendingRestart; await setIndex(idx); }
     // 필요 애드온(requires, 설치 기록에 저장)이 먼저 켜지게 순서대로. 서로 상관없는 것끼리는 기다리지 않아도 되지만 단순하게 차례로.
     const ids = bootOrder(Object.entries(idx).filter(([, v]) => v.on !== false).map(([id]) => id), (id) => idx[id]?.requires);
     for (const id of ids) {
@@ -152,7 +154,11 @@ export function createAddons(api, { core, ctx = {}, fetcher = fetchText, importe
       await stop(id);
       try { await start(id, code, a.version); }
       catch (e) { if (!(await rollback(id, idx))) { idx[id].on = false; idx[id].error = String(e?.message ?? e); await setIndex(idx); } throw e; }
-    } else if (idx[id].on) idx[id].pendingRestart = true, await setIndex(idx);
+    } else if (idx[id].on) {
+      idx[id].pendingRestart = true; await setIndex(idx);
+      // 훅이 있는 애드온은 다음 시작부터 새 버전 → 새로고침을 부탁하는 안내(main.js)
+      try { onPendingRestart?.({ id, name: a.name, version: a.version }); } catch { /* 안내 실패는 무시 */ }
+    }
     emit();
     return idx[id];
   }

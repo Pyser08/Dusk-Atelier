@@ -255,7 +255,14 @@ async function start() {
   Object.defineProperty(app.ctx, "erosync", { configurable: true, get: () => app.ctx.ext.get("svc", "erosync") ?? null });
   // 애드온(2.0.0): 받아 둔 애드온을 같은 창에서 불러온다. 리스 플러그인 목록에는 안 뜬다.
   globalThis.__duskLib = ADDON_LIB; globalThis.__duskVersion = VERSION;   // 애드온이 코어 모듈을 다시 넣지 않고 함께 쓴다(tools/build-addons.mjs)
-  const addons = createAddons(api, { core: VERSION, ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async (tab) => { await app.open(tab ? { tab } : undefined).catch(() => {}); } } });   // 반환값 없음: 애드온 콜백이 그대로 돌려주면 호스트로 복제가 안 돼요
+  // 훅 있는 애드온(장기기억·Erosync) 업데이트를 받아 두면 새로고침을 부탁한다: 리스 화면 알림 → 못 띄우면 Dusk 창 안 알림
+  const pendingNames = new Set();
+  const askRefresh = ({ name, version }) => {
+    pendingNames.add(`${name} v${version}`);
+    const text = `${[...pendingNames].join(", ")} 업데이트를 받았어요. 리스를 새로고침하면 적용돼요.`;
+    toast.show({ title: "새로고침해 주세요", text, action: "눌러서 닫기", ms: 60e3 }).then((ok) => { if (!ok) app?.ctx?.toast?.(text, { seconds: 15 }); }).catch(() => app?.ctx?.toast?.(text, { seconds: 15 }));
+  };
+  const addons = createAddons(api, { core: VERSION, onPendingRestart: askRefresh, ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async (tab) => { await app.open(tab ? { tab } : undefined).catch(() => {}); } } });   // 반환값 없음: 애드온 콜백이 그대로 돌려주면 호스트로 복제가 안 돼요
   app.ctx.addons = addons;
   // 2.0.0으로 올라온 기존 사용자: 쓰던 기능(장기기억·기억카드·Erosync·위젯)의 애드온을 자동으로 받아 그대로 쓰게 한다.
   const rawOf = async (k) => { try { const v = await api.pluginStorage.getItem(k); return v == null || v === "" ? null : v; } catch { return null; } };
