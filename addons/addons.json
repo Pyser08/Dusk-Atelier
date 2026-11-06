@@ -48,13 +48,13 @@
     {
       "id": "memory",
       "name": "장기기억·관계도",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "minCore": "1.9.2",
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "f606e4a6f570a4575fa442048c930bebd0f755d38815540accd65b872ad86243",
-      "size": 1532587
+      "sha256": "fdde6327f5b6e3ddea5032b922dbc21a623cfc7d0e71c3190406296723dbd8ae",
+      "size": 1532899
     },
     {
       "id": "cards",

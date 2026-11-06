@@ -28,6 +28,12 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.evaluate(() => { window.__api.getCurrentChatIndex = async () => -1; window.__api.getCurrentCharacterIndex = async () => -1; const m = __app.ctx.state.mem; m.page = "pot"; m.potTab = "home"; __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);
   ok(`[${tag}] 열린 채팅 없음: 리수폿 화면이 안내와 함께 열림`, (await page.locator("#rb-mem-pot").count()) === 1 && /열린 채팅이 없어요/.test(await page.locator("#rb-mem-pot").textContent()), await page.locator(".rb-main").textContent());
+  ok(`[${tag}] 열린 채팅 없음: 전체 켜기 스위치`, (await page.locator("#rb-mem-pot .rb-phead [role=switch]").count()) === 1);
+  const before = await page.evaluate(() => __app.ctx.memory.switches.potAllOn());
+  await page.locator("#rb-mem-pot .rb-phead [role=switch]").click(); await page.waitForTimeout(700);
+  ok(`[${tag}] 열린 채팅 없음: 스위치로 전체 켜고 끄기`, (await page.evaluate(() => __app.ctx.memory.switches.potAllOn())) === !before);
+  await page.locator("#rb-mem-pot .rb-seg button", { hasText: "설정" }).click(); await page.waitForTimeout(1200);
+  ok(`[${tag}] 열린 채팅 없음: 설정 탭`, /무엇을 기억할까요/.test(await page.locator(".rb-pot-pane").textContent()), (await page.locator(".rb-pot-pane").textContent()).slice(0, 100));
   ok(`[${tag}] 오류 없음`, !errs.length, errs.join(";"));
   await page.close();
 }
