@@ -7,7 +7,8 @@
 import { sha256 } from "../engine/hash.js";
 import { parseManifest, pickUpdates, fitsCore, installOrder, bootOrder } from "../engine/addons.js";
 
-export const ADDON_MANIFEST_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/addons/addons.json";
+// 애드온 목록은 배포 전용 브랜치 addons에서 읽는다(작업 브랜치에 푸시해도 사용자에게 바로 퍼지지 않게). 올리기: node tools/publish-addons.mjs
+export const ADDON_MANIFEST_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/addons.json";
 export const ADDON_URL_KEY = "dusk.addon.manifestUrl";
 export const ADOPT_KEY = "dusk.addon.adopted.v2";
 const INDEX_KEY = "dusk.addon.index", CODE = (id) => `dusk.addon.code.${id}`, PREV = (id) => `dusk.addon.prev.${id}`;

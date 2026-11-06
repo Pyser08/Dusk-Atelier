@@ -2,7 +2,7 @@
 // 코어에 이미 들어 있는 모듈(dom·kit·data/themes 등)은 애드온에 다시 넣지 않고, 실행할 때 코어가 넘겨 준 것(globalThis.__duskLib)을 쓴다.
 //   → 같은 모듈 인스턴스(설정·상태 공유), 애드온 크기 작음. 코어가 넘겨줄 목록은 src/addonlib.gen.js로 만든다(코어 빌드에 들어감).
 //   애드온이 새 코어 모듈을 쓰기 시작하면 addonlib.gen.js가 바뀌므로 코어도 새로 내고 그 애드온의 minCore를 올려야 한다.
-// 사용: node tools/build-addons.mjs [--check]   (BRANCH=feat/2.0.0 기본)
+// 사용: node tools/build-addons.mjs [--check]   (BRANCH=addons 기본)
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rel = (p) => path.relative(root, p).split(path.sep).join("/");
-const branch = process.env.BRANCH || "feat/2.0.0";
+const branch = process.env.BRANCH || "addons";   // 배포 전용 브랜치(빌드 결과만 올림, tools/publish-addons.mjs)
 const check = process.argv.includes("--check");
 const LIB_FILE = path.join(root, "src/addonlib.gen.js");
 const common = { bundle: true, write: false, logLevel: "silent", charset: "utf8", loader: { ".json": "json" }, alias: { fflate: path.join(root, "src/vendor/fflate.js") } };
