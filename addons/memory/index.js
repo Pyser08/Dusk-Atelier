@@ -47,13 +47,12 @@ export async function activate(api, ctx) {
     ext.add("needsMemory", "memory", true),
     ext.add("needsMemory", "relmap", true)
   ];
+  // 채팅 메뉴 바로가기는 리스와 여러 번 오가서 느리다 → 기다리지 않는다(켜기를 막지 않게, 뒤따르는 애드온도 안 늦게)
   const menuOff = [];
-  try {
-    if (app.chatMenu?.addLink) {
-      menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-memory", key: "memory", title: "장기 기억", open: () => openTab("memory") }));
-      menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-regress", key: "regress", title: "회귀", open: regress }));
-    }
-  } catch (e) { log(`채팅 메뉴 바로가기 실패 ${e?.message ?? e}`); }
+  if (app.chatMenu?.addLink) (async () => {
+    menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-memory", key: "memory", title: "장기 기억", open: () => openTab("memory") }));
+    menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-regress", key: "regress", title: "회귀", open: regress }));
+  })().catch((e) => log(`채팅 메뉴 바로가기 실패 ${e?.message ?? e}`));
   affhud.start().catch((e) => log(`호감도 HUD 시작 실패: ${e?.message ?? e}`));
   if (!app.memoryForTest) memory.start().catch((e) => log(`장기기억 시작 실패: ${e?.message ?? e}`));   // 시험에서 끼운 기억은 이미 준비된 것으로 본다
   memBtn.start().catch((e) => log(`관계도 버튼 시작 실패: ${e?.message ?? e}`));

@@ -23,6 +23,7 @@
   - app.js: 기억 화면은 `ctx.memory.ready()`(memory.js start를 한 번만, 실패해도 풀림)를 최대 20초 기다림(needsMemory). 화면 오류에 '다시 시도'.
   - e2e app.entry.js: opts.memory면 실제 memory·cards 애드온(app.memoryForTest), 아니면 탭 자리만. 2.0.0 출시 때 각 애드온 minCore 2.0.0으로.
   - 남은 것: 실기기(세 호스트)에서 기억 훅이 애드온 로드 뒤에 붙는 순서·첫 실행 자동 받기, cards와 memory가 비코어 공유 모듈을 각자 들고 있음(상태 없는 것뿐이라 동작 문제는 없지만 크기 중복 — 애드온 간 모듈 공유는 미구현).
+  애드온 동시 시작(11-06): boot가 코드를 한꺼번에 읽고(Promise.all) 각 애드온은 requires의 시작 약속만 기다림(launch 메모). bootOrder는 이제 안 씀(engine에 남김). memory 애드온의 chatMenu.addLink는 기다리지 않음.
   애드온 확인 주기(11-06): 켤 때 1번 + 1시간마다(setInterval, timers 주입 가능) + Dusk 창 열 때 checkSoon(10분). 목록 주소엔 ?t=시각, 파일 주소엔 ?v=sha 앞 12자(GitHub raw 캐시 우회). 시험 가짜 fetcher는 ? 뒤를 떼고 비교.
   4차(11-06): 관리 애드온 `addons/manage`(72KB: characters·modules·plugins 화면 탭, svc manage, adopt 조건 rbm:ui:v1 있음). legacy(가져오기)·editor·assetmgr·백업은 코어. app.js 기본 탭 home. 모바일 탭바·홈 '관리' 칸은 보일 탭 없으면 숨김. tour.js visibleTour(애드온 없는 탭 단계 뺌). build-addons: 코어 모듈 전부를 addonlib으로 넘김(279개, 코어 +46KB) → 애드온이 새 코어 모듈을 써도 코어 재배포 불필요(ext 자리·api가 바뀔 때만 코어). 코어 2,120KB.
   코어만 확인(11-06): 애드온 0개로 PC·모바일 전 탭 열기 오류 0, 메뉴는 홈·코코아·캐릭터·모듈·플러그인·꾸미기·도구·설정·개발만(모바일 홈·기억·관리·작업실). 숨긴 탭을 주소로 열면 '준비 중'.

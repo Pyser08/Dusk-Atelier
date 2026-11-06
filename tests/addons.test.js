@@ -157,3 +157,18 @@ test("실행 중에도 주기적으로 확인하고, 목록·파일은 캐시를
   const m = urls.length; t += 60e3; await A.checkSoon(); assert.equal(urls.length, m, "방금 확인했으면 창을 열어도 다시 안 받음");
   t += 11 * 60e3; await A.checkSoon(); assert.ok(urls.length > m, "10분 지나면 창을 열 때 확인");
 });
+
+test("시작: 서로 상관없는 애드온은 동시에 켜고, 필요 애드온이 있으면 그것만 기다린다", async () => {
+  const { createAddons } = await import("../src/data/addons.js");
+  const files = new Map(), store = { getItem: async (k) => { await new Promise((r) => setTimeout(r, 20)); return files.get(k) ?? null; }, setItem: async (k, v) => { files.set(k, v); }, removeItem: async (k) => { files.delete(k); } };
+  const idx = { memory: { version: "0.1.0", on: true }, widgets: { version: "0.1.0", on: true }, manage: { version: "0.1.0", on: true }, cards: { version: "0.1.0", on: true, requires: ["memory"] } };
+  files.set("dusk.addon.index", JSON.stringify(idx));
+  for (const id of Object.keys(idx)) files.set(`dusk.addon.code.${id}`, `// ${id}`);
+  const order = [];
+  const importer = async (code) => { const id = code.slice(3); order.push(`+${id}`); await new Promise((r) => setTimeout(r, 100)); order.push(`-${id}`); return { activate: async () => ({}) }; };
+  const A = createAddons({ pluginStorage: store }, { core: "2.0.0", storage: store, importer, timers: { setTimeout: () => 0, setInterval: () => 0 }, fetcher: async () => null });
+  const t0 = Date.now(); await A.boot(); const ms = Date.now() - t0;
+  assert.ok(ms < 320, `동시에 켬(차례로면 400ms 넘음): ${ms}ms`);
+  assert.ok(order.indexOf("+cards") > order.indexOf("-memory"), "cards는 memory가 켜진 뒤");
+  assert.ok(["cards", "manage", "memory", "widgets"].every((id) => A.running(id)), "모두 켜짐");
+});

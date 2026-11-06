@@ -5,7 +5,7 @@
 // - 새 버전이 켜지다 실패하면 바로 전 버전으로 되돌린다. 확인 실패는 조용히 넘어간다(지금 버전 그대로).
 // - 저장: getLocalPluginStorage(RisuAI=콜드스토리지·동기화, Bard/Pocket=서버 KV) → 없으면 pluginStorage.
 import { sha256 } from "../engine/hash.js";
-import { parseManifest, pickUpdates, fitsCore, installOrder, bootOrder } from "../engine/addons.js";
+import { parseManifest, pickUpdates, fitsCore, installOrder } from "../engine/addons.js";
 
 // 애드온 목록은 배포 전용 브랜치 addons에서 읽는다(작업 브랜치에 푸시해도 사용자에게 바로 퍼지지 않게). 올리기: node tools/publish-addons.mjs
 export const ADDON_MANIFEST_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/addons.json";
@@ -87,18 +87,30 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
     const idx = await getIndex();
     // 다시 시작했으니 저장된(새) 버전으로 켜진다 → '새로고침하면 적용' 표시를 지운다
     if (Object.values(idx).some((v) => v?.pendingRestart)) { for (const v of Object.values(idx)) if (v) delete v.pendingRestart; await setIndex(idx); }
-    // 필요 애드온(requires, 설치 기록에 저장)이 먼저 켜지게 순서대로. 서로 상관없는 것끼리는 기다리지 않아도 되지만 단순하게 차례로.
-    const ids = bootOrder(Object.entries(idx).filter(([, v]) => v.on !== false).map(([id]) => id), (id) => idx[id]?.requires);
-    for (const id of ids) {
+    // 동시에 켠다: 저장된 코드는 한꺼번에 읽고, 각 애드온은 자기 필요 애드온(requires)이 켜지기만 기다린다.
+    // (예전: 전부 차례로 → 애드온이 늘수록 늦게 켜져서 장기기억 훅이 첫 요청을 놓칠 수 있었다)
+    const ids = Object.entries(idx).filter(([, v]) => v.on !== false).map(([id]) => id);
+    const codes = new Map(await Promise.all(ids.map(async (id) => [id, await store.getItem(CODE(id)).catch(() => null)])));
+    const started = new Map();
+    const launch = (id, stack = new Set()) => {
+      if (started.has(id)) return started.get(id);
       const v = idx[id];
-      if ((v.requires ?? []).some((r) => !running.has(r))) { log(`${id}: 필요한 애드온(${v.requires.join(", ")})이 켜져 있지 않아 시작하지 않았어요`); continue; }
-      try { await start(id, await store.getItem(CODE(id)), v.version); }
-      catch (e) {
-        log(`${id} v${v.version} 시작 실패 ${e?.message ?? e}`);
-        if (v.prev && await rollback(id, idx)) continue;
-        idx[id] = { ...v, on: false, error: String(e?.message ?? e) }; await setIndex(idx);
-      }
-    }
+      const p = (async () => {
+        const req = (v.requires ?? []).filter((r) => r !== id && !stack.has(r));
+        const ok = await Promise.all(req.map((r) => (idx[r] && idx[r].on !== false && ids.includes(r) ? launch(r, new Set([...stack, id])) : Promise.resolve(false))));
+        if (ok.some((x) => !x) || req.some((r) => !running.has(r))) { log(`${id}: 필요한 애드온(${v.requires.join(", ")})이 켜져 있지 않아 시작하지 않았어요`); return false; }
+        try { await start(id, codes.get(id), v.version); return true; }
+        catch (e) {
+          log(`${id} v${v.version} 시작 실패 ${e?.message ?? e}`);
+          if (v.prev && await rollback(id, idx)) return running.has(id);
+          idx[id] = { ...v, on: false, error: String(e?.message ?? e) }; await setIndex(idx);
+          return false;
+        }
+      })();
+      started.set(id, p);
+      return p;
+    };
+    await Promise.all(ids.map((id) => launch(id)));
     emit();
     timers.setTimeout(() => { check().catch(() => {}); }, 3000);
     if (!autoTimer) { autoTimer = timers.setInterval(() => check().catch(() => {}), CHECK_EVERY); autoTimer?.unref?.(); }
