@@ -397,8 +397,18 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     render();
   }
   let renderToken = 0;
+  // 기능 맛보기용: 가 본 화면(탭, 장기 기억은 'memory:페이지')을 모아 둔다. 잠깐 뒤 한 번에 저장.
+  let visitTimer = null;
+  function noteVisit() {
+    const key = state.tab === "memory" ? `memory:${state.mem?.page || "home"}` : state.tab;
+    const have = prefs.ui?.visited ?? [];
+    if (!key || have.includes(key)) return;
+    if (prefs.ui) prefs.ui.visited = [...have, key].slice(-60);
+    clearTimeout(visitTimer); visitTimer = setTimeout(() => { prefs.saveUi?.({ visited: prefs.ui?.visited ?? [] }).catch?.(() => {}); }, 800);
+  }
   function render({ reuse = false } = {}) {
     const token = ++renderToken;   // 낡은 화면의 늦은 그리기를 막는 번호표(staleguard.js)
+    noteVisit();
     try { ctx.ext?.beginRender(); } catch { /* ctx 만들기 전 */ }   // 이 화면이 읽는 애드온 자리만 다시 그리기 대상
     refreshTabs();
     if (!reuse) dropPanes();
@@ -466,6 +476,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       state.sub = null;
     }
     if (opts?.tab) { state.tab = opts.tab; state.sub = null; }
+    // 기능 맛보기용: 연 횟수(창을 열 때마다 1)
+    prefs.saveUi?.({ opens: (prefs.ui?.opens ?? 0) + 1 }).catch?.(() => {});
     state.modDirty = true;
     state.charOrderStale = true;
     if (state.chars) state.charsBg = true;

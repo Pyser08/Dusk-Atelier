@@ -19,6 +19,8 @@ export async function renderMemory(ctx) {
   const host = h("div", { class: "rb-mem2 rb-scroll", "data-page": page });
   replace(ctx.main, host);
   const redraw = () => renderMemory(ctx).catch(fail(ctx));
+  // 기능 맛보기: 가 본 장기 기억 페이지 기록(app.js noteVisit과 같은 칸)
+  try { const key = `memory:${page}`, have = ctx.prefs.ui?.visited ?? []; if (ctx.prefs.ui && !have.includes(key)) { ctx.prefs.ui.visited = [...have, key].slice(-60); ctx.prefs.saveUi({ visited: ctx.prefs.ui.visited }).catch(() => {}); } } catch { /* 기록 없이 */ }
   try { await PAGES[page](ctx, host, { redraw }); } catch (e) { fail(ctx)(e); }
   maybeAskHypa(ctx).catch(() => {});  // 처음 들어갔을 때 HypaPlus가 있으면 안내(화면을 막지 않는다)
 }

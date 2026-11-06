@@ -50,6 +50,7 @@ export async function renderSettingsTab(ctx) {
     card("백업", linkRow("백업 만들기", "모듈·에셋·설정을 zip 한 파일로", () => fullBackup(ctx), "rb-set-fullbackup"), linkRow("백업에서 복원", "전체 백업 zip으로 되살리기", () => fullRestore(ctx), "rb-set-restore")),
     card("도움말",
       ctx.openOnboarding ? linkRow("시작 안내 다시 보기", "처음 설정을 단계별로 다시 해요", () => ctx.openOnboarding(), "rb-set-onboard") : null,
+      linkRow("기능 맛보기 다시 켜기", "홈에서 다음에 써 볼 기능을 하나씩 다시 권해요", async () => { await ctx.prefs.saveUi({ discover: {} }); ctx.toast("홈에서 다시 권해 드릴게요."); }, "rb-set-discover"),
       linkRow("처음 둘러보기", "버튼을 하나씩 짚어 드려요", () => openTour(ctx), "rb-set-tour"),
       linkRow("새로 바뀐 점", null, () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록"), "rb-set-whatsnew", `v${ctx.version}`))
   );
