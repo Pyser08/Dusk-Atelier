@@ -3,6 +3,7 @@
 //   profiles:[{id,name,connectionId,model,sampling,thinking,stream,cache,tier,safety,search,repetition,prefill,pricing,retry,params,headers}],
 //   purposes:{main:{profileId,over},...}, chain:[profileId], chainOn, budget, perChar:{}, transforms:{rules:[]}, tools:{...}, translator:{...}, debug }
 import { KINDS, PURPOSES, kindOf, baseUrlOf } from "./catalog.js";
+import { normalizeRouteRule } from "./router.js";
 const uid = () => Math.random().toString(36).slice(2, 10);
 const str = (v, d = "") => (typeof v === "string" ? v : d);
 const numOrNull = (v) => (v === "" || v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v));
@@ -12,6 +13,7 @@ export const defaultConfig = () => ({
   v: 1, enabled: false, connections: [], profiles: [], purposes: Object.fromEntries(PURPOSES.map((p) => [p, { profileId: "", over: {} }])),
   subProfileId: "", chain: [], chainOn: false, budget: { dailyUsd: 0, monthlyUsd: 0, action: "warn", switchProfileId: "" }, perChar: {},
   defaults: { stream: "stream", retry: 2, timeoutSec: 300, repetition: { on: true, charRun: 240, minRepeats: 6, minChars: 400 }, keepPartial: true, keyCooldownSec: 60, progress: true, retryOn: "server", logMax: 200, batchWaitMin: 60, batchPollSec: 15 },   // progress: 리스 화면 진행 창(2.0.0)
+  router: { enabled: false, rules: [] },
   transforms: { rules: [], cacheOrder: false },
   tools: { enabled: false, datetime: true, calculator: true, dice: true, webSearch: false, fetchUrl: false, maxDepth: 4, timeoutSec: 30, search: { provider: "brave", url: "", key: "", cx: "" }, prefetch: { enabled: false, position: "beforeLast", maxResults: 3, snippetOnly: true, keywords: "" }, risuRead: false, risuWrite: false, memoryTools: false },
   translator: { enabled: false, protect: true, glossary: true, history: 2, maxBytes: 8192, guide: "", glossaryText: "" },
@@ -47,6 +49,7 @@ export function normalizeConfig(raw) {
   return { ...d, v: 1, enabled: !!raw.enabled, connections, profiles, purposes, subProfileId: pid.has(raw.subProfileId) ? raw.subProfileId : "", chain: (Array.isArray(raw.chain) ? raw.chain : []).filter((x) => pid.has(x)), chainOn: !!raw.chainOn,
     budget: { dailyUsd: numOrNull(b.dailyUsd) ?? 0, monthlyUsd: numOrNull(b.monthlyUsd) ?? 0, action: pick(b.action, ["warn", "switch", "block"], "warn"), switchProfileId: pid.has(b.switchProfileId) ? b.switchProfileId : "" },
     perChar: Object.fromEntries(Object.entries(obj(raw.perChar)).filter(([, v]) => pid.has(v?.profileId)).map(([k, v]) => [k, { profileId: v.profileId }])),
+    router: { enabled: !!raw.router?.enabled, rules: (Array.isArray(raw.router?.rules) ? raw.router.rules : []).map(normalizeRouteRule).filter((r) => pid.has(r.profileId)).slice(0, 30) },
     defaults: { ...d.defaults, ...obj(raw.defaults), retryOn: pick(raw.defaults?.retryOn, ["server", "rate", "both"], "server"), logMax: [50, 200, 500].includes(Number(raw.defaults?.logMax)) ? Number(raw.defaults.logMax) : 200, batchWaitMin: Math.max(1, Math.min(1440, Math.floor(numOrNull(raw.defaults?.batchWaitMin) ?? 60))), batchPollSec: Math.max(5, Math.min(300, Math.floor(numOrNull(raw.defaults?.batchPollSec) ?? 15))), repetition: { ...d.defaults.repetition, ...obj(raw.defaults?.repetition) } }, transforms: { rules: (raw.transforms?.rules ?? []).map(normalizeRule).slice(0, 40), cacheOrder: !!raw.transforms?.cacheOrder },
     tools: { ...d.tools, ...obj(raw.tools), search: { ...d.tools.search, ...obj(raw.tools?.search) }, prefetch: { ...d.tools.prefetch, ...obj(raw.tools?.prefetch) } }, translator: { ...d.translator, ...obj(raw.translator) }, debug: { preview: !!raw.debug?.preview } };
 }

@@ -230,3 +230,13 @@ test("캐시 학습: 두 번째 요청에 앞부분 끝 표시(Claude)", async (
   const marks = (c) => c.req.body.messages.map((m, i) => (m.content.some((x) => x.cache_control) ? i : -1)).filter((i) => i >= 0);
   assert.ok(marks(h.calls[1]).includes(2), JSON.stringify(marks(h.calls[1])));   // 앞 3개(m0~m2)가 같았으니 인덱스 2
 });
+
+test("라우터: 조건에 맞으면 그 프로필, 요청이 직접 고른 프로필은 우선", async () => {
+  const router = { enabled: true, rules: [{ id: "r", name: "긴 글", minChars: 10, profileId: "p2" }] };
+  const h = harness({ cfgOver: { router }, script: [sseRes([oa("x"), oaEnd()])] }); await h.ready;
+  const r = await h.runner.handle(req({ prompt_chat: [{ role: "user", content: "열 글자가 넘는 아주 긴 메시지입니다" }] })); if (typeof r.content !== "string") await collect(r.content);
+  assert.match(h.calls[0].req.url, /anthropic/);
+  const h2 = harness({ cfgOver: { router }, script: [sseRes([oa("y"), oaEnd()])] }); await h2.ready;
+  const r2 = await h2.runner.handle(req({ __profile: "p1", prompt_chat: [{ role: "user", content: "열 글자가 넘는 아주 긴 메시지입니다" }] })); if (typeof r2.content !== "string") await collect(r2.content);
+  assert.doesNotMatch(h2.calls[0].req.url, /anthropic/);
+});

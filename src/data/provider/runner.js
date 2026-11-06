@@ -12,6 +12,7 @@ import { enabledTools, parseArgs } from "../../engine/provider/tools.js";
 import { protect, restore, guideBlock, glossaryBlock } from "../../engine/provider/translate.js";
 import { HttpError, errorFromResponse, redact } from "./transport.js";
 import { PURPOSE_LABEL } from "../../engine/provider/catalog.js";
+import { pickByRules } from "../../engine/provider/router.js";
 import { estimateTokens } from "../../engine/provider/tokens.js";
 import { batchKey, batchCreateRequest, batchStatusRequest, batchResultsRequest, parseBatchStatus, parseBatchResults } from "../../engine/provider/batch.js";
 
@@ -199,7 +200,8 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     const sum = summarize(await store.usage(), { now: now() }), bs = budgetState(sum, cfg.budget); let forced = "";
     if (bs.state === "over") { if (cfg.budget.action === "block") return fail(`예산을 넘었어요: ${bs.why}`); if (cfg.budget.action === "switch" && cfg.budget.switchProfileId) forced = cfg.budget.switchProfileId; else if (warnedDay !== String(new Date(now()).toDateString())) { notify(`예산을 넘었어요: ${bs.why}`); warnedDay = String(new Date(now()).toDateString()); } }
     else if (bs.state === "warn" && warnedDay !== String(new Date(now()).toDateString())) { notify(bs.why); warnedDay = String(new Date(now()).toDateString()); }
-    const first = resolve(cfg, purpose, { chaId: cha?.chaId, profileId: forced || req.__profile || "" }); if (!first) return fail("Dusk 프로바이더에 프로필이 없어요. 작업실 → 프로바이더에서 만들어 주세요.");
+    const routed = forced || req.__profile ? "" : pickByRules(cfg.router, { purpose, messages: req.prompt_chat ?? [] });   // 라우터: 예산 전환·요청 지정이 없을 때만
+    const first = resolve(cfg, purpose, { chaId: cha?.chaId, profileId: forced || req.__profile || routed }); if (!first) return fail("Dusk 프로바이더에 프로필이 없어요. 작업실 → 프로바이더에서 만들어 주세요.");
     let messages = applyRules(req.prompt_chat ?? [], cfg.transforms.rules, { purpose, model: first.profile.model, charName: cha?.botName ?? "" });
     // 번역기 다듬기: 서식 보호 토큰 · 용어집 · 안내문(켜 두었을 때만)
     let tmap = null;

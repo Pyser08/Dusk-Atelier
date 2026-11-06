@@ -370,3 +370,22 @@ test("캐시 학습: 이전 요청과 같은 앞부분 끝에 중단점", () => 
   assert.ok(!marked(none).includes(4));
   assert.equal(normalizeProfile({ id: "p", connectionId: "a", model: "m", cache: { grid: 99, learn: 1 } }).cache.grid, 99);
 });
+
+// 9단계(2.0.0): 라우터 — 조건으로 프로필 고르기
+import { pickByRules, normalizeRouteRule } from "../src/engine/provider/router.js";
+test("라우터: 글자 수·포함 글·용도 조건, 위에서부터 첫 일치", () => {
+  const rules = [normalizeRouteRule({ id: "r1", name: "긴 글", minChars: 100, profileId: "pLong" }), normalizeRouteRule({ id: "r2", name: "키워드", contains: "비밀, 마법", profileId: "pMagic" }), normalizeRouteRule({ id: "r3", purposes: ["translate"], maxChars: 50, profileId: "pCheap" })];
+  const router = { enabled: true, rules };
+  const m = (t) => [{ role: "system", content: "S" }, { role: "user", content: t }];
+  assert.equal(pickByRules(router, { purpose: "main", messages: m("가".repeat(150)) }), "pLong");
+  assert.equal(pickByRules(router, { purpose: "main", messages: m("마법 이야기") }), "pMagic");
+  assert.equal(pickByRules(router, { purpose: "translate", messages: m("짧음") }), "pCheap");
+  assert.equal(pickByRules(router, { purpose: "main", messages: m("평범") }), "");
+  assert.equal(pickByRules({ enabled: false, rules }, { purpose: "main", messages: m("가".repeat(150)) }), "");
+  assert.equal(pickByRules(router, { purpose: "translate", messages: m("가".repeat(150)) }), "pLong");   // 용도 조건 없는 규칙은 모든 용도
+});
+test("라우터 정리: 없는 프로필·꺼진 규칙은 건너뜀", () => {
+  const cfg = normalizeConfig({ enabled: true, connections: [{ id: "c", kind: "openai" }], profiles: [{ id: "p1", connectionId: "c", model: "m" }], router: { enabled: true, rules: [{ id: "a", profileId: "ghost", minChars: 1 }, { id: "b", profileId: "p1", minChars: 1, enabled: false }, { id: "c2", profileId: "p1", minChars: 1 }] } });
+  assert.deepEqual(cfg.router.rules.map((r) => r.id), ["b", "c2"]);
+  assert.equal(pickByRules(cfg.router, { purpose: "main", messages: [{ role: "user", content: "x" }] }), "p1");
+});

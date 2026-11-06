@@ -3,6 +3,7 @@ import { h } from "../../dom.js";
 import { btn, confirmDialog, emptyState, note, segmented, toggleRow, advFold } from "../../kit.js";
 import { PURPOSES, PURPOSE_LABEL } from "../../../engine/provider/catalog.js";
 import { normalizeRule } from "../../../engine/provider/profile.js";
+import { normalizeRouteRule } from "../../../engine/provider/router.js";
 import { summarize, budgetState } from "../../../engine/provider/cost.js";
 import { currentChat } from "../../../data/memoryswitches.js";
 import { field, text, num, area, select, grid, usd, kfmt } from "./ui.js";
@@ -42,6 +43,20 @@ async function use({ ctx, cfg, mutate, draw, toast }) {
     toggleRow("실패하면 다음 프로필로 넘기기", "차단·한도·서버 오류일 때 아래 순서대로 시도해요. 글이 나오기 시작한 뒤에는 넘기지 않아요.", cfg.chainOn, async (v) => { await mutate((x) => { x.chainOn = v; }); draw(); }),
     h("div", { class: "rb-pkeys" }, chain.map((id, i) => h("div", { class: "rb-pkey" }, h("span", { class: "n" }, `${i + 1}. ${pname(cfg, id)}`), btn("", { icon: "up", size: "sm", title: "위로", onClick: async () => { await mutate((x) => { if (i > 0) [x.chain[i - 1], x.chain[i]] = [x.chain[i], x.chain[i - 1]]; }); draw(); } }), btn("", { icon: "trash", size: "sm", title: "빼기", onClick: async () => { await mutate((x) => { x.chain.splice(i, 1); }); draw(); } })))),
     field("사슬에 더하기", select([["", "(고르기)"], ...cfg.profiles.filter((p) => !chain.includes(p.id)).map((p) => [p.id, p.name])], "", async (v) => { if (!v) return; await mutate((x) => { x.chain.push(v); }); draw(); }, "사슬 추가"))));
+  // 라우터(2.0.0): 조건에 맞으면 그 프로필로 — 용도·봇별 프로필 위에 얹는 규칙. 위에서부터 첫 일치, 요청이 직접 고른 프로필·예산 전환이 우선
+  const rr = cfg.router ?? { enabled: false, rules: [] }, setRr = async (fn) => { await mutate((x) => { x.router ??= { enabled: false, rules: [] }; fn(x.router); }); };
+  out.push(h("section", { class: "rb-pcard" },
+    toggleRow("조건으로 프로필 고르기(라우터)", "글자 수·들어 있는 글·용도가 맞으면 지정한 프로필로 보내요. 위에서부터 처음 맞는 규칙을 써요. 조건이 하나도 없는 규칙은 쓰지 않아요.", rr.enabled, async (v) => { await setRr((r) => { r.enabled = v; }); draw(); }),
+    ...rr.rules.map((r, i) => h("div", { class: "rb-pcard", dataset: { route: r.id } },
+      h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, `${i + 1}. ${r.name}`), h("small", { class: "rb-muted" }, pname(cfg, r.profileId))),
+        btn("", { icon: "up", size: "sm", title: "위로", onClick: async () => { await setRr((x) => { if (i > 0) [x.rules[i - 1], x.rules[i]] = [x.rules[i], x.rules[i - 1]]; }); draw(); } }),
+        btn("", { icon: "trash", size: "sm", title: "지우기", onClick: async () => { await setRr((x) => { x.rules.splice(i, 1); }); draw(); } })),
+      grid(field("이름", text(r.name, (v) => setRr((x) => { x.rules[i].name = v || "규칙"; }))),
+        field("용도", select([["", "모든 용도"], ...PURPOSES.map((p) => [p, PURPOSE_LABEL[p]])], r.purposes[0] ?? "", (v) => setRr((x) => { x.rules[i].purposes = v ? [v] : []; }), "용도 조건")),
+        field("글자 수 이상", num(r.minChars, (v) => setRr((x) => { x.rules[i].minChars = v; }), { step: "1" })), field("글자 수 이하", num(r.maxChars, (v) => setRr((x) => { x.rules[i].maxChars = v; }), { step: "1" })),
+        field("들어 있는 글", text(r.contains, (v) => setRr((x) => { x.rules[i].contains = v; }), { ph: "쉼표로 여럿(하나라도 있으면)" })),
+        field("보낼 프로필", select(profOpts(cfg, "(고르기)"), r.profileId, (v) => setRr((x) => { x.rules[i].profileId = v; }), "보낼 프로필"))))),
+    h("div", { class: "rb-actions" }, btn("규칙 추가", { icon: "plus", onClick: async () => { if (!cfg.profiles.length) return toast("먼저 프로필을 만들어 주세요"); await setRr((x) => { x.rules.push(normalizeRouteRule({ name: "새 규칙", profileId: cfg.profiles[0].id })); }); draw(); } }))));
   // 봇별 프로필
   const cur = await currentChat(ctx.api);
   let names = {}; try { for (const c of (await ctx.api.getDatabase(["characters"]))?.characters ?? []) names[c.chaId] = c.name; } catch { /* 이름은 없어도 된다 */ }
