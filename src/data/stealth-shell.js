@@ -55,8 +55,8 @@ var ICON = {
 var ico = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n] ?? ""}</svg>`;
 
 export var SHELL_CSS = `
-.st-sb{position:fixed;left:0;top:0;bottom:0;width:var(--st-sw,260px);z-index:9000;display:flex;flex-direction:column;box-sizing:border-box;background:var(--st-side);border-right:1px solid var(--st-line);color:var(--st-fg);font-size:13.5px;user-select:none}
-.st-sb *{box-sizing:border-box}
+[x-dusk="stealth-sb"]{position:fixed;left:0;top:0;bottom:0;width:var(--st-sw,260px);z-index:9000;display:flex;flex-direction:column;box-sizing:border-box;background:var(--st-side);border-right:1px solid var(--st-line);color:var(--st-fg);font-size:13.5px;user-select:none}
+[x-dusk="stealth-sb"] *{box-sizing:border-box}
 .st-sb-head{display:flex;align-items:center;gap:8px;padding:14px 14px 8px}
 .st-sb-word{font-size:21px;font-weight:600;letter-spacing:-.01em}
 .st-sb-word.serif{font-family:"Tiempos Headline","Source Serif Pro",Georgia,"Noto Serif KR","Nanum Myeongjo",serif !important}
@@ -76,20 +76,20 @@ export var SHELL_CSS = `
 .st-sb-who small{color:var(--st-dim);margin-left:4px;font-size:12px}
 .st-sb-gear{border:0;background:transparent;color:var(--st-fg2);padding:6px;border-radius:8px;cursor:pointer;display:flex}
 .st-sb-gear:hover{background:var(--st-bubble);color:var(--st-fg)}
-.st-top{position:fixed;left:var(--st-sw,260px);right:0;top:0;height:44px;z-index:8990;display:flex;align-items:center;padding:0 24px;background:var(--st-bg);border-bottom:1px solid var(--st-line);color:var(--st-fg2);font-size:13.5px;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.st-top b{color:var(--st-fg);font-weight:500;margin-right:8px}
-.st-note{position:fixed;left:var(--st-sw,260px);right:0;bottom:10px;z-index:8980;text-align:center;color:var(--st-dim);font-size:12px;pointer-events:none}
-.st-pop{position:fixed;left:10px;bottom:56px;width:calc(var(--st-sw,260px) - 20px);max-height:60vh;overflow-y:auto;z-index:9100;background:var(--st-input);border:1px solid var(--st-line2);border-radius:12px;padding:8px;box-shadow:0 8px 28px rgba(0,0,0,.35);color:var(--st-fg);font-size:13px}
-.st-pop h4{margin:4px 8px 6px;font-size:12px;font-weight:500;color:var(--st-dim)}
+[x-dusk="stealth-top"]{position:fixed;left:var(--st-sw,260px);right:0;top:0;height:44px;z-index:8990;display:flex;align-items:center;padding:0 24px;background:var(--st-bg);border-bottom:1px solid var(--st-line);color:var(--st-fg2);font-size:13.5px;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[x-dusk="stealth-top"] b{color:var(--st-fg);font-weight:500;margin-right:8px}
+[x-dusk="stealth-note"]{position:fixed;left:var(--st-sw,260px);right:0;bottom:10px;z-index:8980;text-align:center;color:var(--st-dim);font-size:12px;pointer-events:none}
+[x-dusk="stealth-pop"]{position:fixed;left:10px;bottom:56px;width:calc(var(--st-sw,260px) - 20px);max-height:60vh;overflow-y:auto;z-index:9100;background:var(--st-input);border:1px solid var(--st-line2);border-radius:12px;padding:8px;box-shadow:0 8px 28px rgba(0,0,0,.35);color:var(--st-fg);font-size:13px}
+[x-dusk="stealth-pop"] h4{margin:4px 8px 6px;font-size:12px;font-weight:500;color:var(--st-dim)}
 .st-pop-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 8px;border-radius:8px}
 .st-pop-row:hover{background:var(--st-bubble)}
 .st-pop-row label{flex:1;min-width:0}
-.st-pop select,.st-pop input[type=text]{max-width:120px;background:var(--st-bg);color:var(--st-fg);border:1px solid var(--st-line2);border-radius:6px;padding:3px 6px;font:inherit}
+[x-dusk="stealth-pop"] select,[x-dusk="stealth-pop"] input[type=text]{max-width:120px;background:var(--st-bg);color:var(--st-fg);border:1px solid var(--st-line2);border-radius:6px;padding:3px 6px;font:inherit}
 .st-sw{appearance:none;width:30px;height:18px;border-radius:9px;background:var(--st-line2);position:relative;cursor:pointer;flex:none;border:0}
 .st-sw::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .12s}
 .st-sw:checked{background:var(--st-accent)}
 .st-sw:checked::after{left:14px}
-@media (max-width:760px){.st-sb,.st-top,.st-note{display:none}}
+@media (max-width:760px){[x-dusk="stealth-sb"],[x-dusk="stealth-top"],[x-dusk="stealth-note"]{display:none}}
 `;
 
 /** 사이드바 HTML. model: {kind, user, plan, rows[], title, sub, nativeToggles} */
@@ -145,7 +145,6 @@ export function createShell(api, opts = {}) {
     let el = await d.querySelector(`[x-dusk="${id}"]`);
     if (!html) { if (el) await el.remove(); return null; }
     if (!el) { el = await d.createElement(tag); await el.setAttribute("x-dusk", id); await (await d.querySelector("body")).appendChild(el); }
-    if (style) await el.setAttribute("class", style);
     await el.setInnerHTML(html);
     return el;
   }

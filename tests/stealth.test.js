@@ -116,7 +116,7 @@ import { createShell, syncShell, shellState } from "../src/data/stealth-shell.js
 function fakeDoc() {
   const tree = [], nodes = new Map();
   const mk = (tag) => { const n = { tag, attrs: {}, html: "", handlers: {}, removed: false, children: [] };
-    return { _n: n, setAttribute: async (k, v) => void (n.attrs[k] = v), setInnerHTML: async (h) => void (n.html = h), setInnerText: async (t) => void (n.html = t), appendChild: async (c) => void tree.push(c._n),
+    return { _n: n, setAttribute: async (k, v) => { if (!String(k).startsWith("x-")) throw new Error("Can only set attributes starting with 'x-'"); n.attrs[k] = v; }, setInnerHTML: async (h) => void (n.html = h), setInnerText: async (t) => void (n.html = t), appendChild: async (c) => void tree.push(c._n),
       remove: async () => { const i = tree.indexOf(n); if (i >= 0) tree.splice(i, 1); }, addEventListener: async (ev, fn) => void (n.handlers[ev] = fn) }; };
   const find = (sel) => {
     const m = sel.match(/^\[x-dusk="([^"]+)"\](?: \[([\w-]+)(?:="([^"]*)")?\])?$/);
@@ -131,7 +131,7 @@ function fakeDoc() {
     const inn = host.inner[key];
     return { addEventListener: async (ev, fn) => void (inn.handlers[ev] = fn), getChecked: async () => inn.checked, getValue: async () => inn.value, remove: async () => {} };
   };
-  const wrap = (n) => ({ _n: n, setAttribute: async (k, v) => void (n.attrs[k] = v), setInnerHTML: async (h) => void (n.html = h), remove: async () => { const i = tree.indexOf(n); if (i >= 0) tree.splice(i, 1); }, addEventListener: async () => {} });
+  const wrap = (n) => ({ _n: n, setAttribute: async (k, v) => { if (!String(k).startsWith("x-")) throw new Error("Can only set attributes starting with 'x-'"); n.attrs[k] = v; }, setInnerHTML: async (h) => void (n.html = h), remove: async () => { const i = tree.indexOf(n); if (i >= 0) tree.splice(i, 1); }, addEventListener: async () => {} });
   return { tree, createElement: async (t) => mk(t), querySelector: async (sel) => (sel === "head" || sel === "body" ? { appendChild: async (c) => void tree.push(c._n) } : find(sel)) };
 }
 function shellApi(over = {}) {

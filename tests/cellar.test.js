@@ -80,3 +80,20 @@ test("계속 실패하면 확인 간격이 늘어난다(꺼진 Cellar를 3초마
   assert.ok(n > third);
   assert.ok(first >= 1 && second > first);
 });
+
+test("셀러를 끄면 네트워크 요청을 아예 보내지 않는다", async () => {
+  const { saveCellarEnabled, loadCellarEnabled } = await import("../src/data/cellar.js");
+  let n = 0;
+  const api = { storage: store(), pluginStorage: store(), nativeFetch: async () => { n++; return res(200, { name: "dusk-cellar" }); } };
+  assert.equal(await loadCellarEnabled(api), true);
+  await saveCellarEnabled(api, false);
+  assert.equal(await loadCellarEnabled(api), false);
+  const c = createCellar(api);
+  const st = await c.status();
+  assert.equal(st.ok, false); assert.equal(st.off, true);
+  await assert.rejects(cellarRequest(api, { url: "http://x", via: "native" }, "/cellar/backup"), /꺼/);
+  assert.equal((await probeCellar(api, "http://x")).off, true);
+  assert.equal(n, 0);
+  await saveCellarEnabled(api, true);
+  assert.equal((await createCellar(api).status()).ok, true);
+});

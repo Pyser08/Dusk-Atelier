@@ -38,7 +38,7 @@ export async function renderStealth(ctx) {
     const L = mergeLabels(pick, st.labels?.[pick]);
     const cards = PRESET_IDS.map((id) => h("button", {
       type: "button", class: ["rb-card", "bordered"], "aria-pressed": id === pick ? "true" : "false",
-      style: `text-align:left;cursor:pointer;${id === pick ? "outline:2px solid var(--rb-accent, #7a6cf0)" : ""}`,
+      style: `text-align:left;cursor:pointer;padding:14px 16px;display:flex;flex-direction:column;gap:6px;${id === pick ? "outline:2px solid var(--rb-accent, #7a6cf0)" : ""}`,
       onClick: () => { pick = id; draw(); }
     }, h("b", null, PRESETS[id].label + (st.active === id ? "  ● 켜짐" : "")), h("small", { class: "rb-muted", style: "display:block" }, PRESETS[id].desc)));
     const fields = LABEL_FIELDS.map(([k, name]) => {

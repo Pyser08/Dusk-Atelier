@@ -6,6 +6,11 @@ export const CELLAR_URL_KEY = "dusk.cellar.url";
 export const CELLAR_DEFAULT_URL = "http://127.0.0.1:6011";
 const TIMEOUT = 4000, TTL = 60e3, FAIL_TTL = 3e3;   // 못 찾은 결과는 3초만 기억한다(켜자마자 못 찾았다가 계속 '없음'으로 남지 않게)
 
+// 켜고 끄기: 끄면 주소를 찾으러 가지도, 요청을 보내지도 않는다(기본은 켜짐)
+export const CELLAR_ON_KEY = "dusk.cellar.on";
+export async function loadCellarEnabled(api) { try { return (await api.pluginStorage.getItem(CELLAR_ON_KEY)) !== "0"; } catch { return true; } }
+export async function saveCellarEnabled(api, on) { return api.pluginStorage.setItem(CELLAR_ON_KEY, on ? "1" : "0"); }
+
 export async function loadCellarUrl(api) {
   try { const v = await api.pluginStorage.getItem(CELLAR_URL_KEY); return typeof v === "string" && /^https?:\/\//.test(v.trim()) ? v.trim().replace(/\/+$/, "") : CELLAR_DEFAULT_URL; } catch { return CELLAR_DEFAULT_URL; }
 }
@@ -26,6 +31,7 @@ async function readJson(res) {
 
 // { ok, version, url, via, error }
 export async function probeCellar(api, url) {
+  if (!(await loadCellarEnabled(api))) return { ok: false, url, off: true, error: "Cellar를 꺼 두었어요" };
   const target = `${url}/cellar/health`;
   const tries = [];
   if (typeof api.nativeFetch === "function") tries.push(["native", () => api.nativeFetch(target, { method: "GET" })]);   // method 없으면 POST로 감
@@ -47,6 +53,7 @@ export async function probeCellar(api, url) {
 // 다른 기기(이 PC)의 Cellar로 갈 수 있다. 리스 프록시(/proxy2)는 GET·POST만 확실히 넘기므로 쓰기는 POST만 쓴다.
 // 연결 문제(응답 없음·5xx·401·JSON 아님)는 err.network = true. 반환: { status, json }
 export async function cellarRequest(api, { url, via = "native" }, path, { method = "GET", body, timeout = TIMEOUT } = {}) {
+  if (!(await loadCellarEnabled(api))) throw Object.assign(new Error("Cellar를 꺼 두었어요"), { network: true, status: 0, json: null });
   const target = url + path;
   const init = method === "GET" ? { method: "GET" } : { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body ?? {}) };
   const go = via === "fetch" ? (typeof fetch === "function" ? () => fetch(target, { ...init, cache: "no-store" }) : null) : (typeof api.nativeFetch === "function" ? () => api.nativeFetch(target, init) : null);

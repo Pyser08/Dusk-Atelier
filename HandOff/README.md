@@ -69,3 +69,5 @@ npm ci            # 막히면: esbuild·acorn·eslint-scope를 /opt/npm-tools/no
 - 버전 안내: `docs/GUIDE-v*.md`, 아카라이브 글: `docs/arca/v*.html`
 - 백그라운드 서버: 별도 저장소 **Pyser08/Dusk-Cellar** (진행 상황은 STATE.md 'Dusk Cellar')
 - 안내서 사이트: `docs/site/` — 기능 설명이 바뀌면 같이 수정(STATE.md '안내서 사이트' 참고)
+
+- 모든 작업 전에 `HandOff/QUALITY.md`(검토 지침·박스 여백 규칙)를 읽는다.
