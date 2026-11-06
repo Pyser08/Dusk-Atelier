@@ -144,6 +144,13 @@ window.bootApp = async (seed, opts = {}) => {
       app.ctx.ext.add("svc", "memory", {}); app.ctx.ext.add("svc", "cards", {}); app.ctx.ext.add("svc", "memoryui", { tracked: () => null, STAGE_NAMES: {} });
     }
   }
+  if (opts.onboard && !opts.addons) {  // 시작 안내 '기능' 단계용 가짜 애드온 관리자(받기·켜기만 기록)
+    const idx = {}, man = [{ id: "memory", name: "장기기억·관계도", version: "1.0.0", desc: "기억", requires: [] }, { id: "cards", name: "기억카드", version: "1.0.0", desc: "카드", requires: ["memory"] }];
+    window.__addonLog = [];
+    app.ctx.addons = { loadManifest: async () => man, manifest: () => man, getIndex: async () => ({ ...idx }), core: () => "2.0.0", lastError: () => "", running: () => [], check: async () => ({ updates: [], held: [] }), remove: async () => {}, subscribe: () => () => {},
+      install: async (id) => { for (const r of man.find((a) => a.id === id).requires) idx[r] ??= { version: "1.0.0", on: true }; idx[id] = { version: "1.0.0", on: true }; window.__addonLog.push(["install", id]); },
+      setOn: async (id, on) => { idx[id] = { ...idx[id], on }; window.__addonLog.push(["setOn", id, on]); } };
+  }
   if (opts.addons) {  // 애드온 카드 시험: 파일은 실행기가 window.__addonFiles로 넣어 준다(주소 → 내용)
     app.ctx.addons = createAddons(api, { core: "2.0.0", ctx: { toast: (t, o) => app.ctx.toast?.(t, o) }, fetcher: async (_a, url) => (url.endsWith("addons.json") ? window.__addonFiles?.manifest : window.__addonFiles?.[url]) ?? null });
     await app.ctx.addons.boot();
