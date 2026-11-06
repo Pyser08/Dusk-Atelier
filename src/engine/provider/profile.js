@@ -33,7 +33,7 @@ export function normalizeProfile(p) {
     thinking: { mode: pick(t.mode, ["", "budget", "adaptive"], ""), budget: numOrNull(t.budget), effort: str(t.effort), level: str(t.level), display: pick(t.display, ["", "summarized", "omitted"], ""), include: !!t.include, showThinking: !!t.showThinking, continuation: !!t.continuation },
     stream: pick(p?.stream, ["", "stream", "buffered", "off"], ""), cache: { claude: pick(c.claude, ["off", "5m", "1h"], "off"), breakpoints: numOrNull(c.breakpoints) ?? 2, openai: pick(c.openai, ["off", "in_memory", "24h"], "off"), gemini: pick(c.gemini, ["off", "observe", "auto", "manual"], "off"), geminiTtl: numOrNull(c.geminiTtl) ?? 1800, geminiMinRepeats: numOrNull(c.geminiMinRepeats) ?? 3, geminiMarker: str(c.geminiMarker, "{{cache_marker}}") },
     tier: str(p?.tier), verbosity: str(p?.verbosity), safety: str(p?.safety), search: pick(p?.search, ["off", "auto"], "off"),
-    repetition: pick(p?.repetition, ["inherit", "on", "off"], "inherit"), prefill: str(p?.prefill), pdf: pick(p?.pdf, ["off", "full"], "off"),
+    repetition: pick(p?.repetition, ["inherit", "on", "off"], "inherit"), prefill: str(p?.prefill), pdf: pick(p?.pdf, ["off", "full"], "off"), mediaResolution: pick(p?.mediaResolution, ["", "low", "medium", "high"], ""),
     pricing: { input: numOrNull(pr.input) ?? 0, output: numOrNull(pr.output) ?? 0, cached: numOrNull(pr.cached), cwrite: numOrNull(pr.cwrite) }, retry: numOrNull(p?.retry), params: obj(p?.params), headers: obj(p?.headers) };
 }
 export function normalizeConfig(raw) {

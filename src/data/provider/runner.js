@@ -12,6 +12,7 @@ import { enabledTools, parseArgs } from "../../engine/provider/tools.js";
 import { protect, restore, guideBlock, glossaryBlock } from "../../engine/provider/translate.js";
 import { HttpError, errorFromResponse, redact } from "./transport.js";
 import { PURPOSE_LABEL } from "../../engine/provider/catalog.js";
+import { estimateTokens } from "../../engine/provider/tokens.js";
 
 const nz = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== undefined && !(Array.isArray(v) && !v.length)));
 const TOOL_RE = /<tool_call\s+name="([^"]+)">([\s\S]*?)<\/tool_call>/g;
@@ -147,14 +148,14 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     const c = out.content;
     if (c && typeof c.getReader === "function" && typeof ReadableStream === "function") {
       // 스트림: 다 받으면 완료, 오류면 실패, 리스가 끊으면 취소로 카드를 닫는다(어느 길로 끝나도 카드가 남지 않게). 받은 글자 수도 보여 준다.
-      board?.update(reqId, { phase: "recv" }); let chars = 0, last = 0; const rd = c.getReader();
+      board?.update(reqId, { phase: "recv" }); let chars = 0, toks = 0, last = 0; const rd = c.getReader();
       const piped = new ReadableStream({
         async pull(ctl) {
           try {
             const { done, value } = await rd.read();
-            if (done) { board?.update(reqId, { chars }); board?.end(reqId, "ok"); ctl.close(); return; }
-            chars += String(typeof value === "string" ? value : value?.text ?? "").length;
-            if (now() - last > 500) { last = now(); board?.update(reqId, { chars }); }
+            if (done) { board?.update(reqId, { chars, tokens: toks }); board?.end(reqId, "ok"); ctl.close(); return; }
+            const piece = String(typeof value === "string" ? value : value?.text ?? ""); chars += piece.length; toks += estimateTokens(piece);
+            if (now() - last > 500) { last = now(); board?.update(reqId, { chars, tokens: toks }); }
             ctl.enqueue(value);
           } catch (e) { board?.end(reqId, signal?.aborted ? "abort" : "error", String(e?.message ?? e).slice(0, 120)); ctl.error(e); }
         },

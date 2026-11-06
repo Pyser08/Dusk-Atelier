@@ -322,3 +322,23 @@ test("연결 정리: 지역·잔액 전용 키 칸", () => {
   const c = normalizeConnection({ id: "b", kind: "bedrock", region: " eu-west-1 ", balanceKeyId: "kk" });
   assert.equal(c.region, "eu-west-1"); assert.equal(c.balanceKeyId, "kk"); assert.equal(normalizeConnection({ id: "x", kind: "openai" }).balanceKeyId, "");
 });
+
+// 6단계(2.0.0): 출력 표시 — 토큰 추정·진행 창 표시·미디어 해상도
+import { estimateTokens } from "../src/engine/provider/tokens.js";
+import { boardHtml } from "../src/engine/provider/board.js";
+test("토큰 추정: 영어·한글·빈 글", () => {
+  assert.equal(estimateTokens(""), 0); assert.equal(estimateTokens("abcdefgh"), 2);
+  const ko = estimateTokens("안녕하세요 반갑습니다"); assert.ok(ko >= 6 && ko <= 14);
+  assert.ok(estimateTokens("가".repeat(100)) > estimateTokens("a".repeat(100)));
+});
+test("진행 창: 받은 글자와 추정 토큰을 같이 보여 줌", () => {
+  const html = boardHtml([{ id: "r1", at: 0, phase: "recv", done: false, chars: 1234, tokens: 600, attempt: 1 }], 5000);
+  assert.ok(html.includes("1,234자") && html.includes("약 600토큰"));
+});
+test("Gemini 미디어 해상도와 Claude 생각 표시", () => {
+  const g = buildRequest({ conn: normalizeConnection({ id: "g", kind: "google" }), profile: normalizeProfile({ id: "p", connectionId: "g", model: "gemini-2.5-flash", mediaResolution: "high" }), messages: msgs, cred: "K" });
+  assert.equal(g.body.generationConfig.mediaResolution, "MEDIA_RESOLUTION_HIGH");
+  const g0 = buildRequest({ conn: normalizeConnection({ id: "g", kind: "google" }), profile: normalizeProfile({ id: "p", connectionId: "g", model: "gemini-2.5-flash" }), messages: msgs, cred: "K" });
+  assert.equal(g0.body.generationConfig?.mediaResolution, undefined);
+  assert.equal(normalizeProfile({ id: "p", connectionId: "g", model: "m", mediaResolution: "weird" }).mediaResolution, "");
+});

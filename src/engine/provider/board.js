@@ -28,7 +28,7 @@ export function boardHtml(list, now = Date.now()) {
   const row = (c) => {
     const tone = c.done ? (c.status === "ok" ? "#4caf7d" : c.status === "abort" ? "#9d99c1" : "#e0605a") : "#7c5cf0";
     const state = c.done ? (c.status === "ok" ? "완료" : c.status === "abort" ? "취소됨" : "실패") : PHASES[c.phase] ?? "진행 중";
-    const extra = [c.attempt > 1 ? `${c.attempt}번째 시도` : "", c.waitUntil && !c.done ? `${secs(c.waitUntil - now)} 뒤 다시` : "", c.chars ? `${c.chars.toLocaleString()}자` : "", !c.done ? secs(now - c.at) : ""].filter(Boolean).join(" · ");
+    const extra = [c.attempt > 1 ? `${c.attempt}번째 시도` : "", c.waitUntil && !c.done ? `${secs(c.waitUntil - now)} 뒤 다시` : "", c.chars ? `${c.chars.toLocaleString()}자${c.tokens ? ` · 약 ${c.tokens.toLocaleString()}토큰` : ""}` : "", !c.done ? secs(now - c.at) : ""].filter(Boolean).join(" · ");
     return `<div data-req="${esc(c.id)}" style="display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.04)">`
       + `<span style="flex:none;width:8px;height:8px;margin-top:6px;border-radius:50%;background:${tone}"></span>`
       + `<span style="flex:1;min-width:0"><b style="font-size:12px">${esc(c.label || c.model || "요청")}</b> <span style="font-size:11px;color:#9d99c1">${esc(state)}</span>`

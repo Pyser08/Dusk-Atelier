@@ -87,6 +87,7 @@ function buildGeminiBody(p, msgs, o) {
   const { system, rest } = splitSystem(mergeSame(msgs));
   const contents = startWithUser(rest).map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: geminiParts(m) }));
   const generationConfig = { temperature: s.temperature, topP: s.topP, topK: s.topK, maxOutputTokens: s.maxTokens, stopSequences: s.stop, seed: s.seed, frequencyPenalty: s.frequencyPenalty, presencePenalty: s.presencePenalty };
+  if (p.mediaResolution) generationConfig.mediaResolution = `MEDIA_RESOLUTION_${String(p.mediaResolution).toUpperCase()}`;   // 이미지·PDF를 얼마나 자세히 읽을지
   const tc = {};
   const g3 = /gemini-3/i.test(p.model);
   if (t.effort === "none") { if (g3) tc.thinkingLevel = "MINIMAL"; else tc.thinkingBudget = 0; }
