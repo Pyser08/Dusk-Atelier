@@ -74,7 +74,7 @@ export async function renderProvider(ctx) {
         c.kind === "vertex" ? field("프로젝트 ID", text(c.vertex.projectId, (v) => set({ vertex: { ...c.vertex, projectId: v.trim() } }))) : null,
         c.kind === "vertex" ? field("위치", text(c.vertex.location, (v) => set({ vertex: { ...c.vertex, location: v.trim() || "global" } }), { ph: "global" })) : null,
         c.kind === "copilot" ? field("Copilot 방식", select([["vscode", "VS Code"], ["opencode", "opencode"]], c.copilotEngine, (v) => set({ copilotEngine: v }), "Copilot 방식")) : null,
-        c.keyIds.length > 1 ? field("키 쓰는 방식", select([["random", "무작위"], ["rotate", "돌아가며"], ["affinity", "봇마다 고정"]], c.keyMode, (v) => set({ keyMode: v }), "키 방식"), "한 키가 막히면 잠시 쉬고 다른 키로 넘어가요") : null));
+        c.keyIds.length > 1 ? field("키 쓰는 방식", select([["random", "무작위"], ["rotate", "돌아가며"], ["affinity", "봇마다 고정"], ["on-error", "실패한 뒤에만 다음 키"]], c.keyMode, (v) => set({ keyMode: v }), "키 방식"), "한 키가 막히면 잠시 쉬고 다른 키로 넘어가요") : null));
       card.append(h("div", { class: "acts" },
         btn("모델 불러오기", { icon: "refresh", onClick: async () => { try { st.models[c.id] = await P.models(c); toast(`모델 ${st.models[c.id].length}개를 불러왔어요`); draw(); } catch (e) { fail(e); } } }),
         P.hasBalance(c.kind) ? btn("잔액 보기", { onClick: async () => { try { const b = await P.balance(c); bal.textContent = `${b.label}: ${Number.isFinite(b.value) ? b.value.toFixed(2) : "?"} ${b.unit}`; } catch (e) { fail(e); } } }) : null,

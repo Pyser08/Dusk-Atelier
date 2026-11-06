@@ -7,6 +7,7 @@ import { createRisuTools } from "./risutools.js";
 import { createToolExec } from "./toolexec.js";
 import { createProviderRunner } from "./runner.js";
 import { createBoard } from "../../engine/provider/board.js";
+import { createErrorLog } from "../../engine/provider/errlog.js";
 import { createProgressWindow } from "./progress.js";
 import { createRegistrar } from "./register.js";
 import { listModels, fetchBalance, hasBalance } from "./models.js";
@@ -35,11 +36,12 @@ export function createProvider(api, { notify = () => {}, confirm, memory = null,
   const docOf = getDoc ?? (async () => { try { return await api.getRootDocument?.(); } catch { return null; } });
   const progress = createProgressWindow({ getDoc: docOf, board, enabled: () => progressOn, log });
   store.subscribe((c) => { progressOn = c?.defaults?.progress !== false; progress.refresh(); });
-  const runner = createProviderRunner({ api, store, vault, transport, gemcache, risuTools, toolExec, vertex, copilot, currentChar: () => currentChat(api), notify, board, log });
+  const errlog = createErrorLog();   // 재시도·실패 기록(메모리, 키 가림) — 4단계 로그 보기에서 씀
+  const runner = createProviderRunner({ api, store, vault, transport, gemcache, risuTools, toolExec, vertex, copilot, currentChar: () => currentChat(api), notify, board, errlog, log });
   const registrar = createRegistrar(api, { runner, store, log, allowed });
   const credOf = async (conn) => { const v = await vault.values(conn.keyIds); return v[0] ?? ""; };
   return {
-    store, vault, runner, registrar, risuTools, board, progress,
+    store, vault, runner, registrar, risuTools, board, progress, errlog,
     supported: () => registrar.supported(),
     sync: () => registrar.sync(),
     names: () => registrar.names(),

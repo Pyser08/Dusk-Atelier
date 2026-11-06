@@ -193,3 +193,22 @@ test("번역기: 서식 토큰을 보호했다가 되돌리고 용어집·안내
   assert.match(sent, /⟦0⟧/); assert.match(sent, /더스크/); assert.match(sent, /존댓말로/); assert.doesNotMatch(sent, /<b>/);
   assert.equal(r.content, "안녕 <b> 세계");
 });
+
+test("재시도 대상 rate: 429만 같은 키로 다시, 503은 바로 실패", async () => {
+  const h = harness({ keys: { k1: "sk-only-key-1111" }, cfgOver: { connections: [{ id: "c1", kind: "openai", keyIds: ["k1"] }], profiles: [{ id: "p1", connectionId: "c1", model: "m", retry: 2 }], defaults: { retryOn: "rate", keyCooldownSec: 0 } }, script: [errRes(429, "slow"), sseRes([oa("ok"), oaEnd()])] }); await h.ready;
+  const r = await h.runner.handle(req({ mode: "other" })); assert.equal(r.content, "ok"); assert.equal(h.calls.length, 2);
+  const h2 = harness({ keys: { k1: "sk-only-key-1111" }, cfgOver: { connections: [{ id: "c1", kind: "openai", keyIds: ["k1"] }], profiles: [{ id: "p1", connectionId: "c1", model: "m", retry: 2 }], defaults: { retryOn: "rate" } }, script: [errRes(503, "busy"), sseRes([oa("ok"), oaEnd()])] }); await h2.ready;
+  const r2 = await h2.runner.handle(req({ mode: "other" })); assert.equal(r2.success, false); assert.equal(h2.calls.length, 1);
+});
+test("재시도 오류를 하나씩 기록하고 키는 가림", async () => {
+  const { createErrorLog } = await import("../src/engine/provider/errlog.js"); const errlog = createErrorLog({ max: 20 });
+  harness.extra = { errlog }; const h = harness({ keys: { k1: "sk-only-key-1111" }, cfgOver: { connections: [{ id: "c1", kind: "openai", keyIds: ["k1"] }], profiles: [{ id: "p1", connectionId: "c1", model: "m", retry: 2 }] }, script: [errRes(503, "busy sk-only-key-1111"), errRes(503, "busy"), sseRes([oa("fine"), oaEnd()])] }); await h.ready;
+  await h.runner.handle(req({ mode: "other" })); delete harness.extra; const rows = errlog.list();
+  assert.equal(rows.length, 2); assert.ok(rows.every((x) => x.status === 503 && x.model === "m")); assert.ok(!JSON.stringify(rows).includes("sk-only-key-1111"));
+});
+test("on-error 키 방식: 실패한 뒤에만 다음 키로", async () => {
+  const h = harness({ keys: { k1: "sk-key-one-1111", k2: "sk-key-two-2222" }, cfgOver: { connections: [{ id: "c1", kind: "openai", keyIds: ["k1", "k2"], keyMode: "on-error" }] }, script: [sseRes([oa("a"), oaEnd()]), sseRes([oa("b"), oaEnd()]), errRes(429, "rate"), sseRes([oa("c"), oaEnd()])] }); await h.ready;
+  const auth = (c) => JSON.stringify(c.req.headers);
+  await h.runner.handle(req({ mode: "other" })); await h.runner.handle(req({ mode: "other" })); await h.runner.handle(req({ mode: "other" }));
+  assert.ok(auth(h.calls[0]).includes("1111") && auth(h.calls[1]).includes("1111") && auth(h.calls[2]).includes("1111") && auth(h.calls[3]).includes("2222"));
+});

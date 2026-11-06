@@ -19,7 +19,7 @@ export const toolPrompt = (defs) => `[도구 사용]\n필요할 때만 아래 �
 export const parseToolCalls = (text) => [...String(text).matchAll(TOOL_RE)].map((m) => ({ name: m[1], args: parseArgs(m[2]) }));
 export const stripToolCalls = (text) => String(text).replace(TOOL_RE, "").trim();
 
-export function createProviderRunner({ api, store, vault, transport, gemcache = null, risuTools = null, toolExec = null, vertex = null, copilot = null, currentChar = async () => null, notify = () => {}, board = null, now = () => Date.now(), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), log = () => {} }) {
+export function createProviderRunner({ api, store, vault, transport, gemcache = null, risuTools = null, toolExec = null, vertex = null, copilot = null, currentChar = async () => null, notify = () => {}, board = null, errlog = null, now = () => Date.now(), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), log = () => {} }) {
   const pools = new Map(); const prevAnatomy = new Map(); const reasoningMemo = new Map(); let warnedDay = "";
   const poolFor = async (conn, cfg) => {
     const vals = await vault.values(conn.keyIds), sig = `${conn.id}|${conn.keyMode}|${vals.join("\n")}`;
@@ -124,10 +124,12 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
         if (kind === "abort") return { ok: false, kind, error: e };
         const keysLeft = Math.max(0, pool.ready() - (key ? 1 : 0));
         if (key && (kind === "rate" || kind === "auth")) pool.fail(key, { ms: (cfg.defaults.keyCooldownSec || 60) * 1000 });
-        const plan = planAfterFailure(kind, { retriesLeft: retries, keysLeft, chainLeft: 0 });
+        const plan = planAfterFailure(kind, { retriesLeft: retries, keysLeft, chainLeft: 0, retryOn: cfg.defaults.retryOn });
+        errlog?.add({ model: profile.model, purpose: res.purpose, kind, status: e.status, attempt: n + 1, action: plan, message: e.message });
         if (e.setup) return { ok: false, kind, error: e };
         if (plan === "switch-key") { board?.update(ctx.reqId, { phase: "retry", attempt: (n + 2), note: "다른 키로 다시" }); continue; }
-        if (plan === "retry") { retries--; const ms = backoffMs(Math.max(0, (profile.retry ?? 2) - retries - 1)); board?.update(ctx.reqId, { phase: "retry", attempt: (n + 2), waitUntil: now() + ms, note: e.status ? `HTTP ${e.status}` : "" }); await sleep(ms); continue; }
+        if (plan === "retry") { retries--; if (key && kind === "rate") pool.ok(key);   // 429 재시도: 잠깐 기다린 뒤 같은 키를 다시 쓴다
+          const ms = backoffMs(Math.max(0, (profile.retry ?? 2) - retries - 1)); board?.update(ctx.reqId, { phase: "retry", attempt: (n + 2), waitUntil: now() + ms, note: e.status ? `HTTP ${e.status}` : "" }); await sleep(ms); continue; }
         return { ok: false, kind, error: e };
       }
     }

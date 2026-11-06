@@ -14,10 +14,12 @@ export function classifyFailure({ status = 0, message = "", code = "", aborted =
 export const RETRY_SAME = new Set(["server", "network", "timeout"]);      // 같은 대상 재시도 가치 있음
 export const SWITCH_KEY = new Set(["rate", "auth"]);                      // 다른 키로
 export const NEXT_TARGET = new Set(["rate", "auth", "blocked", "empty", "server", "network", "timeout"]); // 다른 모델/공급자로 넘길 수 있음
-export function planAfterFailure(kind, { retriesLeft = 0, keysLeft = 0, chainLeft = 0, chainOn = true } = {}) {
+// 재시도 대상(retryOn): server = 서버 오류·네트워크·시간 초과(기본) / rate = 429만 / both = 둘 다
+export const retryKindsOf = (retryOn) => (retryOn === "rate" ? new Set(["rate"]) : retryOn === "both" ? new Set([...RETRY_SAME, "rate"]) : RETRY_SAME);
+export function planAfterFailure(kind, { retriesLeft = 0, keysLeft = 0, chainLeft = 0, chainOn = true, retryOn = "server" } = {}) {
   if (kind === "abort") return "stop";
   if (SWITCH_KEY.has(kind) && keysLeft > 0) return "switch-key";
-  if (RETRY_SAME.has(kind) && retriesLeft > 0) return "retry";
+  if (retryKindsOf(retryOn).has(kind) && retriesLeft > 0) return "retry";
   if (chainOn && NEXT_TARGET.has(kind) && chainLeft > 0) return "next-target";
   return "fail";
 }

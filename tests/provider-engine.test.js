@@ -255,3 +255,28 @@ test("보조 프로필: 메인 외 용도는 지정 → 보조 → 메인 순으
   const none = normalizeConfig({ ...raw, subProfileId: "" }); assert.equal(resolve(none, "translate").profileId, "m");
   assert.equal(normalizeConfig({ ...raw, subProfileId: "nope" }).subProfileId, "");
 });
+
+// 2단계(2.0.0): 실패한 뒤에만 다음 키, 재시도 대상, 오류 기록
+import { createErrorLog } from "../src/engine/provider/errlog.js";
+test("키 풀 on-error: 같은 키를 계속 쓰다가 실패하면 다음 키", () => {
+  let t = 0; const p = createKeyPool(["a", "b", "c"], { mode: "on-error", now: () => t });
+  assert.equal(p.pick(), "a"); assert.equal(p.pick(), "a"); p.ok("a"); assert.equal(p.pick(), "a");
+  p.fail("b"); assert.equal(p.pick(), "a");      // 현재 키가 아닌 키의 실패는 순서를 안 바꿈
+  p.fail("a"); assert.equal(p.pick(), "c");      // a 실패 → b는 쉬는 중이라 c
+  t = 120000; assert.equal(p.pick(), "c"); p.fail("c"); assert.equal(p.pick(), "a");
+});
+test("재시도 대상: server(기본)·rate·both", () => {
+  assert.equal(planAfterFailure("rate", { keysLeft: 0, retriesLeft: 1 }), "fail");
+  assert.equal(planAfterFailure("rate", { keysLeft: 0, retriesLeft: 1, retryOn: "rate" }), "retry");
+  assert.equal(planAfterFailure("server", { retriesLeft: 1, retryOn: "rate" }), "fail");
+  assert.equal(planAfterFailure("server", { retriesLeft: 1, retryOn: "both" }), "retry");
+  assert.equal(planAfterFailure("rate", { keysLeft: 0, retriesLeft: 1, retryOn: "both" }), "retry");
+  assert.equal(planAfterFailure("rate", { keysLeft: 1, retriesLeft: 1, retryOn: "rate" }), "switch-key");
+  assert.equal(planAfterFailure("server", { retriesLeft: 0, retryOn: "both", chainLeft: 1 }), "next-target");
+});
+test("오류 기록: 키는 가리고 개수를 넘으면 오래된 것부터 버림", () => {
+  const log = createErrorLog({ max: 3, now: () => 1 });
+  for (let i = 0; i < 5; i++) log.add({ model: "m", kind: "server", status: 503, message: `fail ${i} sk-abcdefghijklmnop1234`, attempt: i });
+  const rows = log.list(); assert.equal(rows.length, 3); assert.equal(rows[0].attempt, 4);
+  assert.ok(!/sk-abcdefghijklmnop1234/.test(JSON.stringify(rows))); log.clear(); assert.equal(log.list().length, 0);
+});

@@ -54,6 +54,10 @@ async function use({ ctx, cfg, mutate, draw, toast }) {
     grid(field("하루 한도($)", num(b.dailyUsd, (v) => mutate((x) => { x.budget.dailyUsd = v ?? 0; }))), field("한 달 한도($)", num(b.monthlyUsd, (v) => mutate((x) => { x.budget.monthlyUsd = v ?? 0; }))),
       field("넘으면", select([["warn", "알려만 주기"], ["switch", "싼 프로필로 바꾸기"], ["block", "막기"]], b.action, async (v) => { await mutate((x) => { x.budget.action = v; }); draw(); }, "예산 초과 동작")),
       b.action === "switch" ? field("바꿀 프로필", select(profOpts(cfg), b.switchProfileId, (v) => mutate((x) => { x.budget.switchProfileId = v; }), "바꿀 프로필")) : null)));
+  // 재시도(2.0.0): 어떤 실패를 같은 곳에 다시 보낼지. 원본 Provider Manager의 재시도 대상 고르기를 참고
+  out.push(h("section", { class: "rb-pcard" }, h("div", { class: "top" }, h("div", { class: "t" }, h("b", null, "다시 시도할 오류"), h("small", { class: "rb-muted" }, "프로필의 ‘재시도 횟수’만큼, 고른 오류일 때 잠깐 쉬었다가 같은 곳에 다시 보내요. 키가 여럿이면 429·인증 오류는 먼저 다른 키로 넘어가요."))),
+    grid(field("대상", select([["server", "서버 오류·끊김·시간 초과(기본)"], ["rate", "429(요청 한도)만"], ["both", "429와 서버 오류 모두"]], cfg.defaults?.retryOn ?? "server", (v) => mutate((x) => { x.defaults.retryOn = v; }), "재시도 대상")),
+      field("키 쉬는 시간(초)", num(cfg.defaults?.keyCooldownSec ?? 60, (v) => mutate((x) => { x.defaults.keyCooldownSec = v ?? 60; }))))));
   // 진행 창(2.0.0): 리스 화면 오른쪽 아래에 요청별 카드(동시 요청도 따로). 끄면 창만 숨기고 진행 상태는 그대로
   out.push(toggleRow("진행 창 보이기", "요청마다 카드로 보여요(보내는 중·다시 시도·받은 글자 수). 동시에 여러 요청이 와도 따로 보이고, 끝난 카드만 5초 뒤 닫혀요.", cfg.defaults?.progress !== false, (v) => mutate((x) => { x.defaults.progress = v; })));
   return out;
