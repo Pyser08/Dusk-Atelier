@@ -1,6 +1,20 @@
 # 현재 상태 — feat/2.0.0
 
-## 다음 작업: 기능 애드온 분리 (2026-11-06 확정 — 새 챗에서 시작)
+## 로드맵 (2026-11-06 정리 — 새 챗은 여기부터)
+### 끝난 것
+- 애드온 구조: 로더(blob import)·requires(받기·시작 순서·끄기 연쇄)·동시 시작·1시간/창 열 때 업데이트 확인·캐시 우회·훅 애드온 새로고침 알림·첫 실행 자동 받기(adopt)·코어 모듈 전부 공유(애드온만 고쳐도 됨).
+- 애드온(배포: `addons` 브랜치, `node tools/publish-addons.mjs`): memory(장기기억·관계도·회귀·HUD) · cards · erosync · manage(캐릭터·모듈·플러그인) · protlink · provider(실험) · widgets · aibuild · chattheme. 코어만으로 홈·가져오기·편집기·코코아·꾸미기·도구·설정 동작.
+- 장기기억 → 리수폿 화면(Erosync 짜임, 채팅 없이도 켜기·설정), 기능 맛보기(engine/discover.js 표), 시작 안내 v2(애드온 고르기), 화면별 ? 안내 보강.
+- 버그: 폴더 키 통일+예전 기억 이전, 기억 파일 v3, 합치기 관계, 페르소나 중앙, 리수폿 일괄, 월경 cycle_report, 모바일 스크롤, 새로고침 직후 먹통.
+### 남은 것 (순서대로)
+1. **실기기 확인**(RisuAI·RisuBard·PocketRisu, PC·모바일): 애드온 받기·자동 받기·동시 시작 속도·기억 훅 순서·예전 기억 이전·리수폿 개요·새로고침 알림·월경 cycle_report 실제 응답. 문제 나오면 DEBUG.md 순서로(실패 시험 먼저).
+2. **2.0.0 출시 준비**(사용자가 시킬 때만): package 버전 2.0.0 → 모든 애드온 minCore 2.0.0·버전 정리 → build·check → publish-addons → main 머지 → `v2.0.0` 태그. 아카 글(docs/arca)은 요청 시.
+3. **넘어오는 유저용 패치**(사용자 결정 대기): 원본 플러그인(리수폿·Erosync·HypaPlus 등) 느낌 살리기 — 어떤 기능을 맞출지 사용자가 정함.
+4. 정리 후보: cards·memory가 비코어 공유 모듈을 각자 들고 있음(크기 중복), 원래부터 실패하는 e2e 6개(run-app·run-hubs·run-tabs·run-editor-ai·run-lorereq·run-popup) 고치기, 기능 맛보기 숫자 조정(사용자 피드백).
+### 애드온만 고칠 때
+소스 수정 → `addons/addons.src.json` 버전 올림 → `node tools/build-addons.mjs` → (빌드가 "코어가 넘겨 줄 모듈이 바뀌었어요"라고 하면 코어도 내고 해당 애드온 minCore 올림) → `node tools/publish-addons.mjs`. 훅 애드온(memory·erosync·provider)은 새로고침해야 적용.
+
+## 기록: 기능 애드온 분리 (2026-11-06, 위 로드맵이 최신)
 - 묶음·크기·의존: 프로젝트 문서 claude/addon-plan.md. 장기기억·관계도 / 기억카드(+cardassets, 장기기억 필요) / 에로싱크(장기기억 필요) / AI로 봇·페르소나 만들기 / 위젯 / 채팅테마 만들기. **코코아·ProtLink+는 코어에 남김.**
 - 규칙: 애드온이 없으면 쓸 수 없는 것(탭·하위 화면·버튼·채팅 메뉴·위젯 칸·설정 행·안내/투어 항목·홈 바로가기)은 전부 그 애드온 쪽으로 옮겨서, 없을 땐 코어에 흔적이 안 남게(숨김). 데이터·설정 키는 그대로(애드온을 다시 받으면 이어서 쓰게).
 - 순서: ① 로더 확장 — manifest `requires`(필요 애드온 같이 받기), 코어가 애드온에 넘기는 `ctx.lib`(dom·kit·icons 등, esbuild로 애드온 빌드 때 external→ctx.lib 매핑), 애드온이 탭·화면·메뉴를 코어에 등록하는 자리(registerTab 등) ② 채팅테마로 첫 분리 ③ AI 제작·위젯 ④ 장기기억·관계도 → 기억카드·에로싱크 ⑤ 2.0.0 첫 실행 때 쓰던 기능 애드온 자동 받기.
