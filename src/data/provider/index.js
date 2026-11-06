@@ -36,7 +36,11 @@ export function createProvider(api, { notify = () => {}, confirm, memory = null,
   const docOf = getDoc ?? (async () => { try { return await api.getRootDocument?.(); } catch { return null; } });
   const progress = createProgressWindow({ getDoc: docOf, board, enabled: () => progressOn, log });
   store.subscribe((c) => { progressOn = c?.defaults?.progress !== false; progress.refresh(); });
-  const errlog = createErrorLog();   // 재시도·실패 기록(메모리, 키 가림) — 4단계 로그 보기에서 씀
+  // 요청·오류 기록(키 가림, 요청 내용 없음): 시작할 때 불러오고, 바뀌면 2초 뒤 저장. 보관 개수는 설정(defaults.logMax)
+  const errlog = createErrorLog(); let saveT = null;
+  store.get().then((c) => { errlog.setMax(c.defaults?.logMax); return store.loadLog(); }).then((rows) => { if (!errlog.list().length) errlog.load(rows); }).catch(() => {});
+  errlog.subscribe((rows) => { clearTimeout(saveT); saveT = setTimeout(() => store.saveLog(rows), 2000); });
+  store.subscribe((c) => errlog.setMax(c?.defaults?.logMax));
   const runner = createProviderRunner({ api, store, vault, transport, gemcache, risuTools, toolExec, vertex, copilot, currentChar: () => currentChat(api), notify, board, errlog, log });
   const registrar = createRegistrar(api, { runner, store, log, allowed });
   const credOf = async (conn) => { const v = await vault.values(conn.keyIds); return v[0] ?? ""; };

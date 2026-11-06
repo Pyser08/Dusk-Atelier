@@ -11,7 +11,7 @@ const pick = (v, list, d) => (list.includes(v) ? v : d);
 export const defaultConfig = () => ({
   v: 1, enabled: false, connections: [], profiles: [], purposes: Object.fromEntries(PURPOSES.map((p) => [p, { profileId: "", over: {} }])),
   subProfileId: "", chain: [], chainOn: false, budget: { dailyUsd: 0, monthlyUsd: 0, action: "warn", switchProfileId: "" }, perChar: {},
-  defaults: { stream: "stream", retry: 2, timeoutSec: 300, repetition: { on: true, charRun: 240, minRepeats: 6, minChars: 400 }, keepPartial: true, keyCooldownSec: 60, progress: true, retryOn: "server" },   // progress: 리스 화면 진행 창(2.0.0)
+  defaults: { stream: "stream", retry: 2, timeoutSec: 300, repetition: { on: true, charRun: 240, minRepeats: 6, minChars: 400 }, keepPartial: true, keyCooldownSec: 60, progress: true, retryOn: "server", logMax: 200 },   // progress: 리스 화면 진행 창(2.0.0)
   transforms: { rules: [], cacheOrder: false },
   tools: { enabled: false, datetime: true, calculator: true, dice: true, webSearch: false, fetchUrl: false, maxDepth: 4, timeoutSec: 30, search: { provider: "brave", url: "", key: "", cx: "" }, prefetch: { enabled: false, position: "beforeLast", maxResults: 3, snippetOnly: true, keywords: "" }, risuRead: false, risuWrite: false, memoryTools: false },
   translator: { enabled: false, protect: true, glossary: true, history: 2, maxBytes: 8192, guide: "", glossaryText: "" },
@@ -47,7 +47,7 @@ export function normalizeConfig(raw) {
   return { ...d, v: 1, enabled: !!raw.enabled, connections, profiles, purposes, subProfileId: pid.has(raw.subProfileId) ? raw.subProfileId : "", chain: (Array.isArray(raw.chain) ? raw.chain : []).filter((x) => pid.has(x)), chainOn: !!raw.chainOn,
     budget: { dailyUsd: numOrNull(b.dailyUsd) ?? 0, monthlyUsd: numOrNull(b.monthlyUsd) ?? 0, action: pick(b.action, ["warn", "switch", "block"], "warn"), switchProfileId: pid.has(b.switchProfileId) ? b.switchProfileId : "" },
     perChar: Object.fromEntries(Object.entries(obj(raw.perChar)).filter(([, v]) => pid.has(v?.profileId)).map(([k, v]) => [k, { profileId: v.profileId }])),
-    defaults: { ...d.defaults, ...obj(raw.defaults), retryOn: pick(raw.defaults?.retryOn, ["server", "rate", "both"], "server"), repetition: { ...d.defaults.repetition, ...obj(raw.defaults?.repetition) } }, transforms: { rules: (raw.transforms?.rules ?? []).map(normalizeRule).slice(0, 40), cacheOrder: !!raw.transforms?.cacheOrder },
+    defaults: { ...d.defaults, ...obj(raw.defaults), retryOn: pick(raw.defaults?.retryOn, ["server", "rate", "both"], "server"), logMax: [50, 200, 500].includes(Number(raw.defaults?.logMax)) ? Number(raw.defaults.logMax) : 200, repetition: { ...d.defaults.repetition, ...obj(raw.defaults?.repetition) } }, transforms: { rules: (raw.transforms?.rules ?? []).map(normalizeRule).slice(0, 40), cacheOrder: !!raw.transforms?.cacheOrder },
     tools: { ...d.tools, ...obj(raw.tools), search: { ...d.tools.search, ...obj(raw.tools?.search) }, prefetch: { ...d.tools.prefetch, ...obj(raw.tools?.prefetch) } }, translator: { ...d.translator, ...obj(raw.translator) }, debug: { preview: !!raw.debug?.preview } };
 }
 const OVER_KEYS = ["sampling", "thinking", "stream", "cache", "tier", "verbosity", "safety", "search", "repetition", "prefill", "retry", "pdf"];

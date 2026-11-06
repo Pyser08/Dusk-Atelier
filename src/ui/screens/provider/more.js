@@ -6,13 +6,14 @@ import { normalizeRule } from "../../../engine/provider/profile.js";
 import { summarize, budgetState } from "../../../engine/provider/cost.js";
 import { currentChat } from "../../../data/memoryswitches.js";
 import { field, text, num, area, select, grid, usd, kfmt } from "./ui.js";
+import { formatLog, kindLabel } from "../../../engine/provider/errlog.js";
 
-export const MORE_TABS = [["use", "용도"], ["rule", "규칙"], ["usage", "사용량"], ["cmp", "비교"]];
+export const MORE_TABS = [["use", "용도"], ["rule", "규칙"], ["usage", "사용량"], ["log", "로그"], ["cmp", "비교"]];
 const pname = (cfg, id) => cfg.profiles.find((p) => p.id === id)?.name ?? "";
 const profOpts = (cfg, none = "(지정 안 함)") => [["", none], ...cfg.profiles.map((p) => [p.id, p.name])];
 
 export async function renderMore(tab, env) {
-  return ({ use, rule, usage, cmp })[tab]?.(env) ?? [];
+  return ({ use, rule, usage, log, cmp })[tab]?.(env) ?? [];
 }
 
 // ── 용도: 메인·번역·감정·기억·보조·분석에 어떤 프로필을 쓸지 + 사슬(대체) + 봇별 + 예산 ──
@@ -83,17 +84,35 @@ async function rule({ ctx, cfg, mutate, draw, toast }) {
 }
 
 // ── 사용량 ──
+// 기간(오늘·7일·30일·전체)을 고르면 아래 통계가 그 기간만 합쳐요. 날짜별·모델별 표에 캐시 읽기·쓰기·아낀 돈도 함께 보여요. 요청 내용은 저장하지 않아요.
+let usageDays = 7;
 async function usage({ ctx, P, cfg, draw, toast }) {
-  const log = await P.store.usage(), sum = summarize(log), bs = budgetState(sum, cfg.budget), tot = sum.total;
+  const log = await P.store.usage(), all = summarize(log), bs = budgetState(all, cfg.budget), sum = summarize(log, { days: usageDays }), tot = sum.total;
   const out = [];
   if (bs.state !== "ok") out.push(note(bs.state === "over" ? "err" : "warn", bs.why));
-  out.push(h("div", { class: "rb-pstat" }, [["오늘", usd(tot.today)], ["이번 달", usd(tot.month)], ["호출", String(tot.calls)], ["입력 토큰", kfmt(tot.input)], ["출력 토큰", kfmt(tot.output)], ["캐시로 아낀 돈", usd(tot.saved)]].map(([l, v]) => h("div", null, h("b", null, v), h("span", null, l)))));
-  const grp = (by, label, nameOf) => { const s = summarize(log, { by }).groups, rows = Object.entries(s).sort((a, b) => b[1].cost - a[1].cost); return rows.length ? h("section", { class: "rb-pcard" }, h("b", null, label), h("table", { class: "rb-ptable" }, h("tr", null, ...["", "호출", "입력", "출력", "비용"].map((x) => h("th", null, x))), ...rows.map(([k, g]) => h("tr", null, h("td", null, nameOf(k)), h("td", null, String(g.calls)), h("td", null, kfmt(g.input)), h("td", null, kfmt(g.output)), h("td", null, usd(g.cost)))))) : null; };
-  out.push(grp("purpose", "용도별", (k) => PURPOSE_LABEL[k] ?? k), grp("profile", "프로필별", (k) => pname(cfg, k) || k || "-"), grp("model", "모델별", (k) => k || "-"));
+  out.push(segmented([["1", "오늘"], ["7", "7일"], ["30", "30일"], ["0", "전체"]], String(usageDays), (v) => { usageDays = Number(v); draw(); }, "기간"));
+  out.push(h("div", { class: "rb-pstat" }, [["비용", usd(tot.all)], ["호출", String(tot.calls)], ["입력 토큰", kfmt(tot.input)], ["출력 토큰", kfmt(tot.output)], ["캐시 읽기", kfmt(tot.cached)], ["캐시 쓰기", kfmt(tot.cwrite)], ["캐시로 아낀 돈", usd(tot.saved)]].map(([l, v]) => h("div", null, h("b", null, v), h("span", null, l)))));
+  const grp = (by, label, nameOf, { desc = false } = {}) => { const s = summarize(log, { by, days: usageDays }).groups, rows = Object.entries(s).sort((a, b) => (desc ? b[0].localeCompare(a[0]) : b[1].cost - a[1].cost)); return rows.length ? h("section", { class: "rb-pcard" }, h("b", null, label), h("div", { class: "rb-pscroll" }, h("table", { class: "rb-ptable" }, h("tr", null, ...["", "호출", "입력", "출력", "캐시 읽기", "캐시 쓰기", "아낀 돈", "비용"].map((x) => h("th", null, x))), ...rows.map(([k, g]) => h("tr", null, h("td", null, nameOf(k)), h("td", null, String(g.calls)), h("td", null, kfmt(g.input)), h("td", null, kfmt(g.output)), h("td", null, kfmt(g.cached)), h("td", null, kfmt(g.cwrite)), h("td", null, usd(g.saved)), h("td", null, usd(g.cost))))))) : null; };
+  out.push(grp("d", "날짜별", (k) => k, { desc: true }), grp("model", "모델별", (k) => k || "-"), grp("purpose", "용도별", (k) => PURPOSE_LABEL[k] ?? k), grp("profile", "프로필별", (k) => pname(cfg, k) || k || "-"));
   if (!log.length) out.push(emptyState({ icon: "info", title: "아직 기록이 없어요", text: "Dusk 프로바이더로 요청하면 여기에 쌓여요. 비용은 프로필의 단가를 적었을 때만 계산돼요." }));
+  else if (!tot.calls) out.push(note("info", "이 기간에는 기록이 없어요. 다른 기간을 골라 보세요."));
   out.push(h("div", { class: "acts" }, btn("기록 지우기", { kind: "danger", icon: "trash", onClick: async () => { if (!await confirmDialog(ctx.win, { title: "사용량 기록을 지울까요?", ok: "지우기", danger: true })) return; await P.store.clearUsage(); draw(); } })));
   out.push(toggleRow("요청 미리보기 알림", "요청을 보낼 때 모델·메시지 수를 알림으로 보여요(문제 확인용).", cfg.debug.preview, (v) => P.store.update((x) => { x.debug.preview = v; })));
   return out.filter(Boolean);
+}
+
+// ── 로그: 최근 요청·오류(키는 가려지고, 요청·응답 내용은 저장하지 않아요) ──
+let logOnlyErr = false;
+async function log({ ctx, P, cfg, draw, toast }) {
+  const all = P.errlog?.list() ?? [], rows = (logOnlyErr ? all.filter((r) => r.kind !== "ok") : all).slice(0, 100), out = [];
+  out.push(note("info", "최근 요청과 다시 시도한 오류를 한 줄씩 남겨요. 키는 ***로 가려지고 보낸 글·받은 글은 저장하지 않아요."));
+  out.push(h("div", { class: "rb-actions" }, segmented([["all", "전부"], ["err", "오류만"]], logOnlyErr ? "err" : "all", (v) => { logOnlyErr = v === "err"; draw(); }, "로그 거르기"),
+    btn("복사", { icon: "download", onClick: async () => { try { await navigator.clipboard.writeText(formatLog(rows)); toast("복사했어요"); } catch { toast("복사하지 못했어요"); } } }),
+    btn("지우기", { kind: "danger", icon: "trash", onClick: async () => { if (!await confirmDialog(ctx.win, { title: "로그를 지울까요?", ok: "지우기", danger: true })) return; P.errlog?.clear(); draw(); } })));
+  out.push(field("보관 개수", select([["50", "50개"], ["200", "200개"], ["500", "500개"]], String(cfg.defaults?.logMax ?? 200), (v) => P.store.update((x) => { x.defaults.logMax = Number(v); }), "로그 보관 개수")));
+  out.push(rows.length ? h("section", { class: "rb-pcard" }, h("div", { class: "rb-pscroll" }, h("table", { class: "rb-ptable" }, h("tr", null, ...["시각", "결과", "모델", "코드", "시도", "시간", "내용"].map((x) => h("th", null, x))),
+    ...rows.map((r) => h("tr", null, h("td", null, new Date(r.at).toLocaleString("ko-KR", { hour12: false })), h("td", null, kindLabel(r.kind)), h("td", null, r.model || "-"), h("td", null, r.status || "-"), h("td", null, String(r.attempt)), h("td", null, r.ms ? `${(r.ms / 1000).toFixed(1)}초` : "-"), h("td", null, r.message || r.action || "")))))) : emptyState({ icon: "info", title: "아직 기록이 없어요", text: "Dusk 프로바이더로 요청하면 여기에 쌓여요." }));
+  return out;
 }
 
 // ── 비교: 같은 말을 두 프로필에 보내 나란히 보기 ──

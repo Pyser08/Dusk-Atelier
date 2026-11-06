@@ -203,7 +203,7 @@ test("재시도 대상 rate: 429만 같은 키로 다시, 503은 바로 실패",
 test("재시도 오류를 하나씩 기록하고 키는 가림", async () => {
   const { createErrorLog } = await import("../src/engine/provider/errlog.js"); const errlog = createErrorLog({ max: 20 });
   harness.extra = { errlog }; const h = harness({ keys: { k1: "sk-only-key-1111" }, cfgOver: { connections: [{ id: "c1", kind: "openai", keyIds: ["k1"] }], profiles: [{ id: "p1", connectionId: "c1", model: "m", retry: 2 }] }, script: [errRes(503, "busy sk-only-key-1111"), errRes(503, "busy"), sseRes([oa("fine"), oaEnd()])] }); await h.ready;
-  await h.runner.handle(req({ mode: "other" })); delete harness.extra; const rows = errlog.list();
+  await h.runner.handle(req({ mode: "other" })); delete harness.extra; const rows = errlog.list().filter((x) => x.kind !== "ok");
   assert.equal(rows.length, 2); assert.ok(rows.every((x) => x.status === 503 && x.model === "m")); assert.ok(!JSON.stringify(rows).includes("sk-only-key-1111"));
 });
 test("on-error 키 방식: 실패한 뒤에만 다음 키로", async () => {
@@ -211,4 +211,11 @@ test("on-error 키 방식: 실패한 뒤에만 다음 키로", async () => {
   const auth = (c) => JSON.stringify(c.req.headers);
   await h.runner.handle(req({ mode: "other" })); await h.runner.handle(req({ mode: "other" })); await h.runner.handle(req({ mode: "other" }));
   assert.ok(auth(h.calls[0]).includes("1111") && auth(h.calls[1]).includes("1111") && auth(h.calls[2]).includes("1111") && auth(h.calls[3]).includes("2222"));
+});
+
+test("성공한 요청도 기록에 한 줄 남고 내용은 저장 안 함", async () => {
+  const { createErrorLog } = await import("../src/engine/provider/errlog.js"); const errlog = createErrorLog({ max: 20 });
+  harness.extra = { errlog }; const h = harness({ keys: { k1: "sk-only-key-1111" }, cfgOver: { connections: [{ id: "c1", kind: "openai", keyIds: ["k1"] }], profiles: [{ id: "p1", connectionId: "c1", model: "m" }] }, script: [sseRes([oa("비밀 본문"), oaEnd()])] }); await h.ready;
+  const r = await h.runner.handle(req({ mode: "other" })); if (typeof r.content !== "string") await collect(r.content); delete harness.extra;
+  const rows = errlog.list(); assert.equal(rows.length, 1); assert.equal(rows[0].kind, "ok"); assert.equal(rows[0].status, 200); assert.ok(!JSON.stringify(rows).includes("비밀 본문"));
 });

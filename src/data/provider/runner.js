@@ -57,7 +57,7 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     catch (e) { done(); if (signal?.aborted) throw Object.assign(new Error("aborted"), { aborted: true }); throw e instanceof HttpError ? e : new HttpError(redact(e?.message, secrets), 0, { network: true, timeout: /timeout/i.test(String(e?.message)) }); }
     if (!res.ok) { done(); const err = await errorFromResponse(res, secrets); err.key = c.key; if (res.status === 401 && c.copilot) c.copilot.invalidate?.(); throw err; }
     const format = reqObj.format, rep = { ...cfg.defaults.repetition, on: profile.repetitionOn };
-    const finish = (acc) => { const u = acc.usage; const cost = costOf(u, profile.pricing), saved = savedByCache(u, profile.pricing); store.addUsage({ at: now(), purpose, profile: profile.id, model: profile.model, cha: cha?.chaId ?? "", usage: u, cost, saved, ms: now() - t0, via: "device" }).catch(() => {}); };
+    const finish = (acc) => { const u = acc.usage; const cost = costOf(u, profile.pricing), saved = savedByCache(u, profile.pricing); errlog?.add({ model: profile.model, purpose, kind: "ok", status: 200, attempt: 0, ms: now() - t0, action: "done", message: `입력 ${u?.input ?? 0} · 출력 ${u?.output ?? 0}` }); store.addUsage({ at: now(), purpose, profile: profile.id, model: profile.model, cha: cha?.chaId ?? "", usage: u, cost, saved, ms: now() - t0, via: "device" }).catch(() => {}); };
     // 스트림 아님(응답이 JSON 통째)
     if (!upstreamStream || !res.body?.getReader) {
       done(); let j; try { j = await res.json(); } catch { throw new HttpError("응답을 읽지 못했어요", res.status); }

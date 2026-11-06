@@ -280,3 +280,25 @@ test("오류 기록: 키는 가리고 개수를 넘으면 오래된 것부터 �
   const rows = log.list(); assert.equal(rows.length, 3); assert.equal(rows[0].attempt, 4);
   assert.ok(!/sk-abcdefghijklmnop1234/.test(JSON.stringify(rows))); log.clear(); assert.equal(log.list().length, 0);
 });
+
+// 3단계(2.0.0): 사용량 통계 — 기간·날짜별·캐시 쓰기
+test("사용량: 캐시 쓰기 기록 + 기간 거르기 + 날짜별 묶기", () => {
+  const D = 864e5, now = Date.UTC(2026, 10, 6, 12); let log = [];
+  const add = (daysAgo, model, u, cost) => { log = addRecord(log, { at: now - daysAgo * D, model, usage: u, cost, saved: cost / 2 }, { now }); };
+  add(0, "a", { input: 100, output: 10, cached: 40, cacheWrite: 20 }, 1); add(0, "b", { input: 50, output: 5 }, 2); add(3, "a", { input: 10, output: 1 }, 4); add(20, "a", { input: 1, output: 1 }, 8);
+  assert.equal(log[0].cwrite, 20);
+  const all = summarize(log, { now }), w7 = summarize(log, { now, days: 7 }), t1 = summarize(log, { now, days: 1 });
+  assert.equal(all.total.calls, 4); assert.equal(w7.total.calls, 3); assert.equal(t1.total.calls, 2);
+  assert.equal(w7.total.cwrite, 20); assert.equal(w7.total.cached, 40);
+  const byDate = summarize(log, { now, by: "d", days: 7 }).groups; assert.deepEqual(Object.keys(byDate).sort(), ["2026-11-03", "2026-11-06"]);
+  assert.equal(byDate["2026-11-06"].calls, 2); assert.equal(summarize(log, { now, by: "model" }).groups.a.cached, 40);
+});
+
+// 4단계(2.0.0): 로그 보기 — 보관 개수 바꾸기·복사용 글·성공 기록
+import { formatLog } from "../src/engine/provider/errlog.js";
+test("로그: 보관 개수 줄이기·복사용 글에 키 없음·ms 보관", () => {
+  const log = createErrorLog({ max: 10, now: () => Date.UTC(2026, 10, 6, 3, 4, 5) });
+  for (let i = 0; i < 6; i++) log.add({ model: "m", kind: i % 2 ? "ok" : "rate", status: i % 2 ? 200 : 429, ms: 1500, message: "Bearer abcdefghijklmnop12345" });
+  log.setMax(4); assert.equal(log.list().length, 4); assert.equal(log.list()[0].ms, 1500);
+  const txt = formatLog(log.list()); assert.ok(/429/.test(txt) && /rate/.test(txt) && !/abcdefghijklmnop12345/.test(txt)); assert.equal(txt.split("\n").length, 4);
+});
