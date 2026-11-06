@@ -302,3 +302,23 @@ test("로그: 보관 개수 줄이기·복사용 글에 키 없음·ms 보관", 
   log.setMax(4); assert.equal(log.list().length, 4); assert.equal(log.list()[0].ms, 1500);
   const txt = formatLog(log.list()); assert.ok(/429/.test(txt) && /rate/.test(txt) && !/abcdefghijklmnop12345/.test(txt)); assert.equal(txt.split("\n").length, 4);
 });
+
+// 5단계(2.0.0): 공급자 추가 — Bedrock(Mantle)·NovelAI·OpenCode Zen·Gemini Express, 잔액 전용 토큰
+import { baseUrlOf } from "../src/engine/provider/catalog.js";
+test("공급자 추가: 주소와 인증 모양", () => {
+  const bed = normalizeConnection({ id: "b", kind: "bedrock", region: "us-west-2" });
+  assert.equal(baseUrlOf(bed), "https://bedrock-mantle.us-west-2.api.aws/v1");
+  assert.equal(baseUrlOf(normalizeConnection({ id: "b2", kind: "bedrock" })), "https://bedrock-mantle.us-east-1.api.aws/v1");
+  const rb = buildRequest({ conn: bed, profile: prof({ model: "openai.gpt-oss-120b" }), messages: msgs, cred: "KEY" });
+  assert.equal(rb.url, "https://bedrock-mantle.us-west-2.api.aws/v1/chat/completions"); assert.equal(rb.headers.authorization, "Bearer KEY");
+  const nai = buildRequest({ conn: normalizeConnection({ id: "n", kind: "novelai" }), profile: prof({ model: "glm-4-6" }), messages: msgs, cred: "K" });
+  assert.equal(nai.url, "https://text.novelai.net/oa/v1/chat/completions");
+  const oc = buildRequest({ conn: normalizeConnection({ id: "o", kind: "opencode" }), profile: prof({ model: "x" }), messages: msgs, cred: "K" });
+  assert.equal(oc.url, "https://opencode.ai/zen/v1/chat/completions");
+  const ge = buildRequest({ conn: normalizeConnection({ id: "g", kind: "geminiexpress" }), profile: prof({ model: "gemini-2.5-flash" }), messages: msgs, cred: "K", stream: true });
+  assert.equal(ge.url, "https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-flash:streamGenerateContent?alt=sse"); assert.equal(ge.headers["x-goog-api-key"], "K");
+});
+test("연결 정리: 지역·잔액 전용 키 칸", () => {
+  const c = normalizeConnection({ id: "b", kind: "bedrock", region: " eu-west-1 ", balanceKeyId: "kk" });
+  assert.equal(c.region, "eu-west-1"); assert.equal(c.balanceKeyId, "kk"); assert.equal(normalizeConnection({ id: "x", kind: "openai" }).balanceKeyId, "");
+});

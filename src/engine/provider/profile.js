@@ -2,7 +2,7 @@
 // 저장 모양: { v:1, connections:[{id,name,kind,format,baseUrl,keyIds[],keyMode,proxyUrl,headers,params,vertex,...}],
 //   profiles:[{id,name,connectionId,model,sampling,thinking,stream,cache,tier,safety,search,repetition,prefill,pricing,retry,params,headers}],
 //   purposes:{main:{profileId,over},...}, chain:[profileId], chainOn, budget, perChar:{}, transforms:{rules:[]}, tools:{...}, translator:{...}, debug }
-import { KINDS, PURPOSES, kindOf } from "./catalog.js";
+import { KINDS, PURPOSES, kindOf, baseUrlOf } from "./catalog.js";
 const uid = () => Math.random().toString(36).slice(2, 10);
 const str = (v, d = "") => (typeof v === "string" ? v : d);
 const numOrNull = (v) => (v === "" || v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v));
@@ -23,7 +23,7 @@ export function normalizeConnection(c) {
   return { id: str(c?.id) || uid(), name: str(c?.name, k.label).slice(0, 40) || k.label, kind, format: pick(c?.format, ["openai", "responses", "anthropic", "gemini", "vertex"], k.format),
     baseUrl: str(c?.baseUrl, k.baseUrl).trim(), keyIds: Array.isArray(c?.keyIds) ? c.keyIds.map(String).slice(0, 40) : [], keyMode: pick(c?.keyMode, ["random", "rotate", "affinity", "on-error"], "random"),
     proxyUrl: str(c?.proxyUrl).trim(), headers: obj(c?.headers), params: obj(c?.params), vertex: { projectId: str(c?.vertex?.projectId), location: str(c?.vertex?.location, "global") || "global" },
-    providerSlug: str(c?.providerSlug), copilotEngine: str(c?.copilotEngine, "vscode"), hidden: Array.isArray(c?.hidden) ? c.hidden.map(String) : [], userModels: Array.isArray(c?.userModels) ? c.userModels.map(String) : [] };
+    providerSlug: str(c?.providerSlug), region: str(c?.region).trim(), balanceKeyId: str(c?.balanceKeyId), copilotEngine: str(c?.copilotEngine, "vscode"), hidden: Array.isArray(c?.hidden) ? c.hidden.map(String) : [], userModels: Array.isArray(c?.userModels) ? c.userModels.map(String) : [] };
 }
 const obj = (v) => (v && typeof v === "object" && !Array.isArray(v) ? { ...v } : {});
 export function normalizeProfile(p) {
@@ -75,8 +75,8 @@ export function chainOrder(cfg, firstId) { return [firstId, ...(cfg.chainOn ? cf
 export const hasUsableProfile = (cfg) => cfg.profiles.length > 0;
 // 프로필 → 기존 모델 프리셋(기억 분석·Cellar 서버 분석이 쓰는 모양). 지원 안 하는 형식이면 null.
 export function toPotPreset(conn, profile) {
-  const k = conn.kind, map = { openai: "openai", anthropic: "claude", google: "google", vertex: "vertex-ai", deepseek: "deepseek", openrouter: "openrouter", ollama: "ollama", llmgateway: "llmgateway", copilot: "copilot", custom: "custom", nanogpt: "custom", vercel: "custom", neuralwatt: "custom", wellspring: "custom" };
+  const k = conn.kind, map = { openai: "openai", anthropic: "claude", google: "google", vertex: "vertex-ai", deepseek: "deepseek", openrouter: "openrouter", ollama: "ollama", llmgateway: "llmgateway", copilot: "copilot", custom: "custom", bedrock: "custom", novelai: "custom", opencode: "custom", nanogpt: "custom", vercel: "custom", neuralwatt: "custom", wellspring: "custom" };
   const provider = map[k]; if (!provider || conn.format === "responses") return null;
   if (provider === "google" && !/openai/.test(conn.baseUrl)) return { provider, baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: profile.model };
-  return { provider, baseUrl: conn.baseUrl, model: profile.model };
+  return { provider, baseUrl: baseUrlOf(conn), model: profile.model };
 }

@@ -1,5 +1,5 @@
 // 요청 만들기 (v1.9.3, 순수): 연결+프로필+메시지 → {url, method, headers, body}. 네트워크 없음.
-import { kindOf, isReasoningModel } from "./catalog.js";
+import { kindOf, isReasoningModel, baseUrlOf } from "./catalog.js";
 import { normalize, mergeSame, splitSystem, startWithUser } from "./messages.js";
 
 const join = (base, path) => `${String(base || "").replace(/\/+$/, "")}${path}`;
@@ -129,7 +129,7 @@ export function buildRequest({ conn, profile, messages, stream = false, cred = "
   const b = { openai: buildOpenAI, responses: buildResponses, anthropic: buildAnthropic, gemini: buildGemini, vertex: buildVertex }[format];
   if (!b) throw new Error(`지원하지 않는 요청 형식이에요: ${format}`);
   const r = b(conn, profile, msgs, o);
-  const base = r.base ?? conn.baseUrl ?? k.baseUrl;
+  const base = r.base ?? baseUrlOf(conn);
   if (!base) throw new Error("연결 주소가 비어 있어요");
   if (format === "vertex" && !conn.vertex?.projectId) throw new Error("Vertex 프로젝트 ID가 필요해요");
   const extra = safeExtra({ ...(conn.params ?? {}), ...(profile.params ?? {}) }, { ...(conn.headers ?? {}), ...(profile.headers ?? {}) });

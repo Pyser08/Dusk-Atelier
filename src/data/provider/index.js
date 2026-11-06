@@ -50,7 +50,7 @@ export function createProvider(api, { notify = () => {}, confirm, memory = null,
     sync: () => registrar.sync(),
     names: () => registrar.names(),
     async models(conn, signal) { return listModels(transport, conn, await credOf(conn), signal); },
-    async balance(conn, signal) { return fetchBalance(transport, conn, await credOf(conn), signal); },
+    async balance(conn, signal) { const own = conn.balanceKeyId ? (await vault.values([conn.balanceKeyId]))[0] : ""; return fetchBalance(transport, conn, own || await credOf(conn), signal); },   // 잔액 전용 토큰이 있으면 그걸로
     hasBalance,
     // Dusk 자체 AI 작업(기억 분석 등)에 지정한 프로필이 있으면 그 pick을 돌려준다
     async analysisPick() { const c = await store.get(); const id = c.purposes?.analysis?.profileId || c.subProfileId; return allowed() && c.enabled && id && c.profiles.some((p) => p.id === id) ? { mode: "dusk", profileId: id } : null; },
