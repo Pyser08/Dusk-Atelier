@@ -73,12 +73,21 @@ test("켜면 리스 설정이 바뀌고, 끄면 처음 값으로 돌아온다(�
 });
 
 import { parseToggles, collectToggles, toggleValue, chatRows, shellHtml, topHtml, SHELL_KINDS } from "../src/data/stealth-shell.js";
-test("스크롤 보강과 껍데기 레이아웃(껍데기가 있을 때만 적용)", () => {
-  for (const id of PRESET_IDS) { const { css } = buildStealth(id); assert.ok(css.includes("overflow-y: auto !important") && css.includes("min-height: 0")); assert.ok(!css.includes("position: sticky")); }
+test("리스의 스크롤 컨테이너·전체 요소를 건드리지 않는다(스크롤·성능)", () => {
+  for (const id of PRESET_IDS) {
+    const { css } = buildStealth(id);
+    assert.ok(!css.includes("position: sticky"), id);
+    assert.ok(!/\.default-chat-screen\s*\{[^}]*(overflow|padding-top|[^-]height)/.test(css), `${id}: 대화 화면의 스크롤 속성을 바꾸지 않는다`);
+    assert.ok(!/\.risu-chat > div/.test(css), `${id}: 리스 메시지 컨테이너 대신 우리 래퍼를 쓴다`);
+    assert.ok(!/body \*/.test(css), `${id}: 모든 요소에 거는 규칙 없음`);
+    assert.ok(!css.includes("-webkit-scrollbar"), `${id}: 스크롤바 크기를 바꾸지 않는다`);
+    assert.ok((css.match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창)`);
+  }
   const c = buildStealth("claudecode").css;
-  assert.ok(c.includes('body:has([x-dusk="stealth-sb"]) { padding-left'));
+  assert.ok(c.includes("body[x-dusk-st] {") && !c.includes('body:has('));
   assert.ok(c.includes("min-width: 761px"), "모바일에선 원래 사이드바를 숨기지 않는다");
-  assert.ok(!buildStealth("gpt").css.includes("stealth-sb"));
+  assert.ok(!buildStealth("gpt").css.includes("x-dusk-st"));
+  assert.ok(c.includes(".st-msg { width: 100%; max-width: var(--st-w); margin: 0 auto;"));
 });
 test("토글 정의 해석: 켜기·고르기·글, 구분선·그룹은 건너뜀, 같은 key는 한 번", () => {
   const t = parseToggles("a=켜기\nb=고르기=select=가,나,다\nc=글=text\nx=그룹=group\n===\n\nd");
@@ -172,4 +181,37 @@ test("syncShell: 껍데기가 있는 모양이면 켜고, 없는 모양·끔이�
   await syncShell(api, null);
   assert.equal(shellState(), null);
   assert.equal(api.doc.tree.filter((n) => String(n.attrs["x-dusk"]).startsWith("stealth")).length, 0);
+});
+
+import { diagnose, runDiagnosis } from "../src/data/stealth-apply.js";
+test("진단: 흔한 원인을 짚는다", () => {
+  const base = { "채팅 래퍼(.st-msg)": 3, "본문 자리(.st-body)": 3, "리스 본문(.chattext)": 3, "채팅 목록(.risu-chat)": 1, "채팅 화면(.default-chat-screen)": 1, "입력칸(.text-input-area)": 1, "스텔스 사이드바": 1, "스텔스 표식": 1 };
+  const ok = { theme: "customHTML", hasWrapper: true, hasStealthCss: true };
+  assert.match(diagnose(base, ok)[0], /문제를 찾지 못했어요/);
+  assert.ok(diagnose({ ...base, "채팅 래퍼(.st-msg)": 0 }, ok).some((l) => /새로고침/.test(l)));
+  assert.ok(diagnose({ ...base, "리스 본문(.chattext)": 0 }, ok).some((l) => /\.chattext/.test(l)));
+  assert.ok(diagnose(base, { ...ok, theme: "classic" }).some((l) => /customHTML/.test(l)));
+  assert.ok(diagnose(base, { ...ok, hasStealthCss: false }).some((l) => /켜기/.test(l)));
+  assert.ok(diagnose({ ...base, "스텔스 사이드바": 0 }, ok).some((l) => /사이드바가 화면에 없어요/.test(l)));
+});
+test("진단 실행: 문서가 없으면 알려 준다, 있으면 자리 수를 센다", async () => {
+  assert.match((await runDiagnosis({ getRootDocument: async () => null })).lines[0], /접근하지 못했어요/);
+  const doc = { querySelectorAll: async (sel) => ({ length: sel.includes("st-msg") ? 2 : 0 }) };
+  const r = await runDiagnosis({ getRootDocument: async () => doc, getDatabase: async () => ({ theme: "customHTML", guiHTML: "<div class=st-msg>", customCSS: "/* Dusk Stealth */" }) });
+  assert.equal(r.counts["채팅 래퍼(.st-msg)"], 2); assert.equal(r.db.hasStealthCss, true);
+});
+test("사이드바 감시는 가볍다: 봇 전체 읽기는 번호가 바뀔 때만, 사용자 이름은 캐시", async () => {
+  const api = shellApi(); let heavy = 0, dbReads = 0;
+  const gc = api.getCharacterFromIndex, gd = api.getDatabase;
+  api.getCharacterFromIndex = async (i) => { heavy++; return gc(i); };
+  api.getDatabase = async (k) => { if (k.includes("personas") && k.includes("username")) dbReads++; return gd(k); };
+  const sh = createShell(api, { kind: "claude", poll: 60000, log: () => {} });
+  await new Promise((r) => setTimeout(r, 40));
+  for (let i = 0; i < 6; i++) await sh._render(false);
+  assert.equal(heavy, 1, "같은 채팅이면 봇 전체를 다시 읽지 않는다"); assert.equal(dbReads, 1);
+  api.char.chatPage = 1;   // 채팅이 바뀌면 다시 읽는다
+  await sh._render(false);
+  assert.equal(heavy, 2);
+  assert.ok(api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb").html.includes("st-sb-item on"));
+  await sh.destroy();
 });

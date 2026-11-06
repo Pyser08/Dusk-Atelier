@@ -55,7 +55,7 @@ var ICON = {
 var ico = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n] ?? ""}</svg>`;
 
 export var SHELL_CSS = `
-.st-sb{position:fixed;left:0;top:0;bottom:0;width:var(--st-sw,260px);z-index:40;display:flex;flex-direction:column;box-sizing:border-box;background:var(--st-side);border-right:1px solid var(--st-line);color:var(--st-fg);font-size:13.5px;user-select:none}
+.st-sb{position:fixed;left:0;top:0;bottom:0;width:var(--st-sw,260px);z-index:9000;display:flex;flex-direction:column;box-sizing:border-box;background:var(--st-side);border-right:1px solid var(--st-line);color:var(--st-fg);font-size:13.5px;user-select:none}
 .st-sb *{box-sizing:border-box}
 .st-sb-head{display:flex;align-items:center;gap:8px;padding:14px 14px 8px}
 .st-sb-word{font-size:21px;font-weight:600;letter-spacing:-.01em}
@@ -76,10 +76,10 @@ export var SHELL_CSS = `
 .st-sb-who small{color:var(--st-dim);margin-left:4px;font-size:12px}
 .st-sb-gear{border:0;background:transparent;color:var(--st-fg2);padding:6px;border-radius:8px;cursor:pointer;display:flex}
 .st-sb-gear:hover{background:var(--st-bubble);color:var(--st-fg)}
-.st-top{position:fixed;left:var(--st-sw,260px);right:0;top:0;height:44px;z-index:30;display:flex;align-items:center;padding:0 24px;background:var(--st-bg);border-bottom:1px solid var(--st-line);color:var(--st-fg2);font-size:13.5px;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-top{position:fixed;left:var(--st-sw,260px);right:0;top:0;height:44px;z-index:8990;display:flex;align-items:center;padding:0 24px;background:var(--st-bg);border-bottom:1px solid var(--st-line);color:var(--st-fg2);font-size:13.5px;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st-top b{color:var(--st-fg);font-weight:500;margin-right:8px}
-.st-note{position:fixed;left:var(--st-sw,260px);right:0;bottom:10px;z-index:20;text-align:center;color:var(--st-dim);font-size:12px;pointer-events:none}
-.st-pop{position:fixed;left:10px;bottom:56px;width:calc(var(--st-sw,260px) - 20px);max-height:60vh;overflow-y:auto;z-index:60;background:var(--st-input);border:1px solid var(--st-line2);border-radius:12px;padding:8px;box-shadow:0 8px 28px rgba(0,0,0,.35);color:var(--st-fg);font-size:13px}
+.st-note{position:fixed;left:var(--st-sw,260px);right:0;bottom:10px;z-index:8980;text-align:center;color:var(--st-dim);font-size:12px;pointer-events:none}
+.st-pop{position:fixed;left:10px;bottom:56px;width:calc(var(--st-sw,260px) - 20px);max-height:60vh;overflow-y:auto;z-index:9100;background:var(--st-input);border:1px solid var(--st-line2);border-radius:12px;padding:8px;box-shadow:0 8px 28px rgba(0,0,0,.35);color:var(--st-fg);font-size:13px}
 .st-pop h4{margin:4px 8px 6px;font-size:12px;font-weight:500;color:var(--st-dim)}
 .st-pop-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 8px;border-radius:8px}
 .st-pop-row:hover{background:var(--st-bubble)}
@@ -120,16 +120,25 @@ var ROOT = "stealth-sb", NOTE = "stealth-note", TOP = "stealth-top", POP = "stea
 export function createShell(api, opts = {}) {
   const log = opts.log ?? ((...a) => console.log("[Dusk Atelier]", ...a));
   let doc = null, timer = null, last = "", dead = false, busy = false, popOpen = false, inflight = Promise.resolve();
+  const cache = { idx: "", at: 0, char: null, user: "", userAt: 0 };
+  const FRESH = opts.freshMs ?? 90000, USER_TTL = 120000;
   const kind = opts.kind ?? "claude";
   async function ensureDoc() { if (doc) return doc; doc = await api.getRootDocument?.(); return doc; }
-  async function chatInfo() {
+  // 봇 전체 읽기는 채팅이 많으면 무겁다 → 지금 봇·채팅 번호가 같으면 FRESH 동안 지난 결과를 그대로 쓴다. 번호는 가벼운 호출이라 자주 본다.
+  async function chatInfo(force = false) {
     const ci = await api.getCurrentCharacterIndex?.(), ti = await api.getCurrentChatIndex?.();
-    if (!Number.isInteger(ci) || ci < 0) return { ci: -1, ti: -1, char: null };
+    if (!Number.isInteger(ci) || ci < 0) return { ci: -1, ti: -1, char: null, light: true };
+    const idx = `${ci}:${ti}`, now = Date.now();
+    if (!force && cache.char && cache.idx === idx && now - cache.at < FRESH) return { ci, ti, char: cache.char, light: true };
     const char = await api.getCharacterFromIndex(ci);
-    return { ci, ti, char };
+    cache.idx = idx; cache.at = now; cache.char = char ? { name: char.name, chats: (char.chats ?? []).map((c) => ({ name: c?.name ?? c?.title ?? "", lastDate: c?.lastDate ?? c?.date ?? 0 })) } : null;
+    return { ci, ti, char: cache.char, light: false };
   }
   async function userName() {
-    try { const db = await api.getDatabase(["username", "personas", "selectedPersona"]); const p = db?.personas?.[db?.selectedPersona ?? 0]; return String(p?.name || db?.username || "").trim(); } catch { return ""; }
+    const now = Date.now();
+    if (cache.user && now - cache.userAt < USER_TTL) return cache.user;
+    try { const db = await api.getDatabase(["username", "personas", "selectedPersona"]); const p = db?.personas?.[db?.selectedPersona ?? 0]; cache.user = String(p?.name || db?.username || "").trim(); cache.userAt = now; } catch { /* 지난 값 유지 */ }
+    return cache.user;
   }
   async function put(d, id, tag, html, style) {
     let el = await d.querySelector(`[x-dusk="${id}"]`);
@@ -148,13 +157,14 @@ export function createShell(api, opts = {}) {
   async function draw(force) {
     try {
       const d = await ensureDoc(); if (!d) return;
-      const { ci, ti, char } = await chatInfo();
+      const { ci, ti, char } = await chatInfo(force);
       const user = opts.user || (opts.getUser ? await opts.getUser() : await userName());
       if (dead) return;
       const rows = chatRows(char, ti);
       const key = JSON.stringify([kind, ci, ti, user, rows.map((r) => [r.index, r.name])]);
       if (!force && key === last) return;
       last = key;
+      try { const b = await d.querySelector("body"); if (b) await b.setAttribute("x-dusk-st", "1"); } catch { /* 표식 없이도 사이드바는 보인다 */ }
       if (!(await d.querySelector(`[x-dusk="${STY}"]`))) {
         const st = await d.createElement("style"); await st.setAttribute("x-dusk", STY); await st.setInnerText(SHELL_CSS);
         await (await d.querySelector("head") ?? await d.querySelector("body")).appendChild(st);
@@ -176,10 +186,11 @@ export function createShell(api, opts = {}) {
     if (!char || !Array.isArray(char.chats) || !char.chats[idx]) return;
     char.chatPage = idx;
     await api.setCharacterToIndex(ci, char);
-    last = ""; await render(true);
+    cache.at = 0; last = ""; await render(true);
   }
   async function popModel() {
-    const { char } = await chatInfo();
+    const ci = await api.getCurrentCharacterIndex?.();
+    const char = Number.isInteger(ci) && ci >= 0 ? await api.getCharacterFromIndex(ci) : null;
     const db = await api.getDatabase(["modules", "enabledModules", "globalChatVariables"]);
     const enabled = new Set([...(db?.enabledModules ?? []), ...(char?.modules ?? [])]);
     const mods = (db?.modules ?? []).filter((m) => enabled.has(m?.id));
@@ -219,7 +230,7 @@ export function createShell(api, opts = {}) {
   async function destroy() {
     dead = true; clearInterval(timer);
     await inflight.catch(() => {});   // 그리던 중이면 끝난 뒤에 지운다(지운 뒤 다시 붙는 것 방지)
-    try { const d = await ensureDoc(); for (const id of [ROOT, NOTE, TOP, POP, STY]) { const el = await d?.querySelector(`[x-dusk="${id}"]`); if (el) await el.remove(); } } catch { /* 화면이 이미 없음 */ }
+    try { const d = await ensureDoc(); const b = await d?.querySelector("body"); if (b) await b.removeAttribute?.("x-dusk-st"); for (const id of [ROOT, NOTE, TOP, POP, STY]) { const el = await d?.querySelector(`[x-dusk="${id}"]`); if (el) await el.remove(); } } catch { /* 화면이 이미 없음 */ }
   }
   timer = setInterval(() => render(false), opts.poll ?? 4000);
   render(true);

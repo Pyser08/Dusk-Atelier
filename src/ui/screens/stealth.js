@@ -2,7 +2,7 @@
 import { h, replace } from "../dom.js";
 import { btn, segmented, note, toggleRow, confirmDialog } from "../kit.js";
 import { PRESETS, PRESET_IDS, mergeLabels } from "../../data/stealth.js";
-import { loadStealth, saveStealth, enableStealth, disableStealth } from "../../data/stealth-apply.js";
+import { loadStealth, saveStealth, enableStealth, disableStealth, runDiagnosis } from "../../data/stealth-apply.js";
 import { syncShell } from "../../data/stealth-shell.js";
 
 var LABEL_FIELDS = [["title", "상단 제목 (비우면 봇 이름)"], ["sub", "상단 제목 뒤 글"], ["model", "입력창 옆 문구"], ["left", "입력창 왼쪽 아래 문구"], ["note", "화면 아래 안내 글"], ["tool", "답변 앞 작업 줄"], ["think", "생성 중 문구"], ["user", "사이드바 사용자 이름 (비우면 페르소나)"], ["plan", "사이드바 요금제 글"]];
@@ -24,6 +24,15 @@ export async function renderStealth(ctx) {
     run(() => disableStealth(ctx.api, st), "원래 모양으로 되돌렸어요");
   };
 
+  const diagnose = async () => {
+    diag = "진단 중…"; draw();
+    try {
+      const r = await runDiagnosis(ctx.api);
+      diag = [`계열: ${r.target ?? "알 수 없음"}`, ...Object.entries(r.counts).map(([k, v]) => `${k}: ${v}`), ...(r.db ? [`리스 설정: 채팅 테마 ${r.db.theme || "(없음)"}, 커스텀 CSS ${r.db.cssLen}자, 채팅 HTML ${r.db.htmlLen}자`] : []), "", ...r.lines].join("\n");
+    } catch (e) { diag = `진단하지 못했어요: ${e?.message ?? e}`; }
+    draw();
+  };
+  let diag = "";
   function draw() {
     const L = mergeLabels(pick, st.labels?.[pick]);
     const cards = PRESET_IDS.map((id) => h("button", {
@@ -49,6 +58,8 @@ export async function renderStealth(ctx) {
       h("div", { class: "rb-row", style: "display:flex;gap:8px" },
         btn(st.active === pick ? "문구·옵션 다시 적용" : `${PRESETS[pick].label} 켜기`, { kind: "primary", onClick: () => apply(pick) }),
         st.active ? btn("끄고 원래대로", { onClick: off }) : null),
+      h("div", { class: "rb-row", style: "display:flex;gap:8px" }, btn("화면 진단", { onClick: diagnose })),
+      diag ? h("pre", { class: "rb-muted", style: "white-space:pre-wrap;font-size:12px;margin:0;user-select:text" }, diag) : null,
       note("info", "화면에 안 바뀌면 리스를 새로고침해 주세요. 리스 업데이트로 화면 구조가 바뀌면 일부가 어긋날 수 있어요.")
     );
   }

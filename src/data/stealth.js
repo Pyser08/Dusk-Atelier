@@ -87,6 +87,26 @@ export function buildStealth(id, opts = {}) {
   const root = scheme === "dark" ? `:root {\n${vars(P, P.dark)}` : `:root {\n${vars(P, P.light)}`;
   const darkBlock = scheme === "auto" ? `@media (prefers-color-scheme: dark) {\n  :root {\n${vars(P, P.dark).replace(/^/gm, "  ")}\n  }\n}` : "";
   const code = id === "codex";
+  // 입력창: :has는 화면이 클수록 비싸므로 한 번만 쓰고 나머지는 CSS 중첩으로 이어 쓴다
+  const mlab = L.model ? (P.shell
+    ? `&::after { content: "${cssText(L.model)}"; position: absolute; right: 6px; bottom: -30px; color: var(--st-fg2); font-size: 12.5px; white-space: pre; pointer-events: none; }`
+    : `&::after { content: "${cssText(L.model)}"; position: absolute; left: 56px; bottom: 12px; color: var(--st-dim); font-size: 12.5px; white-space: pre; pointer-events: none; }`) : "";
+  const llab = P.shell && L.left ? `&::before { content: "${cssText(L.left)}"; position: absolute; left: 12px; bottom: -30px; color: var(--st-fg2); font-size: 12.5px; white-space: pre; pointer-events: none; }` : "";
+  const inputBlock = `div:has(> .text-input-area) {
+  position: relative; box-sizing: border-box; width: calc(100% - 48px) !important; max-width: calc(var(--st-w) - 48px);
+  margin: 8px auto ${P.shell ? 52 : 20}px !important; padding: 10px 10px ${L.model && !P.shell ? 8 : 10}px 6px !important;
+  background: var(--st-input) !important; border: 1px solid var(--st-line2); border-radius: var(--st-ri);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .06); align-items: flex-start !important;
+  &:focus-within { border-color: var(--st-dim); }
+  ${mlab}
+  ${llab}
+  > div, > button { margin: 0 0 0 4px !important; border: none !important; border-radius: 10px !important; background: transparent !important; color: var(--st-dim) !important; padding: 7px !important; align-self: flex-end; }
+  > div:hover, > button:hover { color: var(--st-fg) !important; background: var(--st-bubble) !important; }
+  > .button-icon-send { background: var(--st-accent) !important; color: #fff !important; }
+  > .button-icon-send:hover { filter: brightness(1.08); }
+}
+.text-input-area { margin: 0 0 ${L.model && !P.shell ? 34 : 0}px 0 !important; padding: 4px 10px !important; font-size: 15px !important; color: var(--st-fg) !important; border: none !important; border-radius: 0 !important; background: transparent !important; }
+.text-input-area::placeholder { color: var(--st-dim); }`;
   const css = [
     `/* Dusk Stealth · ${P.label} */`,
     `${root}\n  --st-accent: ${P.accent};\n  --st-font: ${P.font};\n  --st-mono: ${MONO};\n  --st-r: ${P.radius}px;\n  --st-ri: ${P.input}px;\n  --st-w: ${P.width}px;\n}`,
@@ -109,26 +129,23 @@ export function buildStealth(id, opts = {}) {
 }
 .chattext mark[risu-mark] { background-color: transparent !important; color: var(--st-fg) !important; }
 .chattext mark[risu-mark^="blockquote"] { border-left: 3px solid var(--st-line2) !important; color: var(--st-fg2) !important; }
-body, body *:not(code):not(pre):not(pre *) { font-family: ${code ? "var(--st-mono)" : "var(--st-font)"} !important; }
+html, body { font-family: ${code ? "var(--st-mono)" : "var(--st-font)"} !important; }
+button, input, textarea, select { font-family: inherit; }
+code, pre, kbd, samp { font-family: var(--st-mono) !important; }
 body { background: var(--st-bg) !important; color: var(--st-fg); }
 div:has(> .default-chat-screen) { background: var(--st-bg) !important; background-image: none !important; }
 .default-chat-screen { font-size: ${code ? 14 : 15}px; line-height: ${code ? 1.55 : 1.65}; }`,
     hideSidebar || P.shell
-      ? (P.shell ? `@media (min-width: 761px) { body:has([x-dusk="stealth-sb"]) .rs-sidebar, body:has([x-dusk="stealth-sb"]) .risu-sidebar { display: none !important; } }` : `.rs-sidebar, .risu-sidebar { display: none !important; }`)
+      ? (P.shell ? `@media (min-width: 761px) { body[x-dusk-st] .rs-sidebar, body[x-dusk-st] .risu-sidebar { display: none !important; } }` : `.rs-sidebar, .risu-sidebar { display: none !important; }`)
       : `.rs-sidebar, .risu-sidebar { background: var(--st-side) !important; box-shadow: none !important; border-right: 1px solid var(--st-line); }`,
     blurAvatars ? `.sidebar-avatar, .avatar img, .avatar div { filter: grayscale(1) blur(4px) opacity(.4); }` : "",
     P.shell
       ? `:root { --st-sw: clamp(220px, 16vw, 290px); }
-body:has([x-dusk="stealth-sb"]) { padding-left: var(--st-sw) !important; box-sizing: border-box; }
-body:has([x-dusk="stealth-sb"]) .default-chat-screen { padding-top: 48px !important; }
-@media (max-width: 760px) { body:has([x-dusk="stealth-sb"]) { padding-left: 0 !important; } }`
+body[x-dusk-st] { padding-left: var(--st-sw) !important; box-sizing: border-box; }
+@media (max-width: 760px) { body[x-dusk-st] { padding-left: 0 !important; } }`
       : (L.title ? `body::before { content: "${cssText(L.title)}"; position: fixed; top: 0; left: 0; right: 0; height: 44px; z-index: 30; display: flex; align-items: center; padding: 0 24px; background: var(--st-bg); border-bottom: 1px solid var(--st-line); color: var(--st-fg2); font-size: 13px; font-weight: 500; white-space: pre; overflow: hidden; pointer-events: none; }
-.default-chat-screen { padding-top: 48px !important; }` : ""),
-    // 스크롤: 대화 영역이 늘어나도 안에서 스크롤되게(고정 줄·입력창을 얹어도 막히지 않게)
-    `.default-chat-screen { overflow-y: auto !important; min-height: 0 !important; overscroll-behavior: contain; }
-div:has(> .default-chat-screen) { min-height: 0 !important; }`,
-    `.risu-chat > div { margin: 0 auto !important; padding: 6px 24px !important; max-width: var(--st-w); width: 100%; }
-.st-msg { width: 100%; min-width: 0; position: relative; color: var(--st-fg); display: flex; flex-direction: column; }
+` : ""),
+    `.st-msg { width: 100%; max-width: var(--st-w); margin: 0 auto; padding: 6px 24px; box-sizing: border-box; min-width: 0; position: relative; color: var(--st-fg); display: flex; flex-direction: column; }
 .st-body { min-width: 0; }
 .st-user { align-items: flex-end; }
 .st-user .st-body { max-width: 78%; background: var(--st-bubble); border-radius: var(--st-r); padding: 10px 16px; }
@@ -156,33 +173,12 @@ div:has(> .default-chat-screen) { min-height: 0 !important; }`,
 .st-btns button { color: var(--st-dim) !important; }
 .st-btns button:hover { color: var(--st-fg) !important; }
 .st-body textarea { background: var(--st-input) !important; color: var(--st-fg) !important; font-size: 15px !important; border: 1px solid var(--st-line2) !important; border-radius: 10px !important; }
-div:has(> .text-input-area) {
-  position: relative; box-sizing: border-box; width: calc(100% - 48px) !important; max-width: calc(var(--st-w) - 48px);
-  margin: 8px auto ${P.shell ? 52 : 20}px !important; padding: 10px 10px ${L.model && !P.shell ? 8 : 10}px 6px !important;
-  background: var(--st-input) !important; border: 1px solid var(--st-line2); border-radius: var(--st-ri);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, .06); align-items: flex-start !important;
-}
-div:has(> .text-input-area):focus-within { border-color: var(--st-dim); }`,
-    L.model ? (P.shell
-      ? `div:has(> .text-input-area)::after { content: "${cssText(L.model)}"; position: absolute; right: 6px; bottom: -30px; color: var(--st-fg2); font-size: 12.5px; white-space: pre; pointer-events: none; }`
-      : `div:has(> .text-input-area)::after { content: "${cssText(L.model)}"; position: absolute; left: 56px; bottom: 12px; color: var(--st-dim); font-size: 12.5px; white-space: pre; pointer-events: none; }`) : "",
-    P.shell && L.left ? `div:has(> .text-input-area)::before { content: "${cssText(L.left)}"; position: absolute; left: 12px; bottom: -30px; color: var(--st-fg2); font-size: 12.5px; white-space: pre; pointer-events: none; }` : "",
-    `.text-input-area { margin: 0 0 ${L.model && !P.shell ? 34 : 0}px 0 !important; padding: 4px 10px !important; font-size: 15px !important; color: var(--st-fg) !important; border: none !important; border-radius: 0 !important; background: transparent !important; }
-.text-input-area::placeholder { color: var(--st-dim); }
-div:has(> .text-input-area) > div, div:has(> .text-input-area) > button {
-  margin: 0 0 0 4px !important; border: none !important; border-radius: 10px !important; background: transparent !important;
-  color: var(--st-dim) !important; padding: 7px !important; align-self: flex-end;
-}
-div:has(> .text-input-area) > div:hover, div:has(> .text-input-area) > button:hover { color: var(--st-fg) !important; background: var(--st-bubble) !important; }
-div:has(> .text-input-area) > .button-icon-send { background: var(--st-accent) !important; color: #fff !important; }
-div:has(> .text-input-area) > .button-icon-send:hover { filter: brightness(1.08); }`,
+${inputBlock}`,
     `.loadmove { animation: none !important; border: none !important; width: 1em !important; height: 1em !important; }
 .loadmove::before { content: "■"; font-size: 11px; color: var(--st-fg); }`,
     L.think ? `.loadmove::after { content: "${cssText(L.think)}"; position: absolute; left: 18px; top: -30px; color: var(--st-accent); font-size: 13.5px; white-space: pre; animation: st-pulse 1.4s ease-in-out infinite; pointer-events: none; }
 @keyframes st-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }` : "",
-    `::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: var(--st-line2); border-radius: 5px; border: 2px solid var(--st-bg); }
-::-webkit-scrollbar-track { background: transparent; }`
+    `html { scrollbar-color: var(--st-line2) transparent; }`
   ].filter(Boolean).join("\n");
   const html = [
     `<div class="st-msg st-{{role}}">`,

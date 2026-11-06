@@ -59,12 +59,12 @@
     {
       "id": "memory",
       "name": "장기기억·관계도",
-      "version": "0.1.8",
+      "version": "0.1.9",
       "minCore": "1.9.2",
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "6b98eaafa2e9cf75e635b89c2462152b69edd547e52da8df85d297eaa1d1ad16",
+      "sha256": "9260bae68b2d84a114220916eb256611fa7a65551e5be814dcf2d6feb75f4e8f",
       "size": 1538203
     },
     {
@@ -120,13 +120,13 @@
     {
       "id": "stealth",
       "name": "더스크 스텔스",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "minCore": "1.9.2",
       "hooks": false,
       "desc": "리스 채팅을 클로드·GPT·코덱스·제미나이·딥시크 같은 다른 AI 채팅 앱처럼 보이게 꾸며요. 끄면 원래 모양으로 되돌려요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/stealth.js",
-      "sha256": "8b53eb4fdb436dcdc061e757b2d9876deaed86d2a0edf7ccdc21d0c39ceee240",
-      "size": 32687
+      "sha256": "72b31e049aa7d82021d1bd6f491e7361539458f97e43d3789423bb6ed9103721",
+      "size": 36093
     }
   ]
 }
