@@ -1,4 +1,4 @@
-# Dusk Atelier 소스 구조 지도 (v1.9.2 기준, tools/source-map.mjs로 자동 생성)
+# Dusk Atelier 소스 구조 지도 (v2.0.0 기준, tools/source-map.mjs로 자동 생성)
 
 > **다른 AI/새 세션 인계:** 먼저 `HandOff/README.md` → `HandOff/STATE.md` → `HandOff/TASK-MAP.md` 순서로 읽는다.
 
@@ -19,15 +19,15 @@
 
 ## 파일 목록
 ### src/
-- `addonlib.gen.js` (562줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
-- `main.js` (306줄) 
+- `addonlib.gen.js` (508줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
+- `main.js` (293줄) 
 
 ### src/cellar/
 - `node-entry.js` (9줄) Dusk Cellar(서버)에서 장기 기억 분석을 돌리는 Node용 진입점 (v1.9.3, Cella… — createMemoryRunner, createMemoryStoreV3, INDEX_KEY, FOLDER_PREFIX, callWriterModel
 
 ### src/data/
 - `addcharacter.js` (46줄) 새 봇을 DB에 추가하는 공용 흐름 (legacy.js의 '캐릭터 추가'에서 추출, 동작 동일). — insertCharacter, createBotDraft
-- `addons.js` (218줄) 애드온 로더(2.0.0 시험): 우리 저장소 목록(addons.json)의 애드온 ESM을 nativ… — ADDON_MANIFEST_URL, ADDON_URL_KEY, ADOPT_KEY, fetchText, importCode
+- `addons.js` (244줄) 애드온 로더(2.0.0 시험): 우리 저장소 목록(addons.json)의 애드온 ESM을 nativ… — ADDON_MANIFEST_URL, ADDON_URL_KEY, ADOPT_KEY, fetchText, importCode
 - `affhud.js` (178줄) 호감도 HUD 프리셋 런타임: 응답이 끝나면 호감도를 채팅 변수($aff…)에 써 둔다. — createAffHud
 - `assetfix.js` (93줄) v1.8.2 에셋 태그 고치기(도구 탭, 사용자가 누를 때만): 지금 열린 채팅 읽기 · 고친 응답 … — UNDO_KEY, loadRange, applyFix, lastUndo, undoFix
 - `assetfolders.js` (65줄) — foldersOf, childFolders, folderPath, createFolder, renameFolder
@@ -72,8 +72,8 @@
 - `memoryrewind.js` (58줄) 저장된 기억으로 새 채팅 만들기. 원본 채팅·봇 데이터는 수정하지 않고 새 채팅만 추가한다. — sliceFolder, sceneAt, draftFirstMessage, createRewindChat
 - `memoryrunner.js` (340줄) 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 … — createMemoryRunner
 - `memorystore.js` (121줄) 장기기억 v2 저장소: 인덱스 + 폴더별 키 분할, 직렬 쓰기 큐, v1 마이그레이션. — INDEX_KEY, FOLDER_PREFIX, EXT_PREFIX, LEGACY_KEY, DEFAULT_SETTINGS
-- `memorystore3.js` (175줄) 장기기억 v3 저장소: v2와 같은 메서드 + 채팅별 인물 위키(wiki) + 리수폿 가져오기. 직렬… — INDEX_KEY, FOLDER_PREFIX, createMemoryStoreV3
-- `memoryswitches.js` (73줄) v1.7.0 2단계: 화면이 쓰는 '기억 · 리수폿' 스위치 묶음. 저장은 인덱스(store.upda… — currentChat, createSwitches
+- `memorystore3.js` (184줄) 장기기억 v3 저장소: v2와 같은 메서드 + 채팅별 인물 위키(wiki) + 리수폿 가져오기. 직렬… — INDEX_KEY, FOLDER_PREFIX, createMemoryStoreV3
+- `memoryswitches.js` (77줄) v1.7.0 2단계: 화면이 쓰는 '기억 · 리수폿' 스위치 묶음. 저장은 인덱스(store.upda… — currentChat, createSwitches
 - `memorytools.js` (33줄) 인물 AI 도구(7단계 B): 리수폿 컨트롤러를 한 묶음으로 만든다. 턴 흐름이 켜져 있고 그 채팅이… — makeTools
 - `memoryturn.js` (256줄) 턴 흐름 (v1.6.4 4단계): 리수폿 인물 위키(고르기·정리 노트·기록하기)와 Dusk 기록을 한… — promptKeysOf, stageOf, createTurnFlow
 - `modelhub.js` (96줄) 모델 허브 (v1.6.4 3단계): 모델 프리셋 저장·키 보관·내 API 호출·토큰 사용량. 화면은 … — getCfg, saveCfg, keyStore, pickForStage, getUsage
@@ -112,13 +112,16 @@
 
 ### src/data/provider/
 - `gemcache.js` (40줄) Gemini 명시적 캐시 (v1.9.3): 관찰(통계만) · 자동(같은 앞부분이 반복되면 생성) · … — createGeminiCache, anatomy
-- `index.js` (64줄) 프로바이더 묶음 (v1.9.3): 저장소·키 보관·전송·실행기·리스 등록을 한곳에서 엮는다. 화면과 … — createProvider
+- `index.js` (85줄) 프로바이더 묶음 (v1.9.3): 저장소·키 보관·전송·실행기·리스 등록을 한곳에서 엮는다. 화면과 … — createProvider
 - `keyvault.js` (33줄) 프로바이더 키 보관 (v1.9.3): 로컬 저장소에만 둔다(기기 간 동기화·내보내기 없음). 값은 로… — tailOf, createKeyVault
+- `mailbox.js` (113줄) 다른 플러그인 창구 감시기(2.0.0): pluginStorage 우편함을 살펴 요청을 프로바이더 r… — collectText, createMailbox
+- `mcpclient.js` (39줄) MCP 클라이언트 (2.0.0): streamable-http. 서버마다 initialize → no… — createMcpClient
 - `models.js` (23줄) 모델 목록·잔액 조회 (v1.9.3). 공급자가 지원하는 것만. 실패는 메시지로 돌려준다. — parseModels, listModels, hasBalance, fetchBalance
+- `progress.js` (55줄) 프로바이더 진행 창(리스 화면, 2.0.0). 상태는 engine/provider/board.js가 … — createProgressWindow
 - `register.js` (24줄) 리스에 프로바이더 등록 (v1.9.3). addProvider가 없는 호스트에서는 꺼 둔다(suppo… — providerName, createRegistrar, AUTO_NAME, createProviderStore
 - `risutools.js` (51줄) 리스 데이터 도구 실행 (v1.9.3). 읽기는 자유, 쓰기는 안전장치 3단: ① 설정에서 따로 켬 … — MAX_WRITES_PER_REQUEST, createRisuTools
-- `runner.js` (191줄) 프로바이더 실행기 (v1.9.3): 요청 받기 → 프로필 고르기 → 키 고르기 → 보내기 → 해독 →… — toolPrompt, parseToolCalls, stripToolCalls, createProviderRunner
-- `store.js` (20줄) 프로바이더 설정·사용량 저장 (v1.9.3). 설정은 pluginStorage(기기 간 동기화 대상,… — CFG_KEY, createProviderStore
+- `runner.js` (266줄) 프로바이더 실행기 (v1.9.3): 요청 받기 → 프로필 고르기 → 키 고르기 → 보내기 → 해독 →… — toolPrompt, parseToolCalls, stripToolCalls, createProviderRunner
+- `store.js` (24줄) 프로바이더 설정·사용량 저장 (v1.9.3). 설정은 pluginStorage(기기 간 동기화 대상,… — CFG_KEY, createProviderStore
 - `toolexec.js` (30줄) 기본 도구 실행 (v1.9.3): 시간·계산·주사위·웹 검색·URL 가져오기. 리스 데이터 도구는 r… — createToolExec, prefetchSearch
 - `transport.js` (29줄) 전송 (v1.9.3): nativeFetch 우선 → 안 되면 risuFetch(통째로 받기). 사용… — HttpError, redact, proxied, createTransport, errorFromResponse
 
@@ -277,16 +280,24 @@
 - `pot/*.js` 63개 — 리수폿 순수 로직(자동 생성, 직접 수정 금지 — tools/pot-split.mjs)
 
 ### src/engine/provider/
-- `build.js` (145줄) 요청 만들기 (v1.9.3, 순수): 연결+프로필+메시지 → {url, method, headers,… — safeExtra, vertexRoute, buildRequest
-- `catalog.js` (27줄) 프로바이더 카탈로그 (v1.9.3): 공급자별 기본 주소·요청 형식. 순수 데이터. — FORMATS, KINDS, kindOf, PURPOSES, PURPOSE_LABEL
-- `chain.js` (25줄) 실패 분류와 대체 사슬 (v1.9.3, 순수) — classifyFailure, RETRY_SAME, SWITCH_KEY, NEXT_TARGET, planAfterFailure
-- `cost.js` (36줄) 사용량·비용·예산 (v1.9.3, 순수). 가격 단위: 100만 토큰당 달러. — costOf, savedByCache, addRecord, summarize, budgetState
-- `keypool.js` (21줄) 키 풀 (v1.9.3, 순수): 여러 키 중 하나를 고르고, 실패한 키는 잠시 쉰다. — createKeyPool
+- `batch.js` (29줄) 배치 (2.0.0, 순수): Anthropic Message Batches 요청·응답 다루기. 네트워… — batchKey, batchBaseOf, batchCreateRequest, batchStatusRequest, batchResultsRequest
+- `board.js` (39줄) 프로바이더 진행 창의 요청 상태(순수, 2.0.0). Provider Manager의 진행 창을 참고… — PHASES, createBoard, boardHtml
+- `build.js` (157줄) 요청 만들기 (v1.9.3, 순수): 연결+프로필+메시지 → {url, method, headers,… — safeExtra, turnHashesOf, vertexRoute, buildRequest
+- `catalog.js` (33줄) 프로바이더 카탈로그 (v1.9.3): 공급자별 기본 주소·요청 형식. 순수 데이터. — FORMATS, KINDS, kindOf, baseUrlOf, PURPOSES
+- `chain.js` (29줄) 실패 분류와 대체 사슬 (v1.9.3, 순수) — classifyFailure, RETRY_SAME, SWITCH_KEY, NEXT_TARGET, retryKindsOf
+- `cost.js` (37줄) 사용량·비용·예산 (v1.9.3, 순수). 가격 단위: 100만 토큰당 달러. — costOf, savedByCache, addRecord, summarize, budgetState
+- `errlog.js` (20줄) 오류 기록 (2.0.0, 순수): 재시도·실패를 하나씩 남기는 작은 링 버퍼. 키처럼 보이는 글자는 … — maskSecrets, createErrorLog, kindLabel, formatLog
+- `hooks.js` (16줄) 훅 (2.0.0, 순수): 모델별 요청 전(글 바꾸기)·응답 후(글 바꾸기) 처리. 정규식 찾아 바꾸… — normalizeHook, applyPre, applyPost, hasPost
+- `keypool.js` (22줄) 키 풀 (v1.9.3, 순수): 여러 키 중 하나를 고르고, 실패한 키는 잠시 쉰다. — createKeyPool
+- `mailbox.js` (59줄) 다른 플러그인 창구(2.0.0, 순수): pluginStorage 우편함 규칙. — PREFIX, REQ_PREFIX, LIMITS, safeName, reqKey
+- `mcp.js` (40줄) MCP (2.0.0, 순수): 서버 정리·도구 이름·JSON-RPC 틀·응답 읽기. 네트워크 없음. — mcpNameOf, isMcpWrite, normalizeMcpServer, mcpToolDefs, nextRpcId
 - `messages.js` (37줄) 대화 정규화 (v1.9.3, 순수): 리스 prompt_chat → 공급자별 메시지. 역할 병합·시작… — normalize, mergeSame, splitSystem, startWithUser, prefillOf
 - `presets.js` (47줄) 빠른 설정 프리셋 (v1.9.3, 순수): 눌러서 켜고 끄면 프로필의 추가 요청 값·헤더·등급에 들어… — PRESETS, presetsFor, isOn, apply
-- `profile.js` (83줄) 프로바이더 설정 (v1.9.3, 순수): 저장 모양·정리·상속(기본 → 연결 → 프로필 → 용도 덮어… — defaultConfig, normalizeConnection, normalizeProfile, normalizeConfig, normalizeRule
+- `profile.js` (91줄) 프로바이더 설정 (v1.9.3, 순수): 저장 모양·정리·상속(기본 → 연결 → 프로필 → 용도 덮어… — defaultConfig, normalizeConnection, normalizeProfile, normalizeConfig, normalizeRule
 - `repeat.js` (24줄) 반복 감지 (v1.9.3, 순수): 같은 글자 연속 · 같은 덩어리 반복을 스트림 끝에서 찾는다. — REPEAT_DEFAULT, detectRepetition, trimRepetition
+- `router.js` (25줄) 라우터 (2.0.0, 순수): 요청이 조건에 맞으면 그 프로필로 보낸다. 용도·봇별 프로필 위에 얹는… — normalizeRouteRule, pickByRules
 - `sse.js` (110줄) 스트림 해독 (v1.9.3, 순수): SSE 줄 → 형식별 이벤트. 이벤트 {type:"text"|"… — createSseParser, usageOpenAI, usageAnthropic, usageGemini, createStreamDecoder
+- `tokens.js` (9줄) 토큰 수 어림 (2.0.0, 순수). 실제 값이 아니라 진행 창에서 '대략 얼마나 받았나'를 보여 주… — estimateTokens
 - `tools.js` (93줄) 도구 정의와 순수 실행 (v1.9.3): 시간·계산·주사위·웹 검색 요청/해석·HTML→글·쓰기 도구… — TOOL_DEFS, WRITE_TOOLS, isWriteTool, enabledTools, parseArgs
 - `transforms.js` (48줄) 요청 변환 (v1.9.3, 순수): 시스템 프롬프트 주입 규칙 · 캐시 친화 정렬 · 요청 해부. — applyRules, anatomy, orderForCache, splitAtMarker, hashText
 - `translate.js` (36줄) 번역 보조 (v1.9.3, 순수): 마크업 보호 · 용어집/가이드/이전 번역 주입 · 구분자 누수 제… — protect, restore, clipBytes, glossaryBlock, guideBlock
@@ -300,7 +311,7 @@
 
 ### src/ui/
 - `aifix.js` (52줄) 로어북 '고칠 부분' 공유 상태 (v1.6.8): 편집기 글칸에서 고른 부분 ↔ AI 창 '고칠 부분…
-- `app.js` (588줄) 
+- `app.js` (587줄) 
 - `assets.js` (187줄) 
 - `cbs.js` (80줄) 
 - `codeedit.js` (514줄) 가벼운 코드 편집기: 투명한 textarea 뒤에 색을 입힌 pre를 겹쳐 VS Code처럼 보이게 …
@@ -376,11 +387,11 @@
 - `pluginedit.js` (172줄) 플러그인 코드 수정 창 (1.8.3) — 플러그인 탭의 ··· 메뉴 → '코드 수정'.
 - `pluginmgr.js` (248줄) 플러그인 매니저 기능 화면 (1.8.3): 켜기/끄기·별칭·순서·삭제 / 파일에서 등록 / 중복 정리…
 - `plugins.js` (683줄) 플러그인 탭 — 목록·카테고리·업데이트 확인 / DA Interop 연동 설정 / 플러그인 만들기 /…
-- `pot.js` (83줄) 리수폿 화면 (1.7.0 4단계, 계획 §3.3). 기억과 완전히 따로: 자기 스위치·자기 설정. 머…
+- `pot.js` (85줄) 리수폿 화면 (1.7.0 4단계, 계획 §3.3). 기억과 완전히 따로: 자기 스위치·자기 설정. 머…
 - `presets.js` (217줄) 
 - `promptstab.js` (128줄) 설정 → 기억·리수폿 프롬프트 (v1.7.0): 기억·리수폿을 쓸 때 기본 규칙 뒤에 덧붙는 '내 프…
 - `protlink.js` (156줄) 관리 → ProtLink+ (v1.9.2): Proton Drive 링크를 캐릭터·모듈·플러그인에 연…
-- `provider.js` (164줄) 프로바이더 (v1.9.3): 리스 모델 목록에 'Dusk 자동'과 'Dusk · 프로필' 을 더한다.…
+- `provider.js` (173줄) 프로바이더 (v1.9.3): 리스 모델 목록에 'Dusk 자동'과 'Dusk · 프로필' 을 더한다.…
 - `regress.js` (350줄) 회귀 창 (v1.9.2): 인물을 골라, 그 인물의 기억만 들고 새 채팅을 시작한다.
 - `relmap.js` (264줄) 인물 관계도 탭 (v1.9.3): {{user}}를 가운데 두고 인물을 거리(호감도)·높이(중요도)·…
 - `roulettepop.js` (64줄) 봇 편집 도구 → 룰렛: 범주별로 무작위 특징을 뽑아 복사하거나 설명 끝에 붙인다.
@@ -404,7 +415,7 @@
 - `autotrackingbox.js` (43줄) 자동 기록·인물 추적 설정: 기억 탭에서 재사용한다. 기존 위키 화면의 설정과 저장 동작을 그대로 유…
 - `botlist.js` (25줄) 
 - `cards.js` (50줄) 카드 탭: 이 봇에서 만든 카드를 모아 보고, 크게 보기·PNG 저장·삭제를 한다.
-- `chatload.js` (23줄) 봇의 채팅 목록. 이름·개수는 이미 읽은 캐릭터 정보에서 바로 만들고, 본문은 '지금 볼 채팅 하나'…
+- `chatload.js` (28줄) 봇의 채팅 목록. 이름·개수는 이미 읽은 캐릭터 정보에서 바로 만들고, 본문은 '지금 볼 채팅 하나'…
 - `common.js` (55줄) 
 - `compose.js` (243줄) 새 봇 만들기 5단계: 인물 → 범위·등급 → 카드 → 연결 → 첫 메시지·확인
 - `conflictui.js` (31줄) 롤백 충돌 안내(리수폿 고급·인물 화면): '변경 비교' 창과 '그대로 두기'.
@@ -450,7 +461,7 @@
 - `modeladv.js` (66줄) 고급 모델 설정(고급 모드): 공급자 전체 · 모델 목록 불러오기 · 온도/최대 출력/문맥/제한시간 …
 - `people.js` (262줄) 
 - `personv2.js` (219줄) v1.8.3 인물 위키 개편: 머리 + 탭(요약 / 관계 / 상세 정보 / 기록). 넓은 화면(@co…
-- `potpage.js` (35줄) 장기 기억 → 리수폿 화면(2.0.0): Erosync 화면처럼 위에 상태·켜기, 아래에 탭(개요·설…
+- `potpage.js` (61줄) 장기 기억 → 리수폿 화면(2.0.0): Erosync 화면처럼 위에 상태·켜기, 아래에 탭(개요·설…
 - `recordsui.js` (68줄) 인물 항목 관리: 항목 직접 추가·고치기·지우기와 NPC 감정 기록(리수폿 people-records…
 - `recovery.js` (53줄) 복구·실행 기록(고급 모드): Writer 원문 JSON을 붙여넣어 진단 → 고치기 → 반영(또는 강…
 - `regexui.js` (28줄) v1.8.1 정규식 전처리 설정 카드: 기억 분석 입력·임베딩 질의에서 상태창 같은 군더더기를 걷어 …
@@ -469,7 +480,8 @@
 
 ### src/ui/screens/provider/
 - `css.js` (25줄) 프로바이더 화면 전용 스타일(v1.9.3). 색·모서리는 Dusk 토큰만 쓴다.
-- `more.js` (104줄) 프로바이더 화면의 나머지 탭: 용도 · 규칙 · 사용량 · 비교.
+- `ext.js` (56줄) 프로바이더 화면 ‘확장’ 탭(2.0.0): MCP 서버 · 훅 · 다른 플러그인 창구. 비밀(MCP …
+- `more.js` (148줄) 프로바이더 화면의 나머지 탭: 용도 · 규칙 · 사용량 · 비교.
 - `ui.js` (11줄) 프로바이더 화면 부품: 입력칸·묶음. 값이 바뀌면 onChange(값)만 부른다(저장은 부르는 쪽).
 
 ### src/ui/screens/relmap/
