@@ -241,3 +241,18 @@ test("최소 모드는 화면 전체 규칙을 뺀다", () => {
     assert.ok(min.includes(".st-body"), id);
   }
 });
+
+test("하단 ^ 버튼으로 사이드바를 접고 펼 수 있다", async () => {
+  const api = shellApi();
+  const sh = createShell(api, { kind: "claude", poll: 60000, log: () => {} });
+  await new Promise((r) => setTimeout(r, 60));
+  const sb = api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb");
+  assert.equal(sb.attrs["x-fold"], "0"); assert.ok(sb.html.includes('data-st-fold'));
+  await sb.inner["data-st-fold="].handlers.click();
+  await new Promise((r) => setTimeout(r, 60));
+  assert.equal(api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb").attrs["x-fold"], "1");
+  await api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb").inner["data-st-fold="].handlers.click();
+  await new Promise((r) => setTimeout(r, 60));
+  assert.equal(api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb").attrs["x-fold"], "0");
+  await sh.destroy();
+});

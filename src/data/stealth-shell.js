@@ -55,6 +55,14 @@ var ICON = {
 var ico = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n] ?? ""}</svg>`;
 
 export var SHELL_CSS = `
+.st-sb-fold{font-size:16px;line-height:1;font-weight:600;width:28px;height:28px}
+[x-dusk="stealth-sb"][x-fold="1"]{top:auto;width:auto;left:10px;bottom:10px;border:1px solid var(--st-line2);border-radius:10px}
+[x-dusk="stealth-sb"][x-fold="1"] > :not(.st-sb-foot){display:none}
+[x-dusk="stealth-sb"][x-fold="1"] .st-sb-foot{border-top:0;padding:4px}
+[x-dusk="stealth-sb"][x-fold="1"] .st-sb-foot > :not(.st-sb-fold){display:none}
+[x-dusk="stealth-sb"][x-fold="1"] .st-sb-fold{transform:rotate(180deg)}
+body[x-dusk-fold="1"][x-dusk-st]{padding-left:0 !important}
+body[x-dusk-fold="1"] [x-dusk="stealth-top"],body[x-dusk-fold="1"] [x-dusk="stealth-note"]{left:0}
 [x-dusk="stealth-sb"]{position:fixed;left:0;top:0;bottom:0;width:var(--st-sw,260px);z-index:9000;display:flex;flex-direction:column;box-sizing:border-box;background:var(--st-side);border-right:1px solid var(--st-line);color:var(--st-fg);font-size:13.5px;user-select:none}
 [x-dusk="stealth-sb"] *{box-sizing:border-box}
 .st-sb-head{display:flex;align-items:center;gap:8px;padding:14px 14px 8px}
@@ -103,7 +111,7 @@ export function shellHtml(model) {
     + `<div class="st-sb-nav">${nav}</div>`
     + (K.recent ? `<div class="st-sb-sec"><span>${esc(K.recent)}</span></div>` : "")
     + `<div class="st-sb-list">${list}</div>`
-    + `<div class="st-sb-foot"><span class="st-sb-av">${esc(who.slice(0, 1).toUpperCase())}</span><span class="st-sb-who">${esc(who)}<small>· ${esc(model.plan ?? K.plan)}</small></span><button type="button" class="st-sb-gear" data-st-gear="1" aria-label="설정">${ico("gear", 18)}</button></div>`;
+    + `<div class="st-sb-foot"><span class="st-sb-av">${esc(who.slice(0, 1).toUpperCase())}</span><span class="st-sb-who">${esc(who)}<small>· ${esc(model.plan ?? K.plan)}</small></span><button type="button" class="st-sb-gear" data-st-gear="1" aria-label="설정">${ico("gear", 18)}</button><button type="button" class="st-sb-gear st-sb-fold" data-st-fold="1" aria-label="사이드바 접기·펴기" title="사이드바 접기·펴기">^</button></div>`;
 }
 export function topHtml(model) {
   const t = String(model.title ?? "").trim();
@@ -120,7 +128,7 @@ var ROOT = "stealth-sb", NOTE = "stealth-note", TOP = "stealth-top", POP = "stea
  */
 export function createShell(api, opts = {}) {
   const log = opts.log ?? ((...a) => console.log("[Dusk Atelier]", ...a));
-  let doc = null, timer = null, last = "", dead = false, busy = false, popOpen = false, inflight = Promise.resolve();
+  let folded = false, doc = null, timer = null, last = "", dead = false, busy = false, popOpen = false, inflight = Promise.resolve();
   const cache = { idx: "", at: 0, char: null, user: "", userAt: 0 };
   const FRESH = opts.freshMs ?? 90000, USER_TTL = 120000;
   const kind = opts.kind ?? "claude";
@@ -162,16 +170,16 @@ export function createShell(api, opts = {}) {
       const user = opts.user || (opts.getUser ? await opts.getUser() : await userName());
       if (dead) return;
       const rows = chatRows(char, ti);
-      const key = JSON.stringify([kind, ci, ti, user, rows.map((r) => [r.index, r.name])]);
+      const key = JSON.stringify([folded, kind, ci, ti, user, rows.map((r) => [r.index, r.name])]);
       if (!force && key === last) return;
       last = key;
-      try { const b = await d.querySelector("body"); if (b) await b.setAttribute("x-dusk-st", "1"); } catch { /* 표식 없이도 사이드바는 보인다 */ }
+      try { const b = await d.querySelector("body"); if (b) { await b.setAttribute("x-dusk-st", "1"); await b.setAttribute("x-dusk-fold", folded ? "1" : "0"); } } catch { /* 표식 없이도 사이드바는 보인다 */ }
       if (!(await d.querySelector(`[x-dusk="${STY}"]`))) {
         const st = await d.createElement("style"); await st.setAttribute("x-dusk", STY); await st.setInnerText(SHELL_CSS);
         await (await d.querySelector("head") ?? await d.querySelector("body")).appendChild(st);
       }
       const model = { kind, word: opts.word, user, plan: opts.plan, rows, title: opts.title ?? char?.name ?? "", sub: opts.sub };
-      await put(d, ROOT, "div", shellHtml(model), "st-sb");
+      const rootEl = await put(d, ROOT, "div", shellHtml(model), "st-sb"); await rootEl?.setAttribute("x-fold", folded ? "1" : "0");
       await put(d, TOP, "div", topHtml(model), "st-top");
       await put(d, NOTE, "div", opts.note ? esc(opts.note) : "", "st-note");
       for (const r of rows) {
@@ -179,6 +187,8 @@ export function createShell(api, opts = {}) {
         if (b) await b.addEventListener("click", () => switchChat(ci, r.index).catch((e) => log("채팅 전환 실패", e?.message ?? e)));
       }
       const g = await d.querySelector(`[x-dusk="${ROOT}"] [data-st-gear]`);
+      const fb = await d.querySelector(`[x-dusk="${ROOT}"] [data-st-fold]`);
+      if (fb) await fb.addEventListener("click", () => { folded = !folded; last = ""; render(true); });
       shellInfo.draws++; shellInfo.error = "";
       if (g) await g.addEventListener("click", () => togglePop().catch((e) => log("설정 열기 실패", e?.message ?? e)));
     } catch (e) { shellInfo.error = String(e?.message ?? e); log("스텔스 사이드바 그리기 실패", e?.message ?? e); }
