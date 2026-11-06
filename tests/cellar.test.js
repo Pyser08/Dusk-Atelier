@@ -67,3 +67,16 @@ test("cellarRequest: GET은 method만, POST는 JSON 본문. 연결 문제는 net
   await assert.rejects(cellarRequest({ nativeFetch: async () => res(401, { ok: false }) }, { url: "http://c" }, "/x"), (e) => e.network);
   await assert.rejects(cellarRequest({}, { url: "http://c" }, "/x"), (e) => e.network, "nativeFetch가 없으면 일반 fetch로 바꾸지 않는다");
 });
+
+test("계속 실패하면 확인 간격이 늘어난다(꺼진 Cellar를 3초마다 두드리지 않음)", async () => {
+  let t = 0, n = 0;
+  const api = { storage: store(), nativeFetch: async () => { n++; return res(500, {}); } };
+  const c = createCellar(api, { now: () => t });
+  await c.status(); const first = n;
+  t += 4000; await c.status(); const second = n;      // 첫 실패 뒤엔 3초 지나면 다시 확인
+  t += 4000; await c.status(); const third = n;       // 두 번째 실패 뒤엔 4초로는 부족
+  assert.equal(third, second);
+  t += 60e3; await c.status();
+  assert.ok(n > third);
+  assert.ok(first >= 1 && second > first);
+});

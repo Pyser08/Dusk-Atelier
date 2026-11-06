@@ -53,6 +53,7 @@ export async function disableStealth(api, state, { target = "risu" } = {}) {
 
 // ── 화면 진단: 어디서 안 보이는지 찾는다(리스 화면 문서에서 자리 수를 센다) ──
 import { probeSelectors, detectTarget, TARGETS } from "./themes.js";
+import { shellInfo, shellState } from "./stealth-shell.js";
 export var DIAG_SELECTORS = {
   "채팅 래퍼(.st-msg)": ".st-msg", "본문 자리(.st-body)": ".st-body", "리스 본문(.chattext)": ".chattext",
   "채팅 목록(.risu-chat)": ".risu-chat", "채팅 화면(.default-chat-screen)": ".default-chat-screen", "입력칸(.text-input-area)": ".text-input-area",
@@ -69,6 +70,8 @@ export function diagnose(counts, db) {
   if (n("채팅 래퍼(.st-msg)") > 0 && n("본문 자리(.st-body)") === 0) out.push("채팅 래퍼 안에 본문 자리가 없어요 → <risutextbox>가 지원되지 않는 판일 수 있어요.");
   if (n("채팅 화면(.default-chat-screen)") === 0) out.push("대화 화면(.default-chat-screen)을 못 찾았어요 → 이 리스 판은 클래스 이름이 달라 일부 꾸밈이 안 먹어요.");
   if (n("입력칸(.text-input-area)") === 0) out.push("입력칸(.text-input-area)을 못 찾았어요 → 입력창 모양이 적용되지 않아요.");
+  if (db.shell) out.push(`사이드바 상태: ${db.shell}`);
+  if (n("채팅 목록(.risu-chat)") + n("채팅 화면(.default-chat-screen)") + n("입력칸(.text-input-area)") === 0) out.push("채팅 화면 요소가 하나도 안 잡혀요 → Dusk 창이 채팅 위를 덮고 있으면 이렇게 나와요. 채팅 화면에서 다시 확인해 주세요(‘5초 뒤 진단’).");
   if (n("스텔스 사이드바") === 0) out.push("스텔스 사이드바가 화면에 없어요 → 클로드·클로드 코드 모양을 켠 뒤 몇 초 기다리거나 새로고침해 보세요.");
   else if (n("스텔스 표식") === 0) out.push("사이드바는 있는데 표식이 없어 자리 비움이 적용되지 않아요.");
   return out.length ? out : ["문제를 찾지 못했어요. 화면이 그래도 이상하면 어느 부분인지 알려 주세요."];
@@ -79,6 +82,7 @@ export async function runDiagnosis(api) {
   const counts = await probeSelectors(doc, DIAG_SELECTORS);
   const db = await api.getDatabase(["customCSS", "guiHTML", "theme"]).catch(() => ({}));
   const info = { theme: db?.theme ?? "", htmlLen: String(db?.guiHTML ?? "").length, cssLen: String(db?.customCSS ?? "").length, hasWrapper: /st-msg/.test(db?.guiHTML ?? ""), hasStealthCss: /Dusk Stealth/.test(db?.customCSS ?? "") };
+  info.shell = shellState() ? `켜짐(${shellState()}) · 그린 횟수 ${shellInfo.draws}${shellInfo.error ? " · 오류: " + shellInfo.error : ""}` : "꺼짐(켜진 클로드 계열 모양이 없거나 시작 전)";
   const target = await detectTarget(doc, api).catch(() => null);
   return { counts, db: info, target: target ? (TARGETS[target]?.label ?? target) : null, lines: diagnose(counts, info) };
 }

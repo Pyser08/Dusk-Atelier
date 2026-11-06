@@ -60,6 +60,15 @@ export var PRESETS = {
   }
 };
 export var PRESET_IDS = Object.keys(PRESETS);
+// 이미지·영상은 접어 둔다: '명령어 N개 실행함 ▸' 한 줄만 보이고, 누르거나(터치) 마우스를 올리면 펼쳐진다. N(1~9)은 메시지 순서에 따라 바뀐다(CSS만으로 돌려서 호스트 구조에 덜 기댄다)
+export function imageFoldCss() {
+  const has = ":has(img, video)", label = (n) => `content: "명령어 ${n}개 실행함  ▸";`;
+  const nth = Array.from({ length: 9 }, (_, i) => `.st-msg:nth-child(9n + ${i + 1}) .st-body${has}::before { ${label(i + 1)} }`).join("\n");
+  return `.st-body${has}::before, .chattext${has}::before { ${label(3)} display: block; width: fit-content; margin: 4px 0 10px; color: var(--st-dim, #888); font-size: 14px; cursor: pointer; }
+${nth}
+.st-body img, .st-body video, .chattext img, .chattext video { display: none !important; }
+.st-body${has}:hover img, .st-body${has}:hover video, .st-body${has}:focus-within img, .chattext${has}:hover img, .chattext${has}:focus-within img { display: block !important; max-width: 100%; margin-top: 6px; }`;
+}
 export var LABEL_KEYS = ["title", "sub", "tool", "model", "note", "left", "think", "user", "plan"];
 
 var vars = (p, c, scheme) => Object.entries({
@@ -163,7 +172,7 @@ body[x-dusk-st] { padding-left: var(--st-sw) !important; box-sizing: border-box;
 .st-body .chattext a { color: var(--st-accent) !important; }
 .st-body .chattext hr { border-color: var(--st-line) !important; }
 .st-body .chattext blockquote { border-left: 3px solid var(--st-line2) !important; color: var(--st-fg2) !important; }`,
-    hideImages ? `.st-body img, .st-body video { display: none !important; }` : "",
+    hideImages ? imageFoldCss() : "",
     code ? `.st-user .st-body { max-width: 100%; background: transparent; border-radius: 0; padding: 0 0 0 1.4em; text-indent: -1.4em; }
 .st-user .st-body::before { content: "›"; color: var(--st-accent); font-weight: 700; margin-right: .6em; }
 .st-char .st-body::before { content: "•"; color: var(--st-dim); margin-right: .6em; }

@@ -24,8 +24,9 @@ export async function renderStealth(ctx) {
     run(() => disableStealth(ctx.api, st), "원래 모양으로 되돌렸어요");
   };
 
-  const diagnose = async () => {
-    diag = "진단 중…"; draw();
+  const diagnose = async (delay = 0) => {
+    diag = delay ? `${delay}초 뒤 진단해요 — 지금 Dusk 창을 닫고 채팅 화면을 보여 주세요. 끝나면 다시 열어 결과를 확인하세요.` : "진단 중…"; draw();
+    if (delay) await new Promise((r) => setTimeout(r, delay * 1000));
     try {
       const r = await runDiagnosis(ctx.api);
       diag = [`계열: ${r.target ?? "알 수 없음"}`, ...Object.entries(r.counts).map(([k, v]) => `${k}: ${v}`), ...(r.db ? [`리스 설정: 채팅 테마 ${r.db.theme || "(없음)"}, 커스텀 CSS ${r.db.cssLen}자, 채팅 HTML ${r.db.htmlLen}자`] : []), "", ...r.lines].join("\n");
@@ -58,7 +59,7 @@ export async function renderStealth(ctx) {
       h("div", { class: "rb-row", style: "display:flex;gap:8px" },
         btn(st.active === pick ? "문구·옵션 다시 적용" : `${PRESETS[pick].label} 켜기`, { kind: "primary", onClick: () => apply(pick) }),
         st.active ? btn("끄고 원래대로", { onClick: off }) : null),
-      h("div", { class: "rb-row", style: "display:flex;gap:8px" }, btn("화면 진단", { onClick: diagnose })),
+      h("div", { class: "rb-row", style: "display:flex;gap:8px" }, btn("화면 진단", { onClick: () => diagnose(0) }), btn("5초 뒤 진단", { onClick: () => diagnose(5) })),
       diag ? h("pre", { class: "rb-muted", style: "white-space:pre-wrap;font-size:12px;margin:0;user-select:text" }, diag) : null,
       note("info", "화면에 안 바뀌면 리스를 새로고침해 주세요. 리스 업데이트로 화면 구조가 바뀌면 일부가 어긋날 수 있어요.")
     );

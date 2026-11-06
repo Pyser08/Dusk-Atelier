@@ -81,10 +81,10 @@ test("리스의 스크롤 컨테이너·전체 요소를 건드리지 않는다(
     assert.ok(!/\.risu-chat > div/.test(css), `${id}: 리스 메시지 컨테이너 대신 우리 래퍼를 쓴다`);
     assert.ok(!/body \*/.test(css), `${id}: 모든 요소에 거는 규칙 없음`);
     assert.ok(!css.includes("-webkit-scrollbar"), `${id}: 스크롤바 크기를 바꾸지 않는다`);
-    assert.ok((css.match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창)`);
+    assert.ok((css.replace(/[^{}]*\.(st-body|chattext):has\(img, video\)[^{]*\{[^}]*\}/g, "").match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창)`);
   }
   const c = buildStealth("claudecode").css;
-  assert.ok(c.includes("body[x-dusk-st] {") && !c.includes('body:has('));
+  assert.ok(c.includes("body[x-dusk-st] {") && !/(^|[\s,}])body:has\(/.test(c));
   assert.ok(c.includes("min-width: 761px"), "모바일에선 원래 사이드바를 숨기지 않는다");
   assert.ok(!buildStealth("gpt").css.includes("x-dusk-st"));
   assert.ok(c.includes(".st-msg { width: 100%; max-width: var(--st-w); margin: 0 auto;"));
@@ -214,4 +214,12 @@ test("사이드바 감시는 가볍다: 봇 전체 읽기는 번호가 바뀔 �
   assert.equal(heavy, 2);
   assert.ok(api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb").html.includes("st-sb-item on"));
   await sh.destroy();
+});
+
+test("이미지는 '명령어 N개 실행함' 한 줄로 접힌다(N은 1~9)", () => {
+  const css = buildStealth("claude", { hideImages: true }).css;
+  for (let n = 1; n <= 9; n++) assert.ok(css.includes(`명령어 ${n}개 실행함`), `N=${n}`);
+  assert.match(css, /\.st-body img[^{]*\{ display: none !important/);
+  assert.match(css, /:hover img/);
+  assert.ok(!buildStealth("claude", { hideImages: false }).css.includes("실행함  ▸"));
 });

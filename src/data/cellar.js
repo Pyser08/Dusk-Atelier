@@ -63,15 +63,15 @@ export async function cellarRequest(api, { url, via = "native" }, path, { method
 
 // 화면이 여러 번 물어도 1분에 한 번만 실제로 확인한다. 동시에 물으면 한 번만 보낸다.
 export function createCellar(api, { now = () => Date.now() } = {}) {
-  let last = null, at = 0, pending = null;
+  let last = null, at = 0, pending = null, fails = 0;
   return {
     peek: () => last,
     async status({ fresh = false } = {}) {
-      if (!fresh && last && now() - at < (last.ok ? TTL : FAIL_TTL)) return last;
+      if (!fresh && last && now() - at < (last.ok ? TTL : Math.min(FAIL_TTL * 2 ** Math.max(0, fails - 1), 60e3))) return last;
       if (pending) return pending;
-      pending = (async () => { try { const url = await loadCellarUrl(api); last = await probeCellar(api, url); at = now(); return last; } finally { pending = null; } })();
+      pending = (async () => { try { const url = await loadCellarUrl(api); last = await probeCellar(api, url); at = now(); fails = last.ok ? 0 : fails + 1; return last; } finally { pending = null; } })();
       return pending;
     },
-    forget() { last = null; at = 0; },
+    forget() { last = null; at = 0; fails = 0; },
   };
 }

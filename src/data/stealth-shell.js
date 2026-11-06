@@ -111,6 +111,7 @@ export function topHtml(model) {
 }
 
 // ── 화면에 붙이기 ──
+export var shellInfo = { draws: 0, error: "" };   // 진단용: 마지막으로 그린 결과
 var ROOT = "stealth-sb", NOTE = "stealth-note", TOP = "stealth-top", POP = "stealth-pop", STY = "stealth-shell-css";
 
 /**
@@ -156,7 +157,7 @@ export function createShell(api, opts = {}) {
   }
   async function draw(force) {
     try {
-      const d = await ensureDoc(); if (!d) return;
+      const d = await ensureDoc(); if (!d) { shellInfo.error = "리스 화면 문서에 접근하지 못했어요"; return; }
       const { ci, ti, char } = await chatInfo(force);
       const user = opts.user || (opts.getUser ? await opts.getUser() : await userName());
       if (dead) return;
@@ -178,8 +179,9 @@ export function createShell(api, opts = {}) {
         if (b) await b.addEventListener("click", () => switchChat(ci, r.index).catch((e) => log("채팅 전환 실패", e?.message ?? e)));
       }
       const g = await d.querySelector(`[x-dusk="${ROOT}"] [data-st-gear]`);
+      shellInfo.draws++; shellInfo.error = "";
       if (g) await g.addEventListener("click", () => togglePop().catch((e) => log("설정 열기 실패", e?.message ?? e)));
-    } catch (e) { log("스텔스 사이드바 그리기 실패", e?.message ?? e); }
+    } catch (e) { shellInfo.error = String(e?.message ?? e); log("스텔스 사이드바 그리기 실패", e?.message ?? e); }
   }
   async function switchChat(ci, idx) {
     const char = await api.getCharacterFromIndex(ci);
