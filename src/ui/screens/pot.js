@@ -25,7 +25,9 @@ export async function renderPot(ctx) {
 // 리수폿 개요(상태·동작·캐릭터별 사용). 장기 기억 → 리수폿 탭의 '개요'에서도 쓴다. 반환: {nodes, env, cur, idx} 또는 {nodes}
 export async function potOverview(ctx, redraw) {
   const host = h("div"); const out = await draw(ctx, host, redraw, { bare: true });
-  return out ?? { nodes: [...host.childNodes] };
+  // 열린 채팅 없음·봇 못 찾음 같은 이른 반환은 화면 요소를 돌려준다 → 그린 내용(머리 줄 제외)을 목록으로
+  if (Array.isArray(out?.nodes)) return out;
+  return { nodes: [...host.childNodes].filter((n) => !n.classList?.contains("rb-phead")) };
 }
 async function draw(ctx, host, redraw, { bare = false } = {}) {
   const M = ctx.memory;

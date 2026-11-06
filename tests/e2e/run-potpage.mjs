@@ -24,6 +24,10 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 고급 탭: 저장·기록·되돌리기`, /저장 위치/.test(await page.locator(".rb-pot-pane").textContent()) && /되돌리기/.test(await page.locator(".rb-pot-pane").textContent()));
   await page.locator("#rb-mem-pot .rb-phead [aria-label='장기 기억으로']").first().click(); await page.waitForTimeout(700);
   ok(`[${tag}] 장기 기억으로 돌아가기`, (await page.locator("#rb-mem-go-pot").count()) === 1);
+  // 열린 채팅이 없을 때도 리수폿 화면이 열려야 한다(예전: "a.nodes is not iterable")
+  await page.evaluate(() => { window.__api.getCurrentChatIndex = async () => -1; window.__api.getCurrentCharacterIndex = async () => -1; const m = __app.ctx.state.mem; m.page = "pot"; m.potTab = "home"; __app.ctx.go("memory"); });
+  await page.waitForTimeout(1200);
+  ok(`[${tag}] 열린 채팅 없음: 리수폿 화면이 안내와 함께 열림`, (await page.locator("#rb-mem-pot").count()) === 1 && /열린 채팅이 없어요/.test(await page.locator("#rb-mem-pot").textContent()), await page.locator(".rb-main").textContent());
   ok(`[${tag}] 오류 없음`, !errs.length, errs.join(";"));
   await page.close();
 }
