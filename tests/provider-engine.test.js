@@ -342,3 +342,31 @@ test("Gemini 미디어 해상도와 Claude 생각 표시", () => {
   assert.equal(g0.body.generationConfig?.mediaResolution, undefined);
   assert.equal(normalizeProfile({ id: "p", connectionId: "g", model: "m", mediaResolution: "weird" }).mediaResolution, "");
 });
+
+// 7단계(2.0.0): 캐시 고급 — 격자 캐시 포인트·캐시 학습(Claude)
+import { turnHashesOf } from "../src/engine/provider/build.js";
+const claudeConn = () => normalizeConnection({ id: "a", kind: "anthropic" });
+const claudeProf = (cache) => normalizeProfile({ id: "p", connectionId: "a", model: "claude-sonnet-4", cache: { claude: "5m", ...cache } });
+const chat = (n) => [{ role: "system", content: "SYS" }, ...Array.from({ length: n }, (_, i) => ({ role: i % 2 ? "char" : "user", content: `m${i}` }))];
+const marked = (body) => body.messages.map((m, i) => (m.content.some((b) => b.cache_control) ? i : -1)).filter((i) => i >= 0);
+test("격자 캐시 포인트: 정해진 간격의 마지막 지점에 고정, 대화가 길어져도 같은 자리", () => {
+  const mk = (n) => buildRequest({ conn: claudeConn(), profile: claudeProf({ grid: 4, breakpoints: 1 }), messages: chat(n), cred: "K" }).body;
+  const a = marked(mk(10)), b = marked(mk(11));
+  assert.ok(a.includes(7) && b.includes(7));        // 인덱스 7(8번째 메시지)에 격자 포인트
+  assert.ok(marked(mk(14)).includes(11));            // 더 길어지면 다음 격자
+  assert.ok(marked(mk(12)).length <= 3);             // 시스템 1개 + 사용자 + 격자 ≤ 4
+});
+test("격자를 끄면(0) 기존과 같음", () => {
+  const off = buildRequest({ conn: claudeConn(), profile: claudeProf({ grid: 0 }), messages: chat(10), cred: "K" }).body;
+  const base = buildRequest({ conn: claudeConn(), profile: claudeProf({}), messages: chat(10), cred: "K" }).body;
+  assert.deepEqual(marked(off), marked(base));
+});
+test("캐시 학습: 이전 요청과 같은 앞부분 끝에 중단점", () => {
+  const prev = turnHashesOf(chat(8));
+  const next = chat(10); next[6] = { role: "char", content: "바뀐 메시지" };   // turns 인덱스 5부터 달라짐(0~4는 같음)
+  const body = buildRequest({ conn: claudeConn(), profile: claudeProf({ learn: true, breakpoints: 1 }), messages: next, cred: "K", prevTurnHashes: prev }).body;
+  assert.ok(marked(body).includes(4), JSON.stringify(marked(body)));
+  const none = buildRequest({ conn: claudeConn(), profile: claudeProf({ learn: true, breakpoints: 1 }), messages: next, cred: "K" }).body;   // 이전 기록 없으면 학습 표시 없음
+  assert.ok(!marked(none).includes(4));
+  assert.equal(normalizeProfile({ id: "p", connectionId: "a", model: "m", cache: { grid: 99, learn: 1 } }).cache.grid, 99);
+});

@@ -1,7 +1,7 @@
 // 프로바이더 실행기 (v1.9.3): 요청 받기 → 프로필 고르기 → 키 고르기 → 보내기 → 해독 → 대체·재시도 → 사용량 기록.
 import { purposeOfMode, kindOf } from "../../engine/provider/catalog.js";
 import { resolve, chainOrder } from "../../engine/provider/profile.js";
-import { buildRequest } from "../../engine/provider/build.js";
+import { buildRequest, turnHashesOf } from "../../engine/provider/build.js";
 import { createStreamDecoder, parseResponse } from "../../engine/provider/sse.js";
 import { detectRepetition, trimRepetition } from "../../engine/provider/repeat.js";
 import { createKeyPool } from "../../engine/provider/keypool.js";
@@ -21,7 +21,8 @@ export const parseToolCalls = (text) => [...String(text).matchAll(TOOL_RE)].map(
 export const stripToolCalls = (text) => String(text).replace(TOOL_RE, "").trim();
 
 export function createProviderRunner({ api, store, vault, transport, gemcache = null, risuTools = null, toolExec = null, vertex = null, copilot = null, currentChar = async () => null, notify = () => {}, board = null, errlog = null, now = () => Date.now(), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), log = () => {} }) {
-  const pools = new Map(); const prevAnatomy = new Map(); const reasoningMemo = new Map(); let warnedDay = "";
+  const pools = new Map(); const prevAnatomy = new Map(); const prevTurns = new Map();   // 캐시 학습: 채팅·용도·프로필마다 직전 요청의 턴 해시
+  const reasoningMemo = new Map(); let warnedDay = "";
   const poolFor = async (conn, cfg) => {
     const vals = await vault.values(conn.keyIds), sig = `${conn.id}|${conn.keyMode}|${vals.join("\n")}`;
     let p = pools.get(conn.id); if (!p || p.sig !== sig) { p = { sig, pool: createKeyPool(vals, { mode: conn.keyMode, now }) }; pools.set(conn.id, p); }
@@ -46,7 +47,8 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
     const c = await credential(conn, pool, signal, aff);
     let gc = { messages }; if (gemcache && conn.kind === "google") gc = await gemcache.prepare({ conn, profile, messages, cred: c.cred, transport, signal });
     const upstreamStream = wantStream !== "off";
-    let reqObj = buildRequest({ conn, profile, messages: gc.messages, stream: upstreamStream, cred: c.copilot ? "" : c.cred, cachedContent: gc.cachedContent, reasoningState: extra.reasoningState });
+    const learnKey = `${cha?.chaId ?? ""}|${purpose}|${profile.id}`, learnOn = !!profile.cache?.learn; const prevTurnHashes = learnOn ? prevTurns.get(learnKey) ?? null : null; if (learnOn) { try { prevTurns.set(learnKey, turnHashesOf(gc.messages)); } catch { /* 학습만 건너뜀 */ } }
+    let reqObj = buildRequest({ conn, profile, messages: gc.messages, prevTurnHashes, stream: upstreamStream, cred: c.copilot ? "" : c.cred, cachedContent: gc.cachedContent, reasoningState: extra.reasoningState });
     if (c.copilot) { reqObj = { ...reqObj, url: c.copilot.origin + new URL(reqObj.url).pathname, headers: { ...reqObj.headers, ...c.copilot.headers } }; }
     if (cfg.debug?.preview) notify(`요청 미리보기: ${profile.model} · ${gc.messages.length}개 메시지`);
     const t0 = now(), secrets = [c.cred];

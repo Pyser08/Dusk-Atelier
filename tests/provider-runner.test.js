@@ -219,3 +219,14 @@ test("성공한 요청도 기록에 한 줄 남고 내용은 저장 안 함", as
   const r = await h.runner.handle(req({ mode: "other" })); if (typeof r.content !== "string") await collect(r.content); delete harness.extra;
   const rows = errlog.list(); assert.equal(rows.length, 1); assert.equal(rows[0].kind, "ok"); assert.equal(rows[0].status, 200); assert.ok(!JSON.stringify(rows).includes("비밀 본문"));
 });
+
+test("캐시 학습: 두 번째 요청에 앞부분 끝 표시(Claude)", async () => {
+  const an = (t) => `event: content_block_delta\ndata: {"type":"content_block_delta","delta":{"type":"text_delta","text":${JSON.stringify(t)}}}\n\nevent: message_stop\ndata: {"type":"message_stop"}\n\n`;
+  const h = harness({ keys: { k1: "sk-ant-key-1111" }, cfgOver: { connections: [{ id: "c1", kind: "anthropic", keyIds: ["k1"] }], profiles: [{ id: "p1", connectionId: "c1", model: "claude-sonnet-4", cache: { claude: "5m", learn: true, breakpoints: 1 } }] }, script: [sseRes([an("a")]), sseRes([an("b")])] }); await h.ready;
+  const turns = (n) => [{ role: "system", content: "S" }, ...Array.from({ length: n }, (_, i) => ({ role: i % 2 ? "char" : "user", content: `m${i}` }))];
+  const a = await h.runner.handle(req({ prompt_chat: turns(4) })); if (typeof a.content !== "string") await collect(a.content);
+  const second = turns(6); second[4] = { role: "user", content: "바뀜" };
+  const b = await h.runner.handle(req({ prompt_chat: second })); if (typeof b.content !== "string") await collect(b.content);
+  const marks = (c) => c.req.body.messages.map((m, i) => (m.content.some((x) => x.cache_control) ? i : -1)).filter((i) => i >= 0);
+  assert.ok(marks(h.calls[1]).includes(2), JSON.stringify(marks(h.calls[1])));   // 앞 3개(m0~m2)가 같았으니 인덱스 2
+});
