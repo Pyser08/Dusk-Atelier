@@ -6,8 +6,10 @@ var TOKEN = String.raw`(?:<img\b[^>]*>|<video\b[^>]*>[\s\S]*?<\/video>|!\[[^\]\n
 var GAP = String.raw`(?:\s|<br\s*\/?>)*`;
 var RUN = new RegExp(`${TOKEN}(?:${GAP}${TOKEN})*`, "gi");
 // 지금 접을지(스텔스가 켜져 있고 '본문 이미지 숨기기'가 켜졌을 때). syncShell이 갱신한다
-export var foldState = { on: false };
-export var foldDisplay = (text) => (foldState.on ? foldImages(text) : text);
+export var foldState = { on: false, onChange: null };
+export function setFoldOn(v) { v = !!v; if (v === foldState.on) return; foldState.on = v; try { foldState.onChange?.(v); } catch { /* 무시 */ } }
+var QUICK = /<img|<video|!\[|\{\{(?:img|image|inlay|asset|emotion)/i;   // 이미지가 없는 글은 정규식을 돌리지 않는다
+export var foldDisplay = (text) => (foldState.on && typeof text === "string" && QUICK.test(text) ? foldImages(text) : text);
 export var FOLD_MARK = "st-fold";
 
 /** 글 → 1~9 (같은 글이면 늘 같은 수: 다시 그려도 바뀌지 않게) */

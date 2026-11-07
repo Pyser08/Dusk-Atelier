@@ -1,5 +1,5 @@
 import { PRESETS, mergeLabels } from "./stealth.js";
-import { foldState } from "./stealth-fold.js";
+import { setFoldOn } from "./stealth-fold.js";
 // 더스크 스텔스 '껍데기': 클로드·클로드 코드 모양의 왼쪽 사이드바와 위쪽 제목 줄을 플러그인이 리스 화면 문서에 직접 그린다.
 // · 최근 항목 = 지금 열린 봇의 채팅 목록(누르면 그 채팅으로)
 // · 아래 설정 = 순정 리스 사이드바에 있던 모듈 토글(customModuleToggle) 켜고 끄기
@@ -58,7 +58,6 @@ var ico = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fi
 
 export var SHELL_CSS = `
 html body [x-dusk][x-vis="0"]{display:none !important}
-body:not(:has(.text-input-area)) [x-dusk="stealth-sb"],body:not(:has(.text-input-area)) [x-dusk="stealth-top"],body:not(:has(.text-input-area)) [x-dusk="stealth-note"]{display:none !important}
 [x-c~="st-sb-fold"]{font-size:16px;line-height:1;font-weight:600;width:28px;height:28px}
 [x-dusk="stealth-sb"][x-fold="1"]{top:auto;width:auto;left:10px;bottom:10px;border:1px solid var(--st-line2);border-radius:10px}
 [x-dusk="stealth-sb"][x-fold="1"] > :not([x-c~="st-sb-foot"]){display:none}
@@ -110,7 +109,8 @@ body[x-dusk-fold="1"] [x-dusk="stealth-note"]{left:0}
 [x-dusk="stealth-note"]{display:none}
 [x-dusk="stealth-sb"][x-fold="1"]{display:none}
 [x-dusk="stealth-sb"][x-fold="0"]{width:min(86vw,320px);z-index:9200;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
-body[x-dusk-st] [x-dusk="stealth-top"]{display:flex !important;left:0;height:56px;padding:0 6px 0 4px;gap:2px;border-bottom:0;pointer-events:auto;font-size:16px}
+body[x-dusk-st] [x-dusk="stealth-top"]{display:flex !important;left:0;height:56px;padding:0 6px 0 4px;gap:2px;border-bottom:0;pointer-events:none;font-size:16px}
+[x-c~="st-top-more"]{pointer-events:auto}
 [x-c~="st-top-btn"]{display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex:none;border:0;background:transparent;color:var(--st-fg);border-radius:10px;cursor:pointer;padding:0}
 [x-c~="st-top-ico"]{display:inline-flex;color:var(--st-fg2)}
 [x-dusk="stealth-top"] b{font-weight:600;color:var(--st-fg)}
@@ -139,7 +139,7 @@ export function topHtml(model) {
   if (!t && !model.mobile) return "";
   // 넓은 화면: 제목 줄만. 좁은 화면(모바일): ≡ · [아이콘] 제목 / 채팅 · 연필 · ⋮ — 클로드 앱처럼 한 줄
   const one = "display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap";
-  return `<button type="button" x-c="st-top-btn" x-st-menu="1" aria-label="사이드바">${ico("menu", 22)}</button>`
+  return `<button type="button" x-c="st-top-btn" x-st-menu="1" aria-hidden="true" tabindex="-1">${ico("menu", 22)}</button>`
     + `<span x-c="st-top-t" style="${one}">${t ? `<span x-c="st-top-ico" style="flex:none;line-height:0">${ico("stack", 17)}</span><b style="flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(t)}</b>` : ""}${model.sub ? `<span x-c="st-top-sub" style="flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis">/&nbsp; ${esc(model.sub)}</span>` : ""}</span>`
     + `<span x-c="st-top-btn st-top-deco">${ico("edit", 21)}</span>`
     + `<button type="button" x-c="st-top-btn st-top-more" x-st-more="1" aria-label="스텔스 상단 줄 접기">${ico("vdots", 21)}</button>`;
@@ -230,8 +230,6 @@ export function createShell(api, opts = {}) {
       }
       const g = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-gear]`);
       const topEl = await d.querySelector(`[x-dusk="${TOP}"]`); await topEl?.setAttribute("x-plain", plain ? "1" : "0");
-      const mb = await d.querySelector(`[x-dusk="${TOP}"] [x-st-menu]`);
-      if (mb) await mb.addEventListener("click", () => toggleFold(d));
       const more = await d.querySelector(`[x-dusk="${TOP}"] [x-st-more]`);
       if (more) await more.addEventListener("click", async () => { plain = !plain; try { const t = await d.querySelector(`[x-dusk="${TOP}"]`); await t?.setAttribute("x-plain", plain ? "1" : "0"); } catch (e) { log("상단 줄 접기 실패", e?.message ?? e); } });
       const fb = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-fold]`);
@@ -312,7 +310,7 @@ export function createShell(api, opts = {}) {
 var current = null;
 export async function syncShell(api, state, log) {
   const id = state?.active, P = id ? PRESETS[id] : null;
-  foldState.on = !!(P && state.hideImages !== false);
+  setFoldOn(!!(P && state.hideImages !== false));
   const want = P?.shell ? id : null;
   if (current) { const c = current; current = null; await c.shell.destroy().catch(() => {}); }
   if (!want) return null;

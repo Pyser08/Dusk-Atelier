@@ -310,9 +310,21 @@ test("작업실에 더스크 스텔스 탭이 있다", async () => {
   assert.ok(t && t.addon === "stealth" && t.section === "work");
 });
 
-test("채팅 입력칸이 없는 화면에서는 CSS로도 바로 감춘다(그리기 주기를 기다리지 않음)", async () => {
+test("느려짐 방지: body 전체에 거는 :has 규칙이 없고, 이미지 없는 글은 접기 정규식을 건너뛴다", async () => {
   const { SHELL_CSS } = await import("../src/data/stealth-shell.js");
-  assert.match(SHELL_CSS, /body:not\(:has\(\.text-input-area\)\) \[x-dusk="stealth-top"\]/);
+  assert.ok(!/body:not\(:has/.test(SHELL_CSS));
+  const { foldDisplay, setFoldOn } = await import("../src/data/stealth-fold.js");
+  setFoldOn(true);
+  assert.equal(foldDisplay("그냥 글"), "그냥 글");
+  assert.match(foldDisplay('<img src="a">'), /st-fold/);
+  setFoldOn(false);
+  assert.equal(foldDisplay('<img src="a">'), '<img src="a">');
+});
+
+test("모바일 상단 줄은 손가락을 통과시켜 리스 사이드바 버튼이 눌리고, ⋮만 받는다", async () => {
+  const { SHELL_CSS } = await import("../src/data/stealth-shell.js");
+  assert.match(SHELL_CSS, /body\[x-dusk-st\] \[x-dusk="stealth-top"\]\{[^}]*pointer-events:none/);
+  assert.match(SHELL_CSS, /\[x-c~="st-top-more"\]\{pointer-events:auto\}/);
 });
 
 test("접힘을 펼치면 안의 이미지가 보이고, 접힘 밖 이미지만 숨긴다", () => {

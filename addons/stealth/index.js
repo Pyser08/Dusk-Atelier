@@ -3,7 +3,7 @@
 import { renderStealth } from "../../src/ui/screens/stealth.js";
 import { loadStealth } from "../../src/data/stealth-apply.js";
 import { syncShell, setDuskOpen, refreshDuskOpen } from "../../src/data/stealth-shell.js";
-import { foldDisplay } from "../../src/data/stealth-fold.js";
+import { foldDisplay, foldState } from "../../src/data/stealth-fold.js";
 
 export async function activate(api, ctx) {
   const ext = ctx.ext;
@@ -29,9 +29,16 @@ export async function activate(api, ctx) {
   const sizeTimer = setInterval(sizeCheck, 1000);
   sizeCheck();
   // 답변 속 이미지를 '명령어 N개 실행함' 접힘으로(화면에만, 저장된 채팅은 그대로)
+  // 훅은 이미지 접기가 켜져 있을 때만 단다(달려 있으면 메시지마다 플러그인을 거쳐 채팅 열기가 느려진다)
   let hooked = false;
-  try { if (typeof api.addRisuScriptHandler === "function") { await api.addRisuScriptHandler("display", foldDisplay); hooked = true; } } catch (e) { console.log("[Dusk Atelier] 스텔스 이미지 접기 훅 실패", e?.message ?? e); }
+  const setHook = async (on) => {
+    try {
+      if (on && !hooked && typeof api.addRisuScriptHandler === "function") { await api.addRisuScriptHandler("display", foldDisplay); hooked = true; }
+      else if (!on && hooked) { hooked = false; await api.removeRisuScriptHandler?.("display", foldDisplay); }
+    } catch (e) { console.log("[Dusk Atelier] 스텔스 이미지 접기 훅 실패", e?.message ?? e); }
+  };
+  foldState.onChange = (on) => { setHook(on); };
   // 켜 둔 클로드 계열 모양이면 사이드바를 다시 그린다(화면은 새로고침마다 비어 있으므로)
   loadStealth(api).then((st) => syncShell(api, st)).catch((e) => console.log("[Dusk Atelier] 스텔스 사이드바 시작 실패", e?.message ?? e));
-  return { async deactivate() { off.forEach((f) => f()); clearInterval(sizeTimer); try { globalThis.removeEventListener?.("resize", sizeCheck); } catch { /* 없음 */ } if (wrapped) { try { api.showContainer = orig.show; api.hideContainer = orig.hide; } catch { /* 그대로 */ } } setDuskOpen(false); await syncShell(api, null).catch(() => {}); if (hooked) { try { await api.removeRisuScriptHandler?.("display", foldDisplay); } catch { /* 이미 없음 */ } } } };
+  return { async deactivate() { off.forEach((f) => f()); clearInterval(sizeTimer); try { globalThis.removeEventListener?.("resize", sizeCheck); } catch { /* 없음 */ } if (wrapped) { try { api.showContainer = orig.show; api.hideContainer = orig.hide; } catch { /* 그대로 */ } } setDuskOpen(false); await syncShell(api, null).catch(() => {}); foldState.onChange = null; await setHook(false); } };
 }
