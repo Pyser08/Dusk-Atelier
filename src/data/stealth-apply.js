@@ -102,6 +102,7 @@ export async function runDiagnosis(api) {
   if (shellState()) info.shell += ` · ${shellFlags()}`;
   const target = await detectTarget(doc, api).catch(() => null);
   info.layout = await layoutTrace(doc).catch((e) => [`배치 추적 실패: ${e?.message ?? e}`]);
+  info.fold = await foldTrace(doc).catch((e) => [`접힘 추적 실패: ${e?.message ?? e}`]);
   return { counts, db: info, target: target ? (TARGETS[target]?.label ?? target) : null, lines: diagnose(counts, info) };
 }
 
@@ -119,4 +120,21 @@ export async function layoutTrace(doc, max = 16) {
     el = await el.getParent?.().catch(() => null);
   }
   return ["배치 추적(글 → body):", ...out];
+}
+
+// 접힘 추적: 줄·이미지가 실제로 화면에 크기를 갖는지(있어도 0이면 안 보인다). 첫 상자 몇 개는 부모 상자 폭까지 적는다.
+export async function foldTrace(doc, max = 4) {
+  const items = async (sel) => { const l = await doc.querySelectorAll(sel); const n = typeof l?.length === "function" ? await l.length() : l?.length ?? 0; const out = []; for (let i = 0; i < n; i++) out.push(typeof l.at === "function" ? await l.at(i) : l[i]); return out; };
+  const rect = async (el) => { const r = await el?.getBoundingClientRect?.().catch?.(() => null); return r ? { w: Math.round(r.width), h: Math.round(r.height), l: Math.round(r.left), t: Math.round(r.top) } : null; };
+  const labs = await items("[x-st-fw] > [x-st-fl]"), shown = [];
+  for (const el of labs) { const r = await rect(el); if (r && r.w > 0 && r.h > 0) shown.push(r); }
+  const media = await items('[x-st-fw][x-open="0"] > :not([x-st-fl])'); let leak = 0;
+  for (const el of media) { const r = await rect(el); if (r && r.w > 2 && r.h > 2) leak++; }
+  const out = ["접힘 추적:", `크기가 있는 접힘 줄 ${shown.length}/${labs.length}`, `접혔는데도 보이는 이미지 ${leak}/${media.length}`];
+  for (const el of labs.slice(0, max)) {
+    const r = await rect(el), box = await el.getParent?.().catch(() => null), b = await rect(box), pa = await rect(await box?.getParent?.().catch(() => null));
+    const pcls = String(await (await box?.getParent?.().catch(() => null))?.getClassName?.().catch(() => "") ?? "").trim().replace(/\s+/g, ".").slice(0, 50);
+    out.push(`줄 ${r ? `${r.w}×${r.h} (${r.l},${r.t})` : "?"} · 상자 ${b ? `${b.w}×${b.h}` : "?"} · 부모${pcls ? "." + pcls : ""} ${pa ? `${pa.w}×${pa.h}` : "?"}`);
+  }
+  return out;
 }

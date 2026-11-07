@@ -438,3 +438,20 @@ test("순정 사이드바를 열면 스텔스 사이드바가 숨고, 닫으면 
   assert.equal(await nativeSidebarOpen(doc(0, 80)), true, "둘 중 하나라도 보이면 열림");
   assert.equal(await nativeSidebarOpen({ querySelectorAll: async () => { throw new Error("x"); } }), false);
 });
+
+test("화면 진단 접힘 추적: 크기가 있는 접힘 줄·접혔는데 보이는 이미지를 센다", async () => {
+  const { foldTrace } = await import("../src/data/stealth-apply.js");
+  const el = (w, h, parent = null, cls = "") => ({ getBoundingClientRect: async () => ({ width: w, height: h, left: 0, top: 0 }), getParent: async () => parent, getClassName: async () => cls });
+  const par = el(300, 40, null, "card"), box = el(300, 20, par), lab0 = el(0, 0, box), lab1 = el(120, 21, box);
+  const doc = { querySelectorAll: async (s) => (s.includes("> [x-st-fl]") ? [lab0, lab1] : [el(200, 100), el(1, 1)]) };
+  const out = await foldTrace(doc);
+  assert.equal(out[1], "크기가 있는 접힘 줄 1/2");
+  assert.equal(out[2], "접혔는데도 보이는 이미지 1/2");
+  assert.match(out[3], /줄 0×0 .* 상자 300×20 · 부모\.card 300×40/);
+});
+
+test("클로드 계열은 사이드바 CSS를 리스 커스텀 CSS에도 넣는다(<style>을 못 넣는 판에서도 사이드바 모양이 산다)", async () => {
+  const { SHELL_CSS } = await import("../src/data/stealth-shell.js");
+  for (const id of ["claude", "claudecode"]) assert.ok(buildStealth(id).css.includes(SHELL_CSS), id);
+  assert.ok(!buildStealth("gpt").css.includes('[x-dusk="stealth-sb"]'), "사이드바 없는 모양엔 안 넣음");
+});

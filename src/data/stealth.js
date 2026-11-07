@@ -2,6 +2,7 @@
 // 로고·상표 이미지는 쓰지 않고 색·배치·글꼴 분위기만 따른다. 가짜 문구(제목·모델·도구 줄)는 설정에서 바꾼다.
 // 결과는 기존 테마 시스템(data/themes.js)의 테마 한 개({css, html, useTokens:false})로 만들어 같은 길로 적용·되돌린다.
 import { TARGETS } from "./themes.js";
+import { SHELL_CSS } from "./stealth-shellcss.js";
 
 export var STEALTH_KEY = "rbm:stealth:v1";
 export var STEALTH_PREFIX = "스텔스 · ";
@@ -207,6 +208,7 @@ body[x-dusk-st][x-dusk-fold="0"] { padding-left: var(--st-sw) !important; box-si
 .st-body .chattext hr { border-color: var(--st-line) !important; }
 .st-body .chattext blockquote { border-left: 3px solid var(--st-line2) !important; color: var(--st-fg2) !important; }`,
     hideImages ? imageFoldCss() : "",
+    P.shell && !opts.minimal ? `/* Dusk Stealth 사이드바 */\n${SHELL_CSS}` : "",
     code ? `.st-user .st-body { max-width: 100%; background: transparent; border-radius: 0; padding: 0 0 0 1.4em; text-indent: -1.4em; }
 .st-user .st-body::before { content: "›"; color: var(--st-accent); font-weight: 700; margin-right: .6em; }
 .st-char .st-body::before { content: "•"; color: var(--st-dim); margin-right: .6em; }

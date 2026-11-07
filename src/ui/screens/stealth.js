@@ -41,7 +41,7 @@ export async function renderStealth(ctx) {
     if (delay) await new Promise((r) => setTimeout(r, delay * 1000));
     try {
       const r = await runDiagnosis(ctx.api);
-      diag = [`계열: ${r.target ?? "알 수 없음"}`, ...Object.entries(r.counts).map(([k, v]) => `${k}: ${v}`), ...(r.db ? [`리스 설정: 채팅 테마 ${r.db.theme || "(없음)"}, 커스텀 CSS ${r.db.cssLen}자, 채팅 HTML ${r.db.htmlLen}자`] : []), "", ...r.lines, ...(r.db?.layout ? ["", ...r.db.layout] : [])].join("\n");
+      diag = [`계열: ${r.target ?? "알 수 없음"}`, ...Object.entries(r.counts).map(([k, v]) => `${k}: ${v}`), ...(r.db ? [`리스 설정: 채팅 테마 ${r.db.theme || "(없음)"}, 커스텀 CSS ${r.db.cssLen}자, 채팅 HTML ${r.db.htmlLen}자`] : []), "", ...r.lines, ...(r.db?.fold ? ["", ...r.db.fold] : []), ...(r.db?.layout ? ["", ...r.db.layout] : [])].join("\n");
     } catch (e) { diag = `진단하지 못했어요: ${e?.message ?? e}`; }
     redraw?.();
   };
