@@ -86,7 +86,7 @@ test("리스의 스크롤 컨테이너·전체 요소를 건드리지 않는다(
   const c = buildStealth("claudecode").css;
   assert.ok(c.includes('body[x-dusk-st][x-dusk-fold="0"] {') && !/(^|[\s,}])body:has\(/.test(c));
   assert.ok(!/\.rs-sidebar[^{]*\{[^}]*display:\s*none/.test(c), "클로드 계열은 순정 사이드바를 CSS로 숨기지 않는다(열면 스텔스 쪽이 숨는다)");
-  assert.ok(!buildStealth("gemini").css.includes("x-dusk-st"));
+  assert.ok(PRESET_IDS.every((p) => buildStealth(p).css.includes("x-dusk-st")), "모든 모양에 사이드바(11-08)");
   assert.ok(c.includes(".st-msg { width: 100%; max-width: var(--st-w); margin: 0 auto;"));
 });
 test("토글 정의 해석: 켜기·고르기·글, 구분선·그룹은 건너뜀, 같은 key는 한 번", () => {
@@ -111,7 +111,7 @@ test("사이드바 HTML: 이스케이프·현재 채팅 표시·코드 탭은 �
   const h1 = shellHtml({ kind: "claude", user: "<b>나</b>", rows: [{ index: 0, name: "<script>", current: true }] });
   assert.ok(!h1.includes("<script>") && !h1.includes("<b>나</b>")); assert.ok(h1.includes("st-sb-item st-on") && h1.includes("최근 항목") && h1.includes("data-st-gear"));
   const h2 = shellHtml({ kind: "code", user: "p", rows: [] });
-  assert.ok(h2.includes("시작한 세션이 여기에 표시됩니다") && !h2.includes("최근 항목"));
+  assert.ok(h2.includes("시작한 세션이 여기에 표시됩니다") && h2.includes("최근 항목"), "클로드 코드도 목록 제목(7-3)");
   assert.equal(topHtml({ title: "" }), ""); assert.ok(topHtml({ title: "A", sub: "B" }).includes("B"));
   assert.ok(SHELL_KINDS.claude && SHELL_KINDS.code);
 });
@@ -179,8 +179,8 @@ test("syncShell: 껍데기가 있는 모양이면 켜고, 없는 모양·끔이�
   const api = shellApi();
   await syncShell(api, { active: "claudecode", labels: {} }, () => {});
   assert.equal(shellState(), "claudecode");
-  await syncShell(api, { active: "gemini", labels: {} }, () => {});
-  assert.equal(shellState(), null);
+  await syncShell(api, { active: "nope", labels: {} }, () => {});
+  assert.equal(shellState(), null, "모르는 모양은 껍데기 없음");
   await syncShell(api, { active: "claude", labels: {} }, () => {});
   await syncShell(api, null);
   assert.equal(shellState(), null);
@@ -459,7 +459,7 @@ test("화면 진단 접힘 추적: 크기가 있는 접힘 줄·접혔는데 보
 test("클로드 계열은 사이드바 CSS를 리스 커스텀 CSS에도 넣는다(<style>을 못 넣는 판에서도 사이드바 모양이 산다)", async () => {
   const { SHELL_CSS } = await import("../src/data/stealth-shell.js");
   for (const id of ["claude", "claudecode"]) assert.ok(buildStealth(id).css.includes(SHELL_CSS), id);
-  assert.ok(!buildStealth("gemini").css.includes('[x-dusk="stealth-sb"]'), "사이드바 없는 모양엔 안 넣음");
+  assert.ok(PRESET_IDS.every((p) => buildStealth(p).css.includes('[x-dusk="stealth-sb"]')), "모든 모양에 넣음");
 });
 
 test("사이드바 CSS는 x-c로 찾고(요소를 하나씩 만들어 붙이므로), 설정 팝업만 class도 둔다", async () => {
@@ -488,7 +488,8 @@ test("GPT 모양(docs/STEALTH.md 7-1): 사이드바·발 두 줄 Plus·위 줄 �
   assert.match(css, /mark\[risu-mark\^="quote"\]::before \{ content: "・"/);
   assert.ok(!buildStealth("claude").css.includes("동안 처리함"), "처리 시간 줄은 GPT 모양에서만");
   for (const id of ["claude", "gpt"]) assert.match(buildStealth(id).css, /mark\[risu-mark\^="quote"\]::before \{ content: "・"/, id + ": 따옴표 ・ 줄");
-  assert.ok(!buildStealth("codex").css.includes('content: "・"'), "나머지 모양은 아직");
+  assert.ok(!buildStealth("codex").css.includes('mark[risu-mark^="quote"]::before'), "코덱스는 따옴표 줄 없음(7-2)");
+  assert.match(buildStealth("gemini").css, /::before \{ content: "◦"/, "제미나이는 구멍 뚫린 ◦(7-4)");
   const els = [{ a: {} }, { a: {} }].map((n) => ({ n, setAttribute: async (k, v) => { n.a[k] = v; } }));
   assert.equal(await markThinking({ querySelectorAll: async () => els }, () => 0.5), 2);
   assert.equal(els[0].n.a["x-st-th"], "1m 3s");
@@ -502,4 +503,21 @@ test("코덱스 모양(docs/STEALTH.md 7-2): 일반 채팅 앱(고정폭 아님)
   const css = buildStealth("codex").css;
   assert.match(css, /html, body \{ font-family: var\(--st-font\) !important; \}/, "본문은 고정폭이 아님");
   assert.ok(css.includes("6 Luna Medium") && css.includes("clamp(290px"), "모델 글·넓은 사이드바");
+});
+
+test("클로드 코드·제미나이·딥시크 모양(docs/STEALTH.md 7-3~7-5)", async () => {
+  const { shellHtml, topHtml } = await import("../src/data/stealth-shell.js");
+  const rows = [{ index: 0, name: "지금", current: true }, { index: 1, name: "예전" }];
+  const c = shellHtml({ kind: "code", user: "Susan", rows });
+  for (const t of ["st-sb-segb st-on\">", "새로 만들기", "st-sb-badge\">New", "더 보기", "st-dot", "st-sb-wchev"]) assert.ok(c.includes(t.replace(/\\/g, "")), "code: " + t);
+  assert.ok(/st-sb-segb">[^]*?st-sb-segb st-on/.test(c), "code: </> 쪽이 선택");
+  assert.ok(buildStealth("claudecode").css.includes("#4a8cff 15%"), "code: 사용자 글 파란 상자");
+  const g = shellHtml({ kind: "gemini", user: "밤뱀이", rows });
+  for (const t of ["Gemini", "라이브러리", "맞춤설정", "동영상", "전체", "st-sb-secico"]) assert.ok(g.includes(t), "gemini: " + t);
+  assert.ok(!topHtml({ kind: "gemini", title: "봇", sub: "채팅", mobile: true }).includes("채팅"), "gemini: 위 줄 글 없음");
+  const ds = shellHtml({ kind: "deepseek", user: "밤뱀이", rows });
+  for (const t of ["st-accent", "새로운 채팅", "오늘"]) assert.ok(ds.includes(t), "deepseek: " + t);
+  assert.ok(!ds.includes("st-sb-nav"), "deepseek: 메뉴 줄 없음");
+  const dt = topHtml({ kind: "deepseek", sub: "한글 자모 질문", mobile: true });
+  assert.ok(dt.includes("한글 자모 질문") && !dt.includes("st-top-fold") && !dt.includes("공유"));
 });

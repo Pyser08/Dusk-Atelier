@@ -26,10 +26,10 @@ export var PRESETS = {
   },
   claudecode: {
     label: "클로드 코드", desc: "클로드 앱의 Code 탭: 세션 목록 사이드바, 작업 입력창, 하단 모델 줄",
-    font: SANS, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "code",
+    font: SANS, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "code", extra: "code",
     light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f3f3f3", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#666666", dim: "#787878", line: "#ebebeb", line2: "#cecece" },
     dark: { bg: "#1a1a1a", side: "#1f1f1f", bubble: "#2b2b2b", inputBg: "#262626", fg: "#ececec", fg2: "#a0a0a0", dim: "#8c8c8c", line: "#2e2e2e", line2: "#3d3d3d" },
-    labels: { title: "새 세션", sub: "", tool: "파일 읽음 2회, 명령 실행함 1회", model: "Opus 5.5 중간   자동", note: "", left: "자동 ⌄      저장소 ⌄", think: "✻  Thinking…", user: "", plan: "Pro" }
+    labels: { title: "", sub: "", tool: "파일 3개 읽음, 결제 흐름 검색함", model: "Opus   매우 높음", note: "", left: "자동", think: "✻  Thinking…", user: "", plan: "Pro" }
   },
   gpt: {
     label: "GPT", desc: "흑백, 오른쪽 회색 말풍선, 알약 모양 입력창",
@@ -47,17 +47,17 @@ export var PRESETS = {
   },
   gemini: {
     label: "제미나이", desc: "연한 파랑 배경, 큰 알약 입력창, 그라데이션 인사",
-    font: `"Google Sans", "Product Sans", ${SANS}`, accent: "#4285f4", radius: 20, input: 32, width: 800,
+    font: `"Google Sans", "Product Sans", ${SANS}`, accent: "#4285f4", radius: 20, input: 32, width: 800, sidebar: "gemini", quoteDot: "◦",
     light: { bg: "#ffffff", side: "#f0f4f9", bubble: "#e9eef6", inputBg: "#f0f4f9", fg: "#1f1f1f", fg2: "#444746", dim: "#747775", line: "#e3e3e3", line2: "#c4c7c5" },
     dark: { bg: "#131314", side: "#1e1f20", bubble: "#282a2c", inputBg: "#1e1f20", fg: "#e3e3e3", fg2: "#c4c7c5", dim: "#8e918f", line: "#2d2f31", line2: "#444746" },
-    labels: { title: "새 대화", model: "2.5 Pro  ⌄", tool: "", think: "✦  생각하는 중…" }
+    labels: { title: "", sub: "", model: "Gemini 자동 모드  ⌄", tool: "", think: "생각하는 중…", plan: "" }
   },
   deepseek: {
     label: "딥시크", desc: "파란 포인트, 깔끔한 말풍선, 접힌 '생각 과정' 줄",
-    font: SANS, accent: "#4d6bfe", radius: 14, input: 18, width: 780,
+    font: SANS, accent: "#4d6bfe", radius: 14, input: 18, width: 780, sidebar: "deepseek", quoteDot: "・",
     light: { bg: "#ffffff", side: "#f9fafb", bubble: "#eff6ff", inputBg: "#f3f4f6", fg: "#0f1115", fg2: "#4b5563", dim: "#8b919a", line: "#eceef1", line2: "#d4d8de" },
     dark: { bg: "#1b1c1f", side: "#141517", bubble: "#26282d", inputBg: "#292a2e", fg: "#e8eaed", fg2: "#a0a4ab", dim: "#7a7f87", line: "#2a2c30", line2: "#3b3d43" },
-    labels: { title: "새 대화", model: "DeepThink  ·  검색", tool: "✓ 깊이 생각함 (소요 12초)", think: "생각하는 중…" }
+    labels: { title: "", sub: "", model: "깊은 생각  ·  검색", tool: "✓ 깊이 생각함 (소요 12초)", think: "생각하는 중…", plan: "" }
   }
 };
 export var PRESET_IDS = Object.keys(PRESETS);
@@ -70,8 +70,11 @@ export function gptExtraCss() {
   return `.st-msg.st-char[x-st-th]::before { content: attr(x-st-th) " 동안 처리함  ›"; display: block; color: var(--st-dim); font-size: 14px; padding: 0 0 10px; margin: 0 0 12px; border-bottom: 1px solid var(--st-line); }`;
 }
 // "…"·'…'(리스 mark risu-mark=quote*)는 줄을 바꿔 앞에 ・ (프리셋 quoteDot: 클로드·GPT, 사용자 지정 11-08)
-export var quoteDotCss = () => `.chattext mark[risu-mark^="quote"] { display: block; margin: .35em 0; }
-.chattext mark[risu-mark^="quote"]::before { content: "・"; margin-right: .3em; }`;
+export var quoteDotCss = (g = "・") => `.chattext mark[risu-mark^="quote"] { display: block; margin: .35em 0; }
+.chattext mark[risu-mark^="quote"]::before { content: "${g === true ? "・" : cssText(g)}"; margin-right: .3em; }`;
+// 클로드 코드 모양: 사용자 글은 파란 기운 상자 + 파란 글자(docs/STEALTH.md 7-3)
+export var codeExtraCss = () => `.st-user .st-body { background: color-mix(in srgb, #4a8cff 15%, var(--st-bg)) !important; border-radius: 12px !important; }
+.st-user .st-body .chattext, .st-user .st-body .chattext p, .st-user .st-body .chattext span, .st-user .st-body .chattext li { color: color-mix(in srgb, #4a8cff 75%, var(--st-fg)) !important; }`;
 export function imageFoldCss() {
   // 이미지·배경 그림마다 접힘 줄: 스텔스가 화면에서 각 이미지를 [x-st-fw] 상자로 감싸고 맨 위에 [x-st-fl] 줄을 넣는다(stealth-shell.js wrapMedia).
   // 접힌 이미지는 display:none 대신 1px로 숨긴다 — 배경 그림은 display:none이면 받기를 미뤄서, 휴대폰에서 누른 뒤에야 받느라 늦게 떴다(미리 받아 둠).
@@ -219,7 +222,8 @@ body[x-dusk-st][x-dusk-fold="0"] { padding-left: var(--st-sw) !important; box-si
 .st-body .chattext blockquote { border-left: 3px solid var(--st-line2) !important; color: var(--st-fg2) !important; }`,
     hideImages ? imageFoldCss() : "",
     P.extra === "gpt" ? gptExtraCss() : "",
-    P.quoteDot ? quoteDotCss() : "",
+    P.quoteDot ? quoteDotCss(P.quoteDot) : "",
+    P.extra === "code" ? codeExtraCss() : "",
     SB && !opts.minimal ? `/* Dusk Stealth 사이드바 */\n${SHELL_CSS}` : "",
     code ? `.st-user .st-body { max-width: 100%; background: transparent; border-radius: 0; padding: 0 0 0 1.4em; text-indent: -1.4em; }
 .st-user .st-body::before { content: "›"; color: var(--st-accent); font-weight: 700; margin-right: .6em; }

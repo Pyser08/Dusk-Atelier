@@ -26,11 +26,20 @@ body[x-dusk-fold="1"] [x-dusk="stealth-note"]{left:0}
 [x-c~="st-sb-rsep"]{width:22px;height:1px;background:var(--st-line2);margin:4px 0}
 [x-c~="st-sb-rgap"]{flex:1}
 [x-c~="st-sb-main"]{flex:1;min-width:0;display:flex;flex-direction:column}
-[x-c~="st-sb-wchev"]{display:inline-flex;align-items:center;color:var(--st-fg2);margin-left:-4px}
+[x-c~="st-sb-wchev"]{display:inline-flex;align-items:center;color:var(--st-fg2);margin-left:4px;vertical-align:middle}
+[x-c~="st-sb-head"] [x-c~="st-sb-wchev"]{margin-left:-4px}
 [x-c~="st-sb-start"]{flex:1;min-width:0;white-space:nowrap;display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--st-line2);border-radius:12px;font-size:13.5px}
 [x-c~="st-sb-start"] small{margin-left:auto;color:var(--st-dim);font-size:12px}
 [x-c~="st-sb-ring"]{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--st-dim);flex:none}
-[x-c~="st-sb-hico"]{display:inline-flex;align-items:center;color:var(--st-fg2);margin-right:2px}
+[x-c~="st-sb-badge"]{margin-left:6px;padding:1px 7px;border-radius:6px;font-size:11.5px;background:color-mix(in srgb,#4a8cff 22%,transparent);color:#6fa4ff}
+[x-c~="st-sb-item"][x-c~="st-dot"]::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;border:1.5px solid var(--st-dim);margin-right:10px;vertical-align:middle;box-sizing:border-box}
+[x-c~="st-sb-item"][x-c~="st-dot"][x-c~="st-on"]::before{background:var(--st-fg2);border-color:var(--st-fg2)}
+[x-c~="st-sb-secico"]{display:inline-flex;color:var(--st-dim)}
+[x-c~="st-sb-word"][x-c~="st-accent"]{color:var(--st-accent);font-weight:700;letter-spacing:-.02em}
+[x-c~="st-sb-newwrap"]{padding:8px 12px 4px}
+[x-c~="st-sb-new"]{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:999px;background:var(--st-bubble);color:var(--st-fg);font-size:14.5px}
+[x-dusk="stealth-top"][x-empty="1"]{display:none}
+[x-c~="st-sb-hico"]{display:inline-flex;align-items:center;color:var(--st-fg2);margin-right:6px}
 [x-c~="st-sb-seg"]{margin-left:auto;display:inline-flex;gap:2px;padding:3px;border-radius:12px;background:color-mix(in srgb,var(--st-fg) 6%,transparent)}
 [x-c~="st-sb-segb"]{display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;border-radius:9px;color:var(--st-fg2)}
 [x-c~="st-sb-segb"][x-c~="st-on"]{background:color-mix(in srgb,var(--st-fg) 13%,transparent);color:var(--st-fg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--st-fg) 14%,transparent)}

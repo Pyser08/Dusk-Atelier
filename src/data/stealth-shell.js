@@ -48,11 +48,16 @@ export function chatRows(char, currentIndex, limit = 30) {
 // firstOn: 첫 메뉴 줄 강조. foot2: 발을 두 줄(이름 / 요금제). top: "chat"이면 넓은 화면 위 줄에 [폴더] 채팅 이름 ⌄ … 공유. 글자만 쓰고 상표 그림은 쓰지 않는다.
 export var SHELL_KINDS = {
   claude: { word: "Claude", wordSerif: true, head: "seg", headLeft: "panel", firstOn: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["folder", "프로젝트"], ["cube", "아티팩트"], ["clock", "예약됨"], ["bag", "사용자 지정"]], recent: "최근 항목", empty: "", plan: "Pro" },
-  code: { word: "Code", wordSerif: true, firstOn: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["cube", "아티팩트"], ["bag", "사용자 지정"], ["more", "더 보기"]], recent: "", empty: "시작한 세션이 여기에 표시됩니다", plan: "Pro" },
+  code: { word: "", head: "seg", segOn: 1, headLeft: ["panel", "back", "fwd"], items: [["plus", "새로 만들기"], ["folder", "프로젝트", "New"], ["cube", "아티팩트"], ["bag", "사용자 지정"], ["chev", "더 보기"]], recent: "최근 항목", dots: true, footChev: true, empty: "시작한 세션이 여기에 표시됩니다", plan: "" },
+  deepseek: { word: "deepseek", wordAccent: true, head: "icons", headRight: ["search", "panel"], newBtn: "새로운 채팅", items: [], recent: "오늘", recentIcon: "listi", gearIcon: "more", top: "chat", topPlain: true, empty: "", plan: "" },
+  gemini: { word: "Gemini", top: "none", head: "icons", headRight: ["search", "panel"], items: [["edit", "새 채팅"], ["grid", "라이브러리"], ["image", "이미지"], ["clock", "예약"], ["target", "맞춤설정"], ["video", "동영상"]], recent: "전체", recentIcon: "filter", empty: "", plan: "" },
   codex: { word: "Codex", wordChev: true, head: "icons", headRight: ["bell", "search"], rail: ["home", "image", "clock", "book", "plug", "more", "|", "branch"], foot: "start", items: [["edit", "새 채팅"]], recent: "최근", empty: "", plan: "" },
   gpt: { word: "ChatGPT", head: "icons", headRight: ["search", "panel"], foot2: true, top: "chat", items: [["edit", "새 채팅"], ["image", "이미지"], ["clock", "예약"], ["book", "라이브러리"], ["plug", "플러그인"], ["more", "탐색"]], recent: "최근", empty: "", plan: "Plus" }
 };
 var ICON = {
+  grid: '<rect x="4.5" y="4.5" width="6" height="6" rx="2"/><rect x="13.5" y="4.5" width="6" height="6" rx="2"/><rect x="4.5" y="13.5" width="6" height="6" rx="2"/><rect x="13.5" y="13.5" width="6" height="6" rx="2"/>',
+  listi: '<circle cx="6" cy="7" r="1.6"/><circle cx="6" cy="16" r="1.6"/><path d="M10 7h9M10 16h9M10 11h6"/>', pluso: '<circle cx="12" cy="12" r="8"/><path d="M12 8.5v7M8.5 12h7"/>', fwdshare: '<path d="M14 5l6 6-6 6M20 11h-8a7 7 0 0 0-7 7"/>',
+  back: '<path d="M19 12H5M11 6l-6 6 6 6"/>', fwd: '<path d="M5 12h14M13 6l6 6-6 6"/>', target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/>', video: '<rect x="3.5" y="6" width="17" height="12" rx="2.5"/><path d="M3.5 10h17M8 6l2 4M13 6l2 4"/>', filter: '<path d="M4 5h16l-6 7.5V19l-4-2v-4.5z"/>',
   home: '<path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/>', bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/>', branch: '<circle cx="7" cy="6" r="2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="8" r="2"/><path d="M7 8v8M17 10c0 4-10 2-10 6"/>',
   image: '<rect x="4" y="5" width="16" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m4.5 17 4.5-4.5 4 4 2-2 4.5 4.5"/>', book: '<path d="M5 4h3v16H5zM10 4h3v16h-3z"/><path d="m15 5 3-.8 3.2 15.3-3 .7z"/>',
   plug: '<circle cx="12" cy="12" r="8"/><path d="M9.5 9.5h5v3a2.5 2.5 0 0 1-5 0zM11 7v2.5M13 7v2.5M12 15v2"/>', share: '<path d="M12 15V4M8 8l4-4 4 4M5 13v6h14v-6"/>', chev: '<path d="m7 10 5 5 5-5"/>',
@@ -70,21 +75,25 @@ import { SHELL_CSS } from "./stealth-shellcss.js";
 /** 사이드바 HTML. model: {kind, user, plan, rows[], title, sub, nativeToggles} */
 export function shellHtml(model) {
   const K = SHELL_KINDS[model.kind] ?? SHELL_KINDS.claude;
-  const nav = K.items.map(([ic, name], i) => `<div class="st-sb-row${i === 0 && K.firstOn ? " st-on" : ""}">${ico(ic)}<span>${esc(name)}</span></div>`).join("");
-  const rows = (model.rows ?? []).map((r) => `<button type="button" class="st-sb-item${r.current ? " st-on" : ""}" data-st-chat="${r.index}" title="${esc(r.name)}">${esc(r.name)}</button>`).join("");
+  const nav = K.items.map(([ic, name, badge], i) => `<div class="st-sb-row${i === 0 && K.firstOn ? " st-on" : ""}">${ico(ic)}<span>${esc(name)}</span>${badge ? `<span class="st-sb-badge">${esc(badge)}</span>` : ""}</div>`).join("");
+  const rows = (model.rows ?? []).map((r) => `<button type="button" class="st-sb-item${r.current ? " st-on" : ""}${K.dots ? " st-dot" : ""}" data-st-chat="${r.index}" title="${esc(r.name)}">${esc(r.name)}</button>`).join("");
   const list = rows || (K.empty ? `<div class="st-sb-empty">${esc(K.empty)}</div>` : "");
   const who = String(model.user || "나"), plan = String(model.plan ?? K.plan ?? "").trim();
   // 머리: [왼쪽 아이콘] 앱 이름 ……… [오른쪽: 클로드식 묶음 | 아이콘들] (장식)
-  const right = K.head === "seg" ? `<span class="st-sb-seg"><span class="st-sb-segb st-on">${ico("chatq", 18)}</span><span class="st-sb-segb">${ico("code", 18)}</span></span>`
+  const on = (i) => ((K.segOn ?? 0) === i ? " st-on" : "");
+  const right = K.head === "seg" ? `<span class="st-sb-seg"><span class="st-sb-segb${on(0)}">${ico("chatq", 18)}</span><span class="st-sb-segb${on(1)}">${ico("code", 18)}</span></span>`
     : K.head === "icons" ? `<span class="st-sb-hright">${(K.headRight ?? []).map((n) => `<span class="st-sb-hbtn">${ico(n, 20)}</span>`).join("")}</span>` : "";
-  const whoHtml = K.foot2 ? `<span class="st-sb-who st-two"><span>${esc(who)}</span>${plan ? `<small>${esc(plan)}</small>` : ""}</span>` : `<span class="st-sb-who">${esc(who)}${plan ? `<small>· ${esc(plan)}</small>` : ""}</span>`;
-  const gear = `<button type="button" class="st-sb-gear" data-st-gear="1" aria-label="설정">${ico("gear", 18)}</button>`, av = `<span class="st-sb-av">${esc(who.slice(0, 1).toUpperCase())}</span>`;
+  const whoHtml = K.foot2 ? `<span class="st-sb-who st-two"><span>${esc(who)}</span>${plan ? `<small>${esc(plan)}</small>` : ""}</span>` : `<span class="st-sb-who">${esc(who)}${plan ? `<small>· ${esc(plan)}</small>` : ""}${K.footChev ? `<span class="st-sb-wchev">${ico("chev", 14)}</span>` : ""}</span>`;
+  const gear = `<button type="button" class="st-sb-gear" data-st-gear="1" aria-label="설정">${ico(K.gearIcon ?? "gear", 18)}</button>`, av = `<span class="st-sb-av">${esc(who.slice(0, 1).toUpperCase())}</span>`;
   // 발: 기본 = 이니셜·이름(·요금제)·톱니 / "start" = 코덱스식 '○ 시작하기 … 3개 중 0개' 상자(이니셜은 레일 아래)
   const foot = K.foot === "start" ? `<div class="st-sb-foot"><span class="st-sb-start"><span class="st-sb-ring"></span><span>시작하기</span><small>3개 중 0개</small></span>${gear}</div>`
     : `<div class="st-sb-foot">${av}${whoHtml}${gear}</div>`;
-  const main = `<div class="st-sb-head">${K.headLeft ? `<span class="st-sb-hico">${ico(K.headLeft, 20)}</span>` : ""}<span class="st-sb-word${K.wordSerif ? " st-serif" : ""}">${esc(model.word ?? K.word)}</span>${K.wordChev ? `<span class="st-sb-wchev">${ico("chev", 16)}</span>` : ""}${right}</div>`
-    + `<div class="st-sb-nav">${nav}</div>`
-    + (K.recent ? `<div class="st-sb-sec"><span>${esc(K.recent)}</span></div>` : "")
+  const lefts = [].concat(K.headLeft ?? []).map((n) => `<span class="st-sb-hico">${ico(n, 20)}</span>`).join("");
+  const word = model.word ?? K.word;
+  const main = `<div class="st-sb-head">${lefts}${word ? `<span class="st-sb-word${K.wordSerif ? " st-serif" : ""}${K.wordAccent ? " st-accent" : ""}">${esc(word)}</span>` : ""}${K.wordChev ? `<span class="st-sb-wchev">${ico("chev", 16)}</span>` : ""}${right}</div>`
+    + (K.newBtn ? `<div class="st-sb-newwrap"><span class="st-sb-new">${ico("pluso", 18)}<span>${esc(K.newBtn)}</span></span></div>` : "")
+    + (nav ? `<div class="st-sb-nav">${nav}</div>` : "")
+    + (K.recent ? `<div class="st-sb-sec"><span>${esc(K.recent)}</span>${K.recentIcon ? `<span class="st-sb-secico">${ico(K.recentIcon, 16)}</span>` : ""}</div>` : "")
     + `<div class="st-sb-list">${list}</div>`
     + foot;
   if (!K.rail) return main;
@@ -94,11 +103,14 @@ export function shellHtml(model) {
 }
 export function topHtml(model) {
   const K = SHELL_KINDS[model.kind] ?? {};
+  if (K.top === "none")   // 제미나이식: 위 줄에 글 없음(휴대폰은 ≡·⋮만)
+    return `<button type="button" class="st-top-btn" data-st-menu="1" aria-hidden="true" tabindex="-1">${ico("menu", 22)}</button><span class="st-top-t"></span><button type="button" class="st-top-btn st-top-more" data-st-more="1" aria-label="스텔스 상단 줄 접기">${ico("vdots", 21)}</button>`;
   if (K.top === "chat") {   // GPT식: [폴더] 채팅 이름 ⌄ ……… 공유 (휴대폰도 같은 줄, 왼쪽 ≡)
     const name = String(model.sub || model.title || "").trim();
     return `<button type="button" class="st-top-btn" data-st-menu="1" aria-hidden="true" tabindex="-1">${ico("menu", 22)}</button>`
-      + `<span class="st-top-t"><span class="st-top-fold">${ico("folder", 18)}</span><b style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(name)}</b><span class="st-top-chev">${ico("chev", 16)}</span></span>`
-      + `<span class="st-top-share">${ico("share", 18)}<span>공유</span></span>`
+      + (K.topPlain ? `<span class="st-top-t"><b style="min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:500">${esc(name)}</b></span><span class="st-top-share">${ico("fwdshare", 20)}</span>`
+        : `<span class="st-top-t"><span class="st-top-fold">${ico("folder", 18)}</span><b style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(name)}</b><span class="st-top-chev">${ico("chev", 16)}</span></span>`
+        + `<span class="st-top-share">${ico("share", 18)}<span>공유</span></span>`)
       + `<button type="button" class="st-top-btn st-top-more" data-st-more="1" aria-label="스텔스 상단 줄 접기">${ico("vdots", 21)}</button>`;
   }
   const t = String(model.title ?? "").trim();
@@ -244,7 +256,7 @@ export function createShell(api, opts = {}) {
       const model = { mobile: true, kind, word: opts.word, user, plan: opts.plan, rows, title: opts.title || char?.name || "", sub: opts.sub || cur?.name || "" };
       const rootEl = await put(d, ROOT, "div", shellHtml(model), "st-sb"); await rootEl?.setAttribute("x-fold", folded ? "1" : "0"); await rootEl?.setAttribute("x-rail", SHELL_KINDS[kind]?.rail ? "1" : "0");
       await setVis(d);
-      await put(d, TOP, "div", topHtml(model), "st-top");
+      const topEl0 = await put(d, TOP, "div", topHtml(model), "st-top"); await topEl0?.setAttribute("x-empty", SHELL_KINDS[kind]?.top === "none" ? "1" : "0");
       await put(d, NOTE, "div", opts.note ? esc(opts.note) : "", "st-note");
       for (const r of rows) {
         const b = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-chat="${r.index}"]`);
