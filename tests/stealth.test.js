@@ -377,21 +377,24 @@ test("이미지·배경 그림마다 위에 '명령어 N개 실행함' 줄을 �
   await box.kids[0].h(); assert.equal(box.attrs["x-open"], "0");
   assert.equal(await wrapMedia(d), 0, "한 번 감싼 건 다시 안 함");
   const css = buildStealth("claude", { hideImages: true }).css;
-  assert.match(css, /\[x-st-fw\]\[x-open="0"\] > :not\(\[x-st-fl\]\) \{ display: none !important/);
+  assert.match(css, /\[x-st-fw\]\[x-open="0"\] > :not\(\[x-st-fl\]\) \{ position: absolute !important[^}]*height: 1px/, "접힌 이미지는 1px로(미리 받아 둠)");
+  assert.ok(!/\[x-open="0"\] > :not\(\[x-st-fl\]\) \{ display: none/.test(css));
+  assert.match(css, /touch-action: manipulation/, "휴대폰 누르기 지연 없앰");
   assert.match(css, /\[x-st-fw\] > \[x-st-fl\]::before \{ content: "›_"/);
   assert.ok(!buildStealth("claude", { hideImages: true }).html.includes("st-tool"), "메시지 단위 줄은 없음");
 });
 
 test("감싸기에 실패한 이미지는 숨기고 '명령어 N개 실패함'으로 보인다", async () => {
   const { wrapMedia } = await import("../src/data/stealth-shell.js");
-  const parent = { attrs: {}, setAttribute: async (k, v) => { parent.attrs[k] = v; } };
+  const parent = { attrs: {}, h: null, setAttribute: async (k, v) => { parent.attrs[k] = v; }, addEventListener: async (_e, fn) => { parent.h = fn; } };
   const mk = (tag) => { const n = { attrs: {} }; return { n, nodeName: async () => tag, getParent: async () => parent, setAttribute: async (k, v) => { n.attrs[k] = v; }, getBoundingClientRect: async () => ({ width: 300, height: 300 }), replaceWith: async () => { throw new Error("막힘"); } }; };
   const els = [mk("DIV"), mk("IMG")];
   const d = { createElement: async () => ({ setAttribute: async () => {}, setInnerText: async () => {}, appendChild: async () => {}, addEventListener: async () => {} }), querySelectorAll: async () => { const l = els.filter((e) => !e.n.attrs["x-st-m"]); return { length: async () => l.length, at: async (i) => l[i] }; } };
   assert.equal(await wrapMedia(d, { rand: () => 4 }), 0);
   assert.equal(els[0].n.attrs["x-st-m"], "e"); assert.equal(els[0].n.attrs["x-st-n"], "4");
   assert.equal(parent.attrs["x-st-pe"], "4", "<img>는 부모에 글자를 단다");
+  await parent.h(); assert.equal(parent.attrs["x-st-po"], "1", "실패한 것도 누르면 펼친다");
   const css = buildStealth("claude", { hideImages: true }).css;
-  assert.match(css, /:is\(img, video\)\[x-st-m="e"\] \{ display: none !important/);
+  assert.match(css, /:is\(img, video\)\[x-st-m="e"\]:not\(\[x-st-o="1"\]\) \{ display: none !important/);
   assert.match(css, /명령어 " attr\(x-st-n\) "개 실패함/);
 });

@@ -65,22 +65,28 @@ export var PRESET_IDS = Object.keys(PRESETS);
 // N(1~9)은 메시지 순서로 돌린다(CSS만).
 export function imageFoldCss() {
   // 이미지·배경 그림마다 접힘 줄: 스텔스가 화면에서 각 이미지를 [x-st-fw] 상자로 감싸고 맨 위에 [x-st-fl] 줄을 넣는다(stealth-shell.js wrapMedia).
-  // 감싸기 전 잠깐은 이미지를 숨겨 번쩍이지 않게 한다(작은 아이콘 "s"는 그대로). 감싸기에 실패한 것("e")은 숨기고 '명령어 N개 실패함'으로 보인다.
+  // 접힌 이미지는 display:none 대신 1px로 숨긴다 — 배경 그림은 display:none이면 받기를 미뤄서, 휴대폰에서 누른 뒤에야 받느라 늦게 떴다(미리 받아 둠).
+  // 감싸기 전 잠깐도 같은 방식으로 숨긴다(작은 아이콘 "s"는 그대로). 감싸기에 실패한 것("e")은 '명령어 N개 실패함' 줄이 되고, 누르면 펼쳐진다.
   const L = "[x-st-fw] > [x-st-fl]";
-  return `.st-body :is(img, video, [style*="background-image"]):not([x-st-m]):not([x-st-fw] *) { display: none !important; }
-[x-st-fw] { display: block; width: 100%; margin: 2px 0 8px; }
-${L} { width: fit-content; max-width: 100%; cursor: pointer; color: var(--st-dim); font-size: 14px; line-height: 1.5; user-select: none; display: flex; align-items: center; -webkit-tap-highlight-color: transparent; }
+  const hide = "position: absolute !important; left: 0 !important; top: 0 !important; width: 1px !important; height: 1px !important; min-width: 0 !important; min-height: 0 !important; max-height: 1px !important; aspect-ratio: auto !important; opacity: 0 !important; pointer-events: none !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; border: 0 !important;";
+  const lab = "color: var(--st-dim); font-size: 14px; line-height: 1.5; cursor: pointer; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent;";
+  return `.st-body :is(img, video, [style*="background-image"]):not([x-st-m]):not([x-st-fw] *) { ${hide} }
+.st-body { position: relative; }
+[x-st-fw] { display: block; position: relative; width: 100%; margin: 2px 0 8px; }
+${L} { width: fit-content; max-width: 100%; display: flex; align-items: center; ${lab} }
 ${L}::before { content: "›_"; display: inline-block; width: 1.6em; font-family: var(--st-mono); letter-spacing: -.08em; }
 ${L}::after { content: "›"; display: inline-block; margin-left: .5em; font-size: 1.15em; transition: transform .15s; }
 [x-st-fw][x-open="1"] > [x-st-fl]::after { transform: rotate(90deg); }
 ${L}:hover { color: var(--st-fg); }
-[x-st-fw][x-open="0"] > :not([x-st-fl]) { display: none !important; }
+[x-st-fw][x-open="0"] > :not([x-st-fl]) { ${hide} }
 [x-st-fw][x-open="1"] > :not([x-st-fl]) { margin-top: 6px; }
-:is(img, video)[x-st-m="e"] { display: none !important; }
-[x-st-m="e"]:not(img, video) { background: none !important; width: auto !important; height: auto !important; min-height: 0 !important; aspect-ratio: auto !important; border: 0 !important; padding: 0 !important; margin: 2px 0 8px !important; box-shadow: none !important; transform: none !important; }
-[x-st-m="e"]:not(img, video) > * { display: none !important; }
-[x-st-m="e"]:not(img, video)::before, [x-st-pe]::before { content: "›_  명령어 " attr(x-st-n) "개 실패함"; display: block; color: var(--st-dim); font-size: 14px; line-height: 1.5; }
-[x-st-pe]::before { content: "›_  명령어 " attr(x-st-pe) "개 실패함"; margin: 2px 0 8px; }`;
+:is(img, video)[x-st-m="e"]:not([x-st-o="1"]) { display: none !important; }
+[x-st-pe][x-st-po="1"] > :is(img, video)[x-st-m="e"] { display: revert !important; }
+[x-st-m="e"]:not(img, video):not([x-st-o="1"]) { background: none !important; width: auto !important; height: auto !important; min-height: 0 !important; aspect-ratio: auto !important; border: 0 !important; padding: 0 !important; margin: 2px 0 8px !important; box-shadow: none !important; transform: none !important; ${lab} }
+[x-st-m="e"]:not(img, video):not([x-st-o="1"]) > * { display: none !important; }
+[x-st-m="e"]:not(img, video):not([x-st-o="1"])::before { content: "›_  명령어 " attr(x-st-n) "개 실패함  ›"; display: block; }
+[x-st-pe]::before { content: "›_  명령어 " attr(x-st-pe) "개 실패함  ›"; display: block; margin: 2px 0 8px; ${lab} }
+[x-st-pe][x-st-po="1"]::before { content: "›_  명령어 " attr(x-st-pe) "개 실패함  ⌄"; }`;
 }
 export var LABEL_KEYS = ["title", "sub", "tool", "model", "note", "left", "think", "user", "plan"];
 
