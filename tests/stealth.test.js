@@ -296,9 +296,10 @@ test("Dusk 창이 열려 있으면 스텔스 껍데기를 감추고, 닫히면 �
   await new Promise((r) => setTimeout(r, 80));
   const vis = () => api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb").attrs["x-vis"];
   assert.equal(vis(), "1");
-  setDuskOpen(true); await new Promise((r) => setTimeout(r, 30));
+  const W = { innerWidth: 400, innerHeight: 800 };
+  setDuskOpen(true, W); await new Promise((r) => setTimeout(r, 30));
   assert.equal(vis(), "0");
-  setDuskOpen(false); await new Promise((r) => setTimeout(r, 30));
+  setDuskOpen(false, W); await new Promise((r) => setTimeout(r, 30));
   assert.equal(vis(), "1");
   await sh.destroy();
 });
@@ -334,4 +335,13 @@ test("접힘 줄은 클로드 앱처럼 '›_ 명령어 N개 실행함 ›', 펼
   const css = buildStealth("claude", { hideImages: true }).css;
   assert.match(css, /summary::before[^{]*\{ content: "›_"/);
   assert.match(css, /\[open\] > summary::after[^{]*\{ transform: rotate\(90deg\)/);
+});
+
+test("Dusk 창 열림 판단: 플러그인 화면 크기가 0이면 닫힘, 크기가 있으면 hideContainer가 불린 경우만 닫힘", async () => {
+  const { duskIsOpen, frameVisible } = await import("../src/data/stealth-shell.js");
+  assert.equal(frameVisible({ innerWidth: 0, innerHeight: 0 }), false);
+  assert.equal(frameVisible({ innerWidth: 390, innerHeight: 800 }), true);
+  assert.equal(duskIsOpen(false, true), false);
+  assert.equal(duskIsOpen(true, undefined), true, "showContainer를 못 잡아도 화면이 보이면 열림");
+  assert.equal(duskIsOpen(true, false), false);
 });

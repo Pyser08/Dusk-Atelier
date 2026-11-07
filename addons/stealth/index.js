@@ -2,7 +2,7 @@
 // 켜 둔 모양은 리스 설정(커스텀 CSS·채팅 HTML)에 저장돼 애드온을 꺼도 그대로 보인다. 끄기는 화면에서 한다.
 import { renderStealth } from "../../src/ui/screens/stealth.js";
 import { loadStealth } from "../../src/data/stealth-apply.js";
-import { syncShell, setDuskOpen } from "../../src/data/stealth-shell.js";
+import { syncShell, setDuskOpen, refreshDuskOpen } from "../../src/data/stealth-shell.js";
 import { foldDisplay } from "../../src/data/stealth-fold.js";
 
 export async function activate(api, ctx) {
@@ -23,10 +23,15 @@ export async function activate(api, ctx) {
       wrapped = api.showContainer !== orig.show;
     }
   } catch { /* 바꿀 수 없는 객체면 그대로 */ }
+  // 크기로도 확인(코어가 다른 api 사본을 쓰면 위 감싸기가 안 잡힌다): 크기 바뀔 때 + 1초마다(로컬 값만 봐서 가볍다)
+  const sizeCheck = () => refreshDuskOpen();
+  try { globalThis.addEventListener?.("resize", sizeCheck); } catch { /* 없음 */ }
+  const sizeTimer = setInterval(sizeCheck, 1000);
+  sizeCheck();
   // 답변 속 이미지를 '명령어 N개 실행함' 접힘으로(화면에만, 저장된 채팅은 그대로)
   let hooked = false;
   try { if (typeof api.addRisuScriptHandler === "function") { await api.addRisuScriptHandler("display", foldDisplay); hooked = true; } } catch (e) { console.log("[Dusk Atelier] 스텔스 이미지 접기 훅 실패", e?.message ?? e); }
   // 켜 둔 클로드 계열 모양이면 사이드바를 다시 그린다(화면은 새로고침마다 비어 있으므로)
   loadStealth(api).then((st) => syncShell(api, st)).catch((e) => console.log("[Dusk Atelier] 스텔스 사이드바 시작 실패", e?.message ?? e));
-  return { async deactivate() { off.forEach((f) => f()); if (wrapped) { try { api.showContainer = orig.show; api.hideContainer = orig.hide; } catch { /* 그대로 */ } } setDuskOpen(false); await syncShell(api, null).catch(() => {}); if (hooked) { try { await api.removeRisuScriptHandler?.("display", foldDisplay); } catch { /* 이미 없음 */ } } } };
+  return { async deactivate() { off.forEach((f) => f()); clearInterval(sizeTimer); try { globalThis.removeEventListener?.("resize", sizeCheck); } catch { /* 없음 */ } if (wrapped) { try { api.showContainer = orig.show; api.hideContainer = orig.hide; } catch { /* 그대로 */ } } setDuskOpen(false); await syncShell(api, null).catch(() => {}); if (hooked) { try { await api.removeRisuScriptHandler?.("display", foldDisplay); } catch { /* 이미 없음 */ } } } };
 }
