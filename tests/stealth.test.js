@@ -379,3 +379,10 @@ test("애드온이 새 버전이면 켜 둔 모양을 리스 설정에 다시 �
   const off = fakeApi();
   assert.equal((await reapplyIfUpdated(off, "0.3.8")).reapplied, false, "꺼 둔 사람은 건드리지 않음");
 });
+
+test("진단: 채팅 HTML에 접힘이 없거나 화면에서 지워졌으면 알려 준다", async () => {
+  const { diagnose } = await import("../src/data/stealth-apply.js");
+  const base = { theme: "customHTML", hasStealthCss: true, hasWrapper: true };
+  assert.ok(diagnose({ "채팅 래퍼(.st-msg)": 3 }, { ...base, hasFold: false }).some((l) => l.includes("다시 적용")));
+  assert.ok(diagnose({ "채팅 래퍼(.st-msg)": 3, "이미지 접힘 줄(details.st-ftool)": 0 }, { ...base, hasFold: true }).some((l) => l.includes("details")));
+});
