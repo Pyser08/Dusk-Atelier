@@ -319,3 +319,19 @@ test("접힘을 펼치면 안의 이미지가 보이고, 접힘 밖 이미지만
   assert.match(css, /details\[open\] img, details\[open\] video \{ display: block !important/);
   assert.match(css, /\.chattext img:not\(details \*\)/);
 });
+
+test("채팅 번호를 못 읽어도 봇의 chatPage로 지금 채팅 이름을 상단 줄에 쓴다", async () => {
+  const api = shellApi({ getCurrentChatIndex: async () => { throw new Error("chatPage"); }, pluginStorage: { getItem: async () => null, setItem: async () => {} } });
+  api.char.chatPage = 1;
+  const sh = createShell(api, { kind: "claude", poll: 60000, log: () => {} });
+  await new Promise((r) => setTimeout(r, 80));
+  const top = api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-top");
+  assert.ok(top.html.includes("봇A") && top.html.includes("둘째"));
+  await sh.destroy();
+});
+
+test("접힘 줄은 클로드 앱처럼 '›_ 명령어 N개 실행함 ›', 펼치면 화살표가 돈다", () => {
+  const css = buildStealth("claude", { hideImages: true }).css;
+  assert.match(css, /summary::before[^{]*\{ content: "›_"/);
+  assert.match(css, /\[open\] > summary::after[^{]*\{ transform: rotate\(90deg\)/);
+});

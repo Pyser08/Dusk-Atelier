@@ -33,8 +33,9 @@ export function foldImages(text, { label = (n) => `명령어 ${n}개 실행함` 
 export var FOLD_CSS = `details.st-fold , details.x-risu-st-fold { margin: 4px 0 10px; }
 details.st-fold > summary , details.x-risu-st-fold > summary { list-style: none; cursor: pointer; width: fit-content; color: var(--st-dim, #888); font-size: 14px; line-height: 1.5; user-select: none; }
 details.st-fold > summary::-webkit-details-marker , details.x-risu-st-fold > summary::-webkit-details-marker { display: none; }
-details.st-fold > summary::after , details.x-risu-st-fold > summary::after { content: "  ▸"; }
-details.st-fold[open] > summary::after , details.x-risu-st-fold[open] > summary::after { content: "  ▾"; }
+details.st-fold > summary::before , details.x-risu-st-fold > summary::before { content: "›_"; display: inline-block; width: 1.6em; font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: -.08em; }
+details.st-fold > summary::after , details.x-risu-st-fold > summary::after { content: "›"; display: inline-block; margin-left: .5em; font-size: 1.15em; transition: transform .15s; }
+details.st-fold[open] > summary::after , details.x-risu-st-fold[open] > summary::after { transform: rotate(90deg); }
 details.st-fold > summary:hover , details.x-risu-st-fold > summary:hover { color: var(--st-fg, inherit); }
 details[open] img, details[open] video { display: block !important; max-width: 100%; height: auto; margin-top: 8px; border-radius: 8px; }
 details:not([open]) > :not(summary) { display: none !important; }`;

@@ -113,7 +113,8 @@ body[x-dusk-fold="1"] [x-dusk="stealth-note"]{left:0}
 body[x-dusk-st] [x-dusk="stealth-top"]{display:flex !important;left:0;height:56px;padding:0 6px 0 4px;gap:2px;border-bottom:0;pointer-events:auto;font-size:16px}
 [x-c~="st-top-btn"]{display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex:none;border:0;background:transparent;color:var(--st-fg);border-radius:10px;cursor:pointer;padding:0}
 [x-c~="st-top-ico"]{display:inline-flex;color:var(--st-fg2)}
-[x-dusk="stealth-top"] b{font-weight:600;margin-right:2px}
+[x-dusk="stealth-top"] b{font-weight:600;color:var(--st-fg)}
+[x-c~="st-top-sub"]{font-weight:400;color:var(--st-fg2)}
 [x-dusk="stealth-top"][x-plain="1"]{left:auto;width:auto;background:transparent}
 [x-dusk="stealth-top"][x-plain="1"] > :not([x-c~="st-top-more"]){display:none !important}
 }
@@ -136,9 +137,10 @@ export function shellHtml(model) {
 export function topHtml(model) {
   const t = String(model.title ?? "").trim();
   if (!t && !model.mobile) return "";
-  // 넓은 화면: 제목 줄만. 좁은 화면(모바일): ≡ · 제목 / 채팅 · 연필 · ⋮ (CSS가 버튼을 좁은 화면에서만 보인다)
+  // 넓은 화면: 제목 줄만. 좁은 화면(모바일): ≡ · [아이콘] 제목 / 채팅 · 연필 · ⋮ — 클로드 앱처럼 한 줄
+  const one = "display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap";
   return `<button type="button" x-c="st-top-btn" x-st-menu="1" aria-label="사이드바">${ico("menu", 22)}</button>`
-    + `<span x-c="st-top-t">${t ? `<span x-c="st-top-ico">${ico("stack", 17)}</span><b>${esc(t)}</b>` : ""}${model.sub ? `<span x-c="st-top-sub">/&nbsp; ${esc(model.sub)}</span>` : ""}</span>`
+    + `<span x-c="st-top-t" style="${one}">${t ? `<span x-c="st-top-ico" style="flex:none;line-height:0">${ico("stack", 17)}</span><b style="flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(t)}</b>` : ""}${model.sub ? `<span x-c="st-top-sub" style="flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis">/&nbsp; ${esc(model.sub)}</span>` : ""}</span>`
     + `<span x-c="st-top-btn st-top-deco">${ico("edit", 21)}</span>`
     + `<button type="button" x-c="st-top-btn st-top-more" x-st-more="1" aria-label="스텔스 상단 줄 접기">${ico("vdots", 21)}</button>`;
 }
@@ -172,7 +174,7 @@ export function createShell(api, opts = {}) {
     const idx = `${ci}:${ti}`, now = Date.now();
     if (!force && cache.char && cache.idx === idx && now - cache.at < FRESH) return { ci, ti, char: cache.char, light: true };
     const char = await safe(() => api.getCharacterFromIndex(ci));
-    cache.idx = idx; cache.at = now; cache.char = char ? { name: char.name, chats: (char.chats ?? []).map((c) => ({ name: c?.name ?? c?.title ?? "", lastDate: c?.lastDate ?? c?.date ?? 0 })) } : null;
+    cache.idx = idx; cache.at = now; cache.char = char ? { name: char.name, page: Number.isInteger(char.chatPage) ? char.chatPage : -1, chats: (char.chats ?? []).map((c) => ({ name: c?.name ?? c?.title ?? "", lastDate: c?.lastDate ?? c?.date ?? 0 })) } : null;
     return { ci, ti, char: cache.char, light: false };
   }
   async function userName() {
@@ -202,7 +204,7 @@ export function createShell(api, opts = {}) {
       const { ci, ti, char } = await chatInfo(force);
       const user = opts.user || (opts.getUser ? await opts.getUser() : await userName());
       if (dead) return;
-      const rows = chatRows(char, ti);
+      const rows = chatRows(char, Number.isInteger(ti) ? ti : char?.page ?? -1);
       const key = JSON.stringify([folded, onChat, kind, ci, ti, user, rows.map((r) => [r.index, r.name])]);
       if (!force && key === last) return;
       last = key;

@@ -117,12 +117,16 @@ export function buildStealth(id, opts = {}) {
 .text-input-area { margin: 0 0 ${L.model && !P.shell ? 34 : 0}px 0 !important; padding: 4px 10px !important; font-size: 15px !important; color: var(--st-fg) !important; border: none !important; border-radius: 0 !important; background: transparent !important; }
 .text-input-area::placeholder { color: var(--st-dim); }
 @media (max-width: 760px) {
-  .st-msg { max-width: 100%; padding: 6px 16px; }
-  .st-user .st-body { max-width: 85%; }
-  div:has(> .text-input-area) { width: calc(100% - 16px) !important; max-width: none; margin: 6px 8px 10px !important; padding: 8px 8px 8px 6px !important; border-radius: ${Math.max(P.input, 24)}px; align-items: flex-end !important; }
-  div:has(> .text-input-area)::after, div:has(> .text-input-area)::before { content: none !important; }
-  div:has(> .text-input-area) > .text-input-area { font-size: 16px !important; }
-  div:has(> .text-input-area) > .button-icon-send { border-radius: 50% !important; }
+  .st-msg { max-width: 100%; padding: 6px 18px; }
+  .st-user .st-body { max-width: 85%; border-radius: 20px; padding: 10px 16px; }
+  .st-body .chattext, .st-body .chattext p, .st-body .chattext li, .st-body .chattext span { font-size: 16px !important; line-height: 1.6 !important; }
+  /* 클로드 앱 입력창: 위는 글 칸, 아래 한 줄에 리스 버튼 · 모델 칩 · 둥근 보내기. 리스 버튼은 지우지 않고 작게 */
+  div:has(> .text-input-area) { width: calc(100% - 20px) !important; max-width: none; margin: ${P.shell && L.note ? 30 : 8}px 10px 10px !important; padding: 10px 8px 8px !important; border-radius: ${Math.max(P.input, 24)}px; flex-wrap: wrap !important; align-items: center !important; column-gap: 2px; row-gap: 4px; }
+  div:has(> .text-input-area) > .text-input-area { flex: 1 0 100% !important; order: -1; min-height: 40px; margin: 0 !important; padding: 4px 10px !important; font-size: 16px !important; }
+  div:has(> .text-input-area) > div, div:has(> .text-input-area) > button { flex: none; margin: 0 !important; padding: 6px !important; transform: scale(.9); }
+  div:has(> .text-input-area) > .button-icon-send { order: 3; margin-left: auto !important; width: 40px; height: 40px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; transform: none; }
+  ${L.model ? `div:has(> .text-input-area)::after { position: static; order: 2; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; margin-left: 2px; padding: 6px 12px; border-radius: 999px; background: var(--st-bubble); color: var(--st-fg); font-size: 13px; white-space: nowrap; }` : ""}
+  ${P.shell && L.note ? `div:has(> .text-input-area)::before { content: "${cssText(L.note)}"; position: absolute; left: 6px; top: -24px; bottom: auto; color: var(--st-dim); font-size: 12.5px; white-space: nowrap; pointer-events: none; }` : ""}
 }`;
   const css = [
     `/* Dusk Stealth · ${P.label} */`,
