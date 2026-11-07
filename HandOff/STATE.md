@@ -14,7 +14,9 @@
 - Cellar(`Pyser08/Dusk-Cellar` main 0.1.2): 안정성 점검 끝(태그 없음).
 
 ### 다음 큰 작업: 전체 기능 점검(사용자 요청 2026-11-07, `HandOff/QUALITY.md` A절 8항목 기준)
-1. 기능별 '사용자 약속' 한 줄 목록 작성(`docs/PROMISES.md`) → 약속 문장 그대로 테스트(예: 기억 끄면 보조 호출 0회, 묶인 페르소나 이름이 모든 기능에서 같음, 복사한 채팅도 같은 기능). `run-home-memall.mjs`처럼 저장값만 보는 테스트부터 고친다.
+1. ~~기능별 '사용자 약속' 목록~~ **1차 끝(11-07 오후)**: `docs/PROMISES.md`(M·F·T·C·A·S·E·P, 상태 ✅/◐/✘/📱). e2e `app.entry.js opts.host` = 리스 훅 흉내(`__host.request/output/display`) + main.js와 같은 fairPlay·turnInfo. 저장값만 보던 run-home-memall·fair·dice·turn을 '모델에 가는 글·응답 아래 블록' 기준으로 고침. 단위 `tests/promises-memory.test.js`·`promises-fairplay.test.js`.
+   - **버그 발견·수정**: 홈 '장기 기억(모든 채팅)' 끔·저장 위치 '끔'이 러너에 안 먹어 응답마다 보조 모델을 불렀음 → `memoryrunner.js gate`가 `memoryState` 하나로 판단(M-2).
+   - 남은 ◐/✘: M-5(복사 채팅 실제 주입)·M-6(페르소나 이름 기능별)·M-9·S-2·A-4 → 2·3번 작업 때 채운다.
 2. 실데이터 모양 픽스처 `tests/fixtures/`(오래된·필드 빠진·복사/분기/가져온 채팅, 채팅별 페르소나, 긴 채팅, 머리말 같은 응답) — 제보마다 하나씩 추가.
 3. 한 곳 계산: 현재 페르소나 이름·채팅 범위 키(chat.id vs risupotWikiScopeId)·기능 켜짐 여부 → 함수 하나로, 원본 필드 직접 읽기를 막는 grep 검사 테스트.
 4. 호스트 동작 하네스(reroll·edit·delete·copyChat·switchChat·switchPersona·stop·reload)와 시드 고정 무작위 순서 + 불변식.
