@@ -26,13 +26,13 @@
     {
       "id": "provider",
       "name": "프로바이더 (실험)",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "minCore": "1.9.2",
       "hooks": true,
       "desc": "리스 모델 목록에 ‘Dusk 자동’과 내 프로필을 등록하고, API 키 보관·모델 고르기·리스 도구 확인을 해요. 설정 → 실험 기능을 켜야 써요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/provider.js",
-      "sha256": "22d2af79773a4f65cd03e42f5290496b6c9e5ca87a9d78fca00f997626869fcf",
-      "size": 146004
+      "sha256": "d51e31180484d54ed030f521d880e42680e2778c872c24dfffe0005b88397b2c",
+      "size": 146650
     },
     {
       "id": "chattheme",
@@ -59,13 +59,13 @@
     {
       "id": "memory",
       "name": "장기기억·관계도",
-      "version": "0.1.9",
+      "version": "0.1.10",
       "minCore": "1.9.2",
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "7adc9cd0b9c3e4abb4d006211ba846c36149dd1e3d000911cd6ae589adf4b80f",
-      "size": 1538262
+      "sha256": "7279da16e10c37eef711daef61edff183b118420750faba697d0eb30cd1cd1f0",
+      "size": 1538271
     },
     {
       "id": "cards",
