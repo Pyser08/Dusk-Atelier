@@ -65,6 +65,12 @@ export var TABS = [
     card: "색·밝기·글자 크기를 골라요.",
     help: ["누르면 바로 바뀌고 자동으로 저장돼요.", "‘고급 모드’에서 메뉴 위치·밀도·확대율을 더 바꿔요."]
   },
+  {
+    id: "stealth", addon: "stealth", label: "더스크 스텔스", icon: "palette", group: "more", section: "work",
+    desc: "리스 채팅을 클로드·GPT 같은 다른 AI 앱처럼 꾸며요.",
+    card: "리스를 다른 AI 앱처럼 꾸며요.",
+    help: ["모양을 고르고 ‘켜기’를 누르면 리스 설정의 커스텀 CSS·채팅 HTML에 적용돼요.", "끄면 켜기 전 값으로 되돌려요."]
+  },
   { id: "aibot", addon: "aibuild", label: "AI로 봇 만들기", icon: "sparkle", group: "more", section: "work", desc: "AI 제작 화면으로 새 봇을 만들어요.", card: "AI로 새 봇 만들기", help: ["새 봇을 만든 뒤 AI로 제작 화면을 열어요."] },
   { id: "personabuilder", addon: "aibuild", label: "AI로 페르소나 만들기", icon: "character", group: "more", section: "work", desc: "양식과 AI를 이용해 페르소나를 만들어요.", card: "AI로 페르소나 만들기", help: ["페르소나 양식을 고르고 AI로 전체 또는 일부 내용을 만들 수 있어요."] },
   {

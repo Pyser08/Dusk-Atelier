@@ -288,3 +288,23 @@ test("스텔스 사이드바를 접어 두면 순정 사이드바를 숨기지 �
   const { SHELL_CSS } = await import("../src/data/stealth-shell.js");
   assert.match(SHELL_CSS, /body\[x-dusk-fold="1"\] \[x-dusk="stealth-top"\]\{display:none/);
 });
+
+test("Dusk 창이 열려 있으면 스텔스 껍데기를 감추고, 닫히면 다시 보인다", async () => {
+  const { setDuskOpen } = await import("../src/data/stealth-shell.js");
+  const api = shellApi({ pluginStorage: { getItem: async () => null, setItem: async () => {} } });
+  const sh = createShell(api, { kind: "claude", poll: 60000, log: () => {} });
+  await new Promise((r) => setTimeout(r, 80));
+  const vis = () => api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb").attrs["x-vis"];
+  assert.equal(vis(), "1");
+  setDuskOpen(true); await new Promise((r) => setTimeout(r, 30));
+  assert.equal(vis(), "0");
+  setDuskOpen(false); await new Promise((r) => setTimeout(r, 30));
+  assert.equal(vis(), "1");
+  await sh.destroy();
+});
+
+test("작업실에 더스크 스텔스 탭이 있다", async () => {
+  const { TABS } = await import("../src/ui/tabs.js");
+  const t = TABS.find((x) => x.id === "stealth");
+  assert.ok(t && t.addon === "stealth" && t.section === "work");
+});

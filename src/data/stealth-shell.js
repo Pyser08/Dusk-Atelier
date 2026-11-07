@@ -142,6 +142,10 @@ export function topHtml(model) {
     + `<button type="button" x-c="st-top-btn st-top-more" x-st-more="1" aria-label="스텔스 상단 줄 접기">${ico("vdots", 21)}</button>`;
 }
 
+// Dusk 창이 열려 있으면 껍데기를 감춘다(모바일에서 창 위에 상단 줄이 겹치던 문제). 애드온이 showContainer·hideContainer를 감싸 알려 준다
+var duskOpen = { v: false, fn: null };
+export function setDuskOpen(v) { duskOpen.v = !!v; duskOpen.fn?.(); }
+
 // ── 화면에 붙이기 ──
 export var shellInfo = { draws: 0, error: "", warn: "" };   // 진단용: 마지막으로 그린 결과
 var ROOT = "stealth-sb", NOTE = "stealth-note", TOP = "stealth-top", POP = "stealth-pop", STY = "stealth-shell-css";
@@ -209,7 +213,7 @@ export function createShell(api, opts = {}) {
       const cur = rows.find((r) => r.current);
       const model = { mobile: true, kind, word: opts.word, user, plan: opts.plan, rows, title: opts.title || char?.name || "", sub: opts.sub || cur?.name || "" };
       const rootEl = await put(d, ROOT, "div", shellHtml(model), "st-sb"); await rootEl?.setAttribute("x-fold", folded ? "1" : "0");
-      for (const id of [ROOT, TOP, NOTE, POP]) { const e = await d.querySelector(`[x-dusk="${id}"]`); await e?.setAttribute("x-vis", onChat ? "1" : "0"); }
+      await setVis(d);
       await put(d, TOP, "div", topHtml(model), "st-top");
       await put(d, NOTE, "div", opts.note ? esc(opts.note) : "", "st-note");
       for (const r of rows) {
@@ -227,6 +231,10 @@ export function createShell(api, opts = {}) {
       shellInfo.draws++; shellInfo.error = "";
       if (g) await g.addEventListener("click", () => togglePop().catch((e) => log("설정 열기 실패", e?.message ?? e)));
     } catch (e) { shellInfo.error = String(e?.message ?? e); log("스텔스 사이드바 그리기 실패", e?.message ?? e); }
+  }
+  async function setVis(d) {   // 채팅 화면이고 Dusk 창이 닫혀 있을 때만 보인다
+    const v = onChat && !duskOpen.v ? "1" : "0";
+    for (const id of [ROOT, TOP, NOTE, POP]) { const e = await d.querySelector(`[x-dusk="${id}"]`); await e?.setAttribute("x-vis", v); }
   }
   async function toggleFold(d) {   // 다시 그리지 않고 속성만 바꾼다
     try {
@@ -288,6 +296,7 @@ export function createShell(api, opts = {}) {
   }
   timer = setInterval(() => render(false), opts.poll ?? 4000);
   render(true);
+  duskOpen.fn = async () => { try { const d = await ensureDoc(); if (d) await setVis(d); } catch { /* 다음 그리기에서 */ } };
   return { refresh: () => render(true), close: closePop, destroy, _render: render };
 }
 

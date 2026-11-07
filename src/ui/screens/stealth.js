@@ -3,11 +3,12 @@ import { h, replace } from "../dom.js";
 import { btn, segmented, note, toggleRow, confirmDialog } from "../kit.js";
 import { PRESETS, PRESET_IDS, mergeLabels } from "../../data/stealth.js";
 import { loadStealth, saveStealth, enableStealth, disableStealth, runDiagnosis } from "../../data/stealth-apply.js";
-import { syncShell } from "../../data/stealth-shell.js";
+import { syncShell, setDuskOpen } from "../../data/stealth-shell.js";
 
 var LABEL_FIELDS = [["title", "상단 제목 (비우면 봇 이름)"], ["sub", "상단 제목 뒤 글"], ["model", "입력창 옆 문구"], ["left", "입력창 왼쪽 아래 문구"], ["note", "화면 아래 안내 글"], ["tool", "답변 앞 작업 줄"], ["think", "생성 중 문구"], ["user", "사이드바 사용자 이름 (비우면 페르소나)"], ["plan", "사이드바 요금제 글"]];
 
 export async function renderStealth(ctx) {
+  setDuskOpen(true);   // 이 화면은 Dusk 창 안 → 닫힐 때(hideContainer) 다시 보인다
   let st = await loadStealth(ctx.api);
   let pick = st.active ?? "claude";
   const wrap = h("div", { class: "rb-section rb-scroll", style: "flex:1;min-height:0;gap:12px" });   // rb-main은 넘치는 걸 자르므로 화면 자체가 스크롤 상자여야 한다
