@@ -750,9 +750,15 @@ ${a.note}`:"",`패치의 수정 ${c.update??0} · 내 수정 유지 ${c.mine??0}
 `;var TL={};le(TL,{PROVIDER_CSS:()=>ML});j();var ML=`
 .rb-prov{display:flex;flex-direction:column;gap:14px;padding-bottom:28px}
 .rb-prov .rb-seg{width:100%}
-.rb-pcard{display:flex;flex-direction:column;gap:12px;padding:14px 16px;border-radius:var(--rb-r3);background:var(--rb-surf);border:var(--rb-bw,1px) solid var(--rb-line2)}
-.rb-pcard .top{display:flex;align-items:center;gap:10px}.rb-pcard .top .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.rb-pcard .top b{font-size:14.5px}
-.rb-pcard .acts{display:flex;flex-wrap:wrap;gap:8px}
+.rb-pvcard{display:flex;flex-direction:column;gap:12px;padding:14px 16px;border-radius:var(--rb-r3);background:var(--rb-surf);border:var(--rb-bw,1px) solid var(--rb-line2)}
+.rb-pvcard .top{display:flex;align-items:center;gap:10px}.rb-pvcard .top .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.rb-pvcard .top b{font-size:14.5px}
+.rb-pvcard .acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.rb-pvcard .sec{display:flex;flex-direction:column;gap:8px;min-width:0}
+.rb-pvcard .sech{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;min-width:0}
+.rb-pvcard .foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-top:12px;border-top:var(--rb-bw,1px) solid var(--rb-line2)}
+.rb-pvcard .foot .res{flex:1;min-width:0;font-size:12.5px;color:var(--rb-mute);overflow-wrap:anywhere}
+.rb-pvcard .foot .rb-btn.danger{margin-left:auto}
+.rb-pvchips{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto}
 .rb-pgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
 @media (max-width:560px){.rb-pgrid{grid-template-columns:minmax(0,1fr)}}
 .rb-pfield{display:flex;flex-direction:column;gap:4px;min-width:0}.rb-pfield.wide{grid-column:1/-1}

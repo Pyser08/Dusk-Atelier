@@ -50,6 +50,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   await page.locator('[data-conn] input[type=search]').fill("mini"); await page.waitForTimeout(150);
   await page.locator("[data-conn] .rb-chip", { hasText: "gpt-test-mini" }).click(); await page.waitForTimeout(500);
   ok(`[${tag}] 프로필이 만들어지고 프로필 탭으로`, (await vis("[data-prof]")) === 1);
+  // 약속 P-4: 카드 버튼 배치 — 접기는 오른쪽 끝, 지우기(위험)는 맨 아래 오른쪽, 테두리에서 14px 이상 떨어짐
+  const lay = await page.evaluate(() => { const c = document.querySelector("[data-prof]"), cr = c.getBoundingClientRect(), r = (b) => b.getBoundingClientRect(); const fold = c.querySelector(".top .rb-btn"), del = c.querySelector(".foot .rb-btn.danger"); return { fold: cr.right - r(fold).right, delR: cr.right - r(del).right, delBottom: [...c.querySelectorAll(".rb-btn")].every((b) => r(b).top <= r(del).top + 1), left: Math.min(...[...c.querySelectorAll(".foot .rb-btn")].map((b) => r(b).left - cr.left)) }; });
+  ok(`[${tag}] 프로필 카드: 접기 오른쪽 끝, ‘프로필 지우기’는 맨 아래 오른쪽, 여백 14px 이상`, lay.fold >= 14 && lay.fold < 30 && lay.delR >= 14 && lay.delR < 30 && lay.delBottom && lay.left >= 14, JSON.stringify(lay));
   await page.locator('[data-prof] button.rb-chip[data-preset="oa-flex"]').click(); await page.waitForTimeout(400);
   ok(`[${tag}] 플렉스 프리셋이 켜짐`, (await page.locator('[data-preset="oa-flex"]').getAttribute("aria-pressed")) === "true");
   await page.locator('.rb-phead [role=switch]').click(); await page.waitForTimeout(600);
