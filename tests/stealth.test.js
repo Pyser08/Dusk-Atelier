@@ -105,7 +105,7 @@ test("채팅 목록: 최근 순, 현재 표시, 이름 없으면 번호, 최대 
 });
 test("사이드바 HTML: 이스케이프·현재 채팅 표시·코드 탭은 빈 목록 안내", () => {
   const h1 = shellHtml({ kind: "claude", user: "<b>나</b>", rows: [{ index: 0, name: "<script>", current: true }] });
-  assert.ok(!h1.includes("<script>") && !h1.includes("<b>나</b>")); assert.ok(h1.includes("st-sb-item on") && h1.includes("최근 항목") && h1.includes("data-st-gear"));
+  assert.ok(!h1.includes("<script>") && !h1.includes("<b>나</b>")); assert.ok(h1.includes("st-sb-item on") && h1.includes("최근 항목") && h1.includes("x-st-gear"));
   const h2 = shellHtml({ kind: "code", user: "p", rows: [] });
   assert.ok(h2.includes("시작한 세션이 여기에 표시됩니다") && !h2.includes("최근 항목"));
   assert.equal(topHtml({ title: "" }), ""); assert.ok(topHtml({ title: "A", sub: "B" }).includes("B"));
@@ -132,7 +132,7 @@ function fakeDoc() {
     return { addEventListener: async (ev, fn) => void (inn.handlers[ev] = fn), getChecked: async () => inn.checked, getValue: async () => inn.value, remove: async () => {} };
   };
   const wrap = (n) => ({ _n: n, setAttribute: async (k, v) => { if (!String(k).startsWith("x-")) throw new Error("Can only set attributes starting with 'x-'"); n.attrs[k] = v; }, setInnerHTML: async (h) => void (n.html = h), remove: async () => { const i = tree.indexOf(n); if (i >= 0) tree.splice(i, 1); }, addEventListener: async () => {} });
-  return { tree, createElement: async (t) => mk(t), querySelector: async (sel) => (sel === "head" || sel === "body" ? { appendChild: async (c) => void tree.push(c._n) } : find(sel)) };
+  return { tree, createElement: async (t) => mk(t), querySelector: async (sel) => (sel.includes(".default-chat-screen") ? { _chat: true } : sel === "head" || sel === "body" ? { appendChild: async (c) => void tree.push(c._n) } : find(sel)) };
 }
 function shellApi(over = {}) {
   const db = { username: "미유", personas: [{ id: "p", name: "선생님" }], selectedPersona: 0, modules: [{ id: "m1", customModuleToggle: "mt=모듈토글" }], enabledModules: ["m1"], globalChatVariables: {} };
@@ -149,7 +149,7 @@ test("사이드바를 그리고, 채팅을 누르면 그 채팅으로 바뀌고,
   const sb = api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb");
   assert.ok(sb, "사이드바가 붙었다"); assert.ok(sb.html.includes("둘째") && sb.html.includes("선생님".slice(0, 1)) || sb.html.includes("미유".slice(0, 1)));
   assert.ok(api.doc.tree.some((n) => n.attrs["x-dusk"] === "stealth-top"));
-  const row = sb.inner?.['data-st-chat=1'];
+  const row = sb.inner?.['x-st-chat=1'];
   assert.ok(row?.handlers.click, "채팅 줄에 클릭이 달렸다");
   await row.handlers.click();
   assert.equal(api.char.chatPage, 1);
@@ -161,13 +161,13 @@ test("설정(톱니)을 누르면 봇·모듈 토글이 뜨고, 바꾸면 리스
   const sh = createShell(api, { kind: "code", poll: 60000, log: () => {} });
   await new Promise((r) => setTimeout(r, 60));
   const sb = api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb");
-  await sb.inner["data-st-gear="].handlers.click();
+  await sb.inner["x-st-gear="].handlers.click();
   const pop = api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-pop");
   assert.ok(pop && pop.html.includes("봇토글") && pop.html.includes("모듈토글"));
-  const sw = pop.inner["data-st-t=0"]; sw.checked = true;
+  const sw = pop.inner["x-st-t=0"]; sw.checked = true;
   await sw.handlers.change({});
   assert.equal(api.db.globalChatVariables.toggle_ct, "1");
-  await sb.inner["data-st-gear="].handlers.click();   // 다시 누르면 닫힘
+  await sb.inner["x-st-gear="].handlers.click();   // 다시 누르면 닫힘
   assert.ok(!api.doc.tree.some((n) => n.attrs["x-dusk"] === "stealth-pop"));
   await sh.destroy();
 });
@@ -242,17 +242,15 @@ test("최소 모드는 화면 전체 규칙을 뺀다", () => {
   }
 });
 
-test("하단 ^ 버튼으로 사이드바를 접고 펼 수 있다", async () => {
-  const api = shellApi();
+test("사이드바는 기본으로 접혀 있고 ^로 펴고 접는다(속성만 바뀜)", async () => {
+  const api = shellApi({ pluginStorage: { getItem: async () => null, setItem: async () => {} } });
   const sh = createShell(api, { kind: "claude", poll: 60000, log: () => {} });
-  await new Promise((r) => setTimeout(r, 60));
-  const sb = api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb");
-  assert.equal(sb.attrs["x-fold"], "0"); assert.ok(sb.html.includes('data-st-fold'));
-  await sb.inner["data-st-fold="].handlers.click();
-  await new Promise((r) => setTimeout(r, 60));
-  assert.equal(api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb").attrs["x-fold"], "1");
-  await api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb").inner["data-st-fold="].handlers.click();
-  await new Promise((r) => setTimeout(r, 60));
-  assert.equal(api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb").attrs["x-fold"], "0");
+  await new Promise((r) => setTimeout(r, 80));
+  const get = () => api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb");
+  assert.equal(get().attrs["x-fold"], "1"); assert.ok(get().html.includes("x-st-fold"));
+  await get().inner["x-st-fold="].handlers.click();
+  assert.equal(get().attrs["x-fold"], "0");
+  await get().inner["x-st-fold="].handlers.click();
+  assert.equal(get().attrs["x-fold"], "1");
   await sh.destroy();
 });
