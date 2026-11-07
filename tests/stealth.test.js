@@ -377,7 +377,7 @@ test("이미지·배경 그림마다 위에 '명령어 N개 실행함' 줄을 �
   assert.equal(imgs[1].n.attrs["x-st-m"], undefined, "아직 안 받은(크기 0) 그림은 다음 차례에 다시 잰다");
   const box = imgs[0].n.replacedBy;
   assert.equal(box.attrs["x-st-fw"], "1"); assert.equal(box.attrs["x-open"], "0");
-  assert.equal(box.kids[0].text, "명령어 7개 실행함"); assert.equal(box.kids[1], imgs[0].n);
+  assert.equal(box.kids[0].text, "파일 7개 읽음, 명령어 7개 실행함"); assert.equal(box.kids[1], imgs[0].n);
   await box.kids[0].h(); assert.equal(box.attrs["x-open"], "1");
   await box.kids[0].h(); assert.equal(box.attrs["x-open"], "0");
   assert.equal(await wrapMedia(d), 0, "한 번 감싼 건 다시 안 함");

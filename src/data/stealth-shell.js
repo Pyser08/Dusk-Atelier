@@ -325,7 +325,7 @@ export async function wrapMedia(d, { log = () => {}, rand = () => 1 + Math.floor
       await el.setAttribute("x-st-m", "1");
       const box = await d.createElement("div"), lab = await d.createElement("div");
       await box.setAttribute("x-st-fw", "1"); await box.setAttribute("x-open", "0");
-      await lab.setAttribute("x-st-fl", "1"); await lab.setInnerText(`명령어 ${rand()}개 실행함`);
+      await lab.setAttribute("x-st-fl", "1"); await lab.setInnerText(`파일 ${rand()}개 읽음, 명령어 ${rand()}개 실행함`);   // 클로드 코드처럼(11-08 사용자 요청)
       await el.replaceWith(box);
       await box.appendChild(lab); await box.appendChild(el);
       let open = false;

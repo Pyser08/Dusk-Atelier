@@ -62,7 +62,7 @@ export async function renderStealth(ctx) {
       h("p", { class: "rb-muted" }, "리스 채팅을 다른 AI 채팅 앱처럼 보이게 해요. 켜면 리스의 커스텀 CSS·채팅 HTML 칸을 쓰고, 끄면 원래 값으로 되돌려요."),
       h("div", { style: "display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px" }, ...cards),
       segmented([["auto", "기기 설정 따라"], ["light", "항상 밝게"], ["dark", "항상 어둡게"]], st.scheme, (v) => { st.scheme = v; persist(); refresh(); }, "밝기"),
-      toggleRow("이미지 접기", "답변의 이미지를 ‘명령어 N개 실행함’ 줄 아래로 접어요. 누르면 펼쳐져요", st.hideImages, (v) => { st.hideImages = v; persist(); refresh(); }),
+      toggleRow("이미지 접기", "답변의 큰 이미지를 ‘파일 N개 읽음, 명령어 N개 실행함’ 줄 아래로 접어요. 누르면 펼쳐져요", st.hideImages, (v) => { st.hideImages = v; persist(); refresh(); }),
       toggleRow("사이드바 아바타 흐리게", "캐릭터 얼굴이 작게 보여도 알아보기 어렵게 해요", st.blurAvatars, (v) => { st.blurAvatars = v; persist(); refresh(); }),
       toggleRow("최소 모드 (스크롤 문제 점검용)", "화면 전체·입력창 꾸밈을 빼고 말풍선만 꾸며요. 켜 둔 상태면 바로 적용돼요. 스크롤이 되는지 알려 주세요", !!st.minimal, (v) => { st.minimal = v; persist(); refresh(); }),
       toggleRow("사이드바 숨기기", "왼쪽 목록을 통째로 숨겨요", st.hideSidebar, (v) => { st.hideSidebar = v; persist(); refresh(); }),
