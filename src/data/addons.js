@@ -66,7 +66,19 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
   const emit = () => listeners.forEach((l) => { try { l(); } catch { /* 화면 오류는 무시 */ } });
 
   const getIndex = async () => { try { const v = await store.getItem(INDEX_KEY); return v && typeof v === "object" ? v : typeof v === "string" ? JSON.parse(v) : {}; } catch { return {}; } };
-  const setIndex = (v) => store.setItem(INDEX_KEY, v);
+  // 목록 저장은 줄을 세워 하나씩, 그리고 바꾼 애드온 줄만 최신 목록에 합친다 —
+  // 여러 개를 동시에 받을 때 서로의 기록을 덮어써 '받는 중'에서 멈추던 문제(2.0.0)
+  let saving = Promise.resolve();
+  const setIndex = (v, ids = null) => {
+    const run = saving.then(async () => {
+      if (!ids) return store.setItem(INDEX_KEY, v);
+      const fresh = await getIndex();
+      for (const id of ids) { if (v[id] === undefined) delete fresh[id]; else fresh[id] = v[id]; }
+      return store.setItem(INDEX_KEY, fresh);
+    });
+    saving = run.catch(() => {});
+    return run;
+  };
   const manifestUrl = async () => { try { const v = await api.pluginStorage?.getItem(ADDON_URL_KEY); return typeof v === "string" && /^https:\/\//.test(v) ? v : ADDON_MANIFEST_URL; } catch { return ADDON_MANIFEST_URL; } };
 
   async function start(id, code, version) {
@@ -103,7 +115,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
         catch (e) {
           log(`${id} v${v.version} 시작 실패 ${e?.message ?? e}`);
           if (v.prev && await rollback(id, idx)) return running.has(id);
-          idx[id] = { ...v, on: false, error: String(e?.message ?? e) }; await setIndex(idx);
+          idx[id] = { ...v, on: false, error: String(e?.message ?? e) }; await setIndex(idx, [id]);
           return false;
         }
       })();
@@ -125,7 +137,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
     try { await start(id, code, v.prev.version); } catch { return false; }
     await store.setItem(CODE(id), code);
     idx[id] = { version: v.prev.version, sha256: v.prev.sha256, on: true, at: now(), rolledBack: v.version };
-    await setIndex(idx);
+    await setIndex(idx, [id]);
     log(`${id} v${v.version} 대신 v${v.prev.version}로 되돌렸어요`);
     return true;
   }
@@ -158,7 +170,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
       if (missing.length) throw new Error(`필요한 애드온(${missing.join(", ")})이 목록에 없어요`);
       const have = await getIndex();
       for (const r of order.filter((x) => x !== id)) {
-        if (!have[r]) await install(r, { withRequires: false });
+        if (!have[r]) await installOne(r, { withRequires: false });
         else if (have[r].on === false) await setOn(r, true);
       }
     }
@@ -168,19 +180,29 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
     if (cur) { const old = await store.getItem(CODE(id)).catch(() => null); if (typeof old === "string") { await store.setItem(PREV(id), old); } }
     await store.setItem(CODE(id), code);
     idx[id] = { version: a.version, sha256: a.sha256, on: cur?.on ?? true, at: now(), prev: cur ? { version: cur.version, sha256: cur.sha256 } : undefined, requires: a.requires?.length ? a.requires : undefined };
-    await setIndex(idx);
+    await setIndex(idx, [id]);
     const now_ = applyNow ?? (!a.hooks || !running.has(id));
     if (idx[id].on && now_) {
       await stop(id);
       try { await start(id, code, a.version); }
-      catch (e) { if (!(await rollback(id, idx))) { idx[id].on = false; idx[id].error = String(e?.message ?? e); await setIndex(idx); } throw e; }
+      catch (e) { if (!(await rollback(id, idx))) { idx[id].on = false; idx[id].error = String(e?.message ?? e); await setIndex(idx, [id]); } throw e; }
     } else if (idx[id].on) {
-      idx[id].pendingRestart = true; await setIndex(idx);
+      idx[id].pendingRestart = true; await setIndex(idx, [id]);
       // 훅이 있는 애드온은 다음 시작부터 새 버전 → 새로고침을 부탁하는 안내(main.js)
       try { onPendingRestart?.({ id, name: a.name, version: a.version }); } catch { /* 안내 실패는 무시 */ }
     }
     emit();
     return idx[id];
+  }
+
+  // 여러 개 한꺼번에(동시에 받되 같은 애드온은 한 번만). 결과: [{ id, ok, error }]
+  const inflight = new Map();
+  function installOne(id, opts) {
+    if (!inflight.has(id)) inflight.set(id, install(id, opts).finally(() => inflight.delete(id)));
+    return inflight.get(id);
+  }
+  async function installMany(ids) {
+    return Promise.all([...new Set(ids)].map((id) => installOne(id).then(() => ({ id, ok: true }), (e) => ({ id, ok: false, error: String(e?.message ?? e) }))));
   }
 
   async function setOn(id, on) {
@@ -190,7 +212,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
     if (on) for (const r of idx[id].requires ?? []) if (idx[r] && idx[r].on === false) await setOn(r, true);
     if (!on) for (const [other, v] of Object.entries(idx)) if (other !== id && v.on !== false && (v.requires ?? []).includes(id)) await setOn(other, false);
     idx[id] = { ...idx[id], on, error: undefined };
-    await setIndex(idx);
+    await setIndex(idx, [id]);
     if (on) await start(id, await store.getItem(CODE(id)), idx[id].version); else await stop(id);
     emit();
   }
@@ -198,7 +220,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
   async function remove(id) {
     for (const [other, v] of Object.entries(await getIndex())) if (other !== id && (v.requires ?? []).includes(id)) await remove(other);   // 이 애드온이 필요한 것도 함께
     await stop(id);
-    const idx = await getIndex(); delete idx[id]; await setIndex(idx);
+    const idx = await getIndex(); delete idx[id]; await setIndex(idx, [id]);
     await store.removeItem(CODE(id)); await store.removeItem(PREV(id));
     emit();
   }
@@ -210,7 +232,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
     try {
       const list = await loadManifest();
       const res = pickUpdates(await getIndex(), list, core);
-      for (const a of res.updates) { try { await install(a.id); log(`${a.id} v${a.version}로 업데이트했어요`); } catch (e) { log(`${a.id} 업데이트 실패 ${e?.message ?? e}`); } }
+      for (const r of await installMany(res.updates.map((a) => a.id))) log(r.ok ? `${r.id} 업데이트했어요` : `${r.id} 업데이트 실패 ${r.error}`);   // 동시에 받는다
       lastError = ""; emit();
       return res;
     } catch (e) { lastError = String(e?.message ?? e); emit(); return { updates: [], held: [], error: lastError }; }
@@ -232,7 +254,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
   }
 
   return {
-    boot, check, checkSoon, install, remove, setOn, getIndex, loadManifest, adopt,
+    boot, check, checkSoon, install: installOne, installMany, installing: (id) => inflight.has(id), remove, setOn, getIndex, loadManifest, adopt,
     core: () => core,
     manifest: () => manifest,
     running: (id) => running.has(id),

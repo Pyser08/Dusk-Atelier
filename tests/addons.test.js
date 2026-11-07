@@ -172,3 +172,22 @@ test("시작: 서로 상관없는 애드온은 동시에 켜고, 필요 애드�
   assert.ok(order.indexOf("+cards") > order.indexOf("-memory"), "cards는 memory가 켜진 뒤");
   assert.ok(["cards", "manage", "memory", "widgets"].every((id) => A.running(id)), "모두 켜짐");
 });
+
+test("여러 애드온을 동시에 받아도 모두 설치된다(서로의 기록을 덮어쓰지 않음)", async () => {
+  const kv = new Map();
+  // 저장이 느린 기기 흉내: 읽기·쓰기 사이에 다른 받기가 끼어들 틈을 준다
+  const wait = () => new Promise((r) => setTimeout(r, 5));
+  const store = { getItem: async (k) => { await wait(); return kv.get(k) ?? null; }, setItem: async (k, v) => { await wait(); kv.set(k, structuredClone(v)); }, removeItem: async (k) => { kv.delete(k); } };
+  const ids = ["a", "b", "c", "d"], files = {};
+  const addons = await Promise.all(ids.map(async (id) => { const body = `ok:${id}`; files[`https://x/${id}.js`] = body; return { id, name: id, version: "1.0.0", minCore: "2.0.0", url: `https://x/${id}.js`, sha256: await H(body) }; }));
+  files.manifest = JSON.stringify({ format: 1, addons });
+  const fetcher = async (_api, u) => { await wait(); const url = u.split("?")[0]; return url.endsWith("addons.json") ? files.manifest : files[url] ?? null; };
+  const importer = async () => ({ activate: async () => ({ deactivate() {} }) });
+  const A = createAddons({ getLocalPluginStorage: () => store, pluginStorage: store }, { core: "2.0.0", fetcher, importer, log: () => {} });
+  await A.loadManifest();
+  await Promise.all(ids.map((id) => A.install(id)));
+  assert.deepEqual(Object.keys(await A.getIndex()).sort(), ids);
+  // 한 번에 받기
+  const r = await A.installMany(["a", "b"]);
+  assert.ok(r.every((x) => x.ok));
+});
