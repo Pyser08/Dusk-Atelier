@@ -63,7 +63,8 @@ export var SHELL_CSS = `
 [x-dusk="stealth-sb"][x-fold="1"] [x-c~="st-sb-foot"] > :not([x-c~="st-sb-fold"]){display:none}
 [x-dusk="stealth-sb"][x-fold="1"] [x-c~="st-sb-fold"]{transform:rotate(180deg)}
 body[x-dusk-fold="1"][x-dusk-st]{padding-left:0 !important}
-body[x-dusk-fold="1"] [x-dusk="stealth-top"],body[x-dusk-fold="1"] [x-dusk="stealth-note"]{left:0}
+body[x-dusk-fold="1"] [x-dusk="stealth-top"]{display:none !important}
+body[x-dusk-fold="1"] [x-dusk="stealth-note"]{left:0}
 [x-dusk="stealth-sb"]{position:fixed;left:0;top:0;bottom:0;width:var(--st-sw,260px);z-index:9000;display:flex;flex-direction:column;box-sizing:border-box;background:var(--st-side);border-right:1px solid var(--st-line);color:var(--st-fg);font-size:13.5px;user-select:none}
 [x-dusk="stealth-sb"] *{box-sizing:border-box}
 [x-c~="st-sb-head"]{display:flex;align-items:center;gap:8px;padding:14px 14px 8px}
