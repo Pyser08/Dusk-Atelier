@@ -306,11 +306,36 @@ export function createShell(api, opts = {}) {
   return { refresh: () => render(true), close: closePop, destroy, _render: render };
 }
 
+// ── 이미지 접힘 줄 펴고 접기: 채팅 HTML의 .st-ftool에 클릭을 달아 x-open을 바꾼다(details를 지우는 판 대응) ──
+var listItems = async (list) => { if (!list) return []; const n = typeof list.length === "function" ? await list.length() : list.length; const out = []; for (let i = 0; i < n; i++) out.push(typeof list.at === "function" ? await list.at(i) : list[i]); return out; };
+export async function bindFolds(d, log = () => {}) {
+  let n = 0;
+  for (const el of await listItems(await d.querySelectorAll('.st-ftool:not([x-st-b])'))) {
+    if (!el) continue;
+    try {
+      await el.setAttribute("x-st-b", "1");
+      let open = false;
+      await el.addEventListener("click", async () => { open = !open; try { await el.setAttribute("x-open", open ? "1" : "0"); } catch (e) { log("접힘 펴기 실패", e?.message ?? e); } });
+      n++;
+    } catch (e) { log("접힘 연결 실패", e?.message ?? e); }
+  }
+  return n;
+}
+var folder = null;
+function startFolder(api, log) {
+  if (folder) return;
+  let busy = false;
+  const tick = async () => { if (busy) return; busy = true; try { const d = await api.getRootDocument?.(); if (d) await bindFolds(d, log); } catch { /* 다음에 */ } finally { busy = false; } };
+  folder = setInterval(tick, 1500); folder?.unref?.(); tick();
+}
+function stopFolder() { if (folder) { clearInterval(folder); folder = null; } }
+
 // ── 하나만 켜 두는 관리: 설정이 바뀔 때마다 부른다 ──
 var current = null;
 export async function syncShell(api, state, log) {
   const id = state?.active, P = id ? PRESETS[id] : null;
   setFoldOn(!!(P && state.hideImages !== false));
+  if (P && state.hideImages !== false) startFolder(api, log ?? (() => {})); else stopFolder();
   const want = P?.shell ? id : null;
   if (current) { const c = current; current = null; await c.shell.destroy().catch(() => {}); }
   if (!want) return null;

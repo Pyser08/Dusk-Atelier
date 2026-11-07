@@ -327,10 +327,10 @@ test("모바일 상단 줄은 손가락을 통과시켜 리스 사이드바 버�
 
 test("이미지 접기는 메시지 단위: 정규식이 만든 이미지도 접혀 있으면 숨고 펼치면 보인다(훅 없음)", () => {
   const b = buildStealth("claude", { hideImages: true });
-  assert.match(b.html, /<details class="st-ftool"><summary><span class="st-fn"><\/span><\/summary><\/details>/);
-  assert.match(b.css, /\.st-msg:has\(> details\.st-ftool:not\(\[open\]\)\) :is\(\.st-body img, \.st-body video/);
+  assert.match(b.html, /<div class="st-ftool"><span class="st-fn"><\/span><\/div>/);
+  assert.match(b.css, /\.st-msg:has\(> \.st-ftool:not\(\[x-open="1"\]\)\) :is\(\.st-body img, \.st-body video/);
   for (let n = 1; n <= 9; n++) assert.ok(b.css.includes(`명령어 ${n}개 실행함`));
-  assert.match(b.css, /\.st-msg:not\(:has\([^)]*img[^)]*\)\) > details\.st-ftool \{ display: none; \}/, "이미지 없는 메시지엔 접힘 줄을 숨김");
+  assert.match(b.css, /\.st-msg:not\(:has\([^)]*img[^)]*\)\) > \.st-ftool \{ display: none; \}/, "이미지 없는 메시지엔 접힘 줄을 숨김");
   const off = buildStealth("claude", { hideImages: false });
   assert.ok(!off.html.includes("st-ftool") && !off.css.includes("st-ftool"));
   assert.ok(off.html.includes("st-tool"), "끄면 예전 작업 줄");
@@ -348,8 +348,8 @@ test("채팅 번호를 못 읽어도 봇의 chatPage로 지금 채팅 이름을 
 
 test("접힘 줄은 클로드 앱처럼 '›_ 명령어 N개 실행함 ›', 펼치면 화살표가 돈다", () => {
   const css = buildStealth("claude", { hideImages: true }).css;
-  assert.match(css, /summary::before \{ content: "›_"/);
-  assert.match(css, /\[open\] > summary::after[^{]*\{ transform: rotate\(90deg\)/);
+  assert.match(css, /\.st-ftool::before \{ content: "›_"/);
+  assert.match(css, /\[x-open="1"\]::after \{ transform: rotate\(90deg\)/);
 });
 
 test("Dusk 창 열림 판단: 플러그인 화면 크기가 0이면 닫힘, 크기가 있으면 hideContainer가 불린 경우만 닫힘", async () => {
@@ -363,7 +363,7 @@ test("Dusk 창 열림 판단: 플러그인 화면 크기가 0이면 닫힘, 크�
 
 test("배경 그림으로 그리는 정규식 이미지(div style=background-image)도 접힘에 따라 숨는다", () => {
   const css = buildStealth("claude", { hideImages: true }).css;
-  assert.match(css, /:not\(\[open\]\)\) :is\([^)]*\.st-body \[style\*="background-image"\]/);
+  assert.match(css, /:not\(\[x-open="1"\]\)\) :is\([^)]*\.st-body \[style\*="background-image"\]/);
 });
 
 test("애드온이 새 버전이면 켜 둔 모양을 리스 설정에 다시 써 넣는다(한 번만)", async () => {
@@ -384,5 +384,15 @@ test("진단: 채팅 HTML에 접힘이 없거나 화면에서 지워졌으면 �
   const { diagnose } = await import("../src/data/stealth-apply.js");
   const base = { theme: "customHTML", hasStealthCss: true, hasWrapper: true };
   assert.ok(diagnose({ "채팅 래퍼(.st-msg)": 3 }, { ...base, hasFold: false }).some((l) => l.includes("다시 적용")));
-  assert.ok(diagnose({ "채팅 래퍼(.st-msg)": 3, "이미지 접힘 줄(details.st-ftool)": 0 }, { ...base, hasFold: true }).some((l) => l.includes("details")));
+  assert.ok(diagnose({ "채팅 래퍼(.st-msg)": 3, "이미지 접힘 줄(.st-ftool)": 0 }, { ...base, hasFold: true }).some((l) => l.includes("다시 열어")));
+});
+
+test("접힘 줄을 누르면 x-open이 켜졌다 꺼졌다 한다(details를 지우는 판 대응), 한 번만 연결", async () => {
+  const { bindFolds } = await import("../src/data/stealth-shell.js");
+  const els = [0, 1].map(() => { const n = { attrs: {}, h: null }; return { n, setAttribute: async (k, v) => { if (!k.startsWith("x-")) throw new Error("x-"); n.attrs[k] = v; }, addEventListener: async (_e, fn) => { n.h = fn; } }; });
+  const d = { querySelectorAll: async (sel) => { assert.match(sel, /x-st-b/); const list = els.filter((e) => !e.n.attrs["x-st-b"]); return { length: async () => list.length, at: async (i) => list[i] }; } };
+  assert.equal(await bindFolds(d), 2);
+  assert.equal(await bindFolds(d), 0, "이미 연결한 줄은 건너뜀");
+  await els[0].n.h(); assert.equal(els[0].n.attrs["x-open"], "1");
+  await els[0].n.h(); assert.equal(els[0].n.attrs["x-open"], "0");
 });

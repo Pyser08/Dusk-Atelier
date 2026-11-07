@@ -64,19 +64,18 @@ export var PRESET_IDS = Object.keys(PRESETS);
 // 이미지가 정규식·에셋 어디서 나오든(글 순서와 상관없이) 메시지 단위로 숨기고 펼치므로 훅이 필요 없다(채팅 열기가 느려지지 않음).
 // N(1~9)은 메시지 순서로 돌린다(CSS만).
 export function imageFoldCss() {
-  const F = ".st-msg > details.st-ftool", media = ".st-body img, .st-body video, .st-body picture, .st-body svg image, .st-body [style*=\"background-image\"]";   // 배경 그림으로 그리는 정규식 이미지(예: div.image-container)도
+  // 포켓리스 등은 채팅 HTML의 <details>를 지운다 → 그냥 div 줄로 두고, 펴고 접기는 스텔스가 클릭을 받아 x-open 속성으로 바꾼다(stealth-shell.js bindFolds)
+  const F = ".st-msg > .st-ftool", media = ".st-body img, .st-body video, .st-body picture, .st-body svg image, .st-body [style*=\"background-image\"]";
   const nth = Array.from({ length: 9 }, (_, i) => `.risu-chat:nth-child(9n + ${i + 1}) .st-fn::before, .risu-chat > :nth-child(9n + ${i + 1}) .st-fn::before { content: "명령어 ${i + 1}개 실행함"; }`).join("\n");
-  return `${F} { width: fit-content; max-width: 100%; margin: 4px 0 10px; }
-${F} > summary { list-style: none; cursor: pointer; color: var(--st-dim); font-size: 14px; line-height: 1.5; user-select: none; display: flex; align-items: center; }
-${F} > summary::-webkit-details-marker { display: none; }
-${F} > summary::before { content: "›_"; display: inline-block; width: 1.6em; font-family: var(--st-mono); letter-spacing: -.08em; }
-${F} > summary::after { content: "›"; display: inline-block; margin-left: .5em; font-size: 1.15em; transition: transform .15s; }
-${F}[open] > summary::after { transform: rotate(90deg); }
-${F} > summary:hover { color: var(--st-fg); }
+  return `${F} { width: fit-content; max-width: 100%; margin: 4px 0 10px; cursor: pointer; color: var(--st-dim); font-size: 14px; line-height: 1.5; user-select: none; display: flex; align-items: center; -webkit-tap-highlight-color: transparent; }
+${F}::before { content: "›_"; display: inline-block; width: 1.6em; font-family: var(--st-mono); letter-spacing: -.08em; }
+${F}::after { content: "›"; display: inline-block; margin-left: .5em; font-size: 1.15em; transition: transform .15s; }
+${F}[x-open="1"]::after { transform: rotate(90deg); }
+${F}:hover { color: var(--st-fg); }
 .st-fn::before { content: "명령어 3개 실행함"; }
 ${nth}
-.st-msg:not(:has(${media.split(", ").join(", ")})) > details.st-ftool { display: none; }
-.st-msg:has(> details.st-ftool:not([open])) :is(${media}) { display: none !important; }`;
+.st-msg:not(:has(${media})) > .st-ftool { display: none; }
+.st-msg:has(> .st-ftool:not([x-open="1"])) :is(${media}) { display: none !important; }`;
 }
 export var LABEL_KEYS = ["title", "sub", "tool", "model", "note", "left", "think", "user", "plan"];
 
@@ -212,7 +211,7 @@ ${inputBlock}`,
   ].filter(Boolean).join("\n");
   const html = [
     `<div class="st-msg st-{{role}}">`,
-    hideImages ? `<details class="st-ftool"><summary><span class="st-fn"></span></summary></details>` : L.tool ? `<div class="st-tool">${htmlText(L.tool)}<span class="st-tchev">▸</span></div>` : "",
+    hideImages ? `<div class="st-ftool"><span class="st-fn"></span></div>` : L.tool ? `<div class="st-tool">${htmlText(L.tool)}<span class="st-tchev">▸</span></div>` : "",
     `<div class="st-body"><risutextbox></risutextbox></div>`,
     `<div class="st-btns"><risubuttons></risubuttons></div>`,
     `</div>`
