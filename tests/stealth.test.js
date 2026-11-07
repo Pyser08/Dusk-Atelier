@@ -86,7 +86,7 @@ test("리스의 스크롤 컨테이너·전체 요소를 건드리지 않는다(
   const c = buildStealth("claudecode").css;
   assert.ok(c.includes('body[x-dusk-st][x-dusk-fold="0"] {') && !/(^|[\s,}])body:has\(/.test(c));
   assert.ok(!/\.rs-sidebar[^{]*\{[^}]*display:\s*none/.test(c), "클로드 계열은 순정 사이드바를 CSS로 숨기지 않는다(열면 스텔스 쪽이 숨는다)");
-  assert.ok(!buildStealth("gpt").css.includes("x-dusk-st"));
+  assert.ok(!buildStealth("codex").css.includes("x-dusk-st"));
   assert.ok(c.includes(".st-msg { width: 100%; max-width: var(--st-w); margin: 0 auto;"));
 });
 test("토글 정의 해석: 켜기·고르기·글, 구분선·그룹은 건너뜀, 같은 key는 한 번", () => {
@@ -179,7 +179,7 @@ test("syncShell: 껍데기가 있는 모양이면 켜고, 없는 모양·끔이�
   const api = shellApi();
   await syncShell(api, { active: "claudecode", labels: {} }, () => {});
   assert.equal(shellState(), "claudecode");
-  await syncShell(api, { active: "gpt", labels: {} }, () => {});
+  await syncShell(api, { active: "codex", labels: {} }, () => {});
   assert.equal(shellState(), null);
   await syncShell(api, { active: "claude", labels: {} }, () => {});
   await syncShell(api, null);
@@ -459,7 +459,7 @@ test("화면 진단 접힘 추적: 크기가 있는 접힘 줄·접혔는데 보
 test("클로드 계열은 사이드바 CSS를 리스 커스텀 CSS에도 넣는다(<style>을 못 넣는 판에서도 사이드바 모양이 산다)", async () => {
   const { SHELL_CSS } = await import("../src/data/stealth-shell.js");
   for (const id of ["claude", "claudecode"]) assert.ok(buildStealth(id).css.includes(SHELL_CSS), id);
-  assert.ok(!buildStealth("gpt").css.includes('[x-dusk="stealth-sb"]'), "사이드바 없는 모양엔 안 넣음");
+  assert.ok(!buildStealth("codex").css.includes('[x-dusk="stealth-sb"]'), "사이드바 없는 모양엔 안 넣음");
 });
 
 test("사이드바 CSS는 x-c로 찾고(요소를 하나씩 만들어 붙이므로), 설정 팝업만 class도 둔다", async () => {
@@ -474,4 +474,21 @@ test("\"…\"·'…'(리스가 mark risu-mark=quote1·quote2로 감쌈)는 접�
     assert.match(css, /\.chattext mark\[risu-mark\^="quote"\] \{ color: var\(--st-dim\) !important; \}/, id);
     assert.ok(css.indexOf('mark[risu-mark^="quote"]') > css.indexOf("mark[risu-mark] {"), id + ": 일반 mark 규칙보다 뒤(덮어씀)");
   }
+});
+
+test("GPT 모양(docs/STEALTH.md 7-1): 사이드바·발 두 줄 Plus·위 줄 폴더/공유·처리 시간 줄·따옴표 ・ 줄", async () => {
+  const { shellHtml, topHtml, markThinking, syncShell, shellState } = await import("../src/data/stealth-shell.js");
+  const h = shellHtml({ kind: "gpt", user: "키츠", rows: [{ index: 0, name: "브랜치 생성 완료", current: true }] });
+  for (const t of ["ChatGPT", "새 채팅", "이미지", "예약", "라이브러리", "플러그인", "탐색", "최근", "st-two", "<small>Plus</small>"]) assert.ok(h.includes(t), t);
+  assert.ok(!h.includes("st-sb-seg") && !/st-sb-row st-on/.test(h), "클로드식 묶음·첫 줄 강조 없음");
+  const t = topHtml({ kind: "gpt", sub: "브랜치 생성 완료", mobile: true });
+  assert.ok(t.includes("st-top-fold") && t.includes("브랜치 생성 완료") && t.includes("공유"));
+  const css = buildStealth("gpt").css;
+  assert.match(css, /\.st-msg\.st-char\[x-st-th\]::before \{ content: attr\(x-st-th\) " 동안 처리함  ›"/);
+  assert.match(css, /mark\[risu-mark\^="quote"\]::before \{ content: "・"/);
+  assert.ok(!buildStealth("claude").css.includes("동안 처리함"), "GPT 모양에서만");
+  const els = [{ a: {} }, { a: {} }].map((n) => ({ n, setAttribute: async (k, v) => { n.a[k] = v; } }));
+  assert.equal(await markThinking({ querySelectorAll: async () => els }, () => 0.5), 2);
+  assert.equal(els[0].n.a["x-st-th"], "1m 3s");
+  const api = shellApi(); await syncShell(api, { active: "gpt", labels: {} }, () => {}); assert.equal(shellState(), "gpt"); await syncShell(api, null);
 });

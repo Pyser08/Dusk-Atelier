@@ -44,11 +44,16 @@ export function chatRows(char, currentIndex, limit = 30) {
   return rows.slice(0, limit);
 }
 
+// 사이드바 종류(docs/STEALTH.md 5·7절). head: "seg"(클로드식 오른쪽 묶음) | "icons"(headRight 아이콘들). headLeft: 이름 왼쪽 아이콘.
+// firstOn: 첫 메뉴 줄 강조. foot2: 발을 두 줄(이름 / 요금제). top: "chat"이면 넓은 화면 위 줄에 [폴더] 채팅 이름 ⌄ … 공유. 글자만 쓰고 상표 그림은 쓰지 않는다.
 export var SHELL_KINDS = {
-  claude: { word: "Claude", wordSerif: true, headSeg: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["folder", "프로젝트"], ["cube", "아티팩트"], ["clock", "예약됨"], ["bag", "사용자 지정"]], recent: "최근 항목", empty: "", plan: "Pro" },
-  code: { word: "Code", wordSerif: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["cube", "아티팩트"], ["bag", "사용자 지정"], ["more", "더 보기"]], recent: "", empty: "시작한 세션이 여기에 표시됩니다", plan: "Pro" }
+  claude: { word: "Claude", wordSerif: true, head: "seg", headLeft: "panel", firstOn: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["folder", "프로젝트"], ["cube", "아티팩트"], ["clock", "예약됨"], ["bag", "사용자 지정"]], recent: "최근 항목", empty: "", plan: "Pro" },
+  code: { word: "Code", wordSerif: true, firstOn: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["cube", "아티팩트"], ["bag", "사용자 지정"], ["more", "더 보기"]], recent: "", empty: "시작한 세션이 여기에 표시됩니다", plan: "Pro" },
+  gpt: { word: "ChatGPT", head: "icons", headRight: ["search", "panel"], foot2: true, top: "chat", items: [["edit", "새 채팅"], ["image", "이미지"], ["clock", "예약"], ["book", "라이브러리"], ["plug", "플러그인"], ["more", "탐색"]], recent: "최근", empty: "", plan: "Plus" }
 };
 var ICON = {
+  image: '<rect x="4" y="5" width="16" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m4.5 17 4.5-4.5 4 4 2-2 4.5 4.5"/>', book: '<path d="M5 4h3v16H5zM10 4h3v16h-3z"/><path d="m15 5 3-.8 3.2 15.3-3 .7z"/>',
+  plug: '<circle cx="12" cy="12" r="8"/><path d="M9.5 9.5h5v3a2.5 2.5 0 0 1-5 0zM11 7v2.5M13 7v2.5M12 15v2"/>', share: '<path d="M12 15V4M8 8l4-4 4 4M5 13v6h14v-6"/>', chev: '<path d="m7 10 5 5 5-5"/>',
   panel: '<rect x="3.5" y="5" width="17" height="14" rx="3"/><path d="M8 9v6"/>', chatq: '<path d="M12 4.5a7 7 0 0 0-6.2 10.2L5 19l4.3-.8A7 7 0 1 0 12 4.5z"/><circle cx="15.5" cy="15.5" r="2.2"/><path d="m17.2 17.2 1.6 1.6"/>', code: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 6l-3 12"/>',
   menu: '<path d="M4 7h16M4 12h10M4 17h13"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/>', vdots: '<path d="M12 6h.01M12 12h.01M12 18h.01" stroke-width="3"/>', stack: '<rect x="6" y="9" width="12" height="11" rx="2"/><path d="M8 6h8M10 3h4"/>',
   plus: '<path d="M12 5v14M5 12h14"/>', search: '<circle cx="11" cy="11" r="6"/><path d="m20 20-4-4"/>', folder: '<path d="M4 7h6l2 2h8v9H4z"/>',
@@ -63,19 +68,29 @@ import { SHELL_CSS } from "./stealth-shellcss.js";
 /** 사이드바 HTML. model: {kind, user, plan, rows[], title, sub, nativeToggles} */
 export function shellHtml(model) {
   const K = SHELL_KINDS[model.kind] ?? SHELL_KINDS.claude;
-  const nav = K.items.map(([ic, name], i) => `<div class="st-sb-row${i === 0 ? " st-on" : ""}">${ico(ic)}<span>${esc(name)}</span></div>`).join("");
+  const nav = K.items.map(([ic, name], i) => `<div class="st-sb-row${i === 0 && K.firstOn ? " st-on" : ""}">${ico(ic)}<span>${esc(name)}</span></div>`).join("");
   const rows = (model.rows ?? []).map((r) => `<button type="button" class="st-sb-item${r.current ? " st-on" : ""}" data-st-chat="${r.index}" title="${esc(r.name)}">${esc(r.name)}</button>`).join("");
   const list = rows || (K.empty ? `<div class="st-sb-empty">${esc(K.empty)}</div>` : "");
-  const who = String(model.user || "나");
-  // 머리: [패널 아이콘] Claude ……… [말풍선|</>] (클로드 앱 모양, 장식)
-  const seg = K.headSeg ? `<span class="st-sb-seg"><span class="st-sb-segb st-on">${ico("chatq", 18)}</span><span class="st-sb-segb">${ico("code", 18)}</span></span>` : "";
-  return `<div class="st-sb-head">${K.headSeg ? `<span class="st-sb-hico">${ico("panel", 20)}</span>` : ""}<span class="st-sb-word${K.wordSerif ? " st-serif" : ""}">${esc(model.word ?? K.word)}</span>${seg}</div>`
+  const who = String(model.user || "나"), plan = String(model.plan ?? K.plan ?? "").trim();
+  // 머리: [왼쪽 아이콘] 앱 이름 ……… [오른쪽: 클로드식 묶음 | 아이콘들] (장식)
+  const right = K.head === "seg" ? `<span class="st-sb-seg"><span class="st-sb-segb st-on">${ico("chatq", 18)}</span><span class="st-sb-segb">${ico("code", 18)}</span></span>`
+    : K.head === "icons" ? `<span class="st-sb-hright">${(K.headRight ?? []).map((n) => `<span class="st-sb-hbtn">${ico(n, 20)}</span>`).join("")}</span>` : "";
+  const whoHtml = K.foot2 ? `<span class="st-sb-who st-two"><span>${esc(who)}</span>${plan ? `<small>${esc(plan)}</small>` : ""}</span>` : `<span class="st-sb-who">${esc(who)}${plan ? `<small>· ${esc(plan)}</small>` : ""}</span>`;
+  return `<div class="st-sb-head">${K.headLeft ? `<span class="st-sb-hico">${ico(K.headLeft, 20)}</span>` : ""}<span class="st-sb-word${K.wordSerif ? " st-serif" : ""}">${esc(model.word ?? K.word)}</span>${right}</div>`
     + `<div class="st-sb-nav">${nav}</div>`
     + (K.recent ? `<div class="st-sb-sec"><span>${esc(K.recent)}</span></div>` : "")
     + `<div class="st-sb-list">${list}</div>`
-    + `<div class="st-sb-foot"><span class="st-sb-av">${esc(who.slice(0, 1).toUpperCase())}</span><span class="st-sb-who">${esc(who)}<small>· ${esc(model.plan ?? K.plan)}</small></span><button type="button" class="st-sb-gear" data-st-gear="1" aria-label="설정">${ico("gear", 18)}</button></div>`;
+    + `<div class="st-sb-foot"><span class="st-sb-av">${esc(who.slice(0, 1).toUpperCase())}</span>${whoHtml}<button type="button" class="st-sb-gear" data-st-gear="1" aria-label="설정">${ico("gear", 18)}</button></div>`;
 }
 export function topHtml(model) {
+  const K = SHELL_KINDS[model.kind] ?? {};
+  if (K.top === "chat") {   // GPT식: [폴더] 채팅 이름 ⌄ ……… 공유 (휴대폰도 같은 줄, 왼쪽 ≡)
+    const name = String(model.sub || model.title || "").trim();
+    return `<button type="button" class="st-top-btn" data-st-menu="1" aria-hidden="true" tabindex="-1">${ico("menu", 22)}</button>`
+      + `<span class="st-top-t"><span class="st-top-fold">${ico("folder", 18)}</span><b style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(name)}</b><span class="st-top-chev">${ico("chev", 16)}</span></span>`
+      + `<span class="st-top-share">${ico("share", 18)}<span>공유</span></span>`
+      + `<button type="button" class="st-top-btn st-top-more" data-st-more="1" aria-label="스텔스 상단 줄 접기">${ico("vdots", 21)}</button>`;
+  }
   const t = String(model.title ?? "").trim();
   if (!t && !model.mobile) return "";
   // 넓은 화면: 제목 줄만. 좁은 화면(모바일): ≡ · [아이콘] 제목 / 채팅 · 연필 · ⋮ — 클로드 앱처럼 한 줄
@@ -347,11 +362,20 @@ export async function wrapMedia(d, { log = () => {}, rand = () => 1 + Math.floor
   }
   return n;
 }
+// 답변마다 'Nm SSs 동안 처리함'에 쓸 시간을 한 번 정해 둔다(x-st-th). GPT 모양 CSS만 이것을 보여 준다.
+export async function markThinking(d, rand = Math.random) {
+  let n = 0;
+  for (const el of await listItems(await d.querySelectorAll(".st-msg.st-char:not([x-st-th])"))) {
+    const sec = 8 + Math.floor(rand() * 110);
+    try { await el?.setAttribute("x-st-th", sec >= 60 ? `${Math.floor(sec / 60)}m ${sec % 60}s` : `${sec}s`); n++; } catch { /* 다음에 */ }
+  }
+  return n;
+}
 var folder = null;
 function startFolder(api, log) {
   if (folder) return;
   let busy = false;
-  const tick = async () => { if (busy) return; busy = true; try { const d = await api.getRootDocument?.(); if (d) await wrapMedia(d, { log }); } catch { /* 다음에 */ } finally { busy = false; } };
+  const tick = async () => { if (busy) return; busy = true; try { const d = await api.getRootDocument?.(); if (d) { await wrapMedia(d, { log }); await markThinking(d); } } catch { /* 다음에 */ } finally { busy = false; } };
   folder = setInterval(tick, 1500); folder?.unref?.(); tick();
 }
 function stopFolder() { if (folder) { clearInterval(folder); folder = null; } }
@@ -362,11 +386,11 @@ export async function syncShell(api, state, log) {
   const id = state?.active, P = id ? PRESETS[id] : null;
   setFoldOn(!!(P && state.hideImages !== false));
   if (P && state.hideImages !== false) startFolder(api, log ?? (() => {})); else stopFolder();
-  const want = P?.shell ? id : null;
+  const want = (P?.sidebar ?? P?.shell) ? id : null;
   if (current) { const c = current; current = null; await c.shell.destroy().catch(() => {}); }
   if (!want) return null;
   const L = mergeLabels(id, state.labels?.[id]);
-  const shell = createShell(api, { kind: P.shell, title: L.title, sub: L.sub, note: L.note, user: L.user, plan: L.plan || undefined, log });
+  const shell = createShell(api, { kind: P.sidebar ?? P.shell, title: L.title, sub: L.sub, note: L.note, user: L.user, plan: L.plan || undefined, log });
   current = { id, shell };
   return shell;
 }
