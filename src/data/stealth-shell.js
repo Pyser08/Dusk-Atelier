@@ -62,25 +62,25 @@ import { SHELL_CSS } from "./stealth-shellcss.js";
 /** 사이드바 HTML. model: {kind, user, plan, rows[], title, sub, nativeToggles} */
 export function shellHtml(model) {
   const K = SHELL_KINDS[model.kind] ?? SHELL_KINDS.claude;
-  const nav = K.items.map(([ic, name], i) => `<div x-c="st-sb-row${i === 0 ? " on" : ""}">${ico(ic)}<span>${esc(name)}</span></div>`).join("");
-  const rows = (model.rows ?? []).map((r) => `<button type="button" x-c="st-sb-item${r.current ? " on" : ""}" x-st-chat="${r.index}" title="${esc(r.name)}">${esc(r.name)}</button>`).join("");
-  const list = rows || (K.empty ? `<div x-c="st-sb-empty">${esc(K.empty)}</div>` : "");
+  const nav = K.items.map(([ic, name], i) => `<div class="st-sb-row${i === 0 ? " st-on" : ""}">${ico(ic)}<span>${esc(name)}</span></div>`).join("");
+  const rows = (model.rows ?? []).map((r) => `<button type="button" class="st-sb-item${r.current ? " st-on" : ""}" data-st-chat="${r.index}" title="${esc(r.name)}">${esc(r.name)}</button>`).join("");
+  const list = rows || (K.empty ? `<div class="st-sb-empty">${esc(K.empty)}</div>` : "");
   const who = String(model.user || "나");
-  return `<div x-c="st-sb-head"><span x-c="st-sb-word${K.wordSerif ? " serif" : ""}">${esc(model.word ?? K.word)}</span></div>`
-    + `<div x-c="st-sb-nav">${nav}</div>`
-    + (K.recent ? `<div x-c="st-sb-sec"><span>${esc(K.recent)}</span></div>` : "")
-    + `<div x-c="st-sb-list">${list}</div>`
-    + `<div x-c="st-sb-foot"><span x-c="st-sb-av">${esc(who.slice(0, 1).toUpperCase())}</span><span x-c="st-sb-who">${esc(who)}<small>· ${esc(model.plan ?? K.plan)}</small></span><button type="button" x-c="st-sb-gear" x-st-gear="1" aria-label="설정">${ico("gear", 18)}</button><button type="button" x-c="st-sb-gear st-sb-fold" x-st-fold="1" aria-label="사이드바 접기·펴기" title="사이드바 접기·펴기">^</button></div>`;
+  return `<div class="st-sb-head"><span class="st-sb-word${K.wordSerif ? " st-serif" : ""}">${esc(model.word ?? K.word)}</span></div>`
+    + `<div class="st-sb-nav">${nav}</div>`
+    + (K.recent ? `<div class="st-sb-sec"><span>${esc(K.recent)}</span></div>` : "")
+    + `<div class="st-sb-list">${list}</div>`
+    + `<div class="st-sb-foot"><span class="st-sb-av">${esc(who.slice(0, 1).toUpperCase())}</span><span class="st-sb-who">${esc(who)}<small>· ${esc(model.plan ?? K.plan)}</small></span><button type="button" class="st-sb-gear" data-st-gear="1" aria-label="설정">${ico("gear", 18)}</button><button type="button" class="st-sb-gear st-sb-fold" data-st-fold="1" aria-label="사이드바 접기·펴기" title="사이드바 접기·펴기">^</button></div>`;
 }
 export function topHtml(model) {
   const t = String(model.title ?? "").trim();
   if (!t && !model.mobile) return "";
   // 넓은 화면: 제목 줄만. 좁은 화면(모바일): ≡ · [아이콘] 제목 / 채팅 · 연필 · ⋮ — 클로드 앱처럼 한 줄
   const one = "display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap";
-  return `<button type="button" x-c="st-top-btn" x-st-menu="1" aria-hidden="true" tabindex="-1">${ico("menu", 22)}</button>`
-    + `<span x-c="st-top-t" style="${one}">${t ? `<span x-c="st-top-ico" style="flex:none;line-height:0">${ico("stack", 17)}</span><b style="flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(t)}</b>` : ""}${model.sub ? `<span x-c="st-top-sub" style="flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis">/&nbsp; ${esc(model.sub)}</span>` : ""}</span>`
-    + `<span x-c="st-top-btn st-top-deco">${ico("edit", 21)}</span>`
-    + `<button type="button" x-c="st-top-btn st-top-more" x-st-more="1" aria-label="스텔스 상단 줄 접기">${ico("vdots", 21)}</button>`;
+  return `<button type="button" class="st-top-btn" data-st-menu="1" aria-hidden="true" tabindex="-1">${ico("menu", 22)}</button>`
+    + `<span class="st-top-t" style="${one}">${t ? `<span class="st-top-ico" style="flex:none;line-height:0">${ico("stack", 17)}</span><b style="flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(t)}</b>` : ""}${model.sub ? `<span class="st-top-sub" style="flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis">/&nbsp; ${esc(model.sub)}</span>` : ""}</span>`
+    + `<span class="st-top-btn st-top-deco">${ico("edit", 21)}</span>`
+    + `<button type="button" class="st-top-btn st-top-more" data-st-more="1" aria-label="스텔스 상단 줄 접기">${ico("vdots", 21)}</button>`;
 }
 
 // Dusk 창이 열려 있으면 껍데기를 감춘다(모바일에서 창 위에 상단 줄이 겹치던 문제). 애드온이 showContainer·hideContainer를 감싸 알려 준다
@@ -188,16 +188,16 @@ export function createShell(api, opts = {}) {
       await put(d, TOP, "div", topHtml(model), "st-top");
       await put(d, NOTE, "div", opts.note ? esc(opts.note) : "", "st-note");
       for (const r of rows) {
-        const b = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-chat="${r.index}"]`);
+        const b = await d.querySelector(`[x-dusk="${ROOT}"] [data-st-chat="${r.index}"]`);
         if (b) await b.addEventListener("click", () => switchChat(ci, r.index).catch((e) => log("채팅 전환 실패", e?.message ?? e)));
       }
-      const g = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-gear]`);
+      const g = await d.querySelector(`[x-dusk="${ROOT}"] [data-st-gear]`);
       const topEl = await d.querySelector(`[x-dusk="${TOP}"]`); await topEl?.setAttribute("x-plain", plain ? "1" : "0");
-      const more = await d.querySelector(`[x-dusk="${TOP}"] [x-st-more]`);
+      const more = await d.querySelector(`[x-dusk="${TOP}"] [data-st-more]`);
       if (more) await more.addEventListener("click", async () => { plain = !plain; try { const t = await d.querySelector(`[x-dusk="${TOP}"]`); await t?.setAttribute("x-plain", plain ? "1" : "0"); } catch (e) { log("상단 줄 접기 실패", e?.message ?? e); } });
       const bd = await d.querySelector("body");   // 한 번만 단다(body는 다시 그려도 그대로)
       try { if (bd?.addEventListener && await bd.getAttribute?.("x-st-hc") !== "1") { await bd.setAttribute?.("x-st-hc", "1"); await bd.addEventListener("pointerdown", () => { noteHostClick(); setTimeout(() => { recheckNative().catch(() => {}); }, 350); }); } } catch (e) { log("바깥 클릭 감지 실패", e?.message ?? e); }
-      const fb = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-fold]`);
+      const fb = await d.querySelector(`[x-dusk="${ROOT}"] [data-st-fold]`);
       if (fb) await fb.addEventListener("click", () => toggleFold(d));
       shellInfo.draws++; shellInfo.error = "";
       if (g) await g.addEventListener("click", () => togglePop().catch((e) => log("설정 열기 실패", e?.message ?? e)));
@@ -248,15 +248,15 @@ export function createShell(api, opts = {}) {
     const { toggles, vars } = await popModel();
     const rows = toggles.length ? toggles.map((t, i) => {
       const v = toggleValue(t, vars);
-      const ctl = t.type === "toggle" ? `<input x-c="st-sw" type="checkbox" x-st-t="${i}" ${v ? "checked" : ""}>`
-        : t.type === "select" ? `<select x-st-t="${i}">${t.options.map((o, j) => `<option value="${j}" ${String(v) === String(j) ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`
-          : `<input type="text" x-st-t="${i}" value="${esc(v)}">`;
-      return `<div x-c="st-pop-row"><label>${esc(t.label)}</label>${ctl}</div>`;
-    }).join("") : `<div x-c="st-sb-empty">이 봇에는 켜고 끌 토글이 없어요</div>`;
+      const ctl = t.type === "toggle" ? `<input class="st-sw" type="checkbox" data-st-t="${i}" ${v ? "checked" : ""}>`
+        : t.type === "select" ? `<select data-st-t="${i}">${t.options.map((o, j) => `<option value="${j}" ${String(v) === String(j) ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`
+          : `<input type="text" data-st-t="${i}" value="${esc(v)}">`;
+      return `<div class="st-pop-row"><label>${esc(t.label)}</label>${ctl}</div>`;
+    }).join("") : `<div class="st-sb-empty">이 봇에는 켜고 끌 토글이 없어요</div>`;
     const el = await put(d, POP, "div", `<h4>설정</h4>${rows}`, "st-pop");
     popOpen = true;
     for (let i = 0; i < toggles.length; i++) {
-      const t = toggles[i], c = await d.querySelector(`[x-dusk="${POP}"] [x-st-t="${i}"]`);
+      const t = toggles[i], c = await d.querySelector(`[x-dusk="${POP}"] [data-st-t="${i}"]`);
       if (!c) continue;
       await c.addEventListener("change", async (ev) => {
         try {
