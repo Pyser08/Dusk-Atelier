@@ -160,6 +160,8 @@ export function shellFlags() {
   const vis = shellInfo.onChat && !duskOpen.v;
   return `채팅 화면 ${shellInfo.onChat ? "찾음" : "못 찾음"} · Dusk 창 ${duskOpen.v ? "열림으로 판단" : "닫힘"}(창 크기 ${frameVisible() ? `${globalThis.innerWidth}×${globalThis.innerHeight}` : "0"}, 마지막 호출 ${duskOpen.call === undefined ? "없음" : duskOpen.call ? "열기" : "닫기"}) · ${shellInfo.folded ? "접힘" : "펼침"} → ${vis ? "보임" : "숨김"}`;
 }
+// 리스 화면(우리 iframe 밖)이 눌렸다 = Dusk 창이 화면을 덮고 있지 않다. 포켓리스는 바깥을 눌러 창을 닫아도 아무 신호가 없어 이것으로 안다.
+export function noteHostClick(w) { if (duskOpen.call === false && !duskOpen.v) return false; duskOpen.call = false; return refreshDuskOpen(w); }
 export function setDuskOpen(v, w) { duskOpen.call = !!v; duskOpen.v = !v; return refreshDuskOpen(w); }
 
 // ── 화면에 붙이기 ──
@@ -240,6 +242,8 @@ export function createShell(api, opts = {}) {
       const topEl = await d.querySelector(`[x-dusk="${TOP}"]`); await topEl?.setAttribute("x-plain", plain ? "1" : "0");
       const more = await d.querySelector(`[x-dusk="${TOP}"] [x-st-more]`);
       if (more) await more.addEventListener("click", async () => { plain = !plain; try { const t = await d.querySelector(`[x-dusk="${TOP}"]`); await t?.setAttribute("x-plain", plain ? "1" : "0"); } catch (e) { log("상단 줄 접기 실패", e?.message ?? e); } });
+      const bd = await d.querySelector("body");   // 한 번만 단다(body는 다시 그려도 그대로)
+      try { if (bd?.addEventListener && await bd.getAttribute?.("x-st-hc") !== "1") { await bd.setAttribute?.("x-st-hc", "1"); await bd.addEventListener("pointerdown", () => { noteHostClick(); }); } } catch (e) { log("바깥 클릭 감지 실패", e?.message ?? e); }
       const fb = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-fold]`);
       if (fb) await fb.addEventListener("click", () => toggleFold(d));
       shellInfo.draws++; shellInfo.error = "";

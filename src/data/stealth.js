@@ -185,8 +185,8 @@ body[x-dusk-st][x-dusk-fold="0"] { padding-left: var(--st-sw) !important; box-si
 @media (max-width: 760px) { body[x-dusk-st] { padding-left: 0 !important; } }`
       : (L.title ? `body::before { content: "${cssText(L.title)}"; position: fixed; top: 0; left: 0; right: 0; height: 44px; z-index: 30; display: flex; align-items: center; padding: 0 24px; background: var(--st-bg); border-bottom: 1px solid var(--st-line); color: var(--st-fg2); font-size: 13px; font-weight: 500; white-space: pre; overflow: hidden; pointer-events: none; }
 ` : ""),
-    // 포켓리스: .st-msg를 감싼 상자가 내용 폭으로 줄어(313px) 가운데 맞춤이 안 먹고 왼쪽에 붙었다 → 감싼 상자를 꽉 채운다
-    `:has(> .st-msg) { width: 100%; max-width: 100%; min-width: 0; flex: 1 1 100%; }
+    // 포켓리스: .st-msg를 감싼 상자가 내용 폭으로 줄어(313px) 가운데 맞춤이 안 먹고 왼쪽에 붙었다 → 감싼 상자를 꽉 채운다. 범위를 채팅 메시지 상자로 좁힌다(전체 요소에 :has를 걸면 채팅이 바뀔 때마다 화면 전체를 다시 따져 느려진다)
+    `.risu-chat .grow > div:has(> .st-msg) { width: 100%; max-width: 100%; min-width: 0; flex: 1 1 100%; }
 ` +
     `.st-msg { width: 100%; max-width: var(--st-w); margin: 0 auto; padding: 6px 24px; box-sizing: border-box; min-width: 0; position: relative; color: var(--st-fg); display: flex; flex-direction: column; }
 .st-body { min-width: 0; }

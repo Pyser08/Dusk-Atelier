@@ -81,7 +81,7 @@ test("리스의 스크롤 컨테이너·전체 요소를 건드리지 않는다(
     assert.ok(!/\.risu-chat > div/.test(css), `${id}: 리스 메시지 컨테이너 대신 우리 래퍼를 쓴다`);
     assert.ok(!/body \*/.test(css), `${id}: 모든 요소에 거는 규칙 없음`);
     assert.ok(!css.includes("-webkit-scrollbar"), `${id}: 스크롤바 크기를 바꾸지 않는다`);
-    assert.ok((css.replace(/[^{}]*st-f(?:old|tool)[^{]*\{[^}]*\}/g, "").replace(/@media \(max-width: 760px\) \{[\s\S]*?\n\}/g, "").replace(/:has\(> \.st-msg\)/g, "").match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창) — 우리 래퍼 바로 위만 보는 :has(> .st-msg)는 싸서 뺀다`);
+    assert.ok((css.replace(/[^{}]*st-f(?:old|tool)[^{]*\{[^}]*\}/g, "").replace(/@media \(max-width: 760px\) \{[\s\S]*?\n\}/g, "").replace(/\.risu-chat \.grow > div:has\(> \.st-msg\)/g, "").match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창) — 채팅 메시지 상자로 범위를 좁힌 :has(> .st-msg)만 뺀다(맨 :has는 화면 전체를 다시 따져 느려짐)`);
   }
   const c = buildStealth("claudecode").css;
   assert.ok(c.includes('body[x-dusk-st][x-dusk-fold="0"] {') && !/(^|[\s,}])body:has\(/.test(c));
@@ -421,4 +421,12 @@ test("포켓리스: 창을 닫아도 iframe 크기가 남고 닫기 호출이 �
 test("채팅 래퍼의 바로 위 상자가 글 폭만큼 줄어도(포켓리스) 래퍼가 가운데 오도록 부모를 넓힌다", () => {
   const { css } = buildStealth("claude");
   assert.match(css, /:has\(> \.st-msg\)\s*\{[^}]*width:\s*100%/);
+});
+
+test("포켓리스: 바깥을 눌러 Dusk 창을 닫으면(닫기 호출·크기 변화 없음) 리스 화면 클릭으로 닫힘을 알고 사이드바를 다시 보인다", async () => {
+  const { setDuskOpen, duskOpen, noteHostClick } = await import("../src/data/stealth-shell.js");
+  const root = { hidden: false }, w = { innerWidth: 400, innerHeight: 800, document: { querySelector: () => root } };
+  setDuskOpen(true, w); assert.equal(duskOpen.v, true);
+  noteHostClick(w); assert.equal(duskOpen.v, false, "리스 화면을 눌렀다 = Dusk 창이 덮고 있지 않다");
+  setDuskOpen(true, w); assert.equal(duskOpen.v, true, "다시 열면(showContainer) 다시 숨김");
 });

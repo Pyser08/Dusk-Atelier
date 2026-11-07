@@ -5,6 +5,17 @@ import { PRESETS, PRESET_IDS, mergeLabels } from "../../data/stealth.js";
 import { loadStealth, saveStealth, enableStealth, disableStealth, runDiagnosis } from "../../data/stealth-apply.js";
 import { syncShell, setDuskOpen } from "../../data/stealth-shell.js";
 
+// 진단 결과는 화면 밖에 둔다: '5초 뒤 진단'은 창을 닫았다 다시 여는데, 다시 열면 이 화면을 새로 그려 결과가 사라졌다
+let diag = "", redraw = null;   // redraw: 지금 떠 있는 화면의 다시 그리기(진단이 끝났을 때 새로 연 화면에 보이게)
+// 플러그인 iframe에서는 clipboard API가 막히는 판이 있다 → 숨긴 글상자를 골라 복사 명령으로 한 번 더
+async function copyText(win, text) {
+  try { await win.navigator.clipboard.writeText(text); return true; } catch { /* 아래로 */ }
+  const d = win.document, ta = d.createElement("textarea");
+  ta.value = text; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;width:1px;height:1px";
+  d.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+  try { return d.execCommand("copy"); } catch { return false; } finally { ta.remove(); }
+}
+
 var LABEL_FIELDS = [["title", "상단 제목 (비우면 봇 이름)"], ["sub", "상단 제목 뒤 글"], ["model", "입력창 옆 문구"], ["left", "입력창 왼쪽 아래 문구"], ["note", "화면 아래 안내 글"], ["tool", "답변 앞 작업 줄"], ["think", "생성 중 문구"], ["user", "사이드바 사용자 이름 (비우면 페르소나)"], ["plan", "사이드바 요금제 글"]];
 
 export async function renderStealth(ctx) {
@@ -26,15 +37,14 @@ export async function renderStealth(ctx) {
   };
 
   const diagnose = async (delay = 0) => {
-    diag = delay ? `${delay}초 뒤 진단해요 — 지금 Dusk 창을 닫고 채팅 화면을 보여 주세요. 끝나면 다시 열어 결과를 확인하세요.` : "진단 중…"; draw();
+    diag = delay ? `${delay}초 뒤 진단해요 — 지금 Dusk 창을 닫고 채팅 화면을 보여 주세요. 끝나면 다시 열어 결과를 확인하세요.` : "진단 중…"; redraw?.();
     if (delay) await new Promise((r) => setTimeout(r, delay * 1000));
     try {
       const r = await runDiagnosis(ctx.api);
       diag = [`계열: ${r.target ?? "알 수 없음"}`, ...Object.entries(r.counts).map(([k, v]) => `${k}: ${v}`), ...(r.db ? [`리스 설정: 채팅 테마 ${r.db.theme || "(없음)"}, 커스텀 CSS ${r.db.cssLen}자, 채팅 HTML ${r.db.htmlLen}자`] : []), "", ...r.lines, ...(r.db?.layout ? ["", ...r.db.layout] : [])].join("\n");
     } catch (e) { diag = `진단하지 못했어요: ${e?.message ?? e}`; }
-    draw();
+    redraw?.();
   };
-  let diag = "";
   function draw() {
     const L = mergeLabels(pick, st.labels?.[pick]);
     const cards = PRESET_IDS.map((id) => h("button", {
@@ -61,11 +71,12 @@ export async function renderStealth(ctx) {
       h("div", { class: "rb-row", style: "display:flex;gap:8px" },
         btn(st.active === pick ? "문구·옵션 다시 적용" : `${PRESETS[pick].label} 켜기`, { kind: "primary", onClick: () => apply(pick) }),
         st.active ? btn("끄고 원래대로", { onClick: off }) : null),
-      h("div", { class: "rb-row", style: "display:flex;gap:8px" }, btn("화면 진단", { onClick: () => diagnose(0) }), btn("5초 뒤 진단", { onClick: () => diagnose(5) }), diag && !/중…|뒤 진단해요/.test(diag) ? btn("결과 복사", { onClick: async () => { try { await navigator.clipboard.writeText(diag); ctx.toast("진단 결과를 복사했어요"); } catch { ctx.toast("복사하지 못했어요. 결과 글을 길게 눌러 복사해 주세요.", { error: true }); } } }) : null),
+      h("div", { class: "rb-row", style: "display:flex;gap:8px" }, btn("화면 진단", { onClick: () => diagnose(0) }), btn("5초 뒤 진단", { onClick: () => diagnose(5) }), diag && !/중…|뒤 진단해요/.test(diag) ? btn("결과 복사", { onClick: async () => { if (await copyText(globalThis, diag)) ctx.toast("진단 결과를 복사했어요"); else ctx.toast("복사하지 못했어요. 결과 글을 길게 눌러 복사해 주세요.", { error: true }); } }) : null),
       diag ? h("pre", { class: "rb-muted", style: "white-space:pre-wrap;font-size:12px;margin:0;user-select:text" }, diag) : null,
       note("info", "화면에 안 바뀌면 리스를 새로고침해 주세요. 리스 업데이트로 화면 구조가 바뀌면 일부가 어긋날 수 있어요.")
     );
   }
+  redraw = draw;
   draw();
   replace(ctx.main, wrap);
 }
