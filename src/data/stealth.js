@@ -64,7 +64,7 @@ export var PRESET_IDS = Object.keys(PRESETS);
 // 이미지가 정규식·에셋 어디서 나오든(글 순서와 상관없이) 메시지 단위로 숨기고 펼치므로 훅이 필요 없다(채팅 열기가 느려지지 않음).
 // N(1~9)은 메시지 순서로 돌린다(CSS만).
 export function imageFoldCss() {
-  const F = ".st-msg > details.st-ftool", media = ".st-body img, .st-body video, .st-body picture, .st-body svg image";
+  const F = ".st-msg > details.st-ftool", media = ".st-body img, .st-body video, .st-body picture, .st-body svg image, .st-body [style*=\"background-image\"]";   // 배경 그림으로 그리는 정규식 이미지(예: div.image-container)도
   const nth = Array.from({ length: 9 }, (_, i) => `.risu-chat:nth-child(9n + ${i + 1}) .st-fn::before, .risu-chat > :nth-child(9n + ${i + 1}) .st-fn::before { content: "명령어 ${i + 1}개 실행함"; }`).join("\n");
   return `${F} { width: fit-content; max-width: 100%; margin: 4px 0 10px; }
 ${F} > summary { list-style: none; cursor: pointer; color: var(--st-dim); font-size: 14px; line-height: 1.5; user-select: none; display: flex; align-items: center; }

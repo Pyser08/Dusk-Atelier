@@ -360,3 +360,8 @@ test("Dusk 창 열림 판단: 플러그인 화면 크기가 0이면 닫힘, 크�
   assert.equal(duskIsOpen(true, undefined), true, "showContainer를 못 잡아도 화면이 보이면 열림");
   assert.equal(duskIsOpen(true, false), false);
 });
+
+test("배경 그림으로 그리는 정규식 이미지(div style=background-image)도 접힘에 따라 숨는다", () => {
+  const css = buildStealth("claude", { hideImages: true }).css;
+  assert.match(css, /:not\(\[open\]\)\) :is\([^)]*\.st-body \[style\*="background-image"\]/);
+});
