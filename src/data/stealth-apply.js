@@ -67,7 +67,7 @@ export var DIAG_SELECTORS = {
   "채팅 래퍼(.st-msg)": ".st-msg", "본문 자리(.st-body)": ".st-body", "리스 본문(.chattext)": ".chattext",
   "채팅 목록(.risu-chat)": ".risu-chat", "채팅 화면(.default-chat-screen)": ".default-chat-screen", "입력칸(.text-input-area)": ".text-input-area",
   "순정 사이드바": ".rs-sidebar, .risu-sidebar", "스텔스 사이드바": '[x-dusk="stealth-sb"]', "스텔스 표식": "body[x-dusk-st]",
-  "이미지 접힘 상자([x-st-fw])": "[x-st-fw]", "아직 안 감싼 이미지": '.st-msg .st-body :is(img, video, [style*="background-image"]):not([x-st-m]):not([x-st-fw] *)', "감싸기 실패한 이미지": '[x-st-m="e"]', "래퍼 안 이미지(.st-msg img)": ".st-msg img", "래퍼 안 배경 그림": '.st-msg [style*="background-image"]',
+  "이미지 접힘 상자([x-st-fw])": "[x-st-fw]", "접힘 줄([x-st-fl])": "[x-st-fw] > [x-st-fl]", "펼친 상자": '[x-st-fw][x-open="1"]', "아직 안 감싼 이미지": '.st-msg .st-body :is(img, video, [style*="background-image"]):not([x-st-m]):not([x-st-fw] *)', "감싸기 실패한 이미지": '[x-st-m="e"]', "래퍼 안 이미지(.st-msg img)": ".st-msg img", "래퍼 안 배경 그림": '.st-msg [style*="background-image"]',
   "본문 이미지(.chattext img)": ".chattext img", "본문 배경 그림": '.chattext [style*="background-image"]', "래퍼 안 본문(.st-msg .chattext)": ".st-msg .chattext"
 };
 /** counts: {라벨: 개수}, db: {theme, htmlLen, cssLen, hasWrapper, hasStealthCss}. 돌려주는 값: 한 줄씩 읽는 안내 목록. */
@@ -84,6 +84,7 @@ export function diagnose(counts, db) {
   if (db.shell) out.push(`사이드바 상태: ${db.shell}`);
 
   if (n("아직 안 감싼 이미지") > 0) out.push("아직 접힘 줄이 안 붙은 이미지가 있어요 → 1~2초 뒤 다시 진단해 보세요(스텔스 애드온이 켜져 있어야 해요).");
+  if (n("이미지 접힘 상자([x-st-fw])") > 0 && n("접힘 줄([x-st-fl])") < n("이미지 접힘 상자([x-st-fw])")) out.push("접힘 상자에 ‘명령어 N개 실행함’ 줄이 빠진 것이 있어요 → 이 진단 결과를 알려 주세요.");
   if (n("감싸기 실패한 이미지") > 0) out.push("접힘 줄을 붙이지 못한 이미지가 있어요(숨기고 ‘명령어 N개 실패함’으로 보여요) → 이 진단 결과를 알려 주세요.");
   if (n("본문 이미지(.chattext img)") + n("본문 배경 그림") > n("래퍼 안 이미지(.st-msg img)") + n("래퍼 안 배경 그림")) out.push("이미지 일부가 채팅 래퍼 밖에 있어요 → 그 이미지는 접힘으로 숨길 수 없어요.");
   if (n("채팅 목록(.risu-chat)") + n("채팅 화면(.default-chat-screen)") + n("입력칸(.text-input-area)") === 0) out.push("채팅 화면 요소가 하나도 안 잡혀요 → Dusk 창이 채팅 위를 덮고 있으면 이렇게 나와요. 채팅 화면에서 다시 확인해 주세요(‘5초 뒤 진단’).");
