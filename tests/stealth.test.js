@@ -86,7 +86,7 @@ test("리스의 스크롤 컨테이너·전체 요소를 건드리지 않는다(
   const c = buildStealth("claudecode").css;
   assert.ok(c.includes('body[x-dusk-st][x-dusk-fold="0"] {') && !/(^|[\s,}])body:has\(/.test(c));
   assert.ok(!/\.rs-sidebar[^{]*\{[^}]*display:\s*none/.test(c), "클로드 계열은 순정 사이드바를 CSS로 숨기지 않는다(열면 스텔스 쪽이 숨는다)");
-  assert.ok(!buildStealth("codex").css.includes("x-dusk-st"));
+  assert.ok(!buildStealth("gemini").css.includes("x-dusk-st"));
   assert.ok(c.includes(".st-msg { width: 100%; max-width: var(--st-w); margin: 0 auto;"));
 });
 test("토글 정의 해석: 켜기·고르기·글, 구분선·그룹은 건너뜀, 같은 key는 한 번", () => {
@@ -179,7 +179,7 @@ test("syncShell: 껍데기가 있는 모양이면 켜고, 없는 모양·끔이�
   const api = shellApi();
   await syncShell(api, { active: "claudecode", labels: {} }, () => {});
   assert.equal(shellState(), "claudecode");
-  await syncShell(api, { active: "codex", labels: {} }, () => {});
+  await syncShell(api, { active: "gemini", labels: {} }, () => {});
   assert.equal(shellState(), null);
   await syncShell(api, { active: "claude", labels: {} }, () => {});
   await syncShell(api, null);
@@ -459,7 +459,7 @@ test("화면 진단 접힘 추적: 크기가 있는 접힘 줄·접혔는데 보
 test("클로드 계열은 사이드바 CSS를 리스 커스텀 CSS에도 넣는다(<style>을 못 넣는 판에서도 사이드바 모양이 산다)", async () => {
   const { SHELL_CSS } = await import("../src/data/stealth-shell.js");
   for (const id of ["claude", "claudecode"]) assert.ok(buildStealth(id).css.includes(SHELL_CSS), id);
-  assert.ok(!buildStealth("codex").css.includes('[x-dusk="stealth-sb"]'), "사이드바 없는 모양엔 안 넣음");
+  assert.ok(!buildStealth("gemini").css.includes('[x-dusk="stealth-sb"]'), "사이드바 없는 모양엔 안 넣음");
 });
 
 test("사이드바 CSS는 x-c로 찾고(요소를 하나씩 만들어 붙이므로), 설정 팝업만 class도 둔다", async () => {
@@ -493,4 +493,13 @@ test("GPT 모양(docs/STEALTH.md 7-1): 사이드바·발 두 줄 Plus·위 줄 �
   assert.equal(await markThinking({ querySelectorAll: async () => els }, () => 0.5), 2);
   assert.equal(els[0].n.a["x-st-th"], "1m 3s");
   const api = shellApi(); await syncShell(api, { active: "gpt", labels: {} }, () => {}); assert.equal(shellState(), "gpt"); await syncShell(api, null);
+});
+
+test("코덱스 모양(docs/STEALTH.md 7-2): 일반 채팅 앱(고정폭 아님)·왼쪽 아이콘 줄·Codex ⌄·종/검색·새 채팅·최근·시작하기 상자", async () => {
+  const { shellHtml } = await import("../src/data/stealth-shell.js");
+  const h = shellHtml({ kind: "codex", user: "TE", rows: [{ index: 0, name: "Clarify request", current: true }] });
+  for (const t of ["st-sb-rail", "st-sb-rbtn st-on", "st-sb-rsep", "Codex", "st-sb-wchev", "새 채팅", "최근", "시작하기", "3개 중 0개", "data-st-gear"]) assert.ok(h.includes(t), t);
+  const css = buildStealth("codex").css;
+  assert.match(css, /html, body \{ font-family: var\(--st-font\) !important; \}/, "본문은 고정폭이 아님");
+  assert.ok(css.includes("6 Luna Medium") && css.includes("clamp(290px"), "모델 글·넓은 사이드바");
 });

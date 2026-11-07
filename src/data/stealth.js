@@ -39,11 +39,11 @@ export var PRESETS = {
     labels: { title: "", sub: "", model: "GPT  ⌄", tool: "", think: "생각하는 중…", plan: "Plus" }
   },
   codex: {
-    label: "코덱스", desc: "터미널 느낌, 고정폭 글꼴, 자리표시 › 와 상태 줄",
-    font: MONO, accent: "#10a37f", radius: 4, input: 6, width: 900,
-    light: { bg: "#fafafa", side: "#f0f0f0", bubble: "#ececec", inputBg: "#ffffff", fg: "#1f2328", fg2: "#57606a", dim: "#8c959f", line: "#d8dee4", line2: "#c0c7ce" },
-    dark: { bg: "#0d1117", side: "#010409", bubble: "#161b22", inputBg: "#0d1117", fg: "#e6edf3", fg2: "#8b949e", dim: "#6e7681", line: "#21262d", line2: "#30363d" },
-    labels: { title: "~/projects/api-server  (main)", model: "codex · high · 100% context left", tool: "• Ran 2 commands, read 3 files", think: "• Working…" }
+    label: "코덱스", desc: "코덱스 앱: 왼쪽 아이콘 줄 + 사이드바(최근 채팅), 둥근 사각 입력창, 오른쪽 말풍선",
+    font: SANS, accent: "#ececec", radius: 18, input: 22, width: 820, sidebar: "codex", terminal: false,
+    light: { bg: "#ffffff", side: "#f7f7f7", bubble: "#f0f0f0", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#5f5f5f", dim: "#8a8a8a", line: "#e8e8e8", line2: "#d0d0d0" },
+    dark: { bg: "#181818", side: "#202020", bubble: "#2f2f2f", inputBg: "#262626", fg: "#ececec", fg2: "#a8a8a8", dim: "#8a8a8a", line: "#2a2a2a", line2: "#3a3a3a" },
+    labels: { title: "", sub: "", model: "6 Luna Medium  ⌄", tool: "", think: "생각하는 중…", plan: "" }
   },
   gemini: {
     label: "제미나이", desc: "연한 파랑 배경, 큰 알약 입력창, 그라데이션 인사",
@@ -124,7 +124,7 @@ export function buildStealth(id, opts = {}) {
   const hideImages = opts.hideImages !== false, blurAvatars = opts.blurAvatars !== false, hideSidebar = !!opts.hideSidebar;
   const root = scheme === "dark" ? `:root {\n${vars(P, P.dark)}` : `:root {\n${vars(P, P.light)}`;
   const darkBlock = scheme === "auto" ? `@media (prefers-color-scheme: dark) {\n  :root {\n${vars(P, P.dark).replace(/^/gm, "  ")}\n  }\n}` : "";
-  const code = id === "codex";
+  const code = !!P.terminal;   // 터미널 모양(고정폭·› 줄). 코덱스는 11-08 사진대로 일반 채팅 앱이 되어 지금 쓰는 모양 없음
   // 입력창: :has는 화면이 클수록 비싸므로 한 번만 쓰고 나머지는 CSS 중첩으로 이어 쓴다
   const mlab = L.model ? (P.shell
     ? `&::after { content: "${cssText(L.model)}"; position: absolute; right: 6px; bottom: -30px; color: var(--st-fg2); font-size: 12.5px; white-space: pre; pointer-events: none; }`
@@ -191,7 +191,7 @@ div:has(> .default-chat-screen) { background: var(--st-bg) !important; backgroun
       : `.rs-sidebar, .risu-sidebar { background: var(--st-side) !important; box-shadow: none !important; border-right: 1px solid var(--st-line); }`,
     blurAvatars ? `.sidebar-avatar, .avatar img, .avatar div { filter: grayscale(1) blur(4px) opacity(.4); }` : "",
     SB
-      ? `:root { --st-sw: clamp(220px, 16vw, 290px); }
+      ? `:root { --st-sw: ${SB === "codex" ? "clamp(290px, 21vw, 340px)" : "clamp(220px, 16vw, 290px)"}; }
 body[x-dusk-st][x-dusk-fold="0"] { padding-left: var(--st-sw) !important; box-sizing: border-box; }
 @media (max-width: 760px) { body[x-dusk-st] { padding-left: 0 !important; } }`
       : (L.title ? `body::before { content: "${cssText(L.title)}"; position: fixed; top: 0; left: 0; right: 0; height: 44px; z-index: 30; display: flex; align-items: center; padding: 0 24px; background: var(--st-bg); border-bottom: 1px solid var(--st-line); color: var(--st-fg2); font-size: 13px; font-weight: 500; white-space: pre; overflow: hidden; pointer-events: none; }
