@@ -19,7 +19,7 @@ var MONO = `"JetBrains Mono", "Cascadia Code", "D2Coding", Consolas, monospace`;
 export var PRESETS = {
   claude: {
     label: "클로드", desc: "클로드 앱: 왼쪽 사이드바(최근 항목=채팅 목록), 둥근 입력창, 작업 줄",
-    font: SANS, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "claude",
+    font: SANS, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "claude", quoteDot: true,
     light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f3f3f3", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#666666", dim: "#787878", line: "#ebebeb", line2: "#cecece" },
     dark: { bg: "#1a1a1a", side: "#1f1f1f", bubble: "#2b2b2b", inputBg: "#262626", fg: "#ececec", fg2: "#a0a0a0", dim: "#8c8c8c", line: "#2e2e2e", line2: "#3d3d3d" },
     labels: { title: "", sub: "", tool: "명령어 13개 실행함", model: "Sonnet 5.5 낮음   자동", note: "Claude는 AI이며 실수할 수 있습니다.", left: "", think: "✻  Thinking…", user: "", plan: "Pro" }
@@ -33,7 +33,7 @@ export var PRESETS = {
   },
   gpt: {
     label: "GPT", desc: "흑백, 오른쪽 회색 말풍선, 알약 모양 입력창",
-    font: SANS, accent: "#0d0d0d", radius: 18, input: 28, width: 760, sidebar: "gpt", extra: "gpt",
+    font: SANS, accent: "#0d0d0d", radius: 18, input: 28, width: 760, sidebar: "gpt", extra: "gpt", quoteDot: true,
     light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f4f4f4", inputBg: "#f4f4f4", fg: "#0d0d0d", fg2: "#5d5d5d", dim: "#8f8f8f", line: "#ececec", line2: "#d9d9d9" },
     dark: { bg: "#212121", side: "#171717", bubble: "#303030", inputBg: "#303030", fg: "#ececec", fg2: "#b4b4b4", dim: "#8e8e8e", line: "#2f2f2f", line2: "#424242" },
     labels: { title: "", sub: "", model: "GPT  ⌄", tool: "", think: "생각하는 중…", plan: "Plus" }
@@ -67,10 +67,11 @@ export var PRESET_IDS = Object.keys(PRESETS);
 // GPT 모양만(docs/STEALTH.md 7-1): 답변 위 'Nm SSs 동안 처리함 ›' 줄(시간은 stealth-shell markThinking이 x-st-th로 정해 둔다),
 // "…"·'…'(리스 mark risu-mark=quote*)는 줄을 바꿔 앞에 ・
 export function gptExtraCss() {
-  return `.st-msg.st-char[x-st-th]::before { content: attr(x-st-th) " 동안 처리함  ›"; display: block; color: var(--st-dim); font-size: 14px; padding: 0 0 10px; margin: 0 0 12px; border-bottom: 1px solid var(--st-line); }
-.chattext mark[risu-mark^="quote"] { display: block; margin: .35em 0; }
-.chattext mark[risu-mark^="quote"]::before { content: "・"; margin-right: .3em; }`;
+  return `.st-msg.st-char[x-st-th]::before { content: attr(x-st-th) " 동안 처리함  ›"; display: block; color: var(--st-dim); font-size: 14px; padding: 0 0 10px; margin: 0 0 12px; border-bottom: 1px solid var(--st-line); }`;
 }
+// "…"·'…'(리스 mark risu-mark=quote*)는 줄을 바꿔 앞에 ・ (프리셋 quoteDot: 클로드·GPT, 사용자 지정 11-08)
+export var quoteDotCss = () => `.chattext mark[risu-mark^="quote"] { display: block; margin: .35em 0; }
+.chattext mark[risu-mark^="quote"]::before { content: "・"; margin-right: .3em; }`;
 export function imageFoldCss() {
   // 이미지·배경 그림마다 접힘 줄: 스텔스가 화면에서 각 이미지를 [x-st-fw] 상자로 감싸고 맨 위에 [x-st-fl] 줄을 넣는다(stealth-shell.js wrapMedia).
   // 접힌 이미지는 display:none 대신 1px로 숨긴다 — 배경 그림은 display:none이면 받기를 미뤄서, 휴대폰에서 누른 뒤에야 받느라 늦게 떴다(미리 받아 둠).
@@ -218,6 +219,7 @@ body[x-dusk-st][x-dusk-fold="0"] { padding-left: var(--st-sw) !important; box-si
 .st-body .chattext blockquote { border-left: 3px solid var(--st-line2) !important; color: var(--st-fg2) !important; }`,
     hideImages ? imageFoldCss() : "",
     P.extra === "gpt" ? gptExtraCss() : "",
+    P.quoteDot ? quoteDotCss() : "",
     SB && !opts.minimal ? `/* Dusk Stealth 사이드바 */\n${SHELL_CSS}` : "",
     code ? `.st-user .st-body { max-width: 100%; background: transparent; border-radius: 0; padding: 0 0 0 1.4em; text-indent: -1.4em; }
 .st-user .st-body::before { content: "›"; color: var(--st-accent); font-weight: 700; margin-right: .6em; }

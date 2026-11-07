@@ -486,7 +486,9 @@ test("GPT 모양(docs/STEALTH.md 7-1): 사이드바·발 두 줄 Plus·위 줄 �
   const css = buildStealth("gpt").css;
   assert.match(css, /\.st-msg\.st-char\[x-st-th\]::before \{ content: attr\(x-st-th\) " 동안 처리함  ›"/);
   assert.match(css, /mark\[risu-mark\^="quote"\]::before \{ content: "・"/);
-  assert.ok(!buildStealth("claude").css.includes("동안 처리함"), "GPT 모양에서만");
+  assert.ok(!buildStealth("claude").css.includes("동안 처리함"), "처리 시간 줄은 GPT 모양에서만");
+  for (const id of ["claude", "gpt"]) assert.match(buildStealth(id).css, /mark\[risu-mark\^="quote"\]::before \{ content: "・"/, id + ": 따옴표 ・ 줄");
+  assert.ok(!buildStealth("codex").css.includes('content: "・"'), "나머지 모양은 아직");
   const els = [{ a: {} }, { a: {} }].map((n) => ({ n, setAttribute: async (k, v) => { n.a[k] = v; } }));
   assert.equal(await markThinking({ querySelectorAll: async () => els }, () => 0.5), 2);
   assert.equal(els[0].n.a["x-st-th"], "1m 3s");
