@@ -258,17 +258,17 @@ test("최소 모드는 화면 전체 규칙을 뺀다", () => {
   }
 });
 
-test("사이드바는 기본으로 접혀 있고 ^로 펴고 접는다(속성만 바뀜)", async () => {
-  const api = shellApi({ pluginStorage: { getItem: async () => null, setItem: async () => {} } });
-  const sh = createShell(api, { kind: "claude", poll: 60000, log: () => {} });
-  await new Promise((r) => setTimeout(r, 80));
-  const get = () => api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb");
-  assert.equal(get().attrs["x-fold"], "1"); assert.ok(get().html.includes("x-st-fold"));
-  await get().inner["x-st-fold="].handlers.click();
-  assert.equal(get().attrs["x-fold"], "0");
-  await get().inner["x-st-fold="].handlers.click();
-  assert.equal(get().attrs["x-fold"], "1");
-  await sh.destroy();
+test("접기 버튼은 없다: 넓은 화면은 늘 펼침, 좁은 화면(휴대폰)은 접힘", async () => {
+  for (const [w, fold] of [[1800, "0"], [390, "1"]]) {
+    const api = shellApi({ pluginStorage: { getItem: async () => "1", setItem: async () => {} } });   // 예전에 접어 둔 값이 있어도 무시
+    const q = api.doc.querySelector;
+    api.doc.querySelector = async (s) => { const r = await q(s); if (s === "body" && r) r.getBoundingClientRect = async () => ({ width: w, height: 900 }); return r; };
+    const sh = createShell(api, { kind: "claude", poll: 60000, log: () => {} });
+    await new Promise((r) => setTimeout(r, 80));
+    const sb = api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb");
+    assert.equal(sb.attrs["x-fold"], fold, String(w)); assert.ok(!sb.html.includes("fold"), "접기 버튼 없음");
+    await sh.destroy();
+  }
 });
 
 import { readFileSync } from "node:fs";

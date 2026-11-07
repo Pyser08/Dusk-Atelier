@@ -3,12 +3,7 @@
 // 사이드바 요소는 setInnerHTML(소독기가 class·x-* 속성을 지울 수 있음)이 아니라 createElement+setAttribute("x-c")로 만든다(stealth-shell.js mountHtml) → 선택자는 [x-c~=…].
 export var SHELL_CSS = `
 html body [x-dusk][x-vis="0"]{display:none !important}
-[x-c~="st-sb-fold"]{font-size:16px;line-height:1;font-weight:600;width:28px;height:28px}
-[x-dusk="stealth-sb"][x-fold="1"]{top:auto;width:auto;left:12px;bottom:12px;border:1px solid color-mix(in srgb,var(--st-fg) 22%,transparent);border-radius:12px;background:var(--st-bubble,var(--st-side));box-shadow:0 2px 12px rgba(0,0,0,.28)}
-[x-dusk="stealth-sb"][x-fold="1"] > :not([x-c~="st-sb-foot"]){display:none}
-[x-dusk="stealth-sb"][x-fold="1"] [x-c~="st-sb-foot"]{border-top:0;padding:4px}
-[x-dusk="stealth-sb"][x-fold="1"] [x-c~="st-sb-foot"] > :not([x-c~="st-sb-fold"]){display:none}
-[x-dusk="stealth-sb"][x-fold="1"] [x-c~="st-sb-fold"]{transform:rotate(180deg);width:36px;height:36px;font-size:19px;color:var(--st-fg);opacity:1}
+[x-dusk="stealth-sb"][x-fold="1"]{display:none}   /* 접기 버튼은 없앴다(11-08): 넓은 화면은 늘 펼침, 휴대폰만 접힘 */
 body[x-dusk-fold="1"][x-dusk-st]{padding-left:0 !important}
 body[x-dusk-fold="1"] [x-dusk="stealth-top"]{display:none !important}
 body[x-dusk-fold="1"] [x-dusk="stealth-note"]{left:0}

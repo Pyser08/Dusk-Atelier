@@ -70,7 +70,7 @@ export function shellHtml(model) {
     + `<div class="st-sb-nav">${nav}</div>`
     + (K.recent ? `<div class="st-sb-sec"><span>${esc(K.recent)}</span></div>` : "")
     + `<div class="st-sb-list">${list}</div>`
-    + `<div class="st-sb-foot"><span class="st-sb-av">${esc(who.slice(0, 1).toUpperCase())}</span><span class="st-sb-who">${esc(who)}<small>· ${esc(model.plan ?? K.plan)}</small></span><button type="button" class="st-sb-gear" data-st-gear="1" aria-label="설정">${ico("gear", 18)}</button><button type="button" class="st-sb-gear st-sb-fold" data-st-fold="1" aria-label="사이드바 접기·펴기" title="사이드바 접기·펴기">^</button></div>`;
+    + `<div class="st-sb-foot"><span class="st-sb-av">${esc(who.slice(0, 1).toUpperCase())}</span><span class="st-sb-who">${esc(who)}<small>· ${esc(model.plan ?? K.plan)}</small></span><button type="button" class="st-sb-gear" data-st-gear="1" aria-label="설정">${ico("gear", 18)}</button></div>`;
 }
 export function topHtml(model) {
   const t = String(model.title ?? "").trim();
@@ -156,12 +156,11 @@ var ROOT = "stealth-sb", NOTE = "stealth-note", TOP = "stealth-top", POP = "stea
  */
 export function createShell(api, opts = {}) {
   const log = opts.log ?? ((...a) => console.log("[Dusk Atelier]", ...a));
-  let folded = true, foldUnset = false, nativeOpen = false, plain = false, onChat = true, doc = null, timer = null, last = "", dead = false, busy = false, popOpen = false, inflight = Promise.resolve();
+  let folded = true, nativeOpen = false, plain = false, onChat = true, doc = null, timer = null, last = "", dead = false, busy = false, popOpen = false, inflight = Promise.resolve();
   const cache = { idx: "", at: 0, char: null, user: "", userAt: 0 };
   const FRESH = opts.freshMs ?? 90000, USER_TTL = 120000;
   const kind = opts.kind ?? "claude";
-  const FOLD_KEY = "rbm:stealth:fold";
-  const foldReady = (async () => { try { const v = await api.pluginStorage?.getItem?.(FOLD_KEY); if (v === "0") folded = false; else if (v !== "1") foldUnset = true; } catch { foldUnset = true; } })();   // 고른 적 없으면 첫 그리기에서 정한다(넓은 화면 = 펼침)
+  const foldReady = Promise.resolve();   // 접기 버튼은 없앴다(11-08): 화면 폭으로만 정한다
   async function ensureDoc() { if (doc) return doc; doc = await api.getRootDocument?.(); return doc; }
   // 봇 전체 읽기는 채팅이 많으면 무겁다 → 지금 봇·채팅 번호가 같으면 FRESH 동안 지난 결과를 그대로 쓴다. 번호는 가벼운 호출이라 자주 본다.
   const safe = async (fn) => { try { return await fn(); } catch (e) { shellInfo.warn = String(e?.message ?? e); return undefined; } };   // 호스트가 채팅이 없을 때 던지는 오류는 목록만 비우고 넘어간다
@@ -199,7 +198,7 @@ export function createShell(api, opts = {}) {
       const d = await ensureDoc(); if (!d) { shellInfo.error = "리스 화면 문서에 접근하지 못했어요"; return; }
       await foldReady;
       onChat = !!(await d.querySelector(".default-chat-screen, .text-input-area").catch(() => null));
-      if (foldUnset) { foldUnset = false; const r = await (await d.querySelector("body"))?.getBoundingClientRect?.().catch(() => null); folded = !(r && r.width > 760); }   // 기본: PC 펼침 · 휴대폰 접힘(휴대폰은 펼치면 채팅을 덮는다)
+      { const r = await (await d.querySelector("body"))?.getBoundingClientRect?.().catch(() => null); folded = !(r && r.width > 760); }   // 기본: PC 펼침 · 휴대폰 접힘(휴대폰은 펼치면 채팅을 덮는다)
       nativeOpen = await nativeSidebarOpen(d);
       const { ci, ti, char } = await chatInfo(force);
       const user = opts.user || (opts.getUser ? await opts.getUser() : await userName());
@@ -229,8 +228,6 @@ export function createShell(api, opts = {}) {
       if (more) await more.addEventListener("click", async () => { plain = !plain; try { const t = await d.querySelector(`[x-dusk="${TOP}"]`); await t?.setAttribute("x-plain", plain ? "1" : "0"); } catch (e) { log("상단 줄 접기 실패", e?.message ?? e); } });
       const bd = await d.querySelector("body");   // 한 번만 단다(body는 다시 그려도 그대로)
       try { if (bd?.addEventListener && await bd.getAttribute?.("x-st-hc") !== "1") { await bd.setAttribute?.("x-st-hc", "1"); await bd.addEventListener("pointerdown", () => { noteHostClick(); setTimeout(() => { recheckNative().catch(() => {}); }, 350); }); } } catch (e) { log("바깥 클릭 감지 실패", e?.message ?? e); }
-      const fb = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-fold]`);
-      if (fb) await fb.addEventListener("click", () => toggleFold(d));
       shellInfo.draws++; shellInfo.error = "";
       if (g) await g.addEventListener("click", () => togglePop().catch((e) => log("설정 열기 실패", e?.message ?? e)));
     } catch (e) { shellInfo.error = String(e?.message ?? e); log("스텔스 사이드바 그리기 실패", e?.message ?? e); }
@@ -247,13 +244,7 @@ export function createShell(api, opts = {}) {
     await setVis(d);
     const bd = await d.querySelector("body"); await bd?.setAttribute("x-dusk-fold", folded || !onChat || nativeOpen ? "1" : "0");
   }
-  async function toggleFold(d) {   // 다시 그리지 않고 속성만 바꾼다
-    try {
-      folded = !folded; api.pluginStorage?.setItem?.(FOLD_KEY, folded ? "1" : "0");
-      const r = await d.querySelector(`[x-dusk="${ROOT}"]`); await r?.setAttribute("x-fold", folded ? "1" : "0");
-      const bd = await d.querySelector("body"); await bd?.setAttribute("x-dusk-fold", folded || !onChat || nativeOpen ? "1" : "0");
-    } catch (e) { log("사이드바 접기 실패", e?.message ?? e); }
-  }
+
   async function switchChat(ci, idx) {
     const char = await safe(() => api.getCharacterFromIndex(ci));
     if (!char || !Array.isArray(char.chats) || !char.chats[idx]) return;
