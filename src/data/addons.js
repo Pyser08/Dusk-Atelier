@@ -14,7 +14,7 @@ export const ADOPT_KEY = "dusk.addon.adopted.v2";
 const INDEX_KEY = "dusk.addon.index", CODE = (id) => `dusk.addon.code.${id}`, PREV = (id) => `dusk.addon.prev.${id}`;
 // 업데이트 확인: 켜질 때 한 번 + 실행 중 1시간마다 + Dusk 창을 열 때(마지막 확인이 10분 넘었으면).
 // 예전엔 켜질 때 한 번뿐이라 리스를 켜 둔 채로는 새 애드온을 못 받았다.
-const CHECK_EVERY = 3600e3, SOON_EVERY = 10 * 60e3;
+const CHECK_EVERY = 3600e3, SOON_EVERY = 60e3;   // 창을 열 때는 1분만 지나도 다시 본다(애드온을 올리고 바로 확인할 수 있게)
 // GitHub raw는 몇 분 동안 옛 파일을 돌려주므로 주소에 값을 붙여 캐시를 건너뛴다(파일은 sha256으로 따로 확인)
 const bust = (u, v) => u + (u.includes("?") ? "&" : "?") + v;
 

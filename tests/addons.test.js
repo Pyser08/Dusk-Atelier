@@ -154,8 +154,8 @@ test("실행 중에도 주기적으로 확인하고, 목록·파일은 캐시를
   await A.check({ force: true });
   assert.match(urls.at(-1), /[?&]t=\d+/, "목록 주소에 캐시 우회 값");
   const n = urls.length; t += 3600e3 + 1; await every[1](); assert.ok(urls.length > n, "한 시간 지나면 주기 확인이 실제로 목록을 받음");
-  const m = urls.length; t += 60e3; await A.checkSoon(); assert.equal(urls.length, m, "방금 확인했으면 창을 열어도 다시 안 받음");
-  t += 11 * 60e3; await A.checkSoon(); assert.ok(urls.length > m, "10분 지나면 창을 열 때 확인");
+  const m = urls.length; t += 30e3; await A.checkSoon(); assert.equal(urls.length, m, "방금(1분 안) 확인했으면 창을 열어도 다시 안 받음");
+  t += 40e3; await A.checkSoon(); assert.ok(urls.length > m, "1분 지나면 창을 열 때 확인(애드온을 올리고 바로 열어도 잡히게)");
 });
 
 test("시작: 서로 상관없는 애드온은 동시에 켜고, 필요 애드온이 있으면 그것만 기다린다", async () => {
