@@ -60,14 +60,23 @@ export var PRESETS = {
   }
 };
 export var PRESET_IDS = Object.keys(PRESETS);
-// 이미지·영상: 답변 글에서 '명령어 N개 실행함' 접힘으로 감싸고(stealth-fold.js, display 훅) 그 모양을 여기서 준다.
-// 훅이 감싸지 못한 이미지(접힘 밖)는 숨긴다.
-import { FOLD_CSS } from "./stealth-fold.js";
+// 이미지·영상 접기(0.3.6): 메시지마다 채팅 HTML에 '›_ 명령어 N개 실행함 ›' 접힘을 하나 두고, 접혀 있으면 그 메시지의 이미지를 모두 숨긴다.
+// 이미지가 정규식·에셋 어디서 나오든(글 순서와 상관없이) 메시지 단위로 숨기고 펼치므로 훅이 필요 없다(채팅 열기가 느려지지 않음).
+// N(1~9)은 메시지 순서로 돌린다(CSS만).
 export function imageFoldCss() {
-  const out = ":not(details *)";   // 접힘(details) 밖 이미지만 숨긴다. 리스가 class를 바꾸거나 지워도 접힘 안 이미지는 펼치면 보인다
-  return `${FOLD_CSS}
-.st-msg:has(details.st-fold, details.x-risu-st-fold) .st-tool { display: none; }
-.st-body img${out}, .st-body video${out}, .chattext img${out}, .chattext video${out} { display: none !important; }`;
+  const F = ".st-msg > details.st-ftool", media = ".st-body img, .st-body video, .st-body picture, .st-body svg image";
+  const nth = Array.from({ length: 9 }, (_, i) => `.risu-chat:nth-child(9n + ${i + 1}) .st-fn::before, .risu-chat > :nth-child(9n + ${i + 1}) .st-fn::before { content: "명령어 ${i + 1}개 실행함"; }`).join("\n");
+  return `${F} { width: fit-content; max-width: 100%; margin: 4px 0 10px; }
+${F} > summary { list-style: none; cursor: pointer; color: var(--st-dim); font-size: 14px; line-height: 1.5; user-select: none; display: flex; align-items: center; }
+${F} > summary::-webkit-details-marker { display: none; }
+${F} > summary::before { content: "›_"; display: inline-block; width: 1.6em; font-family: var(--st-mono); letter-spacing: -.08em; }
+${F} > summary::after { content: "›"; display: inline-block; margin-left: .5em; font-size: 1.15em; transition: transform .15s; }
+${F}[open] > summary::after { transform: rotate(90deg); }
+${F} > summary:hover { color: var(--st-fg); }
+.st-fn::before { content: "명령어 3개 실행함"; }
+${nth}
+.st-msg:not(:has(${media.split(", ").join(", ")})) > details.st-ftool { display: none; }
+.st-msg:has(> details.st-ftool:not([open])) :is(${media}) { display: none !important; }`;
 }
 export var LABEL_KEYS = ["title", "sub", "tool", "model", "note", "left", "think", "user", "plan"];
 
@@ -203,7 +212,7 @@ ${inputBlock}`,
   ].filter(Boolean).join("\n");
   const html = [
     `<div class="st-msg st-{{role}}">`,
-    L.tool ? `<div class="st-tool">${htmlText(L.tool)}<span class="st-tchev">▸</span></div>` : "",
+    hideImages ? `<details class="st-ftool"><summary><span class="st-fn"></span></summary></details>` : L.tool ? `<div class="st-tool">${htmlText(L.tool)}<span class="st-tchev">▸</span></div>` : "",
     `<div class="st-body"><risutextbox></risutextbox></div>`,
     `<div class="st-btns"><risubuttons></risubuttons></div>`,
     `</div>`

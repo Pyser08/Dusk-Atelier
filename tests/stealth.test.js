@@ -81,7 +81,7 @@ test("리스의 스크롤 컨테이너·전체 요소를 건드리지 않는다(
     assert.ok(!/\.risu-chat > div/.test(css), `${id}: 리스 메시지 컨테이너 대신 우리 래퍼를 쓴다`);
     assert.ok(!/body \*/.test(css), `${id}: 모든 요소에 거는 규칙 없음`);
     assert.ok(!css.includes("-webkit-scrollbar"), `${id}: 스크롤바 크기를 바꾸지 않는다`);
-    assert.ok((css.replace(/[^{}]*st-fold[^{]*\{[^}]*\}/g, "").replace(/@media \(max-width: 760px\) \{[\s\S]*?\n\}/g, "").match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창)`);
+    assert.ok((css.replace(/[^{}]*st-f(?:old|tool)[^{]*\{[^}]*\}/g, "").replace(/@media \(max-width: 760px\) \{[\s\S]*?\n\}/g, "").match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창)`);
   }
   const c = buildStealth("claudecode").css;
   assert.ok(c.includes('body[x-dusk-st][x-dusk-fold="0"] {') && !/(^|[\s,}])body:has\(/.test(c));
@@ -227,9 +227,7 @@ test("이미지는 '명령어 N개 실행함' 접힘 안으로 들어간다(N은
   assert.equal(foldImages(t), out, "다시 그려도 같은 결과");
   const ns = new Set(); for (let i = 0; i < 200; i++) ns.add(foldCount("x" + i));
   assert.ok([...ns].every((n) => n >= 1 && n <= 9) && ns.size === 9);
-  const css = buildStealth("claude", { hideImages: true }).css;
-  assert.match(css, /details\.st-fold > summary/);
-  assert.ok(!buildStealth("claude", { hideImages: false }).css.includes("st-fold"));
+
 });
 
 test("모바일(좁은 화면)에서도 클로드 모양: 좌우 꽉 찬 본문, 둥근 입력창, 상단 ≡ 줄", async () => {
@@ -327,10 +325,15 @@ test("모바일 상단 줄은 손가락을 통과시켜 리스 사이드바 버�
   assert.match(SHELL_CSS, /\[x-c~="st-top-more"\]\{pointer-events:auto\}/);
 });
 
-test("접힘을 펼치면 안의 이미지가 보이고, 접힘 밖 이미지만 숨긴다", () => {
-  const css = buildStealth("claude", { hideImages: true }).css;
-  assert.match(css, /details\[open\] img, details\[open\] video \{ display: block !important/);
-  assert.match(css, /\.chattext img:not\(details \*\)/);
+test("이미지 접기는 메시지 단위: 정규식이 만든 이미지도 접혀 있으면 숨고 펼치면 보인다(훅 없음)", () => {
+  const b = buildStealth("claude", { hideImages: true });
+  assert.match(b.html, /<details class="st-ftool"><summary><span class="st-fn"><\/span><\/summary><\/details>/);
+  assert.match(b.css, /\.st-msg:has\(> details\.st-ftool:not\(\[open\]\)\) :is\(\.st-body img, \.st-body video/);
+  for (let n = 1; n <= 9; n++) assert.ok(b.css.includes(`명령어 ${n}개 실행함`));
+  assert.match(b.css, /\.st-msg:not\(:has\([^)]*img[^)]*\)\) > details\.st-ftool \{ display: none; \}/, "이미지 없는 메시지엔 접힘 줄을 숨김");
+  const off = buildStealth("claude", { hideImages: false });
+  assert.ok(!off.html.includes("st-ftool") && !off.css.includes("st-ftool"));
+  assert.ok(off.html.includes("st-tool"), "끄면 예전 작업 줄");
 });
 
 test("채팅 번호를 못 읽어도 봇의 chatPage로 지금 채팅 이름을 상단 줄에 쓴다", async () => {
@@ -345,7 +348,7 @@ test("채팅 번호를 못 읽어도 봇의 chatPage로 지금 채팅 이름을 
 
 test("접힘 줄은 클로드 앱처럼 '›_ 명령어 N개 실행함 ›', 펼치면 화살표가 돈다", () => {
   const css = buildStealth("claude", { hideImages: true }).css;
-  assert.match(css, /summary::before[^{]*\{ content: "›_"/);
+  assert.match(css, /summary::before \{ content: "›_"/);
   assert.match(css, /\[open\] > summary::after[^{]*\{ transform: rotate\(90deg\)/);
 });
 
