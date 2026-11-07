@@ -2,7 +2,7 @@
 // CSS만으로는 이미지를 접힘 안으로 옮길 수 없어서, 화면에 그리기 직전 글에서 이미지 묶음을 <details>로 감싼다.
 // 이미지 토큰: <img>, <video>…</video>, 마크다운 ![](…), 리스 {{img::…}}·{{inlay::…}} 계열. 붙어 있는(공백·<br>만 사이에 있는) 것은 한 묶음.
 
-var TOKEN = String.raw`(?:<img\b[^>]*>|<video\b[^>]*>[\s\S]*?<\/video>|!\[[^\]\n]*\]\([^)\n]*\)|\{\{(?:img|image|inlay|inlayed|inlayeddata|asset|emotion|bgimg|raw|path)::[^}]*\}\})`;
+var TOKEN = String.raw`(?:<img\b[^>]*>|<video\b[^>]*>[\s\S]*?<\/video>|!\[[^\]\n]*\]\([^)\n]*\)|\{\{(?:img|image|inlay|inlayed|inlayeddata|asset|emotion)::[^}]*\}\})`;
 var GAP = String.raw`(?:\s|<br\s*\/?>)*`;
 var RUN = new RegExp(`${TOKEN}(?:${GAP}${TOKEN})*`, "gi");
 // 지금 접을지(스텔스가 켜져 있고 '본문 이미지 숨기기'가 켜졌을 때). syncShell이 갱신한다
@@ -36,4 +36,5 @@ details.st-fold > summary::-webkit-details-marker , details.x-risu-st-fold > sum
 details.st-fold > summary::after , details.x-risu-st-fold > summary::after { content: "  ▸"; }
 details.st-fold[open] > summary::after , details.x-risu-st-fold[open] > summary::after { content: "  ▾"; }
 details.st-fold > summary:hover , details.x-risu-st-fold > summary:hover { color: var(--st-fg, inherit); }
-details.st-fold img, details.x-risu-st-fold img, details.st-fold video , details.x-risu-st-fold video { display: block; max-width: 100%; height: auto; margin-top: 8px; border-radius: 8px; }`;
+details[open] img, details[open] video { display: block !important; max-width: 100%; height: auto; margin-top: 8px; border-radius: 8px; }
+details:not([open]) > :not(summary) { display: none !important; }`;

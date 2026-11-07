@@ -308,3 +308,14 @@ test("작업실에 더스크 스텔스 탭이 있다", async () => {
   const t = TABS.find((x) => x.id === "stealth");
   assert.ok(t && t.addon === "stealth" && t.section === "work");
 });
+
+test("채팅 입력칸이 없는 화면에서는 CSS로도 바로 감춘다(그리기 주기를 기다리지 않음)", async () => {
+  const { SHELL_CSS } = await import("../src/data/stealth-shell.js");
+  assert.match(SHELL_CSS, /body:not\(:has\(\.text-input-area\)\) \[x-dusk="stealth-top"\]/);
+});
+
+test("접힘을 펼치면 안의 이미지가 보이고, 접힘 밖 이미지만 숨긴다", () => {
+  const css = buildStealth("claude", { hideImages: true }).css;
+  assert.match(css, /details\[open\] img, details\[open\] video \{ display: block !important/);
+  assert.match(css, /\.chattext img:not\(details \*\)/);
+});

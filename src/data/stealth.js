@@ -64,7 +64,7 @@ export var PRESET_IDS = Object.keys(PRESETS);
 // 훅이 감싸지 못한 이미지(접힘 밖)는 숨긴다.
 import { FOLD_CSS } from "./stealth-fold.js";
 export function imageFoldCss() {
-  const out = ":not(details.st-fold *):not(details.x-risu-st-fold *)";
+  const out = ":not(details *)";   // 접힘(details) 밖 이미지만 숨긴다. 리스가 class를 바꾸거나 지워도 접힘 안 이미지는 펼치면 보인다
   return `${FOLD_CSS}
 .st-msg:has(details.st-fold, details.x-risu-st-fold) .st-tool { display: none; }
 .st-body img${out}, .st-body video${out}, .chattext img${out}, .chattext video${out} { display: none !important; }`;
@@ -119,11 +119,10 @@ export function buildStealth(id, opts = {}) {
 @media (max-width: 760px) {
   .st-msg { max-width: 100%; padding: 6px 16px; }
   .st-user .st-body { max-width: 85%; }
-  div:has(> .text-input-area) { width: calc(100% - 24px) !important; max-width: none; margin: ${P.shell && L.note ? 34 : 10}px 12px 12px !important; padding: 12px 10px 10px !important; border-radius: ${Math.max(P.input, 26)}px; flex-wrap: wrap !important; align-items: center !important; }
-  div:has(> .text-input-area) > .text-input-area { flex: 1 0 100% !important; order: -1; min-height: 44px; margin: 0 0 6px !important; padding: 4px 8px !important; font-size: 16px !important; }
-  div:has(> .text-input-area) > .button-icon-send { margin-left: auto !important; width: 42px; height: 42px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; }
-  ${L.model ? `div:has(> .text-input-area)::after { position: static; order: 1; margin-left: 4px; padding: 7px 14px; border-radius: 999px; background: var(--st-bubble); color: var(--st-fg); font-size: 13.5px; white-space: nowrap; }` : ""}
-  ${P.shell && L.note ? `div:has(> .text-input-area)::before { content: "${cssText(L.note)}"; position: absolute; left: 4px; top: -28px; bottom: auto; color: var(--st-dim); font-size: 12.5px; white-space: nowrap; pointer-events: none; }` : ""}
+  div:has(> .text-input-area) { width: calc(100% - 16px) !important; max-width: none; margin: 6px 8px 10px !important; padding: 8px 8px 8px 6px !important; border-radius: ${Math.max(P.input, 24)}px; align-items: flex-end !important; }
+  div:has(> .text-input-area)::after, div:has(> .text-input-area)::before { content: none !important; }
+  div:has(> .text-input-area) > .text-input-area { font-size: 16px !important; }
+  div:has(> .text-input-area) > .button-icon-send { border-radius: 50% !important; }
 }`;
   const css = [
     `/* Dusk Stealth · ${P.label} */`,

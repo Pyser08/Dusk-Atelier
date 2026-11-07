@@ -58,6 +58,7 @@ var ico = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fi
 
 export var SHELL_CSS = `
 html body [x-dusk][x-vis="0"]{display:none !important}
+body:not(:has(.text-input-area)) [x-dusk="stealth-sb"],body:not(:has(.text-input-area)) [x-dusk="stealth-top"],body:not(:has(.text-input-area)) [x-dusk="stealth-note"]{display:none !important}
 [x-c~="st-sb-fold"]{font-size:16px;line-height:1;font-weight:600;width:28px;height:28px}
 [x-dusk="stealth-sb"][x-fold="1"]{top:auto;width:auto;left:10px;bottom:10px;border:1px solid var(--st-line2);border-radius:10px}
 [x-dusk="stealth-sb"][x-fold="1"] > :not([x-c~="st-sb-foot"]){display:none}
