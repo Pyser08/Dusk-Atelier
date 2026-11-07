@@ -2,10 +2,11 @@
 
 ## 최근 세션 (2026-11-07 — 새 챗은 여기부터, 아래 로드맵도 함께)
 - 작업 브랜치 `feat/2.0.0`(예전 `feat/stealth`를 빨리감기로 합침, stealth 브랜치는 남아 있음). main은 v1.9.2 그대로. 작업 전 `HandOff/QUALITY.md`(검토 지침·박스 여백·호스트 제약) 필독.
-- **더스크 스텔스 애드온**(`addons/stealth`, 최신 0.3.8): 클로드·클로드 코드·GPT·코덱스·제미나이·딥시크 프리셋. 파일 `src/data/stealth.js`(CSS·채팅 HTML 생성), `stealth-apply.js`(켜기·끄기·진단·`reapplyIfUpdated`), `stealth-shell.js`(사이드바·상단 줄 껍데기), `src/ui/screens/stealth.js`(화면), `stealth-fold.js`(예전 훅 방식, 지금은 안 씀).
+- **더스크 스텔스 애드온**(`addons/stealth`, 최신 0.3.14): 클로드·클로드 코드·GPT·코덱스·제미나이·딥시크 프리셋. 파일 `src/data/stealth.js`(CSS·채팅 HTML 생성), `stealth-apply.js`(켜기·끄기·진단·`reapplyIfUpdated`), `stealth-shell.js`(사이드바·상단 줄 껍데기), `src/ui/screens/stealth.js`(화면), `stealth-fold.js`(예전 훅 방식, 지금은 안 씀).
   - 호스트 제약: 루트 문서 `setAttribute`는 `x-`만, `setInnerHTML`은 class를 지움 → 안쪽 요소는 `x-c`로 표시하고 CSS `[x-c~=…]`. 클릭 대행 불가(SafeElement에 click 없음).
-  - 이미지 접기(0.3.6~): 채팅 HTML에 메시지마다 `<details class="st-ftool">`, CSS `:has`로 접혀 있으면 그 메시지의 img·video·`[style*=background-image]` 숨김. N(1~9)은 `.risu-chat:nth-child`로. display 훅은 느려지고 정규식 이미지를 못 잡아 폐기.
-  - 애드온 업데이트 시 켜 둔 모양을 리스 설정에 자동 재적용(0.3.8, `appliedVer`). 그 전엔 ‘문구·옵션 다시 적용’을 눌러야 새 채팅 HTML이 들어갔다.
+  - 이미지 접기(0.3.12~ 최종): 스텔스가 화면에서 이미지·배경 그림마다 `[x-st-fw]` 상자로 감싸고 위에 `[x-st-fl]` '›_ 명령어 N개 실행함 ›' 줄(누르면 x-open 토글, `stealth-shell.js` wrapMedia, 1.5초마다). 접힌 이미지는 1px 투명(배경 그림 미리 받기). 48px 미만 아이콘은 그대로. 감싸기 실패는 숨기고 '명령어 N개 실패함'(눌러 펼침). 포켓리스는 채팅 HTML의 `<details>`를 지워서 메시지 단위 방식(0.3.6~0.3.11)은 폐기, display 훅(0.3.0)도 폐기(느림·정규식 이미지 못 잡음).
+  - 사용자 확인: 이미지 접기 동작함(11:35). 휴대폰 펼침 속도는 0.3.14에서 개선 — 확인 대기.
+  - 애드온 업데이트 시 켜 둔 모양을 리스 설정에 자동 재적용(`reapplyIfUpdated`, `appliedVer`).
   - 껍데기: 기본 접힘(^로 펴기), 채팅 화면에서만(x-vis), Dusk 창 열림은 iframe 크기 + showContainer 감싸기로 감지, 모바일은 상단 줄(≡·봇/채팅·✎·⋮) — 줄은 터치를 통과시켜 ≡ 자리의 순정 사이드바 버튼이 눌리게.
   - 미확인(실기기 필요): 포켓리스 모바일 입력창 배치, ≡가 순정 버튼과 겹치는지, 채팅 로드 속도, 상단 줄 숨김.
   - 남은 요청: 클로드 기준 틀 확정 뒤 다른 프리셋(GPT 등) 전용 CSS, 플러그인 전체 로드 속도 측정·개선(어느 화면이 느린지 사용자 정보 필요).
@@ -21,24 +22,28 @@
 6. 버그는 실패 테스트 먼저(이미 규칙).
 7. 출시: release.yml에 `npm test` 단계(main 수정 — 사용자 지시 필요), `cellarlatest.test.js` 네트워크 목 확인, 베타 링크 검토.
 8. '이번 턴 보조 호출 N회 — 기능·설정' 진단 화면.
-+ 작업실 프로바이더 버튼 수정(증상 확인 필요).
++ 작업실 프로바이더 화면: 버튼 글·배치 정리(사용자 요청 — 기능 고장 아님, 모양 문제).
 
-## 로드맵 (2026-11-06 정리)
+## 로드맵 (2026-11-06 정리, 11-07 갱신)
 ### 끝난 것
 - 애드온 구조: 로더(blob import)·requires(받기·시작 순서·끄기 연쇄)·동시 시작·1시간/창 열 때 업데이트 확인·캐시 우회·훅 애드온 새로고침 알림·첫 실행 자동 받기(adopt)·코어 모듈 전부 공유(애드온만 고쳐도 됨).
 - 애드온(배포: `addons` 브랜치, `node tools/publish-addons.mjs`): memory(장기기억·관계도·회귀·HUD) · cards · erosync · manage(캐릭터·모듈·플러그인) · protlink · provider(실험) · widgets · aibuild · chattheme. 코어만으로 홈·가져오기·편집기·코코아·꾸미기·도구·설정 동작.
 - 장기기억 → 리수폿 화면(Erosync 짜임, 채팅 없이도 켜기·설정), 기능 맛보기(engine/discover.js 표), 시작 안내 v2(애드온 고르기), 화면별 ? 안내 보강.
 - 버그: 폴더 키 통일+예전 기억 이전, 기억 파일 v3, 합치기 관계, 페르소나 중앙, 리수폿 일괄, 월경 cycle_report, 모바일 스크롤, 새로고침 직후 먹통.
-### 남은 것 (순서대로)
+### 남은 것 (순서대로 — 맨 위 '전체 기능 점검'이 우선)
+0. **전체 기능 점검**(위 8항목) + 프로바이더 화면 버튼 글·배치 정리.
 1. **실기기 확인**(RisuAI·RisuBard·PocketRisu, PC·모바일): 애드온 받기·자동 받기·동시 시작 속도·기억 훅 순서·예전 기억 이전·리수폿 개요·새로고침 알림·월경 cycle_report 실제 응답. 문제 나오면 DEBUG.md 순서로(실패 시험 먼저).
-2. **2.0.0 출시 준비**(사용자가 시킬 때만): package 버전 2.0.0 → 모든 애드온 minCore 2.0.0·버전 정리 → build·check → publish-addons → main 머지 → `v2.0.0` 태그. 아카 글(docs/arca)은 요청 시.
+2. **2.0.0 출시 준비**(사용자가 시킬 때만, 스텔스 minCore도 2.0.0 검토 — 작업실 탭·애드온 동시 받기 등 코어 변경 포함): package 버전 2.0.0 → 모든 애드온 minCore 2.0.0·버전 정리 → build·check → publish-addons → main 머지 → `v2.0.0` 태그. 아카 글(docs/arca)은 요청 시.
 3. **넘어오는 유저용 패치**(사용자 결정 대기): 원본 플러그인(리수폿·Erosync·HypaPlus 등) 느낌 살리기 — 어떤 기능을 맞출지 사용자가 정함.
 4. **프로바이더 보완**(docs/PLAN-provider-pm.md, Provider Manager v1.19.3 — 원작자 허락, 참고·일부 코드 가져오기 가능, 가져오면 파일 머리에 출처 + NOTICE.md. 원본 파일은 사용자에게 다시 받아야 함): 1~11단계(…·확장·다른 플러그인 창구, 프로바이더 애드온 0.2.1, 스킬은 뺌) 끝(남은 것: 실제 리스에서 다른 플러그인끼리 pluginStorage 칸이 보이는지 확인). 11단계: engine/provider/mailbox.js(키·요청 읽기·결과 정리·설정) + data/provider/mailbox.js(감시기: 동시 처리 수·허용 묻기·결과 쓰기, 요청 칸은 안 건드림, 처리한 id는 결과 칸 보고 기억) + 확장 탭 카드, 규칙 docs/IPC-provider.md. 10단계: engine/provider/{mcp,hooks}.js + data/provider/mcpclient.js + ui/screens/provider/ext.js, MCP는 streamable-http만(레거시 SSE 없음), 토큰은 vault, 실제 MCP 서버로는 확인 못 함(가짜 전송으로만). 9단계: engine/provider/router.js, 우선순위 = 예산 전환 > 요청 지정 > 라우터 > 용도·봇별. 8단계: Anthropic만(engine/provider/batch.js, 진행 중 배치 저장 dusk.prov.batch.v1), OpenAI 배치(파일 업로드)·Cellar 대기는 안 함. 7단계: Claude만(격자 cache.grid, 학습 cache.learn=직전 요청 턴 해시 메모리 보관). Gemini 캐시 학습은 기존 gemcache(observe/auto). 6단계: 토큰은 어림값(engine/provider/tokens.js), 추론 요약/생략=Claude만, 해상도=Gemini generationConfig.mediaResolution. 5단계 한계: Bedrock IAM(SigV4)·네이티브 invoke는 안 함, OpenCode Zen·Gemini Express 주소는 실제 호출로 확인 못 함. 로그는 engine/provider/errlog.js + 저장 dusk.prov.log.v1. 진행 창 카드→로그 바로 열기는 창이 리스 쪽 DOM이라 못 함(로그 탭에서 보기).
 5. 정리 후보: cards·memory가 비코어 공유 모듈을 각자 들고 있음(크기 중복), 원래부터 실패하는 e2e 6개(run-app·run-hubs·run-tabs·run-editor-ai·run-lorereq·run-popup) 고치기, 기능 맛보기 숫자 조정(사용자 피드백).
 ### 애드온만 고칠 때
 소스 수정 → `addons/addons.src.json` 버전 올림 → `node tools/build-addons.mjs` → (빌드가 "코어가 넘겨 줄 모듈이 바뀌었어요"라고 하면 코어도 내고 해당 애드온 minCore 올림) → `node tools/publish-addons.mjs`. 훅 애드온(memory·erosync·provider)은 새로고침해야 적용.
 
-## 기록: 기능 애드온 분리 (2026-11-06, 위 로드맵이 최신)
+---
+# ▼ 이하 지난 기록(참고용 — 현재 상태는 위 세 칸이 기준)
+
+## 기록: 기능 애드온 분리 (2026-11-06)
 - 묶음·크기·의존: 프로젝트 문서 claude/addon-plan.md. 장기기억·관계도 / 기억카드(+cardassets, 장기기억 필요) / 에로싱크(장기기억 필요) / AI로 봇·페르소나 만들기 / 위젯 / 채팅테마 만들기. **코코아·ProtLink+는 코어에 남김.**
 - 규칙: 애드온이 없으면 쓸 수 없는 것(탭·하위 화면·버튼·채팅 메뉴·위젯 칸·설정 행·안내/투어 항목·홈 바로가기)은 전부 그 애드온 쪽으로 옮겨서, 없을 땐 코어에 흔적이 안 남게(숨김). 데이터·설정 키는 그대로(애드온을 다시 받으면 이어서 쓰게).
 - 순서: ① 로더 확장 — manifest `requires`(필요 애드온 같이 받기), 코어가 애드온에 넘기는 `ctx.lib`(dom·kit·icons 등, esbuild로 애드온 빌드 때 external→ctx.lib 매핑), 애드온이 탭·화면·메뉴를 코어에 등록하는 자리(registerTab 등) ② 채팅테마로 첫 분리 ③ AI 제작·위젯 ④ 장기기억·관계도 → 기억카드·에로싱크 ⑤ 2.0.0 첫 실행 때 쓰던 기능 애드온 자동 받기.
