@@ -170,6 +170,7 @@ export function buildStealth(id, opts = {}) {
 }
 .chattext mark[risu-mark] { background-color: transparent !important; color: var(--st-fg) !important; }
 .chattext mark[risu-mark^="blockquote"] { border-left: 3px solid var(--st-line2) !important; color: var(--st-fg2) !important; }
+.chattext mark[risu-mark^="quote"] { color: var(--st-dim) !important; }
 html, body { font-family: ${code ? "var(--st-mono)" : "var(--st-font)"} !important; }
 button, input, textarea, select { font-family: inherit; }
 code, pre, kbd, samp { font-family: var(--st-mono) !important; }

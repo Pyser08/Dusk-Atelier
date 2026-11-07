@@ -1,4 +1,4 @@
-/* Dusk Atelier 애드온 stealth v0.3.25 — 소스: addons/stealth (AGPL-3.0-only) */
+/* Dusk Atelier 애드온 stealth v0.3.26 — 소스: addons/stealth (AGPL-3.0-only) */
 var Et=globalThis.__duskLib?.["src/ui/dom.js"];if(!Et)throw new Error("Dusk 코어에 src/ui/dom.js가 없어요 — Dusk를 업데이트해 주세요");var{EASE:_e,copyText:Re,download:qe,fadeUp:Fe,fmtBytes:je,fmtWhen:Ve,h:S,motion:Ke,pickFiles:Ge,reduceMotion:Ue,replace:nt,svgFrom:We,vanish:Ye}=Et;var Lt=globalThis.__duskLib?.["src/ui/kit.js"];if(!Lt)throw new Error("Dusk 코어에 src/ui/kit.js가 없어요 — Dusk를 업데이트해 주세요");var{STATUS_KINDS:Qe,actionRow:Xe,advFold:Ze,badge:ta,btn:O,chip:ea,colorDialog:aa,confirmDialog:Mt,emptyState:sa,fmtSize:oa,folderDialog:na,folderPickPrefs:ra,guidePanel:ia,iconBtn:la,loading:ca,modal:da,moreNav:pa,note:At,openMenu:ua,optionCards:fa,pageHead:ha,popover:ma,progressBar:ba,promptDialog:xa,segmented:It,setSwitch:ga,sheet:wa,sortBy:va,sortChips:ya,sortKeyName:ka,sortLabel:Sa,sortShort:$a,spinner:Ta,statusCard:Ca,stepsGuide:Ea,switchEl:La,toast:Ma,toggleRow:V,tray:Aa,trayBtn:Ia}=Lt;var Dt=globalThis.__duskLib?.["src/data/themes.js"];if(!Dt)throw new Error("Dusk 코어에 src/data/themes.js가 없어요 — Dusk를 업데이트해 주세요");var{RISU_TAGS:za,TARGETS:tt,TARGET_IDS:Pa,THEME_FILE_KIND:Na,THEME_KEY:Oa,TOKENS:Ba,applyToDocument:rt,compileCss:Ha,copyTokensTo:_a,defaultTokens:Ra,detectTarget:zt,duplicateTheme:qa,exportTheme:Fa,lintCss:ja,lintHtml:Va,loadThemes:it,newTheme:Pt,parseCssVars:Ka,parseThemeFile:Ga,probeSelectors:Nt,renderCbs:Ua,restoreActiveTheme:Wa,restoreDatabase:Ot,saveThemes:lt,setCssVar:Ya,writeToDatabase:Bt}=Dt;var K=`
 html body [x-dusk][x-vis="0"]{display:none !important}
 [x-dusk="stealth-sb"][x-fold="1"]{display:none}   /* 접기 버튼은 없앴다(11-08): 넓은 화면은 늘 펼침, 휴대폰만 접힘 */
@@ -140,6 +140,7 @@ ${ct(a,a.dark).replace(/^/gm,"  ")}
 }
 .chattext mark[risu-mark] { background-color: transparent !important; color: var(--st-fg) !important; }
 .chattext mark[risu-mark^="blockquote"] { border-left: 3px solid var(--st-line2) !important; color: var(--st-fg2) !important; }
+.chattext mark[risu-mark^="quote"] { color: var(--st-dim) !important; }
 html, body { font-family: ${l?"var(--st-mono)":"var(--st-font)"} !important; }
 button, input, textarea, select { font-family: inherit; }
 code, pre, kbd, samp { font-family: var(--st-mono) !important; }

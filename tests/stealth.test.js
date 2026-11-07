@@ -467,3 +467,11 @@ test("사이드바 CSS는 x-c로 찾고(요소를 하나씩 만들어 붙이므�
   assert.match(SHELL_CSS, /\[x-c~="st-sb-row"\]/);
   assert.match(SHELL_CSS, /^\.st-pop-row\{/m);
 });
+
+test("\"…\"·'…'(리스가 mark risu-mark=quote1·quote2로 감쌈)는 접힘 줄처럼 회색", () => {
+  for (const id of PRESET_IDS) {
+    const css = buildStealth(id).css;
+    assert.match(css, /\.chattext mark\[risu-mark\^="quote"\] \{ color: var\(--st-dim\) !important; \}/, id);
+    assert.ok(css.indexOf('mark[risu-mark^="quote"]') > css.indexOf("mark[risu-mark] {"), id + ": 일반 mark 규칙보다 뒤(덮어씀)");
+  }
+});
