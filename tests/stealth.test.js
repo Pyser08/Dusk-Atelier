@@ -398,3 +398,12 @@ test("감싸기에 실패한 이미지는 숨기고 '명령어 N개 실패함'�
   assert.match(css, /:is\(img, video\)\[x-st-m="e"\]:not\(\[x-st-o="1"\]\) \{ display: none !important/);
   assert.match(css, /명령어 " attr\(x-st-n\) "개 실패함/);
 });
+
+test("화면 진단 배치 추적: 채팅 글에서 body까지 상자마다 왼쪽·폭을 적는다", async () => {
+  const { layoutTrace } = await import("../src/data/stealth-apply.js");
+  const mk = (tag, cls, left, width, parent) => ({ nodeName: async () => tag.toUpperCase(), getClassName: async () => cls, getBoundingClientRect: async () => ({ left, width }), getParent: async () => parent });
+  const body = mk("body", "", 0, 1288, null), main = mk("div", "grow h-full", 0, 640, body), msg = mk("div", "st-msg st-ai", 60, 560, main);
+  const lines = await layoutTrace({ querySelector: async (s) => (s === ".st-msg" ? msg : null) });
+  assert.deepEqual(lines, ["배치 추적(글 → body):", "div.st-msg.st-ai — 왼쪽 60 · 폭 560", "div.grow.h-full — 왼쪽 0 · 폭 640", "body — 왼쪽 0 · 폭 1288"]);
+  assert.match((await layoutTrace({ querySelector: async () => null }))[0], /못 찾았어요/);
+});

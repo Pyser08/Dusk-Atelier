@@ -240,6 +240,7 @@ export function createShell(api, opts = {}) {
   }
   async function setVis(d) {   // 채팅 화면이고 Dusk 창이 닫혀 있을 때만 보인다
     const v = onChat && !duskOpen.v ? "1" : "0";
+    shellInfo.flags = `채팅 화면 ${onChat ? "찾음" : "못 찾음"} · Dusk 창 ${duskOpen.v ? "열림으로 판단" : "닫힘"}(크기 ${frameVisible() ? "있음" : "0"}, 호출 ${duskOpen.call === undefined ? "없음" : duskOpen.call ? "열기" : "닫기"}) · ${folded ? "접힘" : "펼침"} → ${v === "1" ? "보임" : "숨김"}`;
     for (const id of [ROOT, TOP, NOTE, POP]) { const e = await d.querySelector(`[x-dusk="${id}"]`); await e?.setAttribute("x-vis", v); }
   }
   async function toggleFold(d) {   // 다시 그리지 않고 속성만 바꾼다

@@ -98,6 +98,24 @@ export async function runDiagnosis(api) {
   const db = await api.getDatabase(["customCSS", "guiHTML", "theme"]).catch(() => ({}));
   const info = { theme: db?.theme ?? "", htmlLen: String(db?.guiHTML ?? "").length, cssLen: String(db?.customCSS ?? "").length, hasWrapper: /st-msg/.test(db?.guiHTML ?? ""), hasFold: /st-ftool/.test(db?.guiHTML ?? ""), hasStealthCss: /Dusk Stealth/.test(db?.customCSS ?? "") };
   info.shell = shellState() ? `켜짐(${shellState()}) · 그린 횟수 ${shellInfo.draws}${shellInfo.error ? " · 오류: " + shellInfo.error : ""}${shellInfo.warn ? " · 주의: " + shellInfo.warn : ""}` : "꺼짐(켜진 클로드 계열 모양이 없거나 시작 전)";
+  if (shellInfo.flags) info.shell += ` · ${shellInfo.flags}`;
   const target = await detectTarget(doc, api).catch(() => null);
+  info.layout = await layoutTrace(doc).catch((e) => [`배치 추적 실패: ${e?.message ?? e}`]);
   return { counts, db: info, target: target ? (TARGETS[target]?.label ?? target) : null, lines: diagnose(counts, info) };
+}
+
+// 배치 추적: 채팅 글에서 body까지 거슬러 올라가며 각 상자의 왼쪽 위치·폭을 적는다(채팅이 한쪽으로 쏠릴 때 어느 상자가 좁은지 찾기)
+export async function layoutTrace(doc, max = 16) {
+  let el = await doc.querySelector(".st-msg") ?? await doc.querySelector(".chattext") ?? await doc.querySelector(".default-chat-screen");
+  if (!el) return ["배치 추적: 채팅 글을 못 찾았어요(채팅 화면에서 ‘5초 뒤 진단’)."];
+  const out = [];
+  for (let i = 0; el && i < max; i++) {
+    const tag = String(await el.nodeName?.().catch(() => "") ?? "").toLowerCase();
+    const cls = String(await el.getClassName?.().catch(() => "") ?? "").trim().replace(/\s+/g, ".").slice(0, 70);
+    const r = await el.getBoundingClientRect?.().catch(() => null);
+    out.push(`${tag}${cls ? "." + cls : ""} — 왼쪽 ${Math.round(r?.left ?? NaN)} · 폭 ${Math.round(r?.width ?? NaN)}`);
+    if (tag === "body" || tag === "html") break;
+    el = await el.getParent?.().catch(() => null);
+  }
+  return ["배치 추적(글 → body):", ...out];
 }
