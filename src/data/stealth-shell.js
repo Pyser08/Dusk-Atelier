@@ -46,13 +46,20 @@ export function chatRows(char, currentIndex, limit = 30) {
 
 // 사이드바 종류(docs/STEALTH.md 5·7절). head: "seg"(클로드식 오른쪽 묶음) | "icons"(headRight 아이콘들). headLeft: 이름 왼쪽 아이콘.
 // firstOn: 첫 메뉴 줄 강조. foot2: 발을 두 줄(이름 / 요금제). top: "chat"이면 넓은 화면 위 줄에 [폴더] 채팅 이름 ⌄ … 공유. 글자만 쓰고 상표 그림은 쓰지 않는다.
+// 머리 아이콘 그림(사용자 결정 11-08): 모양마다 icon = 기본 그림 주소(https:// 또는 data:image/…). 비우면 그림 없음.
+// 사용자가 스텔스 화면에서 고른 그림(state.icons[모양])이 먼저 쓰인다. 기본값은 저장소 관리자가 정한다(지금은 모두 비움).
+export function safeIconUrl(u) {
+  const v = String(u ?? "").trim();
+  if (!/^(https:\/\/|data:image\/(png|jpeg|webp|gif|svg\+xml);)/i.test(v) || /['"()\\\s<>]/.test(v.replace(/^data:[^,]*,/, (m) => m.replace(/[()]/g, "")))) return "";
+  return v.length <= 120000 ? v : "";
+}
 export var SHELL_KINDS = {
-  claude: { word: "Claude", wordSerif: true, head: "seg", headLeft: "panel", firstOn: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["folder", "프로젝트"], ["cube", "아티팩트"], ["clock", "예약됨"], ["bag", "사용자 지정"]], recent: "최근 항목", empty: "", plan: "Pro" },
-  code: { word: "", head: "seg", segOn: 1, headLeft: ["panel", "back", "fwd"], items: [["plus", "새로 만들기"], ["folder", "프로젝트", "New"], ["cube", "아티팩트"], ["bag", "사용자 지정"], ["chev", "더 보기"]], recent: "최근 항목", dots: true, footChev: true, empty: "시작한 세션이 여기에 표시됩니다", plan: "" },
-  deepseek: { word: "deepseek", wordAccent: true, head: "icons", headRight: ["search", "panel"], newBtn: "새로운 채팅", items: [], recent: "오늘", recentIcon: "listi", gearIcon: "more", top: "chat", topPlain: true, empty: "", plan: "" },
-  gemini: { word: "Gemini", top: "none", head: "icons", headRight: ["search", "panel"], items: [["edit", "새 채팅"], ["grid", "라이브러리"], ["image", "이미지"], ["clock", "예약"], ["target", "맞춤설정"], ["video", "동영상"]], recent: "전체", recentIcon: "filter", empty: "", plan: "" },
-  codex: { word: "Codex", wordChev: true, head: "icons", headRight: ["bell", "search"], rail: ["home", "image", "clock", "book", "plug", "more", "|", "branch"], foot: "start", items: [["edit", "새 채팅"]], recent: "최근", empty: "", plan: "" },
-  gpt: { word: "ChatGPT", head: "icons", headRight: ["search", "panel"], foot2: true, top: "chat", items: [["edit", "새 채팅"], ["image", "이미지"], ["clock", "예약"], ["book", "라이브러리"], ["plug", "플러그인"], ["more", "탐색"]], recent: "최근", empty: "", plan: "Plus" }
+  claude: { icon: "", word: "Claude", wordSerif: true, head: "seg", headLeft: "panel", firstOn: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["folder", "프로젝트"], ["cube", "아티팩트"], ["clock", "예약됨"], ["bag", "사용자 지정"]], recent: "최근 항목", empty: "", plan: "Pro" },
+  code: { icon: "", word: "", head: "seg", segOn: 1, headLeft: ["panel", "back", "fwd"], items: [["plus", "새로 만들기"], ["folder", "프로젝트", "New"], ["cube", "아티팩트"], ["bag", "사용자 지정"], ["chev", "더 보기"]], recent: "최근 항목", dots: true, footChev: true, empty: "시작한 세션이 여기에 표시됩니다", plan: "" },
+  deepseek: { icon: "", word: "deepseek", wordAccent: true, head: "icons", headRight: ["search", "panel"], newBtn: "새로운 채팅", items: [], recent: "오늘", recentIcon: "listi", gearIcon: "more", top: "chat", topPlain: true, empty: "", plan: "" },
+  gemini: { icon: "", word: "Gemini", top: "none", head: "icons", headRight: ["search", "panel"], items: [["edit", "새 채팅"], ["grid", "라이브러리"], ["image", "이미지"], ["clock", "예약"], ["target", "맞춤설정"], ["video", "동영상"]], recent: "전체", recentIcon: "filter", empty: "", plan: "" },
+  codex: { icon: "", word: "Codex", wordChev: true, head: "icons", headRight: ["bell", "search"], rail: ["home", "image", "clock", "book", "plug", "more", "|", "branch"], foot: "start", items: [["edit", "새 채팅"]], recent: "최근", empty: "", plan: "" },
+  gpt: { icon: "", word: "ChatGPT", head: "icons", headRight: ["search", "panel"], foot2: true, top: "chat", items: [["edit", "새 채팅"], ["image", "이미지"], ["clock", "예약"], ["book", "라이브러리"], ["plug", "플러그인"], ["more", "탐색"]], recent: "최근", empty: "", plan: "Plus" }
 };
 var ICON = {
   grid: '<rect x="4.5" y="4.5" width="6" height="6" rx="2"/><rect x="13.5" y="4.5" width="6" height="6" rx="2"/><rect x="4.5" y="13.5" width="6" height="6" rx="2"/><rect x="13.5" y="13.5" width="6" height="6" rx="2"/>',
@@ -90,7 +97,8 @@ export function shellHtml(model) {
     : `<div class="st-sb-foot">${av}${whoHtml}${gear}</div>`;
   const lefts = [].concat(K.headLeft ?? []).map((n) => `<span class="st-sb-hico">${ico(n, 20)}</span>`).join("");
   const word = model.word ?? K.word;
-  const main = `<div class="st-sb-head">${lefts}${word ? `<span class="st-sb-word${K.wordSerif ? " st-serif" : ""}${K.wordAccent ? " st-accent" : ""}">${esc(word)}</span>` : ""}${K.wordChev ? `<span class="st-sb-wchev">${ico("chev", 16)}</span>` : ""}${right}</div>`
+  const logo = safeIconUrl(model.icon);
+  const main = `<div class="st-sb-head">${lefts}${logo ? `<span class="st-sb-logo" style="background-image:url('${logo}')"></span>` : ""}${word ? `<span class="st-sb-word${K.wordSerif ? " st-serif" : ""}${K.wordAccent ? " st-accent" : ""}">${esc(word)}</span>` : ""}${K.wordChev ? `<span class="st-sb-wchev">${ico("chev", 16)}</span>` : ""}${right}</div>`
     + (K.newBtn ? `<div class="st-sb-newwrap"><span class="st-sb-new">${ico("pluso", 18)}<span>${esc(K.newBtn)}</span></span></div>` : "")
     + (nav ? `<div class="st-sb-nav">${nav}</div>` : "")
     + (K.recent ? `<div class="st-sb-sec"><span>${esc(K.recent)}</span>${K.recentIcon ? `<span class="st-sb-secico">${ico(K.recentIcon, 16)}</span>` : ""}</div>` : "")
@@ -253,7 +261,7 @@ export function createShell(api, opts = {}) {
         await (await d.querySelector("head") ?? await d.querySelector("body")).appendChild(st);
       }
       const cur = rows.find((r) => r.current);
-      const model = { mobile: true, kind, word: opts.word, user, plan: opts.plan, rows, title: opts.title || char?.name || "", sub: opts.sub || cur?.name || "" };
+      const model = { mobile: true, kind, word: opts.word, user, plan: opts.plan, icon: opts.icon, rows, title: opts.title || char?.name || "", sub: opts.sub || cur?.name || "" };
       const rootEl = await put(d, ROOT, "div", shellHtml(model), "st-sb"); await rootEl?.setAttribute("x-fold", folded ? "1" : "0"); await rootEl?.setAttribute("x-rail", SHELL_KINDS[kind]?.rail ? "1" : "0");
       await setVis(d);
       const topEl0 = await put(d, TOP, "div", topHtml(model), "st-top"); await topEl0?.setAttribute("x-empty", SHELL_KINDS[kind]?.top === "none" ? "1" : "0");
@@ -412,7 +420,8 @@ export async function syncShell(api, state, log) {
   if (current) { const c = current; current = null; await c.shell.destroy().catch(() => {}); }
   if (!want) return null;
   const L = mergeLabels(id, state.labels?.[id]);
-  const shell = createShell(api, { kind: P.sidebar ?? P.shell, title: L.title, sub: L.sub, note: L.note, user: L.user, plan: L.plan || undefined, log });
+  const kindId = P.sidebar ?? P.shell;
+  const shell = createShell(api, { kind: kindId, icon: safeIconUrl(state.icons?.[id]) || SHELL_KINDS[kindId]?.icon || "", title: L.title, sub: L.sub, note: L.note, user: L.user, plan: L.plan || undefined, log });
   current = { id, shell };
   return shell;
 }

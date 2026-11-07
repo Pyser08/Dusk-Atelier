@@ -521,3 +521,17 @@ test("클로드 코드·제미나이·딥시크 모양(docs/STEALTH.md 7-3~7-5)"
   const dt = topHtml({ kind: "deepseek", sub: "한글 자모 질문", mobile: true });
   assert.ok(dt.includes("한글 자모 질문") && !dt.includes("st-top-fold") && !dt.includes("공유"));
 });
+
+test("머리 아이콘: 기본값은 모양마다 빈 칸(SHELL_KINDS.icon), 사용자가 고른 그림이 먼저, 그림 주소는 안전한 것만", async () => {
+  const { shellHtml, SHELL_KINDS, safeIconUrl } = await import("../src/data/stealth-shell.js");
+  for (const k of Object.keys(SHELL_KINDS)) assert.equal(SHELL_KINDS[k].icon, "", k + ": 기본 그림은 비워 둔다");
+  const png = "data:image/png;base64,iVBORw0KGgo=";
+  assert.equal(safeIconUrl(png), png);
+  assert.equal(safeIconUrl("https://example.com/a.png"), "https://example.com/a.png");
+  for (const bad of ["javascript:alert(1)", "data:text/html,<b>", "https://x/a.png') ; x:url('y", ""]) assert.equal(safeIconUrl(bad), "", bad);
+  const h = shellHtml({ kind: "gemini", user: "u", rows: [], icon: png });
+  assert.ok(h.includes(`class="st-sb-logo" style="background-image:url('${png}')"`), "이름 앞에 그림");
+  assert.ok(!shellHtml({ kind: "gemini", user: "u", rows: [] }).includes("st-sb-logo"), "없으면 안 그림");
+  const st = normalizeStealthState({ v: 1, icons: { gemini: png, deepseek: "javascript:x", nope: png } });
+  assert.deepEqual(st.icons, { gemini: png }, "저장값도 안전한 것만, 아는 모양만");
+});

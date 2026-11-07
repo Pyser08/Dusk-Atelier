@@ -16,6 +16,17 @@ async function copyText(win, text) {
   try { return d.execCommand("copy"); } catch { return false; } finally { ta.remove(); }
 }
 
+// 머리 아이콘: 고른 그림을 64px PNG로 줄여 data 주소로(기기에만 저장). 큰 그림이 저장소를 채우지 않게
+async function shrinkIcon(file, size = 64) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error("그림을 읽지 못했어요")); i.src = url; });
+    const c = document.createElement("canvas"); c.width = c.height = size;
+    const k = Math.min(size / img.width, size / img.height), w = img.width * k, hh = img.height * k;
+    c.getContext("2d").drawImage(img, (size - w) / 2, (size - hh) / 2, w, hh);
+    return c.toDataURL("image/png");
+  } finally { URL.revokeObjectURL(url); }
+}
 var LABEL_FIELDS = [["title", "상단 제목 (비우면 봇 이름)"], ["sub", "상단 제목 뒤 글"], ["model", "입력창 옆 문구"], ["left", "입력창 왼쪽 아래 문구"], ["note", "화면 아래 안내 글"], ["tool", "답변 앞 작업 줄"], ["think", "생성 중 문구"], ["user", "사이드바 사용자 이름 (비우면 페르소나)"], ["plan", "사이드바 요금제 글"]];
 
 export async function renderStealth(ctx) {
@@ -66,6 +77,8 @@ export async function renderStealth(ctx) {
       toggleRow("사이드바 아바타 흐리게", "캐릭터 얼굴이 작게 보여도 알아보기 어렵게 해요", st.blurAvatars, (v) => { st.blurAvatars = v; persist(); refresh(); }),
       toggleRow("최소 모드 (스크롤 문제 점검용)", "화면 전체·입력창 꾸밈을 빼고 말풍선만 꾸며요. 켜 둔 상태면 바로 적용돼요. 스크롤이 되는지 알려 주세요", !!st.minimal, (v) => { st.minimal = v; persist(); refresh(); }),
       toggleRow("사이드바 숨기기", "왼쪽 목록을 통째로 숨겨요", st.hideSidebar, (v) => { st.hideSidebar = v; persist(); refresh(); }),
+      h("h4", { class: "rb-h4" }, `${PRESETS[pick].label} 머리 아이콘`),
+      iconRow(),
       h("h4", { class: "rb-h4" }, `${PRESETS[pick].label} 문구`),
       ...fields,
       h("div", { class: "rb-row", style: "display:flex;gap:8px" },
@@ -75,6 +88,20 @@ export async function renderStealth(ctx) {
       diag ? h("pre", { class: "rb-muted", style: "white-space:pre-wrap;font-size:12px;margin:0;user-select:text" }, diag) : null,
       note("info", "화면에 안 바뀌면 리스를 새로고침해 주세요. 리스 업데이트로 화면 구조가 바뀌면 일부가 어긋날 수 있어요.")
     );
+  }
+  function iconRow() {   // 사이드바 이름 앞 작은 그림. 비우면 기본값(SHELL_KINDS.icon, 지금은 없음)
+    const cur = st.icons?.[pick];
+    const file = h("input", { type: "file", accept: "image/png,image/jpeg,image/webp,image/gif,image/svg+xml", style: "display:none" });
+    file.addEventListener("change", async () => {
+      const f = file.files?.[0]; if (!f) return;
+      try { st.icons = { ...st.icons, [pick]: await shrinkIcon(f) }; await persist(); await syncShell(ctx.api, st).catch(() => {}); ctx.toast("머리 아이콘을 바꿨어요"); draw(); }
+      catch (e) { ctx.toast(`그림을 넣지 못했어요: ${e?.message ?? e}`, { error: true }); }
+    });
+    return h("div", { class: "rb-row", style: "display:flex;align-items:center;gap:10px" },
+      cur ? h("span", { style: `width:28px;height:28px;flex:none;border-radius:6px;background:center/contain no-repeat url('${cur}')`, "aria-label": "지금 아이콘" }) : h("small", { class: "rb-muted" }, "그림 없음"),
+      btn(cur ? "다른 그림 고르기" : "그림 고르기", { size: "sm", onClick: () => file.click() }),
+      cur ? btn("지우기", { size: "sm", onClick: async () => { const n = { ...st.icons }; delete n[pick]; st.icons = n; await persist(); await syncShell(ctx.api, st).catch(() => {}); draw(); } }) : null,
+      file, h("small", { class: "rb-muted" }, "고른 그림은 이 기기에만 저장돼요"));
   }
   redraw = draw;
   draw();

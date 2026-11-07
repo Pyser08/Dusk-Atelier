@@ -272,10 +272,12 @@ export function normalizeStealthState(raw) {
       for (const k of LABEL_KEYS) if (typeof src[k] === "string") labels[id][k] = src[k].slice(0, 80);
     }
   }
+  const icons = {};   // 모양별 머리 아이콘(사용자가 고른 그림, 기기에만 저장). 안전한 주소만(stealth-shell safeIconUrl과 같은 규칙)
+  for (const id of PRESET_IDS) { const v = String(raw.icons?.[id] ?? ""); if (/^(https:\/\/|data:image\/(png|jpeg|webp|gif|svg\+xml);)/i.test(v) && !/['"()\\\s<>]/.test(v.replace(/^data:[^,]*,/, "")) && v.length <= 120000) icons[id] = v; }
   return {
     v: 1, active: PRESETS[raw.active] ? raw.active : null,
     scheme: ["auto", "light", "dark"].includes(raw.scheme) ? raw.scheme : "auto",
-    hideImages: raw.hideImages !== false, blurAvatars: raw.blurAvatars !== false, hideSidebar: !!raw.hideSidebar, minimal: !!raw.minimal, appliedVer: typeof raw.appliedVer === "string" ? raw.appliedVer : "", labels
+    hideImages: raw.hideImages !== false, blurAvatars: raw.blurAvatars !== false, hideSidebar: !!raw.hideSidebar, minimal: !!raw.minimal, appliedVer: typeof raw.appliedVer === "string" ? raw.appliedVer : "", labels, icons
   };
 }
 export var optsOf = (state, id) => ({ scheme: state.scheme, hideImages: state.hideImages, blurAvatars: state.blurAvatars, hideSidebar: state.hideSidebar, minimal: state.minimal, labels: state.labels?.[id] ?? {} });
