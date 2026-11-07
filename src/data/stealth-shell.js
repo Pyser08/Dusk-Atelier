@@ -45,10 +45,11 @@ export function chatRows(char, currentIndex, limit = 30) {
 }
 
 export var SHELL_KINDS = {
-  claude: { word: "Claude", wordSerif: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["folder", "프로젝트"], ["cube", "아티팩트"], ["clock", "예약됨"], ["bag", "사용자 지정"]], recent: "최근 항목", empty: "", plan: "Pro" },
+  claude: { word: "Claude", wordSerif: true, headSeg: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["folder", "프로젝트"], ["cube", "아티팩트"], ["clock", "예약됨"], ["bag", "사용자 지정"]], recent: "최근 항목", empty: "", plan: "Pro" },
   code: { word: "Code", wordSerif: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["cube", "아티팩트"], ["bag", "사용자 지정"], ["more", "더 보기"]], recent: "", empty: "시작한 세션이 여기에 표시됩니다", plan: "Pro" }
 };
 var ICON = {
+  panel: '<rect x="3.5" y="5" width="17" height="14" rx="3"/><path d="M8 9v6"/>', chatq: '<path d="M12 4.5a7 7 0 0 0-6.2 10.2L5 19l4.3-.8A7 7 0 1 0 12 4.5z"/><circle cx="15.5" cy="15.5" r="2.2"/><path d="m17.2 17.2 1.6 1.6"/>', code: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 6l-3 12"/>',
   menu: '<path d="M4 7h16M4 12h10M4 17h13"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/>', vdots: '<path d="M12 6h.01M12 12h.01M12 18h.01" stroke-width="3"/>', stack: '<rect x="6" y="9" width="12" height="11" rx="2"/><path d="M8 6h8M10 3h4"/>',
   plus: '<path d="M12 5v14M5 12h14"/>', search: '<circle cx="11" cy="11" r="6"/><path d="m20 20-4-4"/>', folder: '<path d="M4 7h6l2 2h8v9H4z"/>',
   cube: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/>', clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
@@ -66,7 +67,9 @@ export function shellHtml(model) {
   const rows = (model.rows ?? []).map((r) => `<button type="button" class="st-sb-item${r.current ? " st-on" : ""}" data-st-chat="${r.index}" title="${esc(r.name)}">${esc(r.name)}</button>`).join("");
   const list = rows || (K.empty ? `<div class="st-sb-empty">${esc(K.empty)}</div>` : "");
   const who = String(model.user || "나");
-  return `<div class="st-sb-head"><span class="st-sb-word${K.wordSerif ? " st-serif" : ""}">${esc(model.word ?? K.word)}</span></div>`
+  // 머리: [패널 아이콘] Claude ……… [말풍선|</>] (클로드 앱 모양, 장식)
+  const seg = K.headSeg ? `<span class="st-sb-seg"><span class="st-sb-segb st-on">${ico("chatq", 18)}</span><span class="st-sb-segb">${ico("code", 18)}</span></span>` : "";
+  return `<div class="st-sb-head">${K.headSeg ? `<span class="st-sb-hico">${ico("panel", 20)}</span>` : ""}<span class="st-sb-word${K.wordSerif ? " st-serif" : ""}">${esc(model.word ?? K.word)}</span>${seg}</div>`
     + `<div class="st-sb-nav">${nav}</div>`
     + (K.recent ? `<div class="st-sb-sec"><span>${esc(K.recent)}</span></div>` : "")
     + `<div class="st-sb-list">${list}</div>`

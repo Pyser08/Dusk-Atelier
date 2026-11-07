@@ -11,6 +11,10 @@ body[x-dusk-fold="1"] [x-dusk="stealth-note"]{left:0}
 [x-dusk="stealth-sb"] *{box-sizing:border-box}
 [x-c~="st-sb-head"]{display:flex;align-items:center;gap:8px;padding:14px 14px 8px}
 [x-c~="st-sb-word"]{font-size:21px;font-weight:600;letter-spacing:-.01em}
+[x-c~="st-sb-hico"]{display:inline-flex;align-items:center;color:var(--st-fg2);margin-right:2px}
+[x-c~="st-sb-seg"]{margin-left:auto;display:inline-flex;gap:2px;padding:3px;border-radius:12px;background:color-mix(in srgb,var(--st-fg) 6%,transparent)}
+[x-c~="st-sb-segb"]{display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;border-radius:9px;color:var(--st-fg2)}
+[x-c~="st-sb-segb"][x-c~="st-on"]{background:color-mix(in srgb,var(--st-fg) 13%,transparent);color:var(--st-fg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--st-fg) 14%,transparent)}
 [x-c~="st-sb-word"][x-c~="st-serif"]{font-family:"Tiempos Headline","Source Serif Pro",Georgia,"Noto Serif KR","Nanum Myeongjo",serif !important}
 [x-c~="st-sb-nav"]{display:flex;flex-direction:column;padding:6px 8px;gap:1px}
 [x-c~="st-sb-row"]{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:var(--st-fg);cursor:default;border:0;background:transparent;text-align:left;font:inherit;width:100%}
