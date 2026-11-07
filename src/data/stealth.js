@@ -176,7 +176,7 @@ body { background: var(--st-bg) !important; color: var(--st-fg); }
 div:has(> .default-chat-screen) { background: var(--st-bg) !important; background-image: none !important; }
 .default-chat-screen { font-size: ${code ? 14 : 15}px; line-height: ${code ? 1.55 : 1.65}; }`,
     hideSidebar || P.shell
-      ? (P.shell ? `@media (min-width: 761px) { body[x-dusk-st][x-dusk-fold="0"] .rs-sidebar, body[x-dusk-st][x-dusk-fold="0"] .risu-sidebar { display: none !important; } }` : `.rs-sidebar, .risu-sidebar { display: none !important; }`)
+      ? (P.shell ? `.rs-sidebar, .risu-sidebar { background: var(--st-side) !important; box-shadow: none !important; border-right: 1px solid var(--st-line); }` : `.rs-sidebar, .risu-sidebar { display: none !important; }`)   // 클로드 계열: 순정 사이드바를 열면 그게 보이고 스텔스 사이드바가 숨는다(stealth-shell nativeSidebarOpen)
       : `.rs-sidebar, .risu-sidebar { background: var(--st-side) !important; box-shadow: none !important; border-right: 1px solid var(--st-line); }`,
     blurAvatars ? `.sidebar-avatar, .avatar img, .avatar div { filter: grayscale(1) blur(4px) opacity(.4); }` : "",
     P.shell

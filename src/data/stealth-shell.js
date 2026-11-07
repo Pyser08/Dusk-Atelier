@@ -158,9 +158,22 @@ export function refreshDuskOpen(w) { const v = duskIsOpen(frameVisible(w), duskO
 export function shellFlags() {
   refreshDuskOpen();
   const vis = shellInfo.onChat && !duskOpen.v;
-  return `채팅 화면 ${shellInfo.onChat ? "찾음" : "못 찾음"} · Dusk 창 ${duskOpen.v ? "열림으로 판단" : "닫힘"}(창 크기 ${frameVisible() ? `${globalThis.innerWidth}×${globalThis.innerHeight}` : "0"}, 마지막 호출 ${duskOpen.call === undefined ? "없음" : duskOpen.call ? "열기" : "닫기"}) · ${shellInfo.folded ? "접힘" : "펼침"} → ${vis ? "보임" : "숨김"}`;
+  return `채팅 화면 ${shellInfo.onChat ? "찾음" : "못 찾음"} · 순정 사이드바 ${shellInfo.nativeOpen ? "열림" : "닫힘"} · Dusk 창 ${duskOpen.v ? "열림으로 판단" : "닫힘"}(창 크기 ${frameVisible() ? `${globalThis.innerWidth}×${globalThis.innerHeight}` : "0"}, 마지막 호출 ${duskOpen.call === undefined ? "없음" : duskOpen.call ? "열기" : "닫기"}) · ${shellInfo.folded ? "접힘" : "펼침"} → ${vis && !shellInfo.nativeOpen ? "보임" : "숨김"}`;
 }
 // 리스 화면(우리 iframe 밖)이 눌렸다 = Dusk 창이 화면을 덮고 있지 않다. 포켓리스는 바깥을 눌러 창을 닫아도 아무 신호가 없어 이것으로 안다.
+// 리스 순정 사이드바가 열려 있는가: 닫히면 hidden(크기 0)이 된다. 판마다 클래스가 둘(.rs-sidebar·.risu-sidebar)이라 둘 다 본다.
+export async function nativeSidebarOpen(d) {
+  try {
+    const list = await d.querySelectorAll(".rs-sidebar, .risu-sidebar");
+    const n = typeof list?.length === "function" ? await list.length() : list?.length ?? 0;
+    for (let i = 0; i < n; i++) {
+      const el = typeof list.at === "function" ? await list.at(i) : list[i];
+      const r = await el?.getBoundingClientRect?.().catch?.(() => null);
+      if (r && r.width > 8 && r.height > 8 && r.right > 8) return true;
+    }
+  } catch { /* 못 보면 닫힘으로 */ }
+  return false;
+}
 export function noteHostClick(w) { if (duskOpen.call === false && !duskOpen.v) return false; duskOpen.call = false; return refreshDuskOpen(w); }
 export function setDuskOpen(v, w) { duskOpen.call = !!v; duskOpen.v = !v; return refreshDuskOpen(w); }
 
@@ -174,12 +187,12 @@ var ROOT = "stealth-sb", NOTE = "stealth-note", TOP = "stealth-top", POP = "stea
  */
 export function createShell(api, opts = {}) {
   const log = opts.log ?? ((...a) => console.log("[Dusk Atelier]", ...a));
-  let folded = true, plain = false, onChat = true, doc = null, timer = null, last = "", dead = false, busy = false, popOpen = false, inflight = Promise.resolve();
+  let folded = true, foldUnset = false, nativeOpen = false, plain = false, onChat = true, doc = null, timer = null, last = "", dead = false, busy = false, popOpen = false, inflight = Promise.resolve();
   const cache = { idx: "", at: 0, char: null, user: "", userAt: 0 };
   const FRESH = opts.freshMs ?? 90000, USER_TTL = 120000;
   const kind = opts.kind ?? "claude";
   const FOLD_KEY = "rbm:stealth:fold";
-  const foldReady = (async () => { try { const v = await api.pluginStorage?.getItem?.(FOLD_KEY); if (v === "0") folded = false; } catch { /* 기본(접힘) */ } })();
+  const foldReady = (async () => { try { const v = await api.pluginStorage?.getItem?.(FOLD_KEY); if (v === "0") folded = false; else if (v !== "1") foldUnset = true; } catch { foldUnset = true; } })();   // 고른 적 없으면 첫 그리기에서 정한다(넓은 화면 = 펼침)
   async function ensureDoc() { if (doc) return doc; doc = await api.getRootDocument?.(); return doc; }
   // 봇 전체 읽기는 채팅이 많으면 무겁다 → 지금 봇·채팅 번호가 같으면 FRESH 동안 지난 결과를 그대로 쓴다. 번호는 가벼운 호출이라 자주 본다.
   const safe = async (fn) => { try { return await fn(); } catch (e) { shellInfo.warn = String(e?.message ?? e); return undefined; } };   // 호스트가 채팅이 없을 때 던지는 오류는 목록만 비우고 넘어간다
@@ -216,6 +229,8 @@ export function createShell(api, opts = {}) {
       const d = await ensureDoc(); if (!d) { shellInfo.error = "리스 화면 문서에 접근하지 못했어요"; return; }
       await foldReady;
       onChat = !!(await d.querySelector(".default-chat-screen, .text-input-area").catch(() => null));
+      if (foldUnset) { foldUnset = false; const r = await (await d.querySelector("body"))?.getBoundingClientRect?.().catch(() => null); folded = !(r && r.width > 760); }   // 기본: PC 펼침 · 휴대폰 접힘(휴대폰은 펼치면 채팅을 덮는다)
+      nativeOpen = await nativeSidebarOpen(d);
       const { ci, ti, char } = await chatInfo(force);
       const user = opts.user || (opts.getUser ? await opts.getUser() : await userName());
       if (dead) return;
@@ -223,7 +238,7 @@ export function createShell(api, opts = {}) {
       const key = JSON.stringify([folded, onChat, kind, ci, ti, user, rows.map((r) => [r.index, r.name])]);
       if (!force && key === last) return;
       last = key;
-      try { const b = await d.querySelector("body"); if (b) { await b.setAttribute("x-dusk-st", "1"); await b.setAttribute("x-dusk-fold", folded || !onChat ? "1" : "0"); } } catch { /* 표식 없이도 사이드바는 보인다 */ }
+      try { const b = await d.querySelector("body"); if (b) { await b.setAttribute("x-dusk-st", "1"); await b.setAttribute("x-dusk-fold", folded || !onChat || nativeOpen ? "1" : "0"); } } catch { /* 표식 없이도 사이드바는 보인다 */ }
       if (!(await d.querySelector(`[x-dusk="${STY}"]`))) {
         const st = await d.createElement("style"); await st.setAttribute("x-dusk", STY); await st.setInnerText(SHELL_CSS);
         await (await d.querySelector("head") ?? await d.querySelector("body")).appendChild(st);
@@ -243,23 +258,30 @@ export function createShell(api, opts = {}) {
       const more = await d.querySelector(`[x-dusk="${TOP}"] [x-st-more]`);
       if (more) await more.addEventListener("click", async () => { plain = !plain; try { const t = await d.querySelector(`[x-dusk="${TOP}"]`); await t?.setAttribute("x-plain", plain ? "1" : "0"); } catch (e) { log("상단 줄 접기 실패", e?.message ?? e); } });
       const bd = await d.querySelector("body");   // 한 번만 단다(body는 다시 그려도 그대로)
-      try { if (bd?.addEventListener && await bd.getAttribute?.("x-st-hc") !== "1") { await bd.setAttribute?.("x-st-hc", "1"); await bd.addEventListener("pointerdown", () => { noteHostClick(); }); } } catch (e) { log("바깥 클릭 감지 실패", e?.message ?? e); }
+      try { if (bd?.addEventListener && await bd.getAttribute?.("x-st-hc") !== "1") { await bd.setAttribute?.("x-st-hc", "1"); await bd.addEventListener("pointerdown", () => { noteHostClick(); setTimeout(() => { recheckNative().catch(() => {}); }, 350); }); } } catch (e) { log("바깥 클릭 감지 실패", e?.message ?? e); }
       const fb = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-fold]`);
       if (fb) await fb.addEventListener("click", () => toggleFold(d));
       shellInfo.draws++; shellInfo.error = "";
       if (g) await g.addEventListener("click", () => togglePop().catch((e) => log("설정 열기 실패", e?.message ?? e)));
     } catch (e) { shellInfo.error = String(e?.message ?? e); log("스텔스 사이드바 그리기 실패", e?.message ?? e); }
   }
-  async function setVis(d) {   // 채팅 화면이고 Dusk 창이 닫혀 있을 때만 보인다
-    const v = onChat && !duskOpen.v ? "1" : "0";
-    shellInfo.onChat = onChat; shellInfo.folded = folded;
+  async function setVis(d) {   // 채팅 화면이고, Dusk 창이 닫혀 있고, 리스 순정 사이드바가 닫혀 있을 때만 보인다
+    const v = onChat && !duskOpen.v && !nativeOpen ? "1" : "0";
+    shellInfo.onChat = onChat; shellInfo.folded = folded; shellInfo.nativeOpen = nativeOpen;
     for (const id of [ROOT, TOP, NOTE, POP]) { const e = await d.querySelector(`[x-dusk="${id}"]`); await e?.setAttribute("x-vis", v); }
+  }
+  async function recheckNative() {   // 순정 사이드바를 열고 닫는 클릭 뒤에 바로 다시 본다(4초 주기를 기다리지 않게)
+    const d = await ensureDoc(); if (!d || dead) return;
+    const was = nativeOpen; nativeOpen = await nativeSidebarOpen(d);
+    if (was === nativeOpen) return;
+    await setVis(d);
+    const bd = await d.querySelector("body"); await bd?.setAttribute("x-dusk-fold", folded || !onChat || nativeOpen ? "1" : "0");
   }
   async function toggleFold(d) {   // 다시 그리지 않고 속성만 바꾼다
     try {
       folded = !folded; api.pluginStorage?.setItem?.(FOLD_KEY, folded ? "1" : "0");
       const r = await d.querySelector(`[x-dusk="${ROOT}"]`); await r?.setAttribute("x-fold", folded ? "1" : "0");
-      const bd = await d.querySelector("body"); await bd?.setAttribute("x-dusk-fold", folded || !onChat ? "1" : "0");
+      const bd = await d.querySelector("body"); await bd?.setAttribute("x-dusk-fold", folded || !onChat || nativeOpen ? "1" : "0");
     } catch (e) { log("사이드바 접기 실패", e?.message ?? e); }
   }
   async function switchChat(ci, idx) {

@@ -85,7 +85,7 @@ test("리스의 스크롤 컨테이너·전체 요소를 건드리지 않는다(
   }
   const c = buildStealth("claudecode").css;
   assert.ok(c.includes('body[x-dusk-st][x-dusk-fold="0"] {') && !/(^|[\s,}])body:has\(/.test(c));
-  assert.ok(c.includes("min-width: 761px"), "모바일에선 원래 사이드바를 숨기지 않는다");
+  assert.ok(!/\.rs-sidebar[^{]*\{[^}]*display:\s*none/.test(c), "클로드 계열은 순정 사이드바를 CSS로 숨기지 않는다(열면 스텔스 쪽이 숨는다)");
   assert.ok(!buildStealth("gpt").css.includes("x-dusk-st"));
   assert.ok(c.includes(".st-msg { width: 100%; max-width: var(--st-w); margin: 0 auto;"));
 });
@@ -279,10 +279,9 @@ test("애드온 화면은 스크롤 상자(rb-scroll) 안에 그린다", () => {
   }
 });
 
-test("스텔스 사이드바를 접어 두면 순정 사이드바를 숨기지 않고, 상단 줄도 왼쪽 버튼을 가리지 않는다", async () => {
+test("순정 사이드바는 언제나 열 수 있고(숨기지 않음), 스텔스 사이드바를 접으면 상단 줄도 왼쪽 버튼을 가리지 않는다", async () => {
   const c = buildStealth("claude").css;
-  assert.ok(!/body\[x-dusk-st\] \.rs-sidebar/.test(c));
-  assert.match(c, /body\[x-dusk-st\]\[x-dusk-fold="0"\] \.rs-sidebar/);
+  assert.ok(!/\.rs-sidebar[^{]*\{[^}]*display:\s*none/.test(c));
   const { SHELL_CSS } = await import("../src/data/stealth-shell.js");
   assert.match(SHELL_CSS, /body\[x-dusk-fold="1"\] \[x-dusk="stealth-top"\]\{display:none/);
 });
@@ -429,4 +428,13 @@ test("포켓리스: 바깥을 눌러 Dusk 창을 닫으면(닫기 호출·크기
   setDuskOpen(true, w); assert.equal(duskOpen.v, true);
   noteHostClick(w); assert.equal(duskOpen.v, false, "리스 화면을 눌렀다 = Dusk 창이 덮고 있지 않다");
   setDuskOpen(true, w); assert.equal(duskOpen.v, true, "다시 열면(showContainer) 다시 숨김");
+});
+
+test("순정 사이드바를 열면 스텔스 사이드바가 숨고, 닫으면 다시 보인다", async () => {
+  const { nativeSidebarOpen } = await import("../src/data/stealth-shell.js");
+  const el = (w) => ({ getBoundingClientRect: async () => ({ width: w, height: w ? 900 : 0, right: w }) });
+  const doc = (...ws) => ({ querySelectorAll: async () => ws.map(el) });
+  assert.equal(await nativeSidebarOpen(doc(0, 0)), false, "닫힘(hidden) = 크기 0");
+  assert.equal(await nativeSidebarOpen(doc(0, 80)), true, "둘 중 하나라도 보이면 열림");
+  assert.equal(await nativeSidebarOpen({ querySelectorAll: async () => { throw new Error("x"); } }), false);
 });
