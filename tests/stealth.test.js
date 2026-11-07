@@ -254,3 +254,11 @@ test("사이드바는 기본으로 접혀 있고 ^로 펴고 접는다(속성만
   assert.equal(get().attrs["x-fold"], "1");
   await sh.destroy();
 });
+
+import { readFileSync } from "node:fs";
+test("애드온 화면은 스크롤 상자(rb-scroll) 안에 그린다", () => {
+  for (const f of ["src/ui/screens/stealth.js", "src/ui/screens/protlink.js"]) {
+    const src = readFileSync(new URL("../" + f, import.meta.url), "utf8");
+    assert.match(src, /rb-section rb-scroll/, f);
+  }
+});

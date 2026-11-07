@@ -10,7 +10,7 @@ var LABEL_FIELDS = [["title", "상단 제목 (비우면 봇 이름)"], ["sub", "
 export async function renderStealth(ctx) {
   let st = await loadStealth(ctx.api);
   let pick = st.active ?? "claude";
-  const wrap = h("div", { class: "rb-section", style: "display:flex;flex-direction:column;gap:12px" });
+  const wrap = h("div", { class: "rb-section rb-scroll", style: "flex:1;min-height:0;gap:12px" });   // rb-main은 넘치는 걸 자르므로 화면 자체가 스크롤 상자여야 한다
   const persist = () => saveStealth(ctx.api, st).catch((e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }));
   const run = async (fn, okMsg) => {
     try { st = await fn(); await persist(); await syncShell(ctx.api, st).catch(() => {}); if (okMsg) ctx.toast(okMsg); }
