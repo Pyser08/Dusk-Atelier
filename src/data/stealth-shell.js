@@ -308,16 +308,26 @@ export function createShell(api, opts = {}) {
 
 // ── 이미지 접힘 줄 펴고 접기: 채팅 HTML의 .st-ftool에 클릭을 달아 x-open을 바꾼다(details를 지우는 판 대응) ──
 var listItems = async (list) => { if (!list) return []; const n = typeof list.length === "function" ? await list.length() : list.length; const out = []; for (let i = 0; i < n; i++) out.push(typeof list.at === "function" ? await list.at(i) : list[i]); return out; };
-export async function bindFolds(d, log = () => {}) {
+// 이미지·배경 그림 하나마다 위에 '›_ 명령어 N개 실행함 ›' 줄을 붙인다: 그 요소를 우리 상자([x-st-fw])로 바꿔 끼우고(replaceWith) 줄 + 원래 요소를 넣는다.
+// 줄을 누르면 상자의 x-open이 바뀌어 그 이미지만 펴고 접힌다. 아주 작은 아이콘(48px 미만)은 건너뛴다.
+export var MEDIA_SEL = '.st-msg .st-body :is(img, video, [style*="background-image"]):not([x-st-m]):not([x-st-fw] *)';
+export async function wrapMedia(d, { log = () => {}, rand = () => 1 + Math.floor(Math.random() * 9) } = {}) {
   let n = 0;
-  for (const el of await listItems(await d.querySelectorAll('.st-ftool:not([x-st-b])'))) {
+  for (const el of await listItems(await d.querySelectorAll(MEDIA_SEL))) {
     if (!el) continue;
     try {
-      await el.setAttribute("x-st-b", "1");
+      await el.setAttribute("x-st-m", "1");
+      const r = await el.getBoundingClientRect?.().catch?.(() => null);
+      if (r && r.width > 0 && r.height > 0 && r.width < 48 && r.height < 48) { await el.setAttribute("x-st-m", "s"); continue; }
+      const box = await d.createElement("div"), lab = await d.createElement("div");
+      await box.setAttribute("x-st-fw", "1"); await box.setAttribute("x-open", "0");
+      await lab.setAttribute("x-st-fl", "1"); await lab.setInnerText(`명령어 ${rand()}개 실행함`);
+      await el.replaceWith(box);
+      await box.appendChild(lab); await box.appendChild(el);
       let open = false;
-      await el.addEventListener("click", async () => { open = !open; try { await el.setAttribute("x-open", open ? "1" : "0"); } catch (e) { log("접힘 펴기 실패", e?.message ?? e); } });
+      await lab.addEventListener("click", async () => { open = !open; try { await box.setAttribute("x-open", open ? "1" : "0"); } catch (e) { log("이미지 펴기 실패", e?.message ?? e); } });
       n++;
-    } catch (e) { log("접힘 연결 실패", e?.message ?? e); }
+    } catch (e) { try { await el.setAttribute("x-st-m", "e"); } catch { /* 그대로 */ } log("이미지 접기 실패", e?.message ?? e); }
   }
   return n;
 }
@@ -325,7 +335,7 @@ var folder = null;
 function startFolder(api, log) {
   if (folder) return;
   let busy = false;
-  const tick = async () => { if (busy) return; busy = true; try { const d = await api.getRootDocument?.(); if (d) await bindFolds(d, log); } catch { /* 다음에 */ } finally { busy = false; } };
+  const tick = async () => { if (busy) return; busy = true; try { const d = await api.getRootDocument?.(); if (d) await wrapMedia(d, { log }); } catch { /* 다음에 */ } finally { busy = false; } };
   folder = setInterval(tick, 1500); folder?.unref?.(); tick();
 }
 function stopFolder() { if (folder) { clearInterval(folder); folder = null; } }
