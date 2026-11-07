@@ -112,6 +112,37 @@ export async function nativeSidebarOpen(d) {
   } catch { /* 못 보면 닫힘으로 */ }
   return false;
 }
+// 우리가 만든 HTML 글을 리스 화면에 요소 하나하나로 옮긴다. setInnerHTML은 호스트 소독기(DOMPurify)를 거쳐 판에 따라 class·x-* 속성이 지워진다(포켓리스 → 사이드바가 글자만).
+// createElement + setAttribute("x-…")는 어느 판에서나 남는다(이미지 접힘 상자가 이 길). class → x-c, data-st-* → x-st-*, style → setStyleAttribute, 글 → setInnerText.
+// <svg>는 통째로 setInnerHTML(소독기가 남긴다). 글과 요소가 섞인 자리는 글을 <span>으로 감싼다.
+export async function mountHtml(d, target, html, Parser = globalThis.DOMParser) {
+  const root = new Parser().parseFromString(`<body>${html}</body>`, "text/html").body;
+  const walk = async (to, node) => {
+    const kids = [...node.childNodes], mixed = kids.some((k) => k.nodeType === 1);
+    for (const k of kids) {
+      if (k.nodeType === 3) {
+        const t = k.textContent; if (!t) continue;
+        if (!mixed) { await to.setInnerText(t); continue; }
+        if (!t.trim()) continue;
+        const sp = await d.createElement("span"); await sp.setInnerText(t); await to.appendChild(sp); continue;
+      }
+      if (k.nodeType !== 1) continue;
+      const tag = k.tagName.toLowerCase();
+      if (tag === "svg") { const sp = await d.createElement("span"); await sp.setAttribute("x-ico", "1"); await sp.setInnerHTML(k.outerHTML); await to.appendChild(sp); continue; }
+      const el = await d.createElement(tag);
+      for (const a of [...k.attributes]) {
+        const n = a.name.toLowerCase();
+        if (n === "class") await el.setAttribute("x-c", a.value);
+        else if (n.startsWith("data-")) await el.setAttribute("x-" + n.slice(5), a.value);
+        else if (n.startsWith("x-")) await el.setAttribute(n, a.value);
+        else if (n === "style") await el.setStyleAttribute?.(a.value);
+      }
+      await walk(el, k);
+      await to.appendChild(el);
+    }
+  };
+  await walk(target, root);
+}
 export function noteHostClick(w) { if (duskOpen.call === false && !duskOpen.v) return false; duskOpen.call = false; return refreshDuskOpen(w); }
 export function setDuskOpen(v, w) { duskOpen.call = !!v; duskOpen.v = !v; return refreshDuskOpen(w); }
 
@@ -153,7 +184,8 @@ export function createShell(api, opts = {}) {
     let el = await d.querySelector(`[x-dusk="${id}"]`);
     if (!html) { if (el) await el.remove(); return null; }
     if (!el) { el = await d.createElement(tag); await el.setAttribute("x-dusk", id); await (await d.querySelector("body")).appendChild(el); }
-    await el.setInnerHTML(html);
+    if (id !== POP && typeof globalThis.DOMParser === "function") { await el.setInnerHTML(""); await mountHtml(d, el, html); }   // 소독기를 거치지 않는 길(포켓리스)
+    else await el.setInnerHTML(id === POP ? html : String(html).replace(/\sclass="/g, ' x-c="').replace(/\sdata-st-/g, " x-st-"));   // DOMParser 없는 곳: 예전처럼 x-* 속성 글로
     return el;
   }
   function render(force = false) {
@@ -188,16 +220,16 @@ export function createShell(api, opts = {}) {
       await put(d, TOP, "div", topHtml(model), "st-top");
       await put(d, NOTE, "div", opts.note ? esc(opts.note) : "", "st-note");
       for (const r of rows) {
-        const b = await d.querySelector(`[x-dusk="${ROOT}"] [data-st-chat="${r.index}"]`);
+        const b = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-chat="${r.index}"]`);
         if (b) await b.addEventListener("click", () => switchChat(ci, r.index).catch((e) => log("채팅 전환 실패", e?.message ?? e)));
       }
-      const g = await d.querySelector(`[x-dusk="${ROOT}"] [data-st-gear]`);
+      const g = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-gear]`);
       const topEl = await d.querySelector(`[x-dusk="${TOP}"]`); await topEl?.setAttribute("x-plain", plain ? "1" : "0");
-      const more = await d.querySelector(`[x-dusk="${TOP}"] [data-st-more]`);
+      const more = await d.querySelector(`[x-dusk="${TOP}"] [x-st-more]`);
       if (more) await more.addEventListener("click", async () => { plain = !plain; try { const t = await d.querySelector(`[x-dusk="${TOP}"]`); await t?.setAttribute("x-plain", plain ? "1" : "0"); } catch (e) { log("상단 줄 접기 실패", e?.message ?? e); } });
       const bd = await d.querySelector("body");   // 한 번만 단다(body는 다시 그려도 그대로)
       try { if (bd?.addEventListener && await bd.getAttribute?.("x-st-hc") !== "1") { await bd.setAttribute?.("x-st-hc", "1"); await bd.addEventListener("pointerdown", () => { noteHostClick(); setTimeout(() => { recheckNative().catch(() => {}); }, 350); }); } } catch (e) { log("바깥 클릭 감지 실패", e?.message ?? e); }
-      const fb = await d.querySelector(`[x-dusk="${ROOT}"] [data-st-fold]`);
+      const fb = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-fold]`);
       if (fb) await fb.addEventListener("click", () => toggleFold(d));
       shellInfo.draws++; shellInfo.error = "";
       if (g) await g.addEventListener("click", () => togglePop().catch((e) => log("설정 열기 실패", e?.message ?? e)));

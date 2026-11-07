@@ -149,7 +149,7 @@ test("사이드바를 그리고, 채팅을 누르면 그 채팅으로 바뀌고,
   const sb = api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb");
   assert.ok(sb, "사이드바가 붙었다"); assert.ok(sb.html.includes("둘째") && sb.html.includes("선생님".slice(0, 1)) || sb.html.includes("미유".slice(0, 1)));
   assert.ok(api.doc.tree.some((n) => n.attrs["x-dusk"] === "stealth-top"));
-  const row = sb.inner?.['data-st-chat=1'];
+  const row = sb.inner?.['x-st-chat=1'];
   assert.ok(row?.handlers.click, "채팅 줄에 클릭이 달렸다");
   await row.handlers.click();
   assert.equal(api.char.chatPage, 1);
@@ -161,13 +161,13 @@ test("설정(톱니)을 누르면 봇·모듈 토글이 뜨고, 바꾸면 리스
   const sh = createShell(api, { kind: "code", poll: 60000, log: () => {} });
   await new Promise((r) => setTimeout(r, 60));
   const sb = api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb");
-  await sb.inner["data-st-gear="].handlers.click();
+  await sb.inner["x-st-gear="].handlers.click();
   const pop = api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-pop");
   assert.ok(pop && pop.html.includes("봇토글") && pop.html.includes("모듈토글"));
   const sw = pop.inner["data-st-t=0"]; sw.checked = true;
   await sw.handlers.change({});
   assert.equal(api.db.globalChatVariables.toggle_ct, "1");
-  await sb.inner["data-st-gear="].handlers.click();   // 다시 누르면 닫힘
+  await sb.inner["x-st-gear="].handlers.click();   // 다시 누르면 닫힘
   assert.ok(!api.doc.tree.some((n) => n.attrs["x-dusk"] === "stealth-pop"));
   await sh.destroy();
 });
@@ -263,10 +263,10 @@ test("사이드바는 기본으로 접혀 있고 ^로 펴고 접는다(속성만
   const sh = createShell(api, { kind: "claude", poll: 60000, log: () => {} });
   await new Promise((r) => setTimeout(r, 80));
   const get = () => api.doc.tree.find((n) => n.attrs["x-dusk"] === "stealth-sb");
-  assert.equal(get().attrs["x-fold"], "1"); assert.ok(get().html.includes("data-st-fold"));
-  await get().inner["data-st-fold="].handlers.click();
+  assert.equal(get().attrs["x-fold"], "1"); assert.ok(get().html.includes("x-st-fold"));
+  await get().inner["x-st-fold="].handlers.click();
   assert.equal(get().attrs["x-fold"], "0");
-  await get().inner["data-st-fold="].handlers.click();
+  await get().inner["x-st-fold="].handlers.click();
   assert.equal(get().attrs["x-fold"], "1");
   await sh.destroy();
 });
@@ -321,7 +321,7 @@ test("느려짐 방지: body 전체에 거는 :has 규칙이 없고, 이미지 �
 test("모바일 상단 줄은 손가락을 통과시켜 리스 사이드바 버튼이 눌리고, ⋮만 받는다", async () => {
   const { SHELL_CSS } = await import("../src/data/stealth-shell.js");
   assert.match(SHELL_CSS, /body\[x-dusk-st\] \[x-dusk="stealth-top"\]\{[^}]*pointer-events:none/);
-  assert.match(SHELL_CSS, /\.st-top-more\{pointer-events:auto\}/);
+  assert.match(SHELL_CSS, /\[x-c~="st-top-more"\]\{pointer-events:auto\}/);
 });
 
 
@@ -458,12 +458,8 @@ test("클로드 계열은 사이드바 CSS를 리스 커스텀 CSS에도 넣는�
   assert.ok(!buildStealth("gpt").css.includes('[x-dusk="stealth-sb"]'), "사이드바 없는 모양엔 안 넣음");
 });
 
-test("사이드바·상단 줄 HTML은 DOMPurify 기본 설정이 지우지 않는 속성(class·data-*·aria-*·style 등)만 쓴다 — 포켓리스는 x-* 속성을 지워 사이드바가 모양 없이 보였다", async () => {
-  const { shellHtml, topHtml } = await import("../src/data/stealth-shell.js");
-  const html = shellHtml({ word: "Claude", user: "나", rows: [{ index: 0, name: "채팅", current: true }] }) + topHtml({ title: "봇", sub: "채팅", mobile: true });
-  const attrs = [...html.matchAll(/\s([a-zA-Z][\w:-]*)=/g)].map((m) => m[1].toLowerCase());
-  const ok = /^(class|type|title|style|tabindex|width|height|viewbox|fill|stroke|stroke-width|stroke-linecap|stroke-linejoin|d|cx|cy|r|x|y|rx|points|xmlns|value|checked|selected|data-[\w-]+|aria-[\w-]+)$/;
-  assert.deepEqual([...new Set(attrs.filter((a) => !ok.test(a)))], []);
+test("사이드바 CSS는 x-c로 찾고(요소를 하나씩 만들어 붙이므로), 설정 팝업만 class도 둔다", async () => {
   const { SHELL_CSS } = await import("../src/data/stealth-shell.js");
-  assert.ok(!/\[x-c~=/.test(SHELL_CSS), "CSS도 class로 찾는다");
+  assert.match(SHELL_CSS, /\[x-c~="st-sb-row"\]/);
+  assert.match(SHELL_CSS, /^\.st-pop-row\{/m);
 });
