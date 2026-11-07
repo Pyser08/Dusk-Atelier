@@ -65,7 +65,7 @@ export var PRESET_IDS = Object.keys(PRESETS);
 // N(1~9)은 메시지 순서로 돌린다(CSS만).
 export function imageFoldCss() {
   // 이미지·배경 그림마다 접힘 줄: 스텔스가 화면에서 각 이미지를 [x-st-fw] 상자로 감싸고 맨 위에 [x-st-fl] 줄을 넣는다(stealth-shell.js wrapMedia).
-  // 감싸기 전 잠깐은 이미지를 숨겨 번쩍이지 않게 한다(실패한 것 x-st-m="e"·작은 아이콘 "s"는 그대로 보인다).
+  // 감싸기 전 잠깐은 이미지를 숨겨 번쩍이지 않게 한다(작은 아이콘 "s"는 그대로). 감싸기에 실패한 것("e")은 숨기고 '명령어 N개 실패함'으로 보인다.
   const L = "[x-st-fw] > [x-st-fl]";
   return `.st-body :is(img, video, [style*="background-image"]):not([x-st-m]):not([x-st-fw] *) { display: none !important; }
 [x-st-fw] { display: block; width: 100%; margin: 2px 0 8px; }
@@ -75,7 +75,12 @@ ${L}::after { content: "›"; display: inline-block; margin-left: .5em; font-siz
 [x-st-fw][x-open="1"] > [x-st-fl]::after { transform: rotate(90deg); }
 ${L}:hover { color: var(--st-fg); }
 [x-st-fw][x-open="0"] > :not([x-st-fl]) { display: none !important; }
-[x-st-fw][x-open="1"] > :not([x-st-fl]) { margin-top: 6px; }`;
+[x-st-fw][x-open="1"] > :not([x-st-fl]) { margin-top: 6px; }
+:is(img, video)[x-st-m="e"] { display: none !important; }
+[x-st-m="e"]:not(img, video) { background: none !important; width: auto !important; height: auto !important; min-height: 0 !important; aspect-ratio: auto !important; border: 0 !important; padding: 0 !important; margin: 2px 0 8px !important; box-shadow: none !important; transform: none !important; }
+[x-st-m="e"]:not(img, video) > * { display: none !important; }
+[x-st-m="e"]:not(img, video)::before, [x-st-pe]::before { content: "›_  명령어 " attr(x-st-n) "개 실패함"; display: block; color: var(--st-dim); font-size: 14px; line-height: 1.5; }
+[x-st-pe]::before { content: "›_  명령어 " attr(x-st-pe) "개 실패함"; margin: 2px 0 8px; }`;
 }
 export var LABEL_KEYS = ["title", "sub", "tool", "model", "note", "left", "think", "user", "plan"];
 

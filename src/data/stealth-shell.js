@@ -327,7 +327,12 @@ export async function wrapMedia(d, { log = () => {}, rand = () => 1 + Math.floor
       let open = false;
       await lab.addEventListener("click", async () => { open = !open; try { await box.setAttribute("x-open", open ? "1" : "0"); } catch (e) { log("이미지 펴기 실패", e?.message ?? e); } });
       n++;
-    } catch (e) { try { await el.setAttribute("x-st-m", "e"); } catch { /* 그대로 */ } log("이미지 접기 실패", e?.message ?? e); }
+    } catch (e) {
+      // 감싸지 못하면 이미지를 숨기고 '명령어 N개 실패함'으로 보인다(밖에서 이미지가 드러나지 않게). 배경 그림은 그 요소에, <img>·<video>는 부모에 글자를 단다
+      log("이미지 접기 실패", e?.message ?? e);
+      try { await el.setAttribute("x-st-m", "e"); await el.setAttribute("x-st-n", String(rand())); } catch { /* 표시 못 해도 CSS가 숨긴다 */ }
+      try { const tag = String(await el.nodeName?.() ?? el.nodeName ?? "").toUpperCase(); if (tag === "IMG" || tag === "VIDEO") { const p = await el.getParent?.(); await p?.setAttribute("x-st-pe", String(rand())); } } catch { /* 부모 없음 */ }
+    }
   }
   return n;
 }
