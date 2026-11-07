@@ -8,22 +8,29 @@ const browser = await chromium.launch();
 const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage(); page.setDefaultTimeout(5000);
 const errs = []; page.on("pageerror", (e) => errs.push(e.message));
 await page.setContent("<!doctype html><body style='margin:0'></body>"); await page.addScriptTag({ content: r.outputFiles[0].text });
-await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99 }) }));
+await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99 }) }, { host: true }));
 await page.waitForTimeout(300);
 const sw = (name) => name === "유저 편향 없애기" ? page.locator(`.rb-dice [role=switch]`) : page.locator(`.rb-story-helper [role=switch][aria-label='${name}']`);
 const diceOpen = async () => { await page.locator("#rb-dice-row").click(); await page.waitForTimeout(150); };
 const diceClose = async () => { await page.locator(".rb-dice:not(.rb-dlog) .btns button", { hasText: "닫기" }).click(); await page.waitForTimeout(100); };
 const store = (k) => page.evaluate((k) => __api.store[k], k);
+// 약속(docs/PROMISES.md F-1·F-2): 저장값이 아니라 모델에 가는 요청 글을 본다
+const sent = () => page.evaluate(async () => (await __host.request([{ role: "system", content: "sys" }, { role: "assistant", content: "앞 응답" }, { role: "user", content: "문을 연다" }])).map((m) => String(m.content)).join("\n"));
+ok("꺼져 있으면 요청에 공정 지침·주사위가 없다", !/\[Dusk (Fairness|Dice)\]/.test(await sent()), await sent());
 await diceOpen();
 ok("처음엔 둘 다 꺼짐", (await sw("공정한 전개").getAttribute("aria-checked")) === "false" && (await sw("유저 편향 없애기").getAttribute("aria-checked")) === "false");
 await sw("유저 편향 없애기").click(); await page.waitForTimeout(200);
 ok("유저 편향을 켜면 공정한 전개 스위치도 켜짐", (await sw("공정한 전개").getAttribute("aria-checked")) === "true" && (await sw("유저 편향 없애기").getAttribute("aria-checked")) === "true");
+{ const t = await sent(); ok("켜면 다음 요청에 공정 지침과 주사위 굴림값이 들어간다", t.includes("[Dusk Fairness]") && t.includes("[Dusk Dice]"), t.slice(0, 300)); }
 ok("두 설정 모두 저장됨", (await store("dusk.ui.fairPlay")) === "on" && (await store("dusk.ui.fairDice")) === "on", `${await store("dusk.ui.fairPlay")}/${await store("dusk.ui.fairDice")}`);
 ok("이유 안내가 뜸", /공정한 전개도 함께 켰어요/.test(await page.locator(".rb-toasts").textContent()));
 await sw("유저 편향 없애기").click(); await page.waitForTimeout(150);
+{ const t = await sent(); ok("유저 편향만 끄면 공정 지침은 남고 주사위는 빠진다", t.includes("[Dusk Fairness]") && !t.includes("[Dusk Dice]"), t.slice(0, 300)); }
 await sw("유저 편향 없애기").click(); await page.waitForTimeout(200);
 await diceClose();
 ok("공정한 전개가 이미 켜져 있으면 함께 켰다는 안내는 다시 안 뜸", /다음 요청부터 적용돼요/.test(await page.locator(".rb-toasts > *").last().textContent()));
+await sw("공정한 전개").click(); await page.waitForTimeout(200);
+ok("공정한 전개를 끄면 요청에서 둘 다 빠진다", !/\[Dusk (Fairness|Dice)\]/.test(await sent()), await sent());
 ok("오류 없음", !errs.length, errs.join(";"));
 await browser.close();
 process.exit(out.every(Boolean) ? 0 : 1);
