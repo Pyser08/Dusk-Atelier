@@ -148,10 +148,18 @@ export function topHtml(model) {
 // Dusk 창이 열려 있으면 껍데기를 감춘다(모바일에서 창 위에 상단 줄이 겹치던 문제). 애드온이 showContainer·hideContainer를 감싸 알려 준다
 // 두 가지로 판단한다: ① 플러그인 iframe의 크기(창을 닫으면 리스가 숨겨 0이 된다) ② showContainer·hideContainer 호출(잡히는 판에서만).
 // 크기가 0이면 무조건 닫힘, 크기가 있으면 hideContainer가 마지막으로 불린 경우만 닫힘.
-var duskOpen = { v: false, fn: null, call: undefined };
+export var duskOpen = { v: false, fn: null, call: undefined };
 export var frameVisible = (w = globalThis) => (Number(w?.innerWidth) || 0) > 0 && (Number(w?.innerHeight) || 0) > 0;
-export function duskIsOpen(size, call) { return !!size && call !== false; }
-export function refreshDuskOpen(w) { const v = duskIsOpen(frameVisible(w), duskOpen.call); if (v !== duskOpen.v) { duskOpen.v = v; duskOpen.fn?.(); } return v; }
+// shown: Dusk 창 본체(.rb-root)가 숨겨지지 않았는가. 포켓리스는 창을 닫아도 iframe 크기가 남고 hideContainer도 안 잡혀, 이것으로 닫힘을 안다.
+export function duskIsOpen(size, call, shown = true) { return !!size && call !== false && shown !== false; }
+var duskShown = (w = globalThis) => { try { const r = w?.document?.querySelector?.(".rb-root"); return r ? !r.hidden : true; } catch { return true; } };
+export function refreshDuskOpen(w) { const v = duskIsOpen(frameVisible(w), duskOpen.call, duskShown(w)); if (v !== duskOpen.v) { duskOpen.v = v; duskOpen.fn?.(); } return v; }
+// 진단용: 지금 이 순간의 판단 근거(마지막으로 그린 때가 아니라). 진단 버튼은 Dusk 창 안에서 누르므로 '5초 뒤 진단'으로 창을 닫은 뒤 재야 뜻이 있다.
+export function shellFlags() {
+  refreshDuskOpen();
+  const vis = shellInfo.onChat && !duskOpen.v;
+  return `채팅 화면 ${shellInfo.onChat ? "찾음" : "못 찾음"} · Dusk 창 ${duskOpen.v ? "열림으로 판단" : "닫힘"}(창 크기 ${frameVisible() ? `${globalThis.innerWidth}×${globalThis.innerHeight}` : "0"}, 마지막 호출 ${duskOpen.call === undefined ? "없음" : duskOpen.call ? "열기" : "닫기"}) · ${shellInfo.folded ? "접힘" : "펼침"} → ${vis ? "보임" : "숨김"}`;
+}
 export function setDuskOpen(v, w) { duskOpen.call = !!v; duskOpen.v = !v; return refreshDuskOpen(w); }
 
 // ── 화면에 붙이기 ──
@@ -240,7 +248,7 @@ export function createShell(api, opts = {}) {
   }
   async function setVis(d) {   // 채팅 화면이고 Dusk 창이 닫혀 있을 때만 보인다
     const v = onChat && !duskOpen.v ? "1" : "0";
-    shellInfo.flags = `채팅 화면 ${onChat ? "찾음" : "못 찾음"} · Dusk 창 ${duskOpen.v ? "열림으로 판단" : "닫힘"}(크기 ${frameVisible() ? "있음" : "0"}, 호출 ${duskOpen.call === undefined ? "없음" : duskOpen.call ? "열기" : "닫기"}) · ${folded ? "접힘" : "펼침"} → ${v === "1" ? "보임" : "숨김"}`;
+    shellInfo.onChat = onChat; shellInfo.folded = folded;
     for (const id of [ROOT, TOP, NOTE, POP]) { const e = await d.querySelector(`[x-dusk="${id}"]`); await e?.setAttribute("x-vis", v); }
   }
   async function toggleFold(d) {   // 다시 그리지 않고 속성만 바꾼다

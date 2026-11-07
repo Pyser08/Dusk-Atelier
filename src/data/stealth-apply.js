@@ -62,7 +62,7 @@ export async function disableStealth(api, state, { target = "risu" } = {}) {
 
 // ── 화면 진단: 어디서 안 보이는지 찾는다(리스 화면 문서에서 자리 수를 센다) ──
 import { probeSelectors, detectTarget, TARGETS } from "./themes.js";
-import { shellInfo, shellState } from "./stealth-shell.js";
+import { shellInfo, shellState, shellFlags } from "./stealth-shell.js";
 export var DIAG_SELECTORS = {
   "채팅 래퍼(.st-msg)": ".st-msg", "본문 자리(.st-body)": ".st-body", "리스 본문(.chattext)": ".chattext",
   "채팅 목록(.risu-chat)": ".risu-chat", "채팅 화면(.default-chat-screen)": ".default-chat-screen", "입력칸(.text-input-area)": ".text-input-area",
@@ -98,7 +98,7 @@ export async function runDiagnosis(api) {
   const db = await api.getDatabase(["customCSS", "guiHTML", "theme"]).catch(() => ({}));
   const info = { theme: db?.theme ?? "", htmlLen: String(db?.guiHTML ?? "").length, cssLen: String(db?.customCSS ?? "").length, hasWrapper: /st-msg/.test(db?.guiHTML ?? ""), hasFold: /st-ftool/.test(db?.guiHTML ?? ""), hasStealthCss: /Dusk Stealth/.test(db?.customCSS ?? "") };
   info.shell = shellState() ? `켜짐(${shellState()}) · 그린 횟수 ${shellInfo.draws}${shellInfo.error ? " · 오류: " + shellInfo.error : ""}${shellInfo.warn ? " · 주의: " + shellInfo.warn : ""}` : "꺼짐(켜진 클로드 계열 모양이 없거나 시작 전)";
-  if (shellInfo.flags) info.shell += ` · ${shellInfo.flags}`;
+  if (shellState()) info.shell += ` · ${shellFlags()}`;
   const target = await detectTarget(doc, api).catch(() => null);
   info.layout = await layoutTrace(doc).catch((e) => [`배치 추적 실패: ${e?.message ?? e}`]);
   return { counts, db: info, target: target ? (TARGETS[target]?.label ?? target) : null, lines: diagnose(counts, info) };

@@ -81,7 +81,7 @@ test("리스의 스크롤 컨테이너·전체 요소를 건드리지 않는다(
     assert.ok(!/\.risu-chat > div/.test(css), `${id}: 리스 메시지 컨테이너 대신 우리 래퍼를 쓴다`);
     assert.ok(!/body \*/.test(css), `${id}: 모든 요소에 거는 규칙 없음`);
     assert.ok(!css.includes("-webkit-scrollbar"), `${id}: 스크롤바 크기를 바꾸지 않는다`);
-    assert.ok((css.replace(/[^{}]*st-f(?:old|tool)[^{]*\{[^}]*\}/g, "").replace(/@media \(max-width: 760px\) \{[\s\S]*?\n\}/g, "").match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창)`);
+    assert.ok((css.replace(/[^{}]*st-f(?:old|tool)[^{]*\{[^}]*\}/g, "").replace(/@media \(max-width: 760px\) \{[\s\S]*?\n\}/g, "").replace(/:has\(> \.st-msg\)/g, "").match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창) — 우리 래퍼 바로 위만 보는 :has(> .st-msg)는 싸서 뺀다`);
   }
   const c = buildStealth("claudecode").css;
   assert.ok(c.includes('body[x-dusk-st][x-dusk-fold="0"] {') && !/(^|[\s,}])body:has\(/.test(c));
@@ -406,4 +406,19 @@ test("화면 진단 배치 추적: 채팅 글에서 body까지 상자마다 왼�
   const lines = await layoutTrace({ querySelector: async (s) => (s === ".st-msg" ? msg : null) });
   assert.deepEqual(lines, ["배치 추적(글 → body):", "div.st-msg.st-ai — 왼쪽 60 · 폭 560", "div.grow.h-full — 왼쪽 0 · 폭 640", "body — 왼쪽 0 · 폭 1288"]);
   assert.match((await layoutTrace({ querySelector: async () => null }))[0], /못 찾았어요/);
+});
+
+test("포켓리스: 창을 닫아도 iframe 크기가 남고 닫기 호출이 안 잡혀도, Dusk 창(.rb-root)이 숨겨져 있으면 닫힘으로 본다", async () => {
+  const { duskIsOpen, refreshDuskOpen, setDuskOpen, duskOpen } = await import("../src/data/stealth-shell.js");
+  assert.equal(duskIsOpen(true, true, false), false, "창이 숨겨졌으면 닫힘");
+  assert.equal(duskIsOpen(true, undefined, true), true);
+  assert.equal(duskIsOpen(false, true, true), false, "크기 0이면 무조건 닫힘");
+  const root = { hidden: false }, w = { innerWidth: 400, innerHeight: 800, document: { querySelector: (s) => (s === ".rb-root" ? root : null) } };
+  setDuskOpen(true, w); assert.equal(duskOpen.v, true);
+  root.hidden = true; assert.equal(refreshDuskOpen(w), false, "닫기 호출 없이도 1초 확인에서 닫힘으로 바뀜");
+});
+
+test("채팅 래퍼의 바로 위 상자가 글 폭만큼 줄어도(포켓리스) 래퍼가 가운데 오도록 부모를 넓힌다", () => {
+  const { css } = buildStealth("claude");
+  assert.match(css, /:has\(> \.st-msg\)\s*\{[^}]*width:\s*100%/);
 });
