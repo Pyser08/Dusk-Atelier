@@ -102,6 +102,10 @@ test("채팅 목록: 최근 순, 현재 표시, 이름 없으면 번호, 최대 
   assert.deepEqual(r.map((x) => x.name), ["채팅 2", "새", "옛"]);
   assert.equal(r.find((x) => x.index === 2).current, true);
   assert.equal(chatRows(char, 0, 2).length, 2); assert.deepEqual(chatRows(null, 0), []);
+  // 날짜가 없으면(포켓리스 등) 리스처럼 앞(0번)이 최신 → 앞에서부터. 30개로 자를 때도 최신이 남아야 한다
+  const many = { chats: Array.from({ length: 40 }, (_, i) => ({ name: `New Chat ${45 - i}` })) };
+  const m = chatRows(many, 0, 30);
+  assert.equal(m[0].name, "New Chat 45"); assert.equal(m[0].current, true); assert.equal(m.at(-1).name, "New Chat 16");
 });
 test("사이드바 HTML: 이스케이프·현재 채팅 표시·코드 탭은 빈 목록 안내", () => {
   const h1 = shellHtml({ kind: "claude", user: "<b>나</b>", rows: [{ index: 0, name: "<script>", current: true }] });

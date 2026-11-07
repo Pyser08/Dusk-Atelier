@@ -40,7 +40,7 @@ export function toggleValue(t, vars) {
 export function chatRows(char, currentIndex, limit = 30) {
   const chats = Array.isArray(char?.chats) ? char.chats : [];
   const rows = chats.map((c, i) => ({ index: i, name: String(c?.name || c?.title || "").trim() || `채팅 ${i + 1}`, current: i === currentIndex, at: Number(c?.lastDate ?? c?.date ?? 0) || 0 }));
-  rows.sort((a, b) => (b.at - a.at) || (b.index - a.index));
+  rows.sort((a, b) => (b.at - a.at) || (a.index - b.index));   // 날짜가 같거나 없으면 앞(0번)이 최신(리스는 새 채팅을 맨 앞에 넣는다)
   return rows.slice(0, limit);
 }
 
