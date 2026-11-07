@@ -1,4 +1,5 @@
 import { PRESETS, mergeLabels } from "./stealth.js";
+import { foldState } from "./stealth-fold.js";
 // 더스크 스텔스 '껍데기': 클로드·클로드 코드 모양의 왼쪽 사이드바와 위쪽 제목 줄을 플러그인이 리스 화면 문서에 직접 그린다.
 // · 최근 항목 = 지금 열린 봇의 채팅 목록(누르면 그 채팅으로)
 // · 아래 설정 = 순정 리스 사이드바에 있던 모듈 토글(customModuleToggle) 켜고 끄기
@@ -48,6 +49,7 @@ export var SHELL_KINDS = {
   code: { word: "Code", wordSerif: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["cube", "아티팩트"], ["bag", "사용자 지정"], ["more", "더 보기"]], recent: "", empty: "시작한 세션이 여기에 표시됩니다", plan: "Pro" }
 };
 var ICON = {
+  menu: '<path d="M4 7h16M4 12h10M4 17h13"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/>', vdots: '<path d="M12 6h.01M12 12h.01M12 18h.01" stroke-width="3"/>', stack: '<rect x="6" y="9" width="12" height="11" rx="2"/><path d="M8 6h8M10 3h4"/>',
   plus: '<path d="M12 5v14M5 12h14"/>', search: '<circle cx="11" cy="11" r="6"/><path d="m20 20-4-4"/>', folder: '<path d="M4 7h6l2 2h8v9H4z"/>',
   cube: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/>', clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
   bag: '<rect x="4" y="8" width="16" height="11" rx="2"/><path d="M9 8V6h6v2"/>', more: '<path d="M6 12h.01M12 12h.01M18 12h.01"/>', gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>'
@@ -55,7 +57,7 @@ var ICON = {
 var ico = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n] ?? ""}</svg>`;
 
 export var SHELL_CSS = `
-[x-vis="0"]{display:none !important}
+html body [x-dusk][x-vis="0"]{display:none !important}
 [x-c~="st-sb-fold"]{font-size:16px;line-height:1;font-weight:600;width:28px;height:28px}
 [x-dusk="stealth-sb"][x-fold="1"]{top:auto;width:auto;left:10px;bottom:10px;border:1px solid var(--st-line2);border-radius:10px}
 [x-dusk="stealth-sb"][x-fold="1"] > :not([x-c~="st-sb-foot"]){display:none}
@@ -99,7 +101,22 @@ body[x-dusk-fold="1"] [x-dusk="stealth-note"]{left:0}
 [x-c~="st-sw"]::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .12s}
 [x-c~="st-sw"]:checked{background:var(--st-accent)}
 [x-c~="st-sw"]:checked::after{left:14px}
-@media (max-width:760px){[x-dusk="stealth-sb"],[x-dusk="stealth-top"],[x-dusk="stealth-note"]{display:none}}
+[x-c~="st-top-btn"]{display:none}
+[x-c~="st-top-t"]{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
+[x-c~="st-top-ico"]{display:none}
+[x-c~="st-top-sub"]{color:var(--st-fg2);overflow:hidden;text-overflow:ellipsis}
+@media (max-width:760px){
+[x-dusk="stealth-note"]{display:none}
+[x-dusk="stealth-sb"][x-fold="1"]{display:none}
+[x-dusk="stealth-sb"][x-fold="0"]{width:min(86vw,320px);z-index:9200;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
+body[x-dusk-st] [x-dusk="stealth-top"]{display:flex !important;left:0;height:56px;padding:0 6px 0 4px;gap:2px;border-bottom:0;pointer-events:auto;font-size:16px}
+[x-c~="st-top-btn"]{display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex:none;border:0;background:transparent;color:var(--st-fg);border-radius:10px;cursor:pointer;padding:0}
+[x-c~="st-top-ico"]{display:inline-flex;color:var(--st-fg2)}
+[x-dusk="stealth-top"] b{font-weight:600;margin-right:2px}
+[x-dusk="stealth-top"][x-plain="1"]{left:auto;width:auto;background:transparent}
+[x-dusk="stealth-top"][x-plain="1"] > :not([x-c~="st-top-more"]){display:none !important}
+}
+
 `;
 
 /** 사이드바 HTML. model: {kind, user, plan, rows[], title, sub, nativeToggles} */
@@ -117,7 +134,12 @@ export function shellHtml(model) {
 }
 export function topHtml(model) {
   const t = String(model.title ?? "").trim();
-  return t ? `<b>${esc(t)}</b>${model.sub ? `<span>/&nbsp; ${esc(model.sub)}</span>` : ""}` : "";
+  if (!t && !model.mobile) return "";
+  // 넓은 화면: 제목 줄만. 좁은 화면(모바일): ≡ · 제목 / 채팅 · 연필 · ⋮ (CSS가 버튼을 좁은 화면에서만 보인다)
+  return `<button type="button" x-c="st-top-btn" x-st-menu="1" aria-label="사이드바">${ico("menu", 22)}</button>`
+    + `<span x-c="st-top-t">${t ? `<span x-c="st-top-ico">${ico("stack", 17)}</span><b>${esc(t)}</b>` : ""}${model.sub ? `<span x-c="st-top-sub">/&nbsp; ${esc(model.sub)}</span>` : ""}</span>`
+    + `<span x-c="st-top-btn st-top-deco">${ico("edit", 21)}</span>`
+    + `<button type="button" x-c="st-top-btn st-top-more" x-st-more="1" aria-label="스텔스 상단 줄 접기">${ico("vdots", 21)}</button>`;
 }
 
 // ── 화면에 붙이기 ──
@@ -130,7 +152,7 @@ var ROOT = "stealth-sb", NOTE = "stealth-note", TOP = "stealth-top", POP = "stea
  */
 export function createShell(api, opts = {}) {
   const log = opts.log ?? ((...a) => console.log("[Dusk Atelier]", ...a));
-  let folded = true, onChat = true, doc = null, timer = null, last = "", dead = false, busy = false, popOpen = false, inflight = Promise.resolve();
+  let folded = true, plain = false, onChat = true, doc = null, timer = null, last = "", dead = false, busy = false, popOpen = false, inflight = Promise.resolve();
   const cache = { idx: "", at: 0, char: null, user: "", userAt: 0 };
   const FRESH = opts.freshMs ?? 90000, USER_TTL = 120000;
   const kind = opts.kind ?? "claude";
@@ -184,7 +206,8 @@ export function createShell(api, opts = {}) {
         const st = await d.createElement("style"); await st.setAttribute("x-dusk", STY); await st.setInnerText(SHELL_CSS);
         await (await d.querySelector("head") ?? await d.querySelector("body")).appendChild(st);
       }
-      const model = { kind, word: opts.word, user, plan: opts.plan, rows, title: opts.title ?? char?.name ?? "", sub: opts.sub };
+      const cur = rows.find((r) => r.current);
+      const model = { mobile: true, kind, word: opts.word, user, plan: opts.plan, rows, title: opts.title || char?.name || "", sub: opts.sub || cur?.name || "" };
       const rootEl = await put(d, ROOT, "div", shellHtml(model), "st-sb"); await rootEl?.setAttribute("x-fold", folded ? "1" : "0");
       for (const id of [ROOT, TOP, NOTE, POP]) { const e = await d.querySelector(`[x-dusk="${id}"]`); await e?.setAttribute("x-vis", onChat ? "1" : "0"); }
       await put(d, TOP, "div", topHtml(model), "st-top");
@@ -194,17 +217,23 @@ export function createShell(api, opts = {}) {
         if (b) await b.addEventListener("click", () => switchChat(ci, r.index).catch((e) => log("채팅 전환 실패", e?.message ?? e)));
       }
       const g = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-gear]`);
+      const topEl = await d.querySelector(`[x-dusk="${TOP}"]`); await topEl?.setAttribute("x-plain", plain ? "1" : "0");
+      const mb = await d.querySelector(`[x-dusk="${TOP}"] [x-st-menu]`);
+      if (mb) await mb.addEventListener("click", () => toggleFold(d));
+      const more = await d.querySelector(`[x-dusk="${TOP}"] [x-st-more]`);
+      if (more) await more.addEventListener("click", async () => { plain = !plain; try { const t = await d.querySelector(`[x-dusk="${TOP}"]`); await t?.setAttribute("x-plain", plain ? "1" : "0"); } catch (e) { log("상단 줄 접기 실패", e?.message ?? e); } });
       const fb = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-fold]`);
-      if (fb) await fb.addEventListener("click", async () => {   // 다시 그리지 않고 속성만 바꾼다
-        try {
-          folded = !folded; api.pluginStorage?.setItem?.(FOLD_KEY, folded ? "1" : "0");
-          const r = await d.querySelector(`[x-dusk="${ROOT}"]`); await r?.setAttribute("x-fold", folded ? "1" : "0");
-          const bd = await d.querySelector("body"); await bd?.setAttribute("x-dusk-fold", folded || !onChat ? "1" : "0");
-        } catch (e) { log("사이드바 접기 실패", e?.message ?? e); }
-      });
+      if (fb) await fb.addEventListener("click", () => toggleFold(d));
       shellInfo.draws++; shellInfo.error = "";
       if (g) await g.addEventListener("click", () => togglePop().catch((e) => log("설정 열기 실패", e?.message ?? e)));
     } catch (e) { shellInfo.error = String(e?.message ?? e); log("스텔스 사이드바 그리기 실패", e?.message ?? e); }
+  }
+  async function toggleFold(d) {   // 다시 그리지 않고 속성만 바꾼다
+    try {
+      folded = !folded; api.pluginStorage?.setItem?.(FOLD_KEY, folded ? "1" : "0");
+      const r = await d.querySelector(`[x-dusk="${ROOT}"]`); await r?.setAttribute("x-fold", folded ? "1" : "0");
+      const bd = await d.querySelector("body"); await bd?.setAttribute("x-dusk-fold", folded || !onChat ? "1" : "0");
+    } catch (e) { log("사이드바 접기 실패", e?.message ?? e); }
   }
   async function switchChat(ci, idx) {
     const char = await safe(() => api.getCharacterFromIndex(ci));
@@ -266,6 +295,7 @@ export function createShell(api, opts = {}) {
 var current = null;
 export async function syncShell(api, state, log) {
   const id = state?.active, P = id ? PRESETS[id] : null;
+  foldState.on = !!(P && state.hideImages !== false);
   const want = P?.shell ? id : null;
   if (current) { const c = current; current = null; await c.shell.destroy().catch(() => {}); }
   if (!want) return null;

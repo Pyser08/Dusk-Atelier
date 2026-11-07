@@ -21,7 +21,7 @@ export var PRESETS = {
     font: SANS, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "claude",
     light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f3f3f3", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#666666", dim: "#787878", line: "#ebebeb", line2: "#cecece" },
     dark: { bg: "#1a1a1a", side: "#1f1f1f", bubble: "#2b2b2b", inputBg: "#262626", fg: "#ececec", fg2: "#a0a0a0", dim: "#8c8c8c", line: "#2e2e2e", line2: "#3d3d3d" },
-    labels: { title: "", sub: "", tool: "명령어 13개 실행함", model: "Sonnet 5.5 낮음   자동", note: "Claude는 AI이므로 실수를 할 수 있습니다.", left: "", think: "✻  Thinking…", user: "", plan: "Pro" }
+    labels: { title: "", sub: "", tool: "명령어 13개 실행함", model: "Sonnet 5.5 낮음   자동", note: "Claude는 AI이며 실수할 수 있습니다.", left: "", think: "✻  Thinking…", user: "", plan: "Pro" }
   },
   claudecode: {
     label: "클로드 코드", desc: "클로드 앱의 Code 탭: 세션 목록 사이드바, 작업 입력창, 하단 모델 줄",
@@ -60,14 +60,14 @@ export var PRESETS = {
   }
 };
 export var PRESET_IDS = Object.keys(PRESETS);
-// 이미지·영상은 접어 둔다: '명령어 N개 실행함 ▸' 한 줄만 보이고, 누르거나(터치) 마우스를 올리면 펼쳐진다. N(1~9)은 메시지 순서에 따라 바뀐다(CSS만으로 돌려서 호스트 구조에 덜 기댄다)
+// 이미지·영상: 답변 글에서 '명령어 N개 실행함' 접힘으로 감싸고(stealth-fold.js, display 훅) 그 모양을 여기서 준다.
+// 훅이 감싸지 못한 이미지(접힘 밖)는 숨긴다.
+import { FOLD_CSS } from "./stealth-fold.js";
 export function imageFoldCss() {
-  const has = ":has(img, video)", label = (n) => `content: "명령어 ${n}개 실행함  ▸";`;
-  const nth = Array.from({ length: 9 }, (_, i) => `.st-msg:nth-child(9n + ${i + 1}) .st-body${has}::before { ${label(i + 1)} }`).join("\n");
-  return `.st-body${has}::before, .chattext${has}::before { ${label(3)} display: block; width: fit-content; margin: 4px 0 10px; color: var(--st-dim, #888); font-size: 14px; cursor: pointer; }
-${nth}
-.st-body img, .st-body video, .chattext img, .chattext video { display: none !important; }
-.st-body${has}:hover img, .st-body${has}:hover video, .st-body${has}:focus-within img, .chattext${has}:hover img, .chattext${has}:focus-within img { display: block !important; max-width: 100%; margin-top: 6px; }`;
+  const out = ":not(details.st-fold *):not(details.x-risu-st-fold *)";
+  return `${FOLD_CSS}
+.st-msg:has(details.st-fold, details.x-risu-st-fold) .st-tool { display: none; }
+.st-body img${out}, .st-body video${out}, .chattext img${out}, .chattext video${out} { display: none !important; }`;
 }
 export var LABEL_KEYS = ["title", "sub", "tool", "model", "note", "left", "think", "user", "plan"];
 
@@ -115,7 +115,16 @@ export function buildStealth(id, opts = {}) {
   > .button-icon-send:hover { filter: brightness(1.08); }
 }
 .text-input-area { margin: 0 0 ${L.model && !P.shell ? 34 : 0}px 0 !important; padding: 4px 10px !important; font-size: 15px !important; color: var(--st-fg) !important; border: none !important; border-radius: 0 !important; background: transparent !important; }
-.text-input-area::placeholder { color: var(--st-dim); }`;
+.text-input-area::placeholder { color: var(--st-dim); }
+@media (max-width: 760px) {
+  .st-msg { max-width: 100%; padding: 6px 16px; }
+  .st-user .st-body { max-width: 85%; }
+  div:has(> .text-input-area) { width: calc(100% - 24px) !important; max-width: none; margin: ${P.shell && L.note ? 34 : 10}px 12px 12px !important; padding: 12px 10px 10px !important; border-radius: ${Math.max(P.input, 26)}px; flex-wrap: wrap !important; align-items: center !important; }
+  div:has(> .text-input-area) > .text-input-area { flex: 1 0 100% !important; order: -1; min-height: 44px; margin: 0 0 6px !important; padding: 4px 8px !important; font-size: 16px !important; }
+  div:has(> .text-input-area) > .button-icon-send { margin-left: auto !important; width: 42px; height: 42px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; }
+  ${L.model ? `div:has(> .text-input-area)::after { position: static; order: 1; margin-left: 4px; padding: 7px 14px; border-radius: 999px; background: var(--st-bubble); color: var(--st-fg); font-size: 13.5px; white-space: nowrap; }` : ""}
+  ${P.shell && L.note ? `div:has(> .text-input-area)::before { content: "${cssText(L.note)}"; position: absolute; left: 4px; top: -28px; bottom: auto; color: var(--st-dim); font-size: 12.5px; white-space: nowrap; pointer-events: none; }` : ""}
+}`;
   const css = [
     `/* Dusk Stealth · ${P.label} */`,
     `${root}\n  --st-accent: ${P.accent};\n  --st-font: ${P.font};\n  --st-mono: ${MONO};\n  --st-r: ${P.radius}px;\n  --st-ri: ${P.input}px;\n  --st-w: ${P.width}px;\n}`,
@@ -197,7 +206,7 @@ ${inputBlock}`,
     `</div>`
   ].filter(Boolean).join("\n");
   // 최소 모드: 리스 전체 화면(html·body·:root·대화 화면·입력창)을 건드리는 규칙을 빼고 말풍선 꾸밈만 남긴다(스크롤·표시 문제를 가려낼 때)
-  const out = opts.minimal ? css.replace(/^(?:html, body|html|body|button, input, textarea, select|div:has\(> \.default-chat-screen\)|\.default-chat-screen|\.text-input-area[^{]*)\s*\{[^}]*\}\n?/gm, "").replace(/^div:has\(> \.text-input-area\) \{[\s\S]*?^\}\n?/m, "").replace(/^:root \{\n  --risu-theme[\s\S]*?^\}\n?/m, "") : css;
+  const out = opts.minimal ? css.replace(/^@media \(max-width: 760px\) \{\n  \.st-msg[\s\S]*?\n\}\n?/m, "").replace(/^(?:html, body|html|body|button, input, textarea, select|div:has\(> \.default-chat-screen\)|\.default-chat-screen|\.text-input-area[^{]*)\s*\{[^}]*\}\n?/gm, "").replace(/^div:has\(> \.text-input-area\) \{[\s\S]*?^\}\n?/m, "").replace(/^:root \{\n  --risu-theme[\s\S]*?^\}\n?/m, "") : css;
   return { name: STEALTH_PREFIX + P.label, css: out, html };
 }
 

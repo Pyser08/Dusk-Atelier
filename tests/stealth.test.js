@@ -81,7 +81,7 @@ test("리스의 스크롤 컨테이너·전체 요소를 건드리지 않는다(
     assert.ok(!/\.risu-chat > div/.test(css), `${id}: 리스 메시지 컨테이너 대신 우리 래퍼를 쓴다`);
     assert.ok(!/body \*/.test(css), `${id}: 모든 요소에 거는 규칙 없음`);
     assert.ok(!css.includes("-webkit-scrollbar"), `${id}: 스크롤바 크기를 바꾸지 않는다`);
-    assert.ok((css.replace(/[^{}]*\.(st-body|chattext):has\(img, video\)[^{]*\{[^}]*\}/g, "").match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창)`);
+    assert.ok((css.replace(/[^{}]*st-fold[^{]*\{[^}]*\}/g, "").replace(/@media \(max-width: 760px\) \{[\s\S]*?\n\}/g, "").match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창)`);
   }
   const c = buildStealth("claudecode").css;
   assert.ok(c.includes('body[x-dusk-st][x-dusk-fold="0"] {') && !/(^|[\s,}])body:has\(/.test(c));
@@ -216,13 +216,31 @@ test("사이드바 감시는 가볍다: 봇 전체 읽기는 번호가 바뀔 �
   await sh.destroy();
 });
 
-test("이미지는 '명령어 N개 실행함' 한 줄로 접힌다(N은 1~9)", () => {
+test("이미지는 '명령어 N개 실행함' 접힘 안으로 들어간다(N은 1~9, 같은 글이면 같은 수)", async () => {
+  const { foldImages, foldCount } = await import("../src/data/stealth-fold.js");
+  const t = '첫 줄\n<img src="a.png">\n<br>{{inlay::b}}\n\n둘째 줄 ![x](c.png) 끝';
+  const out = foldImages(t);
+  assert.equal((out.match(/<details class="st-fold">/g) ?? []).length, 2, "붙은 이미지는 한 묶음");
+  assert.match(out, /<summary>명령어 [1-9]개 실행함<\/summary>\n\n<img src="a.png">\n<br>\{\{inlay::b\}\}\n\n<\/details>/);
+  assert.equal(foldImages(out), out, "두 번 감싸지 않는다");
+  assert.equal(foldImages("글만 있음"), "글만 있음");
+  assert.equal(foldImages(t), out, "다시 그려도 같은 결과");
+  const ns = new Set(); for (let i = 0; i < 200; i++) ns.add(foldCount("x" + i));
+  assert.ok([...ns].every((n) => n >= 1 && n <= 9) && ns.size === 9);
   const css = buildStealth("claude", { hideImages: true }).css;
-  for (let n = 1; n <= 9; n++) assert.ok(css.includes(`명령어 ${n}개 실행함`), `N=${n}`);
-  assert.match(css, /\.st-body img[^{]*\{ display: none !important/);
-  assert.match(css, /:hover img/);
-  assert.ok(!buildStealth("claude", { hideImages: false }).css.includes("실행함  ▸"));
+  assert.match(css, /details\.st-fold > summary/);
+  assert.ok(!buildStealth("claude", { hideImages: false }).css.includes("st-fold"));
 });
+
+test("모바일(좁은 화면)에서도 클로드 모양: 좌우 꽉 찬 본문, 둥근 입력창, 상단 ≡ 줄", async () => {
+  const css = buildStealth("claude").css;
+  assert.match(css, /@media \(max-width: 760px\) \{\n  \.st-msg \{ max-width: 100%/);
+  const { SHELL_CSS, topHtml } = await import("../src/data/stealth-shell.js");
+  assert.ok(!/@media \(max-width:760px\)\{\[x-dusk="stealth-sb"\],\[x-dusk="stealth-top"\]/.test(SHELL_CSS), "모바일에서 상단 줄을 통째로 숨기지 않는다");
+  const top = topHtml({ mobile: true, title: "봇", sub: "채팅" });
+  assert.ok(top.includes("x-st-menu") && top.includes("x-st-more") && top.includes("채팅"));
+});
+
 
 test("호스트가 채팅 정보를 읽다 오류를 내도 사이드바는 그려진다", async () => {
   const boom = async () => { throw new Error("Cannot read properties of undefined (reading 'chatPage')"); };
