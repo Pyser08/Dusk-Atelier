@@ -244,7 +244,7 @@ export function normalizeStealthState(raw) {
   return {
     v: 1, active: PRESETS[raw.active] ? raw.active : null,
     scheme: ["auto", "light", "dark"].includes(raw.scheme) ? raw.scheme : "auto",
-    hideImages: raw.hideImages !== false, blurAvatars: raw.blurAvatars !== false, hideSidebar: !!raw.hideSidebar, minimal: !!raw.minimal, labels
+    hideImages: raw.hideImages !== false, blurAvatars: raw.blurAvatars !== false, hideSidebar: !!raw.hideSidebar, minimal: !!raw.minimal, appliedVer: typeof raw.appliedVer === "string" ? raw.appliedVer : "", labels
   };
 }
 export var optsOf = (state, id) => ({ scheme: state.scheme, hideImages: state.hideImages, blurAvatars: state.blurAvatars, hideSidebar: state.hideSidebar, minimal: state.minimal, labels: state.labels?.[id] ?? {} });

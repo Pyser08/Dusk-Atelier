@@ -1,6 +1,18 @@
 # 현재 상태 — feat/2.0.0
 
-## 로드맵 (2026-11-06 정리 — 새 챗은 여기부터)
+## 최근 세션 (2026-11-07 — 새 챗은 여기부터, 아래 로드맵도 함께)
+- 작업 브랜치 `feat/2.0.0`(예전 `feat/stealth`를 빨리감기로 합침, stealth 브랜치는 남아 있음). main은 v1.9.2 그대로. 작업 전 `HandOff/QUALITY.md`(검토 지침·박스 여백·호스트 제약) 필독.
+- **더스크 스텔스 애드온**(`addons/stealth`, 최신 0.3.8): 클로드·클로드 코드·GPT·코덱스·제미나이·딥시크 프리셋. 파일 `src/data/stealth.js`(CSS·채팅 HTML 생성), `stealth-apply.js`(켜기·끄기·진단·`reapplyIfUpdated`), `stealth-shell.js`(사이드바·상단 줄 껍데기), `src/ui/screens/stealth.js`(화면), `stealth-fold.js`(예전 훅 방식, 지금은 안 씀).
+  - 호스트 제약: 루트 문서 `setAttribute`는 `x-`만, `setInnerHTML`은 class를 지움 → 안쪽 요소는 `x-c`로 표시하고 CSS `[x-c~=…]`. 클릭 대행 불가(SafeElement에 click 없음).
+  - 이미지 접기(0.3.6~): 채팅 HTML에 메시지마다 `<details class="st-ftool">`, CSS `:has`로 접혀 있으면 그 메시지의 img·video·`[style*=background-image]` 숨김. N(1~9)은 `.risu-chat:nth-child`로. display 훅은 느려지고 정규식 이미지를 못 잡아 폐기.
+  - 애드온 업데이트 시 켜 둔 모양을 리스 설정에 자동 재적용(0.3.8, `appliedVer`). 그 전엔 ‘문구·옵션 다시 적용’을 눌러야 새 채팅 HTML이 들어갔다.
+  - 껍데기: 기본 접힘(^로 펴기), 채팅 화면에서만(x-vis), Dusk 창 열림은 iframe 크기 + showContainer 감싸기로 감지, 모바일은 상단 줄(≡·봇/채팅·✎·⋮) — 줄은 터치를 통과시켜 ≡ 자리의 순정 사이드바 버튼이 눌리게.
+  - 미확인(실기기 필요): 포켓리스 모바일 입력창 배치, ≡가 순정 버튼과 겹치는지, 채팅 로드 속도, 상단 줄 숨김.
+  - 남은 요청: 클로드 기준 틀 확정 뒤 다른 프리셋(GPT 등) 전용 CSS, 플러그인 전체 로드 속도 측정·개선(어느 화면이 느린지 사용자 정보 필요).
+- 코어(2.0.0 릴리스 때 반영): Cellar 끄기/켜기(`loadCellarEnabled`, 끄면 요청 0회)·실패 시 백오프, 작업실 ‘더스크 스텔스’ 탭(tabs.js), 애드온 화면 스크롤 상자, 애드온 동시 받기(목록 저장 직렬화·줄 단위 병합 `setIndex(idx, ids)`)·‘모두 받기·업데이트’·자동 업데이트 동시, host-gate.
+- Cellar(`Pyser08/Dusk-Cellar` main 0.1.2): 안정성 점검 끝(태그 없음).
+
+## 로드맵 (2026-11-06 정리)
 ### 끝난 것
 - 애드온 구조: 로더(blob import)·requires(받기·시작 순서·끄기 연쇄)·동시 시작·1시간/창 열 때 업데이트 확인·캐시 우회·훅 애드온 새로고침 알림·첫 실행 자동 받기(adopt)·코어 모듈 전부 공유(애드온만 고쳐도 됨).
 - 애드온(배포: `addons` 브랜치, `node tools/publish-addons.mjs`): memory(장기기억·관계도·회귀·HUD) · cards · erosync · manage(캐릭터·모듈·플러그인) · protlink · provider(실험) · widgets · aibuild · chattheme. 코어만으로 홈·가져오기·편집기·코코아·꾸미기·도구·설정 동작.

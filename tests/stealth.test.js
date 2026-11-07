@@ -365,3 +365,17 @@ test("배경 그림으로 그리는 정규식 이미지(div style=background-ima
   const css = buildStealth("claude", { hideImages: true }).css;
   assert.match(css, /:not\(\[open\]\)\) :is\([^)]*\.st-body \[style\*="background-image"\]/);
 });
+
+test("애드온이 새 버전이면 켜 둔 모양을 리스 설정에 다시 써 넣는다(한 번만)", async () => {
+  const { reapplyIfUpdated } = await import("../src/data/stealth-apply.js");
+  const api = fakeApi();
+  let st = await loadStealth(api);
+  st = await enableStealth(api, "claude", st); await saveStealth(api, st);
+  api.db.guiHTML = "예전 채팅 HTML";
+  const r1 = await reapplyIfUpdated(api, "0.3.8");
+  assert.equal(r1.reapplied, true); assert.match(api.db.guiHTML, /st-ftool/);
+  const r2 = await reapplyIfUpdated(api, "0.3.8");
+  assert.equal(r2.reapplied, false);
+  const off = fakeApi();
+  assert.equal((await reapplyIfUpdated(off, "0.3.8")).reapplied, false, "꺼 둔 사람은 건드리지 않음");
+});

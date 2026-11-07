@@ -1,7 +1,7 @@
 // 더스크 스텔스 애드온: 리스 채팅을 다른 AI 채팅 앱처럼 보이게 하는 테마(클로드·GPT·코덱스·제미나이·딥시크)를 고르고 켠다.
 // 켜 둔 모양은 리스 설정(커스텀 CSS·채팅 HTML)에 저장돼 애드온을 꺼도 그대로 보인다. 끄기는 화면에서 한다.
 import { renderStealth } from "../../src/ui/screens/stealth.js";
-import { loadStealth } from "../../src/data/stealth-apply.js";
+import { reapplyIfUpdated } from "../../src/data/stealth-apply.js";
 import { syncShell, setDuskOpen, refreshDuskOpen } from "../../src/data/stealth-shell.js";
 
 export async function activate(api, ctx) {
@@ -29,6 +29,6 @@ export async function activate(api, ctx) {
   sizeCheck();
   // 이미지 접기는 채팅 HTML·CSS만으로 한다(0.3.6부터 display 훅 없음 → 채팅 열기가 느려지지 않음)
   // 켜 둔 클로드 계열 모양이면 사이드바를 다시 그린다(화면은 새로고침마다 비어 있으므로)
-  loadStealth(api).then((st) => syncShell(api, st)).catch((e) => console.log("[Dusk Atelier] 스텔스 사이드바 시작 실패", e?.message ?? e));
+  reapplyIfUpdated(api, ctx.version).then(({ st }) => syncShell(api, st)).catch((e) => console.log("[Dusk Atelier] 스텔스 사이드바 시작 실패", e?.message ?? e));
   return { async deactivate() { off.forEach((f) => f()); clearInterval(sizeTimer); try { globalThis.removeEventListener?.("resize", sizeCheck); } catch { /* 없음 */ } if (wrapped) { try { api.showContainer = orig.show; api.hideContainer = orig.hide; } catch { /* 그대로 */ } } setDuskOpen(false); await syncShell(api, null).catch(() => {}); } };
 }

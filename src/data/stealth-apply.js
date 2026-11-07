@@ -6,6 +6,15 @@ import { STEALTH_KEY, STEALTH_PREFIX, PRESETS, stealthTheme, normalizeStealthSta
 export async function loadStealth(api) {
   try { const raw = await api.pluginStorage.getItem(STEALTH_KEY); return normalizeStealthState(raw ? JSON.parse(raw) : null); } catch { return normalizeStealthState(null); }
 }
+// 애드온이 새 버전이면 켜 둔 모양을 리스 설정(커스텀 CSS·채팅 HTML)에 다시 써 넣는다 — 안 하면 업데이트해도 예전 모양이 남는다
+export async function reapplyIfUpdated(api, version) {
+  const st = await loadStealth(api);
+  if (!st.active || !version || st.appliedVer === version) return { st, reapplied: false };
+  const next = await enableStealth(api, st.active, st);
+  const saved = { ...next, appliedVer: version };
+  await saveStealth(api, saved);
+  return { st: saved, reapplied: true };
+}
 export const saveStealth = (api, s) => api.pluginStorage.setItem(STEALTH_KEY, JSON.stringify(s));
 
 // 스텔스가 목록에 넣은 테마는 이름 앞머리로 알아본다(테마 파일 형식에 표지 칸이 없어서)
