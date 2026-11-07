@@ -496,10 +496,11 @@ test("GPT 모양(docs/STEALTH.md 7-1): 사이드바·발 두 줄 Plus·위 줄 �
   const api = shellApi(); await syncShell(api, { active: "gpt", labels: {} }, () => {}); assert.equal(shellState(), "gpt"); await syncShell(api, null);
 });
 
-test("코덱스 모양(docs/STEALTH.md 7-2): 일반 채팅 앱(고정폭 아님)·왼쪽 아이콘 줄·Codex ⌄·종/검색·새 채팅·최근·시작하기 상자", async () => {
+test("코덱스 모양(docs/STEALTH.md 7-2): 일반 채팅 앱(고정폭 아님)·왼쪽 아이콘 줄·Codex ⌄·종/검색·새 채팅·최근", async () => {
   const { shellHtml } = await import("../src/data/stealth-shell.js");
   const h = shellHtml({ kind: "codex", user: "TE", rows: [{ index: 0, name: "Clarify request", current: true }] });
-  for (const t of ["st-sb-rail", "st-sb-rbtn st-on", "st-sb-rsep", "Codex", "st-sb-wchev", "새 채팅", "최근", "시작하기", "3개 중 0개", "data-st-gear"]) assert.ok(h.includes(t), t);
+  for (const t of ["st-sb-rail", "st-sb-rbtn st-on", "st-sb-rsep", "Codex", "st-sb-wchev", "새 채팅", "최근", "data-st-gear"]) assert.ok(h.includes(t), t);
+  assert.ok(!h.includes("시작하기"), "시작하기 상자는 뺐다(11-08)");
   const css = buildStealth("codex").css;
   assert.match(css, /html, body \{ font-family: var\(--st-font\) !important; \}/, "본문은 고정폭이 아님");
   assert.ok(css.includes("6 Luna Medium") && css.includes("clamp(290px"), "모델 글·넓은 사이드바");
@@ -524,7 +525,7 @@ test("클로드 코드·제미나이·딥시크 모양(docs/STEALTH.md 7-3~7-5)"
 
 test("머리 아이콘: 기본값은 모양마다 빈 칸(SHELL_KINDS.icon), 사용자가 고른 그림이 먼저, 그림 주소는 안전한 것만", async () => {
   const { shellHtml, SHELL_KINDS, safeIconUrl } = await import("../src/data/stealth-shell.js");
-  for (const k of Object.keys(SHELL_KINDS)) assert.equal(SHELL_KINDS[k].icon, "", k + ": 기본 그림은 비워 둔다");
+  for (const k of Object.keys(SHELL_KINDS)) assert.equal(typeof SHELL_KINDS[k].icon, "string", k + ": 기본 그림 칸이 있다(값은 저장소 관리자가 정함)");
   const png = "data:image/png;base64,iVBORw0KGgo=";
   assert.equal(safeIconUrl(png), png);
   assert.equal(safeIconUrl("https://example.com/a.png"), "https://example.com/a.png");

@@ -39,7 +39,7 @@
 ## 5. 새 모양 만드는 순서
 1. **실물 캡처를 본다**(사용자에게 받는다): 사이드바 머리·메뉴 줄·목록 제목·발, 입력창, 말풍선, 색.
 2. `PRESETS[id]`: 색 두 벌, 글꼴, `radius`·`input`·`width`, `labels`, `shell: "<kind>"`.
-3. `SHELL_KINDS[kind]`: 지금 있는 칸은 `word`(앱 이름 글자), `wordSerif`, `head`("seg" 클로드식 묶음 | "icons" + `headRight`), `headLeft`, `firstOn`, `foot2`(발 두 줄), `top`("chat": 위 줄 폴더·채팅 이름·공유), `rail`(맨 왼쪽 아이콘 줄, "|"=구분선), `wordChev`(이름 옆 ⌄), `foot`("start": 코덱스식 시작하기 상자), `segOn`(묶음에서 선택 칸), `items` 셋째 값(배지), `dots`(목록 앞 점), `footChev`, `recentIcon`, `newBtn`(폭 꽉 찬 새 채팅 버튼), `wordAccent`, `gearIcon`, `top`("none": 위 줄 글 없음 / "chat"+`topPlain`: 채팅 이름+공유 아이콘), `headLeft`는 여러 개 가능, `items`([아이콘, 글] — 아이콘은 `ICON`에 선 그림으로), `recent`(목록 제목), `empty`, `plan`. 앱마다 머리·새 채팅 버튼 모양이 달라 칸을 늘려야 하면(예: 이름 왼쪽 아이콘, 오른쪽 아이콘들, 알약 '새 채팅' 버튼, 첫 줄 강조 여부) 7절 정리를 보고 그때 더한다.
+3. `SHELL_KINDS[kind]`: 지금 있는 칸은 `word`(앱 이름 글자), `wordSerif`, `head`("seg" 클로드식 묶음 | "icons" + `headRight`), `headLeft`, `firstOn`, `foot2`(발 두 줄), `top`("chat": 위 줄 폴더·채팅 이름·공유), `rail`(맨 왼쪽 아이콘 줄, "|"=구분선), `wordChev`(이름 옆 ⌄), `foot`("noav": 발에 이니셜 없이 이름·톱니), `segOn`(묶음에서 선택 칸), `items` 셋째 값(배지), `dots`(목록 앞 점), `footChev`, `recentIcon`, `newBtn`(폭 꽉 찬 새 채팅 버튼), `wordAccent`, `gearIcon`, `top`("none": 위 줄 글 없음 / "chat"+`topPlain`: 채팅 이름+공유 아이콘), `headLeft`는 여러 개 가능, `items`([아이콘, 글] — 아이콘은 `ICON`에 선 그림으로), `recent`(목록 제목), `empty`, `plan`. 앱마다 머리·새 채팅 버튼 모양이 달라 칸을 늘려야 하면(예: 이름 왼쪽 아이콘, 오른쪽 아이콘들, 알약 '새 채팅' 버튼, 첫 줄 강조 여부) 7절 정리를 보고 그때 더한다.
    - 프리셋의 `shell`은 클로드식 입력창 배치까지 뜻한다. 다른 앱은 `sidebar: "<kind>"`로 사이드바만 붙이고 입력창은 그 앱 모양대로 둔다. 앱만의 본문 꾸밈은 `extra`(예: `"gpt"` → `gptExtraCss`).
 4. 필요한 아이콘은 `ICON`에 24×24 선 그림 path로 넣는다(상표 모양 금지).
 5. 시험(아래 6) → 애드온 버전 올리기(`addons/addons.src.json`) → `node tools/build-addons.mjs` → `npm test` → `npm run build` → `npm run check` → `node tools/publish-addons.mjs`.
@@ -75,7 +75,7 @@
 - 맨 왼쪽 아이콘 줄(레일): 홈(강조) · 이미지 · 예약 · 라이브러리 · 플러그인 · ··· · (선) · 브랜치. 아래쪽에 사용자 이니셜 동그라미.
 - 사이드바 머리: `Codex ⌄`, 오른쪽 아이콘 두 개(알림 종 · 검색).
 - 메뉴: 새 채팅(연필) 한 줄. 목록 제목 `최근`(실물의 '프로젝트' 묶음은 넣지 않음). 지금 채팅은 회색 강조.
-- 발: 둥근 상자 `○ 시작하기 …… 3개 중 0개` (+ 우리 설정 톱니).
+- 발: 이름 · 톱니(이니셜은 레일 아래). 실물의 '시작하기 3개 중 0개' 상자는 사용자 요청으로 넣지 않음(0.3.34).
 - 본문: 산세리프, 사용자는 오른쪽 말풍선, 답변은 말풍선 없는 글. 따옴표 ・ 줄·처리 시간 줄 없음.
 - 입력창: 둥근 사각, 아래 줄 오른쪽 모델 글 `6 Luna Medium ⌄`. 위 줄(채팅 이름)은 없음.
 - 색(다크): 본문 #181818, 사이드바 #202020, 레일 더 어둡게, 말풍선 #2f2f2f. 주황 말풍선·보내기 버튼은 사용자 강조색이라 따르지 않음. 오른쪽 위 'Dusk Atelier · 변경 사항' 카드는 넣지 않음.

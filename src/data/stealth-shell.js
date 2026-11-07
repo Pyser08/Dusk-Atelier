@@ -58,7 +58,7 @@ export var SHELL_KINDS = {
   code: { icon: "", word: "", head: "seg", segOn: 1, headLeft: ["panel", "back", "fwd"], items: [["plus", "새로 만들기"], ["folder", "프로젝트", "New"], ["cube", "아티팩트"], ["bag", "사용자 지정"], ["chev", "더 보기"]], recent: "최근 항목", dots: true, footChev: true, empty: "시작한 세션이 여기에 표시됩니다", plan: "" },
   deepseek: { icon: "https://github.com/Pyser08/Dusk-Atelier/blob/feat/2.0.0/deep.png", word: "deepseek", wordAccent: true, head: "icons", headRight: ["search", "panel"], newBtn: "새로운 채팅", items: [], recent: "오늘", recentIcon: "listi", gearIcon: "more", top: "chat", topPlain: true, empty: "", plan: "" },
   gemini: { icon: "https://github.com/Pyser08/Dusk-Atelier/blob/feat/2.0.0/gem.png", word: "Gemini", top: "none", head: "icons", headRight: ["search", "panel"], items: [["edit", "새 채팅"], ["grid", "라이브러리"], ["image", "이미지"], ["clock", "예약"], ["target", "맞춤설정"], ["video", "동영상"]], recent: "전체", recentIcon: "filter", empty: "", plan: "" },
-  codex: { icon: "", word: "Codex", wordChev: true, head: "icons", headRight: ["bell", "search"], rail: ["home", "image", "clock", "book", "plug", "more", "|", "branch"], foot: "start", items: [["edit", "새 채팅"]], recent: "최근", empty: "", plan: "" },
+  codex: { icon: "", word: "Codex", wordChev: true, head: "icons", headRight: ["bell", "search"], rail: ["home", "image", "clock", "book", "plug", "more", "|", "branch"], foot: "noav", items: [["edit", "새 채팅"]], recent: "최근", empty: "", plan: "" },
   gpt: { icon: "", word: "ChatGPT", head: "icons", headRight: ["search", "panel"], foot2: true, top: "chat", items: [["edit", "새 채팅"], ["image", "이미지"], ["clock", "예약"], ["book", "라이브러리"], ["plug", "플러그인"], ["more", "탐색"]], recent: "최근", empty: "", plan: "Plus" }
 };
 var ICON = {
@@ -93,8 +93,8 @@ export function shellHtml(model) {
   const whoHtml = K.foot2 ? `<span class="st-sb-who st-two"><span>${esc(who)}</span>${plan ? `<small>${esc(plan)}</small>` : ""}</span>` : `<span class="st-sb-who">${esc(who)}${plan ? `<small>· ${esc(plan)}</small>` : ""}${K.footChev ? `<span class="st-sb-wchev">${ico("chev", 14)}</span>` : ""}</span>`;
   const gear = `<button type="button" class="st-sb-gear" data-st-gear="1" aria-label="설정">${ico(K.gearIcon ?? "gear", 18)}</button>`, av = `<span class="st-sb-av">${esc(who.slice(0, 1).toUpperCase())}</span>`;
   // 발: 기본 = 이니셜·이름(·요금제)·톱니 / "start" = 코덱스식 '○ 시작하기 … 3개 중 0개' 상자(이니셜은 레일 아래)
-  const foot = K.foot === "start" ? `<div class="st-sb-foot"><span class="st-sb-start"><span class="st-sb-ring"></span><span>시작하기</span><small>3개 중 0개</small></span>${gear}</div>`
-    : `<div class="st-sb-foot">${av}${whoHtml}${gear}</div>`;
+  // "noav" = 이니셜은 레일 아래에 있으니 발엔 이름·톱니만(코덱스, '시작하기' 상자는 사용자 요청으로 뺌 11-08)
+  const foot = `<div class="st-sb-foot">${K.foot === "noav" ? "" : av}${whoHtml}${gear}</div>`;
   const lefts = [].concat(K.headLeft ?? []).map((n) => `<span class="st-sb-hico">${ico(n, 20)}</span>`).join("");
   const word = model.word ?? K.word;
   const logo = safeIconUrl(model.icon);
