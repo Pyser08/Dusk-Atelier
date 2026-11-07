@@ -67,11 +67,11 @@ export var PRESET_IDS = Object.keys(PRESETS);
 export function imageFoldCss() {
   // 이미지·배경 그림마다 접힘 줄: 스텔스가 화면에서 각 이미지를 [x-st-fw] 상자로 감싸고 맨 위에 [x-st-fl] 줄을 넣는다(stealth-shell.js wrapMedia).
   // 접힌 이미지는 display:none 대신 1px로 숨긴다 — 배경 그림은 display:none이면 받기를 미뤄서, 휴대폰에서 누른 뒤에야 받느라 늦게 떴다(미리 받아 둠).
-  // 감싸기 전 잠깐도 같은 방식으로 숨긴다(작은 아이콘 "s"는 그대로). 감싸기에 실패한 것("e")은 '명령어 N개 실패함' 줄이 되고, 누르면 펼쳐진다.
+  // 감싸기 전 잠깐은 자리만 두고 안 보이게(visibility) — 실제 크기를 재서 큰 그림(짧은 변 220px 이상)만 접는다. 작은 것("s")은 그대로 보인다. 감싸기에 실패한 것("e")은 '명령어 N개 실패함' 줄이 되고, 누르면 펼쳐진다.
   const L = "[x-st-fw] > [x-st-fl]";
   const hide = "position: absolute !important; left: 0 !important; top: 0 !important; width: 1px !important; height: 1px !important; min-width: 0 !important; min-height: 0 !important; max-height: 1px !important; aspect-ratio: auto !important; opacity: 0 !important; pointer-events: none !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; border: 0 !important;";
   const lab = "color: var(--st-dim); font-size: 14px; line-height: 1.5; cursor: pointer; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent;";
-  return `.st-body :is(img, video, [style*="background-image"]):not([x-st-m]):not([x-st-fw] *) { ${hide} }
+  return `.st-body :is(img, video, [style*="url("]):not([x-st-m]):not([x-st-fw] *) { visibility: hidden !important; }
 .st-body { position: relative; }
 [x-st-fw] { display: block; position: relative; width: 100%; margin: 2px 0 8px; }
 ${L} { width: fit-content; max-width: 100%; display: flex; align-items: center; ${lab} }

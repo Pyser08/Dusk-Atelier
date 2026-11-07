@@ -283,15 +283,20 @@ export function createShell(api, opts = {}) {
 var listItems = async (list) => { if (!list) return []; const n = typeof list.length === "function" ? await list.length() : list.length; const out = []; for (let i = 0; i < n; i++) out.push(typeof list.at === "function" ? await list.at(i) : list[i]); return out; };
 // 이미지·배경 그림 하나마다 위에 '›_ 명령어 N개 실행함 ›' 줄을 붙인다: 그 요소를 우리 상자([x-st-fw])로 바꿔 끼우고(replaceWith) 줄 + 원래 요소를 넣는다.
 // 줄을 누르면 상자의 x-open이 바뀌어 그 이미지만 펴고 접힌다. 아주 작은 아이콘(48px 미만)은 건너뛴다.
-export var MEDIA_SEL = '.st-msg .st-body :is(img, video, [style*="background-image"]):not([x-st-m]):not([x-st-fw] *)';
+// 접을 대상: <img>·<video>·인라인 배경 그림(background-image도, background: url(…) 줄임 꼴도).
+export var MEDIA_SEL = '.st-msg .st-body :is(img, video, [style*="url("]):not([x-st-m]):not([x-st-fw] *)';
+// 큰 그림만 접는다(사용자 선택 11-08): 짧은 변이 이보다 작으면 아이콘·봇 위젯·캐릭터 칸(190px)으로 보고 그대로 둔다.
+export var FOLD_MIN = 220;
 export async function wrapMedia(d, { log = () => {}, rand = () => 1 + Math.floor(Math.random() * 9) } = {}) {
   let n = 0;
   for (const el of await listItems(await d.querySelectorAll(MEDIA_SEL))) {
     if (!el) continue;
     try {
-      await el.setAttribute("x-st-m", "1");
+      // 재기 전엔 CSS가 자리는 두고 안 보이게만 한다(visibility) → 실제 크기를 잴 수 있다. 크기가 0이면 아직 안 받은 것 → 다음 차례에 다시
       const r = await el.getBoundingClientRect?.().catch?.(() => null);
-      if (r && r.width > 0 && r.height > 0 && r.width < 48 && r.height < 48) { await el.setAttribute("x-st-m", "s"); continue; }
+      if (r && !(r.width > 0 && r.height > 0)) continue;
+      if (r && Math.min(r.width, r.height) < FOLD_MIN) { await el.setAttribute("x-st-m", "s"); continue; }
+      await el.setAttribute("x-st-m", "1");
       const box = await d.createElement("div"), lab = await d.createElement("div");
       await box.setAttribute("x-st-fw", "1"); await box.setAttribute("x-open", "0");
       await lab.setAttribute("x-st-fl", "1"); await lab.setInnerText(`명령어 ${rand()}개 실행함`);

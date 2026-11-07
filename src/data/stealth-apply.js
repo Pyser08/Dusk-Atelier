@@ -67,8 +67,8 @@ export var DIAG_SELECTORS = {
   "채팅 래퍼(.st-msg)": ".st-msg", "본문 자리(.st-body)": ".st-body", "리스 본문(.chattext)": ".chattext",
   "채팅 목록(.risu-chat)": ".risu-chat", "채팅 화면(.default-chat-screen)": ".default-chat-screen", "입력칸(.text-input-area)": ".text-input-area",
   "순정 사이드바": ".rs-sidebar, .risu-sidebar", "스텔스 사이드바": '[x-dusk="stealth-sb"]', "스텔스 표식": "body[x-dusk-st]",
-  "이미지 접힘 상자([x-st-fw])": "[x-st-fw]", "접힘 줄([x-st-fl])": "[x-st-fw] > [x-st-fl]", "펼친 상자": '[x-st-fw][x-open="1"]', "아직 안 감싼 이미지": '.st-msg .st-body :is(img, video, [style*="background-image"]):not([x-st-m]):not([x-st-fw] *)', "감싸기 실패한 이미지": '[x-st-m="e"]', "래퍼 안 이미지(.st-msg img)": ".st-msg img", "래퍼 안 배경 그림": '.st-msg [style*="background-image"]',
-  "본문 이미지(.chattext img)": ".chattext img", "본문 배경 그림": '.chattext [style*="background-image"]', "래퍼 안 본문(.st-msg .chattext)": ".st-msg .chattext"
+  "이미지 접힘 상자([x-st-fw])": "[x-st-fw]", "접힘 줄([x-st-fl])": "[x-st-fw] > [x-st-fl]", "펼친 상자": '[x-st-fw][x-open="1"]', "아직 안 감싼 이미지": '.st-msg .st-body :is(img, video, [style*="url("]):not([x-st-m]):not([x-st-fw] *)', "작아서 그대로 둔 그림": '[x-st-m="s"]', "감싸기 실패한 이미지": '[x-st-m="e"]', "래퍼 안 이미지(.st-msg img)": ".st-msg img", "래퍼 안 배경 그림": '.st-msg [style*="url("]',
+  "본문 이미지(.chattext img)": ".chattext img", "본문 배경 그림": '.chattext [style*="url("]', "래퍼 안 본문(.st-msg .chattext)": ".st-msg .chattext"
 };
 /** counts: {라벨: 개수}, db: {theme, htmlLen, cssLen, hasWrapper, hasStealthCss}. 돌려주는 값: 한 줄씩 읽는 안내 목록. */
 export function diagnose(counts, db) {

@@ -365,10 +365,12 @@ test("애드온이 새 버전이면 켜 둔 모양을 리스 설정에 다시 �
 test("이미지·배경 그림마다 위에 '명령어 N개 실행함' 줄을 붙이고, 누르면 그 이미지만 펴고 접는다", async () => {
   const { wrapMedia, MEDIA_SEL } = await import("../src/data/stealth-shell.js");
   const mk = (rect) => { const n = { attrs: {}, kids: [], text: "", h: null, replacedBy: null }; return { n, setAttribute: async (k, v) => { if (!k.startsWith("x-")) throw new Error("x-"); n.attrs[k] = v; }, setInnerText: async (t) => { n.text = t; }, appendChild: async (c) => { n.kids.push(c.n); }, replaceWith: async (b) => { n.replacedBy = b.n; }, addEventListener: async (_e, fn) => { n.h = fn; }, getBoundingClientRect: async () => rect }; };
-  const imgs = [mk({ width: 300, height: 400 }), mk({ width: 0, height: 0 }), mk({ width: 20, height: 20 })];
+  const imgs = [mk({ width: 300, height: 400 }), mk({ width: 0, height: 0 }), mk({ width: 20, height: 20 }), mk({ width: 190, height: 190 })];
   const d = { createElement: async () => mk(null), querySelectorAll: async (sel) => { assert.equal(sel, MEDIA_SEL); const l = imgs.filter((e) => !e.n.attrs["x-st-m"]); return { length: async () => l.length, at: async (i) => l[i] }; } };
-  assert.equal(await wrapMedia(d, { rand: () => 7 }), 2, "작은 아이콘은 건너뜀");
-  assert.equal(imgs[2].n.attrs["x-st-m"], "s");
+  assert.equal(await wrapMedia(d, { rand: () => 7 }), 1, "큰 그림만 접는다");
+  assert.equal(imgs[2].n.attrs["x-st-m"], "s", "아이콘은 그대로");
+  assert.equal(imgs[3].n.attrs["x-st-m"], "s", "봇 위젯의 캐릭터 칸(190px)도 그대로");
+  assert.equal(imgs[1].n.attrs["x-st-m"], undefined, "아직 안 받은(크기 0) 그림은 다음 차례에 다시 잰다");
   const box = imgs[0].n.replacedBy;
   assert.equal(box.attrs["x-st-fw"], "1"); assert.equal(box.attrs["x-open"], "0");
   assert.equal(box.kids[0].text, "명령어 7개 실행함"); assert.equal(box.kids[1], imgs[0].n);
