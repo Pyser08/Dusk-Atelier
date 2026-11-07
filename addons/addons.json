@@ -120,13 +120,13 @@
     {
       "id": "stealth",
       "name": "더스크 스텔스",
-      "version": "0.3.34",
+      "version": "0.3.35",
       "minCore": "1.9.2",
       "hooks": false,
       "desc": "리스 채팅을 클로드·GPT·코덱스·제미나이·딥시크 같은 다른 AI 채팅 앱처럼 보이게 꾸며요. 끄면 원래 모양으로 되돌려요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/stealth.js",
-      "sha256": "61b57533b637ab6f203f46859d8dd3eb809dc4e0062aaa82cce37b3acea9c982",
-      "size": 69508
+      "sha256": "06694fb1f71fec3038ddc3e3b852e211f8b5f0851235ca614954fc8b08f830ab",
+      "size": 69528
     }
   ]
 }
