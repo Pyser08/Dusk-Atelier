@@ -319,3 +319,39 @@ test("nativeFetch가 계속 목록만 주면 risuFetch로 받아 설치", async 
   await A.loadManifest(); await A.install("a");
   assert.ok(A.running("a"));
 });
+
+test("응답이 안 오는 nativeFetch 하나가 뒤 요청을 막지 않는다", async () => {
+  const { fetchText } = await import("../src/data/addons.js");
+  const real = globalThis.setTimeout;
+  globalThis.setTimeout = (f, ms, ...a) => real(f, ms > 1000 ? 20 : ms, ...a);
+  try {
+    let n = 0;
+    const api = { nativeFetch: (u) => (++n === 1 ? new Promise(() => {}) : Promise.resolve(u)) };
+    const [a, b] = await Promise.all([fetchText(api, "x"), fetchText(api, "y")]);
+    assert.equal(b, "y"); assert.ok(a === null || a === "x" || typeof a === "string" || a == null);
+  } finally { globalThis.setTimeout = real; }
+});
+
+test("호스트가 어떤 주소에도 같은 응답을 줘도 모듈(export default)로 받아 설치·확인값 확인", async () => {
+  const { moduleUrls } = await import("../src/data/addons.js");
+  const kv = new Map();
+  const store = { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } };
+  const api = { getLocalPluginStorage: () => store, pluginStorage: store };
+  const body = "ok:한글 모듈";
+  const raw = "https://raw.githubusercontent.com/o/r/addons/addons/dist/a.js";
+  const manText = JSON.stringify({ format: 1, addons: [{ id: "a", name: "A", version: "1.0.0", minCore: "2.0.0", url: raw, sha256: await H(body) }] });
+  const sha = await H(body);
+  const mods = { [`https://cdn.jsdelivr.net/gh/o/r@addons/addons/dist/a.${sha.slice(0, 12)}.mjs`]: body, "https://cdn.jsdelivr.net/gh/o/r@addons/addons/addons.json.mjs": manText };
+  assert.equal(moduleUrls.file({ url: raw, sha256: sha }), `https://cdn.jsdelivr.net/gh/o/r@addons/addons/dist/a.${sha.slice(0, 12)}.mjs`);
+  const fetcher = async () => "export const 엉뚱 = 1;";   // 어떤 주소든 같은 엉뚱한 응답
+  const moduleText = async (u) => mods[u.split("?")[0]] ?? null;
+  const A = createAddons(api, { core: "2.0.0", fetcher, moduleText, timers: { setTimeout: (f) => f(), setInterval: () => 0 }, importer: async () => ({ activate: async () => ({}) }), log: () => {} });
+  // 목록 주소 기본값(raw)이 아니라 이 시험용 raw 주소를 쓰게 한다
+  await store.setItem("dusk.addon.manifestUrl", "https://raw.githubusercontent.com/o/r/addons/addons/addons.json");
+  await A.loadManifest(); await A.install("a");
+  assert.ok(A.running("a"));
+  // 모듈로 받은 문자열도 확인값이 다르면 거부
+  const A2 = createAddons(api, { core: "2.0.0", fetcher, moduleText: async (u) => (u.includes("addons.json.mjs") ? manText : "변조"), timers: { setTimeout: (f) => f(), setInterval: () => 0 }, importer: async () => ({ activate: async () => ({}) }), log: () => {} });
+  await A.remove("a"); await A2.loadManifest();
+  await assert.rejects(A2.install("a"), /확인값/);
+});
