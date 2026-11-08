@@ -36,7 +36,7 @@ import { chatKeyOf } from "../engine/chatkey.js";
 import { cleanJsonReply } from "../engine/jsonreply.js";
 import { routerKey, swapRequestRef, directionKey, boundedSet } from "../engine/retrycache.js";
 import { parseDirectorRun, factSheet, directionMessages, parseDirection, renderDirection, directorEnvelope } from "../engine/director.js";
-import { parseWriterRun, recordTurn, buildEnvelope, buildDusk, summarize } from "../engine/recorder.js";
+import { parseWriterRun, recordTurn, buildEnvelope, buildDusk, summarize, attemptDuskRecord } from "../engine/recorder.js";
 import { customPromptPlain } from "../engine/pot/custom-prompts.js";
 
 const READONLY = new Set(["writer_schema", "director_schema", "slots", "policies"]);
@@ -141,8 +141,15 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     const writerCall = async (a, k, preset, prompt, opts = {}) => {
       const label = String(opts.stageLabel ?? ""); let sent = prompt, prep = null;
       if (/^writer batch/i.test(label)) {
-        try { const out = await recordWithDusk(a, k, preset, prompt, opts); if (out != null) return out; }
-        catch (e) { lastRecord = { at: Date.now(), error: String(e?.message ?? e).slice(0, 200) }; throw e; }
+        const out = await attemptDuskRecord(
+          () => recordWithDusk(a, k, preset, prompt, opts),
+          (e) => {
+            const message = String(e?.message ?? e).slice(0, 200);
+            lastRecord = { at: Date.now(), error: message, fallback: "risupot" };
+            log("Dusk 기록기 실패 → 기존 리수폿 Writer로 fallback", message);
+          }
+        );
+        if (out != null) return out;
       }
       if (/^writer/i.test(label)) { try { cyclePending = cycleStates(wiki.snapshot()); } catch { cyclePending = null; } }
       const had = String(prompt).includes(SECTION_MARK);
