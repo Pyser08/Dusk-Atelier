@@ -60,7 +60,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     h("div", { class: "rb-srow rb-mem-trimkeep", id: "rb-mem-trimkeep" }, h("span", { class: "t" }, "남길 최근 턴", h("small", null, "이만큼의 최근 대화(내 말 기준)는 늘 그대로 보내요.")),
       num("턴", () => inj.trimKeep ?? 20, (s, v) => { s.inject ??= {}; s.inject.trimKeep = v; }, { min: 4, max: 200, step: 1 })));
   memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 리수폿 위키 기록도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
-  memOptions.append(orowS("지난 대화 분석 뒤 Erosync 성향 분석도 하기", "Erosync에 인물 성향이 비어 있으면 채팅 전체를 분석해요. AI 호출이 수십 번 들 수 있어서 기본은 꺼 둬요. ‘함께 기록’이 켜져 있을 때만 해요.", S.backfillErosync === true, (st, v) => { st.backfillErosync = v; }));
+  memOptions.append(orowS("지난 대화 분석 뒤 Erosync 성향 분석도 하기", "Erosync가 켜져 있고 이 채팅의 인물 성향이 비어 있으면, 지난 대화 분석 끝에 채팅 전체를 한 번 분석해서 채워요. AI 호출이 채팅 길이만큼 들어요(수십 번일 수 있어요). 한 번 채워지면 다시 하지 않아요. ‘함께 기록’이 켜져 있을 때만 해요.", S.backfillErosync !== false, (st, v) => { st.backfillErosync = v; }));
   // 리수폿 일괄 켜기·끄기(모든 봇·채팅). 예전엔 열린 채팅의 봇 하나만 바꿨다.
   let potAll = true; try { potAll = await M.switches.potAllOn(); } catch { /* 기본 켜짐으로 표시 */ }
   memOptions.append(h("div", { class: "rb-srow" }, h("span", { class: "t" }, "리수폿 일괄 사용", h("small", null, "모든 봇·채팅에서 리수폿(위키 기록)을 한꺼번에 켜고 꺼요.")),

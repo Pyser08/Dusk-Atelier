@@ -138,10 +138,12 @@ export function renderBotAnalysis(env) {
   const range = () => ({ from: Math.max(0, +from.value - 1), to: Math.max(0, +to.value - 1) });
   const paintEst = () => {
     const p = M.runner.planBackfill(msgs, range(), env.folder);
-    est.textContent = `AI 응답 ${p.total}개 · 분석됨 ${p.done} · 미처리 ${p.todo}${p.failed ? ` (지난번 실패 ${p.failed})` : ""} → 예상 호출 ${p.calls}회 · 대략 ${p.tokens.toLocaleString()} 토큰`;
+    const ero = idx.settings?.backfillExtras !== false && idx.settings?.backfillErosync !== false && !!ctx.erosync;
+    est.textContent = `AI 응답 ${p.total}개 · 분석됨 ${p.done} · 미처리 ${p.todo}${p.failed ? ` (지난번 실패 ${p.failed})` : ""} → ${p.todo ? `묶음 ${p.calls}개 · 묶음마다 AI 호출 여러 번(인물 수만큼)` : "분석 안 된 응답이 없어요 · 누르면 전체를 다시 분석해요"} · 대략 ${p.tokens.toLocaleString()} 토큰${ero && p.todo ? " · Erosync 성향이 비어 있으면 끝에 채팅 전체 분석이 더해져요" : ""}`;
+    if (goBtn) goBtn.textContent = p.todo ? `미분석 ${p.todo}개 분석` : "지난 대화 재분석";
   };
-  from.addEventListener("input", paintEst); to.addEventListener("input", paintEst); if (caps.analyze) paintEst();
-  let ctrl = null, failed = [];
+  from.addEventListener("input", paintEst); to.addEventListener("input", paintEst);
+  let ctrl = null, failed = [], goBtn = null;
   const run = async (only) => {
     const pl = M.runner.planBackfill(msgs, range(), env.folder);
     const redo = !pl.todo && pl.total > 0;   // 미분석이 없으면 전체를 다시 분석한다
@@ -153,7 +155,9 @@ export function renderBotAnalysis(env) {
       failed = r.failed; ctx.toast(`지난 대화 분석이 끝났어요${r.server ? " (서버)" : ""} (${r.total - r.failed.length}/${r.total}).${r.reasons?.length ? ` 실패 이유: ${r.reasons[0]}` : ""}`, r.failed.length ? { error: true } : undefined); env.redraw();
     } catch (e) { fail(ctx)(e); env.redraw(); }
   };
-  return section(["지난 대화 분석 (이 채팅 전체)", "chat"], h("div", { class: "rb-mem-range" }, from, "~", to), est, h("div", { class: "rb-mem-sact" }, btn("지난 대화 분석", { kind: "primary", onClick: () => run() }), failed.length ? btn(`실패만 다시 (${failed.length})`, { onClick: () => run(true) }) : null), prog);
+  const out = section(["지난 대화 분석 (이 채팅 전체)", "chat"], h("div", { class: "rb-mem-range" }, from, "~", to), est, h("div", { class: "rb-mem-sact" }, (goBtn = btn("지난 대화 분석", { kind: "primary", onClick: () => run() })), failed.length ? btn(`실패만 다시 (${failed.length})`, { onClick: () => run(true) }) : null), prog);
+  if (caps.analyze) paintEst();
+  return out;
 }
 
 // ---- 카드 설정: 태그·스탯 정의, 기본 언어, 연결 추가 지시. 카드 만들기와 새 봇 만들기에서 쓴다.

@@ -95,13 +95,13 @@ test("output hook unavailable is reported in status", async () => {
   assert.equal(await runner.start(), false);
   assert.equal((await store.getIndex()).status.hook, "unavailable");
 });
-test("backfill groups AI responses by 3 and skips already-recorded ones", async () => {
+test("backfill groups AI responses (up to 5) and skips already-recorded ones", async () => {
   const { api, store, chat } = setup(); let calls = 0;
   chat.message = []; for (let i = 0; i < 7; i++) { chat.message.push({ role: "user", data: "u" + i }, { role: "char", data: LONG + i }); }
   const runner = createMemoryRunner(api, { store, call: async () => { calls++; return good.replace("하루에게", "하루에게 " + calls); } });
-  const plan = runner.planBackfill(chat.message, {}); assert.equal(plan.calls, 3);
+  const plan = runner.planBackfill(chat.message, {}); assert.equal(plan.calls, 2);
   const r = await runner.backfill(0, 0, {});
-  assert.equal(r.total, 3); assert.equal(calls, 3); assert.equal(r.failed.length, 0);
+  assert.equal(r.total, 2); assert.equal(calls, 2); assert.equal(r.failed.length, 0);
   assert.equal(runner.planBackfill(chat.message, {}, await store.getFolder("c1", "t1")).calls, 0, "already analyzed responses are skipped");
 });
 test("backfill redo: 이미 모두 분석했어도 다시 분석할 수 있다 (기본은 건너뜀)", async () => {
@@ -114,7 +114,7 @@ test("backfill redo: 이미 모두 분석했어도 다시 분석할 수 있다 (
   assert.equal(runner.planBackfill(chat.message, { all: true }, f).todo, 7, "all=true는 분석한 응답도 포함");
   const before = calls;
   const r = await runner.backfill(0, 0, {}, { redo: true });
-  assert.equal(r.total, 3); assert.equal(calls - before, 3, "다시 분석은 모든 묶음을 다시 호출");
+  assert.equal(r.total, 2); assert.equal(calls - before, 2, "다시 분석은 모든 묶음을 다시 호출");
   const r2 = await runner.backfill(0, 0, {});
   assert.equal(r2.total, 0, "redo 없이는 여전히 건너뜀");
 });
@@ -127,7 +127,7 @@ test("backfill: 묶음마다 캐릭터·채팅을 통째로 다시 읽지 않는
   let calls = 0;
   const runner = createMemoryRunner(api, { store, call: async () => { calls++; return good.replace("하루에게", "하루에게 " + calls); } });
   const r = await runner.backfill(0, 0, {});
-  assert.equal(r.total, 11); assert.equal(r.failed.length, 0);
+  assert.equal(r.total, 7); assert.equal(r.failed.length, 0);
   assert.equal(chars, 1, "캐릭터는 처음 한 번만 읽는다");
   assert.ok(chats <= 1 + Math.ceil(11 / 5), `채팅 읽기 ${chats}번`);
 });
@@ -143,7 +143,7 @@ test("backfill progress is not capped at 1,000 and old ones are restored from an
   // 예전 데이터: 완료 목록이 최근 1,000개뿐이어도 오래된 쪽의 장면 앵커는 분석됨으로 본다
   const old = { done: hs.slice(-1000), scenes: [{ id: "s", h: hs[5] }], people: { a: { records: [{ id: "r", h: hs[7] }, { id: "r2", h: hs[9], orphan: true }] } } };
   const p2 = runner.planBackfill(chat.message, {}, old);
-  assert.equal(p2.done, 1003); assert.equal(p2.todo, 197); assert.equal(p2.calls, 66);
+  assert.equal(p2.done, 1003); assert.equal(p2.todo, 197); assert.equal(p2.calls, 40);
   // 실패 표시
   const p3 = runner.planBackfill(chat.message, {}, { ...old, failedBackfill: [hs[0], hs[1], hs[5]] });
   assert.equal(p3.failed, 2, "미처리 중 실패한 것만 센다(분석됨인 hs[5]는 제외)");
@@ -245,12 +245,12 @@ test("backfill reports why groups failed", async () => {
   assert.equal(r.failed.length, 2);
   assert.match(r.reasons[0], /JSON/);
 });
-test("지난 대화 분석에 함께 기록: 묶음마다 리수폿에 맡기고, Erosync는 켠 사람만, 설정을 끄면 기억만", async () => {
+test("지난 대화 분석에 함께 기록: 묶음마다 리수폿에 맡기고, Erosync는 기본 켜짐(끌 수 있음), 설정을 끄면 기억만", async () => {
   const run = async (off, ero = true) => {
     const { api, store, chat } = setup();
     chat.message = []; for (let i = 0; i < 7; i++) chat.message.push({ role: "user", data: "u" + i }, { role: "char", data: LONG + i });
     if (off) await store.updateIndex((i) => { i.settings.backfillExtras = false; });
-    if (ero) await store.updateIndex((i) => { i.settings.backfillErosync = true; });
+    if (!ero) await store.updateIndex((i) => { i.settings.backfillErosync = false; });
     const pot = [], ev = [];
     const link = { backfillPotReady: async () => true, backfillPot: (ci, ti, i) => pot.push(i), backfillPotWait: async () => { ev.push("wait"); return true; }, backfillErosync: async () => { ev.push("ero"); } };
     const runner = createMemoryRunner(api, { store, link, call: async () => good });
@@ -258,12 +258,12 @@ test("지난 대화 분석에 함께 기록: 묶음마다 리수폿에 맡기고
     return { pot, ev };
   };
   const on = await run(false);
-  assert.equal(on.pot.length, 3, "묶음 3개 → 리수폿 3번"); assert.deepEqual(on.ev, ["wait", "ero"]);
+  assert.equal(on.pot.length, 2, "묶음 2개 → 리수폿 2번"); assert.deepEqual(on.ev, ["wait", "ero"]);
   assert.ok(on.pot.every((i) => i % 2 === 1), "묶음 끝 AI 응답 위치");
   const off = await run(true);
   assert.equal(off.pot.length, 0); assert.deepEqual(off.ev, []);
-  const noEro = await run(false, false);   // 기본: Erosync 전체 분석은 하지 않는다(미처리 1개인데 호출 20번 넘던 제보)
-  assert.equal(noEro.pot.length, 3); assert.deepEqual(noEro.ev, ["wait"]);
+  const noEro = await run(false, false);   // 옵션을 끄면 Erosync 전체 분석만 빠진다
+  assert.equal(noEro.pot.length, 2); assert.deepEqual(noEro.ev, ["wait"]);
 });
 
 test("중지: 진행 중인 보조 모델 호출을 끊고 실패 횟수에 넣지 않으며 지난 대화 분석도 멈춘다", async () => {
@@ -283,4 +283,14 @@ test("중지: 진행 중인 보조 모델 호출을 끊고 실패 횟수에 넣�
   assert.deepEqual(seen.slice(0, 2), [1, 0]);
   const idx = await store.getIndex();
   assert.ok(!Object.values(idx.bots ?? {}).some((b) => b?.paused), "자동 기록이 멈춘 상태로 남지 않아요");
+});
+
+test("묶음: 한 번에 최대 5개, 글자 합이 7500자를 넘으면 나눈다(호출 수 줄이기)", async () => {
+  const { api, store, chat } = setup();
+  chat.message = []; for (let i = 0; i < 12; i++) chat.message.push({ role: "user", data: "u" + i }, { role: "char", data: "가".repeat(3000) });
+  const runner = createMemoryRunner(api, { store, call: async () => good });
+  const p = runner.planBackfill(chat.message, {});
+  assert.deepEqual(p.groups.map((g) => g.length), [5, 5, 2], "긴 응답도 한 응답은 1500자까지만 세므로 5개씩");
+  const short = []; for (let i = 0; i < 12; i++) short.push({ role: "user", data: "u" + i }, { role: "char", data: "나".repeat(2000) });
+  assert.ok(runner.planBackfill(short, {}).groups.every((g) => g.length <= 5));
 });

@@ -27,6 +27,7 @@ const MAX_FAILS = 5;
 // 자동 기록 시점: next(기본) = 다음 입력을 보낼 때 직전 응답을 확정해 기록 | now = 응답 직후
 const confirmOf = (idx) => idx?.settings?.confirm === "now" ? "now" : "next";
 
+const MAX_GROUP = 5, GROUP_CHARS = 7500;   // 지난 대화 분석 한 묶음의 상한
 const TRANSIENT = /429|rate.?limit|too many|timeout|timed out|overload|busy|unavailable|\b5\d\d\b|ECONN|network|fetch failed|failed to fetch/i;
 export function createMemoryRunner(api, { store, prep = null, prompts = null, afterAnalyze = null, log = (...a) => console.log("[Dusk 기억]", ...a), notify = () => {}, retryMs = 2000, call = null, link = null, server = null, gauge = null } = {}) {
   let timer = null, dirty = false, running = false, started = false;
@@ -274,7 +275,14 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     const done = doneHashes(normalized), failedSet = new Set(normalized?.failedBackfill ?? []);
     const hOf = (i) => messageIdentity(messages[i]);
     const todo = all ? ai : ai.filter((i) => !done.has(hOf(i)));
-    const groups = []; for (let k = 0; k < todo.length; k += 3) groups.push(todo.slice(k, k + 3));
+    // 호출을 줄이려고 한 묶음에 최대 5개(분석에 쓰는 글자 합 7500자까지, 한 응답은 1500자까지만 읽는다)를 합친다. 예전: 3개씩.
+    const groups = []; let cur = [], used = 0;
+    for (const i of todo) {
+      const n = Math.min(1500, extractMessageText(messages[i]).length);
+      if (cur.length && (cur.length >= MAX_GROUP || used + n > GROUP_CHARS)) { groups.push(cur); cur = []; used = 0; }
+      cur.push(i); used += n;
+    }
+    if (cur.length) groups.push(cur);
     const chars = groups.reduce((n, g) => n + g.reduce((s, i) => s + extractMessageText(messages[i]).length, 0) + 4000, 0);
     return { groups, calls: groups.length, tokens: Math.round(chars / 1.5), total: ai.length, done: ai.length - todo.length, todo: todo.length, failed: todo.filter((i) => failedSet.has(hOf(i))).length };
   }
@@ -347,7 +355,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     return { total: groups.length, failed, reasons };
   }
   // 지난 대화 분석에 리수폿 위키 기록·Erosync도 함께(설정 '지난 대화 분석에 함께 기록', 기본 켜짐).
-  // 리수폿: 묶음마다 마지막 응답을 리수폿 Writer에 맡긴다(묶음당 호출 1번 더). Erosync: 설정(backfillErosync)을 켠 사람만, 끝나고 한 번 인물 성향이 비어 있으면 전체 분석.
+  // 리수폿: 묶음마다 마지막 응답을 리수폿 Writer에 맡긴다(묶음당 호출 1번 더). Erosync: 끝나고 한 번, 인물 성향이 비어 있으면 전체 분석(설정 backfillErosync로 끌 수 있음, 기본 켜짐).
   // 둘 다 꺼져 있거나 쓸 수 없으면 아무것도 하지 않는다(지금처럼 기억만).
   async function backfillExtras(charIndex, chatIndex, shared, count) {
     if (!count) return null;
@@ -359,8 +367,8 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
       pot: (i) => { if (!potOk) return; try { link.backfillPot(charIndex, chatIndex, i, shared); } catch (e) { log("리수폿 함께 기록 실패", e?.message ?? e); } },
       async finish({ signal } = {}) {
         if (potOk && typeof link.backfillPotWait === "function") { try { await link.backfillPotWait(charIndex, chatIndex, signal); } catch (e) { log("리수폿 기록 대기 실패", e?.message ?? e); } }
-        // Erosync는 인물 성향이 비어 있으면 채팅 전체를 분석해서 AI 호출이 수십 번 든다 → 켜 둔 사람만(기본 꺼짐, 2.0.6 제보: 미처리 1개인데 20번 넘게 호출)
-        let er = false; try { er = (await store.getIndex()).settings?.backfillErosync === true; } catch { /* 기본 꺼짐 */ }
+        // Erosync: 인물 성향이 비어 있을 때만 채팅 전체를 한 번 분석한다(AI 호출이 많이 든다 → 화면 옵션에서 끌 수 있고, 예상 호출에 함께 보여 준다)
+        let er = false; try { er = (await store.getIndex()).settings?.backfillErosync !== false; } catch { /* 기본 켜짐 */ }
         if (er && typeof link?.backfillErosync === "function") { try { await link.backfillErosync(); } catch (e) { log("Erosync 함께 분석 실패", e?.message ?? e); } }
       }
     };
