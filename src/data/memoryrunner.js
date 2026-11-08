@@ -19,6 +19,7 @@ import { emoForPrompt } from "../engine/memoryemo.js";
 import { hintsForPrompt } from "../engine/memoryinner.js";
 import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engine/memorydigest.js";
 import { loadUserNames } from "./usernames.js";
+import { chatKeyOf, legacyChatKeyOf } from "../engine/chatkey.js";
 
 const MAX_FAILS = 5;
 // 자동 기록 시점: next(기본) = 다음 입력을 보낼 때 직전 응답을 확정해 기록 | now = 응답 직후
@@ -55,7 +56,8 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   async function gather(charIndex, chatIndex, group, shared = null) {
     const character = shared?.character ?? await api.getCharacterFromIndex(charIndex), chat = shared?.chat ?? await api.getChatFromIndex(charIndex, chatIndex);
     if (!character || !chat) throw new Error("캐릭터 또는 채팅을 찾지 못했어요.");
-    const chaId = String(character.chaId ?? charIndex), chatId = String(chat.id ?? chatIndex);
+    const chaId = String(character.chaId ?? charIndex), chatId = chatKeyOf(chat, chatIndex);
+    if (chatId !== legacyChatKeyOf(chat, chatIndex)) await store.adoptFolder?.(chaId, legacyChatKeyOf(chat, chatIndex), chatId).catch(() => {});
     const messages = chat.message ?? [], last = group.at(-1), m = messages[last];
     const rx = prep ? await prep.entriesFor(character, chat) : [];
     const text = group.map((i) => group.length > 1 ? line(messages[i], i, 3000, rx) : clean(messages[i], rx).trim()).join("\n\n");
@@ -265,12 +267,12 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   async function backfill(charIndex, chatIndex, range, { signal, onProgress, redo = false } = {}) {
     // 캐릭터·채팅·폴더는 처음에 한 번만 읽는다(묶음마다 읽으면 수백 번 통째 복사 → 모바일 메모리 부족).
     const chat = await api.getChatFromIndex(charIndex, chatIndex), character = await api.getCharacterFromIndex(charIndex);
-    const folder = await store.getFolder(String(character.chaId), String(chat.id ?? chatIndex));
+    const folder = await store.getFolder(String(character.chaId), chatKeyOf(chat, chatIndex));
     const { groups } = planBackfill(chat.message ?? [], { ...range, all: redo }, folder);
     if (groups.length && isGenerating(character)) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
     // Dusk Cellar 서버 분석: 쓸 수 있으면(서버 연결·기억이 서버에 저장·서버가 부를 수 있는 모델) 서버에서 돌린다. 아니면 아래 기기 방식.
     if (server && groups.length && (await store.getIndex()).settings?.serverAnalysis !== false) {
-      const idx = await store.getIndex(), chaId = String(character.chaId), chatId = String(chat.id ?? chatIndex);
+      const idx = await store.getIndex(), chaId = String(character.chaId), chatId = chatKeyOf(chat, chatIndex);
       const smId = idx.settings?.serverModel?.presetId;   // 서버 분석 전용 '내 API' 프리셋(없으면 분석 모델 그대로 → 리스 쪽 모델이면 중계)
       const prep0 = await server.prepare(smId ? { mode: "custom", presetId: smId } : modelOf(idx.settings));
       if (prep0) {
@@ -309,7 +311,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     }
     if (failed.length) {  // 실패한 응답은 기억해 두었다가 현황에 '실패'로 보여 준다(성공하면 applyAnalysis가 지운다)
       const msgs = chat.message ?? [], hs = failed.flat().map((i) => messageIdentity(msgs[i]));
-      await store.updateFolder(String(character.chaId), String(chat.id ?? chatIndex), (f) => { f.failedBackfill = [...new Set([...(f.failedBackfill ?? []), ...hs])].slice(-500); }).catch(() => {});
+      await store.updateFolder(String(character.chaId), chatKeyOf(chat, chatIndex), (f) => { f.failedBackfill = [...new Set([...(f.failedBackfill ?? []), ...hs])].slice(-500); }).catch(() => {});
     }
     if (extras && !signal?.aborted) await extras.finish({ signal });
     return { total: groups.length, failed, reasons };

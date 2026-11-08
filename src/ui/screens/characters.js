@@ -313,7 +313,7 @@ async function drawCharacters(ctx) {
     h("span", { class: "rb-muted", style: "font-size:12px;white-space:nowrap" }, sort ? "폴더마다 따로 정렬해요 · 끌어서 순서 바꾸기는 원래대로에서" : "끌어서 정한 순서예요")
   ) : null;
   // 1.8.3(목업 4): 도구는 한 줄 — 정렬·폴더·개수(밖에 그대로) · 'AI로 봇 만들기' · '＋ 새 봇' · ···(선택·가져오기)
-  const aiBot = btn("AI로 봇 만들기", { size: "sm", kind: "primary", icon: "sparkle", onClick: () => createBotAndEdit(ctx, { tab: "ai" }) });
+  const aiBot = !ctx.ext?.get("svc", "aibuild") ? null : btn("AI로 봇 만들기", { size: "sm", kind: "primary", icon: "sparkle", onClick: () => createBotAndEdit(ctx, { tab: "ai" }) });
   const newBot = btn("새 봇", { size: "sm", icon: "plus", onClick: async () => {
     const name = await promptDialog(ctx.win, { title: "새 봇", label: "봇 이름", value: "새 봇" });
     if (name?.trim()) createBotAndEdit(ctx, { name });

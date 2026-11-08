@@ -27,8 +27,14 @@ const ui = (page) => page.evaluate(() => JSON.parse(__api.store["rbm:ui:v1"] ?? 
 { const page = await boot({ width: 1280, height: 800 }, { uiMode: "advanced", tourDone: true, tourVer: 3, theme: { preset: "teal", a: "#0f766e", b: "#0b5f59", mode: "dark" } });
   ok("[기존 사용자] 이 버전 처음 열면 한 번 뜬다", (await page.locator(".rb-onb").count()) === 1);
   await page.locator("#rb-onb-start").click(); await page.waitForTimeout(400);
+  ok("[기능] 1단계: 애드온 목록", (await page.locator(".rb-onb-addon").count()) === 2 && (await page.locator(".rb-onb-head h2").textContent()) === "쓸 기능을 골라요");
+  await page.locator(".rb-onb-addon[data-addon='cards'] [role=switch]").click(); await page.waitForTimeout(400);
+  ok("[기능] 켜면 바로 받고 필요한 애드온도 켜짐", (await page.evaluate(() => JSON.stringify(window.__addonLog))) === '[["install","cards"]]' && (await page.locator(".rb-onb-addon[data-addon='memory'] [role=switch]").getAttribute("aria-checked")) === "true");
+  await page.locator(".rb-onb-addon[data-addon='cards'] [role=switch]").click(); await page.waitForTimeout(400);
+  ok("[기능] 끄면 꺼 두기만(지우지 않음)", (await page.evaluate(() => window.__addonLog.at(-1).join())) === "setOn,cards,false");
+  await page.locator("#rb-onb-next").click(); await page.waitForTimeout(400);
   ok("[기존 사용자] 1단계: 지금 화면 모드(고급)가 골라져 있다", (await page.locator(".rb-onb [aria-label='화면 모드'] [aria-pressed=true], .rb-onb [aria-label='화면 모드'] .is-active, .rb-onb [aria-label='화면 모드'] [aria-checked=true]").first().textContent()).includes("고급"));
-  ok("[PC] 왼쪽 단계 목록 6개", (await page.locator(".rb-onb-steps li").count()) === 6);
+  ok("[PC] 왼쪽 단계 목록 7개", (await page.locator(".rb-onb-steps li").count()) === 7);
   await page.locator("#rb-onb-next").click(); await page.waitForTimeout(500);
   ok("[기존 사용자] 2단계: 지금 강조 색(청록)이 골라져 있다", (await page.locator(".rb-onb .rb-accpick[aria-pressed=true]").first().textContent()) === "청록");
   ok("[PC] 2단계 오른쪽: 미리보기·밝기·그라데이션 방향", (await page.locator(".rb-onb-side .rb-onb-prev").count()) === 1 && (await page.locator(".rb-onb-side [aria-label='그라데이션 방향']").count()) === 1);
@@ -47,6 +53,7 @@ const ui = (page) => page.evaluate(() => JSON.parse(__api.store["rbm:ui:v1"] ?? 
   ok("[4단계] 유저 편향 없애기를 켜면 공정한 전개도 켜짐·저장", (await sw("공정한 전개").getAttribute("aria-checked")) === "true" && await page.evaluate(() => __api.store["dusk.ui.fairPlay"] === "on" && __api.store["dusk.ui.fairDice"] === "on"));
   await page.locator("#rb-onb-next").click(); await page.waitForTimeout(600);
   ok("[5단계] 찾은 게 없으면 끝 단계로 넘어간다", (await page.locator(".rb-onb-head h2").textContent()) === "준비됐어요!");
+  ok("[끝] 요약에 고른 기능", /장기기억·관계도/.test(await page.locator(".rb-onb-sum", { hasText: "기능" }).textContent()));
   ok("[끝] 요약에 고른 내용", /벚꽃/.test(await page.locator(".rb-onb-sum", { hasText: "분위기" }).textContent()) && /공정한 전개/.test(await page.locator(".rb-onb-sum", { hasText: "이야기" }).textContent()));
   await page.locator(".rb-onb-sum", { hasText: "화면" }).locator(".rb-btn").click(); await page.waitForTimeout(400);
   ok("[끝] 바꾸기 → 그 단계로", (await page.locator(".rb-onb-head h2").textContent()) === "화면을 골라요");
@@ -57,8 +64,12 @@ const ui = (page) => page.evaluate(() => JSON.parse(__api.store["rbm:ui:v1"] ?? 
   await page.locator("#rb-set-onboard").click(); await page.waitForTimeout(400);
   ok("[설정] 시작 안내 다시 보기", (await page.locator(".rb-onb").count()) === 1);
   await page.close(); }
-// 3) 이미 본 사람: 안 뜬다
+// 3-0) 예전 버전(1)에서 본 사람: 2.0.0에서 한 번 더 뜬다
 { const page = await boot({ width: 1280, height: 800 }, { onboardDone: true, onboardVer: 1, tourDone: true, tourVer: 3 });
+  ok("[예전에 본 사람] 2.0.0에서 다시 뜬다", (await page.locator(".rb-onb").count()) === 1);
+  await page.close(); }
+// 3) 이미 본 사람: 안 뜬다
+{ const page = await boot({ width: 1280, height: 800 }, { onboardDone: true, onboardVer: 2, tourDone: true, tourVer: 3 });
   ok("[본 사람] 다시 안 뜬다", (await page.locator(".rb-onb").count()) === 0);
   await page.close(); }
 ok("오류 없음", !errs.length, errs.join(";"));

@@ -84,7 +84,7 @@ export async function renderProtLink(ctx) {
     busy.add(it.id); await paint();
     try {
       const r = await pl.apply(it.id, { onProgress: (p) => { const el = body.querySelector(`[data-id="${it.id}"] .pl-prog`); if (el) el.textContent = `받는 중 ${p.index + 1}/${p.count} · ${p.name}${p.total ? ` · ${Math.round((p.done / p.total) * 100)}%` : ""}`; } });
-      ctx.toast(r.kind === "plugin" ? `${r.names.join(", ")} 파일을 저장했어요. 리스에서 플러그인으로 넣어 주세요.` : "받았어요. 열린 가져오기 창에서 업데이트를 이어 가요.");
+      ctx.toast(r.kind === "plugin" ? (r.pluginUpdated ? "연결한 플러그인을 새 버전으로 바꿨어요. 리스를 새로고침하면 적용돼요." : `${r.names.join(", ")} 파일을 저장했어요. 리스에서 플러그인으로 넣어 주세요. (Dusk Cellar 플러그인 편집을 켜면 바로 바꿀 수 있어요)`) : "받았어요. 열린 가져오기 창에서 업데이트를 이어 가요.");
     } catch (e) { fail(e); } finally { busy.delete(it.id); await paint(); }
   }
   async function checkLink(it) {

@@ -11,8 +11,8 @@ export function userText(s) {
   const name = userLabel(), b = hasBatchim(name);
   return String(s ?? "").replace(/\{\{user\}\}(와|과|이|가|은|는|을|를)?/gi, (_, p) => name + (p ? PAIRS[p][b ? 0 : 1] : ""));
 }
-export async function loadUserName(ctx) {
-  try { setUserName(await loadPrimaryUserName(ctx.api)); } catch { /* 이름 없이 '나' */ }
+export async function loadUserName(ctx, opts = {}) {
+  try { setUserName(await loadPrimaryUserName(ctx.api, opts)); } catch { /* 이름 없이 '나' */ }
   return userLabel();
 }
 // 화면 조각 안의 글자를 바꾼다(입력칸·편집 영역은 건드리지 않음 — 저장 값이 바뀌면 안 되니까). 부분 갱신도 따라가게 지켜본다.

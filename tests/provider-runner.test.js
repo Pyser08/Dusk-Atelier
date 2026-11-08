@@ -193,3 +193,64 @@ test("번역기: 서식 토큰을 보호했다가 되돌리고 용어집·안내
   assert.match(sent, /⟦0⟧/); assert.match(sent, /더스크/); assert.match(sent, /존댓말로/); assert.doesNotMatch(sent, /<b>/);
   assert.equal(r.content, "안녕 <b> 세계");
 });
+
+test("재시도 대상 rate: 429만 같은 키로 다시, 503은 바로 실패", async () => {
+  const h = harness({ keys: { k1: "sk-only-key-1111" }, cfgOver: { connections: [{ id: "c1", kind: "openai", keyIds: ["k1"] }], profiles: [{ id: "p1", connectionId: "c1", model: "m", retry: 2 }], defaults: { retryOn: "rate", keyCooldownSec: 0 } }, script: [errRes(429, "slow"), sseRes([oa("ok"), oaEnd()])] }); await h.ready;
+  const r = await h.runner.handle(req({ mode: "other" })); assert.equal(r.content, "ok"); assert.equal(h.calls.length, 2);
+  const h2 = harness({ keys: { k1: "sk-only-key-1111" }, cfgOver: { connections: [{ id: "c1", kind: "openai", keyIds: ["k1"] }], profiles: [{ id: "p1", connectionId: "c1", model: "m", retry: 2 }], defaults: { retryOn: "rate" } }, script: [errRes(503, "busy"), sseRes([oa("ok"), oaEnd()])] }); await h2.ready;
+  const r2 = await h2.runner.handle(req({ mode: "other" })); assert.equal(r2.success, false); assert.equal(h2.calls.length, 1);
+});
+test("재시도 오류를 하나씩 기록하고 키는 가림", async () => {
+  const { createErrorLog } = await import("../src/engine/provider/errlog.js"); const errlog = createErrorLog({ max: 20 });
+  harness.extra = { errlog }; const h = harness({ keys: { k1: "sk-only-key-1111" }, cfgOver: { connections: [{ id: "c1", kind: "openai", keyIds: ["k1"] }], profiles: [{ id: "p1", connectionId: "c1", model: "m", retry: 2 }] }, script: [errRes(503, "busy sk-only-key-1111"), errRes(503, "busy"), sseRes([oa("fine"), oaEnd()])] }); await h.ready;
+  await h.runner.handle(req({ mode: "other" })); delete harness.extra; const rows = errlog.list().filter((x) => x.kind !== "ok");
+  assert.equal(rows.length, 2); assert.ok(rows.every((x) => x.status === 503 && x.model === "m")); assert.ok(!JSON.stringify(rows).includes("sk-only-key-1111"));
+});
+test("on-error 키 방식: 실패한 뒤에만 다음 키로", async () => {
+  const h = harness({ keys: { k1: "sk-key-one-1111", k2: "sk-key-two-2222" }, cfgOver: { connections: [{ id: "c1", kind: "openai", keyIds: ["k1", "k2"], keyMode: "on-error" }] }, script: [sseRes([oa("a"), oaEnd()]), sseRes([oa("b"), oaEnd()]), errRes(429, "rate"), sseRes([oa("c"), oaEnd()])] }); await h.ready;
+  const auth = (c) => JSON.stringify(c.req.headers);
+  await h.runner.handle(req({ mode: "other" })); await h.runner.handle(req({ mode: "other" })); await h.runner.handle(req({ mode: "other" }));
+  assert.ok(auth(h.calls[0]).includes("1111") && auth(h.calls[1]).includes("1111") && auth(h.calls[2]).includes("1111") && auth(h.calls[3]).includes("2222"));
+});
+
+test("성공한 요청도 기록에 한 줄 남고 내용은 저장 안 함", async () => {
+  const { createErrorLog } = await import("../src/engine/provider/errlog.js"); const errlog = createErrorLog({ max: 20 });
+  harness.extra = { errlog }; const h = harness({ keys: { k1: "sk-only-key-1111" }, cfgOver: { connections: [{ id: "c1", kind: "openai", keyIds: ["k1"] }], profiles: [{ id: "p1", connectionId: "c1", model: "m" }] }, script: [sseRes([oa("비밀 본문"), oaEnd()])] }); await h.ready;
+  const r = await h.runner.handle(req({ mode: "other" })); if (typeof r.content !== "string") await collect(r.content); delete harness.extra;
+  const rows = errlog.list(); assert.equal(rows.length, 1); assert.equal(rows[0].kind, "ok"); assert.equal(rows[0].status, 200); assert.ok(!JSON.stringify(rows).includes("비밀 본문"));
+});
+
+test("캐시 학습: 두 번째 요청에 앞부분 끝 표시(Claude)", async () => {
+  const an = (t) => `event: content_block_delta\ndata: {"type":"content_block_delta","delta":{"type":"text_delta","text":${JSON.stringify(t)}}}\n\nevent: message_stop\ndata: {"type":"message_stop"}\n\n`;
+  const h = harness({ keys: { k1: "sk-ant-key-1111" }, cfgOver: { connections: [{ id: "c1", kind: "anthropic", keyIds: ["k1"] }], profiles: [{ id: "p1", connectionId: "c1", model: "claude-sonnet-4", cache: { claude: "5m", learn: true, breakpoints: 1 } }] }, script: [sseRes([an("a")]), sseRes([an("b")])] }); await h.ready;
+  const turns = (n) => [{ role: "system", content: "S" }, ...Array.from({ length: n }, (_, i) => ({ role: i % 2 ? "char" : "user", content: `m${i}` }))];
+  const a = await h.runner.handle(req({ prompt_chat: turns(4) })); if (typeof a.content !== "string") await collect(a.content);
+  const second = turns(6); second[4] = { role: "user", content: "바뀜" };
+  const b = await h.runner.handle(req({ prompt_chat: second })); if (typeof b.content !== "string") await collect(b.content);
+  const marks = (c) => c.req.body.messages.map((m, i) => (m.content.some((x) => x.cache_control) ? i : -1)).filter((i) => i >= 0);
+  assert.ok(marks(h.calls[1]).includes(2), JSON.stringify(marks(h.calls[1])));   // 앞 3개(m0~m2)가 같았으니 인덱스 2
+});
+
+test("라우터: 조건에 맞으면 그 프로필, 요청이 직접 고른 프로필은 우선", async () => {
+  const router = { enabled: true, rules: [{ id: "r", name: "긴 글", minChars: 10, profileId: "p2" }] };
+  const h = harness({ cfgOver: { router }, script: [sseRes([oa("x"), oaEnd()])] }); await h.ready;
+  const r = await h.runner.handle(req({ prompt_chat: [{ role: "user", content: "열 글자가 넘는 아주 긴 메시지입니다" }] })); if (typeof r.content !== "string") await collect(r.content);
+  assert.match(h.calls[0].req.url, /anthropic/);
+  const h2 = harness({ cfgOver: { router }, script: [sseRes([oa("y"), oaEnd()])] }); await h2.ready;
+  const r2 = await h2.runner.handle(req({ __profile: "p1", prompt_chat: [{ role: "user", content: "열 글자가 넘는 아주 긴 메시지입니다" }] })); if (typeof r2.content !== "string") await collect(r2.content);
+  assert.doesNotMatch(h2.calls[0].req.url, /anthropic/);
+});
+
+test("훅: 응답 훅이 있으면 한번에 받아 고침", async () => {
+  const cfgOver = { hooks: [{ id: "h", name: "꼬리", post: { find: "\\s*\\(끝\\)$", replace: "" } }] };
+  const h = harness({ cfgOver, script: [sseRes([oa("안녕 (끝)"), oaEnd()])] }); await h.ready;
+  const r = await h.runner.handle(req()); assert.equal(typeof r.content, "string"); assert.equal(r.content, "안녕");
+});
+test("MCP 도구: 읽기 전용은 바로, 쓰기는 확인을 거침", async () => {
+  const mcpSrv = { id: "m", name: "메모", url: "https://x.test/mcp", tools: [{ name: "get", description: "읽기", inputSchema: { type: "object", properties: {} }, annotations: { readOnlyHint: true } }, { name: "put", description: "쓰기", inputSchema: { type: "object", properties: {} } }], allowWrite: true };
+  const called = []; const mcp = { call: async (srv, tool, args) => { called.push(tool); return `결과:${tool}`; } }; let asked = 0;
+  const toolText = (name) => `<tool_call name="${name}">{}</tool_call>`;
+  harness.extra = { mcp, confirm: async () => { asked++; return false; } };
+  const h = harness({ cfgOver: { mcp: { servers: [mcpSrv] } }, script: [sseRes([oa(toolText("mcp_m_get")), oaEnd()]), sseRes([oa(toolText("mcp_m_put")), oaEnd()]), sseRes([oa("끝"), oaEnd()])] }); delete harness.extra; await h.ready;
+  const r = await h.runner.handle(req()); assert.equal(r.content, "끝"); assert.deepEqual(called, ["get"]); assert.equal(asked, 1);   // put은 거절되어 실행 안 됨
+});

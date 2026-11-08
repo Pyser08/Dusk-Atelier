@@ -155,3 +155,13 @@ test("peekCurrent: 위치가 같으면 채팅 통째 복사를 기다리지 않�
   await new Promise((r) => setTimeout(r, 50));
   assert.equal(changed?.chaId, "B", "달라졌으면 알림");
 });
+
+test("리수폿 켜기·끄기는 모든 봇·채팅 일괄이다(봇 하나에서 눌러도)", async () => {
+  const api = mockApi(), st = createMemoryStoreV3(api);
+  const sw = createSwitches({ api, store: st, flow: { apply: async () => {} } });
+  await sw.setPot("ba", true);
+  assert.equal((await sw.state("other")).pot.on, true);
+  await sw.setPot("ba", false);
+  assert.equal((await sw.state("other")).pot.on, false);
+  assert.equal(await sw.potAllOn(), false);
+});

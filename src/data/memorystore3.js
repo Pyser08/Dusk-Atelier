@@ -36,7 +36,8 @@ export function createMemoryStoreV3(api, { storage } = {}) {
   const get = async (k) => parse(await rawGet(k));
   const set = async (k, v) => {
     raws.delete(k);
-    try { return await ps.setItem(k, JSON.stringify(v)); } finally { raws.delete(k); }
+    // 일부 호스트는 실패를 throw 대신 false로 알린다 → 저장 실패로 처리(버그 1: 실패를 성공으로 보고 계속 진행하던 문제)
+    try { const r = await ps.setItem(k, JSON.stringify(v)); if (r === false) throw new Error("저장소에 쓰지 못했어요(용량 부족 또는 권한)."); return r; } finally { raws.delete(k); }
   };
   const rm = (k) => { raws.delete(k); return ps.removeItem(k); };
 
@@ -80,6 +81,30 @@ export function createMemoryStoreV3(api, { storage } = {}) {
       await writeFolder(idx, folder);
       if (!opts.fromRuntime && folder.wiki && (folder.wiki !== wiki0 || folder.wiki.revision !== rev0)) for (const l of wikiListeners) { try { l(String(chaId), String(chatId)); } catch { /* 알림 실패는 저장에 영향 없음 */ } }
       return r;
+    }),
+    // 예전 키(chat.id)로 쌓인 기억을 지금 범위 키 폴더로 옮긴다(engine/chatkey.js). 비어 있는 칸만 채우고 원래 폴더는 둔다.
+    // 예전 키(chat.id)로 쌓인 기억을 지금 범위 키 폴더로 옮긴다(engine/chatkey.js). 모든 칸을 보고, 비어 있는 칸·없는 항목만 채운다.
+    // 위키는 지금 폴더에 이미 있으면(런타임이 쓴 것) 그대로 둔다. 원래 폴더는 지우지 않는다. 한 번 옮기면 adoptedFrom으로 다시 안 함.
+    adoptFolder: (chaId, fromChatId, toChatId) => serial(async () => {
+      if (!fromChatId || String(fromChatId) === String(toChatId)) return false;
+      const existing = await readFolder(chaId, toChatId);
+      if (existing?.adoptedFrom === String(fromChatId)) return false;
+      const old = await readFolder(chaId, fromChatId); if (!old) return false;
+      const idx = await readIndex();
+      const cur = existing ?? blank(chaId, toChatId, { botName: old.botName, chatName: old.chatName });
+      const empty = (v) => v == null || v === "" || (Array.isArray(v) ? !v.length : typeof v === "object" && !Object.keys(v).length);
+      const plain = (v) => v && typeof v === "object" && !Array.isArray(v);
+      let moved = false;
+      for (const [k, ov] of Object.entries(old)) {
+        if (["v", "chaId", "chatId", "adoptedFrom"].includes(k) || empty(ov)) continue;
+        const cv = cur[k];
+        if (empty(cv)) { cur[k] = ov; moved = true; continue; }
+        if (k === "wiki") continue;
+        if (plain(cv) && plain(ov)) for (const [sk, sv] of Object.entries(ov)) if (!(sk in cv)) { cv[sk] = sv; moved = true; }
+      }
+      cur.adoptedFrom = String(fromChatId);
+      await writeFolder(idx, cur);
+      return moved;
     }),
     deleteFolder: (chaId, chatId) => serial(async () => {
       const idx = await readIndex(); const id = folderIdOf(chaId, chatId);

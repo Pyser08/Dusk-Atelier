@@ -145,16 +145,25 @@ export function createProtLink(api, { log = () => {}, load = loadProtLinkOn, dri
         catch (e) { if (signal?.aborted) throw e; throw new Error(`${f.name}: ${errText(e)}`); }
         got.push({ name: f.name, bytes });
       }
-      if (l.kind === "plugin") { for (const g of got) await hooks.saveFile?.(g.name, g.bytes); }
+      // 플러그인: 연결한 플러그인이 있고 코드를 바꿀 길(Dusk Cellar 플러그인 편집)이 있으면 바로 바꾼다. 없으면 파일로 저장(플러그인 api로는 목록에 쓸 수 없음).
+      let updated = false;
+      if (l.kind === "plugin") {
+        const js = got.find((g) => /\.js$/i.test(g.name));
+        if (js && l.target?.id && hooks.updatePlugin) {
+          try { updated = !!(await hooks.updatePlugin(l.target.id, new TextDecoder().decode(js.bytes))); } catch (e) { l.error = `플러그인을 바로 바꾸지 못해 파일로 저장했어요: ${errText(e)}`; }
+        }
+        if (!updated) for (const g of got) await hooks.saveFile?.(g.name, g.bytes);
+      }
       else {
         const files = got.map((g) => new File([g.bytes], g.name, { type: "application/octet-stream" }));
         if (!hooks.importFiles) throw new Error("이 환경에서는 가져오기 창을 열 수 없어요.");
         await hooks.importFiles(files, l.target ? { kind: l.kind, id: l.target.id } : undefined);
       }
       if (l.latest.length) l.files = l.latest;
-      l.pending = []; l.error = "";
+      const warn = l.error.startsWith("플러그인을 바로") ? l.error : "";
+      l.pending = []; l.error = warn;
       await saveLinks();
-      return { names: got.map((g) => g.name), kind: l.kind, summary: summary(l) };
+      return { names: got.map((g) => g.name), kind: l.kind, summary: summary(l), pluginUpdated: updated };
     },
     // 연결 없이 한 번만: 받아서 가져오기 창으로 넘긴다(대상은 가져오기 창에서 고른다)
     async once(url, password, files, { signal, onProgress } = {}) {
