@@ -98,13 +98,13 @@
     {
       "id": "widgets",
       "name": "위젯",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "minCore": "1.9.2",
       "hooks": false,
       "desc": "음악·사진·시계·최근 대화·메모·D-day·타이머 등을 한 화면에 모은 위젯 홈을 써요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/widgets.js",
-      "sha256": "c88509896441aa3d2115a89c184211306e91078db50dff7e4c344dac7141eb1b",
-      "size": 252119
+      "sha256": "68bc3eee4d565a4ca2a808dafc0ca75446215ac88db7be2444cd75c077abbd1a",
+      "size": 252306
     },
     {
       "id": "stealth",
