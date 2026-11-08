@@ -287,3 +287,23 @@ test("raw가 엉뚱한 응답을 주면 jsDelivr 사본으로 받아 설치", as
   assert.ok(A.running("a"));
   assert.equal(toJsdelivr("https://x/y"), null);
 });
+
+test("파일 대신 목록이 오면 주소를 바꿔 다시 받아 설치", async () => {
+  const kv = new Map();
+  const store = { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } };
+  const api = { getLocalPluginStorage: () => store, pluginStorage: store };
+  const body = "ok:retry";
+  const man = JSON.stringify({ format: 1, addons: [{ id: "a", name: "A", version: "1.0.0", minCore: "2.0.0", url: "https://x/a.js", sha256: await H(body) }] });
+  let n = 0;
+  const fetcher = async (_a, url) => (url.includes("addons.json") ? man : ++n === 1 ? man : body);
+  const A = createAddons(api, { core: "2.0.0", fetcher, timers: { setTimeout: (f) => f(), setInterval: () => 0 }, importer: async () => ({ activate: async () => ({}) }), log: () => {} });
+  await A.loadManifest(); await A.install("a");
+  assert.ok(A.running("a"));
+});
+test("nativeFetch는 한 번에 하나씩 부른다", async () => {
+  const { fetchText } = await import("../src/data/addons.js");
+  let live = 0, max = 0;
+  const api = { nativeFetch: async (u) => { live++; max = Math.max(max, live); await new Promise((r) => setTimeout(r, 5)); live--; return u; } };
+  await Promise.all(["a", "b", "c"].map((u) => fetchText(api, u)));
+  assert.equal(max, 1);
+});
