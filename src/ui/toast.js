@@ -19,7 +19,7 @@ export function createHostToast(getDoc) {
   }
   return {
     /** 띄웠으면 true (권한이 없으면 false → 대신 창을 띄운다) */
-    async show({ title, text, action = "눌러서 고르기", onClick, ms = 45e3 }) {
+    async show({ title, text, action = "눌러서 고르기", onClick, ms = 45e3, icon = "🔗" }) {
       const doc = getDoc();
       if (!doc) return false;
       try {
@@ -34,7 +34,7 @@ export function createHostToast(getDoc) {
           main.setStyleAttribute("flex:1;min-width:0;display:flex;gap:12px;align-items:center;padding:14px 4px 14px 16px;cursor:pointer"),
           x.setStyleAttribute("flex:none;width:36px;display:flex;align-items:flex-start;justify-content:center;padding-top:10px;cursor:pointer;color:#9d99c1;font-size:18px"),
           x.setInnerText("×"),
-          main.setInnerHTML(`<span style="flex:none;display:inline-block;width:34px;height:34px;line-height:34px;text-align:center;border-radius:10px;background:linear-gradient(135deg,#4f7cf7,#7c5cf0);font-size:17px">🔗</span><span style="flex:1;min-width:0"><b style="display:block;font-size:14px;color:#ffffff">${esc(title)}</b><span style="display:block;font-size:13px;color:#b1aecb;word-break:keep-all">${esc(text)}</span><span style="display:block;margin-top:4px;font-size:12px;font-weight:700;color:#c4b1ff">${esc(action)} →</span></span>`),
+          main.setInnerHTML(`<span style="flex:none;display:inline-block;width:34px;height:34px;line-height:34px;text-align:center;border-radius:10px;background:linear-gradient(135deg,#4f7cf7,#7c5cf0);font-size:17px">${esc(icon)}</span><span style="flex:1;min-width:0"><b style="display:block;font-size:14px;color:#ffffff">${esc(title)}</b><span style="display:block;font-size:13px;color:#b1aecb;word-break:keep-all">${esc(text)}</span><span style="display:block;margin-top:4px;font-size:12px;font-weight:700;color:#c4b1ff">${esc(action)} →</span></span>`),
           main.addEventListener("click", () => {
             close();
             onClick?.();

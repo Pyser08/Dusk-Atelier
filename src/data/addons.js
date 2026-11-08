@@ -12,6 +12,7 @@ import { scopeApi, createProviderRelay } from "./addonscope.js";
 export const ADDON_MANIFEST_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/addons.json";
 export const ADDON_URL_KEY = "dusk.addon.manifestUrl";
 export const ADOPT_KEY = "dusk.addon.adopted.v2";
+export const SEEN_KEY = "dusk.addon.seen.v1";   // 목록에서 본 적 있는 애드온 id(새로 생긴 애드온 알림용)
 const INDEX_KEY = "dusk.addon.index", CODE = (id) => `dusk.addon.code.${id}`, PREV = (id) => `dusk.addon.prev.${id}`;
 // 업데이트 확인: 켜질 때 한 번 + 실행 중 1시간마다 + Dusk 창을 열 때(마지막 확인이 10분 넘었으면).
 // 예전엔 켜질 때 한 번뿐이라 리스를 켜 둔 채로는 새 애드온을 못 받았다.
@@ -53,7 +54,7 @@ export async function importCode(code, id = "addon") {
 }
 
 
-export function createAddons(api, { core, ctx = {}, onPendingRestart = null, timers = globalThis, fetcher = fetchText, importer = importCode, hasher = sha256, now = () => Date.now(), log = (m) => console.log(`[Dusk Atelier] 애드온: ${m}`) } = {}) {
+export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onNewAddons = null, timers = globalThis, fetcher = fetchText, importer = importCode, hasher = sha256, now = () => Date.now(), log = (m) => console.log(`[Dusk Atelier] 애드온: ${m}`) } = {}) {
   let storeP = null;
   const S = () => (storeP ??= storeOf(api));
   // 값은 문자열로만 저장한다(호스트마다 객체 저장 방식이 달라서)
@@ -254,12 +255,24 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
   }
 
   // 업데이트 확인(뒤에서). force가 아니면 1시간에 한 번.
+  // 받지 않은 새 애드온이 목록에 생기면 알린다. 처음엔 기준만 잡고(지금 목록 전부를 본 것으로), 버전만 오른 것은 알리지 않는다.
+  async function noticeNew(list) {
+    const raw = await store.getItem(SEEN_KEY).catch(() => null);
+    let seen = null; try { seen = raw ? (typeof raw === "string" ? JSON.parse(raw) : raw) : null; } catch { seen = null; }
+    const ids = list.map((a) => a.id);
+    if (!Array.isArray(seen)) { await store.setItem(SEEN_KEY, ids); return []; }
+    const idx = await getIndex();
+    const fresh = list.filter((a) => !seen.includes(a.id) && !idx[a.id] && fitsCore(a, core));
+    if (fresh.length) { await store.setItem(SEEN_KEY, [...new Set([...seen, ...ids])]); try { onNewAddons?.(fresh.map((a) => ({ id: a.id, name: a.name, desc: a.desc }))); } catch { /* 알림 실패는 무시 */ } }
+    return fresh;
+  }
   async function check({ force = false, fresh = false } = {}) {
     if (!force && now() - lastCheck < CHECK_EVERY - 60e3) return { updates: [], held: [] };
     lastCheck = now();
     try {
       const list = await loadManifest(fresh);
       const res = pickUpdates(await getIndex(), list, core);
+      await noticeNew(list).catch(() => {});
       for (const r of await installMany(res.updates.map((a) => a.id))) log(r.ok ? `${r.id} 업데이트했어요` : `${r.id} 업데이트 실패 ${r.error}`);   // 동시에 받는다
       lastError = ""; emit();
       return res;

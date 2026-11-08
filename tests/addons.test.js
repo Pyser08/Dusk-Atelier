@@ -223,3 +223,20 @@ test("'업데이트 확인' 버튼(fresh): 브랜치 최신 커밋으로 고정�
   assert.equal((await A.getIndex()).a?.version, "1.1.0", "버튼 한 번에 최신으로");
   assert.equal(r.error, undefined);
 });
+
+test("새로 생긴 애드온만 알린다(처음 확인·버전만 오른 것·이미 받은 것은 알리지 않음)", async () => {
+  const { createAddons } = await import("../src/data/addons.js");
+  const files = new Map(), store = { getItem: async (k) => files.get(k) ?? null, setItem: async (k, v) => { files.set(k, v); }, removeItem: async (k) => { files.delete(k); } };
+  let list = [{ id: "a", name: "A", version: "1.0.0" }];
+  const man = async () => JSON.stringify({ format: 1, addons: await Promise.all(list.map(async (x) => ({ ...x, minCore: "2.0.0", url: `https://x/${x.id}.js`, sha256: await sha256(new TextEncoder().encode("//" + x.version)) }))) });
+  const seen = [];
+  const A = createAddons({ pluginStorage: store }, { core: "2.0.0", onNewAddons: (xs) => seen.push(xs.map((x) => x.id)), fetcher: async (_a, url) => (url.split("?")[0].endsWith("addons.json") ? await man() : "//" + list.find((x) => url.includes(`/${x.id}.js`)).version), importer: async () => ({ activate: async () => ({}) }) });
+  await A.check({ force: true });
+  assert.deepEqual(seen, [], "처음 확인은 기준만 잡음");
+  list = [{ id: "a", name: "A", version: "1.1.0" }, { id: "b", name: "B", version: "0.1.0" }];
+  await A.check({ force: true });
+  assert.deepEqual(seen, [["b"]], "b만 새로 생김");
+  list = [{ id: "a", name: "A", version: "1.2.0" }, { id: "b", name: "B", version: "0.2.0" }];
+  await A.check({ force: true });
+  assert.deepEqual(seen, [["b"]], "버전만 오르면 알리지 않음");
+});
