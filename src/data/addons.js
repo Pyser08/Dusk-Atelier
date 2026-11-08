@@ -51,7 +51,7 @@ export function latin1ToUtf8(t) {
 let nativeQ = Promise.resolve();
 export async function fetchText(api, url) {
   if (typeof api.nativeFetch === "function") {
-    const run = nativeQ.then(() => api.nativeFetch(url, { method: "GET" })).then(readText).catch(() => null);   // method 없으면 POST
+    const run = nativeQ.then(() => api.nativeFetch(url, { method: "GET", headers: { "x-dusk-req": url } })).then(readText).catch(() => null);   // method 없으면 POST
     nativeQ = run.then(() => {}, () => {});
     const t = await run;
     if (t != null) return t;
@@ -209,6 +209,15 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     if (fetcher === fetchText && typeof fetch === "function") {
       const t = await readText(await fetch(url, { cache: "no-store" }).catch(() => null));
       if (await ok(t)) return t;
+    }
+    // nativeFetch가 계속 다른 응답(목록)을 주는 호스트 → risuFetch로 통째로 받아 본다
+    if (fetcher === fetchText && typeof api.risuFetch === "function") {
+      try {
+        const r = await api.risuFetch(a.url, { method: "GET", rawResponse: true });
+        const d = r?.data;
+        const t = typeof d === "string" ? d : d instanceof Uint8Array || d instanceof ArrayBuffer ? new TextDecoder().decode(d) : Array.isArray(d) ? new TextDecoder().decode(Uint8Array.from(d)) : null;
+        if (await ok(t)) return t;
+      } catch { /* 아래로 */ }
     }
     // 리스 웹·포켓리스는 공용 프록시로 받아 raw.githubusercontent가 IP 제한(429) 안내를 줄 수 있다 → jsDelivr 사본으로
     const mirror = toJsdelivr(pin && a.url.startsWith(pin.from) ? pinned(a.url) : a.url);
