@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseManifest, pickUpdates, cmpVer, rowState } from "../src/engine/addons.js";
-import { createAddons, latin1ToUtf8 } from "../src/data/addons.js";
+import { createAddons, latin1ToUtf8, toJsdelivr } from "../src/data/addons.js";
 import { sha256 } from "../src/engine/hash.js";
 
 const H = (c) => sha256(new TextEncoder().encode(c));
@@ -272,4 +272,18 @@ test("호스트가 UTF-8을 latin1로 풀어 줘도 되살려 설치", async () 
   await A.loadManifest(); await A.install("a");
   assert.ok(A.running("a"));
   assert.equal(latin1ToUtf8("abc"), null);
+});
+
+test("raw가 엉뚱한 응답을 주면 jsDelivr 사본으로 받아 설치", async () => {
+  const kv = new Map();
+  const store = { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } };
+  const api = { getLocalPluginStorage: () => store, pluginStorage: store };
+  const body = "ok:mirror";
+  const raw = "https://raw.githubusercontent.com/o/r/addons/addons/dist/a.js";
+  const man = JSON.stringify({ format: 1, addons: [{ id: "a", name: "A", version: "1.0.0", minCore: "2.0.0", url: raw, sha256: await H(body) }] });
+  const fetcher = async (_a, url) => (url.includes("addons.json") ? man : url.startsWith("https://cdn.jsdelivr.net/gh/o/r@addons/addons/dist/a.js") ? body : "<html>429 Too Many Requests</html>");
+  const A = createAddons(api, { core: "2.0.0", fetcher, importer: async () => ({ activate: async () => ({}) }), log: () => {} });
+  await A.loadManifest(); await A.install("a");
+  assert.ok(A.running("a"));
+  assert.equal(toJsdelivr("https://x/y"), null);
 });
