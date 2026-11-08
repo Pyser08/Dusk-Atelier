@@ -165,7 +165,7 @@ async function start() {
   const loreRuntime = createLoreRuntime(api);
   loreRuntime.start().catch((e) => console.log(`[${TITLE}] 로어북 규칙 시작 실패: ${e?.message ?? e}`));
   // 로어북 로그: 응답마다 들어간 로어북을 남기고, 응답 아래에 버튼을 붙인다
-  const loreLog = createLoreLog(api, { loreRuntime, above: (t) => mem()?.gauge?.onDisplay?.(t) ?? "" });
+  const loreLog = createLoreLog(api, { loreRuntime, above: (t) => mem()?.gauge?.onDisplay?.(t) ?? t });
   loreLog.start().catch((e) => console.log(`[${TITLE}] 로어북 로그 시작 실패: ${e?.message ?? e}`));
   const turnInfo = createTurnInfo(api, { diceSource: () => fairPlay.lastDice(), loreFor: (t) => loreLog.recordFor(t), loreLast: () => loreLog.last() });   // 주사위 결과·모델 호출 표시 (1.8.3)
   turnInfo.start().catch((e) => console.log(`[${TITLE}] 호출 표시 시작 실패: ${e?.message ?? e}`));
