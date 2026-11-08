@@ -181,7 +181,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     const code = await fetcher(api, pin && a.url.startsWith(pin.from) ? pinned(a.url) : bust(a.url, `v=${a.sha256.slice(0, 12)}`));
     if (typeof code !== "string") throw new Error("파일을 받지 못했어요");
     const got = await hasher(new TextEncoder().encode(code));
-    if (got !== a.sha256) throw new Error("파일 확인값이 목록과 달라요");
+    if (got !== a.sha256) throw new Error(`파일 확인값이 목록과 달라요 (받은 ${code.length}자 ${got.slice(0, 8)} / 목록 ${a.sha256.slice(0, 8)})`);
     return code;
   }
 
