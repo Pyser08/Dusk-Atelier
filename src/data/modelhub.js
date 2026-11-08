@@ -11,12 +11,12 @@ const state = new WeakMap(); // api → { keys, cfg, usage }
 const parse = (raw) => { try { return raw ? (typeof raw === "string" ? JSON.parse(raw) : raw) : null; } catch { return null; } };
 
 async function hub(api) {
-  let s = state.get(api);
+  let s = state.get(api?.[Symbol.for("dusk.baseApi")] ?? api);
   if (s) return s;
   s = { keys: new LocalKeyStore(api), cfg: normalizeCfg(parse(await api.pluginStorage.getItem(CFG_KEY))), usage: null, saveT: null };
   const u = parse(await api.pluginStorage.getItem(USAGE_KEY));
   s.usage = u?.total && u?.by ? u : emptyUsage();
-  state.set(api, s);
+  state.set(api?.[Symbol.for("dusk.baseApi")] ?? api, s);
   return s;
 }
 

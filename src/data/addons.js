@@ -6,6 +6,7 @@
 // - 저장: getLocalPluginStorage(RisuAI=콜드스토리지·동기화, Bard/Pocket=서버 KV) → 없으면 pluginStorage.
 import { sha256 } from "../engine/hash.js";
 import { parseManifest, pickUpdates, fitsCore, installOrder } from "../engine/addons.js";
+import { scopeApi, createProviderRelay } from "./addonscope.js";
 
 // 애드온 목록은 배포 전용 브랜치 addons에서 읽는다(작업 브랜치에 푸시해도 사용자에게 바로 퍼지지 않게). 올리기: node tools/publish-addons.mjs
 export const ADDON_MANIFEST_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/addons.json";
@@ -51,6 +52,7 @@ export async function importCode(code, id = "addon") {
   try { return await import(/* webpackIgnore: true */ url); } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
 }
 
+
 export function createAddons(api, { core, ctx = {}, onPendingRestart = null, timers = globalThis, fetcher = fetchText, importer = importCode, hasher = sha256, now = () => Date.now(), log = (m) => console.log(`[Dusk Atelier] 애드온: ${m}`) } = {}) {
   let storeP = null;
   const S = () => (storeP ??= storeOf(api));
@@ -81,18 +83,26 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
   };
   const manifestUrl = async () => { try { const v = await api.pluginStorage?.getItem(ADDON_URL_KEY); return typeof v === "string" && /^https:\/\//.test(v) ? v : ADDON_MANIFEST_URL; } catch { return ADDON_MANIFEST_URL; } };
 
+  // 애드온마다 따로 쓰는 api(addonscope.js): 끌 때 그 애드온이 단 훅을 모두 떼서, 훅 애드온도 새로고침 없이 갈아 끼운다
+  const relay = createProviderRelay(api);
   async function start(id, code, version) {
     const mod = await importer(code, id);
     if (typeof mod?.activate !== "function") throw new Error("activate 함수가 없어요");
-    const handle = (await mod.activate(api, { ...ctx, addonId: id, version })) ?? {};
-    running.set(id, { mod, handle, version });
+    const scope = scopeApi(api, relay);
+    let handle;
+    try { handle = (await mod.activate(scope.api, { ...ctx, addonId: id, version })) ?? {}; }
+    catch (e) { await scope.cleanup(); throw e; }
+    running.set(id, { mod, handle, version, scope });
   }
   async function stop(id) {
     const r = running.get(id);
     if (!r) return;
     running.delete(id);
     try { await (r.handle.deactivate ?? r.mod.deactivate)?.(); } catch (e) { log(`${id} 끄기 실패 ${e?.message ?? e}`); }
+    await r.scope?.cleanup();
   }
+  // 이 애드온을 필요로 하며 켜져 있는 애드온들(다시 켤 때 새 버전을 보게 함께 다시 켠다)
+  const dependents = (idx, id) => Object.entries(idx).filter(([o, v]) => o !== id && running.has(o) && (v.requires ?? []).includes(id)).map(([o]) => o);
 
   // 시작: 저장해 둔 코드로 바로 켠다(네트워크 기다리지 않음). 실패하면 전 버전으로.
   async function boot() {
@@ -196,11 +206,14 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
     await store.setItem(CODE(id), code);
     idx[id] = { version: a.version, sha256: a.sha256, on: cur?.on ?? true, at: now(), prev: cur ? { version: cur.version, sha256: cur.sha256 } : undefined, requires: a.requires?.length ? a.requires : undefined };
     await setIndex(idx, [id]);
-    const now_ = applyNow ?? (!a.hooks || !running.has(id));
+    const now_ = applyNow ?? true;   // 훅 애드온도 바로(addonscope가 예전 훅을 떼 준다)
     if (idx[id].on && now_) {
+      const deps = dependents(idx, id);
+      for (const d of deps) await stop(d);
       await stop(id);
       try { await start(id, code, a.version); }
       catch (e) { if (!(await rollback(id, idx))) { idx[id].on = false; idx[id].error = String(e?.message ?? e); await setIndex(idx, [id]); } throw e; }
+      finally { for (const d of deps) { try { await start(d, await store.getItem(CODE(d)), idx[d]?.version); } catch (e) { log(`${d} 다시 켜기 실패 ${e?.message ?? e}`); } } }
     } else if (idx[id].on) {
       idx[id].pendingRestart = true; await setIndex(idx, [id]);
       // 훅이 있는 애드온은 다음 시작부터 새 버전 → 새로고침을 부탁하는 안내(main.js)

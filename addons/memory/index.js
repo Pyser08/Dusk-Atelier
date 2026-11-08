@@ -1,6 +1,6 @@
 // 장기기억·관계도 애드온(2.0.0): 장기 기억(기록·주입·턴 흐름·리수폿 위키), 인물 관계도, 회귀, 호감도 HUD.
 // 저장 데이터·설정 키(dusk.mem.v3.*, risupot.*, dusk.ui.memoryButton 등)는 그대로라 애드온을 다시 받으면 이어서 써요.
-// 요청 훅(beforeRequest 주입)이 있어 업데이트는 다음 시작부터 적용돼요(hooks:true).
+// 요청 훅(beforeRequest 주입)이 있어요(hooks:true). 코어 2.0.0 로더가 끌 때 훅을 떼 주므로 업데이트도 바로 적용돼요.
 import { createMemory } from "../../src/data/memory.js";
 import { createAffHud } from "../../src/data/affhud.js";
 import { createMemoryButton } from "../../src/data/memorybutton.js";
