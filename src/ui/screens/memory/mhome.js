@@ -55,6 +55,10 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     h("div", { class: "rb-mem-tokpair", style: "display:flex;gap:8px;flex-wrap:wrap" },
       num("목표(최소)", () => inj.targetTokens ?? 2000, (s, v) => { s.inject ??= {}; s.inject.targetTokens = v; if ((s.inject.capTokens ?? 0) < v) s.inject.capTokens = v; }, { min: 200, max: 8000, step: 100 }),
       num("상한(최대)", () => inj.capTokens ?? 8000, (s, v) => { s.inject ??= {}; s.inject.capTokens = Math.max(v, s.inject.targetTokens ?? 0); }, { min: 200, max: 12000, step: 100 }))));
+  // 요약된 옛 대화 빼고 보내기(2.0.1): 하이파처럼 전체 문맥을 줄인다. 기본 꺼짐
+  memOptions.append(orow("요약된 옛 대화 빼고 보내기", "장기 기억에 이미 정리된 옛 대화는 모델에 보내지 않아 전체 토큰이 줄어요. 최근 대화와 아직 정리 안 된 대화는 그대로 보내요.", inj.trimOld === true, (o, v) => { o.trimOld = v; }),
+    h("div", { class: "rb-srow rb-mem-trimkeep", id: "rb-mem-trimkeep" }, h("span", { class: "t" }, "남길 최근 턴", h("small", null, "이만큼의 최근 대화(내 말 기준)는 늘 그대로 보내요.")),
+      num("턴", () => inj.trimKeep ?? 20, (s, v) => { s.inject ??= {}; s.inject.trimKeep = v; }, { min: 4, max: 200, step: 1 })));
   memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 리수폿 위키 기록과 Erosync도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
   // 리수폿 일괄 켜기·끄기(모든 봇·채팅). 예전엔 열린 채팅의 봇 하나만 바꿨다.
   let potAll = true; try { potAll = await M.switches.potAllOn(); } catch { /* 기본 켜짐으로 표시 */ }

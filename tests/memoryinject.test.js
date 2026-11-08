@@ -152,3 +152,21 @@ test("digest 안전: 요약이 담지 못한 기록은 digested로 표시하지 
   applyDigest(p, t, JSON.stringify({ digest: "미나는 옥상에서 비밀을 털어놓았고 이후 친해졌다" }), 10);
   assert.equal(rs[0].digested, true); assert.ok(!rs[1].digested, "요약에 없는 기록은 남는다");
 });
+
+test("요약된 옛 대화 빼고 보내기: 켜면 분석된 옛 대화만 요청 사본에서 빠지고, 끄면(기본) 그대로", async () => {
+  const m = new Map(), msgs = [];
+  for (let i = 0; i < 24; i++) msgs.push({ role: i % 2 ? "char" : "user", data: `${i % 2 ? "봇" : "나"}의 말 ${i}번째 — 충분히 긴 본문이에요.` });
+  const chat = { id: "t", message: msgs };
+  const api = { pluginStorage: { getItem: async (k) => m.get(k) ?? null, setItem: async (k, v) => { m.set(k, v); }, removeItem: async (k) => { m.delete(k); } },
+    getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0, getCharacterFromIndex: async () => ({ chaId: "c", name: "봇" }), getChatFromIndex: async () => chat,
+    addRisuReplacer: async (n, f) => { api.rep = f; } };
+  const store = createMemoryStore(api); const inj = createMemoryInjector(api, { store }); await inj.start();
+  await store.updateFolder("c", "t", (f) => { f.cursor = { at: 22 }; f.scenes.push({ id: "s", sum: "장면", facts: [], who: [] }); });
+  const req = [{ role: "system", content: "sys" }, ...msgs.map((x) => ({ role: x.role === "user" ? "user" : "assistant", content: x.data }))];
+  assert.equal((await api.rep(req, "model")).length, req.length + 1, "기본 꺼짐");
+  await store.updateIndex((i) => { i.settings.inject.trimOld = true; i.settings.inject.trimKeep = 4; });
+  const out = await api.rep(req, "model");
+  assert.equal(inj.lastRequest().dropped, 16, "12턴 중 최근 4턴(8개)만 남김");
+  assert.equal(out.length, req.length - 16 + 1);
+  assert.equal(out[0].content, "sys");
+});
