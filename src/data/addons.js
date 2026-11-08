@@ -47,9 +47,13 @@ export function latin1ToUtf8(t) {
   if (typeof t !== "string" || !/[\u0080-\u00ff]/.test(t) || /[^\u0000-\u00ff]/.test(t)) return null;
   try { return new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from(t, (c) => c.charCodeAt(0))); } catch { return null; }
 }
+// 리스 웹·포켓리스의 nativeFetch는 동시에 여러 개를 부르면 다른 요청의 응답(예: 목록)을 돌려줄 때가 있다 → 한 번에 하나씩
+let nativeQ = Promise.resolve();
 export async function fetchText(api, url) {
   if (typeof api.nativeFetch === "function") {
-    const t = await readText(await Promise.resolve().then(() => api.nativeFetch(url, { method: "GET" })).catch(() => null));   // method 없으면 POST
+    const run = nativeQ.then(() => api.nativeFetch(url, { method: "GET" })).then(readText).catch(() => null);   // method 없으면 POST
+    nativeQ = run.then(() => {}, () => {});
+    const t = await run;
     if (t != null) return t;
   }
   if (typeof fetch === "function") return readText(await fetch(url, { cache: "no-store" }).catch(() => null));
@@ -193,6 +197,12 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     if (typeof code !== "string") throw new Error("파일을 받지 못했어요");
     const ok = async (t) => typeof t === "string" && (await hasher(new TextEncoder().encode(t))) === a.sha256;
     if (await ok(code)) return code;
+    // 엉뚱한 응답(다른 요청의 응답·캐시)이면 주소를 바꿔 몇 번 더
+    for (let i = 1; i <= 2; i++) {
+      await new Promise((r) => timers.setTimeout(r, 400 * i));
+      const t = await fetcher(api, bust(url, `n=${now()}${i}`)).catch(() => null);
+      if (await ok(t)) return t;
+    }
     // 호스트 nativeFetch가 UTF-8을 다른 글자로 풀어 주면(한글 깨짐) 확인값이 어긋난다 → 되살려 보고, 브라우저 fetch로도 받아 본다
     const fixed = latin1ToUtf8(code);
     if (fixed && await ok(fixed)) return fixed;
