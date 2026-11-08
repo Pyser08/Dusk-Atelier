@@ -54,15 +54,15 @@ export function safeIconUrl(u) {
   return v.length <= 120000 ? v : "";
 }
 export var SHELL_KINDS = {
-  claude: { icon: "", word: "Claude", wordSerif: true, head: "seg", headLeft: "panel", firstOn: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["folder", "프로젝트"], ["cube", "아티팩트"], ["clock", "예약됨"], ["bag", "사용자 지정"]], recent: "최근 항목", empty: "", plan: "Pro" },
-  code: { icon: "", word: "", head: "seg", segOn: 1, headLeft: ["panel", "back", "fwd"], items: [["plus", "새로 만들기"], ["folder", "프로젝트", "New"], ["cube", "아티팩트"], ["bag", "사용자 지정"], ["chev", "더 보기"]], recent: "최근 항목", dots: true, footChev: true, empty: "시작한 세션이 여기에 표시됩니다", plan: "" },
+  claude: { mtop: { menu: "panel", title: "crumb", chev: true, right: ["doc"], more: "share", moreLabel: "공유" }, icon: "", word: "Claude", wordSerif: true, head: "seg", headLeft: "panel", firstOn: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["folder", "프로젝트"], ["cube", "아티팩트"], ["clock", "예약됨"], ["bag", "사용자 지정"]], recent: "최근 항목", empty: "", plan: "Pro" },
+  code: { mtop: { menu: "panel", title: "crumb", chev: true, right: ["doc"], more: "share", moreLabel: "공유" }, icon: "", word: "", head: "seg", segOn: 1, headLeft: ["panel", "back", "fwd"], items: [["plus", "새로 만들기"], ["folder", "프로젝트", "New"], ["cube", "아티팩트"], ["bag", "사용자 지정"], ["chev", "더 보기"]], recent: "최근 항목", dots: true, footChev: true, empty: "시작한 세션이 여기에 표시됩니다", plan: "" },
   deepseek: { mtop: { menu: "menu2", title: "chat", right: ["pluso"], more: "fwdshare" }, icon: "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/deep.png", word: "deepseek", wordAccent: true, head: "icons", headRight: ["search", "panel"], newBtn: "새로운 채팅", items: [], recent: "오늘", recentIcon: "listi", gearIcon: "more", top: "chat", topPlain: true, empty: "", plan: "" },
   gemini: { mtop: { menu: "back", title: "model", word: "Gemini", sub: "자동 모드", chev: true, right: ["edit"], more: "vdots" }, icon: "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/gem.png", word: "Gemini", top: "none", head: "icons", headRight: ["search", "panel"], items: [["edit", "새 채팅"], ["grid", "라이브러리"], ["image", "이미지"], ["clock", "예약"], ["target", "맞춤설정"], ["video", "동영상"]], recent: "전체", recentIcon: "filter", empty: "", plan: "" },
-  codex: { icon: "", word: "Codex", wordChev: true, head: "icons", headRight: ["bell", "search"], rail: ["home", "image", "clock", "book", "plug", "more", "|", "branch"], foot: "noav", items: [["edit", "새 채팅"]], recent: "최근", empty: "", plan: "" },
+  codex: { mtop: { menu: "panel", deco: ["edit"], title: "chat", chev: true, right: ["share"], more: "listdots" }, icon: "", word: "Codex", wordChev: true, head: "icons", headRight: ["bell", "search"], rail: ["home", "image", "clock", "book", "plug", "more", "|", "branch"], foot: "noav", items: [["edit", "새 채팅"]], recent: "최근", empty: "", plan: "" },
   gpt: { mtop: { menu: "panel", deco: ["edit"], title: "chat", chev: true, right: ["share"], more: "listdots" }, icon: "", word: "ChatGPT", head: "icons", headRight: ["search", "panel"], foot2: true, top: "chat", items: [["edit", "새 채팅"], ["image", "이미지"], ["clock", "예약"], ["book", "라이브러리"], ["plug", "플러그인"], ["more", "탐색"]], recent: "최근", empty: "", plan: "Plus" }
 };
 var ICON = {
-  menu2: '<path d="M4 8h16M4 16h9"/>', listdots: '<circle cx="6" cy="7.5" r="2.3"/><circle cx="6" cy="16.5" r="2.3"/><path d="M11 7.5h9M11 16.5h9"/>',
+  doc: '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/>', menu2: '<path d="M4 8h16M4 16h9"/>', listdots: '<circle cx="6" cy="7.5" r="2.3"/><circle cx="6" cy="16.5" r="2.3"/><path d="M11 7.5h9M11 16.5h9"/>',
   grid: '<rect x="4.5" y="4.5" width="6" height="6" rx="2"/><rect x="13.5" y="4.5" width="6" height="6" rx="2"/><rect x="4.5" y="13.5" width="6" height="6" rx="2"/><rect x="13.5" y="13.5" width="6" height="6" rx="2"/>',
   listi: '<circle cx="6" cy="7" r="1.6"/><circle cx="6" cy="16" r="1.6"/><path d="M10 7h9M10 16h9M10 11h6"/>', pluso: '<circle cx="12" cy="12" r="8"/><path d="M12 8.5v7M8.5 12h7"/>', fwdshare: '<path d="M14 5l6 6-6 6M20 11h-8a7 7 0 0 0-7 7"/>',
   back: '<path d="M19 12H5M11 6l-6 6 6 6"/>', fwd: '<path d="M5 12h14M13 6l6 6-6 6"/>', target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/>', video: '<rect x="3.5" y="6" width="17" height="12" rx="2.5"/><path d="M3.5 10h17M8 6l2 4M13 6l2 4"/>', filter: '<path d="M4 5h16l-6 7.5V19l-4-2v-4.5z"/>',
@@ -113,9 +113,9 @@ export function shellHtml(model) {
 // 휴대폰 위 줄(K.mtop): [메뉴 아이콘=리스 ≡ 자리] [장식] 제목 ……… [장식] [접기 버튼]. 넓은 화면 쪽(st-top-do)과 함께 그려 두고 CSS가 폭에 따라 하나만 보인다.
 function mobileTop(K, model) {
   const M = K.mtop, name = String(model.sub || model.title || "").trim();
-  const title = M.title === "model" ? `<b>${esc(M.word ?? K.word)}</b><span class="st-top-sub">${esc(M.sub ?? "")}</span>` : `<b style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(name)}</b>`;
+  const title = M.title === "model" ? `<b>${esc(M.word ?? K.word)}</b><span class="st-top-sub">${esc(M.sub ?? "")}</span>` : M.title === "crumb" && model.sub && model.title ? `<span class="st-top-sub" style="max-width:30%;overflow:hidden;text-overflow:ellipsis;margin:0">${esc(model.title)}</span><span class="st-top-sub" style="margin:0 6px">/</span><b style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(model.sub)}</b>` : `<b style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(name)}</b>`;
   const deco = (list) => (list ?? []).map((n) => `<span class="st-top-btn st-top-deco">${ico(n, 21)}</span>`).join("");
-  return { menu: M.menu, html: deco(M.deco) + `<span class="st-top-t st-top-mo">${title}${M.chev ? `<span class="st-top-chev">${ico("chev", 16)}</span>` : ""}</span>` + deco(M.right), more: M.more };
+  return { menu: M.menu, html: deco(M.deco) + `<span class="st-top-t st-top-mo">${title}${M.chev ? `<span class="st-top-chev">${ico("chev", 16)}</span>` : ""}</span>` + deco(M.right), more: M.more, label: M.moreLabel };
 }
 export function topHtml(model) {
   const K = SHELL_KINDS[model.kind] ?? {};
@@ -125,7 +125,7 @@ export function topHtml(model) {
     const inner = desk.replace(/^<button[^>]*data-st-menu[^>]*>[\s\S]*?<\/button>/, "").replace(/<button[^>]*data-st-more[^>]*>[\s\S]*?<\/button>$/, "");
     return `<button type="button" class="st-top-btn" data-st-menu="1" aria-hidden="true" tabindex="-1">${ico(m.menu, 22)}</button>`
       + `<span class="st-top-do">${inner}</span>` + m.html
-      + `<button type="button" class="st-top-btn st-top-more" data-st-more="1" aria-label="스텔스 상단 줄 접기">${ico(m.more, 21)}</button>`;
+      + `<button type="button" class="st-top-btn st-top-more" data-st-more="1" aria-label="스텔스 상단 줄 접기">${ico(m.more, 21)}${m.label ? `<span style="margin-left:4px;font-size:15px">${esc(m.label)}</span>` : ""}</button>`;
   }
   return topCore(model, model._K ?? K);
 }

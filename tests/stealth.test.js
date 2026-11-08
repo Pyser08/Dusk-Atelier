@@ -598,6 +598,11 @@ test("휴대폰 위 줄(GPT·제미나이·딥시크 사진 11-08): 모양별 �
   assert.ok(m.includes("<b>Gemini</b>") && m.includes("자동 모드"), "gemini: 모델 이름 제목");
   const d = topHtml({ kind: "deepseek", sub: "보스 이펙터", mobile: true });
   assert.ok(d.includes("보스 이펙터") && /st-top-deco/.test(d), "deepseek: 채팅 이름 + 새 채팅 아이콘");
+  for (const k of ["claude", "code"]) {
+    const c = topHtml({ kind: k, title: "Dusk", sub: "요약 봇", mobile: true });
+    assert.ok(c.includes(">Dusk<") && c.includes(">/<") && c.includes("요약 봇") && c.includes(">공유<"), k + ": 프로젝트 / 채팅 + 공유");
+  }
+  assert.ok(topHtml({ kind: "codex", sub: "채팅", mobile: true }).includes("st-top-mo"), "codex: gpt처럼");
   const css = buildStealth("gpt").css;
   assert.match(css, /\[x-c~="st-top-t"\]\[x-c~="st-top-mo"\],\[x-c~="st-top-mo"\]\{display:none\}/, "넓은 화면에선 휴대폰 제목 숨김");
 });
