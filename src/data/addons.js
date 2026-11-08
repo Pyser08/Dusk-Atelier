@@ -196,7 +196,8 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
       if (await ok(t)) return t;
     }
     const got = await hasher(new TextEncoder().encode(code));
-    throw new Error(`파일 확인값이 목록과 달라요 (받은 ${code.length}자 ${got.slice(0, 8)} / 목록 ${a.sha256.slice(0, 8)})`);
+    const head = code.slice(0, 120).replace(/\s+/g, " ");
+    throw new Error(`파일 확인값이 목록과 달라요 (받은 ${code.length}자 ${got.slice(0, 8)} / 목록 ${a.sha256.slice(0, 8)} · 받은 내용: ${head})`);
   }
 
   // 받기·업데이트 한 개. 훅이 있는 애드온 업데이트는 다음 시작부터(applyNow:false).
