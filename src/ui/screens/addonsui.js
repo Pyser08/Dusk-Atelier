@@ -39,8 +39,9 @@ export function addonCard(ctx, card) {
     const err = A.lastError();
     const todo = list.filter((a) => !A.installing?.(a.id) && ["available", "update"].includes(rowState(a, idx[a.id], core))).map((a) => a.id);
     const allBtn = todo.length > 1 ? btn(`모두 받기·업데이트 (${todo.length})`, { size: "sm", kind: "primary", id: "rb-addon-all", onClick: getAll(todo) }) : null;
+    // 업데이트 확인 버튼은 fresh: 커밋 고정 주소로 받아 방금 올린 업데이트도 바로(addons.js pinFresh)
     replace(body, ...rows, err ? h("p", { class: "rb-muted" }, `업데이트 확인 실패: ${err}`) : null,
-      h("div", { style: "display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:6px 0" }, allBtn, btn("업데이트 확인", { size: "sm", id: "rb-addon-check", onClick: () => busy(async () => { const r = await A.check({ force: true }); ctx.toast(r.error ? `확인 실패: ${r.error}` : r.updates.length ? `${r.updates.length}개 업데이트했어요` : "모두 최신이에요"); }) })));
+      h("div", { style: "display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:6px 0" }, allBtn, btn("업데이트 확인", { size: "sm", id: "rb-addon-check", onClick: () => busy(async () => { const r = await A.check({ force: true, fresh: true }); ctx.toast(r.error ? `확인 실패: ${r.error}` : r.updates.length ? `${r.updates.length}개 업데이트했어요` : "모두 최신이에요"); }) })));
   }
   paint();
   return card("애드온 (시험)", h("p", { class: "rb-muted", style: "margin:0 0 6px" }, "필요한 기능만 받아서 써요. 리스 플러그인 목록에는 안 뜨고, 자동으로 업데이트돼요."), body);

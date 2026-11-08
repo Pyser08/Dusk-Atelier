@@ -142,8 +142,23 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
     return true;
   }
 
-  async function loadManifest() {
-    const text = await fetcher(api, bust(await manifestUrl(), `t=${now()}`));
+  // raw.githubusercontent는 ?t= 값을 붙여도 최대 5분 예전 사본을 줄 때가 있다 → '업데이트 확인' 버튼(fresh)일 때만
+  // GitHub API로 브랜치 최신 커밋을 받아 그 커밋으로 고정한 주소를 쓴다(고정 주소는 내용이 바뀌지 않으니 캐시돼도 최신). 실패하면 예전 길.
+  let pin = null;   // { from: ".../<브랜치>/", to: ".../<커밋>/" } — 받은 목록 안 애드온 주소도 같이 바꾼다
+  const RAW = /^https:\/\/raw\.githubusercontent\.com\/([\w.-]+)\/([\w.-]+)\/([\w.-]+)\//;
+  async function pinFresh(url) {
+    const m = url.match(RAW); if (!m) return null;
+    try {
+      const t = await fetcher(api, `https://api.github.com/repos/${m[1]}/${m[2]}/git/ref/heads/${m[3]}`);
+      const sha = JSON.parse(t ?? "null")?.object?.sha;
+      return /^[0-9a-f]{40}$/.test(sha ?? "") ? { from: m[0], to: `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${sha}/` } : null;
+    } catch { return null; }
+  }
+  const pinned = (u) => (pin && u.startsWith(pin.from) ? pin.to + u.slice(pin.from.length) : u);
+  async function loadManifest(fresh = false) {
+    const url0 = await manifestUrl();
+    pin = fresh ? await pinFresh(url0) : null;
+    const text = await fetcher(api, pin ? pinned(url0) : bust(url0, `t=${now()}`));
     if (text == null) throw new Error("목록을 받지 못했어요");
     const m = parseManifest(text);
     if (m.errors.length) log(`목록 오류 ${m.errors.join(", ")}`);
@@ -152,7 +167,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
   }
 
   async function download(a) {
-    const code = await fetcher(api, bust(a.url, `v=${a.sha256.slice(0, 12)}`));
+    const code = await fetcher(api, pin && a.url.startsWith(pin.from) ? pinned(a.url) : bust(a.url, `v=${a.sha256.slice(0, 12)}`));
     if (typeof code !== "string") throw new Error("파일을 받지 못했어요");
     const got = await hasher(new TextEncoder().encode(code));
     if (got !== a.sha256) throw new Error("파일 확인값이 목록과 달라요");
@@ -226,11 +241,11 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
   }
 
   // 업데이트 확인(뒤에서). force가 아니면 1시간에 한 번.
-  async function check({ force = false } = {}) {
+  async function check({ force = false, fresh = false } = {}) {
     if (!force && now() - lastCheck < CHECK_EVERY - 60e3) return { updates: [], held: [] };
     lastCheck = now();
     try {
-      const list = await loadManifest();
+      const list = await loadManifest(fresh);
       const res = pickUpdates(await getIndex(), list, core);
       for (const r of await installMany(res.updates.map((a) => a.id))) log(r.ok ? `${r.id} 업데이트했어요` : `${r.id} 업데이트 실패 ${r.error}`);   // 동시에 받는다
       lastError = ""; emit();

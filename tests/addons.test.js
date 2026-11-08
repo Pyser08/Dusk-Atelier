@@ -191,3 +191,28 @@ test("여러 애드온을 동시에 받아도 모두 설치된다(서로의 기�
   const r = await A.installMany(["a", "b"]);
   assert.ok(r.every((x) => x.ok));
 });
+
+test("'업데이트 확인' 버튼(fresh): 브랜치 최신 커밋으로 고정한 주소로 받아 raw 캐시(최대 5분)에 걸리지 않는다", async () => {
+  const kv = new Map(), store = { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } };
+  const api = { getLocalPluginStorage: () => store, pluginStorage: store };
+  const base = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/";
+  const SHA = "abc123def4567890abc123def4567890abc12345";
+  const pinned = `https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/${SHA}/addons/`;
+  const body = "export default 1";
+  const hOld = await H("old"), hNew = await H(body);
+  const mf = (ver, b) => JSON.stringify({ format: 1, addons: [{ id: "a", name: "A", version: ver, minCore: "2.0.0", url: base + "dist/a.js", sha256: b === "old" ? hOld : hNew }] });
+  const seen = [];
+  const fetcher = async (_api, u0) => { const u = u0.split("?")[0]; seen.push(u);
+    if (u === "https://api.github.com/repos/Pyser08/Dusk-Atelier/git/ref/heads/addons") return JSON.stringify({ object: { sha: SHA } });
+    if (u === base + "addons.json") return mf("1.0.0", "old");            // 캐시된 예전 목록
+    if (u === base + "dist/a.js") return "old";
+    if (u === pinned + "addons.json") return mf("1.1.0", body);           // 최신
+    if (u === pinned + "dist/a.js") return body;
+    return null; };
+  const A = createAddons(api, { core: "2.0.0", fetcher, importer: async () => ({ activate: async () => ({}) }), log: () => {} });
+  await A.install("a");   // 예전 목록으로 1.0.0 설치
+  const r = await A.check({ force: true, fresh: true });
+  assert.ok(seen.includes(pinned + "addons.json") && seen.includes(pinned + "dist/a.js"), seen.join("\n"));
+  assert.equal((await A.getIndex()).a?.version, "1.1.0", "버튼 한 번에 최신으로");
+  assert.equal(r.error, undefined);
+});
