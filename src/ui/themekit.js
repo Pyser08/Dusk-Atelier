@@ -61,7 +61,8 @@ export var FONTS = [
   { id: "mono", name: "고정폭", stack: 'ui-monospace, "SFMono-Regular", Menlo, Consolas, "D2Coding", monospace' }
 ];
 export var ROUNDS = [["sharp", "각지게"], ["normal", "보통"], ["round", "둥글게"]];
-export var ROUND_PX = { sharp: ["4px", "6px", "8px", "12px"], normal: ["8px", "12px", "16px", "22px"], round: ["12px", "18px", "24px", "32px"] };
+// 2.0.0 다듬기: 기본(normal)을 더 둥글게. 각지게(sharp)는 그대로 두어 원하는 사람은 예전 느낌으로.
+export var ROUND_PX = { sharp: ["4px", "6px", "8px", "12px"], normal: ["10px", "14px", "20px", "26px"], round: ["14px", "20px", "28px", "36px"] };
 export var SHADOWS = [["none", "없음"], ["soft", "은은하게"], ["strong", "진하게"]];
 export var EDGES = [["none", "없음"], ["normal", "보통"], ["bold", "굵게"]];
 export var WEIGHTS = [["normal", "보통"], ["bold", "굵게"]];

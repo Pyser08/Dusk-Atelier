@@ -626,3 +626,18 @@ test("0.3.43 위젯 홈을 켜 두면 리스 홈(채팅 밖)에서는 사이드�
     await sh.destroy();
   }
 });
+
+test("0.3.44 위젯 홈: 홈에선 표식(x-dusk-st)·왼쪽 여백 없이 비우고, 채팅으로 돌아오면 사이드바를 다시 그린다 · 아바타 흐림은 채팅에서만", async () => {
+  let chat = false; const body = { attrs: {}, setAttribute: async (k, v) => void (body.attrs[k] = v), removeAttribute: async (k) => void delete body.attrs[k], appendChild: async () => {} };
+  const api = shellApi({ pluginStorage: { getItem: async (k) => (k === "dusk.widgethome.on" ? true : null) } });
+  const q = api.doc.querySelector;
+  api.doc.querySelector = async (sel) => sel.includes(".default-chat-screen") ? (chat ? { _chat: true } : null) : sel === "body" ? Object.assign(body, { appendChild: async (c) => void api.doc.tree.push(c._n) }) : q(sel);
+  const sh = createShell(api, { kind: "claude", poll: 60000, log: () => {} });
+  await new Promise((r) => setTimeout(r, 60));
+  assert.equal(body.attrs["x-dusk-st"], undefined); assert.equal(body.attrs["x-dusk-fold"], "1"); assert.equal(body.attrs["x-dusk-chat"], "0");
+  chat = true; await sh.refresh?.(); await syncShell?.(api).catch?.(() => {}); await new Promise((r) => setTimeout(r, 60));
+  if (sh.refresh) assert.ok(api.doc.tree.some((n) => n.attrs["x-dusk"] === "stealth-sb"), "채팅에선 다시 그림");
+  await sh.destroy();
+  const css = buildStealth("claude", {}).css;
+  assert.ok(!/^\.sidebar-avatar/m.test(css) && css.includes('body:not([x-dusk-chat="0"]) .sidebar-avatar'));
+});

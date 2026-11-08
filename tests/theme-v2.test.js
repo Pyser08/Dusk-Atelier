@@ -100,7 +100,8 @@ test('그라데이션·방향: --rb-acc-grad에 반영, 고대비에선 단색',
 
 test('모양: 모서리·그림자·글꼴·아이콘 굵기·줄 높이·움직임·무늬', () => {
   const base = themeVars({}, "light").vars;
-  assert.equal(base["--rb-r2"], "12px");
+  assert.equal(base["--rb-r2"], "14px");   // 2.0.0 다듬기: 기본을 더 둥글게
+  assert.equal(base["--rb-pill"], "999px"); assert.notEqual(themeVars({ round: "sharp" }, "light").vars["--rb-pill"], "999px");
   const sharp = themeVars({ round: "sharp" }, "light").vars;
   assert.ok(parseInt(sharp["--rb-r2"]) < 12);
   const round = themeVars({ round: "round" }, "light").vars;
@@ -163,6 +164,6 @@ test('테마 코드 주고받기 · 밝을 때/어두울 때 따로 쓰는 내 �
   const pair = normalizeTheme({ mine: [{ id: "n", name: "밤", theme: { round: "sharp" } }], useDark: "n" });
   assert.equal(pair.useDark, "n");
   assert.equal(themeVars(pair, "dark").vars["--rb-r2"], "6px");
-  assert.equal(themeVars(pair, "light").vars["--rb-r2"], "12px");
+  assert.equal(themeVars(pair, "light").vars["--rb-r2"], "14px");
   assert.equal(normalizeTheme({ useDark: "없는것" }).useDark, "");
 });

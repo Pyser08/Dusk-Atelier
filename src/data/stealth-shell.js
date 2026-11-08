@@ -275,7 +275,7 @@ export function createShell(api, opts = {}) {
       onChat = !!(await d.querySelector(".default-chat-screen, .text-input-area").catch(() => null));
       // 위젯 홈을 켜 두었으면 리스 홈(채팅 밖)에서는 스텔스가 아무것도 그리지 않는다 — 사이드바·상단 줄을 걷고 표식만 남긴다(위젯 홈이 홈을 차지하게)
       if (!onChat && await widgetHomeOn()) {
-        try { const b = await d.querySelector("body"); if (b) { await b.setAttribute("x-dusk-chat", "0"); await b.setAttribute("x-dusk-wh", "1"); } for (const id of [ROOT, TOP, NOTE, POP]) { const el = await d.querySelector(`[x-dusk="${id}"]`); if (el) await el.remove(); } } catch { /* 다음 차례에 */ }
+        try { const b = await d.querySelector("body"); if (b) { await b.removeAttribute?.("x-dusk-st"); await b.setAttribute("x-dusk-fold", "1"); await b.setAttribute("x-dusk-chat", "0"); await b.setAttribute("x-dusk-wh", "1"); } for (const id of [ROOT, TOP, NOTE, POP]) { const el = await d.querySelector(`[x-dusk="${id}"]`); if (el) await el.remove(); } } catch { /* 다음 차례에 */ }
         last = "wh"; return;
       }
       try { if (last === "wh") { const b = await d.querySelector("body"); await b?.removeAttribute?.("x-dusk-wh"); } } catch { /* 없음 */ }

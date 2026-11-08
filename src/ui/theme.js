@@ -41,7 +41,7 @@ var BASE = {
     knobOn: "#ffffff",
     shadow: "0 24px 64px rgba(0, 0, 0, 0.5)",
     shadowSm: "0 10px 28px rgba(0, 0, 0, 0.42)",
-    card: "0 1px 2px rgba(0, 0, 0, 0.35)",
+    card: "0 1px 2px rgba(0, 0, 0, 0.28), 0 6px 18px rgba(0, 0, 0, 0.18)",
     ok: "#5fd3a5",
     warn: "#f2c066",
     danger: "#f4867a",
@@ -70,7 +70,7 @@ var BASE = {
     knobOn: "#ffffff",
     shadow: "0 24px 64px rgba(50, 38, 28, 0.2)",
     shadowSm: "0 10px 28px rgba(50, 38, 28, 0.16)",
-    card: "0 1px 2px rgba(50, 38, 28, 0.08)",
+    card: "0 1px 2px rgba(50, 38, 28, 0.05), 0 6px 18px rgba(50, 38, 28, 0.06)",
     ok: "#12775a",
     warn: "#8a5a00",
     danger: "#bd2a4a",
@@ -349,10 +349,11 @@ export function themeVars(themeIn, mode) {
     "--rb-rose-soft": alpha(B.rose, 0.13),
     "--rb-toast": B.toast,
     // 모양·크기 토큰: 둥글기 4단계, 컨트롤 높이, 줄 여백, 글자 배율
-    "--rb-r1": "8px",
-    "--rb-r2": "12px",
-    "--rb-r3": "16px",
-    "--rb-r4": "22px",
+    "--rb-r1": "10px",
+    "--rb-r2": "14px",
+    "--rb-r3": "20px",
+    "--rb-r4": "26px",
+    "--rb-pill": "999px",
     "--rb-ctl": dens ? "36px" : "42px",
     "--rb-ctl-sm": dens ? "30px" : "34px",
     "--rb-row-py": dens ? "8px" : "13px",
@@ -373,6 +374,7 @@ export function themeVars(themeIn, mode) {
   if (!hc) {
     const px = ROUND_PX[theme.round];
     ["--rb-r1", "--rb-r2", "--rb-r3", "--rb-r4"].forEach((k, i) => v[k] = px[i]);
+    v["--rb-pill"] = theme.round === "sharp" ? px[1] : "999px";   // 각지게를 고른 사람은 버튼·칩도 각지게
     v["--rb-bw"] = EDGE_V[theme.edge];
     if (theme.shadowLv === "none") {
       v["--rb-shadow-card"] = "none";

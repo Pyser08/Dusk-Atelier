@@ -265,7 +265,9 @@ export function offHome(css) {
     .replace(/^button, input, textarea, select \{/m, `${ON} button, ${ON} input, ${ON} textarea, ${ON} select {`)
     .replace(/^code, pre, kbd, samp \{/m, `${ON} code, ${ON} pre, ${ON} kbd, ${ON} samp {`)
     .replace(/^body \{/m, `${ON} {`)
-    .replace(/^\.rs-sidebar, \.risu-sidebar \{/m, `${ON} .rs-sidebar, ${ON} .risu-sidebar {`);
+    .replace(/^\.rs-sidebar, \.risu-sidebar \{/m, `${ON} .rs-sidebar, ${ON} .risu-sidebar {`)
+    // 0.3.44: 사이드바 아바타 흐림이 홈(채팅 밖)에서도 걸려 리스 순정 사이드바의 캐릭터 목록이 다 흐려졌다
+    .replace(/^\.sidebar-avatar, \.avatar img, \.avatar div \{/m, `${ON} .sidebar-avatar, ${ON} .avatar img, ${ON} .avatar div {`);
 }
 
 /** 기존 테마 시스템 형식의 테마로(세 번째 인자 target은 리스 계열). */
