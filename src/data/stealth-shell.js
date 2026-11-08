@@ -359,14 +359,19 @@ export var MEDIA_SEL = '.st-msg .st-body :is(img, video, [style*="url("]):not([x
 // 큰 그림만 접는다(사용자 선택 11-08): 짧은 변이 이보다 작으면 아이콘·봇 위젯·캐릭터 칸(190px)으로 보고 그대로 둔다.
 export var FOLD_MIN = 220;
 export async function wrapMedia(d, { log = () => {}, rand = () => 1 + Math.floor(Math.random() * 9) } = {}) {
-  let n = 0;
-  for (const el of await listItems(await d.querySelectorAll(MEDIA_SEL))) {
+  let n = 0, min = FOLD_MIN;
+  const list = await listItems(await d.querySelectorAll(MEDIA_SEL));
+  if (list.length) {   // 휴대폰(폭 ≤760): 그림이 화면에 맞춰 줄어들어 220px 아래로 떨어진다 → 기준을 화면 폭의 절반으로(11-08 실기기)
+    const vw = (await (await d.querySelector?.("body")?.catch?.(() => null))?.getBoundingClientRect?.().catch?.(() => null))?.width ?? 0;
+    if (vw > 0 && vw <= 760) min = Math.min(FOLD_MIN, Math.round(vw * 0.5));
+  }
+  for (const el of list) {
     if (!el) continue;
     try {
       // 재기 전엔 CSS가 자리는 두고 안 보이게만 한다(visibility) → 실제 크기를 잴 수 있다. 크기가 0이면 아직 안 받은 것 → 다음 차례에 다시
       const r = await el.getBoundingClientRect?.().catch?.(() => null);
       if (r && !(r.width > 0 && r.height > 0)) continue;
-      if (r && Math.min(r.width, r.height) < FOLD_MIN) { await el.setAttribute("x-st-m", "s"); continue; }
+      if (r && Math.min(r.width, r.height) < min) { await el.setAttribute("x-st-m", "s"); continue; }
       await el.setAttribute("x-st-m", "1");
       const box = await d.createElement("div"), lab = await d.createElement("div");
       await box.setAttribute("x-st-fw", "1"); await box.setAttribute("x-open", "0");

@@ -536,3 +536,14 @@ test("머리 아이콘: 기본값은 모양마다 빈 칸(SHELL_KINDS.icon), 사
   const st = normalizeStealthState({ v: 1, icons: { gemini: png, deepseek: "javascript:x", nope: png } });
   assert.deepEqual(st.icons, { gemini: png }, "저장값도 안전한 것만, 아는 모양만");
 });
+
+test("휴대폰(좁은 화면): 큰 그림 기준을 화면 폭의 절반으로 — 일러스트가 줄어도 접히고 아이콘은 그대로", async () => {
+  const { wrapMedia } = await import("../src/data/stealth-shell.js");
+  const mk = (r) => { const n = { attrs: {}, kids: [] }; return { n, getBoundingClientRect: async () => r, setAttribute: async (k, v) => { n.attrs[k] = v; }, getParent: async () => null }; };
+  const imgs = [mk({ width: 340, height: 200 }), mk({ width: 120, height: 120 })];
+  const box = () => ({ setAttribute: async () => {}, setInnerText: async () => {}, appendChild: async () => {}, addEventListener: async () => {} });
+  const d = { querySelectorAll: async () => imgs, querySelector: async (s) => (s === "body" ? { getBoundingClientRect: async () => ({ width: 390, height: 800 }) } : null), createElement: async () => box() };
+  await wrapMedia(d, { rand: () => 7 }).catch(() => {});
+  assert.notEqual(imgs[0].n.attrs["x-st-m"], "s", "340×200 일러스트는 접힘 대상(390px 화면)");
+  assert.equal(imgs[1].n.attrs["x-st-m"], "s", "120px 아이콘은 그대로");
+});
