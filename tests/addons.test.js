@@ -307,3 +307,15 @@ test("nativeFetch는 한 번에 하나씩 부른다", async () => {
   await Promise.all(["a", "b", "c"].map((u) => fetchText(api, u)));
   assert.equal(max, 1);
 });
+
+test("nativeFetch가 계속 목록만 주면 risuFetch로 받아 설치", async () => {
+  const { fetchText } = await import("../src/data/addons.js");
+  const kv = new Map();
+  const store = { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } };
+  const body = "ok:한글risu";
+  const man = JSON.stringify({ format: 1, addons: [{ id: "a", name: "A", version: "1.0.0", minCore: "2.0.0", url: "https://x/a.js", sha256: await H(body) }] });
+  const api = { getLocalPluginStorage: () => store, pluginStorage: store, nativeFetch: async () => man, risuFetch: async () => ({ ok: true, data: new TextEncoder().encode(body) }) };
+  const A = createAddons(api, { core: "2.0.0", fetcher: fetchText, timers: { setTimeout: (f) => f(), setInterval: () => 0 }, importer: async () => ({ activate: async () => ({}) }), log: () => {} });
+  await A.loadManifest(); await A.install("a");
+  assert.ok(A.running("a"));
+});
