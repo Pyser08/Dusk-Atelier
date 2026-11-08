@@ -578,3 +578,13 @@ test("작다고 판정한 그림도 20초 동안은 다시 잰다 — 다 받기
   await wrapMedia({ querySelectorAll: async (s) => (s.includes('[x-st-m="s"]') ? [img2] : []), querySelector: async () => null }, { now: () => 60000 });
   assert.equal(n2.attrs["x-st-m"], "S", "20초가 지나면 그대로 두기로 굳힌다(더 재지 않음)");
 });
+
+test("가로로 긴 띠 그림(캐릭터 컷)도 접는다 — 폭 320 이상·높이 60 이상. 아이콘·캐릭터 칸은 그대로(11-08 좁은 창 사진)", async () => {
+  const { wrapMedia } = await import("../src/data/stealth-shell.js");
+  const mk = (r) => { const n = { attrs: {} }; return { n, getBoundingClientRect: async () => r, setAttribute: async (k, v) => { n.attrs[k] = v; }, getAttribute: async (k) => n.attrs[k] ?? null, replaceWith: async () => {} }; };
+  const imgs = [mk({ width: 416, height: 95 }), mk({ width: 800, height: 190 }), mk({ width: 74, height: 74 }), mk({ width: 190, height: 190 })];
+  const box = () => ({ setAttribute: async () => {}, setInnerText: async () => {}, appendChild: async () => {}, addEventListener: async () => {} });
+  const d = { querySelectorAll: async (s) => (s.includes('[x-st-m="s"]') ? [] : imgs), querySelector: async () => null, createElement: async () => box() };
+  assert.equal(await wrapMedia(d, { rand: () => 3 }), 2);
+  assert.deepEqual(imgs.map((i) => i.n.attrs["x-st-m"]), ["1", "1", "s", "s"]);
+});

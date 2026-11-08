@@ -361,6 +361,7 @@ export var FOLD_MIN = 220;
 export var SMALL_SEL = '.st-msg .st-body :is(img, video, [style*="url("])[x-st-m="s"]:not([x-st-fw] *)';
 // '작다'고 본 그림은 이 시간 동안만 다시 잰다. 지나면 "S"로 굳혀 더 재지 않는다(차례마다 재는 일이 끝없이 쌓이지 않게).
 export var RECHECK_MS = 20000;
+export var WIDE_W = 320, WIDE_H = 60;
 export async function wrapMedia(d, { log = () => {}, rand = () => 1 + Math.floor(Math.random() * 9), now = () => Date.now() } = {}) {
   let n = 0, min = FOLD_MIN;
   // '작다'고 본 그림(s)도 다시 잰다: 좁은 창에서 리스가 채팅을 새로 그리면 그림을 받는 중(깨진 아이콘 크기)에 재게 되어
@@ -383,7 +384,8 @@ export async function wrapMedia(d, { log = () => {}, rand = () => 1 + Math.floor
       // 재기 전엔 CSS가 자리는 두고 안 보이게만 한다(visibility) → 실제 크기를 잴 수 있다. 크기가 0이면 아직 안 받은 것 → 다음 차례에 다시
       const r = await el.getBoundingClientRect?.().catch?.(() => null);
       if (r && !(r.width > 0 && r.height > 0)) continue;
-      if (r && Math.min(r.width, r.height) < min) {
+      // 넓은 띠 그림(캐릭터 컷 등: 폭 ≥320·높이 ≥60)은 짧은 변이 작아도 접는다(11-08 좁은 창 사진: 416×95)
+      if (r && Math.min(r.width, r.height) < min && !(r.width >= WIDE_W && r.height >= WIDE_H)) {
         if (!small.includes(el)) { await el.setAttribute("x-st-m", "s"); await el.setAttribute("x-st-s", String(now())); }
         try { await el.setAttribute("x-st-sz", `${Math.round(r.width)}x${Math.round(r.height)}`); } catch { /* 진단용일 뿐 */ }
         continue;
