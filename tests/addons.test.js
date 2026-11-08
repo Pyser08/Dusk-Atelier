@@ -240,3 +240,22 @@ test("새로 생긴 애드온만 알린다(처음 확인·버전만 오른 것·
   await A.check({ force: true });
   assert.deepEqual(seen, [["b"]], "버전만 오르면 알리지 않음");
 });
+
+test("목록이 옛 사본이라 확인값이 어긋나면 고정 주소로 목록을 다시 받아 설치", async () => {
+  const kv = new Map();
+  const store = { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } };
+  const api = { getLocalPluginStorage: () => store, pluginStorage: store };
+  const sha = "1".repeat(40), body = "ok:new";
+  const mf = async (h) => JSON.stringify({ format: 1, addons: [{ id: "a", name: "A", version: "2.0.0", minCore: "2.0.0", url: "https://raw.githubusercontent.com/o/r/addons/addons/dist/a.js", sha256: h }] });
+  const stale = await mf(await H("ok:old"));
+  const fetcher = async (_a, url) => {
+    if (url.includes("api.github.com")) return JSON.stringify({ object: { sha } });
+    if (url.includes(`/${sha}/addons/addons.json`)) return mf(await H(body));
+    if (url.includes("addons.json")) return stale;
+    return body;
+  };
+  const A = createAddons(api, { core: "2.0.0", fetcher, importer: async () => ({ activate: async () => ({}) }), log: () => {} });
+  await A.loadManifest();
+  await A.install("a");
+  assert.ok(A.running("a"));
+});
