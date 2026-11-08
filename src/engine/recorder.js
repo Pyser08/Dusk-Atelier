@@ -96,6 +96,12 @@ export function deepMenu(run) {
   return lines;
 }
 
+// Dusk 기록기 호출이 실패하면 기존 리수폿 Writer로 돌아갈 수 있도록 예외를 격리한다.
+export async function attemptDuskRecord(run, onError = () => {}) {
+  try { return await run(); }
+  catch (e) { try { onError(e); } catch { /* 진단 콜백 오류는 fallback을 막지 않는다 */ } return null; }
+}
+
 export const MAX_PEOPLE = 6;
 // dusk: runner.prepareLatest().input (없으면 null). 반환 { stage1, people:[{name, ref, isNew, lines}] }
 export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, onWarn = () => {} } = {}) {
