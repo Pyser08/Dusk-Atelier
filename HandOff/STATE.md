@@ -1,6 +1,7 @@
 # 현재 상태 — feat/2.0.0
 
 ## 최근 세션 (2026-11-07 — 새 챗은 여기부터, 아래 로드맵도 함께)
+- **v2.0.0 릴리스(11-08 20시, 사용자 지시)**: 안내서에 guide/addons.html·guide/stealth.html 새로, 메뉴(site.js NAV·widgets.js PAGES)에 애드온·스텔스·프로바이더·위젯 홈, 장기 기억 ‘기록 방식’ 절, 위젯 홈 자동 열기·프로바이더 한계 갱신, FAQ 2개. 모든 애드온 minCore 2.0.0. CHANGELOG ‘다음 버전’을 v2.0.0(2026-11-08)으로 합침. main은 11-06 롤백(0b410b7)을 되돌린 뒤 feat/2.0.0 병합, `v2.0.0` 태그. 아카 글 docs/arca/v2.0.0.html.
 - 작업 브랜치 `feat/2.0.0`(예전 `feat/stealth`를 빨리감기로 합침, stealth 브랜치는 남아 있음). main은 v1.9.2 그대로. 작업 전 `HandOff/QUALITY.md`(검토 지침·박스 여백·호스트 제약) 필독.
 - **장기기억 프롬프트·기록 개편(11-08, 사용자 요청 "모델 상관없이 잘 정리")**: 원인 ① 리수폿 Writer 지침이 빈 위키에서도 ~11.7만 자(규칙 20여 묶음 같은 무게)+복잡한 JSON → 누락·우선순위 흐림 ② 기본 프롬프트 '뒤'(장면 작성 점검표)가 memory·router·director·writer 단계 맨 끝에 붙음 ③ 사망 등 상태가 일반 기록과 섞여 주입에 우선순위 없음 ④ 합친 기록 경로에선 게이지를 아예 안 물음(gx=null).
   - `engine/recorder.js`(새): `parseWriterRun`(리수폿 프롬프트의 REFERENCE DATA·Text Control Manifest JSON만 꺼냄) → `recordTurn`(1단계 LINES_STAGE1 + 인물별 linesStage2(wiki:true), 같은 응답 1단계는 캐시) → `buildEnvelope`(리수폿 envelope: relationship·current_appraisal·appraisal·identity·speech·behavior·knowledge·perception.secret·npc_emotion, affinity.score init/delta(인용은 `exactQuote`로 원문 구간), 새 인물 people_ops init) + `buildDusk`(Dusk 분석 객체 → stash). 실제 executeWriterBatches 검증 통과(tests/recorder.test.js). register·suspicion·rhythm·taste_band 등은 기록기가 안 씀(기존 값 유지).
