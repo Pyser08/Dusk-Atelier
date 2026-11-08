@@ -131,12 +131,12 @@ export async function foldTrace(doc, max = 4) {
   const media = await items('[x-st-fw][x-open="0"] > :not([x-st-fl])'); let leak = 0;
   for (const el of media) { const r = await rect(el); if (r && r.w > 2 && r.h > 2) leak++; }
   const out = ["접힘 추적:", `크기가 있는 접힘 줄 ${shown.length}/${labs.length}`, `접혔는데도 보이는 이미지 ${leak}/${media.length}`];
-  const smalls = await items('[x-st-m="s"], [x-st-m="S"]');   // 작다고 본 그림의 잰 크기(앞 6개)
-  if (smalls.length) out.push(`작게 본 크기: ${(await Promise.all(smalls.slice(0, 6).map(async (el) => (await el.getAttribute?.("x-st-sz")?.catch?.(() => null)) ?? "?"))).join(", ")}`);
   for (const el of labs.slice(0, max)) {
     const r = await rect(el), box = await el.getParent?.().catch(() => null), b = await rect(box), pa = await rect(await box?.getParent?.().catch(() => null));
     const pcls = String(await (await box?.getParent?.().catch(() => null))?.getClassName?.().catch(() => "") ?? "").trim().replace(/\s+/g, ".").slice(0, 50);
     out.push(`줄 ${r ? `${r.w}×${r.h} (${r.l},${r.t})` : "?"} · 상자 ${b ? `${b.w}×${b.h}` : "?"} · 부모${pcls ? "." + pcls : ""} ${pa ? `${pa.w}×${pa.h}` : "?"}`);
   }
+  const smalls = await items('[x-st-m="s"], [x-st-m="S"]');   // 작다고 본 그림의 잰 크기(앞 6개) — 맨 끝에
+  if (smalls.length) out.push(`작게 본 크기: ${(await Promise.all(smalls.slice(0, 6).map(async (el) => (await el.getAttribute?.("x-st-sz")?.catch?.(() => null)) ?? "?"))).join(", ")}`);
   return out;
 }
