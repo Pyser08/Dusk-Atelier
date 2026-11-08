@@ -537,13 +537,44 @@ test("머리 아이콘: 기본값은 모양마다 빈 칸(SHELL_KINDS.icon), 사
   assert.deepEqual(st.icons, { gemini: png }, "저장값도 안전한 것만, 아는 모양만");
 });
 
-test("휴대폰(좁은 화면): 큰 그림 기준을 화면 폭의 절반으로 — 일러스트가 줄어도 접히고 아이콘은 그대로", async () => {
+test("휴대폰(좁은 화면): 큰 그림 기준을 화면 폭의 40%로 — 일러스트가 줄어도 접히고 아이콘은 그대로", async () => {
   const { wrapMedia } = await import("../src/data/stealth-shell.js");
   const mk = (r) => { const n = { attrs: {}, kids: [] }; return { n, getBoundingClientRect: async () => r, setAttribute: async (k, v) => { n.attrs[k] = v; }, getParent: async () => null }; };
   const imgs = [mk({ width: 340, height: 200 }), mk({ width: 120, height: 120 })];
   const box = () => ({ setAttribute: async () => {}, setInnerText: async () => {}, appendChild: async () => {}, addEventListener: async () => {} });
-  const d = { querySelectorAll: async () => imgs, querySelector: async (s) => (s === "body" ? { getBoundingClientRect: async () => ({ width: 390, height: 800 }) } : null), createElement: async () => box() };
+  const d = { querySelectorAll: async (s) => (s.includes('[x-st-m="s"]') ? [] : imgs), querySelector: async (s) => (s === "body" ? { getBoundingClientRect: async () => ({ width: 390, height: 800 }) } : null), createElement: async () => box() };
   await wrapMedia(d, { rand: () => 7 }).catch(() => {});
   assert.notEqual(imgs[0].n.attrs["x-st-m"], "s", "340×200 일러스트는 접힘 대상(390px 화면)");
   assert.equal(imgs[1].n.attrs["x-st-m"], "s", "120px 아이콘은 그대로");
+});
+
+test("'작다'고 본 그림도 다시 잰다: 받는 중이라 작게 쟀던 일러스트가 커지면 그때 접는다(좁은 창에서 다시 그릴 때)", async () => {
+  const { wrapMedia } = await import("../src/data/stealth-shell.js");
+  let size = { width: 16, height: 16 };   // 아직 받는 중(깨진 그림 아이콘 크기)
+  const n = { attrs: {} };
+  const img = { n, getBoundingClientRect: async () => size, setAttribute: async (k, v) => { n.attrs[k] = v; }, replaceWith: async () => {} };
+  const box = () => ({ setAttribute: async () => {}, setInnerText: async () => {}, appendChild: async () => {}, addEventListener: async () => {} });
+  const d = { querySelectorAll: async (s) => (s.includes('[x-st-m="s"]') ? (n.attrs["x-st-m"] === "s" ? [img] : []) : (n.attrs["x-st-m"] ? [] : [img])), querySelector: async () => null, createElement: async () => box() };
+  await wrapMedia(d, { rand: () => 3 });
+  assert.equal(n.attrs["x-st-m"], "s", "처음엔 작게 잼");
+  size = { width: 300, height: 300 };   // 다 받음
+  assert.equal(await wrapMedia(d, { rand: () => 3 }), 1, "다음 차례에 다시 재서 접음");
+  assert.equal(n.attrs["x-st-m"], "1");
+});
+
+test("작다고 판정한 그림도 20초 동안은 다시 잰다 — 다 받기 전 작게 잡힌 순간에 재서 영영 안 접히던 문제(11-08 좁은 창)", async () => {
+  const { wrapMedia } = await import("../src/data/stealth-shell.js");
+  let size = { width: 40, height: 20 }, t = 1000;
+  const n = { attrs: {} };
+  const img = { n, getBoundingClientRect: async () => size, setAttribute: async (k, v) => { n.attrs[k] = v; }, getAttribute: async (k) => n.attrs[k] ?? null, replaceWith: async () => {} };
+  const box = () => ({ setAttribute: async () => {}, setInnerText: async () => {}, appendChild: async () => {}, addEventListener: async () => {} });
+  const d = { querySelectorAll: async (s) => (s.includes('[x-st-m="s"]') ? (n.attrs["x-st-m"] === "s" ? [img] : []) : (n.attrs["x-st-m"] ? [] : [img])), querySelector: async () => null, createElement: async () => box() };
+  await wrapMedia(d, { rand: () => 3, now: () => t });
+  assert.equal(n.attrs["x-st-m"], "s", "처음엔 작음");
+  size = { width: 300, height: 300 }; t += 5000;
+  assert.equal(await wrapMedia(d, { rand: () => 3, now: () => t }), 1, "다 받은 뒤 다시 재서 접는다");
+  assert.equal(n.attrs["x-st-m"], "1");
+  const n2 = { attrs: { "x-st-m": "s", "x-st-s": "0" } }; const img2 = { n: n2, getBoundingClientRect: async () => ({ width: 300, height: 300 }), setAttribute: async (k, v) => { n2.attrs[k] = v; }, getAttribute: async (k) => n2.attrs[k] ?? null };
+  await wrapMedia({ querySelectorAll: async (s) => (s.includes('[x-st-m="s"]') ? [img2] : []), querySelector: async () => null }, { now: () => 60000 });
+  assert.equal(n2.attrs["x-st-m"], "S", "20초가 지나면 그대로 두기로 굳힌다(더 재지 않음)");
 });

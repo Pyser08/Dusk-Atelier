@@ -358,12 +358,24 @@ var listItems = async (list) => { if (!list) return []; const n = typeof list.le
 export var MEDIA_SEL = '.st-msg .st-body :is(img, video, [style*="url("]):not([x-st-m]):not([x-st-fw] *)';
 // 큰 그림만 접는다(사용자 선택 11-08): 짧은 변이 이보다 작으면 아이콘·봇 위젯·캐릭터 칸(190px)으로 보고 그대로 둔다.
 export var FOLD_MIN = 220;
-export async function wrapMedia(d, { log = () => {}, rand = () => 1 + Math.floor(Math.random() * 9) } = {}) {
+export var SMALL_SEL = '.st-msg .st-body :is(img, video, [style*="url("])[x-st-m="s"]:not([x-st-fw] *)';
+// '작다'고 본 그림은 이 시간 동안만 다시 잰다. 지나면 "S"로 굳혀 더 재지 않는다(차례마다 재는 일이 끝없이 쌓이지 않게).
+export var RECHECK_MS = 20000;
+export async function wrapMedia(d, { log = () => {}, rand = () => 1 + Math.floor(Math.random() * 9), now = () => Date.now() } = {}) {
   let n = 0, min = FOLD_MIN;
-  const list = await listItems(await d.querySelectorAll(MEDIA_SEL));
+  // '작다'고 본 그림(s)도 다시 잰다: 좁은 창에서 리스가 채팅을 새로 그리면 그림을 받는 중(깨진 아이콘 크기)에 재게 되어
+  // 일러스트까지 전부 '작음'으로 남았다(11-08 실기기 진단: 19개 모두 s). 많지 않으니 차례마다 다시 본다.
+  const small = [];
+  for (const el of await listItems(await d.querySelectorAll(SMALL_SEL)?.catch?.(() => []) ?? [])) {
+    if (!el) continue;
+    const since = Number(await el.getAttribute?.("x-st-s")?.catch?.(() => null) ?? NaN);
+    if (Number.isFinite(since) && now() - since > RECHECK_MS) { try { await el.setAttribute("x-st-m", "S"); } catch { /* 다음에 */ } continue; }
+    small.push(el);
+  }
+  const list = [...await listItems(await d.querySelectorAll(MEDIA_SEL)), ...small.slice(0, 60)];
   if (list.length) {   // 휴대폰(폭 ≤760): 그림이 화면에 맞춰 줄어들어 220px 아래로 떨어진다 → 기준을 화면 폭의 절반으로(11-08 실기기)
     const vw = (await (await d.querySelector?.("body")?.catch?.(() => null))?.getBoundingClientRect?.().catch?.(() => null))?.width ?? 0;
-    if (vw > 0 && vw <= 760) min = Math.min(FOLD_MIN, Math.round(vw * 0.5));
+    if (vw > 0 && vw <= 760) min = Math.min(FOLD_MIN, Math.round(vw * 0.4));
   }
   for (const el of list) {
     if (!el) continue;
@@ -371,7 +383,11 @@ export async function wrapMedia(d, { log = () => {}, rand = () => 1 + Math.floor
       // 재기 전엔 CSS가 자리는 두고 안 보이게만 한다(visibility) → 실제 크기를 잴 수 있다. 크기가 0이면 아직 안 받은 것 → 다음 차례에 다시
       const r = await el.getBoundingClientRect?.().catch?.(() => null);
       if (r && !(r.width > 0 && r.height > 0)) continue;
-      if (r && Math.min(r.width, r.height) < min) { await el.setAttribute("x-st-m", "s"); continue; }
+      if (r && Math.min(r.width, r.height) < min) {
+        if (!small.includes(el)) { await el.setAttribute("x-st-m", "s"); await el.setAttribute("x-st-s", String(now())); }
+        try { await el.setAttribute("x-st-sz", `${Math.round(r.width)}x${Math.round(r.height)}`); } catch { /* 진단용일 뿐 */ }
+        continue;
+      }
       await el.setAttribute("x-st-m", "1");
       const box = await d.createElement("div"), lab = await d.createElement("div");
       await box.setAttribute("x-st-fw", "1"); await box.setAttribute("x-open", "0");

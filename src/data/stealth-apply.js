@@ -67,7 +67,7 @@ export var DIAG_SELECTORS = {
   "채팅 래퍼(.st-msg)": ".st-msg", "본문 자리(.st-body)": ".st-body", "리스 본문(.chattext)": ".chattext",
   "채팅 목록(.risu-chat)": ".risu-chat", "채팅 화면(.default-chat-screen)": ".default-chat-screen", "입력칸(.text-input-area)": ".text-input-area",
   "순정 사이드바": ".rs-sidebar, .risu-sidebar", "스텔스 사이드바": '[x-dusk="stealth-sb"]', "스텔스 표식": "body[x-dusk-st]",
-  "이미지 접힘 상자([x-st-fw])": "[x-st-fw]", "접힘 줄([x-st-fl])": "[x-st-fw] > [x-st-fl]", "펼친 상자": '[x-st-fw][x-open="1"]', "아직 안 감싼 이미지": '.st-msg .st-body :is(img, video, [style*="url("]):not([x-st-m]):not([x-st-fw] *)', "작아서 그대로 둔 그림": '[x-st-m="s"]', "감싸기 실패한 이미지": '[x-st-m="e"]', "래퍼 안 이미지(.st-msg img)": ".st-msg img", "래퍼 안 배경 그림": '.st-msg [style*="url("]',
+  "이미지 접힘 상자([x-st-fw])": "[x-st-fw]", "접힘 줄([x-st-fl])": "[x-st-fw] > [x-st-fl]", "펼친 상자": '[x-st-fw][x-open="1"]', "아직 안 감싼 이미지": '.st-msg .st-body :is(img, video, [style*="url("]):not([x-st-m]):not([x-st-fw] *)', "작아서 그대로 둔 그림(다시 재는 중)": '[x-st-m="s"]', "작아서 그대로 둔 그림(굳힘)": '[x-st-m="S"]', "감싸기 실패한 이미지": '[x-st-m="e"]', "래퍼 안 이미지(.st-msg img)": ".st-msg img", "래퍼 안 배경 그림": '.st-msg [style*="url("]',
   "본문 이미지(.chattext img)": ".chattext img", "본문 배경 그림": '.chattext [style*="url("]', "래퍼 안 본문(.st-msg .chattext)": ".st-msg .chattext"
 };
 /** counts: {라벨: 개수}, db: {theme, htmlLen, cssLen, hasWrapper, hasStealthCss}. 돌려주는 값: 한 줄씩 읽는 안내 목록. */
@@ -131,6 +131,8 @@ export async function foldTrace(doc, max = 4) {
   const media = await items('[x-st-fw][x-open="0"] > :not([x-st-fl])'); let leak = 0;
   for (const el of media) { const r = await rect(el); if (r && r.w > 2 && r.h > 2) leak++; }
   const out = ["접힘 추적:", `크기가 있는 접힘 줄 ${shown.length}/${labs.length}`, `접혔는데도 보이는 이미지 ${leak}/${media.length}`];
+  const smalls = await items('[x-st-m="s"], [x-st-m="S"]');   // 작다고 본 그림의 잰 크기(앞 6개)
+  if (smalls.length) out.push(`작게 본 크기: ${(await Promise.all(smalls.slice(0, 6).map(async (el) => (await el.getAttribute?.("x-st-sz")?.catch?.(() => null)) ?? "?"))).join(", ")}`);
   for (const el of labs.slice(0, max)) {
     const r = await rect(el), box = await el.getParent?.().catch(() => null), b = await rect(box), pa = await rect(await box?.getParent?.().catch(() => null));
     const pcls = String(await (await box?.getParent?.().catch(() => null))?.getClassName?.().catch(() => "") ?? "").trim().replace(/\s+/g, ".").slice(0, 50);
