@@ -1,6 +1,7 @@
 # 현재 상태 — feat/2.0.0
 
 ## 최근 세션 (2026-11-07 — 새 챗은 여기부터, 아래 로드맵도 함께)
+- (11-09) 장기기억 0.2.5: 분석 '끝난 뒤' 보조 모델이 계속 호출되는 원인 = backfillErosync가 er.profile('start','full')만 걸고 반환(Erosync 분석은 뒤에서 계속) → 중지 버튼이 Erosync 상태(profile('status') 4초 폴링)도 보고 누르면 profile('cancel'). 그 밖에 리수폿 Writer 큐(backfillPotWait 최대 10분)·digest는 끝난 뒤에도 잠깐 이어질 수 있음(버튼 미연결). 실기기 미확인.
 - (11-09, 사용자 지시·상시) 애드온을 고치면 매번 `node tools/publish-addons.mjs`로 바로 배포(따로 '배포해' 안 기다림). 애드온 버전은 **마지막(패치) 숫자만** 올리고, 앞·가운데 숫자는 사용자가 말할 때만 바꾼다.
 - (11-09) 장기기억 0.2.4(배포 전): ① 호출 폭증 원인 추정 = backfillExtras 끝 Erosync 'full' 전체 분석(성향 비어 있을 때). 기본은 켜짐 유지(settings.backfillErosync!==false, mhome 옵션 행 추가)하고 예상 호출 문구(settings.js paintEst)에 반영. ② planBackfill 묶음 3→최대5개·글자합 7500(MAX_GROUP/GROUP_CHARS)로 호출 감소. ③ 지난 대화 분석 버튼: 미처리>0이면 '미분석 N개 분석'(그것만), 0이면 '지난 대화 재분석'. ④ 보조 모델 기록 중 우측 하단 중지 버튼: memoryrunner.activity{count,onChange,stop}(userStopped는 실패 미집계, backfill은 stopGen으로 멈춤) + src/ui/stopbutton.js + addons/memory/index.js. 실기기 미확인. tests/e2e/run-app.mjs는 '리수폿' 탭 이동에서 원래부터 실패(수정 전도 동일). 배포는 '배포해' 대기.
 - (11-08) 웹리스: nativeFetch/risuFetch가 주소와 무관하게 같은 응답(직전 것)을 줌(시험 플러그인 dusk_fetch_test.js로 확인). 해결: publish-addons가 dist/<id>.<sha12>.mjs(export default 문자열)와 addons.json.mjs를 jsDelivr용으로 함께 올리고, src/data/addons.js가 확인값 불일치/목록 이상 시 import()로 받아 같은 sha256 확인(moduleUrls·importModuleText). 지난 .mjs는 남겨 둠. 실기기 확인 전. 애드온 브랜치는 '배포해' 때 새 형식으로 다시 올려야 함.

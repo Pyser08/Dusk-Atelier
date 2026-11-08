@@ -25,16 +25,31 @@ export async function activate(api, ctx) {
     storyNow: (c, t) => app.storyTime?.current?.(c, t), notify: toast, potLibrary: POT_PROMPTS, onOpen: () => openTab("memory")
   });
   const affhud = createAffHud(api, { store: memory.store, link: memory.link });
-  // 보조 모델로 기억을 쓰는 동안 오른쪽 아래에 작은 '중지' 버튼
-  const stopBtn = createStopButton(() => app.watcher?.doc ?? null, () => { const n = memory.runner?.activity?.stop?.() ?? 0; if (n) toast("기억 작성을 중지했어요. 다음 응답부터 다시 기록돼요."); });
-  const offActivity = memory.runner?.activity?.onChange?.((n) => { stopBtn.set(n > 0).catch(() => {}); });
-  setUserPromptProvider(() => memory.userPrompts());
+  // 보조 모델로 기억을 쓰는 동안 오른쪽 아래에 작은 '중지' 버튼. 지난 대화 분석이 끝난 뒤에도 Erosync 성향 분석이 뒤에서 이어지므로 그동안도 띄운다.
+  let eroBusy = false, eroTimer = null, stopped = false;
+  const refreshStop = () => stopBtn.set(!stopped && ((memory.runner?.activity?.count?.() ?? 0) > 0 || eroBusy)).catch(() => {});
+  const stopBtn = createStopButton(() => app.watcher?.doc ?? null, async () => {
+    const n = memory.runner?.activity?.stop?.() ?? 0;
+    let e = false; if (eroBusy) { try { e = !!(await app.erosync?.profile?.("cancel"))?.ok; } catch { /* 없음 */ } eroBusy = false; clearInterval(eroTimer); }
+    if (n || e) toast(`기억 작성을 중지했어요${e ? " (Erosync 성향 분석 포함)" : ""}. 다음 응답부터 다시 기록돼요.`);
+    refreshStop();
+  });
+  const offActivity = memory.runner?.activity?.onChange?.(() => { refreshStop(); });
+  const watchErosync = () => {   // 성향 분석이 끝날 때까지 4초마다 상태를 보고 버튼을 거둔다
+    eroBusy = true; refreshStop(); clearInterval(eroTimer);
+    eroTimer = setInterval(async () => {
+      let running = false; try { running = !!(await app.erosync?.profile?.("status"))?.running; } catch { /* 끝난 것으로 */ }
+      if (!running) { eroBusy = false; clearInterval(eroTimer); refreshStop(); }
+    }, 4000);
+  };
   // Erosync가 있으면 지난 대화 분석 끝에 성향 분석을 한 번(이미 있으면 그대로)
   memory.link.backfillErosync = async () => {
     const er = app.erosync; if (!er?.isRunning?.()) return false;
     const r = await er.read(); if (r?.ok && (r.people ?? []).length) return false;
     const st = await er.profile("status"); if (st?.running) return false;
-    return !!(await er.profile("start", "full"))?.ok;
+    const ok = !!(await er.profile("start", "full"))?.ok;
+    if (ok) { watchErosync(); toast("Erosync 성향 분석이 이어서 돌아요. 멈추려면 오른쪽 아래 ‘중지’ 버튼을 누르세요."); }
+    return ok;
   };
   const regress = async () => {
     try { await openTab("memory"); const { openRegressHere } = await import("../../src/ui/screens/regress.js"); await openRegressHere(app); }
@@ -63,7 +78,7 @@ export async function activate(api, ctx) {
   return {
     async deactivate() {
       off.forEach((f) => f());
-      try { offActivity?.(); await stopBtn.set(false); } catch { /* 없음 */ }
+      try { offActivity?.(); stopped = true; clearInterval(eroTimer); await stopBtn.set(false); } catch { /* 없음 */ }
       for (const f of menuOff) await f?.().catch?.(() => {});
       setUserPromptProvider(() => null);
       await memBtn.hide?.().catch?.(() => {});
