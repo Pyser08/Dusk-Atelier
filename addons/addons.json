@@ -2,17 +2,6 @@
   "format": 1,
   "addons": [
     {
-      "id": "hello",
-      "name": "애드온 시험",
-      "version": "0.1.0",
-      "minCore": "1.9.2",
-      "hooks": false,
-      "desc": "로더가 제대로 도는지 확인하는 시험용 애드온이에요.",
-      "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/hello.js",
-      "sha256": "196b6c1af63fa4863b9cf4df60ddbf82c0ef8810d3a39c018b5863ca79204e97",
-      "size": 667
-    },
-    {
       "id": "manage",
       "name": "캐릭터·모듈·플러그인 관리",
       "version": "0.1.0",
@@ -120,13 +109,13 @@
     {
       "id": "stealth",
       "name": "더스크 스텔스",
-      "version": "0.3.44",
+      "version": "0.3.45",
       "minCore": "1.9.2",
       "hooks": false,
       "desc": "리스 채팅을 클로드·GPT·코덱스·제미나이·딥시크 같은 다른 AI 채팅 앱처럼 보이게 꾸며요. 끄면 원래 모양으로 되돌려요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/stealth.js",
-      "sha256": "e83e541f2cb4f11433bb5aaa8b0e27cc26dc0955a0260cc820ab6b7e21fd77d0",
-      "size": 74677
+      "sha256": "240f26eaf070aed809407c5d670903a72debae43868841d38b97e00db17a4347",
+      "size": 75745
     }
   ]
 }

@@ -1,12 +1,14 @@
-// 더스크 스텔스 화면: 테마 5종 고르기 · 켜기/끄기 · 가짜 문구·옵션 고치기.
+// 더스크 스텔스 화면: 켜기 토글 · 모양 고르면 바로 적용 · 세부 설정/진단은 접기.
 import { h, replace } from "../dom.js";
+import { icon } from "../icons.js";
 import { btn, segmented, note, toggleRow, confirmDialog } from "../kit.js";
 import { PRESETS, PRESET_IDS, mergeLabels } from "../../data/stealth.js";
 import { loadStealth, saveStealth, enableStealth, disableStealth, runDiagnosis } from "../../data/stealth-apply.js";
 import { syncShell, setDuskOpen } from "../../data/stealth-shell.js";
 
 // 진단 결과는 화면 밖에 둔다: '5초 뒤 진단'은 창을 닫았다 다시 여는데, 다시 열면 이 화면을 새로 그려 결과가 사라졌다
-let diag = "", redraw = null;   // redraw: 지금 떠 있는 화면의 다시 그리기(진단이 끝났을 때 새로 연 화면에 보이게)
+let diag = "", redraw = null;
+const openFolds = {};   // 세부 설정·진단 접기 열림 상태   // redraw: 지금 떠 있는 화면의 다시 그리기(진단이 끝났을 때 새로 연 화면에 보이게)
 // 플러그인 iframe에서는 clipboard API가 막히는 판이 있다 → 숨긴 글상자를 골라 복사 명령으로 한 번 더
 async function copyText(win, text) {
   try { await win.navigator.clipboard.writeText(text); return true; } catch { /* 아래로 */ }
@@ -41,13 +43,15 @@ export async function renderStealth(ctx) {
     draw();
   };
   const refresh = () => st.active && run(() => enableStealth(ctx.api, st.active, st));   // 켜진 상태에서 옵션을 바꾸면 바로 다시 적용
-  const apply = (id) => run(() => enableStealth(ctx.api, id, st), `${PRESETS[id].label} 모양을 켰어요. 새로고침하면 가장 확실해요`);
-  const off = async () => {
-    if (!await confirmDialog(ctx.win, { title: "스텔스 끄기", body: "리스 설정의 커스텀 CSS·채팅 HTML을 켜기 전 값으로 되돌려요.", ok: "끄기" })) return;
-    run(() => disableStealth(ctx.api, st), "원래 모양으로 되돌렸어요");
+  const turnOn = (id) => run(() => enableStealth(ctx.api, id, st), `${PRESETS[id].label} 모양을 켰어요. 안 바뀌면 새로고침해 주세요`);
+  const turnOff = () => run(() => disableStealth(ctx.api, st), "원래 모양으로 되돌렸어요");
+  const restore = async () => {
+    if (!await confirmDialog(ctx.win, { title: "원래 테마로 되돌리기", body: "리스 설정의 커스텀 CSS·채팅 HTML을 스텔스를 켜기 전 값으로 되돌려요.", ok: "되돌리기" })) return;
+    turnOff();
   };
 
   const diagnose = async (delay = 0) => {
+    openFolds.diag = true;
     diag = delay ? `${delay}초 뒤 진단해요 — 지금 Dusk 창을 닫고 채팅 화면을 보여 주세요. 끝나면 다시 열어 결과를 확인하세요.` : "진단 중…"; redraw?.();
     if (delay) await new Promise((r) => setTimeout(r, delay * 1000));
     try {
@@ -56,37 +60,44 @@ export async function renderStealth(ctx) {
     } catch (e) { diag = `진단하지 못했어요: ${e?.message ?? e}`; }
     redraw?.();
   };
+  const fold = (key, title, hint, ...kids) => {   // 원하는 사람만 여는 접기(열림 상태는 다시 그려도 유지)
+    const d = h("details", { class: "rb-fold wide", open: !!openFolds[key], "data-fold": key }, h("summary", null, h("span", { class: "t" }, title), h("span", { class: "h" }, hint), icon("down", 16)), h("div", { class: "rb-fold-body" }, ...kids));
+    d.addEventListener("toggle", () => { openFolds[key] = d.open; });
+    return d;
+  };
   function draw() {
     const L = mergeLabels(pick, st.labels?.[pick]);
     const cards = PRESET_IDS.map((id) => h("button", {
-      type: "button", class: ["rb-card", "bordered"], "aria-pressed": id === pick ? "true" : "false",
+      type: "button", class: ["rb-card", "bordered"], "aria-pressed": id === pick ? "true" : "false", "data-preset": id,
       style: `text-align:left;cursor:pointer;padding:14px 16px;display:flex;flex-direction:column;gap:6px;${id === pick ? "outline:2px solid var(--rb-accent, #7a6cf0)" : ""}`,
-      onClick: () => { pick = id; draw(); }
+      onClick: () => { if (id === pick && st.active === id) return; pick = id; if (st.active) turnOn(id); else draw(); }   // 켜져 있으면 누르는 즉시 그 모양으로
     }, h("b", null, PRESETS[id].label + (st.active === id ? "  ● 켜짐" : "")), h("small", { class: "rb-muted", style: "display:block" }, PRESETS[id].desc)));
     const fields = LABEL_FIELDS.map(([k, name]) => {
       const inp = h("input", { type: "text", class: "rb-input", value: L[k], maxlength: 80, placeholder: "비우면 이 장식을 빼요", "aria-label": name });
-      inp.addEventListener("change", () => { st.labels = { ...st.labels, [pick]: { ...st.labels?.[pick], [k]: inp.value } }; persist(); });
+      inp.addEventListener("change", () => { st.labels = { ...st.labels, [pick]: { ...st.labels?.[pick], [k]: inp.value } }; persist(); if (st.active === pick) refresh(); });
       return h("label", { class: "rb-lfield" }, h("b", null, name), inp);
     });
     replace(wrap,
       h("h3", { class: "rb-h3" }, "더스크 스텔스"),
       h("p", { class: "rb-muted" }, "리스 채팅을 다른 AI 채팅 앱처럼 보이게 해요. 켜면 리스의 커스텀 CSS·채팅 HTML 칸을 쓰고, 끄면 원래 값으로 되돌려요."),
+      toggleRow("더스크 스텔스 켜기", st.active ? `지금 ${PRESETS[st.active].label} 모양이에요. 아래에서 다른 모양을 누르면 바로 바뀌어요` : "켜면 아래에서 고른 모양이 바로 적용돼요", !!st.active, (v) => v ? turnOn(pick) : turnOff()),
       h("div", { style: "display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px" }, ...cards),
+      toggleRow("홈 화면도 바꾸기", "끄면 채팅 화면만 바꾸고 리스 홈(채팅 밖)은 원래대로 둬요", !!st.changeHome, (v) => { st.changeHome = v; persist(); refresh(); }),
+      st.active ? h("div", { class: "rb-row", style: "display:flex;gap:8px" }, btn("원래 테마로 되돌리기", { onClick: restore })) : null,
       segmented([["auto", "기기 설정 따라"], ["light", "항상 밝게"], ["dark", "항상 어둡게"]], st.scheme, (v) => { st.scheme = v; persist(); refresh(); }, "밝기"),
-      toggleRow("이미지 접기", "답변의 큰 이미지를 ‘파일 N개 읽음, 명령어 N개 실행함’ 줄 아래로 접어요. 누르면 펼쳐져요", st.hideImages, (v) => { st.hideImages = v; persist(); refresh(); }),
-      toggleRow("사이드바 아바타 흐리게", "캐릭터 얼굴이 작게 보여도 알아보기 어렵게 해요", st.blurAvatars, (v) => { st.blurAvatars = v; persist(); refresh(); }),
-      toggleRow("최소 모드 (스크롤 문제 점검용)", "화면 전체·입력창 꾸밈을 빼고 말풍선만 꾸며요. 켜 둔 상태면 바로 적용돼요. 스크롤이 되는지 알려 주세요", !!st.minimal, (v) => { st.minimal = v; persist(); refresh(); }),
-      toggleRow("사이드바 숨기기", "왼쪽 목록을 통째로 숨겨요", st.hideSidebar, (v) => { st.hideSidebar = v; persist(); refresh(); }),
-      h("h4", { class: "rb-h4" }, `${PRESETS[pick].label} 머리 아이콘`),
-      iconRow(),
-      h("h4", { class: "rb-h4" }, `${PRESETS[pick].label} 문구`),
-      ...fields,
-      h("div", { class: "rb-row", style: "display:flex;gap:8px" },
-        btn(st.active === pick ? "문구·옵션 다시 적용" : `${PRESETS[pick].label} 켜기`, { kind: "primary", onClick: () => apply(pick) }),
-        st.active ? btn("끄고 원래대로", { onClick: off }) : null),
-      h("div", { class: "rb-row", style: "display:flex;gap:8px" }, btn("화면 진단", { onClick: () => diagnose(0) }), btn("5초 뒤 진단", { onClick: () => diagnose(5) }), diag && !/중…|뒤 진단해요/.test(diag) ? btn("결과 복사", { onClick: async () => { if (await copyText(globalThis, diag)) ctx.toast("진단 결과를 복사했어요"); else ctx.toast("복사하지 못했어요. 결과 글을 길게 눌러 복사해 주세요.", { error: true }); } }) : null),
-      diag ? h("pre", { class: "rb-muted", style: "white-space:pre-wrap;font-size:12px;margin:0;user-select:text" }, diag) : null,
-      note("info", "화면에 안 바뀌면 리스를 새로고침해 주세요. 리스 업데이트로 화면 구조가 바뀌면 일부가 어긋날 수 있어요.")
+      fold("detail", "세부 설정", "이미지 접기·사이드바·아이콘·문구",
+        toggleRow("이미지 접기", "답변의 큰 이미지를 ‘파일 N개 읽음, 명령어 N개 실행함’ 줄 아래로 접어요. 누르면 펼쳐져요", st.hideImages, (v) => { st.hideImages = v; persist(); refresh(); }),
+        toggleRow("사이드바 아바타 흐리게", "캐릭터 얼굴이 작게 보여도 알아보기 어렵게 해요", st.blurAvatars, (v) => { st.blurAvatars = v; persist(); refresh(); }),
+        toggleRow("사이드바 숨기기", "왼쪽 목록을 통째로 숨겨요", st.hideSidebar, (v) => { st.hideSidebar = v; persist(); refresh(); }),
+        h("h4", { class: "rb-h4" }, `${PRESETS[pick].label} 머리 아이콘`),
+        iconRow(),
+        h("h4", { class: "rb-h4" }, `${PRESETS[pick].label} 문구`),
+        ...fields),
+      fold("diag", "진단", "화면이 이상할 때 원인 찾기",
+        toggleRow("최소 모드 (스크롤 문제 점검용)", "화면 전체·입력창 꾸밈을 빼고 말풍선만 꾸며요. 스크롤이 되는지 알려 주세요", !!st.minimal, (v) => { st.minimal = v; persist(); refresh(); }),
+        h("div", { class: "rb-row", style: "display:flex;gap:8px;flex-wrap:wrap" }, btn("화면 진단", { onClick: () => diagnose(0) }), btn("5초 뒤 진단", { onClick: () => diagnose(5) }), diag && !/중…|뒤 진단해요/.test(diag) ? btn("결과 복사", { onClick: async () => { if (await copyText(globalThis, diag)) ctx.toast("진단 결과를 복사했어요"); else ctx.toast("복사하지 못했어요. 결과 글을 길게 눌러 복사해 주세요.", { error: true }); } }) : null),
+        diag ? h("pre", { class: "rb-muted", style: "white-space:pre-wrap;font-size:12px;margin:0;user-select:text" }, diag) : null,
+        note("info", "화면에 안 바뀌면 리스를 새로고침해 주세요. 리스 업데이트로 화면 구조가 바뀌면 일부가 어긋날 수 있어요."))
     );
   }
   function iconRow() {   // 사이드바 이름 앞 작은 그림. 비우면 기본값(SHELL_KINDS.icon, 지금은 없음)

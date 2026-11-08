@@ -250,7 +250,7 @@ ${inputBlock}`,
   ].filter(Boolean).join("\n");
   // 최소 모드: 리스 전체 화면(html·body·:root·대화 화면·입력창)을 건드리는 규칙을 빼고 말풍선 꾸밈만 남긴다(스크롤·표시 문제를 가려낼 때)
   const out = opts.minimal ? css.replace(/^@media \(max-width: 760px\) \{\n  \.st-msg[\s\S]*?\n\}\n?/m, "").replace(/^(?:html, body|html|body|button, input, textarea, select|div:has\(> \.default-chat-screen\)|\.default-chat-screen|\.text-input-area[^{]*)\s*\{[^}]*\}\n?/gm, "").replace(/^div:has\(> \.text-input-area\) \{[\s\S]*?^\}\n?/m, "").replace(/^:root \{\n  --risu-theme[\s\S]*?^\}\n?/m, "") : css;
-  return { name: STEALTH_PREFIX + P.label, css: offHome(out), html };
+  return { name: STEALTH_PREFIX + P.label, css: opts.changeHome ? out : offHome(out), html };   // changeHome: 홈(채팅 밖)도 바꾸기
 }
 
 // 리스 홈(채팅 밖)은 건드리지 않는다: 화면 전체 규칙(색 변수·글꼴·배경·순정 사이드바)을 "채팅 화면일 때"로 좁힌다.
@@ -277,7 +277,7 @@ export function stealthTheme(id, opts = {}, target = "risu") {
   return { name: b.name, target, css: b.css, html: b.html, useTokens: false, stealth: id };
 }
 
-export var defaultStealthState = () => ({ v: 1, active: null, scheme: "auto", hideImages: true, blurAvatars: true, hideSidebar: false, labels: {} });
+export var defaultStealthState = () => ({ v: 1, active: null, scheme: "auto", hideImages: true, blurAvatars: true, hideSidebar: false, changeHome: false, labels: {} });
 export function normalizeStealthState(raw) {
   const d = defaultStealthState();
   if (!raw || typeof raw !== "object" || raw.v !== 1) return d;
@@ -294,7 +294,7 @@ export function normalizeStealthState(raw) {
   return {
     v: 1, active: PRESETS[raw.active] ? raw.active : null,
     scheme: ["auto", "light", "dark"].includes(raw.scheme) ? raw.scheme : "auto",
-    hideImages: raw.hideImages !== false, blurAvatars: raw.blurAvatars !== false, hideSidebar: !!raw.hideSidebar, minimal: !!raw.minimal, appliedVer: typeof raw.appliedVer === "string" ? raw.appliedVer : "", labels, icons
+    hideImages: raw.hideImages !== false, blurAvatars: raw.blurAvatars !== false, hideSidebar: !!raw.hideSidebar, minimal: !!raw.minimal, changeHome: !!raw.changeHome, appliedVer: typeof raw.appliedVer === "string" ? raw.appliedVer : "", labels, icons
   };
 }
-export var optsOf = (state, id) => ({ scheme: state.scheme, hideImages: state.hideImages, blurAvatars: state.blurAvatars, hideSidebar: state.hideSidebar, minimal: state.minimal, labels: state.labels?.[id] ?? {} });
+export var optsOf = (state, id) => ({ scheme: state.scheme, hideImages: state.hideImages, blurAvatars: state.blurAvatars, hideSidebar: state.hideSidebar, minimal: state.minimal, changeHome: !!state.changeHome, labels: state.labels?.[id] ?? {} });

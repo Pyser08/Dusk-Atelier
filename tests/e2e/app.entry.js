@@ -8,6 +8,7 @@ import { activate as memoryAddon } from "../../addons/memory/index.js";
 import { activate as cardsAddon } from "../../addons/cards/index.js";
 import { activate as protlinkAddon } from "../../addons/protlink/index.js";
 import { activate as providerAddon } from "../../addons/provider/index.js";
+import { activate as stealthAddon } from "../../addons/stealth/index.js";
 import { renderProvider as _rpv } from "../../src/ui/screens/provider.js";
 import { renderProtLink as _rp } from "../../src/ui/screens/protlink.js";
 import { renderMemory as _rm } from "../../src/ui/screens/memory/index.js";
@@ -158,6 +159,7 @@ window.bootApp = async (seed, opts = {}) => {
     }
   }
   // 기능 애드온: 실제 사용자처럼 켜 둔 상태로 시험(소스를 바로 불러 같은 모듈 사용). coreOnly면 코어만.
+  if (opts.stealth) await stealthAddon(api, { ext: app.ctx.ext, app: app.ctx, toast: () => {}, openDusk: async () => {} });
   if (!opts.coreOnly) for (const act of FEATURE_ADDONS) await act(api, { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async () => {} });
   // 장기기억·기억카드 애드온(2.0.0): opts.memory면 위에서 만든 기억으로 실제 애드온을 켠다.
   // 아니면 예전처럼 기억 없이 탭만 보이게(화면은 '준비되지 않았어요') 자리만 채운다.

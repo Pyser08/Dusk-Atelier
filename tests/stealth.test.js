@@ -641,3 +641,11 @@ test("0.3.44 위젯 홈: 홈에선 표식(x-dusk-st)·왼쪽 여백 없이 비�
   const css = buildStealth("claude", {}).css;
   assert.ok(!/^\.sidebar-avatar/m.test(css) && css.includes('body:not([x-dusk-chat="0"]) .sidebar-avatar'));
 });
+
+test("changeHome: 끄면(기본) 홈 규칙을 채팅 화면으로 좁히고, 켜면 그대로 둔다", async () => {
+  const { buildStealth, normalizeStealthState, optsOf } = await import("../src/data/stealth.js");
+  assert.equal(normalizeStealthState({ v: 1 }).changeHome, false);
+  assert.equal(optsOf(normalizeStealthState({ v: 1, changeHome: true }), "claude").changeHome, true);
+  assert.match(buildStealth("claude", {}).css, /body:not\(\[x-dusk-chat="0"\]\)/);
+  assert.doesNotMatch(buildStealth("claude", { changeHome: true }).css, /body:not\(\[x-dusk-chat="0"\]\) \{\n  --risu-theme/);
+});
