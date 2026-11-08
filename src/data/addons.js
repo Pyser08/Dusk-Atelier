@@ -37,6 +37,11 @@ async function readText(res) {
   if (b instanceof Uint8Array || b instanceof ArrayBuffer) return new TextDecoder().decode(b);
   return null;
 }
+// UTF-8 바이트가 한 글자씩(latin1) 풀린 문자열을 되돌린다. 그런 문자열이 아니면 null.
+export function latin1ToUtf8(t) {
+  if (typeof t !== "string" || !/[\u0080-\u00ff]/.test(t) || /[^\u0000-\u00ff]/.test(t)) return null;
+  try { return new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from(t, (c) => c.charCodeAt(0))); } catch { return null; }
+}
 export async function fetchText(api, url) {
   if (typeof api.nativeFetch === "function") {
     const t = await readText(await Promise.resolve().then(() => api.nativeFetch(url, { method: "GET" })).catch(() => null));   // method 없으면 POST
@@ -178,11 +183,20 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
   }
 
   async function download(a) {
-    const code = await fetcher(api, pin && a.url.startsWith(pin.from) ? pinned(a.url) : bust(a.url, `v=${a.sha256.slice(0, 12)}`));
+    const url = pin && a.url.startsWith(pin.from) ? pinned(a.url) : bust(a.url, `v=${a.sha256.slice(0, 12)}`);
+    const code = await fetcher(api, url);
     if (typeof code !== "string") throw new Error("파일을 받지 못했어요");
+    const ok = async (t) => typeof t === "string" && (await hasher(new TextEncoder().encode(t))) === a.sha256;
+    if (await ok(code)) return code;
+    // 호스트 nativeFetch가 UTF-8을 다른 글자로 풀어 주면(한글 깨짐) 확인값이 어긋난다 → 되살려 보고, 브라우저 fetch로도 받아 본다
+    const fixed = latin1ToUtf8(code);
+    if (fixed && await ok(fixed)) return fixed;
+    if (fetcher === fetchText && typeof fetch === "function") {
+      const t = await readText(await fetch(url, { cache: "no-store" }).catch(() => null));
+      if (await ok(t)) return t;
+    }
     const got = await hasher(new TextEncoder().encode(code));
-    if (got !== a.sha256) throw new Error("파일 확인값이 목록과 달라요");
-    return code;
+    throw new Error(`파일 확인값이 목록과 달라요 (받은 ${code.length}자 ${got.slice(0, 8)} / 목록 ${a.sha256.slice(0, 8)})`);
   }
 
   // 받기·업데이트 한 개. 훅이 있는 애드온 업데이트는 다음 시작부터(applyNow:false).
