@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseManifest, pickUpdates, cmpVer, rowState } from "../src/engine/addons.js";
-import { createAddons } from "../src/data/addons.js";
+import { createAddons, latin1ToUtf8 } from "../src/data/addons.js";
 import { sha256 } from "../src/engine/hash.js";
 
 const H = (c) => sha256(new TextEncoder().encode(c));
@@ -258,4 +258,18 @@ test("목록이 옛 사본이라 확인값이 어긋나면 고정 주소로 목�
   await A.loadManifest();
   await A.install("a");
   assert.ok(A.running("a"));
+});
+
+test("호스트가 UTF-8을 latin1로 풀어 줘도 되살려 설치", async () => {
+  const kv = new Map();
+  const store = { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } };
+  const api = { getLocalPluginStorage: () => store, pluginStorage: store };
+  const body = "ok:한글 애드온";
+  const broken = String.fromCharCode(...new TextEncoder().encode(body));
+  const man = JSON.stringify({ format: 1, addons: [{ id: "a", name: "A", version: "1.0.0", minCore: "2.0.0", url: "https://x/a.js", sha256: await H(body) }] });
+  const fetcher = async (_a, url) => (url.includes("addons.json") ? man : broken);
+  const A = createAddons(api, { core: "2.0.0", fetcher, importer: async () => ({ activate: async () => ({}) }), log: () => {} });
+  await A.loadManifest(); await A.install("a");
+  assert.ok(A.running("a"));
+  assert.equal(latin1ToUtf8("abc"), null);
 });
