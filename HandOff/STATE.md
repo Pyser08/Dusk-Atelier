@@ -1,6 +1,7 @@
 # 현재 상태 — feat/2.0.0
 
 ## 최근 세션 (2026-11-07 — 새 챗은 여기부터, 아래 로드맵도 함께)
+- (11-08) 웹리스: nativeFetch/risuFetch가 주소와 무관하게 같은 응답(직전 것)을 줌(시험 플러그인 dusk_fetch_test.js로 확인). 해결: publish-addons가 dist/<id>.<sha12>.mjs(export default 문자열)와 addons.json.mjs를 jsDelivr용으로 함께 올리고, src/data/addons.js가 확인값 불일치/목록 이상 시 import()로 받아 같은 sha256 확인(moduleUrls·importModuleText). 지난 .mjs는 남겨 둠. 실기기 확인 전. 애드온 브랜치는 '배포해' 때 새 형식으로 다시 올려야 함.
 - (11-08) 애드온 '파일 확인값이 목록과 달라요': 발행된 addons 브랜치는 sha 전부 일치 확인 → 원인은 raw 캐시가 목록/파일을 서로 다른 시점으로 줌. src/data/addons.js install()이 확인값 오류면 loadManifest(true)(커밋 고정)로 한 번 재시도. 본체 수정이라 릴리스 필요(미실시, 지시 대기).
 - **v2.0.0 릴리스(11-08 20시, 사용자 지시)**: 안내서에 guide/addons.html·guide/stealth.html 새로, 메뉴(site.js NAV·widgets.js PAGES)에 애드온·스텔스·프로바이더·위젯 홈, 장기 기억 ‘기록 방식’ 절, 위젯 홈 자동 열기·프로바이더 한계 갱신, FAQ 2개. 모든 애드온 minCore 2.0.0. CHANGELOG ‘다음 버전’을 v2.0.0(2026-11-08)으로 합침. main은 11-06 롤백(0b410b7)을 되돌린 뒤 feat/2.0.0 병합, `v2.0.0` 태그. 아카 글 docs/arca/v2.0.0.html.
 - 작업 브랜치 `feat/2.0.0`(예전 `feat/stealth`를 빨리감기로 합침, stealth 브랜치는 남아 있음). main은 v1.9.2 그대로. 작업 전 `HandOff/QUALITY.md`(검토 지침·박스 여백·호스트 제약) 필독.

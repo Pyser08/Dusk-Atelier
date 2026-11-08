@@ -42,6 +42,16 @@ export function toJsdelivr(u) {
   const m = String(u).match(/^https:\/\/raw\.githubusercontent\.com\/([\w.-]+)\/([\w.-]+)\/([\w.-]+)\/([^?#]+)/);
   return m ? `https://cdn.jsdelivr.net/gh/${m[1]}/${m[2]}@${m[3]}/${m[4]}` : null;
 }
+// 호스트 요청 통로가 주소와 상관없이 같은 응답을 주는 환경(웹리스) 대비: 글이 아니라 모듈(export default 문자열)로 불러온다.
+// 파일은 publish-addons가 `dist/<id>.<sha12>.mjs`(내용 주소)와 `addons.json.mjs`로 함께 올린다. 받은 문자열은 그대로 sha256을 확인한다.
+export const moduleUrls = {
+  manifest: (u) => { const m = toJsdelivr(String(u).replace(/addons\.json(\?.*)?$/, "addons.json.mjs")); return m; },
+  file: (a) => toJsdelivr(String(a.url).replace(/\/([\w-]+)\.js(\?.*)?$/, (_, id) => `/${id}.${a.sha256.slice(0, 12)}.mjs`))
+};
+export async function importModuleText(url) {
+  const m = await import(/* webpackIgnore: true */ url);
+  return typeof m?.default === "string" ? m.default : null;
+}
 // UTF-8 바이트가 한 글자씩(latin1) 풀린 문자열을 되돌린다. 그런 문자열이 아니면 null.
 export function latin1ToUtf8(t) {
   if (typeof t !== "string" || !/[\u0080-\u00ff]/.test(t) || /[^\u0000-\u00ff]/.test(t)) return null;
@@ -73,7 +83,7 @@ export async function importCode(code, id = "addon") {
 }
 
 
-export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onNewAddons = null, timers = globalThis, fetcher = fetchText, importer = importCode, hasher = sha256, now = () => Date.now(), log = (m) => console.log(`[Dusk Atelier] 애드온: ${m}`) } = {}) {
+export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onNewAddons = null, timers = globalThis, fetcher = fetchText, importer = importCode, moduleText = importModuleText, hasher = sha256, now = () => Date.now(), log = (m) => console.log(`[Dusk Atelier] 애드온: ${m}`) } = {}) {
   let storeP = null;
   const S = () => (storeP ??= storeOf(api));
   // 값은 문자열로만 저장한다(호스트마다 객체 저장 방식이 달라서)
@@ -188,9 +198,14 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
   async function loadManifest(fresh = false) {
     const url0 = await manifestUrl();
     pin = fresh ? await pinFresh(url0) : null;
-    const text = await fetcher(api, pin ? pinned(url0) : bust(url0, `t=${now()}`));
-    if (text == null) throw new Error("목록을 받지 못했어요");
-    const m = parseManifest(text);
+    let text = await fetcher(api, pin ? pinned(url0) : bust(url0, `t=${now()}`));
+    let m = text == null ? { addons: [], errors: ["목록을 받지 못했어요"] } : parseManifest(text);
+    if (m.errors.length && !m.addons.length) {   // 엉뚱한 응답(웹리스의 통로 문제) → 모듈로 불러와 본다
+      const mu = moduleUrls.manifest(url0);
+      const t2 = mu ? await moduleText(`${mu}?t=${now()}`).catch(() => null) : null;
+      if (t2) { const m2 = parseManifest(t2); if (m2.addons.length) m = m2; }
+    }
+    if (text == null && !m.addons.length) throw new Error("목록을 받지 못했어요");
     if (m.errors.length) log(`목록 오류 ${m.errors.join(", ")}`);
     manifest = m.addons;
     return manifest;
@@ -202,6 +217,9 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     if (typeof code !== "string") throw new Error("파일을 받지 못했어요");
     const ok = async (t) => typeof t === "string" && (await hasher(new TextEncoder().encode(t))) === a.sha256;
     if (await ok(code)) return code;
+    // 먼저 모듈로 불러와 본다: 호스트 요청 통로가 주소와 상관없이 같은 응답을 주는 환경(웹리스)에서도 되는 길
+    const mu = moduleUrls.file(a);
+    if (mu) { const t = await moduleText(mu).catch(() => null); if (await ok(t)) return t; }
     // 엉뚱한 응답(다른 요청의 응답·캐시)이면 주소를 바꿔 몇 번 더
     for (let i = 1; i <= 2; i++) {
       await new Promise((r) => timers.setTimeout(r, 400 * i));
