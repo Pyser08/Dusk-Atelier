@@ -44,3 +44,11 @@ test("M-2 저장 위치를 '끔'으로 바꾸면(실행 중이어도) 보조 모
   newReply(chat, 2); api.hooks.output("x"); await wait(80);
   assert.equal(calls, 0);
 });
+
+test("M-2b 홈에서 장기 기억(모든 채팅)을 끄면 인물 위키(리수폿) 자동 정리도 꺼진다 — 보조 모델 호출 없음", async () => {
+  const { potState } = await import("../src/engine/memoryswitch.js");
+  const idx = { settings: { flow: { on: true }, potMode: true, inject: { on: true } }, potBots: {} };
+  assert.equal(potState(idx, "c1").on, true, "켜져 있으면 돈다(이 시험이 실제 판단을 보는지)");
+  idx.settings.inject.on = false;
+  assert.deepEqual(potState(idx, "c1"), { on: false, reason: "memory-all-off" });
+});

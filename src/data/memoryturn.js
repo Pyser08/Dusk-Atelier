@@ -30,7 +30,7 @@ import { CYCLE_BLOCK_MARK, CYCLE_FIELD_PROMPT, applyCycleReport } from "../engin
 import { parseJson } from "../engine/memoryprompt.js";
 import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
 import { makeTools } from "./memorytools.js";
-import { potConfirm, potOffForBot } from "../engine/memoryswitch.js";
+import { potConfirm } from "../engine/memoryswitch.js";
 import { MEMORY_DEFAULT_PROMPT_1, MEMORY_DEFAULT_PROMPT_2 } from "./memory-default-prompts.js";
 import { chatKeyOf } from "../engine/chatkey.js";
 
@@ -150,13 +150,14 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
         return mergeMemory(memory, r);
       } catch (e) { log("회상 실패", e?.message ?? e); return memory; }
     };
-    // 이 봇에서 리수폿만 따로 껐는지(v3.1 봇별 끄기). 끈 봇이 하나도 없으면 봇 정보를 읽지 않는다.
+    // 리수폿이 이 채팅에서 꺼졌는지: 전체 끔이면 바로, 아니면 봇별 끔(v3.1). 끈 봇이 하나도 없으면 봇 정보를 읽지 않는다.
     const botPotOff = async () => {
       try {
         const idx = await store.getIndex();
+        if (!potState(idx, "").on) return true;   // 전체 끔(모든 채팅 장기 기억 끔·리수폿 끔)이면 봇 정보 없이 바로
         if (!Object.keys(idx.potBots ?? {}).length) return false;
         const c = await api.getCharacterFromIndex(await api.getCurrentCharacterIndex());
-        return potOffForBot(idx, c?.chaId);
+        return !potState(idx, c?.chaId).on;   // 봇별 끔만이 아니라 전체 판단(모든 채팅 끔·리수폿 끔 포함)을 한 곳에서
       } catch { return false; }
     };
     // 요청 직전 훅은 하나만: 위키(고르기·정리 노트) → Dusk 블록

@@ -42,6 +42,8 @@ export var memoryGlobalOn = (idx) => { const s = obj(idx?.settings); return s.ba
 export function potState(idx, chaId) {
   const s = obj(idx?.settings);
   if (s.potMode === false) return { on: false, reason: "pot-mode-off" };
+  // 홈 '장기 기억(모든 채팅)' 끔이면 인물 위키도 멈춘다 — 끄면 관련 보조 모델 호출이 하나도 없어야 한다(사용자 11-08, PROMISES M-2b)
+  if (obj(s.inject).on === false) return { on: false, reason: "memory-all-off" };
   if (obj(s.flow).on !== true) return { on: false, reason: "flow-off" };
   if (obj(idx?.potBots)[String(chaId)] === false) return { on: false, reason: "bot-off" };
   return { on: true, reason: "on" };
