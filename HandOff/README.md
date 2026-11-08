@@ -6,7 +6,7 @@
 
 | 저장소 | 작업 브랜치 | 비고 |
 |---|---|---|
-| Dusk-Atelier | `feat/2.0.0` | 첫 메이저 — 애드온 구조(코어 + 런타임 모듈 로더). 설계는 프로젝트 문서 claude/addon-plan.md |
+| Dusk-Atelier | `feat/2.0.7` | 첫 메이저 — 애드온 구조(코어 + 런타임 모듈 로더). 설계는 프로젝트 문서 claude/addon-plan.md |
 | Dusk-Cellar | `feat/0.1.0` | 기억 저장소(`/cellar/mem`) — Atelier 쪽 연동은 위 Atelier 브랜치에서 작업 |
 
 - **작업 브랜치가 바뀌면(새로 만들거나 옮길 때) 같은 작업 안에서 이 표를 main의 `HandOff/README.md`에 고치고 push한다.** 이 문서는 main에서 읽히므로, 표가 낡으면 다음 AI가 옛 브랜치에서 작업하게 된다. (이 표만 고치는 main 수정은 릴리스가 되지 않는다.)
