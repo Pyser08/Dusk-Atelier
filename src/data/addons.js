@@ -37,6 +37,11 @@ async function readText(res) {
   if (b instanceof Uint8Array || b instanceof ArrayBuffer) return new TextDecoder().decode(b);
   return null;
 }
+// raw.githubusercontent.com/<o>/<r>/<ref>/<path> → cdn.jsdelivr.net/gh/<o>/<r>@<ref>/<path>
+export function toJsdelivr(u) {
+  const m = String(u).match(/^https:\/\/raw\.githubusercontent\.com\/([\w.-]+)\/([\w.-]+)\/([\w.-]+)\/([^?#]+)/);
+  return m ? `https://cdn.jsdelivr.net/gh/${m[1]}/${m[2]}@${m[3]}/${m[4]}` : null;
+}
 // UTF-8 바이트가 한 글자씩(latin1) 풀린 문자열을 되돌린다. 그런 문자열이 아니면 null.
 export function latin1ToUtf8(t) {
   if (typeof t !== "string" || !/[\u0080-\u00ff]/.test(t) || /[^\u0000-\u00ff]/.test(t)) return null;
@@ -194,6 +199,14 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     if (fetcher === fetchText && typeof fetch === "function") {
       const t = await readText(await fetch(url, { cache: "no-store" }).catch(() => null));
       if (await ok(t)) return t;
+    }
+    // 리스 웹·포켓리스는 공용 프록시로 받아 raw.githubusercontent가 IP 제한(429) 안내를 줄 수 있다 → jsDelivr 사본으로
+    const mirror = toJsdelivr(pin && a.url.startsWith(pin.from) ? pinned(a.url) : a.url);
+    if (mirror) {
+      const m = await fetcher(api, mirror).catch(() => null);
+      if (await ok(m)) return m;
+      const f = latin1ToUtf8(m);
+      if (f && await ok(f)) return f;
     }
     const got = await hasher(new TextEncoder().encode(code));
     const head = code.slice(0, 120).replace(/\s+/g, " ");
