@@ -46,7 +46,9 @@ for (const a of src.addons) {
     b.onLoad({ filter: /.*/, namespace: "dusklib" }, async (args) => {
       shared.add(args.path);
       const names = await exportsOf(args.path), named = names.filter((n) => n !== "default");
-      return { loader: "js", contents: `const m = globalThis.__duskLib?.[${JSON.stringify(args.path)}];\nif (!m) throw new Error(${JSON.stringify(`Dusk 코어에 ${args.path}가 없어요 — Dusk를 업데이트해 주세요`)});\n${named.length ? `export const { ${named.join(", ")} } = m;\n` : ""}${names.includes("default") ? "export default m.default;\n" : ""}` };
+      // 예전 코어에 이름이 빠져 있으면 'f0 is not a function'처럼 엉뚱하게 터지므로, 켤 때 먼저 확인해 업데이트 안내로 멈춘다
+      const need = JSON.stringify(named);
+      return { loader: "js", contents: `const m = globalThis.__duskLib?.[${JSON.stringify(args.path)}];\nif (!m) throw new Error(${JSON.stringify(`Dusk 코어에 ${args.path}가 없어요 — Dusk를 업데이트해 주세요`)});\n{ const gone = ${need}.filter((k) => !(k in m)); if (gone.length) throw new Error(${JSON.stringify(`Dusk 본체가 이 애드온보다 오래됐어요(${args.path}에 없는 기능: `)} + gone.slice(0, 3).join(", ") + ") — Dusk를 업데이트해 주세요"); }\n${named.length ? `export const { ${named.join(", ")} } = m;\n` : ""}${names.includes("default") ? "export default m.default;\n" : ""}` };
     });
   } };
   const r = await build({ ...common, entryPoints: [path.join(root, "addons", a.id, "index.js")], format: "esm", target: "es2022", legalComments: "none", minify: true, define, plugins: [lib], metafile: true });
