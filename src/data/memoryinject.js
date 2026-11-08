@@ -6,6 +6,7 @@ import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
 import { folderIdOf } from "./memorystore.js";
 import { chatKeyOf } from "../engine/chatkey.js";
+import { trimCovered } from "../engine/historytrim.js";
 
 // onRequest: 메인 모델 요청 직전에 부른다(기다리지 않음). 러너가 '다음 입력 때 직전 응답 확정'을 시작하는 데 쓴다.
 export function createMemoryInjector(api, { store, prep = null, storyNow = null, onRequest = null, embedder = null, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
@@ -48,7 +49,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     const text = applyLore(raw, folder?.lore);  // 주입 로어 편집(줄 수정·숨김·내 로어)
     if (manifest && text !== raw) manifest.tokens = loreTokens(text);
     if (mark && text && idx.settings.inject.plus !== false && manifest?.recordIds?.length) markUsed(character, chat, manifest.recordIds, msgs.length);
-    return { text, raw, manifest, position: idx.settings.inject.position, reason: text ? "" : "empty" };
+    return { text, raw, manifest, position: idx.settings.inject.position, reason: text ? "" : "empty", coveredAt: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : -1, trim: idx.settings.inject.trimOld === true ? Math.max(4, Number(idx.settings.inject.trimKeep) || 20) : 0 };
   }
   async function beforeRequest(messages, type, { focus = null } = {}) {
     try {
@@ -57,8 +58,11 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
       const c = await compose(cur, { focus });
       try { Promise.resolve(onRequest?.()).catch(() => {}); } catch { /* 요청을 막지 않는다 */ }
       if (!c?.text) { last = { at: Date.now(), injected: false, manifest: c?.manifest ?? null, reason: c?.reason ?? "" }; return messages; }
-      last = { at: Date.now(), injected: true, manifest: c.manifest, text: c.text };
-      return insertBlock(messages, c.text, c.position);
+      // 요약된 옛 대화 빼고 보내기(설정, 기본 꺼짐): 기억이 실제로 들어갈 때만, 분석이 끝난 옛 대화만 뺀다
+      let send = messages, dropped = 0;
+      if (c.trim) { const r = trimCovered(messages, cur.chat.message ?? [], { keepTurns: c.trim, coveredAt: c.coveredAt }); send = r.messages; dropped = r.dropped; }
+      last = { at: Date.now(), injected: true, manifest: c.manifest, text: c.text, dropped };
+      return insertBlock(send, c.text, c.position);
     } catch (e) { log("주입 실패", e?.message ?? e); return messages; }
   }
   // 지금 열린 채팅에 다음 요청 때 들어갈 블록을 미리 만들어 본다. 저장 데이터·사용 횟수는 건드리지 않는다.
