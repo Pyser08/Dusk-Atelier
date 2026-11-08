@@ -274,7 +274,7 @@ export function createShell(api, opts = {}) {
       const key = JSON.stringify([folded, onChat, kind, ci, ti, user, rows.map((r) => [r.index, r.name])]);
       if (!force && key === last) return;
       last = key;
-      try { const b = await d.querySelector("body"); if (b) { await b.setAttribute("x-dusk-st", "1"); await b.setAttribute("x-dusk-fold", folded || !onChat || nativeOpen ? "1" : "0"); } } catch { /* 표식 없이도 사이드바는 보인다 */ }
+      try { const b = await d.querySelector("body"); if (b) { await b.setAttribute("x-dusk-st", "1"); await b.setAttribute("x-dusk-chat", onChat ? "1" : "0"); await b.setAttribute("x-dusk-fold", folded || !onChat || nativeOpen ? "1" : "0"); } } catch { /* 표식 없이도 사이드바는 보인다 */ }
       if (!(await d.querySelector(`[x-dusk="${STY}"]`))) {
         const st = await d.createElement("style"); await st.setAttribute("x-dusk", STY); await st.setInnerText(SHELL_CSS);
         await (await d.querySelector("head") ?? await d.querySelector("body")).appendChild(st);
@@ -361,7 +361,7 @@ export function createShell(api, opts = {}) {
   async function destroy() {
     dead = true; clearInterval(timer);
     await inflight.catch(() => {});   // 그리던 중이면 끝난 뒤에 지운다(지운 뒤 다시 붙는 것 방지)
-    try { const d = await ensureDoc(); const b = await d?.querySelector("body"); if (b) await b.removeAttribute?.("x-dusk-st"); for (const id of [ROOT, NOTE, TOP, POP, STY]) { const el = await d?.querySelector(`[x-dusk="${id}"]`); if (el) await el.remove(); } } catch { /* 화면이 이미 없음 */ }
+    try { const d = await ensureDoc(); const b = await d?.querySelector("body"); if (b) { await b.removeAttribute?.("x-dusk-st"); await b.removeAttribute?.("x-dusk-chat"); } for (const id of [ROOT, NOTE, TOP, POP, STY]) { const el = await d?.querySelector(`[x-dusk="${id}"]`); if (el) await el.remove(); } } catch { /* 화면이 이미 없음 */ }
   }
   timer = setInterval(() => render(false), opts.poll ?? 4000);
   render(true);

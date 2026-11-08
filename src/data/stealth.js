@@ -250,7 +250,20 @@ ${inputBlock}`,
   ].filter(Boolean).join("\n");
   // 최소 모드: 리스 전체 화면(html·body·:root·대화 화면·입력창)을 건드리는 규칙을 빼고 말풍선 꾸밈만 남긴다(스크롤·표시 문제를 가려낼 때)
   const out = opts.minimal ? css.replace(/^@media \(max-width: 760px\) \{\n  \.st-msg[\s\S]*?\n\}\n?/m, "").replace(/^(?:html, body|html|body|button, input, textarea, select|div:has\(> \.default-chat-screen\)|\.default-chat-screen|\.text-input-area[^{]*)\s*\{[^}]*\}\n?/gm, "").replace(/^div:has\(> \.text-input-area\) \{[\s\S]*?^\}\n?/m, "").replace(/^:root \{\n  --risu-theme[\s\S]*?^\}\n?/m, "") : css;
-  return { name: STEALTH_PREFIX + P.label, css: out, html };
+  return { name: STEALTH_PREFIX + P.label, css: offHome(out), html };
+}
+
+// 리스 홈(채팅 밖)은 건드리지 않는다: 화면 전체 규칙(색 변수·글꼴·배경·순정 사이드바)을 "채팅 화면일 때"로 좁힌다.
+// 사이드바 쪽이 body에 x-dusk-chat="0"(채팅 아님)을 달면 꺼진다. 표식이 없으면(사이드바가 안 도는 경우) 예전처럼 적용.
+const ON = ':root:not(:has(> body[x-dusk-chat="0"]))';
+export function offHome(css) {
+  return css
+    .replace(/^:root \{\n  --risu-theme/m, `${ON} {\n  --risu-theme`)
+    .replace(/^html, body \{/m, `${ON}, ${ON} > body {`)
+    .replace(/^button, input, textarea, select \{/m, `${ON} button, ${ON} input, ${ON} textarea, ${ON} select {`)
+    .replace(/^code, pre, kbd, samp \{/m, `${ON} code, ${ON} pre, ${ON} kbd, ${ON} samp {`)
+    .replace(/^body \{/m, `${ON} > body {`)
+    .replace(/^\.rs-sidebar, \.risu-sidebar \{/m, `${ON} .rs-sidebar, ${ON} .risu-sidebar {`);
 }
 
 /** 기존 테마 시스템 형식의 테마로(세 번째 인자 target은 리스 계열). */
