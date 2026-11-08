@@ -21,6 +21,17 @@ export function builders(ctx, idx, redraw, kind = "all") {
   return { M, S, save, num, sw, section };
 }
 
+// 최근 기록 결과(Dusk 기록기): 무엇을 남겼는지 한눈에. 화면을 열 때의 값만 보여 준다(새로 기록되면 다시 열면 바뀜).
+function recordBox(M) {
+  const r = M.flow?.lastRecord?.();
+  if (!r) return h("p", { class: "rb-muted", "data-rec": "none" }, "최근 기록 결과: 아직 없어요 (Dusk 기록기가 한 번 돌면 여기에 보여요).");
+  const when = new Date(r.at).toLocaleTimeString();
+  if (r.error) return h("p", { class: "rb-muted", "data-rec": "error" }, `최근 기록 결과 (${when}): 실패 — ${r.error}`);
+  const parts = [r.created?.length ? `새 인물 ${r.created.join(", ")}` : "", r.updated ? `카드 ${r.updated}명 갱신` : "", r.entries ? `항목 ${r.entries}개` : "", r.gauges ? `호감도 변화 ${r.gauges}건` : "", r.states?.length ? `상태 ${r.states.join(", ")}` : "", r.failed?.length ? `세부 실패 ${r.failed.join(", ")}` : ""].filter(Boolean);
+  return h("details", { class: "rb-mem-man", "data-rec": "ok" }, h("summary", null, `최근 기록 결과 (${when}) · ${parts.length ? parts.slice(0, 2).join(" · ") : "바뀐 것 없음"}`),
+    h("ul", null, [r.scene ? `장면: ${r.scene}` : "", ...parts].filter(Boolean).map((t) => h("li", null, t))));
+}
+
 // ---- 전체 설정: 기억 탭 메인 화면(봇 목록 위)에 접이식으로 둔다. 모든 봇에 공통 적용.
 export async function renderGlobalSettings(ctx, host, { redraw, panel = false }) {
   const m = mem(ctx), M = ctx.memory, idx = await M.store.getIndex();
@@ -40,6 +51,9 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
   const adv = h("details", { class: "rb-mem-man rb-mem-adv rb-mem-advfold", open: !!m.advOpen, onToggle: (e) => { m.advOpen = e.target.open; } }, h("summary", null, "고급: 기록·기억 넣기 세부 설정"),
     section("기억 저장소", h("label", { class: "rb-mem-field" }, h("span", null, "저장소"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.backend = e.target.value; }).then(() => askRefresh(ctx)) }, [["auto", "자동"], ["local", "플러그인"], ["bardwiki", "BardWiki"], ["off", "끔"]].map(([v, l]) => h("option", { value: v, selected: S.backend === v }, l)))), h("p", { class: "rb-muted" }, "리스바드에서는 이중 비용을 막으려고 플러그인의 분석·기억 넣기을 끄고 위키를 읽어요. 바꾼 뒤에는 RisuAI를 다시 불러와야 훅에 반영돼요.")),
     caps.analyze ? section("분석", h("label", { class: "rb-mem-field" }, h("span", null, "분석 모델"), mode, sid),
+      h("label", { class: "rb-mem-field" }, h("span", null, "기록 방식"), h("select", { class: "rb-input", "aria-label": "기록 방식", onChange: (e) => save((s) => { s.recorder = e.target.value; }) }, [["dusk", "Dusk 기록기 (권장)"], ["pot", "리수폿 기록 (예전)"]].map(([v, l]) => h("option", { value: v, selected: (S.recorder === "pot" ? "pot" : "dusk") === v }, l)))),
+      h("p", { class: "rb-muted" }, "Dusk 기록기는 응답마다 짧은 질문(장면 1번 + 인물마다 1번)으로 인물 카드·호감도·장면 요약·사망 같은 상태 변화를 기록해요. 리수폿 기록은 예전처럼 아주 긴 지침 하나로 묻는 방식이에요(모델이 중요한 걸 빼먹기 쉬워요). 월경 추적이 켜진 채팅은 항상 리수폿 기록을 써요."),
+      recordBox(M),
       num("보조 모델 제한시간(초, 기본 600)", () => S.modelTimeoutSec ?? 600, (s, v) => { s.modelTimeoutSec = Math.max(10, v); }, { min: 10, max: 3600, step: 10 }),
       h("label", { class: "rb-mem-field" }, h("span", null, "자동 기록 시점"), h("select", { class: "rb-input", "aria-label": "자동 기록 시점", onChange: (e) => save((s) => { s.confirm = e.target.value; s.potStore = { ...(s.potStore ?? {}), confirm: e.target.value }; }) }, [["next", "다음 입력을 보낼 때 (권장)"], ["now", "응답을 받은 직후"]].map(([v, l]) => h("option", { value: v, selected: (S.confirm === "now" ? "now" : "next") === v }, l)))),
       h("p", { class: "rb-muted" }, "‘다음 입력을 보낼 때’는 내가 다음 말을 보내는 순간 직전 응답을 확정해서 기록해요. 리롤하거나 고치는 중인 응답은 기록하지 않아서 되돌릴 일이 거의 없어요. 대신 마지막 응답은 다음 말을 보낼 때까지 기록되지 않아요."),

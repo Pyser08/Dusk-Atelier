@@ -2,6 +2,16 @@
 
 ## 최근 세션 (2026-11-07 — 새 챗은 여기부터, 아래 로드맵도 함께)
 - 작업 브랜치 `feat/2.0.0`(예전 `feat/stealth`를 빨리감기로 합침, stealth 브랜치는 남아 있음). main은 v1.9.2 그대로. 작업 전 `HandOff/QUALITY.md`(검토 지침·박스 여백·호스트 제약) 필독.
+- **장기기억 프롬프트·기록 개편(11-08, 사용자 요청 "모델 상관없이 잘 정리")**: 원인 ① 리수폿 Writer 지침이 빈 위키에서도 ~11.7만 자(규칙 20여 묶음 같은 무게)+복잡한 JSON → 누락·우선순위 흐림 ② 기본 프롬프트 '뒤'(장면 작성 점검표)가 memory·router·director·writer 단계 맨 끝에 붙음 ③ 사망 등 상태가 일반 기록과 섞여 주입에 우선순위 없음 ④ 합친 기록 경로에선 게이지를 아예 안 물음(gx=null).
+  - `engine/recorder.js`(새): `parseWriterRun`(리수폿 프롬프트의 REFERENCE DATA·Text Control Manifest JSON만 꺼냄) → `recordTurn`(1단계 LINES_STAGE1 + 인물별 linesStage2(wiki:true), 같은 응답 1단계는 캐시) → `buildEnvelope`(리수폿 envelope: relationship·current_appraisal·appraisal·identity·speech·behavior·knowledge·perception.secret·npc_emotion, affinity.score init/delta(인용은 `exactQuote`로 원문 구간), 새 인물 people_ops init) + `buildDusk`(Dusk 분석 객체 → stash). 실제 executeWriterBatches 검증 통과(tests/recorder.test.js). register·suspicion·rhythm·taste_band 등은 기록기가 안 씀(기존 값 유지).
+  - 연결: `data/memoryturn.js` writerCall에서 label "Writer batch"면 `recordWithDusk`(settings.recorder!=="pot", 월경 표식 있으면·해석 실패면 예전 길). 사용자 writer front/back 프롬프트는 앞뒤로. `flow.lastRecord()`.
+  - `memorylines.js` 지침 전면 개편(목적→줄 종류 우선순위→짧은 규칙, `state|`·`close|`·`new|` 추가, JSON만 내는 모델용 `{"lines":[…]}` 받기, 성+이름 부분 일치). 상태 줄은 본문 인용 필수 → 인물 기록 attr status.
+  - 주입(`memoryinject.js`): `stateLines`/'Current facts' 섹션(관련도 무관, 사라진 상태 먼저), 이름 옆 [상태], 제목 줄 토큰도 상한에 셈. `memorytrust.currentState/isGoneState`, knownPeople에 state.
+  - 게이지: `memoryrunner` 분석 뒤 게이지 차례면 `gaugeMessages`/`parseGaugeLines` 따로 호출(합친 경로 포함). analyzeStaged는 게이지 때문에 JSON으로 바꾸지 않음.
+  - 기본 프롬프트 '뒤': 새로 추가 안 함 + 손대지 않은 기존 것 끔(`idx.pot.defaultBackOffV2`).
+  - 리수폿 단계 응답 `engine/jsonreply.js cleanJsonReply`(stageCall에서, 기록기 줄 응답 제외) — 인물 도구 "완성된 JSON을 읽지 못했습니다" 줄이기(사용자 제보, Erosync 자체 파서는 이미 관대함).
+  - UI: 기억 설정 → 고급 → 분석 '기록 방식'(dusk/pot)·'최근 기록 결과'. e2e `run-recorder-ui.mjs`(12). memory 애드온 0.2.0. 코어 모듈(memorylines·memoryprompt·memoryinject·memorytrust·memorystore)도 바뀌어 **dusk_atelier.js도 새로 받아야 함**.
+  - 남은 것: 실제 모델(아르곤·딥시크 등)로 품질 확인 못 함, 정리 노트(Director) 지침은 그대로(기본정보 '현재 상태:' 줄로 사망을 보게 함), 기존 tests/pot-port.test.js 실패는 원래부터(customPromptPlain 원본 없음).
 - **더스크 스텔스 애드온**(`addons/stealth`, 최신 0.3.14): 클로드·클로드 코드·GPT·코덱스·제미나이·딥시크 프리셋. 파일 `src/data/stealth.js`(CSS·채팅 HTML 생성), `stealth-apply.js`(켜기·끄기·진단·`reapplyIfUpdated`), `stealth-shell.js`(사이드바·상단 줄 껍데기), `src/ui/screens/stealth.js`(화면), `stealth-fold.js`(예전 훅 방식, 지금은 안 씀).
   - 호스트 제약: 루트 문서 `setAttribute`는 `x-`만, `setInnerHTML`은 class를 지움 → 안쪽 요소는 `x-c`로 표시하고 CSS `[x-c~=…]`. 클릭 대행 불가(SafeElement에 click 없음).
   - 이미지 접기(0.3.12~ 최종): 스텔스가 화면에서 이미지·배경 그림마다 `[x-st-fw]` 상자로 감싸고 위에 `[x-st-fl]` '›_ 명령어 N개 실행함 ›' 줄(누르면 x-open 토글, `stealth-shell.js` wrapMedia, 1.5초마다). 접힌 이미지는 1px 투명(배경 그림 미리 받기). 48px 미만 아이콘은 그대로. 감싸기 실패는 숨기고 '명령어 N개 실패함'(눌러 펼침). 포켓리스는 채팅 HTML의 `<details>`를 지워서 메시지 단위 방식(0.3.6~0.3.11)은 폐기, display 훅(0.3.0)도 폐기(느림·정규식 이미지 못 잡음).

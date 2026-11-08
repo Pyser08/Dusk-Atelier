@@ -33,6 +33,9 @@ import { makeTools } from "./memorytools.js";
 import { potConfirm } from "../engine/memoryswitch.js";
 import { MEMORY_DEFAULT_PROMPT_1, MEMORY_DEFAULT_PROMPT_2 } from "./memory-default-prompts.js";
 import { chatKeyOf } from "../engine/chatkey.js";
+import { cleanJsonReply } from "../engine/jsonreply.js";
+import { parseWriterRun, recordTurn, buildEnvelope, buildDusk, summarize } from "../engine/recorder.js";
+import { customPromptPlain } from "../engine/pot/custom-prompts.js";
 
 const READONLY = new Set(["writer_schema", "director_schema", "slots", "policies"]);
 export const promptKeysOf = (lib) => Object.entries(lib).flatMap(([id, parts]) => Object.keys(parts).filter((p) => !READONLY.has(p)).map((p) => `${id}:${p}`));
@@ -41,7 +44,7 @@ const STASH_MAX = 8;
 
 // link: 러너와 공유하는 빈 객체. 턴 흐름이 켜지면 settle/take가 채워진다.
 export function createTurnFlow(api, { store, runner, injector, embedder = null, sourceLibrary, link = {}, onOpen = null, log = (...a) => console.log("[Dusk 기억]", ...a), scheduler = globalThis } = {}) {
-  let rt = null, starting = null, lastTurn = null, cold = null;
+  let rt = null, starting = null, lastTurn = null, cold = null, lastRecord = null;
   // pure: 기억 저장소가 '끔'이면 Dusk 자체 기억(기록·회상·주입)은 전부 빼고 리수폿 위키 정리만 돌린다
   let pure = false;
   let cyclePending = null; const cycleEvents = [];  // 월경·임신: 응답 전 상태 → 응답 뒤 달라진 큰 사건(출산 등)을 Dusk 기록 대기열에
@@ -70,15 +73,24 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     if (promptPresetIndex.pot?.defaultPromptPresetsV1 !== true) {
       const existing = settings.rawSnapshot().customPrompts ?? [];
       const ids = new Set(existing.map((item) => item.id));
+      // 2.0.0: '뒤'(장면 작성 점검표)는 본편 응답용이라 기록 단계에 넣지 않는다(기록 모델에게 "장면을 출력하라"고 해서 기록이 흐려졌다).
       const defaults = [
         { id: "dusk-default-front-v1", name: "기본 프롬프트 · 앞", stages: ["memory", "router", "director", "writer"], scope: { kind: "all" }, enabled: true, position: "front", text: MEMORY_DEFAULT_PROMPT_1 },
-        { id: "dusk-default-back-v1", name: "기본 프롬프트 · 뒤", stages: ["memory", "router", "director", "writer"], scope: { kind: "all" }, enabled: true, position: "back", text: MEMORY_DEFAULT_PROMPT_2 },
       ].filter((item) => !ids.has(item.id));
       if (defaults.length) {
         settings.update((value) => { value.customPrompts = [...(value.customPrompts ?? []), ...defaults]; });
         await settings.flush();
       }
       await store.updateIndex((idx) => { idx.pot ??= {}; idx.pot.defaultPromptPresetsV1 = true; });
+    }
+    // 2.0.0 이전: 예전에 자동으로 넣은 '기본 프롬프트 · 뒤'가 손대지 않은 그대로면 끈다(한 번만). 사용자가 고친 글은 그대로 둔다.
+    if ((await store.getIndex()).pot?.defaultBackOffV2 !== true) {
+      const list = settings.rawSnapshot().customPrompts ?? [];
+      if (list.some((c) => c.id === "dusk-default-back-v1" && c.enabled !== false && String(c.text ?? "").trim() === MEMORY_DEFAULT_PROMPT_2.trim())) {
+        settings.update((v) => { v.customPrompts = (v.customPrompts ?? []).map((c) => c.id === "dusk-default-back-v1" && String(c.text ?? "").trim() === MEMORY_DEFAULT_PROMPT_2.trim() ? { ...c, enabled: false } : c); });
+        await settings.flush();
+      }
+      await store.updateIndex((idx) => { idx.pot ??= {}; idx.pot.defaultBackOffV2 = true; });
     }
     if (settings.status().blocked) {  // 가져온 설정이 해석되지 않으면 원본은 보관하고 새 설정으로 시작한다
       await store.updateIndex((idx) => { idx.pot ??= {}; idx.pot.settingsBackup = idx.pot.settings; idx.pot.settings = null; });
@@ -92,11 +104,37 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     const stageCall = async (a, k, preset, prompt, opts = {}) => {
       const stage = stageOf(String(opts.stageLabel ?? "")), withSkills = appendToPrompt(prompt, await skillBlock(stage));   // 스킬 주입(꺼짐이면 원문)
       const send = (text) => callWriterModel(a, k, preset, text, { ...opts, onUsage: (u) => { opts.onUsage?.(u); recordUsage(api, stage, u).catch(() => {}); } });
-      return webWrap(stage, withSkills, send);   // 웹 도구(꺼짐이 기본, 켠 단계만 호출이 늘어남)
+      const out = await webWrap(stage, withSkills, send);   // 웹 도구(꺼짐이 기본, 켠 단계만 호출이 늘어남)
+      // 리수폿 단계는 JSON을 받는다: 생각 글·설명·끝 쉼표 때문에 "완성된 JSON을 읽지 못했습니다"가 나지 않게 다듬어 넘긴다(Dusk 기록기 줄 응답은 그대로)
+      return /Writer Dusk/.test(String(opts.stageLabel ?? "")) || typeof out !== "string" ? out : cleanJsonReply(out);
+    };
+    // 2.0.0 Dusk 기록기: 리수폿 Writer 프롬프트(11만 자+)를 보내지 않고 데이터만 꺼내 짧은 단계별 질문으로 기록한 뒤,
+    // 리수폿이 받던 응답(JSON)으로 바꿔 돌려준다. 해석이 안 되거나(PDF 첨부 방식)·월경 보고가 필요하면 예전 길로.
+    const recCache = new Map();   // 같은 응답의 1단계 결과(리수폿이 묶음을 나눠 여러 번 부를 때 재사용)
+    const recordWithDusk = async (a, k, preset, prompt, opts) => {
+      const s0 = (await store.getIndex()).settings ?? {};
+      if (s0.recorder === "pot" || String(prompt).includes(CYCLE_BLOCK_MARK)) return null;
+      const run = parseWriterRun(prompt); if (!run) return null;
+      let prep = null;
+      if (!pure) { try { prep = await runner.prepareLatest(await api.getCurrentCharacterIndex(), await api.getCurrentChatIndex()); } catch { prep = null; } }
+      const snap = settings.rawSnapshot(), sc = wiki.scope ? { characterId: wiki.scope.characterId, chatKey: wiki.scope.chatKey } : {};
+      const front = customPromptPlain(snap, "writer", sc, "front"), back = customPromptPlain(snap, "writer", sc, "back");
+      const call = (msgs) => stageCall(a, k, preset, [front, ...msgs.map((m) => m.role === "system" ? m.content : m.role === "assistant" ? `# Your previous reply\n${m.content}` : `# DATA\n${m.content}`), back].filter(Boolean).join("\n\n"), { ...opts, stageLabel: "Writer Dusk" });
+      const light = s0.light === true, beliefs = s0.inject?.beliefs === true;
+      while (recCache.size > 4) recCache.delete(recCache.keys().next().value);
+      const rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
+      const env = buildEnvelope(run, rec);
+      if (prep && !stash.has(prep.h)) { try { putStash(prep.h, buildDusk(rec, { ignore: prep.ignore, light, beliefs })); } catch (e) { log("기록기: Dusk 기록 변환 실패", e?.message ?? e); } }
+      lastRecord = { at: Date.now(), batch: run.batch, ...summarize(rec, env) };
+      return JSON.stringify(env);
     };
     // 기록하기: Dusk 구획을 같이 싣고, 돌아온 응답에서 떼어 낸다.
     const writerCall = async (a, k, preset, prompt, opts = {}) => {
       const label = String(opts.stageLabel ?? ""); let sent = prompt, prep = null;
+      if (/^writer batch/i.test(label)) {
+        try { const out = await recordWithDusk(a, k, preset, prompt, opts); if (out != null) return out; }
+        catch (e) { lastRecord = { at: Date.now(), error: String(e?.message ?? e).slice(0, 200) }; throw e; }
+      }
       if (/^writer/i.test(label)) { try { cyclePending = cycleStates(wiki.snapshot()); } catch { cyclePending = null; } }
       const had = String(prompt).includes(SECTION_MARK);
       if (/^writer/i.test(label) && !pure) {
@@ -252,5 +290,5 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
   }
   const dropCold = () => { cold = null; };
 
-  return { start: apply, apply: async () => { dropCold(); return apply(); }, stop, isOn: () => !!rt, tools: () => rt ? (rt.tools ??= makeTools({ api, rt, sourceLibrary, llmCall: rt.stageCall })) : null, last: () => lastTurn, runtime: () => rt, stash: () => stash.size, settings: settingsStore };
+  return { start: apply, apply: async () => { dropCold(); return apply(); }, stop, isOn: () => !!rt, tools: () => rt ? (rt.tools ??= makeTools({ api, rt, sourceLibrary, llmCall: rt.stageCall })) : null, last: () => lastTurn, lastRecord: () => lastRecord, runtime: () => rt, stash: () => stash.size, settings: settingsStore };
 }

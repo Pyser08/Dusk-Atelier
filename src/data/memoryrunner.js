@@ -6,6 +6,7 @@ import { appendToMessages } from "../engine/skillcfg.js";
 import { noteStreamChunk } from "./genstate.js";
 import { analyze } from "../engine/memoryprompt.js";
 import { isLightModel } from "../engine/memorylines.js";
+import { gaugeMessages, parseGaugeLines } from "../engine/recorder.js";
 import { customPromptPlain } from "../engine/pot/custom-prompts.js";
 import { reconcile } from "../engine/memoryreconcile.js";
 import { loadReconciled } from "./memoryload.js";
@@ -118,8 +119,8 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     input.custom = await customOf(g.chaId, g.chatId);
     const ordinalNow = aiIndexes(messages).filter((i) => i <= last).length;
     let result = manual ? null : link?.take?.(h) ?? null;
-    const gx = !result && gauge ? gauge.prepare(idx, existing, chaId, ordinalNow) : null;   // 합친 호출(리수폿)에는 게이지를 얹지 않는다
-    if (gx) Object.assign(input, gx.input);
+    // 2.0.0: 게이지는 분석과 따로 작은 호출로 묻는다(예전엔 리수폿과 합친 기록에서 게이지를 아예 묻지 않아 갱신이 안 됐다).
+    const gx = gauge ? gauge.prepare(idx, existing, chaId, ordinalNow) : null;
     if (result) session.combined = (session.combined ?? 0) + 1;
     else session.calls++;
     try { if (!result) result = await analyze((msgs) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true }, signal), input, { staged: idx.settings?.staged !== false, format: idx.settings?.format, light: isLightModel(idx.settings), onWarn: (name, e) => log(`${name} 세부 분석 실패(개요만 기록)`, String(e?.message ?? e).slice(0, 120)) }); }
@@ -129,6 +130,15 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
       if (fails >= MAX_FAILS) { await bump(chaId, (b) => { b.paused = true; }); notify(`"${character.name}"의 장기 기억 분석이 ${MAX_FAILS}번 연속 실패해서 이 봇의 자동 기록을 멈췄어요. 기억 탭에서 다시 켤 수 있어요.`); }
       lastTried.delete(tryKey);
       throw e;
+    }
+    if (gx && result) {
+      try {
+        const since = Math.max(0, (existing?.gauge?.run != null ? aiIndexes(messages)[Math.max(0, existing.gauge.run - 1)] ?? 0 : last - 16));
+        const recentG = messages.slice(Math.max(since, last - 16), last).filter((mm) => mm && !isUserMessage(mm)).map((mm) => clean(mm, g.rx).trim().slice(0, 1500));
+        const raw = await run(gaugeMessages(gx.input.gauges ?? [], { recent: recentG, newest: text, suggest: !!gx.input.suggestGauge }), { ...modelOf(idx.settings), noUserPrompts: true }, signal);
+        const got = parseGaugeLines(raw);
+        if (got) result = { ...result, ...got };
+      } catch (e) { log("게이지 호출 실패(다음 주기에 다시)", String(e?.message ?? e).slice(0, 120)); }
     }
     const names = nameOf(character, chat, chatIndex);
     const uNames = await userNames();
