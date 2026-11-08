@@ -188,7 +188,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
   // 받기·업데이트 한 개. 훅이 있는 애드온 업데이트는 다음 시작부터(applyNow:false).
   async function install(id, { applyNow, withRequires = true } = {}) {
     const list = manifest ?? await loadManifest();
-    const a = list.find((x) => x.id === id);
+    let a = list.find((x) => x.id === id);
     if (!a) throw new Error("목록에 없는 애드온이에요");
     // 필요 애드온을 먼저 받는다(이미 있으면 켜기만)
     if (withRequires && a.requires?.length) {
@@ -201,7 +201,15 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
       }
     }
     if (!fitsCore(a, core)) throw new Error(`Dusk v${a.minCore} 이상이 필요해요`);
-    const code = await download(a);
+    let code;
+    try { code = await download(a); }
+    catch (e) {
+      // 목록과 파일이 서로 다른 때의 사본을 받으면 확인값이 어긋난다(raw 캐시가 목록만/파일만 옛것을 줄 때) → 커밋 고정 주소로 목록을 다시 받아 한 번 더
+      if (!/확인값/.test(String(e?.message))) throw e;
+      const again = (await loadManifest(true)).find((x) => x.id === id);
+      if (!again) throw e;
+      a = again; code = await download(a);
+    }
     const idx = await getIndex(), cur = idx[id];
     if (cur) { const old = await store.getItem(CODE(id)).catch(() => null); if (typeof old === "string") { await store.setItem(PREV(id), old); } }
     await store.setItem(CODE(id), code);
