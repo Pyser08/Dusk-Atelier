@@ -255,14 +255,16 @@ ${inputBlock}`,
 
 // 리스 홈(채팅 밖)은 건드리지 않는다: 화면 전체 규칙(색 변수·글꼴·배경·순정 사이드바)을 "채팅 화면일 때"로 좁힌다.
 // 사이드바 쪽이 body에 x-dusk-chat="0"(채팅 아님)을 달면 꺼진다. 표식이 없으면(사이드바가 안 도는 경우) 예전처럼 적용.
-const ON = ':root:not(:has(> body[x-dusk-chat="0"]))';
+// 0.3.43: :root:has(...) 접두사는 화면의 모든 버튼·입력칸 규칙마다 뿌리 요소를 다시 따지게 해 무거웠다 → body 속성 선택자로(가볍다).
+// 색 변수는 body에 두면 그 아래 모든 요소가 물려받는다.
+const ON = 'body:not([x-dusk-chat="0"])';
 export function offHome(css) {
   return css
     .replace(/^:root \{\n  --risu-theme/m, `${ON} {\n  --risu-theme`)
-    .replace(/^html, body \{/m, `${ON}, ${ON} > body {`)
+    .replace(/^html, body \{/m, `${ON} {`)
     .replace(/^button, input, textarea, select \{/m, `${ON} button, ${ON} input, ${ON} textarea, ${ON} select {`)
     .replace(/^code, pre, kbd, samp \{/m, `${ON} code, ${ON} pre, ${ON} kbd, ${ON} samp {`)
-    .replace(/^body \{/m, `${ON} > body {`)
+    .replace(/^body \{/m, `${ON} {`)
     .replace(/^\.rs-sidebar, \.risu-sidebar \{/m, `${ON} .rs-sidebar, ${ON} .risu-sidebar {`);
 }
 

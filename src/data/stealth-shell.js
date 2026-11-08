@@ -228,6 +228,14 @@ export function createShell(api, opts = {}) {
   const FRESH = opts.freshMs ?? 90000, USER_TTL = 120000;
   const kind = opts.kind ?? "claude";
   const foldReady = Promise.resolve();   // 접기 버튼은 없앴다(11-08): 화면 폭으로만 정한다
+  // 위젯 홈 켜짐 여부(플러그인 저장소 값, 10초 캐시 — 브리지 호출을 아낀다)
+  const wh = { v: false, at: 0 };
+  async function widgetHomeOn() {
+    if (opts.widgetHome != null) return !!opts.widgetHome;
+    const now = Date.now(); if (now - wh.at < 10000) return wh.v;
+    try { const raw = await api.pluginStorage?.getItem?.("dusk.widgethome.on"); wh.v = raw === true || raw === "true" || raw === "1" || raw === 1; } catch { wh.v = false; }
+    wh.at = now; return wh.v;
+  }
   async function ensureDoc() { if (doc) return doc; doc = await api.getRootDocument?.(); return doc; }
   // 봇 전체 읽기는 채팅이 많으면 무겁다 → 지금 봇·채팅 번호가 같으면 FRESH 동안 지난 결과를 그대로 쓴다. 번호는 가벼운 호출이라 자주 본다.
   const safe = async (fn) => { try { return await fn(); } catch (e) { shellInfo.warn = String(e?.message ?? e); return undefined; } };   // 호스트가 채팅이 없을 때 던지는 오류는 목록만 비우고 넘어간다
@@ -265,6 +273,12 @@ export function createShell(api, opts = {}) {
       const d = await ensureDoc(); if (!d) { shellInfo.error = "리스 화면 문서에 접근하지 못했어요"; return; }
       await foldReady;
       onChat = !!(await d.querySelector(".default-chat-screen, .text-input-area").catch(() => null));
+      // 위젯 홈을 켜 두었으면 리스 홈(채팅 밖)에서는 스텔스가 아무것도 그리지 않는다 — 사이드바·상단 줄을 걷고 표식만 남긴다(위젯 홈이 홈을 차지하게)
+      if (!onChat && await widgetHomeOn()) {
+        try { const b = await d.querySelector("body"); if (b) { await b.setAttribute("x-dusk-chat", "0"); await b.setAttribute("x-dusk-wh", "1"); } for (const id of [ROOT, TOP, NOTE, POP]) { const el = await d.querySelector(`[x-dusk="${id}"]`); if (el) await el.remove(); } } catch { /* 다음 차례에 */ }
+        last = "wh"; return;
+      }
+      try { if (last === "wh") { const b = await d.querySelector("body"); await b?.removeAttribute?.("x-dusk-wh"); } } catch { /* 없음 */ }
       { const r = await (await d.querySelector("body"))?.getBoundingClientRect?.().catch(() => null); folded = !(r && r.width > 760); }   // 기본: PC 펼침 · 휴대폰 접힘(휴대폰은 펼치면 채팅을 덮는다)
       nativeOpen = await nativeSidebarOpen(d);
       const { ci, ti, char } = await chatInfo(force);
@@ -363,7 +377,7 @@ export function createShell(api, opts = {}) {
     await inflight.catch(() => {});   // 그리던 중이면 끝난 뒤에 지운다(지운 뒤 다시 붙는 것 방지)
     try { const d = await ensureDoc(); const b = await d?.querySelector("body"); if (b) { await b.removeAttribute?.("x-dusk-st"); await b.removeAttribute?.("x-dusk-chat"); } for (const id of [ROOT, NOTE, TOP, POP, STY]) { const el = await d?.querySelector(`[x-dusk="${id}"]`); if (el) await el.remove(); } } catch { /* 화면이 이미 없음 */ }
   }
-  timer = setInterval(() => render(false), opts.poll ?? 4000);
+  timer = setInterval(() => render(false), opts.poll ?? 6000);   // 0.3.43: 4초→6초(채팅 중 브리지 호출 줄이기). 화면을 누르면 바로 다시 본다
   render(true);
   duskOpen.fn = async () => { try { const d = await ensureDoc(); if (d) await setVis(d); } catch { /* 다음 그리기에서 */ } };
   return { refresh: () => render(true), close: closePop, destroy, _render: render };
@@ -392,7 +406,7 @@ export async function wrapMedia(d, { log = () => {}, rand = () => 1 + Math.floor
     if (Number.isFinite(since) && now() - since > RECHECK_MS) { try { await el.setAttribute("x-st-m", "S"); } catch { /* 다음에 */ } continue; }
     small.push(el);
   }
-  const list = [...await listItems(await d.querySelectorAll(MEDIA_SEL)), ...small.slice(0, 60)];
+  const list = [...await listItems(await d.querySelectorAll(MEDIA_SEL)), ...small.slice(0, 20)];
   if (list.length) {   // 휴대폰(폭 ≤760): 그림이 화면에 맞춰 줄어들어 220px 아래로 떨어진다 → 기준을 화면 폭의 절반으로(11-08 실기기)
     const vw = (await (await d.querySelector?.("body")?.catch?.(() => null))?.getBoundingClientRect?.().catch?.(() => null))?.width ?? 0;
     if (vw > 0 && vw <= 760) min = Math.min(FOLD_MIN, Math.round(vw * 0.4));
@@ -443,12 +457,30 @@ export async function markThinking(d, rand = Math.random) {
   }
   return n;
 }
+export var FOLD_FAST = 1500, FOLD_SLOW = 10000;
 var folder = null;
 function startFolder(api, log) {
   if (folder) return;
   let busy = false;
-  const tick = async () => { if (busy) return; busy = true; try { const d = await api.getRootDocument?.(); if (d) { await wrapMedia(d, { log }); await markThinking(d); } } catch { /* 다음에 */ } finally { busy = false; } };
-  folder = setInterval(tick, 1500); folder?.unref?.(); tick();
+  // 0.3.43 채팅이 느려지던 문제: 1.5초마다 화면 전체를 브리지로 훑었다. 이제 바뀐 게 없으면 간격을 1.5→3→6→10초로 늘리고,
+  // 화면을 누르거나 입력하면(메시지를 보냄) 다시 1.5초부터 빠르게 본다. 탭이 안 보일 땐 쉰다.
+  let gap = FOLD_FAST, hooked = false;
+  const tick = async () => {
+    if (busy) return; busy = true; let n = 0;
+    try {
+      if (globalThis.document?.hidden) return;
+      const d = await api.getRootDocument?.();
+      if (d) {
+        if (!hooked) { hooked = true; for (const t of ["pointerdown", "keyup"]) { try { await d.addEventListener(t, () => { if (gap !== FOLD_FAST) { gap = FOLD_FAST; arm(); } }, { capture: true }); } catch { /* 이벤트를 못 달아도 간격만 늘어난다 */ } } }
+        n = (await wrapMedia(d, { log })) + (await markThinking(d));
+      }
+    } catch { /* 다음에 */ }
+    finally { busy = false; }
+    const next = n > 0 ? FOLD_FAST : Math.min(FOLD_SLOW, gap * 2);
+    if (next !== gap) { gap = next; arm(); }
+  };
+  const arm = () => { if (!folder) return; clearInterval(folder); folder = setInterval(tick, gap); folder?.unref?.(); };
+  folder = setInterval(tick, gap); folder?.unref?.(); tick();
 }
 function stopFolder() { if (folder) { clearInterval(folder); folder = null; } }
 

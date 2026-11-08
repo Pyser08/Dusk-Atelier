@@ -81,7 +81,7 @@ test("리스의 스크롤 컨테이너·전체 요소를 건드리지 않는다(
     assert.ok(!/\.risu-chat > div/.test(css), `${id}: 리스 메시지 컨테이너 대신 우리 래퍼를 쓴다`);
     assert.ok(!/body \*/.test(css), `${id}: 모든 요소에 거는 규칙 없음`);
     assert.ok(!css.includes("-webkit-scrollbar"), `${id}: 스크롤바 크기를 바꾸지 않는다`);
-    assert.ok((css.replace(/[^{}]*st-f(?:old|tool)[^{]*\{[^}]*\}/g, "").replace(/@media \(max-width: 760px\) \{[\s\S]*?\n\}/g, "").replace(/\.risu-chat \.grow > div:has\(> \.st-msg\)/g, "").split(':root:not(:has(> body[x-dusk-chat="0"]))').join("").match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창) — 채팅 메시지 상자로 범위를 좁힌 :has(> .st-msg)만 뺀다(맨 :has는 화면 전체를 다시 따져 느려짐)`);
+    assert.ok((css.replace(/[^{}]*st-f(?:old|tool)[^{]*\{[^}]*\}/g, "").replace(/@media \(max-width: 760px\) \{[\s\S]*?\n\}/g, "").replace(/\.risu-chat \.grow > div:has\(> \.st-msg\)/g, "").match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창) — 채팅 메시지 상자로 범위를 좁힌 :has(> .st-msg)만 뺀다(맨 :has는 화면 전체를 다시 따져 느려짐)`);
   }
   const c = buildStealth("claudecode").css;
   assert.ok(c.includes('body[x-dusk-st][x-dusk-fold="0"] {') && !/(^|[\s,}])body:has\(/.test(c));
@@ -256,7 +256,7 @@ test("호스트가 채팅 정보를 읽다 오류를 내도 사이드바는 그�
 test("최소 모드는 화면 전체 규칙을 뺀다", () => {
   for (const id of ["claude", "claudecode", "gpt"]) {
     const full = buildStealth(id, {}).css, min = buildStealth(id, { minimal: true }).css;
-    assert.ok(full.includes('"0"])) > body {')); assert.match(full, /text-input-area/);
+    assert.ok(full.includes('body:not([x-dusk-chat="0"]) {')); assert.match(full, /text-input-area/);
     assert.ok(!/^body \{|^html|\.text-input-area|--risu-theme|default-chat-screen/m.test(min), id);
     assert.ok(min.includes(".st-body"), id);
   }
@@ -502,7 +502,7 @@ test("코덱스 모양(docs/STEALTH.md 7-2): 일반 채팅 앱(고정폭 아님)
   for (const t of ["st-sb-rail", "st-sb-rbtn st-on", "st-sb-rsep", "Codex", "st-sb-wchev", "새 채팅", "최근", "data-st-gear"]) assert.ok(h.includes(t), t);
   assert.ok(!h.includes("시작하기"), "시작하기 상자는 뺐다(11-08)");
   const css = buildStealth("codex").css;
-  assert.match(css, /> body \{ font-family: var\(--st-font\) !important; \}/, "본문은 고정폭이 아님");
+  assert.match(css, /"0"\]\) \{ font-family: var\(--st-font\) !important; \}/, "본문은 고정폭이 아님");
   assert.ok(css.includes("6 Luna Medium") && css.includes("clamp(290px"), "모델 글·넓은 사이드바");
 });
 
@@ -610,7 +610,19 @@ test("휴대폰 위 줄(GPT·제미나이·딥시크 사진 11-08): 모양별 �
 test("리스 홈(채팅 밖)에선 화면 전체 규칙을 끈다(위젯 홈 보호)", async () => {
   const css = buildStealth("claude").css;
   for (const re of [/^:root \{\n  --risu-theme/m, /^html, body \{/m, /^body \{/m, /^\.rs-sidebar, \.risu-sidebar \{/m]) assert.doesNotMatch(css, re);
-  assert.ok(css.includes(':root:not(:has(> body[x-dusk-chat="0"])) > body {'), "배경은 채팅일 때만");
+  assert.ok(css.includes('body:not([x-dusk-chat="0"]) {'), "배경은 채팅일 때만"); assert.ok(!css.includes(":root:not(:has("), "뿌리 요소 :has 접두사 없음(무거움)");
   const src = (await import("node:fs")).readFileSync(new URL("../src/data/stealth-shell.js", import.meta.url), "utf8");
   assert.ok(src.includes('setAttribute("x-dusk-chat", onChat ? "1" : "0")'), "사이드바가 채팅 여부 표식을 단다");
+});
+
+test("0.3.43 위젯 홈을 켜 두면 리스 홈(채팅 밖)에서는 사이드바·상단 줄을 그리지 않는다", async () => {
+  for (const [on, expect] of [[true, false], [false, true]]) {
+    const api = shellApi({ pluginStorage: { getItem: async (k) => (k === "dusk.widgethome.on" ? on : null) } });
+    const q = api.doc.querySelector; api.doc.querySelector = async (sel) => (sel.includes(".default-chat-screen") ? null : q(sel));
+    api.getCurrentCharacterIndex = async () => -1;
+    const sh = createShell(api, { kind: "claude", poll: 60000, log: () => {} });
+    await new Promise((r) => setTimeout(r, 60));
+    assert.equal(api.doc.tree.some((n) => n.attrs["x-dusk"] === "stealth-sb"), expect, `위젯 홈 ${on ? "켬" : "끔"}`);
+    await sh.destroy();
+  }
 });
