@@ -649,3 +649,9 @@ test("changeHome: 끄면(기본) 홈 규칙을 채팅 화면으로 좁히고, �
   assert.match(buildStealth("claude", {}).css, /body:not\(\[x-dusk-chat="0"\]\)/);
   assert.doesNotMatch(buildStealth("claude", { changeHome: true }).css, /body:not\(\[x-dusk-chat="0"\]\) \{\n  --risu-theme/);
 });
+
+test("위젯 홈 켜짐 값 'on'을 스텔스도 켜짐으로 읽는다(홈에서 스텔스가 비켜 줌)", async () => {
+  const { isWidgetHomeOnValue } = await import("../src/data/stealth-shell.js");
+  for (const v of ["on", true, "true"]) assert.equal(isWidgetHomeOnValue(v), true, String(v));
+  for (const v of ["off", null, undefined, false, ""]) assert.equal(isWidgetHomeOnValue(v), false, String(v));
+});

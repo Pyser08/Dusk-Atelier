@@ -160,6 +160,8 @@ export function duskIsOpen(size, call, shown = true) { return !!size && call !==
 var duskShown = (w = globalThis) => { try { const r = w?.document?.querySelector?.(".rb-root"); return r ? !r.hidden : true; } catch { return true; } };
 export function refreshDuskOpen(w) { const v = duskIsOpen(frameVisible(w), duskOpen.call, duskShown(w)); if (v !== duskOpen.v) { duskOpen.v = v; duskOpen.fn?.(); } return v; }
 // 진단용: 지금 이 순간의 판단 근거(마지막으로 그린 때가 아니라). 진단 버튼은 Dusk 창 안에서 누르므로 '5초 뒤 진단'으로 창을 닫은 뒤 재야 뜻이 있다.
+// 위젯 홈 켜짐 저장값: widgethome.js는 "on"/"off"로 저장한다(예전엔 "on"을 못 읽어 홈에서도 스텔스가 그려져 위젯 홈을 가렸다)
+export function isWidgetHomeOnValue(raw) { return raw === "on" || raw === true || raw === "true" || raw === "1" || raw === 1; }
 export function shellFlags() {
   refreshDuskOpen();
   const vis = shellInfo.onChat && !duskOpen.v;
@@ -233,7 +235,7 @@ export function createShell(api, opts = {}) {
   async function widgetHomeOn() {
     if (opts.widgetHome != null) return !!opts.widgetHome;
     const now = Date.now(); if (now - wh.at < 10000) return wh.v;
-    try { const raw = await api.pluginStorage?.getItem?.("dusk.widgethome.on"); wh.v = raw === true || raw === "true" || raw === "1" || raw === 1; } catch { wh.v = false; }
+    try { const raw = await api.pluginStorage?.getItem?.("dusk.widgethome.on"); wh.v = isWidgetHomeOnValue(raw); } catch { wh.v = false; }
     wh.at = now; return wh.v;
   }
   async function ensureDoc() { if (doc) return doc; doc = await api.getRootDocument?.(); return doc; }
