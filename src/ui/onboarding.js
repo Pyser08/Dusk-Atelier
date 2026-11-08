@@ -17,7 +17,7 @@ import { diceRow } from './dicedetail.js';
 import { loadStoryTimeOn } from '../data/storytime.js';
 import { readCocoa } from '../engine/cocoamigrate.js';
 
-export var ONBOARD_VER = 2;   // 2.0.0: 애드온 고르기가 생겨 모두에게 한 번 더 띄운다
+export var ONBOARD_VER = 3;   // 2.0.0: 애드온 고르기가 생겨 시작 안내를 본 모든 사람(이전 2.0.0 시험판에서 본 사람 포함)에게 한 번 더 띄운다
 var STEPS = ["기능", "화면", "꾸미기", "장기 기억", "이야기 도우미", "가져오기", "끝"];
 // 시작 안내를 마치면 화면마다 자동으로 뜨던 안내는 더 띄우지 않는다(각 화면의 ?로는 언제든 볼 수 있다)
 var AUTO_KEYS = ["rbm:memoryEmbeddingGuide:shown:v1", "da_aibuild:intro"];

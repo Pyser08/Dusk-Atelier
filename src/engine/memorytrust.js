@@ -168,6 +168,15 @@ export function setLock(rec, field, on = true) {
 // ── 프롬프트·화면용 짧은 표기 ──
 // 주입 대상: 현재 적용되는 기록만(종료된 것은 과거 사실로 보존만 한다).
 export const injectable = (r) => !r.orphan && isValid(r);
+// 2.0.0 최신 상태(사망·실종·떠남·부상…): 아직 유효한 status 속성 중 가장 나중 것. 이 값이 예전 장면·기록보다 우선한다.
+export function currentState(person) {
+  const recs = (person?.records ?? []).filter((r) => injectable(r) && r.attr && String(r.attr.c).toLowerCase() === "status");
+  if (!recs.length) return null;
+  const r = recs.reduce((a, b) => ((b.at ?? -1) >= (a.at ?? -1) ? b : a));
+  return { v: String(r.attr.v ?? "").slice(0, 40), at: r.at ?? null, id: r.id };
+}
+// 이야기에서 빠진 상태인가(죽음·실종·떠남 등) — 주입에서 '지금 행동할 수 없음'으로 표시한다. 회복·귀환 같은 말이 같이 있으면 아니다.
+export const isGoneState = (v) => /(사망|죽|숨졌|전사|처형|살해|소멸|실종|행방불명|떠났|떠남|이탈|탈퇴|추방|dead|died|killed|deceased|missing|gone|left)/i.test(String(v ?? "")) && !/(회복|살아|생존|귀환|돌아|부활|되살|alive|returned|revived|recovered)/i.test(String(v ?? ""));
 // 확신도·구분 꼬리표. 보통(사실·높음/미설정)은 비워 토큰을 아낀다.
 export function trustTag(r) {
   const t = [];

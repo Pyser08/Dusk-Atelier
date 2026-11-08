@@ -16,12 +16,13 @@ function setup(n) {
   return { api, store: legacy(createMemoryStoreV3(api)) };
 }
 
-test("8번째 AI 응답에서 게이지가 갱신되고 표시용 박스가 생긴다 (한 번 호출에 얹힘)", async () => {
+test("8번째 AI 응답에서 게이지가 갱신되고 표시용 박스가 생긴다 (게이지는 따로 작은 호출, 2.0.0)", async () => {
   const { api, store } = setup(8);
   const gauge = createGaugeService(api, { store });
   const seen = [];
   const call = async (msgs) => {
     const payload = JSON.parse(msgs[1].content); seen.push(payload);
+    if (/^You update character gauges/.test(msgs[0].content)) { const g0 = payload.gauges[0]; return `g|${g0.id}|${g0.who[0].name}|+2|비밀을 털어놓음`; }
     const gs = payload.gauges ?? [];
     return JSON.stringify({ people: [{ name: "미나", act: "비밀을 털어놓음", p: 2, s: 2, r: 2 }, { name: "하루", act: "침묵", p: 1, s: 1, r: 1 }], scene: { sum: "옥상", facts: [], place: "옥상", when: "", who: ["미나", "하루"], changed: true },
       ...(gs.length ? { gauge: [{ g: gs[0].id, who: gs[0].who[0].name, d: 2, why: "비밀을 털어놓음" }] } : {}) });
@@ -30,7 +31,8 @@ test("8번째 AI 응답에서 게이지가 갱신되고 표시용 박스가 생�
   const d = await gauge.addDef("c1", { name: "신뢰", min: 0, max: 10, init: 3, step: 3, measure: "m", rule: "r", update: "u", on: true });
   assert.equal(d.length, 1);
   for (let k = 0; k < 8; k++) await runner.analyzeAt(0, 0, [k * 2 + 1], { manual: false });
-  assert.equal(seen.filter((p) => p.gauges).length, 1, "8번째에만 게이지가 얹힌다");
+  assert.equal(seen.filter((p) => p.gauges).length, 1, "8번째에만 게이지 호출이 나간다");
+  assert.ok(seen.every((p) => !p.gauges || !p.newest), "게이지는 분석 요청에 얹지 않는다");
   const f = await store.getFolder("c1", "t1");
   assert.equal(f.gauge.log.length, 1);
   assert.equal(f.gauge.log[0].items[0].to, 5);
@@ -46,7 +48,8 @@ test("제안은 기본 켜짐이고, 꺼 두면 요청에 안 얹히고, 켜면 
   const gauge = createGaugeService(api, { store });
   await gauge.setSuggestOn("c1", false);
   let sawSuggest = false;
-  const call = async (msgs) => { const p = JSON.parse(msgs[1].content); if (p.suggestGauge) sawSuggest = true;
+  const call = async (msgs) => { const p = JSON.parse(msgs[1].content);
+    if (/^You update character gauges/.test(msgs[0].content)) { const on = /idea\|/.test(msgs[0].content); if (on) sawSuggest = true; return on ? "idea|경계심|낯선 이에 대한 경계" : "none"; }
     return JSON.stringify({ people: [{ name: "미나", act: "x", p: 1, s: 1, r: 1 }], scene: null, ...(p.suggestGauge ? { gaugeIdea: { name: "경계심", desc: "낯선 이에 대한 경계" } } : {}) }); };
   const runner = createMemoryRunner(api, { store, call, gauge, notify: () => {} });
   for (let k = 0; k < 8; k++) await runner.analyzeAt(0, 0, [k * 2 + 1], {});

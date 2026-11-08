@@ -40,3 +40,4 @@
 - 함수 위치: `grep -rn "export function 이름" src/`
 - 사용처: `grep -rln "이름" src/ tests/`
 - 큰 파일은 필요한 줄 범위만 읽기.
+- 스텔스 모양 만들기·고치기 → docs/STEALTH.md

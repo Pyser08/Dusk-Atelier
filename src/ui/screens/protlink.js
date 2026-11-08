@@ -75,7 +75,7 @@ export async function renderProtLink(ctx) {
   const pl = ctx.protlink;
   const body = h("div", { class: "rb-flds", id: "rb-protlink-body", style: "display:grid;gap:12px" });
   const head = h("div", { id: "rb-protlink-head" });
-  replace(ctx.main, h("div", { class: "rb-section" }, head, body));
+  replace(ctx.main, h("div", { class: "rb-section rb-scroll", style: "flex:1;min-height:0" }, head, body));
   if (!pl) { replace(body, emptyState({ title: "ProtLink+를 쓸 수 없어요", text: "이 환경에서는 ProtLink+가 준비되지 않았어요." })); return; }
   const busy = new Set();
   const fail = (e) => ctx.toast(e?.message ?? String(e), { error: true });

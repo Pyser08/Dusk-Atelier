@@ -8,7 +8,7 @@ const out = [], ok = (n, c, x = "") => { out.push(c); console.log((c ? "✔ " : 
 const b = await chromium.launch(), errs = [];
 const p = await (await b.newContext({ viewport: { width: 1200, height: 800 } })).newPage(); p.setDefaultTimeout(8000);
 p.on("pageerror", (e) => errs.push(e.message));
-await p.setContent(`<!doctype html><body style="margin:0"><div id="app" style="display:flex;height:100vh"><div class="risu-sidebar" style="width:240px;flex-shrink:0;background:#222">사이드바<button id="home">홈</button></div><div id="main" style="flex:1;min-width:0;background:#333"><h2>Welcome</h2></div></div><iframe id="pf" srcdoc="<b>dusk-widgethome-open</b>" style="display:none"></iframe></body>`);
+await p.setContent(`<!doctype html><body style="margin:0"><div id="app" style="display:flex;height:100vh"><div class="risu-sidebar" style="width:240px;flex-shrink:0;background:#222">사이드바<button id="home">홈</button></div><div id="main" style="flex:1;min-width:0;background:#333"><h2>Welcome</h2></div></div><iframe id="pf" srcdoc="<b>dusk-atelier-plugin-frame</b>" style="display:none"></iframe></body>`);
 await p.addScriptTag({ content: r.outputFiles[0].text });
 await p.evaluate(async () => {
   window.sel = -1;

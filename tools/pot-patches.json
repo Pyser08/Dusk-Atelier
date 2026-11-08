@@ -125,5 +125,23 @@
   "why": "위와 같음: 요청에 dusk_character_rule 추가",
   "from": "    contextual_identity_rule:'Before creating",
   "to": "    dusk_character_rule:COLLECTIVE_RULE,\n    contextual_identity_rule:'Before creating"
+ },
+ {
+  "file": "src/data/pot/person-thorough-refresh.js",
+  "why": "AI 작성이 막힐 때 어느 조건 때문인지 알려 주는 진단(notReadyWhy, ready()와 같은 조건)",
+  "from": " async fresh(snapshot){if(!this.ready(snapshot))return false;",
+  "to": " notReadyWhy(){const settings=this.settingsStore.snapshot(),saved=this.settingsStore.status(),scope=this.wikiController.snapshot(),status=this.wikiController.status();if(this.disposed)return'화면이 닫혀 있어요. 인물 화면을 다시 열어 주세요. (사유: 닫힘)';if(!settings.enabled)return'인물 위키(리수폿) 기능이 꺼져 있어요. 기억 탭 맨 위에서 켜 주세요. (사유: 설정 꺼짐)';if(saved.blocked)return'설정을 저장할 수 없는 상태예요. 기억 탭 설정을 확인해 주세요. (사유: 설정 저장 막힘)';if(saved.contentDirty??saved.dirty)return'설정 저장이 아직 끝나지 않았어요. 잠시 뒤 다시 눌러 주세요. (사유: 설정 저장 대기)';if(status.writeBlocked)return'이 채팅은 위키에 쓸 수 없는 상태예요(복사·분기 채팅이거나 기억 범위가 달라요). 응답을 한 번 받은 뒤 다시 눌러 주세요. (사유: 위키 쓰기 막힘)';if(status.store?.phase==='save-error')return'위키 저장에 실패했어요. 저장소(플러그인/BardWiki) 연결을 확인해 주세요. (사유: 위키 저장 오류)';if(status.store?.dirty)return'위키 저장이 아직 끝나지 않았어요. 잠시 뒤 다시 눌러 주세요. (사유: 위키 저장 대기)';if(scope?.documents?.[this.targetId]?.type!=='Character')return'이 인물 문서를 위키에서 찾지 못했어요. 인물 화면을 닫았다 다시 열어 주세요. (사유: 인물 문서 없음)';return'현재 채팅과 설정 저장을 완료한 뒤 실행해주세요. (사유: 작성 중 바뀜)';}\n async fresh(snapshot){if(!this.ready(snapshot))return false;"
+ },
+ {
+  "file": "src/data/pot/person-thorough-refresh.js",
+  "why": "꼼꼼히 쓰기: 막힌 사유를 그대로 안내",
+  "from": "refreshAssert(controller.ready(),'현재 채팅과 설정 저장을 완료한 뒤 실행해주세요.')",
+  "to": "refreshAssert(controller.ready(),controller.notReadyWhy())"
+ },
+ {
+  "file": "src/data/pot/person-thorough-refresh.js",
+  "why": "표준 쓰기: 막힌 사유를 그대로 안내",
+  "from": "refreshAssert(this.ready(),'현재 채팅과 설정 저장을 완료한 뒤 실행해주세요.')",
+  "to": "refreshAssert(this.ready(),this.notReadyWhy())"
  }
 ]

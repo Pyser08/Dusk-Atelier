@@ -802,8 +802,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-wk2-head .rb-mem-av{width:44px;height:44px;font-size:18px}
 .rb-wk2-name{display:flex;flex-direction:column;min-width:0}.rb-wk2-name h3{margin:0;font-size:20px;font-weight:800}
 .rb-wk2-gap{padding:9px 12px;border-radius:var(--rb-r2);background:var(--rb-warn-soft);color:var(--rb-warn);font-size:13px}
-.rb-wk2-tabs{display:flex;gap:4px;padding:4px;border-radius:var(--rb-r3);background:var(--rb-surf);border:1px solid var(--rb-line2)}
-.rb-wk2-tab{flex:1;min-height:var(--rb-ctl-sm);border:0;border-radius:var(--rb-r2);background:transparent;color:var(--rb-sub);font:inherit;font-size:13.5px;cursor:pointer}
+.rb-wk2-tabs{display:flex;gap:4px;padding:4px;border-radius:var(--rb-r3);background:var(--rb-surf);border:1px solid var(--rb-line2);overflow-x:auto;scrollbar-width:none}
+.rb-wk2-tab{flex:1 0 auto;white-space:nowrap;padding:0 10px;min-height:var(--rb-ctl-sm);border:0;border-radius:var(--rb-r2);background:transparent;color:var(--rb-sub);font:inherit;font-size:13.5px;cursor:pointer}
 .rb-wk2-tab[aria-selected="true"]{background:var(--rb-acc-grad);color:var(--rb-on-acc);font-weight:700}
 .rb-wk2-body{display:flex;flex-direction:column;gap:12px;min-width:0}
 .rb-wk2-sum,.rb-wk2-pane{display:flex;flex-direction:column;gap:12px;min-width:0}
@@ -1461,4 +1461,26 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-rune-sd{display:block;height:auto;filter:drop-shadow(0 6px 12px rgba(30,20,60,.22))}
 .rb-wn-rune{display:flex;align-items:center;gap:12px}.rb-rune-sd.sm{width:64px;flex:none}
 .rb-sthanks-head{position:relative;padding-right:96px}.rb-rune-sd.thanks{position:absolute;right:14px;bottom:6px;width:70px}
+
+/* ── 2.0.0 다듬기: 배치는 그대로, 모양만 더 둥글고 부드럽게 ── */
+.rb-btn,.rb-btn.sm,.rb-btn.lg{border-radius:var(--rb-pill,999px);transition:background .15s,border-color .15s,box-shadow .15s,transform .12s}
+.rb-btn:active:not(:disabled){transform:scale(.97)}
+.rb-icon-btn{border-radius:var(--rb-pill,999px);transition:background .15s,color .15s}
+.rb-btn.primary{box-shadow:0 4px 14px color-mix(in srgb,var(--rb-acc) 28%,transparent)}
+.rb-input,select.rb-input,textarea.rb-input{transition:border-color .15s,box-shadow .15s}
+.rb-input:focus,.rb-input:focus-visible{border-color:var(--rb-acc-text);box-shadow:0 0 0 3px color-mix(in srgb,var(--rb-acc) 22%,transparent)}
+.rb-card,.rb-status,.rb-pcard,.rb-nav-card,.rb-simple-note{border-color:color-mix(in srgb,var(--rb-line) 70%,transparent)}
+.rb-card.bordered,.rb-pcard,.rb-status{box-shadow:var(--rb-shadow-card)}
+@media (hover:hover){.rb-card.bordered:is(button,a):hover,.rb-pcard:hover,.rb-wk-row:hover,.rb-wk2-who:hover{box-shadow:var(--rb-shadow-card),0 0 0 1px var(--rb-line3);transform:translateY(-1px)}}
+.rb-card.bordered:is(button,a),.rb-pcard,.rb-wk-row,.rb-wk2-who{transition:transform .15s,box-shadow .15s,background .15s}
+.rb-seg{border-radius:var(--rb-pill,999px)}.rb-seg>button,.rb-seg>[role=radio],.rb-seg>label{border-radius:var(--rb-pill,999px)}
+.rb-wk2-tabs,.rb-mem-sectabs .rb-chip{border-radius:var(--rb-pill,999px)}.rb-wk2-tab{border-radius:var(--rb-pill,999px)}
+.rb-nav a{border-radius:var(--rb-pill,999px)}
+.rb-nav a[aria-current=page]{box-shadow:var(--rb-shadow-card),inset 0 0 0 1px var(--rb-line2)}
+.rb-topnav a{transition:background .15s,color .15s}
+.rb-pop,.rb-help{border-radius:var(--rb-r3);box-shadow:var(--rb-shadow-sm)}
+.rb-dialog{border-radius:var(--rb-r4)}
+.rb-wk-row{border-radius:var(--rb-r3)}
+.rb-scroll::-webkit-scrollbar-thumb{border-radius:var(--rb-pill,999px)}
+@media (prefers-reduced-motion:reduce){.rb-btn,.rb-card,.rb-pcard,.rb-wk-row,.rb-wk2-who{transition:none!important;transform:none!important}}
 `+PROB_CSS+RELMAP_CSS+PROVIDER_CSS+SIZE_CSS;

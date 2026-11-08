@@ -4,6 +4,7 @@ import { LIB as ADDON_LIB } from "./addonlib.gen.js";
 import { startHostUpdateToast } from './ui/hostupdate.js';
 import { createDbCache, WRITE_RE } from './data/dbcache.js';
 import { createHookBus } from './data/hookbus.js';
+import { createHostGate } from './data/hostgate.js';
 import * as engine_exports from './engine/index.js';
 import { hostBlockedMessage, isHostBlocked } from './data/modules.js';
 import { createLegacy } from './ui/legacy.js';
@@ -33,9 +34,13 @@ import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModu
 
 var VERSION = typeof __VERSION__ !== "undefined" ? __VERSION__ : "dev";
 var TITLE = "Dusk Atelier";
+// 리스 화면에서 이 플러그인 iframe을 찾는 표식(srcdoc 안 글자). 위젯 홈 애드온이 홈 자리에 배치할 때 쓴다(home-layout.cjs) — 지우지 말 것
+globalThis.__duskFrameMark = "dusk-atelier-plugin-frame";
 async function start() {
-  const raw = globalThis.risuai ?? globalThis.Risuai;
-  if (!raw) return;
+  const host = globalThis.risuai ?? globalThis.Risuai;
+  if (!host) return;
+  // 무거운 호스트 호출(데이터베이스·봇·채팅 읽기/쓰기)은 동시에 3개까지만 — 여러 기능이 몰려도 리스 화면이 멈추지 않게(2.0.1)
+  const raw = createHostGate(host);
   const friendly = (fn) => async (...args) => {
     try {
       return await fn(...args);
@@ -240,7 +245,13 @@ async function start() {
     const text = `${[...pendingNames].join(", ")} 업데이트를 받았어요. 리스를 새로고침하면 적용돼요.`;
     toast.show({ title: "새로고침해 주세요", text, action: "눌러서 닫기", ms: 60e3 }).then((ok) => { if (!ok) app?.ctx?.toast?.(text, { seconds: 15 }); }).catch(() => app?.ctx?.toast?.(text, { seconds: 15 }));
   };
-  const addons = createAddons(api, { core: VERSION, onPendingRestart: askRefresh, ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async (tab) => { await app.open(tab ? { tab } : undefined).catch(() => {}); } } });   // 반환값 없음: 애드온 콜백이 그대로 돌려주면 호스트로 복제가 안 돼요
+  // 받지 않은 새 애드온이 올라오면 리스 화면 오른쪽 위에 알린다(버전만 오른 것은 알리지 않음). 누르면 설정의 애드온 목록으로
+  const newAddons = (list) => {
+    const text = `${list.map((a) => a.name).join(", ")} — 설정 → 애드온에서 받을 수 있어요.`;
+    const go = () => app.open({ tab: "settings" }).then(() => setTimeout(() => { try { app.ctx.win?.document?.getElementById("rb-addons")?.scrollIntoView({ block: "start" }); } catch { /* 없음 */ } }, 300)).catch(() => {});
+    toast.show({ title: "새 애드온이 나왔어요", text, action: "눌러서 보기", icon: "🧩", onClick: go, ms: 30e3 }).then((ok) => { if (!ok) app?.ctx?.toast?.(text, { seconds: 10 }); }).catch(() => app?.ctx?.toast?.(text, { seconds: 10 }));
+  };
+  const addons = createAddons(api, { core: VERSION, onPendingRestart: askRefresh, onNewAddons: newAddons, ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async (tab) => { await app.open(tab ? { tab } : undefined).catch(() => {}); } } });   // 반환값 없음: 애드온 콜백이 그대로 돌려주면 호스트로 복제가 안 돼요
   app.ctx.addons = addons;
   // 2.0.0으로 올라온 기존 사용자: 쓰던 기능(장기기억·기억카드·Erosync·위젯)의 애드온을 자동으로 받아 그대로 쓰게 한다.
   const rawOf = async (k) => { try { const v = await api.pluginStorage.getItem(k); return v == null || v === "" ? null : v; } catch { return null; } };

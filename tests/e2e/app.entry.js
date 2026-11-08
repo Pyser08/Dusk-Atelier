@@ -8,6 +8,7 @@ import { activate as memoryAddon } from "../../addons/memory/index.js";
 import { activate as cardsAddon } from "../../addons/cards/index.js";
 import { activate as protlinkAddon } from "../../addons/protlink/index.js";
 import { activate as providerAddon } from "../../addons/provider/index.js";
+import { activate as stealthAddon } from "../../addons/stealth/index.js";
 import { renderProvider as _rpv } from "../../src/ui/screens/provider.js";
 import { renderProtLink as _rp } from "../../src/ui/screens/protlink.js";
 import { renderMemory as _rm } from "../../src/ui/screens/memory/index.js";
@@ -24,6 +25,8 @@ import { createWidgetHome } from "../../src/data/widgethome.js";
 import { createProtLink } from "../../src/data/protlink.js";
 import { createStore as createBackupStore, backupSnapshot } from "../../src/engine/index.js";
 import { createMemory } from "../../src/data/memory.js";
+import { createFairPlay } from "../../src/data/fairplay.js";
+import { createTurnInfo } from "../../src/data/turninfo.js";
 import POT_PROMPTS from "../../src/data/pot/prompts.json";
 import { createEmptyWikiScope } from "../../src/engine/pot/wiki-schema.js";
 import { createBlankPerson, ensureProfile, editProfile, addMetric } from "../../src/engine/wikiedit.js";
@@ -81,7 +84,24 @@ window.bootApp = async (seed, opts = {}) => {
     api.getLocalPluginStorage = async () => ({ getItem: async (k) => local[k] ?? null, setItem: async (k, v) => { local[k] = v; } });
     api.nativeFetch = async (url) => new Response(JSON.stringify({ data: [{ id: "gpt-test-mini" }, { id: "gpt-test-large" }] }), { status: 200, headers: { "content-type": "application/json" } });
   }
+  // opts.host: 리스처럼 요청·출력·표시 훅을 받아 두고, 시험이 실제 요청을 흘려 볼 수 있게 한다(window.__host).
+  // '저장됐는가'가 아니라 '모델에 무엇이 가는가·화면에 무엇이 붙는가'를 검사하기 위한 것(docs/PROMISES.md).
+  if (opts.host) {
+    const hooks = { beforeRequest: [], output: [], display: [] };
+    api.addRisuReplacer = async (n, f) => { (hooks[n] ??= []).push(f); };
+    api.removeRisuReplacer = async (n, f) => { hooks[n] = (hooks[n] ?? []).filter((x) => x !== f); };
+    api.addRisuScriptHandler = async (n, f) => { (hooks[n] ??= []).push(f); };
+    const run = async (name, v, ...a) => { for (const f of [...(hooks[name] ?? [])]) v = await f(v, ...a); return v; };
+    window.__host = { hooks, calls: 0,
+      request: async (messages, type = "model") => { window.__host.calls++; return run("beforeRequest", structuredClone(messages), type); },
+      output: (t) => run("output", t), display: (t) => run("display", t) };
+  }
   const app = createApp(api, { legacy: { open() {}, busy: false, startWithFiles() {} }, version: "1.7.0-dev", onPersonaChanged() {} });
+  if (opts.host) {  // main.js와 같은 방식으로 공정한 전개·호출 표시를 만들어 붙인다(화면 스위치가 이 객체를 거친다)
+    let seedN = 7; const rng = () => ((seedN = (seedN * 16807) % 2147483647) / 2147483647);
+    const fairPlay = createFairPlay(api, { rng, saveMs: 20, log() {} }); await fairPlay.start(); app.ctx.fairPlay = fairPlay;
+    const turnInfo = createTurnInfo(api, { chip: false, quietMs: 20, diceSource: () => fairPlay.lastDice(), log() {} }); await turnInfo.start(); app.ctx.turnInfo = turnInfo;
+  }
   if (opts.provider) { app.ctx.provider = createProvider(api, { confirm: async () => false, createStore: createBackupStore, backupSnapshot }); }
   if (opts.widgetHome) {  // 위젯 홈 설정 카드·도구 행 시험: 실제 컨트롤러 + 가짜 화면
     window.__wh = { boots: 0, disposed: 0, opened: 0 };
@@ -112,6 +132,7 @@ window.bootApp = async (seed, opts = {}) => {
     const memory = createMemory(api, { potLibrary: POT_PROMPTS });
     await memory.store.getIndex();
     app.ctx.memory = memory;
+    if (opts.host) await memory.injector.start();   // 실제 요청 훅으로 기억 블록을 넣게 한다
     if (opts.story) {  // 화면 사진용 기록·마지막 요청을 미리 채운다
       const rec = (id, act, g, at, extra = {}) => ({ id, act, g, at, at_ms: 1700000000000 + at * 60000, orphan: false, user: false, pin: false, ...extra });
       await memory.store.updateFolder("c1", "t1", (f) => {
@@ -138,6 +159,7 @@ window.bootApp = async (seed, opts = {}) => {
     }
   }
   // 기능 애드온: 실제 사용자처럼 켜 둔 상태로 시험(소스를 바로 불러 같은 모듈 사용). coreOnly면 코어만.
+  if (opts.stealth) await stealthAddon(api, { ext: app.ctx.ext, app: app.ctx, toast: () => {}, openDusk: async () => {} });
   if (!opts.coreOnly) for (const act of FEATURE_ADDONS) await act(api, { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async () => {} });
   // 장기기억·기억카드 애드온(2.0.0): opts.memory면 위에서 만든 기억으로 실제 애드온을 켠다.
   // 아니면 예전처럼 기억 없이 탭만 보이게(화면은 '준비되지 않았어요') 자리만 채운다.

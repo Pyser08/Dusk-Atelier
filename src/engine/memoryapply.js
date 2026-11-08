@@ -6,7 +6,7 @@ import { mergeWhen } from "./storydate.js";
 import { isTombed } from "./memorydelete.js";
 import { applyEmo, emoForPrompt, convertAffinity } from "./memoryemo.js";
 import { applyPov, applyExp, takeSelf, isImportant, tensionKeys, noteTension, clearHints } from "./memoryinner.js";
-import { trustFields, mergeTrust, resolveConflicts, attrsForPrompt } from "./memorytrust.js";
+import { trustFields, mergeTrust, resolveConflicts, attrsForPrompt, currentState } from "./memorytrust.js";
 import { coolEmo, applyHuman } from "./memoryhuman.js";
 import { normalizeUserNames } from "./memoryuser.js";
 
@@ -83,7 +83,7 @@ export function doneHashes(folder) {
 // 분석 입력에 넣을 known: 인물명·별칭·마지막 행동 1줄.
 export function knownPeople(folder, limit = 30) {
   return Object.values(folder.people).filter((p) => (p.records ?? []).some((r) => !r.orphan)).slice(0, limit)
-    .map((p) => ({ name: p.name, aliases: p.aliases ?? [], last: [...p.records].reverse().find((r) => !r.orphan)?.act ?? "", ...(attrsForPrompt(p).length ? { attrs: attrsForPrompt(p) } : {}) }));
+    .map((p) => { const st = currentState(p); return { name: p.name, aliases: p.aliases ?? [], last: [...p.records].reverse().find((r) => !r.orphan)?.act ?? "", ...(st ? { state: st.v } : {}), ...(attrsForPrompt(p).length ? { attrs: attrsForPrompt(p) } : {}) }; });
 }
 export const emoStateFor = emoForPrompt;
 export { gradeRank };

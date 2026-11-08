@@ -185,11 +185,12 @@ async function analyzeLines(call, input, { onWarn = () => {}, light = false, max
   const known = knownInText(input.known, source);
   const base = buildMessages({ ...input, known });
   let p1; try { p1 = JSON.parse(base[1].content); } catch { p1 = {}; }
-  for (const k of ["emoState", "talkState", "rifts", "beliefs", "selfHint", "openItems"]) delete p1[k];
+  for (const k of ["emoState", "talkState", "rifts", "beliefs", "selfHint", "gauges", "suggestGauge"]) delete p1[k];   // 떡밥 목록은 남긴다(close 줄로 닫게)
+  const openIds = new Set((input.openItems ?? []).map((x) => String(x.id)));
   const sys1 = withCustom(input.custom, LINES_STAGE1);
   const m1 = [{ role: "system", content: sys1 }, { role: "user", content: JSON.stringify(p1) }];
   const overview = await askLines(call, m1, (raw) => {
-    const lines = parseLines(raw), got = lines.length ? fromStage1(lines, { known, source }) : null;
+    const lines = parseLines(raw), got = lines.length ? fromStage1(lines, { known, source, openIds }) : null;
     if (got && (got.scene || got.people.length)) return got;
     if (failureKind(raw) === "truncated") return null;   // 잘린 JSON을 고쳐 읽으면 인물이 빈 '성공'이 된다 — 다시 묻는다
     const j = jsonFrom(raw);   // 강한 모델이 JSON으로 답해도 받는다
@@ -216,9 +217,9 @@ async function analyzeLines(call, input, { onWarn = () => {}, light = false, max
   }
   return validate(merged, { ignore: input.ignore, beliefs: !!input.beliefsOn });
 }
+// 2.0.0: 게이지는 따로 작은 호출로 받으므로(engine/recorder.js gaugeMessages) 분석은 항상 줄 형식이다. settings.format="json"만 예전 JSON 경로.
 export async function analyzeStaged(call, input, opts = {}) {
-  const lines = opts.format !== "json" && !(input.gauges?.length || input.suggestGauge);   // 게이지 출력은 JSON 쪽에서만 받는다
-  return lines ? analyzeLines(call, input, opts) : analyzeStagedJson(call, input, opts);
+  return opts.format !== "json" ? analyzeLines(call, input, opts) : analyzeStagedJson(call, input, opts);
 }
 
 // 형식이 틀리면 최대 2번 다시 요청한다(추론이 약한 모델은 군말·잘림이 잦다). call(messages) → 원문 문자열.

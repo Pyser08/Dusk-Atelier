@@ -58,14 +58,12 @@ test("자동 업데이트: 훅 없는 애드온은 바로 껐다 켬", async () 
   assert.equal((await A.getIndex()).a.version, "1.1.0");
   await A.dispose();
 });
-test("훅 있는 애드온 업데이트는 다음 시작부터", async () => {
+test("훅 있는 애드온도 업데이트하면 새로고침 없이 바로 새 버전", async () => {
   const { A, log, put } = await setup({ hooks: true });
   await put("1.0.0", "ok:1"); await A.loadManifest(); await A.install("a");
   await put("1.1.0", "ok:2"); await A.check({ force: true });
-  assert.deepEqual(log.at(-1), ["on", "ok:1", "1.0.0"]);
-  assert.equal((await A.getIndex()).a.pendingRestart, true);
-  await A.dispose(); await A.boot();
-  assert.deepEqual(log.at(-1), ["on", "ok:2", "1.1.0"]);
+  assert.deepEqual(log.slice(-2), [["off", "ok:1"], ["on", "ok:2", "1.1.0"]]);
+  assert.equal((await A.getIndex()).a.pendingRestart, undefined);
   await A.dispose();
 });
 test("새 버전이 켜지다 실패하면 전 버전으로 되돌림", async () => {
@@ -125,21 +123,30 @@ test("첫 실행 자동 받기(adopt): 쓰던 기능만 받고, 다 받으면 �
   assert.deepEqual((await A.adopt([["widgets", async () => true]])).got, []);
 });
 
-test("훅 있는 애드온을 켜진 채 업데이트하면 새로고침 안내를 부르고, 다시 시작하면 표시를 지운다", async () => {
+test("애드온이 단 훅은 끌 때 모두 떼고, 프로바이더는 같은 이름으로 다시 달면 처리기만 바뀐다", async () => {
   const { createAddons } = await import("../src/data/addons.js");
   const { sha256 } = await import("../src/engine/hash.js");
   const files = new Map(), store = { getItem: async (k) => files.get(k) ?? null, setItem: async (k, v) => { files.set(k, v); }, removeItem: async (k) => { files.delete(k); } };
+  const hooks = [], provs = new Map(); let hostAdds = 0;
+  const api = { pluginStorage: store,
+    addRisuReplacer: async (t, f) => { hooks.push(f); }, removeRisuReplacer: async (t, f) => { const i = hooks.indexOf(f); if (i >= 0) hooks.splice(i, 1); },
+    addProvider: async (n, f) => { hostAdds++; provs.set(n, f); } };
   let ver = "0.1.0"; const code = () => `// ${ver}`;
   const man = async () => JSON.stringify({ format: 1, addons: [{ id: "memory", name: "장기기억", version: ver, hooks: true, sha256: await sha256(new TextEncoder().encode(code())), url: "https://x/m.js" }] });
   const asked = [];
-  const mk = () => createAddons({ pluginStorage: store }, { core: "2.0.0", onPendingRestart: (x) => asked.push(x), fetcher: async (_a, url) => (url.split("?")[0].endsWith(".js") ? code() : await man()), importer: async () => ({ activate: async () => ({ deactivate() {} }) }) });
-  const A = mk(); await A.loadManifest(); await A.install("memory");
-  assert.equal(asked.length, 0, "처음 받기는 바로 켜짐");
+  const A = createAddons(api, { core: "2.0.0", onPendingRestart: (x) => asked.push(x), fetcher: async (_a, url) => (url.split("?")[0].endsWith(".js") ? code() : await man()),
+    importer: async (c) => ({ activate: async (sapi) => { const v = c; await sapi.addRisuReplacer("beforeRequest", () => v); await sapi.addProvider("Dusk", async () => v); return { deactivate() {} }; } }) });
+  await A.loadManifest(); await A.install("memory");
+  assert.equal(hooks.length, 1);
   ver = "0.1.1"; await A.loadManifest(); await A.install("memory");
-  assert.deepEqual(asked, [{ id: "memory", name: "장기기억", version: "0.1.1" }]);
-  assert.equal((await A.getIndex()).memory.pendingRestart, true);
-  const B = mk(); await B.boot();
-  assert.equal((await B.getIndex()).memory.pendingRestart, undefined);
+  assert.equal(asked.length, 0, "새로고침 안내 없음");
+  assert.equal(hooks.length, 1, "예전 훅은 떼고 새 훅 하나만");
+  assert.equal(hooks[0](), "// 0.1.1");
+  assert.equal(hostAdds, 1, "프로바이더는 호스트에 한 번만");
+  assert.equal(await provs.get("Dusk")(), "// 0.1.1");
+  await A.setOn("memory", false);
+  assert.equal(hooks.length, 0);
+  await assert.rejects(provs.get("Dusk")(), /꺼져 있어요/);
 });
 
 test("실행 중에도 주기적으로 확인하고, 목록·파일은 캐시를 건너뛴 주소로 받는다", async () => {
@@ -154,8 +161,8 @@ test("실행 중에도 주기적으로 확인하고, 목록·파일은 캐시를
   await A.check({ force: true });
   assert.match(urls.at(-1), /[?&]t=\d+/, "목록 주소에 캐시 우회 값");
   const n = urls.length; t += 3600e3 + 1; await every[1](); assert.ok(urls.length > n, "한 시간 지나면 주기 확인이 실제로 목록을 받음");
-  const m = urls.length; t += 60e3; await A.checkSoon(); assert.equal(urls.length, m, "방금 확인했으면 창을 열어도 다시 안 받음");
-  t += 11 * 60e3; await A.checkSoon(); assert.ok(urls.length > m, "10분 지나면 창을 열 때 확인");
+  const m = urls.length; t += 30e3; await A.checkSoon(); assert.equal(urls.length, m, "방금(1분 안) 확인했으면 창을 열어도 다시 안 받음");
+  t += 40e3; await A.checkSoon(); assert.ok(urls.length > m, "1분 지나면 창을 열 때 확인(애드온을 올리고 바로 열어도 잡히게)");
 });
 
 test("시작: 서로 상관없는 애드온은 동시에 켜고, 필요 애드온이 있으면 그것만 기다린다", async () => {
@@ -171,4 +178,65 @@ test("시작: 서로 상관없는 애드온은 동시에 켜고, 필요 애드�
   assert.ok(ms < 320, `동시에 켬(차례로면 400ms 넘음): ${ms}ms`);
   assert.ok(order.indexOf("+cards") > order.indexOf("-memory"), "cards는 memory가 켜진 뒤");
   assert.ok(["cards", "manage", "memory", "widgets"].every((id) => A.running(id)), "모두 켜짐");
+});
+
+test("여러 애드온을 동시에 받아도 모두 설치된다(서로의 기록을 덮어쓰지 않음)", async () => {
+  const kv = new Map();
+  // 저장이 느린 기기 흉내: 읽기·쓰기 사이에 다른 받기가 끼어들 틈을 준다
+  const wait = () => new Promise((r) => setTimeout(r, 5));
+  const store = { getItem: async (k) => { await wait(); return kv.get(k) ?? null; }, setItem: async (k, v) => { await wait(); kv.set(k, structuredClone(v)); }, removeItem: async (k) => { kv.delete(k); } };
+  const ids = ["a", "b", "c", "d"], files = {};
+  const addons = await Promise.all(ids.map(async (id) => { const body = `ok:${id}`; files[`https://x/${id}.js`] = body; return { id, name: id, version: "1.0.0", minCore: "2.0.0", url: `https://x/${id}.js`, sha256: await H(body) }; }));
+  files.manifest = JSON.stringify({ format: 1, addons });
+  const fetcher = async (_api, u) => { await wait(); const url = u.split("?")[0]; return url.endsWith("addons.json") ? files.manifest : files[url] ?? null; };
+  const importer = async () => ({ activate: async () => ({ deactivate() {} }) });
+  const A = createAddons({ getLocalPluginStorage: () => store, pluginStorage: store }, { core: "2.0.0", fetcher, importer, log: () => {} });
+  await A.loadManifest();
+  await Promise.all(ids.map((id) => A.install(id)));
+  assert.deepEqual(Object.keys(await A.getIndex()).sort(), ids);
+  // 한 번에 받기
+  const r = await A.installMany(["a", "b"]);
+  assert.ok(r.every((x) => x.ok));
+});
+
+test("'업데이트 확인' 버튼(fresh): 브랜치 최신 커밋으로 고정한 주소로 받아 raw 캐시(최대 5분)에 걸리지 않는다", async () => {
+  const kv = new Map(), store = { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } };
+  const api = { getLocalPluginStorage: () => store, pluginStorage: store };
+  const base = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/";
+  const SHA = "abc123def4567890abc123def4567890abc12345";
+  const pinned = `https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/${SHA}/addons/`;
+  const body = "export default 1";
+  const hOld = await H("old"), hNew = await H(body);
+  const mf = (ver, b) => JSON.stringify({ format: 1, addons: [{ id: "a", name: "A", version: ver, minCore: "2.0.0", url: base + "dist/a.js", sha256: b === "old" ? hOld : hNew }] });
+  const seen = [];
+  const fetcher = async (_api, u0) => { const u = u0.split("?")[0]; seen.push(u);
+    if (u === "https://api.github.com/repos/Pyser08/Dusk-Atelier/git/ref/heads/addons") return JSON.stringify({ object: { sha: SHA } });
+    if (u === base + "addons.json") return mf("1.0.0", "old");            // 캐시된 예전 목록
+    if (u === base + "dist/a.js") return "old";
+    if (u === pinned + "addons.json") return mf("1.1.0", body);           // 최신
+    if (u === pinned + "dist/a.js") return body;
+    return null; };
+  const A = createAddons(api, { core: "2.0.0", fetcher, importer: async () => ({ activate: async () => ({}) }), log: () => {} });
+  await A.install("a");   // 예전 목록으로 1.0.0 설치
+  const r = await A.check({ force: true, fresh: true });
+  assert.ok(seen.includes(pinned + "addons.json") && seen.includes(pinned + "dist/a.js"), seen.join("\n"));
+  assert.equal((await A.getIndex()).a?.version, "1.1.0", "버튼 한 번에 최신으로");
+  assert.equal(r.error, undefined);
+});
+
+test("새로 생긴 애드온만 알린다(처음 확인·버전만 오른 것·이미 받은 것은 알리지 않음)", async () => {
+  const { createAddons } = await import("../src/data/addons.js");
+  const files = new Map(), store = { getItem: async (k) => files.get(k) ?? null, setItem: async (k, v) => { files.set(k, v); }, removeItem: async (k) => { files.delete(k); } };
+  let list = [{ id: "a", name: "A", version: "1.0.0" }];
+  const man = async () => JSON.stringify({ format: 1, addons: await Promise.all(list.map(async (x) => ({ ...x, minCore: "2.0.0", url: `https://x/${x.id}.js`, sha256: await sha256(new TextEncoder().encode("//" + x.version)) }))) });
+  const seen = [];
+  const A = createAddons({ pluginStorage: store }, { core: "2.0.0", onNewAddons: (xs) => seen.push(xs.map((x) => x.id)), fetcher: async (_a, url) => (url.split("?")[0].endsWith("addons.json") ? await man() : "//" + list.find((x) => url.includes(`/${x.id}.js`)).version), importer: async () => ({ activate: async () => ({}) }) });
+  await A.check({ force: true });
+  assert.deepEqual(seen, [], "처음 확인은 기준만 잡음");
+  list = [{ id: "a", name: "A", version: "1.1.0" }, { id: "b", name: "B", version: "0.1.0" }];
+  await A.check({ force: true });
+  assert.deepEqual(seen, [["b"]], "b만 새로 생김");
+  list = [{ id: "a", name: "A", version: "1.2.0" }, { id: "b", name: "B", version: "0.2.0" }];
+  await A.check({ force: true });
+  assert.deepEqual(seen, [["b"]], "버전만 오르면 알리지 않음");
 });

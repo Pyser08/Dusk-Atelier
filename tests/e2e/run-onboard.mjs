@@ -68,8 +68,12 @@ const ui = (page) => page.evaluate(() => JSON.parse(__api.store["rbm:ui:v1"] ?? 
 { const page = await boot({ width: 1280, height: 800 }, { onboardDone: true, onboardVer: 1, tourDone: true, tourVer: 3 });
   ok("[예전에 본 사람] 2.0.0에서 다시 뜬다", (await page.locator(".rb-onb").count()) === 1);
   await page.close(); }
-// 3) 이미 본 사람: 안 뜬다
+// 3-0b) 2.0.0 시험판(2)에서 본 사람도 한 번 더 뜬다
 { const page = await boot({ width: 1280, height: 800 }, { onboardDone: true, onboardVer: 2, tourDone: true, tourVer: 3 });
+  ok("[시험판에서 본 사람] 다시 뜬다", (await page.locator(".rb-onb").count()) === 1);
+  await page.close(); }
+// 3) 이미 본 사람: 안 뜬다
+{ const page = await boot({ width: 1280, height: 800 }, { onboardDone: true, onboardVer: 3, tourDone: true, tourVer: 3 });
   ok("[본 사람] 다시 안 뜬다", (await page.locator(".rb-onb").count()) === 0);
   await page.close(); }
 ok("오류 없음", !errs.length, errs.join(";"));

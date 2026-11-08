@@ -16,9 +16,9 @@ async function gunzip(bytes) {
 }
 var locks = /* @__PURE__ */ new WeakMap();
 function serial(api, fn) {
-  const prev = locks.get(api) ?? Promise.resolve();
+  const prev = locks.get(api?.[Symbol.for("dusk.baseApi")] ?? api) ?? Promise.resolve();
   const p = prev.then(fn, fn);
-  locks.set(api, p.catch(() => {
+  locks.set(api?.[Symbol.for("dusk.baseApi")] ?? api, p.catch(() => {
   }));
   return p;
 }

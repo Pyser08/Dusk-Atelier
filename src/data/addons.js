@@ -6,15 +6,17 @@
 // - 저장: getLocalPluginStorage(RisuAI=콜드스토리지·동기화, Bard/Pocket=서버 KV) → 없으면 pluginStorage.
 import { sha256 } from "../engine/hash.js";
 import { parseManifest, pickUpdates, fitsCore, installOrder } from "../engine/addons.js";
+import { scopeApi, createProviderRelay } from "./addonscope.js";
 
 // 애드온 목록은 배포 전용 브랜치 addons에서 읽는다(작업 브랜치에 푸시해도 사용자에게 바로 퍼지지 않게). 올리기: node tools/publish-addons.mjs
 export const ADDON_MANIFEST_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/addons.json";
 export const ADDON_URL_KEY = "dusk.addon.manifestUrl";
 export const ADOPT_KEY = "dusk.addon.adopted.v2";
+export const SEEN_KEY = "dusk.addon.seen.v1";   // 목록에서 본 적 있는 애드온 id(새로 생긴 애드온 알림용)
 const INDEX_KEY = "dusk.addon.index", CODE = (id) => `dusk.addon.code.${id}`, PREV = (id) => `dusk.addon.prev.${id}`;
 // 업데이트 확인: 켜질 때 한 번 + 실행 중 1시간마다 + Dusk 창을 열 때(마지막 확인이 10분 넘었으면).
 // 예전엔 켜질 때 한 번뿐이라 리스를 켜 둔 채로는 새 애드온을 못 받았다.
-const CHECK_EVERY = 3600e3, SOON_EVERY = 10 * 60e3;
+const CHECK_EVERY = 3600e3, SOON_EVERY = 60e3;   // 창을 열 때는 1분만 지나도 다시 본다(애드온을 올리고 바로 확인할 수 있게)
 // GitHub raw는 몇 분 동안 옛 파일을 돌려주므로 주소에 값을 붙여 캐시를 건너뛴다(파일은 sha256으로 따로 확인)
 const bust = (u, v) => u + (u.includes("?") ? "&" : "?") + v;
 
@@ -51,7 +53,8 @@ export async function importCode(code, id = "addon") {
   try { return await import(/* webpackIgnore: true */ url); } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
 }
 
-export function createAddons(api, { core, ctx = {}, onPendingRestart = null, timers = globalThis, fetcher = fetchText, importer = importCode, hasher = sha256, now = () => Date.now(), log = (m) => console.log(`[Dusk Atelier] 애드온: ${m}`) } = {}) {
+
+export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onNewAddons = null, timers = globalThis, fetcher = fetchText, importer = importCode, hasher = sha256, now = () => Date.now(), log = (m) => console.log(`[Dusk Atelier] 애드온: ${m}`) } = {}) {
   let storeP = null;
   const S = () => (storeP ??= storeOf(api));
   // 값은 문자열로만 저장한다(호스트마다 객체 저장 방식이 달라서)
@@ -66,21 +69,41 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
   const emit = () => listeners.forEach((l) => { try { l(); } catch { /* 화면 오류는 무시 */ } });
 
   const getIndex = async () => { try { const v = await store.getItem(INDEX_KEY); return v && typeof v === "object" ? v : typeof v === "string" ? JSON.parse(v) : {}; } catch { return {}; } };
-  const setIndex = (v) => store.setItem(INDEX_KEY, v);
+  // 목록 저장은 줄을 세워 하나씩, 그리고 바꾼 애드온 줄만 최신 목록에 합친다 —
+  // 여러 개를 동시에 받을 때 서로의 기록을 덮어써 '받는 중'에서 멈추던 문제(2.0.0)
+  let saving = Promise.resolve();
+  const setIndex = (v, ids = null) => {
+    const run = saving.then(async () => {
+      if (!ids) return store.setItem(INDEX_KEY, v);
+      const fresh = await getIndex();
+      for (const id of ids) { if (v[id] === undefined) delete fresh[id]; else fresh[id] = v[id]; }
+      return store.setItem(INDEX_KEY, fresh);
+    });
+    saving = run.catch(() => {});
+    return run;
+  };
   const manifestUrl = async () => { try { const v = await api.pluginStorage?.getItem(ADDON_URL_KEY); return typeof v === "string" && /^https:\/\//.test(v) ? v : ADDON_MANIFEST_URL; } catch { return ADDON_MANIFEST_URL; } };
 
+  // 애드온마다 따로 쓰는 api(addonscope.js): 끌 때 그 애드온이 단 훅을 모두 떼서, 훅 애드온도 새로고침 없이 갈아 끼운다
+  const relay = createProviderRelay(api);
   async function start(id, code, version) {
     const mod = await importer(code, id);
     if (typeof mod?.activate !== "function") throw new Error("activate 함수가 없어요");
-    const handle = (await mod.activate(api, { ...ctx, addonId: id, version })) ?? {};
-    running.set(id, { mod, handle, version });
+    const scope = scopeApi(api, relay);
+    let handle;
+    try { handle = (await mod.activate(scope.api, { ...ctx, addonId: id, version })) ?? {}; }
+    catch (e) { await scope.cleanup(); throw e; }
+    running.set(id, { mod, handle, version, scope });
   }
   async function stop(id) {
     const r = running.get(id);
     if (!r) return;
     running.delete(id);
     try { await (r.handle.deactivate ?? r.mod.deactivate)?.(); } catch (e) { log(`${id} 끄기 실패 ${e?.message ?? e}`); }
+    await r.scope?.cleanup();
   }
+  // 이 애드온을 필요로 하며 켜져 있는 애드온들(다시 켤 때 새 버전을 보게 함께 다시 켠다)
+  const dependents = (idx, id) => Object.entries(idx).filter(([o, v]) => o !== id && running.has(o) && (v.requires ?? []).includes(id)).map(([o]) => o);
 
   // 시작: 저장해 둔 코드로 바로 켠다(네트워크 기다리지 않음). 실패하면 전 버전으로.
   async function boot() {
@@ -103,7 +126,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
         catch (e) {
           log(`${id} v${v.version} 시작 실패 ${e?.message ?? e}`);
           if (v.prev && await rollback(id, idx)) return running.has(id);
-          idx[id] = { ...v, on: false, error: String(e?.message ?? e) }; await setIndex(idx);
+          idx[id] = { ...v, on: false, error: String(e?.message ?? e) }; await setIndex(idx, [id]);
           return false;
         }
       })();
@@ -125,13 +148,28 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
     try { await start(id, code, v.prev.version); } catch { return false; }
     await store.setItem(CODE(id), code);
     idx[id] = { version: v.prev.version, sha256: v.prev.sha256, on: true, at: now(), rolledBack: v.version };
-    await setIndex(idx);
+    await setIndex(idx, [id]);
     log(`${id} v${v.version} 대신 v${v.prev.version}로 되돌렸어요`);
     return true;
   }
 
-  async function loadManifest() {
-    const text = await fetcher(api, bust(await manifestUrl(), `t=${now()}`));
+  // raw.githubusercontent는 ?t= 값을 붙여도 최대 5분 예전 사본을 줄 때가 있다 → '업데이트 확인' 버튼(fresh)일 때만
+  // GitHub API로 브랜치 최신 커밋을 받아 그 커밋으로 고정한 주소를 쓴다(고정 주소는 내용이 바뀌지 않으니 캐시돼도 최신). 실패하면 예전 길.
+  let pin = null;   // { from: ".../<브랜치>/", to: ".../<커밋>/" } — 받은 목록 안 애드온 주소도 같이 바꾼다
+  const RAW = /^https:\/\/raw\.githubusercontent\.com\/([\w.-]+)\/([\w.-]+)\/([\w.-]+)\//;
+  async function pinFresh(url) {
+    const m = url.match(RAW); if (!m) return null;
+    try {
+      const t = await fetcher(api, `https://api.github.com/repos/${m[1]}/${m[2]}/git/ref/heads/${m[3]}`);
+      const sha = JSON.parse(t ?? "null")?.object?.sha;
+      return /^[0-9a-f]{40}$/.test(sha ?? "") ? { from: m[0], to: `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${sha}/` } : null;
+    } catch { return null; }
+  }
+  const pinned = (u) => (pin && u.startsWith(pin.from) ? pin.to + u.slice(pin.from.length) : u);
+  async function loadManifest(fresh = false) {
+    const url0 = await manifestUrl();
+    pin = fresh ? await pinFresh(url0) : null;
+    const text = await fetcher(api, pin ? pinned(url0) : bust(url0, `t=${now()}`));
     if (text == null) throw new Error("목록을 받지 못했어요");
     const m = parseManifest(text);
     if (m.errors.length) log(`목록 오류 ${m.errors.join(", ")}`);
@@ -140,7 +178,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
   }
 
   async function download(a) {
-    const code = await fetcher(api, bust(a.url, `v=${a.sha256.slice(0, 12)}`));
+    const code = await fetcher(api, pin && a.url.startsWith(pin.from) ? pinned(a.url) : bust(a.url, `v=${a.sha256.slice(0, 12)}`));
     if (typeof code !== "string") throw new Error("파일을 받지 못했어요");
     const got = await hasher(new TextEncoder().encode(code));
     if (got !== a.sha256) throw new Error("파일 확인값이 목록과 달라요");
@@ -158,7 +196,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
       if (missing.length) throw new Error(`필요한 애드온(${missing.join(", ")})이 목록에 없어요`);
       const have = await getIndex();
       for (const r of order.filter((x) => x !== id)) {
-        if (!have[r]) await install(r, { withRequires: false });
+        if (!have[r]) await installOne(r, { withRequires: false });
         else if (have[r].on === false) await setOn(r, true);
       }
     }
@@ -168,19 +206,32 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
     if (cur) { const old = await store.getItem(CODE(id)).catch(() => null); if (typeof old === "string") { await store.setItem(PREV(id), old); } }
     await store.setItem(CODE(id), code);
     idx[id] = { version: a.version, sha256: a.sha256, on: cur?.on ?? true, at: now(), prev: cur ? { version: cur.version, sha256: cur.sha256 } : undefined, requires: a.requires?.length ? a.requires : undefined };
-    await setIndex(idx);
-    const now_ = applyNow ?? (!a.hooks || !running.has(id));
+    await setIndex(idx, [id]);
+    const now_ = applyNow ?? true;   // 훅 애드온도 바로(addonscope가 예전 훅을 떼 준다)
     if (idx[id].on && now_) {
+      const deps = dependents(idx, id);
+      for (const d of deps) await stop(d);
       await stop(id);
       try { await start(id, code, a.version); }
-      catch (e) { if (!(await rollback(id, idx))) { idx[id].on = false; idx[id].error = String(e?.message ?? e); await setIndex(idx); } throw e; }
+      catch (e) { if (!(await rollback(id, idx))) { idx[id].on = false; idx[id].error = String(e?.message ?? e); await setIndex(idx, [id]); } throw e; }
+      finally { for (const d of deps) { try { await start(d, await store.getItem(CODE(d)), idx[d]?.version); } catch (e) { log(`${d} 다시 켜기 실패 ${e?.message ?? e}`); } } }
     } else if (idx[id].on) {
-      idx[id].pendingRestart = true; await setIndex(idx);
+      idx[id].pendingRestart = true; await setIndex(idx, [id]);
       // 훅이 있는 애드온은 다음 시작부터 새 버전 → 새로고침을 부탁하는 안내(main.js)
       try { onPendingRestart?.({ id, name: a.name, version: a.version }); } catch { /* 안내 실패는 무시 */ }
     }
     emit();
     return idx[id];
+  }
+
+  // 여러 개 한꺼번에(동시에 받되 같은 애드온은 한 번만). 결과: [{ id, ok, error }]
+  const inflight = new Map();
+  function installOne(id, opts) {
+    if (!inflight.has(id)) inflight.set(id, install(id, opts).finally(() => inflight.delete(id)));
+    return inflight.get(id);
+  }
+  async function installMany(ids) {
+    return Promise.all([...new Set(ids)].map((id) => installOne(id).then(() => ({ id, ok: true }), (e) => ({ id, ok: false, error: String(e?.message ?? e) }))));
   }
 
   async function setOn(id, on) {
@@ -190,7 +241,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
     if (on) for (const r of idx[id].requires ?? []) if (idx[r] && idx[r].on === false) await setOn(r, true);
     if (!on) for (const [other, v] of Object.entries(idx)) if (other !== id && v.on !== false && (v.requires ?? []).includes(id)) await setOn(other, false);
     idx[id] = { ...idx[id], on, error: undefined };
-    await setIndex(idx);
+    await setIndex(idx, [id]);
     if (on) await start(id, await store.getItem(CODE(id)), idx[id].version); else await stop(id);
     emit();
   }
@@ -198,19 +249,31 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
   async function remove(id) {
     for (const [other, v] of Object.entries(await getIndex())) if (other !== id && (v.requires ?? []).includes(id)) await remove(other);   // 이 애드온이 필요한 것도 함께
     await stop(id);
-    const idx = await getIndex(); delete idx[id]; await setIndex(idx);
+    const idx = await getIndex(); delete idx[id]; await setIndex(idx, [id]);
     await store.removeItem(CODE(id)); await store.removeItem(PREV(id));
     emit();
   }
 
   // 업데이트 확인(뒤에서). force가 아니면 1시간에 한 번.
-  async function check({ force = false } = {}) {
+  // 받지 않은 새 애드온이 목록에 생기면 알린다. 처음엔 기준만 잡고(지금 목록 전부를 본 것으로), 버전만 오른 것은 알리지 않는다.
+  async function noticeNew(list) {
+    const raw = await store.getItem(SEEN_KEY).catch(() => null);
+    let seen = null; try { seen = raw ? (typeof raw === "string" ? JSON.parse(raw) : raw) : null; } catch { seen = null; }
+    const ids = list.map((a) => a.id);
+    if (!Array.isArray(seen)) { await store.setItem(SEEN_KEY, ids); return []; }
+    const idx = await getIndex();
+    const fresh = list.filter((a) => !seen.includes(a.id) && !idx[a.id] && fitsCore(a, core));
+    if (fresh.length) { await store.setItem(SEEN_KEY, [...new Set([...seen, ...ids])]); try { onNewAddons?.(fresh.map((a) => ({ id: a.id, name: a.name, desc: a.desc }))); } catch { /* 알림 실패는 무시 */ } }
+    return fresh;
+  }
+  async function check({ force = false, fresh = false } = {}) {
     if (!force && now() - lastCheck < CHECK_EVERY - 60e3) return { updates: [], held: [] };
     lastCheck = now();
     try {
-      const list = await loadManifest();
+      const list = await loadManifest(fresh);
       const res = pickUpdates(await getIndex(), list, core);
-      for (const a of res.updates) { try { await install(a.id); log(`${a.id} v${a.version}로 업데이트했어요`); } catch (e) { log(`${a.id} 업데이트 실패 ${e?.message ?? e}`); } }
+      await noticeNew(list).catch(() => {});
+      for (const r of await installMany(res.updates.map((a) => a.id))) log(r.ok ? `${r.id} 업데이트했어요` : `${r.id} 업데이트 실패 ${r.error}`);   // 동시에 받는다
       lastError = ""; emit();
       return res;
     } catch (e) { lastError = String(e?.message ?? e); emit(); return { updates: [], held: [], error: lastError }; }
@@ -232,7 +295,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, tim
   }
 
   return {
-    boot, check, checkSoon, install, remove, setOn, getIndex, loadManifest, adopt,
+    boot, check, checkSoon, install: installOne, installMany, installing: (id) => inflight.has(id), remove, setOn, getIndex, loadManifest, adopt,
     core: () => core,
     manifest: () => manifest,
     running: (id) => running.has(id),

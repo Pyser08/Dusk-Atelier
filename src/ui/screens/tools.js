@@ -83,7 +83,9 @@ const THANKS = [
   { key: "widgethome", emoji: "🏠", name: "위젯 홈", desc: "위젯 홈 화면의 바탕" },
   { key: "meter", emoji: "📊", name: "RisuMeter", desc: "용량 측정의 바탕" },
   { key: "erosync", emoji: "🌙", name: "Erosync", desc: "NSFW 장면 디렉터의 바탕" },
-  { key: "protlink", emoji: "🔗", name: "ProtLink+", desc: "링크로 받기·업데이트 연결의 바탕" }
+  { key: "protlink", emoji: "🔗", name: "ProtLink+", desc: "링크로 받기·업데이트 연결의 바탕" },
+  { key: "claudestealth", emoji: "🕶️", name: "클로드 은신 테마", desc: "더스크 스텔스에 도움이 됐어요" },
+  { key: "yumi", emoji: "🔌", name: "유미 프로바이더", desc: "프로바이더에 도움이 됐어요" }
 ];
 export async function fullBackup(ctx) {
   const db = await readDb(ctx.api, ["modules", "pluginCustomStorage", "enabledModules"]);

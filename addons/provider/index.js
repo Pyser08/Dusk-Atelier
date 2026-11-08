@@ -1,5 +1,5 @@
 // 프로바이더 애드온(2.0.0, 실험 기능): 리스 모델 목록에 'Dusk 자동'·프로필을 등록하고, 키 보관·모델 고르기·리스 도구 확인을 해요.
-// 리스에 등록한 프로바이더는 빼는 방법이 없어 업데이트·끄기는 다음 시작부터(hooks:true). 설정(dusk.provider.*)은 그대로예요.
+// 리스에 등록한 프로바이더는 뺄 수 없어서 코어 로더가 이름마다 한 번만 달고 처리기만 갈아 끼워요(addonscope.js) — 업데이트·끄기도 바로. 설정(dusk.provider.*)은 그대로예요.
 import { createProvider } from "../../src/data/provider/index.js";
 import { setDuskRoute } from "../../src/engine/runai.js";
 import { setDuskServerModel } from "../../src/data/modelhub.js";

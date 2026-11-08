@@ -152,6 +152,8 @@ export function personDetail(env, host, key, embedded = false) {
   const all = visibleRecords(p);
   const doc = findDoc(env.folder.wiki, p), state = stateOf(doc), tl = timelineOf(env.folder, p, doc), counts = countsOf(tl);
   m.tlFilter ??= "all";
+  // 관계도·나에 대한 기억·홈에서 바로 들어오면 grades·search가 아직 없어 화면이 비고 오류가 났다(인물 카드를 눌러 들어올 때만 채워졌음)
+  if (!Array.isArray(m.grades)) m.grades = []; if (typeof m.search !== "string") m.search = "";
   const evOk = (x) => x.kind !== "event" || ((!m.grades.length || m.grades.includes(x.g)) && (!m.search || x.text.toLowerCase().includes(m.search.toLowerCase())));
   let recs = filterTimeline(tl, embedded ? "all" : m.sort === "grade" ? "event" : m.tlFilter).filter(evOk);
   recs = m.sort === "grade" ? recs.sort((a, b) => GRADES.indexOf(b.g ?? "") - GRADES.indexOf(a.g ?? "")) : recs;

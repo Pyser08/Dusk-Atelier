@@ -1,7 +1,7 @@
 // 장기기억 주입: 고정 예산으로 [Dusk Memory] 블록을 조립한다. 순수 함수.
 import { regressLine } from "./regress.js";
 import { GRADE_WEIGHT } from "./memorygrade.js";
-import { injectable, trustTag, changeNote } from "./memorytrust.js";
+import { injectable, trustTag, changeNote, currentState, isGoneState } from "./memorytrust.js";
 import { emoLines, hasEmo } from "./memoryemo.js";
 import { effectiveTags, returnGap, earlierIds, fading, stageLines, talkLines, bondLines, beliefLines, riftLines, faceLines } from "./memoryhuman.js";
 import { keyHits, keyBoost } from "./memorykeys.js";
@@ -10,7 +10,14 @@ import { povLines, innerLines, expLines } from "./memoryinner.js";
 import { lastTouch, strength, forgotten, knowLines, openLines, relLines, sourceLines, currentStoryTime } from "./memoryplus.js";
 
 export const MARKER = "[Dusk Memory";
-export const HEADER = "[Dusk Memory — story so far. Use for continuity only; the recent messages take priority.]";
+export const HEADER = "[Dusk Memory — story so far. Newer facts win; recent messages take priority.]";
+// 2.0.0 최신 상태 줄: 모든 인물의 지금 상태(사망·실종·떠남 등)를 관련도와 상관없이 맨 앞쪽에 둔다(죽은 인물이 다시 나오는 문제).
+export function stateLines(folder, max = 12) {
+  const rows = [];
+  for (const p of Object.values(folder?.people ?? {})) { if ((p.ctx ?? "auto") === "never") continue; const st = currentState(p); if (st?.v) rows.push({ name: p.name, ...st }); }
+  rows.sort((a, b) => Number(isGoneState(b.v)) - Number(isGoneState(a.v)) || (b.at ?? -1) - (a.at ?? -1));
+  return rows.slice(0, max).map((r) => `- ${r.name}: ${oneLine(r.v)}${isGoneState(r.v) ? " — cannot appear, act or speak now unless the story explicitly brings them back" : ""}`);
+}
 export const estimateTokens = (t) => { const s = String(t ?? ""); const ko = (s.match(/[\u3131-\u318e\uac00-\ud7a3\u3040-\u30ff\u4e00-\u9fff]/g) ?? []).length; return Math.ceil(ko / 1.5 + (s.length - ko) / 4); };
 const norm = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 const oneLine = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
@@ -81,6 +88,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   const lines = [HEADER];
   if (folder.regress?.person) lines.push(regressLine(folder));   // 회귀: 이 인물만 이전 타임라인을 기억한다
   if (cur) lines.push(sceneLine(cur, sceneCap));
+  { const st = stateLines(folder); if (st.length) { const cap = settings.stateTokens ?? 200, keep = []; let n = 0; for (const t of st) { const k = estimateTokens(t); if (n + k > cap) break; keep.push(t); n += k; } if (keep.length) { lines.push("Current facts (latest state, overrides older lines):", ...keep); manifest.included.push({ kind: "state", tokens: n, count: keep.length }); } } }
   if (storyNow) lines.push(`Story time (now): ${oneLine(storyNow)}`); // 이야기 시간 설정이 켜져 있으면 그 값이 기준
   else if (plus && cur && !cur.when && currentStoryTime(folder)) lines.push(`Story time (last known): ${oneLine(currentStoryTime(folder))}`);
   // Story so far: 이전 장면을 최신부터 이벤트 예산 안에서 채우고 시간순으로 출력(통째로만 포함)
@@ -125,7 +133,8 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     const tag = (r) => (earlier?.has(r.id) ? "(earlier) " : "") + (human && fading(r, messageCount, fadeAt) ? "(vague) " : "");   // 변화 이전 기록 · 흐릿해진 사소한 기록
     const moments = top.sort((a, b) => (a.r.at ?? -1) - (b.r.at ?? -1)).map((x) => `(${x.r.g}) ${tag(x.r)}${oneLine(x.r.act)}${trustTag(x.r)}${changeNote(x.r)}`);
     const gap = human && rel ? returnGap(p, scenes, messageCount) : 0;   // 오랜만에 다시 나온 인물
-    const mk = (ms, withDg) => `- ${p.name}${gap ? ` (back after ~${gap} messages away)` : ""}: ${[withDg && dg ? oneLine(dg) : "", ms.length ? "Key moments: " + ms.join(", ") : ""].filter(Boolean).join(" / ")}`;
+    const stNow = currentState(p), stTag = stNow?.v ? ` [${oneLine(stNow.v)}]` : "";
+    const mk = (ms, withDg) => `- ${p.name}${stTag}${gap ? ` (back after ~${gap} messages away)` : ""}: ${[withDg && dg ? oneLine(dg) : "", ms.length ? "Key moments: " + ms.join(", ") : ""].filter(Boolean).join(" / ")}`;
     const text = mk(moments, true);
     // 예산이 모자라면 사람을 통째로 빼기 전에 덜 중요한 순간부터 줄여 본다(문장은 자르지 않고 순간 단위로만 줄임).
     const items = top.map((x, i) => ({ id: x.r.id, s: x.s, m: moments[i] }));   // top은 위에서 시간순으로 정렬돼 moments와 같은 순서
@@ -149,6 +158,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
       if (!fit) { manifest.excluded.push({ kind: "person", name: c.name, tokens: c.tokens, reason: "budget" }); continue; }
       ({ text, tokens, ids } = fit);
     }
+    if (!chars.length) used += headTok;   // 제목 줄도 전체 상한에 센다(뒤 칸들이 상한을 넘지 않게)
     chars.push(text); used += tokens; manifest.included.push({ kind: "person", name: c.name, tokens, group: c.group }); manifest.recordIds.push(...ids); included.add(norm(c.name));
   }
   if (chars.length) lines.push("Characters (current state):", ...chars);

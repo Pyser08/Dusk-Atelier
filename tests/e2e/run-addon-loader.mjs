@@ -1,10 +1,11 @@
 // 애드온 로더 시험: 리스 플러그인 iframe과 같은 sandbox·CSP(eval 금지)에서 실제 addons/dist 파일을 import(blob:)로 켠다.
 import { createRequire } from "node:module";
+import { manifestWithHello } from "./hello-fixture.mjs";
 import fs from "node:fs";
 import { build } from "/opt/npm-tools/node_modules/esbuild/lib/main.js";
 const { chromium } = createRequire("/opt/npm-tools/node_modules/")("playwright");
 const r = await build({ entryPoints: ["tests/e2e/addonloader.entry.js"], bundle: true, write: false, format: "iife", platform: "browser", logLevel: "error" });
-const manifest = fs.readFileSync("addons/addons.json", "utf8");
+const manifest = manifestWithHello();
 const files = Object.fromEntries(JSON.parse(manifest).addons.map((a) => [a.url, fs.readFileSync(`addons/dist/${a.id}.js`, "utf8")]));
 const nonce = "n0nce" + Math.random().toString(36).slice(2);
 const csp = `connect-src 'none'; script-src 'nonce-${nonce}' 'wasm-unsafe-eval'; frame-src 'none'; object-src 'none'; style-src * 'unsafe-inline'; default-src 'none'; img-src * data: blob:; font-src * data: blob:; media-src * data: blob:; base-uri 'none';`;

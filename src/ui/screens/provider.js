@@ -55,7 +55,7 @@ export async function renderProvider(ctx) {
     (async () => {
       const all = await P.vault.list(); if (!alive()) return;
       const mine = all.filter((x) => c.keyIds.includes(x.id));
-      replace(keyBox, ...mine.map((x) => h("div", { class: "rb-pkey" }, h("span", { class: "n" }, x.label), h("code", null, x.tail), btn("", { icon: "trash", size: "sm", title: "키 삭제", onClick: async () => { if (!await confirmDialog(ctx.win, { title: "이 키를 지울까요?", body: `${x.label} ${x.tail}`, ok: "지우기", danger: true })) return; try { await P.vault.remove(x.id); await mutate((cc) => { for (const q of cc.connections) q.keyIds = q.keyIds.filter((i) => i !== x.id); }); draw(); } catch (e) { fail(e); } } }))));
+      replace(keyBox, ...mine.map((x) => h("div", { class: "rb-pkey" }, h("span", { class: "n" }, x.label), h("code", null, x.tail), btn("", { icon: "trash", size: "sm", title: "키 지우기", onClick: async () => { if (!await confirmDialog(ctx.win, { title: "이 키를 지울까요?", body: `${x.label} ${x.tail}`, ok: "지우기", danger: true })) return; try { await P.vault.remove(x.id); await mutate((cc) => { for (const q of cc.connections) q.keyIds = q.keyIds.filter((i) => i !== x.id); }); draw(); } catch (e) { fail(e); } } }))));
       if (!mine.length && !k.keyOptional) keyBox.append(h("small", { class: "rb-muted" }, c.kind === "vertex" ? "서비스 계정 JSON을 통째로 붙여 넣어요." : "아직 키가 없어요."));
     })();
     const keyIn = h("input", { class: "rb-input", type: "password", placeholder: c.kind === "vertex" ? "서비스 계정 JSON" : c.kind === "copilot" ? "GitHub 토큰" : "API 키 붙여 넣기", "aria-label": "API 키", autocomplete: "off" });
@@ -63,9 +63,9 @@ export async function renderProvider(ctx) {
     keyIn.addEventListener("keydown", (e) => { if (e.key === "Enter") addKey(); });
     const set = (patch) => mutate((x) => { Object.assign(x.connections.find((q) => q.id === c.id) ?? {}, patch); });
     const bal = h("small", { class: "rb-muted" });
-    const card = h("section", { class: "rb-pcard", dataset: { conn: c.id } },
+    const card = h("section", { class: "rb-pvcard", dataset: { conn: c.id } },
       h("div", { class: "top" }, h("span", { class: "ico" }, icon("network", 18)), h("div", { class: "t" }, h("b", null, c.name), h("small", { class: "rb-muted" }, `${k.label} · ${c.format}`)), btn("", { icon: open ? "up" : "down", size: "sm", title: open ? "접기" : "펼치기", onClick: () => { st.open = open ? "" : c.id; draw(); } })),
-      keyBox, h("div", { class: "rb-pkeyadd" }, keyIn, btn("키 추가", { onClick: addKey })));
+      h("div", { class: "sec" }, h("span", { class: "rb-label" }, k.keyOptional ? "API 키 (없어도 돼요)" : "API 키"), keyBox, h("div", { class: "rb-pkeyadd" }, keyIn, btn("키 추가", { icon: "plus", onClick: addKey }))));
     if (open) {
       card.append(grid(
         field("이름", text(c.name, async (v) => { await set({ name: v || k.label }); draw(); })),
@@ -77,25 +77,26 @@ export async function renderProvider(ctx) {
         c.kind === "vertex" ? field("위치", text(c.vertex.location, (v) => set({ vertex: { ...c.vertex, location: v.trim() || "global" } }), { ph: "global" })) : null,
         c.kind === "copilot" ? field("Copilot 방식", select([["vscode", "VS Code"], ["opencode", "opencode"]], c.copilotEngine, (v) => set({ copilotEngine: v }), "Copilot 방식")) : null,
         c.keyIds.length > 1 ? field("키 쓰는 방식", select([["random", "무작위"], ["rotate", "돌아가며"], ["affinity", "봇마다 고정"], ["on-error", "실패한 뒤에만 다음 키"]], c.keyMode, (v) => set({ keyMode: v }), "키 방식"), "한 키가 막히면 잠시 쉬고 다른 키로 넘어가요") : null));
-      card.append(h("div", { class: "acts" },
-        btn("모델 불러오기", { icon: "refresh", onClick: async () => { try { st.models[c.id] = await P.models(c); toast(`모델 ${st.models[c.id].length}개를 불러왔어요`); draw(); } catch (e) { fail(e); } } }),
-        P.hasBalance(c.kind) ? btn("잔액 보기", { onClick: async () => { try { const b = await P.balance(c); bal.textContent = `${b.label}: ${Number.isFinite(b.value) ? b.value.toFixed(2) : "?"} ${b.unit}`; } catch (e) { fail(e); } } }) : null,
-        btn("연결 지우기", { kind: "danger", icon: "trash", onClick: async () => { if (!await confirmDialog(ctx.win, { title: "이 연결을 지울까요?", body: "이 연결을 쓰는 프로필도 함께 지워져요. 키는 따로 지워야 해요.", ok: "지우기", danger: true })) return; await mutate((x) => { x.connections = x.connections.filter((q) => q.id !== c.id); }); draw(); } })), bal);
+      if (P.hasBalance(c.kind)) card.append(h("div", { class: "acts" }, btn("잔액 보기", { size: "sm", onClick: async () => { bal.textContent = "확인하는 중…"; try { const b = await P.balance(c); bal.textContent = `${b.label}: ${Number.isFinite(b.value) ? b.value.toFixed(2) : "?"} ${b.unit}`; } catch (e) { bal.textContent = ""; fail(e); } } }), bal));
+      // 모델: 불러오기 → 검색 → 누르면 프로필. 목록에 없으면 빈 프로필을 만들어 이름을 적는다.
+      const modelSec = h("div", { class: "sec" }, h("div", { class: "sech" }, h("span", { class: "rb-label" }, models.length ? `모델 ${models.length}개 — 누르면 프로필이 만들어져요` : "모델"), btn(models.length ? "다시 불러오기" : "모델 불러오기", { size: "sm", icon: "refresh", onClick: async () => { try { st.models[c.id] = await P.models(c); toast(`모델 ${st.models[c.id].length}개를 불러왔어요`); draw(); } catch (e) { fail(e); } } })));
       if (models.length) {
-        const chips = h("div", { style: "display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto" }), cnt = h("span", { class: "rb-label" });
-        const paint = (q) => { const w = q.trim().toLowerCase().split(/\s+/).filter(Boolean), list = models.filter((m) => w.every((x) => m.toLowerCase().includes(x))); cnt.textContent = `모델을 누르면 프로필이 만들어져요 (${list.length}/${models.length})`; replace(chips, ...(list.length ? list.slice(0, 300).map((m) => h("button", { type: "button", class: "rb-chip", onClick: () => newProfile(c, m) }, m)) : [h("small", { class: "rb-muted" }, "맞는 모델이 없어요. 아래 ‘프로필 직접 만들기’로 이름을 적을 수도 있어요.")])); };
+        const chips = h("div", { class: "rb-pvchips" }), cnt = h("small", { class: "rb-muted" });
+        const paint = (q) => { const w = q.trim().toLowerCase().split(/\s+/).filter(Boolean), list = models.filter((m) => w.every((x) => m.toLowerCase().includes(x))); cnt.textContent = q.trim() ? `찾은 모델 ${list.length}개` : ""; replace(chips, ...(list.length ? list.slice(0, 300).map((m) => h("button", { type: "button", class: "rb-chip", onClick: () => newProfile(c, m) }, m)) : [h("small", { class: "rb-muted" }, "맞는 모델이 없어요. 아래 ‘빈 프로필 추가’로 만든 뒤 모델 이름을 적을 수 있어요.")])); };
         const q = h("input", { class: "rb-input", type: "search", placeholder: "모델 검색 (예: claude opus, gpt-5, flash)", "aria-label": "모델 검색", value: st.modelQ?.[c.id] ?? "", autocomplete: "off", spellcheck: "false" });
         q.addEventListener("input", () => { (st.modelQ ??= {})[c.id] = q.value; paint(q.value); });
         paint(q.value);
-        card.append(h("div", { class: "rb-pfield wide" }, cnt, q, chips), h("div", { class: "acts" }, btn("프로필 직접 만들기", { onClick: () => newProfile(c, "") })));
-      }
-      else card.append(h("div", { class: "acts" }, btn("프로필 직접 만들기", { onClick: () => newProfile(c, "") })));
+        modelSec.append(q, cnt, chips);
+      } else modelSec.append(h("small", { class: "rb-muted" }, "키를 넣고 ‘모델 불러오기’를 누르면 고를 수 있는 모델이 떠요."));
+      modelSec.append(h("div", { class: "acts" }, btn("빈 프로필 추가", { size: "sm", icon: "plus", onClick: () => newProfile(c, "") })));
+      card.append(modelSec);
       card.append(advFold(ctx, "provconn", grid(
         field("프록시 주소", text(c.proxyUrl, (v) => set({ proxyUrl: v.trim() }), { ph: "https://…{url}" }), "CORS가 막히는 곳용. {url} 자리에 주소가 들어가요", true),
         field("추가 헤더(JSON)", area(JSON.stringify(c.headers ?? {}), (v) => { try { set({ headers: JSON.parse(v || "{}") }); } catch { toast("JSON 모양이 아니에요", { error: true }); } }, { rows: 2 }), "모델·메시지·인증 헤더는 바꿀 수 없어요", true),
         field("추가 요청 값(JSON)", area(JSON.stringify(c.params ?? {}), (v) => { try { set({ params: JSON.parse(v || "{}") }); } catch { toast("JSON 모양이 아니에요", { error: true }); } }, { rows: 2 }), "", true),
         field("직접 적은 모델(쉼표)", text((c.userModels ?? []).join(", "), (v) => set({ userModels: v.split(",").map((s) => s.trim()).filter(Boolean) })), "", true),
         field("목록에서 숨길 모델(쉼표)", text((c.hidden ?? []).join(", "), (v) => set({ hidden: v.split(",").map((s) => s.trim()).filter(Boolean) })), "", true))));
+      card.append(h("div", { class: "foot" }, h("span", { class: "res" }, "이 연결을 쓰는 프로필도 함께 지워져요."), btn("연결 지우기", { kind: "danger", icon: "trash", onClick: async () => { if (!await confirmDialog(ctx.win, { title: "이 연결을 지울까요?", body: "이 연결을 쓰는 프로필도 함께 지워져요. 키는 따로 지워야 해요.", ok: "지우기", danger: true })) return; await mutate((x) => { x.connections = x.connections.filter((q) => q.id !== c.id); }); draw(); } })));
     }
     return card;
   }
@@ -107,15 +108,15 @@ export async function renderProvider(ctx) {
 
   // ───────── 프로필 ─────────
   function profPanel() {
-    if (!cfg.profiles.length) return [emptyState({ icon: "sliders", title: "프로필이 없어요", text: "‘연결’에서 모델을 눌러 만들거나, 아래 버튼으로 직접 만들어요.", actions: cfg.connections.length ? [{ label: "프로필 만들기", kind: "primary", onClick: () => newProfile(cfg.connections[0], "") }] : [] })];
-    return [h("div", { class: "rb-actions" }, btn("프로필 추가", { icon: "plus", onClick: () => newProfile(cfg.connections[0], "") })), ...cfg.profiles.map(profCard)];
+    if (!cfg.profiles.length) return [emptyState({ icon: "sliders", title: "프로필이 없어요", text: cfg.connections.length ? "‘연결’에서 모델을 누르면 바로 만들어져요. 아래 버튼으로 빈 프로필을 만들 수도 있어요." : "먼저 ‘연결’에서 연결을 추가하고 키를 넣어 주세요.", actions: cfg.connections.length ? [{ label: "프로필 추가", kind: "primary", onClick: () => newProfile(cfg.connections[0], "") }] : [] })];
+    return [h("div", { class: "rb-actions" }, btn("프로필 추가", { kind: "primary", icon: "plus", onClick: () => newProfile(cfg.connections[0], "") })), ...cfg.profiles.map(profCard)];
   }
   function profCard(p) {
     const conn = cfg.connections.find((c) => c.id === p.connectionId), open = st.openProf === p.id, kind = conn?.kind;
     const set = (fn) => mutate((x) => { const q = x.profiles.find((r) => r.id === p.id); if (q) fn(q); });
     const lst = st.models[p.connectionId] ?? [];
     const dl = h("datalist", { id: `rb-pm-${p.id}` }, lst.slice(0, 300).map((m) => h("option", { value: m })));
-    const card = h("section", { class: "rb-pcard", dataset: { prof: p.id } },
+    const card = h("section", { class: "rb-pvcard", dataset: { prof: p.id } },
       h("div", { class: "top" }, h("span", { class: "ico" }, icon("sliders", 18)), h("div", { class: "t" }, h("b", null, p.name), h("small", { class: "rb-muted" }, `${conn?.name ?? "연결 없음"} · ${p.model || "모델 미정"}`)), btn("", { icon: open ? "up" : "down", size: "sm", title: open ? "접기" : "펼치기", onClick: () => { st.openProf = open ? "" : p.id; draw(); } })));
     if (!open) return card;
     const th = p.thinking, reasoning = isReasoningModel(p.model);
@@ -160,11 +161,12 @@ export async function renderProvider(ctx) {
       field("재시도 횟수", num(p.retry, (v) => set((q) => { q.retry = v; }), { step: "1" }), "비우면 공통 값"), field("서비스 등급(tier)", text(p.tier, (v) => set((q) => { q.tier = v.trim(); })), "예: priority, flex"),
       field("안전 필터", text(p.safety, (v) => set((q) => { q.safety = v.trim(); })), "Gemini: off · BLOCK_NONE 등"), field("Frequency / Presence", h("div", { style: "display:flex;gap:8px" }, num(p.sampling.frequencyPenalty, (v) => set((q) => { q.sampling.frequencyPenalty = v; }), { ph: "freq" }), num(p.sampling.presencePenalty, (v) => set((q) => { q.sampling.presencePenalty = v; }), { ph: "pres" }))),
       field("추가 요청 값(JSON)", area(JSON.stringify(p.params ?? {}), (v) => { try { set((q) => { q.params = JSON.parse(v || "{}"); }); } catch { toast("JSON 모양이 아니에요", { error: true }); } }, { rows: 2 }), "", true))));
-    const res = h("small", { class: "rb-muted" });
-    card.append(h("div", { class: "acts" },
-      btn("연결 시험", { icon: "zap", onClick: async (e) => { res.textContent = "시험하는 중…"; try { const r = await P.test(p.id); res.textContent = r.ok ? `성공: ${r.text.slice(0, 80)}` : `실패: ${r.text.slice(0, 160)}`; } catch (er) { res.textContent = `실패: ${er?.message ?? er}`; } } }),
-      btn("복제", { onClick: async () => { const c = normalizeProfile({ ...p, id: "", name: `${p.name} 복사` }); await mutate((x) => { x.profiles.push(c); }); st.openProf = c.id; draw(); } }),
-      btn("지우기", { kind: "danger", icon: "trash", onClick: async () => { if (!await confirmDialog(ctx.win, { title: "이 프로필을 지울까요?", body: "용도·사슬에 지정된 곳은 비워져요.", ok: "지우기", danger: true })) return; await mutate((x) => { x.profiles = x.profiles.filter((q) => q.id !== p.id); }); draw(); } })), res);
+    const res = h("span", { class: "res" });
+    card.append(h("div", { class: "foot" },
+      btn("연결 시험", { icon: "zap", onClick: async () => { res.textContent = "시험하는 중…"; try { const r = await P.test(p.id); res.textContent = r.ok ? `성공: ${r.text.slice(0, 80)}` : `실패: ${r.text.slice(0, 160)}`; } catch (er) { res.textContent = `실패: ${er?.message ?? er}`; } } }),
+      btn("복제", { icon: "split", onClick: async () => { const c = normalizeProfile({ ...p, id: "", name: `${p.name} 복사` }); await mutate((x) => { x.profiles.push(c); }); st.openProf = c.id; draw(); } }),
+      res,
+      btn("프로필 지우기", { kind: "danger", icon: "trash", onClick: async () => { if (!await confirmDialog(ctx.win, { title: "이 프로필을 지울까요?", body: "용도·사슬에 지정된 곳은 비워져요.", ok: "지우기", danger: true })) return; await mutate((x) => { x.profiles = x.profiles.filter((q) => q.id !== p.id); }); draw(); } })));
     return card;
   }
 
