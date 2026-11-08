@@ -34,6 +34,8 @@ import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModu
 
 var VERSION = typeof __VERSION__ !== "undefined" ? __VERSION__ : "dev";
 var TITLE = "Dusk Atelier";
+// 리스 화면에서 이 플러그인 iframe을 찾는 표식(srcdoc 안 글자). 위젯 홈 애드온이 홈 자리에 배치할 때 쓴다(home-layout.cjs) — 지우지 말 것
+globalThis.__duskFrameMark = "dusk-atelier-plugin-frame";
 async function start() {
   const host = globalThis.risuai ?? globalThis.Risuai;
   if (!host) return;

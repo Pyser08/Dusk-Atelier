@@ -83,6 +83,8 @@
       await this.stop();await this.clearNativeScroll();if(!doc)return false;this.doc=doc;
       const found=await findHome(doc);if(!found)return false;const{pane,marker}=found;this.generic=!!found.generic;this.nocover=!!found.nocover;
       let frames=await nodes(await doc.querySelectorAll(MARK),2);
+      if(!frames.length)frames=await nodes(await doc.querySelectorAll('iframe[srcdoc*="dusk-atelier-plugin-frame"]'),2);   // 코어 main.js의 표식(2.0.0: 위젯 홈이 애드온이라 아래 글자는 코어에 없음)
+      if(!frames.length)frames=await nodes(await doc.querySelectorAll('iframe[srcdoc*="rbm:seenVersion:v1"]'),2);   // 표식이 없는 예전 코어(2.0.0 전 빌드)도 Dusk 저장 키 글자로 찾는다
       if(!frames.length)frames=await nodes(await doc.querySelectorAll('iframe[srcdoc*="dusk-widgethome-open"]'),2);
       if(frames.length!==1)return false;
       const frame=frames[0],box=await this.boxOf(pane);if(!box)return false;
