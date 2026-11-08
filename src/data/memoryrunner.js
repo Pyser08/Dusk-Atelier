@@ -34,7 +34,23 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   const note = (result, extra = {}) => { session.tick = { at: Date.now(), result, ...extra }; };
   // 보조 모델 호출 제한시간(초): 기록·주입 세부 설정에서 바꾼다. 기본 600초
   const modelOf = (s) => ({ ...s.model, timeoutSec: Number.isFinite(s.modelTimeoutSec) ? s.modelTimeoutSec : 600 });
-  const run = call ?? (async (msgs, pick, signal) => runAI(api, appendToMessages(msgs, await skillBlock("analysis")), pick, signal));   // 스킬 주입(꺼짐이면 원문 그대로, v1.8.1)
+  const rawRun = call ?? (async (msgs, pick, signal) => runAI(api, appendToMessages(msgs, await skillBlock("analysis")), pick, signal));   // 스킬 주입(꺼짐이면 원문 그대로, v1.8.1)
+  // 보조 모델 호출 추적: 우측 하단 '중지' 버튼용. 진행 중인 호출을 세고, stop()이 전부 끊는다(끊긴 호출은 실패로 세지 않는다).
+  const live = new Set(), watchers = new Set(); let stopGen = 0;
+  const pulse = () => { for (const f of [...watchers]) { try { f(live.size); } catch { /* 화면 쪽 오류는 무시 */ } } };
+  const run = async (msgs, pick, signal) => {
+    const c = new AbortController(), gen = stopGen;
+    const onOuter = () => c.abort(); signal?.addEventListener?.("abort", onOuter, { once: true });
+    const cancelled = new Promise((_, rej) => c.signal.addEventListener("abort", () => { const e = new Error("기억 작성을 중지했어요"); e.userStopped = true; rej(e); }, { once: true }));
+    live.add(c); pulse();
+    try { return await Promise.race([rawRun(msgs, pick, c.signal), cancelled]); }
+    finally { live.delete(c); signal?.removeEventListener?.("abort", onOuter); pulse(); }
+  };
+  const activity = {
+    count: () => live.size,
+    onChange: (fn) => { watchers.add(fn); return () => watchers.delete(fn); },
+    stop: () => { stopGen++; const n = live.size; for (const c of [...live]) c.abort(); return n; }
+  };
 
   const aiIndexes = (messages) => messages.map((m, i) => (!isUserMessage(m) && extractMessageText(m).trim() ? i : -1)).filter((i) => i >= 0);
   const noRoll = (t) => String(t ?? "").replace(/<!--\s*dusk-roll:[\s\S]*?-->\s*/g, "");   // 주사위 판정 표식은 기억 분석에 안 보낸다(1.8.3)
@@ -125,6 +141,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     else session.calls++;
     try { if (!result) result = await analyze((msgs) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true }, signal), input, { staged: idx.settings?.staged !== false, format: idx.settings?.format, light: isLightModel(idx.settings), onWarn: (name, e) => log(`${name} 세부 분석 실패(개요만 기록)`, String(e?.message ?? e).slice(0, 120)) }); }
     catch (e) {
+      if (e?.userStopped) { lastTried.delete(tryKey); throw e; }   // 사용자가 중지한 것: 실패 횟수에 넣지 않는다
       const fails = await bump(chaId, (b) => ++b.fails);
       await status({ lastError: String(e?.message ?? e).slice(0, 300) });
       if (fails >= MAX_FAILS) { await bump(chaId, (b) => { b.paused = true; }); notify(`"${character.name}"의 장기 기억 분석이 ${MAX_FAILS}번 연속 실패해서 이 봇의 자동 기록을 멈췄어요. 기억 탭에서 다시 켤 수 있어요.`); }
@@ -301,10 +318,10 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
       }
     }
     const shared = { character, chat };
-    const failed = [], reasons = []; let n = 0;
+    const failed = [], reasons = []; let n = 0; const gen0 = stopGen;
     const extras = await backfillExtras(charIndex, chatIndex, shared, groups.length);
     for (const g of groups) {
-      if (signal?.aborted) break;
+      if (signal?.aborted || stopGen !== gen0) break;
       // 생성 중인지는 현재 채팅 하나만 5묶음마다 확인한다(캐릭터 전체 복사 금지).
       if (n > 0 && n % 5 === 0 && isChatStreaming(await api.getChatFromIndex(charIndex, chatIndex))) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
       // 요청 한도·시간 초과·서버 오류 같은 일시적 오류는 간격을 늘려 가며 2번까지 다시 시도한다(실패 원인은 reasons로 돌려준다).
@@ -312,6 +329,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
         try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true, redo, shared }); if (extras) extras.pot(g.at(-1)); break; }
         catch (e) {
           const msg = String(e?.message ?? e).slice(0, 160);
+          if (e?.userStopped || stopGen !== gen0) break;   // 중지: 실패로 기록하지 않고 멈춘다
           if (signal?.aborted) { failed.push(g); break; }
           if (attempt < 2 && TRANSIENT.test(msg)) { await new Promise((r) => setTimeout(r, retryMs * (attempt + 1))); continue; }
           failed.push(g); if (!reasons.includes(msg) && reasons.length < 5) reasons.push(msg);
@@ -329,7 +347,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     return { total: groups.length, failed, reasons };
   }
   // 지난 대화 분석에 리수폿 위키 기록·Erosync도 함께(설정 '지난 대화 분석에 함께 기록', 기본 켜짐).
-  // 리수폿: 묶음마다 마지막 응답을 리수폿 Writer에 맡긴다(묶음당 호출 1번 더). Erosync: 끝나고 한 번, 인물 성향이 비어 있으면 전체 분석.
+  // 리수폿: 묶음마다 마지막 응답을 리수폿 Writer에 맡긴다(묶음당 호출 1번 더). Erosync: 설정(backfillErosync)을 켠 사람만, 끝나고 한 번 인물 성향이 비어 있으면 전체 분석.
   // 둘 다 꺼져 있거나 쓸 수 없으면 아무것도 하지 않는다(지금처럼 기억만).
   async function backfillExtras(charIndex, chatIndex, shared, count) {
     if (!count) return null;
@@ -341,11 +359,13 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
       pot: (i) => { if (!potOk) return; try { link.backfillPot(charIndex, chatIndex, i, shared); } catch (e) { log("리수폿 함께 기록 실패", e?.message ?? e); } },
       async finish({ signal } = {}) {
         if (potOk && typeof link.backfillPotWait === "function") { try { await link.backfillPotWait(charIndex, chatIndex, signal); } catch (e) { log("리수폿 기록 대기 실패", e?.message ?? e); } }
-        if (typeof link?.backfillErosync === "function") { try { await link.backfillErosync(); } catch (e) { log("Erosync 함께 분석 실패", e?.message ?? e); } }
+        // Erosync는 인물 성향이 비어 있으면 채팅 전체를 분석해서 AI 호출이 수십 번 든다 → 켜 둔 사람만(기본 꺼짐, 2.0.6 제보: 미처리 1개인데 20번 넘게 호출)
+        let er = false; try { er = (await store.getIndex()).settings?.backfillErosync === true; } catch { /* 기본 꺼짐 */ }
+        if (er && typeof link?.backfillErosync === "function") { try { await link.backfillErosync(); } catch (e) { log("Erosync 함께 분석 실패", e?.message ?? e); } }
       }
     };
   }
 
   return { start, onOutput, confirmNext, tick, analyzeAt, prepareLatest, analyzeLatest: async (ci, ti) => { const i = await latestAiIndex(ci, ti); if (i < 0) throw new Error("분석할 AI 응답이 없어요."); return analyzeAt(ci, ti, [i], { manual: true }); },
-    planBackfill, backfill, resumeServer, digestIfNeeded, session: () => ({ ...session }), isStarted: () => started, stop: () => clearTimeout(timer) };
+    activity, planBackfill, backfill, resumeServer, digestIfNeeded, session: () => ({ ...session }), isStarted: () => started, stop: () => clearTimeout(timer) };
 }

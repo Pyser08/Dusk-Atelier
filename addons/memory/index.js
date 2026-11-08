@@ -7,6 +7,7 @@ import { createMemoryButton } from "../../src/data/memorybutton.js";
 import POT_PROMPTS from "../../src/data/pot/prompts.json";
 import { setUserPromptProvider } from "../../src/engine/runai.js";
 import { iconMarkup } from "../../src/ui/icons.js";
+import { createStopButton } from "../../src/ui/stopbutton.js";
 import { renderMemory } from "../../src/ui/screens/memory/index.js";
 import { renderRelMap } from "../../src/ui/screens/relmap.js";
 import { tracked } from "../../src/ui/screens/memory/settingstools.js";
@@ -24,6 +25,9 @@ export async function activate(api, ctx) {
     storyNow: (c, t) => app.storyTime?.current?.(c, t), notify: toast, potLibrary: POT_PROMPTS, onOpen: () => openTab("memory")
   });
   const affhud = createAffHud(api, { store: memory.store, link: memory.link });
+  // 보조 모델로 기억을 쓰는 동안 오른쪽 아래에 작은 '중지' 버튼
+  const stopBtn = createStopButton(() => app.watcher?.doc ?? null, () => { const n = memory.runner?.activity?.stop?.() ?? 0; if (n) toast("기억 작성을 중지했어요. 다음 응답부터 다시 기록돼요."); });
+  const offActivity = memory.runner?.activity?.onChange?.((n) => { stopBtn.set(n > 0).catch(() => {}); });
   setUserPromptProvider(() => memory.userPrompts());
   // Erosync가 있으면 지난 대화 분석 끝에 성향 분석을 한 번(이미 있으면 그대로)
   memory.link.backfillErosync = async () => {
@@ -59,6 +63,7 @@ export async function activate(api, ctx) {
   return {
     async deactivate() {
       off.forEach((f) => f());
+      try { offActivity?.(); await stopBtn.set(false); } catch { /* 없음 */ }
       for (const f of menuOff) await f?.().catch?.(() => {});
       setUserPromptProvider(() => null);
       await memBtn.hide?.().catch?.(() => {});

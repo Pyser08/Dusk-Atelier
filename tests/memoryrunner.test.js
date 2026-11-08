@@ -245,11 +245,12 @@ test("backfill reports why groups failed", async () => {
   assert.equal(r.failed.length, 2);
   assert.match(r.reasons[0], /JSON/);
 });
-test("지난 대화 분석에 함께 기록: 묶음마다 리수폿에 맡기고 끝나면 Erosync, 설정을 끄면 기억만", async () => {
-  const run = async (off) => {
+test("지난 대화 분석에 함께 기록: 묶음마다 리수폿에 맡기고, Erosync는 켠 사람만, 설정을 끄면 기억만", async () => {
+  const run = async (off, ero = true) => {
     const { api, store, chat } = setup();
     chat.message = []; for (let i = 0; i < 7; i++) chat.message.push({ role: "user", data: "u" + i }, { role: "char", data: LONG + i });
     if (off) await store.updateIndex((i) => { i.settings.backfillExtras = false; });
+    if (ero) await store.updateIndex((i) => { i.settings.backfillErosync = true; });
     const pot = [], ev = [];
     const link = { backfillPotReady: async () => true, backfillPot: (ci, ti, i) => pot.push(i), backfillPotWait: async () => { ev.push("wait"); return true; }, backfillErosync: async () => { ev.push("ero"); } };
     const runner = createMemoryRunner(api, { store, link, call: async () => good });
@@ -261,4 +262,25 @@ test("지난 대화 분석에 함께 기록: 묶음마다 리수폿에 맡기고
   assert.ok(on.pot.every((i) => i % 2 === 1), "묶음 끝 AI 응답 위치");
   const off = await run(true);
   assert.equal(off.pot.length, 0); assert.deepEqual(off.ev, []);
+  const noEro = await run(false, false);   // 기본: Erosync 전체 분석은 하지 않는다(미처리 1개인데 호출 20번 넘던 제보)
+  assert.equal(noEro.pot.length, 3); assert.deepEqual(noEro.ev, ["wait"]);
+});
+
+test("중지: 진행 중인 보조 모델 호출을 끊고 실패 횟수에 넣지 않으며 지난 대화 분석도 멈춘다", async () => {
+  const { api, store, chat } = setup();
+  chat.message = []; for (let i = 0; i < 7; i++) chat.message.push({ role: "user", data: "u" + i }, { role: "char", data: LONG + i });
+  let calls = 0; const seen = [];
+  const runner = createMemoryRunner(api, { store, call: (msgs, pick, signal) => { calls++; return new Promise((res, rej) => { signal?.addEventListener("abort", () => rej(new Error("aborted"))); }); } });
+  runner.activity.onChange((n) => seen.push(n));
+  const p = runner.backfill(0, 0, {});
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(runner.activity.count(), 1);
+  assert.equal(runner.activity.stop(), 1);
+  const r = await p;
+  assert.equal(calls, 1, "중지 뒤에는 다음 묶음을 시작하지 않아요");
+  assert.equal(r.failed.length, 0, "중지는 실패로 기록하지 않아요");
+  assert.equal(runner.activity.count(), 0);
+  assert.deepEqual(seen.slice(0, 2), [1, 0]);
+  const idx = await store.getIndex();
+  assert.ok(!Object.values(idx.bots ?? {}).some((b) => b?.paused), "자동 기록이 멈춘 상태로 남지 않아요");
 });
