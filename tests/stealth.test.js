@@ -588,3 +588,16 @@ test("가로로 긴 띠 그림(캐릭터 컷)도 접는다 — 폭 320 이상·�
   assert.equal(await wrapMedia(d, { rand: () => 3 }), 2);
   assert.deepEqual(imgs.map((i) => i.n.attrs["x-st-m"]), ["1", "1", "s", "s"]);
 });
+
+test("휴대폰 위 줄(GPT·제미나이·딥시크 사진 11-08): 모양별 배치, 넓은 화면 쪽은 st-top-do로 따로", async () => {
+  const { topHtml } = await import("../src/data/stealth-shell.js");
+  const g = topHtml({ kind: "gpt", sub: "채팅", mobile: true });
+  assert.ok(g.includes("st-top-do") && g.includes("st-top-mo") && g.includes("data-st-menu") && g.includes("data-st-more"), "gpt: 두 쪽 + 메뉴·접기 버튼");
+  assert.equal((g.match(/data-st-more/g) ?? []).length, 1, "접기 버튼은 하나");
+  const m = topHtml({ kind: "gemini", sub: "채팅", mobile: true });
+  assert.ok(m.includes("<b>Gemini</b>") && m.includes("자동 모드"), "gemini: 모델 이름 제목");
+  const d = topHtml({ kind: "deepseek", sub: "보스 이펙터", mobile: true });
+  assert.ok(d.includes("보스 이펙터") && /st-top-deco/.test(d), "deepseek: 채팅 이름 + 새 채팅 아이콘");
+  const css = buildStealth("gpt").css;
+  assert.match(css, /\[x-c~="st-top-t"\]\[x-c~="st-top-mo"\],\[x-c~="st-top-mo"\]\{display:none\}/, "넓은 화면에선 휴대폰 제목 숨김");
+});
