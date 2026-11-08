@@ -49,9 +49,14 @@ export function latin1ToUtf8(t) {
 }
 // 리스 웹·포켓리스의 nativeFetch는 동시에 여러 개를 부르면 다른 요청의 응답(예: 목록)을 돌려줄 때가 있다 → 한 번에 하나씩
 let nativeQ = Promise.resolve();
+// 응답이 영영 안 오는 요청이 줄 전체를 막지 않게(포켓리스 등 서버형 호스트)
+const withTimeout = (p, ms) => new Promise((res, rej) => {
+  const t = setTimeout(() => rej(new Error("응답이 없어요")), ms);
+  Promise.resolve(p).then((v) => { clearTimeout(t); res(v); }, (e) => { clearTimeout(t); rej(e); });
+});
 export async function fetchText(api, url) {
   if (typeof api.nativeFetch === "function") {
-    const run = nativeQ.then(() => api.nativeFetch(url, { method: "GET", headers: { "x-dusk-req": url } })).then(readText).catch(() => null);   // method 없으면 POST
+    const run = nativeQ.then(() => withTimeout(api.nativeFetch(url, { method: "GET" }), 30e3)).then(readText).catch(() => null);   // method 없으면 POST
     nativeQ = run.then(() => {}, () => {});
     const t = await run;
     if (t != null) return t;

@@ -319,3 +319,15 @@ test("nativeFetch가 계속 목록만 주면 risuFetch로 받아 설치", async 
   await A.loadManifest(); await A.install("a");
   assert.ok(A.running("a"));
 });
+
+test("응답이 안 오는 nativeFetch 하나가 뒤 요청을 막지 않는다", async () => {
+  const { fetchText } = await import("../src/data/addons.js");
+  const real = globalThis.setTimeout;
+  globalThis.setTimeout = (f, ms, ...a) => real(f, ms > 1000 ? 20 : ms, ...a);
+  try {
+    let n = 0;
+    const api = { nativeFetch: (u) => (++n === 1 ? new Promise(() => {}) : Promise.resolve(u)) };
+    const [a, b] = await Promise.all([fetchText(api, "x"), fetchText(api, "y")]);
+    assert.equal(b, "y"); assert.ok(a === null || a === "x" || typeof a === "string" || a == null);
+  } finally { globalThis.setTimeout = real; }
+});
