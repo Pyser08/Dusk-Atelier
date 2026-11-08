@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { parseWriterRun, recordTurn, buildEnvelope, buildDusk, exactQuote, gaugeMessages, parseGaugeLines } from "../src/engine/recorder.js";
+import { parseWriterRun, recordTurn, buildEnvelope, buildDusk, exactQuote, gaugeMessages, parseGaugeLines, attemptDuskRecord } from "../src/engine/recorder.js";
 import { parseLines, fromStage1, LINES_STAGE1, linesStage2 } from "../src/engine/memorylines.js";
 import { buildBlock, stateLines } from "../src/engine/memoryinject.js";
 import { assembleWriterPrompt } from "../src/engine/pot/writer-prompt.js";
@@ -128,4 +128,13 @@ test("다시 요청: 고르기 열쇠는 위키 내용이 바뀌어도 같은 �
   const mk = (ref, excerpt) => `x "current_user":{"text":"안녕"} "request_ref":"${ref}"\n<<<RISUPOT_REFERENCE_DATA_START>>>\n${JSON.stringify({ recent_chat: { messages: [{ text: "a" }] }, wiki_catalog: { "doc:r1": { title: "민지", identity_context: { identity_excerpt: excerpt } } } })}\n<<<RISUPOT_REFERENCE_DATA_END>>>`;
   assert.equal(routerKey(mk("req:router_1", "옛")), routerKey(mk("req:router_2", "새")));
   assert.equal(swapRequestRef('{"schema_version":1,"request_ref":"req:router_1","selected":[]}', mk("req:router_2", "")), '{"schema_version":1,"request_ref":"req:router_2","selected":[]}');
+});
+
+
+test("Dusk recorder failure is recoverable so the caller can fall back to the original RisuPot writer", async () => {
+  const errors = [];
+  const out = await attemptDuskRecord(async () => { throw new Error("temporary model timeout"); }, (e) => errors.push(e.message));
+  assert.equal(out, null, "a failed Dusk attempt signals the caller to use the original writer");
+  assert.deepEqual(errors, ["temporary model timeout"]);
+  assert.equal(await attemptDuskRecord(async () => "valid envelope"), "valid envelope");
 });
