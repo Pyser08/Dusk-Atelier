@@ -70,6 +70,32 @@ async function ask(call, msgs, parse, { minimal = null } = {}) {
   throw new Error(`기록기 응답 형식 오류 — 응답 앞부분: ${cut(raw, 160)}`);
 }
 
+// 나머지 인물 칸(호감·말투 단계·의심·개방): 켜진 칸만 메뉴로 보여 주고 deep|열쇠|글 한 줄로 받는다. 대상은 모두 {{user}}(개방은 대상 없음).
+export const DEEP_SLOTS = Object.freeze({
+  "affinity.intent": ["intent", "what they want from {{user}} (main and secondary aim)"],
+  "affinity.stance": ["stance", "how they currently read and treat {{user}}"],
+  "affinity.bind": ["bind", "what holds their feelings back and how they handle it"],
+  "affinity.private": ["private", "a feeling they hide, and any moment it leaked"],
+  "affinity.approach": ["approach", "how they actually approached {{user}}, the response, the allowed range now"],
+  "affinity.surface_actual": ["surface", "outward act vs real purpose — ONLY for exploitative or abusive intent"],
+  "register.context": ["context", "how role, status gap and public/private setting shape their speech to {{user}}"],
+  "register.stage_assessment": ["stage", "where the relationship stands now and how far expression can naturally go"],
+  "register.knowledge_gap": ["gap", "what they have not seen of {{user}} since last contact; stale knowledge vs false belief"],
+  "register.restraint": ["restraint", "gap between inner feeling and what they let show"],
+  "openness.context": ["openness", "an established experience or reaction about intimacy and what it means now"],
+});
+const DEEP_BY_KEY = Object.fromEntries(Object.entries(DEEP_SLOTS).map(([slot, [key]]) => [key, slot]));
+export function deepMenu(run) {
+  const lines = [];
+  const deep = Object.entries(DEEP_SLOTS).filter(([slot]) => run.slots.has(slot)).map(([, [key, desc]]) => `${key} = ${desc}`);
+  if (deep.length) lines.push("deep|key|one sentence      key is one of:", ...deep.map((d) => "  " + d));
+  if (run.slots.has("affinity.taste_band") && run.policies["affinity.taste_band"]) lines.push("taste|-3..+3      gut-level pull (+) or repulsion (-) toward {{user}} at first sight; new or unrecorded characters only");
+  if (run.slots.has("suspicion.case")) lines.push("suspect|partner|third person|what they suspect and the evidence they actually saw|+1..+3 or -1..-3|exact quote      suspicion that their partner is involved with someone else", "clue|a concrete clue: where it is, who holds it, who has learned of it");
+  if (run.slots.has("suspicion.response")) lines.push("react|partner|third person|what they actually did about the suspicion (said, tried, result)");
+  if (run.slots.has("openness.score") && run.policies["openness.score"]) lines.push("lewd|+1..+3 or -1..-3|exact quote      change in sexual openness shown in newest");
+  return lines;
+}
+
 export const MAX_PEOPLE = 6;
 // dusk: runner.prepareLatest().input (없으면 null). 반환 { stage1, people:[{name, ref, isNew, lines}] }
 export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, onWarn = () => {} } = {}) {
@@ -106,7 +132,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
     const isNew = !t.doc, mine = (arr) => (arr ?? []).filter((x) => JSON.stringify(x).includes(t.name));
     const payload = { focus: t.name, known: known.map((p) => p.name), card: cardOf(t.doc), overview: { scene: stage1.scene?.sum ?? "", act: t.act ?? "" }, ...(mine(dusk?.emoState).length ? { emoState: mine(dusk.emoState) } : {}), ...(mine(dusk?.talkState).length ? { talkState: mine(dusk.talkState) } : {}), newest: focusText(source, t.name, 3000) };
     try {
-      const got = await ask(call, [{ role: "system", content: linesStage2(t.name, { light, beliefs, wiki: true, isNew }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
+      const got = await ask(call, [{ role: "system", content: linesStage2(t.name, { light, beliefs, wiki: true, isNew, extraLines: deepMenu(run) }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
         if (isNoneReply(raw)) return { lines: [] };
         const lines = parseLines(raw); return lines.length ? { lines } : null;
       });
@@ -131,6 +157,8 @@ export function exactQuote(q, source) {
   for (let k = 0; k < chars.length; k++) { if (n === at && start < 0) start = idx[k]; n += chars[k].length; if (n >= at + target.length) { end = idx[k] + 1; break; } }
   return start >= 0 && end > start ? s.slice(start, end) : "";
 }
+// 기본정보 안의 예전 '현재 상태:' 부분을 뗀다(줄바꿈이 공백으로 바뀌어 저장돼도)
+export const stripState = (t) => String(t ?? "").replace(/\s*(?:·\s*)?현재 상태\s*:[^·\n]*/g, "").trim();
 const LIKE_STEP = { 1: 1, 2: 3, 3: 5, "-1": -2, "-2": -4, "-3": -10 };
 // 정책에 있는 값 중 원하는 값과 부호가 같고 가장 가까운 것
 function nearest(values, want) {
@@ -151,6 +179,7 @@ export function buildEnvelope(run, rec) {
   const userKeys = new Set(["{{user}}", ...run.userNames].map(nk));
   // 이번 응답에서 새로 만드는 인물에게 먼저 new: 참조를 준다(다른 인물의 말투·감정 대상이 될 수 있어서)
   let n = 0;
+  for (const p of people) { const fresh = run.docs.find((d) => nk(d.title) === nk(p.name) || (d.aliases ?? []).some((a) => nk(a) === nk(p.name))); if (fresh) { p.doc = fresh; p.isNew = false; } }   // 다시 쓴 결과여도 지금 위키 기준으로
   for (const p of people) if (p.isNew && !refOf.has(nk(p.name))) { p.ref = slug(++n); refOf.set(nk(p.name), p.ref); } else p.ref = p.doc?.ref ?? refOf.get(nk(p.name));
   const targetRef = (name) => { const c = canonName(name, known); const k = nk(c); if (!k) return null; if (userKeys.has(k) || c === "{{user}}") return "actor:user"; return refOf.get(k) ?? null; };
   const entry = (doc, slot, targets, text, reason, { fresh = false } = {}) => {
@@ -172,8 +201,8 @@ export function buildEnvelope(run, rec) {
     const st = states.get(nk(p.name));
     let identity = p.isNew ? cut(one("id")?.[0] ?? stage1.fresh.find((f) => nk(f.name) === nk(p.name))?.d ?? "", 500) : "";
     if (st) {
-      const base = (identity || entryText(doc, "core.identity")).split(/\n/).filter((l) => !/^현재 상태\s*:/.test(l.trim())).join("\n").trim();
-      identity = `${base}${base ? "\n" : ""}현재 상태: ${st.v}`;
+      const base = stripState(identity || entryText(doc, "core.identity"));
+      identity = `${base}${base ? " · " : ""}현재 상태: ${st.v}`;
     }
     if (p.isNew && !identity) identity = "미확인";
     if (identity) { const e = entry(doc, "core.identity", [], identity, st ? `상태 변화: ${st.q}` : "새 인물의 기본 정보"); if (e) entries.push(e); }
@@ -182,7 +211,43 @@ export function buildEnvelope(run, rec) {
     const first = p.isNew ? one("first")?.[0] : null; if (first) { const e = entry(doc, "affinity.appraisal", ["actor:user"], first, "첫인상"); if (e) entries.push(e); }
     const habit = one("habit")?.[0]; if (habit) { const e = entry(doc, "core.behavior", [], habit, "반복해서 보인 행동"); if (e) entries.push(e); }
     for (const f of L("know").slice(0, 3).map((x) => x.f)) { const e = entry(doc, "core.knowledge", [], f[0], "이번 응답에서 알게 됨", { fresh: true }); if (e && !doc?.entries.some((x) => x.slot_id === "core.knowledge" && nk(x.text) === nk(e.text))) entries.push(e); }
-    for (const f of L("secret").slice(0, 2).map((x) => x.f)) { const e = entry(doc, "perception.secret", [], [f[0], f[1] ? `(${f[1]}에게 숨김)` : ""].filter(Boolean).join(" "), "숨기는 것", { fresh: true }); if (e) entries.push(e); }
+    for (const f of L("secret").slice(0, 2).map((x) => x.f)) { const e = entry(doc, "perception.secret", [], [f[0], f[1] ? `(${f[1]}에게 숨김)` : ""].filter(Boolean).join(" "), "숨기는 것", { fresh: true }); if (e && !doc?.entries.some((x) => x.slot_id === "perception.secret" && nk(x.text) === nk(e.text))) entries.push(e); }
+    // 나머지 칸: deep|열쇠|글 → 그 칸(대상 {{user}}, 개방은 대상 없음). 같은 칸은 한 번만.
+    const deepSeen = new Set();
+    for (const f of L("deep").map((x) => x.f)) {
+      const slot = DEEP_BY_KEY[String(f[0] ?? "").trim().toLowerCase()]; if (!slot || deepSeen.has(slot) || !f[1]) continue; deepSeen.add(slot);
+      const [lo] = S(slot).targets ?? [1, 1];
+      const e = entry(doc, slot, lo === 0 && slot.startsWith("openness") ? [] : ["actor:user"], f[1], `${S(slot).section ?? slot} — 이번 응답에서 확인됨`); if (e) entries.push(e);
+    }
+    // 의심(바람): 대상은 [배우자, 제3자] 순서. 사건 글·대응 글·의심 수치(인용 필수).
+    for (const f of L("suspect").slice(0, 1).map((x) => x.f)) {
+      const b = targetRef(f[0]), c = targetRef(f[1]); if (!b || !c || b === c || b === p.ref || c === p.ref) continue;
+      const e = entry(doc, "suspicion.case", [b, c], f[2], "의심 상황"); if (e) entries.push(e);
+      const pol2 = run.policies["suspicion.score"], step = coerceInt(String(f[3] ?? "").replace(/^\+/, ""), -3, 3, 0), q = exactQuote(f[4], src);
+      if (pol2 && slotOn("suspicion.score")) {
+        const has = (doc?.metrics ?? []).some((x) => x.slot_id === "suspicion.score" && JSON.stringify(x.target_refs) === JSON.stringify([b, c]));
+        if (!has && (pol2.operations ?? []).includes("init")) metricOps.push({ document_ref: p.ref, slot_id: "suspicion.score", target_refs: [b, c], operation: "init", context_key: null, value: (pol2.initial_values ?? [0])[0], evidence_refs: ["source:rp"], reason: "의심이 처음 생김" });
+        const amount = step ? nearest(pol2.delta_values, { 1: 2, 2: 5, 3: 10, "-1": -2, "-2": -5, "-3": -10 }[step]) : null;
+        if (amount != null && q) metricOps.push({ document_ref: p.ref, slot_id: "suspicion.score", target_refs: [b, c], operation: "delta", context_key: null, events: [{ amount, evidence_refs: ["source:rp"], evidence_quote: q, reason: cut(`의심 ${step > 0 ? "커짐" : "줄어듦"}`, 80) }] });
+      }
+    }
+    for (const f of L("react").slice(0, 1).map((x) => x.f)) { const b = targetRef(f[0]), c = targetRef(f[1]); if (b && c && b !== c) { const e = entry(doc, "suspicion.response", [b, c], f[2], "의심에 대한 대응"); if (e) entries.push(e); } }
+    for (const f of L("clue").slice(0, 2).map((x) => x.f)) { const e = entry(doc, "suspicion.clue", [], f[0], "단서", { fresh: true }); if (e && !doc?.entries.some((x) => x.slot_id === "suspicion.clue" && nk(x.text) === nk(e.text))) entries.push(e); }
+    // 첫 끌림(상대별 첫인상 수치): 아직 없을 때 한 번만
+    const taste = one("taste"), tpol = run.policies["affinity.taste_band"];
+    if (taste && tpol && slotOn("affinity.taste_band") && !(doc?.metrics ?? []).some((x) => x.slot_id === "affinity.taste_band" && (x.target_refs ?? [])[0] === "actor:user")) {
+      const v = coerceInt(String(taste[0]).replace(/^\+/, ""), -3, 3, 0), band = Object.entries(tpol.value_map ?? {}).find(([, n]) => n === v)?.[0];
+      if (band) metricOps.push({ document_ref: p.ref, slot_id: "affinity.taste_band", target_refs: ["actor:user"], operation: "derive", context_key: null, choices: { band }, evidence_refs: ["source:rp"], reason: "첫 만남의 끌림/거리감" });
+    }
+    // 개방(대상 없음): 처음이면 0에서 시작, 움직였으면 인용과 함께
+    const lewd = one("lewd"), opol = run.policies["openness.score"];
+    if (lewd && opol && slotOn("openness.score")) {
+      const step = coerceInt(String(lewd[0]).replace(/^\+/, ""), -3, 3, 0), q = exactQuote(lewd[1], src);
+      const has = (doc?.metrics ?? []).some((x) => x.slot_id === "openness.score");
+      if (!has && (opol.operations ?? []).includes("init")) metricOps.push({ document_ref: p.ref, slot_id: "openness.score", target_refs: [], operation: "init", context_key: null, value: 0, evidence_refs: ["source:rp"], reason: "기본값에서 시작" });
+      const amount = step ? nearest(opol.delta_values, LIKE_STEP[step]) : null;
+      if (amount != null && q) metricOps.push({ document_ref: p.ref, slot_id: "openness.score", target_refs: [], operation: "delta", context_key: null, events: [{ amount, evidence_refs: ["source:rp"], evidence_quote: q, reason: "개방성 변화" }] });
+    }
     for (const f of L("call").slice(0, 2).map((x) => x.f)) {
       const tr = targetRef(f[0]); if (!tr || tr === p.ref || (tr !== "actor:user" && !run.npcOn)) continue;
       const tone = /formal|존댓|존대/i.test(f[2] ?? "") ? "존댓말" : /casual|반말/i.test(f[2] ?? "") ? "반말" : "";
@@ -219,8 +284,8 @@ export function buildEnvelope(run, rec) {
     if (people.some((p) => nk(p.name) === k)) continue;
     const doc = run.docs.find((d) => nk(d.title) === k || (d.aliases ?? []).some((a) => nk(a) === k));
     if (!doc?.writable) continue;
-    const base = entryText(doc, "core.identity").split(/\n/).filter((l) => !/^현재 상태\s*:/.test(l.trim())).join("\n").trim();
-    const e = entry(doc, "core.identity", [], `${base}${base ? "\n" : ""}현재 상태: ${st.v}`, `상태 변화: ${st.q}`);
+    const base = stripState(entryText(doc, "core.identity"));
+    const e = entry(doc, "core.identity", [], `${base}${base ? " · " : ""}현재 상태: ${st.v}`, `상태 변화: ${st.q}`);
     if (e) docs.push({ document_ref: doc.ref, operation: "update", type: "character", title: null, aliases_add: [], aliases_remove: [], tags_add: [], tags_remove: [], event_context: null, entries: [e] });
   }
   if (!docs.length && !metricOps.length && !peopleOps.length && !issues.length) issues.push({ code: "no_canonical_change", document_ref: null, detail: "Dusk 기록기: 이번 응답에서 인물 카드에 남길 변화 없음" });
@@ -270,7 +335,7 @@ export function parseGaugeLines(raw) {
   return out.gauge.length || out.gaugeIdea || /\|/.test(String(raw)) ? out : null;
 }
 
-function parseLinesLoose(raw) {
+export function parseLinesLoose(raw) {
   const t = String(raw ?? "").replace(/```[a-z]*/gi, "").trim();
   if (/^[[{]/.test(t)) { try { const acc = []; const walk = (v) => { if (typeof v === "string") acc.push(...v.split(/\r?\n/)); else if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v === "object") Object.values(v).forEach(walk); }; walk(JSON.parse(t)); return acc; } catch { /* 줄로 읽는다 */ } }
   return t.split(/\r?\n/);

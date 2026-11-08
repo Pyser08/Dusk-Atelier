@@ -96,3 +96,36 @@ test("리수폿 인물 도구용 JSON 다듬기: 생각 글·설명·코드 펜�
   assert.equal(cleanJsonReply('{"a":1}'), '{"a":1}');
   assert.equal(cleanJsonReply('{"a":1, "b":'), '{"a":1, "b":', "잘린 건 고칠 수 없으면 원문 그대로");
 });
+
+test("기능을 모두 켜면 나머지 칸(의도·태도·말투 단계·의심·개방·첫 끌림)도 리수폿 검증을 통과해 저장된다", async () => {
+  const settings = structuredClone(await potSettings());
+  for (const f of Object.values(settings.features)) { f.enabled = true; if ("numbers" in f) f.numbers = true; }
+  let scope = createEmptyWikiScope({ characterId: "c2", chatKey: "k2" });
+  const rp = "수아는 남편 도윤의 셔츠에서 낯선 향수 냄새를 맡았다. \"이 향수, 서진 씨 거지?\" 수아는 {{user}}에게 몰래 털어놓았다. 그녀는 {{user}}에게 기대고 싶었지만 꾹 참았다. 도윤과 서진이 함께 웃는 사진도 휴대폰에 남아 있었다.";
+  const model = async (msgs) => {
+    const sys = msgs[0].content, u = JSON.parse(msgs[1].content);
+    if (sys.startsWith("You are the memory recorder")) return "scene|수아가 남편의 외도를 의심하며 {{user}}에게 털어놓았다|수아의 집|밤|yes\nwho|수아|남편의 외도 의심을 {{user}}에게 털어놓음|3\nwho|도윤|셔츠에 향수 냄새를 남김|1\nwho|서진|사진 속에서 도윤과 웃음|1";
+    if (u.focus === "수아") {
+      assert.match(sys, /deep\|key\|one sentence/); assert.match(sys, /suspect\|partner/);
+      return "like|+1|몰래 털어놓았다\ndeep|intent|{{user}}에게 위로받고 싶다\ndeep|restraint|기대고 싶지만 꾹 참는다\ndeep|stage|비밀을 나눌 만큼 가까워졌다\nsuspect|도윤|서진|셔츠의 향수와 사진을 보고 외도를 의심함|+2|낯선 향수 냄새를 맡았다\nreact|도윤|서진|{{user}}에게만 털어놓고 남편에게는 묻지 않음\nclue|휴대폰에 남은 도윤과 서진의 사진\ntaste|+1\nlewd|-1|꾹 참았다\nid|도윤의 아내";
+    }
+    return "id|미확인";
+  };
+  const llmCall = async (_a, _k, _p, prompt) => { const run = parseWriterRun(prompt); const rec = await recordTurn(model, run, {}); return JSON.stringify(buildEnvelope(run, rec)); };
+  const input = { settings, sourceLibrary: LIB, wikiScope: scope, rpText: rp, userText: "", recentContext: "", userIdentity: { title: "현우", aliases: [], known: true }, requestRef: "rx", seedSources: {}, candidateDocumentIds: [], newCharacterCandidates: [], allowCreate: true };
+  const out = await executeWriterBatches({ input, preset: {}, api: {}, keyStore: {}, llmCall, batchRef: "bx", contributionRef: "cx" });
+  assert.equal(out.validationSummary.rejected, 0, JSON.stringify(out.validationSummary.details));
+  scope = out.scope;
+  const sua = Object.values(scope.documents).find((d) => d.title === "수아");
+  const slots = new Set(sua.sections.map((x) => x.provenance?.slotId));
+  for (const id of ["affinity.intent", "register.restraint", "register.stage_assessment", "suspicion.case", "suspicion.response", "suspicion.clue"]) assert.ok(slots.has(id), id + " 저장");
+  const m = Object.fromEntries((sua.metrics ?? []).map((x) => [x.slotId, x.value]));
+  assert.equal(m["suspicion.score"], 5); assert.equal(m["affinity.taste_band"], 1); assert.equal(m["affinity.score"], 1); assert.ok("openness.score" in m);
+});
+
+test("다시 요청: 고르기 열쇠는 위키 내용이 바뀌어도 같은 말·대화면 같고, 요청 번호만 바꿔 돌려준다", async () => {
+  const { routerKey, swapRequestRef } = await import("../src/engine/retrycache.js");
+  const mk = (ref, excerpt) => `x "current_user":{"text":"안녕"} "request_ref":"${ref}"\n<<<RISUPOT_REFERENCE_DATA_START>>>\n${JSON.stringify({ recent_chat: { messages: [{ text: "a" }] }, wiki_catalog: { "doc:r1": { title: "민지", identity_context: { identity_excerpt: excerpt } } } })}\n<<<RISUPOT_REFERENCE_DATA_END>>>`;
+  assert.equal(routerKey(mk("req:router_1", "옛")), routerKey(mk("req:router_2", "새")));
+  assert.equal(swapRequestRef('{"schema_version":1,"request_ref":"req:router_1","selected":[]}', mk("req:router_2", "")), '{"schema_version":1,"request_ref":"req:router_2","selected":[]}');
+});

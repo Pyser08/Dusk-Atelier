@@ -359,3 +359,39 @@ test("Dusk 기록기(기본): 거대한 Writer 지침 없이 짧은 질문으로
   const rec = h.mem.flow.lastRecord();
   assert.ok(rec && !rec.error, "최근 기록 결과가 남음");
 });
+
+test("Dusk 정리 노트(기본, 정확하게 모드): 8만 자 지침 없이 저장값 정리표 + 짧은 방향 1번, 본편 요청에 그대로 들어감", async () => {
+  const h = harness({ model: { other: (rec) => /You help direct the NEXT response/.test(rec.prompt) ? "focus|하야세 유우카|장부 이야기를 꺼낼지 망설인다\navoid|유우카가 갑자기 모든 걸 털어놓는 것" : undefined } });
+  await turnOn(h);
+  for (let n = 1; n <= 4; n++) await h.say(`계속하자 (${n})`, "T" + n);
+  await h.mem.store.updateIndex((i) => { i.settings.flow.mode = "accurate"; i.settings.staged = false; i.settings.recorder = "dusk"; });
+  await h.mem.flow.apply();
+  const before = h.calls.length;
+  const { out } = await h.say("유우카, 아까 그 장부 말이야.", "T5", { requestOnly: true });
+  const req = h.calls.slice(before);
+  assert.equal(req.filter((c) => c.kind === "director").length, 0, "리수폿 정리 노트 지침은 보내지 않음");
+  const dirCalls = req.filter((c) => /You help direct the NEXT response/.test(c.prompt));
+  assert.equal(dirCalls.length, 1, "방향 호출 1번");
+  assert.ok(dirCalls[0].prompt.length < 12000, "짧은 지침: " + dirCalls[0].prompt.length);
+  const sent = out.map((m) => String(m.content)).join("\n");
+  assert.match(sent, /Dusk 정리 노트/); assert.match(sent, /◆ 하야세 유우카/); assert.match(sent, /장부 이야기를 꺼낼지 망설인다/);
+  assert.ok(h.mem.flow.lastNote()?.people >= 1);
+});
+
+test("다시 요청(메인 모델이 끊겨 같은 말을 다시 보냄): 고르기·정리 노트·기록을 다시 부르지 않는다", async () => {
+  const h = harness({ model: { other: (rec) => /You help direct the NEXT response/.test(rec.prompt) ? "focus|하야세 유우카|망설인다" : undefined } });
+  await turnOn(h);
+  for (let n = 1; n <= 3; n++) await h.say(`계속하자 (${n})`, "T" + n);
+  await h.mem.store.updateIndex((i) => { i.settings.flow.mode = "accurate"; i.settings.recorder = "dusk"; });
+  await h.mem.flow.apply();
+  h.chat.message.push({ role: "user", data: "유우카, 장부 말이야.", chatId: "u-retry" });
+  const req = () => [{ role: "system", content: "샬레 세계관" }, ...h.chat.message.slice(-7).map((x) => ({ role: x.role === "char" ? "assistant" : "user", content: x.data }))];
+  const first = h.calls.length;
+  await h.hooks["r:beforeRequest"](req(), "model"); await wait(300);
+  const before = h.calls.length;
+  assert.ok(h.calls.slice(first).some((c) => c.kind === "router" || /You help direct/.test(c.prompt)), "첫 요청엔 보조 호출이 있었다(시험이 실제로 무언가를 봄)");
+  // 그사이 직전 응답 기록이 끝나 위키 개정 번호가 올라가도(리수폿 캐시는 여기서 놓쳤다) 같은 요청이면 다시 부르지 않는다
+  await h.hooks["r:beforeRequest"](req(), "model"); await wait(300);
+  const again = h.calls.slice(before).filter((c) => c.kind === "router" || /You help direct|You are the memory recorder|You update the memory/.test(c.prompt));
+  assert.equal(again.length, 0, "다시 요청 때 보조 호출: " + again.map((c) => c.kind).join(","));
+});

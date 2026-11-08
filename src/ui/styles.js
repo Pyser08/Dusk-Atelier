@@ -802,8 +802,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-wk2-head .rb-mem-av{width:44px;height:44px;font-size:18px}
 .rb-wk2-name{display:flex;flex-direction:column;min-width:0}.rb-wk2-name h3{margin:0;font-size:20px;font-weight:800}
 .rb-wk2-gap{padding:9px 12px;border-radius:var(--rb-r2);background:var(--rb-warn-soft);color:var(--rb-warn);font-size:13px}
-.rb-wk2-tabs{display:flex;gap:4px;padding:4px;border-radius:var(--rb-r3);background:var(--rb-surf);border:1px solid var(--rb-line2)}
-.rb-wk2-tab{flex:1;min-height:var(--rb-ctl-sm);border:0;border-radius:var(--rb-r2);background:transparent;color:var(--rb-sub);font:inherit;font-size:13.5px;cursor:pointer}
+.rb-wk2-tabs{display:flex;gap:4px;padding:4px;border-radius:var(--rb-r3);background:var(--rb-surf);border:1px solid var(--rb-line2);overflow-x:auto;scrollbar-width:none}
+.rb-wk2-tab{flex:1 0 auto;white-space:nowrap;padding:0 10px;min-height:var(--rb-ctl-sm);border:0;border-radius:var(--rb-r2);background:transparent;color:var(--rb-sub);font:inherit;font-size:13.5px;cursor:pointer}
 .rb-wk2-tab[aria-selected="true"]{background:var(--rb-acc-grad);color:var(--rb-on-acc);font-weight:700}
 .rb-wk2-body{display:flex;flex-direction:column;gap:12px;min-width:0}
 .rb-wk2-sum,.rb-wk2-pane{display:flex;flex-direction:column;gap:12px;min-width:0}

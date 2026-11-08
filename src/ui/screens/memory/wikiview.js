@@ -115,6 +115,11 @@ export async function renderPeopleTab(env, host) {
 
   const q = (m.personSearch ?? "").trim().toLowerCase();
   const shown = rows.filter((r) => !q || [r.name, ...(r.doc?.aliases ?? []), ...(r.doc?.tags ?? [])].some((n) => String(n).toLowerCase().includes(q)) || (r.doc?.sections ?? []).some((s) => String(s.body ?? "").toLowerCase().includes(q)));
+  // 관계도·홈·나에 대한 기억에서 특정 인물로 들어오면(personKey) 그 인물을 연다. 한 번 쓰고 비워서, 이후엔 목록에서 고른 사람이 유지된다.
+  if (m.personKey) {
+    const k = String(m.personKey).toLowerCase().replace(/\s+/g, ""), want = rows.find((r) => r.pk === m.personKey || String(r.name).toLowerCase().replace(/\s+/g, "") === k || (r.doc?.aliases ?? []).some((a) => String(a).toLowerCase().replace(/\s+/g, "") === k));
+    if (want) { m.wkSel = want.id; m.personKey = ""; }
+  }
   const sel = rows.find((r) => r.id === m.wkSel) ?? shown[0] ?? rows[0];
   m.wkSel = sel.id;
   let main;

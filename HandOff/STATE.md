@@ -11,7 +11,11 @@
   - 기본 프롬프트 '뒤': 새로 추가 안 함 + 손대지 않은 기존 것 끔(`idx.pot.defaultBackOffV2`).
   - 리수폿 단계 응답 `engine/jsonreply.js cleanJsonReply`(stageCall에서, 기록기 줄 응답 제외) — 인물 도구 "완성된 JSON을 읽지 못했습니다" 줄이기(사용자 제보, Erosync 자체 파서는 이미 관대함).
   - UI: 기억 설정 → 고급 → 분석 '기록 방식'(dusk/pot)·'최근 기록 결과'. e2e `run-recorder-ui.mjs`(12). memory 애드온 0.2.0. 코어 모듈(memorylines·memoryprompt·memoryinject·memorytrust·memorystore)도 바뀌어 **dusk_atelier.js도 새로 받아야 함**.
-  - 남은 것: 실제 모델(아르곤·딥시크 등)로 품질 확인 못 함, 정리 노트(Director) 지침은 그대로(기본정보 '현재 상태:' 줄로 사망을 보게 함), 기존 tests/pot-port.test.js 실패는 원래부터(customPromptPlain 원본 없음).
+  - 2차(11-08 저녁, 사용자 "남은 부분도 다, 모든 값 안정적으로"): 기록기 `DEEP_SLOTS`/`deepMenu`(affinity.intent·stance·bind·private·approach·surface_actual, register.*, openness.context → `deep|열쇠|글`, `suspect|`·`react|`·`clue|`·`taste|`·`lewd|` → suspicion.case/response/clue·suspicion.score·taste_band derive·openness.score). 모든 기능 켠 상태로 실제 검증 통과(tests/recorder.test.js).
+  - 정리 노트: `engine/director.js`(parseDirectorRun → `factSheet` 저장값 그대로 + `directionMessages` 짧은 방향 1번 → `directorEnvelope`). memoryturn `main.llmCall` 래퍼(label "Director pass*", recorder!=="pot"). pass 1에서 바로 final(검색 단계 없음). directorRole facts면 방향 호출 없음.
+  - 다시 요청 재사용: `engine/retrycache.js` routerKey(플레이어 말+최근 대화+문서 이름)·swapRequestRef, 방향 캐시 directionKey, 기록 결과 recDone. hooks.chatListener에서 리수폿 director 캐시 비우기 제거. `flow.retryHits()`.
+  - UI 버그: people.js personDetail에서 m.grades/search 없으면 오류(관계도·나에 대한 기억에서 들어올 때) → 기본값. wikiview가 personKey를 무시하던 것 → 그 인물 선택 후 비움. 위키 탭 nowrap+가로 스크롤. e2e `run-wiki-recorder.mjs`(고급·간단 × PC·모바일 60, 고정 데이터 tests/e2e/fixtures-recorder-wiki.json = /home 스크립트로 기록기 생성).
+  - 남은 것: 실제 모델(아르곤·딥시크 등)로 품질 확인 못 함, 기존 tests/pot-port.test.js 실패는 원래부터(customPromptPlain 원본 없음).
 - **더스크 스텔스 애드온**(`addons/stealth`, 최신 0.3.14): 클로드·클로드 코드·GPT·코덱스·제미나이·딥시크 프리셋. 파일 `src/data/stealth.js`(CSS·채팅 HTML 생성), `stealth-apply.js`(켜기·끄기·진단·`reapplyIfUpdated`), `stealth-shell.js`(사이드바·상단 줄 껍데기), `src/ui/screens/stealth.js`(화면), `stealth-fold.js`(예전 훅 방식, 지금은 안 씀).
   - 호스트 제약: 루트 문서 `setAttribute`는 `x-`만, `setInnerHTML`은 class를 지움 → 안쪽 요소는 `x-c`로 표시하고 CSS `[x-c~=…]`. 클릭 대행 불가(SafeElement에 click 없음).
   - 이미지 접기(0.3.12~ 최종): 스텔스가 화면에서 이미지·배경 그림마다 `[x-st-fw]` 상자로 감싸고 위에 `[x-st-fl]` '›_ 명령어 N개 실행함 ›' 줄(누르면 x-open 토글, `stealth-shell.js` wrapMedia, 1.5초마다). 접힌 이미지는 1px 투명(배경 그림 미리 받기). 48px 미만 아이콘은 그대로. 감싸기 실패는 숨기고 '명령어 N개 실패함'(눌러 펼침). 포켓리스는 채팅 HTML의 `<details>`를 지워서 메시지 단위 방식(0.3.6~0.3.11)은 폐기, display 훅(0.3.0)도 폐기(느림·정규식 이미지 못 잡음).
