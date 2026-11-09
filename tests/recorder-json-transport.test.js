@@ -47,12 +47,12 @@ test("빈 응답 외의 오류(연결 실패 등)는 그대로 던진다", async
   await assert.rejects(recordTurn(async () => { throw new Error("연결 실패"); }, run, {}), /연결 실패/);
 });
 
-test("인물 단계는 형식 오류가 계속돼도 최대 2번까지만 묻는다(추론 토큰 낭비 방지)", async () => {
+test("인물 단계는 형식 오류가 계속돼도 최대 3번(전체 2 + 가벼운 지침 1)까지만 묻는다(추론 토큰 낭비 방지)", async () => {
   const run = await runOf(); const per = new Map();
   const model = async (msgs) => { const u = JSON.parse(msgs[1].content); if (!u.focus) return STAGE1; per.set(u.focus, (per.get(u.focus) ?? 0) + 1); return "잘 모르겠습니다."; };
   const rec = await recordTurn(model, run, {});
   assert.ok(rec.people.length && rec.people.every((p) => p.failed));
-  for (const n of per.values()) assert.ok(n <= 2, `인물 호출 ${n}번`);
+  for (const n of per.values()) assert.ok(n <= 3, `인물 호출 ${n}번`);
 });
 
 test("기록기 프롬프트는 호출층의 JSON 강제와 부딪히지 않게 출력 형식을 JSON {lines}로 못박는다", () => {
@@ -87,4 +87,36 @@ test("알림 판단: 이번에 기록한 인물만 본다 · 내 API 줄 프롬�
   assert.equal(judgeAutoResult({ phase: "completed", scope, names: ["C"] }), null);
   const p = toPrompt([{ role: "system", content: "Reply with LINES ONLY" }, { role: "user", content: "{}" }]);
   assert.equal(p.wrapped, false); assert.match(p.prompt, /\{"lines":\[\]\}/);
+});
+
+const isLightPrompt = (sys) => !/feel\|/.test(sys);
+test("가벼운 지침 자동 전환: 전체 지침에서 형식 오류면 가벼운 지침으로 다시 묻고 남은 인물도 가볍게", async () => {
+  const run = await runOf(); const log = [];
+  const model = async (msgs) => { const u = JSON.parse(msgs[1].content); if (!u.focus) return STAGE1; const lt = isLightPrompt(msgs[0].content); log.push([u.focus, lt]); return lt ? '{"lines":["id|대학생"]}' : "음, 잘 모르겠네요."; };
+  const auto = { streak: 0, hold: 0 };
+  const rec = await recordTurn(model, run, { auto });
+  assert.equal(rec.lightAuto, true); assert.ok(rec.people.length >= 2 && rec.people.every((p) => !p.failed));
+  const second = rec.people[1].name;
+  assert.ok(log.filter(([n]) => n === second).every(([, lt]) => lt), "두 번째 인물은 처음부터 가볍게");
+  assert.equal(auto.streak, 1);
+  await recordTurn(model, run, { auto });
+  assert.equal(auto.hold, 10, "두 응답 연속이면 10번 쉼");
+  log.length = 0; await recordTurn(model, run, { auto });
+  assert.ok(log.every(([, lt]) => lt), "쉬는 동안은 전체 지침을 보내지 않음"); assert.equal(auto.hold, 9);
+});
+test("가벼운 지침 자동 전환: 잘 되는 모델은 전환하지 않고, 연결 오류로는 전환하지 않는다", async () => {
+  const run = await runOf(); const auto = { streak: 1, hold: 0 };
+  const ok = await recordTurn(async (msgs) => JSON.parse(msgs[1].content).focus ? "none" : STAGE1, run, { auto });
+  assert.equal(ok.lightAuto, false); assert.equal(auto.streak, 0);
+  let lightSeen = false;
+  const rec = await recordTurn(async (msgs) => { const u = JSON.parse(msgs[1].content); if (!u.focus) return STAGE1; if (isLightPrompt(msgs[0].content)) lightSeen = true; throw new Error("연결 실패"); }, run, { auto });
+  assert.ok(rec.people.every((p) => p.failed)); assert.equal(lightSeen, false); assert.equal(rec.lightAuto, false);
+});
+test("가벼운 지침 자동 전환: Dusk 분석(analyzeStaged)도 같은 규칙", async () => {
+  const { analyzeStaged } = await import("../src/engine/memoryprompt.js");
+  const text = "민지는 {{user}}의 손을 잡았다. ".repeat(12); let light = 0, full = 0;
+  const call = async (msgs) => { const sys = msgs[0].content; if (sys.startsWith("You are the memory recorder")) return "scene|민지가 손을 잡았다|방|밤|yes\nwho|민지|손을 잡았다|2";
+    if (isLightPrompt(sys)) { light++; return "keys|손"; } full++; return "모르겠어요"; };
+  const out = await analyzeStaged(call, { bot: "b", known: [], recent: [], newest: { index: 1, text } }, {});
+  assert.ok(full >= 1 && light === 1); assert.ok(out.people.some((p) => p.name === "민지"));
 });

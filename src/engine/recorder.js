@@ -71,7 +71,7 @@ async function ask(call, msgs, parse, { minimal = null, tries = 3 } = {}) {
     const next = (k === 1 || kind === "truncated") && minimal ? [{ role: "system", content: minimal }, msgs[1]] : [...msgs, ...(kind === "empty" ? [] : [{ role: "assistant", content: String(raw ?? "").slice(0, 1500) }]), { role: "user", content: RETRY_NOTE[kind] }];
     raw = await once(next);
   }
-  throw new Error(`기록기 응답 형식 오류 — 응답 앞부분: ${cut(raw, 160) || "(빈 응답)"}`);
+  throw Object.assign(new Error(`기록기 응답 형식 오류 — 응답 앞부분: ${cut(raw, 160) || "(빈 응답)"}`), { code: "recorder-format" });
 }
 
 // 3.0.8: 호출층은 모든 요청에 "Return one JSON object only" 시스템 지시를 붙인다(리수폿 단계용). 기록기 지침의 'LINES ONLY'와 부딪혀
@@ -120,7 +120,7 @@ export function deepMenu(run) {
 
 export const MAX_PEOPLE = 6;
 // dusk: runner.prepareLatest().input (없으면 null). 반환 { stage1, people:[{name, ref, isNew, lines}] }
-export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, onWarn = () => {} } = {}) {
+export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, onWarn = () => {} } = {}) {
   const source = run.rp, known0 = knownOf(run, dusk?.known ?? []);
   const known = knownInText(known0, [run.recent, source].join("\n"));
   const openItems = dusk?.openItems ?? [], openIds = new Set(openItems.map((x) => String(x.id)));
@@ -149,19 +149,36 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
     if (!doc && imp(e) < 1 && !stage1.fresh.some((f) => nk(f.name) === k)) continue;   // 새 인물은 한 일이 있을 때만
     targets.push({ name: doc?.title ?? e.name, doc, act: e.act });
   }
+  // 3.0.8 가벼운 지침 자동 전환: 전체 지침(줄 종류 20여 개)으로 형식 오류가 나면 그 인물을 가벼운 지침으로 한 번 더 묻고,
+  // 이 응답의 남은 인물도 가벼운 지침으로 묻는다. auto(호출한 쪽이 들고 있는 상태)가 있으면 두 응답 연속 전환 시 다음 10번은 처음부터 가볍게.
+  // 가벼운 지침은 속마음·갈등·추억·비밀·평가 등 깊은 칸을 묻지 않는다 — 저장된 값은 그대로 남는다. 사용자가 '가벼운 모델'을 켰으면 그대로 따른다.
   const cap = light ? 3 : MAX_PEOPLE, people = [];
+  let lite = light || (auto?.hold ?? 0) > 0, switched = false;
+  const askPerson = (t, payload, isNew, useLight, tries = 2) => ask(call, [{ role: "system", content: linesStage2(t.name, { light: useLight, beliefs, wiki: true, isNew, extraLines: deepMenu(run) }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
+    if (isNoneReply(raw)) return { lines: [] };
+    const lines = parseLines(raw); return lines.length ? { lines } : null;
+  }, { tries });
   if (source.trim().length >= 40) for (const t of targets.slice(0, cap)) {
     const isNew = !t.doc, mine = (arr) => (arr ?? []).filter((x) => JSON.stringify(x).includes(t.name));
     const payload = { focus: t.name, known: known.map((p) => p.name), card: cardOf(t.doc), overview: { scene: stage1.scene?.sum ?? "", act: t.act ?? "" }, ...(mine(dusk?.emoState).length ? { emoState: mine(dusk.emoState) } : {}), ...(mine(dusk?.talkState).length ? { talkState: mine(dusk.talkState) } : {}), newest: focusText(source, t.name, 3000) };
     try {
-      const got = await ask(call, [{ role: "system", content: linesStage2(t.name, { light, beliefs, wiki: true, isNew, extraLines: deepMenu(run) }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
-        if (isNoneReply(raw)) return { lines: [] };
-        const lines = parseLines(raw); return lines.length ? { lines } : null;
-      }, { tries: 2 });
+      let got;
+      try { got = await askPerson(t, payload, isNew, lite); }
+      catch (e) {
+        if (lite || e?.code !== "recorder-format") throw e;
+        lite = true; switched = true;
+        got = await askPerson(t, payload, isNew, true, 1);   // 전환 직후는 한 번만(인물당 최대 3번 호출)
+      }
       people.push({ ...t, isNew, lines: got.lines });
     } catch (e) { onWarn(t.name, e); people.push({ ...t, isNew, lines: [], failed: true }); }
   }
-  return { stage1, people, known, source };
+  const lightAuto = !light && lite;
+  if (auto && !light) {
+    if ((auto.hold ?? 0) > 0) { if (--auto.hold === 0) auto.streak = 1; }   // 쉬는 기간이 끝나면 전체 지침을 다시 시험(또 실패하면 바로 다시 쉼)
+    else if (switched) { auto.streak = (auto.streak ?? 0) + 1; if (auto.streak >= 2) { auto.hold = 10; auto.streak = 0; } }
+    else if (people.length) auto.streak = 0;
+  }
+  return { stage1, people, known, source, lightAuto };
 }
 
 // ── ③ 줄 → 리수폿 응답(envelope) ──
@@ -366,7 +383,7 @@ export function parseLinesLoose(raw) {
 // 한 번의 결과 요약(화면 '최근 기록 결과'용)
 export function summarize(rec, env) {
   return {
-    scene: rec.stage1.scene?.sum ?? "", people: rec.people.length, names: rec.people.map((p) => p.name), failed: rec.people.filter((p) => p.failed).map((p) => p.name),
+    scene: rec.stage1.scene?.sum ?? "", people: rec.people.length, names: rec.people.map((p) => p.name), lightAuto: rec.lightAuto === true, failed: rec.people.filter((p) => p.failed).map((p) => p.name),
     states: (rec.stage1.states ?? []).map((s) => `${s.name}: ${s.v}`), created: env.documents.filter((d) => d.operation === "create").map((d) => d.title),
     updated: env.documents.filter((d) => d.operation === "update").length, entries: env.documents.reduce((n, d) => n + d.entries.length, 0),
     gauges: env.metric_ops.filter((m) => m.operation === "delta").length,

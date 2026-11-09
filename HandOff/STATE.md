@@ -4,12 +4,13 @@
 - 증상(사용자): 2.0.0 이후 실패가 30회 중 2~4 → 3회 중 1~2. 추론 20k~30k 토큰을 쓰고도 기억이 안 생김(검열 아님).
 - 원인: `data/pot/llm-client.js` callWriterModel은 모든 호출(Claude·OpenAI호환·리스 보조모델)에 시스템 "Return one JSON object only"를 붙이고, DeepSeek 생각 끔이면 response_format json_object까지 강제. 2.0.0 기록기(`engine/recorder.js`)는 'LINES ONLY'를 요구 → ① 지시 충돌로 추론 과다·빈 응답 ② JSON으로 낸 '변화 없음'(`{"lines":[]}`)을 형식 오류로 보고 인물마다 3번씩 재질문 ③ 빈 응답은 반환이 아니라 예외(empty-model-response)라 ask()의 재시도를 건너뛰고 1단계 한 번 빈 답에 기록 전체 실패 → 리수폿이 실패 처리, 대신 길 없음.
 - 수정: `recorder.js` `recorderText`(맨 끝에 `RECORDER_OUTPUT` — 출력은 JSON {"lines":[…]}, 없으면 {"lines":[]})를 기록기·정리 노트 방향 호출에 사용(`memoryturn.js`). `ask()`가 empty-model-response를 빈 답으로 받아 다시 묻고, 인물 단계는 최대 2번(`tries`). `memorylines.isNoneReply`가 `{"lines":[]}`·`["none"]`·`[]`도 '변화 없음'으로. `attemptDuskRecord`: 기록기가 끝내 실패하면 null → 예전 리수폿 Writer 한 번 호출로 대신(취소 model-aborted는 그대로 던짐), `lastRecord.fallback="risupot"`. "Director Dusk" 응답은 cleanJsonReply 거치지 않음.
-- 시험: `tests/recorder-json-transport.test.js`(9). npm test 1284 pass/9 skip/0 fail, build·check 동일함, build-addons --check 동일함.
+- 시험: `tests/recorder-json-transport.test.js`(12). npm test 1287 pass/9 skip/0 fail, build·check 동일함, build-addons --check 동일함.
 - 2차(같은 날, 사용자 "약한 모델~강한 모델 전체 검토"): 장기기억·리수폿·Erosync 호출 구조 전수 검토 후 추가 수정.
   - 같은 실패 반복: auto-wiki 자동 재시도(json-contract·target-ref 2회)와 토스트 '다시 시도'가 `recDone` 캐시의 같은 envelope을 다시 받아 결정적으로 재실패 → `memoryturn.js` auto.subscribe에서 failed면 그 열쇠를 `potNext`에 넣어 다음 시도는 예전 리수폿 Writer로, 토스트 재시도는 recDone·recCache 비움.
   - '수치 상태가 비어 있는 인물' 토스트 반복: `buildEnvelope`이 like 줄이 있을 때만 affinity.score init → like 없어도 init(0). `judgeAutoResult({names})`는 이번에 기록한 인물만 봄(`summarize().names`).
   - 내 API 경로(`modelcfg.toPrompt`): 'LINES ONLY' 프롬프트(분석 1·2단계, 게이지)에 `LINES_AS_JSON` 덧붙임. `memoryprompt.askLines`도 empty-model-response를 빈 답으로 받아 다시 물음. 기록기는 빈 응답 뒤 maxTokens를 넓혀(2배, 16k~32k) 보냄.
   - 검토만 하고 안 고친 것: ① 대신 길인 리수폿 Writer는 여전히 11만 자 지침(약한 모델은 여기서도 실패 가능) ② 2단계 지침은 전체 기능 켜면 줄 종류 20여 개·3.4천 자 — 약한 모델은 '가벼운 모델' 토글(light, 1.6천 자) 권장, 자동 판별 없음 ③ 응답당 호출 수 = 1 + 인물 수(최대 6) + 방향 1 + 고르기 1 — 추론 모델은 기록 단계 추론 강도를 낮추길 권장 ④ Erosync는 격리 이식(수정 금지): 자체 JSON 복구 1회 있음, 재시도 횟수 기본 0 ⑤ 인물 도구(수치 AI·직접 지시·새로고침)는 리수폿 JSON 프롬프트 그대로 + cleanJsonReply.
+- 3차(가벼운 지침 자동 전환, 사용자 승인): `recorder.recordTurn`·`memoryprompt.analyzeLines` — 2단계가 형식 오류(code recorder-format / e.raw)로 끝나면 그 인물을 light 지침으로 다시 묻고 그 응답의 남은 인물도 light. 기록기는 `auto`(memoryturn의 `autoLight`, 메모리 상태·저장 안 함): 연속 2응답 전환 → 다음 10응답 처음부터 light → 끝나면 전체 지침 재시험(streak 1). 연결 오류·취소는 전환하지 않음. `summarize().lightAuto` → 설정 '최근 기록 결과'에 표시(settings.js recordBox). 시험 3개 추가. 안내서 guide는 미수정.
 - 배포: 수정은 memory 애드온(dist/memory.js)과 코어(memorylines.js — isNoneReply) 둘 다. **버전 미변경**(memory 0.2.3, 코어 2.0.7) — 사용자 지시 시 memory 0.2.4·코어 버전 올리고 publish-addons/태그.
 - 남은 일: [ ] 실기기(실제 추론 모델)로 실패율 확인 — 개선 단정 금지. [ ] UI freeze(‘리수폿 설정 열기’ 빠른 조작) 미진행. [ ] main HandOff/README.md 작업 브랜치 표를 3.0.8로 고칠지 사용자 확인.
 

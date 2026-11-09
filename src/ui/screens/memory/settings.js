@@ -28,7 +28,7 @@ function recordBox(M) {
   if (!r) return h("p", { class: "rb-muted", "data-rec": "none" }, "최근 기록 결과: 아직 없어요 (Dusk 기록기가 한 번 돌면 여기에 보여요).");
   const when = new Date(r.at).toLocaleTimeString();
   if (r.error) return h("p", { class: "rb-muted", "data-rec": "error" }, `최근 기록 결과 (${when}): 실패 — ${r.error}`);
-  const parts = [r.created?.length ? `새 인물 ${r.created.join(", ")}` : "", r.updated ? `카드 ${r.updated}명 갱신` : "", r.entries ? `항목 ${r.entries}개` : "", r.gauges ? `호감도 변화 ${r.gauges}건` : "", r.states?.length ? `상태 ${r.states.join(", ")}` : "", r.failed?.length ? `세부 실패 ${r.failed.join(", ")}` : ""].filter(Boolean);
+  const parts = [r.created?.length ? `새 인물 ${r.created.join(", ")}` : "", r.updated ? `카드 ${r.updated}명 갱신` : "", r.entries ? `항목 ${r.entries}개` : "", r.gauges ? `호감도 변화 ${r.gauges}건` : "", r.states?.length ? `상태 ${r.states.join(", ")}` : "", r.failed?.length ? `세부 실패 ${r.failed.join(", ")}` : "", r.lightAuto ? "가벼운 지침으로 자동 전환(깊은 칸은 이번에 묻지 않음)" : ""].filter(Boolean);
   return h("details", { class: "rb-mem-man", "data-rec": "ok" }, h("summary", null, `최근 기록 결과 (${when}) · ${parts.length ? parts.slice(0, 2).join(" · ") : "바뀐 것 없음"}`),
     h("ul", null, [r.scene ? `장면: ${r.scene}` : "", ...parts, ...extra].filter(Boolean).map((t) => h("li", null, t))));
 }

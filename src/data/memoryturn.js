@@ -113,6 +113,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     // 2.0.0 Dusk 기록기: 리수폿 Writer 프롬프트(11만 자+)를 보내지 않고 데이터만 꺼내 짧은 단계별 질문으로 기록한 뒤,
     // 리수폿이 받던 응답(JSON)으로 바꿔 돌려준다. 해석이 안 되거나(PDF 첨부 방식)·월경 보고가 필요하면 예전 길로.
     const potNext = new Set(); let lastKey = "";
+    const autoLight = { streak: 0, hold: 0 };   // 가벼운 지침 자동 전환 상태(이번 실행 동안만, 저장하지 않음)
     const recCache = new Map(), recDone = new Map();   // 같은 응답의 1단계 결과(리수폿이 묶음을 나눠 여러 번 부를 때 재사용)
     const recordWithDusk = async (a, k, preset, prompt, opts) => {
       const s0 = (await store.getIndex()).settings ?? {};
@@ -135,7 +136,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       let rec = recDone.get(fullKey);
       if (rec) retryHits++;
       else {
-        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
+        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
         if (!rec.people.some((p) => p.failed)) boundedSet(recDone, fullKey, rec, 4);
       }
       const env = buildEnvelope(run, rec);

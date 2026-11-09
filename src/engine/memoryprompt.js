@@ -200,18 +200,23 @@ async function analyzeLines(call, input, { onWarn = () => {}, light = false, max
   }, { minimal: LINES_STAGE1_MIN });
   const merged = { ...overview, people: (overview.people ?? []).map((e) => ({ ...e })), emo: [], talk: [], rift: [], bond: [], belief: [], start: [] };
   const targets = merged.people.filter((e) => e.name && Math.max(Number(e.p) || 0, Number(e.s) || 0, Number(e.r) || 0) >= 1).slice(0, cap);
+  let lite = light;
   if (newest.length >= SHORT) for (const t of targets) {
     const mine = (arr) => (arr ?? []).filter((x) => JSON.stringify(x).includes(t.name));
     const payload = { bot: input.bot, known, ignore: input.ignore ?? [], focus: t.name, overview: { scene: overview.scene?.sum ?? "", act: t.act ?? "" }, newest: { index: input.newest?.index, text: focusText(newest, t.name) }, ...(mine(input.emoState).length ? { emoState: mine(input.emoState) } : {}), ...(mine(input.talkState).length ? { talkState: mine(input.talkState) } : {}), ...(input.beliefsOn && mine(input.beliefs).length ? { beliefs: mine(input.beliefs) } : {}) };
-    const m2 = [{ role: "system", content: linesStage2(t.name, { light, beliefs: !!input.beliefsOn }) }, { role: "user", content: JSON.stringify(payload) }];
+    const m2of = (lt) => [{ role: "system", content: linesStage2(t.name, { light: lt, beliefs: !!input.beliefsOn }) }, { role: "user", content: JSON.stringify(payload) }];
     try {
-      const got = await askLines(call, m2, (raw) => {
+      // 3.0.8: 전체 지침으로 형식 오류가 나면 가벼운 지침으로 한 번 더 묻고, 이 응답의 남은 인물도 가볍게 묻는다(recorder.js와 같은 규칙)
+      const askP = (lt) => askLines(call, m2of(lt), (raw) => {
         if (isNoneReply(raw)) return { entry: {}, emo: [], talk: [], rift: [], bond: [], belief: [], start: [] };   // 새로 확인된 게 없음
         const lines = parseLines(raw);
-        if (lines.length) return fromStage2(lines, t.name, { known, source, light });
+        if (lines.length) return fromStage2(lines, t.name, { known, source, light: lite });
         const j = jsonFrom(raw), me = (j?.people ?? []).find((e) => String(e?.name ?? "").replace(/\s+/g, "") === t.name.replace(/\s+/g, ""));
         return j ? { entry: me ? Object.fromEntries(Object.entries(me).filter(([k]) => !["name", "act", "p", "s", "r"].includes(k))) : {}, emo: j.emo ?? [], talk: j.talk ?? [], rift: j.rift ?? [], bond: j.bond ?? [], belief: j.belief ?? [], start: j.start ?? [] } : null;
       });
+      let got;
+      try { got = await askP(lite); }
+      catch (e) { if (lite || e?.raw === undefined) throw e; lite = true; got = await askP(true); }
       const slot = merged.people.find((e) => e.name === t.name);
       if (slot) Object.assign(slot, got.entry);
       for (const k of ["emo", "talk", "rift", "bond", "belief", "start"]) merged[k].push(...(got[k] ?? []));
