@@ -1,4 +1,13 @@
-# 현재 상태 — main / v2.0.7
+# 현재 상태 — 3.0.8 (main 2.0.7에서 분기)
+
+## 최근 세션 (2026-11-10 — 3.0.8: 리수폿/장기기억 자동 기록 실패율 급증)
+- 증상(사용자): 2.0.0 이후 실패가 30회 중 2~4 → 3회 중 1~2. 추론 20k~30k 토큰을 쓰고도 기억이 안 생김(검열 아님).
+- 원인: `data/pot/llm-client.js` callWriterModel은 모든 호출(Claude·OpenAI호환·리스 보조모델)에 시스템 "Return one JSON object only"를 붙이고, DeepSeek 생각 끔이면 response_format json_object까지 강제. 2.0.0 기록기(`engine/recorder.js`)는 'LINES ONLY'를 요구 → ① 지시 충돌로 추론 과다·빈 응답 ② JSON으로 낸 '변화 없음'(`{"lines":[]}`)을 형식 오류로 보고 인물마다 3번씩 재질문 ③ 빈 응답은 반환이 아니라 예외(empty-model-response)라 ask()의 재시도를 건너뛰고 1단계 한 번 빈 답에 기록 전체 실패 → 리수폿이 실패 처리, 대신 길 없음.
+- 수정: `recorder.js` `recorderText`(맨 끝에 `RECORDER_OUTPUT` — 출력은 JSON {"lines":[…]}, 없으면 {"lines":[]})를 기록기·정리 노트 방향 호출에 사용(`memoryturn.js`). `ask()`가 empty-model-response를 빈 답으로 받아 다시 묻고, 인물 단계는 최대 2번(`tries`). `memorylines.isNoneReply`가 `{"lines":[]}`·`["none"]`·`[]`도 '변화 없음'으로. `attemptDuskRecord`: 기록기가 끝내 실패하면 null → 예전 리수폿 Writer 한 번 호출로 대신(취소 model-aborted는 그대로 던짐), `lastRecord.fallback="risupot"`. "Director Dusk" 응답은 cleanJsonReply 거치지 않음.
+- 시험: `tests/recorder-json-transport.test.js`(7). npm test 1282 pass/9 skip/0 fail, build·check 동일함, build-addons --check 동일함.
+- 배포: 수정은 memory 애드온(dist/memory.js)과 코어(memorylines.js — isNoneReply) 둘 다. **버전 미변경**(memory 0.2.3, 코어 2.0.7) — 사용자 지시 시 memory 0.2.4·코어 버전 올리고 publish-addons/태그.
+- 남은 일: [ ] 실기기(실제 추론 모델)로 실패율 확인 — 개선 단정 금지. [ ] UI freeze(‘리수폿 설정 열기’ 빠른 조작) 미진행. [ ] main HandOff/README.md 작업 브랜치 표를 3.0.8로 고칠지 사용자 확인.
+
 
 ## 최근 세션 (2026-11-09 — v2.0.7 버전 정리)
 - v2.0.7: `package.json` 버전 및 CHANGELOG 정식 항목으로 정리. 포함 버그 수정은 장기기억/관계도 게이지 fallback(원문 유지) 1건.

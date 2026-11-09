@@ -357,4 +357,14 @@ export const RETRY_NOTE = {
 };
 
 // "none"/"없음" 한 줄만 온 응답 = 새로 확인된 게 없다는 정상 답(재시도하지 않고 저장도 하지 않는다).
-export const isNoneReply = (raw) => /^\s*[`"']*\s*(none|없음|변경\s*없음|no\s*change)\s*[.`"']*\s*$/i.test(String(raw ?? ""));
+const NONE_RE = /^\s*[`"']*\s*(none|없음|변경\s*없음|no\s*change)\s*[.`"']*\s*$/i;
+// 3.0.8: 모델 호출층이 JSON만 내라고 하므로 {"lines":[]}·{"lines":["none"]}·[] 도 같은 뜻으로 받는다.
+export const isNoneReply = (raw) => {
+  const t = String(raw ?? "").trim();
+  if (NONE_RE.test(t)) return true;
+  const body = t.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  if (!/^[[{]/.test(body)) return false;
+  let o; try { o = JSON.parse(body); } catch { return false; }
+  const arr = Array.isArray(o) ? o : o && typeof o === "object" && Array.isArray(o.lines) && Object.keys(o).length === 1 ? o.lines : null;
+  return !!arr && arr.every((x) => typeof x === "string" && (!x.trim() || NONE_RE.test(x)));
+};

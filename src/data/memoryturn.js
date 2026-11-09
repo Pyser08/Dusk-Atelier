@@ -36,7 +36,7 @@ import { chatKeyOf } from "../engine/chatkey.js";
 import { cleanJsonReply } from "../engine/jsonreply.js";
 import { routerKey, swapRequestRef, directionKey, boundedSet } from "../engine/retrycache.js";
 import { parseDirectorRun, factSheet, directionMessages, parseDirection, renderDirection, directorEnvelope } from "../engine/director.js";
-import { parseWriterRun, recordTurn, buildEnvelope, buildDusk, summarize } from "../engine/recorder.js";
+import { parseWriterRun, recordTurn, buildEnvelope, buildDusk, summarize, recorderText, attemptDuskRecord } from "../engine/recorder.js";
 import { customPromptPlain } from "../engine/pot/custom-prompts.js";
 
 const READONLY = new Set(["writer_schema", "director_schema", "slots", "policies"]);
@@ -108,7 +108,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       const send = (text) => callWriterModel(a, k, preset, text, { ...opts, onUsage: (u) => { opts.onUsage?.(u); recordUsage(api, stage, u).catch(() => {}); } });
       const out = await webWrap(stage, withSkills, send);   // 웹 도구(꺼짐이 기본, 켠 단계만 호출이 늘어남)
       // 리수폿 단계는 JSON을 받는다: 생각 글·설명·끝 쉼표 때문에 "완성된 JSON을 읽지 못했습니다"가 나지 않게 다듬어 넘긴다(Dusk 기록기 줄 응답은 그대로)
-      return /Writer Dusk/.test(String(opts.stageLabel ?? "")) || typeof out !== "string" ? out : cleanJsonReply(out);
+      return /Writer Dusk|Director Dusk/.test(String(opts.stageLabel ?? "")) || typeof out !== "string" ? out : cleanJsonReply(out);
     };
     // 2.0.0 Dusk 기록기: 리수폿 Writer 프롬프트(11만 자+)를 보내지 않고 데이터만 꺼내 짧은 단계별 질문으로 기록한 뒤,
     // 리수폿이 받던 응답(JSON)으로 바꿔 돌려준다. 해석이 안 되거나(PDF 첨부 방식)·월경 보고가 필요하면 예전 길로.
@@ -121,7 +121,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       if (!pure) { try { prep = await runner.prepareLatest(await api.getCurrentCharacterIndex(), await api.getCurrentChatIndex()); } catch { prep = null; } }
       const snap = settings.rawSnapshot(), sc = wiki.scope ? { characterId: wiki.scope.characterId, chatKey: wiki.scope.chatKey } : {};
       const front = customPromptPlain(snap, "writer", sc, "front"), back = customPromptPlain(snap, "writer", sc, "back");
-      const call = (msgs) => stageCall(a, k, preset, [front, ...msgs.map((m) => m.role === "system" ? m.content : m.role === "assistant" ? `# Your previous reply\n${m.content}` : `# DATA\n${m.content}`), back].filter(Boolean).join("\n\n"), { ...opts, stageLabel: "Writer Dusk" });
+      const call = (msgs) => stageCall(a, k, preset, recorderText(msgs, { front, back }), { ...opts, stageLabel: "Writer Dusk" });
       const light = s0.light === true, beliefs = s0.inject?.beliefs === true;
       while (recCache.size > 4) recCache.delete(recCache.keys().next().value);
       // 같은 응답을 다시 기록하라고 불리면(앞선 시도가 저장 전에 끊김 등) 받아 둔 결과를 다시 쓴다 — 보조 모델을 또 부르지 않는다
@@ -141,8 +141,13 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     const writerCall = async (a, k, preset, prompt, opts = {}) => {
       const label = String(opts.stageLabel ?? ""); let sent = prompt, prep = null;
       if (/^writer batch/i.test(label)) {
-        try { const out = await recordWithDusk(a, k, preset, prompt, opts); if (out != null) return out; }
-        catch (e) { lastRecord = { at: Date.now(), error: String(e?.message ?? e).slice(0, 200) }; throw e; }
+        // 3.0.8: 기록기가 끝내 실패하면 응답 전체를 실패로 끝내지 않고 예전 리수폿 Writer(한 번 호출)로 대신한다. 취소는 그대로 던진다.
+        const out = await attemptDuskRecord(() => recordWithDusk(a, k, preset, prompt, opts), (e) => {
+          const message = String(e?.message ?? e).slice(0, 200);
+          lastRecord = { at: Date.now(), error: message, fallback: "risupot" };
+          log("Dusk 기록기 실패 → 예전 리수폿 기록으로 대신", message);
+        });
+        if (out != null) return out;
       }
       if (/^writer/i.test(label)) { try { cyclePending = cycleStates(wiki.snapshot()); } catch { cyclePending = null; } }
       const had = String(prompt).includes(SECTION_MARK);
@@ -198,7 +203,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
             const snap = settings.rawSnapshot(), sc = wiki.scope ? { characterId: wiki.scope.characterId, chatKey: wiki.scope.chatKey } : {};
             const front = customPromptPlain(snap, "director", sc, "front"), back = customPromptPlain(snap, "director", sc, "back");
             const [sys, usr] = directionMessages(run, sheet.text);
-            try { rows = parseDirection(await stageCall(a, k, preset, [front, sys.content, `# DATA\n${usr.content}`, back].filter(Boolean).join("\n\n"), { ...opts, stageLabel: "Director Dusk" })); }
+            try { rows = parseDirection(await stageCall(a, k, preset, recorderText([sys, usr], { front, back }), { ...opts, stageLabel: "Director Dusk" })); }
             catch (e) { log("정리 노트 방향 호출 실패(정리표만 넣음)", String(e?.message ?? e).slice(0, 120)); }
             if (rows.length) boundedSet(dirSeen, dkey, rows);
           }

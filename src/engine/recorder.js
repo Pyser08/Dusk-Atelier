@@ -57,17 +57,38 @@ export function cardOf(doc) {
 }
 
 // call(messages) → 원문. 형식이 틀리면 종류에 맞게 다시 묻는다(빈 답·잘림·형식). 끝내 안 되면 던진다.
-async function ask(call, msgs, parse, { minimal = null } = {}) {
-  let raw = await call(msgs);
-  for (let k = 0; k < 3; k++) {
+// 3.0.8: 호출층(llm-client)은 빈 응답을 예외(code empty-model-response)로 던진다 — 추론만 하다 끝난 경우라 다시 묻는다(다른 오류는 그대로 던짐).
+// tries: 최대 호출 횟수(1단계 3, 인물 2 — 추론 모델이 실패할 때마다 수만 토큰을 쓰므로 인물 단계는 한 번만 다시 묻는다).
+async function ask(call, msgs, parse, { minimal = null, tries = 3 } = {}) {
+  const once = async (m) => { try { return await call(m); } catch (e) { if (e?.code === "empty-model-response") return ""; throw e; } };
+  let raw = await once(msgs);
+  for (let k = 0; k < tries; k++) {
     const got = parse(raw);
     if (got) return got;
-    if (k === 2) break;
+    if (k === tries - 1) break;
     const kind = failureKind(raw);
     const next = (k === 1 || kind === "truncated") && minimal ? [{ role: "system", content: minimal }, msgs[1]] : [...msgs, ...(kind === "empty" ? [] : [{ role: "assistant", content: String(raw ?? "").slice(0, 1500) }]), { role: "user", content: RETRY_NOTE[kind] }];
-    raw = await call(next);
+    raw = await once(next);
   }
-  throw new Error(`기록기 응답 형식 오류 — 응답 앞부분: ${cut(raw, 160)}`);
+  throw new Error(`기록기 응답 형식 오류 — 응답 앞부분: ${cut(raw, 160) || "(빈 응답)"}`);
+}
+
+// 3.0.8: 호출층은 모든 요청에 "Return one JSON object only" 시스템 지시를 붙인다(리수폿 단계용). 기록기 지침의 'LINES ONLY'와 부딪혀
+// 추론 모델이 어느 쪽을 따를지 수만 토큰을 고민하거나 엉뚱한 JSON을 냈다. 출력 형식을 JSON {lines}로 맨 끝에 못박아 둘을 맞춘다.
+export const RECORDER_OUTPUT = 'OUTPUT FORMAT (final, overrides any other format note): return exactly one JSON object {"lines":["<line>","<line>"]} — each string is one line in the line format above. If nothing applies, return {"lines":[]}. No other keys, no markdown, no commentary.';
+export function recorderText(msgs, { front = "", back = "" } = {}) {
+  const body = msgs.map((m) => m.role === "system" ? m.content : m.role === "assistant" ? `# Your previous reply\n${m.content}` : `# DATA\n${m.content}`);
+  return [front, ...body, RECORDER_OUTPUT, back].filter(Boolean).join("\n\n");
+}
+
+// Dusk 기록기가 끝내 실패하면 null을 돌려 예전 리수폿 Writer 한 번 호출로 대신하게 한다(그 응답이 통째로 실패로 끝나지 않게). 취소는 그대로 던진다.
+export async function attemptDuskRecord(run, onError = () => {}) {
+  try { return await run(); }
+  catch (e) {
+    if (e?.code === "model-aborted" || e?.name === "AbortError") throw e;
+    try { onError(e); } catch { /* 진단 콜백 오류는 대신 길을 막지 않는다 */ }
+    return null;
+  }
 }
 
 // 나머지 인물 칸(호감·말투 단계·의심·개방): 켜진 칸만 메뉴로 보여 주고 deep|열쇠|글 한 줄로 받는다. 대상은 모두 {{user}}(개방은 대상 없음).
@@ -135,7 +156,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
       const got = await ask(call, [{ role: "system", content: linesStage2(t.name, { light, beliefs, wiki: true, isNew, extraLines: deepMenu(run) }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
         if (isNoneReply(raw)) return { lines: [] };
         const lines = parseLines(raw); return lines.length ? { lines } : null;
-      });
+      }, { tries: 2 });
       people.push({ ...t, isNew, lines: got.lines });
     } catch (e) { onWarn(t.name, e); people.push({ ...t, isNew, lines: [], failed: true }); }
   }
