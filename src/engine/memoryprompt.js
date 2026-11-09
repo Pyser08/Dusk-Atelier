@@ -163,7 +163,9 @@ async function analyzeStagedJson(call, input, { onWarn = () => {}, maxDetail = M
 // ── 한 줄 형식 단계별 분석(1.9.1) ──
 const headOf = (raw) => String(raw ?? "").replace(/\s+/g, " ").slice(0, 160);
 // call → 줄 해석 → ok(결과) 이면 반환. 안 되면 형식을 다시 알려 주고, 마지막엔 더 작은 요청으로 묻는다. 끝내 안 되면 원문 앞부분을 담아 던진다.
-async function askLines(call, msgs, parse, { minimal = null } = {}) {
+async function askLines(call0, msgs, parse, { minimal = null } = {}) {
+  // 3.0.8: 내 API 호출층은 빈 응답을 예외(empty-model-response)로 던진다 — 빈 답으로 받아 다시 묻는다
+  const call = async (m) => { try { return await call0(m); } catch (e) { if (e?.code === "empty-model-response") return ""; throw e; } };
   let raw = await call(msgs), last = raw;
   for (let k = 0; k < 3; k++) {
     const got = parse(raw);

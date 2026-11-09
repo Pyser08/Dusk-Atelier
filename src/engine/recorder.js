@@ -9,6 +9,7 @@
 // 저장 형식은 바뀌지 않는다(리수폿 위키·Dusk 폴더 둘 다 예전 그대로).
 import { JSON_FALLBACK, parseLines, fromStage1, fromStage2, linesStage2, LINES_STAGE1, LINES_STAGE1_MIN, canonName, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, isNoneReply, coerceInt } from "./memorylines.js";
 import { validate } from "./memoryprompt.js";
+import { LINES_AS_JSON } from "./modelcfg.js";
 
 const REF_START = "<<<RISUPOT_REFERENCE_DATA_START>>>", REF_END = "<<<RISUPOT_REFERENCE_DATA_END>>>", MANIFEST = "# Text Control Manifest";
 const nk = (n) => String(n ?? "").toLowerCase().replace(/[\s'"“”‘’「」『』\[\]()（）<>.,!?~·]/g, "");
@@ -75,7 +76,7 @@ async function ask(call, msgs, parse, { minimal = null, tries = 3 } = {}) {
 
 // 3.0.8: 호출층은 모든 요청에 "Return one JSON object only" 시스템 지시를 붙인다(리수폿 단계용). 기록기 지침의 'LINES ONLY'와 부딪혀
 // 추론 모델이 어느 쪽을 따를지 수만 토큰을 고민하거나 엉뚱한 JSON을 냈다. 출력 형식을 JSON {lines}로 맨 끝에 못박아 둘을 맞춘다.
-export const RECORDER_OUTPUT = 'OUTPUT FORMAT (final, overrides any other format note): return exactly one JSON object {"lines":["<line>","<line>"]} — each string is one line in the line format above. If nothing applies, return {"lines":[]}. No other keys, no markdown, no commentary.';
+export const RECORDER_OUTPUT = LINES_AS_JSON;
 export function recorderText(msgs, { front = "", back = "" } = {}) {
   const body = msgs.map((m) => m.role === "system" ? m.content : m.role === "assistant" ? `# Your previous reply\n${m.content}` : `# DATA\n${m.content}`);
   return [front, ...body, RECORDER_OUTPUT, back].filter(Boolean).join("\n\n");
@@ -280,9 +281,10 @@ export function buildEnvelope(run, rec) {
       const e = entry(doc, "core.npc_emotion", [tr], `[${emos.join(", ")}] ${cut(f[2] ?? "", 80)}`.trim(), "다른 인물에 대한 감정"); if (e) entries.push(e);
     }
     // 호감도(게이지): 처음이면 0에서 시작(init), 움직였으면 정책 값 중 가까운 것으로(delta). 인용이 원문에 없으면 버린다.
+    // 3.0.8: like 줄이 없어도(감정이 안 움직인 응답) 게이지가 없는 인물은 0에서 시작시킨다 — 비워 두면 '수치 상태가 비어 있는 인물' 알림이 응답마다 떴다.
     const pol = run.policies["affinity.score"], like = one("like");
-    if (pol && slotOn("affinity.score") && like) {
-      const step = coerceInt(String(like[0]).replace(/^\+/, ""), -3, 3, 0), q = exactQuote(like[1], src);
+    if (pol && slotOn("affinity.score") && !p.failed) {
+      const step = like ? coerceInt(String(like[0]).replace(/^\+/, ""), -3, 3, 0) : 0, q = like ? exactQuote(like[1], src) : "";
       const has = (doc?.metrics ?? []).some((x) => x.slot_id === "affinity.score" && (x.target_refs ?? [])[0] === "actor:user");
       if (!has && (pol.operations ?? []).includes("init")) metricOps.push({ document_ref: p.ref, slot_id: "affinity.score", target_refs: ["actor:user"], operation: "init", context_key: null, value: (pol.initial_values ?? [0]).includes(0) ? 0 : (pol.initial_values ?? [0])[0], evidence_refs: ["source:rp"], reason: "{{user}}와 처음 직접 상호작용함 — 기본값에서 시작" });
       const amount = step ? nearest(pol.delta_values, LIKE_STEP[step]) : null;
@@ -364,7 +366,7 @@ export function parseLinesLoose(raw) {
 // 한 번의 결과 요약(화면 '최근 기록 결과'용)
 export function summarize(rec, env) {
   return {
-    scene: rec.stage1.scene?.sum ?? "", people: rec.people.length, failed: rec.people.filter((p) => p.failed).map((p) => p.name),
+    scene: rec.stage1.scene?.sum ?? "", people: rec.people.length, names: rec.people.map((p) => p.name), failed: rec.people.filter((p) => p.failed).map((p) => p.name),
     states: (rec.stage1.states ?? []).map((s) => `${s.name}: ${s.v}`), created: env.documents.filter((d) => d.operation === "create").map((d) => d.title),
     updated: env.documents.filter((d) => d.operation === "update").length, entries: env.documents.reduce((n, d) => n + d.entries.length, 0),
     gauges: env.metric_ops.filter((m) => m.operation === "delta").length,

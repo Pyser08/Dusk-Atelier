@@ -112,6 +112,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     };
     // 2.0.0 Dusk 기록기: 리수폿 Writer 프롬프트(11만 자+)를 보내지 않고 데이터만 꺼내 짧은 단계별 질문으로 기록한 뒤,
     // 리수폿이 받던 응답(JSON)으로 바꿔 돌려준다. 해석이 안 되거나(PDF 첨부 방식)·월경 보고가 필요하면 예전 길로.
+    const potNext = new Set(); let lastKey = "";
     const recCache = new Map(), recDone = new Map();   // 같은 응답의 1단계 결과(리수폿이 묶음을 나눠 여러 번 부를 때 재사용)
     const recordWithDusk = async (a, k, preset, prompt, opts) => {
       const s0 = (await store.getIndex()).settings ?? {};
@@ -121,11 +122,16 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       if (!pure) { try { prep = await runner.prepareLatest(await api.getCurrentCharacterIndex(), await api.getCurrentChatIndex()); } catch { prep = null; } }
       const snap = settings.rawSnapshot(), sc = wiki.scope ? { characterId: wiki.scope.characterId, chatKey: wiki.scope.chatKey } : {};
       const front = customPromptPlain(snap, "writer", sc, "front"), back = customPromptPlain(snap, "writer", sc, "back");
-      const call = (msgs) => stageCall(a, k, preset, recorderText(msgs, { front, back }), { ...opts, stageLabel: "Writer Dusk" });
+      // 빈 응답(추론이 출력 한도를 다 씀)이 한 번 나오면 이 기록의 남은 호출은 출력 한도를 넓혀 보낸다
+      let boost = false; const roomy = preset && Number(preset.maxTokens) > 0 ? { ...preset, maxTokens: Math.min(32768, Math.max(16384, Number(preset.maxTokens) * 2)) } : preset;
+      const call = async (msgs) => { try { return await stageCall(a, k, boost ? roomy : preset, recorderText(msgs, { front, back }), { ...opts, stageLabel: "Writer Dusk" }); } catch (e) { if (e?.code === "empty-model-response") boost = true; throw e; } };
       const light = s0.light === true, beliefs = s0.inject?.beliefs === true;
       while (recCache.size > 4) recCache.delete(recCache.keys().next().value);
       // 같은 응답을 다시 기록하라고 불리면(앞선 시도가 저장 전에 끊김 등) 받아 둔 결과를 다시 쓴다 — 보조 모델을 또 부르지 않는다
       const fullKey = `${run.rp.length}:${run.rp.slice(0, 200)}:${run.rp.slice(-200)}|${run.docs.filter((d) => d.writable).map((d) => d.title).sort().join(",")}|${run.allowCreate}`;
+      // 이 응답의 기록기 결과가 리수폿 검증에서 떨어졌으면(자동 재시도 포함) 같은 결과를 또 내지 않고 예전 리수폿 기록으로 넘긴다
+      if (potNext.has(fullKey)) { potNext.delete(fullKey); return null; }
+      lastKey = fullKey;
       let rec = recDone.get(fullKey);
       if (rec) retryHits++;
       else {
@@ -170,14 +176,17 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
 
     const auto = new AutoWikiController({ api, settingsStore: settings, keyStore: keys, wikiController: wiki, sourceLibrary, traceStore: trace, scheduler, llmCall: writerCall });
     // 자동 기록이 막히거나 비었을 때 오른쪽 아래에 알리고, 거기서 바로 다시 시도한다.
-    const toast = createRetryToast(api, { scheduler, onRetry: () => auto.retry(), onOpen: () => onOpen?.() });
+    // 사용자가 '다시 시도'를 누르면 받아 둔 결과를 다시 쓰지 않고 새로 기록한다
+    const toast = createRetryToast(api, { scheduler, onRetry: () => { recDone.clear(); recCache.clear(); return auto.retry(); }, onOpen: () => onOpen?.() });
     let seen = "";
     auto.subscribe((st) => {
       const key = `${st.phase}|${st.message}`;
       if (key === seen || !["completed", "failed", "manual"].includes(st.phase)) return;
       seen = key;
+      if (st.phase === "failed" && lastKey && !/리롤|삭제되어|RP 본문이 바뀌어/.test(String(st.message ?? ""))) { recDone.delete(lastKey); recCache.clear(); potNext.add(lastKey); while (potNext.size > 4) potNext.delete(potNext.values().next().value); }
+      if (st.phase === "completed") lastKey = "";
       let scope = null; try { scope = wiki.snapshot(); } catch { /* 아직 준비 전 */ }
-      const verdict = judgeAutoResult({ phase: st.phase, message: st.message, scope });
+      const verdict = judgeAutoResult({ phase: st.phase, message: st.message, scope, names: lastRecord && !lastRecord.error ? lastRecord.names ?? null : null });
       if (verdict) toast.show(verdict.text, { retry: verdict.retry !== false }).catch(() => {}); else toast.hide().catch(() => {});
     });
     const main = new MainWikiHook(api, settings, wiki, keys, libFor("fast"), auto, null, trace);

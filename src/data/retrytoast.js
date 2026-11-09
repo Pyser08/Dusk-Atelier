@@ -40,7 +40,8 @@ export function createRetryToast(api, { onRetry, onOpen, scheduler = globalThis,
 
 // 자동 기록이 끝났을 때 토스트를 띄울지 가른다. 위키 문서가 하나도 없거나, 수치가 비어 있는 인물이 둘 이상이면 알린다.
 // 반환: null(알리지 않음) 또는 {text, retry, kind}. retry=false면 '다시 시도' 버튼을 숨긴다(다시 해도 결과가 같은 경우).
-export function judgeAutoResult({ phase, message = "", scope = null }) {
+// names: 이번 응답에서 기록한 인물 이름(Dusk 기록기). 주어지면 그 인물만 본다 — 이번에 나오지 않은 인물은 다시 시도해도 채워지지 않는다.
+export function judgeAutoResult({ phase, message = "", scope = null, names = null }) {
   if (/자동 재시도 \d\/2/.test(message)) return null;  // 곧 스스로 다시 시도한다
   if (/리롤|삭제되어|RP 본문이 바뀌어/.test(message)) return null;
   if (phase === "manual") {  // 사람이 확인해야 하는 상태: 다시 시도해도 같은 결과라 버튼을 숨긴다
@@ -51,7 +52,7 @@ export function judgeAutoResult({ phase, message = "", scope = null }) {
   if (phase !== "completed" || !scope) return null;
   const chars = Object.values(scope.documents ?? {}).filter((d) => d?.type === "Character");
   if (!chars.length) return { kind: "empty", retry: true, text: "인물 문서가 아직 만들어지지 않았어요. 다시 시도할까요?" };
-  const noMetric = chars.filter((d) => !(d.metrics ?? []).length);
+  const noMetric = chars.filter((d) => !(d.metrics ?? []).length && (!Array.isArray(names) || names.includes(d.title)));
   if (noMetric.length >= 2) return { kind: "nometric", retry: true, text: `수치 상태가 비어 있는 인물이 ${noMetric.length}명이에요(${noMetric.slice(0, 3).map((d) => d.title).join(", ")}). 다시 시도할까요?` };
   return null;
 }

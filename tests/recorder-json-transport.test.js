@@ -69,3 +69,22 @@ test("기록기가 끝내 실패하면 null(예전 리수폿 Writer로) — 취�
   await assert.rejects(attemptDuskRecord(async () => { throw Object.assign(new Error("취소"), { code: "model-aborted" }); }), /취소/);
   assert.equal(await attemptDuskRecord(async () => "ok"), "ok");
 });
+
+test("감정이 안 움직인 응답이어도 게이지 없는 인물은 0에서 시작한다(‘수치 비어 있음’ 알림 반복 방지)", async () => {
+  const { buildEnvelope } = await import("../src/engine/recorder.js");
+  const run = await runOf();
+  const model = async (msgs) => { const u = JSON.parse(msgs[1].content); return u.focus ? '{"lines":["id|대학생"]}' : STAGE1; };
+  const rec = await recordTurn(model, run, {});
+  const env = buildEnvelope(run, rec);
+  for (const p of rec.people) assert.ok(env.metric_ops.some((m) => m.document_ref === p.ref && m.slot_id === "affinity.score" && m.operation === "init"), p.name);
+});
+
+test("알림 판단: 이번에 기록한 인물만 본다 · 내 API 줄 프롬프트는 JSON {lines}로 못박는다", async () => {
+  const { judgeAutoResult } = await import("../src/data/retrytoast.js");
+  const { toPrompt } = await import("../src/engine/modelcfg.js");
+  const scope = { documents: { a: { type: "Character", title: "A", metrics: [] }, b: { type: "Character", title: "B", metrics: [] }, c: { type: "Character", title: "C", metrics: [{}] } } };
+  assert.equal(judgeAutoResult({ phase: "completed", scope })?.kind, "nometric");
+  assert.equal(judgeAutoResult({ phase: "completed", scope, names: ["C"] }), null);
+  const p = toPrompt([{ role: "system", content: "Reply with LINES ONLY" }, { role: "user", content: "{}" }]);
+  assert.equal(p.wrapped, false); assert.match(p.prompt, /\{"lines":\[\]\}/);
+});
