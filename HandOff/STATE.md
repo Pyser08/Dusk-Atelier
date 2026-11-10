@@ -1,6 +1,12 @@
 # 현재 상태 — 2.1.0 브랜치 (3.0.8 내용을 옮김, main 2.0.7에서 분기)
 
 
+## 최근 세션 (2026-11-11 1시 — 모듈 탭 전환·채팅 없이 설정·그룹 지원, manage 0.1.2·modcompat 0.1.1 배포)
+- 사용자: 모듈 탭 위에 크게 ‘모듈 / 모듈 병합’ 선택(애드온 둘만 수정) + 채팅 안 들어가도 설정 + 그룹 채팅도 되게.
+- manage `addons/manage/index.js` `renderModulesTab`: 위에 segmented(📦 모듈 / 🧩 모듈 병합, `ctx.state.modView`), 아래 칸(`.rb-modsw-body`)에 모듈 목록은 `Object.create(ctx)`로 main만 바꿔 core `renderModules` 그대로 / 모듈 병합은 `ext.get("svc","modcompat").render(el)`, 없으면 받기 안내. 코어 변경 없음.
+- modcompat: svc "modcompat" 등록(onCleanup으로 해제). `data/modcompat.js` `listBots`(core `loadCharacters`, 1분 캐시) · `diagnose({ci})`(채팅 없이 고른 봇, chi -1이면 채팅 모듈 없이) · 그룹 `groupSide`(멤버 카드의 에셋·customscript·globalLore·defaultVariables 합침, 그룹은 봇 Lua 없음) — 훅에서는 봇 목록을 기다리지 않고(wait:false) 뒤에서 읽은 뒤 ctx.at=-Infinity로 다시 만들게. 화면: ‘설정할 봇’ select(지금 연 채팅 표시, 마지막 고른 봇 `lastBot` 저장), 그룹·채팅 없이 보는 중 안내.
+- 시험 39(그룹·채팅 없이 3개 추가), e2e run-modcompat(전환·그룹·애드온 없을 때 포함).
+
 ## 최근 세션 (2026-11-11 0시 — v2.1.0 릴리스 + 애드온 배포, 사용자 지시)
 - 모드 매니저(risu-mod-manager, 노예였던것님, GPL-3.0) 스페셜 땡스: 도구 탭 THANKS(15개, run-work e2e 15로), README Special thanks, 안내서 addons.html 모듈 호환 절. 코드는 가져오지 않아 about PARTS·NOTICE에는 넣지 않음.
 - CHANGELOG ‘다음 버전’을 v2.1.0(2026-11-11)으로 합침, main HandOff/README 작업 브랜치 표를 2.1.0으로(참고: 이 두 파일과 dusk_atelier.js는 00:18에 이 작업 폴더에서 이미 같은 내용으로 바뀌어 있었음 — 다른 세션으로 보임, 그대로 씀).

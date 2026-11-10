@@ -2,6 +2,7 @@
 // 리스 훅 셋(output·display·process) + 요청 안내(beforeRequest). 훅은 끌 때 Dusk가 자동으로 뗀다(addonscope).
 import { createModCompat } from "../../src/data/modcompat.js";
 import { renderModCompat } from "../../src/ui/screens/modcompat.js";
+import { h, replace } from "../../src/ui/dom.js";
 
 export async function activate(api, ctx) {
   const dusk = ctx.dusk;
@@ -16,5 +17,12 @@ export async function activate(api, ctx) {
   await hook(() => api.addRisuReplacer("beforeRequest", mc.beforeRequest));
   mc.current().catch(() => {});
   dusk.addPage({ title: "모듈 호환", render: (el) => renderModCompat(el, dusk, mc) });
+  // 모듈 탭의 ‘모듈 병합’ 칸(관리 애드온 0.1.2+)이 이 화면을 그 자리에 그린다
+  const off = dusk.ext?.add?.("svc", "modcompat", { title: "모듈 병합", render: (el) => {
+    const page = h("div", { class: "rb-section rb-scroll rb-addon-page", style: "flex:1;min-height:0" });
+    replace(el, page);
+    renderModCompat(page, dusk, mc);
+  } });
+  if (off) dusk.onCleanup(off);
   return { deactivate() {} };
 }

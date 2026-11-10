@@ -200,7 +200,8 @@ window.bootApp = async (seed, opts = {}) => {
     const mods = [structuredClone(hunterExtra), structuredClone(selfModule)];
     mods[0].lorebook.push({ key: "", comment: "NPC List", content: "{{#if {{equal::{{getvar::Ryu Hae-yeon}}::1}}}}- Ryu Hae-yeon{{/if}}" });
     const getDb0 = api.getDatabase;
-    api.getCharacterFromIndex = async () => structuredClone(bot);
+    const grp = { type: "group", chaId: "g1", name: "헌터 모임", characters: ["hunter"], customscript: [], globalLore: [], chats: [{ message: [] }] };
+    api.getCharacterFromIndex = async (i) => (i === 0 ? structuredClone(bot) : i === 1 ? structuredClone(grp) : null);
     api.getDatabase = async (keys) => ({ ...(await getDb0(keys)), modules: structuredClone(mods), enabledModules: mods.map((m) => m.id) });
     const hooks = (window.__mcHooks = {});
     api.addRisuScriptHandler = async (n, f) => { hooks[n] = f; };

@@ -3,18 +3,41 @@ const GUARD = { none: "필요 없음", soft: "살짝 감싸 지킴", hard: "단�
 const VARS = [["auto", "자동"], ["found0", "나오면 0"], ["found1", "나오면 1"], ["off", "끔"]];
 const RENDER = { keep: "봇 정규식 그대로", inline: "봇 정규식을 대신 적용", native: "리스 기본 그리기" };
 
+// 채팅을 열지 않아도 봇을 골라 설정한다. 고른 봇은 기억해 두고, 채팅을 열고 들어오면 그 봇이 먼저 골라진다.
 export function renderModCompat(el, dusk, mc) {
   const { ui } = dusk;
   const { h, replace, card, note, btn, toggleRow, badge, chip } = ui;
+  let pick = null;   // 화면에서 고른 봇(ci)
   const draw = async () => {
-    replace(el, note("info", "지금 연 봇을 살펴보는 중이에요…"));
-    let d;
-    try { d = await mc.diagnose(); } catch (e) { replace(el, note("err", `살펴보지 못했어요: ${e?.message ?? e}`)); return; }
-    if (!d.ok) { replace(el, note("info", d.reason === "group" ? "그룹 채팅에서는 쓰지 않아요." : "채팅을 하나 연 뒤 다시 열어 주세요.")); return; }
+    replace(el, note("info", "봇 목록을 불러오는 중이에요…"));
+    let d, bots = [], live = { ci: -1, chi: -1 };
+    try {
+      live = await mc.where().catch(() => live);
+      bots = await mc.listBots();
+      if (pick == null || !bots.some((b) => b.ci === pick)) {
+        const last = await dusk.storage.get("lastBot", "");
+        pick = live.ci >= 0 && bots.some((b) => b.ci === live.ci) ? live.ci : (bots.find((b) => b.chaId === last)?.ci ?? bots[0]?.ci ?? null);
+      }
+      if (pick == null) { replace(el, note("info", "봇이 하나도 없어요. 봇을 가져온 뒤 다시 열어 주세요.")); return; }
+      replace(el, picker(), note("info", "이 봇을 살펴보는 중이에요…"));
+      d = await mc.diagnose({ ci: pick });
+    } catch (e) { replace(el, note("err", `살펴보지 못했어요: ${e?.message ?? e}`)); return; }
+    if (!d.ok) { replace(el, picker(), note("info", "이 봇을 읽지 못했어요. 다른 봇을 골라 주세요.")); return; }
+    function picker() {
+      const sel = h("select", { class: "rb-input rb-mc-pick", "aria-label": "설정할 봇", onChange: async (ev) => {
+        pick = Number(ev.target.value);
+        const b = bots.find((x) => x.ci === pick);
+        if (b) await dusk.storage.set("lastBot", b.chaId);
+        draw();
+      } }, ...bots.map((b) => h("option", { value: String(b.ci), selected: b.ci === pick }, `${b.name}${b.group ? " · 그룹" : ""}${b.ci === live.ci ? " (지금 연 채팅)" : ""}`)));
+      return h("div", { class: "rb-mc-pickrow" }, h("span", { class: "rb-mc-picklabel" }, "설정할 봇"), sel);
+    }
     const set = async (patch) => { await mc.setBotCfg(d.chaId, patch); draw(); };
     const imgMods = d.modules.filter((m) => m.own > 0);
 
-    const head = card(`${d.botName || "이 봇"}`,
+    const head = card(`${d.botName || "이 봇"}${d.group ? " · 그룹" : ""}`,
+      d.group ? h("p", { class: "rb-mc-meta" }, d.members.length ? `멤버 ${d.members.join(", ")}의 이미지·정규식을 봇 쪽으로 봐요. 그룹에서는 봇 Lua가 돌지 않고 모듈 Lua만 돌아요.` : "멤버 봇을 찾지 못했어요. 멤버 이미지와 겹치는 모듈 이미지는 모듈 것으로 다뤄요.") : null,
+      d.live ? null : h("p", { class: "rb-mc-meta" }, "채팅을 열지 않고 보는 중이라, 채팅에만 켠 모듈은 빠져 있어요. 설정은 이 봇의 모든 채팅에 적용돼요."),
       h("p", { class: "rb-mc-sub" }, `켜진 모듈 ${d.modules.length}개 · 이미지 있는 모듈 ${imgMods.length}개 · 안내할 인물 ${d.chars}명${d.singles ? ` · 단일 이미지 ${d.singles}장` : ""}`),
       toggleRow("이 봇에서 모듈 호환 쓰기", "모듈 이미지가 이 봇 이미지와 같은 모양으로 나오게 해요. 봇·모듈 파일은 바꾸지 않아요.", d.cfg.on !== false, (v) => set({ on: v })),
       imgMods.length ? null : note("info", "켜진 모듈에 이 봇에 없는 이미지가 없어요. 할 일이 없어요."));
@@ -60,13 +83,16 @@ export function renderModCompat(el, dusk, mc) {
     if ((o.lua.bot ? 1 : 0) + o.lua.modules.length > 1) warn.push(h("li", {}, `Lua 트리거가 ${o.lua.bot ? "봇과 " : ""}${o.lua.modules.join(" · ")}에 있어요. 서로 따로 돌지만, 응답마다 엔진을 다시 만들어 느려질 수 있어요. 봇 고유 기능(호감도·상태창 등)은 모듈 인물에 적용되지 않을 수 있어요.`));
     const over = card("겹침 살펴보기", warn.length ? h("ul", { class: "rb-mc-list" }, ...warn) : note("info", "겹치는 곳을 찾지 못했어요."));
 
-    replace(el, h("style", {}, CSS), head, mods, shapes, vars, adv, over,
+    replace(el, h("style", {}, CSS), picker(), head, mods, shapes, vars, adv, over,
       h("div", { class: "rb-mc-act" }, btn("다시 살펴보기", { size: "sm", onClick: draw })));
   };
   draw();
 }
 
 const CSS = `
+.rb-mc-pickrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;padding:12px 16px;border:1px solid var(--rb-line2);border-radius:12px;background:var(--rb-surf)}
+.rb-mc-picklabel{font-weight:700;color:var(--rb-text);font-size:13.5px}
+.rb-mc-pick{flex:1 1 220px;min-width:0;max-width:420px}
 .rb-addon-page .rb-addon-card{padding:14px 16px;margin-bottom:10px}
 .rb-mc-sub{margin:6px 0 8px;color:var(--rb-sub);font-size:13px;overflow-wrap:anywhere}
 .rb-mc-row{padding:10px 0;border-top:1px solid var(--rb-line2);min-width:0}
