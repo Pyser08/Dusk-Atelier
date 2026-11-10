@@ -1,3 +1,4 @@
+import { trackAi, justStopped, stopError } from "./aistop.js";
 import { extractRunAIText } from './airesponse.js';
 import { applyUserPrompts } from './customprompt.js';
 
@@ -49,7 +50,14 @@ function withTimeout(promise, sec) {
   if (!Number.isFinite(sec) || sec <= 0) return promise;
   let t; return Promise.race([promise, new Promise((_, rej) => { t = setTimeout(() => rej(new Error(`보조 모델 응답이 ${sec}초 제한시간을 넘었어요.`)), sec * 1000); })]).finally(() => clearTimeout(t));
 }
+// 모든 AI 작업은 생성 중지 버튼(engine/aistop.js)에 잡힌다: 누르면 바로 '생성을 중지했어요.' 오류
 export async function runAI(api, messages, pick, signal) {
+  if (justStopped()) throw stopError();
+  const t = trackAi(pick?.stage ?? "", signal);
+  try { return await t.race(runAIInner(api, messages, pick, t.signal)); }
+  finally { t.end(); }
+}
+async function runAIInner(api, messages, pick, signal) {
   if (!pick?.noUserPrompts) messages = await withUserPrompts(messages);   // 장기기억 분석은 대상 채팅 기준으로 직접 끼운다
   const dp = await duskPickFor(pick);
   if (dp && duskRunner) return duskRunner(api, messages, dp, signal);
@@ -62,10 +70,10 @@ export async function runAI(api, messages, pick, signal) {
 
   let last = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
-    if (signal?.aborted) throw new Error("AI 작업을 취소했어요.");
+    if (signal?.aborted) throw stopError();
     try {
       const res = await withTimeout((async () => settleResponse(await api.runLLMModel(opts), signal))(), pick?.timeoutSec);
-      if (signal?.aborted) throw new Error("AI 작업을 취소했어요.");
+      if (signal?.aborted) throw stopError();
       const text = extractRunAIText(res) ?? "";
       if (text) return text;
       const detail = res && typeof res === "object"

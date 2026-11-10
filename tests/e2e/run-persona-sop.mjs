@@ -123,6 +123,15 @@ for (const vw of [1280, 390]) {
   await page.locator(".rb-dialog button", { hasText: "가져오기" }).last().click(); await page.waitForTimeout(900);
   const names = await page.evaluate(() => window.__pdb.map((p) => p.name + ":" + p.personaPrompt).join("|"));
   ok(`[${vw}] 가져오기: 바뀐 건 사본, 지운 건 되살림`, names === "선생님:CHANGED|선생님 (가져옴):TEACHER|학생회장:PRES", names);
+  // ── 생성 중지 버튼 ──
+  await page.evaluate(() => { const api = window.__app.ctx.api; window.__keep = api.runLLMModel; api.runLLMModel = window.__trackedRunLLM(() => new Promise(() => {})); });
+  ok(`[${vw}] 쉴 때는 중지 버튼 없음`, !(await page.locator(".rb-ai-stop").count()));
+  await page.locator(".rb-pb-fcard button", { hasText: "2 검토 보고서" }).click(); await page.waitForTimeout(700);
+  ok(`[${vw}] AI 작업 중 오른쪽 아래 '생성 중지'`, await page.evaluate(() => { const b = document.querySelector(".rb-ai-stop"); if (!b) return false; const r = b.getBoundingClientRect(); return innerWidth - r.right < 40 && innerHeight - r.bottom < 40 && /생성 중지/.test(b.textContent); }));
+  if (shot) await page.screenshot({ path: `/tmp/pb-stop-${vw}.png` });
+  await page.click(".rb-ai-stop"); await page.waitForTimeout(400);
+  ok(`[${vw}] 누르면 바로 멈추고 버튼 사라짐`, !(await page.locator(".rb-ai-stop").count()) && /생성을 중지했어요/.test(await T()));
+  await page.evaluate(() => { window.__app.ctx.api.runLLMModel = window.__keep; });
   ok(`[${vw}] 오류 없음`, !errs.length, errs.join(";"));
   await page.close();
 }

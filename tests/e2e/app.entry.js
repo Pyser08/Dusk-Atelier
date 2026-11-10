@@ -20,6 +20,8 @@ import { createSkillStore } from "../../src/data/skillstore.js";
 import { normalizeSkillSet } from "../../src/engine/skills.js";
 // 1.7.0 메뉴 구조 시험용: 가짜 리스 api로 실제 createApp을 띄운다. node tests/e2e/run-app.mjs 로 실행.
 import { createApp } from "../../src/ui/app.js";
+import { createAiStopButton } from "../../src/ui/aistopbtn.js";
+import { trackedRunLLM } from "../../src/engine/aistop.js";
 import { createProvider } from "../../src/data/provider/index.js";
 import { createWidgetHome } from "../../src/data/widgethome.js";
 import { createProtLink } from "../../src/data/protlink.js";
@@ -189,6 +191,8 @@ window.bootApp = async (seed, opts = {}) => {
     app.ctx.addons = createAddons(api, { core: "2.0.0", ctx: { toast: (t, o) => app.ctx.toast?.(t, o) }, fetcher: async (_a, url0) => { const url = url0.split("?")[0]; return (url.endsWith("addons.json") ? window.__addonFiles?.manifest : window.__addonFiles?.[url]) ?? null; } });
     await app.ctx.addons.boot();
   }
+  app.ctx.aiStop = createAiStopButton(api, { getCtx: () => app.ctx });   // main.js와 같게
+  window.__trackedRunLLM = trackedRunLLM;
   window.__app = app;
   window.__api = api;
   // (opts.fresh: 처음 설치 흐름을 그대로 탄다)

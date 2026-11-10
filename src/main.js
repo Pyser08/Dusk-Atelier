@@ -29,6 +29,8 @@ import { setSkillBlockProvider } from './engine/skillhook.js';
 import { createSkillStore } from './data/skillstore.js';
 import { setWebWrapProvider } from './engine/webhook.js';
 import { createWebTools } from './data/webtools.js';
+import { trackedRunLLM } from './engine/aistop.js';
+import { createAiStopButton } from './ui/aistopbtn.js';
 import { restoreActiveTheme } from './data/themes.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
 
@@ -55,6 +57,8 @@ async function start() {
     }
   };
   const wrapped = { setCharacterToIndex: friendly((...a) => raw.setCharacterToIndex(...a)), setDatabaseLite: friendly((...a) => raw.setDatabaseLite(...a)) };
+  // 생성 중지(2.1.0): 플러그인·애드온이 직접 부르는 모델 호출도 세어 '생성 중지' 버튼으로 끊을 수 있게
+  if (typeof raw.runLLMModel === "function") wrapped.runLLMModel = trackedRunLLM((...a) => raw.runLLMModel(...a));
   // 스크립트 훅(input·output·display)은 종류마다 하나만 호스트에 달고 안에서 나눠 부른다(호스트 왕복 감소, v1.8.1)
   if (typeof raw.addRisuScriptHandler === "function" && typeof raw.removeRisuScriptHandler === "function") {
     const bus = createHookBus(raw);
@@ -207,6 +211,7 @@ async function start() {
   app = createApp(api, { legacy, version: VERSION, onPersonaChanged: () => refreshPersonaHandlers().catch(() => {
   }) });
   app.ctx.watcher = watcher;
+  app.ctx.aiStop = createAiStopButton(api, { getCtx: () => app?.ctx });
   app.ctx.loreRuntime = loreRuntime;
   app.ctx.loreLog = loreLog;
   app.ctx.turnInfo = turnInfo;

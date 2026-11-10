@@ -19,8 +19,8 @@
 
 ## 파일 목록
 ### src/
-- `addonlib.gen.js` (516줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
-- `main.js` (304줄) 
+- `addonlib.gen.js` (520줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
+- `main.js` (309줄) 
 
 ### src/cellar/
 - `node-entry.js` (9줄) Dusk Cellar(서버)에서 장기 기억 분석을 돌리는 Node용 진입점 (v1.9.3, Cella… — createMemoryRunner, createMemoryStoreV3, INDEX_KEY, FOLDER_PREFIX, callWriterModel
@@ -161,6 +161,7 @@
 - `affhud.js` (144줄) 호감도 HUD 프리셋(순수): 배경 HTML 조각·기본 변수 설치/제거, 리스폿 수치 읽기, 자체 보… — MARK_A, AFF_DEFAULTS, AFF_KEYS, hudHtml, hasHud
 - `affprompts.js` (54줄) 호감도 HUD가 보조모델에 보내는 기본 프롬프트. 문구만 고치면 되도록 한곳에 모았다. (로직은 af… — JUDGE_SYSTEM, JUDGE_USER, DESIGN_SYSTEM, DESIGN_USER, DESIGN_RETRY
 - `airesponse.js` (30줄) — extractRunAIText
+- `aistop.js` (53줄) AI 생성 중지 (2.1.0): 플러그인·애드온의 모든 AI 호출을 한곳에서 센다. 하나라도 돌고 있… — onAiChange, trackAi, stopAll, trackedRunLLM, __resetAiStop
 - `assetfix.js` (180줄) v1.8.2 에셋 태그 고치기(도구 탭, 수동). 순수 로직. — MAX_ITEMS, scanReplies, aiItems, aiMessages, parseAiReply
 - `bardwikiadapt.js` (98줄) 리스바드 BardWiki 문서 → 장기기억 폴더(§2.2 모양) 변환. 순수 함수. 필드가 없으면 건… — VIRTUAL_MARK, parseSections, bullets, SUMMARY_TITLES, eventBullets
 - `castfilter.js` (60줄) 로어북에 있는 인물만 위키에 새로 만들기 (장기기억 애드온 전용 — 코어가 import하지 않는다: … — loreCast, inCast, dropCreates, strangers
@@ -250,7 +251,7 @@
 - `relmap.js` (129줄) 인물 관계도(반3D) 데이터 계산 (v1.9.3, 순수 함수). 화면 코드 없음. — RM, STATUS_LABEL, affinityOf, importanceOf, buildRelMap
 - `retrycache.js` (26줄) 다시 요청(메인 모델이 검열·오류로 끊겨 같은 말을 다시 보냄)할 때 보조 모델을 또 부르지 않게 하… — routerKey, swapRequestRef, directionKey, boundedSet
 - `rpack.js` (13줄) — rpackDecode
-- `runai.js` (83줄) 보조 모델이 {type:"streaming", result: ReadableStream}로 답하면 끝… — drainStream, settleResponse, setUserPromptProvider, withUserPrompts, setCustomRunner
+- `runai.js` (91줄) 보조 모델이 {type:"streaming", result: ReadableStream}로 답하면 끝… — drainStream, settleResponse, setUserPromptProvider, withUserPrompts, setCustomRunner
 - `safety.js` (32줄) — restoreFromBackup
 - `settingdeps.js` (43줄) 기능끼리의 선행 조건(순수). "켰는데 동작하지 않는" 일을 막는다. — DEPS, missingDeps, healDeps, depState, lockedBy
 - `settingsutil.js` (87줄) 기억 설정 도우미(순수): 변경 이력 10개 · 프리셋 공유 코드 · 설정 검색 · 범위 칩 이름. … — HIST_MAX, SHARE_PREFIX, SCOPE_CHIPS, scopeChipLabel, changedKeys
@@ -330,6 +331,7 @@
 
 ### src/ui/
 - `aifix.js` (52줄) 로어북 '고칠 부분' 공유 상태 (v1.6.8): 편집기 글칸에서 고른 부분 ↔ AI 창 '고칠 부분…
+- `aistopbtn.js` (76줄) '생성 중지' 버튼 (2.1.0): AI 호출(engine/aistop.js)이 하나라도 돌면 화면 …
 - `app.js` (587줄) 
 - `assets.js` (187줄) 
 - `cbs.js` (80줄) 
@@ -528,7 +530,7 @@
 - `style.js` (4줄) 주의: :host에 overflow:hidden/auto나 overscroll-behavior를 주면… — WH_CSS
 
 ## Risu 플러그인 API (우리 코드가 쓰는 호출, 횟수순)
-`getCharacterFromIndex`(72), `getDatabase`(52), `getChatFromIndex`(32), `getCurrentCharacterIndex`(27), `getCurrentChatIndex`(23), `setCharacterToIndex`(21), `setDatabaseLite`(18), `addRisuScriptHandler`(13), `nativeFetch`(12), `setChatToIndex`(9), `addRisuReplacer`(8), `saveAsset`(7), `readImage`(6), `hideContainer`(6), `registerButton`(5), `toggle`(5), `getRootDocument`(4), `showContainer`(4), `requestPluginPermission`(3), `risuFetch`(2), `addProvider`(2), `getDatabaseCached`(2), `getLocalPluginStorage`(2), `unregisterUIPart`(2), `removeRisuReplacer`(2), `checkCharOrder`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `initPublicLinkSession`(2), `getColorScheme`(2)
+`getCharacterFromIndex`(72), `getDatabase`(52), `getChatFromIndex`(32), `getCurrentCharacterIndex`(27), `getCurrentChatIndex`(23), `setCharacterToIndex`(21), `setDatabaseLite`(18), `addRisuScriptHandler`(13), `nativeFetch`(12), `setChatToIndex`(9), `addRisuReplacer`(8), `saveAsset`(7), `readImage`(6), `hideContainer`(6), `registerButton`(5), `getRootDocument`(5), `toggle`(5), `requestPluginPermission`(4), `showContainer`(4), `risuFetch`(2), `addProvider`(2), `getDatabaseCached`(2), `getLocalPluginStorage`(2), `unregisterUIPart`(2), `removeRisuReplacer`(2), `checkCharOrder`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `initPublicLinkSession`(2), `getColorScheme`(2)
 
 ## RisuAI 본체 구조 (kwaroran/RisuAI, 2026.10.220 기준)
 읽기 전용 클론: `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/kwaroran/risuai` (add_repo로 읽기만 가능, 쓰기 불가). 전체를 읽지 말고 아래 위치만 grep한다.
