@@ -7,7 +7,7 @@ import { rowState, groupByCategory } from "../../engine/addons.js";
 import { openAddonMaker, confirmCustomImport } from "./addonmaker.js";
 
 const STATE = { available: "받을 수 있어요", update: "새 버전이 있어요", installed: "켜져 있어요", off: "꺼져 있어요", "needs-core": "Dusk를 먼저 업데이트해야 해요" };
-export const CUSTOM_NOTE = "직접 만들거나 받은 애드온이에요. 만든 애드온은 자유롭게 공유할 수 있어요. 괜찮은 기능은 제작자에게 공식 기능으로 넣어 달라고 제안할 수도 있어요.";
+export const CUSTOM_NOTE = "직접 만들거나 받은 애드온이에요. 만든 애드온은 자유롭게 공유할 수 있어요. 괜찮은 기능은 Dusk 개발자가 제작자에게 공식 기능으로 넣고 싶다고 요청할 수도 있어요.";
 
 export function addonBox(ctx) {
   const A = ctx.addons;
