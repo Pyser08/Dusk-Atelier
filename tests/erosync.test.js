@@ -105,3 +105,18 @@ test("월경 주기: Dusk 기록이 켜져 있으면 엔진에 알리고, 끄면
   assert.equal(sent.at(-1), false);
   await er.stop();
 });
+
+test("인물 골라서 분석: profile('lore')는 본체 목록을 그대로, 본체가 예전 것이면 이유를 돌려준다", async () => {
+  const api = fakeApi(); api.mem.set(ERO_KEY, "on");
+  const started = [];
+  const profiles = { lore: async () => ({ ok: true, entries: [{ id: "a", title: "하나", chars: 10, picked: false, analysed: false }] }), start: async (kind, ids) => { started.push([kind, ids]); return { running: true }; } };
+  const er = createErosync(api, { boot: async () => ({ loaded: () => true, dispose: async () => {}, profiles }) });
+  await er.boot();
+  assert.deepEqual((await er.profile("lore")).entries.map((x) => x.id), ["a"]);
+  assert.equal((await er.profile("start", "lore", ["a"])).ok, true);
+  assert.deepEqual(started, [["lore", ["a"]]]);
+  const old = createErosync(fakeApi({}), { boot: async () => ({ loaded: () => true, dispose: async () => {}, profiles: { start: async () => ({}) } }), load: async () => true });
+  await old.boot();
+  const r = await old.profile("lore");
+  assert.equal(r.ok, false); assert.match(r.reason, /골라/);
+});

@@ -96,10 +96,22 @@ export function estimateUsed(tagged, messages, { depth = 5, duskFired = {} } = {
 // 응답 글로 기록을 찾는 열쇠: 앞부분 60자(공백·기호 제외). 화면 글에는 테마·정규식이 넣은 HTML 태그(<br>, <p> 등)가
 // 섞일 수 있어 태그와 엔티티를 먼저 걷고 비교한다(안 그러면 'br' 같은 글자가 끼어 못 찾는다).
 const plain = (t) => String(t ?? "").replace(/<[^>]*>/g, "").replace(/&(?:nbsp|amp|lt|gt|quot|#\d+|#x[\da-f]+);/gi, "");
-export const headKey = (text) => squash(plain(text)).slice(0, 60);
-export const tailKey = (text) => { const t = squash(plain(text)); return t.length > 40 ? t.slice(-40) : ""; };
+// 3.0.8(채팅 속도): 같은 글을 로어북 로그·호출 표시·게이지가 저마다 걷고 눌러 쓰던 것(스트리밍 조각마다 4~5번, 화면 메시지마다 3번)을
+// 마지막 몇 개만 기억해 한 번으로. 글이 같으면 결과도 같으니 안전하다.
+const KEY_MAX = 8, keyMemo = new Map();
+function squashedOf(text) {   // (export 안 함: 애드온이 코어 export 이름을 검사하므로, 2.0.7 코어에서도 애드온이 켜지게)
+  const s = String(text ?? "");
+  const hit = keyMemo.get(s);
+  if (hit !== undefined) { keyMemo.delete(s); keyMemo.set(s, hit); return hit; }
+  const out = squash(plain(s));
+  keyMemo.set(s, out);
+  while (keyMemo.size > KEY_MAX) keyMemo.delete(keyMemo.keys().next().value);
+  return out;
+}
+export const headKey = (text) => squashedOf(text).slice(0, 60);
+export const tailKey = (text) => { const t = squashedOf(text); return t.length > 40 ? t.slice(-40) : ""; };
 export function matchRecord(recs, text) {
-  const t = squash(plain(text));
+  const t = squashedOf(text);
   if (t.length < 4) return null;
   for (let i = recs.length - 1; i >= 0; i--) {
     const r = recs[i];

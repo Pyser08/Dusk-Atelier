@@ -9,7 +9,7 @@ import { collectWriterSeedSources } from '../../engine/pot/source-seed.js';
 import { stageContextCount } from '../../engine/pot/stage-context.js';
 import { chatTraceTurn } from './trace-turn.js';
 import { loadUserActor } from '../../engine/pot/user-identity.js';
-import { automaticRecordExpired } from '../../engine/pot/wiki-retention.js';
+import { automaticRecordExpired, latestAssistantIndex } from '../../engine/pot/wiki-retention.js';
 import { normalizeWikiScope, restoreWikiHistoryBatch } from '../../engine/pot/wiki-schema.js';
 import { executeWriterBatches } from './writer-batch.js';
 import { WriterCandidateHandoff } from '../../engine/pot/writer-handoff.js';
@@ -110,7 +110,7 @@ export class AutoWikiController {
       const metadata = { characterId: target.characterId, chatKey: target.chatKey, characterName: target.characterName, chatName: target.chatName }, store = await this.wikiController.repository.openScope(metadata, { refresh: true }); let scope = store.snapshot();jobStore=store;if(!isCurrent()){if(generation===this.generation){this.phase='idle';this.message='이 채팅에 추적할 인물이 없습니다.';this.emit();}return;}
       if (store.status().phase === 'save-error') { await store.retry(); if (store.status().phase === 'save-error') throw new Error('target-save'); scope = store.snapshot(); if (!isCurrent()) return; }
       const completed = completedAutoRecord(scope,identity); if (completed) { this.phase = 'completed'; this.message = '이미 반영된 RP'; this.emit(); return; }
-      if(automaticRecordExpired(scope,{messageIndex:arg.messageIndex,messageKey,identity})){this.phase='manual';this.message='이전 자동 기록이 정리된 범위입니다. 중복 반영을 막기 위해 자동 갱신하지 않았습니다. 필요하면 수동 Writer를 사용해주세요.';this.emit();return;}
+      if(automaticRecordExpired(scope,{messageIndex:arg.messageIndex,messageKey,identity,latestAssistantIndex:latestAssistantIndex(chat)})){this.phase='manual';this.message='이전 자동 기록이 정리된 범위입니다. 중복 반영을 막기 위해 자동 갱신하지 않았습니다. 필요하면 수동 Writer를 사용해주세요.';this.emit();return;}
       if(!arg.manualRetry&&Object.values(scope.automation.records).some(record=>record.identity===identity&&record.status==='failed')){this.phase='failed';this.message='이 RP의 Writer가 실패한 상태입니다. 수동 재시도를 기다립니다.';this.emit();return;}
       const traceMetadata={...metadata,turnNumber:chatTraceTurn(chat,arg.messageIndex)};this.traceStore?.ensurePipeline?.(traceMetadata);progressToken=this.progressPanel?.writerStart()??null;this.activeRequests.set(controller,progressToken);
       // Same message edited, or (V29) a reroll/replacement: the host gives the new answer a new chatId at the same position,

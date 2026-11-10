@@ -29,6 +29,7 @@ import { appendDuskSection, splitDusk, checkDusk, SECTION_MARK } from "../engine
 import { CYCLE_BLOCK_MARK, CYCLE_FIELD_PROMPT, applyCycleReport } from "../engine/cyclereport.js";
 import { parseJson } from "../engine/memoryprompt.js";
 import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
+import { healDeps } from "../engine/settingdeps.js";
 import { makeTools } from "./memorytools.js";
 import { potConfirm } from "../engine/memoryswitch.js";
 import { MEMORY_DEFAULT_PROMPT_1, MEMORY_DEFAULT_PROMPT_2 } from "./memory-default-prompts.js";
@@ -61,6 +62,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     settings.update((s) => {
       s.enabled = true; s.autoWriterEnabled = true; s.retrievalMode = f.mode === "accurate" ? "router" : "keyword";
       if (!f.advanced) { s.hypaReferenceEnabled = false; s.hypaPlusReferenceEnabled = false; }  // 리스 기본 메모리(Hypa)는 Dusk 장기기억이 대신한다: 고급 모드를 켰을 때만 설정값을 따른다
+      healDeps(s);  // 켜 둔 기능의 선행 조건(예: 월경·임신 기록 → 인물 상태 기록)을 함께 맞춘다 — 화면을 거치지 않고 켜진 예전 설정도 여기서 고쳐진다
       s.useRisuSubmodel = m.useRisuSubmodel;
       if (!m.useRisuSubmodel) { s.models.shared = m.shared; for (const [k, v] of Object.entries(m.stages)) s.models.stages[k] = v.mode === "dedicated" ? v : { ...s.models.stages[k], mode: "shared" }; }
     });
@@ -98,7 +100,11 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       await store.updateIndex((idx) => { idx.pot ??= {}; idx.pot.settingsBackup = idx.pot.settings; idx.pot.settings = null; });
       await settings.load();
     }
-    settings.forceRelationshipOnlyMode();
+    // 서사관계 전용 모드는 Dusk 기본값이라 처음 한 번만 켠다. 예전엔 시작할 때마다 다시 켜서, 고급 설정에서 꺼도 새로고침하면 말없이 되돌아갔다.
+    if ((await store.getIndex()).pot?.relOnlyDefaultV1 !== true) {
+      settings.forceRelationshipOnlyMode();
+      await store.updateIndex((idx) => { idx.pot ??= {}; idx.pot.relOnlyDefaultV1 = true; });
+    }
     const trace = new RuntimeTraceStore(api.pluginStorage); await trace.load().catch(() => {});
     const wiki = new WikiController(api, storage, { isEnabled: () => settings.snapshot().enabled });
     settings.setActiveBotResolver?.(() => wiki.scope?.characterId || "");

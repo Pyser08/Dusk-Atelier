@@ -23694,17 +23694,43 @@ Constraint: {{constraint}}
     duskReadCache = null;
     return duskProfileGet(profileId);
   }
+  // Dusk: 인물 골라서 분석 — 이 봇의 로어북 항목 목록(고를 수 있는 것)과 지금 골라 둔 것. 원본의 '인물 로어북 분석' 흐름을 그대로 쓴다.
+  async function duskLoreList() {
+    const { context } = await duskProfileCtx('');
+    const config = normalizeConfig(context.config);
+    const inventory = await collectSourceInventory(context.character, context.scope, { maxSourceChars: config.analysisMaxSourceChars });
+    const index = selectedLoreInventoryIndex(inventory);
+    const selection = normalizeLoreSelection((await getBotOverride(context.scope.sourceBundleKey)).loreSelection);
+    const picked = new Set(selectedLoreRows(selection, inventory).filter(row => row.available).map(row => row.id));
+    const done = new Set(contextProfiles(context).flatMap(profile => (profile.selectedLore?.entries || []).map(entry => entry.id)));
+    const entries = [...(index?.byId.values() || [])].filter(item => item.text)
+      .map(item => ({ id: String(item.id), title: String(item.title || item.id), chars: item.text.length, picked: picked.has(item.id), analysed: done.has(item.id) }));
+    return { ok: true, max: MAX_PROFILE_CHARACTERS, entries, people: contextProfiles(context).map(profile => ({ id: profile.id, name: String(profile.name || '') })) };
+  }
+  // 고른 로어북 항목을 이 봇의 선택으로 저장한다(분석 시작 직전). ids: 로어북 항목 id 배열.
+  async function duskLoreSelect(context, ids) {
+    const want = new Set((Array.isArray(ids) ? ids : []).map(String));
+    if (!want.size) throw new Error('분석할 인물을 한 명 이상 골라 주세요');
+    const config = normalizeConfig(context.config);
+    const inventory = await collectSourceInventory(context.character, context.scope, { maxSourceChars: config.analysisMaxSourceChars });
+    const index = selectedLoreInventoryIndex(inventory);
+    const selectedEntries = [...(index?.byId.values() || [])].filter(item => item.text && want.has(String(item.id))).map(item => ({ id: item.id, hash: item.hash, title: item.title }));
+    if (!selectedEntries.length) throw new Error('고른 로어북 항목을 찾지 못했어요. 목록을 새로 고쳐 주세요');
+    const before = normalizeLoreSelection((await getBotOverride(context.scope.sourceBundleKey)).loreSelection);
+    await updateBotOverride(context.scope.sourceBundleKey, { loreSelection: { selectedEntries, revision: before.revision + 1 } });
+  }
   function duskAnalysisStatus() {
     const a = analysisRuntime;
     return { running: !!a.running, cancelRequested: !!a.cancelRequested, phase: String(a.phase || ''), detail: String(a.detail || ''), completed: Number(a.completed || 0), total: Number(a.total || 0), failed: Number(a.failed || 0), message: String(uiStatusMessage || ''), tone: String(uiStatusTone || 'info') };
   }
   // 시작만 하고 바로 돌려준다(진행은 status로). 이미 다른 분석이 돌고 있으면 이유를 던진다.
   async function duskAnalysisStart(kind, profileId) {
-    const { context } = await duskProfileCtx(profileId || '');
+    const { context } = await duskProfileCtx(kind === 'lore' ? '' : profileId || '');
     if (analysisRuntime.running) throw new Error('이미 다른 분석이 진행 중이에요');
     const fail = (e) => { setUiStatus(String(e?.message || e), 'error'); };
     if (kind === 'single' || kind === 'axes') void startSingleProfileReanalysis(context, profileId, kind === 'axes' ? 'axes' : 'full', { config: context.config }).catch(fail);
     else if (kind === 'full') void startFullCharacterAnalysis(context, true).catch(fail);
+    else if (kind === 'lore') { await duskLoreSelect(context, profileId); void startSelectedLoreAnalysis(context, 'start').catch(fail); }
     else throw new Error('알 수 없는 분석 종류예요');
     return duskAnalysisStatus();
   }
@@ -23862,7 +23888,7 @@ Constraint: {{constraint}}
     content: { get: duskContentGet, set: duskContentSet, global: duskContentGlobal },
     config: { get: duskConfigGet, set: duskConfigSet },
     behind: { list: duskBehindList, remove: duskBehindRemove },
-    profiles: { get: duskProfileGet, edit: duskProfileEdit, reset: duskProfileReset, status: duskAnalysisStatus, start: duskAnalysisStart, cancel: () => { requestAnalysisCancel(); return duskAnalysisStatus(); } },
+    profiles: { get: duskProfileGet, edit: duskProfileEdit, reset: duskProfileReset, status: duskAnalysisStatus, start: duskAnalysisStart, lore: duskLoreList, cancel: () => { requestAnalysisCancel(); return duskAnalysisStatus(); } },
     prompts: { get: duskPromptsGet, set: duskPromptSet },
     guard: { set: duskGuardSet },
     tags: { set: duskTagsSet },

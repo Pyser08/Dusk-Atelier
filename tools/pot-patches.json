@@ -143,5 +143,23 @@
   "why": "표준 쓰기: 막힌 사유를 그대로 안내",
   "from": "refreshAssert(this.ready(),'현재 채팅과 설정 저장을 완료한 뒤 실행해주세요.')",
   "to": "refreshAssert(this.ready(),this.notReadyWhy())"
+ },
+ {
+  "file": "src/engine/pot/wiki-retention.js",
+  "why": "3.0.8: 채팅이 짧아져 새 턴 번호가 정리 번호(prunedThrough) 아래로 가도, 지금 채팅의 마지막 AI 응답(꼬리)은 새 턴이라 자동 기록을 막지 않는다(갱신 영구 잠김 수정). latestAssistantIndex 도우미 export",
+  "from": "export function automaticRecordExpired(scope,{messageIndex,messageKey,identity}){\n  const ledger=scope.automation;if(!ledger)return false;",
+  "to": "export function latestAssistantIndex(chat){const list=Array.isArray(chat?.message)?chat.message:[];for(let i=list.length-1;i>=0;i--){if(!['user','human'].includes(String(list[i]?.role||'').toLowerCase()))return i;}return -1;}\nexport function automaticRecordExpired(scope,{messageIndex,messageKey,identity,latestAssistantIndex=null}){\n  const ledger=scope.automation;if(!ledger)return false;\n  if(Number.isInteger(latestAssistantIndex)&&latestAssistantIndex>=0&&messageIndex>=latestAssistantIndex)return false;"
+ },
+ {
+  "file": "src/data/pot/auto-wiki.js",
+  "why": "위 패치에 꼬리(마지막 AI 응답) 번호를 넘긴다",
+  "from": "automaticRecordExpired(scope,{messageIndex:arg.messageIndex,messageKey,identity})",
+  "to": "automaticRecordExpired(scope,{messageIndex:arg.messageIndex,messageKey,identity,latestAssistantIndex:latestAssistantIndex(chat)})"
+ },
+ {
+  "file": "src/data/pot/auto-wiki.js",
+  "why": "위 패치의 import",
+  "from": "import { automaticRecordExpired } from '../../engine/pot/wiki-retention.js';",
+  "to": "import { automaticRecordExpired, latestAssistantIndex } from '../../engine/pot/wiki-retention.js';"
  }
 ]

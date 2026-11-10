@@ -29,8 +29,10 @@ export function compactWikiRecords(scope){
   next.automation={records,activeByMessage,lastStatus,...(prunedThrough>=0?{prunedThrough}:{}),...(unindexedPruned?{unindexedPruned:true}:{})};
   return{scope:next,changed:JSON.stringify(scope.history)!==JSON.stringify(next.history)||JSON.stringify(automation)!==JSON.stringify(next.automation)};
 }
-export function automaticRecordExpired(scope,{messageIndex,messageKey,identity}){
+export function latestAssistantIndex(chat){const list=Array.isArray(chat?.message)?chat.message:[];for(let i=list.length-1;i>=0;i--){if(!['user','human'].includes(String(list[i]?.role||'').toLowerCase()))return i;}return -1;}
+export function automaticRecordExpired(scope,{messageIndex,messageKey,identity,latestAssistantIndex=null}){
   const ledger=scope.automation;if(!ledger)return false;
+  if(Number.isInteger(latestAssistantIndex)&&latestAssistantIndex>=0&&messageIndex>=latestAssistantIndex)return false;
   if(ledger.activeByMessage?.[messageKey]||Object.values(ledger.records||{}).some(record=>record.identity===identity))return false;
   return ledger.unindexedPruned===true||Number.isInteger(ledger.prunedThrough)&&messageIndex<=ledger.prunedThrough;
 }

@@ -186,3 +186,13 @@ test("기본 성격 변화 반영은 표준 자동", async () => {
   const src = (await import("node:fs")).readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
   assert.match(src, /developmentMode:\s*'standard_auto'/);
 });
+
+test("Dusk 인물 골라서 분석 연결부(실제 엔진): 채팅이 없으면 목록·시작 모두 이유를 알려 준다", async () => {
+  const { api } = fakeApi();
+  const e = await bootErosync(api);
+  assert.equal(typeof e.profiles.lore, "function");
+  await assert.rejects(() => e.profiles.lore(), /채팅/);
+  await assert.rejects(() => e.profiles.start("lore", ["a"]), /채팅/);
+  assert.equal(e.profiles.status().running, false);
+  await e.dispose();
+});

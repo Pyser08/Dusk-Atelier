@@ -48,13 +48,13 @@
     {
       "id": "memory",
       "name": "장기기억·관계도",
-      "version": "0.2.4",
+      "version": "0.2.5",
       "minCore": "2.0.0",
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "abcc75648a4f87143b56be5f3cadcea4699d11f05af0d6992d69ceb0ac582455",
-      "size": 1596680
+      "sha256": "2ac60dace63ca3d7f5aafcfdc24930ff16712cdbeb782a23f8a64332c92305a0",
+      "size": 1602132
     },
     {
       "id": "cards",
@@ -73,7 +73,7 @@
     {
       "id": "erosync",
       "name": "Erosync",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "minCore": "2.0.0",
       "hooks": true,
       "requires": [
@@ -81,8 +81,8 @@
       ],
       "desc": "NSFW 장면 강화 — 인물 성향·목표를 읽어 다음 응답의 장면 계획을 넣어요. 장기기억·관계도 애드온이 필요해요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/erosync.js",
-      "sha256": "abfffc7a8a692cb67cf3ebfaae37744b90dfc827c4e84aeeff110c4751db2bc3",
-      "size": 847015
+      "sha256": "da54720eec0298e166ccac687fb3b0ef07c46943512320f2e0d8e62b698f5f48",
+      "size": 848436
     },
     {
       "id": "protlink",

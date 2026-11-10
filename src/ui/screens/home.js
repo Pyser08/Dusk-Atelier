@@ -1,5 +1,6 @@
 // 홈 (1.8.3 목업 1): 지금 열린 채팅 → 상태 카드(스위치·숫자) → 바로가기 작은 4칸 → 이어서 하기 → 처음 둘러보기.
 // 오른쪽(PC)·아래(모바일): 최근 기록 → 빠른 설정(토글 5개).
+import { renderFeatureFind } from "./featurefind.js";
 import { maybePromptIntro } from './promptstab.js';
 import { readState } from "./homestate.js";
 import { h, replace } from '../dom.js';
@@ -30,6 +31,8 @@ export async function renderHome(ctx) {
   const dev = !!ctx.prefs.ui?.devMode;
   const host = h("div", { class: "rb-home rb-home2 rb-home3 rb-scroll" });
   replace(ctx.main, host);
+  // 기능 찾기: 위 검색창에 낱말을 적으면 홈 대신 찾은 기능 목록을 보여 준다(지우면 홈으로).
+  if (String(ctx.state.search ?? "").trim()) return renderFeatureFind(ctx, host, ctx.state.search);
   // 1.8.3: 모양(머리·상태 칸·바로가기·이어서·최근·빠른 설정)을 먼저 그리고, 읽은 정보만 칸 안에 나중에 채운다.
   // 바로가기·처음 둘러보기는 읽기와 무관해서 처음부터 눌러 쓸 수 있다.
   const bar = (w, hgt = 14) => h("i", { class: "rb-skel", style: `display:block;height:${hgt}px;width:${w}`, "aria-hidden": "true" });

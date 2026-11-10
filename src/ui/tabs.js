@@ -104,6 +104,7 @@ export var SUBNAMES = {
 export var subLabel = (tab, sub) => sub ? SUBNAMES[tab]?.[sub] ?? null : null;
 // 검색창이 있는 탭과 안내 문구
 export var SEARCH = {
+  home: "기능 찾기 (예: 생리, 호감, 테마, API)",
   modules: "모듈 이름, 로어북 키워드 검색",
   plugins: "플러그인 이름, 카테고리 검색",
   characters: "캐릭터 이름, 제작자 검색"

@@ -1,5 +1,17 @@
 # 현재 상태 — 3.0.8 (main 2.0.7에서 분기)
 
+## 최근 세션 (2026-11-10 오후 — 3.0.8: 기능 접근성·채팅 속도·Erosync 인물 고르기·자동 기록 잠김)
+- 사용자 제보: "켠 것처럼 보이는데 안 돈다"(월경·임신 기록은 고급 모드 안 ‘관계만 기록할 때 인지·정체 인식’이 ‘켬’이어야 동작) + 기능이 어디 있는지 못 찾음 + 채팅 느려짐 + Erosync 인물 선택 분석 + 장기기억 꼬이면 번호를 손으로 고쳐야 갱신됨.
+- **설정 선행 조건 자동 맞춤**: `engine/settingdeps.js`(DEPS 표: cycle→sexualDesireEnabled, cycle+relOnly→relationshipPerceptionMode "on"; `healDeps`·`depState`·`lockedBy`). 쓰는 곳: `ui/screens/memory/flowsettings.js`(모든 저장에 healDeps + 토스트 ‘필요한 설정을 함께 켰어요’, 성인 항목 아래 `cycleNote` 동작 중/아직 동작하지 않아요+‘함께 켜기’), `advanced.js`(인지·정체 segmented 잠김 안내 `#rb-mem-perc-lock`), `data/memoryturn.js` apply에서 healDeps(화면 안 거친 예전 설정도 시작 때 맞춤). 새 선행 조건은 DEPS에 한 줄.
+- **서사관계 전용 모드 강제 1회만**: memoryturn이 시작마다 `forceRelationshipOnlyMode()` 하던 것을 `idx.pot.relOnlyDefaultV1`로 처음 한 번만(고급에서 끈 값이 새로고침마다 되돌아가던 문제).
+- **기능 찾기**(코어): `engine/featurefind.js`(FEATURES 표: 이름·다른 말·위치·tab/sub/mem/find/adv/addon, `findFeatures`) + `ui/screens/featurefind.js`(홈 검색창 `SEARCH.home`, 결과 목록 → `openFeature`: ctx.state.mem 세팅 후 go, 제목 글 찾아 스크롤·`.rb-found` 강조, 고급 전용이면 안내) · `home.js`가 검색어 있으면 대신 그림. 화면 제목이 바뀌면 FEATURES의 find·path도 고칠 것(tests/featurefind.test.js).
+- **Erosync 인물 골라서 분석**: 본체 `src/erosync/erosync.js`에 `duskLoreList`/`duskLoreSelect`(원본 ‘인물 로어북 분석’ selectedLore 흐름 재사용, profiles.lore·start("lore", ids)) → `data/erosync.js` op "lore"(예전 본체면 이유 반환) → `ui/screens/memory/erosyncpick.js`(체크 목록 창, 검색·모두/해제·‘분석됨’) → `erosyncpage.js` 버튼. 메모리 애드온(화면)과 Erosync 애드온(본체) 양쪽 배포 필요.
+- **리수폿 자동 기록 ‘정리된 범위’ 영구 잠김**(= "번호 손으로 고쳐야" 제보로 판단): 채팅이 짧아져(삭제·되감기) 새 턴 messageIndex ≤ `automation.prunedThrough`면 모든 새 턴이 '이전 자동 기록이 정리된 범위'. `tools/pot-patches.json` 패치 3개: wiki-retention `automaticRecordExpired`에 `latestAssistantIndex` 옵션(꼬리=지금 채팅 마지막 AI 응답이면 막지 않음) + `latestAssistantIndex(chat)` export, auto-wiki 호출부에 전달. 시험 `tests/wiki-retention-tail.test.js`. 재생성: `git fetch --depth 1 origin ref/risupot` 후 `node tools/pot-split.mjs`.
+- **채팅 속도**: `engine/lorelog.js` `squashedOf`(글→눌린 열쇠 8개 메모, export 안 함 — 애드온이 코어 export 이름을 검사해 2.0.7에서 안 켜질까 봐), headKey/tailKey/matchRecord가 공유 → 조각마다 4~5번·메시지마다 3번 걷던 것 1번. `data/memoryrunner.js` schedule이 조각마다 `store.getIndex()`(인덱스 전체 파싱) 하던 것 3초 캐시. 실기기 체감은 미측정. 큰 지연(응답 시작 전 Router·Director 호출)은 설계상 ‘빠르게’ 모드로만 줄어듦 — 안 바꿈.
+- 배포: memory 0.2.5·erosync 0.1.2 build → `publish-addons`(아래 결과 참고). 코어(기능 찾기·lorelog 메모)는 릴리스 안 함(사용자 지시 대기). 공유 모듈 56개가 2.0.7에 모두 있고 새 export 요구 없음(스크립트로 확인).
+- 확인: npm test 1304 pass / 1 fail(`tests/pot-port.test.js` — ref/risupot 받으면 원래부터 실패, customPromptPlain 원본 없음) / 9 skip, build·check 동일함, build-addons --check 동일함, run-smoke 통과. 안내서 memory.html(설정 자동 맞춤·정리된 범위·인물 골라서 분석)·start.html(기능 찾기) 수정. 실기기(RisuAI·RisuBard·PocketRisu) 미확인.
+- 남은 일: [ ] 실기기에서 ‘함께 켜기’·기능 찾기·인물 골라서 분석 확인. [ ] 느려짐 원인을 실제 측정(어느 훅이 얼마나 걸리는지) — 필요하면 `tests/e2e`에 측정 스크립트. [ ] 다른 "켰는데 안 도는" 조합이 더 있으면 DEPS에 추가(제보 수집).
+
 ## 최근 세션 (2026-11-10 — 3.0.8: 리수폿/장기기억 자동 기록 실패율 급증)
 - 증상(사용자): 2.0.0 이후 실패가 30회 중 2~4 → 3회 중 1~2. 추론 20k~30k 토큰을 쓰고도 기억이 안 생김(검열 아님).
 - 원인: `data/pot/llm-client.js` callWriterModel은 모든 호출(Claude·OpenAI호환·리스 보조모델)에 시스템 "Return one JSON object only"를 붙이고, DeepSeek 생각 끔이면 response_format json_object까지 강제. 2.0.0 기록기(`engine/recorder.js`)는 'LINES ONLY'를 요구 → ① 지시 충돌로 추론 과다·빈 응답 ② JSON으로 낸 '변화 없음'(`{"lines":[]}`)을 형식 오류로 보고 인물마다 3번씩 재질문 ③ 빈 응답은 반환이 아니라 예외(empty-model-response)라 ask()의 재시도를 건너뛰고 1단계 한 번 빈 답에 기록 전체 실패 → 리수폿이 실패 처리, 대신 길 없음.

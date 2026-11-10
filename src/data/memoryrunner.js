@@ -211,12 +211,16 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   }
   // kind: "output"(응답 직후 훅) | "confirm"(다음 입력을 보낼 때). 설정한 자동 기록 시점과 맞는 쪽만 일정을 잡는다.
   let lastKind = "output";
+  // 3.0.8(채팅 속도): 출력 훅은 스트리밍 조각마다 불린다. 조각마다 인덱스 전체를 읽어 풀던 것을 3초 동안은 지난 값으로 쓴다(바뀐 설정은 늦어도 3초 뒤 반영).
+  let schedCache = { at: -Infinity, confirm: false, ms: 4000 };
   async function schedule(kind = "output") {
-    const idx = await store.getIndex().catch(() => null);
-    if ((kind === "confirm") !== (confirmOf(idx) === "next")) return;
+    if (Date.now() - schedCache.at > 3000) {
+      const idx = await store.getIndex().catch(() => null);
+      schedCache = { at: Date.now(), confirm: confirmOf(idx) === "next", ms: Math.max(0, Number(idx?.settings?.debounceSec ?? 4) * 1000) };
+    }
+    if ((kind === "confirm") !== schedCache.confirm) return;
     clearTimeout(timer); dirty = true; lastKind = kind;
-    const ms = Math.max(0, Number(idx?.settings?.debounceSec ?? 4) * 1000);
-    timer = setTimeout(() => tick(), ms);
+    timer = setTimeout(() => tick(), schedCache.ms);
   }
   const onOutput = (text) => { noteStreamChunk(); session.hooks++; session.hookAt = Date.now(); schedule("output").catch(() => {}); return text; };  // 본문은 그대로 반환
   // 사용자가 다음 말을 보내는 순간(요청 직전 훅)에 부른다: 직전 응답을 확정해 기록하기 시작한다.

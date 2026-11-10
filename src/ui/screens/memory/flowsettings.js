@@ -8,6 +8,7 @@ import { fail } from "./common.js";
 import { guideBtn } from "./guide.js";
 import { advancedGlobal } from "./advanced.js";
 import { advancedModel } from "./modeladv.js";
+import { healDeps, depState } from "../../../engine/settingdeps.js";
 import { LEVELS, FEATURE_CARDS, applyLevel, levelOf, levelPatch, summaryOf, needsOf } from "../../../engine/trackpreset.js";
 import { getCfg, saveCfg, keyStore, testPreset, listModels, getUsage, resetUsage } from "../../../data/modelhub.js";
 import { addPreset, updatePreset, removePreset, presetOf, STAGES, STAGE_LABEL } from "../../../engine/modelcfg.js";
@@ -28,7 +29,9 @@ export async function flowSections(ctx, host, { redraw }) {
 
   // ---- 1) 추적 수준 + 기능 카드
   const featHost = h("div", { class: "rb-mem-feats" }), lvHost = h("div");
-  const edit = (fn) => { st.update((s) => fn(s)); paint(); paintAdult(); };
+  // 설정을 고칠 때마다 선행 조건을 함께 맞춘다(engine/settingdeps.js). 함께 켠 것이 있으면 바로 알려 준다.
+  const save = (fn) => { let added = []; st.update((s) => { fn(s); added = healDeps(s); }); if (added.length) ctx.toast(`필요한 설정을 함께 켰어요: ${added.join(" · ")}`); return added; };
+  const edit = (fn) => { save(fn); paint(); paintAdult(); };
   const paint = () => {
     const snap = st.rawSnapshot(), f = snap.features, lv = levelOf(f);
     replace(lvHost, optionCards(LEVELS.map((l) => ({ value: l.id, label: l.label, text: l.text })), lv, (v) => edit((s) => { s.features = applyLevel(s.features, v); }), "추적 수준"),
@@ -125,18 +128,26 @@ export async function flowSections(ctx, host, { redraw }) {
   const adultHost = h("div");
   const paintAdult = () => {
     const snap = st.rawSnapshot(), op = snap.features.openness ?? {}, desire = snap.sexualDesireEnabled === true, cycle = op.cycle === true;
-    const ed = (fn) => { st.update((s) => fn(s)); paintAdult(); };
+    const ed = (fn) => { const added = save(fn); paintAdult(); if (added.length || !snap.features.openness?.cycle !== !st.rawSnapshot().features.openness?.cycle) paintAdv().catch(() => {}); };
     const rate = Number(op.cycleRate ?? 1);
     const rateLabel = h("b", null, `×${rate}`);
     const slider = h("input", { type: "range", class: "rb-range", min: 0.5, max: 3, step: 0.1, value: rate, "aria-label": "임신 확률 배수", onInput: (e) => { rateLabel.textContent = `×${Number(e.target.value)}`; }, onChange: (e) => ed((s) => { s.features.openness.cycleRate = Math.min(3, Math.max(0.5, Number(e.target.value) || 1)); }) });
     replace(adultHost, sec("성인 항목 (기본 꺼짐)", "성인 인물의 욕구·월경·임신을 따라가요. 켜지 않으면 아무것도 기록하지 않아요.",
       toggleRow("욕구 기록", "성인 항목이에요. 월경·임신 기록의 바탕이 돼요.", desire, (v) => ed((s) => { s.sexualDesireEnabled = v; if (!v) s.features.openness.cycle = false; })),
-      toggleRow("월경·임신 기록", "이야기 속 날짜로 주기·임신·출산을 프로그램이 셈해요. 날짜가 없는 턴은 아무것도 움직이지 않아요.", cycle, (v) => ed((s) => { if (v) { s.sexualDesireEnabled = true; s.features.openness.enabled = true; } s.features.openness.cycle = v; })),
+      toggleRow("월경·임신 기록", "이야기 속 날짜로 주기·임신·출산을 프로그램이 셈해요. 날짜가 없는 턴은 아무것도 움직이지 않아요. 켜면 필요한 설정도 함께 켜져요.", cycle, (v) => ed((s) => { if (v) s.features.openness.enabled = true; s.features.openness.cycle = v; })),
+      cycleNote(snap, ed),
       desire ? toggleRow("이상성향 기록", "특이한 성적 취향도 따라가요.", snap.paraphiliaEnabled === true, (v) => ed((s) => { s.paraphiliaEnabled = v; })) : null,
       desire ? toggleRow("노골적인 묘사 수위", "기록 문장이 직설적이 돼요. 꺼 두면 순화해서 적어요.", snap.explicitSexualStyleEnabled === true, (v) => ed((s) => { s.explicitSexualStyleEnabled = v; })) : null,
       cycle ? h("label", { class: "rb-mem-field" }, h("span", null, "임신 확률 배수 (0.5~3)"), slider, rateLabel) : null,
       cycle ? btn("기본값으로", { size: "sm", onClick: () => ed((s) => { s.features.openness.cycleRate = 1; }) }) : null));
   };
+  // 월경·임신 기록이 실제로 도는지 한 줄로 보여 준다. 조건이 빠져 멈춰 있으면 이유와 '함께 켜기'.
+  function cycleNote(snap, ed) {
+    const d = depState("cycle", snap);
+    if (d.state === "off") return null;
+    if (d.state === "working") return h("div", { class: "rb-note", id: "rb-mem-cycle-state", role: "status" }, `동작 중이에요 · 함께 켜 둔 설정: ${d.needs.join(" · ")}`);
+    return h("div", { class: "rb-note warn", id: "rb-mem-cycle-state", role: "status" }, `아직 동작하지 않아요 · 필요한 설정: ${d.missing.map((m) => m.label).join(" · ")} `, btn("함께 켜기", { size: "sm", onClick: () => ed(() => {}) }));
+  }
   paintAdult();
 
   // ---- 4) 가져오기·관리

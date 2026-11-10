@@ -1,5 +1,6 @@
 // 장기 기억 → Erosync 화면: 위에 상태·켜기, 아래에 탭(개요·수위·동작·분석·프롬프트·비하인드·데이터).
 // 인물 값은 인물 위키의 NSFW 탭에서 보고 고친다.
+import { pickLoreEntries } from "./erosyncpick.js";
 import { h, replace } from "../../dom.js";
 import { btn, pageHead, segmented } from "../../kit.js";
 import { mem } from "./common.js";
@@ -32,10 +33,11 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
   const analysisCard = () => {
     const line = analysisLine(ctx, () => {});
     const run = btn("전체 캐릭터 분석", { kind: "primary", id: "rb-erosync-analyze", disabled: !live, onClick: () => line.start("full", "") });
+    const pick = btn("인물 골라서 분석", { id: "rb-erosync-analyze-pick", disabled: !live, onClick: async () => { const ids = await pickLoreEntries(ctx); if (ids?.length) line.start("lore", ids); } });
     line.watch();
     return h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync-analysis" }, h("h3", null, "인물 분석"),
-      p("지금 열린 채팅의 모든 인물을 AI로 분석해 성향 값을 만들어요. AI 호출이 여러 번 들어가요. 인물 한 명만 다시 분석하려면 인물 위키의 NSFW 탭을 쓰세요."),
-      live ? h("div", { class: "rb-mem-sact" }, run) : p("Erosync를 켜면 분석할 수 있어요."), line.el);
+      p("지금 열린 채팅의 인물을 AI로 분석해 성향 값을 만들어요. 전부 분석하면 AI 호출이 많이 들어가니, 필요한 인물만 골라서 분석할 수도 있어요. 이미 분석한 한 명만 다시 하려면 인물 위키의 NSFW 탭을 쓰세요."),
+      live ? h("div", { class: "rb-mem-sact" }, run, pick) : p("Erosync를 켜면 분석할 수 있어요."), line.el);
   };
   const dataCard = () => {
     return h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync-data" }, h("h3", null, "데이터"),
