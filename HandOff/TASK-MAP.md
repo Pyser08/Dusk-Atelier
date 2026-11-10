@@ -25,6 +25,7 @@
 | 로어북 더스크화 규칙 설계 | `src/dev/aibuild/lorerefine.js`(duskdesign.js 규격 재사용), `src/ui/screens/loredusk.js` |
 | 봇빌더 연동(AI로 봇 만들기) | `src/engine/workshop.js`, `src/data/workshop.js`, `src/data/workshoppatch.js`, `src/ui/screens/workshoplink.js`, `src/data/plugins.js`(DA Interop 동작) |
 | 페르소나 빌더 | `src/data/personabuilder.js`(코어 공유), `src/data/personasop.js`(SOP 3단계·NAI 태그·비교, 애드온 전용), `src/ui/screens/personabuilder.js` |
+| 모듈 호환(모듈 이미지가 봇 이미지처럼) | `src/engine/modcompat.js`(태그 모양 학습·등록부·지키기·그리기, 순수), `src/engine/modcompatprompt.js`(모델 안내), `src/data/modcompat.js`(훅·캐시·진단), `src/ui/screens/modcompat.js`, `addons/modcompat/index.js` — 전부 애드온 전용 |
 | AI로 봇 만들기 | `src/ui/screens/aibuild.js`, `src/ui/screens/newbot.js` |
 | 테마 빌더/꾸미기 | `src/ui/screens/themebuilder.js`, `src/ui/screens/chattheme.js`, `src/ui/theme.js` |
 | Erosync(NSFW 장면 강화, 격리 이식) | `src/erosync/erosync.js`(본체, 원본 그대로·고치지 말고 비교만), `src/data/erosync.js`(켜기/끄기), `src/ui/screens/memory/erosyncui.js`(기억 설정 카드) · 위키/관계도 연동: `src/engine/erosyncview.js`, `src/ui/screens/memory/erosyncwiki.js`(+`personv2.js`), `src/ui/screens/relmap.js`(Erosync 층 칩) |

@@ -116,6 +116,18 @@
       "size": 254047
     },
     {
+      "id": "modcompat",
+      "name": "모듈 호환",
+      "category": "manage",
+      "version": "0.1.0",
+      "minCore": "2.1.0",
+      "hooks": true,
+      "desc": "봇이 어떻게 만들어졌든 켜 둔 모듈의 이미지가 그 봇 이미지와 같은 모양으로 나오게 해요. 봇 정규식이 모듈 이미지를 지우지 못하게 지키고, 모델에게 모듈 인물·표정 이름을 알려 줘요.",
+      "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/modcompat.js",
+      "sha256": "0e452c87867de90e5a85d38daef1ba6fd0d3397ce3b2650099828f96ef7ace41",
+      "size": 25376
+    },
+    {
       "id": "stealth",
       "name": "더스크 스텔스",
       "category": "look",

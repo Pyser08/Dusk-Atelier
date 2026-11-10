@@ -1,6 +1,16 @@
 # 현재 상태 — 2.1.0 브랜치 (3.0.8 내용을 옮김, main 2.0.7에서 분기)
 
 
+## 최근 세션 (2026-11-10 밤 3 — 모듈 호환 애드온 modcompat 0.1.0, 미배포)
+- 사용자 목표: 폐쇄형 봇(이름 화이트리스트·{{assetlist}} 확인·이미지 정규식 없음 등)에 확장 모듈을 켜도 **모듈 에셋이 원본 봇 이미지처럼 나오고 완벽히 적용**. Lua는 어쩔 수 없음. 모드 매니저 zip은 참고만(파일 사전 병합이라 방식이 다름).
+- 리스 소스 확인(업스트림 RisuAI): 플러그인 훅은 CBS·정규식보다 먼저(scripts.ts processScriptFull) / `{{raw::}}`·`{{img::}}`·`<img src="이름">`은 모듈 에셋도 찾음(parser.svelte.ts·ChatBody.svelte) / `{{assetlist}}`는 봇 에셋만(cbs.ts) / Lua 트리거는 모드별 엔진 하나에 코드가 다르면 새로 만들어 각자 실행 → 이름 충돌 없음, 대신 느려짐(scriptings.ts). RisuBard 저장소는 이 세션 접근 목록에 없어 업스트림으로 확인.
+- 구조(봇을 가정하지 않음): `engine/modcompat.js` — 그리기 정규식(editdisplay·out에 에셋 CBS·$참조)의 in을 이 봇의 태그 모양으로 학습 + 기본 모양 → output 훅이 모듈 에셋 태그만 봇 editoutput 사슬을 흉내 내 지워지면 감쌈(WJ 한 글자 → 그래도 지워지면 b64 표식) → process 훅이 되돌림(봇 요청 정규식이 자기 태그처럼 처리) → display 훅이 되돌린 뒤 planRender: keep(봇 정규식이 그대로 그림) / inline(봇 out이 {{assetlist}}를 보거나 이름 규칙(.png 붙이기 등)이 안 맞으면 같은 out을 모듈 이름으로 대신 적용, `<img x-dusk-mc`로 재매치 막음) / 봇과 다른 모양이면 봇 모양으로 바꿔 다시 판단 / 최후 `{{img::이름}}`. 이름 오타는 같은 인물의 가까운 표정(default 우선)으로.
+- `engine/modcompatprompt.js` — 요청 글에서 봇의 실제 태그 예시를 찾아 `{name}` 틀(없으면 정규식에서 합성), 인물·표정 묶기(groupSubjects: 여러 인물에 반복되는 꼬리=표정), 스스로 그리는 모듈은 제외, 최근 나온 인물 먼저, 3500자 상한. beforeRequest(model만)로 `[Dusk · module images]` 블록 하나.
+- `data/modcompat.js` — 문맥 캐시(0.8초 안엔 호스트에 안 물음, 봇 카드 60초), 봇별 설정(on·guard·display·prompt·promptOff) `dusk.addon.data.modcompat.settings`, 진단(모듈별 처리·겹치는 정규식/로어북/Lua), ‘이 채팅의 지킴 표식 풀기’. 화면 `ui/screens/modcompat.js`(SDK addPage). 애드온 `addons/modcompat`(manage, hooks, minCore 2.1.0 — SDK addPage가 2.1.0부터). 코어 변경 없음(dusk_atelier.js 동일함, 공유 코어 모듈 0개).
+- 시험: `tests/modcompat.test.js`(27, 고정 데이터 `tests/fixtures/modcompat.js` = 헌터물 화이트리스트형·대학 assetlist형·정규식 없는 봇 + 확장 모듈·자체 렌더 모듈 구조만 줄임), e2e `tests/e2e/run-modcompat.mjs`(24, PC·모바일, 훅 포함; app.entry에 opts.modcompat). 실제 업로드한 세 봇·두 모듈로도 스크래치 확인(한 응답 처리 1~3ms). 참고: 올려 준 헌터물 정규식의 화이트리스트(에셋 찐빠 수정6)는 JS에서 잘못된 정규식이라 원래 꺼져 있음.
+- 확인: npm test 1375 pass / 1 fail(pot-port, 원래부터), build·check 동일함, build-addons --check 동일함, run-modcompat 24/24, run-smoke·run-addons-ui(46) 통과. 실기기·실제 모델 미확인.
+- 남은 일: [ ] 세 호스트 실기기에서 output/display/process 훅 순서·성능(긴 채팅 열기) 확인 [ ] 코어 이미지 태그 자동 교정(imgtagfix)과 함께 켰을 때 순서 확인(코어가 먼저 등록되어 먼저 돎) [ ] 2단계: 모듈 로어북이 `{{getvar::인물}}`로 숨기는 경우 감지 변수 제공(봇별 규약 선택) [ ] 2단계: 모듈끼리 같은 정규식·로어북 교체/병합(지금은 진단만) [ ] 배포(publish-addons)는 사용자 지시 대기, 2.1.0 코어 릴리스 필요.
+
 ## 최근 세션 (2026-11-10 밤 2 — 애드온 상자 홈 이동·카테고리·커스텀 애드온)
 - 홈 `ui/screens/addonsui.js` `addonBox`(hmain, 바로가기 아래). 설정 탭 `addonCard`는 '홈에서 보기' 안내만. 카테고리 `engine/addons.js` ADDON_CATS·categoryOf(목록 category → 없으면 id 표)·groupByCategory, addons.src.json에 category(코드 dist는 그대로).
 - 커스텀 애드온: `data/addons.js` inspectCustom·importCustom·setCustomOn·removeCustom·exportCustom·bootCustom(공식 다음), 키 `dusk.addon.custom.index`/`dusk.addon.custom.code.<id>`, 실행 표 "custom:<id>".

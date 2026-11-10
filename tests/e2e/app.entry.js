@@ -9,6 +9,9 @@ import { activate as cardsAddon } from "../../addons/cards/index.js";
 import { activate as protlinkAddon } from "../../addons/protlink/index.js";
 import { activate as providerAddon } from "../../addons/provider/index.js";
 import { activate as stealthAddon } from "../../addons/stealth/index.js";
+import { activate as modcompatAddon } from "../../addons/modcompat/index.js";
+import { createAddonSdk } from "../../src/data/addonsdk.js";
+import { hunterBot, hunterExtra, selfModule } from "../fixtures/modcompat.js";
 import { renderProvider as _rpv } from "../../src/ui/screens/provider.js";
 import { renderProtLink as _rp } from "../../src/ui/screens/protlink.js";
 import { renderMemory as _rm } from "../../src/ui/screens/memory/index.js";
@@ -190,6 +193,19 @@ window.bootApp = async (seed, opts = {}) => {
   if (opts.addons) {  // 애드온 카드 시험: 파일은 실행기가 window.__addonFiles로 넣어 준다(주소 → 내용)
     app.ctx.addons = createAddons(api, { core: "2.1.0", ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => app.ctx.toast?.(t, o), openDusk: async (tab) => { if (tab) app.ctx.go(tab); } }, fetcher: async (_a, url0) => { const url = url0.split("?")[0]; return (url.endsWith("addons.json") ? window.__addonFiles?.manifest : window.__addonFiles?.[url]) ?? null; } });
     await app.ctx.addons.boot();
+  }
+  // 모듈 호환 애드온: 헌터물 봇(화이트리스트형) + 이미지 모듈·스스로 그리는 모듈을 켠 상태
+  if (opts.modcompat) {
+    const bot = { ...structuredClone(hunterBot), type: "character", chats: [{ message: [] }], modules: [] };
+    const mods = [structuredClone(hunterExtra), structuredClone(selfModule)];
+    const getDb0 = api.getDatabase;
+    api.getCharacterFromIndex = async () => structuredClone(bot);
+    api.getDatabase = async (keys) => ({ ...(await getDb0(keys)), modules: structuredClone(mods), enabledModules: mods.map((m) => m.id) });
+    const hooks = (window.__mcHooks = {});
+    api.addRisuScriptHandler = async (n, f) => { hooks[n] = f; };
+    api.addRisuReplacer = async (n, f) => { hooks[n] = f; };
+    const { sdk } = createAddonSdk(api, { app: app.ctx, ext: app.ctx.ext, openDusk: async (t) => app.ctx.go(t) }, { id: "modcompat", name: "모듈 호환", version: "0.1.0" });
+    await modcompatAddon(api, { ext: app.ctx.ext, app: app.ctx, dusk: sdk, toast: () => {}, openDusk: async () => {} });
   }
   app.ctx.aiStop = createAiStopButton(api, { getCtx: () => app.ctx });   // main.js와 같게
   window.__trackedRunLLM = trackedRunLLM;
