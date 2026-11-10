@@ -4,6 +4,7 @@
     {
       "id": "manage",
       "name": "캐릭터·모듈·플러그인 관리",
+      "category": "manage",
       "version": "0.1.1",
       "minCore": "2.0.0",
       "hooks": false,
@@ -15,6 +16,7 @@
     {
       "id": "provider",
       "name": "프로바이더 (실험)",
+      "category": "lab",
       "version": "0.2.3",
       "minCore": "2.0.0",
       "hooks": true,
@@ -26,6 +28,7 @@
     {
       "id": "chattheme",
       "name": "채팅 테마 만들기",
+      "category": "make",
       "version": "0.1.1",
       "minCore": "2.0.0",
       "hooks": false,
@@ -37,6 +40,7 @@
     {
       "id": "aibuild",
       "name": "AI로 봇·페르소나 만들기",
+      "category": "make",
       "version": "0.1.4",
       "minCore": "2.0.0",
       "hooks": true,
@@ -48,6 +52,7 @@
     {
       "id": "memory",
       "name": "장기기억·관계도",
+      "category": "memory",
       "version": "0.2.7",
       "minCore": "2.0.0",
       "hooks": true,
@@ -59,6 +64,7 @@
     {
       "id": "cards",
       "name": "기억카드",
+      "category": "memory",
       "version": "0.1.1",
       "minCore": "2.0.0",
       "hooks": false,
@@ -73,6 +79,7 @@
     {
       "id": "erosync",
       "name": "Erosync",
+      "category": "memory",
       "version": "0.1.2",
       "minCore": "2.0.0",
       "hooks": true,
@@ -87,6 +94,7 @@
     {
       "id": "protlink",
       "name": "ProtLink+",
+      "category": "manage",
       "version": "0.1.2",
       "minCore": "2.0.0",
       "hooks": false,
@@ -98,6 +106,7 @@
     {
       "id": "widgets",
       "name": "위젯",
+      "category": "look",
       "version": "0.1.2",
       "minCore": "2.0.0",
       "hooks": false,
@@ -107,8 +116,21 @@
       "size": 254047
     },
     {
+      "id": "modcompat",
+      "name": "모듈 호환",
+      "category": "manage",
+      "version": "0.1.0",
+      "minCore": "2.1.0",
+      "hooks": true,
+      "desc": "봇이 어떻게 만들어졌든 켜 둔 모듈의 이미지가 그 봇 이미지와 같은 모양으로 나오게 해요. 봇 정규식이 모듈 이미지를 지우지 못하게 지키고, 모델에게 모듈 인물·표정 이름을 알려 줘요.",
+      "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/modcompat.js",
+      "sha256": "8b607ce384932b9aaa22372c54ed16b5add9e47b90594a1f5ad8b28f0e3f79e1",
+      "size": 30525
+    },
+    {
       "id": "stealth",
       "name": "더스크 스텔스",
+      "category": "look",
       "version": "0.3.47",
       "minCore": "2.0.0",
       "hooks": false,
