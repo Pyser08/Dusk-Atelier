@@ -1,4 +1,4 @@
-// 설정 탭 '애드온 (시험)' 카드: 받기 → 켜짐(채팅 메뉴 버튼 등록) → 끄기 → 지우기. node tests/e2e/run-addons-ui.mjs
+// 홈 '애드온' 상자(2.1.0, 예전 설정 탭): 받기 → 켜짐(채팅 메뉴 버튼 등록) → 끄기 → 지우기. node tests/e2e/run-addons-ui.mjs
 import { createRequire } from "node:module";
 import { manifestWithHello } from "./hello-fixture.mjs";
 import fs from "node:fs";
@@ -17,7 +17,7 @@ for (const mobile of [false, true]) {
   await page.addScriptTag({ content: r.outputFiles[0].text });
   await page.evaluate(async ([f]) => { window.__addonFiles = f; const btns = (window.__btns = []); const orig = window.fakeApi; await window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99 }) }, { addons: true }); }, [files]);
   await page.evaluate(() => { const a = window.__api; a.registerButton = async (o) => { (window.__btns ??= []).push(o.name); return "b1"; }; a.unregisterUIPart = () => { window.__btns = (window.__btns ?? []).slice(0, -1); }; });
-  await page.evaluate(() => window.__app.ctx.go("settings")); await page.waitForTimeout(500);
+  await page.evaluate(() => window.__app.ctx.go("home")); await page.waitForTimeout(500);
   const row = page.locator("[data-addon=hello]");
   ok(`[${tag}] 애드온 카드에 시험 애드온이 보임`, (await row.count()) === 1 && /받을 수 있어요/.test(await row.textContent()), await page.locator("#rb-addons").textContent().catch(() => ""));
   await row.getByRole("button", { name: "받기" }).click(); await page.waitForTimeout(500);
@@ -41,8 +41,38 @@ for (const mobile of [false, true]) {
   const s1 = await sc();
   ok(`[${tag}] ${aid} 받기·끄기·켜기·지우기 동안 스크롤 그대로`, s0.top > 0 && Math.abs(s1.top - s0.top) < 20, `${s0.top} → ${s1.top}`);
   ok(`[${tag}] ${aid} 켜고 끌 때 창을 다시 불러오지 않음`, await page.evaluate(() => document.querySelector(".rb-main").firstElementChild?.__keepMark === 1));
-  await page.evaluate(() => window.__app.ctx.go("tools")); await page.waitForTimeout(400); await page.evaluate(() => window.__app.ctx.go("settings")); await page.waitForTimeout(500);
+  await page.evaluate(() => window.__app.ctx.go("tools")); await page.waitForTimeout(400); await page.evaluate(() => window.__app.ctx.go("home")); await page.waitForTimeout(500);
   }
+  // ── 2.1.0 카테고리·커스텀 애드온 ──
+  ok(`[${tag}] 카테고리로 묶임(기억·꾸미기·커스텀 애드온)`, await page.evaluate(() => ["memory", "look", "custom"].every((c) => document.querySelector(`.rb-addon-cat[data-cat=${c}]`)) && document.querySelector(".rb-addon-cat[data-cat=memory] [data-addon=memory]") && document.querySelector(".rb-addon-cat[data-cat=look] [data-addon=stealth]")));
+  ok(`[${tag}] 머리 오른쪽에 불러오기·만들기`, await page.evaluate(() => { const h = document.querySelector(".rb-addon-head"), a = document.querySelector("#rb-addon-import"), b = document.querySelector("#rb-addon-make"); if (!h || !a || !b) return false; const r = h.getBoundingClientRect(), x = b.getBoundingClientRect(); return x.right > r.right - 40 && a.getBoundingClientRect().top < r.top + 60; }));
+  ok(`[${tag}] 커스텀 묶음 안내(자유 공유·공식 제안)`, /자유롭게 공유/.test(await page.locator("#rb-addon-custom-note").textContent()) && /공식 기능/.test(await page.locator("#rb-addon-custom-note").textContent()));
+  const tpl = (v) => `export const meta = { id: "e2e-hi", name: "E2E 애드온", version: "${v}", desc: "시험", author: "나", minCore: "2.1.0" };\nexport async function activate(api, ctx) { ctx.dusk.addPage({ title: "E2E 화면", render(el) { ctx.dusk.ui.replace(el, ctx.dusk.ui.card("안녕", ctx.dusk.ui.btn("눌러 보기", { onClick: () => ctx.dusk.toast("눌렀어요") }))); } }); return { deactivate() {} }; }`;
+  const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.locator("#rb-addon-import").click()]);
+  await fc.setFiles({ name: "e2e-hi.dusk-addon.js", mimeType: "text/javascript", buffer: Buffer.from(tpl("1.0.0")) });
+  await page.getByRole("button", { name: "확인했어요" }).click(); await page.waitForTimeout(300);
+  await page.getByRole("button", { name: "넣기", exact: true }).click(); await page.waitForTimeout(500);
+  const crow = page.locator("[data-addon=custom-e2e-hi]");
+  ok(`[${tag}] 불러오기 → 커스텀 묶음에 작동 중`, (await crow.count()) === 1 && /작동 중/.test(await crow.textContent()) && (await page.locator(".rb-addon-cat[data-cat=custom] [data-addon=custom-e2e-hi]").count()) === 1, await crow.textContent().catch(() => ""));
+  ok(`[${tag}] 커스텀 줄: 스위치 옆에 ··· 메뉴`, await crow.evaluate((r) => { const sw = r.querySelector("[role=switch]"), m = r.querySelector("[aria-label$='메뉴']"); return !!(sw && m && sw.compareDocumentPosition(m) & 4); }));
+  await crow.getByRole("button", { name: "열기" }).click(); await page.waitForTimeout(400);
+  ok(`[${tag}] 열기 → 애드온 화면`, (await page.getByRole("button", { name: "눌러 보기" }).count()) === 1);
+  await page.evaluate(() => window.__app.ctx.go("home")); await page.waitForTimeout(500);
+  const [dl] = await Promise.all([page.waitForEvent("download"), (async () => { await page.locator("[data-addon=custom-e2e-hi] [aria-label$='메뉴']").click(); await page.getByRole("menuitem", { name: /내보내기/ }).click(); })()]);
+  ok(`[${tag}] ··· → 내보내기 파일`, dl.suggestedFilename() === "e2e-hi-1.0.0.dusk-addon.js", dl.suggestedFilename());
+  await page.locator("#rb-addon-make").click(); await page.waitForTimeout(300);
+  ok(`[${tag}] 만들기 창(요청 복사·여기서 만들기·코드 넣기)`, (await page.locator("#rb-addon-maker #rb-amk-copy").count()) === 1 && (await page.locator("#rb-amk-run").count()) === 1 && (await page.locator("#rb-amk-code").count()) === 1);
+  ok(`[${tag}] 만들기 창이 화면 밖으로 안 넘침`, await page.evaluate(() => { const b = document.querySelector("#rb-addon-maker").getBoundingClientRect(); return b.left >= 0 && b.right <= innerWidth + 1; }));
+  await page.locator("#rb-amk-code").fill("```js\n" + tpl("1.1.0") + "\n```");
+  await page.locator("#rb-amk-import").click(); await page.waitForTimeout(300);
+  await page.getByRole("button", { name: "확인했어요" }).click(); await page.waitForTimeout(300);
+  await page.getByRole("button", { name: "바꾸기" }).click(); await page.waitForTimeout(600);
+  ok(`[${tag}] 붙여 넣은 코드로 새 버전 바꾸기`, /v1\.1\.0/.test(await page.locator("[data-addon=custom-e2e-hi]").textContent()));
+  await page.locator("[data-addon=custom-e2e-hi] [aria-label$='메뉴']").click(); await page.getByRole("menuitem", { name: /지우기/ }).click(); await page.waitForTimeout(200);
+  await page.locator(".rb-dialog").getByRole("button", { name: "지우기" }).click(); await page.waitForTimeout(500);
+  ok(`[${tag}] 지우기 → 빈 안내`, (await page.locator("[data-addon=custom-e2e-hi]").count()) === 0 && (await page.locator(".rb-addon-empty").count()) === 1);
+  ok(`[${tag}] 박스 안 여백(내용이 테두리에 안 붙음)`, await page.evaluate(() => { const b = document.querySelector("#rb-addonbox").getBoundingClientRect(), t = document.querySelector(".rb-addon-head").getBoundingClientRect(); return t.left - b.left >= 10 && b.right - t.right >= 10; }));
+  await page.evaluate(() => window.__app.ctx.go("tools")); await page.waitForTimeout(400); await page.evaluate(() => window.__app.ctx.go("home")); await page.waitForTimeout(500);
   ok(`[${tag}] 다른 화면으로 갔다 오면 맨 위에서 시작`, (await sc()).top < 20, (await sc()).top);
   ok(`[${tag}] 오류 없음`, !errs.length, errs.join(";"));
   await page.close();

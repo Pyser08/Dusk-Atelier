@@ -252,7 +252,7 @@ async function start() {
   };
   // 받지 않은 새 애드온이 올라오면 리스 화면 오른쪽 위에 알린다(버전만 오른 것은 알리지 않음). 누르면 설정의 애드온 목록으로
   const newAddons = (list) => {
-    const text = `${list.map((a) => a.name).join(", ")} — 설정 → 애드온에서 받을 수 있어요.`;
+    const text = `${list.map((a) => a.name).join(", ")} — 홈 → 애드온에서 받을 수 있어요.`;
     const go = () => app.open({ tab: "settings" }).then(() => setTimeout(() => { try { app.ctx.win?.document?.getElementById("rb-addons")?.scrollIntoView({ block: "start" }); } catch { /* 없음 */ } }, 300)).catch(() => {});
     toast.show({ title: "새 애드온이 나왔어요", text, action: "눌러서 보기", icon: "🧩", onClick: go, ms: 30e3 }).then((ok) => { if (!ok) app?.ctx?.toast?.(text, { seconds: 10 }); }).catch(() => app?.ctx?.toast?.(text, { seconds: 10 }));
   };

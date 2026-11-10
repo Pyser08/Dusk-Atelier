@@ -5,8 +5,9 @@
 // - 새 버전이 켜지다 실패하면 바로 전 버전으로 되돌린다. 확인 실패는 조용히 넘어간다(지금 버전 그대로).
 // - 저장: getLocalPluginStorage(RisuAI=콜드스토리지·동기화, Bard/Pocket=서버 KV) → 없으면 pluginStorage.
 import { sha256 } from "../engine/hash.js";
-import { parseManifest, pickUpdates, fitsCore, installOrder } from "../engine/addons.js";
+import { parseManifest, pickUpdates, fitsCore, installOrder, parseCustomMeta, customFileName, cmpVer } from "../engine/addons.js";
 import { scopeApi, createProviderRelay } from "./addonscope.js";
+import { createAddonSdk } from "./addonsdk.js";
 
 // 애드온 목록은 배포 전용 브랜치 addons에서 읽는다(작업 브랜치에 푸시해도 사용자에게 바로 퍼지지 않게). 올리기: node tools/publish-addons.mjs
 export const ADDON_MANIFEST_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/addons.json";
@@ -14,6 +15,9 @@ export const ADDON_URL_KEY = "dusk.addon.manifestUrl";
 export const ADOPT_KEY = "dusk.addon.adopted.v2";
 export const SEEN_KEY = "dusk.addon.seen.v1";   // 목록에서 본 적 있는 애드온 id(새로 생긴 애드온 알림용)
 const INDEX_KEY = "dusk.addon.index", CODE = (id) => `dusk.addon.code.${id}`, PREV = (id) => `dusk.addon.prev.${id}`;
+// 커스텀 애드온(2.1.0): 사용자가 파일로 불러온 것. 공식 목록과 따로 저장하고, 실행 표에서는 "custom:<id>"로 구분한다.
+export const CUSTOM_INDEX_KEY = "dusk.addon.custom.index";
+const CCODE = (id) => `dusk.addon.custom.code.${id}`, RUN = (id) => `custom:${id}`;
 // 업데이트 확인: 켜질 때 한 번 + 실행 중 1시간마다 + Dusk 창을 열 때(마지막 확인이 10분 넘었으면).
 // 예전엔 켜질 때 한 번뿐이라 리스를 켜 둔 채로는 새 애드온을 못 받았다.
 const CHECK_EVERY = 3600e3, SOON_EVERY = 60e3;   // 창을 열 때는 1분만 지나도 다시 본다(애드온을 올리고 바로 확인할 수 있게)
@@ -115,20 +119,24 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
 
   // 애드온마다 따로 쓰는 api(addonscope.js): 끌 때 그 애드온이 단 훅을 모두 떼서, 훅 애드온도 새로고침 없이 갈아 끼운다
   const relay = createProviderRelay(api);
-  async function start(id, code, version) {
-    const mod = await importer(code, id);
+  async function start(id, code, version, { custom = false, name, mod: preMod } = {}) {
+    const key = custom ? RUN(id) : id;
+    const mod = preMod ?? await importer(code, custom ? `custom-${id}` : id);
     if (typeof mod?.activate !== "function") throw new Error("activate 함수가 없어요");
     const scope = scopeApi(api, relay);
+    // ctx.dusk: 쉬운 도구 모음(addonsdk.js). 끌 때 여기서 단 화면도 함께 뗀다.
+    const kit = createAddonSdk(scope.api, { ...ctx, coreVersion: core }, { id, name: name ?? mod.meta?.name ?? id, version, custom });
     let handle;
-    try { handle = (await mod.activate(scope.api, { ...ctx, addonId: id, version })) ?? {}; }
-    catch (e) { await scope.cleanup(); throw e; }
-    running.set(id, { mod, handle, version, scope });
+    try { handle = (await mod.activate(scope.api, { ...ctx, addonId: id, version, custom, dusk: kit.sdk })) ?? {}; }
+    catch (e) { kit.cleanup(); await scope.cleanup(); throw e; }
+    running.set(key, { mod, handle, version, scope, kit });
   }
   async function stop(id) {
     const r = running.get(id);
     if (!r) return;
     running.delete(id);
     try { await (r.handle.deactivate ?? r.mod.deactivate)?.(); } catch (e) { log(`${id} 끄기 실패 ${e?.message ?? e}`); }
+    try { r.kit?.cleanup(); } catch { /* 이미 없음 */ }
     await r.scope?.cleanup();
   }
   // 이 애드온을 필요로 하며 켜져 있는 애드온들(다시 켤 때 새 버전을 보게 함께 다시 켠다)
@@ -163,6 +171,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
       return p;
     };
     await Promise.all(ids.map((id) => launch(id)));
+    await bootCustom();
     emit();
     timers.setTimeout(() => { check().catch(() => {}); }, 3000);
     if (!autoTimer) { autoTimer = timers.setInterval(() => check().catch(() => {}), CHECK_EVERY); autoTimer?.unref?.(); }
@@ -372,7 +381,75 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     return { done: !failed.length, got, failed };
   }
 
+  // ── 커스텀 애드온(2.1.0) ──
+  const getCustomIndex = async () => { try { const v = await store.getItem(CUSTOM_INDEX_KEY); return v && typeof v === "object" ? v : typeof v === "string" && v ? JSON.parse(v) : {}; } catch { return {}; } };
+  let csaving = Promise.resolve();
+  const setCustomIndex = (fn) => { const run = csaving.then(async () => { const idx = await getCustomIndex(); fn(idx); await store.setItem(CUSTOM_INDEX_KEY, idx); return idx; }); csaving = run.catch(() => {}); return run; };
+  // 코드를 불러와 meta를 읽어 본다(activate는 부르지 않는다). 결과: { meta, mod, code, exists? }
+  async function inspectCustom(code) {
+    if (typeof code !== "string" || !code.trim()) throw new Error("빈 파일이에요");
+    if (code.length > 2e6) throw new Error("파일이 너무 커요(2MB까지)");
+    let mod;
+    try { mod = await importer(code, "custom-inspect"); } catch (e) { throw new Error(`코드를 읽지 못했어요: ${e?.message ?? e}`); }
+    const { meta, error } = parseCustomMeta(mod?.meta);
+    if (error) throw new Error(error);
+    if (typeof mod.activate !== "function") throw new Error("export async function activate(api, ctx)가 없어요");
+    if (!fitsCore(meta, core)) throw new Error(`Dusk v${meta.minCore} 이상이 필요해요`);
+    const cur = (await getCustomIndex())[meta.id];
+    return { meta, mod, code, exists: cur ? { version: cur.version, newer: cmpVer(meta.version, cur.version) } : null };
+  }
+  // 불러오기: 같은 id가 있으면 바꿔 끼운다(켜짐 상태 유지). 바로 켠다.
+  async function importCustom(code) {
+    const { meta, mod } = await inspectCustom(code);
+    const had = (await getCustomIndex())[meta.id];
+    if (running.has(RUN(meta.id))) await stop(RUN(meta.id));
+    await store.setItem(CCODE(meta.id), code);
+    const on = had ? had.on !== false : true;
+    await setCustomIndex((idx) => { idx[meta.id] = { ...meta, on, at: now(), size: code.length }; });
+    if (on) {
+      try { await start(meta.id, code, meta.version, { custom: true, name: meta.name, mod }); }
+      catch (e) { await setCustomIndex((idx) => { if (idx[meta.id]) idx[meta.id] = { ...idx[meta.id], on: false, error: String(e?.message ?? e) }; }); emit(); throw new Error(`불러왔지만 켜지 못했어요: ${e?.message ?? e}`); }
+    }
+    emit();
+    return meta;
+  }
+  async function setCustomOn(id, on) {
+    const cur = (await getCustomIndex())[id];
+    if (!cur) return;
+    await setCustomIndex((idx) => { idx[id] = { ...idx[id], on, error: undefined }; });
+    if (on) {
+      try { await start(id, await store.getItem(CCODE(id)), cur.version, { custom: true, name: cur.name }); }
+      catch (e) { await setCustomIndex((idx) => { idx[id] = { ...idx[id], on: false, error: String(e?.message ?? e) }; }); emit(); throw e; }
+    } else await stop(RUN(id));
+    emit();
+  }
+  async function removeCustom(id) {
+    await stop(RUN(id));
+    await setCustomIndex((idx) => { delete idx[id]; });
+    await store.removeItem(CCODE(id));
+    emit();
+  }
+  // 내보내기: { name: 파일 이름, code }
+  async function exportCustom(id) {
+    const cur = (await getCustomIndex())[id];
+    const code = await store.getItem(CCODE(id));
+    if (!cur || typeof code !== "string") throw new Error("저장된 코드가 없어요");
+    return { name: customFileName(cur), code };
+  }
+  async function bootCustom() {
+    const idx = await getCustomIndex();
+    for (const [id, v] of Object.entries(idx)) {
+      if (v.on === false || running.has(RUN(id))) continue;
+      if ((v.requires ?? []).some((r) => !running.has(r) && !running.has(RUN(r)))) { log(`커스텀 ${id}: 필요한 애드온(${v.requires.join(", ")})이 켜져 있지 않아요`); continue; }
+      try { await start(id, await store.getItem(CCODE(id)), v.version, { custom: true, name: v.name }); }
+      catch (e) { log(`커스텀 ${id} 시작 실패 ${e?.message ?? e}`); await setCustomIndex((x) => { if (x[id]) x[id] = { ...x[id], on: false, error: String(e?.message ?? e) }; }); }
+    }
+  }
+
   return {
+    customs: getCustomIndex, inspectCustom, importCustom, setCustomOn, removeCustom, exportCustom,
+    runningCustom: (id) => running.has(RUN(id)),
+    page: (id, custom = false) => ctx.ext?.get?.("svc", `addonpage:${custom ? "c:" : ""}${id}`) ?? null,
     boot, check, checkSoon, install: installOne, installMany, installing: (id) => inflight.has(id), remove, setOn, getIndex, loadManifest, adopt,
     core: () => core,
     manifest: () => manifest,

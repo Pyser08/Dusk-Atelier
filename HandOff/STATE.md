@@ -1,6 +1,14 @@
 # 현재 상태 — 2.1.0 브랜치 (3.0.8 내용을 옮김, main 2.0.7에서 분기)
 
 
+## 최근 세션 (2026-11-10 밤 2 — 애드온 상자 홈 이동·카테고리·커스텀 애드온)
+- 홈 `ui/screens/addonsui.js` `addonBox`(hmain, 바로가기 아래). 설정 탭 `addonCard`는 '홈에서 보기' 안내만. 카테고리 `engine/addons.js` ADDON_CATS·categoryOf(목록 category → 없으면 id 표)·groupByCategory, addons.src.json에 category(코드 dist는 그대로).
+- 커스텀 애드온: `data/addons.js` inspectCustom·importCustom·setCustomOn·removeCustom·exportCustom·bootCustom(공식 다음), 키 `dusk.addon.custom.index`/`dusk.addon.custom.code.<id>`, 실행 표 "custom:<id>".
+- SDK `data/addonsdk.js`: 모든 애드온 ctx.dusk(ui·storage·ai.run(=runAI, 생성 중지)·addPage·toast·lib·ext), 끌 때 cleanup. 페이지 탭 키 `addon-<id>`/`addon-c-<id>`. **더하기만**(바꾸면 docs/addons/SKILL.md·engine/addonguide.js 함께).
+- 만들기 창 `ui/screens/addonmaker.js`(요청 복사·여기서 만들기·안내서/빈 틀·붙여 넣기 불러오기, 위험 안내 확인). 기능 찾기 2항목, 홈 검색에서 홈 안으로 갈 때 검색 비움(app.go).
+- 확인: npm test 1348 pass, build·check 동일함, build-addons --check 동일함, e2e run-addons-ui 46/46(PC·모바일), smoke·onboard 통과. 실기기·실제 모델로 '여기서 만들기' 미확인.
+- 남은 일: [ ] 실기기에서 파일 불러오기(pickFiles)·blob import 확인(세 호스트) [ ] 코어 릴리스 필요(애드온만으로는 안 나감).
+
 ## 최근 세션 (2026-11-10 밤 — 로어북에 있는 인물만 위키에 새로, memory 0.2.6 애드온만 배포)
 - 사용자: "로어북에 명시된 캐릭터가 아니면 위키에 안 떠야" → 기본 켜짐 + 애드온만 배포.
 - 새 파일(애드온 전용, 코어 import 없음): `engine/castfilter.js`(loreCast·inCast·dropCreates, 순수) · `data/castlore.js`(createCastReader: 캐릭터 globalLore + 채팅 localLore + 켜진 모듈(전역·봇·채팅) lorebook + 봇 이름·desc·personality, ci:ti 60초 캐시, 기록 중 위키 봇(chaId)과 열린 봇이 다르면 null).

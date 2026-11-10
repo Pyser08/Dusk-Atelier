@@ -1198,6 +1198,29 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-home3 .rb-hdo{margin-top:0}
 .rb-hcont h2{margin:0 0 8px;font-size:14px;font-weight:700;color:var(--rb-sub)}
 .rb-hcont .rb-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0}
+.rb-addonbox{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.rb-addon-head{display:flex;flex-direction:column;gap:4px}
+.rb-addon-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rb-addon-head h2{margin:0;font-size:14px;font-weight:700;color:var(--rb-sub)}
+.rb-addon-head small{font-size:12.5px;line-height:1.5}
+.rb-addon-tools{display:flex;gap:6px;flex-shrink:0;margin-left:auto}
+.rb-addon-cat{display:flex;flex-direction:column}
+.rb-addon-cat+.rb-addon-cat{margin-top:8px}
+.rb-addon-cath{margin:4px 0 2px;font-size:12.5px;font-weight:700;color:var(--rb-mute);display:flex;align-items:center;gap:6px;letter-spacing:.02em}
+.rb-addon-cath small{font-weight:600;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--rb-line2);color:var(--rb-sub)}
+.rb-addon-cat>.rb-srow:last-child{border-bottom:0}
+.rb-addon-note,.rb-addon-empty{margin:2px 0 6px;font-size:12.5px;line-height:1.55}
+.rb-addon-empty{padding:10px 12px;border-radius:12px;border:1px dashed var(--rb-line)}
+.rb-addon-acts{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.rb-addon-foot{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:4px}
+@media (max-width:560px){.rb-addonbox .rb-srow{flex-wrap:wrap}.rb-addonbox .rb-srow .t{flex-basis:100%}.rb-addon-acts{width:100%}}
+.rb-amk{max-width:560px;max-height:calc(100vh - 40px);overflow:auto}
+.rb-amk-step{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;border:var(--rb-bw,1px) solid var(--rb-line2)}
+.rb-amk-row{display:flex;gap:8px;flex-wrap:wrap}
+.rb-amk-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;min-height:140px}
+.rb-amk-msg{margin:0;font-size:12.5px;min-height:1em}
+.rb-addon-page{display:flex;flex-direction:column;gap:12px;padding-top:8px}
+.rb-addon-card{padding:14px 16px}
 .rb-hrec-head{display:flex;align-items:center;justify-content:space-between;width:100%}
 .rb-home3 .rb-hrecent>h2,.rb-hrec-head h2{margin:0;font-size:14px;font-weight:700;color:var(--rb-sub)}
 .rb-home3 .rb-hrecent>h2{margin-top:8px}

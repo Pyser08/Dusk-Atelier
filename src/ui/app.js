@@ -335,7 +335,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     if (tab === "settings" && ["chattheme", "themebuilder", "themestudio"].includes(sub)) tab = "tools";
     const leaving = tab !== state.tab || sub !== state.sub;
     if (leaving) stashPane();
-    if (tab !== state.tab || (sub === "history") !== (state.sub === "history")) {
+    if (tab !== state.tab || (sub === "history") !== (state.sub === "history") || (tab === "home" && state.search)) {   // 홈 기능 찾기에서 홈 안 기능(애드온)으로 갈 때도 검색을 비운다
       state.search = "";
       searchInput.value = "";
     }

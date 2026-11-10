@@ -26,7 +26,7 @@ function flash(el) {
 
 // 그 기능이 있는 화면으로 가서, 제목을 찾아 스크롤하고 잠깐 강조한다. 못 찾으면 위치를 글로 알려 준다.
 export function openFeature(ctx, f) {
-  if (f.off) { ctx.toast(`‘${ADDON_NAME[f.addon] ?? f.addon}’ 애드온을 켜면 쓸 수 있어요. 설정 → 애드온에서 켤 수 있어요.`); return; }
+  if (f.off) { ctx.toast(`‘${ADDON_NAME[f.addon] ?? f.addon}’ 애드온을 켜면 쓸 수 있어요. 홈 → 애드온에서 켤 수 있어요.`); return; }
   if (f.mem) Object.assign(ctx.state.mem ??= {}, f.mem);
   ctx.go(f.tab, f.sub ?? null);
   if (!f.find) return;

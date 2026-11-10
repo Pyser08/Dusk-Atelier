@@ -127,7 +127,7 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
       const A = ctx.addons;
       if (!A) return [note("info", "이 환경에서는 애드온을 받을 수 없어요. 이 단계는 건너뛰어요.")];
       const st = await addonState();
-      if (st.offline && !Object.keys(st.idx).length) return [note("err", "애드온 목록을 받지 못했어요. 인터넷 연결을 확인하고 ‘이전’→‘다음’으로 다시 열거나, 나중에 설정 → 애드온에서 받아 주세요.")];
+      if (st.offline && !Object.keys(st.idx).length) return [note("err", "애드온 목록을 받지 못했어요. 인터넷 연결을 확인하고 ‘이전’→‘다음’으로 다시 열거나, 나중에 홈 → 애드온에서 받아 주세요.")];
       const list = st.list.length ? st.list : Object.entries(st.idx).map(([id, v]) => ({ id, name: id, version: v.version, desc: "", requires: v.requires ?? [] }));
       const msg = h("small", { class: "rb-muted", "aria-live": "polite", id: "rb-onb-addon-msg" }, "");
       const sws = new Map();
@@ -250,7 +250,7 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
     }
     const TITLES = [
       null,
-      ["1단계 · 기능", "쓸 기능을 골라요", "켜는 기능은 바로 받아서 켜요(인터넷 필요). 나중에 설정 → 애드온에서 언제든 바꿀 수 있어요."],
+      ["1단계 · 기능", "쓸 기능을 골라요", "켜는 기능은 바로 받아서 켜요(인터넷 필요). 나중에 홈 → 애드온에서 언제든 바꿀 수 있어요."],
       ["2단계 · 화면", "화면을 골라요", "언제든 설정에서 바꿀 수 있어요."],
       ["3단계 · 꾸미기", "분위기를 골라요", "누르면 이 화면이 바로 바뀌어요. ‘플러그인 꾸미기’와 같은 선택지예요."],
       ["4단계 · 장기 기억", "장기 기억을 켤까요?", "AI 응답마다 인물의 상태와 있었던 일을 기억해서, 다음 대화에 알맞게 넣어 줘요."],

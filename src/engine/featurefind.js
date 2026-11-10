@@ -6,6 +6,9 @@ const ero = (eroTab) => ({ page: "erosync", eroTab });
 const M = "장기 기억", P = "장기 기억 › 리수폿 › 설정", E = "장기 기억 › Erosync";
 
 export const FEATURES = [
+  // 애드온(2.1.0, 홈)
+  { t: "애드온 받기·켜고 끄기", k: "addon 확장 기능 받기 업데이트 카테고리", path: "홈 › 애드온", tab: "home", find: "애드온" },
+  { t: "커스텀 애드온 불러오기·만들기", k: "커스텀 addon 직접 만들기 AI로 만들기 파일 불러오기 내보내기 공유 SDK", path: "홈 › 애드온 › 불러오기·만들기", tab: "home", find: "커스텀 애드온" },
   // 장기 기억 — 무엇을 기억할까요
   { t: "추적 수준 (가볍게·기본·전부)", k: "기억 수준 프리셋 무엇을 기억 호출 비용", path: `${P} › 무엇을 기억할까요?`, tab: "memory", mem: POT, find: "무엇을 기억할까요?", addon: "memory" },
   { t: "호감 점수", k: "호감도 affinity 좋아하는 정도 숫자 표시 증가 승수 감소 승수", path: `${P} › 무엇을 기억할까요? › 호감`, tab: "memory", mem: POT, find: "호감", addon: "memory" },

@@ -188,7 +188,7 @@ window.bootApp = async (seed, opts = {}) => {
       setOn: async (id, on) => { idx[id] = { ...idx[id], on }; window.__addonLog.push(["setOn", id, on]); } };
   }
   if (opts.addons) {  // 애드온 카드 시험: 파일은 실행기가 window.__addonFiles로 넣어 준다(주소 → 내용)
-    app.ctx.addons = createAddons(api, { core: "2.0.0", ctx: { toast: (t, o) => app.ctx.toast?.(t, o) }, fetcher: async (_a, url0) => { const url = url0.split("?")[0]; return (url.endsWith("addons.json") ? window.__addonFiles?.manifest : window.__addonFiles?.[url]) ?? null; } });
+    app.ctx.addons = createAddons(api, { core: "2.1.0", ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => app.ctx.toast?.(t, o), openDusk: async (tab) => { if (tab) app.ctx.go(tab); } }, fetcher: async (_a, url0) => { const url = url0.split("?")[0]; return (url.endsWith("addons.json") ? window.__addonFiles?.manifest : window.__addonFiles?.[url]) ?? null; } });
     await app.ctx.addons.boot();
   }
   app.ctx.aiStop = createAiStopButton(api, { getCtx: () => app.ctx });   // main.js와 같게
