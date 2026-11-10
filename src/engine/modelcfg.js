@@ -52,7 +52,7 @@ export function pickFor(cfg, stage) {
 
 // 메시지 배열 → 리수폿 클라이언트가 받는 한 덩어리 프롬프트. JSON을 요구하지 않는 작업(번역·첫 메시지 등)은
 // 클라이언트가 항상 "JSON 하나만"을 요구하므로 {"text": …}로 감싸 달라고 하고 나중에 벗긴다.
-export const LINES_AS_JSON = 'OUTPUT FORMAT (final, overrides any other format note): return exactly one JSON object {"lines":["<line>","<line>"]} — each string is one line in the line format above. If nothing applies, return {"lines":[]}. No other keys, no markdown, no commentary.';
+const LINES_AS_JSON = 'OUTPUT FORMAT (final, overrides any other format note): return exactly one JSON object {"lines":["<line>","<line>"]} — each string is one line in the line format above. If nothing applies, return {"lines":[]}. No other keys, no markdown, no commentary.';
 const mentionsJson = (t) => /json/i.test(t);
 export function toPrompt(messages) {
   const parts = (messages || []).map((m) => `[${String(m.role || "user").toUpperCase()}]\n${typeof m.content === "string" ? m.content : JSON.stringify(m.content)}`);

@@ -7,10 +7,19 @@
 //         ③ 줄을 리수폿이 원래 받던 응답(JSON envelope)으로 바꿔 돌려준다 → 리수폿 검증·저장·화면은 그대로.
 //         같은 결과로 Dusk 기록(장면·인물·관계·떡밥·감정)도 만든다.
 // 저장 형식은 바뀌지 않는다(리수폿 위키·Dusk 폴더 둘 다 예전 그대로).
-import { JSON_FALLBACK, parseLines, fromStage1, fromStage2, linesStage2, LINES_STAGE1, LINES_STAGE1_MIN, canonName, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, isNoneReply, coerceInt } from "./memorylines.js";
+import { JSON_FALLBACK, isNoneReply as coreNoneReply, parseLines, fromStage1, fromStage2, linesStage2, LINES_STAGE1, LINES_STAGE1_MIN, canonName, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, coerceInt } from "./memorylines.js";
 import { validate } from "./memoryprompt.js";
-import { LINES_AS_JSON } from "./modelcfg.js";
 
+// '변화 없음' 판단: 코어 2.0.7의 isNoneReply는 JSON 꼴({"lines":[]})을 모르므로 애드온 쪽에서도 받는다.
+const NONE_LINE = /^\s*[`"']*\s*(none|없음|변경\s*없음|no\s*change)\s*[.`"']*\s*$/i;
+export function isNoneReply(raw) {
+  if (coreNoneReply(raw)) return true;
+  const t = String(raw ?? "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  if (!/^[[{]/.test(t)) return false;
+  let o; try { o = JSON.parse(t); } catch { return false; }
+  const arr = Array.isArray(o) ? o : o && typeof o === "object" && Array.isArray(o.lines) && Object.keys(o).length === 1 ? o.lines : null;
+  return !!arr && arr.every((x) => typeof x === "string" && (!x.trim() || NONE_LINE.test(x)));
+}
 const REF_START = "<<<RISUPOT_REFERENCE_DATA_START>>>", REF_END = "<<<RISUPOT_REFERENCE_DATA_END>>>", MANIFEST = "# Text Control Manifest";
 const nk = (n) => String(n ?? "").toLowerCase().replace(/[\s'"“”‘’「」『』\[\]()（）<>.,!?~·]/g, "");
 const cut = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
@@ -76,7 +85,8 @@ async function ask(call, msgs, parse, { minimal = null, tries = 3 } = {}) {
 
 // 3.0.8: 호출층은 모든 요청에 "Return one JSON object only" 시스템 지시를 붙인다(리수폿 단계용). 기록기 지침의 'LINES ONLY'와 부딪혀
 // 추론 모델이 어느 쪽을 따를지 수만 토큰을 고민하거나 엉뚱한 JSON을 냈다. 출력 형식을 JSON {lines}로 맨 끝에 못박아 둘을 맞춘다.
-export const RECORDER_OUTPUT = LINES_AS_JSON;
+// 코어(modelcfg.LINES_AS_JSON)와 같은 글이지만 애드온만 내보내도 쓰이게 여기에도 둔다(코어 공유 모듈의 새 export에 기대지 않음).
+export const RECORDER_OUTPUT = 'OUTPUT FORMAT (final, overrides any other format note): return exactly one JSON object {"lines":["<line>","<line>"]} — each string is one line in the line format above. If nothing applies, return {"lines":[]}. No other keys, no markdown, no commentary.';
 export function recorderText(msgs, { front = "", back = "" } = {}) {
   const body = msgs.map((m) => m.role === "system" ? m.content : m.role === "assistant" ? `# Your previous reply\n${m.content}` : `# DATA\n${m.content}`);
   return [front, ...body, RECORDER_OUTPUT, back].filter(Boolean).join("\n\n");

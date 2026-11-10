@@ -11,7 +11,9 @@
   - 내 API 경로(`modelcfg.toPrompt`): 'LINES ONLY' 프롬프트(분석 1·2단계, 게이지)에 `LINES_AS_JSON` 덧붙임. `memoryprompt.askLines`도 empty-model-response를 빈 답으로 받아 다시 물음. 기록기는 빈 응답 뒤 maxTokens를 넓혀(2배, 16k~32k) 보냄.
   - 검토만 하고 안 고친 것: ① 대신 길인 리수폿 Writer는 여전히 11만 자 지침(약한 모델은 여기서도 실패 가능) ② 2단계 지침은 전체 기능 켜면 줄 종류 20여 개·3.4천 자 — 약한 모델은 '가벼운 모델' 토글(light, 1.6천 자) 권장, 자동 판별 없음 ③ 응답당 호출 수 = 1 + 인물 수(최대 6) + 방향 1 + 고르기 1 — 추론 모델은 기록 단계 추론 강도를 낮추길 권장 ④ Erosync는 격리 이식(수정 금지): 자체 JSON 복구 1회 있음, 재시도 횟수 기본 0 ⑤ 인물 도구(수치 AI·직접 지시·새로고침)는 리수폿 JSON 프롬프트 그대로 + cleanJsonReply.
 - 3차(가벼운 지침 자동 전환, 사용자 승인): `recorder.recordTurn`·`memoryprompt.analyzeLines` — 2단계가 형식 오류(code recorder-format / e.raw)로 끝나면 그 인물을 light 지침으로 다시 묻고 그 응답의 남은 인물도 light. 기록기는 `auto`(memoryturn의 `autoLight`, 메모리 상태·저장 안 함): 연속 2응답 전환 → 다음 10응답 처음부터 light → 끝나면 전체 지침 재시험(streak 1). 연결 오류·취소는 전환하지 않음. `summarize().lightAuto` → 설정 '최근 기록 결과'에 표시(settings.js recordBox). 시험 3개 추가. 안내서 guide는 미수정.
-- 배포: 수정은 memory 애드온(dist/memory.js)과 코어(memorylines.js — isNoneReply) 둘 다. **버전 미변경**(memory 0.2.3, 코어 2.0.7) — 사용자 지시 시 memory 0.2.4·코어 버전 올리고 publish-addons/태그.
+- 배포(11-10, 사용자 "코어는 배포하지 말고 애드온만"): **memory 애드온 0.2.4만 publish**(minCore 2.0.0, 코어 2.0.7 그대로·태그 없음·main 안 건드림). 애드온은 코어 공유 모듈의 export 이름을 전부 검사해 없으면 안 켜지므로 modelcfg `LINES_AS_JSON`은 export하지 않음(recorder.js에 같은 글 `RECORDER_OUTPUT`, JSON 꼴 '변화 없음'은 recorder.js 자체 `isNoneReply`). 확인: 애드온이 쓰는 공유 모듈 56개의 export가 2.0.7(79a0578)에 모두 있음.
+  - 애드온으로 나간 것: 리수폿 기록기 경로 전부(JSON 형식 맞춤·빈 답 다시 묻기·호출 상한·리수폿 대신 길·실패 캐시 재사용 막기·호감도 init·알림 판단·가벼운 지침 자동 전환·설정 표시).
+  - **코어에만 있어 아직 안 나간 것**(다음 코어 릴리스 때): `memorylines.isNoneReply` JSON 꼴, `memoryprompt.askLines` 빈 답 다시 묻기·Dusk 분석 가벼운 지침 전환, `modelcfg.toPrompt` 줄 지침 JSON 맞춤(내 API로 돌리는 Dusk 자체 분석·게이지). CHANGELOG '다음 버전'에 적어 둠.
 - 남은 일: [ ] 실기기(실제 추론 모델)로 실패율 확인 — 개선 단정 금지. [ ] UI freeze(‘리수폿 설정 열기’ 빠른 조작) 미진행. [ ] main HandOff/README.md 작업 브랜치 표를 3.0.8로 고칠지 사용자 확인.
 
 
