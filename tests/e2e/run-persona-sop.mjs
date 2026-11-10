@@ -1,0 +1,77 @@
+// 페르소나 빌더 SOP 흐름(애드온): SOP 양식 자동 선택 → 1 초안 → 2 검토 보고서(항목 고르기) → 3 최종 다듬기 → 바뀐 점 보기, NAI 태그·토큰 추정.
+// 가짜 보조 모델이 단계별로 답한다. 실제 모델·호스트에는 접근하지 않는다.
+import { createRequire } from "node:module";
+import { build } from "/opt/npm-tools/node_modules/esbuild/lib/main.js";
+const { chromium } = createRequire("/opt/npm-tools/node_modules/")("playwright");
+const r = await build({ entryPoints: ["tests/e2e/app.entry.js"], bundle: true, write: false, format: "iife", platform: "browser", logLevel: "error", define: { __VERSION__: '"2.1.0"', __CHANGELOG__: '""' }, alias: { fflate: process.cwd() + "/src/vendor/fflate.js" }, loader: { ".json": "json" } });
+const out = [], ok = (n, c, x = "") => { out.push(c); console.log((c ? "✔ " : "✘ ") + n + (c ? "" : "  → " + x)); };
+const shot = process.argv.includes("--shot");
+const browser = await chromium.launch();
+for (const vw of [1280, 390]) {
+  const page = await (await browser.newContext({ viewport: { width: vw, height: 900 } })).newPage();
+  const errs = []; page.on("pageerror", (e) => errs.push(e.message));
+  await page.setContent("<!doctype html><body style='margin:0'></body>");
+  await page.addScriptTag({ content: r.outputFiles[0].text });
+  await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99 }) }, { story: true }));
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    window.__calls = [];
+    window.__app.ctx.api.runLLMModel = async (o) => {
+      const m = o.messages, last = m[m.length - 1].content;
+      window.__calls.push(m);
+      if (/Review the completed SOP sheet/.test(last)) return { type: "success", result: "## KEEP\n- Core Identity > Core Premise: drives behavior — keep\n\n## CUT\n- Appearance > Scent: decorative — no output — drop\n- Basic Information > Residence: unused — drop\n\n## MACRO RISK\n- Physical Mannerisms / Nonverbal Expression > Tells: one tell for all — add variants" };
+      if (/Rewrite the SOP sheet above/.test(last)) return { type: "success", result: "### Basic Information\n- Name: Mina Park\n- Age / Gender: 25 | female\n\n### Core Identity\n- Core Premise: Mina is, above all else, a keeper of debts.\n- Mask / Leak System:\n  - Fear → mask: jokes / leak: counts exits" };
+      if (/NovelAI/.test(m[0].content)) return { type: "success", result: "1girl, black hair, red eyes, 1girl" };
+      if (/Instruction: Generate a broad first-draft/.test(last)) return { type: "success", result: "### Basic Information\n- Name: Mina\n- Age / Gender: 25 | female\n- Residence: studio flat\n\n### Appearance\n- Scent: rain and coffee\n\n### Core Identity\n- Core Premise: Mina is, above all else, careful.\n\n### Physical Mannerisms / Nonverbal Expression\n- Tells: taps ring" };
+      return { type: "success", result: "번역" };
+    };
+  });
+  await page.evaluate(() => window.__app.ctx.go("personabuilder"));
+  await page.waitForTimeout(700);
+  const T = () => page.evaluate(() => document.querySelector(".rb-main").innerText);
+  ok(`[${vw}] SOP 양식이 골라져 있음`, await page.evaluate(() => [...document.querySelectorAll('select[aria-label="설명 양식"] option')].find((o) => o.selected)?.textContent === "SOP 양식"));
+  ok(`[${vw}] 단계 버튼 3개`, /1 초안 쓰기/.test(await T()) && /2 검토 보고서/.test(await T()) && /3 최종 다듬기/.test(await T()));
+  const click = async (txt) => { await page.evaluate((t) => [...document.querySelectorAll(".rb-main button")].find((b) => b.textContent.trim() === t && !b.disabled)?.click(), txt); await page.waitForTimeout(700); };
+  await page.fill('textarea[aria-label="캐릭터 콘셉트"]', "25살 야간 편의점 알바생");
+  await click("1 초안 쓰기");
+  ok(`[${vw}] 초안: 6칸 채움`, /6칸을 썼어요/.test(await T()), (await T()).slice(0, 400));
+  ok(`[${vw}] 초안 요청에 1단계 지침·콘셉트`, await page.evaluate(() => { const c = window.__calls[0]; return /^Instruction: Generate/.test(c[1].content) && /야간 편의점/.test(c[1].content); }));
+  await click("3 최종 다듬기");
+  ok(`[${vw}] 검토 전 3단계는 안내만`, /먼저 '2 검토 보고서'/.test(await T()));
+  await click("2 검토 보고서");
+  ok(`[${vw}] 검토 항목 4개 표시`, (await page.locator(".rb-pb-rv-i").count()) === 4);
+  ok(`[${vw}] 검토 요청 = 요청→시트→검토 OOC`, await page.evaluate(() => { const c = window.__calls.findLast((x) => /Review the completed/.test(x.at(-1).content)); return c.map((x) => x.role).join() === "system,user,assistant,user" && /Name: Mina/.test(c[2].content); }));
+  await page.locator(".rb-pb-rv-i input").nth(2).uncheck();   // Residence CUT 거절
+  await page.fill('textarea[aria-label="검토 메모"]', "말투는 줄이지 말 것");
+  await click("고른 항목으로 최종 다듬기");
+  const fin = await page.evaluate(() => window.__calls.map((c) => c.at(-1).content).reverse().find((t) => /Rewrite the SOP/.test(t)) ?? "");
+  ok(`[${vw}] 최종 요청: 고른 항목만·메모`, /Scent: decorative/.test(fin) && !/Residence: unused/.test(fin) && /말투는 줄이지/.test(fin), fin.slice(-500));
+  const vals = await page.evaluate(() => JSON.parse(window.__app.ctx.api.store["rbm:personaBuilder:v1"] ?? "{}"));
+  await page.waitForTimeout(500);
+  const v2 = await page.evaluate(() => JSON.parse(window.__app.ctx.api.store["rbm:personaBuilder:v1"]).draft.values);
+  ok(`[${vw}] 최종본으로 교체(빠진 칸 비움·하위 목록 합침)`, v2["Basic Information::Name"] === "Mina Park" && !v2["Appearance::Scent"] && /Fear → mask: jokes/.test(v2["Core Identity::Mask / Leak System"] ?? ""), JSON.stringify(v2));
+  void vals;
+  ok(`[${vw}] 바뀐 점 보기 버튼`, /바뀐 점 보기/.test(await T()));
+  await click("바뀐 점 보기");
+  ok(`[${vw}] 비교 창: 추가·삭제 줄`, await page.evaluate(() => document.querySelectorAll(".rb-pb-diff .add").length > 0 && document.querySelectorAll(".rb-pb-diff .del").length > 0));
+  if (shot) await page.screenshot({ path: `/tmp/pb-diff-${vw}.png` });
+  await page.evaluate(() => [...document.querySelectorAll(".rb-dialog button")].find((b) => b.textContent.trim() === "닫기")?.click());
+  await page.waitForTimeout(400);
+  ok(`[${vw}] 비교 창 닫힘`, !(await page.locator(".rb-pb-diff").count()));
+  ok(`[${vw}] 미리보기에 토큰 추정`, /약 [\d,]+토큰/.test(await T()));
+  await page.evaluate(() => { const d = [...document.querySelectorAll(".rb-main details")].find((x) => /NAI 캐릭터 태그/.test(x.textContent)); d.open = true; });
+  await click("태그 뽑기");
+  ok(`[${vw}] NAI 태그 뽑기(중복 제거)`, (await page.inputValue('textarea[aria-label="NAI 캐릭터 태그"]')) === "1girl, black hair, red eyes");
+  await click("되돌리기 (2)");
+  const v3 = await page.evaluate(() => new Promise((res) => setTimeout(() => res(JSON.parse(window.__app.ctx.api.store["rbm:personaBuilder:v1"]).draft.values), 600)));
+  ok(`[${vw}] 되돌리기로 최종 전 내용 복원`, v3["Basic Information::Residence"] === "studio flat", JSON.stringify(v3));
+  // 여백: 검토 항목 글이 상자 테두리에 붙지 않음
+  await click("2 검토 보고서");
+  const pad = await page.evaluate(() => { const i = document.querySelector(".rb-pb-rv-i"), s = i.querySelector("span"); const a = i.getBoundingClientRect(), b = s.getBoundingClientRect(); return Math.min(b.left - a.left, a.right - b.right, b.top - a.top); });
+  ok(`[${vw}] 검토 항목 안쪽 여백 ≥ 5px`, pad >= 5, String(pad));
+  ok(`[${vw}] 가로 넘침 없음`, await page.evaluate(() => { const m = document.querySelector(".rb-main .rb-section"); return m.scrollWidth <= m.clientWidth + 1; }));
+  if (shot) { await page.evaluate(() => document.querySelector(".rb-pb-rv").scrollIntoView()); await page.screenshot({ path: `/tmp/pb-review-${vw}.png` }); }
+  ok(`[${vw}] 오류 없음`, !errs.length, errs.join(";"));
+  await page.close();
+}
+await browser.close(); process.exit(out.every(Boolean) ? 0 : 1);

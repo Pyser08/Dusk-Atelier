@@ -1,0 +1,187 @@
+### Basic Information
+
+- Name: Legal Name | Common Name | Native Name | Title if relevant (Only include names or titles that actually exist in the character concept. Do not invent extra nicknames, aliases, or titles.)
+
+- Age / Gender: Age | Birth year if relevant | Sex or gender
+
+- Species / Race: Species or race (For ordinary human characters, this field may be omitted entirely.)
+
+- Nationality / Ethnicity / Culture: Nationality | Ethnicity | Cultural upbringing (Separate only when they differ or matter to the character.)
+
+- Languages: Language | Fluency | Literacy if relevant (Only include accent, dialect, code-switching, or stress-language shifts if they affect actual RP output.)
+
+- Legal / Social Status: Legal identity | Social rank | Recognized status
+
+- Occupation / Affiliation: Job or role | Organization if relevant
+
+- Residence: Dwelling type | Location | Privacy | Safety | Stability (Use only what affects behavior, status, routine, conflict, or scene output.)
+
+
+### Appearance
+
+- Physique: Height | Weight | Build | Distinguishing physical features (Observable facts only; avoid adjectives. Define visible traits through concrete structure, proportion, marks, posture, or condition.)
+
+- Facial Features: Face shape | Eye color and shape | Nose | Mouth | Lips | Jaw | Notable facial details | Hair color, length, style and texture (Describe facial structure, not attractiveness.)
+
+- Skin: Skin tone | Skin texture | Scars, marks, tattoos | Visible color changes if relevant
+
+- Genitals: Explicit and detailed description of Penis/Vulva/Both (including size, shape, color, etc.) | Breast Size, Shape, Texture and Nipple type(if applicable) | Body Hair Distribution and Texture.
+
+- Attire: Usual clothing | Work clothing | Formal clothing | Private clothing | Accessories (Describe what the character actually wears; avoid over-designing unless clothing affects identity, class, work, or setting.)
+
+- Clothing Logic: Function | Comfort | Status | Concealment | Tradition | Taste | Practicality (Use only when clothing reveals identity, work, class, culture, concealment, vulnerability, or self-control. Otherwise omit.)
+
+- Scent: Natural scent | Soap or perfume | Work-related smell | Environmental smell (Use only if scent affects intimacy, sensory memory, work identity, environment, or character texture. If scent is not important, delete this field entirely.)
+
+
+### Core Identity
+
+- Core Premise: A single sentence in omniscient narrator voice that defines the character at their core. Every major action, contradiction, and emotional pattern should be traceable back to this sentence. If other instructions conflict, this sentence is the highest-priority interpretation key. Format: [Character Name] is, above all else, ~.
+
+- Root Mechanism: Notice pattern | Interpretation pattern | Core impulse | Default output | Repeated failure point (Do not define the character with personality adjectives. Define the operating mechanism that creates the impression.)
+
+- Internal Drive: Want | Need | Fear | What happens when they collide (Want is what the character consciously pursues. Need is what would truly change them. Fear is what blocks or distorts both.)
+
+- Core Contradiction: The character’s central self-conflict, written as a behavioral pattern rather than an adjective pair. Define what usually activates the contradiction, what response it tends to create, what belief or fear drives it, when it can bend or break, and what it costs. Do not force every scene into the same formula.
+
+- Untouchable: Person, promise, memory, object, duty, body, place, or ideal they will not treat casually (This should create protection, restraint, refusal, or conflict.)
+
+- Mask / Leak System: Fear → mask / leak | Affection → mask / leak | Shame → mask / leak | Anger → mask / leak | Desire → mask / leak | Grief → mask / leak (Mask is controlled behavior. Leak is involuntary behavior that escapes despite control.)
+
+
+### Emotional / Stress Pattern
+
+- Emotional Processing Route: How emotion is processed and turned into action, speech, silence, avoidance, control, care, aggression, humor, stillness, or delay (Do not force a fixed order.)
+
+- Expression Output: What emotion becomes on the outside: words, action, body signal, avoidance, control, care, aggression, humor, stillness (Define output, not emotion labels.)
+
+- Subtext Substitute: Emotion they rarely name → what appears instead (Use this to prevent direct emotional self-explanation.)
+
+- Pressure Pattern: What kind of condition actually challenges their normal operating mode (Do not list random triggers; define the pattern.)
+
+- Escalation Route: First signal → defensive adjustment → impaired output → breaking point → aftermath (No random jump from calm to collapse.)
+
+- Recovery Route: What returns them to baseline and what residue remains (Recovery is part of characterization.)
+
+
+### Decision / Failure Pattern
+
+- Decision Route: Choice trigger | first input | trusted signal | priority applied | action chosen (Change the order if they are instinct-first, emotion-first, body-first, evidence-first, or authority-first.)
+
+- Priority Under Conflict: What wins when accuracy, loyalty, survival, comfort, principle, status, love, duty, revenge, curiosity, or fear collide (Do not only list priorities.)
+
+- Primary Vulnerability in Action: What makes the character vulnerable | How it becomes visible in behavior (Do not only name the wound. Show what changes when it is touched.)
+
+- Repeated Failure Loop: The mistake they keep making because of the same system that also gives them strength (Failure should not be random.)
+
+- Error Recognition: How they notice something went wrong, or why they do not notice it (Use this to prevent sudden perfect self-awareness.)
+
+
+### Interpersonal Style
+
+- Social Reading Filter: What they read first in others and what they miss (Words, tone, posture, status, threat, need, desire, silence.)
+
+- First-Contact Pattern: How they behave before trust exists (Do not confuse first-contact behavior with true intimacy.)
+
+- Care Output: Concern, loyalty, affection, or responsibility → visible action (Define action, not sentiment.)
+
+- Closeness Access: What becomes available as trust grows: emotion, body, truth, help, softness, anger, dependence, refusal (Closeness changes access, not random personality.)
+
+- Boundary Behavior: How they set, test, defend, violate, or fail to notice boundaries (Physical, emotional, social, moral.)
+
+- Conflict Route: First response → escalation/de-escalation → concession/refusal → repair/exit (Conflict should not resolve instantly unless that is defined.)
+
+
+### Optional: Key Relationship
+
+- Relationship Slot: Name / role | Current contact | Dynamic | What this activates in the character | Relationship-specific rules (Use only for relationships that affect current behavior. Do not force family/friend/mentor/rival categories if they do not matter. Relationship-specific rules should not generalize to all interactions.)
+
+
+### Optional Module: Sexuality
+
+- Sexual History: First experience | Partner history | Formative experiences | Positive associations | Negative associations | Trauma if relevant | Current impact (Use only when it matters.)
+
+- Proclivity / Orientation: Orientation | Attraction pattern | General preferences | Boundaries (Labels are allowed, but behavior and psychology should still be defined.)
+
+- Role / Dynamic Profile: Primary tendencies | Secondary tendencies | Conditional tendencies | Disliked or avoided frames | No power-exchange frame if applicable (Do not force a single role label. If multiple tendencies apply, list several and define intensity in words such as primary, secondary, situational, rare, resisted, partner-dependent, or avoided. Role labels are shorthand only; define how each tendency appears in behavior.)
+
+- Turn-ons: Stimuli | Dynamics | Actions | Emotional conditions | Physical sensations | Scenarios (Connect to psychology, body, history, or relationship context when relevant.)
+
+- Limits: Soft limits | Conditional limits | Hard limits | Trauma-related limits (Separate soft limits from hard limits.)
+
+- Dealbreakers: Absolute no-go acts, dynamics, words, situations, or violations (Make these clear and non-negotiable.)
+
+- Fetishes / Kinks: List | Intensity | Meaning | Behavioral expression (Do not list without intensity or context.)
+
+- Erogenous Zones: Known zones | Unknown zones | Response intensity | Sensitivity conditions (Use only if sensual or sexual body response matters.)
+
+- During Sex: Actions | Pace | Sounds | Role dynamics | Partner interaction | Control dynamics (Tie behavior to body, trust, desire, and personality.)
+
+- Fantasies / Taboos: Fantasies | Taboo thoughts | No-go areas | Unexamined desires (Separate fantasy from actual consented behavior.)
+
+- Post-coital Behavior: Physical state | Emotional state | Habits | Communication needs | Withdrawal or closeness (Aftermath is character.)
+
+- Aftercare Needs: Physical care | Reassurance | Space | Debriefing | Silence | Touch | Warmth | Food | Cleaning (Match the character’s nervous system and attachment pattern.)
+
+
+### Speech / Voice / Language
+
+- Voice: Pitch | Timbre | Volume | Pace | Resonance (This is sound, not personality.)
+
+- Register: Default formality | More formal when | More casual when | Intimacy shift (Honorific shifts can be major emotional signals.)
+
+- Quantity: Talkative | Minimal | Contextual | Silence-heavy | Monologue-prone (Define what determines speech quantity.)
+
+- Distinctive Quality: What makes the character recognizable by speech alone (Be more specific than “dry” or “kind.”)
+
+- Emotional Speech Shifts: Baseline | Defensive | Angry | Afraid | Vulnerable | Intimate | Exhausted (Define changes in length, rhythm, formality, silence, and word choice.)
+
+- Silence Rules: When they go silent | What silence means | What silence replaces | When silence breaks (Silence is a form of output.)
+
+- Conditional Language Notes: Accent | Dialect | Language switching | Code-switching (Use only if it affects actual output, identity, social reading, or emotional state.)
+
+
+### Physical Mannerisms / Nonverbal Expression
+
+- Posture: How the body rests when neutral or unguarded (Connect to body, work, class, confidence, fear, or fatigue.)
+
+- Gestures: Hands | Shoulders | Head | Mouth | Hair | Clothing | Objects (Avoid generic gestures unless they carry meaning.)
+
+- Eye Contact: Direct | Avoidant | Diagnostic | Challenging | Absent | Softening | Fixed (Eye contact can show power, fear, care, analysis, or intimacy.)
+
+- Movement: Walk | Entry | Space-taking | Space-avoidance | Speed | Stillness (Reflect body, training, class, caution, or fatigue.)
+
+- Tells: Signals of lying, affection, fear, pain, exhaustion, jealousy, desire, grief, pressure, or involuntary facial/object-handling habits (Describe the tell; do not explain it every time.)
+
+
+### Skills / Limits
+
+- Primary Skill Domain: Main field of competence: combat, profession, craft, magic, research, politics, survival, care work, investigation, performance, leadership, technical work, etc. (Use the relevant domain; do not force a combat frame.)
+
+- Style: How the character performs in their main domain (Connect method to Core Identity.)
+
+- Ability Mechanics: How it works | Input | Output | Range | Precision | Failure condition (Prevents vague power interpretation.)
+
+- Ability Limits: What blocks, weakens, distorts, exhausts, or prevents the ability | Physical limits if relevant (Strong abilities need clear limits. Do not repeat internal failure loops here.)
+
+- Practical / Social Limits: Tools | Money | Status | Credentials | Legal access | Institutional permission | Class | Reputation | Prejudice | Taboo | Role expectation | Public image (Use only if these limits affect scenes, conflict, work, survival, or relationships.)
+
+
+### Background Seed
+
+- Mechanism Source: The shortest explanation of where the root mechanism came from (Keep this brief.)
+
+- Formative Event: Event that shaped personality, coping, belief, body habit, attachment, or fear | Rule learned | Present behavior created
+
+- Behavioral Residue: Habits, avoidances, desires, misreadings, body reactions, speech patterns, or relationship patterns that remain because of the past
+
+
+### Preferences / Secrets
+
+- Comforts & Irritants: Objects | Routines | Places | People | Sounds | Gestures | Food | Weather | Work | Minor things that disproportionately bother the character (Can reveal vulnerability without confession; do not let irritants become a gimmick.)
+
+- Hidden Truth: Hidden fact | Why hidden | What it protects (Use only if it affects identity, relationships, power, safety, shame, plot, or behavior.)
+
+- Self-Deception: What the character believes about themselves that is false, incomplete, or outdated (Should affect choices.)
+
+- Concealment Behavior: Silence | Humor | Competence | Anger | Charm | Distance | Lies | Overwork | Politeness | How the hidden truth leaks into action, speech, choices, avoidance, or body language (Prevents secrets from becoming inert lore.)

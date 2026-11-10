@@ -1,4 +1,14 @@
-# 현재 상태 — 3.0.8 (main 2.0.7에서 분기)
+# 현재 상태 — 2.1.0 브랜치 (3.0.8 내용을 옮김, main 2.0.7에서 분기)
+
+## 최근 세션 (2026-11-10 저녁 — 2.1.0: 페르소나 빌더 SOP 3단계 + 페르소나 공방 기능)
+- 사용자 요청: AI로 페르소나 만들기를 사용자 SOP 시트(첨부 txt) 기준으로 바꾸고, 지침을 초안(시트 머리글)·검토 보고서(OOC 감사)·최종(OOC 다시 쓰기) 3개로. 페르소나 공방(canister2668/Risu-persona-forge 1.0.0)에만 있는 기능은 가져오기.
+- **새 파일 `src/data/personasop.js`(애드온 전용, 코어가 import하지 않음 → 코어 2.0.7에서도 aibuild 켜짐, 공유 export 12개 모듈 main 대조 확인)**: SOP_TEMPLATE(75칸, [한글] 이름), SOP_DRAFT/REVIEW/FINAL(사용자 문구 그대로), `stepPrompt`(프리셋 `sopDraft/sopReview/sopFinal`, 비면 기본), `ensureSop`(sop 양식 추가, 처음 한 번 `pb.sopV1` — 쓰던 값 없으면 sop 선택), `readSheet`(들여 쓴 하위 목록을 ` | `로 접어 코어 readValues), `buildStepPrompt`(draft·fill·edit 모두 1단계 지침 기준), `buildReviewPrompt`/`buildFinalPrompt`(사용자 OOC 흐름 그대로: 요청→시트(assistant)→검토 OOC→보고서(assistant)→최종 OOC+고른 항목+메모), `parseReport`(## 분류·**분류:**·줄 안 분류·번호·하위 목록), NAI 태그(`naiTagPrompt`/`cleanTags`), `estimateTokens`, `lineDiff`, 공유 코드 `DPA2`(단계 지침 포함, DPA1·DPB1은 코어 readCode).
+- 화면 `ui/screens/personabuilder.js`: 단계 버튼 ‘1 초안 쓰기 › 2 검토 보고서 › 3 최종 다듬기’, 검토 패널(분류별 체크·모두 적용/해제·원문/번역 접기·메모·‘고른 항목으로 최종 다듬기’, 시트 바뀌면 경고), 최종 적용 = 켜진 섹션 칸 전부 교체(30% 미만으로 줄면 확인), ‘바뀐 점 보기’(diff 모달), 미리보기 토큰 추정, NAI 캐릭터 태그 접기, 백업 ‘지금 내용과 비교’, ··· 안 ‘빈 칸만 채우기’·‘전부 비우기’, AI 프리셋 편집 ‘단계별 지침’(기본값으로). sop 양식 ‘처음 상태로’ 처리. draft에 `review`·`naiTags` 저장.
+- 가져오지 않은 공방 기능: 기본 이미지 템플릿 80장(남의 그림·저장소 호스팅), 보관함 판 관리·파일 백업, 봇 기본 페르소나·설명 주입 자동 갱신(페르소나 연결과 겹침 — 사용자 확인 필요), 업데이트 서버.
+- aibuild 애드온 0.1.1 → 0.1.2(build-addons). **배포(publish-addons)·push 안 함** — 이 세션은 저장소 쓰기 권한이 없었음.
+- 확인: npm test 1318 pass / 1 fail(pot-port, 원래부터), build·check 동일함(코어 변경 없음), build-addons --check 동일함, e2e `run-persona-sop.mjs` 36(PC 1280·모바일 390), `run-addon-aibuild.mjs`·`run-smoke.mjs` 통과. 실제 모델·실기기 미확인.
+- 남은 일: [ ] 실제 모델로 초안·보고서 형식(분류 머리글) 확인 [ ] 공방의 봇 기본 페르소나·파일 백업을 넣을지 사용자 결정 [ ] 공방 기능 이식 표기(감사 카드)를 넣을지 사용자 결정
+
 
 ## 최근 세션 (2026-11-10 오후 — 3.0.8: 기능 접근성·채팅 속도·Erosync 인물 고르기·자동 기록 잠김)
 - 사용자 제보: "켠 것처럼 보이는데 안 돈다"(월경·임신 기록은 고급 모드 안 ‘관계만 기록할 때 인지·정체 인식’이 ‘켬’이어야 동작) + 기능이 어디 있는지 못 찾음 + 채팅 느려짐 + Erosync 인물 선택 분석 + 장기기억 꼬이면 번호를 손으로 고쳐야 갱신됨.
