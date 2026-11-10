@@ -37,6 +37,8 @@ import { chatKeyOf } from "../engine/chatkey.js";
 import { cleanJsonReply } from "../engine/jsonreply.js";
 import { routerKey, swapRequestRef, directionKey, boundedSet } from "../engine/retrycache.js";
 import { parseDirectorRun, factSheet, directionMessages, parseDirection, renderDirection, directorEnvelope } from "../engine/director.js";
+import { createCastReader } from "./castlore.js";
+import { dropCreates } from "../engine/castfilter.js";
 import { parseWriterRun, recordTurn, buildEnvelope, buildDusk, summarize, recorderText, attemptDuskRecord } from "../engine/recorder.js";
 import { customPromptPlain } from "../engine/pot/custom-prompts.js";
 
@@ -47,7 +49,7 @@ const STASH_MAX = 8;
 
 // link: 러너와 공유하는 빈 객체. 턴 흐름이 켜지면 settle/take가 채워진다.
 export function createTurnFlow(api, { store, runner, injector, embedder = null, sourceLibrary, link = {}, onOpen = null, log = (...a) => console.log("[Dusk 기억]", ...a), scheduler = globalThis } = {}) {
-  let rt = null, starting = null, lastTurn = null, cold = null, lastRecord = null, lastNote = null, retryHits = 0;
+  let rt = null, starting = null, lastTurn = null, cold = null, lastRecord = null, lastNote = null, retryHits = 0, lastSkipped = null;
   // pure: 기억 저장소가 '끔'이면 Dusk 자체 기억(기록·회상·주입)은 전부 빼고 리수폿 위키 정리만 돌린다
   let pure = false;
   let cyclePending = null; const cycleEvents = [];  // 월경·임신: 응답 전 상태 → 응답 뒤 달라진 큰 사건(출산 등)을 Dusk 기록 대기열에
@@ -120,7 +122,10 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     // 리수폿이 받던 응답(JSON)으로 바꿔 돌려준다. 해석이 안 되거나(PDF 첨부 방식)·월경 보고가 필요하면 예전 길로.
     const potNext = new Set(); let lastKey = "";
     const autoLight = { streak: 0, hold: 0 };   // 가벼운 지침 자동 전환 상태(이번 실행 동안만, 저장하지 않음)
-    const recCache = new Map(), recDone = new Map();   // 같은 응답의 1단계 결과(리수폿이 묶음을 나눠 여러 번 부를 때 재사용)
+    const recCache = new Map(), recDone = new Map();
+    // 로어북에 있는 인물만 새로 기록(기본 켜짐, 설정 loreOnly). 판단기가 null이면(로어북 없음·봇이 바뀜·읽기 실패) 막지 않는다.
+    const readCast = createCastReader(api);
+    const castNow = async (s0) => { if (s0?.loreOnly === false) return null; try { return await readCast(wiki.scope?.characterId ?? ""); } catch { return null; } };   // 같은 응답의 1단계 결과(리수폿이 묶음을 나눠 여러 번 부를 때 재사용)
     const recordWithDusk = async (a, k, preset, prompt, opts) => {
       const s0 = (await store.getIndex()).settings ?? {};
       if (s0.recorder === "pot" || String(prompt).includes(CYCLE_BLOCK_MARK)) return null;
@@ -135,14 +140,15 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       const light = s0.light === true, beliefs = s0.inject?.beliefs === true;
       while (recCache.size > 4) recCache.delete(recCache.keys().next().value);
       // 같은 응답을 다시 기록하라고 불리면(앞선 시도가 저장 전에 끊김 등) 받아 둔 결과를 다시 쓴다 — 보조 모델을 또 부르지 않는다
-      const fullKey = `${run.rp.length}:${run.rp.slice(0, 200)}:${run.rp.slice(-200)}|${run.docs.filter((d) => d.writable).map((d) => d.title).sort().join(",")}|${run.allowCreate}`;
+      const fullKey = `${run.rp.length}:${run.rp.slice(0, 200)}:${run.rp.slice(-200)}|${run.docs.filter((d) => d.writable).map((d) => d.title).sort().join(",")}|${run.allowCreate}|${s0.loreOnly !== false}`;
       // 이 응답의 기록기 결과가 리수폿 검증에서 떨어졌으면(자동 재시도 포함) 같은 결과를 또 내지 않고 예전 리수폿 기록으로 넘긴다
       if (potNext.has(fullKey)) { potNext.delete(fullKey); return null; }
       lastKey = fullKey;
       let rec = recDone.get(fullKey);
       if (rec) retryHits++;
       else {
-        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
+        const cast = await castNow(s0);
+        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, cast, onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
         if (!rec.people.some((p) => p.failed)) boundedSet(recDone, fullKey, rec, 4);
       }
       const env = buildEnvelope(run, rec);
@@ -178,6 +184,13 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
         text = raw;
       }
       if (cyc) { try { text = applyCycleReport(text, wiki.snapshot(), parseJson).raw; } catch { /* 보고 줄 없이 그대로 */ } }
+      // 예전 리수폿 기록(대신 길 포함)도 로어북에 없는 새 인물은 빼고 넘긴다
+      if (/^writer/i.test(label) && typeof text === "string") {
+        try {
+          const cast = await castNow((await store.getIndex()).settings ?? {});
+          if (cast) { const { env, dropped } = dropCreates(JSON.parse(text), (t, al) => cast(t, al)); if (dropped.length) { text = JSON.stringify(env); lastSkipped = { at: Date.now(), names: dropped }; log("로어북에 없는 새 인물 빼고 기록", dropped.join(", ")); } }
+        } catch { /* JSON이 아니면(리수폿이 고쳐 읽음) 그대로 */ }
+      }
       return text;
     };
 
@@ -352,5 +365,5 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
   }
   const dropCold = () => { cold = null; };
 
-  return { start: apply, apply: async () => { dropCold(); return apply(); }, stop, isOn: () => !!rt, tools: () => rt ? (rt.tools ??= makeTools({ api, rt, sourceLibrary, llmCall: rt.stageCall })) : null, last: () => lastTurn, lastRecord: () => lastRecord, lastNote: () => lastNote, retryHits: () => retryHits, runtime: () => rt, stash: () => stash.size, settings: settingsStore };
+  return { start: apply, apply: async () => { dropCold(); return apply(); }, stop, isOn: () => !!rt, tools: () => rt ? (rt.tools ??= makeTools({ api, rt, sourceLibrary, llmCall: rt.stageCall })) : null, last: () => lastTurn, lastRecord: () => lastRecord, lastSkipped: () => lastSkipped, lastNote: () => lastNote, retryHits: () => retryHits, runtime: () => rt, stash: () => stash.size, settings: settingsStore };
 }

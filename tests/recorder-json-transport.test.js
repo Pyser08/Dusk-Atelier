@@ -120,3 +120,15 @@ test("가벼운 지침 자동 전환: Dusk 분석(analyzeStaged)도 같은 규�
   const out = await analyzeStaged(call, { bot: "b", known: [], recent: [], newest: { index: 1, text } }, {});
   assert.ok(full >= 1 && light === 1); assert.ok(out.people.some((p) => p.name === "민지"));
 });
+
+test("로어북 필터: 로어북에 없는 새 인물은 묻지도 만들지도 않는다(이미 있는 인물은 그대로)", async () => {
+  const run = await runOf(); const asked = [];
+  const model = async (msgs) => { const u = JSON.parse(msgs[1].content); if (!u.focus) return STAGE1; asked.push(u.focus); return '{"lines":["id|대학생"]}'; };
+  const rec = await recordTurn(model, run, { cast: (name) => name === "민지" });
+  assert.deepEqual(asked, ["민지"]); assert.deepEqual(rec.people.map((p) => p.name), ["민지"]);
+  assert.deepEqual(rec.skipped, ["민준"]);
+  const { buildEnvelope, summarize } = await import("../src/engine/recorder.js");
+  const env = buildEnvelope(run, rec);
+  assert.deepEqual(env.documents.filter((d) => d.operation === "create").map((d) => d.title), ["민지"]);
+  assert.deepEqual(summarize(rec, env).skipped, ["민준"]);
+});

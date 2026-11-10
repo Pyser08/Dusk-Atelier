@@ -24,11 +24,12 @@ export function builders(ctx, idx, redraw, kind = "all") {
 // 최근 기록 결과(Dusk 기록기): 무엇을 남겼는지 한눈에. 화면을 열 때의 값만 보여 준다(새로 기록되면 다시 열면 바뀜).
 function recordBox(M) {
   const r = M.flow?.lastRecord?.(), note = M.flow?.lastNote?.(), hits = M.flow?.retryHits?.() ?? 0;
-  const extra = [note ? `정리 노트: 인물 ${note.people}명${note.direction ? ` · 방향 ${note.direction}줄` : ""} (${new Date(note.at).toLocaleTimeString()})` : "", hits ? `다시 요청 때 재사용 ${hits}번` : ""].filter(Boolean);
+  const sk = M.flow?.lastSkipped?.();
+  const extra = [sk?.names?.length ? `리수폿 기록에서 로어북에 없는 새 인물 뺌: ${sk.names.join(", ")} (${new Date(sk.at).toLocaleTimeString()})` : "", note ? `정리 노트: 인물 ${note.people}명${note.direction ? ` · 방향 ${note.direction}줄` : ""} (${new Date(note.at).toLocaleTimeString()})` : "", hits ? `다시 요청 때 재사용 ${hits}번` : ""].filter(Boolean);
   if (!r) return h("p", { class: "rb-muted", "data-rec": "none" }, "최근 기록 결과: 아직 없어요 (Dusk 기록기가 한 번 돌면 여기에 보여요).");
   const when = new Date(r.at).toLocaleTimeString();
   if (r.error) return h("p", { class: "rb-muted", "data-rec": "error" }, `최근 기록 결과 (${when}): 실패 — ${r.error}`);
-  const parts = [r.created?.length ? `새 인물 ${r.created.join(", ")}` : "", r.updated ? `카드 ${r.updated}명 갱신` : "", r.entries ? `항목 ${r.entries}개` : "", r.gauges ? `호감도 변화 ${r.gauges}건` : "", r.states?.length ? `상태 ${r.states.join(", ")}` : "", r.failed?.length ? `세부 실패 ${r.failed.join(", ")}` : "", r.lightAuto ? "가벼운 지침으로 자동 전환(깊은 칸은 이번에 묻지 않음)" : ""].filter(Boolean);
+  const parts = [r.created?.length ? `새 인물 ${r.created.join(", ")}` : "", r.updated ? `카드 ${r.updated}명 갱신` : "", r.entries ? `항목 ${r.entries}개` : "", r.gauges ? `호감도 변화 ${r.gauges}건` : "", r.states?.length ? `상태 ${r.states.join(", ")}` : "", r.failed?.length ? `세부 실패 ${r.failed.join(", ")}` : "", r.lightAuto ? "가벼운 지침으로 자동 전환(깊은 칸은 이번에 묻지 않음)" : "", r.skipped?.length ? `로어북에 없어 새로 만들지 않음: ${r.skipped.join(", ")}` : ""].filter(Boolean);
   return h("details", { class: "rb-mem-man", "data-rec": "ok" }, h("summary", null, `최근 기록 결과 (${when}) · ${parts.length ? parts.slice(0, 2).join(" · ") : "바뀐 것 없음"}`),
     h("ul", null, [r.scene ? `장면: ${r.scene}` : "", ...parts, ...extra].filter(Boolean).map((t) => h("li", null, t))));
 }
@@ -60,6 +61,8 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
       h("p", { class: "rb-muted" }, "‘다음 입력을 보낼 때’는 내가 다음 말을 보내는 순간 직전 응답을 확정해서 기록해요. 리롤하거나 고치는 중인 응답은 기록하지 않아서 되돌릴 일이 거의 없어요. 대신 마지막 응답은 다음 말을 보낼 때까지 기록되지 않아요."),
       num("디바운스(초)", () => S.debounceSec, (s, v) => { s.debounceSec = v; }, { max: 60 }), num("기록 시작 턴(1=첫 응답부터)", () => S.startTurn ?? 1, (s, v) => { s.startTurn = Math.max(1, v); }, { min: 1, max: 50 }), num("N턴마다 분석", () => S.everyN, (s, v) => { s.everyN = Math.max(1, v); }, { min: 1, max: 20 }),
       num("짧은 응답 기준(글자)", () => S.minChars, (s, v) => { s.minChars = v; }, { max: 2000 }), num("인물당 기록 상한", () => S.personCap, (s, v) => { s.personCap = Math.max(20, v); }, { min: 20, max: 2000 }),
+      sw("로어북에 있는 인물만 새로 기록", S.loreOnly !== false, (s, v) => { s.loreOnly = v; }),
+      h("p", { class: "rb-muted" }, "켜 두면 봇 이름·설명이나 로어북(캐릭터·채팅·모듈)에 이름이 나오는 인물만 위키에 새로 만들어요. 지나가는 점원 같은 엑스트라는 만들지 않아요. 이미 위키에 있는 인물은 그대로 기록하고, 로어북이 비어 있는 봇에서는 막지 않아요."),
       sw("가벼운 모델 모드", S.light === true, (s, v) => { s.light = v; }),
       h("p", { class: "rb-muted" }, "가벼운 모델(flash·mini 등)이 형식을 잘 못 맞출 때 직접 켜세요. 세부 분석을 최대 3명으로 줄이고 속마음·갈등·추억은 요구하지 않아요."),
       sw("단계별 분석 (안정적, 호출은 늘어요)", S.staged !== false, (s, v) => { s.staged = v; }),

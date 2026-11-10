@@ -1,5 +1,14 @@
 # 현재 상태 — 2.1.0 브랜치 (3.0.8 내용을 옮김, main 2.0.7에서 분기)
 
+
+## 최근 세션 (2026-11-10 밤 — 로어북에 있는 인물만 위키에 새로, memory 0.2.6 애드온만 배포)
+- 사용자: "로어북에 명시된 캐릭터가 아니면 위키에 안 떠야" → 기본 켜짐 + 애드온만 배포.
+- 새 파일(애드온 전용, 코어 import 없음): `engine/castfilter.js`(loreCast·inCast·dropCreates, 순수) · `data/castlore.js`(createCastReader: 캐릭터 globalLore + 채팅 localLore + 켜진 모듈(전역·봇·채팅) lorebook + 봇 이름·desc·personality, ci:ti 60초 캐시, 기록 중 위키 봇(chaId)과 열린 봇이 다르면 null).
+- 맞춤: 정규화(소문자·공백 제거·{{…}} 제거) 후 이름/별칭이 로어북 글(key·secondkey·comment·content)에 들어 있거나, 키워드(2자+)가 이름 안에 있으면 통과. 로어북 항목 0개 → 막지 않음.
+- 적용: `recorder.recordTurn({cast})` — 새 인물만 거름(묻지도 않음, `rec.skipped`·summarize.skipped). `memoryturn.writerCall` — 예전 리수폿 Writer 응답(JSON)도 `dropCreates`로 새 인물 create와 그 ref를 가리키는 entries·metric/people ops·issues 제거(`lastSkipped`). 설정 `settings.loreOnly`(기본 undefined=켜짐), 캐시 열쇠에 포함. UI: 고급 → 분석 스위치 + 최근 기록 결과에 ‘로어북에 없어 새로 만들지 않음’.
+- 안 막는 길: Dusk 자체 ‘지난 대화 분석’(코어 memoryprompt) — 다음 코어 때 검토. 기능 찾기 목록(코어 featurefind)에 항목 미추가.
+- 확인: npm test 1334 pass/0 fail, build·check 동일함(v2.1.0, 코어 변경 없음), build-addons --check 동일함, 공유 모듈 56개 export가 2.0.7(79a0578)에 모두 있음, e2e run-recorder-ui 12/12. 실기기 미확인.
+
 ## 최근 세션 (2026-11-10 저녁 — 2.1.0: 페르소나 빌더 SOP 3단계 + 페르소나 공방 기능)
 - 사용자 요청: AI로 페르소나 만들기를 사용자 SOP 시트(첨부 txt) 기준으로 바꾸고, 지침을 초안(시트 머리글)·검토 보고서(OOC 감사)·최종(OOC 다시 쓰기) 3개로. 페르소나 공방(canister2668/Risu-persona-forge 1.0.0)에만 있는 기능은 가져오기.
 - **새 파일 `src/data/personasop.js`(애드온 전용, 코어가 import하지 않음 → 코어 2.0.7에서도 aibuild 켜짐, 공유 export 12개 모듈 main 대조 확인)**: SOP_TEMPLATE(75칸, [한글] 이름), SOP_DRAFT/REVIEW/FINAL(사용자 문구 그대로), `stepPrompt`(프리셋 `sopDraft/sopReview/sopFinal`, 비면 기본), `ensureSop`(sop 양식 추가, 처음 한 번 `pb.sopV1` — 쓰던 값 없으면 sop 선택), `readSheet`(들여 쓴 하위 목록을 ` | `로 접어 코어 readValues), `buildStepPrompt`(draft·fill·edit 모두 1단계 지침 기준), `buildReviewPrompt`/`buildFinalPrompt`(사용자 OOC 흐름 그대로: 요청→시트(assistant)→검토 OOC→보고서(assistant)→최종 OOC+고른 항목+메모), `parseReport`(## 분류·**분류:**·줄 안 분류·번호·하위 목록), NAI 태그(`naiTagPrompt`/`cleanTags`), `estimateTokens`, `lineDiff`, 공유 코드 `DPA2`(단계 지침 포함, DPA1·DPB1은 코어 readCode).

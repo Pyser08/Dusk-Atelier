@@ -130,7 +130,8 @@ export function deepMenu(run) {
 
 export const MAX_PEOPLE = 6;
 // dusk: runner.prepareLatest().input (없으면 null). 반환 { stage1, people:[{name, ref, isNew, lines}] }
-export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, onWarn = () => {} } = {}) {
+// cast(name, aliases) → bool: 로어북에 있는 인물만 새로 만들기(설정 '로어북에 있는 인물만 새로 기록'). 없으면 막지 않는다. 이미 위키에 있는 인물은 묻지 않고 통과.
+export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, onWarn = () => {} } = {}) {
   const source = run.rp, known0 = knownOf(run, dusk?.known ?? []);
   const known = knownInText(known0, [run.recent, source].join("\n"));
   const openItems = dusk?.openItems ?? [], openIds = new Set(openItems.map((x) => String(x.id)));
@@ -151,12 +152,13 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   for (const d of run.docs) for (const a of d.aliases ?? []) if (!byName.has(nk(a))) byName.set(nk(a), d);
   const userKeys = new Set(["{{user}}", ...run.userNames].map(nk));
   const imp = (e) => Math.max(e.p ?? 0, e.s ?? 0, e.r ?? 0);
-  const seen = new Set(), targets = [];
+  const seen = new Set(), targets = [], skipped = [];
   for (const e of [...stage1.people].sort((x, y) => imp(y) - imp(x))) {
     const k = nk(e.name); if (seen.has(k) || userKeys.has(k)) continue; seen.add(k);
     const doc = byName.get(k) ?? null;
     if (doc ? !doc.writable : !run.allowCreate) continue;
     if (!doc && imp(e) < 1 && !stage1.fresh.some((f) => nk(f.name) === k)) continue;   // 새 인물은 한 일이 있을 때만
+    if (!doc && cast && !cast(e.name, [])) { skipped.push(e.name); continue; }   // 로어북에 없는 새 인물(지나가는 점원 등)
     targets.push({ name: doc?.title ?? e.name, doc, act: e.act });
   }
   // 3.0.8 가벼운 지침 자동 전환: 전체 지침(줄 종류 20여 개)으로 형식 오류가 나면 그 인물을 가벼운 지침으로 한 번 더 묻고,
@@ -188,7 +190,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
     else if (switched) { auto.streak = (auto.streak ?? 0) + 1; if (auto.streak >= 2) { auto.hold = 10; auto.streak = 0; } }
     else if (people.length) auto.streak = 0;
   }
-  return { stage1, people, known, source, lightAuto };
+  return { stage1, people, known, source, lightAuto, skipped };
 }
 
 // ── ③ 줄 → 리수폿 응답(envelope) ──
@@ -393,7 +395,7 @@ export function parseLinesLoose(raw) {
 // 한 번의 결과 요약(화면 '최근 기록 결과'용)
 export function summarize(rec, env) {
   return {
-    scene: rec.stage1.scene?.sum ?? "", people: rec.people.length, names: rec.people.map((p) => p.name), lightAuto: rec.lightAuto === true, failed: rec.people.filter((p) => p.failed).map((p) => p.name),
+    scene: rec.stage1.scene?.sum ?? "", people: rec.people.length, names: rec.people.map((p) => p.name), lightAuto: rec.lightAuto === true, skipped: rec.skipped ?? [], failed: rec.people.filter((p) => p.failed).map((p) => p.name),
     states: (rec.stage1.states ?? []).map((s) => `${s.name}: ${s.v}`), created: env.documents.filter((d) => d.operation === "create").map((d) => d.title),
     updated: env.documents.filter((d) => d.operation === "update").length, entries: env.documents.reduce((n, d) => n + d.entries.length, 0),
     gauges: env.metric_ops.filter((m) => m.operation === "delta").length,
