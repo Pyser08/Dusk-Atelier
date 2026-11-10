@@ -26,6 +26,12 @@ for (const vw of [1280, 390]) {
       return { type: "success", result: "번역" };
     };
   });
+  await page.evaluate(() => {
+    const api = window.__app.ctx.api, orig = api.getDatabase;
+    window.__pdb = [{ id: "p1", name: "선생님", personaPrompt: "TEACHER" }, { id: "p2", name: "학생회장", personaPrompt: "PRES" }];
+    api.getDatabase = async (k) => ({ ...(await orig(k)), personas: structuredClone(window.__pdb), selectedPersona: -1 });
+    api.setDatabaseLite = async (o) => { if (o.personas) window.__pdb = structuredClone(o.personas); };
+  });
   await page.evaluate(() => window.__app.ctx.go("personabuilder"));
   await page.waitForTimeout(700);
   if (shot) await page.screenshot({ path: `/tmp/pb-top-${vw}.png` });
@@ -86,6 +92,28 @@ for (const vw of [1280, 390]) {
   ok(`[${vw}] 크레딧: 페르소나 공방·SOP Lite`, /페르소나 공방/.test(await T()) && /SOP Lite/.test(await T()));
   ok(`[${vw}] 가로 넘침 없음`, await page.evaluate(() => { const m = document.querySelector(".rb-main .rb-section"); return m.scrollWidth <= m.clientWidth + 1; }));
   if (shot) { await page.evaluate(() => document.querySelector(".rb-pb-rv").scrollIntoView()); await page.screenshot({ path: `/tmp/pb-review-${vw}.png` }); }
+  // ── 현재 채팅 · 봇 기본 페르소나 ──
+  ok(`[${vw}] 현재 채팅 카드(봇 이름)`, /현재 채팅/.test(await T()) && /시로코/.test(await page.locator(".rb-pb-cs").innerText()));
+  await page.selectOption('select[aria-label="이 봇 기본 페르소나"]', "p1"); await page.waitForTimeout(500);
+  ok(`[${vw}] 봇 기본 페르소나 저장`, await page.evaluate(() => JSON.parse(window.__app.ctx.api.store["dusk.personaBotDefaults"] ?? "{}").c1?.pid === "p1"));
+  ok(`[${vw}] 요청에 설명이 들어감`, await page.evaluate(async () => { const o = await window.__app.ctx.ext.get("svc", "aibuild").botDefaults.beforeRequest([{ role: "user", content: "hi", memo: "m" }], "model"); return o.length === 2 && /TEACHER/.test(o[0].content); }));
+  if (shot) { await page.locator(".rb-pb-cs").scrollIntoViewIfNeeded(); await page.screenshot({ path: `/tmp/pb-cs-${vw}.png` }); }
+  ok(`[${vw}] 카드에 '(봇 기본)' 표시`, /선생님 \(봇 기본\)/.test(await page.locator(".rb-pb-cs").innerText()));
+  // ── 파일 백업 → 가져오기 ──
+  const menu = async (label) => { await page.click('button[aria-label="백업 메뉴"]'); await page.waitForTimeout(200); await page.locator(".rb-menu button, [role=menu] button, [role=menuitem]", { hasText: label }).first().click(); await page.waitForTimeout(300); };
+  await menu("파일로 백업");
+  const [dl] = await Promise.all([page.waitForEvent("download"), page.locator(".rb-dialog button", { hasText: "백업 파일 받기" }).click()]);
+  const file = await dl.path().then((p) => import("node:fs").then((fs) => fs.readFileSync(p, "utf8")));
+  const bk = JSON.parse(file);
+  ok(`[${vw}] 백업 파일: 페르소나 2·양식·봇 기본`, bk.personas.length === 2 && bk.templates.some((t) => t.id === "sop") && bk.botDefaults.c1?.pid === "p1", file.slice(0, 200));
+  await page.evaluate(() => { window.__pdb[0].personaPrompt = "CHANGED"; window.__pdb.splice(1, 1); });
+  const [fc] = await Promise.all([page.waitForEvent("filechooser"), menu("파일에서 가져오기")]);
+  await fc.setFiles({ name: "b.json", mimeType: "application/json", buffer: Buffer.from(file) });
+  await page.waitForTimeout(600);
+  ok(`[${vw}] 가져오기 확인창 요약`, /새로 1개 · 사본 1개/.test(await page.locator(".rb-dialog").innerText().catch(() => "")));
+  await page.locator(".rb-dialog button", { hasText: "가져오기" }).last().click(); await page.waitForTimeout(900);
+  const names = await page.evaluate(() => window.__pdb.map((p) => p.name + ":" + p.personaPrompt).join("|"));
+  ok(`[${vw}] 가져오기: 바뀐 건 사본, 지운 건 되살림`, names === "선생님:CHANGED|선생님 (가져옴):TEACHER|학생회장:PRES", names);
   ok(`[${vw}] 오류 없음`, !errs.length, errs.join(";"));
   await page.close();
 }

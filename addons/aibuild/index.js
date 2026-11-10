@@ -6,11 +6,15 @@ import * as bridge from "../../src/dev/aibuild/bridge.js";
 import * as aitab from "../../src/ui/screens/aitab.js";
 import { openAiPopup, loadPopupGeom } from "../../src/ui/screens/aibuild.js";
 import { renderPersonaBuilder } from "../../src/ui/screens/personabuilder.js";
+import { createBotDefaults } from "../../src/data/personabotdef.js";
 
-export async function activate(_api, ctx) {
+export async function activate(api, ctx) {
   const ext = ctx.ext;
   if (!ext) throw new Error("Dusk가 애드온 자리(ext)를 지원하지 않아요 — Dusk를 업데이트해 주세요");
-  const svc = { load: async () => [controller, bridge], aitab: async () => aitab, openAiPopup, loadPopupGeom };
+  // 봇 기본 페르소나(요청 훅): 정해 둔 봇이 있을 때만 훅을 건다
+  const botDefaults = createBotDefaults(api);
+  botDefaults.start().catch((e) => console.log(`[Dusk Atelier] 봇 기본 페르소나 시작 실패 ${e?.message ?? e}`));
+  const svc = { load: async () => [controller, bridge], aitab: async () => aitab, openAiPopup, loadPopupGeom, botDefaults };
   const off = [ext.add("svc", "aibuild", svc), ext.add("tab", "personabuilder", renderPersonaBuilder)];
-  return { deactivate() { off.forEach((f) => f()); } };
+  return { async deactivate() { off.forEach((f) => f()); await botDefaults.stop(); } };
 }

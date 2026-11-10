@@ -2,12 +2,14 @@
 // AI 없이 손으로 채우거나, AI 프리셋(모델·추가 지시·단계 지침·번역)으로
 // 1단계 초안 → 2단계 검토 보고서(항목 고르기) → 3단계 최종 다듬기, 빈 칸/부분 고치기.
 // AI 출력은 영어 고정, 번역은 보기용(저장되지 않음). SOP 흐름·NAI 태그·판 비교는 data/personasop.js(애드온 전용).
-import { copyText, h, replace } from '../dom.js';
+import { copyText, download, pickFiles, h, replace } from '../dom.js';
 import { btn, iconBtn, confirmDialog, promptDialog, modal, note, openMenu, switchEl, setSwitch } from '../kit.js';
 import { attachUndo } from '../undo.js';
 import { AI_MODES, runAI } from '../../engine/merge.js';
-import { parseTemplate, compose, readValues, translatePrompt, fieldKey, freeKey, loadPB, savePB, pushBackup, loadBackups, newId, templateCode, readCode, DEFAULT_AI, addField, removeField, addSection, removeSection } from '../../data/personabuilder.js';
+import { PB_BACKUP_KEY, parseTemplate, compose, readValues, translatePrompt, fieldKey, freeKey, loadPB, savePB, pushBackup, loadBackups, newId, templateCode, readCode, DEFAULT_AI, addField, removeField, addSection, removeSection } from '../../data/personabuilder.js';
 import { SOP_ID, SOP_TEMPLATE, STEP_KEYS, STEP_DEFAULT, ensureSop, readSheet, writableKeys, buildStepPrompt, buildReviewPrompt, buildFinalPrompt, parseReport, CATS, CAT_KO, naiTagPrompt, cleanTags, translateReportPrompt, estimateTokens, lineDiff, aiCode2, readAiCode2 } from '../../data/personasop.js';
+import { makeBackup, backupName, parseBackup, planImport, restoreImages } from '../../data/personafile.js';
+import { createBotDefaults, loadBotDefaults } from '../../data/personabotdef.js';
 import { ROULETTE, DEFAULT_SLOTS, catById, spin, rouletteText } from '../../data/personaroulette.js';
 
 var CSS = `
@@ -69,7 +71,7 @@ var CSS = `
 .rb-pb-steps .arrow{color:var(--rb-mute);font-size:12px}
 .rb-pb-cols{display:flex;flex-direction:column;gap:14px;min-width:0}
 .rb-pb-mainc,.rb-pb-sidec{display:flex;flex-direction:column;gap:14px;min-width:0}
-@media (min-width:1000px){.rb-pb-cols{display:grid;grid-template-columns:minmax(0,1fr) 340px;column-gap:18px;align-items:start}.rb-pb-sidec{position:sticky;top:0}}
+@media (min-width:1000px){.rb-pb-cols{display:grid;grid-template-columns:minmax(0,1fr) 340px;column-gap:18px;align-items:start}}
 .rb-pb-card{border:1px solid var(--rb-line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--rb-surf);min-width:0}
 .rb-pb-idc .rb-pb-lbl .rb-pb-name{height:46px;font-size:16px;font-weight:700}
 .rb-pb-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -115,12 +117,23 @@ var CSS = `
 .rb-pb-live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--rb-ok,#46a758)}
 .rb-pb-sheetc{padding:0;gap:0;overflow:hidden}
 .rb-pb-sheetc>.hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rb-line);font-size:12.5px;font-weight:700}
-.rb-pb-sheetc>pre{border:0;border-radius:0;max-height:46vh;padding:12px 16px}
+.rb-pb-sheetc>pre{border:0;border-radius:0;max-height:40vh;padding:12px 16px}
 .rb-pb-sheetc>.ft{display:flex;justify-content:space-between;gap:8px;padding:10px 16px;border-top:1px solid var(--rb-line);font-size:11px;color:var(--rb-mute)}
 .rb-pb-foot{position:sticky;bottom:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;margin-top:4px;border:1px solid var(--rb-line);border-radius:14px;background:var(--rb-win,var(--rb-surf));box-shadow:0 -6px 18px rgb(0 0 0/.08)}
 .rb-pb-foot .msg{flex:1;min-width:160px;font-size:12px;color:var(--rb-sub)}
 .rb-main .rb-pb-chat{bottom:84px!important}
 @media (max-width:760px){.rb-main .rb-pb-chat{bottom:150px!important}.rb-pb-foot{flex-wrap:nowrap;padding:8px}.rb-pb-foot .msg{display:none}.rb-pb-foot>.rb-btn{flex:1 1 auto;justify-content:center;padding-inline:8px;min-width:0}.rb-pb-foot>.rb-btn:first-of-type{flex:none}.rb-pb-foot>.rb-btn:first-of-type span,.rb-pb-foot>.rb-btn:not(:first-of-type) svg{display:none}.rb-pb-gen .rb-pb-bar>.rb-btn{flex:1 1 auto;justify-content:center}.rb-pb-gen .rb-pb-bar>span{display:none}}
+.rb-pb-cs{display:flex;flex-direction:column;gap:8px;font-size:12.5px}
+.rb-pb-cs .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.rb-pb-cs .row span:first-child{color:var(--rb-mute);flex:none}
+.rb-pb-cs .row b{text-align:right;min-width:0;overflow-wrap:anywhere}
+.rb-pb-cs select{height:38px;width:100%}
+.rb-pb-cs small{font-size:11.5px;color:var(--rb-mute);line-height:1.5}
+.rb-pb-defs{display:flex;flex-direction:column;gap:6px}
+.rb-pb-defs>div{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--rb-line);border-radius:10px;font-size:12px}
+.rb-pb-defs>div span{flex:1;min-width:0;overflow-wrap:anywhere}
+.rb-pb-pick{display:flex;flex-direction:column;gap:4px;max-height:46vh;overflow:auto}
+.rb-pb-pick label{display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:8px;border:1px solid var(--rb-line);font-size:12.5px}
 .rb-pb-thanks{margin:6px 0 4px;text-align:center;font-size:11px;line-height:1.7;color:var(--rb-mute)}
 .rb-pb-thanks a{color:inherit;font-weight:700;text-decoration:underline}
 .rb-pb-rv{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--rb-line);padding-top:10px}
@@ -1219,6 +1232,80 @@ export async function renderPersonaBuilder(ctx) {
     ));
   }
 
+  // ── 파일 백업 (페르소나 공방): 고른 리스 페르소나 + 양식·AI 프리셋·덮어쓰기 백업·봇 기본 페르소나 ──
+  const botDef = ctx.ext?.get?.("svc", "aibuild")?.botDefaults ?? createBotDefaults(api);
+  async function exportFile() {
+    await loadPersonas();
+    const list = personas.filter((p) => p.id);
+    const picked = await modal(ctx.win, (done) => {
+      const boxes = list.map((p) => {
+        const cb = h("input", { type: "checkbox", checked: true, value: p.id });
+        return { cb, row: h("label", null, cb, h("span", null, p.name || "(이름 없음)")) };
+      });
+      return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(520px,94vw)" },
+        h("h3", { class: "rb-h3" }, "파일로 백업"),
+        h("p", { class: "rb-p" }, "고른 페르소나(설명·이름·이미지)와 이 화면의 양식·AI 프리셋·덮어쓰기 전 백업·봇 기본 페르소나를 파일 하나에 담아요. 다른 기기나 리스에서 '파일에서 가져오기'로 되살려요."),
+        list.length ? h("div", { class: "rb-pb-pick" }, ...boxes.map((b) => b.row)) : h("p", { class: "rb-muted" }, "리스 페르소나가 없어요. 양식·AI 프리셋만 담아요."),
+        h("div", { class: "btns" }, btn("취소", { onClick: () => done(null) }), btn("백업 파일 받기", { kind: "primary", icon: "download", onClick: () => done(boxes.filter((b) => b.cb.checked).map((b) => b.cb.value)) })));
+    });
+    if (!picked) return;
+    const data = await makeBackup({ personas: list.filter((p) => picked.includes(p.id)), pb, backups: await loadBackups(api), botDefaults: await loadBotDefaults(api), readImage: (x) => api.readImage(x), version: typeof __VERSION__ !== "undefined" ? __VERSION__ : "" });
+    download(backupName(), JSON.stringify(data), "application/json");
+    ctx.toast(`페르소나 ${data.personas.length}개를 담은 백업 파일을 만들었어요`);
+  }
+  async function importFile() {
+    const [f] = await pickFiles({ accept: ".json,application/json" });
+    if (!f) return;
+    try {
+      const data = parseBackup(await f.text());
+      await loadPersonas();
+      const db = await api.getDatabase(["personas"]);
+      const plan = planImport({ personas: db?.personas ?? [], pb, backups: await loadBackups(api), botDefaults: await loadBotDefaults(api) }, data, () => crypto.randomUUID?.() ?? newId() + newId());
+      const st = plan.stat;
+      const lines = [`페르소나 새로 ${st.added}개 · 사본 ${st.copies}개 · 같아서 건너뜀 ${st.same}개`, `양식 ${st.templates}개 · AI 프리셋 ${st.ais}개 · 덮어쓰기 백업 ${st.backups}개 · 봇 기본 페르소나 ${st.botDefaults}개`];
+      if (!st.added && !st.copies && !st.templates && !st.ais && !st.backups && !st.botDefaults) return ctx.toast("새로 가져올 것이 없어요 (모두 같아요)");
+      if (!await confirmDialog(ctx.win, { title: "백업 파일을 가져올까요?", body: `${lines.join(" · ")}. 지금 쓰던 칸과 이미 있는 페르소나는 바꾸지 않아요. 같은 페르소나인데 내용이 다르면 '(가져옴)' 사본으로 더해요.`, ok: "가져오기" })) return;
+      await restoreImages(plan, data, { readImage: (x) => api.readImage(x), saveAsset: (d) => api.saveAsset(d) });
+      if (st.added || st.copies) await api.setDatabaseLite({ personas: plan.personas });
+      pb.templates = plan.templates;
+      pb.ais = plan.ais;
+      await savePB(api, pb);
+      if (st.backups) await api.pluginStorage.setItem(PB_BACKUP_KEY, JSON.stringify(plan.backups));
+      if (st.botDefaults) await botDef.replaceAll(plan.botDefaults);
+      ctx.toast(`가져왔어요 · ${lines[0]}`, { seconds: 8 });
+      await renderPersonaBuilder(ctx);
+    } catch (e) {
+      ctx.toast(`가져오지 못했어요: ${e?.message ?? e}`, { error: true });
+    }
+  }
+  // ── 현재 채팅 · 봇 기본 페르소나 (페르소나 공방): 페르소나가 연결되지 않은 그 봇의 채팅에 설명을 넣는다 ──
+  const chatCard = h("div", { class: "rb-pb-card rb-pb-cs", "aria-live": "polite" });
+  async function drawChatCard() {
+    let cur = null, map = {};
+    try { [cur, map] = await Promise.all([botDef.current(), loadBotDefaults(api)]); } catch { /* 열린 채팅 없음 */ }
+    await loadPersonas().catch(() => {});
+    const nameOf = (id) => personas.find((p) => p.id === id)?.name || "(지운 페르소나)";
+    const defs = Object.entries(map);
+    const defList = defs.length ? h("details", { class: "rb-pb-fold" }, h("summary", null, h("span", { class: "rb-muted", style: "font-size:12px;font-weight:700" }, `정해 둔 봇 ${defs.length}개 ▾`)),
+      h("div", { class: "rb-pb-defs", style: "margin-top:6px" }, ...defs.map(([bid, v]) => h("div", null, h("span", null, `${v.bot || bid} → ${nameOf(v.pid)}`), h("button", { type: "button", class: "rb-pb-x", style: "font-size:12px;padding:3px 6px", onClick: async () => { await botDef.set(bid, ""); drawChatCard(); ctx.toast("봇 기본 페르소나를 해제했어요"); } }, "해제"))))) : null;
+    if (!cur) return replace(chatCard, h("div", { class: "rb-pb-h" }, "현재 채팅"), h("small", null, "열린 채팅이 없어요. 봇 채팅을 연 뒤 여기서 그 봇의 기본 페르소나를 정할 수 있어요."), defList);
+    const bound = cur.chat.bindedPersona ? nameOf(cur.chat.bindedPersona) : "";
+    const def = cur.botId ? map[cur.botId]?.pid ?? "" : "";
+    const sel = h("select", { class: "rb-input", "aria-label": "이 봇 기본 페르소나", disabled: !cur.botId },
+      h("option", { value: "", selected: !def }, "없음"), ...personas.filter((p) => p.id).map((p) => h("option", { value: p.id, selected: p.id === def }, p.name || "(이름 없음)")));
+    sel.addEventListener("change", async () => {
+      await botDef.set(cur.botId, sel.value, cur.botName);
+      ctx.toast(sel.value ? `'${cur.botName || "이 봇"}'의 기본 페르소나를 '${nameOf(sel.value)}'(으)로 정했어요. 페르소나가 연결된 채팅에는 넣지 않아요.` : `'${cur.botName || "이 봇"}'의 기본 페르소나를 해제했어요.`, { seconds: 7 });
+      drawChatCard();
+    });
+    replace(chatCard,
+      h("div", { class: "rb-pb-h" }, "현재 채팅"),
+      h("div", { class: "row" }, h("span", null, "봇 · 채팅"), h("b", null, [cur.botName, cur.chat.name].filter(Boolean).join(" · ") || "현재 채팅")),
+      h("div", { class: "row" }, h("span", null, "이 채팅 페르소나"), h("b", null, bound ? `${bound} (연결됨)` : def ? `${nameOf(def)} (봇 기본)` : "전역 페르소나")),
+      h("label", { class: "rb-pb-lbl" }, "이 봇 기본 페르소나", sel),
+      h("small", null, "페르소나를 연결하지 않은 이 봇의 채팅에서 요청에 그 설명을 넣어요. 설명은 매번 리스 페르소나에서 읽어서, 고치면 바로 따라가요. 이름표·이미지는 그대로예요."),
+      defList);
+  }
   const saveErr = (e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
   const badges = h("div", { class: "rb-pb-badges" });
   drawBadges = () => {
@@ -1227,8 +1314,14 @@ export async function renderPersonaBuilder(ctx) {
       target && p ? h("span", { class: "rb-pb-badge acc" }, `페르소나 '${p.name || "이름 없음"}' 수정 중`) : h("span", { class: "rb-pb-badge" }, "새 페르소나"),
       h("span", { class: "rb-pb-badge" }, `양식 · ${tpl().name}`),
       h("span", { style: "flex:1" }),
-      btn("백업 보기", { size: "sm", kind: "ghost", icon: "history", onClick: showBackups }));
+      bkBtn);
   };
+  const bkBtn = btn("백업 ▾", { size: "sm", kind: "ghost", icon: "history", onClick: (ev) => openMenu(ctx.win, ev.currentTarget, [
+        { label: "덮어쓰기 전 백업 보기", icon: "history", onClick: showBackups },
+        { label: "파일로 백업", icon: "download", onClick: () => exportFile().catch((e) => ctx.toast(`백업하지 못했어요: ${e?.message ?? e}`, { error: true })) },
+        { label: "파일에서 가져오기", icon: "upload", onClick: importFile }
+      ]) });
+  bkBtn.setAttribute("aria-label", "백업 메뉴");
   nameIn.classList.add("rb-pb-name");
   const idCard = h("div", { class: "rb-pb-card rb-pb-idc" },
     h("label", { class: "rb-pb-lbl" }, "페르소나 이름", nameIn),
@@ -1249,6 +1342,7 @@ export async function renderPersonaBuilder(ctx) {
   drawSheet();
   drawRoulette();
   drawBadges();
+  drawChatCard();
   replace(ctx.main, h(
     "div",
     { class: "rb-section rb-scroll", style: "flex:1" },
@@ -1259,7 +1353,7 @@ export async function renderPersonaBuilder(ctx) {
           aiBox,
           h("div", { class: "rb-pb-wh" }, h("b", null, "페르소나 만들기"), h("span", null, "원하는 항목만 채워도 괜찮아요")),
           sheet),
-        h("div", { class: "rb-pb-sidec" }, sideSheet, rlBox)),
+        h("div", { class: "rb-pb-sidec" }, sideSheet, chatCard, rlBox)),
       foot,
       h("div", { class: "rb-pb-thanks" },
         "🪶 Special thanks · ",

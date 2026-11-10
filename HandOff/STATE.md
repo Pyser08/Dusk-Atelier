@@ -9,7 +9,8 @@
 - 확인: npm test 1318 pass / 1 fail(pot-port, 원래부터), build·check 동일함(코어 변경 없음), build-addons --check 동일함, e2e `run-persona-sop.mjs` 36(PC 1280·모바일 390), `run-addon-aibuild.mjs`·`run-smoke.mjs` 통과. 실제 모델·실기기 미확인.
 - 이어서(같은 날 18시~): 사용자가 권한을 주고 **공방 UI를 우리 식으로 쓰라**고 함 + 크레딧 = 페르소나 공방·SOP Lite. 화면 재구성: `.rb-pb-cols`(PC 2단, 오른쪽 `.rb-pb-sidec` sticky) — 기본 정보 카드(`.rb-pb-idc`, 이름·편집할 페르소나·양식·상태 배지·백업 보기) → ‘설명으로 AI 전체 생성’ 접는 카드(`.rb-pb-fcard`, 안은 예전 AI 상자) → ‘페르소나 만들기’ 머리 → 섹션 번호 탭(`.rb-pb-tabs`, ✓=채움, 마지막 미리보기·＋폴더, 모바일 가로 스크롤) → 한 섹션 카드 + 요청 막대(`.rb-pb-gen`: 요청대로 고치기=edit+요청, 이 섹션 새로 쓰기) + 이전/다음 → 아래 sticky 저장 막대(`.rb-pb-foot`, AI 대화 버튼을 떠 있는 버튼 대신 여기로). 오른쪽 시트 미리보기 카드(`.rb-pb-sheetc`)는 미리보기 탭에서 숨김. 지금 탭은 `pb.uiStep`. 공방의 칩 템플릿·생성 길이·보관함·원본·채팅 적용·이미지는 우리에게 없는 기능이라 뺌.
 - 크레딧: 도구 탭 THANKS(14개, run-work e2e 14로), about PARTS, README Special thanks, 빌더 화면 아래 줄.
-- 남은 일: [ ] 실제 모델로 초안·보고서 형식(분류 머리글) 확인 [ ] 공방의 봇 기본 페르소나·파일 백업을 넣을지 사용자 결정
+- 이어서(19시~): 공방의 **봇 기본 페르소나**·**파일 백업** 추가(aibuild 0.1.3, `hooks: true`). `src/data/personabotdef.js`(저장 키 `dusk.personaBotDefaults` = {chaId:{pid,bot}}; `createBotDefaults(api)` — 정해 둔 봇이 있을 때만 beforeRequest 훅, type model만, chat.bindedPersona 있으면 안 넣음, pid가 전역 선택 페르소나면 안 넣음, 설명은 요청마다 getDatabase personas에서 읽음=자동 갱신, 봇 정보는 ci 바뀔 때만 getCharacterFromIndex; MARK 블록을 첫 memo 메시지 앞에). 애드온 index.js가 만들어 svc.botDefaults로 노출, deactivate에서 훅 제거. `src/data/personafile.js`(형식 `dusk.personabuilder.backup` v1: personas·images(b64)·templates·ais·backups·botDefaults; `planImport` 같으면 건너뜀/같은 id 다른 내용은 '(가져옴)' 사본·봇 기본 pid도 사본 id로; builtin 양식 충돌은 사본; draft는 안 건드림). 화면: 오른쪽 ‘현재 채팅’ 카드(`.rb-pb-cs`), 기본 정보 카드 ‘백업 ▾’ 메뉴(덮어쓰기 전 백업 보기·파일로 백업·파일에서 가져오기). 공방의 ‘채팅별 설명 주입’은 넣지 않음(요청 없음).
+- 남은 일: [ ] 실제 모델로 초안·보고서 형식(분류 머리글) 확인 [ ] 봇 기본 페르소나 세 호스트 실기기 확인
 
 
 ## 최근 세션 (2026-11-10 오후 — 3.0.8: 기능 접근성·채팅 속도·Erosync 인물 고르기·자동 기록 잠김)

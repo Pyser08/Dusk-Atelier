@@ -81,7 +81,9 @@
 - `modelhub.js` (96줄) 모델 허브 (v1.6.4 3단계): 모델 프리셋 저장·키 보관·내 API 호출·토큰 사용량. 화면은 … — getCfg, saveCfg, keyStore, pickForStage, getUsage
 - `modules.js` (248줄) — loadCharacters, readDb, entriesOf, loadModuleState, moduleCounts
 - `persona.js` (152줄) — loadPersonaMap, savePersonaMap, setPersonaLink, syncPersonaModules
+- `personabotdef.js` (96줄) 봇 기본 페르소나 (aibuild 애드온 전용 — 페르소나 공방의 '이 봇 기본 페르소나'를 Dusk… — loadBotDefaults, saveBotDefaults, injectBlock, createBotDefaults
 - `personabuilder.js` (353줄) 페르소나 빌더: 설명 양식(프리셋) 파싱·조립, AI 프롬프트, 저장소, 공유 코드 — parseTemplate, addField, removeField, addSection, removeSection
+- `personafile.js` (106줄) 페르소나 빌더 파일 백업 (aibuild 애드온 전용 — 페르소나 공방의 파일 백업을 Dusk 방식으… — makeBackup, parseBackup, planImport, restoreImages
 - `personaroulette.js` (52줄) 페르소나 룰렛: 칸마다 범주를 고르고 무작위로 뽑아 콘셉트에 보탠다. — spin, wheelItems
 - `personasop.js` (369줄) 페르소나 빌더 SOP 흐름 (aibuild 애드온 전용 — 코어는 이 파일을 가져오지 않는다) — ensureSop, foldNested, buildStepPrompt, buildReviewPrompt, buildFinalPrompt
 - `pluginTemplate.js` (185줄) 플러그인 만들기 — 템플릿, 머리말·등록 코드 동기화, 검사, 설치용 객체, 도움말 — buildTemplate, syncMeta, isValidVersion, cmpVersion, checkCode
@@ -398,7 +400,7 @@
 - `newbot.js` (58줄) 새 봇 만들기 (v1.7.0 5단계): 빈 봇을 하나 추가하고 편집기를 연다. AI로 만들기는 편집기…
 - `patchui.js` (136줄) 
 - `peoplescreen.js` (99줄) 인물 화면 + 인물 상세 (1.7.0 4단계, 계획 §3.4): 위키의 인물 문서를 보고 다듬는다. …
-- `personabuilder.js` (1275줄) 페르소나 빌더 화면: 양식(프리셋)의 ### 섹션 = 폴더, * 항목 = 칸.
+- `personabuilder.js` (1369줄) 페르소나 빌더 화면: 양식(프리셋)의 ### 섹션 = 폴더, * 항목 = 칸.
 - `placeholder.js` (21줄) 
 - `pluginedit.js` (172줄) 플러그인 코드 수정 창 (1.8.3) — 플러그인 탭의 ··· 메뉴 → '코드 수정'.
 - `pluginmgr.js` (248줄) 플러그인 매니저 기능 화면 (1.8.3): 켜기/끄기·별칭·순서·삭제 / 파일에서 등록 / 중복 정리…
@@ -524,7 +526,7 @@
 - `style.js` (4줄) 주의: :host에 overflow:hidden/auto나 overscroll-behavior를 주면… — WH_CSS
 
 ## Risu 플러그인 API (우리 코드가 쓰는 호출, 횟수순)
-`getCharacterFromIndex`(69), `getDatabase`(49), `getChatFromIndex`(32), `getCurrentCharacterIndex`(26), `getCurrentChatIndex`(22), `setCharacterToIndex`(21), `setDatabaseLite`(17), `addRisuScriptHandler`(13), `nativeFetch`(12), `setChatToIndex`(9), `addRisuReplacer`(7), `saveAsset`(6), `hideContainer`(6), `registerButton`(5), `toggle`(5), `getRootDocument`(4), `readImage`(4), `showContainer`(4), `requestPluginPermission`(3), `risuFetch`(2), `addProvider`(2), `getDatabaseCached`(2), `getLocalPluginStorage`(2), `unregisterUIPart`(2), `checkCharOrder`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `initPublicLinkSession`(2), `getColorScheme`(2), `hasDbCache`(2)
+`getCharacterFromIndex`(70), `getDatabase`(51), `getChatFromIndex`(32), `getCurrentCharacterIndex`(26), `getCurrentChatIndex`(22), `setCharacterToIndex`(21), `setDatabaseLite`(18), `addRisuScriptHandler`(13), `nativeFetch`(12), `setChatToIndex`(9), `addRisuReplacer`(8), `saveAsset`(7), `readImage`(6), `hideContainer`(6), `registerButton`(5), `toggle`(5), `getRootDocument`(4), `showContainer`(4), `requestPluginPermission`(3), `risuFetch`(2), `addProvider`(2), `getDatabaseCached`(2), `getLocalPluginStorage`(2), `unregisterUIPart`(2), `removeRisuReplacer`(2), `checkCharOrder`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `initPublicLinkSession`(2), `getColorScheme`(2)
 
 ## RisuAI 본체 구조 (kwaroran/RisuAI, 2026.10.220 기준)
 읽기 전용 클론: `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/kwaroran/risuai` (add_repo로 읽기만 가능, 쓰기 불가). 전체를 읽지 말고 아래 위치만 grep한다.
