@@ -5,9 +5,11 @@
 - **새 파일 `src/data/personasop.js`(애드온 전용, 코어가 import하지 않음 → 코어 2.0.7에서도 aibuild 켜짐, 공유 export 12개 모듈 main 대조 확인)**: SOP_TEMPLATE(75칸, [한글] 이름), SOP_DRAFT/REVIEW/FINAL(사용자 문구 그대로), `stepPrompt`(프리셋 `sopDraft/sopReview/sopFinal`, 비면 기본), `ensureSop`(sop 양식 추가, 처음 한 번 `pb.sopV1` — 쓰던 값 없으면 sop 선택), `readSheet`(들여 쓴 하위 목록을 ` | `로 접어 코어 readValues), `buildStepPrompt`(draft·fill·edit 모두 1단계 지침 기준), `buildReviewPrompt`/`buildFinalPrompt`(사용자 OOC 흐름 그대로: 요청→시트(assistant)→검토 OOC→보고서(assistant)→최종 OOC+고른 항목+메모), `parseReport`(## 분류·**분류:**·줄 안 분류·번호·하위 목록), NAI 태그(`naiTagPrompt`/`cleanTags`), `estimateTokens`, `lineDiff`, 공유 코드 `DPA2`(단계 지침 포함, DPA1·DPB1은 코어 readCode).
 - 화면 `ui/screens/personabuilder.js`: 단계 버튼 ‘1 초안 쓰기 › 2 검토 보고서 › 3 최종 다듬기’, 검토 패널(분류별 체크·모두 적용/해제·원문/번역 접기·메모·‘고른 항목으로 최종 다듬기’, 시트 바뀌면 경고), 최종 적용 = 켜진 섹션 칸 전부 교체(30% 미만으로 줄면 확인), ‘바뀐 점 보기’(diff 모달), 미리보기 토큰 추정, NAI 캐릭터 태그 접기, 백업 ‘지금 내용과 비교’, ··· 안 ‘빈 칸만 채우기’·‘전부 비우기’, AI 프리셋 편집 ‘단계별 지침’(기본값으로). sop 양식 ‘처음 상태로’ 처리. draft에 `review`·`naiTags` 저장.
 - 가져오지 않은 공방 기능: 기본 이미지 템플릿 80장(남의 그림·저장소 호스팅), 보관함 판 관리·파일 백업, 봇 기본 페르소나·설명 주입 자동 갱신(페르소나 연결과 겹침 — 사용자 확인 필요), 업데이트 서버.
-- aibuild 애드온 0.1.1 → 0.1.2(build-addons). **배포(publish-addons)·push 안 함** — 이 세션은 저장소 쓰기 권한이 없었음.
+- aibuild 애드온 0.1.1 → 0.1.2(build-addons). 저녁에 권한을 받아 push·publish-addons 함.
 - 확인: npm test 1318 pass / 1 fail(pot-port, 원래부터), build·check 동일함(코어 변경 없음), build-addons --check 동일함, e2e `run-persona-sop.mjs` 36(PC 1280·모바일 390), `run-addon-aibuild.mjs`·`run-smoke.mjs` 통과. 실제 모델·실기기 미확인.
-- 남은 일: [ ] 실제 모델로 초안·보고서 형식(분류 머리글) 확인 [ ] 공방의 봇 기본 페르소나·파일 백업을 넣을지 사용자 결정 [ ] 공방 기능 이식 표기(감사 카드)를 넣을지 사용자 결정
+- 이어서(같은 날 18시~): 사용자가 권한을 주고 **공방 UI를 우리 식으로 쓰라**고 함 + 크레딧 = 페르소나 공방·SOP Lite. 화면 재구성: `.rb-pb-cols`(PC 2단, 오른쪽 `.rb-pb-sidec` sticky) — 기본 정보 카드(`.rb-pb-idc`, 이름·편집할 페르소나·양식·상태 배지·백업 보기) → ‘설명으로 AI 전체 생성’ 접는 카드(`.rb-pb-fcard`, 안은 예전 AI 상자) → ‘페르소나 만들기’ 머리 → 섹션 번호 탭(`.rb-pb-tabs`, ✓=채움, 마지막 미리보기·＋폴더, 모바일 가로 스크롤) → 한 섹션 카드 + 요청 막대(`.rb-pb-gen`: 요청대로 고치기=edit+요청, 이 섹션 새로 쓰기) + 이전/다음 → 아래 sticky 저장 막대(`.rb-pb-foot`, AI 대화 버튼을 떠 있는 버튼 대신 여기로). 오른쪽 시트 미리보기 카드(`.rb-pb-sheetc`)는 미리보기 탭에서 숨김. 지금 탭은 `pb.uiStep`. 공방의 칩 템플릿·생성 길이·보관함·원본·채팅 적용·이미지는 우리에게 없는 기능이라 뺌.
+- 크레딧: 도구 탭 THANKS(14개, run-work e2e 14로), about PARTS, README Special thanks, 빌더 화면 아래 줄.
+- 남은 일: [ ] 실제 모델로 초안·보고서 형식(분류 머리글) 확인 [ ] 공방의 봇 기본 페르소나·파일 백업을 넣을지 사용자 결정
 
 
 ## 최근 세션 (2026-11-10 오후 — 3.0.8: 기능 접근성·채팅 속도·Erosync 인물 고르기·자동 기록 잠김)

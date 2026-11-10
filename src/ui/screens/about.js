@@ -10,7 +10,8 @@ var PARTS = [
   ["msgpackr 1.11.9", "MIT · .risup 프리셋 읽기"],
   ["@noble/ciphers 1.3.0 · @noble/hashes 1.8.0", "MIT · .risup 복호화"],
   ["RPack 매핑 (RisuAI)", "MIT · .risup/.risum 해석"],
-  ["risupot · Arcana Card · 봇빌더 · RisuTide", "원작자 허락을 받아 Dusk 방식으로 옮김 (도구 탭 크레딧)"]
+  ["risupot · Arcana Card · 봇빌더 · RisuTide · 페르소나 공방", "원작자 허락을 받아 Dusk 방식으로 옮김 (도구 탭 크레딧)"],
+  ["SOP Lite (Sort Of Persona)", "페르소나 SOP 양식과 초안·검토·최종 지침"]
 ];
 export function openAbout(ctx) {
   return modal(ctx.win, (done) =>

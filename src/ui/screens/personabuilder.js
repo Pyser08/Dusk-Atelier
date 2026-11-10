@@ -67,6 +67,62 @@ var CSS = `
 .rb-pb-lever.pull .rod{transform:scaleY(.15)}
 .rb-pb-steps{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .rb-pb-steps .arrow{color:var(--rb-mute);font-size:12px}
+.rb-pb-cols{display:flex;flex-direction:column;gap:14px;min-width:0}
+.rb-pb-mainc,.rb-pb-sidec{display:flex;flex-direction:column;gap:14px;min-width:0}
+@media (min-width:1000px){.rb-pb-cols{display:grid;grid-template-columns:minmax(0,1fr) 340px;column-gap:18px;align-items:start}.rb-pb-sidec{position:sticky;top:0}}
+.rb-pb-card{border:1px solid var(--rb-line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--rb-surf);min-width:0}
+.rb-pb-idc .rb-pb-lbl .rb-pb-name{height:46px;font-size:16px;font-weight:700}
+.rb-pb-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:640px){.rb-pb-grid2{grid-template-columns:1fr}}
+.rb-pb-lbl{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:11.5px;font-weight:700;color:var(--rb-sub)}
+.rb-pb-lbl>.row{display:flex;gap:6px;align-items:center}
+.rb-pb-lbl select,.rb-pb-lbl input{height:40px;flex:none;width:100%;min-width:0;box-sizing:border-box;font-size:13.5px;font-weight:500}
+.rb-pb-lbl>.row select{flex:1;width:auto}
+.rb-pb-badges{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rb-pb-badge{font-size:11.5px;font-weight:700;border-radius:999px;padding:3px 10px;border:1px solid var(--rb-line);color:var(--rb-sub)}
+.rb-pb-badge.acc{background:var(--rb-acc-soft);border-color:transparent;color:var(--rb-acc-text)}
+.rb-pb-fcard{padding:0}
+.rb-pb-fcard>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer}
+.rb-pb-fcard>summary::-webkit-details-marker{display:none}
+.rb-pb-fcard>summary .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rb-pb-fcard>summary b{font-size:14px}
+.rb-pb-fcard>summary small{font-size:11.5px;color:var(--rb-mute);font-weight:500}
+.rb-pb-fcard>summary::after{content:"＋";font-size:17px;color:var(--rb-acc-text)}
+.rb-pb-fcard[open]>summary::after{content:"−"}
+.rb-pb-fcard>.in{padding:0 16px 16px;display:flex;flex-direction:column;gap:10px}
+.rb-pb-wh{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:6px}
+.rb-pb-wh b{font-size:14px}.rb-pb-wh span{font-size:11.5px;color:var(--rb-mute)}
+.rb-pb-tabs{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+@media (max-width:640px){.rb-pb-tabs{display:flex;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}.rb-pb-tabs>button{flex:0 0 96px}}
+.rb-pb-tabs>button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;border:1px solid var(--rb-line);border-radius:12px;background:var(--rb-surf);color:var(--rb-sub);cursor:pointer;font:inherit;font-size:12px;font-weight:600;min-width:0}
+.rb-pb-tabs>button .num{font-size:11px;color:var(--rb-mute);font-weight:700}
+.rb-pb-tabs>button .nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rb-pb-tabs>button:hover{border-color:var(--rb-acc-text)}
+.rb-pb-tabs>button[aria-current]{background:var(--rb-acc-soft);border-color:var(--rb-acc-text);color:var(--rb-acc-text);font-weight:800}
+.rb-pb-tabs>button[aria-current] .num,.rb-pb-tabs>button.done .num{color:var(--rb-acc-text)}
+.rb-pb-tabs>button[data-off] .nm{opacity:.45;text-decoration:line-through}
+.rb-pb-tabs>button.add{border-style:dashed;justify-content:center}
+.rb-pb-sh{display:flex;align-items:center;gap:10px}
+.rb-pb-sh .t{flex:1;min-width:0}
+.rb-pb-sh .t b{font-size:15px;display:block}
+.rb-pb-sh .t small{font-size:11.5px;color:var(--rb-mute)}
+.rb-pb-card[data-off] .rb-pb-sh .t b{opacity:.45;text-decoration:line-through}
+.rb-pb-gen{border:1px solid var(--rb-line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--rb-bg,transparent)}
+.rb-pb-gen input{height:38px}
+.rb-pb-gen small{font-size:11.5px;color:var(--rb-mute);line-height:1.5}
+.rb-pb-nav{display:flex;justify-content:space-between;gap:8px}
+.rb-pb-live{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--rb-mute);font-weight:600}
+.rb-pb-live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--rb-ok,#46a758)}
+.rb-pb-sheetc{padding:0;gap:0;overflow:hidden}
+.rb-pb-sheetc>.hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rb-line);font-size:12.5px;font-weight:700}
+.rb-pb-sheetc>pre{border:0;border-radius:0;max-height:46vh;padding:12px 16px}
+.rb-pb-sheetc>.ft{display:flex;justify-content:space-between;gap:8px;padding:10px 16px;border-top:1px solid var(--rb-line);font-size:11px;color:var(--rb-mute)}
+.rb-pb-foot{position:sticky;bottom:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;margin-top:4px;border:1px solid var(--rb-line);border-radius:14px;background:var(--rb-win,var(--rb-surf));box-shadow:0 -6px 18px rgb(0 0 0/.08)}
+.rb-pb-foot .msg{flex:1;min-width:160px;font-size:12px;color:var(--rb-sub)}
+.rb-main .rb-pb-chat{bottom:84px!important}
+@media (max-width:760px){.rb-main .rb-pb-chat{bottom:150px!important}.rb-pb-foot{flex-wrap:nowrap;padding:8px}.rb-pb-foot .msg{display:none}.rb-pb-foot>.rb-btn{flex:1 1 auto;justify-content:center;padding-inline:8px;min-width:0}.rb-pb-foot>.rb-btn:first-of-type{flex:none}.rb-pb-foot>.rb-btn:first-of-type span,.rb-pb-foot>.rb-btn:not(:first-of-type) svg{display:none}.rb-pb-gen .rb-pb-bar>.rb-btn{flex:1 1 auto;justify-content:center}.rb-pb-gen .rb-pb-bar>span{display:none}}
+.rb-pb-thanks{margin:6px 0 4px;text-align:center;font-size:11px;line-height:1.7;color:var(--rb-mute)}
+.rb-pb-thanks a{color:inherit;font-weight:700;text-decoration:underline}
 .rb-pb-rv{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--rb-line);padding-top:10px}
 .rb-pb-rv-g{display:flex;flex-direction:column;gap:4px}
 .rb-pb-rv-g>.gh{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:var(--rb-sub)}
@@ -112,6 +168,7 @@ export async function renderPersonaBuilder(ctx) {
   let slots = Array.isArray(d.slots) && d.slots.length ? d.slots.filter((x) => x && typeof x.cat === "string").map((x) => ({ cat: catById(x.cat).id, value: String(x.value ?? ""), lock: !!x.lock })) : DEFAULT_SLOTS.map((cat) => ({ cat, value: "", lock: false }));
   const undo = [];
   let busy = false;
+  let drawBadges = () => {}; // 기본 정보 카드의 상태 표시(아래에서 채움)
   const tpl = () => pb.templates.find((t) => t.id === pb.template) ?? pb.templates[0];
   const aip = () => pb.ais.find((a) => a.id === pb.ai) ?? pb.ais[0];
   let sections = parseTemplate(tpl().text);
@@ -242,7 +299,10 @@ export async function renderPersonaBuilder(ctx) {
   }
 
   // ── AI ──
-  const aiBox = h("div", { class: "rb-pb-box" });
+  const aiIn = h("div", { class: "in" });
+  const aiBox = h("details", { class: "rb-pb-card rb-pb-fcard", open: pb.uiAiOpen ?? true, onToggle: (e) => { pb.uiAiOpen = e.target.open; } },
+    h("summary", null, h("span", { style: "font-size:17px;color:var(--rb-acc-text)", "aria-hidden": "true" }, "✦"), h("span", { class: "t" }, h("b", null, "설명으로 AI 전체 생성"), h("small", null, "SOP 3단계 · 초안 → 검토 보고서 → 최종 다듬기 · 영어로 써요"))),
+    aiIn);
   const aiSel = h("select", { class: "rb-input", "aria-label": "AI 프리셋" });
   aiSel.addEventListener("change", () => {
     pb.ai = aiSel.value;
@@ -533,6 +593,7 @@ export async function renderPersonaBuilder(ctx) {
     replace(aiSel, ...pb.ais.map((a) => h("option", { value: a.id, selected: a.id === pb.ai }, a.name)));
     const P = aip();
     aiButtons.length = 0;
+    aiButtons.push(...sheet.querySelectorAll(".rb-pb-gen button"));
     const b1 = btn("1 초안 쓰기", { kind: "primary", size: "sm", icon: "zap", onClick: () => aiDo("AI가 초안을 쓰는 중… (줄이지 않고 넓게 채워요 · 큰 모델일수록 좋아요)", "draft") });
     const bRv = btn("2 검토 보고서", { size: "sm", icon: "list", onClick: reviewDo });
     const bFi = btn("3 최종 다듬기", { size: "sm", icon: "sparkle", onClick: finalDo });
@@ -627,12 +688,10 @@ export async function renderPersonaBuilder(ctx) {
     aiButtons.push(clearAll);
     moreBox.append(noteIn, h("div", { class: "rb-pb-bar" }, editIn, b3), h("div", { class: "rb-pb-bar" }, h("label", { style: "display:flex;align-items:center;gap:6px;font-size:12.5px" }, koSw, "번역 같이 보기"), h("span", { style: "flex:1" }), b4), h("div", { class: "rb-pb-bar" }, b2, h("span", { style: "flex:1" }), clearAll));
     replace(
-      aiBox,
-      h("div", { class: "rb-pb-h" }, "AI로 쓰기", h("span", { class: "rb-muted", style: "font-weight:500;font-size:12px" }, "· 영어로 써요")),
+      aiIn,
       setBox,
       conceptIn,
-      h("div", { class: "rb-pb-steps" }, b1, h("span", { class: "arrow", "aria-hidden": "true" }, "›"), bRv, h("span", { class: "arrow", "aria-hidden": "true" }, "›"), bFi),
-      h("div", { class: "rb-pb-bar" }, undoWrap, h("span", { style: "flex:1" }), moreBtn),
+      h("div", { class: "rb-pb-steps" }, b1, h("span", { class: "arrow", "aria-hidden": "true" }, "›"), bRv, h("span", { class: "arrow", "aria-hidden": "true" }, "›"), bFi, h("span", { style: "flex:1" }), undoWrap, moreBtn),
       h("small", { class: "rb-muted", style: "font-size:12px" }, "초안은 넓게 채우고, 검토 보고서에서 고른 항목대로 최종본을 다듬어요. 빈 칸만 채우기·추가 지시·번역·수정 요청은 ··· 에 있어요."),
       moreBox,
       msg,
@@ -643,9 +702,19 @@ export async function renderPersonaBuilder(ctx) {
     drawUndo();
   };
 
-  // ── 시트: 섹션 = 폴더, 항목 = 칸 ──
-  const sheet = h("div", { style: "display:flex;flex-direction:column;gap:8px" });
-  const open = new Set(sections.filter((s) => s.kind !== "fixed").slice(0, 1).map((s) => s.title));
+  // ── 시트: 섹션 = 단계 탭(페르소나 공방 화면 구성) · 한 번에 한 섹션 + 아래 요청 막대 ──
+  const sheet = h("div", { style: "display:flex;flex-direction:column;gap:12px;min-width:0" });
+  const PREVIEW = "__preview";
+  const titles = () => sections.map((s) => s.title);
+  let step = titles().includes(pb.uiStep) || pb.uiStep === PREVIEW ? pb.uiStep : (sections.find((s) => s.kind !== "fixed") ?? sections[0])?.title ?? PREVIEW;
+  const open = { add: (t) => { step = t; }, delete() {}, has: (t) => t === step }; // 예전 펼침 상태 자리(항목·폴더 추가 뒤 그 섹션으로 간다)
+  const goStep = (t) => {
+    step = t;
+    pb.uiStep = t;
+    persist();
+    drawSheet();
+    sheet.scrollIntoView?.({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  };
   const autoGrow = (ta) => {
     ta.style.height = "auto";
     ta.style.height = `${Math.min(ta.scrollHeight + 2, 320)}px`;
@@ -671,41 +740,94 @@ export async function renderPersonaBuilder(ctx) {
       paintKo();
       persist();
       drawPreview();
+      paintTabs();
     });
     paintKo();
     if (!big) requestAnimationFrame(() => autoGrow(ta));
     const mini = h("button", { type: "button", class: "rb-pb-mini", title: "이 칸만 AI로 고치기", onClick: () => askEdit(`'${label}' 칸 AI로 고치기`, [k]), disabled: busy }, "✦ AI");
     return h("div", { class: "rb-pb-f" }, h("div", { class: "lab" }, h("span", { title: en ? `설명에는 영어 이름 '${en}'으로 들어가요` : "" }, label), mini, onRemove ? h("button", { type: "button", class: "rb-pb-x", title: "이 항목을 양식에서 빼기", "aria-label": `${label} 항목 빼기`, onClick: onRemove }, "×") : null), ta, koEl);
   };
+  const secKeys = (s) => s.kind === "fields" ? s.fields.map((f) => fieldKey(s.title, f.label)) : s.kind === "free" ? [freeKey(s.title)] : [];
+  const secFilled = (s) => secKeys(s).filter((k) => String(values[k] ?? "").trim()).length;
+  const tabs = h("nav", { class: "rb-pb-tabs", "aria-label": "설명 항목 단계" });
+  const paintTabs = () => {
+    let n = 0;
+    replace(tabs, ...sections.map((s) => {
+      n++;
+      const done = s.kind !== "fixed" && secFilled(s) > 0;
+      return h("button", { type: "button", class: done ? "done" : "", "aria-current": s.title === step ? "step" : null, "data-off": !!off[s.title], title: s.title, onClick: () => goStep(s.title) },
+        h("span", { class: "num", "aria-hidden": "true" }, done ? "✓" : String(n).padStart(2, "0")), h("span", { class: "nm" }, s.ko));
+    }), h("button", { type: "button", "aria-current": step === PREVIEW ? "step" : null, onClick: () => goStep(PREVIEW) }, h("span", { class: "num", "aria-hidden": "true" }, String(sections.length + 1).padStart(2, "0")), h("span", { class: "nm" }, "미리보기")),
+    h("button", { type: "button", class: "add", title: "양식에 폴더 추가", onClick: newSection }, h("span", { class: "nm" }, "＋ 폴더")));
+  };
+  // 섹션 요청 막대: 지금 내용을 두고 요청한 곳만 고치기 / 이 섹션 새로 쓰기
+  const genBar = (s) => {
+    const keys = secKeys(s);
+    const inp = h("input", { class: "rb-input", placeholder: "요청 예: 말투를 더 건조하게 / 가면·새어 나옴을 상황별로 나눠 줘", "aria-label": `${s.ko} 요청`, enterkeyhint: "send", autocomplete: "off" });
+    const revise = btn("요청대로 고치기", { size: "sm", kind: "primary", icon: "brush", onClick: () => {
+      if (!inp.value.trim()) return inp.focus();
+      if (!keys.some((k) => String(values[k] ?? "").trim())) return aiDo(`AI가 '${s.ko}'을(를) 쓰는 중…`, "edit", { keys, instruction: inp.value.trim() });
+      aiDo(`AI가 '${s.ko}'을(를) 고치는 중…`, "edit", { keys, instruction: inp.value.trim() }).then(() => inp.value = "");
+    } });
+    const fresh = btn("이 섹션 새로 쓰기", { size: "sm", icon: "sparkle", onClick: () => aiDo(`AI가 '${s.ko}'을(를) 새로 쓰는 중…`, "edit", { keys, instruction: inp.value.trim() }) });
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) {
+        e.preventDefault();
+        revise.click();
+      }
+    });
+    aiButtons.push(revise, fresh);
+    if (busy) revise.disabled = fresh.disabled = true;
+    return h("div", { class: "rb-pb-gen" }, inp, h("div", { class: "rb-pb-bar" }, h("span", { style: "flex:1" }), fresh, revise),
+      h("small", null, "'요청대로 고치기'는 지금 내용을 두고 요청한 곳만 바꿔요. '이 섹션 새로 쓰기'는 이 섹션을 1단계 지침대로 다시 써요."));
+  };
+  const previewStep = () => h("div", { class: "rb-pb-card" },
+    h("div", { class: "rb-pb-sh" }, h("div", { class: "t" }, h("b", null, "미리보기"), h("small", null, "꺼진 섹션과 빈 칸은 설명에 들어가지 않아요")), charCount2, btn("복사", { size: "sm", onClick: async () => {
+      await copyText(compose(sections, values, off));
+      ctx.toast("복사했어요");
+    } })),
+    pre,
+    tagBox,
+    note("info", "AI 결과는 항상 영어예요. 번역은 확인용이라 저장되지 않아요."));
   const drawSheet = () => {
-    replace(sheet, ...sections.map((s) => {
-      const filled = s.kind === "fields" ? s.fields.filter((f) => String(values[fieldKey(s.title, f.label)] ?? "").trim()).length : s.kind === "free" ? +!!String(values[freeKey(s.title)] ?? "").trim() : 0;
-      const total = s.kind === "fields" ? s.fields.length : s.kind === "free" ? 1 : 0;
-      const det = h("details", { class: "rb-pb-sec", open: open.has(s.title), "data-off": !!off[s.title] });
-      det.addEventListener("toggle", () => det.open ? open.add(s.title) : open.delete(s.title));
+    if (step !== PREVIEW && !titles().includes(step)) step = (sections.find((x) => x.kind !== "fixed") ?? sections[0])?.title ?? PREVIEW;
+    // 이전 섹션 요청 막대 버튼은 목록에서 뺀다
+    for (const b of [...sheet.querySelectorAll(".rb-pb-gen button")]) {
+      const i = aiButtons.indexOf(b);
+      if (i >= 0) aiButtons.splice(i, 1);
+    }
+    paintTabs();
+    const idx = step === PREVIEW ? sections.length : sections.findIndex((x) => x.title === step);
+    const nav = h("div", { class: "rb-pb-nav" },
+      idx > 0 ? btn(`← ${sections[idx - 1].ko}`, { size: "sm", onClick: () => goStep(sections[idx - 1].title) }) : h("span"),
+      idx < sections.length ? btn(`${idx + 1 < sections.length ? sections[idx + 1].ko : "미리보기"} →`, { size: "sm", onClick: () => goStep(idx + 1 < sections.length ? sections[idx + 1].title : PREVIEW) }) : h("span"));
+    let body;
+    if (step === PREVIEW) body = previewStep();
+    else {
+      const s = sections[idx];
+      const card = h("div", { class: "rb-pb-card", "data-off": !!off[s.title] });
       const sw = switchEl(!off[s.title], { label: `${s.ko} 포함`, onChange: (v, el) => {
         setSwitch(el, v);
         if (v) delete off[s.title];
         else off[s.title] = true;
-        det.toggleAttribute("data-off", !v);
+        card.toggleAttribute("data-off", !v);
         persist();
         drawPreview();
+        paintTabs();
       } });
-      const keys = s.kind === "fields" ? s.fields.map((f) => fieldKey(s.title, f.label)) : [freeKey(s.title)];
-      const secAi = s.kind === "fixed" ? null : h("button", { type: "button", class: "rb-pb-mini", title: "이 섹션만 AI로 고치기", disabled: busy, onClick: (e) => {
-        e.preventDefault();
-        askEdit(`'${s.ko}' 폴더 AI로 고치기`, keys);
-      } }, "✦ AI");
-      det.append(
-        h("summary", null, h("span", { style: "display:flex;color:var(--rb-sub)" }, "📁"), h("span", { class: "ttl", title: s.title }, s.ko), s.kind === "fixed" ? h("span", { class: "cnt" }, "고정 문구") : h("span", { class: "cnt" }, `${filled}/${total}`), secAi, sw),
-        h("div", { class: "rb-pb-body" },
-          s.kind === "fixed" ? h("div", { class: "rb-pb-fixed" }, h("div", { class: "rb-muted", style: "margin-bottom:6px" }, "AI에게 주는 규칙이에요. 영어 그대로 설명 맨 위에 들어가요. (양식 편집에서 바꿀 수 있어요)"), s.text) : s.kind === "free" ? fieldBox(freeKey(s.title), s.ko, s.hint ? `(${s.hint})` : "자유롭게", true, s.title) : s.fields.map((f) => fieldBox(fieldKey(s.title, f.label), f.ko, f.hint, false, f.label, () => dropField(s, f))),
-          s.kind === "fixed" || s.kind === "free" ? null : h("button", { type: "button", class: "rb-pb-add", onClick: () => newField(s) }, `＋ '${s.ko}'에 항목 추가`),
-          s.kind === "fixed" ? null : h("div", { style: "display:flex;justify-content:flex-end" }, h("button", { type: "button", class: "rb-pb-x", style: "font-size:12px;padding:3px 6px", onClick: () => dropSection(s) }, "이 폴더 양식에서 빼기")))
-      );
-      return det;
-    }), h("button", { type: "button", class: "rb-pb-add", onClick: newSection }, "＋ 폴더 추가"));
+      const total = secKeys(s).length;
+      card.append(
+        h("div", { class: "rb-pb-sh" }, h("div", { class: "t" }, h("b", null, s.ko), h("small", null, s.kind === "fixed" ? "고정 문구 · AI에게 주는 규칙" : `${s.title} · ${secFilled(s)}/${total}칸`)), sw),
+        ...(s.kind === "fixed" ? [h("div", { class: "rb-pb-fixed" }, h("div", { class: "rb-muted", style: "margin-bottom:6px" }, "AI에게 주는 규칙이에요. 영어 그대로 설명 맨 위에 들어가요. (양식 편집에서 바꿀 수 있어요)"), s.text)]
+          : s.kind === "free" ? [fieldBox(freeKey(s.title), s.ko, s.hint ? `(${s.hint})` : "자유롭게", true, s.title)]
+          : [...s.fields.map((f) => fieldBox(fieldKey(s.title, f.label), f.ko, f.hint, false, f.label, () => dropField(s, f))), h("button", { type: "button", class: "rb-pb-add", onClick: () => newField(s) }, `＋ '${s.ko}'에 항목 추가`)]),
+        s.kind === "fixed" ? null : genBar(s),
+        h("div", { style: "display:flex;justify-content:flex-end" }, h("button", { type: "button", class: "rb-pb-x", style: "font-size:12px;padding:3px 6px", onClick: () => dropSection(s) }, "이 폴더 양식에서 빼기")));
+      body = card;
+    }
+    replace(sheet, tabs, body, nav);
     drawPreview();
+    drawBadges();
   };
 
   // ── 양식에 항목·폴더 더하고 빼기 (지금 고른 양식이 바뀐다) ──
@@ -924,7 +1046,7 @@ export async function renderPersonaBuilder(ctx) {
 
   const personaChat = [];
   let chatPanel = null;
-  const chatFab = btn("AI 대화", { kind: "primary", icon: "message-circle", onClick: () => {
+  const chatFab = btn("AI 대화", { icon: "message-circle", onClick: () => {
     if (!chatPanel) createPersonaChat();
     const opening = chatPanel.hidden;
     chatPanel.hidden = !opening;
@@ -980,14 +1102,21 @@ export async function renderPersonaBuilder(ctx) {
     paintChat();
   }
   // ── 미리보기 · 저장 ──
-  const pre = h("pre", { class: "rb-pb-pre" });
-  const charCount = h("span", { class: "rb-muted", style: "font-size:12px" });
+  const pre = h("pre", { class: "rb-pb-pre", style: "max-height:60vh" });
+  const pre2 = h("pre", { class: "rb-pb-pre" });
+  const charCount = h("span", null);
+  const charCount2 = h("span", { class: "rb-muted", style: "font-size:12px" });
   const drawPreview = () => {
     const t = compose(sections, values, off);
-    pre.textContent = t || "(아직 비어 있어요)";
-    charCount.textContent = `${t.length.toLocaleString()}자 · 약 ${estimateTokens(t).toLocaleString()}토큰`;
-    charCount.title = "토큰 수는 대략의 추정이에요(모델마다 달라요)";
+    pre.textContent = pre2.textContent = t || "(아직 비어 있어요)";
+    charCount.textContent = charCount2.textContent = `${t.length.toLocaleString()}자 · 약 ${estimateTokens(t).toLocaleString()}토큰`;
+    charCount.title = charCount2.title = "토큰 수는 대략의 추정이에요(모델마다 달라요)";
+    sideSheet.hidden = step === PREVIEW;
   };
+  const sideSheet = h("div", { class: "rb-pb-card rb-pb-sheetc" },
+    h("div", { class: "hd" }, h("span", null, "시트 미리보기"), h("span", { class: "rb-pb-live" }, "실시간 반영")),
+    pre2,
+    h("div", { class: "ft" }, h("span", null, "입력한 내용이 시트로 정리돼요"), charCount));
   // ── NAI 캐릭터 태그: 시트에서 그림으로 그릴 수 있는 특징만 영어 태그로 뽑는다(이미지 생성은 하지 않음) ──
   const tagIn = h("textarea", { placeholder: "1girl, long black hair, red eyes, …", "aria-label": "NAI 캐릭터 태그", style: "min-height:56px" });
   tagIn.value = naiTags;
@@ -1056,6 +1185,7 @@ export async function renderPersonaBuilder(ctx) {
     }
     await loadPersonas();
     drawPersonaSel();
+    drawBadges();
     persist();
   }
   async function showBackups() {
@@ -1089,43 +1219,56 @@ export async function renderPersonaBuilder(ctx) {
     ));
   }
 
-  const back = h("div", { style: "display:flex;align-items:center;gap:10px" }, btn("", { kind: "ghost", icon: "back", onClick: () => ctx.go("work-home") }), h("div", null, h("span", { class: "rb-muted" }, "작업실"), h("h2", { class: "rb-h2" }, "AI로 페르소나 만들기")));
-  back.querySelector("button").setAttribute("aria-label", "도구로 돌아가기");
+  const saveErr = (e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
+  const badges = h("div", { class: "rb-pb-badges" });
+  drawBadges = () => {
+    const p = personas.find((x) => x.id === target);
+    replace(badges,
+      target && p ? h("span", { class: "rb-pb-badge acc" }, `페르소나 '${p.name || "이름 없음"}' 수정 중`) : h("span", { class: "rb-pb-badge" }, "새 페르소나"),
+      h("span", { class: "rb-pb-badge" }, `양식 · ${tpl().name}`),
+      h("span", { style: "flex:1" }),
+      btn("백업 보기", { size: "sm", kind: "ghost", icon: "history", onClick: showBackups }));
+  };
+  nameIn.classList.add("rb-pb-name");
+  const idCard = h("div", { class: "rb-pb-card rb-pb-idc" },
+    h("label", { class: "rb-pb-lbl" }, "페르소나 이름", nameIn),
+    h("div", { class: "rb-pb-grid2" },
+      h("label", { class: "rb-pb-lbl" }, "편집할 페르소나", personaSel),
+      h("div", { class: "rb-pb-lbl" }, "설명 양식", h("div", { class: "row" }, tplSel, tplMenu))),
+    badges);
+  const foot = h("div", { class: "rb-pb-foot" },
+    h("span", { class: "msg" }, "✓ 완성한 페르소나는 리스 페르소나 목록에 저장해요"),
+    chatFab,
+    btn("새 페르소나로 저장", { size: "sm", icon: "plus", onClick: () => save(true).catch(saveErr) }),
+    btn("이 페르소나에 저장", { size: "sm", kind: "primary", icon: "check", onClick: () => (target ? save(false) : save(true)).catch(saveErr) }));
+  chatFab.classList.remove("rb-pb-chat-fab");
+  chatFab.classList.add("sm");
   drawPersonaSel();
   drawTplSel();
   drawAi();
   drawSheet();
   drawRoulette();
-  void back;
-  // 1.8.3(목업 5): 제목은 위쪽 도움말 줄 한 번만. 맨 위 한 줄 = 페르소나·이름·양식. PC는 왼쪽 페르소나·항목, 오른쪽 AI로 쓰기·슬롯머신.
+  drawBadges();
   replace(ctx.main, h(
     "div",
     { class: "rb-section rb-scroll", style: "flex:1" },
-    h("div", { class: "rb-pb rb-pb3" },
-      h("div", { class: "rb-pb-box rb-pb-top" },
-        h("div", { class: "rb-pb-bar" }, personaSel, nameIn),
-        h("div", { class: "rb-pb-bar" }, h("span", { class: "rb-label", style: "flex:none" }, "설명 양식"), tplSel, tplMenu)),
-      h("div", { class: "rb-pb-side" }, aiBox, rlBox),
-      h("div", { class: "rb-pb-h rb-pb-sheethead" }, "설명 항목"),
-      sheet,
-      h("div", { class: "rb-pb-box" },
-        h("div", { class: "rb-pb-h" }, "미리보기", charCount, h("span", { style: "flex:1" }), btn("복사", { size: "sm", onClick: async () => {
-          await copyText(compose(sections, values, off));
-          ctx.toast("복사했어요");
-        } })),
-        pre,
-        tagBox,
-        h("div", { class: "rb-pb-bar" },
-          btn("백업 보기", { size: "sm", icon: "history", onClick: showBackups }),
-          h("span", { style: "flex:1" }),
-          btn("새 페르소나로 저장", { size: "sm", icon: "plus", onClick: () => save(true).catch((e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true })) }),
-          btn("이 페르소나에 저장", { size: "sm", kind: "primary", icon: "check", onClick: () => target ? save(false).catch((e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true })) : save(true).catch((e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true })) })),
-        note("info", "AI 결과는 항상 영어예요. 번역은 확인용이라 저장되지 않아요. 꺼진 섹션과 빈 칸은 설명에 들어가지 않아요.")),
-      h("div", { style: "margin:6px 0 4px;text-align:center;font-size:11px;line-height:1.6;color:var(--rb-mute)" },
+    h("div", { class: "rb-pb" },
+      h("div", { class: "rb-pb-cols" },
+        h("div", { class: "rb-pb-mainc" },
+          idCard,
+          aiBox,
+          h("div", { class: "rb-pb-wh" }, h("b", null, "페르소나 만들기"), h("span", null, "원하는 항목만 채워도 괜찮아요")),
+          sheet),
+        h("div", { class: "rb-pb-sidec" }, sideSheet, rlBox)),
+      foot,
+      h("div", { class: "rb-pb-thanks" },
         "🪶 Special thanks · ",
-        h("a", { href: "https://arca.live/b/characterai/179512405/995597043#c_995597043", target: "_blank", rel: "noopener noreferrer", style: "color:inherit;font-weight:700;text-decoration:underline" }, "홍루"),
-        "님 — 기본 양식(페르소나 프롬프트)의 바탕을 만드는 데 도움을 주셨어요")
+        h("a", { href: "https://arca.live/b/characterai/179512405/995597043#c_995597043", target: "_blank", rel: "noopener noreferrer" }, "홍루"),
+        "님 — 예전 기본 양식의 바탕 · ",
+        h("a", { href: "https://github.com/canister2668/Risu-persona-forge", target: "_blank", rel: "noopener noreferrer" }, "페르소나 공방"),
+        " — 화면 구성·NAI 태그·판 비교 · ",
+        h("b", null, "SOP Lite"),
+        " (Sort Of Persona) — SOP 양식과 초안·검토·최종 지침")
     )
   ));
-  ctx.main.appendChild(chatFab);
 }

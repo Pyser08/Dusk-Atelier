@@ -28,6 +28,7 @@ for (const vw of [1280, 390]) {
   });
   await page.evaluate(() => window.__app.ctx.go("personabuilder"));
   await page.waitForTimeout(700);
+  if (shot) await page.screenshot({ path: `/tmp/pb-top-${vw}.png` });
   const T = () => page.evaluate(() => document.querySelector(".rb-main").innerText);
   ok(`[${vw}] SOP 양식이 골라져 있음`, await page.evaluate(() => [...document.querySelectorAll('select[aria-label="설명 양식"] option')].find((o) => o.selected)?.textContent === "SOP 양식"));
   ok(`[${vw}] 단계 버튼 3개`, /1 초안 쓰기/.test(await T()) && /2 검토 보고서/.test(await T()) && /3 최종 다듬기/.test(await T()));
@@ -59,9 +60,21 @@ for (const vw of [1280, 390]) {
   await page.waitForTimeout(400);
   ok(`[${vw}] 비교 창 닫힘`, !(await page.locator(".rb-pb-diff").count()));
   ok(`[${vw}] 미리보기에 토큰 추정`, /약 [\d,]+토큰/.test(await T()));
+  ok(`[${vw}] 단계 탭(섹션 13 + 미리보기 + 폴더 추가)`, (await page.locator(".rb-pb-tabs > button").count()) === 15);
+  ok(`[${vw}] 오른쪽/아래 시트 미리보기 보임`, await page.locator(".rb-pb-sheetc").isVisible());
+  await page.locator(".rb-pb-tabs > button", { hasText: "핵심 정체성" }).click(); await page.waitForTimeout(300);
+  ok(`[${vw}] 섹션 탭: 핵심 정체성 칸만`, (await page.locator(".rb-pb-card .rb-pb-f").count()) === 6 && /요청대로 고치기/.test(await T()));
+  await page.fill('input[aria-label="핵심 정체성 요청"]', "더 건조하게");
+  await page.locator(".rb-pb-gen button", { hasText: "요청대로 고치기" }).click(); await page.waitForTimeout(800);
+  ok(`[${vw}] 섹션 요청: 그 섹션 칸만·요청 포함`, await page.evaluate(() => { const c = window.__calls.findLast((x) => /Change request: 더 건조하게/.test(x.at(-1).content)); return !!c && (c.at(-1).content.split("Structure:")[1].match(/<<WRITE/g) ?? []).length === 6; }));
+  if (shot) await page.screenshot({ path: `/tmp/pb-step-${vw}.png` });
+  ok(`[${vw}] 저장 막대 버튼 한 줄`, await page.evaluate(() => { const t = [...document.querySelectorAll(".rb-pb-foot>.rb-btn")].map((b) => Math.round(b.getBoundingClientRect().top)); return new Set(t).size === 1; }));
+  await page.locator(".rb-pb-tabs > button", { hasText: "미리보기" }).click(); await page.waitForTimeout(300);
+  ok(`[${vw}] 미리보기 단계에서는 옆 미리보기 숨김`, !(await page.locator(".rb-pb-sheetc").isVisible()));
   await page.evaluate(() => { const d = [...document.querySelectorAll(".rb-main details")].find((x) => /NAI 캐릭터 태그/.test(x.textContent)); d.open = true; });
   await click("태그 뽑기");
   ok(`[${vw}] NAI 태그 뽑기(중복 제거)`, (await page.inputValue('textarea[aria-label="NAI 캐릭터 태그"]')) === "1girl, black hair, red eyes");
+  await click("되돌리기 (3)");
   await click("되돌리기 (2)");
   const v3 = await page.evaluate(() => new Promise((res) => setTimeout(() => res(JSON.parse(window.__app.ctx.api.store["rbm:personaBuilder:v1"]).draft.values), 600)));
   ok(`[${vw}] 되돌리기로 최종 전 내용 복원`, v3["Basic Information::Residence"] === "studio flat", JSON.stringify(v3));
@@ -69,6 +82,8 @@ for (const vw of [1280, 390]) {
   await click("2 검토 보고서");
   const pad = await page.evaluate(() => { const i = document.querySelector(".rb-pb-rv-i"), s = i.querySelector("span"); const a = i.getBoundingClientRect(), b = s.getBoundingClientRect(); return Math.min(b.left - a.left, a.right - b.right, b.top - a.top); });
   ok(`[${vw}] 검토 항목 안쪽 여백 ≥ 5px`, pad >= 5, String(pad));
+  ok(`[${vw}] 아래 저장 막대 화면 안`, await page.evaluate(() => { const b = document.querySelector(".rb-pb-foot").getBoundingClientRect(); return b.bottom <= innerHeight + 1 && b.top > 0; }));
+  ok(`[${vw}] 크레딧: 페르소나 공방·SOP Lite`, /페르소나 공방/.test(await T()) && /SOP Lite/.test(await T()));
   ok(`[${vw}] 가로 넘침 없음`, await page.evaluate(() => { const m = document.querySelector(".rb-main .rb-section"); return m.scrollWidth <= m.clientWidth + 1; }));
   if (shot) { await page.evaluate(() => document.querySelector(".rb-pb-rv").scrollIntoView()); await page.screenshot({ path: `/tmp/pb-review-${vw}.png` }); }
   ok(`[${vw}] 오류 없음`, !errs.length, errs.join(";"));

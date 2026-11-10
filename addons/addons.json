@@ -42,8 +42,8 @@
       "hooks": false,
       "desc": "말로 요청해 봇·모듈을 만들고 고치는 AI 창·AI로 제작 탭, AI로 페르소나 만들기를 써요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/aibuild.js",
-      "sha256": "55b02e334e7d89c38829a3824294ebb3ff74fe7d17b70f14095d73b93bae8ace",
-      "size": 200042
+      "sha256": "4366d876d05678e5fb60b573ef625890ac110a536bebc4b9da51403c8d501d6f",
+      "size": 208663
     },
     {
       "id": "memory",

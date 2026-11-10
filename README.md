@@ -197,6 +197,8 @@ node tools/build.mjs --check   # 빌드 결과가 저장소의 dusk_atelier.js�
 - **cocoA(gent!)** 개발자님 — 스킬 세트(SKILL.md)와 단계별 지침 주입 기능을 Dusk Atelier로 옮겨 오도록 허락해 주셨어요. 코코아전트에서 쓰던 스킬은 그대로 가져와 쓸 수 있어요. (원문 글: https://arca.live/b/characterai/179049659)
 - **HypaPlus** 개발자님 — HypaPlus의 기억 가져오기와 정규식 전처리 기능을 Dusk Atelier로 옮겨 오도록 허락해 주셨어요. (원문 글: https://arca.live/b/characterai/180803492)
 - **봇빌더** 원작자님 — AI로 설명·로어북·정규식·Lua를 만드는 엔진과 프리셋 요청 조립을 Dusk Atelier 개발 탭으로 옮기도록 허락해 주셨어요. (원문 글: https://arca.live/b/characterai/187289284)
+- **페르소나 공방** 개발자님 — AI로 페르소나 만들기의 화면 구성과 NAI 캐릭터 태그·판 비교·토큰 추정 기능을 Dusk Atelier로 옮겨 오도록 허락해 주셨어요. (https://github.com/canister2668/Risu-persona-forge)
+- **SOP Lite** (SOP: Sort Of Persona) — 페르소나 SOP 양식과 초안·검토 보고서·최종 다듬기 지침의 바탕이에요.
 - **RisuMeter** — 용량 측정의 분류 방식과 렌더 개입 진단 아이디어의 바탕이 됐어요. 코드는 Dusk Atelier에 맞게 새로 썼어요.
 
 ## 라이선스
