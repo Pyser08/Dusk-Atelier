@@ -20,6 +20,8 @@ import { infoTab } from "./infotab.js";
 import { wikiPanel } from "./wikipanel.js";
 import { openWikiLog } from "./wikilog.js";
 import { liveScope } from "./advanced.js";
+import { castOfCard, modulesOf } from "../../../data/castlore.js";
+import { strangers } from "../../../engine/castfilter.js";
 import { personTabs } from "./personv2.js";
 
 const USER = "{{user}}";
@@ -93,11 +95,38 @@ export async function renderPeopleTab(env, host) {
     if (ok) await fillEmptyPeople(env, plan);
   };
   const makeMissing = () => commit((w) => { let cur = w; for (const [, p] of missing) { try { cur = createBlankPerson(cur, p.name); } catch { /* 이미 있으면 건너뜀 */ } } return cur; }, `${missing.length}명의 위키 문서를 만들었어요. 수치·성격은 각 인물에서 ‘AI 작성’으로 채워요.`);
+  // 로어북에 없는 인물 지우기: 예전에(또는 설정을 끈 동안) 위키에 생긴 엑스트라를 골라 지운다. 로어북은 누를 때 읽는다.
+  const askStrangers = async () => {
+    let ch = null; try { ch = await ctx.api.getCharacterFromIndex(env.bot.index); } catch { ch = null; }
+    if (!ch) throw new Error("봇 정보를 읽지 못했어요.");
+    const chat = ch.chats?.[env.chatItem.index] ?? env.chatItem.chat ?? null;
+    const cast = castOfCard(ch, chat, await modulesOf(ctx.api, ch, chat));
+    if (cast.empty) { ctx.toast("이 봇은 로어북이 비어 있어서 판단할 수 없어요."); return; }
+    const list = strangers(docs, cast, isUser);
+    if (!list.length) { ctx.toast("로어북에 없는 인물이 없어요."); return; }
+    const picked = new Set(list.map((d) => d.id));
+    const ids = await modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(520px,94vw)" },
+      h("h3", null, `로어북에 없는 인물 ${list.length}명`),
+      h("p", { class: "rb-muted" }, "봇 이름·설명이나 로어북(캐릭터·채팅·모듈)에 이름이 나오지 않는 인물이에요. 지울 인물을 고르세요. 위키 문서·기본 성격과 이 채팅의 장기 기억 기록이 함께 지워지고 되돌릴 수 없어요. 📌 고정한 항목이 있는 인물은 건너뛰어요."),
+      h("div", { class: "rb-mem-chats", "data-strangers": "1" }, list.map((d) => h("label", { class: "rb-mem-check" }, h("input", { type: "checkbox", checked: true, "data-id": d.id, onChange: (e) => { e.target.checked ? picked.add(d.id) : picked.delete(d.id); } }), h("b", null, d.title), (d.aliases ?? []).length ? h("small", { class: "rb-muted" }, ` · ${d.aliases.join(", ")}`) : null))),
+      h("div", { class: "rb-dialog-actions" }, btn("취소", { onClick: () => done(null) }), btn("고른 인물 지우기", { kind: "danger", onClick: () => done([...picked]) }))));
+    if (!ids?.length) return;
+    const gone = [], kept = [];
+    await M.store.updateFolder(env.bot.id, env.chatItem.id, (f) => {
+      let w = f.wiki; if (!w?.documents) return;
+      for (const id of ids) { const doc = w.documents[id]; if (!doc) continue; try { w = removePerson(w, id); gone.push(doc); } catch { kept.push(doc.title); } }
+      f.wiki = w;
+      for (const doc of gone) { const k = keyOfDoc.get(doc.id); if (k && f.people?.[k]) delete f.people[k]; }   // 같은 인물의 장기 기억 기록도 지운다(안 지우면 '위키 문서 만들기'로 다시 떠오름)
+    });
+    ctx.toast(`${gone.length}명을 지웠어요.${kept.length ? ` 고정 항목이 있어 남긴 인물: ${kept.join(", ")}` : ""}`);
+    m.wkSel = ""; (env.redrawView ?? env.redraw)();
+  };
   const autoSt = autoStatusOf(M, docs.length);
   // 리수폿·인물 화면의 고유 기능을 기존 위키 UI 아래에 추가한다. 기존 위키 조작부는 교체하지 않는다.
   const strip = () => h("div", { class: "rb-wk-auto" }, note(autoSt.kind, autoSt.text), h("span", { class: "rb-mem-rowact" }, plan.total && wikiEditable(env) ? btn(`AI로 빈칸 채우기 (${plan.total}명)`, { size: "sm", kind: "primary", title: "비어 있는 수치(와 본문·성격까지 빈 인물)만 채워요. 실행 전에 대상을 보여 드려요.", onClick: () => askFill().catch(fail(ctx)) }) : null, missing.length && wikiEditable(env) ? btn(`위키 없는 인물 ${missing.length}명 만들기`, { size: "sm", kind: "primary", onClick: () => makeMissing() }) : null, btn("위키 기록·다시 시도", { size: "sm", onClick: () => openWikiLog(env).catch(fail(ctx)) })));
   const top = (n) => h("div", { class: "rb-wk-headwrap" }, h("div", { class: "rb-wk-head" }, h("div", null, h("div", { class: "rb-wk-eyebrow rb-muted" }, "지금 채팅"), h("h2", null, "인물 문서")),
     h("span", { class: "rb-mem-rowact" }, h("span", { class: "rb-wk-n" }, `${n}명`), btn("인물 추가·가져오기", { size: "sm", onClick: () => openImport(env).catch(fail(ctx)) }), btn("빈 인물 직접 추가", { size: "sm", onClick: addBlank }),
+      docs.length && wikiEditable(env) ? btn("로어북에 없는 인물 지우기", { size: "sm", title: "로어북·봇 설명에 이름이 없는 인물을 골라 지워요", onClick: () => askStrangers().catch(fail(ctx)) }) : null,
       btn("더보기", { size: "sm", icon: "more", onClick: (e) => openMenu(ctx.win, e.currentTarget, peopleMenuItems(env, Object.entries(people).filter(([, p]) => visibleRecords(p).length || p.digest))) }))), strip());
 
   const keyOfDoc = new Map();

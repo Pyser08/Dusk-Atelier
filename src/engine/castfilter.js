@@ -51,3 +51,9 @@ export function dropCreates(env, keep) {
     out.issues = [{ code: "no_canonical_change", document_ref: null, detail: "로어북에 없는 인물만 나와서 이번에는 바꾸지 않음" }];
   return { env: out, dropped: [...gone.values()] };
 }
+
+// 이미 위키에 있는 인물 중 로어북에 없는 사람(지우기 후보). isUser(name)이면 빼고, 로어북이 비었으면 아무도 고르지 않는다.
+export function strangers(docs, cast, isUser = () => false) {
+  if (!cast || cast.empty) return [];
+  return (docs ?? []).filter((d) => d?.type === "Character" && d.title && !isUser(d.title) && !inCast(cast, d.title, d.aliases ?? []));
+}

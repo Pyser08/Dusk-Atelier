@@ -70,6 +70,7 @@ export function fakeApi(seed = {}, story = false, mods = false) {
     getRootDocument: async () => null, nativeFetch: async (u, o) => { (window.__nf ??= []).push([u, o?.method]); if (window.__cellarOn && /\/cellar\/plugins$/.test(u)) { const b = JSON.parse(o.body); (window.__cpCalls ??= []).push(b); const r = window.__cpHandle(b); return { status: r.status, json: async () => r.body }; } if (window.__cellarOn && /\/cellar\/backup$/.test(u)) { if (o?.method === "POST") (window.__bkPosts ??= []).push(JSON.parse(o.body)); return { status: 200, json: async () => (o?.method === "POST" ? { ok: true, job: { done: 0 } } : { ok: true, items: window.__bkItems ?? [], job: window.__bkJob ?? null }) }; } return window.__cellarOn && /\/cellar\/health$/.test(u) ? { status: 200, json: async () => ({ ok: true, name: "dusk-cellar", version: "0.1.0", auth: true, ...(window.__cellarFeat ? { features: window.__cellarFeat } : {}) }) } : { status: 404 }; }, registerButton: async () => {}, registerSetting: async () => {}
   };
 }
+window.__testLib = { createEmptyWikiScope, createBlankPerson };
 window.bootApp = async (seed, opts = {}) => {
   // 1.8.3 시작 안내는 기본으로 '본 것'으로 시작한다(안내 자체를 시험할 때만 opts.onboard)
   if (!opts.onboard) { const ui = JSON.parse(seed["rbm:ui:v1"] ?? "{}"); ui.onboardDone ??= true; ui.onboardVer ??= 99; seed = { ...seed, "rbm:ui:v1": JSON.stringify(ui) }; }

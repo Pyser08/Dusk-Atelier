@@ -65,3 +65,11 @@ test("castlore: 캐릭터·채팅·켜진 모듈 로어북을 모으고, 봇이 
   t = 61_000; ch.globalLore = []; ch.chats[0].localLore = []; ch.modules = [];
   assert.equal(await read("c1"), null, "로어북이 비면 막지 않음");
 });
+
+test("지우기 후보: 로어북에 없는 위키 인물만(플레이어·로어북 빈 봇 제외)", async () => {
+  const { strangers } = await import("../src/engine/castfilter.js");
+  const docs = [{ id: "a", type: "Character", title: "민지" }, { id: "b", type: "Character", title: "점원" }, { id: "c", type: "Character", title: "알바", aliases: ["세라"] },
+    { id: "d", type: "Character", title: "철수" }, { id: "e", type: "Place", title: "카페2" }];
+  assert.deepEqual(strangers(docs, cast, (n) => n === "철수").map((d) => d.id), ["b"]);
+  assert.deepEqual(strangers(docs, loreCast({ entries: [] })), []);
+});

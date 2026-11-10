@@ -17,16 +17,24 @@ export function createCastReader(api, { now = () => Date.now(), ttl = 60_000 } =
       if (!ch) return null;
       chat = ch.chats?.[ti] ?? null;
       if (!chat && ti >= 0) { try { chat = await api.getChatFromIndex?.(ci, ti); } catch { chat = null; } }
-      try {
-        const db = await api.getDatabase(["modules", "enabledModules"]);
-        const ids = new Set([...(db?.enabledModules ?? []), ...(ch.modules ?? []), ...(chat?.modules ?? [])]);
-        mods = (db?.modules ?? []).filter((m) => ids.has(m?.id));
-      } catch { mods = []; }
-      const entries = [...(ch.globalLore ?? []), ...(chat?.localLore ?? []), ...mods.flatMap((m) => m.lorebook ?? [])];
-      memo = { key, at: now(), chaId: String(ch.chaId ?? ""), cast: loreCast({ botName: ch.name ?? "", description: [ch.desc, ch.personality].filter(Boolean).join("\n"), entries }) };
+      mods = await modulesOf(api, ch, chat);
+      memo = { key, at: now(), chaId: String(ch.chaId ?? ""), cast: castOfCard(ch, chat, mods) };
     }
     if (characterId && memo.chaId && String(characterId) !== memo.chaId) return null;
     const cast = memo.cast;
     return cast.empty ? null : (name, aliases = []) => inCast(cast, name, aliases);
   };
+}
+
+// 봇 카드 + 채팅 + 켜진 모듈 → 판단 재료(loreCast). 인물 화면의 '로어북에 없는 인물 지우기'도 같은 것을 쓴다.
+export function castOfCard(ch, chat, mods = []) {
+  const entries = [...(ch?.globalLore ?? []), ...(chat?.localLore ?? []), ...(mods ?? []).flatMap((m) => m?.lorebook ?? [])];
+  return loreCast({ botName: ch?.name ?? "", description: [ch?.desc, ch?.personality].filter(Boolean).join("\n"), entries });
+}
+export async function modulesOf(api, ch, chat) {
+  try {
+    const db = await api.getDatabase(["modules", "enabledModules"]);
+    const ids = new Set([...(db?.enabledModules ?? []), ...(ch?.modules ?? []), ...(chat?.modules ?? [])]);
+    return (db?.modules ?? []).filter((m) => ids.has(m?.id));
+  } catch { return []; }
 }
