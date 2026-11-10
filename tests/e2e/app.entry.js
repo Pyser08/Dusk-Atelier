@@ -198,6 +198,7 @@ window.bootApp = async (seed, opts = {}) => {
   if (opts.modcompat) {
     const bot = { ...structuredClone(hunterBot), type: "character", chats: [{ message: [] }], modules: [] };
     const mods = [structuredClone(hunterExtra), structuredClone(selfModule)];
+    mods[0].lorebook.push({ key: "", comment: "NPC List", content: "{{#if {{equal::{{getvar::Ryu Hae-yeon}}::1}}}}- Ryu Hae-yeon{{/if}}" });
     const getDb0 = api.getDatabase;
     api.getCharacterFromIndex = async () => structuredClone(bot);
     api.getDatabase = async (keys) => ({ ...(await getDb0(keys)), modules: structuredClone(mods), enabledModules: mods.map((m) => m.id) });

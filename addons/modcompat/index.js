@@ -9,6 +9,7 @@ export async function activate(api, ctx) {
   const mc = createModCompat(api, { storage: dusk.storage, log });
   await mc.loadSettings();
   const hook = async (fn) => { try { await fn(); } catch (e) { log("훅 등록 실패", e?.message ?? e); } };
+  await hook(() => api.addRisuScriptHandler("input", mc.onInput));
   await hook(() => api.addRisuScriptHandler("output", mc.onOutput));
   await hook(() => api.addRisuScriptHandler("display", mc.onDisplay));
   await hook(() => api.addRisuScriptHandler("process", mc.onProcess));

@@ -188,8 +188,8 @@ export function groupSubjects(names) {
 }
 
 // ---------- 보호(응답 저장 전) ----------
-export const WJ = "⁠";
-const B64S = "", B64E = "";
+export const WJ = "\u2060";
+const B64S = "\uE0D0", B64E = "\uE0D1";
 const b64e = (s) => { const u = new TextEncoder().encode(s); let bin = ""; for (const c of u) bin += String.fromCharCode(c); return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
 const b64d = (s) => { const t = s.replace(/-/g, "+").replace(/_/g, "/"); const bin = atob(t + "===".slice((t.length + 3) % 4)); return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))); };
 const softWrap = (tag) => tag[0] + WJ + tag.slice(1);
@@ -197,8 +197,8 @@ const hardWrap = (tag) => `${B64S}D${b64e(tag)}${B64E}`;
 // 감싼 것을 되돌린다(어느 단계에서든 같은 함수).
 export function unwrap(text) {
   let s = String(text ?? "");
-  if (s.includes(B64S)) s = s.replace(/D([A-Za-z0-9_-]+)/g, (all, b) => { try { return b64d(b); } catch { return all; } });
-  if (s.includes(WJ)) s = s.replace(/([<{])⁠/g, "$1");
+  if (s.includes(B64S)) s = s.replace(/\uE0D0D([A-Za-z0-9_-]+)\uE0D1/g, (all, b) => { try { return b64d(b); } catch { return all; } });
+  if (s.includes(WJ)) s = s.replace(/([<{])\u2060/g, "$1");
   return s;
 }
 
@@ -287,8 +287,17 @@ export function prepareDisplay(text, ctx) {
 // 태그 하나를 어떻게 그릴지. 'keep'이면 봇 정규식이 원래대로 그린다.
 export function planRender(tag, ctx, hit = null) {
   const disp = (ctx.scripts ?? []).filter((x) => x.type === "editdisplay");
+  // 리스 순서대로 태그에 걸리는 첫 정규식. 태그를 남겨 두는 정규식(감싸기·줄바꿈 등)은 지나친다.
   let first = null;
-  for (const sc of disp) { sc.re.lastIndex = 0; if (sc.re.test(tag)) { first = sc; break; } }
+  for (const sc of disp) {
+    sc.re.lastIndex = 0;
+    if (!sc.re.test(tag)) continue;
+    if (isRenderer(sc)) { first = sc; break; }
+    let after = tag;
+    try { sc.re.lastIndex = 0; after = tag.replace(sc.re, sc.out); } catch { /* 그대로 */ }
+    if (after.includes(tag)) continue;
+    first = sc; break;
+  }
   if (first && isRenderer(first) && !LIST_CBS.test(first.out) && looksUp(first, tag, hit)) return { how: "keep", renderer: first };
   const renderer = first && isRenderer(first) ? first : disp.find((x) => { x.re.lastIndex = 0; return isRenderer(x) && x.re.test(tag); });
   if (renderer) return { how: "inline", renderer };
@@ -341,8 +350,8 @@ export function inlineRender(tag, renderer, hit, ctx) {
   let html;
   try { html = tag.replace(re, out).split(NAME).join(String(hit.name)); } catch { return null; }
   html = html.replace(/<img(\s)/gi, `<img x-dusk-mc$1`);
-  const disp = (ctx.scripts ?? []).filter((x) => x.type === "editdisplay");
-  if (disp.some((x) => { x.re.lastIndex = 0; return x.re.test(html); })) return null;
+  // 그리기 정규식이 결과를 다시 잡아 두 번 그리면 안 된다(다른 꾸밈 정규식은 상관없음)
+  if ((ctx.scripts ?? []).some((x) => isRenderer(x) && (x.re.lastIndex = 0, x.re.test(html)))) return null;
   return html;
 }
 
@@ -357,15 +366,18 @@ export function makePrefilter(shapes) {
 
 // 예시가 없으면 봇 그리기 정규식 패턴에서 만든다(첫 캡처 → {name}). 그것도 없으면 리스 기본 꼴.
 export function synthTemplate(ctx) {
-  const r = (ctx?.shapes ?? []).find((s) => s.renderer && s.renderer.source?.kind !== "module") ?? (ctx?.shapes ?? []).find((s) => s.renderer);
+  // 봇·프리셋 모양 → 이름이 열린(특정 이름만 받지 않는) 모듈 모양 → 아무 그리기 모양
+  const rs = (ctx?.shapes ?? []).filter((s) => s.renderer);
+  const open = (s) => /\((?!\?)[^)]*(\.|\[\^|\\[sSwW])/.test(s.src);
+  const r = rs.find((s) => s.renderer.source?.kind !== "module") ?? rs.find(open) ?? rs[0];
   if (r) {
     let t = r.src.replace(/^\^|\$$/g, "");
-    t = t.replace(/\((?!\?)(?:\\.|[^()\\])*\)/, "");                 // 첫 캡처
+    t = t.replace(/\((?!\?)(?:\\.|[^()\\])*\)/, "\uE0D3");                 // 첫 캡처
     t = t.replace(/\((?:\?[:=!<][^()]*)\)/g, "");                            // 둘러보기·비캡처
     t = t.replace(/\\s\*|\\s\+\?|\\s\*\?/g, "").replace(/\\s\+/g, " ").replace(/\\s/g, " ");
     t = t.replace(/(\\.|[^\\])[?*]/g, (all, c) => (c === ")" ? all : ""));      // 있어도 없어도 되는 글자는 뺀다
     t = t.replace(/\\(.)/g, "$1");
-    if (!/[\[\]()|+*?]/.test(t) && t.includes("")) return t.replace("", "{name}");
+    if (!/[\[\]()|+*?]/.test(t) && t.includes("\uE0D3")) return t.replace("\uE0D3", "{name}");
   }
   return `<img src="{name}">`;
 }

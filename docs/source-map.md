@@ -80,7 +80,7 @@
 - `memoryswitches.js` (77줄) v1.7.0 2단계: 화면이 쓰는 '기억 · 리수폿' 스위치 묶음. 저장은 인덱스(store.upda… — currentChat, createSwitches
 - `memorytools.js` (33줄) 인물 AI 도구(7단계 B): 리수폿 컨트롤러를 한 묶음으로 만든다. 턴 흐름이 켜져 있고 그 채팅이… — makeTools
 - `memoryturn.js` (370줄) 턴 흐름 (v1.6.4 4단계): 리수폿 인물 위키(고르기·정리 노트·기록하기)와 Dusk 기록을 한… — promptKeysOf, stageOf, createTurnFlow
-- `modcompat.js` (170줄) 모듈 호환(애드온 modcompat 전용): 리스 훅 셋(output·display·process) … — DEFAULTS, createModCompat, overlaps
+- `modcompat.js` (223줄) 모듈 호환(애드온 modcompat 전용): 리스 훅 셋(output·display·process) … — DEFAULTS, createModCompat, stripOwnSetvars, overlaps
 - `modelhub.js` (96줄) 모델 허브 (v1.6.4 3단계): 모델 프리셋 저장·키 보관·내 API 호출·토큰 사용량. 화면은 … — getCfg, saveCfg, keyStore, pickForStage, getUsage
 - `modules.js` (248줄) — loadCharacters, readDb, entriesOf, loadModuleState, moduleCounts
 - `persona.js` (152줄) — loadPersonaMap, savePersonaMap, setPersonaLink, syncPersonaModules
@@ -233,8 +233,9 @@
 - `memoryv3.js` (58줄) 장기기억 v3 순수 변환: v2 → v3, 리수폿 백업/저장소 덤프 → v3 조각, 봇 전체 인물 모… — V3, indexV2toV3, folderV2toV3, parsePotBundle, botPeople
 - `merge.js` (37줄) 합치기(RisuTide) 연결: 인물·세계관 가져오기, 전체 합치기, 출처별 업데이트, 떼어내기, A… — adaptCharacterPrompt, conflictTidyPrompt, mergeInput, prepareScopedSelection, applyScopedSelection
 - `merge3.js` (196줄) — charIncomingView, modIncomingView, pickView, merge3, charSpec
-- `modcompat.js` (382줄) 모듈 호환(순수, 애드온 modcompat 전용 — 코어가 import하지 않는다). — MEDIA_EXT, keyOf, assetNames, buildRegistry, parseScript
-- `modcompatprompt.js` (92줄) 모듈 호환 — 모델 안내(순수). 모델이 모듈 이미지 이름을 '봇 자신의 태그 모양'으로 쓰게 요청 … — MARK, exampleTemplate, promptSubjects, buildBlock, injectBlock
+- `modcompat.js` (394줄) 모듈 호환(순수, 애드온 modcompat 전용 — 코어가 import하지 않는다). — MEDIA_EXT, keyOf, assetNames, buildRegistry, parseScript
+- `modcompatprompt.js` (104줄) 모듈 호환 — 모델 안내(순수). 모델이 모듈 이미지 이름을 '봇 자신의 태그 모양'으로 쓰게 요청 … — MARK, exampleTemplate, promptSubjects, buildBlock, injectBlock
+- `modcompatvars.js` (84줄) 모듈 호환 — 인물 감지 변수(순수). 모듈 로어북이 {{getvar::인물}}로 인물 소개를 숨기고… — getvarNames, managedNames, inferFoundValue, varUpdates, setvarText
 - `modelcfg.js` (93줄) 모델 설정 순수 로직 (v1.6.4 3단계) — 리수폿 모델 프리셋을 Dusk AI 선택(pick)으… — STAGES, STAGE_LABEL, defaultCfg, normalizeCfg, addPreset
 - `module.js` (153줄) — loreIdentity, mergeLorebook, planAssets, buildMergedModule, fieldChanges
 - `patch.js` (148줄) — viewKeys, buildPatch, parsePatch, planPatch, applyPatch
@@ -405,7 +406,7 @@
 - `infocard.js` (42줄) 봇·모듈 편집기 '정보' 탭이 같이 쓰는 요약 카드·접는 카드 스타일 (v1.6.9: 모듈도 봇과 같…
 - `loredusk.js` (170줄) 로어북 더스크화 창: 구분선 규칙 변환 / AI 분석(소속·장소) → [규칙 설계(조건·반복·유지·그…
 - `lorelog.js` (107줄) 도구 → 로어북 로그: 응답마다 어떤 로어북이 들어갔는지
-- `modcompat.js` (76줄) 모듈 호환 화면(애드온 modcompat). 지금 연 봇에서 켜진 모듈의 이미지가 어떻게 처리되는지 …
+- `modcompat.js` (84줄) 모듈 호환 화면(애드온 modcompat). 지금 연 봇에서 켜진 모듈의 이미지가 어떻게 처리되는지 …
 - `modlinks.js` (130줄) 모듈 연결 (v1.7.0 5단계): 전역 · 페르소나 · 캐릭터 · 지금 채팅.
 - `modules.js` (734줄) 
 - `newbot.js` (58줄) 새 봇 만들기 (v1.7.0 5단계): 빈 봇을 하나 추가하고 편집기를 연다. AI로 만들기는 편집기…

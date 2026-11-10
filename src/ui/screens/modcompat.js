@@ -1,10 +1,11 @@
 // 모듈 호환 화면(애드온 modcompat). 지금 연 봇에서 켜진 모듈의 이미지가 어떻게 처리되는지 보여 주고 끄고 켠다.
 const GUARD = { none: "필요 없음", soft: "살짝 감싸 지킴", hard: "단단히 감싸 지킴" };
+const VARS = [["auto", "자동"], ["found0", "나오면 0"], ["found1", "나오면 1"], ["off", "끔"]];
 const RENDER = { keep: "봇 정규식 그대로", inline: "봇 정규식을 대신 적용", native: "리스 기본 그리기" };
 
 export function renderModCompat(el, dusk, mc) {
   const { ui } = dusk;
-  const { h, replace, card, note, btn, toggleRow, badge } = ui;
+  const { h, replace, card, note, btn, toggleRow, badge, chip } = ui;
   const draw = async () => {
     replace(el, note("info", "지금 연 봇을 살펴보는 중이에요…"));
     let d;
@@ -33,6 +34,13 @@ export function renderModCompat(el, dusk, mc) {
       d.shapes.length ? h("ul", { class: "rb-mc-list" }, ...d.shapes.map((s) => h("li", {}, h("code", {}, s.src), ` — ${s.kind === "bot" ? "봇" : s.kind === "module" ? `모듈 ${s.name}` : "프리셋"}${s.usesList ? " (봇 에셋 목록만 확인 → 대신 적용)" : ""}`)))
         : note("info", "이 봇에는 이미지를 그리는 정규식이 없어요. 모듈 이미지는 리스 기본 방식으로 그려요."));
 
+    const v = d.vars;
+    const vars = card("인물 감지 변수",
+      h("p", { class: "rb-mc-sub" }, v.names.length
+        ? `모듈 로어북이 {{getvar::인물}}로 소개를 숨기고 보이는 인물 ${v.names.length}명을 최근 대화에 나왔는지로 채워요. 봇 Lua가 다루는 인물은 건드리지 않아요.`
+        : "모듈 로어북에 이 봇이 채우지 않는 인물 변수가 없어요."),
+      v.names.length ? h("p", { class: "rb-mc-meta" }, `${v.names.slice(0, 8).join(", ")}${v.names.length > 8 ? ` 외 ${v.names.length - 8}명` : ""} · 지금 규칙: 나오면 ${v.mode === "found1" ? "1" : v.mode === "found0" ? "0" : v.found ?? "0"}${v.mode === "auto" ? " (자동)" : ""}`) : null,
+      v.names.length ? h("div", { class: "rb-mc-act" }, ...VARS.map(([id, label]) => chip(label, { pressed: (v.mode ?? "auto") === id, onClick: () => set({ vars: id }) }))) : null);
     const block = h("details", { class: "rb-mc-details" }, h("summary", {}, "모델에게 넣는 안내 보기"), h("pre", { class: "rb-mc-pre" }, d.block || "(넣을 안내가 없어요)"));
     const adv = card("세부 설정",
       toggleRow("응답 저장 때 지키기", "봇의 ‘응답 수정’ 정규식이 모듈 이미지 태그를 지우지 못하게 해요.", d.cfg.guard !== false, (v) => set({ guard: v })),
@@ -52,7 +60,7 @@ export function renderModCompat(el, dusk, mc) {
     if ((o.lua.bot ? 1 : 0) + o.lua.modules.length > 1) warn.push(h("li", {}, `Lua 트리거가 ${o.lua.bot ? "봇과 " : ""}${o.lua.modules.join(" · ")}에 있어요. 서로 따로 돌지만, 응답마다 엔진을 다시 만들어 느려질 수 있어요. 봇 고유 기능(호감도·상태창 등)은 모듈 인물에 적용되지 않을 수 있어요.`));
     const over = card("겹침 살펴보기", warn.length ? h("ul", { class: "rb-mc-list" }, ...warn) : note("info", "겹치는 곳을 찾지 못했어요."));
 
-    replace(el, h("style", {}, CSS), head, mods, shapes, adv, over,
+    replace(el, h("style", {}, CSS), head, mods, shapes, vars, adv, over,
       h("div", { class: "rb-mc-act" }, btn("다시 살펴보기", { size: "sm", onClick: draw })));
   };
   draw();

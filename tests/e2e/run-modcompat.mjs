@@ -21,6 +21,11 @@ for (const [label, vp] of [["PC", { width: 1280, height: 860 }], ["모바일", {
   ok(`${label}: 봇 이름과 겹치는 이미지 안내`, /같은 이름이 있는 이미지 1장/.test(t));
   ok(`${label}: Lua 겹침 안내`, /Lua 트리거/.test(t));
   ok(`${label}: 이미지 태그 모양`, /<img="\{name\}">/.test(t));
+  ok(`${label}: 인물 감지 변수 카드`, /인물 감지 변수/.test(t) && /인물 1명/.test(t) && /Ryu Hae-yeon/.test(t) && /나오면 0 \(자동\)/.test(t), t);
+  await page.evaluate(() => [...document.querySelectorAll(".rb-main button")].find((b) => b.textContent.trim() === "끔")?.click());
+  await page.waitForTimeout(900);
+  const varsSaved = await page.evaluate(() => window.__api.store["dusk.addon.data.modcompat.settings"] ?? "");
+  ok(`${label}: 감지 변수 끄기 저장`, /"vars":"off"/.test(varsSaved), varsSaved);
   const pad = await page.evaluate(() => [...document.querySelectorAll(".rb-addon-card")].map((c) => { const s = getComputedStyle(c); return [parseFloat(s.paddingTop), parseFloat(s.paddingLeft)]; }));
   ok(`${label}: 카드 안쪽 여백 14·16 이상`, pad.length >= 4 && pad.every(([a, b]) => a >= 14 && b >= 16), JSON.stringify(pad));
   const over = await page.evaluate(() => { const m = document.querySelector(".rb-main"); return [...m.querySelectorAll(".rb-addon-card *")].filter((e) => e.getBoundingClientRect().right > m.getBoundingClientRect().right + 1).map((e) => e.tagName + "." + e.className).slice(0, 3); });

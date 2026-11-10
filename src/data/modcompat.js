@@ -3,14 +3,16 @@
 // 표시·요청 때 되돌린다(engine/modcompat.js). 훅은 기다리지 않게 문맥을 캐시하고, 봇·채팅이 바뀔 때만 다시 읽는다.
 import { buildContext, protectOutput, prepareDisplay, unwrap, keyOf, findTags, resolveName, guardFor, planRender, MEDIA_EXT } from "../engine/modcompat.js";
 import { buildBlock, exampleTemplate, injectBlock, promptSubjects } from "../engine/modcompatprompt.js";
+import { managedNames, inferFoundValue, varUpdates, setvarText, windowText } from "../engine/modcompatvars.js";
 
-export const DEFAULTS = Object.freeze({ on: true, guard: true, display: true, prompt: true, promptOff: [] });
-const FRESH_MS = 800, MAX_AGE_MS = 15000;
+// vars: 인물 감지 변수 — "auto"(봇 변수에서 읽고, 못 읽으면 나오면 0) | "found0" | "found1" | "off"
+export const DEFAULTS = Object.freeze({ on: true, guard: true, display: true, prompt: true, promptOff: [], vars: "auto", varWindow: 9 });
+const FRESH_MS = 800, MAX_AGE_MS = 15000, FORCE_AGE_MS = 3000;
 
 export function createModCompat(api, { storage, log = (...a) => console.log("[Dusk 모듈 호환]", ...a), now = () => Date.now() } = {}) {
   let ctx = null, checkedAt = 0, pending = null, settings = { bots: {} };
   const cardCache = { ci: null, at: 0, card: null };
-  const stats = { protected: 0, rendered: 0, lastAt: 0 };
+  const stats = { protected: 0, rendered: 0, vars: 0, lastAt: 0 };
 
   async function loadSettings() { settings = (await storage?.get?.("settings", null)) ?? { bots: {} }; if (!settings.bots) settings.bots = {}; return settings; }
   const botCfg = (chaId) => ({ ...DEFAULTS, ...(settings.bots?.[chaId] ?? {}) });
@@ -43,7 +45,8 @@ export function createModCompat(api, { storage, log = (...a) => console.log("[Du
     const modules = (db?.modules ?? []).filter((m) => m && ids.has(m.id));
     const botAssets = [...(ch.additionalAssets ?? []), ...(ch.emotionImages ?? [])];
     const c = buildContext({ botAssets, modules, preset, botScripts: ch.customscript ?? [] });
-    return Object.assign(c, { ci, chi, chaId: String(ch.chaId ?? ""), botName: ch.name ?? "", modules, botLua: luaCount(ch.triggerscript), at: now(), cfg: botCfg(String(ch.chaId ?? "")) });
+    const managed = managedNames({ modules, bot: ch, subjects: c.reg.subjects });
+    return Object.assign(c, { ci, chi, chaId: String(ch.chaId ?? ""), botName: ch.name ?? "", modules, managed, botEntries: ch.globalLore ?? [], botLua: luaCount(ch.triggerscript), at: now(), cfg: botCfg(String(ch.chaId ?? "")) });
   }
   // 지금 봇·채팅의 문맥. 짧은 시간 안에는 호스트에 묻지 않는다(표시 훅이 메시지마다 불리므로).
   async function current({ force = false } = {}) {
@@ -53,7 +56,11 @@ export function createModCompat(api, { storage, log = (...a) => console.log("[Du
       try {
         const w = await where();
         checkedAt = now();
-        if (!force && ctx && ctx.ci === w.ci && ctx.chi === w.chi && now() - ctx.at < MAX_AGE_MS) return ctx;
+        const same = ctx && ctx.ci === w.ci && ctx.chi === w.chi;
+        // 같은 봇·채팅이면 오래되지 않은 문맥을 쓴다(요청 때는 더 짧게 — 모듈을 막 켜고 끈 경우)
+        if (same && now() - ctx.at < (force ? FORCE_AGE_MS : MAX_AGE_MS)) return ctx;
+        // 훅(응답 조각·화면)에서는 같은 채팅이면 기다리지 않고 지금 것을 쓰고, 뒤에서 새로 읽는다(HOST-COMPAT 3)
+        if (same && !force) { refreshLater(w); return ctx; }
         ctx = await build(w.ci, w.chi);
         return ctx;
       } catch (e) { log("문맥 실패", e?.message ?? e); return ctx; }
@@ -61,28 +68,69 @@ export function createModCompat(api, { storage, log = (...a) => console.log("[Du
     })();
     return pending;
   }
+  let refreshing = null;
+  function refreshLater(w) {
+    if (refreshing) return;
+    refreshing = build(w.ci, w.chi).then((c) => { if (ctx && ctx.ci === c.ci && ctx.chi === c.chi) { c.lastBlock = ctx.lastBlock; c.lastTemplate = ctx.lastTemplate; if (ctx.template && c.template) c.template = ctx.template; } ctx = c; }).catch((e) => log("새로 읽기 실패", e?.message ?? e)).finally(() => { refreshing = null; });
+  }
   const active = (c) => c && !c.empty && c.cfg?.on !== false && c.reg?.mod?.size > 0;
+  const varsOn = (c) => c && !c.empty && c.cfg?.on !== false && c.cfg?.vars !== "off" && c.managed?.length > 0;
+
+  // 인물 감지 변수: 최근 대화(+이번 입력)에 모듈 인물이 나왔는지로 값을 정해 {{setvar}}를 덧붙인다(바뀐 것만).
+  // 리스 runVar 패스가 프롬프트를 만들기 전에 실행하고 지운다(interop 2절 4번).
+  async function varTail(c, extra) {
+    let chat = null;
+    try { chat = await api.getChatFromIndex?.(c.ci, c.chi); } catch { chat = null; }
+    const state = chat?.scriptstate ?? {};
+    const text = windowText(chat?.message ?? [], extra, c.cfg.varWindow || 9);
+    const found = foundValue(c, state, text);
+    c.lastFound = found;
+    return setvarText(varUpdates({ managed: c.managed, text, found, scriptstate: state }));
+  }
+  function foundValue(c, state, text) {
+    if (c.cfg.vars === "found0") return "0";
+    if (c.cfg.vars === "found1") return "1";
+    return inferFoundValue({ scriptstate: state, botEntries: c.botEntries, recentText: text, managed: c.managed }) ?? "0";
+  }
 
   // ---- 훅 ----
   async function onOutput(text) {
     if (typeof text !== "string") return text;
     try {
       const c = await current();
-      if (!active(c) || c.cfg.guard === false) return text;
-      const r = protectOutput(text, c);
-      if (r.changed.length) { stats.protected += r.changed.length; stats.lastAt = now(); }
-      return r.text;
+      let out = text;
+      if (active(c) && c.cfg.guard !== false) {
+        const r = protectOutput(text, c);
+        if (r.changed.length) { stats.protected += r.changed.length; stats.lastAt = now(); }
+        out = r.text;
+      }
+      // 감지 변수는 여기서 붙이지 않는다: 리스는 스트리밍 중 조각마다 이 훅을 부르고 그 글을 화면에 그대로 보여 줘서
+      // {{setvar}}가 잠깐 글자로 보인다. 변수는 프롬프트를 만들 때만 필요하므로 다음 입력(onInput)에서 맞춘다.
+      return out;
     } catch (e) { log("응답 처리 실패", e?.message ?? e); return text; }
   }
   async function onDisplay(text) {
     if (typeof text !== "string" || !text) return text;
     try {
       const c = await current();
+      // 막 보낸 입력은 리스가 runVar로 지우기 전 잠깐 그려질 수 있다 → 우리가 붙인 {{setvar}}는 화면에서 뺀다
+      if (c?.managed?.length && text.includes("{{setvar::")) text = stripOwnSetvars(text, c.managed);
       if (!active(c) || c.cfg.display === false) return unwrap(text);
       const out = prepareDisplay(text, c);
       if (out !== text) stats.rendered++;
       return out;
     } catch (e) { log("표시 처리 실패", e?.message ?? e); return unwrap(text); }
+  }
+  // 보내는 글: 인물 감지 변수를 이번 입력까지 넣어 맞춘다(리스가 프롬프트를 만들기 전에 실행)
+  async function onInput(text) {
+    if (typeof text !== "string" || !text.trim()) return text;   // 빈 입력(이어 쓰기 등)에 메시지를 만들지 않게
+    try {
+      const c = await current({ force: true });
+      if (!varsOn(c)) return text;
+      const tail = await varTail(c, text);
+      if (tail) stats.vars++;
+      return tail ? text + tail : text;
+    } catch (e) { log("입력 처리 실패", e?.message ?? e); return text; }
   }
   // 요청에 들어가는 글: 감싼 표식을 원래 태그로(봇의 요청 정규식이 자기 태그처럼 다룬다)
   function onProcess(text) { return typeof text === "string" ? unwrap(text) : text; }
@@ -126,7 +174,8 @@ export function createModCompat(api, { storage, log = (...a) => console.log("[Du
       shapes: c.shapes.filter((s) => s.renderer).map((s) => ({ src: s.src, kind: s.renderer.source.kind, name: s.renderer.source.name ?? "", comment: s.renderer.comment, usesList: s.usesList })),
       modules: mods, chars: ps.chars.length, singles: ps.singles.length,
       block: c.lastBlock ?? buildBlock(c, { template, off: c.cfg.promptOff ?? [] }),
-      overlaps: overlaps(c), botLua: c.botLua, stats: { ...stats }
+      overlaps: overlaps(c), botLua: c.botLua, stats: { ...stats },
+      vars: { mode: c.cfg.vars ?? "auto", names: c.managed.map((m) => m.name), found: c.lastFound ?? (c.managed.length ? await (async () => { try { const ch = await api.getChatFromIndex?.(c.ci, c.chi); return foundValue(c, ch?.scriptstate ?? {}, windowText(ch?.message ?? [], "", c.cfg.varWindow || 9)); } catch { return null; } })() : null) }
     };
   }
 
@@ -141,9 +190,13 @@ export function createModCompat(api, { storage, log = (...a) => console.log("[Du
     return n;
   }
 
-  return { current, onOutput, onDisplay, onProcess, beforeRequest, diagnose, unwrapChat, loadSettings, setBotCfg, botCfg, stats };
+  return { current, onInput, onOutput, onDisplay, onProcess, beforeRequest, diagnose, unwrapChat, loadSettings, setBotCfg, botCfg, stats };
 }
 
+export function stripOwnSetvars(text, managed) {
+  const names = new Set((managed ?? []).map((m) => m.name));
+  return String(text).replace(/\{\{setvar::([^:{}]+)::[01]\}\}/g, (all, n) => (names.has(n) ? "" : all));
+}
 const luaCount = (list) => (Array.isArray(list) ? list : []).filter((t) => (t?.effect ?? []).some((e) => e?.type === "triggerlua" && String(e.code ?? "").trim())).length;
 
 // 모듈끼리·봇과 겹치는 곳(진단만): 같은 정규식, 같은 로어북 이름표, Lua 트리거 수.

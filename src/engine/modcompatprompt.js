@@ -9,19 +9,31 @@ const UI_WORD = /(^|[\s_\-.])(icon|icons|bg|background|frame|button|btn|ui|bar|b
 // 봇이 실제로 쓰는 태그 예시를 글에서 찾아 '{name}' 자리를 만든다. 그리기 정규식 모양을 먼저 본다.
 // texts: 요청 메시지 글들(글로벌 노트·설명·로어북이 들어 있음)
 export function exampleTemplate(texts, ctx) {
-  const shapes = [...(ctx?.shapes ?? [])].sort((a, b) => (b.renderer ? 1 : 0) - (a.renderer ? 1 : 0));
-  for (const t of texts ?? []) {
-    const s = String(t ?? "");
-    if (!s || s.length > 400000) continue;
-    for (const h of findTags(s, shapes)) {
-      if (!h.shape.renderer && !ctx.reg?.bot?.has(keyOf(h.raw))) continue;
-      if (/\{\{|\{name\}/.test(h.raw)) continue;
-      const g = /^\$(\d+)$/.exec(h.shape.tpl), cap = g ? h.m[+g[1]] : null;
-      if (!cap) continue;
-      const at = h.text.indexOf(cap);
-      if (at < 0) continue;
-      const ext = MEDIA_EXT.test(cap) ? cap.match(MEDIA_EXT)[0] : "";
-      return h.text.slice(0, at) + "{name}" + ext + h.text.slice(at + cap.length);
+  const all = ctx?.shapes ?? [];
+  // 봇(·프리셋) 그리기 모양 → 모듈 그리기 모양 → 기본 모양(봇 에셋 이름일 때만) 순서로 찾는다
+  // 1) 봇 에셋 이름을 쓴 예시(어느 그리기 모양이든) 2) 봇·프리셋 그리기 모양 3) 모듈 그리기 모양 4) 기본 모양의 봇 에셋 예시
+  const isBot = (h) => ctx.reg?.bot?.has(keyOf(h.raw));
+  const passes = [
+    [all.filter((s) => s.renderer), isBot],
+    [all.filter((s) => s.renderer && s.renderer.source?.kind !== "module"), () => true],
+    [all.filter((s) => s.renderer?.source?.kind === "module"), () => true],
+    [all.filter((s) => !s.renderer), isBot]
+  ];
+  for (const [shapes, okHit] of passes) {
+    if (!shapes.length) continue;
+    for (const t of texts ?? []) {
+      const s = String(t ?? "");
+      if (!s || s.length > 400000) continue;
+      for (const h of findTags(s, shapes)) {
+        if (!okHit(h)) continue;
+        if (/\{\{|\{name\}/.test(h.raw)) continue;
+        const g = /^\$(\d+)$/.exec(h.shape.tpl), cap = g ? h.m[+g[1]] : null;
+        if (!cap) continue;
+        const at = h.text.indexOf(cap);
+        if (at < 0) continue;
+        const ext = MEDIA_EXT.test(cap) ? cap.match(MEDIA_EXT)[0] : "";
+        return h.text.slice(0, at) + "{name}" + ext + h.text.slice(at + cap.length);
+      }
     }
   }
   return synthTemplate(ctx);

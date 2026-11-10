@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { buildContext, protectOutput, prepareDisplay, unwrap, runChain, groupSubjects, resolveName, keyOf, nameTemplate, planRender, collectScripts, WJ } from "../src/engine/modcompat.js";
 import { buildBlock, exampleTemplate, synthTemplate, injectBlock, promptSubjects, MARK } from "../src/engine/modcompatprompt.js";
 import { createModCompat } from "../src/data/modcompat.js";
+import { managedNames, inferFoundValue, varUpdates, setvarText, getvarNames } from "../src/engine/modcompatvars.js";
 import { hunterBot, univBot, plainBot, hunterExtra, selfModule, univExtra } from "./fixtures/modcompat.js";
 
 const ctxOf = (bot, modules) => buildContext({ botAssets: bot.additionalAssets, modules, botScripts: bot.customscript });
@@ -254,4 +255,90 @@ test("표시: 봇과 다른 모양으로 쓴 모듈 태그도 봇 모양으로 �
   assert.ok(shown.includes("{{raw::minji_angry.png}}"), shown);
   const h = ctxOf(hunterBot, [hunterExtra]);
   assert.equal(prepareDisplay(`<img src="Park In-joon smile">`, h), `<img="Park In-joon smile">`);
+});
+
+// ---- 인물 감지 변수 ----
+const npcModule = { id: "mha", name: "더 많은 헌터들", assets: [], regex: [], trigger: [], lorebook: [
+  { key: "", comment: "NPC List", alwaysActive: true, content: "{{#if {{equal::{{getvar::Ryu Hae-yeon}}::1}}}}- Ryu Hae-yeon (20/F){{/if}}\n{{#if {{equal::{{getvar::Park In-joon}}::1}}}}- Park In-joon{{/if}}\n{{getvar::lang}}" },
+  { key: "류해연, Ryu Hae-yeon", comment: "류해연", content: "..." },
+  { key: "박인준, Park In-joon", comment: "박인준", content: "..." }
+] };
+const luaBot = { ...hunterBot, triggerscript: [{ effect: [{ type: "triggerlua", code: `local characterMap = { { id = "Kang Min-hyuk", keywords = {"Kang Min-hyuk", "강민혁"} } }` }] }], defaultVariables: "lang=1", globalLore: [{ key: "강민혁, Kang Min-hyuk", content: "" }, { key: "민채린, Min Chae-rin", content: "" }] };
+
+test("감지 변수: 모듈 인물만 고르고 설정 변수·봇이 다루는 인물은 뺀다", () => {
+  assert.deepEqual(getvarNames("{{getvar::A}} {{getvar:: B }}"), ["A", "B"]);
+  const mod2 = { ...npcModule, id: "x", lorebook: [...npcModule.lorebook, { key: "강민혁, Kang Min-hyuk", content: "{{getvar::Kang Min-hyuk}}" }] };
+  const names = managedNames({ modules: [mod2], bot: luaBot }).map((m) => m.name);
+  assert.deepEqual(names.sort(), ["Park In-joon", "Ryu Hae-yeon"]);
+  const ryu = managedNames({ modules: [npcModule], bot: luaBot }).find((m) => m.name === "Ryu Hae-yeon");
+  assert.ok(ryu.keywords.includes("류해연"));
+});
+
+test("감지 변수: 봇이 채운 변수와 최근 대화를 맞춰 '나오면 몇'을 읽는다", () => {
+  const recent = "강민혁이 웃었다. 민채린도.";
+  assert.equal(inferFoundValue({ scriptstate: { "$Kang Min-hyuk": "0", "$Min Chae-rin": "0", "$Kim Min-soo": "1", "$Lee Ha-eun": "1" }, botEntries: luaBot.globalLore, recentText: recent }), "0");
+  assert.equal(inferFoundValue({ scriptstate: { "$Kang Min-hyuk": "1", "$Min Chae-rin": "1", "$Kim Min-soo": "0", "$Lee Ha-eun": "0" }, botEntries: luaBot.globalLore, recentText: recent }), "1");
+  assert.equal(inferFoundValue({ scriptstate: { "$lang": "1" }, recentText: recent }), null, "자료가 모자라면 모름");
+});
+
+test("감지 변수: 바뀐 것만 {{setvar}}로", () => {
+  const managed = managedNames({ modules: [npcModule], bot: luaBot });
+  const up = varUpdates({ managed, text: "류해연이 왔다", found: "0", scriptstate: { "$Park In-joon": "1" } });
+  assert.deepEqual(up, { "Ryu Hae-yeon": "0" });
+  assert.equal(setvarText(up), "{{setvar::Ryu Hae-yeon::0}}");
+  assert.equal(setvarText({ "a::b": "1" }), "", "이상한 이름은 쓰지 않는다");
+});
+
+test("훅: 입력 끝에 감지 변수를 붙이고(응답에는 안 붙임 — 스트리밍 중 글자로 보임), 끄면 붙이지 않는다", async () => {
+  const chat = { message: [{ role: "char", data: "강민혁이 들어왔다." }], scriptstate: { "$Kang Min-hyuk": "0", "$Min Chae-rin": "1", "$Kim Min-soo": "1", "$Lee Ha-eun": "1" } };
+  const { api } = fakeApi({ bot: luaBot, modules: [npcModule, hunterExtra], chat });
+  const mc = createModCompat(api, { storage: mem(), log: () => {} });
+  await mc.loadSettings();
+  assert.equal(await mc.onOutput("류해연이 손을 흔들었다."), "류해연이 손을 흔들었다.");
+  const inp = await mc.onInput("류해연, 박인준은?");
+  assert.ok(inp.endsWith("{{setvar::Ryu Hae-yeon::0}}{{setvar::Park In-joon::0}}"), inp);
+  chat.scriptstate["$Ryu Hae-yeon"] = "0"; chat.scriptstate["$Park In-joon"] = "0";
+  assert.equal(await mc.onInput("류해연, 박인준은?"), "류해연, 박인준은?", "값이 같으면 붙이지 않는다");
+  assert.equal(await mc.onInput("  "), "  ", "빈 입력은 그대로");
+  await mc.setBotCfg("hunter", { vars: "off" });
+  assert.equal(await mc.onInput("그냥"), "그냥");
+});
+
+test("감지 변수: 다른 모듈 Lua가 직접 채우는 인물도 건드리지 않는다", () => {
+  const luaMod = { id: "lm", lorebook: [], trigger: [{ effect: [{ type: "triggerlua", code: `setChatVar(id, "Ryu Hae-yeon", "0")` }] }] };
+  const names = managedNames({ modules: [npcModule, luaMod], bot: luaBot }).map((m) => m.name);
+  assert.deepEqual(names, ["Park In-joon"]);
+});
+
+test("모델 안내: 다른 모듈 글의 태그 예시보다 봇 모양을 먼저 쓴다", () => {
+  const ctx = ctxOf(univBot, [univBot.module, univExtra, selfModule]);
+  assert.equal(exampleTemplate([`모듈 안내: <img="Ernest Melville">`, univBot.globalNote], ctx), "<img src={name}>");
+});
+
+test("예시가 없을 때도 특정 이름만 받는 모듈 모양보다 열린 모양을 쓴다", () => {
+  const ctx = ctxOf(univBot, [selfModule, univBot.module, univExtra]);
+  assert.equal(synthTemplate(ctx), "<img src={name}>");
+});
+
+test("화면: 막 보낸 입력의 감지 변수 {{setvar}}는 보이지 않는다(다른 setvar는 그대로)", async () => {
+  const chat = { message: [], scriptstate: {} };
+  const { api } = fakeApi({ bot: luaBot, modules: [npcModule], chat });
+  const mc = createModCompat(api, { storage: mem(), log: () => {} });
+  await mc.loadSettings();
+  assert.equal(await mc.onDisplay("안녕{{setvar::Ryu Hae-yeon::1}}{{setvar::mood::1}}"), "안녕{{setvar::mood::1}}");
+});
+
+test("훅: 오래된 문맥이어도 같은 채팅이면 기다리지 않고 뒤에서 새로 읽는다", async () => {
+  let t = 0, slow = null;
+  const { api } = fakeApi({ bot: hunterBot, modules: [hunterExtra] });
+  const getDb = api.getDatabase;
+  const mc = createModCompat(api, { storage: mem(), log: () => {}, now: () => t });
+  await mc.loadSettings();
+  await mc.current();
+  t = 60000;
+  api.getDatabase = (k) => new Promise((r) => { slow = () => r(getDb(k)); });
+  const res = await Promise.race([mc.onOutput(`<img="Ryu Hae-yeon smile">`), new Promise((r) => setTimeout(() => r("timeout"), 200))]);
+  assert.notEqual(res, "timeout");
+  assert.notEqual(res, `<img="Ryu Hae-yeon smile">`);
+  slow?.();
 });
