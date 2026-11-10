@@ -200,6 +200,7 @@ node tools/build.mjs --check   # 빌드 결과가 저장소의 dusk_atelier.js�
 - **페르소나 공방** 개발자님 — AI로 페르소나 만들기의 화면 구성과 NAI 캐릭터 태그·판 비교·토큰 추정 기능을 Dusk Atelier로 옮겨 오도록 허락해 주셨어요. (https://github.com/canister2668/Risu-persona-forge)
 - **SOP Lite** (SOP: Sort Of Persona) — 페르소나 SOP 양식과 초안·검토 보고서·최종 다듬기 지침의 바탕이에요.
 - **RisuMeter** — 용량 측정의 분류 방식과 렌더 개입 진단 아이디어의 바탕이 됐어요. 코드는 Dusk Atelier에 맞게 새로 썼어요.
+- **모드 매니저** (risu-mod-manager, 노예였던것님) — 모듈 호환 애드온을 만들 때 모듈의 로어북·정규식을 섹션별로 나눠 합치는 방식을 참고했어요. 코드는 가져오지 않고 Dusk Atelier에 맞게 새로 썼어요.
 
 ## 라이선스
 Dusk Atelier는 **GNU Affero General Public License v3.0 (AGPL-3.0)** 입니다. 소스는 이 저장소(`src/`)입니다. 이 프로그램은 어떠한 보증도 없이 배포됩니다.

@@ -1,6 +1,11 @@
 # 현재 상태 — 2.1.0 브랜치 (3.0.8 내용을 옮김, main 2.0.7에서 분기)
 
 
+## 최근 세션 (2026-11-11 0시 — v2.1.0 릴리스 + 애드온 배포, 사용자 지시)
+- 모드 매니저(risu-mod-manager, 노예였던것님, GPL-3.0) 스페셜 땡스: 도구 탭 THANKS(15개, run-work e2e 15로), README Special thanks, 안내서 addons.html 모듈 호환 절. 코드는 가져오지 않아 about PARTS·NOTICE에는 넣지 않음.
+- CHANGELOG ‘다음 버전’을 v2.1.0(2026-11-11)으로 합침, main HandOff/README 작업 브랜치 표를 2.1.0으로(참고: 이 두 파일과 dusk_atelier.js는 00:18에 이 작업 폴더에서 이미 같은 내용으로 바뀌어 있었음 — 다른 세션으로 보임, 그대로 씀).
+- main을 2.1.0으로 빨리감기 병합, `v2.1.0` 태그 → release.yml이 릴리스. 이어서 publish-addons(modcompat 0.1.0 새로 포함).
+
 ## 최근 세션 (2026-11-10 밤 3 — 모듈 호환 애드온 modcompat 0.1.0, 미배포)
 - 사용자 목표: 폐쇄형 봇(이름 화이트리스트·{{assetlist}} 확인·이미지 정규식 없음 등)에 확장 모듈을 켜도 **모듈 에셋이 원본 봇 이미지처럼 나오고 완벽히 적용**. Lua는 어쩔 수 없음. 모드 매니저 zip은 참고만(파일 사전 병합이라 방식이 다름).
 - 리스 소스 확인(업스트림 RisuAI): 플러그인 훅은 CBS·정규식보다 먼저(scripts.ts processScriptFull) / `{{raw::}}`·`{{img::}}`·`<img src="이름">`은 모듈 에셋도 찾음(parser.svelte.ts·ChatBody.svelte) / `{{assetlist}}`는 봇 에셋만(cbs.ts) / Lua 트리거는 모드별 엔진 하나에 코드가 다르면 새로 만들어 각자 실행 → 이름 충돌 없음, 대신 느려짐(scriptings.ts). RisuBard 저장소는 이 세션 접근 목록에 없어 업스트림으로 확인.
