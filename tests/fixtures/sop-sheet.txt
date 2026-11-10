@@ -1,3 +1,22 @@
+# SOP: Sort Of Persona
+
+## Lite Operating Profile
+
+Instruction: Generate a broad first-draft SOP sheet using the structure below.
+
+Fill any field that can be meaningfully designed, inferred, or made useful for this character. Do not prune, compress, or summarize during first draft.
+
+Do not output placeholders such as N/A, None, Unknown, Not applicable, or blank labels. If a field has no value or relevance, omit that field and its label entirely.
+
+Do not write adjective stacks, trope labels, aesthetic praise, or abstract personality claims as final description. Replace each trait with usable mechanism: cause or trigger → interpretation → behavior → cost, limit, or exception.
+
+Define what the character does, chooses, notices, avoids, protects, misreads, repeats, or fails to change. Use concrete output patterns: behavior, voice, decisions, boundaries, stress response, social reading, Want/Need/Fear conflict, Mask/Leak, subtext, sensory residue, and speech shifts.
+
+Avoid poetic metaphor, grand symbolic explanation, and vague emotional summary. Every detail must give the model scene material, not just mood.
+
+After generating the sheet, stop. Do not perform final pruning or token optimization unless instructed.
+
+
 ### Basic Information
 
 - Name: Legal Name | Common Name | Native Name | Title if relevant (Only include names or titles that actually exist in the character concept. Do not invent extra nicknames, aliases, or titles.)

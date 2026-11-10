@@ -5,8 +5,13 @@ import { readValues, compose, fieldKey, freeKey } from "./personabuilder.js";
 
 export var SOP_ID = "sop";
 
-// ── 1단계 기본 지침 (사용자 제공 SOP 시트 머리글) ──
-export var SOP_DRAFT = `Instruction: Generate a broad first-draft SOP sheet using the structure below.
+// ── 기본 규칙 = 사용자 제공 SOP 원문 그대로 (SOP: Sort Of Persona · Lite Operating Profile) ──
+// 1단계 지침(Instruction…)과 양식(### 섹션, - 항목: 힌트)을 모두 이 원문에서 뽑는다. 원문을 바꾸면 둘 다 따라간다.
+export var SOP_RAW = `# SOP: Sort Of Persona
+
+## Lite Operating Profile
+
+Instruction: Generate a broad first-draft SOP sheet using the structure below.
 
 Fill any field that can be meaningfully designed, inferred, or made useful for this character. Do not prune, compress, or summarize during first draft.
 
@@ -18,7 +23,200 @@ Define what the character does, chooses, notices, avoids, protects, misreads, re
 
 Avoid poetic metaphor, grand symbolic explanation, and vague emotional summary. Every detail must give the model scene material, not just mood.
 
-After generating the sheet, stop. Do not perform final pruning or token optimization unless instructed.`;
+After generating the sheet, stop. Do not perform final pruning or token optimization unless instructed.
+
+
+### Basic Information
+
+- Name: Legal Name | Common Name | Native Name | Title if relevant (Only include names or titles that actually exist in the character concept. Do not invent extra nicknames, aliases, or titles.)
+
+- Age / Gender: Age | Birth year if relevant | Sex or gender
+
+- Species / Race: Species or race (For ordinary human characters, this field may be omitted entirely.)
+
+- Nationality / Ethnicity / Culture: Nationality | Ethnicity | Cultural upbringing (Separate only when they differ or matter to the character.)
+
+- Languages: Language | Fluency | Literacy if relevant (Only include accent, dialect, code-switching, or stress-language shifts if they affect actual RP output.)
+
+- Legal / Social Status: Legal identity | Social rank | Recognized status
+
+- Occupation / Affiliation: Job or role | Organization if relevant
+
+- Residence: Dwelling type | Location | Privacy | Safety | Stability (Use only what affects behavior, status, routine, conflict, or scene output.)
+
+
+### Appearance
+
+- Physique: Height | Weight | Build | Distinguishing physical features (Observable facts only; avoid adjectives. Define visible traits through concrete structure, proportion, marks, posture, or condition.)
+
+- Facial Features: Face shape | Eye color and shape | Nose | Mouth | Lips | Jaw | Notable facial details | Hair color, length, style and texture (Describe facial structure, not attractiveness.)
+
+- Skin: Skin tone | Skin texture | Scars, marks, tattoos | Visible color changes if relevant
+
+- Genitals: Explicit and detailed description of Penis/Vulva/Both (including size, shape, color, etc.) | Breast Size, Shape, Texture and Nipple type(if applicable) | Body Hair Distribution and Texture.
+
+- Attire: Usual clothing | Work clothing | Formal clothing | Private clothing | Accessories (Describe what the character actually wears; avoid over-designing unless clothing affects identity, class, work, or setting.)
+
+- Clothing Logic: Function | Comfort | Status | Concealment | Tradition | Taste | Practicality (Use only when clothing reveals identity, work, class, culture, concealment, vulnerability, or self-control. Otherwise omit.)
+
+- Scent: Natural scent | Soap or perfume | Work-related smell | Environmental smell (Use only if scent affects intimacy, sensory memory, work identity, environment, or character texture. If scent is not important, delete this field entirely.)
+
+
+### Core Identity
+
+- Core Premise: A single sentence in omniscient narrator voice that defines the character at their core. Every major action, contradiction, and emotional pattern should be traceable back to this sentence. If other instructions conflict, this sentence is the highest-priority interpretation key. Format: [Character Name] is, above all else, ~.
+
+- Root Mechanism: Notice pattern | Interpretation pattern | Core impulse | Default output | Repeated failure point (Do not define the character with personality adjectives. Define the operating mechanism that creates the impression.)
+
+- Internal Drive: Want | Need | Fear | What happens when they collide (Want is what the character consciously pursues. Need is what would truly change them. Fear is what blocks or distorts both.)
+
+- Core Contradiction: The character’s central self-conflict, written as a behavioral pattern rather than an adjective pair. Define what usually activates the contradiction, what response it tends to create, what belief or fear drives it, when it can bend or break, and what it costs. Do not force every scene into the same formula.
+
+- Untouchable: Person, promise, memory, object, duty, body, place, or ideal they will not treat casually (This should create protection, restraint, refusal, or conflict.)
+
+- Mask / Leak System: Fear → mask / leak | Affection → mask / leak | Shame → mask / leak | Anger → mask / leak | Desire → mask / leak | Grief → mask / leak (Mask is controlled behavior. Leak is involuntary behavior that escapes despite control.)
+
+
+### Emotional / Stress Pattern
+
+- Emotional Processing Route: How emotion is processed and turned into action, speech, silence, avoidance, control, care, aggression, humor, stillness, or delay (Do not force a fixed order.)
+
+- Expression Output: What emotion becomes on the outside: words, action, body signal, avoidance, control, care, aggression, humor, stillness (Define output, not emotion labels.)
+
+- Subtext Substitute: Emotion they rarely name → what appears instead (Use this to prevent direct emotional self-explanation.)
+
+- Pressure Pattern: What kind of condition actually challenges their normal operating mode (Do not list random triggers; define the pattern.)
+
+- Escalation Route: First signal → defensive adjustment → impaired output → breaking point → aftermath (No random jump from calm to collapse.)
+
+- Recovery Route: What returns them to baseline and what residue remains (Recovery is part of characterization.)
+
+
+### Decision / Failure Pattern
+
+- Decision Route: Choice trigger | first input | trusted signal | priority applied | action chosen (Change the order if they are instinct-first, emotion-first, body-first, evidence-first, or authority-first.)
+
+- Priority Under Conflict: What wins when accuracy, loyalty, survival, comfort, principle, status, love, duty, revenge, curiosity, or fear collide (Do not only list priorities.)
+
+- Primary Vulnerability in Action: What makes the character vulnerable | How it becomes visible in behavior (Do not only name the wound. Show what changes when it is touched.)
+
+- Repeated Failure Loop: The mistake they keep making because of the same system that also gives them strength (Failure should not be random.)
+
+- Error Recognition: How they notice something went wrong, or why they do not notice it (Use this to prevent sudden perfect self-awareness.)
+
+
+### Interpersonal Style
+
+- Social Reading Filter: What they read first in others and what they miss (Words, tone, posture, status, threat, need, desire, silence.)
+
+- First-Contact Pattern: How they behave before trust exists (Do not confuse first-contact behavior with true intimacy.)
+
+- Care Output: Concern, loyalty, affection, or responsibility → visible action (Define action, not sentiment.)
+
+- Closeness Access: What becomes available as trust grows: emotion, body, truth, help, softness, anger, dependence, refusal (Closeness changes access, not random personality.)
+
+- Boundary Behavior: How they set, test, defend, violate, or fail to notice boundaries (Physical, emotional, social, moral.)
+
+- Conflict Route: First response → escalation/de-escalation → concession/refusal → repair/exit (Conflict should not resolve instantly unless that is defined.)
+
+
+### Optional: Key Relationship
+
+- Relationship Slot: Name / role | Current contact | Dynamic | What this activates in the character | Relationship-specific rules (Use only for relationships that affect current behavior. Do not force family/friend/mentor/rival categories if they do not matter. Relationship-specific rules should not generalize to all interactions.)
+
+
+### Optional Module: Sexuality
+
+- Sexual History: First experience | Partner history | Formative experiences | Positive associations | Negative associations | Trauma if relevant | Current impact (Use only when it matters.)
+
+- Proclivity / Orientation: Orientation | Attraction pattern | General preferences | Boundaries (Labels are allowed, but behavior and psychology should still be defined.)
+
+- Role / Dynamic Profile: Primary tendencies | Secondary tendencies | Conditional tendencies | Disliked or avoided frames | No power-exchange frame if applicable (Do not force a single role label. If multiple tendencies apply, list several and define intensity in words such as primary, secondary, situational, rare, resisted, partner-dependent, or avoided. Role labels are shorthand only; define how each tendency appears in behavior.)
+
+- Turn-ons: Stimuli | Dynamics | Actions | Emotional conditions | Physical sensations | Scenarios (Connect to psychology, body, history, or relationship context when relevant.)
+
+- Limits: Soft limits | Conditional limits | Hard limits | Trauma-related limits (Separate soft limits from hard limits.)
+
+- Dealbreakers: Absolute no-go acts, dynamics, words, situations, or violations (Make these clear and non-negotiable.)
+
+- Fetishes / Kinks: List | Intensity | Meaning | Behavioral expression (Do not list without intensity or context.)
+
+- Erogenous Zones: Known zones | Unknown zones | Response intensity | Sensitivity conditions (Use only if sensual or sexual body response matters.)
+
+- During Sex: Actions | Pace | Sounds | Role dynamics | Partner interaction | Control dynamics (Tie behavior to body, trust, desire, and personality.)
+
+- Fantasies / Taboos: Fantasies | Taboo thoughts | No-go areas | Unexamined desires (Separate fantasy from actual consented behavior.)
+
+- Post-coital Behavior: Physical state | Emotional state | Habits | Communication needs | Withdrawal or closeness (Aftermath is character.)
+
+- Aftercare Needs: Physical care | Reassurance | Space | Debriefing | Silence | Touch | Warmth | Food | Cleaning (Match the character’s nervous system and attachment pattern.)
+
+
+### Speech / Voice / Language
+
+- Voice: Pitch | Timbre | Volume | Pace | Resonance (This is sound, not personality.)
+
+- Register: Default formality | More formal when | More casual when | Intimacy shift (Honorific shifts can be major emotional signals.)
+
+- Quantity: Talkative | Minimal | Contextual | Silence-heavy | Monologue-prone (Define what determines speech quantity.)
+
+- Distinctive Quality: What makes the character recognizable by speech alone (Be more specific than “dry” or “kind.”)
+
+- Emotional Speech Shifts: Baseline | Defensive | Angry | Afraid | Vulnerable | Intimate | Exhausted (Define changes in length, rhythm, formality, silence, and word choice.)
+
+- Silence Rules: When they go silent | What silence means | What silence replaces | When silence breaks (Silence is a form of output.)
+
+- Conditional Language Notes: Accent | Dialect | Language switching | Code-switching (Use only if it affects actual output, identity, social reading, or emotional state.)
+
+
+### Physical Mannerisms / Nonverbal Expression
+
+- Posture: How the body rests when neutral or unguarded (Connect to body, work, class, confidence, fear, or fatigue.)
+
+- Gestures: Hands | Shoulders | Head | Mouth | Hair | Clothing | Objects (Avoid generic gestures unless they carry meaning.)
+
+- Eye Contact: Direct | Avoidant | Diagnostic | Challenging | Absent | Softening | Fixed (Eye contact can show power, fear, care, analysis, or intimacy.)
+
+- Movement: Walk | Entry | Space-taking | Space-avoidance | Speed | Stillness (Reflect body, training, class, caution, or fatigue.)
+
+- Tells: Signals of lying, affection, fear, pain, exhaustion, jealousy, desire, grief, pressure, or involuntary facial/object-handling habits (Describe the tell; do not explain it every time.)
+
+
+### Skills / Limits
+
+- Primary Skill Domain: Main field of competence: combat, profession, craft, magic, research, politics, survival, care work, investigation, performance, leadership, technical work, etc. (Use the relevant domain; do not force a combat frame.)
+
+- Style: How the character performs in their main domain (Connect method to Core Identity.)
+
+- Ability Mechanics: How it works | Input | Output | Range | Precision | Failure condition (Prevents vague power interpretation.)
+
+- Ability Limits: What blocks, weakens, distorts, exhausts, or prevents the ability | Physical limits if relevant (Strong abilities need clear limits. Do not repeat internal failure loops here.)
+
+- Practical / Social Limits: Tools | Money | Status | Credentials | Legal access | Institutional permission | Class | Reputation | Prejudice | Taboo | Role expectation | Public image (Use only if these limits affect scenes, conflict, work, survival, or relationships.)
+
+
+### Background Seed
+
+- Mechanism Source: The shortest explanation of where the root mechanism came from (Keep this brief.)
+
+- Formative Event: Event that shaped personality, coping, belief, body habit, attachment, or fear | Rule learned | Present behavior created
+
+- Behavioral Residue: Habits, avoidances, desires, misreadings, body reactions, speech patterns, or relationship patterns that remain because of the past
+
+
+### Preferences / Secrets
+
+- Comforts & Irritants: Objects | Routines | Places | People | Sounds | Gestures | Food | Weather | Work | Minor things that disproportionately bother the character (Can reveal vulnerability without confession; do not let irritants become a gimmick.)
+
+- Hidden Truth: Hidden fact | Why hidden | What it protects (Use only if it affects identity, relationships, power, safety, shame, plot, or behavior.)
+
+- Self-Deception: What the character believes about themselves that is false, incomplete, or outdated (Should affect choices.)
+
+- Concealment Behavior: Silence | Humor | Competence | Anger | Charm | Distance | Lies | Overwork | Politeness | How the hidden truth leaks into action, speech, choices, avoidance, or body language (Prevents secrets from becoming inert lore.)
+`;
+export var SOP_TITLE = "SOP: Sort Of Persona · Lite Operating Profile";
+// 1단계 기본 지침: 'Instruction:'부터 첫 '###' 전까지
+export var SOP_DRAFT = SOP_RAW.slice(SOP_RAW.indexOf("Instruction:"), SOP_RAW.indexOf("\n### ")).trim();
 
 // ── 2단계 검토 보고서 ──
 export var SOP_REVIEW = `OOC: Review the completed SOP sheet above. Do not rewrite it yet.
@@ -77,116 +275,32 @@ export var STEP_DEFAULT = { draft: SOP_DRAFT, review: SOP_REVIEW, final: SOP_FIN
 // AI 프리셋에 적힌 단계 지침(비어 있으면 기본값)
 export var stepPrompt = (preset, step) => String(preset?.[STEP_KEYS[step]] ?? "").trim() || STEP_DEFAULT[step];
 
-// ── SOP 양식: 사용자 제공 시트를 빌더 양식(### 폴더, * 항목 [한글]: 힌트)으로 옮긴 것 ──
-export var SOP_TEMPLATE = `### Basic Information [기본 정보]
-* Name [이름]: Legal Name | Common Name | Native Name | Title if relevant (Only include names or titles that actually exist in the character concept. Do not invent extra nicknames, aliases, or titles.)
-* Age / Gender [나이 / 성별]: Age | Birth year if relevant | Sex or gender
-* Species / Race [종족]: Species or race (For ordinary human characters, this field may be omitted entirely.)
-* Nationality / Ethnicity / Culture [국적 / 민족 / 문화]: Nationality | Ethnicity | Cultural upbringing (Separate only when they differ or matter to the character.)
-* Languages [언어]: Language | Fluency | Literacy if relevant (Only include accent, dialect, code-switching, or stress-language shifts if they affect actual RP output.)
-* Legal / Social Status [법적 · 사회적 지위]: Legal identity | Social rank | Recognized status
-* Occupation / Affiliation [직업 / 소속]: Job or role | Organization if relevant
-* Residence [거주지]: Dwelling type | Location | Privacy | Safety | Stability (Use only what affects behavior, status, routine, conflict, or scene output.)
+// ── SOP 양식: 원문의 섹션·항목·힌트를 그대로 빌더 양식(### 섹션 [한글], * 항목 [한글]: 힌트)으로 옮긴다 ──
+// 한글 이름은 화면 표시용이고, 설명에는 원문 영어 이름이 그대로 들어간다.
+export var SOP_KO = {"#Basic Information": "기본 정보", "#Appearance": "외모","#Core Identity": "핵심 정체성","#Emotional / Stress Pattern": "감정 · 스트레스 패턴","#Decision / Failure Pattern": "결정 · 실패 패턴","#Interpersonal Style": "대인 관계 방식","#Speech / Voice / Language": "말투 · 목소리 · 언어","#Physical Mannerisms / Nonverbal Expression": "몸짓 · 비언어 표현","#Skills / Limits": "능력 · 한계","#Background Seed": "배경의 씨앗","#Preferences / Secrets": "취향 · 비밀","Name": "이름","Age / Gender": "나이 / 성별","Species / Race": "종족","Nationality / Ethnicity / Culture": "국적 / 민족 / 문화","Languages": "언어","Legal / Social Status": "법적 · 사회적 지위","Occupation / Affiliation": "직업 / 소속","Residence": "거주지","Physique": "체격","Facial Features": "얼굴","Skin": "피부","Genitals": "신체 (성적 특징)","Attire": "옷차림","Clothing Logic": "옷 고르는 기준","Scent": "체취 · 향","Core Premise": "핵심 전제","Root Mechanism": "근본 작동 방식","Internal Drive": "내적 동기","Core Contradiction": "핵심 모순","Untouchable": "건드릴 수 없는 것","Mask / Leak System": "가면 / 새어 나옴","Emotional Processing Route": "감정 처리 경로","Expression Output": "겉으로 나오는 모습","Subtext Substitute": "말 대신 나오는 것","Pressure Pattern": "압박 패턴","Escalation Route": "고조 경로","Recovery Route": "회복 경로","Decision Route": "결정 경로","Priority Under Conflict": "충돌할 때 우선순위","Primary Vulnerability in Action": "행동에 드러나는 약점","Repeated Failure Loop": "반복되는 실패","Error Recognition": "실수 알아채기","Social Reading Filter": "사람 읽는 법","First-Contact Pattern": "첫 만남","Care Output": "아끼는 마음의 표현","Closeness Access": "가까워지면 열리는 것","Boundary Behavior": "경계 다루기","Conflict Route": "갈등 경로","Relationship Slot": "관계","Sexual History": "성 경험","Proclivity / Orientation": "성향 / 지향","Role / Dynamic Profile": "역할 · 관계 역학","Turn-ons": "끌리는 것","Limits": "한계","Dealbreakers": "절대 안 되는 것","Fetishes / Kinks": "취향 · 페티시","Erogenous Zones": "민감한 곳","During Sex": "관계 중","Fantasies / Taboos": "환상 / 금기","Post-coital Behavior": "관계 후","Aftercare Needs": "애프터케어","Voice": "목소리","Register": "말의 격식","Quantity": "말의 양","Distinctive Quality": "말투만으로 알아보는 점","Emotional Speech Shifts": "감정에 따른 말투 변화","Silence Rules": "침묵 규칙","Conditional Language Notes": "사투리 · 언어 전환","Posture": "자세","Gestures": "손짓 · 몸짓","Eye Contact": "시선","Movement": "움직임","Tells": "티 나는 버릇","Primary Skill Domain": "주 능력 분야","Style": "쓰는 방식","Ability Mechanics": "능력 작동 원리","Ability Limits": "능력의 한계","Practical / Social Limits": "현실 · 사회적 제약","Mechanism Source": "작동 방식의 출처","Formative Event": "형성 사건","Behavioral Residue": "남은 흔적","Comforts & Irritants": "위안 · 거슬리는 것","Hidden Truth": "숨긴 진실","Self-Deception": "자기기만","Concealment Behavior": "숨기는 방식","#Optional: Key Relationship": "핵심 관계 (선택)","#Optional Module: Sexuality": "성적 성향 (선택 모듈)"};
+export var SOP_TEMPLATE = SOP_RAW.slice(SOP_RAW.indexOf("\n### ")).split("\n").map((l) => {
+  const sec = /^###\s+(.+?)\s*$/.exec(l);
+  if (sec) return `### ${sec[1]}${SOP_KO["#" + sec[1]] ? ` [${SOP_KO["#" + sec[1]]}]` : ""}`;
+  const f = /^-\s+([^:]+?):\s*(.*)$/.exec(l);
+  if (f) return `* ${f[1]}${SOP_KO[f[1]] ? ` [${SOP_KO[f[1]]}]` : ""}: ${f[2]}`;
+  return l.trim() ? l : null;
+}).filter((l) => l !== null).join("\n").replace(/\n(### )/g, "\n\n$1").trim() + "\n";
+// 예전 SOP 양식(0.1.2~0.1.3)의 섹션 이름 → 원문 이름 (저장된 칸 옮기기)
+// 예전 내장 SOP 양식 글의 해시(직접 고치지 않았는지 확인용)
+var OLD_SOP_HASH = [75873812];
+export var textHash = (t) => { let h = 0; for (const c of String(t)) h = (h * 31 + c.charCodeAt(0)) | 0; return h; };
+var OLD_TITLES = { "Key Relationship": "Optional: Key Relationship", "Sexuality": "Optional Module: Sexuality" };
 
-### Appearance [외모]
-* Physique [체격]: Height | Weight | Build | Distinguishing physical features (Observable facts only; avoid adjectives. Define visible traits through concrete structure, proportion, marks, posture, or condition.)
-* Facial Features [얼굴]: Face shape | Eye color and shape | Nose | Mouth | Lips | Jaw | Notable facial details | Hair color, length, style and texture (Describe facial structure, not attractiveness.)
-* Skin [피부]: Skin tone | Skin texture | Scars, marks, tattoos | Visible color changes if relevant
-* Genitals [신체 (성적 특징)]: Explicit and detailed description of Penis/Vulva/Both (including size, shape, color, etc.) | Breast Size, Shape, Texture and Nipple type (if applicable) | Body Hair Distribution and Texture
-* Attire [옷차림]: Usual clothing | Work clothing | Formal clothing | Private clothing | Accessories (Describe what the character actually wears; avoid over-designing unless clothing affects identity, class, work, or setting.)
-* Clothing Logic [옷 고르는 기준]: Function | Comfort | Status | Concealment | Tradition | Taste | Practicality (Use only when clothing reveals identity, work, class, culture, concealment, vulnerability, or self-control. Otherwise omit.)
-* Scent [체취 · 향]: Natural scent | Soap or perfume | Work-related smell | Environmental smell (Use only if scent affects intimacy, sensory memory, work identity, environment, or character texture. If scent is not important, delete this field entirely.)
-
-### Core Identity [핵심 정체성]
-* Core Premise [핵심 전제]: A single sentence in omniscient narrator voice that defines the character at their core. Every major action, contradiction, and emotional pattern should be traceable back to this sentence. If other instructions conflict, this sentence is the highest-priority interpretation key. Format: [Character Name] is, above all else, ~.
-* Root Mechanism [근본 작동 방식]: Notice pattern | Interpretation pattern | Core impulse | Default output | Repeated failure point (Do not define the character with personality adjectives. Define the operating mechanism that creates the impression.)
-* Internal Drive [내적 동기]: Want | Need | Fear | What happens when they collide (Want is what the character consciously pursues. Need is what would truly change them. Fear is what blocks or distorts both.)
-* Core Contradiction [핵심 모순]: The character's central self-conflict, written as a behavioral pattern rather than an adjective pair. Define what usually activates the contradiction, what response it tends to create, what belief or fear drives it, when it can bend or break, and what it costs. Do not force every scene into the same formula.
-* Untouchable [건드릴 수 없는 것]: Person, promise, memory, object, duty, body, place, or ideal they will not treat casually (This should create protection, restraint, refusal, or conflict.)
-* Mask / Leak System [가면 / 새어 나옴]: Fear → mask / leak | Affection → mask / leak | Shame → mask / leak | Anger → mask / leak | Desire → mask / leak | Grief → mask / leak (Mask is controlled behavior. Leak is involuntary behavior that escapes despite control.)
-
-### Emotional / Stress Pattern [감정 · 스트레스 패턴]
-* Emotional Processing Route [감정 처리 경로]: How emotion is processed and turned into action, speech, silence, avoidance, control, care, aggression, humor, stillness, or delay (Do not force a fixed order.)
-* Expression Output [겉으로 나오는 모습]: What emotion becomes on the outside: words, action, body signal, avoidance, control, care, aggression, humor, stillness (Define output, not emotion labels.)
-* Subtext Substitute [말 대신 나오는 것]: Emotion they rarely name → what appears instead (Use this to prevent direct emotional self-explanation.)
-* Pressure Pattern [압박 패턴]: What kind of condition actually challenges their normal operating mode (Do not list random triggers; define the pattern.)
-* Escalation Route [고조 경로]: First signal → defensive adjustment → impaired output → breaking point → aftermath (No random jump from calm to collapse.)
-* Recovery Route [회복 경로]: What returns them to baseline and what residue remains (Recovery is part of characterization.)
-
-### Decision / Failure Pattern [결정 · 실패 패턴]
-* Decision Route [결정 경로]: Choice trigger | first input | trusted signal | priority applied | action chosen (Change the order if they are instinct-first, emotion-first, body-first, evidence-first, or authority-first.)
-* Priority Under Conflict [충돌할 때 우선순위]: What wins when accuracy, loyalty, survival, comfort, principle, status, love, duty, revenge, curiosity, or fear collide (Do not only list priorities.)
-* Primary Vulnerability in Action [행동에 드러나는 약점]: What makes the character vulnerable | How it becomes visible in behavior (Do not only name the wound. Show what changes when it is touched.)
-* Repeated Failure Loop [반복되는 실패]: The mistake they keep making because of the same system that also gives them strength (Failure should not be random.)
-* Error Recognition [실수 알아채기]: How they notice something went wrong, or why they do not notice it (Use this to prevent sudden perfect self-awareness.)
-
-### Interpersonal Style [대인 관계 방식]
-* Social Reading Filter [사람 읽는 법]: What they read first in others and what they miss (Words, tone, posture, status, threat, need, desire, silence.)
-* First-Contact Pattern [첫 만남]: How they behave before trust exists (Do not confuse first-contact behavior with true intimacy.)
-* Care Output [아끼는 마음의 표현]: Concern, loyalty, affection, or responsibility → visible action (Define action, not sentiment.)
-* Closeness Access [가까워지면 열리는 것]: What becomes available as trust grows: emotion, body, truth, help, softness, anger, dependence, refusal (Closeness changes access, not random personality.)
-* Boundary Behavior [경계 다루기]: How they set, test, defend, violate, or fail to notice boundaries (Physical, emotional, social, moral.)
-* Conflict Route [갈등 경로]: First response → escalation/de-escalation → concession/refusal → repair/exit (Conflict should not resolve instantly unless that is defined.)
-
-### Key Relationship [핵심 관계 (선택)]
-* Relationship Slot [관계]: Name / role | Current contact | Dynamic | What this activates in the character | Relationship-specific rules (Use only for relationships that affect current behavior. Do not force family/friend/mentor/rival categories if they do not matter. Relationship-specific rules should not generalize to all interactions.)
-
-### Sexuality [성적 성향 (선택)]
-* Sexual History [성 경험]: First experience | Partner history | Formative experiences | Positive associations | Negative associations | Trauma if relevant | Current impact (Use only when it matters.)
-* Proclivity / Orientation [성향 / 지향]: Orientation | Attraction pattern | General preferences | Boundaries (Labels are allowed, but behavior and psychology should still be defined.)
-* Role / Dynamic Profile [역할 · 관계 역학]: Primary tendencies | Secondary tendencies | Conditional tendencies | Disliked or avoided frames | No power-exchange frame if applicable (Do not force a single role label. If multiple tendencies apply, list several and define intensity in words such as primary, secondary, situational, rare, resisted, partner-dependent, or avoided. Role labels are shorthand only; define how each tendency appears in behavior.)
-* Turn-ons [끌리는 것]: Stimuli | Dynamics | Actions | Emotional conditions | Physical sensations | Scenarios (Connect to psychology, body, history, or relationship context when relevant.)
-* Limits [한계]: Soft limits | Conditional limits | Hard limits | Trauma-related limits (Separate soft limits from hard limits.)
-* Dealbreakers [절대 안 되는 것]: Absolute no-go acts, dynamics, words, situations, or violations (Make these clear and non-negotiable.)
-* Fetishes / Kinks [취향 · 페티시]: List | Intensity | Meaning | Behavioral expression (Do not list without intensity or context.)
-* Erogenous Zones [민감한 곳]: Known zones | Unknown zones | Response intensity | Sensitivity conditions (Use only if sensual or sexual body response matters.)
-* During Sex [관계 중]: Actions | Pace | Sounds | Role dynamics | Partner interaction | Control dynamics (Tie behavior to body, trust, desire, and personality.)
-* Fantasies / Taboos [환상 / 금기]: Fantasies | Taboo thoughts | No-go areas | Unexamined desires (Separate fantasy from actual consented behavior.)
-* Post-coital Behavior [관계 후]: Physical state | Emotional state | Habits | Communication needs | Withdrawal or closeness (Aftermath is character.)
-* Aftercare Needs [애프터케어]: Physical care | Reassurance | Space | Debriefing | Silence | Touch | Warmth | Food | Cleaning (Match the character's nervous system and attachment pattern.)
-
-### Speech / Voice / Language [말투 · 목소리 · 언어]
-* Voice [목소리]: Pitch | Timbre | Volume | Pace | Resonance (This is sound, not personality.)
-* Register [말의 격식]: Default formality | More formal when | More casual when | Intimacy shift (Honorific shifts can be major emotional signals.)
-* Quantity [말의 양]: Talkative | Minimal | Contextual | Silence-heavy | Monologue-prone (Define what determines speech quantity.)
-* Distinctive Quality [말투만으로 알아보는 점]: What makes the character recognizable by speech alone (Be more specific than "dry" or "kind.")
-* Emotional Speech Shifts [감정에 따른 말투 변화]: Baseline | Defensive | Angry | Afraid | Vulnerable | Intimate | Exhausted (Define changes in length, rhythm, formality, silence, and word choice.)
-* Silence Rules [침묵 규칙]: When they go silent | What silence means | What silence replaces | When silence breaks (Silence is a form of output.)
-* Conditional Language Notes [사투리 · 언어 전환]: Accent | Dialect | Language switching | Code-switching (Use only if it affects actual output, identity, social reading, or emotional state.)
-
-### Physical Mannerisms / Nonverbal Expression [몸짓 · 비언어 표현]
-* Posture [자세]: How the body rests when neutral or unguarded (Connect to body, work, class, confidence, fear, or fatigue.)
-* Gestures [손짓 · 몸짓]: Hands | Shoulders | Head | Mouth | Hair | Clothing | Objects (Avoid generic gestures unless they carry meaning.)
-* Eye Contact [시선]: Direct | Avoidant | Diagnostic | Challenging | Absent | Softening | Fixed (Eye contact can show power, fear, care, analysis, or intimacy.)
-* Movement [움직임]: Walk | Entry | Space-taking | Space-avoidance | Speed | Stillness (Reflect body, training, class, caution, or fatigue.)
-* Tells [티 나는 버릇]: Signals of lying, affection, fear, pain, exhaustion, jealousy, desire, grief, pressure, or involuntary facial/object-handling habits (Describe the tell; do not explain it every time.)
-
-### Skills / Limits [능력 · 한계]
-* Primary Skill Domain [주 능력 분야]: Main field of competence: combat, profession, craft, magic, research, politics, survival, care work, investigation, performance, leadership, technical work, etc. (Use the relevant domain; do not force a combat frame.)
-* Style [쓰는 방식]: How the character performs in their main domain (Connect method to Core Identity.)
-* Ability Mechanics [능력 작동 원리]: How it works | Input | Output | Range | Precision | Failure condition (Prevents vague power interpretation.)
-* Ability Limits [능력의 한계]: What blocks, weakens, distorts, exhausts, or prevents the ability | Physical limits if relevant (Strong abilities need clear limits. Do not repeat internal failure loops here.)
-* Practical / Social Limits [현실 · 사회적 제약]: Tools | Money | Status | Credentials | Legal access | Institutional permission | Class | Reputation | Prejudice | Taboo | Role expectation | Public image (Use only if these limits affect scenes, conflict, work, survival, or relationships.)
-
-### Background Seed [배경의 씨앗]
-* Mechanism Source [작동 방식의 출처]: The shortest explanation of where the root mechanism came from (Keep this brief.)
-* Formative Event [형성 사건]: Event that shaped personality, coping, belief, body habit, attachment, or fear | Rule learned | Present behavior created
-* Behavioral Residue [남은 흔적]: Habits, avoidances, desires, misreadings, body reactions, speech patterns, or relationship patterns that remain because of the past
-
-### Preferences / Secrets [취향 · 비밀]
-* Comforts & Irritants [위안 · 거슬리는 것]: Objects | Routines | Places | People | Sounds | Gestures | Food | Weather | Work | Minor things that disproportionately bother the character (Can reveal vulnerability without confession; do not let irritants become a gimmick.)
-* Hidden Truth [숨긴 진실]: Hidden fact | Why hidden | What it protects (Use only if it affects identity, relationships, power, safety, shame, plot, or behavior.)
-* Self-Deception [자기기만]: What the character believes about themselves that is false, incomplete, or outdated (Should affect choices.)
-* Concealment Behavior [숨기는 방식]: Silence | Humor | Competence | Anger | Charm | Distance | Lies | Overwork | Politeness | How the hidden truth leaks into action, speech, choices, avoidance, or body language (Prevents secrets from becoming inert lore.)
-`;
-
-// 빌더 저장값에 SOP 양식을 넣는다. 처음 한 번(sopV1)은 쓰던 내용이 없으면 SOP 양식을 골라 둔다.
-// 돌려주는 값: 바뀌었으면 true (호출한 쪽이 savePB)
+// 빌더 저장값에 SOP 양식(기본 규칙)을 넣는다. 돌려주는 값: 바뀌었으면 true (호출한 쪽이 savePB)
+// - SOP 양식을 목록 맨 앞에 두고, 예전 '기본 양식'은 '예전 기본 양식'으로 이름만 바꾼다(지우지 않음).
+// - 처음 한 번(sopV1): 쓰던 값이 없으면 SOP 양식을 고른다.
+// - sopV2: 직접 고치지 않은 내장 SOP 양식은 원문 그대로의 새 양식으로 바꾸고, 바뀐 섹션 이름(Optional…)으로 저장된 칸을 옮긴다.
 export function ensureSop(pb) {
   let changed = false;
-  if (!pb.templates.some((t) => t.id === SOP_ID)) {
-    const at = pb.templates.findIndex((t) => t.id === "default");
-    pb.templates.splice(at + 1, 0, { id: SOP_ID, name: "SOP 양식", text: SOP_TEMPLATE, builtin: true });
+  let t = pb.templates.find((x) => x.id === SOP_ID);
+  if (!t) {
+    t = { id: SOP_ID, name: "SOP 기본 규칙", text: SOP_TEMPLATE, builtin: true };
+    pb.templates.unshift(t);
     changed = true;
   }
   if (!pb.sopV1) {
@@ -194,6 +308,32 @@ export function ensureSop(pb) {
     const vals = pb.draft?.values ?? {};
     if (pb.template === "default" && !Object.values(vals).some((v) => String(v ?? "").trim())) pb.template = SOP_ID;
     changed = true;
+  }
+  if (!pb.sopV2) {
+    pb.sopV2 = true;
+    changed = true;
+    if (t.builtin && t.text !== SOP_TEMPLATE) {
+      if (OLD_SOP_HASH.includes(textHash(t.text))) t.text = SOP_TEMPLATE;   // 직접 고친 양식은 그대로 둔다
+    }
+    if (t.name === "SOP 양식") t.name = "SOP 기본 규칙";
+    const old = pb.templates.find((x) => x.id === "default");
+    if (old && old.name === "기본 양식") old.name = "예전 기본 양식";
+    pb.templates = [t, ...pb.templates.filter((x) => x !== t)];
+    if (pb.template === SOP_ID && pb.draft) {
+      const mv = (o) => {
+        if (!o || typeof o !== "object") return o;
+        const out = {};
+        for (const [k, v] of Object.entries(o)) {
+          const i = k.indexOf("::");
+          const sec = i < 0 ? k : k.slice(0, i);
+          out[OLD_TITLES[sec] ? (i < 0 ? OLD_TITLES[sec] : OLD_TITLES[sec] + k.slice(i)) : k] = v;
+        }
+        return out;
+      };
+      pb.draft.values = mv(pb.draft.values);
+      pb.draft.off = mv(pb.draft.off);
+      pb.draft.ko = mv(pb.draft.ko);
+    }
   }
   return changed;
 }
@@ -365,4 +505,28 @@ export function readAiCode2(text, defaults, uid) {
   if (!m) return null;
   const o = dec(m[1]);
   return { kind: "ai", value: { ...defaults, ...o, id: uid(), name: String(o.name || "가져온 AI 프리셋").slice(0, 40) } };
+}
+
+// ── SOP 규칙 버튼: 1단계 지침 문단에서 그대로 뽑아 '이 규칙대로 다듬기' 요청으로 쓴다 ──
+var PARAS = SOP_DRAFT.split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
+var para = (start) => PARAS.find((x) => x.startsWith(start)) ?? "";
+export var SOP_RULES = [
+  { id: "fill", label: "빠짐없이 채우기", title: "빈 칸 중 의미 있게 만들 수 있는 칸을 채워요", rule: para("Fill any field") },
+  { id: "mechanize", label: "작동 방식으로", title: "형용사·유형 이름을 '계기 → 해석 → 행동 → 대가·한계·예외'로 바꿔요", rule: para("Do not write adjective stacks") },
+  { id: "scene", label: "장면 재료로", title: "하는 일·고르는 것·알아채는 것·피하는 것 같은 행동 패턴으로 쓰고, 비유·막연한 감정 요약을 걷어내요", rule: [para("Define what the character"), para("Avoid poetic metaphor")].filter(Boolean).join("\n") },
+  { id: "omit", label: "자리표시 지우기", title: "N/A·None·Unknown 같은 빈 값을 지워요 (AI 없이)", rule: para("Do not output placeholders") }
+];
+// AI 없이: 자리표시 값(N/A·None·Unknown·Not applicable·빈 표시)을 지운다. 돌려줌: 지운 열쇠들
+var PLACEHOLDER = /^\s*[([]?\s*(n\s*\/\s*a|na|none|unknown|not applicable|null|nil|tbd|-+|—|–)\s*[)\].]?\s*$/i;
+export function dropPlaceholders(values, keys = Object.keys(values)) {
+  const gone = [];
+  for (const k of keys) {
+    const v = values[k];
+    if (typeof v !== "string") continue;
+    const parts = v.split("|").map((x) => x.trim());
+    if (parts.every((x) => !x || PLACEHOLDER.test(x))) { delete values[k]; gone.push(k); continue; }
+    const kept = parts.filter((x) => x && !PLACEHOLDER.test(x));
+    if (kept.length !== parts.length) { values[k] = kept.join(" | "); gone.push(k); }
+  }
+  return gone;
 }

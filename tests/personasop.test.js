@@ -3,13 +3,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { parseTemplate, compose, fieldKey } from "../src/data/personabuilder.js";
+import { SOP_RULES, dropPlaceholders, textHash } from "../src/data/personasop.js";
 import { SOP_TEMPLATE, SOP_DRAFT, SOP_REVIEW, SOP_FINAL, ensureSop, readSheet, writableKeys, buildStepPrompt, buildReviewPrompt, buildFinalPrompt, parseReport, stepPrompt, estimateTokens, lineDiff, cleanTags, aiCode2, readAiCode2 } from "../src/data/personasop.js";
 
 const secs = parseTemplate(SOP_TEMPLATE);
 
 test("SOP 양식은 사용자 시트의 섹션·항목을 모두 칸으로 갖는다", () => {
   const titles = secs.map((s) => s.title);
-  for (const t of ["Basic Information", "Appearance", "Core Identity", "Emotional / Stress Pattern", "Decision / Failure Pattern", "Interpersonal Style", "Key Relationship", "Sexuality", "Speech / Voice / Language", "Physical Mannerisms / Nonverbal Expression", "Skills / Limits", "Background Seed", "Preferences / Secrets"]) assert.ok(titles.includes(t), t);
+  for (const t of ["Basic Information", "Appearance", "Core Identity", "Emotional / Stress Pattern", "Decision / Failure Pattern", "Interpersonal Style", "Optional: Key Relationship", "Optional Module: Sexuality", "Speech / Voice / Language", "Physical Mannerisms / Nonverbal Expression", "Skills / Limits", "Background Seed", "Preferences / Secrets"]) assert.ok(titles.includes(t), t);
   assert.ok(secs.every((s) => s.kind === "fields"));
   const n = secs.reduce((a, s) => a + s.fields.length, 0);
   assert.equal(n, 75);
@@ -22,9 +23,14 @@ test("SOP 양식은 사용자 시트의 섹션·항목을 모두 칸으로 갖�
 test("첨부 SOP 시트의 항목 이름이 양식에 빠짐없이 있다", () => {
   const src = fs.readFileSync(new URL("./fixtures/sop-sheet.txt", import.meta.url), "utf8");
   const labels = [...src.matchAll(/^- ([^:]+):/gm)].map((m) => m[1].trim());
-  const have = new Set(secs.flatMap((s) => s.fields.map((f) => f.label)));
+  const have = new Map(secs.flatMap((s) => s.fields.map((f) => [f.label, f.hint])));
   assert.equal(labels.length, 75);
   for (const l of labels) assert.ok(have.has(l), l);
+  // 힌트도 원문 글자 그대로
+  for (const m of src.matchAll(/^- ([^:]+):\s*(.*)$/gm)) assert.equal(have.get(m[1].trim()), m[2].trim(), m[1]);
+  const heads = [...src.matchAll(/^### (.+)$/gm)].map((m) => m[1].trim());
+  assert.deepEqual(secs.map((s) => s.title), heads);
+  assert.ok(src.includes(SOP_DRAFT));
 });
 
 test("단계 지침 기본값은 사용자 제공 문구 그대로이고, 프리셋에 적으면 그것을 쓴다", () => {
@@ -39,7 +45,8 @@ test("처음 열면 SOP 양식이 생기고, 쓰던 내용이 없을 때만 SOP 
   const a = { templates: [{ id: "default", text: "### A\n* X:" }], template: "default", draft: null };
   assert.equal(ensureSop(a), true);
   assert.equal(a.template, "sop");
-  assert.equal(a.templates[1].id, "sop");
+  assert.equal(a.templates[0].id, "sop");
+  assert.equal(a.templates[0].name, "SOP 기본 규칙");
   assert.equal(ensureSop(a), false);
   const b = { templates: [{ id: "default", text: "" }], template: "default", draft: { values: { "A::X": "hi" } } };
   ensureSop(b);
@@ -75,12 +82,12 @@ test("초안 프롬프트: 1단계 지침·콘셉트·양식 구조가 들어가
 
 test("빈 칸 채우기는 빈 칸만, 꺼진 섹션은 빼고 표시한다", () => {
   const values = { [fieldKey("Basic Information", "Name")]: "Mina" };
-  const off = { Sexuality: true };
+  const off = { "Optional Module: Sexuality": true };
   const { target, messages } = buildStepPrompt({ sections: secs, values, off, task: "fill", preset: {} });
   assert.ok(!target.has(fieldKey("Basic Information", "Name")));
   assert.ok(!target.has(fieldKey("Sexuality", "Limits")));
   assert.equal(target.size, 75 - 1 - 12);
-  assert.doesNotMatch(messages[1].content, /### Sexuality/);
+  assert.doesNotMatch(messages[1].content, /### Optional Module: Sexuality/);
 });
 
 test("검토 프롬프트는 사용자 OOC 흐름 그대로: 요청 → 시트 → 검토 OOC", () => {
@@ -126,7 +133,7 @@ MERGE: Root Mechanism and Decision Route overlap — combine.`);
 });
 
 test("최종본 적용 대상 칸 = 켜진 섹션의 칸 전체", () => {
-  const keys = writableKeys(secs, { Sexuality: true });
+  const keys = writableKeys(secs, { "Optional Module: Sexuality": true });
   assert.equal(keys.length, 75 - 12);
 });
 
@@ -152,4 +159,36 @@ test("코어는 personasop.js를 가져오지 않는다 (애드온 전용 — �
 test("compose 결과를 다시 읽으면 같은 값 (SOP 양식)", () => {
   const values = { [fieldKey("Speech / Voice / Language", "Voice")]: "Low | slow", [fieldKey("Preferences / Secrets", "Hidden Truth")]: "x" };
   assert.deepEqual(readSheet(secs, compose(secs, values)), values);
+});
+
+test("예전 내장 SOP 양식은 원문 양식으로 바꾸고 바뀐 섹션 이름으로 칸을 옮긴다 (직접 고친 양식은 그대로)", async () => {
+  const { execSync } = await import("node:child_process");
+  let old = "";
+  try { old = execSync("git show 4883578:src/data/personasop.js", { encoding: "utf8" }); } catch { return; }   // 저장소 기록이 없으면 건너뜀
+  const oldText = /export var SOP_TEMPLATE = `([\s\S]*?)`;/.exec(old)[1].replace(/\\`/g, "`");
+  assert.equal(textHash(oldText), 75873812);
+  const pb = { templates: [{ id: "default", name: "기본 양식", text: "", builtin: true }, { id: "sop", name: "SOP 양식", text: oldText, builtin: true }], template: "sop", sopV1: true,
+    draft: { values: { "Sexuality::Limits": "soft", "Key Relationship::Relationship Slot": "sis", "Core Identity::Core Premise": "x" }, off: { Sexuality: true }, ko: {} } };
+  ensureSop(pb);
+  assert.equal(pb.templates[0].text, SOP_TEMPLATE);
+  assert.equal(pb.templates[0].name, "SOP 기본 규칙");
+  assert.equal(pb.templates[1].name, "예전 기본 양식");
+  assert.deepEqual(pb.draft.values, { "Optional Module: Sexuality::Limits": "soft", "Optional: Key Relationship::Relationship Slot": "sis", "Core Identity::Core Premise": "x" });
+  assert.deepEqual(pb.draft.off, { "Optional Module: Sexuality": true });
+  const mine = { templates: [{ id: "sop", name: "내 SOP", text: oldText + "\n* Extra: y", builtin: true }], template: "sop", sopV1: true, draft: null };
+  ensureSop(mine);
+  assert.ok(mine.templates[0].text.includes("Extra"));
+});
+
+test("SOP 규칙 버튼은 1단계 지침 문단 그대로", () => {
+  assert.deepEqual(SOP_RULES.map((r) => r.id), ["fill", "mechanize", "scene", "omit"]);
+  for (const r of SOP_RULES) for (const line of r.rule.split("\n")) assert.ok(SOP_DRAFT.includes(line), r.id);
+  assert.match(SOP_RULES[1].rule, /cause or trigger → interpretation → behavior → cost, limit, or exception/);
+});
+
+test("자리표시 지우기: N/A·None·Unknown 칸과 조각만 지운다", () => {
+  const v = { a: "N/A", b: "None.", c: "25 | N/A | female", d: "Unknown", e: "real text", f: "(none)" };
+  const gone = dropPlaceholders(v);
+  assert.deepEqual(gone.sort(), ["a", "b", "c", "d", "f"]);
+  assert.deepEqual(v, { c: "25 | female", e: "real text" });
 });

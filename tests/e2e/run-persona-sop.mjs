@@ -36,7 +36,7 @@ for (const vw of [1280, 390]) {
   await page.waitForTimeout(700);
   if (shot) await page.screenshot({ path: `/tmp/pb-top-${vw}.png` });
   const T = () => page.evaluate(() => document.querySelector(".rb-main").innerText);
-  ok(`[${vw}] SOP 양식이 골라져 있음`, await page.evaluate(() => [...document.querySelectorAll('select[aria-label="설명 양식"] option')].find((o) => o.selected)?.textContent === "SOP 양식"));
+  ok(`[${vw}] SOP 양식이 골라져 있음`, await page.evaluate(() => [...document.querySelectorAll('select[aria-label="설명 양식"] option')].find((o) => o.selected)?.textContent === "SOP 기본 규칙"));
   ok(`[${vw}] 단계 버튼 3개`, /1 초안 쓰기/.test(await T()) && /2 검토 보고서/.test(await T()) && /3 최종 다듬기/.test(await T()));
   const click = async (txt) => { await page.evaluate((t) => [...document.querySelectorAll(".rb-main button")].find((b) => b.textContent.trim() === t && !b.disabled)?.click(), txt); await page.waitForTimeout(700); };
   await page.fill('textarea[aria-label="캐릭터 콘셉트"]', "25살 야간 편의점 알바생");
@@ -74,14 +74,23 @@ for (const vw of [1280, 390]) {
   await page.locator(".rb-pb-gen button", { hasText: "요청대로 고치기" }).click(); await page.waitForTimeout(800);
   ok(`[${vw}] 섹션 요청: 그 섹션 칸만·요청 포함`, await page.evaluate(() => { const c = window.__calls.findLast((x) => /Change request: 더 건조하게/.test(x.at(-1).content)); return !!c && (c.at(-1).content.split("Structure:")[1].match(/<<WRITE/g) ?? []).length === 6; }));
   if (shot) await page.screenshot({ path: `/tmp/pb-step-${vw}.png` });
+  ok(`[${vw}] 섹션 SOP 규칙 버튼 4개`, (await page.locator(".rb-pb-gen .rb-pb-chip").count()) === 4);
+  await page.locator(".rb-pb-gen .rb-pb-chip", { hasText: "작동 방식으로" }).click(); await page.waitForTimeout(800);
+  ok(`[${vw}] 규칙 버튼: SOP 문장 그대로 요청`, await page.evaluate(() => !!window.__calls.findLast((x) => /Change request: Do not write adjective stacks/.test(x.at(-1).content))));
+  await page.evaluate(() => { const ta = document.querySelector('textarea[aria-label="건드릴 수 없는 것"]'); ta.value = "N/A"; ta.dispatchEvent(new Event("input", { bubbles: true })); });
+  await page.locator(".rb-pb-gen .rb-pb-chip", { hasText: "자리표시 지우기" }).click(); await page.waitForTimeout(300);
+  ok(`[${vw}] 자리표시 지우기(AI 없이)`, (await page.inputValue('textarea[aria-label="건드릴 수 없는 것"]')) === "" && /자리표시 1칸/.test(await T()));
+  ok(`[${vw}] 전체 규칙 버튼·규칙 원문`, (await page.locator(".rb-pb-fcard .rb-pb-rules .rb-pb-chip").count()) === 4);
+  await page.locator(".rb-pb-fcard button", { hasText: "규칙 원문" }).click(); await page.waitForTimeout(300);
+  ok(`[${vw}] 규칙 원문 창`, /Sort Of Persona/.test(await page.locator(".rb-dialog").innerText()) && /Instruction: Generate a broad first-draft/.test(await page.locator(".rb-dialog").innerText()));
+  await page.locator(".rb-dialog button", { hasText: "닫기" }).click(); await page.waitForTimeout(200);
   ok(`[${vw}] 저장 막대 버튼 한 줄`, await page.evaluate(() => { const t = [...document.querySelectorAll(".rb-pb-foot>.rb-btn")].map((b) => Math.round(b.getBoundingClientRect().top)); return new Set(t).size === 1; }));
   await page.locator(".rb-pb-tabs > button", { hasText: "미리보기" }).click(); await page.waitForTimeout(300);
   ok(`[${vw}] 미리보기 단계에서는 옆 미리보기 숨김`, !(await page.locator(".rb-pb-sheetc").isVisible()));
   await page.evaluate(() => { const d = [...document.querySelectorAll(".rb-main details")].find((x) => /NAI 캐릭터 태그/.test(x.textContent)); d.open = true; });
   await click("태그 뽑기");
   ok(`[${vw}] NAI 태그 뽑기(중복 제거)`, (await page.inputValue('textarea[aria-label="NAI 캐릭터 태그"]')) === "1girl, black hair, red eyes");
-  await click("되돌리기 (3)");
-  await click("되돌리기 (2)");
+  for (const n of [5, 4, 3, 2]) await click(`되돌리기 (${n})`);
   const v3 = await page.evaluate(() => new Promise((res) => setTimeout(() => res(JSON.parse(window.__app.ctx.api.store["rbm:personaBuilder:v1"]).draft.values), 600)));
   ok(`[${vw}] 되돌리기로 최종 전 내용 복원`, v3["Basic Information::Residence"] === "studio flat", JSON.stringify(v3));
   // 여백: 검토 항목 글이 상자 테두리에 붙지 않음

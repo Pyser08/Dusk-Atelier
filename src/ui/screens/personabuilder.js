@@ -7,7 +7,8 @@ import { btn, iconBtn, confirmDialog, promptDialog, modal, note, openMenu, switc
 import { attachUndo } from '../undo.js';
 import { AI_MODES, runAI } from '../../engine/merge.js';
 import { PB_BACKUP_KEY, parseTemplate, compose, readValues, translatePrompt, fieldKey, freeKey, loadPB, savePB, pushBackup, loadBackups, newId, templateCode, readCode, DEFAULT_AI, addField, removeField, addSection, removeSection } from '../../data/personabuilder.js';
-import { SOP_ID, SOP_TEMPLATE, STEP_KEYS, STEP_DEFAULT, ensureSop, readSheet, writableKeys, buildStepPrompt, buildReviewPrompt, buildFinalPrompt, parseReport, CATS, CAT_KO, naiTagPrompt, cleanTags, translateReportPrompt, estimateTokens, lineDiff, aiCode2, readAiCode2 } from '../../data/personasop.js';
+import { SOP_RULES, SOP_TITLE, SOP_DRAFT, dropPlaceholders } from '../../data/personasop.js';
+import { stepPrompt, SOP_ID, SOP_TEMPLATE, STEP_KEYS, STEP_DEFAULT, ensureSop, readSheet, writableKeys, buildStepPrompt, buildReviewPrompt, buildFinalPrompt, parseReport, CATS, CAT_KO, naiTagPrompt, cleanTags, translateReportPrompt, estimateTokens, lineDiff, aiCode2, readAiCode2 } from '../../data/personasop.js';
 import { makeBackup, backupName, parseBackup, planImport, restoreImages } from '../../data/personafile.js';
 import { createBotDefaults, loadBotDefaults } from '../../data/personabotdef.js';
 import { ROULETTE, DEFAULT_SLOTS, catById, spin, rouletteText } from '../../data/personaroulette.js';
@@ -109,6 +110,9 @@ var CSS = `
 .rb-pb-sh .t b{font-size:15px;display:block}
 .rb-pb-sh .t small{font-size:11.5px;color:var(--rb-mute)}
 .rb-pb-card[data-off] .rb-pb-sh .t b{opacity:.45;text-decoration:line-through}
+.rb-pb-rules{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rb-pb-rules .lbl{font-size:11.5px;font-weight:700;color:var(--rb-sub);margin-right:2px}
+.rb-pb-chip:disabled{opacity:.45;cursor:default}
 .rb-pb-gen{border:1px solid var(--rb-line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--rb-bg,transparent)}
 .rb-pb-gen input{height:38px}
 .rb-pb-gen small{font-size:11.5px;color:var(--rb-mute);line-height:1.5}
@@ -314,7 +318,7 @@ export async function renderPersonaBuilder(ctx) {
   // ── AI ──
   const aiIn = h("div", { class: "in" });
   const aiBox = h("details", { class: "rb-pb-card rb-pb-fcard", open: pb.uiAiOpen ?? true, onToggle: (e) => { pb.uiAiOpen = e.target.open; } },
-    h("summary", null, h("span", { style: "font-size:17px;color:var(--rb-acc-text)", "aria-hidden": "true" }, "✦"), h("span", { class: "t" }, h("b", null, "설명으로 AI 전체 생성"), h("small", null, "SOP 3단계 · 초안 → 검토 보고서 → 최종 다듬기 · 영어로 써요"))),
+    h("summary", null, h("span", { style: "font-size:17px;color:var(--rb-acc-text)", "aria-hidden": "true" }, "✦"), h("span", { class: "t" }, h("b", null, "SOP로 AI 전체 생성"), h("small", null, "Sort Of Persona · 초안 → 검토 보고서 → 최종 다듬기 · 영어로 써요"))),
     aiIn);
   const aiSel = h("select", { class: "rb-input", "aria-label": "AI 프리셋" });
   aiSel.addEventListener("change", () => {
@@ -423,6 +427,40 @@ export async function renderPersonaBuilder(ctx) {
   // ── 2단계 검토 보고서 · 3단계 최종 다듬기 (사용자 OOC 흐름 그대로: 시트 → 검토 → 고른 결정으로 다시 쓰기) ──
   const sheetNow = () => compose(sections.filter((s) => s.kind !== "fixed"), values, off);
   const needModel = (P) => P.mode === "static" && !P.staticModel ? (say("AI 프리셋에 모델 ID를 먼저 적어 주세요."), true) : false;
+  // SOP 규칙 버튼: 1단계 지침의 문단을 그대로 수정 요청으로 보낸다(자리표시 지우기는 AI 없이)
+  const filledOf = (keys) => keys.filter((k) => String(values[k] ?? "").trim());
+  async function applyRule(r, keys, where) {
+    if (busy) return;
+    if (r.id === "omit") {
+      snap();
+      const gone = dropPlaceholders(values, keys);
+      if (!gone.length) { undo.pop(); return say(`${where}에 지울 자리표시(N/A·None·Unknown 등)가 없어요.`); }
+      gone.forEach((k) => delete ko[k]);
+      persist();
+      drawSheet();
+      drawUndo();
+      return say(`${where}에서 자리표시 ${gone.length}칸을 정리했어요.`);
+    }
+    if (r.id === "fill") {
+      const empty = keys.filter((k) => !String(values[k] ?? "").trim());
+      if (!empty.length) return say(`${where}에 빈 칸이 없어요.`);
+      return aiDo(`AI가 ${where}의 빈 칸 ${empty.length}개를 채우는 중… (의미 없는 칸은 비워 둬요)`, "edit", { keys: empty, instruction: r.rule });
+    }
+    const filled = filledOf(keys);
+    if (!filled.length) return say(`${where}에 다듬을 내용이 없어요. 먼저 채워 주세요.`);
+    return aiDo(`AI가 ${where}을(를) '${r.label}' 규칙대로 다듬는 중…`, "edit", { keys: filled, instruction: r.rule });
+  }
+  const ruleChips = (keys, where) => SOP_RULES.map((r) => {
+    const b = h("button", { type: "button", class: "rb-pb-chip", title: `${r.title}\n\n${r.rule}`, disabled: busy, onClick: () => applyRule(r, typeof keys === "function" ? keys() : keys, where) }, r.label);
+    return b;
+  });
+  const showRules = () => modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(680px,94vw);max-height:90vh;overflow:auto" },
+    h("h3", { class: "rb-h3" }, SOP_TITLE),
+    h("p", { class: "rb-p" }, "기본 규칙이에요. '1 초안 쓰기'와 빈 칸 채우기·섹션 고치기에 이 지침이 들어가고, 양식(섹션·항목·안내)은 'SOP 기본 규칙' 양식에 그대로 들어 있어요. 검토·최종 지침과 함께 AI 프리셋 편집의 '단계별 지침'에서 고칠 수 있어요."),
+    h("pre", { class: "rb-pb-pre", style: "max-height:46vh" }, stepPrompt(aip(), "draft")),
+    h("div", { class: "rb-pb-h", style: "margin-top:4px" }, "규칙 버튼"),
+    ...SOP_RULES.map((r) => h("div", { class: "rb-pb-f" }, h("div", { class: "lab" }, h("span", null, `${r.label} — ${r.title}`)), h("pre", { class: "rb-pb-pre", style: "max-height:none" }, r.rule))),
+    h("div", { class: "btns" }, btn("닫기", { onClick: () => done(null) }))));
   async function reviewDo() {
     if (busy) return;
     const P = aip();
@@ -610,7 +648,6 @@ export async function renderPersonaBuilder(ctx) {
     const b1 = btn("1 초안 쓰기", { kind: "primary", size: "sm", icon: "zap", onClick: () => aiDo("AI가 초안을 쓰는 중… (줄이지 않고 넓게 채워요 · 큰 모델일수록 좋아요)", "draft") });
     const bRv = btn("2 검토 보고서", { size: "sm", icon: "list", onClick: reviewDo });
     const bFi = btn("3 최종 다듬기", { size: "sm", icon: "sparkle", onClick: finalDo });
-    const b2 = btn("빈 칸만 채우기", { size: "sm", icon: "plus", onClick: () => aiDo("AI가 빈 칸을 채우는 중…", "fill") });
     const b3 = btn("고치기", { size: "sm", icon: "brush", onClick: () => {
       if (!editIn.value.trim()) return editIn.focus();
       const keys = sections.filter((s) => !off[s.title]).flatMap((s) => s.kind === "fields" ? s.fields.map((f) => fieldKey(s.title, f.label)) : s.kind === "free" ? [freeKey(s.title)] : []).filter((k) => String(values[k] ?? "").trim());
@@ -628,7 +665,8 @@ export async function renderPersonaBuilder(ctx) {
       setBusy(false);
       say("번역했어요.");
     } });
-    aiButtons.push(b1, bRv, bFi, b2, b3, b4);
+    const allChips = ruleChips(() => writableKeys(sections, off), "켜진 섹션 전체");
+    aiButtons.push(b1, bRv, bFi, b3, b4, ...allChips);
     // on* 속성 핸들러가 false를 돌려주면 브라우저가 입력을 취소해 영문·지우기가 막힌다 → 값을 돌려주지 않는 리스너로 연결
     if (editIn.__pbKey) editIn.removeEventListener("keydown", editIn.__pbKey);
     editIn.__pbKey = (e) => {
@@ -699,13 +737,14 @@ export async function renderPersonaBuilder(ctx) {
       say("모든 칸을 비웠어요.");
     } });
     aiButtons.push(clearAll);
-    moreBox.append(noteIn, h("div", { class: "rb-pb-bar" }, editIn, b3), h("div", { class: "rb-pb-bar" }, h("label", { style: "display:flex;align-items:center;gap:6px;font-size:12.5px" }, koSw, "번역 같이 보기"), h("span", { style: "flex:1" }), b4), h("div", { class: "rb-pb-bar" }, b2, h("span", { style: "flex:1" }), clearAll));
+    moreBox.append(noteIn, h("div", { class: "rb-pb-bar" }, editIn, b3), h("div", { class: "rb-pb-bar" }, h("label", { style: "display:flex;align-items:center;gap:6px;font-size:12.5px" }, koSw, "번역 같이 보기"), h("span", { style: "flex:1" }), b4), h("div", { class: "rb-pb-bar" }, h("span", { style: "flex:1" }), clearAll));
     replace(
       aiIn,
       setBox,
       conceptIn,
       h("div", { class: "rb-pb-steps" }, b1, h("span", { class: "arrow", "aria-hidden": "true" }, "›"), bRv, h("span", { class: "arrow", "aria-hidden": "true" }, "›"), bFi, h("span", { style: "flex:1" }), undoWrap, moreBtn),
-      h("small", { class: "rb-muted", style: "font-size:12px" }, "초안은 넓게 채우고, 검토 보고서에서 고른 항목대로 최종본을 다듬어요. 빈 칸만 채우기·추가 지시·번역·수정 요청은 ··· 에 있어요."),
+      h("div", { class: "rb-pb-rules" }, h("span", { class: "lbl" }, "SOP 규칙으로 다듬기 · 전체"), ...allChips, h("button", { type: "button", class: "rb-pb-mini", onClick: showRules }, "규칙 원문")),
+      h("small", { class: "rb-muted", style: "font-size:12px" }, "초안은 줄이지 않고 넓게 채우고, 검토 보고서에서 고른 항목대로 최종본을 다듬어요. 규칙 버튼은 SOP 지침 문장을 그대로 요청으로 보내요. 추가 지시·번역·수정 요청은 ··· 에 있어요."),
       moreBox,
       msg,
       reviewBox
@@ -789,10 +828,13 @@ export async function renderPersonaBuilder(ctx) {
         revise.click();
       }
     });
-    aiButtons.push(revise, fresh);
-    if (busy) revise.disabled = fresh.disabled = true;
-    return h("div", { class: "rb-pb-gen" }, inp, h("div", { class: "rb-pb-bar" }, h("span", { style: "flex:1" }), fresh, revise),
-      h("small", null, "'요청대로 고치기'는 지금 내용을 두고 요청한 곳만 바꿔요. '이 섹션 새로 쓰기'는 이 섹션을 1단계 지침대로 다시 써요."));
+    const chips = ruleChips(keys, `'${s.ko}'`);
+    aiButtons.push(revise, fresh, ...chips);
+    if (busy) [revise, fresh, ...chips].forEach((b) => b.disabled = true);
+    return h("div", { class: "rb-pb-gen" },
+      h("div", { class: "rb-pb-rules" }, h("span", { class: "lbl" }, "SOP 규칙으로 다듬기"), ...chips),
+      inp, h("div", { class: "rb-pb-bar" }, h("span", { style: "flex:1" }), fresh, revise),
+      h("small", null, "규칙 버튼은 SOP 지침 문장대로 이 섹션만 다듬어요(자리표시 지우기는 AI 없이). '요청대로 고치기'는 지금 내용을 두고 요청한 곳만, '이 섹션 새로 쓰기'는 1단계 지침대로 다시 써요."));
   };
   const previewStep = () => h("div", { class: "rb-pb-card" },
     h("div", { class: "rb-pb-sh" }, h("div", { class: "t" }, h("b", null, "미리보기"), h("small", null, "꺼진 섹션과 빈 칸은 설명에 들어가지 않아요")), charCount2, btn("복사", { size: "sm", onClick: async () => {
