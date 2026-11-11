@@ -41,6 +41,9 @@ async function boot(width, height) {
       if (path === "/ai/upscale") return { status: 200, body: stream(zipped(await png(n, 332, 484))) };
       return { status: 200, body: stream(zipped(await png(n))) };
     };
+    const getC = api.getCharacterFromIndex, setC = api.setCharacterToIndex, kept = {};   // 가짜 리스가 쓴 봇을 기억하게
+    api.getCharacterFromIndex = async (i) => (kept[i] ? structuredClone(kept[i]) : getC(i));
+    api.setCharacterToIndex = async (i, c) => { kept[i] = structuredClone(c); return setC(i, c); };
     api.saveAsset = async (d) => { const p = `assets/${++window.__saved}.png`; window.__assetBytes[p] = d; return p; };
     api.readImage = async (p) => window.__assetBytes[p] ?? null;
     if (typeof api.getLocalPluginStorage !== "function") { const local = {}; api.getLocalPluginStorage = async () => ({ getItem: async (k) => local[k] ?? null, setItem: async (k, v) => { local[k] = v; } }); }
@@ -51,7 +54,7 @@ async function boot(width, height) {
 const pick = async (page, sel) => { await page.evaluate((s) => { window.__app.ctx.state.devSel = s; window.__app.ctx.go("dev"); }, sel); await page.waitForTimeout(600); };
 const openStudio = async (page, sel) => { await pick(page, sel); await page.click("#rb-dev-edit"); await page.waitForTimeout(700); await page.click("#rb-sd-make"); await page.waitForTimeout(700); };
 const txt = (page, sel) => page.locator(sel).first().innerText();
-const promptOk = async (page, value) => { const i = page.locator(".rb-modal input").first(); await i.fill(value); await page.locator(".rb-modal .rb-dialog button.primary").last().click(); await page.waitForTimeout(300); };
+const promptOk = async (page, value) => { const top = page.locator(".rb-modal").last(); await top.locator("input").first().fill(value); await top.locator(".rb-dialog button.primary").last().click(); await page.waitForTimeout(300); };
 const fillArea = async (page, id, v) => { await page.locator(`#${id}`).fill(v); await page.waitForTimeout(50); };
 const reqs = (page, path) => page.evaluate((p) => window.__req.filter((x) => x.path === p).map((x) => x.body), path);
 const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: page.locator(".cap .n", { hasText: new RegExp(`^${name}$`) }) }).first();
@@ -65,10 +68,12 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   ok("에셋 제작: 플러그인 창이 화면 가득", full.s && Math.abs(full.w[0] - full.vw[0]) < 3 && Math.abs(full.w[1] - full.vw[1]) < 3 && Math.abs(full.s[0] - full.w[0]) < 3, JSON.stringify(full));
   ok("처음: 캐릭터 갤러리 + 빈 안내 + 프롬프트 에디터", /캐릭터 갤러리/.test(await txt(page, "#sds-topbar")) && /캐릭터를 만들어요/.test(await txt(page, "#sds-body")) && await page.locator(".sds-left").isVisible());
   const groups = await page.evaluate(() => [...document.querySelectorAll("#sds-tools .sds-group > small")].map((x) => x.textContent));
-  ok("도구 무리: 예약·캐릭터 도구·이미지·관리·도움말·설정·검색·보기", JSON.stringify(groups) === JSON.stringify(["예약", "캐릭터 도구", "이미지·관리", "도움말", "설정", "검색", "보기"]), JSON.stringify(groups));
+  ok("도구 무리: 되돌리기·예약·캐릭터 도구·템플릿·이미지·관리·도움말·설정·검색·보기", JSON.stringify(groups) === JSON.stringify(["되돌리기", "예약", "캐릭터 도구", "템플릿", "이미지·관리", "도움말", "설정", "검색", "보기"]), JSON.stringify(groups));
+  const leftGroups = await page.evaluate(() => [...document.querySelectorAll(".sds-left .sds-group > small")].map((x) => x.textContent));
+  ok("프로젝트 무리 없앰(도구·프리셋), 레일은 ‘프롬프트’", JSON.stringify(leftGroups) === JSON.stringify(["도구", "프리셋"]) && (await txt(page, ".sds-rail .tab")) === "프롬프트", JSON.stringify(leftGroups));
 
   await page.click("#sds-addchar"); await page.waitForTimeout(250);
-  ok("새 캐릭터: 봇 이름으로 채워 둠", (await page.locator(".rb-modal input").first().inputValue()) === "호시노");
+  ok("새 캐릭터: 봇 이름으로 채워 둠", (await page.locator(".rb-modal").last().locator("input").first().inputValue()) === "호시노");
   await promptOk(page, "호시노");
   ok("만들면 그 캐릭터의 씬 갤러리(default 씬 1개)", /씬 갤러리/.test(await txt(page, "#sds-topbar")) && (await page.locator("#sds-body .sds-scene").count()) === 1);
   await fillArea(page, "sds-top", "masterpiece, |, white background");
@@ -132,20 +137,39 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await page.keyboard.press("Escape"); await page.waitForTimeout(250);
   ok("씬 그림 6장(변형·업스케일·배경 지우기 더함)", (await page.locator("#sds-body .sds-img").count()) === 6);
 
-  // 봇에 넣기
+  // 봇에 바로 넣기(대화상자 없음, WebP로 바꿔 새 에셋) → 알림 되돌리기
   await page.locator("#sds-body .sds-img .chk").first().click(); await page.waitForTimeout(100);
-  await page.click("#sds-put-sel"); await page.waitForTimeout(250);
-  ok("넣기 창: 이름 기본값 = 씬 이름", (await page.locator("#sds-put-name").inputValue()) === "angry");
-  await page.click("#sds-put-ok"); await page.waitForTimeout(400);
+  const saved0 = await page.evaluate(() => window.__saved);
+  await page.click("#sds-put-sel"); await page.waitForTimeout(900);
+  ok("바로 넣기: 대화상자 없음", (await page.locator(".rb-modal").count()) === 0);
   let w = await page.evaluate(() => window.__charWrites?.at(-1));
-  ok("봇 감정 이미지에 [angry, 경로]", w?.i === 1 && w.c.emotionImages?.at(-1)?.[0] === "angry" && /^assets\//.test(w.c.emotionImages.at(-1)[1]), JSON.stringify(w?.c?.emotionImages));
+  const last = w?.c?.emotionImages?.at(-1);
+  const conv = await page.evaluate((p) => { const b = window.__assetBytes[p]; return b ? String.fromCharCode(...b.slice(8, 12)) : ""; }, last?.[1]);
+  ok("감정 이미지에 [angry, 새 경로], WebP로 바꿔 저장", w?.i === 1 && last?.[0] === "angry" && (await page.evaluate(() => window.__saved)) === saved0 + 1 && conv === "WEBP", JSON.stringify([last, conv]));
+  ok("알림에 용량(→)과 되돌리기", /감정 이미지에 1장 넣었어요 · .+ → .+/.test(await txt(page, ".rb-toasts")) && (await page.locator(".rb-toasts button.act").count()) >= 1);
+  await page.locator(".rb-toasts button.act", { hasText: "되돌리기" }).last().click(); await page.waitForTimeout(400);
+  w = await page.evaluate(() => window.__charWrites?.at(-1));
+  ok("되돌리기 → 감정 이미지 원래대로", !(w?.c?.emotionImages ?? []).some((x) => x[0] === "angry"), JSON.stringify(w?.c?.emotionImages));
+  await page.locator("#sds-body .sds-img").first().hover(); await page.locator("#sds-body .sds-img .sds-qput").first().click(); await page.waitForTimeout(800);
+  w = await page.evaluate(() => window.__charWrites?.at(-1));
+  ok("그림 카드 ‘넣기’로도 바로", (w?.c?.emotionImages ?? []).some((x) => x[0] === "angry"));
+  await page.locator("#sds-body .sds-img .chk").nth(1).click(); await page.waitForTimeout(100);
+  await page.click("#sds-put-sel-opt"); await page.waitForTimeout(250);
+  ok("넣는 방법 고르기: 이름 기본값 = 씬 이름", (await page.locator("#sds-put-name").inputValue()) === "angry");
+  await page.click("#sds-put-ok"); await page.waitForTimeout(400);
+  w = await page.evaluate(() => window.__charWrites?.at(-1));
+  ok("고른 방법으로 넣으면 같은 이름엔 번호(angry_2)", (w?.c?.emotionImages ?? []).some((x) => x[0] === "angry_2"), JSON.stringify((w?.c?.emotionImages ?? []).map((x) => x[0])));
   await page.locator("#sds-crumbs button", { hasText: "호시노" }).click(); await page.waitForTimeout(300);
-  await page.click("#sds-put-covers"); await page.waitForTimeout(250);
+  await page.click("#sds-put-covers-opt"); await page.waitForTimeout(250);
   await page.locator(".rb-modal .rb-seg button", { hasText: "그림 바꾸기" }).click();
   await page.click("#sds-put-ok"); await page.waitForTimeout(400);
   w = await page.evaluate(() => window.__charWrites?.at(-1));
   const names = (w?.c?.emotionImages ?? []).map((x) => x[0]);
-  ok("씬 대표 넣기: angry는 바꾸고 smile 더함(이름 = 씬 이름)", names.filter((n) => n === "angry").length === 1 && names.includes("smile"), JSON.stringify(names));
+  ok("씬 대표 넣기(바꾸기): angry는 그대로 하나, smile 더함", names.filter((n) => n === "angry").length === 1 && names.includes("smile"), JSON.stringify(names));
+  const before = (w?.c?.emotionImages ?? []).length;
+  await page.locator("#rb-sd-studio").focus(); await page.keyboard.press("Control+b"); await page.waitForTimeout(1200);
+  w = await page.evaluate(() => window.__charWrites?.at(-1));
+  ok("Ctrl+B: 씬 대표를 바로 넣음(번호 붙여 더하기)", (w?.c?.emotionImages ?? []).length === before + 2, `${before} → ${(w?.c?.emotionImages ?? []).length}`);
 
   // 모드
   await page.locator(".sds-modes button[data-mode='gallery']").click(); await page.waitForTimeout(300);
@@ -164,6 +188,60 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   ok("비교 모드: 2장 나란히", (await page.locator("#sds-cmp figure").count()) === 2);
   await page.locator(".sds-modes button[data-mode='scene']").click(); await page.waitForTimeout(200);
 
+  // 템플릿: 저장 → 새 캐릭터(처음 상태)는 바로 채움 → SDStudio 파일 가져오기(맨 위 = 모든 캐릭터, 합치기/바꾸기) → 되돌리기
+  await page.click("#sds-tpl-save"); await page.waitForTimeout(200); await promptOk(page, "감정 20");
+  await page.locator("#sds-crumbs button", { hasText: "전체" }).click(); await page.waitForTimeout(300);
+  await page.click("#sds-addchar"); await page.waitForTimeout(200); await promptOk(page, "시로코");
+  await page.locator("#sds-crumbs button", { hasText: "전체" }).click(); await page.waitForTimeout(300);
+  await page.click("#sds-tpl"); await page.locator(".rb-menu button", { hasText: "감정 20 적용" }).click(); await page.waitForTimeout(300);
+  ok("맨 위 적용: 씬 있는 캐릭터가 있으면 합치기/바꾸기 묻기", (await page.locator("#sds-tpl-ok").count()) === 1 && /1명/.test(await txt(page, ".rb-modal .rb-dialog")));
+  await page.click("#sds-tpl-ok"); await page.waitForTimeout(400);
+  let sv = await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj.chars.map((c) => [c.name, c.scenes.length]));
+  ok("합치기: 처음 상태 시로코는 20개로 채움, 호시노는 그대로 20", JSON.stringify(sv) === JSON.stringify([["호시노", 20], ["시로코", 20]]), JSON.stringify(sv));
+  const sdTpl = JSON.stringify({ version: 1, type: "sdstudio-scene-template", name: "SD 표정", session: { scenes: { "blushing shyly": { type: "scene", name: "blushing shyly", resolution: "portrait", slots: [[{ prompt: "blush, shy", id: "a" }]] }, "angry": { type: "scene", name: "angry", resolution: "landscape", slots: [[{ prompt: "furious", id: "b" }]] } }, library: { 표정: { version: 1, name: "표정", pieces: [{ name: "웃음", prompt: "smile" }] } } } });
+  page.once("filechooser", (fc) => fc.setFiles({ name: "sd.json", mimeType: "application/json", buffer: Buffer.from(sdTpl) }));
+  await page.click("#sds-tpl-import"); await page.waitForTimeout(500);
+  await page.locator(".rb-modal .rb-seg button", { hasText: "바꾸기" }).click(); await page.click("#sds-tpl-ok"); await page.waitForTimeout(400);
+  sv = await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj.chars.map((c) => c.scenes.map((x) => x.name).join(",")));
+  const hosAngry = await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj.chars[0].scenes.find((x) => x.name === "angry"));
+  ok("SDStudio 템플릿 가져오기 → 모든 캐릭터에 바꾸기(angry는 그림 지키고 프롬프트·크기 바뀜)", sv.every((x) => x === "blushing shyly,angry") && hosAngry.images.length === 6 && hosAngry.slots[0][0].prompt === "furious" && hosAngry.size === "landscape", JSON.stringify(sv));
+  ok("가져온 조각 모음도 합쳐짐", await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj.pieces.some((l) => l.name === "표정")));
+  await page.click("#sds-undo"); await page.waitForTimeout(300);
+  sv = await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj.chars.map((c) => c.scenes.length));
+  ok("되돌리기 버튼 → 템플릿 적용 전으로", JSON.stringify(sv) === JSON.stringify([20, 20]), JSON.stringify(sv));
+  await page.click("#sds-redo"); await page.waitForTimeout(300);
+  ok("다시하기 → 다시 적용", JSON.stringify(await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj.chars.map((c) => c.scenes.length))) === JSON.stringify([2, 2]));
+  await page.locator("#rb-sd-studio").focus(); await page.keyboard.press("Control+z"); await page.waitForTimeout(300);
+  ok("Ctrl+Z 단축키로 되돌리기", JSON.stringify(await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj.chars.map((c) => c.scenes.length))) === JSON.stringify([20, 20]));
+  const tpls = await page.evaluate(async () => JSON.parse(await window.__api.pluginStorage.getItem("dusk.sdstudio.templates")).map((t) => t.name));
+  ok("템플릿 목록에 저장(감정 20·SD 표정)", JSON.stringify(tpls) === JSON.stringify(["감정 20", "SD 표정"]), JSON.stringify(tpls));
+  // 단축키 바꾸기
+  await page.click("#sds-settings"); await page.waitForTimeout(250); await page.click("#sds-keys"); await page.waitForTimeout(250);
+  await page.locator(".rb-modal .rb-chip[data-action='toggleLeft']").click(); await page.keyboard.press("Control+Shift+L"); await page.waitForTimeout(100);
+  await page.click("#sds-keys-save"); await page.waitForTimeout(250);
+  await page.locator("#rb-sd-studio").focus(); await page.keyboard.press("Control+Shift+L"); await page.waitForTimeout(200);
+  ok("단축키 바꾸면 그 키로 동작(프롬프트 에디터 닫힘)", !(await page.locator(".sds-left").isVisible()));
+  await page.keyboard.press("Control+Shift+L"); await page.waitForTimeout(200);
+  // 부스트: 켜기(경고) + 토큰 2개 → 두 토큰으로 동시에
+  await page.click("#sds-settings"); await page.waitForTimeout(250);
+  await page.locator("#sds-boost .rb-seg button", { hasText: "켬" }).click(); await page.waitForTimeout(250);
+  ok("부스트 켜면 제재 경고", /제재/.test(await page.locator(".rb-modal .rb-dialog").last().innerText()));
+  await page.locator(".rb-modal .rb-dialog button", { hasText: "알고 켜기" }).click(); await page.waitForTimeout(250);
+  await page.click("#sds-token-add"); await page.waitForTimeout(200); await page.locator(".rb-modal input").last().fill("pst-second"); await page.locator(".rb-modal .rb-dialog button.primary").last().click(); await page.waitForTimeout(300);
+  await page.locator(".rb-modal .rb-dialog button", { hasText: "닫기" }).last().click(); await page.waitForTimeout(250);
+  await page.locator("#sds-body .sds-char").first().click(); await page.waitForTimeout(300);
+  for (const n of ["sad", "shy"]) { await sceneCard(page, n).hover(); await sceneCard(page, n).locator(".quick button", { hasText: "+1" }).click(); await page.waitForTimeout(100); }
+  ok("생성 버튼에 부스트 표시", /부스트 생성 2장/.test(await txt(page, "#sds-run")));
+  const nBefore = (await reqs(page, "/ai/generate-image")).length;
+  await page.evaluate(() => { window.__delay = 500; });
+  await page.click("#sds-run"); await page.waitForTimeout(350);
+  const auths = await page.evaluate((n) => window.__req.filter((x) => x.path === "/ai/generate-image").slice(n).map((x) => x.auth), nBefore);
+  ok("부스트: 두 토큰으로 동시에(둘 다 이미 보냄)", auths.length === 2 && new Set(auths).size === 2, JSON.stringify(auths));
+  await page.waitForTimeout(900); await page.evaluate(() => { window.__delay = 120; });
+  await page.click("#sds-settings"); await page.waitForTimeout(250); await page.locator("#sds-boost .rb-seg button", { hasText: "끔" }).click(); await page.waitForTimeout(150);
+  await page.locator(".rb-modal .rb-dialog button", { hasText: "닫기" }).last().click(); await page.waitForTimeout(200);
+  await page.locator("#sds-crumbs button", { hasText: "전체" }).click(); await page.waitForTimeout(300);
+
   // 폴더(맨 위)
   await page.locator("#sds-crumbs button", { hasText: "전체" }).click(); await page.waitForTimeout(300);
   await page.click("#sds-addfolder"); await page.waitForTimeout(200);
@@ -171,6 +249,12 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await page.locator("#sds-body .sds-char .chk").first().click(); await page.waitForTimeout(100);
   await page.locator("#sds-tools button[aria-label='고른 캐릭터를 폴더에 넣기·빼기']").click(); await page.locator(".rb-menu button", { hasText: "아비도스" }).click(); await page.waitForTimeout(300);
   ok("폴더 줄에 캐릭터 카드, 종류 표시", (await page.locator(".sds-frow .sds-char").count()) === 1 && /소속/.test(await txt(page, ".sds-frow")));
+  await page.locator(".sds-frow .sds-fopen").click(); await page.waitForTimeout(300);
+  await page.click("#sds-tpl"); await page.locator(".rb-menu button", { hasText: "SD 표정 적용" }).click(); await page.waitForTimeout(300);
+  await page.locator(".rb-modal .rb-seg button", { hasText: "합치기" }).click(); await page.click("#sds-tpl-ok"); await page.waitForTimeout(400);
+  const inFolder = await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj.chars.map((c) => c.scenes.length));
+  ok("폴더 안에서 적용하면 그 폴더의 캐릭터만(합치기: 없는 씬 1개 더함)", inFolder[0] === 21 && inFolder[1] === 20, JSON.stringify(inFolder));
+  await page.locator("#sds-crumbs button", { hasText: "전체" }).click(); await page.waitForTimeout(300);
   const shift = await page.evaluate(() => ({ win: [window.__app.ctx.win.scrollLeft, window.__app.ctx.win.scrollTop], left: Math.round(document.querySelector(".sds").getBoundingClientRect().left) }));
   ok("창이 옆으로 밀리지 않음", shift.win[0] === 0 && shift.win[1] === 0 && shift.left === 0, JSON.stringify(shift));
   await shot(page, "sd-6-folders");
@@ -201,7 +285,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   const back = await page.evaluate(() => { const w = window.__app.ctx.win.getBoundingClientRect(); return [w.width, w.height, innerWidth, innerHeight]; });
   ok("닫으면 창 크기 되돌림", back[0] < back[2] - 10 || back[1] < back[3] - 10, JSON.stringify(back));
   const saved = await page.evaluate(async () => JSON.parse(await window.__api.pluginStorage.getItem("dusk.sdstudio.p.c2")));
-  ok("봇별 저장(v2): 캐릭터·씬 20·폴더·조각·V5", saved?.v === 2 && saved.chars[0].scenes.length === 20 && saved.folders.length === 1 && saved.pieces[0].name === "옷" && saved.settings.sampling.model === "5-full");
+  ok("봇별 저장(v2): 캐릭터 2·폴더·조각·V5", saved?.v === 2 && saved.chars.length === 2 && saved.folders.length === 1 && saved.pieces.some((l) => l.name === "옷") && saved.settings.sampling.model === "5-full");
   await page.locator(".rb-full .rb-full-head button[aria-label='닫기']").first().click().catch(() => {}); await page.waitForTimeout(300);
   const d = page.locator(".rb-modal .rb-dialog button", { hasText: /닫기|버리|나가기/ }); if (await d.count()) await d.first().click();
 

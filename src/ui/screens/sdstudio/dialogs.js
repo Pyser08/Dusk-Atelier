@@ -6,6 +6,8 @@ import { MODELS, modelOf, SAMPLER_KO, NOISE_SCHEDULES, QUALITY_KO, UC_KO, ucPres
 import { buildPrompt, buildNegative, toPARR, combinationCount } from "../../../engine/sdstudio/prompt.js";
 import * as P from "../../../engine/sdstudio/project.js";
 import { promptArea, helpDot } from "./left.js";
+import { ACTIONS, DEFAULT_KEYS, comboOf, rebind } from "../../../engine/sdstudio/keys.js";
+import { templateFile } from "../../../engine/sdstudio/template.js";
 import { ico } from "./look.js";
 
 var dialog = (title, wide, ...kids) => h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": title, style: `max-width:${wide ?? 520}px;max-height:calc(100vh - 32px);overflow:auto` }, h("h3", { class: "rb-h3" }, title), ...kids);
@@ -190,23 +192,6 @@ export function createDialogs(S) {
     ]);
   }
 
-  // ── 작업 묶음 파일 ──
-  function projectMenu(anchor) {
-    openMenu(win, anchor, [
-      { label: "작업 묶음 내보내기(.json)", icon: "download", onClick: () => download(`${S.title}-에셋제작.json`, JSON.stringify({ format: "dusk-sdstudio", v: 2, project: S.proj }, null, 1), "application/json") },
-      { label: "작업 묶음 가져오기…", icon: "upload", onClick: async () => {
-        const [f] = await pickFiles({ accept: "application/json,.json" });
-        if (!f) return;
-        try {
-          const j = JSON.parse(await f.text());
-          const p = P.normalizeProject(j?.project ?? j);
-          if (!await confirmDialog(win, { title: "지금 작업 묶음을 바꿀까요?", body: `캐릭터 ${p.chars.length}명·폴더 ${p.folders.length}개로 바뀌어요. 그림 경로는 같은 리스에서만 보여요.`, ok: "바꾸기", danger: true })) return;
-          S.set(p); S.st.charId = null; S.st.sceneId = null; S.st.folder = null; S.paint();
-        } catch (e) { S.toast(`읽지 못했어요: ${e?.message ?? e}`, { error: true }); }
-      } }
-    ]);
-  }
-
   async function check() {
     const out = [], pr = S.proj, s = pr.settings;
     if (!(await S.sd.getToken())) out.push(["warn", "NovelAI 토큰이 없어요. 설정(톱니)에서 넣어요."]);
@@ -231,7 +216,11 @@ export function createDialogs(S) {
       sec("씬 조합", "씬은 슬롯(열) 여러 개로 되어 있고 슬롯마다 켜진 조각 하나씩 골라 조합해요. 예약 1장 = 조합 전부를 한 장씩."),
       sec("모드", "씬 모드: 카드로 보기 · 갤러리 모드: 모든 그림 · 검색 모드: 이름·프롬프트 찾기 · 비교 모드: 그림 여러 장 나란히 · 동시편집: 여러 씬 프롬프트를 한 번에."),
       sec("그림", "그림을 누르면 크게 보고, 즐겨찾기·대표·변형·인페인트·업스케일·디렉터 도구(배경 지우기 등)를 써요. 이미지 월드컵으로 순위를 매기면 1위가 대표가 돼요."),
-      sec("폴더", "복장 베리에이션·소속으로 캐릭터를 묶어요. 폴더 안에 폴더, 한 캐릭터를 여러 폴더에 넣을 수 있어요. 왼쪽 ‘폴더’ 탭이나 카드 메뉴로 넣어요."),
+      sec("폴더", "복장 베리에이션·소속으로 캐릭터를 묶어요. 폴더 안에 폴더, 한 캐릭터를 여러 폴더에 넣을 수 있어요. 카드를 고른 뒤 ‘폴더에 넣기’나 카드 메뉴로 넣어요."),
+      sec("바로 넣기", "그림·씬을 고르고 ‘바로 넣기’(Ctrl+B)를 누르면 대화상자 없이 봇에 들어가요. 자리·형식(WebP·AVIF로 용량 줄이기)·같은 이름 처리는 설정에서 정하고, 알림의 ‘되돌리기’로 바로 취소해요."),
+      sec("템플릿", "씬 구성을 템플릿으로 저장하고 다른 캐릭터에 적용해요. SDStudio 씬 템플릿 파일(.json)도 가져와요. 맨 위에서 적용하면 모든 캐릭터, 폴더 안에서는 그 폴더의 캐릭터, 캐릭터 안에서는 그 캐릭터에 들어가요. 씬이 이미 있으면 합칠지 바꿀지 골라요."),
+      sec("되돌리기·단축키", "Ctrl+Z 되돌리기, Ctrl+Shift+Z 다시하기(봇에 넣은 것은 알림의 되돌리기로). 단축키는 설정 → 단축키 설정에서 바꿔요."),
+      sec("부스트 모드", "설정에서 켜고 토큰을 여러 개 넣으면 동시에 그려요. 한 기기에서 여러 계정을 쓰면 NovelAI 제재 대상이 될 수 있어요."),
       sec("저장", "그림은 만들자마자 리스 에셋 저장소에 저장되고, 이 화면 목록에서 빼도 저장소 파일은 남아요. 작업 묶음은 봇·모듈마다 따로 저장돼요."),
       h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => done(true) }))));
   }
@@ -248,12 +237,97 @@ export function createDialogs(S) {
     return false;
   }
   async function settings() {
+    const pf = await S.sd.getPrefs();
     const has = !!(await S.sd.getToken());
-    await modal(win, (done) => dialog("설정", 480,
+    const slots = S.target.kind === "module" ? [["assets", "모듈 에셋"]] : [["emotionImages", "감정 이미지"], ["additionalAssets", "추가 에셋"]];
+    const ql = h("span", { class: "rb-muted" }, `품질 ${Math.round(pf.putQuality * 100)}`);
+    const tokensBox = h("div", { style: "display:flex;flex-direction:column;gap:6px" });
+    const paintTokens = async () => {
+      const list = await S.sd.getTokens();
+      replace(tokensBox, ...list.map((t, i) => h("div", { style: "display:flex;gap:8px;align-items:center" }, h("span", { style: "flex:1" }, `${t.label || `토큰 ${i + 1}`} · …${t.token.slice(-4)}`),
+        btn("빼기", { size: "sm", kind: "ghost", onClick: async () => { await S.sd.setTokens(list.filter((_, k) => k !== i)); paintTokens(); } }))),
+        btn("토큰 더하기", { size: "sm", icon: "plus", id: "sds-token-add", onClick: async () => { const t = await askToken("부스트 모드 토큰 더하기"); if (t) { await S.sd.setTokens([...list, { label: `계정 ${list.length + 1}`, token: t }]); paintTokens(); } } }));
+    };
+    paintTokens();
+    const boostSw = h("div", { id: "sds-boost" });
+    const paintBoost = () => replace(boostSw, segmented([["off", "끔"], ["on", "켬"]], S.prefs.boost ? "on" : "off", async (v) => {
+      const on = v === "on";
+      if (on && !await confirmDialog(win, { title: "부스트 모드를 켤까요?", body: "한 기기에서 여러 NovelAI 계정으로 동시에 그리는 것은 NovelAI 정책상 제재·계정 정지 대상이 될 수 있어요. 모든 책임은 사용하는 사람에게 있어요(SDStudio 원본 안내와 같음).", ok: "알고 켜기", danger: true })) { paintBoost(); return; }
+      await S.sd.setPrefs({ boost: on }); S.prefs.boost = on; S.paintTop(); paintBoost();
+    }, "부스트 모드"));
+    paintBoost();
+    await modal(win, (done) => dialog("설정", 560,
       field("NovelAI 토큰", h("div", { style: "display:flex;gap:8px;align-items:center" }, h("span", { class: "rb-muted", style: "flex:1" }, has ? "저장됨(이 기기)" : "없음"), btn(has ? "바꾸기" : "넣기", { size: "sm", onClick: () => { done(true); token({ force: true }); } }))),
+      h("b", null, "봇에 넣기"),
+      slots.length > 1 ? field("바로 넣을 자리", segmented(slots, pf.putSlot || slots[0][0], async (v) => { await S.sd.setPrefs({ putSlot: v }); S.prefs.putSlot = v; }, "바로 넣을 자리")) : null,
+      field("넣을 때 형식(용량 줄이기)", segmented([["png", "원본 PNG"], ["webp", "WebP"], ["avif", "AVIF"]], pf.putFormat, async (v) => { await S.sd.setPrefs({ putFormat: v }); S.prefs.putFormat = v; }, "넣을 때 형식"),
+        ql, h("input", { type: "range", min: 0.5, max: 1, step: 0.01, value: pf.putQuality, onInput: (e) => { ql.textContent = `품질 ${Math.round(e.target.value * 100)}`; }, onChange: async (e) => { const q = Number(e.target.value); await S.sd.setPrefs({ putQuality: q }); S.prefs.putQuality = q; } }),
+        h("span", { class: "rb-muted", style: "white-space:normal;font-size:12px" }, "AVIF를 못 만드는 브라우저면 WebP로 넣어요. 바꾼 것이 더 크면 원본 그대로 넣어요.")),
+      field("같은 이름이 이미 있으면", segmented([["number", "번호 붙여 더하기"], ["replace", "그림 바꾸기"]], pf.dup, async (v) => { await S.sd.setPrefs({ dup: v }); S.prefs.dup = v; }, "같은 이름")),
+      h("b", null, "부스트 모드(여러 계정으로 동시에 그리기)"), boostSw,
+      h("span", { class: "rb-muted", style: "white-space:normal;font-size:12px" }, "켜면 아래 토큰 수만큼(최대 4) 동시에 그려요. 토큰은 이 기기에만 저장돼요."), tokensBox,
+      h("b", null, "그 밖"),
       field("‘모두 예약’ 장 수", num(S.proj.settings.reserveDefault, { min: 1, max: 20, id: "sds-rdef", onChange: (v) => { S.set(P.setSettings(S.proj, { reserveDefault: Math.max(1, Math.min(20, Math.round(v) || 1)) })); S.paintTools(); } })),
-      h("span", { class: "rb-muted", style: "white-space:normal" }, "그림은 만들 때 바로 리스 에셋 저장소에 저장돼요. 목록에서 빼도 파일은 남으니, 많이 만들었다면 리스의 에셋 정리로 지워요."),
+      btn("단축키 설정…", { icon: "zap", id: "sds-keys", onClick: () => { done(true); keysDialog(); } }),
+      h("span", { class: "rb-muted", style: "white-space:normal" }, "그림은 만들 때 바로 리스 에셋 저장소에 저장돼요. 목록에서 빼도 파일은 남아요."),
       h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => done(true) }))));
+  }
+  async function askToken(title) {
+    const input = h("input", { type: "password", class: "rb-input", placeholder: "pst-…", autocomplete: "off", "data-autofocus": "" });
+    const ok = await modal(win, (done) => dialog(title, 440, input, h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(false) }), btn("더하기", { kind: "primary", onClick: () => input.value.trim() && done(true) }))));
+    return ok ? input.value.trim() : "";
+  }
+
+  // 단축키: 줄을 누르고 새 키를 누르면 바뀜(겹치는 쪽은 비움)
+  async function keysDialog() {
+    let keys = { ...S.keys }, waiting = null;
+    const body = h("div", { style: "display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center" });
+    const paint = () => replace(body, ...Object.entries(ACTIONS).flatMap(([a, label]) => [h("span", null, label),
+      h("button", { type: "button", class: "rb-chip", "aria-pressed": String(waiting === a), dataset: { action: a }, style: "min-width:120px;justify-content:center", onClick: () => { waiting = a; paint(); } }, waiting === a ? "키를 누르세요…" : keys[a] || "없음")]));
+    const onKey = (e) => {
+      if (!waiting) return;
+      e.preventDefault(); e.stopPropagation();
+      if (e.key === "Escape") { waiting = null; paint(); return; }
+      if (e.key === "Backspace" || e.key === "Delete") { keys = rebind(keys, waiting, ""); waiting = null; paint(); return; }
+      const c = comboOf(e);
+      if (!c) return;
+      keys = rebind(keys, waiting, c); waiting = null; paint();
+    };
+    win.ownerDocument.addEventListener("keydown", onKey, true);
+    paint();
+    const ok = await modal(win, (done) => dialog("단축키 설정", 520, h("span", { class: "rb-muted", style: "white-space:normal" }, "줄을 누르고 새 키를 눌러요. 지우려면 Backspace. 다른 동작과 겹치면 그쪽은 비워져요."), body,
+      h("div", { class: "btns" }, btn("기본값", { kind: "ghost", onClick: () => { keys = { ...DEFAULT_KEYS }; paint(); } }), btn("취소", { kind: "ghost", onClick: () => done(false) }), btn("저장", { kind: "primary", id: "sds-keys-save", onClick: () => done(true) }))));
+    win.ownerDocument.removeEventListener("keydown", onKey, true);
+    if (ok) { S.keys = keys; await S.sd.setPrefs({ keys }); S.toast("단축키를 저장했어요"); }
+  }
+
+  // 템플릿: 이미 씬이 있는 캐릭터가 있으면 합칠지 바꿀지
+  async function templateChoice(count, name) {
+    let mode = "merge";
+    desc.textContent = DESC.merge;
+    return modal(win, (done) => dialog(`‘${name}’ 템플릿 적용`, 500,
+      h("span", { class: "rb-muted", style: "white-space:normal" }, `씬이 이미 있는 캐릭터가 ${count}명이에요. 어떻게 할까요? (처음 상태인 캐릭터는 그냥 템플릿 씬으로 채워요)`),
+      segmented([["merge", "합치기"], ["replace", "바꾸기"]], mode, (v) => { mode = v; desc.textContent = DESC[v]; }, "적용 방식"),
+      desc,
+      h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(null) }), btn("적용", { kind: "primary", id: "sds-tpl-ok", onClick: () => done(mode) }))));
+  }
+  var DESC = { merge: "있는 씬은 그대로 두고, 템플릿에만 있는 씬을 뒤에 더해요.", replace: "씬 목록을 템플릿대로 바꿔요. 이름이 같은 씬은 프롬프트만 바뀌고 그림은 남아요. 템플릿에 없는 씬은 빠져요(되돌리기 가능)." };
+  var desc = h("span", { style: "white-space:normal;font-size:13px" }, DESC.merge);
+  async function templateManager({ apply }) {
+    const body = h("div", { style: "display:flex;flex-direction:column;gap:8px" });
+    const paint = async () => {
+      const list = await S.sd.loadTemplates();
+      replace(body, ...(list.length ? list.map((t, i) => h("div", { style: "display:flex;gap:8px;align-items:center;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);padding:8px 10px" },
+        h("div", { style: "flex:1;min-width:0;display:flex;flex-direction:column" }, h("b", null, t.name), h("span", { class: "rb-muted", style: "font-size:12px;white-space:normal" }, `씬 ${t.scenes.length}개 · ${t.scenes.slice(0, 6).map((x) => x.name).join(", ")}${t.scenes.length > 6 ? " …" : ""}`)),
+        btn("적용", { size: "sm", kind: "primary", onClick: async () => { done?.(true); await apply(t); } }),
+        btn("", { size: "sm", kind: "ghost", icon: "edit", title: "이름 바꾸기", onClick: async () => { const n = await promptDialog(win, { title: "템플릿 이름", label: "이름", value: t.name }); if (n?.trim()) { list[i] = { ...t, name: n.trim() }; await S.sd.saveTemplates(list); paint(); } } }),
+        btn("", { size: "sm", kind: "ghost", icon: "download", title: "파일로 내보내기", onClick: () => download(`${t.name}.dusk-template.json`, templateFile(t), "application/json") }),
+        btn("", { size: "sm", kind: "ghost", icon: "trash", title: "지우기", onClick: async () => { if (await confirmDialog(win, { title: `‘${t.name}’ 템플릿을 지울까요?`, ok: "지우기", danger: true })) { list.splice(i, 1); await S.sd.saveTemplates(list); paint(); } } })))
+        : [h("span", { class: "rb-muted", style: "white-space:normal" }, "저장한 템플릿이 없어요. 캐릭터를 연 뒤 ‘씬을 템플릿으로 저장’하거나 SDStudio 씬 템플릿 파일을 가져와요.")]));
+    };
+    let done = null;
+    await paint();
+    await modal(win, (d) => { done = d; return dialog("템플릿 관리", 620, body, h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => d(true) }))); });
   }
 
   // 봇·모듈에 넣기 → { slot, name, replace } | null
@@ -278,5 +352,5 @@ export function createDialogs(S) {
     });
   }
 
-  return { sampling, charPrompts, pieces, vibes, refs, savePreset, loadPreset, projectMenu, check, help, token, settings, put, folderDialog };
+  return { sampling, charPrompts, pieces, vibes, refs, savePreset, loadPreset, check, help, token, settings, put, folderDialog, keysDialog, templateChoice, templateManager };
 }

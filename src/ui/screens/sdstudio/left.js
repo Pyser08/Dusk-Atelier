@@ -82,11 +82,10 @@ export function renderLeft(S, body) {
 
 export function leftHead(S) {
   return [
-    h("div", { class: "sds-left-head" }, h("b", null, "프롬프트 에디터"), helpDot("SDStudio 프롬프트 에디터와 같아요. 바뀐 내용은 바로 저장돼요."), h("span", { style: "flex:1" }),
+    h("div", { class: "sds-left-head" }, h("b", null, "프롬프트 에디터"), helpDot("이 봇(모듈)의 그림 설정이에요. 바뀐 내용은 바로 저장되고 Ctrl+Z로 되돌려요."), h("span", { style: "flex:1" }),
       h("button", { type: "button", class: "sds-ib", title: "접기", "aria-label": "프롬프트 에디터 접기", style: "border:0;background:none", onClick: () => S.toggleLeft(false) }, ico("chevL", 18))),
     h("div", { class: "sds-groups" },
-      h("div", { class: "sds-group" }, h("small", null, "프로젝트"), h("div", null,
-        ib("copies", "작업 묶음 파일로 내보내기·가져오기", (e) => S.dlg.projectMenu(e.currentTarget), { id: "sds-proj" }),
+      h("div", { class: "sds-group" }, h("small", null, "도구"), h("div", null,
         ib("puzzle", "조각 모음", () => S.dlg.pieces(), { id: "sds-pieces" }),
         ib("warn", "문제 확인(없는 조각·빈 프롬프트·Anlas)", () => S.dlg.check(), { id: "sds-check" }))),
       h("div", { class: "sds-group" }, h("small", null, "프리셋"), h("div", null,

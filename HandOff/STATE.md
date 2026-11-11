@@ -1,5 +1,17 @@
 # 현재 상태 — SD-Studio 브랜치 (2.1.0 끝 e194dd9에서 분기)
 
+## 최근 세션 (2026-11-11 11시 — 바로 넣기·WebP/AVIF·부스트·템플릿·되돌리기·단축키, ‘프로젝트’ 없앰)
+- 사용자: “프로젝트는 없애도 됨(봇당 이미지). 선택해서 봇으로 직접 넣기(최대한 빠르게), 넣을 때 webp·avif로 용량 줄이기. 부스트 모드·템플릿 관리·단축키 설정·실행 취소, SDStudio 씬 템플릿 가져오기. 최상위에서 템플릿 가져오면 모든 폴더·캐릭터에 적용, 씬이 이미 있으면 합칠지 바꿀지.”
+- ‘프로젝트’ 없앰 = 화면에서만: 왼쪽 위 ‘프로젝트’ 무리(작업 묶음 파일 내보내기·가져오기) 지움 → ‘도구’(조각 모음·문제 확인)+‘프리셋’, 레일 글자 ‘프롬프트’. 봇·모듈별 저장(pluginStorage dusk.sdstudio.p./m.)은 그대로.
+- **바로 넣기**(studio.js quickPut): 대화상자 없이 설정의 자리(봇 기본 감정 이미지/모듈 에셋)·형식·같은 이름 규칙대로, 변환은 3장씩 동시에, 봇 쓰기는 한 번, 알림에 용량(원본→변환)과 ‘되돌리기’(그 자리 목록을 넣기 전으로). 입구: 씬 화면 ‘고른 그림 바로 넣기’, 그림 카드 ‘넣기’, 캐릭터 화면 ‘씬 대표 바로 넣기’(고른 씬 또는 전부, 이름 = 씬 이름), 크게 보기 ‘봇에 바로 넣기’, Ctrl+B. 예전 대화상자는 ‘넣는 방법 고르고 넣기…’(sliders 아이콘)로 남김.
+- **변환**(data/sdstudio.js convertImage): createImageBitmap → (Offscreen)Canvas → image/webp·image/avif(quality). AVIF를 못 만들면 WebP, 더 커지면 원본. 변환본은 새로 saveAsset(생성 때 저장한 PNG 원본도 저장소에 남음). 설정: prefs(로컬 dusk.sdstudio.prefs) putSlot·putFormat(기본 webp)·putQuality(0.85)·dup(number|replace).
+- **부스트 모드**: 설정에서 끔/켬(켤 때 NovelAI 제재 경고 확인 — SDStudio 원본 안내와 같음), 토큰 여러 개(로컬 dusk.sdstudio.tokens, 첫 칸 = 기본 토큰). 켜고 토큰 2개 이상이면 runQueue가 토큰마다 한 줄씩(최대 4) 동시에 그림(sd.call token 넘김). 생성 버튼에 ‘부스트’ 표시.
+- **템플릿**(engine/sdstudio/template.js): 캐릭터 씬 → 템플릿(이름·슬롯·크기, 조각 모음 포함, 그림·예약 제외), 저장 pluginStorage dusk.sdstudio.templates. 가져오기: Dusk 파일(format dusk-sdstudio-template)·SDStudio 씬 템플릿(type sdstudio-scene-template, session.scenes·library, resolution 키 그대로, custom은 WxH)·SDStudio 세션 JSON. 적용 범위: 맨 위 = 모든 캐릭터, 폴더 안 = 그 폴더(안의 폴더 포함) 캐릭터, 캐릭터 안 = 그 캐릭터. 처음 상태(빈 default 하나) 캐릭터는 그냥 바꿈, 씬 있는 캐릭터가 있으면 합치기(없는 씬만 뒤에)/바꾸기(템플릿 목록으로 — 같은 이름 씬은 id·그림·예약 지키고 슬롯·크기만, 템플릿에 없는 씬은 빠짐) 고름. 조각 모음은 없는 모음·조각만 더함. 가져오기 = 저장 + 바로 적용. 템플릿 관리 창(적용·이름·내보내기·지우기). 도구 줄 ‘템플릿’ 무리.
+- **되돌리기**(history.js): S.set이 직전 상태를 쌓음(0.7초 안 잇단 바꿈은 하나로, 60개). 그리기 결과·예약 줄이기·바이브 캐시·변형 결과는 {undo:false}. 도구 줄 ‘되돌리기’ 무리, Ctrl+Z / Ctrl+Shift+Z(글 쓰는 칸 안에서는 칸 자체 되돌리기). 봇에 넣은 것은 알림의 되돌리기로.
+- **단축키**(keys.js): 16개 동작(생성·에디터·되돌리기/다시·바로 넣기·모두 고르기·검색·새로 만들기·월드컵·예약·모드1~5·도움말), ⌘=Ctrl, 설정 → 단축키 설정(줄 누르고 키, Backspace로 지움, 겹치면 상대 비움, 기본값), 로컬 prefs.keys.
+- 시험: unit `sdstudio-tools.test.js`(6) → npm test 1413 pass. e2e `run-addon-sdstudio` 65(바로 넣기·WebP 확인·되돌리기 알림·넣기 방법·Ctrl+B·템플릿 저장/적용/SD 파일 가져오기(filechooser)/바꾸기/폴더 범위·되돌리기 버튼·Ctrl+Z·단축키 바꾸기·부스트 두 토큰 동시). 가짜 리스가 봇 쓰기를 기억하게 고침. dev-slot 8·chattheme 14·widgets 10·addons-ui 46·scrollkeep 12·smoke 53 통과.
+- 남은 일(추가): [ ] 실기기에서 WebP/AVIF 변환(플러그인 칸에서 createImageBitmap·OffscreenCanvas 되는지) [ ] 부스트는 실제 계정 2개로 확인 못 함
+
 ## 최근 세션 (2026-11-11 10시 — SDStudio 사진처럼 전체 이식 + 에셋 버튼을 편집 화면으로)
 - 사용자: “사진(SDStudio 씬 갤러리)과 최대한 비슷하게, 우리 디자인으로. 이 플러그인만 완전 풀스크린 OK. 에셋·에셋 제작 버튼은 봇/모듈 편집 ‘적용’ 아래로, 밖의 버튼 2개는 지움. SDStudio 기능은 가능한 한 모두. 우리 독자 기능은 폴더뿐.” 질문으로 정함: **캐릭터 안에 씬**(카드=캐릭터, 열면 사진 같은 씬 갤러리, 씬 이름 = 감정 이미지 이름), **에셋 제작은 봇·모듈 둘 다**(모듈은 모듈 에셋).
 - **코어**: `editor.js` 머리 아래 `#rb-edit-sub`(오른쪽 정렬) = ‘에셋’(cfg.openAssets) + 애드온 자리 **`slot "editor.actions"`**(부품 (ctx, cfg.target), target = {kind:"module", id} | {kind:"character", id, index}, 봇 초안이면 target 없음 → 줄 안 그림). 모듈 openEditor·chareditor가 target/openAssets 넘김. `dev.js` 상세의 ‘에셋’ 버튼과 `dev.actions` 자리는 없앰(미릴리스라 영향 없음). CHANGELOG ‘다음 버전’·안내서 manage.html(에셋 관리자 ‘여는 곳’) 갱신.

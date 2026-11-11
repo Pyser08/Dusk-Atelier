@@ -12,6 +12,28 @@ import { normalizeProject } from "../engine/sdstudio/project.js";
 export var NAI_IMAGE = "https://image.novelai.net";
 var TOKEN_KEY = "dusk.sdstudio.token";
 var PRESET_KEY = "dusk.sdstudio.presets";
+var TEMPLATE_KEY = "dusk.sdstudio.templates";   // 씬 템플릿(기기와 상관없이 이 리스 전체)
+var TOKENS_KEY = "dusk.sdstudio.tokens";         // 부스트 모드용 토큰 여러 개(이 기기에만)
+var PREFS_KEY = "dusk.sdstudio.prefs";           // 넣기 기본값·변환 형식·단축키·부스트(이 기기에만)
+
+// 봇에 넣을 때 용량 줄이기: PNG → WebP/AVIF. AVIF를 못 만드는 브라우저면 WebP로 → { data, ext, fellBack }
+export async function convertImage(bytes, fmt = "webp", quality = 0.85) {
+  if (fmt !== "webp" && fmt !== "avif") return { data: bytes, ext: "png", fellBack: false };
+  const bmp = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
+  const mk = async (type) => {
+    if (typeof OffscreenCanvas === "function") { const c = new OffscreenCanvas(bmp.width, bmp.height); c.getContext("2d").drawImage(bmp, 0, 0); return c.convertToBlob({ type, quality }); }
+    const c = Object.assign(document.createElement("canvas"), { width: bmp.width, height: bmp.height });
+    c.getContext("2d").drawImage(bmp, 0, 0);
+    return new Promise((ok) => c.toBlob(ok, type, quality));
+  };
+  try {
+    let blob = await mk(`image/${fmt}`), fellBack = false, ext = fmt;
+    if (!blob || blob.type !== `image/${fmt}`) { blob = await mk("image/webp"); ext = "webp"; fellBack = fmt === "avif"; }
+    if (!blob || blob.type !== "image/webp" && ext === "webp") return { data: bytes, ext: "png", fellBack: true };
+    const out = new Uint8Array(await blob.arrayBuffer());
+    return out.length < bytes.length ? { data: out, ext, fellBack } : { data: bytes, ext: "png", fellBack };   // 더 커지면 원본
+  } finally { bmp.close?.(); }
+}
 // 봇: dusk.sdstudio.p.<chaId>(예전 그대로) · 모듈: dusk.sdstudio.m.<id>
 export var projectKey = (target) => (target?.kind === "module" ? `dusk.sdstudio.m.${target.id}` : `dusk.sdstudio.p.${target?.id}`);
 
@@ -81,10 +103,28 @@ export function createSdStudio(api) {
       const s = await local();
       try { await s?.setItem?.(TOKEN_KEY, mem); } catch { /* 로컬 저장소 없음 — 메모리만 */ }
     },
+    // 이 기기에만 두는 값(JSON)
+    async getLocal(key, fallback) { const s = await local(); try { const v = await s?.getItem?.(key); return v ? (typeof v === "string" ? JSON.parse(v) : v) : fallback; } catch { return fallback; } },
+    async setLocal(key, v) { const s = await local(); try { await s?.setItem?.(key, JSON.stringify(v)); } catch { /* 로컬 저장소 없음 */ } },
+    async getPrefs() { return { putSlot: "", putFormat: "webp", putQuality: 0.85, dup: "number", keys: {}, boost: false, ...(await this.getLocal(PREFS_KEY, {})) }; },
+    async setPrefs(patch) { const cur = await this.getPrefs(); await this.setLocal(PREFS_KEY, { ...cur, ...patch }); },
+    // 부스트 모드 토큰 목록 [{ label, token }] — 첫 칸은 기본 토큰
+    async getTokens() {
+      const list = (await this.getLocal(TOKENS_KEY, [])).filter((x) => x && typeof x.token === "string" && x.token.trim());
+      const main = await this.getToken();
+      return main && !list.some((x) => x.token === main) ? [{ label: "기본", token: main }, ...list] : list;
+    },
+    async setTokens(list) {
+      const clean = list.map((x) => ({ label: String(x.label ?? "").slice(0, 30), token: String(x.token ?? "").trim() })).filter((x) => x.token);
+      await this.setLocal(TOKENS_KEY, clean);
+      if (clean[0]) await this.setToken(clean[0].token);
+    },
+    async loadTemplates() { try { const v = await store()?.getItem(TEMPLATE_KEY); const a = v ? (typeof v === "string" ? JSON.parse(v) : v) : []; return Array.isArray(a) ? a : []; } catch { return []; } },
+    async saveTemplates(list) { await store()?.setItem(TEMPLATE_KEY, JSON.stringify(list)); },
     // NAI POST 하나 → 받은 바이트. label은 생성 중지 버튼이 세는 이름
-    async call(path, body, { signal, label = "sdstudio", zip = true } = {}) {
+    async call(path, body, { signal, label = "sdstudio", zip = true, token: useToken } = {}) {
       if (justStopped()) throw stopError();
-      const token = await this.getToken();
+      const token = useToken || await this.getToken();
       if (!token) throw new Error("NovelAI 토큰을 먼저 넣어 주세요");
       const t = trackAi(label, signal);
       try {
