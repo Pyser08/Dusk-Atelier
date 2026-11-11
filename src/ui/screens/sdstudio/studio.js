@@ -224,7 +224,7 @@ export async function openAssetStudio(ctx, target, sd) {
   // Alt/⌥를 누르고 놓으면 복사(캐릭터는 여러 폴더에 걸칠 수 있고, 씬은 구성만 복사돼요).
   const dnd = { cur: null };
   const MARKS = ["drop-before", "drop-after", "drop-into"];
-  const endDrag = () => { dnd.cur = null; for (const n of el.querySelectorAll(".dragging,.drop-before,.drop-after,.drop-into")) n.classList.remove("dragging", ...MARKS); el.classList.remove("sds-dragging", "sds-drag-scene"); };
+  const endDrag = () => { dnd.cur = null; for (const n of el.querySelectorAll(".dragging,.drop-before,.drop-after,.drop-into")) { n.classList.remove("dragging", ...MARKS); delete n.dataset.dropHint; } el.classList.remove("sds-dragging", "sds-drag-scene"); };
   function dragSource(node, payload) {
     node.draggable = true;
     node.addEventListener("dragstart", (e) => {
@@ -238,7 +238,7 @@ export async function openAssetStudio(ctx, target, sd) {
     node.addEventListener("dragend", endDrag);
   }
   // mode(p): "into"(통째로 안에) | "x"(왼쪽/오른쪽 절반 = 앞/뒤) | "y3"(위 1/4 앞 · 아래 1/4 뒤 · 가운데 안)
-  function dropTarget(node, { mode, ok, run }) {
+  function dropTarget(node, { mode, ok, run, hint }) {
     const zoneOf = (e, p) => {
       const m = mode(p); if (m === "into") return "into";
       const r = node.getBoundingClientRect(), t = m === "x" ? (e.clientX - r.left) / (r.width || 1) : (e.clientY - r.top) / (r.height || 1);
@@ -247,9 +247,11 @@ export async function openAssetStudio(ctx, target, sd) {
     node.addEventListener("dragover", (e) => {
       const p = dnd.cur; if (!p || !ok(p)) return;
       e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = e.altKey ? "copy" : "move";
-      node.classList.remove(...MARKS); node.classList.add("drop-" + zoneOf(e, p));
+      const z = zoneOf(e, p);
+      node.classList.remove(...MARKS); node.classList.add("drop-" + z);
+      if (hint) node.dataset.dropHint = hint(p, z, e.altKey); else delete node.dataset.dropHint;
     });
-    node.addEventListener("dragleave", (e) => { if (!node.contains(e.relatedTarget)) node.classList.remove(...MARKS); });
+    node.addEventListener("dragleave", (e) => { if (!node.contains(e.relatedTarget)) { node.classList.remove(...MARKS); delete node.dataset.dropHint; } });
     node.addEventListener("drop", (e) => {
       const p = dnd.cur; if (!p || !ok(p)) return;
       e.preventDefault(); e.stopPropagation();
@@ -279,6 +281,7 @@ export async function openAssetStudio(ctx, target, sd) {
     dropTarget(chip, {
       mode: () => "into",
       ok: (p) => p.kind === "char" || (p.kind === "folder" && p.id !== folderId),
+      hint: (p) => folderId ? `‘${proj.folders.find((x) => x.id === folderId)?.name}’(으)로` : p.kind === "char" ? "폴더에서 빼기" : "맨 위로",
       run: (p, _z, copy) => (p.kind === "char" ? dropChars(p, folderId, null, copy) : dropFolder(p.id, folderId, null))
     });
     return chip;
@@ -371,22 +374,38 @@ export async function openAssetStudio(ctx, target, sd) {
     bodyEl.scrollTop = keep;
     if (ctx.win.scrollLeft || ctx.win.scrollTop) { ctx.win.scrollLeft = 0; ctx.win.scrollTop = 0; }   // 포커스 이동으로 창이 밀리지 않게
   }
+  // 폴더 줄 안의 하위 폴더 타일(비어 있어도 보이게). 누르면 테두리, 다시 누르면 열림, 끌어 옮기기·놓기 가능.
+  function subTile(g) {
+    const n = P.rowChars(proj, g.id).length, k = proj.folders.filter((x) => x.parent === g.id).length;
+    const t = h("button", { type: "button", class: "sds-card sds-subf", dataset: { id: g.id }, title: g.name },
+      h("span", { class: "ph", style: "flex-direction:column;gap:6px;color:var(--rb-acc)" }, ico("folder", 34), h("span", { class: "rb-muted", style: "font-size:12px" }, `${n}명${k ? ` · 폴더 ${k}` : ""}`)),
+      h("span", { class: "cap" }, h("span", { class: "n" }, g.name)));
+    t.classList.toggle("cur", isCur("folder", g.id));
+    t.addEventListener("click", () => { if (!isCur("folder", g.id)) { setFocus("folder", g.id); t.classList.add("cur"); return; } st.focus = null; st.folder = g.id; sel.clear(); paintTools(); paintBody(); });
+    t.addEventListener("contextmenu", (e) => { e.preventDefault(); folderMenu(t, g.id); });
+    dragSource(t, () => ({ kind: "folder", id: g.id }));
+    dropTarget(t, { mode: () => "into", ok: (p) => p.kind === "char" || (p.kind === "folder" && p.id !== g.id),
+      hint: (p, _z, alt) => p.kind === "char" ? `‘${g.name}’ 안에 ${alt ? "복사" : "넣기"}` : `‘${g.name}’ 안으로`,
+      run: (p, _z, copy) => (p.kind === "char" ? dropChars(p, g.id, null, copy) : dropFolder(p.id, g.id, null)) });
+    return t;
+  }
   function charsView() {
-    if (!proj.chars.length) return [empty("이 " + (target.kind === "module" ? "모듈" : "봇") + "에 들어갈 캐릭터를 만들어요", "캐릭터를 열어 씬(표정·포즈)을 만들고 예약하면 SDStudio처럼 차례로 그려요. 복장·소속은 폴더로 묶어요.", btn("새 캐릭터", { kind: "primary", icon: "plus", onClick: () => addChar() }))];
+    if (!proj.chars.length && !proj.folders.length) return [empty("이 " + (target.kind === "module" ? "모듈" : "봇") + "에 들어갈 캐릭터를 만들어요", "캐릭터를 열어 씬(표정·포즈)을 만들고 예약하면 SDStudio처럼 차례로 그려요. 복장·소속은 폴더로 묶어요.", btn("새 캐릭터", { kind: "primary", icon: "plus", onClick: () => addChar() }))];
     const v = P.view(proj, st.folder);
     const rows = v.folders.map((f) => {
-      const list = P.rowChars(proj, f.id), subs = proj.folders.filter((x) => x.parent === f.id).length;
+      const list = P.rowChars(proj, f.id), subF = proj.folders.filter((x) => x.parent === f.id), subs = subF.length;
       const row = h("div", { class: "sds-frow sds-folder", dataset: { id: f.id } },
         h("div", { class: "hd" }, h("button", { type: "button", class: "open sds-fopen", onClick: () => { if (!isCur("folder", f.id)) { setFocus("folder", f.id); return; } st.focus = null; st.folder = f.id; sel.clear(); paintTools(); paintBody(); } },
           h("span", { style: "color:var(--rb-acc);display:flex" }, ico("folder", 18)), h("b", { style: "font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, f.name),
           f.kind ? h("span", { class: "rb-badge" }, KIND_KO[f.kind]) : null, h("span", { class: "rb-muted" }, `${list.length}명${subs ? ` · 폴더 ${subs}` : ""}`), h("span", { style: "color:var(--rb-mute);display:flex" }, ico("chevR", 16))),
           h("button", { type: "button", class: "rb-icon-btn", "aria-label": "폴더 메뉴", onClick: (e) => folderMenu(e.currentTarget, f.id) }, ico("more", 18))),
-        list.length ? h("div", { class: "strip" }, ...list.map((c) => charCard(c, f.id, list))) : h("span", { class: "rb-muted", style: "white-space:normal" }, "아직 캐릭터가 없어요. 캐릭터 카드를 여기로 끌어다 놓거나, 카드를 고른 뒤 ‘폴더에 넣기’를 눌러요."));
+        (list.length || subF.length) ? h("div", { class: "strip" }, ...subF.map((g) => subTile(g)), ...list.map((c) => charCard(c, f.id, list))) : h("span", { class: "rb-muted", style: "white-space:normal" }, "비어 있어요. 캐릭터 카드나 폴더를 여기로 끌어다 놓아요."));
       row.classList.toggle("cur", isCur("folder", f.id));
       dragSource(row.querySelector(".hd"), () => ({ kind: "folder", id: f.id }));
       dropTarget(row, {
         mode: (p) => (p.kind === "folder" ? "y3" : "into"),
         ok: (p) => p.kind === "char" || (p.kind === "folder" && p.id !== f.id),
+        hint: (p, z, alt) => p.kind === "char" ? `‘${f.name}’ 안에 ${alt ? "복사" : "넣기"}${p.ids.length > 1 ? ` (${p.ids.length}명)` : ""}` : z === "into" ? `‘${f.name}’ 안으로` : `‘${f.name}’ ${z === "before" ? "위" : "아래"}에 놓기`,
         run: (p, z, copy) => {
           if (p.kind === "char") return dropChars(p, f.id, null, copy);
           if (z === "into") return dropFolder(p.id, f.id, null);

@@ -1018,3 +1018,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 드래그(HTML5 DnD, `studio.js`의 `dragSource`/`dropTarget`): 캐릭터 카드→폴더 줄·경로 칩(전체›…)·다른 카드 앞뒤·바닥 영역, 폴더→다른 폴더 안/앞뒤/경로 칩, 씬 카드→같은 캐릭터 순서·아래 '다른 캐릭터로' 줄. Alt/⌥=복사. 엔진: `project.js`의 `moveChars/reorderChars/placeFolder/reorderScenes/moveScenesToChar`(단위 시험 3개). e2e는 DragEvent를 직접 보냄(`dnd` 헬퍼).
 - 샘플링/모델: 토글마다 설명 한 줄, legacy UC·바이브 합은 '고급' 접이식으로.
 - 미확인: 터치 화면(리스바드·모바일)에서 HTML5 끌기가 되는지 — 안 되면 포인터 기반 끌기로 바꿔야 함. 실기기 미확인.
+- (14시 50분) 폴더만 있고 캐릭터 0명일 때 폴더가 안 보이던 것 수정(빈 화면 조건). 하위 폴더를 상위 폴더 줄 안에 타일(`subTile`, 비어도 보임)로. 끌 때 놓을 곳 위에 '‘X’ 안에 넣기/위에 놓기' 라벨(`data-drop-hint`).

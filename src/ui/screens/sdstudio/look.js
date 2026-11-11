@@ -93,6 +93,10 @@ export var CSS = `
 .sds-card.drop-before::after{left:0}.sds-card.drop-after::after{right:0}
 .sds-frow.drop-into,.sds-grid.drop-into,.sds-rootdrop.drop-into,.sds-crumbs .rb-chip.drop-into,.sds-tray .rb-chip.drop-into{outline:2px solid var(--rb-acc);outline-offset:1px;background:var(--rb-sel-bg,var(--rb-surf2))}
 .sds-frow.drop-before{box-shadow:0 -4px 0 var(--rb-acc)}.sds-frow.drop-after{box-shadow:0 4px 0 var(--rb-acc)}
+.sds-frow{position:relative}
+[data-drop-hint]::before{content:attr(data-drop-hint);position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:5;padding:3px 10px;border-radius:999px;background:var(--rb-acc-grad);color:var(--rb-on-acc);font-size:12px;font-weight:800;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.sds-crumbs .rb-chip{position:relative}
+.sds-subf.drop-into{outline:2px solid var(--rb-acc);outline-offset:1px}
 .sds-rootdrop{display:none;border:2px dashed var(--rb-line3);border-radius:var(--rb-r3);padding:16px;text-align:center;color:var(--rb-sub);font-size:13px}
 .sds-dragging .sds-rootdrop{display:block}
 .sds-tray{display:none;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border:2px dashed var(--rb-line3);border-radius:var(--rb-r3);position:sticky;bottom:0;background:var(--rb-win);margin-top:6px}

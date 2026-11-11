@@ -297,6 +297,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await dnd(page, `.sds-frow.sds-folder[data-id="${f2}"] .hd`, `.sds-frow.sds-folder[data-id="${pr.folders[0].id}"]`); await page.waitForTimeout(250);
   pr = await sdProj(page);
   ok("폴더를 다른 폴더 줄 가운데에 끌면 그 안으로", pr.folders.find((f) => f.id === f2).parent === pr.folders[0].id);
+  ok("하위 폴더가 상위 폴더 줄 안에 타일로 보임", (await page.locator(`.sds-frow .sds-subf[data-id="${f2}"]`).count()) === 1);
   await page.locator(".sds-frow .sds-fopen").click(); await page.waitForTimeout(80); await page.locator(".sds-frow .sds-fopen").click(); await page.waitForTimeout(250);
   await dnd(page, `.sds-frow.sds-folder[data-id="${f2}"] .hd`, "#sds-crumbs .rb-chip"); await page.waitForTimeout(250);
   pr = await sdProj(page);
