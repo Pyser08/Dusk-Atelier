@@ -1,4 +1,4 @@
-// 도구 → 업데이트 설정: 새 봇 자동 감지, 받은 사본 정리, 채팅 백업
+// 도구 → 업데이트 설정: 업데이트 알림, 새 봇 자동 감지, 받은 사본 정리, 채팅 백업
 import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
 import { btn, iconBtn, setSwitch, switchEl } from '../kit.js';
@@ -66,6 +66,7 @@ export async function renderUpdateSettings(ctx) {
     h(
       "div",
       { style: "display:flex;flex-direction:column;gap:10px" },
+      row("updateNotice", "info", "업데이트 알림", "Dusk 새 버전·애드온 업데이트(새로고침 필요)·새 애드온이 나오면 리스 화면 오른쪽 위에 작게 알려요. 끄면 띄우지 않아요. 애드온은 꺼도 그대로 자동으로 받아요."),
       row("autoDetect", "refresh", "새로 가져온 봇 자동 감지", "리스에서 봇을 가져오면 기존 봇의 새 버전인지 확인하고 \"이어 붙일까요?\"라고 물어요. 몇 초마다 봇 목록과 봇 목록 끝을 가볍게 확인하고, 모듈은 20초마다(가져오기 직후엔 3초마다) 확인해요. 리스 메인 화면에 끌어다 놓아 가져와도 잡혀요. 메인 화면 접근을 허락하면 + 메뉴에 'Dusk Atelier로 업데이트' 버튼도 생겨요."),
       row("trashCopies", "trash", "이어 붙인 뒤 받은 사본을 휴지통으로", "업데이트가 끝나면 새로 가져온 사본 봇을 휴지통으로 옮겨요. 대화가 생긴 사본은 건드리지 않아요.", node ? null : "이 앱(원본 RisuAI 웹·데스크톱)에서는 자동 정리가 안 돼요. 사본은 직접 지워 주세요."),
       statusCard(ctx),

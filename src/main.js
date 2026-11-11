@@ -12,7 +12,7 @@ import { h } from './ui/dom.js';
 import { iconMarkup } from './ui/icons.js';
 import { createApp } from './ui/app.js';
 import { createHostToast } from './ui/toast.js';
-import { createWatcher } from './ui/watch.js';
+import { createWatcher, readUi } from './ui/watch.js';
 import { CSS2 } from './ui/styles.js';
 import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets } from './data/presets.js';
 import { createLoreRuntime } from './data/lorerules.js';
@@ -245,16 +245,20 @@ async function start() {
   globalThis.__duskLib = ADDON_LIB; globalThis.__duskVersion = VERSION;   // 애드온이 코어 모듈을 다시 넣지 않고 함께 쓴다(tools/build-addons.mjs)
   // 훅 있는 애드온(장기기억·Erosync) 업데이트를 받아 두면 새로고침을 부탁한다: 리스 화면 알림 → 못 띄우면 Dusk 창 안 알림
   const pendingNames = new Set();
+  // 업데이트 알림(새 버전·새로고침·새 애드온): 설정 → 업데이트 설정에서 끔
+  const noticeOn = async () => { try { return (await readUi(api))?.updateNotice !== false; } catch { return true; } };
   const askRefresh = ({ name, version }) => {
     pendingNames.add(`${name} v${version}`);
     const text = `${[...pendingNames].join(", ")} 업데이트를 받았어요. 리스를 새로고침하면 적용돼요.`;
-    toast.show({ title: "새로고침해 주세요", text, action: "눌러서 닫기", ms: 60e3 }).then((ok) => { if (!ok) app?.ctx?.toast?.(text, { seconds: 15 }); }).catch(() => app?.ctx?.toast?.(text, { seconds: 15 }));
+    noticeOn().then((on) => { if (!on) return;
+      toast.show({ title: "새로고침해 주세요", text, action: "눌러서 닫기", ms: 60e3, icon: "⬇", compact: true }).then((ok) => { if (!ok) app?.ctx?.toast?.(text, { seconds: 15 }); }).catch(() => app?.ctx?.toast?.(text, { seconds: 15 })); });
   };
   // 받지 않은 새 애드온이 올라오면 리스 화면 오른쪽 위에 알린다(버전만 오른 것은 알리지 않음). 누르면 설정의 애드온 목록으로
   const newAddons = (list) => {
     const text = `${list.map((a) => a.name).join(", ")} — 홈 → 애드온에서 받을 수 있어요.`;
     const go = () => app.open({ tab: "settings" }).then(() => setTimeout(() => { try { app.ctx.win?.document?.getElementById("rb-addons")?.scrollIntoView({ block: "start" }); } catch { /* 없음 */ } }, 300)).catch(() => {});
-    toast.show({ title: "새 애드온이 나왔어요", text, action: "눌러서 보기", icon: "🧩", onClick: go, ms: 30e3 }).then((ok) => { if (!ok) app?.ctx?.toast?.(text, { seconds: 10 }); }).catch(() => app?.ctx?.toast?.(text, { seconds: 10 }));
+    noticeOn().then((on) => { if (!on) return;
+      toast.show({ title: "새 애드온이 나왔어요", text, action: "눌러서 보기", icon: "🧩", onClick: go, ms: 30e3, compact: true }).then((ok) => { if (!ok) app?.ctx?.toast?.(text, { seconds: 10 }); }).catch(() => app?.ctx?.toast?.(text, { seconds: 10 })); });
   };
   const addons = createAddons(api, { core: VERSION, onPendingRestart: askRefresh, onNewAddons: newAddons, ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async (tab) => { await app.open(tab ? { tab } : undefined).catch(() => {}); } } });   // 반환값 없음: 애드온 콜백이 그대로 돌려주면 호스트로 복제가 안 돼요
   app.ctx.addons = addons;
@@ -285,8 +289,8 @@ async function start() {
   memoryRef.toast = (t) => app.ctx.toast(t, { seconds: 8 });
   refreshPersonaHandlers().catch(() => {
   });
-  // 새 버전이 있으면 메인 화면 오른쪽 위에 큰 알림 (켜질 때 한 번)
-  setTimeout(() => startHostUpdateToast(api, { version: VERSION, log: (m) => console.log(`[${TITLE}] ${m}`) }).catch(() => {}), 4000);
+  // 새 버전이 있으면 메인 화면 오른쪽 위에 작은 알림 (켜질 때 한 번, 업데이트 알림을 끄면 안 띄움)
+  setTimeout(async () => { if (await noticeOn()) startHostUpdateToast(api, { version: VERSION, log: (m) => console.log(`[${TITLE}] ${m}`) }).catch(() => {}); }, 4000);
   (async () => {
     const data = await loadPresets(api);
     const device = isMobileDevice() ? "mobile" : "desktop";

@@ -1,4 +1,4 @@
-# Dusk Atelier 소스 구조 지도 (v2.1.2 기준, tools/source-map.mjs로 자동 생성)
+# Dusk Atelier 소스 구조 지도 (v2.1.3 기준, tools/source-map.mjs로 자동 생성)
 
 > **다른 AI/새 세션 인계:** 먼저 `HandOff/README.md` → `HandOff/STATE.md` → `HandOff/TASK-MAP.md` 순서로 읽는다.
 
@@ -6,7 +6,7 @@
 
 ## 빌드·테스트·릴리즈
 - 진입 `src/main.js` → esbuild(`tools/build.mjs`)로 `dusk_atelier.js` 한 파일(IIFE). `__VERSION__`·`__CHANGELOG__`는 빌드 define. 산출물도 git에 포함되니 소스 수정 후 `node tools/build.mjs`로 다시 빌드(`npm run check`로 동일 확인).
-- 테스트 `node --test` (tests/*.test.js, 순수 엔진 위주, v{{VERSION}} 기준 1428개). UI는 `node tests/e2e/run-smoke.mjs`(가짜 ctx 브라우저 연기 시험)·Playwright로 확인.
+- 테스트 `node --test` (tests/*.test.js, 순수 엔진 위주, v{{VERSION}} 기준 1433개). UI는 `node tests/e2e/run-smoke.mjs`(가짜 ctx 브라우저 연기 시험)·Playwright로 확인.
 - 버전: `package.json` + `CHANGELOG.md` 맨 위 `## vX.Y.Z (날짜)` 섹션(앱의 '새로 바뀐 점'에 표시) + `docs/GUIDE-vX.Y.Z.md`.
 - 아카 글 HTML: `docs/arca/v버전.html` (형식은 프로젝트 문서 arca-post-preset.html, 이전 형식은 arca-post-header.md).
 - 주의: `git remote set-url`은 차단됨. 저장소가 얕은 복제일 수 있으니 병합 전 `git fetch origin main`/`--depth=N origin 브랜치`. 클라우드 샌드박스는 npm 레지스트리가 막혀 있을 수 있음 → esbuild·acorn·eslint-scope는 `/opt/npm-tools/node_modules/`(또는 `/opt/node-tools/`)에서 `node_modules/`로 링크.
@@ -20,7 +20,7 @@
 ## 파일 목록
 ### src/
 - `addonlib.gen.js` (526줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
-- `main.js` (309줄) 
+- `main.js` (313줄) 
 
 ### src/cellar/
 - `node-entry.js` (9줄) Dusk Cellar(서버)에서 장기 기억 분석을 돌리는 Node용 진입점 (v1.9.3, Cella… — createMemoryRunner, createMemoryStoreV3, INDEX_KEY, FOLDER_PREFIX, callWriterModel
@@ -199,7 +199,7 @@
 - `hypaimport.js` (84줄) v1.8.1 HypaPlus 가져오기(순수): HypaPlus의 요약 노드(event/facts)를 … — HYPA_STATE_PREFIX, MAX_ACT, parseHypaKey, readHypaNodes, cut
 - `image.js` (177줄) — imageSize, readMetadata, stripMetadata, canEncode, convertImage
 - `imghint.js` (90줄) v1.8.2 이미지 태그 알림 (순수 로직, 추가 AI 호출 없음). — HINT_MARK, textOf, presentChars, buildHint, insertHint
-- `imgtagfix.js` (420줄) v1.8.2 AI 이미지 태그 교정 (순수 로직, 모델 호출 없음). — norm, stem, buildAssetIndex, fixImgTags, readTags
+- `imgtagfix.js` (425줄) v1.8.2 AI 이미지 태그 교정 (순수 로직, 모델 호출 없음). — norm, stem, buildAssetIndex, fixImgTags, readTags
 - `impact.js` (62줄) 업데이트 영향 미리보기 (1.4.6) — moduleImpact, characterImpact, impactHtml, impactText
 - `index.js` (20줄) — rpackDecode, assetKey, sha256, sha256js, Cancelled
 - `issuehelp.js` (40줄) 편집기 검증 경고의 '왜 뜨나요 / 어떻게 하나요' 설명 (순수). 문구 패턴으로 찾고, 없으면 일반… — explainIssue, issueKey, splitIssues
@@ -234,9 +234,9 @@
 - `memoryv3.js` (58줄) 장기기억 v3 순수 변환: v2 → v3, 리수폿 백업/저장소 덤프 → v3 조각, 봇 전체 인물 모… — V3, indexV2toV3, folderV2toV3, parsePotBundle, botPeople
 - `merge.js` (37줄) 합치기(RisuTide) 연결: 인물·세계관 가져오기, 전체 합치기, 출처별 업데이트, 떼어내기, A… — adaptCharacterPrompt, conflictTidyPrompt, mergeInput, prepareScopedSelection, applyScopedSelection
 - `merge3.js` (196줄) — charIncomingView, modIncomingView, pickView, merge3, charSpec
-- `modcompat.js` (394줄) 모듈 호환(순수, 애드온 modcompat 전용 — 코어가 import하지 않는다). — MEDIA_EXT, keyOf, assetNames, buildRegistry, parseScript
+- `modcompat.js` (417줄) 모듈 호환(순수, 애드온 modcompat 전용 — 코어가 import하지 않는다). — MEDIA_EXT, keyOf, assetNames, buildRegistry, parseScript
 - `modcompatprompt.js` (104줄) 모듈 호환 — 모델 안내(순수). 모델이 모듈 이미지 이름을 '봇 자신의 태그 모양'으로 쓰게 요청 … — MARK, exampleTemplate, promptSubjects, buildBlock, injectBlock
-- `modcompatvars.js` (84줄) 모듈 호환 — 인물 감지 변수(순수). 모듈 로어북이 {{getvar::인물}}로 인물 소개를 숨기고… — getvarNames, managedNames, inferFoundValue, varUpdates, setvarText
+- `modcompatvars.js` (133줄) 모듈 호환 — 인물 감지 변수(순수). 모듈 로어북이 {{getvar::인물}}로 인물 소개를 숨기고… — getvarNames, managedNames, luaSegments, foundHints, luaKeywords
 - `modelcfg.js` (93줄) 모델 설정 순수 로직 (v1.6.4 3단계) — 리수폿 모델 프리셋을 Dusk AI 선택(pick)으… — STAGES, STAGE_LABEL, defaultCfg, normalizeCfg, addPreset
 - `module.js` (153줄) — loreIdentity, mergeLorebook, planAssets, buildMergedModule, fieldChanges
 - `patch.js` (148줄) — viewKeys, buildPatch, parsePatch, planPatch, applyPatch
@@ -361,7 +361,7 @@
 - `entrypicker.js` (73줄) 항목 고르기: 폴더 트리 + 검색 모달. 드롭다운(select) 대신 쓴다.
 - `ext.js` (34줄) 애드온이 코어 화면에 끼어드는 자리(2.0.0). 애드온이 없으면 아무것도 등록되지 않아 코어에 흔적…
 - `fields.js` (44줄) 값을 고르는 칸(슬라이더 + 숫자 입력)과 선택 칸. 브라우저 기본 모양 대신 Dusk 스타일(.rb…
-- `hostupdate.js` (85줄) 리스를 켤 때 새 버전이 있으면 메인 화면 오른쪽 위에 큰 알림 카드를 잠깐 띄운다 (닫기 버튼 · …
+- `hostupdate.js` (85줄) 리스를 켤 때 새 버전이 있으면 메인 화면 오른쪽 위에 작은 알림을 잠깐 띄운다(설정 → 업데이트 설…
 - `icons.js` (73줄) 
 - `kit.js` (627줄) 
 - `legacy.js` (1879줄) 
@@ -382,7 +382,7 @@
 - `tabs.js` (122줄) 탭 목록과 설명 문구 (홈 카드·위쪽 줄·도움말이 같이 쓴다). 화면 코드 없음.
 - `theme.js` (408줄) v1.6.3 UI 리뉴얼: 밝은 회백 + 코랄 포인트가 기본. 색은 전부 여기 토큰에서만 나온다.
 - `themekit.js` (80줄) v1.8.3 꾸미기 카탈로그: 테마 묶음 · 강조 색 · 그라데이션 · 모양 · 글꼴. 순수 데이터라…
-- `toast.js` (61줄) 리스 메인 화면 오른쪽 위에 띄우는 알림 (메인 화면 접근 권한이 있을 때만)
+- `toast.js` (64줄) 리스 메인 화면 오른쪽 위에 띄우는 알림 (메인 화면 접근 권한이 있을 때만)
 - `tooltip.js` (88줄) 말풍선 도움말: 마우스를 올리면(0.4초), 모바일은 길게 누르면(0.5초) title 글자를 보여 …
 - `tour.js` (129줄) 처음 둘러보기: 다시 설치한 사람에게만 자동으로 뜬다. 탭을 하나씩 설명하며 해당 버튼을 강조하고,
 - `undo.js` (96줄) 글 칸 되돌리기·다시 하기 (1.4.6)
@@ -447,7 +447,7 @@
 - `themebuilder.js` (349줄) 테마 빌더 화면: 스타일 → 대표색 → 밝기만 고르면 테마 완성. 결과는 일반 테마로 저장된다.
 - `themestudio.js` (438줄) 테마 스튜디오: 계열(일반 리스/포켓리스)별 테마 편집 · 실시간 미리보기 · 적용 · 공유
 - `tools.js` (409줄) 
-- `updsettings.js` (76줄) 도구 → 업데이트 설정: 새 봇 자동 감지, 받은 사본 정리, 채팅 백업
+- `updsettings.js` (77줄) 도구 → 업데이트 설정: 업데이트 알림, 새 봇 자동 감지, 받은 사본 정리, 채팅 백업
 - `workshoplink.js` (108줄) 봇빌더 연동 화면 (v1.8.1)
 
 ### src/ui/screens/cards/

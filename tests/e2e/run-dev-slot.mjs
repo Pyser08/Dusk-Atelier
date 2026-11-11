@@ -49,5 +49,13 @@ await page.evaluate(() => window.__off());
 await pick("c:c2");
 await page.click("#rb-dev-edit"); await page.waitForTimeout(600);
 ok("떼면 사라짐('에셋'은 남음)", (await page.locator("#t-slot").count()) === 0 && (await page.locator("#rb-edit-assets").count()) === 1);
+await closeEditor();
+// 업데이트 알림 끄기(2.1.3): 설정 → 업데이트 설정 맨 위 스위치, 기본 켜짐 → 끄면 ui.updateNotice = false
+await page.evaluate(() => window.__app.ctx.go("settings", "updset")); await page.waitForTimeout(500);
+const sw = page.locator(".rb-row", { hasText: "업데이트 알림" }).first().locator("[role=switch], button, input").last();
+const before = await page.evaluate(() => window.__app.ctx.prefs.ui?.updateNotice);
+ok("업데이트 설정: ‘업데이트 알림’ 줄이 맨 위", (await page.locator(".rb-row .name").first().innerText()) === "업데이트 알림");
+await sw.click(); await page.waitForTimeout(300);
+ok("끄면 ui.updateNotice = false", before !== false && (await page.evaluate(() => window.__app.ctx.prefs.ui?.updateNotice)) === false);
 ok("오류 없음", !errs.length, errs.join(";"));
 await browser.close(); process.exit(out.every(Boolean) ? 0 : 1);

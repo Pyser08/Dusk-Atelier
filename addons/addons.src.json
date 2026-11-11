@@ -1,119 +1,13 @@
-{
- "format": 1,
- "addons": [
-  {
-   "id": "manage",
-   "name": "캐릭터·모듈·플러그인 관리",
-   "category": "manage",
-   "version": "0.1.2",
-   "minCore": "2.0.0",
-   "hooks": false,
-   "desc": "캐릭터를 폴더로 정리하고 에셋·로어북을 다듬고, 모듈을 켜고 끄고 연결하고, 플러그인 새 버전을 확인해요. 가져오기는 이 애드온 없이도 돼요."
-  },
-  {
-   "id": "provider",
-   "name": "프로바이더 (실험)",
-   "category": "lab",
-   "version": "0.2.3",
-   "minCore": "2.0.0",
-   "hooks": true,
-   "desc": "리스 모델 목록에 ‘Dusk 자동’과 내 프로필을 등록하고, API 키 보관·모델 고르기·리스 도구 확인을 해요. 설정 → 실험 기능을 켜야 써요."
-  },
-  {
-   "id": "chattheme",
-   "name": "채팅 테마 만들기",
-   "category": "make",
-   "version": "0.1.1",
-   "minCore": "2.0.0",
-   "hooks": false,
-   "desc": "채팅 테마 빌더·테마 스튜디오로 내 채팅 테마를 만들고 주고받아요. 만든 테마는 이 애드온이 없어도 계속 적용돼요."
-  },
-  {
-   "id": "aibuild",
-   "name": "AI로 봇·페르소나 만들기",
-   "category": "make",
-   "version": "0.1.4",
-   "minCore": "2.0.0",
-   "hooks": true,
-   "desc": "말로 요청해 봇·모듈을 만들고 고치는 AI 창·AI로 제작 탭, AI로 페르소나 만들기를 써요."
-  },
-  {
-   "id": "memory",
-   "name": "장기기억·관계도",
-   "category": "memory",
-   "version": "0.2.7",
-   "minCore": "2.0.0",
-   "hooks": true,
-   "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요."
-  },
-  {
-   "id": "cards",
-   "name": "기억카드",
-   "category": "memory",
-   "version": "0.1.1",
-   "minCore": "2.0.0",
-   "hooks": false,
-   "requires": [
-    "memory"
-   ],
-   "desc": "장기 기억으로 카드를 만들고 꾸미고, 그 카드로 새 봇을 이어 가요. 장기기억·관계도 애드온이 필요해요."
-  },
-  {
-   "id": "erosync",
-   "name": "Erosync",
-   "category": "memory",
-   "version": "0.1.2",
-   "minCore": "2.0.0",
-   "hooks": true,
-   "requires": [
-    "memory"
-   ],
-   "desc": "NSFW 장면 강화 — 인물 성향·목표를 읽어 다음 응답의 장면 계획을 넣어요. 장기기억·관계도 애드온이 필요해요."
-  },
-  {
-   "id": "protlink",
-   "name": "ProtLink+",
-   "category": "manage",
-   "version": "0.1.2",
-   "minCore": "2.0.0",
-   "hooks": false,
-   "desc": "Proton Drive 공유 링크를 캐릭터·모듈·플러그인에 연결해 두고, 새 파일이 올라오면 알려 주고 받아서 업데이트로 넘겨요."
-  },
-  {
-   "id": "widgets",
-   "name": "위젯",
-   "category": "look",
-   "version": "0.1.2",
-   "minCore": "2.0.0",
-   "hooks": false,
-   "desc": "음악·사진·시계·최근 대화·메모·D-day·타이머 등을 한 화면에 모은 위젯 홈을 써요."
-  },
-  {
-   "id": "modcompat",
-   "name": "모듈 호환",
-   "category": "manage",
-   "version": "0.1.1",
-   "minCore": "2.1.0",
-   "hooks": true,
-   "desc": "봇이 어떻게 만들어졌든 켜 둔 모듈의 이미지가 그 봇 이미지와 같은 모양으로 나오게 해요. 봇 정규식이 모듈 이미지를 지우지 못하게 지키고, 모델에게 모듈 인물·표정 이름을 알려 줘요."
-  },
-  {
-   "id": "stealth",
-   "name": "더스크 스텔스",
-   "category": "look",
-   "version": "0.3.47",
-   "minCore": "2.0.0",
-   "hooks": false,
-   "desc": "리스 채팅을 클로드·GPT·코덱스·제미나이·딥시크 같은 다른 AI 채팅 앱처럼 보이게 꾸며요. 끄면 원래 모양으로 되돌려요."
-  },
-  {
-   "id": "sdstudio",
-   "name": "에셋 제작 (SDStudio)",
-   "category": "make",
-   "version": "0.1.0",
-   "minCore": "2.1.1",
-   "hooks": false,
-   "desc": "봇·모듈 편집 화면에서 SDStudio처럼 NovelAI 그림을 한꺼번에 뽑고, 씬마다 대표를 골라 봇 에셋으로 넣어요. SDStudio 백업도 가져와요."
-  }
- ]
-}
+{ "format": 1, "addons": [
+  { "id": "manage", "name": "캐릭터·모듈·플러그인 관리", "category": "manage", "version": "0.1.2", "minCore": "2.0.0", "hooks": false, "desc": "캐릭터를 폴더로 정리하고 에셋·로어북을 다듬고, 모듈을 켜고 끄고 연결하고, 플러그인 새 버전을 확인해요. 가져오기는 이 애드온 없이도 돼요." },
+  { "id": "provider", "name": "프로바이더 (실험)", "category": "lab", "version": "0.2.3", "minCore": "2.0.0", "hooks": true, "desc": "리스 모델 목록에 ‘Dusk 자동’과 내 프로필을 등록하고, API 키 보관·모델 고르기·리스 도구 확인을 해요. 설정 → 실험 기능을 켜야 써요." },
+  { "id": "chattheme", "name": "채팅 테마 만들기", "category": "make", "version": "0.1.1", "minCore": "2.0.0", "hooks": false, "desc": "채팅 테마 빌더·테마 스튜디오로 내 채팅 테마를 만들고 주고받아요. 만든 테마는 이 애드온이 없어도 계속 적용돼요." },
+  { "id": "aibuild", "name": "AI로 봇·페르소나 만들기", "category": "make", "version": "0.1.4", "minCore": "2.0.0", "hooks": true, "desc": "말로 요청해 봇·모듈을 만들고 고치는 AI 창·AI로 제작 탭, AI로 페르소나 만들기를 써요." },
+  { "id": "memory", "name": "장기기억·관계도", "category": "memory", "version": "0.2.7", "minCore": "2.0.0", "hooks": true, "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요." },
+  { "id": "cards", "name": "기억카드", "category": "memory", "version": "0.1.1", "minCore": "2.0.0", "hooks": false, "requires": ["memory"], "desc": "장기 기억으로 카드를 만들고 꾸미고, 그 카드로 새 봇을 이어 가요. 장기기억·관계도 애드온이 필요해요." },
+  { "id": "erosync", "name": "Erosync", "category": "memory", "version": "0.1.2", "minCore": "2.0.0", "hooks": true, "requires": ["memory"], "desc": "NSFW 장면 강화 — 인물 성향·목표를 읽어 다음 응답의 장면 계획을 넣어요. 장기기억·관계도 애드온이 필요해요." },
+  { "id": "protlink", "name": "ProtLink+", "category": "manage", "version": "0.1.2", "minCore": "2.0.0", "hooks": false, "desc": "Proton Drive 공유 링크를 캐릭터·모듈·플러그인에 연결해 두고, 새 파일이 올라오면 알려 주고 받아서 업데이트로 넘겨요." },
+  { "id": "widgets", "name": "위젯", "category": "look", "version": "0.1.2", "minCore": "2.0.0", "hooks": false, "desc": "음악·사진·시계·최근 대화·메모·D-day·타이머 등을 한 화면에 모은 위젯 홈을 써요." }
+  ,{ "id": "modcompat", "name": "모듈 호환", "category": "manage", "version": "0.1.4", "minCore": "2.1.0", "hooks": true, "desc": "봇이 어떻게 만들어졌든 켜 둔 모듈의 이미지가 그 봇 이미지와 같은 모양으로 나오게 해요. 봇 정규식이 모듈 이미지를 지우지 못하게 지키고, 모델에게 모듈 인물·표정 이름을 알려 줘요." }
+  ,{ "id": "stealth", "name": "더스크 스텔스", "category": "look", "version": "0.3.47", "minCore": "2.0.0", "hooks": false, "desc": "리스 채팅을 클로드·GPT·코덱스·제미나이·딥시크 같은 다른 AI 채팅 앱처럼 보이게 꾸며요. 끄면 원래 모양으로 되돌려요." }
+] }

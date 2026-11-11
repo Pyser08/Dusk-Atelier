@@ -41,7 +41,7 @@ for (const [label, vp] of [["PC", { width: 1280, height: 860 }], ["모바일", {
   await page.waitForTimeout(1000);
   // 훅: 실제 번들 코드로 저장·표시·요청
   const hk = await page.evaluate(async () => { const h = window.__mcHooks; const o = await h.output(`<img="Ryu Hae-yeon smile">`); const d = await h.display(o); const p = h.process(o); const req = await h.beforeRequest([{ role: "system", content: "x" }, { role: "user", content: "hi", memo: "a" }], "model"); return { changed: o !== `<img="Ryu Hae-yeon smile">`, d, p, block: req.some((m) => String(m.content).startsWith("[Dusk · module images]")) }; });
-  ok(`${label}: 훅 — 저장 때 지키고 표시·요청 때 되돌림`, hk.changed && hk.d === `<img="Ryu Hae-yeon smile">` && hk.p === hk.d, JSON.stringify(hk));
+  ok(`${label}: 훅 — 저장 때 지키고 표시·요청 때 되돌림`, hk.changed && hk.d.trim() === `<img="Ryu Hae-yeon smile">` && hk.p === hk.d, JSON.stringify(hk));
   ok(`${label}: 훅 — 요청에 안내 블록`, hk.block);
   // 끄기 → 저장되고 훅이 멈춘다
   await page.evaluate(() => { const row = [...document.querySelectorAll(".rb-main .rb-toggle-row, .rb-main [class*=toggle]")].find((x) => /이 봇에서 모듈 호환 쓰기/.test(x.textContent)); (row?.querySelector("input,button,[role=switch]") ?? row)?.click(); });

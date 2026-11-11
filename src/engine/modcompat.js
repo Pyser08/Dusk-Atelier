@@ -236,9 +236,32 @@ export function protectOutput(text, ctx) {
     const how = guardFor(tag, ctx.scripts, ctx.shapes, hit.name);
     const next = how === "soft" ? softWrap(tag) : how === "hard" ? hardWrap(tag) : tag;
     if (next !== h.text) changed.push({ from: h.text, to: tag, how });
-    s = s.slice(0, h.start) + next + s.slice(h.end);
+    let before = s.slice(0, h.start), after = s.slice(h.end);
+    // 감싸면 봇의 ‘꾸밈’ 정규식(태그 앞뒤 줄바꿈 등)도 비켜 가므로, 봇 이미지였다면 받았을 앞뒤 공백을 대신 붙인다
+    if (how !== "none") {
+      const pad = botPadding(h, ctx);
+      if (pad) { before = before.replace(/[ \t\r\n]*$/, "") + pad.pre; after = pad.post + after.replace(/^[ \t\r\n]*/, ""); }
+    }
+    s = before + next + after;
   }
   return { text: s, changed: changed.reverse() };
+}
+// 같은 모양의 봇 이미지 태그를 봇 '응답 수정' 정규식에 넣어 보고, 태그 앞뒤 공백이 어떻게 바뀌는지 본다.
+// 바뀌지 않거나(그대로) 봇 이미지가 없으면 null. → { pre, post }
+const PAD_A = "\uE0F0", PAD_B = "\uE0F1";
+export function botPadding(h, ctx) {
+  const botName = ctx?.reg?.bot?.values?.().next?.().value;
+  if (!botName) return null;
+  const sample = renameIn(h, String(botName).replace(MEDIA_EXT, ""));
+  if (sample === h.text) return null;
+  const probe = `${PAD_A} \n${sample}\n ${PAD_B}`;
+  const out = runChain(probe, ctx.scripts, "editoutput");
+  const a = out.indexOf(PAD_A), t = out.indexOf(sample), b = out.indexOf(PAD_B);
+  if (a < 0 || t < 0 || b < 0 || !(a < t && t < b)) return null;
+  const pre = out.slice(a + 1, t), post = out.slice(t + sample.length, b);
+  if (!/^\s*$/.test(pre) || !/^\s*$/.test(post)) return null;
+  if (pre === " \n" && post === "\n ") return null;
+  return { pre: pre.replace(/^ /, ""), post: post.replace(/ $/, "") };
 }
 // 태그 안의 이름 부분만 바꾼다(캡처 1개 틀일 때). 아니면 원래 태그.
 function renameIn(h, name) {
