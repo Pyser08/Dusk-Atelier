@@ -76,6 +76,17 @@
   - [ ] 다음: 봇/모듈 정보로 프롬프트 초안(ai.run)·감정별 한 번에 만들기·SDStudio 프리셋/월드컵·i2i
   - [ ] CHANGELOG·안내서는 사용자에게 보이는 기능이 생길 때(슬롯만으로는 보이는 변화 없음)
 
+## 최근 세션 (2026-11-11 20시 — v2.1.2 릴리스(main에 2.1.0 머지, 사용자 지시) / 이전 제목: 20시 — 태그 교정: 확장자 붙은 에셋 이름, 코어 수정·미릴리스)
+- 제보: 정혜(에셋 이름이 `X.webp`) + 향하율 모듈에서 태그 교정 켜면 경자 이미지 안 나옴. 원인: buildAssetIndex가 이름의 확장자를 떼고 색인해 교정 결과에서 `.webp`가 빠짐. 고침: 뗀 이름으로 읽되 entry.name·byName은 실제 이름(src/engine/imgtagfix.js buildAssetIndex/indexOf). 테스트 tests/imgtagfix.test.js 끝.
+- 참고: 그 전 “이미지 작게 나옴”(얼터네이트 헌터즈 V2 (2))은 사용자가 켠 다른 모듈 배경 CSS의 max-width:80px 탓으로 판명, Dusk 무관. modcompat 0.1.4 배포 완료.
+
+## 최근 세션 (2026-11-11 18시 — modcompat 0.1.3: 감싼 태그 앞뒤 공백)
+- 실기기 화면: 편집으로 넣은 테스트 태그가 작게 나옴 → 원인은 편집이라 봇 editoutput ‘에셋 커맨드 개행’(`\s*(<img=…>)\s*`→`\n\n$1\n\n`)이 안 돌아 태그들이 한 문단에 붙은 것(봇 이미지도 같이 작음, 패널이 없던 건 첫 메시지의 ※※ 표식을 지워서). 같은 일이 실제 생성에서도 감싼(soft/hard) 모듈 태그에 일어남 → `botPadding`: 같은 모양의 봇 에셋 태그를 봇 editoutput 사슬에 넣어(앞뒤 표식 \uE0F0/\uE0F1) 바뀐 앞뒤 공백을 감싼 태그에 그대로 붙임.
+
+## 최근 세션 (2026-11-11 저녁 — 얼터네이트 헌터즈 V2 모드팩 지원, modcompat 0.1.2)
+- 모드팩(.risum, 로어 792·정규식 15·에셋 4618·Lua 74KB) 분석: 자체 그리기 정규식(이름 목록 in, `{{raw::$1}}`)·화이트리스트·글노덮(@@position pt_GlobalNote) 있음 → 이미지는 기존 로직으로 keep/selfRender. 문제는 Lua에 `function onOutput`이 3번 정의돼 마지막(MD)만 살아, 앞의 700명 characterMap(나오면 "0")·MMH("1")가 안 돌아 NPC List [절약](`equal::{{getvar::이름}}::1`) 변수가 비어 있음.
+- `engine/modcompatvars.js`: `luaSegments`(맨 바깥 `function X(`/`X = async(function(` 단위, 같은 이름은 마지막만 live) → 봇·모듈 Lua 제외 판단은 live 코드만 / `foundHints`(죽은 정의 포함, 그 정의의 `isFound and "X"` → 인물별 found) / `luaKeywords`(`{ id=…, keywords={…} }`) → managed 항목에 found·키워드. varUpdates는 항목 found가 있으면 그것 우선. 실제 모드팩+더 많은 헌터들: 관리 503명(모드팩 443명 found 0, 4명 found 1).
+
 ## 최근 세션 (2026-11-11 1시 — 모듈 탭 전환·채팅 없이 설정·그룹 지원, manage 0.1.2·modcompat 0.1.1 배포)
 - 사용자: 모듈 탭 위에 크게 ‘모듈 / 모듈 병합’ 선택(애드온 둘만 수정) + 채팅 안 들어가도 설정 + 그룹 채팅도 되게.
 - manage `addons/manage/index.js` `renderModulesTab`: 위에 segmented(📦 모듈 / 🧩 모듈 병합, `ctx.state.modView`), 아래 칸(`.rb-modsw-body`)에 모듈 목록은 `Object.create(ctx)`로 main만 바꿔 core `renderModules` 그대로 / 모듈 병합은 `ext.get("svc","modcompat").render(el)`, 없으면 받기 안내. 코어 변경 없음.

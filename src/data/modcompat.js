@@ -80,7 +80,7 @@ export function createModCompat(api, { storage, log = (...a) => console.log("[Du
     const side = group ? await groupSide(ch, { wait }) : { assets: [...(ch.additionalAssets ?? []), ...(ch.emotionImages ?? [])], scripts: ch.customscript ?? [], lore: ch.globalLore ?? [], defaults: ch.defaultVariables ?? "", members: [] };
     const c = buildContext({ botAssets: side.assets, modules, preset, botScripts: side.scripts });
     // 그룹에서는 봇 트리거가 돌지 않는다(모듈 트리거만) → 봇 Lua가 다루는 인물도 없다
-    const botForVars = { defaultVariables: side.defaults, triggerscript: group ? [] : ch.triggerscript, globalLore: side.lore };
+    const botForVars = { defaultVariables: side.defaults, triggerscript: group ? [] : ch.triggerscript, globalLore: side.lore, customscript: side.scripts };
     const managed = managedNames({ modules, bot: botForVars, subjects: c.reg.subjects });
     const chaId = String(ch.chaId ?? "");
     return Object.assign(c, { ci, chi, chaId, botName: ch.name ?? "", group, members: side.members, modules, managed, botEntries: side.lore, botLua: group ? 0 : luaCount(ch.triggerscript), at: now(), cfg: botCfg(chaId) });
