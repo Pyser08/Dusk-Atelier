@@ -5,13 +5,13 @@
       "id": "manage",
       "name": "캐릭터·모듈·플러그인 관리",
       "category": "manage",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "minCore": "2.0.0",
       "hooks": false,
       "desc": "캐릭터를 폴더로 정리하고 에셋·로어북을 다듬고, 모듈을 켜고 끄고 연결하고, 플러그인 새 버전을 확인해요. 가져오기는 이 애드온 없이도 돼요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/manage.js",
-      "sha256": "a3bd9a811bc0ae3830ad800b0b90cb3c913746d80d65a716a247b994094ad2a9",
-      "size": 78055
+      "sha256": "0849d5f8a9216f098faad35a340316968ba927278e68fa310106b8c1b40d1071",
+      "size": 79135
     },
     {
       "id": "provider",
@@ -119,13 +119,13 @@
       "id": "modcompat",
       "name": "모듈 호환",
       "category": "manage",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "minCore": "2.1.0",
       "hooks": true,
       "desc": "봇이 어떻게 만들어졌든 켜 둔 모듈의 이미지가 그 봇 이미지와 같은 모양으로 나오게 해요. 봇 정규식이 모듈 이미지를 지우지 못하게 지키고, 모델에게 모듈 인물·표정 이름을 알려 줘요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/modcompat.js",
-      "sha256": "8b607ce384932b9aaa22372c54ed16b5add9e47b90594a1f5ad8b28f0e3f79e1",
-      "size": 30525
+      "sha256": "0601ecf4356e26810847374aba2cfdaac4f5cb352dee4dbb9d63418b51987bd3",
+      "size": 35335
     },
     {
       "id": "stealth",

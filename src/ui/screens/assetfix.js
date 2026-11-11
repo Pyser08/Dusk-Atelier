@@ -2,7 +2,7 @@
 // 방식: 엔진이 못 고친 것만 보조모델에(그런 게 없으면 AI 호출 없음) / 상황까지 전부(고른 범위 태그 전체를 보조모델이 검토, 호출 1번)
 import { h, replace } from "../dom.js";
 import { btn, modal, note, segmented } from "../kit.js";
-import { runAI } from "../../engine/runai.js";
+import { runAITask } from "../../engine/runai.js";
 import { loadPB } from "../../data/personabuilder.js";
 import { getCfg as getModelCfg } from "../../data/modelhub.js";
 import { scanReplies, aiItems, aiMessages, parseAiReply, changeRows, applyRows } from "../../engine/assetfix.js";
@@ -12,7 +12,7 @@ const WHY = { case: "대소문자·띄어쓰기", fuzzy: "비슷한 이름으로
 const LS_KEY = "dusk.assetfix.ui.v1";
 
 export async function openAssetFix(ctx, deps = {}) {
-  const run = deps.runAI ?? runAI;
+  const run = deps.runAI ?? ((...a) => runAITask("에셋 태그 고치기", ...a));
   const ais = await loadPB(ctx.api).then((d) => ({ ais: d.ais, ai: d.ai })).catch(() => ({ ais: [{ id: "default", name: "기본", mode: "submodel" }], ai: "default" }));
   const apis = await getModelCfg(ctx.api).then((c) => c.presets ?? []).catch(() => []);
   let ui = { n: 10, mode: "unresolved", instr: "" };

@@ -93,6 +93,8 @@ export async function openCharEditor(ctx, index, chaId, { startTab, draftChar = 
     view: charToView(ch),
     kindLabel: "봇 편집",
     idKey: "chaId",
+    target: draftChar ? null : { kind: "character", id: chaId, index },
+    openAssets: () => openCharAssets(ctx, index, chaId),
     infoLabels: CHAR_INFO_LABELS,
     infoTitle: "봇 정보",
     validate: (v) => validateModule(v),

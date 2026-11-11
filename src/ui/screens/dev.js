@@ -1,5 +1,5 @@
 import { validateModule } from './editor.js';
-import { openCharAssets, openCharEditor } from './chareditor.js';
+import { openCharEditor } from './chareditor.js';
 import { newCharacterBase, uniqueDisplayName } from '../../engine/character.js';
 import { createStore } from '../../engine/store.js';
 import { Busy, backupSnapshot, isGenerating } from '../../engine/safety.js';
@@ -301,7 +301,6 @@ var rowMeta = (p) => {
 function actions(ctx, all, p, obj) {
   const t = targetOf(all, p);
   const edit = () => (p.kind === "module" ? ctx.openEditor(p.id) : openCharEditor(ctx, t.i, p.id)).catch?.((e) => ctx.toast(e?.message ?? String(e), { error: true }));
-  const assets = () => (p.kind === "module" ? ctx.openAssets(p.id) : openCharAssets(ctx, t.i, p.id)).catch?.((e) => ctx.toast(e?.message ?? String(e), { error: true }));
   const checkpoint = async () => {
     const n = await promptDialog(ctx.win, { title: "체크포인트 저장", label: "메모 (도구 → 기록에 보여요)", value: p.version ? `v${p.version} 작업 중` : "작업 중", ok: "저장" });
     if (n === null) return;
@@ -425,7 +424,6 @@ function actions(ctx, all, p, obj) {
     "div",
     { style: "display:flex;gap:8px;flex-wrap:wrap" },
     btn("편집", { kind: "primary", icon: "edit", onClick: edit, id: "rb-dev-edit" }),
-    btn("에셋", { icon: "image", onClick: assets }),
     btn("체크포인트", { icon: "check", onClick: checkpoint, id: "rb-dev-checkpoint" }),
     btn("불러오기", { icon: "upload", onClick: importMenu, id: "rb-dev-import" }),
     btn("내보내기", { icon: "download", onClick: exportMenu, id: "rb-dev-export" })

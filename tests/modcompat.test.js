@@ -173,14 +173,15 @@ test("리스와 같은 순서: <order N>이 있으면 큰 것부터", () => {
 });
 
 // ---- 데이터 층(가짜 리스 api) ----
-function fakeApi({ bot, modules, chat = { message: [] } }) {
+function fakeApi({ bot, modules, chat = { message: [] }, chars = null, cur = 0 }) {
   const calls = { char: 0 };
+  const list = chars ?? [bot];
   const api = {
-    getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0,
-    getCharacterFromIndex: async () => { calls.char++; return structuredClone(bot); },
+    getCurrentCharacterIndex: async () => cur, getCurrentChatIndex: async () => (cur >= 0 ? 0 : -1),
+    getCharacterFromIndex: async (i) => { calls.char++; return list[i] ? structuredClone(list[i]) : null; },
     getChatFromIndex: async () => structuredClone(chat),
     setChatToIndex: async (ci, ti, c) => { chat.message = c.message; },
-    getDatabase: async (keys) => keys.includes("modules") ? { modules, enabledModules: modules.map((m) => m.id) } : {}
+    getDatabase: async (keys) => keys.includes("modules") ? { modules, enabledModules: modules.map((m) => m.id) } : keys.includes("characterOrder") ? { characterOrder: list.map((c) => c.chaId) } : {}
   };
   return { api, calls, chat };
 }
@@ -341,4 +342,52 @@ test("훅: 오래된 문맥이어도 같은 채팅이면 기다리지 않고 뒤
   assert.notEqual(res, "timeout");
   assert.notEqual(res, `<img="Ryu Hae-yeon smile">`);
   slow?.();
+});
+
+
+// ---- 채팅 없이 고르기 · 그룹 채팅 ----
+const groupCard = { type: "group", chaId: "g1", name: "헌터 모임", characters: ["hunter"], customscript: [], globalLore: [], chats: [] };
+
+test("채팅을 열지 않아도 봇을 골라 진단·설정할 수 있다", async () => {
+  const { api } = fakeApi({ bot: hunterBot, modules: [hunterExtra], cur: -1, chars: [hunterBot, univBot] });
+  const mc = createModCompat(api, { storage: mem(), log: () => {} });
+  const bots = await mc.listBots();
+  assert.deepEqual(bots.map((b) => b.name), ["Alternate Hunters", "Cheongwon Univ."]);
+  const d = await mc.diagnose({ ci: 0 });
+  assert.ok(d.ok && !d.live && d.botName === "Alternate Hunters");
+  assert.equal(d.modules.find((m) => m.id === "mha").render, "keep");
+  await mc.setBotCfg(d.chaId, { prompt: false });
+  assert.equal(mc.botCfg("hunter").prompt, false);
+});
+
+test("그룹 채팅: 멤버 봇의 에셋·정규식을 봇 쪽으로 보고 똑같이 지키고 그린다", async () => {
+  const { api } = fakeApi({ bot: groupCard, modules: [hunterExtra], chars: [groupCard, hunterBot], cur: 0 });
+  const mc = createModCompat(api, { storage: mem(), log: () => {} });
+  await mc.loadSettings();
+  const d = await mc.diagnose({ ci: 0 });
+  assert.ok(d.ok && d.group);
+  assert.deepEqual(d.members, ["Alternate Hunters"]);
+  assert.equal(d.modules.find((m) => m.id === "mha").render, "keep");
+  assert.equal(d.modules.find((m) => m.id === "mha").guard, "soft");
+  await mc.current({ force: true });
+  const out = await mc.onOutput(`<img="Ryu Hae-yeon smile">`);
+  assert.notEqual(out, `<img="Ryu Hae-yeon smile">`);
+  assert.equal(await mc.onDisplay(out), `<img="Ryu Hae-yeon smile">`);
+  assert.equal(await mc.onOutput(`<img="Min Chae-rin smile">`), `<img="Min Chae-rin smile">`, "멤버 자신의 이미지는 그대로");
+});
+
+test("그룹 채팅: 훅은 봇 목록을 기다리지 않는다(뒤에서 읽고 다시 만든다)", async () => {
+  let t = 1000;
+  const { api } = fakeApi({ bot: groupCard, modules: [hunterExtra], chars: [groupCard, hunterBot], cur: 0 });
+  const mc = createModCompat(api, { storage: mem(), log: () => {}, now: () => t });
+  await mc.loadSettings();
+  const c0 = await mc.current();
+  assert.ok(c0.group && c0.members.length === 0);
+  await mc.listBots();
+  t += 2000;
+  await mc.current();               // 오래된 것으로 표시돼 뒤에서 다시 만듦
+  await new Promise((r) => setTimeout(r, 20));
+  t += 2000;
+  const c1 = await mc.current();
+  assert.deepEqual(c1.members, ["Alternate Hunters"]);
 });

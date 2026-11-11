@@ -3,7 +3,7 @@
 import { h, replace } from '../dom.js';
 import { btn, modal, note, progressBar } from '../kit.js';
 import { applyPlan, keyFixes, keyOnlyPlan, batchMessages, batches, mergeAnalysis, parseAnalysis, rulePlan, summaryText } from '../../engine/loredusk.js';
-import { runAI } from '../../engine/runai.js';
+import { runAITask } from '../../engine/runai.js';
 import { loadPB } from '../../data/personabuilder.js';
 import { getCfg as getModelCfg } from '../../data/modelhub.js';
 import { pickRefine, readRefine, refineChanges, refineMessages, refineStep, refineTargets } from '../../dev/aibuild/lorerefine.js';
@@ -56,7 +56,7 @@ export async function openLoreDusk(ctx, { list, reference = "" }) {
       const failed = [];
       for (let i = 0; i < bs.length; i++) {
         try {
-          const raw = await runAI(ctx.api, batchMessages(list, work, bs[i], { instruction: instr.value, reference }), pick(), ctrl.signal);
+          const raw = await runAITask("로어북 정리", ctx.api, batchMessages(list, work, bs[i], { instruction: instr.value, reference }), pick(), ctrl.signal);
           mergeAnalysis(work, parseAnalysis(raw, list, bs[i]), list);
         } catch (e) {
           if (ctrl.signal.aborted) return;
@@ -124,9 +124,9 @@ export async function openLoreDusk(ctx, { list, reference = "" }) {
       for (let i = 0; i < bs.length; i++) {
         try {
           const msgs = refineMessages(work, bs[i], { instruction: instr.value, reference });
-          let raw = await runAI(ctx.api, msgs, pick(), ctrl.signal), r;
+          let raw = await runAITask("로어북 정리", ctx.api, msgs, pick(), ctrl.signal), r;
           try { r = readRefine(raw, work, bs[i]); }
-          catch { raw = await runAI(ctx.api, [...msgs, { role: "assistant", content: String(raw ?? "") }, { role: "user", content: "JSON 객체 하나만 다시 보내 주세요." }], pick(), ctrl.signal); r = readRefine(raw, work, bs[i]); }
+          catch { raw = await runAITask("로어북 정리", ctx.api, [...msgs, { role: "assistant", content: String(raw ?? "") }, { role: "user", content: "JSON 객체 하나만 다시 보내 주세요." }], pick(), ctrl.signal); r = readRefine(raw, work, bs[i]); }
           Object.assign(why, r.why);
           const st = refineStep(work, r.design);
           work = st.work; errs.push(...st.errors); warns.push(...st.warnings);

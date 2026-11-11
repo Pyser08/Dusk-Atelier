@@ -3,6 +3,7 @@
 // 표시·요청 때 되돌린다(engine/modcompat.js). 훅은 기다리지 않게 문맥을 캐시하고, 봇·채팅이 바뀔 때만 다시 읽는다.
 import { buildContext, protectOutput, prepareDisplay, unwrap, keyOf, findTags, resolveName, guardFor, planRender, MEDIA_EXT } from "../engine/modcompat.js";
 import { buildBlock, exampleTemplate, injectBlock, promptSubjects } from "../engine/modcompatprompt.js";
+import { loadCharacters } from "./modules.js";
 import { managedNames, inferFoundValue, varUpdates, setvarText, windowText } from "../engine/modcompatvars.js";
 
 // vars: 인물 감지 변수 — "auto"(봇 변수에서 읽고, 못 읽으면 나오면 0) | "found0" | "found1" | "off"
@@ -34,19 +35,55 @@ export function createModCompat(api, { storage, log = (...a) => console.log("[Du
     cardCache.ci = ci; cardCache.at = now(); cardCache.card = c;
     return c;
   }
-  async function build(ci, chi) {
-    const ch = ci >= 0 ? await card(ci) : null;
-    if (!ch || ch.type === "group") return { ci, chi, chaId: "", empty: true, at: now() };
+  // 봇 목록(그룹 멤버 찾기·채팅 없이 고르기용). 봇마다 카드를 통째로 읽으므로 1분 캐시, 화면·그룹에서만 부른다.
+  let bots = null, botsAt = 0, botsPending = null;
+  async function listBots({ fresh = false } = {}) {
+    if (!fresh && bots && now() - botsAt < 60000) return bots;
+    if (botsPending) return botsPending;
+    botsPending = (async () => {
+      const { list } = await loadCharacters(api);
+      bots = list.map((c, ci) => (c ? { ci, chaId: String(c.chaId ?? ""), name: c.name ?? "(이름 없음)", group: c.type === "group", card: c } : null)).filter(Boolean);
+      botsAt = now();
+      return bots;
+    })().finally(() => { botsPending = null; });
+    return botsPending;
+  }
+  // 그룹 채팅: 멤버 봇들의 에셋·정규식·로어북을 합쳐 '봇 쪽'으로 본다(리스는 멤버가 말한 메시지를 그 멤버로 그린다).
+  // wait=false(훅): 봇 목록이 아직 없으면 기다리지 않고 멤버 없이 만들고, 목록을 다 읽으면 문맥을 오래된 것으로 표시해 뒤에서 새로 만든다.
+  async function groupSide(g, { wait = true } = {}) {
+    const ids = new Set((g.characters ?? []).map(String));
+    let members = [];
+    const have = bots && now() - botsAt < 60000;
+    if (!wait && !have) {
+      listBots().then(() => { if (ctx?.group) ctx.at = -Infinity; }).catch((e) => log("그룹 멤버를 읽지 못함", e?.message ?? e));
+    } else {
+      try { members = (await listBots()).filter((b) => ids.has(b.chaId) && !b.group).map((b) => b.card); } catch (e) { log("그룹 멤버를 읽지 못함", e?.message ?? e); }
+    }
+    return {
+      assets: members.flatMap((m) => [...(m.additionalAssets ?? []), ...(m.emotionImages ?? [])]),
+      scripts: [...(g.customscript ?? []), ...members.flatMap((m) => m.customscript ?? [])],
+      lore: [...(g.globalLore ?? []), ...members.flatMap((m) => m.globalLore ?? [])],
+      defaults: members.map((m) => m.defaultVariables ?? "").join("\n"),
+      members: members.map((m) => m.name ?? "")
+    };
+  }
+  async function build(ci, chi, { cardOf = null, wait = true } = {}) {
+    const ch = cardOf ?? (ci >= 0 ? await card(ci) : null);
+    if (!ch) return { ci, chi, chaId: "", empty: true, at: now() };
     let chat = null, db = null, preset = [];
-    try { chat = await api.getChatFromIndex?.(ci, chi); } catch { chat = null; }
+    if (chi >= 0) { try { chat = await api.getChatFromIndex?.(ci, chi); } catch { chat = null; } }
     try { db = await api.getDatabase(["modules", "enabledModules"]); } catch (e) { log("모듈을 읽지 못함", e?.message ?? e); }
     try { preset = (await api.getDatabase(["presetRegex"]))?.presetRegex ?? []; } catch { preset = []; }
     const ids = new Set([...(db?.enabledModules ?? []), ...(ch.modules ?? []), ...(chat?.modules ?? [])]);
     const modules = (db?.modules ?? []).filter((m) => m && ids.has(m.id));
-    const botAssets = [...(ch.additionalAssets ?? []), ...(ch.emotionImages ?? [])];
-    const c = buildContext({ botAssets, modules, preset, botScripts: ch.customscript ?? [] });
-    const managed = managedNames({ modules, bot: ch, subjects: c.reg.subjects });
-    return Object.assign(c, { ci, chi, chaId: String(ch.chaId ?? ""), botName: ch.name ?? "", modules, managed, botEntries: ch.globalLore ?? [], botLua: luaCount(ch.triggerscript), at: now(), cfg: botCfg(String(ch.chaId ?? "")) });
+    const group = ch.type === "group";
+    const side = group ? await groupSide(ch, { wait }) : { assets: [...(ch.additionalAssets ?? []), ...(ch.emotionImages ?? [])], scripts: ch.customscript ?? [], lore: ch.globalLore ?? [], defaults: ch.defaultVariables ?? "", members: [] };
+    const c = buildContext({ botAssets: side.assets, modules, preset, botScripts: side.scripts });
+    // 그룹에서는 봇 트리거가 돌지 않는다(모듈 트리거만) → 봇 Lua가 다루는 인물도 없다
+    const botForVars = { defaultVariables: side.defaults, triggerscript: group ? [] : ch.triggerscript, globalLore: side.lore };
+    const managed = managedNames({ modules, bot: botForVars, subjects: c.reg.subjects });
+    const chaId = String(ch.chaId ?? "");
+    return Object.assign(c, { ci, chi, chaId, botName: ch.name ?? "", group, members: side.members, modules, managed, botEntries: side.lore, botLua: group ? 0 : luaCount(ch.triggerscript), at: now(), cfg: botCfg(chaId) });
   }
   // 지금 봇·채팅의 문맥. 짧은 시간 안에는 호스트에 묻지 않는다(표시 훅이 메시지마다 불리므로).
   async function current({ force = false } = {}) {
@@ -61,7 +98,7 @@ export function createModCompat(api, { storage, log = (...a) => console.log("[Du
         if (same && now() - ctx.at < (force ? FORCE_AGE_MS : MAX_AGE_MS)) return ctx;
         // 훅(응답 조각·화면)에서는 같은 채팅이면 기다리지 않고 지금 것을 쓰고, 뒤에서 새로 읽는다(HOST-COMPAT 3)
         if (same && !force) { refreshLater(w); return ctx; }
-        ctx = await build(w.ci, w.chi);
+        ctx = await build(w.ci, w.chi, { wait: !!force });
         return ctx;
       } catch (e) { log("문맥 실패", e?.message ?? e); return ctx; }
       finally { pending = null; }
@@ -71,7 +108,7 @@ export function createModCompat(api, { storage, log = (...a) => console.log("[Du
   let refreshing = null;
   function refreshLater(w) {
     if (refreshing) return;
-    refreshing = build(w.ci, w.chi).then((c) => { if (ctx && ctx.ci === c.ci && ctx.chi === c.chi) { c.lastBlock = ctx.lastBlock; c.lastTemplate = ctx.lastTemplate; if (ctx.template && c.template) c.template = ctx.template; } ctx = c; }).catch((e) => log("새로 읽기 실패", e?.message ?? e)).finally(() => { refreshing = null; });
+    refreshing = build(w.ci, w.chi, { wait: false }).then((c) => { if (ctx && ctx.ci === c.ci && ctx.chi === c.chi) { c.lastBlock = ctx.lastBlock; c.lastTemplate = ctx.lastTemplate; if (ctx.template && c.template) c.template = ctx.template; } ctx = c; }).catch((e) => log("새로 읽기 실패", e?.message ?? e)).finally(() => { refreshing = null; });
   }
   const active = (c) => c && !c.empty && c.cfg?.on !== false && c.reg?.mod?.size > 0;
   const varsOn = (c) => c && !c.empty && c.cfg?.on !== false && c.cfg?.vars !== "off" && c.managed?.length > 0;
@@ -149,10 +186,16 @@ export function createModCompat(api, { storage, log = (...a) => console.log("[Du
   }
 
   // ---- 진단(화면용) ----
-  async function diagnose() {
+  // 진단: ci를 주면(채팅을 열지 않고 고른 봇) 그 봇 기준, 아니면 지금 연 채팅 기준
+  async function diagnose({ ci = null } = {}) {
     await loadSettings();
-    const c = await current({ force: true });
-    if (!c || c.empty) return { ok: false, reason: c?.ci < 0 ? "no-bot" : "group" };
+    let c;
+    if (ci != null) {
+      const live = await current({ force: true });
+      if (live && !live.empty && live.ci === ci) c = live;
+      else { const b = (await listBots()).find((x) => x.ci === ci); c = b ? await build(ci, -1, { cardOf: b.card }) : null; }
+    } else c = await current({ force: true });
+    if (!c || c.empty) return { ok: false, reason: "no-bot" };
     const template = c.lastTemplate ?? exampleTemplate([], c);
     const ps = promptSubjects(c, { off: c.cfg.promptOff ?? [] });
     const mods = c.modules.map((m) => {
@@ -170,12 +213,12 @@ export function createModCompat(api, { storage, log = (...a) => console.log("[Du
       return { id: m.id, name: m.name ?? "(이름 없음)", assets: names.length, own: own.length, shadowed: names.length - own.length, sample, guard, render, selfRender: ps.selfRender.includes(m.id), promptOff: (c.cfg.promptOff ?? []).includes(m.id), lua: luaCount(m.trigger), regex: (m.regex ?? []).length, lore: (m.lorebook ?? []).length };
     });
     return {
-      ok: true, botName: c.botName, chaId: c.chaId, cfg: c.cfg, template,
+      ok: true, ci: c.ci, live: c.chi >= 0, group: !!c.group, members: c.members ?? [], botName: c.botName, chaId: c.chaId, cfg: c.cfg, template,
       shapes: c.shapes.filter((s) => s.renderer).map((s) => ({ src: s.src, kind: s.renderer.source.kind, name: s.renderer.source.name ?? "", comment: s.renderer.comment, usesList: s.usesList })),
       modules: mods, chars: ps.chars.length, singles: ps.singles.length,
       block: c.lastBlock ?? buildBlock(c, { template, off: c.cfg.promptOff ?? [] }),
       overlaps: overlaps(c), botLua: c.botLua, stats: { ...stats },
-      vars: { mode: c.cfg.vars ?? "auto", names: c.managed.map((m) => m.name), found: c.lastFound ?? (c.managed.length ? await (async () => { try { const ch = await api.getChatFromIndex?.(c.ci, c.chi); return foundValue(c, ch?.scriptstate ?? {}, windowText(ch?.message ?? [], "", c.cfg.varWindow || 9)); } catch { return null; } })() : null) }
+      vars: { mode: c.cfg.vars ?? "auto", names: c.managed.map((m) => m.name), found: c.lastFound ?? (c.managed.length ? await (async () => { try { const ch = c.chi >= 0 ? await api.getChatFromIndex?.(c.ci, c.chi) : null; return foundValue(c, ch?.scriptstate ?? {}, windowText(ch?.message ?? [], "", c.cfg.varWindow || 9)); } catch { return null; } })() : null) }
     };
   }
 
@@ -190,7 +233,7 @@ export function createModCompat(api, { storage, log = (...a) => console.log("[Du
     return n;
   }
 
-  return { current, onInput, onOutput, onDisplay, onProcess, beforeRequest, diagnose, unwrapChat, loadSettings, setBotCfg, botCfg, stats };
+  return { current, listBots, where, onInput, onOutput, onDisplay, onProcess, beforeRequest, diagnose, unwrapChat, loadSettings, setBotCfg, botCfg, stats };
 }
 
 export function stripOwnSetvars(text, managed) {
