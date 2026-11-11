@@ -98,13 +98,20 @@ export var CSS = `
 .sds-crumbs .rb-chip{position:relative}
 .sds-frow .sds-frow{background:var(--rb-surf2)}
 .sds-subrows{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
-.sds-subrows>.sds-frow{flex:1 1 auto;min-width:min(100%,240px);max-width:100%;box-sizing:border-box}
+.sds-subrows>.sds-frow{flex:1 1 auto;min-width:min(100%,260px);max-width:100%;box-sizing:border-box}
+.sds-toprows{gap:14px}
+.sds-frow.folded{padding-top:9px;padding-bottom:9px}
+.sds-subrows>.sds-frow.folded{flex:0 1 auto}
 .sds-subrows>.sds-frow .strip{max-width:100%}
 .sds-subf.drop-into{outline:2px solid var(--rb-acc);outline-offset:1px}
 .sds-rootdrop{display:none;border:2px dashed var(--rb-line3);border-radius:var(--rb-r3);padding:16px;text-align:center;color:var(--rb-sub);font-size:13px}
 .sds-dragging .sds-rootdrop{display:block}
 .sds-tray{display:none;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border:2px dashed var(--rb-line3);border-radius:var(--rb-r3);position:sticky;bottom:0;background:var(--rb-win);margin-top:6px}
 .sds-drag-scene .sds-tray{display:flex}
+.sds-prog{display:flex;align-items:center;gap:10px;min-width:220px;flex:1;max-width:520px}
+.sds-prog .bar{flex:1;height:8px;border-radius:999px;background:var(--rb-surf2);overflow:hidden;border:1px solid var(--rb-line2)}
+.sds-prog .bar i{display:block;height:100%;background:var(--rb-acc-grad);transition:width .3s}
+.sds-prog .t{font-size:12px;font-weight:700;color:var(--rb-sub);white-space:nowrap;font-variant-numeric:tabular-nums}
 .sds-crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .sds-sec{display:flex;align-items:center;gap:8px;min-height:30px}
 .sds-sec b{font-size:14px}
@@ -197,6 +204,7 @@ var P = {
   load: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M12 18v-7M9 14l3-3 3 3"/>',
   person: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/>',
   chevL: '<path d="M15 18l-6-6 6-6"/>',
+  chevD: '<path d="M6 9l6 6 6-6"/>',
   chevR: '<path d="M9 18l6-6-6-6"/>',
   lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/>',

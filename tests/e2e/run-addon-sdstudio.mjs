@@ -335,6 +335,13 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
     await page.keyboard.press("Control+Shift+A"); await page.waitForTimeout(250);
     ok("Ctrl+Shift+A = 고르기 모두 풀기", !(await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj.chars.some((c) => c.scenes.some((s) => s.images.some((i) => i.pick))))));
     await page.keyboard.press('Escape'); await page.waitForTimeout(250); }
+  { const fid = await page.evaluate(() => document.querySelector(".sds-toprows > .sds-frow")?.dataset.id);
+    await page.locator(`.sds-toprows > .sds-frow[data-id="${fid}"] .sds-fold`).click(); await page.waitForTimeout(200);
+    ok("폴더 접기: 카드·하위 줄 숨김", (await page.locator(`.sds-frow[data-id="${fid}"] .strip, .sds-frow[data-id="${fid}"] .sds-subrows`).count()) === 0);
+    await page.locator(`.sds-frow[data-id="${fid}"] .sds-fold`).click(); await page.waitForTimeout(200);
+    ok("폴더 펼치기", (await page.locator(`.sds-frow[data-id="${fid}"] .sds-fold[aria-expanded=true]`).count()) === 1);
+    await page.locator("#sds-body").click({ button: "right", position: { x: 4, y: 4 } }); await page.waitForTimeout(150);
+    ok("빈 곳 우클릭 메뉴(새 캐릭터·폴더)", (await page.locator(".rb-menu button", { hasText: "새 캐릭터" }).count()) === 1); await page.keyboard.press("Escape"); }
   await shot(page, "sd-6-folders");
 
   // 샘플링(V5)·조각·문제 확인

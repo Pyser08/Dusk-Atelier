@@ -1,7 +1,13 @@
 // 에셋 제작 — 대화상자들: 샘플링/모델, 캐릭터 프롬프트(NAI 다인), 조각 모음, 바이브 이미지, 레퍼런스, 프리셋, 작업 묶음 파일,
 // 문제 확인, 도움말, 설정(토큰·기본 예약), 봇·모듈에 넣기, 폴더. 저장은 모두 S.set(사본)으로.
 import { h, replace, download, pickFiles } from "../../dom.js";
-import { btn, modal, segmented, confirmDialog, promptDialog, openMenu, switchEl, setSwitch } from "../../kit.js";
+import { btn, modal, segmented, confirmDialog, promptDialog, openMenu, switchEl as kitSwitch, setSwitch } from "../../kit.js";
+// 스위치 옆에 이름을 보이게 하고, 누르면 모양부터 바로 바꾼다(kit 스위치는 스스로 안 바뀜)
+function switchEl(on, { label, onChange, disabled } = {}) {
+  const sw = kitSwitch(on, { label, disabled, onChange: (v, el) => { setSwitch(el, v); onChange?.(v, el); } });
+  return h("label", { class: "sds-sw", style: "display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600" }, sw, label ? h("span", null, label) : null);
+}
+
 import { MODELS, modelOf, SAMPLER_KO, NOISE_SCHEDULES, QUALITY_KO, UC_KO, ucPresetsFor, normalizeSampling, ucPresetText, isFreeSize } from "../../../engine/sdstudio/nai.js";
 import { buildPrompt, buildNegative, toPARR, combinationCount } from "../../../engine/sdstudio/prompt.js";
 import * as P from "../../../engine/sdstudio/project.js";
@@ -21,7 +27,7 @@ export function createDialogs(S) {
   const setSampling = (patch) => { S.set(P.setSettings(S.proj, { sampling: normalizeSampling({ ...S.proj.settings.sampling, ...patch }) })); S.paintLeft(); };
 
   // 설명이 붙은 스위치
-  const tog = (on, label, desc, onChange) => h("div", { style: "display:flex;flex-direction:column;gap:3px" }, switchEl(on, { label, onChange: (v, sw) => { setSwitch(sw, v); onChange(v); } }), h("span", { class: "rb-muted", style: "font-size:12px;white-space:normal;line-height:1.5" }, desc));
+  const tog = (on, label, desc, onChange) => h("div", { style: "display:flex;flex-direction:column;gap:3px" }, switchEl(on, { label, onChange }), h("span", { class: "rb-muted", style: "font-size:12px;white-space:normal;line-height:1.5" }, desc));
 
   async function sampling() {
     const body = h("div", { style: "display:flex;flex-direction:column;gap:14px" });

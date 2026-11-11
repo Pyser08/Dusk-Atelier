@@ -1,6 +1,12 @@
 // 에셋 제작 — 그림 크게 보기(라이트박스)·이미지 월드컵·인페인트 붓·변형/디렉터 도구 창. SDStudio ResultViewer·Tournament·InPaintEditor 대응.
 import { h, replace, download } from "../../dom.js";
-import { btn, modal, segmented, confirmDialog, openMenu, switchEl } from "../../kit.js";
+import { btn, modal, segmented, confirmDialog, openMenu, switchEl as kitSwitch, setSwitch } from "../../kit.js";
+// 스위치 옆에 이름을 보이게 하고, 누르면 모양부터 바로 바꾼다(kit 스위치는 스스로 안 바뀜)
+function switchEl(on, { label, onChange, disabled } = {}) {
+  const sw = kitSwitch(on, { label, disabled, onChange: (v, el) => { setSwitch(el, v); onChange?.(v, el); } });
+  return h("label", { class: "sds-sw", style: "display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600" }, sw, label ? h("span", null, label) : null);
+}
+
 import { AUGMENTS, EMOTIONS, upscaleCost, pngSize } from "../../../engine/sdstudio/nai.js";
 import * as P from "../../../engine/sdstudio/project.js";
 import { promptArea } from "./left.js";
@@ -59,7 +65,7 @@ export function openLightbox(S, items, index = 0) {
     if (!over.contains(document.activeElement)) over.focus({ preventScroll: true });   // 창이 닫히며 돌려준 버튼이 사라져도 키(← → Esc)가 먹게
     try { const u = await S.url(im.path); if (cur()?.path !== im.path) { URL.revokeObjectURL(u); return; } if (url) URL.revokeObjectURL(url); url = u; img.src = u; } catch { img.removeAttribute("src"); }
   }
-  function toggleFav() { const { it, im } = meta(); S.set(P.setImage(S.proj, it.cid, it.sid, im.path, { fav: !im.fav })); paint(); }
+  function toggleFav() { const { it, im } = meta(); S.set(P.setImage(S.proj, it.cid, it.sid, im.path, { fav: !im.fav })); paint(); S.paintBody?.(); }
   async function remove() {
     const { it } = meta();
     if (!await confirmDialog(S.ctx.win, { title: "목록에서 뺄까요?", body: "이 화면 목록에서만 빠져요. 리스 에셋 저장소 파일과 이미 봇에 넣은 에셋은 그대로예요.", ok: "빼기", danger: true })) return;
