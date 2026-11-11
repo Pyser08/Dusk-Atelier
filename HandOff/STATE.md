@@ -1,5 +1,20 @@
-# 현재 상태 — 2.1.0 브랜치 (3.0.8 내용을 옮김, main 2.0.7에서 분기)
+# 현재 상태 — SD-Studio 브랜치 (2.1.0 끝 e194dd9에서 분기)
 
+## 최근 세션 (2026-11-11 9시 — SD-Studio 브랜치 시작: SDStudio 이식 0단계 시험 + 개발 탭 애드온 자리)
+- 목표(사용자): 개발 탭에서 봇/모듈을 만들 때 **‘에셋’ 버튼 옆 버튼**으로 그 봇에 원하는 에셋(NAI 이미지)을 자동으로 넣기. 원본은 SDStudio(Electron, sunho, MIT) — 통째 이식은 안 하고 NAI 생성·씬/프리셋·월드컵만 애드온 `sdstudio`로 새로 짓는 계획.
+- **0단계 시험(커스텀 애드온 sdtest 0.1.2, 저장소에 넣지 않음) — RisuBard(PocketRisu 기반) 결과:**
+  - `api.nativeFetch` → `image.novelai.net/ai/generate-image` POST: status 200, body=ReadableStream, 1.3MB zip을 약 2초에 받음. 웹리스의 ‘직전 응답 재사용’ 문제는 안 보임.
+  - NAI zip은 **flags=8(데이터 기술자)** → 로컬 머리 크기 0. 크기는 EOCD→중앙 디렉터리에서 읽어야 함. 압축 해제는 `new Response(stream)`이 호스트에서 “Failed to fetch”로 깨짐 → DecompressionStream writer/reader 직접. (본 구현은 `src/vendor/fflate.js` unzipSync를 쓰면 됨.)
+  - **IndexedDB 금지**(“access to the Indexed Database API is denied in this context”) → 이미지 보관은 `api.saveAsset`(630ms, `assets/<sha>.png`) + 경로만 저장, 후보 이미지는 메모리만. Cellar 있으면 Cellar 저장 검토.
+  - `additionalAssets`에 `[name, path, "png"]` 추가 → `setCharacterToIndex` → 다시 읽어 보임, 실제 봇에 들어간 것 사용자 확인. `readImage(path)`는 응답 없이 멈춤(결과 줄 안 나옴) → 본 구현은 시간 제한 + 메모리 바이트로 미리보기.
+  - `getRuntimeInfo()`가 `{}` — 호스트 구분 신호로 못 씀. `/user/data`의 tier 필드 경로는 틀림(본 구현은 `/user/subscription`).
+  - 남은 확인: RisuAI 웹·PocketRisu 단독에서 같은 시험.
+- **코어: 개발 탭 애드온 자리 `slot "dev.actions"`** — `ui/screens/dev.js` actions()의 ‘에셋’ 바로 뒤. 부품은 `(ctx, info)`, info = 모듈 `{ kind: "module", id }` / 봇 `{ kind: "character", id, index }`. `ui/ext.js` `render(kind, key, ctx, info)` 넷째 인자 추가(더하기만, 기존 슬롯 영향 없음). e2e `tests/e2e/run-dev-slot.mjs`(7). 애드온이 이 자리를 쓰려면 이 코어가 릴리스돼야 함(minCore 올리기) — 릴리스는 지시 대기.
+- 남은 일:
+  - [ ] 나머지 두 호스트 시험 결과 받기
+  - [ ] 애드온 `addons/sdstudio` 1단계: 엔진 이식(`src/engine/sdstudio/` — nai 요청 본문·모델 목록·품질/UC 프리셋·시드, SDStudio jest 테스트 옮김), 전송 `data/sdstudio/`(nativeFetch→risuFetch, fflate unzip, 토큰은 getLocalPluginStorage)
+  - [ ] 2단계: dev.actions 슬롯에 ‘AI 에셋’ 버튼 → 봇/모듈 정보로 프롬프트 초안(ai.run) → 생성·후보 고르기 → 감정 이미지/추가 에셋(모듈은 모듈 assets)으로 넣기(넣기 전 확인, 기존 에셋 안 건드림)
+  - [ ] CHANGELOG·안내서는 사용자에게 보이는 기능이 생길 때(슬롯만으로는 보이는 변화 없음)
 
 ## 최근 세션 (2026-11-11 1시 — 모듈 탭 전환·채팅 없이 설정·그룹 지원, manage 0.1.2·modcompat 0.1.1 배포)
 - 사용자: 모듈 탭 위에 크게 ‘모듈 / 모듈 병합’ 선택(애드온 둘만 수정) + 채팅 안 들어가도 설정 + 그룹 채팅도 되게.
