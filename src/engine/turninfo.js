@@ -56,7 +56,35 @@ export function callHtml(rec, lore = null) {
   const sum = `⏱ ${kind} · ${esc(rec.model || "모델 알 수 없음")} · ${fmtSec(total)}${rec.inTok != null ? ` · 입력 약 ${fmtTokens(rec.inTok)}` : ""}${rec.outTok != null ? ` · 출력 약 ${fmtTokens(rec.outTok)}` : ""}`;
   const row = (k, v) => `<div style="display:flex;gap:8px;padding:3px 0;border-top:1px solid rgba(157,153,193,.18)"><b style="flex:none;min-width:5em">${k}</b><span style="min-width:0;word-break:break-word">${v}</span></div>`;
   const names = (lore?.entries ?? []).map((e) => esc(e.n)).filter(Boolean);
-  return `\n\n<details x-dusk="turn" style="${BOX}"><summary style="${SUM}">${sum}</summary>${row("구분", `${kind} 모델`)}${row("모델", esc(rec.model || "알 수 없음"))}${row("걸린 시간", `첫 글자까지 ${fmtSec(wait)} (추론·대기) · 출력 ${fmtSec(Math.max(0, total - wait))} · 합계 ${fmtSec(total)}`)}${row("예상 토큰", `입력 약 ${fmtTokens(rec.inTok ?? 0)} · 출력 약 ${fmtTokens(rec.outTok ?? 0)} (글자 수로 어림)`)}${rec.cache ? row("캐시(어림)", esc(cacheLine(rec.cache))) : ""}${row("로어북", names.length ? `${names.length}개 · ${names.join(", ")}` : "들어간 로어북이 없어요")}</details>`;
+  return `\n\n<details x-dusk="turn" style="${BOX}"><summary style="${SUM}">${sum}</summary>${row("구분", `${kind} 모델`)}${row("모델", esc(rec.model || "알 수 없음"))}${row("걸린 시간", `첫 글자까지 ${fmtSec(wait)} (추론·대기) · 출력 ${fmtSec(Math.max(0, total - wait))} · 합계 ${fmtSec(total)}`)}${row("예상 토큰", `입력 약 ${fmtTokens(rec.inTok ?? 0)} · 출력 약 ${fmtTokens(rec.outTok ?? 0)} (글자 수로 어림)`)}${rec.parts?.length ? row("입력 내역", rec.parts.map((p) => `${esc(p.label)} ${fmtTokens(p.tok)}`).join(" · ")) : ""}${rec.cache ? row("캐시(어림)", esc(cacheLine(rec.cache))) : ""}${row("로어북", names.length ? `${names.length}개 · ${names.join(", ")}` : "들어간 로어북이 없어요")}</details>`;
+}
+
+// ── 입력 내역 (2.1.4): 메인 프롬프트를 출처별로 나눠 어림한다. 무엇이 입력을 키웠는지 보이게. ──
+// Dusk·리수폿이 넣는 블록은 표식으로 가르고, 나머지는 역할로(system = 봇 설정·로어북 등, user/assistant = 채팅 기록).
+const WIKI = ["<!-- RISUPOT_WIKI_REFERENCE_START -->", "<!-- RISUPOT_WIKI_REFERENCE_END -->"];
+const NOTE = ["<!-- RISUPOT_DIRECTOR_NOTE_START -->", "<!-- RISUPOT_DIRECTOR_NOTE_END -->"];
+const HEAD = [["[Dusk Memory", "장기 기억"], ["[Dusk · module images]", "모듈 호환 안내"], ["[Dusk · bot default persona]", "봇 기본 페르소나"], ["[Dusk Fairness]", "공정한 전개"], ["[Dusk Dice]", "주사위"], ["[Dusk Time]", "이야기 시간"], ["[Dusk · image tag", "이미지 태그 알림"], ["[USER ADDED RULES", "내 프롬프트"]];
+const SYS = "시스템·봇 설정·로어북", CHAT = "채팅 기록";
+function cutBlock(text, [a, b], label, add) {
+  let out = "", i = 0;
+  for (;;) {
+    const s = text.indexOf(a, i); if (s < 0) break;
+    const e = text.indexOf(b, s + a.length), end = e < 0 ? text.length : e + b.length;
+    add(label, text.slice(s, end)); out += text.slice(i, s); i = end;
+  }
+  return out + text.slice(i);
+}
+export function promptParts(messages) {
+  const sums = new Map(), add = (label, t) => { const n = estimateTokens(t); if (n) sums.set(label, (sums.get(label) ?? 0) + n); };
+  for (const m of Array.isArray(messages) ? messages : []) {
+    if (!m || typeof m !== "object") continue;
+    let t = flat(m.content); if (!t) continue;
+    t = cutBlock(t, WIKI, "인물 위키", add);
+    t = cutBlock(t, NOTE, "정리 노트", add);
+    const head = t.trimStart(), hit = HEAD.find(([k]) => head.startsWith(k));
+    add(hit ? hit[1] : m.role === "system" ? SYS : CHAT, t);
+  }
+  return [...sums].map(([label, tok]) => ({ label, tok })).sort((x, y) => y.tok - x.tok);
 }
 
 // ── 캐시 적중 어림 (1.8.3): 직전 메인 요청과 앞부분이 어디까지 같은지. 프롬프트 캐시는 '앞부분이 글자까지 같은 만큼'만 다시 쓴다. ──

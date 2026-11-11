@@ -5,7 +5,7 @@
 // RisuBard(bardWiki 있음)에서는 쓰지 않는다. 훅 안에서는 오래 기다리지 않는다(HOST-COMPAT 3-3).
 import { headKey, tailKey, matchRecord } from "../engine/lorelog.js";
 import { parseRollMarks } from "../engine/fairplay.js";
-import { estimateTokens, diceHtml, callHtml, fmtSec, fmtTokens, prefixInfo, cacheLine } from "../engine/turninfo.js";
+import { estimateTokens, diceHtml, callHtml, fmtSec, fmtTokens, prefixInfo, cacheLine, promptParts } from "../engine/turninfo.js";
 
 export const DICE_SHOW_KEY = "dusk.ui.diceShow";   // 기본 꺼짐
 export const CALL_SHOW_KEY = "dusk.ui.callShow";   // 기본 꺼짐
@@ -26,7 +26,7 @@ const KEYFRAMES = "@keyframes dusk-dice-roll{0%{transform:rotate(-220deg) scale(
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const textOf = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => typeof p === "string" ? p : p?.text ?? "").join("\n") : String(c ?? "");
 
-export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => null, loreFor = () => null, loreLast = () => null, now = Date.now, chip = true, quietMs = 1500, log = (...a) => console.log("[Dusk 호출표시]", ...a) } = {}) {
+export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => null, loreFor = () => null, loreLast = () => null, now = Date.now, chip = true, quietMs = 1500, watchReplacers = null, relastMs = 300, log = (...a) => console.log("[Dusk 호출표시]", ...a) } = {}) {
   let cacheAlert = true, prevMsgs = null, diceShow = false, callShow = false, recs = null, pending = null, saveTimer = null, hooked = false, quiet = null, names = { at: -Infinity, main: "", sub: "" };
   const supported = () => !isBardHost(api);
 
@@ -102,6 +102,7 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
       // 캐시 어림: 직전 메인 요청과 앞부분 비교(글만 보관)
       const flatMsgs = (Array.isArray(messages) ? messages : []).map((m) => ({ role: m?.role, content: textOf(m?.content) }));
       const pi = prefixInfo(prevMsgs, flatMsgs); prevMsgs = flatMsgs;
+      rec.parts = promptParts(messages).slice(0, 8).map((p) => ({ label: p.label, tok: p.tok }));   // 입력 내역(2.1.4)
       if (pi) rec.cache = { ratio: pi.ratio, same: pi.same, total: pi.total, breakAt: pi.breakAt, at: pi.at, of: pi.of, dusk: pi.dusk };
       if (cacheAlert && pi && pi.total >= ALERT_MIN_TOKENS && pi.ratio < ALERT_RATIO) alertCache(pi);
       if (diceShow || callShow) { pending = rec; chipRun(rec); } else pending = null;   // 캐시 알림만이면 응답 기록은 남기지 않는다
@@ -146,6 +147,12 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
     } catch { return text; }
   }
 
+  let unwatch = null, relastTimer = null, relasting = false;
+  async function relast() {
+    if (relasting || typeof api.removeRisuReplacer !== "function") return;
+    relasting = true;
+    try { await api.removeRisuReplacer("beforeRequest", beforeRequest); await api.addRisuReplacer("beforeRequest", beforeRequest); } catch { /* 순서만 못 바꿈 */ } finally { relasting = false; }
+  }
   async function hook() {
     if (hooked || !supported()) return hooked;
     try {
@@ -153,7 +160,9 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
       if (typeof api.addRisuScriptHandler === "function") { await api.addRisuScriptHandler("output", onOutput); await api.addRisuScriptHandler("display", onDisplay); }
       hooked = true;
       // 요청 훅은 등록 순서대로 불린다. Dusk의 다른 훅(장기 기억 등)이 나중에 붙어도 최종 프롬프트를 보도록 잠시 뒤 맨 뒤로 다시 단다.
-      setTimeout(async () => { try { if (typeof api.removeRisuReplacer === "function") { await api.removeRisuReplacer("beforeRequest", beforeRequest); await api.addRisuReplacer("beforeRequest", beforeRequest); } } catch { /* 순서만 못 바꿈 */ } }, 5000);
+      setTimeout(() => relast(), 5000);
+      // 2.1.4: 애드온(장기 기억 등)은 5초보다 늦게 붙을 수 있다 → 다른 beforeRequest 훅이 붙을 때마다 다시 맨 뒤로(입력 내역이 최종 프롬프트를 세게)
+      if (typeof watchReplacers === "function" && !unwatch) unwatch = watchReplacers((type, fn) => { if (type === "beforeRequest" && fn !== beforeRequest) { clearTimeout(relastTimer); relastTimer = setTimeout(() => relast(), relastMs); } });
     } catch (e) { log("훅 등록 실패", e?.message ?? e); }
     return hooked;
   }

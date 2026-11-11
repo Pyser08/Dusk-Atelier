@@ -1,5 +1,12 @@
 # 현재 상태 — SD-Studio 브랜치 (2.1.0 끝 e194dd9에서 분기)
 
+## 최근 세션 (2026-11-11 21시 — v2.1.4: 모델 호출 표시 ‘입력 내역’)
+- 제보: “장기기억 쓰면 2.0.0 전보다 입력이 7만→13만(응답 아래 모델 호출 칸 기준)”. 조사: 그 숫자는 Dusk turninfo의 메인 요청 어림값. 장기기억이 본편에 넣는 몫은 코드상 상한이 위키 참조 16,000자(관계 전용이면 실제 2~4천 자)+정리 노트 11,900자라 약 7천 토큰이 최대 → 6만 증가는 장기기억만으로 설명 안 됨. 원인 확정 못 함 — 사용자(제보자)가 장기 기억 끄고 다시 생성해 비교하기로.
+- 그래서 **입력 내역** 추가: `engine/turninfo.js` promptParts(messages) — 리수폿 위키/정리 노트는 HTML 주석 표식으로 잘라 세고, 메시지 머리 표식([Dusk Memory·[Dusk · module images]·봇 기본 페르소나·공정한 전개·주사위·이야기 시간·이미지 태그·내 프롬프트), 나머지는 system=‘시스템·봇 설정·로어북’, 그 밖=‘채팅 기록’. 큰 것부터 최대 8개를 rec.parts로 저장, callHtml에 ‘입력 내역’ 줄.
+- 훅 순서: 애드온(장기 기억 등)이 5초 뒤에 붙으면 호출 표시가 최종 프롬프트를 못 봤음 → `data/replacerorder.js` createReplacerWatch(raw) (main.js가 api.addRisuReplacer를 감쌈) + turninfo `watchReplacers`: 다른 beforeRequest가 붙을 때마다 0.3초 뒤 remove→add로 맨 뒤.
+- 시험: unit `turninfo-parts.test.js`(5) 포함 npm test 1438 pass / **1 fail = tests/pot-port.test.js**(customPromptPlain is not defined — 내 변경 전 origin/SD-Studio에서도 같은 실패, 손대지 않음). build·check 동일함(v2.1.4). e2e run-home-turn·run-smoke 통과.
+- 남은 일: [ ] 제보자 ‘입력 내역’ 결과 받아 13만의 원인 확인 [ ] 정리 노트(factSheet)가 위키 참조와 겹치는 칸 빼기·기록기 실패 시 리수폿 Writer(약 3만 토큰) 대신 길 줄이기(보조 토큰) — 사용자 결정 대기 [ ] pot-port.test 실패 원인 [ ] v2.1.4 main 병합·태그(사용자 지시 대기)
+
 ## 최근 세션 (2026-11-11 11시 40분 — 생성 중지: 작업 이름 표시 + 대기 작업까지 멈춤)
 - 사용자: “생성 중지 버튼에 무슨 작업 중인지도 떠야. 버튼이 작동 안 함 — 누르면 뒤에 대기 중인 작업까지 그만두게, 플러그인에서 부른 것만.”
 - 원인: ① 버튼은 호출 개수만 보여 줌(대부분 호출에 이름 없음). ② stopAll은 지금 도는 호출만 끊음 → 로어북 정리·기억 기록처럼 여러 번 부르는 작업은 2초 뒤 다음 호출로 그대로 이어짐. ③ 기억 기록이 내 API(provider 직접 fetch)로 돌면 trackAi에 아예 안 잡혀 중지 불가.

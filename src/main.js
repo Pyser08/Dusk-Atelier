@@ -18,6 +18,7 @@ import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets
 import { createLoreRuntime } from './data/lorerules.js';
 import { createLoreLog } from './data/lorelog.js';
 import { createTurnInfo } from './data/turninfo.js';
+import { createReplacerWatch } from './data/replacerorder.js';
 import { createChatMenu } from './data/chatmenu.js';
 import { createStoryTime } from './data/storytime.js';
 import { createFairPlay } from './data/fairplay.js';
@@ -65,6 +66,9 @@ async function start() {
     wrapped.addRisuScriptHandler = (...a) => bus.add(...a);
     wrapped.removeRisuScriptHandler = (...a) => bus.remove(...a);
   }
+  // 요청 훅 등록 알림(2.1.4): 모델 호출 표시가 나중에 붙은 훅(애드온)보다 뒤에서 최종 프롬프트를 세도록
+  let replacerWatch = null;
+  if (typeof raw.addRisuReplacer === "function") { replacerWatch = createReplacerWatch(raw); wrapped.addRisuReplacer = (...a) => replacerWatch.add(...a); }
   // 화면 목록용 getDatabase 짧은 캐시(getDatabaseCached): 쓰기 계열 호출이 있으면 바로 비운다. Dusk 창을 열 때도 비운다.
   const dbc = createDbCache(raw);
   wrapped.getDatabaseCached = (keys, opts) => dbc.get(keys, opts);
@@ -171,7 +175,7 @@ async function start() {
   // 로어북 로그: 응답마다 들어간 로어북을 남기고, 응답 아래에 버튼을 붙인다
   const loreLog = createLoreLog(api, { loreRuntime, above: (t) => mem()?.gauge?.onDisplay?.(t) ?? t });
   loreLog.start().catch((e) => console.log(`[${TITLE}] 로어북 로그 시작 실패: ${e?.message ?? e}`));
-  const turnInfo = createTurnInfo(api, { diceSource: () => fairPlay.lastDice(), loreFor: (t) => loreLog.recordFor(t), loreLast: () => loreLog.last() });   // 주사위 결과·모델 호출 표시 (1.8.3)
+  const turnInfo = createTurnInfo(api, { watchReplacers: replacerWatch?.onAdded ?? null, diceSource: () => fairPlay.lastDice(), loreFor: (t) => loreLog.recordFor(t), loreLast: () => loreLog.last() });   // 주사위 결과·모델 호출 표시 (1.8.3)
   turnInfo.start().catch((e) => console.log(`[${TITLE}] 호출 표시 시작 실패: ${e?.message ?? e}`));
   // 채팅 입력창 옆 메뉴의 빠른 설정 (1.8.3). 어디서 바꾸든(홈·시작 안내·메뉴) 버튼 이름이 따라 바뀌게 설정 함수를 감싼다.
   const chatMenu = createChatMenu(api, { fairPlay, turnInfo });   // 맨 위 '장기 기억'·'회귀' 바로가기는 장기기억 애드온이 addLink로 붙인다
