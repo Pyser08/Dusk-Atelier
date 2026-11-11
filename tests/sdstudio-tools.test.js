@@ -138,3 +138,13 @@ test("단축키: 기본값·바꾸기·겹치면 비움·예전 저장값 옮김
   assert.equal(K.actionOf(k2, "Mod+Y"), "redo");
   assert.equal(K.typingSafe("Mod+Z"), true); assert.equal(K.typingSafe("Ctrl+Z"), true); assert.equal(K.typingSafe("1"), false); assert.equal(K.typingSafe("F1"), true);
 });
+
+import * as TG from "../src/engine/sdstudio/tags.js";
+test("태그 자동완성: 영어 앞부분·한글 자모(치는 중)·초성", () => {
+  const db = TG.parseTagDb("long hair,0,5000,null\nvery long hair,0,900,null\n머리/길이/긴 머리,0,5000,long hair\n얼굴/표정/미소,0,4000,smile\nsmile,0,4000,null\n");
+  assert.equal(TG.searchTags(db, "long h")[0].tag, "long hair");
+  assert.equal(TG.searchTags(db, "긴 멀")[0].tag, "long hair");
+  assert.equal(TG.searchTags(db, "ㄱㅁ")[0].tag, "long hair");
+  assert.equal(TG.searchTags(db, "미ㅅ")[0].tag, "smile");
+  assert.deepEqual(TG.insertTag("1girl, long h, smile", 13, "long hair"), { text: "1girl, long hair, smile", caret: 18 });
+});

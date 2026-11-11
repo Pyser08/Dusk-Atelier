@@ -23,12 +23,41 @@ export function parseTagDb(text) {
   return { words, keys, cats, freqs, redirs, size: words.length };
 }
 
+// 한글: 자모로 풀어서 비교 → 치는 중인 글자(머ㄹ·멀)·초성만(ㄱㅁ)도 맞게
+var CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ", JUNG = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ", JONG = ["", "ㄱ", "ㄲ", "ㄱㅅ", "ㄴ", "ㄴㅈ", "ㄴㅎ", "ㄷ", "ㄹ", "ㄹㄱ", "ㄹㅁ", "ㄹㅂ", "ㄹㅅ", "ㄹㅌ", "ㄹㅍ", "ㄹㅎ", "ㅁ", "ㅂ", "ㅂㅅ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"];
+var SPLIT = { "ㅘ": "ㅗㅏ", "ㅙ": "ㅗㅐ", "ㅚ": "ㅗㅣ", "ㅝ": "ㅜㅓ", "ㅞ": "ㅜㅔ", "ㅟ": "ㅜㅣ", "ㅢ": "ㅡㅣ", "ㄳ": "ㄱㅅ", "ㄵ": "ㄴㅈ", "ㄶ": "ㄴㅎ", "ㄺ": "ㄹㄱ", "ㄻ": "ㄹㅁ", "ㄼ": "ㄹㅂ", "ㄽ": "ㄹㅅ", "ㄾ": "ㄹㅌ", "ㄿ": "ㄹㅍ", "ㅀ": "ㄹㅎ", "ㅄ": "ㅂㅅ" };
+export function jamo(str) {
+  let o = "";
+  for (const ch of String(str)) {
+    const c = ch.charCodeAt(0) - 0xac00;
+    if (c >= 0 && c < 11172) { const j = JUNG[Math.floor(c / 28) % 21]; o += CHO[Math.floor(c / 588)] + (SPLIT[j] ?? j) + JONG[c % 28]; }
+    else o += SPLIT[ch] ?? ch;
+  }
+  return o;
+}
+export var chosung = (str) => [...String(str)].map((ch) => { const c = ch.charCodeAt(0) - 0xac00; return c >= 0 && c < 11172 ? CHO[Math.floor(c / 588)] : ch; }).join("");
+var HAS_KO = /[ㄱ-ㅎㅏ-ㅣ가-힣]/, ONLY_CHO = /^[ㄱ-ㅎ\s]+$/;
+function koIndex(db) {
+  if (db.ko) return db.ko;
+  const ids = [], jk = [], ck = [];
+  for (let i = 0; i < db.size; i++) if (HAS_KO.test(db.words[i])) { const k = norm(db.words[i]); ids.push(i); jk.push(jamo(k)); ck.push(chosung(k)); }
+  return (db.ko = { ids, jk, ck });
+}
+
 // 찾기: 앞부분이 맞는 것 먼저, 그다음 중간에 들어 있는 것. 같은 태그로 넘어가는 줄은 하나만.
 export function searchTags(db, q, limit = 8) {
   const k = norm(q);
   if (!db || k.length < 1) return [];
   const pre = [], mid = [];
-  for (let i = 0; i < db.size; i++) {
+  if (HAS_KO.test(k)) {   // 한글: 자모·초성으로(분류 경로 전체에서, 마지막 칸이 맞으면 앞쪽)
+    const ko = koIndex(db), cho = ONLY_CHO.test(k), qq = cho ? k.replace(/\s+/g, "") : jamo(k);
+    for (let n = 0; n < ko.ids.length; n++) {
+      const hay = cho ? ko.ck[n].replace(/\s+/g, "") : ko.jk[n], at = hay.indexOf(qq);
+      if (at < 0) continue;
+      const last = hay.lastIndexOf("/");
+      (at > last || at === 0 ? pre : mid).push(ko.ids[n]);
+    }
+  } else for (let i = 0; i < db.size; i++) {
     const key = db.keys[i], at = key.indexOf(k);
     if (at < 0) continue;
     (at === 0 || key[at - 1] === " " || key[at - 1] === "\u0000" || key[at - 1] === "/" ? pre : mid).push(i);
