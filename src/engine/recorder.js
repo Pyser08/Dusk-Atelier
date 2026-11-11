@@ -128,26 +128,57 @@ export function deepMenu(run) {
   return lines;
 }
 
+// 2.1.4 월경·임신 기록: 리수폿 Writer(지침 약 3만 토큰) 대신 1단계에 줄 몇 개만 더 받는다. 날짜·주기 계산은 지금처럼 프로그램(리수폿 주기 추적)이 한다.
+// 받은 줄은 리수폿이 받던 cycle_report 꼴로 바꿔 넘긴다(engine/cyclereport.js applyCycleReportObject).
+export const CYCLE_STAGE1 = [
+  "",
+  "",
+  "Cycle tracking is on — ALSO write these lines, only for characters who are clearly adult women and appear in newest:",
+  "woman|Name      every clearly adult woman who appears in newest (one line each)",
+  "sex|Name|male partner|used or none      only vaginal intercourse with a man shown in newest; used only when contraception is clearly shown",
+  "pregnant|Name      she learns in newest that she is pregnant",
+  "birth|Name      she gives birth in newest",
+  "Never write these lines for anyone who is not clearly an adult woman.",
+].join("\n");
+// 원문 → cycle_report 목록 [{name, adult, sex:[{partner, contraception}], known, birth}]
+export function cycleFrom(raw, known = []) {
+  const m = new Map();
+  const get = (n) => { const name = canonName(String(n ?? "").trim(), known); if (!name || name === "{{user}}") return null; if (!m.has(nk(name))) m.set(nk(name), { name, adult: true, sex: [], known: false, birth: false }); return m.get(nk(name)); };
+  let text = String(raw ?? "");
+  try { const t = text.replace(/```[a-z]*/gi, "").trim(); if (/^[[{]/.test(t)) { const o = JSON.parse(t); const acc = []; const walk = (v) => { if (typeof v === "string") acc.push(...v.split(/\r?\n/)); else if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v === "object") Object.values(v).forEach(walk); }; walk(o); text = acc.join("\n"); } } catch { /* 줄로 읽기 */ }
+  for (const line0 of text.split(/\r?\n/)) {
+    const f = line0.trim().replace(/^(?:[-*•>]+|\d+[.)])\s*/, "").split(/[|｜¦]/).map((x) => x.trim());
+    const tag = (f[0] ?? "").toLowerCase();
+    if (tag === "woman") get(f[1]);
+    else if (tag === "sex" && f[2]) { const w = get(f[1]); if (w && w.sex.length < 4) w.sex.push({ partner: f[2].slice(0, 60), contraception: /^used$/i.test(f[3] ?? "") ? "used" : "none" }); }
+    else if (tag === "pregnant") { const w = get(f[1]); if (w) w.known = true; }
+    else if (tag === "birth") { const w = get(f[1]); if (w) w.birth = true; }
+  }
+  return [...m.values()];
+}
+
 export const MAX_PEOPLE = 6;
 export const GROUP_MAX = 3;   // 2.1.4: 한 번에 묻는 인물 수
 const names = (chunk) => chunk.map((t) => t.name).join("·");
 // dusk: runner.prepareLatest().input (없으면 null). 반환 { stage1, people:[{name, ref, isNew, lines}] }
 // cast(name, aliases) → bool: 로어북에 있는 인물만 새로 만들기(설정 '로어북에 있는 인물만 새로 기록'). 없으면 막지 않는다. 이미 위키에 있는 인물은 묻지 않고 통과.
-export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, group = false, onWarn = () => {} } = {}) {
+export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, group = false, cycle = false, onWarn = () => {} } = {}) {
   const source = run.rp, known0 = knownOf(run, dusk?.known ?? []);
   const known = knownInText(known0, [run.recent, source].join("\n"));
   const openItems = dusk?.openItems ?? [], openIds = new Set(openItems.map((x) => String(x.id)));
   const key = nk(source).slice(0, 4000);
-  let stage1 = cache?.get(key) ?? null;
+  const ckey = cycle ? key + "|cycle" : key;
+  let stage1 = cache?.get(ckey) ?? null;
   if (!stage1) {
     const payload = { bot: dusk?.bot ?? "", known: known.map((p) => ({ name: p.name, ...(p.aliases?.length ? { aliases: p.aliases.slice(0, 6) } : {}), ...(p.state ? { state: p.state } : {}), ...(p.last ? { last: cut(p.last, 60) } : {}) })), previousScene: dusk?.previousScene ?? null, ...(openItems.length ? { openItems } : {}), ...(dusk?.storyDate ? { storyDate: dusk.storyDate } : {}), recent: cut(run.recent || (dusk?.recent ?? []).join("\n"), 4000), newest: source.slice(0, 8000) };
-    stage1 = await ask(call, [{ role: "system", content: LINES_STAGE1 }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
+    stage1 = await ask(call, [{ role: "system", content: cycle ? LINES_STAGE1 + CYCLE_STAGE1 : LINES_STAGE1 }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
       const lines = parseLines(raw); if (!lines.length) return null;
       const got = fromStage1(lines, { known, source, openIds });
+      if (cycle) got.cycle = cycleFrom(raw, known);
       return got.scene || got.people.length ? got : null;
     }, { minimal: LINES_STAGE1_MIN });
     stage1.states ??= []; stage1.fresh ??= []; stage1.open ??= { add: [], close: [] };   // 예전 코어(fromStage1)와 섞여도 깨지지 않게
-    cache?.set(key, stage1);
+    cache?.set(ckey, stage1);
   }
   // 2단계 대상: 이번 묶음에서 쓸 수 있는 기존 문서 + (만들 수 있으면) 새 인물. 중요도 순으로 최대 MAX_PEOPLE.
   const byName = new Map(run.docs.map((d) => [nk(d.title), d]));

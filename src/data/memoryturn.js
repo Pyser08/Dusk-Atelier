@@ -27,7 +27,7 @@ import { createRetryToast, judgeAutoResult } from "./retrytoast.js";
 import { loadReconciled } from "./memoryload.js";
 import { confirmedAiIndex, messageIdentity } from "../engine/chattext.js";
 import { appendDuskSection, splitDusk, checkDusk, SECTION_MARK } from "../engine/duskwriter.js";
-import { CYCLE_BLOCK_MARK, CYCLE_FIELD_PROMPT, applyCycleReport } from "../engine/cyclereport.js";
+import { CYCLE_BLOCK_MARK, CYCLE_FIELD_PROMPT, applyCycleReport, applyCycleReportObject } from "../engine/cyclereport.js";
 import { parseJson } from "../engine/memoryprompt.js";
 import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
 import { healDeps } from "../engine/settingdeps.js";
@@ -133,9 +133,9 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       return /Writer Dusk|Director Dusk/.test(String(opts.stageLabel ?? "")) || typeof out !== "string" ? out : cleanJsonReply(out);
     };
     // 2.0.0 Dusk 기록기: 리수폿 Writer 프롬프트(11만 자+)를 보내지 않고 데이터만 꺼내 짧은 단계별 질문으로 기록한 뒤,
-    // 리수폿이 받던 응답(JSON)으로 바꿔 돌려준다. 해석이 안 되거나(PDF 첨부 방식)·월경 보고가 필요하면 예전 길로.
+    // 리수폿이 받던 응답(JSON)으로 바꿔 돌려준다. 해석이 안 되면(PDF 첨부 방식) 예전 길로. 월경 보고도 2.1.4부터 기록기에서 받는다.
     const potNext = new Set(); let lastKey = "", recorderFailed = false;
-    const fullKeyOf = (run, s0) => `${run.rp.length}:${run.rp.slice(0, 200)}:${run.rp.slice(-200)}|${run.docs.filter((d) => d.writable).map((d) => d.title).sort().join(",")}|${run.allowCreate}|${s0.loreOnly !== false}`;
+    const fullKeyOf = (run, s0) => `${run.rp.length}:${run.rp.slice(0, 200)}:${run.rp.slice(-200)}|${run.docs.filter((d) => d.writable).map((d) => d.title).sort().join(",")}|${run.allowCreate}|${s0.loreOnly !== false}|${run.cycleOn ? 1 : 0}`;
     const autoLight = { streak: 0, hold: 0 };   // 가벼운 지침 자동 전환 상태(이번 실행 동안만, 저장하지 않음)
     const recCache = new Map(), recDone = new Map();
     // 로어북에 있는 인물만 새로 기록(기본 켜짐, 설정 loreOnly). 판단기가 null이면(로어북 없음·봇이 바뀜·읽기 실패) 막지 않는다.
@@ -143,8 +143,10 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     const castNow = async (s0) => { if (s0?.loreOnly === false) return null; try { return await readCast(wiki.scope?.characterId ?? ""); } catch { return null; } };   // 같은 응답의 1단계 결과(리수폿이 묶음을 나눠 여러 번 부를 때 재사용)
     const recordWithDusk = async (a, k, preset, prompt, opts) => {
       const s0 = (await store.getIndex()).settings ?? {};
-      if (s0.recorder === "pot" || String(prompt).includes(CYCLE_BLOCK_MARK)) return null;
+      if (s0.recorder === "pot") return null;
+      const cyc = String(prompt).includes(CYCLE_BLOCK_MARK);   // 2.1.4: 월경·임신 기록도 기록기로(1단계에 줄 몇 개 더, 예전엔 늘 리수폿 Writer)
       const run = parseWriterRun(prompt); if (!run) return null;
+      run.cycleOn = cyc;
       let prep = null;
       if (!pure) { try { prep = await runner.prepareLatest(await api.getCurrentCharacterIndex(), await api.getCurrentChatIndex()); } catch { prep = null; } }
       const snap = settings.rawSnapshot(), sc = wiki.scope ? { characterId: wiki.scope.characterId, chatKey: wiki.scope.chatKey } : {};
@@ -167,10 +169,11 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       if (rec) retryHits++;
       else {
         const cast = await castNow(s0);
-        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, cast, group: s0.groupPeople !== false, onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
+        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, cast, group: s0.groupPeople !== false, cycle: cyc, onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
         if (!rec.people.some((p) => p.failed)) boundedSet(recDone, fullKey, rec, 4);
       }
-      const env = buildEnvelope(run, rec);
+      let env = buildEnvelope(run, rec);
+      if (cyc) { try { env = applyCycleReportObject({ ...env, cycle_report: rec.stage1?.cycle ?? [] }, wiki.snapshot()).obj; } catch (e) { log("기록기: 월경 보고 변환 실패", e?.message ?? e); } }
       if (prep && !stash.has(prep.h)) { try { putStash(prep.h, buildDusk(rec, { ignore: prep.ignore, light, beliefs })); } catch (e) { log("기록기: Dusk 기록 변환 실패", e?.message ?? e); } }
       lastRecord = { at: Date.now(), batch: run.batch, ...summarize(rec, env) };
       return JSON.stringify(env);
@@ -178,6 +181,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     // 기록하기: Dusk 구획을 같이 싣고, 돌아온 응답에서 떼어 낸다.
     const writerCall = async (a, k, preset, prompt, opts = {}) => {
       const label = String(opts.stageLabel ?? ""); let sent = prompt, prep = null;
+      if (/^writer/i.test(label)) { try { cyclePending = cycleStates(wiki.snapshot()); } catch { cyclePending = null; } }   // 기록기 길에서도 큰 사건(출산 등)을 잡게 먼저
       if (/^writer batch/i.test(label)) {
         // 기록기가 끝내 실패하면: 2.1.4부터 기본은 이 기록을 실패로 끝내고 '다시 시도' 알림을 띄운다(다시 시도 = 기록기로 새로).
         // 예전처럼 리수폿 Writer 전체 지침(약 3만 토큰)으로 대신하려면 설정 '기록기가 실패하면 예전 리수폿 기록으로 대신'(potFallback). 취소는 그대로 던진다.
@@ -192,7 +196,6 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
           log("Dusk 기록기 실패 → 예전 리수폿 기록으로 대신", message);
         }
       }
-      if (/^writer/i.test(label)) { try { cyclePending = cycleStates(wiki.snapshot()); } catch { cyclePending = null; } }
       const had = String(prompt).includes(SECTION_MARK);
       if (/^writer/i.test(label) && !pure) {
         try { prep = await runner.prepareLatest(await api.getCurrentCharacterIndex(), await api.getCurrentChatIndex()); } catch { prep = null; }

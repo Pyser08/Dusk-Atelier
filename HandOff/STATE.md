@@ -9,7 +9,8 @@
 - 기억 설정에 스위치 2개(묶어 묻기 기본 켬·실패 시 대신 기본 끔) + 안내서 memory.html·story.html, CHANGELOG.
 - 장기기억 애드온 0.2.8 **minCore 2.1.4**(코어 memorylines 새 export 때문) → 코어 2.1.4 전 기기는 held(예전 애드온 유지).
 - 시험: `tests/aux-saving.test.js`(12) + memoryturn ‘2.1.4 실패 시 대신 안 함/설정 켜면 대신’ → npm test 1451 pass / 1 fail(pot-port, 원래 실패). build·check 동일함, build-addons --check 동일. e2e recorder-ui 14(스위치 확인 추가)·wiki-recorder·home-turn·smoke 통과.
-- 남은 일: [ ] 제보자 재측정(보조 호출 줄로 어느 작업이 큰지) [ ] analyzeLines 묶어 묻기 [ ] 월경 추적 켠 채팅은 늘 리수폿 Writer(약 3만) — 기록기로 옮길지 [ ] Erosync 직접 제공자 호출도 장부에 [ ] 정리 노트 factSheet가 위키 참조와 겹치는 칸 [ ] v2.1.4 main 병합·태그(사용자 지시 대기)
+- (22시 반) **월경·임신 기록도 기록기로**(장기기억 애드온 0.2.9): recordWithDusk가 CYCLE_BLOCK_MARK 있어도 리수폿 Writer로 안 넘김. `recorder.CYCLE_STAGE1`을 1단계 지침에 덧붙여 woman/sex/pregnant/birth 줄을 받고 `cycleFrom` → cycle_report → `applyCycleReportObject`로 리수폿 표식(CYCLE:/SEX:/PREGNANCY KNOWN/BIRTH). 주기 계산은 리수폿 그대로. cyclePending(출산 등 큰 사건)은 기록기 길 전에 잡도록 앞으로 옮김. 시험 `tests/recorder-cycle.test.js`(실제 리수폿 검증 통과·표식 저장).
+- 남은 일: [ ] 제보자 재측정(보조 호출 줄로 어느 작업이 큰지) [ ] analyzeLines 묶어 묻기 [ ] Erosync 직접 제공자 호출도 장부에 [ ] 정리 노트 factSheet가 위키 참조와 겹치는 칸 [ ] v2.1.4 main 병합·태그(사용자 지시 대기)
 
 ## 최근 세션 (2026-11-11 21시 — v2.1.4: 모델 호출 표시 ‘입력 내역’)
 - 제보: “장기기억 쓰면 2.0.0 전보다 입력이 7만→13만(응답 아래 모델 호출 칸 기준)”. 조사: 그 숫자는 Dusk turninfo의 메인 요청 어림값. 장기기억이 본편에 넣는 몫은 코드상 상한이 위키 참조 16,000자(관계 전용이면 실제 2~4천 자)+정리 노트 11,900자라 약 7천 토큰이 최대 → 6만 증가는 장기기억만으로 설명 안 됨. 원인 확정 못 함 — 사용자(제보자)가 장기 기억 끄고 다시 생성해 비교하기로.
