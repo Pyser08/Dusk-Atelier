@@ -1,7 +1,7 @@
 // 에셋 제작 — 대화상자들: 샘플링/모델, 캐릭터 프롬프트(NAI 다인), 조각 모음, 바이브 이미지, 레퍼런스, 프리셋, 작업 묶음 파일,
 // 문제 확인, 도움말, 설정(토큰·기본 예약), 봇·모듈에 넣기, 폴더. 저장은 모두 S.set(사본)으로.
 import { h, replace, download, pickFiles } from "../../dom.js";
-import { btn, modal, segmented, confirmDialog, promptDialog, openMenu, switchEl } from "../../kit.js";
+import { btn, modal, segmented, confirmDialog, promptDialog, openMenu, switchEl, setSwitch } from "../../kit.js";
 import { MODELS, modelOf, SAMPLER_KO, NOISE_SCHEDULES, QUALITY_KO, UC_KO, ucPresetsFor, normalizeSampling, ucPresetText, isFreeSize } from "../../../engine/sdstudio/nai.js";
 import { buildPrompt, buildNegative, toPARR, combinationCount } from "../../../engine/sdstudio/prompt.js";
 import * as P from "../../../engine/sdstudio/project.js";
@@ -21,7 +21,7 @@ export function createDialogs(S) {
   const setSampling = (patch) => { S.set(P.setSettings(S.proj, { sampling: normalizeSampling({ ...S.proj.settings.sampling, ...patch }) })); S.paintLeft(); };
 
   // 설명이 붙은 스위치
-  const tog = (on, label, desc, onChange) => h("div", { style: "display:flex;flex-direction:column;gap:3px" }, switchEl(on, { label, onChange }), h("span", { class: "rb-muted", style: "font-size:12px;white-space:normal;line-height:1.5" }, desc));
+  const tog = (on, label, desc, onChange) => h("div", { style: "display:flex;flex-direction:column;gap:3px" }, switchEl(on, { label, onChange: (v, sw) => { setSwitch(sw, v); onChange(v); } }), h("span", { class: "rb-muted", style: "font-size:12px;white-space:normal;line-height:1.5" }, desc));
 
   async function sampling() {
     const body = h("div", { style: "display:flex;flex-direction:column;gap:14px" });
@@ -222,7 +222,7 @@ export function createDialogs(S) {
       sec("씬 조합", "씬은 슬롯(열) 여러 개로 되어 있고 슬롯마다 켜진 조각 하나씩 골라 조합해요. 예약 1장 = 조합 전부를 한 장씩."),
       sec("모드", "씬 모드: 카드로 보기 · 갤러리 모드: 모든 그림 · 검색 모드: 이름·프롬프트 찾기 · 비교 모드: 그림 여러 장 나란히 · 동시편집: 여러 씬 프롬프트를 한 번에."),
       sec("그림", "그림을 누르면 크게 보고, 즐겨찾기·대표·변형·인페인트·업스케일·디렉터 도구(배경 지우기 등)를 써요. 이미지 월드컵으로 순위를 매기면 1위가 대표가 돼요."),
-      sec("폴더", "복장 베리에이션·소속으로 캐릭터를 묶어요. 폴더 안에 폴더, 한 캐릭터를 여러 폴더에 넣을 수 있어요. 카드를 고른 뒤 ‘폴더에 넣기’나 카드 메뉴로 넣어요."),
+      sec("폴더", "캐릭터·소속으로 캐릭터를 묶어요. 폴더 안에 폴더, 한 캐릭터를 여러 폴더에 넣을 수 있어요. 카드를 고른 뒤 ‘폴더에 넣기’나 카드 메뉴로 넣어요."),
       sec("보낼 그림 고르기·바로 넣기", `그림 카드 왼쪽 위 체크(또는 ${isMacLike() ? "⌘" : "Ctrl"}+클릭)로 보낼 그림을 골라요. 고른 것은 씬을 옮기거나 다시 열어도 남고, 씬 카드에 ✓수로 보여요. ‘고른 그림 바로 넣기’(${S.keyLabel("put")})를 누르면 고른 그림만 씬 이름으로 봇에 들어가요. 자리·형식(WebP·AVIF)·같은 이름 처리는 설정에서, 알림의 ‘되돌리기’로 바로 취소해요.`),
       sec("템플릿", "씬 구성을 템플릿으로 저장하고 다른 캐릭터에 적용해요. SDStudio 씬 템플릿 파일(.json)도 가져와요. 맨 위에서 적용하면 모든 캐릭터, 폴더 안에서는 그 폴더의 캐릭터, 캐릭터 안에서는 그 캐릭터에 들어가요. 씬이 이미 있으면 합칠지 바꿀지 골라요."),
       sec("되돌리기·단축키", `${S.keyLabel("undo")} 되돌리기, ${S.keyLabel("redo")} 다시하기(봇에 넣은 것은 알림의 되돌리기로). 단축키는 설정 → 단축키 설정에서 바꿔요. 맥은 ⌘ 기준이에요.`),
@@ -245,7 +245,7 @@ export function createDialogs(S) {
   async function settings() {
     const pf = await S.sd.getPrefs();
     const has = !!(await S.sd.getToken());
-    const slots = S.target.kind === "module" ? [["assets", "모듈 에셋"]] : [["emotionImages", "감정 이미지"], ["additionalAssets", "추가 에셋"]];
+    const slots = S.target.kind === "module" ? [["assets", "모듈 에셋"]] : [["additionalAssets", "추가 에셋"], ["emotionImages", "감정 이미지"]];
     const ql = h("span", { class: "rb-muted" }, `품질 ${Math.round(pf.putQuality * 100)}`);
     const tokensBox = h("div", { style: "display:flex;flex-direction:column;gap:6px" });
     const paintTokens = async () => {
@@ -269,6 +269,8 @@ export function createDialogs(S) {
       field("넣을 때 형식(용량 줄이기)", segmented([["png", "원본 PNG"], ["webp", "WebP"], ["avif", "AVIF"]], pf.putFormat, async (v) => { await S.sd.setPrefs({ putFormat: v }); S.prefs.putFormat = v; }, "넣을 때 형식"),
         ql, h("input", { type: "range", min: 0.5, max: 1, step: 0.01, value: pf.putQuality, onInput: (e) => { ql.textContent = `품질 ${Math.round(e.target.value * 100)}`; }, onChange: async (e) => { const q = Number(e.target.value); await S.sd.setPrefs({ putQuality: q }); S.prefs.putQuality = q; } }),
         h("span", { class: "rb-muted", style: "white-space:normal;font-size:12px" }, "AVIF를 못 만드는 브라우저면 WebP로 넣어요. 바꾼 것이 더 크면 원본 그대로 넣어요.")),
+      field("넣을 때 에셋 이름", segmented([["scene", "씬"], ["us", "폴더_캐릭터_씬.확장자"], ["dot", "폴더.캐릭터.씬.확장자"]], pf.nameStyle ?? "scene", async (v) => { await S.sd.setPrefs({ nameStyle: v }); S.prefs.nameStyle = v; }, "에셋 이름"),
+        h("span", { class: "rb-muted", style: "white-space:normal;font-size:12px" }, "폴더 = 그 캐릭터가 든 캐릭터 폴더(없으면 첫 폴더, 폴더가 없으면 빼요). 예: 아비도스_호시노_smile.webp")),
       field("같은 이름이 이미 있으면", segmented([["number", "번호 붙여 더하기"], ["replace", "그림 바꾸기"]], pf.dup, async (v) => { await S.sd.setPrefs({ dup: v }); S.prefs.dup = v; }, "같은 이름")),
       h("b", null, "부스트 모드(여러 계정으로 동시에 그리기)"), boostSw,
       h("span", { class: "rb-muted", style: "white-space:normal;font-size:12px" }, "켜면 아래 토큰 수만큼(최대 4) 동시에 그려요. 토큰은 이 기기에만 저장돼요."), tokensBox,
@@ -338,7 +340,7 @@ export function createDialogs(S) {
 
   // 넣는 방법 고르기 → { slot, name(비우면 씬 이름), dup } | null
   async function put({ count }) {
-    const slots = S.target.kind === "module" ? [["assets", "모듈 에셋"]] : [["emotionImages", "감정 이미지"], ["additionalAssets", "추가 에셋"]];
+    const slots = S.target.kind === "module" ? [["assets", "모듈 에셋"]] : [["additionalAssets", "추가 에셋"], ["emotionImages", "감정 이미지"]];
     let slot = slots.some((x) => x[0] === S.prefs.putSlot) ? S.prefs.putSlot : slots[0][0], dup = S.prefs.dup ?? "number";
     const nameIn = h("input", { class: "rb-input", id: "sds-put-name", placeholder: "비우면 씬 이름" });
     return modal(win, (done) => dialog(`고른 그림 ${count}장을 넣을까요?`, 480,
@@ -354,7 +356,7 @@ export function createDialogs(S) {
     const input = h("input", { type: "text", class: "rb-input", value: name, placeholder: "예: 수영복 / 아비도스", "data-autofocus": "", id: "sds-fname" });
     return modal(win, (done) => {
       input.addEventListener("keydown", (e) => { if (e.key === "Enter" && input.value.trim()) done({ name: input.value.trim(), kind: k }); });
-      return dialog(title, 460, field("폴더 이름", input), field("무엇으로 묶나요", segmented([["outfit", "복장 베리에이션"], ["group", "소속"], ["", "그 밖"]], k, (v) => { k = v; }, "폴더 종류")),
+      return dialog(title, 460, field("폴더 이름", input), field("무엇으로 묶나요", segmented([["outfit", "캐릭터"], ["group", "소속"], ["", "그 밖"]], k, (v) => { k = v; }, "폴더 종류")),
         h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(null) }), btn(ok, { kind: "primary", id: "sds-fok", onClick: () => input.value.trim() && done({ name: input.value.trim(), kind: k }) })));
     });
   }

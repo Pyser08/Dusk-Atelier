@@ -20,7 +20,7 @@ import { createDialogs } from "./dialogs.js";
 import { openLightbox, openCup } from "./viewer.js";
 
 var MODES = [["scene", "씬 모드"], ["gallery", "갤러리 모드"], ["search", "검색 모드"], ["compare", "비교 모드"], ["bulk", "동시편집"]];
-var KIND_KO = { outfit: "복장", group: "소속" };
+var KIND_KO = { outfit: "캐릭터", group: "소속" };
 // '감정 세트' — 봇 감정 이미지로 자주 쓰는 씬(이름 = 감정 이미지 이름)
 var EMOTION_SET = [["default", ""], ["smile", "smile"], ["happy", "happy, smile, open mouth"], ["laughing", "laughing, closed eyes"], ["angry", "angry, v-shaped eyebrows"], ["sad", "sad, frown"], ["crying", "crying, tears"], ["surprised", "surprised, open mouth, wide-eyed"], ["shy", "shy, blush, looking away"], ["embarrassed", "embarrassed, blush, sweat"], ["confused", "confused, head tilt"], ["thinking", "thinking, hand on own chin"], ["sleepy", "sleepy, half-closed eyes"], ["smug", "smug, smirk"], ["scared", "scared, trembling"], ["disgusted", "disgusted"], ["determined", "determined, clenched hand"], ["bored", "bored, half-closed eyes"], ["excited", "excited, sparkle"], ["love", "heart-shaped pupils, blush"]];
 
@@ -135,7 +135,9 @@ export async function openAssetStudio(ctx, target, sd) {
   function paintTools() {
     const c = S.curChar(), sc = S.curScene(), n = proj.settings.reserveDefault;
     const selN = sel.size;
-    const view = [group("검색", ib("search", "검색 모드", () => { setMode("search"); bodyEl.querySelector("#sds-q")?.focus(); }, { on: st.mode === "search" })),
+    const allPicked = pickedInScope();
+    const view = [group("검색", ib("search", "검색 모드", () => { setMode("search"); bodyEl.querySelector("#sds-q")?.focus(); }, { on: st.mode === "search" }),
+        ib("exportBot", `봇으로 넣기 — 고른 그림 ${allPicked.length}장 (${S.curChar() ? "이 캐릭터" : st.folder ? "이 폴더" : "전체"})`, () => quickPut(allPicked), { disabled: !allPicked.length, id: "sds-put-all" })),
       group("보기", ib("eye", st.names ? "이름 숨기기" : "이름 보이기", () => { st.names = !st.names; el.classList.toggle("nonames", !st.names); paintTools(); }, { on: st.names, id: "sds-names" }),
         h("div", { class: "sds-zoom" }, h("input", { type: "range", min: 10, max: 100, value: st.zoom, "aria-label": "카드 크기", id: "sds-zoom", onInput: (e) => { st.zoom = Number(e.target.value); applyZoom(); e.target.nextSibling.textContent = `${st.zoom}%`; } }), h("span", null, `${st.zoom}%`)))];
     const undoG = group("되돌리기", ib("undo", "되돌리기", () => S.undo(), { disabled: !hist.canUndo(), id: "sds-undo" }), ib("redo", "다시하기", () => S.redo(), { disabled: !hist.canRedo(), id: "sds-redo" }));
@@ -390,7 +392,7 @@ export async function openAssetStudio(ctx, target, sd) {
     return t;
   }
   function charsView() {
-    if (!proj.chars.length && !proj.folders.length) return [empty("이 " + (target.kind === "module" ? "모듈" : "봇") + "에 들어갈 캐릭터를 만들어요", "캐릭터를 열어 씬(표정·포즈)을 만들고 예약하면 SDStudio처럼 차례로 그려요. 복장·소속은 폴더로 묶어요.", btn("새 캐릭터", { kind: "primary", icon: "plus", onClick: () => addChar() }))];
+    if (!proj.chars.length && !proj.folders.length) return [empty("이 " + (target.kind === "module" ? "모듈" : "봇") + "에 들어갈 캐릭터를 만들어요", "캐릭터를 열어 씬(표정·포즈)을 만들고 예약하면 SDStudio처럼 차례로 그려요. 캐릭터·소속은 폴더로 묶어요.", btn("새 캐릭터", { kind: "primary", icon: "plus", onClick: () => addChar() }))];
     const v = P.view(proj, st.folder);
     const folderRow = (f, depth = 0) => {
       const all = P.rowChars(proj, f.id), list = (f.members ?? []).map((id) => P.charOf(proj, id)).filter(Boolean), subF = depth < 8 ? proj.folders.filter((x) => x.parent === f.id) : [], subs = subF.length;
@@ -400,7 +402,7 @@ export async function openAssetStudio(ctx, target, sd) {
           f.kind ? h("span", { class: "rb-badge" }, KIND_KO[f.kind]) : null, h("span", { class: "rb-muted" }, `${all.length}명${subs ? ` · 폴더 ${subs}` : ""}`), h("span", { style: "color:var(--rb-mute);display:flex" }, ico("chevR", 16))),
           h("button", { type: "button", class: "rb-icon-btn", "aria-label": "폴더 메뉴", onClick: (e) => folderMenu(e.currentTarget, f.id) }, ico("more", 18))),
         list.length ? h("div", { class: "strip" }, ...list.map((c) => charCard(c, f.id, list))) : subF.length ? null : h("span", { class: "rb-muted", style: "white-space:normal" }, "비어 있어요. 캐릭터 카드나 폴더를 여기로 끌어다 놓아요."),
-        ...subF.map((g) => folderRow(g, depth + 1)));
+        subF.length ? h("div", { class: "sds-subrows" }, ...subF.map((g) => folderRow(g, depth + 1))) : null);
       row.classList.toggle("cur", isCur("folder", f.id));
       dragSource(row.querySelector(".hd"), () => ({ kind: "folder", id: f.id }));
       dropTarget(row, {
@@ -676,11 +678,28 @@ export async function openAssetStudio(ctx, target, sd) {
     const nm = uniqueAssetName(x, slot, name); used.add(nm.toLowerCase());
     return withAsset(x, slot, nm, path, ext);
   }
+  // 에셋 이름: 설정(넣을 때 에셋 이름) — scene = 씬 이름, us = 폴더_캐릭터_씬.확장자, dot = 폴더.캐릭터.씬.확장자
+  function charFolderName(cid) {
+    const fs = proj.folders.filter((f) => f.members.includes(cid));
+    return (fs.find((f) => f.kind === "outfit") ?? fs[0])?.name ?? "";
+  }
+  function assetName(it, ext) {
+    const style = S.prefs.nameStyle ?? "scene";
+    if (style === "scene" || !it.cid) return it.name;
+    const c = P.charOf(proj, it.cid), sep = style === "dot" ? "." : "_";
+    return [charFolderName(it.cid), c?.name, it.name].filter(Boolean).join(sep) + (ext ? `.${ext}` : "");
+  }
+  // 지금 보는 범위(맨 위 = 전체, 폴더 = 그 폴더, 캐릭터·씬 = 그 캐릭터)의 고른 그림 모두
+  function pickedInScope() {
+    const c = S.curChar();
+    const chars = c ? [c] : st.folder ? P.rowChars(proj, st.folder) : proj.chars;
+    return chars.flatMap((x) => P.pickedImages(x).map((y) => ({ ...y, cid: x.id })));
+  }
   async function quickPut(items, opt = {}) {
     items = items.filter((x) => x?.path);
     if (!items.length) { S.toast("보낼 그림을 먼저 골라요(그림 왼쪽 위 체크)"); return; }
     const okSlot = (v) => (target.kind === "module" ? v === "assets" : v === "emotionImages" || v === "additionalAssets");
-    const slot = okSlot(opt.slot) ? opt.slot : okSlot(S.prefs.putSlot) ? S.prefs.putSlot : target.kind === "module" ? "assets" : "emotionImages";
+    const slot = okSlot(opt.slot) ? opt.slot : okSlot(S.prefs.putSlot) ? S.prefs.putSlot : target.kind === "module" ? "assets" : "additionalAssets";
     const dup = opt.dup ?? S.prefs.dup;
     const fmt = S.prefs.putFormat ?? "webp", quality = S.prefs.putQuality ?? 0.85;
     const t = ctx.toast(`넣는 중 0/${items.length}`, { seconds: 600 });
@@ -702,7 +721,7 @@ export async function openAssetStudio(ctx, target, sd) {
       };
       await Promise.all([work(), work(), work()]);
       let prevSlot = null;
-      await withTarget((tg) => { prevSlot = structuredClone(tg[slot] ?? []); const used = new Set(); let x = tg; items.forEach((it, i) => { x = putOne(x, slot, opt.name || it.name, out[i].path, out[i].ext, dup, used); }); return x; });
+      await withTarget((tg) => { prevSlot = structuredClone(tg[slot] ?? []); const used = new Set(); let x = tg; items.forEach((it, i) => { x = putOne(x, slot, opt.name || assetName(it, out[i].ext), out[i].path, out[i].ext, dup, used); }); return x; });
       let unpick = proj;   // 보낸 그림은 고르기를 풀어 다시 보내지 않게
       for (const it of items) if (it.cid && it.sid) unpick = P.setPicks(unpick, it.cid, it.sid, [it.path], false);
       if (unpick !== proj) S.set(unpick, { undo: false });

@@ -75,6 +75,8 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   const subs = await page.evaluate(() => [...document.querySelectorAll("#rb-edit-sub > *")].map((x) => x.id));
   ok("봇 편집: 적용 아래 '에셋' 다음 '에셋 제작'", JSON.stringify(subs) === JSON.stringify(["rb-edit-assets", "rb-sd-make"]), JSON.stringify(subs));
   await page.click("#rb-sd-make"); await page.waitForTimeout(700);
+  ok("넣는 자리 기본값 = 추가 에셋", (await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.prefs.putSlot)) === "additionalAssets");
+  await page.evaluate(() => { document.querySelector("#rb-sd-studio").__sds.prefs.putSlot = "emotionImages"; });   // 아래 시험은 감정 이미지 기준
   const full = await page.evaluate(() => { const w = window.__app.ctx.win.getBoundingClientRect(), s = document.querySelector("#rb-sd-studio")?.getBoundingClientRect(); return { w: [w.width, w.height], s: s && [s.width, s.height], vw: [innerWidth, innerHeight] }; });
   ok("에셋 제작: 플러그인 창이 화면 가득", full.s && Math.abs(full.w[0] - full.vw[0]) < 3 && Math.abs(full.w[1] - full.vw[1]) < 3 && Math.abs(full.s[0] - full.w[0]) < 3, JSON.stringify(full));
   ok("처음: 캐릭터 갤러리 + 빈 안내 + 프롬프트 에디터", /캐릭터 갤러리/.test(await txt(page, "#sds-topbar")) && /캐릭터를 만들어요/.test(await txt(page, "#sds-body")) && await page.locator(".sds-left").isVisible());
@@ -303,6 +305,21 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   pr = await sdProj(page);
   ok("폴더를 ‘전체’로 끌면 맨 위로", pr.folders.find((f) => f.id === f2).parent == null);
   await page.locator("#sds-crumbs .rb-chip").first().click(); await page.waitForTimeout(250);
+  { const S = await page.evaluateHandle(() => document.querySelector("#rb-sd-studio").__sds);
+    const pr2 = await sdProj(page), hid = charId(pr2, "호시노") ?? pr2.chars[0].id;
+    const sc0 = pr2.chars.find((c) => c.id === hid).scenes.find((x) => x.images.length);
+    if (sc0) {
+      await page.evaluate(({ hid, sid, path }) => { const S = document.querySelector("#rb-sd-studio").__sds; S.togglePick({ cid: hid, sid, path }, true); S.prefs.nameStyle = "us"; }, { hid, sid: sc0.id, path: sc0.images[0].path });
+      await page.waitForTimeout(150);
+      ok("검색 옆 ‘봇으로 넣기’ 켜짐(고른 수 반영)", await page.locator("#sds-put-all").isEnabled());
+      await page.click("#sds-put-all"); await page.waitForTimeout(900);
+      const names = await page.evaluate(() => (window.__charWrites?.at(-1)?.c?.emotionImages ?? []).map((x) => x[0]));
+      const fname = pr2.folders.find((f) => f.members.includes(hid))?.name;
+      const want = [fname, pr2.chars.find((c) => c.id === hid).name, sc0.name].filter(Boolean).join("_") + ".webp";
+      ok("이름 규칙 폴더_캐릭터_씬.확장자", names.includes(want), JSON.stringify([want, names.slice(-3)]));
+      await page.evaluate(() => { document.querySelector("#rb-sd-studio").__sds.prefs.nameStyle = "scene"; });
+    } else ok("이름 규칙 시험용 그림 있음", false);
+    await S.dispose(); }
   await shot(page, "sd-6-folders");
 
   // 샘플링(V5)·조각·문제 확인

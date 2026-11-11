@@ -97,6 +97,9 @@ export var CSS = `
 [data-drop-hint]::before{content:attr(data-drop-hint);position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:5;padding:3px 10px;border-radius:999px;background:var(--rb-acc-grad);color:var(--rb-on-acc);font-size:12px;font-weight:800;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 .sds-crumbs .rb-chip{position:relative}
 .sds-frow .sds-frow{background:var(--rb-surf2)}
+.sds-subrows{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.sds-subrows>.sds-frow{flex:1 1 auto;min-width:min(100%,240px);max-width:100%;box-sizing:border-box}
+.sds-subrows>.sds-frow .strip{max-width:100%}
 .sds-subf.drop-into{outline:2px solid var(--rb-acc);outline-offset:1px}
 .sds-rootdrop{display:none;border:2px dashed var(--rb-line3);border-radius:var(--rb-r3);padding:16px;text-align:center;color:var(--rb-sub);font-size:13px}
 .sds-dragging .sds-rootdrop{display:block}

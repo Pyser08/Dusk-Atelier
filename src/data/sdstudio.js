@@ -106,7 +106,7 @@ export function createSdStudio(api) {
     // 이 기기에만 두는 값(JSON)
     async getLocal(key, fallback) { const s = await local(); try { const v = await s?.getItem?.(key); return v ? (typeof v === "string" ? JSON.parse(v) : v) : fallback; } catch { return fallback; } },
     async setLocal(key, v) { const s = await local(); try { await s?.setItem?.(key, JSON.stringify(v)); } catch { /* 로컬 저장소 없음 */ } },
-    async getPrefs() { return { putSlot: "", putFormat: "webp", putQuality: 0.85, dup: "number", keys: {}, boost: false, ...(await this.getLocal(PREFS_KEY, {})) }; },
+    async getPrefs() { return { putSlot: "additionalAssets", nameStyle: "scene", putFormat: "webp", putQuality: 0.85, dup: "number", keys: {}, boost: false, ...(await this.getLocal(PREFS_KEY, {})) }; },
     async setPrefs(patch) { const cur = await this.getPrefs(); await this.setLocal(PREFS_KEY, { ...cur, ...patch }); },
     // 부스트 모드 토큰 목록 [{ label, token }] — 첫 칸은 기본 토큰
     async getTokens() {
