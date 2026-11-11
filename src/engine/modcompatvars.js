@@ -18,9 +18,12 @@ export function getvarNames(text) {
 // 이 봇에서 Dusk가 채울 인물 변수 → [{name, keywords, moduleId}]
 // 모듈 로어북이 getvar로 부르고, 그 이름이 모듈의 인물(로어북 키·이름표·이미지 주제)이며, 봇이 스스로 다루지 않는 것만.
 export function managedNames({ modules = [], bot = {}, subjects = [] } = {}) {
-  // 봇·모듈 Lua(그리고 봇 기본 변수)가 직접 다루는 이름은 건드리지 않는다
+  // 봇·모듈 Lua(그리고 봇 기본 변수)가 직접 다루는 이름은 건드리지 않는다. 같은 코드에서 같은 이름으로 다시 정의돼
+  // 실제로는 돌지 않는 함수(예: function onOutput이 셋)는 빼고 본다 — 거기 있는 인물은 아무도 채우지 않는다.
   const codes = (list) => (list ?? []).flatMap((t) => (t?.effect ?? []).map((e) => e?.code ?? ""));
-  const botText = [bot.defaultVariables, ...codes(bot.triggerscript), ...(modules ?? []).flatMap((m) => codes(m?.trigger))].join("\n");
+  const allCode = [...codes(bot.triggerscript), ...(modules ?? []).flatMap((m) => codes(m?.trigger))];
+  const botText = [bot.defaultVariables, ...allCode.map((c) => luaSegments(c).live)].join("\n");
+  const hints = foundHints(allCode), luaKw = luaKeywords(allCode);
   const botEntries = [...(bot.globalLore ?? [])];
   const subj = new Set((subjects ?? []).map((s) => lower(s.name ?? s)));
   const res = new Map();
@@ -35,11 +38,49 @@ export function managedNames({ modules = [], bot = {}, subjects = [] } = {}) {
       if (!owner && !subj.has(ln)) continue;                       // 인물이 아닌 설정 변수(lang 등)는 건드리지 않는다
       if (botText.includes(`"${n}"`) || botText.includes(`'${n}'`) || new RegExp(`(^|\\n)\\s*${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*=`).test(botText)) continue;   // 봇 Lua·기본 변수가 다룸
       if (botEntries.some((b) => splitKeys(b?.key).some((k) => lower(k) === ln))) continue;   // 봇 자신의 인물
-      const keywords = owner ? [...new Set([...splitKeys(owner.key), ...splitKeys(owner.secondkey), n])] : [n];
-      res.set(ln, { name: n, keywords: keywords.filter((k) => k.length >= 2), moduleId: m?.id ?? "" });
+      const keywords = [...new Set([...(owner ? [...splitKeys(owner.key), ...splitKeys(owner.secondkey)] : []), ...(luaKw.get(n) ?? []), n])];
+      res.set(ln, { name: n, keywords: keywords.filter((k) => k.length >= 2), moduleId: m?.id ?? "", found: hints.get(n) ?? null });
     }
   }
   return [...res.values()];
+}
+
+// Lua 코드를 맨 바깥 함수 정의 단위로 나눈다. 같은 이름이 여러 번 정의되면 마지막 것만 산다(Lua 전역 덮어쓰기).
+// → { live: 살아 있는 코드, dead: [덮여 죽은 정의들] }
+export function luaSegments(code) {
+  const s = String(code ?? "");
+  const re = /^(?:function\s+([A-Za-z_][\w.]*)\s*\(|([A-Za-z_][\w.]*)\s*=\s*(?:async\s*\()?\s*function\s*\()/gm;
+  const marks = [];
+  let m;
+  while ((m = re.exec(s))) marks.push({ at: m.index, name: m[1] ?? m[2] });
+  if (!marks.length) return { live: s, dead: [] };
+  const segs = marks.map((x, i) => ({ name: x.name, text: s.slice(x.at, marks[i + 1]?.at ?? s.length) }));
+  const lastIdx = new Map(segs.map((x, i) => [x.name, i]));
+  const live = [s.slice(0, marks[0].at), ...segs.filter((x, i) => lastIdx.get(x.name) === i).map((x) => x.text)].join("");
+  const dead = segs.filter((x, i) => lastIdx.get(x.name) !== i).map((x) => x.text);
+  return { live, dead };
+}
+// 모듈 Lua(죽은 정의 포함)에서 인물별 ‘나왔을 때 값’ 힌트: 그 인물이 든 정의의 `isFound and "X" or "Y"` → X
+export function foundHints(codeList) {
+  const out = new Map();
+  for (const code of codeList ?? []) {
+    const { live, dead } = luaSegments(code);
+    for (const seg of [...dead, live]) {
+      const v = /\b\w*[Ff]ound\w*\s+and\s+["']([01])["']\s+or\s+["']([01])["']/.exec(seg);
+      if (!v) continue;
+      for (const m of seg.matchAll(/\bid\s*=\s*["']([^"']+)["']/g)) out.set(m[1], v[1]);
+    }
+  }
+  return out;
+}
+// Lua 인물 표(죽은 정의 포함)의 키워드: `{ id = "X", keywords = {"X", "엑스"} }` → X → [X, 엑스]
+export function luaKeywords(codeList) {
+  const out = new Map();
+  for (const code of codeList ?? []) for (const m of String(code ?? "").matchAll(/\bid\s*=\s*["']([^"']+)["']\s*,\s*keywords\s*=\s*\{([^}]*)\}/g)) {
+    const kw = [...m[2].matchAll(/["']([^"']+)["']/g)].map((x) => x[1]);
+    if (kw.length) out.set(m[1], kw);
+  }
+  return out;
 }
 
 // 지금 채팅 변수에서 '나오면 몇'인지 읽는다. 봇이 이미 0/1로 채우는 인물 변수와 최근 대화를 맞춰 본다.
@@ -66,10 +107,11 @@ export function inferFoundValue({ scriptstate = {}, botEntries = [], recentText 
 
 // 바꿀 값만 → {이름: 값}. found: 나왔을 때 값("0"|"1")
 export function varUpdates({ managed = [], text = "", found = "0", scriptstate = {} } = {}) {
-  const t = lower(text), notFound = found === "0" ? "1" : "0", out = {};
+  const t = lower(text), out = {};
   for (const m of managed) {
     const seen = m.keywords.some((k) => t.includes(lower(k)));
-    const v = seen ? found : notFound;
+    const f = m.found === "0" || m.found === "1" ? m.found : found;   // 그 모듈 Lua가 쓰던 규칙이 있으면 그것
+    const v = seen ? f : (f === "0" ? "1" : "0");
     const cur = scriptstate?.[`$${m.name}`];
     if (cur == null || String(cur) !== v) out[m.name] = v;
   }

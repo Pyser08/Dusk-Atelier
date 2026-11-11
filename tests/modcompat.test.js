@@ -391,3 +391,24 @@ test("그룹 채팅: 훅은 봇 목록을 기다리지 않는다(뒤에서 읽�
   const c1 = await mc.current();
   assert.deepEqual(c1.members, ["Alternate Hunters"]);
 });
+
+test("감지 변수: 같은 Lua 안에서 다시 정의돼 죽은 함수의 인물은 Dusk가 채우고, 그 함수의 규칙·키워드를 쓴다", async () => {
+  const { luaSegments, foundHints } = await import("../src/engine/modcompatvars.js");
+  const code = `function onOutput(triggerId)
+  local characterMap = { { id = "Lina Orvette", keywords = {"Lina Orvette", "리나 오르베트"} } }
+  local value = isFound and "0" or "1"
+end
+function onOutput(triggerId)
+  local characterMap = { { id = "Nereida", keywords = {"Nereida"} } }
+  local value = isFound and "1" or "0"
+end`;
+  assert.equal(luaSegments(code).dead.length, 1);
+  assert.equal(foundHints([code]).get("Lina Orvette"), "0");
+  const pack = { id: "pack", trigger: [{ effect: [{ type: "triggerlua", code }] }], assets: [], regex: [], lorebook: [
+    { key: "", comment: "NPC List", content: "{{#if {{equal::{{getvar::Lina Orvette}}::1}}}}- Lina{{/if}}{{#if {{equal::{{getvar::Nereida}}::1}}}}- N{{/if}}" },
+    { key: "리나, Lina", comment: "Lina Orvette", content: "" }, { key: "Nereida", comment: "Nereida", content: "" }] };
+  const man = managedNames({ modules: [pack], bot: {} });
+  assert.deepEqual(man.map((m) => m.name), ["Lina Orvette"], "살아 있는 정의가 다루는 Nereida는 뺀다");
+  assert.ok(man[0].keywords.includes("리나 오르베트"));
+  assert.deepEqual(varUpdates({ managed: man, text: "리나 오르베트가 왔다", found: "1" }), { "Lina Orvette": "0" }, "모듈 Lua 규칙(나오면 0)이 먼저");
+});
