@@ -1098,3 +1098,8 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - **에셋 제작(sdstudio) 애드온은 배포 안 함**: 소스(addons/sdstudio, src/engine·ui sdstudio, data/sdstudio)는 main에 같이 들어가지만 addons.src.json에 없음 → 사용자에게 안 보임. 배포할 때 addons.src.json 줄 추가(minCore 2.1.1) + 안내서 addons.html#sdstudio 다시 넣기(초안은 커밋 0090c54의 docs/site/guide/addons.html) + CHANGELOG.
 - 태그 푸시가 이 환경에서 403이면 사용자가 `v2.1.3` 태그를 올려야 릴리스됨.
 - addons/dist/sdstudio.js(취소된 배포 때 만든 빌드물)가 main에도 들어가지만 addons.json에 없어 쓰이지 않음. 지울지는 사용자 결정.
+
+## 태그 한글 이름 4차 (1000회 이상 마무리)
+- 일반 태그 중 사용 1,000회 이상·괄호 없는 미번역 3,954개를 직접 번역해 `data/sdstudio/tags_ko_extra.csv`(10,865줄)·`src/engine/sdstudio/tags_ko.js`에 추가.
+- 남은 일반 태그: 1,000회 미만과 괄호 붙은 작품·캐릭터 계열. (기본 사전에 이미 한글 항목이 있는 태그는 영어 쪽 값으로 걸러내야 중복이 안 생김)
+- 확인: npm test(fail 0) · build · check 동일함. e2e는 안 돌림(데이터만 바뀜). sdstudio 애드온 배포는 여전히 보류.
