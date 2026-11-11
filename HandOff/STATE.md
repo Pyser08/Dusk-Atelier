@@ -10,10 +10,17 @@
   - `getRuntimeInfo()`가 `{}` — 호스트 구분 신호로 못 씀. `/user/data`의 tier 필드 경로는 틀림(본 구현은 `/user/subscription`).
   - 남은 확인: RisuAI 웹·PocketRisu 단독에서 같은 시험.
 - **코어: 개발 탭 애드온 자리 `slot "dev.actions"`** — `ui/screens/dev.js` actions()의 ‘에셋’ 바로 뒤. 부품은 `(ctx, info)`, info = 모듈 `{ kind: "module", id }` / 봇 `{ kind: "character", id, index }`. `ui/ext.js` `render(kind, key, ctx, info)` 넷째 인자 추가(더하기만, 기존 슬롯 영향 없음). e2e `tests/e2e/run-dev-slot.mjs`(7). 애드온이 이 자리를 쓰려면 이 코어가 릴리스돼야 함(minCore 올리기) — 릴리스는 지시 대기.
+- **(9시 반) 자리를 버튼 줄 아래로 옮김 + 애드온 `addons/sdstudio` ‘에셋 제작’ 첫 판** — 사용자: “불러오기·내보내기 밑에 길쭉한 에셋 제작 버튼”.
+  - `dev.js` actions(): 슬롯 부품이 있으면 `#rb-dev-actions`(세로) = 버튼 줄 + 그 아래 부품들(폭 가득). 없으면 예전 줄 그대로.
+  - 새 파일(애드온 전용, 코어 import 없음): `engine/sdstudio/nai.js`(buildGenerateBody v4.5·SIZES 세로/가로/정사각 Opus 무료 범위·readZipFirst(데이터 기술자 zip, fflate inflateSync)·assetSlotsOf·withAsset·uniqueAssetName) · `data/sdstudio.js`(토큰 `dusk.sdstudio.token`은 getLocalPluginStorage만·없으면 메모리, nativeFetch(signal 안 넘김)→fetch, 바디 어느 꼴이든, trackAi로 생성 중지, 401/402/429 문구, saveAsset 3번 시도) · `ui/screens/sdstudio.js`(창: 토큰(저장됨/바꾸기)·프롬프트·크기·1/2/4장·만들기·그림 고르기·봇은 추가 에셋/감정 이미지·이름·넣기 → 덧붙이기만, 봇 생성 중이면 막음, 모듈은 svc.run update assets). 창 상태는 `ctx.state.sdstudio["kind:id"]`.
+  - 시험: `tests/sdstudio.test.js`(5), e2e `run-addon-sdstudio.mjs`(21, PC+390, 중지·틀린 토큰·Esc 포함, `SHOTS=dir`로 사진), `run-dev-slot` 위치 검사 갱신.
+  - **아직 `addons/addons.src.json`에 안 넣음**(배포 목록) — minCore를 이 슬롯이 든 코어 버전으로 정해야 해서. 코어 릴리스·애드온 배포·버전은 사용자 지시 대기.
 - 남은 일:
+  - [ ] 애드온 목록 등록(addons.src.json, category "make"?) + minCore 결정 → 코어 릴리스 후 publish
+  - [ ] 실기기(RisuBard)에서 에셋 제작 창 확인 — 미리보기 그림(blob URL)이 플러그인 칸에서 보이는지
   - [ ] 나머지 두 호스트 시험 결과 받기
   - [ ] 애드온 `addons/sdstudio` 1단계: 엔진 이식(`src/engine/sdstudio/` — nai 요청 본문·모델 목록·품질/UC 프리셋·시드, SDStudio jest 테스트 옮김), 전송 `data/sdstudio/`(nativeFetch→risuFetch, fflate unzip, 토큰은 getLocalPluginStorage)
-  - [ ] 2단계: dev.actions 슬롯에 ‘AI 에셋’ 버튼 → 봇/모듈 정보로 프롬프트 초안(ai.run) → 생성·후보 고르기 → 감정 이미지/추가 에셋(모듈은 모듈 assets)으로 넣기(넣기 전 확인, 기존 에셋 안 건드림)
+  - [ ] 다음: 봇/모듈 정보로 프롬프트 초안(ai.run)·감정별 한 번에 만들기·SDStudio 프리셋/월드컵·i2i
   - [ ] CHANGELOG·안내서는 사용자에게 보이는 기능이 생길 때(슬롯만으로는 보이는 변화 없음)
 
 ## 최근 세션 (2026-11-11 1시 — 모듈 탭 전환·채팅 없이 설정·그룹 지원, manage 0.1.2·modcompat 0.1.1 배포)

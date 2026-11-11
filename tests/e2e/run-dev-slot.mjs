@@ -1,4 +1,4 @@
-// 개발 탭 '에셋' 버튼 옆 애드온 자리(slot "dev.actions"): 애드온이 없으면 흔적이 없고, 끼우면 에셋 바로 뒤에 붙으며
+// 개발 탭 버튼 줄 아래 애드온 자리(slot "dev.actions"): 애드온이 없으면 흔적이 없고, 끼우면 불러오기·내보내기 줄 아래 폭 가득 붙으며
 // 부품은 (ctx, { kind, id, index }) 를 받는다(봇이면 index = 캐릭터 순번). 떼면 다시 사라진다.
 import { createRequire } from "node:module";
 import { build } from "/opt/npm-tools/node_modules/esbuild/lib/main.js";
@@ -23,7 +23,8 @@ ok("애드온 없음: 에셋 옆에 아무것도 없음", before.length === 5 &&
 await page.evaluate(() => { window.__off = window.__app.ctx.ext.add("slot", "dev.actions", (ctx, info) => { const b = document.createElement("button"); b.id = "t-slot"; b.dataset.info = JSON.stringify(info ?? null); b.textContent = "AI 에셋"; return b; }); });
 await pick("m:m1");
 const withSlot = await labels();
-ok("끼우면 에셋 바로 뒤에 붙음", withSlot.length === 6 && /에셋/.test(withSlot[1]) && withSlot[2] === "t-slot", withSlot.join("|"));
+const place = await page.evaluate(() => { const s = document.querySelector("#t-slot"), row = document.querySelector("#rb-dev-edit").parentElement; return { parent: s?.parentElement?.id, afterRow: s?.previousElementSibling === row, below: s && s.getBoundingClientRect().top >= row.getBoundingClientRect().bottom }; });
+ok("끼우면 버튼 줄은 그대로, 그 아래에 붙음", withSlot.length === 5 && withSlot[4] === "rb-dev-export" && place.parent === "rb-dev-actions" && place.afterRow && place.below, `${withSlot.join("|")} ${JSON.stringify(place)}`);
 const infoM = await page.evaluate(() => JSON.parse(document.querySelector("#t-slot")?.dataset.info ?? "null"));
 ok("모듈이면 { kind: module, id }", infoM?.kind === "module" && infoM?.id === "m1" && infoM?.index == null, JSON.stringify(infoM));
 

@@ -421,16 +421,18 @@ function actions(ctx, all, p, obj) {
     "sep",
     ...p.kind === "module" ? [{ label: "모듈 .json", icon: "download", onClick: exportModJson }, { label: ".risum 전체", icon: "download", onClick: exportFull }] : [{ label: "봇 카드 .charx", icon: "download", onClick: exportCharx }]
   ]);
-  return h(
+  // 애드온 자리 "dev.actions": 버튼 줄 아래 폭 가득(예: 에셋 제작). 부품은 (ctx, { kind, id, index? }) — 봇이면 index = 캐릭터 순번
+  const extra = ctx.ext?.render("slot", "dev.actions", ctx, p.kind === "module" ? { kind: "module", id: p.id } : { kind: "character", id: p.id, index: t?.i }) ?? [];
+  const row = h(
     "div",
     { style: "display:flex;gap:8px;flex-wrap:wrap" },
     btn("편집", { kind: "primary", icon: "edit", onClick: edit, id: "rb-dev-edit" }),
     btn("에셋", { icon: "image", onClick: assets }),
-    ...ctx.ext?.render("slot", "dev.actions", ctx, p.kind === "module" ? { kind: "module", id: p.id } : { kind: "character", id: p.id, index: t?.i }) ?? [],   // 애드온: 에셋 옆 버튼(예: AI 에셋)
     btn("체크포인트", { icon: "check", onClick: checkpoint, id: "rb-dev-checkpoint" }),
     btn("불러오기", { icon: "upload", onClick: importMenu, id: "rb-dev-import" }),
     btn("내보내기", { icon: "download", onClick: exportMenu, id: "rb-dev-export" })
   );
+  return extra.length ? h("div", { style: "display:flex;flex-direction:column;gap:8px", id: "rb-dev-actions" }, row, ...extra) : row;
 }
 function listImportDialog(ctx, lists, fileName) {
   const keys = new Set(Object.keys(lists));
