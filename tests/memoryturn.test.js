@@ -414,3 +414,24 @@ test("2.1.4: Dusk 기록기가 끝내 실패해도 기본은 리수폿 Writer �
     assert.equal(h.mem.flow.lastRecord().fallback, fallback ? "risupot" : undefined);
   }
 });
+
+// 2.1.4 확인: 다음 응답이 끊겨 다시 생성해도(출력 없음·잘린 응답이 지워짐·플러그인 다시 시작) 장기기억·리수폿이 이전 대화를 다시 정리하지 않는다
+for (const mode of ["fast", "accurate"]) for (const variant of ["no-output", "partial-then-removed", "restart"]) test("끊긴 생성 뒤 다시 생성(" + mode + " · " + variant + "): 이미 정리한 이전 대화를 다시 정리하지 않는다", async () => {
+  const h = harness();
+  await h.mem.store.updateIndex((i) => { i.settings.flow.on = true; i.settings.recorder = "pot"; i.settings.flow.mode = mode; i.settings.edited = [...(i.settings.edited ?? []), "flow.mode"]; i.settings.debounceSec = 0.05; i.settings.minChars = 10; });
+  assert.equal(await h.mem.start(), "local");
+  const send = (user) => h.hooks["r:beforeRequest"]([{ role: "system", content: "샬레" }, { role: "user", content: user }], "model");
+  const request = (user) => { h.chat.message.push({ role: "user", data: user, chatId: "u" + h.chat.message.length }); return send(user); };
+  const reply = async (text, id) => { const idx = h.chat.message.length; h.chat.message.push({ role: "char", data: text, chatId: id }); h.hooks["c:output"]?.({ characterIndex: 0, chatIndex: 0, messageIndex: idx, chat: structuredClone(h.chat), char: await h.api.getCharacterFromIndex(0) }); return idx; };
+  const idle = () => !h.mem.flow.runtime()?.auto.scopeBusy("0:0") && !h.mem.flow.runtime()?.auto.processingKeys.size;
+  await request("시작하자"); const i1 = await reply(SCRIPT.T1.text, "a1");
+  await request("계속하자");
+  assert.ok(await until(async () => (await h.folder())?.cursor?.at === i1 && idle()));
+  await wait(500);
+  const n0 = h.calls.length;
+  if (variant === "partial-then-removed") { await reply(SCRIPT.T2.text.slice(0, 40), "a2p"); await wait(200); h.chat.message.pop(); }
+  if (variant === "restart") { await h.mem.stop?.(); assert.equal(await h.mem.start(), "local"); }
+  await send("계속하자");   // 다시 생성(같은 입력)
+  await wait(1500);
+  assert.equal(h.calls.length, n0, "이전 대화를 다시 정리하지 않는다");
+});
