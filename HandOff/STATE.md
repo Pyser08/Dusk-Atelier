@@ -1055,3 +1055,6 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 ## v2.1.2 릴리스 + 에셋 제작(sdstudio) 0.1.0 배포 (11-11 저녁, 사용자 "배포해줘")
 - origin/main(v2.1.1)을 SD-Studio에 병합 → package 2.1.2(코어 변경: 에셋 버튼 편집 탭 줄로). addons.src.json에 sdstudio 0.1.0(minCore 2.1.1 — 탭 줄 아니어도 2.1.1 슬롯에서 동작). 안내서 addons.html#sdstudio, CHANGELOG v2.1.2.
 - 순서: test·build·check·e2e → publish-addons → main 빨리감기 → v2.1.2 태그.
+- **배포 취소(11-11 20:33, 사용자 지시)**: 위 순서 중 publish-addons만 실행됐었음 → 그 사이 다른 세션이 main에 v2.1.2(모듈 호환 0.1.2~0.1.4·태그 교정)를 올려 둔 상태라 내 배포가 modcompat를 0.1.1로 덮어씀 → addons 브랜치를 4e6ca0f(b31d2d4 배포)와 똑같이 되돌림(새 커밋, 강제 푸시 아님). main 푸시·v2.1.2 태그는 안 됨(main은 앞서 감, 태그 푸시는 403).
+- 다시 배포하려면: origin/main(다른 세션 v2.1.2)을 이 브랜치에 병합 → CHANGELOG·addons.src.json 충돌은 둘 다 살림(sdstudio 줄 추가) → 코어 버전은 2.1.3 등 새로 정함(main이 이미 2.1.2) → test·build·check·e2e → publish-addons → main 빨리감기 → 태그(여기선 403이라 사용자가 올려야 할 수 있음).
+- 이 브랜치의 package.json 2.1.2·CHANGELOG v2.1.2 문구는 배포용으로 바꾼 것이라 다시 배포할 때 손볼 것.
