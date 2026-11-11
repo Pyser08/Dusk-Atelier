@@ -10,6 +10,7 @@
 - 장기기억 애드온 0.2.8 **minCore 2.1.4**(코어 memorylines 새 export 때문) → 코어 2.1.4 전 기기는 held(예전 애드온 유지).
 - 시험: `tests/aux-saving.test.js`(12) + memoryturn ‘2.1.4 실패 시 대신 안 함/설정 켜면 대신’ → npm test 1451 pass / 1 fail(pot-port, 원래 실패). build·check 동일함, build-addons --check 동일. e2e recorder-ui 14(스위치 확인 추가)·wiki-recorder·home-turn·smoke 통과.
 - (22시 반) **월경·임신 기록도 기록기로**(장기기억 애드온 0.2.9): recordWithDusk가 CYCLE_BLOCK_MARK 있어도 리수폿 Writer로 안 넘김. `recorder.CYCLE_STAGE1`을 1단계 지침에 덧붙여 woman/sex/pregnant/birth 줄을 받고 `cycleFrom` → cycle_report → `applyCycleReportObject`로 리수폿 표식(CYCLE:/SEX:/PREGNANCY KNOWN/BIRTH). 주기 계산은 리수폿 그대로. cyclePending(출산 등 큰 사건)은 기록기 길 전에 잡도록 앞으로 옮김. 시험 `tests/recorder-cycle.test.js`(실제 리수폿 검증 통과·표식 저장).
+- 배포: addons 브랜치에 **장기기억 0.2.9만**(minCore 2.1.4) 올림(f8b8a67). publish-addons가 dist 전체를 올려 aibuild·cards·chattheme·erosync·provider(버전 그대로인데 코드가 바뀜)와 sdstudio.js(목록에 없는 남은 파일)까지 올라갔던 것을 되돌림 — 이 애드온들은 버전을 안 올린 채 바뀐 상태라, 다음에 배포할 땐 버전·minCore를 정하고 올릴 것.
 - 남은 일: [ ] 제보자 재측정(보조 호출 줄로 어느 작업이 큰지) [ ] analyzeLines 묶어 묻기 [ ] Erosync 직접 제공자 호출도 장부에 [ ] 정리 노트 factSheet가 위키 참조와 겹치는 칸 [ ] v2.1.4 main 병합·태그(사용자 지시 대기)
 
 ## 최근 세션 (2026-11-11 21시 — v2.1.4: 모델 호출 표시 ‘입력 내역’)
