@@ -111,6 +111,69 @@ export function setMember(p, folderId, charId, on) {
     return f;
   }) };
 }
+// ── 끌어 옮기기(드래그) ──
+// 목록 안 순서: 폴더 밖이면 chars 순서, 폴더 안이면 그 폴더 members 순서. before = 이 id 앞에(없으면 맨 뒤).
+// before가 옮기는 쪽(ids)에 들어 있으면 그 다음 것으로 밀어서 '제자리에 놓기'가 되게 한다
+var resolveBefore = (arr, set, before) => { let i = before ? arr.indexOf(before) : -1; if (i < 0) return null; while (i < arr.length && set.has(arr[i])) i++; return arr[i] ?? null; };
+var placeBefore = (arr, ids, before) => {
+  const set = new Set(ids), moved = ids.filter((x) => arr.includes(x)), rest = arr.filter((x) => !set.has(x));
+  const b = resolveBefore(arr, set, before), at = b ? rest.indexOf(b) : rest.length;
+  return [...rest.slice(0, at), ...moved, ...rest.slice(at)];
+};
+// 캐릭터 옮기기: from(폴더 id 또는 null) → to(폴더 id 또는 null). copy면 from에 남겨 둠(여러 폴더에 걸칠 수 있어서).
+// to가 폴더면 그 폴더의 before 앞에 들어가고, to가 null(맨 위)이면 from에서만 빠짐(다른 폴더 소속은 그대로).
+export function moveChars(p, ids, { from = null, to = null, before = null, copy = false } = {}) {
+  const valid = ids.filter((id) => p.chars.some((c) => c.id === id));
+  if (!valid.length) return p;
+  if (to && !p.folders.some((f) => f.id === to)) return p;
+  let folders = p.folders, chars = p.chars;
+  if (to) {
+    folders = folders.map((f) => {
+      if (f.id === to) { const cur = f.members.filter((m) => !valid.includes(m)); const b = f.members.includes(before) ? resolveBefore(f.members, new Set(valid), before) : null, at = b && cur.includes(b) ? cur.indexOf(b) : cur.length; return { ...f, members: [...cur.slice(0, at), ...valid, ...cur.slice(at)] }; }
+      if (!copy && from && f.id === from) return { ...f, members: f.members.filter((m) => !valid.includes(m)) };
+      return f;
+    });
+  } else {
+    if (!copy && from) folders = folders.map((f) => (f.id === from ? { ...f, members: f.members.filter((m) => !valid.includes(m)) } : f));
+    // 맨 위로 꺼냈는데 아무 폴더에도 안 속하면 chars 순서도 맞춘다
+    const order = placeBefore(chars.map((c) => c.id), valid, before), byId = new Map(chars.map((c) => [c.id, c]));
+    chars = order.map((id) => byId.get(id));
+  }
+  return { ...p, folders, chars };
+}
+// 같은 목록 안에서 순서만 바꾸기(folderId null = 폴더 밖 목록)
+export function reorderChars(p, folderId, ids, before) {
+  if (!folderId) { const byId = new Map(p.chars.map((c) => [c.id, c])); return { ...p, chars: placeBefore(p.chars.map((c) => c.id), ids, before).map((id) => byId.get(id)) }; }
+  return { ...p, folders: p.folders.map((f) => (f.id === folderId ? { ...f, members: placeBefore(f.members, ids, before) } : f)) };
+}
+// 폴더를 parent 밑으로(before = 형제 중 이 폴더 앞에). 자기 안으로는 못 들어감.
+export function placeFolder(p, id, parent, before = null) {
+  const q = moveFolder(p, id, parent || null), me = q.folders.find((f) => f.id === id);
+  if (!me) return p;
+  const rest = q.folders.filter((f) => f.id !== id), at = before && before !== id ? rest.findIndex((f) => f.id === before) : -1;
+  if (at < 0) { const last = rest.map((f, i) => ((f.parent ?? null) === (me.parent ?? null) ? i : -1)).filter((i) => i >= 0).pop(); return { ...q, folders: [...rest.slice(0, (last ?? rest.length - 1) + 1), me, ...rest.slice((last ?? rest.length - 1) + 1)] }; }
+  return { ...q, folders: [...rest.slice(0, at), me, ...rest.slice(at)] };
+}
+// 씬 여러 개를 같은 캐릭터 안에서 before 앞으로
+export function reorderScenes(p, cid, ids, before) {
+  return mapScenes(p, cid, (ss) => { const byId = new Map(ss.map((x) => [x.id, x])); return placeBefore(ss.map((x) => x.id), ids, before).map((id) => byId.get(id)); });
+}
+// 씬을 다른 캐릭터로(그림·예약까지 같이). copy면 구성만 복사. 이름이 겹치면 번호를 붙인다.
+export function moveScenesToChar(p, fromCid, sids, toCid, { copy = false, mkId = newId } = {}) {
+  if (fromCid === toCid) return p;
+  const src = charOf(p, fromCid), dst = charOf(p, toCid);
+  if (!src || !dst) return p;
+  const take = src.scenes.filter((s) => sids.includes(s.id));
+  if (!take.length) return p;
+  let cur = dst;
+  const added = take.map((s) => {
+    const name = uniqueSceneName(cur, s.name);
+    const n = copy ? { ...structuredClone(s), id: mkId(), name, images: [], cover: "", reserve: 0 } : { ...s, name };
+    cur = { ...cur, scenes: [...cur.scenes, n] };
+    return n;
+  });
+  return { ...p, chars: p.chars.map((c) => (c.id === toCid ? cur : c.id === fromCid && !copy ? { ...c, scenes: c.scenes.filter((s) => !sids.includes(s.id)), cover: src.cover && take.some((s) => s.images.some((i) => i.path === src.cover)) ? "" : c.cover } : c)) };
+}
 export var foldersOf = (p, charId) => p.folders.filter((f) => f.members.includes(charId));
 export function view(p, folderId) {
   const byId = new Map(p.chars.map((c) => [c.id, c]));

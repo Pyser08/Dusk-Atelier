@@ -164,3 +164,55 @@ test("보낼 그림 고르기: 그림마다 기억, 씬 순서대로 모음, 풀
   p = P.clearPicks(p, c);
   assert.deepEqual(P.pickedImages(P.charOf(p, c)), []);
 });
+
+// ── 끌어 옮기기 ──
+test("드래그: 캐릭터를 폴더로 옮기기·복사·꺼내기·앞뒤 놓기", () => {
+  let n = 0; const id = () => "d" + ++n;
+  let p = P.emptyProject();
+  for (const name of ["A", "B", "C"]) p = P.addChar(p, { name }, id);
+  const [a, b, c] = p.chars.map((x) => x.id);
+  p = P.addFolder(p, { name: "F" }, id); p = P.addFolder(p, { name: "G" }, id);
+  const [F, G] = p.folders.map((f) => f.id);
+  p = P.moveChars(p, [a, b], { to: F });
+  assert.deepEqual(p.folders[0].members, [a, b]);
+  p = P.moveChars(p, [a], { from: F, to: G });
+  assert.deepEqual([p.folders[0].members, p.folders[1].members], [[b], [a]]);
+  p = P.moveChars(p, [b], { from: F, to: G, copy: true, before: a });
+  assert.deepEqual([p.folders[0].members, p.folders[1].members], [[b], [b, a]]);
+  p = P.moveChars(p, [a], { from: G, to: F, before: b });
+  assert.deepEqual(p.folders[0].members, [a, b]);
+  p = P.moveChars(p, [a], { from: F, to: null });
+  assert.deepEqual(p.folders[0].members, [b]);
+  p = P.reorderChars(p, null, [c], a);
+  assert.deepEqual(p.chars.map((x) => x.id), [b, c, a]);
+  // 끌려가는 쪽이 before인 경우 제자리
+  p = P.reorderChars(p, null, [c], c);
+  assert.deepEqual(p.chars.map((x) => x.id), [b, c, a]);
+});
+test("드래그: 폴더 안으로·앞뒤·자기 안 금지", () => {
+  let n = 0; const id = () => "e" + ++n;
+  let p = P.emptyProject();
+  for (const name of ["F", "G", "H"]) p = P.addFolder(p, { name }, id);
+  const [F, G, H] = p.folders.map((f) => f.id);
+  p = P.placeFolder(p, G, F);
+  assert.equal(p.folders.find((f) => f.id === G).parent, F);
+  assert.throws(() => P.placeFolder(p, F, G), /자기 안/);
+  p = P.placeFolder(p, H, null, F);
+  assert.deepEqual(p.folders.filter((f) => !f.parent).map((f) => f.id), [H, F]);
+});
+test("드래그: 씬 순서 바꾸기·다른 캐릭터로 옮기기/복사", () => {
+  let n = 0; const id = () => "s" + ++n;
+  let p = P.emptyProject();
+  p = P.addChar(p, { name: "A" }, id); p = P.addChar(p, { name: "B" }, id);
+  const [a, b] = p.chars.map((x) => x.id);
+  p = P.addScene(p, a, { name: "x" }, id); p = P.addScene(p, a, { name: "y" }, id); p = P.addScene(p, b, { name: "x" }, id);
+  const [, x, y] = P.charOf(p, a).scenes.map((s) => s.id);
+  p = P.reorderScenes(p, a, [y], x);
+  assert.deepEqual(P.charOf(p, a).scenes.map((s) => s.name), ["default", "y", "x"]);
+  p = P.moveScenesToChar(p, a, [x], b);
+  assert.deepEqual(P.charOf(p, a).scenes.map((s) => s.name), ["default", "y"]);
+  assert.deepEqual(P.charOf(p, b).scenes.map((s) => s.name), ["default", "x", "x 2"]);
+  p = P.moveScenesToChar(p, a, [y], b, { copy: true, mkId: id });
+  assert.equal(P.charOf(p, a).scenes.length, 2);
+  assert.equal(P.charOf(p, b).scenes.length, 4);
+});

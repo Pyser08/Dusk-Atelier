@@ -20,6 +20,9 @@ export function createDialogs(S) {
   const win = S.ctx.win;
   const setSampling = (patch) => { S.set(P.setSettings(S.proj, { sampling: normalizeSampling({ ...S.proj.settings.sampling, ...patch }) })); S.paintLeft(); };
 
+  // 설명이 붙은 스위치
+  const tog = (on, label, desc, onChange) => h("div", { style: "display:flex;flex-direction:column;gap:3px" }, switchEl(on, { label, onChange }), h("span", { class: "rb-muted", style: "font-size:12px;white-space:normal;line-height:1.5" }, desc));
+
   async function sampling() {
     const body = h("div", { style: "display:flex;flex-direction:column;gap:14px" });
     const paint = () => {
@@ -37,11 +40,14 @@ export function createDialogs(S) {
         field("품질 태그", m.v5 ? segmented(Object.entries(QUALITY_KO), s.quality, (v) => setSampling({ quality: v }), "품질 태그") : segmented([["standard", "켬"], ["none", "끔"]], s.quality === "none" ? "none" : "standard", (v) => setSampling({ quality: v }), "품질 태그")),
         field("네거티브 프리셋", sel(ucPresetsFor(s.model).map((k) => [k, UC_KO[k]]), s.ucPreset, (v) => { setSampling({ ucPreset: v }); paint(); }, "sds-ucpreset"),
           ucPresetText(s.model, s.ucPreset) ? h("span", { class: "rb-muted", style: "white-space:normal;font-size:12px" }, ucPresetText(s.model, s.ucPreset)) : null),
-        m.varietyPlus ? switchEl(s.varietyPlus, { label: "Variety+ (구도 다양하게)", onChange: (v) => setSampling({ varietyPlus: v }) }) : null,
-        m.transparent ? switchEl(s.transparent, { label: "투명 배경", onChange: (v) => setSampling({ transparent: v }) }) : null,
-        switchEl(s.useCoords, { label: "캐릭터 위치 쓰기(캐릭터 프롬프트)", onChange: (v) => setSampling({ useCoords: v }) }),
-        m.v5 ? null : switchEl(s.legacyUc, { label: "옛 네거티브 방식(legacy UC)", onChange: (v) => setSampling({ legacyUc: v }) }),
-        m.vibe ? switchEl(s.normalizeVibes, { label: "바이브 세기 합을 1로 맞추기", onChange: (v) => setSampling({ normalizeVibes: v }) }) : null);
+        m.varietyPlus ? tog(s.varietyPlus, "Variety+ (구도 다양하게)", "초반 단계의 가이던스를 줄여서 같은 프롬프트도 구도·표정이 더 다양하게 나와요. 결과가 너무 비슷할 때 켜요.", (v) => setSampling({ varietyPlus: v })) : null,
+        m.transparent ? tog(s.transparent, "투명 배경", "배경을 투명하게 그려 달라고 요청하고 ‘transparent background’ 태그를 붙여요. 누끼가 필요한 에셋에 써요.", (v) => setSampling({ transparent: v })) : null,
+        tog(s.useCoords, "캐릭터 위치 쓰기", "캐릭터 프롬프트에서 정한 자리(가운데·왼쪽·오른쪽…)를 모델에 알려요. 끄면 자리는 모델이 알아서 정해요. 캐릭터 프롬프트를 쓸 때만 뜻이 있어요.", (v) => setSampling({ useCoords: v })),
+        (m.v5 && !m.vibe) ? null : h("details", { style: "border:1px solid var(--rb-line2);border-radius:var(--rb-r2);padding:8px 12px" },
+          h("summary", { style: "cursor:pointer;font-weight:700;font-size:13px" }, "고급 (거의 안 건드려요)"),
+          h("div", { style: "display:flex;flex-direction:column;gap:12px;margin-top:10px" },
+            m.v5 ? null : tog(s.legacyUc, "옛 네거티브 방식(legacy UC)", "네거티브 프롬프트를 예전 방식으로 처리해요. 예전에 그린 그림을 똑같이 다시 뽑고 싶을 때만 켜요.", (v) => setSampling({ legacyUc: v })),
+            m.vibe ? tog(s.normalizeVibes, "바이브 세기 합을 1로 맞추기", "바이브를 여러 장 쓸 때 세기를 합이 1이 되게 나눠요. 끄면 각 바이브의 세기가 그대로 들어가요.", (v) => setSampling({ normalizeVibes: v })) : null)));
       shrinkless(body);
     };
     paint();

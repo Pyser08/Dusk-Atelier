@@ -59,6 +59,15 @@ const txt = (page, sel) => page.locator(sel).first().innerText();
 const promptOk = async (page, value) => { const top = page.locator(".rb-modal").last(); await top.locator("input").first().fill(value); await top.locator(".rb-dialog button.primary").last().click(); await page.waitForTimeout(300); };
 const fillArea = async (page, id, v) => { await page.locator(`#${id}`).fill(v); await page.waitForTimeout(50); };
 const reqs = (page, path) => page.evaluate((p) => window.__req.filter((x) => x.path === p).map((x) => x.body), path);
+const openCard = async (loc) => { await loc.click(); await loc.page().waitForTimeout(60); await loc.click(); };   // 한 번 = 테두리, 한 번 더 = 열기
+const dnd = (page, src, dst, { alt = false, fx = 0.5, fy = 0.5 } = {}) => page.evaluate(({ src, dst, alt, fx, fy }) => {   // HTML5 끌어놓기 이벤트를 차례로 보냄
+  const a = document.querySelector(src), b = document.querySelector(dst);
+  if (!a || !b) throw new Error(`없음: ${!a ? src : dst}`);
+  const dt = new DataTransfer(), r = b.getBoundingClientRect(), o = { bubbles: true, cancelable: true, dataTransfer: dt, altKey: alt, clientX: r.left + r.width * fx, clientY: r.top + r.height * fy };
+  a.dispatchEvent(new DragEvent("dragstart", o)); b.dispatchEvent(new DragEvent("dragover", o)); b.dispatchEvent(new DragEvent("drop", o)); a.dispatchEvent(new DragEvent("dragend", o));
+}, { src, dst, alt, fx, fy });
+const sdProj = (page) => page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj);
+const charId = (pr, name) => pr.chars.find((c) => c.name === name)?.id;
 const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: page.locator(".cap .n", { hasText: new RegExp(`^${name}$`) }) }).first();
 
 { const { page, errs } = await boot(1600, 1000);
@@ -77,6 +86,8 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await page.click("#sds-addchar"); await page.waitForTimeout(250);
   ok("새 캐릭터: 봇 이름으로 채워 둠", (await page.locator(".rb-modal").last().locator("input").first().inputValue()) === "호시노");
   await promptOk(page, "호시노");
+  ok("만들어도 바로 열리지 않고 카드에 테두리", (await page.locator("#sds-body .sds-char.cur").count()) === 1 && !/씬 갤러리/.test(await txt(page, "#sds-topbar")));
+  await page.locator("#sds-body .sds-char.cur").click(); await page.waitForTimeout(300);
   ok("만들면 그 캐릭터의 씬 갤러리(default 씬 1개)", /씬 갤러리/.test(await txt(page, "#sds-topbar")) && (await page.locator("#sds-body .sds-scene").count()) === 1);
   await fillArea(page, "sds-top", "masterpiece, |, white background");
   await fillArea(page, "sds-own", "1boy, cat ears, black hoodie");
@@ -105,7 +116,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await shot(page, "sd-2-generated");
 
   // 씬 열기 → 조합
-  await sceneCard(page, "angry").click(); await page.waitForTimeout(400);
+  await openCard(sceneCard(page, "angry")); await page.waitForTimeout(400);
   ok("씬 열기: 경로·씬 조합 편집·그림 1", /호시노\s*›\s*angry/.test(await txt(page, "#sds-crumbs")) && (await page.locator("#sds-slots .sds-slot").count()) === 2 && (await page.locator("#sds-body .sds-img").count()) === 1);
   await page.click("#sds-addslot"); await page.waitForTimeout(200);
   await page.locator("#sds-slots .sds-slot").nth(1).locator("textarea").first().fill("standing");
@@ -165,7 +176,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   // 카드마다 고르기: angry에서 1장, smile에서 1장 → 씬 화면 밖에서도 남고, 고른 것만 보냄
   await page.locator("#sds-body .sds-img .chk").nth(2).click(); await page.waitForTimeout(100);
   await page.locator("#sds-crumbs button", { hasText: "호시노" }).click(); await page.waitForTimeout(300);
-  await sceneCard(page, "smile").click(); await page.waitForTimeout(300);
+  await openCard(sceneCard(page, "smile")); await page.waitForTimeout(300);
   await page.locator("#sds-body .sds-img .chk").first().click(); await page.waitForTimeout(100);
   await page.locator("#sds-crumbs button", { hasText: "호시노" }).click(); await page.waitForTimeout(300);
   ok("씬 카드에 고른 수 ✓1, 다른 씬은 없음", (await sceneCard(page, "angry").locator(".pk").innerText()) === "✓1" && (await sceneCard(page, "smile").locator(".pk").innerText()) === "✓1" && (await sceneCard(page, "sad").locator(".pk").count()) === 0);
@@ -200,7 +211,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   // 템플릿: 저장 → 새 캐릭터(처음 상태)는 바로 채움 → SDStudio 파일 가져오기(맨 위 = 모든 캐릭터, 합치기/바꾸기) → 되돌리기
   await page.click("#sds-tpl-save"); await page.waitForTimeout(200); await promptOk(page, "감정 20");
   await page.locator("#sds-crumbs button", { hasText: "전체" }).click(); await page.waitForTimeout(300);
-  await page.click("#sds-addchar"); await page.waitForTimeout(200); await promptOk(page, "시로코");
+  await page.click("#sds-addchar"); await page.waitForTimeout(200); await promptOk(page, "시로코"); await page.waitForTimeout(150); await page.locator("#sds-body .sds-char.cur").click();
   await page.locator("#sds-crumbs button", { hasText: "전체" }).click(); await page.waitForTimeout(300);
   await page.click("#sds-tpl"); await page.locator(".rb-menu button", { hasText: "감정 20 적용" }).click(); await page.waitForTimeout(300);
   ok("맨 위 적용: 씬 있는 캐릭터가 있으면 합치기/바꾸기 묻기", (await page.locator("#sds-tpl-ok").count()) === 1 && /1명/.test(await txt(page, ".rb-modal .rb-dialog")));
@@ -238,7 +249,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await page.locator(".rb-modal .rb-dialog button", { hasText: "알고 켜기" }).click(); await page.waitForTimeout(250);
   await page.click("#sds-token-add"); await page.waitForTimeout(200); await page.locator(".rb-modal input").last().fill("pst-second"); await page.locator(".rb-modal .rb-dialog button.primary").last().click(); await page.waitForTimeout(300);
   await page.locator(".rb-modal .rb-dialog button", { hasText: "닫기" }).last().click(); await page.waitForTimeout(250);
-  await page.locator("#sds-body .sds-char").first().click(); await page.waitForTimeout(300);
+  await openCard(page.locator("#sds-body .sds-char").first()); await page.waitForTimeout(300);
   for (const n of ["sad", "shy"]) { await sceneCard(page, n).hover(); await sceneCard(page, n).locator(".quick button", { hasText: "+1" }).click(); await page.waitForTimeout(100); }
   ok("생성 버튼에 부스트 표시", /부스트 생성 2장/.test(await txt(page, "#sds-run")));
   const nBefore = (await reqs(page, "/ai/generate-image")).length;
@@ -258,7 +269,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await page.locator("#sds-body .sds-char .chk").first().click(); await page.waitForTimeout(100);
   await page.locator("#sds-tools button[aria-label='고른 캐릭터를 폴더에 넣기·빼기']").click(); await page.locator(".rb-menu button", { hasText: "아비도스" }).click(); await page.waitForTimeout(300);
   ok("폴더 줄에 캐릭터 카드, 종류 표시", (await page.locator(".sds-frow .sds-char").count()) === 1 && /소속/.test(await txt(page, ".sds-frow")));
-  await page.locator(".sds-frow .sds-fopen").click(); await page.waitForTimeout(300);
+  await openCard(page.locator(".sds-frow .sds-fopen")); await page.waitForTimeout(300);
   await page.click("#sds-tpl"); await page.locator(".rb-menu button", { hasText: "SD 표정 적용" }).click(); await page.waitForTimeout(300);
   await page.locator(".rb-modal .rb-seg button", { hasText: "합치기" }).click(); await page.click("#sds-tpl-ok"); await page.waitForTimeout(400);
   const inFolder = await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj.chars.map((c) => c.scenes.length));
@@ -266,6 +277,31 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await page.locator("#sds-crumbs button", { hasText: "전체" }).click(); await page.waitForTimeout(300);
   const shift = await page.evaluate(() => ({ win: [window.__app.ctx.win.scrollLeft, window.__app.ctx.win.scrollTop], left: Math.round(document.querySelector(".sds").getBoundingClientRect().left) }));
   ok("창이 옆으로 밀리지 않음", shift.win[0] === 0 && shift.win[1] === 0 && shift.left === 0, JSON.stringify(shift));
+  // 폴더: 고른 채 새 캐릭터 → 그 폴더 안 · 끌어 옮기기
+  await page.locator(".sds-frow .sds-fopen").click(); await page.waitForTimeout(100);
+  ok("폴더를 한 번 누르면 테두리만 켜지고 안 열림", (await page.locator(".sds-frow.sds-folder.cur").count()) === 1 && !/아비도스/.test(await txt(page, "#sds-crumbs")));
+  await page.click("#sds-addchar"); await page.waitForTimeout(200); await promptOk(page, "유우카"); await page.waitForTimeout(250);
+  let pr = await sdProj(page), yid = charId(pr, "유우카");
+  ok("폴더를 고른 채 새 캐릭터 → 그 폴더 안에, 열리지 않음", pr.folders[0].members.includes(yid) && !/씬 갤러리/.test(await txt(page, "#sds-topbar")) && (await page.locator(`.sds-frow .sds-char.cur[data-id="${yid}"]`).count()) === 1);
+  await dnd(page, `.sds-frow .sds-char[data-id="${yid}"]`, "#sds-crumbs .rb-chip"); await page.waitForTimeout(250);
+  pr = await sdProj(page);
+  ok("카드를 위 ‘전체’로 끌면 폴더에서 빠짐", !pr.folders[0].members.includes(yid) && (await page.locator(`#sds-body .sds-grid .sds-char[data-id="${yid}"]`).count()) === 1);
+  await dnd(page, `#sds-body .sds-grid .sds-char[data-id="${yid}"]`, ".sds-frow.sds-folder"); await page.waitForTimeout(250);
+  pr = await sdProj(page);
+  ok("카드를 폴더 줄에 끌어 놓으면 들어감", pr.folders[0].members.includes(yid));
+  await page.click("#sds-addfolder"); await page.waitForTimeout(200); await page.fill("#sds-fname", "복장"); await page.click("#sds-fok"); await page.waitForTimeout(250);
+  pr = await sdProj(page); const f2 = pr.folders.find((f) => f.name === "복장").id;
+  await dnd(page, `.sds-frow .sds-char[data-id="${yid}"]`, `.sds-frow.sds-folder[data-id="${f2}"]`, { alt: true }); await page.waitForTimeout(250);
+  pr = await sdProj(page);
+  ok("Alt+끌어놓기는 복사(두 폴더에 걸침)", pr.folders.filter((f) => f.members.includes(yid)).length === 2);
+  await dnd(page, `.sds-frow.sds-folder[data-id="${f2}"] .hd`, `.sds-frow.sds-folder[data-id="${pr.folders[0].id}"]`); await page.waitForTimeout(250);
+  pr = await sdProj(page);
+  ok("폴더를 다른 폴더 줄 가운데에 끌면 그 안으로", pr.folders.find((f) => f.id === f2).parent === pr.folders[0].id);
+  await page.locator(".sds-frow .sds-fopen").click(); await page.waitForTimeout(80); await page.locator(".sds-frow .sds-fopen").click(); await page.waitForTimeout(250);
+  await dnd(page, `.sds-frow.sds-folder[data-id="${f2}"] .hd`, "#sds-crumbs .rb-chip"); await page.waitForTimeout(250);
+  pr = await sdProj(page);
+  ok("폴더를 ‘전체’로 끌면 맨 위로", pr.folders.find((f) => f.id === f2).parent == null);
+  await page.locator("#sds-crumbs .rb-chip").first().click(); await page.waitForTimeout(250);
   await shot(page, "sd-6-folders");
 
   // 샘플링(V5)·조각·문제 확인
@@ -283,7 +319,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await page.click("#sds-check"); await page.waitForTimeout(300);
   ok("문제 확인: 조각이 맞으면 문제 없음", /문제가 없어요/.test(await txt(page, ".rb-modal .rb-dialog")), await txt(page, ".rb-modal .rb-dialog"));
   await page.locator(".rb-modal .rb-dialog button", { hasText: "닫기" }).click(); await page.waitForTimeout(150);
-  await page.locator("#sds-body .sds-char").first().click(); await page.waitForTimeout(300);
+  await openCard(page.locator("#sds-body .sds-char").first()); await page.waitForTimeout(300);
   await sceneCard(page, "smile").hover(); await sceneCard(page, "smile").locator(".quick button", { hasText: "+1" }).click();
   await page.click("#sds-run"); await page.waitForTimeout(700);
   const v5 = (await reqs(page, "/ai/generate-image")).at(-1);
@@ -294,7 +330,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   const back = await page.evaluate(() => { const w = window.__app.ctx.win.getBoundingClientRect(); return [w.width, w.height, innerWidth, innerHeight]; });
   ok("닫으면 창 크기 되돌림", back[0] < back[2] - 10 || back[1] < back[3] - 10, JSON.stringify(back));
   const saved = await page.evaluate(async () => JSON.parse(await window.__api.pluginStorage.getItem("dusk.sdstudio.p.c2")));
-  ok("봇별 저장(v2): 캐릭터 2·폴더·조각·V5", saved?.v === 2 && saved.chars.length === 2 && saved.folders.length === 1 && saved.pieces.some((l) => l.name === "옷") && saved.settings.sampling.model === "5-full");
+  ok("봇별 저장(v2): 캐릭터 3·폴더 2·조각·V5", saved?.v === 2 && saved.chars.length === 3 && saved.folders.length === 2 && saved.pieces.some((l) => l.name === "옷") && saved.settings.sampling.model === "5-full");
   await page.locator(".rb-full .rb-full-head button[aria-label='닫기']").first().click().catch(() => {}); await page.waitForTimeout(300);
   const d = page.locator(".rb-modal .rb-dialog button", { hasText: /닫기|버리|나가기/ }); if (await d.count()) await d.first().click();
 
@@ -307,7 +343,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
 { const { page, errs } = await boot(1280, 860, { mac: true });
   await pick(page, "c:c2"); await page.click("#rb-dev-edit"); await page.waitForTimeout(700);
   await page.click("#rb-sd-make"); await page.waitForTimeout(700);
-  await page.click("#sds-addchar"); await page.waitForTimeout(200); await promptOk(page, "호시노");
+  await page.click("#sds-addchar"); await page.waitForTimeout(200); await promptOk(page, "호시노"); await page.waitForTimeout(150); await page.locator("#sds-body .sds-char.cur").click();
   await page.click("#sds-emoset"); await page.waitForTimeout(300);
   ok("맥: 도구 설명에 ⌘ 표시(⌘B)", /⌘B/.test(await page.locator("#sds-put-picked").getAttribute("title")));
   await page.locator("#rb-sd-studio").focus(); await page.keyboard.press("Meta+z"); await page.waitForTimeout(300);
@@ -329,7 +365,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await page.locator(".rb-row", { hasText: "호시노" }).first().click(); await page.waitForTimeout(600);
   await page.evaluate(() => document.querySelector("#rb-dev-edit")?.scrollIntoView()); await page.click("#rb-dev-edit"); await page.waitForTimeout(700);
   await page.click("#rb-sd-make"); await page.waitForTimeout(700);
-  await page.click("#sds-addchar"); await page.waitForTimeout(200); await promptOk(page, "호시노");
+  await page.click("#sds-addchar"); await page.waitForTimeout(200); await promptOk(page, "호시노"); await page.waitForTimeout(150); await page.locator("#sds-body .sds-char.cur").click();
   await page.click("#sds-emoset"); await page.waitForTimeout(300);
   ok("모바일: 프롬프트 에디터는 접고 시작", !(await page.locator(".sds-left").isVisible()));
   await page.locator(".sds-rail .tab").click(); await page.waitForTimeout(200);

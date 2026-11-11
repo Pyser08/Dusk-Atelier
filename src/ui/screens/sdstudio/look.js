@@ -87,6 +87,16 @@ export var CSS = `
 .sds-frow .hd>button.open{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:none;border:0;padding:0;color:var(--rb-text);cursor:pointer;text-align:left;font:inherit}
 .sds-frow .strip{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
 .sds-frow .strip .sds-card{width:var(--sds-row,132px);flex-shrink:0}
+.sds-card.cur,.sds-frow.cur{border-color:var(--rb-acc);box-shadow:0 0 0 2px var(--rb-acc)}
+.sds-dragging .dragging{opacity:.45}
+.sds-card.drop-before::after,.sds-card.drop-after::after{content:"";position:absolute;top:0;bottom:0;width:6px;background:var(--rb-acc);z-index:3}
+.sds-card.drop-before::after{left:0}.sds-card.drop-after::after{right:0}
+.sds-frow.drop-into,.sds-grid.drop-into,.sds-rootdrop.drop-into,.sds-crumbs .rb-chip.drop-into,.sds-tray .rb-chip.drop-into{outline:2px solid var(--rb-acc);outline-offset:1px;background:var(--rb-sel-bg,var(--rb-surf2))}
+.sds-frow.drop-before{box-shadow:0 -4px 0 var(--rb-acc)}.sds-frow.drop-after{box-shadow:0 4px 0 var(--rb-acc)}
+.sds-rootdrop{display:none;border:2px dashed var(--rb-line3);border-radius:var(--rb-r3);padding:16px;text-align:center;color:var(--rb-sub);font-size:13px}
+.sds-dragging .sds-rootdrop{display:block}
+.sds-tray{display:none;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border:2px dashed var(--rb-line3);border-radius:var(--rb-r3);position:sticky;bottom:0;background:var(--rb-win);margin-top:6px}
+.sds-drag-scene .sds-tray{display:flex}
 .sds-crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .sds-sec{display:flex;align-items:center;gap:8px;min-height:30px}
 .sds-sec b{font-size:14px}

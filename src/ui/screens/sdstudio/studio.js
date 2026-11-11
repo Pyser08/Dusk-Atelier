@@ -104,6 +104,7 @@ export async function openAssetStudio(ctx, target, sd) {
   const topEl = h("div", { class: "sds-top", id: "sds-topbar" });
   const toolsEl = h("div", { class: "sds-tools", id: "sds-tools", role: "toolbar", "aria-label": "도구" });
   const bodyEl = h("div", { class: "sds-body rb-scroll", id: "sds-body" });
+  bodyEl.addEventListener("click", (e) => { if (st.focus && !e.target.closest(".sds-card,.sds-frow,.rb-chip,button,input,select,textarea,label")) setFocus(null); });
   const mainEl = h("div", { class: "sds-main" }, topEl, toolsEl, bodyEl);
   el.append(rail, leftEl, mainEl);
   ctx.win.appendChild(el);
@@ -197,24 +198,108 @@ export async function openAssetStudio(ctx, target, sd) {
   // ── 카드 ──
   const capOf = (name, count, picks = 0) => h("span", { class: "cap" }, h("span", { class: "n" }, name), picks ? h("span", { class: "pk", title: `봇에 보낼 그림 ${picks}장 고름` }, `✓${picks}`) : null, h("span", { class: "c" }, String(count)));
   const chk = () => h("span", { class: "chk", "aria-hidden": "true" }, ico("check", 14));
-  function selectable(card, key, onOpen) {
+  // 한 번 누르면 테두리가 켜지고(고른 상태), 켜진 걸 다시 누르면 열려요. 폴더를 고른 채 '새 캐릭터'를 누르면 그 폴더 안에 만들어져요.
+  const isCur = (kind, id) => st.focus?.kind === kind && st.focus.id === id;
+  function setFocus(kind, id) {
+    st.focus = id ? { kind, id } : null;
+    el.querySelectorAll(".sds-card.cur,.sds-frow.cur").forEach((n) => n.classList.remove("cur"));
+    if (!id) return;
+    const q = kind === "folder" ? ".sds-frow.sds-folder" : `.sds-${kind}`;
+    for (const n of bodyEl.querySelectorAll(q)) if (n.dataset.id === id) n.classList.add("cur");
+  }
+  function selectable(card, key, onOpen, kind) {
     card.addEventListener("click", (e) => {
       if (e.target.closest(".quick")) return;
       if (e.target.closest(".chk") || e.ctrlKey || e.metaKey || e.shiftKey || (sel.size && st.mode !== "scene")) { sel.has(key) ? sel.delete(key) : sel.add(key); card.setAttribute("aria-selected", String(sel.has(key))); paintTools(); return; }
+      if (kind && !isCur(kind, key)) { setFocus(kind, key); return; }
       onOpen();
     });
     card.setAttribute("aria-selected", String(sel.has(key)));
+    if (kind) card.classList.toggle("cur", isCur(kind, key));
     return card;
   }
-  const charCard = (c) => {
+
+  // ── 끌어 옮기기(드래그) ──
+  // 캐릭터 카드 → 폴더 줄·빵부스러기(경로)·다른 카드 앞뒤 / 폴더 → 다른 폴더 안·앞뒤·경로 / 씬 카드 → 같은 캐릭터 안 순서·아래 줄의 다른 캐릭터.
+  // Alt/⌥를 누르고 놓으면 복사(캐릭터는 여러 폴더에 걸칠 수 있고, 씬은 구성만 복사돼요).
+  const dnd = { cur: null };
+  const MARKS = ["drop-before", "drop-after", "drop-into"];
+  const endDrag = () => { dnd.cur = null; for (const n of el.querySelectorAll(".dragging,.drop-before,.drop-after,.drop-into")) n.classList.remove("dragging", ...MARKS); el.classList.remove("sds-dragging", "sds-drag-scene"); };
+  function dragSource(node, payload) {
+    node.draggable = true;
+    node.addEventListener("dragstart", (e) => {
+      e.stopPropagation();
+      dnd.cur = payload();
+      e.dataTransfer.effectAllowed = "copyMove";
+      try { e.dataTransfer.setData("text/plain", "sds"); } catch { /* 일부 환경 */ }
+      node.classList.add("dragging"); el.classList.add("sds-dragging");
+      if (dnd.cur.kind === "scene") el.classList.add("sds-drag-scene");
+    });
+    node.addEventListener("dragend", endDrag);
+  }
+  // mode(p): "into"(통째로 안에) | "x"(왼쪽/오른쪽 절반 = 앞/뒤) | "y3"(위 1/4 앞 · 아래 1/4 뒤 · 가운데 안)
+  function dropTarget(node, { mode, ok, run }) {
+    const zoneOf = (e, p) => {
+      const m = mode(p); if (m === "into") return "into";
+      const r = node.getBoundingClientRect(), t = m === "x" ? (e.clientX - r.left) / (r.width || 1) : (e.clientY - r.top) / (r.height || 1);
+      return m === "y3" ? (t < 0.25 ? "before" : t > 0.75 ? "after" : "into") : (t < 0.5 ? "before" : "after");
+    };
+    node.addEventListener("dragover", (e) => {
+      const p = dnd.cur; if (!p || !ok(p)) return;
+      e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = e.altKey ? "copy" : "move";
+      node.classList.remove(...MARKS); node.classList.add("drop-" + zoneOf(e, p));
+    });
+    node.addEventListener("dragleave", (e) => { if (!node.contains(e.relatedTarget)) node.classList.remove(...MARKS); });
+    node.addEventListener("drop", (e) => {
+      const p = dnd.cur; if (!p || !ok(p)) return;
+      e.preventDefault(); e.stopPropagation();
+      const z = zoneOf(e, p), copy = e.altKey;
+      endDrag(); run(p, z, copy);
+    });
+  }
+  const selIds = (key) => (sel.has(key) && sel.size > 1 ? [...sel] : [key]);
+  const nextAfter = (arr, id) => { const i = arr.findIndex((x) => x.id === id); return i < 0 ? null : arr[i + 1]?.id ?? null; };
+  // 그 캐릭터가 (container 폴더 아래에서) 실제로 속한 폴더
+  const holderOf = (cid, container) => {
+    if (!container) return null;
+    const q = [container], seen = new Set();
+    while (q.length) { const id = q.shift(); if (seen.has(id)) continue; seen.add(id); if (proj.folders.find((x) => x.id === id)?.members.includes(cid)) return id; for (const g of proj.folders) if (g.parent === id) q.push(g.id); }
+    return container;
+  };
+  const afterMove = () => { paintTop(); paintTools(); paintBody(); };
+  function dropChars(p, to, before, copy) {
+    S.set(P.moveChars(proj, p.ids, { from: p.from, to, before, copy: !!to && copy }));
+    sel.clear(); afterMove();
+  }
+  function dropFolder(id, parent, before) {
+    try { S.set(P.placeFolder(proj, id, parent, before)); afterMove(); } catch (e) { S.toast(e?.message ?? String(e), { error: true }); }
+  }
+  // 경로 칩(전체 › 폴더…)에 놓기: 캐릭터는 그 폴더로(전체면 폴더에서 빼기), 폴더는 그 밑으로
+  function crumbDrop(chip, folderId) {
+    dropTarget(chip, {
+      mode: () => "into",
+      ok: (p) => p.kind === "char" || (p.kind === "folder" && p.id !== folderId),
+      run: (p, _z, copy) => (p.kind === "char" ? dropChars(p, folderId, null, copy) : dropFolder(p.id, folderId, null))
+    });
+    return chip;
+  }
+  const charCard = (c, container, list) => {
     const cover = P.charCover(c), rsv = c.scenes.reduce((n, s) => n + s.reserve, 0);
     const card = h("button", { type: "button", class: "sds-card sds-char", dataset: { id: c.id }, title: c.name },
       cover ? S.thumb(cover) : h("span", { class: "ph" }, ico("person", 34)), chk(),
       rsv ? h("span", { class: "rsv" }, `예약 ${rsv}`) : null, capOf(c.name, P.imageCount(c), P.pickedImages(c).length));
     card.addEventListener("contextmenu", (e) => { e.preventDefault(); charMenu(card, c); });
-    return selectable(card, c.id, () => openChar(c.id));
+    if (container !== undefined) {
+      dragSource(card, () => ({ kind: "char", ids: selIds(c.id), from: holderOf(c.id, container) }));
+      dropTarget(card, {
+        mode: () => "x",
+        ok: (p) => p.kind === "char" && !(p.ids.length === 1 && p.ids[0] === c.id),
+        run: (p, z, copy) => dropChars(p, container, z === "before" ? c.id : nextAfter(list, c.id), copy)
+      });
+    }
+    return selectable(card, c.id, () => openChar(c.id), "char");
   };
-  const sceneCard = (c, sc) => {
+  const sceneCard = (c, sc, list) => {
     const cover = P.coverOf(sc);
     const card = h("button", { type: "button", class: "sds-card sds-scene", dataset: { id: sc.id }, title: sc.name },
       cover ? S.thumb(cover) : h("span", { class: "ph" }, ico("image", 30)), chk(),
@@ -223,7 +308,15 @@ export async function openAssetStudio(ctx, target, sd) {
         sc.reserve ? h("button", { type: "button", title: "예약 하나 빼기", onClick: (e) => { e.stopPropagation(); S.set(P.setReserve(proj, c.id, sc.id, sc.reserve - 1)); paintTop(); paintBody(); } }, "−1") : null),
       capOf(sc.name, sc.images.length, P.pickCount(sc)));
     card.addEventListener("contextmenu", (e) => { e.preventDefault(); sceneMenu(card, c, sc); });
-    return selectable(card, sc.id, () => openScene(sc.id));
+    if (list) {
+      dragSource(card, () => ({ kind: "scene", cid: c.id, ids: selIds(sc.id) }));
+      dropTarget(card, {
+        mode: () => "x",
+        ok: (p) => p.kind === "scene" && p.cid === c.id && !(p.ids.length === 1 && p.ids[0] === sc.id),
+        run: (p, z) => { S.set(P.reorderScenes(proj, c.id, p.ids, z === "before" ? sc.id : nextAfter(list, sc.id))); sel.clear(); afterMove(); }
+      });
+    }
+    return selectable(card, sc.id, () => openScene(sc.id), "scene");
   };
   const imageCard = (it, im, list, idx) => {
     const card = h("button", { type: "button", class: "sds-card sds-img", dataset: { path: im.path }, title: im.seed ? `시드 ${im.seed}` : "" },
@@ -252,8 +345,8 @@ export async function openAssetStudio(ctx, target, sd) {
   function crumbs() {
     const c = S.curChar(), sc = S.curScene();
     const chip = (text, on, fn) => h("button", { type: "button", class: "rb-chip", "aria-pressed": String(on), onClick: fn }, text);
-    const items = [chip("전체", !st.folder && !c, () => { st.folder = null; openChar(null); })];
-    for (const f of P.pathOf(proj, st.folder)) items.push(h("span", { class: "rb-muted" }, "›"), chip(f.name, f.id === st.folder && !c, () => { st.folder = f.id; openChar(null); }));
+    const items = [crumbDrop(chip("전체", !st.folder && !c, () => { st.folder = null; openChar(null); }), null)];
+    for (const f of P.pathOf(proj, st.folder)) items.push(h("span", { class: "rb-muted" }, "›"), crumbDrop(chip(f.name, f.id === st.folder && !c, () => { st.folder = f.id; openChar(null); }), f.id));
     if (c) items.push(h("span", { class: "rb-muted" }, "›"), chip(c.name, !sc, () => openScene(null)));
     if (sc) items.push(h("span", { class: "rb-muted" }, "›"), chip(sc.name, true, () => {}));
     if (st.folder && !c) items.push(h("button", { type: "button", class: "rb-icon-btn", "aria-label": "폴더 메뉴", onClick: (e) => folderMenu(e.currentTarget, st.folder) }, ico("more", 18)));
@@ -283,21 +376,49 @@ export async function openAssetStudio(ctx, target, sd) {
     const v = P.view(proj, st.folder);
     const rows = v.folders.map((f) => {
       const list = P.rowChars(proj, f.id), subs = proj.folders.filter((x) => x.parent === f.id).length;
-      return h("div", { class: "sds-frow", dataset: { id: f.id } },
-        h("div", { class: "hd" }, h("button", { type: "button", class: "open sds-fopen", onClick: () => { st.folder = f.id; sel.clear(); paintTools(); paintBody(); } },
+      const row = h("div", { class: "sds-frow sds-folder", dataset: { id: f.id } },
+        h("div", { class: "hd" }, h("button", { type: "button", class: "open sds-fopen", onClick: () => { if (!isCur("folder", f.id)) { setFocus("folder", f.id); return; } st.focus = null; st.folder = f.id; sel.clear(); paintTools(); paintBody(); } },
           h("span", { style: "color:var(--rb-acc);display:flex" }, ico("folder", 18)), h("b", { style: "font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, f.name),
           f.kind ? h("span", { class: "rb-badge" }, KIND_KO[f.kind]) : null, h("span", { class: "rb-muted" }, `${list.length}명${subs ? ` · 폴더 ${subs}` : ""}`), h("span", { style: "color:var(--rb-mute);display:flex" }, ico("chevR", 16))),
           h("button", { type: "button", class: "rb-icon-btn", "aria-label": "폴더 메뉴", onClick: (e) => folderMenu(e.currentTarget, f.id) }, ico("more", 18))),
-        list.length ? h("div", { class: "strip" }, ...list.map(charCard)) : h("span", { class: "rb-muted", style: "white-space:normal" }, "아직 캐릭터가 없어요. 캐릭터를 고른 뒤 ‘폴더에 넣기’를 눌러요."));
+        list.length ? h("div", { class: "strip" }, ...list.map((c) => charCard(c, f.id, list))) : h("span", { class: "rb-muted", style: "white-space:normal" }, "아직 캐릭터가 없어요. 캐릭터 카드를 여기로 끌어다 놓거나, 카드를 고른 뒤 ‘폴더에 넣기’를 눌러요."));
+      row.classList.toggle("cur", isCur("folder", f.id));
+      dragSource(row.querySelector(".hd"), () => ({ kind: "folder", id: f.id }));
+      dropTarget(row, {
+        mode: (p) => (p.kind === "folder" ? "y3" : "into"),
+        ok: (p) => p.kind === "char" || (p.kind === "folder" && p.id !== f.id),
+        run: (p, z, copy) => {
+          if (p.kind === "char") return dropChars(p, f.id, null, copy);
+          if (z === "into") return dropFolder(p.id, f.id, null);
+          const sibs = proj.folders.filter((x) => (x.parent ?? null) === (f.parent ?? null) && x.id !== p.id);
+          dropFolder(p.id, f.parent ?? null, z === "before" ? f.id : nextAfter(sibs, f.id));
+        }
+      });
+      return row;
     });
     const out = [...rows];
-    if (v.chars.length) out.push(sec(st.folder ? "캐릭터" : rows.length ? "폴더 없는 캐릭터" : "캐릭터", v.chars.length), grid(...v.chars.map(charCard)));
-    else if (st.folder && !rows.length) out.push(h("span", { class: "rb-muted" }, "이 폴더에 바로 든 캐릭터가 없어요."));
+    if (v.chars.length) {
+      const g = grid(...v.chars.map((c) => charCard(c, st.folder, v.chars)));
+      dropTarget(g, { mode: () => "into", ok: (p) => p.kind === "char", run: (p, _z, copy) => dropChars(p, st.folder, null, copy) });
+      out.push(sec(st.folder ? "캐릭터" : rows.length ? "폴더 없는 캐릭터" : "캐릭터", v.chars.length), g);
+    } else if (st.folder && !rows.length) out.push(h("span", { class: "rb-muted" }, "이 폴더에 바로 든 캐릭터가 없어요. 캐릭터 카드를 끌어다 놓을 수 있어요."));
+    else if (rows.length) {
+      const z = h("div", { class: "sds-rootdrop" }, st.folder ? "여기에 놓으면 이 폴더 바로 아래로 와요" : "여기에 놓으면 폴더에서 빠져요");
+      dropTarget(z, { mode: () => "into", ok: (p) => p.kind === "char", run: (p) => dropChars(p, st.folder, null, false) });
+      out.push(z);
+    }
+    if (proj.chars.length) out.push(h("span", { class: "rb-muted", style: "font-size:12px;white-space:normal" }, "카드·폴더를 끌어서 옮겨요 · 폴더에 놓으면 들어가고, 위 경로(전체 › …)에 놓으면 그 위치로 가요 · Alt/⌥를 누르고 놓으면 복사(여러 폴더에 걸치기)"));
     return out;
   }
   function scenesView(c) {
     if (!c.scenes.length) return [empty("씬이 없어요", "씬은 표정·포즈 하나예요. 이름이 그대로 감정 이미지 이름이 돼요.", btn("새 씬", { kind: "primary", icon: "plus", onClick: () => addScene() }), btn("감정 세트 더하기", { icon: "sparkle", onClick: () => addEmotionSet() }))];
-    return [sec("씬", c.scenes.length, h("span", { class: "rb-muted", style: "font-size:12px" }, "카드를 누르면 열려요 · Ctrl/⌘·체크로 여러 개 고르기")), grid(...c.scenes.map((sc) => sceneCard(c, sc)))];
+    const others = proj.chars.filter((x) => x.id !== c.id);
+    const tray = others.length ? h("div", { class: "sds-tray" }, h("span", { class: "rb-muted", style: "font-size:12px" }, "다른 캐릭터로(Alt/⌥ 복사)"), ...others.map((o) => {
+      const chip = h("span", { class: "rb-chip", role: "button" }, o.name);
+      dropTarget(chip, { mode: () => "into", ok: (p) => p.kind === "scene" && p.cid === c.id, run: (p, _z, copy) => { S.set(P.moveScenesToChar(proj, c.id, p.ids, o.id, { copy })); sel.clear(); afterMove(); } });
+      return chip;
+    })) : null;
+    return [sec("씬", c.scenes.length, h("span", { class: "rb-muted", style: "font-size:12px" }, "눌러서 고르고, 한 번 더 누르면 열려요 · 끌어서 순서 바꾸기 · Ctrl/⌘·체크로 여러 개 고르기")), grid(...c.scenes.map((sc) => sceneCard(c, sc, c.scenes))), tray];
   }
   function sceneView(c, sc) {
     const n = combinationCount(sc.slots);
@@ -404,18 +525,20 @@ export async function openAssetStudio(ctx, target, sd) {
   }
 
   // ── 동작 ──
-  function openChar(id) { st.charId = id; st.sceneId = null; sel.clear(); if (st.mode === "bulk" && !id) st.mode = "scene"; S.paint(); bodyEl.scrollTop = 0; }
-  function openScene(id) { st.sceneId = id; sel.clear(); if (id) st.mode = "scene"; paintTop(); paintTools(); paintBody(); paintLeft(); bodyEl.scrollTop = 0; }
+  function openChar(id) { st.focus = null; st.charId = id; st.sceneId = null; sel.clear(); if (st.mode === "bulk" && !id) st.mode = "scene"; S.paint(); bodyEl.scrollTop = 0; }
+  function openScene(id) { st.focus = null; st.sceneId = id; sel.clear(); if (id) st.mode = "scene"; paintTop(); paintTools(); paintBody(); paintLeft(); bodyEl.scrollTop = 0; }
   const paintLeft = () => S.paintLeft();
   async function addChar() {
     const name = await promptDialog(ctx.win, { title: "새 캐릭터", label: "이름", value: proj.chars.length ? "" : title, ok: "만들기", placeholder: "예: 시로코" });
     if (name == null) return;
     let next = P.addChar(proj, { name });
     const id = next.chars.at(-1).id;
-    if (st.folder) next = P.setMember(next, st.folder, id, true);
+    const into = st.focus?.kind === "folder" && proj.folders.some((f) => f.id === st.focus.id) ? st.focus.id : st.folder;   // 폴더를 골라 둔 채면 그 폴더 안에
+    if (into) next = P.setMember(next, into, id, true);
     S.set(next);
-    openChar(id);
-    leftBody.querySelector("#sds-own")?.focus();
+    st.focus = { kind: "char", id };   // 만든 캐릭터는 열지 않고 테두리만 켜 둔다
+    afterMove();
+    for (const n of bodyEl.querySelectorAll(".sds-char")) if (n.dataset.id === id) { n.scrollIntoView({ block: "nearest", inline: "nearest" }); break; }
   }
   async function removeChars(ids) {
     if (!ids.length || !await confirmDialog(ctx.win, { title: `캐릭터 ${ids.length}명을 지울까요?`, body: "씬·프롬프트·그림 목록이 지워져요. 리스 에셋 저장소 파일과 이미 넣은 에셋은 그대로예요.", ok: "지우기", danger: true })) return;

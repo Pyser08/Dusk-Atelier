@@ -1012,3 +1012,9 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 
 ## 최근 세션 (2026-11-11 14시 — 에셋·에셋 제작 버튼을 탭 줄로)
 - 사용자 지시: '에셋'·'에셋 제작'은 정보·로어북·정규식 탭이 있는 줄에 같이. `editor.js`의 `#rb-edit-sub`을 `.rb-tabs-row`(탭 + 버튼) 안 오른쪽 끝으로 옮김(초안 봇은 target 없어 버튼 없음). run-dev-slot 판정도 '탭 줄 안'으로 바꿈.
+
+## 최근 세션 (2026-11-11 14시 반 — 끌어 옮기기·테두리 선택·샘플링 설명)
+- 카드/폴더 한 번 누르면 테두리(`.cur`, `st.focus`), 켜진 걸 다시 누르면 열림(`selectable(card,key,open,kind)`·`setFocus`). 폴더를 고른 채 '새 캐릭터' → 그 폴더 안, 만들어도 열지 않고 테두리+스크롤만(`addChar`).
+- 드래그(HTML5 DnD, `studio.js`의 `dragSource`/`dropTarget`): 캐릭터 카드→폴더 줄·경로 칩(전체›…)·다른 카드 앞뒤·바닥 영역, 폴더→다른 폴더 안/앞뒤/경로 칩, 씬 카드→같은 캐릭터 순서·아래 '다른 캐릭터로' 줄. Alt/⌥=복사. 엔진: `project.js`의 `moveChars/reorderChars/placeFolder/reorderScenes/moveScenesToChar`(단위 시험 3개). e2e는 DragEvent를 직접 보냄(`dnd` 헬퍼).
+- 샘플링/모델: 토글마다 설명 한 줄, legacy UC·바이브 합은 '고급' 접이식으로.
+- 미확인: 터치 화면(리스바드·모바일)에서 HTML5 끌기가 되는지 — 안 되면 포인터 기반 끌기로 바꿔야 함. 실기기 미확인.
