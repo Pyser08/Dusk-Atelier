@@ -392,14 +392,15 @@ export async function openAssetStudio(ctx, target, sd) {
   function charsView() {
     if (!proj.chars.length && !proj.folders.length) return [empty("이 " + (target.kind === "module" ? "모듈" : "봇") + "에 들어갈 캐릭터를 만들어요", "캐릭터를 열어 씬(표정·포즈)을 만들고 예약하면 SDStudio처럼 차례로 그려요. 복장·소속은 폴더로 묶어요.", btn("새 캐릭터", { kind: "primary", icon: "plus", onClick: () => addChar() }))];
     const v = P.view(proj, st.folder);
-    const rows = v.folders.map((f) => {
-      const list = P.rowChars(proj, f.id), subF = proj.folders.filter((x) => x.parent === f.id), subs = subF.length;
+    const folderRow = (f, depth = 0) => {
+      const all = P.rowChars(proj, f.id), list = (f.members ?? []).map((id) => P.charOf(proj, id)).filter(Boolean), subF = depth < 8 ? proj.folders.filter((x) => x.parent === f.id) : [], subs = subF.length;
       const row = h("div", { class: "sds-frow sds-folder", dataset: { id: f.id } },
         h("div", { class: "hd" }, h("button", { type: "button", class: "open sds-fopen", onClick: () => { if (!isCur("folder", f.id)) { setFocus("folder", f.id); return; } st.focus = null; st.folder = f.id; sel.clear(); paintTools(); paintBody(); } },
           h("span", { style: "color:var(--rb-acc);display:flex" }, ico("folder", 18)), h("b", { style: "font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, f.name),
-          f.kind ? h("span", { class: "rb-badge" }, KIND_KO[f.kind]) : null, h("span", { class: "rb-muted" }, `${list.length}명${subs ? ` · 폴더 ${subs}` : ""}`), h("span", { style: "color:var(--rb-mute);display:flex" }, ico("chevR", 16))),
+          f.kind ? h("span", { class: "rb-badge" }, KIND_KO[f.kind]) : null, h("span", { class: "rb-muted" }, `${all.length}명${subs ? ` · 폴더 ${subs}` : ""}`), h("span", { style: "color:var(--rb-mute);display:flex" }, ico("chevR", 16))),
           h("button", { type: "button", class: "rb-icon-btn", "aria-label": "폴더 메뉴", onClick: (e) => folderMenu(e.currentTarget, f.id) }, ico("more", 18))),
-        (list.length || subF.length) ? h("div", { class: "strip" }, ...subF.map((g) => subTile(g)), ...list.map((c) => charCard(c, f.id, list))) : h("span", { class: "rb-muted", style: "white-space:normal" }, "비어 있어요. 캐릭터 카드나 폴더를 여기로 끌어다 놓아요."));
+        list.length ? h("div", { class: "strip" }, ...list.map((c) => charCard(c, f.id, list))) : subF.length ? null : h("span", { class: "rb-muted", style: "white-space:normal" }, "비어 있어요. 캐릭터 카드나 폴더를 여기로 끌어다 놓아요."),
+        ...subF.map((g) => folderRow(g, depth + 1)));
       row.classList.toggle("cur", isCur("folder", f.id));
       dragSource(row.querySelector(".hd"), () => ({ kind: "folder", id: f.id }));
       dropTarget(row, {
@@ -414,7 +415,8 @@ export async function openAssetStudio(ctx, target, sd) {
         }
       });
       return row;
-    });
+    };
+    const rows = v.folders.map((f) => folderRow(f));
     const out = [...rows];
     if (v.chars.length) {
       const g = grid(...v.chars.map((c) => charCard(c, st.folder, v.chars)));
