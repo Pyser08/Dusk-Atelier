@@ -24,6 +24,11 @@ export function managedNames({ modules = [], bot = {}, subjects = [] } = {}) {
   const allCode = [...codes(bot.triggerscript), ...(modules ?? []).flatMap((m) => codes(m?.trigger))];
   const botText = [bot.defaultVariables, ...allCode.map((c) => luaSegments(c).live)].join("\n");
   const hints = foundHints(allCode), luaKw = luaKeywords(allCode);
+  // 봇이 스스로 읽거나 정해 두는 변수 이름(설정 패널·기본 변수 등)
+  const botVars = new Set([
+    ...getvarNames([...(bot.customscript ?? []).flatMap((r) => [r?.in, r?.out]), ...(bot.globalLore ?? []).map((e) => e?.content)].join("\n")),
+    ...String(bot.defaultVariables ?? "").split("\n").map((l) => l.split("=")[0].trim()).filter(Boolean)
+  ].map(lower));
   const botEntries = [...(bot.globalLore ?? [])];
   const subj = new Set((subjects ?? []).map((s) => lower(s.name ?? s)));
   const res = new Map();
@@ -36,6 +41,8 @@ export function managedNames({ modules = [], bot = {}, subjects = [] } = {}) {
       if (!SAFE(n) || res.has(ln)) continue;
       const owner = keyOwner.get(ln);
       if (!owner && !subj.has(ln)) continue;                       // 인물이 아닌 설정 변수(lang 등)는 건드리지 않는다
+      if (!/^[A-Z\u0080-\uFFFF]/.test(n) && !/[\s-]/.test(n)) continue;   // 소문자로 시작하는 한 낱말(lang·fold 등)은 설정 변수로 본다
+      if (botVars.has(ln)) continue;                               // 봇 정규식·로어북·기본 변수가 읽는 변수는 봇 것
       if (botText.includes(`"${n}"`) || botText.includes(`'${n}'`) || new RegExp(`(^|\\n)\\s*${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*=`).test(botText)) continue;   // 봇 Lua·기본 변수가 다룸
       if (botEntries.some((b) => splitKeys(b?.key).some((k) => lower(k) === ln))) continue;   // 봇 자신의 인물
       const keywords = [...new Set([...(owner ? [...splitKeys(owner.key), ...splitKeys(owner.secondkey)] : []), ...(luaKw.get(n) ?? []), n])];

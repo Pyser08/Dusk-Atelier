@@ -423,3 +423,11 @@ test("감싼 모듈 태그도 봇 이미지처럼 앞뒤 줄바꿈을 받는다(
   const plain = ctxOf(plainBot, [hunterExtra]);
   assert.equal(botPadding(findTags(`<img="Ryu Hae-yeon smile">`, plain.shapes)[0], plain), null, "꾸밈 정규식이 없으면 그대로");
 });
+
+test("감지 변수: 설정 변수(lang 등)·봇이 읽는 변수는 인물처럼 보여도 건드리지 않는다", () => {
+  const mod = { id: "m", trigger: [], assets: [], regex: [], lorebook: [
+    { key: "lang", comment: "lang", content: "{{getvar::lang}}{{getvar::Hero Kim}}{{getvar::Panel Mode}}" },
+    { key: "Hero Kim", comment: "Hero Kim", content: "" }, { key: "Panel Mode", comment: "Panel Mode", content: "" }] };
+  const bot = { customscript: [{ in: "x", out: "{{getvar::Panel Mode}}", type: "editdisplay" }], defaultVariables: "lang=1" };
+  assert.deepEqual(managedNames({ modules: [mod], bot }).map((m) => m.name), ["Hero Kim"]);
+});
