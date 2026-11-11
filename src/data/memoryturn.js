@@ -43,6 +43,8 @@ import { dropCreates } from "../engine/castfilter.js";
 import { parseWriterRun, recordTurn, buildEnvelope, buildDusk, summarize, recorderText, attemptDuskRecord } from "../engine/recorder.js";
 import { customPromptPlain } from "../engine/pot/custom-prompts.js";
 
+// 빈 응답이 출력 한도에 걸려 끊긴 것인가(호출층 오류 글의 finish_reason/stop_reason). 이유를 모르면 아니라고 본다.
+export const cutByLimit = (e) => /(finish_reason|stop_reason)\s+(length|max_tokens|MAX_TOKENS|max_output_tokens)\b/i.test(String(e?.message ?? ""));
 const READONLY = new Set(["writer_schema", "director_schema", "slots", "policies"]);
 export const promptKeysOf = (lib) => Object.entries(lib).flatMap(([id, parts]) => Object.keys(parts).filter((p) => !READONLY.has(p)).map((p) => `${id}:${p}`));
 export const stageOf = (label) => /^router/i.test(label) ? "router" : /^director/i.test(label) ? "director" : "writer";
@@ -114,9 +116,16 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
 
     const stageCall = async (a, k, preset, prompt, opts = {}) => {
       const stage = stageOf(String(opts.stageLabel ?? "")), withSkills = appendToPrompt(prompt, await skillBlock(stage));   // 스킬 주입(꺼짐이면 원문)
-      const send = (text) => callWriterModel(a, k, preset, text, { ...opts, onUsage: (u) => { opts.onUsage?.(u); recordUsage(api, stage, u).catch(() => {}); } });
+      // 보조 호출 장부(2.1.4): 내 API(직접 연결)는 공급자가 알려 준 실제 토큰을 적는다. 리스 보조 모델 길은 api.runLLMModel 래퍼가 어림해 적는다.
+      // 장부는 globalThis로만 부른다(예전 코어에서도 애드온이 깨지지 않게).
+      const auxName = describeAi(stage) ? `장기기억 · ${describeAi(stage)}` : "장기기억 기록";
+      const send = async (text) => {
+        let usage = null;
+        try { return await callWriterModel(a, k, preset, text, { ...opts, onUsage: (u) => { usage = u; opts.onUsage?.(u); recordUsage(api, stage, u).catch(() => {}); } }); }
+        finally { if (usage) { try { globalThis.__duskAux?.note?.({ label: auxName, inTok: usage.inputTokens ?? 0, outTok: (usage.outputTokens ?? 0) + (usage.reasoningIncluded === false ? usage.reasoningTokens ?? 0 : 0), real: true }); } catch { /* 무시 */ } } }
+      };
       // 생성 중지에 잡히게: 내 API(직접 연결) 모델은 runLLMModel을 거치지 않아 따로 세고, 누르면 결과를 버리고 바로 멈춘다
-      const out = await aiTask(describeAi(stage) ? `장기기억 · ${describeAi(stage)}` : "장기기억 기록", async () => {
+      const out = await aiTask(auxName, async () => {
         const t = trackAi("");
         try { return await t.race(webWrap(stage, withSkills, send)); } finally { t.end(); }
       });   // 웹 도구(꺼짐이 기본, 켠 단계만 호출이 늘어남)
@@ -125,7 +134,8 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     };
     // 2.0.0 Dusk 기록기: 리수폿 Writer 프롬프트(11만 자+)를 보내지 않고 데이터만 꺼내 짧은 단계별 질문으로 기록한 뒤,
     // 리수폿이 받던 응답(JSON)으로 바꿔 돌려준다. 해석이 안 되거나(PDF 첨부 방식)·월경 보고가 필요하면 예전 길로.
-    const potNext = new Set(); let lastKey = "";
+    const potNext = new Set(); let lastKey = "", recorderFailed = false;
+    const fullKeyOf = (run, s0) => `${run.rp.length}:${run.rp.slice(0, 200)}:${run.rp.slice(-200)}|${run.docs.filter((d) => d.writable).map((d) => d.title).sort().join(",")}|${run.allowCreate}|${s0.loreOnly !== false}`;
     const autoLight = { streak: 0, hold: 0 };   // 가벼운 지침 자동 전환 상태(이번 실행 동안만, 저장하지 않음)
     const recCache = new Map(), recDone = new Map();
     // 로어북에 있는 인물만 새로 기록(기본 켜짐, 설정 loreOnly). 판단기가 null이면(로어북 없음·봇이 바뀜·읽기 실패) 막지 않는다.
@@ -139,21 +149,25 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       if (!pure) { try { prep = await runner.prepareLatest(await api.getCurrentCharacterIndex(), await api.getCurrentChatIndex()); } catch { prep = null; } }
       const snap = settings.rawSnapshot(), sc = wiki.scope ? { characterId: wiki.scope.characterId, chatKey: wiki.scope.chatKey } : {};
       const front = customPromptPlain(snap, "writer", sc, "front"), back = customPromptPlain(snap, "writer", sc, "back");
-      // 빈 응답(추론이 출력 한도를 다 씀)이 한 번 나오면 이 기록의 남은 호출은 출력 한도를 넓혀 보낸다
-      let boost = false; const roomy = preset && Number(preset.maxTokens) > 0 ? { ...preset, maxTokens: Math.min(32768, Math.max(16384, Number(preset.maxTokens) * 2)) } : preset;
-      const call = async (msgs) => { try { return await stageCall(a, k, boost ? roomy : preset, recorderText(msgs, { front, back }), { ...opts, stageLabel: "Writer Dusk" }); } catch (e) { if (e?.code === "empty-model-response") boost = true; throw e; } };
-      const light = s0.light === true, beliefs = s0.inject?.beliefs === true;
+      // 2.1.4: 빈 응답이 '출력 한도에 걸려 끊긴 것'일 때만(finish_reason length·MAX_TOKENS) 남은 호출의 출력 한도를 1.5배(최대 16384)로 넓힌다.
+      // 다른 이유의 빈 응답·형식 오류에는 한도를 올리지 않는다(추론 토큰만 더 쓰고 결과는 같았다).
+      let boost = false; const roomy = preset && Number(preset.maxTokens) > 0 ? { ...preset, maxTokens: Math.min(16384, Math.max(Number(preset.maxTokens), Math.round(Number(preset.maxTokens) * 1.5))) } : preset;
+      const call = async (msgs) => { try { return await stageCall(a, k, boost ? roomy : preset, recorderText(msgs, { front, back }), { ...opts, stageLabel: "Writer Dusk" }); } catch (e) { if (e?.code === "empty-model-response" && cutByLimit(e)) boost = true; throw e; } };
+      // 묶음 결과가 리수폿 검증에서 떨어진 응답은 받아 둔 결과를 버리고 가벼운 지침으로 새로 기록한다(예전: 리수폿 Writer 전체 지침으로 다시 기록 — 약 3만 토큰)
+      const fresh = potNext.has(fullKeyOf(run, s0)) && s0.potFallback !== true;
+      const light = s0.light === true || fresh, beliefs = s0.inject?.beliefs === true;
       while (recCache.size > 4) recCache.delete(recCache.keys().next().value);
       // 같은 응답을 다시 기록하라고 불리면(앞선 시도가 저장 전에 끊김 등) 받아 둔 결과를 다시 쓴다 — 보조 모델을 또 부르지 않는다
-      const fullKey = `${run.rp.length}:${run.rp.slice(0, 200)}:${run.rp.slice(-200)}|${run.docs.filter((d) => d.writable).map((d) => d.title).sort().join(",")}|${run.allowCreate}|${s0.loreOnly !== false}`;
-      // 이 응답의 기록기 결과가 리수폿 검증에서 떨어졌으면(자동 재시도 포함) 같은 결과를 또 내지 않고 예전 리수폿 기록으로 넘긴다
-      if (potNext.has(fullKey)) { potNext.delete(fullKey); return null; }
+      const fullKey = fullKeyOf(run, s0);
+      // 이 응답의 기록기 결과가 리수폿 검증에서 떨어졌으면 같은 결과를 또 내지 않는다: 기본은 가벼운 지침으로 새로 기록,
+      // '실패하면 예전 리수폿 기록으로 대신'을 켰을 때만 예전 리수폿 기록으로 넘긴다
+      if (potNext.has(fullKey)) { potNext.delete(fullKey); recDone.delete(fullKey); if (s0.potFallback === true) return null; }
       lastKey = fullKey;
-      let rec = recDone.get(fullKey);
+      let rec = fresh ? null : recDone.get(fullKey);
       if (rec) retryHits++;
       else {
         const cast = await castNow(s0);
-        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, cast, onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
+        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, cast, group: s0.groupPeople !== false, onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
         if (!rec.people.some((p) => p.failed)) boundedSet(recDone, fullKey, rec, 4);
       }
       const env = buildEnvelope(run, rec);
@@ -165,13 +179,18 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     const writerCall = async (a, k, preset, prompt, opts = {}) => {
       const label = String(opts.stageLabel ?? ""); let sent = prompt, prep = null;
       if (/^writer batch/i.test(label)) {
-        // 3.0.8: 기록기가 끝내 실패하면 응답 전체를 실패로 끝내지 않고 예전 리수폿 Writer(한 번 호출)로 대신한다. 취소는 그대로 던진다.
-        const out = await attemptDuskRecord(() => recordWithDusk(a, k, preset, prompt, opts), (e) => {
-          const message = String(e?.message ?? e).slice(0, 200);
-          lastRecord = { at: Date.now(), error: message, fallback: "risupot" };
-          log("Dusk 기록기 실패 → 예전 리수폿 기록으로 대신", message);
-        });
+        // 기록기가 끝내 실패하면: 2.1.4부터 기본은 이 기록을 실패로 끝내고 '다시 시도' 알림을 띄운다(다시 시도 = 기록기로 새로).
+        // 예전처럼 리수폿 Writer 전체 지침(약 3만 토큰)으로 대신하려면 설정 '기록기가 실패하면 예전 리수폿 기록으로 대신'(potFallback). 취소는 그대로 던진다.
+        let failed = null; recorderFailed = false;
+        const out = await attemptDuskRecord(() => recordWithDusk(a, k, preset, prompt, opts), (e) => { failed = e; });
         if (out != null) return out;
+        if (failed) {
+          const message = String(failed?.message ?? failed).slice(0, 200);
+          const fallback = ((await store.getIndex()).settings ?? {}).potFallback === true;
+          lastRecord = { at: Date.now(), error: message, ...(fallback ? { fallback: "risupot" } : {}) };
+          if (!fallback) { recorderFailed = true; log("Dusk 기록기 실패(예전 리수폿 기록으로 대신하지 않음)", message); throw Object.assign(new Error(`Dusk 기록기 실패 — ${message}`), { code: "dusk-recorder-failed" }); }
+          log("Dusk 기록기 실패 → 예전 리수폿 기록으로 대신", message);
+        }
       }
       if (/^writer/i.test(label)) { try { cyclePending = cycleStates(wiki.snapshot()); } catch { cyclePending = null; } }
       const had = String(prompt).includes(SECTION_MARK);
@@ -208,7 +227,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       const key = `${st.phase}|${st.message}`;
       if (key === seen || !["completed", "failed", "manual"].includes(st.phase)) return;
       seen = key;
-      if (st.phase === "failed" && lastKey && !/리롤|삭제되어|RP 본문이 바뀌어/.test(String(st.message ?? ""))) { recDone.delete(lastKey); recCache.clear(); potNext.add(lastKey); while (potNext.size > 4) potNext.delete(potNext.values().next().value); }
+      if (st.phase === "failed" && lastKey && !recorderFailed && !/리롤|삭제되어|RP 본문이 바뀌어|Dusk 기록기 실패/.test(String(st.message ?? ""))) { recDone.delete(lastKey); recCache.clear(); potNext.add(lastKey); while (potNext.size > 4) potNext.delete(potNext.values().next().value); }
       if (st.phase === "completed") lastKey = "";
       let scope = null; try { scope = wiki.snapshot(); } catch { /* 아직 준비 전 */ }
       const verdict = judgeAutoResult({ phase: st.phase, message: st.message, scope, names: lastRecord && !lastRecord.error ? lastRecord.names ?? null : null });

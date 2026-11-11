@@ -29,6 +29,9 @@ for (const [label, vp] of [["PC", { width: 1280, height: 860 }], ["모바일", {
     ok(`[${label}] 기본은 Dusk 기록기`, (await sel.inputValue()) === "dusk", await sel.inputValue());
     ok(`[${label}] 최근 기록 결과 줄`, await page.locator("[data-rec]").count() >= 1);
     await sel.scrollIntoViewIfNeeded(); await page.screenshot({ path: `/tmp/recorder-ui-${label === "PC" ? "pc" : "mo"}.png` });
+    // 2.1.4: 묶어 묻기(기본 켬)·실패 시 예전 리수폿 기록(기본 끔) 스위치가 보인다
+    const txt = await page.evaluate(() => document.body.innerText);
+    ok(`[${label}] 묶어 묻기·실패 시 대신 스위치가 보임`, txt.includes("인물 여러 명 한 번에 묻기") && txt.includes("기록기가 실패하면 예전 리수폿 기록으로 대신"));
     await sel.selectOption("pot"); await page.waitForTimeout(400);
     const saved = await page.evaluate(async () => (await __app.ctx.memory.store.getIndex()).settings.recorder);
     ok(`[${label}] 리수폿 기록으로 바꾸면 저장됨`, saved === "pot", saved);

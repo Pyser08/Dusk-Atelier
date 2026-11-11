@@ -4,6 +4,7 @@
 // · 화면(display): 열쇠가 맞는 응답 아래에 접는 블록을 붙인다 (저장된 채팅은 건드리지 않음)
 // RisuBard(bardWiki 있음)에서는 쓰지 않는다. 훅 안에서는 오래 기다리지 않는다(HOST-COMPAT 3-3).
 import { headKey, tailKey, matchRecord } from "../engine/lorelog.js";
+import { onAux, mergeSide } from "../engine/auxlog.js";
 import { parseRollMarks } from "../engine/fairplay.js";
 import { estimateTokens, diceHtml, callHtml, fmtSec, fmtTokens, prefixInfo, cacheLine, promptParts } from "../engine/turninfo.js";
 
@@ -105,6 +106,7 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
       rec.parts = promptParts(messages).slice(0, 8).map((p) => ({ label: p.label, tok: p.tok }));   // 입력 내역(2.1.4)
       if (pi) rec.cache = { ratio: pi.ratio, same: pi.same, total: pi.total, breakAt: pi.breakAt, at: pi.at, of: pi.of, dusk: pi.dusk };
       if (cacheAlert && pi && pi.total >= ALERT_MIN_TOKENS && pi.ratio < ALERT_RATIO) alertCache(pi);
+      if (auxBuf.length) { for (const e of auxBuf) rec.side = mergeSide(rec.side, e); auxBuf = []; }   // 첫 메인 요청 전에 나간 보조 호출
       if (diceShow || callShow) { pending = rec; chipRun(rec); } else pending = null;   // 캐시 알림만이면 응답 기록은 남기지 않는다
     } catch (e) { log("요청 확인 실패", e?.message ?? e); }
     return messages;
@@ -147,6 +149,15 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
     } catch { return text; }
   }
 
+  // 보조 호출 장부(2.1.4): 이 메인 요청부터 다음 메인 요청 전까지 나간 보조 호출을 이 응답 기록에 작업별로 더한다
+  let auxBuf = [], unAux = null;
+  function noteSide(e) {
+    if (!callShow || !supported()) return;
+    const rec = pending;
+    if (!rec) { auxBuf.push(e); if (auxBuf.length > 200) auxBuf.shift(); return; }
+    rec.side = mergeSide(rec.side, e);
+    if (rec.id) save();
+  }
   let unwatch = null, relastTimer = null, relasting = false;
   async function relast() {
     if (relasting || typeof api.removeRisuReplacer !== "function") return;
@@ -159,6 +170,7 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
       if (typeof api.addRisuReplacer === "function") await api.addRisuReplacer("beforeRequest", beforeRequest);
       if (typeof api.addRisuScriptHandler === "function") { await api.addRisuScriptHandler("output", onOutput); await api.addRisuScriptHandler("display", onDisplay); }
       hooked = true;
+      unAux ??= onAux(noteSide);
       // 요청 훅은 등록 순서대로 불린다. Dusk의 다른 훅(장기 기억 등)이 나중에 붙어도 최종 프롬프트를 보도록 잠시 뒤 맨 뒤로 다시 단다.
       setTimeout(() => relast(), 5000);
       // 2.1.4: 애드온(장기 기억 등)은 5초보다 늦게 붙을 수 있다 → 다른 beforeRequest 훅이 붙을 때마다 다시 맨 뒤로(입력 내역이 최종 프롬프트를 세게)

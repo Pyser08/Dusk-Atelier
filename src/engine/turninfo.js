@@ -53,10 +53,13 @@ export function callHtml(rec, lore = null) {
   const total = (rec.lastAt ?? 0) - (rec.startAt ?? rec.at ?? 0);
   const wait = rec.firstAt ? rec.firstAt - (rec.startAt ?? rec.at ?? 0) : 0;
   const kind = rec.aux ? "보조" : "메인";
-  const sum = `⏱ ${kind} · ${esc(rec.model || "모델 알 수 없음")} · ${fmtSec(total)}${rec.inTok != null ? ` · 입력 약 ${fmtTokens(rec.inTok)}` : ""}${rec.outTok != null ? ` · 출력 약 ${fmtTokens(rec.outTok)}` : ""}`;
+  const side = Array.isArray(rec.side) ? rec.side : [];
+  const sideN = side.reduce((a, x) => a + (x.n || 0), 0), sideIn = side.reduce((a, x) => a + (x.inTok || 0), 0), sideOut = side.reduce((a, x) => a + (x.outTok || 0), 0);
+  const sum = `⏱ ${kind} · ${esc(rec.model || "모델 알 수 없음")} · ${fmtSec(total)}${rec.inTok != null ? ` · 입력 약 ${fmtTokens(rec.inTok)}` : ""}${rec.outTok != null ? ` · 출력 약 ${fmtTokens(rec.outTok)}` : ""}${sideN ? ` · 보조 ${sideN}회` : ""}`;
   const row = (k, v) => `<div style="display:flex;gap:8px;padding:3px 0;border-top:1px solid rgba(157,153,193,.18)"><b style="flex:none;min-width:5em">${k}</b><span style="min-width:0;word-break:break-word">${v}</span></div>`;
+  const sideRow = sideN ? row("보조 호출", `${sideN}회 · 입력 ${fmtTokens(sideIn)} · 출력 ${fmtTokens(sideOut)}${side.some((x) => x.est) ? " (일부는 글자 수로 어림)" : ""}<br>${side.map((x) => `${esc(x.label)} ${x.n}회 · 입력 ${fmtTokens(x.inTok)} · 출력 ${fmtTokens(x.outTok)}`).join("<br>")}`) : "";
   const names = (lore?.entries ?? []).map((e) => esc(e.n)).filter(Boolean);
-  return `\n\n<details x-dusk="turn" style="${BOX}"><summary style="${SUM}">${sum}</summary>${row("구분", `${kind} 모델`)}${row("모델", esc(rec.model || "알 수 없음"))}${row("걸린 시간", `첫 글자까지 ${fmtSec(wait)} (추론·대기) · 출력 ${fmtSec(Math.max(0, total - wait))} · 합계 ${fmtSec(total)}`)}${row("예상 토큰", `입력 약 ${fmtTokens(rec.inTok ?? 0)} · 출력 약 ${fmtTokens(rec.outTok ?? 0)} (글자 수로 어림)`)}${rec.parts?.length ? row("입력 내역", rec.parts.map((p) => `${esc(p.label)} ${fmtTokens(p.tok)}`).join(" · ")) : ""}${rec.cache ? row("캐시(어림)", esc(cacheLine(rec.cache))) : ""}${row("로어북", names.length ? `${names.length}개 · ${names.join(", ")}` : "들어간 로어북이 없어요")}</details>`;
+  return `\n\n<details x-dusk="turn" style="${BOX}"><summary style="${SUM}">${sum}</summary>${row("구분", `${kind} 모델`)}${row("모델", esc(rec.model || "알 수 없음"))}${row("걸린 시간", `첫 글자까지 ${fmtSec(wait)} (추론·대기) · 출력 ${fmtSec(Math.max(0, total - wait))} · 합계 ${fmtSec(total)}`)}${row("예상 토큰", `입력 약 ${fmtTokens(rec.inTok ?? 0)} · 출력 약 ${fmtTokens(rec.outTok ?? 0)} (글자 수로 어림)`)}${rec.parts?.length ? row("입력 내역", rec.parts.map((p) => `${esc(p.label)} ${fmtTokens(p.tok)}`).join(" · ")) : ""}${rec.cache ? row("캐시(어림)", esc(cacheLine(rec.cache))) : ""}${sideRow}${row("로어북", names.length ? `${names.length}개 · ${names.join(", ")}` : "들어간 로어북이 없어요")}</details>`;
 }
 
 // ── 입력 내역 (2.1.4): 메인 프롬프트를 출처별로 나눠 어림한다. 무엇이 입력을 키웠는지 보이게. ──

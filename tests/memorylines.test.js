@@ -65,7 +65,10 @@ const longText = "민지가 방에 들어와 {{user}}에게 비밀을 털어놓�
 test("한 줄 형식 전체 흐름: 개요 1번 + 인물 1번, 감정·호칭·키워드가 합쳐진다", async () => {
   const calls = [];
   const call = async (m) => {
-    const sys = m[0].content; calls.push(/ONE character: "([^"]+)"/.exec(sys)?.[1] ?? "overview");
+    // 2.1.4: 인물 이름은 지침(시스템 글)이 아니라 데이터의 focus로 온다(지침이 인물마다 같아 캐시가 잡히게)
+    const sys = m[0].content; let focus = null; try { focus = JSON.parse(m[1].content).focus ?? null; } catch { focus = null; }
+    if (/ONE character/.test(sys)) assert.ok(!sys.includes("민지"), "인물 지침에 인물 이름이 없다");
+    calls.push(/ONE character/.test(sys) ? focus : "overview");
     if (/ONE character/.test(sys)) return "to|{{user}}|warm|help|함께 가자고 손을 잡았다\ncall|{{user}}|선배|casual\nkeys|비밀";
     return "scene|민지가 비밀을 털어놓았다|방|저녁|yes\nwho|민지|비밀을 털어놓았다|3\nwho|{{user}}|들어 주었다|1";
   };

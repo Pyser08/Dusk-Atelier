@@ -2,6 +2,7 @@
 // '생성 중지' 버튼이 뜨고(ui/aistopbtn.js), 누르면 지금 도는 호출을 모두 끊는다.
 // 잡는 곳 두 군데: runAI(engine/runai.js — Dusk 대부분의 AI 작업)와 api.runLLMModel 래퍼(main.js — 리수폿·Erosync·봇빌더처럼 직접 부르는 곳).
 // 호스트의 모델 호출 자체를 되돌릴 수는 없어서, 기다리던 쪽이 바로 '중지' 오류를 받고 결과는 버린다(스트림이면 읽기를 끊는다).
+import { noteAux, auxTok, msgsText } from "./auxlog.js";
 export var STOP_MSG = "생성을 중지했어요.";
 var GRACE_MS = 3000;   // 중지 직후 자동 재시도·대기 작업이 곧바로 다시 부르는 것을 막는 시간(막힐 때마다 다시 잼)
 
@@ -82,8 +83,14 @@ export function trackedRunLLM(run) {
   return async (opts, ...rest) => {
     if (justStopped()) throw stopError();
     const t = trackAi(opts?.mode ? `model:${opts.mode}` : "model");
-    try { return await t.race(Promise.resolve().then(() => run(opts, ...rest))); }
-    finally { t.end(); }
+    // 보조 호출 장부(2.1.4): 이름은 지금 열린 작업(기억 기록 등), otherAx(Erosync·애드온이 쓰는 칸)는 그 이름으로
+    const label = opts?.mode === "otherAx" ? "Erosync·애드온" : opts?.mode === "model" ? "플러그인의 메인 모델 호출" : (activeTasks().find((n) => n !== "AI 작업") ?? "보조 호출");
+    let res;
+    try { res = await t.race(Promise.resolve().then(() => run(opts, ...rest))); return res; }
+    finally {
+      t.end();
+      try { const out = typeof res === "string" ? res : typeof res?.result === "string" ? res.result : ""; noteAux({ label, inTok: auxTok(msgsText(opts?.messages)), outTok: auxTok(out), real: false }); } catch { /* 장부 오류는 무시 */ }
+    }
   };
 }
 // 시험용

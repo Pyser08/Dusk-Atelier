@@ -335,7 +335,10 @@ test("Dusk 기록기(기본): 거대한 Writer 지침 없이 짧은 질문으로
   const h = harness({ model: { other: (rec) => {
     const turn = /"newest":"\[(T\d+)\]/.exec(rec.prompt)?.[1];
     if (/You are the memory recorder/.test(rec.prompt)) return LINES[turn] ?? "scene|조용한 사무실|샬레||no";
-    if (/You update the memory of ONE character: "하야세 유우카"/.test(rec.prompt)) return "like|+2|커피만 내려놓았다\nnow|선생님에게 비밀을 털어놓지 못해 미안해한다\nid|밀레니엄 세미나 회계\nfirst|믿을 만한 선생님\nknow|장부에 누락이 있다";
+    // 2.1.4: 두 명 이상이면 한 번에 묻는다(@|이름 묶음). 한 명이면 이름은 데이터의 focus로 온다.
+    const YUUKA = "like|+2|커피만 내려놓았다\nnow|선생님에게 비밀을 털어놓지 못해 미안해한다\nid|밀레니엄 세미나 회계\nfirst|믿을 만한 선생님\nknow|장부에 누락이 있다", OTHER = "id|아비도스 대책위원회\nnone";
+    if (/You update the memory of SEVERAL characters/.test(rec.prompt)) { const names = [...rec.prompt.matchAll(/"name":"([^"]+)"/g)].map((m) => m[1]); return names.map((n) => `@|${n}\n${n === "하야세 유우카" ? YUUKA : OTHER}`).join("\n"); }
+    if (/You update the memory of ONE character/.test(rec.prompt) && /"focus":"하야세 유우카"/.test(rec.prompt)) return YUUKA;
     if (/You update the memory of ONE character/.test(rec.prompt)) return "id|아비도스 대책위원회\nnone";
     return undefined;
   } } });
@@ -394,4 +397,20 @@ test("다시 요청(메인 모델이 끊겨 같은 말을 다시 보냄): 고르
   await h.hooks["r:beforeRequest"](req(), "model"); await wait(300);
   const again = h.calls.slice(before).filter((c) => c.kind === "router" || /You help direct|You are the memory recorder|You update the memory/.test(c.prompt));
   assert.equal(again.length, 0, "다시 요청 때 보조 호출: " + again.map((c) => c.kind).join(","));
+});
+
+test("2.1.4: Dusk 기록기가 끝내 실패해도 기본은 리수폿 Writer 전체 지침을 다시 보내지 않는다(실패·다시 시도) · 설정을 켜면 예전처럼 대신 기록", async () => {
+  for (const fallback of [false, true]) {
+    const h = harness({ model: { other: (rec) => /You are the memory recorder/.test(rec.prompt) ? "죄송하지만 형식을 못 맞추겠어요" : undefined } });
+    h.recorder = "dusk";
+    await turnOn(h, "fast");
+    if (fallback) await h.mem.store.updateIndex((i) => { i.settings.potFallback = true; });
+    await h.say("계속", "T1");
+    assert.ok(await until(async () => !!h.mem.flow.lastRecord()?.error), "기록기 실패가 남음");
+    await wait(300);
+    const writer = h.calls.filter((c) => /Writer output guide/.test(c.prompt)).length;
+    if (fallback) assert.ok(writer >= 1, "켜면 예전 리수폿 기록으로 대신");
+    else assert.equal(writer, 0, "기본은 큰 지침을 보내지 않는다");
+    assert.equal(h.mem.flow.lastRecord().fallback, fallback ? "risupot" : undefined);
+  }
 });

@@ -1,5 +1,16 @@
 # 현재 상태 — SD-Studio 브랜치 (2.1.0 끝 e194dd9에서 분기)
 
+## 최근 세션 (2026-11-11 22시 — v2.1.4 계속: 보조 호출 내역 + 장기기억 보조 토큰 줄이기, 장기기억 애드온 0.2.8)
+- 제보 확정: 숫자는 **보조 모델**(메인 버텍스 아르곤, 보조 버텍스 제미나이 3 플래시, 둘 다 추론 low), 턴당 입력 약 12만·출력 약 3만. 켠 애드온: 장기기억·관계도·기억카드·Erosync. (1.9.2 때 보조 약 7만 = 리수폿 Writer 지침 약 3만 + Director 약 2만 + 데이터)
+- **보조 호출 장부** `engine/auxlog.js`(globalThis.__duskAux — 애드온은 import 없이 `globalThis.__duskAux?.note?.()`): 적는 곳 ① `aistop.trackedRunLLM`(api.runLLMModel — 이름 = 열린 aiTask, otherAx = ‘Erosync·애드온’, mode model = ‘플러그인의 메인 모델 호출’, 글자 수 어림) ② `runai` 내 API·Dusk 프로바이더 길(어림) ③ `memoryturn.stageCall`이 onUsage를 받은 경우(직접 연결 = 공급자 실제 토큰, 리스 길은 ①이 적음). turninfo가 메인 요청부터 다음 메인 요청 전까지의 호출을 rec.side(작업별 n·in·out·est)로 묶고 callHtml ‘보조 호출’ 줄 + 접힌 줄 ‘보조 N회’. Erosync 자체 직접 제공자(리스 안 거침)는 아직 안 잡힘.
+- **묶어 묻기** `memorylines.linesStage2Group`·`splitGroupReply`(@|이름 묶음), `recorder.recordTurn({group})` — 3명씩 한 호출, 못 읽으면 그 묶음만 한 명씩, 묶음에 빠진 인물 = 변화 없음(실패 아님), 취소는 던짐. 기본값은 recordTurn 인자로는 꺼짐(시험 호환), memoryturn이 `settings.groupPeople !== false`로 켬. **Dusk 단독 분석(memoryprompt.analyzeLines)은 아직 한 명씩**.
+- **캐시**: linesStage2가 인물 이름을 지침에 넣지 않음(데이터 focus로만) → 인물마다 지침 글이 같음. 시험 2곳(memorylines·memoryturn) 이름 읽는 곳을 focus로 고침.
+- **실패 낭비**: memoryturn writerCall — 기록기 실패 시 기본은 `dusk-recorder-failed`로 던져 ‘다시 시도’(예전 리수폿 Writer 대신 안 함), 설정 `potFallback`(기억 설정 스위치) 켜면 예전처럼. 리수폿 검증 탈락(potNext) 뒤에도 기본은 가벼운 지침으로 새로 기록. 출력 한도 넓히기는 `cutByLimit`(finish_reason length/MAX_TOKENS·stop_reason max_tokens)일 때만, 1.5배·최대 16384(사용자 지시: 토큰 때문이 아니면 올리지 말 것).
+- 기억 설정에 스위치 2개(묶어 묻기 기본 켬·실패 시 대신 기본 끔) + 안내서 memory.html·story.html, CHANGELOG.
+- 장기기억 애드온 0.2.8 **minCore 2.1.4**(코어 memorylines 새 export 때문) → 코어 2.1.4 전 기기는 held(예전 애드온 유지).
+- 시험: `tests/aux-saving.test.js`(12) + memoryturn ‘2.1.4 실패 시 대신 안 함/설정 켜면 대신’ → npm test 1451 pass / 1 fail(pot-port, 원래 실패). build·check 동일함, build-addons --check 동일. e2e recorder-ui 14(스위치 확인 추가)·wiki-recorder·home-turn·smoke 통과.
+- 남은 일: [ ] 제보자 재측정(보조 호출 줄로 어느 작업이 큰지) [ ] analyzeLines 묶어 묻기 [ ] 월경 추적 켠 채팅은 늘 리수폿 Writer(약 3만) — 기록기로 옮길지 [ ] Erosync 직접 제공자 호출도 장부에 [ ] 정리 노트 factSheet가 위키 참조와 겹치는 칸 [ ] v2.1.4 main 병합·태그(사용자 지시 대기)
+
 ## 최근 세션 (2026-11-11 21시 — v2.1.4: 모델 호출 표시 ‘입력 내역’)
 - 제보: “장기기억 쓰면 2.0.0 전보다 입력이 7만→13만(응답 아래 모델 호출 칸 기준)”. 조사: 그 숫자는 Dusk turninfo의 메인 요청 어림값. 장기기억이 본편에 넣는 몫은 코드상 상한이 위키 참조 16,000자(관계 전용이면 실제 2~4천 자)+정리 노트 11,900자라 약 7천 토큰이 최대 → 6만 증가는 장기기억만으로 설명 안 됨. 원인 확정 못 함 — 사용자(제보자)가 장기 기억 끄고 다시 생성해 비교하기로.
 - 그래서 **입력 내역** 추가: `engine/turninfo.js` promptParts(messages) — 리수폿 위키/정리 노트는 HTML 주석 표식으로 잘라 세고, 메시지 머리 표식([Dusk Memory·[Dusk · module images]·봇 기본 페르소나·공정한 전개·주사위·이야기 시간·이미지 태그·내 프롬프트), 나머지는 system=‘시스템·봇 설정·로어북’, 그 밖=‘채팅 기록’. 큰 것부터 최대 8개를 rec.parts로 저장, callHtml에 ‘입력 내역’ 줄.

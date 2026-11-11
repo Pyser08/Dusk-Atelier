@@ -1,4 +1,5 @@
-import { trackAi, justStopped, stopError, aiTask } from "./aistop.js";
+import { trackAi, justStopped, stopError, aiTask, describeAi, activeTasks } from "./aistop.js";
+import { noteAux, auxTok, msgsText } from "./auxlog.js";
 import { extractRunAIText } from './airesponse.js';
 import { applyUserPrompts } from './customprompt.js';
 
@@ -62,10 +63,16 @@ export const runAITask = (label, api, messages, pick, signal) => aiTask(label, (
 async function runAIInner(api, messages, pick, signal) {
   if (!pick?.noUserPrompts) messages = await withUserPrompts(messages);   // 장기기억 분석은 대상 채팅 기준으로 직접 끼운다
   const dp = await duskPickFor(pick);
-  if (dp && duskRunner) return duskRunner(api, messages, dp, signal);
+  // 내 API·Dusk 프로바이더는 리스 runLLMModel을 거치지 않으므로 여기서 보조 호출 장부에 적는다(2.1.4)
+  const direct = async (p) => {
+    const label = describeAi(pick?.label ?? pick?.stage ?? "") || activeTasks().find((n) => n !== "AI 작업") || "보조 호출";
+    let res; try { res = await p; return res; }
+    finally { try { noteAux({ label, inTok: auxTok(msgsText(messages)), outTok: auxTok(typeof res === "string" ? res : extractRunAIText?.(res) ?? ""), real: false }); } catch { /* 무시 */ } }
+  };
+  if (dp && duskRunner) return direct(duskRunner(api, messages, dp, signal));
   if (pick?.mode === "custom") {
     if (!customRunner) throw new Error("내 API 모델을 쓸 수 없어요 (모델 설정이 아직 준비되지 않았어요).");
-    return customRunner(api, messages, pick, signal);
+    return direct(customRunner(api, messages, pick, signal));
   }
   const opts = { messages, mode: pick?.mode && pick.mode !== "static" ? pick.mode : "submodel", allowPlugins: true };
   if (pick?.mode === "static" && pick.staticModel) opts.staticModel = pick.staticModel;

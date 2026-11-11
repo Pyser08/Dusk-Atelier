@@ -7,7 +7,7 @@
 //         ③ 줄을 리수폿이 원래 받던 응답(JSON envelope)으로 바꿔 돌려준다 → 리수폿 검증·저장·화면은 그대로.
 //         같은 결과로 Dusk 기록(장면·인물·관계·떡밥·감정)도 만든다.
 // 저장 형식은 바뀌지 않는다(리수폿 위키·Dusk 폴더 둘 다 예전 그대로).
-import { JSON_FALLBACK, isNoneReply as coreNoneReply, parseLines, fromStage1, fromStage2, linesStage2, LINES_STAGE1, LINES_STAGE1_MIN, canonName, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, coerceInt } from "./memorylines.js";
+import { JSON_FALLBACK, isNoneReply as coreNoneReply, parseLines, fromStage1, fromStage2, linesStage2, linesStage2Group, splitGroupReply, LINES_STAGE1, LINES_STAGE1_MIN, canonName, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, coerceInt } from "./memorylines.js";
 import { validate } from "./memoryprompt.js";
 
 // '변화 없음' 판단: 코어 2.0.7의 isNoneReply는 JSON 꼴({"lines":[]})을 모르므로 애드온 쪽에서도 받는다.
@@ -129,9 +129,11 @@ export function deepMenu(run) {
 }
 
 export const MAX_PEOPLE = 6;
+export const GROUP_MAX = 3;   // 2.1.4: 한 번에 묻는 인물 수
+const names = (chunk) => chunk.map((t) => t.name).join("·");
 // dusk: runner.prepareLatest().input (없으면 null). 반환 { stage1, people:[{name, ref, isNew, lines}] }
 // cast(name, aliases) → bool: 로어북에 있는 인물만 새로 만들기(설정 '로어북에 있는 인물만 새로 기록'). 없으면 막지 않는다. 이미 위키에 있는 인물은 묻지 않고 통과.
-export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, onWarn = () => {} } = {}) {
+export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, group = false, onWarn = () => {} } = {}) {
   const source = run.rp, known0 = knownOf(run, dusk?.known ?? []);
   const known = knownInText(known0, [run.recent, source].join("\n"));
   const openItems = dusk?.openItems ?? [], openIds = new Set(openItems.map((x) => String(x.id)));
@@ -170,9 +172,12 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
     if (isNoneReply(raw)) return { lines: [] };
     const lines = parseLines(raw); return lines.length ? { lines } : null;
   }, { tries });
-  if (source.trim().length >= 40) for (const t of targets.slice(0, cap)) {
-    const isNew = !t.doc, mine = (arr) => (arr ?? []).filter((x) => JSON.stringify(x).includes(t.name));
-    const payload = { focus: t.name, known: known.map((p) => p.name), card: cardOf(t.doc), overview: { scene: stage1.scene?.sum ?? "", act: t.act ?? "" }, ...(mine(dusk?.emoState).length ? { emoState: mine(dusk.emoState) } : {}), ...(mine(dusk?.talkState).length ? { talkState: mine(dusk.talkState) } : {}), newest: focusText(source, t.name, 3000) };
+  const payloadOf = (t) => {
+    const mine = (arr) => (arr ?? []).filter((x) => JSON.stringify(x).includes(t.name));
+    return { focus: t.name, known: known.map((p) => p.name), card: cardOf(t.doc), overview: { scene: stage1.scene?.sum ?? "", act: t.act ?? "" }, ...(mine(dusk?.emoState).length ? { emoState: mine(dusk.emoState) } : {}), ...(mine(dusk?.talkState).length ? { talkState: mine(dusk.talkState) } : {}), newest: focusText(source, t.name, 3000) };
+  };
+  const runOne = async (t) => {
+    const isNew = !t.doc, payload = payloadOf(t);
     try {
       let got;
       try { got = await askPerson(t, payload, isNew, lite); }
@@ -183,6 +188,30 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
       }
       people.push({ ...t, isNew, lines: got.lines });
     } catch (e) { onWarn(t.name, e); people.push({ ...t, isNew, lines: [], failed: true }); }
+  };
+  // 2.1.4 묶어 묻기: 인물 2~3명을 한 번에 묻는다(호출 수·추론 토큰 절약). 묶음 답을 못 읽으면 그 묶음만 예전처럼 한 명씩.
+  // 답에 묶음이 있는데 빠진 인물은 '새로 확인된 것 없음'으로 본다(다시 묻지 않음). 코어가 묶음 지침을 모르면(예전 코어) 한 명씩.
+  const askGroup = async (chunk) => {
+    const names = chunk.map((t) => t.name), anyNew = chunk.some((t) => !t.doc);
+    const payload = { known: known.map((p) => p.name), overview: { scene: stage1.scene?.sum ?? "" }, people: chunk.map((t) => { const p = payloadOf(t); delete p.focus; delete p.known; delete p.newest; return { name: t.name, ...(t.doc ? {} : { new: true }), ...p, overview: undefined, act: t.act ?? "" }; }), newest: source.slice(0, 8000) };
+    return ask(call, [{ role: "system", content: linesStage2Group({ light: lite, beliefs, wiki: true, anyNew, extraLines: deepMenu(run) }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
+      const m = splitGroupReply(raw, names); if (!m || !m.size) return null;
+      return new Map([...m].map(([n, block]) => [n, isNoneReply(block) ? [] : parseLines(block)]));
+    }, { tries: 2 });
+  };
+  const list = source.trim().length >= 40 ? targets.slice(0, cap) : [];
+  const canGroup = group && typeof linesStage2Group === "function" && typeof splitGroupReply === "function";
+  for (let i = 0; i < list.length;) {
+    const chunk = canGroup ? list.slice(i, i + GROUP_MAX) : [list[i]];
+    i += chunk.length;
+    if (chunk.length < 2) { await runOne(chunk[0]); continue; }
+    let got = null;
+    try { got = await askGroup(chunk); }
+    catch (e) { if (e?.code === "model-aborted" || e?.name === "AbortError" || /중지/.test(String(e?.message ?? ""))) throw e; onWarn(names(chunk), e); got = null; }
+    for (const t of chunk) {
+      if (got) people.push({ ...t, isNew: !t.doc, lines: got.get(t.name) ?? [] });
+      else await runOne(t);
+    }
   }
   const lightAuto = !light && lite;
   if (auto && !light) {
