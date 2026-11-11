@@ -50,7 +50,7 @@ export function normalizeProject(x) {
   const charIds = new Set(chars.map((c) => c.id));
   const raw = (Array.isArray(x.folders) ? x.folders : []).filter((f) => f && typeof f.id === "string" && f.id);
   const fIds = new Set(raw.map((f) => f.id));
-  const folders = raw.map((f) => ({ id: f.id, name: str(f.name, 80) || "새 폴더", kind: f.kind === "outfit" || f.kind === "group" ? f.kind : "", parent: typeof f.parent === "string" && fIds.has(f.parent) && f.parent !== f.id ? f.parent : null, members: [...new Set((Array.isArray(f.members) ? f.members : []).filter((m) => charIds.has(m)))] }));
+  const folders = raw.map((f) => ({ id: f.id, name: str(f.name, 80) || "새 폴더", kind: f.kind === "outfit" || f.kind === "group" ? f.kind : "", prompt: str(f.prompt), parent: typeof f.parent === "string" && fIds.has(f.parent) && f.parent !== f.id ? f.parent : null, members: [...new Set((Array.isArray(f.members) ? f.members : []).filter((m) => charIds.has(m)))] }));
   const byId = new Map(folders.map((f) => [f.id, f]));
   for (const f of folders) { const seen = new Set([f.id]); let p = f.parent; while (p) { if (seen.has(p)) { f.parent = null; break; } seen.add(p); p = byId.get(p)?.parent ?? null; } }
   return { v: 2, settings, pieces, chars, folders };
@@ -85,13 +85,25 @@ export function charCover(c) {
 }
 
 // ── 폴더 ──
-export function addFolder(p, { name = "", kind = "", parent = null } = {}, mkId = newId) {
+export function addFolder(p, { name = "", kind = "", parent = null, prompt = "" } = {}, mkId = newId) {
   const par = parent && p.folders.some((f) => f.id === parent) ? parent : null;
-  return { ...p, folders: [...p.folders, { id: mkId(), name: str(name, 80).trim() || "새 폴더", kind: kind === "outfit" || kind === "group" ? kind : "", parent: par, members: [] }] };
+  return { ...p, folders: [...p.folders, { id: mkId(), name: str(name, 80).trim() || "새 폴더", kind: kind === "outfit" || kind === "group" ? kind : "", prompt: str(prompt), parent: par, members: [] }] };
 }
-export function updateFolder(p, id, { name, kind }) {
-  return { ...p, folders: p.folders.map((f) => (f.id === id ? { ...f, ...(name != null ? { name: str(name, 80).trim() || f.name } : {}), ...(kind != null ? { kind } : {}) } : f)) };
+export function updateFolder(p, id, { name, kind, prompt }) {
+  return { ...p, folders: p.folders.map((f) => (f.id === id ? { ...f, ...(name != null ? { name: str(name, 80).trim() || f.name } : {}), ...(kind != null ? { kind } : {}), ...(prompt != null ? { prompt: str(prompt) } : {}) } : f)) };
 }
+// 캐릭터 외형 프롬프트 앞에 붙는 폴더 프롬프트: 그 캐릭터가 든 폴더마다 맨 위 조상부터 차례로(같은 폴더는 한 번)
+export function folderPromptFor(p, cid) {
+  const byId = new Map(p.folders.map((f) => [f.id, f])), seen = new Set(), parts = [];
+  for (const f of p.folders) {
+    if (!f.members.includes(cid)) continue;
+    const chain = [];
+    for (let g = f; g && chain.length < 50; g = g.parent ? byId.get(g.parent) : null) chain.unshift(g);
+    for (const g of chain) if (!seen.has(g.id)) { seen.add(g.id); if (String(g.prompt ?? "").trim()) parts.push(g.prompt.trim()); }
+  }
+  return parts.join(", ");
+}
+export var ownPrompt = (p, c) => [folderPromptFor(p, c.id), String(c.prompt ?? "").trim()].filter(Boolean).join(", ");
 var descendants = (p, id) => {
   const out = new Set([id]);
   for (let grew = true; grew;) { grew = false; for (const f of p.folders) if (f.parent && out.has(f.parent) && !out.has(f.id)) { out.add(f.id); grew = true; } }

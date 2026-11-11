@@ -50,7 +50,7 @@ export async function openAssetStudio(ctx, target, sd) {
 
   const S = {
     ctx, target, sd, st, sel, title,
-    prefs, keys: prefs.keys2 ? normalizeKeys(prefs.keys2) : normalizeKeys(prefs.keys, { v: 1 }),
+    P, prefs, keys: prefs.keys2 ? normalizeKeys(prefs.keys2) : normalizeKeys(prefs.keys, { v: 1 }),
     keyLabel: (a) => keyLabel(S.keys[a]) || "단축키 없음",
     get proj() { return proj; },
     // undo: false = 되돌리기 기록에 안 남김(그리기 결과·예약 줄이기·바이브 캐시)
@@ -213,9 +213,11 @@ export async function openAssetStudio(ctx, target, sd) {
     card.addEventListener("click", (e) => {
       if (e.target.closest(".quick")) return;
       if (e.target.closest(".chk") || e.ctrlKey || e.metaKey || e.shiftKey || (sel.size && st.mode !== "scene")) { sel.has(key) ? sel.delete(key) : sel.add(key); card.setAttribute("aria-selected", String(sel.has(key))); paintTools(); return; }
+      if (kind === "scene") { sel.has(key) && sel.size === 1 ? sel.clear() : (sel.clear(), sel.add(key)); for (const n of bodyEl.querySelectorAll(".sds-scene")) n.setAttribute("aria-selected", String(sel.has(n.dataset.id))); paintTools(); return; }
       if (kind && !isCur(kind, key)) { setFocus(kind, key); return; }
       onOpen();
     });
+    if (kind === "scene") card.addEventListener("dblclick", (e) => { if (!e.target.closest(".quick")) { sel.clear(); onOpen(); } });
     card.setAttribute("aria-selected", String(sel.has(key)));
     if (kind) card.classList.toggle("cur", isCur(kind, key));
     return card;
@@ -331,9 +333,9 @@ export async function openAssetStudio(ctx, target, sd) {
     card.setAttribute("aria-selected", String(!!im.pick));
     card.addEventListener("click", (e) => {
       if (e.target.closest(".quick")) return;
-      if (e.target.closest(".chk") || e.ctrlKey || e.metaKey || e.shiftKey) { togglePick(it); return; }
-      openLightbox(S, list, idx);
+      togglePick(it);   // 한 번 = 보낼 그림으로 고르기/풀기
     });
+    card.addEventListener("dblclick", (e) => { if (!e.target.closest(".quick")) openLightbox(S, list, idx); });   // 더블클릭 = 크게 보기(두 번의 클릭으로 고르기는 제자리)
     return card;
   };
   function togglePick(it, on) {
@@ -453,7 +455,7 @@ export async function openAssetStudio(ctx, target, sd) {
     const setSlots = (slots) => { S.set(P.setSlots(proj, c.id, sc.id, slots)); };
     const slotsEl = h("div", { class: "sds-slots", id: "sds-slots" });
     const preview = h("pre", { class: "rb-muted", id: "sds-preview", style: "margin:0;white-space:pre-wrap;word-break:break-word;font:inherit;font-size:12.5px;background:var(--rb-win);border-radius:var(--rb-r1);padding:8px 10px" });
-    const paintPreview = () => { const s = proj.settings, cc = P.charOf(proj, c.id), ss = P.sceneOf(proj, c.id, sc.id); try { preview.textContent = combinationCount(ss.slots) ? buildPrompt({ top: s.top, own: cc.prompt, middle: P.middleFor(ss, 0), back: s.back }, proj.pieces, () => 0) : "켜진 조각이 없는 슬롯이 있어 그릴 수 없어요."; preview.style.color = ""; } catch (e) { preview.textContent = e.message; preview.style.color = "var(--rb-danger)"; } };
+    const paintPreview = () => { const s = proj.settings, cc = P.charOf(proj, c.id), ss = P.sceneOf(proj, c.id, sc.id); try { preview.textContent = combinationCount(ss.slots) ? buildPrompt({ top: s.top, own: P.ownPrompt(proj, cc), middle: P.middleFor(ss, 0), back: s.back }, proj.pieces, () => 0) : "켜진 조각이 없는 슬롯이 있어 그릴 수 없어요."; preview.style.color = ""; } catch (e) { preview.textContent = e.message; preview.style.color = "var(--rb-danger)"; } };
     const paintSlots = () => {
       const cur = P.sceneOf(proj, c.id, sc.id).slots;
       replace(slotsEl, ...cur.map((slot, si) => h("div", { class: "sds-slot" },
@@ -478,10 +480,18 @@ export async function openAssetStudio(ctx, target, sd) {
       imgs.length ? grid(...imgs.map((im, i) => imageCard(list[i], im, list, i))) : empty("아직 그림이 없어요", "예약하고 위의 ‘생성’을 누르거나 ‘지금 1장’을 눌러요.")];
   }
   function galleryView(c) {
-    const chars = c ? [c] : proj.chars;
+    const chars = c ? [c] : st.folder ? P.rowChars(proj, st.folder) : proj.chars;
     const all = chars.flatMap((cc) => cc.scenes.flatMap((sc) => P.sortedImages(sc).map((im) => ({ it: { cid: cc.id, sid: sc.id, path: im.path }, im, sc, cc }))));
     if (!all.length) return [empty("그림이 없어요", "씬을 예약하고 ‘생성’을 누르면 여기에 모여요.")];
-    const list = all.map((x) => x.it), out = [];
+    const list = all.map((x) => x.it), picked = all.filter((x) => x.im.pick);
+    const setAll = (on) => { let nx = proj; for (const x of all) if (!!x.im.pick !== on) nx = P.setPicks(nx, x.it.cid, x.it.sid, [x.it.path], on); S.set(nx, { undo: false }); paintTools(); paintBody(); };
+    const out = [h("div", { class: "sds-row sds-bulkbar", id: "sds-gbulk", style: "flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:4;background:var(--rb-win);padding:6px 0" },
+      h("span", { class: "sds-pill" }, `그림 ${all.length}장 · 고름 ${picked.length}`),
+      btn("모두 고르기", { size: "sm", id: "sds-g-all", onClick: () => setAll(true) }),
+      btn("고르기 풀기", { size: "sm", id: "sds-g-none", disabled: !picked.length, onClick: () => setAll(false) }),
+      btn(`고른 ${picked.length}장 봇에 넣기`, { size: "sm", kind: "primary", id: "sds-g-put", disabled: !picked.length, onClick: () => quickPut(picked.map((x) => ({ cid: x.it.cid, sid: x.it.sid, path: x.it.path, name: x.sc.name }))) }),
+      btn(`고른 ${picked.length}장 목록에서 빼기`, { size: "sm", kind: "danger", id: "sds-g-del", disabled: !picked.length, onClick: () => removePicked(picked.map((x) => x.it)) }),
+      h("span", { class: "rb-muted", style: "font-size:12px" }, "한 번 누르면 고르기 · 두 번 누르면 크게 보기"))];
     let i = 0;
     for (const cc of chars) for (const sc of cc.scenes) {
       const part = all.filter((x) => x.sc === sc);
@@ -590,6 +600,11 @@ export async function openAssetStudio(ctx, target, sd) {
     if (ids.includes(st.sceneId)) st.sceneId = null;
     paintTop(); paintTools(); paintBody();
   }
+  async function removePicked(items) {
+    if (!items.length || !await confirmDialog(ctx.win, { title: `${items.length}장을 목록에서 뺄까요?`, body: "이 화면 목록에서만 빠져요. 리스 에셋 저장소 파일과 이미 넣은 에셋은 그대로예요.", ok: "빼기", danger: true })) return;
+    let nx = proj; for (const it of items) nx = P.removeImages(nx, it.cid, it.sid, [it.path]);
+    S.set(nx); sel.clear(); paintTools(); paintBody();
+  }
   async function removePaths(cid, sid, paths) {
     if (!paths.length || !await confirmDialog(ctx.win, { title: `${paths.length}장을 목록에서 뺄까요?`, body: "이 화면 목록에서만 빠져요. 리스 에셋 저장소 파일과 이미 넣은 에셋은 그대로예요.", ok: "빼기", danger: true })) return;
     S.set(P.removeImages(proj, cid, sid, paths)); sel.clear(); paintTools(); paintBody();
@@ -603,7 +618,7 @@ export async function openAssetStudio(ctx, target, sd) {
     const f = proj.folders.find((x) => x.id === id);
     if (!f) return;
     openMenu(ctx.win, anchor, [
-      { label: "이름·종류 바꾸기", icon: "edit", onClick: async () => { const r = await S.dlg.folderDialog({ title: "폴더 바꾸기", name: f.name, kind: f.kind, ok: "저장" }); if (r) { S.set(P.updateFolder(proj, id, r)); paintBody(); } } },
+      { label: "이름·종류·프롬프트 바꾸기", icon: "edit", onClick: async () => { const r = await S.dlg.folderDialog({ title: "폴더 바꾸기", name: f.name, kind: f.kind, prompt: f.prompt ?? "", ok: "저장" }); if (r) { S.set(P.updateFolder(proj, id, r)); paintBody(); } } },
       { label: "안에 폴더 만들기", icon: "folderPlus", onClick: () => addFolder(id) },
       ...(f.parent ? [{ label: "맨 위로 꺼내기", icon: "up", onClick: () => { S.set(P.moveFolder(proj, id, null)); paintBody(); } }] : []),
       "sep",
@@ -642,7 +657,7 @@ export async function openAssetStudio(ctx, target, sd) {
   }
   async function copyPrompts(c, ids) {
     const s = proj.settings;
-    const lines = c.scenes.filter((sc) => !ids || ids.includes(sc.id)).map((sc) => { try { return `${sc.name}: ${buildPrompt({ top: s.top, own: c.prompt, middle: P.middleFor(sc, 0), back: s.back }, proj.pieces, () => 0)}`; } catch (e) { return `${sc.name}: (${e.message})`; } });
+    const lines = c.scenes.filter((sc) => !ids || ids.includes(sc.id)).map((sc) => { try { return `${sc.name}: ${buildPrompt({ top: s.top, own: P.ownPrompt(proj, c), middle: P.middleFor(sc, 0), back: s.back }, proj.pieces, () => 0)}`; } catch (e) { return `${sc.name}: (${e.message})`; } });
     try { await navigator.clipboard.writeText(lines.join("\n")); S.toast("프롬프트를 복사했어요"); } catch { S.toast("복사하지 못했어요", { error: true }); }
   }
   function zipMenu(anchor) {
@@ -828,7 +843,7 @@ export async function openAssetStudio(ctx, target, sd) {
   async function generateJob(job, k, token) {
     const c = P.charOf(proj, job.cid), sc = P.sceneOf(proj, job.cid, job.sid), s = proj.settings;
     if (!c || !sc) return;
-    const prompt = buildPrompt({ top: s.top, own: c.prompt, middle: P.middleFor(sc, job.combo), back: s.back }, proj.pieces);
+    const prompt = buildPrompt({ top: s.top, own: P.ownPrompt(proj, c), middle: P.middleFor(sc, job.combo), back: s.back }, proj.pieces);
     const { width, height } = P.sizeFor(s.size, sc);
     const body = buildGenerateBody({ prompt, uc: buildNegative(s.neg, proj.pieces), width, height, seed: P.seedFor(s.seed, k), settings: s.sampling,
       chars: s.chars.filter((x) => x.on), vibes: await vibesFor(s.sampling.model), refs: await refsFor(s.sampling.model) });
@@ -881,7 +896,7 @@ export async function openAssetStudio(ctx, target, sd) {
       const s = proj.settings;
       let data, prompt = im.prompt;
       if (kind === "img2img" || kind === "infill") {
-        prompt = opts.prompt?.trim() || im.prompt || buildPrompt({ top: s.top, own: c.prompt, middle: P.middleFor(sc, 0), back: s.back }, proj.pieces);
+        prompt = opts.prompt?.trim() || im.prompt || buildPrompt({ top: s.top, own: P.ownPrompt(proj, c), middle: P.middleFor(sc, 0), back: s.back }, proj.pieces);
         const body = buildGenerateBody({ prompt, uc: buildNegative(s.neg, proj.pieces), width: sz.width, height: sz.height, settings: s.sampling, action: kind, image: b64,
           mask: kind === "infill" ? toB64(opts.mask) : undefined, strength: opts.strength, noise: opts.noise ?? 0, addOriginal: opts.keep ?? true, chars: s.chars.filter((x) => x.on), vibes: await vibesFor(s.sampling.model), refs: kind === "img2img" ? await refsFor(s.sampling.model) : [] });
         data = await sd.image(body, { label: `sdstudio:${kind}` });
@@ -908,7 +923,7 @@ export async function openAssetStudio(ctx, target, sd) {
     if (ctx.root) { if (prev.root == null) ctx.root.removeAttribute("style"); else ctx.root.setAttribute("style", prev.root); }
     if (prev.win == null) ctx.win.removeAttribute("style"); else ctx.win.setAttribute("style", prev.win);
   }
-  function runAction(act) {
+  async function runAction(act) {
     const c = S.curChar(), sc = S.curScene();
     if (act === "run") return q.running ? stopQueue() : runQueue();
     if (act === "toggleLeft") return S.toggleLeft();
@@ -917,7 +932,16 @@ export async function openAssetStudio(ctx, target, sd) {
     if (act === "help") return S.dlg.help();
     if (act === "search") return setMode("search");
     if (/^mode[1-5]$/.test(act)) { const m = MODES[Number(act[4]) - 1][0]; if (m !== "bulk" || c) setMode(m); return; }
-    if (act === "put") { if (c) return quickPut(P.pickedImages(c, sc?.id ?? null).map((x) => ({ ...x, cid: c.id }))); return S.toast("캐릭터를 열고 넣어요"); }
+    if (act === "put") return quickPut(sc ? P.pickedImages(c, sc.id).map((x) => ({ ...x, cid: c.id })) : pickedInScope());
+    if (act === "unpick") { const items = pickedInScope(); let nx = proj; for (const x of items) nx = P.setPicks(nx, x.cid, x.sid, [x.path], false); sel.clear(); st.focus = null; S.set(nx, { undo: false }); paintTools(); paintBody(); return; }
+    if (act === "remove") {
+      if (st.mode === "gallery" || sc) { const items = sc ? P.pickedImages(c, sc.id).map((x) => ({ ...x, cid: c.id })) : pickedInScope(); if (items.length) return removePicked(items); }
+      if (sel.size) return c ? removeScenes([...sel]) : removeChars([...sel]);
+      if (st.focus?.kind === "char") return removeChars([st.focus.id]);
+      if (st.focus?.kind === "folder") { const f = proj.folders.find((x) => x.id === st.focus.id); if (f && await confirmDialog(ctx.win, { title: `‘${f.name}’ 폴더를 지울까요?`, body: "안의 폴더도 함께 지워져요. 캐릭터와 그림은 남아요.", ok: "지우기", danger: true })) { S.set(P.removeFolder(proj, f.id)); st.focus = null; paintTools(); paintBody(); } }
+      return;
+    }
+    if (act === "selectAll" && st.mode === "gallery") { return el.querySelector("#sds-g-all")?.click(); }
     if (act === "selectAll") { if (sc) { S.set(P.setPicks(proj, c.id, sc.id, sc.images.map((i) => i.path), true), { undo: false }); paintTools(); paintBody(); return; } (c ? c.scenes.map((x) => x.id) : P.view(proj, st.folder).chars.map((x) => x.id)).forEach((k) => sel.add(k)); paintTools(); paintBody(); return; }
     if (act === "newItem") return c ? addScene() : addChar();
     if (act === "cup") { if (sc) return openCup(S, c.id, sc.id); if (c && sel.size === 1) return openCup(S, c.id, [...sel][0]); return; }

@@ -203,7 +203,7 @@ export function createDialogs(S) {
     if (!(await S.sd.getToken())) out.push(["warn", "NovelAI 토큰이 없어요. 설정(톱니)에서 넣어요."]);
     for (const c of pr.chars) for (const sc of c.scenes) {
       if (!combinationCount(sc.slots)) { out.push(["warn", `${c.name} › ${sc.name}: 켜진 조각이 없는 슬롯이 있어 그릴 수 없어요.`]); continue; }
-      try { const pmt = buildPrompt({ top: s.top, own: c.prompt, middle: P.middleFor(sc, 0), back: s.back }, pr.pieces); if (!toPARR(pmt).length) out.push(["warn", `${c.name} › ${sc.name}: 프롬프트가 비었어요.`]); }
+      try { const pmt = buildPrompt({ top: s.top, own: P.ownPrompt(pr, c), middle: P.middleFor(sc, 0), back: s.back }, pr.pieces); if (!toPARR(pmt).length) out.push(["warn", `${c.name} › ${sc.name}: 프롬프트가 비었어요.`]); }
       catch (e) { out.push(["err", `${c.name} › ${sc.name}: ${e.message}`]); }
     }
     try { buildNegative(s.neg, pr.pieces); } catch (e) { out.push(["err", `네거티브: ${e.message}`]); }
@@ -351,13 +351,16 @@ export function createDialogs(S) {
       h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(null) }), btn("넣기", { kind: "primary", id: "sds-put-ok", onClick: () => done({ slot, name: nameIn.value.trim(), dup }) }))));
   }
 
-  function folderDialog({ title, name = "", kind = "", ok = "만들기" }) {
+  function folderDialog({ title, name = "", kind = "", prompt = "", ok = "만들기" }) {
     let k = kind;
+    const pIn = h("textarea", { class: "rb-input", rows: 3, id: "sds-fprompt", placeholder: "예: school uniform, halo — 이 폴더(안의 폴더 포함) 캐릭터 프롬프트 앞에 붙어요" }, prompt);
+    const val = () => ({ name: input.value.trim(), kind: k, prompt: pIn.value });
     const input = h("input", { type: "text", class: "rb-input", value: name, placeholder: "예: 수영복 / 아비도스", "data-autofocus": "", id: "sds-fname" });
     return modal(win, (done) => {
-      input.addEventListener("keydown", (e) => { if (e.key === "Enter" && input.value.trim()) done({ name: input.value.trim(), kind: k }); });
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter" && input.value.trim()) done(val()); });
       return dialog(title, 460, field("폴더 이름", input), field("무엇으로 묶나요", segmented([["outfit", "캐릭터"], ["group", "소속"], ["", "그 밖"]], k, (v) => { k = v; }, "폴더 종류")),
-        h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(null) }), btn(ok, { kind: "primary", id: "sds-fok", onClick: () => input.value.trim() && done({ name: input.value.trim(), kind: k }) })));
+        field("폴더 프롬프트", pIn, h("span", { class: "rb-muted", style: "font-size:12px;white-space:normal" }, "상위 폴더 프롬프트 → 하위 폴더 프롬프트 → 캐릭터 외형 순으로 이어져요.")),
+        h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(null) }), btn(ok, { kind: "primary", id: "sds-fok", onClick: () => input.value.trim() && done(val()) })));
     });
   }
 

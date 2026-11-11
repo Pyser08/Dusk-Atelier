@@ -59,7 +59,7 @@ const txt = (page, sel) => page.locator(sel).first().innerText();
 const promptOk = async (page, value) => { const top = page.locator(".rb-modal").last(); await top.locator("input").first().fill(value); await top.locator(".rb-dialog button.primary").last().click(); await page.waitForTimeout(300); };
 const fillArea = async (page, id, v) => { await page.locator(`#${id}`).fill(v); await page.waitForTimeout(50); };
 const reqs = (page, path) => page.evaluate((p) => window.__req.filter((x) => x.path === p).map((x) => x.body), path);
-const openCard = async (loc) => { await loc.click(); await loc.page().waitForTimeout(60); await loc.click(); };   // 한 번 = 테두리, 한 번 더 = 열기
+const openCard = async (loc) => { if (await loc.evaluate((x) => x.classList.contains("sds-scene") || x.classList.contains("sds-img"))) { await loc.dblclick(); return; } await loc.click(); await loc.page().waitForTimeout(60); await loc.click(); };   // 한 번 = 테두리, 한 번 더 = 열기
 const dnd = (page, src, dst, { alt = false, fx = 0.5, fy = 0.5 } = {}) => page.evaluate(({ src, dst, alt, fx, fy }) => {   // HTML5 끌어놓기 이벤트를 차례로 보냄
   const a = document.querySelector(src), b = document.querySelector(dst);
   if (!a || !b) throw new Error(`없음: ${!a ? src : dst}`);
@@ -139,7 +139,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   ok("월드컵 끝 → 1위 배지", (await page.locator("#sds-cup").count()) === 0 && (await page.locator("#sds-body .sds-img .badge", { hasText: "1위" }).count()) === 1);
 
   // 크게 보기
-  await page.locator("#sds-body .sds-img").first().click(); await page.waitForTimeout(500);
+  await page.locator("#sds-body .sds-img").first().dblclick(); await page.waitForTimeout(500);
   ok("크게 보기 열림(1위 표시)", (await page.locator("#sds-lightbox").count()) === 1 && /1위/.test(await txt(page, "#sds-lb-info")));
   await page.click("#sds-lb-fav"); await page.waitForTimeout(150);
   ok("즐겨찾기 켬", (await page.locator("#sds-lb-fav[aria-pressed='true']").count()) === 1);
@@ -320,6 +320,21 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
       await page.evaluate(() => { document.querySelector("#rb-sd-studio").__sds.prefs.nameStyle = "scene"; });
     } else ok("이름 규칙 시험용 그림 있음", false);
     await S.dispose(); }
+  // 폴더 프롬프트가 하위 폴더 캐릭터에 이어짐 · 맨 위 갤러리 일괄 · Delete/Ctrl+A
+  { const pr3 = await sdProj(page);
+        const own = await page.evaluate(() => { const S = document.querySelector("#rb-sd-studio").__sds, P = S.P; let p = S.proj;
+      p = P.addFolder(p, { name: "위", prompt: "halo" }); const up = p.folders.at(-1).id; p = P.addFolder(p, { name: "아래", prompt: "school uniform", parent: up }); const dn = p.folders.at(-1).id;
+      const c = p.chars[0]; p = P.setMember(p, dn, c.id, true); const r = P.ownPrompt(p, c); return r; });
+    ok("상위·하위 폴더 프롬프트가 캐릭터 앞에 차례로", /^halo, school uniform(, |$)/.test(own), String(own));
+    await page.locator("#sds-crumbs .rb-chip").first().click(); await page.waitForTimeout(200);
+    await page.locator(".sds-modes button", { hasText: "갤러리" }).click(); await page.waitForTimeout(300);
+    ok("맨 위 갤러리에 일괄 관리 줄", (await page.locator("#sds-gbulk").count()) === 1);
+    await page.locator("#sds-body").click({ position: { x: 5, y: 5 } }); await page.keyboard.press("Control+A"); await page.waitForTimeout(250);
+    const pk = await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj.chars.flatMap((c) => c.scenes.flatMap((s) => s.images)).every((i) => i.pick));
+    ok("갤러리에서 Ctrl+A = 그림 모두 고르기", pk);
+    await page.keyboard.press("Control+Shift+A"); await page.waitForTimeout(250);
+    ok("Ctrl+Shift+A = 고르기 모두 풀기", !(await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj.chars.some((c) => c.scenes.some((s) => s.images.some((i) => i.pick))))));
+    await page.keyboard.press('Escape'); await page.waitForTimeout(250); }
   await shot(page, "sd-6-folders");
 
   // 샘플링(V5)·조각·문제 확인
