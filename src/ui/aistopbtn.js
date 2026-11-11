@@ -4,7 +4,7 @@
 import { onAiChange, activeCount, activeTasks, stopAll } from "../engine/aistop.js";
 
 var ATTR = "x-dusk-ai-stop";
-var STYLE = "position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,calc(env(safe-area-inset-bottom) + 16px));z-index:2147483000;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(28,28,34,.94);color:#fff;font:700 13px/1 Inter,system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.35);cursor:pointer;";
+var STYLE = "position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(76px,calc(env(safe-area-inset-bottom) + 76px));z-index:2147483000;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(28,28,34,.94);color:#fff;font:700 13px/1 Inter,system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.35);cursor:pointer;";
 var SQ = "display:inline-block;width:10px;height:10px;border-radius:2px;background:#ff6b6b;";
 var TXT = "max-width:min(56vw,280px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
 var SUB = "font-weight:500;opacity:.75;";
