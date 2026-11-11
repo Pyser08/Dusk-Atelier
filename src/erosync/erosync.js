@@ -1,3 +1,4 @@
+import { createLookaheadDelay, LOOKAHEAD_CANCELLED } from "./lookaheaddelay.js";
 // Erosync V0.9.1 격리 이식 — 원작자에게 제공받은 플러그인(erosync, api 3.0)을 Dusk 안에서 켜고 끌 수 있게 감싼 것.
 // 원본 대비 바뀐 곳: (1) //@ 머리말 제거 (2) 즉시 실행 함수 → bootErosync(api) (3) R을 주입받은 api의 프록시로(onUnload를 가로챔)
 // (4) 배경음 자료는 비움 (5) 끝에 Dusk 연결부(duskReadSnapshot, duskContent/Config/Prompts/Guard/Flags/Profile/Analysis/Behind) 추가 (6) 원래 설정 창·이펙트·소리·관계망 화면·열기 진입점은 tools/erosync-prune.mjs로 걷어냄(엔진만 남음) (7) bootErosync(api, host): host.runAI로 Dusk 모델 설정 사용. 그 밖의 본문은 원본 그대로이니 고칠 때는 원본과 비교할 것.
@@ -2710,6 +2711,7 @@ export async function bootErosync(api, hostArg) {
   let risuActiveCallSequence = 0;
   const profileCompilePromises = new Map();
   const verificationPromises = new Map();
+  const lookaheadDelay = createLookaheadDelay();   // Dusk 2.1.4: 확정 뒤 미리 짜기를 미룸(다시 생성이면 취소)
   const decisionPromises = new Map();
   const decisionCache = new Map();
   const lookaheadGuards = new Map();
@@ -19529,14 +19531,17 @@ Constraint: {{constraint}}
     const lookaheadPending = lookaheadBase ? { ...pending, scope: { ...pending.scope, planningSignature: planningSettingsSignature(
       configCache || DEFAULT_CONFIG, lookaheadBase.botOverride, lookaheadBase.profileStore, pending.scope.sourceBundleKey, pending.scope.variantKey,
     ) } } : pending;
-    const lookaheadJob = lookaheadBase ? queueNextTurnLookahead(lookaheadPending, content, lookaheadBase) : Promise.resolve(null);
+    // Dusk 2.1.4: 계획 미리 짜기·인물 재분석·비하인드를 잠깐 미룬다 — 그 사이 다시 생성(검열·중지로 잘린 응답)하면 잘린 응답 몫은 건너뛴다.
+    const lookaheadJob = lookaheadDelay.delay(pending.scope.scopeKey, () => (lookaheadBase ? queueNextTurnLookahead(lookaheadPending, content, lookaheadBase) : null));
+    const skipped = (value) => value === LOOKAHEAD_CANCELLED;
     const refreshJob = lookaheadJob.then(
-      () => schedulePostResponseProfileRefresh(pending),
+      (value) => (skipped(value) ? LOOKAHEAD_CANCELLED : schedulePostResponseProfileRefresh(pending)),
       () => schedulePostResponseProfileRefresh(pending),
     );
     // 점진 분석 후속(2026-10-31, Erosync.Progressive-Followup.Work-Plan.md): 자동 재분석 자리 다음에 첫 분석 또는 등장 인물 한 명 분석
-    const followUpJob = refreshJob.then(() => scheduleProgressiveFollowUp(pending), () => scheduleProgressiveFollowUp(pending));
-    const scheduleBehind = () => queueBehindScene(pending, content).catch((error) => warn('behind-scene generation skipped:', error?.message || error));
+    const followUpJob = refreshJob.then((value) => (skipped(value) ? LOOKAHEAD_CANCELLED : scheduleProgressiveFollowUp(pending)), () => scheduleProgressiveFollowUp(pending));
+    const scheduleBehindNow = () => queueBehindScene(pending, content).catch((error) => warn('behind-scene generation skipped:', error?.message || error));
+    const scheduleBehind = (value) => (skipped(value) ? null : scheduleBehindNow());
     if (!pending.profileRefresh?.needed) followUpJob.then(scheduleBehind, scheduleBehind);
     else {
       Promise.resolve(loadConfig()).then((config) => {
@@ -19544,7 +19549,7 @@ Constraint: {{constraint}}
         const behindRole = config.behindUseSeparateModel ? 'behind' : 'director';
         const behindProviderId = resolveRoleProfile(config, behindRole).providerId;
         if (profileProviderId === behindProviderId) return followUpJob.then(scheduleBehind, scheduleBehind);
-        return scheduleBehind();
+        return lookaheadJob.then(scheduleBehind, scheduleBehind);
       }).catch((error) => warn('behind-scene scheduling skipped:', error?.message || error));
     }
   }
@@ -20072,6 +20077,7 @@ Constraint: {{constraint}}
               && clampInt(resyncPreparedBundle?.moduleSelectionRevision, 0, 0, 1000000000) === clampInt(inventory.moduleSelectionRevision, 0, 0, 1000000000)
               && resyncProfileSourceIds.length > 0;
             scheduleChatResync(scope, scope.chat?.message, turnKey, requestSlotKey, resync);
+            lookaheadDelay.cancel(scope.scopeKey);   // Dusk 2.1.4: 되돌린(다시 생성한) 응답 몫의 미뤄 둔 계획은 짜지 않는다
             const resyncEpoch = currentScopeEpoch(scope);
             earlyPending = null;
             enqueuePendingContext({
@@ -20115,6 +20121,17 @@ Constraint: {{constraint}}
           warn('chat resync skipped; existing records kept:', error?.message || error);
         }
 
+        // Dusk 2.1.4: 미뤄 둔 계획이 있으면 지금 시작한다(새 입력). 긴급 판단 대기 시간까지만 기다린다(0이거나 리스 제공자면 기다리지 않음).
+        {
+          const flushed = lookaheadDelay.flush(scope.scopeKey);
+          const waitMs = flushed ? emergencyReplanWaitMs(config) : 0;
+          if (flushed && waitMs && resolveRoleProfile(config, 'director').providerId !== 'risu') {
+            requestGuard.extend(waitMs + EMERGENCY_FINISH_MS);
+            let timer = null;
+            await Promise.race([flushed.catch(() => null), new Promise((resolve) => { timer = setTimeout(resolve, waitMs); })]);
+            clearTimeout(timer);
+          }
+        }
         // Resync can roll profiles or mobs back. Bind the prepared decision to
         // that post-resync profile state, not the stale pre-resync snapshot.
         scope.planningSignature = planningSettingsSignature(
@@ -23470,6 +23487,7 @@ Constraint: {{constraint}}
         judgmentRetryTimers.clear();
         sceneRecoveryCheckPending = false;
         lookaheadContexts.clear();
+        lookaheadDelay.cancelAll();
         unloaded = true;
         observeCompatibility('clear');
         if (compatibilityUiTimer) clearTimeout(compatibilityUiTimer);

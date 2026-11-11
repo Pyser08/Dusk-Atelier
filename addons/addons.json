@@ -80,7 +80,7 @@
       "id": "erosync",
       "name": "Erosync",
       "category": "memory",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "minCore": "2.0.0",
       "hooks": true,
       "requires": [
@@ -88,8 +88,8 @@
       ],
       "desc": "NSFW 장면 강화 — 인물 성향·목표를 읽어 다음 응답의 장면 계획을 넣어요. 장기기억·관계도 애드온이 필요해요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/erosync.js",
-      "sha256": "3c16b502db404eb497c100b506ece25d69e33b427228625770b40f2325347a7d",
-      "size": 848461
+      "sha256": "b57fb9ea030492ffc25c804ff07f040392c16a3dfda64892d1dcea065f7b55ed",
+      "size": 849486
     },
     {
       "id": "protlink",
