@@ -114,11 +114,15 @@ export function buildAssetIndex(names) {
   const groups = input.some((g) => Array.isArray(g)) ? input.filter(Array.isArray) : [input];
   const seen = new Set(), raw = [], modes = new Set();
   for (const g of groups) {
-    const list = [...new Set(g.map((n) => String(n ?? "").replace(EXT, "")).filter(Boolean))].filter((n) => !seen.has(n));
+    // 이름 자체에 확장자가 든 에셋(`Gyeongja_smile.webp`)은 확장자를 떼고 읽되, 고칠 때는 실제 이름(확장자째)을 쓴다.
+    const real = new Map();
+    for (const n0 of g) { const n = String(n0 ?? ""), b = n.replace(EXT, ""); if (b && !real.has(b)) real.set(b, n); }
+    const list = [...real.keys()].filter((n) => !seen.has(n));
     if (!list.length) continue;
     list.forEach((n) => seen.add(n));
     const r = parseGroup(list);
     modes.add(r.dotted);
+    for (const x of r.raw) { x.bare = x.name; x.name = real.get(x.name) ?? x.name; }
     raw.push(...r.raw);
   }
   const dotted = modes.size === 1 && modes.has(true);
@@ -158,10 +162,11 @@ function parseGroup(list) {
 
 function indexOf(raw, dotted, modes) {
   const entries = [], byName = new Map(), chars = new Map(), kwCount = new Map();
-  for (const { name, char, outfit, kw } of raw) {
+  for (const { name, bare, char, outfit, kw } of raw) {
     const e = { name, char, outfit, kw, nk: norm(kw) };
     entries.push(e);
     byName.set(norm(name), name);
+    if (bare && bare !== name && !byName.has(norm(bare))) byName.set(norm(bare), name);
     let c = chars.get(char);
     if (!c) chars.set(char, c = { name: char, n: norm(char), t: toks(char), outfits: new Map(), entries: [] });
     c.entries.push(e);

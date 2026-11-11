@@ -148,3 +148,17 @@ test("missing outfit follows the outfit worn last; an action that outfit lacks b
   assert.equal(f2('<img="Fujiwara_Chika.hug">', { state }), C("hug"));   // 동작 우선: 직전 옷(casual)에 없으면 hug가 있는 옷으로
   assert.equal(f2('<img="Fujiwara_Chika.hug">'), C("hug"));   // 기록이 없으면 그 동작이 있는 옷
 });
+
+// 버그 제보(정혜 + 향하율): 에셋 이름 자체에 .webp가 들어 있는 봇(무상몰수 경자)은 확장자째 써야 이미지가 나온다.
+test("asset names that literally end in an extension keep it", () => {
+  const idx = buildAssetIndex([
+    ["Gyeongja_blushing_shyly.webp", "Gyeongja_smile.webp", "jhkg_gyeongja_anbang.webp"],
+    ["Hayul.hanbok.happy.clear", "Hayul.hanbok.sad", "Hayul.school uniform.default"],
+  ]);
+  const ok = 'a\n<img src="Gyeongja_blushing_shyly.webp">\nb <img="Hayul.hanbok.happy.clear">';
+  assert.deepEqual(fixImgTags(ok, idx), { text: ok, changed: false, fixes: [] });
+  assert.equal(fixImgTags('<img src="Gyeongja_blushing_shyly">', idx).text, '<img src="Gyeongja_blushing_shyly.webp">');
+  assert.equal(fixImgTags('<img src="gyeongja_smiling.webp">', idx).text, '<img src="Gyeongja_smile.webp">');
+  const solo = buildAssetIndex(["Gyeongja_blushing_shyly.webp", "Gyeongja_smile.webp"]);
+  assert.equal(fixImgTags(ok.split("\n")[1], solo).changed, false);
+});
