@@ -1,6 +1,9 @@
 # 현재 상태 — 2.1.0 브랜치 (3.0.8 내용을 옮김, main 2.0.7에서 분기)
 
 
+## 최근 세션 (2026-11-11 18시 — modcompat 0.1.3: 감싼 태그 앞뒤 공백)
+- 실기기 화면: 편집으로 넣은 테스트 태그가 작게 나옴 → 원인은 편집이라 봇 editoutput ‘에셋 커맨드 개행’(`\s*(<img=…>)\s*`→`\n\n$1\n\n`)이 안 돌아 태그들이 한 문단에 붙은 것(봇 이미지도 같이 작음, 패널이 없던 건 첫 메시지의 ※※ 표식을 지워서). 같은 일이 실제 생성에서도 감싼(soft/hard) 모듈 태그에 일어남 → `botPadding`: 같은 모양의 봇 에셋 태그를 봇 editoutput 사슬에 넣어(앞뒤 표식 \uE0F0/\uE0F1) 바뀐 앞뒤 공백을 감싼 태그에 그대로 붙임.
+
 ## 최근 세션 (2026-11-11 저녁 — 얼터네이트 헌터즈 V2 모드팩 지원, modcompat 0.1.2)
 - 모드팩(.risum, 로어 792·정규식 15·에셋 4618·Lua 74KB) 분석: 자체 그리기 정규식(이름 목록 in, `{{raw::$1}}`)·화이트리스트·글노덮(@@position pt_GlobalNote) 있음 → 이미지는 기존 로직으로 keep/selfRender. 문제는 Lua에 `function onOutput`이 3번 정의돼 마지막(MD)만 살아, 앞의 700명 characterMap(나오면 "0")·MMH("1")가 안 돌아 NPC List [절약](`equal::{{getvar::이름}}::1`) 변수가 비어 있음.
 - `engine/modcompatvars.js`: `luaSegments`(맨 바깥 `function X(`/`X = async(function(` 단위, 같은 이름은 마지막만 live) → 봇·모듈 Lua 제외 판단은 live 코드만 / `foundHints`(죽은 정의 포함, 그 정의의 `isFound and "X"` → 인물별 found) / `luaKeywords`(`{ id=…, keywords={…} }`) → managed 항목에 found·키워드. varUpdates는 항목 found가 있으면 그것 우선. 실제 모드팩+더 많은 헌터들: 관리 503명(모드팩 443명 found 0, 4명 found 1).

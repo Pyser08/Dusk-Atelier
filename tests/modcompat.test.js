@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildContext, protectOutput, prepareDisplay, unwrap, runChain, groupSubjects, resolveName, keyOf, nameTemplate, planRender, collectScripts, WJ } from "../src/engine/modcompat.js";
+import { buildContext, protectOutput, prepareDisplay, unwrap, runChain, groupSubjects, resolveName, keyOf, nameTemplate, planRender, collectScripts, findTags, WJ } from "../src/engine/modcompat.js";
 import { buildBlock, exampleTemplate, synthTemplate, injectBlock, promptSubjects, MARK } from "../src/engine/modcompatprompt.js";
 import { createModCompat } from "../src/data/modcompat.js";
 import { managedNames, inferFoundValue, varUpdates, setvarText, getvarNames } from "../src/engine/modcompatvars.js";
@@ -194,7 +194,7 @@ test("훅: 응답 저장·표시·요청이 한 흐름으로 동작한다", asyn
   const out = await mc.onOutput(`<img="Ryu Hae-yeon smile">`);
   assert.notEqual(out, `<img="Ryu Hae-yeon smile">`);
   assert.ok((await mc.onDisplay(out)).includes(`<img="Ryu Hae-yeon smile">`));
-  assert.equal(mc.onProcess(out), `<img="Ryu Hae-yeon smile">`);
+  assert.equal(mc.onProcess(out), `\n\n<img="Ryu Hae-yeon smile">\n\n`, "봇 이미지처럼 앞뒤 줄바꿈");
   const msgs = await mc.beforeRequest([{ role: "system", content: hunterBot.globalNote }, { role: "user", content: "hi", memo: "x" }], "model");
   assert.ok(msgs.some((m) => String(m.content).startsWith(MARK)));
   assert.equal((await mc.beforeRequest([{ role: "user", content: "q" }], "submodel")).length, 1, "본 응답 요청에만");
@@ -234,7 +234,7 @@ test("이 채팅의 지킴 표식 풀기", async () => {
   await mc.loadSettings();
   chat.message[0].data = await mc.onOutput(`<img="Ryu Hae-yeon smile">`);
   assert.equal(await mc.unwrapChat(), 1);
-  assert.equal(chat.message[0].data, `<img="Ryu Hae-yeon smile">`);
+  assert.equal(chat.message[0].data.trim(), `<img="Ryu Hae-yeon smile">`);
 });
 
 test("진단: 모듈별 처리 방식과 겹침을 알려 준다", async () => {
@@ -372,7 +372,7 @@ test("그룹 채팅: 멤버 봇의 에셋·정규식을 봇 쪽으로 보고 똑
   await mc.current({ force: true });
   const out = await mc.onOutput(`<img="Ryu Hae-yeon smile">`);
   assert.notEqual(out, `<img="Ryu Hae-yeon smile">`);
-  assert.equal(await mc.onDisplay(out), `<img="Ryu Hae-yeon smile">`);
+  assert.equal((await mc.onDisplay(out)).trim(), `<img="Ryu Hae-yeon smile">`);
   assert.equal(await mc.onOutput(`<img="Min Chae-rin smile">`), `<img="Min Chae-rin smile">`, "멤버 자신의 이미지는 그대로");
 });
 
@@ -411,4 +411,15 @@ end`;
   assert.deepEqual(man.map((m) => m.name), ["Lina Orvette"], "살아 있는 정의가 다루는 Nereida는 뺀다");
   assert.ok(man[0].keywords.includes("리나 오르베트"));
   assert.deepEqual(varUpdates({ managed: man, text: "리나 오르베트가 왔다", found: "1" }), { "Lina Orvette": "0" }, "모듈 Lua 규칙(나오면 0)이 먼저");
+});
+
+test("감싼 모듈 태그도 봇 이미지처럼 앞뒤 줄바꿈을 받는다(봇 ‘에셋 커맨드 개행’ 정규식 흉내)", async () => {
+  const { botPadding } = await import("../src/engine/modcompat.js");
+  const ctx = ctxOf(hunterBot, [hunterExtra]);
+  const botStored = runChain(`가 <img="Min Chae-rin smile"> 나`, ctx.scripts, "editoutput");
+  assert.equal(botStored, `가\n\n<img="Min Chae-rin smile">\n\n나`);
+  const stored = save(`가 <img="Ryu Hae-yeon smile"> 나`, ctx);
+  assert.equal(unwrap(stored), `가\n\n<img="Ryu Hae-yeon smile">\n\n나`);
+  const plain = ctxOf(plainBot, [hunterExtra]);
+  assert.equal(botPadding(findTags(`<img="Ryu Hae-yeon smile">`, plain.shapes)[0], plain), null, "꾸밈 정규식이 없으면 그대로");
 });
