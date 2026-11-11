@@ -1,7 +1,7 @@
 // 저장된 기억으로 새 채팅 만들기. 원본 채팅·봇 데이터는 수정하지 않고 새 채팅만 추가한다.
 import { newId } from "../engine/util.js";
 import { firstMessagePrompt } from "../engine/memorycompose.js";
-import { runAI } from "../engine/runai.js";
+import { runAITask } from "../engine/runai.js";
 import { stripVirtualContext } from "../engine/bardwikiadapt.js";
 import { chatKeyOf } from "../engine/chatkey.js";
 
@@ -23,7 +23,7 @@ export const sceneAt = (folder, at) => (folder.scenes ?? []).filter((s) => !s.or
 export async function draftFirstMessage(api, { name, scene, relationship = "", model, lang = "ko", signal }) {
   if (!scene) return "";
   const fallback = [scene.sum, ...(scene.facts ?? [])].filter(Boolean).join("\n");
-  try { const t = (await runAI(api, firstMessagePrompt({ name, scene: { sum: scene.sum, facts: scene.facts, place: scene.place }, relationship, lang }), model, signal)).trim(); return t || fallback; }
+  try { const t = (await runAITask("되감기 첫 메시지", api, firstMessagePrompt({ name, scene: { sum: scene.sum, facts: scene.facts, place: scene.place }, relationship, lang }), model, signal)).trim(); return t || fallback; }
   catch (e) { if (signal?.aborted) throw e; return fallback; }
 }
 

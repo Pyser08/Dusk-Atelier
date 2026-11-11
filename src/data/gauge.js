@@ -1,5 +1,5 @@
 // 게이지 서비스: 정의(idx.gauges[chaId]) · 값/이력(folder.gauge) 저장, AI 설계, 분석에 얹기, 채팅 표시용 보기.
-import { runAI } from "../engine/runai.js";
+import { runAITask } from "../engine/runai.js";
 import { parseJson } from "../engine/memoryprompt.js";
 import { knownPeople } from "../engine/memoryapply.js";
 import { headKey, tailKey, matchRecord } from "../engine/lorelog.js";
@@ -13,7 +13,7 @@ const DESIGN_RULES = [
 ].join("\n");
 
 export function createGaugeService(api, { store, log = () => {}, call = null } = {}) {
-  const run = call ?? ((msgs, pick, signal) => runAI(api, msgs, pick, signal));
+  const run = call ?? ((msgs, pick, signal) => runAITask("인물 게이지", api, msgs, pick, signal));
   const gx = (idx, chaId) => idx.gauges?.[chaId] ?? { defs: [], sug: G.newSuggestState(), chats: {} };
   const ensure = (idx, chaId) => { idx.gauges ??= {}; const g = (idx.gauges[chaId] ??= { defs: [], sug: G.newSuggestState(), chats: {} }); g.sug ??= G.newSuggestState(); g.chats ??= {}; return g; };
 

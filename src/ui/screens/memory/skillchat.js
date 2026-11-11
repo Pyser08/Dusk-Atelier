@@ -2,7 +2,7 @@
 // 시스템 글은 SKILL_GUIDE 원문 + 출력 규칙(engine/skillchat.js). 메시지 한 번에 AI 호출 한 번.
 import { h, replace } from "../../dom.js";
 import { btn, iconBtn, confirmDialog, promptDialog } from "../../kit.js";
-import { runAI } from "../../../engine/runai.js";
+import { runAITask } from "../../../engine/runai.js";
 import { loadPB } from "../../../data/personabuilder.js";
 import { SKILL_GUIDE } from "../../../data/skillguide.js";
 import { extractSkillFiles, stripSkillFiles, mergeDraft, draftToSet, skillChatSystem, trimChat } from "../../../engine/skillchat.js";
@@ -81,7 +81,7 @@ export function mountSkillChat(ctx, { onSaved, noFab = false } = {}) {
     await loadAis(); st.msgs.push({ role: "user", content: text }); input.value = ""; st.busy = true; paint();
     try {
       const lib = await S.getLibrary(), system = skillChatSystem(SKILL_GUIDE, st.draft, { existing: lib.sets.map((x) => x.name) });
-      const out = String(await runAI(ctx.api, [{ role: "system", content: system }, ...trimChat(st.msgs).map(({ role, content }) => ({ role, content }))], pick()) ?? "").trim();
+      const out = String(await runAITask("스킬 대화", ctx.api, [{ role: "system", content: system }, ...trimChat(st.msgs).map(({ role, content }) => ({ role, content }))], pick()) ?? "").trim();
       const files = extractSkillFiles(out);
       st.msgs.push({ role: "assistant", content: out || "응답이 비어 있어요.", files: files.length || 0 });
       if (files.length) { st.draft = mergeDraft(st.draft, files); if (!st.draft.some((f) => f.path === st.file)) st.file = files[0].path; }

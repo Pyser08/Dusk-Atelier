@@ -1,4 +1,4 @@
-import { trackAi, justStopped, stopError } from "./aistop.js";
+import { trackAi, justStopped, stopError, aiTask } from "./aistop.js";
 import { extractRunAIText } from './airesponse.js';
 import { applyUserPrompts } from './customprompt.js';
 
@@ -53,10 +53,12 @@ function withTimeout(promise, sec) {
 // 모든 AI 작업은 생성 중지 버튼(engine/aistop.js)에 잡힌다: 누르면 바로 '생성을 중지했어요.' 오류
 export async function runAI(api, messages, pick, signal) {
   if (justStopped()) throw stopError();
-  const t = trackAi(pick?.stage ?? "", signal);
+  const t = trackAi(pick?.label ?? pick?.stage ?? "", signal);
   try { return await t.race(runAIInner(api, messages, pick, t.signal)); }
   finally { t.end(); }
 }
+// 이름 붙인 작업으로 부른다: 생성 중지 버튼에 '무슨 작업 중인지'가 보이고, 중지하면 같은 작업의 남은 호출도 바로 끊긴다
+export const runAITask = (label, api, messages, pick, signal) => aiTask(label, () => runAI(api, messages, pick, signal));
 async function runAIInner(api, messages, pick, signal) {
   if (!pick?.noUserPrompts) messages = await withUserPrompts(messages);   // 장기기억 분석은 대상 채팅 기준으로 직접 끼운다
   const dp = await duskPickFor(pick);

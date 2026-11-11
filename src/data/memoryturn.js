@@ -7,6 +7,7 @@
 //    - 두 구획은 따로 검증한다. dusk 구획이 없거나 틀리면 기존 방식(따로 한 번 더 호출)으로 대신한다.
 //  빠른 모드: 모델 호출 없이 키워드로 인물을 고르고 정리 노트를 건너뛴다(응답 뒤 호출 1회). 정확하게: 고르기+정리 노트 사용.
 import { potState } from "../engine/memoryswitch.js";
+import { aiTask, describeAi, trackAi } from "../engine/aistop.js";
 import { folderIdOf } from "./memorystore.js";
 import { SettingsStore } from "../engine/pot/settings.js";
 import { WikiController } from "./pot/wiki-controller.js";
@@ -114,7 +115,11 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     const stageCall = async (a, k, preset, prompt, opts = {}) => {
       const stage = stageOf(String(opts.stageLabel ?? "")), withSkills = appendToPrompt(prompt, await skillBlock(stage));   // 스킬 주입(꺼짐이면 원문)
       const send = (text) => callWriterModel(a, k, preset, text, { ...opts, onUsage: (u) => { opts.onUsage?.(u); recordUsage(api, stage, u).catch(() => {}); } });
-      const out = await webWrap(stage, withSkills, send);   // 웹 도구(꺼짐이 기본, 켠 단계만 호출이 늘어남)
+      // 생성 중지에 잡히게: 내 API(직접 연결) 모델은 runLLMModel을 거치지 않아 따로 세고, 누르면 결과를 버리고 바로 멈춘다
+      const out = await aiTask(describeAi(stage) ? `장기기억 · ${describeAi(stage)}` : "장기기억 기록", async () => {
+        const t = trackAi("");
+        try { return await t.race(webWrap(stage, withSkills, send)); } finally { t.end(); }
+      });   // 웹 도구(꺼짐이 기본, 켠 단계만 호출이 늘어남)
       // 리수폿 단계는 JSON을 받는다: 생각 글·설명·끝 쉼표 때문에 "완성된 JSON을 읽지 못했습니다"가 나지 않게 다듬어 넘긴다(Dusk 기록기 줄 응답은 그대로)
       return /Writer Dusk|Director Dusk/.test(String(opts.stageLabel ?? "")) || typeof out !== "string" ? out : cleanJsonReply(out);
     };

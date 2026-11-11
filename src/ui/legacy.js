@@ -10,6 +10,7 @@ import { createStore } from '../engine/store.js';
 import { iconMarkup } from './icons.js';
 import { persistentWrites, queueTrash, readUi, trashCopy, watchDefaults } from './watch.js';
 import { AI_MODES, MergeSelfCheckError, adaptCharacterPrompt, applyPartialUpdatePlan, applyPreparedDetach, applyScopedSelection, conflictTidyPrompt, detectCharacters, encodeCardProvenance, mergeInput, moduleToMergeInput, partField, planSourceUpdate, prepareDetach, prepareScopedSelection, preserveTargetLicense, protectSourceImages, protectedImageIds, runAI, selfCheck, suggestWorld } from '../engine/merge.js';
+import { runAITask } from '../engine/runai.js';
 import { loadProvenance } from '../engine/tidestore.js';
 import { Busy, backupSnapshot, isGenerating, restoreFromBackup } from '../engine/safety.js';
 import { commit, entriesOf, readDb } from '../data/modules.js';
@@ -1418,7 +1419,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
       const world = [String(T.card.desc ?? ""), ...T.parts.filter((x) => x.kind === "lore").slice(0, 12).map((x) => `${partLabel(x)}: ${partText(x).slice(0, 300)}`)].join("\n").slice(0, 4e3);
       const isChar = detectCharacters(S).some((c) => c.loreKeys.includes(k));
       try {
-        const out = await runAI(api, isChar ? adaptCharacterPrompt({ targetWorld: world, character: original }) : conflictTidyPrompt({ a: world, b: original }), pick, ctrl.signal);
+        const out = await runAITask(isChar ? "봇 세계관 맞추기" : "로어 충돌 정리", api, isChar ? adaptCharacterPrompt({ targetWorld: world, character: original }) : conflictTidyPrompt({ a: world, b: original }), pick, ctrl.signal);
         if (ctrl.signal.aborted) return;
         const parts = wordDiff(original, out).map((d) => d.op === "same" ? esc(d.text) : d.op === "add" ? `<ins>${esc(d.text)}</ins>` : `<del>${esc(d.text)}</del>`).join("");
         box.innerHTML = `<div class="rv-cap">AI 제안 <span class="muted">— <del>원래 글</del> <ins>AI가 바꾼 글</ins></span></div><div class="rv-diffbox">${parts}</div>

@@ -2,7 +2,7 @@
 import { adaptDocuments, gradeMessages, parseGrades, eventBullets, wikiScore } from "../engine/bardwikiadapt.js";
 import { hashText } from "../engine/chattext.js";
 import { EXT_PREFIX, folderIdOf } from "./memorystore.js";
-import { runAI } from "../engine/runai.js";
+import { runAITask } from "../engine/runai.js";
 
 export function createBardWikiBackend(api, { store, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
   const parse = (raw) => { try { return typeof raw === "string" ? JSON.parse(raw) : raw ?? null; } catch { return null; } };
@@ -38,7 +38,7 @@ export function createBardWikiBackend(api, { store, log = (...a) => console.log(
     if (!items.length) return { ...snap, lastGrade: { total: 0, wrote: 0, cacheOnly: 0, reason: "" } };
     const canWrite = typeof api?.bardWiki?.setGrade === "function" && !!fresh; let writable = canWrite, wrote = 0, denied = false, failed = "";  // fresh가 있어야(=지금 열린 채팅 문서) 위키에 씀
     for (let i = 0; i < items.length; i += 30) {
-      const part = items.slice(i, i + 30), got = parseGrades(await runAI(api, gradeMessages(part), model, signal));
+      const part = items.slice(i, i + 30), got = parseGrades(await runAITask("기억 중요도 매기기", api, gradeMessages(part), model, signal));
       for (const it of part) {
         const r = got[it.id]; if (!r) continue;
         grades[it.id] = r;
