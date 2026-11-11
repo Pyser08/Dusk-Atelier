@@ -1,5 +1,20 @@
 # 현재 상태 — SD-Studio 브랜치 (2.1.0 끝 e194dd9에서 분기)
 
+## 최근 세션 (2026-11-11 10시 — SDStudio 사진처럼 전체 이식 + 에셋 버튼을 편집 화면으로)
+- 사용자: “사진(SDStudio 씬 갤러리)과 최대한 비슷하게, 우리 디자인으로. 이 플러그인만 완전 풀스크린 OK. 에셋·에셋 제작 버튼은 봇/모듈 편집 ‘적용’ 아래로, 밖의 버튼 2개는 지움. SDStudio 기능은 가능한 한 모두. 우리 독자 기능은 폴더뿐.” 질문으로 정함: **캐릭터 안에 씬**(카드=캐릭터, 열면 사진 같은 씬 갤러리, 씬 이름 = 감정 이미지 이름), **에셋 제작은 봇·모듈 둘 다**(모듈은 모듈 에셋).
+- **코어**: `editor.js` 머리 아래 `#rb-edit-sub`(오른쪽 정렬) = ‘에셋’(cfg.openAssets) + 애드온 자리 **`slot "editor.actions"`**(부품 (ctx, cfg.target), target = {kind:"module", id} | {kind:"character", id, index}, 봇 초안이면 target 없음 → 줄 안 그림). 모듈 openEditor·chareditor가 target/openAssets 넘김. `dev.js` 상세의 ‘에셋’ 버튼과 `dev.actions` 자리는 없앰(미릴리스라 영향 없음). CHANGELOG ‘다음 버전’·안내서 manage.html(에셋 관리자 ‘여는 곳’) 갱신.
+- **애드온 `addons/sdstudio`**(아직 addons.src.json 미등록): editor.actions에 ‘에셋 제작’ → `ui/screens/sdstudio/studio.js` openAssetStudio(ctx, target, sd). 연 동안 `ctx.root` padding 0 + `ctx.win` 크기 제한·모서리 없앰(닫으면 원래 style 되돌림) = 플러그인만 화면 가득. 루트 `.rb-full.sds`(앱 Esc가 창을 닫지 않게 rb-full 붙임, overflow:hidden — 없으면 포커스 때 창이 옆으로 밀림).
+  - 화면(사진 대응): 왼쪽 레일 ‘F1 프로젝트’(프롬프트 에디터 접기) · 왼쪽 ‘프롬프트 에디터’(프로젝트[작업 묶음 파일·조각 모음·문제 확인]/프리셋[저장·불러오기], 상위·(캐릭터 연 동안)외형·하위·네거티브 — 문법 색칠, 시드(값·잠금·완전 랜덤/고정/장마다 이어서), 이미지 사이즈(각 씬대로·SDStudio 크기 11종·직접), 캐릭터 프롬프트(NAI 다인, 위치), 샘플링/모델, 바이브, 레퍼런스(0/2)) · 위 줄(제목·조합 N개·예약된 씬 a/b 알약·모드 탭[씬/캐릭터·갤러리·검색·비교·동시편집]·생성/멈추기·도움말) · 도구 줄(무리 이름 작게: 예약·씬 도구·이미지·관리·도움말·설정 … 검색·보기[이름 표시·카드 크기 41%]) · 카드 2:3 + 아래 이름·장 수, 예약 배지 +N, 마우스 올리면 +1/−1, 체크·Ctrl로 여러 개.
+  - 단계: 캐릭터 갤러리(폴더 줄=한 줄에 카드 여러 장, 안에 폴더·여러 폴더) → 씬 갤러리 → 씬(조합 슬롯 편집·미리보기·크기·예약·‘지금 1장’ + 그림). 감정 세트(20개) 더하기.
+  - 그림: 라이트박스(← → Esc F Delete, 즐겨찾기·씬/캐릭터 대표·봇에 넣기·변형(img2img)·인페인트(붓 마스크)·업스케일(Anlas 안내)·디렉터 도구 6종·비교에 넣기·이 시드로 고정·내려받기·목록에서 빼기), 이미지 월드컵(순위, 1위=씬 대표), zip(고른 것/씬 대표/전부), 봇·모듈에 넣기(고른 그림 / 씬 대표를 씬 이름으로 — 같은 이름 ‘번호 붙여 더하기/그림 바꾸기’).
+  - 큐: 예약 1장 = 그 씬 조합 전부(SDStudio 규칙), MAX_JOBS 500, 다 그린 묶음마다 예약 −1, 생성 중지 버튼(trackAi)·멈추기. 바이브는 V4.x에서 encode-vibe 결과를 설정에 캐시(모델·정보량 같을 때), 레퍼런스는 1024×1536/1536×1024/1472×1472에 가운데 맞춤.
+- **엔진**: `engine/sdstudio/nai.js` 전면(모델 7종 V5 Full/Medium/Curated·V4.5·V4, 샘플러·노이즈·크기, 품질·UC 프리셋 원문 그대로, V5 tag_hint·Medium 고정값·cfg_rescale 생략, 캐릭터 프롬프트·바이브 정규화·디렉터 레퍼런스·Variety+·img2img·infill, augment·upscale(비용)·encode-vibe 본문, zip 첫/마지막 항목·pngSize, 가중치 띄어쓰기) · 새 `prompt.js`(##주석##·줄바꿈·{a|b}·<모음.조각>(여러 줄 무작위·순환 오류)·상위 | 끼움·조합 개수/i번째·문법 칠하기) · `project.js` v2(settings·pieces·chars→scenes·folders, v1 마이그레이션(그림→default 씬), 씬 CRUD·정렬·복제, 이미지 순위/즐겨찾기/대표, 예약·planJobs·reserveSummary, seedFor(xorshift)·sizeFor, 월드컵). `data/sdstudio.js`: call/image/augment/upscale/encodeVibe, toB64/fromB64, 저장 키 봇 `dusk.sdstudio.p.<chaId>`·모듈 `dusk.sdstudio.m.<id>`, 프리셋 `dusk.sdstudio.presets`(기기 전체).
+- 시험: unit `sdstudio.test.js`(12)·`sdstudio-project.test.js`(8) → npm test 1407 pass / 0 fail. e2e `run-addon-sdstudio` 45(1600×1000 + 390, 캔버스 PNG·zip 가짜 NAI, `SHOTS=dir`로 사진 7장), `run-dev-slot`(편집 화면 자리로 바뀜) 8, chattheme 14·widgets 10·addons-ui 46·scrollkeep 12·smoke 53 통과. **`run-app`·`run-editor-ai`는 원래 2.1.0 끝(e194dd9)에서도 같은 오류로 실패**(내 변경과 무관, 그대로 둠).
+- 남은 일:
+  - [ ] addons.src.json 등록(category "make"?) + minCore = editor.actions 든 코어 버전 → 코어 릴리스 후 publish(사용자 지시 대기). 그때 안내서에 에셋 제작 쪽 추가.
+  - [ ] 실기기(RisuBard)에서: 창 풀스크린 되돌림, ctx.assets(readImage)로 다시 연 그림이 보이는지(0단계 시험에서 readImage 응답 없음), 바이브·레퍼런스·인페인트 실제 NAI 응답.
+  - [ ] SDStudio 중 아직 없는 것: 태그 자동완성(DB 22만 줄이라 제외), 부스트 모드(제재 위험), 로컬 배경 제거·포토샵 연동·구글 드라이브(데스크톱 전용), 씬 템플릿 관리, 단축키 설정, 실행 취소.
+
 ## 최근 세션 (2026-11-11 9시 — SD-Studio 브랜치 시작: SDStudio 이식 0단계 시험 + 개발 탭 애드온 자리)
 - 목표(사용자): 개발 탭에서 봇/모듈을 만들 때 **‘에셋’ 버튼 옆 버튼**으로 그 봇에 원하는 에셋(NAI 이미지)을 자동으로 넣기. 원본은 SDStudio(Electron, sunho, MIT) — 통째 이식은 안 하고 NAI 생성·씬/프리셋·월드컵만 애드온 `sdstudio`로 새로 짓는 계획.
 - **0단계 시험(커스텀 애드온 sdtest 0.1.2, 저장소에 넣지 않음) — RisuBard(PocketRisu 기반) 결과:**

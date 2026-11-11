@@ -1,5 +1,5 @@
-// 개발 탭 버튼 줄 아래 애드온 자리(slot "dev.actions"): 애드온이 없으면 흔적이 없고, 끼우면 불러오기·내보내기 줄 아래 폭 가득 붙으며
-// 부품은 (ctx, { kind, id, index }) 를 받는다(봇이면 index = 캐릭터 순번). 떼면 다시 사라진다.
+// 에셋 버튼 자리(2.1.x): 개발 탭 상세엔 '에셋' 버튼이 없고, 봇·모듈 편집 화면의 '적용' 아래 줄에 '에셋' + 애드온 자리(slot "editor.actions")가 있다.
+// 부품은 (ctx, { kind, id, index? }) — 봇이면 index = 캐릭터 순번. 애드온이 없으면 '에셋'만. 하나가 터져도 나머지는 그림. 떼면 사라짐.
 import { createRequire } from "node:module";
 import { build } from "/opt/npm-tools/node_modules/esbuild/lib/main.js";
 const { chromium } = createRequire("/opt/npm-tools/node_modules/")("playwright");
@@ -14,30 +14,40 @@ await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:u
 await page.waitForTimeout(300);
 await page.evaluate(() => window.__app.ctx.svc.meta((m) => { m.devProjects = [{ kind: "module", id: "m1", addedAt: 1, version: "", releases: [] }, { kind: "character", id: "c2", addedAt: 1, version: "", releases: [] }]; }));
 const pick = async (sel) => { await page.evaluate((s) => { window.__app.ctx.state.devSel = s; window.__app.ctx.go("dev"); }, sel); await page.waitForTimeout(600); };
-const labels = () => page.evaluate(() => [...document.querySelectorAll("#rb-dev-edit")].map((b) => [...b.parentElement.children].map((x) => x.id || x.textContent.trim())).flat());
+const closeEditor = async () => { await page.locator(".rb-full .rb-full-head button[aria-label='닫기']").first().click(); await page.waitForTimeout(300); const d = page.locator(".rb-modal .rb-dialog button", { hasText: /닫기|버리|나가기/ }); if (await d.count()) { await d.first().click(); await page.waitForTimeout(200); } };
+const sub = () => page.evaluate(() => { const s = document.querySelector("#rb-edit-sub"); if (!s) return null; const apply = [...document.querySelectorAll(".rb-full-head .rb-btn")].find((b) => b.textContent.trim() === "적용"); return { labels: [...s.children].map((x) => x.id || x.textContent.trim()), below: !!apply && s.getBoundingClientRect().top >= apply.getBoundingClientRect().bottom - 1, right: !!apply && Math.abs(s.lastElementChild.getBoundingClientRect().right - apply.getBoundingClientRect().right) < 24 }; });
 
 await pick("m:m1");
-const before = await labels();
-ok("애드온 없음: 에셋 옆에 아무것도 없음", before.length === 5 && /에셋/.test(before[1]) && before[2] === "rb-dev-checkpoint", before.join("|"));
+const devLabels = await page.evaluate(() => [...document.querySelector("#rb-dev-edit").parentElement.children].map((x) => x.id || x.textContent.trim()));
+ok("개발 상세: 에셋 버튼 없이 버튼 4개", !devLabels.some((x) => /에셋/.test(x)) && devLabels.length === 4, devLabels.join("|"));
+ok("개발 상세: 애드온 자리 없음", (await page.locator("#rb-dev-actions").count()) === 0);
 
-await page.evaluate(() => { window.__off = window.__app.ctx.ext.add("slot", "dev.actions", (ctx, info) => { const b = document.createElement("button"); b.id = "t-slot"; b.dataset.info = JSON.stringify(info ?? null); b.textContent = "AI 에셋"; return b; }); });
+await page.click("#rb-dev-edit"); await page.waitForTimeout(600);
+let s = await sub();
+ok("모듈 편집: 적용 아래 오른쪽에 '에셋'만", !!s && JSON.stringify(s.labels) === JSON.stringify(["rb-edit-assets"]) && s.below && s.right, JSON.stringify(s));
+await page.click("#rb-edit-assets"); await page.waitForTimeout(500);
+ok("모듈 편집: '에셋'을 누르면 에셋 관리가 위에 열림", (await page.locator(".rb-full[aria-label$='에셋']").count()) === 1);
+await page.keyboard.press("Escape"); await page.waitForTimeout(200);
+await closeEditor();
+
+await page.evaluate(() => { window.__off = window.__app.ctx.ext.add("slot", "editor.actions", (ctx, info) => { const b = document.createElement("button"); b.id = "t-slot"; b.dataset.info = JSON.stringify(info ?? null); b.textContent = "에셋 제작"; return b; }); });
+await page.evaluate(() => { window.__app.ctx.ext.add("slot", "editor.actions", () => { throw new Error("고장"); }); });
 await pick("m:m1");
-const withSlot = await labels();
-const place = await page.evaluate(() => { const s = document.querySelector("#t-slot"), row = document.querySelector("#rb-dev-edit").parentElement; return { parent: s?.parentElement?.id, afterRow: s?.previousElementSibling === row, below: s && s.getBoundingClientRect().top >= row.getBoundingClientRect().bottom }; });
-ok("끼우면 버튼 줄은 그대로, 그 아래에 붙음", withSlot.length === 5 && withSlot[4] === "rb-dev-export" && place.parent === "rb-dev-actions" && place.afterRow && place.below, `${withSlot.join("|")} ${JSON.stringify(place)}`);
+await page.click("#rb-dev-edit"); await page.waitForTimeout(600);
+s = await sub();
 const infoM = await page.evaluate(() => JSON.parse(document.querySelector("#t-slot")?.dataset.info ?? "null"));
-ok("모듈이면 { kind: module, id }", infoM?.kind === "module" && infoM?.id === "m1" && infoM?.index == null, JSON.stringify(infoM));
+ok("애드온: '에셋' 옆에 끼움, 모듈이면 { kind: module, id }", JSON.stringify(s?.labels) === JSON.stringify(["rb-edit-assets", "t-slot"]) && infoM?.kind === "module" && infoM?.id === "m1" && infoM?.index == null, JSON.stringify([s, infoM]));
+await closeEditor();
 
 await pick("c:c2");
+await page.click("#rb-dev-edit"); await page.waitForTimeout(700);
 const infoC = await page.evaluate(() => JSON.parse(document.querySelector("#t-slot")?.dataset.info ?? "null"));
-ok("봇이면 { kind: character, id, index }", infoC?.kind === "character" && infoC?.id === "c2" && infoC?.index === 1, JSON.stringify(infoC));
-
-await page.evaluate(() => { window.__app.ctx.ext.add("slot", "dev.actions", () => { throw new Error("고장"); }); });
-await pick("m:m1");
-ok("부품 하나가 터져도 화면·다른 부품은 그대로", (await page.locator("#t-slot").count()) === 1 && (await page.locator("#rb-dev-edit").count()) === 1);
+ok("봇 편집: { kind: character, id, index }", infoC?.kind === "character" && infoC?.id === "c2" && infoC?.index === 1, JSON.stringify(infoC));
+await closeEditor();
 
 await page.evaluate(() => window.__off());
-await pick("m:m1");
-ok("떼면 사라짐", (await page.locator("#t-slot").count()) === 0);
+await pick("c:c2");
+await page.click("#rb-dev-edit"); await page.waitForTimeout(600);
+ok("떼면 사라짐('에셋'은 남음)", (await page.locator("#t-slot").count()) === 0 && (await page.locator("#rb-edit-assets").count()) === 1);
 ok("오류 없음", !errs.length, errs.join(";"));
 await browser.close(); process.exit(out.every(Boolean) ? 0 : 1);

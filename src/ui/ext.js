@@ -2,7 +2,7 @@
 // - screen  "탭/하위" → (ctx) => 화면 그리기      예: ext.add("screen", "tools/chattheme", renderChatTheme)
 // - row     "자리"    → { id, icon, title, desc, onClick(ctx), order? }  목록 한 줄(도구 탭 등)
 // - slot    "자리"    → (ctx) => Node | null       화면 안 정해진 자리에 끼울 부품
-//                                                  자리에 따라 둘째 인자로 정보를 받음(예: "dev.actions" → { kind, id, index })
+//                                                  자리에 따라 둘째 인자로 정보를 받음(예: "editor.actions" → { kind, id, index })
 // - tab     "탭 id"   → (ctx) => 탭 화면           tabs.js에 addon 표시가 있는 탭
 // - svc     "이름"    → 아무 값                    코어 화면이 쓰는 애드온 기능(예: 편집기의 AI)
 // add()는 되돌리기 함수를 돌려준다(애드온 끌 때 부름).
