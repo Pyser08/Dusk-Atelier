@@ -18,7 +18,7 @@ export function emptyProject() { return { v: 2, settings: emptySettings(), piece
 
 function normImage(i) {
   if (!i || typeof i.path !== "string" || !i.path) return null;
-  return { path: i.path, seed: Number.isFinite(i.seed) ? i.seed : null, at: num(i.at, 0), prompt: str(i.prompt), rank: Number.isFinite(i.rank) ? i.rank : null, fav: !!i.fav, pick: !!i.pick, w: num(i.w, 0), h: num(i.h, 0), from: typeof i.from === "string" ? i.from.slice(0, 20) : "" };
+  return { path: i.path, seed: Number.isFinite(i.seed) ? i.seed : null, at: num(i.at, 0), prompt: str(i.prompt), rank: Number.isFinite(i.rank) ? i.rank : null, fav: !!i.fav, pick: !!i.pick, w: num(i.w, 0), h: num(i.h, 0), from: typeof i.from === "string" ? i.from.slice(0, 20) : "", sent: typeof i.sent === "string" ? i.sent.slice(0, 200) : "" };
 }
 function normScene(sc) {
   if (!sc || typeof sc.id !== "string" || !sc.id) return null;
@@ -263,6 +263,23 @@ export function setPicks(p, cid, sid, paths, on) {
 export var clearPicks = (p, cid, sid = null) => mapScenes(p, cid, (ss) => ss.map((s) => (!sid || s.id === sid ? { ...s, images: s.images.map((i) => (i.pick ? { ...i, pick: false } : i)) } : s)));
 export var pickCount = (sc) => (sc?.images ?? []).filter((i) => i.pick).length;
 // [{ sid, name(=씬 이름), path }] — 씬 순서, 씬 안은 보이는 순서
+// ── 즐겨찾기(★): 씬마다 마음에 든 그림. 봇에 넣을 때 기본 묶음 ──
+export var favImages = (c, sid = null) => (c?.scenes ?? []).filter((s) => !sid || s.id === sid).flatMap((s) => sortedImages(s).filter((i) => i.fav).map((i) => ({ sid: s.id, name: s.name, path: i.path, sent: i.sent || "" })));
+export var hasFav = (sc) => (sc?.images ?? []).some((i) => i.fav);
+// 즐겨찾기가 아직 없는 씬(그림이 없는 씬 포함)
+export var scenesNoFav = (c) => (c?.scenes ?? []).filter((s) => !hasFav(s));
+// 즐겨찾기 없는 씬만 n장씩 예약
+export function reserveNoFav(p, cid, n) {
+  var c = charOf(p, cid);
+  if (!c) return p;
+  var ids = scenesNoFav(c).map((s) => s.id);
+  return ids.length ? reserveAll(p, cid, n, ids) : p;
+}
+// 봇에 넣은 이름 기록(다음 내보내기에서 '이미 넣음' 표시)
+export function markSent(p, cid, sid, path, name) {
+  var sc = sceneOf(p, cid, sid);
+  return sc ? updateScene(p, cid, sid, { images: sc.images.map((i) => (i.path === path ? { ...i, sent: String(name).slice(0, 200) } : i)) }) : p;
+}
 export var pickedImages = (c, sid = null) => (c?.scenes ?? []).filter((s) => !sid || s.id === sid).flatMap((s) => sortedImages(s).filter((i) => i.pick).map((i) => ({ sid: s.id, name: s.name, path: i.path })));
 
 // 보이는 순서: 순위(월드컵) → 즐겨찾기 → 최신

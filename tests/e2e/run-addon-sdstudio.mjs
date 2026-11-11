@@ -1,6 +1,7 @@
 // 에셋 제작 애드온(SDStudio 모양 전체 화면): 봇 편집 '적용' 아래 '에셋 제작' → 창이 화면 가득 → 캐릭터 → 감정 세트 → 예약·생성(조합·상위 | 끼움)
 // → 씬 조합 편집·지금 1장 → 월드컵 → 크게 보기(즐겨찾기·변형·업스케일·디렉터 도구) → 봇 감정 이미지로 넣기·씬 대표 넣기
 // → 갤러리·검색·동시편집·비교 모드 → 폴더 → 샘플링(V5)·조각·문제 확인 → 닫으면 창 크기 되돌림 → 모듈 편집에도 버튼 → 좁은 폭(390).
+import { tar } from "../tar-helper.mjs";
 import { createRequire } from "node:module";
 import { build } from "/opt/npm-tools/node_modules/esbuild/lib/main.js";
 const { chromium } = createRequire("/opt/npm-tools/node_modules/")("playwright");
@@ -81,7 +82,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   ok("에셋 제작: 플러그인 창이 화면 가득", full.s && Math.abs(full.w[0] - full.vw[0]) < 3 && Math.abs(full.w[1] - full.vw[1]) < 3 && Math.abs(full.s[0] - full.w[0]) < 3, JSON.stringify(full));
   ok("처음: 캐릭터 갤러리 + 빈 안내 + 프롬프트 에디터", /캐릭터 갤러리/.test(await txt(page, "#sds-topbar")) && /캐릭터를 만들어요/.test(await txt(page, "#sds-body")) && await page.locator(".sds-left").isVisible());
   const groups = await page.evaluate(() => [...document.querySelectorAll("#sds-tools .sds-group > small")].map((x) => x.textContent));
-  ok("도구 무리: 되돌리기·예약·캐릭터 도구·템플릿·이미지·관리·도움말·설정·검색·보기", JSON.stringify(groups) === JSON.stringify(["되돌리기", "예약", "캐릭터 도구", "템플릿", "이미지·관리", "도움말", "설정", "검색", "보기"]), JSON.stringify(groups));
+  ok("도구 무리: 되돌리기·예약·캐릭터 도구·템플릿·대표·이미지·관리·도움말·설정·검색·보기", JSON.stringify(groups) === JSON.stringify(["되돌리기", "예약", "캐릭터 도구", "템플릿", "대표", "이미지·관리", "도움말", "설정", "검색", "보기"]), JSON.stringify(groups));
   const leftGroups = await page.evaluate(() => [...document.querySelectorAll(".sds-left .sds-group > small")].map((x) => x.textContent));
   ok("프로젝트 무리 없앰(도구·프리셋), 레일은 ‘프롬프트’", JSON.stringify(leftGroups) === JSON.stringify(["도구", "프리셋"]) && (await txt(page, ".sds-rail .tab")) === "프롬프트", JSON.stringify(leftGroups));
 
@@ -419,6 +420,63 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   ok("맥: ⌃U로 바꾸면 ⌃U로 보임", (await page.locator(".rb-modal .rb-chip[data-action='undo']").innerText()) === "⌃U");
   await page.click("#sds-keys-save"); await page.waitForTimeout(250);
   ok("오류 없음(맥)", !errs.length, errs.join(";"));
+  await page.close(); }
+
+{ const { page, errs } = await boot(1400, 900);   // 대표 고르기 → ★ 없는 씬 → 즐겨찾기 내보내기 확인
+  await pick(page, "c:c2"); await page.click("#rb-dev-edit"); await page.waitForTimeout(700);
+  await page.click("#rb-sd-make"); await page.waitForTimeout(700);
+  await page.click("#sds-addchar"); await page.waitForTimeout(200); await promptOk(page, "호시노"); await page.waitForTimeout(150); await page.locator("#sds-body .sds-char.cur").click();
+  await page.click("#sds-emoset"); await page.waitForTimeout(300);
+  const names = await page.evaluate(async () => {
+    const S = document.querySelector("#rb-sd-studio").__sds, c = S.proj.chars[0];
+    const png = (k) => new Promise((res) => { const cv = document.createElement("canvas"); cv.width = 60; cv.height = 90; const g = cv.getContext("2d"); g.fillStyle = `hsl(${k * 60},50%,50%)`; g.fillRect(0, 0, 60, 90); cv.toBlob(async (b) => res(new Uint8Array(await b.arrayBuffer())), "image/png"); });
+    let p = S.proj, k = 0;
+    for (const [si, n] of [[0, 3], [1, 3], [2, 1]]) for (let j = 0; j < n; j++) { const d = await png(++k), path = await window.__api.saveAsset(d); S.remember(path, d); p = S.P.addImage(p, c.id, c.scenes[si].id, { path, seed: k }); }
+    S.set(p); S.paint(); return c.scenes.slice(0, 3).map((x) => x.name);
+  });
+  await page.waitForTimeout(200);
+  ok("★ 없음 표시: 그림 있는 씬 3개", (await page.locator("#sds-body .sds-scene .nofav").count()) === 3);
+  ok("씬 머리에 ‘★ 없는 씬 3’", (await page.locator("#sds-nofav-pill").innerText()).includes("3"));
+  await page.click("#sds-choose"); await page.waitForTimeout(300);
+  ok("대표 고르기 열림: 첫 씬·후보 3장", await page.locator("#sds-chooser").isVisible() && (await page.locator("#sds-ch-title").innerText()).endsWith(names[0]) && (await page.locator("#sds-ch-strip .sds-ch-th").count()) === 3);
+  await page.keyboard.press("ArrowRight"); await page.keyboard.press("f"); await page.waitForTimeout(150);
+  let pr = await sdProj(page);
+  ok("→ 다음 후보, F = 즐겨찾기", pr.chars[0].scenes[0].images.filter((i) => i.fav).length === 1 && (await page.locator("#sds-ch-strip .sds-ch-th.fav").count()) === 1);
+  await page.keyboard.press("Enter"); await page.waitForTimeout(200);
+  ok("Enter = 정하고 다음 씬", (await page.locator("#sds-ch-title").innerText()).endsWith(names[1]));
+  await page.keyboard.press("Enter"); await page.waitForTimeout(200);
+  pr = await sdProj(page);
+  ok("Enter는 즐겨찾기 없으면 지금 그림을 ★", pr.chars[0].scenes[1].images.filter((i) => i.fav).length === 1 && (await page.locator("#sds-ch-title").innerText()).endsWith(names[2]));
+  await page.keyboard.press("ArrowUp"); await page.waitForTimeout(150);
+  await page.check("#sds-ch-only"); await page.waitForTimeout(150);
+  ok("‘즐겨찾기 없는 씬만’: 지금 씬 + 남은 씬", (await page.locator("#sds-ch-title").innerText()).endsWith(names[1]) && (await page.locator("#sds-chooser .ttl small").innerText()).includes("/ 2"));
+  await page.keyboard.press("Escape"); await page.waitForTimeout(200);
+  ok("Esc는 대표 고르기만 닫음", !(await page.locator("#sds-chooser").count()) && await page.locator("#rb-sd-studio").isVisible());
+  ok("★ 없음 표시가 1개로", (await page.locator("#sds-body .sds-scene .nofav").count()) === 1);
+  await page.click("#sds-rsv-nofav"); await page.waitForTimeout(200);
+  pr = await sdProj(page);
+  ok("★ 없는 씬만 예약(★ 있는 씬은 0)", pr.chars[0].scenes[0].reserve === 0 && pr.chars[0].scenes[1].reserve === 0 && pr.chars[0].scenes[2].reserve > 0 && pr.chars[0].scenes[5].reserve > 0);
+  await page.click("#sds-rsv-clear"); await page.waitForTimeout(150);
+  await page.click("#sds-put-fav"); await page.waitForTimeout(400);
+  const st1 = await page.locator("#sds-exp-list .sds-exp-row").evaluateAll((xs) => xs.map((x) => x.dataset.st));
+  ok("내보내기 확인: 즐겨찾기 2장 모두 ‘새로’", JSON.stringify(st1) === '["new","new"]', JSON.stringify(st1));
+  await page.click("#sds-exp-ok"); await page.waitForTimeout(800);
+  const add = await page.evaluate(() => window.__charWrites?.at(-1)?.c?.additionalAssets?.map((a) => a[0]) ?? []);
+  ok("추가 에셋에 씬 이름으로 2장", names.slice(0, 2).every((n) => add.includes(n)), JSON.stringify(add));
+  await page.click("#sds-put-fav"); await page.waitForTimeout(400);
+  const st2 = await page.locator("#sds-exp-list .sds-exp-row").evaluateAll((xs) => xs.map((x) => [x.dataset.st, x.querySelector("input").checked]));
+  ok("다시 열면 ‘이미 넣음’·체크 꺼짐·넣기 막힘", JSON.stringify(st2) === '[["sent",false],["sent",false]]' && await page.locator("#sds-exp-ok").isDisabled(), JSON.stringify(st2));
+  await page.keyboard.press("Escape"); await page.waitForTimeout(200);
+  { const sess = { version: 1, name: "시로코", presets: { SDImageGen: [{ name: "default", frontPrompt: "white hair" }] }, scenes: { 웃음: { type: "scene", name: "웃음", resolution: "portrait", slots: [[{ prompt: "smile" }]], imageMap: [], mains: ["1.png"] } }, library: {} };
+    const png = await page.evaluate(async () => { const cv = document.createElement("canvas"); cv.width = 20; cv.height = 30; return [...new Uint8Array(await (await new Promise((r) => cv.toBlob(r, "image/png"))).arrayBuffer())]; });
+    const bytes = tar([["_folder.json", JSON.stringify({ type: "sdstudio-folder-backup", folder: "아비도스" })], ["시로코/project.json", JSON.stringify(sess)], ["시로코/outs/웃음/1.png", new Uint8Array(png)], ["시로코/outs/웃음/2.png", new Uint8Array(png)]]);
+    await page.evaluate((b) => { document.querySelector("#rb-sd-studio").__sds.importBackup(new File([new Uint8Array(b)], "abydos_folder.tar")); }, [...bytes]);
+    await page.waitForSelector("#sds-bk-list"); await page.waitForTimeout(150);
+    ok("백업 가져오기: 프로젝트 목록·즐겨찾기만 기본", (await page.locator("#sds-bk-list .sds-exp-row").count()) === 1 && (await page.locator(".rb-modal .rb-seg [aria-checked=true]").first().innerText()).includes("즐겨찾기"));
+    await page.click("#sds-bk-ok"); await page.waitForTimeout(1200);
+    const got = await page.evaluate(() => { const p = document.querySelector("#rb-sd-studio").__sds.proj, c = p.chars.find((x) => x.name === "시로코"); return c && { prompt: c.prompt, scenes: c.scenes.map((s) => [s.name, s.images.length, s.images.filter((i) => i.fav).length]), folder: p.folders.find((f) => f.members.includes(c.id))?.name }; });
+    ok("백업 → 캐릭터·씬·즐겨찾기 그림·폴더", JSON.stringify(got) === JSON.stringify({ prompt: "white hair", scenes: [["웃음", 1, 1]], folder: "아비도스" }), JSON.stringify(got)); }
+  ok("오류 없음(대표 고르기)", !errs.length, errs.join(";"));
   await page.close(); }
 
 { const { page, errs } = await boot(390, 844);

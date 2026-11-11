@@ -3,10 +3,10 @@
 // 글자·숫자는 e.code(KeyZ·Digit1)로 읽어 맥 Option 조합(⌥L → ¬)이나 한글 자판에서도 같은 이름이 된다.
 export var ACTIONS = {
   run: "생성 시작·멈추기", toggleLeft: "프롬프트 에디터 열고 닫기", undo: "되돌리기", redo: "다시하기", put: "고른 그림 봇에 바로 넣기",
-  selectAll: "모두 고르기", search: "검색", newItem: "새 캐릭터·씬", cup: "이미지 월드컵", reserve: "고른 씬 1장 예약",
+  selectAll: "모두 고르기", search: "검색", newItem: "새 캐릭터·씬", cup: "이미지 월드컵", reserve: "고른 씬 1장 예약", choose: "대표 고르기", putFav: "즐겨찾기 확인하고 봇에 넣기",
   remove: "고른 것 지우기(캐릭터·씬·그림)", unpick: "고르기 모두 풀기", mode1: "씬 모드", mode2: "갤러리 모드", mode3: "검색 모드", mode4: "비교 모드", mode5: "동시편집", help: "도움말"
 };
-export var DEFAULT_KEYS = { run: "Mod+Enter", toggleLeft: "F1", undo: "Mod+Z", redo: "Mod+Shift+Z", put: "Mod+B", selectAll: "Mod+A", search: "Mod+F", newItem: "N", cup: "W", reserve: "R", remove: "Delete", unpick: "Mod+Shift+A", mode1: "1", mode2: "2", mode3: "3", mode4: "4", mode5: "5", help: "F2" };
+export var DEFAULT_KEYS = { run: "Mod+Enter", toggleLeft: "F1", undo: "Mod+Z", redo: "Mod+Shift+Z", put: "Mod+B", selectAll: "Mod+A", search: "Mod+F", newItem: "N", cup: "W", reserve: "R", choose: "C", putFav: "Mod+Shift+B", remove: "Delete", unpick: "Mod+Shift+A", mode1: "1", mode2: "2", mode3: "3", mode4: "4", mode5: "5", help: "F2" };
 export var isMacLike = (nav = globalThis.navigator) => /Mac|iPhone|iPad|iPod/i.test(nav?.userAgentData?.platform ?? nav?.platform ?? nav?.userAgent ?? "");
 var MOD_ONLY = new Set(["Control", "Shift", "Alt", "Meta", "OS", "AltGraph", "CapsLock", "Fn"]);
 function baseKey(e) {

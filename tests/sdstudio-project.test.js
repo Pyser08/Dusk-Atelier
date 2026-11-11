@@ -216,3 +216,23 @@ test("드래그: 씬 순서 바꾸기·다른 캐릭터로 옮기기/복사", ()
   assert.equal(P.charOf(p, a).scenes.length, 2);
   assert.equal(P.charOf(p, b).scenes.length, 4);
 });
+
+test("즐겨찾기: 없는 씬 찾기·그 씬만 예약·넣은 이름 기록", () => {
+  const id = (() => { let n = 0; return () => `x${++n}`; })();
+  let p = P.addChar(P.emptyProject(), { name: "A" }, id);
+  const c = p.chars[0].id;
+  p = P.addScene(p, c, { name: "smile" }, id);
+  const [s0, s1] = p.chars[0].scenes.map((s) => s.id);
+  p = P.addImage(p, c, s0, { path: "a/1.png" });
+  p = P.addImage(p, c, s1, { path: "a/2.png" });
+  p = P.addImage(p, c, s1, { path: "a/3.png" });
+  assert.equal(P.scenesNoFav(P.charOf(p, c)).length, 2);
+  p = P.setImage(p, c, s1, "a/3.png", { fav: true });
+  assert.deepEqual(P.scenesNoFav(P.charOf(p, c)).map((s) => s.id), [s0]);
+  assert.deepEqual(P.favImages(P.charOf(p, c)).map((x) => x.path), ["a/3.png"]);
+  p = P.reserveNoFav(p, c, 2);
+  assert.deepEqual(P.charOf(p, c).scenes.map((s) => s.reserve), [2, 0]);
+  p = P.markSent(p, c, s1, "a/3.png", "A_smile");
+  assert.equal(P.favImages(P.charOf(p, c))[0].sent, "A_smile");
+  assert.equal(P.sceneOf(p, c, s1).images.find((i) => i.path === "a/3.png").sent, "A_smile");
+});

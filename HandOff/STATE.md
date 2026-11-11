@@ -1038,3 +1038,12 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - tags_ko_extra.csv 총 6,911줄. 이번 추가 4,507개 = 규칙 생성 4,067(색·무늬·소재 + 옷·소품·동물 등 머리말 명사 사전, 'holding/no/unworn/torn X') + 손번역 440.
 - 생성 규칙/사전은 /tmp/g(세션 임시)였음 — 필요하면 비슷하게 다시 만들 것. 남은 일반 태그 약 28,900개는 사용 횟수 약 2,000 이하의 긴 꼬리.
 - `(cosplay)`, `(meme)`, 작품명 괄호가 붙은 태그는 캐릭터·작품 관련이라 제외.
+
+## 대표 고르기 · ★ 없는 씬 · 내보내기 확인 · SDStudio 백업 가져오기 (SD-Studio)
+- chooser.js(새): 대표 고르기 오버레이 `#sds-chooser`. ←/→ 후보, ↑/↓·PageUp/Down 씬, F 즐겨찾기, Enter 정하고 다음 씬(★ 없으면 지금 그림 ★), 1~9 후보, '즐겨찾기 없는 씬만'(지금 씬은 남김). 도구 무리 '대표'(`#sds-choose`, `#sds-rsv-nofav`), 씬 메뉴 '여기서 대표 고르기', 단축키 choose=C·putFav=Mod+Shift+B.
+- ★ 없는 씬: 씬 카드 `.nofav` 배지, 캐릭터 씬 머리 `#sds-nofav-pill`(누르면 ★ 없는 씬만 대표 고르기), `P.reserveNoFav`(그림 없는 씬 포함).
+- 내보내기 확인: `#sds-put-fav` → `dlg.exportPreview`(새로/같은 이름/이미 넣음, 자리·같은 이름 규칙, 안 넣은 것만). 넣으면 그림에 `sent`(넣은 에셋 이름) 기록 → 다음에 '이미 넣음'·체크 꺼짐. project.js: favImages·hasFav·scenesNoFav·reserveNoFav·markSent, normImage에 sent.
+- backup.js(새, 순수): tar(pax·GNU 긴 이름) 목록은 File.slice로 머리글만 읽음(큰 백업도 메모리에 안 올림). 프로젝트/폴더(_folder.json)/전체(_backup.json) 백업, zip·gz·프로젝트 .json도. SDStudio 프로젝트 1개 = 캐릭터 1명(이름 겹치면 번호), 씬(인페인트 씬 제외)·조각·앞 프롬프트→외형, 뒤·UC는 비었을 때만 설정에, mains→★, imageMap 순서, 폴더 이름으로 폴더. 그림: 즐겨찾기만/모두/없이. 진입: 맨 위 캐릭터 도구 `#sds-import-backup`, 빈 곳 우클릭.
+- 태그 한글 검색 순위: 이름 첫머리·낱말 첫머리 매치를 먼저(‘긴 머’ → 긴 머리가 ‘넘긴 머리’보다 앞).
+- 시험: tests/sdstudio-backup.test.js(+tests/tar-helper.mjs), sdstudio-project 즐겨찾기 시험, e2e 대표 고르기·내보내기 확인·백업 가져오기 블록.
+- 실기기 미확인: 수천 장 백업 가져오기 속도·리스 저장소 용량, webp 그림(SDStudio 설정이 webp면) 썸네일.

@@ -48,14 +48,14 @@ function koIndex(db) {
 export function searchTags(db, q, limit = 8) {
   const k = norm(q);
   if (!db || k.length < 1) return [];
-  const pre = [], mid = [];
-  if (HAS_KO.test(k)) {   // 한글: 자모·초성으로(분류 경로 전체에서, 마지막 칸이 맞으면 앞쪽)
+  const top = [], pre = [], mid = [];
+  if (HAS_KO.test(k)) {   // 한글: 자모·초성으로(분류 경로 전체에서). 이름 첫머리·낱말 첫머리 > 이름 안 > 분류 경로
     const ko = koIndex(db), cho = ONLY_CHO.test(k), qq = cho ? k.replace(/\s+/g, "") : jamo(k);
     for (let n = 0; n < ko.ids.length; n++) {
       const hay = cho ? ko.ck[n].replace(/\s+/g, "") : ko.jk[n], at = hay.indexOf(qq);
       if (at < 0) continue;
       const last = hay.lastIndexOf("/");
-      (at > last || at === 0 ? pre : mid).push(ko.ids[n]);
+      (at === last + 1 || (at > last && hay[at - 1] === " ") ? top : at > last || at === 0 ? pre : mid).push(ko.ids[n]);
     }
   } else for (let i = 0; i < db.size; i++) {
     const key = db.keys[i], at = key.indexOf(k);
@@ -63,9 +63,9 @@ export function searchTags(db, q, limit = 8) {
     (at === 0 || key[at - 1] === " " || key[at - 1] === "\u0000" || key[at - 1] === "/" ? pre : mid).push(i);
   }
   const by = (a, b) => db.freqs[b] - db.freqs[a];
-  pre.sort(by); mid.sort(by);
+  top.sort(by); pre.sort(by); mid.sort(by);
   const out = [], seen = new Set();
-  for (const i of [...pre, ...mid]) {
+  for (const i of [...top, ...pre, ...mid]) {
     const tag = db.redirs[i] || db.words[i];
     if (seen.has(tag)) continue;
     seen.add(tag);

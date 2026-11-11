@@ -365,6 +365,72 @@ export function createDialogs(S) {
       h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(null) }), btn("넣기", { kind: "primary", id: "sds-put-ok", onClick: () => done({ slot, name: nameIn.value.trim(), dup }) }))));
   }
 
+  // 내보내기 전에 확인: rows=[{ it, label, nameFor(slot) }], names={ slot: Set(소문자) } → { idx:[], slot, dup } | null
+  async function exportPreview({ rows, names, title = "즐겨찾기를 봇에 넣기" }) {
+    const slots = S.target.kind === "module" ? [["assets", "모듈 에셋"]] : [["additionalAssets", "추가 에셋"], ["emotionImages", "감정 이미지"]];
+    let slot = slots.some((x) => x[0] === S.prefs.putSlot) ? S.prefs.putSlot : slots[0][0], dup = S.prefs.dup ?? "number";
+    const on = rows.map(() => true), listEl = h("div", { class: "sds-exp-list", id: "sds-exp-list" }), sumEl = h("span", { class: "rb-muted", style: "white-space:normal;font-size:12.5px" });
+    let okBtn = null;
+    const statusOf = (r) => {
+      const ex = names[slot] ?? new Set(), nm = r.nameFor(slot).toLowerCase();
+      if (r.it.sent && ex.has(r.it.sent.toLowerCase())) return ["sent", "이미 넣음"];
+      if (ex.has(nm)) return ["dup", dup === "replace" ? "바꿈" : "같은 이름 있음 → 번호"];
+      return ["new", "새로"];
+    };
+    rows.forEach((r, i) => { if (statusOf(r)[0] === "sent") on[i] = false; });
+    const paint = () => {
+      const cnt = { new: 0, dup: 0, sent: 0 };
+      replace(listEl, ...rows.map((r, i) => {
+        const [k, t] = statusOf(r); if (on[i]) cnt[k]++;
+        return h("label", { class: "sds-exp-row", dataset: { st: k } },
+          h("input", { type: "checkbox", checked: on[i], "aria-label": `${r.nameFor(slot)} 넣기`, onChange: (e) => { on[i] = e.target.checked; paint(); } }),
+          S.thumb(r.it.path, { now: true }),
+          h("span", { class: "nm", title: r.nameFor(slot) }, r.nameFor(slot), h("small", { class: "rb-muted", style: "display:block;font-weight:500" }, r.label)),
+          h("span", { class: ["st", k] }, t));
+      }));
+      const n = on.filter(Boolean).length;
+      sumEl.textContent = `넣을 그림 ${n}장 · 새로 ${cnt.new} · 같은 이름 ${cnt.dup}${cnt.sent ? ` · 이미 넣은 것 ${cnt.sent}` : ""} — 형식은 설정대로(${{ png: "원본 PNG", webp: "WebP", avif: "AVIF" }[S.prefs.putFormat] ?? "WebP"}), 이름 끝 확장자는 바뀔 수 있어요.`;
+      if (okBtn) { okBtn.disabled = !n; okBtn.lastChild.textContent = `${n}장 넣기`; }
+    };
+    const setAll = (v) => { on.fill(v); paint(); };
+    const unsent = () => { rows.forEach((r, i) => { on[i] = statusOf(r)[0] !== "sent"; }); paint(); };
+    return modal(win, (done) => {
+      okBtn = btn("넣기", { kind: "primary", id: "sds-exp-ok", onClick: () => { const idx = on.flatMap((v, i) => (v ? [i] : [])); if (idx.length) done({ idx, slot, dup }); } });
+      paint();
+      return dialog(title, 620,
+        slots.length > 1 ? field("넣을 자리", segmented(slots, slot, (v) => { slot = v; unsent(); }, "넣을 자리")) : null,
+        field("같은 이름이 이미 있으면", segmented([["number", "번호 붙여 더하기"], ["replace", "그림 바꾸기"]], dup, (v) => { dup = v; paint(); }, "같은 이름")),
+        h("div", { class: "sds-row", style: "gap:6px;flex-wrap:wrap" }, btn("모두", { size: "sm", kind: "ghost", onClick: () => setAll(true) }), btn("안 넣은 것만", { size: "sm", kind: "ghost", id: "sds-exp-unsent", onClick: unsent }), btn("모두 풀기", { size: "sm", kind: "ghost", onClick: () => setAll(false) })),
+        listEl, sumEl,
+        h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(null) }), okBtn));
+    });
+  }
+
+  // SDStudio 백업 가져오기: projs=[{ name, folder, tpl, count, favCount }] → { idx:[], mode } | null
+  async function backupImport({ projs, hasImages }) {
+    const on = projs.map(() => true), favAll = projs.reduce((n, x) => n + x.favCount, 0);
+    let mode = !hasImages ? "none" : favAll ? "fav" : "all";
+    const listEl = h("div", { class: "sds-exp-list", id: "sds-bk-list" }), sumEl = h("span", { class: "rb-muted", style: "white-space:normal;font-size:12.5px" });
+    let okBtn = null;
+    const paint = () => {
+      replace(listEl, ...projs.map((x, i) => h("label", { class: "sds-exp-row" },
+        h("input", { type: "checkbox", checked: on[i], "aria-label": `${x.name} 가져오기`, onChange: (e) => { on[i] = e.target.checked; paint(); } }),
+        h("span", { class: "nm", title: x.name }, x.name, h("small", { class: "rb-muted", style: "display:block;font-weight:500" }, [x.folder && `폴더 ${x.folder}`, `씬 ${x.tpl.scenes.length}`, hasImages && `그림 ${x.count}`, hasImages && `즐겨찾기 ${x.favCount}`].filter(Boolean).join(" · "))))));
+      const sel = projs.filter((_, i) => on[i]), n = mode === "none" ? 0 : sel.reduce((k, x) => k + (mode === "all" ? x.count : x.favCount), 0);
+      sumEl.textContent = `캐릭터 ${sel.length}명으로 가져와요${n ? ` · 그림 ${n}장` : ""}. 폴더는 같은 이름 폴더에 넣고, 같은 이름 캐릭터가 있으면 번호를 붙여요. 상위·제외 프롬프트는 비어 있을 때만 채워요.`;
+      if (okBtn) { okBtn.disabled = !sel.length; okBtn.lastChild.textContent = `${sel.length}명 가져오기`; }
+    };
+    return modal(win, (done) => {
+      okBtn = btn("가져오기", { kind: "primary", id: "sds-bk-ok", onClick: () => { const idx = on.flatMap((v, i) => (v ? [i] : [])); if (idx.length) done({ idx, mode }); } });
+      paint();
+      return dialog("SDStudio 백업 가져오기", 600,
+        h("span", { class: "rb-muted", style: "white-space:normal;font-size:12.5px" }, "SDStudio 프로젝트 하나가 캐릭터 하나가 돼요. 씬 구성·조각·앞쪽 프롬프트(외형)를 가져오고, 그림은 리스 에셋 저장소에 저장해요."),
+        hasImages ? field("그림", segmented([["fav", "즐겨찾기만"], ["all", "모두"], ["none", "그림 없이"]], mode, (v) => { mode = v; paint(); }, "가져올 그림")) : h("span", { class: "rb-muted", style: "font-size:12.5px" }, "이 파일에는 그림이 없어 씬 구성만 가져와요."),
+        listEl, sumEl,
+        h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(null) }), okBtn));
+    });
+  }
+
   function folderDialog({ title, name = "", kind = "", prompt = "", ok = "만들기" }) {
     let k = kind;
     const pIn = h("textarea", { class: "rb-input", rows: 3, id: "sds-fprompt", placeholder: "예: school uniform, halo — 이 폴더(안의 폴더 포함) 캐릭터 프롬프트 앞에 붙어요" }, prompt);
@@ -408,5 +474,5 @@ export function createDialogs(S) {
     await modal(win, (done) => dialog("작가 태그(그림체)", 520, q, list, h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => done() }))));
   }
 
-  return { artists, sampling, charPrompts, pieces, vibes, refs, savePreset, loadPreset, check, help, token, settings, put, folderDialog, keysDialog, templateChoice, templateManager };
+  return { artists, sampling, charPrompts, pieces, vibes, refs, savePreset, loadPreset, check, help, token, settings, put, exportPreview, backupImport, folderDialog, keysDialog, templateChoice, templateManager };
 }

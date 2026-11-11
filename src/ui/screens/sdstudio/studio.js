@@ -18,6 +18,10 @@ import { ensureStyle, ico } from "./look.js";
 import { renderLeft, leftHead, promptArea, ib, setTagSource } from "./left.js";
 import { createDialogs } from "./dialogs.js";
 import { openLightbox, openCup } from "./viewer.js";
+import { openChooser } from "./chooser.js";
+import * as BK from "../../../engine/sdstudio/backup.js";
+import { unzipSync } from "../../../vendor/fflate-full.js";
+import { gunzipSync } from "../../../vendor/fflate.js";
 
 var MODES = [["scene", "씬 모드"], ["gallery", "갤러리 모드"], ["search", "검색 모드"], ["compare", "비교 모드"], ["bulk", "동시편집"]];
 var KIND_KO = { outfit: "캐릭터", group: "소속" };
@@ -164,9 +168,13 @@ export async function openAssetStudio(ctx, target, sd) {
   function paintTools() {
     const c = S.curChar(), sc = S.curScene(), n = proj.settings.reserveDefault;
     const selN = sel.size;
-    const allPicked = pickedInScope();
+    const allPicked = pickedInScope(), favN = favsInScope().length;
+    const noFavN = scopeChars().reduce((n, x) => n + P.scenesNoFav(x).length, 0);
+    const chooseG = group("대표", ib("star", `대표 고르기 — 씬마다 후보를 넘기며 ★ (←/→ · F · Enter)`, () => chooser(), { id: "sds-choose" }),
+      ib("bolt", `즐겨찾기 없는 씬만 ${n}장씩 예약 (${noFavN}개)`, () => reserveNoFav(), { id: "sds-rsv-nofav", disabled: !noFavN }));
     const view = [group("검색", ib("search", "검색 모드", () => { setMode("search"); bodyEl.querySelector("#sds-q")?.focus(); }, { on: st.mode === "search" }),
-        btn(`봇으로 넣기${allPicked.length ? ` ${allPicked.length}장` : ""}`, { kind: "primary", icon: "upload", id: "sds-put-all", title: `고른 그림 ${allPicked.length}장을 봇에 넣어요 (${S.curChar() ? "이 캐릭터" : st.folder ? "이 폴더" : "전체"}) · ${S.keyLabel("put")}`, disabled: !allPicked.length, onClick: () => quickPut(allPicked) })),
+        btn(`봇으로 넣기${allPicked.length ? ` ${allPicked.length}장` : ""}`, { kind: "primary", icon: "upload", id: "sds-put-all", title: `고른 그림 ${allPicked.length}장을 봇에 넣어요 (${S.curChar() ? "이 캐릭터" : st.folder ? "이 폴더" : "전체"}) · ${S.keyLabel("put")}`, disabled: !allPicked.length, onClick: () => quickPut(allPicked) }),
+        btn(`즐겨찾기 넣기${favN ? ` ${favN}장` : ""}`, { icon: "sparkle", id: "sds-put-fav", title: "즐겨찾기한 그림을 확인하고 봇에 넣어요(이름·같은 이름·이미 넣은 것 미리 보기)", disabled: !favN, onClick: () => exportFav() })),
       group("보기", ib("eye", st.names ? "이름 숨기기" : "이름 보이기", () => { st.names = !st.names; el.classList.toggle("nonames", !st.names); paintTools(); }, { on: st.names, id: "sds-names" }),
         h("div", { class: "sds-zoom" }, h("input", { type: "range", min: 10, max: 100, value: st.zoom, "aria-label": "카드 크기", id: "sds-zoom", onInput: (e) => { st.zoom = Number(e.target.value); applyZoom(); e.target.nextSibling.textContent = `${st.zoom}%`; } }), h("span", null, `${st.zoom}%`)))];
     const undoG = group("되돌리기", ib("undo", "되돌리기", () => S.undo(), { disabled: !hist.canUndo(), id: "sds-undo" }), ib("redo", "다시하기", () => S.redo(), { disabled: !hist.canRedo(), id: "sds-redo" }));
@@ -180,9 +188,9 @@ export async function openAssetStudio(ctx, target, sd) {
         group("예약", ib("calPlus", `모든 캐릭터의 모든 씬 ${n}장씩 예약`, () => { let nx = proj; for (const x of proj.chars) nx = P.reserveAll(nx, x.id, n); S.set(nx); paintTop(); paintBody(); }, { id: "sds-rsv-all" }),
           ib("calX", "예약 모두 비우기", () => { S.set(P.clearReserve(proj, null)); paintTop(); paintBody(); }, { id: "sds-rsv-clear" })),
         group("캐릭터 도구", ib("file", "새 캐릭터", () => addChar(), { id: "sds-addchar" }), ib("copy", "고른 캐릭터 복제", () => { for (const id of sel) S.set(P.duplicateChar(proj, id)); sel.clear(); paintBody(); }, { disabled: !selN }),
-          ib("folderPlus", "폴더 만들기", () => addFolder(), { id: "sds-addfolder" }), ib("swap", "고른 캐릭터를 폴더에 넣기·빼기", (e) => folderPick(e.currentTarget, [...sel]), { disabled: !selN || !proj.folders.length }),
+          ib("folderPlus", "폴더 만들기", () => addFolder(), { id: "sds-addfolder" }), ib("importIn", "SDStudio 백업 가져오기(.tar·프로젝트 .json)", () => importBackup(), { id: "sds-import-backup" }), ib("swap", "고른 캐릭터를 폴더에 넣기·빼기", (e) => folderPick(e.currentTarget, [...sel]), { disabled: !selN || !proj.folders.length }),
           ib("trash", "고른 캐릭터 지우기", () => removeChars([...sel]), { danger: true, disabled: !selN })),
-        tplG,
+        tplG, chooseG,
         group("이미지·관리", ib("zip", "zip으로 내려받기", (e) => zipMenu(e.currentTarget), { id: "sds-zip" })),
         group("도움말", ib("help", "도움말", () => S.dlg.help())), group("설정", ib("gear", "설정(넣기 형식·부스트·단축키·토큰)", () => S.dlg.settings(), { id: "sds-settings" })),
         h("span", { class: "sp" }), ...view];
@@ -196,7 +204,7 @@ export async function openAssetStudio(ctx, target, sd) {
           ib("layers", "감정 세트 더하기(없는 것만)", () => addEmotionSet(), { id: "sds-emoset" }),
           ib("sortAsc", "이름순 ↑", () => { S.set(P.sortScenes(proj, c.id, "asc")); paintBody(); }), ib("sortDesc", "이름순 ↓", () => { S.set(P.sortScenes(proj, c.id, "desc")); paintBody(); }),
           ib("trash", "고른 씬 지우기", () => removeScenes([...sel]), { danger: true, disabled: !selN })),
-        tplG,
+        tplG, chooseG,
         group("이미지·관리", ib("exportBot", `고른 그림 ${picked.length}장 봇에 바로 넣기(이름 = 씬 이름) (${S.keyLabel("put")})`, () => quickPut(picked), { disabled: !picked.length, id: "sds-put-picked" }),
           ib("sliders", "고른 그림 넣는 방법 고르고 넣기…", () => putPaths(picked), { disabled: !picked.length, id: "sds-put-picked-opt" }),
           ib("x", "이 캐릭터의 그림 고르기 모두 풀기", () => { S.set(P.clearPicks(proj, c.id), { undo: false }); paintTools(); paintBody(); }, { disabled: !picked.length, id: "sds-unpick-all" }),
@@ -209,6 +217,7 @@ export async function openAssetStudio(ctx, target, sd) {
       groups = [
         undoG,
         group("예약", ib("calPlus", "이 씬 1장 예약", () => { S.set(P.setReserve(proj, c.id, sc.id, sc.reserve + 1)); paintTop(); paintBody(); }, { id: "sds-rsv-one" }), ib("calX", "이 씬 예약 비우기", () => { S.set(P.setReserve(proj, c.id, sc.id, 0)); paintTop(); paintBody(); })),
+        chooseG,
         group("씬 도구", ib("copy", "씬 복제", () => { S.set(P.duplicateScene(proj, c.id, sc.id)); S.toast("씬을 복제했어요"); }), ib("trash", "이 씬 지우기", () => removeScenes([sc.id]), { danger: true })),
         group("이미지·관리", ib("exportBot", `고른 그림 ${paths.length}장 봇에 바로 넣기 (${S.keyLabel("put")})`, () => quickPut(picked), { disabled: !paths.length, id: "sds-put-sel" }),
           ib("sliders", "넣는 방법 고르고 넣기…", () => putPaths(picked), { disabled: !paths.length, id: "sds-put-sel-opt" }),
@@ -340,6 +349,7 @@ export async function openAssetStudio(ctx, target, sd) {
     const card = h("button", { type: "button", class: "sds-card sds-scene", dataset: { id: sc.id }, title: sc.name },
       cover ? S.thumb(cover) : h("span", { class: "ph" }, ico("image", 30)), chk(),
       sc.reserve ? h("span", { class: "rsv" }, `+${sc.reserve}`) : null,
+      sc.images.length && !P.hasFav(sc) ? h("span", { class: "nofav", title: "아직 즐겨찾기가 없어요" }, "★ 없음") : null,
       h("span", { class: "quick" }, h("button", { type: "button", title: "1장 예약", onClick: (e) => { e.stopPropagation(); S.set(P.setReserve(proj, c.id, sc.id, sc.reserve + 1)); paintTop(); paintBody(); } }, "+1"),
         sc.reserve ? h("button", { type: "button", title: "예약 하나 빼기", onClick: (e) => { e.stopPropagation(); S.set(P.setReserve(proj, c.id, sc.id, sc.reserve - 1)); paintTop(); paintBody(); } }, "−1") : null),
       capOf(sc.name, sc.images.length, P.pickCount(sc)));
@@ -477,7 +487,8 @@ export async function openAssetStudio(ctx, target, sd) {
       dropTarget(chip, { mode: () => "into", ok: (p) => p.kind === "scene" && p.cid === c.id, run: (p, _z, copy) => { S.set(P.moveScenesToChar(proj, c.id, p.ids, o.id, { copy })); sel.clear(); afterMove(); } });
       return chip;
     })) : null;
-    return [sec("씬", c.scenes.length, h("span", { class: "rb-muted", style: "font-size:12px" }, "눌러서 고르고, 한 번 더 누르면 열려요 · 끌어서 순서 바꾸기 · Ctrl/⌘·체크로 여러 개 고르기")), grid(...c.scenes.map((sc) => sceneCard(c, sc, c.scenes))), tray];
+    const nf = c.scenes.filter((x) => x.images.length && !P.hasFav(x)).length;
+    return [sec("씬", c.scenes.length, nf ? h("button", { type: "button", class: "sds-pill", id: "sds-nofav-pill", title: "즐겨찾기 없는 씬부터 대표 고르기", style: "cursor:pointer;border:0", onClick: () => chooser({ onlyNoFav: true }) }, `★ 없는 씬 ${nf}`) : null, h("span", { class: "rb-muted", style: "font-size:12px" }, "눌러서 고르고, 한 번 더 누르면 열려요 · 끌어서 순서 바꾸기 · Ctrl/⌘·체크로 여러 개 고르기")), grid(...c.scenes.map((sc) => sceneCard(c, sc, c.scenes))), tray];
   }
   function sceneView(c, sc) {
     const n = combinationCount(sc.slots);
@@ -718,6 +729,7 @@ export async function openAssetStudio(ctx, target, sd) {
     ] : [
       { label: "새 캐릭터", icon: "plus", onClick: () => addChar() },
       { label: st.folder ? "안에 폴더 만들기" : "폴더 만들기", icon: "folderPlus", onClick: () => addFolder() },
+      { label: "SDStudio 백업 가져오기…", icon: "upload", onClick: () => importBackup() },
       ...(st.folder ? [{ label: "위로", icon: "back", onClick: () => goUp() }] : [])
     ]);
   }
@@ -727,6 +739,7 @@ export async function openAssetStudio(ctx, target, sd) {
       { label: "1장 예약", icon: "plus", onClick: () => { S.set(P.setReserve(proj, c.id, sc.id, sc.reserve + 1)); paintTop(); paintBody(); } },
       { label: "예약 비우기", icon: "x", onClick: () => { S.set(P.setReserve(proj, c.id, sc.id, 0)); paintTop(); paintBody(); } },
       { label: "이미지 월드컵", icon: "zap", onClick: () => openCup(S, c.id, sc.id) },
+      ...(sc.images.length ? [{ label: "여기서 대표 고르기", icon: "sparkle", onClick: () => { const all = c.scenes.filter((x) => x.images.length).map((x) => ({ cid: c.id, sid: x.id })); openChooser(S, all, { start: Math.max(0, all.findIndex((x) => x.sid === sc.id)) }); } }] : []),
       { label: "복제", icon: "split", onClick: () => { S.set(P.duplicateScene(proj, c.id, sc.id)); paintBody(); } },
       "sep", { label: "지우기", icon: "trash", danger: true, onClick: () => removeScenes([sc.id]) }
     ]);
@@ -763,10 +776,10 @@ export async function openAssetStudio(ctx, target, sd) {
   // ── 봇에 바로 넣기(대화상자 없이): 설정의 자리·형식·같은 이름 규칙대로, 한 번에 저장, 알림에서 되돌리기 ──
   const SLOT_KO = { emotionImages: "감정 이미지", additionalAssets: "추가 에셋", assets: "모듈 에셋" };
   const fmtKB = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)}MB` : `${Math.max(1, Math.round(n / 1024))}KB`);
-  function putOne(x, slot, name, path, ext, dup, used) {
+  function putOne(x, slot, name, path, ext, dup, used, names) {
     const list = x[slot] ?? [], key = String(name).toLowerCase(), at = list.findIndex((a) => String(a?.[0]).toLowerCase() === key);
-    if (dup === "replace" && at >= 0 && !used.has(key)) { used.add(key); return { ...x, [slot]: list.map((a, k) => (k === at ? (slot === "emotionImages" ? [a[0], path] : [a[0], path, ext]) : a)) }; }
-    const nm = uniqueAssetName(x, slot, name); used.add(nm.toLowerCase());
+    if (dup === "replace" && at >= 0 && !used.has(key)) { used.add(key); names?.push(list[at][0]); return { ...x, [slot]: list.map((a, k) => (k === at ? (slot === "emotionImages" ? [a[0], path] : [a[0], path, ext]) : a)) }; }
+    const nm = uniqueAssetName(x, slot, name); used.add(nm.toLowerCase()); names?.push(nm);
     return withAsset(x, slot, nm, path, ext);
   }
   // 에셋 이름: 설정(넣을 때 에셋 이름) — scene = 씬 이름, us = 폴더_캐릭터_씬.확장자, dot = 폴더.캐릭터.씬.확장자
@@ -786,11 +799,55 @@ export async function openAssetStudio(ctx, target, sd) {
     const chars = c ? [c] : st.folder ? P.rowChars(proj, st.folder) : proj.chars;
     return chars.flatMap((x) => P.pickedImages(x).map((y) => ({ ...y, cid: x.id })));
   }
+  const okSlot = (v) => (target.kind === "module" ? v === "assets" : v === "emotionImages" || v === "additionalAssets");
+  const slotOf = (v) => (okSlot(v) ? v : okSlot(S.prefs.putSlot) ? S.prefs.putSlot : target.kind === "module" ? "assets" : "additionalAssets");
+  const scopeChars = () => { const c = S.curChar(); return c ? [c] : st.folder ? P.rowChars(proj, st.folder) : proj.chars; };
+  // 지금 보는 범위의 즐겨찾기 모두(씬이면 그 씬만)
+  function favsInScope() {
+    const c = S.curChar(), sc = S.curScene();
+    return (c ? [c] : scopeChars()).flatMap((x) => P.favImages(x, sc && x === c ? sc.id : null).map((y) => ({ ...y, cid: x.id })));
+  }
+  // 봇·모듈의 자리별 에셋 이름(소문자)
+  async function targetNames() {
+    let src;
+    if (target.kind === "module") src = (await ctx.svc.load({ fresh: true })).entries.find((e) => e.module.id === target.id)?.module;
+    else src = await ctx.api.getCharacterFromIndex(target.index);
+    const out = {};
+    for (const k of ["assets", "additionalAssets", "emotionImages"]) out[k] = new Set((src?.[k] ?? []).map((a) => String(a?.[0] ?? "").toLowerCase()));
+    return out;
+  }
+  // 내보내기 전에 확인하고 넣기(즐겨찾기 기본)
+  async function exportFav(items = favsInScope()) {
+    items = items.filter((x) => x?.path);
+    if (!items.length) { S.toast("즐겨찾기한 그림이 없어요. 그림에서 ★(F)를 눌러요"); return; }
+    let names;
+    try { names = await targetNames(); } catch (e) { ctx.toast(`봇을 읽지 못했어요: ${e?.message ?? e}`, { error: true }); return; }
+    const ext = (S.prefs.putFormat ?? "webp") === "png" ? "png" : S.prefs.putFormat ?? "webp";
+    const rows = items.map((it) => ({ it, label: `${P.charOf(proj, it.cid)?.name ?? ""} › ${it.name}`, nameFor: () => assetName(it, ext) }));
+    const r = await S.dlg.exportPreview({ rows, names });
+    if (!r) return;
+    await quickPut(r.idx.map((i) => items[i]), { slot: r.slot, dup: r.dup });
+  }
+  S.exportFav = exportFav;
+  // 대표 고르기: 지금 범위의 씬들(씬 안이면 그 씬부터)
+  function chooser({ onlyNoFav = false } = {}) {
+    const c = S.curChar(), sc = S.curScene();
+    const scenes = scopeChars().flatMap((x) => x.scenes.map((s) => ({ cid: x.id, sid: s.id })));
+    const withImg = scenes.filter((x) => P.sceneOf(proj, x.cid, x.sid)?.images.length);
+    if (!withImg.length) { S.toast("그림이 있는 씬이 없어요. 먼저 예약하고 생성해요"); return; }
+    const start = sc ? Math.max(0, withImg.findIndex((x) => x.cid === c.id && x.sid === sc.id)) : 0;
+    openChooser(S, withImg, { start, onlyNoFav });
+  }
+  function reserveNoFav() {
+    const n = proj.settings.reserveDefault; let nx = proj, k = 0;
+    for (const x of scopeChars()) { k += P.scenesNoFav(x).length; nx = P.reserveNoFav(nx, x.id, n); }
+    if (!k) { S.toast("즐겨찾기 없는 씬이 없어요"); return; }
+    S.set(nx); paintTop(); paintBody(); S.toast(`즐겨찾기 없는 씬 ${k}개에 ${n}장씩 예약했어요`);
+  }
   async function quickPut(items, opt = {}) {
     items = items.filter((x) => x?.path);
     if (!items.length) { S.toast("보낼 그림을 먼저 골라요(그림 왼쪽 위 체크)"); return; }
-    const okSlot = (v) => (target.kind === "module" ? v === "assets" : v === "emotionImages" || v === "additionalAssets");
-    const slot = okSlot(opt.slot) ? opt.slot : okSlot(S.prefs.putSlot) ? S.prefs.putSlot : target.kind === "module" ? "assets" : "additionalAssets";
+    const slot = slotOf(opt.slot);
     const dup = opt.dup ?? S.prefs.dup;
     const fmt = S.prefs.putFormat ?? "webp", quality = S.prefs.putQuality ?? 0.85;
     const t = ctx.toast(`넣는 중 0/${items.length}`, { seconds: 600 });
@@ -811,10 +868,10 @@ export async function openAssetStudio(ctx, target, sd) {
         }
       };
       await Promise.all([work(), work(), work()]);
-      let prevSlot = null;
-      await withTarget((tg) => { prevSlot = structuredClone(tg[slot] ?? []); const used = new Set(); let x = tg; items.forEach((it, i) => { x = putOne(x, slot, opt.name || assetName(it, out[i].ext), out[i].path, out[i].ext, dup, used); }); return x; });
-      let unpick = proj;   // 보낸 그림은 고르기를 풀어 다시 보내지 않게
-      for (const it of items) if (it.cid && it.sid) unpick = P.setPicks(unpick, it.cid, it.sid, [it.path], false);
+      let prevSlot = null; const names = [];
+      await withTarget((tg) => { prevSlot = structuredClone(tg[slot] ?? []); names.length = 0; const used = new Set(); let x = tg; items.forEach((it, i) => { x = putOne(x, slot, opt.name || assetName(it, out[i].ext), out[i].path, out[i].ext, dup, used, names); }); return x; });
+      let unpick = proj;   // 보낸 그림은 고르기를 풀어 다시 보내지 않게 · 넣은 이름은 기록(다음에 '이미 넣음')
+      items.forEach((it, i) => { if (it.cid && it.sid) { unpick = P.setPicks(unpick, it.cid, it.sid, [it.path], false); if (names[i]) unpick = P.markSent(unpick, it.cid, it.sid, it.path, names[i]); } });
       if (unpick !== proj) S.set(unpick, { undo: false });
       t?.close?.();
       const size = fmt !== "png" && before ? ` · ${fmtKB(before)} → ${fmtKB(after)}` : "";
@@ -847,6 +904,67 @@ export async function openAssetStudio(ctx, target, sd) {
     if (i >= 0) list[i] = t; else list.push(t);
     await sd.saveTemplates(list);
   }
+  // ── SDStudio 백업(.tar·.zip·프로젝트 .json) 가져오기 ──
+  async function openArchive(f) {
+    const head = new Uint8Array(await f.slice(0, 512).arrayBuffer());
+    if (head[0] === 0x7b || /\.json$/i.test(f.name)) { const j = JSON.parse(await f.text()); return { files: [], projs: [BK.projectFromSession(j, { name: j.name || f.name.replace(/\.json$/i, "") })], read: null }; }
+    if (BK.isTar(head)) {
+      const read = async (o, n) => new Uint8Array(await f.slice(o, o + n).arrayBuffer());
+      const files = await BK.listTar(read, f.size), at = new Map(files.map((x) => [x.name, x]));
+      const get = async (name) => { const x = at.get(name); if (!x) throw new Error(`${name}이 없어요`); return read(x.off, x.size); };
+      return { files, get };
+    }
+    let bytes = new Uint8Array(await f.arrayBuffer());
+    if (bytes[0] === 0x1f && bytes[1] === 0x8b) bytes = gunzipSync(bytes);
+    if (BK.isTar(bytes.subarray(0, 512))) {
+      const read = async (o, n) => bytes.subarray(o, o + n);
+      const files = await BK.listTar(read, bytes.length), at = new Map(files.map((x) => [x.name, x]));
+      return { files, get: async (name) => { const x = at.get(name); if (!x) throw new Error(`${name}이 없어요`); return bytes.subarray(x.off, x.off + x.size); } };
+    }
+    if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
+      const m = unzipSync(bytes), files = Object.keys(m).filter((k) => !k.endsWith("/")).map((name) => ({ name }));
+      return { files, get: async (name) => { if (!m[name]) throw new Error(`${name}이 없어요`); return m[name]; } };
+    }
+    throw new Error("SDStudio 백업(.tar)이나 프로젝트 파일(.json)이 아니에요");
+  }
+  async function importBackup(file) {
+    const f = file ?? (await pickFiles({ accept: ".tar,.zip,.json,.gz,application/x-tar,application/json,application/zip" }))[0];
+    if (!f) return;
+    let arc, projs;
+    const t0 = ctx.toast("백업을 읽는 중…", { seconds: 600 });
+    try {
+      arc = await openArchive(f);
+      projs = arc.projs ?? await BK.findProjects(arc.files, async (n) => JSON.parse(new TextDecoder().decode(await arc.get(n))));
+    } catch (e) { t0?.close?.(); ctx.toast(`읽지 못했어요: ${e?.message ?? e}`, { error: true }); return; }
+    t0?.close?.();
+    if (!projs.length) { ctx.toast("백업 안에서 SDStudio 프로젝트를 찾지 못했어요", { error: true }); return; }
+    const r = await S.dlg.backupImport({ projs, hasImages: !!arc.get && projs.some((x) => x.count) });
+    if (!r) return;
+    const chosen = r.idx.map((i) => projs[i]);
+    const { project, jobs } = BK.importProjects(proj, chosen, { mode: arc.get ? r.mode : "none" });
+    S.set(project);
+    st.folder = null; openChar(null);
+    if (!jobs.length) { ctx.toast(`캐릭터 ${chosen.length}명을 가져왔어요`, { seconds: 8, action: { label: "되돌리기", run: () => S.undo() } }); return; }
+    const t = ctx.toast(`그림 가져오는 중 0/${jobs.length}`, { seconds: 3600 });
+    const span = () => ctx.win.querySelector(".rb-toasts .rb-toast:last-child span");
+    let next = 0, done = 0, fail = 0, pend = [];
+    const base = Date.now();
+    const flush = () => { if (!pend.length) return; let nx = proj; for (const x of pend) nx = P.addImage(nx, x.cid, x.sid, { path: x.path, fav: x.fav }, () => x.at); pend = []; S.set(nx, { undo: false }); };
+    const work = async () => {
+      while (next < jobs.length) {
+        const j = jobs[next++];
+        try { const data = await arc.get(j.entry); const path = await sd.saveAsset(data); pend.push({ ...j, path, at: base - j.order }); }
+        catch { fail++; }
+        done++;
+        if (pend.length >= 20) { flush(); paintBody(); }
+        const sp = span(); if (sp) sp.textContent = `그림 가져오는 중 ${done}/${jobs.length}`;
+      }
+    };
+    await Promise.all([work(), work(), work()]);
+    flush(); S.persist(); t?.close?.(); S.paint();
+    ctx.toast(`캐릭터 ${chosen.length}명 · 그림 ${jobs.length - fail}장을 가져왔어요${fail ? ` (못 읽은 그림 ${fail}장)` : ""}`, { seconds: 10 });
+  }
+  S.importBackup = importBackup;
   async function importTemplate() {
     const [f] = await pickFiles({ accept: "application/json,.json" });
     if (!f) return;
@@ -1040,6 +1158,8 @@ export async function openAssetStudio(ctx, target, sd) {
     if (act === "help") return S.dlg.help();
     if (act === "search") return setMode("search");
     if (/^mode[1-5]$/.test(act)) { const m = MODES[Number(act[4]) - 1][0]; if (m !== "bulk" || c) setMode(m); return; }
+    if (act === "choose") return chooser();
+    if (act === "putFav") return exportFav();
     if (act === "put") return quickPut(sc ? P.pickedImages(c, sc.id).map((x) => ({ ...x, cid: c.id })) : pickedInScope());
     if (act === "unpick") { const items = pickedInScope(); let nx = proj; for (const x of items) nx = P.setPicks(nx, x.cid, x.sid, [x.path], false); sel.clear(); st.focus = null; S.set(nx, { undo: false }); paintTools(); paintBody(); return; }
     if (act === "remove") {
