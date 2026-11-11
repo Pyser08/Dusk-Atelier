@@ -1029,3 +1029,7 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 태그 자동완성: `data/sdstudio/tags_v5.csv.gz`(SDStudio db_v5.csv, MIT 사본 LICENSE-SDStudio.txt) → 처음 쓸 때 raw.githubusercontent(main → jsdelivr → SD-Studio 순)에서 받아 getLocalPluginStorage에 base64로 둠. 엔진 `engine/sdstudio/tags.js`, UI `left.js attachTags`. **주의: main에 이 파일이 올라가야 실제로 받아짐**(지금은 로컬 커밋만). 설정에 '파일에서 불러오기'.
 - (17시) 한글 태그 이름 보충 427줄(`data/sdstudio/tags_ko_extra.csv` → `src/engine/sdstudio/tags_ko.js` KO_EXTRA, 사전을 읽을 때 덧붙임). 자모·초성 한글 검색. 작가 태그 창(`S.dlg.artists`, 사전의 작가 종류 → 상위 프롬프트에 artist:이름, 자주 쓰는 작가 prefs.artistFav). 폴더 기본 템플릿(folder.tpl, 하위 폴더로 이어짐, 새 캐릭터에 바꾸기로 적용, 폴더 메뉴에서 정하기·안 캐릭터 모두 적용).
 - SDStudio 작가 분석(Kaloscope·WD 태거 ONNX 450MB~1.2GB, 데스크톱 추론)은 플러그인에서 불가 → 작가 태그 고르기 창으로 대신.
+
+## 한글 태그 이름 2차 보충 (SD-Studio)
+- tags_ko_extra.csv / tags_ko.js: 일반 태그 상위(빈도 순, 한글 없는 것) 1,977개 추가 → 총 2,404줄. 형식 `분류/한글,0,빈도,영어`.
+- 다음 묶음은 빈도 약 9,300 이하부터(일반 태그만, 고유명사 제외). 후보 추출: 사전에서 category 0 · redirect null · 한글 줄/KO_EXTRA에 없는 것.
