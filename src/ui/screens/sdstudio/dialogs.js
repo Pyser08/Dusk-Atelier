@@ -270,6 +270,13 @@ export function createDialogs(S) {
     paintBoost();
     await modal(win, (done) => dialog("설정", 560,
       field("NovelAI 토큰", h("div", { style: "display:flex;gap:8px;align-items:center" }, h("span", { class: "rb-muted", style: "flex:1" }, has ? "저장됨(이 기기)" : "없음"), btn(has ? "바꾸기" : "넣기", { size: "sm", onClick: () => { done(true); token({ force: true }); } }))),
+      h("b", null, "태그 자동완성"),
+      h("div", { style: "display:flex;flex-direction:column;gap:8px" },
+        switchEl(pf.tags !== false, { label: "프롬프트 칸에서 태그 자동완성", onChange: async (v) => { await S.sd.setPrefs({ tags: v }); S.prefs.tags = v; } }),
+        h("span", { class: "rb-muted", style: "font-size:12px;white-space:normal" }, `${S.sd.tags() ? `사전 ${S.sd.tags().size.toLocaleString()}개 있음` : "사전 없음 — 프롬프트를 칠 때 받기를 권해요(약 2MB, 처음 한 번)"} · 두 글자부터 · ↑↓로 고르고 Enter·Tab으로 넣기 · 한글(예: 긴 머리)로도 찾아요. 사전: SDStudio(MIT).`),
+        h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" },
+          btn("지금 받기", { size: "sm", id: "sds-tags-dl", onClick: async () => { try { const db = await S.sd.loadTags(); S.toast(`태그 ${db.size.toLocaleString()}개`); } catch (e) { S.toast(e?.message ?? String(e), { error: true }); } } }),
+          btn("파일에서 불러오기(.csv/.csv.gz)", { size: "sm", onClick: async () => { const [f] = await pickFiles({ accept: ".csv,.gz,text/csv,application/gzip" }); if (!f) return; try { const db = await S.sd.loadTagsFromBytes(new Uint8Array(await f.arrayBuffer())); S.toast(`태그 ${db.size.toLocaleString()}개를 불러왔어요`); } catch (e) { S.toast(`불러오지 못했어요: ${e?.message ?? e}`, { error: true }); } } }))),
       h("b", null, "봇에 넣기"),
       slots.length > 1 ? field("바로 넣을 자리", segmented(slots, pf.putSlot || slots[0][0], async (v) => { await S.sd.setPrefs({ putSlot: v }); S.prefs.putSlot = v; }, "바로 넣을 자리")) : null,
       field("넣을 때 형식(용량 줄이기)", segmented([["png", "원본 PNG"], ["webp", "WebP"], ["avif", "AVIF"]], pf.putFormat, async (v) => { await S.sd.setPrefs({ putFormat: v }); S.prefs.putFormat = v; }, "넣을 때 형식"),

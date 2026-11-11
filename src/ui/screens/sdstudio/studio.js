@@ -15,7 +15,7 @@ import * as T from "../../../engine/sdstudio/template.js";
 import { createHistory } from "../../../engine/sdstudio/history.js";
 import { normalizeKeys, comboOf, actionOf, typingSafe, keyLabel } from "../../../engine/sdstudio/keys.js";
 import { ensureStyle, ico } from "./look.js";
-import { renderLeft, leftHead, promptArea, ib } from "./left.js";
+import { renderLeft, leftHead, promptArea, ib, setTagSource } from "./left.js";
 import { createDialogs } from "./dialogs.js";
 import { openLightbox, openCup } from "./viewer.js";
 
@@ -45,6 +45,10 @@ export async function openAssetStudio(ctx, target, sd) {
   const q = { running: false, done: 0, total: 0, ctl: null, workers: 1 };
   const hist = createHistory();
   const prefs = await sd.getPrefs();
+  let tagOffered = false;
+  setTagSource({ get: () => sd.tags(), enabled: () => prefs.tags !== false, offered: () => tagOffered,
+    load: async () => { tagOffered = true; const t = ctx.toast("태그 사전 받는 중…", { seconds: 120 }); try { const db = await sd.loadTags(); ctx.toast(`태그 ${db.size.toLocaleString()}개를 받았어요`); return db; } finally { t?.close?.(); } } });
+  sd.loadTags({ download: false }).catch(() => {});   // 이 기기에 받아 둔 사전이 있으면 조용히 불러옴
 
   // ── 플러그인 창을 화면 가득(닫으면 되돌림) ──
   const prev = { root: ctx.root?.getAttribute("style") ?? null, win: ctx.win.getAttribute("style") ?? null };

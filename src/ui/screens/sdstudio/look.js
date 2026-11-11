@@ -112,6 +112,16 @@ export var CSS = `
 .sds-prog .bar{flex:1;height:8px;border-radius:999px;background:var(--rb-surf2);overflow:hidden;border:1px solid var(--rb-line2)}
 .sds-prog .bar i{display:block;height:100%;background:var(--rb-acc-grad);transition:width .3s}
 .sds-prog .t{font-size:12px;font-weight:700;color:var(--rb-sub);white-space:nowrap;font-variant-numeric:tabular-nums}
+.sds-pa{position:relative}
+.sds-ac{position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:40;background:var(--rb-win);border:var(--rb-bw,1px) solid var(--rb-line3);border-radius:var(--rb-r2);box-shadow:0 10px 30px rgba(0,0,0,.4);padding:4px;max-height:300px;overflow:auto}
+.sds-ac .it{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;cursor:pointer;font-size:13px}
+.sds-ac .it.on,.sds-ac .it:hover{background:var(--rb-sel-bg,var(--rb-surf2))}
+.sds-ac .it.dl{color:var(--rb-acc-text,var(--rb-acc));font-weight:700}
+.sds-ac .cat{flex:none;font-size:11px;font-weight:800;padding:1px 7px;border-radius:999px;background:var(--rb-surf2);color:var(--rb-sub)}
+.sds-ac .cat.c1{color:#e8a33d}.sds-ac .cat.c3{color:#c77dff}.sds-ac .cat.c4{color:#4fc3a1}.sds-ac .cat.c5{color:#e06c75}
+.sds-ac .w{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.sds-ac .r{color:var(--rb-sub);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
+.sds-ac .f{color:var(--rb-mute);font-size:11.5px;font-variant-numeric:tabular-nums}
 .sds-crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .sds-sec{display:flex;align-items:center;gap:8px;min-height:30px}
 .sds-sec b{font-size:14px}

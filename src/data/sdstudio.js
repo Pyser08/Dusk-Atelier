@@ -4,7 +4,8 @@
 // - zip 풀기는 Response/fetch에 기대지 않는다(RisuBard에서 new Response(stream)이 'Failed to fetch' — 0단계 시험).
 // - IndexedDB는 플러그인 칸에서 막혀 있어(RisuBard) 그림은 api.saveAsset으로만 저장한다.
 // - 모든 NAI 호출은 AI 호출이라 trackAi로 세서 '생성 중지' 버튼에 잡힌다.
-import { inflateSync } from "../vendor/fflate.js";
+import { inflateSync, gunzipSync, strFromU8 } from "../vendor/fflate.js";
+import { parseTagDb } from "../engine/sdstudio/tags.js";
 import { trackAi, justStopped, stopError } from "../engine/aistop.js";
 import { readZipFirst, isPng, buildGenerateBody } from "../engine/sdstudio/nai.js";
 import { normalizeProject } from "../engine/sdstudio/project.js";
@@ -14,7 +15,15 @@ var TOKEN_KEY = "dusk.sdstudio.token";
 var PRESET_KEY = "dusk.sdstudio.presets";
 var TEMPLATE_KEY = "dusk.sdstudio.templates";   // 씬 템플릿(기기와 상관없이 이 리스 전체)
 var TOKENS_KEY = "dusk.sdstudio.tokens";         // 부스트 모드용 토큰 여러 개(이 기기에만)
-var PREFS_KEY = "dusk.sdstudio.prefs";           // 넣기 기본값·변환 형식·단축키·부스트(이 기기에만)
+var PREFS_KEY = "dusk.sdstudio.prefs";
+// 태그 사전(SDStudio db_v5.csv, gzip 약 2MB): 처음 쓸 때 저장소에서 한 번 받고 이 기기에 둔다
+export var TAG_URLS = [
+  "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/data/sdstudio/tags_v5.csv.gz",
+  "https://cdn.jsdelivr.net/gh/Pyser08/Dusk-Atelier@main/data/sdstudio/tags_v5.csv.gz",
+  "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/SD-Studio/data/sdstudio/tags_v5.csv.gz"
+];
+var TAGS_CACHE_KEY = "dusk.sdstudio.tagsgz";
+var tagDb = null, tagLoading = null;           // 넣기 기본값·변환 형식·단축키·부스트(이 기기에만)
 
 // 봇에 넣을 때 용량 줄이기: PNG → WebP/AVIF. AVIF를 못 만드는 브라우저면 WebP로 → { data, ext, fellBack }
 export async function convertImage(bytes, fmt = "webp", quality = 0.85) {
@@ -86,7 +95,40 @@ export function createSdStudio(api) {
   };
   const store = () => api.pluginStorage;
   const keyOf = (target) => (typeof target === "string" ? `dusk.sdstudio.p.${target}` : projectKey(target));
+  const gzToDb = (gz) => parseTagDb(strFromU8(gz[0] === 0x1f && gz[1] === 0x8b ? gunzipSync(gz) : gz));
+  const b64 = { to: (u) => { let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); }, from: (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0)) };
   return {
+    // 태그 사전: 메모리 → 이 기기 저장 → 내려받기. 실패하면 오류를 던짐(호출한 쪽이 '파일에서 불러오기'를 권함)
+    tags() { return tagDb; },
+    async loadTags({ download = true } = {}) {
+      if (tagDb) return tagDb;
+      if (tagLoading) return tagLoading;
+      tagLoading = (async () => {
+        const s = await local();
+        try { const v = await s?.getItem?.(TAGS_CACHE_KEY); if (v) return (tagDb = gzToDb(b64.from(String(v)))); } catch { /* 저장 없음·깨짐 */ }
+        if (!download) return null;
+        let last = null;
+        for (const url of TAG_URLS) {
+          try {
+            const res = await send(url, { method: "GET" });
+            if (!res?.ok && res?.status) throw new Error(`HTTP ${res.status}`);
+            const gz = await bodyBytes(res);
+            if (gz.length < 100000) throw new Error("파일이 너무 작아요");
+            tagDb = gzToDb(gz);
+            try { await s?.setItem?.(TAGS_CACHE_KEY, b64.to(gz)); } catch { /* 기기 저장 공간 부족 — 다음에 다시 받음 */ }
+            return tagDb;
+          } catch (e) { last = e; }
+        }
+        throw new Error(`태그 사전을 받지 못했어요: ${last?.message ?? last}`);
+      })().finally(() => { tagLoading = null; });
+      return tagLoading;
+    },
+    async loadTagsFromBytes(bytes) {
+      tagDb = gzToDb(bytes);
+      const s = await local();
+      try { const gz = bytes[0] === 0x1f && bytes[1] === 0x8b ? bytes : null; if (gz) await s?.setItem?.(TAGS_CACHE_KEY, b64.to(gz)); } catch { /* 공간 부족 */ }
+      return tagDb;
+    },
     async loadProject(target) {
       try { const v = await store()?.getItem(keyOf(target)); return normalizeProject(v ? (typeof v === "string" ? JSON.parse(v) : v) : null); } catch { return normalizeProject(null); }
     },

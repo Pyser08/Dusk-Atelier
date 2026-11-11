@@ -6,6 +6,55 @@ import { highlight } from "../../../engine/sdstudio/prompt.js";
 import { RESOLUTIONS, modelOf, isFreeSize, clampSize } from "../../../engine/sdstudio/nai.js";
 import * as P from "../../../engine/sdstudio/project.js";
 import { ico } from "./look.js";
+import { searchTags, currentToken, insertTag, CATEGORY_KO, fmtFreq } from "../../../engine/sdstudio/tags.js";
+
+// 태그 자동완성: 에셋 제작 화면이 사전을 넘겨 준다(setTagSource). 프롬프트 칸마다 커서 아래 목록.
+var tagSrc = null;   // { get(): db|null, load(): Promise<db>, enabled(): bool }
+export var setTagSource = (src) => { tagSrc = src; };
+function attachTags(box, ta, after) {
+  const pop = h("div", { class: "sds-ac", role: "listbox", hidden: true });
+  box.appendChild(pop);
+  let items = [], at = 0, timer = null, loadingNow = false;
+  const close = () => { pop.hidden = true; items = []; };
+  const pick = (i) => {
+    const it = items[i]; if (!it) return;
+    const r = insertTag(ta.value, ta.selectionStart, it.tag);
+    ta.value = r.text; ta.setSelectionRange(r.caret, r.caret); close(); after();
+  };
+  const paint = () => {
+    pop.replaceChildren(...items.map((it, i) => h("div", { class: ["it", i === at && "on"], role: "option", "aria-selected": String(i === at), onMousedown: (e) => { e.preventDefault(); pick(i); } },
+      h("span", { class: `cat c${it.cat}` }, CATEGORY_KO[it.cat] ?? "기타"),
+      h("span", { class: "w" }, it.word.includes("/") ? it.word.slice(it.word.lastIndexOf("/") + 1) : it.word),
+      it.tag !== it.word ? h("span", { class: "r" }, `→ ${it.tag}`) : null,
+      h("span", { class: "f" }, fmtFreq(it.freq)))));
+    pop.hidden = !items.length;
+  };
+  const offerDownload = () => {
+    pop.replaceChildren(h("div", { class: "it dl", onMousedown: async (e) => {
+      e.preventDefault(); if (loadingNow) return; loadingNow = true;
+      pop.firstChild.textContent = "태그 사전 받는 중… (약 2MB, 한 번만)";
+      try { await tagSrc.load(); loadingNow = false; refresh(); }
+      catch (err) { loadingNow = false; pop.firstChild.textContent = `${err?.message ?? err} — 설정에서 파일로 불러올 수 있어요`; }
+    } }, "태그 자동완성 쓰기 — 사전 받기(약 2MB, 처음 한 번)"));
+    pop.hidden = false;
+  };
+  const refresh = () => {
+    if (!tagSrc?.enabled?.()) return close();
+    const tok = currentToken(ta.value, ta.selectionStart);
+    if (tok.word.trim().length < 2 || ta.selectionStart !== ta.selectionEnd) return close();
+    const db = tagSrc.get();
+    if (!db) return tagSrc.offered?.() ? close() : offerDownload();
+    items = searchTags(db, tok.word, 8); at = 0; paint();
+  };
+  ta.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(refresh, 70); });
+  ta.addEventListener("keydown", (e) => {
+    if (pop.hidden || !items.length) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); at = (at + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length; paint(); }
+    else if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); e.stopPropagation(); pick(at); }
+    else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); }
+  });
+  ta.addEventListener("blur", () => setTimeout(close, 120));
+}
 
 // 문법 색칠되는 프롬프트 칸(뒤에 색칠한 글, 위에 투명 글자 textarea)
 export function promptArea({ value = "", onInput, rows = 4, placeholder = "", id, label }) {
@@ -22,6 +71,7 @@ export function promptArea({ value = "", onInput, rows = 4, placeholder = "", id
   paint();
   const box = h("div", { class: "sds-pa" }, pre, ta);
   box.textarea = ta;
+  attachTags(box, ta, () => { paint(); onInput?.(ta.value); });
   return box;
 }
 export var helpDot = (text) => h("button", { type: "button", class: "sds-help", title: text, "aria-label": text, onClick: (e) => e.preventDefault() }, "?");

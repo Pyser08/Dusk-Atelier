@@ -1024,3 +1024,6 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 씬: 한 번=고르기, 더블클릭=열기. 그림: 한 번=보낼 그림 고르기, 더블클릭=크게 보기. 맨 위·폴더 갤러리에 일괄 줄(#sds-gbulk: 모두 고르기·풀기·넣기·빼기). 단축키 추가: Delete=고른 것 지우기, Ctrl/⌘+Shift+A=고르기 풀기, 갤러리 Ctrl+A=그림 모두 고르기, Ctrl+B는 어디서든.
 - 폴더 프롬프트(folder.prompt): 상위→하위→캐릭터 외형 순으로 붙음(`P.folderPromptFor/ownPrompt`).
 - 미룸: 코어 탭 빠르게 누르면 멈춤(에뮬레이터 재현 안 됨, 사용자 상세 대기). 다음: 태그 자동완성 방식 상의.
+- (16시) 위 `<` = 한 단계 위로(모드→씬→캐릭터→상위 폴더→닫기). 스위치 옆 이름 보이게(dialogs/viewer의 래퍼 switchEl). 즐겨찾기 끄기(도구 버튼이 켜기만 했음). 우클릭: 그림·폴더 머리·빈 곳 메뉴 추가. 폴더 접기(st.folded). 맨 위 폴더 줄도 적층(.sds-toprows). 봇으로 넣기 = 글자 있는 큰 버튼.
+- 생성: 진행 막대(%·장수·예상 시간·재시도). 끊기지 않게 — 네트워크·서버 오류는 3s→6s→15s→30s→60s 간격으로 끝없이 다시, 토큰/결제 오류·멈추기만 멈춤. 3초마다 자동 저장, wakeLock, 창 닫아도 계속(LIVE 맵에 화면을 살려 두고 다시 열면 붙임), prefs.resume로 꺼졌다 켜지면 '이어 그리기' 알림.
+- 태그 자동완성: `data/sdstudio/tags_v5.csv.gz`(SDStudio db_v5.csv, MIT 사본 LICENSE-SDStudio.txt) → 처음 쓸 때 raw.githubusercontent(main → jsdelivr → SD-Studio 순)에서 받아 getLocalPluginStorage에 base64로 둠. 엔진 `engine/sdstudio/tags.js`, UI `left.js attachTags`. **주의: main에 이 파일이 올라가야 실제로 받아짐**(지금은 로컬 커밋만). 설정에 '파일에서 불러오기'.
