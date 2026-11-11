@@ -22,8 +22,8 @@
       "hooks": true,
       "desc": "리스 모델 목록에 ‘Dusk 자동’과 내 프로필을 등록하고, API 키 보관·모델 고르기·리스 도구 확인을 해요. 설정 → 실험 기능을 켜야 써요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/provider.js",
-      "sha256": "81cf5f9681189fc894fa5598f3be2c21ea3390c354252602763266b91ab7ff15",
-      "size": 151915
+      "sha256": "2ead2f30ce8c5f32acfa0feb3ba514e3fe73e4a95da83006525d363261ff0ed9",
+      "size": 151940
     },
     {
       "id": "chattheme",
@@ -34,8 +34,8 @@
       "hooks": false,
       "desc": "채팅 테마 빌더·테마 스튜디오로 내 채팅 테마를 만들고 주고받아요. 만든 테마는 이 애드온이 없어도 계속 적용돼요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/chattheme.js",
-      "sha256": "b4d392db8964c7e55863b6c2ae5da26ae1dd03abc32a3b345b122a415ca3e824",
-      "size": 88986
+      "sha256": "b92568e20576ff1b6bfee75bd4617510af9574c10164bac7c182161e25651ba4",
+      "size": 89685
     },
     {
       "id": "aibuild",
@@ -46,20 +46,20 @@
       "hooks": true,
       "desc": "말로 요청해 봇·모듈을 만들고 고치는 AI 창·AI로 제작 탭, AI로 페르소나 만들기를 써요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/aibuild.js",
-      "sha256": "397e2258c97cc28a54f099c6713c9af112a5adfde377d27417a94b872c15f7c3",
-      "size": 227101
+      "sha256": "4cc2b35b1d157a72a84e3b5922143cb119f769199c104a5df625f08ad7f59b13",
+      "size": 227982
     },
     {
       "id": "memory",
       "name": "장기기억·관계도",
       "category": "memory",
-      "version": "0.2.7",
-      "minCore": "2.0.0",
+      "version": "0.2.9",
+      "minCore": "2.1.4",
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "3259f7ad1bd8183a8aa847cd4ed37fbec367a6c3e2b2d1364a8a3cf7833b3219",
-      "size": 1608624
+      "sha256": "83103f9ba9201d7aaaa4c05fe61535f128f7c555a2dfa2d2da7a0f2513e37bf8",
+      "size": 1613946
     },
     {
       "id": "cards",
@@ -73,8 +73,8 @@
       ],
       "desc": "장기 기억으로 카드를 만들고 꾸미고, 그 카드로 새 봇을 이어 가요. 장기기억·관계도 애드온이 필요해요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/cards.js",
-      "sha256": "43b73c86001cfe70738949af11e4eda2776e464771e0c14778bf23cb3ee1d170",
-      "size": 661271
+      "sha256": "37de19a02ae39fcd2c7da970e1649b598fc3eb01a2d7651b192a2c21e928ad64",
+      "size": 661452
     },
     {
       "id": "erosync",
@@ -88,8 +88,8 @@
       ],
       "desc": "NSFW 장면 강화 — 인물 성향·목표를 읽어 다음 응답의 장면 계획을 넣어요. 장기기억·관계도 애드온이 필요해요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/erosync.js",
-      "sha256": "da54720eec0298e166ccac687fb3b0ef07c46943512320f2e0d8e62b698f5f48",
-      "size": 848436
+      "sha256": "3c16b502db404eb497c100b506ece25d69e33b427228625770b40f2325347a7d",
+      "size": 848461
     },
     {
       "id": "protlink",
