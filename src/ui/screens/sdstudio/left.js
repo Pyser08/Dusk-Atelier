@@ -82,7 +82,7 @@ export function renderLeft(S, body) {
 
 export function leftHead(S) {
   return [
-    h("div", { class: "sds-left-head" }, h("b", null, "프롬프트 에디터"), helpDot("이 봇(모듈)의 그림 설정이에요. 바뀐 내용은 바로 저장되고 Ctrl+Z로 되돌려요."), h("span", { style: "flex:1" }),
+    h("div", { class: "sds-left-head" }, h("b", null, "프롬프트 에디터"), helpDot(`이 봇(모듈)의 그림 설정이에요. 바뀐 내용은 바로 저장되고 ${S.keyLabel("undo")}로 되돌려요.`), h("span", { style: "flex:1" }),
       h("button", { type: "button", class: "sds-ib", title: "접기", "aria-label": "프롬프트 에디터 접기", style: "border:0;background:none", onClick: () => S.toggleLeft(false) }, ico("chevL", 18))),
     h("div", { class: "sds-groups" },
       h("div", { class: "sds-group" }, h("small", null, "도구"), h("div", null,

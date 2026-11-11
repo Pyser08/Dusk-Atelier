@@ -10,10 +10,12 @@ const browser = await chromium.launch();
 const shotDir = process.env.SHOTS;
 const shot = async (page, name) => { if (shotDir) await page.screenshot({ path: `${shotDir}/${name}.png` }); };
 
-async function boot(width, height) {
+async function boot(width, height, { mac = false } = {}) {
   const page = await (await browser.newContext({ viewport: { width, height } })).newPage();
+
   const errs = []; page.on("pageerror", (e) => errs.push(e.message));
   await page.setContent("<!doctype html><meta name=viewport content=\"width=device-width,initial-scale=1\"><body style='margin:0'></body>");
+  if (mac) await page.evaluate(() => { Object.defineProperty(Navigator.prototype, "platform", { get: () => "MacIntel" }); Object.defineProperty(Navigator.prototype, "userAgentData", { get: () => ({ platform: "macOS" }) }); });   // 맥처럼
   await page.addScriptTag({ content: r.outputFiles[0].text });
   await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99, uiMode: "advanced", devMode: true }) }, { coreOnly: true, mods: true }));
   await page.waitForTimeout(300);
@@ -155,21 +157,28 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   ok("그림 카드 ‘넣기’로도 바로", (w?.c?.emotionImages ?? []).some((x) => x[0] === "angry"));
   await page.locator("#sds-body .sds-img .chk").nth(1).click(); await page.waitForTimeout(100);
   await page.click("#sds-put-sel-opt"); await page.waitForTimeout(250);
-  ok("넣는 방법 고르기: 이름 기본값 = 씬 이름", (await page.locator("#sds-put-name").inputValue()) === "angry");
+  ok("넣는 방법 고르기: 이름 비우면 씬 이름", (await page.locator("#sds-put-name").inputValue()) === "" && /씬 이름/.test(await page.locator("#sds-put-name").getAttribute("placeholder")));
   await page.click("#sds-put-ok"); await page.waitForTimeout(400);
   w = await page.evaluate(() => window.__charWrites?.at(-1));
   ok("고른 방법으로 넣으면 같은 이름엔 번호(angry_2)", (w?.c?.emotionImages ?? []).some((x) => x[0] === "angry_2"), JSON.stringify((w?.c?.emotionImages ?? []).map((x) => x[0])));
+  ok("보낸 그림은 고르기가 풀림", (await page.locator("#sds-body .sds-img[aria-selected='true']").count()) === 0);
+  // 카드마다 고르기: angry에서 1장, smile에서 1장 → 씬 화면 밖에서도 남고, 고른 것만 보냄
+  await page.locator("#sds-body .sds-img .chk").nth(2).click(); await page.waitForTimeout(100);
   await page.locator("#sds-crumbs button", { hasText: "호시노" }).click(); await page.waitForTimeout(300);
-  await page.click("#sds-put-covers-opt"); await page.waitForTimeout(250);
-  await page.locator(".rb-modal .rb-seg button", { hasText: "그림 바꾸기" }).click();
-  await page.click("#sds-put-ok"); await page.waitForTimeout(400);
-  w = await page.evaluate(() => window.__charWrites?.at(-1));
-  const names = (w?.c?.emotionImages ?? []).map((x) => x[0]);
-  ok("씬 대표 넣기(바꾸기): angry는 그대로 하나, smile 더함", names.filter((n) => n === "angry").length === 1 && names.includes("smile"), JSON.stringify(names));
-  const before = (w?.c?.emotionImages ?? []).length;
+  await sceneCard(page, "smile").click(); await page.waitForTimeout(300);
+  await page.locator("#sds-body .sds-img .chk").first().click(); await page.waitForTimeout(100);
+  await page.locator("#sds-crumbs button", { hasText: "호시노" }).click(); await page.waitForTimeout(300);
+  ok("씬 카드에 고른 수 ✓1, 다른 씬은 없음", (await sceneCard(page, "angry").locator(".pk").innerText()) === "✓1" && (await sceneCard(page, "smile").locator(".pk").innerText()) === "✓1" && (await sceneCard(page, "sad").locator(".pk").count()) === 0);
+  ok("캐릭터 화면 ‘고른 그림 2장 바로 넣기’", /고른 그림 2장/.test(await page.locator("#sds-put-picked").getAttribute("title")) && !(await page.locator("#sds-put-picked").isDisabled()));
+  let wb = await page.evaluate(() => window.__charWrites?.at(-1)?.c?.emotionImages ?? []);
+  const nPrev = wb.length;
   await page.locator("#rb-sd-studio").focus(); await page.keyboard.press("Control+b"); await page.waitForTimeout(1200);
   w = await page.evaluate(() => window.__charWrites?.at(-1));
-  ok("Ctrl+B: 씬 대표를 바로 넣음(번호 붙여 더하기)", (w?.c?.emotionImages ?? []).length === before + 2, `${before} → ${(w?.c?.emotionImages ?? []).length}`);
+  const added = (w?.c?.emotionImages ?? []).slice(nPrev).map((x) => x[0]);
+  ok("Ctrl+B: 고른 2장만 씬 이름으로, 씬 순서대로(smile·angry_3)", JSON.stringify(added) === JSON.stringify(["smile", "angry_3"]), JSON.stringify(added));
+  ok("보낸 뒤 ✓표시 사라짐·버튼 꺼짐", (await page.locator("#sds-body .sds-scene .pk").count()) === 0 && await page.locator("#sds-put-picked").isDisabled());
+  await page.click("#sds-put-picked").catch(() => {});
+  ok("고른 게 없으면 아무것도 안 보냄", (await page.evaluate(() => window.__charWrites?.at(-1)?.c?.emotionImages?.length)) === nPrev + 2);
 
   // 모드
   await page.locator(".sds-modes button[data-mode='gallery']").click(); await page.waitForTimeout(300);
@@ -293,6 +302,26 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await openStudio(page, "m:m1");
   ok("모듈 편집에도 '에셋 제작' → 전체 화면", (await page.locator("#rb-sd-studio").count()) === 1 && /캐릭터 갤러리/.test(await txt(page, "#sds-topbar")));
   ok("오류 없음(PC)", !errs.length, errs.join(";"));
+  await page.close(); }
+
+{ const { page, errs } = await boot(1280, 860, { mac: true });
+  await pick(page, "c:c2"); await page.click("#rb-dev-edit"); await page.waitForTimeout(700);
+  await page.click("#rb-sd-make"); await page.waitForTimeout(700);
+  await page.click("#sds-addchar"); await page.waitForTimeout(200); await promptOk(page, "호시노");
+  await page.click("#sds-emoset"); await page.waitForTimeout(300);
+  ok("맥: 도구 설명에 ⌘ 표시(⌘B)", /⌘B/.test(await page.locator("#sds-put-picked").getAttribute("title")));
+  await page.locator("#rb-sd-studio").focus(); await page.keyboard.press("Meta+z"); await page.waitForTimeout(300);
+  ok("맥: ⌘Z로 되돌리기", (await page.locator("#sds-body .sds-scene").count()) === 1);
+  await page.keyboard.press("Meta+Shift+z"); await page.waitForTimeout(300);
+  ok("맥: ⌘⇧Z로 다시하기", (await page.locator("#sds-body .sds-scene").count()) === 20);
+  await page.keyboard.press("Control+z"); await page.waitForTimeout(300);
+  ok("맥: ⌃Z는 되돌리기가 아님(⌘와 따로)", (await page.locator("#sds-body .sds-scene").count()) === 20);
+  await page.click("#sds-settings"); await page.waitForTimeout(250); await page.click("#sds-keys"); await page.waitForTimeout(250);
+  ok("맥: 단축키 설정에 기호로(⌘Z·⌘⇧Z)", (await page.locator(".rb-modal .rb-chip[data-action='undo']").innerText()) === "⌘Z" && (await page.locator(".rb-modal .rb-chip[data-action='redo']").innerText()) === "⌘⇧Z");
+  await page.locator(".rb-modal .rb-chip[data-action='undo']").click(); await page.keyboard.press("Control+u"); await page.waitForTimeout(100);
+  ok("맥: ⌃U로 바꾸면 ⌃U로 보임", (await page.locator(".rb-modal .rb-chip[data-action='undo']").innerText()) === "⌃U");
+  await page.click("#sds-keys-save"); await page.waitForTimeout(250);
+  ok("오류 없음(맥)", !errs.length, errs.join(";"));
   await page.close(); }
 
 { const { page, errs } = await boot(390, 844);

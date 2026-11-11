@@ -6,7 +6,7 @@ import { MODELS, modelOf, SAMPLER_KO, NOISE_SCHEDULES, QUALITY_KO, UC_KO, ucPres
 import { buildPrompt, buildNegative, toPARR, combinationCount } from "../../../engine/sdstudio/prompt.js";
 import * as P from "../../../engine/sdstudio/project.js";
 import { promptArea, helpDot } from "./left.js";
-import { ACTIONS, DEFAULT_KEYS, comboOf, rebind } from "../../../engine/sdstudio/keys.js";
+import { ACTIONS, DEFAULT_KEYS, comboOf, rebind, keyLabel, isMacLike } from "../../../engine/sdstudio/keys.js";
 import { templateFile } from "../../../engine/sdstudio/template.js";
 import { ico } from "./look.js";
 
@@ -217,9 +217,9 @@ export function createDialogs(S) {
       sec("모드", "씬 모드: 카드로 보기 · 갤러리 모드: 모든 그림 · 검색 모드: 이름·프롬프트 찾기 · 비교 모드: 그림 여러 장 나란히 · 동시편집: 여러 씬 프롬프트를 한 번에."),
       sec("그림", "그림을 누르면 크게 보고, 즐겨찾기·대표·변형·인페인트·업스케일·디렉터 도구(배경 지우기 등)를 써요. 이미지 월드컵으로 순위를 매기면 1위가 대표가 돼요."),
       sec("폴더", "복장 베리에이션·소속으로 캐릭터를 묶어요. 폴더 안에 폴더, 한 캐릭터를 여러 폴더에 넣을 수 있어요. 카드를 고른 뒤 ‘폴더에 넣기’나 카드 메뉴로 넣어요."),
-      sec("바로 넣기", "그림·씬을 고르고 ‘바로 넣기’(Ctrl+B)를 누르면 대화상자 없이 봇에 들어가요. 자리·형식(WebP·AVIF로 용량 줄이기)·같은 이름 처리는 설정에서 정하고, 알림의 ‘되돌리기’로 바로 취소해요."),
+      sec("보낼 그림 고르기·바로 넣기", `그림 카드 왼쪽 위 체크(또는 ${isMacLike() ? "⌘" : "Ctrl"}+클릭)로 보낼 그림을 골라요. 고른 것은 씬을 옮기거나 다시 열어도 남고, 씬 카드에 ✓수로 보여요. ‘고른 그림 바로 넣기’(${S.keyLabel("put")})를 누르면 고른 그림만 씬 이름으로 봇에 들어가요. 자리·형식(WebP·AVIF)·같은 이름 처리는 설정에서, 알림의 ‘되돌리기’로 바로 취소해요.`),
       sec("템플릿", "씬 구성을 템플릿으로 저장하고 다른 캐릭터에 적용해요. SDStudio 씬 템플릿 파일(.json)도 가져와요. 맨 위에서 적용하면 모든 캐릭터, 폴더 안에서는 그 폴더의 캐릭터, 캐릭터 안에서는 그 캐릭터에 들어가요. 씬이 이미 있으면 합칠지 바꿀지 골라요."),
-      sec("되돌리기·단축키", "Ctrl+Z 되돌리기, Ctrl+Shift+Z 다시하기(봇에 넣은 것은 알림의 되돌리기로). 단축키는 설정 → 단축키 설정에서 바꿔요."),
+      sec("되돌리기·단축키", `${S.keyLabel("undo")} 되돌리기, ${S.keyLabel("redo")} 다시하기(봇에 넣은 것은 알림의 되돌리기로). 단축키는 설정 → 단축키 설정에서 바꿔요. 맥은 ⌘ 기준이에요.`),
       sec("부스트 모드", "설정에서 켜고 토큰을 여러 개 넣으면 동시에 그려요. 한 기기에서 여러 계정을 쓰면 NovelAI 제재 대상이 될 수 있어요."),
       sec("저장", "그림은 만들자마자 리스 에셋 저장소에 저장되고, 이 화면 목록에서 빼도 저장소 파일은 남아요. 작업 묶음은 봇·모듈마다 따로 저장돼요."),
       h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => done(true) }))));
@@ -283,7 +283,7 @@ export function createDialogs(S) {
     let keys = { ...S.keys }, waiting = null;
     const body = h("div", { style: "display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center" });
     const paint = () => replace(body, ...Object.entries(ACTIONS).flatMap(([a, label]) => [h("span", null, label),
-      h("button", { type: "button", class: "rb-chip", "aria-pressed": String(waiting === a), dataset: { action: a }, style: "min-width:120px;justify-content:center", onClick: () => { waiting = a; paint(); } }, waiting === a ? "키를 누르세요…" : keys[a] || "없음")]));
+      h("button", { type: "button", class: "rb-chip", "aria-pressed": String(waiting === a), dataset: { action: a }, style: "min-width:120px;justify-content:center", onClick: () => { waiting = a; paint(); } }, waiting === a ? "키를 누르세요…" : keyLabel(keys[a]) || "없음")]));
     const onKey = (e) => {
       if (!waiting) return;
       e.preventDefault(); e.stopPropagation();
@@ -295,10 +295,10 @@ export function createDialogs(S) {
     };
     win.ownerDocument.addEventListener("keydown", onKey, true);
     paint();
-    const ok = await modal(win, (done) => dialog("단축키 설정", 520, h("span", { class: "rb-muted", style: "white-space:normal" }, "줄을 누르고 새 키를 눌러요. 지우려면 Backspace. 다른 동작과 겹치면 그쪽은 비워져요."), body,
+    const ok = await modal(win, (done) => dialog("단축키 설정", 520, h("span", { class: "rb-muted", style: "white-space:normal" }, `줄을 누르고 새 키를 눌러요. 지우려면 Backspace. 다른 동작과 겹치면 그쪽은 비워져요.${isMacLike() ? " 맥은 ⌘가 주 보조키예요(⌃ Control·⌥ Option도 따로 쓸 수 있어요)." : ""}`), body,
       h("div", { class: "btns" }, btn("기본값", { kind: "ghost", onClick: () => { keys = { ...DEFAULT_KEYS }; paint(); } }), btn("취소", { kind: "ghost", onClick: () => done(false) }), btn("저장", { kind: "primary", id: "sds-keys-save", onClick: () => done(true) }))));
     win.ownerDocument.removeEventListener("keydown", onKey, true);
-    if (ok) { S.keys = keys; await S.sd.setPrefs({ keys }); S.toast("단축키를 저장했어요"); }
+    if (ok) { S.keys = keys; await S.sd.setPrefs({ keys2: keys }); S.paintTools(); S.toast("단축키를 저장했어요"); }
   }
 
   // 템플릿: 이미 씬이 있는 캐릭터가 있으면 합칠지 바꿀지
@@ -330,16 +330,17 @@ export function createDialogs(S) {
     await modal(win, (d) => { done = d; return dialog("템플릿 관리", 620, body, h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => d(true) }))); });
   }
 
-  // 봇·모듈에 넣기 → { slot, name, replace } | null
-  async function put({ count, name = "", allScenes = false }) {
+  // 넣는 방법 고르기 → { slot, name(비우면 씬 이름), dup } | null
+  async function put({ count }) {
     const slots = S.target.kind === "module" ? [["assets", "모듈 에셋"]] : [["emotionImages", "감정 이미지"], ["additionalAssets", "추가 에셋"]];
-    let slot = slots[0][0], mode = "add";
-    const nameIn = h("input", { class: "rb-input", value: name, id: "sds-put-name", placeholder: "에셋 이름" });
-    return modal(win, (done) => dialog(allScenes ? "씬 대표 그림을 넣을까요?" : `${count}장을 넣을까요?`, 480,
-      h("span", { class: "rb-muted", style: "white-space:normal" }, allScenes ? `씬 ${count}개의 대표 그림(1위·즐겨찾기·최신 순)을 씬 이름으로 넣어요.` : "기존 에셋 뒤에 덧붙여요. 같은 이름이 있으면 뒤에 번호가 붙어요."),
+    let slot = slots.some((x) => x[0] === S.prefs.putSlot) ? S.prefs.putSlot : slots[0][0], dup = S.prefs.dup ?? "number";
+    const nameIn = h("input", { class: "rb-input", id: "sds-put-name", placeholder: "비우면 씬 이름" });
+    return modal(win, (done) => dialog(`고른 그림 ${count}장을 넣을까요?`, 480,
+      h("span", { class: "rb-muted", style: "white-space:normal" }, `고른 그림만 넣어요. 형식은 설정대로(${{ png: "원본 PNG", webp: "WebP", avif: "AVIF" }[S.prefs.putFormat] ?? "WebP"}) 바꿔요.`),
       slots.length > 1 ? field("넣을 자리", segmented(slots, slot, (v) => { slot = v; }, "넣을 자리")) : null,
-      allScenes ? field("같은 이름이 이미 있으면", segmented([["add", "번호 붙여 더하기"], ["replace", "그림 바꾸기"]], mode, (v) => { mode = v; }, "같은 이름")) : field("이름", nameIn),
-      h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(null) }), btn("넣기", { kind: "primary", id: "sds-put-ok", onClick: () => done({ slot, name: nameIn.value.trim(), replace: mode === "replace" }) }))));
+      field("이름", nameIn),
+      field("같은 이름이 이미 있으면", segmented([["number", "번호 붙여 더하기"], ["replace", "그림 바꾸기"]], dup, (v) => { dup = v; }, "같은 이름")),
+      h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(null) }), btn("넣기", { kind: "primary", id: "sds-put-ok", onClick: () => done({ slot, name: nameIn.value.trim(), dup }) }))));
   }
 
   function folderDialog({ title, name = "", kind = "", ok = "만들기" }) {

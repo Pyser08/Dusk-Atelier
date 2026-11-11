@@ -82,7 +82,7 @@ test("조각 합치기: 없는 모음·조각만 더함", () => {
 test("되돌리기: 쌓기·되돌리기·다시하기·짧은 간격은 하나로·상한", () => {
   let t = 0;
   const h = createHistory({ limit: 3, mergeMs: 500, now: () => t });
-  h.push("a"); t = 100; h.push("b");   // 0.5초 안 → 하나로(앞 상태 a 유지)
+  h.push("a", { typing: true }); t = 100; h.push("b", { typing: true });   // 글자 입력이 0.5초 안 → 하나로(앞 상태 a 유지)
   t = 1000; h.push("c");
   assert.equal(h.undo("d"), "c");
   assert.equal(h.undo("c"), "a");
@@ -91,25 +91,50 @@ test("되돌리기: 쌓기·되돌리기·다시하기·짧은 간격은 하나�
   assert.equal(h.redo("c"), "d");
   assert.equal(h.redo("d"), null);
   t = 5000; h.push("e"); assert.equal(h.canRedo(), false, "새로 바꾸면 다시하기는 비움");
+  const h2 = createHistory({ mergeMs: 500, now: () => 0 });
+  h2.push("p"); h2.push("q");   // 버튼 동작은 아무리 빨라도 따로
+  assert.equal(h2.undo("r"), "q"); assert.equal(h2.undo("q"), "p");
+  const h3 = createHistory({ mergeMs: 500, now: () => 0 });
+  h3.push("p"); h3.push("q", { typing: true });   // 버튼 뒤 첫 입력은 따로
+  assert.equal(h3.undo("r"), "q");
   for (const x of ["f", "g", "h", "i"]) { t += 1000; h.push(x); }
   let n = 0; let cur = "z"; while ((cur = h.undo(cur)) != null) n++;
   assert.equal(n, 3, "상한");
 });
 
-test("단축키: 누른 키 → 이름, 기본값·바꾸기·겹치면 비움", () => {
-  assert.equal(K.comboOf({ key: "z", ctrlKey: true }), "Ctrl+Z");
-  assert.equal(K.comboOf({ key: "Z", ctrlKey: true, shiftKey: true }), "Ctrl+Shift+Z");
-  assert.equal(K.comboOf({ key: "z", metaKey: true }), "Ctrl+Z", "맥 ⌘도 Ctrl로");
-  assert.equal(K.comboOf({ key: "Enter", ctrlKey: true }), "Ctrl+Enter");
-  assert.equal(K.comboOf({ key: "F1" }), "F1");
-  assert.equal(K.comboOf({ key: " " }), "Space");
-  assert.equal(K.comboOf({ key: "Control", ctrlKey: true }), null, "보조키만은 없음");
-  const keys = K.normalizeKeys({ undo: "Ctrl+Y", bogus: "X" });
-  assert.equal(keys.undo, "Ctrl+Y");
+test("단축키: 윈도우·리눅스 — Ctrl이 주 보조키", () => {
+  const pc = false;
+  assert.equal(K.comboOf({ key: "z", code: "KeyZ", ctrlKey: true }, pc), "Mod+Z");
+  assert.equal(K.comboOf({ key: "Z", code: "KeyZ", ctrlKey: true, shiftKey: true }, pc), "Mod+Shift+Z");
+  assert.equal(K.comboOf({ key: "ㅋ", code: "KeyZ", ctrlKey: true }, pc), "Mod+Z", "한글 자판이어도 같은 이름");
+  assert.equal(K.comboOf({ key: "Enter", code: "Enter", ctrlKey: true }, pc), "Mod+Enter");
+  assert.equal(K.comboOf({ key: "F1", code: "F1" }, pc), "F1");
+  assert.equal(K.comboOf({ key: " ", code: "Space" }, pc), "Space");
+  assert.equal(K.comboOf({ key: "Control", ctrlKey: true }, pc), null, "보조키만은 없음");
+  assert.equal(K.keyLabel("Mod+Shift+Z", pc), "Ctrl+Shift+Z");
+  assert.equal(K.keyLabel("Mod+Enter", pc), "Ctrl+Enter");
+});
+test("단축키: 맥 — ⌘가 주 보조키, ⌃·⌥는 따로, 보이는 이름은 기호", () => {
+  const mac = true;
+  assert.equal(K.comboOf({ key: "z", code: "KeyZ", metaKey: true }, mac), "Mod+Z");
+  assert.equal(K.comboOf({ key: "z", code: "KeyZ", metaKey: true, shiftKey: true }, mac), "Mod+Shift+Z");
+  assert.equal(K.comboOf({ key: "z", code: "KeyZ", ctrlKey: true }, mac), "Ctrl+Z", "맥 ⌃Z는 ⌘Z와 다름");
+  assert.equal(K.comboOf({ key: "¬", code: "KeyL", altKey: true, metaKey: true }, mac), "Mod+Alt+L", "⌥로 바뀐 글자도 L");
+  assert.equal(K.keyLabel("Mod+Shift+Z", mac), "⌘⇧Z");
+  assert.equal(K.keyLabel("Mod+Alt+L", mac), "⌘⌥L");
+  assert.equal(K.keyLabel("Mod+Enter", mac), "⌘↩");
+  assert.equal(K.isMacLike({ platform: "MacIntel" }), true);
+  assert.equal(K.isMacLike({ platform: "Win32" }), false);
+  assert.equal(K.isMacLike({ userAgentData: { platform: "macOS" } }), true);
+});
+test("단축키: 기본값·바꾸기·겹치면 비움·예전 저장값 옮김", () => {
+  const keys = K.normalizeKeys({ undo: "Mod+Y", bogus: "X" });
+  assert.equal(keys.undo, "Mod+Y");
   assert.equal(keys.bogus, undefined);
   assert.equal(keys.run, K.DEFAULT_KEYS.run);
-  const k2 = K.rebind(keys, "redo", "Ctrl+Y");
-  assert.equal(k2.redo, "Ctrl+Y"); assert.equal(k2.undo, "", "겹친 쪽은 비움");
-  assert.equal(K.actionOf(k2, "Ctrl+Y"), "redo");
-  assert.equal(K.typingSafe("Ctrl+Z"), true); assert.equal(K.typingSafe("1"), false); assert.equal(K.typingSafe("F1"), true);
+  assert.equal(K.normalizeKeys({ undo: "Ctrl+Y" }, { v: 1 }).undo, "Mod+Y", "v1의 Ctrl은 주 보조키였음");
+  const k2 = K.rebind(keys, "redo", "Mod+Y");
+  assert.equal(k2.redo, "Mod+Y"); assert.equal(k2.undo, "", "겹친 쪽은 비움");
+  assert.equal(K.actionOf(k2, "Mod+Y"), "redo");
+  assert.equal(K.typingSafe("Mod+Z"), true); assert.equal(K.typingSafe("Ctrl+Z"), true); assert.equal(K.typingSafe("1"), false); assert.equal(K.typingSafe("F1"), true);
 });

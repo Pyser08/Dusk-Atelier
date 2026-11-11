@@ -18,7 +18,7 @@ export function emptyProject() { return { v: 2, settings: emptySettings(), piece
 
 function normImage(i) {
   if (!i || typeof i.path !== "string" || !i.path) return null;
-  return { path: i.path, seed: Number.isFinite(i.seed) ? i.seed : null, at: num(i.at, 0), prompt: str(i.prompt), rank: Number.isFinite(i.rank) ? i.rank : null, fav: !!i.fav, w: num(i.w, 0), h: num(i.h, 0), from: typeof i.from === "string" ? i.from.slice(0, 20) : "" };
+  return { path: i.path, seed: Number.isFinite(i.seed) ? i.seed : null, at: num(i.at, 0), prompt: str(i.prompt), rank: Number.isFinite(i.rank) ? i.rank : null, fav: !!i.fav, pick: !!i.pick, w: num(i.w, 0), h: num(i.h, 0), from: typeof i.from === "string" ? i.from.slice(0, 20) : "" };
 }
 function normScene(sc) {
   if (!sc || typeof sc.id !== "string" || !sc.id) return null;
@@ -174,6 +174,16 @@ export function setImage(p, cid, sid, path, patch) {
   const sc = sceneOf(p, cid, sid);
   return sc ? updateScene(p, cid, sid, { images: sc.images.map((i) => (i.path === path ? { ...i, ...patch, path: i.path } : i)) }) : p;
 }
+// ── 봇에 보낼 그림 고르기(그림마다 pick, 씬·화면을 옮겨도·다시 열어도 남음) ──
+export function setPicks(p, cid, sid, paths, on) {
+  const sc = sceneOf(p, cid, sid), set = new Set(paths);
+  return sc ? updateScene(p, cid, sid, { images: sc.images.map((i) => (set.has(i.path) ? { ...i, pick: !!on } : i)) }) : p;
+}
+export var clearPicks = (p, cid, sid = null) => mapScenes(p, cid, (ss) => ss.map((s) => (!sid || s.id === sid ? { ...s, images: s.images.map((i) => (i.pick ? { ...i, pick: false } : i)) } : s)));
+export var pickCount = (sc) => (sc?.images ?? []).filter((i) => i.pick).length;
+// [{ sid, name(=씬 이름), path }] — 씬 순서, 씬 안은 보이는 순서
+export var pickedImages = (c, sid = null) => (c?.scenes ?? []).filter((s) => !sid || s.id === sid).flatMap((s) => sortedImages(s).filter((i) => i.pick).map((i) => ({ sid: s.id, name: s.name, path: i.path })));
+
 // 보이는 순서: 순위(월드컵) → 즐겨찾기 → 최신
 export function sortedImages(sc) {
   return [...(sc?.images ?? [])].sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || Number(b.fav) - Number(a.fav) || b.at - a.at);

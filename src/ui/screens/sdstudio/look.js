@@ -70,6 +70,7 @@ export var CSS = `
 .sds-card .cap{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:6px;padding:20px 12px 9px;background:linear-gradient(transparent,rgba(0,0,0,.66));color:#fff;font-size:14px;font-weight:700}
 .sds-card .cap .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sds-card .cap .c{opacity:.9;font-variant-numeric:tabular-nums}
+.sds-card .cap .pk{height:20px;padding:0 7px;border-radius:999px;background:var(--rb-acc-grad);color:var(--rb-on-acc);font-size:11.5px;font-weight:800;display:inline-flex;align-items:center}
 .sds.nonames .sds-card .cap .n{visibility:hidden}
 .sds-card .rsv{position:absolute;top:8px;right:8px;height:22px;padding:0 8px;border-radius:999px;background:var(--rb-acc-grad);color:var(--rb-on-acc);font-size:12px;font-weight:800;display:flex;align-items:center}
 .sds-card .chk{position:absolute;top:8px;left:8px;width:24px;height:24px;border-radius:7px;background:var(--rb-win);border:1px solid var(--rb-line3);display:flex;align-items:center;justify-content:center;color:var(--rb-on-acc);opacity:0;transition:opacity .12s}

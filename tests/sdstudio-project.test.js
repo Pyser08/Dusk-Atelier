@@ -142,3 +142,25 @@ test("이미지 월드컵: 짝 고르기 → 1위·순위, 홀수 부전승", ()
   p = P.applyCup(p, c, s, { a: 1, b: 2 });
   assert.deepEqual(P.sortedImages(P.sceneOf(p, c, s)).map((i) => i.path), ["a", "b"]);
 });
+
+test("보낼 그림 고르기: 그림마다 기억, 씬 순서대로 모음, 풀기", () => {
+  const id = (() => { let n = 0; return () => `y${++n}`; })();
+  let p = P.addChar(P.emptyProject(), { name: "A" }, id);
+  const c = p.chars[0].id;
+  p = P.addScene(p, c, { name: "angry" }, id);
+  const [def, angry] = P.charOf(p, c).scenes.map((s) => s.id);
+  let t = 0; const now = () => ++t;
+  for (const n of [1, 2]) p = P.addImage(p, c, def, { path: `d${n}` }, now);
+  for (const n of [1, 2, 3]) p = P.addImage(p, c, angry, { path: `a${n}` }, now);
+  assert.deepEqual(P.pickedImages(P.charOf(p, c)), []);
+  p = P.setPicks(p, c, angry, ["a1", "a3"], true);
+  p = P.setPicks(p, c, def, ["d2"], true);
+  assert.equal(P.pickCount(P.sceneOf(p, c, angry)), 2);
+  assert.deepEqual(P.pickedImages(P.charOf(p, c)).map((x) => [x.name, x.path]), [["default", "d2"], ["angry", "a3"], ["angry", "a1"]], "씬 순서, 씬 안은 보이는 순서(최신 먼저)");
+  assert.deepEqual(P.pickedImages(P.charOf(p, c), angry).map((x) => x.path), ["a3", "a1"]);
+  assert.equal(P.normalizeProject(JSON.parse(JSON.stringify(p))).chars[0].scenes[1].images.filter((i) => i.pick).length, 2, "저장해도 남음");
+  p = P.setPicks(p, c, angry, ["a1"], false);
+  assert.deepEqual(P.pickedImages(P.charOf(p, c)).map((x) => x.path), ["d2", "a3"]);
+  p = P.clearPicks(p, c);
+  assert.deepEqual(P.pickedImages(P.charOf(p, c)), []);
+});
