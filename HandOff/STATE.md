@@ -1,5 +1,15 @@
 # 현재 상태 — SD-Studio 브랜치 (2.1.0 끝 e194dd9에서 분기)
 
+## 최근 세션 (2026-11-11 11시 40분 — 생성 중지: 작업 이름 표시 + 대기 작업까지 멈춤)
+- 사용자: “생성 중지 버튼에 무슨 작업 중인지도 떠야. 버튼이 작동 안 함 — 누르면 뒤에 대기 중인 작업까지 그만두게, 플러그인에서 부른 것만.”
+- 원인: ① 버튼은 호출 개수만 보여 줌(대부분 호출에 이름 없음). ② stopAll은 지금 도는 호출만 끊음 → 로어북 정리·기억 기록처럼 여러 번 부르는 작업은 2초 뒤 다음 호출로 그대로 이어짐. ③ 기억 기록이 내 API(provider 직접 fetch)로 돌면 trackAi에 아예 안 잡혀 중지 불가.
+- `engine/aistop.js`: `aiTask(label, fn)`(작업 묶음) · `activeTasks()`(최근 먼저, 겹치면 하나, 이름 없으면 ‘AI 작업’) · `describeAi(raw)`(writer→기억 기록, sdstudio→NAI 이미지 생성, erosync-*→Erosync, model:*·모르는 영문 id→"", 한국어 그대로). stopAll이 열린 작업을 ‘중지됨’으로 표시 → 그 작업이 끝날 때까지 새 trackAi는 시작하자마자 abort, runAI·trackedRunLLM은 바로 중지 오류. 막힌 시도마다 유예(3초)를 다시 재서 곧바로 재시도하는 루프도 끊김.
+- `engine/runai.js`: `runAITask(label, …)`, runAI는 `pick.label ?? pick.stage`로 이름.
+- 이름 붙인 곳: 장기기억 자동 기록(memoryrunner)·장기기억 단계(memoryturn — trackAi로 감싸 내 API도 중지됨)·인물 게이지·호감도 HUD·인물 카드·되감기 첫 메시지·기억 중요도(bardwiki)·페르소나·로어북 정리·테마·스킬 대화·봇 세계관 맞추기/로어 충돌 정리(legacy)·에셋 태그 고치기·봇빌더(aibuild). 애드온은 stage 이름(‘애드온 …’, Erosync, NAI) 그대로.
+- `ui/aistopbtn.js`: ‘생성 중지 · 작업 이름 외 N’(긴 이름은 말줄임), title에 전체 목록. 리스 화면 버튼도 같은 글자.
+- 시험: unit aistop 10(이름표·작업 묶음·실패해도 정리·pick.label·대기 호출 5개 모두 중지·trackAi 즉시 abort) → npm test 1421 pass / 9 skip. e2e persona-sop(‘생성 중지 · 페르소나 만들기’ 확인 추가)·addon-sdstudio 76·smoke 53·addons-ui 46 통과.
+- 남은 일: [ ] 리수폿이 hook에서 직접 도는 기록(main-wiki-hook 등, pot 자동 생성 코드라 못 고침)은 이름 없이 ‘AI 작업’으로 보이고, 3초보다 긴 간격의 pot 자체 재시도는 막지 못함 — 실기기에서 확인 필요.
+
 ## 최근 세션 (2026-11-11 11시 반 — 맥 단축키, 고른 그림만 보내기)
 - 사용자: “단축키는 맥용도 지원, 각 카드에서 봇으로 이미지를 보낼 때는 선택한 이미지만 내보낼 수 있게.”
 - **맥 단축키**(keys.js 다시 씀): 키 이름에 `Mod`(맥 ⌘, 그 밖 Ctrl)를 쓰고 맥의 `Ctrl`(⌃)·`Alt`(⌥)는 따로. 글자·숫자는 e.code(KeyZ·Digit1)로 읽어 ⌥ 조합(¬ 등)·한글 자판도 같은 이름. 보이는 이름 keyLabel(맥 ⌘⇧Z·⌘↩, 그 밖 Ctrl+Shift+Z). isMacLike = userAgentData.platform → platform → userAgent. 저장은 prefs.keys2(예전 prefs.keys는 v1으로 읽어 Ctrl→Mod). 도구 설명·도움말·왼쪽 도움말이 실제 키 이름을 보여 줌.
@@ -123,7 +133,6 @@
 - 이어서(20시~): **AI 생성 중지 버튼(코어)** — `engine/aistop.js`(활성 호출 세기·`stopAll`·`trackedRunLLM`·중지 뒤 2초 재호출 막기), `engine/runai.js`가 모든 호출을 `trackAi`로 감쌈, `main.js`가 `wrapped.runLLMModel`을 감쌈(리수폿·Erosync·봇빌더 직접 호출도 잡힘), `ui/aistopbtn.js`(0.4초 뒤 표시, Dusk 창 열림=창 안 fixed 오른쪽 아래 `.rb-ai-stop`, 닫힘=리스 화면 mainDom 버튼 `x-dusk-ai-stop`, 1.5초마다 자리 확인). 상시 규칙은 HandOff/README 6절. **코어 변경이라 2.1.0 코어 릴리스 때 사용자에게 감.** 테스트 tests/aistop.test.js, e2e run-persona-sop 끝.
 - 남은 일: [ ] 실제 모델로 초안·보고서 형식(분류 머리글) 확인 [ ] 봇 기본 페르소나·생성 중지(리스 화면 쪽) 세 호스트 실기기 확인 [ ] 중지 뒤 각 기능의 실패 알림이 과하지 않은지(isStopError로 거르기) 기능별 점검
 
-
 ## 최근 세션 (2026-11-10 오후 — 3.0.8: 기능 접근성·채팅 속도·Erosync 인물 고르기·자동 기록 잠김)
 - 사용자 제보: "켠 것처럼 보이는데 안 돈다"(월경·임신 기록은 고급 모드 안 ‘관계만 기록할 때 인지·정체 인식’이 ‘켬’이어야 동작) + 기능이 어디 있는지 못 찾음 + 채팅 느려짐 + Erosync 인물 선택 분석 + 장기기억 꼬이면 번호를 손으로 고쳐야 갱신됨.
 - **설정 선행 조건 자동 맞춤**: `engine/settingdeps.js`(DEPS 표: cycle→sexualDesireEnabled, cycle+relOnly→relationshipPerceptionMode "on"; `healDeps`·`depState`·`lockedBy`). 쓰는 곳: `ui/screens/memory/flowsettings.js`(모든 저장에 healDeps + 토스트 ‘필요한 설정을 함께 켰어요’, 성인 항목 아래 `cycleNote` 동작 중/아직 동작하지 않아요+‘함께 켜기’), `advanced.js`(인지·정체 segmented 잠김 안내 `#rb-mem-perc-lock`), `data/memoryturn.js` apply에서 healDeps(화면 안 거친 예전 설정도 시작 때 맞춤). 새 선행 조건은 DEPS에 한 줄.
@@ -152,12 +161,10 @@
   - **코어에만 있어 아직 안 나간 것**(다음 코어 릴리스 때): `memorylines.isNoneReply` JSON 꼴, `memoryprompt.askLines` 빈 답 다시 묻기·Dusk 분석 가벼운 지침 전환, `modelcfg.toPrompt` 줄 지침 JSON 맞춤(내 API로 돌리는 Dusk 자체 분석·게이지). CHANGELOG '다음 버전'에 적어 둠.
 - 남은 일: [ ] 실기기(실제 추론 모델)로 실패율 확인 — 개선 단정 금지. [ ] UI freeze(‘리수폿 설정 열기’ 빠른 조작) 미진행. [ ] main HandOff/README.md 작업 브랜치 표를 3.0.8로 고칠지 사용자 확인.
 
-
 ## 최근 세션 (2026-11-09 — v2.0.7 버전 정리)
 - v2.0.7: `package.json` 버전 및 CHANGELOG 정식 항목으로 정리. 포함 버그 수정은 장기기억/관계도 게이지 fallback(원문 유지) 1건.
 - 버그 2번의 미검증 초안은 main에 포함하지 않음. 계속 `feat/2.0.7`에서 별도 분석.
 - 빌드 결과물 `dusk_atelier.js` 재생성 및 `npm test`/`npm run build`/`npm run check` 검증은 로컬 저장소 필요.
-
 
 ## 최근 세션 (2026-11-09 — feat/2.0.7 시작: 장기기억/관계도 버그 3건 조사·수정)
 - 완료(1): `src/main.js` 로어북 로그의 `above` fallback을 `?? ""`에서 `?? t`로 수정. 장기기억 게이지/서비스가 없거나 결과를 반환하지 않을 때 원문 메시지를 유지해요. CHANGELOG에 기록.
@@ -297,7 +304,6 @@
 - 중복 스위치: 기억 고급(`madv.js` 대화에 넣기)의 사람다운 기억·감정 식음·거짓말 추적 제거(간단 '기억 옵션'에만), 예전 세부(`settings.js` renderGlobalSettings)의 기억 넣기 켜기·확장 기억 넣기 제거(고급 '대화에 넣기'에만). e2e `run-dupes.mjs`(탭별 같은 이름 스위치 검사).
 - 미확인: 실기기(세 호스트·모바일 터치 스크롤), 하위 화면(봇 세부 설정 등)의 중복.
 - 다음: 애드온 구조(프로젝트 문서 claude/addon-plan.md, 1순위 blob import 로더 PoC).
-
 
 - 회귀(2026-11-05): `engine/regress.js`(regressSlice·regressCandidates·regressLine, 순수) · `data/regress.js`(createRegressChat: 새 채팅 append+chatPage 이동, risupotWikiScopeId=새 id, 폴더 먼저 쓰고 실패 시 deleteFolder) · `ui/screens/regress.js`(신비 창, .rb-rg 범위 CSS) · 진입: chatmenu `dusk-qt-regress`, people.js 더보기·인물 상세, wikiview 헤더. carried 기록은 at:null(주입 최근 제외 회피)·src/hs 제거(대조 되돌림 회피)·회귀자 ctx=always, memoryinject에 Regression 줄. Erosync 값은 옮기지 않음. 테스트 tests/regress.test.js, e2e run-regress.mjs(22). 실기기 미확인.
 - 지난 대화 분석 함께 기록(2026-11-05): memoryrunner `backfillExtras`(settings.backfillExtras 기본 true) → link.backfillPot(묶음 끝 index를 auto.schedule)·backfillPotWait(waitForScope 10분)·backfillPotReady(potState+auto.enabled) — memoryturn rt 시작 시 채움. 끝나면 link.backfillErosync(main.js: Erosync 켜짐+read().people 비었을 때 profile start "full"). Erosync 턴 단위 기록은 planner pending 구조라 과거 재생 불가 → 성향 전체 분석으로 대체. 서버 분석 경로는 함께 기록 안 함. 리수폿 일괄: switches.setPotAll/potAllOn(potBots 초기화).
@@ -583,7 +589,6 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 연결: `main.js` `app.ctx.skills`, `memory/index.js` PAGES.skills. 테스트 `tests/cocoamigrate.test.js`, 연기 시험 `tests/e2e/smoke.entry.js`에 스킬 탭 4건.
 - 확인 못 한 것: 실제 RisuAI·RisuBard·PocketRisu에서 코코아전트 저장소 키가 보이는지(pluginStorage 공유 여부는 호스트마다 다를 수 있음 → 안 보이면 ZIP/JSON 가져오기), 파일 선택·다운로드(`Blob` 링크)의 모바일 동작, 좁은 폭 레이아웃(스크린샷 미확인), 코코아 `postMode` 값 가정(`record`).
 
-
 ### 스킬 5단계 결과 — 웹 도구·호출 기록 (v1.8.1, CHANGELOG 반영)
 - 웹 도구: `engine/websearch.js`(7개 검색 서비스 요청/해석, SSRF 주소 검사 `checkUrl`, `htmlToText`, 글 규약 `[[tool:이름 {json}]]` + `runToolLoop`), `data/webtools.js`(설정 `dusk.web.v1` 기본 꺼짐·키는 이 기기 저장소만, `nativeFetch`만 사용, 페이지 읽기는 `redirect:"error"`), `engine/webhook.js`(연결점), 연결: `data/memoryturn.js` `stageCall`이 스킬 글을 붙인 뒤 `webWrap`으로 감쌈 → 꺼짐/다른 단계/설정 미비면 원문으로 **한 번만** 호출. 켜진 단계에서 모델이 답 전체를 도구 호출 한 줄로 하면 실행 후 결과를 붙여 다시 호출(최대 `maxSteps` 기본 2, 상한 3). 기본 단계=director.
 - 호출 기록: `engine/skillhook.js` `recentCalls`(메모리 30건, 저장 안 함) + 화면 '최근 호출 기록'. 스킬 글이 실제로 붙었는지(글자 수)·도구 사용 확인용 → **실제 호스트 검증 때 이걸 먼저 볼 것.**
@@ -601,7 +606,6 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 안 바꾼 것(튜토리얼이 아니라 참고/기능이라): 캐릭터 편집기 도움말 패널(`editor.js HELP`), 플러그인 필드 도움말(`plugins.js`), 기억 처음 설정 마법사(`setup.js`, 실제 설정 단계), 도구·설정의 '이럴 땐 여기로' 길잡이 패널(`guidePanel`, 이동 메뉴).
 - 테스트: `tests/e2e/smoke.entry.js`에 둘러보기 10건(단계 건너뛰기·하이라이트·동작 버튼·정의 검증·가이드 강조). `run-app`의 '[PC] 사이드바 순서'는 이 작업 전부터 실패.
 - 확인 못 한 것: 실제 RisuAI·RisuBard·PocketRisu 화면에서 각 선택자가 잡히는지(특히 모바일 폭에서 가려진 칸은 건너뜀), 둘러보기 카드가 좁은 폭에서 강조 대상을 가리지 않는지 눈으로 확인 안 함.
-
 
 
 - 코코아 탭: 사이드바 기억 섹션의 독립 탭 `cocoa`(tabs.js, ui/screens/cocoa.js → memory/skills.js `standalone`). 기억 홈 ‘코코아 · 스킬’ 행은 이 탭으로 이동. 간단 모드=토글+사용할 스킬(연출·집필에 붙임)+목록/편집, 고급 모드=단계별 붙이기·코코아전트 옮기기·웹 도구·호출 기록(advFold). 탭 이름 `코코아`.

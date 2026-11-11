@@ -3,7 +3,7 @@
 //  B) 아니면 자체 보조모델이 이번 응답의 변화량만 판정해 누적한다. (cfg.source === "own"이면 항상 B)
 // 설정은 캐릭터별(저장소 인덱스 affhud[chaId]). 배경 HTML에 HUD가 설치된 봇에서만 동작한다.
 import { extractMessageText, isUserMessage, hashText, isChatGenerating as isGenerating } from "../engine/chattext.js";
-import { runAI } from "../engine/runai.js";
+import { runAITask } from "../engine/runai.js";
 import { pickForStage } from "./modelhub.js";
 import { readDb, entriesOf, ops as moduleOps } from "./modules.js";
 import { AFF_DEFAULTS, buildAffMessages, clampAff, designMessages, designRetry, extractHud, hasHud, hudHtml, installHud, installHudModule, uninstallHudModule, parseDelta, readPotAffinity, uninstallHud, validateHud } from "../engine/affhud.js";
@@ -14,7 +14,7 @@ const num = (v) => { const n = Number(v); return v !== "" && v != null && Number
 const WAIT_MS = 180000;
 
 export function createAffHud(api, { store, link = null, ask = null, log = (...a) => console.log("[Dusk 호감도]", ...a), debounceMs = 5000, retryMs = 2000 } = {}) {
-  const askAI = ask ?? (async (messages) => runAI(api, messages, await pickForStage(api, "writer")));
+  const askAI = ask ?? (async (messages) => runAITask("호감도 HUD", api, messages, await pickForStage(api, "writer")));
   let timer = null, running = false, dirty = false;
 
   const getCfg = async (chaId) => ({ on: false, source: "auto", ...AFF_DEFAULTS, ...((await store.getIndex()).affhud?.[chaId] ?? {}) });

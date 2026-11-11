@@ -128,6 +128,7 @@ for (const vw of [1280, 390]) {
   ok(`[${vw}] 쉴 때는 중지 버튼 없음`, !(await page.locator(".rb-ai-stop").count()));
   await page.locator(".rb-pb-fcard button", { hasText: "2 검토 보고서" }).click(); await page.waitForTimeout(700);
   ok(`[${vw}] AI 작업 중 오른쪽 아래 '생성 중지'`, await page.evaluate(() => { const b = document.querySelector(".rb-ai-stop"); if (!b) return false; const r = b.getBoundingClientRect(); return innerWidth - r.right < 40 && innerHeight - r.bottom < 40 && /생성 중지/.test(b.textContent); }));
+  ok(`[${vw}] 버튼에 무슨 작업 중인지 보임`, await page.evaluate(() => { const b = document.querySelector(".rb-ai-stop"); return /생성 중지 · 페르소나 만들기/.test(b?.textContent ?? "") && /페르소나 만들기/.test(b?.title ?? ""); }), await page.evaluate(() => document.querySelector(".rb-ai-stop")?.textContent));
   if (shot) await page.screenshot({ path: `/tmp/pb-stop-${vw}.png` });
   await page.click(".rb-ai-stop"); await page.waitForTimeout(400);
   ok(`[${vw}] 누르면 바로 멈추고 버튼 사라짐`, !(await page.locator(".rb-ai-stop").count()) && /생성을 중지했어요/.test(await T()));

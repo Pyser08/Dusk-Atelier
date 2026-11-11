@@ -61,7 +61,7 @@ npm ci            # 막히면: esbuild·acorn·eslint-scope를 /opt/npm-tools/no
 - UI는 부분 갱신 우선(전체 재렌더는 버벅임 원인). DOM은 `ui/dom.js`의 `h()`/`replace()`, 공용 위젯은 `ui/kit.js`.
 - 장기기억 저장 데이터는 사용자 기기에 이미 쌓여 있음 → 식별자·스키마 변경 시 **반드시 예전 데이터 마이그레이션 + 테스트** (v1.8.1이 그 예시).
 - 원본 봇·채팅은 수정하지 않고 새 객체만 만든다(합성·되감기 등).
-- **AI를 쓰는 모든 작업은 '생성 중지' 버튼에 잡혀야 한다(2.1.0, 사용자 상시 지시).** 코어·애드온 모두 AI 호출은 `engine/runai.js`의 `runAI` 또는 `api.runLLMModel`(main.js가 감싼 것)로만 부른다 — 둘 다 `engine/aistop.js`가 세어 오른쪽 아래 버튼(`ui/aistopbtn.js`)을 띄운다. fetch로 직접 모델을 부르는 새 코드는 `trackAi(label, signal)`로 감싸고 `race()`·`end()`를 쓴다. 중지 오류는 `isStopError(e)`로 가려 실패 알림·자동 재시도를 하지 않는다. 새 AI 기능 e2e에는 "작업 중 버튼 보임 → 누르면 멈춤" 확인을 넣는다(`tests/e2e/run-persona-sop.mjs` 끝 참고).
+- **AI를 쓰는 모든 작업은 '생성 중지' 버튼에 잡혀야 한다(2.1.0, 사용자 상시 지시).** 코어·애드온 모두 AI 호출은 `engine/runai.js`의 `runAI` 또는 `api.runLLMModel`(main.js가 감싼 것)로만 부른다 — 둘 다 `engine/aistop.js`가 세어 오른쪽 아래 버튼(`ui/aistopbtn.js`)을 띄운다. fetch로 직접 모델을 부르는 새 코드는 `trackAi(label, signal)`로 감싸고 `race()`·`end()`를 쓴다. **여러 번 부르는 작업은 이름을 붙여 묶는다**: `runAITask("작업 이름", api, msgs, pick, signal)` 또는 `aiTask("작업 이름", fn)` — 버튼에 ‘생성 중지 · 작업 이름’이 보이고, 중지하면 그 작업이 끝날 때까지 남은 호출이 바로 끊긴다(대기열까지 멈춤). 중지 오류는 `isStopError(e)`로 가려 실패 알림·자동 재시도를 하지 않는다. 새 AI 기능 e2e에는 "작업 중 버튼 보임 → 누르면 멈춤" 확인을 넣는다(`tests/e2e/run-persona-sop.mjs` 끝 참고).
 - `git remote set-url` 차단됨. push 전 `git fetch origin <브랜치>` 후 rebase.
 - 커밋 메시지는 영어 짧게, 사용자 대상 문구(CHANGELOG·UI)는 한국어.
 

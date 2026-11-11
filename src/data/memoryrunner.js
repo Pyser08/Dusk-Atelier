@@ -14,6 +14,7 @@ import { applyAnalysis, knownPeople, doneHashes } from "../engine/memoryapply.js
 import { storyDateOf } from "../engine/storydate.js";
 import { addMilestones } from "../engine/cyclememo.js";
 import { runAI } from "../engine/runai.js";
+import { aiTask } from "../engine/aistop.js";
 import { applyRegex } from "../engine/regexprep.js";
 import { openForPrompt } from "../engine/memoryplus.js";
 import { emoForPrompt } from "../engine/memoryemo.js";
@@ -204,7 +205,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
       const i = await targetIndex(ci, ti, mode);
       if (i < 0) { note(mode === "next" ? "noconfirmed" : "noai"); return; }
       if (link?.settle) await link.settle(ci, ti).catch(() => {});  // 리수폿 Writer가 같은 응답을 처리 중이면 끝날 때까지 기다려 호출을 합친다
-      const r = await analyzeAt(ci, ti, [i]);
+      const r = await aiTask("장기기억 자동 기록", () => analyzeAt(ci, ti, [i]));
       note(typeof r === "string" ? r : "ok", { at_msg: i });
     } catch (e) { note("error", { error: String(e?.message ?? e).slice(0, 200) }); log("자동 분석 실패", e?.message ?? e); }
     finally { if (running) running = false; if (dirty) schedule(lastKind).catch(() => {}); }

@@ -1,6 +1,7 @@
 // 봇빌더(BB) v0.3.2 (arca.live/b/characterai/187289284)에서 이식. 원작자 허락. 원본은 저장소 ref/botbuilder 브랜치.
 import { assert, bytes } from './util.js';
 import { withUserPrompts } from '../../engine/runai.js';
+import { aiTask } from '../../engine/aistop.js';
   async function responseText(result, job) {
     assert(result !== null && result !== void 0, "모델 응답이 없습니다.");
     if (typeof result === "string") {
@@ -50,7 +51,7 @@ import { withUserPrompts } from '../../engine/runai.js';
       };
       timer = setTimeout(() => job.stop("요청 대기 시간이 초과되었습니다. 늦게 도착한 결과는 폐기합니다."), timeoutSeconds * 1e3);
     });
-    const work = Promise.resolve().then(() => api2.runLLMModel({ messages, mode, allowPlugins: true })).then((r) => responseText(r, job));
+    const work = aiTask("봇빌더", () => api2.runLLMModel({ messages, mode, allowPlugins: true })).then((r) => responseText(r, job));
     try {
       return await Promise.race([work, stopped]);
     } finally {

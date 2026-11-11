@@ -2,6 +2,7 @@
 import { h, replace } from '../dom.js';
 import { btn, iconBtn, segmented, note, chip, switchEl, promptDialog } from '../kit.js';
 import { AI_MODES, runAI } from '../../engine/merge.js';
+import { runAITask } from '../../engine/runai.js';
 import { ensureStudioCss, mockDoc } from './themestudio.js';
 import { themeTabs } from './chattheme.js';
 import { TARGETS, loadThemes, saveThemes, detectTarget } from '../../data/themes.js';
@@ -206,7 +207,7 @@ export async function renderThemeBuilder(ctx) {
     try {
       undo.push(structuredClone(choice));
       if (undo.length > 10) undo.shift();
-      await fn((m) => runAI(ctx.api, m, ai));
+      await fn((m) => runAITask("테마 만들기", ctx.api, m, ai));
       accentTouched = true;
       draw();
     } catch (e) {
