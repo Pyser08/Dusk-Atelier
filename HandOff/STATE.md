@@ -1009,3 +1009,6 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 집착성 상한 기본 20(엔진·컨트롤러·UI). 선택 칸은 `choiceField`(optionCards+설명), 스위치는 `.rb-toggle`(장기 기억과 같은 모양). '검토 후 반영'(기본값)은 Dusk에 확인 화면이 없어 후보만 쌓임 → 설명에 적어 둠, 기본값 변경은 사용자 결정 필요.
 
 - Erosync 수위 일괄화: 엔진 `globalContent` 오버레이(getBotOverride) + `inst.content.global()`, 값은 dusk.erosync.level(src/data/erosync.js). 봇별 저장은 더 안 씀(기존 봇별 값은 일괄 값이 있으면 가려짐). 지난 대화 분석: 미분석만, 없으면 전체 재분석(안내 후 확인).
+
+## 최근 세션 (2026-11-11 14시 — 에셋·에셋 제작 버튼을 탭 줄로)
+- 사용자 지시: '에셋'·'에셋 제작'은 정보·로어북·정규식 탭이 있는 줄에 같이. `editor.js`의 `#rb-edit-sub`을 `.rb-tabs-row`(탭 + 버튼) 안 오른쪽 끝으로 옮김(초안 봇은 target 없어 버튼 없음). run-dev-slot 판정도 '탭 줄 안'으로 바꿈.

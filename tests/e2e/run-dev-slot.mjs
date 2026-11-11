@@ -15,7 +15,7 @@ await page.waitForTimeout(300);
 await page.evaluate(() => window.__app.ctx.svc.meta((m) => { m.devProjects = [{ kind: "module", id: "m1", addedAt: 1, version: "", releases: [] }, { kind: "character", id: "c2", addedAt: 1, version: "", releases: [] }]; }));
 const pick = async (sel) => { await page.evaluate((s) => { window.__app.ctx.state.devSel = s; window.__app.ctx.go("dev"); }, sel); await page.waitForTimeout(600); };
 const closeEditor = async () => { await page.locator(".rb-full .rb-full-head button[aria-label='닫기']").first().click(); await page.waitForTimeout(300); const d = page.locator(".rb-modal .rb-dialog button", { hasText: /닫기|버리|나가기/ }); if (await d.count()) { await d.first().click(); await page.waitForTimeout(200); } };
-const sub = () => page.evaluate(() => { const s = document.querySelector("#rb-edit-sub"); if (!s) return null; const apply = [...document.querySelectorAll(".rb-full-head .rb-btn")].find((b) => b.textContent.trim() === "적용"); return { labels: [...s.children].map((x) => x.id || x.textContent.trim()), below: !!apply && s.getBoundingClientRect().top >= apply.getBoundingClientRect().bottom - 1, right: !!apply && Math.abs(s.lastElementChild.getBoundingClientRect().right - apply.getBoundingClientRect().right) < 24 }; });
+const sub = () => page.evaluate(() => { const s = document.querySelector("#rb-edit-sub"); if (!s) return null; const apply = [...document.querySelectorAll(".rb-full-head .rb-btn")].find((b) => b.textContent.trim() === "적용"); return { labels: [...s.children].map((x) => x.id || x.textContent.trim()), below: (() => { const t = document.querySelector(".rb-tabs").getBoundingClientRect(), r = s.getBoundingClientRect(); return !!apply && r.top >= apply.getBoundingClientRect().bottom - 1 && r.top >= t.top - 2 && r.bottom <= t.bottom + 2 && r.left >= t.left; })(), right: !!apply && Math.abs(s.lastElementChild.getBoundingClientRect().right - apply.getBoundingClientRect().right) < 24 }; });
 
 await pick("m:m1");
 const devLabels = await page.evaluate(() => [...document.querySelector("#rb-dev-edit").parentElement.children].map((x) => x.id || x.textContent.trim()));
@@ -24,7 +24,7 @@ ok("개발 상세: 애드온 자리 없음", (await page.locator("#rb-dev-action
 
 await page.click("#rb-dev-edit"); await page.waitForTimeout(600);
 let s = await sub();
-ok("모듈 편집: 적용 아래 오른쪽에 '에셋'만", !!s && JSON.stringify(s.labels) === JSON.stringify(["rb-edit-assets"]) && s.below && s.right, JSON.stringify(s));
+ok("모듈 편집: 탭 줄(정보·로어북…) 오른쪽 끝에 '에셋'만", !!s && JSON.stringify(s.labels) === JSON.stringify(["rb-edit-assets"]) && s.below && s.right, JSON.stringify(s));
 await page.click("#rb-edit-assets"); await page.waitForTimeout(500);
 ok("모듈 편집: '에셋'을 누르면 에셋 관리가 위에 열림", (await page.locator(".rb-full[aria-label$='에셋']").count()) === 1);
 await page.keyboard.press("Escape"); await page.waitForTimeout(200);

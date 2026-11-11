@@ -371,12 +371,14 @@ export async function openEditorCore(ctx, cfg) {
     helpBtn,
     applyBtn
   );
-  // 적용 버튼 아래 줄(2.1.x): 에셋 관리 + 애드온 자리 "editor.actions"(부품 (ctx, target), target = { kind: "module"|"character", id, index? }).
-  // 아직 만들어지지 않은 봇(초안)은 target이 없어 줄을 안 그린다.
-  const subEl = cfg.target ? h("div", { class: "rb-edit-sub", id: "rb-edit-sub", style: "flex-shrink:0;display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 16px;background:var(--rb-surf);border-bottom:var(--rb-bw,1px) solid var(--rb-line2)" },
+  // 탭 줄(정보·로어북·정규식…) 오른쪽 끝(2.1.x): 에셋 관리 + 애드온 자리 "editor.actions"(부품 (ctx, target), target = { kind: "module"|"character", id, index? }).
+  // 아직 만들어지지 않은 봇(초안)은 target이 없어 버튼을 안 그린다.
+  const subEl = cfg.target ? h("div", { class: "rb-edit-sub", id: "rb-edit-sub", style: "flex-shrink:0;display:flex;align-items:center;gap:8px;padding:4px 0 0" },
     btn("에셋", { size: "sm", icon: "image", id: "rb-edit-assets", onClick: () => Promise.resolve(cfg.openAssets?.()).catch((e) => ctx.toast(e?.message ?? String(e), { error: true })) }),
     ...(ctx.ext?.render("slot", "editor.actions", ctx, cfg.target) ?? [])) : null;
   const tabsEl = h("div", { class: "rb-tabs", role: "tablist" });
+  if (subEl) tabsEl.style.cssText = "flex:1;min-width:0;border-bottom:0;background:transparent";
+  const tabsRow = subEl ? h("div", { class: "rb-tabs-row", style: "flex-shrink:0;display:flex;align-items:center;gap:8px;padding-right:16px;background:var(--rb-surf);border-bottom:var(--rb-bw,1px) solid var(--rb-line2)" }, tabsEl, subEl) : tabsEl;
   const toolEl = h("div", { class: "rb-side-tools rb-bar rb-toolrow", hidden: true });
   const body = h("div", { class: "rb-split" });
   // 우측 하단 버튼 하나: 누르면 [AI 창 · 규칙 시험] 두 개가 펼쳐진다 (AI 창은 봇 편집에서만, 모듈은 규칙 시험만)
@@ -434,7 +436,7 @@ export async function openEditorCore(ctx, cfg) {
     fabMain.title = (hasAi ? "AI 창 · 규칙 시험" : "") + (label ? ` — ${label}` : "");
     fabMain.setAttribute("aria-label", "도구" + (label ? ` (${label})` : ""));
   }
-  panel.append(head, ...(subEl ? [subEl] : []), tabsEl, toolEl, body, statusEl, testFab, helpEl);
+  panel.append(head, tabsRow, toolEl, body, statusEl, testFab, helpEl);
   if (hasAi) {
     for (const ev of ["pointerenter", "focus", "touchstart"]) fabMain.addEventListener(ev, () => warmAi(), { once: true });
     setTimeout(() => { if (panel.isConnected) warmAi(); }, 1500);
