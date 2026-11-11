@@ -125,6 +125,11 @@ export var CSS = `
 .sds-ac .r{font-size:11.5px;color:var(--rb-sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sds-ac .f{font-size:11.5px;color:var(--rb-mute);font-variant-numeric:tabular-nums}
 .sds-ac .ft{display:flex;gap:10px;justify-content:flex-end;padding:5px 10px 3px;border-top:1px solid var(--rb-line2);margin-top:3px;font-size:11px;color:var(--rb-mute)}
+.sds-artlist{display:flex;flex-direction:column;gap:4px;max-height:52vh;overflow:auto;margin-top:8px}
+.sds-artlist .it{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px}
+.sds-artlist .it:hover{background:var(--rb-surf2)}
+.sds-artlist .w{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.sds-artlist small{margin-top:6px}
 .sds-crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .sds-sec{display:flex;align-items:center;gap:8px;min-height:30px}
 .sds-sec b{font-size:14px}

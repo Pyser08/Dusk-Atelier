@@ -1,0 +1,427 @@
+인원/여자 한 명,0,7943303,1girl
+인원/소녀 1명,0,7943303,1girl
+인원/여자 1,0,7943303,1girl
+인원/혼자,0,6649830,solo
+인원/단독,0,6649830,solo
+인원/솔로,0,6649830,solo
+인원/남자 한 명,0,1996955,1boy
+인원/소년 1명,0,1996955,1boy
+인원/여자 두 명,0,1353702,2girls
+인원/여자 세 명,0,311371,3girls
+인원/남자 두 명,0,437777,2boys
+인원/여러 여자,0,1996838,multiple girls
+인원/여러 남자,0,655055,multiple boys
+인원/성별 불명 1명,0,117648,1other
+인원/커플,0,95920,couple
+인원/형제자매,0,155442,siblings
+인원/남매,0,155442,siblings
+인원/자매,0,90662,sisters
+표정/홍조,0,3875548,blush
+표정/볼 붉힘,0,3875548,blush
+표정/입 벌림,0,3284156,open mouth
+표정/벌린 입,0,3284156,open mouth
+표정/입 다묾,0,1814020,closed mouth
+표정/다문 입,0,1814020,closed mouth
+표정/살짝 벌린 입,0,700578,parted lips
+표정/윙크,0,584320,one eye closed
+표정/한쪽 눈 감기,0,584320,one eye closed
+표정/씩 웃음,0,334412,grin
+표정/이 보이는 웃음,0,334412,grin
+표정/혀 내밀기,0,393973,tongue out
+표정/메롱,0,393973,tongue out
+표정/송곳니,0,429127,fang
+표정/눈물,0,285037,tears
+표정/울음,0,107633,crying
+표정/울기,0,107633,crying
+표정/땀방울(만화),0,309330,sweatdrop
+표정/땀,0,721407,sweat
+표정/무표정,0,170594,expressionless
+표정/부끄러움,0,133324,embarrassed
+표정/창피함,0,133324,embarrassed
+표정/반쯤 감은 눈,0,134756,half-closed eyes
+표정/졸린 눈,0,134756,half-closed eyes
+표정/옅은 미소,0,102782,light smile
+표정/살짝 웃음,0,102782,light smile
+표정/옅은 홍조,0,115004,light blush
+표정/코 홍조,0,140977,nose blush
+표정/볼터치 스티커,0,147886,blush stickers
+표정/화난 눈썹,0,249332,v-shaped eyebrows
+표정/V자 눈썹,0,249332,v-shaped eyebrows
+표정/짙은 눈썹,0,133402,thick eyebrows
+표정/굵은 눈썹,0,133402,thick eyebrows
+표정/이 악물기,0,99068,clenched teeth
+표정/물결 입,0,98261,wavy mouth
+표정/떨림,0,102961,trembling
+표정/덜덜,0,102961,trembling
+표정/침,0,144282,saliva
+표정/눈웃음,0,148429,^ ^
+표정/활짝 웃음,0,807605,:d
+표정/놀란 입,0,253230,:o
+표정/고양이 입,0,171274,:3
+표정/윙크하며 웃음,0,89880,;d
+표정/질끈 감은 눈,0,89234,> <
+표정/하트 눈동자,0,114322,heart-shaped pupils
+표정/모양 눈동자,0,234887,symbol-shaped pupils
+표정/세로 동공,0,87944,slit pupils
+표정/밝은 동공,0,138834,bright pupils
+표정/흰 동공,0,111868,white pupils
+표정/속눈썹,0,248049,eyelashes
+표정/뾰족한 이,0,116419,sharp teeth
+표정/상어 이,0,116419,sharp teeth
+표정/살짝 송곳니,0,96007,skin fang
+표정/윗니만,0,240511,upper teeth only
+표정/이빨,0,723120,teeth
+표정/혀,0,524343,tongue
+표정/머리카락 너머 보이는 눈,0,99118,eyes visible through hair
+표정/빛나는,0,132619,glowing
+머리/동물 귀,0,1645868,animal ears
+머리/수인 귀,0,1645868,animal ears
+머리/고양이 귀,0,386277,cat ears
+머리/여우 귀,0,203929,fox ears
+머리/토끼 귀,0,307772,rabbit ears
+머리/늑대 귀,0,109418,wolf ears
+머리/강아지 귀,0,85352,dog ears
+머리/말 귀,0,210217,horse ears
+머리/귀 털,0,339829,animal ear fluff
+머리/가짜 동물 귀,0,220064,fake animal ears
+머리/머리띠 귀,0,220064,fake animal ears
+머리/귀 네 개,0,86232,extra ears
+머리/뾰족 귀,0,557625,pointy ears
+머리/엘프 귀,0,557625,pointy ears
+머리/뿔,0,645772,horns
+머리/악마 뿔,0,131746,demon horns
+머리/헤일로,0,458991,halo
+머리/광륜,0,458991,halo
+머리/머리 꽃,0,375680,hair flower
+머리/날리는 머리,0,182308,floating hair
+머리/생머리,0,96354,straight hair
+머리/다른 머리 모양,0,139393,alternate hairstyle
+머리/교차 앞머리,0,97506,crossed bangs
+머리/양갈래 앞머리,0,86439,double-parted bangs
+머리/옆머리 튜브,0,97644,hair tubes
+머리/X 머리핀,0,107514,x hair ornament
+머리/곱창 밴드,0,102078,scrunchie
+머리/슈슈,0,102078,scrunchie
+머리/검은 머리띠,0,138226,black hairband
+머리/머리 날개,0,88152,head wings
+머리/머리 장비,0,98593,headgear
+머리/머리 위 안경,0,90226,eyewear on head
+몸/가슴,0,4675105,breasts
+몸/작은 가슴,0,672837,small breasts
+몸/중간 가슴,0,1152031,medium breasts
+몸/큰 가슴,0,2127798,large breasts
+몸/거대한 가슴,0,305713,huge breasts
+몸/평평한 가슴,0,226576,flat chest
+몸/배꼽,0,1515872,navel
+몸/쇄골,0,1049259,collarbone
+몸/허벅지,0,780491,thighs
+몸/두꺼운 허벅지,0,148330,thick thighs
+몸/허벅지 틈,0,94101,thigh gap
+몸/다리,0,177756,legs
+몸/발,0,258217,feet
+몸/발가락,0,224587,toes
+몸/발바닥,0,140772,soles
+몸/배,0,389118,stomach
+몸/복근,0,127335,abs
+몸/가슴 근육,0,123201,pectorals
+몸/근육질 남자,0,132074,muscular male
+몸/등,0,115370,back
+몸/사타구니,0,181320,groin
+몸/손톱,0,256886,fingernails
+몸/매니큐어,0,324788,nail polish
+몸/검은 손톱,0,113135,black nails
+몸/빨간 손톱,0,82557,red nails
+몸/입술,0,171281,lips
+몸/화장,0,176496,makeup
+몸/점,0,372256,mole
+몸/눈 밑 점,0,233367,mole under eye
+몸/흉터,0,159316,scar
+몸/얼굴 흉터,0,100202,scar on face
+몸/얼굴 문양,0,143348,facial mark
+몸/문신,0,197311,tattoo
+몸/수염,0,161043,facial hair
+몸/어두운 피부,0,384116,dark skin
+몸/갈색 피부 여자,0,238835,dark-skinned female
+몸/갈색 피부 남자,0,126022,dark-skinned male
+몸/색 피부,0,196952,colored skin
+몸/윤기 피부,0,151753,shiny skin
+몸/날개,0,587098,wings
+몸/깃털 날개,0,96767,feathered wings
+몸/꼬리,0,1114130,tail
+몸/고양이 꼬리,0,211436,cat tail
+몸/여우 꼬리,0,137687,fox tail
+몸/말 꼬리,0,120626,horse tail
+몸/토끼 꼬리,0,82977,rabbit tail
+몸/악마 꼬리,0,83604,demon tail
+몸/회색 눈,0,269078,grey eyes
+몸/청록 눈,0,242895,aqua eyes
+몸/어려진,0,84510,aged down
+몸/어린 모습,0,84510,aged down
+몸/살 파임,0,154485,skindentation
+캐릭터 유형/고양이 소녀,0,148863,cat girl
+캐릭터 유형/묘인,0,148863,cat girl
+캐릭터 유형/여우 소녀,0,125697,fox girl
+캐릭터 유형/말 소녀,0,203455,horse girl
+캐릭터 유형/악마 소녀,0,123453,demon girl
+캐릭터 유형/엘프,0,107047,elf
+캐릭터 유형/마법소녀,0,104156,magical girl
+캐릭터 유형/로봇,0,87775,robot
+캐릭터 유형/퍼리,0,130150,furry
+캐릭터 유형/수인,0,130150,furry
+캐릭터 유형/버튜버,0,603123,virtual youtuber
+캐릭터 유형/브이튜버,0,603123,virtual youtuber
+캐릭터 유형/치비,0,352316,chibi
+캐릭터 유형/SD 캐릭터,0,352316,chibi
+옷/셔츠,0,2722060,shirt
+옷/흰 셔츠,0,1306940,white shirt
+옷/검은 셔츠,0,342415,black shirt
+옷/파란 셔츠,0,153594,blue shirt
+옷/빨간 셔츠,0,103489,red shirt
+옷/회색 셔츠,0,99105,grey shirt
+옷/칼라 셔츠,0,703728,collared shirt
+옷/와이셔츠,0,158636,dress shirt
+옷/풀어헤친 셔츠,0,144558,open shirt
+옷/민소매 셔츠,0,214258,sleeveless shirt
+옷/크롭 탑,0,268594,crop top
+옷/탱크톱,0,114570,tank top
+옷/나시,0,114570,tank top
+옷/긴 소매,0,2210968,long sleeves
+옷/반소매,0,854970,short sleeves
+옷/퍼프 소매,0,493044,puffy sleeves
+옷/퍼프 반소매,0,244057,puffy short sleeves
+옷/퍼프 긴소매,0,93535,puffy long sleeves
+옷/줄리엣 소매,0,96115,juliet sleeves
+옷/프릴 소매,0,113533,frilled sleeves
+옷/손등 덮는 소매,0,224418,sleeves past wrists
+옷/분리형 칼라,0,176317,detached collar
+옷/윙 칼라,0,81989,wing collar
+옷/세일러 칼라,0,387324,sailor collar
+옷/파란 세일러 칼라,0,86098,blue sailor collar
+옷/흰 세일러 칼라,0,84320,white sailor collar
+옷/조끼,0,301848,vest
+옷/검은 재킷,0,364654,black jacket
+옷/흰 재킷,0,180832,white jacket
+옷/파란 재킷,0,147192,blue jacket
+옷/빨간 재킷,0,88811,red jacket
+옷/열린 재킷,0,356651,open jacket
+옷/후드 재킷,0,84101,hooded jacket
+옷/검은 코트,0,91735,black coat
+옷/후드,0,416366,hood
+옷/후드 내림,0,135733,hood down
+옷/케이프,0,165246,capelet
+옷/흰 원피스,0,416108,white dress
+옷/검은 원피스,0,350796,black dress
+옷/파란 원피스,0,173606,blue dress
+옷/빨간 원피스,0,135675,red dress
+옷/분홍 원피스,0,89887,pink dress
+옷/짧은 원피스,0,124739,short dress
+옷/민소매 원피스,0,216482,sleeveless dress
+옷/프릴 원피스,0,138758,frilled dress
+옷/끈 없는,0,223727,strapless
+옷/검은 치마,0,435940,black skirt
+옷/파란 치마,0,246187,blue skirt
+옷/빨간 치마,0,154314,red skirt
+옷/흰 치마,0,132000,white skirt
+옷/초록 치마,0,82582,green skirt
+옷/프릴 치마,0,108570,frilled skirt
+옷/바지,0,656112,pants
+옷/검은 바지,0,236357,black pants
+옷/검은 반바지,0,183259,black shorts
+옷/청바지,0,99791,denim
+옷/데님,0,99791,denim
+옷/흰 앞치마,0,113504,white apron
+옷/오비(기모노 띠),0,103139,obi
+옷/군복,0,105704,military
+옷/밀리터리,0,105704,military
+옷/어깨 갑옷,0,96844,shoulder armor
+옷/원피스 수영복,0,174051,one-piece swimsuit
+옷/검은 비키니,0,152104,black bikini
+옷/흰 비키니,0,125863,white bikini
+옷/검은 레오타드,0,103718,black leotard
+옷/비치는 옷,0,205975,see-through clothes
+옷/트임 옷,0,249934,clothing cutout
+옷/줄무늬 옷,0,339249,striped clothes
+옷/체크무늬 옷,0,185809,plaid clothes
+옷/하이레그,0,157265,highleg
+옷/다른 의상,0,608913,alternate costume
+옷/공식 다른 의상,0,519944,official alternate costume
+옷/코스프레,0,179054,cosplay
+옷/속옷,0,976245,underwear
+옷/흰 팬티,0,233100,white panties
+옷/검은 팬티,0,174038,black panties
+옷/검은 브래지어,0,82745,black bra
+옷/노브라,0,120138,no bra
+옷/검은 니삭스,0,483906,black thighhighs
+옷/흰 니삭스,0,326493,white thighhighs
+옷/검은 스타킹,0,284600,black pantyhose
+옷/흰 스타킹,0,85552,white pantyhose
+옷/흰 양말,0,207756,white socks
+옷/검은 양말,0,141146,black socks
+옷/신발,0,797086,shoes
+옷/검은 신발,0,251883,black shoes
+옷/흰 신발,0,88151,white shoes
+옷/갈색 신발,0,85377,brown shoes
+옷/검은 부츠,0,172742,black boots
+옷/맨발(신발 없음),0,120068,no shoes
+옷/검은 장갑,0,635278,black gloves
+옷/흰 장갑,0,413224,white gloves
+옷/모자,0,1609396,hat
+옷/검은 모자,0,232263,black hat
+옷/흰 모자,0,161392,white hat
+옷/빨간 모자,0,83391,red hat
+옷/마녀 모자,0,129922,witch hat
+옷/몹캡,0,100101,mob cap
+옷/헬멧,0,107221,helmet
+옷/리본(나비),0,1618727,bow
+옷/빨간 리본,0,307911,red bow
+옷/파란 리본,0,168225,blue bow
+옷/검은 리본,0,209324,black bow
+옷/흰 리본,0,141836,white bow
+옷/분홍 리본,0,112159,pink bow
+옷/빨간 리본 끈,0,252777,red ribbon
+옷/검은 리본 끈,0,182684,black ribbon
+옷/파란 리본 끈,0,104700,blue ribbon
+옷/흰 리본 끈,0,83054,white ribbon
+옷/빨간 나비넥타이,0,106853,red bowtie
+옷/빨간 넥타이,0,112044,red necktie
+옷/검은 넥타이,0,99027,black necktie
+옷/검은 초커,0,251390,black choker
+옷/장신구,0,1498951,jewelry
+옷/귀 피어싱,0,100836,ear piercing
+옷/보석,0,109151,gem
+옷/방울,0,155203,bell
+옷/십자가,0,98418,cross
+옷/검은 벨트,0,96540,black belt
+옷/가면,0,187177,mask
+옷/마스크,0,187177,mask
+옷/안대,0,99187,eyepatch
+옷/고글,0,82298,goggles
+옷/선글라스,0,135297,sunglasses
+옷/헤드폰,0,129706,headphones
+옷/붕대,0,124073,bandages
+옷/반창고,0,90931,bandaid
+옷/가방,0,311508,bag
+옷/배낭,0,95348,backpack
+옷/전라,0,271274,completely nude
+옷/알몸,0,653864,nude
+자세/들고 있음,0,2045489,holding
+자세/손 들기,0,522764,hand up
+자세/팔 들기,0,287898,arm up
+자세/허리에 손,0,215371,hand on own hip
+자세/가슴에 손,0,84859,hand on own chest
+자세/두 손 모으기,0,109688,own hands together
+자세/팔짱,0,115552,crossed arms
+자세/팔로 받치기,0,114656,arm support
+자세/팔 뻗기,0,89003,outstretched arm
+자세/가리키기,0,88369,pointing
+자세/주먹 쥐기,0,82739,clenched hand
+자세/브이,0,220868,v
+자세/V 사인,0,220868,v
+자세/고개 갸웃,0,167620,head tilt
+자세/다리 벌리기,0,332517,spread legs
+자세/다리 들기,0,106441,leg up
+자세/무릎 꿇기,0,149944,kneeling
+자세/와리자,0,104123,wariza
+자세/오리 앉기,0,104123,wariza
+자세/올라타기,0,95707,straddling
+자세/잠자기,0,96189,sleeping
+자세/먹기,0,110284,eating
+자세/포옹,0,163942,hug
+자세/안기,0,163942,hug
+자세/키스,0,89565,kiss
+자세/손잡기,0,137669,holding hands
+자세/입에 물기,0,96662,mouth hold
+자세/정면 보기,0,95634,facing viewer
+자세/옆모습,0,172621,profile
+자세/옷 들어올리기,0,84325,lifting own clothes
+자세/옷 걷어올림,0,273270,clothes lift
+자세/옷 당기기,0,103511,clothes pull
+자세/묶임,0,104912,bound
+자세/무기 들기,0,390951,holding weapon
+자세/검 들기,0,166596,holding sword
+자세/총 들기,0,95816,holding gun
+자세/컵 들기,0,103012,holding cup
+자세/음식 들기,0,143037,holding food
+자세/폰 들기,0,95464,holding phone
+자세/침대 위,0,161385,on bed
+구도/남자 중심,0,1059053,male focus
+구도/한 명 중심,0,474326,solo focus
+구도/1인칭 시점,0,184903,pov
+구도/여러 시점,0,251046,multiple views
+구도/피사계 심도,0,122117,depth of field
+구도/흐림,0,297810,blurry
+구도/움직임 선,0,114202,motion lines
+구도/날리는 땀방울,0,120621,flying sweatdrops
+구도/반짝임,0,217014,sparkle
+구도/그림자,0,156090,shadow
+구도/햇빛,0,98852,sunlight
+배경/야외,0,748297,outdoors
+배경/실내,0,518353,indoors
+배경/하늘,0,582127,sky
+배경/파란 하늘,0,276354,blue sky
+배경/흐린 하늘,0,98614,cloudy sky
+배경/구름,0,375889,cloud
+배경/나무,0,220954,tree
+배경/풀,0,110397,grass
+배경/잔디,0,110397,grass
+배경/나뭇잎,0,134543,leaf
+배경/식물,0,97295,plant
+배경/꽃,0,833790,flower
+배경/흰 꽃,0,137884,white flower
+배경/빨간 꽃,0,105469,red flower
+배경/분홍 꽃,0,88645,pink flower
+배경/장미,0,141411,rose
+배경/꽃잎,0,167290,petals
+배경/불,0,102142,fire
+배경/창문,0,171946,window
+배경/커튼,0,88056,curtains
+배경/침대,0,131528,bed
+배경/침대 시트,0,118564,bed sheet
+배경/베개,0,193413,pillow
+배경/의자,0,137343,chair
+배경/탁자,0,113339,table
+배경/사람 없음,0,219688,no humans
+배경/배경만,0,219688,no humans
+사물/무기,0,773366,weapon
+사물/검,0,355385,sword
+사물/칼,0,355385,sword
+사물/나이프,0,85641,knife
+사물/총,0,185896,gun
+사물/책,0,181381,book
+사물/컵,0,249035,cup
+사물/병,0,95762,bottle
+사물/음식,0,589412,food
+사물/과일,0,143158,fruit
+사물/전화기,0,142369,phone
+사물/휴대폰,0,128267,cellphone
+사물/스마트폰,0,111373,smartphone
+사물/우산,0,113869,umbrella
+사물/인형,0,113874,stuffed toy
+사물/동물 인형,0,90486,stuffed animal
+사물/하트,0,841794,heart
+사물/별 모양,0,337995,star (symbol)
+사물/깃털,0,100844,feathers
+동물/동물,0,138703,animal
+동물/고양이,0,112129,cat
+동물/새,0,142275,bird
+동물/벌레,0,94170,bug
+동물/포켓몬,0,219450,pokemon (creature)
+화풍/흑백,0,809886,monochrome
+화풍/모노크롬,0,809886,monochrome
+화풍/그레이스케일,0,655256,greyscale
+화풍/스케치,0,186588,sketch
+화풍/만화,0,694162,comic
+화풍/4컷 만화,0,114333,4koma
+화풍/말풍선,0,469841,speech bubble
+화풍/테두리,0,233308,border
+화풍/흰 테두리,0,146646,white border
+화풍/외곽선,0,82321,outline
+화풍/패러디,0,106620,parody
+화풍/크로스오버,0,82037,crossover
+화풍/밈,0,83032,meme
+메타/서명,0,413766,signature
+메타/워터마크,0,226078,watermark
+메타/작가 이름,0,577726,artist name
+메타/캐릭터 이름,0,289069,character name
+메타/영어 글자,0,377148,english text
+메타/날짜 표기,0,253993,dated

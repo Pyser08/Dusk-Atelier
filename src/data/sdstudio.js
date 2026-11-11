@@ -6,6 +6,7 @@
 // - 모든 NAI 호출은 AI 호출이라 trackAi로 세서 '생성 중지' 버튼에 잡힌다.
 import { inflateSync, gunzipSync, strFromU8 } from "../vendor/fflate.js";
 import { parseTagDb } from "../engine/sdstudio/tags.js";
+import { KO_EXTRA } from "../engine/sdstudio/tags_ko.js";
 import { trackAi, justStopped, stopError } from "../engine/aistop.js";
 import { readZipFirst, isPng, buildGenerateBody } from "../engine/sdstudio/nai.js";
 import { normalizeProject } from "../engine/sdstudio/project.js";
@@ -95,7 +96,7 @@ export function createSdStudio(api) {
   };
   const store = () => api.pluginStorage;
   const keyOf = (target) => (typeof target === "string" ? `dusk.sdstudio.p.${target}` : projectKey(target));
-  const gzToDb = (gz) => parseTagDb(strFromU8(gz[0] === 0x1f && gz[1] === 0x8b ? gunzipSync(gz) : gz));
+  const gzToDb = (gz) => parseTagDb(strFromU8(gz[0] === 0x1f && gz[1] === 0x8b ? gunzipSync(gz) : gz) + "\n" + KO_EXTRA);   // 한글 이름 보충을 덧붙임
   const b64 = { to: (u) => { let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); }, from: (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0)) };
   return {
     // 태그 사전: 메모리 → 이 기기 저장 → 내려받기. 실패하면 오류를 던짐(호출한 쪽이 '파일에서 불러오기'를 권함)

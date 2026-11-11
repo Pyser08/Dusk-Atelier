@@ -434,7 +434,7 @@ export async function openAssetStudio(ctx, target, sd) {
       const row = h("div", { class: ["sds-frow sds-folder", folded && "folded"], dataset: { id: f.id } },
         h("div", { class: "hd" }, foldBtn, h("button", { type: "button", class: "open sds-fopen", onClick: () => { if (!isCur("folder", f.id)) { setFocus("folder", f.id); return; } st.focus = null; st.folder = f.id; sel.clear(); paintTools(); paintBody(); } },
           h("span", { style: "color:var(--rb-acc);display:flex" }, ico("folder", 18)), h("b", { style: "font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, f.name),
-          f.kind ? h("span", { class: "rb-badge" }, KIND_KO[f.kind]) : null, h("span", { class: "rb-muted" }, `${all.length}명${subs ? ` · 폴더 ${subs}` : ""}`), h("span", { style: "color:var(--rb-mute);display:flex" }, ico("chevR", 16))),
+          f.kind ? h("span", { class: "rb-badge" }, KIND_KO[f.kind]) : null, f.tpl ? h("span", { class: "rb-badge", title: "새 캐릭터에 적용할 기본 템플릿" }, `템플릿 ${f.tpl}`) : null, h("span", { class: "rb-muted" }, `${all.length}명${subs ? ` · 폴더 ${subs}` : ""}`), h("span", { style: "color:var(--rb-mute);display:flex" }, ico("chevR", 16))),
           h("button", { type: "button", class: "rb-icon-btn", "aria-label": "폴더 메뉴", onClick: (e) => folderMenu(e.currentTarget, f.id) }, ico("more", 18))),
         folded ? null : list.length ? h("div", { class: "strip" }, ...list.map((c) => charCard(c, f.id, list))) : subF.length ? null : h("span", { class: "rb-muted", style: "white-space:normal" }, "비어 있어요. 캐릭터 카드나 폴더를 여기로 끌어다 놓아요."),
         !folded && subF.length ? h("div", { class: "sds-subrows" }, ...subF.map((g) => folderRow(g, depth + 1))) : null);
@@ -602,6 +602,11 @@ export async function openAssetStudio(ctx, target, sd) {
     const id = next.chars.at(-1).id;
     const into = st.focus?.kind === "folder" && proj.folders.some((f) => f.id === st.focus.id) ? st.focus.id : st.folder;   // 폴더를 골라 둔 채면 그 폴더 안에
     if (into) next = P.setMember(next, into, id, true);
+    const tplName = into ? P.folderTemplateFor(next, into) : "";
+    if (tplName) {
+      const tpl = (await sd.loadTemplates()).find((t) => t.name === tplName);
+      if (tpl) { next = T.applyTemplate(next, [id], tpl, "replace").project; S.toast(`폴더 기본 템플릿 ‘${tplName}’을 적용했어요`); }
+    }
     S.set(next);
     st.focus = { kind: "char", id };   // 만든 캐릭터는 열지 않고 테두리만 켜 둔다
     afterMove();
@@ -648,12 +653,22 @@ export async function openAssetStudio(ctx, target, sd) {
     if (!r) return;
     S.set(P.addFolder(proj, { ...r, parent })); paintTools(); paintBody();
   }
+  async function pickFolderTpl(anchor, f) {
+    const list = await sd.loadTemplates();
+    if (!list.length) return S.toast("저장된 템플릿이 없어요. 캐릭터 안에서 ‘템플릿으로 저장’하거나 가져오기를 먼저 해요");
+    openMenu(ctx.win, anchor, [
+      ...list.map((t) => ({ label: `${t.name === f.tpl ? "✓ " : ""}${t.name}`, icon: "folder", onClick: () => { S.set(P.updateFolder(proj, f.id, { tpl: t.name })); paintBody(); S.toast(`이제 ‘${f.name}’(안의 폴더 포함)에 만드는 캐릭터는 ‘${t.name}’으로 시작해요`); } })),
+      ...(f.tpl ? ["sep", { label: "기본 템플릿 없애기", icon: "x", onClick: () => { S.set(P.updateFolder(proj, f.id, { tpl: "" })); paintBody(); } }] : [])
+    ]);
+  }
   function folderMenu(anchor, id) {
     const f = proj.folders.find((x) => x.id === id);
     if (!f) return;
     openMenu(ctx.win, anchor, [
       { label: "이름·종류·프롬프트 바꾸기", icon: "edit", onClick: async () => { const r = await S.dlg.folderDialog({ title: "폴더 바꾸기", name: f.name, kind: f.kind, prompt: f.prompt ?? "", ok: "저장" }); if (r) { S.set(P.updateFolder(proj, id, r)); paintBody(); } } },
       { label: "안에 폴더 만들기", icon: "folderPlus", onClick: () => addFolder(id) },
+      { label: f.tpl ? `기본 템플릿: ${f.tpl}` : "기본 템플릿 정하기…", icon: "folder", onClick: () => pickFolderTpl(anchor, f) },
+      ...(P.folderTemplateFor(proj, id) ? [{ label: "기본 템플릿을 안의 캐릭터 모두에 적용", icon: "folder", onClick: async () => { const tpl = (await sd.loadTemplates()).find((t) => t.name === P.folderTemplateFor(proj, id)); if (!tpl) return S.toast("그 템플릿이 없어요", { error: true }); const ids = P.rowChars(proj, id).map((c) => c.id); if (!ids.length) return; const need = T.needsChoice(proj, ids); let mode = "merge"; if (need.length) { mode = await S.dlg.templateChoice(need.length, tpl.name); if (!mode) return; } S.set(T.applyTemplate(proj, ids, tpl, mode).project); paintTop(); paintBody(); S.toast(`‘${tpl.name}’을 ${ids.length}명에 적용했어요`); } }] : []),
       ...(f.parent ? [{ label: "맨 위로 꺼내기", icon: "up", onClick: () => { S.set(P.moveFolder(proj, id, null)); paintBody(); } }] : []),
       "sep",
       { label: "폴더 지우기", icon: "trash", danger: true, onClick: async () => {

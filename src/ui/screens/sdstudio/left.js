@@ -137,7 +137,8 @@ export function leftHead(S) {
     h("div", { class: "sds-groups" },
       h("div", { class: "sds-group" }, h("small", null, "도구"), h("div", null,
         ib("puzzle", "조각 모음", () => S.dlg.pieces(), { id: "sds-pieces" }),
-        ib("warn", "문제 확인(없는 조각·빈 프롬프트·Anlas)", () => S.dlg.check(), { id: "sds-check" }))),
+        ib("warn", "문제 확인(없는 조각·빈 프롬프트·Anlas)", () => S.dlg.check(), { id: "sds-check" }),
+        ib("brush", "작가 태그 고르기(그림체)", () => S.dlg.artists(), { id: "sds-artists" }))),
       h("div", { class: "sds-group" }, h("small", null, "프리셋"), h("div", null,
         ib("save", "지금 설정을 프리셋으로 저장", () => S.dlg.savePreset(), { on: true, id: "sds-psave" }),
         ib("load", "프리셋 불러오기", (e) => S.dlg.loadPreset(e.currentTarget), { id: "sds-pload" }))))

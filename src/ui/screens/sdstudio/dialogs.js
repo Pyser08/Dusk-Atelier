@@ -15,6 +15,7 @@ import { promptArea, helpDot } from "./left.js";
 import { ACTIONS, DEFAULT_KEYS, comboOf, rebind, keyLabel, isMacLike } from "../../../engine/sdstudio/keys.js";
 import { templateFile } from "../../../engine/sdstudio/template.js";
 import { ico } from "./look.js";
+import { norm, fmtFreq } from "../../../engine/sdstudio/tags.js";
 
 var dialog = (title, wide, ...kids) => h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": title, style: `max-width:${wide ?? 520}px;max-height:calc(100vh - 32px);overflow:auto` }, h("h3", { class: "rb-h3" }, title), ...kids);
 var shrinkless = (box) => { for (const el of box.children) el.style.flexShrink = "0"; return box; };
@@ -377,5 +378,35 @@ export function createDialogs(S) {
     });
   }
 
-  return { sampling, charPrompts, pieces, vibes, refs, savePreset, loadPreset, check, help, token, settings, put, folderDialog, keysDialog, templateChoice, templateManager };
+  // 작가 태그(그림체): 사전의 작가 종류에서 찾아 상위 프롬프트에 artist:이름 으로 더한다. 자주 쓰는 건 별표로 모아 둠.
+  async function artists() {
+    let db = S.sd.tags();
+    if (!db) { try { db = await S.sd.loadTags(); } catch (e) { S.toast(`${e?.message ?? e} — 설정 → 태그 자동완성에서 파일로 불러올 수 있어요`, { error: true }); return; } }
+    const fav = () => S.prefs.artistFav ?? [];
+    const saveFav = async (list) => { S.prefs.artistFav = list; await S.sd.setPrefs({ artistFav: list }); };
+    const q = h("input", { class: "rb-input", type: "search", id: "sds-art-q", placeholder: "작가 이름 찾기(두 글자부터)", "data-autofocus": "" });
+    const list = h("div", { class: "sds-artlist", id: "sds-art-list" });
+    const inTop = (name) => new RegExp(`(^|,)\\s*artist:${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*(,|$)`, "i").test(S.proj.settings.top ?? "");
+    const add = (name) => {
+      const top = String(S.proj.settings.top ?? "").replace(/\s*,?\s*$/, "");
+      S.set(P.setSettings(S.proj, { top: inTop(name) ? top : `${top}${top ? ", " : ""}artist:${name}` })); S.paintLeft(); paint();
+    };
+    const row = (name, freq) => h("div", { class: "it" },
+      h("button", { type: "button", class: ["sds-ib", fav().includes(name) && "on"], title: "자주 쓰는 작가", "aria-label": "자주 쓰는 작가", onClick: async () => { await saveFav(fav().includes(name) ? fav().filter((x) => x !== name) : [...fav(), name]); paint(); } }, ico("star", 16)),
+      h("span", { class: "w" }, name), freq != null ? h("span", { class: "rb-muted", style: "font-size:12px" }, fmtFreq(freq)) : null,
+      btn(inTop(name) ? "넣음" : "넣기", { size: "sm", kind: inTop(name) ? "ghost" : "primary", disabled: inTop(name), onClick: () => add(name) }));
+    const paint = () => {
+      const k = q.value.trim();
+      const hits = k.length >= 2 ? (() => { const out = []; const nk = norm(k); for (let i = 0; i < db.size && out.length < 400; i++) if (db.cats[i] === 1 && !db.redirs[i] && db.keys[i].includes(nk)) out.push(i); return out.sort((a, b) => db.freqs[b] - db.freqs[a]).slice(0, 40); })() : [];
+      replace(list,
+        fav().length ? h("small", { class: "rb-muted" }, "자주 쓰는 작가") : null, ...fav().map((n) => row(n, null)),
+        k.length >= 2 ? h("small", { class: "rb-muted" }, hits.length ? `찾은 작가 ${hits.length}` : "없어요") : h("small", { class: "rb-muted" }, "이름을 두 글자 이상 쳐요. 넣으면 상위 프롬프트 끝에 artist:이름 으로 붙어요."),
+        ...hits.map((i) => row(db.words[i], db.freqs[i])));
+    };
+    q.addEventListener("input", () => paint());
+    paint();
+    await modal(win, (done) => dialog("작가 태그(그림체)", 520, q, list, h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => done() }))));
+  }
+
+  return { artists, sampling, charPrompts, pieces, vibes, refs, savePreset, loadPreset, check, help, token, settings, put, folderDialog, keysDialog, templateChoice, templateManager };
 }

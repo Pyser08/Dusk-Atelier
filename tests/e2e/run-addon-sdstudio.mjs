@@ -354,6 +354,14 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   ok("한글로 찾으면 영어 태그로", /long hair/.test(await txt(page, ".sds-ac .w")) && /긴 머리/.test(await txt(page, ".sds-ac .r")));
   await page.keyboard.press("Escape"); await page.waitForTimeout(100);
   ok("Esc는 목록만 닫음(화면은 그대로)", (await page.locator(".sds-ac:not([hidden])").count()) === 0 && (await page.locator("#rb-sd-studio").count()) === 1);
+  await page.evaluate(async () => { const S = document.querySelector("#rb-sd-studio").__sds; await S.sd.loadTagsFromBytes(new TextEncoder().encode("wlop,1,9000,null\nwlop_fan,1,10,null\nsmile,0,4000,null\n")); });
+  await page.click("#sds-artists"); await page.waitForTimeout(200); await page.fill("#sds-art-q", "wlo"); await page.waitForTimeout(150);
+  await page.locator("#sds-art-list .it", { hasText: /^wlop/ }).first().locator("button", { hasText: "넣기" }).click(); await page.waitForTimeout(150);
+  ok("작가 태그 넣기 → 상위 프롬프트에 artist:", /artist:wlop/.test(await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.proj.settings.top)));
+  await page.locator(".rb-modal .rb-dialog button", { hasText: "닫기" }).last().click(); await page.waitForTimeout(150);
+  { const r = await page.evaluate(async () => { const S = document.querySelector("#rb-sd-studio").__sds, P = S.P; let p = S.proj;
+      p = P.addFolder(p, { name: "T" }); const f = p.folders.at(-1).id; p = P.updateFolder(p, f, { tpl: "감정 20" }); p = P.addFolder(p, { name: "T2", parent: f }); return P.folderTemplateFor(p, p.folders.at(-1).id); });
+    ok("폴더 기본 템플릿은 하위 폴더로 이어짐", r === "감정 20"); }
   await page.locator("#sds-top").fill("masterpiece, |, white background"); await page.locator("#sds-top").dispatchEvent("input"); await page.waitForTimeout(150);
   await shot(page, "sd-6-folders");
 
