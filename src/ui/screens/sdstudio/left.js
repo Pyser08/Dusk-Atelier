@@ -22,11 +22,11 @@ function attachTags(box, ta, after) {
     ta.value = r.text; ta.setSelectionRange(r.caret, r.caret); close(); after();
   };
   const paint = () => {
-    pop.replaceChildren(...items.map((it, i) => h("div", { class: ["it", i === at && "on"], role: "option", "aria-selected": String(i === at), onMousedown: (e) => { e.preventDefault(); pick(i); } },
-      h("span", { class: `cat c${it.cat}` }, CATEGORY_KO[it.cat] ?? "기타"),
-      h("span", { class: "w" }, it.word.includes("/") ? it.word.slice(it.word.lastIndexOf("/") + 1) : it.word),
-      it.tag !== it.word ? h("span", { class: "r" }, `→ ${it.tag}`) : null,
-      h("span", { class: "f" }, fmtFreq(it.freq)))));
+    pop.replaceChildren(...items.map((it, i) => h("div", { class: ["it", i === at && "on"], role: "option", "aria-selected": String(i === at), title: CATEGORY_KO[it.cat] ?? "", onMousedown: (e) => { e.preventDefault(); pick(i); } },
+      h("span", { class: `dot c${it.cat}`, "aria-hidden": "true" }),
+      h("span", { class: "tx" }, h("span", { class: "w" }, it.tag), it.tag !== it.word ? h("span", { class: "r" }, it.word.includes("/") ? it.word.split("/").join(" › ") : it.word) : null),
+      h("span", { class: "f" }, fmtFreq(it.freq)))),
+      h("div", { class: "ft", "aria-hidden": "true" }, h("span", null, "↑↓ 고르기"), h("span", null, "Enter·Tab 넣기"), h("span", null, "Esc 닫기")));
     pop.hidden = !items.length;
   };
   const offerDownload = () => {

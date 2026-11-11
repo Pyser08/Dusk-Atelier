@@ -345,11 +345,13 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   // 태그 자동완성(사전은 작은 CSV로 넣음)
   await page.evaluate(async () => { const S = document.querySelector("#rb-sd-studio").__sds; await S.sd.loadTagsFromBytes(new TextEncoder().encode("long hair,0,5000,null\nvery long hair,0,900,null\n머리/길이/긴 머리,0,5000,long hair\nsmile,0,4000,null\n")); });
   await page.locator("#sds-top").click(); await page.keyboard.press("End"); await page.keyboard.type(", long h"); await page.waitForTimeout(250);
+  await shot(page, "sd-tags");
   ok("태그 자동완성 목록 뜸", (await page.locator(".sds-ac:not([hidden]) .it").count()) === 2, await txt(page, ".sds-ac"));
   await page.keyboard.press("Enter"); await page.waitForTimeout(150);
-  ok("Enter로 넣으면 태그+쉼표", /long hair, $/.test(await page.locator("#sds-top").inputValue()), await page.locator("#sds-top").inputValue());
+  await page.keyboard.type("");   ok("Enter로 넣으면 태그+쉼표", /long hair, $/.test(await page.locator("#sds-top").inputValue()), await page.locator("#sds-top").inputValue());
   await page.keyboard.type("긴 머"); await page.waitForTimeout(250);
-  ok("한글로 찾으면 영어 태그로", /→ long hair/.test(await txt(page, ".sds-ac")));
+  await shot(page, "sd-tags-ko");
+  ok("한글로 찾으면 영어 태그로", /long hair/.test(await txt(page, ".sds-ac .w")) && /긴 머리/.test(await txt(page, ".sds-ac .r")));
   await page.keyboard.press("Escape"); await page.waitForTimeout(100);
   ok("Esc는 목록만 닫음(화면은 그대로)", (await page.locator(".sds-ac:not([hidden])").count()) === 0 && (await page.locator("#rb-sd-studio").count()) === 1);
   await page.locator("#sds-top").fill("masterpiece, |, white background"); await page.locator("#sds-top").dispatchEvent("input"); await page.waitForTimeout(150);
