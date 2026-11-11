@@ -15,9 +15,17 @@
   - 새 파일(애드온 전용, 코어 import 없음): `engine/sdstudio/nai.js`(buildGenerateBody v4.5·SIZES 세로/가로/정사각 Opus 무료 범위·readZipFirst(데이터 기술자 zip, fflate inflateSync)·assetSlotsOf·withAsset·uniqueAssetName) · `data/sdstudio.js`(토큰 `dusk.sdstudio.token`은 getLocalPluginStorage만·없으면 메모리, nativeFetch(signal 안 넘김)→fetch, 바디 어느 꼴이든, trackAi로 생성 중지, 401/402/429 문구, saveAsset 3번 시도) · `ui/screens/sdstudio.js`(창: 토큰(저장됨/바꾸기)·프롬프트·크기·1/2/4장·만들기·그림 고르기·봇은 추가 에셋/감정 이미지·이름·넣기 → 덧붙이기만, 봇 생성 중이면 막음, 모듈은 svc.run update assets). 창 상태는 `ctx.state.sdstudio["kind:id"]`.
   - 시험: `tests/sdstudio.test.js`(5), e2e `run-addon-sdstudio.mjs`(21, PC+390, 중지·틀린 토큰·Esc 포함, `SHOTS=dir`로 사진), `run-dev-slot` 위치 검사 갱신.
   - **아직 `addons/addons.src.json`에 안 넣음**(배포 목록) — minCore를 이 슬롯이 든 코어 버전으로 정해야 해서. 코어 릴리스·애드온 배포·버전은 사용자 지시 대기.
+- **(9시 40분) 에셋 제작을 전체 화면으로(SDStudio 씬 갤러리 모양) — 봇만** — 사용자: “다른 창들처럼 플러그인 내 풀스크린, 사진(SDStudio)처럼. 가운데는 그 봇에 들어갈 캐릭터. 폴더는 한 줄에 여러 명, 복장 베리에이션·소속 정리, 겹칠 수 있게, 안에 캐릭터 카드와 생성 이미지.”
+  - ‘겹친다’는 두 뜻 모두 지원: **폴더 안에 폴더**(parent) + **한 캐릭터를 여러 폴더에**(members는 참조). 폴더 지우면 하위 폴더도 지우고 캐릭터·그림은 남음.
+  - 새 `engine/sdstudio/project.js`(emptyProject·normalizeProject(고리·유령 정리)·add/update/removeChar·add/update/move/removeFolder·setMember·foldersOf·view(맨 위=폴더 없는 캐릭터)·rowChars(하위 폴더까지)·pathOf·addImage(새 것 앞, 200장 상한)·removeImage·coverOf·composePrompt). 테스트 `tests/sdstudio-project.test.js`(6).
+  - `data/sdstudio.js` loadProject/saveProject — pluginStorage `dusk.sdstudio.p.<chaId>`(서버형 호스트에서도 이어짐). 만든 그림은 **바로 saveAsset**으로 저장, 경로만 기록(다시 열면 ctx.assets(readImage)로 읽음). 봇에 넣을 땐 경로만 덧붙임(다시 저장 안 함). 목록에서 빼도 호스트 에셋 파일은 남음.
+  - `ui/screens/sdstudio.js` openAssetStudio: `.rb-full`(에셋 관리와 같은 틀) — 머리(닫기·폴더·캐릭터 추가, 좁으면 아이콘만) / 왼쪽 `.side`(공통 프롬프트·고른 캐릭터 이름·프롬프트·폴더 칩(여러 개 켜기)·네거티브·크기·장 수·토큰·만들기) / 오른쪽(경로 칩 ‘전체 › …’ + 폴더 메뉴, 폴더 줄 = 카드 가로 한 줄, 캐릭터 카드 2:3 + 이름·장 수, 고른 캐릭터의 이미지, 고르면 아래 넣기 줄: 추가 에셋/감정 이미지·이름(비우면 캐릭터 이름)·대표 그림·목록에서 빼기). Esc = 고르기 풀기 → 닫기. 상태 `ctx.state.sdstudio[chaId]`(보던 폴더·캐릭터·장 수·자리).
+  - 애드온: 모듈엔 버튼 안 그림(봇만). 예전 창(openAssetMaker) 대체.
+  - e2e `run-addon-sdstudio.mjs` 29(PC 1280 + 390, 캔버스로 만든 진짜 PNG, 폴더 한 줄·안에 폴더·두 폴더·넣기·다시 열기·중지·Esc). `SHOTS=dir`로 화면 사진.
 - 남은 일:
   - [ ] 애드온 목록 등록(addons.src.json, category "make"?) + minCore 결정 → 코어 릴리스 후 publish
-  - [ ] 실기기(RisuBard)에서 에셋 제작 창 확인 — 미리보기 그림(blob URL)이 플러그인 칸에서 보이는지
+  - [ ] 실기기(RisuBard)에서 확인 — 방금 만든 그림(blob URL)·다시 연 그림(readImage — 0단계 시험에서 응답이 늦거나 멈춤)이 보이는지
+  - [ ] 다음 후보: 시드 고정·캐릭터 프롬프트(NAI char_captions)·감정별 한 번에 만들기·그림 크게 보기·이미지 월드컵·폴더로 캐릭터 끌어 넣기
   - [ ] 나머지 두 호스트 시험 결과 받기
   - [ ] 애드온 `addons/sdstudio` 1단계: 엔진 이식(`src/engine/sdstudio/` — nai 요청 본문·모델 목록·품질/UC 프리셋·시드, SDStudio jest 테스트 옮김), 전송 `data/sdstudio/`(nativeFetch→risuFetch, fflate unzip, 토큰은 getLocalPluginStorage)
   - [ ] 다음: 봇/모듈 정보로 프롬프트 초안(ai.run)·감정별 한 번에 만들기·SDStudio 프리셋/월드컵·i2i

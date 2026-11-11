@@ -98,7 +98,7 @@
 - `regexprep.js` (25줄) v1.8.1 정규식 전처리 공급자: 이 채팅에 적용할 정규식 목록을 모아 준다. 읽기만 하며 실패하면… — createRegexPrep
 - `regress.js` (50줄) 회귀 (v1.9.2): 고른 인물의 기억만 들고 같은 봇에 새 채팅을 만든다. 원래 채팅과 그 기억은… — createRegressChat
 - `retrytoast.js` (59줄) 채팅 화면 오른쪽 아래에 뜨는 작은 알림. 자동 위키 기록이 막혔을 때 플러그인을 열지 않고 바로 다… — createRetryToast, judgeAutoResult
-- `sdstudio.js` (92줄) SDStudio 이식(애드온 sdstudio 전용): NovelAI 토큰 보관·이미지 생성 요청·에셋… — createSdStudio
+- `sdstudio.js` (98줄) SDStudio 이식(애드온 sdstudio 전용): NovelAI 토큰 보관·이미지 생성 요청·에셋… — createSdStudio
 - `service.js` (131줄) — createService, groupByFolder
 - `sizemeter.js` (120줄) 용량 측정 수집 (v1.9.2): 읽기 전용. 봇은 하나씩 읽어 크기만 남기고 바로 버려서(큰 채팅이… — measureAllCharacters, addModuleAssetBytes, scanSizes
 - `skillguide.js` (3줄) cocoA(gent!) SKILL_GUIDE.md 원문(스킬 형식 규격). AI 스킬 만들기 대화의 … — SKILL_GUIDE
@@ -331,6 +331,7 @@
 
 ### src/engine/sdstudio/
 - `nai.js` (77줄) SDStudio 이식(애드온 sdstudio 전용): NovelAI 이미지 생성 요청 본문·응답 zi… — buildGenerateBody, readZipFirst, uniqueAssetName, withAsset
+- `project.js` (116줄) 에셋 제작(애드온 sdstudio) 봇별 작업 묶음: 캐릭터(프롬프트·만든 이미지)와 폴더(복장 베리… — emptyProject, normalizeProject, addChar, updateChar, removeChar
 
 ### src/erosync/
 - `erosync.js` (23903줄) Erosync V0.9.1 격리 이식 — 원작자에게 제공받은 플러그인(erosync, api 3.0)… — bootErosync
@@ -429,7 +430,7 @@
 - `regress.js` (350줄) 회귀 창 (v1.9.2): 인물을 골라, 그 인물의 기억만 들고 새 채팅을 시작한다.
 - `relmap.js` (264줄) 인물 관계도 탭 (v1.9.3): {{user}}를 가운데 두고 인물을 거리(호감도)·높이(중요도)·…
 - `roulettepop.js` (64줄) 봇 편집 도구 → 룰렛: 범주별로 무작위 특징을 뽑아 복사하거나 설명 끝에 붙인다.
-- `sdstudio.js` (157줄) 에셋 제작 창(애드온 sdstudio 전용): 개발 탭 버튼 줄 아래 '에셋 제작' → NovelAI…
+- `sdstudio.js` (321줄) 에셋 제작 화면(애드온 sdstudio 전용, 봇만): 개발 탭 '에셋 제작' → 플러그인 안 전체 …
 - `sectionhome.js` (73줄) 그룹 개요(기억·관리·작업실, 1.8.3 목업 1): 한 줄 안내 → (기억) 상태 카드 → 목록형 …
 - `settings.js` (178줄) 플러그인 꾸미기 (v1.7.0 7단계, 계획 §3.12 → v1.8.3 확장): 미리보기 → 테마 묶…
 - `settingstab.js` (272줄) 설정 탭 (1.8.3 목업 5): 묶음 이름 달기(화면 · 백업 · 도움말). 고급은 묶음별 한 줄 …
@@ -543,7 +544,7 @@
 - `style.js` (4줄) 주의: :host에 overflow:hidden/auto나 overscroll-behavior를 주면… — WH_CSS
 
 ## Risu 플러그인 API (우리 코드가 쓰는 호출, 횟수순)
-`getCharacterFromIndex`(75), `getDatabase`(54), `getChatFromIndex`(34), `getCurrentCharacterIndex`(28), `getCurrentChatIndex`(24), `setCharacterToIndex`(23), `setDatabaseLite`(18), `addRisuScriptHandler`(14), `nativeFetch`(13), `setChatToIndex`(11), `addRisuReplacer`(8), `saveAsset`(8), `readImage`(6), `hideContainer`(6), `registerButton`(5), `getRootDocument`(5), `toggle`(5), `requestPluginPermission`(4), `showContainer`(4), `risuFetch`(2), `addProvider`(2), `getDatabaseCached`(2), `getLocalPluginStorage`(2), `unregisterUIPart`(2), `removeRisuReplacer`(2), `checkCharOrder`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `initPublicLinkSession`(2), `getColorScheme`(2)
+`getCharacterFromIndex`(76), `getDatabase`(54), `getChatFromIndex`(34), `getCurrentCharacterIndex`(28), `getCurrentChatIndex`(24), `setCharacterToIndex`(23), `setDatabaseLite`(18), `addRisuScriptHandler`(14), `nativeFetch`(13), `setChatToIndex`(11), `addRisuReplacer`(8), `saveAsset`(8), `readImage`(6), `hideContainer`(6), `registerButton`(5), `getRootDocument`(5), `toggle`(5), `requestPluginPermission`(4), `showContainer`(4), `risuFetch`(2), `addProvider`(2), `getDatabaseCached`(2), `getLocalPluginStorage`(2), `unregisterUIPart`(2), `removeRisuReplacer`(2), `checkCharOrder`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `initPublicLinkSession`(2), `getColorScheme`(2)
 
 ## RisuAI 본체 구조 (kwaroran/RisuAI, 2026.10.220 기준)
 읽기 전용 클론: `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/kwaroran/risuai` (add_repo로 읽기만 가능, 쓰기 불가). 전체를 읽지 말고 아래 위치만 grep한다.

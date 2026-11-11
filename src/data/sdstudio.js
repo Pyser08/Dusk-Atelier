@@ -7,9 +7,11 @@
 import { inflateSync } from "../vendor/fflate.js";
 import { trackAi, justStopped, stopError } from "../engine/aistop.js";
 import { buildGenerateBody, readZipFirst, isPng } from "../engine/sdstudio/nai.js";
+import { normalizeProject } from "../engine/sdstudio/project.js";
 
 export var NAI_IMAGE = "https://image.novelai.net";
 var TOKEN_KEY = "dusk.sdstudio.token";
+var projKey = (chaId) => `dusk.sdstudio.p.${chaId}`;   // 봇별 작업 묶음(캐릭터·폴더·만든 이미지 경로) — pluginStorage(공용, 서버형 호스트에서도 이어짐)
 
 async function bodyBytes(res) {
   if (res instanceof Uint8Array) return res;
@@ -49,6 +51,10 @@ export function createSdStudio(api) {
     return fetch(url, { ...init, signal });
   };
   return {
+    async loadProject(chaId) {
+      try { const v = await api.pluginStorage?.getItem(projKey(chaId)); return normalizeProject(v ? (typeof v === "string" ? JSON.parse(v) : v) : null); } catch { return normalizeProject(null); }
+    },
+    async saveProject(chaId, p) { await api.pluginStorage?.setItem(projKey(chaId), JSON.stringify(p)); },
     async getToken() {
       const s = await local();
       try { const v = await s?.getItem?.(TOKEN_KEY); if (v) return String(v); } catch { /* 로컬 저장소 없음 */ }
