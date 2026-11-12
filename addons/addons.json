@@ -143,13 +143,13 @@
       "id": "sdstudio",
       "name": "에셋 제작",
       "category": "make",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "minCore": "2.1.7",
       "hooks": false,
       "desc": "NovelAI로 봇·모듈에 넣을 캐릭터 그림을 뽑아 바로 넣어요. 원본 SDStudio 기능에 로어북 폴더 가져오기·SFW/NSFW 씬 세트·즐겨찾기 넣기를 더했어요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/sdstudio.js",
-      "sha256": "04ce47f84de3e5e670e804470077f13d8f666644fc1188d53b36c65d8fc9824a",
-      "size": 727628
+      "sha256": "ea9be2269c8687f8ca716e06ac97529841fc8fcc3a7df94d2ff2b302ea20930a",
+      "size": 728113
     }
   ]
 }
