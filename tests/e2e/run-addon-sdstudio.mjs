@@ -518,6 +518,15 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
     await page.locator(".rb-modal .rb-dialog button", { hasText: "가져오기" }).last().click(); await page.waitForTimeout(800);
     const r = await page.evaluate(async () => { const S = document.querySelector("#rb-sd-studio").__sds; return { lib: S.proj.pieces.some((l) => l.name === "hair style" && l.pieces[0].name === "long hair"), pre: (await S.sd.loadPresets()).some((x) => x.name === "화풍X" && x.settings.top === "artist:x"), tpl: (await S.sd.loadTemplates()).some((t) => t.name === "템플릿X" && t.scenes[0].name === "웃음") }; });
     ok("원본 전체 백업 설정 → 조각 모음(띄어쓰기 유지)·프리셋·씬 템플릿", r.lib && r.pre && r.tpl, JSON.stringify(r)); }
+  { // 그림 3000장: 갤러리는 나눠 붙이고, 끝까지 내리면 더 붙음
+    const t0 = Date.now();
+    await page.evaluate(() => { const S = document.querySelector("#rb-sd-studio").__sds; let p = S.proj; const c = p.chars[0], sc = c.scenes[0]; const imgs = Array.from({ length: 3000 }, (_, i) => ({ path: `assets/fake${i}.png`, at: i })); p = { ...p, chars: p.chars.map((x) => (x.id !== c.id ? x : { ...x, scenes: x.scenes.map((y) => (y.id !== sc.id ? y : { ...y, images: [...y.images, ...imgs] })) })) }; S.set(p, { undo: false }); });
+    await page.locator(".sds-modes button[data-mode=gallery]").click(); await page.waitForTimeout(400);
+    const n1 = await page.locator("#sds-body .sds-img").count();
+    ok("그림 3000장 갤러리: 처음엔 일부만 붙임", n1 > 0 && n1 <= 400, `${n1}장 · ${Date.now() - t0}ms`);
+    for (let k = 0; k < 3; k++) { await page.evaluate(() => { const b = document.querySelector("#sds-body"); b.scrollTop = b.scrollHeight; }); await page.waitForTimeout(250); }
+    const n2 = await page.locator("#sds-body .sds-img").count();
+    ok("끝까지 내리면 더 붙음", n2 > n1, `${n1} → ${n2}`); }
   ok("오류 없음(대표 고르기)", !errs.length, errs.join(";"));
   await page.close(); }
 

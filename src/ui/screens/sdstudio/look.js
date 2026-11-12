@@ -80,6 +80,7 @@ export var CSS = `
 .sds-mi.sds-zoom{cursor:default}
 .sds-mi.sds-zoom input{flex:1;min-width:80px}
 .sds-msep{height:1px;margin:4px 6px;background:var(--rb-line2)}
+.sds-ghead{grid-column:1/-1;margin-top:10px}
 .sds-selc{font-weight:800;font-size:13px;padding:0 6px}
 @media (max-width:600px){.sds-tools{flex-wrap:nowrap;gap:6px;padding:8px 10px}.sds-tools>.sds-dd>.sds-ddt>span,.sds-tools>.sds-dd>.sds-ddt>svg:last-child:not(:first-child),.sds-tools>.sds-ddt>span{display:none}.sds-tools>.sds-dd>.sds-ddt,.sds-tools>.sds-ddt{width:34px;padding:0;justify-content:center}.sds-tools .rb-btn{padding:0 10px}}
 .sds-setbar{display:flex;justify-content:flex-end;padding:6px 16px;border-bottom:var(--rb-bw,1px) solid var(--rb-line2);flex-shrink:0}

@@ -7,6 +7,7 @@ import { btn, openMenu, promptDialog, confirmDialog } from "../../kit.js";
 import { zipSync, strToU8, strFromU8, gzipSync } from "../../../vendor/fflate.js";
 import * as BD from "../../../engine/sdstudio/botdata.js";
 import { parsePieceFile, addPieceLibs, addWildcard, parseCharPresets, readPngPrompt, parseGlobalPresets, addPresets, presetFromSD } from "../../../engine/sdstudio/imports.js";
+import { getThumb, putThumb, makeThumb, createLazy, chunkedAppend } from "./thumbs.js";
 import { pullLore } from "../../../engine/sdstudio/loresync.js";
 import * as FB from "../../../engine/sdstudio/fullbackup.js";
 import { isStopError } from "../../../engine/aistop.js";
@@ -87,7 +88,11 @@ export async function openAssetStudio(ctx, target, sd) {
     toast: (t, o) => ctx.toast(t, o),
     curChar: () => (st.charId ? P.charOf(proj, st.charId) : null),
     curScene: () => (st.charId && st.sceneId ? P.sceneOf(proj, st.charId, st.sceneId) : null),
-    remember(path, data) { bytesCache.set(path, data); if (!thumbUrls.has(path)) thumbUrls.set(path, URL.createObjectURL(new Blob([data], { type: "image/png" }))); },
+    remember(path, data) {
+      bytesCache.set(path, data); if (bytesCache.size > 24) bytesCache.delete(bytesCache.keys().next().value);
+      if (!thumbUrls.has(path)) thumbUrls.set(path, URL.createObjectURL(new Blob([data], { type: "image/png" })));
+      makeThumb(data).then((b) => putThumb(path, b)).catch(() => {});   // 다음에 열 때는 작은 썸네일로
+    },
     async bytes(path) {
       if (bytesCache.has(path)) return bytesCache.get(path);
       const d = await ctx.assets.read(path, { prio: 100 });
@@ -100,7 +105,7 @@ export async function openAssetStudio(ctx, target, sd) {
     thumb(path, { now = false } = {}) {
       const img = h("img", { alt: "", loading: "lazy", dataset: { path, ext: "png" } });
       if (thumbUrls.has(path)) img.src = thumbUrls.get(path);
-      else if (now) ctx.assets.thumb?.(path, "png").then((u) => { if (u) img.src = u; }).catch(() => {});
+      else if (now) loadThumb(path).then((u) => { if (u) img.src = u; }).catch(() => {});
       else lazy?.observe(img);
       return img;
     },
@@ -110,6 +115,24 @@ export async function openAssetStudio(ctx, target, sd) {
     paintLeft() { renderLeft(S, leftBody); },
     paintTop, paintTools, paintBody, putPaths, derive, quickPut
   };
+  // 썸네일: 이 세션 메모리 → 브라우저 저장(작은 webp) → 원본을 읽어 줄이고 저장
+  const thumbInflight = new Map();
+  function loadThumb(path) {
+    if (thumbUrls.has(path)) return Promise.resolve(thumbUrls.get(path));
+    if (thumbInflight.has(path)) return thumbInflight.get(path);
+    const p = (async () => {
+      let b = await getThumb(path);
+      if (!b) {
+        const d = await ctx.assets.read(path, { prio: 10 });
+        if (!d) return null;
+        b = await makeThumb(d);
+        putThumb(path, b);
+      }
+      const u = URL.createObjectURL(b); thumbUrls.set(path, u); return u;
+    })().finally(() => thumbInflight.delete(path));
+    thumbInflight.set(path, p);
+    return p;
+  }
   function afterJump() {
     if (st.charId && !P.charOf(proj, st.charId)) { st.charId = null; st.sceneId = null; }
     if (st.sceneId && !P.sceneOf(proj, st.charId, st.sceneId)) st.sceneId = null;
@@ -452,6 +475,9 @@ export async function openAssetStudio(ctx, target, sd) {
     paintTools(); paintBody();
   }
   S.togglePick = togglePick;
+  // 다시 그릴 때(새 그림이 올 때마다) 아까 붙인 만큼은 한 번에 붙여 스크롤이 튀지 않게
+  const chunkMemo = new Map();
+  const chunkOpt = (key, first) => ({ root: bodyEl, first: Math.max(first, chunkMemo.get(key) ?? 0), step: 200, onCount: (n) => chunkMemo.set(key, n) });
   const grid = (...cards) => h("div", { class: "sds-grid" }, ...cards);
   const sec = (title, count, ...right) => h("div", { class: "sds-sec" }, h("b", null, title), count != null ? h("span", { class: "rb-muted" }, String(count)) : null, h("span", { class: "sp" }), ...right);
   const empty = (t, d, ...acts) => h("div", { class: "sds-empty" }, h("b", null, t), h("span", { style: "white-space:normal" }, d), ...acts);
@@ -470,7 +496,7 @@ export async function openAssetStudio(ctx, target, sd) {
   // ── 본문 ──
   function paintBody() {
     const keep = bodyEl.scrollTop;
-    lazy?.disconnect(); lazy = ctx.assets.lazy(bodyEl);
+    lazy?.disconnect(); lazy = createLazy(bodyEl, loadThumb);
     applyZoom(); el.classList.toggle("nonames", !st.names);
     const c = S.curChar(), sc = S.curScene();
     const out = [crumbs()];
@@ -590,7 +616,7 @@ export async function openAssetStudio(ctx, target, sd) {
       h("details", { open: st.slotsOpen, onToggle: (e) => { st.slotsOpen = e.target.open; } }, h("summary", { style: "cursor:pointer;font-weight:800;font-size:13px;margin-bottom:8px" }, "씬 프롬프트 조합"),
         h("div", { style: "display:flex;flex-direction:column;gap:8px" }, h("span", { class: "rb-muted", style: "white-space:normal;font-size:12px" }, "슬롯마다 켜진 조각 하나씩 골라 조합해요. 예약 1장 = 조합 전부. 최종 = 상위 + 외형 + 이 조합 + 하위."), slotsEl, h("span", { class: "rb-label" }, "미리보기(첫 조합)"), preview)));
     return [editor, sec("이미지", imgs.length, imgs.length ? h("span", { class: "rb-muted", style: "font-size:12px" }, "누르면 크게 · 체크로 고르기") : null),
-      imgs.length ? grid(...imgs.map((im, i) => imageCard(list[i], im, list, i))) : empty("아직 그림이 없어요", "예약하고 위의 ‘생성’을 누르거나 ‘지금 1장’을 눌러요.")];
+      imgs.length ? chunkedAppend(grid(), imgs, (im, i) => imageCard(list[i], im, list, i), chunkOpt(`s:${sc.id}`, 120)) : empty("아직 그림이 없어요", "예약하고 위의 ‘생성’을 누르거나 ‘지금 1장’을 눌러요.")];
   }
   function galleryView(c) {
     const chars = c ? [c] : st.folder ? P.rowChars(proj, st.folder) : proj.chars;
@@ -605,12 +631,11 @@ export async function openAssetStudio(ctx, target, sd) {
       btn(`고른 ${picked.length}장 봇에 넣기`, { size: "sm", kind: "primary", id: "sds-g-put", disabled: !picked.length, onClick: () => quickPut(picked.map((x) => ({ cid: x.it.cid, sid: x.it.sid, path: x.it.path, name: x.sc.name }))) }),
       btn(`고른 ${picked.length}장 목록에서 빼기`, { size: "sm", kind: "danger", id: "sds-g-del", disabled: !picked.length, onClick: () => removePicked(picked.map((x) => x.it)) }),
       h("span", { class: "rb-muted", style: "font-size:12px" }, "한 번 누르면 고르기 · 두 번 누르면 크게 보기"))];
-    let i = 0;
-    for (const cc of chars) for (const sc of cc.scenes) {
-      const part = all.filter((x) => x.sc === sc);
-      if (!part.length) continue;
-      out.push(sec(c ? sc.name : `${cc.name} › ${sc.name}`, part.length), grid(...part.map((x) => imageCard(x.it, x.im, list, i++))));
-    }
+    // 수천 장: 씬 제목을 격자 안 한 줄로 넣고, 보이는 만큼씩 나눠 붙임
+    const flat = [];
+    let i = 0, prev = null;
+    for (const x of all) { if (x.sc !== prev) { prev = x.sc; flat.push({ head: c ? x.sc.name : `${x.cc.name} › ${x.sc.name}`, n: x.sc.images.length }); } flat.push({ x, i: i++ }); }
+    out.push(chunkedAppend(h("div", { class: "sds-grid sds-ggrid" }), flat, (e) => (e.head ? h("div", { class: "sds-ghead" }, sec(e.head, e.n)) : imageCard(e.x.it, e.x.im, list, e.i)), chunkOpt(`g:${c?.id ?? st.folder ?? ""}`, 150)));
     return out;
   }
   function searchView(c) {
