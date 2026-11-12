@@ -14,6 +14,7 @@ import * as P from "../../../engine/sdstudio/project.js";
 import { promptArea, helpDot } from "./left.js";
 import { ACTIONS, DEFAULT_KEYS, comboOf, rebind, keyLabel, isMacLike } from "../../../engine/sdstudio/keys.js";
 import { templateFile } from "../../../engine/sdstudio/template.js";
+import { parsePieceFile, addPieceLibs, addWildcard, piecesFile } from "../../../engine/sdstudio/imports.js";
 import { ico } from "./look.js";
 import { norm, fmtFreq } from "../../../engine/sdstudio/tags.js";
 
@@ -97,12 +98,14 @@ export function createDialogs(S) {
       const libs = S.proj.pieces;
       if (libI >= libs.length) libI = Math.max(0, libs.length - 1);
       replace(left, ...libs.map((l, i) => h("button", { type: "button", class: "rb-chip", "aria-pressed": i === libI ? "true" : "false", onClick: () => { libI = i; paint(); } }, `${l.name} ${l.pieces.length}`)),
-        btn("모음 더하기", { size: "sm", icon: "plus", id: "sds-lib-add", onClick: async () => { const n = clean(await promptDialog(win, { title: "조각 모음 이름", label: "이름(점·꺾쇠·쉼표·띄어쓰기 없이)", placeholder: "예: 옷" })); if (!n || libs.some((l) => l.name === n)) return; upd([...S.proj.pieces, { name: n, pieces: [] }]); libI = S.proj.pieces.length - 1; paint(); } }));
+        btn("모음 더하기", { size: "sm", icon: "plus", id: "sds-lib-add", onClick: async () => { const n = clean(await promptDialog(win, { title: "조각 모음 이름", label: "이름(점·꺾쇠·쉼표·띄어쓰기 없이)", placeholder: "예: 옷" })); if (!n || libs.some((l) => l.name === n)) return; upd([...S.proj.pieces, { name: n, pieces: [] }]); libI = S.proj.pieces.length - 1; paint(); } }),
+        btn("파일에서 가져오기", { size: "sm", icon: "upload", id: "sds-lib-import", title: "SDStudio 조각 모음 .json(한 모음·전역 조각 백업·프로젝트) 또는 와일드카드 .txt", onClick: () => importPieces() }));
       const lib = libs[libI];
       if (!lib) { replace(right, h("span", { class: "rb-muted", style: "white-space:normal" }, "조각은 자주 쓰는 프롬프트 묶음이에요. 프롬프트에 <모음.조각>으로 넣으면 펼쳐져요. ‘여러 줄’ 조각은 줄 하나를 무작위로 골라요.")); return; }
       const setLib = (patch) => upd(S.proj.pieces.map((l, i) => (i === libI ? { ...l, ...patch } : l)));
       replace(right,
         h("div", { style: "display:flex;gap:8px;align-items:center" }, h("b", { style: "flex:1" }, `<${lib.name}.…>`),
+          btn("내보내기", { size: "sm", kind: "ghost", icon: "download", title: "SDStudio에서도 읽는 .json", onClick: () => download(`${lib.name}.json`, piecesFile(lib), "application/json") }),
           btn("모음 지우기", { size: "sm", kind: "danger", onClick: async () => { if (await confirmDialog(win, { title: `‘${lib.name}’ 모음을 지울까요?`, body: "이 모음을 부르는 프롬프트는 오류가 나요.", ok: "지우기", danger: true })) { upd(S.proj.pieces.filter((_, i) => i !== libI)); paint(); } } })),
         ...lib.pieces.map((pc, k) => {
           const setPc = (patch) => setLib({ pieces: S.proj.pieces[libI].pieces.map((x, j) => (j === k ? { ...x, ...patch } : x)) });
@@ -116,6 +119,17 @@ export function createDialogs(S) {
         btn("조각 더하기", { icon: "plus", id: "sds-piece-add", onClick: () => { let n = "조각"; for (let i = 2; lib.pieces.some((x) => x.name === n); i++) n = `조각${i}`; setLib({ pieces: [...lib.pieces, { name: n, prompt: "", multi: false }] }); paint(); } }));
       shrinkless(right);
     };
+    async function importPieces() {
+      const files = await pickFiles({ accept: ".json,.txt,application/json,text/plain", multiple: true });
+      for (const f of files ?? []) {
+        try {
+          const r = parsePieceFile(f.name, await f.text());
+          if (r.libs) { const x = addPieceLibs(S.proj.pieces, r.libs); S.set({ ...S.proj, pieces: x.pieces }); libI = S.proj.pieces.length - 1; S.toast(`조각 모음 ${x.names.join(", ")}을 가져왔어요`); }
+          else { const cur = S.proj.pieces[libI]?.name; const x = addWildcard(S.proj.pieces, r.wild, cur || "wildcards"); S.set({ ...S.proj, pieces: x.pieces }); libI = S.proj.pieces.findIndex((l) => l.name === x.group); S.toast(`<${x.group}.${x.name}> 조각으로 가져왔어요`); }
+        } catch (e) { S.toast(`${f.name}: ${e?.message ?? e}`, { error: true }); }
+      }
+      paint();
+    }
     paint();
     await modal(win, (done) => dialog("조각 모음", 760, h("div", { style: "display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start" }, left, right), h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => done(true) }))));
     S.paintLeft();

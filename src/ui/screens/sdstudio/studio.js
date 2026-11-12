@@ -6,6 +6,7 @@ import { h, replace, download, pickFiles } from "../../dom.js";
 import { btn, openMenu, promptDialog, confirmDialog } from "../../kit.js";
 import { zipSync, strToU8, strFromU8, gzipSync } from "../../../vendor/fflate.js";
 import * as BD from "../../../engine/sdstudio/botdata.js";
+import { parsePieceFile, addPieceLibs, addWildcard, parseCharPresets, readPngPrompt } from "../../../engine/sdstudio/imports.js";
 import { syncLore, pullLore } from "../../../engine/sdstudio/loresync.js";
 import { newFolderEntry } from "../editor.js";
 import * as FB from "../../../engine/sdstudio/fullbackup.js";
@@ -203,7 +204,8 @@ export async function openAssetStudio(ctx, target, sd) {
     const undoG = group("되돌리기", ib("undo", "되돌리기", () => S.undo(), { disabled: !hist.canUndo(), id: "sds-undo" }), ib("redo", "다시하기", () => S.redo(), { disabled: !hist.canRedo(), id: "sds-redo" }));
     const tplG = group("템플릿", ib("template", c ? "템플릿 적용·관리(이 캐릭터)" : st.folder ? "템플릿 적용·관리(이 폴더의 캐릭터 모두)" : "템플릿 적용·관리(모든 캐릭터)", (e) => templateMenu(e.currentTarget), { id: "sds-tpl" }),
       ib("importIn", c ? "SDStudio·Dusk 씬 템플릿 가져와 이 캐릭터에 적용" : st.folder ? "씬 템플릿 가져와 이 폴더의 캐릭터 모두에 적용" : "씬 템플릿 가져와 모든 캐릭터에 적용", () => importTemplate(), { id: "sds-tpl-import" }),
-      c ? ib("save", "이 캐릭터의 씬을 템플릿으로 저장", () => saveTemplate(c), { id: "sds-tpl-save" }) : null);
+      c ? ib("save", "이 캐릭터의 씬을 템플릿으로 저장", () => saveTemplate(c), { id: "sds-tpl-save" }) : null,
+      ib("load", "원본 SDStudio 파일 가져오기(백업·씬 템플릿·조각·캐릭터 프리셋·PNG 프롬프트)", (e) => importMenu(e.currentTarget), { id: "sds-import-menu" }));
     let groups;
     if (!c) {
       groups = [
@@ -1041,6 +1043,53 @@ export async function openAssetStudio(ctx, target, sd) {
       return { files, get: async (name) => { if (!m[name]) throw new Error(`${name}이 없어요`); return m[name]; } };
     }
     throw new Error("SDStudio 백업(.tar)이나 프로젝트 파일(.json)이 아니에요");
+  }
+  // ── 원본 SDStudio에서 가져오기(한곳에 모음) ──
+  function importMenu(anchor) {
+    openMenu(ctx.win, anchor, [
+      { label: "SDStudio 백업·프로젝트(.tar·.json) / Dusk 전체 백업(.zip)", icon: "upload", onClick: () => importBackup() },
+      { label: "씬 템플릿(.json)", icon: "upload", onClick: () => importTemplate() },
+      { label: "조각 모음(.json) · 와일드카드(.txt)", icon: "upload", onClick: () => importPiecesFile() },
+      { label: "캐릭터 프리셋(.json) → 캐릭터 카드", icon: "upload", onClick: () => importCharPresets() },
+      { label: "PNG 메타데이터 → 프롬프트", icon: "upload", onClick: () => importPngPrompt() }
+    ]);
+  }
+  async function importPiecesFile() {
+    const files = await pickFiles({ accept: ".json,.txt,application/json,text/plain", multiple: true });
+    for (const f of files ?? []) {
+      try {
+        const r = parsePieceFile(f.name, await f.text());
+        if (r.libs) { const x = addPieceLibs(proj.pieces, r.libs); S.set({ ...proj, pieces: x.pieces }); S.toast(`조각 모음 ${x.names.join(", ")}을 가져왔어요`); }
+        else { const x = addWildcard(proj.pieces, r.wild); S.set({ ...proj, pieces: x.pieces }); S.toast(`<${x.group}.${x.name}> 조각으로 가져왔어요`); }
+      } catch (e) { S.toast(`${f.name}: ${e?.message ?? e}`, { error: true }); }
+    }
+    paintLeft();
+  }
+  async function importCharPresets() {
+    const [f] = await pickFiles({ accept: ".json,application/json" });
+    if (!f) return;
+    let list;
+    try { list = parseCharPresets(await f.text()); } catch (e) { return S.toast(e?.message ?? String(e), { error: true }); }
+    if (!list.length) return S.toast("캐릭터 프리셋이 없어요");
+    let next = proj;
+    const into = st.folder, ids = [];
+    for (const x of list) { next = P.addChar(next, { name: x.name, prompt: x.prompt }); const id = next.chars.at(-1).id; ids.push(id); if (into) next = P.setMember(next, into, id, true); }
+    const tplName = (into && P.folderTemplateFor(next, into)) || P.activeSet(next)?.tpl || "";
+    const tpl = tplName ? (await sd.loadTemplates()).find((t) => t.name === tplName) : null;
+    if (tpl) next = T.applyTemplate(next, ids, tpl, "replace").project;
+    S.set(next); paintTop(); paintBody(); S.toast(`캐릭터 ${list.length}명을 만들었어요(외형 프롬프트 포함)`);
+  }
+  async function importPngPrompt() {
+    const [f] = await pickFiles({ accept: "image/png" });
+    if (!f) return;
+    const m = readPngPrompt(new Uint8Array(await f.arrayBuffer()));
+    if (!m) return S.toast("이 PNG에는 프롬프트 메타데이터가 없어요", { error: true });
+    const sc = S.curScene(), c = S.curChar();
+    const useMid = m.split && m.middle && sc && await confirmDialog(ctx.win, { title: "씬 프롬프트도 바꿀까요?", body: `이 그림의 씬 부분(${m.middle.slice(0, 80)})을 지금 씬 ‘${sc.name}’에 넣어요.`, ok: "씬에도 넣기", cancel: "상위·하위만" });
+    let next = P.setSettings(proj, { top: m.top, back: m.split ? m.back : proj.settings.back, neg: m.neg || proj.settings.neg });
+    if (m.split && m.middle && !useMid) next = P.setSettings(next, { back: [m.middle, m.back].filter(Boolean).join(", ") });
+    if (useMid) next = P.setSlots(next, c.id, sc.id, [[{ prompt: m.middle, on: true }]]);
+    S.set(next); paintLeft(); paintBody(); S.toast(m.split ? "SDStudio 메타데이터로 상위·하위·네거티브를 채웠어요" : "그림 프롬프트를 상위 프롬프트에, 네거티브를 네거티브에 넣었어요");
   }
   async function importBackup(file) {
     const f = file ?? (await pickFiles({ accept: ".tar,.zip,.json,.gz,application/x-tar,application/json,application/zip" }))[0];

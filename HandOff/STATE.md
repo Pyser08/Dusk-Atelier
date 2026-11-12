@@ -8,6 +8,8 @@
 - 시험: unit `tests/sdstudio-sets.test.js`(4) → npm test 1474 pass / 1 fail(pot-port, 원래 실패). build·check 동일함, build-addons --check 동일. e2e run-addon-sdstudio 117 통과(튜토리얼은 e2e에서 tutorialDone으로 건너뜀 — 세트·튜토리얼 e2e는 아직 없음).
 - (11시) 캐릭터 카드·폴더는 한 번 누르면 테두리만, 여는 건 더블클릭(selectable·폴더 타일·sds-fopen). 생성 다시 시도: 진행 줄에 마지막 오류 표시(q.lastErr), 429 말고 4xx(NovelAI 오류 400 등)는 다시 해도 같아 멈추고 알림. e2e openCard = dblclick, 117 통과.
 - (11시 반) 멈추기 고침: ① 다시 시도 대기(최대 1분)가 abort를 안 들어 그동안 안 멈췄음 → 대기도 q.ctl.signal로 끝남 ② 그림 올 때마다 paintTop이 버튼을 새로 그려 click이 끊길 수 있음 → pointerdown에서 멈춤 ③ 멈추는 동안 ‘멈추는 중…’(q.stopping), 그동안 생성 다시 못 누름. e2e 120(재시도 중 멈추기·오류 문구·400 즉시 멈춤 추가).
+- (11시 반) 오류 가독성: 다시 시도 오류는 위 줄 아래 빨간 띠 `#sds-qerr`(줄바꿈, 300자). 프롬프트 만들기 오류(없는 조각 모음 등)는 e.fatal로 요청 없이 바로 멈추고 알림(15초, ‘그 씬 열기’). 제보 원인 = 상위 프롬프트의 없는 조각 모음 참조.
+- (11시 40분) 원본 가져오기 모음: 도구 줄 ‘템플릿’ 무리의 `#sds-import-menu`(백업·씬 템플릿·조각 .json/.txt·캐릭터 프리셋 .json→캐릭터 카드·PNG 메타 → 프롬프트). 엔진 `engine/sdstudio/imports.js`(조각 한 모음·옛 형식·전역 백업·세션 library, 같은 이름은 _2 / 와일드카드는 wildcards 모음 / NAI Comment·SDStudio v1 구획). 조각 모음 창에 ‘파일에서 가져오기’·모음 ‘내보내기’(SDStudio 형식). 시험 tests/sdstudio-imports.test.js(4). 안 넣은 원본 가져오기: 작가 라이브러리 이미지·글로벌 프리셋 tar·캐릭터 프리셋의 바이브/레퍼런스 그림·구글 드라이브.
 - 남은 일: [ ] 제보 ‘다시 시도 5번 해도 안 됨’ 원인(진행 줄 오류 문구 받아 확인) [ ] 사용자 제보 ‘씬 예약 버튼이 제대로 안 나옴’ — e2e 사진에선 정상, 실기기 화면 확인 필요 [ ] 세트·튜토리얼 e2e [ ] 애드온 배포(minCore 2.1.4) 지시 대기
 
 ## 최근 세션 (2026-11-11 22시 — v2.1.4 계속: 보조 호출 내역 + 장기기억 보조 토큰 줄이기, 장기기억 애드온 0.2.8)
