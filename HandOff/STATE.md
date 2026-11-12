@@ -14,6 +14,7 @@
 - (11시 50분) 조각 이름 띄어쓰기: 가져오기·이름 바꾸기·조각 창이 띄어쓰기를 지우던 것 → 남김(연속 공백은 하나). findPiece는 정확히 → 없으면 공백·대소문자 무시로 찾음(예전에 띄어쓰기가 빠진 채 가져온 모음도 원래 참조로 읽힘).
 - (12시) ‘저장하지 못했어요’ 잦음: 원인 = 생성 중 3초 자동 저장·0.5초 저장이 겹쳐 앞 저장의 다시 읽기 확인이 뒤 저장 내용을 보고 ‘달라요’로 던짐 → data/sdstudio.js saveProject를 한 줄로(대기 중엔 마지막 것만), 실패 시 3번 재시도, 알림은 30초에 한 번. 시험 tests/sdstudio-save.test.js.
 - (12시) 원본 가져오기 보강: 전체 백업 __settings__/global_pieces·global_presets·global_character_presets, 글로벌 프리셋 백업(global_presets.json), 프로젝트 템플릿 백업(project_templates.json → 씬 템플릿+프리셋)을 importBackup이 물어보고 가져옴(importSettingsFrom). 글로벌 프리셋 .json 메뉴. presetFromSD: frontPrompt·backPrompt·uc·steps·promptGuidance·cfgRescale·sampling·noiseSchedule·characterPrompts·varietyPlus·useCoords. e2e ‘원본 전체 백업 설정’ 추가. 여전히 못 가져옴: 작가 라이브러리(이미지)·바이브/레퍼런스 그림·이지 모드/I2I/인페인트 워크플로 프리셋·즐겨찾기/북마크/휴지통 등 앱 설정.
+- (12시 반) 도구 줄 개편(사용자 승인): 무리 12개·아이콘 25개 → 한 줄 [되돌리기][새로 만들기▾][예약▾][대표 고르기][(씬: 그림▾)][가져오기·내보내기▾] … [검색][봇에 넣기][···]. 항목은 .sds-ddp 안 진짜 버튼(id 그대로), 바깥 누르면 닫힘, fitPanel로 화면 안에. 카드를 고르면 같은 줄이 ‘N개 고름 · 예약·복제·폴더·지우기 · ✕’. 도움말은 위 줄 것만. 모바일(≤600)은 아이콘만. 빠졌던 아이콘(shield·download·upload·edit — ?로 보이던 것) 추가. e2e는 page.click이 숨은 메뉴 항목이면 메뉴를 먼저 엶.
 - 남은 일: [ ] 제보 ‘다시 시도 5번 해도 안 됨’ 원인(진행 줄 오류 문구 받아 확인) [ ] 사용자 제보 ‘씬 예약 버튼이 제대로 안 나옴’ — e2e 사진에선 정상, 실기기 화면 확인 필요 [ ] 세트·튜토리얼 e2e [ ] 애드온 배포(minCore 2.1.4) 지시 대기
 
 ## 최근 세션 (2026-11-11 22시 — v2.1.4 계속: 보조 호출 내역 + 장기기억 보조 토큰 줄이기, 장기기억 애드온 0.2.8)

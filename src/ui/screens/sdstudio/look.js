@@ -59,6 +59,29 @@ export var CSS = `
 .sds-modes button:disabled{opacity:.35;cursor:default}
 .sds-tools{display:flex;align-items:flex-end;gap:18px;padding:8px 16px 10px;border-bottom:var(--rb-bw,1px) solid var(--rb-line2);overflow-x:auto;scrollbar-width:thin;flex-shrink:0}
 .sds-tools .sp{flex:1}
+.sds-tools{align-items:center;gap:8px;overflow:visible;flex-wrap:wrap;position:relative;z-index:40}
+.sds-dd{position:relative}
+.sds-ddt{height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border-radius:var(--rb-r1);border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-surf2);color:var(--rb-text);font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.sds-ddt:disabled{opacity:.4;cursor:default}
+.sds-ddt.danger{color:var(--rb-danger)}
+.sds-ddt[aria-expanded=true]{border-color:var(--rb-acc);color:var(--rb-acc-text)}
+.sds-dd>.sds-ddt:not(:has(span)){width:34px;padding:0;justify-content:center}
+@media (hover:hover){.sds-ddt:not(:disabled):hover{border-color:var(--rb-acc);color:var(--rb-acc-text)}}
+.sds-ddp{position:absolute;top:calc(100% + 6px);left:0;z-index:30;min-width:240px;max-width:min(340px,90vw);padding:6px;border-radius:var(--rb-r2);border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-win);box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:2px}
+.sds-ddp[hidden]{display:none}
+.sds-tools .sp~* .sds-ddp,.sds-tools .sp~.sds-dd .sds-ddp{left:auto;right:0}
+.sds-mi{display:flex;align-items:center;gap:10px;width:100%;min-height:34px;padding:6px 10px;border:0;border-radius:var(--rb-r1);background:none;color:var(--rb-text);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.sds-mi>span{flex:1;min-width:0}
+.sds-mi>small{color:var(--rb-sub);font-size:11.5px}
+.sds-mi:disabled{opacity:.4;cursor:default}
+.sds-mi.danger{color:var(--rb-danger)}
+.sds-mi.on>svg{color:var(--rb-acc-text)}
+@media (hover:hover){.sds-mi:not(:disabled):hover{background:var(--rb-surf2)}}
+.sds-mi.sds-zoom{cursor:default}
+.sds-mi.sds-zoom input{flex:1;min-width:80px}
+.sds-msep{height:1px;margin:4px 6px;background:var(--rb-line2)}
+.sds-selc{font-weight:800;font-size:13px;padding:0 6px}
+@media (max-width:600px){.sds-tools{flex-wrap:nowrap;gap:6px;padding:8px 10px}.sds-tools>.sds-dd>.sds-ddt>span,.sds-tools>.sds-dd>.sds-ddt>svg:last-child:not(:first-child),.sds-tools>.sds-ddt>span{display:none}.sds-tools>.sds-dd>.sds-ddt,.sds-tools>.sds-ddt{width:34px;padding:0;justify-content:center}.sds-tools .rb-btn{padding:0 10px}}
 .sds-setbar{display:flex;justify-content:flex-end;padding:6px 16px;border-bottom:var(--rb-bw,1px) solid var(--rb-line2);flex-shrink:0}
 .sds-sets{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .sds-zoom{display:flex;align-items:center;gap:8px}
@@ -266,6 +289,10 @@ var P = {
   folderPlus: '<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM12 10v6M9 13h6"/>',
   check: '<path d="M5 12l5 5L20 7"/>',
   sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
+  shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  download: '<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',
+  upload: '<path d="M12 20V9"/><path d="m7 14 5-5 5 5"/><path d="M5 4h14"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
   more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
   dice: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01"/>',
   layers: '<path d="m12 3 9 5-9 5-9-5zM3 13l9 5 9-5"/>',

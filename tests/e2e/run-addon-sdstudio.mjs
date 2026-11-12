@@ -15,6 +15,10 @@ async function boot(width, height, { mac = false } = {}) {
   const page = await (await browser.newContext({ viewport: { width, height } })).newPage();
 
   const errs = []; page.on("pageerror", (e) => errs.push(e.message));
+  // 도구 줄 항목은 ▾ 메뉴 안에 있어요 — 숨어 있으면 그 메뉴를 먼저 연다
+  const openDD = (sel) => page.evaluate((s) => { const b = document.querySelector(s); const dd = b?.closest(".sds-ddp"); if (dd && dd.hidden) dd.previousSibling.click(); }, sel).catch(() => {});
+  const origClick = page.click.bind(page);
+  page.click = async (sel, o) => { if (typeof sel === "string" && /^#sds-/.test(sel)) await openDD(sel); return origClick(sel, o); };
   await page.setContent("<!doctype html><meta name=viewport content=\"width=device-width,initial-scale=1\"><body style='margin:0'></body>");
   if (mac) await page.evaluate(() => { Object.defineProperty(Navigator.prototype, "platform", { get: () => "MacIntel" }); Object.defineProperty(Navigator.prototype, "userAgentData", { get: () => ({ platform: "macOS" }) }); });   // 맥처럼
   await page.addScriptTag({ content: r.outputFiles[0].text });
@@ -83,8 +87,9 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   const full = await page.evaluate(() => { const w = window.__app.ctx.win.getBoundingClientRect(), s = document.querySelector("#rb-sd-studio")?.getBoundingClientRect(); return { w: [w.width, w.height], s: s && [s.width, s.height], vw: [innerWidth, innerHeight] }; });
   ok("에셋 제작: 플러그인 창이 화면 가득", full.s && Math.abs(full.w[0] - full.vw[0]) < 3 && Math.abs(full.w[1] - full.vw[1]) < 3 && Math.abs(full.s[0] - full.w[0]) < 3, JSON.stringify(full));
   ok("처음: 캐릭터 갤러리 + 빈 안내 + 프롬프트 에디터", /캐릭터 갤러리/.test(await txt(page, "#sds-topbar")) && /캐릭터를 만들어요/.test(await txt(page, "#sds-body")) && await page.locator(".sds-left").isVisible());
-  const groups = await page.evaluate(() => [...document.querySelectorAll("#sds-tools .sds-group > small")].map((x) => x.textContent));
-  ok("도구 무리: 되돌리기·예약·캐릭터 도구·템플릿·대표·이미지·관리·도움말·설정·검색·보기", JSON.stringify(groups) === JSON.stringify(["되돌리기", "예약", "캐릭터 도구", "템플릿", "대표", "이미지·관리", "도움말", "설정", "검색", "보기"]), JSON.stringify(groups));
+  const groups = await page.evaluate(() => [...document.querySelectorAll("#sds-tools > .sds-dd > .sds-ddt span, #sds-tools > .sds-ddt span")].map((x) => x.textContent));
+  ok("도구 줄: 새로 만들기·예약·대표 고르기·가져오기·내보내기 + 봇에 넣기", JSON.stringify(groups) === JSON.stringify(["새로 만들기", "예약", "대표 고르기", "가져오기·내보내기"]) && (await page.locator("#sds-put-all").isVisible()), JSON.stringify(groups));
+  await page.click("#sds-dd-new"); ok("▾ 메뉴 열기·바깥 누르면 닫힘", await page.locator("#sds-addchar").isVisible()); await page.mouse.click(5, 990); ok("메뉴 닫힘", !(await page.locator("#sds-addchar").isVisible()));
   const leftGroups = await page.evaluate(() => [...document.querySelectorAll(".sds-left .sds-group > small")].map((x) => x.textContent));
   ok("프로젝트 무리 없앰(도구·프리셋), 레일은 ‘프롬프트’", JSON.stringify(leftGroups) === JSON.stringify(["도구", "프리셋"]) && (await txt(page, ".sds-rail .tab")) === "프롬프트", JSON.stringify(leftGroups));
 
@@ -292,7 +297,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await page.click("#sds-addfolder"); await page.waitForTimeout(200);
   await page.fill("#sds-fname", "아비도스"); await page.locator(".rb-modal .rb-seg button", { hasText: "소속" }).click(); await page.click("#sds-fok"); await page.waitForTimeout(250);
   await page.locator("#sds-body .sds-char .chk").first().click(); await page.waitForTimeout(100);
-  await page.locator("#sds-tools button[aria-label='고른 캐릭터를 폴더에 넣기·빼기']").click(); await page.locator(".rb-menu button", { hasText: "아비도스" }).click(); await page.waitForTimeout(300);
+  await page.locator("#sds-tools .sds-ddt", { hasText: "폴더에 넣기·빼기" }).click(); await page.locator(".rb-menu button", { hasText: "아비도스" }).click(); await page.waitForTimeout(300);
   ok("폴더 줄에 캐릭터 카드, 종류 표시", (await page.locator(".sds-frow .sds-char").count()) === 1 && /소속/.test(await txt(page, ".sds-frow")));
   await openCard(page.locator(".sds-frow .sds-fopen")); await page.waitForTimeout(300);
   await page.click("#sds-tpl"); await page.locator(".rb-menu button", { hasText: "SD 표정 적용" }).click(); await page.waitForTimeout(300);

@@ -182,82 +182,116 @@ export async function openAssetStudio(ctx, target, sd) {
   }
 
   // ── 도구 줄(무리 이름은 작게 위에) ──
-  const group = (cap, ...btns) => h("div", { class: "sds-group" }, h("small", null, cap), h("div", null, ...btns.filter(Boolean)));
+  el.addEventListener("click", (e) => { if (!e.target.closest?.(".sds-dd")) closeDD(); });
   function paintTools() {
     const c = S.curChar(), sc = S.curScene(), n = proj.settings.reserveDefault;
     const selN = sel.size;
     const allPicked = pickedInScope(), favN = favsInScope().length;
     const noFavN = scopeChars().reduce((n, x) => n + P.scenesNoFav(x).length, 0);
-    const chooseG = group("대표", ib("star", `대표 고르기 — 씬마다 후보를 넘기며 ★ (←/→ · F · Enter)`, () => chooser(), { id: "sds-choose" }),
-      ib("bolt", `즐겨찾기 없는 씬만 ${n}장씩 예약 (${noFavN}개)`, () => reserveNoFav(), { id: "sds-rsv-nofav", disabled: !noFavN }));
-    const view = [group("검색", ib("search", "검색 모드", () => { setMode("search"); bodyEl.querySelector("#sds-q")?.focus(); }, { on: st.mode === "search" }),
-        btn(`봇으로 넣기${allPicked.length ? ` ${allPicked.length}장` : ""}`, { kind: "primary", icon: "upload", id: "sds-put-all", title: `고른 그림 ${allPicked.length}장을 봇에 넣어요 (${S.curChar() ? "이 캐릭터" : st.folder ? "이 폴더" : "전체"}) · ${S.keyLabel("put")}`, disabled: !allPicked.length, onClick: () => quickPut(allPicked) }),
-        btn(`즐겨찾기 넣기${favN ? ` ${favN}장` : ""}`, { icon: "sparkle", id: "sds-put-fav", title: "즐겨찾기한 그림을 확인하고 봇에 넣어요(이름·같은 이름·이미 넣은 것 미리 보기)", disabled: !favN, onClick: () => exportFav() })),
-      group("보기", ib("eye", st.names ? "이름 숨기기" : "이름 보이기", () => { st.names = !st.names; el.classList.toggle("nonames", !st.names); paintTools(); }, { on: st.names, id: "sds-names" }),
-        h("div", { class: "sds-zoom" }, h("input", { type: "range", min: 10, max: 100, value: st.zoom, "aria-label": "카드 크기", id: "sds-zoom", onInput: (e) => { st.zoom = Number(e.target.value); applyZoom(); e.target.nextSibling.textContent = `${st.zoom}%`; } }), h("span", null, `${st.zoom}%`)))];
-    // 씬 세트(프리셋) 줄: 즐겨찾기 넣기·보기 아래
+    // 씬 세트 줄
     const SS = P.setsOf(proj);
-    const setRow = h("div", { class: "sds-sets", id: "sds-sets", role: "group", "aria-label": "씬 세트" },
+    replace(setsEl, h("div", { class: "sds-sets", id: "sds-sets", role: "group", "aria-label": "씬 세트" },
       ...SS.list.map((t) => { const b = btn(t.name, { size: "sm", kind: t.id === SS.active ? "primary" : "ghost", id: `sds-set-${t.id}`, title: `${t.name} 세트${t.tpl ? ` · 씬 프리셋 ‘${t.tpl}’` : ""} — 우클릭: 이름·프리셋·지우기`, onClick: () => changeSet(t.id) }); b.addEventListener("contextmenu", (e) => { e.preventDefault(); e.stopPropagation(); setMenu(b, t.id); }); return b; }),
-      btn("", { size: "sm", kind: "ghost", icon: "plus", id: "sds-set-add", title: "새 씬 세트", onClick: () => addSetFlow() }));
-    replace(setsEl, setRow);
-    const undoG = group("되돌리기", ib("undo", "되돌리기", () => S.undo(), { disabled: !hist.canUndo(), id: "sds-undo" }), ib("redo", "다시하기", () => S.redo(), { disabled: !hist.canRedo(), id: "sds-redo" }));
-    const tplG = group("템플릿", ib("template", c ? "템플릿 적용·관리(이 캐릭터)" : st.folder ? "템플릿 적용·관리(이 폴더의 캐릭터 모두)" : "템플릿 적용·관리(모든 캐릭터)", (e) => templateMenu(e.currentTarget), { id: "sds-tpl" }),
-      ib("importIn", c ? "SDStudio·Dusk 씬 템플릿 가져와 이 캐릭터에 적용" : st.folder ? "씬 템플릿 가져와 이 폴더의 캐릭터 모두에 적용" : "씬 템플릿 가져와 모든 캐릭터에 적용", () => importTemplate(), { id: "sds-tpl-import" }),
-      c ? ib("save", "이 캐릭터의 씬을 템플릿으로 저장", () => saveTemplate(c), { id: "sds-tpl-save" }) : null,
-      ib("load", "원본 SDStudio 파일 가져오기(백업·씬 템플릿·조각·캐릭터 프리셋·PNG 프롬프트)", (e) => importMenu(e.currentTarget), { id: "sds-import-menu" }));
-    let groups;
-    if (!c) {
-      groups = [
-        undoG,
-        group("예약", ib("calPlus", `모든 캐릭터의 모든 씬 ${n}장씩 예약`, () => { let nx = proj; for (const x of proj.chars) nx = P.reserveAll(nx, x.id, n); S.set(nx); paintTop(); paintBody(); }, { id: "sds-rsv-all" }),
-          ib("calX", "예약 모두 비우기", () => { S.set(P.clearReserve(proj, null)); paintTop(); paintBody(); }, { id: "sds-rsv-clear" })),
-        group("캐릭터 도구", ib("file", "새 캐릭터", () => addChar(), { id: "sds-addchar" }), ib("copy", "고른 캐릭터 복제", () => { for (const id of sel) S.set(P.duplicateChar(proj, id)); sel.clear(); paintBody(); }, { disabled: !selN }),
-          ib("folderPlus", "폴더 만들기", () => addFolder(), { id: "sds-addfolder" }), ib("importIn", "SDStudio 백업 가져오기(.tar·프로젝트 .json)", () => importBackup(), { id: "sds-import-backup" }), ib("swap", "고른 캐릭터를 폴더에 넣기·빼기", (e) => folderPick(e.currentTarget, [...sel]), { disabled: !selN || !proj.folders.length }),
-          ib("trash", "고른 캐릭터 지우기", () => removeChars([...sel]), { danger: true, disabled: !selN })),
-        tplG, chooseG,
-        group("이미지·관리", ib("zip", "이미지만 zip으로 내보내기", (e) => zipMenu(e.currentTarget), { id: "sds-zip" }), ib("download", "프로젝트 전체 백업(zip) — 설정과 그림을 모두 담아요", () => fullBackup(), { id: "sds-fullbackup" }), ib("shield", botOn ? "봇에도 설정 저장 중 — 누르면 끄고 봇에서 지움(카드 배포용)" : "봇에 설정 저장 꺼짐 — 누르면 켬", () => toggleBotSave(), { id: "sds-botsave", on: botOn })),
-        group("도움말", ib("help", "도움말", () => S.dlg.help())), group("설정", ib("gear", "설정(넣기 형식·부스트·단축키·토큰)", () => S.dlg.settings(), { id: "sds-settings" })),
-        h("span", { class: "sp" }), ...view];
+      btn("", { size: "sm", kind: "ghost", icon: "plus", id: "sds-set-add", title: "새 씬 세트", onClick: () => addSetFlow() })));
+    // ── 글자 달린 메뉴(▾) — 안의 항목도 진짜 버튼(id 그대로) ──
+    const mi = (icon, label, fn, { id, disabled = false, danger = false, on = false, hint = "" } = {}) =>
+      h("button", { type: "button", class: ["sds-mi", danger && "danger", on && "on"], id, disabled, title: hint || label, onClick: (e) => { closeDD(); fn(e); } }, ico(icon, 16), h("span", null, label), hint ? h("small", null, hint) : null);
+    const sepEl = () => h("div", { class: "sds-msep" });
+    const dd = (label, icon, items, { id, primary = false } = {}) => {
+      const panel = h("div", { class: "sds-ddp", role: "menu", hidden: true }, ...items.filter(Boolean));
+      const trig = h("button", { type: "button", class: ["sds-ddt", primary && "pri"], id, title: label || undefined, "aria-haspopup": "menu", "aria-expanded": "false", onClick: (e) => { e.stopPropagation(); const open = panel.hidden; closeDD(); if (open) { panel.hidden = false; trig.setAttribute("aria-expanded", "true"); fitPanel(panel); } } },
+        icon ? ico(icon, 16) : null, label ? h("span", null, label) : null, label ? ico("chevD", 14) : null);
+      if (!label) trig.setAttribute("aria-label", id === "sds-more" ? "더 보기" : "메뉴");
+      return h("div", { class: "sds-dd" }, trig, panel);
+    };
+    const zoomRow = h("div", { class: "sds-mi sds-zoom" }, ico("eye", 16), h("span", null, "카드 크기"), h("input", { type: "range", min: 10, max: 100, value: st.zoom, "aria-label": "카드 크기", id: "sds-zoom", onClick: (e) => e.stopPropagation(), onInput: (e) => { st.zoom = Number(e.target.value); applyZoom(); e.target.nextSibling.textContent = `${st.zoom}%`; } }), h("span", null, `${st.zoom}%`));
+    const importItems = [
+      mi("importIn", "SDStudio·Dusk 백업 가져오기", () => importBackup(), { id: "sds-import-backup" }),
+      mi("importIn", "다른 원본 파일 가져오기…", (e) => importMenu(e.currentTarget.closest(".sds-dd") ?? e.currentTarget), { id: "sds-import-menu" }),
+      mi("template", c ? "템플릿 적용·관리(이 캐릭터)" : st.folder ? "템플릿 적용·관리(이 폴더)" : "템플릿 적용·관리(모두)", (e) => templateMenu(e.currentTarget.closest(".sds-dd") ?? e.currentTarget), { id: "sds-tpl" }),
+      mi("importIn", "씬 템플릿 가져와 적용", () => importTemplate(), { id: "sds-tpl-import" }),
+      c && !sc ? mi("save", "이 캐릭터 씬을 템플릿으로 저장", () => saveTemplate(c), { id: "sds-tpl-save" }) : null,
+      sepEl(),
+      mi("zip", "그림 zip으로 내보내기", (e) => zipMenu(e.currentTarget.closest(".sds-dd") ?? e.currentTarget), { id: "sds-zip" }),
+      !c ? mi("download", "프로젝트 전체 백업(zip)", () => fullBackup(), { id: "sds-fullbackup" }) : null,
+      c && !sc ? mi("clip", "씬 프롬프트 복사", () => copyPrompts(c, selN ? [...sel] : null)) : null,
+      mi("sparkle", `즐겨찾기 확인하고 넣기${favN ? ` ${favN}장` : ""}`, () => exportFav(), { id: "sds-put-fav", disabled: !favN })];
+    const commonMore = [
+      mi("redo", "다시하기", () => S.redo(), { id: "sds-redo", disabled: !hist.canRedo(), hint: S.keyLabel("redo") }),
+      mi("eye", st.names ? "카드 이름 숨기기" : "카드 이름 보이기", () => { st.names = !st.names; el.classList.toggle("nonames", !st.names); paintTools(); }, { id: "sds-names", on: st.names }),
+      zoomRow, sepEl(),
+      !c ? mi("shield", botOn ? "봇에도 설정 저장 중(끄기)" : "봇에 설정 저장 꺼짐(켜기)", () => toggleBotSave(), { id: "sds-botsave", on: botOn }) : null,
+      mi("gear", "설정", () => S.dlg.settings(), { id: "sds-settings" })];
+    const putBtn = (list, id) => btn(`봇에 넣기${list.length ? ` ${list.length}` : ""}`, { kind: "primary", icon: "upload", id, title: `고른 그림 ${list.length}장을 봇에 넣어요 · ${S.keyLabel("put")}`, disabled: !list.length, onClick: () => quickPut(list) });
+    let left, right;
+    const undoB = ib("undo", `되돌리기 (${S.keyLabel("undo")})`, () => S.undo(), { disabled: !hist.canUndo(), id: "sds-undo" });
+    const chooseB = h("button", { type: "button", class: "sds-ddt", id: "sds-choose", title: "대표 고르기 — 씬마다 후보를 넘기며 ★ (←/→ · F · Enter)", onClick: () => chooser() }, ico("star", 16), h("span", null, "대표 고르기"));
+    const searchB = ib("search", "검색", () => { setMode("search"); bodyEl.querySelector("#sds-q")?.focus(); }, { on: st.mode === "search" });
+    if (selN && !sc) {
+      // 고른 게 있으면: 고른 것에 쓸 동작만
+      const ids = [...sel];
+      left = [h("span", { class: "sds-selc" }, `${selN}개 고름`),
+        ...(c
+          ? [h("button", { type: "button", class: "sds-ddt", id: "sds-rsv-all", onClick: () => { S.set(P.reserveAll(proj, c.id, n, ids)); paintTop(); paintBody(); } }, ico("calPlus", 16), h("span", null, `${n}장씩 예약`)),
+            h("button", { type: "button", class: "sds-ddt", onClick: () => { for (const id of sel) S.set(P.duplicateScene(proj, c.id, id)); sel.clear(); paintBody(); } }, ico("copy", 16), h("span", null, "복제")),
+            selN === 1 ? h("button", { type: "button", class: "sds-ddt", onClick: () => openCup(S, c.id, ids[0]) }, ico("trophy", 16), h("span", null, "월드컵")) : null,
+            h("button", { type: "button", class: "sds-ddt", onClick: () => copyPrompts(c, ids) }, ico("clip", 16), h("span", null, "프롬프트 복사")),
+            h("button", { type: "button", class: "sds-ddt danger", onClick: () => removeScenes(ids) }, ico("trash", 16), h("span", null, "지우기"))]
+          : [h("button", { type: "button", class: "sds-ddt", onClick: () => { for (const id of sel) S.set(P.duplicateChar(proj, id)); sel.clear(); paintBody(); } }, ico("copy", 16), h("span", null, "복제")),
+            h("button", { type: "button", class: "sds-ddt", disabled: !proj.folders.length, onClick: (e) => folderPick(e.currentTarget, ids) }, ico("swap", 16), h("span", null, "폴더에 넣기·빼기")),
+            h("button", { type: "button", class: "sds-ddt danger", onClick: () => removeChars(ids) }, ico("trash", 16), h("span", null, "지우기"))]),
+        ib("x", "고르기 풀기", () => { sel.clear(); paintTools(); paintBody(); })].filter(Boolean);
+      right = [putBtn(allPicked, "sds-put-all")];
+    } else if (!c) {
+      left = [undoB,
+        dd("새로 만들기", "plus", [mi("file", "새 캐릭터", () => addChar(), { id: "sds-addchar" }), mi("folderPlus", "폴더", () => addFolder(), { id: "sds-addfolder" })], { id: "sds-dd-new" }),
+        dd("예약", "calPlus", [mi("calPlus", `모든 씬 ${n}장씩 예약`, () => { let nx = proj; for (const x of proj.chars) nx = P.reserveAll(nx, x.id, n); S.set(nx); paintTop(); paintBody(); }, { id: "sds-rsv-all" }),
+          mi("bolt", `즐겨찾기 없는 씬만 ${n}장씩 (${noFavN}개)`, () => reserveNoFav(), { id: "sds-rsv-nofav", disabled: !noFavN }),
+          mi("calX", "예약 모두 비우기", () => { S.set(P.clearReserve(proj, null)); paintTop(); paintBody(); }, { id: "sds-rsv-clear" })], { id: "sds-dd-rsv" }),
+        chooseB, dd("가져오기·내보내기", "importIn", importItems, { id: "sds-dd-io" })];
+      right = [searchB, putBtn(allPicked, "sds-put-all"), dd("", "more", commonMore, { id: "sds-more" })];
     } else if (!sc) {
-      const ids = selN ? [...sel] : null, picked = P.pickedImages(c).map((x) => ({ ...x, cid: c.id }));
-      groups = [
-        undoG,
-        group("예약", ib("calPlus", ids ? `고른 씬 ${n}장씩 예약` : `모든 씬 ${n}장씩 예약`, () => { S.set(P.reserveAll(proj, c.id, n, ids)); paintTop(); paintBody(); }, { id: "sds-rsv-all" }),
-          ib("calX", "이 캐릭터 예약 비우기", () => { S.set(P.clearReserve(proj, c.id)); paintTop(); paintBody(); }, { id: "sds-rsv-clear" })),
-        group("씬 도구", ib("file", "새 씬", () => addScene(), { id: "sds-addscene" }), ib("copy", "고른 씬 복제", () => { for (const id of sel) S.set(P.duplicateScene(proj, c.id, id)); sel.clear(); paintBody(); }, { disabled: !selN }),
-          ib("layers", "감정 세트 더하기(없는 것만)", () => addEmotionSet(), { id: "sds-emoset" }),
-          ib("sortAsc", "이름순 ↑", () => { S.set(P.sortScenes(proj, c.id, "asc")); paintBody(); }), ib("sortDesc", "이름순 ↓", () => { S.set(P.sortScenes(proj, c.id, "desc")); paintBody(); }),
-          ib("trash", "고른 씬 지우기", () => removeScenes([...sel]), { danger: true, disabled: !selN })),
-        tplG, chooseG,
-        group("이미지·관리", ib("exportBot", `고른 그림 ${picked.length}장 봇에 바로 넣기(이름 = 씬 이름) (${S.keyLabel("put")})`, () => quickPut(picked), { disabled: !picked.length, id: "sds-put-picked" }),
-          ib("sliders", "고른 그림 넣는 방법 고르고 넣기…", () => putPaths(picked), { disabled: !picked.length, id: "sds-put-picked-opt" }),
-          ib("x", "이 캐릭터의 그림 고르기 모두 풀기", () => { S.set(P.clearPicks(proj, c.id), { undo: false }); paintTools(); paintBody(); }, { disabled: !picked.length, id: "sds-unpick-all" }),
-          ib("trophy", "고른 씬 이미지 월드컵", () => { const id = [...sel][0]; if (id) openCup(S, c.id, id); }, { disabled: selN !== 1 }),
-          ib("zip", "이미지만 zip으로 내보내기", (e) => zipMenu(e.currentTarget), { id: "sds-zip" }), ib("clip", "고른 씬 프롬프트 복사", () => copyPrompts(c, ids), { disabled: !selN })),
-        group("도움말", ib("help", "도움말", () => S.dlg.help())), group("설정", ib("gear", "설정(넣기 형식·부스트·단축키·토큰)", () => S.dlg.settings(), { id: "sds-settings" })),
-        h("span", { class: "sp" }), ...view];
+      const picked = P.pickedImages(c).map((x) => ({ ...x, cid: c.id }));
+      left = [undoB,
+        dd("새로 만들기", "plus", [mi("file", "새 씬", () => addScene(), { id: "sds-addscene" }), mi("layers", "감정 세트(없는 것만)", () => addEmotionSet(), { id: "sds-emoset" })], { id: "sds-dd-new" }),
+        dd("예약", "calPlus", [mi("calPlus", `모든 씬 ${n}장씩 예약`, () => { S.set(P.reserveAll(proj, c.id, n)); paintTop(); paintBody(); }, { id: "sds-rsv-all" }),
+          mi("bolt", `즐겨찾기 없는 씬만 ${n}장씩 (${noFavN}개)`, () => reserveNoFav(), { id: "sds-rsv-nofav", disabled: !noFavN }),
+          mi("calX", "이 캐릭터 예약 비우기", () => { S.set(P.clearReserve(proj, c.id)); paintTop(); paintBody(); }, { id: "sds-rsv-clear" })], { id: "sds-dd-rsv" }),
+        chooseB, dd("가져오기·내보내기", "importIn", importItems, { id: "sds-dd-io" })];
+      right = [searchB, putBtn(picked, "sds-put-picked"), dd("", "more", [
+        mi("sliders", "고른 그림 넣는 방법 고르고 넣기…", () => putPaths(picked), { id: "sds-put-picked-opt", disabled: !picked.length }),
+        mi("x", "그림 고르기 모두 풀기", () => { S.set(P.clearPicks(proj, c.id), { undo: false }); paintTools(); paintBody(); }, { id: "sds-unpick-all", disabled: !picked.length }),
+        mi("sortAsc", "씬 이름순 ↑", () => { S.set(P.sortScenes(proj, c.id, "asc")); paintBody(); }), mi("sortDesc", "씬 이름순 ↓", () => { S.set(P.sortScenes(proj, c.id, "desc")); paintBody(); }),
+        sepEl(), ...commonMore], { id: "sds-more" })];
     } else {
       const picked = P.pickedImages(c, sc.id).map((x) => ({ ...x, cid: c.id })), paths = picked.map((x) => x.path);
-      groups = [
-        undoG,
-        group("예약", ib("calPlus", "이 씬 1장 예약", () => { S.set(P.setReserve(proj, c.id, sc.id, sc.reserve + 1)); paintTop(); paintBody(); }, { id: "sds-rsv-one" }), ib("calX", "이 씬 예약 비우기", () => { S.set(P.setReserve(proj, c.id, sc.id, 0)); paintTop(); paintBody(); })),
-        chooseG,
-        group("씬 도구", ib("copy", "씬 복제", () => { S.set(P.duplicateScene(proj, c.id, sc.id)); S.toast("씬을 복제했어요"); }), ib("trash", "이 씬 지우기", () => removeScenes([sc.id]), { danger: true })),
-        group("이미지·관리", ib("exportBot", `고른 그림 ${paths.length}장 봇에 바로 넣기 (${S.keyLabel("put")})`, () => quickPut(picked), { disabled: !paths.length, id: "sds-put-sel" }),
-          ib("sliders", "넣는 방법 고르고 넣기…", () => putPaths(picked), { disabled: !paths.length, id: "sds-put-sel-opt" }),
-          ib("star", "고른 그림 즐겨찾기 켜기·풀기", () => { const on = !paths.every((p) => sc.images.find((i) => i.path === p)?.fav); let nx = proj; for (const p of paths) nx = P.setImage(nx, c.id, sc.id, p, { fav: on }); S.set(nx); paintTools(); paintBody(); }, { disabled: !paths.length, id: "sds-fav" }),
-          ib("compare", "고른 그림 비교", () => { for (const p of paths) S.addCompare({ cid: c.id, sid: sc.id, path: p }); setMode("compare"); }, { disabled: paths.length < 2 }),
-          ib("trophy", "이미지 월드컵", () => openCup(S, c.id, sc.id), { disabled: sc.images.length < 2, id: "sds-cup-btn" }),
-          ib("check", "모두 고르기", () => { S.set(P.setPicks(proj, c.id, sc.id, sc.images.map((i) => i.path), true), { undo: false }); paintTools(); paintBody(); }),
-          ib("x", "고르기 풀기", () => { S.set(P.clearPicks(proj, c.id, sc.id), { undo: false }); paintTools(); paintBody(); }, { disabled: !paths.length, id: "sds-unpick" }),
-          ib("zip", "이미지만 zip으로 내보내기", (e) => zipMenu(e.currentTarget), { id: "sds-zip" }),
-          ib("trash", "고른 그림 목록에서 빼기", () => removePaths(c.id, sc.id, paths), { danger: true, disabled: !paths.length })),
-        group("도움말", ib("help", "도움말", () => S.dlg.help())), group("설정", ib("gear", "설정(넣기 형식·부스트·단축키·토큰)", () => S.dlg.settings(), { id: "sds-settings" })),
-        h("span", { class: "sp" }), ...view];
+      left = [undoB,
+        dd("예약", "calPlus", [mi("calPlus", "이 씬 1장 예약", () => { S.set(P.setReserve(proj, c.id, sc.id, sc.reserve + 1)); paintTop(); paintBody(); }, { id: "sds-rsv-one" }),
+          mi("calX", "이 씬 예약 비우기", () => { S.set(P.setReserve(proj, c.id, sc.id, 0)); paintTop(); paintBody(); })], { id: "sds-dd-rsv" }),
+        chooseB,
+        dd(paths.length ? `고른 그림 ${paths.length}` : "그림", "image", [
+          mi("check", "모두 고르기", () => { S.set(P.setPicks(proj, c.id, sc.id, sc.images.map((i) => i.path), true), { undo: false }); paintTools(); paintBody(); }),
+          mi("x", "고르기 풀기", () => { S.set(P.clearPicks(proj, c.id, sc.id), { undo: false }); paintTools(); paintBody(); }, { id: "sds-unpick", disabled: !paths.length }),
+          mi("star", "고른 그림 즐겨찾기 켜기·풀기", () => { const on = !paths.every((p) => sc.images.find((i) => i.path === p)?.fav); let nx = proj; for (const p of paths) nx = P.setImage(nx, c.id, sc.id, p, { fav: on }); S.set(nx); paintTools(); paintBody(); }, { id: "sds-fav", disabled: !paths.length }),
+          mi("compare", "고른 그림 비교", () => { for (const p of paths) S.addCompare({ cid: c.id, sid: sc.id, path: p }); setMode("compare"); }, { disabled: paths.length < 2 }),
+          mi("trophy", "이미지 월드컵", () => openCup(S, c.id, sc.id), { id: "sds-cup-btn", disabled: sc.images.length < 2 }),
+          mi("sliders", "넣는 방법 고르고 넣기…", () => putPaths(picked), { id: "sds-put-sel-opt", disabled: !paths.length }),
+          sepEl(), mi("trash", "고른 그림 목록에서 빼기", () => removePaths(c.id, sc.id, paths), { danger: true, disabled: !paths.length })], { id: "sds-dd-img" }),
+        dd("가져오기·내보내기", "importIn", importItems, { id: "sds-dd-io" })];
+      right = [searchB, putBtn(picked, "sds-put-sel"), dd("", "more", [
+        mi("copy", "씬 복제", () => { S.set(P.duplicateScene(proj, c.id, sc.id)); S.toast("씬을 복제했어요"); }),
+        mi("trash", "이 씬 지우기", () => removeScenes([sc.id]), { danger: true }), sepEl(), ...commonMore], { id: "sds-more" })];
     }
-    replace(toolsEl, ...groups);
+    replace(toolsEl, ...left, h("span", { class: "sp" }), ...right);
   }
+  // 메뉴가 도구 줄 밖(왼쪽 프롬프트 에디터 위·화면 밖)으로 나가지 않게 왼쪽/오른쪽 맞춤을 고른다
+  function fitPanel(panel) {
+    panel.style.left = ""; panel.style.right = "";
+    const box = toolsEl.getBoundingClientRect(), r = panel.getBoundingClientRect();
+    if (r.left < box.left) { panel.style.left = "0"; panel.style.right = "auto"; }
+    else if (r.right > Math.min(box.right, innerWidth)) { panel.style.left = "auto"; panel.style.right = "0"; }
+  }
+  function closeDD() { for (const p of el.querySelectorAll(".sds-ddp")) { if (p.hidden) continue; p.hidden = true; p.previousSibling?.setAttribute("aria-expanded", "false"); } }
   const applyZoom = () => { el.style.setProperty("--sds-card", `${Math.round(90 + st.zoom * 2.6)}px`); el.style.setProperty("--sds-row", `${Math.round(80 + st.zoom * 1.6)}px`); };
 
   // ── 카드 ──
