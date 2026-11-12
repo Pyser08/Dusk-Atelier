@@ -1160,3 +1160,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - **0.3.50(11-12 15시 반)**: '+'가 둘(포켓리스 '채팅 키우기' 버튼) → 보내기/멈춤 바로 뒤 칸만 '+', 나머지 아이콘 칸 숨김(:has 안에 :has 금지라 `:not(.button-icon-send + *)` 꼴). 따옴표 안 끝 '.'이면 mark가 아닌 다른 꾸밈(왼쪽 막대)으로 나옴 → `.chattext` 안 `[style*=border-left]`·`[class*=quote|dialog]`도 상자로(추정, 진단의 '사용자 말풍선 요소'로 확인 필요). 글꼴: Inter+Pretendard(클로드·GPT·코덱스·딥시크), Google Sans(+Flex)+Noto Sans KR(제미나이), @import 여러 개.
 - **0.3.51**: 0.3.50에서 '+'가 아예 사라짐(포켓리스는 메뉴가 보내기 바로 뒤가 아님) → 아이콘 버튼 중 첫 번째만 '+', 뒤따르는 것 숨김. 진짜 순서는 진단 '입력창 추적'으로 확인 필요.
 - **0.3.52**: 진단(포켓리스) — 입력 줄 = [button(+ 자리) 34] [textarea] [button.composer-expand-btn 0×0] [button.order-2 보내기]. 0.3.51의 '첫 아이콘 버튼만 +'가 맞음. 사용자 따옴표는 봇 정규식 div.x-risu-regex-quote-block("…")·x-risu-regex-thought-block('…') → thought도 상자 대상에 추가.
+- **0.3.53**: '…'(quote2 mark·thought-block) 상자는 강조색 쪽 글자색으로 구분.

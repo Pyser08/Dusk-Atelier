@@ -120,7 +120,8 @@ var vars = (p, c, scheme) => Object.entries({
 var QSEL = ':is(body .st-body mark[risu-mark^="quote"][risu-mark], body .st-body .chattext :is([style*="border-left"], [class*="quote" i], [class*="thought" i], [class*="dialog" i]):not(blockquote):not(:has(p, div, img)))';
 export var quoteBoxCss = () => `${QSEL} { display: inline !important; font-family: var(--st-mono) !important; font-size: .88em !important; font-weight: 400 !important; color: var(--st-cfg) !important; background: var(--st-cbg) !important; border: 1px solid var(--st-cline) !important; border-radius: 6px !important; padding: .1em .4em !important; margin: 0 !important; box-shadow: none !important; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 ${QSEL}::before, ${QSEL}::after { content: none !important; display: none !important; }
-${QSEL} * { font: inherit !important; color: inherit !important; background: none !important; border: 0 !important; padding: 0 !important; margin: 0 !important; display: inline !important; }`;
+${QSEL} * { font: inherit !important; color: inherit !important; background: none !important; border: 0 !important; padding: 0 !important; margin: 0 !important; display: inline !important; }
+body .st-body :is(mark[risu-mark^="quote2"][risu-mark], .chattext [class*="thought" i]) { color: color-mix(in srgb, var(--st-accent) 80%, var(--st-fg)) !important; }   /* '…'(작은따옴표)는 다른 색(사용자 지정 11-12) */`;
 
 // 휴대폰 입력창(사진 11-12, 클로드·클로드 코드·GPT·제미나이). 리스 줄: [스티커?] 글 칸 · (보내기|멈춤) · 메뉴(마지막 칸).
 // 메뉴 칸 = '+' 버튼, 그 ::after = 마이크(장식), ::before = 안내 글(클로드). 보내기 = 강조색 동그라미 + ↑.
