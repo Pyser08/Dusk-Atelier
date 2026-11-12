@@ -427,7 +427,7 @@ export function createDialogs(S) {
       if (ex.has(nm)) return ["dup", dup === "replace" ? "바꿈" : "같은 이름 있음 → 번호"];
       return ["new", "새로"];
     };
-    rows.forEach((r, i) => { if (statusOf(r)[0] === "sent") on[i] = false; });
+    rows.forEach((r, i) => { if (statusOf(r)[0] !== "new") on[i] = false; });   // 기본: 아직 안 넣었고 이름도 겹치지 않는 것만
     const paint = () => {
       const cnt = { new: 0, dup: 0, sent: 0 };
       replace(listEl, ...rows.map((r, i) => {

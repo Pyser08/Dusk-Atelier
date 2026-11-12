@@ -194,8 +194,8 @@ export async function openAssetStudio(ctx, target, sd) {
       ...SS.list.map((t) => { const b = btn(t.name, { size: "sm", kind: t.id === SS.active ? "primary" : "ghost", id: `sds-set-${t.id}`, title: `${t.name} 세트${t.tpl ? ` · 씬 프리셋 ‘${t.tpl}’` : ""} — 우클릭: 이름·프리셋·지우기`, onClick: () => changeSet(t.id) }); b.addEventListener("contextmenu", (e) => { e.preventDefault(); e.stopPropagation(); setMenu(b, t.id); }); return b; }),
       btn("", { size: "sm", kind: "ghost", icon: "plus", id: "sds-set-add", title: "새 씬 세트", onClick: () => addSetFlow() })));
     // ── 글자 달린 메뉴(▾) — 안의 항목도 진짜 버튼(id 그대로) ──
-    const mi = (icon, label, fn, { id, disabled = false, danger = false, on = false, hint = "" } = {}) =>
-      h("button", { type: "button", class: ["sds-mi", danger && "danger", on && "on"], id, disabled, title: hint || label, onClick: (e) => { closeDD(); fn(e); } }, ico(icon, 16), h("span", null, label), hint ? h("small", null, hint) : null);
+    const mi = (icon, label, fn, { id, disabled = false, danger = false, on = false, hint = "", title } = {}) =>
+      h("button", { type: "button", class: ["sds-mi", danger && "danger", on && "on"], id, disabled, title: title || hint || label, onClick: (e) => { closeDD(); fn(e); } }, ico(icon, 16), h("span", null, label), hint ? h("small", null, hint) : null);
     const sepEl = () => h("div", { class: "sds-msep" });
     const dd = (label, icon, items, { id, primary = false } = {}) => {
       const panel = h("div", { class: "sds-ddp", role: "menu", hidden: true }, ...items.filter(Boolean));
@@ -205,6 +205,8 @@ export async function openAssetStudio(ctx, target, sd) {
       return h("div", { class: "sds-dd" }, trig, panel);
     };
     const zoomRow = h("div", { class: "sds-mi sds-zoom" }, ico("eye", 16), h("span", null, "카드 크기"), h("input", { type: "range", min: 10, max: 100, value: st.zoom, "aria-label": "카드 크기", id: "sds-zoom", onClick: (e) => e.stopPropagation(), onInput: (e) => { st.zoom = Number(e.target.value); applyZoom(); e.target.nextSibling.textContent = `${st.zoom}%`; } }), h("span", null, `${st.zoom}%`));
+    const nowList = sc ? P.pickedImages(c, sc.id).map((x) => ({ ...x, cid: c.id })) : allPicked;
+    const putNow = () => mi("upload", `고른 그림 바로 넣기${nowList.length ? ` ${nowList.length}장` : ""}`, () => quickPut(nowList), { id: sc ? "sds-put-sel" : c ? "sds-put-picked" : "sds-put-all", disabled: !nowList.length, hint: S.keyLabel("put"), title: `고른 그림 ${nowList.length}장 봇에 바로 넣기 (${S.keyLabel("put")})` });
     const importItems = [
       mi("importIn", "SDStudio·Dusk 백업 가져오기", () => importBackup(), { id: "sds-import-backup" }),
       mi("importIn", "다른 원본 파일 가져오기…", (e) => importMenu(e.currentTarget.closest(".sds-dd") ?? e.currentTarget), { id: "sds-import-menu" }),
@@ -214,15 +216,16 @@ export async function openAssetStudio(ctx, target, sd) {
       sepEl(),
       mi("zip", "그림 zip으로 내보내기", (e) => zipMenu(e.currentTarget.closest(".sds-dd") ?? e.currentTarget), { id: "sds-zip" }),
       !c ? mi("download", "프로젝트 전체 백업(zip)", () => fullBackup(), { id: "sds-fullbackup" }) : null,
-      c && !sc ? mi("clip", "씬 프롬프트 복사", () => copyPrompts(c, selN ? [...sel] : null)) : null,
-      mi("sparkle", `즐겨찾기 확인하고 넣기${favN ? ` ${favN}장` : ""}`, () => exportFav(), { id: "sds-put-fav", disabled: !favN })];
+      c && !sc ? mi("clip", "씬 프롬프트 복사", () => copyPrompts(c, selN ? [...sel] : null)) : null];
     const commonMore = [
+      putNow(),
       mi("redo", "다시하기", () => S.redo(), { id: "sds-redo", disabled: !hist.canRedo(), hint: S.keyLabel("redo") }),
       mi("eye", st.names ? "카드 이름 숨기기" : "카드 이름 보이기", () => { st.names = !st.names; el.classList.toggle("nonames", !st.names); paintTools(); }, { id: "sds-names", on: st.names }),
       zoomRow, sepEl(),
       !c ? mi("shield", botOn ? "봇에도 설정 저장 중(끄기)" : "봇에 설정 저장 꺼짐(켜기)", () => toggleBotSave(), { id: "sds-botsave", on: botOn }) : null,
       mi("gear", "설정", () => S.dlg.settings(), { id: "sds-settings" })];
-    const putBtn = (list, id) => btn(`봇에 넣기${list.length ? ` ${list.length}` : ""}`, { kind: "primary", icon: "upload", id, title: `고른 그림 ${list.length}장을 봇에 넣어요 · ${S.keyLabel("put")}`, disabled: !list.length, onClick: () => quickPut(list) });
+    // 큰 ‘봇에 넣기’ = 즐겨찾기 확인하고 넣기(기본은 아직 안 넣었고 이름이 겹치지 않는 것만). 고른 그림 바로 넣기는 단축키···· 메뉴
+    const putBtn = () => btn(`봇에 넣기${favN ? ` ${favN}` : ""}`, { kind: "primary", icon: "upload", id: "sds-put-fav", title: `즐겨찾기 ${favN}장을 확인하고 봇에 넣어요 (${S.curChar() ? "이 캐릭터" : st.folder ? "이 폴더" : "전체"}) · ${S.keyLabel("putFav")}`, disabled: !favN, onClick: () => exportFav() });
     let left, right;
     const undoB = ib("undo", `되돌리기 (${S.keyLabel("undo")})`, () => S.undo(), { disabled: !hist.canUndo(), id: "sds-undo" });
     const chooseB = h("button", { type: "button", class: "sds-ddt", id: "sds-choose", title: "대표 고르기 — 씬마다 후보를 넘기며 ★ (←/→ · F · Enter)", onClick: () => chooser() }, ico("star", 16), h("span", null, "대표 고르기"));
@@ -1438,7 +1441,7 @@ export async function openAssetStudio(ctx, target, sd) {
   }
   function finish() {
     clearInterval(botTimer); clearTimeout(loreT);
-    LIVE.delete(liveKey);
+    LIVE.delete(liveKey); document.removeEventListener("keydown", docKey);
     removeEventListener?.("focus", refull); document.removeEventListener?.("visibilitychange", refull);
     lazy?.disconnect();
     for (const u of thumbUrls.values()) URL.revokeObjectURL(u);
@@ -1470,7 +1473,7 @@ export async function openAssetStudio(ctx, target, sd) {
     if (act === "cup") { if (sc) return openCup(S, c.id, sc.id); if (c && sel.size === 1) return openCup(S, c.id, [...sel][0]); return; }
     if (act === "reserve") { if (sc) S.set(P.setReserve(proj, c.id, sc.id, sc.reserve + 1)); else if (c && sel.size) S.set(P.reserveAll(proj, c.id, 1, [...sel])); else return; paintTop(); paintBody(); }
   }
-  el.addEventListener("keydown", (e) => {
+  const onKey = (e) => {
     if (ctx.win.querySelector(".rb-modal, .rb-menu") || el.querySelector(".sds-over")) return;
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName ?? "");
     if (e.key === "Escape") {
@@ -1488,7 +1491,11 @@ export async function openAssetStudio(ctx, target, sd) {
     if (typing && (!typingSafe(combo) || act === "undo" || act === "redo" || act === "selectAll")) return;   // 글 쓰는 칸은 제 되돌리기·전체 선택
     e.preventDefault(); e.stopPropagation();
     runAction(act);
-  });
+  };
+  el.addEventListener("keydown", onKey);
+  // 메뉴를 닫거나 빈 곳을 누른 뒤 포커스가 body로 빠져도 단축키(⌘A 등)가 듣게
+  const docKey = (e) => { if (el.hidden || !el.isConnected || el.contains(e.target)) return; const t = e.target; if (t && t !== document.body && t !== document.documentElement) return; onKey(e); };
+  document.addEventListener("keydown", docKey);
   S.paint();
   el.focus();
   if (prefs.tutorialDone) setTimeout(() => syncLoreNow({ ask: !prefs.loreSync }), 300);   // 열 때 로어북에 새 폴더가 있으면 물어보고 가져옴(처음이면 튜토리얼 1단계에서)

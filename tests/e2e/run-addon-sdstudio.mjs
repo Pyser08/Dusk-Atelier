@@ -88,7 +88,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   ok("에셋 제작: 플러그인 창이 화면 가득", full.s && Math.abs(full.w[0] - full.vw[0]) < 3 && Math.abs(full.w[1] - full.vw[1]) < 3 && Math.abs(full.s[0] - full.w[0]) < 3, JSON.stringify(full));
   ok("처음: 캐릭터 갤러리 + 빈 안내 + 프롬프트 에디터", /캐릭터 갤러리/.test(await txt(page, "#sds-topbar")) && /캐릭터를 만들어요/.test(await txt(page, "#sds-body")) && await page.locator(".sds-left").isVisible());
   const groups = await page.evaluate(() => [...document.querySelectorAll("#sds-tools > .sds-dd > .sds-ddt span, #sds-tools > .sds-ddt span")].map((x) => x.textContent));
-  ok("도구 줄: 새로 만들기·예약·대표 고르기·가져오기·내보내기 + 봇에 넣기", JSON.stringify(groups) === JSON.stringify(["새로 만들기", "예약", "대표 고르기", "가져오기·내보내기"]) && (await page.locator("#sds-put-all").isVisible()), JSON.stringify(groups));
+  ok("도구 줄: 새로 만들기·예약·대표 고르기·가져오기·내보내기 + 봇에 넣기", JSON.stringify(groups) === JSON.stringify(["새로 만들기", "예약", "대표 고르기", "가져오기·내보내기"]) && (await page.locator("#sds-put-fav").isVisible()), JSON.stringify(groups));
   await page.click("#sds-dd-new"); ok("▾ 메뉴 열기·바깥 누르면 닫힘", await page.locator("#sds-addchar").isVisible()); await page.mouse.click(5, 990); ok("메뉴 닫힘", !(await page.locator("#sds-addchar").isVisible()));
   const leftGroups = await page.evaluate(() => [...document.querySelectorAll(".sds-left .sds-group > small")].map((x) => x.textContent));
   ok("프로젝트 무리 없앰(도구·프리셋), 레일은 ‘프롬프트’", JSON.stringify(leftGroups) === JSON.stringify(["도구", "프리셋"]) && (await txt(page, ".sds-rail .tab")) === "프롬프트", JSON.stringify(leftGroups));
@@ -443,6 +443,9 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   ok("맥: ⌘⇧Z로 다시하기", (await page.locator("#sds-body .sds-scene").count()) === 20);
   await page.keyboard.press("Control+z"); await page.waitForTimeout(300);
   ok("맥: ⌃Z는 되돌리기가 아님(⌘와 따로)", (await page.locator("#sds-body .sds-scene").count()) === 20);
+  await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press("Meta+a"); await page.waitForTimeout(200);
+  ok("맥: 포커스가 빠져도 ⌘A로 씬 모두 고르기", /20개 고름/.test(await txt(page, "#sds-tools")), await txt(page, "#sds-tools"));
+  await page.keyboard.press("Escape"); await page.waitForTimeout(150);
   await page.click("#sds-settings"); await page.waitForTimeout(250); await page.click("#sds-keys"); await page.waitForTimeout(250);
   ok("맥: 단축키 설정에 기호로(⌘Z·⌘⇧Z)", (await page.locator(".rb-modal .rb-chip[data-action='undo']").innerText()) === "⌘Z" && (await page.locator(".rb-modal .rb-chip[data-action='redo']").innerText()) === "⌘⇧Z");
   await page.locator(".rb-modal .rb-chip[data-action='undo']").click(); await page.keyboard.press("Control+u"); await page.waitForTimeout(100);
