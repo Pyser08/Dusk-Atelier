@@ -15,10 +15,10 @@ test("조각 JSON: 한 모음·옛 형식·전역 백업·프로젝트 library, 
 });
 test("와일드카드 txt → wildcards 모음 안 조각(여러 줄)", () => {
   const w = parsePieceFile("hair color.txt", "red\n\nblue\n").wild;
-  assert.deepEqual(w, { name: "haircolor", prompt: "red\nblue", multi: true });
+  assert.deepEqual(w, { name: "hair color", prompt: "red\nblue", multi: true });
   const x = addWildcard([], w);
   assert.equal(x.group, "wildcards");
-  assert.equal(addWildcard(x.pieces, w).name, "haircolor_2");
+  assert.equal(addWildcard(x.pieces, w).name, "hair color_2");
 });
 test("캐릭터 프리셋 JSON → 이름·외형", () => {
   assert.deepEqual(parseCharPresets(JSON.stringify({ version: 1, presets: [{ name: "시로코", characterPrompt: "grey hair" }] })), [{ name: "시로코", prompt: "grey hair" }]);
@@ -47,4 +47,11 @@ test("조각 모음 이름 바꾸기: 프롬프트 참조도 함께", () => {
   assert.equal(r.pieces[1].pieces[0].prompt, "<의상.a>, <옷2.b>");
   assert.deepEqual(r.pieces.map((l) => l.name), ["의상", "옷2"]);
   assert.throws(() => P.renamePieceLib(p, "옷", "옷2"));
+});
+import { buildPrompt } from "../src/engine/sdstudio/prompt.js";
+test("띄어쓰기 든 조각 이름: 가져와도 그대로, 띄어쓰기를 빼고 써도 찾음", () => {
+  const libs = parsePieceFile("a.json", JSON.stringify({ version: 1, name: "hair style", pieces: [{ name: "long hair", prompt: "very long hair" }] })).libs;
+  assert.equal(libs[0].name, "hair style"); assert.equal(libs[0].pieces[0].name, "long hair");
+  assert.match(buildPrompt({ top: "<hair style.long hair>", own: "", middle: [], back: "" }, libs, () => 0), /very long hair/);
+  assert.match(buildPrompt({ top: "<hairstyle.longhair>", own: "", middle: [], back: "" }, libs, () => 0), /very long hair/);
 });

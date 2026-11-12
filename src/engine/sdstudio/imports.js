@@ -1,7 +1,7 @@
 // 에셋 제작 — 원본 SDStudio 파일 가져오기(순수). 조각 모음(.json — 한 모음·옛 형식·전역 조각 백업·프로젝트 library, .txt 와일드카드),
 // 캐릭터 프리셋(.json → 캐릭터 카드), PNG 메타데이터(NAI Comment·SDStudio v1 → 프롬프트 칸).
 var str = (v, n = 8000) => String(v ?? "").slice(0, n);
-var cleanName = (s) => String(s ?? "").replace(/[.<>,\s]/g, "").slice(0, 40);
+var cleanName = (s) => String(s ?? "").replace(/[.<>,]/g, "").replace(/\s+/g, " ").trim().slice(0, 40);
 var normLib = (l) => {
   if (!l || typeof l !== "object") return null;
   const name = cleanName(l.name ?? l.description);

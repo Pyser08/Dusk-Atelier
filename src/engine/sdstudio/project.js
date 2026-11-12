@@ -431,7 +431,7 @@ export var setLoreIds = (p, ids) => ({ ...p, folders: p.folders.map((f) => (ids[
 
 // 조각 모음 이름 바꾸기: 프롬프트 곳곳의 <옛이름.조각>도 함께 고침(상위·하위·네거티브·NAI 캐릭터·폴더·캐릭터 외형·씬 슬롯·다른 조각, 다른 세트 포함)
 export function renamePieceLib(p, from, to) {
-  to = String(to ?? "").replace(/[.<>,\s]/g, "").slice(0, 40);
+  to = String(to ?? "").replace(/[.<>,]/g, "").replace(/\s+/g, " ").trim().slice(0, 40);
   if (!to || to === from || !p.pieces.some((l) => l.name === from)) return p;
   if (p.pieces.some((l) => l.name === to)) throw new Error(`‘${to}’ 모음이 이미 있어요`);
   const esc = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), re = new RegExp(`<${esc}\\.`, "g");

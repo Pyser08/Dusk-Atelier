@@ -92,7 +92,7 @@ export function createDialogs(S) {
     let libI = 0;
     const left = h("div", { style: "display:flex;flex-direction:column;gap:6px;min-width:150px" });
     const right = h("div", { style: "flex:1;min-width:0;display:flex;flex-direction:column;gap:10px" });
-    const clean = (s) => String(s ?? "").replace(/[.<>,\s]/g, "").slice(0, 40);
+    const clean = (s) => String(s ?? "").replace(/[.<>,]/g, "").replace(/\s+/g, " ").trim().slice(0, 40);
     const upd = (libs) => S.set({ ...S.proj, pieces: libs });
     const paint = () => {
       const libs = S.proj.pieces;

@@ -39,9 +39,11 @@ export function expandInlineRandom(text, rng = Math.random) {
 export function findPiece(libs, ref) {
   const inner = ref.slice(1, -1), dot = inner.indexOf(".");
   if (dot < 1) throw new Error(`올바르지 않은 조각 문법 "${ref}" — <모음.조각> 꼴로 써요`);
-  const lib = (libs ?? []).find((l) => l.name === inner.slice(0, dot));
+  const sp = (x) => String(x ?? "").replace(/\s+/g, " ").trim().toLowerCase();   // 띄어쓰기·대소문자 차이는 같은 이름으로
+  const ln = sp(inner.slice(0, dot)), pn = sp(inner.slice(dot + 1));
+  const lib = (libs ?? []).find((l) => l.name === inner.slice(0, dot)) ?? (libs ?? []).find((l) => sp(l.name) === ln || sp(l.name).replace(/ /g, "") === ln.replace(/ /g, ""));
   if (!lib) throw new Error(`없는 조각 모음 "${inner.slice(0, dot)}"`);
-  const piece = lib.pieces.find((p) => p.name === inner.slice(dot + 1));
+  const piece = lib.pieces.find((p) => p.name === inner.slice(dot + 1)) ?? lib.pieces.find((p) => sp(p.name) === pn || sp(p.name).replace(/ /g, "") === pn.replace(/ /g, ""));
   if (!piece) throw new Error(`없는 조각 "${ref}"`);
   return piece;
 }
