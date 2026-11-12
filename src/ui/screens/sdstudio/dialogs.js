@@ -250,19 +250,20 @@ export function createDialogs(S) {
       sec("되돌리기·단축키", `${S.keyLabel("undo")} 되돌리기, ${S.keyLabel("redo")} 다시하기(봇에 넣은 것은 알림의 되돌리기로). 단축키는 설정 → 단축키 설정에서 바꿔요. 맥은 ⌘ 기준이에요.`),
       sec("부스트 모드", "설정에서 켜고 토큰을 여러 개 넣으면 동시에 그려요. 한 기기에서 여러 계정을 쓰면 NovelAI 제재 대상이 될 수 있어요."),
       sec("씬 세트(SFW·NSFW·+)", "도구 줄 ‘보기’ 아래 버튼으로 세트를 바꿔요. 폴더 구조는 모든 세트가 함께 쓰고, 캐릭터 카드·그림은 세트마다 따로예요. 세트마다 씬 프리셋(저장된 씬 템플릿, 리스 전체에서 공유)을 정해 두면 새 캐릭터가 그 씬으로 시작해요. 봇 데이터는 넣기 전까지 안 바뀌어요. 우클릭으로 이름·프리셋·지우기."),
-      sec("로어북 연동", "설정에서 켜면(기본 끔) 폴더가 봇·모듈 로어북 폴더로 만들어지고, 로어북에서 만든 Dusk 폴더·[소속] 폴더도 여기로 가져와요. 지우기는 어느 쪽으로도 전해지지 않아요."),
+      sec("로어북 폴더 가져오기", "봇·모듈 로어북의 Dusk 폴더·[소속] 구조를 에셋 제작 폴더로 가져와요. 열 때 새 폴더가 있으면 물어보고(설정에서 ‘자동’으로 바꿀 수 있어요), 에셋 제작에서 바꾼 것은 로어북에 적지 않아요. 여기서 지운 폴더는 다시 가져오지 않아요."),
       sec("저장", "그림은 만들자마자 리스 에셋 저장소에 저장되고, 이 화면 목록에서 빼도 저장소 파일은 남아요. 작업 묶음은 봇·모듈마다 따로 저장돼요."),
       h("div", { class: "btns" }, btn("튜토리얼 다시 보기", { kind: "ghost", id: "sds-help-tut", onClick: () => { done(true); setTimeout(() => tutorial(), 0); } }), btn("닫기", { kind: "primary", onClick: () => done(true) }))));
   }
 
-  // 처음 열 때(그리고 도움말에서) 보는 튜토리얼. 단계: 로어북 연동 → SDStudio 백업 → 씬 프리셋 → 저장·백업
+  // 처음 열 때(그리고 도움말에서) 보는 튜토리얼. 단계: 로어북 폴더 가져오기 → SDStudio 백업 → 씬 프리셋 → 저장·백업
   async function tutorial() {
     const pf = await S.sd.getPrefs();
     const p = (t) => h("p", { style: "margin:6px 0 0;white-space:normal;color:var(--rb-sub)" }, t);
     const act = (label, id, fn) => btn(label, { size: "sm", id, onClick: fn });
     const pages = [
-      () => [h("b", null, "1. 로어북 연동"), p("폴더(캐릭터·소속)를 봇·모듈 로어북 폴더로도 만들고, 로어북에서 만든 Dusk 폴더·[소속] 폴더를 여기로 가져와요. 지우기는 양쪽 다 전해지지 않아요. 나중에 설정에서 바꿀 수 있어요."),
-        segmented([["off", "끄기(기본)"], ["on", "켜기"]], pf.loreSync ? "on" : "off", async (v) => { const on = v === "on"; await S.sd.setPrefs({ loreSync: on }); S.prefs.loreSync = on; pf.loreSync = on; if (on) S.syncLore?.(); }, "로어북 연동")],
+      () => [h("b", null, "1. 로어북 폴더 가져오기"), p("봇·모듈 로어북의 Dusk 폴더·[소속] 구조를 에셋 제작 폴더로 가져와요(로어북 → 에셋 제작 한쪽만, 로어북은 바뀌지 않아요). ‘물어보기’면 열 때 새 폴더가 있을 때 묻고, ‘자동’이면 묻지 않고 가져와요. 나중에 설정에서 바꿀 수 있어요."),
+        segmented([["off", "물어보기(기본)"], ["on", "자동"]], pf.loreSync ? "on" : "off", async (v) => { const on = v === "on"; await S.sd.setPrefs({ loreSync: on }); S.prefs.loreSync = on; pf.loreSync = on; }, "로어북 폴더 가져오기"),
+        h("div", { class: "btns", style: "justify-content:flex-start" }, btn("지금 가져오기", { size: "sm", id: "sds-tut-lore", onClick: () => S.syncLore?.({ ask: false }) }))],
       () => [h("b", null, "2. 원본 SDStudio에서 옮겨 오기"), p("SDStudio의 백업(.tar)이나 프로젝트 .json을 가져오면 캐릭터·씬·조각 모음이 들어와요. 씬 템플릿 파일만 있다면 다음 단계에서 가져와요."),
         h("div", { class: "btns", style: "justify-content:flex-start" }, act("SDStudio 백업 가져오기…", "sds-tut-backup", () => S.tut?.importBackup?.()))],
       () => [h("b", null, "3. 씬 프리셋(SFW·NSFW)"), p("도구 줄 ‘보기’ 아래의 [SFW] [NSFW] [+]가 씬 세트예요. 세트마다 씬 프리셋(씬 템플릿)을 정해 두면 새 캐릭터가 그 씬으로 시작하고, 프리셋은 리스 전체에 저장돼 다른 봇에서도 써요. 폴더는 세트끼리 공유하고 캐릭터 카드는 세트마다 따로예요."),
@@ -321,7 +322,7 @@ export function createDialogs(S) {
       field("NovelAI 토큰", h("div", { style: "display:flex;gap:8px;align-items:center" }, h("span", { class: "rb-muted", style: "flex:1" }, has ? "저장됨(이 기기)" : "없음"), btn(has ? "바꾸기" : "넣기", { size: "sm", onClick: () => { done(true); token({ force: true }); } }))),
       h("b", null, "태그 자동완성"),
       h("div", { style: "display:flex;flex-direction:column;gap:8px" },
-        switchEl(!!pf.loreSync, { label: "폴더를 봇·모듈 로어북에도 만들기(이름·위치 따라감, 지워도 로어북은 남음)", onChange: async (v) => { await S.sd.setPrefs({ loreSync: v }); S.prefs.loreSync = v; if (v) S.syncLore?.(); } }),
+        switchEl(!!pf.loreSync, { label: "로어북 폴더를 묻지 않고 가져오기(끄면 열 때 새 폴더가 있으면 물어봐요. 에셋 제작 → 로어북으로는 적지 않아요)", onChange: async (v) => { await S.sd.setPrefs({ loreSync: v }); S.prefs.loreSync = v; if (v) S.syncLore?.(); } }),
         switchEl(pf.tags !== false, { label: "프롬프트 칸에서 태그 자동완성", onChange: async (v) => { await S.sd.setPrefs({ tags: v }); S.prefs.tags = v; } }),
         h("span", { class: "rb-muted", style: "font-size:12px;white-space:normal" }, `${S.sd.tags() ? `사전 ${S.sd.tags().size.toLocaleString()}개 있음` : "사전 없음 — 프롬프트를 칠 때 받기를 권해요(약 2MB, 처음 한 번)"} · 두 글자부터 · ↑↓로 고르고 Enter·Tab으로 넣기 · 한글(예: 긴 머리)로도 찾아요. 사전: SDStudio(MIT).`),
         h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" },

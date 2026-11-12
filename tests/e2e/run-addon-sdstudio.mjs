@@ -97,6 +97,8 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   ok("새 캐릭터: 봇 이름으로 채워 둠", (await page.locator(".rb-modal").last().locator("input").first().inputValue()) === "호시노");
   await promptOk(page, "호시노");
   ok("만들어도 바로 열리지 않고 카드에 테두리", (await page.locator("#sds-body .sds-char.cur").count()) === 1 && !/씬 갤러리/.test(await txt(page, "#sds-topbar")));
+  ok("위 줄 도움말 오른쪽에 닫기(X)", await page.evaluate(() => { const b = document.querySelector("#sds-quit"); return !!b && b.parentElement.lastElementChild === b && /도움말/.test(b.parentElement.textContent); }));
+  ok("테두리 켠 캐릭터만 예약하는 항목", /‘호시노’ 씬 모두/.test(await page.evaluate(() => document.querySelector("#sds-rsv-focus")?.textContent ?? "")));
   await page.locator("#sds-body .sds-char.cur").dblclick(); await page.waitForTimeout(300);
   ok("만들면 그 캐릭터의 씬 갤러리(default 씬 1개)", /씬 갤러리/.test(await txt(page, "#sds-topbar")) && (await page.locator("#sds-body .sds-scene").count()) === 1);
   await fillArea(page, "sds-top", "masterpiece, |, white background");

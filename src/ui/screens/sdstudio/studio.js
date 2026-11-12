@@ -7,8 +7,7 @@ import { btn, openMenu, promptDialog, confirmDialog } from "../../kit.js";
 import { zipSync, strToU8, strFromU8, gzipSync } from "../../../vendor/fflate.js";
 import * as BD from "../../../engine/sdstudio/botdata.js";
 import { parsePieceFile, addPieceLibs, addWildcard, parseCharPresets, readPngPrompt, parseGlobalPresets, addPresets, presetFromSD } from "../../../engine/sdstudio/imports.js";
-import { syncLore, pullLore } from "../../../engine/sdstudio/loresync.js";
-import { newFolderEntry } from "../editor.js";
+import { pullLore } from "../../../engine/sdstudio/loresync.js";
 import * as FB from "../../../engine/sdstudio/fullbackup.js";
 import { isStopError } from "../../../engine/aistop.js";
 import { isGenerating } from "../../../engine/safety.js";
@@ -81,7 +80,7 @@ export async function openAssetStudio(ctx, target, sd) {
     get proj() { return proj; },
     // undo: false = 되돌리기 기록에 안 남김(그리기 결과·예약 줄이기·바이브 캐시)
     // 글자 입력(input 이벤트) 중에 잇단 바꿈만 하나로 묶고, 버튼 동작은 하나씩
-    set(next, { undo = true } = {}) { if (next?.folders !== proj?.folders && S.prefs?.loreSync) { clearTimeout(loreT); loreT = setTimeout(() => syncLoreNow(), 1200); } if (undo && next !== proj) { hist.push(proj, { typing: globalThis.event?.type === "input" }); } proj = next; clearTimeout(saveT); saveT = setTimeout(() => S.persist(), 500); },
+    set(next, { undo = true } = {}) { if (undo && next !== proj) { hist.push(proj, { typing: globalThis.event?.type === "input" }); } proj = next; clearTimeout(saveT); saveT = setTimeout(() => S.persist(), 500); },
     undo() { const prev = hist.undo(proj); if (!prev) { S.toast("되돌릴 것이 없어요"); return; } proj = prev; afterJump(); },
     redo() { const nx = hist.redo(proj); if (!nx) { S.toast("다시 할 것이 없어요"); return; } proj = nx; afterJump(); },
     persist() { clearTimeout(saveT); botDirty = true; return sd.saveProject(target, proj).catch((e) => { if (Date.now() - (S._saveErrAt ?? 0) < 30000) return; S._saveErrAt = Date.now(); ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }); }); },
@@ -154,7 +153,7 @@ export async function openAssetStudio(ctx, target, sd) {
         h("span", { class: "sds-pill", id: "sds-reserved" }, `예약된 씬 ${sum.reserved}/${sum.scenes}`)),
       h("div", { class: "sds-modes", role: "tablist", "aria-label": "모드" }, ...MODES.map(([k, t]) => h("button", { type: "button", role: "tab", "aria-selected": String(st.mode === k), disabled: k === "bulk" && !c, dataset: { mode: k }, onClick: () => setMode(k) }, k === "scene" && !c ? "캐릭터 모드" : t))),
       q.running ? progressEl() : null,
-      h("div", { class: "sds-run" }, runBtn, btn("도움말", { size: "sm", icon: "help", onClick: () => S.dlg.help() })));
+      h("div", { class: "sds-run" }, runBtn, btn("도움말", { size: "sm", icon: "help", onClick: () => S.dlg.help() }), ib("x", "에셋 제작 닫기(플러그인 화면으로)", () => close(), { id: "sds-quit" })));
   }
   // 생성 진행: %·남은 장수·예상 시간(최근 평균)
   const fmtDur = (ms) => { const s = Math.max(0, Math.round(ms / 1000)), hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60; return hh ? `${hh}시간 ${mm}분` : mm ? `${mm}분 ${ss}초` : `${ss}초`; };
@@ -186,6 +185,7 @@ export async function openAssetStudio(ctx, target, sd) {
   function paintTools() {
     const c = S.curChar(), sc = S.curScene(), n = proj.settings.reserveDefault;
     const selN = sel.size;
+    const focusChar = !c && st.focus?.kind === "char" ? P.charOf(proj, st.focus.id) : null, focusFolder = !c && st.focus?.kind === "folder" ? proj.folders.find((f) => f.id === st.focus.id) : null;
     const allPicked = pickedInScope(), favN = favsInScope().length;
     const noFavN = scopeChars().reduce((n, x) => n + P.scenesNoFav(x).length, 0);
     // 씬 세트 줄
@@ -237,7 +237,9 @@ export async function openAssetStudio(ctx, target, sd) {
             selN === 1 ? h("button", { type: "button", class: "sds-ddt", onClick: () => openCup(S, c.id, ids[0]) }, ico("trophy", 16), h("span", null, "월드컵")) : null,
             h("button", { type: "button", class: "sds-ddt", onClick: () => copyPrompts(c, ids) }, ico("clip", 16), h("span", null, "프롬프트 복사")),
             h("button", { type: "button", class: "sds-ddt danger", onClick: () => removeScenes(ids) }, ico("trash", 16), h("span", null, "지우기"))]
-          : [h("button", { type: "button", class: "sds-ddt", onClick: () => { for (const id of sel) S.set(P.duplicateChar(proj, id)); sel.clear(); paintBody(); } }, ico("copy", 16), h("span", null, "복제")),
+          : [h("button", { type: "button", class: "sds-ddt", id: "sds-rsv-selchars", title: "고른 캐릭터의 모든 씬을 예약", onClick: () => { let nx = proj; for (const id of ids) nx = P.reserveAll(nx, id, n); S.set(nx); paintTop(); paintBody(); S.toast(`캐릭터 ${ids.length}명의 모든 씬을 ${n}장씩 예약했어요`); } }, ico("calPlus", 16), h("span", null, `${n}장씩 예약`)),
+            h("button", { type: "button", class: "sds-ddt", title: "고른 캐릭터 예약 비우기", onClick: () => { let nx = proj; for (const id of ids) nx = P.clearReserve(nx, id); S.set(nx); paintTop(); paintBody(); } }, ico("calX", 16), h("span", null, "예약 비우기")),
+            h("button", { type: "button", class: "sds-ddt", onClick: () => { for (const id of sel) S.set(P.duplicateChar(proj, id)); sel.clear(); paintBody(); } }, ico("copy", 16), h("span", null, "복제")),
             h("button", { type: "button", class: "sds-ddt", disabled: !proj.folders.length, onClick: (e) => folderPick(e.currentTarget, ids) }, ico("swap", 16), h("span", null, "폴더에 넣기·빼기")),
             h("button", { type: "button", class: "sds-ddt danger", onClick: () => removeChars(ids) }, ico("trash", 16), h("span", null, "지우기"))]),
         ib("x", "고르기 풀기", () => { sel.clear(); paintTools(); paintBody(); })].filter(Boolean);
@@ -245,7 +247,10 @@ export async function openAssetStudio(ctx, target, sd) {
     } else if (!c) {
       left = [undoB,
         dd("새로 만들기", "plus", [mi("file", "새 캐릭터", () => addChar(), { id: "sds-addchar" }), mi("folderPlus", "폴더", () => addFolder(), { id: "sds-addfolder" })], { id: "sds-dd-new" }),
-        dd("예약", "calPlus", [mi("calPlus", `모든 씬 ${n}장씩 예약`, () => { let nx = proj; for (const x of proj.chars) nx = P.reserveAll(nx, x.id, n); S.set(nx); paintTop(); paintBody(); }, { id: "sds-rsv-all" }),
+        dd("예약", "calPlus", [
+          ...(focusChar ? [mi("calPlus", `‘${focusChar.name}’ 씬 모두 ${n}장씩 예약`, () => { S.set(P.reserveAll(proj, focusChar.id, n)); paintTop(); paintBody(); }, { id: "sds-rsv-focus" })] : []),
+          ...(focusFolder ? [mi("calPlus", `‘${focusFolder.name}’ 안 캐릭터 ${P.rowChars(proj, focusFolder.id).length}명 ${n}장씩 예약`, () => { let nx = proj; for (const x of P.rowChars(proj, focusFolder.id)) nx = P.reserveAll(nx, x.id, n); S.set(nx); paintTop(); paintBody(); }, { id: "sds-rsv-focus" })] : []),
+          mi("calPlus", st.folder ? `이 폴더 캐릭터 모두 ${n}장씩 예약` : `모든 캐릭터 ${n}장씩 예약`, () => { let nx = proj; for (const x of (st.folder ? P.rowChars(proj, st.folder) : proj.chars)) nx = P.reserveAll(nx, x.id, n); S.set(nx); paintTop(); paintBody(); }, { id: "sds-rsv-all" }),
           mi("bolt", `즐겨찾기 없는 씬만 ${n}장씩 (${noFavN}개)`, () => reserveNoFav(), { id: "sds-rsv-nofav", disabled: !noFavN }),
           mi("calX", "예약 모두 비우기", () => { S.set(P.clearReserve(proj, null)); paintTop(); paintBody(); }, { id: "sds-rsv-clear" })], { id: "sds-dd-rsv" }),
         chooseB, dd("가져오기·내보내기", "importIn", importItems, { id: "sds-dd-io" })];
@@ -302,9 +307,8 @@ export async function openAssetStudio(ctx, target, sd) {
   function setFocus(kind, id) {
     st.focus = id ? { kind, id } : null;
     el.querySelectorAll(".sds-card.cur,.sds-frow.cur").forEach((n) => n.classList.remove("cur"));
-    if (!id) return;
-    const q = kind === "folder" ? ".sds-frow.sds-folder" : `.sds-${kind}`;
-    for (const n of bodyEl.querySelectorAll(q)) if (n.dataset.id === id) n.classList.add("cur");
+    if (id) { const q = kind === "folder" ? ".sds-frow.sds-folder" : `.sds-${kind}`; for (const n of bodyEl.querySelectorAll(q)) if (n.dataset.id === id) n.classList.add("cur"); }
+    if (!S.curChar()) paintTools();   // 예약 메뉴에 ‘고른 캐릭터·폴더만’ 항목
   }
   function selectable(card, key, onOpen, kind) {
     card.addEventListener("click", (e) => {
@@ -409,6 +413,7 @@ export async function openAssetStudio(ctx, target, sd) {
       cover ? S.thumb(cover) : h("span", { class: "ph" }, ico("image", 30)), chk(),
       h("span", { class: "rsvbtn" + (sc.reserve ? " on" : ""), role: "button", tabindex: "0", id: `sds-rsv-${sc.id}`, title: sc.reserve ? `예약 ${sc.reserve}장 — 누르면 1장 더` : "1장 예약", onClick: (e) => { e.stopPropagation(); S.set(P.setReserve(proj, c.id, sc.id, sc.reserve + 1)); paintTop(); paintBody(); } }, ico("calPlus", 14), sc.reserve ? `+${sc.reserve}` : "예약"),
       sc.images.length && !P.hasFav(sc) ? h("span", { class: "nofav", title: "아직 즐겨찾기가 없어요" }, "★ 없음") : null,
+      P.hasFav(sc) ? h("span", { class: "favmark", title: "즐겨찾기를 정한 씬" }, ico("star", 12), `${sc.images.filter((i) => i.fav).length}`) : null,
       h("span", { class: "quick" },
         sc.reserve ? h("button", { type: "button", title: "예약 하나 빼기", onClick: (e) => { e.stopPropagation(); S.set(P.setReserve(proj, c.id, sc.id, sc.reserve - 1)); paintTop(); paintBody(); } }, "−1") : null),
       capOf(sc.name, sc.images.length, P.pickCount(sc)));
@@ -1372,27 +1377,22 @@ export async function openAssetStudio(ctx, target, sd) {
   }
 
   // 폴더 → 봇·모듈 로어북 폴더(설정에서 켰을 때만). 이름·위치만 맞추고, 지워도 로어북 쪽은 남긴다
-  async function syncLoreNow() {
+  // 로어북 → 에셋 제작 폴더(한쪽만). 에셋 제작에서 로어북으로는 적지 않는다.
+  // ask: 새로 가져올 폴더가 있으면 먼저 물어봄(열 때). 설정 loreSync를 켜 두면 묻지 않고 가져옴
+  async function syncLoreNow({ ask = false } = {}) {
     try {
-      const field = target.kind === "module" ? "lorebook" : "globalLore";
       const cur = await readBot();
       if (!cur) return;
-      const lore = cur[field] ?? [];
-      // 1) 로어북에서 새로 만든 Dusk 폴더·[소속] 폴더 → 에셋 제작 폴더로
+      const lore = cur[target.kind === "module" ? "lorebook" : "globalLore"] ?? [];
       const pulled = pullLore(lore, proj);
-      if (pulled.added) { proj = pulled.project; S.persist(); paintTools(); paintBody(); ctx.toast(`로어북 폴더 ${pulled.added}개를 가져왔어요`); }
-      // 2) 에셋 제작 폴더 → 로어북(같은 목록에서 한 번만 계산해 id가 어긋나지 않게)
-      const r = syncLore(lore, proj, { newFolder: (name, list, o) => newFolderEntry(name, list, o) });
-      if (r.changed) {
-        if (target.kind === "module") await ctx.svc.run("update", target.id, { lorebook: r.lorebook });
-        else {
-          if (isGenerating(cur)) return;
-          await ctx.api.setCharacterToIndex(target.index, { ...cur, globalLore: r.lorebook });
-        }
-        if (target.kind === "module") ctx.state.modDirty = true; else ctx.state.charsDirty = true;
+      if (!pulled.added) return;
+      if (ask) {
+        const names = pulled.project.folders.filter((f) => !proj.folders.some((g) => g.id === f.id)).map((f) => f.name);
+        if (!await confirmDialog(ctx.win, { title: `로어북 폴더 ${pulled.added}개를 가져올까요?`, body: `${names.slice(0, 8).join(", ")}${names.length > 8 ? " …" : ""} — 봇 로어북의 Dusk 폴더·[소속] 구조대로 에셋 제작 폴더를 만들어요. 에셋 제작에서 바꿔도 로어북은 그대로예요.`, ok: "가져오기", cancel: "나중에" })) return;
       }
-      if (Object.keys(r.ids).length) { proj = P.setLoreIds(proj, r.ids); S.persist(); }
-    } catch (e) { ctx.toast(`로어북 폴더를 맞추지 못했어요: ${e?.message ?? e}`, { error: true }); }
+      proj = pulled.project; S.persist(); paintTools(); paintBody();
+      ctx.toast(`로어북 폴더 ${pulled.added}개를 가져왔어요`);
+    } catch (e) { ctx.toast(`로어북 폴더를 읽지 못했어요: ${e?.message ?? e}`, { error: true }); }
   }
   S.syncLore = syncLoreNow;
   // 봇(모듈) 안에도 저장 — 무겁지 않게 닫을 때·3분마다·백업할 때만
@@ -1491,7 +1491,7 @@ export async function openAssetStudio(ctx, target, sd) {
   });
   S.paint();
   el.focus();
-  if (prefs.loreSync) setTimeout(() => syncLoreNow(), 300);
+  if (prefs.tutorialDone) setTimeout(() => syncLoreNow({ ask: !prefs.loreSync }), 300);   // 열 때 로어북에 새 폴더가 있으면 물어보고 가져옴(처음이면 튜토리얼 1단계에서)
   S.tut = { importBackup: () => importBackup(), importTemplate: () => importTemplate(), pickSetTpl: (a, id) => pickSetTpl(a, id) };
   if (!prefs.tutorialDone) setTimeout(() => S.dlg.tutorial?.(), 400);   // 처음 한 번
    // 열 때 로어북에서 새로 만든 폴더 가져오기

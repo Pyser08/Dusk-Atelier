@@ -30,10 +30,10 @@ export var CSS = `
 .sds-pa>pre{position:absolute;inset:0;overflow:hidden;pointer-events:none;color:var(--rb-text)}
 .sds-pa>textarea{position:relative;display:block;width:100%;min-height:72px;max-height:340px;resize:vertical;border:0;background:transparent;color:transparent;caret-color:var(--rb-text);outline:none}
 .sds-pa>textarea::placeholder{color:var(--rb-mute)}
-.sds-pa .k-weight-up,.sds-pa .k-brace{background:var(--rb-rose-soft);border-radius:3px}
+.sds-pa .k-weight-up,.sds-pa .k-brace{background:color-mix(in srgb,#ff4d73 30%,transparent);box-shadow:inset 0 -2px 0 #ff4d73;border-radius:3px}
 .sds-pa .k-brace{font-weight:800}
-.sds-pa .k-weight-down,.sds-pa .k-bracket{background:var(--rb-blue-soft);border-radius:3px}
-.sds-pa .k-weight-neg{background:var(--rb-surf2);color:var(--rb-sub);border-radius:3px}
+.sds-pa .k-weight-down,.sds-pa .k-bracket{background:color-mix(in srgb,#3d8bff 30%,transparent);box-shadow:inset 0 -2px 0 #3d8bff;border-radius:3px}
+.sds-pa .k-weight-neg{background:color-mix(in srgb,#9a9a9a 28%,transparent);text-decoration:line-through;text-decoration-color:#ff4d73;border-radius:3px}
 .sds-pa .k-piece{background:var(--rb-teal-soft);border-radius:3px}
 .sds-pa .k-random{background:var(--rb-warn-soft);border-radius:3px}
 .sds-pa .k-comment{color:var(--rb-mute);font-style:italic}
@@ -103,6 +103,8 @@ export var CSS = `
 .sds-card[aria-selected=true]{border-color:var(--rb-acc);box-shadow:0 0 0 2px var(--rb-acc)}
 .sds-card[aria-selected=true] .chk{background:var(--rb-acc-grad);border:0}
 .sds-card .rsvbtn{position:absolute;top:8px;right:8px;z-index:2;height:24px;padding:0 9px;border-radius:999px;display:flex;align-items:center;gap:4px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.sds-card .favmark{position:absolute;top:38px;right:8px;z-index:2;height:22px;padding:0 8px;border-radius:999px;display:flex;align-items:center;gap:3px;background:#f5c518;color:#3a2a00;font-size:12px;font-weight:800;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.sds-card .favmark svg{fill:currentColor}
 .sds-card .rsvbtn.on{background:var(--rb-acc-grad);color:var(--rb-on-acc)}
 .sds-card .rsvbtn:hover{filter:brightness(1.15)}
 .sds-card .badges{position:absolute;top:8px;right:8px;display:flex;gap:4px}
