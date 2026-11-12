@@ -482,14 +482,16 @@ test("GPT 모양(docs/STEALTH.md 7-1): 사이드바·발 두 줄 Plus·위 줄 �
   for (const t of ["ChatGPT", "새 채팅", "이미지", "예약", "라이브러리", "플러그인", "탐색", "최근", "st-two", "<small>Plus</small>"]) assert.ok(h.includes(t), t);
   assert.ok(!h.includes("st-sb-seg") && !/st-sb-row st-on/.test(h), "클로드식 묶음·첫 줄 강조 없음");
   const t = topHtml({ kind: "gpt", sub: "브랜치 생성 완료", mobile: true });
-  assert.ok(t.includes("st-top-fold") && t.includes("브랜치 생성 완료") && t.includes("공유"));
+  assert.ok(t.includes("st-top-fold") && t.includes("브랜치 생성 완료") && t.includes("공유"), "넓은 화면 위 줄은 그대로");
   const css = buildStealth("gpt").css;
   assert.match(css, /\.st-msg\.st-char\[x-st-th\]::before \{ content: attr\(x-st-th\) " 동안 처리함  ›"/);
-  assert.match(css, /mark\[risu-mark\^="quote"\]::before \{ content: "・"/);
   assert.ok(!buildStealth("claude").css.includes("동안 처리함"), "처리 시간 줄은 GPT 모양에서만");
-  for (const id of ["claude", "gpt"]) assert.match(buildStealth(id).css, /mark\[risu-mark\^="quote"\]::before \{ content: "・"/, id + ": 따옴표 ・ 줄");
-  assert.ok(!buildStealth("codex").css.includes('mark[risu-mark^="quote"]::before'), "코덱스는 따옴표 줄 없음(7-2)");
-  assert.match(buildStealth("gemini").css, /::before \{ content: "◦"/, "제미나이는 구멍 뚫린 ◦(7-4)");
+  // 따옴표는 모든 모양에서 인라인 코드 상자(11-12, 예전 ・ 줄 대신)
+  for (const id of ["claude", "claudecode", "gpt", "codex", "gemini", "deepseek"]) {
+    const c = buildStealth(id).css;
+    assert.match(c, /mark\[risu-mark\^="quote"\] \{ display: inline; font-family: var\(--st-mono\)[^}]*background: var\(--st-cbg\)/, id + ": 따옴표 상자");
+    assert.ok(!c.includes('mark[risu-mark^="quote"]::before') && /--st-cbg: /.test(c), id + ": ・ 줄 없음·상자 색 있음");
+  }
   const els = [{ a: {} }, { a: {} }].map((n) => ({ n, setAttribute: async (k, v) => { n.a[k] = v; } }));
   assert.equal(await markThinking({ querySelectorAll: async () => els }, () => 0.5), 2);
   assert.equal(els[0].n.a["x-st-th"], "1m 3s");
@@ -594,14 +596,18 @@ test("휴대폰 위 줄(GPT·제미나이·딥시크 사진 11-08): 모양별 �
   const g = topHtml({ kind: "gpt", sub: "채팅", mobile: true });
   assert.ok(g.includes("st-top-do") && g.includes("st-top-mo") && g.includes("data-st-menu") && g.includes("data-st-more"), "gpt: 두 쪽 + 메뉴·접기 버튼");
   assert.equal((g.match(/data-st-more/g) ?? []).length, 1, "접기 버튼은 하나");
+  assert.ok(!/st-top-mo">[^<]*<b/.test(g), "gpt(11-12): 휴대폰 위 줄엔 제목 없음(떠 있는 버튼만)");
   const m = topHtml({ kind: "gemini", sub: "채팅", mobile: true });
   assert.ok(m.includes("<b>Gemini</b>") && m.includes("자동 모드"), "gemini: 모델 이름 제목");
   const d = topHtml({ kind: "deepseek", sub: "보스 이펙터", mobile: true });
   assert.ok(d.includes("보스 이펙터") && /st-top-deco/.test(d), "deepseek: 채팅 이름 + 새 채팅 아이콘");
-  for (const k of ["claude", "code"]) {
-    const c = topHtml({ kind: k, title: "Dusk", sub: "요약 봇", mobile: true });
-    assert.ok(c.includes(">Dusk<") && c.includes(">/<") && c.includes("요약 봇") && c.includes(">공유<"), k + ": 프로젝트 / 채팅 + 공유");
-  }
+  const c = topHtml({ kind: "claude", title: "Dusk", sub: "요약 봇", mobile: true });
+  assert.ok(c.includes(">요약 봇<") && !c.includes(">공유<"), "claude(11-12): 가운데 채팅 이름, 공유 없음");
+  const k = topHtml({ kind: "code", title: "Dusk-Cellar", sub: "Session", mobile: true });
+  assert.ok(k.includes(">Session<") && k.includes("Dusk-Cellar · Default"), "code(11-12): 두 줄 제목");
+  const { SHELL_KINDS } = await import("../src/data/stealth-shell.js");
+  assert.deepEqual(["claude", "code", "gpt", "gemini"].map((x) => SHELL_KINDS[x].mtop.style), ["center", "center2", "float", "gemini"]);
+  for (const id of ["claude", "claudecode", "gpt", "gemini"]) assert.match(buildStealth(id).css, /--st-i-mic: url\("data:image\/svg\+xml,/, id + ": 휴대폰 입력창 아이콘");
   assert.ok(topHtml({ kind: "codex", sub: "채팅", mobile: true }).includes("st-top-mo"), "codex: gpt처럼");
   const css = buildStealth("gpt").css;
   assert.match(css, /\[x-c~="st-top-t"\]\[x-c~="st-top-mo"\],\[x-c~="st-top-mo"\]\{display:none\}/, "넓은 화면에선 휴대폰 제목 숨김");

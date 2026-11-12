@@ -92,6 +92,28 @@ body[x-dusk-st] [x-dusk="stealth-top"]{display:flex !important;left:0;height:56p
 [x-c~="st-top-sub"]{font-weight:400;color:var(--st-fg2)}
 [x-dusk="stealth-top"][x-plain="1"]{left:auto;width:auto;background:transparent}
 [x-dusk="stealth-top"][x-plain="1"] > :not([x-c~="st-top-more"]){display:none !important}
+/* 휴대폰 위 줄 모양별(사진 11-12): center=클로드(가운데 제목) · center2=클로드 코드(가운데 두 줄) · float=GPT(떠 있는 동그라미·알약) · gemini */
+[x-dusk="stealth-top"][x-mt]:not([x-mt=""]){overflow:visible}
+[x-mt^="center"] [x-c~="st-top-mo"]{position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);max-width:calc(100% - 200px);justify-content:center;text-align:center;gap:0}
+[x-mt="center"] [x-c~="st-top-mo"]{left:calc(50% - 12px);max-width:calc(100% - 210px)}
+[x-mt^="center"] [x-c~="st-top-mo"] + [x-c~="st-top-deco"]{margin-left:auto}
+[x-mt^="center"] [x-c~="st-top-btn"]{color:color-mix(in srgb,var(--st-fg) 80%,var(--st-bg))}
+[x-dusk="stealth-top"][x-mt^="center"] b{font-size:16.5px;font-weight:600;margin:0}
+[x-mt="center2"] [x-c~="st-top-mo"]{flex-direction:column;line-height:1.3}
+[x-mt="center2"] [x-c~="st-top-sub2"]{font-size:13.5px;margin:1px 0 0 !important;color:var(--st-dim)}
+[x-dusk="stealth-top"][x-mt^="center"]::after,[x-dusk="stealth-top"][x-mt="gemini"]::after{content:"";position:absolute;left:0;right:0;top:100%;height:14px;background:linear-gradient(var(--st-bg),transparent);pointer-events:none}
+[x-dusk="stealth-top"][x-mt="float"]{height:66px;padding:0 13px;background:linear-gradient(var(--st-bg) 35%,color-mix(in srgb,var(--st-bg) 0%,transparent))}
+[x-mt="float"] [x-c~="st-top-btn"]{color:var(--st-fg)}
+[x-mt="float"] [data-st-menu],[x-mt="float"] [x-st-menu]{width:42px;height:42px;border-radius:50%;background:var(--st-mi,var(--st-input));box-shadow:0 2px 14px rgba(0,0,0,.1)}
+[x-mt="float"] [x-c~="st-top-deco"]{position:relative}
+[x-mt="float"] [x-c~="st-top-deco"]::before{content:"";position:absolute;left:0;top:-1px;width:86px;height:42px;border-radius:21px;background:var(--st-mi,var(--st-input));box-shadow:0 2px 14px rgba(0,0,0,.1);z-index:-1}
+[x-mt="float"] [x-c~="st-top-deco"],[x-mt="float"] [x-c~="st-top-more"]{width:43px;height:40px}
+[x-dusk="stealth-top"][x-mt="gemini"]{font-size:20px}
+[x-mt="gemini"] [x-c~="st-top-btn"]{color:var(--st-fg)}
+[x-mt="gemini"] [x-c~="st-top-mo"]{margin-left:18px;gap:0}
+[x-dusk="stealth-top"][x-mt="gemini"] b{font-weight:400;margin:0}
+[x-mt="gemini"] [x-c~="st-top-sub"]{color:var(--st-fg2);margin-left:7px !important}
+[x-mt="gemini"] [x-c~="st-top-chev"]{margin-left:6px}
 }
 
 [x-dusk] [x-ico]{display:inline-flex;align-items:center;line-height:0;flex:none}

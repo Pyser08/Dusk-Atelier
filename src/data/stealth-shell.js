@@ -54,14 +54,19 @@ export function safeIconUrl(u) {
   return v.length <= 120000 ? v : "";
 }
 export var SHELL_KINDS = {
-  claude: { mtop: { menu: "panel", title: "crumb", chev: true, right: ["doc"], more: "share", moreLabel: "공유" }, icon: "", word: "Claude", wordSerif: true, head: "seg", headLeft: "panel", firstOn: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["folder", "프로젝트"], ["cube", "아티팩트"], ["clock", "예약됨"], ["bag", "사용자 지정"]], recent: "최근 항목", empty: "", plan: "Pro" },
-  code: { mtop: { menu: "panel", title: "crumb", chev: true, right: ["doc"], more: "share", moreLabel: "공유" }, icon: "", word: "", head: "seg", segOn: 1, headLeft: ["panel", "back", "fwd"], items: [["plus", "새로 만들기"], ["folder", "프로젝트", "New"], ["cube", "아티팩트"], ["bag", "사용자 지정"], ["chev", "더 보기"]], recent: "최근 항목", dots: true, footChev: true, empty: "시작한 세션이 여기에 표시됩니다", plan: "" },
+  claude: { mtop: { style: "center", menu: "menu3", title: "chat", right: ["docr", "compose"], more: "vdots" }, icon: "", word: "Claude", wordSerif: true, head: "seg", headLeft: "panel", firstOn: true, items: [["plus", "새로 만들기"], ["search", "검색"], ["folder", "프로젝트"], ["cube", "아티팩트"], ["clock", "예약됨"], ["bag", "사용자 지정"]], recent: "최근 항목", empty: "", plan: "Pro" },
+  code: { mtop: { style: "center2", menu: "back", title: "two", tail: "Default", right: ["ring"], more: "vdots" }, icon: "", word: "", head: "seg", segOn: 1, headLeft: ["panel", "back", "fwd"], items: [["plus", "새로 만들기"], ["folder", "프로젝트", "New"], ["cube", "아티팩트"], ["bag", "사용자 지정"], ["chev", "더 보기"]], recent: "최근 항목", dots: true, footChev: true, empty: "시작한 세션이 여기에 표시됩니다", plan: "" },
   deepseek: { mtop: { menu: "menu2", title: "chat", right: ["pluso"], more: "fwdshare" }, icon: "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/deep.png", word: "deepseek", wordAccent: true, head: "icons", headRight: ["search", "panel"], newBtn: "새로운 채팅", items: [], recent: "오늘", recentIcon: "listi", gearIcon: "more", top: "chat", topPlain: true, empty: "", plan: "" },
-  gemini: { mtop: { menu: "back", title: "model", word: "Gemini", sub: "자동 모드", chev: true, right: ["edit"], more: "vdots" }, icon: "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/gem.png", word: "Gemini", top: "none", head: "icons", headRight: ["search", "panel"], items: [["edit", "새 채팅"], ["grid", "라이브러리"], ["image", "이미지"], ["clock", "예약"], ["target", "맞춤설정"], ["video", "동영상"]], recent: "전체", recentIcon: "filter", empty: "", plan: "" },
+  gemini: { mtop: { style: "gemini", menu: "menu2e", title: "model", word: "Gemini", sub: "자동 모드", chev: true, right: ["compose"], more: "hdots" }, icon: "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/feat/2.0.0/gem.png", word: "Gemini", top: "none", head: "icons", headRight: ["search", "panel"], items: [["edit", "새 채팅"], ["grid", "라이브러리"], ["image", "이미지"], ["clock", "예약"], ["target", "맞춤설정"], ["video", "동영상"]], recent: "전체", recentIcon: "filter", empty: "", plan: "" },
   codex: { mtop: { menu: "panel", deco: ["edit"], title: "chat", chev: true, right: ["share"], more: "listdots" }, icon: "", word: "Codex", wordChev: true, head: "icons", headRight: ["bell", "search"], rail: ["home", "image", "clock", "book", "plug", "more", "|", "branch"], foot: "noav", items: [["edit", "새 채팅"]], recent: "최근", empty: "", plan: "" },
-  gpt: { mtop: { menu: "panel", deco: ["edit"], title: "chat", chev: true, right: ["share"], more: "listdots" }, icon: "", word: "ChatGPT", head: "icons", headRight: ["search", "panel"], foot2: true, top: "chat", items: [["edit", "새 채팅"], ["image", "이미지"], ["clock", "예약"], ["book", "라이브러리"], ["plug", "플러그인"], ["more", "탐색"]], recent: "최근", empty: "", plan: "Plus" }
+  gpt: { mtop: { style: "float", menu: "menu2b", title: "none", right: ["compose"], more: "vdots" }, icon: "", word: "ChatGPT", head: "icons", headRight: ["search", "panel"], foot2: true, top: "chat", items: [["edit", "새 채팅"], ["image", "이미지"], ["clock", "예약"], ["book", "라이브러리"], ["plug", "플러그인"], ["more", "탐색"]], recent: "최근", empty: "", plan: "Plus" }
 };
 var ICON = {
+  // 휴대폰 위 줄(사진 11-12): 클로드 ≡(세 줄, 아래로 짧아짐) · GPT/제미나이 =(두 줄, 굵게) · 새 글(네모+연필) · 클로드 코드 빨간 고리 · 가로 점
+  menu3: '<path d="M4 6.5h16M4 12h13M4 17.5h9"/>', menu2b: '<path d="M5 9.5h14M5 15h9" stroke-width="2.2"/>', menu2e: '<path d="M4.5 9.5h15M4.5 15h15" stroke-width="2.2"/>',
+  compose: '<path d="M11.5 4.5H7A2.5 2.5 0 0 0 4.5 7v10A2.5 2.5 0 0 0 7 19.5h10a2.5 2.5 0 0 0 2.5-2.5v-4.5"/><path d="M17.6 3.9a1.9 1.9 0 0 1 2.7 2.7L12.5 14.4l-3.5.9.9-3.5z"/>',
+  ring: '<circle cx="12" cy="12" r="8.2" stroke="#d64045" stroke-width="2"/>', hdots: '<path d="M6 12h.01M12 12h.01M18 12h.01" stroke-width="3"/>',
+  docr: '<path d="M8 3.5h5.5l5 5V19a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 19V5A1.5 1.5 0 0 1 8 3.5z"/><path d="M13.5 3.5v5h5"/>',
   doc: '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/>', menu2: '<path d="M4 8h16M4 16h9"/>', listdots: '<circle cx="6" cy="7.5" r="2.3"/><circle cx="6" cy="16.5" r="2.3"/><path d="M11 7.5h9M11 16.5h9"/>',
   grid: '<rect x="4.5" y="4.5" width="6" height="6" rx="2"/><rect x="13.5" y="4.5" width="6" height="6" rx="2"/><rect x="4.5" y="13.5" width="6" height="6" rx="2"/><rect x="13.5" y="13.5" width="6" height="6" rx="2"/>',
   listi: '<circle cx="6" cy="7" r="1.6"/><circle cx="6" cy="16" r="1.6"/><path d="M10 7h9M10 16h9M10 11h6"/>', pluso: '<circle cx="12" cy="12" r="8"/><path d="M12 8.5v7M8.5 12h7"/>', fwdshare: '<path d="M14 5l6 6-6 6M20 11h-8a7 7 0 0 0-7 7"/>',
@@ -113,8 +118,12 @@ export function shellHtml(model) {
 // 휴대폰 위 줄(K.mtop): [메뉴 아이콘=리스 ≡ 자리] [장식] 제목 ……… [장식] [접기 버튼]. 넓은 화면 쪽(st-top-do)과 함께 그려 두고 CSS가 폭에 따라 하나만 보인다.
 function mobileTop(K, model) {
   const M = K.mtop, name = String(model.sub || model.title || "").trim();
-  const title = M.title === "model" ? `<b>${esc(M.word ?? K.word)}</b><span class="st-top-sub">${esc(M.sub ?? "")}</span>` : M.title === "crumb" && model.sub && model.title ? `<span class="st-top-sub" style="max-width:30%;overflow:hidden;text-overflow:ellipsis;margin:0">${esc(model.title)}</span><span class="st-top-sub" style="margin:0 6px">/</span><b style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(model.sub)}</b>` : `<b style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(name)}</b>`;
-  const deco = (list) => (list ?? []).map((n) => `<span class="st-top-btn st-top-deco">${ico(n, 21)}</span>`).join("");
+  const clip = "min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+  const title = M.title === "none" ? ""
+    : M.title === "model" ? `<b>${esc(M.word ?? K.word)}</b><span class="st-top-sub">${esc(M.sub ?? "")}</span>`
+    : M.title === "two" ? `<b style="${clip};max-width:100%">${esc(name)}</b><span class="st-top-sub st-top-sub2" style="${clip};max-width:100%">${esc([model.sub ? model.title : "", M.tail].filter(Boolean).join(" · "))}</span>`
+    : M.title === "crumb" && model.sub && model.title ? `<span class="st-top-sub" style="max-width:30%;overflow:hidden;text-overflow:ellipsis;margin:0">${esc(model.title)}</span><span class="st-top-sub" style="margin:0 6px">/</span><b style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(model.sub)}</b>` : `<b style="${clip}">${esc(name)}</b>`;
+  const deco = (list) => (list ?? []).map((n) => `<span class="st-top-btn st-top-deco">${ico(n, 22)}</span>`).join("");
   return { menu: M.menu, html: deco(M.deco) + `<span class="st-top-t st-top-mo">${title}${M.chev ? `<span class="st-top-chev">${ico("chev", 16)}</span>` : ""}</span>` + deco(M.right), more: M.more, label: M.moreLabel };
 }
 export function topHtml(model) {
@@ -299,7 +308,7 @@ export function createShell(api, opts = {}) {
       const model = { mobile: true, kind, word: opts.word, user, plan: opts.plan, icon: opts.icon, rows, title: opts.title || char?.name || "", sub: opts.sub || cur?.name || "" };
       const rootEl = await put(d, ROOT, "div", shellHtml(model), "st-sb"); await rootEl?.setAttribute("x-fold", folded ? "1" : "0"); await rootEl?.setAttribute("x-rail", SHELL_KINDS[kind]?.rail ? "1" : "0");
       await setVis(d);
-      const topEl0 = await put(d, TOP, "div", topHtml(model), "st-top"); await topEl0?.setAttribute("x-empty", SHELL_KINDS[kind]?.top === "none" ? "1" : "0");
+      const topEl0 = await put(d, TOP, "div", topHtml(model), "st-top"); await topEl0?.setAttribute("x-empty", SHELL_KINDS[kind]?.top === "none" ? "1" : "0"); await topEl0?.setAttribute("x-mt", SHELL_KINDS[kind]?.mtop?.style ?? "");
       await put(d, NOTE, "div", opts.note ? esc(opts.note) : "", "st-note");
       for (const r of rows) {
         const b = await d.querySelector(`[x-dusk="${ROOT}"] [x-st-chat="${r.index}"]`);

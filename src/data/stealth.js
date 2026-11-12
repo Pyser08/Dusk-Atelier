@@ -19,44 +19,44 @@ var MONO = `"JetBrains Mono", "Cascadia Code", "D2Coding", Consolas, monospace`;
 export var PRESETS = {
   claude: {
     label: "클로드", desc: "클로드 앱: 왼쪽 사이드바(최근 항목=채팅 목록), 둥근 입력창, 작업 줄",
-    font: SANS, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "claude", quoteDot: true,
-    light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f3f3f3", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#666666", dim: "#787878", line: "#ebebeb", line2: "#cecece" },
-    dark: { bg: "#1a1a1a", side: "#1f1f1f", bubble: "#2b2b2b", inputBg: "#262626", fg: "#ececec", fg2: "#a0a0a0", dim: "#8c8c8c", line: "#2e2e2e", line2: "#3d3d3d" },
+    font: SANS, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "claude", mob: "box",
+    light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f3f3f3", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#666666", dim: "#787878", line: "#ebebeb", line2: "#cecece", cbg: "#f3f2ee", cline: "#e2e0d8", cfg: "#2f6fb5", mi: "#ffffff", mline: "#e3e2dc", mb: "#f0efea", ms: "#c96442", msf: "#ffffff", mic: "#3d3d3a" },
+    dark: { bg: "#1a1a1a", side: "#1f1f1f", bubble: "#2b2b2b", inputBg: "#262626", fg: "#ececec", fg2: "#a0a0a0", dim: "#8c8c8c", line: "#2e2e2e", line2: "#3d3d3d", cbg: "#272727", cline: "#3a3a3a", cfg: "#7ba7e0", mi: "#20201e", mline: "#30302e", mb: "#313131", ms: "#c46141", msf: "#ffffff", mic: "#ececec" },
     labels: { title: "", sub: "", tool: "명령어 13개 실행함", model: "Sonnet 5.5 낮음   자동", note: "Claude는 AI이며 실수할 수 있습니다.", left: "", think: "✻  Thinking…", user: "", plan: "Pro" }
   },
   claudecode: {
     label: "클로드 코드", desc: "클로드 앱의 Code 탭: 세션 목록 사이드바, 작업 입력창, 하단 모델 줄",
-    font: SANS, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "code", extra: "code",
-    light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f3f3f3", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#666666", dim: "#787878", line: "#ebebeb", line2: "#cecece" },
-    dark: { bg: "#1a1a1a", side: "#1f1f1f", bubble: "#2b2b2b", inputBg: "#262626", fg: "#ececec", fg2: "#a0a0a0", dim: "#8c8c8c", line: "#2e2e2e", line2: "#3d3d3d" },
+    font: SANS, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "code", extra: "code", mob: "box",
+    light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f3f3f3", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#666666", dim: "#787878", line: "#ebebeb", line2: "#cecece", cbg: "#f3f2ee", cline: "#e2e0d8", cfg: "#2f6fb5", mi: "#ffffff", mline: "#e3e2dc", mb: "#f0efea", ms: "#c96442", msf: "#ffffff", mic: "#3d3d3a" },
+    dark: { bg: "#1a1a1a", side: "#1f1f1f", bubble: "#2b2b2b", inputBg: "#262626", fg: "#ececec", fg2: "#a0a0a0", dim: "#8c8c8c", line: "#2e2e2e", line2: "#3d3d3d", cbg: "#272727", cline: "#3a3a3a", cfg: "#7ba7e0", mi: "#20201e", mline: "#30302e", mb: "#313131", ms: "#c46141", msf: "#ffffff", mic: "#ececec" },
     labels: { title: "", sub: "", tool: "파일 3개 읽음, 결제 흐름 검색함", model: "Opus   매우 높음", note: "", left: "자동", think: "✻  Thinking…", user: "", plan: "Pro" }
   },
   gpt: {
     label: "GPT", desc: "흑백, 오른쪽 회색 말풍선, 알약 모양 입력창",
-    font: SANS, accent: "#0d0d0d", radius: 18, input: 28, width: 760, sidebar: "gpt", extra: "gpt", quoteDot: true,
-    light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f4f4f4", inputBg: "#f4f4f4", fg: "#0d0d0d", fg2: "#5d5d5d", dim: "#8f8f8f", line: "#ececec", line2: "#d9d9d9" },
-    dark: { bg: "#212121", side: "#171717", bubble: "#303030", inputBg: "#303030", fg: "#ececec", fg2: "#b4b4b4", dim: "#8e8e8e", line: "#2f2f2f", line2: "#424242" },
+    font: SANS, accent: "#0d0d0d", radius: 18, input: 28, width: 760, sidebar: "gpt", extra: "gpt", mob: { m: 32, h: 46, pl: 5, pr: 8, send: 30, gap: 14, tp: 6, icon: 24, stroke: 2 },
+    light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f4f4f4", inputBg: "#f4f4f4", fg: "#0d0d0d", fg2: "#5d5d5d", dim: "#8f8f8f", line: "#ececec", line2: "#d9d9d9", cbg: "#ececec", cline: "transparent", cfg: "#0d0d0d", mi: "#ffffff", mline: "transparent", mb: "transparent", ms: "#ff7f66", msf: "#ffffff", mic: "#0d0d0d" },
+    dark: { bg: "#212121", side: "#171717", bubble: "#303030", inputBg: "#303030", fg: "#ececec", fg2: "#b4b4b4", dim: "#8e8e8e", line: "#2f2f2f", line2: "#424242", cbg: "#424242", cline: "transparent", cfg: "#ececec", mi: "#303030", mline: "transparent", mb: "transparent", ms: "#ff7f66", msf: "#ffffff", mic: "#ececec" },
     labels: { title: "", sub: "", model: "GPT  ⌄", tool: "", think: "생각하는 중…", plan: "Plus" }
   },
   codex: {
     label: "코덱스", desc: "코덱스 앱: 왼쪽 아이콘 줄 + 사이드바(최근 채팅), 둥근 사각 입력창, 오른쪽 말풍선",
     font: SANS, accent: "#ececec", radius: 18, input: 22, width: 820, sidebar: "codex", terminal: false,
-    light: { bg: "#ffffff", side: "#f7f7f7", bubble: "#f0f0f0", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#5f5f5f", dim: "#8a8a8a", line: "#e8e8e8", line2: "#d0d0d0" },
-    dark: { bg: "#181818", side: "#202020", bubble: "#2f2f2f", inputBg: "#262626", fg: "#ececec", fg2: "#a8a8a8", dim: "#8a8a8a", line: "#2a2a2a", line2: "#3a3a3a" },
+    light: { bg: "#ffffff", side: "#f7f7f7", bubble: "#f0f0f0", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#5f5f5f", dim: "#8a8a8a", line: "#e8e8e8", line2: "#d0d0d0", cbg: "#f0f0f0", cline: "#e0e0e0", cfg: "#1a1a1a" },
+    dark: { bg: "#181818", side: "#202020", bubble: "#2f2f2f", inputBg: "#262626", fg: "#ececec", fg2: "#a8a8a8", dim: "#8a8a8a", line: "#2a2a2a", line2: "#3a3a3a", cbg: "#2f2f2f", cline: "#3a3a3a", cfg: "#ececec" },
     labels: { title: "", sub: "", model: "6 Luna Medium  ⌄", tool: "", think: "생각하는 중…", plan: "" }
   },
   gemini: {
     label: "제미나이", desc: "연한 파랑 배경, 큰 알약 입력창, 그라데이션 인사",
-    font: `"Google Sans", "Product Sans", ${SANS}`, accent: "#4285f4", radius: 20, input: 32, width: 800, sidebar: "gemini", quoteDot: "◦",
-    light: { bg: "#ffffff", side: "#f0f4f9", bubble: "#e9eef6", inputBg: "#f0f4f9", fg: "#1f1f1f", fg2: "#444746", dim: "#747775", line: "#e3e3e3", line2: "#c4c7c5" },
-    dark: { bg: "#131314", side: "#1e1f20", bubble: "#282a2c", inputBg: "#1e1f20", fg: "#e3e3e3", fg2: "#c4c7c5", dim: "#8e918f", line: "#2d2f31", line2: "#444746" },
+    font: `"Google Sans", "Product Sans", ${SANS}`, accent: "#4285f4", radius: 20, input: 32, width: 800, sidebar: "gemini", mob: { m: 19, h: 75, pl: 20, pr: 19, send: 37, gap: 9, tp: 14, icon: 26, stroke: 1.8 },
+    light: { bg: "#ffffff", side: "#f0f4f9", bubble: "#e9eef6", inputBg: "#f0f4f9", fg: "#1f1f1f", fg2: "#444746", dim: "#747775", line: "#e3e3e3", line2: "#c4c7c5", cbg: "#e9eef6", cline: "transparent", cfg: "#1f1f1f", mi: "#ffffff", mline: "transparent", mb: "transparent", ms: "#9ed2ff", msf: "#000000", mic: "#1f1f1f" },
+    dark: { bg: "#131314", side: "#1e1f20", bubble: "#282a2c", inputBg: "#1e1f20", fg: "#e3e3e3", fg2: "#c4c7c5", dim: "#8e918f", line: "#2d2f31", line2: "#444746", cbg: "#2b2c2f", cline: "transparent", cfg: "#e3e3e3", mi: "#1e1f20", mline: "transparent", mb: "transparent", ms: "#9ed2ff", msf: "#062e6f", mic: "#e3e3e3" },
     labels: { title: "", sub: "", model: "Gemini 자동 모드  ⌄", tool: "", think: "생각하는 중…", plan: "" }
   },
   deepseek: {
     label: "딥시크", desc: "파란 포인트, 깔끔한 말풍선, 접힌 '생각 과정' 줄",
-    font: SANS, accent: "#4d6bfe", radius: 14, input: 18, width: 780, sidebar: "deepseek", quoteDot: "・",
-    light: { bg: "#ffffff", side: "#f9fafb", bubble: "#eff6ff", inputBg: "#f3f4f6", fg: "#0f1115", fg2: "#4b5563", dim: "#8b919a", line: "#eceef1", line2: "#d4d8de" },
-    dark: { bg: "#1b1c1f", side: "#141517", bubble: "#26282d", inputBg: "#292a2e", fg: "#e8eaed", fg2: "#a0a4ab", dim: "#7a7f87", line: "#2a2c30", line2: "#3b3d43" },
+    font: SANS, accent: "#4d6bfe", radius: 14, input: 18, width: 780, sidebar: "deepseek",
+    light: { bg: "#ffffff", side: "#f9fafb", bubble: "#eff6ff", inputBg: "#f3f4f6", fg: "#0f1115", fg2: "#4b5563", dim: "#8b919a", line: "#eceef1", line2: "#d4d8de", cbg: "#ececec", cline: "transparent", cfg: "#0f1115" },
+    dark: { bg: "#1b1c1f", side: "#141517", bubble: "#26282d", inputBg: "#292a2e", fg: "#e8eaed", fg2: "#a0a4ab", dim: "#7a7f87", line: "#2a2c30", line2: "#3b3d43", cbg: "#33353a", cline: "transparent", cfg: "#e8eaed" },
     labels: { title: "", sub: "", model: "깊은 생각  ·  검색", tool: "✓ 깊이 생각함 (소요 12초)", think: "생각하는 중…", plan: "" }
   }
 };
@@ -102,9 +102,58 @@ ${L}:hover { color: var(--st-fg); }
 }
 export var LABEL_KEYS = ["title", "sub", "tool", "model", "note", "left", "think", "user", "plan"];
 
+// 휴대폰 입력창 아이콘(+·마이크·↑)은 CSS 배경 그림(data: SVG)으로 그린다 — 리스 버튼의 원래 아이콘은 숨긴다. 색은 모양·밝기마다 정해 변수로 넣는다.
+var MICO = { plus: '<path d="M12 5v14M5 12h14"/>', mic: '<rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/>', up: '<path d="M12 19V5M6 11l6-6 6 6"/>' };
+export var svgUri = (path, color, sw = 1.8) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${color}' stroke-width='${sw}' stroke-linecap='round' stroke-linejoin='round'>${path.replace(/"/g, "'")}</svg>`)}")`;
 var vars = (p, c, scheme) => Object.entries({
-  bg: c.bg, side: c.side, bubble: c.bubble, input: c.inputBg, fg: c.fg, fg2: c.fg2, dim: c.dim, line: c.line, line2: c.line2
+  bg: c.bg, side: c.side, bubble: c.bubble, input: c.inputBg, fg: c.fg, fg2: c.fg2, dim: c.dim, line: c.line, line2: c.line2,
+  cbg: c.cbg ?? c.bubble, cline: c.cline ?? c.line, cfg: c.cfg ?? c.fg,
+  ...(p.mob ? { mi: c.mi, mline: c.mline, mb: c.mb, ms: c.ms, "i-plus": svgUri(MICO.plus, c.mic, p.mob.stroke ?? 1.8), "i-mic": svgUri(MICO.mic, c.mic, p.mob.stroke ?? 1.7), "i-up": svgUri(MICO.up, c.msf, 2) } : {})
 }).map(([k, v]) => `  --st-${k}: ${v};`).join("\n");
+
+// 따옴표("…"·'…', 리스 mark risu-mark=quote*)는 그 앱의 인라인 코드처럼 상자로(사용자 지정 11-12, 예전 '・ 줄'을 바꿈). 색은 --st-cbg·--st-cline·--st-cfg
+export var quoteBoxCss = () => `.st-body .chattext mark[risu-mark^="quote"] { display: inline; font-family: var(--st-mono) !important; font-size: .88em !important; color: var(--st-cfg) !important; background: var(--st-cbg) !important; border: 1px solid var(--st-cline); border-radius: 6px; padding: .1em .4em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.st-body .chattext mark[risu-mark^="quote"] * { font: inherit !important; color: inherit !important; background: none !important; }`;
+
+// 휴대폰 입력창(사진 11-12, 클로드·클로드 코드·GPT·제미나이). 리스 줄: [스티커?] 글 칸 · (보내기|멈춤) · 메뉴(마지막 칸).
+// 메뉴 칸 = '+' 버튼, 그 ::after = 마이크(장식), ::before = 안내 글(클로드). 보내기 = 강조색 동그라미 + ↑.
+// "box"(클로드): 위는 글 칸, 아래 줄 [+] [모델 알약] …… [마이크] [보내기]. 알약은 상자의 ::before(모델)·::after(세기, 흐린 글)
+// 숫자 묶음(GPT·제미나이): 한 줄 알약 [+] 글 …… [마이크] [보내기]
+export function splitModel(label) {
+  const t = String(label ?? "").replace(/\s+/g, " ").trim();
+  const m = t.match(/^(.*?) ((?:매우 )?(?:낮음|중간|높음)|최대)(?: 자동)?$/);   // 넓은 화면용 꼬리(' 자동')는 뺀다
+  return m && m[1] ? [m[1], m[2]] : [t, ""];
+}
+function mobileInputCss(P, L) {
+  const S = "div:has(> .text-input-area)", menu = `${S} > :last-child:is(div, button):not(.text-input-area):not(.button-icon-send):not(:has(.loadmove))`;
+  const send = `${S} > .button-icon-send.button-icon-send`, stop = `${S} > div:has(> .loadmove)`;
+  const hideIco = `${S} > :not(.text-input-area) > svg { display: none !important; }`;
+  if (P.mob === "box") {
+    const [m1, m2] = splitModel(L.model);
+    const pill = "flex: none; position: static; order: 2; height: 34px; line-height: 34px; padding: 0; font-size: 15px; white-space: pre; background: var(--st-mb); pointer-events: none;";
+    return `${S} { display: flex !important; width: calc(100% - 30px) !important; max-width: none; margin: ${L.note ? 30 : 8}px 15px 10px !important; padding: 14px 8px 8px !important; border-radius: 26px; background: var(--st-mi) !important; border: 1px solid var(--st-mline) !important; box-shadow: none; flex-wrap: wrap !important; align-items: center !important; column-gap: 0; row-gap: 12px; }
+  ${S} > .text-input-area { flex: 1 0 100% !important; order: -1; min-height: 28px; margin: 0 !important; padding: 2px 8px !important; font-size: 16px !important; resize: none; }
+  ${hideIco}
+  ${menu} { order: 1; position: static !important; flex: none; width: 34px; height: 34px; margin: 0 8px 0 0 !important; padding: 0 !important; border-radius: 50% !important; transform: none; background: var(--st-i-plus) center / 20px 20px no-repeat var(--st-mb) !important; }
+  ${menu}::after { content: ""; position: absolute; right: 50px; bottom: 8px; width: 34px; height: 34px; border-radius: 50%; background: var(--st-i-mic) center / 20px 20px no-repeat var(--st-mb); pointer-events: none; }
+  ${L.note ? `${menu}::before { content: "${cssText(L.note)}"; position: absolute; left: 6px; top: -24px; color: var(--st-dim); font-size: 12.5px; white-space: nowrap; pointer-events: none; }` : ""}
+  ${m1 ? `${S}::before { content: "${cssText(m1)}"; ${pill} padding: 0 ${m2 ? 5 : 14}px 0 14px; border-radius: ${m2 ? "999px 0 0 999px" : "999px"}; color: var(--st-fg); }` : `${S}::before { content: none; }`}
+  ${m1 && m2 ? `${S}::after { content: "${cssText(m2)}"; ${pill} padding: 0 14px 0 0; border-radius: 0 999px 999px 0; color: var(--st-dim); }` : `${S}::after { content: none; }`}
+  :is(${send}, ${stop}) { order: 3; flex: none; margin: 0 0 0 auto !important; width: 34px; height: 34px; padding: 0 !important; border-radius: 50% !important; transform: none; display: flex; align-items: center; justify-content: center; }
+  ${send} { background: var(--st-i-up) center / 20px 20px no-repeat var(--st-ms) !important; }
+  ${stop} { background: var(--st-ms) !important; color: #fff !important; }`;
+  }
+  const M = P.mob, mic = M.icon + 12;
+  return `${S} { display: flex !important; width: calc(100% - ${M.m * 2}px) !important; max-width: none; margin: 8px ${M.m}px 12px !important; padding: ${(M.h - M.send) / 2}px ${M.pr}px ${(M.h - M.send) / 2}px ${M.pl}px !important; min-height: ${M.h}px; border-radius: ${M.h / 2}px; background: var(--st-mi) !important; border: 1px solid var(--st-mline) !important; box-shadow: 0 6px 28px rgba(0, 0, 0, .09), 0 1px 4px rgba(0, 0, 0, .04); flex-wrap: nowrap !important; align-items: flex-end !important; gap: 0; }
+  ${S}::before, ${S}::after { content: none !important; }
+  ${S} > .text-input-area { flex: 1 1 auto !important; order: 0; min-width: 0; min-height: ${M.send}px; margin: 0 ${mic + M.gap}px 0 0 !important; padding: ${(M.send - 24) / 2}px ${M.tp}px !important; font-size: 16px !important; line-height: 24px !important; resize: none; }
+  ${hideIco}
+  ${menu} { order: -1; position: static !important; flex: none; width: 36px; height: ${M.send}px; margin: 0 !important; padding: 0 !important; border-radius: 50% !important; transform: none; background: var(--st-i-plus) center / ${M.icon}px ${M.icon}px no-repeat transparent !important; }
+  ${menu}::after { content: ""; position: absolute; right: ${M.pr + M.send + M.gap}px; bottom: ${(M.h - M.send) / 2}px; width: ${mic}px; height: ${M.send}px; background: var(--st-i-mic) center / ${M.icon}px ${M.icon}px no-repeat; pointer-events: none; }
+  :is(${send}, ${stop}) { order: 3; flex: none; margin: 0 !important; width: ${M.send}px; height: ${M.send}px; padding: 0 !important; border-radius: 50% !important; transform: none; display: flex; align-items: center; justify-content: center; }
+  ${send} { background: var(--st-i-up) center / ${Math.round(M.send * .58)}px no-repeat var(--st-ms) !important; }
+  ${stop} { background: var(--st-ms) !important; color: #fff !important; }`;
+}
 
 /** 기본 문구 + 사용자가 고친 문구. 빈 문자열이면 그 장식을 뺀다. */
 export function mergeLabels(id, custom = {}) {
@@ -152,13 +201,13 @@ export function buildStealth(id, opts = {}) {
   .st-msg { max-width: 100%; padding: 6px 18px; }
   .st-user .st-body { max-width: 85%; border-radius: 20px; padding: 10px 16px; }
   .st-body .chattext, .st-body .chattext p, .st-body .chattext li, .st-body .chattext span { font-size: 16px !important; line-height: 1.6 !important; }
-  /* 클로드 앱 입력창: 위는 글 칸, 아래 한 줄에 리스 버튼 · 모델 칩 · 둥근 보내기. 리스 버튼은 지우지 않고 작게 */
+  ${P.mob ? mobileInputCss(P, L) : `  /* 클로드 앱 입력창: 위는 글 칸, 아래 한 줄에 리스 버튼 · 모델 칩 · 둥근 보내기. 리스 버튼은 지우지 않고 작게 */
   div:has(> .text-input-area) { width: calc(100% - 20px) !important; max-width: none; margin: ${P.shell && L.note ? 30 : 8}px 10px 10px !important; padding: 10px 8px 8px !important; border-radius: ${Math.max(P.input, 24)}px; flex-wrap: wrap !important; align-items: center !important; column-gap: 2px; row-gap: 4px; }
   div:has(> .text-input-area) > .text-input-area { flex: 1 0 100% !important; order: -1; min-height: 40px; margin: 0 !important; padding: 4px 10px !important; font-size: 16px !important; }
   div:has(> .text-input-area) > div, div:has(> .text-input-area) > button { flex: none; margin: 0 !important; padding: 6px !important; transform: scale(.9); }
   div:has(> .text-input-area) > .button-icon-send { order: 3; margin-left: auto !important; width: 40px; height: 40px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; transform: none; }
   ${L.model ? `div:has(> .text-input-area)::after { position: static; order: 2; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; margin-left: 2px; padding: 6px 12px; border-radius: 999px; background: var(--st-bubble); color: var(--st-fg); font-size: 13px; white-space: nowrap; }` : ""}
-  ${P.shell && L.note ? `div:has(> .text-input-area)::before { content: "${cssText(L.note)}"; position: absolute; left: 6px; top: -24px; bottom: auto; color: var(--st-dim); font-size: 12.5px; white-space: nowrap; pointer-events: none; }` : ""}
+  ${P.shell && L.note ? `div:has(> .text-input-area)::before { content: "${cssText(L.note)}"; position: absolute; left: 6px; top: -24px; bottom: auto; color: var(--st-dim); font-size: 12.5px; white-space: nowrap; pointer-events: none; }` : ""}`}
 }`;
   const css = [
     `/* Dusk Stealth · ${P.label} */`,
@@ -222,7 +271,7 @@ body[x-dusk-st][x-dusk-fold="0"] { padding-left: var(--st-sw) !important; box-si
 .st-body .chattext blockquote { border-left: 3px solid var(--st-line2) !important; color: var(--st-fg2) !important; }`,
     hideImages ? imageFoldCss() : "",
     P.extra === "gpt" ? gptExtraCss() : "",
-    P.quoteDot ? quoteDotCss(P.quoteDot) : "",
+    quoteBoxCss(),
     P.extra === "code" ? codeExtraCss() : "",
     SB && !opts.minimal ? `/* Dusk Stealth 사이드바 */\n${SHELL_CSS}` : "",
     code ? `.st-user .st-body { max-width: 100%; background: transparent; border-radius: 0; padding: 0 0 0 1.4em; text-indent: -1.4em; }
