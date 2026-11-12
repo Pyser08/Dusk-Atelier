@@ -117,7 +117,7 @@ var vars = (p, c, scheme) => Object.entries({
 // 따옴표("…"·'…', 리스 mark risu-mark=quote*)는 그 앱의 인라인 코드처럼 상자로(사용자 지정 11-12, 예전 '・ 줄'을 바꿈). 색은 --st-cbg·--st-cline·--st-cfg
 // 봇 CSS가 따옴표에 줄(왼쪽 막대·block)을 그리는 경우가 있어(사용자 화면 11-12) 더 센 선택자로 덮고 앞뒤 장식도 끈다
 // 따옴표 안 끝에 '.'이 있으면 리스 mark가 아니라 봇·판의 다른 꾸밈(왼쪽 막대 줄)으로 나왔다(11-12) → 채팅 글 안의 대사 꾸밈(인라인 왼쪽 막대·quote/dialog 이름)도 같은 상자로
-var QSEL = ':is(body .st-body mark[risu-mark^="quote"][risu-mark], body .st-body .chattext :is([style*="border-left"], [class*="quote" i], [class*="dialog" i]):not(blockquote):not(:has(p, div, img)))';
+var QSEL = ':is(body .st-body mark[risu-mark^="quote"][risu-mark], body .st-body .chattext :is([style*="border-left"], [class*="quote" i], [class*="thought" i], [class*="dialog" i]):not(blockquote):not(:has(p, div, img)))';
 export var quoteBoxCss = () => `${QSEL} { display: inline !important; font-family: var(--st-mono) !important; font-size: .88em !important; font-weight: 400 !important; color: var(--st-cfg) !important; background: var(--st-cbg) !important; border: 1px solid var(--st-cline) !important; border-radius: 6px !important; padding: .1em .4em !important; margin: 0 !important; box-shadow: none !important; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 ${QSEL}::before, ${QSEL}::after { content: none !important; display: none !important; }
 ${QSEL} * { font: inherit !important; color: inherit !important; background: none !important; border: 0 !important; padding: 0 !important; margin: 0 !important; display: inline !important; }`;
