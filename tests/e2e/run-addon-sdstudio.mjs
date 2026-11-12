@@ -38,6 +38,7 @@ async function boot(width, height, { mac = false } = {}) {
       const path = u.replace(/^https:\/\/image\.novelai\.net/, ""), body = JSON.parse(o.body);
       window.__req.push({ path, body, auth: o.headers.Authorization, method: o.method });
       await new Promise((res) => setTimeout(res, window.__delay ?? 120));
+      if (window.__fail) return { status: window.__fail, body: new TextEncoder().encode('{"message":"busy"}') };
       if (o.headers.Authorization === "Bearer bad") return { status: 401, body: new TextEncoder().encode('{"message":"Unauthorized"}') };
       if (path === "/ai/encode-vibe") return { status: 200, body: new Uint8Array([1, 2, 3, 4]) };
       const n = window.__req.length;
@@ -118,6 +119,18 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   ok("예약 2장: 상위 | 자리에 씬 조합, 외형, 하위", g1.length === 2 && !!ga && ga.input.startsWith("masterpiece, angry, v-shaped eyebrows, white background, 1boy, cat ears, black hoodie, detailed"), ga?.input);
   ok("다 그리면 예약 0·카드 수 1", /예약된 씬 0\/20/.test(await txt(page, "#sds-reserved")) && /1$/.test((await sceneCard(page, "angry").locator(".cap").innerText()).trim()));
   await shot(page, "sd-2-generated");
+  // 다시 시도 중(서버 오류)에도 멈추기가 바로 듣고, 진행 줄에 오류가 보임
+  await page.evaluate(() => { window.__fail = 500; window.__reqMark = window.__req.length; });
+  await page.locator("#sds-body .sds-scene").first().locator(".rsvbtn").click(); await page.waitForTimeout(100);
+  await page.click("#sds-run"); await page.waitForTimeout(600);
+  ok("다시 시도 중 진행 줄에 오류 문구", /다시 시도 1번째 \(NovelAI 오류 500/.test(await txt(page, "#sds-prog")), await txt(page, "#sds-prog"));
+  await page.dispatchEvent("#sds-run", "pointerdown", { button: 0 }); await page.waitForTimeout(400);
+  ok("다시 시도 기다리는 중에도 멈추기 바로", !/멈추/.test(await txt(page, "#sds-run")) && /생성/.test(await txt(page, "#sds-run")), await txt(page, "#sds-run"));
+  await page.evaluate(() => { window.__fail = 400; });
+  await page.click("#sds-run"); await page.waitForTimeout(500);
+  ok("400 오류는 다시 시도 없이 멈춤", /생성/.test(await txt(page, "#sds-run")));
+  await page.evaluate(() => { window.__fail = 0; window.__req.length = window.__reqMark; });
+  await page.click("#sds-rsv-clear"); await page.waitForTimeout(150);
 
   // 씬 열기 → 조합
   await openCard(sceneCard(page, "angry")); await page.waitForTimeout(400);

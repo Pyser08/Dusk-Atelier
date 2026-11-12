@@ -7,6 +7,7 @@
 - 4 튜토리얼 `dlg.tutorial`(4단계: 로어북 연동 끔/켬 · SDStudio 백업 가져오기 · 씬 템플릿 가져오기/세트 프리셋 고르기 · 저장·백업), 첫 실행(prefs.tutorialDone 없을 때)과 도움말 ‘튜토리얼 다시 보기’. 도움말에 씬 세트·로어북 연동 절.
 - 시험: unit `tests/sdstudio-sets.test.js`(4) → npm test 1474 pass / 1 fail(pot-port, 원래 실패). build·check 동일함, build-addons --check 동일. e2e run-addon-sdstudio 117 통과(튜토리얼은 e2e에서 tutorialDone으로 건너뜀 — 세트·튜토리얼 e2e는 아직 없음).
 - (11시) 캐릭터 카드·폴더는 한 번 누르면 테두리만, 여는 건 더블클릭(selectable·폴더 타일·sds-fopen). 생성 다시 시도: 진행 줄에 마지막 오류 표시(q.lastErr), 429 말고 4xx(NovelAI 오류 400 등)는 다시 해도 같아 멈추고 알림. e2e openCard = dblclick, 117 통과.
+- (11시 반) 멈추기 고침: ① 다시 시도 대기(최대 1분)가 abort를 안 들어 그동안 안 멈췄음 → 대기도 q.ctl.signal로 끝남 ② 그림 올 때마다 paintTop이 버튼을 새로 그려 click이 끊길 수 있음 → pointerdown에서 멈춤 ③ 멈추는 동안 ‘멈추는 중…’(q.stopping), 그동안 생성 다시 못 누름. e2e 120(재시도 중 멈추기·오류 문구·400 즉시 멈춤 추가).
 - 남은 일: [ ] 제보 ‘다시 시도 5번 해도 안 됨’ 원인(진행 줄 오류 문구 받아 확인) [ ] 사용자 제보 ‘씬 예약 버튼이 제대로 안 나옴’ — e2e 사진에선 정상, 실기기 화면 확인 필요 [ ] 세트·튜토리얼 e2e [ ] 애드온 배포(minCore 2.1.4) 지시 대기
 
 ## 최근 세션 (2026-11-11 22시 — v2.1.4 계속: 보조 호출 내역 + 장기기억 보조 토큰 줄이기, 장기기억 애드온 0.2.8)

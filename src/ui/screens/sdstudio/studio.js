@@ -141,7 +141,8 @@ export async function openAssetStudio(ctx, target, sd) {
     const c = S.curChar();
     const sum = P.reserveSummary(proj, c?.id ?? null);
     const runBtn = q.running
-      ? h("button", { type: "button", class: "sds-queue stop", id: "sds-run", onClick: () => stopQueue() }, ico("stop", 14), `멈추기 ${q.done}/${q.total}`)
+      ? h("button", { type: "button", class: "sds-queue stop", id: "sds-run", onPointerdown: (e) => { if (e.button === 0) stopQueue(); }, onClick: () => stopQueue() }, ico("stop", 14), `멈추기 ${q.done}/${q.total}`)
+      : q.stopping ? h("button", { type: "button", class: "sds-queue stop", id: "sds-run", disabled: true }, ico("stop", 14), "멈추는 중…")
       : h("button", { type: "button", class: "sds-queue", id: "sds-run", disabled: !P.planJobs(proj).length, title: S.prefs.boost ? "부스트 모드: 토큰 여러 개로 동시에 그려요" : "예약된 씬을 차례로 그려요", onClick: () => runQueue() }, ico(S.prefs.boost ? "bolt" : "play", 14), `${S.prefs.boost ? "부스트 " : ""}생성${P.planJobs(proj).length ? ` ${P.planJobs(proj).length}장` : ""}`);
     replace(topEl,
       h("button", { type: "button", class: "sds-ib", style: "border:0;background:none", "aria-label": st.sceneId || st.charId || st.folder || st.mode !== "scene" ? "위로" : "에셋 제작 닫기", title: st.sceneId || st.charId || st.folder ? "한 단계 위로" : "닫기", id: "sds-close", onClick: () => goUp() }, ico("back", 20)),
@@ -1160,7 +1161,7 @@ export async function openAssetStudio(ctx, target, sd) {
     S.set(P.addImage(proj, c.id, sc.id, { path, seed: body.parameters.seed, prompt, w: width, h: height }), { undo: false });
   }
   async function runQueue() {
-    if (q.running) return;
+    if (q.running || q.stopping) return;
     const jobs = P.planJobs(proj);
     if (!jobs.length) { S.toast("예약된 씬이 없어요. 씬 카드의 +1이나 위 예약 버튼을 눌러요."); return; }
     if (!await S.dlg.token()) return;
@@ -1187,7 +1188,8 @@ export async function openAssetStudio(ctx, target, sd) {
             q.lastErr = String(e?.message ?? e).slice(0, 80);
             q.retry = tries + 1; paintTop();
             const wait = Math.min(60000, [3000, 6000, 15000, 30000][tries] ?? 60000);   // 네트워크·서버 오류는 끝없이 다시(최대 1분 간격)
-            await new Promise((r) => setTimeout(r, wait));
+            await new Promise((r) => { const sig = q.ctl?.signal, tm = setTimeout(done, wait); function done() { clearTimeout(tm); sig?.removeEventListener?.("abort", done); r(); } sig?.addEventListener?.("abort", done); if (sig?.aborted) done(); });   // 멈추기를 누르면 기다림도 바로 끝
+
           }
         }
         if (!ok) break;
@@ -1203,14 +1205,14 @@ export async function openAssetStudio(ctx, target, sd) {
     clearInterval(tick); try { await wake?.release(); } catch { /* 이미 풀림 */ }
     sd.setPrefs({ resume: false }).catch(() => {});
     const done = q.done;
-    Object.assign(q, { running: false, ctl: null, workers: 1 });
+    Object.assign(q, { running: false, stopping: false, ctl: null, workers: 1 });
     await S.persist();
     paintTop(); paintTools(); paintBody();
     if (err && !isStopError(err)) { ctx.toast(`그리다 멈췄어요(${done}장 완료): ${err?.message ?? err}`, { error: true }); if (/토큰/.test(err?.message ?? "")) S.dlg.token({ force: true }); }
     else ctx.toast(err ? `멈췄어요. ${done}장 만들었어요` : `${done}장 다 그렸어요${lanes.length > 1 ? ` (부스트 ${lanes.length}줄)` : ""}`);
     if (el.hidden) finish();   // 닫아 둔 채 다 그렸으면 이제 정리
   }
-  function stopQueue() { q.running = false; q.ctl?.abort(); }
+  function stopQueue() { if (!q.running) return; q.running = false; q.stopping = true; q.ctl?.abort(); paintTop(); ctx.toast("멈추는 중이에요 — 지금 그리는 장만 끝나면 멈춰요"); }
   // 변형·인페인트·업스케일·디렉터 도구 → 같은 씬에 더함. 만든 경로를 돌려준다
   async function derive(it, kind, opts) {
     const sc = P.sceneOf(proj, it.cid, it.sid), im = sc?.images.find((x) => x.path === it.path), c = P.charOf(proj, it.cid);
