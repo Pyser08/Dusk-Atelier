@@ -157,7 +157,7 @@ export async function openAssetStudio(ctx, target, sd) {
   function progressText() {
     const pct = q.total ? Math.floor((q.done / q.total) * 100) : 0, left = q.total - q.done;
     const el2 = Date.now() - q.t0, eta = q.done ? (el2 / q.done) * left : null;
-    return `${pct}% · ${q.done}/${q.total}장 · 남은 ${left}장 · ${eta == null ? "예상 시간 재는 중" : `약 ${fmtDur(eta)} 남음`}${q.retry ? ` · 다시 시도 ${q.retry}번째` : ""}`;
+    return `${pct}% · ${q.done}/${q.total}장 · 남은 ${left}장 · ${eta == null ? "예상 시간 재는 중" : `약 ${fmtDur(eta)} 남음`}${q.retry ? ` · 다시 시도 ${q.retry}번째${q.lastErr ? ` (${q.lastErr})` : ""}` : ""}`;
   }
   function progressEl() {
     const pct = q.total ? (q.done / q.total) * 100 : 0;
@@ -258,7 +258,7 @@ export async function openAssetStudio(ctx, target, sd) {
   // ── 카드 ──
   const capOf = (name, count, picks = 0) => h("span", { class: "cap" }, h("span", { class: "n" }, name), picks ? h("span", { class: "pk", title: `봇에 보낼 그림 ${picks}장 고름` }, `✓${picks}`) : null, h("span", { class: "c" }, String(count)));
   const chk = () => h("span", { class: "chk", "aria-hidden": "true" }, ico("check", 14));
-  // 한 번 누르면 테두리가 켜지고(고른 상태), 켜진 걸 다시 누르면 열려요. 폴더를 고른 채 '새 캐릭터'를 누르면 그 폴더 안에 만들어져요.
+  // 한 번 누르면 테두리가 켜지고(고른 상태), 더블클릭하면 열려요. 폴더를 고른 채 '새 캐릭터'를 누르면 그 폴더 안에 만들어져요.
   const isCur = (kind, id) => st.focus?.kind === kind && st.focus.id === id;
   function setFocus(kind, id) {
     st.focus = id ? { kind, id } : null;
@@ -272,10 +272,10 @@ export async function openAssetStudio(ctx, target, sd) {
       if (e.target.closest(".quick")) return;
       if (e.target.closest(".chk") || e.ctrlKey || e.metaKey || e.shiftKey || (sel.size && st.mode !== "scene")) { sel.has(key) ? sel.delete(key) : sel.add(key); card.setAttribute("aria-selected", String(sel.has(key))); paintTools(); return; }
       if (kind === "scene") { sel.has(key) && sel.size === 1 ? sel.clear() : (sel.clear(), sel.add(key)); for (const n of bodyEl.querySelectorAll(".sds-scene")) n.setAttribute("aria-selected", String(sel.has(n.dataset.id))); paintTools(); return; }
-      if (kind && !isCur(kind, key)) { setFocus(kind, key); return; }
+      if (kind) { if (!isCur(kind, key)) setFocus(kind, key); return; }   // 카드·폴더는 한 번 누르면 테두리만, 여는 건 더블클릭
       onOpen();
     });
-    if (kind === "scene") card.addEventListener("dblclick", (e) => { if (!e.target.closest(".quick")) { sel.clear(); onOpen(); } });
+    if (kind) card.addEventListener("dblclick", (e) => { if (!e.target.closest(".quick")) { sel.clear(); onOpen(); } });
     card.setAttribute("aria-selected", String(sel.has(key)));
     if (kind) card.classList.toggle("cur", isCur(kind, key));
     return card;
@@ -438,14 +438,15 @@ export async function openAssetStudio(ctx, target, sd) {
     bodyEl.scrollTop = keep;
     if (ctx.win.scrollLeft || ctx.win.scrollTop) { ctx.win.scrollLeft = 0; ctx.win.scrollTop = 0; }   // 포커스 이동으로 창이 밀리지 않게
   }
-  // 폴더 줄 안의 하위 폴더 타일(비어 있어도 보이게). 누르면 테두리, 다시 누르면 열림, 끌어 옮기기·놓기 가능.
+  // 폴더 줄 안의 하위 폴더 타일(비어 있어도 보이게). 누르면 테두리, 더블클릭하면 열림, 끌어 옮기기·놓기 가능.
   function subTile(g) {
     const n = P.rowChars(proj, g.id).length, k = proj.folders.filter((x) => x.parent === g.id).length;
     const t = h("button", { type: "button", class: "sds-card sds-subf", dataset: { id: g.id }, title: g.name },
       h("span", { class: "ph", style: "flex-direction:column;gap:6px;color:var(--rb-acc)" }, ico("folder", 34), h("span", { class: "rb-muted", style: "font-size:12px" }, `${n}명${k ? ` · 폴더 ${k}` : ""}`)),
       h("span", { class: "cap" }, h("span", { class: "n" }, g.name)));
     t.classList.toggle("cur", isCur("folder", g.id));
-    t.addEventListener("click", () => { if (!isCur("folder", g.id)) { setFocus("folder", g.id); t.classList.add("cur"); return; } st.focus = null; st.folder = g.id; sel.clear(); paintTools(); paintBody(); });
+    t.addEventListener("click", () => { if (!isCur("folder", g.id)) { setFocus("folder", g.id); t.classList.add("cur"); } });
+    t.addEventListener("dblclick", () => { st.focus = null; st.folder = g.id; sel.clear(); paintTools(); paintBody(); });
     t.addEventListener("contextmenu", (e) => { e.preventDefault(); folderMenu(t, g.id); });
     dragSource(t, () => ({ kind: "folder", id: g.id }));
     dropTarget(t, { mode: () => "into", ok: (p) => p.kind === "char" || (p.kind === "folder" && p.id !== g.id),
@@ -462,7 +463,7 @@ export async function openAssetStudio(ctx, target, sd) {
       const foldBtn = h("button", { type: "button", class: "rb-icon-btn sds-fold", "aria-label": folded ? "펼치기" : "접기", "aria-expanded": String(!folded), title: folded ? "펼치기" : "접기",
         onClick: (e) => { e.stopPropagation(); st.folded = folded ? st.folded.filter((x) => x !== f.id) : [...st.folded, f.id]; paintBody(); } }, h("span", { style: `display:flex;transition:transform .15s;transform:rotate(${folded ? -90 : 0}deg)` }, ico("chevD", 16)));
       const row = h("div", { class: ["sds-frow sds-folder", folded && "folded"], dataset: { id: f.id } },
-        h("div", { class: "hd" }, foldBtn, h("button", { type: "button", class: "open sds-fopen", onClick: () => { if (!isCur("folder", f.id)) { setFocus("folder", f.id); return; } st.focus = null; st.folder = f.id; sel.clear(); paintTools(); paintBody(); } },
+        h("div", { class: "hd" }, foldBtn, h("button", { type: "button", class: "open sds-fopen", onClick: () => { if (!isCur("folder", f.id)) setFocus("folder", f.id); }, onDblclick: () => { st.focus = null; st.folder = f.id; sel.clear(); paintTools(); paintBody(); } },
           h("span", { style: "color:var(--rb-acc);display:flex" }, ico("folder", 18)), h("b", { style: "font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, f.name),
           f.kind ? h("span", { class: "rb-badge" }, KIND_KO[f.kind]) : null, f.tpl ? h("span", { class: "rb-badge", title: "새 캐릭터에 적용할 기본 템플릿" }, `템플릿 ${f.tpl}`) : null, h("span", { class: "rb-muted" }, `${all.length}명${subs ? ` · 폴더 ${subs}` : ""}`), h("span", { style: "color:var(--rb-mute);display:flex" }, ico("chevR", 16))),
           h("button", { type: "button", class: "rb-icon-btn", "aria-label": "폴더 메뉴", onClick: (e) => folderMenu(e.currentTarget, f.id) }, ico("more", 18))),
@@ -508,7 +509,7 @@ export async function openAssetStudio(ctx, target, sd) {
       return chip;
     })) : null;
     const nf = c.scenes.filter((x) => x.images.length && !P.hasFav(x)).length;
-    return [sec("씬", c.scenes.length, nf ? h("button", { type: "button", class: "sds-pill", id: "sds-nofav-pill", title: "즐겨찾기 없는 씬부터 대표 고르기", style: "cursor:pointer;border:0", onClick: () => chooser({ onlyNoFav: true }) }, `★ 없는 씬 ${nf}`) : null, h("span", { class: "rb-muted", style: "font-size:12px" }, "눌러서 고르고, 한 번 더 누르면 열려요 · 끌어서 순서 바꾸기 · Ctrl/⌘·체크로 여러 개 고르기")), grid(...c.scenes.map((sc) => sceneCard(c, sc, c.scenes))), tray];
+    return [sec("씬", c.scenes.length, nf ? h("button", { type: "button", class: "sds-pill", id: "sds-nofav-pill", title: "즐겨찾기 없는 씬부터 대표 고르기", style: "cursor:pointer;border:0", onClick: () => chooser({ onlyNoFav: true }) }, `★ 없는 씬 ${nf}`) : null, h("span", { class: "rb-muted", style: "font-size:12px" }, "눌러서 고르고, 더블클릭하면 열려요 · 끌어서 순서 바꾸기 · Ctrl/⌘·체크로 여러 개 고르기")), grid(...c.scenes.map((sc) => sceneCard(c, sc, c.scenes))), tray];
   }
   function sceneView(c, sc) {
     const n = combinationCount(sc.slots);
@@ -1177,10 +1178,13 @@ export async function openAssetStudio(ctx, target, sd) {
         const k = next++, job = jobs[k];
         let ok = false;
         for (let tries = 0; q.running && !err; tries++) {
-          try { await generateJob(job, k, token); ok = true; q.retry = 0; break; }
+          try { await generateJob(job, k, token); ok = true; q.retry = 0; q.lastErr = ""; break; }
           catch (e) {
             if (isStopError(e) || !q.running) { err ??= e; break; }
             if (/토큰|401|402|403|Unauthorized|Anlas|구독/i.test(e?.message ?? "")) { err ??= e; q.running = false; q.ctl?.abort(); break; }
+            // 요청 자체가 틀린 오류(400·404·413 등, 429 빼고)는 다시 해도 같으니 멈추고 알림
+            if (/NovelAI 오류 4(?!29)\d\d/.test(e?.message ?? "")) { err ??= e; q.running = false; q.ctl?.abort(); break; }
+            q.lastErr = String(e?.message ?? e).slice(0, 80);
             q.retry = tries + 1; paintTop();
             const wait = Math.min(60000, [3000, 6000, 15000, 30000][tries] ?? 60000);   // 네트워크·서버 오류는 끝없이 다시(최대 1분 간격)
             await new Promise((r) => setTimeout(r, wait));

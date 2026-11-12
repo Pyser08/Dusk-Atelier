@@ -6,7 +6,8 @@
 - 3 로어북 연동 양방향: loresync `pullLore` — 연결 안 된 Dusk 폴더·[소속]을 폴더로(소속→group, da_parent 구조 유지, lore id 연결, 고리는 맨 위). 이미 연결된 것의 이름·위치는 에셋 제작 기준. 지운 폴더의 lore id는 `proj.loreSkip`에 남겨 다시 안 가져옴. syncLoreNow: 열 때(loreSync 켰으면)·폴더 바뀔 때 pull → push. **버그 고침**: 봇 쪽 push가 syncLore를 두 번 불러 기록한 lore id와 실제 로어북 id가 어긋났음 → 한 번만 계산.
 - 4 튜토리얼 `dlg.tutorial`(4단계: 로어북 연동 끔/켬 · SDStudio 백업 가져오기 · 씬 템플릿 가져오기/세트 프리셋 고르기 · 저장·백업), 첫 실행(prefs.tutorialDone 없을 때)과 도움말 ‘튜토리얼 다시 보기’. 도움말에 씬 세트·로어북 연동 절.
 - 시험: unit `tests/sdstudio-sets.test.js`(4) → npm test 1474 pass / 1 fail(pot-port, 원래 실패). build·check 동일함, build-addons --check 동일. e2e run-addon-sdstudio 117 통과(튜토리얼은 e2e에서 tutorialDone으로 건너뜀 — 세트·튜토리얼 e2e는 아직 없음).
-- 남은 일: [ ] 사용자 제보 ‘씬 예약 버튼이 제대로 안 나옴’ — e2e 사진에선 정상, 실기기 화면 확인 필요 [ ] 세트·튜토리얼 e2e [ ] 애드온 배포(minCore 2.1.4) 지시 대기
+- (11시) 캐릭터 카드·폴더는 한 번 누르면 테두리만, 여는 건 더블클릭(selectable·폴더 타일·sds-fopen). 생성 다시 시도: 진행 줄에 마지막 오류 표시(q.lastErr), 429 말고 4xx(NovelAI 오류 400 등)는 다시 해도 같아 멈추고 알림. e2e openCard = dblclick, 117 통과.
+- 남은 일: [ ] 제보 ‘다시 시도 5번 해도 안 됨’ 원인(진행 줄 오류 문구 받아 확인) [ ] 사용자 제보 ‘씬 예약 버튼이 제대로 안 나옴’ — e2e 사진에선 정상, 실기기 화면 확인 필요 [ ] 세트·튜토리얼 e2e [ ] 애드온 배포(minCore 2.1.4) 지시 대기
 
 ## 최근 세션 (2026-11-11 22시 — v2.1.4 계속: 보조 호출 내역 + 장기기억 보조 토큰 줄이기, 장기기억 애드온 0.2.8)
 - 제보 확정: 숫자는 **보조 모델**(메인 버텍스 아르곤, 보조 버텍스 제미나이 3 플래시, 둘 다 추론 low), 턴당 입력 약 12만·출력 약 3만. 켠 애드온: 장기기억·관계도·기억카드·Erosync. (1.9.2 때 보조 약 7만 = 리수폿 Writer 지침 약 3만 + Director 약 2만 + 데이터)
