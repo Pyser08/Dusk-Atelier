@@ -123,13 +123,21 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await page.evaluate(() => { window.__fail = 500; window.__reqMark = window.__req.length; });
   await page.locator("#sds-body .sds-scene").first().locator(".rsvbtn").click(); await page.waitForTimeout(100);
   await page.click("#sds-run"); await page.waitForTimeout(600);
-  ok("다시 시도 중 진행 줄에 오류 문구", /다시 시도 1번째 \(NovelAI 오류 500/.test(await txt(page, "#sds-prog")), await txt(page, "#sds-prog"));
+  ok("다시 시도 중 오류 문구가 위에 따로 보임", /다시 시도 1번째 — NovelAI 오류 500/.test(await txt(page, "#sds-qerr")) && await page.locator("#sds-qerr").isVisible(), await txt(page, "#sds-qerr"));
   await page.dispatchEvent("#sds-run", "pointerdown", { button: 0 }); await page.waitForTimeout(400);
   ok("다시 시도 기다리는 중에도 멈추기 바로", !/멈추/.test(await txt(page, "#sds-run")) && /생성/.test(await txt(page, "#sds-run")), await txt(page, "#sds-run"));
   await page.evaluate(() => { window.__fail = 400; });
   await page.click("#sds-run"); await page.waitForTimeout(500);
   ok("400 오류는 다시 시도 없이 멈춤", /생성/.test(await txt(page, "#sds-run")));
-  await page.evaluate(() => { window.__fail = 0; window.__req.length = window.__reqMark; });
+  await page.evaluate(() => { window.__fail = 0; });
+  const topWas = await page.locator("#sds-top").inputValue().catch(() => null);
+  await page.evaluate(() => { const S = document.querySelector("#rb-sd-studio").__sds; S.set(S.P.setSettings(S.proj, { top: S.proj.settings.top + ", <없는모음.x>" })); });
+  const n0 = await page.evaluate(() => window.__req.length);
+  await page.click("#sds-run"); await page.waitForTimeout(500);
+  ok("없는 조각 모음은 요청 없이 바로 멈춤", (await page.evaluate(() => window.__req.length)) === n0 && /생성/.test(await txt(page, "#sds-run")) && !(await page.locator("#sds-qerr").isVisible()));
+  await page.evaluate(() => { const S = document.querySelector("#rb-sd-studio").__sds; S.set(S.P.setSettings(S.proj, { top: S.proj.settings.top.replace(", <없는모음.x>", "") })); });
+  void topWas;
+  await page.evaluate(() => { window.__req.length = window.__reqMark; });
   await page.click("#sds-rsv-clear"); await page.waitForTimeout(150);
 
   // 씬 열기 → 조합

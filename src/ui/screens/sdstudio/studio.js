@@ -132,7 +132,9 @@ export async function openAssetStudio(ctx, target, sd) {
   bodyEl.addEventListener("contextmenu", (e) => { if (e.target.closest(".sds-card,.sds-frow,input,textarea,select,button")) return; e.preventDefault(); bodyMenu(e.target.closest("div") ?? bodyEl); });
   bodyEl.addEventListener("click", (e) => { if (st.focus && !e.target.closest(".sds-card,.sds-frow,.rb-chip,button,input,select,textarea,label")) setFocus(null); });
   const setsEl = h("div", { class: "sds-setbar" });
-  const mainEl = h("div", { class: "sds-main" }, topEl, toolsEl, setsEl, bodyEl);
+  const qErrEl = h("div", { class: "sds-qerr", id: "sds-qerr", role: "alert", hidden: true });
+  const paintQErr = () => { const m = q.running && q.retry && q.lastErr; qErrEl.hidden = !m; if (m) qErrEl.textContent = `다시 시도 ${q.retry}번째 — ${q.lastErr}`; };
+  const mainEl = h("div", { class: "sds-main" }, topEl, qErrEl, toolsEl, setsEl, bodyEl);
   el.append(rail, leftEl, mainEl);
   ctx.win.appendChild(el);
 
@@ -158,7 +160,7 @@ export async function openAssetStudio(ctx, target, sd) {
   function progressText() {
     const pct = q.total ? Math.floor((q.done / q.total) * 100) : 0, left = q.total - q.done;
     const el2 = Date.now() - q.t0, eta = q.done ? (el2 / q.done) * left : null;
-    return `${pct}% · ${q.done}/${q.total}장 · 남은 ${left}장 · ${eta == null ? "예상 시간 재는 중" : `약 ${fmtDur(eta)} 남음`}${q.retry ? ` · 다시 시도 ${q.retry}번째${q.lastErr ? ` (${q.lastErr})` : ""}` : ""}`;
+    return `${pct}% · ${q.done}/${q.total}장 · 남은 ${left}장 · ${eta == null ? "예상 시간 재는 중" : `약 ${fmtDur(eta)} 남음`}${q.retry ? ` · 다시 시도 ${q.retry}번째` : ""}`;
   }
   function progressEl() {
     const pct = q.total ? (q.done / q.total) * 100 : 0;
@@ -1151,9 +1153,11 @@ export async function openAssetStudio(ctx, target, sd) {
   async function generateJob(job, k, token) {
     const c = P.charOf(proj, job.cid), sc = P.sceneOf(proj, job.cid, job.sid), s = proj.settings;
     if (!c || !sc) return;
-    const prompt = buildPrompt({ top: s.top, own: P.ownPrompt(proj, c), middle: P.middleFor(sc, job.combo), back: s.back }, proj.pieces);
+    let prompt, uc;
+    try { prompt = buildPrompt({ top: s.top, own: P.ownPrompt(proj, c), middle: P.middleFor(sc, job.combo), back: s.back }, proj.pieces); uc = buildNegative(s.neg, proj.pieces); }
+    catch (e) { const er = new Error(`${c.name} · ${sc.name} 프롬프트 오류: ${e?.message ?? e}`); er.fatal = true; er.at = { cid: c.id, sid: sc.id }; throw er; }   // 다시 해도 같으니 바로 멈춤
     const { width, height } = P.sizeFor(s.size, sc);
-    const body = buildGenerateBody({ prompt, uc: buildNegative(s.neg, proj.pieces), width, height, seed: P.seedFor(s.seed, k), settings: s.sampling,
+    const body = buildGenerateBody({ prompt, uc, width, height, seed: P.seedFor(s.seed, k), settings: s.sampling,
       chars: s.chars.filter((x) => x.on), vibes: await vibesFor(s.sampling.model), refs: await refsFor(s.sampling.model) });
     const data = await sd.image(body, { signal: q.ctl?.signal, token });
     const path = await sd.saveAsset(data);
@@ -1170,7 +1174,7 @@ export async function openAssetStudio(ctx, target, sd) {
     Object.assign(q, { running: true, done: 0, total: jobs.length, ctl: new AbortController(), workers: lanes.length, t0: Date.now(), retry: 0 });
     sd.setPrefs({ resume: true }).catch(() => {});   // 도중에 창·앱이 꺼지면 다음에 열 때 이어 그리기를 물어봄
     let wake = null; try { wake = await navigator.wakeLock?.request("screen"); } catch { /* 지원 안 함 */ }
-    const tick = setInterval(() => { const t = el.querySelector("#sds-prog .t"); if (t) t.textContent = progressText(); }, 1000);
+    const tick = setInterval(() => { const t = el.querySelector("#sds-prog .t"); if (t) t.textContent = progressText(); paintQErr(); }, 1000);
     paintTop(); paintBody();
     const per = new Map();
     let err = null, next = 0;
@@ -1182,11 +1186,12 @@ export async function openAssetStudio(ctx, target, sd) {
           try { await generateJob(job, k, token); ok = true; q.retry = 0; q.lastErr = ""; break; }
           catch (e) {
             if (isStopError(e) || !q.running) { err ??= e; break; }
+            if (e?.fatal) { err ??= e; q.running = false; q.ctl?.abort(); break; }
             if (/토큰|401|402|403|Unauthorized|Anlas|구독/i.test(e?.message ?? "")) { err ??= e; q.running = false; q.ctl?.abort(); break; }
             // 요청 자체가 틀린 오류(400·404·413 등, 429 빼고)는 다시 해도 같으니 멈추고 알림
             if (/NovelAI 오류 4(?!29)\d\d/.test(e?.message ?? "")) { err ??= e; q.running = false; q.ctl?.abort(); break; }
-            q.lastErr = String(e?.message ?? e).slice(0, 80);
-            q.retry = tries + 1; paintTop();
+            q.lastErr = String(e?.message ?? e).slice(0, 300);
+            q.retry = tries + 1; paintTop(); paintQErr();
             const wait = Math.min(60000, [3000, 6000, 15000, 30000][tries] ?? 60000);   // 네트워크·서버 오류는 끝없이 다시(최대 1분 간격)
             await new Promise((r) => { const sig = q.ctl?.signal, tm = setTimeout(done, wait); function done() { clearTimeout(tm); sig?.removeEventListener?.("abort", done); r(); } sig?.addEventListener?.("abort", done); if (sig?.aborted) done(); });   // 멈추기를 누르면 기다림도 바로 끝
 
@@ -1205,10 +1210,10 @@ export async function openAssetStudio(ctx, target, sd) {
     clearInterval(tick); try { await wake?.release(); } catch { /* 이미 풀림 */ }
     sd.setPrefs({ resume: false }).catch(() => {});
     const done = q.done;
-    Object.assign(q, { running: false, stopping: false, ctl: null, workers: 1 });
+    Object.assign(q, { running: false, stopping: false, ctl: null, workers: 1, retry: 0, lastErr: "" }); paintQErr();
     await S.persist();
     paintTop(); paintTools(); paintBody();
-    if (err && !isStopError(err)) { ctx.toast(`그리다 멈췄어요(${done}장 완료): ${err?.message ?? err}`, { error: true }); if (/토큰/.test(err?.message ?? "")) S.dlg.token({ force: true }); }
+    if (err && !isStopError(err)) { ctx.toast(`그리다 멈췄어요(${done}장 완료): ${err?.message ?? err}`, { error: true, seconds: 15, ...(err.at ? { action: { label: "그 씬 열기", run: () => { st.charId = err.at.cid; st.sceneId = err.at.sid; st.mode = "scene"; S.paint(); } } } : {}) }); if (/토큰/.test(err?.message ?? "")) S.dlg.token({ force: true }); }
     else ctx.toast(err ? `멈췄어요. ${done}장 만들었어요` : `${done}장 다 그렸어요${lanes.length > 1 ? ` (부스트 ${lanes.length}줄)` : ""}`);
     if (el.hidden) finish();   // 닫아 둔 채 다 그렸으면 이제 정리
   }

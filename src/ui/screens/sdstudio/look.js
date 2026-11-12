@@ -116,6 +116,8 @@ export var CSS = `
 .sds-prog{display:flex;align-items:center;gap:10px;min-width:220px;flex:1;max-width:520px}
 .sds-prog .bar{flex:1;height:8px;border-radius:999px;background:var(--rb-surf2);overflow:hidden;border:1px solid var(--rb-line2)}
 .sds-prog .bar i{display:block;height:100%;background:var(--rb-acc-grad);transition:width .3s}
+.sds-qerr{padding:8px 16px;background:color-mix(in srgb,var(--rb-danger) 16%,transparent);border-bottom:var(--rb-bw,1px) solid var(--rb-danger);color:var(--rb-text);font-size:13px;font-weight:700;line-height:1.45;white-space:normal;word-break:break-word;flex-shrink:0}
+.sds-qerr[hidden]{display:none}
 .sds-prog .t{font-size:12px;font-weight:700;color:var(--rb-sub);white-space:nowrap;font-variant-numeric:tabular-nums}
 .sds-pa{position:relative}
 .sds-ac{position:absolute;left:0;right:0;top:100%;margin-top:6px;z-index:40;background:var(--rb-surf);border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.35);padding:4px;max-height:280px;overflow:auto;scrollbar-width:thin}
