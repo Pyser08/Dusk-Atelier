@@ -3,15 +3,17 @@
 //   "캐릭터 임포트 / RisuRealm / 패키지 임포트"를 누른 뒤 몇 분 동안만 자주 확인한다.
 //   파일을 끌어다 놓아 가져오는 경우를 위해 8초마다 가볍게(봇 ID 목록만) 확인한다.
 // - 권한이 없으면 4초마다 봇 ID 목록만 비교한다.
-// - 모듈 목록은 무거워서 평소 20초마다, 가져오기 직후 몇 분만 3초마다 본다.
-// - 화면이 안 보일 때는 멈추고, 다시 보이면 바로 확인한다.
+// - 캐릭터 전체 읽기는 데이터가 많으면 10초 넘게 걸린다: 처음 설치 때와 새 봇을 살펴볼 때만.
+//   평소엔 순서 목록 + 봇 배열 끝자리(getCharacterFromIndex)만 본다. 봇 수는 저장해 둔다.
+// - 모듈 목록도 무거워서 평소 5분마다, 가져오기 직후 몇 분만 20초마다 본다. 켠 직후 1분은 안 본다.
+// - 화면이 안 보일 때는 멈추고, 다시 보이면 가볍게 확인한다.
 // - 확인한 봇 ID를 저장해 두어, 플러그인이 꺼져 있던 동안 생긴 봇도 다음에 켤 때 확인한다.
 import { listUpdateCandidates } from '../tide/characterUpdateTargets.ts';
 import { charFields } from '../engine/tideplan.js';
 import { stableJson } from '../engine/util.js';
 
 // 모듈 목록은 통째로 복사돼 와서 무겁다: 평소엔 가끔, 가져오기 직후(burst)에만 자주
-var KNOWN_MOD_KEY = "rbm:watchMod:v1", MOD_EVERY = 12e4, MOD_BURST = 3e3;
+var KNOWN_MOD_KEY = "rbm:watchMod:v1", MOD_EVERY = 3e5, MOD_BURST = 2e4, MOD_FIRST = 6e4, TAIL_MAX = 50;
 var KNOWN_KEY = "rbm:watch:v1", UI_KEY = "rbm:ui:v1", TRASH_KEY = "rbm:pendingTrash:v1";
 var SLOW = 15e3, FAST = 8e3, BURST = 1500, BURST_FOR = 3 * 6e4, TRASH_EVERY = 3e4;
 var MENU_BTN_ID = "dusk-atelier-addchar";
@@ -98,12 +100,12 @@ function modKey(name) {
   return String(name ?? "").normalize("NFKC").toLowerCase().replace(/(?:\s*[-–—:]?\s*(?:v(?:er(?:sion)?)?\.?\s*)?\d+(?:\.\d+)+|\s*[([]\s*v?\d+(?:\.\d+)*\s*[)\]])\s*$/u, "").replace(/[^\p{L}\p{N}]/gu, "");
 }
 export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew, isBusy, onModChanged }) {
-  let knownMods = null, lastMod = 0, charCount = null, lastOrder = null;
+  let knownMods = null, lastMod = Date.now() - MOD_EVERY + MOD_FIRST, charCount = null, lastOrder = null;  // lastOrder: 직전 순서 목록(Set)
   let known = null, timer = null, burstUntil = 0, mode = "fast", running = false, checking = false, enabled = true;
   let doc = null, menuTimer = null, lastMenuAt = 0;
   const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
   const ids = async () => flatten((await api.getDatabase(["characterOrder"]))?.characterOrder);
-  const saveKnown = () => api.pluginStorage.setItem(KNOWN_KEY, JSON.stringify({ v: 1, ids: [...known] })).catch(() => {
+  const saveKnown = () => api.pluginStorage.setItem(KNOWN_KEY, JSON.stringify({ v: 1, ids: [...known], n: charCount })).catch(() => {
   });
 
   let lastTrash = 0;
@@ -137,49 +139,75 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
       // 권한 거부·읽기 실패: 기준(본 봇 목록)을 건드리지 않고 다음에 다시
       if (!orderDb || !Array.isArray(orderDb.characterOrder)) throw new Error("캐릭터 순서를 읽지 못했어요 (데이터베이스 접근 권한을 확인해 주세요)");
       let cur = flatten(orderDb.characterOrder);
-      // 끝자리 확인: 리스가 순서 목록에 늦게 넣어도, 봇 목록 끝에 새 봇이 생겼는지 직접 본다 (없으면 null 하나만 오가서 가볍다)
-      let tailHit = false;
-      if (charCount !== null) {
-        try {
-          tailHit = !!await api.getCharacterFromIndex(charCount);
-        } catch {
+      if (!known) {
+        const saved = await readJson(api, KNOWN_KEY, null);
+        if (saved?.ids) {
+          known = new Set(saved.ids);
+          if (charCount === null && Number.isInteger(saved.n) && saved.n >= 0) charCount = saved.n;
         }
       }
-      const orderSig = cur.join("|");
-      const orderMoved = orderSig !== lastOrder;
-      if (tailHit || orderMoved || !known || charCount === null || force) {
+      let countMoved = false;
+      if (!known || charCount === null) {
+        // 처음 한 번만 전체를 읽어 기준(봇 수·지금 있는 봇)을 잡는다
         const db = await (api.getDatabaseWarm ?? api.getDatabase).call(api, ["characters"]);
         if (!db || !Array.isArray(db.characters)) throw new Error("봇 목록을 읽지 못했어요");
         charCount = db.characters.length;
+        countMoved = true;
         const live = db.characters.filter((c) => c?.chaId && !c.trashTime && c.type !== "group").map((c) => c.chaId);
         cur = [.../* @__PURE__ */ new Set([...cur, ...live])];
-        lastOrder = orderSig;
-      } else cur = [...known];
-      stat.chars = cur.length;
-      if (!known) {
-        const saved = await readJson(api, KNOWN_KEY, null);
-        if (!saved?.ids) {
+        if (!known) {
           // 처음 켰을 때: 지금 있는 봇은 모두 "본 것"으로
           known = new Set(cur);
           await saveKnown();
+          stat.chars = cur.length;
           stat.lastAt = Date.now();
           stat.lastError = "";
           return;
         }
-        known = new Set(saved.ids);
+      } else {
+        // 끝자리 확인: 리스가 순서 목록에 늦게 넣어도 봇 배열 끝에 새 봇이 생겼는지 직접 본다 (없으면 null 하나만 오간다)
+        const extra = [];
+        for (let k = 0; k < TAIL_MAX; k++) {
+          let ch = null;
+          try {
+            ch = await api.getCharacterFromIndex(charCount);
+          } catch {
+          }
+          if (!ch) break;
+          charCount++;
+          countMoved = true;
+          if (ch.chaId && !ch.trashTime && ch.type !== "group") extra.push(ch.chaId);
+        }
+        if (extra.length) cur = [.../* @__PURE__ */ new Set([...cur, ...extra])];
       }
+      stat.chars = cur.length;
       const added = cur.filter((id) => !known.has(id));
-      const curSet = new Set(cur);
-      const removed = curSet.size !== known.size || [...known].some((id) => !curSet.has(id));
-      if (added.length || removed) {
-        known = new Set(cur);
+      // 본 봇은 순서에서 빠져도 기억해 둔다 (리스가 순서에 늦게 넣는 봇을 '새 봇'으로 오해하지 않게)
+      const orderSet = new Set(flatten(orderDb.characterOrder));
+      const removed = !!lastOrder && [...lastOrder].some((id) => !orderSet.has(id));
+      lastOrder = orderSet;
+      if (removed) {
+        // 봇을 지우면 배열이 줄어든다: 끝자리 위치를 맞춘다 (지울 때만 봇 하나씩 읽음)
+        while (charCount > 0) {
+          let ch = null;
+          try {
+            ch = await api.getCharacterFromIndex(charCount - 1);
+          } catch {
+          }
+          if (ch) break;
+          charCount--;
+          countMoved = true;
+        }
+      }
+      if (added.length || countMoved) {
+        for (const id of added) known.add(id);
         await saveKnown();
       }
       if (added.length) {
         burstUntil = 0;
         await inspect(added);
       }
-      if (force || Date.now() - lastMod >= (Date.now() < burstUntil ? MOD_BURST : MOD_EVERY)) await checkModules();
+      if (Date.now() - lastMod >= (Date.now() < burstUntil ? MOD_BURST : MOD_EVERY)) await checkModules();
       await processTrash();
       stat.lastAt = Date.now();
       stat.lastError = "";
@@ -268,6 +296,8 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
   }
   function burst() {
     burstUntil = Date.now() + BURST_FOR;
+    // 가져오기는 몇 초 걸리니 모듈은 10초 뒤부터 본다 (누르자마자 무거운 읽기를 하지 않게)
+    lastMod = Math.max(lastMod, Date.now() - MOD_BURST + 1e4);
     schedule();
   }
 
@@ -337,7 +367,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
         if (ok) mode = "dom";
       });
       if (typeof document !== "undefined") document.addEventListener("visibilitychange", () => {
-        if (visible()) check(true);
+        if (visible()) check();
       });
       // 리스는 DB를 다 읽은 뒤 플러그인을 켜므로 곧바로 첫 확인을 한다 (예전 2.5초 대기 제거)
       setTimeout(() => check(true), 300);
