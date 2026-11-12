@@ -41,7 +41,7 @@
 - 아이콘은 CSS 배경 그림(`data:image/svg+xml`, `--st-i-plus/mic/up`) — 색은 프리셋 `mic`(아이콘)·`msf`(↑). 입력창 색 `mi`·`mline`·`mb`(동그라미)·`ms`(보내기).
 - 프리셋 `mob`: `"box"`(클로드식: 위 글 칸, 아래 [+][모델 알약]…[마이크][보내기]; 알약은 상자 `::before`(모델)+`::after`(세기 흐린 글, `splitModel`)) / 숫자 묶음 `{m,h,pl,pr,send,gap,tp,icon,stroke}`(GPT·제미나이 한 줄 알약).
 - 위 줄 `mtop.style`(위 줄 요소에 `x-mt`): `center`(클로드: ≡ · 가운데 채팅 이름 · 문서·새 글·⋮) / `center2`(클로드 코드: ← · 가운데 채팅 이름 + `봇 · Default` · 빨간 고리·⋮) / `float`(GPT: 떠 있는 흰 동그라미 =, 오른쪽 알약 [새 글 ⋮], 제목 없음) / `gemini`(= · Gemini 자동 모드 ⌄ · 새 글 · ···).
-- 글꼴(0.3.49): 프리셋 `font` 맨 앞이 앱 공식 글꼴, 공개 글꼴은 `fontUrl`(@import, CSS 맨 앞). 클로드·GPT 글꼴은 비공개라 기기에 없으면 시스템 글꼴.
+- 글꼴(0.3.50): 프리셋 `font` = 앱 글꼴 이름 → 가장 비슷한 공개 글꼴(Inter+Pretendard / 제미나이 Google Sans·Flex+Noto Sans KR), `fontUrl` 배열을 CSS 맨 앞 @import로.
 - GPT 보내기 색은 사진 그대로 #ff7f66. 실기기(포켓리스)에서 data: 아이콘이 막히면 아이콘만 안 보이고 동그라미는 남는다.
 ## 5. 새 모양 만드는 순서
 1. **실물 캡처를 본다**(사용자에게 받는다): 사이드바 머리·메뉴 줄·목록 제목·발, 입력창, 말풍선, 색.

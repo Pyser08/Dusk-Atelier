@@ -156,5 +156,7 @@ export async function inputTrace(doc) {
   }
   const q = await doc.querySelector(".st-user .chattext mark, .st-user .chattext blockquote, .st-user .chattext q");
   out.push(q ? `사용자 따옴표: ${await name(q)} · 부모 ${await name(await q.getParent?.().catch(() => null))}` : "사용자 말풍선에 mark·인용 요소 없음");
+  const ub = await doc.querySelector(".st-user .chattext");   // 사용자 말풍선 속 요소들(따옴표가 무엇으로 바뀌는지)
+  if (ub) { const all = await ub.querySelectorAll?.("*").catch(() => null); const n = typeof all?.length === "function" ? await all.length() : all?.length ?? 0; const list = []; for (let i = 0; i < Math.min(n, 8); i++) { const el = typeof all.at === "function" ? await all.at(i) : all[i]; const st = String(await el?.getAttribute?.("style")?.catch?.(() => "") ?? "").slice(0, 50); list.push(`${await name(el)}${st ? ` [${st}]` : ""}`); } out.push(`사용자 말풍선 요소: ${list.join(" · ") || "없음"}`); }
   return out;
 }
