@@ -29,7 +29,7 @@
   - 시험: unit sdstudio-projsplit(3)·sdstudio-store(8, 가짜 기기·보관본·Cellar), 실제 Cellar 서버(cellar-start --role-server)에 붙여 저장→새 기기에서 Cellar로 복원→지우기 반영 수동 확인. e2e 시험 페이지를 localhost(route)로 바꿔 IndexedDB·OPFS가 실제로 돌게 함(about:blank는 막힘) — 저장 블록(기기 바로·보관본 미룸·닫으면 보관본·기기 지워도 복원·다시 채움)·OPFS 원본 확인 추가, 136 통과. npm test 1504.
   - 남은 확인: 실기기(RisuBard 서버 + 사파리·모바일) / 여러 탭 동시 편집은 마지막 저장이 이김.
 - (21시 40분) **sdstudio 0.3.0 배포**(사용자 지시): addons.src.json에 sdstudio(category make, minCore 2.1.7 — 공유 코어 모듈 6개가 v2.1.7과 같음 확인) 추가. publish-addons는 dist 전체를 올려 버전 안 올린 provider·chattheme·aibuild·cards 바뀐 코드까지 나가므로 쓰지 않고, addons 브랜치에 sdstudio.js·.mjs·목록 항목·addons.json.mjs만 손으로 올림.
-- (23시 50분) 대표 고르기 느림 → sdstudio 0.3.1: 후보 줄을 넘길 때마다 다시 그리며 썸네일 전부를 now로 동시에 불렀음 → 줄은 목록이 바뀔 때만 다시 그리고 보일 때만 4장씩(createLazy, S.thumb({lazy})·S.loadThumb), 큰 그림은 썸네일 먼저 보이고 원본으로 바꿈, 앞뒤 후보 원본 미리 받기. addons 브랜치 배포는 권한 대기.
+- (23시 50분) 대표 고르기 느림 → sdstudio 0.3.1: 후보 줄을 넘길 때마다 다시 그리며 썸네일 전부를 now로 동시에 불렀음 → 줄은 목록이 바뀔 때만 다시 그리고 보일 때만 4장씩(createLazy, S.thumb({lazy})·S.loadThumb), 큰 그림은 썸네일 먼저 보이고 원본으로 바꿈, 앞뒤 후보 원본 미리 받기. addons 브랜치에 sdstudio 0.3.1만 배포(00시 10분). 태그 사전(data/sdstudio/tags_v5.csv.gz)은 main에 이미 같은 파일이 있어 따로 올릴 것 없음(한글 보충은 애드온에 들어 있음).
 - 남은 일: [ ] 제보 ‘다시 시도 5번 해도 안 됨’ 원인(진행 줄 오류 문구 받아 확인) [ ] 사용자 제보 ‘씬 예약 버튼이 제대로 안 나옴’ — e2e 사진에선 정상, 실기기 화면 확인 필요 [ ] 세트·튜토리얼 e2e [ ] 애드온 배포(minCore 2.1.4) 지시 대기
 
 ## 최근 세션 (2026-11-11 22시 — v2.1.4 계속: 보조 호출 내역 + 장기기억 보조 토큰 줄이기, 장기기억 애드온 0.2.8)
