@@ -16,6 +16,12 @@
 - `src/main.js` 시작 시 start() 10여 개 동시(storyTime·fairPlay·imgFix·watcher·loreRuntime·loreLog·turnInfo·chatMenu …) — 각자 읽는 것 측정 필요.
 - 화면들의 `getDatabase(["characters"])` 10곳(dev·devtools·modlinks·chareditor·newbot·workshoplink·provider/more·patchui·memory/makebot, widgethome/service.cjs) + `dbRead(["characters", …])`. Dusk 첫 화면이 무엇을 읽는지 확인 필요.
 
+## 쓰는 동안 버벅임의 원인 (2026-11-12 22:45, 사용자 성능 기록 Trace-20261112T224101 분석)
+- 상호작용 지연 대부분이 '입력 지연'(130~800ms) = 메인 스레드가 배경 작업 중. 처리 자체는 짧음. 봇 바꾸기만 처리 600ms+.
+- 배경 작업 1위: RisuBard `src/ts/storage/risuSave.ts` `RisuSavePatcher.set()` — 저장할 때마다(트래킹된 저장 뒤 약 2초 후의 'untracked sweep' 포함, `globalApi.svelte.ts` 1594~1618줄) **모든 캐릭터를 `JSON.stringify(withStubs(curChar))`로 문자열화해 비교**(1131~1140줄 부근). 반응형 프록시 위에서 57.8MB를 훑어 1회 약 0.5초, 99초 기록 중 8번 이상. 데이터 양에 비례, 플러그인과 무관.
+- 그 밖: Svelte 반응 갱신(flush) 합계 약 5.5초, 정체 미확인 장기 작업 `kde`(stores.svelte 1862줄)·`zge`/`Fge`(2641~2643줄)·`ase`(1108줄) 각 약 1~3초. V8 DeoptimizeCode 9만 회.
+- 결론: Dusk로 고칠 수 없는 호스트 쪽 원인. RisuBard 개발자에게 근거와 함께 전달할 것.
+
 ## 할 일
 - [ ] 시작 단계별 시간 기록(Dusk 내부 타이밍 로그) → 23.2초 중 Dusk 몫 측정
 - [ ] watch.js: 전체 읽기 없애기(순서 목록 + getCharacterFromIndex), 탭 복귀 시 force 제거, 모듈 확인 빈도 축소
