@@ -54,6 +54,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
       tags: async (id) => (window.__tg ??= {})[id] ?? { likes: [], limits: [] },
       setTags: async (id, v) => { (window.__tg ??= {})[id] = v; window.__tgCalls = (window.__tgCalls ?? 0) + 1; return { ok: true, value: v }; },
       tempTrend: async (v) => { if (typeof v === "boolean") window.__tt = v; return window.__tt ?? true; },
+      userTrack: async (v) => { if (typeof v === "boolean") window.__ut = v; return window.__ut ?? false; },
       review: async (op, id) => { const w = window; w.__rv ??= [{ id: "c1", actor: "p3", actorName: "시로코", target: "", targetName: "", scope: "global", trait: "initiative", label: "주도성", direction: "increase", pattern: "", motive: "", stage: "", confidence: 82, evidenceCount: 4, scenes: 3, step: 5, reasons: ["먼저 말을 걸었다"], status: "pending_review" }, { id: "c2", actor: "p3", actorName: "시로코", target: "p4", targetName: "호시노", scope: "relation", trait: "qualitative", label: "행동 경향", direction: "increase", pattern: "둘만 있을 때 말수가 늘어난다", motive: "", stage: "", confidence: 70, evidenceCount: 4, scenes: 3, step: 0, reasons: [], status: "pending_review" }];
         if (op === "list") return { ok: true, items: w.__rv.slice(), mode: "standard_auto" };
         w.__rvCalls = [...(w.__rvCalls ?? []), [op, id]]; w.__rv = w.__rv.filter((x) => x.id !== id); return { ok: true }; },
@@ -123,6 +124,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 기억 화면에 Erosync 줄이 바로 보임`, await page.locator("#rb-mem-go-erosync").isVisible(), String(await page.locator("#rb-mem-go-erosync").count()));
   await page.locator("#rb-mem-go-erosync").click(); await page.waitForTimeout(600);
   ok(`[${tag}] 줄을 누르면 Erosync 설정 화면(켜기 스위치)이 열림`, await page.locator("#rb-erosync").isVisible());
+  ok(`[${tag}] 켜기 아래 ‘user에게도 적용’ 스위치(기본 꺼짐)`, (await page.locator("#rb-ero-user [role=switch]").count()) === 1 && (await page.locator("#rb-ero-user [role=switch]").getAttribute("aria-checked")) === "false"); await page.locator("#rb-ero-user [role=switch]").click(); await page.waitForTimeout(200); ok(`[${tag}] 누르면 userTrack(true)`, await page.evaluate(() => window.__ut === true));
   const tabTo = async (t) => { await page.locator("#rb-erosync-tabs button", { hasText: t }).click(); await page.waitForTimeout(350); };
   ok(`[${tag}] 탭 줄이 보임(개요·수위·동작·검토·분석·프롬프트·비하인드·데이터)`, (await page.locator("#rb-erosync-tabs button").count()) === 8);
   await tabTo("수위");

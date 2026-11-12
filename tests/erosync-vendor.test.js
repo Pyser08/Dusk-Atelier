@@ -85,8 +85,8 @@ test("Dusk 연결부(실제 엔진): 동작 설정·지시문·집착 방지·�
   assert.equal(p3.pages[0].sections[0].texts[b].changed, false);
   await assert.rejects(() => e.prompts.set("nope", "common", "x"), /알 수 없는/);
   assert.equal(e.guard.set({ on: true, obsessionCap: 500 }).obsessionCap, 100);
-  assert.deepEqual(e.flags.set({ duskCycle: true }), { duskCycle: true, tempTrend: true });
-  assert.deepEqual(e.flags.set({ tempTrend: false }), { duskCycle: true, tempTrend: false });   // 한쪽만 바꿔도 다른 쪽은 그대로
+  assert.deepEqual(e.flags.set({ duskCycle: true }), { duskCycle: true, tempTrend: true, userTrack: false });
+  assert.deepEqual(e.flags.set({ tempTrend: false }), { duskCycle: true, tempTrend: false, userTrack: false });   // 한쪽만 바꿔도 다른 쪽은 그대로
   await e.dispose();
 });
 test("Dusk 프로필 연결부(실제 엔진): 채팅이 없으면 이유를 알리고, 분석 상태 모양을 돌려준다", async () => {
@@ -195,4 +195,33 @@ test("Dusk 인물 골라서 분석 연결부(실제 엔진): 채팅이 없으면
   await assert.rejects(() => e.profiles.start("lore", ["a"]), /채팅/);
   assert.equal(e.profiles.status().running, false);
   await e.dispose();
+});
+
+test("user 관찰(2.1.5): 켜면 플래그·저장 정리·장면 판단 입력·확정 기록이 이어지고, user 행동을 계획하라는 길은 없다", async () => {
+  const { api } = fakeApi();
+  const e = await bootErosync(api);
+  assert.equal(e.flags.set({ userTrack: true }).userTrack, true);
+  assert.equal(e.flags.set({ tempTrend: false }).userTrack, true, "다른 플래그를 바꿔도 그대로");
+  await e.dispose();
+  const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
+  const i = src.indexOf("function normalizeSessionState(");
+  assert.ok(/next\.duskUser\s*=/.test(src.slice(i, src.indexOf("\n  }\n", i))), "저장 정리에서 duskUser가 떨어지면 안 된다");
+  assert.ok(src.includes("...(duskUserTrack ? { userTracking: duskUserDirectorInput(state, sfw) } : {}),"));
+  assert.ok(src.includes("if (duskUserTrack && !externalEvent) duskUserRecord(update, state, registry);"));
+  const a = src.indexOf("  const DUSK_USER_MAX"), b = src.indexOf("  async function duskReadSnapshot()");
+  const clampInt = (v, d, lo, hi) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
+  const isPlainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+  const truncate = (v, n) => String(v ?? "").slice(0, n);
+  const resolveEntity = (_r, ref) => (String(ref).toLowerCase() === "user" ? "user" : ref);
+  const f = new Function("clampInt", "isPlainObject", "truncate", "resolveEntity", `${src.slice(a, b)}\nreturn { duskUserRecord, duskUserView, duskUserDirectorInput };`)(clampInt, isPlainObject, truncate, resolveEntity);
+  const st = { turnIndex: 1, scopeKey: "s" };
+  f.duskUserRecord({ observedActions: [{ actor: "user", target: "a", summary: "손을 잡았다" }], userObservation: { state: "긴장함", signals: [{ trait: "initiative", direction: "increase", summary: "먼저 다가감" }], openness: { delta: 2, quote: "괜찮아" } } }, st, {});
+  st.turnIndex = 2; f.duskUserRecord({ userObservation: { openness: { delta: 1, quote: "응" } } }, st, {});
+  let v = f.duskUserView(st);
+  assert.equal(v.openness, 65); assert.equal(v.state, "긴장함"); assert.equal(v.lastAction, "손을 잡았다"); assert.equal(v.tendencies.length, 1);
+  st.turnIndex = 1; assert.equal(f.duskUserView(st).openness, 60, "되돌리면 뒤 턴 기록은 안 셈");
+  f.duskUserRecord({ userObservation: { state: "편안함" } }, st, {});   // 같은 턴 다시 굴림 → 바꿈
+  assert.deepEqual(st.duskUser.log.map((x) => x.turn), [1]); assert.equal(f.duskUserView(st).state, "편안함");
+  const inp = f.duskUserDirectorInput(st, true);
+  assert.match(inp.note, /Never plan/); assert.ok(!("sexualOpenness" in inp.known) && !/openness/.test(inp.reply) && !/sexual/.test(inp.reply), "SFW에서는 성적 항목 없음");
 });

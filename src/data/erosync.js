@@ -15,6 +15,7 @@ export async function loadErosyncOn(api) {
 }
 export const GUARD_KEY = "dusk.erosync.guard";
 export const LEVEL_KEY = "dusk.erosync.level";   // 수위 일괄 값(모든 봇·채팅에 적용)
+export const USER_KEY = "dusk.erosync.userTrack";   // 2.1.5: {{user}}의 상태·성향·개방도도 관찰해 장면 판단에 참고로 넣을지(기본 꺼짐)
 export const TEMP_KEY = "dusk.erosync.tempTrend";   // 관계 온도 변화를 장면 판단 입력에 넣을지(기본 켜짐)
 export const GUARD_DEFAULT = Object.freeze({ on: false, obsessionCap: 20, sameTargetTurns: 3, restTurns: 4 });
 export function normGuard(v) {
@@ -24,7 +25,7 @@ export function normGuard(v) {
 // 본체는 켤 때만 불러온다(번들 안에서도 처음 부를 때까지 실행되지 않는다).
 const loadBoot = async () => (await import("../erosync/erosync.js")).bootErosync;
 export function createErosync(api, { log = () => {}, boot = null, load = loadErosyncOn, host = {}, cycleProbe = null } = {}) {
-  let timer = null, duskCycle = false, tempTrend = true;
+  let timer = null, duskCycle = false, tempTrend = true, userTrack = false;
   let levelNow = null, inst = null, starting = null, error = "", onNow = false, guardNow = { ...GUARD_DEFAULT }, tagsNow = {};
   async function loadGuard() {
     try { const raw = await api.pluginStorage.getItem(GUARD_KEY); guardNow = normGuard(typeof raw === "string" ? JSON.parse(raw) : raw); } catch { guardNow = { ...GUARD_DEFAULT }; }
@@ -35,7 +36,8 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
   async function refreshFlags() {
     try { duskCycle = cycleProbe ? !!(await cycleProbe()) : false; } catch { duskCycle = false; }
     try { const raw = await api.pluginStorage.getItem(TEMP_KEY); tempTrend = !(raw === "off" || raw === false || raw === "false"); } catch { tempTrend = true; }
-    try { inst?.flags?.set?.({ duskCycle, tempTrend }); } catch { /* 무시 */ }
+    try { const raw = await api.pluginStorage.getItem(USER_KEY); userTrack = raw === "on" || raw === true || raw === "true"; } catch { userTrack = false; }
+    try { inst?.flags?.set?.({ duskCycle, tempTrend, userTrack }); } catch { /* 무시 */ }
     return duskCycle;
   }
   const LEVEL_FIELDS = ["contentMode", "extremityLimit", "nsfwPlus", "nsfwPlusRecheck"];
@@ -94,6 +96,11 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
     async tempTrend(v) {
       if (typeof v === "boolean") { tempTrend = v; try { await api.pluginStorage.setItem(TEMP_KEY, v ? "on" : "off"); } catch { /* 이번 실행에는 반영 */ } try { inst?.flags?.set?.({ tempTrend }); } catch { /* 무시 */ } }
       return tempTrend;
+    },
+    // {{user}} 관찰(상태·성향·개방도만, 계획·목표는 만들지 않음). 인자 없으면 현재 값
+    async userTrack(v) {
+      if (typeof v === "boolean") { userTrack = v; try { await api.pluginStorage.setItem(USER_KEY, v ? "on" : "off"); } catch { /* 이번 실행에는 반영 */ } try { inst?.flags?.set?.({ userTrack }); } catch { /* 무시 */ } }
+      return userTrack;
     },
     lastError: () => error,
     on: () => onNow,

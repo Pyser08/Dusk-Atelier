@@ -1147,4 +1147,6 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
   4) recordTurn이 인원 상한으로 잘린 인물을 `capped`로 돌려주고 envelope에서 "인원 상한으로 이번엔 묻지 않음".
   시험: tests/recorder-review.test.js(실제 리수폿 검증 통과 확인 포함).
 - 3) 업데이트 알림이 업데이트 후 남는 문제: 켜질 때 `clearStaleUpdateToast`로 남은 알림 제거(main.js, 업데이트 알림이 켜져 있을 때만). tests/updatenotice.test.js.
-- 남은 일: [ ] **에로싱크만** {{user}}에게도 적용하는 토글(사용자 결정 11-12). 조사 결과: 엔진은 user를 행위자로 두지 않게 설계돼 있고(erosync.js 15641·15750·15771 등 actor==='user' 건너뜀), 12444~12540은 예전 데이터에서 user 행위자 기록을 **지우는 정리 코드**까지 있음. 즉 '장면 계획에 user 행동 넣기'는 엔진 원칙과 정면 충돌 → 무엇을 user에게 적용할지(① user 성향·개방도·상태 추적만 / ② 계획에 user 행동까지) 정한 뒤 새 챗에서 작업. 켤 때 정리 코드가 user 데이터를 지우지 않게 막는 것도 필요. [ ] 코어(2.1.5?)·장기기억 애드온 배포는 사용자 지시 시.
+- [x] **Erosync ‘user에게도 적용’**(사용자 선택: ① 관찰만). 엔진 원칙(user 계획·목표·관계 출발 금지, 12444~ 정리 코드)은 안 건드리고 따로 칸 `state.duskUser.log`(턴별, 읽을 때 지금 턴 이후 버림 → 되돌리기 대응)에 상태·user 행동·성향 신호·개방도(±3, 인용 필수, 50 기준 ×5)를 남김. 장면 판단 입력에 `userTracking`(관찰 전용 안내+현재 값+`previousTurnUpdate.userObservation` 응답 칸 설명, SFW는 성적 항목 없음). 확정 `applyPreviousTurnUpdate`에서 `duskUserRecord`. 저장 정리·SESSION_VARIANT_FIELDS에 duskUser 추가. 플래그 `flags.set({userTrack})`, 읽기 `read().user`, `user.view`. Dusk: data/erosync.js `USER_KEY dusk.erosync.userTrack`(기본 꺼짐)·`userTrack()`, erosyncui.js `#rb-ero-user` 스위치, 안내서 memory.html#erosync-user. 시험: erosync-vendor 마지막 시험, e2e run-erosync-ui.
+  - 남은 것: [ ] 관찰한 user 값을 화면(인물 위키 NSFW 탭 등)에 보여 주기(`read().user`는 준비됨). [ ] 실제 모델이 userObservation을 잘 채우는지 실기기 확인 못 함.
+- [ ] 코어(2.1.5?)·장기기억 애드온 배포는 사용자 지시 시.

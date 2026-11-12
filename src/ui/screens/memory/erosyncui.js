@@ -5,6 +5,14 @@ import { switchEl, setSwitch, statusCard } from "../../kit.js";
 
 export const EROSYNC_COST_NOTE = "켜면 AI 호출이 늘어요. 인물 프로필을 만들 때 호출이 여러 번 들어가고, 응답이 끝날 때마다 장면을 읽는 호출이 한 번 더 들어가요. 기본으로 Dusk의 모델 설정(‘자체 AI 작업’ 모델, 없으면 리스 보조 모델)을 따르고, 쓰는 만큼 토큰·요금이 더 들어요.";
 
+// 2.1.5 {{user}}에게도 적용: user의 상태·성향·개방도를 관찰해 두고 인물들의 장면 판단에 참고로만 넣는다(user 행동을 계획하지는 않음)
+function userToggle(er) {
+  if (typeof er?.userTrack !== "function") return null;
+  const sw = switchEl(false, { label: "user에게도 적용", onChange: async (v, el) => { setSwitch(el, v); await er.userTrack(v); } });
+  er.userTrack().then((v) => setSwitch(sw, !!v)).catch(() => {});
+  return h("div", { class: "rb-toggle", id: "rb-ero-user" }, h("div", { class: "t" }, h("b", null, "user에게도 적용"), h("small", null, "내 캐릭터(user)의 상태·성향·개방도도 관찰해서, 인물들이 나를 어떻게 대할지 판단할 때 참고해요. user의 행동을 대신 정하지는 않아요.")), sw);
+}
+
 export function erosyncSection(ctx, onChange = () => {}) {
   const er = ctx.erosync;
   if (!er) return null;
@@ -40,6 +48,7 @@ export function erosyncSection(ctx, onChange = () => {}) {
     h("h3", null, "Erosync (NSFW 장면 강화)"),
     stateBox,
     h("div", { class: "rb-toggle" }, h("div", { class: "t" }, h("b", null, "Erosync 켜기"), h("small", null, "켜면 다음 응답부터 장면 계획이 요청에 들어가요")), sw),
+    userToggle(er),
     h("p", { class: "rb-muted", style: "white-space:normal;margin:0" }, "인물마다 성향·관계를 따로 읽어 두고, 다음 응답에서 누가 무엇을 향해 움직일지 계획해 요청에 넣어요. 성적인 내용을 다루는 기능이라 기본은 꺼짐이에요."),
     h("p", { class: "rb-muted", style: "white-space:normal;margin:0" }, EROSYNC_COST_NOTE),
     overlap,

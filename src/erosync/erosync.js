@@ -9389,9 +9389,12 @@ Constraint: {{constraint}}
 
   // Dusk ‘월경·임신 기록’(성인 항목)이 켜져 있으면 몸 상태·주기는 Dusk의 날짜 계산이 맡고, Erosync 쪽 주기는 쉰다(같은 몸 상태가 두 번 들어가지 않게). 저장값은 건드리지 않는다.
   let duskCycleOwns = false;
+  // Dusk: {{user}} 관찰(2.1.5, 설정 'user에게도 적용'). 엔진 원칙(user는 계획·목표·관계 출발점이 되지 않음)은 그대로 두고,
+  // user의 상태·성향 신호·개방도만 따로 칸(state.duskUser)에 남겨 인물들의 장면 판단 입력에 '참고'로 싣는다. 기본 꺼짐.
+  let duskUserTrack = false;
   let duskTempTrend = true;   // 관계 온도 변화(최근 몇 턴)를 장면 판단 입력에 넣을지
   function cycleOff(config) { return duskCycleOwns || config?.cycleEnabled === false; }
-  function duskFlagsSet(v) { if (v && 'duskCycle' in v) duskCycleOwns = v.duskCycle === true; if (v && 'tempTrend' in v) duskTempTrend = v.tempTrend !== false; duskReadCache = null; return { duskCycle: duskCycleOwns, tempTrend: duskTempTrend }; }
+  function duskFlagsSet(v) { if (v && 'userTrack' in v) duskUserTrack = v.userTrack === true; if (v && 'duskCycle' in v) duskCycleOwns = v.duskCycle === true; if (v && 'tempTrend' in v) duskTempTrend = v.tempTrend !== false; duskReadCache = null; return { duskCycle: duskCycleOwns, tempTrend: duskTempTrend, userTrack: duskUserTrack }; }
   function currentCycle(profile, state, amplitude = cycleAmplitudeFactor(configCache)) {
     const settings = cycleProfileFor(profile);
     if (!settings.applicable) return null;
@@ -11504,6 +11507,7 @@ Constraint: {{constraint}}
     next.sexualTargets = normalizeSexualTargets(source.sexualTargets);
     next.actorStates = isPlainObject(source.actorStates) ? source.actorStates : {};
     next.development = normalizeDevelopmentState(source.development);
+    if (isPlainObject(source.duskUser)) next.duskUser = duskUserNormalize(source.duskUser);
     if (isPlainObject(source.preferenceState)) next.preferenceState = normalizePreferenceState(source.preferenceState) || safeClone(source.preferenceState);
     if (isPlainObject(source.cycleState)) next.cycleState = normalizeCycleState(source.cycleState) || safeClone(source.cycleState);
     next.lastPlan = isPlainObject(source.lastPlan) ? {
@@ -11557,7 +11561,7 @@ Constraint: {{constraint}}
   const SESSION_VARIANT_FIELDS = Object.freeze([
     'turnIndex', 'scene', 'relations', 'rivalries', 'goals', 'sexualTargets', 'actorStates', 'development', 'preferenceState', 'cycleState', 'userIdentity', 'identityRepair', 'continuationReceipt', 'lastPlan', 'lastInjection',
     'lastCommittedOutput', 'lastCommittedMessageIndex', 'events', 'interactionHistory', 'interactionLedger',
-    'commitJournal', 'lastDirectorAttempt', 'directorAttemptHistory', 'preparedLookahead', 'sceneRecovery', 'koco', 'updatedAt',
+    'commitJournal', 'lastDirectorAttempt', 'directorAttemptHistory', 'preparedLookahead', 'sceneRecovery', 'koco', 'updatedAt', 'duskUser',
   ]);
 
   
@@ -15774,6 +15778,7 @@ Constraint: {{constraint}}
       };
     }
 
+    if (duskUserTrack && !externalEvent) duskUserRecord(update, state, registry);
     const newlyDiscovered = new Set(discoveredIds);
     for (const id of seenThisUpdate) {
       if (!id || id === 'user' || newlyDiscovered.has(id)) continue;
@@ -17329,6 +17334,7 @@ Constraint: {{constraint}}
       currentMainCharacter: scope.identity.name,
       userIdentity: state.userIdentity ? { ...state.userIdentity, aliases: [...identityContext.userNames] } : { id: 'user', name: 'user', aliases: [] },
       candidateCharacters: candidates,
+      ...(duskUserTrack ? { userTracking: duskUserDirectorInput(state, sfw) } : {}),
       internalRelations: compactRelationsForDirector(state.relations, candidateIds, state.development, policy),
       internalRivalries: compactRivalriesForDirector(state.rivalries, candidateIds),
       // SFW에서는 성관계 목표를 장면 판단에 싣지 않는다(저장은 유지, NSFW로 돌리면 다시 실림).
@@ -23555,6 +23561,52 @@ Constraint: {{constraint}}
   // 3초 안에 다시 부르면 같은 결과를 돌려준다. 쓰기는 하지 않는다(고치기는 Erosync 자체 화면의 몫).
   let duskReadCache = null;
   const duskPlain = (value) => { try { return JSON.parse(JSON.stringify(value ?? null)); } catch { return null; } };
+  // ── Dusk: {{user}} 관찰 칸 ── 기록은 턴 번호와 함께 쌓고, 읽을 때 지금 턴 이후 것은 버린다(다시 굴리기·되돌리기로 턴이 돌아가도 맞게).
+  const DUSK_USER_MAX = 60;
+  const DUSK_USER_TRAITS = ['initiative', 'spontaneity', 'directness', 'goalPersistence', 'obsessiveness', 'extremity', 'eroticInterest', 'sexualSpontaneity', 'sexualOpenness', 'sexualMomentum', 'other'];
+  function duskUserNormalize(value) {
+    const log = (Array.isArray(value?.log) ? value.log : []).filter(isPlainObject).slice(-DUSK_USER_MAX).map((e) => ({
+      turn: clampInt(e.turn, 0, 0, 100000000),
+      ...(e.state ? { state: truncate(e.state, 200) } : {}),
+      ...(e.action ? { action: truncate(e.action, 300) } : {}),
+      ...(Number.isFinite(Number(e.open)) && Number(e.open) ? { open: clampInt(e.open, 0, -3, 3), quote: truncate(e.quote, 120) } : {}),
+      ...(Array.isArray(e.signals) && e.signals.length ? { signals: e.signals.filter(isPlainObject).slice(0, 4).map((x) => ({ trait: DUSK_USER_TRAITS.includes(x.trait) ? x.trait : 'other', direction: ['increase', 'decrease', 'new_pattern', 'weaken_pattern'].includes(x.direction) ? x.direction : 'increase', summary: truncate(x.summary, 200) })) } : {}),
+    }));
+    return { log };
+  }
+  function duskUserView(state) {
+    const turn = clampInt(state?.turnIndex, 0, 0, 100000000);
+    const log = (state?.duskUser?.log || []).filter((e) => e.turn <= turn);
+    const openness = Math.max(0, Math.min(100, 50 + log.reduce((n, e) => n + (Number(e.open) || 0) * 5, 0)));
+    const last = (k) => [...log].reverse().find((e) => e[k])?.[k] || '';
+    return { openness, state: last('state'), lastAction: last('action'), tendencies: log.flatMap((e) => (e.signals || []).map((x) => ({ ...x, turn: e.turn }))).slice(-8), entries: log.length };
+  }
+  function duskUserDirectorInput(state, sfw) {
+    const v = duskUserView(state);
+    const traits = DUSK_USER_TRAITS.filter((t) => !sfw || !/^(erotic|sexual)/.test(t)).join(' | ');
+    return {
+      note: 'The human-controlled persona "user" is OBSERVED only. Never plan, decide, or write actions, goals, relation patches or rivalries for user. Use this only as context for how NPCs read and respond to user.',
+      known: { state: v.state, lastAction: v.lastAction, tendencies: v.tendencies.map((x) => `${x.trait} ${x.direction}: ${x.summary}`), ...(sfw ? {} : { sexualOpenness: v.openness }) },
+      reply: `ALSO add inside "previousTurnUpdate" one optional field "userObservation": {"state": "user's current visible physical/emotional state, <=80 chars, or empty", "signals": [{"trait": "${traits}", "direction": "increase | decrease | new_pattern | weaken_pattern", "summary": "what user actually showed"}]${sfw ? '' : ', "openness": {"delta": -3..3 (0 if unchanged), "quote": "exact short quote from the committed text"}'}}. Record only what the committed text shows about user; at most 3 signals; omit the field when nothing is observable.`,
+    };
+  }
+  function duskUserRecord(update, state, registry) {
+    try {
+      const raw = isPlainObject(update?.userObservation) ? update.userObservation : null;
+      const acts = (Array.isArray(update?.observedActions) ? update.observedActions : []).filter((a) => isPlainObject(a) && resolveEntity(registry, a.actor, state.scopeKey) === 'user');
+      const turn = clampInt(state.turnIndex, 0, 0, 100000000);
+      const entry = { turn };
+      if (raw?.state) entry.state = raw.state;
+      if (acts.length) entry.action = acts.map((a) => a.summary).filter(Boolean).join(' / ');
+      if (Array.isArray(raw?.signals) && raw.signals.length) entry.signals = raw.signals.slice(0, 3);
+      const od = Number(raw?.openness?.delta);
+      if (Number.isFinite(od) && Math.round(od) && raw?.openness?.quote) { entry.open = Math.round(od); entry.quote = raw.openness.quote; }
+      const prev = (state.duskUser?.log || []).filter((e) => e.turn < turn);   // 같은 턴(다시 굴림)·이후 턴 기록은 이번 것으로 바꾼다
+      if (Object.keys(entry).length <= 1) { if (state.duskUser) state.duskUser = duskUserNormalize({ log: prev }); return; }
+      state.duskUser = duskUserNormalize({ log: [...prev, entry] });
+    } catch (e) { console.log('[Erosync] user 관찰 기록 실패', e?.message ?? e); }
+  }
+
   async function duskReadSnapshot() {
     if (duskReadCache && Date.now() - duskReadCache.at < 3000) return duskReadCache.value;
     const out = { ok: false, reason: '', scope: null, turnIndex: 0, contentMode: '', people: [], goals: [], rivalries: [], relations: [], rests: [], temp: [] };
@@ -23566,6 +23618,7 @@ Constraint: {{constraint}}
         out.ok = true;
         out.scope = { botKey: String(context.scope.sourceBundleKey || ''), scopeKey: String(context.scope.scopeKey || ''), chatName: String(context.scope.chatName || ''), variantKey: String(context.scope.variantKey || '') };
         out.turnIndex = Number(session.turnIndex || 0);
+        out.user = duskUserTrack ? duskPlain(duskUserView(session)) : null;
         out.contentMode = String(contentPolicyFor(context.botOverride).contentMode || '');
         const nameOf = (id) => id === 'user' ? '당신' : String(uiPersonName(context, id) || id);
         out.people = contextProfiles(context).map((profile) => {
@@ -23913,6 +23966,7 @@ Constraint: {{constraint}}
     undo: { lastScene: duskUndoLastScene },
     review: { list: duskReviewList, act: duskReviewAct },
     flags: { set: duskFlagsSet },
+    user: { view: duskUserView },
     async dispose() {
       for (const fn of unloadFns.splice(0).reverse()) { try { await fn(); } catch (e) { console.log('[Erosync] 정리 중 오류', e?.message ?? e); } }
     },
