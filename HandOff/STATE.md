@@ -27,7 +27,7 @@
 - (11-12 23시 반) **watch.js 가볍게**(시험 tests/watch-light.test.js 4개, 고치기 전 4개 실패 확인): 캐릭터 전체 읽기는 처음 설치·inspect(새 봇)만. 평소엔 순서 목록 + getCharacterFromIndex(봇 수) 끝자리 훑기, 봇 수는 rbm:watch:v1의 `n`에 저장. 순서에서 빠진 봇도 known에 남김(늦게 들어오는 봇 오탐 방지). 순서에서 봇이 빠지면 끝자리를 아래로 맞춤. 탭 복귀 force 제거, force가 모듈 읽기를 부르지 않음. 모듈 MOD_EVERY 2분→5분, 시작 뒤 1분 쉼, burst 3초→20초(누른 뒤 10초부터). npm test는 돌렸고 **build·check·e2e는 패키지 설치 차단으로 못 함** — 다음 세션에서 npm run build → check 필수(dist 미갱신).
 
 ## 할 일
-- [x] watch.js 전체 읽기 없애기 (빌드 미확인)
+- [x] watch.js 전체 읽기 없애기 — (11-12 23시 반) build·check 동일함(v2.1.7), e2e run-smoke 통과, dist 갱신. 실기기 체감 미확인
 - [ ] 시작 단계별 시간 기록(Dusk 내부 타이밍 로그) → 23.2초 중 Dusk 몫 측정
 - [ ] 캐릭터 요약 캐시(chaId·이름·이미지·바뀐 시각)를 pluginStorage에 두고 바뀐 것만 갱신 → 화면들이 전체 대신 요약 사용
 - [ ] 시작 시 무거운 start()는 미루기(첫 채팅·첫 열기 때)
