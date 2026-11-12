@@ -102,8 +102,8 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await page.click("#sds-rsv-all"); await page.waitForTimeout(200);
   ok("모든 씬 예약 → 예약된 씬 20/20·생성 20장", /예약된 씬 20\/20/.test(await txt(page, "#sds-reserved")) && /생성 20장/.test(await txt(page, "#sds-run")));
   await page.click("#sds-rsv-clear"); await page.waitForTimeout(200);
-  for (const n of ["angry", "smile"]) { await sceneCard(page, n).hover(); await sceneCard(page, n).locator(".quick button", { hasText: "+1" }).click(); await page.waitForTimeout(120); }
-  ok("카드 +1: 예약 배지와 알약", (await sceneCard(page, "angry").locator(".rsv").innerText()) === "+1" && /예약된 씬 2\/20/.test(await txt(page, "#sds-reserved")));
+  for (const n of ["angry", "smile"]) { await sceneCard(page, n).hover(); await sceneCard(page, n).locator(".rsvbtn").click(); await page.waitForTimeout(120); }
+  ok("카드 +1: 예약 배지와 알약", (await sceneCard(page, "angry").locator(".rsvbtn").innerText()).trim() === "+1" && /예약된 씬 2\/20/.test(await txt(page, "#sds-reserved")));
   await shot(page, "sd-1-scenes");
 
   await page.evaluate(() => { window.__delay = 700; });
@@ -253,7 +253,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   await page.click("#sds-token-add"); await page.waitForTimeout(200); await page.locator(".rb-modal input").last().fill("pst-second"); await page.locator(".rb-modal .rb-dialog button.primary").last().click(); await page.waitForTimeout(300);
   await page.locator(".rb-modal .rb-dialog button", { hasText: "닫기" }).last().click(); await page.waitForTimeout(250);
   await openCard(page.locator("#sds-body .sds-char").first()); await page.waitForTimeout(300);
-  for (const n of ["sad", "shy"]) { await sceneCard(page, n).hover(); await sceneCard(page, n).locator(".quick button", { hasText: "+1" }).click(); await page.waitForTimeout(100); }
+  for (const n of ["sad", "shy"]) { await sceneCard(page, n).hover(); await sceneCard(page, n).locator(".rsvbtn").click(); await page.waitForTimeout(100); }
   ok("생성 버튼에 부스트 표시", /부스트 생성 2장/.test(await txt(page, "#sds-run")));
   const nBefore = (await reqs(page, "/ai/generate-image")).length;
   await page.evaluate(() => { window.__delay = 500; });
@@ -382,7 +382,7 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   ok("문제 확인: 조각이 맞으면 문제 없음", /문제가 없어요/.test(await txt(page, ".rb-modal .rb-dialog")), await txt(page, ".rb-modal .rb-dialog"));
   await page.locator(".rb-modal .rb-dialog button", { hasText: "닫기" }).click(); await page.waitForTimeout(150);
   await openCard(page.locator("#sds-body .sds-char").first()); await page.waitForTimeout(300);
-  await sceneCard(page, "smile").hover(); await sceneCard(page, "smile").locator(".quick button", { hasText: "+1" }).click();
+  await sceneCard(page, "smile").hover(); await sceneCard(page, "smile").locator(".rsvbtn").click();
   await page.click("#sds-run"); await page.waitForTimeout(700);
   const v5 = (await reqs(page, "/ai/generate-image")).at(-1);
   ok("V5로 생성: params_version 4·조각 펼침", v5?.parameters?.params_version === 4 && v5.model === "nai-diffusion-5-full" && /detailed, school uniform/.test(v5.input), v5?.input);

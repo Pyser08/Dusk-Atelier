@@ -4,7 +4,11 @@
 // 화면 상태 ctx.state.sdstudio["kind:id"], 작업 묶음 pluginStorage(data/sdstudio.js projectKey).
 import { h, replace, download, pickFiles } from "../../dom.js";
 import { btn, openMenu, promptDialog, confirmDialog } from "../../kit.js";
-import { zipSync } from "../../../vendor/fflate.js";
+import { zipSync, strToU8, strFromU8, gzipSync } from "../../../vendor/fflate.js";
+import * as BD from "../../../engine/sdstudio/botdata.js";
+import { syncLore } from "../../../engine/sdstudio/loresync.js";
+import { newFolderEntry } from "../editor.js";
+import * as FB from "../../../engine/sdstudio/fullbackup.js";
 import { isStopError } from "../../../engine/aistop.js";
 import { isGenerating } from "../../../engine/safety.js";
 import { buildGenerateBody, buildAugmentBody, buildUpscaleBody, buildEncodeVibeBody, modelOf, pngSize, withAsset, uniqueAssetName, RESOLUTIONS } from "../../../engine/sdstudio/nai.js";
@@ -39,13 +43,22 @@ export async function openAssetStudio(ctx, target, sd) {
   if (target.kind === "module") title = (await ctx.svc.load({ fresh: true })).entries.find((e) => e.module.id === target.id)?.module?.name ?? "";
   else { const c = await ctx.api.getCharacterFromIndex(target.index); if (!c || c.chaId !== target.id) throw new Error("봇을 찾지 못했어요. 목록을 새로 고친 뒤 다시 해 주세요"); title = c.name; }
   let proj = await sd.loadProject(target);
+  // 봇(모듈) 안 사본이 더 최근이면 그걸로(다른 기기에서 고쳤거나 플러그인 저장소가 비었을 때)
+  const botKey = `dusk.sdstudio.nobot.${target.kind}:${target.id}`;
+  let botOn = !(await sd.getLocal(botKey, false)), botT = 0, botDirty = false;
+  const u8b64 = (u) => { let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); };
+  const readBot = async () => (target.kind === "module" ? (await ctx.svc.load({ fresh: true })).entries.find((e) => e.module.id === target.id)?.module : await ctx.api.getCharacterFromIndex(target.index).then((c) => (c?.chaId === target.id ? c : null)));
+  try {
+    const snap = BD.readSnap(await readBot(), target.kind);
+    if (snap) { botT = snap.t; if (snap.t > await sd.savedAt(target)) { proj = P.normalizeProject(JSON.parse(strFromU8(gunzipSync(Uint8Array.from(atob(snap.z), (c) => c.charCodeAt(0)))))); ctx.toast("봇에 저장된 더 최근 설정으로 열었어요", { seconds: 5 }); } }
+  } catch { /* 봇 사본이 없거나 깨짐 — 플러그인 저장소 것 사용 */ }
   const st = ((ctx.state.sdstudio ??= {})[`${target.kind}:${target.id}`] ??= { folder: null, charId: null, sceneId: null, mode: "scene", zoom: 41, names: true, left: (ctx.win.clientWidth || innerWidth) > 760, q: "", compare: [], slotsOpen: true });   // 좁은 화면은 프롬프트 에디터를 접고 시작
   if (st.folder && !proj.folders.some((f) => f.id === st.folder)) st.folder = null;
   if (st.charId && !P.charOf(proj, st.charId)) { st.charId = null; st.sceneId = null; }
   if (st.sceneId && !P.sceneOf(proj, st.charId, st.sceneId)) st.sceneId = null;
   const sel = new Set();
   const bytesCache = new Map(), thumbUrls = new Map();
-  let saveT = null, lazy = null;
+  let saveT = null, lazy = null, loreT = null;
   const q = { running: false, done: 0, total: 0, ctl: null, workers: 1 };
   const hist = createHistory();
   const prefs = await sd.getPrefs();
@@ -67,10 +80,10 @@ export async function openAssetStudio(ctx, target, sd) {
     get proj() { return proj; },
     // undo: false = 되돌리기 기록에 안 남김(그리기 결과·예약 줄이기·바이브 캐시)
     // 글자 입력(input 이벤트) 중에 잇단 바꿈만 하나로 묶고, 버튼 동작은 하나씩
-    set(next, { undo = true } = {}) { if (undo && next !== proj) { hist.push(proj, { typing: globalThis.event?.type === "input" }); } proj = next; clearTimeout(saveT); saveT = setTimeout(() => S.persist(), 500); },
+    set(next, { undo = true } = {}) { if (next?.folders !== proj?.folders && S.prefs?.loreSync) { clearTimeout(loreT); loreT = setTimeout(() => syncLoreNow(), 1200); } if (undo && next !== proj) { hist.push(proj, { typing: globalThis.event?.type === "input" }); } proj = next; clearTimeout(saveT); saveT = setTimeout(() => S.persist(), 500); },
     undo() { const prev = hist.undo(proj); if (!prev) { S.toast("되돌릴 것이 없어요"); return; } proj = prev; afterJump(); },
     redo() { const nx = hist.redo(proj); if (!nx) { S.toast("다시 할 것이 없어요"); return; } proj = nx; afterJump(); },
-    persist() { clearTimeout(saveT); return sd.saveProject(target, proj).catch((e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true })); },
+    persist() { clearTimeout(saveT); botDirty = true; return sd.saveProject(target, proj).catch((e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true })); },
     toast: (t, o) => ctx.toast(t, o),
     curChar: () => (st.charId ? P.charOf(proj, st.charId) : null),
     curScene: () => (st.charId && st.sceneId ? P.sceneOf(proj, st.charId, st.sceneId) : null),
@@ -191,7 +204,7 @@ export async function openAssetStudio(ctx, target, sd) {
           ib("folderPlus", "폴더 만들기", () => addFolder(), { id: "sds-addfolder" }), ib("importIn", "SDStudio 백업 가져오기(.tar·프로젝트 .json)", () => importBackup(), { id: "sds-import-backup" }), ib("swap", "고른 캐릭터를 폴더에 넣기·빼기", (e) => folderPick(e.currentTarget, [...sel]), { disabled: !selN || !proj.folders.length }),
           ib("trash", "고른 캐릭터 지우기", () => removeChars([...sel]), { danger: true, disabled: !selN })),
         tplG, chooseG,
-        group("이미지·관리", ib("zip", "zip으로 내려받기", (e) => zipMenu(e.currentTarget), { id: "sds-zip" })),
+        group("이미지·관리", ib("zip", "이미지만 zip으로 내보내기", (e) => zipMenu(e.currentTarget), { id: "sds-zip" }), ib("download", "프로젝트 전체 백업(zip) — 설정과 그림을 모두 담아요", () => fullBackup(), { id: "sds-fullbackup" }), ib("shield", botOn ? "봇에도 설정 저장 중 — 누르면 끄고 봇에서 지움(카드 배포용)" : "봇에 설정 저장 꺼짐 — 누르면 켬", () => toggleBotSave(), { id: "sds-botsave", on: botOn })),
         group("도움말", ib("help", "도움말", () => S.dlg.help())), group("설정", ib("gear", "설정(넣기 형식·부스트·단축키·토큰)", () => S.dlg.settings(), { id: "sds-settings" })),
         h("span", { class: "sp" }), ...view];
     } else if (!sc) {
@@ -209,7 +222,7 @@ export async function openAssetStudio(ctx, target, sd) {
           ib("sliders", "고른 그림 넣는 방법 고르고 넣기…", () => putPaths(picked), { disabled: !picked.length, id: "sds-put-picked-opt" }),
           ib("x", "이 캐릭터의 그림 고르기 모두 풀기", () => { S.set(P.clearPicks(proj, c.id), { undo: false }); paintTools(); paintBody(); }, { disabled: !picked.length, id: "sds-unpick-all" }),
           ib("trophy", "고른 씬 이미지 월드컵", () => { const id = [...sel][0]; if (id) openCup(S, c.id, id); }, { disabled: selN !== 1 }),
-          ib("zip", "zip으로 내려받기", (e) => zipMenu(e.currentTarget), { id: "sds-zip" }), ib("clip", "고른 씬 프롬프트 복사", () => copyPrompts(c, ids), { disabled: !selN })),
+          ib("zip", "이미지만 zip으로 내보내기", (e) => zipMenu(e.currentTarget), { id: "sds-zip" }), ib("clip", "고른 씬 프롬프트 복사", () => copyPrompts(c, ids), { disabled: !selN })),
         group("도움말", ib("help", "도움말", () => S.dlg.help())), group("설정", ib("gear", "설정(넣기 형식·부스트·단축키·토큰)", () => S.dlg.settings(), { id: "sds-settings" })),
         h("span", { class: "sp" }), ...view];
     } else {
@@ -226,7 +239,7 @@ export async function openAssetStudio(ctx, target, sd) {
           ib("trophy", "이미지 월드컵", () => openCup(S, c.id, sc.id), { disabled: sc.images.length < 2, id: "sds-cup-btn" }),
           ib("check", "모두 고르기", () => { S.set(P.setPicks(proj, c.id, sc.id, sc.images.map((i) => i.path), true), { undo: false }); paintTools(); paintBody(); }),
           ib("x", "고르기 풀기", () => { S.set(P.clearPicks(proj, c.id, sc.id), { undo: false }); paintTools(); paintBody(); }, { disabled: !paths.length, id: "sds-unpick" }),
-          ib("zip", "zip으로 내려받기", (e) => zipMenu(e.currentTarget), { id: "sds-zip" }),
+          ib("zip", "이미지만 zip으로 내보내기", (e) => zipMenu(e.currentTarget), { id: "sds-zip" }),
           ib("trash", "고른 그림 목록에서 빼기", () => removePaths(c.id, sc.id, paths), { danger: true, disabled: !paths.length })),
         group("도움말", ib("help", "도움말", () => S.dlg.help())), group("설정", ib("gear", "설정(넣기 형식·부스트·단축키·토큰)", () => S.dlg.settings(), { id: "sds-settings" })),
         h("span", { class: "sp" }), ...view];
@@ -342,15 +355,15 @@ export async function openAssetStudio(ctx, target, sd) {
         run: (p, z, copy) => dropChars(p, container, z === "before" ? c.id : nextAfter(list, c.id), copy)
       });
     }
-    return selectable(card, c.id, () => openChar(c.id), "char");
+    return selectable(card, c.id, () => openChar(c.id, container), "char");
   };
   const sceneCard = (c, sc, list) => {
     const cover = P.coverOf(sc);
     const card = h("button", { type: "button", class: "sds-card sds-scene", dataset: { id: sc.id }, title: sc.name },
       cover ? S.thumb(cover) : h("span", { class: "ph" }, ico("image", 30)), chk(),
-      sc.reserve ? h("span", { class: "rsv" }, `+${sc.reserve}`) : null,
+      h("span", { class: "rsvbtn" + (sc.reserve ? " on" : ""), role: "button", tabindex: "0", id: `sds-rsv-${sc.id}`, title: sc.reserve ? `예약 ${sc.reserve}장 — 누르면 1장 더` : "1장 예약", onClick: (e) => { e.stopPropagation(); S.set(P.setReserve(proj, c.id, sc.id, sc.reserve + 1)); paintTop(); paintBody(); } }, ico("calPlus", 14), sc.reserve ? `+${sc.reserve}` : "예약"),
       sc.images.length && !P.hasFav(sc) ? h("span", { class: "nofav", title: "아직 즐겨찾기가 없어요" }, "★ 없음") : null,
-      h("span", { class: "quick" }, h("button", { type: "button", title: "1장 예약", onClick: (e) => { e.stopPropagation(); S.set(P.setReserve(proj, c.id, sc.id, sc.reserve + 1)); paintTop(); paintBody(); } }, "+1"),
+      h("span", { class: "quick" },
         sc.reserve ? h("button", { type: "button", title: "예약 하나 빼기", onClick: (e) => { e.stopPropagation(); S.set(P.setReserve(proj, c.id, sc.id, sc.reserve - 1)); paintTop(); paintBody(); } }, "−1") : null),
       capOf(sc.name, sc.images.length, P.pickCount(sc)));
     card.addEventListener("contextmenu", (e) => { e.preventDefault(); sceneMenu(card, c, sc); });
@@ -603,13 +616,13 @@ export async function openAssetStudio(ctx, target, sd) {
   }
 
   // ── 동작 ──
-  function openChar(id) { st.focus = null; st.charId = id; st.sceneId = null; sel.clear(); if (st.mode === "bulk" && !id) st.mode = "scene"; S.paint(); bodyEl.scrollTop = 0; }
+  function openChar(id, from) { st.focus = null; if (id && from !== undefined && (from === null || proj.folders.some((f) => f.id === from))) st.folder = from; st.charId = id; st.sceneId = null; sel.clear(); if (st.mode === "bulk" && !id) st.mode = "scene"; S.paint(); bodyEl.scrollTop = 0; }
   function openScene(id) { st.focus = null; st.sceneId = id; sel.clear(); if (id) st.mode = "scene"; paintTop(); paintTools(); paintBody(); paintLeft(); bodyEl.scrollTop = 0; }
   const paintLeft = () => S.paintLeft();
   async function addChar() {
-    const name = await promptDialog(ctx.win, { title: "새 캐릭터", label: "이름", value: proj.chars.length ? "" : title, ok: "만들기", placeholder: "예: 시로코" });
-    if (name == null) return;
-    let next = P.addChar(proj, { name });
+    const r = await S.dlg.charNames({ title: "새 캐릭터", name: proj.chars.length ? "" : title });
+    if (!r) return;
+    let next = P.addChar(proj, r);
     const id = next.chars.at(-1).id;
     const into = st.focus?.kind === "folder" && proj.folders.some((f) => f.id === st.focus.id) ? st.focus.id : st.folder;   // 폴더를 골라 둔 채면 그 폴더 안에
     if (into) next = P.setMember(next, into, id, true);
@@ -699,7 +712,7 @@ export async function openAssetStudio(ctx, target, sd) {
   function charMenu(anchor, c) {
     openMenu(ctx.win, anchor, [
       { label: "열기", icon: "chevron", onClick: () => openChar(c.id) },
-      { label: "이름 바꾸기", icon: "edit", onClick: async () => { const n = await promptDialog(ctx.win, { title: "이름 바꾸기", label: "이름", value: c.name }); if (n?.trim()) { S.set(P.updateChar(proj, c.id, { name: n.trim() })); paintBody(); } } },
+      { label: "이름 바꾸기", icon: "edit", onClick: async () => { const r = await S.dlg.charNames({ title: "이름 바꾸기", name: c.name, en: c.en ?? "", ok: "바꾸기" }); if (r?.name) { S.set(P.updateChar(proj, c.id, r)); paintBody(); paintTop(); } } },
       { label: "복제", icon: "split", onClick: () => { S.set(P.duplicateChar(proj, c.id)); paintBody(); } },
       ...(proj.folders.length ? [{ label: "폴더에 넣기·빼기", icon: "folder", onClick: () => folderPick(anchor, [c.id]) }] : []),
       "sep", { label: "지우기", icon: "trash", danger: true, onClick: () => removeChars([c.id]) }
@@ -753,8 +766,8 @@ export async function openAssetStudio(ctx, target, sd) {
     const c = S.curChar(), sc = S.curScene();
     openMenu(ctx.win, anchor, [
       ...(sc ? [{ label: P.pickCount(sc) ? `고른 그림 ${P.pickCount(sc)}장` : `이 씬 그림 ${sc.images.length}장`, icon: "download", onClick: () => zipOut((P.pickCount(sc) ? P.pickedImages(c, sc.id).map((x) => x.path) : sc.images.map((i) => i.path)).map((p, i) => [`${c.name}/${sc.name}_${i + 1}.png`, p])) }] : []),
-      { label: "씬 대표 그림만", icon: "download", onClick: () => zipOut((c ? [c] : proj.chars).flatMap((cc) => cc.scenes.filter((s2) => P.coverOf(s2)).map((s2) => [`${cc.name}/${s2.name}.png`, P.coverOf(s2)]))) },
-      { label: "모든 그림", icon: "download", onClick: () => zipOut((c ? [c] : proj.chars).flatMap((cc) => cc.scenes.flatMap((s2) => P.sortedImages(s2).map((im, i) => [`${cc.name}/${s2.name}_${i + 1}.png`, im.path])))) }
+      { label: "씬 대표 그림만", icon: "download", onClick: () => zipOut((c ? [c] : proj.chars).flatMap((cc) => cc.scenes.filter((s2) => P.coverOf(s2)).map((s2) => [`${P.fileName(cc)}/${s2.name}.png`, P.coverOf(s2)]))) },
+      { label: "모든 그림", icon: "download", onClick: () => zipOut((c ? [c] : proj.chars).flatMap((cc) => cc.scenes.flatMap((s2) => P.sortedImages(s2).map((im, i) => [`${P.fileName(cc)}/${s2.name}_${i + 1}.png`, im.path])))) }
     ]);
   }
   async function zipOut(entries) {
@@ -791,7 +804,7 @@ export async function openAssetStudio(ctx, target, sd) {
     const style = S.prefs.nameStyle ?? "scene";
     if (style === "scene" || !it.cid) return it.name;
     const c = P.charOf(proj, it.cid), sep = style === "dot" ? "." : "_";
-    return [charFolderName(it.cid), c?.name, it.name].filter(Boolean).join(sep) + (ext ? `.${ext}` : "");
+    return [charFolderName(it.cid), c && P.fileName(c), it.name].filter(Boolean).join(sep) + (ext ? `.${ext}` : "");
   }
   // 지금 보는 범위(맨 위 = 전체, 폴더 = 그 폴더, 캐릭터·씬 = 그 캐릭터)의 고른 그림 모두
   function pickedInScope() {
@@ -904,6 +917,48 @@ export async function openAssetStudio(ctx, target, sd) {
     if (i >= 0) list[i] = t; else list.push(t);
     await sd.saveTemplates(list);
   }
+  // ── 프로젝트 전체 백업(zip): 설정(JSON)과 모든 그림. 가져오기는 'SDStudio 백업 가져오기'로 같은 zip을 고르면 돼요 ──
+  async function fullBackup() {
+    S.persist(); saveToBot({ force: true });
+    const paths = [...FB.assetPaths(proj)];
+    const t = ctx.toast(`백업 만드는 중 0/${paths.length}`, { seconds: 3600 });
+    try {
+      const files = {}, names = new Map();
+      let n = 0, miss = 0;
+      for (const p of paths) {
+        try {
+          const data = await S.bytes(p), ext = (/\.(png|webp|jpe?g|avif)$/i.exec(p)?.[1] ?? "png").toLowerCase();
+          const name = `img/${String(names.size + 1).padStart(5, "0")}.${ext}`;
+          names.set(p, name); files[name] = [data, { level: 0 }];
+        } catch { miss++; }
+        if (++n % 10 === 0) { const span = ctx.win.querySelector(".rb-toasts .rb-toast:last-child span"); if (span) span.textContent = `백업 만드는 중 ${n}/${paths.length}`; await new Promise((r) => setTimeout(r)); }
+      }
+      files[FB.BACKUP_NAME] = [strToU8(JSON.stringify(FB.makeBackup(proj, names, { title }))), { level: 6 }];
+      download(`${title || "에셋"}-프로젝트백업.zip`, new Blob([zipSync(files)], { type: "application/zip" }));
+      ctx.toast(`백업을 내려받았어요(그림 ${names.size}장${miss ? `, 못 읽은 ${miss}장 빠짐` : ""})`, { seconds: 8, error: !!miss });
+    } catch (e) { ctx.toast(`백업을 만들지 못했어요: ${e?.message ?? e}`, { error: true }); }
+    finally { t?.close?.(); }
+  }
+  async function restoreFull(arc, data) {
+    const b = FB.readBackup(data);
+    if (!b) throw new Error("백업 파일이 올바르지 않아요");
+    if (!await confirmDialog(ctx.win, { title: "이 백업으로 지금 프로젝트를 바꿀까요?", body: `캐릭터 ${b.project.chars?.length ?? 0}명, 그림 ${b.entries.length}장. 지금 내용은 되돌리기로 돌아올 수 있어요.`, ok: "바꾸기" })) return;
+    const t = ctx.toast(`그림 가져오는 중 0/${b.entries.length}`, { seconds: 3600 });
+    const map = new Map();
+    let next = 0, done = 0;
+    const work = async () => {
+      while (next < b.entries.length) {
+        const name = b.entries[next++];
+        try { map.set(name, await sd.saveAsset(await arc.get(name))); } catch { /* 이 그림은 건너뜀 */ }
+        const sp = ctx.win.querySelector(".rb-toasts .rb-toast:last-child span"); if (sp) sp.textContent = `그림 가져오는 중 ${++done}/${b.entries.length}`;
+      }
+    };
+    try { await Promise.all([work(), work(), work()]); } finally { t?.close?.(); }
+    const lost = b.entries.length - map.size;
+    S.set(P.normalizeProject(FB.restore(b.project, map)));
+    st.folder = null; openChar(null);
+    ctx.toast(`백업을 불러왔어요(그림 ${map.size}장${lost ? `, 못 가져온 ${lost}장 빠짐` : ""})`, { seconds: 8, action: { label: "되돌리기", run: () => S.undo() }, error: !!lost });
+  }
   // ── SDStudio 백업(.tar·.zip·프로젝트 .json) 가져오기 ──
   async function openArchive(f) {
     const head = new Uint8Array(await f.slice(0, 512).arrayBuffer());
@@ -934,6 +989,7 @@ export async function openAssetStudio(ctx, target, sd) {
     const t0 = ctx.toast("백업을 읽는 중…", { seconds: 600 });
     try {
       arc = await openArchive(f);
+      if (arc.get && arc.files.some((x) => x.name === FB.BACKUP_NAME)) { t0?.close?.(); await restoreFull(arc, JSON.parse(strFromU8(await arc.get(FB.BACKUP_NAME)))); return; }
       projs = arc.projs ?? await BK.findProjects(arc.files, async (n) => JSON.parse(new TextDecoder().decode(await arc.get(n))));
     } catch (e) { t0?.close?.(); ctx.toast(`읽지 못했어요: ${e?.message ?? e}`, { error: true }); return; }
     t0?.close?.();
@@ -1125,8 +1181,51 @@ export async function openAssetStudio(ctx, target, sd) {
     } finally { t?.close?.(); }
   }
 
+  // 폴더 → 봇·모듈 로어북 폴더(설정에서 켰을 때만). 이름·위치만 맞추고, 지워도 로어북 쪽은 남긴다
+  async function syncLoreNow() {
+    try {
+      const field = target.kind === "module" ? "lorebook" : "globalLore";
+      const cur = await readBot();
+      if (!cur) return;
+      const r = syncLore(cur[field] ?? [], proj, { newFolder: (name, list, o) => newFolderEntry(name, list, o) });
+      if (r.changed) {
+        if (target.kind === "module") await ctx.svc.run("update", target.id, { lorebook: r.lorebook });
+        else {
+          const b = await ctx.api.getCharacterFromIndex(target.index);
+          if (!b || b.chaId !== target.id || isGenerating(b)) return;
+          await ctx.api.setCharacterToIndex(target.index, { ...b, globalLore: syncLore(b.globalLore ?? [], proj, { newFolder: (name, list, o) => newFolderEntry(name, list, o) }).lorebook });
+        }
+        if (target.kind === "module") ctx.state.modDirty = true; else ctx.state.charsDirty = true;
+      }
+      if (Object.keys(r.ids).length) { proj = P.setLoreIds(proj, r.ids); S.persist(); }
+    } catch (e) { ctx.toast(`로어북에 폴더를 적지 못했어요: ${e?.message ?? e}`, { error: true }); }
+  }
+  S.syncLore = syncLoreNow;
+  // 봇(모듈) 안에도 저장 — 무겁지 않게 닫을 때·3분마다·백업할 때만
+  async function saveToBot({ force = false, remove = false } = {}) {
+    if (!remove && (!botOn || (!botDirty && !force))) return;
+    try {
+      const snap = remove ? null : { t: Date.now(), z: u8b64(gzipSync(strToU8(JSON.stringify(proj)))) };
+      if (target.kind === "module") await ctx.svc.run("update", target.id, { [BD.BOT_KEY]: snap ?? undefined });
+      else {
+        const b = await ctx.api.getCharacterFromIndex(target.index);
+        if (!b || b.chaId !== target.id || isGenerating(b)) return;
+        if (!remove && BD.readSnap(b, "character")?.t > Math.max(botT, await sd.savedAt(target))) { ctx.toast("봇 안 설정이 더 최근이라 덮어쓰지 않았어요(다른 기기에서 고친 듯해요)", { error: true }); return; }
+        await ctx.api.setCharacterToIndex(target.index, BD.writeSnap(b, "character", snap));
+      }
+      botDirty = false; if (snap) botT = snap.t;
+    } catch (e) { if (force || remove) ctx.toast(`봇에 저장하지 못했어요: ${e?.message ?? e}`, { error: true }); }
+  }
+  const botTimer = setInterval(() => { if (!el.hidden) saveToBot(); }, 180000);
+  async function toggleBotSave() {
+    if (botOn) {
+      if (!await confirmDialog(ctx.win, { title: "봇에 저장을 끌까요?", body: "봇 안에 넣어 둔 에셋 제작 설정을 지워요. 리스에서 카드를 그대로 내보내 배포할 때 쓰세요. 설정은 플러그인 저장소·이 기기 복사본에 그대로 남아요.", ok: "끄고 지우기" })) return;
+      botOn = false; await sd.setLocal(botKey, true); await saveToBot({ remove: true }); S.toast("봇에서 지웠어요. 배포가 끝나면 다시 켜 주세요");
+    } else { botOn = true; await sd.setLocal(botKey, false); await saveToBot({ force: true }); S.toast("봇에도 저장해요"); }
+    paintTools();
+  }
   function close() {
-    S.persist();
+    S.persist(); saveToBot();
     restoreWin();
     if (q.running) { el.hidden = true; ctx.toast(`창을 닫아도 계속 그려요(${q.done}/${q.total}). 다시 ‘에셋 제작’을 누르면 이어서 보여요`, { seconds: 8 }); return; }
     finish();
@@ -1144,7 +1243,9 @@ export async function openAssetStudio(ctx, target, sd) {
     el.hidden = false; S.paint(); el.focus();
   }
   function finish() {
+    clearInterval(botTimer); clearTimeout(loreT);
     LIVE.delete(liveKey);
+    removeEventListener?.("focus", refull); document.removeEventListener?.("visibilitychange", refull);
     lazy?.disconnect();
     for (const u of thumbUrls.values()) URL.revokeObjectURL(u);
     el.remove();
@@ -1200,6 +1301,9 @@ export async function openAssetStudio(ctx, target, sd) {
   LIVE.set(liveKey, live);
   addEventListener?.("pagehide", () => S.persist());
   document.addEventListener?.("visibilitychange", () => { if (document.visibilityState === "hidden") S.persist(); });
+  // 창 포커스를 잃었다 돌아오면 호스트가 사이드바를 다시 꺼내므로, 열려 있는 동안 전체 화면을 다시 요청한다
+  const refull = () => { if (!el.hidden && el.isConnected && document.visibilityState !== "hidden") ctx.api.showContainer?.("fullscreen")?.catch?.(() => {}); };
+  addEventListener?.("focus", refull); document.addEventListener?.("visibilitychange", refull);
   // 지난번에 그리다 끊겼으면 이어 그리기
   if (prefs.resume && P.planJobs(proj).length) ctx.toast(`지난번에 그리다 멈췄어요. 남은 ${P.planJobs(proj).length}장을 이어 그릴까요?`, { seconds: 30, action: { label: "이어 그리기", run: () => runQueue() } });
   return live;

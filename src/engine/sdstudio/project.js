@@ -45,12 +45,12 @@ export function normalizeProject(x) {
   const chars = (Array.isArray(x.chars) ? x.chars : []).filter((c) => c && typeof c.id === "string" && c.id).map((c) => {
     let scenes = (Array.isArray(c.scenes) ? c.scenes : []).map(normScene).filter(Boolean);
     if (v1 && !c.scenes) scenes = [normScene({ id: `${c.id}-default`, name: "default", images: c.images ?? [], cover: c.cover })];
-    return { id: c.id, name: str(c.name, 80) || "이름 없음", prompt: str(c.prompt), cover: typeof c.cover === "string" && !v1 ? c.cover : "", scenes };
+    return { id: c.id, name: str(c.name, 80) || "이름 없음", en: str(c.en, 80).trim(), prompt: str(c.prompt), cover: typeof c.cover === "string" && !v1 ? c.cover : "", scenes };
   });
   const charIds = new Set(chars.map((c) => c.id));
   const raw = (Array.isArray(x.folders) ? x.folders : []).filter((f) => f && typeof f.id === "string" && f.id);
   const fIds = new Set(raw.map((f) => f.id));
-  const folders = raw.map((f) => ({ id: f.id, name: str(f.name, 80) || "새 폴더", kind: f.kind === "outfit" || f.kind === "group" ? f.kind : "", prompt: str(f.prompt), tpl: str(f.tpl, 120), parent: typeof f.parent === "string" && fIds.has(f.parent) && f.parent !== f.id ? f.parent : null, members: [...new Set((Array.isArray(f.members) ? f.members : []).filter((m) => charIds.has(m)))] }));
+  const folders = raw.map((f) => ({ id: f.id, name: str(f.name, 80) || "새 폴더", kind: f.kind === "outfit" || f.kind === "group" ? f.kind : "", prompt: str(f.prompt), tpl: str(f.tpl, 120), lore: str(f.lore, 80), parent: typeof f.parent === "string" && fIds.has(f.parent) && f.parent !== f.id ? f.parent : null, members: [...new Set((Array.isArray(f.members) ? f.members : []).filter((m) => charIds.has(m)))] }));
   const byId = new Map(folders.map((f) => [f.id, f]));
   for (const f of folders) { const seen = new Set([f.id]); let p = f.parent; while (p) { if (seen.has(p)) { f.parent = null; break; } seen.add(p); p = byId.get(p)?.parent ?? null; } }
   return { v: 2, settings, pieces, chars, folders };
@@ -60,9 +60,9 @@ export function normalizeProject(x) {
 export var setSettings = (p, patch) => ({ ...p, settings: { ...p.settings, ...patch } });
 
 // ── 캐릭터 ──
-export function addChar(p, { name = "", prompt = "" } = {}, mkId = newId) {
+export function addChar(p, { name = "", en = "", prompt = "" } = {}, mkId = newId) {
   const id = mkId();
-  return { ...p, chars: [...p.chars, { id, name: str(name, 80).trim() || "새 캐릭터", prompt: str(prompt), cover: "", scenes: [{ id: mkId(), name: "default", slots: [], size: "", reserve: 0, cover: "", memo: "", images: [] }] }] };
+  return { ...p, chars: [...p.chars, { id, name: str(name, 80).trim() || "새 캐릭터", en: str(en, 80).trim(), prompt: str(prompt), cover: "", scenes: [{ id: mkId(), name: "default", slots: [], size: "", reserve: 0, cover: "", memo: "", images: [] }] }] };
 }
 export var updateChar = (p, id, patch) => ({ ...p, chars: p.chars.map((c) => (c.id === id ? { ...c, ...patch, id: c.id } : c)) });
 export var removeChar = (p, id) => ({ ...p, chars: p.chars.filter((c) => c.id !== id), folders: p.folders.map((f) => ({ ...f, members: f.members.filter((m) => m !== id) })) });
@@ -366,3 +366,7 @@ export function applyCup(p, cid, sid, ranks) {
   const sc = sceneOf(p, cid, sid);
   return sc ? updateScene(p, cid, sid, { images: sc.images.map((i) => (ranks[i.path] != null ? { ...i, rank: ranks[i.path] } : i)) }) : p;
 }
+
+// 내보내기용 이름: 영어 이름이 있으면 그것, 없으면 표기 이름
+export var fileName = (c) => (c?.en || c?.name || "char");
+export var setLoreIds = (p, ids) => ({ ...p, folders: p.folders.map((f) => (ids[f.id] ? { ...f, lore: ids[f.id] } : f)) });

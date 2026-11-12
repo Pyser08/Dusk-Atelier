@@ -10,6 +10,8 @@ import { buildMergedCharacter, newCharacterBase, planCharacter } from './charact
 import { CHAR_LISTS, MOD_LISTS } from './merge3.js';
 import { buildRisum, safeFileName } from './export.js';
 import { createZip } from './zipwrite.js';
+// 에셋 제작 애드온이 봇·모듈에 넣어 둔 설정 칸(dusk_sdstudio)은 배포 파일에서 뺀다(engine/sdstudio/botdata.js와 같은 규칙 — 애드온 전용 모듈을 코어에 끌어오지 않으려고 따로 둠)
+var stripSnap = (o) => { const c = JSON.parse(JSON.stringify(o)); delete c.dusk_sdstudio; if (c.extentions && typeof c.extentions === "object") delete c.extentions.dusk_sdstudio; return c; };
 
 export var WORK_ACCEPT = { module: ".risum,.json", character: ".charx,.png,.jpg,.jpeg,.json" };
 
@@ -153,7 +155,8 @@ var clean = (o) => {
   for (const k of Object.keys(o)) if (o[k] === void 0) delete o[k];
   return o;
 };
-export async function buildCharx(ch, readAsset, { onProgress } = {}) {
+export async function buildCharx(ch0, readAsset, { onProgress } = {}) {
+  const ch = stripSnap(ch0);   // 에셋 제작 설정은 배포 파일에 넣지 않음
   const zip = createZip();
   const assets = [], used = /* @__PURE__ */ new Set(), cache = /* @__PURE__ */ new Map();
   const jobs = [];

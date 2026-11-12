@@ -24,6 +24,7 @@ export var TAG_URLS = [
   "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/SD-Studio/data/sdstudio/tags_v5.csv.gz"
 ];
 var TAGS_CACHE_KEY = "dusk.sdstudio.tagsgz";
+var MIRROR = "dusk.sdstudio.mirror.";   // 프로젝트 복사본(이 기기 로컬 저장소)
 var tagDb = null, tagLoading = null;           // 넣기 기본값·변환 형식·단축키·부스트(이 기기에만)
 
 // 봇에 넣을 때 용량 줄이기: PNG → WebP/AVIF. AVIF를 못 만드는 브라우저면 WebP로 → { data, ext, fellBack }
@@ -130,10 +131,33 @@ export function createSdStudio(api) {
       try { const gz = bytes[0] === 0x1f && bytes[1] === 0x8b ? bytes : null; if (gz) await s?.setItem?.(TAGS_CACHE_KEY, b64.to(gz)); } catch { /* 공간 부족 */ }
       return tagDb;
     },
+    // 저장은 두 곳에: 리스 플러그인 저장소(주) + 이 기기 로컬 저장소(복사본). 주 저장소가 비었거나 깨졌거나 더 오래됐으면 복사본으로 복구한다.
     async loadProject(target) {
-      try { const v = await store()?.getItem(keyOf(target)); return normalizeProject(v ? (typeof v === "string" ? JSON.parse(v) : v) : null); } catch { return normalizeProject(null); }
+      const k = keyOf(target), parse = (v) => (v ? (typeof v === "string" ? JSON.parse(v) : v) : null);
+      let a = null, ta = 0, m = null;
+      try { a = parse(await store()?.getItem(k)); } catch { a = null; }
+      try { ta = Number(await store()?.getItem(`${k}.t`)) || 0; } catch { ta = 0; }
+      try { const s = await local(); m = parse(await s?.getItem?.(MIRROR + k)); } catch { m = null; }
+      const useMirror = m?.p && (!a || m.t > ta);
+      return normalizeProject(useMirror ? m.p : a);
     },
-    async saveProject(target, p) { await store()?.setItem(keyOf(target), JSON.stringify(p)); },
+    // 플러그인 저장소·기기 복사본 중 더 최근 저장 시각(봇 안 사본과 견줄 때)
+    async savedAt(target) {
+      const k = keyOf(target);
+      let ta = 0, tm = 0;
+      try { ta = Number(await store()?.getItem(`${k}.t`)) || 0; } catch { /* 없음 */ }
+      try { const s = await local(); const v = await s?.getItem?.(MIRROR + k); tm = Number((typeof v === "string" ? JSON.parse(v) : v)?.t) || 0; } catch { /* 없음 */ }
+      return Math.max(ta, tm);
+    },
+    async saveProject(target, p) {
+      const k = keyOf(target), json = JSON.stringify(p), t = Date.now();
+      const s = await local();
+      try { await s?.setItem?.(MIRROR + k, JSON.stringify({ t, p })); } catch { /* 기기 저장 공간 부족 — 복사본만 건너뜀 */ }
+      await store()?.setItem(k, json);
+      try { await store()?.setItem(`${k}.t`, String(t)); } catch { /* 시각만 못 적음 */ }
+      let back = null; try { back = await store()?.getItem(k); } catch { /* 읽기 실패는 아래에서 */ }
+      if (back != null && (typeof back === "string" ? back : JSON.stringify(back)) !== json) throw new Error("저장한 내용이 달라요. 이 기기 복사본에는 남아 있어요 — 전체 백업(zip)을 받아 두세요");
+    },
     async loadPresets() { try { const v = await store()?.getItem(PRESET_KEY); const a = v ? (typeof v === "string" ? JSON.parse(v) : v) : []; return Array.isArray(a) ? a : []; } catch { return []; } },
     async savePresets(list) { await store()?.setItem(PRESET_KEY, JSON.stringify(list)); },
     async getToken() {

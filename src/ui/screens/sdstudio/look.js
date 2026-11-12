@@ -77,6 +77,9 @@ export var CSS = `
 .sds-card[aria-selected=true] .chk,.sds-card:focus-visible .chk{opacity:1}
 .sds-card[aria-selected=true]{border-color:var(--rb-acc);box-shadow:0 0 0 2px var(--rb-acc)}
 .sds-card[aria-selected=true] .chk{background:var(--rb-acc-grad);border:0}
+.sds-card .rsvbtn{position:absolute;top:8px;right:8px;z-index:2;height:24px;padding:0 9px;border-radius:999px;display:flex;align-items:center;gap:4px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.sds-card .rsvbtn.on{background:var(--rb-acc-grad);color:var(--rb-on-acc)}
+.sds-card .rsvbtn:hover{filter:brightness(1.15)}
 .sds-card .badges{position:absolute;top:8px;right:8px;display:flex;gap:4px}
 .sds-card .badge{height:22px;min-width:22px;padding:0 6px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:11.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
 .sds-card .quick{position:absolute;left:8px;right:8px;bottom:44px;display:flex;gap:6px;justify-content:flex-end;opacity:0;transition:opacity .12s}

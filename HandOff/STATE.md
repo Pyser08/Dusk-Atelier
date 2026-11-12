@@ -1103,3 +1103,11 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 일반 태그 중 사용 1,000회 이상·괄호 없는 미번역 3,954개를 직접 번역해 `data/sdstudio/tags_ko_extra.csv`(10,865줄)·`src/engine/sdstudio/tags_ko.js`에 추가.
 - 남은 일반 태그: 1,000회 미만과 괄호 붙은 작품·캐릭터 계열. (기본 사전에 이미 한글 항목이 있는 태그는 영어 쪽 값으로 걸러내야 중복이 안 생김)
 - 확인: npm test(fail 0) · build · check 동일함. e2e는 안 돌림(데이터만 바뀜). sdstudio 애드온 배포는 여전히 보류.
+
+## 에셋 제작 2026-11-12 (커밋됨, 애드온 미배포 — 시험 파일 0.1.6)
+- 포커스 복귀 시 전체화면 재요청(`studio.js` refull). 씬 카드 우측 상단 예약 버튼(`.rsvbtn`, 호버 +1 없앰). 하위 폴더에서 캐릭터 열면 경로 유지(`openChar(id, from)`).
+- 저장 안정성: 플러그인 저장소 + 기기 로컬 복사본(`dusk.sdstudio.mirror.*`) + 봇 안 사본(`engine/sdstudio/botdata.js`, char.extentions.dusk_sdstudio / module.dusk_sdstudio, gzip+b64, 닫을 때·3분·백업 때). 가장 최근 것으로 열기. 방패 버튼으로 봇 사본 끄기(배포용). 코어 내보내기(.charx·.risum·모듈 json)는 이 칸을 뺌(export.js·devfile.js 인라인 stripSnap — 코어 릴리스 필요).
+- 백업 둘: 이미지만 zip / 프로젝트 전체 백업 zip(`engine/sdstudio/fullbackup.js`, dusk-sdstudio-backup.json + img/*), 복원은 '백업 가져오기'.
+- 폴더 → 로어북 폴더 연동(`engine/sdstudio/loresync.js`, 설정 loreSync 기본 끔, 지워도 로어북은 남김, 코어 editor.js newFolderEntry 사용 → 배포 시 minCore 2.1.4).
+- 캐릭터 표기 이름/영어 이름(`en`, `P.fileName`) — zip·에셋 이름에 영어 이름.
+- 다음(새 챗): 캐릭터 폴더도 표기/영어 이름, 튜토리얼(로어북 연동·이전 설정 가져오기·씬 프리셋), 봇 로어북 소속 구조 → 폴더로 가져오기, 툴바 프리셋 버튼(SFW·NSFW·+). 세부 결정은 대화에서 정한 것 참고.

@@ -273,6 +273,7 @@ export function createDialogs(S) {
       field("NovelAI 토큰", h("div", { style: "display:flex;gap:8px;align-items:center" }, h("span", { class: "rb-muted", style: "flex:1" }, has ? "저장됨(이 기기)" : "없음"), btn(has ? "바꾸기" : "넣기", { size: "sm", onClick: () => { done(true); token({ force: true }); } }))),
       h("b", null, "태그 자동완성"),
       h("div", { style: "display:flex;flex-direction:column;gap:8px" },
+        switchEl(!!pf.loreSync, { label: "폴더를 봇·모듈 로어북에도 만들기(이름·위치 따라감, 지워도 로어북은 남음)", onChange: async (v) => { await S.sd.setPrefs({ loreSync: v }); S.prefs.loreSync = v; if (v) S.syncLore?.(); } }),
         switchEl(pf.tags !== false, { label: "프롬프트 칸에서 태그 자동완성", onChange: async (v) => { await S.sd.setPrefs({ tags: v }); S.prefs.tags = v; } }),
         h("span", { class: "rb-muted", style: "font-size:12px;white-space:normal" }, `${S.sd.tags() ? `사전 ${S.sd.tags().size.toLocaleString()}개 있음` : "사전 없음 — 프롬프트를 칠 때 받기를 권해요(약 2MB, 처음 한 번)"} · 두 글자부터 · ↑↓로 고르고 Enter·Tab으로 넣기 · 한글(예: 긴 머리)로도 찾아요. 사전: SDStudio(MIT).`),
         h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" },
@@ -431,6 +432,17 @@ export function createDialogs(S) {
     });
   }
 
+  // 캐릭터 이름 두 칸: 표기(화면·로어북) / 영어(파일·에셋 내보내기)
+  function charNames({ title, name = "", en = "", ok = "만들기" }) {
+    const nIn = h("input", { type: "text", class: "rb-input", value: name, placeholder: "예: 시로코", "data-autofocus": "", id: "sds-cname" });
+    const eIn = h("input", { type: "text", class: "rb-input", value: en, placeholder: "예: shiroko (비우면 표기 이름 사용)", id: "sds-cen" });
+    const val = () => ({ name: nIn.value.trim(), en: eIn.value.trim().replace(/[\\/:*?"<>|]/g, "_") });
+    return modal(win, (done) => {
+      for (const x of [nIn, eIn]) x.addEventListener("keydown", (e) => { if (e.key === "Enter" && nIn.value.trim()) done(val()); });
+      return dialog(title, 420, field("표기 이름(화면·로어북)", nIn), field("영어 이름(이미지 내보내기·에셋 이름)", eIn),
+        h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(null) }), btn(ok, { kind: "primary", id: "sds-cok", onClick: () => nIn.value.trim() && done(val()) })));
+    });
+  }
   function folderDialog({ title, name = "", kind = "", prompt = "", ok = "만들기" }) {
     let k = kind;
     const pIn = h("textarea", { class: "rb-input", rows: 3, id: "sds-fprompt", placeholder: "예: school uniform, halo — 이 폴더(안의 폴더 포함) 캐릭터 프롬프트 앞에 붙어요" }, prompt);
@@ -474,5 +486,5 @@ export function createDialogs(S) {
     await modal(win, (done) => dialog("작가 태그(그림체)", 520, q, list, h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => done() }))));
   }
 
-  return { artists, sampling, charPrompts, pieces, vibes, refs, savePreset, loadPreset, check, help, token, settings, put, exportPreview, backupImport, folderDialog, keysDialog, templateChoice, templateManager };
+  return { artists, sampling, charPrompts, pieces, vibes, refs, savePreset, loadPreset, check, help, token, settings, put, exportPreview, backupImport, folderDialog, charNames, keysDialog, templateChoice, templateManager };
 }

@@ -1,4 +1,6 @@
 import { DECODE } from './rpack.js';
+// 에셋 제작 애드온이 봇·모듈에 넣어 둔 설정 칸(dusk_sdstudio)은 배포 파일에서 뺀다(engine/sdstudio/botdata.js와 같은 규칙 — 애드온 전용 모듈을 코어에 끌어오지 않으려고 따로 둠)
+var stripSnap = (o) => { const c = JSON.parse(JSON.stringify(o)); delete c.dusk_sdstudio; if (c.extentions && typeof c.extentions === "object") delete c.extentions.dusk_sdstudio; return c; };
 
 var ENCODE = (() => {
   const e = new Uint8Array(256);
@@ -17,7 +19,7 @@ var u322 = (n) => {
 };
 export async function buildRisum(module, readAsset, { onProgress, shouldStop } = {}) {
   const assets = module.assets ?? [];
-  const clean = JSON.parse(JSON.stringify(module));
+  const clean = stripSnap(module);
   delete clean.enabled;
   clean.assets = assets.map((a) => [a[0], "", a[2]]);
   const main = rpackEncode(new TextEncoder().encode(JSON.stringify({ module: clean, type: "risuModule" }, null, 2)));
@@ -34,7 +36,7 @@ export async function buildRisum(module, readAsset, { onProgress, shouldStop } =
   return new Blob(parts, { type: "application/octet-stream" });
 }
 export function moduleJson(module) {
-  const clean = JSON.parse(JSON.stringify(module));
+  const clean = stripSnap(module);
   delete clean.enabled;
   return JSON.stringify({ ...clean, type: "risuModule" }, null, 2);
 }
