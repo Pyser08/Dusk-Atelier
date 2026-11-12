@@ -105,6 +105,7 @@ export function createDialogs(S) {
       const setLib = (patch) => upd(S.proj.pieces.map((l, i) => (i === libI ? { ...l, ...patch } : l)));
       replace(right,
         h("div", { style: "display:flex;gap:8px;align-items:center" }, h("b", { style: "flex:1" }, `<${lib.name}.…>`),
+          btn("이름 바꾸기", { size: "sm", kind: "ghost", icon: "edit", id: "sds-lib-rename", title: "프롬프트 속 <옛 이름.조각>도 함께 바뀌어요", onClick: async () => { const n = clean(await promptDialog(win, { title: "조각 모음 이름", label: "새 이름(점·꺾쇠·쉼표·띄어쓰기 없이)", value: lib.name })); if (!n || n === lib.name) return; try { S.set(P.renamePieceLib(S.proj, lib.name, n)); S.paintLeft(); S.toast(`‘${n}’으로 바꿨어요. 프롬프트의 <${lib.name}.…>도 고쳤어요`); } catch (e) { S.toast(e?.message ?? String(e), { error: true }); } paint(); } }),
           btn("내보내기", { size: "sm", kind: "ghost", icon: "download", title: "SDStudio에서도 읽는 .json", onClick: () => download(`${lib.name}.json`, piecesFile(lib), "application/json") }),
           btn("모음 지우기", { size: "sm", kind: "danger", onClick: async () => { if (await confirmDialog(win, { title: `‘${lib.name}’ 모음을 지울까요?`, body: "이 모음을 부르는 프롬프트는 오류가 나요.", ok: "지우기", danger: true })) { upd(S.proj.pieces.filter((_, i) => i !== libI)); paint(); } } })),
         ...lib.pieces.map((pc, k) => {

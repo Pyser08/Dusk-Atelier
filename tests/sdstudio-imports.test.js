@@ -34,3 +34,17 @@ test("PNG 메타데이터: NAI Comment·SDStudio v1", () => {
   assert.equal(r.top, "a, b"); assert.equal(r.middle, "smile"); assert.equal(r.back, "c"); assert.equal(r.split, true);
   assert.equal(readPngPrompt(png()), null);
 });
+import * as P from "../src/engine/sdstudio/project.js";
+test("조각 모음 이름 바꾸기: 프롬프트 참조도 함께", () => {
+  let p = P.addChar(P.emptyProject(), { name: "A", prompt: "<옷.a>" });
+  p = { ...p, pieces: [{ name: "옷", pieces: [{ name: "a", prompt: "x", multi: false }] }, { name: "옷2", pieces: [{ name: "b", prompt: "<옷.a>, <옷2.b>", multi: false }] }] };
+  p = P.setSettings(p, { top: "q, <옷.a>, <옷2.b>" });
+  p = P.setSlots(p, p.chars[0].id, p.chars[0].scenes[0].id, [[{ prompt: "<옷.a>" }]]);
+  const r = P.renamePieceLib(p, "옷", "의상");
+  assert.equal(r.settings.top, "q, <의상.a>, <옷2.b>");
+  assert.equal(r.chars[0].prompt, "<의상.a>");
+  assert.equal(r.chars[0].scenes[0].slots[0][0].prompt, "<의상.a>");
+  assert.equal(r.pieces[1].pieces[0].prompt, "<의상.a>, <옷2.b>");
+  assert.deepEqual(r.pieces.map((l) => l.name), ["의상", "옷2"]);
+  assert.throws(() => P.renamePieceLib(p, "옷", "옷2"));
+});
