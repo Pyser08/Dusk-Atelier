@@ -1,8 +1,8 @@
-/* Dusk Atelier 애드온 sdstudio v0.1.0 — 소스: addons/sdstudio (AGPL-3.0-only) */
-var eo=Object.defineProperty;var no=(e,n)=>{for(var a in n)eo(e,a,{get:n[a],enumerable:!0})};var Qt=globalThis.__duskLib?.["src/ui/kit.js"];if(!Qt)throw new Error("Dusk 코어에 src/ui/kit.js가 없어요 — Dusk를 업데이트해 주세요");{let e=["STATUS_KINDS","actionRow","advFold","badge","btn","chip","colorDialog","confirmDialog","emptyState","fmtSize","folderDialog","folderPickPrefs","guidePanel","iconBtn","loading","modal","moreNav","note","openMenu","optionCards","pageHead","popover","progressBar","promptDialog","segmented","setSwitch","sheet","sortBy","sortChips","sortKeyName","sortLabel","sortShort","spinner","statusCard","stepsGuide","switchEl","toast","toggleRow","tray","trayBtn"].filter(n=>!(n in Qt));if(e.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/ui/kit.js에 없는 기능: "+e.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{STATUS_KINDS:ri,actionRow:ai,advFold:si,badge:oi,btn:D,chip:ii,colorDialog:li,confirmDialog:$e,emptyState:di,fmtSize:ci,folderDialog:pi,folderPickPrefs:hi,guidePanel:ui,iconBtn:gi,loading:mi,modal:fe,moreNav:bi,note:fi,openMenu:Se,optionCards:wi,pageHead:ki,popover:yi,progressBar:vi,promptDialog:Be,segmented:xe,setSwitch:pt,sheet:xi,sortBy:Ci,sortChips:Pi,sortKeyName:ji,sortLabel:$i,sortShort:zi,spinner:Mi,statusCard:Ai,stepsGuide:_i,switchEl:ht,toast:Si,toggleRow:Li,tray:qi,trayBtn:Ei}=Qt;var Zt=globalThis.__duskLib?.["src/vendor/fflate.js"];if(!Zt)throw new Error("Dusk 코어에 src/vendor/fflate.js가 없어요 — Dusk를 업데이트해 주세요");{let e=["deflateSync","gunzipSync","gzipSync","inflateSync","strFromU8","strToU8","zipSync"].filter(n=>!(n in Zt));if(e.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/vendor/fflate.js에 없는 기능: "+e.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{deflateSync:Ti,gunzipSync:ut,gzipSync:Oi,inflateSync:gt,strFromU8:ca,strToU8:Fi,zipSync:pa}=Zt;var ua={0:"일반",1:"작가",3:"작품",4:"캐릭터",5:"메타"},bn=e=>String(e??"").toLowerCase().replace(/[_\s]+/g," ").trim();function ga(e){let n=[],a=[],s=[],i=[],t=[],l=0,p=e.length;for(;l<p;){let b=e.indexOf(`
-`,l);b<0&&(b=p);let f=e.charCodeAt(b-1)===13?e.slice(l,b-1):e.slice(l,b);if(l=b+1,!f)continue;let w=f.lastIndexOf(","),M=f.lastIndexOf(",",w-1),m=f.lastIndexOf(",",M-1);if(m<=0)continue;let $=f.slice(0,m),L=f.slice(w+1);n.push($),a.push(bn($.includes("/")?$.slice($.lastIndexOf("/")+1):$)+($.includes("/")?"\0"+bn($):"")),s.push(Number(f.slice(m+1,M))||0),i.push(Number(f.slice(M+1,w))||0),t.push(L==="null"?"":L)}return{words:n,keys:a,cats:s,freqs:i,redirs:t,size:n.length}}var ma="ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ",to="ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ",ro=["","ㄱ","ㄲ","ㄱㅅ","ㄴ","ㄴㅈ","ㄴㅎ","ㄷ","ㄹ","ㄹㄱ","ㄹㅁ","ㄹㅂ","ㄹㅅ","ㄹㅌ","ㄹㅍ","ㄹㅎ","ㅁ","ㅂ","ㅂㅅ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"],ha={ㅘ:"ㅗㅏ",ㅙ:"ㅗㅐ",ㅚ:"ㅗㅣ",ㅝ:"ㅜㅓ",ㅞ:"ㅜㅔ",ㅟ:"ㅜㅣ",ㅢ:"ㅡㅣ",ㄳ:"ㄱㅅ",ㄵ:"ㄴㅈ",ㄶ:"ㄴㅎ",ㄺ:"ㄹㄱ",ㄻ:"ㄹㅁ",ㄼ:"ㄹㅂ",ㄽ:"ㄹㅅ",ㄾ:"ㄹㅌ",ㄿ:"ㄹㅍ",ㅀ:"ㄹㅎ",ㅄ:"ㅂㅅ"};function ba(e){let n="";for(let a of String(e)){let s=a.charCodeAt(0)-44032;if(s>=0&&s<11172){let i=to[Math.floor(s/28)%21];n+=ma[Math.floor(s/588)]+(ha[i]??i)+ro[s%28]}else n+=ha[a]??a}return n}var ao=e=>[...String(e)].map(n=>{let a=n.charCodeAt(0)-44032;return a>=0&&a<11172?ma[Math.floor(a/588)]:n}).join(""),fa=/[ㄱ-ㅎㅏ-ㅣ가-힣]/,so=/^[ㄱ-ㅎ\s]+$/;function oo(e){if(e.ko)return e.ko;let n=[],a=[],s=[];for(let i=0;i<e.size;i++)if(fa.test(e.words[i])){let t=bn(e.words[i]);n.push(i),a.push(ba(t)),s.push(ao(t))}return e.ko={ids:n,jk:a,ck:s}}function wa(e,n,a=8){let s=bn(n);if(!e||s.length<1)return[];let i=[],t=[],l=[];if(fa.test(s)){let w=oo(e),M=so.test(s),m=M?s.replace(/\s+/g,""):ba(s);for(let $=0;$<w.ids.length;$++){let L=M?w.ck[$].replace(/\s+/g,""):w.jk[$],G=L.indexOf(m);if(G<0)continue;let Z=L.lastIndexOf("/");(G===Z+1||G>Z&&L[G-1]===" "?i:G>Z||G===0?t:l).push(w.ids[$])}}else for(let w=0;w<e.size;w++){let M=e.keys[w],m=M.indexOf(s);m<0||(m===0||M[m-1]===" "||M[m-1]==="\0"||M[m-1]==="/"?t:l).push(w)}let p=(w,M)=>e.freqs[M]-e.freqs[w];i.sort(p),t.sort(p),l.sort(p);let b=[],f=new Set;for(let w of[...i,...t,...l]){let M=e.redirs[w]||e.words[w];if(!f.has(M)&&(f.add(M),b.push({word:e.words[w],tag:M,cat:e.cats[w],freq:e.freqs[w]}),b.length>=a))break}return b}function er(e,n){let a=n;for(;a>0&&!`,
-|{}[]()<>`.includes(e[a-1]);)a--;for(;a<n&&e[a]===" ";)a++;let s=n;for(;s<e.length&&!`,
-|{}[]()<>`.includes(e[s]);)s++;return{start:a,end:s,word:e.slice(a,n)}}function ka(e,n,a){let s=er(e,n),i=e.slice(s.end).replace(/^\s*,?\s*/,""),t=e.slice(0,s.start)+a+", ";return{text:t+i,caret:t.length}}var mt=e=>e>=1e6?`${(e/1e6).toFixed(1)}M`:e>=1e3?`${Math.round(e/1e3)}k`:String(e);var ya=`인원/여자 한 명,0,7943303,1girl
+/* Dusk Atelier 애드온 sdstudio v0.3.0 — 소스: addons/sdstudio (AGPL-3.0-only) */
+var i0=Object.defineProperty;var l0=(n,e)=>{for(var t in e)i0(n,t,{get:e[t],enumerable:!0})};var Gr=globalThis.__duskLib?.["src/ui/kit.js"];if(!Gr)throw new Error("Dusk 코어에 src/ui/kit.js가 없어요 — Dusk를 업데이트해 주세요");{let n=["STATUS_KINDS","actionRow","advFold","badge","btn","chip","colorDialog","confirmDialog","emptyState","fmtSize","folderDialog","folderPickPrefs","guidePanel","iconBtn","loading","modal","moreNav","note","openMenu","optionCards","pageHead","popover","progressBar","promptDialog","segmented","setSwitch","sheet","sortBy","sortChips","sortKeyName","sortLabel","sortShort","spinner","statusCard","stepsGuide","switchEl","toast","toggleRow","tray","trayBtn"].filter(e=>!(e in Gr));if(n.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/ui/kit.js에 없는 기능: "+n.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{STATUS_KINDS:kl,actionRow:yl,advFold:vl,badge:xl,btn:B,chip:jl,colorDialog:Cl,confirmDialog:zn,emptyState:Pl,fmtSize:$l,folderDialog:zl,folderPickPrefs:Ml,guidePanel:Sl,iconBtn:Al,loading:Tl,modal:Pn,moreNav:_l,note:El,openMenu:In,optionCards:ql,pageHead:Ll,popover:Ol,progressBar:Il,promptDialog:Xn,segmented:Tn,setSwitch:Wt,sheet:Dl,sortBy:Fl,sortChips:Nl,sortKeyName:Bl,sortLabel:Rl,sortShort:Ul,spinner:Kl,statusCard:Vl,stepsGuide:Hl,switchEl:Gt,toast:Jl,toggleRow:Wl,tray:Gl,trayBtn:Xl}=Gr;var Xr=globalThis.__duskLib?.["src/vendor/fflate.js"];if(!Xr)throw new Error("Dusk 코어에 src/vendor/fflate.js가 없어요 — Dusk를 업데이트해 주세요");{let n=["deflateSync","gunzipSync","gzipSync","inflateSync","strFromU8","strToU8","zipSync"].filter(e=>!(e in Xr));if(n.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/vendor/fflate.js에 없는 기능: "+n.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{deflateSync:Ql,gunzipSync:at,gzipSync:Os,inflateSync:Xt,strFromU8:st,strToU8:Yr,zipSync:Qr}=Xr;var Ds={0:"일반",1:"작가",3:"작품",4:"캐릭터",5:"메타"},Ie=n=>String(n??"").toLowerCase().replace(/[_\s]+/g," ").trim();function Fs(n){let e=[],t=[],a=[],o=[],c=[],p=0,s=n.length;for(;p<s;){let w=n.indexOf(`
+`,p);w<0&&(w=s);let x=n.charCodeAt(w-1)===13?n.slice(p,w-1):n.slice(p,w);if(p=w+1,!x)continue;let m=x.lastIndexOf(","),k=x.lastIndexOf(",",m-1),j=x.lastIndexOf(",",k-1);if(j<=0)continue;let z=x.slice(0,j),_=x.slice(m+1);e.push(z),t.push(Ie(z.includes("/")?z.slice(z.lastIndexOf("/")+1):z)+(z.includes("/")?"\0"+Ie(z):"")),a.push(Number(x.slice(j+1,k))||0),o.push(Number(x.slice(k+1,m))||0),c.push(_==="null"?"":_)}return{words:e,keys:t,cats:a,freqs:o,redirs:c,size:e.length}}var Ns="ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ",c0="ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ",d0=["","ㄱ","ㄲ","ㄱㅅ","ㄴ","ㄴㅈ","ㄴㅎ","ㄷ","ㄹ","ㄹㄱ","ㄹㅁ","ㄹㅂ","ㄹㅅ","ㄹㅌ","ㄹㅍ","ㄹㅎ","ㅁ","ㅂ","ㅂㅅ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"],Is={ㅘ:"ㅗㅏ",ㅙ:"ㅗㅐ",ㅚ:"ㅗㅣ",ㅝ:"ㅜㅓ",ㅞ:"ㅜㅔ",ㅟ:"ㅜㅣ",ㅢ:"ㅡㅣ",ㄳ:"ㄱㅅ",ㄵ:"ㄴㅈ",ㄶ:"ㄴㅎ",ㄺ:"ㄹㄱ",ㄻ:"ㄹㅁ",ㄼ:"ㄹㅂ",ㄽ:"ㄹㅅ",ㄾ:"ㄹㅌ",ㄿ:"ㄹㅍ",ㅀ:"ㄹㅎ",ㅄ:"ㅂㅅ"};function Bs(n){let e="";for(let t of String(n)){let a=t.charCodeAt(0)-44032;if(a>=0&&a<11172){let o=c0[Math.floor(a/28)%21];e+=Ns[Math.floor(a/588)]+(Is[o]??o)+d0[a%28]}else e+=Is[t]??t}return e}var p0=n=>[...String(n)].map(e=>{let t=e.charCodeAt(0)-44032;return t>=0&&t<11172?Ns[Math.floor(t/588)]:e}).join(""),Rs=/[ㄱ-ㅎㅏ-ㅣ가-힣]/,h0=/^[ㄱ-ㅎ\s]+$/;function u0(n){if(n.ko)return n.ko;let e=[],t=[],a=[];for(let o=0;o<n.size;o++)if(Rs.test(n.words[o])){let c=Ie(n.words[o]);e.push(o),t.push(Bs(c)),a.push(p0(c))}return n.ko={ids:e,jk:t,ck:a}}function Us(n,e,t=8){let a=Ie(e);if(!n||a.length<1)return[];let o=[],c=[],p=[];if(Rs.test(a)){let m=u0(n),k=h0.test(a),j=k?a.replace(/\s+/g,""):Bs(a);for(let z=0;z<m.ids.length;z++){let _=k?m.ck[z].replace(/\s+/g,""):m.jk[z],f=_.indexOf(j);if(f<0)continue;let $=_.lastIndexOf("/");(f===$+1||f>$&&_[f-1]===" "?o:f>$||f===0?c:p).push(m.ids[z])}}else for(let m=0;m<n.size;m++){let k=n.keys[m],j=k.indexOf(a);j<0||(j===0||k[j-1]===" "||k[j-1]==="\0"||k[j-1]==="/"?c:p).push(m)}let s=(m,k)=>n.freqs[k]-n.freqs[m];o.sort(s),c.sort(s),p.sort(s);let w=[],x=new Set;for(let m of[...o,...c,...p]){let k=n.redirs[m]||n.words[m];if(!x.has(k)&&(x.add(k),w.push({word:n.words[m],tag:k,cat:n.cats[m],freq:n.freqs[m]}),w.length>=t))break}return w}function Zr(n,e){let t=e;for(;t>0&&!`,
+|{}[]()<>`.includes(n[t-1]);)t--;for(;t<e&&n[t]===" ";)t++;let a=e;for(;a<n.length&&!`,
+|{}[]()<>`.includes(n[a]);)a++;return{start:t,end:a,word:n.slice(t,e)}}function Ks(n,e,t){let a=Zr(n,e),o=n.slice(a.end).replace(/^\s*,?\s*/,""),c=n.slice(0,a.start)+t+", ";return{text:c+o,caret:c.length}}var Yt=n=>n>=1e6?`${(n/1e6).toFixed(1)}M`:n>=1e3?`${Math.round(n/1e3)}k`:String(n);var Vs=`인원/여자 한 명,0,7943303,1girl
 인원/소녀 1명,0,7943303,1girl
 인원/여자 1,0,7943303,1girl
 인원/혼자,0,6649830,solo
@@ -6913,8 +6913,3962 @@ var eo=Object.defineProperty;var no=(e,n)=>{for(var a in n)eo(e,a,{get:n[a],enum
 옷/거미줄 무늬,0,6244,spider web print
 동작/상대 입에 손가락,0,6236,finger in another's mouth
 옷/깃발 무늬 비키니,0,6222,flag print bikini
-`;var nr=globalThis.__duskLib?.["src/engine/aistop.js"];if(!nr)throw new Error("Dusk 코어에 src/engine/aistop.js가 없어요 — Dusk를 업데이트해 주세요");{let e=["STOP_MSG","__resetAiStop","activeCount","activeTasks","aiTask","describeAi","isStopError","justStopped","onAiChange","stopAll","stopError","trackAi","trackedRunLLM"].filter(n=>!(n in nr));if(e.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/engine/aistop.js에 없는 기능: "+e.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{STOP_MSG:Ri,__resetAiStop:Bi,activeCount:Vi,activeTasks:Ki,aiTask:Hi,describeAi:Gi,isStopError:bt,justStopped:va,onAiChange:Wi,stopAll:Yi,stopError:xa,trackAi:Ca,trackedRunLLM:Ji}=nr;var io=["k_euler_ancestral","k_euler","k_dpmpp_2s_ancestral","k_dpmpp_2m","k_dpmpp_sde","k_dpmpp_2m_sde","ddim_v3"],lo=["k_euler_ancestral","k_euler","k_dpmpp_2s_ancestral","k_dpmpp_2m_sde","k_dpmpp_2m","k_dpmpp_sde"],ft={v5:!1,samplers:io,vibe:!0,reference:!0,varietyPlus:!0,transparent:!1},tr=e=>({v5:!0,samplers:lo,maxScale:10,maxSteps:50,maxChars:32,tokens:e,vibe:!1,reference:!1,varietyPlus:!1,transparent:!0,forcedNoise:"karras"}),kt=[{id:"5-full",label:"V5 Full",gen:"nai-diffusion-5-full",inpaint:"nai-diffusion-5-full-inpainting",...tr(1471)},{id:"5-full-medium",label:"V5 Medium",gen:"nai-diffusion-5-full-medium",inpaint:"nai-diffusion-5-full-medium-inpainting",...tr(1471),noCfgRescale:!0,fixed:{steps:14,sampler:"k_euler_ancestral",uc:"heavy"}},{id:"5-curated",label:"V5 Curated",gen:"nai-diffusion-5-curated",inpaint:"nai-diffusion-4-5-curated-inpainting",...tr(703)},{id:"4-5-full",label:"V4.5 Full",gen:"nai-diffusion-4-5-full",inpaint:"nai-diffusion-4-5-full-inpainting",...ft},{id:"4-5-curated",label:"V4.5 Curated",gen:"nai-diffusion-4-5-curated",inpaint:"nai-diffusion-4-5-curated-inpainting",...ft},{id:"4-full",label:"V4 Full",gen:"nai-diffusion-4-full",inpaint:"nai-diffusion-4-full-inpainting",...ft},{id:"4-curated",label:"V4 Curated",gen:"nai-diffusion-4-curated-preview",inpaint:"nai-diffusion-4-curated-inpainting",...ft}],Le=e=>kt.find(n=>n.id===e)??kt.find(n=>n.id==="4-5-full"),sr={k_euler_ancestral:"Euler Ancestral",k_euler:"Euler",k_dpmpp_2s_ancestral:"DPM++ 2S Ancestral",k_dpmpp_2m:"DPM++ 2M",k_dpmpp_sde:"DPM++ SDE",k_dpmpp_2m_sde:"DPM++ 2M SDE",ddim_v3:"DDIM"},or=["native","karras","exponential","polyexponential"],ke={portrait:{width:832,height:1216,label:"세로"},landscape:{width:1216,height:832,label:"가로"},square:{width:1024,height:1024,label:"정사각"},small_portrait:{width:512,height:768,label:"작은 세로"},small_landscape:{width:768,height:512,label:"작은 가로"},small_square:{width:640,height:640,label:"작은 정사각"},large_portrait:{width:1024,height:1536,label:"큰 세로"},large_landscape:{width:1536,height:1024,label:"큰 가로"},large_square:{width:1472,height:1472,label:"큰 정사각"},wallpaper_portrait:{width:1088,height:1920,label:"배경화면 세로"},wallpaper_landscape:{width:1920,height:1088,label:"배경화면 가로"}},Qi={portrait:ke.portrait,landscape:ke.landscape,square:ke.square},Tn=(e,n,a=28)=>e*n<=1024*1024&&a<=28;function Ze(e,n){let a=s=>Math.max(64,Math.min(2048,Math.round((Number(s)||0)/64)*64));return{width:a(e),height:a(n)}}var co={"4-5-full":", very aesthetic, masterpiece, no text","4-5-curated":", location, masterpiece, no text, -0.8::feet::, rating:general","4-full":", no text, best quality, very aesthetic, absurdres","4-curated":", rating:general, amazing quality, very aesthetic, absurdres"},po={standard:"very aesthetic, masterpiece, no text",light:"very aesthetic, amazing quality, no text",none:""},ir={standard:"표준",light:"가벼움",none:"없음"},Pa="nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page",ja="lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page",$a="{worst quality}, distracting watermark, unfinished, bad quality, {widescreen}, upscale, {sequence}, {{grandfathered content}}, blurred foreground, chromatic aberration, sketch, everyone, [sketch background], simple, [flat colors], ych (character), outline, multiple scenes, [[horror (theme)]], comic",rr={heavy:ja,light:"lowres, bad hands, bad anatomy, artistic error, sepia, white haze, worst quality, very displeasing, jpeg artifacts, 0::ai-generated::",humanFocus:ja+", @_@, mismatched pupils, glowing eyes, bad anatomy",furryFocus:$a},lr={"5-full":rr,"5-full-medium":rr,"5-curated":rr,"4-5-full":{heavy:Pa,light:"nsfw, lowres, artistic error, scan artifacts, worst quality, bad quality, jpeg artifacts, multiple views, very displeasing, too many watermarks, negative space, blank page",humanFocus:Pa+", @_@, mismatched pupils, glowing eyes, bad anatomy",furryFocus:"nsfw, "+$a},"4-5-curated":{heavy:"blurry, lowres, upscaled, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, halftone, multiple views, logo, too many watermarks, negative space, blank page",light:"blurry, lowres, upscaled, artistic error, scan artifacts, jpeg artifacts, logo, too many watermarks, negative space, blank page",humanFocus:"blurry, lowres, upscaled, artistic error, film grain, scan artifacts, bad anatomy, bad hands, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, halftone, multiple views, logo, too many watermarks, @_@, mismatched pupils, glowing eyes, negative space, blank page"},"4-full":{heavy:"nsfw, blurry, lowres, error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, multiple views, logo, too many watermarks, white blank page, blank page",light:"nsfw, blurry, lowres, error, worst quality, bad quality, jpeg artifacts, very displeasing, white blank page, blank page"},"4-curated":{heavy:"blurry, lowres, error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, logo, dated, signature, multiple views, gigantic breasts, white blank page, blank page",light:"blurry, lowres, error, worst quality, bad quality, jpeg artifacts, very displeasing, logo, dated, signature"}},za={heavy:"강함",light:"약함",humanFocus:"인물 중심",furryFocus:"퍼리 중심",none:"없음"},dr=e=>["heavy","light","humanFocus","furryFocus","none"].filter(n=>n==="none"||lr[e]?.[n]!==void 0),ar=(e,n)=>!n||n==="none"?"none":lr[e]?.[n]!==void 0?n:"none",On=(e,n)=>{let a=ar(e,n);return a==="none"?"":lr[e]?.[a]??""};function ho(e,n,a,s=!1){let i=e;if(s&&(i=i?`transparent background, ${i}`:"transparent background"),a==="none")return i;if(Le(n).v5){let t=po[a];return t?i?`${i}, ${t}`:t:i}return i+(co[n]??"")}var uo=(e,n,a)=>{let s=On(n,a);return s?e?`${s}, ${e}`:s:e},go={heavy:0,light:1,furryFocus:2,humanFocus:3,none:4},mo={none:0,heavy:2,light:3,humanFocus:4,furryFocus:5},bo={standard:1,light:3,none:0};function wt(e){return!e||e.indexOf("::")<0?e:e.replace(/(-?\d*\.?\d+::)([^:]*?)(::)/g,(n,a,s,i)=>{if(!s.trim())return n;let t=s;return/^\d/.test(t)&&(t=" "+t),/\d$/.test(t)&&(t=t+" "),a+t+i})}var fo={model:"4-5-full",sampler:"k_euler_ancestral",steps:28,scale:5,cfgRescale:0,noise:"karras",quality:"standard",ucPreset:"heavy",varietyPlus:!1,transparent:!1,useCoords:!1,legacyUc:!1,normalizeVibes:!0};function fn(e){let n={...fo,...e&&typeof e=="object"?e:{}},a=Le(n.model);n.model=a.id,a.samplers.includes(n.sampler)||(n.sampler="k_euler_ancestral"),n.steps=Math.max(1,Math.min(a.maxSteps??50,Math.round(Number(n.steps)||28))),n.scale=Math.max(0,Math.min(a.maxScale??10,Number(n.scale)||0)),n.cfgRescale=Math.max(0,Math.min(1,Number(n.cfgRescale)||0)),or.includes(n.noise)||(n.noise="karras"),n.quality in ir||(n.quality="standard"),dr(a.id).includes(n.ucPreset)||(n.ucPreset="heavy");for(let s of["varietyPlus","transparent","useCoords","legacyUc","normalizeVibes"])n[s]=!!n[s];return n}function Fn({prompt:e,uc:n="",width:a=832,height:s=1216,size:i,seed:t,settings:l,action:p="generate",image:b,mask:f,strength:w=.7,noise:M=0,addOriginal:m=!0,chars:$=[],vibes:L=[],refs:G=[]}={}){let Z=String(e??"").trim();if(!Z)throw new Error("프롬프트를 적어 주세요");i&&ke[i]&&({width:a,height:s}=ke[i]);let h=fn(l),N=Le(h.model),R=N.v5,U=N.fixed,X=U?U.sampler:h.sampler,he=R?h.quality:h.quality==="none"?"none":"standard",V=R&&N.transparent&&h.transparent,oe=wt(ho(Z,N.id,he,V)),ee=U?U.uc:h.ucPreset,ne=U?On(N.id,U.uc):wt(uo(String(n??""),N.id,h.ucPreset)),Ce=Number.isInteger(t)&&t>0?t>>>0:1+Math.floor(Math.random()*4294967294),y=P=>({caption:{base_caption:P,char_captions:[]}}),v;R?(v={params_version:4,width:a,height:s,noise_schedule:N.forcedNoise,scale:Math.min(h.scale,N.maxScale??h.scale),sampler:X,steps:U?U.steps:Math.min(h.steps,N.maxSteps??h.steps),noise:M,seed:Ce,n_samples:1,negative_prompt:ne,strength:w,characterPrompts:[],use_coords:h.useCoords,cfg_rescale:h.cfgRescale,skip_cfg_above_sigma:null,prefer_brownian:X==="k_euler_ancestral",deliberate_euler_ancestral_bug:!1,tag_hint_qt:bo[he],tag_hint_uc_preset:mo[ar(N.id,ee)],tag_hint_transparent_background:V,v4_prompt:{...y(oe),use_coords:h.useCoords,use_order:!0},v4_negative_prompt:y(ne)},N.noCfgRescale&&delete v.cfg_rescale):v={params_version:3,width:a,height:s,noise_schedule:h.noise,controlnet_strength:1,dynamic_thresholding:!1,scale:h.scale,sampler:X,steps:h.steps,noise:M,seed:Ce,n_samples:1,ucPreset:go[ar(N.id,h.ucPreset)],negative_prompt:ne,strength:w,qualityToggle:he!=="none",characterPrompts:[],use_coords:h.useCoords,legacy:!1,legacy_v3_extend:!1,prefer_brownian:!0,autoSmea:!1,legacy_uc:h.legacyUc,inpaintImg2ImgStrength:w,cfg_rescale:h.cfgRescale,add_original_image:m,normalize_reference_strength_multiple:h.normalizeVibes,skip_cfg_above_sigma:null,v4_prompt:{...y(oe),use_coords:h.useCoords,use_order:!0},v4_negative_prompt:{...y(ne),legacy_uc:h.legacyUc}};let C={input:oe,model:p==="infill"?N.inpaint:N.gen,action:p,parameters:v};R&&(C.use_new_shared_trial=!0),R&&p==="infill"&&(v.add_original_image=m);let A=(L??[]).filter(P=>P?.image);if(!R&&A.length){v.reference_image_multiple=A.map(E=>E.image);let P=A.map(E=>Number(E.strength??.6));if(h.normalizeVibes&&P.length>1){let E=P.reduce((H,j)=>H+j,0)||1;P=P.map(H=>H/E)}v.reference_strength_multiple=P}let q=(G??[]).filter(P=>P?.image);if(!R&&q.length&&(v.director_reference_images=q.map(P=>P.image),v.director_reference_descriptions=q.map(P=>({...y(P.type||"character"),legacy_uc:h.legacyUc})),v.director_reference_strength_values=q.map(P=>P.strength??.6),v.director_reference_secondary_strength_values=q.map(P=>1-(P.fidelity??1)),v.director_reference_information_extracted=q.map(P=>P.info??1)),b&&(v.image=b),f&&(v.mask=f),p==="infill"&&(v.img2img={strength:w,begin_from_sigma:null,noise:0,extra_noise_seed:Ce,color_correct:!0},X==="ddim_v3"&&(v.sampler="k_euler_ancestral")),p==="img2img"&&(v.img2img={strength:w,begin_from_sigma:null,noise:M,extra_noise_seed:Ce,color_correct:!0}),X==="k_euler_ancestral"&&(v.deliberate_euler_ancestral_bug=!1),!R&&h.varietyPlus&&!q.length){let P=N.id.startsWith("4-5")?58:N.id.startsWith("4-")?19:0;v.skip_cfg_above_sigma=P*Math.sqrt(a*s/(832*1216))}let x=($??[]).map(P=>({prompt:wt(String(P?.prompt??"")),uc:U?"":wt(String(P?.uc??"")),center:h.useCoords&&Number.isFinite(P?.x)?{x:P.x,y:P.y}:{x:.5,y:.5}})).filter(P=>P.prompt.trim()).slice(0,N.maxChars??99);return x.length&&(v.characterPrompts=x,v.v4_prompt.caption.char_captions=x.map(P=>({char_caption:P.prompt,centers:[P.center]})),v.v4_negative_prompt.caption.char_captions=x.map(P=>({char_caption:P.uc,centers:[P.center]}))),C}var en={"bg-removal":"배경 지우기",lineart:"선화",sketch:"스케치",colorize:"채색",emotion:"표정 바꾸기",declutter:"정리(글자·잡것 지우기)"},Ma=["neutral","happy","sad","angry","scared","surprised","tired","excited","nervous","thinking","confused","shy","disgusted","smug","bored","laughing","irritated","aroused","embarrassed","worried","love","determined","hurt","playful"];function Aa({method:e,image:n,width:a,height:s,prompt:i="",emotion:t="neutral",defry:l=0}){if(!en[e])throw new Error("알 수 없는 디렉터 도구예요");let p={image:n,req_type:e,width:a,height:s};return(e==="colorize"||e==="emotion")&&(p.prompt=e==="emotion"?`${t};;${i}`:i,p.defry=l),p}var wo="nai-diffusion-5-curated";function _a(e,n){let a=e*n;if(!(e>0&&n>0)||a>3145728)throw new Error("업스케일은 3,145,728픽셀 이하 그림만 돼요");return a<=1048576?1:a<=1747627?2:a<=2446678?3:4}var Sa=e=>({image:e,model:wo,declared_blur_sigma:0}),La=(e,n,a)=>({image:e,model:Le(a).gen,information_extracted:n});function yt(e,n,{last:a=!1}={}){let s=new DataView(e.buffer,e.byteOffset,e.byteLength);if(e.length<30||s.getUint32(0,!0)!==67324752)throw new Error("받은 파일이 zip이 아니에요");let i=-1;for(let $=e.length-22;$>=Math.max(0,e.length-65557);$--)if(s.getUint32($,!0)===101010256){i=$;break}let t=0,l=s.getUint16(8,!0),p=s.getUint32(18,!0);if(i>=0){let $=s.getUint16(i+10,!0),L=s.getUint32(i+16,!0);if(L+46>e.length||s.getUint32(L,!0)!==33639248)throw new Error("zip 목록이 깨졌어요");for(let G=0;G<(a?$:1)&&s.getUint32(L,!0)===33639248;G++)l=s.getUint16(L+10,!0),p=s.getUint32(L+20,!0),t=s.getUint32(L+42,!0),L+=46+s.getUint16(L+28,!0)+s.getUint16(L+30,!0)+s.getUint16(L+32,!0)}else if(s.getUint16(6,!0)&8||!p)throw new Error("zip 끝을 찾지 못했어요(받다 끊겼을 수 있어요)");let b=s.getUint16(t+26,!0),f=s.getUint16(t+28,!0),w=t+30+b+f;if(w+p>e.length)throw new Error("zip 내용이 잘렸어요");let M=e.subarray(w,w+p),m=l===0?M.slice():l===8?n(M):null;if(!m)throw new Error(`zip 압축 방식 ${l}은 못 풀어요`);return{name:new TextDecoder().decode(e.subarray(t+30,t+30+b)),data:m}}var vt=e=>e?.[0]===137&&e?.[1]===80&&e?.[2]===78&&e?.[3]===71;function wn(e){if(!vt(e)||e.length<24)return null;let n=new DataView(e.buffer,e.byteOffset,e.byteLength);return{width:n.getUint32(16),height:n.getUint32(20)}}var qa=["additionalAssets","emotionImages","assets"];function Ea(e,n,a){let s=String(a??"").trim()||"image",i=new Set(qa.flatMap(t=>(e?.[t]??[]).map(l=>String(l?.[0]??"").toLowerCase())));if(!i.has(s.toLowerCase()))return s;for(let t=2;;t++)if(!i.has(`${s}_${t}`.toLowerCase()))return`${s}_${t}`}function Ia(e,n,a,s,i="png"){if(!qa.includes(n))throw new Error(`알 수 없는 에셋 자리예요: ${n}`);let t=n==="emotionImages"?[a,s]:[a,s,i];return{...e,[n]:[...e?.[n]??[],t]}}var Je={};no(Je,{MAX_IMAGES:()=>pr,MAX_JOBS:()=>Ra,addChar:()=>yn,addFolder:()=>vn,addImage:()=>Kn,addScene:()=>At,applyCup:()=>Ar,charCover:()=>gr,charOf:()=>ge,clearPicks:()=>St,clearReserve:()=>Lt,countIn:()=>$o,coverOf:()=>sn,cupDone:()=>$r,cupPair:()=>qt,cupPick:()=>zr,cupRoundLabel:()=>Mr,duplicateChar:()=>Ct,duplicateScene:()=>Bn,emptyProject:()=>Va,emptySettings:()=>Ba,favImages:()=>yr,folderPromptFor:()=>Ha,folderTemplateFor:()=>Un,foldersOf:()=>jo,hasFav:()=>an,imageCount:()=>ur,markSent:()=>xr,middleFor:()=>ln,moveChars:()=>Rn,moveFolder:()=>Pt,moveScene:()=>zo,moveScenesToChar:()=>wr,normalizeProject:()=>kn,ownPrompt:()=>nn,pathOf:()=>Mt,pickCount:()=>Pn,pickedImages:()=>We,placeFolder:()=>br,planJobs:()=>Ye,removeChar:()=>hr,removeFolder:()=>jt,removeImages:()=>Cn,removeScenes:()=>kr,reorderChars:()=>Po,reorderScenes:()=>fr,reserveAll:()=>on,reserveNoFav:()=>vr,reserveSummary:()=>Cr,rowChars:()=>Ke,sceneOf:()=>se,scenesNoFav:()=>Hn,seedFor:()=>Pr,setImage:()=>tn,setMember:()=>$t,setPicks:()=>rn,setReserve:()=>Ee,setSettings:()=>ze,setSlots:()=>Vn,sizeFor:()=>gn,sortScenes:()=>_t,sortedImages:()=>Ne,startCup:()=>jr,stepSeed:()=>Wa,uniqueSceneName:()=>xn,updateChar:()=>Fe,updateFolder:()=>Nn,updateScene:()=>Pe,view:()=>zt});var ko=e=>String(e??"").replace(/##[\s\S]*?##/g,""),Ve=e=>ko(e).replace(/\r\n?|\n/g,",").split(",").map(n=>n.trim()).filter(Boolean);function Ta(e,n=Math.random){let a=i=>i[Math.min(i.length-1,Math.floor(n()*i.length))],s=i=>{let t="";for(let l=0;l<i.length;l++){if(i[l]!=="{"){t+=i[l];continue}let p=1,b=-1,f=[];for(let w=l+1;w<i.length;w++)if(i[w]==="{")p++;else if(i[w]==="}"){if(--p===0){b=w;break}}else i[w]==="|"&&p===1&&f.push(w);if(b<0){t+=i.slice(l);break}if(!f.length)t+=`{${s(i.slice(l+1,b))}}`;else{let w=[],M=l+1;for(let m of f)w.push(i.slice(M,m)),M=m+1;w.push(i.slice(M,b)),t+=s(a(w).trim())}l=b}return t};return s(String(e??""))}function yo(e,n){let a=n.slice(1,-1),s=a.indexOf(".");if(s<1)throw new Error(`올바르지 않은 조각 문법 "${n}" — <모음.조각> 꼴로 써요`);let i=(e??[]).find(l=>l.name===a.slice(0,s));if(!i)throw new Error(`없는 조각 모음 "${a.slice(0,s)}"`);let t=i.pieces.find(l=>l.name===a.slice(s+1));if(!t)throw new Error(`없는 조각 "${n}"`);return t}var vo=e=>e.length>2&&e[0]==="<"&&e[e.length-1]===">";function cr(e,n,a=Math.random,s=new Set,i={n:0}){if(!vo(e))return[e];if(s.has(e))throw new Error(`조각이 자기 자신을 불러요: ${e}`);if(s.size>=50||++i.n>1e4)throw new Error(`조각이 너무 깊게 겹쳐 있어요: ${e}`);let t=yo(n,e);s.add(e);try{let l=t.prompt??"";if(t.multi){let p=l.split(/\r\n?|\n/).filter(b=>Ve(b).length);l=p.length?p[Math.min(p.length-1,Math.floor(a()*p.length))]:""}return Ve(l).flatMap(p=>cr(p,n,a,s,i))}finally{s.delete(e)}}var xo=(e,n,a=Math.random)=>Ve(e).flatMap(s=>cr(s,n,a)).join(", ");function Co(e,n){let a=[],s=0,i=0,t=0;for(;s<e.length&&i<n.length;)if(t===0){if(e[s]==="|"){t=1,s++;continue}a.push(e[s++])}else{if(n[i]==="|"){t=0,i++;continue}a.push(n[i++])}for(;s<e.length;s++)e[s]!=="|"&&a.push(e[s]);for(;i<n.length;i++)n[i]!=="|"&&a.push(n[i]);return a}var Oa=e=>(e??[]).filter(n=>n&&n.on!==!1);function De(e){if(!e?.length)return 1;let n=1;for(let a of e)if(n*=Oa(a).length,!n)return 0;return n}function Fa(e,n){let a=[],s=Math.max(0,Math.floor(n));for(let i=(e?.length??0)-1;i>=0;i--){let t=Oa(e[i]);if(!t.length)return null;a[i]=t[s%t.length],s=Math.floor(s/t.length)}return a}var Da=e=>(e??[]).map(n=>n?.prompt??"").filter(n=>n.trim()).join(", ");function un({top:e="",own:n="",middle:a="",back:s=""},i=[],t=Math.random){let l=[...Ve(e),...Ve(n)],p=[...Co(l,Ve(a)),...Ve(s)];return Ta(p.flatMap(b=>cr(b,i,t)).join(", "),t)}var Dn=(e,n=[],a=Math.random)=>Ta(xo(e,n,a),a);function Na(e){let n=String(e??""),a=[],s=(p,b)=>{if(!p)return;let f=a[a.length-1];f&&f.kind===b?f.text+=p:a.push({text:p,kind:b})},i=/##[\s\S]*?##|-?\d*\.?\d+::[\s\S]*?::|<[^<>\n]+>|\{+[^{}\n]*\}+|\[+[^[\]\n]*\]+|\|/g,t=0,l;for(;l=i.exec(n);){s(n.slice(t,l.index),"text");let p=l[0],b="text";if(p.startsWith("##"))b="comment";else if(p.includes("::")){let f=parseFloat(p);b=f<0?"weight-neg":f<1?"weight-down":"weight-up"}else p[0]==="<"?b="piece":p[0]==="{"?b=p.includes("|")?"random":"brace":p[0]==="["?b="bracket":p==="|"&&(b="pipe");s(p,b),t=l.index+p.length}return s(n.slice(t),"text"),a}var pr=300,Ra=500,ue=(e,n=8e3)=>String(e??"").slice(0,n),Ge=()=>Math.random().toString(36).slice(2,10),Ae=(e,n)=>Number.isFinite(Number(e))?Number(e):n;function Ba(){return{top:"",back:"",neg:"",seed:{mode:"random",value:0},size:{mode:"scene",w:832,h:1216},sampling:fn(null),chars:[],vibes:[],refs:[],reserveDefault:1}}function Va(){return{v:2,settings:Ba(),pieces:[],chars:[],folders:[]}}function Ka(e){return!e||typeof e.path!="string"||!e.path?null:{path:e.path,seed:Number.isFinite(e.seed)?e.seed:null,at:Ae(e.at,0),prompt:ue(e.prompt),rank:Number.isFinite(e.rank)?e.rank:null,fav:!!e.fav,pick:!!e.pick,w:Ae(e.w,0),h:Ae(e.h,0),from:typeof e.from=="string"?e.from.slice(0,20):"",sent:typeof e.sent=="string"?e.sent.slice(0,200):""}}function Ua(e){if(!e||typeof e.id!="string"||!e.id)return null;let n=(Array.isArray(e.slots)?e.slots:[]).filter(Array.isArray).map(s=>s.filter(i=>i&&typeof i=="object").map(i=>({prompt:ue(i.prompt),on:i.on!==!1}))),a=(Array.isArray(e.images)?e.images:[]).map(Ka).filter(Boolean).slice(0,pr);return{id:e.id,name:ue(e.name,80)||"씬",slots:n,size:typeof e.size=="string"?e.size:"",reserve:Math.max(0,Math.min(99,Math.round(Ae(e.reserve,0)))),cover:typeof e.cover=="string"?e.cover:"",memo:ue(e.memo,2e3),images:a}}function kn(e){let n=Va();if(!e||typeof e!="object")return n;let a=e.v!==2,s=a?{top:e.top,neg:e.neg,size:{mode:e.size&&ke[e.size]?e.size:"scene"}}:e.settings??{},i={top:ue(s.top),back:ue(s.back),neg:ue(s.neg),seed:{mode:["random","fixed","chain"].includes(s.seed?.mode)?s.seed.mode:"random",value:Math.max(0,Math.floor(Ae(s.seed?.value,0)))>>>0},size:{mode:s.size?.mode==="custom"||s.size?.mode==="scene"||ke[s.size?.mode]?s.size.mode:"scene",...Ze(Ae(s.size?.w,832),Ae(s.size?.h,1216))},sampling:fn(s.sampling),chars:(Array.isArray(s.chars)?s.chars:[]).filter(m=>m&&typeof m=="object").slice(0,32).map(m=>({id:typeof m.id=="string"?m.id:Ge(),prompt:ue(m.prompt),uc:ue(m.uc),x:Math.max(.1,Math.min(.9,Ae(m.x,.5))),y:Math.max(.1,Math.min(.9,Ae(m.y,.5))),on:m.on!==!1})),vibes:(Array.isArray(s.vibes)?s.vibes:[]).filter(m=>m&&typeof m.path=="string").slice(0,16).map(m=>({id:typeof m.id=="string"?m.id:Ge(),path:m.path,strength:Math.max(0,Math.min(1,Ae(m.strength,.6))),info:Math.max(0,Math.min(1,Ae(m.info,1))),on:m.on!==!1,enc:m.enc&&typeof m.enc.data=="string"?{model:ue(m.enc.model,40),info:Ae(m.enc.info,1),data:m.enc.data}:null})),refs:(Array.isArray(s.refs)?s.refs:[]).filter(m=>m&&typeof m.path=="string").slice(0,2).map(m=>({id:typeof m.id=="string"?m.id:Ge(),path:m.path,strength:Math.max(0,Math.min(1,Ae(m.strength,.6))),fidelity:Math.max(0,Math.min(1,Ae(m.fidelity,1))),type:["character","style","character&style"].includes(m.type)?m.type:"character&style",on:m.on!==!1})),reserveDefault:Math.max(1,Math.min(20,Math.round(Ae(s.reserveDefault,1))))},t=(Array.isArray(e.pieces)?e.pieces:[]).filter(m=>m&&typeof m.name=="string"&&m.name).map(m=>({name:ue(m.name,40).replace(/[.<>,]/g,""),pieces:(Array.isArray(m.pieces)?m.pieces:[]).filter($=>$&&typeof $.name=="string"&&$.name).map($=>({name:ue($.name,40).replace(/[.<>,]/g,""),prompt:ue($.prompt),multi:!!$.multi}))})),l=(Array.isArray(e.chars)?e.chars:[]).filter(m=>m&&typeof m.id=="string"&&m.id).map(m=>{let $=(Array.isArray(m.scenes)?m.scenes:[]).map(Ua).filter(Boolean);return a&&!m.scenes&&($=[Ua({id:`${m.id}-default`,name:"default",images:m.images??[],cover:m.cover})]),{id:m.id,name:ue(m.name,80)||"이름 없음",prompt:ue(m.prompt),cover:typeof m.cover=="string"&&!a?m.cover:"",scenes:$}}),p=new Set(l.map(m=>m.id)),b=(Array.isArray(e.folders)?e.folders:[]).filter(m=>m&&typeof m.id=="string"&&m.id),f=new Set(b.map(m=>m.id)),w=b.map(m=>({id:m.id,name:ue(m.name,80)||"새 폴더",kind:m.kind==="outfit"||m.kind==="group"?m.kind:"",prompt:ue(m.prompt),tpl:ue(m.tpl,120),parent:typeof m.parent=="string"&&f.has(m.parent)&&m.parent!==m.id?m.parent:null,members:[...new Set((Array.isArray(m.members)?m.members:[]).filter($=>p.has($)))]})),M=new Map(w.map(m=>[m.id,m]));for(let m of w){let $=new Set([m.id]),L=m.parent;for(;L;){if($.has(L)){m.parent=null;break}$.add(L),L=M.get(L)?.parent??null}}return{v:2,settings:i,pieces:t,chars:l,folders:w}}var ze=(e,n)=>({...e,settings:{...e.settings,...n}});function yn(e,{name:n="",prompt:a=""}={},s=Ge){let i=s();return{...e,chars:[...e.chars,{id:i,name:ue(n,80).trim()||"새 캐릭터",prompt:ue(a),cover:"",scenes:[{id:s(),name:"default",slots:[],size:"",reserve:0,cover:"",memo:"",images:[]}]}]}}var Fe=(e,n,a)=>({...e,chars:e.chars.map(s=>s.id===n?{...s,...a,id:s.id}:s)}),hr=(e,n)=>({...e,chars:e.chars.filter(a=>a.id!==n),folders:e.folders.map(a=>({...a,members:a.members.filter(s=>s!==n)}))});function Ct(e,n,a=Ge){let s=e.chars.find(p=>p.id===n);if(!s)return e;let i=a(),t={...structuredClone(s),id:i,name:`${s.name} 사본`,cover:"",scenes:s.scenes.map(p=>({...structuredClone(p),id:a(),images:[],cover:"",reserve:0}))},l=e.chars.findIndex(p=>p.id===n);return{...e,chars:[...e.chars.slice(0,l+1),t,...e.chars.slice(l+1)],folders:e.folders.map(p=>p.members.includes(n)?{...p,members:[...p.members,i]}:p)}}var ge=(e,n)=>e.chars.find(a=>a.id===n)??null,ur=e=>(e?.scenes??[]).reduce((n,a)=>n+a.images.length,0);function gr(e){if(!e)return"";if(e.cover&&e.scenes.some(n=>n.images.some(a=>a.path===e.cover)))return e.cover;for(let n of e.scenes){let a=sn(n);if(a)return a}return""}function vn(e,{name:n="",kind:a="",parent:s=null,prompt:i=""}={},t=Ge){let l=s&&e.folders.some(p=>p.id===s)?s:null;return{...e,folders:[...e.folders,{id:t(),name:ue(n,80).trim()||"새 폴더",kind:a==="outfit"||a==="group"?a:"",prompt:ue(i),parent:l,members:[]}]}}function Nn(e,n,{name:a,kind:s,prompt:i,tpl:t}){return{...e,folders:e.folders.map(l=>l.id===n?{...l,...a!=null?{name:ue(a,80).trim()||l.name}:{},...s!=null?{kind:s}:{},...i!=null?{prompt:ue(i)}:{},...t!=null?{tpl:ue(t,120)}:{}}:l)}}function Ha(e,n){let a=new Map(e.folders.map(t=>[t.id,t])),s=new Set,i=[];for(let t of e.folders){if(!t.members.includes(n))continue;let l=[];for(let p=t;p&&l.length<50;p=p.parent?a.get(p.parent):null)l.unshift(p);for(let p of l)s.has(p.id)||(s.add(p.id),String(p.prompt??"").trim()&&i.push(p.prompt.trim()))}return i.join(", ")}function Un(e,n){let a=new Map(e.folders.map(s=>[s.id,s]));for(let s=a.get(n),i=0;s&&i<50;s=s.parent?a.get(s.parent):null,i++)if(s.tpl)return s.tpl;return""}var nn=(e,n)=>[Ha(e,n.id),String(n.prompt??"").trim()].filter(Boolean).join(", "),mr=(e,n)=>{let a=new Set([n]);for(let s=!0;s;){s=!1;for(let i of e.folders)i.parent&&a.has(i.parent)&&!a.has(i.id)&&(a.add(i.id),s=!0)}return a};function Pt(e,n,a){if(a&&mr(e,n).has(a))throw new Error("폴더를 자기 안으로 옮길 수 없어요");return{...e,folders:e.folders.map(s=>s.id===n?{...s,parent:a||null}:s)}}var jt=(e,n)=>{let a=mr(e,n);return{...e,folders:e.folders.filter(s=>!a.has(s.id))}};function $t(e,n,a,s){return{...e,folders:e.folders.map(i=>{if(i.id!==n)return i;let t=i.members.includes(a);return s&&!t?{...i,members:[...i.members,a]}:!s&&t?{...i,members:i.members.filter(l=>l!==a)}:i})}}var Ga=(e,n,a)=>{let s=a?e.indexOf(a):-1;if(s<0)return null;for(;s<e.length&&n.has(e[s]);)s++;return e[s]??null},xt=(e,n,a)=>{let s=new Set(n),i=n.filter(b=>e.includes(b)),t=e.filter(b=>!s.has(b)),l=Ga(e,s,a),p=l?t.indexOf(l):t.length;return[...t.slice(0,p),...i,...t.slice(p)]};function Rn(e,n,{from:a=null,to:s=null,before:i=null,copy:t=!1}={}){let l=n.filter(f=>e.chars.some(w=>w.id===f));if(!l.length||s&&!e.folders.some(f=>f.id===s))return e;let p=e.folders,b=e.chars;if(s)p=p.map(f=>{if(f.id===s){let w=f.members.filter($=>!l.includes($)),M=f.members.includes(i)?Ga(f.members,new Set(l),i):null,m=M&&w.includes(M)?w.indexOf(M):w.length;return{...f,members:[...w.slice(0,m),...l,...w.slice(m)]}}return!t&&a&&f.id===a?{...f,members:f.members.filter(w=>!l.includes(w))}:f});else{!t&&a&&(p=p.map(M=>M.id===a?{...M,members:M.members.filter(m=>!l.includes(m))}:M));let f=xt(b.map(M=>M.id),l,i),w=new Map(b.map(M=>[M.id,M]));b=f.map(M=>w.get(M))}return{...e,folders:p,chars:b}}function Po(e,n,a,s){if(!n){let i=new Map(e.chars.map(t=>[t.id,t]));return{...e,chars:xt(e.chars.map(t=>t.id),a,s).map(t=>i.get(t))}}return{...e,folders:e.folders.map(i=>i.id===n?{...i,members:xt(i.members,a,s)}:i)}}function br(e,n,a,s=null){let i=Pt(e,n,a||null),t=i.folders.find(b=>b.id===n);if(!t)return e;let l=i.folders.filter(b=>b.id!==n),p=s&&s!==n?l.findIndex(b=>b.id===s):-1;if(p<0){let b=l.map((f,w)=>(f.parent??null)===(t.parent??null)?w:-1).filter(f=>f>=0).pop();return{...i,folders:[...l.slice(0,(b??l.length-1)+1),t,...l.slice((b??l.length-1)+1)]}}return{...i,folders:[...l.slice(0,p),t,...l.slice(p)]}}function fr(e,n,a,s){return He(e,n,i=>{let t=new Map(i.map(l=>[l.id,l]));return xt(i.map(l=>l.id),a,s).map(l=>t.get(l))})}function wr(e,n,a,s,{copy:i=!1,mkId:t=Ge}={}){if(n===s)return e;let l=ge(e,n),p=ge(e,s);if(!l||!p)return e;let b=l.scenes.filter(M=>a.includes(M.id));if(!b.length)return e;let f=p,w=b.map(M=>{let m=xn(f,M.name),$=i?{...structuredClone(M),id:t(),name:m,images:[],cover:"",reserve:0}:{...M,name:m};return f={...f,scenes:[...f.scenes,$]},$});return{...e,chars:e.chars.map(M=>M.id===s?f:M.id===n&&!i?{...M,scenes:M.scenes.filter(m=>!a.includes(m.id)),cover:l.cover&&b.some(m=>m.images.some($=>$.path===l.cover))?"":M.cover}:M)}}var jo=(e,n)=>e.folders.filter(a=>a.members.includes(n));function zt(e,n){let a=new Map(e.chars.map(i=>[i.id,i])),s=e.folders.filter(i=>(i.parent??null)===(n??null));if(!n){let i=new Set(e.folders.flatMap(t=>t.members));return{folders:s,chars:e.chars.filter(t=>!i.has(t.id))}}return{folders:s,chars:(e.folders.find(i=>i.id===n)?.members??[]).map(i=>a.get(i)).filter(Boolean)}}function Ke(e,n){let a=new Map(e.chars.map(i=>[i.id,i])),s=new Set;for(let i of mr(e,n))for(let t of e.folders.find(l=>l.id===i)?.members??[])s.add(t);return[...s].map(i=>a.get(i)).filter(Boolean)}var $o=(e,n)=>Ke(e,n).length;function Mt(e,n){let a=new Map(e.folders.map(i=>[i.id,i])),s=[];for(let i=a.get(n);i&&s.length<50;i=i.parent?a.get(i.parent):null)s.unshift(i);return s}var He=(e,n,a)=>Fe(e,n,{scenes:a(ge(e,n)?.scenes??[])});function At(e,n,{name:a="",prompt:s=""}={},i=Ge){let t={id:i(),name:ue(a,80).trim()||"새 씬",slots:s.trim()?[[{prompt:ue(s),on:!0}]]:[],size:"",reserve:0,cover:"",memo:"",images:[]};return He(e,n,l=>[...l,t])}var Pe=(e,n,a,s)=>He(e,n,i=>i.map(t=>t.id===a?{...t,...s,id:t.id}:t)),kr=(e,n,a)=>{let s=new Set(a);return He(e,n,i=>i.filter(t=>!s.has(t.id)))};function Bn(e,n,a,s=Ge){return He(e,n,i=>{let t=i.findIndex(p=>p.id===a);if(t<0)return i;let l={...structuredClone(i[t]),id:s(),name:`${i[t].name} 사본`,images:[],cover:"",reserve:0};return[...i.slice(0,t+1),l,...i.slice(t+1)]})}function zo(e,n,a,s){return He(e,n,i=>{let t=i.findIndex(b=>b.id===a);if(t<0)return i;let l=[...i],[p]=l.splice(t,1);return l.splice(Math.max(0,Math.min(l.length,s)),0,p),l})}var _t=(e,n,a="asc")=>He(e,n,s=>[...s].sort((i,t)=>i.name.localeCompare(t.name,"ko")*(a==="desc"?-1:1))),se=(e,n,a)=>ge(e,n)?.scenes.find(s=>s.id===a)??null;function xn(e,n){let a=String(n??"").trim()||"새 씬",s=new Set((e?.scenes??[]).map(i=>i.name.toLowerCase()));if(!s.has(a.toLowerCase()))return a;for(let i=2;;i++)if(!s.has(`${a} ${i}`.toLowerCase()))return`${a} ${i}`}var Vn=(e,n,a,s)=>Pe(e,n,a,{slots:s.map(i=>i.map(t=>({prompt:ue(t.prompt),on:t.on!==!1})))});function Kn(e,n,a,s,i=Date.now){let t=se(e,n,a);return t?Pe(e,n,a,{images:[Ka({...s,at:i()}),...t.images].filter(Boolean).slice(0,pr)}):e}function Cn(e,n,a,s){let i=se(e,n,a),t=new Set(s);if(!i)return e;let l=Pe(e,n,a,{images:i.images.filter(b=>!t.has(b.path)),cover:t.has(i.cover)?"":i.cover}),p=ge(l,n);return p&&t.has(p.cover)&&(l=Fe(l,n,{cover:""})),l}function tn(e,n,a,s,i){let t=se(e,n,a);return t?Pe(e,n,a,{images:t.images.map(l=>l.path===s?{...l,...i,path:l.path}:l)}):e}function rn(e,n,a,s,i){let t=se(e,n,a),l=new Set(s);return t?Pe(e,n,a,{images:t.images.map(p=>l.has(p.path)?{...p,pick:!!i}:p)}):e}var St=(e,n,a=null)=>He(e,n,s=>s.map(i=>!a||i.id===a?{...i,images:i.images.map(t=>t.pick?{...t,pick:!1}:t)}:i)),Pn=e=>(e?.images??[]).filter(n=>n.pick).length,yr=(e,n=null)=>(e?.scenes??[]).filter(a=>!n||a.id===n).flatMap(a=>Ne(a).filter(s=>s.fav).map(s=>({sid:a.id,name:a.name,path:s.path,sent:s.sent||""}))),an=e=>(e?.images??[]).some(n=>n.fav),Hn=e=>(e?.scenes??[]).filter(n=>!an(n));function vr(e,n,a){var s=ge(e,n);if(!s)return e;var i=Hn(s).map(t=>t.id);return i.length?on(e,n,a,i):e}function xr(e,n,a,s,i){var t=se(e,n,a);return t?Pe(e,n,a,{images:t.images.map(l=>l.path===s?{...l,sent:String(i).slice(0,200)}:l)}):e}var We=(e,n=null)=>(e?.scenes??[]).filter(a=>!n||a.id===n).flatMap(a=>Ne(a).filter(s=>s.pick).map(s=>({sid:a.id,name:a.name,path:s.path})));function Ne(e){return[...e?.images??[]].sort((n,a)=>(n.rank??1e9)-(a.rank??1e9)||Number(a.fav)-Number(n.fav)||a.at-n.at)}function sn(e){return e?.images?.length?e.cover&&e.images.some(n=>n.path===e.cover)?e.cover:Ne(e)[0].path:""}var Ee=(e,n,a,s)=>Pe(e,n,a,{reserve:Math.max(0,Math.min(99,Math.round(s)))}),on=(e,n,a,s=null)=>He(e,n,i=>i.map(t=>!s||s.includes(t.id)?{...t,reserve:Math.max(0,Math.min(99,t.reserve+a))}:t)),Lt=(e,n)=>n?He(e,n,a=>a.map(s=>({...s,reserve:0}))):{...e,chars:e.chars.map(a=>({...a,scenes:a.scenes.map(s=>({...s,reserve:0}))}))};function Ye(e,n=null){let a=[];for(let s of e.chars)if(!(n&&s.id!==n))for(let i of s.scenes){let t=De(i.slots);for(let l=0;l<i.reserve;l++)for(let p=0;p<t;p++){if(a.length>=Ra)return a;a.push({cid:s.id,sid:i.id,combo:p})}}return a}function Cr(e,n=null){let s=e.chars.filter(i=>!n||i.id===n).flatMap(i=>i.scenes);return{reserved:s.filter(i=>i.reserve>0).length,scenes:s.length,jobs:Ye(e,n).length,combos:s.reduce((i,t)=>i+De(t.slots),0)}}var ln=(e,n)=>Da(Fa(e?.slots??[],n)??[]);function Wa(e){return e=e>>>0,e^=e<<13,e>>>=0,e^=e>>>17,e^=e<<5,e>>>=0,Math.max(1,e)}function Pr(e,n,a=Math.random){let s=e?.value>>>0;if(e?.mode==="fixed"&&s)return s;if(e?.mode==="chain"&&s){let i=s;for(let t=0;t<n;t++)i=Wa(i);return i}return 1+Math.floor(a()*4294967294)}function gn(e,n){let a=i=>ke[i]?{width:ke[i].width,height:ke[i].height}:null,s=i=>{let t=/^(\d+)x(\d+)$/.exec(i??"");return t?Ze(t[1],t[2]):null};return e?.mode==="custom"?Ze(e.w,e.h):e?.mode&&e.mode!=="scene"?a(e.mode)??a("portrait"):a(n?.size)??s(n?.size)??a("portrait")}function jr(e,n=Math.random){let a=[...new Set(e)];for(let s=a.length-1;s>0;s--){let i=Math.floor(n()*(s+1));[a[s],a[i]]=[a[i],a[s]]}return a.length<=1?{players:a,next:[],at:0,size:a.length,ranks:a[0]?{[a[0]]:1}:{},total:a.length,done:!0}:{players:a,next:[],at:0,size:a.length,ranks:{},total:a.length,done:!1}}var $r=e=>!!e?.done;function qt(e){return e.players.length-e.at>=2?[e.players[e.at],e.players[e.at+1]]:null}function zr(e,n){let a=qt(e);if(!a)return e;let s=a[n?1:0],i=a[n?0:1],t={...e,next:[...e.next,s],at:e.at+2,ranks:{...e.ranks,[i]:Math.floor(e.size/2)+1}};return Mo(t)}function Mo(e){if(e.players.length-e.at>=2)return e;let n=e.players.length-e.at===1?[e.players[e.at]]:[],a=[...e.next,...n];return a.length<=1?{...e,players:a,next:[],at:0,size:a.length,ranks:a[0]?{...e.ranks,[a[0]]:1}:e.ranks,done:!0}:{...e,players:a,next:[],at:0,size:a.length}}var Mr=e=>e.done?"끝":e.size<=2?"결승":e.size<=4?"4강":`${e.size}강`;function Ar(e,n,a,s){let i=se(e,n,a);return i?Pe(e,n,a,{images:i.images.map(t=>s[t.path]!=null?{...t,rank:s[t.path]}:t)}):e}var Ao="https://image.novelai.net",Ya="dusk.sdstudio.token",Ja="dusk.sdstudio.presets",Xa="dusk.sdstudio.templates",Qa="dusk.sdstudio.tokens",Za="dusk.sdstudio.prefs",_o=["https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/data/sdstudio/tags_v5.csv.gz","https://cdn.jsdelivr.net/gh/Pyser08/Dusk-Atelier@main/data/sdstudio/tags_v5.csv.gz","https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/SD-Studio/data/sdstudio/tags_v5.csv.gz"],_r="dusk.sdstudio.tagsgz",dn=null,Gn=null;async function ns(e,n="webp",a=.85){if(n!=="webp"&&n!=="avif")return{data:e,ext:"png",fellBack:!1};let s=await createImageBitmap(new Blob([e],{type:"image/png"})),i=async t=>{if(typeof OffscreenCanvas=="function"){let p=new OffscreenCanvas(s.width,s.height);return p.getContext("2d").drawImage(s,0,0),p.convertToBlob({type:t,quality:a})}let l=Object.assign(document.createElement("canvas"),{width:s.width,height:s.height});return l.getContext("2d").drawImage(s,0,0),new Promise(p=>l.toBlob(p,t,a))};try{let t=await i(`image/${n}`),l=!1,p=n;if((!t||t.type!==`image/${n}`)&&(t=await i("image/webp"),p="webp",l=n==="avif"),!t||t.type!=="image/webp"&&p==="webp")return{data:e,ext:"png",fellBack:!0};let b=new Uint8Array(await t.arrayBuffer());return b.length<e.length?{data:b,ext:p,fellBack:l}:{data:e,ext:"png",fellBack:l}}finally{s.close?.()}}var So=e=>e?.kind==="module"?`dusk.sdstudio.m.${e.id}`:`dusk.sdstudio.p.${e?.id}`;function jn(e){let n="";for(let a=0;a<e.length;a+=32768)n+=String.fromCharCode.apply(null,e.subarray(a,a+32768));return btoa(n)}async function es(e){if(e instanceof Uint8Array)return e;if(e instanceof ArrayBuffer)return new Uint8Array(e);let n=e?.body;if(n instanceof Uint8Array)return n;if(n instanceof ArrayBuffer)return new Uint8Array(n);if(n&&typeof n.getReader=="function"){let a=n.getReader(),s=[],i=0;for(;;){let{done:p,value:b}=await a.read();if(p)break;s.push(b),i+=b.length}let t=new Uint8Array(i),l=0;for(let p of s)t.set(p,l),l+=p.length;return t}if(typeof e?.arrayBuffer=="function")return new Uint8Array(await e.arrayBuffer());if(typeof e?.text=="function")return new TextEncoder().encode(await e.text());if(typeof n=="string")return new TextEncoder().encode(n);throw new Error("응답을 읽지 못했어요")}function Lo(e,n){let a="";try{let s=new TextDecoder().decode(n.subarray(0,2e3));try{a=JSON.parse(s)?.message??s}catch{a=s}}catch{}return e===401?"토큰이 맞지 않아요. 토큰을 다시 넣어 주세요":e===402?"Anlas가 모자라거나 구독이 필요해요":e===429?"요청이 너무 잦아요. 잠시 뒤 다시 해 주세요":`NovelAI 오류 ${e}${a?`: ${String(a).slice(0,200)}`:""}`}function ts(e){let n="",a=async()=>{try{return await e.getLocalPluginStorage?.()??null}catch{return null}},s=async(b,f,w)=>{if(typeof e.nativeFetch=="function")try{return await e.nativeFetch(b,f)}catch(M){if(typeof fetch!="function")throw M}return fetch(b,{...f,signal:w})},i=()=>e.pluginStorage,t=b=>typeof b=="string"?`dusk.sdstudio.p.${b}`:So(b),l=b=>ga(ca(b[0]===31&&b[1]===139?ut(b):b)+`
-`+ya),p={to:b=>{let f="";for(let w=0;w<b.length;w+=32768)f+=String.fromCharCode(...b.subarray(w,w+32768));return btoa(f)},from:b=>Uint8Array.from(atob(b),f=>f.charCodeAt(0))};return{tags(){return dn},async loadTags({download:b=!0}={}){return dn||Gn||(Gn=(async()=>{let f=await a();try{let M=await f?.getItem?.(_r);if(M)return dn=l(p.from(String(M)))}catch{}if(!b)return null;let w=null;for(let M of _o)try{let m=await s(M,{method:"GET"});if(!m?.ok&&m?.status)throw new Error(`HTTP ${m.status}`);let $=await es(m);if($.length<1e5)throw new Error("파일이 너무 작아요");dn=l($);try{await f?.setItem?.(_r,p.to($))}catch{}return dn}catch(m){w=m}throw new Error(`태그 사전을 받지 못했어요: ${w?.message??w}`)})().finally(()=>{Gn=null}),Gn)},async loadTagsFromBytes(b){dn=l(b);let f=await a();try{let w=b[0]===31&&b[1]===139?b:null;w&&await f?.setItem?.(_r,p.to(w))}catch{}return dn},async loadProject(b){try{let f=await i()?.getItem(t(b));return kn(f?typeof f=="string"?JSON.parse(f):f:null)}catch{return kn(null)}},async saveProject(b,f){await i()?.setItem(t(b),JSON.stringify(f))},async loadPresets(){try{let b=await i()?.getItem(Ja),f=b?typeof b=="string"?JSON.parse(b):b:[];return Array.isArray(f)?f:[]}catch{return[]}},async savePresets(b){await i()?.setItem(Ja,JSON.stringify(b))},async getToken(){let b=await a();try{let f=await b?.getItem?.(Ya);if(f)return String(f)}catch{}return n},async setToken(b){n=String(b??"").trim();let f=await a();try{await f?.setItem?.(Ya,n)}catch{}},async getLocal(b,f){let w=await a();try{let M=await w?.getItem?.(b);return M?typeof M=="string"?JSON.parse(M):M:f}catch{return f}},async setLocal(b,f){let w=await a();try{await w?.setItem?.(b,JSON.stringify(f))}catch{}},async getPrefs(){return{putSlot:"additionalAssets",nameStyle:"scene",putFormat:"webp",putQuality:.85,dup:"number",keys:{},boost:!1,...await this.getLocal(Za,{})}},async setPrefs(b){let f=await this.getPrefs();await this.setLocal(Za,{...f,...b})},async getTokens(){let b=(await this.getLocal(Qa,[])).filter(w=>w&&typeof w.token=="string"&&w.token.trim()),f=await this.getToken();return f&&!b.some(w=>w.token===f)?[{label:"기본",token:f},...b]:b},async setTokens(b){let f=b.map(w=>({label:String(w.label??"").slice(0,30),token:String(w.token??"").trim()})).filter(w=>w.token);await this.setLocal(Qa,f),f[0]&&await this.setToken(f[0].token)},async loadTemplates(){try{let b=await i()?.getItem(Xa),f=b?typeof b=="string"?JSON.parse(b):b:[];return Array.isArray(f)?f:[]}catch{return[]}},async saveTemplates(b){await i()?.setItem(Xa,JSON.stringify(b))},async call(b,f,{signal:w,label:M="sdstudio",zip:m=!0,token:$}={}){if(va())throw xa();let L=$||await this.getToken();if(!L)throw new Error("NovelAI 토큰을 먼저 넣어 주세요");let G=Ca(M,w);try{return await G.race((async()=>{let Z=await s(`${Ao}${b}`,{method:"POST",headers:{Authorization:`Bearer ${L}`,"Content-Type":"application/json",Accept:m?"application/zip":"*/*"},body:JSON.stringify(f)},G.signal),h=await es(Z);if((Z?.status??200)>=400)throw new Error(Lo(Z.status,h));return h})())}finally{G.end()}},async image(b,f){let{data:w}=yt(await this.call("/ai/generate-image",b,f),gt);if(!vt(w))throw new Error("받은 그림이 PNG가 아니에요");return w},async augment(b,f){return yt(await this.call("/ai/augment-image",b,f),gt,{last:!0}).data},async upscale(b,f){let{data:w}=yt(await this.call("/ai/upscale",b,f),gt);if(!vt(w))throw new Error("업스케일 결과가 PNG가 아니에요");return w},async encodeVibe(b,f){return jn(await this.call("/ai/encode-vibe",b,{...f,zip:!1}))},async generate(b,f){let w=Fn(b);return{data:await this.image(w,{signal:f}),seed:w.parameters.seed}},async saveAsset(b){if(typeof e.saveAsset!="function")throw new Error("이 리스에서는 에셋을 저장할 수 없어요");let f;for(let w=0;w<3;w++){try{let M=await e.saveAsset(b.slice());if(M)return M}catch(M){f=M}await new Promise(M=>setTimeout(M,600*(w+1)))}throw new Error(`에셋을 저장하지 못했어요: ${f?.message??f??"경로 없음"}`)}}}var Sr=globalThis.__duskLib?.["src/ui/dom.js"];if(!Sr)throw new Error("Dusk 코어에 src/ui/dom.js가 없어요 — Dusk를 업데이트해 주세요");{let e=["EASE","copyText","download","fadeUp","fmtBytes","fmtWhen","h","motion","pickFiles","reduceMotion","replace","svgFrom","vanish"].filter(n=>!(n in Sr));if(e.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/ui/dom.js에 없는 기능: "+e.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{EASE:cl,copyText:pl,download:$n,fadeUp:hl,fmtBytes:ul,fmtWhen:gl,h:o,motion:ml,pickFiles:zn,reduceMotion:bl,replace:ce,svgFrom:rs,vanish:fl}=Sr;var Lr=globalThis.__duskLib?.["src/engine/safety.js"];if(!Lr)throw new Error("Dusk 코어에 src/engine/safety.js가 없어요 — Dusk를 업데이트해 주세요");{let e=["Busy","backupSnapshot","isGenerating","restoreFromBackup"].filter(n=>!(n in Lr));if(e.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/engine/safety.js에 없는 기능: "+e.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{Busy:kl,backupSnapshot:yl,isGenerating:as,restoreFromBackup:vl}=Lr;var Xe=(e,n=8e3)=>String(e??"").slice(0,n),qo=()=>Math.random().toString(36).slice(2,10),Wn=e=>(Array.isArray(e)?e:[]).filter(Array.isArray).map(n=>n.filter(a=>a&&typeof a=="object").map(a=>({prompt:Xe(a.prompt),on:a.on!==!1&&a.enabled!==!1}))),Et=e=>(Array.isArray(e)?e:[]).filter(n=>n&&typeof n.name=="string"&&n.name).map(n=>({name:Xe(n.name,40).replace(/[.<>,]/g,""),pieces:(Array.isArray(n.pieces)?n.pieces:[]).filter(a=>a&&typeof a.name=="string"&&a.name).map(a=>({name:Xe(a.name,40).replace(/[.<>,]/g,""),prompt:Xe(a.prompt),multi:!!a.multi}))}));function ss(e,n,a=[]){return{v:1,name:Xe(n,80).trim()||`${e.name} 씬`,scenes:e.scenes.map(s=>({name:s.name,slots:Wn(s.slots),size:s.size||""})),pieces:Et(a)}}var os=e=>JSON.stringify({format:"dusk-sdstudio-template",v:1,name:e.name,scenes:e.scenes,pieces:e.pieces??[]},null,1);function Eo(e){if(e?.resolution&&e.resolution!=="custom"&&ke[e.resolution])return e.resolution;if(e?.resolutionWidth&&e?.resolutionHeight){let n=Ze(e.resolutionWidth,e.resolutionHeight);return`${n.width}x${n.height}`}return""}function It(e){if(e?.format==="dusk-sdstudio-template")return{v:1,name:Xe(e.name,80)||"가져온 템플릿",scenes:(Array.isArray(e.scenes)?e.scenes:[]).filter(i=>i&&i.name).map(i=>({name:Xe(i.name,80),slots:Wn(i.slots),size:typeof i.size=="string"?i.size:""})),pieces:Et(e.pieces)};let n=e?.type==="sdstudio-scene-template"?e.session:e?.scenes&&typeof e.scenes=="object"?e:null;if(!n||typeof n.scenes!="object")throw new Error("SDStudio 씬 템플릿이나 Dusk 템플릿 파일이 아니에요");let a=Object.entries(n.scenes).filter(([,i])=>i&&typeof i=="object").map(([i,t])=>({name:Xe(t.name||i,80),slots:Wn(t.slots),size:Eo(t)})),s=Et(Object.values(n.library??{}));return{v:1,name:Xe(e.name??n.name,80)||"가져온 템플릿",scenes:a,pieces:s}}var is=e=>!e.scenes.length||e.scenes.length===1&&!e.scenes[0].images.length&&!e.scenes[0].slots.some(n=>n.some(a=>a.prompt.trim())),qr=(e,n)=>n.filter(a=>{let s=ge(e,a);return s&&!is(s)});function Io(e,n){let a=(e??[]).map(s=>({...s,pieces:[...s.pieces]}));for(let s of Et(n)){let i=a.find(t=>t.name===s.name);if(!i){a.push(s);continue}for(let t of s.pieces)i.pieces.some(l=>l.name===t.name)||i.pieces.push(t)}return a}function Mn(e,n,a,s="merge",i=qo){let t={chars:0,added:0,kept:0,removed:0,updated:0},l=b=>({id:i(),name:b.name,slots:Wn(b.slots),size:b.size||"",reserve:0,cover:"",memo:"",images:[]}),p={...e,pieces:Io(e.pieces,a.pieces)};for(let b of n){let f=ge(p,b);if(!f)continue;t.chars++;let w=is(f)?"replace":s,M=new Map(f.scenes.map($=>[$.name.toLowerCase(),$])),m;if(w==="merge"){m=[...f.scenes];for(let $ of a.scenes)M.has($.name.toLowerCase())?t.kept++:(m.push(l($)),t.added++)}else{let $=new Set(a.scenes.map(L=>L.name.toLowerCase()));t.removed+=f.scenes.filter(L=>!$.has(L.name.toLowerCase())).length,m=a.scenes.map(L=>{let G=M.get(L.name.toLowerCase());return G?(t.updated++,{...G,slots:Wn(L.slots),size:L.size||""}):(t.added++,l(L))})}p=Fe(p,b,{scenes:m})}return{project:p,stats:t}}function ls({limit:e=60,mergeMs:n=700,now:a=()=>Date.now()}={}){let s=[],i=[],t=-1/0,l=!1;return{push(p,{typing:b=!1}={}){let f=a();b&&l&&f-t<=n&&s.length||(s.push(p),s.length>e&&s.shift()),t=f,l=b,i=[]},undo(p){return s.length?(i.push(p),l=!1,s.pop()):null},redo(p){return i.length?(s.push(p),l=!1,i.pop()):null},canUndo:()=>s.length>0,canRedo:()=>i.length>0,clear(){s=[],i=[],t=-1/0,l=!1}}}var Er={run:"생성 시작·멈추기",toggleLeft:"프롬프트 에디터 열고 닫기",undo:"되돌리기",redo:"다시하기",put:"고른 그림 봇에 바로 넣기",selectAll:"모두 고르기",search:"검색",newItem:"새 캐릭터·씬",cup:"이미지 월드컵",reserve:"고른 씬 1장 예약",choose:"대표 고르기",putFav:"즐겨찾기 확인하고 봇에 넣기",remove:"고른 것 지우기(캐릭터·씬·그림)",unpick:"고르기 모두 풀기",mode1:"씬 모드",mode2:"갤러리 모드",mode3:"검색 모드",mode4:"비교 모드",mode5:"동시편집",help:"도움말"},Ir={run:"Mod+Enter",toggleLeft:"F1",undo:"Mod+Z",redo:"Mod+Shift+Z",put:"Mod+B",selectAll:"Mod+A",search:"Mod+F",newItem:"N",cup:"W",reserve:"R",choose:"C",putFav:"Mod+Shift+B",remove:"Delete",unpick:"Mod+Shift+A",mode1:"1",mode2:"2",mode3:"3",mode4:"4",mode5:"5",help:"F2"},Yn=(e=globalThis.navigator)=>/Mac|iPhone|iPad|iPod/i.test(e?.userAgentData?.platform??e?.platform??e?.userAgent??""),Oo=new Set(["Control","Shift","Alt","Meta","OS","AltGraph","CapsLock","Fn"]);function Fo(e){let n=/^Key([A-Z])$/.exec(e.code??"")??/^Digit(\d)$/.exec(e.code??"");return n?n[1]:e.key===" "?"Space":e.key.length===1?e.key.toUpperCase():e.key}function Tt(e,n=Yn()){if(!e?.key||Oo.has(e.key))return null;let a=Fo(e),s=[];return(n?e.metaKey:e.ctrlKey)&&s.push("Mod"),n&&e.ctrlKey&&s.push("Ctrl"),!n&&e.metaKey&&s.push("Meta"),e.altKey&&s.push("Alt"),e.shiftKey&&(a.length>1||s.length)&&s.push("Shift"),s.push(a),s.join("+")}var Do={Mod:"⌘",Ctrl:"⌃",Alt:"⌥",Shift:"⇧",Enter:"↩",Escape:"⎋",Backspace:"⌫",Delete:"⌦",ArrowLeft:"←",ArrowRight:"→",ArrowUp:"↑",ArrowDown:"↓",Space:"Space"},No={Mod:"Ctrl",Meta:"Win",ArrowLeft:"←",ArrowRight:"→",ArrowUp:"↑",ArrowDown:"↓"};function Ot(e,n=Yn()){if(!e)return"";let a=e.split("+");return n?a.map(s=>Do[s]??s).join(""):a.map(s=>No[s]??s).join("+")}function Tr(e,{v:n=2}={}){let a={...Ir};for(let[s,i]of Object.entries(e&&typeof e=="object"?e:{}))!(s in Er)||typeof i!="string"||(a[s]=(n<2?i.replace(/^Ctrl\+/,"Mod+"):i).slice(0,40));return a}function Or(e,n,a){let s={...e};if(a)for(let i of Object.keys(s))s[i]===a&&i!==n&&(s[i]="");return s[n]=a||"",s}var ds=(e,n)=>n?Object.keys(e).find(a=>e[a]===n)??null:null,cs=e=>/^(Mod|Ctrl|Alt|Meta)\+/.test(e??"")||/^F\d+$/.test(e??"");var Uo=`
+메타/시간 역설,0,9097,time paradox
+몸/가슴 큰 로리,0,9092,oppai loli
+성인/깊은 삽입,0,9082,deep penetration
+몸/짙은 젖꼭지,0,9057,dark nipples
+성인/몸 없는 음경,0,8978,disembodied penis
+메타/골라 보세요,0,8763,take your pick
+옷/도키와다이 교복,0,8596,tokiwadai school uniform
+성인/회음부,0,8442,perineum
+효과/움직이지 않는 무늬,0,8364,unmoving pattern
+자세/상대 어깨에 손,0,8329,hands on another's shoulders
+메타/동서 크로스오버,0,8329,east-west crossover
+메타/유쿠리 시테잇테네,0,8276,yukkuri shiteitte ne
+옷/트레센 운동복,0,8254,tracen training uniform
+몸/엉덩이 보조개,0,8252,dimples of venus
+옷/오토노키자카 교복,0,8227,otonokizaka school uniform
+동물/우산 요괴,0,8191,karakasa obake
+옷/귀살대 제복,0,8149,demon slayer uniform
+몸/가슴 누르기,0,8068,breast suppress
+성인/요도,0,8053,urethra
+인원/변태 여자,0,8048,female pervert
+메타/시리즈 내 크로스오버,0,8030,in-franchise crossover
+성인/동물 음경,0,8027,animal penis
+구도/옆을 향함,0,8023,facing to the side
+몸/젖꼭지 없음,0,8014,no nipples
+성인/벌린 항문,0,8000,spread anus
+성인/얼굴 위 음경,0,7984,penis on face
+표정/가슴 부러워함,0,7804,breast envy
+성인/항문 보임,0,7678,anus peek
+옷/가레그 마크 수도원 제복,0,7656,garreg mach monastery uniform
+표정/음경에 감탄,0,7635,penis awe
+몸/거대한 젖꼭지,0,7582,huge nipples
+성인/도톰한 둔덕,0,7580,fat mons
+인원/꼬마 소년,0,7533,miniboy
+메타/진화 계통,0,7489,evolutionary line
+성인/발기 안 됨,0,7396,flaccid
+옷/칼데아 마스터 제복,0,7260,chaldea master uniform
+성인/두 발 풋잡,0,7045,two-footed footjob
+성인/입에 문 콘돔,0,6968,condom in mouth
+소품/쿠로코테,0,6964,kurokote
+소품/색지,0,6946,shikishi
+소품/에너지 총,0,6909,energy gun
+성인/음부 없음,0,6906,no pussy
+소품/젖꼭지 밴드,0,6889,bandaids on nipples
+메타/2023년,0,6860,2023
+메타/그로,0,6829,guro
+속옷/고양이 란제리,0,6826,cat lingerie
+성인/상대 음경 쥠,0,6783,grabbing another's penis
+성인/음부 체액 자국,0,6767,pussy juice trail
+메타/번호 매김,0,6763,numbered
+메타/상표 흉내,0,6690,brand name imitation
+몸/갈고리 발톱,0,6689,talons
+메타/노래 제목,0,6685,song name
+메타/2024년,0,6673,2024
+소품/하트 오링,0,6645,heart o-ring
+성인/음부 체액 얼룩,0,6638,pussy juice stain
+소품/구멍 재갈,0,6627,wiffle gag
+성인/포켓몬 성애,0,6547,pokephilia
+몸/짝짝이 가슴,0,6520,unaligned breasts
+자세/상대 허벅지 쥠,0,6441,grabbing another's thighs
+성인/장갑 낀 손,0,6441,gloved handjob
+메타/2022년,0,6277,2022
+소품/초승달 핀,0,6208,crescent pin
+소품/창,0,6202,lance
+옷/검은 스웨터 조끼,0,6193,black sweater vest
+소품/연잎,0,6189,lily pad
+모자/경찰 모자,0,6187,police hat
+소품/붕대 감은 목,0,6185,bandaged neck
+소품/고헤이 들기,0,6181,holding gohei
+동작/글쓰기,0,6173,writing
+메타/2025년,0,6167,2025
+자세/고개 젖힘,0,6165,head back
+표정/찌푸림,0,6155,scowl
+메타/여러 크로스오버,0,6154,multiple crossover
+머리/간자시,0,6152,kanzashi
+소품/기타 들기,0,6144,holding guitar
+성인/배 위 사정,0,6144,cum on stomach
+소품/헤드마운트 디스플레이,0,6143,head-mounted display
+동물/라미아,0,6138,lamia
+자세/도움받아 노출,0,6128,assisted exposure
+신발/통굽 신발,0,6126,platform shoes
+몸/불꽃 꼬리,0,6126,flame-tipped tail
+음식/크림,0,6124,cream
+소품/쓰레기통,0,6111,trash can
+동작/쓰다듬기,0,6110,petting
+옷/불가능한 보디슈트,0,6109,impossible bodysuit
+몸/듬성한 음모,0,6104,sparse pubic hair
+얼굴/이마 흉터,0,6102,scar on forehead
+소품/속옷 들기,0,6101,holding underwear
+소품/기차,0,6097,train
+소품/프라이팬,0,6095,frying pan
+소품/휴대용 게임기 들기,0,6093,holding handheld game console
+몸/다람쥐 귀,0,6092,squirrel ears
+모자/진가사,0,6090,jingasa
+눈/치켜뜬 눈,0,6081,upturned eyes
+몸/엄니,0,6076,tusks
+자세/두 손으로,0,6074,two-handed
+소품/칼집 들기,0,6068,holding sheath
+소품/깨진 유리,0,6068,broken glass
+소품/현수막,0,6068,banner
+머리/울프컷,0,6061,wolf cut
+시선/응시,0,6058,staring
+자세/어깨 위,0,6032,on shoulder
+자세/머리 붙잡음,0,6028,head grab
+소품/자루 들기,0,6025,holding sack
+성인/처녀 상실,0,6024,defloration
+옷/옷 속 보디슈트,0,6017,bodysuit under clothes
+동작/운전,0,6009,driving
+소품/삼각 귀걸이,0,6008,triangle earrings
+얼굴/더러운 얼굴,0,6006,dirty face
+소품/피크 들기,0,6002,holding plectrum
+음식/감자튀김,0,6000,french fries
+옷/방탄조끼,0,5997,bulletproof vest
+표정/츤데레,0,5993,tsundere
+소품/스타일러스,0,5989,stylus
+소품/피아노,0,5987,piano
+소품/탄산 캔,0,5985,soda can
+몸/비키니 자국,0,5972,bikini tan
+신발/스트랩 힐,0,5957,strappy heels
+메타/즉시 패배,0,5957,instant loss
+소품/촛대,0,5955,candlestand
+소품/슈퍼 크라운,0,5951,super crown
+음식/모찌,0,5943,mochi
+배경/복도,0,5943,hallway
+옷/월광관 고교 교복,0,5940,gekkoukan high school uniform
+인원/호랑이 소년,0,5935,tiger boy
+옷/동정 킬러 스웨터,0,5927,virgin killer sweater
+효과/빛줄기,0,5927,light trail
+소품/천장 조명,0,5925,ceiling light
+소품/인형극 인형,0,5909,puppet
+얼굴/뾰족한 코,0,5907,pointy nose
+옷/고대 이집트 의상,0,5905,ancient egyptian clothes
+눈/흰 속눈썹,0,5897,white eyelashes
+자세/탁자 위,0,5890,on table
+몸/가려진 복근,0,5887,covered abs
+동작/운동,0,5886,exercising
+배경/비행운,0,5882,contrail
+동물/머리 위 새,0,5881,bird on head
+메타/1컷 만화,0,5876,1koma
+몸/원뿔 뿔,0,5873,cone horns
+메타/인스타그램 아이디,0,5872,instagram username
+효과/푹신함,0,5871,fluffy
+옷/로즈월 저택 메이드복,0,5868,roswaal mansion maid uniform
+소품/장난감,0,5866,toy
+자세/상자 안,0,5860,in box
+소품/젖꼭지 고리,0,5853,nipple rings
+신발/짝짝이 신발,0,5850,mismatched footwear
+옷/직원 유니폼,0,5848,employee uniform
+옷/수영 팬츠,0,5847,swim trunks
+소품/일회용 커피잔,0,5847,disposable coffee cup
+동작/옷 물기,0,5847,clothes in mouth
+소품/팻말 들기,0,5846,holding sign
+자세/떠 있음,0,5841,afloat
+양말/흰 레그워머,0,5840,white leg warmers
+표정/시큰둥,0,5840,unamused
+동작/머리 넘기기,0,5840,tucking hair
+소품/마법사 지팡이,0,5831,mage staff
+머리/클로버 머리장식,0,5826,clover hair ornament
+메타/공식 다른 머리색,0,5825,official alternate hair color
+자세/다리 감기,0,5824,leg lock
+메타/잡지 표지,0,5817,magazine cover
+자세/손 붙잡기,0,5813,hand grab
+효과/에너지 날개,0,5806,energy wings
+배경/스테인드글라스,0,5790,stained glass
+음식/오믈렛,0,5782,omelet
+소품/줄깃발,0,5778,string of flags
+몸/손가락 적음,0,5772,fewer digits
+머리/밴드 머리장식,0,5770,bandaid hair ornament
+옷/유치원복,0,5765,kindergarten uniform
+자세/상대 목에 손,0,5759,hand on another's neck
+양말/한쪽 니하이,0,5747,single kneehigh
+옷/견장,0,5747,shoulder boards
+옷/축구복,0,5738,soccer uniform
+소품/게임기,0,5738,game console
+얼굴/눈물점 무늬,0,5736,teardrop facial mark
+소품/사슬 목줄,0,5723,chain leash
+옷/가슴 사이 끈,0,5718,strap between breasts
+몸/키스마크,0,5716,hickey
+효과/꽃 기호,0,5716,flower symbol
+메타/스크린샷 삽입,0,5714,screenshot inset
+소품/메달,0,5714,medal
+소품/진주 귀걸이,0,5713,pearl earrings
+효과/해 기호,0,5712,sun symbol
+몸/다람쥐 꼬리,0,5703,squirrel tail
+동작/풍선껌 불기,0,5703,blowing bubble gum
+소품/바늘,0,5692,needle
+인원/키 큰 여자,0,5683,tall female
+구도/옆으로,0,5677,sideways
+구도/나란히 세움,0,5677,lineup
+옷/캐릭터 무늬,0,5676,character print
+눈/유난히 크게 뜬 눈,0,5675,unusually open eyes
+동작/기도,0,5672,praying
+소품/플라스크,0,5670,flask
+효과/이모지,0,5664,emoji
+옷/멜빵 반바지,0,5662,suspender shorts
+몸/여러 흉터,0,5661,multiple scars
+표정/걱정,0,5657,worried
+옷/하네오카 교복,0,5646,haneoka school uniform
+효과/떨어지는 깃털,0,5643,falling feathers
+동작/오케이 손짓,0,5638,ok sign
+얼굴/하트 얼굴 무늬,0,5638,heart facial mark
+몸/원숭이 꼬리,0,5630,monkey tail
+효과/회색 테두리,0,5625,grey border
+자세/상대 뒤,0,5625,behind another
+소품/기세루,0,5610,kiseru
+머리/마름모 머리띠,0,5610,diamond hairband
+소품/선풍기,0,5609,electric fan
+메타/콜라주,0,5609,collage
+성인/음핵 자극,0,5607,clitoral stimulation
+옷/니지가사키 교복,0,5604,nijigasaki school uniform
+음식/버블티,0,5603,bubble tea
+자세/묶인 발목,0,5600,bound ankles
+구도/반사 강조,0,5595,reflection focus
+소품/신문,0,5595,newspaper
+소품/삽,0,5594,shovel
+음식/라멘,0,5594,ramen
+동작/냄새 맡기,0,5585,smell
+메타/욕설,0,5585,profanity
+동작/숨기,0,5584,hiding
+성인/펠라 시늉,0,5584,fellatio gesture
+머리/상어 머리장식,0,5582,shark hair ornament
+메타/가짜 폰 화면,0,5582,fake phone screenshot
+소품/파란 테 안경,0,5582,blue-framed eyewear
+양말/다리옷 없음,0,5576,missing legwear
+소품/팔 밴드,0,5568,bandaid on arm
+자세/머리에 손,0,5550,hands on own head
+음식/푸딩,0,5537,pudding
+신발/발바닥 신발,0,5531,paw shoes
+배경/아치,0,5528,arch
+배경/낙서,0,5526,graffiti
+옷/가슴 끈,0,5518,chest strap
+몸/뒤 문신,0,5517,back tattoo
+모자/뿔 달린 모자,0,5516,horned headwear
+효과/콧물,0,5513,snot
+인원/공주,0,5513,princess
+성인/상대 엉덩이에 손,0,5504,hand on another's ass
+메타/2021년,0,5502,2021
+몸/삐져나온 음모,0,5499,stray pubic hair
+소품/조개껍데기,0,5499,seashell
+옷/아란 스웨터,0,5498,aran sweater
+성인/콘돔 들기,0,5486,holding condom
+옷/맞춘 옷,0,5480,matching outfits
+배경/적란운,0,5477,cumulonimbus cloud
+소품/깃펜,0,5475,quill
+옷/무늬 있는 옷,0,5467,patterned clothing
+소품/마스카라,0,5466,mascara
+소품/리본 초커,0,5466,bow choker
+몸/몸 주근깨,0,5459,body freckles
+소품/중국 매듭,0,5443,chinese knot
+소품/스피커,0,5438,speaker
+몸/땅딸 글래머,0,5436,shortstack
+신발/방향타 신발,0,5427,rudder footwear
+동작/머리 꼬기,0,5426,twirling hair
+소품/네잎클로버,0,5422,four-leaf clover
+메타/사용자 인터페이스,0,5415,user interface
+소품/젖꼭지 바,0,5401,nipple bar
+배경/굴뚝,0,5396,smokestack
+옷/료오 교복,0,5395,ryouou school uniform
+소품/드럼 스틱,0,5395,drumsticks
+모자/나이트캡,0,5394,nightcap
+소품/튜브 들기,0,5391,holding swim ring
+옷/노란 테두리,0,5389,yellow trim
+성인/음부 비비기,0,5387,pussyjob
+소품/MP3 플레이어,0,5386,mp3 player
+자세/무릎 위,0,5378,on lap
+모자/청대 관모,0,5372,qingdai guanmao
+머리/아치형 앞머리,0,5368,arched bangs
+소품/전기톱,0,5364,chainsaw
+옷/옆 망토,0,5364,side cape
+소품/이어버드,0,5360,earbuds
+성인/음경 위 사정,0,5360,cum on penis
+몸/긁힌 자국,0,5347,scratches
+소품/시가,0,5344,cigar
+자세/자기 발 내밀기,0,5343,presenting own foot
+메타/요청 삽입,0,5333,request inset
+소품/컴퓨터 마우스,0,5330,computer mouse
+표정/비명,0,5318,screaming
+표정/질투,0,5318,jealous
+소품/머리 위 음식,0,5318,food on head
+성인/꿈틀대는 음경,0,5309,twitching penis
+몸/검은 음모,0,5302,black pubic hair
+동작/수영복 고쳐 입기,0,5302,adjusting swimsuit
+몸/사슴 뿔,0,5293,deer antlers
+소품/얼음,0,5290,ice cube
+자세/펼친 손가락,0,5285,spread fingers
+자세/왼손잡이,0,5280,left-handed
+인원/퍼리끼리,0,5280,furry with furry
+인원/시체,0,5279,corpse
+얼굴/꿰맨 얼굴,0,5278,stitched face
+메타/팬박스 아이디,0,5277,fanbox username
+옷/마름모 구멍,0,5276,diamond cutout
+인원/다람쥐 소녀,0,5275,squirrel girl
+동작/꼬집기,0,5271,pinching
+표정/광기 어린 미소,0,5270,crazy smile
+동작/공격,0,5270,attack
+동작/상대 옷 들추기,0,5269,lifting another's clothes
+소품/수류탄,0,5268,grenade
+인원/슬라임 소녀,0,5256,slime girl
+동작/둘이 하트 손,0,5255,heart hands duo
+소품/불펍 소총,0,5250,bullpup
+소품/눈썹 피어싱,0,5246,eyebrow piercing
+소품/악기 케이스,0,5245,instrument case
+소품/피규어,0,5240,figure
+성인/올라타 파이즈리,0,5239,straddling paizuri
+자세/뒤로 잡힌 팔,0,5237,arm held back
+머리/캐릭터 머리장식,0,5236,character hair ornament
+음식/식빵 한 장,0,5235,bread slice
+몸/탱탱한 가슴,0,5234,perky breasts
+얼굴/일부 그늘진 얼굴,0,5230,partially shaded face
+소품/술병,0,5228,sake bottle
+소품/방독면,0,5223,gas mask
+동작/보는 이 공격,0,5221,attacking viewer
+동작/인형 껴안기,0,5216,hugging doll
+동작/꼭 안기,0,5210,cuddling
+배경/비행갑판,0,5209,flight deck
+소품/부채,0,5208,uchiwa
+신발/통굽 부츠,0,5208,platform boots
+소품/싱크대,0,5206,sink
+효과/쏟아짐,0,5202,spill
+몸/염소 귀,0,5200,goat ears
+자세/상대 다리 잡기,0,5195,holding another's leg
+옷/프릴 비키니,0,5192,ruffle bikini
+효과/블룸,0,5186,bloom
+속옷/팬티 선,0,5176,pantylines
+옷/오링 하의,0,5175,o-ring bottom
+성인/음경에 낀 콘돔,0,5175,condom on penis
+소품/입 가리개,0,5174,mouth veil
+메타/칸 나눈 만화,0,5173,segmented comic
+자세/손에 둘러싸임,0,5168,surrounded by hands
+소품/X자 밴드,0,5167,crossed bandaids
+인원/토끼 소년,0,5165,rabbit boy
+메타/우타이테,0,5162,utaite
+소품/코 피어싱,0,5161,nose piercing
+소품/회색 테 안경,0,5161,grey-framed eyewear
+메타/블러 검열,0,5157,blur censor
+소품/학교 문장,0,5152,school emblem
+동물/금붕어,0,5149,goldfish
+몸/다른 피부색,0,5149,alternate skin color
+소품/러그,0,5148,rug
+소품/구명튜브,0,5145,lifebuoy
+배경/벽돌 쌓기 무늬,0,5142,running bond
+화풍/스크린톤,0,5139,screentones
+몸/핏줄 선 팔,0,5138,veiny arms
+소품/옷걸이,0,5122,clothes hanger
+소품/청진기,0,5120,stethoscope
+동작/승마,0,5111,horseback riding
+동작/눈 비비기,0,5107,rubbing eyes
+몸/빨간 손,0,5106,red hands
+소품/칫솔,0,5104,toothbrush
+배경/이끼,0,5102,moss
+메타/빈칸 검열,0,5102,blank censor
+옷/우라노호시 교복,0,5101,uranohoshi school uniform
+메타/이름이 같은 사물,0,5099,object namesake
+옷/작은 옷,0,5098,undersized clothes
+메타/제목,0,5086,title
+옷/소데,0,5086,sode
+소품/분홍 렌즈 안경,0,5084,pink-tinted eyewear
+메타/주황 테마,0,5079,orange theme
+메타/폰 사진,0,5076,cellphone photo
+동물/비둘기,0,5069,dove
+메타/강간당할 거야 밈,0,5068,you gonna get raped
+성인/오인,0,5056,fivesome
+동작/자기 눈 가림,0,5049,covering own eyes
+모자/파티 모자,0,5035,party hat
+동작/이리 와,0,5030,come hither
+소품/물감,0,5028,paint
+소품/아이스크림 들기,0,5027,holding ice cream
+몸/발굽,0,5022,hooves
+효과/입속 하트,0,5018,heart in mouth
+음식/디저트,0,5006,dessert
+소품/로션,0,5002,lotion
+소품/사다리,0,4995,ladder
+옷/털 목도리,0,4995,fur scarf
+화풍/추상,0,4991,abstract
+인원/아내와 아내,0,4987,wife and wife
+메타/왓슨 크로스,0,4986,watson cross
+효과/햇살 무늬,0,4982,sunburst
+옷/빼 입은 셔츠,0,4979,untucked shirt
+배경/결혼식,0,4974,wedding
+소품/힙색,0,4972,fanny pack
+메타/가린 젖꼭지,0,4969,censored nipples
+소품/카펫,0,4967,carpet
+소품/얼굴 스티커,0,4961,sticker on face
+동작/날리는 키스,0,4959,blowing kiss
+몸/목젖,0,4957,adam's apple
+자세/넥웨어 잡기,0,4955,neckwear grab
+옷/더러운 옷,0,4938,dirty clothes
+인원/오크,0,4933,orc
+자세/상대 머리에 손,0,4931,hands on another's head
+머리/여러 머리핀,0,4925,multiple hairclips
+배경/나무 위,0,4925,in tree
+몸/드러난 엉덩이,0,4925,bare hips
+효과/추위,0,4920,cold
+자세/사슬에 묶임,0,4916,chained
+효과/머리 뒤 후광,0,4913,halo behind head
+자세/발끝 뻗음,0,4910,plantar flexion
+옷/네온 테두리,0,4909,neon trim
+옷/아라비아 의상,0,4906,arabian clothes
+옷/카프리 바지,0,4904,capri pants
+소품/비치타월,0,4901,beach towel
+몸/목 흉터,0,4898,scar on neck
+효과/다른 반사,0,4896,different reflection
+옷/깃털 테두리,0,4893,feather trim
+소품/쌍안경,0,4892,binoculars
+동작/벽쿵,0,4889,kabedon
+효과/오선보,0,4886,musical staff
+소품/대검,0,4856,greatsword
+인원/물고기 소녀,0,4856,fish girl
+배경/무늬 배경,0,4847,patterned background
+소품/수면 안대,0,4846,sleep mask
+효과/불타는,0,4845,burning
+몸/골반뼈,0,4836,hip bones
+화풍/선화 없음,0,4835,no lineart
+옷/리본 비키니,0,4835,bow bikini
+배경/일출,0,4832,sunrise
+머리/넓은 포니테일,0,4829,wide ponytail
+인원/언니 로리,0,4829,onee-loli
+자세/상대 어깨에 기댄 머리,0,4828,head on another's shoulder
+소품/분홍 테 안경,0,4826,pink-framed eyewear
+음식/도시락,0,4825,bento
+소품/보라 렌즈 안경,0,4824,purple-tinted eyewear
+화풍/전통 매체풍,0,4814,faux traditional media
+메타/글자 없는 표지,0,4807,textless cover page
+소품/샤워기,0,4805,shower head
+소품/우주 헬멧,0,4804,space helmet
+몸/메카 맨몸,0,4804,mechabare
+소품/하트 단추,0,4803,heart button
+옷/털코트,0,4800,fur coat
+구도/단체 사진,0,4797,group picture
+자세/구부린 손가락,0,4787,curled fingers
+동작/손가락 핥기,0,4773,licking finger
+소품/패치,0,4771,patch
+메타/가짜 표지,0,4770,fake cover
+옷/해적 의상,0,4765,pirate costume
+얼굴/눈썹 흉터,0,4765,eyebrow cut
+소품/묘비,0,4764,tombstone
+동작/결투,0,4761,duel
+소품/막대 들기,0,4758,holding stick
+옷/성조기 비키니,0,4756,american flag bikini
+성인/사정 후,0,4755,after ejaculation
+소품/탄피,0,4751,shell casing
+소품/전구,0,4749,light bulb
+머리/귀 모양 머리,0,4743,hair ears
+상태/괴물화,0,4740,monsterification
+메타/사진 삽입,0,4736,photo inset
+신발/스틸레토 힐,0,4735,stiletto heels
+소품/우유병,0,4733,milk bottle
+효과/해골 마크,0,4728,skull and crossbones
+옷/한쪽 건틀릿,0,4726,single gauntlet
+몸/유령 꼬리,0,4724,ghost tail
+소품/샴페인 잔,0,4721,champagne flute
+배경/반사되는 바닥,0,4719,reflective floor
+자세/잠긴,0,4717,submerged
+메타/삽입 테두리,0,4716,inset border
+메타/갈색 테마,0,4713,brown theme
+소품/핸들,0,4711,steering wheel
+소품/테 위로 보는 안경,0,4709,over-rim eyewear
+음식/레몬 조각,0,4708,lemon slice
+음식/꼬치,0,4704,skewer
+소품/뒤집개,0,4699,spatula
+몸/표범 귀,0,4694,panther ears
+양말/성조기 양말,0,4691,american flag legwear
+자세/턱에 손가락,0,4685,finger to own chin
+몸/자칼 귀,0,4679,jackal ears
+효과/눈에서 피,0,4677,blood from eyes
+자세/허벅지에 손,0,4676,hands on own thighs
+소품/가위 들기,0,4668,holding scissors
+자세/웅크린 자세,0,4666,fetal position
+자세/근육 자랑,0,4663,flexing
+옷/노란 스웨터 조끼,0,4653,yellow sweater vest
+얼굴/덥수룩한 수염,0,4653,full beard
+소품/탄약,0,4653,ammunition
+소품/얼굴 붕대,0,4650,bandage on face
+소품/소매 밴드,0,4649,sleeve garter
+배경/달빛,0,4643,moonlight
+표정/거짓 미소,0,4643,false smile
+모자/샤코 모자,0,4640,shako cap
+구도/옷 입은 여자와 벗은 여자,0,4639,clothed female nude female
+옷/아스티카시아 교복,0,4635,asticassia school uniform
+소품/여러 팔찌,0,4627,multiple bracelets
+양말/리본 양말,0,4625,bow legwear
+머리/옆 올림 쪽,0,4624,side up bun
+소품/입술 피어싱,0,4612,lip piercing
+표정/닥쳐오는 파멸,0,4612,impending doom
+음식/딸기 쇼트케이크,0,4611,strawberry shortcake
+머리/한쪽 머리 튜브,0,4610,single hair tube
+효과/4분음표,0,4603,quarter note
+소품/안전핀,0,4602,safety pin
+머리/뿔 리본,0,4600,horn bow
+메타/로마 숫자,0,4597,roman numeral
+효과/발화 능력,0,4596,pyrokinesis
+소품/칵테일 잔,0,4583,cocktail glass
+표정/뭐,0,4582,what
+동작/머리 만지작,0,4579,playing with own hair
+소품/추진기,0,4577,thrusters
+소품/유선 전화기,0,4577,corded phone
+몸/바코드 문신,0,4576,barcode tattoo
+소품/천 재갈,0,4567,cloth gag
+옷/하트 마에바리,0,4565,heart maebari
+메타/자파리 기호,0,4564,japari symbol
+배경/매화,0,4556,plum blossoms
+자세/베개 움켜쥠,0,4554,pillow grab
+배경/발코니,0,4552,balcony
+효과/분홍 테두리,0,4550,pink border
+소품/발목 리본,0,4548,ankle ribbon
+메타/데비안아트 아이디,0,4547,deviantart username
+얼굴/염소수염 까칠,0,4546,goatee stubble
+음식/소용돌이 막대사탕,0,4545,swirl lollipop
+소품/스트립 봉,0,4544,stripper pole
+음식/빙수,0,4544,shaved ice
+신발/오픈토 부츠,0,4541,open-toe boots
+메타/5컷 만화,0,4540,5koma
+소품/유노미,0,4530,yunomi
+인원/사촌,0,4528,cousins
+효과/높은 대비,0,4525,high contrast
+자세/상대 배에 손,0,4524,hand on another's stomach
+옷/나나모리 교복,0,4513,nanamori school uniform
+구도/턴어라운드,0,4509,turnaround
+음식/휘핑크림,0,4505,whipped cream
+몸/땀난 겨드랑이,0,4505,sweaty armpits
+소품/물방울 귀걸이,0,4497,teardrop earrings
+소품/부적,0,4492,talisman
+소품/등 뒤로 무기 들기,0,4488,holding weapon behind back
+소품/투구,0,4482,helm
+동작/건네줌,0,4480,giving
+인원/사슴 소녀,0,4480,deer girl
+옷/성조기 드레스,0,4475,american flag dress
+성인/상대 음부 벌림,0,4472,spreading another's pussy
+옷/터틀넥 레오타드,0,4462,turtleneck leotard
+성인/난자,0,4461,ovum
+표정/o3o,0,4460,o3o
+소품/노,0,4455,paddle
+몸/핏줄 선 가슴,0,4446,veiny breasts
+소품/우유갑,0,4445,milk carton
+자세/신발 덜렁,0,4440,shoe dangle
+동작/엿보기,0,4440,peeking
+옷/파란 테두리,0,4440,blue trim
+동물/손 위 새,0,4438,bird on hand
+소품/전투 헬멧,0,4437,combat helmet
+얼굴/뺨 점,0,4435,mole on cheek
+음식/컵라면,0,4435,instant noodles
+옷/함께 입은 옷,0,4427,shared clothes
+동작/장갑 고쳐 끼기,0,4420,adjusting gloves
+소품/안경 끈,0,4419,eyewear strap
+소품/그네,0,4411,swing
+성인/굵은 음경,0,4410,girthy penis
+배경/어둠,0,4409,darkness
+동작/상대 옷 당기기,0,4407,pulling another's clothes
+머리/고양이 귀 머리띠,0,4407,cat ear hairband
+자세/반대 소매에 손,0,4401,hands in opposite sleeves
+모자/필박스 모자,0,4398,pillbox hat
+소품/대걸레,0,4395,mop
+소품/냄비,0,4395,cooking pot
+동물/거대한 동물,0,4394,oversized animal
+몸/기계 손,0,4394,mechanical hands
+화풍/유메카와,0,4393,yume kawaii
+인원/표범 소녀,0,4386,panther girl
+옷/옷에 붙은 부적,0,4385,ofuda on clothes
+몸/주름진 피부,0,4380,wrinkled skin
+몸/호랑이 줄무늬,0,4379,tiger stripes
+옷/풀린 비키니 상의,0,4375,untied bikini top
+소품/거북 등딱지,0,4373,turtle shell
+소품/더플백,0,4373,duffel bag
+효과/녹는,0,4367,melting
+얼굴/별 얼굴 무늬,0,4364,star facial mark
+자세/사람 위에서 잠,0,4363,sleeping on person
+얼굴/양 눈 밑 점,0,4363,mole under each eye
+소품/열쇠구멍,0,4363,keyhole
+배경/자판기,0,4362,vending machine
+메타/파스텔 색감,0,4359,pastel colors
+몸/몸 없는 머리,0,4359,disembodied head
+옷/츠키노모리 교복,0,4358,tsukinomori school uniform
+메타/흰색 테마,0,4357,white theme
+몸/목덜미,0,4353,nape
+효과/파란 테두리,0,4351,blue border
+성인/자궁경부,0,4348,cervix
+옷/엔페라,0,4343,enpera
+성인/거친 섹스,0,4342,rough sex
+소품/파란 렌즈 안경,0,4339,blue-tinted eyewear
+성인/후타와 남자,0,4335,futa with male
+표정/한숨,0,4334,sigh
+인원/다른 3명,0,4330,3others
+속옷/흰 가터벨트,0,4329,white garter straps
+성인/젖꼭지 핥기,0,4327,licking nipple
+소품/안 쓴 헬멧 들기,0,4326,holding unworn helmet
+성인/성인용품 들기,0,4326,holding sex toy
+몸/엉덩이 출렁임,0,4320,ass ripple
+소품/엄지 반지,0,4319,thumb ring
+소품/입에 문 빨대,0,4319,drinking straw in mouth
+음식/계란프라이,0,4312,fried egg
+소품/드론,0,4308,drone
+효과/발자국,0,4300,footprints
+음식/단 음식,0,4296,sweets
+소품/헤드램프,0,4295,headlamp
+배경/카운터,0,4295,counter
+몸/동양 용 뿔,0,4293,eastern dragon horns
+옷/양면 코트,0,4290,two-sided coat
+소품/타로,0,4288,tarot
+몸/아주 긴 손톱,0,4283,very long fingernails
+메타/정사각 4컷 만화,0,4282,square 4koma
+메타/2020년,0,4280,2020
+얼굴/두꺼운 입술,0,4276,thick lips
+얼굴/뻐드렁니,0,4275,buck teeth
+몸/갈라진 혀,0,4272,forked tongue
+성인/음부 밴드,0,4271,bandaid on pussy
+옷/왕자 패션,0,4270,ouji fashion
+몸/사물 머리,0,4269,object head
+머리/불타는 머리,0,4268,fiery hair
+성인/수정,0,4268,fertilization
+소품/거즈,0,4267,gauze
+소품/새장,0,4266,birdcage
+신발/롤러스케이트,0,4264,roller skates
+효과/직사각 후광,0,4264,rectangular halo
+상태/빙의,0,4260,possessed
+구도/거울 셀카,0,4259,mirror selfie
+소품/곡옥 목걸이,0,4258,magatama necklace
+효과/코 방울,0,4251,nose bubble
+옷/트레이닝 바지,0,4248,sweatpants
+동작/상대를 가리킴,0,4247,pointing at another
+소품/채찍 들기,0,4246,holding whip
+소품/가짜 뿔,0,4245,fake antlers
+소품/거꾸로 십자가,0,4244,inverted cross
+옷/하츠보시 학원 교복,0,4244,hatsuboshi gakuen school uniform
+자세/유리에 눌린 가슴,0,4235,breasts on glass
+자세/무릎 위에 손,0,4232,hands on lap
+성인/수면 추행,0,4224,sleep molestation
+소품/자물쇠,0,4220,padlock
+표정/놀림,0,4219,teasing
+자세/난간에 기댐,0,4212,against railing
+성인/손 안 대고 사정,0,4208,handsfree ejaculation
+옷/목 갑옷,0,4206,gorget
+메타/게임 대화창,0,4201,video game dialogue box
+메타/작품 속 장소,0,4200,in-universe location
+성인/양말 풋잡,0,4200,footjob with legwear
+자세/어깨에 짊어짐,0,4196,shoulder carry
+자세/어깨에 메고 나름,0,4195,carrying over shoulder
+효과/세잎 무늬,0,4193,trefoil
+소품/나무망치,0,4192,mallet
+얼굴/콧수염 까칠,0,4191,mustache stubble
+소품/서프보드,0,4190,surfboard
+인원/곰 소녀,0,4189,bear girl
+옷/별자리 무늬,0,4185,constellation print
+자세/끼임,0,4183,stuck
+소품/회한의 막대,0,4181,rod of remorse
+모자/포크파이 모자,0,4179,porkpie hat
+몸/옆구리 근육,0,4176,obliques
+메타/오타,0,4175,typo
+모자/터번,0,4175,turban
+머리/뿔 머리띠,0,4171,horn hairband
+배경/아침,0,4168,morning
+효과/불타는 눈,0,4166,flaming eye
+소품/샹들리에,0,4162,chandelier
+음식/토스트,0,4159,toast
+효과/화려한 테두리,0,4159,ornate border
+구도/머리만,0,4150,head only
+동작/눈 가리기,0,4147,shading eyes
+옷/파라디섬 군복,0,4146,paradis military uniform
+소품/립스틱,0,4146,lipstick tube
+메타/워터마크 너무 많음,0,4145,too many watermarks
+음식/감자칩,0,4143,potato chips
+소품/거품기,0,4137,whisk
+자세/가슴 사이에 머리,0,4136,head between breasts
+성인/포경,0,4132,phimosis
+옷/몬스터볼 무늬,0,4131,poke ball print
+동물/햄스터,0,4131,hamster
+자세/칼자루에 손,0,4130,hand on hilt
+몸/새 다리,0,4121,bird legs
+소품/고정 구속구,0,4120,stationary restraints
+몸/발 없음,0,4118,no feet
+옷/불꽃 무늬,0,4117,flame print
+메타/2차 세계대전,0,4115,world war ii
+음식/바게트,0,4110,baguette
+몸/배 흉터,0,4109,scar on stomach
+눈/링 조명 반사,0,4108,ring light reflection
+자세/앉아서 잠,0,4107,sleeping upright
+옷/홀터 셔츠,0,4106,halter shirt
+메타/나이 변화,0,4103,age progression
+메타/작가 연결,0,4102,creator connection
+자세/꼬리 감기,0,4100,tail wrap
+자세/옷 벗는 동작,0,4099,hadanugi dousa
+인원/하렘,0,4098,harem
+소품/리본 귀걸이,0,4091,bow earrings
+소품/여러 피어싱,0,4086,multiple piercings
+구도/탁자 아래,0,4084,under table
+배경/실제 장소,0,4081,real world location
+동작/도망,0,4079,fleeing
+인원/생물과 의인화,0,4079,creature and personification
+화풍/선 음영,0,4078,linear hatching
+효과/쏟아짐,0,4075,spilling
+옷/팔 갑옷,0,4074,arm armor
+소품/산호,0,4068,coral
+옷/가슴 가림 없음,0,4066,no dickey
+몸/맞은 자국,0,4065,slap mark
+소품/탄약 주머니,0,4065,ammunition pouch
+음식/블루베리,0,4059,blueberry
+옷/레슬링복,0,4051,wrestling outfit
+동작/통화,0,4047,talking on phone
+효과/없어진 후광,0,4047,missing halo
+소품/정육면체,0,4046,cube
+배경/흐린 하늘,0,4044,overcast
+소품/빔 라이플,0,4043,beam rifle
+화풍/사이버펑크,0,4042,cyberpunk
+몸/손 문신,0,4041,hand tattoo
+인원/다른 6명 이상,0,4041,6+others
+옷/맨몸 스웨터,0,4037,naked sweater
+자세/좀비 자세,0,4035,zombie pose
+소품/태엽 열쇠,0,4033,winding key
+소품/붓 들기,0,4030,holding brush
+옷/목 털,0,4029,neck fur
+음식/밥그릇,0,4026,rice bowl
+소품/할로윈 바구니,0,4024,halloween bucket
+인원/고블린,0,4024,goblin
+옷/전술복,0,4019,tactical clothes
+음식/오므라이스,0,4019,omurice
+동작/뺨 꼬집기,0,4015,cheek pinching
+신발/색깔 있는 밑창,0,4011,colored shoe soles
+소품/지우개,0,4010,eraser
+동작/뺨 찌르기,0,4010,cheek poking
+눈/물방울 동공,0,4006,drop-shaped pupils
+표정/기쁨의 눈물,0,4001,happy tears
+소품/다용도 벨트,0,4000,utility belt
+소품/바람 넣는 장난감,0,3999,inflatable toy
+자세/무릎 벌리고 발 모음,0,3998,knees apart feet together
+소품/팩 주스,0,3998,juice box
+음식/크레페,0,3997,crepe
+메타/러시아어 글자,0,3994,russian text
+옷/미라 의상,0,3994,mummy costume
+소품/휘장,0,3992,insignia
+동작/간지럼,0,3989,tickling
+효과/육망성,0,3987,hexagram
+소품/수리검,0,3986,shuriken
+메타/배터리 표시,0,3986,battery indicator
+효과/화성 기호,0,3984,mars symbol
+속옷/검은 남성 속옷,0,3982,black male underwear
+자세/안경에 손,0,3972,hand on eyewear
+효과/분홍 피,0,3965,pink blood
+소품/외눈 메카,0,3965,one-eyed mecha
+소품/유리병,0,3963,vial
+소품/홀스터에 꽂음,0,3954,holstered
+소품/배관,0,3953,industrial pipe
+성인/말 음경,0,3953,horse penis
+소품/손 밴드,0,3949,bandaid on hand
+소품/발목 수갑,0,3949,ankle cuffs
+소품/팔 감싸기,0,3937,arm wrap
+신발/통굽 힐,0,3936,platform heels
+효과/스마일 얼굴,0,3935,smiley face
+소품/전선,0,3934,wire
+소품/무전기,0,3934,walkie-talkie
+소품/기타 케이스,0,3930,guitar case
+효과/창문 그림자,0,3929,window shadow
+자세/물건에 기댐,0,3927,leaning on object
+효과/먼지,0,3927,dust
+소품/스케치북,0,3925,sketchbook
+효과/머리카락 속 피,0,3925,blood in hair
+소품/도쿠리,0,3922,tokkuri
+소품/어깨끈,0,3921,shoulder strap
+머리/뒷목 땋기,0,3921,nape braid
+옷/키타우지 고교 교복,0,3920,kitauji high school uniform
+소품/서랍,0,3917,drawer
+메타/명화 패러디,0,3914,fine art parody
+옷/사슬 갑옷,0,3914,chainmail
+소품/냉장고,0,3913,refrigerator
+머리/땋은 트윈테일,0,3911,braided twintails
+메타/신원 가림,0,3908,censored identity
+소품/지폐,0,3908,banknote
+소품/로켓 발사기,0,3904,rocket launcher
+소품/야자잎,0,3903,palm leaf
+인원/염소 소녀,0,3902,goat girl
+소품/신발끈,0,3900,shoelaces
+옷/불가능한 드레스,0,3898,impossible dress
+인원/메스가키,0,3895,mesugaki
+음식/녹는 아이스바,0,3895,melting popsicle
+동작/합장,0,3894,palms together
+옷/하나사키가와 교복,0,3893,hanasakigawa school uniform
+소품/왕홀,0,3891,scepter
+소품/인더스트리얼 피어싱,0,3891,industrial piercing
+모자/삼각모,0,3884,tricorne
+효과/둥근 테두리,0,3883,round border
+메타/김 검열,0,3882,steam censor
+메타/카메오,0,3882,cameo
+옷/깊은 목선,0,3877,low neckline
+효과/불꽃,0,3874,sparks
+옷/배꼽 위 구멍,0,3868,cutout above navel
+속옷/흰 남성 속옷,0,3867,white male underwear
+배경/잔해,0,3866,rubble
+옷/나오에츠 고교 교복,0,3865,naoetsu high school uniform
+몸/얼굴 멍,0,3865,bruise on face
+옷/제로 슈트,0,3864,zero suit
+옷/불가능한 레오타드,0,3864,impossible leotard
+소품/수납장,0,3862,cabinet
+머리/옆가르마,0,3861,side part
+효과/눈빛 궤적,0,3859,eye trail
+음식/카레,0,3859,curry
+동작/선물 건넴,0,3857,incoming gift
+소품/허벅지 리본,0,3856,thigh ribbon
+성인/음경 노출,0,3854,penis out
+몸/기운 피부,0,3853,patchwork skin
+동작/검지 맞대기,0,3852,index fingers together
+동물/손 위 나비,0,3850,butterfly on hand
+속옷/고양이 귀 팬티,0,3847,cat ear panties
+소품/화환,0,3845,wreath
+성인/큰 고환,0,3842,large testicles
+옷/쿠로모리미네 군복,0,3837,kuromorimine military uniform
+메타/어색한 발,0,3835,bad feet
+메타/정해진 사건,0,3831,canon event
+배경/나무 그늘,0,3823,tree shade
+동작/빙글빙글,0,3823,spinning
+메타/메타 발언,0,3820,fourth wall
+몸/근육질 팔,0,3815,muscular arms
+메타/음모 불일치,0,3815,mismatched pubic hair
+소품/횃불,0,3804,torch
+음식/페이스트리,0,3802,pastry
+신발/접어 신은 부츠,0,3802,fold-over boots
+메타/로켓단,0,3795,team rocket
+효과/색 그림자,0,3793,colored shadow
+메타/다중 그림 챌린지,0,3791,multiple drawing challenge
+옷/저지,0,3786,jersey
+양말/다른 양말,0,3785,alternate legwear
+자세/상대 뺨에 손,0,3782,hands on another's cheeks
+옷/펜슬 드레스,0,3780,pencil dress
+소품/돋보기,0,3779,magnifying glass
+동작/머리 빗기,0,3778,brushing hair
+시선/음식 보기,0,3774,looking at food
+자세/그네 위,0,3773,on swing
+메타/체력 막대,0,3772,health bar
+옷/레이 끈,0,3769,rei no himo
+동작/젖꼭지 가림,0,3768,covering nipples
+소품/블라인드,0,3765,window blinds
+상태/꿈꾸는,0,3763,dreaming
+얼굴/구레나룻 까칠,0,3761,sideburns stubble
+양말/심 있는 스타킹,0,3761,seamed legwear
+소품/이빨 목걸이,0,3758,tooth necklace
+소품/통,0,3758,barrel
+메타/닮은꼴,0,3750,look-alike
+소품/불꽃놀이 막대,0,3749,sparkler
+모자/다른 머리쓰개,0,3747,alternate headwear
+소품/국자 들기,0,3746,holding ladle
+소품/날개 장식,0,3744,wing ornament
+머리/옆 아호게,0,3743,side ahoge
+효과/액체,0,3743,liquid
+성인/남자에게 사정,0,3743,cum on male
+소품/빗,0,3740,comb
+옷/리코리스 제복,0,3737,lycoris uniform
+효과/핏자국,0,3737,blood stain
+소품/잎 들기,0,3729,holding leaf
+소품/열쇠 목걸이,0,3728,key necklace
+몸/사타구니 힘줄,0,3727,groin tendon
+옷/바이커 복장,0,3724,biker clothes
+소품/당근 목걸이,0,3723,carrot necklace
+옷/허리에 맨 스웨터,0,3720,sweater around waist
+메타/리디자인,0,3719,redesign
+메타/스타터 포켓몬 삼형제,0,3716,starter pokemon trio
+배경/스카이라인,0,3711,skyline
+메타/카운트다운,0,3708,countdown
+몸/다리 흉터,0,3706,scar on leg
+소품/트럼펫,0,3705,trumpet
+자세/뒤꿈치 듦,0,3704,heel up
+소품/모자 위 안경,0,3703,eyewear on headwear
+메타/옅은 색감,0,3698,pale colors
+몸/납작한 엉덩이,0,3696,flat ass
+소품/UFO,0,3694,ufo
+신발/발목 끈 묶기,0,3692,ankle lace-up
+동작/자기 입에 손가락,0,3691,finger in own mouth
+소품/수영장 사다리,0,3689,pool ladder
+소품/포커 칩,0,3689,poker chip
+메타/인스타그램 로고,0,3689,instagram logo
+소품/어깨 벨트,0,3688,shoulder belt
+메타/둘이 짝짓는다면,0,3688,if they mated
+효과/물빛 일렁임,0,3685,caustics
+옷/검은 튜브톱,0,3685,black tube top
+효과/에너지 구체,0,3684,energy ball
+옷/헐렁한 옷,0,3683,loose clothes
+얼굴/송곳니 드러냄,0,3681,fangs out
+화풍/복고풍,0,3675,faux retro artstyle
+소품/손목 보호대,0,3672,wrist guards
+배경/나무 울타리,0,3664,wooden fence
+소품/신호등,0,3664,traffic light
+효과/말풍선 땀방울,0,3659,spoken sweatdrop
+소품/물뿌리개,0,3651,watering can
+옷/폴로 셔츠,0,3645,polo shirt
+메타/토끼해,0,3643,year of the rabbit
+소품/알람시계,0,3641,alarm clock
+상태/의식 없음,0,3640,unconscious
+소품/드로잉 태블릿,0,3639,drawing tablet
+옷/떠 있는 망토,0,3634,floating cape
+메타/픽시브 아이디,0,3632,pixiv username
+음식/오렌지 조각,0,3632,orange slice
+효과/전원 기호,0,3630,power symbol
+소품/수도꼭지,0,3626,faucet
+소품/갈색 테 안경,0,3626,brown-framed eyewear
+옷/멜빵 반바지,0,3625,overall shorts
+효과/옷을 통과,0,3623,through clothes
+소품/다리 벨트,0,3623,leg belt
+소품/책상 조명,0,3622,desk lamp
+소품/중지 반지,0,3617,middle ring
+배경/별하늘 배경,0,3615,starry sky background
+자세/계단에 앉음,0,3615,sitting on stairs
+음식/산쇼쿠 당고,0,3615,sanshoku dango
+인원/사자 소년,0,3615,lion boy
+표정/소변 마려움,0,3615,have to pee
+효과/색 있는 말풍선,0,3615,colored speech bubble
+소품/나무 양동이,0,3614,wooden bucket
+소품/호흡 마스크,0,3613,respirator
+머리/붙임머리,0,3613,hair extensions
+소품/목 꽃,0,3612,neck flower
+옷/단추 채운 소맷부리,0,3609,buttoned cuffs
+동작/보는 이에게 먹여줌,0,3608,feeding viewer
+동작/활 당김,0,3607,drawing bow
+옷/전통 수녀복,0,3605,traditional nun
+얼굴/히키마유,0,3605,hikimayu
+얼굴/눈 밑 보석,0,3603,jewel under eye
+소품/메뉴판,0,3598,menu
+소품/팔 칼날,0,3598,arm blade
+성인/과도한 사정,0,3595,excessive cum
+소품/칼라시니코프 소총,0,3589,kalashnikov rifle
+소품/새첼백,0,3586,satchel
+효과/고운 천 강조,0,3585,fine fabric emphasis
+배경/공원 벤치,0,3581,park bench
+소품/불꽃놀이 들기,0,3578,holding fireworks
+효과/트라이포스,0,3577,triforce
+동작/손가락 하트,0,3572,finger heart
+인원/외눈박이,0,3570,cyclops
+옷/한쪽 바짓가랑이,0,3568,single pantsleg
+효과/전기 능력,0,3566,electrokinesis
+옷/찢어진 청바지,0,3561,torn jeans
+소품/태블릿 들기,0,3561,holding tablet pc
+효과/보라 불꽃,0,3557,purple fire
+인원/휴런,0,3556,hyur
+모자/줄무늬 머리쓰개,0,3553,striped headwear
+메타/실사 삽입,0,3551,real life insert
+소품/호랑가시나무,0,3548,holly
+메타/픽시브 ID,0,3547,pixiv id
+메타/색 연결,0,3546,color connection
+옷/아이누 의상,0,3545,ainu clothes
+소품/무한궤도,0,3542,caterpillar tracks
+동작/머리 들어 올림,0,3540,hair lift
+효과/연결된 16분음표,0,3540,beamed sixteenth notes
+메타/2019년,0,3540,2019
+자세/고개 숙임,0,3535,head down
+소품/보드게임,0,3533,board game
+소품/머리빗,0,3531,hair brush
+소품/염주,0,3525,prayer beads
+성인/음경 크기 차이,0,3525,penis size difference
+메타/화구 입장,0,3522,art tools in frame
+소품/마커,0,3520,marker
+소품/전투 도끼,0,3520,battle axe
+자세/자기 다리 잡기,0,3519,holding own leg
+옷/청해파 무늬,0,3516,seigaiha
+속옷/검은 가터벨트,0,3514,black garter belt
+동작/넘어짐,0,3512,tripping
+옷/보디스,0,3511,bodice
+머리/뿔에 걸린 머리카락,0,3510,hair on horn
+옷/다리 갑옷,0,3509,leg armor
+동물/너구리,0,3503,tanuki
+모자/프릴 머리쓰개,0,3502,frilled headwear
+소품/폭탄,0,3502,bomb
+메타/빼빼로 데이,0,3501,pocky day
+메타/생방송,0,3499,livestream
+소품/여러 무기,0,3495,multiple weapons
+옷/남자 플레이보이 바니,0,3491,male playboy bunny
+구도/문간 시점,0,3487,pov doorway
+자세/가슴에 얼굴,0,3477,face to breasts
+화풍/스프라이트,0,3476,sprite
+음식/몸에 묻은 초콜릿,0,3475,chocolate on body
+신발/발목 스트랩,0,3475,ankle strap
+메타/시간 표시,0,3471,timestamp
+옷/흰 튜브톱,0,3470,white tube top
+표정/고통,0,3467,pain
+소품/전투기,0,3467,fighter jet
+소품/소음기,0,3466,suppressor
+소품/가짜 수염,0,3466,fake facial hair
+눈/속 빈 눈,0,3465,solid eyes
+메타/동아시아풍,0,3465,east asian
+자세/액체 위에 섬,0,3464,standing on liquid
+성인/오므린 항문,0,3457,puckered anus
+성인/엉덩이 때리기,0,3454,spanking
+동작/문 열기,0,3451,opening door
+음식/붕어빵,0,3450,taiyaki
+몸/도마뱀 꼬리,0,3450,lizard tail
+모자/코이프,0,3448,coif
+머리/도넛 쪽머리,0,3447,donut hair bun
+소품/십자키,0,3446,d-pad
+성인/발에 사정,0,3444,cum on feet
+소품/비디오카메라,0,3443,video camera
+배경/축제,0,3440,festival
+몸/서양배 체형,0,3439,pear-shaped figure
+동물/어깨 위 새,0,3439,bird on shoulder
+소품/풍경,0,3435,wind chime
+동작/당기기,0,3433,pulling
+동작/손짓,0,3433,beckoning
+배경/우거진,0,3429,overgrown
+인원/할머니,0,3428,old woman
+소품/이어진 피어싱,0,3428,linked piercing
+옷/판금 갑옷,0,3426,plate armor
+메타/호랑이해,0,3422,year of the tiger
+효과/빈 말풍선,0,3421,blank speech bubble
+성인/촉수 구덩이,0,3417,tentacle pit
+동작/말리기,0,3417,drying
+메타/글자만 있는 쪽,0,3416,text-only page
+소품/함께 두른 목도리,0,3416,shared scarf
+소품/휠체어,0,3415,wheelchair
+소품/소매 리본,0,3415,sleeve ribbon
+옷/동물 귀 후드,0,3414,animal ear hood
+모자/벙거지,0,3413,bucket hat
+표정/신남,0,3411,excited
+몸/지행 다리,0,3410,digitigrade
+모자/탐 오 섄터,0,3407,tam o' shanter
+소품/화면,0,3406,screen
+모자/사냥 모자,0,3406,deerstalker
+음식/고구마,0,3404,sweet potato
+소품/잉크,0,3400,ink
+소품/손인형,0,3399,hand puppet
+메타/QR 코드,0,3398,qr code
+성인/콘돔 포장 띠,0,3397,condom packet strip
+효과/브레스,0,3396,breath weapon
+효과/연기 꼬리,0,3392,smoke trail
+머리/일자로 자른 머리,0,3392,blunt tresses
+상태/부풀음,0,3391,inflation
+표정/기진맥진,0,3391,exhausted
+메타/의뢰인 이름,0,3389,commissioner name
+배경/네온 불빛,0,3388,neon lights
+자세/촉수에 붙잡힘,0,3386,grabbed by tentacles
+모자/우샨카,0,3384,ushanka
+상태/퍼리화,0,3382,furrification
+성인/여러 콘돔,0,3380,multiple condoms
+메타/워터마크 격자,0,3378,watermark grid
+옷/저지 메이드,0,3378,jersey maid
+소품/꼬리 방울,0,3373,tail bell
+배경/기둥,0,3373,column
+성인/후타나리 암시,0,3372,implied futanari
+자세/펼친 날개,0,3371,spread wings
+소품/젖꼭지 노리개,0,3370,pacifier
+옷/가슴 트인 스웨터,0,3370,open-chest sweater
+메타/케이팝,0,3370,k-pop
+소품/스트리머,0,3366,streamers
+몸/엉덩이 점,0,3364,mole on ass
+옷/줄무늬 팔 워머,0,3361,striped arm warmers
+옷/삼각 비키니 상의,0,3359,triangle bikini top
+음식/상추,0,3359,lettuce
+몸/과한 음모,0,3359,excessive pubic hair
+소품/손목 리본,0,3358,wrist bow
+메타/변형,0,3355,variations
+옷/독일 전통 의상,0,3355,german clothes
+옷/앞트임,0,3350,front slit
+음식/입에 문 아이스바,0,3344,popsicle in mouth
+상태/꿰뚫림,0,3343,impaled
+신발/신발만 신음,0,3342,naked shoes
+옷/발톱 건틀릿,0,3342,clawed gauntlets
+동작/씹기,0,3339,chewing
+자세/뺨 맞댐,0,3338,cheek press
+옷/배구복,0,3336,volleyball uniform
+구도/벽 너머,0,3335,through wall
+동작/찌르기,0,3335,stab
+동작/봉춤,0,3335,pole dancing
+눈/V자 눈,0,3334,v-shaped eyes
+소품/여러 칼,0,3332,multiple swords
+메타/간접광고,0,3331,product placement
+옷/물색 테두리,0,3328,aqua trim
+배경/등나무,0,3325,wisteria
+소품/별 스티커,0,3325,star sticker
+성인/후타나리 자위,0,3325,futanari masturbation
+소품/네일아트,0,3319,nail art
+효과/칼에 묻은 피,0,3319,blood on knife
+옷/상어 후드,0,3315,shark hood
+소품/초록 테 안경,0,3313,green-framed eyewear
+메타/오리지널 캐릭터와 원작,0,3312,oc x canon
+옷/서클 스커트,0,3312,circle skirt
+속옷/풀린 팬티,0,3311,untied panties
+메타/제 무덤 파기,0,3311,digging your own grave
+소품/동백꽃,0,3310,camellia
+몸/의족,0,3306,prosthetic leg
+머리/모자 사이로 나온 머리,0,3306,hair through headwear
+구도/탁자 맞은편 시점,0,3305,pov across table
+인원/식물 소녀,0,3304,plant girl
+구도/세로 나열,0,3303,column lineup
+소품/철퇴,0,3302,mace
+인원/못생긴 아저씨,0,3301,ugly bastard
+효과/비치는 몸,0,3301,see-through body
+음식/파이,0,3300,pie
+동작/쫓기,0,3298,chasing
+효과/말풍선 속 사물,0,3296,spoken object
+자세/팔꿈치에 걸침,0,3296,elbow carry
+동물/머리 위 포켓몬,0,3295,pokemon on head
+인원/박쥐 소녀,0,3295,bat girl
+성인/손에 사정,0,3294,cum on hands
+소품/다이맥스 밴드,0,3293,dynamax band
+소품/링거,0,3289,intravenous drip
+메타/야오이 암시,0,3289,implied yaoi
+효과/몬스터볼 기호,0,3287,poke ball symbol
+모자/탐험 헬멧,0,3284,pith helmet
+효과/점선,0,3282,dotted line
+옷/사타구니 갑옷,0,3276,crotch plate
+소품/낚싯대 들기,0,3273,holding fishing rod
+메타/어색한 손,0,3273,bad hands
+자세/자기 어깨에 손,0,3272,hand on own shoulder
+소품/나뭇잎 마을 문양,0,3269,konohagakure symbol
+음식/입에 문 빼빼로,0,3267,pocky in mouth
+배경/콘서트,0,3265,concert
+소품/노란 렌즈 안경,0,3264,yellow-tinted eyewear
+모자/모자 뚫고 나온 뿔,0,3263,horns through headwear
+메타/료나,0,3260,ryona
+자세/커튼 움켜쥠,0,3256,curtain grab
+메타/서클 이름,0,3255,circle name
+소품/물약,0,3253,potion
+얼굴/흰 입,0,3251,white mouth
+배경/나뭇잎,0,3251,foliage
+동작/레슬링,0,3247,wrestling
+옷/야소가미 교복,0,3245,yasogami school uniform
+배경/3D 배경,0,3244,3d background
+메타/보이면 알 수 있는,0,3239,when you see it
+음식/거대한 음식,0,3237,oversized food
+동작/머리 손질,0,3237,hairdressing
+동작/낚시,0,3236,fishing
+동작/기습 키스,0,3235,surprise kiss
+머리/십자키 머리장식,0,3232,d-pad hair ornament
+눈/텅 빈 눈,0,3231,hollow eyes
+메타/절묘한 팔 가림,0,3231,convenient arm
+옷/하카마 반바지,0,3230,hakama shorts
+자세/상대 다리에 손,0,3229,hand on another's leg
+소품/그랜드 피아노,0,3229,grand piano
+소품/문장,0,3228,crest
+인원/지미코,0,3227,jimiko
+소품/군함,0,3224,warship
+소품/야자수,0,3223,palms
+소품/꽃봉오리,0,3222,bud
+머리/땋은 옆머리,0,3222,braided sidelocks
+동작/상대 옷 벗기기,0,3220,undressing another
+머리/고리 붙임머리,0,3217,ring hair extensions
+소품/볼로 타이,0,3212,bolo tie
+소품/야구 글러브,0,3210,baseball mitt
+효과/번진 화장,0,3208,runny makeup
+효과/파괴,0,3208,destruction
+자세/어깨 너머 엿봄,0,3206,shoulder peek
+성인/옷 위 자위,0,3204,masturbation through clothes
+소품/귀이개,0,3203,mimikaki
+자세/모자에 손,0,3203,hands on headwear
+동작/동물 안기,0,3203,animal hug
+인원/거미 소녀,0,3201,spider girl
+효과/어두운 기운,0,3200,dark aura
+옷/정장 바지,0,3198,suit pants
+구도/회전 대칭,0,3197,rotational symmetry
+성인/펠라 직전,0,3197,imminent fellatio
+음식/초콜릿 바,0,3196,chocolate bar
+자세/역동적인 자세,0,3194,dynamic pose
+메타/2026년,0,3193,2026
+메타/2018년,0,3191,2018
+메타/성우,0,3190,voice actor
+소품/식탁보,0,3188,tablecloth
+옷/목욕 유카타,0,3183,bath yukata
+소품/슈퍼 로봇,0,3181,super robot
+표정/의기양양,0,3179,doyagao
+자세/자기 목에 손,0,3177,hand on own neck
+자세/허벅지 사이,0,3177,between thighs
+동작/응원,0,3174,cheering
+옷/세로줄 하나,0,3173,single vertical stripe
+소품/비상의 검,0,3169,sword of hisou
+메타/상그비스 페리,0,3169,sangvis ferri
+옷/허리에 맨 카디건,0,3168,cardigan around waist
+소품/보물상자,0,3166,treasure chest
+머리/움직이는 머리카락,0,3166,prehensile hair
+동물/사슴,0,3166,deer
+성인/음부 체액 웅덩이,0,3165,pussy juice puddle
+소품/대물 저격총,0,3165,anti-materiel rifle
+효과/금성 기호,0,3164,venus symbol
+소품/메가폰 들기,0,3164,holding megaphone
+효과/팔에 묻은 피,0,3163,blood on arm
+동작/속삭임,0,3161,whispering
+옷/리틀 버스터즈 교복,0,3159,little busters! school uniform
+메타/두 언어 글자,0,3159,bilingual text
+인원/비에라,0,3158,viera
+몸/표범 꼬리,0,3158,panther tail
+머리/글자 머리장식,0,3158,letter hair ornament
+배경/문,0,3157,gate
+소품/메모장,0,3152,notepad
+자세/어깨에 멘 검,0,3150,sword over shoulder
+메타/실패,0,3148,failure
+머리/해바라기 머리장식,0,3146,sunflower hair ornament
+소품/팔레트,0,3146,paint palette
+소품/시그 자우어,0,3145,sig sauer
+메타/터무니없이 세밀한 구도,0,3143,absurdly detailed composition
+소품/우세크 목걸이,0,3142,usekh collar
+성인/후타와 후타,0,3142,futa with futa
+모자/떠 있는 머리장비,0,3141,floating headgear
+소품/다이빙 마스크,0,3140,diving mask
+효과/메안더 무늬,0,3137,meandros
+옷/성 글로리아나 교복,0,3129,st. gloriana's school uniform
+소품/쓴 휴지,0,3125,used tissue
+메타/그룹 이름,0,3120,group name
+성인/리본 결박,0,3116,ribbon bondage
+인원/곰 소년,0,3116,bear boy
+옷/반소매 재킷,0,3115,short-sleeved jacket
+얼굴/삼각 얼굴 무늬,0,3112,triangle facial mark
+배경/돌담,0,3112,stone wall
+소품/안 입은 재킷 들기,0,3112,holding unworn jacket
+소품/크리스마스 전구,0,3111,christmas lights
+소품/깁슨 레스폴,0,3109,gibson les paul
+자세/나무에 기댐,0,3106,against tree
+소품/브라운관,0,3104,crt
+표정/더블 W,0,3103,double w
+소품/총 멜빵,0,3100,gun sling
+소품/미사일,0,3098,missile
+소품/M4 카빈,0,3098,m4 carbine
+성인/뿜는 모유,0,3096,projectile lactation
+소품/주전자,0,3096,kettle
+소품/경고 테이프,0,3092,caution tape
+효과/불 뿜기,0,3091,breathing fire
+자세/밟힘,0,3087,stepped on
+옷/야가스리 무늬,0,3085,yagasuri
+배경/세로줄 배경,0,3082,vertical-striped background
+소품/스냅 버클,0,3081,snap-fit buckle
+자세/손에 기댄 머리,0,3081,head on hand
+소품/바퀴,0,3076,wheel
+옷/한쪽 가슴 가리개,0,3075,single breast curtain
+눈/토끼 모양 동공,0,3075,rabbit-shaped pupils
+몸/판다 귀,0,3075,panda ears
+메타/공식 다른 색,0,3073,official alternate color
+동작/상대 얼굴 핥기,0,3071,licking another's face
+소품/스타일러스 들기,0,3069,holding stylus
+소품/가슴 리본,0,3069,chest bow
+몸/물건을 잡는 꼬리,0,3068,prehensile tail
+소품/미니 팔괘로,0,3067,mini-hakkero
+옷/기구루미,0,3067,kigurumi
+소품/공책 들기,0,3067,holding notebook
+소품/채소 들기,0,3064,holding vegetable
+옷/유리가오카 여학원 교복,0,3062,yurigaoka girls academy school uniform
+몸/옆 가슴근,0,3061,sidepec
+자세/쓰러짐,0,3060,fallen down
+소품/바이올린 들기,0,3058,holding violin
+옷/검은 팔 워머,0,3058,black arm warmers
+소품/폭죽,0,3056,party popper
+효과/홀로그램 인터페이스,0,3056,holographic interface
+소품/콘 아이스크림 들기,0,3053,holding ice cream cone
+구도/폰 든 보는 이,0,3050,viewer holding phone
+머리/땋은 머리 속 리본,0,3050,ribbon in braid
+몸/척추,0,3046,spine
+메타/가짜 잡지 표지,0,3046,fake magazine cover
+배경/소나무,0,3043,pine tree
+인원/불량학생,0,3043,delinquent
+표정/X X,0,3041,x x
+효과/빨간 테두리,0,3039,red border
+상태/머리를 뚫은 물체,0,3035,object through head
+소품/러브레터,0,3035,love letter
+자세/물속,0,3032,in water
+동작/눈물 닦기,0,3030,wiping tears
+자세/오토바이 위,0,3029,on motorcycle
+동작/이마 키스,0,3029,kissing forehead
+배경/돌바닥,0,3028,stone floor
+소품/잘린 머리,0,3028,severed head
+소품/스트라이커 유닛,0,3027,striker unit
+얼굴/직사각 입,0,3026,rectangular mouth
+음식/케첩,0,3026,ketchup
+몸/입가 흉터,0,3022,scar on mouth
+소품/진주 팔찌,0,3022,pearl bracelet
+동작/머리 부딪힘,0,3022,head bump
+인원/발레리나,0,3022,ballerina
+소품/햄버거 들기,0,3021,holding burger
+메타/게임 화면 삽입,0,3020,game screenshot inset
+소품/에어컨,0,3014,air conditioner
+동물/단순한 새,0,3013,simple bird
+소품/음료 팩 들기,0,3010,holding drink carton
+인원/드워프,0,3010,dwarf
+성인/고환 없음,0,3006,no testicles
+소품/관,0,3000,tube
+소품/개틀링 건,0,3000,gatling gun
+머리/고리 머리장식,0,2999,ring hair ornament
+몸/검은 손,0,2998,black hands
+소품/소풍 바구니,0,2997,picnic basket
+메타/중국어 간체 글자,0,2996,simplified chinese text
+소품/받침접시 들기,0,2991,holding saucer
+메타/가사,0,2986,lyrics
+동작/화장하기,0,2985,applying makeup
+옷/줄 하나,0,2984,single stripe
+배경/포장도로,0,2984,pavement
+속옷/초소형 팬티,0,2983,micro panties
+효과/먼지구름,0,2982,dust cloud
+신발/구두,0,2982,dress shoes
+메타/소해,0,2980,year of the ox
+배경/사선 줄무늬 배경,0,2980,diagonal-striped background
+음식/시럽,0,2976,syrup
+몸/반점,0,2976,birthmark
+소품/휴지,0,2974,tissue
+소품/봉투 들기,0,2973,holding envelope
+머리/표정 있는 머리카락,0,2968,expressive hair
+구도/목줄 쥔 보는 이,0,2964,viewer holding leash
+성인/쓸모없는 콘돔,0,2962,pointless condom
+옷/제4동 고교 교복,0,2962,fourth east high school uniform
+자세/상대 허리에 팔,0,2962,arms around another's waist
+옷/한쪽 끈,0,2961,single strap
+모자/딕시컵 모자,0,2961,dixie cup hat
+얼굴/큰 코,0,2960,large nose
+몸/고래 꼬리,0,2959,cetacean tail
+소품/스케이트보드,0,2958,skateboard
+메타/고양이의 날,0,2957,cat day
+소품/함께 쓴 우산,0,2956,shared umbrella
+소품/손수건,0,2956,handkerchief
+소품/어깨 띠,0,2953,shoulder sash
+얼굴/두꺼운 콧수염,0,2953,thick mustache
+배경/세쓰분,0,2952,setsubun
+자세/나무에 앉음,0,2948,sitting in tree
+메타/공식 일러스트 삽입,0,2947,official art inset
+소품/눈가리개,0,2945,blindfold mask
+동작/턱 쓰다듬기,0,2943,stroking own chin
+소품/접이식 의자,0,2943,folding chair
+배경/얕은 물,0,2939,shallow water
+음식/베리,0,2937,berry
+옷/한쪽 견장,0,2935,single epaulette
+메타/공식 다른 눈 색,0,2933,official alternate eye color
+음식/컵라면,0,2933,instant cup noodles
+소품/은행잎,0,2932,ginkgo leaf
+머리/반묶음 땋기,0,2927,half up half down braid
+메타/커서,0,2927,cursor
+소품/비치볼 들기,0,2926,holding beachball
+표정/c:,0,2925,c:
+배경/베란다,0,2924,veranda
+옷/슈치인 학원 교복,0,2924,shuuchiin academy school uniform
+옷/원지,0,2924,onesie
+옷/갓포기,0,2923,kappougi
+메타/왼쪽에서 오른쪽 만화,0,2920,left-to-right manga
+소품/나기나타,0,2917,naginata
+효과/노란 테두리,0,2915,yellow border
+메타/만화 표지,0,2913,manga cover
+속옷/한쪽 가터 끈,0,2912,single garter strap
+메타/2016년,0,2910,2016
+소품/붕대 감은 가슴,0,2907,bandaged chest
+성인/진동기 선,0,2906,vibrator cord
+구도/대칭,0,2906,symmetry
+몸/처진 토끼 귀,0,2906,lop rabbit ears
+동작/침 뱉기,0,2904,spitting
+소품/체중계,0,2903,weighing scale
+옷/하렘 바지,0,2903,harem pants
+메타/몬스터 에너지,0,2901,monster energy
+소품/호스 들기,0,2900,holding hose
+머리/한쪽 땋은 옆머리,0,2899,single braided sidelock
+소품/라운지 의자,0,2898,lounge chair
+옷/라운드넥,0,2898,crew neck
+자세/의자 위,0,2894,on stool
+메타/하지 말랬잖아,0,2893,told you not to do that
+몸/없는 날개,0,2893,missing wings
+소품/오링 벨트,0,2892,o-ring belt
+옷/주술고전 교복,0,2891,jujutsu tech uniform
+자세/상대 턱 잡기,0,2891,grabbing another's chin
+동물/머리 위 고양이,0,2891,cat on head
+메타/트위터 탈의 게임,0,2889,twitter strip game
+자세/다리 감은 꼬리,0,2887,tail around own leg
+화풍/서부극,0,2887,cowboy western
+소품/깃 장식,0,2884,plume
+소품/목에 건 마스크,0,2883,mask around neck
+메타/트위터 X 로고,0,2878,twitter x logo
+옷/드레스 속 반바지,0,2877,shorts under dress
+자세/머리에 얹은 가슴,0,2875,breasts on head
+메타/2017년,0,2874,2017
+소품/선인장,0,2873,cactus
+자세/자기 꼬리 잡기,0,2872,holding own tail
+몸/눈표범 귀,0,2870,snow leopard ears
+소품/식칼,0,2870,kitchen knife
+소품/어쿠스틱 기타,0,2868,acoustic guitar
+인원/켄타우로스,0,2867,centaur
+소품/고삐,0,2866,reins
+소품/3단 트레이,0,2864,tiered tray
+배경/나무 그루터기,0,2863,tree stump
+옷/오아라이 군복,0,2862,ooarai military uniform
+옷/잠수복,0,2862,diving suit
+자세/자기 엉덩이에 손,0,2860,hands on own ass
+소품/드럼 세트,0,2860,drum set
+효과/레이저,0,2859,laser
+표정/완전 시큰둥,0,2856,completely unamused
+메타/소설 표지,0,2854,novel cover
+옷/가슴 갑옷,0,2854,boobplate
+소품/밧줄 벨트,0,2853,rope belt
+소품/드럼 스틱 들기,0,2848,holding drumsticks
+인원/가족 유대,0,2845,family bonding
+동작/인사,0,2845,bowing
+인원/선생과 학생,0,2844,teacher and student
+메타/무지개 순서,0,2840,rainbow order
+소품/석궁,0,2838,crossbow
+소품/축음기,0,2837,phonograph
+소품/라이터,0,2834,lighter
+메타/2015년,0,2831,2015
+소품/로션 병,0,2826,lotion bottle
+동작/얼굴 닦기,0,2825,wiping face
+옷/유이가오카 교복,0,2823,yuigaoka school uniform
+소품/수류탄 핀,0,2822,grenade pin
+성인/옷 속 벌린 음부,0,2820,spread pussy under clothes
+동작/양치,0,2819,brushing teeth
+소품/텐트,0,2816,tent
+소품/고양이 낚싯대,0,2815,cat teaser
+소품/일자 넥타이,0,2809,square-end necktie
+옷/히카리자카 사립고 교복,0,2807,hikarizaka private high school uniform
+동작/귀 쫑긋,0,2807,ear wiggle
+몸/금빛 음모,0,2805,blonde pubic hair
+메타/지온,0,2803,zeon
+자세/매달림,0,2802,hanging
+몸/없는 꼬리,0,2798,missing tail
+소품/목에 두른 반다나,0,2798,bandana around neck
+옷/사각 목선,0,2797,square neckline
+구도/분할 화면,0,2797,split screen
+구도/사물 강조,0,2797,object focus
+음식/솜사탕,0,2797,cotton candy
+몸/엉덩이 아랫살,0,2796,underbutt
+음식/체크 쿠키,0,2796,checkerboard cookie
+소품/반쪽 가면,0,2792,half mask
+동작/빼빼로 키스,0,2791,pocky kiss
+얼굴/눈 밑 무늬,0,2789,mark under eye
+메타/포켓몬 도감 번호,0,2785,pokedex number
+소품/비누,0,2783,soap
+소품/라이더 벨트,0,2783,rider belt
+자세/이끄는 손,0,2782,guiding hand
+머리/사이드컷,0,2780,sidecut
+몸/장사 허리,0,2779,strongman waist
+자세/음식 속,0,2778,in food
+몸/절지동물 다리,0,2777,arthropod limbs
+음식/아이싱,0,2776,icing
+화풍/원형 자르기,0,2775,circle cut
+자세/바위 위,0,2772,on rock
+자세/겨드랑이에 낌,0,2772,carrying under arm
+동작/머리카락 입에 물기,0,2771,hair in own mouth
+소품/은방울꽃,0,2770,lily of the valley
+모자/사발 모자,0,2770,bowl hat
+자세/손 얹기,0,2765,hand rest
+몸/켄타우로스형,0,2765,centauroid
+옷/라운지웨어,0,2760,loungewear
+메타/절묘한 꼬리 가림,0,2758,convenient tail
+자세/엉덩이 내밀기,0,2755,presenting own ass
+메타/픽시브 로고,0,2755,pixiv logo
+얼굴/초승달 얼굴 무늬,0,2755,crescent facial mark
+배경/벽난로,0,2751,fireplace
+화풍/치비케모,0,2751,chibikemo
+몸/땀난 가슴,0,2750,sweaty breasts
+옷/털 망토,0,2748,fur cape
+몸/큰 손,0,2745,large hands
+소품/악보,0,2741,sheet music
+음식/오이,0,2741,cucumber
+소품/영국 국기,0,2738,union jack
+얼굴/양 눈 밑 무늬,0,2736,mark under both eyes
+효과/무지개 그라데이션,0,2734,rainbow gradient
+성인/거대한 고환,0,2732,huge testicles
+동작/검 뽑기,0,2732,drawing sword
+메타/물색 테마,0,2728,aqua theme
+효과/반짝이는 기운,0,2726,sparkling aura
+눈/전원 기호 동공,0,2726,power symbol-shaped pupils
+몸/동양 용 꼬리,0,2724,eastern dragon tail
+소품/화로,0,2723,stove
+소품/크리스마스 선물,0,2722,christmas present
+배경/해바라기밭,0,2721,sunflower field
+옷/땀에 젖은 옷,0,2720,sweaty clothes
+소품/손전등,0,2720,flashlight
+소품/캐릭터 참,0,2718,character charm
+자세/치켜든 주먹,0,2716,raised fist
+소품/골동품 전화기,0,2716,antique phone
+옷/걷어 올린 바지,0,2715,pants rolled up
+몸/출렁이는 엉덩이,0,2715,bouncing ass
+소품/아날로그 시계,0,2714,analog clock
+자세/상대 손 위에 손,0,2713,hand on another's hand
+소품/통나무,0,2710,log
+성인/가려진 음경,0,2710,covered penis
+메타/잘못하고 있어,0,2708,you're doing it wrong
+소품/꼭두각시 줄,0,2707,puppet strings
+옷/전체 지퍼,0,2706,full-length zipper
+소품/지시봉,0,2704,pointer
+옷/전술 조끼,0,2704,load bearing vest
+자세/자기 이마에 손,0,2704,hand on own forehead
+효과/물 능력,0,2703,hydrokinesis
+소품/음식 모양 귀걸이,0,2702,food-themed earrings
+옷/주반,0,2701,juban
+음식/쌓은 팬케이크,0,2700,pancake stack
+음식/타코야키,0,2698,takoyaki
+음식/뼈 붙은 고기,0,2695,boned meat
+효과/파편,0,2692,shards
+소품/의식용 지팡이,0,2692,ritual baton
+동물/오징어,0,2691,squid
+소품/예스노 베개,0,2690,yes-no pillow
+배경/칠석,0,2690,tanabata
+음식/튀김,0,2689,tempura
+동작/두 손 여우 그림자,0,2686,double fox shadow puppet
+성인/음부 피어싱,0,2685,pussy piercing
+자세/모은 두 손,0,2685,cupping hands
+소품/허리띠,0,2681,waist sash
+자세/이마 맞대기,0,2679,forehead-to-forehead
+옷/성 글로리아나 군복,0,2678,st. gloriana's military uniform
+소품/미늘창,0,2675,halberd
+옷/로켓단 제복,0,2674,team rocket uniform
+동물/무리,0,2674,flock
+동물/어깨 위 포켓몬,0,2671,pokemon on shoulder
+동작/땀 닦기,0,2667,wiping sweat
+자세/물건 위에 앉음,0,2666,sitting on object
+동물/유니콘,0,2665,unicorn
+소품/믹싱볼,0,2664,mixing bowl
+옷/스위트 롤리타,0,2661,sweet lolita
+옷/순록 의상,0,2661,reindeer costume
+소품/마스터 소드,0,2661,master sword
+동물/시바견,0,2660,shiba inu
+효과/남근 상징,0,2658,phallic symbol
+소품/붕대 감은 손목,0,2656,bandaged wrist
+성인/음부 없는 후타,0,2655,futa without pussy
+성인/콘돔 벨트,0,2655,condom belt
+효과/화학 구조식,0,2655,chemical structure
+구도/반쯤 물에 잠긴 샷,0,2654,partially underwater shot
+소품/종이접기,0,2651,origami
+인원/천사와 악마,0,2650,angel and devil
+소품/뾰족한 왕관,0,2644,pointed crown
+얼굴/두꺼운 수염,0,2644,thick beard
+소품/양동이 들기,0,2642,holding bucket
+메타/채팅 기록,0,2642,chat log
+인원/새 소년,0,2642,bird boy
+동작/생물 안기,0,2641,holding creature
+몸/어깨 홍조,0,2640,shoulder blush
+소품/메가스톤,0,2640,mega stone
+성인/음부 내보이기,0,2639,presenting own pussy
+몸/배 점,0,2639,mole on stomach
+배경/반딧불이,0,2639,fireflies
+자세/상대 셔츠 잡기,0,2638,grabbing another's shirt
+동작/아래 눈꺼풀 당기기,0,2634,eyelid pull
+메타/잭오 챌린지,0,2633,jack-o' challenge
+소품/실,0,2632,thread
+동물/로봇 동물,0,2632,robot animal
+성인/윤활제,0,2631,lube
+음식/팝콘,0,2630,popcorn
+소품/일장기,0,2628,japanese flag
+눈/눈 속 꽃,0,2627,flower in eye
+표정/결연함,0,2627,determined
+소품/꼬리 피어싱,0,2626,tail piercing
+소품/방범 벨,0,2625,crime prevention buzzer
+몸/여분의 입,0,2624,extra mouth
+얼굴/X자 입,0,2623,x mouth
+자세/바닥에 손,0,2623,hand on ground
+소품/헬리콥터,0,2622,helicopter
+동작/입 앞 브이,0,2619,v over mouth
+소품/쓰레기 봉투,0,2619,trash bag
+소품/드릴,0,2617,drill
+인원/소 소년,0,2617,cow boy
+눈/겹눈,0,2613,compound eyes
+옷/도키도키 문예부 교복,0,2611,doki doki literature club school uniform
+효과/찰싹 소리,0,2610,plap
+소품/아령,0,2609,dumbbell
+메타/뱀해,0,2608,year of the snake
+음식/수박 조각,0,2608,watermelon slice
+소품/승마 채찍 들기,0,2606,holding riding crop
+속옷/벨트 브라,0,2606,belt bra
+메타/역할 바꾸기,0,2604,role reversal
+소품/얼굴 거즈,0,2601,gauze on face
+음식/라무네,0,2600,ramune
+소품/하고이타,0,2600,hagoita
+동작/뺨 눌림,0,2600,cheek squash
+몸/전신 문신,0,2599,full-body tattoo
+소품/나사,0,2594,screw
+효과/낫과 망치,0,2594,hammer and sickle
+성인/풀패키지 후타나리,0,2593,full-package futanari
+눈/단추 눈,0,2592,button eyes
+인원/뱀 소녀,0,2590,snake girl
+자세/자기 배에 손,0,2589,hands on own stomach
+소품/관,0,2589,coffin
+몸/색 있는 젖꼭지,0,2586,colored nipples
+옷/정강이 보호대,0,2585,shin guards
+옷/거싯,0,2583,gusset
+동작/청소,0,2583,cleaning
+소품/떠 있는 무기,0,2582,floating weapon
+음식/수프,0,2579,soup
+머리/옆 드릴 머리,0,2578,side drill
+머리/마름모 머리장식,0,2578,diamond hair ornament
+소품/금 단추,0,2573,gold buttons
+표정/식탐,0,2573,glutton
+메타/오토봇,0,2572,autobot
+메타/39,0,2569,39
+옷/가로줄 하나,0,2566,single horizontal stripe
+동작/입에 문 리본,0,2565,ribbon in mouth
+인원/하빈,0,2565,harvin
+메타/캐릭터 나이,0,2565,character age
+음식/소시지,0,2563,sausage
+소품/머리 위 꽃,0,2560,flower on head
+옷/초록 스웨터 조끼,0,2559,green sweater vest
+동작/무릎 굽혀 인사,0,2558,curtsey
+옷/리본 테두리 옷,0,2556,ribbon-trimmed clothes
+소품/줄 달린 동전,0,2555,coin on string
+동물/전통 요괴,0,2553,traditional youkai
+성인/정자,0,2553,sperm cell
+옷/겹쳐 입은 셔츠,0,2553,shirt under shirt
+메타/키,0,2552,height
+효과/갈색 테두리,0,2552,brown border
+모자/투톤 머리쓰개,0,2551,two-tone headwear
+메타/가상 졸업 기념,0,2548,virtual graduation commemoration
+옷/신선조,0,2548,shinsengumi
+메타/예,0,2547,yes
+머리/진주 머리장식,0,2547,pearl hair ornament
+동작/하이킥,0,2546,high kick
+상태/우발적 노출,0,2536,accidental exposure
+소품/병원 침대,0,2535,hospital bed
+동작/손등 키스,0,2534,kissing hand
+머리/낮은 옆 포니테일,0,2533,low side ponytail
+성인/보이지 않는 음경,0,2532,invisible penis
+동물/독수리,0,2532,eagle
+성인/착유기,0,2531,milking machine
+성인/여자 셋,0,2530,fff threesome
+옷/미야마스자카 여학원 교복,0,2528,miyamasuzaka girls' academy school uniform
+메타/전면 만화,0,2527,full page comic
+효과/비네팅,0,2526,vignetting
+소품/캐리어,0,2525,rolling suitcase
+동작/셔츠 물기,0,2521,shirt in mouth
+동물/서양 용,0,2520,western dragon
+음식/피자 조각,0,2516,pizza slice
+소품/머리에 붙은 부적,0,2516,ofuda on head
+동물/무릎 위 동물,0,2516,animal on lap
+소품/선크림,0,2515,sunscreen
+배경/모닥불,0,2512,campfire
+효과/바닥의 피,0,2507,blood on ground
+소품/앙크,0,2507,ankh
+소품/꼬리 반지,0,2506,tail ring
+옷/슈카 고교 교복,0,2506,shuka high school uniform
+효과/염동력,0,2504,telekinesis
+동작/손 내밀기,0,2503,offering hand
+소품/불타는 무기,0,2503,flaming weapon
+소품/둥근바닥 플라스크,0,2501,round-bottom flask
+성인/입으로 권유,0,2500,oral invitation
+음식/가슴 위 초콜릿,0,2499,chocolate on breasts
+메타/텀블러 아이디,0,2498,tumblr username
+소품/가시 몽둥이,0,2498,spiked club
+소품/서랍장,0,2497,chest of drawers
+몸/한쪽 맨발,0,2496,single bare foot
+자세/비대칭 쌍수,0,2494,asymmetrical dual wielding
+자세/가슴 사이 팔,0,2494,arm between breasts
+메타/미쿠의 날,0,2493,miku day
+얼굴/긴 코,0,2493,long nose
+소품/탐사봉,0,2493,dowsing rod
+자세/얼굴에,0,2492,in the face
+소품/바 스툴,0,2492,bar stool
+소품/여러 목걸이,0,2491,multiple necklaces
+옷/안치오 교복,0,2490,anzio school uniform
+옷/유에이 교복,0,2489,u.a. school uniform
+소품/스프레이 캔,0,2488,spray can
+몸/재규어 귀,0,2487,jaguar ears
+메타/전후 비교,0,2487,before and after
+메타/용해,0,2486,year of the dragon
+자세/사람 위,0,2483,on person
+옷/나랑하 학원 교복,0,2482,naranja academy school uniform
+음식/탄산음료,0,2481,soda
+소품/뺨 거즈,0,2481,gauze on cheek
+소품/마작 패,0,2480,mahjong tile
+상태/야성,0,2479,feral instincts
+인원/늑대인간,0,2475,werewolf
+옷/군 전투복,0,2474,military combat uniform
+음식/패스트푸드,0,2474,fast food
+소품/나무 상자,0,2471,crate
+소품/바늘 들기,0,2469,holding needle
+소품/지구본,0,2469,globe
+소품/열쇠 귀걸이,0,2467,key earrings
+소품/여행가방 들기,0,2466,holding suitcase
+소품/한쪽 손목 커프스,0,2463,single wrist cuff
+인원/탐정,0,2463,detective
+소품/입에 문 식기,0,2462,utensil in mouth
+성인/자기 몸에 사정,0,2461,cum on self
+옷/쿠사즈리,0,2458,kusazuri
+눈/두족류 눈,0,2456,cephalopod eyes
+옷/제3신도쿄 중학교 교복,0,2455,tokyo-3 middle school uniform
+소품/구부러지는 빨대,0,2452,bendy straw
+소품/뜀틀,0,2451,vaulting horse
+양말/동물 귀 양말,0,2450,animal ear legwear
+효과/룬 문자,0,2444,runes
+소품/찻주전자 들기,0,2444,holding teapot
+메타/골든위크,0,2444,golden week
+머리/일자 옆머리,0,2443,blunt sidelocks
+메타/세부를 짚음,0,2439,pointing out the details
+옷/속옷 없는 기모노,0,2438,naked kimono
+소품/마작,0,2438,mahjong
+효과/포르티시모,0,2436,fortissimo
+옷/집어넣은 바지,0,2434,pants tucked in
+자세/눌려 고정됨,0,2430,pinned
+소품/스쿠터,0,2428,scooter
+동작/박수,0,2428,clapping
+자세/무릎에 손,0,2425,hand on lap
+배경/석등,0,2424,stone lantern
+소품/궁니르,0,2424,spear the gungnir
+자세/양동이 속,0,2421,in bucket
+동작/고백,0,2419,confession
+배경/맑은 하늘,0,2419,clear sky
+모자/아지로가사,0,2419,ajirogasa
+옷/후드 위 재킷,0,2416,jacket over hoodie
+음식/파스타,0,2411,pasta
+옷/키비토 고교 교복,0,2411,kibito high school uniform
+동작/떨림,0,2410,shaking
+동작/발레,0,2410,ballet
+효과/하트 관통 화살,0,2410,arrow through heart
+소품/나뭇가지 들기,0,2409,holding branch
+동작/넥타이 고쳐 매기,0,2409,adjusting necktie
+소품/러버콘,0,2404,traffic cone
+얼굴/볼록한 뺨,0,2403,cheek bulge
+옷/환자복,0,2401,hospital gown
+소품/걸어 둔 안경,0,2400,eyewear hang
+소품/발가락 반지,0,2397,toe ring
+소품/성인물,0,2397,pornography
+소품/뜰채,0,2397,hand net
+효과/녹는 후광,0,2395,melting halo
+옷/풀린 비키니 하의,0,2394,untied bikini bottom
+머리/목덜미 한 가닥,0,2391,lone nape hair
+구도/머리 잘림,0,2391,cropped head
+눈/찡그린 눈,0,2389,squinting
+자세/O자 다리,0,2389,bowlegged pose
+몸/항문 털,0,2389,anal hair
+동작/때리기,0,2387,slapping
+소품/아이폰,0,2387,iphone
+소품/버스터 소드,0,2387,buster sword
+상태/숨이 끊어짐,0,2386,giving up the ghost
+머리/주사위 머리장식,0,2385,dice hair ornament
+몸/체모,0,2385,body hair
+소품/밀,0,2382,wheat
+동작/버둥거림,0,2382,struggling
+모자/물방울무늬 머리쓰개,0,2381,polka dot headwear
+동작/포켓몬 타기,0,2380,riding pokemon
+옷/파란 스웨터 조끼,0,2380,blue sweater vest
+몸/레이맨 팔다리,0,2378,rayman limbs
+메타/만우절,0,2378,april fools
+소품/음양 구슬,0,2376,yin yang orb
+소품/게이밍 의자,0,2375,gaming chair
+머리/눈 위 꽃,0,2371,flower over eye
+동작/아칸베,0,2371,akanbe
+자세/꼬리 잡기,0,2369,tail grab
+메타/후리가나,0,2367,furigana
+소품/구멍 뚫린 동전,0,2366,holed coin
+동작/머리 말리기,0,2366,drying hair
+소품/도마,0,2365,cutting board
+인원/라라펠,0,2363,lalafell
+화풍/검은 윤곽선,0,2362,black outline
+소품/오토바이 헬멧,0,2361,motorcycle helmet
+소품/쿨러,0,2361,cooler
+메타/바니의 날,0,2361,bunny day
+메타/어색한 비율,0,2361,bad proportions
+소품/렌치 들기,0,2360,holding wrench
+몸/머리 여러 개,0,2358,multiple heads
+소품/어뢰 발사관,0,2357,torpedo tubes
+소품/턱끈,0,2357,chinstrap
+얼굴/부푼 볼,0,2356,puffy cheeks
+메타/분할 테마,0,2352,split theme
+배경/용암,0,2352,lava
+눈/점선 눈,0,2352,dashed eyes
+몸/손 흉터,0,2349,scar on hand
+몸/케이블 꼬리,0,2349,cable tail
+표정/체중 신경 씀,0,2348,weight conscious
+동작/기타 연주,0,2348,playing guitar
+몸/처진 귀,0,2348,droopy ears
+소품/종이비행기,0,2347,paper airplane
+소품/나팔꽃,0,2345,morning glory
+표정/멍한 시선,0,2345,blank stare
+옷/뱀파이어 의상,0,2344,vampire costume
+소품/책갈피,0,2344,bookmark
+자세/상대 허벅지에 손,0,2342,hands on another's thighs
+옷/솟은 셔츠,0,2341,tented shirt
+소품/가시 등딱지,0,2341,spiked shell
+옷/분홍 테두리,0,2341,pink trim
+자세/접은 다리,0,2340,legs folded
+소품/오븐 장갑,0,2339,oven mitts
+소품/입체기동장치,0,2338,three-dimensional maneuver gear
+옷/죄수복,0,2337,prison clothes
+옷/분홍 팔 워머,0,2336,pink arm warmers
+얼굴/입 위 점,0,2335,mole above mouth
+소품/목 술 장식,0,2332,neck tassel
+동작/때리기,0,2332,hitting
+소품/홍백 새끼줄,0,2331,kouhaku nawa
+배경/굴뚝,0,2331,chimney
+옷/강시 의상,0,2330,jiangshi costume
+소품/솜사탕 들기,0,2328,holding cotton candy
+몸/족제비 귀,0,2327,weasel ears
+몸/뾰족한 꼬리,0,2327,sharp tail
+음식/에너지 드링크,0,2326,energy drink
+옷/터틀넥 재킷,0,2325,turtleneck jacket
+소품/전기 플러그,0,2325,electric plug
+자세/허벅지 사이 다리,0,2320,leg between thighs
+메타/낚시 썸네일,0,2317,misleading thumbnail
+신발/한쪽 허벅지 부츠,0,2316,single thigh boot
+메타/빛 검열,0,2316,light censor
+옷/Y2K 패션,0,2313,y2k fashion
+소품/톱,0,2312,saw
+동작/위로,0,2312,comforting
+소품/세탁기,0,2311,washing machine
+동작/갸루 브이,0,2309,gyaru v
+소품/에마,0,2309,ema
+효과/육각형,0,2308,hexagon
+소품/추,0,2307,pendulum
+머리/사슬 머리띠,0,2307,chain headband
+옷/치마 리본,0,2304,skirt bow
+몸/이마 문신,0,2304,forehead tattoo
+옷/한쪽 어깨 보호대,0,2303,single shoulder pad
+소품/두꺼운 안경,0,2303,coke-bottle glasses
+옷/트레센 수영복,0,2302,tracen swimsuit
+옷/교차 끈,0,2302,criss-cross straps
+소품/단자쿠,0,2301,tanzaku
+인원/파충류 소녀,0,2297,reptile girl
+소품/바람개비,0,2297,pinwheel
+소품/다루마 인형,0,2297,daruma doll
+소품/HK416,0,2293,h&k hk416
+자세/다리 사이 팔,0,2292,arms between legs
+옷/상어 의상,0,2290,shark costume
+소품/올가미,0,2288,noose
+자세/탁자에 팔꿈치,0,2288,elbows on table
+음식/샴페인,0,2288,champagne
+동작/함께 먹는 음식,0,2287,shared food
+메타/방과후 티타임,0,2287,ho-kago tea time
+소품/학생 가방,0,2286,school briefcase
+옷/검은 테두리,0,2286,black trim
+소품/하트 버클,0,2285,heart-shaped buckle
+동작/하트 속 하트 손,0,2285,heart in heart hands
+옷/양면 드레스,0,2285,two-sided dress
+상태/기계화,0,2283,mechanization
+옷/다리 감개,0,2283,leg wrap
+소품/머리 사슬,0,2282,head chain
+메타/독일어 글자,0,2282,german text
+옷/튜브 드레스,0,2280,tube dress
+메타/시안 디자인,0,2280,prototype design
+옷/회색 스웨터 조끼,0,2280,grey sweater vest
+동작/자기에게 붓기,0,2279,pouring onto self
+옷/장식 많은 의상,0,2279,embellished costume
+메타/도표,0,2279,chart
+동물/괴수,0,2277,kaiju
+옷/회색 정장,0,2277,grey suit
+동작/떨어뜨림,0,2277,dropping
+자세/고타츠 속,0,2276,under kotatsu
+소품/기계,0,2276,machine
+소품/부적 들기,0,2276,holding ofuda
+옷/부족풍,0,2275,tribal
+메타/검은색 테마,0,2274,black theme
+소품/포타라 귀걸이,0,2273,potara earrings
+소품/민들레,0,2272,dandelion
+옷/더플코트,0,2271,duffel coat
+메타/자해,0,2270,self-harm
+소품/배틀 라이플,0,2269,battle rifle
+동물/달팽이,0,2268,snail
+소품/탄산 병,0,2267,soda bottle
+머리/중국식 비녀,0,2264,chinese hairpin
+소품/오다치,0,2263,ootachi
+옷/쿠로모리미네 교복,0,2263,kuromorimine school uniform
+소품/털실,0,2260,yarn
+동작/후드 들추기,0,2259,hoodie lift
+소품/리모컨 들기,0,2257,holding remote control
+신발/오픈토 신발,0,2256,open-toe shoes
+머리/짧은 옆 포니테일,0,2256,short side ponytail
+옷/웻슈트,0,2254,wetsuit
+화풍/아이 그림,0,2248,child's drawing
+옷/누더기 옷,0,2246,patchwork clothes
+소품/플루트 들기,0,2246,holding flute
+효과/매체 관통,0,2245,through medium
+옷/전술 교복,0,2245,tactical school uniform
+소품/자,0,2245,ruler
+효과/물 위 꽃잎,0,2243,petals on liquid
+인원/여러 남장 미소년,0,2243,multiple traps
+배경/벽돌 바닥,0,2242,brick floor
+동작/상대 머리 빗기,0,2241,brushing another's hair
+메타/우마무스메 말 관계,0,2240,umamusume horse relations
+성인/쿠퍼액 뚝뚝,0,2239,precum drip
+메타/낙서 검열,0,2238,scribble censor
+소품/사쿠라 문양,0,2238,sakuramon
+음식/만두,0,2238,dumpling
+자세/옆으로 앉아 탐,0,2236,sidesaddle
+소품/경주 차량,0,2236,race vehicle
+성인/수직 파이즈리,0,2235,perpendicular paizuri
+몸/튀어나온 배꼽,0,2235,outie navel
+구도/바깥에서,0,2232,from outside
+음식/부스러기,0,2230,crumbs
+성인/매듭 음경,0,2229,knotted penis
+자세/자기 팔꿈치에 손,0,2229,hand on own elbow
+소품/하트 에이스,0,2229,ace of hearts
+옷/소매 달린 레오타드,0,2227,sleeved leotard
+메타/홍마관,0,2227,scarlet devil mansion
+소품/분필,0,2226,chalk
+소품/가발,0,2221,wig
+성인/강제 절정,0,2221,forced orgasm
+동작/입 당기기,0,2220,mouth pull
+효과/유리 파편,0,2220,glass shards
+소품/허벅지 밴드,0,2219,bandaid on thigh
+배경/소풍,0,2215,picnic
+옷/묶인 재킷,0,2215,tied jacket
+소품/어뢰 발사기,0,2214,torpedo launcher
+소품/마이크 스탠드 들기,0,2214,holding microphone stand
+소품/초록 렌즈 안경,0,2214,green-tinted eyewear
+효과/심장 박동,0,2213,heartbeat
+옷/음식 테마 옷,0,2212,food-themed clothes
+메타/캐릭터 검열,0,2211,character censor
+인원/관객,0,2211,audience
+몸/뾰족한 발톱,0,2209,sharp toenails
+성인/짙은 음경,0,2209,dark penis
+옷/토모에다 초등학교 교복,0,2208,tomoeda elementary school uniform
+화풍/피규어풍,0,2208,faux figurine
+표정/가슴 신경 씀,0,2205,breast conscious
+자세/유리에 손,0,2204,hand on glass
+동작/엉덩이 흔들기,0,2203,ass shake
+메타/원작보다 근육질,0,2199,more muscular than canon
+동물/열대어,0,2198,tropical fish
+메타/원작 왜곡,0,2198,perversion of canon
+자세/무릎에 팔,0,2198,arm on knee
+소품/시험관 들기,0,2196,holding test tube
+소품/가면 쓴,0,2194,masked
+자세/뻗은 다리,0,2192,outstretched leg
+소품/벽시계,0,2191,wall clock
+성인/끝만,0,2191,just the tip
+소품/대나무 찜기,0,2191,bamboo steamer
+자세/다리 사이 꼬리,0,2187,tail between legs
+배경/음식 노점,0,2187,food stand
+몸/목젖,0,2186,uvula
+소품/비디오 게임,0,2185,video game
+소품/라디오,0,2185,radio
+음식/카레라이스,0,2183,curry rice
+소품/스펀지,0,2181,sponge
+성인/음핵 피어싱,0,2180,clitoral piercing
+성인/후타가 남자에게,0,2178,futa on male
+자세/얼굴에 손가락,0,2178,finger to face
+상태/아픔,0,2177,sick
+효과/빨간 윤곽선,0,2177,red outline
+메타/빌려온 디자인,0,2176,borrowed design
+소품/다이얼 전화기,0,2175,rotary phone
+성인/입속 촉수,0,2174,tentacle in mouth
+옷/흰 웨딩 토시,0,2173,white bridal gauntlets
+음식/선디,0,2172,sundae
+인원/광대,0,2172,jester
+동작/소매 쥐기,0,2171,pinching sleeves
+몸/뾰족한 가슴,0,2170,pointy breasts
+동작/머리 자르기,0,2170,cutting hair
+동작/입에 문 줄기,0,2167,stalk in mouth
+옷/푸르푸르 코트,0,2166,fatui coat
+메타/태국어 글자,0,2165,thai text
+메타/스크린샷 배경,0,2165,screenshot background
+옷/레오타드 엿보임,0,2165,leotard peek
+메타/회색 테마,0,2165,grey theme
+음식/핫도그,0,2164,hot dog
+소품/곡옥 귀걸이,0,2162,magatama earrings
+옷/헐렁한 옷,0,2162,baggy clothes
+머리/액체 머리,0,2161,liquid hair
+메타/필기체,0,2161,cursive
+소품/플레이스테이션 컨트롤러,0,2159,playstation controller
+옷/조개 비키니,0,2156,shell bikini
+모자/케피,0,2156,kepi
+몸/머리 없음,0,2156,headless
+동물/삼색 고양이,0,2155,calico cat
+옷/파란 정장,0,2155,blue suit
+머리/꽃 머리핀,0,2154,flower hairpin
+옷/카고 바지,0,2153,cargo pants
+소품/파일럿 선글라스,0,2153,aviator sunglasses
+효과/피웅덩이,0,2151,pool of blood
+눈/검은 아이라인,0,2151,black eyeliner
+자세/벽에 손,0,2150,hand on wall
+소품/이젤,0,2147,easel
+동작/니삭 당기기,0,2146,thighhighs pull
+성인/음경 엿보임,0,2146,penis peek
+모자/양면 머리쓰개,0,2145,two-sided headwear
+소품/어깨 홀스터,0,2144,shoulder holster
+소품/탄띠,0,2143,ammunition belt
+소품/모래시계,0,2142,hourglass
+소품/잠자리채,0,2142,butterfly net
+소품/두루마리 들기,0,2141,holding scroll
+옷/운동용 레오타드,0,2141,athletic leotard
+옷/스트리트웨어,0,2139,streetwear
+머리/땋은 밑동 포니테일,0,2137,ponytail with braided base
+메타/배드 엔딩,0,2137,bad end
+성인/긴 소음순,0,2136,long labia
+소품/코걸이,0,2135,nose ring
+화풍/디더링,0,2135,dithering
+모자/밀짚 보터 모자,0,2135,boater hat
+머리/송곳니 앞머리,0,2134,fanged bangs
+소품/입 가린 목도리,0,2133,scarf over mouth
+소품/프라이팬 들기,0,2130,holding frying pan
+옷/닻 무늬,0,2130,anchor print
+소품/눈덩이,0,2129,snowball
+동작/손가락 프레임,0,2129,finger frame
+소품/개조 포탑,0,2129,adapted turret
+메타/문자 메시지,0,2128,text messaging
+옷/한쪽 팔 워머,0,2128,single arm warmer
+몸/원숭이 귀,0,2128,monkey ears
+옷/수영복 위 재킷,0,2128,jacket over swimsuit
+자세/자동차 위,0,2127,on car
+동작/모자 살짝 들기,0,2127,hat tip
+옷/래빗 하우스 제복,0,2126,rabbit house uniform
+소품/경찰 배지,0,2126,police badge
+자세/죠죠 포즈,0,2126,jojo pose
+메타/낙서 삽입,0,2125,doodle inset
+소품/식신,0,2122,shikigami
+성인/무표정 섹스,0,2122,emotionless sex
+옷/탄 옷,0,2118,burnt clothes
+소품/냅킨,0,2117,napkin
+양말/검은 레그워머,0,2116,black leg warmers
+자세/공중부양,0,2115,levitation
+인원/염소 소년,0,2114,goat boy
+자세/상대 등에 팔,0,2114,arm around another's back
+메타/인종 페티시,0,2111,race fetishism
+동작/상대 입 막기,0,2110,covering another's mouth
+소품/재갈 하네스,0,2108,gag harness
+소품/노 가면,0,2107,noh mask
+성인/반쯤 벌린 음부,0,2107,half-spread pussy
+자세/엉덩이 받침,0,2106,ass support
+소품/쌓인 종이,0,2104,paper stack
+동작/구자인,0,2104,kuji-in
+메타/칼데아 로고,0,2104,chaldea logo
+얼굴/텅 빈 얼굴,0,2103,void face
+효과/응결,0,2103,condensation
+몸/하이에나 귀,0,2102,hyena ears
+자세/가슴 내밀기,0,2101,presenting own breasts
+옷/방탄복,0,2101,body armor
+머리/자른 앞머리,0,2100,cut bangs
+화풍/손그림,0,2099,tegaki
+옷/스카잔,0,2099,sukajan
+동작/베기,0,2099,slashing
+옷/보라 테두리,0,2099,purple trim
+효과/힘 모으기,0,2098,powering up
+모자/파파하,0,2098,papakha
+소품/가나보,0,2098,kanabou
+소품/스노클,0,2097,snorkel
+자세/상대 엉덩이 옆에 손,0,2095,hands on another's hips
+성인/상대 팬티 속에 손,0,2095,hand in another's panties
+효과/노란 윤곽선,0,2094,yellow outline
+소품/립스틱 들기,0,2090,holding lipstick tube
+메타/회상,0,2090,flashback
+동작/변신,0,2089,henshin
+효과/함께 쓴 말풍선,0,2087,shared speech bubble
+옷/펑크,0,2087,punk
+인원/엘레젠,0,2087,elezen
+옷/떠 있는 목도리,0,2086,floating scarf
+동물/나방,0,2084,moth
+얼굴/광대뼈,0,2084,cheekbones
+소품/메달리온,0,2083,medallion
+몸/굵은 팔,0,2081,thick arms
+소품/곡괭이,0,2080,pickaxe
+소품/마법서,0,2080,grimoire
+소품/포켓몬 카드,0,2079,pokemon card
+소품/약물,0,2075,drugs
+상태/다음 날 아침,0,2074,morning after
+음식/가지,0,2074,eggplant
+소품/부활절 달걀,0,2073,easter egg
+메타/슈퍼 사이어인 1,0,2071,super saiyan 1
+소품/페넌트,0,2070,pennant
+효과/파란 윤곽선,0,2070,blue outline
+동작/균형 잡기,0,2070,balancing
+신발/아이스 스케이트,0,2068,ice skates
+머리/네잎클로버 머리장식,0,2067,four-leaf clover hair ornament
+옷/불가능한 수영복,0,2066,impossible swimsuit
+메타/보컬로이드 어펜드,0,2065,vocaloid append
+소품/깃펜 들기,0,2064,holding quill
+동작/상대에게 손 뻗기,0,2063,reaching towards another
+몸/꿰맨 팔,0,2062,stitched arm
+메타/스페인어 글자,0,2062,spanish text
+동작/스스로 연 상태,0,2062,opened by self
+배경/격자,0,2062,lattice
+소품/크레용,0,2062,crayon
+옷/슈진 학원 교복,0,2060,shuujin academy school uniform
+소품/조개 목걸이,0,2059,shell necklace
+음식/버터,0,2059,butter
+메타/내레이션,0,2058,narration
+메타/세로 스크롤 만화,0,2057,vertical scroll comic
+동작/오르기,0,2057,climbing
+동작/비키니 하의 당기기,0,2057,bikini bottom pull
+옷/옆트임 반바지,0,2056,side slit shorts
+효과/에너지 빔,0,2056,energy beam
+모자/방울 비니,0,2052,pom pom beanie
+소품/떨어진 머리 들기,0,2051,holding detached head
+소품/크레페 들기,0,2051,holding crepe
+메타/연속 컷,0,2050,sequential
+소품/비사문천의 보탑,0,2049,bishamonten's pagoda
+옷/흰 팔 워머,0,2046,white arm warmers
+몸/등지느러미,0,2045,dorsal fin
+음식/칵테일,0,2045,cocktail
+메타/나이 비교,0,2043,age comparison
+소품/손목 붕대,0,2042,wrist wrap
+배경/가득 찬 실내,0,2042,loaded interior
+소품/돈 들기,0,2042,holding money
+옷/도깨비불 무늬,0,2042,hitodama print
+구도/팔 잘림,0,2042,cropped arms
+메타/비교,0,2042,comparison
+소품/하마야,0,2041,hamaya
+인원/양부모와 양자,0,2041,adoptive parent and adoptive child
+소품/아치형 왕관,0,2040,arched crown
+소품/요요,0,2039,yo-yo
+소품/등에 멘 악기 케이스,0,2039,instrument case on back
+메타/만화 표지,0,2039,comic cover
+옷/드러난 주머니,0,2038,exposed pocket
+음식/과자 봉지,0,2038,bag of chips
+소품/M1911,0,2036,m1911
+성인/콘돔 상자,0,2036,condom box
+자세/탁자에 올린 가슴,0,2035,breasts on table
+옷/드레스 속 치마,0,2033,skirt under dress
+옷/아메리카 원주민풍,0,2033,native american
+메타/좋아요와 리트윗,0,2033,like and retweet
+동작/프리다이빙,0,2033,freediving
+신발/군화,0,2033,combat boots
+몸/아가미,0,2031,gills
+옷/UVA 학원 교복,0,2030,uva academy school uniform
+소품/안장,0,2030,saddle
+속옷/앞 후크 브라,0,2028,front-fastening bra
+인원/언데드,0,2027,undead
+메타/이로치와 일반,0,2027,shiny and normal
+소품/뿔 달린 가면,0,2027,horned mask
+인원/광대,0,2026,clown
+몸/눈표범 꼬리,0,2025,snow leopard tail
+소품/사과사탕 들기,0,2025,holding candy apple
+자세/바닥에 두 손,0,2025,hands on ground
+소품/경고 표지판,0,2024,warning sign
+화풍/스팀펑크,0,2024,steampunk
+옷/자수,0,2023,embroidery
+효과/중성 기호,0,2020,androgyne symbol
+성인/흔치 않은 자극,0,2019,uncommon stimulation
+메타/비누 거품 검열,0,2018,soap censor
+효과/피 흘러내림,0,2018,blood drip
+옷/죽은 세계 전선 제복,0,2017,shinda sekai sensen uniform
+옷/귀갑문,0,2017,kikkoumon
+자세/앞으로 끼인 속옷,0,2017,frontal wedgie
+소품/체리색 부케,0,2017,cerise bouquet
+동작/비눗방울 불기,0,2017,blowing bubbles
+음식/꿀,0,2015,honey
+소품/하우치와,0,2015,hauchiwa
+소품/해초,0,2014,seaweed
+동작/푸는 중,0,2013,untying
+메타/페이스북 아이디,0,2013,facebook username
+음식/열대 음료,0,2012,tropical drink
+모자/등에 건 모자,0,2011,hat on back
+소품/탄약 띠,0,2011,bandolier
+몸/듬성한 가슴털,0,2010,sparse chest hair
+모자/한쪽 눈 가린 모자,0,2010,hat over one eye
+소품/장바구니,0,2010,grocery bag
+효과/악마의 열매 능력,0,2010,devil fruit power
+머리/떨어진 아호게,0,2010,detached ahoge
+동작/한쪽 눈 가림,0,2010,covering one eye
+신발/벨트 부츠,0,2009,belt boots
+소품/잉크병,0,2008,inkwell
+옷/드레스 속 셔츠,0,2007,shirt under dress
+옷/사쿠가와 교복,0,2007,sakugawa school uniform
+머리/해파리 컷,0,2007,jellyfish cut
+동작/부채질,0,2007,fanning self
+머리/조개 머리장식,0,2006,shell hair ornament
+배경/보이지 않는 바닥,0,2006,invisible floor
+상태/붙잡힘,0,2005,captured
+몸/어깨 흉터,0,2001,scar on shoulder
+소품/전신 거울,0,2000,full-length mirror
+소품/가시 귀 피어싱,0,1999,spiked ear piercing
+동물/너구리,0,1999,raccoon
+효과/말풍선 속 음식,0,1998,spoken food
+동작/쇼핑,0,1998,shopping
+효과/얼굴에 튄 물감,0,1998,paint splatter on face
+몸/몸에 뚫린 구멍,0,1998,hole on body
+소품/어깨 대포,0,1997,shoulder cannon
+옷/초록 테두리,0,1997,green trim
+몸/맥 꼬리,0,1995,tapir tail
+소품/펌프 액션,0,1995,pump action
+머리/달걀 머리장식,0,1995,egg hair ornament
+옷/정통 롤리타 코디,0,1993,accurate lolita coord
+옷/하이로 드레스,0,1992,high-low dress
+몸/옅은 유륜,0,1991,light areolae
+성인/옷 사이로 새는 체액,0,1989,pussy juice drip through clothes
+음식/감자,0,1989,potato
+소품/드라이버,0,1988,screwdriver
+모자/이각모,0,1988,bicorne
+모자/무늬 머리쓰개,0,1987,print headwear
+소품/대걸레 들기,0,1986,holding mop
+자세/가슴에 기댄 머리,0,1985,head on chest
+소품/망원경,0,1983,telescope
+음식/코코넛,0,1982,coconut
+상태/눈이 먼,0,1982,blind
+소품/철조망,0,1982,barbed wire
+소품/주머니 속 물건,0,1980,object in pocket
+효과/사랑의 기운,0,1980,loving aura
+자세/셔츠 속 손,0,1980,hand under shirt
+소품/모금함,0,1980,donation box
+옷/아사히야마 고교 교복,0,1979,asahiyama high school uniform
+모자/안전모,0,1977,hard hat
+옷/치마 속 바지,0,1976,pants under skirt
+소품/사탕 포장지,0,1976,candy wrapper
+소품/원형 휘장,0,1975,roundel
+소품/모래 조각,0,1974,sand sculpture
+옷/한에리,0,1974,han'eri
+옷/에덴 학원 교복,0,1974,eden academy school uniform
+옷/반바지 속 비키니 하의,0,1972,bikini bottom under shorts
+소품/비틀어 맨 머리띠,0,1971,nejiri hachimaki
+메타/미라크라 파크,0,1971,mira-cra park!
+인원/고슴도치 소년,0,1971,hedgehog boy
+모자/페시네이터,0,1971,fascinator
+소품/매트,0,1970,mat
+표정/지루함,0,1970,bored
+인원/요들,0,1969,yordle
+동물/우주적 공포,0,1968,eldritch abomination
+옷/호무라바라 학원 교복,0,1967,homurabara academy school uniform
+소품/중식도,0,1967,cleaver
+소품/대나무 빗자루,0,1966,bamboo broom
+성인/양말에 사정,0,1964,cum on legwear
+소품/캠코더,0,1963,camcorder
+동작/화장실 사용,0,1962,toilet use
+옷/수영복 덧옷,0,1962,swimsuit cover-up
+몸/엉덩이 엿보임,0,1961,ass peek
+음식/수박바,0,1959,watermelon bar
+성인/음경에서 흐르는 정액,0,1959,cumdrip from penis
+소품/고풍 총기,0,1959,antique firearm
+효과/다리에 묻은 피,0,1958,blood on leg
+소품/경기관총,0,1956,light machine gun
+소품/하트 자물쇠,0,1955,heart-shaped lock
+옷/허벅지 사이 옷,0,1953,clothes between thighs
+소품/CD,0,1953,cd
+소품/손거울,0,1950,hand mirror
+배경/나무 아래,0,1948,under tree
+메타/혼다,0,1947,honda
+상태/사물화,0,1946,objectification
+소품/메신저백,0,1946,messenger bag
+음식/아이스크림 플로트,0,1945,ice cream float
+속옷/트레이닝 브라,0,1944,training bra
+몸/눈물 문신,0,1944,teardrop tattoo
+메타/서브스크라이브스타 아이디,0,1942,subscribestar username
+머리/덩굴 머리카락,0,1942,hair vines
+배경/오로라,0,1942,aurora
+소품/인형 뽑기,0,1941,crane game
+동작/뺨 당기기,0,1941,cheek pull
+효과/분홍 윤곽선,0,1940,pink outline
+소품/반려동물 밥그릇,0,1940,pet bowl
+자세/발등 굽힘,0,1940,dorsiflexion
+인원/텐구,0,1938,tengu
+효과/연기 나는 총구,0,1938,smoking barrel
+소품/이마 밴드,0,1938,bandaid on forehead
+자세/컵 속,0,1937,in cup
+머리/납작한 면발 머리,0,1936,kishimen hair
+소품/방석,0,1934,zabuton
+효과/홀로그램,0,1934,hologram
+구도/나란히 대비,0,1933,juxtaposition
+소품/이탈리아 국기,0,1932,italian flag
+음식/새우튀김,0,1930,shrimp tempura
+옷/사이어인 갑옷,0,1929,saiyan armor
+옷/나이트 레이븐 칼리지 교복,0,1929,night raven college school uniform
+음식/포장 사탕,0,1928,wrapped candy
+음식/적포도주,0,1926,red wine
+소품/화장지,0,1924,toilet paper
+소품/리라,0,1924,lyre
+음식/생선 뼈,0,1924,fish skeleton
+동작/와락 안기,0,1923,glomp
+소품/부러진 무기,0,1922,broken weapon
+소품/사진 들기,0,1921,holding photo
+소품/거울 들기,0,1921,holding mirror
+성인/거대한 음경,0,1921,gigantic penis
+옷/옆 끈 엿보임,0,1920,side-tie peek
+소품/입 피어싱,0,1919,mouth piercing
+몸/팔 점,0,1919,mole on arm
+소품/글록,0,1919,glock
+상태/나이 퇴행,0,1918,age regression
+소품/필통,0,1915,pencil case
+성인/손 안 대고 파이즈리,0,1915,handsfree paizuri
+표정/당황,0,1914,panicking
+소품/걸이 화분,0,1912,hanging plant
+옷/교차 끈 트임,0,1912,cross-laced slit
+소품/헤어드라이어,0,1910,hair dryer
+옷/반쯤 벗은 코트,0,1910,coat partially removed
+인원/다른 4명,0,1910,4others
+옷/빨간 정장,0,1909,red suit
+소품/경주용 자동차,0,1909,racecar
+자세/손바닥 위,0,1909,in palm
+소품/성배,0,1909,chalice
+메타/여러 흑백,0,1907,multiple monochrome
+자세/자전거 위,0,1906,on bicycle
+효과/초록 테두리,0,1906,green border
+상태/보디 호러,0,1906,body horror
+소품/털실 뭉치,0,1902,yarn ball
+소품/날개 브로치,0,1902,wing brooch
+소품/빨래,0,1901,laundry
+배경/은하,0,1901,galaxy
+소품/다른 무기,0,1901,alternate weapon
+성인/가려진 고환,0,1900,covered testicles
+표정/미친 듯,0,1898,crazy
+자세/발에 손,0,1896,hands on feet
+메타/프랑스어 글자,0,1896,french text
+옷/소부 고교 교복,0,1895,sobu high school uniform
+인원/물고기 소년,0,1895,fish boy
+동작/날아차기,0,1894,flying kick
+효과/낮은음자리표,0,1894,bass clef
+효과/흙,0,1893,dirt
+소품/보라 테 안경,0,1892,purple-framed eyewear
+몸/쇄골 점,0,1891,mole on collarbone
+메타/진실,0,1890,truth
+얼굴/빨간 코,0,1890,red nose
+소품/뿔 고리,0,1890,horn ring
+소품/서류가방 들기,0,1890,holding briefcase
+인원/이복 남매,0,1890,half-siblings
+음식/롤케이크,0,1889,swiss roll
+성인/고환 없는 후타,0,1889,futa without balls
+배경/점무늬 배경,0,1889,dotted background
+배경/레슬링 링,0,1885,wrestling ring
+동작/스스로 속옷 끌어올리기,0,1885,self wedgie
+소품/호루스의 눈,0,1885,eye of horus
+음식/옥수수,0,1885,corn
+인원/사람과 동물화,0,1884,person and animalization
+소품/장난감 들기,0,1883,holding toy
+옷/치마 구멍,0,1881,skirt cutout
+배경/헬스장,0,1881,fitness gym
+화풍/아르누보,0,1881,art nouveau
+메타/웨이보 아이디,0,1878,weibo username
+성인/음경 키스,0,1878,kissing penis
+자세/탁자에 손,0,1878,hand on table
+몸/젖꼭지 윤곽,0,1877,nipple indents
+음식/입에 문 막대사탕,0,1877,lollipop in mouth
+소품/허리 리본,0,1876,waist ribbon
+모자/복숭아 모자 장식,0,1876,peach hat ornament
+동물/비둘기,0,1875,pigeon
+모자/귀 달린 모자,0,1873,hat with ears
+소품/돋보기 들기,0,1872,holding magnifying glass
+옷/반소매 스웨터,0,1870,short-sleeved sweater
+속옷/작은 브라 컵,0,1869,undersized breast cup
+소품/프로펠러,0,1869,propeller
+소품/어깨에 멘 우산,0,1868,umbrella over shoulder
+효과/말풍선 속 표정,0,1868,spoken expression
+양말/고양이 귀 양말,0,1868,cat ear legwear
+동작/목 키스,0,1867,kissing neck
+동물/도마뱀,0,1866,lizard
+소품/꼬치 들기,0,1866,holding skewer
+소품/앰프,0,1866,amplifier
+메타/인종 페티시 상징,0,1865,race fetishism symbol
+인원/의붓 남매,0,1865,adoptive siblings
+모자/옆으로 쓴 모자,0,1864,sideways hat
+동작/양궁,0,1864,archery
+메타/2014년,0,1864,2014
+배경/알록달록한 배경,0,1863,colorful background
+자세/머리 위 팔,0,1863,arm above head
+옷/신형 스쿨 수영복,0,1862,new school swimsuit
+성인/입에 삽입,0,1862,mouth insertion
+동작/지퍼 내리기,0,1860,unzipping
+동작/서로 껴안음,0,1860,mutual hug
+머리/튜브 머리장식,0,1859,lifebuoy hair ornament
+눈/충혈된 눈,0,1857,bloodshot eyes
+시선/다리 사이로 봄,0,1856,looking through own legs
+소품/뒤집개 들기,0,1856,holding spatula
+얼굴/오므린 입술,0,1854,pursed lips
+얼굴/그린 수염,0,1854,drawn whiskers
+옷/살아 있는 옷,0,1853,living clothes
+자세/구부정함,0,1853,hunched over
+소품/만화 뼈다귀,0,1853,cartoon bone
+동물/소,0,1850,kine
+성인/사람 칼집,0,1850,human scabbard
+양말/팬티스타킹 위 니삭,0,1848,thighhighs over pantyhose
+음식/간식,0,1848,snack
+몸/악어 꼬리,0,1845,crocodilian tail
+메타/성격 교체,0,1844,personality switch
+소품/헤클러 운트 코흐,0,1844,heckler & koch
+얼굴/꿰맨 입,0,1843,stitched mouth
+자세/유령 포즈,0,1843,ghost pose
+구도/위를 향함,0,1842,facing up
+소품/야광봉 들기,0,1841,holding glowstick
+소품/왕홀 들기,0,1840,holding scepter
+몸/뇌,0,1839,brain
+몸/긴 귓불,0,1837,long earlobes
+옷/반쪽 치마,0,1837,half-skirt
+몸/긴 목,0,1836,long neck
+옷/향림당 텐구 의상,0,1836,kourindou tengu costume
+성인/삼킴,0,1835,vore
+소품/집게,0,1835,tongs
+배경/알록달록한 구름,0,1835,colorful clouds
+메타/상징,0,1833,symbolism
+메타/상품,0,1833,merchandise
+옷/어느 고교 교복,0,1833,a certain high school uniform
+메타/로고 패러디,0,1832,logo parody
+메타/자기 코스프레,0,1831,self cosplay
+메타/성인물 제작,0,1831,pornography production
+동작/뽑으려는 자세,0,1830,ready to draw
+몸/다리 여러 개,0,1829,multiple legs
+눈/아래 속눈썹만,0,1829,lower eyelashes only
+성인/발기한 음핵,0,1829,erect clitoris
+배경/돌계단,0,1828,stone stairs
+동물/반려동물,0,1828,pet
+구도/무릎 잘림,0,1827,knees out of frame
+구도/정면 향함,0,1827,facing ahead
+효과/탄흔,0,1826,bullet hole
+소품/마법사 경전 두루마리,0,1825,sorcerer's sutra scroll
+메타/테두리 없는 칸,0,1825,borderless panels
+소품/AR-15,0,1825,ar-15
+효과/픽셀화,0,1824,pixelated
+몸/창자,0,1824,intestines
+옷/하운즈투스 무늬,0,1824,houndstooth
+구도/아래를 향함,0,1824,facing down
+효과/붕대에 묻은 피,0,1824,blood on bandages
+옷/터틀넥 보디슈트,0,1823,turtleneck bodysuit
+메타/머리색 연결,0,1821,hair color connection
+자세/웅크림,0,1821,curled up
+동작/주문 시전,0,1821,casting spell
+소품/베레타 92,0,1819,beretta 92
+소품/로켓,0,1818,rocket
+동작/앞을 가리킴,0,1818,pointing forward
+동작/역도,0,1817,weightlifting
+모자/중산모,0,1817,bowler hat
+동작/재킷 당기기,0,1816,jacket pull
+음식/한 입 베어 먹은 자국,0,1816,food bite
+소품/테루테루보즈,0,1815,teruterubouzu
+메타/유사색,0,1815,analogous colors
+소품/체크 깃발,0,1814,checkered flag
+양말/웨딩 스타킹,0,1814,bridal legwear
+소품/귀 보호대,0,1813,ear protection
+옷/털 재킷,0,1810,fur jacket
+소품/봉,0,1810,bo staff
+소품/부적,0,1809,amulet
+소품/지갑 체인,0,1808,wallet chain
+소품/포스트잇,0,1807,sticky note
+몸/어깨 점,0,1807,mole on shoulder
+동물/키메라,0,1807,chimera
+메타/디셉티콘,0,1805,decepticon
+모자/튤립 모자,0,1804,tulip hat
+머리/굴뚝 머리장식,0,1804,smokestack hair ornament
+소품/가문 문장,0,1804,family crest
+인원/절지동물 소년,0,1804,arthropod boy
+얼굴/원형 얼굴 무늬,0,1803,circle facial mark
+속옷/흰 가터벨트,0,1802,white garter belt
+표정/눈물 한 방울,0,1802,single tear
+소품/팔 방패,0,1801,arm shield
+소품/삽 들기,0,1800,holding shovel
+인원/신랑,0,1800,groom
+표정/애정 어림,0,1800,affectionate
+소품/커터칼,0,1799,boxcutter
+옷/한쪽 웨딩 토시,0,1797,single bridal gauntlet
+얼굴/땅콩 입,0,1797,peanut mouth
+소품/체온계,0,1795,thermometer
+소품/한쪽 홍조 스티커,0,1795,single blush sticker
+소품/도일리,0,1795,doily
+동작/검지 세움,0,1793,index fingers raised
+메타/오다 우리,0,1792,oda uri
+성인/겨드랑이 핥기,0,1792,licking armpit
+소품/혈액 팩,0,1792,blood bag
+메타/다른 종족,0,1792,alternate species
+자세/상대 어깨에 팔,0,1791,arm on another's shoulder
+성인/음경 위 침,0,1790,saliva on penis
+소품/총검,0,1790,bayonet
+얼굴/빈디,0,1789,bindi
+옷/속바지,0,1787,upshorts
+음식/스파게티,0,1787,spaghetti
+메타/게임 화면 배경,0,1787,game screenshot background
+인원/오빠와 쇼타,0,1786,onii-shota
+성인/눈 위 음경,0,1785,penis over eyes
+소품/젖꼭지 장신구,0,1785,nipple jewelry
+옷/턱받이 칼라,0,1784,bib collar
+옷/집어넣은 스웨터,0,1783,sweater tucked in
+옷/오하시 고교 교복,0,1783,oohashi high school uniform
+머리/귀 곱창밴드,0,1783,ear scrunchie
+소품/마네킹,0,1782,mannequin
+옷/가슴 보호대,0,1782,chest guard
+소품/게시판,0,1782,bulletin board
+옷/핀스트라이프 정장,0,1781,pinstripe suit
+성인/항문 체액,0,1781,anal fluid
+옷/구속복,0,1780,straitjacket
+동작/밀기,0,1780,pushing
+성인/음경 맞닿음,0,1780,penises touching
+메타/2013년,0,1780,2013
+소품/향수병,0,1779,perfume bottle
+인원/투명 인간,0,1779,invisible man
+눈/속눈썹 장식,0,1777,eyelash ornament
+동작/귀 깨물기,0,1777,biting ear
+옷/대마인 슈트,0,1776,taimanin suit
+효과/무한 기호,0,1776,infinity symbol
+배경/구름 위,0,1775,above clouds
+메타/제목 패러디,0,1774,title parody
+옷/레이서백,0,1773,racerback
+자세/난간 위,0,1773,on railing
+자세/무릎에 누움,0,1772,lying on lap
+몸/불타는 뿔,0,1772,fiery horns
+음식/스프링클,0,1767,sprinkles
+인원/갸루오,0,1766,gyaruo
+음식/초콜릿 케이크,0,1766,chocolate cake
+소품/전방 손잡이,0,1764,foregrip
+소품/모자 벨트,0,1763,hat belt
+메타/어색한 원근,0,1763,bad perspective
+성인/음경에 립스틱 자국,0,1762,lipstick mark on penis
+성인/젖꼭지 문지르기,0,1761,nipple rub
+동작/키스 암시,0,1761,implied kiss
+양말/뒤 심 스타킹,0,1761,back-seamed legwear
+소품/무술 띠,0,1760,martial arts belt
+옷/드레스 수영복,0,1759,dress swimsuit
+구도/사타구니 강조,0,1759,crotch focus
+동작/양말 고쳐 신기,0,1759,adjusting legwear
+배경/전쟁,0,1758,war
+배경/성운,0,1757,nebula
+동물/염소,0,1757,goat
+동작/손으로 얼굴 가림,0,1757,facepalm
+메타/중국어 번체 글자,0,1753,traditional chinese text
+자세/물구나무,0,1753,handstand
+자세/바닥에 손,0,1753,hand on floor
+동물/멧돼지,0,1752,boar
+메타/어색한 음식,0,1752,bad food
+소품/젖병,0,1751,baby bottle
+동물/팔 위 동물,0,1750,animal on arm
+소품/봉인의 지팡이,0,1749,fuuin no tsue
+소품/닻 목걸이,0,1749,anchor necklace
+옷/이초 사립고 교복,0,1748,icho private high school uniform
+메타/역사 인물 이름 연결,0,1748,historical name connection
+배경/벽돌,0,1748,brick
+몸/몸 없는 눈,0,1746,disembodied eye
+눈/나비 모양 동공,0,1746,butterfly-shaped pupils
+효과/손자국,0,1745,handprint
+메타/슈퍼 사이어인 4,0,1744,super saiyan 4
+옷/동탄 드레스,0,1742,dongtan dress
+상태/정신 붕괴,0,1740,mind break
+성인/귀두 애무,0,1740,glansjob
+옷/털 숄,0,1739,fur shawl
+옷/패딩 재킷,0,1739,down jacket
+효과/보라 테두리,0,1738,purple border
+동물/비단잉어,0,1738,koi
+소품/칼집,0,1738,knife sheath
+동물/날치,0,1738,flying fish
+몸/거대한 가슴근육,0,1736,huge pectorals
+메타/동그라미 9,0,1736,circled 9
+배경/종말 이후,0,1735,post-apocalypse
+소품/콘센트,0,1735,electrical outlet
+성인/용기 속 정액,0,1735,cum in container
+자세/아이 안음,0,1735,child carry
+신발/인라인 스케이트,0,1734,inline skates
+소품/등 뒤로 검 들기,0,1734,holding sword behind back
+몸/탈모,0,1734,balding
+배경/사우나,0,1733,sauna
+자세/상대 귀에 손,0,1731,hand on another's ear
+동작/입에 문 꽃,0,1729,flower in mouth
+소품/머리 위 다이빙 마스크,0,1729,diving mask on head
+소품/지갑,0,1728,wallet
+동작/옷 찢기,0,1728,tearing clothes
+자세/자기 귀에 손,0,1728,hand on own ear
+효과/흥분 코피,0,1728,aroused nosebleed
+소품/팔 커프스,0,1728,arm cuffs
+모자/주교관,0,1727,mitre
+소품/아랫입술 피어싱,0,1726,labret piercing
+옷/은하 팀 조사병단 제복,0,1726,galaxy team survey corps uniform
+성인/개 음경,0,1726,dog penis
+자세/가슴 사이 얼굴,0,1725,face between breasts
+소품/식물 뿌리,0,1724,plant roots
+자세/함께 묶임,0,1724,bound together
+소품/화필,0,1723,art brush
+동작/두 손가락 경례,0,1722,two-finger salute
+메타/코이시의 날,0,1722,koishi day
+구도/생물 강조,0,1722,creature focus
+소품/지휘봉,0,1721,conductor baton
+소품/스페이드 퀸 기호,0,1720,queen of spades symbol
+옷/빨간 트레이닝복,0,1719,red track suit
+성인/엉덩이 위 음경,0,1719,penis on ass
+자세/발가락 사이,0,1719,between toes
+소품/광대 코,0,1718,clown nose
+효과/얼굴에 립스틱 자국,0,1716,lipstick mark on face
+옷/로우라이즈 바지,0,1714,lowleg pants
+소품/PSP,0,1713,playstation portable
+음식/입에 문 토스트,0,1712,toast in mouth
+화풍/굵은 선화,0,1712,thick lineart
+소품/마네키네코,0,1710,maneki-neko
+옷/호그와트 교복,0,1710,hogwarts school uniform
+신발/풀린 신발끈,0,1708,untied shoelaces
+소품/매다는 등,0,1708,hanging light
+동작/옷 잡아당김,0,1708,clothes tug
+소품/오미쿠지,0,1707,omikuji
+화풍/벤데이 점,0,1707,ben-day dots
+몸/셔츠 위로 나온 살,0,1706,shirt overhang
+속옷/블루머 속 팬티,0,1706,panties under buruma
+메타/지구연방,0,1706,earth federation
+배경/가게 앞,0,1704,storefront
+소품/와키자시,0,1703,wakizashi
+동물/고슴도치,0,1703,hedgehog
+소품/단선,0,1702,tuanshan
+소품/돛대,0,1702,mast
+머리/반 왕관 땋기,0,1702,half crown braid
+배경/단색 배경,0,1701,monochrome background
+메타/방법,0,1700,how to
+머리/뿔에 꽃,0,1699,horn flower
+메타/태그,0,1698,tag
+모자/모자 술,0,1698,hat tassel
+인원/웨이터,0,1697,waiter
+옷/한쪽 무릎 보호대,0,1697,single knee pad
+메타/흑인화된 여자,0,1696,blacked female
+소품/폰 참,0,1694,cellphone charm
+소품/버스,0,1694,bus
+소품/스페이드 에이스,0,1694,ace of spades
+몸/한쪽 맨다리,0,1693,single bare leg
+음식/모찌 늘어짐,0,1693,mochi trail
+옷/장갑 리본,0,1693,glove bow
+음식/멜론,0,1692,melon
+소품/종이학,0,1691,paper crane
+동물/순록,0,1690,reindeer
+옷/반바지 속 사이클 팬츠,0,1690,bike shorts under shorts
+메타/2012년,0,1690,2012
+소품/종이들,0,1689,papers
+소품/미사일 포드,0,1689,missile pod
+자세/탁자에 앉음,0,1688,sitting on table
+소품/선물 가방,0,1688,gift bag
+신발/한쪽 부츠,0,1687,single boot
+음식/가슴 위 음식,0,1686,food on breasts
+성인/자기 팬티 속에 손,0,1684,hand in own panties
+소품/독일 국기,0,1684,german flag
+옷/눈 무늬,0,1684,eye print
+동물/악어류,0,1684,crocodilian
+동작/상대 눈 가림,0,1684,covering another's eyes
+소품/공구,0,1683,tools
+동작/단체 포옹,0,1682,group hug
+음식/푸드 아트,0,1682,food art
+옷/표정 있는 옷,0,1682,expressive clothes
+동작/허리 비비기,0,1681,humping
+동작/도둑질,0,1680,theft
+동작/눈 위에 손,0,1680,hand over eye
+옷/곰 의상,0,1680,bear costume
+소품/신문 들기,0,1679,holding newspaper
+자세/지붕 위,0,1677,on roof
+표정/가학,0,1676,sadism
+메타/따뜻한 색감,0,1675,warm colors
+소품/다윗의 별,0,1675,star of david
+소품/칫솔 들기,0,1675,holding toothbrush
+동작/뿜음,0,1674,spit take
+효과/날리는 종이,0,1674,flying paper
+소품/빈백 의자,0,1674,bean bag chair
+속옷/서포터,0,1671,jockstrap
+속옷/끈 브라,0,1670,string bra
+옷/새틴,0,1668,satin
+표정/피학,0,1666,masochism
+효과/포켓몬 기술,0,1665,pokemon move
+효과/무중력,0,1660,zero gravity
+몸/올빼미 귀 깃,0,1659,owl ears
+소품/리코더,0,1658,recorder
+소품/해먹,0,1658,hammock
+소품/거품기 들기,0,1657,holding whisk
+머리/육각형 머리장식,0,1657,hexagon hair ornament
+소품/그릴,0,1656,grill
+효과/둥근 모서리,0,1655,rounded corners
+동작/TV 보기,0,1654,watching television
+동작/머리 헝클기,0,1654,ruffling hair
+효과/옷에 묻은 물감,0,1654,paint on clothes
+소품/폴라로이드 사진,0,1653,polaroid photo
+동물/거대 괴물,0,1653,giant monster
+성인/코 속 정액,0,1653,cum in nose
+옷/기저귀,0,1652,diaper
+상태/부분 인간화,0,1650,partial humanization
+인원/게루도,0,1650,gerudo
+소품/표,0,1647,ticket
+소품/스펠 카드,0,1647,spell card
+메타/하나만 다름,0,1647,odd one out
+몸/넓은 어깨,0,1647,broad shoulders
+옷/늑대 의상,0,1646,wolf costume
+얼굴/듬성한 까칠 수염,0,1646,sparse stubble
+소품/어린이 수영장,0,1645,wading pool
+음식/스테이크,0,1645,steak
+자세/허리 가로지른 팔,0,1645,arm across waist
+모자/챙 넓은 모자,0,1644,wide brim
+표정/엑스트라 얼굴,0,1644,mob face
+배경/새벽,0,1644,dawn
+배경/도시풍,0,1642,urban
+몸/재규어 꼬리,0,1642,jaguar tail
+소품/귀 사슬,0,1641,ear chain
+소품/안전벨트,0,1640,seatbelt
+인원/붉은 오니,0,1640,red oni
+인원/조라,0,1639,zora
+화풍/사진 같은,0,1639,photorealistic
+표정/영문 모름,0,1639,clueless
+음식/각설탕,0,1637,sugar cube
+몸/맥 귀,0,1636,tapir ears
+소품/죽도,0,1634,shinai
+메타/아디다스,0,1634,adidas
+머리/한쪽 머리 날개,0,1632,single head wing
+인원/여자 고블린,0,1632,female goblin
+옷/퍼프 슬래시 소매,0,1630,puff and slash sleeves
+소품/화장 붓,0,1630,makeup brush
+옷/육각형 무늬,0,1630,hexagon print
+메타/라이몬,0,1629,raimon
+메타/이 로리콘 말더듬이,0,1628,kono lolicon domome
+소품/도토리,0,1627,acorn
+메타/점 없음,0,1626,no mole
+메타/보색,0,1626,complementary colors
+동작/스스로 화장하기,0,1625,applying own makeup
+구도/둘러싸임,0,1624,surrounded
+인원/음양사,0,1624,onmyouji
+동작/보는 이 껴안기,0,1624,hugging viewer
+음식/콩,0,1624,beans
+표정/오해,0,1623,misunderstanding
+속옷/큰 브라 컵,0,1622,oversized breast cup
+메타/가린 글자,0,1622,censored text
+옷/흉갑,0,1621,cuirass
+옷/검은 남성 수영복,0,1621,black male swimwear
+옷/양면 망토(클로크),0,1621,two-sided cloak
+옷/한쪽 다리에 걸린 반바지,0,1617,shorts around one leg
+눈/꽉 찬 원형 동공,0,1616,solid circle pupils
+동물/초코보,0,1616,chocobo
+속옷/가슴 패드,0,1616,breast padding
+메타/자해 흉터,0,1615,self-harm scar
+몸/한쪽 귀 처짐,0,1615,one ear down
+인원/복제 하렘,0,1615,clone harem
+동물/어깨 위 고양이,0,1615,cat on shoulder
+구도/셔츠 아래서 본 모습,0,1614,upshirt
+표정/사랑에 빠짐,0,1612,lovestruck
+메타/돌체스트라,0,1612,dollchestra
+옷/방탄 재킷,0,1611,flak jacket
+동작/상대 입에 손가락,0,1611,finger to another's mouth
+옷/양면 장갑,0,1610,two-sided gloves
+소품/화이트보드,0,1609,whiteboard
+메타/2010년,0,1609,2010
+메타/결속 밴드,0,1608,kessoku band
+소품/금 허벅지 장식,0,1608,gold thighlet
+소품/금 머리띠,0,1608,gold circlet
+화풍/교차 빗금,0,1608,crosshatching
+동작/끌기,0,1607,dragging
+동작/이로 물기,0,1605,teeth hold
+소품/보온병,0,1604,thermos
+소품/머리에 쓴 팬티,0,1604,panties on head
+음식/마시멜로,0,1604,marshmallow
+옷/턱받이,0,1603,bib
+효과/튄 자국,0,1602,splatter
+성인/역방향 펠라,0,1601,reverse fellatio
+옷/아오자이,0,1600,ao dai
+메타/글자 벽,0,1599,wall of text
+소품/방울 귀걸이,0,1599,pom pom earrings
+소품/식물 들기,0,1598,holding plant
+동작/불기,0,1598,blowing
+모자/수영 모자,0,1596,swim cap
+옷/군 예복,0,1594,military dress uniform
+인원/족제비 소녀,0,1593,weasel girl
+동물/페가수스,0,1593,pegasus
+효과/평화 기호,0,1593,peace symbol
+소품/듀얼 디스크,0,1593,duel disk
+몸/목 물린 자국,0,1590,bite mark on neck
+소품/피자 상자,0,1589,pizza box
+동작/캐미솔 들추기,0,1589,camisole lift
+옷/스이메이 학원 교복,0,1587,suimei academy school uniform
+소품/유탄 발사기,0,1587,grenade launcher
+자세/헤드폰에 손,0,1586,hand on headphones
+머리/자연스레 떨어진 머리카락,0,1585,naturally detached hair
+자세/상대 다리 잡기,0,1585,holding another's legs
+몸/갈라진 꼬리,0,1585,forked tail
+소품/닻 초커,0,1585,anchor choker
+얼굴/뺨 표시,0,1583,marking on cheek
+옷/시모키타자와 고교 교복,0,1582,shimokitazawa high school uniform
+동작/장갑 물기,0,1582,biting glove
+몸/흰 음모,0,1581,white pubic hair
+성인/옷 속 자위,0,1581,masturbation under clothes
+자세/머리에 겨눈 총,0,1581,gun to head
+옷/드레스 리본,0,1581,dress ribbon
+소품/로그 포스,0,1580,log pose
+소품/번호판,0,1579,license plate
+동물/벌,0,1579,bee
+눈/눈동자 반사,0,1578,eye reflection
+옷/깅엄 체크 옷,0,1577,gingham clothes
+옷/코트 드레스,0,1575,coat dress
+메타/천사 귀여워,0,1574,tenshi kaiwai
+인원/사이어인,0,1573,saiyan
+소품/짤주머니,0,1573,pastry bag
+효과/손 위에 뜬 물체,0,1573,object floating above hand
+효과/달의 위상,0,1572,moon phases
+동작/머리 모아 쥐기,0,1572,bunching hair
+성인/글로리 월,0,1571,glory wall
+소품/초승달 목걸이,0,1571,crescent necklace
+동물/무당벌레,0,1570,ladybug
+메타/키 비교표,0,1570,height chart
+몸/부족 문신,0,1568,tribal tattoo
+소품/화려한 반지,0,1568,ornate ring
+배경/창턱,0,1566,windowsill
+구도/괴물 강조,0,1566,monster focus
+소품/쇠지렛대,0,1566,crowbar
+소품/줄자,0,1564,tape measure
+소품/잘린 팔다리,0,1564,severed limb
+소품/장대 들기,0,1564,holding pole
+성인/자기 젖꼭지 비틀기,0,1563,tweaking own nipple
+배경/현관,0,1563,porch
+구도/여백,0,1563,negative space
+소품/발목 리본,0,1563,ankle bow
+소품/케첩 병,0,1562,ketchup bottle
+인원/아메스쿠 갸루,0,1562,amesuku gyaru
+배경/폭풍,0,1561,storm
+옷/슬링 비키니 상의,0,1561,sling bikini top
+배경/노래방,0,1561,karaoke
+상태/목욕 후,0,1561,after bathing
+인원/세쌍둥이,0,1560,triplets
+모자/리본 테두리 머리쓰개,0,1559,ribbon-trimmed headwear
+소품/하네츠키,0,1559,hanetsuki
+메타/화이트데이,0,1557,white day
+옷/앞이 트인 옷,0,1557,frontless outfit
+머리/반짝이 머리장식,0,1556,sparkle hair ornament
+소품/하프,0,1556,harp
+옷/고양이 의상,0,1556,cat costume
+성인/자기 항문 벌림,0,1555,spreading own anus
+옷/가로줄 두 줄,0,1555,double horizontal stripe
+몸/가슴에 뚫린 구멍,0,1554,hole in chest
+옷/아리아 컴퍼니 제복,0,1554,aria company uniform
+인원/시이카,0,1553,sheikah
+메타/데시,0,1553,desi
+자세/상대 소매 잡기,0,1551,grabbing another's sleeve
+효과/떠 있는 책,0,1551,floating book
+인원/인어 남자,0,1550,merman
+음식/여러 스쿱,0,1549,multiple scoops
+메타/캐릭터 서명,0,1549,character signature
+효과/헤드업 디스플레이,0,1548,heads-up display
+효과/금 간 유리,0,1548,cracked glass
+소품/빔 캐논,0,1548,beam cannon
+옷/파워 슈트,0,1547,power suit
+소품/모래성,0,1546,sand castle
+소품/못 박은 방망이,0,1546,nail bat
+소품/팔 주머니,0,1546,arm pouch
+인원/오타쿠,0,1545,otaku
+자세/무릎에 팔꿈치,0,1544,elbow on knee
+소품/사슬 묶인 손목,0,1544,chained wrists
+소품/담쟁이,0,1543,ivy
+소품/빼빼로 들기,0,1543,holding pocky
+머리/유령 머리장식,0,1543,ghost hair ornament
+배경/조약돌 길,0,1542,cobblestone
+메타/학대,0,1542,abuse
+메타/2011년,0,1542,2011
+모자/세로줄 머리쓰개,0,1541,vertical-striped headwear
+메타/넷나비,0,1541,netnavi
+옷/분홍 스웨터 조끼,0,1539,pink sweater vest
+몸/더러운 발,0,1539,dirty feet
+소품/프로펠러 전투기,0,1537,propeller fighter
+옷/계속 군복,0,1537,keizoku military uniform
+동작/꼬리 껴안기,0,1537,hugging tail
+소품/초록 돌격 바이저,0,1537,green assault visor
+메타/닛신 컵라면,0,1536,nissin cup noodle
+동작/머리 넘기기,0,1536,hair flip
+효과/복사 능력,0,1536,copy ability
+자세/포즈,0,1535,posing
+표정/어머니 같음,0,1535,motherly
+메타/인세키,0,1535,inseki
+옷/그리폰 앤 크루거 군복,0,1535,griffin & kryuger military uniform
+소품/브라질 국기,0,1535,brazilian flag
+동물/앵무새,0,1534,parrot
+소품/다이아몬드 귀걸이,0,1534,diamond earrings
+동작/놀기,0,1533,playing
+소품/손잡이,0,1532,hand grip
+음식/프라이드치킨,0,1532,fried chicken
+몸/그리스형 발가락,0,1531,greek toe
+신발/신발 꽃 장식,0,1531,footwear flower
+몸/등 흉터,0,1530,scar on back
+동작/스스로 머리 말리기,0,1530,drying own hair
+효과/행복한 기운,0,1529,happy aura
+메타/작은 몸 지배,0,1527,smalldom
+음식/샐러드,0,1526,salad
+성인/펠라 흉내,0,1523,simulated fellatio
+인원/경찰,0,1523,policeman
+몸/완전히 드러난 가슴골,0,1523,full cleavage
+음식/양파,0,1522,onion
+몸/가슴근육 사이,0,1522,between pectorals
+효과/왜곡,0,1521,distortion
+소품/손 붕대,0,1520,hand wraps
+동물/페럿,0,1520,ferret
+효과/컬러 타이머,0,1520,color timer
+소품/닌텐도 DS,0,1519,nintendo ds
+효과/떠 있는 카드,0,1519,floating card
+옷/사타구니 지퍼,0,1519,crotch zipper
+음식/크루아상,0,1519,croissant
+옷/가시 어깨 갑옷,0,1518,spiked pauldrons
+옷/멜빵 치마,0,1517,overall skirt
+머리/여러 색 머리방울,0,1517,multicolored hair bobbles
+소품/현상 수배서,0,1516,wanted poster
+소품/LP 레코드,0,1515,vinyl record
+소품/쇼핑 카트,0,1515,shopping cart
+메타/해시태그,0,1515,hashtag
+인원/군대,0,1515,army
+옷/동정 파괴 스웨터,0,1514,virgin destroyer sweater
+옷/키요스미 교복,0,1514,kiyosumi school uniform
+성인/상대 엉덩이에 손,0,1514,hands on another's ass
+옷/털 망토,0,1513,fur cloak
+머리/동전 머리장식,0,1512,coin hair ornament
+자세/상대 가슴에 손,0,1511,hands on another's chest
+메타/후타 서브,0,1510,futasub
+효과/거품,0,1510,foam
+옷/메타모란 조끼,0,1507,metamoran vest
+옷/와 롤리타,0,1506,wa lolita
+몸/파란 음모,0,1506,blue pubic hair
+모자/눈까지 내린 헬멧,0,1505,helmet over eyes
+소품/무기 상자,0,1503,weapon case
+메타/나치,0,1503,nazi
+음식/얼굴에 묻은 크림,0,1503,cream on face
+몸/족제비 꼬리,0,1502,weasel tail
+음식/파인애플,0,1501,pineapple
+자세/자기 다리 뒤로 잡기,0,1501,holding own legs back
+소품/깨진 거울,0,1501,broken mirror
+자세/뒤돌아 앉음,0,1500,sitting backwards
+음식/어묵,0,1500,kamaboko
+상태/참수,0,1500,decapitation
+소품/아이스투스 에스투스,0,1500,aestus estus
+소품/트로피,0,1499,trophy
+옷/팔꿈치 갑옷,0,1499,couter
+음식/콜라,0,1499,cola
+몸/핏줄 선 손,0,1497,veiny hands
+상태/정사 후 암시,0,1497,implied after sex
+소품/울트라볼,0,1496,ultra ball
+소품/아이팟,0,1496,ipod
+옷/떨어진 단추,0,1495,popped button
+메타/손목 긋기,0,1493,wrist cutting
+구도/소실점,0,1493,vanishing point
+동물/강아지,0,1493,puppy
+소품/크리스마스 양말,0,1493,christmas stocking
+동작/마사지,0,1492,massage
+동작/귀 핥기,0,1491,licking ear
+배경/무덤,0,1491,grave
+소품/국화 문양,0,1490,kikumon
+인원/고슴도치 소녀,0,1489,hedgehog girl
+옷/귀족풍 옷,0,1489,aristocratic clothes
+배경/부스 좌석,0,1488,booth seating
+옷/모피,0,1487,pelt
+동작/부수기,0,1487,breaking
+효과/총구 화염,0,1486,muzzle flash
+소품/게임보이,0,1486,game boy
+동작/아기 안기,0,1485,carrying baby
+인원/소년 샌드위치,0,1485,boy sandwich
+메타/굿 엔딩,0,1483,good end
+메타/트리니티 종합학원 로고,0,1482,trinity general school logo
+자세/난간에 손,0,1482,hand on railing
+동작/손가락 세기,0,1482,finger counting
+자세/탁자에 팔꿈치,0,1482,elbow on table
+동작/피아노 연주,0,1481,playing piano
+소품/비행선,0,1481,airship
+소품/모토유이,0,1479,motoyui
+동작/꼬리로 들기,0,1479,holding with tail
+소품/립글로스,0,1478,lipgloss
+소품/담뱃갑,0,1478,cigarette pack
+인원/마법사,0,1477,wizard
+효과/화면 너머,0,1477,through screen
+머리/별 박힌 머리,0,1477,starry hair
+효과/구멍,0,1477,hole
+옷/사이버 패션,0,1477,cyber fashion
+소품/알약 귀걸이,0,1475,pill earrings
+머리/보석 머리장식,0,1475,gem hair ornament
+소품/차크람,0,1474,chakram
+옷/분홍 트레이닝복,0,1471,pink track suit
+소품/인장,0,1470,seal impression
+모자/삿갓,0,1470,rice hat
+메타/블루스카이 아이디,0,1470,bluesky username
+소품/마테리아,0,1469,materia
+메타/말해,0,1468,year of the horse
+자세/나비 앉기,0,1468,butterfly sitting
+몸/까칠한 음모,0,1467,pubic stubble
+속옷/두두,0,1467,dudou
+인원/원숭이 소년,0,1466,monkey boy
+자세/상대 뿔 잡기,0,1466,holding another's horns
+머리/뒤로 묶은 옆머리,0,1465,sidelocks tied back
+자세/머리에 손,0,1465,hand to head
+동작/코끼리 맞대기,0,1464,noses touching
+몸/머리카락 사이로 보이는 귀,0,1463,ears visible through hair
+소품/붕대 감은 손가락,0,1463,bandaged fingers
+메타/차가운 색감,0,1462,cool colors
+동작/엉덩이 가림,0,1461,covering ass
+속옷/속옷 글씨,0,1460,underwear writing
+메타/DVD 표지,0,1460,dvd cover
+메타/버블티 챌린지,0,1460,bubble tea challenge
+신발/발걸이 신발,0,1459,stirrup footwear
+동물/북극곰,0,1459,polar bear
+음식/위스키,0,1458,whiskey
+배경/엘리베이터,0,1458,elevator
+소품/맥주병,0,1457,beer bottle
+음식/무,0,1456,radish
+옷/나나이로가오카 중학교 교복,0,1456,nanairogaoka middle school uniform
+소품/폴더,0,1456,folder
+머리/접은 머리,0,1456,folded hair
+효과/글리터,0,1455,glitter
+동작/발로 들기,0,1453,holding with feet
+소품/밴,0,1449,van
+자세/상대 허리에 손,0,1449,hands on another's waist
+동작/안절부절,0,1449,fidgeting
+자세/머리 위에 머리,0,1446,head on head
+소품/머리 밴드,0,1446,bandaid on head
+메타/수학,0,1445,math
+머리/부채 머리장식,0,1445,fan hair ornament
+소품/에너지 대포,0,1445,energy cannon
+메타/2009년,0,1445,2009
+동작/재채기,0,1444,sneezing
+효과/녹아내림,0,1444,dissolving
+속옷/신부 란제리,0,1444,bridal lingerie
+성인/인간형에 동물 성기,0,1444,animal genitalia on humanoid
+옷/양면 치마,0,1444,two-sided skirt
+신발/털 부츠,0,1443,fur boots
+효과/별자리,0,1442,zodiac
+표정/배고픔,0,1441,hungry
+몸/동물 머리,0,1441,animal head
+인원/거대한 남자,0,1440,giant male
+소품/메뉴판,0,1438,menu board
+인원/간구로,0,1438,ganguro
+음식/캐릭터 모양 음식,0,1438,character-themed food
+소품/스톱워치,0,1437,stopwatch
+동물/참새,0,1437,sparrow
+인원/이불 유령,0,1437,sheet ghost
+소품/건블레이드,0,1437,gunblade
+눈/사시,0,1437,cross-eyed
+자세/기기,0,1437,crawling
+메타/능력치,0,1436,stats
+음식/멜론빵,0,1436,melon bread
+구도/아이소메트릭,0,1436,isometric
+소품/플라스크 들기,0,1436,holding flask
+배경/은하수,0,1435,milky way
+동작/머리 땋기,0,1435,braiding hair
+몸/꿰맨 몸통,0,1432,stitched torso
+동작/재킷 들추기,0,1431,jacket lift
+자세/자기 다리에 손,0,1429,hands on own legs
+소품/짐볼,0,1428,exercise ball
+소품/오다이바코,0,1427,odaibako
+메타/투명 검열,0,1426,transparent censoring
+효과/머리 김,0,1426,head steam
+옷/프라우다 교복,0,1424,pravda school uniform
+인원/미라,0,1423,mummy
+효과/이마에서 피,0,1423,blood from forehead
+동작/발 간지럼,0,1422,tickling feet
+소품/뒷머리 헤드폰,0,1422,behind-the-head headphones
+옷/토끼 의상,0,1421,rabbit costume
+소품/긴차쿠,0,1421,kinchaku
+동작/두 손 메탈 손짓,0,1420,double \\m/
+메타/오른쪽에서 왼쪽 만화,0,1419,right-to-left comic
+옷/반쯤 집어넣은 셔츠,0,1418,shirt partially tucked in
+구도/옷 입은 남자와 벗은 남자,0,1418,clothed male nude male
+배경/버려진,0,1418,abandoned
+몸/온몸 흉터,0,1417,scars all over
+소품/체스판,0,1416,chessboard
+소품/단도,0,1415,tantou
+음식/얼굴에 붙은 밥풀,0,1415,rice on face
+동작/한쪽 가슴 가림,0,1413,covering one breast
+소품/스키 고글,0,1412,ski goggles
+배경/공중화장실,0,1412,public restroom
+성인/쓴 콘돔 낀 음경,0,1411,used condom on penis
+메타/잉크토버,0,1411,inktober
+메타/크레딧,0,1410,credits
+메타/메모,0,1409,note
+메타/메타,0,1409,meta
+옷/젖꼭지 구멍,0,1408,nipple cutout
+인원/미노타우로스,0,1407,minotaur
+배경/가드레일,0,1407,guard rail
+효과/가슴에 묻은 피,0,1407,blood on chest
+성인/고환 쥐기,0,1404,testicle grab
+옷/판코우,0,1404,pankou
+상태/약에 취함,0,1403,drugged
+소품/가마솥,0,1403,cauldron
+자세/엉덩이 맞대기,0,1403,ass-to-ass
+소품/다리 밴드,0,1402,legband
+동물/머리 위 생물,0,1402,creature on head
+소품/국화,0,1400,chrysanthemum
+옷/무릎 갑옷,0,1399,poleyn
+소품/털 초커,0,1399,fur choker
+소품/구급상자,0,1399,first aid kit
+옷/빅토리아풍,0,1398,victorian
+성인/가슴근육에 사정,0,1397,cum on pectorals
+소품/라이터 들기,0,1396,holding lighter
+옷/원숄더 드레스,0,1395,single-shoulder dress
+동작/지켜줌,0,1395,protecting
+화풍/중세풍,0,1394,medieval
+인원/여장 공,0,1394,josou seme
+인원/스킬라,0,1393,scylla
+동작/머리 긁기,0,1393,scratching head
+옷/보송한 옷,0,1393,fluffy clothes
+몸/양팔다리 절단,0,1393,double amputee
+효과/방사능 기호,0,1392,radiation symbol
+메타/2P,0,1392,player 2
+소품/목 밴드,0,1391,bandaid on neck
+동작/상대 목 핥기,0,1389,licking another's neck
+머리/불가사리 머리장식,0,1388,starfish hair ornament
+소품/별 지팡이,0,1388,star wand
+소품/욱일기,0,1388,rising sun flag
+메타/닛산,0,1387,nissan
+동작/치마 펄럭임,0,1386,skirt flip
+몸/치아 교정기,0,1386,braces
+인원/옷 입은 로봇,0,1385,clothed robot
+소품/나란한 피어싱,0,1382,parallel piercings
+성인/남자 셋,0,1382,mmm threesome
+몸/조스타 반점,0,1380,joestar birthmark
+옷/하라마키,0,1380,haramaki
+소품/산탄 탄피,0,1378,shotgun shell
+소품/야간투시경,0,1378,night vision device
+소품/제트팩,0,1378,jetpack
+동물/딱정벌레,0,1378,beetle
+동작/스포츠 브라 들추기,0,1377,sports bra lift
+음식/군고구마,0,1377,roasted sweet potato
+메타/몬스터볼 테마,0,1376,poke ball theme
+소품/빨랫줄,0,1376,clothesline
+동작/앞치마 들추기,0,1376,apron lift
+동작/반쪽 하트 손,0,1375,half-heart hands
+메타/쥐해,0,1374,year of the rat
+소품/해적 깃발,0,1374,jolly roger
+속옷/뒤 무늬 팬티,0,1374,back-print panties
+동작/장난,0,1373,prank
+배경/유성우,0,1373,meteor shower
+인원/마법 소년,0,1373,magical boy
+동작/작은 사람 들기,0,1373,holding mini person
+소품/손가락 사이 칼,0,1371,knives between fingers
+소품/H&K UMP,0,1371,h&k ump
+메타/여분의 얼굴,0,1371,extra faces
+자세/튜브 위,0,1370,on innertube
+소품/서예 붓 들기,0,1370,holding calligraphy brush
+자세/칼자루에 두 손,0,1370,hands on hilt
+자세/앞뒤로 포개짐,0,1370,front-to-back
+소품/코르크,0,1370,cork
+머리/호랑가시 머리장식,0,1369,holly hair ornament
+몸/알파카 귀,0,1369,alpaca ears
+동물/특이한 탈것,0,1368,unconventional steed
+자세/나뭇가지에 앉음,0,1368,sitting on branch
+옷/라스트 디펜스 학원 교복,0,1367,last defense academy school uniform
+인원/하이에나 소년,0,1367,hyena boy
+동작/골반 천 들추기,0,1366,pelvic curtain lift
+소품/펜더 스트라토캐스터,0,1365,fender stratocaster
+소품/재떨이,0,1365,ashtray
+메타/메타 벽에 기댐,0,1364,against fourth wall
+인원/세일러 전사,0,1363,sailor senshi
+배경/여러 도리이,0,1363,multiple torii
+메타/호요페어,0,1363,hoyofair
+메타/에로 그로,0,1362,ero guro
+소품/고삐 쥐기,0,1361,holding reins
+옷/엠파이어 웨이스트,0,1361,empire waist
+소품/전투용 칼,0,1360,combat knife
+음식/브로콜리,0,1360,broccoli
+성인/숨긴 음경,0,1359,tucked penis
+배경/레드 카펫,0,1359,red carpet
+소품/천개 침대,0,1359,canopy bed
+옷/이모 패션,0,1358,emo fashion
+소품/손목 벨트,0,1357,wrist belt
+메타/평범함을 멋지게,0,1357,mundane made awesome
+옷/가슴골 위 구멍,0,1357,above-cleavage cutout
+소품/쇠공 족쇄,0,1356,ball and chain restraint
+배경/타일 천장,0,1355,tile ceiling
+동작/상대 옷 입혀주기,0,1355,dressing another
+동작/옷 냄새 맡기,0,1354,smelling clothes
+자세/자기 사타구니에 손,0,1354,hand on own crotch
+옷/떠 있는 넥웨어,0,1354,floating neckwear
+머리/밑동 있는 트윈테일,0,1353,twintails with hair base
+얼굴/빠진 이,0,1353,missing tooth
+소품/등에 멘 방패,0,1351,shield on back
+메타/살인,0,1350,murder
+소품/칼레이도스틱,0,1350,kaleidostick
+성인/애무,0,1349,foreplay
+메타/몸 바꾸기,0,1349,body switch
+성인/소변 얼룩,0,1348,pee stain
+속옷/남성 속옷 엿보임,0,1348,male underwear peek
+효과/다른 그림자,0,1348,different shadow
+인원/아라크네,0,1348,arachne
+동물/앙고라 토끼,0,1348,angora rabbit
+인원/눈표범 소녀,0,1347,snow leopard girl
+메타/괴롭힘,0,1347,bullying
+소품/봉래의 옥가지,0,1346,jeweled branch of hourai
+소품/마커 들기,0,1346,holding marker
+소품/음식 포장지,0,1345,food wrapper
+효과/가슴 위 불,0,1345,fire on chest
+옷/고딕 펑크,0,1343,gothic punk
+소품/비누 병,0,1342,soap bottle
+소품/확장 테이프,0,1342,dilation tape
+소품/커프스 단추,0,1341,cuff links
+동작/주먹 인사,0,1340,fist bump
+메타/일본 경찰,0,1339,japan national police
+효과/초록 불꽃,0,1339,green fire
+옷/육상복,0,1338,track uniform
+몸/거대한 팔다리,0,1338,oversized limbs
+동물/수달,0,1338,otter
+소품/오링 하네스,0,1338,o-ring harness
+옷/나뭇잎 마을 닌자복,0,1338,konohagakure shinobi uniform
+소품/베이스 기타 들기,0,1337,holding bass guitar
+동물/아기 오리,0,1336,duckling
+몸/물갈퀴 손,0,1335,webbed hands
+소품/풀린 목 리본,0,1335,undone neck ribbon
+성인/가려진 음부,0,1335,covered pussy
+소품/낫,0,1334,sickle
+소품/고무 보트,0,1334,inflatable raft
+인원/발키리,0,1332,valkyrie
+소품/쇠파이프,0,1332,lead pipe
+동작/비키니 상의 당기기,0,1331,bikini top pull
+소품/머리 위 해골,0,1330,skull on head
+효과/물 위 꽃,0,1330,flower on liquid
+음식/계란말이,0,1328,tamagoyaki
+메타/만자,0,1325,swastika
+소품/그물,0,1325,net
+음식/소프트 아이스크림,0,1324,soft serve
+메타/성격 이탈,0,1324,out of character
+옷/음양 무늬,0,1323,yin yang print
+상태/얼어붙음,0,1323,frozen
+동물/잠자리,0,1323,dragonfly
+동작/어깨 으쓱,0,1321,shrugging
+동작/아호게 흔들기,0,1321,ahoge wag
+옷/서더스 군복,0,1320,saunders military uniform
+소품/목검,0,1320,bokken
+옷/BC 자유 군복,0,1320,bc freedom military uniform
+인원/원숭이 소녀,0,1319,monkey girl
+몸/불타는 날개,0,1319,fiery wings
+소품/메뉴판 들기,0,1318,holding menu
+소품/눈토끼,0,1317,snow rabbit
+배경/후지산,0,1317,mount fuji
+효과/다이맥스,0,1317,dynamax
+자세/엎드림,0,1315,face down
+모자/비행모,0,1315,aviator cap
+얼굴/중간 구레나룻,0,1314,medium sideburns
+옷/치슝루췬,0,1313,qixiong ruqun
+소품/체스,0,1313,chess
+메타/미국,0,1312,united states
+동작/바느질,0,1312,sewing
+소품/온바시라,0,1311,onbashira
+자세/탁자에 기댐,0,1311,leaning on table
+효과/이모티콘,0,1311,emoticon
+음식/동물 모양 음식,0,1311,animal-themed food
+인원/맥 소녀,0,1310,tapir girl
+얼굴/구레나룻 수염,0,1310,mutton chops
+인원/말 소년,0,1310,horse boy
+소품/횃불 들기,0,1308,holding torch
+동작/뺨 긁기,0,1307,scratching cheek
+효과/격자,0,1307,grid
+소품/프랑스 국기,0,1307,french flag
+동작/재킷 벗기,0,1306,removing jacket
+몸/수달 귀,0,1306,otter ears
+배경/촛불,0,1306,candlelight
+동작/스스로 껴안기,0,1305,self hug
+소품/철퇴 들기,0,1305,holding mace
+화풍/서예,0,1303,calligraphy
+옷/장갑 구멍,0,1302,glove cutout
+옷/펭귄 후드,0,1301,penguin hood
+동작/가슴근육 눌림,0,1301,pectoral press
+동작/무릎베개 권유,0,1301,lap pillow invitation
+효과/블랙홀,0,1301,black hole
+음식/소스,0,1300,sauce
+소품/광학 조준경,0,1300,optical sight
+성인/가려진 삽입,0,1300,covered penetration
+자세/도게자,0,1299,dogeza
+동작/서핑,0,1298,surfing
+자세/어깨에 앉음,0,1297,sitting on shoulder
+옷/소매에서 뺀 팔,0,1297,arm out of sleeve
+음식/잼,0,1296,jam
+메타/토요타,0,1295,toyota
+메타/자살,0,1295,suicide
+몸/가슴근육 아랫살,0,1293,underpec
+효과/가슴에 묻은 피,0,1292,blood on breasts
+옷/얼룩진 옷,0,1291,stained clothes
+소품/우유갑 들기,0,1290,holding milk carton
+몸/가려진 가슴근육,0,1290,covered pectorals
+소품/향로,0,1289,incense burner
+소품/물뿌리개 들기,0,1289,holding watering can
+음식/진저브레드맨,0,1289,gingerbread man
+메타/유아 성애,0,1288,toddlercon
+옷/비늘 갑옷,0,1288,scale armor
+머리/행성 머리장식,0,1288,planet hair ornament
+동작/음악 듣기,0,1288,listening to music
+몸/표범 귀,0,1288,leopard ears
+머리/위로 떠오른 머리카락,0,1288,hair floating upwards
+표정/x3,0,1287,x3
+소품/머리 위 종이,0,1287,paper on head
+소품/수직 손잡이,0,1286,vertical foregrip
+동작/자기 뱃살 집기,0,1286,pinching own belly
+동작/목도리 고쳐 매기,0,1286,adjusting scarf
+동물/흰동가리,0,1283,clownfish
+옷/비키니 쇼츠,0,1283,bikini shorts
+눈/넓은 타원 눈,0,1282,wide oval eyes
+소품/아령 들기,0,1282,holding dumbbell
+동물/지네,0,1282,centipede
+소품/수레,0,1282,cart
+배경/광고판,0,1282,billboard
+속옷/반바지 속 팬티,0,1281,panties under shorts
+상태/투명,0,1280,invisible
+옷/후드 트랙 재킷,0,1280,hooded track jacket
+메타/소련,0,1277,soviet
+소품/대파 들기,0,1277,holding spring onion
+인원/여성스러운 소년,0,1277,girly boy
+구도/원형 대형,0,1277,circle formation
+옷/바리아 슈트,0,1276,varia suit
+소품/치마 바구니,0,1276,skirt basket
+소품/곤봉 들기,0,1276,holding club
+자세/상대 트윈테일 잡기,0,1276,grabbing another's twintails
+동작/여럿이 탐,0,1275,multiple riders
+메타/유행어,0,1275,catchphrase
+표정/억지 미소,0,1274,forced smile
+소품/FN P90,0,1274,fn p90
+음식/양배추,0,1274,cabbage
+모자/과일 모자 장식,0,1272,fruit hat ornament
+옷/프릴 끈,0,1272,frilled straps
+소품/스카우터,0,1271,scouter
+소품/안 쓰는 타이어,0,1269,unused tire
+자세/컴퓨터 앞,0,1269,at computer
+머리/다른 머리장식,0,1269,alternate hair ornament
+소품/톤파,0,1268,tonfa
+옷/칸바 여고 교복,0,1267,kanba girls high school uniform
+몸/겨드랑이 점,0,1266,mole on armpit
+모자/뿔 달린 모자,0,1266,horned hat
+소품/구불구불한 빨대,0,1266,crazy straw
+소품/붕대 감은 발,0,1266,bandaged foot
+옷/아카츠키 제복,0,1266,akatsuki uniform
+동물/와이번,0,1265,wyvern
+옷/가린 사타구니,0,1265,covered groin
+음식/베이컨,0,1265,bacon
+메타/네오 지온,0,1264,neo zeon
+효과/립스틱 자국 고리,0,1264,lipstick ring
+옷/가라테복,0,1264,karate gi
+소품/메모장 들기,0,1263,holding notepad
+효과/정체불명 붉은 액체,0,1263,ambiguous red liquid
+성인/음부 위 음경,0,1262,penis on pussy
+소품/자전거 바구니,0,1262,bicycle basket
+동작/끈팬티 옆으로 젖힘,0,1261,thong aside
+몸/옷 너머 보이는 음부 문신,0,1261,pubic tattoo visible through clothes
+동작/데이트,0,1261,dating
+동작/청혼,0,1259,marriage proposal
+소품/연잎,0,1259,lotus leaf
+소품/빨래 바구니,0,1258,laundry basket
+몸/귀 반점,0,1258,ear birthmark
+표정/중2병,0,1258,chuunibyou
+구도/무기 강조,0,1257,weapon focus
+소품/탐조등,0,1257,searchlight
+소품/가장무도회 가면,0,1257,masquerade mask
+몸/갈기,0,1257,mane
+인원/나방 소녀,0,1256,moth girl
+소품/커피포트,0,1256,coffee pot
+동물/작은 동물,0,1255,undersized animal
+옷/보라 스웨터 조끼,0,1255,purple sweater vest
+성인/남자가 후타에게,0,1255,male on futa
+효과/팔괘,0,1254,trigram
+소품/수갑 들기,0,1254,holding handcuffs
+메타/패키지 일러스트,0,1252,box art
+효과/초록 윤곽선,0,1251,green outline
+몸/발가락 틈,0,1250,toe cleavage
+메타/일본,0,1250,japan
+효과/목에 묻은 피,0,1250,blood on neck
+소품/배구 네트,0,1249,volleyball net
+성인/테이프 결박,0,1249,tape bondage
+머리/나사 머리장식,0,1249,screw hair ornament
+소품/MG42,0,1249,mg42
+몸/사지 절단,0,1248,quadruple amputee
+눈/튀어나온 눈,0,1248,bulging eyes
+소품/함께 낀 이어폰,0,1247,shared earphones
+표정/슬픈 미소,0,1247,sad smile
+소품/오비도메,0,1247,obidome
+소품/전자레인지,0,1246,microwave
+소품/출입 금지,0,1246,keep out
+얼굴/눈 위 점,0,1245,mole above eye
+소품/수련,0,1244,water lily flower
+옷/토키사다메 교복,0,1244,tokisadame school uniform
+옷/풍림관 고교 교복,0,1243,fuurinkan high school uniform
+머리/소 귀 머리띠,0,1243,cow ear hairband
+모자/여성 제모,0,1242,female service cap
+옷/헤키호 학원 교복,0,1241,hekiho academy school uniform
+옷/칼라 홀터넥,0,1241,collared halterneck
+자세/물 위에 누움,0,1240,lying on water
+음식/초콜릿 입힌 음식,0,1240,chocolate-covered food
+메타/사고,0,1240,accident
+구도/후타나리 시점,0,1237,futanari pov
+소품/낚싯줄,0,1237,fishing line
+옷/루나 노바 교복,0,1236,luna nova school uniform
+메타/성스러운 5인조,0,1235,holy quintet
+자세/상대 손목 잡기,0,1235,holding another's wrists
+동작/조르기,0,1235,choke hold
+모자/와타보시,0,1234,wataboushi
+옷/데코라,0,1234,decora
+소품/소변기,0,1233,urinal
+옷/허리에 맨 셔츠,0,1233,shirt around waist
+동작/악수,0,1233,handshake
+눈/시계 눈,0,1233,clock eyes
+동작/밀어내기,0,1232,pushing away
+소품/손가락 사이 부적,0,1232,ofuda between fingers
+몸/꿰맨 목,0,1230,stitched neck
+동작/재기,0,1229,measuring
+화풍/헤이세이 레트로,0,1229,heisei retro
+눈/한쪽 기계 눈,0,1228,single mechanical eye
+소품/화승총,0,1228,firelock
+소품/비치 매트,0,1228,beach mat
+소품/목욕 의자,0,1228,bath stool
+몸/나무 뿔,0,1227,tree horns
+동물/장어,0,1227,eel
+옷/발 갑옷,0,1226,sabaton
+성인/반쯤 발기,0,1225,half-erect
+화풍/성적인 치비,0,1224,sexualized chibi
+효과/녹,0,1224,rust
+메타/홀로미스,0,1224,holomyth
+눈/사륜안,0,1223,sharingan
+동작/동시 작업,0,1223,multitasking
+소품/조이콘,0,1223,joy-con
+동작/숨 참기,0,1223,holding breath
+몸/가시,0,1222,spines
+음식/산딸기,0,1222,raspberry
+메타/포켓몬 팀,0,1222,pokemon team
+표정/냥,0,1222,nyan
+소품/프라모델,0,1222,model kit
+성인/짙은 소음순,0,1222,dark labia
+소품/나침반,0,1222,compass
+자세/상대 발 잡기,0,1221,holding another's foot
+소품/황금 사과,0,1221,golden apple
+소품/고사리,0,1221,fern
+소품/크리스마스 리스,0,1221,christmas wreath
+소품/전쟁 망치,0,1220,war hammer
+몸/꼬리 흉터,0,1220,scar on tail
+인원/의붓 남매,0,1219,step-siblings
+자세/주머니에 손,0,1219,hands in pocket
+옷/반쯤 벗은 셔츠,0,1217,shirt partially removed
+머리/날개 머리,0,1217,hair wings
+속옷/초소형 브라,0,1216,micro bra
+몸/엉덩이 문신,0,1216,ass tattoo
+소품/팔 구속대,0,1216,armbinder
+소품/닻 장식,0,1216,anchor ornament
+소품/촛대,0,1215,candelabra
+동작/책 껴안기,0,1214,hugging book
+소품/캔 커피,0,1214,canned coffee
+인원/유령 소녀,0,1213,ghost girl
+동물/새끼 고양이,0,1212,kitten
+소품/쓰레기,0,1211,trash
+효과/빛나는 손,0,1210,glowing hand
+소품/메스,0,1209,scalpel
+동물/어깨 위 생물,0,1209,creature on shoulder
+소품/아케이드 게임기,0,1208,arcade cabinet
+옷/뒤 리본,0,1208,back ribbon
+소품/티 세트,0,1207,tea set
+성인/상대 항문 벌림,0,1207,spreading another's anus
+머리/스페이드 머리장식,0,1207,spade hair ornament
+소품/서프보드 들기,0,1207,holding surfboard
+머리/뿔 사이 머리카락,0,1207,hair between horns
+옷/압박 셔츠,0,1207,compression shirt
+인원/이모와 조카,0,1207,aunt and niece
+옷/무지갯빛 옷,0,1206,iridescent clothes
+동작/추파,0,1206,flirting
+몸/플러그 꼬리,0,1206,electric plug tail
+소품/요석,0,1205,kaname-ishi
+옷/플뢰르 드 라팽 제복,0,1205,fleur de lapin uniform
+소품/반지 목걸이,0,1204,ring necklace
+옷/오다이바 여고 교복,0,1204,odaiba girls high school uniform
+소품/삼각 플라스크,0,1204,erlenmeyer flask
+효과/아래 조명,0,1203,underlighting
+소품/옷걸이 들기,0,1203,holding clothes hanger
+메타/가짜 영상,0,1203,fake video
+인원/모두,0,1203,absolutely everyone
+소품/삼각대,0,1202,tripod
+성인/가슴에 음경,0,1201,penis to breast
+메타/위선,0,1200,hypocrisy
+메타/검로드 아이디,0,1200,gumroad username
+몸/어깨 물린 자국,0,1200,bite mark on shoulder
+소품/얼룩진 시트,0,1199,stained sheets
+속옷/빨간 남성 속옷,0,1199,red male underwear
+소품/경찰차,0,1199,police car
+성인/음경 그림자,0,1199,penis shadow
+동작/짓누르기,0,1198,crushing
+소품/굴레,0,1198,bridle
+옷/위팔 갑옷,0,1197,rerebrace
+효과/주황 테두리,0,1197,orange border
+자세/턱에 두 손,0,1197,hands on own chin
+자세/머리 위로 팔,0,1197,arm over head
+눈/사각 동공,0,1196,square pupils
+옷/원숄더 셔츠,0,1196,single-shoulder shirt
+동작/보는 이 때리기,0,1195,punching viewer
+동작/자기 손가락 물기,0,1195,biting own finger
+소품/평면 TV,0,1194,flat screen tv
+효과/대비,0,1194,contrast
+옷/대비되는 옷깃,0,1193,contrast lapels
+옷/경주 번호표,0,1192,race bib
+소품/기관차,0,1192,locomotive
+효과/액체 후광,0,1191,liquid halo
+몸/염소 꼬리,0,1190,goat tail
+몸/갑각,0,1190,carapace
+상태/전투 손상,0,1190,battle damage
+옷/와그나리아 제복,0,1189,wagnaria uniform
+옷/스타라이트 학원 교복,0,1189,starlight academy school uniform
+효과/달러 기호,0,1189,dollar sign
+동작/자르기,0,1189,cutting
+얼굴/갈라진 턱,0,1189,cleft chin
+동물/아귀,0,1189,anglerfish
+옷/농구 유니폼,0,1188,basketball jersey
+음식/웨하스 스틱,0,1187,wafer stick
+소품/토글 단추,0,1187,toggles
+옷/요토 고교 교복,0,1186,youtou high school uniform
+메타/테마 사물,0,1186,themed object
+소품/노,0,1186,oar
+표정/가오,0,1186,gao
+효과/사각형,0,1185,square
+소품/스마트폰 케이스,0,1185,smartphone case
+몸/보라 음모,0,1185,purple pubic hair
+양말/분홍 레그워머,0,1185,pink leg warmers
+메타/헤로핀,0,1185,heropin
+배경/목욕탕,0,1185,bathhouse
+성인/수음 시늉,0,1184,handjob gesture
+소품/투척용 칼,0,1183,throwing knife
+옷/어깨 보호대,0,1183,shoulder guard
+옷/브라질 국기 무늬,0,1183,brazilian flag print
+메타/L 손,0,1182,l hand
+배경/졸업식,0,1182,graduation
+효과/백합 문장,0,1181,fleur-de-lis
+속옷/브라 컵,0,1181,bust cup
+메타/오징어 부리 스플래툰,0,1180,squidbeak splatoon
+소품/디지털 시계,0,1180,digital clock
+소품/날개 달린 유니콘 인형,0,1179,stuffed winged unicorn
+옷/스웨터 속 셔츠,0,1179,shirt under sweater
+옷/스쿠프넥,0,1179,scoop neck
+옷/패스트푸드 유니폼,0,1179,fast food uniform
+소품/후두 마이크,0,1178,throat microphone
+인원/마술사,0,1178,magician
+동작/뺨에 손가락,0,1178,fingers to cheeks
+배경/차양,0,1178,awning
+동작/동물 타기,0,1177,riding animal
+효과/종이 질감,0,1177,paper texture
+모자/눈을 덮은 모자,0,1176,hat over eyes
+배경/하쿠레이 신사,0,1176,hakurei shrine
+옷/수단,0,1176,cassock
+몸/수북한 가슴털,0,1175,thick chest hair
+눈/그늘 속 눈,0,1175,eyes in shadow
+옷/거미 무늬,0,1174,spider print
+소품/바늘,0,1174,sewing needle
+옷/반바지 속 레깅스,0,1174,leggings under shorts
+자세/상대 등에 손,0,1174,hands on another's back
+효과/나선,0,1173,spiral
+소품/계급장,0,1173,military rank insignia
+소품/키블레이드,0,1173,keyblade
+소품/전기톱 들기,0,1173,holding chainsaw
+화풍/일본화,0,1171,nihonga
+소품/한쪽 눈 가면,0,1171,mask over one eye
+메타/의뢰인 삽입,0,1171,commissioner insert
+소품/국자,0,1170,hishaku
+배경/어두운 방,0,1169,dark room
+소품/청소기,0,1168,vacuum cleaner
+효과/픽셀 하트,0,1168,pixel heart
+인원/여집사,0,1168,female butler
+자세/베개에 얼굴,0,1168,face in pillow
+얼굴/검은 입,0,1168,black mouth
+옷/유메노사키 교복,0,1167,yumenosaki school uniform
+몸/삐져나온 옆살,0,1167,muffin top
+소품/짝짝이 렌즈 안경,0,1167,heterochromatic eyewear
+소품/하트 스티커,0,1167,heart sticker
+음식/과일 컵,0,1167,fruit as cup
+소품/계산대,0,1167,cash register
+상태/강함,0,1166,strong
+소품/쌍안경 들기,0,1165,holding binoculars
+배경/떠 있는 바위,0,1165,floating rock
+옷/개조 교복,0,1164,adapted uniform
+음식/딸기 조각,0,1163,strawberry slice
+성인/가려진 음핵,0,1163,covered clitoris
+몸/가는 다리,0,1162,slim legs
+옷/발자국 무늬,0,1162,paw print pattern
+상태/익사,0,1162,drowning
+성인/용기 속 모유,0,1161,breast milk in container
+소품/천등,0,1160,sky lantern
+옷/사패복,0,1160,shihakusho
+효과/가슴 위 하트,0,1160,heart on chest
+음식/에호마키,0,1160,ehoumaki
+동물/손 위 동물,0,1160,animal on hand
+효과/콧물,0,1159,runny nose
+동물/팔 위 새,0,1159,bird on arm
+옷/끈 두 개 슬립,0,1157,double strap slip
+소품/포커 테이블,0,1156,poker table
+옷/애쉬포드 학원 교복,0,1156,ashford academy school uniform
+동작/엄지 아래로,0,1155,thumbs down
+소품/손목 꽃,0,1154,wrist flower
+옷/표범 무늬 비키니,0,1154,leopard print bikini
+동작/하트 손 실패,0,1154,heart hands failure
+소품/화염방사기,0,1154,flamethrower
+성인/안경에 사정,0,1154,cum on eyewear
+동작/팔 흔들기,0,1153,waving arms
+옷/서머 포켓 교복,0,1153,summer pockets school uniform
+메타/기념일 축하,0,1153,happy anniversary
+소품/깁스,0,1153,cast
+옷/안치오 군복,0,1153,anzio military uniform
+동작/액체 위 걷기,0,1152,walking on liquid
+인원/파충류 소년,0,1152,reptile boy
+상태/얽힘,0,1152,entangled
+소품/변장,0,1152,disguise
+소품/손수레,0,1151,wheelbarrow
+소품/스케치북 들기,0,1151,holding sketchbook
+소품/화분 들기,0,1150,holding flower pot
+소품/지휘봉 들기,0,1149,holding baton
+메타/디자인 추측,0,1149,design speculation
+성인/음부 점,0,1148,mole on pussy
+동작/무술,0,1148,martial arts
+몸/후드 뚫고 나온 귀,0,1148,ears through hood
+몸/꿰맨 다리,0,1147,stitched leg
+효과/날아가는 눈물,0,1147,flying teardrops
+옷/클래식 롤리타,0,1147,classic lolita
+소품/분재,0,1147,bonsai
+자세/가구에 몸 숙임,0,1147,bent over furniture
+소품/Z 세이버,0,1146,z saber
+머리/왕관 머리장식,0,1146,crown hair ornament
+효과/특이한 효과음,0,1145,unconventional sound effect
+소품/여러 허벅지 끈,0,1144,multiple thigh straps
+옷/가리유시 셔츠,0,1144,kariyushi shirt
+소품/빨래집게,0,1144,clothes pin
+인원/아란칼,0,1144,arrancar
+동작/발 구르기,0,1143,stomping
+효과/홀로그램 모니터,0,1143,holographic monitor
+동물/사역마,0,1143,familiar
+소품/보안경,0,1142,safety glasses
+옷/오링 원피스 수영복,0,1142,o-ring one-piece swimsuit
+구도/침대 맞은편 시점,0,1141,pov across bed
+인원/나체주의자,0,1141,nudist
+소품/지시봉 들기,0,1141,holding pointer
+소품/발목 붕대,0,1141,ankle wrap
+인원/너구리 소년,0,1140,raccoon boy
+소품/임신 테스트기,0,1140,pregnancy test
+몸/가슴 물린 자국,0,1140,bite mark on breast
+배경/나무 벤치,0,1139,wooden bench
+동작/목 깨물기,0,1139,biting neck
+옷/대장 하오리,0,1138,taichou haori
+배경/야자나무,0,1138,coconut tree
+음식/고추,0,1138,chili pepper
+소품/가슴 위 물건,0,1137,object on breast
+음식/볶음밥,0,1137,fried rice
+소품/오븐,0,1136,oven
+소품/빗 들기,0,1136,holding comb
+화풍/야미카와,0,1135,yami kawaii
+옷/셔츠 리본,0,1135,shirt bow
+모자/여러 모자,0,1134,multiple hats
+화풍/로우 폴리,0,1134,low poly
+옷/츠와부키 고교 교복,0,1133,tsuwabuki high school uniform
+동작/팬티 고쳐 입기,0,1132,adjusting panties
+소품/스노볼,0,1131,snow globe
+머리/옆 올림 고리,0,1131,side up ring
+동작/탁자에 비비기,0,1129,table humping
+자세/머리 위로 들기,0,1129,holding above head
+표정/우울,0,1129,depressed
+표정/호기심,0,1129,curious
+몸/레서판다 귀,0,1128,red panda ears
+음식/사료,0,1128,pet food
+옷/원피스 끈 수영복,0,1128,one-piece thong
+소품/저울,0,1128,balance scale
+성인/함께 물건 삽입,0,1127,shared object insertion
+동작/손가락 미소,0,1127,fingersmile
+눈/처진 눈,0,1127,downturned eyes
+효과/굴절,0,1126,refraction
+옷/판다 후드,0,1126,panda hood
+인원/범고래 소녀,0,1126,orca girl
+상태/움직일 수 없음,0,1126,immobilization
+눈/여분의 동공,0,1126,extra pupils
+옷/외골격,0,1126,exoskeleton
+소품/오디오 잭,0,1126,audio jack
+동물/고등어 고양이,0,1125,tabby cat
+소품/석궁 들기,0,1125,holding crossbow
+속옷/앞 후크 브라,0,1125,front-hook bra
+머리/쌍아계,0,1124,shuangyaji
+소품/셀카봉,0,1124,selfie stick
+자세/스쿠터 위,0,1124,on scooter
+소품/조이스틱,0,1124,joystick
+소품/갈고리,0,1124,hook
+동작/상대 입을 막은 손,0,1124,hand over another's mouth
+옷/아즈망가 대왕 교복,0,1124,azumanga daioh's school uniform
+효과/트리퀘트라,0,1123,triquetra
+소품/피아노 건반,0,1123,piano keys
+인원/타천사,0,1123,fallen angel
+동물/무릎 위 고양이,0,1123,cat on lap
+양말/발끝 이음새,0,1122,toe seam
+메타/캐릭터와 성별 반전,0,1122,character and genderswap
+자세/A포즈,0,1122,a-pose
+소품/페인트 통,0,1121,paint can
+배경/유럽 건축,0,1121,european architecture
+몸/짙은 유륜,0,1121,dark areolae
+성인/작은 정조대,0,1120,small chastity cage
+효과/화면 불빛,0,1120,screen light
+소품/앨리스의 마법서,0,1120,grimoire of alice
+옷/갈색 정장,0,1120,brown suit
+자세/옆으로 앉음,0,1119,sitting sideways
+음식/자파리만쥬,0,1119,japari bun
+효과/떨어지는 꽃,0,1119,falling flower
+눈/뚫어 낸 속눈썹,0,1119,cutout eyelashes
+메타/흑 대 백,0,1119,black vs white
+몸/겨드랑이 털 엿보임,0,1119,armpit hair peek
+동작/쥐어짜기,0,1118,squeezing
+메타/로리 지배,0,1118,lolidom
+소품/회중시계 들기,0,1118,holding pocket watch
+소품/쇠지렛대 들기,0,1118,holding crowbar
+소품/봉인 밀랍,0,1117,wax seal
+자세/상대 귀 잡기,0,1117,grabbing another's ear
+소품/귀여운 무기,0,1117,cute weapon
+동물/벌레,0,1116,worm
+표정/트롤 페이스,0,1116,troll face
+소품/탬버린,0,1116,tambourine
+구도/하늘 강조,0,1116,sky focus
+몸/상어 지느러미,0,1116,shark fin
+메타/메모스프라이트,0,1116,memosprite
+메타/페이스북 로고,0,1116,facebook logo
+효과/터지는 옷,0,1116,exploding clothes
+동작/옷 입고 비비기,0,1116,dry humping
+효과/코믹한 땀방울,0,1116,comedic sweatdrop
+구도/웅장한 규모,0,1115,grand scale
+소품/펜던트 칼라,0,1114,pendant collar
+소품/닌텐도 3DS,0,1114,nintendo 3ds
+머리/바깥으로 뻗친 앞머리,0,1114,flipped bangs
+몸/뱃살,0,1114,fat rolls
+옷/사야가타 무늬,0,1113,sayagata
+옷/기움프,0,1113,guimpe
+자세/4자 다리 앉기,0,1113,figure four sitting
+몸/불타는 꼬리,0,1113,fiery tail
+소품/첼로,0,1113,cello
+옷/파란 남성 수영복,0,1113,blue male swimwear
+몸/날개 귀,0,1112,wing ears
+소품/물방울 테 안경,0,1112,teardrop-framed glasses
+메타/힘의 연결,0,1112,power connection
+옷/무늬 있는,0,1112,patterned
+소품/4호 전차,0,1112,panzer iv
+효과/심전도,0,1112,cardiogram
+동작/스케이트,0,1111,skating
+몸/표범 꼬리,0,1111,leopard tail
+배경/큰 바위,0,1111,boulder
+메타/음식 이름,0,1110,food name
+메타/카드 패러디,0,1110,card parody
+효과/16분음표,0,1109,sixteenth note
+표정/회상,0,1109,remembering
+소품/공작 깃털,0,1109,peacock feathers
+효과/디지털 분해,0,1109,digital dissolve
+머리/츠마미 간자시,0,1108,tsumami kanzashi
+음식/라임 조각,0,1108,lime slice
+메타/에피소드 번호,0,1108,episode number
+상태/묻힘,0,1108,buried
+몸/갈색 음모,0,1108,brown pubic hair
+자세/탁자에 팔,0,1108,arm on table
+소품/샴푸 병,0,1107,shampoo bottle
+몸/붉은 음모,0,1107,red pubic hair
+소품/졸업장 통,0,1107,diploma tube
+효과/냉기 능력,0,1106,cryokinesis
+인원/벌 소녀,0,1106,bee girl
+동작/입 닦기,0,1105,wiping mouth
+옷/비치는 바니수트,0,1105,translucent bunnysuit
+옷/영원한 광휘,0,1105,luminosite eternelle
+인원/개구리 소녀,0,1104,frog girl
+동물/바퀴벌레,0,1104,cockroach
+소품/너클,0,1104,brass knuckles
+메타/슈퍼 사이어인 블루,0,1103,super saiyan blue
+인원/올빼미 소녀,0,1103,owl girl
+몸/장기,0,1103,organs
+동작/제빵,0,1103,baking
+자세/부복,0,1102,prostration
+인원/왕자,0,1102,prince
+옷/가슴 끈,0,1102,breast strap
+동물/머리카락 있는 동물,0,1102,animal with hair
+효과/정전기,0,1101,static
+눈/가슴의 눈,0,1101,chest eye
+소품/역기,0,1100,weights
+소품/패들 들기,0,1099,holding paddle
+옷/털 비키니,0,1099,fur bikini
+옷/인도 의상,0,1099,asian indian clothes
+동작/묶기,0,1098,tying
+옷/빨간 튜브톱,0,1097,red tube top
+효과/진흙,0,1097,mud
+인원/승무원,0,1096,travel attendant
+소품/허리에 두른 수건,0,1096,towel around waist
+옷/어깨 판,0,1096,shoulder plates
+소품/소풍 돗자리,0,1096,picnic blanket
+음식/훠궈,0,1096,hotpot
+메타/하트 가슴 챌린지,0,1096,heart-shaped boob challenge
+몸/끝이 털 난 꼬리,0,1096,fur-tipped tail
+신발/블록 힐,0,1096,block heels
+자세/욕조 안,0,1095,in bathtub
+동작/하이파이브,0,1095,high five
+효과/회색 윤곽선,0,1095,grey outline
+소품/배트맨 기호,0,1095,batman symbol
+메타/에우고,0,1095,aeug
+소품/등에 멘 총,0,1094,gun on back
+효과/벽에 묻은 피,0,1093,blood on wall
+소품/방울 귀걸이,0,1092,bell earrings
+성인/항문만,0,1092,anal only
+메타/게으르다고 말하지 마,0,1091,don't say "lazy"
+배경/잔해,0,1090,wreckage
+몸/긴 발톱,0,1090,long toenails
+소품/바닥의 옷,0,1090,clothes on floor
+효과/상형문자,0,1089,hieroglyphics
+소품/하트 귀 장식,0,1089,heart ear ornament
+효과/떠 있는 해골,0,1089,floating skull
+소품/주머니 속 펜,0,1087,pen in pocket
+소품/짤주머니 들기,0,1087,holding pastry bag
+소품/어항,0,1086,fish tank
+효과/화염구,0,1086,fireball
+메타/월드와이드 미쿠,0,1085,worldwide miku
+소품/삼각 안경,0,1085,triangular eyewear
+옷/일본 제국 육군,0,1085,imperial japanese army
+눈/사시,0,1083,lazy eye
+배경/풍력 발전기,0,1082,wind turbine
+효과/말풍선 속 쿨쿨,0,1082,spoken zzz
+메타/성별 반전 안 된 캐릭터의 성별 반전,0,1082,genderswap on non-genderswap
+효과/몸에 묻은 물감,0,1081,paint on body
+소품/M16,0,1081,m16
+메타/정액으로 가림,0,1081,censored with cum
+몸/비만,0,1080,obese
+소품/팔레트 들기,0,1080,holding paint palette
+메타/조력 강간,0,1080,assisted rape
+메타/MTU 바이러스,0,1079,mtu virus
+소품/자석,0,1079,magnet
+소품/목에 건 카메라,0,1079,camera around neck
+소품/찬장,0,1078,cupboard
+머리/식물 머리카락,0,1077,plant hair
+동작/마스크 들추기,0,1077,mask lift
+동작/피하기,0,1077,dodging
+메타/동물 성애화,0,1077,animal sexualization
+상태/임신 암시,0,1076,implied pregnancy
+몸/여분의 귀 암시,0,1076,implied extra ears
+옷/동정 킬러 의상,0,1075,virgin killer outfit
+모자/작은 요리사 모자,0,1075,mini chef hat
+소품/형광등,0,1075,fluorescent lamp
+소품/오리발,0,1075,flippers
+음식/토마토 조각,0,1074,tomato slice
+속옷/브라 선,0,1074,bralines
+옷/하늘 무늬,0,1073,sky print
+효과/어두운 조명,0,1073,dim lighting
+소품/전함,0,1073,battleship
+몸/한쪽 기계 손,0,1071,single mechanical hand
+동작/상대 머리 땋기,0,1071,braiding another's hair
+옷/라이몬 축구복,0,1070,raimon soccer uniform
+배경/철창,0,1070,iron bars
+소품/음식 포장,0,1070,food packaging
+옷/흘러내린 멜빵,0,1069,suspenders slip
+소품/디오라마,0,1069,diorama
+소품/텐구 가면,0,1068,tengu mask
+동작/포즈 따라 하기,0,1068,pose imitation
+동물/범고래,0,1068,orca
+성인/산란,0,1068,egg laying
+속옷/파란 남성 속옷,0,1068,blue male underwear
+소품/웍,0,1067,wok
+시선/꽃 보기,0,1067,looking at flowers
+동작/초콜릿 만들기,0,1067,chocolate making
+소품/머리빗 들기,0,1066,holding hair brush
+동작/담요로 덮기,0,1066,covering with blanket
+자세/사람 의자,0,1064,human chair
+효과/소용돌이,0,1063,swirl
+소품/드라이어 들기,0,1063,holding hair dryer
+자세/허벅지 사이 머리,0,1063,head between thighs
+소품/에너지 칼날,0,1063,energy blade
+음식/나루토마키,0,1062,narutomaki
+인원/갓파,0,1062,kappa
+메타/드림 소울,0,1062,dream soul
+소품/데저트 이글,0,1062,desert eagle
+효과/피 후광,0,1062,blood halo
+메타/성 지도,0,1061,sexual coaching
+옷/형광 안전복,0,1061,high-visibility clothing
+자세/상대 무릎에 손,0,1061,hand on another's knee
+소품/가로 피리,0,1060,transverse flute
+옷/체크 옷깃,0,1060,plaid lapels
+메타/이탈리아어 글자,0,1060,italian text
+옷/후리소데 소매,0,1060,furisode sleeves
+성인/여자가 남자에게 애널 핥기,0,1060,female rimming male
+소품/무릎 위 책,0,1060,book on lap
+소품/양각대,0,1060,bipod
+소품/Z 링,0,1059,z-ring
+소품/나무망치 들기,0,1059,holding mallet
+소품/플루메리아,0,1058,plumeria
+인원/엘반,0,1057,elvaan
+동작/겨드랑이 간지럼,0,1056,tickling armpits
+성인/벗은 팬티 내보이기,0,1056,presenting removed panties
+옷/털 소맷부리,0,1056,fur cuffs
+성인/팬티 속 음경,0,1055,penis in panties
+모자/모자 방울,0,1054,hat bell
+소품/걸레,0,1054,cleaning rag
+음식/죽순,0,1054,bamboo shoot
+인원/촉수 소녀,0,1053,tentacle girl
+머리/무늬 있는 머리,0,1052,patterned hair
+음식/머리 위 과일,0,1052,fruit on head
+동작/입 앞 꽃,0,1052,flower over mouth
+자세/무릎에 팔,0,1052,arms on knees
+옷/보일,0,1051,voile
+동물/턱시도 고양이,0,1051,tuxedo cat
+자세/계단 위,0,1051,on stairs
+성인/가슴 핥기,0,1051,licking breast
+효과/희미해짐,0,1051,fading
+자세/상대 등에 팔,0,1051,arms around another's back
+자세/발 달랑,0,1050,foot dangle
+효과/녹아내리는 옷,0,1050,dissolving clothes
+몸/가슴 털 뭉치,0,1050,chest tuft
+소품/광선총,0,1049,ray gun
+효과/카메라 플래시,0,1049,camera flash
+효과/무지갯빛,0,1047,iridescent
+소품/리본 귀걸이,0,1046,ribbon earrings
+메타/모죠,0,1046,mojyo
+양말/앞 심 스타킹,0,1046,front-seamed legwear
+몸/역삼각 체형,0,1045,v-taper
+효과/주사선,0,1045,scanlines
+몸/채찍 자국,0,1044,whip marks
+동작/펄럭임,0,1044,flapping
+옷/지퍼 드레스,0,1043,zipper dress
+효과/투명 테두리,0,1043,transparent border
+효과/거다이맥스,0,1043,gigantamax
+소품/무선 이어폰,0,1042,wireless earphones
+눈/삼각 동공,0,1042,triangle-shaped pupils
+동물/불사조,0,1042,phoenix
+배경/파티,0,1042,party
+머리/가슴 사이 머리카락,0,1042,hair between breasts
+동작/허우적,0,1042,flailing
+배경/무대 커튼,0,1041,stage curtains
+양말/수영복 속 팬티스타킹,0,1041,pantyhose under swimsuit
+자세/배 위,0,1041,on boat
+옷/코사카 키리노 교복,0,1041,kousaka kirino's school uniform
+자세/자기 모자에 손,0,1041,hand on own hat
+메타/평범한 쓰임,0,1040,mundane utility
+동작/주먹 불끈,0,1040,fist pump
+메타/크레딧 쪽,0,1040,credits page
+인원/카우보이,0,1040,cowboy
+자세/자기 발 잡기,0,1039,holding own foot
+소품/오픈카,0,1039,convertible
+자세/엉덩이 눌림,0,1039,ass press
+몸/다른 날개,0,1038,alternate wings
+동물/물고기 떼,0,1037,school of fish
+몸/무릎 홍조,0,1037,knee blush
+메타/페이크몬,0,1037,fakemon
+메타/비주얼 노벨,0,1036,visual novel
+소품/이빨 귀걸이,0,1036,tooth earrings
+소품/가격표,0,1036,price tag
+성인/음경 촉수,0,1036,penis tentacle
+소품/미니건,0,1036,minigun
+동작/상대 화장해주기,0,1036,applying another's makeup
+소품/옷 위 붕대,0,1035,bandages over clothes
+소품/요패,0,1034,yaopei
+동물/쥐가오리,0,1034,manta ray
+메타/브레이커 고르곤,0,1034,breaker gorgon
+메타/멋진 순간 망치기,0,1033,ruining the glorious moment
+옷/미즈 핫피,0,1033,mizu happi
+배경/콘크리트,0,1033,concrete
+옷/칼데아 직원 제복,0,1033,chaldea staff uniform
+옷/캣슈트,0,1033,catsuit
+효과/상서로운 구름,0,1032,xiangyun
+인원/삼촌과 조카,0,1032,uncle and niece
+메타/계절 연결,0,1031,season connection
+동작/상대 머리 만지작,0,1031,playing with another's hair
+성인/자기 음경에 손,0,1031,hand on own penis
+화풍/컬러 트레이스,0,1031,color trace
+메타/스쿠스쿠 하쿠타쿠,0,1030,sukusuku hakutaku
+눈/조준선 동공,0,1030,crosshair pupils
+동물/덩어리,0,1030,blob
+소품/술 상자,0,1030,alcohol carton
+메타/발 반대,0,1029,wrong foot
+구도/발만,0,1029,feet only
+소품/구슬 초커,0,1029,bead choker
+옷/야마부키 고교 교복,0,1028,yamabuki high school uniform
+동작/고개 젓기,0,1028,shaking head
+동물/미믹,0,1028,mimic
+성인/손가락에 묻은 체액,0,1027,pussy juice on fingers
+소품/히스이 몬스터볼,0,1027,hisuian poke ball
+소품/필름,0,1027,film strip
+동작/자기 귀 막기,0,1027,covering own ears
+소품/전차 포탑,0,1026,tank turret
+성인/음경 재기,0,1026,penis measuring
+옷/언더슈트,0,1025,undersuit
+구도/음부 강조,0,1025,pussy focus
+옷/홀터 레오타드,0,1024,halter leotard
+소품/픽업트럭,0,1023,pickup truck
+동작/손가락 빨기,0,1023,finger sucking
+효과/틈새 빛,0,1023,crack of light
+옷/뿔 달린 후드,0,1022,horned hood
+메타/키릴 문자,0,1022,cyrillic
+자세/허리 젖힘,0,1021,sway back
+구도/신발 강조,0,1021,footwear focus
+메타/오류 메시지,0,1021,error message
+효과/탄피 배출,0,1021,casing ejection
+동작/상대 가슴 찌르기,0,1020,poking another's breast
+소품/링거대,0,1020,iv stand
+성인/과도한 음부 체액,0,1020,excessive pussy juice
+옷/교차 끈 구멍,0,1020,cross-laced cutout
+소품/젖꼭지 테이프,0,1019,tape on nipples
+동작/재장전,0,1019,reloading
+소품/머스킷,0,1019,musket
+성인/손 착유,0,1019,hand milking
+자세/탁자에 두 팔,0,1018,arms on table
+머리/판다 머리장식,0,1017,panda hair ornament
+배경/후스마,0,1017,fusuma
+동물/목에 두른 동물,0,1017,animal around neck
+음식/손에 든 음식,0,1016,food on hand
+소품/바벨,0,1016,barbell
+동물/매,0,1015,hawk
+동작/가로질러 스트레칭,0,1015,cross-body stretch
+소품/식료품,0,1014,groceries
+표정/게스 얼굴,0,1014,gesugao
+소품/동전 지갑,0,1014,coin purse
+메타/탈것과 의인화,0,1011,vehicle and personification
+배경/학교 체육관,0,1011,school gym
+메타/라이트 페르소나,0,1011,light persona
+성인/가려진 항문,0,1011,covered anus
+소품/갈색 렌즈 안경,0,1011,brown-tinted eyewear
+메타/탈것 이름,0,1010,vehicle name
+효과/반투명,0,1010,translucent
+메타/레이 노 풀,0,1010,rei no pool
+소품/마라카스,0,1010,maracas
+배경/차선,0,1010,lane line
+몸/거추장스러운 가슴,0,1010,inconvenient breasts
+소품/샤워기 들기,0,1010,holding shower head
+메타/종 연결,0,1009,species connection
+메타/러우 전쟁,0,1009,russo-ukrainian war
+옷/형광 조끼,0,1009,high-visibility vest
+표정/:c,0,1009,:c
+메타/2008년,0,1009,2008
+동작/닦기,0,1008,wiping
+옷/사이난 고교 교복,0,1008,sainan high school uniform
+소품/떠 있는 검,0,1008,floating sword
+성인/옷 위로 번진 정액,0,1008,cum through clothes
+소품/벽등,0,1007,wall lamp
+메타/반복 이미지,0,1007,recurring image
+소품/딸랑이,0,1007,rattle
+얼굴/마름모 얼굴 무늬,0,1007,diamond facial mark
+몸/큐티 마크,0,1007,cutie mark
+소품/바나나 껍질,0,1007,banana peel
+머리/레이더 머리장식,0,1006,radar hair ornament
+효과/분홍 불꽃,0,1006,pink fire
+소품/함께 덮은 담요,0,1005,shared blanket
+동작/굽기,0,1005,grilling
+성인/젖꼭지 맞댐,0,1004,nipple-to-nipple
+소품/협탁,0,1004,nightstand
+메타/아사히 맥주,0,1004,asahi breweries
+소품/타로 카드,0,1003,tarot card
+동작/X자 손가락,0,1001,x fingers
+배경/키 큰 풀,0,1001,tall grass
+소품/갠 옷,0,1001,folded clothes
+소품/수통,0,1001,canteen
+자세/상대 얼굴 잡기,0,1000,grabbing another's face
+몸/공룡 꼬리,0,1000,dinosaur tail`;var na=globalThis.__duskLib?.["src/engine/aistop.js"];if(!na)throw new Error("Dusk 코어에 src/engine/aistop.js가 없어요 — Dusk를 업데이트해 주세요");{let n=["STOP_MSG","__resetAiStop","activeCount","activeTasks","aiTask","describeAi","isStopError","justStopped","onAiChange","stopAll","stopError","trackAi","trackedRunLLM"].filter(e=>!(e in na));if(n.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/engine/aistop.js에 없는 기능: "+n.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{STOP_MSG:tc,__resetAiStop:rc,activeCount:ac,activeTasks:sc,aiTask:oc,describeAi:ic,isStopError:Qt,justStopped:Hs,onAiChange:lc,stopAll:cc,stopError:Js,trackAi:Ws,trackedRunLLM:dc}=na;var g0=["k_euler_ancestral","k_euler","k_dpmpp_2s_ancestral","k_dpmpp_2m","k_dpmpp_sde","k_dpmpp_2m_sde","ddim_v3"],m0=["k_euler_ancestral","k_euler","k_dpmpp_2s_ancestral","k_dpmpp_2m_sde","k_dpmpp_2m","k_dpmpp_sde"],Zt={v5:!1,samplers:g0,vibe:!0,reference:!0,varietyPlus:!0,transparent:!1},ea=n=>({v5:!0,samplers:m0,maxScale:10,maxSteps:50,maxChars:32,tokens:n,vibe:!1,reference:!1,varietyPlus:!1,transparent:!0,forcedNoise:"karras"}),er=[{id:"5-full",label:"V5 Full",gen:"nai-diffusion-5-full",inpaint:"nai-diffusion-5-full-inpainting",...ea(1471)},{id:"5-full-medium",label:"V5 Medium",gen:"nai-diffusion-5-full-medium",inpaint:"nai-diffusion-5-full-medium-inpainting",...ea(1471),noCfgRescale:!0,fixed:{steps:14,sampler:"k_euler_ancestral",uc:"heavy"}},{id:"5-curated",label:"V5 Curated",gen:"nai-diffusion-5-curated",inpaint:"nai-diffusion-4-5-curated-inpainting",...ea(703)},{id:"4-5-full",label:"V4.5 Full",gen:"nai-diffusion-4-5-full",inpaint:"nai-diffusion-4-5-full-inpainting",...Zt},{id:"4-5-curated",label:"V4.5 Curated",gen:"nai-diffusion-4-5-curated",inpaint:"nai-diffusion-4-5-curated-inpainting",...Zt},{id:"4-full",label:"V4 Full",gen:"nai-diffusion-4-full",inpaint:"nai-diffusion-4-full-inpainting",...Zt},{id:"4-curated",label:"V4 Curated",gen:"nai-diffusion-4-curated-preview",inpaint:"nai-diffusion-4-curated-inpainting",...Zt}],Nn=n=>er.find(e=>e.id===n)??er.find(e=>e.id==="4-5-full"),aa={k_euler_ancestral:"Euler Ancestral",k_euler:"Euler",k_dpmpp_2s_ancestral:"DPM++ 2S Ancestral",k_dpmpp_2m:"DPM++ 2M",k_dpmpp_sde:"DPM++ SDE",k_dpmpp_2m_sde:"DPM++ 2M SDE",ddim_v3:"DDIM"},sa=["native","karras","exponential","polyexponential"],_n={portrait:{width:832,height:1216,label:"세로"},landscape:{width:1216,height:832,label:"가로"},square:{width:1024,height:1024,label:"정사각"},small_portrait:{width:512,height:768,label:"작은 세로"},small_landscape:{width:768,height:512,label:"작은 가로"},small_square:{width:640,height:640,label:"작은 정사각"},large_portrait:{width:1024,height:1536,label:"큰 세로"},large_landscape:{width:1536,height:1024,label:"큰 가로"},large_square:{width:1472,height:1472,label:"큰 정사각"},wallpaper_portrait:{width:1088,height:1920,label:"배경화면 세로"},wallpaper_landscape:{width:1920,height:1088,label:"배경화면 가로"}},hc={portrait:_n.portrait,landscape:_n.landscape,square:_n.square},ot=(n,e,t=28)=>n*e<=1024*1024&&t<=28;function we(n,e){let t=a=>Math.max(64,Math.min(2048,Math.round((Number(a)||0)/64)*64));return{width:t(n),height:t(e)}}var f0={"4-5-full":", very aesthetic, masterpiece, no text","4-5-curated":", location, masterpiece, no text, -0.8::feet::, rating:general","4-full":", no text, best quality, very aesthetic, absurdres","4-curated":", rating:general, amazing quality, very aesthetic, absurdres"},b0={standard:"very aesthetic, masterpiece, no text",light:"very aesthetic, amazing quality, no text",none:""},oa={standard:"표준",light:"가벼움",none:"없음"},Gs="nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page",Xs="lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page",Ys="{worst quality}, distracting watermark, unfinished, bad quality, {widescreen}, upscale, {sequence}, {{grandfathered content}}, blurred foreground, chromatic aberration, sketch, everyone, [sketch background], simple, [flat colors], ych (character), outline, multiple scenes, [[horror (theme)]], comic",ta={heavy:Xs,light:"lowres, bad hands, bad anatomy, artistic error, sepia, white haze, worst quality, very displeasing, jpeg artifacts, 0::ai-generated::",humanFocus:Xs+", @_@, mismatched pupils, glowing eyes, bad anatomy",furryFocus:Ys},ia={"5-full":ta,"5-full-medium":ta,"5-curated":ta,"4-5-full":{heavy:Gs,light:"nsfw, lowres, artistic error, scan artifacts, worst quality, bad quality, jpeg artifacts, multiple views, very displeasing, too many watermarks, negative space, blank page",humanFocus:Gs+", @_@, mismatched pupils, glowing eyes, bad anatomy",furryFocus:"nsfw, "+Ys},"4-5-curated":{heavy:"blurry, lowres, upscaled, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, halftone, multiple views, logo, too many watermarks, negative space, blank page",light:"blurry, lowres, upscaled, artistic error, scan artifacts, jpeg artifacts, logo, too many watermarks, negative space, blank page",humanFocus:"blurry, lowres, upscaled, artistic error, film grain, scan artifacts, bad anatomy, bad hands, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, halftone, multiple views, logo, too many watermarks, @_@, mismatched pupils, glowing eyes, negative space, blank page"},"4-full":{heavy:"nsfw, blurry, lowres, error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, multiple views, logo, too many watermarks, white blank page, blank page",light:"nsfw, blurry, lowres, error, worst quality, bad quality, jpeg artifacts, very displeasing, white blank page, blank page"},"4-curated":{heavy:"blurry, lowres, error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, logo, dated, signature, multiple views, gigantic breasts, white blank page, blank page",light:"blurry, lowres, error, worst quality, bad quality, jpeg artifacts, very displeasing, logo, dated, signature"}},Qs={heavy:"강함",light:"약함",humanFocus:"인물 중심",furryFocus:"퍼리 중심",none:"없음"},la=n=>["heavy","light","humanFocus","furryFocus","none"].filter(e=>e==="none"||ia[n]?.[e]!==void 0),ra=(n,e)=>!e||e==="none"?"none":ia[n]?.[e]!==void 0?e:"none",it=(n,e)=>{let t=ra(n,e);return t==="none"?"":ia[n]?.[t]??""};function w0(n,e,t,a=!1){let o=n;if(a&&(o=o?`transparent background, ${o}`:"transparent background"),t==="none")return o;if(Nn(e).v5){let c=b0[t];return c?o?`${o}, ${c}`:c:o}return o+(f0[e]??"")}var k0=(n,e,t)=>{let a=it(e,t);return a?n?`${a}, ${n}`:a:n},y0={heavy:0,light:1,furryFocus:2,humanFocus:3,none:4},v0={none:0,heavy:2,light:3,humanFocus:4,furryFocus:5},x0={standard:1,light:3,none:0};function nr(n){return!n||n.indexOf("::")<0?n:n.replace(/(-?\d*\.?\d+::)([^:]*?)(::)/g,(e,t,a,o)=>{if(!a.trim())return e;let c=a;return/^\d/.test(c)&&(c=" "+c),/\d$/.test(c)&&(c=c+" "),t+c+o})}var j0={model:"4-5-full",sampler:"k_euler_ancestral",steps:28,scale:5,cfgRescale:0,noise:"karras",quality:"standard",ucPreset:"heavy",varietyPlus:!1,transparent:!1,useCoords:!1,legacyUc:!1,normalizeVibes:!0};function De(n){let e={...j0,...n&&typeof n=="object"?n:{}},t=Nn(e.model);e.model=t.id,t.samplers.includes(e.sampler)||(e.sampler="k_euler_ancestral"),e.steps=Math.max(1,Math.min(t.maxSteps??50,Math.round(Number(e.steps)||28))),e.scale=Math.max(0,Math.min(t.maxScale??10,Number(e.scale)||0)),e.cfgRescale=Math.max(0,Math.min(1,Number(e.cfgRescale)||0)),sa.includes(e.noise)||(e.noise="karras"),e.quality in oa||(e.quality="standard"),la(t.id).includes(e.ucPreset)||(e.ucPreset="heavy");for(let a of["varietyPlus","transparent","useCoords","legacyUc","normalizeVibes"])e[a]=!!e[a];return e}function lt({prompt:n,uc:e="",width:t=832,height:a=1216,size:o,seed:c,settings:p,action:s="generate",image:w,mask:x,strength:m=.7,noise:k=0,addOriginal:j=!0,chars:z=[],vibes:_=[],refs:f=[]}={}){let $=String(n??"").trim();if(!$)throw new Error("프롬프트를 적어 주세요");o&&_n[o]&&({width:t,height:a}=_n[o]);let b=De(p),P=Nn(b.model),F=P.v5,R=P.fixed,E=R?R.sampler:b.sampler,O=F?b.quality:b.quality==="none"?"none":"standard",G=F&&P.transparent&&b.transparent,on=nr(w0($,P.id,O,G)),rn=R?R.uc:b.ucPreset,un=R?it(P.id,R.uc):nr(k0(String(e??""),P.id,b.ucPreset)),g=Number.isInteger(c)&&c>0?c>>>0:1+Math.floor(Math.random()*4294967294),yn=T=>({caption:{base_caption:T,char_captions:[]}}),nn;F?(nn={params_version:4,width:t,height:a,noise_schedule:P.forcedNoise,scale:Math.min(b.scale,P.maxScale??b.scale),sampler:E,steps:R?R.steps:Math.min(b.steps,P.maxSteps??b.steps),noise:k,seed:g,n_samples:1,negative_prompt:un,strength:m,characterPrompts:[],use_coords:b.useCoords,cfg_rescale:b.cfgRescale,skip_cfg_above_sigma:null,prefer_brownian:E==="k_euler_ancestral",deliberate_euler_ancestral_bug:!1,tag_hint_qt:x0[O],tag_hint_uc_preset:v0[ra(P.id,rn)],tag_hint_transparent_background:G,v4_prompt:{...yn(on),use_coords:b.useCoords,use_order:!0},v4_negative_prompt:yn(un)},P.noCfgRescale&&delete nn.cfg_rescale):nn={params_version:3,width:t,height:a,noise_schedule:b.noise,controlnet_strength:1,dynamic_thresholding:!1,scale:b.scale,sampler:E,steps:b.steps,noise:k,seed:g,n_samples:1,ucPreset:y0[ra(P.id,b.ucPreset)],negative_prompt:un,strength:m,qualityToggle:O!=="none",characterPrompts:[],use_coords:b.useCoords,legacy:!1,legacy_v3_extend:!1,prefer_brownian:!0,autoSmea:!1,legacy_uc:b.legacyUc,inpaintImg2ImgStrength:m,cfg_rescale:b.cfgRescale,add_original_image:j,normalize_reference_strength_multiple:b.normalizeVibes,skip_cfg_above_sigma:null,v4_prompt:{...yn(on),use_coords:b.useCoords,use_order:!0},v4_negative_prompt:{...yn(un),legacy_uc:b.legacyUc}};let M={input:on,model:s==="infill"?P.inpaint:P.gen,action:s,parameters:nn};F&&(M.use_new_shared_trial=!0),F&&s==="infill"&&(nn.add_original_image=j);let S=(_??[]).filter(T=>T?.image);if(!F&&S.length){nn.reference_image_multiple=S.map(A=>A.image);let T=S.map(A=>Number(A.strength??.6));if(b.normalizeVibes&&T.length>1){let A=T.reduce((J,H)=>J+H,0)||1;T=T.map(J=>J/A)}nn.reference_strength_multiple=T}let q=(f??[]).filter(T=>T?.image);if(!F&&q.length&&(nn.director_reference_images=q.map(T=>T.image),nn.director_reference_descriptions=q.map(T=>({...yn(T.type||"character"),legacy_uc:b.legacyUc})),nn.director_reference_strength_values=q.map(T=>T.strength??.6),nn.director_reference_secondary_strength_values=q.map(T=>1-(T.fidelity??1)),nn.director_reference_information_extracted=q.map(T=>T.info??1)),w&&(nn.image=w),x&&(nn.mask=x),s==="infill"&&(nn.img2img={strength:m,begin_from_sigma:null,noise:0,extra_noise_seed:g,color_correct:!0},E==="ddim_v3"&&(nn.sampler="k_euler_ancestral")),s==="img2img"&&(nn.img2img={strength:m,begin_from_sigma:null,noise:k,extra_noise_seed:g,color_correct:!0}),E==="k_euler_ancestral"&&(nn.deliberate_euler_ancestral_bug=!1),!F&&b.varietyPlus&&!q.length){let T=P.id.startsWith("4-5")?58:P.id.startsWith("4-")?19:0;nn.skip_cfg_above_sigma=T*Math.sqrt(t*a/(832*1216))}let L=(z??[]).map(T=>({prompt:nr(String(T?.prompt??"")),uc:R?"":nr(String(T?.uc??"")),center:b.useCoords&&Number.isFinite(T?.x)?{x:T.x,y:T.y}:{x:.5,y:.5}})).filter(T=>T.prompt.trim()).slice(0,P.maxChars??99);return L.length&&(nn.characterPrompts=L,nn.v4_prompt.caption.char_captions=L.map(T=>({char_caption:T.prompt,centers:[T.center]})),nn.v4_negative_prompt.caption.char_captions=L.map(T=>({char_caption:T.uc,centers:[T.center]}))),M}var ke={"bg-removal":"배경 지우기",lineart:"선화",sketch:"스케치",colorize:"채색",emotion:"표정 바꾸기",declutter:"정리(글자·잡것 지우기)"},Zs=["neutral","happy","sad","angry","scared","surprised","tired","excited","nervous","thinking","confused","shy","disgusted","smug","bored","laughing","irritated","aroused","embarrassed","worried","love","determined","hurt","playful"];function no({method:n,image:e,width:t,height:a,prompt:o="",emotion:c="neutral",defry:p=0}){if(!ke[n])throw new Error("알 수 없는 디렉터 도구예요");let s={image:e,req_type:n,width:t,height:a};return(n==="colorize"||n==="emotion")&&(s.prompt=n==="emotion"?`${c};;${o}`:o,s.defry=p),s}var C0="nai-diffusion-5-curated";function eo(n,e){let t=n*e;if(!(n>0&&e>0)||t>3145728)throw new Error("업스케일은 3,145,728픽셀 이하 그림만 돼요");return t<=1048576?1:t<=1747627?2:t<=2446678?3:4}var to=n=>({image:n,model:C0,declared_blur_sigma:0}),ro=(n,e,t)=>({image:n,model:Nn(t).gen,information_extracted:e});function tr(n,e,{last:t=!1}={}){let a=new DataView(n.buffer,n.byteOffset,n.byteLength);if(n.length<30||a.getUint32(0,!0)!==67324752)throw new Error("받은 파일이 zip이 아니에요");let o=-1;for(let z=n.length-22;z>=Math.max(0,n.length-65557);z--)if(a.getUint32(z,!0)===101010256){o=z;break}let c=0,p=a.getUint16(8,!0),s=a.getUint32(18,!0);if(o>=0){let z=a.getUint16(o+10,!0),_=a.getUint32(o+16,!0);if(_+46>n.length||a.getUint32(_,!0)!==33639248)throw new Error("zip 목록이 깨졌어요");for(let f=0;f<(t?z:1)&&a.getUint32(_,!0)===33639248;f++)p=a.getUint16(_+10,!0),s=a.getUint32(_+20,!0),c=a.getUint32(_+42,!0),_+=46+a.getUint16(_+28,!0)+a.getUint16(_+30,!0)+a.getUint16(_+32,!0)}else if(a.getUint16(6,!0)&8||!s)throw new Error("zip 끝을 찾지 못했어요(받다 끊겼을 수 있어요)");let w=a.getUint16(c+26,!0),x=a.getUint16(c+28,!0),m=c+30+w+x;if(m+s>n.length)throw new Error("zip 내용이 잘렸어요");let k=n.subarray(m,m+s),j=p===0?k.slice():p===8?e(k):null;if(!j)throw new Error(`zip 압축 방식 ${p}은 못 풀어요`);return{name:new TextDecoder().decode(n.subarray(c+30,c+30+w)),data:j}}var rr=n=>n?.[0]===137&&n?.[1]===80&&n?.[2]===78&&n?.[3]===71;function Fe(n){if(!rr(n)||n.length<24)return null;let e=new DataView(n.buffer,n.byteOffset,n.byteLength);return{width:e.getUint32(16),height:e.getUint32(20)}}var ao=["additionalAssets","emotionImages","assets"];function so(n,e,t){let a=String(t??"").trim()||"image",o=new Set(ao.flatMap(c=>(n?.[c]??[]).map(p=>String(p?.[0]??"").toLowerCase())));if(!o.has(a.toLowerCase()))return a;for(let c=2;;c++)if(!o.has(`${a}_${c}`.toLowerCase()))return`${a}_${c}`}function oo(n,e,t,a,o="png"){if(!ao.includes(e))throw new Error(`알 수 없는 에셋 자리예요: ${e}`);let c=e==="emotionImages"?[t,a]:[t,a,o];return{...n,[e]:[...n?.[e]??[],c]}}var le={};l0(le,{MAX_IMAGES:()=>da,MAX_JOBS:()=>go,activeSet:()=>or,addChar:()=>ye,addFolder:()=>Ne,addImage:()=>mt,addScene:()=>ur,addSet:()=>ha,applyCup:()=>Ta,charCover:()=>fa,charFolderOf:()=>kr,charOf:()=>vn,clearPicks:()=>mr,clearReserve:()=>bt,countIn:()=>_0,coverOf:()=>Ce,cupDone:()=>Ma,cupPair:()=>fr,cupPick:()=>Sa,cupRoundLabel:()=>Aa,defaultSets:()=>sr,duplicateChar:()=>lr,duplicateScene:()=>gt,emptyProject:()=>fo,emptySettings:()=>mo,favImages:()=>xa,fileName:()=>br,folderFileName:()=>wr,folderPromptFor:()=>wo,folderTemplateFor:()=>Be,foldersOf:()=>T0,hasFav:()=>oe,imageCount:()=>ma,markSent:()=>Ca,middleFor:()=>Pe,moveChars:()=>ut,moveFolder:()=>cr,moveScene:()=>E0,moveScenesToChar:()=>ya,normalizeProject:()=>Zn,ownPrompt:()=>ve,pathOf:()=>hr,pickCount:()=>Ve,pickedImages:()=>ae,placeFolder:()=>wa,planJobs:()=>ie,removeChar:()=>ga,removeFolder:()=>dr,removeImages:()=>Ke,removeScenes:()=>va,removeSet:()=>ua,renamePieceLib:()=>_a,reorderChars:()=>A0,reorderScenes:()=>ka,reserveAll:()=>Wn,reserveNoFav:()=>ja,reserveSummary:()=>Pa,rowChars:()=>Rn,sceneOf:()=>mn,scenesNoFav:()=>ft,seedFor:()=>$a,setCharCount:()=>ir,setImage:()=>xe,setLoreIds:()=>L0,setMember:()=>ht,setPicks:()=>je,setReserve:()=>Un,setSettings:()=>Ln,setSlots:()=>Ue,setsOf:()=>Dn,sizeFor:()=>_e,sortScenes:()=>gr,sortedImages:()=>ne,startCup:()=>za,stepSeed:()=>yo,switchSet:()=>pa,uniqueSceneName:()=>Re,updateChar:()=>Jn,updateFolder:()=>pt,updateScene:()=>On,updateSet:()=>dt,view:()=>pr,zipDir:()=>wt});var P0=n=>String(n??"").replace(/##[\s\S]*?##/g,""),te=n=>P0(n).replace(/\r\n?|\n/g,",").split(",").map(e=>e.trim()).filter(Boolean);function io(n,e=Math.random){let t=o=>o[Math.min(o.length-1,Math.floor(e()*o.length))],a=o=>{let c="";for(let p=0;p<o.length;p++){if(o[p]!=="{"){c+=o[p];continue}let s=1,w=-1,x=[];for(let m=p+1;m<o.length;m++)if(o[m]==="{")s++;else if(o[m]==="}"){if(--s===0){w=m;break}}else o[m]==="|"&&s===1&&x.push(m);if(w<0){c+=o.slice(p);break}if(!x.length)c+=`{${a(o.slice(p+1,w))}}`;else{let m=[],k=p+1;for(let j of x)m.push(o.slice(k,j)),k=j+1;m.push(o.slice(k,w)),c+=a(t(m).trim())}p=w}return c};return a(String(n??""))}function $0(n,e){let t=e.slice(1,-1),a=t.indexOf(".");if(a<1)throw new Error(`올바르지 않은 조각 문법 "${e}" — <모음.조각> 꼴로 써요`);let o=x=>String(x??"").replace(/\s+/g," ").trim().toLowerCase(),c=o(t.slice(0,a)),p=o(t.slice(a+1)),s=(n??[]).find(x=>x.name===t.slice(0,a))??(n??[]).find(x=>o(x.name)===c||o(x.name).replace(/ /g,"")===c.replace(/ /g,""));if(!s)throw new Error(`없는 조각 모음 "${t.slice(0,a)}"`);let w=s.pieces.find(x=>x.name===t.slice(a+1))??s.pieces.find(x=>o(x.name)===p||o(x.name).replace(/ /g,"")===p.replace(/ /g,""));if(!w)throw new Error(`없는 조각 "${e}"`);return w}var z0=n=>n.length>2&&n[0]==="<"&&n[n.length-1]===">";function ca(n,e,t=Math.random,a=new Set,o={n:0}){if(!z0(n))return[n];if(a.has(n))throw new Error(`조각이 자기 자신을 불러요: ${n}`);if(a.size>=50||++o.n>1e4)throw new Error(`조각이 너무 깊게 겹쳐 있어요: ${n}`);let c=$0(e,n);a.add(n);try{let p=c.prompt??"";if(c.multi){let s=p.split(/\r\n?|\n/).filter(w=>te(w).length);p=s.length?s[Math.min(s.length-1,Math.floor(t()*s.length))]:""}return te(p).flatMap(s=>ca(s,e,t,a,o))}finally{a.delete(n)}}var M0=(n,e,t=Math.random)=>te(n).flatMap(a=>ca(a,e,t)).join(", ");function S0(n,e){let t=[],a=0,o=0,c=0;for(;a<n.length&&o<e.length;)if(c===0){if(n[a]==="|"){c=1,a++;continue}t.push(n[a++])}else{if(e[o]==="|"){c=0,o++;continue}t.push(e[o++])}for(;a<n.length;a++)n[a]!=="|"&&t.push(n[a]);for(;o<e.length;o++)e[o]!=="|"&&t.push(e[o]);return t}var lo=n=>(n??[]).filter(e=>e&&e.on!==!1);function Yn(n){if(!n?.length)return 1;let e=1;for(let t of n)if(e*=lo(t).length,!e)return 0;return e}function co(n,e){let t=[],a=Math.max(0,Math.floor(e));for(let o=(n?.length??0)-1;o>=0;o--){let c=lo(n[o]);if(!c.length)return null;t[o]=c[a%c.length],a=Math.floor(a/c.length)}return t}var po=n=>(n??[]).map(e=>e?.prompt??"").filter(e=>e.trim()).join(", ");function Te({top:n="",own:e="",middle:t="",back:a=""},o=[],c=Math.random){let p=[...te(n),...te(e)],s=[...S0(p,te(t)),...te(a)];return io(s.flatMap(w=>ca(w,o,c)).join(", "),c)}var ct=(n,e=[],t=Math.random)=>io(M0(n,e,t),t);function ho(n){let e=String(n??""),t=[],a=(s,w)=>{if(!s)return;let x=t[t.length-1];x&&x.kind===w?x.text+=s:t.push({text:s,kind:w})},o=/##[\s\S]*?##|-?\d*\.?\d+::[\s\S]*?::|<[^<>\n]+>|\{+[^{}\n]*\}+|\[+[^[\]\n]*\]+|\|/g,c=0,p;for(;p=o.exec(e);){a(e.slice(c,p.index),"text");let s=p[0],w="text";if(s.startsWith("##"))w="comment";else if(s.includes("::")){let x=parseFloat(s);w=x<0?"weight-neg":x<1?"weight-down":"weight-up"}else s[0]==="<"?w="piece":s[0]==="{"?w=s.includes("|")?"random":"brace":s[0]==="["?w="bracket":s==="|"&&(w="pipe");a(s,w),c=p.index+s.length}return a(e.slice(c),"text"),t}var da=300,go=500,gn=(n,e=8e3)=>String(n??"").slice(0,e),Qn=()=>Math.random().toString(36).slice(2,10),Fn=(n,e)=>Number.isFinite(Number(n))?Number(n):e;function mo(){return{top:"",back:"",neg:"",seed:{mode:"random",value:0},size:{mode:"scene",w:832,h:1216},sampling:De(null),chars:[],vibes:[],refs:[],reserveDefault:1}}var sr=()=>({active:"sfw",list:[{id:"sfw",name:"SFW",tpl:""},{id:"nsfw",name:"NSFW",tpl:""}],store:{}});function fo(){return{v:2,settings:mo(),pieces:[],chars:[],folders:[],loreSkip:[],sets:sr()}}function bo(n){return!n||typeof n.path!="string"||!n.path?null:{path:n.path,seed:Number.isFinite(n.seed)?n.seed:null,at:Fn(n.at,0),prompt:gn(n.prompt),rank:Number.isFinite(n.rank)?n.rank:null,fav:!!n.fav,pick:!!n.pick,w:Fn(n.w,0),h:Fn(n.h,0),from:typeof n.from=="string"?n.from.slice(0,20):"",sent:typeof n.sent=="string"?n.sent.slice(0,200):""}}function uo(n){if(!n||typeof n.id!="string"||!n.id)return null;let e=(Array.isArray(n.slots)?n.slots:[]).filter(Array.isArray).map(a=>a.filter(o=>o&&typeof o=="object").map(o=>({prompt:gn(o.prompt),on:o.on!==!1}))),t=(Array.isArray(n.images)?n.images:[]).map(bo).filter(Boolean).slice(0,da);return{id:n.id,name:gn(n.name,80)||"씬",slots:e,size:typeof n.size=="string"?n.size:"",reserve:Math.max(0,Math.min(99,Math.round(Fn(n.reserve,0)))),cover:typeof n.cover=="string"?n.cover:"",memo:gn(n.memo,2e3),images:t}}function Zn(n){let e=fo();if(!n||typeof n!="object")return e;let t=n.v!==2,a=t?{top:n.top,neg:n.neg,size:{mode:n.size&&_n[n.size]?n.size:"scene"}}:n.settings??{},o={top:gn(a.top),back:gn(a.back),neg:gn(a.neg),seed:{mode:["random","fixed","chain"].includes(a.seed?.mode)?a.seed.mode:"random",value:Math.max(0,Math.floor(Fn(a.seed?.value,0)))>>>0},size:{mode:a.size?.mode==="custom"||a.size?.mode==="scene"||_n[a.size?.mode]?a.size.mode:"scene",...we(Fn(a.size?.w,832),Fn(a.size?.h,1216))},sampling:De(a.sampling),chars:(Array.isArray(a.chars)?a.chars:[]).filter(b=>b&&typeof b=="object").slice(0,32).map(b=>({id:typeof b.id=="string"?b.id:Qn(),prompt:gn(b.prompt),uc:gn(b.uc),x:Math.max(.1,Math.min(.9,Fn(b.x,.5))),y:Math.max(.1,Math.min(.9,Fn(b.y,.5))),on:b.on!==!1})),vibes:(Array.isArray(a.vibes)?a.vibes:[]).filter(b=>b&&typeof b.path=="string").slice(0,16).map(b=>({id:typeof b.id=="string"?b.id:Qn(),path:b.path,strength:Math.max(0,Math.min(1,Fn(b.strength,.6))),info:Math.max(0,Math.min(1,Fn(b.info,1))),on:b.on!==!1,enc:b.enc&&typeof b.enc.data=="string"?{model:gn(b.enc.model,40),info:Fn(b.enc.info,1),data:b.enc.data}:null})),refs:(Array.isArray(a.refs)?a.refs:[]).filter(b=>b&&typeof b.path=="string").slice(0,2).map(b=>({id:typeof b.id=="string"?b.id:Qn(),path:b.path,strength:Math.max(0,Math.min(1,Fn(b.strength,.6))),fidelity:Math.max(0,Math.min(1,Fn(b.fidelity,1))),type:["character","style","character&style"].includes(b.type)?b.type:"character&style",on:b.on!==!1})),reserveDefault:Math.max(1,Math.min(20,Math.round(Fn(a.reserveDefault,1))))},c=(Array.isArray(n.pieces)?n.pieces:[]).filter(b=>b&&typeof b.name=="string"&&b.name).map(b=>({name:gn(b.name,40).replace(/[.<>,]/g,""),pieces:(Array.isArray(b.pieces)?b.pieces:[]).filter(P=>P&&typeof P.name=="string"&&P.name).map(P=>({name:gn(P.name,40).replace(/[.<>,]/g,""),prompt:gn(P.prompt),multi:!!P.multi}))})),p=b=>(Array.isArray(b)?b:[]).filter(P=>P&&typeof P.id=="string"&&P.id).map(P=>{let F=(Array.isArray(P.scenes)?P.scenes:[]).map(uo).filter(Boolean);return t&&!P.scenes&&(F=[uo({id:`${P.id}-default`,name:"default",images:P.images??[],cover:P.cover})]),{id:P.id,name:gn(P.name,80)||"이름 없음",en:gn(P.en,80).trim(),prompt:gn(P.prompt),cover:typeof P.cover=="string"&&!t?P.cover:"",scenes:F}}),s=p(n.chars),w=new Set(s.map(b=>b.id)),x=(Array.isArray(n.folders)?n.folders:[]).filter(b=>b&&typeof b.id=="string"&&b.id),m=new Set(x.map(b=>b.id)),k=x.map(b=>({id:b.id,name:gn(b.name,80)||"새 폴더",en:gn(b.en,80).trim(),kind:b.kind==="outfit"||b.kind==="group"?b.kind:"",prompt:gn(b.prompt),tpl:gn(b.tpl,120),lore:gn(b.lore,80),parent:typeof b.parent=="string"&&m.has(b.parent)&&b.parent!==b.id?b.parent:null,members:[...new Set((Array.isArray(b.members)?b.members:[]).filter(P=>w.has(P)))]})),j=new Map(k.map(b=>[b.id,b]));for(let b of k){let P=new Set([b.id]),F=b.parent;for(;F;){if(P.has(F)){b.parent=null;break}P.add(F),F=j.get(F)?.parent??null}}let z=[...new Set((Array.isArray(n.loreSkip)?n.loreSkip:[]).filter(b=>typeof b=="string"&&b))].slice(-500),_=n.sets&&typeof n.sets=="object"?n.sets:null,f=(Array.isArray(_?.list)?_.list:[]).filter(b=>b&&typeof b.id=="string"&&b.id).map(b=>({id:b.id.slice(0,40),name:gn(b.name,30).trim()||"세트",tpl:gn(b.tpl,120)})),$=f.length?{active:f.some(b=>b.id===_.active)?_.active:f[0].id,list:f,store:{}}:sr();for(let b of $.list){let P=_?.store?.[b.id];if(!P||b.id===$.active)continue;let F=p(P.chars),R=new Set(F.map(O=>O.id)),E={};for(let O of k)E[O.id]=[...new Set((Array.isArray(P.members?.[O.id])?P.members[O.id]:[]).filter(G=>R.has(G)))];$.store[b.id]={chars:F,members:E}}return{v:2,settings:o,pieces:c,chars:s,folders:k,loreSkip:z,sets:$}}var Dn=n=>n.sets??sr(),or=n=>{let e=Dn(n);return e.list.find(t=>t.id===e.active)??e.list[0]},ir=(n,e)=>e===Dn(n).active?n.chars.length:Dn(n).store[e]?.chars?.length??0;function pa(n,e,{copy:t=!1,mkId:a=Qn}={}){let o=Dn(n);if(e===o.active||!o.list.some(s=>s.id===e))return n;let c={...o.store,[o.active]:{chars:n.chars,members:Object.fromEntries(n.folders.map(s=>[s.id,s.members]))}},p=c[e]??{chars:[],members:{}};if(delete c[e],t&&!p.chars.length&&n.chars.length){let s=new Map(n.chars.map(w=>[w.id,a()]));p={chars:n.chars.map(w=>({id:s.get(w.id),name:w.name,en:w.en??"",prompt:w.prompt,cover:"",scenes:[{id:a(),name:"default",slots:[],size:"",reserve:0,cover:"",memo:"",images:[]}]})),members:Object.fromEntries(n.folders.map(w=>[w.id,w.members.map(x=>s.get(x)).filter(Boolean)]))}}return{...n,chars:p.chars,folders:n.folders.map(s=>({...s,members:p.members?.[s.id]??[]})),sets:{...o,active:e,store:c}}}function ha(n,{name:e="",tpl:t=""}={},a=Qn){let o=Dn(n),c=a();return{...n,sets:{...o,list:[...o.list,{id:c,name:gn(e,30).trim()||"새 세트",tpl:gn(t,120)}]}}}var dt=(n,e,t)=>{let a=Dn(n);return{...n,sets:{...a,list:a.list.map(o=>o.id===e?{...o,...t.name!=null?{name:gn(t.name,30).trim()||o.name}:{},...t.tpl!=null?{tpl:gn(t.tpl,120)}:{}}:o)}}};function ua(n,e){let t=Dn(n);if(e===t.active||t.list.length<=1)return n;let a={...t.store};return delete a[e],{...n,sets:{...t,list:t.list.filter(o=>o.id!==e),store:a}}}var Ln=(n,e)=>({...n,settings:{...n.settings,...e}});function ye(n,{name:e="",en:t="",prompt:a=""}={},o=Qn){let c=o();return{...n,chars:[...n.chars,{id:c,name:gn(e,80).trim()||"새 캐릭터",en:gn(t,80).trim(),prompt:gn(a),cover:"",scenes:[{id:o(),name:"default",slots:[],size:"",reserve:0,cover:"",memo:"",images:[]}]}]}}var Jn=(n,e,t)=>({...n,chars:n.chars.map(a=>a.id===e?{...a,...t,id:a.id}:a)}),ga=(n,e)=>({...n,chars:n.chars.filter(t=>t.id!==e),folders:n.folders.map(t=>({...t,members:t.members.filter(a=>a!==e)}))});function lr(n,e,t=Qn){let a=n.chars.find(s=>s.id===e);if(!a)return n;let o=t(),c={...structuredClone(a),id:o,name:`${a.name} 사본`,cover:"",scenes:a.scenes.map(s=>({...structuredClone(s),id:t(),images:[],cover:"",reserve:0}))},p=n.chars.findIndex(s=>s.id===e);return{...n,chars:[...n.chars.slice(0,p+1),c,...n.chars.slice(p+1)],folders:n.folders.map(s=>s.members.includes(e)?{...s,members:[...s.members,o]}:s)}}var vn=(n,e)=>n.chars.find(t=>t.id===e)??null,ma=n=>(n?.scenes??[]).reduce((e,t)=>e+t.images.length,0);function fa(n){if(!n)return"";if(n.cover&&n.scenes.some(e=>e.images.some(t=>t.path===n.cover)))return n.cover;for(let e of n.scenes){let t=Ce(e);if(t)return t}return""}function Ne(n,{name:e="",en:t="",kind:a="",parent:o=null,prompt:c="",lore:p=""}={},s=Qn){let w=o&&n.folders.some(x=>x.id===o)?o:null;return{...n,folders:[...n.folders,{id:s(),name:gn(e,80).trim()||"새 폴더",en:gn(t,80).trim(),...p?{lore:gn(p,80)}:{},kind:a==="outfit"||a==="group"?a:"",prompt:gn(c),parent:w,members:[]}]}}function pt(n,e,{name:t,en:a,kind:o,prompt:c,tpl:p}){return{...n,folders:n.folders.map(s=>s.id===e?{...s,...t!=null?{name:gn(t,80).trim()||s.name}:{},...a!=null?{en:gn(a,80).trim()}:{},...o!=null?{kind:o}:{},...c!=null?{prompt:gn(c)}:{},...p!=null?{tpl:gn(p,120)}:{}}:s)}}function wo(n,e){let t=new Map(n.folders.map(c=>[c.id,c])),a=new Set,o=[];for(let c of n.folders){if(!c.members.includes(e))continue;let p=[];for(let s=c;s&&p.length<50;s=s.parent?t.get(s.parent):null)p.unshift(s);for(let s of p)a.has(s.id)||(a.add(s.id),String(s.prompt??"").trim()&&o.push(s.prompt.trim()))}return o.join(", ")}function Be(n,e){let t=new Map(n.folders.map(a=>[a.id,a]));for(let a=t.get(e),o=0;a&&o<50;a=a.parent?t.get(a.parent):null,o++)if(a.tpl)return a.tpl;return""}var ve=(n,e)=>[wo(n,e.id),String(e.prompt??"").trim()].filter(Boolean).join(", "),ba=(n,e)=>{let t=new Set([e]);for(let a=!0;a;){a=!1;for(let o of n.folders)o.parent&&t.has(o.parent)&&!t.has(o.id)&&(t.add(o.id),a=!0)}return t};function cr(n,e,t){if(t&&ba(n,e).has(t))throw new Error("폴더를 자기 안으로 옮길 수 없어요");return{...n,folders:n.folders.map(a=>a.id===e?{...a,parent:t||null}:a)}}var dr=(n,e)=>{let t=ba(n,e),a=n.folders.filter(o=>t.has(o.id)&&o.lore).map(o=>o.lore);return{...n,folders:n.folders.filter(o=>!t.has(o.id)),loreSkip:[...new Set([...n.loreSkip??[],...a])]}};function ht(n,e,t,a){return{...n,folders:n.folders.map(o=>{if(o.id!==e)return o;let c=o.members.includes(t);return a&&!c?{...o,members:[...o.members,t]}:!a&&c?{...o,members:o.members.filter(p=>p!==t)}:o})}}var ko=(n,e,t)=>{let a=t?n.indexOf(t):-1;if(a<0)return null;for(;a<n.length&&e.has(n[a]);)a++;return n[a]??null},ar=(n,e,t)=>{let a=new Set(e),o=e.filter(w=>n.includes(w)),c=n.filter(w=>!a.has(w)),p=ko(n,a,t),s=p?c.indexOf(p):c.length;return[...c.slice(0,s),...o,...c.slice(s)]};function ut(n,e,{from:t=null,to:a=null,before:o=null,copy:c=!1}={}){let p=e.filter(x=>n.chars.some(m=>m.id===x));if(!p.length||a&&!n.folders.some(x=>x.id===a))return n;let s=n.folders,w=n.chars;if(a)s=s.map(x=>{if(x.id===a){let m=x.members.filter(z=>!p.includes(z)),k=x.members.includes(o)?ko(x.members,new Set(p),o):null,j=k&&m.includes(k)?m.indexOf(k):m.length;return{...x,members:[...m.slice(0,j),...p,...m.slice(j)]}}return!c&&t&&x.id===t?{...x,members:x.members.filter(m=>!p.includes(m))}:x});else{!c&&t&&(s=s.map(k=>k.id===t?{...k,members:k.members.filter(j=>!p.includes(j))}:k));let x=ar(w.map(k=>k.id),p,o),m=new Map(w.map(k=>[k.id,k]));w=x.map(k=>m.get(k))}return{...n,folders:s,chars:w}}function A0(n,e,t,a){if(!e){let o=new Map(n.chars.map(c=>[c.id,c]));return{...n,chars:ar(n.chars.map(c=>c.id),t,a).map(c=>o.get(c))}}return{...n,folders:n.folders.map(o=>o.id===e?{...o,members:ar(o.members,t,a)}:o)}}function wa(n,e,t,a=null){let o=cr(n,e,t||null),c=o.folders.find(w=>w.id===e);if(!c)return n;let p=o.folders.filter(w=>w.id!==e),s=a&&a!==e?p.findIndex(w=>w.id===a):-1;if(s<0){let w=p.map((x,m)=>(x.parent??null)===(c.parent??null)?m:-1).filter(x=>x>=0).pop();return{...o,folders:[...p.slice(0,(w??p.length-1)+1),c,...p.slice((w??p.length-1)+1)]}}return{...o,folders:[...p.slice(0,s),c,...p.slice(s)]}}function ka(n,e,t,a){return re(n,e,o=>{let c=new Map(o.map(p=>[p.id,p]));return ar(o.map(p=>p.id),t,a).map(p=>c.get(p))})}function ya(n,e,t,a,{copy:o=!1,mkId:c=Qn}={}){if(e===a)return n;let p=vn(n,e),s=vn(n,a);if(!p||!s)return n;let w=p.scenes.filter(k=>t.includes(k.id));if(!w.length)return n;let x=s,m=w.map(k=>{let j=Re(x,k.name),z=o?{...structuredClone(k),id:c(),name:j,images:[],cover:"",reserve:0}:{...k,name:j};return x={...x,scenes:[...x.scenes,z]},z});return{...n,chars:n.chars.map(k=>k.id===a?x:k.id===e&&!o?{...k,scenes:k.scenes.filter(j=>!t.includes(j.id)),cover:p.cover&&w.some(j=>j.images.some(z=>z.path===p.cover))?"":k.cover}:k)}}var T0=(n,e)=>n.folders.filter(t=>t.members.includes(e));function pr(n,e){let t=new Map(n.chars.map(o=>[o.id,o])),a=n.folders.filter(o=>(o.parent??null)===(e??null));if(!e){let o=new Set(n.folders.flatMap(c=>c.members));return{folders:a,chars:n.chars.filter(c=>!o.has(c.id))}}return{folders:a,chars:(n.folders.find(o=>o.id===e)?.members??[]).map(o=>t.get(o)).filter(Boolean)}}function Rn(n,e){let t=new Map(n.chars.map(o=>[o.id,o])),a=new Set;for(let o of ba(n,e))for(let c of n.folders.find(p=>p.id===o)?.members??[])a.add(c);return[...a].map(o=>t.get(o)).filter(Boolean)}var _0=(n,e)=>Rn(n,e).length;function hr(n,e){let t=new Map(n.folders.map(o=>[o.id,o])),a=[];for(let o=t.get(e);o&&a.length<50;o=o.parent?t.get(o.parent):null)a.unshift(o);return a}var re=(n,e,t)=>Jn(n,e,{scenes:t(vn(n,e)?.scenes??[])});function ur(n,e,{name:t="",prompt:a=""}={},o=Qn){let c={id:o(),name:gn(t,80).trim()||"새 씬",slots:a.trim()?[[{prompt:gn(a),on:!0}]]:[],size:"",reserve:0,cover:"",memo:"",images:[]};return re(n,e,p=>[...p,c])}var On=(n,e,t,a)=>re(n,e,o=>o.map(c=>c.id===t?{...c,...a,id:c.id}:c)),va=(n,e,t)=>{let a=new Set(t);return re(n,e,o=>o.filter(c=>!a.has(c.id)))};function gt(n,e,t,a=Qn){return re(n,e,o=>{let c=o.findIndex(s=>s.id===t);if(c<0)return o;let p={...structuredClone(o[c]),id:a(),name:`${o[c].name} 사본`,images:[],cover:"",reserve:0};return[...o.slice(0,c+1),p,...o.slice(c+1)]})}function E0(n,e,t,a){return re(n,e,o=>{let c=o.findIndex(w=>w.id===t);if(c<0)return o;let p=[...o],[s]=p.splice(c,1);return p.splice(Math.max(0,Math.min(p.length,a)),0,s),p})}var gr=(n,e,t="asc")=>re(n,e,a=>[...a].sort((o,c)=>o.name.localeCompare(c.name,"ko")*(t==="desc"?-1:1))),mn=(n,e,t)=>vn(n,e)?.scenes.find(a=>a.id===t)??null;function Re(n,e){let t=String(e??"").trim()||"새 씬",a=new Set((n?.scenes??[]).map(o=>o.name.toLowerCase()));if(!a.has(t.toLowerCase()))return t;for(let o=2;;o++)if(!a.has(`${t} ${o}`.toLowerCase()))return`${t} ${o}`}var Ue=(n,e,t,a)=>On(n,e,t,{slots:a.map(o=>o.map(c=>({prompt:gn(c.prompt),on:c.on!==!1})))});function mt(n,e,t,a,o=Date.now){let c=mn(n,e,t);return c?On(n,e,t,{images:[bo({...a,at:o()}),...c.images].filter(Boolean).slice(0,da)}):n}function Ke(n,e,t,a){let o=mn(n,e,t),c=new Set(a);if(!o)return n;let p=On(n,e,t,{images:o.images.filter(w=>!c.has(w.path)),cover:c.has(o.cover)?"":o.cover}),s=vn(p,e);return s&&c.has(s.cover)&&(p=Jn(p,e,{cover:""})),p}function xe(n,e,t,a,o){let c=mn(n,e,t);return c?On(n,e,t,{images:c.images.map(p=>p.path===a?{...p,...o,path:p.path}:p)}):n}function je(n,e,t,a,o){let c=mn(n,e,t),p=new Set(a);return c?On(n,e,t,{images:c.images.map(s=>p.has(s.path)?{...s,pick:!!o}:s)}):n}var mr=(n,e,t=null)=>re(n,e,a=>a.map(o=>!t||o.id===t?{...o,images:o.images.map(c=>c.pick?{...c,pick:!1}:c)}:o)),Ve=n=>(n?.images??[]).filter(e=>e.pick).length,xa=(n,e=null)=>(n?.scenes??[]).filter(t=>!e||t.id===e).flatMap(t=>ne(t).filter(a=>a.fav).map(a=>({sid:t.id,name:t.name,path:a.path,sent:a.sent||""}))),oe=n=>(n?.images??[]).some(e=>e.fav),ft=n=>(n?.scenes??[]).filter(e=>!oe(e));function ja(n,e,t){var a=vn(n,e);if(!a)return n;var o=ft(a).map(c=>c.id);return o.length?Wn(n,e,t,o):n}function Ca(n,e,t,a,o){var c=mn(n,e,t);return c?On(n,e,t,{images:c.images.map(p=>p.path===a?{...p,sent:String(o).slice(0,200)}:p)}):n}var ae=(n,e=null)=>(n?.scenes??[]).filter(t=>!e||t.id===e).flatMap(t=>ne(t).filter(a=>a.pick).map(a=>({sid:t.id,name:t.name,path:a.path})));function ne(n){return[...n?.images??[]].sort((e,t)=>(e.rank??1e9)-(t.rank??1e9)||Number(t.fav)-Number(e.fav)||t.at-e.at)}function Ce(n){return n?.images?.length?n.cover&&n.images.some(e=>e.path===n.cover)?n.cover:ne(n)[0].path:""}var Un=(n,e,t,a)=>On(n,e,t,{reserve:Math.max(0,Math.min(99,Math.round(a)))}),Wn=(n,e,t,a=null)=>re(n,e,o=>o.map(c=>!a||a.includes(c.id)?{...c,reserve:Math.max(0,Math.min(99,c.reserve+t))}:c)),bt=(n,e)=>e?re(n,e,t=>t.map(a=>({...a,reserve:0}))):{...n,chars:n.chars.map(t=>({...t,scenes:t.scenes.map(a=>({...a,reserve:0}))}))};function ie(n,e=null){let t=[];for(let a of n.chars)if(!(e&&a.id!==e))for(let o of a.scenes){let c=Yn(o.slots);for(let p=0;p<o.reserve;p++)for(let s=0;s<c;s++){if(t.length>=go)return t;t.push({cid:a.id,sid:o.id,combo:s})}}return t}function Pa(n,e=null){let a=n.chars.filter(o=>!e||o.id===e).flatMap(o=>o.scenes);return{reserved:a.filter(o=>o.reserve>0).length,scenes:a.length,jobs:ie(n,e).length,combos:a.reduce((o,c)=>o+Yn(c.slots),0)}}var Pe=(n,e)=>po(co(n?.slots??[],e)??[]);function yo(n){return n=n>>>0,n^=n<<13,n>>>=0,n^=n>>>17,n^=n<<5,n>>>=0,Math.max(1,n)}function $a(n,e,t=Math.random){let a=n?.value>>>0;if(n?.mode==="fixed"&&a)return a;if(n?.mode==="chain"&&a){let o=a;for(let c=0;c<e;c++)o=yo(o);return o}return 1+Math.floor(t()*4294967294)}function _e(n,e){let t=o=>_n[o]?{width:_n[o].width,height:_n[o].height}:null,a=o=>{let c=/^(\d+)x(\d+)$/.exec(o??"");return c?we(c[1],c[2]):null};return n?.mode==="custom"?we(n.w,n.h):n?.mode&&n.mode!=="scene"?t(n.mode)??t("portrait"):t(e?.size)??a(e?.size)??t("portrait")}function za(n,e=Math.random){let t=[...new Set(n)];for(let a=t.length-1;a>0;a--){let o=Math.floor(e()*(a+1));[t[a],t[o]]=[t[o],t[a]]}return t.length<=1?{players:t,next:[],at:0,size:t.length,ranks:t[0]?{[t[0]]:1}:{},total:t.length,done:!0}:{players:t,next:[],at:0,size:t.length,ranks:{},total:t.length,done:!1}}var Ma=n=>!!n?.done;function fr(n){return n.players.length-n.at>=2?[n.players[n.at],n.players[n.at+1]]:null}function Sa(n,e){let t=fr(n);if(!t)return n;let a=t[e?1:0],o=t[e?0:1],c={...n,next:[...n.next,a],at:n.at+2,ranks:{...n.ranks,[o]:Math.floor(n.size/2)+1}};return q0(c)}function q0(n){if(n.players.length-n.at>=2)return n;let e=n.players.length-n.at===1?[n.players[n.at]]:[],t=[...n.next,...e];return t.length<=1?{...n,players:t,next:[],at:0,size:t.length,ranks:t[0]?{...n.ranks,[t[0]]:1}:n.ranks,done:!0}:{...n,players:t,next:[],at:0,size:t.length}}var Aa=n=>n.done?"끝":n.size<=2?"결승":n.size<=4?"4강":`${n.size}강`;function Ta(n,e,t,a){let o=mn(n,e,t);return o?On(n,e,t,{images:o.images.map(c=>a[c.path]!=null?{...c,rank:a[c.path]}:c)}):n}var br=n=>n?.en||n?.name||"char",wr=n=>n?.en||n?.name||"";function kr(n,e){let t=n.folders.filter(a=>a.members.includes(e));return t.find(a=>a.kind==="outfit")??t[0]??null}var wt=(n,e)=>[wr(kr(n,e?.id)),br(e)].filter(Boolean).join("/"),L0=(n,e)=>({...n,folders:n.folders.map(t=>e[t.id]?{...t,lore:e[t.id]}:t)});function _a(n,e,t){if(t=String(t??"").replace(/[.<>,]/g,"").replace(/\s+/g," ").trim().slice(0,40),!t||t===e||!n.pieces.some(m=>m.name===e))return n;if(n.pieces.some(m=>m.name===t))throw new Error(`‘${t}’ 모음이 이미 있어요`);let a=e.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),o=new RegExp(`<${a}\\.`,"g"),c=m=>typeof m=="string"?m.replace(o,`<${t}.`):m,p=m=>m.map(k=>({...k,prompt:c(k.prompt),scenes:k.scenes.map(j=>({...j,slots:j.slots.map(z=>z.map(_=>({..._,prompt:c(_.prompt)})))}))})),s=n.settings,w=Dn(n),x=Object.fromEntries(Object.entries(w.store??{}).map(([m,k])=>[m,{...k,chars:p(k.chars??[])}]));return{...n,settings:{...s,top:c(s.top),back:c(s.back),neg:c(s.neg),chars:s.chars.map(m=>({...m,prompt:c(m.prompt),uc:c(m.uc)}))},pieces:n.pieces.map(m=>({...m,name:m.name===e?t:m.name,pieces:m.pieces.map(k=>({...k,prompt:c(k.prompt)}))})),folders:n.folders.map(m=>({...m,prompt:c(m.prompt)})),chars:p(n.chars),sets:{...w,store:x}}}var O0="https://image.novelai.net",vo="dusk.sdstudio.token",xo="dusk.sdstudio.presets",jo="dusk.sdstudio.templates",Co="dusk.sdstudio.tokens",Po="dusk.sdstudio.prefs",I0=["https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/data/sdstudio/tags_v5.csv.gz","https://cdn.jsdelivr.net/gh/Pyser08/Dusk-Atelier@main/data/sdstudio/tags_v5.csv.gz","https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/SD-Studio/data/sdstudio/tags_v5.csv.gz"],Ea="dusk.sdstudio.tagsgz",qa="dusk.sdstudio.mirror.",$e=null,kt=null;async function zo(n,e="webp",t=.85){if(e!=="webp"&&e!=="avif")return{data:n,ext:"png",fellBack:!1};let a=await createImageBitmap(new Blob([n],{type:"image/png"})),o=async c=>{if(typeof OffscreenCanvas=="function"){let s=new OffscreenCanvas(a.width,a.height);return s.getContext("2d").drawImage(a,0,0),s.convertToBlob({type:c,quality:t})}let p=Object.assign(document.createElement("canvas"),{width:a.width,height:a.height});return p.getContext("2d").drawImage(a,0,0),new Promise(s=>p.toBlob(s,c,t))};try{let c=await o(`image/${e}`),p=!1,s=e;if((!c||c.type!==`image/${e}`)&&(c=await o("image/webp"),s="webp",p=e==="avif"),!c||c.type!=="image/webp"&&s==="webp")return{data:n,ext:"png",fellBack:!0};let w=new Uint8Array(await c.arrayBuffer());return w.length<n.length?{data:w,ext:s,fellBack:p}:{data:n,ext:"png",fellBack:p}}finally{a.close?.()}}var D0=n=>n?.kind==="module"?`dusk.sdstudio.m.${n.id}`:`dusk.sdstudio.p.${n?.id}`;function He(n){let e="";for(let t=0;t<n.length;t+=32768)e+=String.fromCharCode.apply(null,n.subarray(t,t+32768));return btoa(e)}async function $o(n){if(n instanceof Uint8Array)return n;if(n instanceof ArrayBuffer)return new Uint8Array(n);let e=n?.body;if(e instanceof Uint8Array)return e;if(e instanceof ArrayBuffer)return new Uint8Array(e);if(e&&typeof e.getReader=="function"){let t=e.getReader(),a=[],o=0;for(;;){let{done:s,value:w}=await t.read();if(s)break;a.push(w),o+=w.length}let c=new Uint8Array(o),p=0;for(let s of a)c.set(s,p),p+=s.length;return c}if(typeof n?.arrayBuffer=="function")return new Uint8Array(await n.arrayBuffer());if(typeof n?.text=="function")return new TextEncoder().encode(await n.text());if(typeof e=="string")return new TextEncoder().encode(e);throw new Error("응답을 읽지 못했어요")}function F0(n,e){let t="";try{let a=new TextDecoder().decode(e.subarray(0,2e3));try{t=JSON.parse(a)?.message??a}catch{t=a}}catch{}return n===401?"토큰이 맞지 않아요. 토큰을 다시 넣어 주세요":n===402?"Anlas가 모자라거나 구독이 필요해요":n===429?"요청이 너무 잦아요. 잠시 뒤 다시 해 주세요":`NovelAI 오류 ${n}${t?`: ${String(t).slice(0,200)}`:""}`}function Mo(n){let e="",t=async()=>{try{return await n.getLocalPluginStorage?.()??null}catch{return null}},a=async(m,k,j)=>{if(typeof n.nativeFetch=="function")try{return await n.nativeFetch(m,k)}catch(z){if(typeof fetch!="function")throw z}return fetch(m,{...k,signal:j})},o=()=>n.pluginStorage,c={};async function p(m,k,j){let z=JSON.stringify(k),_=j||Date.now(),f=await t();try{await f?.setItem?.(qa+m,JSON.stringify({t:_,p:k}))}catch{}let $=null;for(let b=0;b<3;b++)try{await o()?.setItem(m,z);let P=null;try{P=await o()?.getItem(m)}catch{}if(P!=null&&(typeof P=="string"?P:JSON.stringify(P))!==z)throw new Error("저장한 내용이 달라요. 이 기기 복사본에는 남아 있어요 — 전체 백업(zip)을 받아 두세요");try{await o()?.setItem(`${m}.t`,String(_))}catch{}return}catch(P){$=P,await new Promise(F=>setTimeout(F,400*(b+1)))}throw $}let s=m=>typeof m=="string"?`dusk.sdstudio.p.${m}`:D0(m),w=m=>Fs(st(m[0]===31&&m[1]===139?at(m):m)+`
+`+Vs),x={to:m=>{let k="";for(let j=0;j<m.length;j+=32768)k+=String.fromCharCode(...m.subarray(j,j+32768));return btoa(k)},from:m=>Uint8Array.from(atob(m),k=>k.charCodeAt(0))};return{tags(){return $e},async loadTags({download:m=!0}={}){return $e||kt||(kt=(async()=>{let k=await t();try{let z=await k?.getItem?.(Ea);if(z)return $e=w(x.from(String(z)))}catch{}if(!m)return null;let j=null;for(let z of I0)try{let _=await a(z,{method:"GET"});if(!_?.ok&&_?.status)throw new Error(`HTTP ${_.status}`);let f=await $o(_);if(f.length<1e5)throw new Error("파일이 너무 작아요");$e=w(f);try{await k?.setItem?.(Ea,x.to(f))}catch{}return $e}catch(_){j=_}throw new Error(`태그 사전을 받지 못했어요: ${j?.message??j}`)})().finally(()=>{kt=null}),kt)},async loadTagsFromBytes(m){$e=w(m);let k=await t();try{let j=m[0]===31&&m[1]===139?m:null;j&&await k?.setItem?.(Ea,x.to(j))}catch{}return $e},keyOf:s,async loadProject(m){let k=s(m),j=b=>b?typeof b=="string"?JSON.parse(b):b:null,z=null,_=0,f=null;try{z=j(await o()?.getItem(k))}catch{z=null}try{_=Number(await o()?.getItem(`${k}.t`))||0}catch{_=0}try{let b=await t();f=j(await b?.getItem?.(qa+k))}catch{f=null}let $=f?.p&&(!z||f.t>_);return Zn($?f.p:z)},async savedAt(m){let k=s(m),j=0,z=0;try{j=Number(await o()?.getItem(`${k}.t`))||0}catch{}try{let f=await(await t())?.getItem?.(qa+k);z=Number((typeof f=="string"?JSON.parse(f):f)?.t)||0}catch{}return Math.max(j,z)},saveProject(m,k,j){let z=s(m),_=c[z]??={busy:null,next:null};if(_.next=k,_.at=j,_.busy)return _.busy;let f=async()=>{let $=null;for(;_.next;){let b=_.next,P=_.at;_.next=null;try{await p(z,b,P),$=null}catch(F){$=F}}if(_.busy=null,$)throw $};return _.busy=f(),_.busy},async loadPresets(){try{let m=await o()?.getItem(xo),k=m?typeof m=="string"?JSON.parse(m):m:[];return Array.isArray(k)?k:[]}catch{return[]}},async savePresets(m){await o()?.setItem(xo,JSON.stringify(m))},async getToken(){let m=await t();try{let k=await m?.getItem?.(vo);if(k)return String(k)}catch{}return e},async setToken(m){e=String(m??"").trim();let k=await t();try{await k?.setItem?.(vo,e)}catch{}},async getLocal(m,k){let j=await t();try{let z=await j?.getItem?.(m);return z?typeof z=="string"?JSON.parse(z):z:k}catch{return k}},async setLocal(m,k){let j=await t();try{await j?.setItem?.(m,JSON.stringify(k))}catch{}},async getPrefs(){return{putSlot:"additionalAssets",nameStyle:"scene",putFormat:"webp",putQuality:.85,dup:"number",keys:{},boost:!1,...await this.getLocal(Po,{})}},async setPrefs(m){let k=await this.getPrefs();await this.setLocal(Po,{...k,...m})},async getTokens(){let m=(await this.getLocal(Co,[])).filter(j=>j&&typeof j.token=="string"&&j.token.trim()),k=await this.getToken();return k&&!m.some(j=>j.token===k)?[{label:"기본",token:k},...m]:m},async setTokens(m){let k=m.map(j=>({label:String(j.label??"").slice(0,30),token:String(j.token??"").trim()})).filter(j=>j.token);await this.setLocal(Co,k),k[0]&&await this.setToken(k[0].token)},async loadTemplates(){try{let m=await o()?.getItem(jo),k=m?typeof m=="string"?JSON.parse(m):m:[];return Array.isArray(k)?k:[]}catch{return[]}},async saveTemplates(m){await o()?.setItem(jo,JSON.stringify(m))},async call(m,k,{signal:j,label:z="sdstudio",zip:_=!0,token:f}={}){if(Hs())throw Js();let $=f||await this.getToken();if(!$)throw new Error("NovelAI 토큰을 먼저 넣어 주세요");let b=Ws(z,j);try{return await b.race((async()=>{let P=await a(`${O0}${m}`,{method:"POST",headers:{Authorization:`Bearer ${$}`,"Content-Type":"application/json",Accept:_?"application/zip":"*/*"},body:JSON.stringify(k)},b.signal),F=await $o(P);if((P?.status??200)>=400)throw new Error(F0(P.status,F));return F})())}finally{b.end()}},async image(m,k){let{data:j}=tr(await this.call("/ai/generate-image",m,k),Xt);if(!rr(j))throw new Error("받은 그림이 PNG가 아니에요");return j},async augment(m,k){return tr(await this.call("/ai/augment-image",m,k),Xt,{last:!0}).data},async upscale(m,k){let{data:j}=tr(await this.call("/ai/upscale",m,k),Xt);if(!rr(j))throw new Error("업스케일 결과가 PNG가 아니에요");return j},async encodeVibe(m,k){return He(await this.call("/ai/encode-vibe",m,{...k,zip:!1}))},async generate(m,k){let j=lt(m);return{data:await this.image(j,{signal:k}),seed:j.parameters.seed}},async saveAsset(m){if(typeof n.saveAsset!="function")throw new Error("이 리스에서는 에셋을 저장할 수 없어요");let k;for(let j=0;j<3;j++){try{let z=await n.saveAsset(m.slice());if(z)return z}catch(z){k=z}await new Promise(z=>setTimeout(z,600*(j+1)))}throw new Error(`에셋을 저장하지 못했어요: ${k?.message??k??"경로 없음"}`)}}}var La=globalThis.__duskLib?.["src/ui/dom.js"];if(!La)throw new Error("Dusk 코어에 src/ui/dom.js가 없어요 — Dusk를 업데이트해 주세요");{let n=["EASE","copyText","download","fadeUp","fmtBytes","fmtWhen","h","motion","pickFiles","reduceMotion","replace","svgFrom","vanish"].filter(e=>!(e in La));if(n.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/ui/dom.js에 없는 기능: "+n.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{EASE:Cc,copyText:Pc,download:ze,fadeUp:$c,fmtBytes:zc,fmtWhen:Mc,h:i,motion:Sc,pickFiles:ee,reduceMotion:Ac,replace:wn,svgFrom:So,vanish:Tc}=La;var Me="dusk_sdstudio";function Oa(n,e){let t=e==="module"?n?.[Me]:n?.extentions?.[Me];return t&&typeof t=="object"&&typeof t.z=="string"&&Number.isFinite(t.t)?t:null}function Ao(n,e,t){if(e==="module")return t?n[Me]=t:delete n[Me],n;let a={...n.extentions??{}};return t?a[Me]=t:delete a[Me],n.extentions=a,n}var Kn=(n,e=8e3)=>String(n??"").slice(0,e),yt=n=>String(n??"").replace(/[.<>,]/g,"").replace(/\s+/g," ").trim().slice(0,40),To=n=>{if(!n||typeof n!="object")return null;let e=yt(n.name??n.description);if(!e||!n.pieces)return null;let t=n.multi&&typeof n.multi=="object"?n.multi:{},o=(Array.isArray(n.pieces)?n.pieces:Object.entries(n.pieces).map(([c,p])=>({name:c,prompt:p,multi:t[c]}))).filter(c=>c&&yt(c.name)).map(c=>({name:yt(c.name),prompt:Kn(c.prompt),multi:!!c.multi}));return{name:e,pieces:o}};function vt(n,e){if(/\.txt$/i.test(n)){let p=String(e).split(/\r?\n/).map(s=>s.trim()).filter(Boolean);if(!p.length)throw new Error("파일이 비어 있어요");return{wild:{name:yt(n.replace(/\.txt$/i,""))||"조각",prompt:p.join(`
+`),multi:p.length>1}}}let t;try{t=JSON.parse(e)}catch{throw new Error("JSON을 읽지 못했어요")}let a=To(t);if(a)return{libs:[a]};let o=t?.library&&typeof t.library=="object"?t.library:t,c=(Array.isArray(o)?o:Object.entries(o??{}).map(([p,s])=>s&&typeof s=="object"?{...s,name:s.name??p}:null)).map(To).filter(Boolean);if(!c.length)throw new Error("조각 모음 JSON이 아니에요");return{libs:c}}var Eo=(n,e)=>{if(!e.has(n))return n;for(let t=2;;t++)if(!e.has(`${n}_${t}`))return`${n}_${t}`};function xt(n,e){let t=[...n??[]],a=new Set(t.map(c=>c.name)),o=[];for(let c of e){let p=Eo(c.name,a);a.add(p),o.push(p),t.push({...c,name:p})}return{pieces:t,names:o}}function yr(n,e,t="wildcards"){let a=yt(t)||"wildcards",o=(n??[]).map(s=>({...s,pieces:[...s.pieces]})),c=o.find(s=>s.name===a);c||(c={name:a,pieces:[]},o.push(c));let p=Eo(e.name,new Set(c.pieces.map(s=>s.name)));return c.pieces.push({name:p,prompt:e.prompt,multi:e.multi}),{pieces:o,group:a,name:p}}function qo(n){return JSON.stringify({version:1,name:n.name,pieces:n.pieces.map(e=>({name:e.name,prompt:e.prompt,multi:!!e.multi}))},null,1)}function Ia(n){let e;try{e=JSON.parse(n)}catch{throw new Error("JSON을 읽지 못했어요")}let t=Array.isArray(e?.presets)?e.presets:Array.isArray(e)?e:null;if(!t)throw new Error("캐릭터 프리셋 파일이 아니에요");return t.filter(a=>a&&typeof a=="object").map(a=>({name:Kn(a.name,80).trim()||"캐릭터",prompt:Kn(a.characterPrompt??a.prompt)}))}function B0(n){let e={};if(!(n?.[0]===137&&n[1]===80))return e;let t=c=>(n[c]<<24|n[c+1]<<16|n[c+2]<<8|n[c+3])>>>0,a=new TextDecoder("latin1"),o=new TextDecoder;for(let c=8;c+12<=n.length;){let p=t(c),s=String.fromCharCode(n[c+4],n[c+5],n[c+6],n[c+7]),w=n.subarray(c+8,c+8+p);if(s==="tEXt"||s==="iTXt"){let x=w.indexOf(0),m=a.decode(w.subarray(0,x));if(s==="tEXt")e[m]=o.decode(w.subarray(x+1));else if(!w[x+1]){let k=w.indexOf(0,x+3)+1;k=w.indexOf(0,k)+1,e[m]=o.decode(w.subarray(k))}}if(s==="IEND")break;c+=12+p}return e}var _o=(...n)=>n.map(e=>String(e??"").trim()).filter(Boolean).join(", ");function Lo(n){let e=B0(n),t=null,a=null;try{t=e.Comment?JSON.parse(e.Comment):null}catch{}try{a=e.SDStudio?.startsWith("v1:")?JSON.parse(e.SDStudio.slice(3)):null}catch{}let o=a?.promptSource;if(o&&typeof o.frontPrompt=="string")return{top:_o(o.frontPrompt,o.extraPrompt,o.characterPrompt),middle:Kn(o.middlePrompt),back:_o(o.backgroundPrompt,o.backPrompt),neg:Kn(t?.uc??t?.negative_prompt),seed:Number.isFinite(t?.seed)?t.seed:null,split:!0};let c=t?.prompt??e.Description;return typeof c!="string"?null:{top:Kn(c),middle:"",back:"",neg:Kn(t?.uc??t?.negative_prompt),seed:Number.isFinite(t?.seed)?t.seed:null,split:!1}}function Da(n,e={}){let t=n?.preset??n??{},a={...e.sampling??{}};Number.isFinite(t.steps)&&(a.steps=t.steps),Number.isFinite(t.promptGuidance)&&(a.scale=t.promptGuidance),Number.isFinite(t.cfgRescale)&&(a.cfgRescale=t.cfgRescale),typeof t.sampling=="string"&&(a.sampler=t.sampling),typeof t.noiseSchedule=="string"&&(a.noise=t.noiseSchedule);for(let c of["varietyPlus","useCoords"])typeof t[c]=="boolean"&&(a[c]=t[c]);let o={top:Kn(t.frontPrompt),back:Kn(t.backPrompt),neg:Kn(t.uc),sampling:a};return Array.isArray(t.characterPrompts)&&t.characterPrompts.length&&(o.chars=t.characterPrompts.filter(c=>c&&typeof c=="object").map(c=>({prompt:Kn(c.prompt),uc:Kn(c.uc),x:Number(c.position?.x)||.5,y:Number(c.position?.y)||.5,on:c.enabled!==!1}))),{name:Kn(n?.name,80).trim()||"SDStudio 프리셋",at:Number(n?.updatedAt)||Date.now(),settings:o}}function Fa(n,e){let t;try{t=typeof n=="string"?JSON.parse(n):n}catch{throw new Error("JSON을 읽지 못했어요")}let a=Array.isArray(t?.presets)?t.presets:Array.isArray(t)?t:null;if(!a)throw new Error("글로벌 프리셋 파일이 아니에요");return a.filter(o=>o&&(!o.workflowType||/^SDImageGen/.test(o.workflowType))).map(o=>Da(o,e))}function vr(n,e){let t=[...n??[]],a=new Set(t.map(c=>c.name)),o=[];for(let c of e){let p=c.name;for(let s=2;a.has(p);s++)p=`${c.name} ${s}`;a.add(p),o.push(p),t.push({...c,name:p})}return{list:t,names:o}}var R0="dusk-sds-thumbs",Na="t",Oo=12e3,xr=null;function U0(){return xr||(xr=new Promise(n=>{try{let e=indexedDB.open(R0,1);e.onupgradeneeded=()=>e.result.createObjectStore(Na),e.onsuccess=()=>n(e.result),e.onerror=()=>n(null)}catch{n(null)}}),xr)}var jr=async(n,e)=>{let t=await U0();return t?new Promise(a=>{try{let o=t.transaction(Na,n),c=e(o.objectStore(Na));o.oncomplete=()=>a(c?.result??null),o.onerror=()=>a(null),o.onabort=()=>a(null)}catch{a(null)}}):null},Do=n=>jr("readonly",e=>e.get(n)),K0=0;async function Ba(n,e){if(!(!e||e.size>400*1024)&&(await jr("readwrite",t=>t.put(e,n)),++K0%200===0)){let t=await jr("readonly",a=>a.count());t>Oo&&await jr("readwrite",a=>{let o=a.openCursor(),c=t-Oo+500;return o.onsuccess=()=>{let p=o.result;p&&c-- >0&&(p.delete(),p.continue())},o})}}var Io=2500,jt=null;async function Ra(){if(jt!==null)return jt;try{let n=await navigator.storage?.getDirectory?.();jt=n?await n.getDirectoryHandle("dusk-sds-img",{create:!0}):!1}catch{jt=!1}return jt}var Fo=n=>encodeURIComponent(n).replace(/%/g,"_").slice(0,200);async function Ua(n){let e=await Ra();if(!e)return null;try{let t=await(await e.getFileHandle(Fo(n))).getFile();return t.size?new Uint8Array(await t.arrayBuffer()):null}catch{return null}}var V0=0;async function Ka(n,e){let t=await Ra();if(!(!t||!e?.length)){try{let a=await t.getFileHandle(Fo(n),{create:!0});if(a.createWritable){let o=await a.createWritable();await o.write(e),await o.close()}else return}catch{return}++V0%100===0&&H0().catch(()=>{})}}async function H0(){let n=await Ra();if(!n)return;let e=[];for await(let[t,a]of n.entries())if(a.kind==="file")try{e.push([t,(await a.getFile()).lastModified])}catch{}if(!(e.length<=Io)){e.sort((t,a)=>t[1]-a[1]);for(let[t]of e.slice(0,e.length-Io+200))await n.removeEntry(t).catch(()=>{})}}async function Va(n,e=320){let t=n instanceof Blob?n:new Blob([n],{type:"image/png"});if(typeof createImageBitmap!="function")return t;try{let a=await createImageBitmap(t),o=Math.min(1,e/Math.max(a.width,a.height)),c=Math.max(1,Math.round(a.width*o)),p=Math.max(1,Math.round(a.height*o)),s;if(typeof OffscreenCanvas=="function"){let w=new OffscreenCanvas(c,p);w.getContext("2d").drawImage(a,0,0,c,p),s=await w.convertToBlob({type:"image/webp",quality:.8})}else{let w=document.createElement("canvas");w.width=c,w.height=p,w.getContext("2d").drawImage(a,0,0,c,p),s=await new Promise(x=>w.toBlob(x,"image/webp",.8))}return a.close?.(),s??t}catch{return t}}function No(n,e,{concurrency:t=6}={}){let a=new Set,o=0,c=()=>{for(;o<t&&a.size;){let s=a.values().next().value;a.delete(s),s.isConnected&&(o++,e(s.dataset.path).then(w=>{w?(s.src=w,s.dataset.loaded="1"):s.dataset.failed="1"}).catch(()=>{s.dataset.failed="1"}).finally(()=>{o--,c()}))}},p=typeof IntersectionObserver=="function"?new IntersectionObserver(s=>{for(let w of s)w.isIntersecting?(p.unobserve(w.target),a.add(w.target)):a.delete(w.target);c()},{root:n,rootMargin:"600px 0px"}):null;return{observe(s){p?p.observe(s):(a.add(s),c())},disconnect(){p?.disconnect(),a.clear()}}}function Ha(n,e,t,{first:a=120,step:o=160,root:c=null,onCount:p}={}){let s=0,w=document.createElement("div");w.style.cssText="grid-column:1/-1;height:1px";let x=()=>{let k=Math.min(e.length,s+(s?o:a)),j=document.createDocumentFragment();for(;s<k;s++)j.appendChild(t(e[s],s));n.insertBefore(j,w),p?.(s),s>=e.length&&(m?.disconnect(),w.remove())};n.appendChild(w);let m=typeof IntersectionObserver=="function"&&e.length>a?new IntersectionObserver(k=>{k.some(j=>j.isIntersecting)&&x()},{root:c,rootMargin:"800px 0px"}):null;if(x(),m&&s<e.length)m.observe(w);else if(s<e.length)for(;s<e.length;)x();return n}var ce="head",Cr=(n,e)=>`c:${n}:${e}`;function Ja(n){let e=n.sets??{active:"sfw",list:[],store:{}},t=new Map,a={},o=(s,w)=>{a[s]=w.map(x=>x.id);for(let x of w)t.set(Cr(s,x.id),JSON.stringify(x))};o(e.active,n.chars??[]);let c={};for(let[s,w]of Object.entries(e.store??{}))o(s,w.chars??[]),c[s]={members:w.members??{}};let p={v:n.v??2,settings:n.settings,pieces:n.pieces,folders:n.folders,loreSkip:n.loreSkip??[],sets:{active:e.active,list:e.list,store:c},order:a};return t.set(ce,JSON.stringify(p)),t}function Bo(n){let e=n(ce);if(!e)return null;let t=JSON.parse(e),a=[],o=w=>(t.order?.[w]??[]).map(x=>{let m=n(Cr(w,x));if(!m)return a.push(Cr(w,x)),null;try{return JSON.parse(m)}catch{return a.push(Cr(w,x)),null}}).filter(Boolean),c=t.sets??{},p={};for(let[w,x]of Object.entries(c.store??{}))p[w]={chars:o(w),members:x.members??{}};return{project:{v:t.v,settings:t.settings,pieces:t.pieces,folders:t.folders,loreSkip:t.loreSkip,chars:o(c.active),sets:{active:c.active,list:c.list,store:p}},missing:a}}function Wa(n,e){let t=[],a=[];for(let[o,c]of e)n?.get(o)!==c&&t.push([o,c]);if(n)for(let o of n.keys())e.has(o)||a.push(o);return{puts:t,dels:a}}var Ro="dusk.mem.sds.",Uo=n=>String(n).replace(/[^A-Za-z0-9._:@-]/g,e=>`_${e.charCodeAt(0).toString(16)}_`);function Ko({name:n="dusk-sds-proj",idb:e=globalThis.indexedDB}={}){let t=null,a=()=>t??=new Promise((c,p)=>{if(!e)return p(new Error("IndexedDB를 쓸 수 없어요"));let s=e.open(n,1);s.onupgradeneeded=()=>s.result.createObjectStore("r"),s.onsuccess=()=>c(s.result),s.onerror=()=>p(s.error??new Error("IndexedDB를 열지 못했어요"))}),o=c=>IDBKeyRange.bound(`${c}`,`${c}￿`);return{async load(c){let p=await a();return new Promise((s,w)=>{let x=new Map,m=p.transaction("r","readonly"),k=m.objectStore("r").openCursor(o(c));k.onsuccess=()=>{let j=k.result;j&&(x.set(String(j.key).slice(c.length+1),j.value),j.continue())},m.oncomplete=()=>s(x.size?x:null),m.onerror=()=>w(m.error)})},async write(c,p,s){let w=await a();return new Promise((x,m)=>{let k=w.transaction("r","readwrite"),j=k.objectStore("r");for(let[z,_]of p)j.put(_,`${c}${z}`);for(let z of s)j.delete(`${c}${z}`);k.oncomplete=()=>x(),k.onerror=()=>m(k.error??new Error("IndexedDB에 쓰지 못했어요")),k.onabort=()=>m(k.error??new Error("IndexedDB 쓰기가 취소됐어요"))})}}}function Vo({local:n,host:e,cellar:t=null,now:a=()=>Date.now(),hostEvery:o=6e4,cellarEvery:c=3e3,log:p=()=>{},timers:s=globalThis}={}){let w=new Map,x=($,b)=>{let P=w.get($);return P||w.set($,P={target:b,prev:null,hostDirty:!1,hostTimer:null,cellarKeys:new Set,cellarTimer:null,latest:null,lastT:0,err:null}),P},m=($,b)=>{let P=JSON.parse($.get(ce));return P.t=b,$.set(ce,JSON.stringify(P)),$},k=$=>{try{return Number(JSON.parse($.get(ce)).t)||0}catch{return 0}};async function j($){if(!t||!await t.ready())return null;let b=`${Ro}${Uo($)}.`,P=await t.list(b);if(!P?.length)return null;let F=new Map;for(let R of P){let E=await t.get(R.key);E!=null&&F.set(R.key.slice(b.length),E)}return F.has(ce)?F:null}async function z($){let b=w.get($);if(!(!b?.hostDirty||!b.latest)){b.hostDirty=!1;try{await e.save(b.target,b.latest,b.lastT)}catch(P){throw b.hostDirty=!0,b.err=P,p("플러그인 저장소 보관본 실패",P?.message??P),P}}}async function _($){let b=w.get($);if(!b?.cellarKeys.size||!b.prev||!t||!await t.ready().catch(()=>!1))return;let P=[...b.cellarKeys];b.cellarKeys.clear();let F=`${Ro}${Uo($)}.`;P.sort((E,O)=>(E===ce)-(O===ce));let R=P.map(E=>b.prev.has(E)?{op:"put",key:F+E,value:b.prev.get(E)}:{op:"del",key:F+E});try{for(let E=0;E<R.length;){let O=E,G=0;for(;O<R.length&&O-E<50&&(O===E||G+(R[O].value?.length??0)<4e6);)G+=R[O].value?.length??0,O++;let on=await t.batch(R.slice(E,O)),rn=P.slice(E,O).filter((un,g)=>!on?.[g]?.ok);if(rn.length)throw new Error(`Cellar가 ${rn.length}개를 받지 않았어요`);E=O}}catch(E){for(let O of P)b.cellarKeys.add(O);p("Cellar 올리기 실패 — 다음에 다시",E?.message??E)}}let f=($,b,P,F)=>{$[b]||($[b]=s.setTimeout(()=>{$[b]=null,P().catch(()=>{})},F))};return{async open($,b){let P=x(b,$),F=[];try{let E=await n.load(b);E&&F.push({src:"local",recs:E,t:k(E)})}catch(E){p("기기 저장소 읽기 실패",E?.message??E)}try{let E=await e.load($);E?.project&&F.push({src:"host",project:E.project,t:E.t||0})}catch(E){p("플러그인 저장소 읽기 실패",E?.message??E)}try{let E=await j(b);E&&F.push({src:"cellar",recs:E,t:k(E)})}catch(E){p("Cellar 읽기 실패",E?.message??E)}let R={local:0,cellar:1,host:2};F.sort((E,O)=>O.t-E.t||R[E.src]-R[O.src]);for(let E of F){let O=E.project,G=[];if(E.recs){let rn=Bo(un=>E.recs.get(un)??null);if(!rn)continue;O=rn.project,G=rn.missing}if(G.length&&F.indexOf(E)<F.length-1){p(`${E.src}에 캐릭터 기록 ${G.length}개가 빠져 있어 다음 저장본으로`);continue}O=Zn(O);let on=m(Ja(O),E.t||a());if(E.src!=="local")try{let rn=Wa(F.find(un=>un.src==="local")?.recs??null,on);await n.write(b,rn.puts,rn.dels)}catch(rn){p("기기 저장소 채우기 실패",rn?.message??rn)}if(P.prev=on,P.latest=O,P.lastT=E.t,E.src!=="cellar"&&t){let rn=F.find(un=>un.src==="cellar");if(!rn||rn.t<E.t){for(let un of on.keys())P.cellarKeys.add(un);f(P,"cellarTimer",()=>_(b),c)}}return{project:O,source:E.src,missing:G,t:E.t}}return{project:Zn(null),source:"none",missing:[],t:0}},save($,b,P){let F=x(b,$),R=()=>this._save(F,b,P);return F.chain=(F.chain??Promise.resolve()).then(R,R),F.chain},async _save($,b,P){let F=Math.max(a(),$.lastT+1),R=m(Ja(P),F),E=Wa($.prev,R);await n.write(b,E.puts,E.dels),$.prev=R,$.latest=P,$.lastT=F;for(let[O]of E.puts)$.cellarKeys.add(O);for(let O of E.dels)$.cellarKeys.add(O);return $.hostDirty=!0,f($,"hostTimer",()=>z(b),o),t&&f($,"cellarTimer",()=>_(b),c),{written:E.puts.length,deleted:E.dels.length,t:F}},async flush($){let b=w.get($);b&&(b.hostTimer&&(s.clearTimeout(b.hostTimer),b.hostTimer=null),b.cellarTimer&&(s.clearTimeout(b.cellarTimer),b.cellarTimer=null),await Promise.allSettled([z($),_($)]))},pending($){let b=w.get($);return{host:!!b?.hostDirty,cellar:b?.cellarKeys.size??0}}}}var J0="[소속] ";var W0=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4),Je=n=>n?.extentions?.da_folder?.id||null;function Ho(n,e,t=W0){let a=(Array.isArray(n)?n:[]).filter(k=>Je(k)),o=new Map(e.folders.filter(k=>k.lore).map(k=>[k.lore,k.id])),c=new Set(e.loreSkip??[]),p=new Set(a.map(Je)),s=a.filter(k=>!o.has(Je(k))&&!c.has(Je(k))),w=[...e.folders],x=0,m=(k,j)=>{let z=String(k.comment??"").trim(),_=z.startsWith(J0.trim())||!!k.extentions?.da_folder?.aff,f=z.replace(/^\[소속\]\s*/,"").trim()||"새 폴더",$=t();w.push({id:$,name:f,en:"",kind:_?"group":"",prompt:"",tpl:"",lore:Je(k),parent:j,members:[]}),o.set(Je(k),$),x++};for(;s.length;){let k=[];for(let j of s){let z=j.extentions?.da_parent||null;!z||!p.has(z)||c.has(z)?m(j,null):o.has(z)?m(j,o.get(z)):k.push(j)}if(k.length===s.length){k.forEach(j=>m(j,null));break}s=k}return{project:x?{...e,folders:w}:e,added:x}}var $r="dusk-sdstudio-backup.json",Jo="dusk-sdstudio-backup";function zr(n){let e=new Set;return(function t(a){if(Array.isArray(a)){a.forEach(t);return}a&&typeof a=="object"&&(typeof a.path=="string"&&a.path&&e.add(a.path),Object.values(a).forEach(t))})(n),e}function Pr(n,e){if(typeof n=="string")return e.has(n)?e.get(n):n;if(Array.isArray(n))return n.map(t=>Pr(t,e));if(n&&typeof n=="object"){let t={};for(let a of Object.keys(n))t[a]=Pr(n[a],e);return t}return n}function Wo(n,e,t={}){return{format:Jo,v:1,at:Date.now(),title:String(t.title??""),project:Pr(n,e)}}function Go(n){return!n||n.format!==Jo||!n.project||typeof n.project!="object"?null:{project:n.project,title:String(n.title??""),at:Number(n.at)||0,entries:[...zr(n.project)]}}function Xo(n,e){let t=new Set([...zr(n)].filter(o=>!e.has(o))),a=o=>{if(Array.isArray(o))return o.filter(c=>!(c&&typeof c=="object"&&typeof c.path=="string"&&t.has(c.path))).map(a);if(o&&typeof o=="object"){let c={};for(let p of Object.keys(o))c[p]=a(o[p]);return c}return o};return Pr(a(n),e)}var Ga=globalThis.__duskLib?.["src/engine/safety.js"];if(!Ga)throw new Error("Dusk 코어에 src/engine/safety.js가 없어요 — Dusk를 업데이트해 주세요");{let n=["Busy","backupSnapshot","isGenerating","restoreFromBackup"].filter(e=>!(e in Ga));if(n.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/engine/safety.js에 없는 기능: "+n.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{Busy:Nc,backupSnapshot:Bc,isGenerating:Xa,restoreFromBackup:Rc}=Ga;var de=(n,e=8e3)=>String(n??"").slice(0,e),X0=()=>Math.random().toString(36).slice(2,10),Ct=n=>(Array.isArray(n)?n:[]).filter(Array.isArray).map(e=>e.filter(t=>t&&typeof t=="object").map(t=>({prompt:de(t.prompt),on:t.on!==!1&&t.enabled!==!1}))),Mr=n=>(Array.isArray(n)?n:[]).filter(e=>e&&typeof e.name=="string"&&e.name).map(e=>({name:de(e.name,40).replace(/[.<>,]/g,""),pieces:(Array.isArray(e.pieces)?e.pieces:[]).filter(t=>t&&typeof t.name=="string"&&t.name).map(t=>({name:de(t.name,40).replace(/[.<>,]/g,""),prompt:de(t.prompt),multi:!!t.multi}))}));function Yo(n,e,t=[]){return{v:1,name:de(e,80).trim()||`${n.name} 씬`,scenes:n.scenes.map(a=>({name:a.name,slots:Ct(a.slots),size:a.size||""})),pieces:Mr(t)}}var Qo=n=>JSON.stringify({format:"dusk-sdstudio-template",v:1,name:n.name,scenes:n.scenes,pieces:n.pieces??[]},null,1);function Y0(n){if(n?.resolution&&n.resolution!=="custom"&&_n[n.resolution])return n.resolution;if(n?.resolutionWidth&&n?.resolutionHeight){let e=we(n.resolutionWidth,n.resolutionHeight);return`${e.width}x${e.height}`}return""}function Pt(n){if(n?.format==="dusk-sdstudio-template")return{v:1,name:de(n.name,80)||"가져온 템플릿",scenes:(Array.isArray(n.scenes)?n.scenes:[]).filter(o=>o&&o.name).map(o=>({name:de(o.name,80),slots:Ct(o.slots),size:typeof o.size=="string"?o.size:""})),pieces:Mr(n.pieces)};let e=n?.type==="sdstudio-scene-template"?n.session:n?.scenes&&typeof n.scenes=="object"?n:null;if(!e||typeof e.scenes!="object")throw new Error("SDStudio 씬 템플릿이나 Dusk 템플릿 파일이 아니에요");let t=Object.entries(e.scenes).filter(([,o])=>o&&typeof o=="object").map(([o,c])=>({name:de(c.name||o,80),slots:Ct(c.slots),size:Y0(c)})),a=Mr(Object.values(e.library??{}));return{v:1,name:de(n.name??e.name,80)||"가져온 템플릿",scenes:t,pieces:a}}var Zo=n=>!n.scenes.length||n.scenes.length===1&&!n.scenes[0].images.length&&!n.scenes[0].slots.some(e=>e.some(t=>t.prompt.trim())),Sr=(n,e)=>e.filter(t=>{let a=vn(n,t);return a&&!Zo(a)});function Q0(n,e){let t=(n??[]).map(a=>({...a,pieces:[...a.pieces]}));for(let a of Mr(e)){let o=t.find(c=>c.name===a.name);if(!o){t.push(a);continue}for(let c of a.pieces)o.pieces.some(p=>p.name===c.name)||o.pieces.push(c)}return t}function pe(n,e,t,a="merge",o=X0){let c={chars:0,added:0,kept:0,removed:0,updated:0},p=w=>({id:o(),name:w.name,slots:Ct(w.slots),size:w.size||"",reserve:0,cover:"",memo:"",images:[]}),s={...n,pieces:Q0(n.pieces,t.pieces)};for(let w of e){let x=vn(s,w);if(!x)continue;c.chars++;let m=Zo(x)?"replace":a,k=new Map(x.scenes.map(z=>[z.name.toLowerCase(),z])),j;if(m==="merge"){j=[...x.scenes];for(let z of t.scenes)k.has(z.name.toLowerCase())?c.kept++:(j.push(p(z)),c.added++)}else{let z=new Set(t.scenes.map(_=>_.name.toLowerCase()));c.removed+=x.scenes.filter(_=>!z.has(_.name.toLowerCase())).length,j=t.scenes.map(_=>{let f=k.get(_.name.toLowerCase());return f?(c.updated++,{...f,slots:Ct(_.slots),size:_.size||""}):(c.added++,p(_))})}s=Jn(s,w,{scenes:j})}return{project:s,stats:c}}function ni({limit:n=60,mergeMs:e=700,now:t=()=>Date.now()}={}){let a=[],o=[],c=-1/0,p=!1;return{push(s,{typing:w=!1}={}){let x=t();w&&p&&x-c<=e&&a.length||(a.push(s),a.length>n&&a.shift()),c=x,p=w,o=[]},undo(s){return a.length?(o.push(s),p=!1,a.pop()):null},redo(s){return o.length?(a.push(s),p=!1,o.pop()):null},canUndo:()=>a.length>0,canRedo:()=>o.length>0,clear(){a=[],o=[],c=-1/0,p=!1}}}var Ya={run:"생성 시작·멈추기",toggleLeft:"프롬프트 에디터 열고 닫기",undo:"되돌리기",redo:"다시하기",put:"고른 그림 봇에 바로 넣기",selectAll:"모두 고르기",search:"검색",newItem:"새 캐릭터·씬",cup:"이미지 월드컵",reserve:"고른 씬 1장 예약",choose:"대표 고르기",putFav:"즐겨찾기 확인하고 봇에 넣기",remove:"고른 것 지우기(캐릭터·씬·그림)",unpick:"고르기 모두 풀기",mode1:"씬 모드",mode2:"갤러리 모드",mode3:"검색 모드",mode4:"비교 모드",mode5:"동시편집",help:"도움말"},Qa={run:"Mod+Enter",toggleLeft:"F1",undo:"Mod+Z",redo:"Mod+Shift+Z",put:"Mod+B",selectAll:"Mod+A",search:"Mod+F",newItem:"N",cup:"W",reserve:"R",choose:"C",putFav:"Mod+Shift+B",remove:"Delete",unpick:"Mod+Shift+A",mode1:"1",mode2:"2",mode3:"3",mode4:"4",mode5:"5",help:"F2"},$t=(n=globalThis.navigator)=>/Mac|iPhone|iPad|iPod/i.test(n?.userAgentData?.platform??n?.platform??n?.userAgent??""),nl=new Set(["Control","Shift","Alt","Meta","OS","AltGraph","CapsLock","Fn"]);function el(n){let e=/^Key([A-Z])$/.exec(n.code??"")??/^Digit(\d)$/.exec(n.code??"");return e?e[1]:n.key===" "?"Space":n.key.length===1?n.key.toUpperCase():n.key}function Ar(n,e=$t()){if(!n?.key||nl.has(n.key))return null;let t=el(n),a=[];return(e?n.metaKey:n.ctrlKey)&&a.push("Mod"),e&&n.ctrlKey&&a.push("Ctrl"),!e&&n.metaKey&&a.push("Meta"),n.altKey&&a.push("Alt"),n.shiftKey&&(t.length>1||a.length)&&a.push("Shift"),a.push(t),a.join("+")}var tl={Mod:"⌘",Ctrl:"⌃",Alt:"⌥",Shift:"⇧",Enter:"↩",Escape:"⎋",Backspace:"⌫",Delete:"⌦",ArrowLeft:"←",ArrowRight:"→",ArrowUp:"↑",ArrowDown:"↓",Space:"Space"},rl={Mod:"Ctrl",Meta:"Win",ArrowLeft:"←",ArrowRight:"→",ArrowUp:"↑",ArrowDown:"↓"};function Tr(n,e=$t()){if(!n)return"";let t=n.split("+");return e?t.map(a=>tl[a]??a).join(""):t.map(a=>rl[a]??a).join("+")}function Za(n,{v:e=2}={}){let t={...Qa};for(let[a,o]of Object.entries(n&&typeof n=="object"?n:{}))!(a in Ya)||typeof o!="string"||(t[a]=(e<2?o.replace(/^Ctrl\+/,"Mod+"):o).slice(0,40));return t}function ns(n,e,t){let a={...n};if(t)for(let o of Object.keys(a))a[o]===t&&o!==e&&(a[o]="");return a[e]=t||"",a}var ei=(n,e)=>e?Object.keys(n).find(t=>n[t]===e)??null:null,ti=n=>/^(Mod|Ctrl|Alt|Meta)\+/.test(n??"")||/^F\d+$/.test(n??"");var ri=`
 .sds{position:absolute;inset:0;z-index:25;display:flex;flex-direction:row;overflow:hidden;background:var(--rb-win);color:var(--rb-text);animation:rb-in .15s ease-out}
 .sds *{box-sizing:border-box}
 .sds-rail{width:44px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;background:var(--rb-surf);border-right:var(--rb-bw,1px) solid var(--rb-line2)}
@@ -6943,10 +10897,10 @@ var eo=Object.defineProperty;var no=(e,n)=>{for(var a in n)eo(e,a,{get:n[a],enum
 .sds-pa>pre{position:absolute;inset:0;overflow:hidden;pointer-events:none;color:var(--rb-text)}
 .sds-pa>textarea{position:relative;display:block;width:100%;min-height:72px;max-height:340px;resize:vertical;border:0;background:transparent;color:transparent;caret-color:var(--rb-text);outline:none}
 .sds-pa>textarea::placeholder{color:var(--rb-mute)}
-.sds-pa .k-weight-up,.sds-pa .k-brace{background:var(--rb-rose-soft);border-radius:3px}
+.sds-pa .k-weight-up,.sds-pa .k-brace{background:color-mix(in srgb,#ff4d73 30%,transparent);box-shadow:inset 0 -2px 0 #ff4d73;border-radius:3px}
 .sds-pa .k-brace{font-weight:800}
-.sds-pa .k-weight-down,.sds-pa .k-bracket{background:var(--rb-blue-soft);border-radius:3px}
-.sds-pa .k-weight-neg{background:var(--rb-surf2);color:var(--rb-sub);border-radius:3px}
+.sds-pa .k-weight-down,.sds-pa .k-bracket{background:color-mix(in srgb,#3d8bff 30%,transparent);box-shadow:inset 0 -2px 0 #3d8bff;border-radius:3px}
+.sds-pa .k-weight-neg{background:color-mix(in srgb,#9a9a9a 28%,transparent);text-decoration:line-through;text-decoration-color:#ff4d73;border-radius:3px}
 .sds-pa .k-piece{background:var(--rb-teal-soft);border-radius:3px}
 .sds-pa .k-random{background:var(--rb-warn-soft);border-radius:3px}
 .sds-pa .k-comment{color:var(--rb-mute);font-style:italic}
@@ -6972,6 +10926,32 @@ var eo=Object.defineProperty;var no=(e,n)=>{for(var a in n)eo(e,a,{get:n[a],enum
 .sds-modes button:disabled{opacity:.35;cursor:default}
 .sds-tools{display:flex;align-items:flex-end;gap:18px;padding:8px 16px 10px;border-bottom:var(--rb-bw,1px) solid var(--rb-line2);overflow-x:auto;scrollbar-width:thin;flex-shrink:0}
 .sds-tools .sp{flex:1}
+.sds-tools{align-items:center;gap:8px;overflow:visible;flex-wrap:wrap;position:relative;z-index:40}
+.sds-dd{position:relative}
+.sds-ddt{height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border-radius:var(--rb-r1);border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-surf2);color:var(--rb-text);font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.sds-ddt:disabled{opacity:.4;cursor:default}
+.sds-ddt.danger{color:var(--rb-danger)}
+.sds-ddt[aria-expanded=true]{border-color:var(--rb-acc);color:var(--rb-acc-text)}
+.sds-dd>.sds-ddt:not(:has(span)){width:34px;padding:0;justify-content:center}
+@media (hover:hover){.sds-ddt:not(:disabled):hover{border-color:var(--rb-acc);color:var(--rb-acc-text)}}
+.sds-ddp{position:absolute;top:calc(100% + 6px);left:0;z-index:30;min-width:240px;max-width:min(340px,90vw);padding:6px;border-radius:var(--rb-r2);border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-win);box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:2px}
+.sds-ddp[hidden]{display:none}
+.sds-tools .sp~* .sds-ddp,.sds-tools .sp~.sds-dd .sds-ddp{left:auto;right:0}
+.sds-mi{display:flex;align-items:center;gap:10px;width:100%;min-height:34px;padding:6px 10px;border:0;border-radius:var(--rb-r1);background:none;color:var(--rb-text);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.sds-mi>span{flex:1;min-width:0}
+.sds-mi>small{color:var(--rb-sub);font-size:11.5px}
+.sds-mi:disabled{opacity:.4;cursor:default}
+.sds-mi.danger{color:var(--rb-danger)}
+.sds-mi.on>svg{color:var(--rb-acc-text)}
+@media (hover:hover){.sds-mi:not(:disabled):hover{background:var(--rb-surf2)}}
+.sds-mi.sds-zoom{cursor:default}
+.sds-mi.sds-zoom input{flex:1;min-width:80px}
+.sds-msep{height:1px;margin:4px 6px;background:var(--rb-line2)}
+.sds-ghead{grid-column:1/-1;margin-top:10px}
+.sds-selc{font-weight:800;font-size:13px;padding:0 6px}
+@media (max-width:600px){.sds-tools{flex-wrap:nowrap;gap:6px;padding:8px 10px}.sds-tools>.sds-dd>.sds-ddt>span,.sds-tools>.sds-dd>.sds-ddt>svg:last-child:not(:first-child),.sds-tools>.sds-ddt>span{display:none}.sds-tools>.sds-dd>.sds-ddt,.sds-tools>.sds-ddt{width:34px;padding:0;justify-content:center}.sds-tools .rb-btn{padding:0 10px}}
+.sds-setbar{display:flex;justify-content:flex-end;padding:6px 16px;border-bottom:var(--rb-bw,1px) solid var(--rb-line2);flex-shrink:0}
+.sds-sets{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .sds-zoom{display:flex;align-items:center;gap:8px}
 .sds-zoom input{width:120px;accent-color:var(--rb-acc)}
 .sds-zoom span{font-size:12px;color:var(--rb-sub);width:34px;text-align:right;font-variant-numeric:tabular-nums}
@@ -6990,6 +10970,11 @@ var eo=Object.defineProperty;var no=(e,n)=>{for(var a in n)eo(e,a,{get:n[a],enum
 .sds-card[aria-selected=true] .chk,.sds-card:focus-visible .chk{opacity:1}
 .sds-card[aria-selected=true]{border-color:var(--rb-acc);box-shadow:0 0 0 2px var(--rb-acc)}
 .sds-card[aria-selected=true] .chk{background:var(--rb-acc-grad);border:0}
+.sds-card .rsvbtn{position:absolute;top:8px;right:8px;z-index:2;height:24px;padding:0 9px;border-radius:999px;display:flex;align-items:center;gap:4px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.sds-card .favmark{position:absolute;top:38px;right:8px;z-index:2;height:22px;padding:0 8px;border-radius:999px;display:flex;align-items:center;gap:3px;background:#f5c518;color:#3a2a00;font-size:12px;font-weight:800;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.sds-card .favmark svg{fill:currentColor}
+.sds-card .rsvbtn.on{background:var(--rb-acc-grad);color:var(--rb-on-acc)}
+.sds-card .rsvbtn:hover{filter:brightness(1.15)}
 .sds-card .badges{position:absolute;top:8px;right:8px;display:flex;gap:4px}
 .sds-card .badge{height:22px;min-width:22px;padding:0 6px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:11.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
 .sds-card .quick{position:absolute;left:8px;right:8px;bottom:44px;display:flex;gap:6px;justify-content:flex-end;opacity:0;transition:opacity .12s}
@@ -7024,6 +11009,8 @@ var eo=Object.defineProperty;var no=(e,n)=>{for(var a in n)eo(e,a,{get:n[a],enum
 .sds-prog{display:flex;align-items:center;gap:10px;min-width:220px;flex:1;max-width:520px}
 .sds-prog .bar{flex:1;height:8px;border-radius:999px;background:var(--rb-surf2);overflow:hidden;border:1px solid var(--rb-line2)}
 .sds-prog .bar i{display:block;height:100%;background:var(--rb-acc-grad);transition:width .3s}
+.sds-qerr{padding:8px 16px;background:color-mix(in srgb,var(--rb-danger) 16%,transparent);border-bottom:var(--rb-bw,1px) solid var(--rb-danger);color:var(--rb-text);font-size:13px;font-weight:700;line-height:1.45;white-space:normal;word-break:break-word;flex-shrink:0}
+.sds-qerr[hidden]{display:none}
 .sds-prog .t{font-size:12px;font-weight:700;color:var(--rb-sub);white-space:nowrap;font-variant-numeric:tabular-nums}
 .sds-pa{position:relative}
 .sds-ac{position:absolute;left:0;right:0;top:100%;margin-top:6px;z-index:40;background:var(--rb-surf);border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.35);padding:4px;max-height:280px;overflow:auto;scrollbar-width:thin}
@@ -7114,7 +11101,7 @@ var eo=Object.defineProperty;var no=(e,n)=>{for(var a in n)eo(e,a,{get:n[a],enum
   .sds-cup .pair{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
 }
 @media (prefers-reduced-motion:reduce){.sds{animation:none}}
-`;function hs(e=document){if(e.getElementById("rb-sds-style"))return;let n=e.createElement("style");n.id="rb-sds-style",n.textContent=Uo,e.head.appendChild(n)}var ps={calPlus:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M12 13v5M9.5 15.5h5"/>',calX:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M10 14l4 4M14 14l-4 4"/>',file:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 12v6M9 15h6"/>',copy:'<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',swap:'<path d="M4 8h14l-4-4M20 16H6l4 4"/>',trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',exportBot:'<path d="M4 4h10v16H4z"/><path d="M14 12h7M18 9l3 3-3 3"/>',exportAll:'<path d="M4 4h9v5H4zM4 11h9v9H4z"/><path d="M14 12h7M18 9l3 3-3 3"/>',zip:'<path d="M6 3h9l4 4v14H6z"/><path d="M10 3v2M10 7v2M10 11v2M9 15h2v3H9z"/>',expand:'<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/>',sortAsc:'<path d="M7 4v16M3 16l4 4 4-4M14 6h7M14 12h5M14 18h3"/>',sortDesc:'<path d="M7 20V4M3 8l4-4 4 4M14 6h3M14 12h5M14 18h7"/>',clip:'<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6"/>',film:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',importIn:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M12 11v7M9 15l3 3 3-3"/>',list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17h.01"/>',gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',copies:'<rect x="3" y="3" width="13" height="13" rx="2"/><path d="M8 21h11a2 2 0 0 0 2-2V8"/>',puzzle:'<path d="M10 3h4v3a2 2 0 1 0 4 0V3h3v7h-3a2 2 0 1 0 0 4h3v7h-7v-3a2 2 0 1 0-4 0v3H3v-7h3a2 2 0 1 0 0-4H3V3h7z"/>',warn:'<path d="M12 3 2 21h20zM12 10v5M12 18h.01"/>',save:'<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-6h8v6"/>',load:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M12 18v-7M9 14l3-3 3 3"/>',person:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/>',chevL:'<path d="M15 18l-6-6 6-6"/>',chevD:'<path d="M6 9l6 6 6-6"/>',chevR:'<path d="M9 18l6-6-6-6"/>',lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',trophy:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/>',star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/>',wand:'<path d="M15 4V2M15 10V8M11 6h2M17 6h2M4 20 14 10M18 13v2M17 14h2"/>',up2:'<path d="M7 17 17 7M9 7h8v8"/><rect x="3" y="3" width="18" height="18" rx="2"/>',brush:'<path d="M18 2l4 4-10 10-4-4zM8 12l-4 4a3 3 0 0 0 0 4c1 1 3 1 4 0l4-4"/>',play:'<path d="M7 4l13 8-13 8z"/>',stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',plus:'<path d="M12 5v14M5 12h14"/>',minus:'<path d="M5 12h14"/>',x:'<path d="M6 6l12 12M18 6 6 18"/>',back:'<path d="M15 18l-6-6 6-6"/>',folder:'<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',folderPlus:'<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM12 10v6M9 13h6"/>',check:'<path d="M5 12l5 5L20 7"/>',sparkle:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',dice:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01"/>',layers:'<path d="m12 3 9 5-9 5-9-5zM3 13l9 5 9-5"/>',compare:'<rect x="3" y="4" width="8" height="16" rx="1.5"/><rect x="13" y="4" width="8" height="16" rx="1.5"/>',undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',redo:'<path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/>',sliders:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',keyboard:'<rect x="2" y="6" width="20" height="13" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 15h10"/>',template:'<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><path d="M17 13v8M13 17h8"/>',bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'},Ro=new Set(["play","stop","more"]);function ie(e,n=18){let a=ps[e]??ps.help;return rs(`<svg xmlns="http://www.w3.org/2000/svg" width="${n}" height="${n}" viewBox="0 0 24 24" fill="${Ro.has(e)?"currentColor":"none"}" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${a}</svg>`)}var Jn=null,us=e=>{Jn=e};function Bo(e,n,a){let s=o("div",{class:"sds-ac",role:"listbox",hidden:!0});e.appendChild(s);let i=[],t=0,l=null,p=!1,b=()=>{s.hidden=!0,i=[]},f=$=>{let L=i[$];if(!L)return;let G=ka(n.value,n.selectionStart,L.tag);n.value=G.text,n.setSelectionRange(G.caret,G.caret),b(),a()},w=()=>{s.replaceChildren(...i.map(($,L)=>o("div",{class:["it",L===t&&"on"],role:"option","aria-selected":String(L===t),title:ua[$.cat]??"",onMousedown:G=>{G.preventDefault(),f(L)}},o("span",{class:`dot c${$.cat}`,"aria-hidden":"true"}),o("span",{class:"tx"},o("span",{class:"w"},$.tag),$.tag!==$.word?o("span",{class:"r"},$.word.includes("/")?$.word.split("/").join(" › "):$.word):null),o("span",{class:"f"},mt($.freq)))),o("div",{class:"ft","aria-hidden":"true"},o("span",null,"↑↓ 고르기"),o("span",null,"Enter·Tab 넣기"),o("span",null,"Esc 닫기"))),s.hidden=!i.length},M=()=>{s.replaceChildren(o("div",{class:"it dl",onMousedown:async $=>{if($.preventDefault(),!p){p=!0,s.firstChild.textContent="태그 사전 받는 중… (약 2MB, 한 번만)";try{await Jn.load(),p=!1,m()}catch(L){p=!1,s.firstChild.textContent=`${L?.message??L} — 설정에서 파일로 불러올 수 있어요`}}}},"태그 자동완성 쓰기 — 사전 받기(약 2MB, 처음 한 번)")),s.hidden=!1},m=()=>{if(!Jn?.enabled?.())return b();let $=er(n.value,n.selectionStart);if($.word.trim().length<2||n.selectionStart!==n.selectionEnd)return b();let L=Jn.get();if(!L)return Jn.offered?.()?b():M();i=wa(L,$.word,8),t=0,w()};n.addEventListener("input",()=>{clearTimeout(l),l=setTimeout(m,70)}),n.addEventListener("keydown",$=>{s.hidden||!i.length||($.key==="ArrowDown"||$.key==="ArrowUp"?($.preventDefault(),t=(t+($.key==="ArrowDown"?1:-1)+i.length)%i.length,w()):($.key==="Enter"||$.key==="Tab")&&!$.shiftKey&&!$.ctrlKey&&!$.metaKey?($.preventDefault(),$.stopPropagation(),f(t)):$.key==="Escape"&&($.preventDefault(),$.stopPropagation(),b()))}),n.addEventListener("blur",()=>setTimeout(b,120))}function Ie({value:e="",onInput:n,rows:a=4,placeholder:s="",id:i,label:t}){let l=o("pre",{"aria-hidden":"true"}),p=o("textarea",{rows:a,placeholder:s,id:i,spellcheck:"false","aria-label":t});p.value=e;let b=()=>{l.replaceChildren(...Na(p.value).map(w=>w.kind==="text"?document.createTextNode(w.text):o("span",{class:`k-${w.kind}`},w.text)),document.createTextNode(`
-`)),l.scrollTop=p.scrollTop};p.addEventListener("input",()=>{b(),n?.(p.value)}),p.addEventListener("scroll",()=>{l.scrollTop=p.scrollTop}),new(globalThis.ResizeObserver??class{observe(){}})(()=>{l.style.height=`${p.offsetHeight}px`}).observe(p),b();let f=o("div",{class:"sds-pa"},l,p);return f.textarea=p,Bo(f,p,()=>{b(),n?.(p.value)}),f}var gs=e=>o("button",{type:"button",class:"sds-help",title:e,"aria-label":e,onClick:n=>n.preventDefault()},"?"),W=(e,n,a,{on:s=!1,danger:i=!1,id:t,disabled:l=!1}={})=>o("button",{type:"button",class:["sds-ib",s&&"on",i&&"danger"],title:n,"aria-label":n,id:t,disabled:l,onClick:a},ie(e,18)),An=(e,n,a)=>o("label",{class:"sds-lbl",for:a},e,n?gs(n):null);function ms(e,n){let a=e.proj,s=a.settings,i=e.curChar(),t=(N,R=!1)=>{e.set(ze(e.proj,N)),R&&e.paintLeft(),e.paintTop()},l=[];l.push(o("div",null,An("상위 프롬프트","모든 그림 맨 앞에 붙어요. | 를 넣으면 그 자리에 씬 조합이 들어가요. <모음.조각>으로 조각을 불러요.","sds-top"),Ie({id:"sds-top",value:s.top,rows:5,placeholder:"예: masterpiece, best quality, |, white background",label:"상위 프롬프트",onInput:N=>t({top:N})}))),i&&l.push(o("div",null,An(`${i.name} 외형 프롬프트`,"이 캐릭터의 생김새·복장. 상위 프롬프트 뒤에 붙어요.","sds-own"),Ie({id:"sds-own",value:i.prompt,rows:4,placeholder:"예: 1boy, cat ears, black hair, black hoodie",label:"외형 프롬프트",onInput:N=>{e.set(Fe(e.proj,i.id,{prompt:N}))}}))),l.push(o("div",null,An("하위 프롬프트","씬 조합 뒤, 맨 끝에 붙어요.","sds-back"),Ie({id:"sds-back",value:s.back,rows:4,placeholder:"예: 2::white background::, cat tail",label:"하위 프롬프트",onInput:N=>t({back:N})}))),l.push(o("div",null,An("네거티브 프롬프트","피할 것. 샘플링 설정의 네거티브 프리셋이 앞에 붙어요.","sds-neg"),Ie({id:"sds-neg",value:s.neg,rows:4,placeholder:"예: text, logo, watermark",label:"네거티브 프롬프트",onInput:N=>t({neg:N})})));let p=o("input",{class:"sds-in",id:"sds-seed",inputmode:"numeric",placeholder:"비우면 랜덤",value:s.seed.value?String(s.seed.value):"",style:"flex:1",onChange:N=>{let R=Math.max(0,Math.floor(Number(N.target.value)||0))>>>0;t({seed:{...e.proj.settings.seed,value:R,mode:R&&e.proj.settings.seed.mode==="random"?"fixed":e.proj.settings.seed.mode}},!0)}}),b=o("label",{title:"시드 잠금(고정)",style:"display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--rb-sub)"},ie("lock",14),o("input",{type:"checkbox",id:"sds-seedlock",checked:s.seed.mode!=="random",onChange:N=>t({seed:{...e.proj.settings.seed,mode:N.target.checked?"fixed":"random"}},!0)})),f=o("select",{class:"sds-sel acc",id:"sds-seedmode",style:"flex:1",onChange:N=>t({seed:{...e.proj.settings.seed,mode:N.target.value}},!0)},...[["random","완전 랜덤"],["fixed","시드 고정"],["chain","장마다 이어서"]].map(([N,R])=>o("option",{value:N,selected:s.seed.mode===N},R)));l.push(o("div",null,An("시드"),o("div",{class:"sds-row"},p,b,f)));let w=s.size,M=gn(w,e.curScene()),m=o("select",{class:"sds-sel",id:"sds-size",style:"flex:1",onChange:N=>{let R=N.target.value,U=ke[R];t({size:{...e.proj.settings.size,mode:R,...U?{w:U.width,h:U.height}:{}}},!0)}},o("option",{value:"scene",selected:w.mode==="scene"},"각 씬의 설정대로"),...Object.entries(ke).map(([N,R])=>o("option",{value:N,selected:w.mode===N},`${R.label} ${R.width}×${R.height}${Tn(R.width,R.height)?"":" · Anlas"}`)),o("option",{value:"custom",selected:w.mode==="custom"},"직접 입력")),$=(N,R)=>o("input",{class:"sds-in",inputmode:"numeric",value:String(R),style:"width:76px;text-align:center",disabled:w.mode!=="custom","aria-label":N==="w"?"가로":"세로",onChange:U=>{let X=Ze(N==="w"?U.target.value:e.proj.settings.size.w,N==="h"?U.target.value:e.proj.settings.size.h);t({size:{...e.proj.settings.size,w:X.width,h:X.height}},!0)}});l.push(o("div",null,An("이미지 사이즈","‘각 씬의 설정대로’면 씬마다 정한 크기(없으면 세로)로 만들어요. 1024×1024를 넘거나 스텝이 28을 넘으면 Anlas가 들어요."),o("div",{class:"sds-row"},m,$("w",M.width),o("span",{style:"color:var(--rb-sub)"},"×"),$("h",M.height))));let L=Le(s.sampling.model),G=s.chars.filter(N=>N.on&&N.prompt.trim()).length;l.push(o("div",{class:"sds-row"},o("button",{type:"button",class:"sds-bar",id:"sds-chars",onClick:()=>e.dlg.charPrompts()},o("span",{class:"t"},"캐릭터 프롬프트"),o("small",null,G?`${G}명`:"")),W("person","캐릭터 프롬프트 편집",()=>e.dlg.charPrompts()),W("puzzle","조각 모음",()=>e.dlg.pieces()))),l.push(o("button",{type:"button",class:"sds-bar",id:"sds-sampling",onClick:()=>e.dlg.sampling()},o("span",{class:"t"},"샘플링/모델 설정"),o("small",null,`${L.label} · ${s.sampling.steps}스텝`),ie("chevR",16)));let Z=s.vibes.filter(N=>N.on).length;l.push(o("button",{type:"button",class:"sds-bar fill",id:"sds-vibe",disabled:!1,onClick:()=>e.dlg.vibes()},o("span",{class:"t"},"바이브 이미지"),o("small",null,L.vibe?s.vibes.length?`${Z}/${s.vibes.length} 켜짐`:"":"V5는 못 써요")));let h=s.refs.filter(N=>N.on).length;l.push(o("div",{class:"sds-row",style:"gap:10px"},o("span",{style:"font-size:13px;font-weight:800;white-space:nowrap"},"레퍼런스 설정: ",o("span",{style:"color:var(--rb-acc-text)"},`(${h}/2 활성화)`)),o("span",{class:"sds-in",style:"flex:1;display:flex;align-items:center;color:var(--rb-sub);font-size:13px;overflow:hidden;white-space:nowrap"},h?s.refs.filter(N=>N.on).map(N=>({character:"캐릭터",style:"그림체","character&style":"캐릭터+그림체"})[N.type]).join(", "):L.reference?"활성화된 이미지 없음":"V5는 못 써요"),o("button",{type:"button",class:"rb-btn primary sm",id:"sds-ref",onClick:()=>e.dlg.refs()},"편집"))),ce(n,...l)}function bs(e){return[o("div",{class:"sds-left-head"},o("b",null,"프롬프트 에디터"),gs(`이 봇(모듈)의 그림 설정이에요. 바뀐 내용은 바로 저장되고 ${e.keyLabel("undo")}로 되돌려요.`),o("span",{style:"flex:1"}),o("button",{type:"button",class:"sds-ib",title:"접기","aria-label":"프롬프트 에디터 접기",style:"border:0;background:none",onClick:()=>e.toggleLeft(!1)},ie("chevL",18))),o("div",{class:"sds-groups"},o("div",{class:"sds-group"},o("small",null,"도구"),o("div",null,W("puzzle","조각 모음",()=>e.dlg.pieces(),{id:"sds-pieces"}),W("warn","문제 확인(없는 조각·빈 프롬프트·Anlas)",()=>e.dlg.check(),{id:"sds-check"}),W("brush","작가 태그 고르기(그림체)",()=>e.dlg.artists(),{id:"sds-artists"}))),o("div",{class:"sds-group"},o("small",null,"프리셋"),o("div",null,W("save","지금 설정을 프리셋으로 저장",()=>e.dlg.savePreset(),{on:!0,id:"sds-psave"}),W("load","프리셋 불러오기",n=>e.dlg.loadPreset(n.currentTarget),{id:"sds-pload"}))))]}function _n(e,{label:n,onChange:a,disabled:s}={}){let i=ht(e,{label:n,disabled:s,onChange:(t,l)=>{pt(l,t),a?.(t,l)}});return o("label",{class:"sds-sw",style:"display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600"},i,n?o("span",null,n):null)}var je=(e,n,...a)=>o("div",{class:"rb-dialog",role:"dialog","aria-modal":"true","aria-label":e,style:`max-width:${n??520}px;max-height:calc(100vh - 32px);overflow:auto`},o("h3",{class:"rb-h3"},e),...a),Xn=e=>{for(let n of e.children)n.style.flexShrink="0";return e},be=(e,...n)=>o("div",{style:"display:flex;flex-direction:column;gap:6px"},o("span",{class:"rb-label"},e),...n),Ft=(e,{min:n,max:a,step:s=1,id:i,onChange:t})=>{let l=o("input",{type:"number",class:"rb-input",value:String(e),min:n,max:a,step:s,id:i,style:"width:110px"});return l.addEventListener("change",()=>t(Number(l.value))),l},Qn=(e,n,a,s)=>o("select",{class:"rb-input",id:s,onChange:i=>a(i.target.value)},...e.map(([i,t])=>o("option",{value:i,selected:i===n},t)));function fs(e){let n=e.ctx.win,a=y=>{e.set(ze(e.proj,{sampling:fn({...e.proj.settings.sampling,...y})})),e.paintLeft()},s=(y,v,C,A)=>o("div",{style:"display:flex;flex-direction:column;gap:3px"},_n(y,{label:v,onChange:A}),o("span",{class:"rb-muted",style:"font-size:12px;white-space:normal;line-height:1.5"},C));async function i(){let y=o("div",{style:"display:flex;flex-direction:column;gap:14px"}),v=()=>{let C=e.proj.settings.sampling,A=Le(C.model),q=Tn(832,1216,C.steps);ce(y,be("모델",Qn(kt.map(x=>[x.id,x.label]),C.model,x=>{a({model:x}),v()},"sds-model")),be("샘플러",A.fixed?o("span",{class:"rb-muted"},`${sr[A.fixed.sampler]} (이 모델은 고정)`):Qn(A.samplers.map(x=>[x,sr[x]]),C.sampler,x=>{a({sampler:x}),v()},"sds-sampler")),o("div",{style:"display:flex;gap:14px;flex-wrap:wrap"},be("스텝",A.fixed?o("span",{class:"rb-muted"},`${A.fixed.steps} (고정)`):Ft(C.steps,{min:1,max:A.maxSteps??50,id:"sds-steps",onChange:x=>{a({steps:x}),v()}})),be("프롬프트 가이던스",Ft(C.scale,{min:0,max:A.maxScale??10,step:.1,id:"sds-scale",onChange:x=>a({scale:x})})),A.noCfgRescale?null:be("CFG 리스케일",Ft(C.cfgRescale,{min:0,max:1,step:.02,onChange:x=>a({cfgRescale:x})}))),q?o("span",{class:"rb-muted",style:"white-space:normal"},"28스텝 이하·1024×1024 이하면 Opus 무료예요."):o("span",{style:"color:var(--rb-warn);font-size:13px;white-space:normal"},"28스텝을 넘으면 Anlas가 들어요."),be("노이즈 스케줄",A.v5?o("span",{class:"rb-muted"},"karras (V5는 고정)"):Qn(or.map(x=>[x,x]),C.noise,x=>a({noise:x}))),be("품질 태그",A.v5?xe(Object.entries(ir),C.quality,x=>a({quality:x}),"품질 태그"):xe([["standard","켬"],["none","끔"]],C.quality==="none"?"none":"standard",x=>a({quality:x}),"품질 태그")),be("네거티브 프리셋",Qn(dr(C.model).map(x=>[x,za[x]]),C.ucPreset,x=>{a({ucPreset:x}),v()},"sds-ucpreset"),On(C.model,C.ucPreset)?o("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},On(C.model,C.ucPreset)):null),A.varietyPlus?s(C.varietyPlus,"Variety+ (구도 다양하게)","초반 단계의 가이던스를 줄여서 같은 프롬프트도 구도·표정이 더 다양하게 나와요. 결과가 너무 비슷할 때 켜요.",x=>a({varietyPlus:x})):null,A.transparent?s(C.transparent,"투명 배경","배경을 투명하게 그려 달라고 요청하고 ‘transparent background’ 태그를 붙여요. 누끼가 필요한 에셋에 써요.",x=>a({transparent:x})):null,s(C.useCoords,"캐릭터 위치 쓰기","캐릭터 프롬프트에서 정한 자리(가운데·왼쪽·오른쪽…)를 모델에 알려요. 끄면 자리는 모델이 알아서 정해요. 캐릭터 프롬프트를 쓸 때만 뜻이 있어요.",x=>a({useCoords:x})),A.v5&&!A.vibe?null:o("details",{style:"border:1px solid var(--rb-line2);border-radius:var(--rb-r2);padding:8px 12px"},o("summary",{style:"cursor:pointer;font-weight:700;font-size:13px"},"고급 (거의 안 건드려요)"),o("div",{style:"display:flex;flex-direction:column;gap:12px;margin-top:10px"},A.v5?null:s(C.legacyUc,"옛 네거티브 방식(legacy UC)","네거티브 프롬프트를 예전 방식으로 처리해요. 예전에 그린 그림을 똑같이 다시 뽑고 싶을 때만 켜요.",x=>a({legacyUc:x})),A.vibe?s(C.normalizeVibes,"바이브 세기 합을 1로 맞추기","바이브를 여러 장 쓸 때 세기를 합이 1이 되게 나눠요. 끄면 각 바이브의 세기가 그대로 들어가요.",x=>a({normalizeVibes:x})):null))),Xn(y)};v(),await fe(n,C=>je("샘플링/모델 설정",520,y,o("div",{class:"btns"},D("닫기",{kind:"primary",onClick:()=>C(!0)})))),e.paintLeft()}async function t(){let y=o("div",{style:"display:flex;flex-direction:column;gap:12px"}),v=A=>{e.set(ze(e.proj,{chars:A}))},C=()=>{let A=e.proj.settings,q=Le(A.sampling.model),x=A.chars;ce(y,o("span",{class:"rb-muted",style:"white-space:normal"},"한 그림에 여러 인물을 그릴 때 인물마다 프롬프트를 따로 적어요(NAI 캐릭터 프롬프트). 위치를 쓰려면 샘플링 설정에서 ‘캐릭터 위치 쓰기’를 켜요."),...x.map((P,E)=>{let H=O=>v(e.proj.settings.chars.map((J,le)=>le===E?{...J,...O}:J)),j=A.sampling.useCoords?Qn([.1,.3,.5,.7,.9].flatMap(O=>[.1,.3,.5,.7,.9].map(J=>[`${J},${O}`,`${"ABCDE"[Math.round((J-.1)/.2)]}${Math.round((O-.1)/.2)+1}`])),`${P.x},${P.y}`,O=>{let[J,le]=O.split(",").map(Number);H({x:J,y:le})}):null;return o("div",{class:"rb-card",style:"padding:12px;display:flex;flex-direction:column;gap:8px;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2)"},o("div",{style:"display:flex;align-items:center;gap:8px"},o("b",{style:"flex:1"},`캐릭터 ${E+1}`),j,_n(P.on,{label:"켜기",onChange:O=>H({on:O})}),D("",{size:"sm",kind:"ghost",icon:"trash",title:"지우기",onClick:()=>{v(e.proj.settings.chars.filter((O,J)=>J!==E)),C()}})),Ie({value:P.prompt,rows:3,placeholder:"예: girl, cat ears, black hoodie",label:`캐릭터 ${E+1} 프롬프트`,onInput:O=>H({prompt:O})}),o("input",{class:"rb-input",value:P.uc,placeholder:"이 인물 네거티브(선택)",onChange:O=>H({uc:O.target.value})}))}),D("캐릭터 더하기",{icon:"plus",id:"sds-char-add",disabled:x.length>=(q.maxChars??6),onClick:()=>{v([...e.proj.settings.chars,{id:Math.random().toString(36).slice(2,10),prompt:"",uc:"",x:.5,y:.5,on:!0}]),C()}})),Xn(y)};C(),await fe(n,A=>je("캐릭터 프롬프트",560,y,o("div",{class:"btns"},D("닫기",{kind:"primary",onClick:()=>A(!0)})))),e.paintLeft()}async function l(){let y=0,v=o("div",{style:"display:flex;flex-direction:column;gap:6px;min-width:150px"}),C=o("div",{style:"flex:1;min-width:0;display:flex;flex-direction:column;gap:10px"}),A=P=>String(P??"").replace(/[.<>,\s]/g,"").slice(0,40),q=P=>e.set({...e.proj,pieces:P}),x=()=>{let P=e.proj.pieces;y>=P.length&&(y=Math.max(0,P.length-1)),ce(v,...P.map((j,O)=>o("button",{type:"button",class:"rb-chip","aria-pressed":O===y?"true":"false",onClick:()=>{y=O,x()}},`${j.name} ${j.pieces.length}`)),D("모음 더하기",{size:"sm",icon:"plus",id:"sds-lib-add",onClick:async()=>{let j=A(await Be(n,{title:"조각 모음 이름",label:"이름(점·꺾쇠·쉼표·띄어쓰기 없이)",placeholder:"예: 옷"}));!j||P.some(O=>O.name===j)||(q([...e.proj.pieces,{name:j,pieces:[]}]),y=e.proj.pieces.length-1,x())}}));let E=P[y];if(!E){ce(C,o("span",{class:"rb-muted",style:"white-space:normal"},"조각은 자주 쓰는 프롬프트 묶음이에요. 프롬프트에 <모음.조각>으로 넣으면 펼쳐져요. ‘여러 줄’ 조각은 줄 하나를 무작위로 골라요."));return}let H=j=>q(e.proj.pieces.map((O,J)=>J===y?{...O,...j}:O));ce(C,o("div",{style:"display:flex;gap:8px;align-items:center"},o("b",{style:"flex:1"},`<${E.name}.…>`),D("모음 지우기",{size:"sm",kind:"danger",onClick:async()=>{await $e(n,{title:`‘${E.name}’ 모음을 지울까요?`,body:"이 모음을 부르는 프롬프트는 오류가 나요.",ok:"지우기",danger:!0})&&(q(e.proj.pieces.filter((j,O)=>O!==y)),x())}})),...E.pieces.map((j,O)=>{let J=le=>H({pieces:e.proj.pieces[y].pieces.map((me,pe)=>pe===O?{...me,...le}:me)});return o("div",{style:"display:flex;flex-direction:column;gap:6px;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);padding:10px"},o("div",{style:"display:flex;gap:8px;align-items:center"},o("input",{class:"rb-input",value:j.name,style:"flex:1","aria-label":"조각 이름",onChange:le=>{let me=A(le.target.value);me&&J({name:me}),x()}}),_n(j.multi,{label:"여러 줄",onChange:le=>J({multi:le})}),D("",{size:"sm",kind:"ghost",icon:"trash",title:"조각 지우기",onClick:()=>{H({pieces:e.proj.pieces[y].pieces.filter((le,me)=>me!==O)}),x()}})),Ie({value:j.prompt,rows:3,label:`조각 ${j.name}`,onInput:le=>J({prompt:le})}))}),D("조각 더하기",{icon:"plus",id:"sds-piece-add",onClick:()=>{let j="조각";for(let O=2;E.pieces.some(J=>J.name===j);O++)j=`조각${O}`;H({pieces:[...E.pieces,{name:j,prompt:"",multi:!1}]}),x()}})),Xn(C)};x(),await fe(n,P=>je("조각 모음",760,o("div",{style:"display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start"},v,C),o("div",{class:"btns"},D("닫기",{kind:"primary",onClick:()=>P(!0)})))),e.paintLeft()}async function p(){let[y]=await zn({accept:"image/png,image/jpeg,image/webp"});if(!y)return null;let v=new Uint8Array(await y.arrayBuffer()),C=await e.sd.saveAsset(v);return e.remember(C,v),C}async function b(){let y=o("div",{style:"display:flex;flex-direction:column;gap:12px"}),v=A=>e.set(ze(e.proj,{vibes:A})),C=()=>{let A=e.proj.settings,q=Le(A.sampling.model);ce(y,q.vibe?o("span",{class:"rb-muted",style:"white-space:normal"},"그림의 분위기·그림체를 따라 그려요. 처음 쓰는 그림(또는 정보량을 바꾼 그림)은 NovelAI가 한 번 분석해요(Anlas 2)."):o("div",{class:"rb-note warn",style:"white-space:normal"},"V5 모델은 바이브를 쓸 수 없어요. 샘플링/모델 설정에서 V4.5·V4를 고르면 켜져요."),o("div",{style:"display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px"},...A.vibes.map((x,P)=>{let E=H=>v(e.proj.settings.vibes.map((j,O)=>O===P?{...j,...H}:j));return o("div",{style:"display:flex;flex-direction:column;gap:6px;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);padding:8px"},o("div",{class:"sds-card",style:"aspect-ratio:1/1;cursor:default"},e.thumb(x.path,{now:!0})),_n(x.on,{label:"켜기",onChange:H=>E({on:H})}),o("label",{class:"rb-muted",style:"font-size:12px"},`세기 ${x.strength.toFixed(2)}`),o("input",{type:"range",min:0,max:1,step:.01,value:x.strength,onChange:H=>{E({strength:Number(H.target.value)}),C()}}),o("label",{class:"rb-muted",style:"font-size:12px"},`정보량 ${x.info.toFixed(2)}`),o("input",{type:"range",min:.01,max:1,step:.01,value:x.info,onChange:H=>{E({info:Number(H.target.value),enc:null}),C()}}),D("빼기",{size:"sm",kind:"ghost",icon:"trash",onClick:()=>{v(e.proj.settings.vibes.filter((H,j)=>j!==P)),C()}}))})),D("그림 더하기",{icon:"plus",id:"sds-vibe-add",onClick:async()=>{try{let x=await p();x&&(v([...e.proj.settings.vibes,{id:Math.random().toString(36).slice(2,10),path:x,strength:.6,info:1,on:!0,enc:null}]),C())}catch(x){e.toast(x?.message??String(x),{error:!0})}}})),Xn(y)};C(),await fe(n,A=>je("바이브 이미지",640,y,o("div",{class:"btns"},D("닫기",{kind:"primary",onClick:()=>A(!0)})))),e.paintLeft()}async function f(){let y=o("div",{style:"display:flex;flex-direction:column;gap:12px"}),v=A=>e.set(ze(e.proj,{refs:A})),C=()=>{let A=e.proj.settings,q=Le(A.sampling.model);ce(y,q.reference?o("span",{class:"rb-muted",style:"white-space:normal"},"고른 그림의 캐릭터·그림체를 따라 그려요(캐릭터 레퍼런스, 최대 2장). 장당 Anlas가 들 수 있어요."):o("div",{class:"rb-note warn",style:"white-space:normal"},"V5 모델은 레퍼런스를 쓸 수 없어요. V4.5를 골라 주세요."),...A.refs.map((x,P)=>{let E=H=>v(e.proj.settings.refs.map((j,O)=>O===P?{...j,...H}:j));return o("div",{style:"display:flex;gap:12px;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);padding:10px;align-items:flex-start"},o("div",{class:"sds-card",style:"width:110px;cursor:default;flex-shrink:0"},e.thumb(x.path,{now:!0})),o("div",{style:"flex:1;display:flex;flex-direction:column;gap:8px"},xe([["character","캐릭터"],["style","그림체"],["character&style","둘 다"]],x.type,H=>E({type:H}),"레퍼런스 종류"),o("label",{class:"rb-muted",style:"font-size:12px"},`세기 ${x.strength.toFixed(2)}`),o("input",{type:"range",min:0,max:1,step:.01,value:x.strength,onChange:H=>{E({strength:Number(H.target.value)}),C()}}),o("label",{class:"rb-muted",style:"font-size:12px"},`충실도 ${x.fidelity.toFixed(2)}`),o("input",{type:"range",min:0,max:1,step:.01,value:x.fidelity,onChange:H=>{E({fidelity:Number(H.target.value)}),C()}}),o("div",{style:"display:flex;gap:8px"},_n(x.on,{label:"켜기",onChange:H=>E({on:H})}),D("빼기",{size:"sm",kind:"ghost",icon:"trash",onClick:()=>{v(e.proj.settings.refs.filter((H,j)=>j!==P)),C()}}))))}),D("그림 더하기",{icon:"plus",id:"sds-ref-add",disabled:A.refs.length>=2,onClick:async()=>{try{let x=await p();x&&(v([...e.proj.settings.refs,{id:Math.random().toString(36).slice(2,10),path:x,strength:.6,fidelity:1,type:"character&style",on:!0}]),C())}catch(x){e.toast(x?.message??String(x),{error:!0})}}})),Xn(y)};C(),await fe(n,A=>je("레퍼런스 설정",560,y,o("div",{class:"btns"},D("닫기",{kind:"primary",onClick:()=>A(!0)})))),e.paintLeft()}let w=["top","back","neg","sampling","size","seed","chars"];async function M(){let y=await Be(n,{title:"프리셋 저장",label:"이름",placeholder:"예: 하얀 배경 고양이 화풍"});if(!y?.trim())return;let v=(await e.sd.loadPresets()).filter(A=>A.name!==y.trim()),C=e.proj.settings;await e.sd.savePresets([...v,{name:y.trim(),at:Date.now(),settings:Object.fromEntries(w.map(A=>[A,structuredClone(C[A])]))}]),e.toast(`프리셋 ‘${y.trim()}’을 저장했어요`)}async function m(y){let v=await e.sd.loadPresets();if(!v.length){e.toast("저장한 프리셋이 없어요. 왼쪽 위 저장 버튼으로 만들어요.");return}Se(n,y,[...v.map(C=>({label:C.name,icon:"preset",onClick:async()=>{await $e(n,{title:`‘${C.name}’을 불러올까요?`,body:"상위·하위·네거티브 프롬프트와 시드·크기·샘플링·캐릭터 프롬프트가 바뀌어요. 캐릭터·씬·그림은 그대로예요.",ok:"불러오기"})&&(e.set(kn({...e.proj,settings:{...e.proj.settings,...C.settings}})),e.paint(),e.toast(`‘${C.name}’을 불러왔어요`))}})),"sep",{label:"프리셋 지우기…",icon:"trash",danger:!0,onClick:async()=>{let C=await Be(n,{title:"지울 프리셋 이름",label:`있는 것: ${v.map(A=>A.name).join(", ")}`});C&&(await e.sd.savePresets(v.filter(A=>A.name!==C.trim())),e.toast("지웠어요"))}}])}async function $(){let y=[],v=e.proj,C=v.settings;await e.sd.getToken()||y.push(["warn","NovelAI 토큰이 없어요. 설정(톱니)에서 넣어요."]);for(let q of v.chars)for(let x of q.scenes){if(!De(x.slots)){y.push(["warn",`${q.name} › ${x.name}: 켜진 조각이 없는 슬롯이 있어 그릴 수 없어요.`]);continue}try{let P=un({top:C.top,own:nn(v,q),middle:ln(x,0),back:C.back},v.pieces);Ve(P).length||y.push(["warn",`${q.name} › ${x.name}: 프롬프트가 비었어요.`])}catch(P){y.push(["err",`${q.name} › ${x.name}: ${P.message}`])}}try{Dn(C.neg,v.pieces)}catch(q){y.push(["err",`네거티브: ${q.message}`])}let A=v.chars.flatMap(q=>q.scenes.map(x=>[q,x,gn(C.size,x)])).filter(([,,q])=>!Tn(q.width,q.height,C.sampling.steps));A.length&&y.push(["info",`Anlas가 드는 크기·스텝인 씬 ${A.length}개(1024×1024·28스텝 넘음).`]),await fe(n,q=>je("문제 확인",560,y.length?o("div",{style:"display:flex;flex-direction:column;gap:6px"},...y.map(([x,P])=>o("div",{class:`rb-note ${x}`,style:"white-space:normal"},P))):o("div",{class:"rb-note info"},"문제가 없어요."),o("div",{class:"btns"},D("닫기",{kind:"primary",onClick:()=>q(!0)}))))}async function L(){let y=(v,...C)=>o("div",null,o("b",null,v),...C.map(A=>o("p",{style:"margin:4px 0 0;white-space:normal;color:var(--rb-sub)"},A)));await fe(n,v=>je("에셋 제작 도움말",620,y("흐름","캐릭터 카드를 만들고 → 캐릭터를 열어 씬(표정·포즈)을 만들고 → 씬마다 예약하고 → 위 ‘생성’을 누르면 차례로 그려요. 고른 그림을 봇의 감정 이미지·추가 에셋(모듈은 모듈 에셋)으로 넣어요."),y("프롬프트","최종 = 상위 + 외형 + 씬 조합 + 하위. 상위에 | 를 넣으면 그 자리에 씬 조합이 들어가요. ##주석##은 지워지고, {a|b}는 하나를 골라요. <모음.조각>은 조각 모음에서 펼쳐요."),y("씬 조합","씬은 슬롯(열) 여러 개로 되어 있고 슬롯마다 켜진 조각 하나씩 골라 조합해요. 예약 1장 = 조합 전부를 한 장씩."),y("모드","씬 모드: 카드로 보기 · 갤러리 모드: 모든 그림 · 검색 모드: 이름·프롬프트 찾기 · 비교 모드: 그림 여러 장 나란히 · 동시편집: 여러 씬 프롬프트를 한 번에."),y("그림","그림을 누르면 크게 보고, 즐겨찾기·대표·변형·인페인트·업스케일·디렉터 도구(배경 지우기 등)를 써요. 이미지 월드컵으로 순위를 매기면 1위가 대표가 돼요."),y("폴더","캐릭터·소속으로 캐릭터를 묶어요. 폴더 안에 폴더, 한 캐릭터를 여러 폴더에 넣을 수 있어요. 카드를 고른 뒤 ‘폴더에 넣기’나 카드 메뉴로 넣어요."),y("보낼 그림 고르기·바로 넣기",`그림 카드 왼쪽 위 체크(또는 ${Yn()?"⌘":"Ctrl"}+클릭)로 보낼 그림을 골라요. 고른 것은 씬을 옮기거나 다시 열어도 남고, 씬 카드에 ✓수로 보여요. ‘고른 그림 바로 넣기’(${e.keyLabel("put")})를 누르면 고른 그림만 씬 이름으로 봇에 들어가요. 자리·형식(WebP·AVIF)·같은 이름 처리는 설정에서, 알림의 ‘되돌리기’로 바로 취소해요.`),y("템플릿","씬 구성을 템플릿으로 저장하고 다른 캐릭터에 적용해요. SDStudio 씬 템플릿 파일(.json)도 가져와요. 맨 위에서 적용하면 모든 캐릭터, 폴더 안에서는 그 폴더의 캐릭터, 캐릭터 안에서는 그 캐릭터에 들어가요. 씬이 이미 있으면 합칠지 바꿀지 골라요."),y("되돌리기·단축키",`${e.keyLabel("undo")} 되돌리기, ${e.keyLabel("redo")} 다시하기(봇에 넣은 것은 알림의 되돌리기로). 단축키는 설정 → 단축키 설정에서 바꿔요. 맥은 ⌘ 기준이에요.`),y("부스트 모드","설정에서 켜고 토큰을 여러 개 넣으면 동시에 그려요. 한 기기에서 여러 계정을 쓰면 NovelAI 제재 대상이 될 수 있어요."),y("저장","그림은 만들자마자 리스 에셋 저장소에 저장되고, 이 화면 목록에서 빼도 저장소 파일은 남아요. 작업 묶음은 봇·모듈마다 따로 저장돼요."),o("div",{class:"btns"},D("닫기",{kind:"primary",onClick:()=>v(!0)}))))}async function G({force:y=!1}={}){if(!y&&await e.sd.getToken())return!0;let v=o("input",{type:"password",class:"rb-input",placeholder:"pst-…",autocomplete:"off",id:"sds-token","data-autofocus":""});return await fe(n,A=>(v.addEventListener("keydown",q=>{q.key==="Enter"&&v.value.trim()&&A(!0)}),je("NovelAI 토큰",460,o("span",{class:"rb-muted",style:"white-space:normal"},"NovelAI → 계정 설정 → 영구 API 토큰(pst-…)을 넣어요. 이 기기에만 저장되고 다른 곳으로 보내지 않아요."),v,o("div",{class:"btns"},D("취소",{kind:"ghost",onClick:()=>A(!1)}),D("저장",{kind:"primary",id:"sds-token-ok",onClick:()=>v.value.trim()&&A(!0)})))))&&v.value.trim()?(await e.sd.setToken(v.value.trim()),!0):!1}async function Z(){let y=await e.sd.getPrefs(),v=!!await e.sd.getToken(),C=e.target.kind==="module"?[["assets","모듈 에셋"]]:[["additionalAssets","추가 에셋"],["emotionImages","감정 이미지"]],A=o("span",{class:"rb-muted"},`품질 ${Math.round(y.putQuality*100)}`),q=o("div",{style:"display:flex;flex-direction:column;gap:6px"}),x=async()=>{let H=await e.sd.getTokens();ce(q,...H.map((j,O)=>o("div",{style:"display:flex;gap:8px;align-items:center"},o("span",{style:"flex:1"},`${j.label||`토큰 ${O+1}`} · …${j.token.slice(-4)}`),D("빼기",{size:"sm",kind:"ghost",onClick:async()=>{await e.sd.setTokens(H.filter((J,le)=>le!==O)),x()}}))),D("토큰 더하기",{size:"sm",icon:"plus",id:"sds-token-add",onClick:async()=>{let j=await h("부스트 모드 토큰 더하기");j&&(await e.sd.setTokens([...H,{label:`계정 ${H.length+1}`,token:j}]),x())}}))};x();let P=o("div",{id:"sds-boost"}),E=()=>ce(P,xe([["off","끔"],["on","켬"]],e.prefs.boost?"on":"off",async H=>{let j=H==="on";if(j&&!await $e(n,{title:"부스트 모드를 켤까요?",body:"한 기기에서 여러 NovelAI 계정으로 동시에 그리는 것은 NovelAI 정책상 제재·계정 정지 대상이 될 수 있어요. 모든 책임은 사용하는 사람에게 있어요(SDStudio 원본 안내와 같음).",ok:"알고 켜기",danger:!0})){E();return}await e.sd.setPrefs({boost:j}),e.prefs.boost=j,e.paintTop(),E()},"부스트 모드"));E(),await fe(n,H=>je("설정",560,be("NovelAI 토큰",o("div",{style:"display:flex;gap:8px;align-items:center"},o("span",{class:"rb-muted",style:"flex:1"},v?"저장됨(이 기기)":"없음"),D(v?"바꾸기":"넣기",{size:"sm",onClick:()=>{H(!0),G({force:!0})}}))),o("b",null,"태그 자동완성"),o("div",{style:"display:flex;flex-direction:column;gap:8px"},_n(y.tags!==!1,{label:"프롬프트 칸에서 태그 자동완성",onChange:async j=>{await e.sd.setPrefs({tags:j}),e.prefs.tags=j}}),o("span",{class:"rb-muted",style:"font-size:12px;white-space:normal"},`${e.sd.tags()?`사전 ${e.sd.tags().size.toLocaleString()}개 있음`:"사전 없음 — 프롬프트를 칠 때 받기를 권해요(약 2MB, 처음 한 번)"} · 두 글자부터 · ↑↓로 고르고 Enter·Tab으로 넣기 · 한글(예: 긴 머리)로도 찾아요. 사전: SDStudio(MIT).`),o("div",{style:"display:flex;gap:8px;flex-wrap:wrap"},D("지금 받기",{size:"sm",id:"sds-tags-dl",onClick:async()=>{try{let j=await e.sd.loadTags();e.toast(`태그 ${j.size.toLocaleString()}개`)}catch(j){e.toast(j?.message??String(j),{error:!0})}}}),D("파일에서 불러오기(.csv/.csv.gz)",{size:"sm",onClick:async()=>{let[j]=await zn({accept:".csv,.gz,text/csv,application/gzip"});if(j)try{let O=await e.sd.loadTagsFromBytes(new Uint8Array(await j.arrayBuffer()));e.toast(`태그 ${O.size.toLocaleString()}개를 불러왔어요`)}catch(O){e.toast(`불러오지 못했어요: ${O?.message??O}`,{error:!0})}}}))),o("b",null,"봇에 넣기"),C.length>1?be("바로 넣을 자리",xe(C,y.putSlot||C[0][0],async j=>{await e.sd.setPrefs({putSlot:j}),e.prefs.putSlot=j},"바로 넣을 자리")):null,be("넣을 때 형식(용량 줄이기)",xe([["png","원본 PNG"],["webp","WebP"],["avif","AVIF"]],y.putFormat,async j=>{await e.sd.setPrefs({putFormat:j}),e.prefs.putFormat=j},"넣을 때 형식"),A,o("input",{type:"range",min:.5,max:1,step:.01,value:y.putQuality,onInput:j=>{A.textContent=`품질 ${Math.round(j.target.value*100)}`},onChange:async j=>{let O=Number(j.target.value);await e.sd.setPrefs({putQuality:O}),e.prefs.putQuality=O}}),o("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},"AVIF를 못 만드는 브라우저면 WebP로 넣어요. 바꾼 것이 더 크면 원본 그대로 넣어요.")),be("넣을 때 에셋 이름",xe([["scene","씬"],["us","폴더_캐릭터_씬.확장자"],["dot","폴더.캐릭터.씬.확장자"]],y.nameStyle??"scene",async j=>{await e.sd.setPrefs({nameStyle:j}),e.prefs.nameStyle=j},"에셋 이름"),o("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},"폴더 = 그 캐릭터가 든 캐릭터 폴더(없으면 첫 폴더, 폴더가 없으면 빼요). 예: 아비도스_호시노_smile.webp")),be("같은 이름이 이미 있으면",xe([["number","번호 붙여 더하기"],["replace","그림 바꾸기"]],y.dup,async j=>{await e.sd.setPrefs({dup:j}),e.prefs.dup=j},"같은 이름")),o("b",null,"부스트 모드(여러 계정으로 동시에 그리기)"),P,o("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},"켜면 아래 토큰 수만큼(최대 4) 동시에 그려요. 토큰은 이 기기에만 저장돼요."),q,o("b",null,"그 밖"),be("‘모두 예약’ 장 수",Ft(e.proj.settings.reserveDefault,{min:1,max:20,id:"sds-rdef",onChange:j=>{e.set(ze(e.proj,{reserveDefault:Math.max(1,Math.min(20,Math.round(j)||1))})),e.paintTools()}})),D("단축키 설정…",{icon:"zap",id:"sds-keys",onClick:()=>{H(!0),N()}}),o("span",{class:"rb-muted",style:"white-space:normal"},"그림은 만들 때 바로 리스 에셋 저장소에 저장돼요. 목록에서 빼도 파일은 남아요."),o("div",{class:"btns"},D("닫기",{kind:"primary",onClick:()=>H(!0)}))))}async function h(y){let v=o("input",{type:"password",class:"rb-input",placeholder:"pst-…",autocomplete:"off","data-autofocus":""});return await fe(n,A=>je(y,440,v,o("div",{class:"btns"},D("취소",{kind:"ghost",onClick:()=>A(!1)}),D("더하기",{kind:"primary",onClick:()=>v.value.trim()&&A(!0)}))))?v.value.trim():""}async function N(){let y={...e.keys},v=null,C=o("div",{style:"display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center"}),A=()=>ce(C,...Object.entries(Er).flatMap(([P,E])=>[o("span",null,E),o("button",{type:"button",class:"rb-chip","aria-pressed":String(v===P),dataset:{action:P},style:"min-width:120px;justify-content:center",onClick:()=>{v=P,A()}},v===P?"키를 누르세요…":Ot(y[P])||"없음")])),q=P=>{if(!v)return;if(P.preventDefault(),P.stopPropagation(),P.key==="Escape"){v=null,A();return}if(P.key==="Backspace"||P.key==="Delete"){y=Or(y,v,""),v=null,A();return}let E=Tt(P);E&&(y=Or(y,v,E),v=null,A())};n.ownerDocument.addEventListener("keydown",q,!0),A();let x=await fe(n,P=>je("단축키 설정",520,o("span",{class:"rb-muted",style:"white-space:normal"},`줄을 누르고 새 키를 눌러요. 지우려면 Backspace. 다른 동작과 겹치면 그쪽은 비워져요.${Yn()?" 맥은 ⌘가 주 보조키예요(⌃ Control·⌥ Option도 따로 쓸 수 있어요).":""}`),C,o("div",{class:"btns"},D("기본값",{kind:"ghost",onClick:()=>{y={...Ir},A()}}),D("취소",{kind:"ghost",onClick:()=>P(!1)}),D("저장",{kind:"primary",id:"sds-keys-save",onClick:()=>P(!0)}))));n.ownerDocument.removeEventListener("keydown",q,!0),x&&(e.keys=y,await e.sd.setPrefs({keys2:y}),e.paintTools(),e.toast("단축키를 저장했어요"))}async function R(y,v){let C="merge";return X.textContent=U.merge,fe(n,A=>je(`‘${v}’ 템플릿 적용`,500,o("span",{class:"rb-muted",style:"white-space:normal"},`씬이 이미 있는 캐릭터가 ${y}명이에요. 어떻게 할까요? (처음 상태인 캐릭터는 그냥 템플릿 씬으로 채워요)`),xe([["merge","합치기"],["replace","바꾸기"]],C,q=>{C=q,X.textContent=U[q]},"적용 방식"),X,o("div",{class:"btns"},D("취소",{kind:"ghost",onClick:()=>A(null)}),D("적용",{kind:"primary",id:"sds-tpl-ok",onClick:()=>A(C)}))))}var U={merge:"있는 씬은 그대로 두고, 템플릿에만 있는 씬을 뒤에 더해요.",replace:"씬 목록을 템플릿대로 바꿔요. 이름이 같은 씬은 프롬프트만 바뀌고 그림은 남아요. 템플릿에 없는 씬은 빠져요(되돌리기 가능)."},X=o("span",{style:"white-space:normal;font-size:13px"},U.merge);async function he({apply:y}){let v=o("div",{style:"display:flex;flex-direction:column;gap:8px"}),C=async()=>{let q=await e.sd.loadTemplates();ce(v,...q.length?q.map((x,P)=>o("div",{style:"display:flex;gap:8px;align-items:center;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);padding:8px 10px"},o("div",{style:"flex:1;min-width:0;display:flex;flex-direction:column"},o("b",null,x.name),o("span",{class:"rb-muted",style:"font-size:12px;white-space:normal"},`씬 ${x.scenes.length}개 · ${x.scenes.slice(0,6).map(E=>E.name).join(", ")}${x.scenes.length>6?" …":""}`)),D("적용",{size:"sm",kind:"primary",onClick:async()=>{A?.(!0),await y(x)}}),D("",{size:"sm",kind:"ghost",icon:"edit",title:"이름 바꾸기",onClick:async()=>{let E=await Be(n,{title:"템플릿 이름",label:"이름",value:x.name});E?.trim()&&(q[P]={...x,name:E.trim()},await e.sd.saveTemplates(q),C())}}),D("",{size:"sm",kind:"ghost",icon:"download",title:"파일로 내보내기",onClick:()=>$n(`${x.name}.dusk-template.json`,os(x),"application/json")}),D("",{size:"sm",kind:"ghost",icon:"trash",title:"지우기",onClick:async()=>{await $e(n,{title:`‘${x.name}’ 템플릿을 지울까요?`,ok:"지우기",danger:!0})&&(q.splice(P,1),await e.sd.saveTemplates(q),C())}}))):[o("span",{class:"rb-muted",style:"white-space:normal"},"저장한 템플릿이 없어요. 캐릭터를 연 뒤 ‘씬을 템플릿으로 저장’하거나 SDStudio 씬 템플릿 파일을 가져와요.")])},A=null;await C(),await fe(n,q=>(A=q,je("템플릿 관리",620,v,o("div",{class:"btns"},D("닫기",{kind:"primary",onClick:()=>q(!0)})))))}async function V({count:y}){let v=e.target.kind==="module"?[["assets","모듈 에셋"]]:[["additionalAssets","추가 에셋"],["emotionImages","감정 이미지"]],C=v.some(x=>x[0]===e.prefs.putSlot)?e.prefs.putSlot:v[0][0],A=e.prefs.dup??"number",q=o("input",{class:"rb-input",id:"sds-put-name",placeholder:"비우면 씬 이름"});return fe(n,x=>je(`고른 그림 ${y}장을 넣을까요?`,480,o("span",{class:"rb-muted",style:"white-space:normal"},`고른 그림만 넣어요. 형식은 설정대로(${{png:"원본 PNG",webp:"WebP",avif:"AVIF"}[e.prefs.putFormat]??"WebP"}) 바꿔요.`),v.length>1?be("넣을 자리",xe(v,C,P=>{C=P},"넣을 자리")):null,be("이름",q),be("같은 이름이 이미 있으면",xe([["number","번호 붙여 더하기"],["replace","그림 바꾸기"]],A,P=>{A=P},"같은 이름")),o("div",{class:"btns"},D("취소",{kind:"ghost",onClick:()=>x(null)}),D("넣기",{kind:"primary",id:"sds-put-ok",onClick:()=>x({slot:C,name:q.value.trim(),dup:A})}))))}async function oe({rows:y,names:v,title:C="즐겨찾기를 봇에 넣기"}){let A=e.target.kind==="module"?[["assets","모듈 에셋"]]:[["additionalAssets","추가 에셋"],["emotionImages","감정 이미지"]],q=A.some(pe=>pe[0]===e.prefs.putSlot)?e.prefs.putSlot:A[0][0],x=e.prefs.dup??"number",P=y.map(()=>!0),E=o("div",{class:"sds-exp-list",id:"sds-exp-list"}),H=o("span",{class:"rb-muted",style:"white-space:normal;font-size:12.5px"}),j=null,O=pe=>{let we=v[q]??new Set,qe=pe.nameFor(q).toLowerCase();return pe.it.sent&&we.has(pe.it.sent.toLowerCase())?["sent","이미 넣음"]:we.has(qe)?["dup",x==="replace"?"바꿈":"같은 이름 있음 → 번호"]:["new","새로"]};y.forEach((pe,we)=>{O(pe)[0]==="sent"&&(P[we]=!1)});let J=()=>{let pe={new:0,dup:0,sent:0};ce(E,...y.map((qe,Ue)=>{let[Te,Zn]=O(qe);return P[Ue]&&pe[Te]++,o("label",{class:"sds-exp-row",dataset:{st:Te}},o("input",{type:"checkbox",checked:P[Ue],"aria-label":`${qe.nameFor(q)} 넣기`,onChange:qn=>{P[Ue]=qn.target.checked,J()}}),e.thumb(qe.it.path,{now:!0}),o("span",{class:"nm",title:qe.nameFor(q)},qe.nameFor(q),o("small",{class:"rb-muted",style:"display:block;font-weight:500"},qe.label)),o("span",{class:["st",Te]},Zn))}));let we=P.filter(Boolean).length;H.textContent=`넣을 그림 ${we}장 · 새로 ${pe.new} · 같은 이름 ${pe.dup}${pe.sent?` · 이미 넣은 것 ${pe.sent}`:""} — 형식은 설정대로(${{png:"원본 PNG",webp:"WebP",avif:"AVIF"}[e.prefs.putFormat]??"WebP"}), 이름 끝 확장자는 바뀔 수 있어요.`,j&&(j.disabled=!we,j.lastChild.textContent=`${we}장 넣기`)},le=pe=>{P.fill(pe),J()},me=()=>{y.forEach((pe,we)=>{P[we]=O(pe)[0]!=="sent"}),J()};return fe(n,pe=>(j=D("넣기",{kind:"primary",id:"sds-exp-ok",onClick:()=>{let we=P.flatMap((qe,Ue)=>qe?[Ue]:[]);we.length&&pe({idx:we,slot:q,dup:x})}}),J(),je(C,620,A.length>1?be("넣을 자리",xe(A,q,we=>{q=we,me()},"넣을 자리")):null,be("같은 이름이 이미 있으면",xe([["number","번호 붙여 더하기"],["replace","그림 바꾸기"]],x,we=>{x=we,J()},"같은 이름")),o("div",{class:"sds-row",style:"gap:6px;flex-wrap:wrap"},D("모두",{size:"sm",kind:"ghost",onClick:()=>le(!0)}),D("안 넣은 것만",{size:"sm",kind:"ghost",id:"sds-exp-unsent",onClick:me}),D("모두 풀기",{size:"sm",kind:"ghost",onClick:()=>le(!1)})),E,H,o("div",{class:"btns"},D("취소",{kind:"ghost",onClick:()=>pe(null)}),j))))}async function ee({projs:y,hasImages:v}){let C=y.map(()=>!0),A=y.reduce((j,O)=>j+O.favCount,0),q=v?A?"fav":"all":"none",x=o("div",{class:"sds-exp-list",id:"sds-bk-list"}),P=o("span",{class:"rb-muted",style:"white-space:normal;font-size:12.5px"}),E=null,H=()=>{ce(x,...y.map((J,le)=>o("label",{class:"sds-exp-row"},o("input",{type:"checkbox",checked:C[le],"aria-label":`${J.name} 가져오기`,onChange:me=>{C[le]=me.target.checked,H()}}),o("span",{class:"nm",title:J.name},J.name,o("small",{class:"rb-muted",style:"display:block;font-weight:500"},[J.folder&&`폴더 ${J.folder}`,`씬 ${J.tpl.scenes.length}`,v&&`그림 ${J.count}`,v&&`즐겨찾기 ${J.favCount}`].filter(Boolean).join(" · "))))));let j=y.filter((J,le)=>C[le]),O=q==="none"?0:j.reduce((J,le)=>J+(q==="all"?le.count:le.favCount),0);P.textContent=`캐릭터 ${j.length}명으로 가져와요${O?` · 그림 ${O}장`:""}. 폴더는 같은 이름 폴더에 넣고, 같은 이름 캐릭터가 있으면 번호를 붙여요. 상위·제외 프롬프트는 비어 있을 때만 채워요.`,E&&(E.disabled=!j.length,E.lastChild.textContent=`${j.length}명 가져오기`)};return fe(n,j=>(E=D("가져오기",{kind:"primary",id:"sds-bk-ok",onClick:()=>{let O=C.flatMap((J,le)=>J?[le]:[]);O.length&&j({idx:O,mode:q})}}),H(),je("SDStudio 백업 가져오기",600,o("span",{class:"rb-muted",style:"white-space:normal;font-size:12.5px"},"SDStudio 프로젝트 하나가 캐릭터 하나가 돼요. 씬 구성·조각·앞쪽 프롬프트(외형)를 가져오고, 그림은 리스 에셋 저장소에 저장해요."),v?be("그림",xe([["fav","즐겨찾기만"],["all","모두"],["none","그림 없이"]],q,O=>{q=O,H()},"가져올 그림")):o("span",{class:"rb-muted",style:"font-size:12.5px"},"이 파일에는 그림이 없어 씬 구성만 가져와요."),x,P,o("div",{class:"btns"},D("취소",{kind:"ghost",onClick:()=>j(null)}),E))))}function ne({title:y,name:v="",kind:C="",prompt:A="",ok:q="만들기"}){let x=C,P=o("textarea",{class:"rb-input",rows:3,id:"sds-fprompt",placeholder:"예: school uniform, halo — 이 폴더(안의 폴더 포함) 캐릭터 프롬프트 앞에 붙어요"},A),E=()=>({name:H.value.trim(),kind:x,prompt:P.value}),H=o("input",{type:"text",class:"rb-input",value:v,placeholder:"예: 수영복 / 아비도스","data-autofocus":"",id:"sds-fname"});return fe(n,j=>(H.addEventListener("keydown",O=>{O.key==="Enter"&&H.value.trim()&&j(E())}),je(y,460,be("폴더 이름",H),be("무엇으로 묶나요",xe([["outfit","캐릭터"],["group","소속"],["","그 밖"]],x,O=>{x=O},"폴더 종류")),be("폴더 프롬프트",P,o("span",{class:"rb-muted",style:"font-size:12px;white-space:normal"},"상위 폴더 프롬프트 → 하위 폴더 프롬프트 → 캐릭터 외형 순으로 이어져요.")),o("div",{class:"btns"},D("취소",{kind:"ghost",onClick:()=>j(null)}),D(q,{kind:"primary",id:"sds-fok",onClick:()=>H.value.trim()&&j(E())})))))}async function Ce(){let y=e.sd.tags();if(!y)try{y=await e.sd.loadTags()}catch(j){e.toast(`${j?.message??j} — 설정 → 태그 자동완성에서 파일로 불러올 수 있어요`,{error:!0});return}let v=()=>e.prefs.artistFav??[],C=async j=>{e.prefs.artistFav=j,await e.sd.setPrefs({artistFav:j})},A=o("input",{class:"rb-input",type:"search",id:"sds-art-q",placeholder:"작가 이름 찾기(두 글자부터)","data-autofocus":""}),q=o("div",{class:"sds-artlist",id:"sds-art-list"}),x=j=>new RegExp(`(^|,)\\s*artist:${j.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}\\s*(,|$)`,"i").test(e.proj.settings.top??""),P=j=>{let O=String(e.proj.settings.top??"").replace(/\s*,?\s*$/,"");e.set(ze(e.proj,{top:x(j)?O:`${O}${O?", ":""}artist:${j}`})),e.paintLeft(),H()},E=(j,O)=>o("div",{class:"it"},o("button",{type:"button",class:["sds-ib",v().includes(j)&&"on"],title:"자주 쓰는 작가","aria-label":"자주 쓰는 작가",onClick:async()=>{await C(v().includes(j)?v().filter(J=>J!==j):[...v(),j]),H()}},ie("star",16)),o("span",{class:"w"},j),O!=null?o("span",{class:"rb-muted",style:"font-size:12px"},mt(O)):null,D(x(j)?"넣음":"넣기",{size:"sm",kind:x(j)?"ghost":"primary",disabled:x(j),onClick:()=>P(j)})),H=()=>{let j=A.value.trim(),O=j.length>=2?(()=>{let J=[],le=bn(j);for(let me=0;me<y.size&&J.length<400;me++)y.cats[me]===1&&!y.redirs[me]&&y.keys[me].includes(le)&&J.push(me);return J.sort((me,pe)=>y.freqs[pe]-y.freqs[me]).slice(0,40)})():[];ce(q,v().length?o("small",{class:"rb-muted"},"자주 쓰는 작가"):null,...v().map(J=>E(J,null)),j.length>=2?o("small",{class:"rb-muted"},O.length?`찾은 작가 ${O.length}`:"없어요"):o("small",{class:"rb-muted"},"이름을 두 글자 이상 쳐요. 넣으면 상위 프롬프트 끝에 artist:이름 으로 붙어요."),...O.map(J=>E(y.words[J],y.freqs[J])))};A.addEventListener("input",()=>H()),H(),await fe(n,j=>je("작가 태그(그림체)",520,A,q,o("div",{class:"btns"},D("닫기",{kind:"primary",onClick:()=>j()}))))}return{artists:Ce,sampling:i,charPrompts:t,pieces:l,vibes:b,refs:f,savePreset:M,loadPreset:m,check:$,help:L,token:G,settings:Z,put:V,exportPreview:oe,backupImport:ee,folderDialog:ne,keysDialog:N,templateChoice:R,templateManager:he}}function Vo(e,{label:n,onChange:a,disabled:s}={}){let i=ht(e,{label:n,disabled:s,onChange:(t,l)=>{pt(l,t),a?.(t,l)}});return o("label",{class:"sds-sw",style:"display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600"},i,n?o("span",null,n):null)}var ws=async(e,n,a)=>{try{await navigator.clipboard.writeText(String(n)),e.toast(`${a}을 복사했어요`)}catch{e.toast("복사하지 못했어요",{error:!0})}};function Fr(e,n,a=0){let s=Math.max(0,Math.min(n.length-1,a)),i=null,t=o("img",{alt:"크게 보기",id:"sds-lb-img"}),l=o("div",{class:"stage"},t),p=o("aside",{class:"info",id:"sds-lb-info"}),b=o("button",{type:"button",class:"nav",style:"left:12px","aria-label":"이전 그림",onClick:()=>$(-1)},ie("chevL",22)),f=o("button",{type:"button",class:"nav",style:"right:12px","aria-label":"다음 그림",onClick:()=>$(1)},ie("chevR",22));l.append(b,f);let w=o("div",{class:"rb-full-head",style:"min-height:52px"}),M=o("div",{class:"sds-over",role:"dialog","aria-label":"그림 크게 보기",id:"sds-lightbox",tabIndex:-1},w,o("div",{class:"sds-lb"},l,p)),m=()=>{i&&URL.revokeObjectURL(i),M.remove(),e.paintBody()},$=U=>{n.length&&(s=(s+U+n.length)%n.length,Z())},L=()=>n[s],G=()=>{let U=L(),X=se(e.proj,U.cid,U.sid);return{it:U,sc:X,c:ge(e.proj,U.cid),im:X?.images.find(he=>he.path===U.path)}};async function Z(){let{it:U,sc:X,c:he,im:V}=G();if(!V)return n.splice(s,1),n.length?(s=Math.min(s,n.length-1),Z()):m();b.hidden=f.hidden=n.length<2,ce(w,o("button",{type:"button",class:"rb-icon-btn","aria-label":"닫기",onClick:m},ie("x",20)),o("div",{class:"ttl"},o("small",null,`${he.name} › ${X.name}`),o("b",null,`${s+1} / ${n.length}`)));let oe=sn(X)===V.path&&!!X.cover,ee=(ne,Ce,y,v={})=>D(ne,{size:"sm",icon:Ce,...v,onClick:y});ce(p,o("div",{style:"display:flex;gap:8px;align-items:center"},o("button",{type:"button",class:["sds-ib",V.fav&&"on"],id:"sds-lb-fav",title:"즐겨찾기 (F)","aria-pressed":String(V.fav),onClick:()=>h()},ie("star",18)),o("b",{style:"flex:1"},V.rank?`${V.rank}위`:V.fav?"즐겨찾기":""),V.from?o("span",{class:"rb-badge"},{img2img:"변형",infill:"인페인트",upscale:"업스케일"}[V.from]??en[V.from]??V.from):null),o("div",{class:"sds-acts"},ee(V.pick?"고름 ✓":"보낼 그림으로 고르기","check",()=>{e.togglePick(U),Z()},{id:"sds-lb-pick",kind:V.pick?"primary":""}),ee("이 그림만 봇에 넣기","download",()=>e.quickPut([{path:V.path,name:X.name,cid:U.cid,sid:U.sid}]),{id:"sds-lb-put"}),ee("넣는 방법…","sliders",()=>e.putPaths([{path:V.path,name:X.name,cid:U.cid,sid:U.sid}])),ee(oe?"씬 대표":"씬 대표로","check",()=>{e.set(Pe(e.proj,U.cid,U.sid,{cover:V.path})),Z()},{disabled:oe}),ee("캐릭터 대표로","character",()=>{e.set(Fe(e.proj,U.cid,{cover:V.path})),e.toast("캐릭터 카드 대표로 했어요")})),o("div",{class:"sds-acts"},ee("변형","refresh",()=>R("img2img")),ee("인페인트","brush",()=>Wo(e,U,V)),ee("업스케일","size",()=>R("upscale")),ee("디렉터 도구","sparkle",ne=>Se(e.ctx.win,ne.currentTarget,Object.entries(en).map(([Ce,y])=>({label:y,onClick:()=>R(Ce)}))))),o("div",{class:"sds-acts"},ee("비교에 넣기","split",()=>{e.addCompare(U),e.toast("비교 모드에 넣었어요")}),ee("이 시드로 고정","zap",()=>{V.seed&&(e.set(ze(e.proj,{seed:{mode:"fixed",value:V.seed}})),e.paintLeft(),e.toast(`시드 ${V.seed}로 고정했어요`))},{disabled:!V.seed}),ee("내려받기","download",async()=>$n(`${he.name}_${X.name}_${s+1}.png`,new Blob([await e.bytes(V.path)],{type:"image/png"}))),ee("목록에서 빼기","trash",()=>N(),{kind:"danger"})),o("div",{style:"display:flex;gap:8px;align-items:center;font-size:13px"},o("span",{class:"rb-muted"},"시드"),o("b",{style:"flex:1"},V.seed??"-"),V.seed?D("복사",{size:"sm",kind:"ghost",onClick:()=>ws(e,V.seed,"시드")}):null),V.w?o("div",{class:"rb-muted",style:"font-size:13px"},`${V.w}×${V.h}`):null,V.prompt?o("div",{style:"display:flex;flex-direction:column;gap:6px"},o("div",{style:"display:flex;align-items:center"},o("span",{class:"rb-label",style:"flex:1"},"프롬프트"),D("복사",{size:"sm",kind:"ghost",onClick:()=>ws(e,V.prompt,"프롬프트")})),o("pre",null,V.prompt)):null);for(let ne of p.children)ne.style.flexShrink="0";M.contains(document.activeElement)||M.focus({preventScroll:!0});try{let ne=await e.url(V.path);if(L()?.path!==V.path){URL.revokeObjectURL(ne);return}i&&URL.revokeObjectURL(i),i=ne,t.src=ne}catch{t.removeAttribute("src")}}function h(){let{it:U,im:X}=G();e.set(tn(e.proj,U.cid,U.sid,X.path,{fav:!X.fav})),Z(),e.paintBody?.()}async function N(){let{it:U}=G();if(await $e(e.ctx.win,{title:"목록에서 뺄까요?",body:"이 화면 목록에서만 빠져요. 리스 에셋 저장소 파일과 이미 봇에 넣은 에셋은 그대로예요.",ok:"빼기",danger:!0})){if(e.set(Cn(e.proj,U.cid,U.sid,[U.path])),n.splice(s,1),!n.length)return m();s=Math.min(s,n.length-1),Z()}}async function R(U){let{it:X,sc:he,im:V}=G(),oe=U==="img2img"?await Ko(e,V,he):U==="upscale"?await Ho(e,V):en[U]?await Go(e,U):null;if(!oe)return;let ee=await e.derive(X,U,oe);ee&&(n.splice(s,0,{cid:X.cid,sid:X.sid,path:ee}),Z())}M.addEventListener("keydown",U=>{e.ctx.win.querySelector(".rb-modal, .rb-menu")||(U.key==="Escape"?(U.stopPropagation(),m()):U.key==="ArrowLeft"?$(-1):U.key==="ArrowRight"?$(1):U.key==="f"||U.key==="F"?h():U.key==="Delete"&&N())}),e.el.appendChild(M),M.focus(),Z()}async function Ko(e,n,a){let s=.7,i=0,t=Ie({value:n.prompt||"",rows:4,label:"변형 프롬프트"}),l=o("span",{class:"rb-muted"},`세기 ${s}`),p=o("span",{class:"rb-muted"},`노이즈 ${i}`);return fe(e.ctx.win,b=>o("div",{class:"rb-dialog",role:"dialog","aria-label":"변형",style:"max-width:520px"},o("h3",{class:"rb-h3"},"이미지 변형(img2img)"),o("span",{class:"rb-muted",style:"white-space:normal"},`이 그림을 바탕으로 다시 그려요. 결과는 ‘${a.name}’ 씬에 더해져요.`),o("span",{class:"rb-label"},"프롬프트"),t,l,o("input",{type:"range",min:.01,max:.99,step:.01,value:s,onInput:f=>{s=Number(f.target.value),l.textContent=`세기 ${s}`}}),p,o("input",{type:"range",min:0,max:.99,step:.01,value:i,onInput:f=>{i=Number(f.target.value),p.textContent=`노이즈 ${i}`}}),o("div",{class:"btns"},D("취소",{kind:"ghost",onClick:()=>b(null)}),D("변형",{kind:"primary",id:"sds-i2i-ok",onClick:()=>b({strength:s,noise:i,prompt:t.textarea.value})}))))}async function Ho(e,n){let a=null;try{let s=wn(await e.bytes(n.path));a=_a(s.width,s.height)}catch(s){return e.toast(s?.message??String(s),{error:!0}),null}return await $e(e.ctx.win,{title:"2배로 키울까요?",body:`NovelAI 업스케일은 Anlas ${a}가 들어요(서버가 최종 결정). 결과는 같은 씬에 더해져요.`,ok:"업스케일"})?{}:null}async function Go(e,n){if(n!=="colorize"&&n!=="emotion")return await $e(e.ctx.win,{title:`${en[n]}`,body:"NovelAI 디렉터 도구로 이 그림을 바꿔요. 결과는 같은 씬에 더해져요. Anlas가 들 수 있어요.",ok:"하기"})?{}:null;let a="happy",s=0,i=o("input",{class:"rb-input",placeholder:n==="emotion"?"더할 말(선택)":"예: red hair, blue eyes"});return fe(e.ctx.win,t=>o("div",{class:"rb-dialog",role:"dialog","aria-label":en[n],style:"max-width:480px"},o("h3",{class:"rb-h3"},en[n]),n==="emotion"?o("select",{class:"rb-input",id:"sds-emotion",onChange:l=>{a=l.target.value}},...Ma.map(l=>o("option",{value:l,selected:l===a},l))):null,i,o("span",{class:"rb-label"},"약하게(0~5)"),xe([0,1,2,3,4,5].map(l=>[String(l),String(l)]),"0",l=>{s=Number(l)},"약하게"),o("div",{class:"btns"},D("취소",{kind:"ghost",onClick:()=>t(null)}),D("하기",{kind:"primary",onClick:()=>t({emotion:a,prompt:i.value,defry:s})}))))}async function Wo(e,n,a){let s=await e.bytes(a.path),i=wn(s)??{width:a.w||832,height:a.h||1216},t=new Image,l=URL.createObjectURL(new Blob([s],{type:"image/png"}));await new Promise(V=>{t.onload=V,t.onerror=V,t.src=l});let p=o("canvas",{width:i.width,height:i.height,id:"sds-inpaint-canvas",style:"cursor:crosshair"}),b=Object.assign(document.createElement("canvas"),{width:i.width,height:i.height}),f=p.getContext("2d"),w=b.getContext("2d"),M=64,m=!1,$=1,L=!0,G=!1,Z=null,h=()=>{f.clearRect(0,0,i.width,i.height),f.drawImage(t,0,0,i.width,i.height),f.globalAlpha=.45,f.drawImage(b,0,0),f.globalAlpha=1},N=V=>{let oe=p.getBoundingClientRect();return{x:(V.clientX-oe.left)*(i.width/oe.width),y:(V.clientY-oe.top)*(i.height/oe.height)}},R=(V,oe)=>{w.globalCompositeOperation=m?"destination-out":"source-over",w.strokeStyle="#ff3b6b",w.lineWidth=M,w.lineCap="round",w.beginPath(),w.moveTo(V.x,V.y),w.lineTo(oe.x,oe.y),w.stroke(),h()};p.addEventListener("pointerdown",V=>{G=!0,Z=N(V),p.setPointerCapture?.(V.pointerId),R(Z,Z)}),p.addEventListener("pointermove",V=>{if(!G)return;let oe=N(V);R(Z,oe),Z=oe}),p.addEventListener("pointerup",()=>{G=!1}),h();let U=Ie({value:a.prompt||"",rows:3,label:"인페인트 프롬프트"}),X=o("span",{class:"rb-muted"},`붓 ${M}`),he=await new Promise(V=>{let oe=o("div",{class:"sds-over",role:"dialog","aria-label":"인페인트",id:"sds-inpaint"},o("div",{class:"rb-full-head"},o("button",{type:"button",class:"rb-icon-btn","aria-label":"닫기",onClick:()=>{oe.remove(),V(null)}},ie("x",20)),o("div",{class:"ttl"},o("small",null,"인페인트"),o("b",null,"다시 그릴 곳을 칠해요"))),o("div",{class:"sds-lb"},o("div",{class:"sds-paint"},p),o("aside",{class:"info"},X,o("input",{type:"range",min:8,max:256,value:M,onInput:ee=>{M=Number(ee.target.value),X.textContent=`붓 ${M}`}}),xe([["paint","칠하기"],["erase","지우개"]],"paint",ee=>{m=ee==="erase"},"붓"),D("칠한 것 모두 지우기",{size:"sm",kind:"ghost",onClick:()=>{w.clearRect(0,0,i.width,i.height),h()}}),o("span",{class:"rb-label"},"프롬프트"),U,o("span",{class:"rb-label"},"세기"),o("input",{type:"range",min:.01,max:1,step:.01,value:$,onInput:ee=>{$=Number(ee.target.value)}}),Vo(L,{label:"칠하지 않은 곳은 그대로 두기",onChange:ee=>{L=ee}}),D("인페인트",{kind:"primary",id:"sds-inpaint-ok",onClick:async()=>{let ee=Object.assign(document.createElement("canvas"),{width:i.width,height:i.height}),ne=ee.getContext("2d");ne.fillStyle="#000",ne.fillRect(0,0,i.width,i.height);let Ce=Object.assign(document.createElement("canvas"),{width:i.width,height:i.height}),y=Ce.getContext("2d");y.drawImage(b,0,0),y.globalCompositeOperation="source-in",y.fillStyle="#fff",y.fillRect(0,0,i.width,i.height),ne.drawImage(Ce,0,0);let v=await new Promise(C=>ee.toBlob(C,"image/png"));oe.remove(),V({mask:new Uint8Array(await v.arrayBuffer()),prompt:U.textarea.value,strength:$,keep:L})}}))));for(let ee of oe.querySelector(".info").children)ee.style.flexShrink="0";e.el.appendChild(oe)});URL.revokeObjectURL(l),he&&await e.derive(n,"infill",he)}async function Sn(e,n,a){let s=se(e.proj,n,a);if(!s||s.images.length<2){e.toast("그림이 2장 이상 있어야 해요");return}let i=jr(s.images.map(m=>m.path)),t=[],l=o("div",{class:"rb-full-head"}),p=o("div",{class:"pair"}),b=o("div",{class:"sds-over",role:"dialog","aria-label":"이미지 월드컵",id:"sds-cup",tabIndex:-1},l,o("div",{class:"sds-cup"},p,o("div",{class:"rb-muted",style:"text-align:center;padding:0 0 14px"},"더 마음에 드는 쪽을 눌러요 · ← → 키"))),f=m=>{for(let $ of t)URL.revokeObjectURL($);b.remove(),m&&e.paintBody()},w=m=>{i=zr(i,m),M()};async function M(){if($r(i))return e.set(Pe(Ar(e.proj,n,a,i.ranks),n,a,{cover:Object.keys(i.ranks).find(h=>i.ranks[h]===1)??""})),e.toast("순위를 매겼어요. 1위가 씬 대표가 됐어요"),f(!0);let[m,$]=qt(i),L=i.at/2+1,G=Math.floor(i.players.length/2);ce(l,o("button",{type:"button",class:"rb-icon-btn","aria-label":"그만하기",onClick:()=>f(!1)},ie("x",20)),o("div",{class:"ttl"},o("small",null,`이미지 월드컵 · ${s.name}`),o("b",null,`${Mr(i)} ${L}/${G}`)));let Z=async(h,N)=>{let R=o("button",{type:"button","aria-label":N?"오른쪽 고르기":"왼쪽 고르기",class:"sds-cup-pick",onClick:()=>w(N)});try{let U=await e.url(h);t.push(U),R.append(o("img",{src:U,alt:""}))}catch{}return R};ce(p,await Z(m,0),await Z($,1)),b.contains(document.activeElement)||b.focus({preventScroll:!0})}b.addEventListener("keydown",m=>{m.key==="Escape"?(m.stopPropagation(),f(!1)):m.key==="ArrowLeft"?w(0):m.key==="ArrowRight"&&w(1)}),e.el.appendChild(b),b.focus(),M()}function Dr(e,n,{start:a=0,onlyNoFav:s=!1}={}){let i=s,t=0,l=0,p=null,b=n.filter(v=>se(e.proj,v.cid,v.sid)?.images.length),f=()=>b.filter(v=>{let C=se(e.proj,v.cid,v.sid);return C?.images.length&&(!i||!an(C)||v===w)}),w=b[a]??null,M=o("img",{alt:"후보 그림",id:"sds-ch-img"}),m=o("button",{type:"button",class:"nav",style:"left:12px","aria-label":"이전 후보",onClick:()=>oe(-1)},ie("chevL",22)),$=o("button",{type:"button",class:"nav",style:"right:12px","aria-label":"다음 후보",onClick:()=>oe(1)},ie("chevR",22)),L=o("span",{class:"sds-ch-star","aria-hidden":"true"},"★"),G=o("div",{class:"stage"},M,L,m,$),Z=o("div",{class:"rb-full-head",style:"min-height:52px"}),h=o("div",{class:"sds-ch-strip rb-scroll",id:"sds-ch-strip"}),N=o("div",{class:"sds-ch-acts"}),R=o("div",{class:"sds-over",role:"dialog","aria-label":"대표 고르기",id:"sds-chooser",tabIndex:-1},Z,o("div",{class:"sds-ch"},G,h,N)),U=()=>{p&&URL.revokeObjectURL(p),R.remove(),e.paint()},X=()=>f(),he=()=>{let C=X()[t];return C?{x:C,sc:se(e.proj,C.cid,C.sid),c:ge(e.proj,C.cid)}:null},V=()=>{let v=he();return v?Ne(v.sc):[]};function oe(v){let C=V().length;C&&(l=(l+v+C)%C,y())}function ee(v){let C=X();if(!C.length)return;t=Math.max(0,Math.min(C.length-1,t+v)),w=C[t],l=0;let A=X();t=Math.max(0,A.indexOf(w)),y()}function ne(v){let C=he(),A=V()[l];!C||!A||(e.set(tn(e.proj,C.x.cid,C.x.sid,A.path,{fav:v??!A.fav})),l=Math.max(0,V().findIndex(q=>q.path===A.path)),y())}function Ce(){let v=V()[l];if(!v)return;v.fav||ne(!0);let C=X(),A=C.indexOf(w);if(A>=C.length-1){e.toast("마지막 씬이에요");return}w=C[A+1],l=0,t=Math.max(0,X().indexOf(w)),y()}async function y(){let v=X();if(!v.length)return e.toast(i?"즐겨찾기 없는 씬이 없어요":"그림이 있는 씬이 없어요"),U();(!w||!v.includes(w))&&(w=v[Math.min(t,v.length-1)]),t=v.indexOf(w);let{x:C,sc:A,c:q}=he(),x=Ne(A);l=Math.max(0,Math.min(l,x.length-1));let P=x[l],E=x.filter(j=>j.fav).length,H=b.filter(j=>{let O=se(e.proj,j.cid,j.sid);return O&&!an(O)}).length;if(ce(Z,o("button",{type:"button",class:"rb-icon-btn","aria-label":"닫기",onClick:U},ie("x",20)),o("div",{class:"ttl"},o("small",null,`씬 ${t+1} / ${v.length} · 즐겨찾기 없는 씬 ${H}`),o("b",{id:"sds-ch-title"},`${q.name} › ${A.name}`)),o("span",{class:"sp",style:"flex:1"}),o("label",{class:"sds-sw",style:"display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer"},o("input",{type:"checkbox",id:"sds-ch-only",checked:i,onChange:j=>{i=j.target.checked,y()}}),"즐겨찾기 없는 씬만")),L.hidden=!P?.fav,m.hidden=$.hidden=x.length<2,ce(h,...x.map((j,O)=>o("button",{type:"button",class:["sds-ch-th",O===l&&"on",j.fav&&"fav"],"aria-label":`후보 ${O+1}${j.fav?" 즐겨찾기":""}`,"aria-pressed":String(O===l),onClick:()=>{l=O,y()},onDblclick:()=>{l=O,ne()}},e.thumb(j.path,{now:!0}),o("span",{class:"n"},String(O+1)),j.fav?o("span",{class:"f"},"★"):null))),h.querySelector(".on")?.scrollIntoView?.({block:"nearest",inline:"nearest"}),ce(N,o("span",{class:"rb-muted",style:"font-size:12px"},`후보 ${l+1} / ${x.length} · 즐겨찾기 ${E}`),o("span",{class:"sp",style:"flex:1"}),D("이전 씬",{size:"sm",icon:"chevL",id:"sds-ch-prev",disabled:t<=0,onClick:()=>ee(-1)}),D(P?.fav?"즐겨찾기 풀기 (F)":"즐겨찾기 (F)",{size:"sm",icon:"sparkle",id:"sds-ch-fav",kind:P?.fav?"primary":"",onClick:()=>ne()}),D("이걸로 정하고 다음 씬 (Enter)",{size:"sm",kind:"primary",icon:"check",id:"sds-ch-next",onClick:()=>Ce()}),D("다음 씬",{size:"sm",icon:"chevR",id:"sds-ch-skip",disabled:t>=v.length-1,onClick:()=>ee(1)})),(!R.contains(document.activeElement)||document.activeElement===R)&&R.focus({preventScroll:!0}),!P){M.removeAttribute("src");return}try{let j=await e.url(P.path);if(V()[l]?.path!==P.path){URL.revokeObjectURL(j);return}p&&URL.revokeObjectURL(p),p=j,M.src=j}catch{M.removeAttribute("src")}}return R.addEventListener("keydown",v=>{if(e.ctx.win.querySelector(".rb-modal, .rb-menu")||/^(INPUT|SELECT|TEXTAREA)$/.test(v.target?.tagName??"")&&v.target.type!=="checkbox")return;let C=v.key;if(C==="Escape"){v.stopPropagation(),U();return}let q={ArrowLeft:()=>oe(-1),ArrowRight:()=>oe(1),ArrowUp:()=>ee(-1),ArrowDown:()=>ee(1),PageUp:()=>ee(-1),PageDown:()=>ee(1),Enter:()=>Ce(),f:()=>ne(),F:()=>ne()}[C]??(/^[1-9]$/.test(C)?()=>{let x=Number(C)-1;x<V().length&&(l=x,y())}:null);q&&(v.preventDefault(),v.stopPropagation(),q())}),e.el.appendChild(R),R.focus(),y(),{close:U}}var ks=new TextDecoder,Ln=(e,n,a)=>{let s=n;for(;s<n+a&&e[s];)s++;return ks.decode(e.subarray(n,s))},Yo=(e,n,a)=>parseInt(Ln(e,n,a).trim()||"0",8)||0,Jo=/\.(png|webp|jpe?g|avif)$/i;async function Nr(e,n){let a=[],s=0,i=null,t=null;for(;s+512<=n;){let l=await e(s,512);if(l.every($=>$===0))break;let p=Yo(l,124,12),b=String.fromCharCode(l[156]||48),f=s+512,w=Ln(l,0,100),M=Ln(l,257,6),m=M.startsWith("ustar")?Ln(l,345,155):"";if(m&&(w=`${m}/${w}`),b==="L")i=Ln(await e(f,p),0,p);else if(b==="x"){let $=ks.decode(await e(f,p));t={};for(let L of $.split(`
-`)){let G=/^\d+ ([^=]+)=(.*)$/.exec(L);G&&(t[G[1]]=G[2])}}else b==="g"||(t?.path?w=t.path:i&&(w=i),(b==="0"||b==="\0"||b==="7")&&a.push({name:w.replace(/^\.\//,""),off:f,size:p}),i=null,t=null);s=f+Math.ceil(p/512)*512}return a}var Ur=e=>e.length>=262&&Ln(e,257,5)==="ustar";async function ys(e,n){let a=new Set(e.map(p=>p.name)),s=null;a.has("_backup.json")?s=await n("_backup.json").catch(()=>null):a.has("_folder.json")&&(s=await n("_folder.json").catch(()=>null));let i=e.filter(p=>/(^|\/)project\.json$/.test(p.name)).map(p=>p.name.slice(0,-12)),t=p=>{if(s?.type==="sdstudio-folder-backup")return s.folder||"";let b=(s?.projects??[]).find(f=>f&&(f.name===p||f===p));return(b&&typeof b=="object"?b.folder:"")||""},l=[];for(let p of i){let b;try{b=await n(`${p}project.json`)}catch{continue}if(!b||typeof b.scenes!="object")continue;let f=String(b.name||p.replace(/\/$/,"").split("/").pop()||"SDStudio").slice(0,80);l.push(Rr(b,{name:f,folder:t(p.replace(/\/$/,""))||t(f),root:p,files:e}))}return l}function Rr(e,{name:n=e?.name||"SDStudio",folder:a="",root:s="",files:i=[]}={}){let t=e.selectedWorkflow?.workflowType||"SDImageGen",l=e.selectedWorkflow?.presetName,p=e.presets?.[t]??e.presets?.SDImageGen??[],b=(Array.isArray(p)?p.find(L=>L?.name===l)??p[0]:null)??{},f=It(e);f.scenes=f.scenes.filter((L,G)=>(Object.values(e.scenes)[G]?.type??"scene")==="scene");let w={},M=0,m=0,$=new Map;for(let L of i){if(!L.name.startsWith(`${s}outs/`)||!Jo.test(L.name))continue;let G=L.name.slice(`${s}outs/`.length),Z=G.lastIndexOf("/");if(Z<0)continue;let h=G.slice(0,Z),N=G.slice(Z+1);$.has(h)||$.set(h,[]),$.get(h).push({file:N,entry:L.name})}for(let[L,G]of Object.entries(e.scenes??{})){if(!G||G.type&&G.type!=="scene")continue;let Z=String(G.name||L),h=$.get(Z)??[],N=new Set((G.mains??[]).map(X=>String(X).split("/").pop())),R=(G.imageMap??[]).map(X=>String(X).split("/").pop()),U=X=>{let he=R.indexOf(X);return he<0?1e9:he};h.sort((X,he)=>U(X.file)-U(he.file)||X.file.localeCompare(he.file)),w[Z]=h.map(X=>({...X,fav:N.has(X.file)})),M+=h.length,m+=w[Z].filter(X=>X.fav).length}return{name:n,folder:String(a||""),prompt:String(b.frontPrompt??""),back:String(b.backPrompt??""),neg:String(b.uc??""),tpl:f,images:w,count:M,favCount:m}}function vs(e,n,{mode:a="fav"}={},s){let i=e,t=[],l=new Set(e.chars.map(f=>f.name)),p=f=>{if(!l.has(f))return l.add(f),f;let w=2;for(;l.has(`${f} ${w}`);)w++;return l.add(`${f} ${w}`),`${f} ${w}`};for(let f of n){i=s?yn(i,{name:p(f.name),prompt:f.prompt},s):yn(i,{name:p(f.name),prompt:f.prompt});let w=i.chars[i.chars.length-1];if(f.tpl.scenes.length&&(i=Mn(i,[w.id],f.tpl,"replace",s).project),f.folder){let m=i.folders.find($=>$.name===f.folder&&!$.parent);m||(i=s?vn(i,{name:f.folder},s):vn(i,{name:f.folder}),m=i.folders[i.folders.length-1]),i=Rn(i,[w.id],{to:m.id})}if(a==="none")continue;let M=ge(i,w.id);for(let m of M.scenes)(f.images[m.name]??[]).filter(L=>a==="all"||L.fav).forEach((L,G)=>t.push({cid:w.id,sid:m.id,entry:L.entry,fav:L.fav,order:G}))}let b=n[0];if(b){let f=i.settings,w={};!String(f.back??"").trim()&&b.back.trim()&&(w.back=b.back),!String(f.neg??"").trim()&&b.neg.trim()&&(w.neg=b.neg),Object.keys(w).length&&(i=ze(i,w))}return{project:i,jobs:t}}var Br=globalThis.__duskLib?.["src/vendor/fflate-full.js"];if(!Br)throw new Error("Dusk 코어에 src/vendor/fflate-full.js가 없어요 — Dusk를 업데이트해 주세요");{let e=["Decompress","strFromU8","strToU8","unzipSync","zipSync"].filter(n=>!(n in Br));if(e.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/vendor/fflate-full.js에 없는 기능: "+e.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{Decompress:r0,strFromU8:a0,strToU8:s0,unzipSync:xs,zipSync:o0}=Br;var Cs=[["scene","씬 모드"],["gallery","갤러리 모드"],["search","검색 모드"],["compare","비교 모드"],["bulk","동시편집"]],Qo={outfit:"캐릭터",group:"소속"},Zo=[["default",""],["smile","smile"],["happy","happy, smile, open mouth"],["laughing","laughing, closed eyes"],["angry","angry, v-shaped eyebrows"],["sad","sad, frown"],["crying","crying, tears"],["surprised","surprised, open mouth, wide-eyed"],["shy","shy, blush, looking away"],["embarrassed","embarrassed, blush, sweat"],["confused","confused, head tilt"],["thinking","thinking, hand on own chin"],["sleepy","sleepy, half-closed eyes"],["smug","smug, smirk"],["scared","scared, trembling"],["disgusted","disgusted"],["determined","determined, clenched hand"],["bored","bored, half-closed eyes"],["excited","excited, sparkle"],["love","heart-shaped pupils, blush"]],Dt=new Map;async function Vr(e,n,a){if(!n?.id||n.kind!=="module"&&n.kind!=="character")return;hs();let s=`${n.kind}:${n.id}`;if(Dt.has(s)){let r=Dt.get(s);return r.reopen(),r}let i="";if(n.kind==="module")i=(await e.svc.load({fresh:!0})).entries.find(r=>r.module.id===n.id)?.module?.name??"";else{let r=await e.api.getCharacterFromIndex(n.index);if(!r||r.chaId!==n.id)throw new Error("봇을 찾지 못했어요. 목록을 새로 고친 뒤 다시 해 주세요");i=r.name}let t=await a.loadProject(n),l=(e.state.sdstudio??={})[`${n.kind}:${n.id}`]??={folder:null,charId:null,sceneId:null,mode:"scene",zoom:41,names:!0,left:(e.win.clientWidth||innerWidth)>760,q:"",compare:[],slotsOpen:!0};l.folder&&!t.folders.some(r=>r.id===l.folder)&&(l.folder=null),l.charId&&!ge(t,l.charId)&&(l.charId=null,l.sceneId=null),l.sceneId&&!se(t,l.charId,l.sceneId)&&(l.sceneId=null);let p=new Set,b=new Map,f=new Map,w=null,M=null,m={running:!1,done:0,total:0,ctl:null,workers:1},$=ls(),L=await a.getPrefs(),G=!1;us({get:()=>a.tags(),enabled:()=>L.tags!==!1,offered:()=>G,load:async()=>{G=!0;let r=e.toast("태그 사전 받는 중…",{seconds:120});try{let d=await a.loadTags();return e.toast(`태그 ${d.size.toLocaleString()}개를 받았어요`),d}finally{r?.close?.()}}}),a.loadTags({download:!1}).catch(()=>{});let Z={root:e.root?.getAttribute("style")??null,win:e.win.getAttribute("style")??null};e.root&&(e.root.style.padding="0"),Object.assign(e.win.style,{maxWidth:"none",maxHeight:"none",width:"100%",height:"100%",borderRadius:"0",border:"0"}),e.api.showContainer?.("fullscreen")?.catch?.(()=>{});let h={ctx:e,target:n,sd:a,st:l,sel:p,title:i,P:Je,prefs:L,keys:L.keys2?Tr(L.keys2):Tr(L.keys,{v:1}),keyLabel:r=>Ot(h.keys[r])||"단축키 없음",get proj(){return t},set(r,{undo:d=!0}={}){d&&r!==t&&$.push(t,{typing:globalThis.event?.type==="input"}),t=r,clearTimeout(w),w=setTimeout(()=>h.persist(),500)},undo(){let r=$.undo(t);if(!r){h.toast("되돌릴 것이 없어요");return}t=r,N()},redo(){let r=$.redo(t);if(!r){h.toast("다시 할 것이 없어요");return}t=r,N()},persist(){return clearTimeout(w),a.saveProject(n,t).catch(r=>e.toast(`저장하지 못했어요: ${r?.message??r}`,{error:!0}))},toast:(r,d)=>e.toast(r,d),curChar:()=>l.charId?ge(t,l.charId):null,curScene:()=>l.charId&&l.sceneId?se(t,l.charId,l.sceneId):null,remember(r,d){b.set(r,d),f.has(r)||f.set(r,URL.createObjectURL(new Blob([d],{type:"image/png"})))},async bytes(r){if(b.has(r))return b.get(r);let d=await e.assets.read(r,{prio:100});if(!d)throw new Error("그림을 읽지 못했어요");return b.size>24&&b.delete(b.keys().next().value),b.set(r,d),d},async url(r){return URL.createObjectURL(new Blob([await h.bytes(r)],{type:"image/png"}))},thumb(r,{now:d=!1}={}){let c=o("img",{alt:"",loading:"lazy",dataset:{path:r,ext:"png"}});return f.has(r)?c.src=f.get(r):d?e.assets.thumb?.(r,"png").then(g=>{g&&(c.src=g)}).catch(()=>{}):M?.observe(c),c},addCompare(r){l.compare=[...l.compare.filter(d=>d.path!==r.path),r].slice(-4)},toggleLeft(r=!l.left){l.left=r,V.hidden=!r,U.setAttribute("aria-pressed",String(r))},paint(){h.paintLeft(),h.paintTop(),h.paintTools(),h.paintBody()},paintLeft(){ms(h,he)},paintTop:y,paintTools:E,paintBody:B,putPaths:dt,derive:Js,quickPut:Re};function N(){l.charId&&!ge(t,l.charId)&&(l.charId=null,l.sceneId=null),l.sceneId&&!se(t,l.charId,l.sceneId)&&(l.sceneId=null),l.folder&&!t.folders.some(r=>r.id===l.folder)&&(l.folder=null),p.clear(),clearTimeout(w),w=setTimeout(()=>h.persist(),300),h.paint()}h.dlg=fs(h);let R=o("div",{class:"rb-full sds",role:"dialog","aria-label":"에셋 제작",id:"rb-sd-studio",tabIndex:-1});h.el=R,R.__sds=h;let U=o("button",{type:"button",class:"tab","aria-pressed":String(l.left),title:"프롬프트 에디터 열고 닫기 (F1)",onClick:()=>h.toggleLeft()},"프롬프트"),X=o("nav",{class:"sds-rail","aria-label":"옆 칸"},o("span",{class:"key"},"F1"),U),he=o("div",{class:"sds-left-body rb-scroll",id:"sds-left"}),V=o("aside",{class:"sds-left",hidden:!l.left,"aria-label":"프롬프트 에디터"},...bs(h),he),oe=o("div",{class:"sds-top",id:"sds-topbar"}),ee=o("div",{class:"sds-tools",id:"sds-tools",role:"toolbar","aria-label":"도구"}),ne=o("div",{class:"sds-body rb-scroll",id:"sds-body"});ne.addEventListener("contextmenu",r=>{r.target.closest(".sds-card,.sds-frow,input,textarea,select,button")||(r.preventDefault(),Os(r.target.closest("div")??ne))}),ne.addEventListener("click",r=>{l.focus&&!r.target.closest(".sds-card,.sds-frow,.rb-chip,button,input,select,textarea,label")&&le(null)});let Ce=o("div",{class:"sds-main"},oe,ee,ne);R.append(X,V,Ce),e.win.appendChild(R);function y(){let r=h.curChar(),d=Cr(t,r?.id??null),c=m.running?o("button",{type:"button",class:"sds-queue stop",id:"sds-run",onClick:()=>ia()},ie("stop",14),`멈추기 ${m.done}/${m.total}`):o("button",{type:"button",class:"sds-queue",id:"sds-run",disabled:!Ye(t).length,title:h.prefs.boost?"부스트 모드: 토큰 여러 개로 동시에 그려요":"예약된 씬을 차례로 그려요",onClick:()=>ct()},ie(h.prefs.boost?"bolt":"play",14),`${h.prefs.boost?"부스트 ":""}생성${Ye(t).length?` ${Ye(t).length}장`:""}`);ce(oe,o("button",{type:"button",class:"sds-ib",style:"border:0;background:none","aria-label":l.sceneId||l.charId||l.folder||l.mode!=="scene"?"위로":"에셋 제작 닫기",title:l.sceneId||l.charId||l.folder?"한 단계 위로":"닫기",id:"sds-close",onClick:()=>q()},ie("back",20)),o("div",{class:"ttl"},o("b",null,r?"씬 갤러리":"캐릭터 갤러리"),r?o("span",{class:"sds-pill",id:"sds-combos"},`조합 ${d.combos}개`):o("span",{class:"sds-pill"},`캐릭터 ${t.chars.length}명`),o("span",{class:"sds-pill",id:"sds-reserved"},`예약된 씬 ${d.reserved}/${d.scenes}`)),o("div",{class:"sds-modes",role:"tablist","aria-label":"모드"},...Cs.map(([g,u])=>o("button",{type:"button",role:"tab","aria-selected":String(l.mode===g),disabled:g==="bulk"&&!r,dataset:{mode:g},onClick:()=>x(g)},g==="scene"&&!r?"캐릭터 모드":u))),m.running?A():null,o("div",{class:"sds-run"},c,D("도움말",{size:"sm",icon:"help",onClick:()=>h.dlg.help()})))}let v=r=>{let d=Math.max(0,Math.round(r/1e3)),c=Math.floor(d/3600),g=Math.floor(d%3600/60),u=d%60;return c?`${c}시간 ${g}분`:g?`${g}분 ${u}초`:`${u}초`};function C(){let r=m.total?Math.floor(m.done/m.total*100):0,d=m.total-m.done,c=Date.now()-m.t0,g=m.done?c/m.done*d:null;return`${r}% · ${m.done}/${m.total}장 · 남은 ${d}장 · ${g==null?"예상 시간 재는 중":`약 ${v(g)} 남음`}${m.retry?` · 다시 시도 ${m.retry}번째`:""}`}function A(){let r=m.total?m.done/m.total*100:0;return o("div",{class:"sds-prog",id:"sds-prog",role:"progressbar","aria-valuemin":"0","aria-valuemax":"100","aria-valuenow":String(Math.floor(r))},o("div",{class:"bar"},o("i",{style:`width:${r.toFixed(1)}%`})),o("span",{class:"t"},C()))}function q(){if(l.mode!=="scene"&&l.mode!=="bulk")return x("scene");if(l.sceneId)return In(null);if(l.charId)return pn(null);if(l.folder){l.folder=t.folders.find(r=>r.id===l.folder)?.parent??null,l.focus=null,p.clear(),y(),E(),B();return}Jt()}function x(r){l.mode=r,p.clear(),l.sceneId&&r!=="scene"&&(l.sceneId=null),y(),E(),B()}let P=(r,...d)=>o("div",{class:"sds-group"},o("small",null,r),o("div",null,...d.filter(Boolean)));function E(){let r=h.curChar(),d=h.curScene(),c=t.settings.reserveDefault,g=p.size,u=it(),k=ea().length,z=lt().reduce((F,T)=>F+Hn(T).length,0),I=P("대표",W("star","대표 고르기 — 씬마다 후보를 넘기며 ★ (←/→ · F · Enter)",()=>Gt(),{id:"sds-choose"}),W("bolt",`즐겨찾기 없는 씬만 ${c}장씩 예약 (${z}개)`,()=>Ks(),{id:"sds-rsv-nofav",disabled:!z})),S=[P("검색",W("search","검색 모드",()=>{x("search"),ne.querySelector("#sds-q")?.focus()},{on:l.mode==="search"}),D(`봇으로 넣기${u.length?` ${u.length}장`:""}`,{kind:"primary",icon:"upload",id:"sds-put-all",title:`고른 그림 ${u.length}장을 봇에 넣어요 (${h.curChar()?"이 캐릭터":l.folder?"이 폴더":"전체"}) · ${h.keyLabel("put")}`,disabled:!u.length,onClick:()=>Re(u)}),D(`즐겨찾기 넣기${k?` ${k}장`:""}`,{icon:"sparkle",id:"sds-put-fav",title:"즐겨찾기한 그림을 확인하고 봇에 넣어요(이름·같은 이름·이미 넣은 것 미리 보기)",disabled:!k,onClick:()=>Ht()})),P("보기",W("eye",l.names?"이름 숨기기":"이름 보이기",()=>{l.names=!l.names,R.classList.toggle("nonames",!l.names),E()},{on:l.names,id:"sds-names"}),o("div",{class:"sds-zoom"},o("input",{type:"range",min:10,max:100,value:l.zoom,"aria-label":"카드 크기",id:"sds-zoom",onInput:F=>{l.zoom=Number(F.target.value),H(),F.target.nextSibling.textContent=`${l.zoom}%`}}),o("span",null,`${l.zoom}%`)))],Y=P("되돌리기",W("undo","되돌리기",()=>h.undo(),{disabled:!$.canUndo(),id:"sds-undo"}),W("redo","다시하기",()=>h.redo(),{disabled:!$.canRedo(),id:"sds-redo"})),_=P("템플릿",W("template",r?"템플릿 적용·관리(이 캐릭터)":l.folder?"템플릿 적용·관리(이 폴더의 캐릭터 모두)":"템플릿 적용·관리(모든 캐릭터)",F=>Ws(F.currentTarget),{id:"sds-tpl"}),W("importIn",r?"SDStudio·Dusk 씬 템플릿 가져와 이 캐릭터에 적용":l.folder?"씬 템플릿 가져와 이 폴더의 캐릭터 모두에 적용":"씬 템플릿 가져와 모든 캐릭터에 적용",()=>ta(),{id:"sds-tpl-import"}),r?W("save","이 캐릭터의 씬을 템플릿으로 저장",()=>ra(r),{id:"sds-tpl-save"}):null),K;if(!r)K=[Y,P("예약",W("calPlus",`모든 캐릭터의 모든 씬 ${c}장씩 예약`,()=>{let F=t;for(let T of t.chars)F=on(F,T.id,c);h.set(F),y(),B()},{id:"sds-rsv-all"}),W("calX","예약 모두 비우기",()=>{h.set(Lt(t,null)),y(),B()},{id:"sds-rsv-clear"})),P("캐릭터 도구",W("file","새 캐릭터",()=>tt(),{id:"sds-addchar"}),W("copy","고른 캐릭터 복제",()=>{for(let F of p)h.set(Ct(t,F));p.clear(),B()},{disabled:!g}),W("folderPlus","폴더 만들기",()=>Bt(),{id:"sds-addfolder"}),W("importIn","SDStudio 백업 가져오기(.tar·프로젝트 .json)",()=>Yt(),{id:"sds-import-backup"}),W("swap","고른 캐릭터를 폴더에 넣기·빼기",F=>Jr(F.currentTarget,[...p]),{disabled:!g||!t.folders.length}),W("trash","고른 캐릭터 지우기",()=>rt([...p]),{danger:!0,disabled:!g})),_,I,P("이미지·관리",W("zip","zip으로 내려받기",F=>Vt(F.currentTarget),{id:"sds-zip"})),P("도움말",W("help","도움말",()=>h.dlg.help())),P("설정",W("gear","설정(넣기 형식·부스트·단축키·토큰)",()=>h.dlg.settings(),{id:"sds-settings"})),o("span",{class:"sp"}),...S];else if(d){let F=We(r,d.id).map(Q=>({...Q,cid:r.id})),T=F.map(Q=>Q.path);K=[Y,P("예약",W("calPlus","이 씬 1장 예약",()=>{h.set(Ee(t,r.id,d.id,d.reserve+1)),y(),B()},{id:"sds-rsv-one"}),W("calX","이 씬 예약 비우기",()=>{h.set(Ee(t,r.id,d.id,0)),y(),B()})),I,P("씬 도구",W("copy","씬 복제",()=>{h.set(Bn(t,r.id,d.id)),h.toast("씬을 복제했어요")}),W("trash","이 씬 지우기",()=>st([d.id]),{danger:!0})),P("이미지·관리",W("exportBot",`고른 그림 ${T.length}장 봇에 바로 넣기 (${h.keyLabel("put")})`,()=>Re(F),{disabled:!T.length,id:"sds-put-sel"}),W("sliders","넣는 방법 고르고 넣기…",()=>dt(F),{disabled:!T.length,id:"sds-put-sel-opt"}),W("star","고른 그림 즐겨찾기 켜기·풀기",()=>{let Q=!T.every(re=>d.images.find(ae=>ae.path===re)?.fav),ye=t;for(let re of T)ye=tn(ye,r.id,d.id,re,{fav:Q});h.set(ye),E(),B()},{disabled:!T.length,id:"sds-fav"}),W("compare","고른 그림 비교",()=>{for(let Q of T)h.addCompare({cid:r.id,sid:d.id,path:Q});x("compare")},{disabled:T.length<2}),W("trophy","이미지 월드컵",()=>Sn(h,r.id,d.id),{disabled:d.images.length<2,id:"sds-cup-btn"}),W("check","모두 고르기",()=>{h.set(rn(t,r.id,d.id,d.images.map(Q=>Q.path),!0),{undo:!1}),E(),B()}),W("x","고르기 풀기",()=>{h.set(St(t,r.id,d.id),{undo:!1}),E(),B()},{disabled:!T.length,id:"sds-unpick"}),W("zip","zip으로 내려받기",Q=>Vt(Q.currentTarget),{id:"sds-zip"}),W("trash","고른 그림 목록에서 빼기",()=>qs(r.id,d.id,T),{danger:!0,disabled:!T.length})),P("도움말",W("help","도움말",()=>h.dlg.help())),P("설정",W("gear","설정(넣기 형식·부스트·단축키·토큰)",()=>h.dlg.settings(),{id:"sds-settings"})),o("span",{class:"sp"}),...S]}else{let F=g?[...p]:null,T=We(r).map(Q=>({...Q,cid:r.id}));K=[Y,P("예약",W("calPlus",F?`고른 씬 ${c}장씩 예약`:`모든 씬 ${c}장씩 예약`,()=>{h.set(on(t,r.id,c,F)),y(),B()},{id:"sds-rsv-all"}),W("calX","이 캐릭터 예약 비우기",()=>{h.set(Lt(t,r.id)),y(),B()},{id:"sds-rsv-clear"})),P("씬 도구",W("file","새 씬",()=>at(),{id:"sds-addscene"}),W("copy","고른 씬 복제",()=>{for(let Q of p)h.set(Bn(t,r.id,Q));p.clear(),B()},{disabled:!g}),W("layers","감정 세트 더하기(없는 것만)",()=>Yr(),{id:"sds-emoset"}),W("sortAsc","이름순 ↑",()=>{h.set(_t(t,r.id,"asc")),B()}),W("sortDesc","이름순 ↓",()=>{h.set(_t(t,r.id,"desc")),B()}),W("trash","고른 씬 지우기",()=>st([...p]),{danger:!0,disabled:!g})),_,I,P("이미지·관리",W("exportBot",`고른 그림 ${T.length}장 봇에 바로 넣기(이름 = 씬 이름) (${h.keyLabel("put")})`,()=>Re(T),{disabled:!T.length,id:"sds-put-picked"}),W("sliders","고른 그림 넣는 방법 고르고 넣기…",()=>dt(T),{disabled:!T.length,id:"sds-put-picked-opt"}),W("x","이 캐릭터의 그림 고르기 모두 풀기",()=>{h.set(St(t,r.id),{undo:!1}),E(),B()},{disabled:!T.length,id:"sds-unpick-all"}),W("trophy","고른 씬 이미지 월드컵",()=>{let Q=[...p][0];Q&&Sn(h,r.id,Q)},{disabled:g!==1}),W("zip","zip으로 내려받기",Q=>Vt(Q.currentTarget),{id:"sds-zip"}),W("clip","고른 씬 프롬프트 복사",()=>Ds(r,F),{disabled:!g})),P("도움말",W("help","도움말",()=>h.dlg.help())),P("설정",W("gear","설정(넣기 형식·부스트·단축키·토큰)",()=>h.dlg.settings(),{id:"sds-settings"})),o("span",{class:"sp"}),...S]}ce(ee,...K)}let H=()=>{R.style.setProperty("--sds-card",`${Math.round(90+l.zoom*2.6)}px`),R.style.setProperty("--sds-row",`${Math.round(80+l.zoom*1.6)}px`)},j=(r,d,c=0)=>o("span",{class:"cap"},o("span",{class:"n"},r),c?o("span",{class:"pk",title:`봇에 보낼 그림 ${c}장 고름`},`✓${c}`):null,o("span",{class:"c"},String(d))),O=()=>o("span",{class:"chk","aria-hidden":"true"},ie("check",14)),J=(r,d)=>l.focus?.kind===r&&l.focus.id===d;function le(r,d){if(l.focus=d?{kind:r,id:d}:null,R.querySelectorAll(".sds-card.cur,.sds-frow.cur").forEach(g=>g.classList.remove("cur")),!d)return;let c=r==="folder"?".sds-frow.sds-folder":`.sds-${r}`;for(let g of ne.querySelectorAll(c))g.dataset.id===d&&g.classList.add("cur")}function me(r,d,c,g){return r.addEventListener("click",u=>{if(!u.target.closest(".quick")){if(u.target.closest(".chk")||u.ctrlKey||u.metaKey||u.shiftKey||p.size&&l.mode!=="scene"){p.has(d)?p.delete(d):p.add(d),r.setAttribute("aria-selected",String(p.has(d))),E();return}if(g==="scene"){p.has(d)&&p.size===1?p.clear():(p.clear(),p.add(d));for(let k of ne.querySelectorAll(".sds-scene"))k.setAttribute("aria-selected",String(p.has(k.dataset.id)));E();return}if(g&&!J(g,d)){le(g,d);return}c()}}),g==="scene"&&r.addEventListener("dblclick",u=>{u.target.closest(".quick")||(p.clear(),c())}),r.setAttribute("aria-selected",String(p.has(d))),g&&r.classList.toggle("cur",J(g,d)),r}let pe={cur:null},we=["drop-before","drop-after","drop-into"],qe=()=>{pe.cur=null;for(let r of R.querySelectorAll(".dragging,.drop-before,.drop-after,.drop-into"))r.classList.remove("dragging",...we),delete r.dataset.dropHint;R.classList.remove("sds-dragging","sds-drag-scene")};function Ue(r,d){r.draggable=!0,r.addEventListener("dragstart",c=>{c.stopPropagation(),pe.cur=d(),c.dataTransfer.effectAllowed="copyMove";try{c.dataTransfer.setData("text/plain","sds")}catch{}r.classList.add("dragging"),R.classList.add("sds-dragging"),pe.cur.kind==="scene"&&R.classList.add("sds-drag-scene")}),r.addEventListener("dragend",qe)}function Te(r,{mode:d,ok:c,run:g,hint:u}){let k=(z,I)=>{let S=d(I);if(S==="into")return"into";let Y=r.getBoundingClientRect(),_=S==="x"?(z.clientX-Y.left)/(Y.width||1):(z.clientY-Y.top)/(Y.height||1);return S==="y3"?_<.25?"before":_>.75?"after":"into":_<.5?"before":"after"};r.addEventListener("dragover",z=>{let I=pe.cur;if(!I||!c(I))return;z.preventDefault(),z.stopPropagation(),z.dataTransfer.dropEffect=z.altKey?"copy":"move";let S=k(z,I);r.classList.remove(...we),r.classList.add("drop-"+S),u?r.dataset.dropHint=u(I,S,z.altKey):delete r.dataset.dropHint}),r.addEventListener("dragleave",z=>{r.contains(z.relatedTarget)||(r.classList.remove(...we),delete r.dataset.dropHint)}),r.addEventListener("drop",z=>{let I=pe.cur;if(!I||!c(I))return;z.preventDefault(),z.stopPropagation();let S=k(z,I),Y=z.altKey;qe(),g(I,S,Y)})}let Zn=r=>p.has(r)&&p.size>1?[...p]:[r],qn=(r,d)=>{let c=r.findIndex(g=>g.id===d);return c<0?null:r[c+1]?.id??null},Ps=(r,d)=>{if(!d)return null;let c=[d],g=new Set;for(;c.length;){let u=c.shift();if(!g.has(u)){if(g.add(u),t.folders.find(k=>k.id===u)?.members.includes(r))return u;for(let k of t.folders)k.parent===u&&c.push(k.id)}}return d},En=()=>{y(),E(),B()};function mn(r,d,c,g){h.set(Rn(t,r.ids,{from:r.from,to:d,before:c,copy:!!d&&g})),p.clear(),En()}function et(r,d,c){try{h.set(br(t,r,d,c)),En()}catch(g){h.toast(g?.message??String(g),{error:!0})}}function Kr(r,d){return Te(r,{mode:()=>"into",ok:c=>c.kind==="char"||c.kind==="folder"&&c.id!==d,hint:c=>d?`‘${t.folders.find(g=>g.id===d)?.name}’(으)로`:c.kind==="char"?"폴더에서 빼기":"맨 위로",run:(c,g,u)=>c.kind==="char"?mn(c,d,null,u):et(c.id,d,null)}),r}let Nt=(r,d,c)=>{let g=gr(r),u=r.scenes.reduce((z,I)=>z+I.reserve,0),k=o("button",{type:"button",class:"sds-card sds-char",dataset:{id:r.id},title:r.name},g?h.thumb(g):o("span",{class:"ph"},ie("person",34)),O(),u?o("span",{class:"rsv"},`예약 ${u}`):null,j(r.name,ur(r),We(r).length));return k.addEventListener("contextmenu",z=>{z.preventDefault(),Is(k,r)}),d!==void 0&&(Ue(k,()=>({kind:"char",ids:Zn(r.id),from:Ps(r.id,d)})),Te(k,{mode:()=>"x",ok:z=>z.kind==="char"&&!(z.ids.length===1&&z.ids[0]===r.id),run:(z,I,S)=>mn(z,d,I==="before"?r.id:qn(c,r.id),S)})),me(k,r.id,()=>pn(r.id),"char")},Hr=(r,d,c)=>{let g=sn(d),u=o("button",{type:"button",class:"sds-card sds-scene",dataset:{id:d.id},title:d.name},g?h.thumb(g):o("span",{class:"ph"},ie("image",30)),O(),d.reserve?o("span",{class:"rsv"},`+${d.reserve}`):null,d.images.length&&!an(d)?o("span",{class:"nofav",title:"아직 즐겨찾기가 없어요"},"★ 없음"):null,o("span",{class:"quick"},o("button",{type:"button",title:"1장 예약",onClick:k=>{k.stopPropagation(),h.set(Ee(t,r.id,d.id,d.reserve+1)),y(),B()}},"+1"),d.reserve?o("button",{type:"button",title:"예약 하나 빼기",onClick:k=>{k.stopPropagation(),h.set(Ee(t,r.id,d.id,d.reserve-1)),y(),B()}},"−1"):null),j(d.name,d.images.length,Pn(d)));return u.addEventListener("contextmenu",k=>{k.preventDefault(),Fs(u,r,d)}),c&&(Ue(u,()=>({kind:"scene",cid:r.id,ids:Zn(d.id)})),Te(u,{mode:()=>"x",ok:k=>k.kind==="scene"&&k.cid===r.id&&!(k.ids.length===1&&k.ids[0]===d.id),run:(k,z)=>{h.set(fr(t,r.id,k.ids,z==="before"?d.id:qn(c,d.id))),p.clear(),En()}})),me(u,d.id,()=>In(d.id),"scene")},Gr=(r,d,c,g)=>{let u=o("button",{type:"button",class:"sds-card sds-img",dataset:{path:d.path},title:d.seed?`시드 ${d.seed}`:""},h.thumb(d.path),O(),o("span",{class:"badges"},d.rank?o("span",{class:"badge"},`${d.rank}위`):null,d.fav?o("span",{class:"badge"},"★"):null),o("span",{class:"quick",style:"bottom:10px"},o("button",{type:"button",title:"이 그림을 봇에 바로 넣기",class:"sds-qput",onClick:k=>{k.stopPropagation(),Re([{path:d.path,name:se(t,r.cid,r.sid)?.name??"image",cid:r.cid,sid:r.sid}])}},"넣기")));return u.setAttribute("aria-selected",String(!!d.pick)),u.addEventListener("click",k=>{k.target.closest(".quick")||Ut(r)}),u.addEventListener("dblclick",k=>{k.target.closest(".quick")||Fr(h,c,g)}),u.addEventListener("contextmenu",k=>{k.preventDefault(),Ts(u,r,c,g)}),u};function Ut(r,d){let c=se(t,r.cid,r.sid)?.images.find(g=>g.path===r.path);c&&(h.set(rn(t,r.cid,r.sid,[r.path],d??!c.pick),{undo:!1}),E(),B())}h.togglePick=Ut;let cn=(...r)=>o("div",{class:"sds-grid"},...r),Qe=(r,d,...c)=>o("div",{class:"sds-sec"},o("b",null,r),d!=null?o("span",{class:"rb-muted"},String(d)):null,o("span",{class:"sp"}),...c),nt=(r,d,...c)=>o("div",{class:"sds-empty"},o("b",null,r),o("span",{style:"white-space:normal"},d),...c);function js(){let r=h.curChar(),d=h.curScene(),c=(u,k,z)=>o("button",{type:"button",class:"rb-chip","aria-pressed":String(k),onClick:z},u),g=[Kr(c("전체",!l.folder&&!r,()=>{l.folder=null,pn(null)}),null)];for(let u of Mt(t,l.folder))g.push(o("span",{class:"rb-muted"},"›"),Kr(c(u.name,u.id===l.folder&&!r,()=>{l.folder=u.id,pn(null)}),u.id));return r&&g.push(o("span",{class:"rb-muted"},"›"),c(r.name,!d,()=>In(null))),d&&g.push(o("span",{class:"rb-muted"},"›"),c(d.name,!0,()=>{})),l.folder&&!r&&g.push(o("button",{type:"button",class:"rb-icon-btn","aria-label":"폴더 메뉴",onClick:u=>ot(u.currentTarget,l.folder)},ie("more",18))),o("nav",{class:"sds-crumbs",id:"sds-crumbs","aria-label":"위치"},...g)}function B(){let r=ne.scrollTop;M?.disconnect(),M=e.assets.lazy(ne),H(),R.classList.toggle("nonames",!l.names);let d=h.curChar(),c=h.curScene(),g=[js()];l.mode==="compare"?g.push(...Ss()):l.mode==="search"?g.push(..._s(d)):l.mode==="gallery"?g.push(...As(d)):l.mode==="bulk"&&d?g.push(...Ls(d)):c?g.push(...Ms(d,c)):d?g.push(...zs(d)):g.push(...$s()),ce(ne,...g),ne.scrollTop=r,(e.win.scrollLeft||e.win.scrollTop)&&(e.win.scrollLeft=0,e.win.scrollTop=0)}function ni(r){let d=Ke(t,r.id).length,c=t.folders.filter(u=>u.parent===r.id).length,g=o("button",{type:"button",class:"sds-card sds-subf",dataset:{id:r.id},title:r.name},o("span",{class:"ph",style:"flex-direction:column;gap:6px;color:var(--rb-acc)"},ie("folder",34),o("span",{class:"rb-muted",style:"font-size:12px"},`${d}명${c?` · 폴더 ${c}`:""}`)),o("span",{class:"cap"},o("span",{class:"n"},r.name)));return g.classList.toggle("cur",J("folder",r.id)),g.addEventListener("click",()=>{if(!J("folder",r.id)){le("folder",r.id),g.classList.add("cur");return}l.focus=null,l.folder=r.id,p.clear(),E(),B()}),g.addEventListener("contextmenu",u=>{u.preventDefault(),ot(g,r.id)}),Ue(g,()=>({kind:"folder",id:r.id})),Te(g,{mode:()=>"into",ok:u=>u.kind==="char"||u.kind==="folder"&&u.id!==r.id,hint:(u,k,z)=>u.kind==="char"?`‘${r.name}’ 안에 ${z?"복사":"넣기"}`:`‘${r.name}’ 안으로`,run:(u,k,z)=>u.kind==="char"?mn(u,r.id,null,z):et(u.id,r.id,null)}),g}function $s(){if(!t.chars.length&&!t.folders.length)return[nt("이 "+(n.kind==="module"?"모듈":"봇")+"에 들어갈 캐릭터를 만들어요","캐릭터를 열어 씬(표정·포즈)을 만들고 예약하면 SDStudio처럼 차례로 그려요. 캐릭터·소속은 폴더로 묶어요.",D("새 캐릭터",{kind:"primary",icon:"plus",onClick:()=>tt()}))];let r=zt(t,l.folder),d=(u,k=0)=>{let z=Ke(t,u.id),I=(u.members??[]).map(T=>ge(t,T)).filter(Boolean),S=k<8?t.folders.filter(T=>T.parent===u.id):[],Y=S.length,_=(l.folded??=[]).includes(u.id),K=o("button",{type:"button",class:"rb-icon-btn sds-fold","aria-label":_?"펼치기":"접기","aria-expanded":String(!_),title:_?"펼치기":"접기",onClick:T=>{T.stopPropagation(),l.folded=_?l.folded.filter(Q=>Q!==u.id):[...l.folded,u.id],B()}},o("span",{style:`display:flex;transition:transform .15s;transform:rotate(${_?-90:0}deg)`},ie("chevD",16))),F=o("div",{class:["sds-frow sds-folder",_&&"folded"],dataset:{id:u.id}},o("div",{class:"hd"},K,o("button",{type:"button",class:"open sds-fopen",onClick:()=>{if(!J("folder",u.id)){le("folder",u.id);return}l.focus=null,l.folder=u.id,p.clear(),E(),B()}},o("span",{style:"color:var(--rb-acc);display:flex"},ie("folder",18)),o("b",{style:"font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"},u.name),u.kind?o("span",{class:"rb-badge"},Qo[u.kind]):null,u.tpl?o("span",{class:"rb-badge",title:"새 캐릭터에 적용할 기본 템플릿"},`템플릿 ${u.tpl}`):null,o("span",{class:"rb-muted"},`${z.length}명${Y?` · 폴더 ${Y}`:""}`),o("span",{style:"color:var(--rb-mute);display:flex"},ie("chevR",16))),o("button",{type:"button",class:"rb-icon-btn","aria-label":"폴더 메뉴",onClick:T=>ot(T.currentTarget,u.id)},ie("more",18))),_?null:I.length?o("div",{class:"strip"},...I.map(T=>Nt(T,u.id,I))):S.length?null:o("span",{class:"rb-muted",style:"white-space:normal"},"비어 있어요. 캐릭터 카드나 폴더를 여기로 끌어다 놓아요."),!_&&S.length?o("div",{class:"sds-subrows"},...S.map(T=>d(T,k+1))):null);return F.classList.toggle("cur",J("folder",u.id)),F.querySelector(".hd").addEventListener("contextmenu",T=>{T.preventDefault(),T.stopPropagation(),ot(T.currentTarget,u.id)}),Ue(F.querySelector(".hd"),()=>({kind:"folder",id:u.id})),Te(F,{mode:T=>T.kind==="folder"?"y3":"into",ok:T=>T.kind==="char"||T.kind==="folder"&&T.id!==u.id,hint:(T,Q,ye)=>T.kind==="char"?`‘${u.name}’ 안에 ${ye?"복사":"넣기"}${T.ids.length>1?` (${T.ids.length}명)`:""}`:Q==="into"?`‘${u.name}’ 안으로`:`‘${u.name}’ ${Q==="before"?"위":"아래"}에 놓기`,run:(T,Q,ye)=>{if(T.kind==="char")return mn(T,u.id,null,ye);if(Q==="into")return et(T.id,u.id,null);let re=t.folders.filter(ae=>(ae.parent??null)===(u.parent??null)&&ae.id!==T.id);et(T.id,u.parent??null,Q==="before"?u.id:qn(re,u.id))}}),F},c=r.folders.map(u=>d(u)),g=c.length?[o("div",{class:"sds-subrows sds-toprows"},...c)]:[];if(r.chars.length){let u=cn(...r.chars.map(k=>Nt(k,l.folder,r.chars)));Te(u,{mode:()=>"into",ok:k=>k.kind==="char",run:(k,z,I)=>mn(k,l.folder,null,I)}),g.push(Qe(l.folder?"캐릭터":c.length?"폴더 없는 캐릭터":"캐릭터",r.chars.length),u)}else if(l.folder&&!c.length)g.push(o("span",{class:"rb-muted"},"이 폴더에 바로 든 캐릭터가 없어요. 캐릭터 카드를 끌어다 놓을 수 있어요."));else if(c.length){let u=o("div",{class:"sds-rootdrop"},l.folder?"여기에 놓으면 이 폴더 바로 아래로 와요":"여기에 놓으면 폴더에서 빠져요");Te(u,{mode:()=>"into",ok:k=>k.kind==="char",run:k=>mn(k,l.folder,null,!1)}),g.push(u)}return t.chars.length&&g.push(o("span",{class:"rb-muted",style:"font-size:12px;white-space:normal"},"카드·폴더를 끌어서 옮겨요 · 폴더에 놓으면 들어가고, 위 경로(전체 › …)에 놓으면 그 위치로 가요 · Alt/⌥를 누르고 놓으면 복사(여러 폴더에 걸치기)")),g}function zs(r){if(!r.scenes.length)return[nt("씬이 없어요","씬은 표정·포즈 하나예요. 이름이 그대로 감정 이미지 이름이 돼요.",D("새 씬",{kind:"primary",icon:"plus",onClick:()=>at()}),D("감정 세트 더하기",{icon:"sparkle",onClick:()=>Yr()}))];let d=t.chars.filter(u=>u.id!==r.id),c=d.length?o("div",{class:"sds-tray"},o("span",{class:"rb-muted",style:"font-size:12px"},"다른 캐릭터로(Alt/⌥ 복사)"),...d.map(u=>{let k=o("span",{class:"rb-chip",role:"button"},u.name);return Te(k,{mode:()=>"into",ok:z=>z.kind==="scene"&&z.cid===r.id,run:(z,I,S)=>{h.set(wr(t,r.id,z.ids,u.id,{copy:S})),p.clear(),En()}}),k})):null,g=r.scenes.filter(u=>u.images.length&&!an(u)).length;return[Qe("씬",r.scenes.length,g?o("button",{type:"button",class:"sds-pill",id:"sds-nofav-pill",title:"즐겨찾기 없는 씬부터 대표 고르기",style:"cursor:pointer;border:0",onClick:()=>Gt({onlyNoFav:!0})},`★ 없는 씬 ${g}`):null,o("span",{class:"rb-muted",style:"font-size:12px"},"눌러서 고르고, 한 번 더 누르면 열려요 · 끌어서 순서 바꾸기 · Ctrl/⌘·체크로 여러 개 고르기")),cn(...r.scenes.map(u=>Hr(r,u,r.scenes))),c]}function Ms(r,d){let c=De(d.slots),g=o("input",{class:"sds-in",value:d.name,id:"sds-sname","aria-label":"씬 이름",style:"font-weight:800;min-width:160px;flex:1",onChange:re=>{let ae=re.target.value.trim();ae&&ae!==d.name&&(h.set(Pe(t,r.id,d.id,{name:xn({scenes:r.scenes.filter(de=>de.id!==d.id)},ae)})),B())}}),u=o("select",{class:"sds-sel","aria-label":"씬 크기",id:"sds-ssize",onChange:re=>{h.set(Pe(t,r.id,d.id,{size:re.target.value})),Wr()}},o("option",{value:"",selected:!d.size},"크기: 세로(기본)"),...Object.entries(ke).map(([re,ae])=>o("option",{value:re,selected:d.size===re},`${ae.label} ${ae.width}×${ae.height}`))),k=o("div",{class:"sds-row",style:"gap:4px"},W("minus","예약 하나 빼기",()=>{h.set(Ee(t,r.id,d.id,d.reserve-1)),y(),B()},{disabled:!d.reserve}),o("span",{class:"sds-pill",id:"sds-srsv"},`예약 ${d.reserve}`),W("plus","1장 예약",()=>{h.set(Ee(t,r.id,d.id,d.reserve+1)),y(),B()},{id:"sds-srsv-plus"})),z=re=>{h.set(Vn(t,r.id,d.id,re))},I=o("div",{class:"sds-slots",id:"sds-slots"}),S=o("pre",{class:"rb-muted",id:"sds-preview",style:"margin:0;white-space:pre-wrap;word-break:break-word;font:inherit;font-size:12.5px;background:var(--rb-win);border-radius:var(--rb-r1);padding:8px 10px"}),Y=()=>{let re=t.settings,ae=ge(t,r.id),de=se(t,r.id,d.id);try{S.textContent=De(de.slots)?un({top:re.top,own:nn(t,ae),middle:ln(de,0),back:re.back},t.pieces,()=>0):"켜진 조각이 없는 슬롯이 있어 그릴 수 없어요.",S.style.color=""}catch(te){S.textContent=te.message,S.style.color="var(--rb-danger)"}},_=()=>{let re=se(t,r.id,d.id).slots;ce(I,...re.map((ae,de)=>o("div",{class:"sds-slot"},o("div",{class:"hd"},o("span",{style:"flex:1"},`슬롯 ${de+1}`),o("button",{type:"button",class:"rb-icon-btn","aria-label":"슬롯 지우기",onClick:()=>{z(re.filter((te,ve)=>ve!==de)),_(),Y(),F()}},ie("x",14))),...ae.map((te,ve)=>o("div",{class:["sds-piece",te.on===!1&&"off"]},o("input",{type:"checkbox",checked:te.on!==!1,title:"켜기","aria-label":"조각 켜기",style:"margin-top:12px",onChange:Me=>{z(se(t,r.id,d.id).slots.map((Oe,_e)=>_e!==de?Oe:Oe.map((hn,Xt)=>Xt!==ve?hn:{...hn,on:Me.target.checked}))),_(),Y(),F()}}),Ie({value:te.prompt,rows:2,label:`슬롯 ${de+1} 조각 ${ve+1}`,onInput:Me=>{z(se(t,r.id,d.id).slots.map((Oe,_e)=>_e!==de?Oe:Oe.map((hn,Xt)=>Xt!==ve?hn:{...hn,prompt:Me}))),Y()}}),o("button",{type:"button",class:"rb-icon-btn","aria-label":"조각 지우기",onClick:()=>{z(se(t,r.id,d.id).slots.map((Me,Oe)=>Oe!==de?Me:Me.filter((_e,hn)=>hn!==ve))),_(),Y(),F()}},ie("trash",14)))),D("조각 더하기",{size:"sm",icon:"plus",onClick:()=>{z(se(t,r.id,d.id).slots.map((te,ve)=>ve!==de?te:[...te,{prompt:"",on:!0}])),_(),F()}}))),o("button",{type:"button",class:"sds-slot",id:"sds-addslot",style:"align-items:center;justify-content:center;min-height:120px;cursor:pointer;color:var(--rb-sub);font:inherit;font-weight:700",onClick:()=>{z([...se(t,r.id,d.id).slots,[{prompt:"",on:!0}]]),_(),Y(),F()}},ie("plus",22),"슬롯 더하기"))},K=o("span",{class:"sds-pill"}),F=()=>{K.textContent=`조합 ${De(se(t,r.id,d.id).slots)}개`,y()};_(),Y(),F();let T=Ne(d),Q=T.map(re=>({cid:r.id,sid:d.id,path:re.path}));return[o("section",{class:"sds-frow",id:"sds-scene-edit"},o("div",{class:"sds-row",style:"flex-wrap:wrap"},g,u,k,K,D("지금 1장",{size:"sm",kind:"primary",icon:"sparkle",id:"sds-gen-one",disabled:m.running||!c,onClick:()=>{h.set(Ee(t,r.id,d.id,d.reserve+1)),ct()}})),o("details",{open:l.slotsOpen,onToggle:re=>{l.slotsOpen=re.target.open}},o("summary",{style:"cursor:pointer;font-weight:800;font-size:13px;margin-bottom:8px"},"씬 프롬프트 조합"),o("div",{style:"display:flex;flex-direction:column;gap:8px"},o("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},"슬롯마다 켜진 조각 하나씩 골라 조합해요. 예약 1장 = 조합 전부. 최종 = 상위 + 외형 + 이 조합 + 하위."),I,o("span",{class:"rb-label"},"미리보기(첫 조합)"),S))),Qe("이미지",T.length,T.length?o("span",{class:"rb-muted",style:"font-size:12px"},"누르면 크게 · 체크로 고르기"):null),T.length?cn(...T.map((re,ae)=>Gr(Q[ae],re,Q,ae))):nt("아직 그림이 없어요","예약하고 위의 ‘생성’을 누르거나 ‘지금 1장’을 눌러요.")]}function As(r){let d=r?[r]:l.folder?Ke(t,l.folder):t.chars,c=d.flatMap(S=>S.scenes.flatMap(Y=>Ne(Y).map(_=>({it:{cid:S.id,sid:Y.id,path:_.path},im:_,sc:Y,cc:S}))));if(!c.length)return[nt("그림이 없어요","씬을 예약하고 ‘생성’을 누르면 여기에 모여요.")];let g=c.map(S=>S.it),u=c.filter(S=>S.im.pick),k=S=>{let Y=t;for(let _ of c)!!_.im.pick!==S&&(Y=rn(Y,_.it.cid,_.it.sid,[_.it.path],S));h.set(Y,{undo:!1}),E(),B()},z=[o("div",{class:"sds-row sds-bulkbar",id:"sds-gbulk",style:"flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:4;background:var(--rb-win);padding:6px 0"},o("span",{class:"sds-pill"},`그림 ${c.length}장 · 고름 ${u.length}`),D("모두 고르기",{size:"sm",id:"sds-g-all",onClick:()=>k(!0)}),D("고르기 풀기",{size:"sm",id:"sds-g-none",disabled:!u.length,onClick:()=>k(!1)}),D(`고른 ${u.length}장 봇에 넣기`,{size:"sm",kind:"primary",id:"sds-g-put",disabled:!u.length,onClick:()=>Re(u.map(S=>({cid:S.it.cid,sid:S.it.sid,path:S.it.path,name:S.sc.name})))}),D(`고른 ${u.length}장 목록에서 빼기`,{size:"sm",kind:"danger",id:"sds-g-del",disabled:!u.length,onClick:()=>Rt(u.map(S=>S.it))}),o("span",{class:"rb-muted",style:"font-size:12px"},"한 번 누르면 고르기 · 두 번 누르면 크게 보기"))],I=0;for(let S of d)for(let Y of S.scenes){let _=c.filter(K=>K.sc===Y);_.length&&z.push(Qe(r?Y.name:`${S.name} › ${Y.name}`,_.length),cn(..._.map(K=>Gr(K.it,K.im,g,I++))))}return z}function _s(r){let d=o("input",{class:"sds-in",id:"sds-q",type:"search",placeholder:r?"씬 이름·프롬프트 찾기":"캐릭터 이름·외형 프롬프트 찾기",value:l.q,style:"width:100%",onInput:u=>{l.q=u.target.value;let k=g();ce(c,...k)}}),c=o("div",{style:"display:flex;flex-direction:column;gap:12px"}),g=()=>{let u=l.q.trim().toLowerCase();if(!u)return[o("span",{class:"rb-muted"},"찾을 말을 적어요.")];if(r){let z=r.scenes.filter(I=>I.name.toLowerCase().includes(u)||I.slots.some(S=>S.some(Y=>Y.prompt.toLowerCase().includes(u))));return z.length?[Qe("찾은 씬",z.length),cn(...z.map(I=>Hr(r,I)))]:[o("span",{class:"rb-muted"},"없어요.")]}let k=t.chars.filter(z=>z.name.toLowerCase().includes(u)||z.prompt.toLowerCase().includes(u)||z.scenes.some(I=>I.name.toLowerCase().includes(u)));return k.length?[Qe("찾은 캐릭터",k.length),cn(...k.map(Nt))]:[o("span",{class:"rb-muted"},"없어요.")]};return ce(c,...g()),setTimeout(()=>d.focus(),0),[d,c]}function Ss(){let r=l.compare.filter(u=>se(t,u.cid,u.sid)?.images.some(k=>k.path===u.path));l.compare=r;let d=[Qe("비교",r.length,r.length?D("비우기",{size:"sm",kind:"ghost",onClick:()=>{l.compare=[],B()}}):null)];r.length<2&&d.push(o("span",{class:"rb-muted",style:"white-space:normal"},"그림을 2~4장 넣으면 나란히 보여요. 아래 그림을 누르거나, 크게 보기에서 ‘비교에 넣기’를 눌러요.")),r.length&&d.push(o("div",{class:"sds-cmp",id:"sds-cmp"},...r.map(u=>{let k=o("img",{alt:""});h.url(u.path).then(S=>{k.src=S}).catch(()=>{});let z=se(t,u.cid,u.sid),I=z.images.find(S=>S.path===u.path);return o("figure",null,k,o("figcaption",null,o("span",{style:"flex:1"},`${ge(t,u.cid).name} › ${z.name}${I?.seed?` · ${I.seed}`:""}`),o("button",{type:"button",class:"rb-icon-btn","aria-label":"비교에서 빼기",onClick:()=>{l.compare=l.compare.filter(S=>S.path!==u.path),B()}},ie("x",14))))})));let c=h.curChar(),g=(c?[c]:t.chars).flatMap(u=>u.scenes.flatMap(k=>k.images.map(z=>({cid:u.id,sid:k.id,path:z.path})))).slice(0,120);return g.length&&d.push(Qe("고르기",g.length),cn(...g.map(u=>{let k=l.compare.some(I=>I.path===u.path);return o("button",{type:"button",class:"sds-card","aria-selected":String(k),onClick:()=>{k?l.compare=l.compare.filter(I=>I.path!==u.path):h.addCompare(u),B()}},h.thumb(u.path),O())}))),d}function Ls(r){let d=r.scenes.map(_=>_.id),c=o("input",{type:"checkbox","aria-label":"모두 고르기",checked:d.length&&d.every(_=>p.has(_)),onChange:_=>{_.target.checked?d.forEach(K=>p.add(K)):p.clear(),B(),E()}}),g=()=>r.scenes.filter(_=>p.has(_.id)),u=o("input",{class:"sds-in",placeholder:"넣을 태그 / 찾을 말",id:"sds-bulk-text",style:"flex:1;min-width:160px"}),k=o("input",{class:"sds-in",placeholder:"바꿀 말",id:"sds-bulk-rep",style:"flex:1;min-width:120px"}),z=_=>{let K=g();if(!K.length){h.toast("씬을 먼저 골라요");return}let F=t;for(let T of K)F=Vn(F,r.id,T.id,_(se(F,r.id,T.id).slots));h.set(F),B(),h.toast(`씬 ${K.length}개를 바꿨어요`)},I=(_,K)=>[_,K].filter(F=>F&&F.trim()).join(", "),S=o("div",{class:"sds-frow"},o("b",null,`고른 씬 ${g().length}개에 한꺼번에`),o("div",{class:"sds-row",style:"flex-wrap:wrap"},u,k),o("div",{class:"sds-acts"},D("앞에 넣기",{size:"sm",id:"sds-bulk-front",onClick:()=>{let _=u.value.trim();_&&z(K=>K.length?K.map((F,T)=>T?F:F.map(Q=>({...Q,prompt:I(_,Q.prompt)}))):[[{prompt:_,on:!0}]])}}),D("뒤에 넣기",{size:"sm",onClick:()=>{let _=u.value.trim();_&&z(K=>K.length?K.map((F,T)=>T!==K.length-1?F:F.map(Q=>({...Q,prompt:I(Q.prompt,_)}))):[[{prompt:_,on:!0}]])}}),D("찾아 바꾸기",{size:"sm",onClick:()=>{let _=u.value;_&&z(K=>K.map(F=>F.map(T=>({...T,prompt:T.prompt.split(_).join(k.value)}))))}}),D("예약 +1",{size:"sm",onClick:()=>{h.set(on(t,r.id,1,g().map(_=>_.id))),y(),B()}}),o("select",{class:"sds-sel","aria-label":"크기 한꺼번에",onChange:_=>{if(!_.target.value)return;let K=t;for(let F of g())K=Pe(K,r.id,F.id,{size:_.target.value==="base"?"":_.target.value});h.set(K),B()}},o("option",{value:""},"크기 한꺼번에…"),o("option",{value:"base"},"세로(기본)"),...Object.entries(ke).map(([_,K])=>o("option",{value:_},K.label))))),Y=r.scenes.map(_=>o("tr",null,o("td",null,o("input",{type:"checkbox",checked:p.has(_.id),"aria-label":`${_.name} 고르기`,onChange:K=>{K.target.checked?p.add(_.id):p.delete(_.id),E()}})),o("td",null,o("input",{class:"sds-in",value:_.name,style:"width:140px;height:34px",onChange:K=>{let F=K.target.value.trim();F&&h.set(Pe(t,r.id,_.id,{name:xn({scenes:ge(t,r.id).scenes.filter(T=>T.id!==_.id)},F)}))}})),o("td",{style:"min-width:260px"},_.slots.length===1&&_.slots[0].length===1?Ie({value:_.slots[0][0].prompt,rows:1,label:`${_.name} 프롬프트`,onInput:K=>h.set(Vn(t,r.id,_.id,[[{..._.slots[0][0],prompt:K}]]))}):o("span",{class:"rb-muted",style:"white-space:normal"},_.slots.length?`슬롯 ${_.slots.length}개 · 조합 ${De(_.slots)}개`:"(조합 없음)")),o("td",null,_.size?ke[_.size]?.label??_.size:"기본"),o("td",null,String(_.reserve)),o("td",null,String(_.images.length))));return[S,o("div",{style:"overflow:auto"},o("table",{class:"sds-table",id:"sds-bulk"},o("thead",null,o("tr",null,o("th",null,c),o("th",null,"씬"),o("th",null,"프롬프트"),o("th",null,"크기"),o("th",null,"예약"),o("th",null,"그림"))),o("tbody",null,...Y)))]}function pn(r){l.focus=null,l.charId=r,l.sceneId=null,p.clear(),l.mode==="bulk"&&!r&&(l.mode="scene"),h.paint(),ne.scrollTop=0}function In(r){l.focus=null,l.sceneId=r,p.clear(),r&&(l.mode="scene"),y(),E(),B(),Wr(),ne.scrollTop=0}let Wr=()=>h.paintLeft();async function tt(){let r=await Be(e.win,{title:"새 캐릭터",label:"이름",value:t.chars.length?"":i,ok:"만들기",placeholder:"예: 시로코"});if(r==null)return;let d=yn(t,{name:r}),c=d.chars.at(-1).id,g=l.focus?.kind==="folder"&&t.folders.some(k=>k.id===l.focus.id)?l.focus.id:l.folder;g&&(d=$t(d,g,c,!0));let u=g?Un(d,g):"";if(u){let k=(await a.loadTemplates()).find(z=>z.name===u);k&&(d=Mn(d,[c],k,"replace").project,h.toast(`폴더 기본 템플릿 ‘${u}’을 적용했어요`))}h.set(d),l.focus={kind:"char",id:c},En();for(let k of ne.querySelectorAll(".sds-char"))if(k.dataset.id===c){k.scrollIntoView({block:"nearest",inline:"nearest"});break}}async function rt(r){if(!r.length||!await $e(e.win,{title:`캐릭터 ${r.length}명을 지울까요?`,body:"씬·프롬프트·그림 목록이 지워져요. 리스 에셋 저장소 파일과 이미 넣은 에셋은 그대로예요.",ok:"지우기",danger:!0}))return;let d=t;for(let c of r)d=hr(d,c);h.set(d),p.clear(),y(),E(),B()}async function at(){let r=h.curChar(),d=await Be(e.win,{title:"새 씬",label:"이름(감정 이미지 이름이 돼요)",ok:"만들기",placeholder:"예: angry"});d?.trim()&&(h.set(At(t,r.id,{name:xn(r,d),prompt:d.trim()})),y(),B())}function Yr(){let r=h.curChar(),d=new Set(r.scenes.map(u=>u.name.toLowerCase())),c=t,g=0;for(let[u,k]of Zo)d.has(u)||(c=At(c,r.id,{name:u,prompt:k}),g++);h.set(c),y(),B(),h.toast(g?`감정 씬 ${g}개를 더했어요`:"이미 다 있어요")}async function st(r){let d=h.curChar();!r.length||!await $e(e.win,{title:`씬 ${r.length}개를 지울까요?`,body:"조합·그림 목록이 지워져요. 리스 에셋 저장소 파일은 그대로예요.",ok:"지우기",danger:!0})||(h.set(kr(t,d.id,r)),p.clear(),r.includes(l.sceneId)&&(l.sceneId=null),y(),E(),B())}async function Rt(r){if(!r.length||!await $e(e.win,{title:`${r.length}장을 목록에서 뺄까요?`,body:"이 화면 목록에서만 빠져요. 리스 에셋 저장소 파일과 이미 넣은 에셋은 그대로예요.",ok:"빼기",danger:!0}))return;let d=t;for(let c of r)d=Cn(d,c.cid,c.sid,[c.path]);h.set(d),p.clear(),E(),B()}async function qs(r,d,c){!c.length||!await $e(e.win,{title:`${c.length}장을 목록에서 뺄까요?`,body:"이 화면 목록에서만 빠져요. 리스 에셋 저장소 파일과 이미 넣은 에셋은 그대로예요.",ok:"빼기",danger:!0})||(h.set(Cn(t,r,d,c)),p.clear(),E(),B())}async function Bt(r=l.folder){let d=await h.dlg.folderDialog({title:r?"안에 폴더 만들기":"폴더 만들기"});d&&(h.set(vn(t,{...d,parent:r})),E(),B())}async function Es(r,d){let c=await a.loadTemplates();if(!c.length)return h.toast("저장된 템플릿이 없어요. 캐릭터 안에서 ‘템플릿으로 저장’하거나 가져오기를 먼저 해요");Se(e.win,r,[...c.map(g=>({label:`${g.name===d.tpl?"✓ ":""}${g.name}`,icon:"folder",onClick:()=>{h.set(Nn(t,d.id,{tpl:g.name})),B(),h.toast(`이제 ‘${d.name}’(안의 폴더 포함)에 만드는 캐릭터는 ‘${g.name}’으로 시작해요`)}})),...d.tpl?["sep",{label:"기본 템플릿 없애기",icon:"x",onClick:()=>{h.set(Nn(t,d.id,{tpl:""})),B()}}]:[]])}function ot(r,d){let c=t.folders.find(g=>g.id===d);c&&Se(e.win,r,[{label:"이름·종류·프롬프트 바꾸기",icon:"edit",onClick:async()=>{let g=await h.dlg.folderDialog({title:"폴더 바꾸기",name:c.name,kind:c.kind,prompt:c.prompt??"",ok:"저장"});g&&(h.set(Nn(t,d,g)),B())}},{label:"안에 폴더 만들기",icon:"folderPlus",onClick:()=>Bt(d)},{label:c.tpl?`기본 템플릿: ${c.tpl}`:"기본 템플릿 정하기…",icon:"folder",onClick:()=>Es(r,c)},...Un(t,d)?[{label:"기본 템플릿을 안의 캐릭터 모두에 적용",icon:"folder",onClick:async()=>{let g=(await a.loadTemplates()).find(I=>I.name===Un(t,d));if(!g)return h.toast("그 템플릿이 없어요",{error:!0});let u=Ke(t,d).map(I=>I.id);if(!u.length)return;let k=qr(t,u),z="merge";k.length&&(z=await h.dlg.templateChoice(k.length,g.name),!z)||(h.set(Mn(t,u,g,z).project),y(),B(),h.toast(`‘${g.name}’을 ${u.length}명에 적용했어요`))}}]:[],...c.parent?[{label:"맨 위로 꺼내기",icon:"up",onClick:()=>{h.set(Pt(t,d,null)),B()}}]:[],"sep",{label:"폴더 지우기",icon:"trash",danger:!0,onClick:async()=>{await $e(e.win,{title:`‘${c.name}’ 폴더를 지울까요?`,body:"안의 폴더도 함께 지워져요. 캐릭터와 그림은 남아요.",ok:"지우기",danger:!0})&&(h.set(jt(t,d)),l.folder&&!t.folders.some(g=>g.id===l.folder)&&(l.folder=null),E(),B())}}])}function Jr(r,d){Se(e.win,r,t.folders.map(c=>{let g=d.every(u=>c.members.includes(u));return{label:`${g?"✓ ":""}${Mt(t,c.id).map(u=>u.name).join(" › ")}`,icon:"folder",onClick:()=>{let u=t;for(let k of d)u=$t(u,c.id,k,!g);h.set(u),B(),h.toast(g?"폴더에서 뺐어요":"폴더에 넣었어요")}}}))}function Is(r,d){Se(e.win,r,[{label:"열기",icon:"chevron",onClick:()=>pn(d.id)},{label:"이름 바꾸기",icon:"edit",onClick:async()=>{let c=await Be(e.win,{title:"이름 바꾸기",label:"이름",value:d.name});c?.trim()&&(h.set(Fe(t,d.id,{name:c.trim()})),B())}},{label:"복제",icon:"split",onClick:()=>{h.set(Ct(t,d.id)),B()}},...t.folders.length?[{label:"폴더에 넣기·빼기",icon:"folder",onClick:()=>Jr(r,[d.id])}]:[],"sep",{label:"지우기",icon:"trash",danger:!0,onClick:()=>rt([d.id])}])}function Ts(r,d,c,g){let u=se(t,d.cid,d.sid),k=u?.images.find(z=>z.path===d.path);k&&Se(e.win,r,[{label:"크게 보기",icon:"eye",onClick:()=>Fr(h,c,g)},{label:k.pick?"보낼 그림에서 빼기":"보낼 그림으로 고르기",icon:"check",onClick:()=>Ut(d)},{label:k.fav?"즐겨찾기 풀기":"즐겨찾기",icon:"sparkle",onClick:()=>{h.set(tn(t,d.cid,d.sid,d.path,{fav:!k.fav})),B()}},{label:"씬 대표로",icon:"image",onClick:()=>{h.set(Pe(t,d.cid,d.sid,{cover:d.path})),B()}},{label:"캐릭터 대표로",icon:"image",onClick:()=>{h.set(Fe(t,d.cid,{cover:d.path})),h.toast("캐릭터 카드 대표로 했어요")}},{label:"이 그림만 봇에 넣기",icon:"exportBot",onClick:()=>Re([{...d,name:u.name}])},{label:"넣는 방법 고르고 넣기…",icon:"sliders",onClick:()=>dt([{...d,name:u.name}])},"sep",{label:"목록에서 빼기",icon:"trash",danger:!0,onClick:()=>Rt([d])}])}function Os(r){let d=h.curChar();Se(e.win,r,d?[{label:"새 씬",icon:"plus",onClick:()=>at()},{label:"모든 씬 1장씩 예약",icon:"calPlus",onClick:()=>{h.set(on(t,d.id,1)),y(),B()}},{label:"위로",icon:"back",onClick:()=>q()}]:[{label:"새 캐릭터",icon:"plus",onClick:()=>tt()},{label:l.folder?"안에 폴더 만들기":"폴더 만들기",icon:"folderPlus",onClick:()=>Bt()},{label:"SDStudio 백업 가져오기…",icon:"upload",onClick:()=>Yt()},...l.folder?[{label:"위로",icon:"back",onClick:()=>q()}]:[]])}function Fs(r,d,c){Se(e.win,r,[{label:"열기",icon:"chevron",onClick:()=>In(c.id)},{label:"1장 예약",icon:"plus",onClick:()=>{h.set(Ee(t,d.id,c.id,c.reserve+1)),y(),B()}},{label:"예약 비우기",icon:"x",onClick:()=>{h.set(Ee(t,d.id,c.id,0)),y(),B()}},{label:"이미지 월드컵",icon:"zap",onClick:()=>Sn(h,d.id,c.id)},...c.images.length?[{label:"여기서 대표 고르기",icon:"sparkle",onClick:()=>{let g=d.scenes.filter(u=>u.images.length).map(u=>({cid:d.id,sid:u.id}));Dr(h,g,{start:Math.max(0,g.findIndex(u=>u.sid===c.id))})}}]:[],{label:"복제",icon:"split",onClick:()=>{h.set(Bn(t,d.id,c.id)),B()}},"sep",{label:"지우기",icon:"trash",danger:!0,onClick:()=>st([c.id])}])}async function Ds(r,d){let c=t.settings,g=r.scenes.filter(u=>!d||d.includes(u.id)).map(u=>{try{return`${u.name}: ${un({top:c.top,own:nn(t,r),middle:ln(u,0),back:c.back},t.pieces,()=>0)}`}catch(k){return`${u.name}: (${k.message})`}});try{await navigator.clipboard.writeText(g.join(`
-`)),h.toast("프롬프트를 복사했어요")}catch{h.toast("복사하지 못했어요",{error:!0})}}function Vt(r){let d=h.curChar(),c=h.curScene();Se(e.win,r,[...c?[{label:Pn(c)?`고른 그림 ${Pn(c)}장`:`이 씬 그림 ${c.images.length}장`,icon:"download",onClick:()=>Kt((Pn(c)?We(d,c.id).map(g=>g.path):c.images.map(g=>g.path)).map((g,u)=>[`${d.name}/${c.name}_${u+1}.png`,g]))}]:[],{label:"씬 대표 그림만",icon:"download",onClick:()=>Kt((d?[d]:t.chars).flatMap(g=>g.scenes.filter(u=>sn(u)).map(u=>[`${g.name}/${u.name}.png`,sn(u)])))},{label:"모든 그림",icon:"download",onClick:()=>Kt((d?[d]:t.chars).flatMap(g=>g.scenes.flatMap(u=>Ne(u).map((k,z)=>[`${g.name}/${u.name}_${z+1}.png`,k.path]))))}])}async function Kt(r){if(!r.length){h.toast("내려받을 그림이 없어요");return}let d=e.toast(`zip 만드는 중 0/${r.length}`,{seconds:600});try{let c={},g=new Set,u=0;for(let[k,z]of r){let I=k.replace(/[\\:*?"<>|]/g,"_");for(let Y=2;g.has(I);Y++)I=k.replace(/\.png$/,`_${Y}.png`);g.add(I),c[I]=[await h.bytes(z),{level:0}];let S=e.win.querySelector(".rb-toasts .rb-toast:last-child span");S&&(S.textContent=`zip 만드는 중 ${++u}/${r.length}`)}$n(`${i||"에셋"}-에셋제작.zip`,new Blob([pa(c)],{type:"application/zip"}))}catch(c){e.toast(`zip을 만들지 못했어요: ${c?.message??c}`,{error:!0})}finally{d?.close?.()}}let Ns={emotionImages:"감정 이미지",additionalAssets:"추가 에셋",assets:"모듈 에셋"},Xr=r=>r>=1048576?`${(r/1048576).toFixed(1)}MB`:`${Math.max(1,Math.round(r/1024))}KB`;function Us(r,d,c,g,u,k,z,I){let S=r[d]??[],Y=String(c).toLowerCase(),_=S.findIndex(F=>String(F?.[0]).toLowerCase()===Y);if(k==="replace"&&_>=0&&!z.has(Y))return z.add(Y),I?.push(S[_][0]),{...r,[d]:S.map((F,T)=>T===_?d==="emotionImages"?[F[0],g]:[F[0],g,u]:F)};let K=Ea(r,d,c);return z.add(K.toLowerCase()),I?.push(K),Ia(r,d,K,g,u)}function Rs(r){let d=t.folders.filter(c=>c.members.includes(r));return(d.find(c=>c.kind==="outfit")??d[0])?.name??""}function Qr(r,d){let c=h.prefs.nameStyle??"scene";if(c==="scene"||!r.cid)return r.name;let g=ge(t,r.cid),u=c==="dot"?".":"_";return[Rs(r.cid),g?.name,r.name].filter(Boolean).join(u)+(d?`.${d}`:"")}function it(){let r=h.curChar();return(r?[r]:l.folder?Ke(t,l.folder):t.chars).flatMap(c=>We(c).map(g=>({...g,cid:c.id})))}let Zr=r=>n.kind==="module"?r==="assets":r==="emotionImages"||r==="additionalAssets",Bs=r=>Zr(r)?r:Zr(h.prefs.putSlot)?h.prefs.putSlot:n.kind==="module"?"assets":"additionalAssets",lt=()=>{let r=h.curChar();return r?[r]:l.folder?Ke(t,l.folder):t.chars};function ea(){let r=h.curChar(),d=h.curScene();return(r?[r]:lt()).flatMap(c=>yr(c,d&&c===r?d.id:null).map(g=>({...g,cid:c.id})))}async function Vs(){let r;n.kind==="module"?r=(await e.svc.load({fresh:!0})).entries.find(c=>c.module.id===n.id)?.module:r=await e.api.getCharacterFromIndex(n.index);let d={};for(let c of["assets","additionalAssets","emotionImages"])d[c]=new Set((r?.[c]??[]).map(g=>String(g?.[0]??"").toLowerCase()));return d}async function Ht(r=ea()){if(r=r.filter(k=>k?.path),!r.length){h.toast("즐겨찾기한 그림이 없어요. 그림에서 ★(F)를 눌러요");return}let d;try{d=await Vs()}catch(k){e.toast(`봇을 읽지 못했어요: ${k?.message??k}`,{error:!0});return}let c=(h.prefs.putFormat??"webp")==="png"?"png":h.prefs.putFormat??"webp",g=r.map(k=>({it:k,label:`${ge(t,k.cid)?.name??""} › ${k.name}`,nameFor:()=>Qr(k,c)})),u=await h.dlg.exportPreview({rows:g,names:d});u&&await Re(u.idx.map(k=>r[k]),{slot:u.slot,dup:u.dup})}h.exportFav=Ht;function Gt({onlyNoFav:r=!1}={}){let d=h.curChar(),c=h.curScene(),u=lt().flatMap(z=>z.scenes.map(I=>({cid:z.id,sid:I.id}))).filter(z=>se(t,z.cid,z.sid)?.images.length);if(!u.length){h.toast("그림이 있는 씬이 없어요. 먼저 예약하고 생성해요");return}let k=c?Math.max(0,u.findIndex(z=>z.cid===d.id&&z.sid===c.id)):0;Dr(h,u,{start:k,onlyNoFav:r})}function Ks(){let r=t.settings.reserveDefault,d=t,c=0;for(let g of lt())c+=Hn(g).length,d=vr(d,g.id,r);if(!c){h.toast("즐겨찾기 없는 씬이 없어요");return}h.set(d),y(),B(),h.toast(`즐겨찾기 없는 씬 ${c}개에 ${r}장씩 예약했어요`)}async function Re(r,d={}){if(r=r.filter(S=>S?.path),!r.length){h.toast("보낼 그림을 먼저 골라요(그림 왼쪽 위 체크)");return}let c=Bs(d.slot),g=d.dup??h.prefs.dup,u=h.prefs.putFormat??"webp",k=h.prefs.putQuality??.85,z=e.toast(`넣는 중 0/${r.length}`,{seconds:600}),I=()=>e.win.querySelector(".rb-toasts .rb-toast:last-child span");try{let S=new Array(r.length),Y=0,_=0,K=!1,F=0,T=0,Q=async()=>{for(;Y<r.length;){let te=Y++,ve=r[te];if(u==="png")S[te]={path:ve.path,ext:"png"};else{let Oe=await h.bytes(ve.path),_e=await ns(Oe,u,k);K||=_e.fellBack,F+=Oe.length,T+=_e.data.length,S[te]=_e.ext==="png"?{path:ve.path,ext:"png"}:{path:await a.saveAsset(_e.data),ext:_e.ext}}let Me=I();Me&&(Me.textContent=`넣는 중 ${++_}/${r.length}`)}};await Promise.all([Q(),Q(),Q()]);let ye=null,re=[];await aa(te=>{ye=structuredClone(te[c]??[]),re.length=0;let ve=new Set,Me=te;return r.forEach((Oe,_e)=>{Me=Us(Me,c,d.name||Qr(Oe,S[_e].ext),S[_e].path,S[_e].ext,g,ve,re)}),Me});let ae=t;r.forEach((te,ve)=>{te.cid&&te.sid&&(ae=rn(ae,te.cid,te.sid,[te.path],!1),re[ve]&&(ae=xr(ae,te.cid,te.sid,te.path,re[ve])))}),ae!==t&&h.set(ae,{undo:!1}),z?.close?.();let de=u!=="png"&&F?` · ${Xr(F)} → ${Xr(T)}`:"";e.toast(`${Ns[c]}에 ${r.length}장 넣었어요${de}`,{seconds:8,action:{label:"되돌리기",run:async()=>{try{await aa(te=>({...te,[c]:ye})),e.toast("넣기를 되돌렸어요")}catch(te){e.toast(`되돌리지 못했어요: ${te?.message??te}`,{error:!0})}}}}),K&&e.toast("이 브라우저는 AVIF를 만들 수 없어 WebP(또는 원본)로 넣었어요"),p.clear(),E(),B()}catch(S){z?.close?.(),e.toast(`넣지 못했어요: ${S?.message??S}`,{error:!0})}}function Hs(){let r=h.curChar();if(r)return{ids:[r.id],label:`‘${r.name}’`};if(l.folder){let d=Ke(t,l.folder).map(c=>c.id);return{ids:d,label:`‘${t.folders.find(c=>c.id===l.folder)?.name}’ 폴더의 캐릭터 ${d.length}명`}}return{ids:t.chars.map(d=>d.id),label:`모든 캐릭터 ${t.chars.length}명`}}async function Wt(r){let d=Hs();if(!d.ids.length){h.toast("적용할 캐릭터가 없어요. 먼저 캐릭터를 만들어요");return}let c=qr(t,d.ids),g="merge";if(c.length&&(g=await h.dlg.templateChoice(c.length,r.name),!g))return;let u=Mn(t,d.ids,r,g);h.set(u.project),y(),E(),B(),h.paintLeft(),e.toast(`‘${r.name}’을 ${d.label}에 적용했어요 · 더함 ${u.stats.added} · 바뀜 ${u.stats.updated}${u.stats.removed?` · 빠짐 ${u.stats.removed}`:""}`,{seconds:8,action:{label:"되돌리기",run:()=>h.undo()}})}async function na(r){let d=await a.loadTemplates(),c=d.findIndex(g=>g.name===r.name);c>=0?d[c]=r:d.push(r),await a.saveTemplates(d)}async function Gs(r){let d=new Uint8Array(await r.slice(0,512).arrayBuffer());if(d[0]===123||/\.json$/i.test(r.name)){let g=JSON.parse(await r.text());return{files:[],projs:[Rr(g,{name:g.name||r.name.replace(/\.json$/i,"")})],read:null}}if(Ur(d)){let g=async(I,S)=>new Uint8Array(await r.slice(I,I+S).arrayBuffer()),u=await Nr(g,r.size),k=new Map(u.map(I=>[I.name,I]));return{files:u,get:async I=>{let S=k.get(I);if(!S)throw new Error(`${I}이 없어요`);return g(S.off,S.size)}}}let c=new Uint8Array(await r.arrayBuffer());if(c[0]===31&&c[1]===139&&(c=ut(c)),Ur(c.subarray(0,512))){let u=await Nr(async(z,I)=>c.subarray(z,z+I),c.length),k=new Map(u.map(z=>[z.name,z]));return{files:u,get:async z=>{let I=k.get(z);if(!I)throw new Error(`${z}이 없어요`);return c.subarray(I.off,I.off+I.size)}}}if(c[0]===80&&c[1]===75){let g=xs(c);return{files:Object.keys(g).filter(k=>!k.endsWith("/")).map(k=>({name:k})),get:async k=>{if(!g[k])throw new Error(`${k}이 없어요`);return g[k]}}}throw new Error("SDStudio 백업(.tar)이나 프로젝트 파일(.json)이 아니에요")}async function Yt(r){let d=r??(await zn({accept:".tar,.zip,.json,.gz,application/x-tar,application/json,application/zip"}))[0];if(!d)return;let c,g,u=e.toast("백업을 읽는 중…",{seconds:600});try{c=await Gs(d),g=c.projs??await ys(c.files,async de=>JSON.parse(new TextDecoder().decode(await c.get(de))))}catch(de){u?.close?.(),e.toast(`읽지 못했어요: ${de?.message??de}`,{error:!0});return}if(u?.close?.(),!g.length){e.toast("백업 안에서 SDStudio 프로젝트를 찾지 못했어요",{error:!0});return}let k=await h.dlg.backupImport({projs:g,hasImages:!!c.get&&g.some(de=>de.count)});if(!k)return;let z=k.idx.map(de=>g[de]),{project:I,jobs:S}=vs(t,z,{mode:c.get?k.mode:"none"});if(h.set(I),l.folder=null,pn(null),!S.length){e.toast(`캐릭터 ${z.length}명을 가져왔어요`,{seconds:8,action:{label:"되돌리기",run:()=>h.undo()}});return}let Y=e.toast(`그림 가져오는 중 0/${S.length}`,{seconds:3600}),_=()=>e.win.querySelector(".rb-toasts .rb-toast:last-child span"),K=0,F=0,T=0,Q=[],ye=Date.now(),re=()=>{if(!Q.length)return;let de=t;for(let te of Q)de=Kn(de,te.cid,te.sid,{path:te.path,fav:te.fav},()=>te.at);Q=[],h.set(de,{undo:!1})},ae=async()=>{for(;K<S.length;){let de=S[K++];try{let ve=await c.get(de.entry),Me=await a.saveAsset(ve);Q.push({...de,path:Me,at:ye-de.order})}catch{T++}F++,Q.length>=20&&(re(),B());let te=_();te&&(te.textContent=`그림 가져오는 중 ${F}/${S.length}`)}};await Promise.all([ae(),ae(),ae()]),re(),h.persist(),Y?.close?.(),h.paint(),e.toast(`캐릭터 ${z.length}명 · 그림 ${S.length-T}장을 가져왔어요${T?` (못 읽은 그림 ${T}장)`:""}`,{seconds:10})}h.importBackup=Yt;async function ta(){let[r]=await zn({accept:"application/json,.json"});if(!r)return;let d;try{d=It(JSON.parse(await r.text()))}catch(c){e.toast(`읽지 못했어요: ${c?.message??c}`,{error:!0});return}if(!d.scenes.length){e.toast("씬이 없는 템플릿이에요",{error:!0});return}await na(d),await Wt(d)}async function ra(r){let d=await Be(e.win,{title:"씬을 템플릿으로 저장",label:"템플릿 이름(같은 이름은 바뀌어요)",value:`${r.name} 씬`,ok:"저장"});d?.trim()&&(await na(ss(r,d.trim(),t.pieces)),e.toast(`템플릿 ‘${d.trim()}’을 저장했어요(씬 ${r.scenes.length}개)`))}async function Ws(r){let d=await a.loadTemplates(),c=h.curChar();Se(e.win,r,[...d.map(g=>({label:`${g.name} 적용 (씬 ${g.scenes.length})`,icon:"preset",onClick:()=>Wt(g)})),...d.length?["sep"]:[],{label:"파일에서 가져와 적용(SDStudio·Dusk)…",icon:"upload",onClick:()=>ta()},...c?[{label:"이 캐릭터 씬을 템플릿으로 저장",icon:"plus",onClick:()=>ra(c)}]:[],{label:"템플릿 관리…",icon:"list",onClick:()=>h.dlg.templateManager({apply:Wt})}])}async function aa(r){if(n.kind==="module"){let c=(await e.svc.load({fresh:!0})).entries.find(u=>u.module.id===n.id)?.module;if(!c)throw new Error("모듈을 찾지 못했어요");let g=r(structuredClone(c));await e.svc.run("update",n.id,{assets:g.assets}),e.state.modDirty=!0;return}let d=await e.api.getCharacterFromIndex(n.index);if(!d||d.chaId!==n.id)throw new Error("봇을 찾지 못했어요");if(as(d))throw new Error("봇이 응답을 생성하는 중이에요. 끝난 뒤 다시 해 주세요");await e.api.setCharacterToIndex(n.index,r(d)),e.state.charsDirty=!0}async function dt(r){if(!r.length)return;let d=await h.dlg.put({count:r.length});d&&await Re(r,d)}async function sa(r){let d=Le(r),c=[];if(!d.vibe)return c;for(let g of t.settings.vibes.filter(u=>u.on)){let u=g.enc&&g.enc.model===r&&g.enc.info===g.info?g.enc.data:null;u||(u=await a.encodeVibe(La(jn(await h.bytes(g.path)),g.info,r),{signal:m.ctl?.signal,label:"sdstudio:vibe"}),h.set(ze(t,{vibes:t.settings.vibes.map(k=>k.id===g.id?{...k,enc:{model:r,info:g.info,data:u}}:k)}),{undo:!1})),c.push({image:u,strength:g.strength})}return c}async function oa(r){if(!Le(r).reference)return[];let d=[];for(let c of t.settings.refs.filter(g=>g.on))d.push({image:await ei(await h.bytes(c.path)),strength:c.strength,fidelity:c.fidelity,type:c.type,info:1});return d}async function Ys(r,d,c){let g=ge(t,r.cid),u=se(t,r.cid,r.sid),k=t.settings;if(!g||!u)return;let z=un({top:k.top,own:nn(t,g),middle:ln(u,r.combo),back:k.back},t.pieces),{width:I,height:S}=gn(k.size,u),Y=Fn({prompt:z,uc:Dn(k.neg,t.pieces),width:I,height:S,seed:Pr(k.seed,d),settings:k.sampling,chars:k.chars.filter(F=>F.on),vibes:await sa(k.sampling.model),refs:await oa(k.sampling.model)}),_=await a.image(Y,{signal:m.ctl?.signal,token:c}),K=await a.saveAsset(_);h.remember(K,_),h.set(Kn(t,g.id,u.id,{path:K,seed:Y.parameters.seed,prompt:z,w:I,h:S}),{undo:!1})}async function ct(){if(m.running)return;let r=Ye(t);if(!r.length){h.toast("예약된 씬이 없어요. 씬 카드의 +1이나 위 예약 버튼을 눌러요.");return}if(!await h.dlg.token())return;let d=h.prefs.boost?(await a.getTokens()).slice(0,4):[],c=d.length>=2?d.map(_=>_.token):[void 0];Object.assign(m,{running:!0,done:0,total:r.length,ctl:new AbortController,workers:c.length,t0:Date.now(),retry:0}),a.setPrefs({resume:!0}).catch(()=>{});let g=null;try{g=await navigator.wakeLock?.request("screen")}catch{}let u=setInterval(()=>{let _=R.querySelector("#sds-prog .t");_&&(_.textContent=C())},1e3);y(),B();let k=new Map,z=null,I=0,S=async _=>{for(;m.running&&!z&&I<r.length;){let K=I++,F=r[K],T=!1;for(let re=0;m.running&&!z;re++)try{await Ys(F,K,_),T=!0,m.retry=0;break}catch(ae){if(bt(ae)||!m.running){z??=ae;break}if(/토큰|401|402|403|Unauthorized|Anlas|구독/i.test(ae?.message??"")){z??=ae,m.running=!1,m.ctl?.abort();break}m.retry=re+1,y();let de=Math.min(6e4,[3e3,6e3,15e3,3e4][re]??6e4);await new Promise(te=>setTimeout(te,de))}if(!T)break;m.done++;let Q=se(t,F.cid,F.sid),ye=(k.get(F.sid)??0)+1;k.set(F.sid,ye),Q&&ye%Math.max(1,De(Q.slots))===0&&h.set(Ee(t,F.cid,F.sid,Q.reserve-1),{undo:!1}),Date.now()-(m.savedAt??0)>3e3&&(m.savedAt=Date.now(),h.persist()),R.hidden||(y(),B())}};await Promise.all(c.map(S)),clearInterval(u);try{await g?.release()}catch{}a.setPrefs({resume:!1}).catch(()=>{});let Y=m.done;Object.assign(m,{running:!1,ctl:null,workers:1}),await h.persist(),y(),E(),B(),z&&!bt(z)?(e.toast(`그리다 멈췄어요(${Y}장 완료): ${z?.message??z}`,{error:!0}),/토큰/.test(z?.message??"")&&h.dlg.token({force:!0})):e.toast(z?`멈췄어요. ${Y}장 만들었어요`:`${Y}장 다 그렸어요${c.length>1?` (부스트 ${c.length}줄)`:""}`),R.hidden&&la()}function ia(){m.running=!1,m.ctl?.abort()}async function Js(r,d,c){let g=se(t,r.cid,r.sid),u=g?.images.find(S=>S.path===r.path),k=ge(t,r.cid);if(!u||!await h.dlg.token())return null;let z={img2img:"변형",infill:"인페인트",upscale:"업스케일"}[d]??"디렉터 도구",I=e.toast(`${z} 하는 중…`,{seconds:600});try{let S=await h.bytes(u.path),Y=jn(S),_=wn(S)??{width:u.w,height:u.h},K=t.settings,F,T=u.prompt;if(d==="img2img"||d==="infill"){T=c.prompt?.trim()||u.prompt||un({top:K.top,own:nn(t,k),middle:ln(g,0),back:K.back},t.pieces);let re=Fn({prompt:T,uc:Dn(K.neg,t.pieces),width:_.width,height:_.height,settings:K.sampling,action:d,image:Y,mask:d==="infill"?jn(c.mask):void 0,strength:c.strength,noise:c.noise??0,addOriginal:c.keep??!0,chars:K.chars.filter(ae=>ae.on),vibes:await sa(K.sampling.model),refs:d==="img2img"?await oa(K.sampling.model):[]});F=await a.image(re,{label:`sdstudio:${d}`})}else d==="upscale"?F=await a.upscale(Sa(Y),{label:"sdstudio:upscale"}):F=await a.augment(Aa({method:d,image:Y,width:_.width,height:_.height,prompt:c.prompt??"",emotion:c.emotion,defry:c.defry??0}),{label:`sdstudio:${d}`});let Q=await a.saveAsset(F);h.remember(Q,F);let ye=wn(F)??_;return h.set(Kn(t,r.cid,r.sid,{path:Q,seed:null,prompt:T,w:ye.width,h:ye.height,from:d}),{undo:!1}),e.toast(`${z}한 그림을 더했어요`),Q}catch(S){return bt(S)||e.toast(`${z}하지 못했어요: ${S?.message??S}`,{error:!0}),null}finally{I?.close?.()}}function Jt(){if(h.persist(),Xs(),m.running){R.hidden=!0,e.toast(`창을 닫아도 계속 그려요(${m.done}/${m.total}). 다시 ‘에셋 제작’을 누르면 이어서 보여요`,{seconds:8});return}la()}function Xs(){e.root&&(Z.root==null?e.root.removeAttribute("style"):e.root.setAttribute("style",Z.root)),Z.win==null?e.win.removeAttribute("style"):e.win.setAttribute("style",Z.win)}function Qs(){Z.root=e.root?.getAttribute("style")??null,Z.win=e.win.getAttribute("style")??null,e.root&&(e.root.style.padding="0"),Object.assign(e.win.style,{maxWidth:"none",maxHeight:"none",width:"100%",height:"100%",borderRadius:"0",border:"0"}),e.api.showContainer?.("fullscreen")?.catch?.(()=>{}),R.isConnected||e.win.appendChild(R),R.hidden=!1,h.paint(),R.focus()}function la(){Dt.delete(s),M?.disconnect();for(let r of f.values())URL.revokeObjectURL(r);R.remove()}async function Zs(r){let d=h.curChar(),c=h.curScene();if(r==="run")return m.running?ia():ct();if(r==="toggleLeft")return h.toggleLeft();if(r==="undo")return h.undo();if(r==="redo")return h.redo();if(r==="help")return h.dlg.help();if(r==="search")return x("search");if(/^mode[1-5]$/.test(r)){let g=Cs[Number(r[4])-1][0];(g!=="bulk"||d)&&x(g);return}if(r==="choose")return Gt();if(r==="putFav")return Ht();if(r==="put")return Re(c?We(d,c.id).map(g=>({...g,cid:d.id})):it());if(r==="unpick"){let g=it(),u=t;for(let k of g)u=rn(u,k.cid,k.sid,[k.path],!1);p.clear(),l.focus=null,h.set(u,{undo:!1}),E(),B();return}if(r==="remove"){if(l.mode==="gallery"||c){let g=c?We(d,c.id).map(u=>({...u,cid:d.id})):it();if(g.length)return Rt(g)}if(p.size)return d?st([...p]):rt([...p]);if(l.focus?.kind==="char")return rt([l.focus.id]);if(l.focus?.kind==="folder"){let g=t.folders.find(u=>u.id===l.focus.id);g&&await $e(e.win,{title:`‘${g.name}’ 폴더를 지울까요?`,body:"안의 폴더도 함께 지워져요. 캐릭터와 그림은 남아요.",ok:"지우기",danger:!0})&&(h.set(jt(t,g.id)),l.focus=null,E(),B())}return}if(r==="selectAll"&&l.mode==="gallery")return R.querySelector("#sds-g-all")?.click();if(r==="selectAll"){if(c){h.set(rn(t,d.id,c.id,c.images.map(g=>g.path),!0),{undo:!1}),E(),B();return}(d?d.scenes.map(g=>g.id):zt(t,l.folder).chars.map(g=>g.id)).forEach(g=>p.add(g)),E(),B();return}if(r==="newItem")return d?at():tt();if(r==="cup")return c?Sn(h,d.id,c.id):d&&p.size===1?Sn(h,d.id,[...p][0]):void 0;if(r==="reserve"){if(c)h.set(Ee(t,d.id,c.id,c.reserve+1));else if(d&&p.size)h.set(on(t,d.id,1,[...p]));else return;y(),B()}}R.addEventListener("keydown",r=>{if(e.win.querySelector(".rb-modal, .rb-menu")||R.querySelector(".sds-over"))return;let d=/^(INPUT|TEXTAREA|SELECT)$/.test(r.target?.tagName??"");if(r.key==="Escape"){if(d&&r.target.value){r.target.blur();return}r.stopPropagation(),p.size?(p.clear(),E(),B()):l.mode!=="scene"?x("scene"):l.sceneId?In(null):l.charId?pn(null):Jt();return}let c=Tt(r),g=ds(h.keys,c);g&&(d&&(!cs(c)||g==="undo"||g==="redo"||g==="selectAll")||(r.preventDefault(),r.stopPropagation(),Zs(g)))}),h.paint(),R.focus();let da={el:R,close:Jt,S:h,reopen:Qs};return Dt.set(s,da),addEventListener?.("pagehide",()=>h.persist()),document.addEventListener?.("visibilitychange",()=>{document.visibilityState==="hidden"&&h.persist()}),L.resume&&Ye(t).length&&e.toast(`지난번에 그리다 멈췄어요. 남은 ${Ye(t).length}장을 이어 그릴까요?`,{seconds:30,action:{label:"이어 그리기",run:()=>ct()}}),da}async function ei(e){let n=URL.createObjectURL(new Blob([e]));try{let a=new Image;await new Promise((m,$)=>{a.onload=m,a.onerror=$,a.src=n});let s=a.width/a.height,[i,t]=s<.83?[1024,1536]:s>1.2?[1536,1024]:[1472,1472],l=Object.assign(document.createElement("canvas"),{width:i,height:t}),p=l.getContext("2d");p.fillStyle="#000",p.fillRect(0,0,i,t);let b=Math.min(i/a.width,t/a.height),f=a.width*b,w=a.height*b;p.drawImage(a,(i-f)/2,(t-w)/2,f,w);let M=await new Promise(m=>l.toBlob(m,"image/png"));return jn(new Uint8Array(await M.arrayBuffer()))}finally{URL.revokeObjectURL(n)}}async function L0(e,n){let a=n.ext;if(!a)throw new Error("Dusk가 애드온 자리(ext)를 지원하지 않아요 — Dusk를 업데이트해 주세요");let s=ts(e),i=a.add("slot","editor.actions",(t,l)=>!l?.id||l.kind==="character"&&!Number.isInteger(l.index)?null:D("에셋 제작",{size:"sm",kind:"primary",icon:"sparkle",id:"rb-sd-make",onClick:()=>Vr(t,l,s).catch(p=>t.toast(p?.message??String(p),{error:!0}))}));return{deactivate(){i()}}}export{L0 as activate};
+`;function si(n=document){let e=n.getElementById("rb-sds-style");e?.textContent!==ri&&(e||(e=n.createElement("style"),e.id="rb-sds-style",n.head.appendChild(e)),e.textContent=ri)}var ai={calPlus:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M12 13v5M9.5 15.5h5"/>',calX:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M10 14l4 4M14 14l-4 4"/>',file:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 12v6M9 15h6"/>',copy:'<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',swap:'<path d="M4 8h14l-4-4M20 16H6l4 4"/>',trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',exportBot:'<path d="M4 4h10v16H4z"/><path d="M14 12h7M18 9l3 3-3 3"/>',exportAll:'<path d="M4 4h9v5H4zM4 11h9v9H4z"/><path d="M14 12h7M18 9l3 3-3 3"/>',zip:'<path d="M6 3h9l4 4v14H6z"/><path d="M10 3v2M10 7v2M10 11v2M9 15h2v3H9z"/>',expand:'<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/>',sortAsc:'<path d="M7 4v16M3 16l4 4 4-4M14 6h7M14 12h5M14 18h3"/>',sortDesc:'<path d="M7 20V4M3 8l4-4 4 4M14 6h3M14 12h5M14 18h7"/>',clip:'<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6"/>',film:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',importIn:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M12 11v7M9 15l3 3 3-3"/>',list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17h.01"/>',gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',copies:'<rect x="3" y="3" width="13" height="13" rx="2"/><path d="M8 21h11a2 2 0 0 0 2-2V8"/>',puzzle:'<path d="M10 3h4v3a2 2 0 1 0 4 0V3h3v7h-3a2 2 0 1 0 0 4h3v7h-7v-3a2 2 0 1 0-4 0v3H3v-7h3a2 2 0 1 0 0-4H3V3h7z"/>',warn:'<path d="M12 3 2 21h20zM12 10v5M12 18h.01"/>',save:'<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-6h8v6"/>',load:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M12 18v-7M9 14l3-3 3 3"/>',person:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/>',chevL:'<path d="M15 18l-6-6 6-6"/>',chevD:'<path d="M6 9l6 6 6-6"/>',chevR:'<path d="M9 18l6-6-6-6"/>',lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',trophy:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/>',star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/>',wand:'<path d="M15 4V2M15 10V8M11 6h2M17 6h2M4 20 14 10M18 13v2M17 14h2"/>',up2:'<path d="M7 17 17 7M9 7h8v8"/><rect x="3" y="3" width="18" height="18" rx="2"/>',brush:'<path d="M18 2l4 4-10 10-4-4zM8 12l-4 4a3 3 0 0 0 0 4c1 1 3 1 4 0l4-4"/>',play:'<path d="M7 4l13 8-13 8z"/>',stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',plus:'<path d="M12 5v14M5 12h14"/>',minus:'<path d="M5 12h14"/>',x:'<path d="M6 6l12 12M18 6 6 18"/>',back:'<path d="M15 18l-6-6 6-6"/>',folder:'<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',folderPlus:'<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM12 10v6M9 13h6"/>',check:'<path d="M5 12l5 5L20 7"/>',sparkle:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',download:'<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',upload:'<path d="M12 20V9"/><path d="m7 14 5-5 5 5"/><path d="M5 4h14"/>',edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',dice:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01"/>',layers:'<path d="m12 3 9 5-9 5-9-5zM3 13l9 5 9-5"/>',compare:'<rect x="3" y="4" width="8" height="16" rx="1.5"/><rect x="13" y="4" width="8" height="16" rx="1.5"/>',undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',redo:'<path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/>',sliders:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',keyboard:'<rect x="2" y="6" width="20" height="13" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 15h10"/>',template:'<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><path d="M17 13v8M13 17h8"/>',bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'},al=new Set(["play","stop","more"]);function sn(n,e=18){let t=ai[n]??ai.help;return So(`<svg xmlns="http://www.w3.org/2000/svg" width="${e}" height="${e}" viewBox="0 0 24 24" fill="${al.has(n)?"currentColor":"none"}" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${t}</svg>`)}var zt=null,oi=n=>{zt=n};function sl(n,e,t){let a=i("div",{class:"sds-ac",role:"listbox",hidden:!0});n.appendChild(a);let o=[],c=0,p=null,s=!1,w=()=>{a.hidden=!0,o=[]},x=z=>{let _=o[z];if(!_)return;let f=Ks(e.value,e.selectionStart,_.tag);e.value=f.text,e.setSelectionRange(f.caret,f.caret),w(),t()},m=()=>{a.replaceChildren(...o.map((z,_)=>i("div",{class:["it",_===c&&"on"],role:"option","aria-selected":String(_===c),title:Ds[z.cat]??"",onMousedown:f=>{f.preventDefault(),x(_)}},i("span",{class:`dot c${z.cat}`,"aria-hidden":"true"}),i("span",{class:"tx"},i("span",{class:"w"},z.tag),z.tag!==z.word?i("span",{class:"r"},z.word.includes("/")?z.word.split("/").join(" › "):z.word):null),i("span",{class:"f"},Yt(z.freq)))),i("div",{class:"ft","aria-hidden":"true"},i("span",null,"↑↓ 고르기"),i("span",null,"Enter·Tab 넣기"),i("span",null,"Esc 닫기"))),a.hidden=!o.length},k=()=>{a.replaceChildren(i("div",{class:"it dl",onMousedown:async z=>{if(z.preventDefault(),!s){s=!0,a.firstChild.textContent="태그 사전 받는 중… (약 2MB, 한 번만)";try{await zt.load(),s=!1,j()}catch(_){s=!1,a.firstChild.textContent=`${_?.message??_} — 설정에서 파일로 불러올 수 있어요`}}}},"태그 자동완성 쓰기 — 사전 받기(약 2MB, 처음 한 번)")),a.hidden=!1},j=()=>{if(!zt?.enabled?.())return w();let z=Zr(e.value,e.selectionStart);if(z.word.trim().length<2||e.selectionStart!==e.selectionEnd)return w();let _=zt.get();if(!_)return zt.offered?.()?w():k();o=Us(_,z.word,8),c=0,m()};e.addEventListener("input",()=>{clearTimeout(p),p=setTimeout(j,70)}),e.addEventListener("keydown",z=>{a.hidden||!o.length||(z.key==="ArrowDown"||z.key==="ArrowUp"?(z.preventDefault(),c=(c+(z.key==="ArrowDown"?1:-1)+o.length)%o.length,m()):(z.key==="Enter"||z.key==="Tab")&&!z.shiftKey&&!z.ctrlKey&&!z.metaKey?(z.preventDefault(),z.stopPropagation(),x(c)):z.key==="Escape"&&(z.preventDefault(),z.stopPropagation(),w()))}),e.addEventListener("blur",()=>setTimeout(w,120))}function Vn({value:n="",onInput:e,rows:t=4,placeholder:a="",id:o,label:c}){let p=i("pre",{"aria-hidden":"true"}),s=i("textarea",{rows:t,placeholder:a,id:o,spellcheck:"false","aria-label":c});s.value=n;let w=()=>{p.replaceChildren(...ho(s.value).map(m=>m.kind==="text"?document.createTextNode(m.text):i("span",{class:`k-${m.kind}`},m.text)),document.createTextNode(`
+`)),p.scrollTop=s.scrollTop};s.addEventListener("input",()=>{w(),e?.(s.value)}),s.addEventListener("scroll",()=>{p.scrollTop=s.scrollTop}),new(globalThis.ResizeObserver??class{observe(){}})(()=>{p.style.height=`${s.offsetHeight}px`}).observe(s),w();let x=i("div",{class:"sds-pa"},p,s);return x.textarea=s,sl(x,s,()=>{w(),e?.(s.value)}),x}var ii=n=>i("button",{type:"button",class:"sds-help",title:n,"aria-label":n,onClick:e=>e.preventDefault()},"?"),Bn=(n,e,t,{on:a=!1,danger:o=!1,id:c,disabled:p=!1}={})=>i("button",{type:"button",class:["sds-ib",a&&"on",o&&"danger"],title:e,"aria-label":e,id:c,disabled:p,onClick:t},sn(n,18)),We=(n,e,t)=>i("label",{class:"sds-lbl",for:t},n,e?ii(e):null);function li(n,e){let t=n.proj,a=t.settings,o=n.curChar(),c=(P,F=!1)=>{n.set(Ln(n.proj,P)),F&&n.paintLeft(),n.paintTop()},p=[];p.push(i("div",null,We("상위 프롬프트","모든 그림 맨 앞에 붙어요. | 를 넣으면 그 자리에 씬 조합이 들어가요. <모음.조각>으로 조각을 불러요.","sds-top"),Vn({id:"sds-top",value:a.top,rows:5,placeholder:"예: masterpiece, best quality, |, white background",label:"상위 프롬프트",onInput:P=>c({top:P})}))),o&&p.push(i("div",null,We(`${o.name} 외형 프롬프트`,"이 캐릭터의 생김새·복장. 상위 프롬프트 뒤에 붙어요.","sds-own"),Vn({id:"sds-own",value:o.prompt,rows:4,placeholder:"예: 1boy, cat ears, black hair, black hoodie",label:"외형 프롬프트",onInput:P=>{n.set(Jn(n.proj,o.id,{prompt:P}))}}))),p.push(i("div",null,We("하위 프롬프트","씬 조합 뒤, 맨 끝에 붙어요.","sds-back"),Vn({id:"sds-back",value:a.back,rows:4,placeholder:"예: 2::white background::, cat tail",label:"하위 프롬프트",onInput:P=>c({back:P})}))),p.push(i("div",null,We("네거티브 프롬프트","피할 것. 샘플링 설정의 네거티브 프리셋이 앞에 붙어요.","sds-neg"),Vn({id:"sds-neg",value:a.neg,rows:4,placeholder:"예: text, logo, watermark",label:"네거티브 프롬프트",onInput:P=>c({neg:P})})));let s=i("input",{class:"sds-in",id:"sds-seed",inputmode:"numeric",placeholder:"비우면 랜덤",value:a.seed.value?String(a.seed.value):"",style:"flex:1",onChange:P=>{let F=Math.max(0,Math.floor(Number(P.target.value)||0))>>>0;c({seed:{...n.proj.settings.seed,value:F,mode:F&&n.proj.settings.seed.mode==="random"?"fixed":n.proj.settings.seed.mode}},!0)}}),w=i("label",{title:"시드 잠금(고정)",style:"display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--rb-sub)"},sn("lock",14),i("input",{type:"checkbox",id:"sds-seedlock",checked:a.seed.mode!=="random",onChange:P=>c({seed:{...n.proj.settings.seed,mode:P.target.checked?"fixed":"random"}},!0)})),x=i("select",{class:"sds-sel acc",id:"sds-seedmode",style:"flex:1",onChange:P=>c({seed:{...n.proj.settings.seed,mode:P.target.value}},!0)},...[["random","완전 랜덤"],["fixed","시드 고정"],["chain","장마다 이어서"]].map(([P,F])=>i("option",{value:P,selected:a.seed.mode===P},F)));p.push(i("div",null,We("시드"),i("div",{class:"sds-row"},s,w,x)));let m=a.size,k=_e(m,n.curScene()),j=i("select",{class:"sds-sel",id:"sds-size",style:"flex:1",onChange:P=>{let F=P.target.value,R=_n[F];c({size:{...n.proj.settings.size,mode:F,...R?{w:R.width,h:R.height}:{}}},!0)}},i("option",{value:"scene",selected:m.mode==="scene"},"각 씬의 설정대로"),...Object.entries(_n).map(([P,F])=>i("option",{value:P,selected:m.mode===P},`${F.label} ${F.width}×${F.height}${ot(F.width,F.height)?"":" · Anlas"}`)),i("option",{value:"custom",selected:m.mode==="custom"},"직접 입력")),z=(P,F)=>i("input",{class:"sds-in",inputmode:"numeric",value:String(F),style:"width:76px;text-align:center",disabled:m.mode!=="custom","aria-label":P==="w"?"가로":"세로",onChange:R=>{let E=we(P==="w"?R.target.value:n.proj.settings.size.w,P==="h"?R.target.value:n.proj.settings.size.h);c({size:{...n.proj.settings.size,w:E.width,h:E.height}},!0)}});p.push(i("div",null,We("이미지 사이즈","‘각 씬의 설정대로’면 씬마다 정한 크기(없으면 세로)로 만들어요. 1024×1024를 넘거나 스텝이 28을 넘으면 Anlas가 들어요."),i("div",{class:"sds-row"},j,z("w",k.width),i("span",{style:"color:var(--rb-sub)"},"×"),z("h",k.height))));let _=Nn(a.sampling.model),f=a.chars.filter(P=>P.on&&P.prompt.trim()).length;p.push(i("div",{class:"sds-row"},i("button",{type:"button",class:"sds-bar",id:"sds-chars",onClick:()=>n.dlg.charPrompts()},i("span",{class:"t"},"캐릭터 프롬프트"),i("small",null,f?`${f}명`:"")),Bn("person","캐릭터 프롬프트 편집",()=>n.dlg.charPrompts()),Bn("puzzle","조각 모음",()=>n.dlg.pieces()))),p.push(i("button",{type:"button",class:"sds-bar",id:"sds-sampling",onClick:()=>n.dlg.sampling()},i("span",{class:"t"},"샘플링/모델 설정"),i("small",null,`${_.label} · ${a.sampling.steps}스텝`),sn("chevR",16)));let $=a.vibes.filter(P=>P.on).length;p.push(i("button",{type:"button",class:"sds-bar fill",id:"sds-vibe",disabled:!1,onClick:()=>n.dlg.vibes()},i("span",{class:"t"},"바이브 이미지"),i("small",null,_.vibe?a.vibes.length?`${$}/${a.vibes.length} 켜짐`:"":"V5는 못 써요")));let b=a.refs.filter(P=>P.on).length;p.push(i("div",{class:"sds-row",style:"gap:10px"},i("span",{style:"font-size:13px;font-weight:800;white-space:nowrap"},"레퍼런스 설정: ",i("span",{style:"color:var(--rb-acc-text)"},`(${b}/2 활성화)`)),i("span",{class:"sds-in",style:"flex:1;display:flex;align-items:center;color:var(--rb-sub);font-size:13px;overflow:hidden;white-space:nowrap"},b?a.refs.filter(P=>P.on).map(P=>({character:"캐릭터",style:"그림체","character&style":"캐릭터+그림체"})[P.type]).join(", "):_.reference?"활성화된 이미지 없음":"V5는 못 써요"),i("button",{type:"button",class:"rb-btn primary sm",id:"sds-ref",onClick:()=>n.dlg.refs()},"편집"))),wn(e,...p)}function ci(n){return[i("div",{class:"sds-left-head"},i("b",null,"프롬프트 에디터"),ii(`이 봇(모듈)의 그림 설정이에요. 바뀐 내용은 바로 저장되고 ${n.keyLabel("undo")}로 되돌려요.`),i("span",{style:"flex:1"}),i("button",{type:"button",class:"sds-ib",title:"접기","aria-label":"프롬프트 에디터 접기",style:"border:0;background:none",onClick:()=>n.toggleLeft(!1)},sn("chevL",18))),i("div",{class:"sds-groups"},i("div",{class:"sds-group"},i("small",null,"도구"),i("div",null,Bn("puzzle","조각 모음",()=>n.dlg.pieces(),{id:"sds-pieces"}),Bn("warn","문제 확인(없는 조각·빈 프롬프트·Anlas)",()=>n.dlg.check(),{id:"sds-check"}),Bn("brush","작가 태그 고르기(그림체)",()=>n.dlg.artists(),{id:"sds-artists"}))),i("div",{class:"sds-group"},i("small",null,"프리셋"),i("div",null,Bn("save","지금 설정을 프리셋으로 저장",()=>n.dlg.savePreset(),{on:!0,id:"sds-psave"}),Bn("load","프리셋 불러오기",e=>n.dlg.loadPreset(e.currentTarget),{id:"sds-pload"}))))]}function Ee(n,{label:e,onChange:t,disabled:a}={}){let o=Gt(n,{label:e,disabled:a,onChange:(c,p)=>{Wt(p,c),t?.(c,p)}});return i("label",{class:"sds-sw",style:"display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600"},o,e?i("span",null,e):null)}var En=(n,e,...t)=>i("div",{class:"rb-dialog",role:"dialog","aria-modal":"true","aria-label":n,style:`max-width:${e??520}px;max-height:calc(100vh - 32px);overflow:auto`},i("h3",{class:"rb-h3"},n),...t),Mt=n=>{for(let e of n.children)e.style.flexShrink="0";return n},Cn=(n,...e)=>i("div",{style:"display:flex;flex-direction:column;gap:6px"},i("span",{class:"rb-label"},n),...e),_r=(n,{min:e,max:t,step:a=1,id:o,onChange:c})=>{let p=i("input",{type:"number",class:"rb-input",value:String(n),min:e,max:t,step:a,id:o,style:"width:110px"});return p.addEventListener("change",()=>c(Number(p.value))),p},St=(n,e,t,a)=>i("select",{class:"rb-input",id:a,onChange:o=>t(o.target.value)},...n.map(([o,c])=>i("option",{value:o,selected:o===e},c)));function di(n){let e=n.ctx.win,t=M=>{n.set(Ln(n.proj,{sampling:De({...n.proj.settings.sampling,...M})})),n.paintLeft()},a=(M,S,q,L)=>i("div",{style:"display:flex;flex-direction:column;gap:3px"},Ee(M,{label:S,onChange:L}),i("span",{class:"rb-muted",style:"font-size:12px;white-space:normal;line-height:1.5"},q));async function o(){let M=i("div",{style:"display:flex;flex-direction:column;gap:14px"}),S=()=>{let q=n.proj.settings.sampling,L=Nn(q.model),T=ot(832,1216,q.steps);wn(M,Cn("모델",St(er.map(A=>[A.id,A.label]),q.model,A=>{t({model:A}),S()},"sds-model")),Cn("샘플러",L.fixed?i("span",{class:"rb-muted"},`${aa[L.fixed.sampler]} (이 모델은 고정)`):St(L.samplers.map(A=>[A,aa[A]]),q.sampler,A=>{t({sampler:A}),S()},"sds-sampler")),i("div",{style:"display:flex;gap:14px;flex-wrap:wrap"},Cn("스텝",L.fixed?i("span",{class:"rb-muted"},`${L.fixed.steps} (고정)`):_r(q.steps,{min:1,max:L.maxSteps??50,id:"sds-steps",onChange:A=>{t({steps:A}),S()}})),Cn("프롬프트 가이던스",_r(q.scale,{min:0,max:L.maxScale??10,step:.1,id:"sds-scale",onChange:A=>t({scale:A})})),L.noCfgRescale?null:Cn("CFG 리스케일",_r(q.cfgRescale,{min:0,max:1,step:.02,onChange:A=>t({cfgRescale:A})}))),T?i("span",{class:"rb-muted",style:"white-space:normal"},"28스텝 이하·1024×1024 이하면 Opus 무료예요."):i("span",{style:"color:var(--rb-warn);font-size:13px;white-space:normal"},"28스텝을 넘으면 Anlas가 들어요."),Cn("노이즈 스케줄",L.v5?i("span",{class:"rb-muted"},"karras (V5는 고정)"):St(sa.map(A=>[A,A]),q.noise,A=>t({noise:A}))),Cn("품질 태그",L.v5?Tn(Object.entries(oa),q.quality,A=>t({quality:A}),"품질 태그"):Tn([["standard","켬"],["none","끔"]],q.quality==="none"?"none":"standard",A=>t({quality:A}),"품질 태그")),Cn("네거티브 프리셋",St(la(q.model).map(A=>[A,Qs[A]]),q.ucPreset,A=>{t({ucPreset:A}),S()},"sds-ucpreset"),it(q.model,q.ucPreset)?i("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},it(q.model,q.ucPreset)):null),L.varietyPlus?a(q.varietyPlus,"Variety+ (구도 다양하게)","초반 단계의 가이던스를 줄여서 같은 프롬프트도 구도·표정이 더 다양하게 나와요. 결과가 너무 비슷할 때 켜요.",A=>t({varietyPlus:A})):null,L.transparent?a(q.transparent,"투명 배경","배경을 투명하게 그려 달라고 요청하고 ‘transparent background’ 태그를 붙여요. 누끼가 필요한 에셋에 써요.",A=>t({transparent:A})):null,a(q.useCoords,"캐릭터 위치 쓰기","캐릭터 프롬프트에서 정한 자리(가운데·왼쪽·오른쪽…)를 모델에 알려요. 끄면 자리는 모델이 알아서 정해요. 캐릭터 프롬프트를 쓸 때만 뜻이 있어요.",A=>t({useCoords:A})),L.v5&&!L.vibe?null:i("details",{style:"border:1px solid var(--rb-line2);border-radius:var(--rb-r2);padding:8px 12px"},i("summary",{style:"cursor:pointer;font-weight:700;font-size:13px"},"고급 (거의 안 건드려요)"),i("div",{style:"display:flex;flex-direction:column;gap:12px;margin-top:10px"},L.v5?null:a(q.legacyUc,"옛 네거티브 방식(legacy UC)","네거티브 프롬프트를 예전 방식으로 처리해요. 예전에 그린 그림을 똑같이 다시 뽑고 싶을 때만 켜요.",A=>t({legacyUc:A})),L.vibe?a(q.normalizeVibes,"바이브 세기 합을 1로 맞추기","바이브를 여러 장 쓸 때 세기를 합이 1이 되게 나눠요. 끄면 각 바이브의 세기가 그대로 들어가요.",A=>t({normalizeVibes:A})):null))),Mt(M)};S(),await Pn(e,q=>En("샘플링/모델 설정",520,M,i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>q(!0)})))),n.paintLeft()}async function c(){let M=i("div",{style:"display:flex;flex-direction:column;gap:12px"}),S=L=>{n.set(Ln(n.proj,{chars:L}))},q=()=>{let L=n.proj.settings,T=Nn(L.sampling.model),A=L.chars;wn(M,i("span",{class:"rb-muted",style:"white-space:normal"},"한 그림에 여러 인물을 그릴 때 인물마다 프롬프트를 따로 적어요(NAI 캐릭터 프롬프트). 위치를 쓰려면 샘플링 설정에서 ‘캐릭터 위치 쓰기’를 켜요."),...A.map((J,H)=>{let N=U=>S(n.proj.settings.chars.map((Q,fn)=>fn===H?{...Q,...U}:Q)),D=L.sampling.useCoords?St([.1,.3,.5,.7,.9].flatMap(U=>[.1,.3,.5,.7,.9].map(Q=>[`${Q},${U}`,`${"ABCDE"[Math.round((Q-.1)/.2)]}${Math.round((U-.1)/.2)+1}`])),`${J.x},${J.y}`,U=>{let[Q,fn]=U.split(",").map(Number);N({x:Q,y:fn})}):null;return i("div",{class:"rb-card",style:"padding:12px;display:flex;flex-direction:column;gap:8px;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2)"},i("div",{style:"display:flex;align-items:center;gap:8px"},i("b",{style:"flex:1"},`캐릭터 ${H+1}`),D,Ee(J.on,{label:"켜기",onChange:U=>N({on:U})}),B("",{size:"sm",kind:"ghost",icon:"trash",title:"지우기",onClick:()=>{S(n.proj.settings.chars.filter((U,Q)=>Q!==H)),q()}})),Vn({value:J.prompt,rows:3,placeholder:"예: girl, cat ears, black hoodie",label:`캐릭터 ${H+1} 프롬프트`,onInput:U=>N({prompt:U})}),i("input",{class:"rb-input",value:J.uc,placeholder:"이 인물 네거티브(선택)",onChange:U=>N({uc:U.target.value})}))}),B("캐릭터 더하기",{icon:"plus",id:"sds-char-add",disabled:A.length>=(T.maxChars??6),onClick:()=>{S([...n.proj.settings.chars,{id:Math.random().toString(36).slice(2,10),prompt:"",uc:"",x:.5,y:.5,on:!0}]),q()}})),Mt(M)};q(),await Pn(e,L=>En("캐릭터 프롬프트",560,M,i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>L(!0)})))),n.paintLeft()}async function p(){let M=0,S=i("div",{style:"display:flex;flex-direction:column;gap:6px;min-width:150px"}),q=i("div",{style:"flex:1;min-width:0;display:flex;flex-direction:column;gap:10px"}),L=H=>String(H??"").replace(/[.<>,]/g,"").replace(/\s+/g," ").trim().slice(0,40),T=H=>n.set({...n.proj,pieces:H}),A=()=>{let H=n.proj.pieces;M>=H.length&&(M=Math.max(0,H.length-1)),wn(S,...H.map((U,Q)=>i("button",{type:"button",class:"rb-chip","aria-pressed":Q===M?"true":"false",onClick:()=>{M=Q,A()}},`${U.name} ${U.pieces.length}`)),B("모음 더하기",{size:"sm",icon:"plus",id:"sds-lib-add",onClick:async()=>{let U=L(await Xn(e,{title:"조각 모음 이름",label:"이름(점·꺾쇠·쉼표·띄어쓰기 없이)",placeholder:"예: 옷"}));!U||H.some(Q=>Q.name===U)||(T([...n.proj.pieces,{name:U,pieces:[]}]),M=n.proj.pieces.length-1,A())}}),B("파일에서 가져오기",{size:"sm",icon:"upload",id:"sds-lib-import",title:"SDStudio 조각 모음 .json(한 모음·전역 조각 백업·프로젝트) 또는 와일드카드 .txt",onClick:()=>J()}));let N=H[M];if(!N){wn(q,i("span",{class:"rb-muted",style:"white-space:normal"},"조각은 자주 쓰는 프롬프트 묶음이에요. 프롬프트에 <모음.조각>으로 넣으면 펼쳐져요. ‘여러 줄’ 조각은 줄 하나를 무작위로 골라요."));return}let D=U=>T(n.proj.pieces.map((Q,fn)=>fn===M?{...Q,...U}:Q));wn(q,i("div",{style:"display:flex;gap:8px;align-items:center"},i("b",{style:"flex:1"},`<${N.name}.…>`),B("이름 바꾸기",{size:"sm",kind:"ghost",icon:"edit",id:"sds-lib-rename",title:"프롬프트 속 <옛 이름.조각>도 함께 바뀌어요",onClick:async()=>{let U=L(await Xn(e,{title:"조각 모음 이름",label:"새 이름(점·꺾쇠·쉼표·띄어쓰기 없이)",value:N.name}));if(!(!U||U===N.name)){try{n.set(_a(n.proj,N.name,U)),n.paintLeft(),n.toast(`‘${U}’으로 바꿨어요. 프롬프트의 <${N.name}.…>도 고쳤어요`)}catch(Q){n.toast(Q?.message??String(Q),{error:!0})}A()}}}),B("내보내기",{size:"sm",kind:"ghost",icon:"download",title:"SDStudio에서도 읽는 .json",onClick:()=>ze(`${N.name}.json`,qo(N),"application/json")}),B("모음 지우기",{size:"sm",kind:"danger",onClick:async()=>{await zn(e,{title:`‘${N.name}’ 모음을 지울까요?`,body:"이 모음을 부르는 프롬프트는 오류가 나요.",ok:"지우기",danger:!0})&&(T(n.proj.pieces.filter((U,Q)=>Q!==M)),A())}})),...N.pieces.map((U,Q)=>{let fn=en=>D({pieces:n.proj.pieces[M].pieces.map((kn,Mn)=>Mn===Q?{...kn,...en}:kn)});return i("div",{style:"display:flex;flex-direction:column;gap:6px;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);padding:10px"},i("div",{style:"display:flex;gap:8px;align-items:center"},i("input",{class:"rb-input",value:U.name,style:"flex:1","aria-label":"조각 이름",onChange:en=>{let kn=L(en.target.value);kn&&fn({name:kn}),A()}}),Ee(U.multi,{label:"여러 줄",onChange:en=>fn({multi:en})}),B("",{size:"sm",kind:"ghost",icon:"trash",title:"조각 지우기",onClick:()=>{D({pieces:n.proj.pieces[M].pieces.filter((en,kn)=>kn!==Q)}),A()}})),Vn({value:U.prompt,rows:3,label:`조각 ${U.name}`,onInput:en=>fn({prompt:en})}))}),B("조각 더하기",{icon:"plus",id:"sds-piece-add",onClick:()=>{let U="조각";for(let Q=2;N.pieces.some(fn=>fn.name===U);Q++)U=`조각${Q}`;D({pieces:[...N.pieces,{name:U,prompt:"",multi:!1}]}),A()}})),Mt(q)};async function J(){let H=await ee({accept:".json,.txt,application/json,text/plain",multiple:!0});for(let N of H??[])try{let D=vt(N.name,await N.text());if(D.libs){let U=xt(n.proj.pieces,D.libs);n.set({...n.proj,pieces:U.pieces}),M=n.proj.pieces.length-1,n.toast(`조각 모음 ${U.names.join(", ")}을 가져왔어요`)}else{let U=n.proj.pieces[M]?.name,Q=yr(n.proj.pieces,D.wild,U||"wildcards");n.set({...n.proj,pieces:Q.pieces}),M=n.proj.pieces.findIndex(fn=>fn.name===Q.group),n.toast(`<${Q.group}.${Q.name}> 조각으로 가져왔어요`)}}catch(D){n.toast(`${N.name}: ${D?.message??D}`,{error:!0})}A()}A(),await Pn(e,H=>En("조각 모음",760,i("div",{style:"display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start"},S,q),i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>H(!0)})))),n.paintLeft()}async function s(){let[M]=await ee({accept:"image/png,image/jpeg,image/webp"});if(!M)return null;let S=new Uint8Array(await M.arrayBuffer()),q=await n.sd.saveAsset(S);return n.remember(q,S),q}async function w(){let M=i("div",{style:"display:flex;flex-direction:column;gap:12px"}),S=L=>n.set(Ln(n.proj,{vibes:L})),q=()=>{let L=n.proj.settings,T=Nn(L.sampling.model);wn(M,T.vibe?i("span",{class:"rb-muted",style:"white-space:normal"},"그림의 분위기·그림체를 따라 그려요. 처음 쓰는 그림(또는 정보량을 바꾼 그림)은 NovelAI가 한 번 분석해요(Anlas 2)."):i("div",{class:"rb-note warn",style:"white-space:normal"},"V5 모델은 바이브를 쓸 수 없어요. 샘플링/모델 설정에서 V4.5·V4를 고르면 켜져요."),i("div",{style:"display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px"},...L.vibes.map((A,J)=>{let H=N=>S(n.proj.settings.vibes.map((D,U)=>U===J?{...D,...N}:D));return i("div",{style:"display:flex;flex-direction:column;gap:6px;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);padding:8px"},i("div",{class:"sds-card",style:"aspect-ratio:1/1;cursor:default"},n.thumb(A.path,{now:!0})),Ee(A.on,{label:"켜기",onChange:N=>H({on:N})}),i("label",{class:"rb-muted",style:"font-size:12px"},`세기 ${A.strength.toFixed(2)}`),i("input",{type:"range",min:0,max:1,step:.01,value:A.strength,onChange:N=>{H({strength:Number(N.target.value)}),q()}}),i("label",{class:"rb-muted",style:"font-size:12px"},`정보량 ${A.info.toFixed(2)}`),i("input",{type:"range",min:.01,max:1,step:.01,value:A.info,onChange:N=>{H({info:Number(N.target.value),enc:null}),q()}}),B("빼기",{size:"sm",kind:"ghost",icon:"trash",onClick:()=>{S(n.proj.settings.vibes.filter((N,D)=>D!==J)),q()}}))})),B("그림 더하기",{icon:"plus",id:"sds-vibe-add",onClick:async()=>{try{let A=await s();A&&(S([...n.proj.settings.vibes,{id:Math.random().toString(36).slice(2,10),path:A,strength:.6,info:1,on:!0,enc:null}]),q())}catch(A){n.toast(A?.message??String(A),{error:!0})}}})),Mt(M)};q(),await Pn(e,L=>En("바이브 이미지",640,M,i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>L(!0)})))),n.paintLeft()}async function x(){let M=i("div",{style:"display:flex;flex-direction:column;gap:12px"}),S=L=>n.set(Ln(n.proj,{refs:L})),q=()=>{let L=n.proj.settings,T=Nn(L.sampling.model);wn(M,T.reference?i("span",{class:"rb-muted",style:"white-space:normal"},"고른 그림의 캐릭터·그림체를 따라 그려요(캐릭터 레퍼런스, 최대 2장). 장당 Anlas가 들 수 있어요."):i("div",{class:"rb-note warn",style:"white-space:normal"},"V5 모델은 레퍼런스를 쓸 수 없어요. V4.5를 골라 주세요."),...L.refs.map((A,J)=>{let H=N=>S(n.proj.settings.refs.map((D,U)=>U===J?{...D,...N}:D));return i("div",{style:"display:flex;gap:12px;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);padding:10px;align-items:flex-start"},i("div",{class:"sds-card",style:"width:110px;cursor:default;flex-shrink:0"},n.thumb(A.path,{now:!0})),i("div",{style:"flex:1;display:flex;flex-direction:column;gap:8px"},Tn([["character","캐릭터"],["style","그림체"],["character&style","둘 다"]],A.type,N=>H({type:N}),"레퍼런스 종류"),i("label",{class:"rb-muted",style:"font-size:12px"},`세기 ${A.strength.toFixed(2)}`),i("input",{type:"range",min:0,max:1,step:.01,value:A.strength,onChange:N=>{H({strength:Number(N.target.value)}),q()}}),i("label",{class:"rb-muted",style:"font-size:12px"},`충실도 ${A.fidelity.toFixed(2)}`),i("input",{type:"range",min:0,max:1,step:.01,value:A.fidelity,onChange:N=>{H({fidelity:Number(N.target.value)}),q()}}),i("div",{style:"display:flex;gap:8px"},Ee(A.on,{label:"켜기",onChange:N=>H({on:N})}),B("빼기",{size:"sm",kind:"ghost",icon:"trash",onClick:()=>{S(n.proj.settings.refs.filter((N,D)=>D!==J)),q()}}))))}),B("그림 더하기",{icon:"plus",id:"sds-ref-add",disabled:L.refs.length>=2,onClick:async()=>{try{let A=await s();A&&(S([...n.proj.settings.refs,{id:Math.random().toString(36).slice(2,10),path:A,strength:.6,fidelity:1,type:"character&style",on:!0}]),q())}catch(A){n.toast(A?.message??String(A),{error:!0})}}})),Mt(M)};q(),await Pn(e,L=>En("레퍼런스 설정",560,M,i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>L(!0)})))),n.paintLeft()}let m=["top","back","neg","sampling","size","seed","chars"];async function k(){let M=await Xn(e,{title:"프리셋 저장",label:"이름",placeholder:"예: 하얀 배경 고양이 화풍"});if(!M?.trim())return;let S=(await n.sd.loadPresets()).filter(L=>L.name!==M.trim()),q=n.proj.settings;await n.sd.savePresets([...S,{name:M.trim(),at:Date.now(),settings:Object.fromEntries(m.map(L=>[L,structuredClone(q[L])]))}]),n.toast(`프리셋 ‘${M.trim()}’을 저장했어요`)}async function j(M){let S=await n.sd.loadPresets();if(!S.length){n.toast("저장한 프리셋이 없어요. 왼쪽 위 저장 버튼으로 만들어요.");return}In(e,M,[...S.map(q=>({label:q.name,icon:"preset",onClick:async()=>{await zn(e,{title:`‘${q.name}’을 불러올까요?`,body:"상위·하위·네거티브 프롬프트와 시드·크기·샘플링·캐릭터 프롬프트가 바뀌어요. 캐릭터·씬·그림은 그대로예요.",ok:"불러오기"})&&(n.set(Zn({...n.proj,settings:{...n.proj.settings,...q.settings}})),n.paint(),n.toast(`‘${q.name}’을 불러왔어요`))}})),"sep",{label:"프리셋 지우기…",icon:"trash",danger:!0,onClick:async()=>{let q=await Xn(e,{title:"지울 프리셋 이름",label:`있는 것: ${S.map(L=>L.name).join(", ")}`});q&&(await n.sd.savePresets(S.filter(L=>L.name!==q.trim())),n.toast("지웠어요"))}}])}async function z(){let M=[],S=n.proj,q=S.settings;await n.sd.getToken()||M.push(["warn","NovelAI 토큰이 없어요. 설정(톱니)에서 넣어요."]);for(let T of S.chars)for(let A of T.scenes){if(!Yn(A.slots)){M.push(["warn",`${T.name} › ${A.name}: 켜진 조각이 없는 슬롯이 있어 그릴 수 없어요.`]);continue}try{let J=Te({top:q.top,own:ve(S,T),middle:Pe(A,0),back:q.back},S.pieces);te(J).length||M.push(["warn",`${T.name} › ${A.name}: 프롬프트가 비었어요.`])}catch(J){M.push(["err",`${T.name} › ${A.name}: ${J.message}`])}}try{ct(q.neg,S.pieces)}catch(T){M.push(["err",`네거티브: ${T.message}`])}let L=S.chars.flatMap(T=>T.scenes.map(A=>[T,A,_e(q.size,A)])).filter(([,,T])=>!ot(T.width,T.height,q.sampling.steps));L.length&&M.push(["info",`Anlas가 드는 크기·스텝인 씬 ${L.length}개(1024×1024·28스텝 넘음).`]),await Pn(e,T=>En("문제 확인",560,M.length?i("div",{style:"display:flex;flex-direction:column;gap:6px"},...M.map(([A,J])=>i("div",{class:`rb-note ${A}`,style:"white-space:normal"},J))):i("div",{class:"rb-note info"},"문제가 없어요."),i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>T(!0)}))))}async function _(){let M=(S,...q)=>i("div",null,i("b",null,S),...q.map(L=>i("p",{style:"margin:4px 0 0;white-space:normal;color:var(--rb-sub)"},L)));await Pn(e,S=>En("에셋 제작 도움말",620,M("흐름","캐릭터 카드를 만들고 → 캐릭터를 열어 씬(표정·포즈)을 만들고 → 씬마다 예약하고 → 위 ‘생성’을 누르면 차례로 그려요. 고른 그림을 봇의 감정 이미지·추가 에셋(모듈은 모듈 에셋)으로 넣어요."),M("프롬프트","최종 = 상위 + 외형 + 씬 조합 + 하위. 상위에 | 를 넣으면 그 자리에 씬 조합이 들어가요. ##주석##은 지워지고, {a|b}는 하나를 골라요. <모음.조각>은 조각 모음에서 펼쳐요."),M("씬 조합","씬은 슬롯(열) 여러 개로 되어 있고 슬롯마다 켜진 조각 하나씩 골라 조합해요. 예약 1장 = 조합 전부를 한 장씩."),M("모드","씬 모드: 카드로 보기 · 갤러리 모드: 모든 그림 · 검색 모드: 이름·프롬프트 찾기 · 비교 모드: 그림 여러 장 나란히 · 동시편집: 여러 씬 프롬프트를 한 번에."),M("그림","그림을 누르면 크게 보고, 즐겨찾기·대표·변형·인페인트·업스케일·디렉터 도구(배경 지우기 등)를 써요. 이미지 월드컵으로 순위를 매기면 1위가 대표가 돼요."),M("폴더","캐릭터·소속으로 캐릭터를 묶어요. 폴더 안에 폴더, 한 캐릭터를 여러 폴더에 넣을 수 있어요. 카드를 고른 뒤 ‘폴더에 넣기’나 카드 메뉴로 넣어요."),M("보낼 그림 고르기·바로 넣기",`그림 카드 왼쪽 위 체크(또는 ${$t()?"⌘":"Ctrl"}+클릭)로 보낼 그림을 골라요. 고른 것은 씬을 옮기거나 다시 열어도 남고, 씬 카드에 ✓수로 보여요. ‘고른 그림 바로 넣기’(${n.keyLabel("put")})를 누르면 고른 그림만 씬 이름으로 봇에 들어가요. 자리·형식(WebP·AVIF)·같은 이름 처리는 설정에서, 알림의 ‘되돌리기’로 바로 취소해요.`),M("템플릿","씬 구성을 템플릿으로 저장하고 다른 캐릭터에 적용해요. SDStudio 씬 템플릿 파일(.json)도 가져와요. 맨 위에서 적용하면 모든 캐릭터, 폴더 안에서는 그 폴더의 캐릭터, 캐릭터 안에서는 그 캐릭터에 들어가요. 씬이 이미 있으면 합칠지 바꿀지 골라요."),M("되돌리기·단축키",`${n.keyLabel("undo")} 되돌리기, ${n.keyLabel("redo")} 다시하기(봇에 넣은 것은 알림의 되돌리기로). 단축키는 설정 → 단축키 설정에서 바꿔요. 맥은 ⌘ 기준이에요.`),M("부스트 모드","설정에서 켜고 토큰을 여러 개 넣으면 동시에 그려요. 한 기기에서 여러 계정을 쓰면 NovelAI 제재 대상이 될 수 있어요."),M("씬 세트(SFW·NSFW·+)","도구 줄 ‘보기’ 아래 버튼으로 세트를 바꿔요. 폴더 구조는 모든 세트가 함께 쓰고, 캐릭터 카드·그림은 세트마다 따로예요. 세트마다 씬 프리셋(저장된 씬 템플릿, 리스 전체에서 공유)을 정해 두면 새 캐릭터가 그 씬으로 시작해요. 봇 데이터는 넣기 전까지 안 바뀌어요. 우클릭으로 이름·프리셋·지우기."),M("로어북 폴더 가져오기","봇·모듈 로어북의 Dusk 폴더·[소속] 구조를 에셋 제작 폴더로 가져와요. 열 때 새 폴더가 있으면 물어보고(설정에서 ‘자동’으로 바꿀 수 있어요), 에셋 제작에서 바꾼 것은 로어북에 적지 않아요. 여기서 지운 폴더는 다시 가져오지 않아요."),M("저장","그림은 만들자마자 리스 에셋 저장소에 저장되고, 이 화면 목록에서 빼도 저장소 파일은 남아요. 작업 묶음은 봇·모듈마다 따로 저장돼요."),i("div",{class:"btns"},B("튜토리얼 다시 보기",{kind:"ghost",id:"sds-help-tut",onClick:()=>{S(!0),setTimeout(()=>f(),0)}}),B("닫기",{kind:"primary",onClick:()=>S(!0)}))))}async function f(){let M=await n.sd.getPrefs(),S=A=>i("p",{style:"margin:6px 0 0;white-space:normal;color:var(--rb-sub)"},A),q=(A,J,H)=>B(A,{size:"sm",id:J,onClick:H}),L=[()=>[i("b",null,"1. 로어북 폴더 가져오기"),S("봇·모듈 로어북의 Dusk 폴더·[소속] 구조를 에셋 제작 폴더로 가져와요(로어북 → 에셋 제작 한쪽만, 로어북은 바뀌지 않아요). ‘물어보기’면 열 때 새 폴더가 있을 때 묻고, ‘자동’이면 묻지 않고 가져와요. 나중에 설정에서 바꿀 수 있어요."),Tn([["off","물어보기(기본)"],["on","자동"]],M.loreSync?"on":"off",async A=>{let J=A==="on";await n.sd.setPrefs({loreSync:J}),n.prefs.loreSync=J,M.loreSync=J},"로어북 폴더 가져오기"),i("div",{class:"btns",style:"justify-content:flex-start"},B("지금 가져오기",{size:"sm",id:"sds-tut-lore",onClick:()=>n.syncLore?.({ask:!1})}))],()=>[i("b",null,"2. 원본 SDStudio에서 옮겨 오기"),S("SDStudio의 백업(.tar)이나 프로젝트 .json을 가져오면 캐릭터·씬·조각 모음이 들어와요. 씬 템플릿 파일만 있다면 다음 단계에서 가져와요."),i("div",{class:"btns",style:"justify-content:flex-start"},q("SDStudio 백업 가져오기…","sds-tut-backup",()=>n.tut?.importBackup?.()))],()=>[i("b",null,"3. 씬 프리셋(SFW·NSFW)"),S("도구 줄 ‘보기’ 아래의 [SFW] [NSFW] [+]가 씬 세트예요. 세트마다 씬 프리셋(씬 템플릿)을 정해 두면 새 캐릭터가 그 씬으로 시작하고, 프리셋은 리스 전체에 저장돼 다른 봇에서도 써요. 폴더는 세트끼리 공유하고 캐릭터 카드는 세트마다 따로예요."),i("div",{class:"btns",style:"justify-content:flex-start;flex-wrap:wrap"},q("씬 템플릿 파일 가져오기…","sds-tut-tpl",()=>n.tut?.importTemplate?.()),...Dn(n.proj).list.slice(0,4).map(A=>q(`${A.name} 프리셋 고르기`,`sds-tut-set-${A.id}`,J=>n.tut?.pickSetTpl?.(J.currentTarget,A.id))))],()=>[i("b",null,"4. 저장과 백업"),S("작업은 플러그인 저장소·이 기기 사본·봇 안 사본에 함께 저장되고, 열 때 가장 최근 것을 써요. 봇 안 사본은 카드를 배포할 땐 방패 버튼으로 꺼요(코어 내보내기는 이 칸을 빼요)."),S("‘이미지·관리’의 zip은 그림만, ‘프로젝트 전체 백업’은 설정과 그림을 모두 담아요. 복원은 백업 가져오기로 해요.")]],T=0;await Pn(e,A=>{let J=i("div",{id:"sds-tut-body"}),H=i("div",{class:"btns"}),N=()=>{wn(J,...L[T]()),wn(H,i("span",{class:"rb-muted",style:"margin-right:auto"},`${T+1} / ${L.length}`),T?B("이전",{kind:"ghost",onClick:()=>{T--,N()}}):B("건너뛰기",{kind:"ghost",id:"sds-tut-skip",onClick:()=>A(!0)}),T<L.length-1?B("다음",{kind:"primary",id:"sds-tut-next",onClick:()=>{T++,N()}}):B("시작하기",{kind:"primary",id:"sds-tut-done",onClick:()=>A(!0)}))};return N(),En("에셋 제작 시작하기",560,J,H)}),await n.sd.setPrefs({tutorialDone:!0}),n.prefs.tutorialDone=!0}async function $({force:M=!1}={}){if(!M&&await n.sd.getToken())return!0;let S=i("input",{type:"password",class:"rb-input",placeholder:"pst-…",autocomplete:"off",id:"sds-token","data-autofocus":""});return await Pn(e,L=>(S.addEventListener("keydown",T=>{T.key==="Enter"&&S.value.trim()&&L(!0)}),En("NovelAI 토큰",460,i("span",{class:"rb-muted",style:"white-space:normal"},"NovelAI → 계정 설정 → 영구 API 토큰(pst-…)을 넣어요. 이 기기에만 저장되고 다른 곳으로 보내지 않아요."),S,i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>L(!1)}),B("저장",{kind:"primary",id:"sds-token-ok",onClick:()=>S.value.trim()&&L(!0)})))))&&S.value.trim()?(await n.sd.setToken(S.value.trim()),!0):!1}async function b(){let M=await n.sd.getPrefs(),S=!!await n.sd.getToken(),q=n.target.kind==="module"?[["assets","모듈 에셋"]]:[["additionalAssets","추가 에셋"],["emotionImages","감정 이미지"]],L=i("span",{class:"rb-muted"},`품질 ${Math.round(M.putQuality*100)}`),T=i("div",{style:"display:flex;flex-direction:column;gap:6px"}),A=async()=>{let N=await n.sd.getTokens();wn(T,...N.map((D,U)=>i("div",{style:"display:flex;gap:8px;align-items:center"},i("span",{style:"flex:1"},`${D.label||`토큰 ${U+1}`} · …${D.token.slice(-4)}`),B("빼기",{size:"sm",kind:"ghost",onClick:async()=>{await n.sd.setTokens(N.filter((Q,fn)=>fn!==U)),A()}}))),B("토큰 더하기",{size:"sm",icon:"plus",id:"sds-token-add",onClick:async()=>{let D=await P("부스트 모드 토큰 더하기");D&&(await n.sd.setTokens([...N,{label:`계정 ${N.length+1}`,token:D}]),A())}}))};A();let J=i("div",{id:"sds-boost"}),H=()=>wn(J,Tn([["off","끔"],["on","켬"]],n.prefs.boost?"on":"off",async N=>{let D=N==="on";if(D&&!await zn(e,{title:"부스트 모드를 켤까요?",body:"한 기기에서 여러 NovelAI 계정으로 동시에 그리는 것은 NovelAI 정책상 제재·계정 정지 대상이 될 수 있어요. 모든 책임은 사용하는 사람에게 있어요(SDStudio 원본 안내와 같음).",ok:"알고 켜기",danger:!0})){H();return}await n.sd.setPrefs({boost:D}),n.prefs.boost=D,n.paintTop(),H()},"부스트 모드"));H(),await Pn(e,N=>En("설정",560,Cn("NovelAI 토큰",i("div",{style:"display:flex;gap:8px;align-items:center"},i("span",{class:"rb-muted",style:"flex:1"},S?"저장됨(이 기기)":"없음"),B(S?"바꾸기":"넣기",{size:"sm",onClick:()=>{N(!0),$({force:!0})}}))),i("b",null,"태그 자동완성"),i("div",{style:"display:flex;flex-direction:column;gap:8px"},Ee(!!M.loreSync,{label:"로어북 폴더를 묻지 않고 가져오기(끄면 열 때 새 폴더가 있으면 물어봐요. 에셋 제작 → 로어북으로는 적지 않아요)",onChange:async D=>{await n.sd.setPrefs({loreSync:D}),n.prefs.loreSync=D,D&&n.syncLore?.()}}),Ee(M.tags!==!1,{label:"프롬프트 칸에서 태그 자동완성",onChange:async D=>{await n.sd.setPrefs({tags:D}),n.prefs.tags=D}}),i("span",{class:"rb-muted",style:"font-size:12px;white-space:normal"},`${n.sd.tags()?`사전 ${n.sd.tags().size.toLocaleString()}개 있음`:"사전 없음 — 프롬프트를 칠 때 받기를 권해요(약 2MB, 처음 한 번)"} · 두 글자부터 · ↑↓로 고르고 Enter·Tab으로 넣기 · 한글(예: 긴 머리)로도 찾아요. 사전: SDStudio(MIT).`),i("div",{style:"display:flex;gap:8px;flex-wrap:wrap"},B("지금 받기",{size:"sm",id:"sds-tags-dl",onClick:async()=>{try{let D=await n.sd.loadTags();n.toast(`태그 ${D.size.toLocaleString()}개`)}catch(D){n.toast(D?.message??String(D),{error:!0})}}}),B("파일에서 불러오기(.csv/.csv.gz)",{size:"sm",onClick:async()=>{let[D]=await ee({accept:".csv,.gz,text/csv,application/gzip"});if(D)try{let U=await n.sd.loadTagsFromBytes(new Uint8Array(await D.arrayBuffer()));n.toast(`태그 ${U.size.toLocaleString()}개를 불러왔어요`)}catch(U){n.toast(`불러오지 못했어요: ${U?.message??U}`,{error:!0})}}}))),i("b",null,"봇에 넣기"),q.length>1?Cn("바로 넣을 자리",Tn(q,M.putSlot||q[0][0],async D=>{await n.sd.setPrefs({putSlot:D}),n.prefs.putSlot=D},"바로 넣을 자리")):null,Cn("넣을 때 형식(용량 줄이기)",Tn([["png","원본 PNG"],["webp","WebP"],["avif","AVIF"]],M.putFormat,async D=>{await n.sd.setPrefs({putFormat:D}),n.prefs.putFormat=D},"넣을 때 형식"),L,i("input",{type:"range",min:.5,max:1,step:.01,value:M.putQuality,onInput:D=>{L.textContent=`품질 ${Math.round(D.target.value*100)}`},onChange:async D=>{let U=Number(D.target.value);await n.sd.setPrefs({putQuality:U}),n.prefs.putQuality=U}}),i("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},"AVIF를 못 만드는 브라우저면 WebP로 넣어요. 바꾼 것이 더 크면 원본 그대로 넣어요.")),Cn("넣을 때 에셋 이름",Tn([["scene","씬"],["us","폴더_캐릭터_씬.확장자"],["dot","폴더.캐릭터.씬.확장자"]],M.nameStyle??"scene",async D=>{await n.sd.setPrefs({nameStyle:D}),n.prefs.nameStyle=D},"에셋 이름"),i("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},"폴더 = 그 캐릭터가 든 캐릭터 폴더(없으면 첫 폴더, 폴더가 없으면 빼요). 예: 아비도스_호시노_smile.webp")),Cn("같은 이름이 이미 있으면",Tn([["number","번호 붙여 더하기"],["replace","그림 바꾸기"]],M.dup,async D=>{await n.sd.setPrefs({dup:D}),n.prefs.dup=D},"같은 이름")),i("b",null,"부스트 모드(여러 계정으로 동시에 그리기)"),J,i("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},"켜면 아래 토큰 수만큼(최대 4) 동시에 그려요. 토큰은 이 기기에만 저장돼요."),T,i("b",null,"그 밖"),Cn("‘모두 예약’ 장 수",_r(n.proj.settings.reserveDefault,{min:1,max:20,id:"sds-rdef",onChange:D=>{n.set(Ln(n.proj,{reserveDefault:Math.max(1,Math.min(20,Math.round(D)||1))})),n.paintTools()}})),B("단축키 설정…",{icon:"zap",id:"sds-keys",onClick:()=>{N(!0),F()}}),i("span",{class:"rb-muted",style:"white-space:normal"},"그림은 만들 때 바로 리스 에셋 저장소에 저장돼요. 목록에서 빼도 파일은 남아요."),i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>N(!0)}))))}async function P(M){let S=i("input",{type:"password",class:"rb-input",placeholder:"pst-…",autocomplete:"off","data-autofocus":""});return await Pn(e,L=>En(M,440,S,i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>L(!1)}),B("더하기",{kind:"primary",onClick:()=>S.value.trim()&&L(!0)}))))?S.value.trim():""}async function F(){let M={...n.keys},S=null,q=i("div",{style:"display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center"}),L=()=>wn(q,...Object.entries(Ya).flatMap(([J,H])=>[i("span",null,H),i("button",{type:"button",class:"rb-chip","aria-pressed":String(S===J),dataset:{action:J},style:"min-width:120px;justify-content:center",onClick:()=>{S=J,L()}},S===J?"키를 누르세요…":Tr(M[J])||"없음")])),T=J=>{if(!S)return;if(J.preventDefault(),J.stopPropagation(),J.key==="Escape"){S=null,L();return}if(J.key==="Backspace"||J.key==="Delete"){M=ns(M,S,""),S=null,L();return}let H=Ar(J);H&&(M=ns(M,S,H),S=null,L())};e.ownerDocument.addEventListener("keydown",T,!0),L();let A=await Pn(e,J=>En("단축키 설정",520,i("span",{class:"rb-muted",style:"white-space:normal"},`줄을 누르고 새 키를 눌러요. 지우려면 Backspace. 다른 동작과 겹치면 그쪽은 비워져요.${$t()?" 맥은 ⌘가 주 보조키예요(⌃ Control·⌥ Option도 따로 쓸 수 있어요).":""}`),q,i("div",{class:"btns"},B("기본값",{kind:"ghost",onClick:()=>{M={...Qa},L()}}),B("취소",{kind:"ghost",onClick:()=>J(!1)}),B("저장",{kind:"primary",id:"sds-keys-save",onClick:()=>J(!0)}))));e.ownerDocument.removeEventListener("keydown",T,!0),A&&(n.keys=M,await n.sd.setPrefs({keys2:M}),n.paintTools(),n.toast("단축키를 저장했어요"))}async function R(M,S){let q="merge";return O.textContent=E.merge,Pn(e,L=>En(`‘${S}’ 템플릿 적용`,500,i("span",{class:"rb-muted",style:"white-space:normal"},`씬이 이미 있는 캐릭터가 ${M}명이에요. 어떻게 할까요? (처음 상태인 캐릭터는 그냥 템플릿 씬으로 채워요)`),Tn([["merge","합치기"],["replace","바꾸기"]],q,T=>{q=T,O.textContent=E[T]},"적용 방식"),O,i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>L(null)}),B("적용",{kind:"primary",id:"sds-tpl-ok",onClick:()=>L(q)}))))}var E={merge:"있는 씬은 그대로 두고, 템플릿에만 있는 씬을 뒤에 더해요.",replace:"씬 목록을 템플릿대로 바꿔요. 이름이 같은 씬은 프롬프트만 바뀌고 그림은 남아요. 템플릿에 없는 씬은 빠져요(되돌리기 가능)."},O=i("span",{style:"white-space:normal;font-size:13px"},E.merge);async function G({apply:M}){let S=i("div",{style:"display:flex;flex-direction:column;gap:8px"}),q=async()=>{let T=await n.sd.loadTemplates();wn(S,...T.length?T.map((A,J)=>i("div",{style:"display:flex;gap:8px;align-items:center;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);padding:8px 10px"},i("div",{style:"flex:1;min-width:0;display:flex;flex-direction:column"},i("b",null,A.name),i("span",{class:"rb-muted",style:"font-size:12px;white-space:normal"},`씬 ${A.scenes.length}개 · ${A.scenes.slice(0,6).map(H=>H.name).join(", ")}${A.scenes.length>6?" …":""}`)),B("적용",{size:"sm",kind:"primary",onClick:async()=>{L?.(!0),await M(A)}}),B("",{size:"sm",kind:"ghost",icon:"edit",title:"이름 바꾸기",onClick:async()=>{let H=await Xn(e,{title:"템플릿 이름",label:"이름",value:A.name});H?.trim()&&(T[J]={...A,name:H.trim()},await n.sd.saveTemplates(T),q())}}),B("",{size:"sm",kind:"ghost",icon:"download",title:"파일로 내보내기",onClick:()=>ze(`${A.name}.dusk-template.json`,Qo(A),"application/json")}),B("",{size:"sm",kind:"ghost",icon:"trash",title:"지우기",onClick:async()=>{await zn(e,{title:`‘${A.name}’ 템플릿을 지울까요?`,ok:"지우기",danger:!0})&&(T.splice(J,1),await n.sd.saveTemplates(T),q())}}))):[i("span",{class:"rb-muted",style:"white-space:normal"},"저장한 템플릿이 없어요. 캐릭터를 연 뒤 ‘씬을 템플릿으로 저장’하거나 SDStudio 씬 템플릿 파일을 가져와요.")])},L=null;await q(),await Pn(e,T=>(L=T,En("템플릿 관리",620,S,i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>T(!0)})))))}async function on({count:M}){let S=n.target.kind==="module"?[["assets","모듈 에셋"]]:[["additionalAssets","추가 에셋"],["emotionImages","감정 이미지"]],q=S.some(A=>A[0]===n.prefs.putSlot)?n.prefs.putSlot:S[0][0],L=n.prefs.dup??"number",T=i("input",{class:"rb-input",id:"sds-put-name",placeholder:"비우면 씬 이름"});return Pn(e,A=>En(`고른 그림 ${M}장을 넣을까요?`,480,i("span",{class:"rb-muted",style:"white-space:normal"},`고른 그림만 넣어요. 형식은 설정대로(${{png:"원본 PNG",webp:"WebP",avif:"AVIF"}[n.prefs.putFormat]??"WebP"}) 바꿔요.`),S.length>1?Cn("넣을 자리",Tn(S,q,J=>{q=J},"넣을 자리")):null,Cn("이름",T),Cn("같은 이름이 이미 있으면",Tn([["number","번호 붙여 더하기"],["replace","그림 바꾸기"]],L,J=>{L=J},"같은 이름")),i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>A(null)}),B("넣기",{kind:"primary",id:"sds-put-ok",onClick:()=>A({slot:q,name:T.value.trim(),dup:L})}))))}async function rn({rows:M,names:S,title:q="즐겨찾기를 봇에 넣기"}){let L=n.target.kind==="module"?[["assets","모듈 에셋"]]:[["additionalAssets","추가 에셋"],["emotionImages","감정 이미지"]],T=L.some(kn=>kn[0]===n.prefs.putSlot)?n.prefs.putSlot:L[0][0],A=n.prefs.dup??"number",J=M.map(()=>!0),H=i("div",{class:"sds-exp-list",id:"sds-exp-list"}),N=i("span",{class:"rb-muted",style:"white-space:normal;font-size:12.5px"}),D=null,U=kn=>{let Mn=S[T]??new Set,Hn=kn.nameFor(T).toLowerCase();return kn.it.sent&&Mn.has(kn.it.sent.toLowerCase())?["sent","이미 넣음"]:Mn.has(Hn)?["dup",A==="replace"?"바꿈":"같은 이름 있음 → 번호"]:["new","새로"]};M.forEach((kn,Mn)=>{U(kn)[0]!=="new"&&(J[Mn]=!1)});let Q=()=>{let kn={new:0,dup:0,sent:0};wn(H,...M.map((Hn,se)=>{let[Gn,pn]=U(Hn);return J[se]&&kn[Gn]++,i("label",{class:"sds-exp-row",dataset:{st:Gn}},i("input",{type:"checkbox",checked:J[se],"aria-label":`${Hn.nameFor(T)} 넣기`,onChange:qr=>{J[se]=qr.target.checked,Q()}}),n.thumb(Hn.it.path,{now:!0}),i("span",{class:"nm",title:Hn.nameFor(T)},Hn.nameFor(T),i("small",{class:"rb-muted",style:"display:block;font-weight:500"},Hn.label)),i("span",{class:["st",Gn]},pn))}));let Mn=J.filter(Boolean).length;N.textContent=`넣을 그림 ${Mn}장 · 새로 ${kn.new} · 같은 이름 ${kn.dup}${kn.sent?` · 이미 넣은 것 ${kn.sent}`:""} — 형식은 설정대로(${{png:"원본 PNG",webp:"WebP",avif:"AVIF"}[n.prefs.putFormat]??"WebP"}), 이름 끝 확장자는 바뀔 수 있어요.`,D&&(D.disabled=!Mn,D.lastChild.textContent=`${Mn}장 넣기`)},fn=kn=>{J.fill(kn),Q()},en=()=>{M.forEach((kn,Mn)=>{J[Mn]=U(kn)[0]!=="sent"}),Q()};return Pn(e,kn=>(D=B("넣기",{kind:"primary",id:"sds-exp-ok",onClick:()=>{let Mn=J.flatMap((Hn,se)=>Hn?[se]:[]);Mn.length&&kn({idx:Mn,slot:T,dup:A})}}),Q(),En(q,620,L.length>1?Cn("넣을 자리",Tn(L,T,Mn=>{T=Mn,en()},"넣을 자리")):null,Cn("같은 이름이 이미 있으면",Tn([["number","번호 붙여 더하기"],["replace","그림 바꾸기"]],A,Mn=>{A=Mn,Q()},"같은 이름")),i("div",{class:"sds-row",style:"gap:6px;flex-wrap:wrap"},B("모두",{size:"sm",kind:"ghost",onClick:()=>fn(!0)}),B("안 넣은 것만",{size:"sm",kind:"ghost",id:"sds-exp-unsent",onClick:en}),B("모두 풀기",{size:"sm",kind:"ghost",onClick:()=>fn(!1)})),H,N,i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>kn(null)}),D))))}async function un({projs:M,hasImages:S}){let q=M.map(()=>!0),L=M.reduce((D,U)=>D+U.favCount,0),T=S?L?"fav":"all":"none",A=i("div",{class:"sds-exp-list",id:"sds-bk-list"}),J=i("span",{class:"rb-muted",style:"white-space:normal;font-size:12.5px"}),H=null,N=()=>{wn(A,...M.map((Q,fn)=>i("label",{class:"sds-exp-row"},i("input",{type:"checkbox",checked:q[fn],"aria-label":`${Q.name} 가져오기`,onChange:en=>{q[fn]=en.target.checked,N()}}),i("span",{class:"nm",title:Q.name},Q.name,i("small",{class:"rb-muted",style:"display:block;font-weight:500"},[Q.folder&&`폴더 ${Q.folder}`,`씬 ${Q.tpl.scenes.length}`,S&&`그림 ${Q.count}`,S&&`즐겨찾기 ${Q.favCount}`].filter(Boolean).join(" · "))))));let D=M.filter((Q,fn)=>q[fn]),U=T==="none"?0:D.reduce((Q,fn)=>Q+(T==="all"?fn.count:fn.favCount),0);J.textContent=`캐릭터 ${D.length}명으로 가져와요${U?` · 그림 ${U}장`:""}. 폴더는 같은 이름 폴더에 넣고, 같은 이름 캐릭터가 있으면 번호를 붙여요. 상위·제외 프롬프트는 비어 있을 때만 채워요.`,H&&(H.disabled=!D.length,H.lastChild.textContent=`${D.length}명 가져오기`)};return Pn(e,D=>(H=B("가져오기",{kind:"primary",id:"sds-bk-ok",onClick:()=>{let U=q.flatMap((Q,fn)=>Q?[fn]:[]);U.length&&D({idx:U,mode:T})}}),N(),En("SDStudio 백업 가져오기",600,i("span",{class:"rb-muted",style:"white-space:normal;font-size:12.5px"},"SDStudio 프로젝트 하나가 캐릭터 하나가 돼요. 씬 구성·조각·앞쪽 프롬프트(외형)를 가져오고, 그림은 리스 에셋 저장소에 저장해요."),S?Cn("그림",Tn([["fav","즐겨찾기만"],["all","모두"],["none","그림 없이"]],T,U=>{T=U,N()},"가져올 그림")):i("span",{class:"rb-muted",style:"font-size:12.5px"},"이 파일에는 그림이 없어 씬 구성만 가져와요."),A,J,i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>D(null)}),H))))}function g({title:M,name:S="",en:q="",ok:L="만들기"}){let T=i("input",{type:"text",class:"rb-input",value:S,placeholder:"예: 시로코","data-autofocus":"",id:"sds-cname"}),A=i("input",{type:"text",class:"rb-input",value:q,placeholder:"예: shiroko (비우면 표기 이름 사용)",id:"sds-cen"}),J=()=>({name:T.value.trim(),en:A.value.trim().replace(/[\\/:*?"<>|]/g,"_")});return Pn(e,H=>{for(let N of[T,A])N.addEventListener("keydown",D=>{D.key==="Enter"&&T.value.trim()&&H(J())});return En(M,420,Cn("표기 이름(화면·로어북)",T),Cn("영어 이름(이미지 내보내기·에셋 이름)",A),i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>H(null)}),B(L,{kind:"primary",id:"sds-cok",onClick:()=>T.value.trim()&&H(J())})))})}function yn({title:M,name:S="",en:q="",kind:L="",prompt:T="",ok:A="만들기"}){let J=L,H=i("input",{type:"text",class:"rb-input",value:q,placeholder:"예: swimsuit — 비우면 폴더 이름",id:"sds-fen"}),N=i("textarea",{class:"rb-input",rows:3,id:"sds-fprompt",placeholder:"예: school uniform, halo — 이 폴더(안의 폴더 포함) 캐릭터 프롬프트 앞에 붙어요"},T),D=()=>({name:U.value.trim(),en:H.value.trim(),kind:J,prompt:N.value}),U=i("input",{type:"text",class:"rb-input",value:S,placeholder:"예: 수영복 / 아비도스","data-autofocus":"",id:"sds-fname"});return Pn(e,Q=>{for(let fn of[U,H])fn.addEventListener("keydown",en=>{en.key==="Enter"&&U.value.trim()&&Q(D())});return En(M,460,Cn("표기 이름(화면·로어북)",U),Cn("영어 이름(이미지 내보내기·에셋 이름)",H),Cn("무엇으로 묶나요",Tn([["outfit","캐릭터"],["group","소속"],["","그 밖"]],J,fn=>{J=fn},"폴더 종류")),Cn("폴더 프롬프트",N,i("span",{class:"rb-muted",style:"font-size:12px;white-space:normal"},"상위 폴더 프롬프트 → 하위 폴더 프롬프트 → 캐릭터 외형 순으로 이어져요.")),i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>Q(null)}),B(A,{kind:"primary",id:"sds-fok",onClick:()=>U.value.trim()&&Q(D())})))})}async function nn(){let M=n.sd.tags();if(!M)try{M=await n.sd.loadTags()}catch(D){n.toast(`${D?.message??D} — 설정 → 태그 자동완성에서 파일로 불러올 수 있어요`,{error:!0});return}let S=()=>n.prefs.artistFav??[],q=async D=>{n.prefs.artistFav=D,await n.sd.setPrefs({artistFav:D})},L=i("input",{class:"rb-input",type:"search",id:"sds-art-q",placeholder:"작가 이름 찾기(두 글자부터)","data-autofocus":""}),T=i("div",{class:"sds-artlist",id:"sds-art-list"}),A=D=>new RegExp(`(^|,)\\s*artist:${D.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}\\s*(,|$)`,"i").test(n.proj.settings.top??""),J=D=>{let U=String(n.proj.settings.top??"").replace(/\s*,?\s*$/,"");n.set(Ln(n.proj,{top:A(D)?U:`${U}${U?", ":""}artist:${D}`})),n.paintLeft(),N()},H=(D,U)=>i("div",{class:"it"},i("button",{type:"button",class:["sds-ib",S().includes(D)&&"on"],title:"자주 쓰는 작가","aria-label":"자주 쓰는 작가",onClick:async()=>{await q(S().includes(D)?S().filter(Q=>Q!==D):[...S(),D]),N()}},sn("star",16)),i("span",{class:"w"},D),U!=null?i("span",{class:"rb-muted",style:"font-size:12px"},Yt(U)):null,B(A(D)?"넣음":"넣기",{size:"sm",kind:A(D)?"ghost":"primary",disabled:A(D),onClick:()=>J(D)})),N=()=>{let D=L.value.trim(),U=D.length>=2?(()=>{let Q=[],fn=Ie(D);for(let en=0;en<M.size&&Q.length<400;en++)M.cats[en]===1&&!M.redirs[en]&&M.keys[en].includes(fn)&&Q.push(en);return Q.sort((en,kn)=>M.freqs[kn]-M.freqs[en]).slice(0,40)})():[];wn(T,S().length?i("small",{class:"rb-muted"},"자주 쓰는 작가"):null,...S().map(Q=>H(Q,null)),D.length>=2?i("small",{class:"rb-muted"},U.length?`찾은 작가 ${U.length}`:"없어요"):i("small",{class:"rb-muted"},"이름을 두 글자 이상 쳐요. 넣으면 상위 프롬프트 끝에 artist:이름 으로 붙어요."),...U.map(Q=>H(M.words[Q],M.freqs[Q])))};L.addEventListener("input",()=>N()),N(),await Pn(e,D=>En("작가 태그(그림체)",520,L,T,i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>D()}))))}return{artists:nn,sampling:o,charPrompts:c,pieces:p,vibes:w,refs:x,savePreset:k,loadPreset:j,check:z,help:_,token:$,settings:b,put:on,exportPreview:rn,backupImport:un,folderDialog:yn,charNames:g,keysDialog:F,templateChoice:R,templateManager:G,tutorial:f}}function ol(n,{label:e,onChange:t,disabled:a}={}){let o=Gt(n,{label:e,disabled:a,onChange:(c,p)=>{Wt(p,c),t?.(c,p)}});return i("label",{class:"sds-sw",style:"display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600"},o,e?i("span",null,e):null)}var pi=async(n,e,t)=>{try{await navigator.clipboard.writeText(String(e)),n.toast(`${t}을 복사했어요`)}catch{n.toast("복사하지 못했어요",{error:!0})}};function es(n,e,t=0){let a=Math.max(0,Math.min(e.length-1,t)),o=null,c=i("img",{alt:"크게 보기",id:"sds-lb-img"}),p=i("div",{class:"stage"},c),s=i("aside",{class:"info",id:"sds-lb-info"}),w=i("button",{type:"button",class:"nav",style:"left:12px","aria-label":"이전 그림",onClick:()=>z(-1)},sn("chevL",22)),x=i("button",{type:"button",class:"nav",style:"right:12px","aria-label":"다음 그림",onClick:()=>z(1)},sn("chevR",22));p.append(w,x);let m=i("div",{class:"rb-full-head",style:"min-height:52px"}),k=i("div",{class:"sds-over",role:"dialog","aria-label":"그림 크게 보기",id:"sds-lightbox",tabIndex:-1},m,i("div",{class:"sds-lb"},p,s)),j=()=>{o&&URL.revokeObjectURL(o),k.remove(),n.paintBody()},z=R=>{e.length&&(a=(a+R+e.length)%e.length,$())},_=()=>e[a],f=()=>{let R=_(),E=mn(n.proj,R.cid,R.sid);return{it:R,sc:E,c:vn(n.proj,R.cid),im:E?.images.find(O=>O.path===R.path)}};async function $(){let{it:R,sc:E,c:O,im:G}=f();if(!G)return e.splice(a,1),e.length?(a=Math.min(a,e.length-1),$()):j();w.hidden=x.hidden=e.length<2,wn(m,i("button",{type:"button",class:"rb-icon-btn","aria-label":"닫기",onClick:j},sn("x",20)),i("div",{class:"ttl"},i("small",null,`${O.name} › ${E.name}`),i("b",null,`${a+1} / ${e.length}`)));let on=Ce(E)===G.path&&!!E.cover,rn=(un,g,yn,nn={})=>B(un,{size:"sm",icon:g,...nn,onClick:yn});wn(s,i("div",{style:"display:flex;gap:8px;align-items:center"},i("button",{type:"button",class:["sds-ib",G.fav&&"on"],id:"sds-lb-fav",title:"즐겨찾기 (F)","aria-pressed":String(G.fav),onClick:()=>b()},sn("star",18)),i("b",{style:"flex:1"},G.rank?`${G.rank}위`:G.fav?"즐겨찾기":""),G.from?i("span",{class:"rb-badge"},{img2img:"변형",infill:"인페인트",upscale:"업스케일"}[G.from]??ke[G.from]??G.from):null),i("div",{class:"sds-acts"},rn(G.pick?"고름 ✓":"보낼 그림으로 고르기","check",()=>{n.togglePick(R),$()},{id:"sds-lb-pick",kind:G.pick?"primary":""}),rn("이 그림만 봇에 넣기","download",()=>n.quickPut([{path:G.path,name:E.name,cid:R.cid,sid:R.sid}]),{id:"sds-lb-put"}),rn("넣는 방법…","sliders",()=>n.putPaths([{path:G.path,name:E.name,cid:R.cid,sid:R.sid}])),rn(on?"씬 대표":"씬 대표로","check",()=>{n.set(On(n.proj,R.cid,R.sid,{cover:G.path})),$()},{disabled:on}),rn("캐릭터 대표로","character",()=>{n.set(Jn(n.proj,R.cid,{cover:G.path})),n.toast("캐릭터 카드 대표로 했어요")})),i("div",{class:"sds-acts"},rn("변형","refresh",()=>F("img2img")),rn("인페인트","brush",()=>dl(n,R,G)),rn("업스케일","size",()=>F("upscale")),rn("디렉터 도구","sparkle",un=>In(n.ctx.win,un.currentTarget,Object.entries(ke).map(([g,yn])=>({label:yn,onClick:()=>F(g)}))))),i("div",{class:"sds-acts"},rn("비교에 넣기","split",()=>{n.addCompare(R),n.toast("비교 모드에 넣었어요")}),rn("이 시드로 고정","zap",()=>{G.seed&&(n.set(Ln(n.proj,{seed:{mode:"fixed",value:G.seed}})),n.paintLeft(),n.toast(`시드 ${G.seed}로 고정했어요`))},{disabled:!G.seed}),rn("내려받기","download",async()=>ze(`${O.name}_${E.name}_${a+1}.png`,new Blob([await n.bytes(G.path)],{type:"image/png"}))),rn("목록에서 빼기","trash",()=>P(),{kind:"danger"})),i("div",{style:"display:flex;gap:8px;align-items:center;font-size:13px"},i("span",{class:"rb-muted"},"시드"),i("b",{style:"flex:1"},G.seed??"-"),G.seed?B("복사",{size:"sm",kind:"ghost",onClick:()=>pi(n,G.seed,"시드")}):null),G.w?i("div",{class:"rb-muted",style:"font-size:13px"},`${G.w}×${G.h}`):null,G.prompt?i("div",{style:"display:flex;flex-direction:column;gap:6px"},i("div",{style:"display:flex;align-items:center"},i("span",{class:"rb-label",style:"flex:1"},"프롬프트"),B("복사",{size:"sm",kind:"ghost",onClick:()=>pi(n,G.prompt,"프롬프트")})),i("pre",null,G.prompt)):null);for(let un of s.children)un.style.flexShrink="0";k.contains(document.activeElement)||k.focus({preventScroll:!0});try{let un=await n.url(G.path);if(_()?.path!==G.path){URL.revokeObjectURL(un);return}o&&URL.revokeObjectURL(o),o=un,c.src=un}catch{c.removeAttribute("src")}}function b(){let{it:R,im:E}=f();n.set(xe(n.proj,R.cid,R.sid,E.path,{fav:!E.fav})),$(),n.paintBody?.()}async function P(){let{it:R}=f();if(await zn(n.ctx.win,{title:"목록에서 뺄까요?",body:"이 화면 목록에서만 빠져요. 리스 에셋 저장소 파일과 이미 봇에 넣은 에셋은 그대로예요.",ok:"빼기",danger:!0})){if(n.set(Ke(n.proj,R.cid,R.sid,[R.path])),e.splice(a,1),!e.length)return j();a=Math.min(a,e.length-1),$()}}async function F(R){let{it:E,sc:O,im:G}=f(),on=R==="img2img"?await il(n,G,O):R==="upscale"?await ll(n,G):ke[R]?await cl(n,R):null;if(!on)return;let rn=await n.derive(E,R,on);rn&&(e.splice(a,0,{cid:E.cid,sid:E.sid,path:rn}),$())}k.addEventListener("keydown",R=>{n.ctx.win.querySelector(".rb-modal, .rb-menu")||(R.key==="Escape"?(R.stopPropagation(),j()):R.key==="ArrowLeft"?z(-1):R.key==="ArrowRight"?z(1):R.key==="f"||R.key==="F"?b():R.key==="Delete"&&P())}),n.el.appendChild(k),k.focus(),$()}async function il(n,e,t){let a=.7,o=0,c=Vn({value:e.prompt||"",rows:4,label:"변형 프롬프트"}),p=i("span",{class:"rb-muted"},`세기 ${a}`),s=i("span",{class:"rb-muted"},`노이즈 ${o}`);return Pn(n.ctx.win,w=>i("div",{class:"rb-dialog",role:"dialog","aria-label":"변형",style:"max-width:520px"},i("h3",{class:"rb-h3"},"이미지 변형(img2img)"),i("span",{class:"rb-muted",style:"white-space:normal"},`이 그림을 바탕으로 다시 그려요. 결과는 ‘${t.name}’ 씬에 더해져요.`),i("span",{class:"rb-label"},"프롬프트"),c,p,i("input",{type:"range",min:.01,max:.99,step:.01,value:a,onInput:x=>{a=Number(x.target.value),p.textContent=`세기 ${a}`}}),s,i("input",{type:"range",min:0,max:.99,step:.01,value:o,onInput:x=>{o=Number(x.target.value),s.textContent=`노이즈 ${o}`}}),i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>w(null)}),B("변형",{kind:"primary",id:"sds-i2i-ok",onClick:()=>w({strength:a,noise:o,prompt:c.textarea.value})}))))}async function ll(n,e){let t=null;try{let a=Fe(await n.bytes(e.path));t=eo(a.width,a.height)}catch(a){return n.toast(a?.message??String(a),{error:!0}),null}return await zn(n.ctx.win,{title:"2배로 키울까요?",body:`NovelAI 업스케일은 Anlas ${t}가 들어요(서버가 최종 결정). 결과는 같은 씬에 더해져요.`,ok:"업스케일"})?{}:null}async function cl(n,e){if(e!=="colorize"&&e!=="emotion")return await zn(n.ctx.win,{title:`${ke[e]}`,body:"NovelAI 디렉터 도구로 이 그림을 바꿔요. 결과는 같은 씬에 더해져요. Anlas가 들 수 있어요.",ok:"하기"})?{}:null;let t="happy",a=0,o=i("input",{class:"rb-input",placeholder:e==="emotion"?"더할 말(선택)":"예: red hair, blue eyes"});return Pn(n.ctx.win,c=>i("div",{class:"rb-dialog",role:"dialog","aria-label":ke[e],style:"max-width:480px"},i("h3",{class:"rb-h3"},ke[e]),e==="emotion"?i("select",{class:"rb-input",id:"sds-emotion",onChange:p=>{t=p.target.value}},...Zs.map(p=>i("option",{value:p,selected:p===t},p))):null,o,i("span",{class:"rb-label"},"약하게(0~5)"),Tn([0,1,2,3,4,5].map(p=>[String(p),String(p)]),"0",p=>{a=Number(p)},"약하게"),i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>c(null)}),B("하기",{kind:"primary",onClick:()=>c({emotion:t,prompt:o.value,defry:a})}))))}async function dl(n,e,t){let a=await n.bytes(t.path),o=Fe(a)??{width:t.w||832,height:t.h||1216},c=new Image,p=URL.createObjectURL(new Blob([a],{type:"image/png"}));await new Promise(G=>{c.onload=G,c.onerror=G,c.src=p});let s=i("canvas",{width:o.width,height:o.height,id:"sds-inpaint-canvas",style:"cursor:crosshair"}),w=Object.assign(document.createElement("canvas"),{width:o.width,height:o.height}),x=s.getContext("2d"),m=w.getContext("2d"),k=64,j=!1,z=1,_=!0,f=!1,$=null,b=()=>{x.clearRect(0,0,o.width,o.height),x.drawImage(c,0,0,o.width,o.height),x.globalAlpha=.45,x.drawImage(w,0,0),x.globalAlpha=1},P=G=>{let on=s.getBoundingClientRect();return{x:(G.clientX-on.left)*(o.width/on.width),y:(G.clientY-on.top)*(o.height/on.height)}},F=(G,on)=>{m.globalCompositeOperation=j?"destination-out":"source-over",m.strokeStyle="#ff3b6b",m.lineWidth=k,m.lineCap="round",m.beginPath(),m.moveTo(G.x,G.y),m.lineTo(on.x,on.y),m.stroke(),b()};s.addEventListener("pointerdown",G=>{f=!0,$=P(G),s.setPointerCapture?.(G.pointerId),F($,$)}),s.addEventListener("pointermove",G=>{if(!f)return;let on=P(G);F($,on),$=on}),s.addEventListener("pointerup",()=>{f=!1}),b();let R=Vn({value:t.prompt||"",rows:3,label:"인페인트 프롬프트"}),E=i("span",{class:"rb-muted"},`붓 ${k}`),O=await new Promise(G=>{let on=i("div",{class:"sds-over",role:"dialog","aria-label":"인페인트",id:"sds-inpaint"},i("div",{class:"rb-full-head"},i("button",{type:"button",class:"rb-icon-btn","aria-label":"닫기",onClick:()=>{on.remove(),G(null)}},sn("x",20)),i("div",{class:"ttl"},i("small",null,"인페인트"),i("b",null,"다시 그릴 곳을 칠해요"))),i("div",{class:"sds-lb"},i("div",{class:"sds-paint"},s),i("aside",{class:"info"},E,i("input",{type:"range",min:8,max:256,value:k,onInput:rn=>{k=Number(rn.target.value),E.textContent=`붓 ${k}`}}),Tn([["paint","칠하기"],["erase","지우개"]],"paint",rn=>{j=rn==="erase"},"붓"),B("칠한 것 모두 지우기",{size:"sm",kind:"ghost",onClick:()=>{m.clearRect(0,0,o.width,o.height),b()}}),i("span",{class:"rb-label"},"프롬프트"),R,i("span",{class:"rb-label"},"세기"),i("input",{type:"range",min:.01,max:1,step:.01,value:z,onInput:rn=>{z=Number(rn.target.value)}}),ol(_,{label:"칠하지 않은 곳은 그대로 두기",onChange:rn=>{_=rn}}),B("인페인트",{kind:"primary",id:"sds-inpaint-ok",onClick:async()=>{let rn=Object.assign(document.createElement("canvas"),{width:o.width,height:o.height}),un=rn.getContext("2d");un.fillStyle="#000",un.fillRect(0,0,o.width,o.height);let g=Object.assign(document.createElement("canvas"),{width:o.width,height:o.height}),yn=g.getContext("2d");yn.drawImage(w,0,0),yn.globalCompositeOperation="source-in",yn.fillStyle="#fff",yn.fillRect(0,0,o.width,o.height),un.drawImage(g,0,0);let nn=await new Promise(M=>rn.toBlob(M,"image/png"));on.remove(),G({mask:new Uint8Array(await nn.arrayBuffer()),prompt:R.textarea.value,strength:z,keep:_})}}))));for(let rn of on.querySelector(".info").children)rn.style.flexShrink="0";n.el.appendChild(on)});URL.revokeObjectURL(p),O&&await n.derive(e,"infill",O)}async function Ge(n,e,t){let a=mn(n.proj,e,t);if(!a||a.images.length<2){n.toast("그림이 2장 이상 있어야 해요");return}let o=za(a.images.map(j=>j.path)),c=[],p=i("div",{class:"rb-full-head"}),s=i("div",{class:"pair"}),w=i("div",{class:"sds-over",role:"dialog","aria-label":"이미지 월드컵",id:"sds-cup",tabIndex:-1},p,i("div",{class:"sds-cup"},s,i("div",{class:"rb-muted",style:"text-align:center;padding:0 0 14px"},"더 마음에 드는 쪽을 눌러요 · ← → 키"))),x=j=>{for(let z of c)URL.revokeObjectURL(z);w.remove(),j&&n.paintBody()},m=j=>{o=Sa(o,j),k()};async function k(){if(Ma(o))return n.set(On(Ta(n.proj,e,t,o.ranks),e,t,{cover:Object.keys(o.ranks).find(b=>o.ranks[b]===1)??""})),n.toast("순위를 매겼어요. 1위가 씬 대표가 됐어요"),x(!0);let[j,z]=fr(o),_=o.at/2+1,f=Math.floor(o.players.length/2);wn(p,i("button",{type:"button",class:"rb-icon-btn","aria-label":"그만하기",onClick:()=>x(!1)},sn("x",20)),i("div",{class:"ttl"},i("small",null,`이미지 월드컵 · ${a.name}`),i("b",null,`${Aa(o)} ${_}/${f}`)));let $=async(b,P)=>{let F=i("button",{type:"button","aria-label":P?"오른쪽 고르기":"왼쪽 고르기",class:"sds-cup-pick",onClick:()=>m(P)});try{let R=await n.url(b);c.push(R),F.append(i("img",{src:R,alt:""}))}catch{}return F};wn(s,await $(j,0),await $(z,1)),w.contains(document.activeElement)||w.focus({preventScroll:!0})}w.addEventListener("keydown",j=>{j.key==="Escape"?(j.stopPropagation(),x(!1)):j.key==="ArrowLeft"?m(0):j.key==="ArrowRight"&&m(1)}),n.el.appendChild(w),w.focus(),k()}function ts(n,e,{start:t=0,onlyNoFav:a=!1}={}){let o=a,c=0,p=0,s=null,w=e.filter(nn=>mn(n.proj,nn.cid,nn.sid)?.images.length),x=()=>w.filter(nn=>{let M=mn(n.proj,nn.cid,nn.sid);return M?.images.length&&(!o||!oe(M)||nn===m)}),m=w[t]??null,k=i("img",{alt:"후보 그림",id:"sds-ch-img"}),j=i("button",{type:"button",class:"nav",style:"left:12px","aria-label":"이전 후보",onClick:()=>on(-1)},sn("chevL",22)),z=i("button",{type:"button",class:"nav",style:"right:12px","aria-label":"다음 후보",onClick:()=>on(1)},sn("chevR",22)),_=i("span",{class:"sds-ch-star","aria-hidden":"true"},"★"),f=i("div",{class:"stage"},k,_,j,z),$=i("div",{class:"rb-full-head",style:"min-height:52px"}),b=i("div",{class:"sds-ch-strip rb-scroll",id:"sds-ch-strip"}),P=i("div",{class:"sds-ch-acts"}),F=i("div",{class:"sds-over",role:"dialog","aria-label":"대표 고르기",id:"sds-chooser",tabIndex:-1},$,i("div",{class:"sds-ch"},f,b,P)),R=()=>{s&&URL.revokeObjectURL(s),F.remove(),n.paint()},E=()=>x(),O=()=>{let M=E()[c];return M?{x:M,sc:mn(n.proj,M.cid,M.sid),c:vn(n.proj,M.cid)}:null},G=()=>{let nn=O();return nn?ne(nn.sc):[]};function on(nn){let M=G().length;M&&(p=(p+nn+M)%M,yn())}function rn(nn){let M=E();if(!M.length)return;c=Math.max(0,Math.min(M.length-1,c+nn)),m=M[c],p=0;let S=E();c=Math.max(0,S.indexOf(m)),yn()}function un(nn){let M=O(),S=G()[p];!M||!S||(n.set(xe(n.proj,M.x.cid,M.x.sid,S.path,{fav:nn??!S.fav})),p=Math.max(0,G().findIndex(q=>q.path===S.path)),yn())}function g(){let nn=G()[p];if(!nn)return;nn.fav||un(!0);let M=E(),S=M.indexOf(m);if(S>=M.length-1){n.toast("마지막 씬이에요");return}m=M[S+1],p=0,c=Math.max(0,E().indexOf(m)),yn()}async function yn(){let nn=E();if(!nn.length)return n.toast(o?"즐겨찾기 없는 씬이 없어요":"그림이 있는 씬이 없어요"),R();(!m||!nn.includes(m))&&(m=nn[Math.min(c,nn.length-1)]),c=nn.indexOf(m);let{x:M,sc:S,c:q}=O(),L=ne(S);p=Math.max(0,Math.min(p,L.length-1));let T=L[p],A=L.filter(H=>H.fav).length,J=w.filter(H=>{let N=mn(n.proj,H.cid,H.sid);return N&&!oe(N)}).length;if(wn($,i("button",{type:"button",class:"rb-icon-btn","aria-label":"닫기",onClick:R},sn("x",20)),i("div",{class:"ttl"},i("small",null,`씬 ${c+1} / ${nn.length} · 즐겨찾기 없는 씬 ${J}`),i("b",{id:"sds-ch-title"},`${q.name} › ${S.name}`)),i("span",{class:"sp",style:"flex:1"}),i("label",{class:"sds-sw",style:"display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer"},i("input",{type:"checkbox",id:"sds-ch-only",checked:o,onChange:H=>{o=H.target.checked,yn()}}),"즐겨찾기 없는 씬만")),_.hidden=!T?.fav,j.hidden=z.hidden=L.length<2,wn(b,...L.map((H,N)=>i("button",{type:"button",class:["sds-ch-th",N===p&&"on",H.fav&&"fav"],"aria-label":`후보 ${N+1}${H.fav?" 즐겨찾기":""}`,"aria-pressed":String(N===p),onClick:()=>{p=N,yn()},onDblclick:()=>{p=N,un()}},n.thumb(H.path,{now:!0}),i("span",{class:"n"},String(N+1)),H.fav?i("span",{class:"f"},"★"):null))),b.querySelector(".on")?.scrollIntoView?.({block:"nearest",inline:"nearest"}),wn(P,i("span",{class:"rb-muted",style:"font-size:12px"},`후보 ${p+1} / ${L.length} · 즐겨찾기 ${A}`),i("span",{class:"sp",style:"flex:1"}),B("이전 씬",{size:"sm",icon:"chevL",id:"sds-ch-prev",disabled:c<=0,onClick:()=>rn(-1)}),B(T?.fav?"즐겨찾기 풀기 (F)":"즐겨찾기 (F)",{size:"sm",icon:"sparkle",id:"sds-ch-fav",kind:T?.fav?"primary":"",onClick:()=>un()}),B("이걸로 정하고 다음 씬 (Enter)",{size:"sm",kind:"primary",icon:"check",id:"sds-ch-next",onClick:()=>g()}),B("다음 씬",{size:"sm",icon:"chevR",id:"sds-ch-skip",disabled:c>=nn.length-1,onClick:()=>rn(1)})),(!F.contains(document.activeElement)||document.activeElement===F)&&F.focus({preventScroll:!0}),!T){k.removeAttribute("src");return}try{let H=await n.url(T.path);if(G()[p]?.path!==T.path){URL.revokeObjectURL(H);return}s&&URL.revokeObjectURL(s),s=H,k.src=H}catch{k.removeAttribute("src")}}return F.addEventListener("keydown",nn=>{if(n.ctx.win.querySelector(".rb-modal, .rb-menu")||/^(INPUT|SELECT|TEXTAREA)$/.test(nn.target?.tagName??"")&&nn.target.type!=="checkbox")return;let M=nn.key;if(M==="Escape"){nn.stopPropagation(),R();return}let q={ArrowLeft:()=>on(-1),ArrowRight:()=>on(1),ArrowUp:()=>rn(-1),ArrowDown:()=>rn(1),PageUp:()=>rn(-1),PageDown:()=>rn(1),Enter:()=>g(),f:()=>un(),F:()=>un()}[M]??(/^[1-9]$/.test(M)?()=>{let L=Number(M)-1;L<G().length&&(p=L,yn())}:null);q&&(nn.preventDefault(),nn.stopPropagation(),q())}),n.el.appendChild(F),F.focus(),yn(),{close:R}}var hi=new TextDecoder,Xe=(n,e,t)=>{let a=e;for(;a<e+t&&n[a];)a++;return hi.decode(n.subarray(e,a))},pl=(n,e,t)=>parseInt(Xe(n,e,t).trim()||"0",8)||0,hl=/\.(png|webp|jpe?g|avif)$/i;async function rs(n,e){let t=[],a=0,o=null,c=null;for(;a+512<=e;){let p=await n(a,512);if(p.every(z=>z===0))break;let s=pl(p,124,12),w=String.fromCharCode(p[156]||48),x=a+512,m=Xe(p,0,100),k=Xe(p,257,6),j=k.startsWith("ustar")?Xe(p,345,155):"";if(j&&(m=`${j}/${m}`),w==="L")o=Xe(await n(x,s),0,s);else if(w==="x"){let z=hi.decode(await n(x,s));c={};for(let _ of z.split(`
+`)){let f=/^\d+ ([^=]+)=(.*)$/.exec(_);f&&(c[f[1]]=f[2])}}else w==="g"||(c?.path?m=c.path:o&&(m=o),(w==="0"||w==="\0"||w==="7")&&t.push({name:m.replace(/^\.\//,""),off:x,size:s}),o=null,c=null);a=x+Math.ceil(s/512)*512}return t}var as=n=>n.length>=262&&Xe(n,257,5)==="ustar";async function ui(n,e){let t=new Set(n.map(s=>s.name)),a=null;t.has("_backup.json")?a=await e("_backup.json").catch(()=>null):t.has("_folder.json")&&(a=await e("_folder.json").catch(()=>null));let o=n.filter(s=>/(^|\/)project\.json$/.test(s.name)).map(s=>s.name.slice(0,-12)),c=s=>{if(a?.type==="sdstudio-folder-backup")return a.folder||"";let w=(a?.projects??[]).find(x=>x&&(x.name===s||x===s));return(w&&typeof w=="object"?w.folder:"")||""},p=[];for(let s of o){let w;try{w=await e(`${s}project.json`)}catch{continue}if(!w||typeof w.scenes!="object")continue;let x=String(w.name||s.replace(/\/$/,"").split("/").pop()||"SDStudio").slice(0,80);p.push(ss(w,{name:x,folder:c(s.replace(/\/$/,""))||c(x),root:s,files:n}))}return p}function ss(n,{name:e=n?.name||"SDStudio",folder:t="",root:a="",files:o=[]}={}){let c=n.selectedWorkflow?.workflowType||"SDImageGen",p=n.selectedWorkflow?.presetName,s=n.presets?.[c]??n.presets?.SDImageGen??[],w=(Array.isArray(s)?s.find(_=>_?.name===p)??s[0]:null)??{},x=Pt(n);x.scenes=x.scenes.filter((_,f)=>(Object.values(n.scenes)[f]?.type??"scene")==="scene");let m={},k=0,j=0,z=new Map;for(let _ of o){if(!_.name.startsWith(`${a}outs/`)||!hl.test(_.name))continue;let f=_.name.slice(`${a}outs/`.length),$=f.lastIndexOf("/");if($<0)continue;let b=f.slice(0,$),P=f.slice($+1);z.has(b)||z.set(b,[]),z.get(b).push({file:P,entry:_.name})}for(let[_,f]of Object.entries(n.scenes??{})){if(!f||f.type&&f.type!=="scene")continue;let $=String(f.name||_),b=z.get($)??[],P=new Set((f.mains??[]).map(E=>String(E).split("/").pop())),F=(f.imageMap??[]).map(E=>String(E).split("/").pop()),R=E=>{let O=F.indexOf(E);return O<0?1e9:O};b.sort((E,O)=>R(E.file)-R(O.file)||E.file.localeCompare(O.file)),m[$]=b.map(E=>({...E,fav:P.has(E.file)})),k+=b.length,j+=m[$].filter(E=>E.fav).length}return{name:e,folder:String(t||""),prompt:String(w.frontPrompt??""),back:String(w.backPrompt??""),neg:String(w.uc??""),tpl:x,images:m,count:k,favCount:j}}function gi(n,e,{mode:t="fav"}={},a){let o=n,c=[],p=new Set(n.chars.map(x=>x.name)),s=x=>{if(!p.has(x))return p.add(x),x;let m=2;for(;p.has(`${x} ${m}`);)m++;return p.add(`${x} ${m}`),`${x} ${m}`};for(let x of e){o=a?ye(o,{name:s(x.name),prompt:x.prompt},a):ye(o,{name:s(x.name),prompt:x.prompt});let m=o.chars[o.chars.length-1];if(x.tpl.scenes.length&&(o=pe(o,[m.id],x.tpl,"replace",a).project),x.folder){let j=o.folders.find(z=>z.name===x.folder&&!z.parent);j||(o=a?Ne(o,{name:x.folder},a):Ne(o,{name:x.folder}),j=o.folders[o.folders.length-1]),o=ut(o,[m.id],{to:j.id})}if(t==="none")continue;let k=vn(o,m.id);for(let j of k.scenes)(x.images[j.name]??[]).filter(_=>t==="all"||_.fav).forEach((_,f)=>c.push({cid:m.id,sid:j.id,entry:_.entry,fav:_.fav,order:f}))}let w=e[0];if(w){let x=o.settings,m={};!String(x.back??"").trim()&&w.back.trim()&&(m.back=w.back),!String(x.neg??"").trim()&&w.neg.trim()&&(m.neg=w.neg),Object.keys(m).length&&(o=Ln(o,m))}return{project:o,jobs:c}}var os=globalThis.__duskLib?.["src/vendor/fflate-full.js"];if(!os)throw new Error("Dusk 코어에 src/vendor/fflate-full.js가 없어요 — Dusk를 업데이트해 주세요");{let n=["Decompress","strFromU8","strToU8","unzipSync","zipSync"].filter(e=>!(e in os));if(n.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/vendor/fflate-full.js에 없는 기능: "+n.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{Decompress:Pd,strFromU8:$d,strToU8:zd,unzipSync:mi,zipSync:Md}=os;var fi=[["scene","씬 모드"],["gallery","갤러리 모드"],["search","검색 모드"],["compare","비교 모드"],["bulk","동시편집"]],gl={outfit:"캐릭터",group:"소속"},ml=[["default",""],["smile","smile"],["happy","happy, smile, open mouth"],["laughing","laughing, closed eyes"],["angry","angry, v-shaped eyebrows"],["sad","sad, frown"],["crying","crying, tears"],["surprised","surprised, open mouth, wide-eyed"],["shy","shy, blush, looking away"],["embarrassed","embarrassed, blush, sweat"],["confused","confused, head tilt"],["thinking","thinking, hand on own chin"],["sleepy","sleepy, half-closed eyes"],["smug","smug, smirk"],["scared","scared, trembling"],["disgusted","disgusted"],["determined","determined, clenched hand"],["bored","bored, half-closed eyes"],["excited","excited, sparkle"],["love","heart-shaped pupils, blush"]],Er=new Map;async function is(n,e,t){if(!e?.id||e.kind!=="module"&&e.kind!=="character")return;si();let a=`${e.kind}:${e.id}`;if(Er.has(a)){let r=Er.get(a);return r.reopen(),r}let o="";if(e.kind==="module")o=(await n.svc.load({fresh:!0})).entries.find(r=>r.module.id===e.id)?.module?.name??"";else{let r=await n.api.getCharacterFromIndex(e.index);if(!r||r.chaId!==e.id)throw new Error("봇을 찾지 못했어요. 목록을 새로 고친 뒤 다시 해 주세요");o=r.name}let c=t.keyOf(e),p=n.state.sdsStore??=typeof indexedDB<"u"?Vo({local:Ko(),host:{save:(r,l,d)=>t.saveProject(r,l,d),load:async r=>({project:await t.loadProject(r),t:await t.savedAt(r)})},log:(...r)=>console.warn("[Dusk 에셋 제작 저장]",...r)}):null,s,w=0;if(p){let r=await p.open(e,c);s=r.project,w=r.t,r.missing.length&&setTimeout(()=>n.toast(`저장본에서 캐릭터 ${r.missing.length}명을 찾지 못했어요. 전체 백업(zip)이 있으면 가져와 주세요`,{error:!0,seconds:12}),500)}else s=await t.loadProject(e),w=await t.savedAt(e);let x=`dusk.sdstudio.nobot.${e.kind}:${e.id}`,m=!await t.getLocal(x,!1),k=0,j=!1,z=r=>{let l="";for(let d=0;d<r.length;d+=32768)l+=String.fromCharCode(...r.subarray(d,d+32768));return btoa(l)},_=async()=>e.kind==="module"?(await n.svc.load({fresh:!0})).entries.find(r=>r.module.id===e.id)?.module:await n.api.getCharacterFromIndex(e.index).then(r=>r?.chaId===e.id?r:null);try{let r=Oa(await _(),e.kind);r&&(k=r.t,r.t>w&&(s=Zn(JSON.parse(st(at(Uint8Array.from(atob(r.z),l=>l.charCodeAt(0)))))),n.toast("봇에 저장된 더 최근 설정으로 열었어요",{seconds:5})))}catch{}let f=(n.state.sdstudio??={})[`${e.kind}:${e.id}`]??={folder:null,charId:null,sceneId:null,mode:"scene",zoom:41,names:!0,left:(n.win.clientWidth||innerWidth)>760,q:"",compare:[],slotsOpen:!0};f.folder&&!s.folders.some(r=>r.id===f.folder)&&(f.folder=null),f.charId&&!vn(s,f.charId)&&(f.charId=null,f.sceneId=null),f.sceneId&&!mn(s,f.charId,f.sceneId)&&(f.sceneId=null);let $=new Set,b=new Map,P=new Map,F=null,R=null,E=null,O={running:!1,done:0,total:0,ctl:null,workers:1},G=ni(),on=await t.getPrefs(),rn=!1;oi({get:()=>t.tags(),enabled:()=>on.tags!==!1,offered:()=>rn,load:async()=>{rn=!0;let r=n.toast("태그 사전 받는 중…",{seconds:120});try{let l=await t.loadTags();return n.toast(`태그 ${l.size.toLocaleString()}개를 받았어요`),l}finally{r?.close?.()}}}),t.loadTags({download:!1}).catch(()=>{});let un={root:n.root?.getAttribute("style")??null,win:n.win.getAttribute("style")??null};n.root&&(n.root.style.padding="0"),Object.assign(n.win.style,{maxWidth:"none",maxHeight:"none",width:"100%",height:"100%",borderRadius:"0",border:"0"}),n.api.showContainer?.("fullscreen")?.catch?.(()=>{});let g={ctx:n,target:e,sd:t,st:f,sel:$,title:o,P:le,prefs:on,keys:on.keys2?Za(on.keys2):Za(on.keys,{v:1}),keyLabel:r=>Tr(g.keys[r])||"단축키 없음",get proj(){return s},set(r,{undo:l=!0}={}){l&&r!==s&&G.push(s,{typing:globalThis.event?.type==="input"}),s=r,clearTimeout(F),F=setTimeout(()=>g.persist(),500)},undo(){let r=G.undo(s);if(!r){g.toast("되돌릴 것이 없어요");return}s=r,M()},redo(){let r=G.redo(s);if(!r){g.toast("다시 할 것이 없어요");return}s=r,M()},persist(){clearTimeout(F),j=!0;let r=l=>{Date.now()-(g._saveErrAt??0)<3e4||(g._saveErrAt=Date.now(),n.toast(`저장하지 못했어요: ${l?.message??l}`,{error:!0}))};return p?p.save(e,c,s).catch(l=>(console.warn("[Dusk 에셋 제작 저장] 기기 저장 실패",l),t.saveProject(e,s).catch(r))):t.saveProject(e,s).catch(r)},toast:(r,l)=>n.toast(r,l),curChar:()=>f.charId?vn(s,f.charId):null,curScene:()=>f.charId&&f.sceneId?mn(s,f.charId,f.sceneId):null,remember(r,l){b.set(r,l),b.size>24&&b.delete(b.keys().next().value),P.has(r)||P.set(r,URL.createObjectURL(new Blob([l],{type:"image/png"}))),Va(l).then(d=>Ba(r,d)).catch(()=>{}),Ka(r,l)},async bytes(r){if(b.has(r))return b.get(r);let l=await Ua(r);if(l||(l=await n.assets.read(r,{prio:100}),l&&Ka(r,l)),!l)throw new Error("그림을 읽지 못했어요");return b.size>24&&b.delete(b.keys().next().value),b.set(r,l),l},async url(r){return URL.createObjectURL(new Blob([await g.bytes(r)],{type:"image/png"}))},thumb(r,{now:l=!1}={}){let d=i("img",{alt:"",loading:"lazy",dataset:{path:r,ext:"png"}});return P.has(r)?d.src=P.get(r):l?nn(r).then(h=>{h&&(d.src=h)}).catch(()=>{}):R?.observe(d),d},addCompare(r){f.compare=[...f.compare.filter(l=>l.path!==r.path),r].slice(-4)},toggleLeft(r=!f.left){f.left=r,A.hidden=!r,q.setAttribute("aria-pressed",String(r))},paint(){g.paintLeft(),g.paintTop(),g.paintTools(),g.paintBody()},paintLeft(){li(g,T)},paintTop:en,paintTools:pn,paintBody:X,putPaths:Ut,derive:n0,quickPut:me},yn=new Map;function nn(r){if(P.has(r))return Promise.resolve(P.get(r));if(yn.has(r))return yn.get(r);let l=(async()=>{let d=await Do(r);if(!d){let u=await Ua(r);if(!u&&(u=await n.assets.read(r,{prio:10}),!u))return null;d=await Va(u),Ba(r,d)}let h=URL.createObjectURL(d);return P.set(r,h),h})().finally(()=>yn.delete(r));return yn.set(r,l),l}function M(){f.charId&&!vn(s,f.charId)&&(f.charId=null,f.sceneId=null),f.sceneId&&!mn(s,f.charId,f.sceneId)&&(f.sceneId=null),f.folder&&!s.folders.some(r=>r.id===f.folder)&&(f.folder=null),$.clear(),clearTimeout(F),F=setTimeout(()=>g.persist(),300),g.paint()}g.dlg=di(g);let S=i("div",{class:"rb-full sds",role:"dialog","aria-label":"에셋 제작",id:"rb-sd-studio",tabIndex:-1});g.el=S,S.__sds=g;let q=i("button",{type:"button",class:"tab","aria-pressed":String(f.left),title:"프롬프트 에디터 열고 닫기 (F1)",onClick:()=>g.toggleLeft()},"프롬프트"),L=i("nav",{class:"sds-rail","aria-label":"옆 칸"},i("span",{class:"key"},"F1"),q),T=i("div",{class:"sds-left-body rb-scroll",id:"sds-left"}),A=i("aside",{class:"sds-left",hidden:!f.left,"aria-label":"프롬프트 에디터"},...ci(g),T),J=i("div",{class:"sds-top",id:"sds-topbar"}),H=i("div",{class:"sds-tools",id:"sds-tools",role:"toolbar","aria-label":"도구"}),N=i("div",{class:"sds-body rb-scroll",id:"sds-body"});N.addEventListener("contextmenu",r=>{r.target.closest(".sds-card,.sds-frow,input,textarea,select,button")||(r.preventDefault(),qi(r.target.closest("div")??N))}),N.addEventListener("click",r=>{f.focus&&!r.target.closest(".sds-card,.sds-frow,.rb-chip,button,input,select,textarea,label")&&Tt(null)});let D=i("div",{class:"sds-setbar"}),U=i("div",{class:"sds-qerr",id:"sds-qerr",role:"alert",hidden:!0}),Q=()=>{let r=O.running&&O.retry&&O.lastErr;U.hidden=!r,r&&(U.textContent=`다시 시도 ${O.retry}번째 — ${O.lastErr}`)},fn=i("div",{class:"sds-main"},J,U,H,D,N);S.append(L,A,fn),n.win.appendChild(S);function en(){let r=g.curChar(),l=Pa(s,r?.id??null),d=O.running?i("button",{type:"button",class:"sds-queue stop",id:"sds-run",onPointerdown:h=>{h.button===0&&Jr()},onClick:()=>Jr()},sn("stop",14),`멈추기 ${O.done}/${O.total}`):O.stopping?i("button",{type:"button",class:"sds-queue stop",id:"sds-run",disabled:!0},sn("stop",14),"멈추는 중…"):i("button",{type:"button",class:"sds-queue",id:"sds-run",disabled:!ie(s).length,title:g.prefs.boost?"부스트 모드: 토큰 여러 개로 동시에 그려요":"예약된 씬을 차례로 그려요",onClick:()=>Kt()},sn(g.prefs.boost?"bolt":"play",14),`${g.prefs.boost?"부스트 ":""}생성${ie(s).length?` ${ie(s).length}장`:""}`);wn(J,i("button",{type:"button",class:"sds-ib",style:"border:0;background:none","aria-label":f.sceneId||f.charId||f.folder||f.mode!=="scene"?"위로":"에셋 제작 닫기",title:f.sceneId||f.charId||f.folder?"한 단계 위로":"닫기",id:"sds-close",onClick:()=>se()},sn("back",20)),i("div",{class:"ttl"},i("b",null,r?"씬 갤러리":"캐릭터 갤러리"),r?i("span",{class:"sds-pill",id:"sds-combos"},`조합 ${l.combos}개`):i("span",{class:"sds-pill"},`캐릭터 ${s.chars.length}명`),i("span",{class:"sds-pill",id:"sds-reserved"},`예약된 씬 ${l.reserved}/${l.scenes}`)),i("div",{class:"sds-modes",role:"tablist","aria-label":"모드"},...fi.map(([h,u])=>i("button",{type:"button",role:"tab","aria-selected":String(f.mode===h),disabled:h==="bulk"&&!r,dataset:{mode:h},onClick:()=>Gn(h)},h==="scene"&&!r?"캐릭터 모드":u))),O.running?Hn():null,i("div",{class:"sds-run"},d,B("도움말",{size:"sm",icon:"help",onClick:()=>g.dlg.help()}),Bn("x","에셋 제작 닫기(플러그인 화면으로)",()=>Vt(),{id:"sds-quit"})))}let kn=r=>{let l=Math.max(0,Math.round(r/1e3)),d=Math.floor(l/3600),h=Math.floor(l%3600/60),u=l%60;return d?`${d}시간 ${h}분`:h?`${h}분 ${u}초`:`${u}초`};function Mn(){let r=O.total?Math.floor(O.done/O.total*100):0,l=O.total-O.done,d=Date.now()-O.t0,h=O.done?d/O.done*l:null;return`${r}% · ${O.done}/${O.total}장 · 남은 ${l}장 · ${h==null?"예상 시간 재는 중":`약 ${kn(h)} 남음`}${O.retry?` · 다시 시도 ${O.retry}번째`:""}`}function Hn(){let r=O.total?O.done/O.total*100:0;return i("div",{class:"sds-prog",id:"sds-prog",role:"progressbar","aria-valuemin":"0","aria-valuemax":"100","aria-valuenow":String(Math.floor(r))},i("div",{class:"bar"},i("i",{style:`width:${r.toFixed(1)}%`})),i("span",{class:"t"},Mn()))}function se(){if(f.mode!=="scene"&&f.mode!=="bulk")return Gn("scene");if(f.sceneId)return Ze(null);if(f.charId)return ge(null);if(f.folder){f.folder=s.folders.find(r=>r.id===f.folder)?.parent??null,f.focus=null,$.clear(),en(),pn(),X();return}Vt()}function Gn(r){f.mode=r,$.clear(),f.sceneId&&r!=="scene"&&(f.sceneId=null),en(),pn(),X()}S.addEventListener("click",r=>{r.target.closest?.(".sds-dd")||Lr()});function pn(){let r=g.curChar(),l=g.curScene(),d=s.settings.reserveDefault,h=$.size,u=!r&&f.focus?.kind==="char"?vn(s,f.focus.id):null,v=!r&&f.focus?.kind==="folder"?s.folders.find(Z=>Z.id===f.focus.id):null,C=Nt(),I=Cs().length,K=Bt().reduce((Z,cn)=>Z+ft(cn).length,0),tn=Dn(s);wn(D,i("div",{class:"sds-sets",id:"sds-sets",role:"group","aria-label":"씬 세트"},...tn.list.map(Z=>{let cn=B(Z.name,{size:"sm",kind:Z.id===tn.active?"primary":"ghost",id:`sds-set-${Z.id}`,title:`${Z.name} 세트${Z.tpl?` · 씬 프리셋 ‘${Z.tpl}’`:""} — 우클릭: 이름·프리셋·지우기`,onClick:()=>$i(Z.id)});return cn.addEventListener("contextmenu",An=>{An.preventDefault(),An.stopPropagation(),Mi(cn,Z.id)}),cn}),B("",{size:"sm",kind:"ghost",icon:"plus",id:"sds-set-add",title:"새 씬 세트",onClick:()=>zi()})));let y=(Z,cn,An,{id:fe,disabled:Ae=!1,danger:be=!1,on:tt=!1,hint:rt="",title:Wr}={})=>i("button",{type:"button",class:["sds-mi",be&&"danger",tt&&"on"],id:fe,disabled:Ae,title:Wr||rt||cn,onClick:o0=>{Lr(),An(o0)}},sn(Z,16),i("span",null,cn),rt?i("small",null,rt):null),W=()=>i("div",{class:"sds-msep"}),V=(Z,cn,An,{id:fe,primary:Ae=!1}={})=>{let be=i("div",{class:"sds-ddp",role:"menu",hidden:!0},...An.filter(Boolean)),tt=i("button",{type:"button",class:["sds-ddt",Ae&&"pri"],id:fe,title:Z||void 0,"aria-haspopup":"menu","aria-expanded":"false",onClick:rt=>{rt.stopPropagation();let Wr=be.hidden;Lr(),Wr&&(be.hidden=!1,tt.setAttribute("aria-expanded","true"),qr(be))}},cn?sn(cn,16):null,Z?i("span",null,Z):null,Z?sn("chevD",14):null);return Z||tt.setAttribute("aria-label",fe==="sds-more"?"더 보기":"메뉴"),i("div",{class:"sds-dd"},tt,be)},Y=i("div",{class:"sds-mi sds-zoom"},sn("eye",16),i("span",null,"카드 크기"),i("input",{type:"range",min:10,max:100,value:f.zoom,"aria-label":"카드 크기",id:"sds-zoom",onClick:Z=>Z.stopPropagation(),onInput:Z=>{f.zoom=Number(Z.target.value),ls(),Z.target.nextSibling.textContent=`${f.zoom}%`}}),i("span",null,`${f.zoom}%`)),dn=l?ae(r,l.id).map(Z=>({...Z,cid:r.id})):C,xn=()=>y("upload",`고른 그림 바로 넣기${dn.length?` ${dn.length}장`:""}`,()=>me(dn),{id:l?"sds-put-sel":r?"sds-put-picked":"sds-put-all",disabled:!dn.length,hint:g.keyLabel("put"),title:`고른 그림 ${dn.length}장 봇에 바로 넣기 (${g.keyLabel("put")})`}),hn=[y("importIn","SDStudio·Dusk 백업 가져오기",()=>Se(),{id:"sds-import-backup"}),y("importIn","다른 원본 파일 가져오기…",Z=>Hi(Z.currentTarget.closest(".sds-dd")??Z.currentTarget),{id:"sds-import-menu"}),y("template",r?"템플릿 적용·관리(이 캐릭터)":f.folder?"템플릿 적용·관리(이 폴더)":"템플릿 적용·관리(모두)",Z=>Qi(Z.currentTarget.closest(".sds-dd")??Z.currentTarget),{id:"sds-tpl"}),y("importIn","씬 템플릿 가져와 적용",()=>Rt(),{id:"sds-tpl-import"}),r&&!l?y("save","이 캐릭터 씬을 템플릿으로 저장",()=>zs(r),{id:"sds-tpl-save"}):null,W(),y("zip","그림 zip으로 내보내기",Z=>Oi(Z.currentTarget.closest(".sds-dd")??Z.currentTarget),{id:"sds-zip"}),r?null:y("download","프로젝트 전체 백업(zip)",()=>Ui(),{id:"sds-fullbackup"}),r&&!l?y("clip","씬 프롬프트 복사",()=>ys(r,h?[...$]:null)):null],ln=[xn(),y("redo","다시하기",()=>g.redo(),{id:"sds-redo",disabled:!G.canRedo(),hint:g.keyLabel("redo")}),y("eye",f.names?"카드 이름 숨기기":"카드 이름 보이기",()=>{f.names=!f.names,S.classList.toggle("nonames",!f.names),pn()},{id:"sds-names",on:f.names}),Y,W(),r?null:y("shield",m?"봇에도 설정 저장 중(끄기)":"봇에 설정 저장 꺼짐(켜기)",()=>t0(),{id:"sds-botsave",on:m}),y("gear","설정",()=>g.dlg.settings(),{id:"sds-settings"})],jn=()=>B(`봇에 넣기${I?` ${I}`:""}`,{kind:"primary",icon:"upload",id:"sds-put-fav",title:`즐겨찾기 ${I}장을 확인하고 봇에 넣어요 (${g.curChar()?"이 캐릭터":f.folder?"이 폴더":"전체"}) · ${g.keyLabel("putFav")}`,disabled:!I,onClick:()=>Kr()}),an,bn,Sn=Bn("undo",`되돌리기 (${g.keyLabel("undo")})`,()=>g.undo(),{disabled:!G.canUndo(),id:"sds-undo"}),$n=i("button",{type:"button",class:"sds-ddt",id:"sds-choose",title:"대표 고르기 — 씬마다 후보를 넘기며 ★ (←/→ · F · Enter)",onClick:()=>Vr()},sn("star",16),i("span",null,"대표 고르기")),qn=Bn("search","검색",()=>{Gn("search"),N.querySelector("#sds-q")?.focus()},{on:f.mode==="search"});if(h&&!l){let Z=[...$];an=[i("span",{class:"sds-selc"},`${h}개 고름`),...r?[i("button",{type:"button",class:"sds-ddt",id:"sds-rsv-all",onClick:()=>{g.set(Wn(s,r.id,d,Z)),en(),X()}},sn("calPlus",16),i("span",null,`${d}장씩 예약`)),i("button",{type:"button",class:"sds-ddt",onClick:()=>{for(let cn of $)g.set(gt(s,r.id,cn));$.clear(),X()}},sn("copy",16),i("span",null,"복제")),h===1?i("button",{type:"button",class:"sds-ddt",onClick:()=>Ge(g,r.id,Z[0])},sn("trophy",16),i("span",null,"월드컵")):null,i("button",{type:"button",class:"sds-ddt",onClick:()=>ys(r,Z)},sn("clip",16),i("span",null,"프롬프트 복사")),i("button",{type:"button",class:"sds-ddt danger",onClick:()=>Dt(Z)},sn("trash",16),i("span",null,"지우기"))]:[i("button",{type:"button",class:"sds-ddt",id:"sds-rsv-selchars",title:"고른 캐릭터의 모든 씬을 예약",onClick:()=>{let cn=s;for(let An of Z)cn=Wn(cn,An,d);g.set(cn),en(),X(),g.toast(`캐릭터 ${Z.length}명의 모든 씬을 ${d}장씩 예약했어요`)}},sn("calPlus",16),i("span",null,`${d}장씩 예약`)),i("button",{type:"button",class:"sds-ddt",title:"고른 캐릭터 예약 비우기",onClick:()=>{let cn=s;for(let An of Z)cn=bt(cn,An);g.set(cn),en(),X()}},sn("calX",16),i("span",null,"예약 비우기")),i("button",{type:"button",class:"sds-ddt",onClick:()=>{for(let cn of $)g.set(lr(s,cn));$.clear(),X()}},sn("copy",16),i("span",null,"복제")),i("button",{type:"button",class:"sds-ddt",disabled:!s.folders.length,onClick:cn=>ks(cn.currentTarget,Z)},sn("swap",16),i("span",null,"폴더에 넣기·빼기")),i("button",{type:"button",class:"sds-ddt danger",onClick:()=>Ot(Z)},sn("trash",16),i("span",null,"지우기"))],Bn("x","고르기 풀기",()=>{$.clear(),pn(),X()})].filter(Boolean),bn=[jn(C,"sds-put-all")]}else if(!r)an=[Sn,V("새로 만들기","plus",[y("file","새 캐릭터",()=>Lt(),{id:"sds-addchar"}),y("folderPlus","폴더",()=>Rr(),{id:"sds-addfolder"})],{id:"sds-dd-new"}),V("예약","calPlus",[...u?[y("calPlus",`‘${u.name}’ 씬 모두 ${d}장씩 예약`,()=>{g.set(Wn(s,u.id,d)),en(),X()},{id:"sds-rsv-focus"})]:[],...v?[y("calPlus",`‘${v.name}’ 안 캐릭터 ${Rn(s,v.id).length}명 ${d}장씩 예약`,()=>{let Z=s;for(let cn of Rn(s,v.id))Z=Wn(Z,cn.id,d);g.set(Z),en(),X()},{id:"sds-rsv-focus"})]:[],y("calPlus",f.folder?`이 폴더 캐릭터 모두 ${d}장씩 예약`:`모든 캐릭터 ${d}장씩 예약`,()=>{let Z=s;for(let cn of f.folder?Rn(s,f.folder):s.chars)Z=Wn(Z,cn.id,d);g.set(Z),en(),X()},{id:"sds-rsv-all"}),y("bolt",`즐겨찾기 없는 씬만 ${d}장씩 (${K}개)`,()=>Ps(),{id:"sds-rsv-nofav",disabled:!K}),y("calX","예약 모두 비우기",()=>{g.set(bt(s,null)),en(),X()},{id:"sds-rsv-clear"})],{id:"sds-dd-rsv"}),$n,V("가져오기·내보내기","importIn",hn,{id:"sds-dd-io"})],bn=[qn,jn(C,"sds-put-all"),V("","more",ln,{id:"sds-more"})];else if(l){let Z=ae(r,l.id).map(An=>({...An,cid:r.id})),cn=Z.map(An=>An.path);an=[Sn,V("예약","calPlus",[y("calPlus","이 씬 1장 예약",()=>{g.set(Un(s,r.id,l.id,l.reserve+1)),en(),X()},{id:"sds-rsv-one"}),y("calX","이 씬 예약 비우기",()=>{g.set(Un(s,r.id,l.id,0)),en(),X()})],{id:"sds-dd-rsv"}),$n,V(cn.length?`고른 그림 ${cn.length}`:"그림","image",[y("check","모두 고르기",()=>{g.set(je(s,r.id,l.id,l.images.map(An=>An.path),!0),{undo:!1}),pn(),X()}),y("x","고르기 풀기",()=>{g.set(mr(s,r.id,l.id),{undo:!1}),pn(),X()},{id:"sds-unpick",disabled:!cn.length}),y("star","고른 그림 즐겨찾기 켜기·풀기",()=>{let An=!cn.every(Ae=>l.images.find(be=>be.path===Ae)?.fav),fe=s;for(let Ae of cn)fe=xe(fe,r.id,l.id,Ae,{fav:An});g.set(fe),pn(),X()},{id:"sds-fav",disabled:!cn.length}),y("compare","고른 그림 비교",()=>{for(let An of cn)g.addCompare({cid:r.id,sid:l.id,path:An});Gn("compare")},{disabled:cn.length<2}),y("trophy","이미지 월드컵",()=>Ge(g,r.id,l.id),{id:"sds-cup-btn",disabled:l.images.length<2}),y("sliders","넣는 방법 고르고 넣기…",()=>Ut(Z),{id:"sds-put-sel-opt",disabled:!cn.length}),W(),y("trash","고른 그림 목록에서 빼기",()=>Ai(r.id,l.id,cn),{danger:!0,disabled:!cn.length})],{id:"sds-dd-img"}),V("가져오기·내보내기","importIn",hn,{id:"sds-dd-io"})],bn=[qn,jn(Z,"sds-put-sel"),V("","more",[y("copy","씬 복제",()=>{g.set(gt(s,r.id,l.id)),g.toast("씬을 복제했어요")}),y("trash","이 씬 지우기",()=>Dt([l.id]),{danger:!0}),W(),...ln],{id:"sds-more"})]}else{let Z=ae(r).map(cn=>({...cn,cid:r.id}));an=[Sn,V("새로 만들기","plus",[y("file","새 씬",()=>It(),{id:"sds-addscene"}),y("layers","감정 세트(없는 것만)",()=>ws(),{id:"sds-emoset"})],{id:"sds-dd-new"}),V("예약","calPlus",[y("calPlus",`모든 씬 ${d}장씩 예약`,()=>{g.set(Wn(s,r.id,d)),en(),X()},{id:"sds-rsv-all"}),y("bolt",`즐겨찾기 없는 씬만 ${d}장씩 (${K}개)`,()=>Ps(),{id:"sds-rsv-nofav",disabled:!K}),y("calX","이 캐릭터 예약 비우기",()=>{g.set(bt(s,r.id)),en(),X()},{id:"sds-rsv-clear"})],{id:"sds-dd-rsv"}),$n,V("가져오기·내보내기","importIn",hn,{id:"sds-dd-io"})],bn=[qn,jn(Z,"sds-put-picked"),V("","more",[y("sliders","고른 그림 넣는 방법 고르고 넣기…",()=>Ut(Z),{id:"sds-put-picked-opt",disabled:!Z.length}),y("x","그림 고르기 모두 풀기",()=>{g.set(mr(s,r.id),{undo:!1}),pn(),X()},{id:"sds-unpick-all",disabled:!Z.length}),y("sortAsc","씬 이름순 ↑",()=>{g.set(gr(s,r.id,"asc")),X()}),y("sortDesc","씬 이름순 ↓",()=>{g.set(gr(s,r.id,"desc")),X()}),W(),...ln],{id:"sds-more"})]}wn(H,...an,i("span",{class:"sp"}),...bn)}function qr(r){r.style.left="",r.style.right="";let l=H.getBoundingClientRect(),d=r.getBoundingClientRect();d.left<l.left?(r.style.left="0",r.style.right="auto"):d.right>Math.min(l.right,innerWidth)&&(r.style.left="auto",r.style.right="0")}function Lr(){for(let r of S.querySelectorAll(".sds-ddp"))r.hidden||(r.hidden=!0,r.previousSibling?.setAttribute("aria-expanded","false"))}let ls=()=>{S.style.setProperty("--sds-card",`${Math.round(90+f.zoom*2.6)}px`),S.style.setProperty("--sds-row",`${Math.round(80+f.zoom*1.6)}px`)},cs=(r,l,d=0)=>i("span",{class:"cap"},i("span",{class:"n"},r),d?i("span",{class:"pk",title:`봇에 보낼 그림 ${d}장 고름`},`✓${d}`):null,i("span",{class:"c"},String(l))),At=()=>i("span",{class:"chk","aria-hidden":"true"},sn("check",14)),qe=(r,l)=>f.focus?.kind===r&&f.focus.id===l;function Tt(r,l){if(f.focus=l?{kind:r,id:l}:null,S.querySelectorAll(".sds-card.cur,.sds-frow.cur").forEach(d=>d.classList.remove("cur")),l){let d=r==="folder"?".sds-frow.sds-folder":`.sds-${r}`;for(let h of N.querySelectorAll(d))h.dataset.id===l&&h.classList.add("cur")}g.curChar()||pn()}function ds(r,l,d,h){return r.addEventListener("click",u=>{if(!u.target.closest(".quick")){if(u.target.closest(".chk")||u.ctrlKey||u.metaKey||u.shiftKey||$.size&&f.mode!=="scene"){$.has(l)?$.delete(l):$.add(l),r.setAttribute("aria-selected",String($.has(l))),pn();return}if(h==="scene"){$.has(l)&&$.size===1?$.clear():($.clear(),$.add(l));for(let v of N.querySelectorAll(".sds-scene"))v.setAttribute("aria-selected",String($.has(v.dataset.id)));pn();return}if(h){qe(h,l)||Tt(h,l);return}d()}}),h&&r.addEventListener("dblclick",u=>{u.target.closest(".quick")||($.clear(),d())}),r.setAttribute("aria-selected",String($.has(l))),h&&r.classList.toggle("cur",qe(h,l)),r}let Ye={cur:null},Or=["drop-before","drop-after","drop-into"],ps=()=>{Ye.cur=null;for(let r of S.querySelectorAll(".dragging,.drop-before,.drop-after,.drop-into"))r.classList.remove("dragging",...Or),delete r.dataset.dropHint;S.classList.remove("sds-dragging","sds-drag-scene")};function _t(r,l){r.draggable=!0,r.addEventListener("dragstart",d=>{d.stopPropagation(),Ye.cur=l(),d.dataTransfer.effectAllowed="copyMove";try{d.dataTransfer.setData("text/plain","sds")}catch{}r.classList.add("dragging"),S.classList.add("sds-dragging"),Ye.cur.kind==="scene"&&S.classList.add("sds-drag-scene")}),r.addEventListener("dragend",ps)}function he(r,{mode:l,ok:d,run:h,hint:u}){let v=(C,I)=>{let K=l(I);if(K==="into")return"into";let tn=r.getBoundingClientRect(),y=K==="x"?(C.clientX-tn.left)/(tn.width||1):(C.clientY-tn.top)/(tn.height||1);return K==="y3"?y<.25?"before":y>.75?"after":"into":y<.5?"before":"after"};r.addEventListener("dragover",C=>{let I=Ye.cur;if(!I||!d(I))return;C.preventDefault(),C.stopPropagation(),C.dataTransfer.dropEffect=C.altKey?"copy":"move";let K=v(C,I);r.classList.remove(...Or),r.classList.add("drop-"+K),u?r.dataset.dropHint=u(I,K,C.altKey):delete r.dataset.dropHint}),r.addEventListener("dragleave",C=>{r.contains(C.relatedTarget)||(r.classList.remove(...Or),delete r.dataset.dropHint)}),r.addEventListener("drop",C=>{let I=Ye.cur;if(!I||!d(I))return;C.preventDefault(),C.stopPropagation();let K=v(C,I),tn=C.altKey;ps(),h(I,K,tn)})}let hs=r=>$.has(r)&&$.size>1?[...$]:[r],Ir=(r,l)=>{let d=r.findIndex(h=>h.id===l);return d<0?null:r[d+1]?.id??null},bi=(r,l)=>{if(!l)return null;let d=[l],h=new Set;for(;d.length;){let u=d.shift();if(!h.has(u)){if(h.add(u),s.folders.find(v=>v.id===u)?.members.includes(r))return u;for(let v of s.folders)v.parent===u&&d.push(v.id)}}return l},Qe=()=>{en(),pn(),X()};function Le(r,l,d,h){g.set(ut(s,r.ids,{from:r.from,to:l,before:d,copy:!!l&&h})),$.clear(),Qe()}function Et(r,l,d){try{g.set(wa(s,r,l,d)),Qe()}catch(h){g.toast(h?.message??String(h),{error:!0})}}function us(r,l){return he(r,{mode:()=>"into",ok:d=>d.kind==="char"||d.kind==="folder"&&d.id!==l,hint:d=>l?`‘${s.folders.find(h=>h.id===l)?.name}’(으)로`:d.kind==="char"?"폴더에서 빼기":"맨 위로",run:(d,h,u)=>d.kind==="char"?Le(d,l,null,u):Et(d.id,l,null)}),r}let Dr=(r,l,d)=>{let h=fa(r),u=r.scenes.reduce((C,I)=>C+I.reserve,0),v=i("button",{type:"button",class:"sds-card sds-char",dataset:{id:r.id},title:r.name},h?g.thumb(h):i("span",{class:"ph"},sn("person",34)),At(),u?i("span",{class:"rsv"},`예약 ${u}`):null,cs(r.name,ma(r),ae(r).length));return v.addEventListener("contextmenu",C=>{C.preventDefault(),_i(v,r)}),l!==void 0&&(_t(v,()=>({kind:"char",ids:hs(r.id),from:bi(r.id,l)})),he(v,{mode:()=>"x",ok:C=>C.kind==="char"&&!(C.ids.length===1&&C.ids[0]===r.id),run:(C,I,K)=>Le(C,l,I==="before"?r.id:Ir(d,r.id),K)})),ds(v,r.id,()=>ge(r.id,l),"char")},gs=(r,l,d)=>{let h=Ce(l),u=i("button",{type:"button",class:"sds-card sds-scene",dataset:{id:l.id},title:l.name},h?g.thumb(h):i("span",{class:"ph"},sn("image",30)),At(),i("span",{class:"rsvbtn"+(l.reserve?" on":""),role:"button",tabindex:"0",id:`sds-rsv-${l.id}`,title:l.reserve?`예약 ${l.reserve}장 — 누르면 1장 더`:"1장 예약",onClick:v=>{v.stopPropagation(),g.set(Un(s,r.id,l.id,l.reserve+1)),en(),X()}},sn("calPlus",14),l.reserve?`+${l.reserve}`:"예약"),l.images.length&&!oe(l)?i("span",{class:"nofav",title:"아직 즐겨찾기가 없어요"},"★ 없음"):null,oe(l)?i("span",{class:"favmark",title:"즐겨찾기를 정한 씬"},sn("star",12),`${l.images.filter(v=>v.fav).length}`):null,i("span",{class:"quick"},l.reserve?i("button",{type:"button",title:"예약 하나 빼기",onClick:v=>{v.stopPropagation(),g.set(Un(s,r.id,l.id,l.reserve-1)),en(),X()}},"−1"):null),cs(l.name,l.images.length,Ve(l)));return u.addEventListener("contextmenu",v=>{v.preventDefault(),Li(u,r,l)}),d&&(_t(u,()=>({kind:"scene",cid:r.id,ids:hs(l.id)})),he(u,{mode:()=>"x",ok:v=>v.kind==="scene"&&v.cid===r.id&&!(v.ids.length===1&&v.ids[0]===l.id),run:(v,C)=>{g.set(ka(s,r.id,v.ids,C==="before"?l.id:Ir(d,l.id))),$.clear(),Qe()}})),ds(u,l.id,()=>Ze(l.id),"scene")},ms=(r,l,d,h)=>{let u=i("button",{type:"button",class:"sds-card sds-img",dataset:{path:l.path},title:l.seed?`시드 ${l.seed}`:""},g.thumb(l.path),At(),i("span",{class:"badges"},l.rank?i("span",{class:"badge"},`${l.rank}위`):null,l.fav?i("span",{class:"badge"},"★"):null),i("span",{class:"quick",style:"bottom:10px"},i("button",{type:"button",title:"이 그림을 봇에 바로 넣기",class:"sds-qput",onClick:v=>{v.stopPropagation(),me([{path:l.path,name:mn(s,r.cid,r.sid)?.name??"image",cid:r.cid,sid:r.sid}])}},"넣기")));return u.setAttribute("aria-selected",String(!!l.pick)),u.addEventListener("click",v=>{v.target.closest(".quick")||Fr(r)}),u.addEventListener("dblclick",v=>{v.target.closest(".quick")||es(g,d,h)}),u.addEventListener("contextmenu",v=>{v.preventDefault(),Ei(u,r,d,h)}),u};function Fr(r,l){let d=mn(s,r.cid,r.sid)?.images.find(h=>h.path===r.path);d&&(g.set(je(s,r.cid,r.sid,[r.path],l??!d.pick),{undo:!1}),pn(),X())}g.togglePick=Fr;let fs=new Map,bs=(r,l)=>({root:N,first:Math.max(l,fs.get(r)??0),step:200,onCount:d=>fs.set(r,d)}),Oe=(...r)=>i("div",{class:"sds-grid"},...r),ue=(r,l,...d)=>i("div",{class:"sds-sec"},i("b",null,r),l!=null?i("span",{class:"rb-muted"},String(l)):null,i("span",{class:"sp"}),...d),qt=(r,l,...d)=>i("div",{class:"sds-empty"},i("b",null,r),i("span",{style:"white-space:normal"},l),...d);function wi(){let r=g.curChar(),l=g.curScene(),d=(u,v,C)=>i("button",{type:"button",class:"rb-chip","aria-pressed":String(v),onClick:C},u),h=[us(d("전체",!f.folder&&!r,()=>{f.folder=null,ge(null)}),null)];for(let u of hr(s,f.folder))h.push(i("span",{class:"rb-muted"},"›"),us(d(u.name,u.id===f.folder&&!r,()=>{f.folder=u.id,ge(null)}),u.id));return r&&h.push(i("span",{class:"rb-muted"},"›"),d(r.name,!l,()=>Ze(null))),l&&h.push(i("span",{class:"rb-muted"},"›"),d(l.name,!0,()=>{})),f.folder&&!r&&h.push(i("button",{type:"button",class:"rb-icon-btn","aria-label":"폴더 메뉴",onClick:u=>Ft(u.currentTarget,f.folder)},sn("more",18))),i("nav",{class:"sds-crumbs",id:"sds-crumbs","aria-label":"위치"},...h)}function X(){let r=N.scrollTop;R?.disconnect(),R=No(N,nn),ls(),S.classList.toggle("nonames",!f.names);let l=g.curChar(),d=g.curScene(),h=[wi()];f.mode==="compare"?h.push(...Ci()):f.mode==="search"?h.push(...ji(l)):f.mode==="gallery"?h.push(...xi(l)):f.mode==="bulk"&&l?h.push(...Pi(l)):d?h.push(...vi(l,d)):l?h.push(...yi(l)):h.push(...ki()),wn(N,...h),N.scrollTop=r,(n.win.scrollLeft||n.win.scrollTop)&&(n.win.scrollLeft=0,n.win.scrollTop=0)}function bl(r){let l=Rn(s,r.id).length,d=s.folders.filter(u=>u.parent===r.id).length,h=i("button",{type:"button",class:"sds-card sds-subf",dataset:{id:r.id},title:r.name},i("span",{class:"ph",style:"flex-direction:column;gap:6px;color:var(--rb-acc)"},sn("folder",34),i("span",{class:"rb-muted",style:"font-size:12px"},`${l}명${d?` · 폴더 ${d}`:""}`)),i("span",{class:"cap"},i("span",{class:"n"},r.name)));return h.classList.toggle("cur",qe("folder",r.id)),h.addEventListener("click",()=>{qe("folder",r.id)||(Tt("folder",r.id),h.classList.add("cur"))}),h.addEventListener("dblclick",()=>{f.focus=null,f.folder=r.id,$.clear(),pn(),X()}),h.addEventListener("contextmenu",u=>{u.preventDefault(),Ft(h,r.id)}),_t(h,()=>({kind:"folder",id:r.id})),he(h,{mode:()=>"into",ok:u=>u.kind==="char"||u.kind==="folder"&&u.id!==r.id,hint:(u,v,C)=>u.kind==="char"?`‘${r.name}’ 안에 ${C?"복사":"넣기"}`:`‘${r.name}’ 안으로`,run:(u,v,C)=>u.kind==="char"?Le(u,r.id,null,C):Et(u.id,r.id,null)}),h}function ki(){if(!s.chars.length&&!s.folders.length)return[qt("이 "+(e.kind==="module"?"모듈":"봇")+"에 들어갈 캐릭터를 만들어요","캐릭터를 열어 씬(표정·포즈)을 만들고 예약하면 SDStudio처럼 차례로 그려요. 캐릭터·소속은 폴더로 묶어요.",B("새 캐릭터",{kind:"primary",icon:"plus",onClick:()=>Lt()}))];let r=pr(s,f.folder),l=(u,v=0)=>{let C=Rn(s,u.id),I=(u.members??[]).map(Y=>vn(s,Y)).filter(Boolean),K=v<8?s.folders.filter(Y=>Y.parent===u.id):[],tn=K.length,y=(f.folded??=[]).includes(u.id),W=i("button",{type:"button",class:"rb-icon-btn sds-fold","aria-label":y?"펼치기":"접기","aria-expanded":String(!y),title:y?"펼치기":"접기",onClick:Y=>{Y.stopPropagation(),f.folded=y?f.folded.filter(dn=>dn!==u.id):[...f.folded,u.id],X()}},i("span",{style:`display:flex;transition:transform .15s;transform:rotate(${y?-90:0}deg)`},sn("chevD",16))),V=i("div",{class:["sds-frow sds-folder",y&&"folded"],dataset:{id:u.id}},i("div",{class:"hd"},W,i("button",{type:"button",class:"open sds-fopen",onClick:()=>{qe("folder",u.id)||Tt("folder",u.id)},onDblclick:()=>{f.focus=null,f.folder=u.id,$.clear(),pn(),X()}},i("span",{style:"color:var(--rb-acc);display:flex"},sn("folder",18)),i("b",{style:"font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"},u.name),u.kind?i("span",{class:"rb-badge"},gl[u.kind]):null,u.tpl?i("span",{class:"rb-badge",title:"새 캐릭터에 적용할 기본 템플릿"},`템플릿 ${u.tpl}`):null,i("span",{class:"rb-muted"},`${C.length}명${tn?` · 폴더 ${tn}`:""}`),i("span",{style:"color:var(--rb-mute);display:flex"},sn("chevR",16))),i("button",{type:"button",class:"rb-icon-btn","aria-label":"폴더 메뉴",onClick:Y=>Ft(Y.currentTarget,u.id)},sn("more",18))),y?null:I.length?i("div",{class:"strip"},...I.map(Y=>Dr(Y,u.id,I))):K.length?null:i("span",{class:"rb-muted",style:"white-space:normal"},"비어 있어요. 캐릭터 카드나 폴더를 여기로 끌어다 놓아요."),!y&&K.length?i("div",{class:"sds-subrows"},...K.map(Y=>l(Y,v+1))):null);return V.classList.toggle("cur",qe("folder",u.id)),V.querySelector(".hd").addEventListener("contextmenu",Y=>{Y.preventDefault(),Y.stopPropagation(),Ft(Y.currentTarget,u.id)}),_t(V.querySelector(".hd"),()=>({kind:"folder",id:u.id})),he(V,{mode:Y=>Y.kind==="folder"?"y3":"into",ok:Y=>Y.kind==="char"||Y.kind==="folder"&&Y.id!==u.id,hint:(Y,dn,xn)=>Y.kind==="char"?`‘${u.name}’ 안에 ${xn?"복사":"넣기"}${Y.ids.length>1?` (${Y.ids.length}명)`:""}`:dn==="into"?`‘${u.name}’ 안으로`:`‘${u.name}’ ${dn==="before"?"위":"아래"}에 놓기`,run:(Y,dn,xn)=>{if(Y.kind==="char")return Le(Y,u.id,null,xn);if(dn==="into")return Et(Y.id,u.id,null);let hn=s.folders.filter(ln=>(ln.parent??null)===(u.parent??null)&&ln.id!==Y.id);Et(Y.id,u.parent??null,dn==="before"?u.id:Ir(hn,u.id))}}),V},d=r.folders.map(u=>l(u)),h=d.length?[i("div",{class:"sds-subrows sds-toprows"},...d)]:[];if(r.chars.length){let u=Oe(...r.chars.map(v=>Dr(v,f.folder,r.chars)));he(u,{mode:()=>"into",ok:v=>v.kind==="char",run:(v,C,I)=>Le(v,f.folder,null,I)}),h.push(ue(f.folder?"캐릭터":d.length?"폴더 없는 캐릭터":"캐릭터",r.chars.length),u)}else if(f.folder&&!d.length)h.push(i("span",{class:"rb-muted"},"이 폴더에 바로 든 캐릭터가 없어요. 캐릭터 카드를 끌어다 놓을 수 있어요."));else if(d.length){let u=i("div",{class:"sds-rootdrop"},f.folder?"여기에 놓으면 이 폴더 바로 아래로 와요":"여기에 놓으면 폴더에서 빠져요");he(u,{mode:()=>"into",ok:v=>v.kind==="char",run:v=>Le(v,f.folder,null,!1)}),h.push(u)}return s.chars.length&&h.push(i("span",{class:"rb-muted",style:"font-size:12px;white-space:normal"},"카드·폴더를 끌어서 옮겨요 · 폴더에 놓으면 들어가고, 위 경로(전체 › …)에 놓으면 그 위치로 가요 · Alt/⌥를 누르고 놓으면 복사(여러 폴더에 걸치기)")),h}function yi(r){if(!r.scenes.length)return[qt("씬이 없어요","씬은 표정·포즈 하나예요. 이름이 그대로 감정 이미지 이름이 돼요.",B("새 씬",{kind:"primary",icon:"plus",onClick:()=>It()}),B("감정 세트 더하기",{icon:"sparkle",onClick:()=>ws()}))];let l=s.chars.filter(u=>u.id!==r.id),d=l.length?i("div",{class:"sds-tray"},i("span",{class:"rb-muted",style:"font-size:12px"},"다른 캐릭터로(Alt/⌥ 복사)"),...l.map(u=>{let v=i("span",{class:"rb-chip",role:"button"},u.name);return he(v,{mode:()=>"into",ok:C=>C.kind==="scene"&&C.cid===r.id,run:(C,I,K)=>{g.set(ya(s,r.id,C.ids,u.id,{copy:K})),$.clear(),Qe()}}),v})):null,h=r.scenes.filter(u=>u.images.length&&!oe(u)).length;return[ue("씬",r.scenes.length,h?i("button",{type:"button",class:"sds-pill",id:"sds-nofav-pill",title:"즐겨찾기 없는 씬부터 대표 고르기",style:"cursor:pointer;border:0",onClick:()=>Vr({onlyNoFav:!0})},`★ 없는 씬 ${h}`):null,i("span",{class:"rb-muted",style:"font-size:12px"},"눌러서 고르고, 더블클릭하면 열려요 · 끌어서 순서 바꾸기 · Ctrl/⌘·체크로 여러 개 고르기")),Oe(...r.scenes.map(u=>gs(r,u,r.scenes))),d]}function vi(r,l){let d=Yn(l.slots),h=i("input",{class:"sds-in",value:l.name,id:"sds-sname","aria-label":"씬 이름",style:"font-weight:800;min-width:160px;flex:1",onChange:hn=>{let ln=hn.target.value.trim();ln&&ln!==l.name&&(g.set(On(s,r.id,l.id,{name:Re({scenes:r.scenes.filter(jn=>jn.id!==l.id)},ln)})),X())}}),u=i("select",{class:"sds-sel","aria-label":"씬 크기",id:"sds-ssize",onChange:hn=>{g.set(On(s,r.id,l.id,{size:hn.target.value})),nt()}},i("option",{value:"",selected:!l.size},"크기: 세로(기본)"),...Object.entries(_n).map(([hn,ln])=>i("option",{value:hn,selected:l.size===hn},`${ln.label} ${ln.width}×${ln.height}`))),v=i("div",{class:"sds-row",style:"gap:4px"},Bn("minus","예약 하나 빼기",()=>{g.set(Un(s,r.id,l.id,l.reserve-1)),en(),X()},{disabled:!l.reserve}),i("span",{class:"sds-pill",id:"sds-srsv"},`예약 ${l.reserve}`),Bn("plus","1장 예약",()=>{g.set(Un(s,r.id,l.id,l.reserve+1)),en(),X()},{id:"sds-srsv-plus"})),C=hn=>{g.set(Ue(s,r.id,l.id,hn))},I=i("div",{class:"sds-slots",id:"sds-slots"}),K=i("pre",{class:"rb-muted",id:"sds-preview",style:"margin:0;white-space:pre-wrap;word-break:break-word;font:inherit;font-size:12.5px;background:var(--rb-win);border-radius:var(--rb-r1);padding:8px 10px"}),tn=()=>{let hn=s.settings,ln=vn(s,r.id),jn=mn(s,r.id,l.id);try{K.textContent=Yn(jn.slots)?Te({top:hn.top,own:ve(s,ln),middle:Pe(jn,0),back:hn.back},s.pieces,()=>0):"켜진 조각이 없는 슬롯이 있어 그릴 수 없어요.",K.style.color=""}catch(an){K.textContent=an.message,K.style.color="var(--rb-danger)"}},y=()=>{let hn=mn(s,r.id,l.id).slots;wn(I,...hn.map((ln,jn)=>i("div",{class:"sds-slot"},i("div",{class:"hd"},i("span",{style:"flex:1"},`슬롯 ${jn+1}`),i("button",{type:"button",class:"rb-icon-btn","aria-label":"슬롯 지우기",onClick:()=>{C(hn.filter((an,bn)=>bn!==jn)),y(),tn(),V()}},sn("x",14))),...ln.map((an,bn)=>i("div",{class:["sds-piece",an.on===!1&&"off"]},i("input",{type:"checkbox",checked:an.on!==!1,title:"켜기","aria-label":"조각 켜기",style:"margin-top:12px",onChange:Sn=>{C(mn(s,r.id,l.id).slots.map(($n,qn)=>qn!==jn?$n:$n.map((Z,cn)=>cn!==bn?Z:{...Z,on:Sn.target.checked}))),y(),tn(),V()}}),Vn({value:an.prompt,rows:2,label:`슬롯 ${jn+1} 조각 ${bn+1}`,onInput:Sn=>{C(mn(s,r.id,l.id).slots.map(($n,qn)=>qn!==jn?$n:$n.map((Z,cn)=>cn!==bn?Z:{...Z,prompt:Sn}))),tn()}}),i("button",{type:"button",class:"rb-icon-btn","aria-label":"조각 지우기",onClick:()=>{C(mn(s,r.id,l.id).slots.map((Sn,$n)=>$n!==jn?Sn:Sn.filter((qn,Z)=>Z!==bn))),y(),tn(),V()}},sn("trash",14)))),B("조각 더하기",{size:"sm",icon:"plus",onClick:()=>{C(mn(s,r.id,l.id).slots.map((an,bn)=>bn!==jn?an:[...an,{prompt:"",on:!0}])),y(),V()}}))),i("button",{type:"button",class:"sds-slot",id:"sds-addslot",style:"align-items:center;justify-content:center;min-height:120px;cursor:pointer;color:var(--rb-sub);font:inherit;font-weight:700",onClick:()=>{C([...mn(s,r.id,l.id).slots,[{prompt:"",on:!0}]]),y(),tn(),V()}},sn("plus",22),"슬롯 더하기"))},W=i("span",{class:"sds-pill"}),V=()=>{W.textContent=`조합 ${Yn(mn(s,r.id,l.id).slots)}개`,en()};y(),tn(),V();let Y=ne(l),dn=Y.map(hn=>({cid:r.id,sid:l.id,path:hn.path}));return[i("section",{class:"sds-frow",id:"sds-scene-edit"},i("div",{class:"sds-row",style:"flex-wrap:wrap"},h,u,v,W,B("지금 1장",{size:"sm",kind:"primary",icon:"sparkle",id:"sds-gen-one",disabled:O.running||!d,onClick:()=>{g.set(Un(s,r.id,l.id,l.reserve+1)),Kt()}})),i("details",{open:f.slotsOpen,onToggle:hn=>{f.slotsOpen=hn.target.open}},i("summary",{style:"cursor:pointer;font-weight:800;font-size:13px;margin-bottom:8px"},"씬 프롬프트 조합"),i("div",{style:"display:flex;flex-direction:column;gap:8px"},i("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},"슬롯마다 켜진 조각 하나씩 골라 조합해요. 예약 1장 = 조합 전부. 최종 = 상위 + 외형 + 이 조합 + 하위."),I,i("span",{class:"rb-label"},"미리보기(첫 조합)"),K))),ue("이미지",Y.length,Y.length?i("span",{class:"rb-muted",style:"font-size:12px"},"누르면 크게 · 체크로 고르기"):null),Y.length?Ha(Oe(),Y,(hn,ln)=>ms(dn[ln],hn,dn,ln),bs(`s:${l.id}`,120)):qt("아직 그림이 없어요","예약하고 위의 ‘생성’을 누르거나 ‘지금 1장’을 눌러요.")]}function xi(r){let d=(r?[r]:f.folder?Rn(s,f.folder):s.chars).flatMap(y=>y.scenes.flatMap(W=>ne(W).map(V=>({it:{cid:y.id,sid:W.id,path:V.path},im:V,sc:W,cc:y}))));if(!d.length)return[qt("그림이 없어요","씬을 예약하고 ‘생성’을 누르면 여기에 모여요.")];let h=d.map(y=>y.it),u=d.filter(y=>y.im.pick),v=y=>{let W=s;for(let V of d)!!V.im.pick!==y&&(W=je(W,V.it.cid,V.it.sid,[V.it.path],y));g.set(W,{undo:!1}),pn(),X()},C=[i("div",{class:"sds-row sds-bulkbar",id:"sds-gbulk",style:"flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:4;background:var(--rb-win);padding:6px 0"},i("span",{class:"sds-pill"},`그림 ${d.length}장 · 고름 ${u.length}`),B("모두 고르기",{size:"sm",id:"sds-g-all",onClick:()=>v(!0)}),B("고르기 풀기",{size:"sm",id:"sds-g-none",disabled:!u.length,onClick:()=>v(!1)}),B(`고른 ${u.length}장 봇에 넣기`,{size:"sm",kind:"primary",id:"sds-g-put",disabled:!u.length,onClick:()=>me(u.map(y=>({cid:y.it.cid,sid:y.it.sid,path:y.it.path,name:y.sc.name})))}),B(`고른 ${u.length}장 목록에서 빼기`,{size:"sm",kind:"danger",id:"sds-g-del",disabled:!u.length,onClick:()=>Br(u.map(y=>y.it))}),i("span",{class:"rb-muted",style:"font-size:12px"},"한 번 누르면 고르기 · 두 번 누르면 크게 보기"))],I=[],K=0,tn=null;for(let y of d)y.sc!==tn&&(tn=y.sc,I.push({head:r?y.sc.name:`${y.cc.name} › ${y.sc.name}`,n:y.sc.images.length})),I.push({x:y,i:K++});return C.push(Ha(i("div",{class:"sds-grid sds-ggrid"}),I,y=>y.head?i("div",{class:"sds-ghead"},ue(y.head,y.n)):ms(y.x.it,y.x.im,h,y.i),bs(`g:${r?.id??f.folder??""}`,150))),C}function ji(r){let l=i("input",{class:"sds-in",id:"sds-q",type:"search",placeholder:r?"씬 이름·프롬프트 찾기":"캐릭터 이름·외형 프롬프트 찾기",value:f.q,style:"width:100%",onInput:u=>{f.q=u.target.value;let v=h();wn(d,...v)}}),d=i("div",{style:"display:flex;flex-direction:column;gap:12px"}),h=()=>{let u=f.q.trim().toLowerCase();if(!u)return[i("span",{class:"rb-muted"},"찾을 말을 적어요.")];if(r){let C=r.scenes.filter(I=>I.name.toLowerCase().includes(u)||I.slots.some(K=>K.some(tn=>tn.prompt.toLowerCase().includes(u))));return C.length?[ue("찾은 씬",C.length),Oe(...C.map(I=>gs(r,I)))]:[i("span",{class:"rb-muted"},"없어요.")]}let v=s.chars.filter(C=>C.name.toLowerCase().includes(u)||C.prompt.toLowerCase().includes(u)||C.scenes.some(I=>I.name.toLowerCase().includes(u)));return v.length?[ue("찾은 캐릭터",v.length),Oe(...v.map(Dr))]:[i("span",{class:"rb-muted"},"없어요.")]};return wn(d,...h()),setTimeout(()=>l.focus(),0),[l,d]}function Ci(){let r=f.compare.filter(u=>mn(s,u.cid,u.sid)?.images.some(v=>v.path===u.path));f.compare=r;let l=[ue("비교",r.length,r.length?B("비우기",{size:"sm",kind:"ghost",onClick:()=>{f.compare=[],X()}}):null)];r.length<2&&l.push(i("span",{class:"rb-muted",style:"white-space:normal"},"그림을 2~4장 넣으면 나란히 보여요. 아래 그림을 누르거나, 크게 보기에서 ‘비교에 넣기’를 눌러요.")),r.length&&l.push(i("div",{class:"sds-cmp",id:"sds-cmp"},...r.map(u=>{let v=i("img",{alt:""});g.url(u.path).then(K=>{v.src=K}).catch(()=>{});let C=mn(s,u.cid,u.sid),I=C.images.find(K=>K.path===u.path);return i("figure",null,v,i("figcaption",null,i("span",{style:"flex:1"},`${vn(s,u.cid).name} › ${C.name}${I?.seed?` · ${I.seed}`:""}`),i("button",{type:"button",class:"rb-icon-btn","aria-label":"비교에서 빼기",onClick:()=>{f.compare=f.compare.filter(K=>K.path!==u.path),X()}},sn("x",14))))})));let d=g.curChar(),h=(d?[d]:s.chars).flatMap(u=>u.scenes.flatMap(v=>v.images.map(C=>({cid:u.id,sid:v.id,path:C.path})))).slice(0,120);return h.length&&l.push(ue("고르기",h.length),Oe(...h.map(u=>{let v=f.compare.some(I=>I.path===u.path);return i("button",{type:"button",class:"sds-card","aria-selected":String(v),onClick:()=>{v?f.compare=f.compare.filter(I=>I.path!==u.path):g.addCompare(u),X()}},g.thumb(u.path),At())}))),l}function Pi(r){let l=r.scenes.map(y=>y.id),d=i("input",{type:"checkbox","aria-label":"모두 고르기",checked:l.length&&l.every(y=>$.has(y)),onChange:y=>{y.target.checked?l.forEach(W=>$.add(W)):$.clear(),X(),pn()}}),h=()=>r.scenes.filter(y=>$.has(y.id)),u=i("input",{class:"sds-in",placeholder:"넣을 태그 / 찾을 말",id:"sds-bulk-text",style:"flex:1;min-width:160px"}),v=i("input",{class:"sds-in",placeholder:"바꿀 말",id:"sds-bulk-rep",style:"flex:1;min-width:120px"}),C=y=>{let W=h();if(!W.length){g.toast("씬을 먼저 골라요");return}let V=s;for(let Y of W)V=Ue(V,r.id,Y.id,y(mn(V,r.id,Y.id).slots));g.set(V),X(),g.toast(`씬 ${W.length}개를 바꿨어요`)},I=(y,W)=>[y,W].filter(V=>V&&V.trim()).join(", "),K=i("div",{class:"sds-frow"},i("b",null,`고른 씬 ${h().length}개에 한꺼번에`),i("div",{class:"sds-row",style:"flex-wrap:wrap"},u,v),i("div",{class:"sds-acts"},B("앞에 넣기",{size:"sm",id:"sds-bulk-front",onClick:()=>{let y=u.value.trim();y&&C(W=>W.length?W.map((V,Y)=>Y?V:V.map(dn=>({...dn,prompt:I(y,dn.prompt)}))):[[{prompt:y,on:!0}]])}}),B("뒤에 넣기",{size:"sm",onClick:()=>{let y=u.value.trim();y&&C(W=>W.length?W.map((V,Y)=>Y!==W.length-1?V:V.map(dn=>({...dn,prompt:I(dn.prompt,y)}))):[[{prompt:y,on:!0}]])}}),B("찾아 바꾸기",{size:"sm",onClick:()=>{let y=u.value;y&&C(W=>W.map(V=>V.map(Y=>({...Y,prompt:Y.prompt.split(y).join(v.value)}))))}}),B("예약 +1",{size:"sm",onClick:()=>{g.set(Wn(s,r.id,1,h().map(y=>y.id))),en(),X()}}),i("select",{class:"sds-sel","aria-label":"크기 한꺼번에",onChange:y=>{if(!y.target.value)return;let W=s;for(let V of h())W=On(W,r.id,V.id,{size:y.target.value==="base"?"":y.target.value});g.set(W),X()}},i("option",{value:""},"크기 한꺼번에…"),i("option",{value:"base"},"세로(기본)"),...Object.entries(_n).map(([y,W])=>i("option",{value:y},W.label))))),tn=r.scenes.map(y=>i("tr",null,i("td",null,i("input",{type:"checkbox",checked:$.has(y.id),"aria-label":`${y.name} 고르기`,onChange:W=>{W.target.checked?$.add(y.id):$.delete(y.id),pn()}})),i("td",null,i("input",{class:"sds-in",value:y.name,style:"width:140px;height:34px",onChange:W=>{let V=W.target.value.trim();V&&g.set(On(s,r.id,y.id,{name:Re({scenes:vn(s,r.id).scenes.filter(Y=>Y.id!==y.id)},V)}))}})),i("td",{style:"min-width:260px"},y.slots.length===1&&y.slots[0].length===1?Vn({value:y.slots[0][0].prompt,rows:1,label:`${y.name} 프롬프트`,onInput:W=>g.set(Ue(s,r.id,y.id,[[{...y.slots[0][0],prompt:W}]]))}):i("span",{class:"rb-muted",style:"white-space:normal"},y.slots.length?`슬롯 ${y.slots.length}개 · 조합 ${Yn(y.slots)}개`:"(조합 없음)")),i("td",null,y.size?_n[y.size]?.label??y.size:"기본"),i("td",null,String(y.reserve)),i("td",null,String(y.images.length))));return[K,i("div",{style:"overflow:auto"},i("table",{class:"sds-table",id:"sds-bulk"},i("thead",null,i("tr",null,i("th",null,d),i("th",null,"씬"),i("th",null,"프롬프트"),i("th",null,"크기"),i("th",null,"예약"),i("th",null,"그림"))),i("tbody",null,...tn)))]}function ge(r,l){f.focus=null,r&&l!==void 0&&(l===null||s.folders.some(d=>d.id===l))&&(f.folder=l),f.charId=r,f.sceneId=null,$.clear(),f.mode==="bulk"&&!r&&(f.mode="scene"),g.paint(),N.scrollTop=0}function Ze(r){f.focus=null,f.sceneId=r,$.clear(),r&&(f.mode="scene"),en(),pn(),X(),nt(),N.scrollTop=0}let nt=()=>g.paintLeft();async function Lt(){let r=await g.dlg.charNames({title:"새 캐릭터",name:s.chars.length?"":o});if(!r)return;let l=ye(s,r),d=l.chars.at(-1).id,h=f.focus?.kind==="folder"&&s.folders.some(C=>C.id===f.focus.id)?f.focus.id:f.folder;h&&(l=ht(l,h,d,!0));let u=h?Be(l,h):"",v=u||or(l)?.tpl||"";if(v){let C=(await t.loadTemplates()).find(I=>I.name===v);C&&(l=pe(l,[d],C,"replace").project,g.toast(`${u?"폴더 기본 템플릿":"씬 프리셋"} ‘${v}’을 적용했어요`))}g.set(l),f.focus={kind:"char",id:d},Qe();for(let C of N.querySelectorAll(".sds-char"))if(C.dataset.id===d){C.scrollIntoView({block:"nearest",inline:"nearest"});break}}async function $i(r){let l=Dn(s),d=l.list.find(v=>v.id===r);if(!d||r===l.active)return;let h=!1;!ir(s,r)&&s.chars.length&&(h=await zn(n.win,{title:`‘${d.name}’ 세트가 비어 있어요`,body:`지금 캐릭터 ${s.chars.length}명(이름·외형·폴더 소속)을 가져와 ${d.tpl?`씬 프리셋 ‘${d.tpl}’으로`:"빈 씬으로"} 시작할까요? 그림·씬은 따라가지 않아요.`,ok:"가져오기",cancel:"빈 세트로"}));let u=pa(s,r,{copy:h});if(h&&d.tpl){let v=(await t.loadTemplates()).find(C=>C.name===d.tpl);v&&(u=pe(u,u.chars.map(C=>C.id),v,"replace").project)}g.set(u),f.charId=null,f.sceneId=null,f.focus=null,$.clear(),g.paint(),g.toast(`‘${d.name}’ 세트로 바꿨어요`)}async function zi(){let r=await Xn(n.win,{title:"새 씬 세트",label:"이름",placeholder:"예: 수영복",ok:"만들기"});if(!r?.trim())return;g.set(ha(s,{name:r.trim()})),pn();let l=Dn(s).list.at(-1);(await t.loadTemplates()).length&&await Nr(n.win.querySelector(`#sds-set-${l.id}`),l.id)}async function Nr(r,l){let d=await t.loadTemplates(),h=Dn(s).list.find(u=>u.id===l);if(h){if(!d.length)return g.toast("저장된 씬 템플릿이 없어요. 템플릿 → 가져오기나 ‘템플릿으로 저장’을 먼저 해요");In(n.win,r??N,[...d.map(u=>({label:`${u.name===h.tpl?"✓ ":""}${u.name}`,icon:"list",onClick:()=>{g.set(dt(s,l,{tpl:u.name})),pn(),g.toast(`‘${h.name}’ 세트의 새 캐릭터는 ‘${u.name}’ 씬으로 시작해요`)}})),...h.tpl?["sep",{label:"씬 프리셋 없애기",icon:"x",onClick:()=>{g.set(dt(s,l,{tpl:""})),pn()}}]:[]])}}function Mi(r,l){let d=Dn(s),h=d.list.find(u=>u.id===l);h&&In(n.win,r,[{label:"이름 바꾸기",icon:"edit",onClick:async()=>{let u=await Xn(n.win,{title:"세트 이름",label:"이름",value:h.name});u?.trim()&&(g.set(dt(s,l,{name:u})),pn())}},{label:h.tpl?`씬 프리셋: ${h.tpl}`:"씬 프리셋 고르기…",icon:"list",onClick:()=>Nr(r,l)},...h.tpl&&l===d.active?[{label:"씬 프리셋을 이 세트 캐릭터 모두에 적용",icon:"sparkle",onClick:()=>Si(h)}]:[],"sep",{label:"세트 지우기",icon:"trash",danger:!0,onClick:async()=>{if(!(d.list.length<=1)){if(l===d.active)return g.toast("지금 쓰는 세트는 지울 수 없어요. 다른 세트로 바꾼 뒤 지워요");await zn(n.win,{title:`‘${h.name}’ 세트를 지울까요?`,body:`이 세트의 캐릭터 ${ir(s,l)}명과 그림 목록이 빠져요. 리스 에셋 저장소 파일은 남아요.`,ok:"지우기",danger:!0})&&(g.set(ua(s,l)),pn())}}}])}async function Si(r){let l=(await t.loadTemplates()).find(v=>v.name===r.tpl);if(!l)return g.toast("그 템플릿이 없어요",{error:!0});let d=s.chars.map(v=>v.id);if(!d.length)return;let h=Sr(s,d),u="merge";h.length&&(u=await g.dlg.templateChoice(h.length,l.name),!u)||(g.set(pe(s,d,l,u).project),en(),X(),g.toast(`‘${l.name}’을 ${d.length}명에 적용했어요`))}async function Ot(r){if(!r.length||!await zn(n.win,{title:`캐릭터 ${r.length}명을 지울까요?`,body:"씬·프롬프트·그림 목록이 지워져요. 리스 에셋 저장소 파일과 이미 넣은 에셋은 그대로예요.",ok:"지우기",danger:!0}))return;let l=s;for(let d of r)l=ga(l,d);g.set(l),$.clear(),en(),pn(),X()}async function It(){let r=g.curChar(),l=await Xn(n.win,{title:"새 씬",label:"이름(감정 이미지 이름이 돼요)",ok:"만들기",placeholder:"예: angry"});l?.trim()&&(g.set(ur(s,r.id,{name:Re(r,l),prompt:l.trim()})),en(),X())}function ws(){let r=g.curChar(),l=new Set(r.scenes.map(u=>u.name.toLowerCase())),d=s,h=0;for(let[u,v]of ml)l.has(u)||(d=ur(d,r.id,{name:u,prompt:v}),h++);g.set(d),en(),X(),g.toast(h?`감정 씬 ${h}개를 더했어요`:"이미 다 있어요")}async function Dt(r){let l=g.curChar();!r.length||!await zn(n.win,{title:`씬 ${r.length}개를 지울까요?`,body:"조합·그림 목록이 지워져요. 리스 에셋 저장소 파일은 그대로예요.",ok:"지우기",danger:!0})||(g.set(va(s,l.id,r)),$.clear(),r.includes(f.sceneId)&&(f.sceneId=null),en(),pn(),X())}async function Br(r){if(!r.length||!await zn(n.win,{title:`${r.length}장을 목록에서 뺄까요?`,body:"이 화면 목록에서만 빠져요. 리스 에셋 저장소 파일과 이미 넣은 에셋은 그대로예요.",ok:"빼기",danger:!0}))return;let l=s;for(let d of r)l=Ke(l,d.cid,d.sid,[d.path]);g.set(l),$.clear(),pn(),X()}async function Ai(r,l,d){!d.length||!await zn(n.win,{title:`${d.length}장을 목록에서 뺄까요?`,body:"이 화면 목록에서만 빠져요. 리스 에셋 저장소 파일과 이미 넣은 에셋은 그대로예요.",ok:"빼기",danger:!0})||(g.set(Ke(s,r,l,d)),$.clear(),pn(),X())}async function Rr(r=f.folder){let l=await g.dlg.folderDialog({title:r?"안에 폴더 만들기":"폴더 만들기"});l&&(g.set(Ne(s,{...l,parent:r})),pn(),X())}async function Ti(r,l){let d=await t.loadTemplates();if(!d.length)return g.toast("저장된 템플릿이 없어요. 캐릭터 안에서 ‘템플릿으로 저장’하거나 가져오기를 먼저 해요");In(n.win,r,[...d.map(h=>({label:`${h.name===l.tpl?"✓ ":""}${h.name}`,icon:"folder",onClick:()=>{g.set(pt(s,l.id,{tpl:h.name})),X(),g.toast(`이제 ‘${l.name}’(안의 폴더 포함)에 만드는 캐릭터는 ‘${h.name}’으로 시작해요`)}})),...l.tpl?["sep",{label:"기본 템플릿 없애기",icon:"x",onClick:()=>{g.set(pt(s,l.id,{tpl:""})),X()}}]:[]])}function Ft(r,l){let d=s.folders.find(h=>h.id===l);d&&In(n.win,r,[{label:"이름·종류·프롬프트 바꾸기",icon:"edit",onClick:async()=>{let h=await g.dlg.folderDialog({title:"폴더 바꾸기",name:d.name,en:d.en??"",kind:d.kind,prompt:d.prompt??"",ok:"저장"});h&&(g.set(pt(s,l,h)),X())}},{label:"안에 폴더 만들기",icon:"folderPlus",onClick:()=>Rr(l)},{label:d.tpl?`기본 템플릿: ${d.tpl}`:"기본 템플릿 정하기…",icon:"folder",onClick:()=>Ti(r,d)},...Be(s,l)?[{label:"기본 템플릿을 안의 캐릭터 모두에 적용",icon:"folder",onClick:async()=>{let h=(await t.loadTemplates()).find(I=>I.name===Be(s,l));if(!h)return g.toast("그 템플릿이 없어요",{error:!0});let u=Rn(s,l).map(I=>I.id);if(!u.length)return;let v=Sr(s,u),C="merge";v.length&&(C=await g.dlg.templateChoice(v.length,h.name),!C)||(g.set(pe(s,u,h,C).project),en(),X(),g.toast(`‘${h.name}’을 ${u.length}명에 적용했어요`))}}]:[],...d.parent?[{label:"맨 위로 꺼내기",icon:"up",onClick:()=>{g.set(cr(s,l,null)),X()}}]:[],"sep",{label:"폴더 지우기",icon:"trash",danger:!0,onClick:async()=>{await zn(n.win,{title:`‘${d.name}’ 폴더를 지울까요?`,body:"안의 폴더도 함께 지워져요. 캐릭터와 그림은 남아요.",ok:"지우기",danger:!0})&&(g.set(dr(s,l)),f.folder&&!s.folders.some(h=>h.id===f.folder)&&(f.folder=null),pn(),X())}}])}function ks(r,l){In(n.win,r,s.folders.map(d=>{let h=l.every(u=>d.members.includes(u));return{label:`${h?"✓ ":""}${hr(s,d.id).map(u=>u.name).join(" › ")}`,icon:"folder",onClick:()=>{let u=s;for(let v of l)u=ht(u,d.id,v,!h);g.set(u),X(),g.toast(h?"폴더에서 뺐어요":"폴더에 넣었어요")}}}))}function _i(r,l){In(n.win,r,[{label:"열기",icon:"chevron",onClick:()=>ge(l.id)},{label:"이름 바꾸기",icon:"edit",onClick:async()=>{let d=await g.dlg.charNames({title:"이름 바꾸기",name:l.name,en:l.en??"",ok:"바꾸기"});d?.name&&(g.set(Jn(s,l.id,d)),X(),en())}},{label:"복제",icon:"split",onClick:()=>{g.set(lr(s,l.id)),X()}},...s.folders.length?[{label:"폴더에 넣기·빼기",icon:"folder",onClick:()=>ks(r,[l.id])}]:[],"sep",{label:"지우기",icon:"trash",danger:!0,onClick:()=>Ot([l.id])}])}function Ei(r,l,d,h){let u=mn(s,l.cid,l.sid),v=u?.images.find(C=>C.path===l.path);v&&In(n.win,r,[{label:"크게 보기",icon:"eye",onClick:()=>es(g,d,h)},{label:v.pick?"보낼 그림에서 빼기":"보낼 그림으로 고르기",icon:"check",onClick:()=>Fr(l)},{label:v.fav?"즐겨찾기 풀기":"즐겨찾기",icon:"sparkle",onClick:()=>{g.set(xe(s,l.cid,l.sid,l.path,{fav:!v.fav})),X()}},{label:"씬 대표로",icon:"image",onClick:()=>{g.set(On(s,l.cid,l.sid,{cover:l.path})),X()}},{label:"캐릭터 대표로",icon:"image",onClick:()=>{g.set(Jn(s,l.cid,{cover:l.path})),g.toast("캐릭터 카드 대표로 했어요")}},{label:"이 그림만 봇에 넣기",icon:"exportBot",onClick:()=>me([{...l,name:u.name}])},{label:"넣는 방법 고르고 넣기…",icon:"sliders",onClick:()=>Ut([{...l,name:u.name}])},"sep",{label:"목록에서 빼기",icon:"trash",danger:!0,onClick:()=>Br([l])}])}function qi(r){let l=g.curChar();In(n.win,r,l?[{label:"새 씬",icon:"plus",onClick:()=>It()},{label:"모든 씬 1장씩 예약",icon:"calPlus",onClick:()=>{g.set(Wn(s,l.id,1)),en(),X()}},{label:"위로",icon:"back",onClick:()=>se()}]:[{label:"새 캐릭터",icon:"plus",onClick:()=>Lt()},{label:f.folder?"안에 폴더 만들기":"폴더 만들기",icon:"folderPlus",onClick:()=>Rr()},{label:"SDStudio 백업 가져오기…",icon:"upload",onClick:()=>Se()},...f.folder?[{label:"위로",icon:"back",onClick:()=>se()}]:[]])}function Li(r,l,d){In(n.win,r,[{label:"열기",icon:"chevron",onClick:()=>Ze(d.id)},{label:"1장 예약",icon:"plus",onClick:()=>{g.set(Un(s,l.id,d.id,d.reserve+1)),en(),X()}},{label:"예약 비우기",icon:"x",onClick:()=>{g.set(Un(s,l.id,d.id,0)),en(),X()}},{label:"이미지 월드컵",icon:"zap",onClick:()=>Ge(g,l.id,d.id)},...d.images.length?[{label:"여기서 대표 고르기",icon:"sparkle",onClick:()=>{let h=l.scenes.filter(u=>u.images.length).map(u=>({cid:l.id,sid:u.id}));ts(g,h,{start:Math.max(0,h.findIndex(u=>u.sid===d.id))})}}]:[],{label:"복제",icon:"split",onClick:()=>{g.set(gt(s,l.id,d.id)),X()}},"sep",{label:"지우기",icon:"trash",danger:!0,onClick:()=>Dt([d.id])}])}async function ys(r,l){let d=s.settings,h=r.scenes.filter(u=>!l||l.includes(u.id)).map(u=>{try{return`${u.name}: ${Te({top:d.top,own:ve(s,r),middle:Pe(u,0),back:d.back},s.pieces,()=>0)}`}catch(v){return`${u.name}: (${v.message})`}});try{await navigator.clipboard.writeText(h.join(`
+`)),g.toast("프롬프트를 복사했어요")}catch{g.toast("복사하지 못했어요",{error:!0})}}function Oi(r){let l=g.curChar(),d=g.curScene();In(n.win,r,[...d?[{label:Ve(d)?`고른 그림 ${Ve(d)}장`:`이 씬 그림 ${d.images.length}장`,icon:"download",onClick:()=>Ur((Ve(d)?ae(l,d.id).map(h=>h.path):d.images.map(h=>h.path)).map((h,u)=>[`${wt(s,l)}/${d.name}_${u+1}.png`,h]))}]:[],{label:"씬 대표 그림만",icon:"download",onClick:()=>Ur((l?[l]:s.chars).flatMap(h=>h.scenes.filter(u=>Ce(u)).map(u=>[`${wt(s,h)}/${u.name}.png`,Ce(u)])))},{label:"모든 그림",icon:"download",onClick:()=>Ur((l?[l]:s.chars).flatMap(h=>h.scenes.flatMap(u=>ne(u).map((v,C)=>[`${wt(s,h)}/${u.name}_${C+1}.png`,v.path]))))}])}async function Ur(r){if(!r.length){g.toast("내려받을 그림이 없어요");return}let l=n.toast(`zip 만드는 중 0/${r.length}`,{seconds:600});try{let d={},h=new Set,u=0;for(let[v,C]of r){let I=v.replace(/[\\:*?"<>|]/g,"_");for(let tn=2;h.has(I);tn++)I=v.replace(/\.png$/,`_${tn}.png`);h.add(I),d[I]=[await g.bytes(C),{level:0}];let K=n.win.querySelector(".rb-toasts .rb-toast:last-child span");K&&(K.textContent=`zip 만드는 중 ${++u}/${r.length}`)}ze(`${o||"에셋"}-에셋제작.zip`,new Blob([Qr(d)],{type:"application/zip"}))}catch(d){n.toast(`zip을 만들지 못했어요: ${d?.message??d}`,{error:!0})}finally{l?.close?.()}}let Ii={emotionImages:"감정 이미지",additionalAssets:"추가 에셋",assets:"모듈 에셋"},vs=r=>r>=1048576?`${(r/1048576).toFixed(1)}MB`:`${Math.max(1,Math.round(r/1024))}KB`;function Di(r,l,d,h,u,v,C,I){let K=r[l]??[],tn=String(d).toLowerCase(),y=K.findIndex(V=>String(V?.[0]).toLowerCase()===tn);if(v==="replace"&&y>=0&&!C.has(tn))return C.add(tn),I?.push(K[y][0]),{...r,[l]:K.map((V,Y)=>Y===y?l==="emotionImages"?[V[0],h]:[V[0],h,u]:V)};let W=so(r,l,d);return C.add(W.toLowerCase()),I?.push(W),oo(r,l,W,h,u)}var Fi=r=>wr(kr(s,r));function xs(r,l){let d=g.prefs.nameStyle??"scene";if(d==="scene"||!r.cid)return r.name;let h=vn(s,r.cid),u=d==="dot"?".":"_";return[Fi(r.cid),h&&br(h),r.name].filter(Boolean).join(u)+(l?`.${l}`:"")}function Nt(){let r=g.curChar();return(r?[r]:f.folder?Rn(s,f.folder):s.chars).flatMap(d=>ae(d).map(h=>({...h,cid:d.id})))}let js=r=>e.kind==="module"?r==="assets":r==="emotionImages"||r==="additionalAssets",Ni=r=>js(r)?r:js(g.prefs.putSlot)?g.prefs.putSlot:e.kind==="module"?"assets":"additionalAssets",Bt=()=>{let r=g.curChar();return r?[r]:f.folder?Rn(s,f.folder):s.chars};function Cs(){let r=g.curChar(),l=g.curScene();return(r?[r]:Bt()).flatMap(d=>xa(d,l&&d===r?l.id:null).map(h=>({...h,cid:d.id})))}async function Bi(){let r;e.kind==="module"?r=(await n.svc.load({fresh:!0})).entries.find(d=>d.module.id===e.id)?.module:r=await n.api.getCharacterFromIndex(e.index);let l={};for(let d of["assets","additionalAssets","emotionImages"])l[d]=new Set((r?.[d]??[]).map(h=>String(h?.[0]??"").toLowerCase()));return l}async function Kr(r=Cs()){if(r=r.filter(v=>v?.path),!r.length){g.toast("즐겨찾기한 그림이 없어요. 그림에서 ★(F)를 눌러요");return}let l;try{l=await Bi()}catch(v){n.toast(`봇을 읽지 못했어요: ${v?.message??v}`,{error:!0});return}let d=(g.prefs.putFormat??"webp")==="png"?"png":g.prefs.putFormat??"webp",h=r.map(v=>({it:v,label:`${vn(s,v.cid)?.name??""} › ${v.name}`,nameFor:()=>xs(v,d)})),u=await g.dlg.exportPreview({rows:h,names:l});u&&await me(u.idx.map(v=>r[v]),{slot:u.slot,dup:u.dup})}g.exportFav=Kr;function Vr({onlyNoFav:r=!1}={}){let l=g.curChar(),d=g.curScene(),u=Bt().flatMap(C=>C.scenes.map(I=>({cid:C.id,sid:I.id}))).filter(C=>mn(s,C.cid,C.sid)?.images.length);if(!u.length){g.toast("그림이 있는 씬이 없어요. 먼저 예약하고 생성해요");return}let v=d?Math.max(0,u.findIndex(C=>C.cid===l.id&&C.sid===d.id)):0;ts(g,u,{start:v,onlyNoFav:r})}function Ps(){let r=s.settings.reserveDefault,l=s,d=0;for(let h of Bt())d+=ft(h).length,l=ja(l,h.id,r);if(!d){g.toast("즐겨찾기 없는 씬이 없어요");return}g.set(l),en(),X(),g.toast(`즐겨찾기 없는 씬 ${d}개에 ${r}장씩 예약했어요`)}async function me(r,l={}){if(r=r.filter(K=>K?.path),!r.length){g.toast("보낼 그림을 먼저 골라요(그림 왼쪽 위 체크)");return}let d=Ni(l.slot),h=l.dup??g.prefs.dup,u=g.prefs.putFormat??"webp",v=g.prefs.putQuality??.85,C=n.toast(`넣는 중 0/${r.length}`,{seconds:600}),I=()=>n.win.querySelector(".rb-toasts .rb-toast:last-child span");try{let K=new Array(r.length),tn=0,y=0,W=!1,V=0,Y=0,dn=async()=>{for(;tn<r.length;){let an=tn++,bn=r[an];if(u==="png")K[an]={path:bn.path,ext:"png"};else{let $n=await g.bytes(bn.path),qn=await zo($n,u,v);W||=qn.fellBack,V+=$n.length,Y+=qn.data.length,K[an]=qn.ext==="png"?{path:bn.path,ext:"png"}:{path:await t.saveAsset(qn.data),ext:qn.ext}}let Sn=I();Sn&&(Sn.textContent=`넣는 중 ${++y}/${r.length}`)}};await Promise.all([dn(),dn(),dn()]);let xn=null,hn=[];await Ms(an=>{xn=structuredClone(an[d]??[]),hn.length=0;let bn=new Set,Sn=an;return r.forEach(($n,qn)=>{Sn=Di(Sn,d,l.name||xs($n,K[qn].ext),K[qn].path,K[qn].ext,h,bn,hn)}),Sn});let ln=s;r.forEach((an,bn)=>{an.cid&&an.sid&&(ln=je(ln,an.cid,an.sid,[an.path],!1),hn[bn]&&(ln=Ca(ln,an.cid,an.sid,an.path,hn[bn])))}),ln!==s&&g.set(ln,{undo:!1}),C?.close?.();let jn=u!=="png"&&V?` · ${vs(V)} → ${vs(Y)}`:"";n.toast(`${Ii[d]}에 ${r.length}장 넣었어요${jn}`,{seconds:8,action:{label:"되돌리기",run:async()=>{try{await Ms(an=>({...an,[d]:xn})),n.toast("넣기를 되돌렸어요")}catch(an){n.toast(`되돌리지 못했어요: ${an?.message??an}`,{error:!0})}}}}),W&&n.toast("이 브라우저는 AVIF를 만들 수 없어 WebP(또는 원본)로 넣었어요"),$.clear(),pn(),X()}catch(K){C?.close?.(),n.toast(`넣지 못했어요: ${K?.message??K}`,{error:!0})}}function Ri(){let r=g.curChar();if(r)return{ids:[r.id],label:`‘${r.name}’`};if(f.folder){let l=Rn(s,f.folder).map(d=>d.id);return{ids:l,label:`‘${s.folders.find(d=>d.id===f.folder)?.name}’ 폴더의 캐릭터 ${l.length}명`}}return{ids:s.chars.map(l=>l.id),label:`모든 캐릭터 ${s.chars.length}명`}}async function Hr(r){let l=Ri();if(!l.ids.length){g.toast("적용할 캐릭터가 없어요. 먼저 캐릭터를 만들어요");return}let d=Sr(s,l.ids),h="merge";if(d.length&&(h=await g.dlg.templateChoice(d.length,r.name),!h))return;let u=pe(s,l.ids,r,h);g.set(u.project),en(),pn(),X(),g.paintLeft(),n.toast(`‘${r.name}’을 ${l.label}에 적용했어요 · 더함 ${u.stats.added} · 바뀜 ${u.stats.updated}${u.stats.removed?` · 빠짐 ${u.stats.removed}`:""}`,{seconds:8,action:{label:"되돌리기",run:()=>g.undo()}})}async function $s(r){let l=await t.loadTemplates(),d=l.findIndex(h=>h.name===r.name);d>=0?l[d]=r:l.push(r),await t.saveTemplates(l)}async function Ui(){g.persist(),et({force:!0});let r=[...zr(s)],l=n.toast(`백업 만드는 중 0/${r.length}`,{seconds:3600});try{let d={},h=new Map,u=0,v=0;for(let C of r){try{let I=await g.bytes(C),K=(/\.(png|webp|jpe?g|avif)$/i.exec(C)?.[1]??"png").toLowerCase(),tn=`img/${String(h.size+1).padStart(5,"0")}.${K}`;h.set(C,tn),d[tn]=[I,{level:0}]}catch{v++}if(++u%10===0){let I=n.win.querySelector(".rb-toasts .rb-toast:last-child span");I&&(I.textContent=`백업 만드는 중 ${u}/${r.length}`),await new Promise(K=>setTimeout(K))}}d[$r]=[Yr(JSON.stringify(Wo(s,h,{title:o}))),{level:6}],ze(`${o||"에셋"}-프로젝트백업.zip`,new Blob([Qr(d)],{type:"application/zip"})),n.toast(`백업을 내려받았어요(그림 ${h.size}장${v?`, 못 읽은 ${v}장 빠짐`:""})`,{seconds:8,error:!!v})}catch(d){n.toast(`백업을 만들지 못했어요: ${d?.message??d}`,{error:!0})}finally{l?.close?.()}}async function Ki(r,l){let d=Go(l);if(!d)throw new Error("백업 파일이 올바르지 않아요");if(!await zn(n.win,{title:"이 백업으로 지금 프로젝트를 바꿀까요?",body:`캐릭터 ${d.project.chars?.length??0}명, 그림 ${d.entries.length}장. 지금 내용은 되돌리기로 돌아올 수 있어요.`,ok:"바꾸기"}))return;let h=n.toast(`그림 가져오는 중 0/${d.entries.length}`,{seconds:3600}),u=new Map,v=0,C=0,I=async()=>{for(;v<d.entries.length;){let tn=d.entries[v++];try{u.set(tn,await t.saveAsset(await r.get(tn)))}catch{}let y=n.win.querySelector(".rb-toasts .rb-toast:last-child span");y&&(y.textContent=`그림 가져오는 중 ${++C}/${d.entries.length}`)}};try{await Promise.all([I(),I(),I()])}finally{h?.close?.()}let K=d.entries.length-u.size;g.set(Zn(Xo(d.project,u))),f.folder=null,ge(null),n.toast(`백업을 불러왔어요(그림 ${u.size}장${K?`, 못 가져온 ${K}장 빠짐`:""})`,{seconds:8,action:{label:"되돌리기",run:()=>g.undo()},error:!!K})}async function Vi(r){let l=new Uint8Array(await r.slice(0,512).arrayBuffer());if(l[0]===123||/\.json$/i.test(r.name)){let h=JSON.parse(await r.text());return{files:[],projs:[ss(h,{name:h.name||r.name.replace(/\.json$/i,"")})],read:null}}if(as(l)){let h=async(I,K)=>new Uint8Array(await r.slice(I,I+K).arrayBuffer()),u=await rs(h,r.size),v=new Map(u.map(I=>[I.name,I]));return{files:u,get:async I=>{let K=v.get(I);if(!K)throw new Error(`${I}이 없어요`);return h(K.off,K.size)}}}let d=new Uint8Array(await r.arrayBuffer());if(d[0]===31&&d[1]===139&&(d=at(d)),as(d.subarray(0,512))){let u=await rs(async(C,I)=>d.subarray(C,C+I),d.length),v=new Map(u.map(C=>[C.name,C]));return{files:u,get:async C=>{let I=v.get(C);if(!I)throw new Error(`${C}이 없어요`);return d.subarray(I.off,I.off+I.size)}}}if(d[0]===80&&d[1]===75){let h=mi(d);return{files:Object.keys(h).filter(v=>!v.endsWith("/")).map(v=>({name:v})),get:async v=>{if(!h[v])throw new Error(`${v}이 없어요`);return h[v]}}}throw new Error("SDStudio 백업(.tar)이나 프로젝트 파일(.json)이 아니에요")}function Hi(r){In(n.win,r,[{label:"SDStudio 백업·프로젝트(.tar·.json) / Dusk 전체 백업(.zip)",icon:"upload",onClick:()=>Se()},{label:"씬 템플릿(.json)",icon:"upload",onClick:()=>Rt()},{label:"조각 모음(.json) · 와일드카드(.txt)",icon:"upload",onClick:()=>Ji()},{label:"캐릭터 프리셋(.json) → 캐릭터 카드",icon:"upload",onClick:()=>Gi()},{label:"글로벌 프리셋(.json·백업 .tar) → 프리셋",icon:"upload",onClick:()=>Wi()},{label:"프로젝트 템플릿 백업(.tar) → 씬 템플릿·프리셋",icon:"upload",onClick:()=>Se()},{label:"PNG 메타데이터 → 프롬프트",icon:"upload",onClick:()=>Xi()}])}async function Ji(){let r=await ee({accept:".json,.txt,application/json,text/plain",multiple:!0});for(let l of r??[])try{let d=vt(l.name,await l.text());if(d.libs){let h=xt(s.pieces,d.libs);g.set({...s,pieces:h.pieces}),g.toast(`조각 모음 ${h.names.join(", ")}을 가져왔어요`)}else{let h=yr(s.pieces,d.wild);g.set({...s,pieces:h.pieces}),g.toast(`<${h.group}.${h.name}> 조각으로 가져왔어요`)}}catch(d){g.toast(`${l.name}: ${d?.message??d}`,{error:!0})}nt()}async function Wi(){let[r]=await ee({accept:".json,.tar,application/json,application/x-tar"});if(r){if(/\.tar$/i.test(r.name))return Se(r);try{let l=Fa(await r.text(),s.settings),d=vr(await t.loadPresets(),l);await t.savePresets(d.list),g.toast(`프리셋 ${l.length}개를 가져왔어요 — 왼쪽 위 프리셋 불러오기에서 골라요`)}catch(l){g.toast(l?.message??String(l),{error:!0})}}}async function Gi(){let[r]=await ee({accept:".json,application/json"});if(!r)return;let l;try{l=Ia(await r.text())}catch(I){return g.toast(I?.message??String(I),{error:!0})}if(!l.length)return g.toast("캐릭터 프리셋이 없어요");let d=s,h=f.folder,u=[];for(let I of l){d=ye(d,{name:I.name,prompt:I.prompt});let K=d.chars.at(-1).id;u.push(K),h&&(d=ht(d,h,K,!0))}let v=h&&Be(d,h)||or(d)?.tpl||"",C=v?(await t.loadTemplates()).find(I=>I.name===v):null;C&&(d=pe(d,u,C,"replace").project),g.set(d),en(),X(),g.toast(`캐릭터 ${l.length}명을 만들었어요(외형 프롬프트 포함)`)}async function Xi(){let[r]=await ee({accept:"image/png"});if(!r)return;let l=Lo(new Uint8Array(await r.arrayBuffer()));if(!l)return g.toast("이 PNG에는 프롬프트 메타데이터가 없어요",{error:!0});let d=g.curScene(),h=g.curChar(),u=l.split&&l.middle&&d&&await zn(n.win,{title:"씬 프롬프트도 바꿀까요?",body:`이 그림의 씬 부분(${l.middle.slice(0,80)})을 지금 씬 ‘${d.name}’에 넣어요.`,ok:"씬에도 넣기",cancel:"상위·하위만"}),v=Ln(s,{top:l.top,back:l.split?l.back:s.settings.back,neg:l.neg||s.settings.neg});l.split&&l.middle&&!u&&(v=Ln(v,{back:[l.middle,l.back].filter(Boolean).join(", ")})),u&&(v=Ue(v,h.id,d.id,[[{prompt:l.middle,on:!0}]])),g.set(v),nt(),X(),g.toast(l.split?"SDStudio 메타데이터로 상위·하위·네거티브를 채웠어요":"그림 프롬프트를 상위 프롬프트에, 네거티브를 네거티브에 넣었어요")}async function Se(r){let l=r??(await ee({accept:".tar,.zip,.json,.gz,application/x-tar,application/json,application/zip"}))[0];if(!l)return;let d,h,u=n.toast("백업을 읽는 중…",{seconds:600});try{if(d=await Vi(l),d.get&&d.files.some(an=>an.name===$r)){u?.close?.(),await Ki(d,JSON.parse(st(await d.get($r))));return}h=d.projs??await ui(d.files,async an=>JSON.parse(new TextDecoder().decode(await d.get(an))))}catch(an){u?.close?.(),n.toast(`읽지 못했어요: ${an?.message??an}`,{error:!0});return}u?.close?.();let v=d.get?await Yi(d):"";if(!h.length&&v)return;if(!h.length){n.toast("백업 안에서 SDStudio 프로젝트를 찾지 못했어요",{error:!0});return}let C=await g.dlg.backupImport({projs:h,hasImages:!!d.get&&h.some(an=>an.count)});if(!C)return;let I=C.idx.map(an=>h[an]),{project:K,jobs:tn}=gi(s,I,{mode:d.get?C.mode:"none"});if(g.set(K),f.folder=null,ge(null),!tn.length){n.toast(`캐릭터 ${I.length}명을 가져왔어요`,{seconds:8,action:{label:"되돌리기",run:()=>g.undo()}});return}let y=n.toast(`그림 가져오는 중 0/${tn.length}`,{seconds:3600}),W=()=>n.win.querySelector(".rb-toasts .rb-toast:last-child span"),V=0,Y=0,dn=0,xn=[],hn=Date.now(),ln=()=>{if(!xn.length)return;let an=s;for(let bn of xn)an=mt(an,bn.cid,bn.sid,{path:bn.path,fav:bn.fav},()=>bn.at);xn=[],g.set(an,{undo:!1})},jn=async()=>{for(;V<tn.length;){let an=tn[V++];try{let Sn=await d.get(an.entry),$n=await t.saveAsset(Sn);xn.push({...an,path:$n,at:hn-an.order})}catch{dn++}Y++,xn.length>=20&&(ln(),X());let bn=W();bn&&(bn.textContent=`그림 가져오는 중 ${Y}/${tn.length}`)}};await Promise.all([jn(),jn(),jn()]),ln(),g.persist(),y?.close?.(),g.paint(),n.toast(`캐릭터 ${I.length}명 · 그림 ${tn.length-dn}장을 가져왔어요${dn?` (못 읽은 그림 ${dn}장)`:""}`,{seconds:10})}g.importBackup=Se;async function Yi(r){let l=y=>r.files.find(W=>W.name===y||W.name===`__settings__/${y}`||W.name.endsWith(`/__settings__/${y}`))?.name,d=async y=>new TextDecoder().decode(await r.get(y)),h=[],u=l("global_pieces.json"),v=l("global_presets.json"),C=l("global_character_presets.json"),I=l("project_templates.json");if(!u&&!v&&!C&&!I||!await zn(n.win,{title:"전역 설정도 가져올까요?",body:[u&&"전역 조각 모음",v&&"글로벌(그림체) 프리셋",C&&"캐릭터 프리셋(→ 캐릭터 카드)",I&&"프로젝트 템플릿(→ 씬 템플릿·프리셋)"].filter(Boolean).join(" · ")+"이 들어 있어요. 같은 이름은 번호를 붙여 더해요.",ok:"가져오기",cancel:"건너뛰기"}))return"";try{if(u){let y=vt("g.json",await d(u));if(y.libs){let W=xt(s.pieces,y.libs);g.set({...s,pieces:W.pieces}),h.push(`조각 모음 ${W.names.length}개`)}}}catch(y){n.toast(`전역 조각: ${y?.message??y}`,{error:!0})}try{if(v){let y=Fa(await d(v),s.settings),W=vr(await t.loadPresets(),y);await t.savePresets(W.list),h.push(`프리셋 ${y.length}개`)}}catch(y){n.toast(`글로벌 프리셋: ${y?.message??y}`,{error:!0})}try{if(C){let y=Ia(await d(C)),W=s;for(let V of y)W=ye(W,{name:V.name,prompt:V.prompt});g.set(W),h.push(`캐릭터 ${y.length}명`)}}catch(y){n.toast(`캐릭터 프리셋: ${y?.message??y}`,{error:!0})}try{if(I){let y=JSON.parse(await d(I)),W=Array.isArray(y?.templates)?y.templates:[],V=await t.loadTemplates(),Y=await t.loadPresets(),dn=0;for(let xn of W)if(xn?.name){try{let hn=Pt({name:xn.name,scenes:xn.scenes??[]}),ln=hn.name;for(let jn=2;V.some(an=>an.name===ln);jn++)ln=`${hn.name} ${jn}`;V.push({...hn,name:ln}),dn++}catch{}xn.preset&&(Y=vr(Y,[Da({name:xn.name,preset:xn.preset},s.settings)]).list)}await t.saveTemplates(V),await t.savePresets(Y),h.push(`프로젝트 템플릿 ${dn}개`)}}catch(y){n.toast(`프로젝트 템플릿: ${y?.message??y}`,{error:!0})}nt(),X();let tn=h.join(" · ");return tn&&n.toast(`가져왔어요: ${tn}`,{seconds:8}),tn}async function Rt(){let[r]=await ee({accept:"application/json,.json"});if(!r)return;let l;try{l=Pt(JSON.parse(await r.text()))}catch(d){n.toast(`읽지 못했어요: ${d?.message??d}`,{error:!0});return}if(!l.scenes.length){n.toast("씬이 없는 템플릿이에요",{error:!0});return}await $s(l),await Hr(l)}async function zs(r){let l=await Xn(n.win,{title:"씬을 템플릿으로 저장",label:"템플릿 이름(같은 이름은 바뀌어요)",value:`${r.name} 씬`,ok:"저장"});l?.trim()&&(await $s(Yo(r,l.trim(),s.pieces)),n.toast(`템플릿 ‘${l.trim()}’을 저장했어요(씬 ${r.scenes.length}개)`))}async function Qi(r){let l=await t.loadTemplates(),d=g.curChar();In(n.win,r,[...l.map(h=>({label:`${h.name} 적용 (씬 ${h.scenes.length})`,icon:"preset",onClick:()=>Hr(h)})),...l.length?["sep"]:[],{label:"파일에서 가져와 적용(SDStudio·Dusk)…",icon:"upload",onClick:()=>Rt()},...d?[{label:"이 캐릭터 씬을 템플릿으로 저장",icon:"plus",onClick:()=>zs(d)}]:[],{label:"템플릿 관리…",icon:"list",onClick:()=>g.dlg.templateManager({apply:Hr})}])}async function Ms(r){if(e.kind==="module"){let d=(await n.svc.load({fresh:!0})).entries.find(u=>u.module.id===e.id)?.module;if(!d)throw new Error("모듈을 찾지 못했어요");let h=r(structuredClone(d));await n.svc.run("update",e.id,{assets:h.assets}),n.state.modDirty=!0;return}let l=await n.api.getCharacterFromIndex(e.index);if(!l||l.chaId!==e.id)throw new Error("봇을 찾지 못했어요");if(Xa(l))throw new Error("봇이 응답을 생성하는 중이에요. 끝난 뒤 다시 해 주세요");await n.api.setCharacterToIndex(e.index,r(l)),n.state.charsDirty=!0}async function Ut(r){if(!r.length)return;let l=await g.dlg.put({count:r.length});l&&await me(r,l)}async function Ss(r){let l=Nn(r),d=[];if(!l.vibe)return d;for(let h of s.settings.vibes.filter(u=>u.on)){let u=h.enc&&h.enc.model===r&&h.enc.info===h.info?h.enc.data:null;u||(u=await t.encodeVibe(ro(He(await g.bytes(h.path)),h.info,r),{signal:O.ctl?.signal,label:"sdstudio:vibe"}),g.set(Ln(s,{vibes:s.settings.vibes.map(v=>v.id===h.id?{...v,enc:{model:r,info:h.info,data:u}}:v)}),{undo:!1})),d.push({image:u,strength:h.strength})}return d}async function As(r){if(!Nn(r).reference)return[];let l=[];for(let d of s.settings.refs.filter(h=>h.on))l.push({image:await fl(await g.bytes(d.path)),strength:d.strength,fidelity:d.fidelity,type:d.type,info:1});return l}async function Zi(r,l,d){let h=vn(s,r.cid),u=mn(s,r.cid,r.sid),v=s.settings;if(!h||!u)return;let C,I;try{C=Te({top:v.top,own:ve(s,h),middle:Pe(u,r.combo),back:v.back},s.pieces),I=ct(v.neg,s.pieces)}catch(Y){let dn=new Error(`${h.name} · ${u.name} 프롬프트 오류: ${Y?.message??Y}`);throw dn.fatal=!0,dn.at={cid:h.id,sid:u.id},dn}let{width:K,height:tn}=_e(v.size,u),y=lt({prompt:C,uc:I,width:K,height:tn,seed:$a(v.seed,l),settings:v.sampling,chars:v.chars.filter(Y=>Y.on),vibes:await Ss(v.sampling.model),refs:await As(v.sampling.model)}),W=await t.image(y,{signal:O.ctl?.signal,token:d}),V=await t.saveAsset(W);g.remember(V,W),g.set(mt(s,h.id,u.id,{path:V,seed:y.parameters.seed,prompt:C,w:K,h:tn}),{undo:!1})}async function Kt(){if(O.running||O.stopping)return;let r=ie(s);if(!r.length){g.toast("예약된 씬이 없어요. 씬 카드의 +1이나 위 예약 버튼을 눌러요.");return}if(!await g.dlg.token())return;let l=g.prefs.boost?(await t.getTokens()).slice(0,4):[],d=l.length>=2?l.map(y=>y.token):[void 0];Object.assign(O,{running:!0,done:0,total:r.length,ctl:new AbortController,workers:d.length,t0:Date.now(),retry:0}),t.setPrefs({resume:!0}).catch(()=>{});let h=null;try{h=await navigator.wakeLock?.request("screen")}catch{}let u=setInterval(()=>{let y=S.querySelector("#sds-prog .t");y&&(y.textContent=Mn()),Q()},1e3);en(),X();let v=new Map,C=null,I=0,K=async y=>{for(;O.running&&!C&&I<r.length;){let W=I++,V=r[W],Y=!1;for(let hn=0;O.running&&!C;hn++)try{await Zi(V,W,y),Y=!0,O.retry=0,O.lastErr="";break}catch(ln){if(Qt(ln)||!O.running){C??=ln;break}if(ln?.fatal){C??=ln,O.running=!1,O.ctl?.abort();break}if(/토큰|401|402|403|Unauthorized|Anlas|구독/i.test(ln?.message??"")){C??=ln,O.running=!1,O.ctl?.abort();break}if(/NovelAI 오류 4(?!29)\d\d/.test(ln?.message??"")){C??=ln,O.running=!1,O.ctl?.abort();break}O.lastErr=String(ln?.message??ln).slice(0,300),O.retry=hn+1,en(),Q();let jn=Math.min(6e4,[3e3,6e3,15e3,3e4][hn]??6e4);await new Promise(an=>{let bn=O.ctl?.signal,Sn=setTimeout($n,jn);function $n(){clearTimeout(Sn),bn?.removeEventListener?.("abort",$n),an()}bn?.addEventListener?.("abort",$n),bn?.aborted&&$n()})}if(!Y)break;O.done++;let dn=mn(s,V.cid,V.sid),xn=(v.get(V.sid)??0)+1;v.set(V.sid,xn),dn&&xn%Math.max(1,Yn(dn.slots))===0&&g.set(Un(s,V.cid,V.sid,dn.reserve-1),{undo:!1}),Date.now()-(O.savedAt??0)>3e3&&(O.savedAt=Date.now(),g.persist()),S.hidden||(en(),X())}};await Promise.all(d.map(K)),clearInterval(u);try{await h?.release()}catch{}t.setPrefs({resume:!1}).catch(()=>{});let tn=O.done;Object.assign(O,{running:!1,stopping:!1,ctl:null,workers:1,retry:0,lastErr:""}),Q(),await g.persist(),en(),pn(),X(),C&&!Qt(C)?(n.toast(`그리다 멈췄어요(${tn}장 완료): ${C?.message??C}`,{error:!0,seconds:15,...C.at?{action:{label:"그 씬 열기",run:()=>{f.charId=C.at.cid,f.sceneId=C.at.sid,f.mode="scene",g.paint()}}}:{}}),/토큰/.test(C?.message??"")&&g.dlg.token({force:!0})):n.toast(C?`멈췄어요. ${tn}장 만들었어요`:`${tn}장 다 그렸어요${d.length>1?` (부스트 ${d.length}줄)`:""}`),S.hidden&&_s()}function Jr(){O.running&&(O.running=!1,O.stopping=!0,O.ctl?.abort(),en(),n.toast("멈추는 중이에요 — 지금 그리는 장만 끝나면 멈춰요"))}async function n0(r,l,d){let h=mn(s,r.cid,r.sid),u=h?.images.find(K=>K.path===r.path),v=vn(s,r.cid);if(!u||!await g.dlg.token())return null;let C={img2img:"변형",infill:"인페인트",upscale:"업스케일"}[l]??"디렉터 도구",I=n.toast(`${C} 하는 중…`,{seconds:600});try{let K=await g.bytes(u.path),tn=He(K),y=Fe(K)??{width:u.w,height:u.h},W=s.settings,V,Y=u.prompt;if(l==="img2img"||l==="infill"){Y=d.prompt?.trim()||u.prompt||Te({top:W.top,own:ve(s,v),middle:Pe(h,0),back:W.back},s.pieces);let hn=lt({prompt:Y,uc:ct(W.neg,s.pieces),width:y.width,height:y.height,settings:W.sampling,action:l,image:tn,mask:l==="infill"?He(d.mask):void 0,strength:d.strength,noise:d.noise??0,addOriginal:d.keep??!0,chars:W.chars.filter(ln=>ln.on),vibes:await Ss(W.sampling.model),refs:l==="img2img"?await As(W.sampling.model):[]});V=await t.image(hn,{label:`sdstudio:${l}`})}else l==="upscale"?V=await t.upscale(to(tn),{label:"sdstudio:upscale"}):V=await t.augment(no({method:l,image:tn,width:y.width,height:y.height,prompt:d.prompt??"",emotion:d.emotion,defry:d.defry??0}),{label:`sdstudio:${l}`});let dn=await t.saveAsset(V);g.remember(dn,V);let xn=Fe(V)??y;return g.set(mt(s,r.cid,r.sid,{path:dn,seed:null,prompt:Y,w:xn.width,h:xn.height,from:l}),{undo:!1}),n.toast(`${C}한 그림을 더했어요`),dn}catch(K){return Qt(K)||n.toast(`${C}하지 못했어요: ${K?.message??K}`,{error:!0}),null}finally{I?.close?.()}}async function Ts({ask:r=!1}={}){try{let l=await _();if(!l)return;let d=l[e.kind==="module"?"lorebook":"globalLore"]??[],h=Ho(d,s);if(!h.added)return;if(r){let u=h.project.folders.filter(v=>!s.folders.some(C=>C.id===v.id)).map(v=>v.name);if(!await zn(n.win,{title:`로어북 폴더 ${h.added}개를 가져올까요?`,body:`${u.slice(0,8).join(", ")}${u.length>8?" …":""} — 봇 로어북의 Dusk 폴더·[소속] 구조대로 에셋 제작 폴더를 만들어요. 에셋 제작에서 바꿔도 로어북은 그대로예요.`,ok:"가져오기",cancel:"나중에"}))return}s=h.project,g.persist(),pn(),X(),n.toast(`로어북 폴더 ${h.added}개를 가져왔어요`)}catch(l){n.toast(`로어북 폴더를 읽지 못했어요: ${l?.message??l}`,{error:!0})}}g.syncLore=Ts;async function et({force:r=!1,remove:l=!1}={}){if(!(!l&&(!m||!j&&!r)))try{let d=l?null:{t:Date.now(),z:z(Os(Yr(JSON.stringify(s))))};if(e.kind==="module")await n.svc.run("update",e.id,{[Me]:d??void 0});else{let h=await n.api.getCharacterFromIndex(e.index);if(!h||h.chaId!==e.id||Xa(h))return;if(!l&&Oa(h,"character")?.t>Math.max(k,await t.savedAt(e))){n.toast("봇 안 설정이 더 최근이라 덮어쓰지 않았어요(다른 기기에서 고친 듯해요)",{error:!0});return}await n.api.setCharacterToIndex(e.index,Ao(h,"character",d))}j=!1,d&&(k=d.t)}catch(d){(r||l)&&n.toast(`봇에 저장하지 못했어요: ${d?.message??d}`,{error:!0})}}let e0=setInterval(()=>{S.hidden||et()},18e4);async function t0(){if(m){if(!await zn(n.win,{title:"봇에 저장을 끌까요?",body:"봇 안에 넣어 둔 에셋 제작 설정을 지워요. 리스에서 카드를 그대로 내보내 배포할 때 쓰세요. 설정은 플러그인 저장소·이 기기 복사본에 그대로 남아요.",ok:"끄고 지우기"}))return;m=!1,await t.setLocal(x,!0),await et({remove:!0}),g.toast("봇에서 지웠어요. 배포가 끝나면 다시 켜 주세요")}else m=!0,await t.setLocal(x,!1),await et({force:!0}),g.toast("봇에도 저장해요");pn()}function Vt(){if(g.persist(),et(),p?.flush(c),r0(),O.running){S.hidden=!0,n.toast(`창을 닫아도 계속 그려요(${O.done}/${O.total}). 다시 ‘에셋 제작’을 누르면 이어서 보여요`,{seconds:8});return}_s()}function r0(){n.root&&(un.root==null?n.root.removeAttribute("style"):n.root.setAttribute("style",un.root)),un.win==null?n.win.removeAttribute("style"):n.win.setAttribute("style",un.win)}function a0(){un.root=n.root?.getAttribute("style")??null,un.win=n.win.getAttribute("style")??null,n.root&&(n.root.style.padding="0"),Object.assign(n.win.style,{maxWidth:"none",maxHeight:"none",width:"100%",height:"100%",borderRadius:"0",border:"0"}),n.api.showContainer?.("fullscreen")?.catch?.(()=>{}),S.isConnected||n.win.appendChild(S),S.hidden=!1,g.paint(),S.focus()}function _s(){clearInterval(e0),clearTimeout(E),Er.delete(a),document.removeEventListener("keydown",qs),removeEventListener?.("focus",Jt),document.removeEventListener?.("visibilitychange",Jt),document.removeEventListener?.("visibilitychange",Ht),removeEventListener?.("pagehide",Ht),R?.disconnect();for(let r of P.values())URL.revokeObjectURL(r);S.remove()}async function s0(r){let l=g.curChar(),d=g.curScene();if(r==="run")return O.running?Jr():Kt();if(r==="toggleLeft")return g.toggleLeft();if(r==="undo")return g.undo();if(r==="redo")return g.redo();if(r==="help")return g.dlg.help();if(r==="search")return Gn("search");if(/^mode[1-5]$/.test(r)){let h=fi[Number(r[4])-1][0];(h!=="bulk"||l)&&Gn(h);return}if(r==="choose")return Vr();if(r==="putFav")return Kr();if(r==="put")return me(d?ae(l,d.id).map(h=>({...h,cid:l.id})):Nt());if(r==="unpick"){let h=Nt(),u=s;for(let v of h)u=je(u,v.cid,v.sid,[v.path],!1);$.clear(),f.focus=null,g.set(u,{undo:!1}),pn(),X();return}if(r==="remove"){if(f.mode==="gallery"||d){let h=d?ae(l,d.id).map(u=>({...u,cid:l.id})):Nt();if(h.length)return Br(h)}if($.size)return l?Dt([...$]):Ot([...$]);if(f.focus?.kind==="char")return Ot([f.focus.id]);if(f.focus?.kind==="folder"){let h=s.folders.find(u=>u.id===f.focus.id);h&&await zn(n.win,{title:`‘${h.name}’ 폴더를 지울까요?`,body:"안의 폴더도 함께 지워져요. 캐릭터와 그림은 남아요.",ok:"지우기",danger:!0})&&(g.set(dr(s,h.id)),f.focus=null,pn(),X())}return}if(r==="selectAll"&&f.mode==="gallery")return S.querySelector("#sds-g-all")?.click();if(r==="selectAll"){if(d){g.set(je(s,l.id,d.id,d.images.map(h=>h.path),!0),{undo:!1}),pn(),X();return}(l?l.scenes.map(h=>h.id):pr(s,f.folder).chars.map(h=>h.id)).forEach(h=>$.add(h)),pn(),X();return}if(r==="newItem")return l?It():Lt();if(r==="cup")return d?Ge(g,l.id,d.id):l&&$.size===1?Ge(g,l.id,[...$][0]):void 0;if(r==="reserve"){if(d)g.set(Un(s,l.id,d.id,d.reserve+1));else if(l&&$.size)g.set(Wn(s,l.id,1,[...$]));else return;en(),X()}}let Es=r=>{if(n.win.querySelector(".rb-modal, .rb-menu")||S.querySelector(".sds-over"))return;let l=/^(INPUT|TEXTAREA|SELECT)$/.test(r.target?.tagName??"");if(r.key==="Escape"){if(l&&r.target.value){r.target.blur();return}r.stopPropagation(),$.size?($.clear(),pn(),X()):f.mode!=="scene"?Gn("scene"):f.sceneId?Ze(null):f.charId?ge(null):Vt();return}let d=Ar(r),h=ei(g.keys,d);h&&(l&&(!ti(d)||h==="undo"||h==="redo"||h==="selectAll")||(r.preventDefault(),r.stopPropagation(),s0(h)))};S.addEventListener("keydown",Es);let Ht=()=>{(document.visibilityState==="hidden"||event?.type==="pagehide")&&(g.persist(),p?.flush(c))};document.addEventListener("visibilitychange",Ht),addEventListener?.("pagehide",Ht);let qs=r=>{if(S.hidden||!S.isConnected||S.contains(r.target))return;let l=r.target;l&&l!==document.body&&l!==document.documentElement||Es(r)};document.addEventListener("keydown",qs),g.paint(),S.focus(),on.tutorialDone&&setTimeout(()=>Ts({ask:!on.loreSync}),300),g.tut={importBackup:()=>Se(),importTemplate:()=>Rt(),pickSetTpl:(r,l)=>Nr(r,l)},on.tutorialDone||setTimeout(()=>g.dlg.tutorial?.(),400);let Ls={el:S,close:Vt,S:g,reopen:a0};Er.set(a,Ls),addEventListener?.("pagehide",()=>g.persist()),document.addEventListener?.("visibilitychange",()=>{document.visibilityState==="hidden"&&g.persist()});let Jt=()=>{!S.hidden&&S.isConnected&&document.visibilityState!=="hidden"&&n.api.showContainer?.("fullscreen")?.catch?.(()=>{})};return addEventListener?.("focus",Jt),document.addEventListener?.("visibilitychange",Jt),on.resume&&ie(s).length&&n.toast(`지난번에 그리다 멈췄어요. 남은 ${ie(s).length}장을 이어 그릴까요?`,{seconds:30,action:{label:"이어 그리기",run:()=>Kt()}}),Ls}async function fl(n){let e=URL.createObjectURL(new Blob([n]));try{let t=new Image;await new Promise((j,z)=>{t.onload=j,t.onerror=z,t.src=e});let a=t.width/t.height,[o,c]=a<.83?[1024,1536]:a>1.2?[1536,1024]:[1472,1472],p=Object.assign(document.createElement("canvas"),{width:o,height:c}),s=p.getContext("2d");s.fillStyle="#000",s.fillRect(0,0,o,c);let w=Math.min(o/t.width,c/t.height),x=t.width*w,m=t.height*w;s.drawImage(t,(o-x)/2,(c-m)/2,x,m);let k=await new Promise(j=>p.toBlob(j,"image/png"));return He(new Uint8Array(await k.arrayBuffer()))}finally{URL.revokeObjectURL(e)}}async function ap(n,e){let t=e.ext;if(!t)throw new Error("Dusk가 애드온 자리(ext)를 지원하지 않아요 — Dusk를 업데이트해 주세요");let a=Mo(n),o=t.add("slot","editor.actions",(c,p)=>!p?.id||p.kind==="character"&&!Number.isInteger(p.index)?null:B("에셋 제작",{size:"sm",kind:"primary",icon:"sparkle",id:"rb-sd-make",onClick:()=>is(c,p,a).catch(s=>c.toast(s?.message??String(s),{error:!0}))}));return{deactivate(){o()}}}export{ap as activate};
