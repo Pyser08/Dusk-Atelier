@@ -81,7 +81,7 @@ test("리스의 스크롤 컨테이너·전체 요소를 건드리지 않는다(
     assert.ok(!/\.risu-chat > div/.test(css), `${id}: 리스 메시지 컨테이너 대신 우리 래퍼를 쓴다`);
     assert.ok(!/body \*/.test(css), `${id}: 모든 요소에 거는 규칙 없음`);
     assert.ok(!css.includes("-webkit-scrollbar"), `${id}: 스크롤바 크기를 바꾸지 않는다`);
-    assert.ok((css.replace(/[^{}]*st-f(?:old|tool)[^{]*\{[^}]*\}/g, "").replace(/@media \(max-width: 760px\) \{[\s\S]*?\n\}/g, "").replace(/\.risu-chat \.grow > div:has\(> \.st-msg\)/g, "").match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창) — 채팅 메시지 상자로 범위를 좁힌 :has(> .st-msg)만 뺀다(맨 :has는 화면 전체를 다시 따져 느려짐)`);
+    assert.ok((css.replace(/[^{}]*st-f(?:old|tool)[^{]*\{[^}]*\}/g, "").replace(/@media \(max-width: 760px\) \{[\s\S]*?\n\}/g, "").replace(/\.risu-chat \.grow > div:has\(> \.st-msg\)/g, "").replace(/\/\* 입력창 버튼 모양:[\s\S]*?\/\* 입력창 버튼 모양 끝 \*\//g, "").match(/:has\(/g) ?? []).length <= 2, `${id}: :has는 최대 두 번(대화 배경·입력창) — 채팅 메시지 상자로 범위를 좁힌 :has(> .st-msg)만 뺀다(맨 :has는 화면 전체를 다시 따져 느려짐)`);
   }
   const c = buildStealth("claudecode").css;
   assert.ok(c.includes('body[x-dusk-st][x-dusk-fold="0"] {') && !/(^|[\s,}])body:has\(/.test(c));

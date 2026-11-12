@@ -133,11 +133,12 @@ export function splitModel(label) {
   return m && m[1] ? [m[1], m[2]] : [t, ""];
 }
 function mobileInputCss(P, L) {
-  const S = "div:has(> .text-input-area)", menu = `${S} > :is(div, button):not(.text-input-area):not(.button-icon-send):not(:has(.loadmove)):has(svg)`;
+  const S = "div:has(> .text-input-area)", menu = `${S} > :is(div, button):not(.text-input-area):not(.button-icon-send):not(.composer-expand-btn):not(:has(.loadmove)):has(svg)`;
+  const expand = `${S} > .composer-expand-btn`;   // 포켓리스 '채팅 키우기' 버튼 → 모델 알약으로 보이게(누르면 그대로 키우기, 사용자 지정 11-12)
   const send = `${S} > .button-icon-send.button-icon-send`, stop = `${S} > div:has(> .loadmove)`;
   // 포켓리스 등은 '채팅 키우기' 같은 아이콘 버튼이 더 있어 '+'가 둘 떴다(11-12). 메뉴가 보내기 바로 뒤가 아닌 판도 있어(0.3.50에서 둘 다 사라짐)
   // → 아이콘 버튼 중 첫 번째만 '+', 뒤따르는 아이콘 버튼은 숨긴다(진단 '입력창 추적'으로 판별 순서 확인 필요)
-  const btn = ":is(div, button):not(.text-input-area):not(.button-icon-send):not(:has(.loadmove)):has(svg)";
+  const btn = ":is(div, button):not(.text-input-area):not(.button-icon-send):not(.composer-expand-btn):not(:has(.loadmove)):has(svg)";
   const extra = `${S} > ${btn} ~ ${btn}`;
   const hideIco = `${S} > :not(.text-input-area) > svg { display: none !important; }
   ${extra} { display: none !important; }
@@ -150,16 +151,23 @@ function mobileInputCss(P, L) {
   ${hideIco}
   ${menu} { order: 1; position: static !important; flex: none; width: 34px; height: 34px; margin: 0 8px 0 0 !important; padding: 0 !important; border-radius: 50% !important; transform: none; background: var(--st-i-plus) center / 20px 20px no-repeat var(--st-mb) !important; }
   ${menu}::after { content: ""; position: absolute; right: 50px; bottom: 8px; width: 34px; height: 34px; border-radius: 50%; background: var(--st-i-mic) center / 20px 20px no-repeat var(--st-mb); pointer-events: none; }
-  ${L.note ? `${menu}::before { content: "${cssText(L.note)}"; position: absolute; left: 6px; top: -24px; color: var(--st-dim); font-size: 12.5px; white-space: nowrap; pointer-events: none; }` : ""}
+  ${L.note ? `@media (max-width: 760px) { ${menu}::before { content: "${cssText(L.note)}"; position: absolute; left: 6px; top: -24px; color: var(--st-dim); font-size: 12.5px; white-space: nowrap; pointer-events: none; } }` : ""}
   ${m1 ? `${S}::before { content: "${cssText(m1)}"; ${pill} padding: 0 ${m2 ? 5 : 14}px 0 14px; border-radius: ${m2 ? "999px 0 0 999px" : "999px"}; color: var(--st-fg); }` : `${S}::before { content: none; }`}
   ${m1 && m2 ? `${S}::after { content: "${cssText(m2)}"; ${pill} padding: 0 14px 0 0; border-radius: 0 999px 999px 0; color: var(--st-dim); }` : `${S}::after { content: none; }`}
+  ${m1 ? `${S}:has(> .composer-expand-btn)::before, ${S}:has(> .composer-expand-btn)::after { content: none !important; }
+  ${expand} { order: 2; display: inline-flex !important; align-items: center; flex: none; width: auto !important; min-width: 0 !important; height: 34px !important; margin: 0 !important; padding: 0 14px !important; border-radius: 999px !important; background: var(--st-mb) !important; color: var(--st-fg) !important; font-size: 15px; white-space: pre; visibility: visible !important; opacity: 1 !important; overflow: visible; transform: none; cursor: pointer; }
+  ${expand} > * { display: none !important; }
+  ${expand}::before { content: "${cssText(m1)}"; color: var(--st-fg); }
+  ${m2 ? `${expand}::after { content: " ${cssText(m2)}"; color: var(--st-dim); }` : ""}` : ""}
   :is(${send}, ${stop}) { order: 3; flex: none; margin: 0 0 0 auto !important; width: 34px; height: 34px; padding: 0 !important; border-radius: 50% !important; transform: none; display: flex; align-items: center; justify-content: center; }
   ${send} { background: var(--st-i-up) center / 20px 20px no-repeat var(--st-ms) !important; }
   ${stop} { background: var(--st-ms) !important; color: #fff !important; }`;
   }
   const M = P.mob, mic = M.icon + 12;
+  const noExpand = `${expand} { display: none !important; }`;
   return `${S} { display: flex !important; width: calc(100% - ${M.m * 2}px) !important; max-width: none; margin: 8px ${M.m}px 12px !important; padding: ${(M.h - M.send) / 2}px ${M.pr}px ${(M.h - M.send) / 2}px ${M.pl}px !important; min-height: ${M.h}px; border-radius: ${M.h / 2}px; background: var(--st-mi) !important; border: 1px solid var(--st-mline) !important; box-shadow: 0 6px 28px rgba(0, 0, 0, .09), 0 1px 4px rgba(0, 0, 0, .04); flex-wrap: nowrap !important; align-items: flex-end !important; gap: 0; }
   ${S}::before, ${S}::after { content: none !important; }
+  ${noExpand}
   ${S} > .text-input-area { flex: 1 1 auto !important; order: 0; min-width: 0; min-height: ${M.send}px; margin: 0 ${mic + M.gap}px 0 0 !important; padding: ${(M.send - 24) / 2}px ${M.tp}px !important; font-size: 16px !important; line-height: 24px !important; resize: none; }
   ${hideIco}
   ${menu} { order: -1; position: static !important; flex: none; width: 36px; height: ${M.send}px; margin: 0 !important; padding: 0 !important; border-radius: 50% !important; transform: none; background: var(--st-i-plus) center / ${M.icon}px ${M.icon}px no-repeat transparent !important; }
@@ -215,14 +223,18 @@ export function buildStealth(id, opts = {}) {
   .st-msg { max-width: 100%; padding: 6px 18px; }
   .st-user .st-body { max-width: 85%; border-radius: 20px; padding: 10px 16px; }
   .st-body .chattext, .st-body .chattext p, .st-body .chattext li, .st-body .chattext span { font-size: 16px !important; line-height: 1.6 !important; }
-  ${P.mob ? mobileInputCss(P, L) : `  /* 클로드 앱 입력창: 위는 글 칸, 아래 한 줄에 리스 버튼 · 모델 칩 · 둥근 보내기. 리스 버튼은 지우지 않고 작게 */
+  ${P.mob ? "" : `  /* 클로드 앱 입력창: 위는 글 칸, 아래 한 줄에 리스 버튼 · 모델 칩 · 둥근 보내기. 리스 버튼은 지우지 않고 작게 */
   div:has(> .text-input-area) { width: calc(100% - 20px) !important; max-width: none; margin: ${P.shell && L.note ? 30 : 8}px 10px 10px !important; padding: 10px 8px 8px !important; border-radius: ${Math.max(P.input, 24)}px; flex-wrap: wrap !important; align-items: center !important; column-gap: 2px; row-gap: 4px; }
   div:has(> .text-input-area) > .text-input-area { flex: 1 0 100% !important; order: -1; min-height: 40px; margin: 0 !important; padding: 4px 10px !important; font-size: 16px !important; }
   div:has(> .text-input-area) > div, div:has(> .text-input-area) > button { flex: none; margin: 0 !important; padding: 6px !important; transform: scale(.9); }
   div:has(> .text-input-area) > .button-icon-send { order: 3; margin-left: auto !important; width: 40px; height: 40px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; transform: none; }
   ${L.model ? `div:has(> .text-input-area)::after { position: static; order: 2; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; margin-left: 2px; padding: 6px 12px; border-radius: 999px; background: var(--st-bubble); color: var(--st-fg); font-size: 13px; white-space: nowrap; }` : ""}
   ${P.shell && L.note ? `div:has(> .text-input-area)::before { content: "${cssText(L.note)}"; position: absolute; left: 6px; top: -24px; bottom: auto; color: var(--st-dim); font-size: 12.5px; white-space: nowrap; pointer-events: none; }` : ""}`}
-}`;
+}${P.mob && !opts.minimal ? `
+/* 입력창 버튼 모양: 휴대폰·PC 같이(사용자 지정 11-12) */
+${mobileInputCss(P, L)}
+@media (min-width: 761px) { div:has(> .text-input-area) { max-width: calc(var(--st-w) - 48px) !important; margin-left: auto !important; margin-right: auto !important; } }
+/* 입력창 버튼 모양 끝 */` : ""}`;
   const css = [
     // 앱 공식 글꼴(사용자 지정 11-12): 공개된 글꼴(구글 산스 플렉스·Inter)은 구글 폰트에서 받아 오고, 공개 안 된 글꼴(Anthropic Sans·OpenAI Sans)은 기기에 있으면 쓰고 없으면 시스템 글꼴. @import는 맨 앞이어야 한다
     P.fontUrl && !opts.minimal ? [].concat(P.fontUrl).map((u) => `@import url("${u}");`).join("\n") : "",
