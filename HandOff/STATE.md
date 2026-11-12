@@ -1175,3 +1175,5 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 원인: 트리거는 comment로 짝짓고 이름 바뀜 감지는 내용 해시가 같을 때만 → comment(버전)·코드가 함께 바뀐 Lua가 따로 놂. 기록 없으면 unknownExtra가 '기존 유지'로 남고, 기록 있으면 남은 옛 것이 mineAdded(keep)로 계속 남음. 옛 것이 앞에 있어 먼저 실행됨.
 - 고침: characterUpdateMerge.ts — `isLuaTrigger`·`luaStem`(버전 표기 제거). 짝 없는 Lua끼리 이름 줄기가 같으면(아니면 하나씩만 남을 때) 교체로 짝지음(기록 있으면 기록에 있는 제작자 것만). mineAdded 옛 Lua는 새 버전에 같은 줄기 Lua가 있으면 keep false. tideplan.js keepSet: '기존 유지'에서 Lua 트리거 제외. characterUpdate.ts 요약 `luaTriggers`, legacy.js 요약에 2개 이상이면 `#rv-lua-warn` 경고, 체크박스 문구에 트리거 추가. 안내서 manage.html.
 - 시험: tests/tideplan-lua.test.js. 업데이트 화면 e2e는 없음(눈 확인 못 함).
+
+- [x] 장기기억 애드온 0.2.11 배포(11-12 17시 반, 사용자 지시): 게이지 상자 여백. 다른 애드온은 빌드물 변화 없음.
