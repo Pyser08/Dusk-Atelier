@@ -233,11 +233,11 @@ export var CSS = `
 @media (prefers-reduced-motion:reduce){.sds{animation:none}}
 `;
 export function ensureStyle(doc = document) {
-  if (doc.getElementById("rb-sds-style")) return;
-  const el = doc.createElement("style");
-  el.id = "rb-sds-style";
+  // 애드온이 새로 고침 없이 바뀌면 예전 style이 남아 새 규칙이 안 먹었음 → 내용이 다르면 바꿔 넣음
+  let el = doc.getElementById("rb-sds-style");
+  if (el?.textContent === CSS) return;
+  if (!el) { el = doc.createElement("style"); el.id = "rb-sds-style"; doc.head.appendChild(el); }
   el.textContent = CSS;
-  doc.head.appendChild(el);
 }
 
 // 아이콘(24px 선 아이콘) — SDStudio 도구 모음과 같은 뜻
