@@ -319,6 +319,8 @@ button.rb-srow{width:100%;background:none;border-top:0;border-left:0;border-righ
 .rb-card{border-radius:var(--rb-r3);background:var(--rb-surf);overflow:hidden}
 .rb-card.pad{padding:18px}
 .rb-card.bordered{border:var(--rb-bw,1px) solid var(--rb-line2);box-shadow:var(--rb-shadow-card)}
+.rb-discover{padding:14px 16px}
+.rb-mem-chg{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
 .rb-kv{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--rb-line2);font-size:13px}
 .rb-kv:last-child{border-bottom:0}.rb-kv>span:first-child{flex:1}.rb-kv>span:last-child{font-size:12px;color:var(--rb-sub)}
 .rb-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}

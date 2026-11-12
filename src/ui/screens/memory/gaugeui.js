@@ -60,7 +60,7 @@ export function gaugeBlock(env, doc, p) {
     const shown = G.shownSuggestion(sug);
     if (shown) {
       const dup = G.isDuplicateName(defs, shown.name);
-      kids.push(h("div", { class: "rb-card", style: "border:1px solid rgba(180,160,255,.5);background:linear-gradient(135deg,rgba(124,92,240,.18),rgba(18,16,31,.4))" },
+      kids.push(h("div", { class: "rb-card pad", style: "border:1px solid rgba(180,160,255,.5);background:linear-gradient(135deg,rgba(124,92,240,.18),rgba(18,16,31,.4))" },
         h("b", null, `✦ 새 게이지 제안: ${shown.name}`), h("p", { class: "rb-muted", style: "margin:4px 0" }, shown.desc || "(설명 없음)"), dup ? h("p", { class: "rb-muted" }, "⚠ 비슷한 게이지가 이미 있어요.") : null,
         h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" },
           btn("수락 (모든 인물에게)", { kind: "primary", size: "sm", onClick: () => run((async () => { env.ctx.toast("AI가 게이지를 설계하는 중…"); await S.acceptSuggestion(chaOf(env), shown.id, modelOf(env), env.bot?.character?.name); env.ctx.toast("게이지를 만들었어요."); await paint(); })()) }),
@@ -141,13 +141,13 @@ export async function openManager(env) {
     const listEl = h("div"), sugEl = h("div"), top = h("div");
     const paint = async () => {
       const defs = await S.getDefs(cha), sug = await S.getSuggest(cha);
-      listEl.replaceChildren(...(defs.length ? defs.map((d) => h("div", { class: "rb-card", style: "display:flex;gap:8px;align-items:center;margin:6px 0" },
+      listEl.replaceChildren(...(defs.length ? defs.map((d) => h("div", { class: "rb-card", style: "display:flex;gap:8px;align-items:center;margin:6px 0;padding:10px 12px" },
         h("div", { style: "flex:none;width:46px" }, html(shapeHtml({ ...d, look: { ...d.look, shape: d.look.shape === "bar" || d.look.shape === "ticks" ? "orb" : d.look.shape } }, d.init))),
         h("div", { style: "flex:1;min-width:0" }, h("b", null, `${d.look.icon || "✦"} ${d.name}`), h("div", { class: "rb-muted", style: "font-size:12px" }, `${d.min}~${d.max}${d.src === "user" ? "" : " · AI"}${d.on ? "" : " · 꺼짐"}`)),
         switchEl(d.on, { label: "자동 갱신", onChange: (on, el) => { setSwitch(el, on); run(S.updateDef(cha, d.id, { on }).then(paint)); } }),
         btn("수정", { size: "sm", onClick: () => run(openEditor(env, d).then(paint)) }),
         btn("삭제", { size: "sm", onClick: () => run((async () => { if (await confirmDialog(env.ctx.win, { title: "게이지 삭제", body: `"${d.name}"와 모든 채팅의 값·기록이 지워져요.`, ok: "삭제", danger: true })) { await S.removeDef(cha, d.id); await paint(); } })()) }))) : [h("p", { class: "rb-muted" }, "게이지가 없어요.")]));
-      sugEl.replaceChildren(h("div", { class: "rb-card" }, h("div", { style: "display:flex;gap:8px;align-items:center" }, h("div", { style: "flex:1" }, h("b", null, "게이지 자동 제안"), h("div", { class: "rb-muted", style: "font-size:12px" }, "하루 2개까지, 4시간 간격, 한 번에 1개만. 직접 만든 건 이 개수에 안 들어가요.")), switchEl(!!sug.on, { label: "자동 제안", onChange: (on, el) => { setSwitch(el, on); run(S.setSuggestOn(cha, on)); } }))));
+      sugEl.replaceChildren(h("div", { class: "rb-card pad" }, h("div", { style: "display:flex;gap:8px;align-items:center" }, h("div", { style: "flex:1" }, h("b", null, "게이지 자동 제안"), h("div", { class: "rb-muted", style: "font-size:12px" }, "하루 2개까지, 4시간 간격, 한 번에 1개만. 직접 만든 건 이 개수에 안 들어가요.")), switchEl(!!sug.on, { label: "자동 제안", onChange: (on, el) => { setSwitch(el, on); run(S.setSuggestOn(cha, on)); } }))));
     };
     const exp = async () => { const defs = await S.getDefs(cha); const text = G.exportDefs(defs); try { await env.ctx.win.navigator.clipboard.writeText(text); env.ctx.toast("JSON을 복사했어요."); } catch { const a = h("a", { href: "data:application/json;charset=utf-8," + encodeURIComponent(text), download: "dusk-gauges.json" }); a.click(); } };
     const imp = () => { const inp = h("input", { type: "file", accept: ".json,application/json" }); inp.addEventListener("change", () => run((async () => { const f = inp.files?.[0]; if (!f) return; const defs = await S.getDefs(cha); const list = G.importDefs(await f.text(), defs); for (const d of list) await S.addDef(cha, d); env.ctx.toast(`${list.length}개 가져왔어요 (꺼진 상태).`); await paint(); })())); inp.click(); };

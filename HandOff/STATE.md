@@ -1166,3 +1166,7 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 ## 2026-11-12 16시 — 홈 애드온 상자: 맨 위 받기·업데이트 줄 + ‘업데이트’ 묶음 + 탭 열기 (코어, 미릴리스)
 - addonsui.js paint: 맨 위 `.rb-addon-bar`(실패 문구·모두 받기·업데이트 확인), 그다음 새 버전 있는 애드온만 모은 `data-cat=update` 묶음(원래 분류에선 뺌, 카드에 `v옛 → v새`). openBtn은 page가 없으면 tabs.js `addon:` 탭으로 `ctx.go`(protlink·memory·cards·manage 등). e2e: tests/e2e/run-addons-top.mjs.
 - [x] v2.1.5 코어 릴리스(11-12, 사용자 지시): SD-Studio → main 빨리감기 + v2.1.5 태그.
+
+## 2026-11-12 17시 — 상자 여백 정리 + v2.1.6 코어 릴리스 (사용자 지시)
+- 여백 0이라 내용이 테두리에 붙던 상자: styles.js `.rb-discover{padding:14px 16px}`, `.rb-mem-chg{padding…;flex column;gap 8}`(aitools·writerui·mergeui 비교 상자, 코어 CSS라 코어만으로 적용). gaugeui.js 제안 상자 2개 `pad`, 목록 줄 인라인 padding → **장기기억 애드온 배포 때 적용**(아직 배포 안 함).
+- 확인: npm test(실패 0)·build·check 동일함·e2e run-discover. 다른 화면 눈 확인은 못 함.
