@@ -21,6 +21,8 @@
 - 배경 작업 1위: RisuBard `src/ts/storage/risuSave.ts` `RisuSavePatcher.set()` — 저장할 때마다(트래킹된 저장 뒤 약 2초 후의 'untracked sweep' 포함, `globalApi.svelte.ts` 1594~1618줄) **모든 캐릭터를 `JSON.stringify(withStubs(curChar))`로 문자열화해 비교**(1131~1140줄 부근). 반응형 프록시 위에서 57.8MB를 훑어 1회 약 0.5초, 99초 기록 중 8번 이상. 데이터 양에 비례, 플러그인과 무관.
 - 그 밖: Svelte 반응 갱신(flush) 합계 약 5.5초, 정체 미확인 장기 작업 `kde`(stores.svelte 1862줄)·`zge`/`Fge`(2641~2643줄)·`ase`(1108줄) 각 약 1~3초. V8 DeoptimizeCode 9만 회.
 - 결론: Dusk로 고칠 수 없는 호스트 쪽 원인. RisuBard 개발자에게 근거와 함께 전달할 것.
+- (23:06) 사용자 RisuBard에 '버벅임 패치'(별도 배포물 RisuBard-perf-patch.zip — set()의 봇·설정 비교 반복문을 8ms마다 scheduler.yield로 나눔, 결과 동일 시험 통과) 적용 → **확실히 효과 있음**. 플러그인을 켜면 다시 조금 버벅임 → Dusk 몫 확인됨.
+- 다음 챗: ① 사용자가 'Dusk만 켠' 성능 기록을 줌 → Dusk 함수별 시간 분석 ② `watch.js`부터 수정. 이 세션은 npm 레지스트리 차단으로 esbuild를 못 받아 build/check 불가 — 패키지 설치가 되는 환경에서 진행.
 
 ## 할 일
 - [ ] 시작 단계별 시간 기록(Dusk 내부 타이밍 로그) → 23.2초 중 Dusk 몫 측정
