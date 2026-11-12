@@ -19,7 +19,9 @@ async function boot(width, height, { mac = false } = {}) {
   const openDD = (sel) => page.evaluate((s) => { const b = document.querySelector(s); const dd = b?.closest(".sds-ddp"); if (dd && dd.hidden) dd.previousSibling.click(); }, sel).catch(() => {});
   const origClick = page.click.bind(page);
   page.click = async (sel, o) => { if (typeof sel === "string" && /^#sds-/.test(sel)) await openDD(sel); return origClick(sel, o); };
-  await page.setContent("<!doctype html><meta name=viewport content=\"width=device-width,initial-scale=1\"><body style='margin:0'></body>");
+  // localhost(보안 출처)로 열어야 IndexedDB·OPFS를 쓸 수 있어요(about:blank는 막힘)
+  await page.route("http://localhost:7999/**", (rt) => rt.fulfill({ contentType: "text/html", body: "<!doctype html><meta name=viewport content=\"width=device-width,initial-scale=1\"><body style='margin:0'></body>" }));
+  await page.goto("http://localhost:7999/");
   if (mac) await page.evaluate(() => { Object.defineProperty(Navigator.prototype, "platform", { get: () => "MacIntel" }); Object.defineProperty(Navigator.prototype, "userAgentData", { get: () => ({ platform: "macOS" }) }); });   // 맥처럼
   await page.addScriptTag({ content: r.outputFiles[0].text });
   await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99, uiMode: "advanced", devMode: true }) }, { coreOnly: true, mods: true }));
@@ -126,6 +128,9 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
   ok("예약 2장: 상위 | 자리에 씬 조합, 외형, 하위", g1.length === 2 && !!ga && ga.input.startsWith("masterpiece, angry, v-shaped eyebrows, white background, 1boy, cat ears, black hoodie, detailed"), ga?.input);
   ok("다 그리면 예약 0·카드 수 1", /예약된 씬 0\/20/.test(await txt(page, "#sds-reserved")) && /1$/.test((await sceneCard(page, "angry").locator(".cap").innerText()).trim()));
   await shot(page, "sd-2-generated");
+  { const r = await page.evaluate(async () => { if (!navigator.storage?.getDirectory) return "none"; const d = await (await navigator.storage.getDirectory()).getDirectoryHandle("dusk-sds-img").catch(() => null); if (!d) return 0; let n = 0; for await (const _ of d.keys()) n++; return n; });
+    if (r === "none") console.log("- OPFS 없는 환경(시험 페이지가 보안 출처가 아님) — 원본 캐시 확인 건너뜀");
+    else ok("그린 그림 원본은 이 기기(OPFS)에도", r > 0, String(r)); }
   // 다시 시도 중(서버 오류)에도 멈추기가 바로 듣고, 진행 줄에 오류가 보임
   await page.evaluate(() => { window.__fail = 500; window.__reqMark = window.__req.length; });
   await page.locator("#sds-body .sds-scene").first().locator(".rsvbtn").click(); await page.waitForTimeout(100);
@@ -528,6 +533,28 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
     const n2 = await page.locator("#sds-body .sds-img").count();
     ok("끝까지 내리면 더 붙음", n2 > n1, `${n1} → ${n2}`); }
   ok("오류 없음(대표 고르기)", !errs.length, errs.join(";"));
+  await page.close(); }
+
+{ const { page, errs } = await boot(1400, 900);   // 저장: 기기(IndexedDB) 바로 · 보관본은 닫을 때 · 기기를 지워도 보관본으로 되살림 · 그림 원본 OPFS
+  await pick(page, "c:c2"); await page.click("#rb-dev-edit"); await page.waitForTimeout(700);
+  await page.click("#rb-sd-make"); await page.waitForTimeout(700);
+  const hostKey = await page.evaluate(() => document.querySelector("#rb-sd-studio").__sds.sd?.keyOf?.(document.querySelector("#rb-sd-studio").__sds.target) ?? null);
+  const hostVal = () => page.evaluate(async (k) => { const v = await window.__api.pluginStorage.getItem(k); return v ? (typeof v === "string" ? JSON.parse(v) : v) : null; }, hostKey);
+  const idbRecs = () => page.evaluate(() => new Promise((res) => { const r = indexedDB.open("dusk-sds-proj", 1); r.onsuccess = () => { const out = []; const t = r.result.transaction("r", "readonly"), c = t.objectStore("r").openCursor(); c.onsuccess = () => { const x = c.result; if (x) { out.push(String(x.key)); x.continue(); } }; t.oncomplete = () => { r.result.close(); res(out); }; }; r.onerror = () => res(null); }));
+  const before = await hostVal();
+  await page.click("#sds-addchar"); await page.waitForTimeout(200); await promptOk(page, "저장시험"); await page.waitForTimeout(900);
+  const recs = await idbRecs();
+  ok("저장: 기기(IndexedDB)에 바로 — head와 캐릭터 기록", recs && recs.some((k) => k.endsWith("\u0001head")) && recs.filter((k) => k.includes("\u0001c:")).length === 1, JSON.stringify(recs));
+  const mid = await hostVal();
+  ok("저장: 플러그인 저장소 보관본은 아직(1분 모음)", !mid?.chars?.some((c) => c.name === "저장시험") && JSON.stringify(mid) === JSON.stringify(before));
+  await page.click("#sds-close"); await page.waitForTimeout(800);
+  ok("닫으면 보관본도 바로", (await hostVal())?.chars?.some((c) => c.name === "저장시험"));
+  await page.evaluate(() => new Promise((res) => { const r = indexedDB.open("dusk-sds-proj", 1); r.onsuccess = () => { const t = r.result.transaction("r", "readwrite"); t.objectStore("r").clear(); t.oncomplete = () => { r.result.close(); res(); }; }; }));
+  await page.evaluate(() => { window.__app.ctx.state.sdsStore = null; for (const k of Object.keys(window.__app.ctx.state.sdstudio ?? {})) delete window.__app.ctx.state.sdstudio[k]; });
+  await page.click("#rb-sd-make"); await page.waitForTimeout(900);
+  ok("기기 저장을 지워도 보관본으로 되살아남", (await page.locator("#sds-body .sds-char", { hasText: "저장시험" }).count()) === 1);
+  ok("되살린 뒤 기기도 다시 채움", ((await idbRecs()) ?? []).some((k) => k.endsWith("\u0001head")));
+  ok("오류 없음(저장)", !errs.length, errs.join(";"));
   await page.close(); }
 
 { const { page, errs } = await boot(390, 844);

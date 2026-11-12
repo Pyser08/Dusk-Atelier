@@ -97,8 +97,8 @@ export function createSdStudio(api) {
   };
   const store = () => api.pluginStorage;
   const saveQ = {};
-  async function writeProject(k, p) {
-    const json = JSON.stringify(p), t = Date.now();
+  async function writeProject(k, p, at) {
+    const json = JSON.stringify(p), t = at || Date.now();
     const s = await local();
     try { await s?.setItem?.(MIRROR + k, JSON.stringify({ t, p })); } catch { /* 기기 저장 공간 부족 — 복사본만 건너뜀 */ }
     let err = null;
@@ -149,6 +149,7 @@ export function createSdStudio(api) {
       return tagDb;
     },
     // 저장은 두 곳에: 리스 플러그인 저장소(주) + 이 기기 로컬 저장소(복사본). 주 저장소가 비었거나 깨졌거나 더 오래됐으면 복사본으로 복구한다.
+    keyOf,
     async loadProject(target) {
       const k = keyOf(target), parse = (v) => (v ? (typeof v === "string" ? JSON.parse(v) : v) : null);
       let a = null, ta = 0, m = null;
@@ -167,16 +168,16 @@ export function createSdStudio(api) {
       return Math.max(ta, tm);
     },
     // 저장은 한 줄로(겹치면 앞 저장의 '다시 읽어 확인'이 뒤 저장 내용을 보고 '달라요'로 오인함). 기다리는 사이 또 오면 마지막 것만 저장.
-    saveProject(target, p) {
+    saveProject(target, p, at) {
       const k = keyOf(target);
       const q = (saveQ[k] ??= { busy: null, next: null });
-      q.next = p;
+      q.next = p; q.at = at;
       if (q.busy) return q.busy;
       const run = async () => {
         let lastErr = null;
         while (q.next) {
-          const cur = q.next; q.next = null;
-          try { await writeProject(k, cur); lastErr = null; } catch (e) { lastErr = e; }
+          const cur = q.next, at2 = q.at; q.next = null;
+          try { await writeProject(k, cur, at2); lastErr = null; } catch (e) { lastErr = e; }
         }
         q.busy = null;
         if (lastErr) throw lastErr;

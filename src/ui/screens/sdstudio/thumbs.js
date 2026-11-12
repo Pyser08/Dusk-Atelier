@@ -27,6 +27,40 @@ export async function putThumb(path, blob) {
 }
 export var dropThumb = (path) => tx("readwrite", (s) => s.delete(path));
 
+// ── 그림 원본 캐시: OPFS(브라우저 전용 파일 공간) — 리스 저장소(서버면 네트워크)를 다시 거치지 않게. 없으면 null ──
+// 이름 = 경로를 안전한 파일 이름으로. 최대 개수를 넘으면 오래된(lastModified) 것부터 지움.
+var OMAX = 2500;
+let odir = null;
+async function opfs() {
+  if (odir !== null) return odir;
+  try { const root = await navigator.storage?.getDirectory?.(); odir = root ? await root.getDirectoryHandle("dusk-sds-img", { create: true }) : false; }
+  catch { odir = false; }
+  return odir;
+}
+var fname = (path) => encodeURIComponent(path).replace(/%/g, "_").slice(0, 200);
+export async function getOrig(path) {
+  const d = await opfs(); if (!d) return null;
+  try { const f = await (await d.getFileHandle(fname(path))).getFile(); return f.size ? new Uint8Array(await f.arrayBuffer()) : null; } catch { return null; }
+}
+let oputs = 0;
+export async function putOrig(path, data) {
+  const d = await opfs(); if (!d || !data?.length) return;
+  try {
+    const fh = await d.getFileHandle(fname(path), { create: true });
+    if (fh.createWritable) { const w = await fh.createWritable(); await w.write(data); await w.close(); }   // 다 쓴 뒤 바꿔치기(중간에 꺼져도 깨진 파일 안 남음)
+    else return;
+  } catch { return; }
+  if (++oputs % 100 === 0) pruneOrig().catch(() => {});
+}
+async function pruneOrig() {
+  const d = await opfs(); if (!d) return;
+  const all = [];
+  for await (const [n, h] of d.entries()) { if (h.kind !== "file") continue; try { all.push([n, (await h.getFile()).lastModified]); } catch { /* 넘김 */ } }
+  if (all.length <= OMAX) return;
+  all.sort((a, b) => a[1] - b[1]);
+  for (const [n] of all.slice(0, all.length - OMAX + 200)) await d.removeEntry(n).catch(() => {});
+}
+
 // 작은 썸네일 만들기(이미 가진 바이트에서)
 export async function makeThumb(data, size = 320) {
   const blob = data instanceof Blob ? data : new Blob([data], { type: "image/png" });

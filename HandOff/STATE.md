@@ -19,6 +19,15 @@
 - (13시 50분) 고른 캐릭터만 예약(고르기 줄 ‘N장씩 예약·예약 비우기’, 테두리 켠 캐릭터·폴더는 예약▾ 첫 항목 #sds-rsv-focus). 강화·약화 칠하기 진하게(빨강·파랑 30% + 밑줄, 음수는 취소선). 즐겨찾기 있는 씬은 예약 버튼 아래 노란 ★N(.favmark). 위 줄 도움말 오른쪽 X(#sds-close) = 에셋 제작만 닫음. **로어북 연동은 로어북 → 에셋 제작 한쪽만**(사용자 결정): 에셋 제작 → 로어북 쓰기 없앰(syncLore·newFolderEntry 안 씀), 열 때 새 폴더가 있으면 물어봄(설정 loreSync = 묻지 않고 자동), 튜토리얼 1단계 물어보기/자동 + 지금 가져오기.
 - (14시) 큰 ‘봇에 넣기’(#sds-put-fav) = 즐겨찾기 확인하고 넣기, 미리 보기 기본 체크는 ‘새로’(안 넣었고 이름 안 겹침)만. 고른 그림 바로 넣기는 ··· 메뉴 첫 줄(id sds-put-all/picked/sel 그대로)·⌘B. ⌘A 등 단축키: 포커스가 body로 빠져도 듣게 document keydown(docKey) 추가.
 - (19시) 그림 수천 장 느림: sdstudio/thumbs.js — ① 썸네일을 IndexedDB(dusk-sds-thumbs, 320px webp, 최대 1.2만)에 남겨 다음에 열 때 원본 PNG를 다시 읽고 줄이지 않음(새로 그린 그림은 그릴 때 바로 저장) ② 자체 lazy(보일 때만, 600px 미리, 동시 6) ③ 씬·갤러리 격자를 나눠 붙임(처음 120~150, 끝에 닿으면 200씩, 다시 그릴 땐 붙였던 만큼 — chunkMemo) ④ 갤러리 씬 묶기 O(n)으로. e2e ‘그림 3000장’ 추가.
+- (19시 반) **저장 구조 바꿈(사용자 결정)** — `src/data/sdsstore.js` + `src/engine/sdstudio/projsplit.js`:
+  - 작업 묶음을 head(설정·조각·폴더·세트 목록·캐릭터 순서)와 캐릭터 기록 `c:<세트>:<id>`로 쪼갬. 저장은 지난 저장과 다른 기록만.
+  - ① 기기 IndexedDB `dusk-sds-proj`(키 `<작업키>\u0001<조각>`, 한 거래로 다 되거나 다 안 되거나) — 화면은 이것만 기다림, 저장은 한 줄로(chain). 실패하면 플러그인 저장소에 바로(예전 방식).
+  - ② 플러그인 저장소 통째 보관본: 1분에 한 번·닫을 때·탭 숨길 때(pagehide·visibilitychange). saveProject(target, p, at)로 기기 저장 시각을 그대로 적음.
+  - ③ Cellar(mem 기능 있으면): 바뀐 기록만 3초 모아 `/cellar/mem/batch`, 키 `dusk.mem.sds.<작업키>.<조각>`(옛 Cellar KEY_RE 그대로 통과), 캐릭터 먼저·head 마지막, 50개·4MB씩, 실패는 남겨 두고 다음에.
+  - 열 때: 기기·Cellar·보관본 중 head.t 최신(같으면 기기 → Cellar → 보관본). 캐릭터 기록이 빠진 저장본은 건너뛰고 다음 것(마지막이면 알림). 고른 것이 기기가 아니면 기기를 채움. 봇 안 사본과의 비교도 이 t로.
+  - 그림 원본 캐시 OPFS `dusk-sds-img`(최대 2500, lastModified 오래된 것부터 정리, createWritable 없으면 안 씀) — S.bytes·썸네일 만들기가 먼저 봄, 새로 그린 그림은 바로 넣음. 썸네일은 IndexedDB `dusk-sds-thumbs` 그대로.
+  - 시험: unit sdstudio-projsplit(3)·sdstudio-store(8, 가짜 기기·보관본·Cellar), 실제 Cellar 서버(cellar-start --role-server)에 붙여 저장→새 기기에서 Cellar로 복원→지우기 반영 수동 확인. e2e 시험 페이지를 localhost(route)로 바꿔 IndexedDB·OPFS가 실제로 돌게 함(about:blank는 막힘) — 저장 블록(기기 바로·보관본 미룸·닫으면 보관본·기기 지워도 복원·다시 채움)·OPFS 원본 확인 추가, 136 통과. npm test 1504.
+  - 남은 확인: 실기기(RisuBard 서버 + 사파리·모바일) / 여러 탭 동시 편집은 마지막 저장이 이김.
 - 남은 일: [ ] 제보 ‘다시 시도 5번 해도 안 됨’ 원인(진행 줄 오류 문구 받아 확인) [ ] 사용자 제보 ‘씬 예약 버튼이 제대로 안 나옴’ — e2e 사진에선 정상, 실기기 화면 확인 필요 [ ] 세트·튜토리얼 e2e [ ] 애드온 배포(minCore 2.1.4) 지시 대기
 
 ## 최근 세션 (2026-11-11 22시 — v2.1.4 계속: 보조 호출 내역 + 장기기억 보조 토큰 줄이기, 장기기억 애드온 0.2.8)

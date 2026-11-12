@@ -7,7 +7,8 @@ import { btn, openMenu, promptDialog, confirmDialog } from "../../kit.js";
 import { zipSync, strToU8, strFromU8, gzipSync } from "../../../vendor/fflate.js";
 import * as BD from "../../../engine/sdstudio/botdata.js";
 import { parsePieceFile, addPieceLibs, addWildcard, parseCharPresets, readPngPrompt, parseGlobalPresets, addPresets, presetFromSD } from "../../../engine/sdstudio/imports.js";
-import { getThumb, putThumb, makeThumb, createLazy, chunkedAppend } from "./thumbs.js";
+import { getThumb, putThumb, makeThumb, createLazy, chunkedAppend, getOrig, putOrig } from "./thumbs.js";
+import { createProjectStore, createIdbBackend, createCellarAdapter } from "../../../data/sdsstore.js";
 import { pullLore } from "../../../engine/sdstudio/loresync.js";
 import * as FB from "../../../engine/sdstudio/fullbackup.js";
 import { isStopError } from "../../../engine/aistop.js";
@@ -43,7 +44,15 @@ export async function openAssetStudio(ctx, target, sd) {
   let title = "";
   if (target.kind === "module") title = (await ctx.svc.load({ fresh: true })).entries.find((e) => e.module.id === target.id)?.module?.name ?? "";
   else { const c = await ctx.api.getCharacterFromIndex(target.index); if (!c || c.chaId !== target.id) throw new Error("봇을 찾지 못했어요. 목록을 새로 고친 뒤 다시 해 주세요"); title = c.name; }
-  let proj = await sd.loadProject(target);
+  // 저장: 기기(IndexedDB) 바로 + 플러그인 저장소 보관본 1분 + Cellar(있으면) — data/sdsstore.js
+  const pk = sd.keyOf(target);
+  const PS = (ctx.state.sdsStore ??= (typeof indexedDB !== "undefined" ? createProjectStore({ local: createIdbBackend(), host: { save: (t, p, at) => sd.saveProject(t, p, at), load: async (t) => ({ project: await sd.loadProject(t), t: await sd.savedAt(t) }) }, cellar: createCellarAdapter(ctx.api), log: (...a) => console.warn("[Dusk 에셋 제작 저장]", ...a) }) : null));
+  let proj, savedT = 0;
+  if (PS) {
+    const r = await PS.open(target, pk);
+    proj = r.project; savedT = r.t;
+    if (r.missing.length) setTimeout(() => ctx.toast(`저장본에서 캐릭터 ${r.missing.length}명을 찾지 못했어요. 전체 백업(zip)이 있으면 가져와 주세요`, { error: true, seconds: 12 }), 500);
+  } else { proj = await sd.loadProject(target); savedT = await sd.savedAt(target); }
   // 봇(모듈) 안 사본이 더 최근이면 그걸로(다른 기기에서 고쳤거나 플러그인 저장소가 비었을 때)
   const botKey = `dusk.sdstudio.nobot.${target.kind}:${target.id}`;
   let botOn = !(await sd.getLocal(botKey, false)), botT = 0, botDirty = false;
@@ -51,7 +60,7 @@ export async function openAssetStudio(ctx, target, sd) {
   const readBot = async () => (target.kind === "module" ? (await ctx.svc.load({ fresh: true })).entries.find((e) => e.module.id === target.id)?.module : await ctx.api.getCharacterFromIndex(target.index).then((c) => (c?.chaId === target.id ? c : null)));
   try {
     const snap = BD.readSnap(await readBot(), target.kind);
-    if (snap) { botT = snap.t; if (snap.t > await sd.savedAt(target)) { proj = P.normalizeProject(JSON.parse(strFromU8(gunzipSync(Uint8Array.from(atob(snap.z), (c) => c.charCodeAt(0)))))); ctx.toast("봇에 저장된 더 최근 설정으로 열었어요", { seconds: 5 }); } }
+    if (snap) { botT = snap.t; if (snap.t > savedT) { proj = P.normalizeProject(JSON.parse(strFromU8(gunzipSync(Uint8Array.from(atob(snap.z), (c) => c.charCodeAt(0)))))); ctx.toast("봇에 저장된 더 최근 설정으로 열었어요", { seconds: 5 }); } }
   } catch { /* 봇 사본이 없거나 깨짐 — 플러그인 저장소 것 사용 */ }
   const st = ((ctx.state.sdstudio ??= {})[`${target.kind}:${target.id}`] ??= { folder: null, charId: null, sceneId: null, mode: "scene", zoom: 41, names: true, left: (ctx.win.clientWidth || innerWidth) > 760, q: "", compare: [], slotsOpen: true });   // 좁은 화면은 프롬프트 에디터를 접고 시작
   if (st.folder && !proj.folders.some((f) => f.id === st.folder)) st.folder = null;
@@ -84,7 +93,13 @@ export async function openAssetStudio(ctx, target, sd) {
     set(next, { undo = true } = {}) { if (undo && next !== proj) { hist.push(proj, { typing: globalThis.event?.type === "input" }); } proj = next; clearTimeout(saveT); saveT = setTimeout(() => S.persist(), 500); },
     undo() { const prev = hist.undo(proj); if (!prev) { S.toast("되돌릴 것이 없어요"); return; } proj = prev; afterJump(); },
     redo() { const nx = hist.redo(proj); if (!nx) { S.toast("다시 할 것이 없어요"); return; } proj = nx; afterJump(); },
-    persist() { clearTimeout(saveT); botDirty = true; return sd.saveProject(target, proj).catch((e) => { if (Date.now() - (S._saveErrAt ?? 0) < 30000) return; S._saveErrAt = Date.now(); ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }); }); },
+    persist() {
+      clearTimeout(saveT); botDirty = true;
+      const warn = (e) => { if (Date.now() - (S._saveErrAt ?? 0) < 30000) return; S._saveErrAt = Date.now(); ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }); };
+      if (!PS) return sd.saveProject(target, proj).catch(warn);
+      // 기기 저장이 실패하면(용량 등) 플러그인 저장소에 바로 — 잃지 않게
+      return PS.save(target, pk, proj).catch((e) => { console.warn("[Dusk 에셋 제작 저장] 기기 저장 실패", e); return sd.saveProject(target, proj).catch(warn); });
+    },
     toast: (t, o) => ctx.toast(t, o),
     curChar: () => (st.charId ? P.charOf(proj, st.charId) : null),
     curScene: () => (st.charId && st.sceneId ? P.sceneOf(proj, st.charId, st.sceneId) : null),
@@ -92,10 +107,12 @@ export async function openAssetStudio(ctx, target, sd) {
       bytesCache.set(path, data); if (bytesCache.size > 24) bytesCache.delete(bytesCache.keys().next().value);
       if (!thumbUrls.has(path)) thumbUrls.set(path, URL.createObjectURL(new Blob([data], { type: "image/png" })));
       makeThumb(data).then((b) => putThumb(path, b)).catch(() => {});   // 다음에 열 때는 작은 썸네일로
+      putOrig(path, data);   // 원본도 이 기기에(크게 보기·변형이 빠르게)
     },
     async bytes(path) {
       if (bytesCache.has(path)) return bytesCache.get(path);
-      const d = await ctx.assets.read(path, { prio: 100 });
+      let d = await getOrig(path);   // 이 기기 사본 먼저
+      if (!d) { d = await ctx.assets.read(path, { prio: 100 }); if (d) putOrig(path, d); }
       if (!d) throw new Error("그림을 읽지 못했어요");
       if (bytesCache.size > 24) bytesCache.delete(bytesCache.keys().next().value);
       bytesCache.set(path, d);
@@ -123,8 +140,8 @@ export async function openAssetStudio(ctx, target, sd) {
     const p = (async () => {
       let b = await getThumb(path);
       if (!b) {
-        const d = await ctx.assets.read(path, { prio: 10 });
-        if (!d) return null;
+        let d = await getOrig(path);
+        if (!d) { d = await ctx.assets.read(path, { prio: 10 }); if (!d) return null; }
         b = await makeThumb(d);
         putThumb(path, b);
       }
@@ -1447,7 +1464,7 @@ export async function openAssetStudio(ctx, target, sd) {
     paintTools();
   }
   function close() {
-    S.persist(); saveToBot();
+    S.persist(); saveToBot(); PS?.flush(pk);
     restoreWin();
     if (q.running) { el.hidden = true; ctx.toast(`창을 닫아도 계속 그려요(${q.done}/${q.total}). 다시 ‘에셋 제작’을 누르면 이어서 보여요`, { seconds: 8 }); return; }
     finish();
@@ -1467,7 +1484,7 @@ export async function openAssetStudio(ctx, target, sd) {
   function finish() {
     clearInterval(botTimer); clearTimeout(loreT);
     LIVE.delete(liveKey); document.removeEventListener("keydown", docKey);
-    removeEventListener?.("focus", refull); document.removeEventListener?.("visibilitychange", refull);
+    removeEventListener?.("focus", refull); document.removeEventListener?.("visibilitychange", refull); document.removeEventListener?.("visibilitychange", flushHidden); removeEventListener?.("pagehide", flushHidden);
     lazy?.disconnect();
     for (const u of thumbUrls.values()) URL.revokeObjectURL(u);
     el.remove();
@@ -1518,6 +1535,9 @@ export async function openAssetStudio(ctx, target, sd) {
     runAction(act);
   };
   el.addEventListener("keydown", onKey);
+  // 탭을 가리거나 닫을 때: 보관본·Cellar를 지금
+  const flushHidden = () => { if (document.visibilityState === "hidden" || event?.type === "pagehide") { S.persist(); PS?.flush(pk); } };
+  document.addEventListener("visibilitychange", flushHidden); addEventListener?.("pagehide", flushHidden);
   // 메뉴를 닫거나 빈 곳을 누른 뒤 포커스가 body로 빠져도 단축키(⌘A 등)가 듣게
   const docKey = (e) => { if (el.hidden || !el.isConnected || el.contains(e.target)) return; const t = e.target; if (t && t !== document.body && t !== document.documentElement) return; onKey(e); };
   document.addEventListener("keydown", docKey);
