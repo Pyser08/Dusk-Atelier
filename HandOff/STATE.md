@@ -1,3 +1,29 @@
+# 현재 상태 — perf/startup 브랜치 (main 9acdc8c, v2.1.7에서 분기 · 2026-11-12)
+
+## 목표: 데이터가 많은 순정 호스트에서 빠릿빠릿하게 (봇·모듈 삭제 없이, 호스트 패치 없이)
+사용자 RisuBard(Mac Chrome) 측정, **Dusk 켠 상태** 기준값(2026-11-12 21:52):
+- 새로고침 → 리스 들어가기 48초, 플러그인 다 뜨기 23.2초, Dusk 열고 애드온까지 13.8초, 리스 설정 열기 약 10초
+- **Dusk 끈 상태 값은 아직 못 받음** — 받으면 여기 적고 Dusk 몫을 확정할 것
+
+진단 플러그인(dusk_diag 0.1.0, 별도 파일·저장소 밖) 결과:
+- 캐릭터 138개, 채팅 뺀 본문 57.8MB / 모듈 104개(켜짐 6) 36.8MB / pluginCustomStorage 15.7MB / 플러그인 8개(Dusk 2.2MB)
+- `getDatabase(["characters"])` 한 번 = **10.8초**, `["modules"]` = 1.8초 (리스의 $state.snapshot + iframe 복사)
+- RisuBard는 원본의 콜드 스토리지 복원(changeChar)을 뺐고, Pocket의 캐릭터 비활성화도 없음 → 호스트 쪽 덜어내기 수단 없음
+
+원인 후보(코드 확인):
+- `src/ui/watch.js` 새 봇 감시: 시작 300ms 뒤·탭이 다시 보일 때 `check(true)` = 캐릭터 전체 읽기(10.8초). 모듈 전체 읽기 2분마다, + 메뉴 클릭 뒤 3분간 3초마다(MOD_EVERY 12e4, MOD_BURST 3e3).
+- `src/main.js` 시작 시 start() 10여 개 동시(storyTime·fairPlay·imgFix·watcher·loreRuntime·loreLog·turnInfo·chatMenu …) — 각자 읽는 것 측정 필요.
+- 화면들의 `getDatabase(["characters"])` 10곳(dev·devtools·modlinks·chareditor·newbot·workshoplink·provider/more·patchui·memory/makebot, widgethome/service.cjs) + `dbRead(["characters", …])`. Dusk 첫 화면이 무엇을 읽는지 확인 필요.
+
+## 할 일
+- [ ] 시작 단계별 시간 기록(Dusk 내부 타이밍 로그) → 23.2초 중 Dusk 몫 측정
+- [ ] watch.js: 전체 읽기 없애기(순서 목록 + getCharacterFromIndex), 탭 복귀 시 force 제거, 모듈 확인 빈도 축소
+- [ ] 캐릭터 요약 캐시(chaId·이름·이미지·바뀐 시각)를 pluginStorage에 두고 바뀐 것만 갱신 → 화면들이 전체 대신 요약 사용
+- [ ] 시작 시 무거운 start()는 미루기(첫 채팅·첫 열기 때)
+- [ ] pluginCustomStorage 15.7MB 주인 확인(키 접두사별 크기)
+
+---
+
 # 현재 상태 — SD-Studio 브랜치 (2.1.0 끝 e194dd9에서 분기)
 
 ## 최근 세션 (2026-11-12 10시 반 — 에셋 제작 다음 작업 명세 1~4, 미커밋·미푸시: 세션에 push 권한 없음)
