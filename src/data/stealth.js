@@ -134,9 +134,10 @@ export function splitModel(label) {
 function mobileInputCss(P, L) {
   const S = "div:has(> .text-input-area)", menu = `${S} > :is(div, button):not(.text-input-area):not(.button-icon-send):not(:has(.loadmove)):has(svg)`;
   const send = `${S} > .button-icon-send.button-icon-send`, stop = `${S} > div:has(> .loadmove)`;
-  // 포켓리스 등은 '채팅 키우기' 같은 버튼이 더 있어 '+'가 둘 떴다(11-12) → 보내기(멈춤) 바로 뒤 칸이 있으면 그것만 '+'(리스 메뉴), 나머지 아이콘 칸은 숨긴다
-  // (:has 안에 :has는 못 쓴다 — 리스 원본·포켓리스 모두 메뉴는 보내기/멈춤 바로 뒤)
-  const extra = `${S} > :is(div, button):not(.text-input-area):not(.button-icon-send):not(:has(.loadmove)):has(svg):not(.button-icon-send + *):not(div:has(> .loadmove) + *)`;
+  // 포켓리스 등은 '채팅 키우기' 같은 아이콘 버튼이 더 있어 '+'가 둘 떴다(11-12). 메뉴가 보내기 바로 뒤가 아닌 판도 있어(0.3.50에서 둘 다 사라짐)
+  // → 아이콘 버튼 중 첫 번째만 '+', 뒤따르는 아이콘 버튼은 숨긴다(진단 '입력창 추적'으로 판별 순서 확인 필요)
+  const btn = ":is(div, button):not(.text-input-area):not(.button-icon-send):not(:has(.loadmove)):has(svg)";
+  const extra = `${S} > ${btn} ~ ${btn}`;
   const hideIco = `${S} > :not(.text-input-area) > svg { display: none !important; }
   ${extra} { display: none !important; }
   ${S} > :is(div, span):empty { display: none !important; }`;   // 빈 칸(판마다 붙는 자리)은 자리를 차지하지 않게
