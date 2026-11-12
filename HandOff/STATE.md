@@ -1177,3 +1177,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 시험: tests/tideplan-lua.test.js. 업데이트 화면 e2e는 없음(눈 확인 못 함).
 
 - [x] 장기기억 애드온 0.2.11 배포(11-12 17시 반, 사용자 지시): 게이지 상자 여백. 다른 애드온은 빌드물 변화 없음.
+- ⚠ publish-addons.mjs를 돌리니 버전 그대로인 aibuild·cards·chattheme·provider 빌드물과 미배포 sdstudio.js까지 실림 → addons 브랜치를 손으로 되돌려 memory만 남김(2b1edad). **publish-addons 쓰지 말 것**(원인 미확인, 같은 버전인데 빌드 해시가 다름).
