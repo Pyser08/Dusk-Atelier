@@ -118,10 +118,12 @@ export async function openAssetStudio(ctx, target, sd) {
       bytesCache.set(path, d);
       return d;
     },
+    loadThumb: (path) => loadThumb(path),
     async url(path) { return URL.createObjectURL(new Blob([await S.bytes(path)], { type: "image/png" })); },
-    thumb(path, { now = false } = {}) {
+    thumb(path, { now = false, lazy: own = null } = {}) {
       const img = h("img", { alt: "", loading: "lazy", dataset: { path, ext: "png" } });
       if (thumbUrls.has(path)) img.src = thumbUrls.get(path);
+      else if (own) own.observe(img);
       else if (now) loadThumb(path).then((u) => { if (u) img.src = u; }).catch(() => {});
       else lazy?.observe(img);
       return img;

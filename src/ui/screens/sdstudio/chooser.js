@@ -1,4 +1,5 @@
 // 에셋 제작 — 대표 고르기: 씬마다 후보 그림을 펼쳐 놓고 ←/→로 넘기며 F로 즐겨찾기, Enter로 정하고 다음 씬.
+import { createLazy } from "./thumbs.js";
 import { h, replace } from "../../dom.js";
 import { btn } from "../../kit.js";
 import * as P from "../../../engine/sdstudio/project.js";
@@ -19,7 +20,7 @@ export function openChooser(S, scenes, { start = 0, onlyNoFav = false } = {}) {
   const strip = h("div", { class: "sds-ch-strip rb-scroll", id: "sds-ch-strip" });
   const acts = h("div", { class: "sds-ch-acts" });
   const over = h("div", { class: "sds-over", role: "dialog", "aria-label": "대표 고르기", id: "sds-chooser", tabIndex: -1 }, head, h("div", { class: "sds-ch" }, stage, strip, acts));
-  const close = () => { if (url) URL.revokeObjectURL(url); over.remove(); S.paint(); };
+  const close = () => { stripLazy?.disconnect(); if (url) URL.revokeObjectURL(url); over.remove(); S.paint(); };
   const scenesNow = () => list();
   const cur = () => { const L = scenesNow(); const x = L[si]; return x ? { x, sc: P.sceneOf(S.proj, x.cid, x.sid), c: P.charOf(S.proj, x.cid) } : null; };
   const imgs = () => { const k = cur(); return k ? P.sortedImages(k.sc) : []; };
@@ -59,11 +60,15 @@ export function openChooser(S, scenes, { start = 0, onlyNoFav = false } = {}) {
         h("input", { type: "checkbox", id: "sds-ch-only", checked: only, onChange: (e) => { only = e.target.checked; paint(); } }), "즐겨찾기 없는 씬만"));
     star.hidden = !im?.fav;
     navL.hidden = navR.hidden = list2.length < 2;
+    // 후보 줄은 씬(목록)이 바뀔 때만 새로 그림 — 넘길 때마다 썸네일 수십 장을 다시 부르지 않게. 보일 때만 4장씩
+    const sig = list2.map((it) => `${it.path}${it.fav ? "*" : ""}`).join("|");
+    if (sig === stripSig) { [...strip.children].forEach((b, k) => { b.classList.toggle("on", k === ci); b.setAttribute("aria-pressed", String(k === ci)); }); }
+    else { stripSig = sig; stripLazy?.disconnect(); stripLazy = createLazy(strip, (p) => S.loadThumb(p), { concurrency: 4 });
     replace(strip, ...list2.map((it, k) => {
       const b = h("button", { type: "button", class: ["sds-ch-th", k === ci && "on", it.fav && "fav"], "aria-label": `후보 ${k + 1}${it.fav ? " 즐겨찾기" : ""}`, "aria-pressed": String(k === ci), onClick: () => { ci = k; paint(); }, onDblclick: () => { ci = k; fav(); } },
-        S.thumb(it.path, { now: true }), h("span", { class: "n" }, String(k + 1)), it.fav ? h("span", { class: "f" }, "★") : null);
+        S.thumb(it.path, { lazy: stripLazy }), h("span", { class: "n" }, String(k + 1)), it.fav ? h("span", { class: "f" }, "★") : null);
       return b;
-    }));
+    })); }
     strip.querySelector(".on")?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
     replace(acts,
       h("span", { class: "rb-muted", style: "font-size:12px" }, `후보 ${ci + 1} / ${list2.length} · 즐겨찾기 ${favN}`),
@@ -74,7 +79,11 @@ export function openChooser(S, scenes, { start = 0, onlyNoFav = false } = {}) {
       btn("다음 씬", { size: "sm", icon: "chevR", id: "sds-ch-skip", disabled: si >= L.length - 1, onClick: () => goScene(1) }));
     if (!over.contains(document.activeElement) || document.activeElement === over) over.focus({ preventScroll: true });
     if (!im) { img.removeAttribute("src"); return; }
-    try { const u = await S.url(im.path); if (imgs()[ci]?.path !== im.path) { URL.revokeObjectURL(u); return; } if (url) URL.revokeObjectURL(url); url = u; img.src = u; } catch { img.removeAttribute("src"); }
+    // 썸네일을 먼저 보여 주고(바로), 원본으로 바꿈. 앞뒤 후보 원본은 미리 받아 둠
+    const want = im.path;
+    S.loadThumb(want).then((t) => { if (t && imgs()[ci]?.path === want && img.dataset.full !== want) img.src = t; }).catch(() => {});
+    for (const d of [1, -1, 2]) { const nb = list2[ci + d]; if (nb) S.bytes(nb.path).catch(() => {}); }
+    try { const u = await S.url(im.path); img.dataset.full = want; if (imgs()[ci]?.path !== im.path) { URL.revokeObjectURL(u); return; } if (url) URL.revokeObjectURL(url); url = u; img.src = u; } catch { img.removeAttribute("src"); }
   }
   over.addEventListener("keydown", (e) => {
     if (S.ctx.win.querySelector(".rb-modal, .rb-menu")) return;
@@ -86,6 +95,7 @@ export function openChooser(S, scenes, { start = 0, onlyNoFav = false } = {}) {
     if (!fn) return;
     e.preventDefault(); e.stopPropagation(); fn();
   });
+  let stripSig = "", stripLazy = null;
   S.el.appendChild(over);
   over.focus();
   paint();
