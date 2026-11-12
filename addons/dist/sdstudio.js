@@ -1,0 +1,11107 @@
+/* Dusk Atelier 애드온 sdstudio v0.3.0 — 소스: addons/sdstudio (AGPL-3.0-only) */
+var i0=Object.defineProperty;var l0=(n,e)=>{for(var t in e)i0(n,t,{get:e[t],enumerable:!0})};var Gr=globalThis.__duskLib?.["src/ui/kit.js"];if(!Gr)throw new Error("Dusk 코어에 src/ui/kit.js가 없어요 — Dusk를 업데이트해 주세요");{let n=["STATUS_KINDS","actionRow","advFold","badge","btn","chip","colorDialog","confirmDialog","emptyState","fmtSize","folderDialog","folderPickPrefs","guidePanel","iconBtn","loading","modal","moreNav","note","openMenu","optionCards","pageHead","popover","progressBar","promptDialog","segmented","setSwitch","sheet","sortBy","sortChips","sortKeyName","sortLabel","sortShort","spinner","statusCard","stepsGuide","switchEl","toast","toggleRow","tray","trayBtn"].filter(e=>!(e in Gr));if(n.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/ui/kit.js에 없는 기능: "+n.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{STATUS_KINDS:kl,actionRow:yl,advFold:vl,badge:xl,btn:B,chip:jl,colorDialog:Cl,confirmDialog:zn,emptyState:Pl,fmtSize:$l,folderDialog:zl,folderPickPrefs:Ml,guidePanel:Sl,iconBtn:Al,loading:Tl,modal:Pn,moreNav:_l,note:El,openMenu:In,optionCards:ql,pageHead:Ll,popover:Ol,progressBar:Il,promptDialog:Xn,segmented:Tn,setSwitch:Wt,sheet:Dl,sortBy:Fl,sortChips:Nl,sortKeyName:Bl,sortLabel:Rl,sortShort:Ul,spinner:Kl,statusCard:Vl,stepsGuide:Hl,switchEl:Gt,toast:Jl,toggleRow:Wl,tray:Gl,trayBtn:Xl}=Gr;var Xr=globalThis.__duskLib?.["src/vendor/fflate.js"];if(!Xr)throw new Error("Dusk 코어에 src/vendor/fflate.js가 없어요 — Dusk를 업데이트해 주세요");{let n=["deflateSync","gunzipSync","gzipSync","inflateSync","strFromU8","strToU8","zipSync"].filter(e=>!(e in Xr));if(n.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/vendor/fflate.js에 없는 기능: "+n.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{deflateSync:Ql,gunzipSync:at,gzipSync:Os,inflateSync:Xt,strFromU8:st,strToU8:Yr,zipSync:Qr}=Xr;var Ds={0:"일반",1:"작가",3:"작품",4:"캐릭터",5:"메타"},Ie=n=>String(n??"").toLowerCase().replace(/[_\s]+/g," ").trim();function Fs(n){let e=[],t=[],a=[],o=[],c=[],p=0,s=n.length;for(;p<s;){let w=n.indexOf(`
+`,p);w<0&&(w=s);let x=n.charCodeAt(w-1)===13?n.slice(p,w-1):n.slice(p,w);if(p=w+1,!x)continue;let m=x.lastIndexOf(","),k=x.lastIndexOf(",",m-1),j=x.lastIndexOf(",",k-1);if(j<=0)continue;let z=x.slice(0,j),_=x.slice(m+1);e.push(z),t.push(Ie(z.includes("/")?z.slice(z.lastIndexOf("/")+1):z)+(z.includes("/")?"\0"+Ie(z):"")),a.push(Number(x.slice(j+1,k))||0),o.push(Number(x.slice(k+1,m))||0),c.push(_==="null"?"":_)}return{words:e,keys:t,cats:a,freqs:o,redirs:c,size:e.length}}var Ns="ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ",c0="ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ",d0=["","ㄱ","ㄲ","ㄱㅅ","ㄴ","ㄴㅈ","ㄴㅎ","ㄷ","ㄹ","ㄹㄱ","ㄹㅁ","ㄹㅂ","ㄹㅅ","ㄹㅌ","ㄹㅍ","ㄹㅎ","ㅁ","ㅂ","ㅂㅅ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"],Is={ㅘ:"ㅗㅏ",ㅙ:"ㅗㅐ",ㅚ:"ㅗㅣ",ㅝ:"ㅜㅓ",ㅞ:"ㅜㅔ",ㅟ:"ㅜㅣ",ㅢ:"ㅡㅣ",ㄳ:"ㄱㅅ",ㄵ:"ㄴㅈ",ㄶ:"ㄴㅎ",ㄺ:"ㄹㄱ",ㄻ:"ㄹㅁ",ㄼ:"ㄹㅂ",ㄽ:"ㄹㅅ",ㄾ:"ㄹㅌ",ㄿ:"ㄹㅍ",ㅀ:"ㄹㅎ",ㅄ:"ㅂㅅ"};function Bs(n){let e="";for(let t of String(n)){let a=t.charCodeAt(0)-44032;if(a>=0&&a<11172){let o=c0[Math.floor(a/28)%21];e+=Ns[Math.floor(a/588)]+(Is[o]??o)+d0[a%28]}else e+=Is[t]??t}return e}var p0=n=>[...String(n)].map(e=>{let t=e.charCodeAt(0)-44032;return t>=0&&t<11172?Ns[Math.floor(t/588)]:e}).join(""),Rs=/[ㄱ-ㅎㅏ-ㅣ가-힣]/,h0=/^[ㄱ-ㅎ\s]+$/;function u0(n){if(n.ko)return n.ko;let e=[],t=[],a=[];for(let o=0;o<n.size;o++)if(Rs.test(n.words[o])){let c=Ie(n.words[o]);e.push(o),t.push(Bs(c)),a.push(p0(c))}return n.ko={ids:e,jk:t,ck:a}}function Us(n,e,t=8){let a=Ie(e);if(!n||a.length<1)return[];let o=[],c=[],p=[];if(Rs.test(a)){let m=u0(n),k=h0.test(a),j=k?a.replace(/\s+/g,""):Bs(a);for(let z=0;z<m.ids.length;z++){let _=k?m.ck[z].replace(/\s+/g,""):m.jk[z],f=_.indexOf(j);if(f<0)continue;let $=_.lastIndexOf("/");(f===$+1||f>$&&_[f-1]===" "?o:f>$||f===0?c:p).push(m.ids[z])}}else for(let m=0;m<n.size;m++){let k=n.keys[m],j=k.indexOf(a);j<0||(j===0||k[j-1]===" "||k[j-1]==="\0"||k[j-1]==="/"?c:p).push(m)}let s=(m,k)=>n.freqs[k]-n.freqs[m];o.sort(s),c.sort(s),p.sort(s);let w=[],x=new Set;for(let m of[...o,...c,...p]){let k=n.redirs[m]||n.words[m];if(!x.has(k)&&(x.add(k),w.push({word:n.words[m],tag:k,cat:n.cats[m],freq:n.freqs[m]}),w.length>=t))break}return w}function Zr(n,e){let t=e;for(;t>0&&!`,
+|{}[]()<>`.includes(n[t-1]);)t--;for(;t<e&&n[t]===" ";)t++;let a=e;for(;a<n.length&&!`,
+|{}[]()<>`.includes(n[a]);)a++;return{start:t,end:a,word:n.slice(t,e)}}function Ks(n,e,t){let a=Zr(n,e),o=n.slice(a.end).replace(/^\s*,?\s*/,""),c=n.slice(0,a.start)+t+", ";return{text:c+o,caret:c.length}}var Yt=n=>n>=1e6?`${(n/1e6).toFixed(1)}M`:n>=1e3?`${Math.round(n/1e3)}k`:String(n);var Vs=`인원/여자 한 명,0,7943303,1girl
+인원/소녀 1명,0,7943303,1girl
+인원/여자 1,0,7943303,1girl
+인원/혼자,0,6649830,solo
+인원/단독,0,6649830,solo
+인원/솔로,0,6649830,solo
+인원/남자 한 명,0,1996955,1boy
+인원/소년 1명,0,1996955,1boy
+인원/여자 두 명,0,1353702,2girls
+인원/여자 세 명,0,311371,3girls
+인원/남자 두 명,0,437777,2boys
+인원/여러 여자,0,1996838,multiple girls
+인원/여러 남자,0,655055,multiple boys
+인원/성별 불명 1명,0,117648,1other
+인원/커플,0,95920,couple
+인원/형제자매,0,155442,siblings
+인원/남매,0,155442,siblings
+인원/자매,0,90662,sisters
+표정/홍조,0,3875548,blush
+표정/볼 붉힘,0,3875548,blush
+표정/입 벌림,0,3284156,open mouth
+표정/벌린 입,0,3284156,open mouth
+표정/입 다묾,0,1814020,closed mouth
+표정/다문 입,0,1814020,closed mouth
+표정/살짝 벌린 입,0,700578,parted lips
+표정/윙크,0,584320,one eye closed
+표정/한쪽 눈 감기,0,584320,one eye closed
+표정/씩 웃음,0,334412,grin
+표정/이 보이는 웃음,0,334412,grin
+표정/혀 내밀기,0,393973,tongue out
+표정/메롱,0,393973,tongue out
+표정/송곳니,0,429127,fang
+표정/눈물,0,285037,tears
+표정/울음,0,107633,crying
+표정/울기,0,107633,crying
+표정/땀방울(만화),0,309330,sweatdrop
+표정/땀,0,721407,sweat
+표정/무표정,0,170594,expressionless
+표정/부끄러움,0,133324,embarrassed
+표정/창피함,0,133324,embarrassed
+표정/반쯤 감은 눈,0,134756,half-closed eyes
+표정/졸린 눈,0,134756,half-closed eyes
+표정/옅은 미소,0,102782,light smile
+표정/살짝 웃음,0,102782,light smile
+표정/옅은 홍조,0,115004,light blush
+표정/코 홍조,0,140977,nose blush
+표정/볼터치 스티커,0,147886,blush stickers
+표정/화난 눈썹,0,249332,v-shaped eyebrows
+표정/V자 눈썹,0,249332,v-shaped eyebrows
+표정/짙은 눈썹,0,133402,thick eyebrows
+표정/굵은 눈썹,0,133402,thick eyebrows
+표정/이 악물기,0,99068,clenched teeth
+표정/물결 입,0,98261,wavy mouth
+표정/떨림,0,102961,trembling
+표정/덜덜,0,102961,trembling
+표정/침,0,144282,saliva
+표정/눈웃음,0,148429,^ ^
+표정/활짝 웃음,0,807605,:d
+표정/놀란 입,0,253230,:o
+표정/고양이 입,0,171274,:3
+표정/윙크하며 웃음,0,89880,;d
+표정/질끈 감은 눈,0,89234,> <
+표정/하트 눈동자,0,114322,heart-shaped pupils
+표정/모양 눈동자,0,234887,symbol-shaped pupils
+표정/세로 동공,0,87944,slit pupils
+표정/밝은 동공,0,138834,bright pupils
+표정/흰 동공,0,111868,white pupils
+표정/속눈썹,0,248049,eyelashes
+표정/뾰족한 이,0,116419,sharp teeth
+표정/상어 이,0,116419,sharp teeth
+표정/살짝 송곳니,0,96007,skin fang
+표정/윗니만,0,240511,upper teeth only
+표정/이빨,0,723120,teeth
+표정/혀,0,524343,tongue
+표정/머리카락 너머 보이는 눈,0,99118,eyes visible through hair
+표정/빛나는,0,132619,glowing
+머리/동물 귀,0,1645868,animal ears
+머리/수인 귀,0,1645868,animal ears
+머리/고양이 귀,0,386277,cat ears
+머리/여우 귀,0,203929,fox ears
+머리/토끼 귀,0,307772,rabbit ears
+머리/늑대 귀,0,109418,wolf ears
+머리/강아지 귀,0,85352,dog ears
+머리/말 귀,0,210217,horse ears
+머리/귀 털,0,339829,animal ear fluff
+머리/가짜 동물 귀,0,220064,fake animal ears
+머리/머리띠 귀,0,220064,fake animal ears
+머리/귀 네 개,0,86232,extra ears
+머리/뾰족 귀,0,557625,pointy ears
+머리/엘프 귀,0,557625,pointy ears
+머리/뿔,0,645772,horns
+머리/악마 뿔,0,131746,demon horns
+머리/헤일로,0,458991,halo
+머리/광륜,0,458991,halo
+머리/머리 꽃,0,375680,hair flower
+머리/날리는 머리,0,182308,floating hair
+머리/생머리,0,96354,straight hair
+머리/다른 머리 모양,0,139393,alternate hairstyle
+머리/교차 앞머리,0,97506,crossed bangs
+머리/양갈래 앞머리,0,86439,double-parted bangs
+머리/옆머리 튜브,0,97644,hair tubes
+머리/X 머리핀,0,107514,x hair ornament
+머리/곱창 밴드,0,102078,scrunchie
+머리/슈슈,0,102078,scrunchie
+머리/검은 머리띠,0,138226,black hairband
+머리/머리 날개,0,88152,head wings
+머리/머리 장비,0,98593,headgear
+머리/머리 위 안경,0,90226,eyewear on head
+몸/가슴,0,4675105,breasts
+몸/작은 가슴,0,672837,small breasts
+몸/중간 가슴,0,1152031,medium breasts
+몸/큰 가슴,0,2127798,large breasts
+몸/거대한 가슴,0,305713,huge breasts
+몸/평평한 가슴,0,226576,flat chest
+몸/배꼽,0,1515872,navel
+몸/쇄골,0,1049259,collarbone
+몸/허벅지,0,780491,thighs
+몸/두꺼운 허벅지,0,148330,thick thighs
+몸/허벅지 틈,0,94101,thigh gap
+몸/다리,0,177756,legs
+몸/발,0,258217,feet
+몸/발가락,0,224587,toes
+몸/발바닥,0,140772,soles
+몸/배,0,389118,stomach
+몸/복근,0,127335,abs
+몸/가슴 근육,0,123201,pectorals
+몸/근육질 남자,0,132074,muscular male
+몸/등,0,115370,back
+몸/사타구니,0,181320,groin
+몸/손톱,0,256886,fingernails
+몸/매니큐어,0,324788,nail polish
+몸/검은 손톱,0,113135,black nails
+몸/빨간 손톱,0,82557,red nails
+몸/입술,0,171281,lips
+몸/화장,0,176496,makeup
+몸/점,0,372256,mole
+몸/눈 밑 점,0,233367,mole under eye
+몸/흉터,0,159316,scar
+몸/얼굴 흉터,0,100202,scar on face
+몸/얼굴 문양,0,143348,facial mark
+몸/문신,0,197311,tattoo
+몸/수염,0,161043,facial hair
+몸/어두운 피부,0,384116,dark skin
+몸/갈색 피부 여자,0,238835,dark-skinned female
+몸/갈색 피부 남자,0,126022,dark-skinned male
+몸/색 피부,0,196952,colored skin
+몸/윤기 피부,0,151753,shiny skin
+몸/날개,0,587098,wings
+몸/깃털 날개,0,96767,feathered wings
+몸/꼬리,0,1114130,tail
+몸/고양이 꼬리,0,211436,cat tail
+몸/여우 꼬리,0,137687,fox tail
+몸/말 꼬리,0,120626,horse tail
+몸/토끼 꼬리,0,82977,rabbit tail
+몸/악마 꼬리,0,83604,demon tail
+몸/회색 눈,0,269078,grey eyes
+몸/청록 눈,0,242895,aqua eyes
+몸/어려진,0,84510,aged down
+몸/어린 모습,0,84510,aged down
+몸/살 파임,0,154485,skindentation
+캐릭터 유형/고양이 소녀,0,148863,cat girl
+캐릭터 유형/묘인,0,148863,cat girl
+캐릭터 유형/여우 소녀,0,125697,fox girl
+캐릭터 유형/말 소녀,0,203455,horse girl
+캐릭터 유형/악마 소녀,0,123453,demon girl
+캐릭터 유형/엘프,0,107047,elf
+캐릭터 유형/마법소녀,0,104156,magical girl
+캐릭터 유형/로봇,0,87775,robot
+캐릭터 유형/퍼리,0,130150,furry
+캐릭터 유형/수인,0,130150,furry
+캐릭터 유형/버튜버,0,603123,virtual youtuber
+캐릭터 유형/브이튜버,0,603123,virtual youtuber
+캐릭터 유형/치비,0,352316,chibi
+캐릭터 유형/SD 캐릭터,0,352316,chibi
+옷/셔츠,0,2722060,shirt
+옷/흰 셔츠,0,1306940,white shirt
+옷/검은 셔츠,0,342415,black shirt
+옷/파란 셔츠,0,153594,blue shirt
+옷/빨간 셔츠,0,103489,red shirt
+옷/회색 셔츠,0,99105,grey shirt
+옷/칼라 셔츠,0,703728,collared shirt
+옷/와이셔츠,0,158636,dress shirt
+옷/풀어헤친 셔츠,0,144558,open shirt
+옷/민소매 셔츠,0,214258,sleeveless shirt
+옷/크롭 탑,0,268594,crop top
+옷/탱크톱,0,114570,tank top
+옷/나시,0,114570,tank top
+옷/긴 소매,0,2210968,long sleeves
+옷/반소매,0,854970,short sleeves
+옷/퍼프 소매,0,493044,puffy sleeves
+옷/퍼프 반소매,0,244057,puffy short sleeves
+옷/퍼프 긴소매,0,93535,puffy long sleeves
+옷/줄리엣 소매,0,96115,juliet sleeves
+옷/프릴 소매,0,113533,frilled sleeves
+옷/손등 덮는 소매,0,224418,sleeves past wrists
+옷/분리형 칼라,0,176317,detached collar
+옷/윙 칼라,0,81989,wing collar
+옷/세일러 칼라,0,387324,sailor collar
+옷/파란 세일러 칼라,0,86098,blue sailor collar
+옷/흰 세일러 칼라,0,84320,white sailor collar
+옷/조끼,0,301848,vest
+옷/검은 재킷,0,364654,black jacket
+옷/흰 재킷,0,180832,white jacket
+옷/파란 재킷,0,147192,blue jacket
+옷/빨간 재킷,0,88811,red jacket
+옷/열린 재킷,0,356651,open jacket
+옷/후드 재킷,0,84101,hooded jacket
+옷/검은 코트,0,91735,black coat
+옷/후드,0,416366,hood
+옷/후드 내림,0,135733,hood down
+옷/케이프,0,165246,capelet
+옷/흰 원피스,0,416108,white dress
+옷/검은 원피스,0,350796,black dress
+옷/파란 원피스,0,173606,blue dress
+옷/빨간 원피스,0,135675,red dress
+옷/분홍 원피스,0,89887,pink dress
+옷/짧은 원피스,0,124739,short dress
+옷/민소매 원피스,0,216482,sleeveless dress
+옷/프릴 원피스,0,138758,frilled dress
+옷/끈 없는,0,223727,strapless
+옷/검은 치마,0,435940,black skirt
+옷/파란 치마,0,246187,blue skirt
+옷/빨간 치마,0,154314,red skirt
+옷/흰 치마,0,132000,white skirt
+옷/초록 치마,0,82582,green skirt
+옷/프릴 치마,0,108570,frilled skirt
+옷/바지,0,656112,pants
+옷/검은 바지,0,236357,black pants
+옷/검은 반바지,0,183259,black shorts
+옷/청바지,0,99791,denim
+옷/데님,0,99791,denim
+옷/흰 앞치마,0,113504,white apron
+옷/오비(기모노 띠),0,103139,obi
+옷/군복,0,105704,military
+옷/밀리터리,0,105704,military
+옷/어깨 갑옷,0,96844,shoulder armor
+옷/원피스 수영복,0,174051,one-piece swimsuit
+옷/검은 비키니,0,152104,black bikini
+옷/흰 비키니,0,125863,white bikini
+옷/검은 레오타드,0,103718,black leotard
+옷/비치는 옷,0,205975,see-through clothes
+옷/트임 옷,0,249934,clothing cutout
+옷/줄무늬 옷,0,339249,striped clothes
+옷/체크무늬 옷,0,185809,plaid clothes
+옷/하이레그,0,157265,highleg
+옷/다른 의상,0,608913,alternate costume
+옷/공식 다른 의상,0,519944,official alternate costume
+옷/코스프레,0,179054,cosplay
+옷/속옷,0,976245,underwear
+옷/흰 팬티,0,233100,white panties
+옷/검은 팬티,0,174038,black panties
+옷/검은 브래지어,0,82745,black bra
+옷/노브라,0,120138,no bra
+옷/검은 니삭스,0,483906,black thighhighs
+옷/흰 니삭스,0,326493,white thighhighs
+옷/검은 스타킹,0,284600,black pantyhose
+옷/흰 스타킹,0,85552,white pantyhose
+옷/흰 양말,0,207756,white socks
+옷/검은 양말,0,141146,black socks
+옷/신발,0,797086,shoes
+옷/검은 신발,0,251883,black shoes
+옷/흰 신발,0,88151,white shoes
+옷/갈색 신발,0,85377,brown shoes
+옷/검은 부츠,0,172742,black boots
+옷/맨발(신발 없음),0,120068,no shoes
+옷/검은 장갑,0,635278,black gloves
+옷/흰 장갑,0,413224,white gloves
+옷/모자,0,1609396,hat
+옷/검은 모자,0,232263,black hat
+옷/흰 모자,0,161392,white hat
+옷/빨간 모자,0,83391,red hat
+옷/마녀 모자,0,129922,witch hat
+옷/몹캡,0,100101,mob cap
+옷/헬멧,0,107221,helmet
+옷/리본(나비),0,1618727,bow
+옷/빨간 리본,0,307911,red bow
+옷/파란 리본,0,168225,blue bow
+옷/검은 리본,0,209324,black bow
+옷/흰 리본,0,141836,white bow
+옷/분홍 리본,0,112159,pink bow
+옷/빨간 리본 끈,0,252777,red ribbon
+옷/검은 리본 끈,0,182684,black ribbon
+옷/파란 리본 끈,0,104700,blue ribbon
+옷/흰 리본 끈,0,83054,white ribbon
+옷/빨간 나비넥타이,0,106853,red bowtie
+옷/빨간 넥타이,0,112044,red necktie
+옷/검은 넥타이,0,99027,black necktie
+옷/검은 초커,0,251390,black choker
+옷/장신구,0,1498951,jewelry
+옷/귀 피어싱,0,100836,ear piercing
+옷/보석,0,109151,gem
+옷/방울,0,155203,bell
+옷/십자가,0,98418,cross
+옷/검은 벨트,0,96540,black belt
+옷/가면,0,187177,mask
+옷/마스크,0,187177,mask
+옷/안대,0,99187,eyepatch
+옷/고글,0,82298,goggles
+옷/선글라스,0,135297,sunglasses
+옷/헤드폰,0,129706,headphones
+옷/붕대,0,124073,bandages
+옷/반창고,0,90931,bandaid
+옷/가방,0,311508,bag
+옷/배낭,0,95348,backpack
+옷/전라,0,271274,completely nude
+옷/알몸,0,653864,nude
+자세/들고 있음,0,2045489,holding
+자세/손 들기,0,522764,hand up
+자세/팔 들기,0,287898,arm up
+자세/허리에 손,0,215371,hand on own hip
+자세/가슴에 손,0,84859,hand on own chest
+자세/두 손 모으기,0,109688,own hands together
+자세/팔짱,0,115552,crossed arms
+자세/팔로 받치기,0,114656,arm support
+자세/팔 뻗기,0,89003,outstretched arm
+자세/가리키기,0,88369,pointing
+자세/주먹 쥐기,0,82739,clenched hand
+자세/브이,0,220868,v
+자세/V 사인,0,220868,v
+자세/고개 갸웃,0,167620,head tilt
+자세/다리 벌리기,0,332517,spread legs
+자세/다리 들기,0,106441,leg up
+자세/무릎 꿇기,0,149944,kneeling
+자세/와리자,0,104123,wariza
+자세/오리 앉기,0,104123,wariza
+자세/올라타기,0,95707,straddling
+자세/잠자기,0,96189,sleeping
+자세/먹기,0,110284,eating
+자세/포옹,0,163942,hug
+자세/안기,0,163942,hug
+자세/키스,0,89565,kiss
+자세/손잡기,0,137669,holding hands
+자세/입에 물기,0,96662,mouth hold
+자세/정면 보기,0,95634,facing viewer
+자세/옆모습,0,172621,profile
+자세/옷 들어올리기,0,84325,lifting own clothes
+자세/옷 걷어올림,0,273270,clothes lift
+자세/옷 당기기,0,103511,clothes pull
+자세/묶임,0,104912,bound
+자세/무기 들기,0,390951,holding weapon
+자세/검 들기,0,166596,holding sword
+자세/총 들기,0,95816,holding gun
+자세/컵 들기,0,103012,holding cup
+자세/음식 들기,0,143037,holding food
+자세/폰 들기,0,95464,holding phone
+자세/침대 위,0,161385,on bed
+구도/남자 중심,0,1059053,male focus
+구도/한 명 중심,0,474326,solo focus
+구도/1인칭 시점,0,184903,pov
+구도/여러 시점,0,251046,multiple views
+구도/피사계 심도,0,122117,depth of field
+구도/흐림,0,297810,blurry
+구도/움직임 선,0,114202,motion lines
+구도/날리는 땀방울,0,120621,flying sweatdrops
+구도/반짝임,0,217014,sparkle
+구도/그림자,0,156090,shadow
+구도/햇빛,0,98852,sunlight
+배경/야외,0,748297,outdoors
+배경/실내,0,518353,indoors
+배경/하늘,0,582127,sky
+배경/파란 하늘,0,276354,blue sky
+배경/흐린 하늘,0,98614,cloudy sky
+배경/구름,0,375889,cloud
+배경/나무,0,220954,tree
+배경/풀,0,110397,grass
+배경/잔디,0,110397,grass
+배경/나뭇잎,0,134543,leaf
+배경/식물,0,97295,plant
+배경/꽃,0,833790,flower
+배경/흰 꽃,0,137884,white flower
+배경/빨간 꽃,0,105469,red flower
+배경/분홍 꽃,0,88645,pink flower
+배경/장미,0,141411,rose
+배경/꽃잎,0,167290,petals
+배경/불,0,102142,fire
+배경/창문,0,171946,window
+배경/커튼,0,88056,curtains
+배경/침대,0,131528,bed
+배경/침대 시트,0,118564,bed sheet
+배경/베개,0,193413,pillow
+배경/의자,0,137343,chair
+배경/탁자,0,113339,table
+배경/사람 없음,0,219688,no humans
+배경/배경만,0,219688,no humans
+사물/무기,0,773366,weapon
+사물/검,0,355385,sword
+사물/칼,0,355385,sword
+사물/나이프,0,85641,knife
+사물/총,0,185896,gun
+사물/책,0,181381,book
+사물/컵,0,249035,cup
+사물/병,0,95762,bottle
+사물/음식,0,589412,food
+사물/과일,0,143158,fruit
+사물/전화기,0,142369,phone
+사물/휴대폰,0,128267,cellphone
+사물/스마트폰,0,111373,smartphone
+사물/우산,0,113869,umbrella
+사물/인형,0,113874,stuffed toy
+사물/동물 인형,0,90486,stuffed animal
+사물/하트,0,841794,heart
+사물/별 모양,0,337995,star (symbol)
+사물/깃털,0,100844,feathers
+동물/동물,0,138703,animal
+동물/고양이,0,112129,cat
+동물/새,0,142275,bird
+동물/벌레,0,94170,bug
+동물/포켓몬,0,219450,pokemon (creature)
+화풍/흑백,0,809886,monochrome
+화풍/모노크롬,0,809886,monochrome
+화풍/그레이스케일,0,655256,greyscale
+화풍/스케치,0,186588,sketch
+화풍/만화,0,694162,comic
+화풍/4컷 만화,0,114333,4koma
+화풍/말풍선,0,469841,speech bubble
+화풍/테두리,0,233308,border
+화풍/흰 테두리,0,146646,white border
+화풍/외곽선,0,82321,outline
+화풍/패러디,0,106620,parody
+화풍/크로스오버,0,82037,crossover
+화풍/밈,0,83032,meme
+메타/서명,0,413766,signature
+메타/워터마크,0,226078,watermark
+메타/작가 이름,0,577726,artist name
+메타/캐릭터 이름,0,289069,character name
+메타/영어 글자,0,377148,english text
+메타/날짜 표기,0,253993,dated
+몸/엉덩이,0,753383,ass
+성인/이성애,0,750510,hetero
+성인/검열,0,618795,censored
+성인/음경,0,559219,penis
+성인/음부,0,487482,pussy
+메타/트위터 아이디,0,406220,twitter username
+성인/모자이크,0,284403,mosaic censoring
+성인/검은 띠 검열,0,223228,bar censor
+몸/가려진 젖꼭지,0,195240,covered nipples
+몸/가려진 배꼽,0,186274,covered navel
+성인/무검열,0,185564,uncensored
+상태/젖음,0,185128,wet
+상태/피,0,179445,blood
+성인/음모,0,179010,pubic hair
+메타/저작권 표기,0,171094,copyright name
+성인/항문,0,158338,anus
+얼굴/송곳니,0,147018,fangs
+성인/발기,0,140149,erection
+인원/여자 4명,0,138948,4girls
+성인/고환,0,130549,testicles
+성인/여성 음모,0,120910,female pubic hair
+성인/캐멀토,0,120892,cameltoe
+몸/허벅지 사이로 보이는 엉덩이,0,113213,ass visible through thighs
+장르/야오이,0,106940,yaoi
+인원/여자 6명 이상,0,103162,6+girls
+인원/남자 3명,0,99983,3boys
+구도/테두리 밖,0,91274,outside border
+성인/가슴 움켜쥐기,0,89910,grabbing another's breast
+장르/바라,0,89335,bara
+얼굴/점 코,0,88592,dot nose
+메타/표지,0,87232,cover
+성인/상반신 노출 여성,0,85641,topless female
+메타/로고,0,81631,logo
+배경/별,0,81380,star (sky)
+머리/공식 다른 머리모양,0,81196,official alternate hairstyle
+모자/모자 리본,0,80890,hat ribbon
+배경/건물,0,80611,building
+소품/일본도,0,80332,katana
+몸/가슴 크기 변경(크게),0,79464,alternate breast size (larger)
+모자/모자 리본 장식,0,79124,hat bow
+양말/한쪽 니삭,0,78702,single thighhigh
+소품/지팡이,0,78583,staff
+옷/흰 소매,0,78359,white sleeves
+옷/정장,0,77569,formal clothes
+효과/빛 입자,0,77553,light particles
+자세/무릎 세움,0,77163,knees up
+표정/그늘진 얼굴,0,77148,shaded face
+소품/악기,0,77059,instrument
+머리/낮은 포니테일,0,77033,low ponytail
+인원/몬스터 소녀,0,76804,monster girl
+옷/회색 치마,0,76457,grey skirt
+몸/발톱,0,75972,claws
+모자/파란 모자,0,75716,blue hat
+표정/힘줄 분노 표시,0,75684,anger vein
+소품/상자,0,75644,box
+표정/침 흘림,0,75628,drooling
+옷/후드 쓴 모습,0,75073,hood up
+머리/어깨 위로 넘긴 머리,0,75005,hair over shoulder
+옷/메이드 앞치마,0,74997,maid apron
+옷/열린 코트,0,74812,open coat
+인원/어린이,0,74765,child
+옷/하이레그 레오타드,0,74707,highleg leotard
+옷/짧은 재킷,0,74594,cropped jacket
+옷/보라색 드레스,0,74026,purple dress
+옷/망토,0,73887,cloak
+옷/바지 안 입음,0,73710,no pants
+옷/파란 넥타이,0,73615,blue necktie
+인원/남자 아이 같은 소녀,0,73553,trap
+표정/말풍선 하트,0,73220,spoken heart
+구도/입상 그림,0,72897,tachi-e
+동물/나비,0,72675,butterfly
+옷/끈 없는 드레스,0,72625,strapless dress
+소품/수건,0,72506,towel
+배경/소파,0,72498,couch
+얼굴/입 아래 점,0,72254,mole under mouth
+옷/빨간 목스카프,0,72245,red neckerchief
+효과/음표,0,72215,musical note
+옷/손끝 넘는 소매,0,72161,sleeves past fingers
+몸/박쥐 날개,0,72069,bat wings
+인원/여자 5명,0,71942,5girls
+신발/갈색 부츠,0,71940,brown boots
+음식/사탕,0,71824,candy
+배경/풍경,0,71602,scenery
+소품/장병기,0,71463,polearm
+소품/둥근 안경,0,71128,round eyewear
+효과/김,0,70943,steam
+자세/검지 세움,0,70644,index finger raised
+얼굴/립스틱,0,70598,lipstick
+배경/벚꽃,0,70570,cherry blossoms
+몸/파란 손톱,0,70510,blue nails
+눈/색 있는 흰자,0,70441,colored sclera
+옷/오링,0,70372,o-ring
+표정/놀람,0,70290,surprised
+소품/초승달,0,70133,crescent
+몸/창백한 피부,0,70122,pale skin
+성인/성인 용품,0,69964,sex toy
+몸/발톱(발),0,69916,toenails
+얼굴/아이섀도,0,69724,eyeshadow
+양말/줄무늬 니삭,0,69599,striped thighhighs
+화풍/SD 캐릭터만,0,69584,chibi only
+구도/상반신 잘림,0,69325,cropped torso
+몸/분홍 손톱,0,69307,pink nails
+몸/용 뿔,0,69164,dragon horns
+옷/검은 조끼,0,68984,black vest
+자세/자기 얼굴에 손,0,68611,hand on own face
+자세/책 들기,0,68290,holding book
+옷/허리 앞치마,0,68266,waist apron
+소품/마이크,0,68178,microphone
+옷/방울 장식,0,68113,pom pom (clothes)
+표정/눈물 글썽,0,67785,tearing up
+옷/노란 리본,0,67362,yellow bow
+구도/레터박스,0,67147,letterboxed
+옷/흰 바지,0,67122,white pants
+옷/분홍 셔츠,0,67099,pink shirt
+옷/흰 코트,0,67076,white coat
+소품/한쪽 귀걸이,0,66892,single earring
+구도/다리 잘림,0,66863,cropped legs
+메타/웹 주소,0,66859,web address
+동작/옷 벗는 중,0,66741,undressing
+눈/한쪽 눈 가림,0,66595,one eye covered
+성인/남성 음모,0,66312,male pubic hair
+메타/표지 페이지,0,66031,cover page
+구도/원근 단축,0,65887,foreshortening
+머리/머리 방울,0,65835,hair bobbles
+소품/칼집,0,65761,sheath
+효과/바람,0,65742,wind
+동작/구속됨,0,65726,restrained
+얼굴/얼굴 없음,0,65063,faceless
+표정/찌푸린 눈썹,0,65041,furrowed brow
+옷/건틀릿,0,65026,gauntlets
+자세/가슴 눌림,0,64971,breast press
+몸/검은 날개,0,64958,black wings
+몸/여러 꼬리,0,64815,multiple tails
+옷/변형 의상,0,64496,adapted costume
+자세/깍지,0,64474,interlocked fingers
+얼굴/수염,0,64426,beard
+머리/짧은 머리에 긴 옆머리,0,64322,short hair with long locks
+옷/파란 반바지,0,63994,blue shorts
+옷/빨간 장갑,0,63756,red gloves
+소품/접시,0,63541,plate
+소품/목 방울,0,63534,neck bell
+소품/파란 꽃,0,63519,blue flower
+옷/검은 보타이,0,63186,black bowtie
+메타/패트리온 아이디,0,62607,patreon username
+옷/갈색 장갑,0,62526,brown gloves
+옷/프릴 앞치마,0,62465,frilled apron
+자세/가슴 사이,0,62425,between breasts
+옷/분홍 치마,0,62235,pink skirt
+인원/수인 여성,0,61969,furry female
+옷/니트 조끼,0,61932,sweater vest
+자세/팔 내림,0,61920,arm at side
+동작/안거나 들기,0,61899,carrying
+옷/초록 리본,0,61807,green bow
+옷/치마 세트,0,61703,skirt set
+옷/분홍 리본,0,61541,pink ribbon
+옷/보라 리본,0,61511,purple bow
+소품/반테 안경,0,61390,semi-rimless eyewear
+눈/올라간 눈,0,61387,tsurime
+눈/여러 색 눈,0,61222,multicolored eyes
+옷/회색 재킷,0,61020,grey jacket
+옷/세로줄 무늬 옷,0,61013,vertical-striped clothes
+옷/노란 셔츠,0,60523,yellow shirt
+표정/혀 내밀기,0,60498,:p
+구도/클로즈업,0,60475,close-up
+인원/성별 반전,0,60391,genderswap
+옷/검은 세일러 칼라,0,60353,black sailor collar
+몸/흰 날개,0,60235,white wings
+옷/하이넥,0,60172,high collar
+얼굴/이마,0,60140,forehead
+옷/초록 재킷,0,59954,green jacket
+몸/흰 피부,0,59900,white skin
+몸/핏줄,0,59762,veins
+옷/갈색 재킷,0,59704,brown jacket
+속옷/분홍 팬티,0,59579,pink panties
+인원/수인 남성,0,59561,furry male
+눈/빛나는 눈,0,59451,glowing eyes
+몸/검은 뿔,0,59353,black horns
+신발/흰 부츠,0,59215,white boots
+얼굴/주근깨,0,59091,freckles
+상태/젖은 옷,0,59088,wet clothes
+소품/자동차 류,0,59064,motor vehicle
+인원/중성적,0,59034,androgynous
+몸/벌어진 가슴,0,58989,breasts apart
+화풍/부분 채색,0,58972,spot color
+모자/챙 모자,0,58831,peaked cap
+인원/이중 인격,0,58387,dual persona
+인원/용 소녀,0,58171,dragon girl
+옷/주머니,0,58112,pocket
+몸/늑대 꼬리,0,58084,wolf tail
+자세/주먹 쥔 손,0,58032,clenched hands
+옷/동복,0,57787,winter uniform
+소품/부채,0,57634,hand fan
+옷/보라 셔츠,0,57268,purple shirt
+자세/떠 있음,0,57225,floating
+속옷/리본 팬티,0,57163,bow panties
+옷/검은 소매,0,57045,black sleeves
+옷/옷에 적힌 글자,0,56975,clothes writing
+머리/흰 머리띠,0,56961,white hairband
+양말/갈색 팬티스타킹,0,56797,brown pantyhose
+몸/탄탄한 몸,0,56766,toned
+소품/방울,0,56394,jingle bell
+소품/구슬,0,56387,beads
+자세/은밀한 곳 가리기,0,56376,covering privates
+동작/핥기,0,56257,licking
+옷/파란 비키니,0,56233,blue bikini
+배경/SF,0,56200,science fiction
+옷/프릴 셔츠 칼라,0,55823,frilled shirt collar
+옷/파란 바지,0,55818,blue pants
+상태/얼굴의 피,0,55757,blood on face
+옷/한쪽 장갑,0,55643,single glove
+몸/큰 가슴근육,0,55637,large pectorals
+효과/연기,0,55613,smoke
+자세/무릎 하나 세움,0,55485,knee up
+눈/처진 눈,0,55253,tareme
+인원/늑대 소녀,0,55175,wolf girl
+옷/초록 드레스,0,54961,green dress
+성인/옷 입은 여자 벗은 남자,0,54853,clothed female nude male
+소품/인형,0,54794,doll
+소품/유리컵,0,54774,drinking glass
+음식/케이크,0,54736,cake
+몸/천사 날개,0,54694,angel wings
+옷/터틀넥 스웨터,0,54633,turtleneck sweater
+화풍/흰 윤곽선,0,54175,white outline
+몸/넓은 골반,0,54117,wide hips
+인원/토끼 소녀,0,54007,rabbit girl
+배경/책상,0,53947,desk
+효과/반사,0,53608,reflection
+소품/선물,0,53538,gift
+배경/눈,0,53529,snow
+시선/정면 바라봄,0,53502,looking ahead
+소품/검은 테 안경,0,53456,black-framed eyewear
+몸/가슴 점,0,53391,mole on breast
+소품/메카,0,53341,mecha
+옷/셔츠 넣어 입음,0,53287,shirt tucked in
+인원/이성 복장,0,53267,crossdressing
+옷/보라 치마,0,53260,purple skirt
+옷/져지,0,53252,track jacket
+옷/초록 셔츠,0,53163,green shirt
+효과/생각 말풍선,0,53147,thought bubble
+배경/보름달,0,53079,full moon
+소품/소총,0,52917,rifle
+옷/흰 기모노,0,52907,white kimono
+양말/짝짝이 레그웨어,0,52749,asymmetrical legwear
+동작/물속 걷기,0,52541,wading
+소품/파란 헤일로,0,52478,blue halo
+옷/펜슬 스커트,0,52395,pencil skirt
+머리/곱창 머리끈,0,52362,hair scrunchie
+눈/색 있는 속눈썹,0,51867,colored eyelashes
+표정/눈 뜨고 울기,0,51739,crying with eyes open
+자세/팔 뒤로,0,51477,arm behind back
+몸/긴 손톱,0,51371,long fingernails
+옷/흰 반바지,0,51365,white shorts
+동작/걷기,0,51315,walking
+표정/말풍선 말줄임표,0,51238,spoken ellipsis
+소품/권총,0,51098,handgun
+옷/앞매듭 상의,0,50868,front-tie top
+머리/별 머리장식,0,50839,star hair ornament
+구도/정면,0,50708,straight-on
+배경/별이 가득한 하늘,0,50631,starry sky
+인원/수인귀 모드,0,50545,kemonomimi mode
+옷/몸에 붙는 옷,0,50515,skin tight
+옷/벨트 버클,0,50173,belt buckle
+소품/가짜 꼬리,0,50062,fake tail
+옷/파란 보타이,0,49987,blue bowtie
+옷/검은 보디수트,0,49955,black bodysuit
+자세/상대 머리에 손,0,49907,hand on another's head
+화풍/애니 채색,0,49881,anime coloring
+자세/입에 손가락,0,49856,finger to mouth
+메타/저작권 표시,0,49851,copyright notice
+소품/노란 꽃,0,49800,yellow flower
+소품/보라 꽃,0,49559,purple flower
+자세/주머니에 손,0,49548,hand in pocket
+표정/눈 휘둥그레,0,49507,wide-eyed
+옷/어깨 갑옷,0,49337,pauldrons
+옷/프릴 비키니,0,49219,frilled bikini
+효과/주목선,0,49098,notice lines
+몸/외뿔,0,48996,single horn
+소품/쟁반,0,48936,tray
+표정/거친 숨,0,48883,heavy breathing
+머리/귀 뒤로 넘긴 머리,0,48877,hair behind ear
+성인/가려서 안 보임,0,48870,convenient censoring
+소품/파우치,0,48781,pouch
+소품/헤드셋,0,48747,headset
+자세/팔 머리 뒤로,0,48736,arm behind head
+소품/분홍 헤일로,0,48719,pink halo
+자세/다리 사이,0,48658,between legs
+자세/우산 들기,0,48653,holding umbrella
+옷/줄무늬 셔츠,0,48619,striped shirt
+효과/렌즈 플레어,0,48509,lens flare
+옷/갈색 치마,0,48384,brown skirt
+인원/나이 차이,0,48260,age difference
+머리/일자로 자른 끝,0,48246,blunt ends
+동물/물고기,0,48230,fish
+인원/얼굴 없는 남자,0,48171,faceless male
+속옷/줄무늬 팬티,0,48130,striped panties
+자세/정좌,0,48054,seiza
+소품/머리 위 고글,0,47979,goggles on head
+모자/산타 모자,0,47770,santa hat
+옷/롱 드레스,0,47684,long dress
+성인/후타나리,0,47474,futanari
+속옷/끈 팬티,0,47328,side-tie panties
+소품/들고 있는 모자,0,47279,unworn headwear
+자세/지팡이 들기,0,47200,holding staff
+옷/칼라 드레스,0,47145,collared dress
+눈/공허한 눈,0,47116,empty eyes
+소품/모자 없음,0,47016,missing headwear
+옷/노란 리본,0,47003,yellow ribbon
+눈/반쯤 감긴 눈,0,46923,jitome
+음식/술,0,46843,alcohol
+머리/땋은 포니테일,0,46795,braided ponytail
+몸/지느러미,0,46790,fins
+몸/강아지 꼬리,0,46770,dog tail
+소품/담배,0,46745,cigarette
+메타/중국어 글자,0,46736,chinese text
+인원/오니,0,46580,oni
+효과/의성어,0,46473,sound effects
+옷/빨간 목도리,0,46356,red scarf
+옷/골지 스웨터,0,46323,ribbed sweater
+소품/숄더백,0,46320,shoulder bag
+성인/갈라진 틈,0,46300,cleft of venus
+소품/튜브,0,46126,swim ring
+옷/리본 단 소매,0,45935,ribbon-trimmed sleeves
+자세/손 뻗기,0,45926,reaching
+인원/성별 반전(남→여),0,45889,genderswap (mtf)
+배경/비,0,45665,rain
+소품/펜던트,0,45663,pendant
+구도/2컷 만화,0,45599,2koma
+인원/강아지 소녀,0,45542,dog girl
+시선/곁눈질,0,45324,sideways glance
+자세/자기 머리에 손,0,45157,hand in own hair
+머리/긴 앞머리,0,45151,long bangs
+몸/동물 손,0,44972,animal hands
+옷/줄무늬 리본,0,44884,striped bow
+머리/흩어진 머리카락,0,44860,hair spread out
+효과/집중선,0,44839,emphasis lines
+성인/불룩함,0,44641,bulge
+인원/남자 4명,0,44599,4boys
+몸/용 꼬리,0,44510,dragon tail
+옷/갈색 벨트,0,44331,brown belt
+성인/봉긋한 젖꼭지,0,44231,puffy nipples
+옷/겹친 소매,0,44202,layered sleeves
+얼굴/분홍 입술,0,44128,pink lips
+성인/콘돔,0,44071,condom
+인원/의인화,0,43933,personification
+속옷/흰 브라,0,43912,white bra
+옷/빨간 비키니,0,43790,red bikini
+인원/키 차이,0,43741,height difference
+인원/성숙한 남자,0,43714,mature male
+소품/귀 덮개,0,43694,ear covers
+효과/거품,0,43671,bubble
+자세/반쯤 잠김,0,43604,partially submerged
+옷/흰 레오타드,0,43594,white leotard
+인원/쌍둥이,0,43571,twins
+옷/붕대 감은 팔,0,43329,bandaged arm
+구도/1인칭 시점 손,0,43212,pov hands
+옷/분홍 재킷,0,43131,pink jacket
+성인/큰 음경,0,43107,large penis
+소품/마스크,0,42962,mouth mask
+모자/갈색 모자,0,42816,brown hat
+자세/턱 괴기,0,42738,head rest
+양말/찢어진 팬티스타킹,0,42721,torn pantyhose
+구도/동물 중심,0,42689,animal focus
+소품/빨간 장미,0,42655,red rose
+옷/비키니 상의만,0,42491,bikini top only
+머리/가운데 가르마 앞머리,0,42345,curtained hair
+모자/모자 장식,0,42341,hat ornament
+동작/달리기,0,42181,running
+소품/종이,0,42140,paper
+표정/올라간 눈썹,0,42076,raised eyebrows
+옷/볼레로,0,42064,shrug (clothing)
+구도/프레임 밖,0,42061,out of frame
+소품/빨간 테 안경,0,42021,red-framed eyewear
+효과/떨어지는 꽃잎,0,41979,falling petals
+몸/낮은 날개,0,41961,low wings
+소품/찻잔,0,41930,teacup
+머리/하트 머리장식,0,41886,heart hair ornament
+자세/허리에 손,0,41838,hands on own hips
+얼굴/아이라이너,0,41658,eyeliner
+소품/그릇,0,41618,bowl
+소품/검은 목걸이(초커),0,41598,black collar
+옷/파란 원피스 수영복,0,41562,blue one-piece swimsuit
+옷/하복,0,41557,summer uniform
+동작/날기,0,41519,flying
+옷/빨간 망토,0,41441,red cape
+인원/부모와 자식,0,41421,parent and child
+소품/책가방,0,41357,school bag
+소품/색 있는 안경,0,41355,tinted eyewear
+옷/오프숄더 드레스,0,41260,off-shoulder dress
+얼굴/다크서클,0,40955,bags under eyes
+얼굴/까칠한 수염,0,40913,stubble
+동물/개,0,40905,dog
+소품/빨대,0,40904,drinking straw
+인원/괴물,0,40763,monster
+메타/한국어 글자,0,40708,korean text
+자세/상대 어깨에 손,0,40681,hand on another's shoulder
+인원/남자 6명 이상,0,40656,6+boys
+자세/양손 브이,0,40224,double v
+효과/흐린 전경,0,40175,blurry foreground
+자세/무릎 붙이고 발 벌림,0,40138,knees together feet apart
+인원/작은 사람,0,40044,mini person
+옷/뒤 리본,0,40014,back bow
+머리/촉수 머리,0,39995,tentacle hair
+소품/꽃다발,0,39937,bouquet
+소품/빗자루,0,39911,broom
+모자/밀짚모자,0,39696,sun hat
+몸/보라 손톱,0,39658,purple nails
+옷/크롭 셔츠,0,39612,cropped shirt
+옷/회색 바지,0,39607,grey pants
+옷/롤리타 패션,0,39564,lolita fashion
+자세/꽃 들기,0,39550,holding flower
+옷/검은 세일러복,0,39457,black serafuku
+자세/쌍수,0,39340,dual wielding
+성인/벌린 음부,0,39136,spread pussy
+효과/김 나는 몸,0,39095,steaming body
+옷/흉갑,0,39077,breastplate
+몸/팔 문신,0,38964,arm tattoo
+옷/반쯤 손가락 없는 장갑,0,38867,partially fingerless gloves
+모자/초록 모자,0,38800,green hat
+인원/남매,0,38753,brother and sister
+소품/머그컵,0,38688,mug
+소품/거울,0,38684,mirror
+옷/트레센 학원 교복,0,38604,tracen school uniform
+얼굴/눈을 가로지르는 흉터,0,38595,scar across eye
+구도/발 잘림,0,38590,foot out of frame
+구도/뒤돌아봄,0,38543,facing away
+배경/나무 바닥,0,38504,wooden floor
+얼굴/콧수염,0,38491,mustache
+얼굴/짧은 눈썹,0,38464,short eyebrows
+자세/칼 들기,0,38444,holding knife
+소품/펼친 책,0,38426,open book
+자세/벗은 옷 들기,0,38388,holding unworn clothes
+성인/핏줄 선 음경,0,38372,veiny penis
+화풍/파란색 위주,0,38302,blue theme
+소품/머리 장식 테,0,38278,circlet
+성인/넘치는 체액,0,38207,cum overflow
+옷/더블 브레스티드,0,38185,double-breasted
+옷/흰 스웨터,0,38178,white sweater
+옷/갈색 드레스,0,38176,brown dress
+자세/의자에 앉음,0,38122,on chair
+상태/부상,0,38061,injury
+동작/손 흔들기,0,38003,waving
+소품/튜브(물놀이),0,37966,innertube
+음식/막대사탕,0,37925,lollipop
+표정/진지한 표정,0,37913,serious
+성인/큰 유륜,0,37912,large areolae
+옷/파란 장갑,0,37844,blue gloves
+머리/빨간 머리띠,0,37764,red hairband
+머리/동물 귀 머리띠,0,37675,animal ear hairband
+소품/몬스터볼,0,37633,poke ball
+옷/노란 재킷,0,37518,yellow jacket
+머리/구레나룻,0,37371,sideburns
+자세/하트 손,0,37367,heart hands
+옷/파란 기모노,0,37358,blue kimono
+배경/석양,0,37325,sunset
+얼굴/빨간 입술,0,37311,red lips
+옷/털 달린 재킷,0,37290,fur-trimmed jacket
+소품/가짜 뿔,0,37269,fake horns
+몸/파란 피부,0,37239,blue skin
+옷/끈 조절,0,37203,drawstring
+소품/하프림 안경,0,37155,under-rim eyewear
+몸/페디큐어,0,37122,toenail polish
+소품/등불,0,37063,lantern
+머리/한쪽 옆 올림머리,0,36995,single side bun
+얼굴/얼굴 밴드,0,36989,bandaid on face
+효과/화살표,0,36907,arrow (symbol)
+메타/동인지 표지,0,36881,doujin cover
+옷/검은 망토,0,36815,black cape
+자세/바닥에 앉음,0,36809,on floor
+몸/겨드랑이 주름,0,36808,armpit crease
+양말/망사 팬티스타킹,0,36730,fishnet pantyhose
+동물/토끼,0,36707,rabbit
+모자/미니 모자,0,36690,mini hat
+자세/팔 내림(양쪽),0,36669,arms at sides
+동작/흔들리는 가슴,0,36648,bouncing breasts
+메타/포켓몬 중심,0,36600,pokemon focus
+소품/캔,0,36521,can
+효과/색수차,0,36487,chromatic aberration
+소품/방패,0,36475,shield
+얼굴/이마 무늬,0,36452,forehead mark
+자세/뒤에서 안기,0,36451,hug from behind
+옷/털 칼라,0,36428,fur collar
+표정/삐죽 입,0,36402,:t
+자세/콘트라포스토,0,36348,contrapposto
+효과/반짝임,0,36336,glint
+동물/용,0,36183,dragon
+옷/노란 애스콧 타이,0,36113,yellow ascot
+눈/소용돌이 눈,0,36110,ringed eyes
+배경/눈 내림,0,36057,snowing
+자세/다리 모음,0,36030,legs together
+머리/비대칭 머리,0,36021,asymmetrical hair
+소품/카드,0,35945,card
+메타/웨이보 워터마크,0,35880,weibo watermark
+표정/벌어진 입,0,35820,split mouth
+인원/유령,0,35751,ghost
+표정/뾰로통,0,35689,pout
+옷/중앙 프릴,0,35678,center frills
+자세/가방 들기,0,35667,holding bag
+배경/바위,0,35613,rock
+자세/모아 올린 가슴,0,35557,breasts squeezed together
+자세/다리 사이에 손,0,35490,hand between own legs
+인원/성인화,0,35419,aged up
+옷/물리법칙 무시 옷,0,35348,impossible clothes
+옷/갈색 셔츠,0,35259,brown shirt
+소품/캐릭터 인형,0,35193,character doll
+자세/볼에 손,0,35192,hand on own cheek
+옷/프릴 셔츠,0,35143,frilled shirt
+소품/노란 헤일로,0,35137,yellow halo
+인원/미소년,0,35100,bishounen
+옷/무늬 비키니,0,35077,print bikini
+표정/비웃는 미소,0,35064,smirk
+배경/타일,0,35003,tiles
+성인/젖꼭지 자극,0,34980,nipple stimulation
+옷/초록 리본,0,34956,green ribbon
+소품/곰 인형,0,34948,teddy bear
+메타/작가 로고,0,34892,artist logo
+옷/세일러 셔츠,0,34873,sailor shirt
+배경/계단,0,34768,stairs
+소품/쓰지 않은 모자,0,34747,unworn hat
+머리/반묶음 땋기,0,34626,half up braid
+성인/여성 자위,0,34613,female masturbation
+옷/보라 리본,0,34514,purple ribbon
+속옷/팬티스타킹 속 팬티,0,34508,panties under pantyhose
+자세/시청자 쪽으로 손 뻗기,0,34502,reaching towards viewer
+메타/카드 일러스트,0,34465,card (medium)
+눈/검은 흰자,0,34441,black sclera
+소품/빨간 헤일로,0,34384,red halo
+모자/모자 꽃 장식,0,34358,hat flower
+음식/아이스바,0,34212,popsicle
+소품/칼집에 꽂힌 칼,0,34066,sheathed
+소품/표지판,0,34029,sign
+얼굴/머리에 가린 눈썹,0,34002,eyebrows hidden by hair
+배경/얼음,0,33966,ice
+음식/딸기,0,33901,strawberry
+옷/오프숄더 셔츠,0,33888,off-shoulder shirt
+모자/바이저 모자,0,33876,visor cap
+배경/모래,0,33837,sand
+자세/땅에 앉음,0,33720,on ground
+소품/수정,0,33657,crystal
+몸/쥐 귀,0,33646,mouse ears
+소품/핸드백,0,33630,handbag
+소품/숟가락,0,33614,spoon
+머리/나비 머리장식,0,33601,butterfly hair ornament
+소품/해골,0,33566,skull
+옷/빨간 조끼,0,33557,red vest
+소품/포크,0,33546,fork
+모자/비니,0,33440,beanie
+옷/검은 스웨터,0,33393,black sweater
+상태/옷에 묻은 피,0,33384,blood on clothes
+메타/화풍 패러디,0,33245,style parody
+성인/인종이 다른 커플,0,33238,interracial
+옷/줄무늬 비키니,0,33224,striped bikini
+효과/모션 블러,0,33149,motion blur
+구도/거꾸로,0,33131,upside-down
+몸/몸털,0,33105,body fur
+효과/물방울,0,33096,water drop
+몸/뾰족한 손톱,0,33073,sharp fingernails
+몸/거대한 엉덩이,0,33061,huge ass
+소품/함선 장비,0,33011,rigging
+음식/아이스크림,0,32944,ice cream
+음식/음료,0,32911,drink
+옷/스파게티 스트랩,0,32862,spaghetti strap
+자세/주머니에 두 손,0,32803,hands in pockets
+자세/가슴 아래 팔,0,32767,arm under breasts
+모자/간호사 모자,0,32703,nurse cap
+몸/흰 털,0,32686,white fur
+음식/초콜릿,0,32611,chocolate
+옷/갈색 바지,0,32610,brown pants
+양말/갈색 니삭,0,32548,brown thighhighs
+배경/난간,0,32450,railing
+메타/빌린 캐릭터,0,32399,borrowed character
+동작/흡연,0,32366,smoking
+자세/사람 위에 앉음,0,32358,sitting on person
+소품/젓가락,0,32270,chopsticks
+메타/다른 색상,0,32203,alternate color
+옷/한쪽 어깨 노출,0,32190,single bare shoulder
+옷/어깨에 걸친 재킷,0,32124,jacket on shoulders
+자세/소파에 앉음,0,32111,on couch
+효과/빛줄기,0,32090,light rays
+눈/눈 속 기호,0,32071,symbol in eye
+신발/파란 신발,0,32025,blue shoes
+옷/양면 천,0,32024,two-sided fabric
+소품/반다나,0,31940,bandana
+옷/검은 원피스 수영복,0,31898,black one-piece swimsuit
+옷/흰 목도리,0,31828,white scarf
+자세/브이 팔,0,31826,v arms
+옷/투톤 드레스,0,31825,two-tone dress
+표정/윙크 이모티콘,0,31772,;)
+옷/동물 후드,0,31751,animal hood
+옷/앞매듭 비키니 상의,0,31745,front-tie bikini top
+옷/타바드,0,31722,tabard
+구도/다른 대상 중심,0,31711,other focus
+옷/광택 나는 옷,0,31625,shiny clothes
+배경/나뭇가지,0,31623,branch
+옷/흰 케이프,0,31593,white capelet
+속옷/파란 팬티,0,31488,blue panties
+배경/현대,0,31488,contemporary
+자세/물건 껴안기,0,31473,hugging object
+자세/장병기 들기,0,31451,holding polearm
+머리/머리끈,0,31370,hair tie
+옷/운동복,0,31354,sportswear
+자세/입 가리기,0,31301,covering own mouth
+모자/밀짚모자(챙),0,31283,straw hat
+옷/무늬 기모노,0,31180,print kimono
+모자/군모,0,31168,military hat
+자세/뻗은 손,0,31160,outstretched hand
+소품/부적,0,31148,ofuda
+화풍/사실적,0,31042,realistic
+눈/별 모양 눈동자,0,31029,star-shaped pupils
+옷/주름 드레스,0,30995,pleated dress
+동작/점프,0,30969,jumping
+배경/새해,0,30881,new year
+인원/안드로이드,0,30755,android
+배경/울타리,0,30563,fence
+소품/귀 장식,0,30352,ear ornament
+인원/생물,0,30343,creature
+옷/파란 레오타드,0,30292,blue leotard
+옷/흰 원피스 수영복,0,30280,white one-piece swimsuit
+옷/가슴 주머니,0,30279,breast pocket
+음식/사과,0,30247,apple
+자세/병 들기,0,30206,holding bottle
+동물/뱀,0,30164,snake
+옷/회색 드레스,0,30109,grey dress
+자세/뒤에서 움켜쥐기,0,30060,grabbing from behind
+배경/야자수,0,30057,palm tree
+소품/카메라,0,30018,camera
+구도/셀카,0,29943,selfie
+소품/활,0,29934,bow (weapon)
+메타/샘플 워터마크,0,29921,sample watermark
+자세/상대 얼굴에 손,0,29874,hand on another's face
+소품/안경 쓴 모습,0,29860,bespectacled
+얼굴/염소수염,0,29792,goatee
+소품/화분,0,29775,potted plant
+옷/교차 끈 옷,0,29755,cross-laced clothes
+얼굴/코,0,29745,nose
+소품/꼬리 장식,0,29719,tail ornament
+인원/체격 차이,0,29709,size difference
+옷/보라 재킷,0,29673,purple jacket
+표정/얼굴 전체 홍조,0,29658,full-face blush
+자세/마이크 들기,0,29587,holding microphone
+몸/사슴뿔,0,29583,antlers
+얼굴/코 없음,0,29549,no nose
+성인/클리토리스,0,29504,clitoris
+옷/검은 기모노,0,29457,black kimono
+배경/문,0,29434,door
+머리/파란 머리띠,0,29403,blue hairband
+화풍/픽셀 아트,0,29380,pixel art
+자세/부채 들기,0,29364,holding fan
+자세/안경 고쳐 쓰기,0,29305,adjusting eyewear
+옷/살짝 보이는 허리,0,29295,midriff peek
+머리/머리 방울(종),0,29290,hair bell
+표정/말풍선 물음표,0,29265,spoken question mark
+성인/재갈,0,29209,gagged
+동작/입에 음식,0,29204,food in mouth
+효과/색종이,0,29150,confetti
+동작/입술 핥기,0,29128,licking lips
+인원/엄마와 아이,0,29105,mother and child
+성인/상대 엉덩이 움켜쥐기,0,29094,grabbing another's ass
+소품/선물 상자,0,29086,gift box
+소품/창,0,29054,spear
+몸/초록 피부,0,28996,green skin
+인원/천사,0,28822,angel
+옷/사타구니 솔기,0,28775,crotch seam
+화풍/애니화,0,28770,animification
+표정/가려진 입,0,28744,covered mouth
+배경/물속,0,28674,underwater
+자세/쟁반 들기,0,28550,holding tray
+인원/쇼타,0,28497,shota
+소품/해바라기,0,28422,sunflower
+옷/지퍼 손잡이,0,28364,zipper pull tab
+양말/보라 니삭,0,28328,purple thighhighs
+몸/아담한 체구,0,28311,petite
+몸/오금,0,28276,kneepits
+메타/쪽 번호,0,28264,page number
+소품/펜,0,28167,pen
+자세/악기 들기,0,28060,holding instrument
+옷/분홍 비키니,0,28055,pink bikini
+메타/원신 비전,0,28024,vision (genshin impact)
+머리/음식 모양 머리장식,0,28015,food-themed hair ornament
+배경/태양,0,28015,sun
+구도/머리 잘림,0,28011,head out of frame
+표정/동그란 눈,0,27903,o o
+배경/수평선,0,27894,horizon
+옷/노란 목스카프,0,27871,yellow neckerchief
+소품/자동차,0,27832,car
+성인/엉덩이 골,0,27810,butt crack
+소품/기타,0,27758,guitar
+표정/w 입,0,27664,w
+옷/이름표,0,27623,name tag
+옷/검은 후드티,0,27561,black hoodie
+성인/클리토리스 포피,0,27559,clitoral hood
+표정/얼굴에 묻은 음식,0,27556,food on face
+옷/갸루,0,27478,gyaru
+소품/풍선,0,27472,balloon
+자세/턱에 손,0,27465,hand on own chin
+옷/프릴 리본,0,27425,frilled bow
+옷/주황 리본,0,27297,orange bow
+메타/심해서함,0,27281,abyssal ship
+양말/빨간 니삭,0,27270,red thighhighs
+모자/분홍 모자,0,27251,pink hat
+메타/유희왕 몬스터,0,27241,duel monster
+몸/관절,0,27222,joints
+자세/가슴 가리기,0,27200,covering breasts
+몸/더듬이,0,27186,antennae
+소품/손목시계,0,27186,wristwatch
+소품/마법봉,0,27180,wand
+메타/다키마쿠라,0,27169,dakimakura (medium)
+속옷/하이레그 팬티,0,27131,highleg panties
+옷/반장갑,0,27039,half gloves
+모자/헌팅캡,0,26943,newsboy cap
+인원/그 외 여러 명,0,26905,multiple others
+양말/발끝 없는 양말,0,26894,toeless legwear
+옷/보라 장갑,0,26887,purple gloves
+옷/소매 커프스,0,26855,sleeve cuffs
+소품/케이블,0,26849,cable
+자세/팔 벌림,0,26839,spread arms
+소품/이마 보석,0,26794,forehead jewel
+옷/열린 카디건,0,26784,open cardigan
+배경/책장,0,26783,bookshelf
+머리/긴 옆머리,0,26751,long sidelocks
+화풍/3D,0,26731,3d
+메타/무언 만화,0,26716,silent comic
+화풍/낙서,0,26715,oekaki
+옷/체크무늬 옷,0,26713,checkered clothes
+구도/1인칭 사타구니,0,26683,pov crotch
+효과/침 실,0,26683,saliva trail
+옷/프린트 셔츠,0,26677,print shirt
+소품/머리 위 가면,0,26668,mask on head
+옷/반도 브라,0,26648,bandeau
+소품/담요,0,26647,blanket
+옷/파란 망토,0,26646,blue cape
+머리/비녀,0,26589,hair stick
+소품/파란 보석,0,26510,blue gem
+자세/머리 만지기,0,26443,adjusting hair
+몸/늘어진 가슴,0,26436,hanging breasts
+소품/흰 초커,0,26380,white choker
+소품/신분증,0,26348,id card
+옷/옷 속 비키니,0,26333,bikini under clothes
+몸/물고기 꼬리,0,26315,fish tail
+소품/접부채,0,26311,folding fan
+옷/파일럿 슈트,0,26285,mecha pilot suit
+소품/머리 장식,0,26272,headpiece
+속옷/한쪽 다리에 걸친 팬티,0,26215,panties around one leg
+표정/말하는 중,0,26212,talking
+옷/파란 조끼,0,26157,blue vest
+성인/살짝 보이는 음부,0,26135,partially visible vulva
+소품/시계,0,26124,clock
+효과/전기,0,26117,electricity
+머리/머리카락 리본,0,26112,tress ribbon
+효과/8분음표,0,26083,eighth note
+옷/언더버스트,0,26058,underbust
+옷/빨간 기모노,0,26051,red kimono
+소품/양초,0,26035,candle
+소품/몬스터볼(기본),0,26013,poke ball (basic)
+옷/겨울옷,0,25993,winter clothes
+옷/흰 애스콧 타이,0,25805,white ascot
+배경/덤불,0,25799,bush
+옷/열린 지퍼,0,25783,open fly
+몸/소 귀,0,25768,cow ears
+몸/긴 다리,0,25731,long legs
+속옷/분홍 브라,0,25690,pink bra
+머리/토끼 귀 머리띠,0,25665,rabbit ear hairband
+옷/분홍 보타이,0,25633,pink bowtie
+자세/머리 위에 올림,0,25631,on head
+눈/가려진 눈,0,25533,covered eyes
+옷/흰 망토,0,25479,white cape
+옷/파란 목스카프,0,25477,blue neckerchief
+옷/일본 갑옷,0,25340,japanese armor
+옷/검은 민소매,0,25333,black tank top
+몸/휘어진 뿔,0,25295,curled horns
+소품/바구니,0,25275,basket
+옷/하이레그 원피스 수영복,0,25231,highleg one-piece swimsuit
+머리/깃털 머리장식,0,25228,feather hair ornament
+구도/3컷 만화,0,25196,3koma
+성인/음경에 둘러싸임,0,25162,surrounded by penises
+동작/마시는 중,0,25115,drinking
+자세/뒤로 젖힘,0,25045,leaning back
+옷/멀티컬러 재킷,0,25018,multicolored jacket
+자세/옆으로 앉음,0,25013,yokozuwari
+옷/속옷 셔츠,0,24950,undershirt
+효과/필름 그레인,0,24947,film grain
+신발/빨간 부츠,0,24923,red boots
+메타/회사 이름,0,24908,company name
+화풍/제한된 색상,0,24905,limited palette
+옷/갈색 코트,0,24860,brown coat
+몸/탄탄한 남자,0,24833,toned male
+옷/흰 벨트,0,24814,white belt
+옷/페티코트,0,24794,petticoat
+메타/패트리온 로고,0,24775,patreon logo
+소품/컨트롤러,0,24694,controller
+성인/하트 검열,0,24679,heart censor
+몸/요정 날개,0,24618,fairy wings
+자세/꽃다발 들기,0,24573,holding bouquet
+옷/노란 드레스,0,24521,yellow dress
+양말/파란 니삭,0,24484,blue thighhighs
+소품/화살,0,24471,arrow (projectile)
+자세/양손으로 얼굴 감쌈,0,24454,hands on own face
+효과/다이아몬드 모양,0,24437,diamond (shape)
+몸/빨간 뿔,0,24403,red horns
+소품/항공기,0,24341,aircraft
+몸/비늘,0,24326,scales
+소품/유리잔,0,24313,glass
+옷/흰 민소매,0,24245,white tank top
+옷/할로윈 의상,0,24184,halloween costume
+소품/미니 왕관,0,24169,mini crown
+자세/모자에 손,0,24157,hand on headwear
+소품/일회용 컵,0,24156,disposable cup
+몸/어깨 문신,0,24031,shoulder tattoo
+옷/흰 손목 커프스,0,24023,white wrist cuffs
+성인/오르가즘,0,24020,orgasm
+양말/망사 니삭,0,24012,fishnet thighhighs
+옷/꽉 끼는 옷,0,23909,tight clothes
+소품/빨간 초커,0,23905,red choker
+옷/빨간 애스콧 타이,0,23854,red ascot
+자세/허리 젖힘,0,23831,arched back
+몸/소 뿔,0,23804,cow horns
+화풍/레트로,0,23781,retro artstyle
+구도/검은 테두리,0,23775,black border
+소품/눈알,0,23772,eyeball
+옷/하네스,0,23766,harness
+자세/동물 안기,0,23741,holding animal
+배경/교실 책상,0,23733,school desk
+소품/파란 장미,0,23725,blue rose
+양말/찢어진 니삭,0,23714,torn thighhighs
+자세/펼친 손,0,23710,open hand
+옷/흰 칼라,0,23696,white collar
+옷/빨간 코트,0,23656,red coat
+얼굴/볼 흉터,0,23584,scar on cheek
+옷/치어리더,0,23561,cheerleader
+옷/흰 후드티,0,23556,white hoodie
+소품/치어 방울,0,23516,pom pom (cheerleading)
+머리/똥머리 커버,0,23481,bun cover
+모자/보라 모자,0,23458,purple hat
+옷/털 달린 코트,0,23386,fur-trimmed coat
+몸/호랑이 귀,0,23370,tiger ears
+옷/일부 풀린 단추,0,23348,partially unbuttoned
+성인/같이 목욕,0,23310,shared bathing
+자세/투명 의자,0,23260,invisible chair
+옷/줄무늬 넥타이,0,23256,striped necktie
+표정/식은땀,0,23145,nervous sweating
+자세/몬스터볼 들기,0,23140,holding poke ball
+동작/쓰다듬기,0,23100,headpat
+몸/기계 팔,0,23100,mechanical arms
+옷/팔 끈,0,23068,arm strap
+옷/팔 보호구,0,23064,vambraces
+자세/봉제인형 들기,0,23037,holding stuffed toy
+옷/칼라 재킷,0,22993,collared jacket
+얼굴/동물 코,0,22934,animal nose
+효과/꼬불선,0,22920,squiggle
+신발/분홍 신발,0,22912,pink shoes
+몸/여러 색 피부,0,22847,multicolored skin
+표정/살짝 찡그림,0,22802,light frown
+자세/자기 머리에 손,0,22799,hand on own head
+메타/인클링,0,22762,inkling
+배경/타일 바닥,0,22689,tile floor
+성인/후타 x 여성,0,22688,futa with female
+동작/독서,0,22599,reading
+소품/돌격소총,0,22518,assault rifle
+자세/올라탐,0,22445,riding
+표정/안쪽 올라간 눈썹,0,22416,raised inner eyebrows
+옷/짝짝이 장갑,0,22355,asymmetrical gloves
+효과/마법,0,22288,magic
+속옷/티팬티,0,22272,thong panties
+옷/빨간 바지,0,22270,red pants
+성인/쿠퍼액,0,22211,precum
+소품/문장,0,22198,emblem
+동작/기지개,0,22150,stretching
+몸/배,0,22149,belly
+자세/접시 들기,0,22143,holding plate
+머리/리본 머리띠,0,22128,bow hairband
+옷/민소매 터틀넥,0,22119,sleeveless turtleneck
+성인/젖꼭지 피어싱,0,22088,nipple piercing
+옷/초록 넥타이,0,22083,green necktie
+인원/요정,0,22065,fairy
+소품/램프,0,22046,lamp
+소품/군용 차량,0,22015,military vehicle
+머리/대머리,0,21990,bald
+얼굴/얼굴 문신,0,21952,facial tattoo
+옷/고딕 롤리타,0,21951,gothic lolita
+모자/세일러 모자,0,21945,sailor hat
+화풍/실루엣,0,21941,silhouette
+자세/등 맞댐,0,21898,back-to-back
+옷/보라 비키니,0,21882,purple bikini
+몸/다리 밴드,0,21879,bandaid on leg
+옷/하이레그 비키니,0,21842,highleg bikini
+자세/이불 속,0,21796,under covers
+몸/회색 피부,0,21761,grey skin
+옷/반팔 겹쳐 입기,0,21720,short over long sleeves
+신발/파란 부츠,0,21713,blue boots
+옷/분홍 기모노,0,21701,pink kimono
+몸/새 날개,0,21687,bird wings
+머리/개구리 머리장식,0,21686,frog hair ornament
+옷/흰 보타이,0,21679,white bowtie
+성인/이종간,0,21675,interspecies
+옷/겹겹 드레스,0,21666,layered dress
+옷/발바닥 장갑,0,21635,paw gloves
+효과/그늘,0,21612,shade
+소품/깃발,0,21605,flag
+동작/춤,0,21586,dancing
+옷/빨간 반바지,0,21586,red shorts
+동작/옷 잡아당기기,0,21579,pulling own clothes
+옷/검은 케이프,0,21537,black capelet
+몸/떨어진 손,0,21530,disembodied hand
+양말/짝짝이 레그웨어,0,21514,mismatched legwear
+표정/웃음,0,21513,laughing
+표정/사악한 미소,0,21473,evil smile
+소품/함포,0,21462,ship turret
+자세/입에 손,0,21447,hand to own mouth
+옷/허리에 맨 옷,0,21442,clothes around waist
+옷/파란 코트,0,21423,blue coat
+몸/초록 손톱,0,21412,green nails
+동작/딥키스,0,21408,french kiss
+표정/삼각 입,0,21346,triangle mouth
+옷/노란 넥타이,0,21346,yellow necktie
+소품/기계 헤일로,0,21262,mechanical halo
+성인/서서 하는 체위,0,21241,standing sex
+자세/상대 팔 잡기,0,21210,grabbing another's arm
+옷/빨간 레오타드,0,21203,red leotard
+메타/십이지,0,21143,chinese zodiac
+옷/보라 보타이,0,21122,purple bowtie
+머리/프릴 머리띠,0,21119,frilled hairband
+옷/파란 목도리,0,21110,blue scarf
+눈/눈동자 없음,0,21061,no pupils
+구도/설정화,0,21056,reference sheet
+성인/함몰 젖꼭지,0,21027,inverted nipples
+소품/삼각 머리장식,0,21012,triangular headpiece
+표정/눈 굴리기,0,20982,rolling eyes
+옷/신부 베일,0,20942,bridal veil
+얼굴/빨간 아이섀도,0,20937,red eyeshadow
+옷/겹친 치마,0,20925,layered skirt
+옷/동물 의상,0,20920,animal costume
+몸/동물 귀 피어싱,0,20904,animal ear piercing
+소품/와인잔,0,20888,wine glass
+옷/팽팽한 옷,0,20849,taut clothes
+인원/모녀,0,20828,mother and daughter
+배경/벤치,0,20826,bench
+옷/보라 기모노,0,20764,purple kimono
+자세/깍지 낀 손,0,20751,own hands clasped
+옷/갈색 카디건,0,20740,brown cardigan
+옷/붕대 감은 다리,0,20728,bandaged leg
+소품/가슴 보석,0,20700,chest jewel
+옷/단추 풀림,0,20696,unbuttoned
+자세/다리 들기,0,20666,leg lift
+옷/노란 비키니,0,20650,yellow bikini
+옷/노치드 라펠,0,20642,notched lapels
+소품/고헤이,0,20622,gohei
+몸/쥐 꼬리,0,20612,mouse tail
+성인/스스로 벌림,0,20605,spreading own pussy
+소품/열쇠,0,20565,key
+몸/아쿠아 손톱,0,20532,aqua nails
+화풍/부분 채색(일부),0,20532,partially colored
+머리/토끼 머리장식,0,20515,rabbit hair ornament
+옷/아쿠아 넥타이,0,20495,aqua necktie
+소품/홀스터,0,20482,holster
+눈/빨간 눈동자,0,20470,red pupils
+소품/토끼 인형,0,20459,stuffed rabbit
+표정/겁먹음,0,20453,scared
+소품/벗은 안경,0,20385,unworn eyewear
+상태/젖은 셔츠,0,20363,wet shirt
+머리/귀 리본,0,20355,ear bow
+배경/다다미,0,20332,tatami
+자세/드레스 잡기,0,20305,holding own dress
+소품/낫,0,20296,scythe
+인원/남자 5명,0,20293,5boys
+얼굴/입 없음,0,20269,no mouth
+성인/콘돔 포장,0,20259,condom wrapper
+음식/빼빼로,0,20253,pocky
+옷/프릴 허벅지 끈,0,20244,frilled thigh strap
+자세/몸 보여주기,0,20220,presenting own body
+소품/흰 장미,0,20201,white rose
+음식/빵,0,20174,bread
+몸/피부로 덮인 뿔,0,20159,skin-covered horns
+자세/양반다리,0,20076,indian style
+옷/줄무늬 드레스,0,20070,striped dress
+옷/묶은 셔츠,0,20059,tied shirt
+머리/나란한 머리핀,0,20045,parallel hairclips
+소품/안대,0,20016,eye mask
+자세/자기 팔에 손,0,20014,hand on own arm
+옷/가죽,0,20004,leather
+소품/단검,0,20000,dagger
+머리/화관,0,19998,head wreath
+자세/가슴에 손,0,19994,hands on own chest
+속옷/리본 브라,0,19982,bow bra
+몸/검은 꼬리,0,19946,black tail
+소품/닻 기호,0,19943,anchor symbol
+자세/경례,0,19876,salute
+머리/흰 브릿지,0,19836,white streaks
+소품/여러 반지,0,19834,multiple rings
+소품/십자가 목걸이,0,19833,cross necklace
+옷/갈색 스웨터,0,19828,brown sweater
+옷/갈색 반바지,0,19821,brown shorts
+소품/도끼,0,19814,axe
+동작/전투,0,19810,battle
+옷/회색 반바지,0,19803,grey shorts
+머리/빨간 브릿지,0,19756,red streaks
+효과/도깨비불,0,19731,hitodama
+자세/과일 들기,0,19706,holding fruit
+눈/다른 눈 색,0,19699,alternate eye color
+소품/뿔 장식,0,19699,horn ornament
+동물/검은 고양이,0,19683,black cat
+소품/양동이,0,19682,bucket
+얼굴/둥근 치아,0,19676,round teeth
+구도/서로 마주 봄,0,19646,facing another
+소품/목에 건 헤드폰,0,19645,headphones around neck
+인원/동물화,0,19636,animalization
+화풍/망점,0,19588,halftone
+소품/별 귀걸이,0,19500,star earrings
+자세/꼬리 세움,0,19465,tail raised
+자세/허벅지에 손,0,19452,hand on own thigh
+몸/상어 꼬리,0,19443,shark tail
+구도/얼굴 마주 봄,0,19434,face-to-face
+표정/말풍선 느낌표,0,19433,spoken exclamation mark
+동작/악기 연주,0,19425,playing instrument
+상태/젖은 머리,0,19366,wet hair
+소품/컴퓨터,0,19355,computer
+구도/글자 중심,0,19327,text focus
+소품/찻주전자,0,19322,teapot
+옷/주황 셔츠,0,19319,orange shirt
+옷/정장 재킷,0,19308,suit jacket
+배경/판타지,0,19280,fantasy
+인원/흡혈귀,0,19262,vampire
+옷/회색 스웨터,0,19250,grey sweater
+표정/취함,0,19241,drunk
+모자/기울어진 모자,0,19202,tilted headwear
+몸/너구리 귀,0,19193,raccoon ears
+얼굴/수염 무늬,0,19176,whisker markings
+머리/프릴 머리 튜브,0,19158,frilled hair tubes
+성인/사용한 콘돔,0,19156,used condom
+소품/대포,0,19109,cannon
+몸/견갑골,0,19105,shoulder blades
+옷/빨간 하카마,0,19077,red hakama
+자세/엄지 척,0,19002,thumbs up
+표정/씩 웃는 입,0,18975,:>
+몸/가슴근육 골,0,18965,pectoral cleavage
+옷/로우라이즈,0,18963,lowleg
+화풍/분홍색 위주,0,18947,pink theme
+머리/잎 머리장식,0,18943,leaf hair ornament
+옷/검은 정장,0,18938,black suit
+배경/단풍잎,0,18917,autumn leaves
+옷/노란 치마,0,18878,yellow skirt
+표정/짜증,0,18857,annoyed
+모자/동물 모자,0,18840,animal hat
+인원/형제,0,18831,brothers
+속옷/빨간 팬티,0,18827,red panties
+배경/어둠,0,18826,dark
+자세/벽에 기댐,0,18814,against wall
+효과/공기 방울,0,18783,air bubble
+자세/자기 머리 잡기,0,18780,holding own hair
+눈/좁아진 눈동자,0,18776,constricted pupils
+양말/짝짝이 양말,0,18770,uneven legwear
+옷/열린 기모노,0,18732,open kimono
+자세/다리 끌어안기,0,18705,hugging own legs
+모자/모자 밖으로 나온 귀,0,18684,ears through headwear
+소품/구슬 목걸이,0,18674,bead necklace
+옷/지퍼 내림,0,18671,unzipped
+모자/모자 깃털,0,18585,hat feather
+몸/빨간 피부,0,18543,red skin
+인원/쥐 소녀,0,18508,mouse girl
+몸/드러난 가슴근육,0,18507,bare pectorals
+효과/바람에 날리는 치마,0,18503,wind lift
+소품/분홍 장미,0,18497,pink rose
+효과/입김,0,18492,puff of air
+옷/옷 속 수영복,0,18491,swimsuit under clothes
+소품/여우 가면,0,18490,fox mask
+옷/비치는 소매,0,18487,see-through sleeves
+옷/어깨에 걸친 코트,0,18485,coat on shoulders
+옷/오프숄더 스웨터,0,18459,off-shoulder sweater
+몸/뚱뚱함,0,18450,fat
+효과/실로 된 하트,0,18430,heart of string
+소품/사진,0,18430,photo (object)
+소품/부적 장식,0,18394,charm (object)
+옷/털 달린 소매,0,18393,fur-trimmed sleeves
+양말/분홍 니삭,0,18391,pink thighhighs
+자세/상대 손목 잡기,0,18383,holding another's wrist
+소품/벗은 신발,0,18370,unworn shoes
+성인/하복부 문신,0,18366,pubic tattoo
+옷/초록 비키니,0,18353,green bikini
+얼굴/빨간 아이라이너,0,18351,red eyeliner
+몸/가슴 문신,0,18333,chest tattoo
+소품/란도셀,0,18333,randoseru
+몸/꼬리 두 개,0,18320,two tails
+자세/공주님 안기,0,18313,princess carry
+소품/붓,0,18309,paintbrush
+옷/빨간 케이프,0,18299,red capelet
+옷/비키니 스커트,0,18227,bikini skirt
+성인/한쪽 가슴 노출,0,18203,one breast out
+옷/비치는 셔츠,0,18201,see-through shirt
+표정/귀 빨개짐,0,18159,ear blush
+옷/7부 소매,0,18157,three-quarter sleeves
+몸/꿰맨 자국,0,18132,stitches
+소품/실,0,18098,string
+표정/밤톨 입,0,18077,chestnut mouth
+효과/오라,0,18060,aura
+소품/지우산,0,18014,oil-paper umbrella
+옷/슈퍼히어로 의상,0,18012,superhero costume
+옷/팔목 보호대,0,18009,bracer
+시선/시선 피함,0,17978,averting eyes
+인원/모두,0,17964,everyone
+옷/흰 보디수트,0,17919,white bodysuit
+눈/투톤 눈,0,17885,two-tone eyes
+얼굴/얼굴 피어싱,0,17874,face piercing
+소품/하트 귀걸이,0,17847,heart earrings
+몸/머리 지느러미,0,17845,head fins
+소품/머릿수건,0,17837,headscarf
+음식/당근,0,17815,carrot
+옷/초록 바지,0,17787,green pants
+자세/가슴 사이에 낀 옷,0,17786,clothes between breasts
+머리/눈 사이로 내려온 머리,0,17786,long hair between eyes
+효과/눈송이,0,17777,snowflakes
+자세/한쪽 무릎 꿇음,0,17764,on one knee
+화풍/2000년대 스타일,0,17755,2000s (style)
+소품/벨트형 목걸이,0,17738,belt collar
+옷/검은 목스카프,0,17727,black neckerchief
+옷/후드 망토,0,17719,hooded cloak
+소품/게임 컨트롤러,0,17716,game controller
+자세/선물 들기,0,17713,holding gift
+소품/스파이크 목걸이,0,17709,spiked collar
+머리/뱀 머리장식,0,17697,snake hair ornament
+머리/십자가 머리장식,0,17684,cross hair ornament
+얼굴/아랫니만,0,17679,lower teeth only
+메타/어색한 해부학,0,17668,bad anatomy
+속옷/보라 팬티,0,17646,purple panties
+얼굴/페이스 페인팅,0,17633,facepaint
+메타/게임 UI,0,17623,gameplay mechanics
+신발/신발 밑창,0,17621,shoe soles
+인원/고양이 소년,0,17620,cat boy
+소품/배,0,17610,watercraft
+인원/노인,0,17601,old
+동작/키스 직전,0,17585,imminent kiss
+몸/탄탄한 여성,0,17578,toned female
+모자/보닛,0,17575,bonnet
+성인/MMF 쓰리섬,0,17556,mmf threesome
+옷/가슴 하네스,0,17551,chest harness
+구도/단면도,0,17538,cross-section
+옷/파란 스웨터,0,17536,blue sweater
+동작/목욕,0,17531,bathing
+옷/무릎 보호대,0,17522,knee pads
+소품/벨트 파우치,0,17515,belt pouch
+소품/칼집(검집),0,17499,scabbard
+몸/투톤 피부,0,17497,two-tone skin
+옷/체육복 상의,0,17492,gym shirt
+몸/배꼽 피어싱,0,17447,navel piercing
+자세/머리 위 동물,0,17423,animal on head
+자세/발끝으로 섬,0,17410,tiptoes
+얼굴/삐져나온 송곳니,0,17363,fang out
+옷/오버사이즈 옷,0,17362,oversized clothes
+소품/액자,0,17348,picture frame
+소품/음료 캔,0,17336,drink can
+성인/FFM 쓰리섬,0,17311,ffm threesome
+인원/키츠네,0,17302,kitsune
+배경/겨울,0,17301,winter
+눈/멍한 눈,0,17291,blank eyes
+옷/노란 보타이,0,17279,yellow bowtie
+옷/줄무늬 보타이,0,17274,striped bowtie
+성인/남성 삽입받음,0,17262,male penetrated
+눈/십자 눈동자,0,17243,cross-shaped pupils
+자세/포크 들기,0,17242,holding fork
+효과/잔상,0,17206,afterimage
+소품/모니터,0,17183,monitor
+머리/초승달 머리장식,0,17170,crescent hair ornament
+배경/덩굴,0,17142,vines
+소품/귀마개,0,17140,earmuffs
+자세/자기 무릎에 손,0,17120,hand on own knee
+자세/무릎에 앉음,0,17096,sitting on lap
+머리/옆 땋은 머리,0,17090,side braids
+옷/분홍 장갑,0,17088,pink gloves
+표정/긴장,0,17073,nervous
+소품/동물 목줄,0,17064,animal collar
+동물/박쥐,0,17051,bat (animal)
+몸/얼음 날개,0,17038,ice wings
+옷/파란 후드티,0,17027,blue hoodie
+옷/검은 목도리,0,17017,black scarf
+옷/초록 조끼,0,17017,green vest
+상태/손에 묻은 피,0,17014,blood on hand
+머리/외줄 옆머리,0,17014,single sidelock
+옷/흰 캐미솔,0,16990,white camisole
+표정/떨떠름한 입,0,16957,:/
+소품/비행기,0,16950,airplane
+표정/코피,0,16886,nosebleed
+몸/보라 피부,0,16883,purple skin
+소품/동전,0,16881,coin
+메타/디지몬,0,16879,digimon (creature)
+소품/다리 리본,0,16877,leg ribbon
+표정/움찔,0,16864,wince
+옷/투톤 셔츠,0,16833,two-tone shirt
+양말/반바지 속 팬티스타킹,0,16821,pantyhose under shorts
+표정/슬픔,0,16800,sad
+소품/검은 헤일로,0,16795,black halo
+옷/초록 반바지,0,16788,green shorts
+소품/빨간 보석,0,16786,red gem
+소품/빨간 목걸이,0,16744,red collar
+성인/의미 없는 검열,0,16737,pointless censoring
+옷/브이넥,0,16737,v-neck
+소품/자루,0,16726,sack
+인원/아빠와 아이,0,16725,father and child
+눈/외눈,0,16721,one-eyed
+구도/음식 중심,0,16718,food focus
+자세/담배 들기,0,16715,holding cigarette
+자세/젓가락 들기,0,16691,holding chopsticks
+자세/숟가락 들기,0,16665,holding spoon
+옷/털 달린 장갑,0,16661,fur-trimmed gloves
+성인/펠라 핥기,0,16660,licking penis
+소품/초록 헤일로,0,16614,green halo
+소품/파란 초커,0,16544,blue choker
+소품/소 방울,0,16542,cowbell
+눈/노란 흰자,0,16542,yellow sclera
+소품/시메나와,0,16524,shimenawa
+효과/엑스레이,0,16523,x-ray
+머리/롤리타 머리띠,0,16509,lolita hairband
+속옷/파란 브라,0,16460,blue bra
+음식/화과자,0,16446,wagashi
+옷/사선 무늬 옷,0,16427,diagonal-striped clothes
+자세/시청자 가리키기,0,16423,pointing at viewer
+자세/사탕 들기,0,16415,holding candy
+표정/신음,0,16414,moaning
+자세/M자 다리,0,16395,m legs
+자세/캔 들기,0,16381,holding can
+속옷/검은 스포츠 브라,0,16379,black sports bra
+인원/누나x쇼타,0,16356,onee-shota
+인원/다중 인격,0,16339,multiple persona
+인원/인어족,0,16336,merfolk
+속옷/끈 팬티(스트링),0,16305,string panties
+옷/회색 장갑,0,16287,grey gloves
+몸/아주 어두운 피부,0,16286,very dark skin
+옷/분홍 스웨터,0,16283,pink sweater
+시선/물건 바라봄,0,16275,looking at object
+배경/동아시아 건축,0,16267,east asian architecture
+옷/찢어진 셔츠,0,16257,torn shirt
+표정/장난스러운 미소,0,16242,>:)
+동작/깨물기,0,16241,biting
+구도/어깨 너머,0,16225,over shoulder
+옷/돌핀 쇼츠,0,16217,dolphin shorts
+음식/도넛,0,16193,donut
+인원/어두운 인격,0,16166,dark persona
+양말/레이스 니삭,0,16149,lace-trimmed thighhighs
+동물/개구리,0,16115,frog
+표정/느낌표 두 개,0,16070,!!
+화풍/알페스 스타일,0,16055,alphes (style)
+구도/용기 속,0,16039,in container
+옷/반쯤 벗은 재킷,0,16036,jacket partially removed
+속옷/레이스 브라,0,16034,lace-trimmed bra
+옷/끈 사이 틈,0,16033,strap gap
+성인/선정적,0,16026,sexually suggestive
+배경/도리이,0,16016,torii
+소품/목 고리,0,15975,neck ring
+음식/호박,0,15953,pumpkin
+머리/구슬 머리장식,0,15886,sphere hair ornament
+소품/등에 멘 무기,0,15866,weapon on back
+양말/회색 니삭,0,15851,grey thighhighs
+배경/어두운 배경,0,15848,dark background
+머리/분홍 머리띠,0,15834,pink hairband
+자세/활 들기,0,15830,holding bow (weapon)
+옷/털 달린 망토,0,15815,fur-trimmed cape
+옷/오링 비키니,0,15812,o-ring bikini
+화풍/금색,0,15810,gold
+몸/이두근,0,15804,biceps
+성인/포섬,0,15803,foursome
+메타/스퀸스,0,15799,squeans
+소품/스툴,0,15766,stool
+옷/아쿠아 리본,0,15759,aqua bow
+소품/리본 초커,0,15759,ribbon choker
+배경/초승달,0,15749,crescent moon
+모자/수녀 두건,0,15731,nun headdress
+옷/초록 보타이,0,15702,green bowtie
+소품/구슬 팔찌,0,15683,bead bracelet
+눈/삼백안,0,15656,sanpaku
+자세/상대 머리 잡기,0,15633,holding another's hair
+동작/노래,0,15628,singing
+머리/파란 브릿지,0,15599,blue streaks
+옷/투톤 재킷,0,15596,two-tone jacket
+음식/차,0,15594,tea
+자세/겨냥,0,15579,aiming
+옷/빨간 띠,0,15566,red sash
+자세/사타구니 가리기,0,15557,covering crotch
+성인/거대한 음경,0,15545,huge penis
+소품/트럼프 카드,0,15544,playing card
+소품/술 귀걸이,0,15519,tassel earrings
+소품/조개,0,15509,shell
+동작/고개 돌림,0,15508,turning head
+효과/그림자,0,15490,drop shadow
+소품/일렉기타,0,15481,electric guitar
+옷/끈,0,15454,strap
+자세/다리 찢기,0,15423,split
+옷/털 달린 드레스,0,15418,fur-trimmed dress
+머리/노란 머리띠,0,15402,yellow hairband
+모자/플랫캡,0,15395,flat cap
+몸/갈비뼈,0,15382,ribs
+자세/마법봉 들기,0,15379,holding wand
+옷/하스노소라 교복,0,15365,hasu no sora school uniform
+옷/빨간 스웨터,0,15350,red sweater
+옷/세운 칼라,0,15344,popped collar
+인원/메카 소녀,0,15334,mecha musume
+옷/털 달린 케이프,0,15299,fur-trimmed capelet
+화풍/선화,0,15280,lineart
+옷/파란 소매,0,15277,blue sleeves
+몸/어두운 피부,0,15274,deep skin
+양말/무늬 니삭,0,15250,print thighhighs
+옷/흰 베일,0,15250,white veil
+배경/벽돌 벽,0,15239,brick wall
+모자/회색 모자,0,15239,grey hat
+소품/히비스커스,0,15239,hibiscus
+머리/아주 긴 땋은 머리,0,15234,very long braid
+머리/여러 머리 리본,0,15229,multiple hair bows
+몸/염소 뿔,0,15223,goat horns
+몸/갈색 털,0,15218,brown fur
+몸/몸 무늬,0,15217,body markings
+몸/호랑이 꼬리,0,15193,tiger tail
+소품/프릴 초커,0,15176,frilled choker
+구도/나란히,0,15158,side-by-side
+몸/잘록한 허리,0,15143,narrow waist
+소품/연필,0,15093,pencil
+소품/닻,0,15086,anchor
+소품/양산,0,15086,parasol
+동작/사람 안기,0,15083,carrying person
+몸/곰 귀,0,15079,bear ears
+소품/진주 목걸이,0,15070,pearl necklace
+머리/끝만 다른 색,0,15064,colored extremities
+음식/버섯,0,15053,mushroom
+신발/통굽 샌들,0,15034,platform sandals
+인원/의인화(인간형),0,15018,humanization
+옷/갈색 조끼,0,15011,brown vest
+눈/빛나는 한쪽 눈,0,14998,glowing eye
+옷/비대칭 옷,0,14988,asymmetrical clothes
+자세/종이 들기,0,14969,holding paper
+옷/캐주얼 원피스 수영복,0,14964,casual one-piece swimsuit
+효과/잠자는 표시,0,14946,zzz
+구도/탈것 중심,0,14926,vehicle focus
+동작/발차기,0,14913,kicking
+효과/폭발,0,14901,explosion
+머리/큐브 머리장식,0,14883,cube hair ornament
+인원/인어,0,14855,mermaid
+옷/하트 모양 뚫림,0,14824,heart cutout
+옷/가슴 사이 넥타이,0,14810,necktie between breasts
+몸/여분의 팔,0,14794,extra arms
+동작/추락,0,14776,falling
+배경/욕조,0,14763,bath
+옷/래글런 소매,0,14749,raglan sleeves
+옷/후드 코트,0,14747,hooded coat
+옷/노란 장갑,0,14744,yellow gloves
+소품/휴대용 게임기,0,14742,handheld game console
+자세/머리 맞댐,0,14742,heads together
+인원/상어 소녀,0,14736,shark girl
+음식/햄버거,0,14730,burger
+눈/다이아 모양 눈동자,0,14726,diamond-shaped pupils
+자세/겨드랑이 보여주기,0,14720,presenting own armpit
+음식/쿠키,0,14712,cookie
+배경/산 지평선,0,14709,mountainous horizon
+소품/텔레비전,0,14687,television
+옷/쇼걸 스커트,0,14653,showgirl skirt
+옷/금색 비키니,0,14642,gold bikini
+소품/물병,0,14640,water bottle
+자세/카드 들기,0,14624,holding card
+표정/유혹적인 미소,0,14601,seductive smile
+배경/격자 배경,0,14598,grid background
+효과/떠오르는 옷,0,14574,floating clothes
+효과/물결,0,14566,ripples
+몸/분리된 날개,0,14560,detached wings
+속옷/레이스 팬티,0,14554,lace-trimmed panties
+머리/머리 길이 변경(길게),0,14553,alternate hair length (longer)
+옷/멀티컬러 드레스,0,14551,multicolored dress
+배경/미닫이문,0,14532,sliding doors
+메타/연령 등급,0,14529,content rating
+옷/크롭탑 아래로 비치는 가슴,0,14509,crop top overhang
+모자/개리슨 캡,0,14505,garrison cap
+옷/경찰 제복,0,14505,police uniform
+효과/나뭇잎 사이 햇살,0,14474,dappled sunlight
+메타/가짜 스크린샷,0,14462,fake screenshot
+옷/빨간 보디수트,0,14452,red bodysuit
+소품/동물 귀 헤드폰,0,14444,animal ear headphones
+소품/망치,0,14443,hammer
+옷/보라 넥타이,0,14424,purple necktie
+몸/너구리 꼬리,0,14423,raccoon tail
+성인/옷 위로 발기,0,14415,erection under clothes
+자세/안짱다리,0,14409,pigeon-toed
+소품/검은 가방,0,14398,black bag
+화풍/공식 스타일,0,14373,official style
+옷/멀티컬러 장갑,0,14368,multicolored gloves
+옷/주황 치마,0,14308,orange skirt
+몸/사자 귀,0,14283,lion ears
+성인/동성 목욕,0,14283,same-sex bathing
+몸/다리 문신,0,14278,leg tattoo
+소품/금 귀걸이,0,14258,gold earrings
+옷/민소매 재킷,0,14253,sleeveless jacket
+몸/검은 털,0,14240,black fur
+몸/노란 손톱,0,14235,yellow nails
+소품/이어폰,0,14218,earphones
+동물/말,0,14215,horse
+옷/초록 기모노,0,14210,green kimono
+인원/노인 남성,0,14206,old man
+옷/오링 상의,0,14188,o-ring top
+옷/해군 제복,0,14165,naval uniform
+옷/무늬 드레스,0,14158,print dress
+동물/새끼 동물,0,14152,baby animal
+소품/곡옥,0,14146,magatama
+자세/옆으로 기움,0,14142,leaning to the side
+옷/전통 보타이,0,14130,traditional bowtie
+배경/여름,0,14084,summer
+성인/프레임 밖 처리,0,14082,out-of-frame censoring
+몸/무릎,0,14055,knees
+소품/팔 대포,0,14037,arm cannon
+양말/발등 걸이 레그웨어,0,14034,stirrup legwear
+화풍/빨간색 위주,0,14027,red theme
+자세/가슴 아래 팔(양팔),0,14026,arms under breasts
+옷/상의 없음,0,14022,no shirt
+옷/찢어진 바지,0,14002,torn pants
+음식/체리,0,13996,cherry
+인원/소 소녀,0,13982,cow girl
+상태/더러움,0,13978,dirty
+옷/컷오프 데님,0,13966,cutoffs
+효과/투명,0,13954,transparent
+옷/초록 장갑,0,13952,green gloves
+옷/드레스 리본,0,13951,dress bow
+옷/흰 로브,0,13946,white robe
+소품/주황 꽃,0,13921,orange flower
+옷/홀터넥 드레스,0,13911,halter dress
+몸/처진 귀,0,13892,floppy ears
+옷/노란 스웨터,0,13873,yellow sweater
+몸/곤충 날개,0,13868,insect wings
+자세/비대칭 겹침,0,13865,asymmetrical docking
+자세/카메라 들기,0,13844,holding camera
+옷/아가일 무늬 옷,0,13832,argyle clothes
+성인/여성 오르가즘,0,13817,female orgasm
+모자/타테에보시,0,13811,tate eboshi
+소품/단풍잎,0,13808,maple leaf
+소품/목걸이 끈,0,13786,lanyard
+소품/주사기,0,13768,syringe
+얼굴/수염(동물),0,13744,whiskers
+옷/무네아테,0,13734,muneate
+효과/세뇌,0,13733,mind control
+자세/펜 들기,0,13726,holding pen
+모자/미니 톱햇,0,13716,mini top hat
+옷/분홍 카디건,0,13710,pink cardigan
+몸/비대칭 날개,0,13685,asymmetrical wings
+양말/회색 팬티스타킹,0,13667,grey pantyhose
+소품/검은 마스크,0,13662,black mask
+몸/등 골,0,13659,median furrow
+눈/눈 속 하트,0,13634,heart in eye
+인원/뚱뚱한 남자,0,13621,fat man
+효과/속도선,0,13616,speed lines
+성인/소변,0,13615,pee
+몸/가슴털,0,13606,chest hair
+인원/그 외 2명,0,13604,2others
+소품/거대한 물건,0,13604,oversized object
+양말/파란 양말,0,13598,blue socks
+배경/가로등,0,13598,lamppost
+몸/길고 뾰족한 귀,0,13596,long pointy ears
+몸/검은 피부,0,13595,black skin
+신발/검은 샌들,0,13590,black sandals
+옷/플러그슈트,0,13579,plugsuit (evangelion)
+표정/수줍음,0,13571,shy
+표정/입가 침,0,13569,mouth drool
+배경/전선,0,13561,power lines
+옷/미디 드레스,0,13536,medium dress
+메타/장면 참고,0,13518,scene reference
+구도/눈 잘림,0,13503,eyes out of frame
+모자/초승달 모자장식,0,13498,crescent hat ornament
+인원/얼굴 없는 여자,0,13497,faceless female
+메타/밀레니엄 로고,0,13495,millennium science school logo
+옷/흰 목스카프,0,13490,white neckerchief
+배경/헐벗은 나무,0,13482,bare tree
+메타/성우 연결,0,13482,voice actor connection
+메타/명일방주 감염 모니터,0,13477,infection monitor (arknights)
+머리/날개 머리장식,0,13472,wing hair ornament
+양말/프릴 니삭,0,13451,frilled thighhighs
+배경/체크무늬 바닥,0,13447,checkered floor
+옷/짧은 넥타이,0,13443,short necktie
+옷/소무늬 비키니,0,13442,cow print bikini
+소품/거대한 무기,0,13415,huge weapon
+몸/구체관절,0,13407,doll joints
+표정/하품,0,13404,yawning
+몸/숫자 문신,0,13397,number tattoo
+옷/흰 넥타이,0,13373,white necktie
+눈/타원형 점 눈,0,13364,solid oval eyes
+머리/땋은 머리 고리,0,13347,braided hair rings
+소품/가위,0,13325,scissors
+자세/대칭 겹침,0,13320,symmetrical docking
+옷/연미복,0,13319,tailcoat
+소품/검은 꽃,0,13318,black flower
+옷/체크 리본,0,13314,plaid bow
+눈/여분의 눈,0,13311,extra eyes
+옷/미타키하라 교복,0,13310,mitakihara school uniform
+배경/대나무,0,13301,bamboo
+동작/꼬리 흔들기,0,13290,tail wagging
+얼굴/코 밴드,0,13273,bandaid on nose
+눈/눈 없음,0,13270,no eyes
+메타/명조 타세트 마크,0,13268,tacet mark (wuthering waves)
+화풍/보라색 위주,0,13265,purple theme
+눈/짝짝이 눈동자,0,13262,mismatched pupils
+옷/기타 고교 교복,0,13248,kita high school uniform
+옷/파란 보디수트,0,13230,blue bodysuit
+옷/물방울무늬 리본,0,13226,polka dot bow
+자세/양손으로 볼 감쌈,0,13215,hands on own cheeks
+동물/파란 나비,0,13181,blue butterfly
+옷/팔 보호대,0,13178,arm guards
+모자/별 모자장식,0,13165,star hat ornament
+음식/케이크 조각,0,13147,cake slice
+자세/막대사탕 들기,0,13142,holding lollipop
+배경/칠판,0,13127,chalkboard
+화풍/해칭,0,13119,hatching (texture)
+옷/정강이 갑옷,0,13109,greaves
+소품/떠 있는 귀걸이,0,13084,floating earrings
+옷/가슴 사라시,0,13082,chest sarashi
+눈/눈 속 별,0,13068,star in eye
+옷/프릴 칼라,0,13067,frilled collar
+양말/줄무늬 팬티스타킹,0,13060,striped pantyhose
+배경/무지개,0,13030,rainbow
+눈/제3의 눈,0,13015,third eye
+메타/이름 연결,0,13010,name connection
+옷/세로줄 셔츠,0,13009,vertical-striped shirt
+표정/윙크 놀람,0,12986,;o
+옷/검은 망토(클로크),0,12974,black cloak
+소품/기관단총,0,12971,submachine gun
+신발/분홍 부츠,0,12966,pink boots
+인원/보이시한 소녀,0,12959,tomboy
+음식/복숭아,0,12943,peach
+소품/받침 접시,0,12924,saucer
+표정/여러 표정,0,12919,multiple expressions
+성인/수간,0,12917,zoophilia
+효과/햇살,0,12913,sunbeam
+소품/분홍 초커,0,12895,pink choker
+몸/꼬리 리본,0,12894,tail bow
+몸/노란 털,0,12894,yellow fur
+음식/커피,0,12883,coffee
+몸/원피스 태닝 자국,0,12880,one-piece tan
+자세/공 들기,0,12865,holding ball
+옷/회색 코트,0,12859,grey coat
+화풍/플랫 컬러,0,12856,flat color
+소품/곰방대,0,12856,smoking pipe
+소품/십자가 귀걸이,0,12845,cross earrings
+인원/몬스터 소년,0,12825,monster boy
+소품/하트 브로치,0,12814,heart brooch
+소품/모빌슈트,0,12814,mobile suit
+몸/로봇 관절,0,12809,robot joints
+옷/짝짝이 장갑,0,12791,mismatched gloves
+성인/포피,0,12789,foreskin
+자세/서서 다리 찢기,0,12782,standing split
+메타/특징 연결,0,12768,trait connection
+양말/한쪽 양말,0,12766,single sock
+머리/긴 구레나룻,0,12761,long sideburns
+옷/주황 재킷,0,12760,orange jacket
+몸/날개 하나,0,12736,single wing
+몸/양 뿔,0,12730,sheep horns
+화풍/1990년대 스타일,0,12722,1990s (style)
+효과/녹화 화면,0,12718,recording
+몸/팔 흉터,0,12716,scar on arm
+몸/분홍 피부,0,12658,pink skin
+인원/강아지 소년,0,12655,dog boy
+소품/머리 위 잎,0,12649,leaf on head
+구도/메카 중심,0,12644,mecha focus
+몸/투톤 털,0,12638,two-tone fur
+효과/마법진,0,12618,magic circle
+인원/해골,0,12606,skeleton
+효과/떠 있는 물체,0,12605,floating object
+신발/보라 신발,0,12567,purple shoes
+표정/졸림,0,12557,sleepy
+몸/여러 색 손톱,0,12544,multicolored nails
+모자/털 달린 모자,0,12510,fur-trimmed headwear
+옷/비치는 가슴골,0,12507,see-through cleavage
+동작/시트 움켜쥠,0,12497,sheet grab
+효과/물 튀김,0,12483,splashing
+구도/참고 삽입 그림,0,12469,reference inset
+옷/터틀넥 셔츠,0,12468,turtleneck shirt
+상태/멍,0,12449,bruise
+표정/말풍선 음표,0,12435,spoken musical note
+자세/모자 손에 들기,0,12430,holding unworn hat
+표정/흐르는 눈물,0,12428,streaming tears
+성인/하트 니플 패치,0,12424,heart pasties
+소품/갈색 가방,0,12409,brown bag
+자세/상대 볼에 손,0,12389,hand on another's cheek
+옷/회색 조끼,0,12387,grey vest
+소품/회색 헤일로,0,12373,grey halo
+메타/색이 다른 포켓몬,0,12362,shiny pokemon
+음식/수박,0,12358,watermelon
+옷/남성 수영복,0,12355,male swimwear
+옷/니트 원피스,0,12336,sweater dress
+속옷/브라 끈,0,12334,bra strap
+동작/머리 묶기,0,12333,tying hair
+자세/방아쇠 수칙,0,12332,trigger discipline
+표정/외침,0,12321,shouting
+효과/뚝뚝 떨어짐,0,12318,dripping
+옷/빨간 소매,0,12317,red sleeves
+몸/백선,0,12304,linea alba
+모자/카우보이 모자,0,12297,cowboy hat
+표정/눈 깜빡임,0,12280,blinking
+소품/팔 리본,0,12268,arm ribbon
+눈/그라데이션 눈,0,12265,gradient eyes
+소품/클립보드,0,12263,clipboard
+머리/뿌리부터 땋은 머리,0,12254,braided base
+배경/선반,0,12226,shelf
+옷/변형 메이드,0,12225,unconventional maid
+몸/의수·의족,0,12213,prosthesis
+메타/작가 자캐 등장,0,12212,artist self-insert
+옷/아이돌 의상,0,12210,idol clothes
+효과/파란 불꽃,0,12189,blue fire
+인원/성별 반전(여→남),0,12170,genderswap (ftm)
+자세/배에 손,0,12136,hand on own stomach
+배경/기둥,0,12107,pillar
+눈/긴 속눈썹,0,12103,long eyelashes
+소품/전통 후광,0,12099,traditional halo
+성인/수간(동물),0,12090,bestiality
+효과/재질 변화,0,12090,material growth
+속옷/벗은 팬티,0,12089,unworn panties
+옷/술 장식,0,12087,fringe trim
+옷/군복 재킷,0,12087,military jacket
+소품/오토바이,0,12077,motorcycle
+인원/사이보그,0,12071,cyborg
+음식/달걀,0,12067,egg
+인원/외계인,0,12062,alien
+얼굴/수염 자국,0,12062,beard stubble
+옷/하트 무늬,0,12057,heart print
+자세/그 포즈,0,12055,the pose
+옷/가려진 쇄골,0,12046,covered collarbone
+눈/분홍 눈동자,0,12037,pink pupils
+동작/발 담그기,0,12033,soaking feet
+자세/사이에 끼임,0,12021,sandwiched
+양말/한쪽 다리 팬티스타킹,0,12004,single leg pantyhose
+소품/테이프,0,12001,tape
+소품/쌓인 책,0,12000,book stack
+자세/가슴 위에 올려놓음,0,11997,breast rest
+얼굴/점 여러 개,0,11993,multiple moles
+화풍/흑백+컬러 배경,0,11977,greyscale with colored background
+소품/호루라기,0,11972,whistle
+소품/두루마리,0,11951,scroll
+동작/먹여주기,0,11947,feeding
+자세/발 들기,0,11928,feet up
+옷/무늬 장갑,0,11925,print gloves
+효과/측면 조명,0,11923,sidelighting
+효과/떨어지는 잎,0,11921,falling leaves
+신발/털 달린 부츠,0,11904,fur-trimmed boots
+자세/어깨에 멘 무기,0,11902,weapon over shoulder
+음식/밥,0,11897,rice
+옷/회색 후드티,0,11894,grey hoodie
+양말/줄무늬 양말,0,11885,striped socks
+소품/음양,0,11881,yin yang
+효과/금,0,11850,crack
+소품/회전의자,0,11848,swivel chair
+머리/해골 머리장식,0,11843,skull hair ornament
+옷/꽃무늬 기모노,0,11842,floral print kimono
+배경/타일 벽,0,11836,tile wall
+효과/머리카락으로 가림,0,11824,convenient hair
+소품/스티커,0,11816,sticker
+옷/반쯤 내린 지퍼,0,11806,partially unzipped
+모자/노란 모자,0,11806,yellow hat
+옷/검은 애스콧 타이,0,11802,black ascot
+옷/어깨 패드,0,11795,shoulder pads
+양말/보라 팬티스타킹,0,11783,purple pantyhose
+자세/손가락 사이,0,11777,between fingers
+신발/신발 리본,0,11774,footwear bow
+표정/노려봄,0,11744,glaring
+옷/분홍 넥타이,0,11738,pink necktie
+눈/꽃 모양 눈동자,0,11732,flower-shaped pupils
+옷/깃발 무늬,0,11728,flag print
+옷/붕대 감은 손,0,11724,bandaged hand
+성인/질내사정,0,11722,internal cumshot
+효과/피 튐,0,11705,blood splatter
+몸/용 날개,0,11696,dragon wings
+옷/갈색 리본,0,11690,brown bow
+상태/입에서 나는 피,0,11686,blood from mouth
+음식/맥주,0,11660,beer
+옷/도복,0,11652,dougi
+얼굴/보라 입술,0,11645,purple lips
+성인/체액 실,0,11633,cum string
+옷/오비지메,0,11622,obijime
+자세/꽂힘,0,11617,planted
+옷/검은 코르셋,0,11604,black corset
+옷/레이스 퀸,0,11603,race queen
+옷/주황 드레스,0,11599,orange dress
+인원/악마 소년,0,11593,demon boy
+인원/드래프,0,11591,draph
+옷/체크 셔츠,0,11589,plaid shirt
+음식/와인,0,11588,wine
+배경/전봇대,0,11579,utility pole
+동작/요리,0,11573,cooking
+자세/여우 손 그림자,0,11568,fox shadow puppet
+표정/작은 땀방울,0,11567,small sweatdrop
+몸/가슴 흉터,0,11553,scar on chest
+몸/목 점,0,11550,mole on neck
+자세/모자 고쳐 쓰기,0,11548,adjusting headwear
+인원/부부,0,11536,husband and wife
+옷/단추 사이 틈,0,11528,button gap
+소품/종이 상자,0,11525,cardboard box
+옷/미디 스커트,0,11522,medium skirt
+양말/세로줄 니삭,0,11501,vertical-striped thighhighs
+소품/저격총,0,11494,sniper rifle
+표정/패배,0,11471,defeat
+장르/일상물,0,11447,slice of life
+소품/무테 안경,0,11435,rimless eyewear
+화풍/SD 변형,0,11424,deformed
+소품/꽃 매듭,0,11396,flower knot
+옷/코테,0,11387,kote
+표정/동그란 눈(0 0),0,11386,0 0
+속옷/흰 블루머,0,11386,white bloomers
+자세/상대 머리 잡기,0,11384,grabbing another's hair
+모자/광대 모자,0,11372,jester cap
+몸/목 문신,0,11366,neck tattoo
+머리/술 머리장식,0,11364,tassel hair ornament
+머리/귀 리본,0,11360,ear ribbon
+몸/여러 날개,0,11355,multiple wings
+옷/흰 조끼,0,11354,white vest
+몸/빨간 날개,0,11345,red wings
+속옷/무늬 팬티,0,11342,print panties
+메타/평행 세계,0,11333,alternate universe
+소품/여행 가방,0,11327,suitcase
+옷/비대칭 소매,0,11324,asymmetrical sleeves
+자세/빗자루 타기,0,11319,broom riding
+옷/허리 케이프,0,11314,waist cape
+자세/팔꿈치 괴기,0,11311,elbow rest
+인원/미코테,0,11285,miqo'te
+소품/백합,0,11284,lily (flower)
+소품/성조기,0,11276,american flag
+자세/상대 턱에 손,0,11273,hand on another's chin
+옷/비키니 하의만,0,11263,bikini bottom only
+소품/구슬(오브),0,11259,orb
+소품/보라 헤일로,0,11233,purple halo
+소품/군번줄,0,11228,dog tags
+자세/무릎베개,0,11226,lap pillow
+자세/머리 위 물건,0,11224,object on head
+소품/이불(후톤),0,11221,futon
+옷/다중 끈 비키니 하의,0,11216,multi-strapped bikini bottom
+메타/야쿠모 유카리 틈,0,11215,gap (touhou)
+인원/절지동물 소녀,0,11212,arthropod girl
+머리/가슴 덮은 머리,0,11208,hair over breasts
+속옷/프릴 브라,0,11207,frilled bra
+옷/통 넓은 바지,0,11204,baggy pants
+옷/여러 벨트,0,11187,multiple belts
+자세/방패 들기,0,11180,holding shield
+소품/초록 보석,0,11173,green gem
+상태/땀범벅,0,11173,very sweaty
+옷/비치는 브라,0,11169,bra visible through clothes
+소품/꽃병,0,11140,vase
+음식/콘 아이스크림,0,11131,ice cream cone
+옷/분홍 목스카프,0,11129,pink neckerchief
+소품/비치 파라솔,0,11122,beach umbrella
+인원/호랑이 소녀,0,11117,tiger girl
+성인/합동 행위,0,11108,teamwork (sexual)
+표정/한쪽 눈썹 올림,0,11100,raised eyebrow
+표정/불안한 미소,0,11098,nervous smile
+자세/쉿,0,11096,shushing
+눈/점 눈,0,11086,solid circle eyes
+소품/쿠션,0,11084,cushion
+성인/분출,0,11080,projectile cum
+속옷/초록 팬티,0,11078,green panties
+옷/투톤 장갑,0,11072,two-tone gloves
+옷/허리 리본,0,11065,waist bow
+자세/빗자루 들기,0,11057,holding broom
+동작/주먹질,0,11055,punching
+성인/자궁,0,11050,uterus
+성인/옷 입은 남자 벗은 여자,0,11042,clothed male nude female
+상태/의상 사고,0,11033,wardrobe malfunction
+소품/노트북,0,11032,laptop
+옷/체크 조끼,0,11019,plaid vest
+옷/검은 로브,0,11000,black robe
+동작/사진 찍기,0,10992,taking picture
+머리/검은 브릿지,0,10983,black streaks
+모자/프릴 모자,0,10969,frilled hat
+자세/펼친 양손,0,10966,open hands
+소품/고양이 귀 헤드폰,0,10962,cat ear headphones
+몸/무릎 밴드,0,10952,bandaid on knee
+옷/파란 케이프,0,10951,blue capelet
+자세/그릇 들기,0,10941,holding bowl
+효과/이어진 8분음표,0,10931,beamed eighth notes
+인원/신부,0,10930,bride
+표정/XD,0,10927,xd
+소품/체인 목걸이,0,10915,chain necklace
+성인/쭈그려 올라탄 체위,0,10911,squatting cowgirl position
+화풍/계단 현상 선,0,10908,jaggy lines
+자세/베개 껴안기,0,10895,pillow hug
+머리/방울 머리장식,0,10879,pom pom hair ornament
+성인/음경 바라봄,0,10867,looking at penis
+옷/빨간 벨트,0,10864,red belt
+신발/하이힐 샌들,0,10861,high heel sandals
+인원/기사,0,10854,knight
+화풍/초록색 위주,0,10851,green theme
+몸/소 꼬리,0,10844,cow tail
+머리/가운데 갈라진 앞머리,0,10840,center-flap bangs
+자세/목에 팔 두름,0,10824,arms around neck
+신발/회색 신발,0,10824,grey shoes
+인원/늑대 소년,0,10811,wolf boy
+옷/카리기누,0,10806,kariginu
+인원/부녀,0,10797,father and daughter
+옷/사쿠라가오카 교복,0,10797,sakuragaoka high school uniform
+배경/철망 울타리,0,10790,chain-link fence
+자세/벗은 안경 들기,0,10790,holding removed eyewear
+머리/빨간 머리띠,0,10785,red headband
+소품/철십자,0,10772,iron cross
+소품/빨간 완장,0,10770,red armband
+옷/코갸루,0,10760,kogal
+몸/기계 팔 하나,0,10759,single mechanical arm
+자세/상자 들기,0,10727,holding box
+옷/줄무늬 재킷,0,10717,striped jacket
+자세/치마 잡기,0,10697,holding own skirt
+옷/검은 갑옷,0,10683,black armor
+동물/여우,0,10680,fox
+속옷/프릴 팬티,0,10674,frilled panties
+동작/게임하기,0,10674,playing games
+소품/사카즈키,0,10671,sakazuki
+음식/고기,0,10664,meat
+표정/말풍선 홍조,0,10660,spoken blush
+자세/기대어 누움,0,10647,reclining
+속옷/빨간 브라,0,10645,red bra
+메타/명일방주 광석병 증상,0,10631,oripathy lesion (arknights)
+자세/어깨 위 동물,0,10624,animal on shoulder
+표정/D 입,0,10617,d:
+옷/한쪽 어깨 내림,0,10613,single off shoulder
+옷/사선 줄무늬 넥타이,0,10609,diagonal-striped necktie
+신발/한쪽 신발,0,10602,single shoe
+음식/하트 모양 음식,0,10589,heart-shaped food
+소품/벗은 재킷,0,10556,unworn jacket
+옷/무늬 치마,0,10549,print skirt
+옷/풀 아머,0,10533,full armor
+소품/교실 의자,0,10532,school chair
+몸/바벨 피어싱,0,10513,barbell piercing
+표정/남자다운,0,10501,manly
+옷/한쪽 긴 장갑,0,10483,single elbow glove
+소품/지팡이(지팡이형),0,10481,cane
+소품/커피 머그,0,10472,coffee mug
+눈/반쯤 감은 눈,0,10460,half-closed eye
+소품/팔 가터,0,10446,arm garter
+옷/줄무늬 치마,0,10426,striped skirt
+자세/손가락 모음(첨탑),0,10422,steepled fingers
+자세/공중,0,10418,midair
+몸/여러 뿔,0,10402,multiple horns
+소품/폭발물,0,10394,explosive
+메타/저작권 로고,0,10385,copyright logo
+소품/전차,0,10376,tank
+인원/네코마타,0,10373,nekomata
+음식/면,0,10368,noodles
+효과/보케,0,10360,bokeh
+옷/큰 리본,0,10345,large bow
+소품/바코드,0,10340,barcode
+소품/벗은 치마,0,10335,unworn skirt
+옷/초록 스웨터,0,10327,green sweater
+머리/보라 머리띠,0,10303,purple hairband
+배경/별 무늬 배경,0,10300,star symbol background
+소품/금 목걸이,0,10297,gold necklace
+머리/머리 길이 변경(짧게),0,10294,alternate hair length (shorter)
+얼굴/볼 밴드,0,10285,bandaid on cheek
+머리/가르마,0,10284,parted hair
+메타/회사 연결,0,10278,company connection
+자세/사람에게 기댐,0,10272,leaning on person
+소품/오링 초커,0,10242,o-ring choker
+인원/강시,0,10241,jiangshi
+옷/오아라이 교복,0,10241,ooarai school uniform
+상태/무기에 묻은 피,0,10222,blood on weapon
+옷/파란 벨트,0,10219,blue belt
+속옷/팬티 살짝 보임,0,10218,panty peek
+옷/보라 레오타드,0,10215,purple leotard
+메타/란게이지,0,10211,ranguage
+몸/사지 절단,0,10208,amputee
+옷/멀티컬러 보디수트,0,10202,multicolored bodysuit
+소품/안테나,0,10199,radio antenna
+옷/멀티컬러 비키니,0,10196,multicolored bikini
+효과/타락,0,10193,corruption
+옷/파란 애스콧 타이,0,10189,blue ascot
+표정/창백해짐,0,10187,turn pale
+옷/회색 카디건,0,10184,grey cardigan
+옷/한쪽 어깨 갑옷,0,10165,single pauldron
+소품/음료 팩,0,10164,drink carton
+소품/쇼핑백,0,10158,shopping bag
+머리/올림머리,0,10157,updo
+자세/책상 위에 앉음,0,10146,on desk
+머리/삐친 머리,0,10143,cowlick
+소품/공책,0,10133,notebook
+옷/회색 세일러 칼라,0,10123,grey sailor collar
+옷/파란 멜빵바지,0,10118,blue overalls
+음식/당고,0,10113,dango
+자세/자기 엉덩이에 손,0,10112,hand on own ass
+옷/세로줄 드레스,0,10111,vertical-striped dress
+옷/옷 속 레오타드,0,10100,leotard under clothes
+인원/옥토링,0,10099,octoling
+화풍/세피아,0,10094,sepia
+소품/한쪽 귀 덮개,0,10080,single ear cover
+소품/허벅지 홀스터,0,10072,thigh holster
+옷/패션,0,10067,fashion
+소품/번개 기호,0,10064,lightning bolt symbol
+옷/열린 후드,0,10057,open hoodie
+옷/보라 소매,0,10055,purple sleeves
+효과/눈물방울,0,10046,teardrop
+동작/발사,0,10037,firing
+자세/얼굴 가리기,0,10032,covering face
+자세/도끼 들기,0,10021,holding axe
+머리/꽃 화환,0,10018,flower wreath
+표정/윙크 혀 내밀기,0,10012,;p
+몸/갈색 꼬리,0,10009,brown tail
+옷/체크 목도리,0,10002,plaid scarf
+소품/하트 모양 안경,0,9989,heart-shaped eyewear
+옷/의상 교체,0,9988,costume switch
+동작/볼 키스,0,9982,kissing cheek
+옷/그라데이션 옷,0,9969,gradient clothes
+상태/부서짐,0,9965,broken
+표정/비뚤어진 입,0,9952,sideways mouth
+자세/베개에 머리 얹음,0,9951,head on pillow
+소품/사각 안경,0,9937,rectangular eyewear
+양말/회색 양말,0,9936,grey socks
+배경/파도,0,9936,waves
+표정/점 입,0,9933,dot mouth
+자세/상대 등에 손,0,9932,hand on another's back
+옷/웨이스트코트,0,9928,waistcoat
+동물/쥐,0,9925,mouse (animal)
+옷/경기용 스쿨 수영복,0,9908,competition school swimsuit
+동물/늑대,0,9907,wolf
+인원/에룬,0,9897,erune
+옷/세일러 전사 복장,0,9886,sailor senshi uniform
+자세/컨트롤러 들기,0,9882,holding controller
+효과/뷰파인더,0,9877,viewfinder
+옷/분홍 반바지,0,9860,pink shorts
+소품/벗은 옷,0,9859,unworn clothes
+속옷/보라 브라,0,9842,purple bra
+몸/배꼽 털,0,9809,navel hair
+옷/빨간 부루마,0,9809,red buruma
+옷/노란 카디건,0,9808,yellow cardigan
+옷/찢어진 드레스,0,9806,torn dress
+소품/포스터,0,9804,poster (object)
+자세/자기 가리키기,0,9798,pointing at self
+머리/흰 머리띠,0,9792,white headband
+옷/허리 갑옷,0,9784,faulds
+얼굴/주둥이,0,9783,snout
+인원/너구리 소녀,0,9767,raccoon girl
+자세/낫 들기,0,9766,holding scythe
+몸/파란 날개,0,9762,blue wings
+눈/가늘게 뜬 눈,0,9748,narrowed eyes
+자세/어깨동무,0,9740,arm around shoulder
+소품/맥주잔,0,9721,beer mug
+자세/비튼 상체,0,9706,twisted torso
+배경/그라데이션 하늘,0,9698,gradient sky
+옷/파란 부루마,0,9669,blue buruma
+옷/초록 세일러 칼라,0,9649,green sailor collar
+모자/페도라,0,9643,fedora
+몸/흰 뿔,0,9642,white horns
+옷/느슨한 넥타이,0,9640,loose necktie
+자세/치어 방울 들기,0,9633,holding pom poms
+소품/금 팔찌,0,9624,gold bracelet
+소품/금속 목걸이,0,9624,metal collar
+몸/새 귀,0,9614,bird ears
+인원/여경,0,9606,policewoman
+양말/소무늬 니삭,0,9599,cow print thighhighs
+옷/초록 망토,0,9586,green cape
+상태/더움,0,9571,hot
+소품/하트 목걸이,0,9563,heart necklace
+소품/트레이딩 카드,0,9559,trading card
+몸/겨드랑이털,0,9550,armpit hair
+옷/노란 반바지,0,9544,yellow shorts
+소품/어뢰,0,9543,torpedo
+동작/사람 들어올리기,0,9532,lifting person
+효과/슬라임,0,9526,slime (substance)
+화풍/회화풍,0,9522,painterly
+옷/프릴 장갑,0,9513,frilled gloves
+자세/양손 무릎에,0,9511,hands on own knees
+자세/가면 들기,0,9509,holding mask
+옷/한쪽 분리 소매,0,9503,single detached sleeve
+성인/즉석 재갈,0,9501,improvised gag
+머리/삐져나온 머리카락,0,9501,loose hair strand
+옷/하이웨이스트 반바지,0,9493,high-waist shorts
+옷/검은 띠,0,9491,black sash
+화풍/정물,0,9490,still life
+인원/악마,0,9475,demon
+소품/허벅지 벨트,0,9474,thigh belt
+인원/용 소년,0,9463,dragon boy
+메타/작가 실수,0,9454,artistic error
+옷/검은 베일,0,9454,black veil
+자세/메탈 손동작,0,9441,\\m/
+옷/타이트 바지,0,9437,tight pants
+옷/양면 망토,0,9431,two-sided cape
+옷/사선 줄무늬 리본,0,9428,diagonal-striped bow
+자세/눈 위 브이,0,9426,v over eye
+음식/오렌지,0,9418,orange (fruit)
+효과/최면,0,9415,hypnosis
+자세/소녀 샌드위치,0,9413,girl sandwich
+메타/혼합 언어 글자,0,9411,mixed-language text
+신발/초록 신발,0,9401,green shoes
+자세/수건 들기,0,9401,holding towel
+소품/뼈,0,9398,bone
+옷/트랙 팬츠,0,9393,track pants
+머리/땋은 뿌리 똥머리,0,9383,bun with braided base
+자세/유리에 기댐,0,9379,against glass
+소품/하트 초커,0,9377,heart choker
+소품/폴더폰,0,9375,flip phone
+인원/수인x인간,0,9373,furry with non-furry
+신발/빨간 신발,0,62984,red shoes
+몸/악마 날개,0,62915,demon wings
+머리/음표 머리장식,0,9369,musical note hair ornament
+옷/민소매 기모노,0,9366,sleeveless kimono
+눈/빨간 흰자,0,9353,red sclera
+신발/노란 신발,0,9352,yellow shoes
+옷/검은 캐미솔,0,9350,black camisole
+눈/고르지 않은 눈,0,9322,uneven eyes
+몸/멀티컬러 날개,0,9307,multicolored wings
+소품/흰 깃털,0,9304,white feathers
+옷/하이웨이스트 바지,0,9297,high-waist pants
+머리/고양이 머리장식,0,9271,cat hair ornament
+소품/물 총,0,9270,water gun
+옷/보라 코트,0,9217,purple coat
+신발/회색 부츠,0,9192,grey boots
+옷/보라 조끼,0,9139,purple vest
+얼굴/검은 입술,0,9132,black lips
+소품/보라 장미,0,9125,purple rose
+옷/노란 목도리,0,9111,yellow scarf
+옷/분홍 목도리,0,9105,pink scarf
+몸/로봇 귀,0,9096,robot ears
+옷/빨간 세일러 칼라,0,9091,red sailor collar
+옷/주황 비키니,0,9083,orange bikini
+몸/파란 털,0,9081,blue fur
+옷/보라 바지,0,9077,purple pants
+얼굴/긴 혀,0,9058,long tongue
+동물/흰 고양이,0,9056,white cat
+옷/한쪽 소매,0,9049,single sleeve
+눈/노란 눈동자,0,9045,yellow pupils
+옷/산타 드레스,0,9004,santa dress
+동물/펭귄,0,8995,penguin
+몸/새 꼬리,0,8978,bird tail
+옷/아쿠아 셔츠,0,8959,aqua shirt
+양말/무늬 팬티스타킹,0,8943,print pantyhose
+옷/체크무늬 드레스,0,8913,plaid dress
+양말/빨간 양말,0,8894,red socks
+옷/겨울 코트,0,8883,winter coat
+몸/미니 날개,0,8856,mini wings
+배경/주황 하늘,0,8776,orange sky
+몸/비대칭 뿔,0,8774,asymmetrical horns
+소품/조각상,0,8772,statue
+동물/불가사리,0,8771,starfish
+배경/열린 문,0,8690,open door
+자세/목줄 들기,0,8684,holding leash
+옷/아쿠아 보타이,0,8669,aqua bowtie
+옷/줄무늬 목도리,0,8654,striped scarf
+머리/흰 머리 장식,0,8650,white headdress
+옷/비치는 드레스,0,8622,see-through dress
+소품/종이 부채,0,8610,paper fan
+머리/드릴 옆머리,0,8570,drill sidelocks
+옷/초록 코트,0,8525,green coat
+얼굴/색 있는 혀,0,8515,colored tongue
+옷/칼라 있는 코트,0,8434,collared coat
+머리/파란 곱창 머리끈,0,8421,blue scrunchie
+양말/양말 없음,0,8400,no socks
+옷/파란 띠,0,8384,blue sash
+소품/분홍 꽃잎,0,8359,pink petals
+동물/게,0,8329,crab
+양말/검은 레깅스,0,8326,black leggings
+소품/눈사람,0,8297,snowman
+눈/파란 눈동자,0,8270,blue pupils
+옷/줄무늬 리본,0,8260,striped ribbon
+옷/빨간 망토(클로크),0,8253,red cloak
+소품/벗은 마스크,0,8227,unworn mask
+옷/흰 망토(클로크),0,8188,white cloak
+옷/초록 목도리,0,8158,green scarf
+머리/검은 머리띠,0,8151,black headband
+몸/보라 날개,0,8136,purple wings
+옷/갈색 목도리,0,8130,brown scarf
+몸/갈색 뿔,0,8129,brown horns
+소품/편지,0,8113,letter
+속옷/물방울무늬 팬티,0,8112,polka dot panties
+머리/빨간 곱창 머리끈,0,8106,red scrunchie
+옷/투톤 치마,0,8103,two-tone skirt
+옷/분홍 레오타드,0,8097,pink leotard
+소품/병(항아리),0,8083,jar
+소품/클로버,0,8051,clover
+옷/용 무늬,0,8025,dragon print
+옷/주황 넥타이,0,8020,orange necktie
+양말/파란 팬티스타킹,0,8009,blue pantyhose
+옷/주황 리본,0,7994,orange ribbon
+몸/수정 날개,0,7979,crystal wings
+소품/보라 초커,0,7978,purple choker
+양말/빨간 팬티스타킹,0,7962,red pantyhose
+자세/인형 들기,0,7950,holding doll
+모자/해적 모자,0,7943,pirate hat
+몸/나비 날개,0,7940,butterfly wings
+배경/천장,0,7916,ceiling
+옷/보라 망토,0,7908,purple cape
+옷/주황 보타이,0,7882,orange bowtie
+몸/주황 손톱,0,7880,orange nails
+소품/보라 보석,0,7876,purple gem
+소품/꽃 귀걸이,0,7873,flower earrings
+옷/아쿠아 드레스,0,7869,aqua dress
+몸/기계 날개,0,7847,mechanical wings
+몸/회색 털,0,7844,grey fur
+소품/닫힌 우산,0,7815,closed umbrella
+옷/찢어진 치마,0,7793,torn skirt
+옷/골지 셔츠,0,7773,ribbed shirt
+옷/검은 카디건,0,7749,black cardigan
+옷/초록 소매,0,7717,green sleeves
+양말/초록 니삭,0,7716,green thighhighs
+몸/십자가 흉터,0,7714,cross scar
+신발/보라 부츠,0,7710,purple boots
+옷/스트랩리스 비키니,0,7702,strapless bikini
+소품/노란 장미,0,7693,yellow rose
+소품/오망성,0,7685,pentagram
+소품/빨간 밧줄,0,7676,red rope
+모자/주황 모자,0,7659,orange hat
+소품/벗은 헬멧,0,7651,unworn helmet
+속옷/젖은 팬티,0,7635,wet panties
+음식/토마토,0,7632,tomato
+동물/곰,0,7594,bear
+옷/멀티컬러 치마,0,7587,multicolored skirt
+소품/흰 헤일로,0,7584,white halo
+양말/프릴 양말,0,7527,frilled socks
+머리/초록 머리띠,0,7515,green hairband
+옷/후드 달린 케이프,0,7487,hooded capelet
+소품/금색 사슬,0,7478,gold chain
+몸/고양이 발바닥,0,7473,cat paws
+옷/보라 반바지,0,7465,purple shorts
+옷/노란 기모노,0,7461,yellow kimono
+옷/고양이 후드,0,7444,cat hood
+옷/민소매 스웨터,0,7439,sleeveless sweater
+옷/아쿠아 치마,0,7430,aqua skirt
+옷/파란 카디건,0,7427,blue cardigan
+소품/분홍 가방,0,7423,pink bag
+머리/깃털 머리,0,7381,feather hair
+옷/소 무늬 장갑,0,7375,cow print gloves
+옷/분홍 소매,0,7375,pink sleeves
+옷/파란 세일러복,0,7363,blue serafuku
+옷/비치는 베일,0,7342,see-through veil
+얼굴/파란 입술,0,7339,blue lips
+배경/회색 하늘,0,7305,grey sky
+자세/바구니 들기,0,7253,holding basket
+음식/피자,0,7251,pizza
+속옷/회색 팬티,0,7239,grey panties
+속옷/노란 팬티,0,7189,yellow panties
+몸/노란 피부,0,7166,yellow skin
+옷/프릴 기모노,0,7158,frilled kimono
+옷/빨간 갑옷,0,7153,red armor
+옷/프릴 원피스 수영복,0,7138,frilled one-piece swimsuit
+옷/줄무늬 바지,0,7136,striped pants
+옷/주황 장갑,0,7130,orange gloves
+신발/갈색 샌들,0,7114,brown sandals
+옷/체크무늬 보타이,0,7068,plaid bowtie
+옷/보라 세일러 칼라,0,7035,purple sailor collar
+옷/흰 띠,0,7008,white sash
+동물/고무 오리,0,7006,rubber duck
+소품/별 헤일로,0,6969,star halo
+몸/흰 꼬리,0,6964,white tail
+몸/큰 꼬리,0,6962,large tail
+머리/짧은 앞머리,0,6961,short bangs
+소품/빨간 가방,0,6953,red bag
+음식/샌드위치,0,6920,sandwich
+몸/사슴 귀,0,6900,deer ears
+음식/우유,0,6871,milk
+몸/보라 꼬리,0,6856,purple tail
+자세/고양이 들기,0,6846,holding cat
+몸/노란 뿔,0,6836,yellow horns
+옷/투톤 리본,0,6821,two-tone bow
+머리/흰 곱창 머리끈,0,6800,white scrunchie
+옷/보라 띠,0,6798,purple sash
+몸/금 간 피부,0,6754,cracked skin
+몸/작은 뿔,0,6746,small horns
+옷/아쿠아 목스카프,0,6744,aqua neckerchief
+몸/기계 꼬리,0,6742,mechanical tail
+몸/양 귀,0,6740,sheep ears
+소품/종이 가방,0,6735,paper bag
+동물/문어,0,6733,octopus
+모자/큰 모자,0,6724,large hat
+동물/오리,0,6711,duck
+옷/검은 앞치마,0,6710,black apron
+옷/분홍 앞치마,0,6709,pink apron
+옷/털 달린 후드,0,6685,fur-trimmed hood
+배경/바닥,0,6684,floor
+동물/양,0,6675,sheep
+옷/메이드 비키니,0,6674,maid bikini
+옷/분홍 후드티,0,6652,pink hoodie
+소품/우리,0,6620,cage
+신발/초록 부츠,0,6599,green boots
+몸/고르지 않은 뿔,0,6586,uneven horns
+옷/후드 달린 망토,0,6569,hooded cape
+신발/노란 부츠,0,6552,yellow boots
+소품/검은 깃털,0,6544,black feathers
+몸/분홍 털,0,6529,pink fur
+옷/흰 카디건,0,6523,white cardigan
+옷/초록 후드티,0,6511,green hoodie
+옷/투톤 비키니,0,6498,two-tone bikini
+소품/흰 머릿수건,0,6488,white headscarf
+옷/주황 반바지,0,6474,orange shorts
+소품/흰 마스크,0,6472,white mask
+옷/스트랩리스 셔츠,0,6455,strapless shirt
+옷/퐁퐁한 분리된 소매,0,6446,puffy detached sleeves
+옷/분홍 바지,0,6441,pink pants
+머리/분홍 브릿지,0,6435,pink streaks
+옷/빨간 후드티,0,6422,red hoodie
+몸/하트 문신,0,6421,heart tattoo
+옷/체크 치마,0,6418,checkered skirt
+양말/분홍 양말,0,6415,pink socks
+양말/리본 단 니삭,0,6415,ribbon-trimmed thighhighs
+옷/라텍스 보디수트,0,6413,latex bodysuit
+소품/벗은 브라,0,6398,unworn bra
+옷/검은 한푸,0,6397,black hanfu
+옷/체크 목도리,0,6397,checkered scarf
+동물/호랑이,0,6395,tiger
+소품/하트 풍선,0,6353,heart balloon
+머리/검은 곱창 머리끈,0,6331,black scrunchie
+소품/파란 가방,0,6331,blue bag
+자세/등불 들기,0,6305,holding lantern
+소품/벗은 셔츠,0,6287,unworn shirt
+자세/화살 들기,0,6245,holding arrow
+옷/프릴 케이프,0,6231,frilled capelet
+옷/초록 레오타드,0,6213,green leotard
+옷/보라 목도리,0,6201,purple scarf
+배경/빨간 달,0,6194,red moon
+속옷/흰 스포츠 브라,0,6186,white sports bra
+몸/주황 털,0,6130,orange fur
+음식/바나나,0,6123,banana
+자세/주사기 들기,0,6113,holding syringe
+소품/프릴 베개,0,6110,frilled pillow
+옷/보라 보디수트,0,6086,purple bodysuit
+몸/멀티컬러 뿔,0,6083,multicolored horns
+옷/갈색 리본,0,6072,brown ribbon
+모자/고양이 모자,0,6062,cat hat
+소품/지도,0,6058,map
+옷/우비,0,6050,raincoat
+소품/알약,0,6047,pill
+배경/보라 하늘,0,6047,purple sky
+옷/오버사이즈 셔츠,0,6046,oversized shirt
+몸/뱀 꼬리,0,6043,snake tail
+소품/흰 가방,0,6033,white bag
+동물/닭,0,6031,chicken
+동물/봉제 고양이,0,6025,stuffed cat
+옷/찢어진 소매,0,6022,torn sleeves
+몸/흰 손톱,0,6013,white nails
+옷/투톤 보디수트,0,6004,two-tone bodysuit
+옷/검은 볼레로,0,6001,black shrug
+얼굴/분홍 아이섀도,0,5994,pink eyeshadow
+옷/회색 리본,0,5990,grey bow
+옷/흰 한푸,0,5990,white hanfu
+옷/투톤 수영복,0,5984,two-tone swimsuit
+옷/노란 벨트,0,5961,yellow belt
+소품/금색 초커,0,5954,gold choker
+옷/겹친 비키니,0,5954,layered bikini
+옷/아쿠아 리본,0,5952,aqua ribbon
+옷/갈색 케이프,0,5948,brown capelet
+옷/줄무늬 소매,0,5941,striped sleeves
+옷/프릴 손목 커프스,0,5937,frilled wrist cuffs
+몸/아주 긴 꼬리,0,5906,very long tail
+몸/파란 꼬리,0,5889,blue tail
+옷/노란 띠,0,5885,yellow sash
+옷/보라 스웨터,0,5875,purple sweater
+옷/물방울무늬 비키니,0,5873,polka dot bikini
+동물/해파리,0,5872,jellyfish
+머리/주황 머리띠,0,5864,orange hairband
+신발/흰 샌들,0,5857,white sandals
+옷/파란 앞치마,0,5846,blue apron
+머리/분홍 곱창 머리끈,0,5833,pink scrunchie
+소품/연꽃,0,5813,lotus
+소품/빨간 반다나,0,5806,red bandana
+소품/빨간 우산,0,5782,red umbrella
+소품/깃털 귀걸이,0,5774,feather earrings
+속옷/레이스 팬티,0,5760,lace panties
+옷/체크무늬 넥타이,0,5726,plaid necktie
+옷/찢어진 보디수트,0,5725,torn bodysuit
+옷/갈색 세일러 칼라,0,5718,brown sailor collar
+옷/분홍 벨트,0,5710,pink belt
+옷/노란 조끼,0,5700,yellow vest
+동물/흰 새,0,5697,white bird
+몸/멀티컬러 털,0,5694,multicolored fur
+소품/꽃 장식,0,5677,flower ornament
+옷/찢어진 망토,0,5669,torn cape
+몸/줄무늬 꼬리,0,5650,striped tail
+옷/비치는 치마,0,5637,see-through skirt
+몸/기계 뿔,0,5636,mechanical horns
+옷/데님 치마,0,5633,denim skirt
+몸/파란 뿔,0,5624,blue horns
+소품/플라스틱 가방,0,5602,plastic bag
+몸/빨간 털,0,5601,red fur
+옷/갈색 망토,0,5568,brown cape
+옷/리본 단 치마,0,5563,ribbon-trimmed skirt
+옷/찢어진 반바지,0,5555,torn shorts
+머리/보라 브릿지,0,5545,purple streaks
+옷/레이스 달린 드레스,0,5528,lace-trimmed dress
+소품/주사위,0,5513,dice
+속옷/초록 브라,0,5511,green bra
+머리/박쥐 머리장식,0,5506,bat hair ornament
+몸/빨간 문신,0,5493,red tattoo
+얼굴/파란 아이섀도,0,5481,blue eyeshadow
+옷/고르지 않은 장갑,0,5469,uneven gloves
+몸/회색 뿔,0,5468,grey horns
+옷/검은 하카마,0,5466,black hakama
+동물/올빼미,0,5457,owl
+옷/주황 목스카프,0,5455,orange neckerchief
+옷/회색 기모노,0,5441,grey kimono
+옷/열린 드레스,0,5436,open dress
+옷/눈송이 무늬,0,5414,snowflake print
+옷/초록 목스카프,0,5413,green neckerchief
+옷/노란 후드티,0,5403,yellow hoodie
+옷/파란 갑옷,0,5388,blue armor
+소품/사탕 지팡이,0,5364,candy cane
+얼굴/보라 아이섀도,0,5357,purple eyeshadow
+옷/회색 소매,0,5329,grey sleeves
+양말/갈색 양말,0,5325,brown socks
+옷/아쿠아 재킷,0,5321,aqua jacket
+옷/파란 하카마,0,5320,blue hakama
+머리/멀티컬러 머리띠,0,5294,multicolored hairband
+옷/분홍 코트,0,5269,pink coat
+몸/분홍 꼬리,0,5261,pink tail
+옷/무늬 리본,0,5228,print bow
+옷/토끼 후드,0,5228,rabbit hood
+옷/주황 기모노,0,5224,orange kimono
+소품/튤립,0,5213,tulip
+옷/망사 상의,0,5204,fishnet top
+옷/멀티컬러 수영복,0,5200,multicolored swimsuit
+신발/멀티컬러 신발,0,5197,multicolored shoes
+자세/연필 들기,0,5167,holding pencil
+소품/하트 모양 베개,0,5153,heart-shaped pillow
+몸/줄무늬 뿔,0,5146,striped horns
+옷/회색 목스카프,0,5138,grey neckerchief
+옷/젖은 수영복,0,5136,wet swimsuit
+옷/고양이 무늬,0,5125,cat print
+옷/사선 줄무늬 보타이,0,5119,diagonal-striped bowtie
+옷/흰 갑옷,0,5109,white armor
+옷/보라 벨트,0,5107,purple belt
+옷/긴 셔츠,0,5098,long shirt
+옷/노란 코트,0,5084,yellow coat
+동물/상어,0,5077,shark
+머리/노란 곱창 머리끈,0,5074,yellow scrunchie
+옷/짧은 조끼,0,5058,cropped vest
+옷/분홍 잠옷,0,5047,pink pajamas
+소품/보라 우산,0,5016,purple umbrella
+양말/노란 니삭,0,5011,yellow thighhighs
+옷/프릴 리본,0,5010,frilled ribbon
+옷/헐렁한 벨트,0,4969,loose belt
+옷/회색 넥타이,0,4965,grey necktie
+머리/물고기 머리장식,0,4963,fish hair ornament
+옷/금색 갑옷,0,4957,gold armor
+옷/주황 바지,0,4927,orange pants
+머리/갈색 머리띠,0,4903,brown hairband
+자세/지팡이 들기,0,4897,holding cane
+몸/보라 뿔,0,4896,purple horns
+소품/검은 장미,0,4882,black rose
+옷/교차 끈 드레스,0,4882,cross-laced dress
+소품/노란 가방,0,4879,yellow bag
+옷/짝짝이 비키니,0,4875,mismatched bikini
+신발/주황 신발,0,4867,orange shoes
+소품/초록 초커,0,4866,green choker
+머리/눈송이 머리장식,0,4860,snowflake hair ornament
+옷/갈색 넥타이,0,4856,brown necktie
+옷/멀티컬러 레오타드,0,4855,multicolored leotard
+옷/등 파인 레오타드,0,4850,backless leotard
+몸/회색 꼬리,0,4828,grey tail
+옷/멀티컬러 셔츠,0,4816,multicolored shirt
+소품/파란 완장,0,4814,blue armband
+옷/아쿠아 비키니,0,4812,aqua bikini
+옷/흰 볼레로,0,4781,white shrug
+옷/줄무늬 반바지,0,4777,striped shorts
+옷/비치는 레오타드,0,4769,see-through leotard
+양말/초록 양말,0,4761,green socks
+음식/새우,0,4760,shrimp
+옷/토끼 무늬,0,4747,rabbit print
+옷/회색 벨트,0,4738,grey belt
+얼굴/초록 입술,0,4720,green lips
+옷/짧은 후드티,0,4717,cropped hoodie
+몸/가짜 날개,0,4714,fake wings
+옷/재킷 없음,0,4704,no jacket
+몸/부서진 뿔,0,4689,broken horn
+소품/금색 반지,0,4677,gold ring
+옷/골지 드레스,0,4668,ribbed dress
+동물/판다,0,4665,panda
+옷/해골 무늬,0,4631,skull print
+옷/회색 목도리,0,4617,grey scarf
+옷/보라 케이프,0,4610,purple capelet
+옷/분홍 보디수트,0,4599,pink bodysuit
+옷/세로줄 치마,0,4580,vertical-striped skirt
+옷/징 박힌 벨트,0,4573,studded belt
+소품/투명 우산,0,4565,transparent umbrella
+배경/나무 테이블,0,4565,wooden table
+옷/파란 칼라,0,4564,blue collar
+자세/팬티 들기,0,4545,holding panties
+속옷/레이스 브라,0,4544,lace bra
+소품/안경 없음,0,4536,no eyewear
+몸/박쥐 귀,0,4520,bat ears
+양말/분홍 팬티스타킹,0,4510,pink pantyhose
+옷/고르지 않은 소매,0,4503,uneven sleeves
+양말/멀티컬러 니삭,0,4495,multicolored thighhighs
+옷/주황 보디수트,0,4488,orange bodysuit
+배경/빨간 하늘,0,4488,red sky
+옷/흰 롬퍼,0,4483,white romper
+옷/분홍 조끼,0,4472,pink vest
+옷/줄무늬 스웨터,0,4470,striped sweater
+모자/날개 달린 헬멧,0,4470,winged helmet
+동물/돼지,0,4460,pig
+옷/주황 목도리,0,4453,orange scarf
+옷/빨간 원피스 수영복,0,4433,red one-piece swimsuit
+옷/갈색 기모노,0,4429,brown kimono
+속옷/줄무늬 브라,0,4393,striped bra
+소품/별 초커,0,4385,star choker
+옷/노란 바지,0,4374,yellow pants
+머리/푹신한 머리,0,4366,fluffy hair
+머리/금색 머리띠,0,4355,gold hairband
+옷/빨간 후드,0,4334,red hood
+옷/세일러 비키니,0,4326,sailor bikini
+소품/빛나는 검,0,4312,glowing sword
+자세/베개 들기,0,4301,holding pillow
+옷/털 달린 치마,0,4296,fur-trimmed skirt
+몸/꽃 문신,0,4295,flower tattoo
+옷/체크무늬 바지,0,4282,plaid pants
+옷/레이스 달린 소매,0,4281,lace-trimmed sleeves
+머리/파란 머리띠,0,4268,blue headband
+옷/칼라 있는 망토,0,4260,collared cape
+옷/헐렁한 보타이,0,4258,loose bowtie
+소품/별 목걸이,0,4254,star necklace
+옷/초록 앞치마,0,4250,green apron
+소품/금색 왕관,0,4231,gold crown
+자세/풍선 들기,0,4224,holding balloon
+자세/신발 들기,0,4222,holding shoes
+옷/멀티컬러 코트,0,4217,multicolored coat
+옷/퐁퐁한 반바지,0,4208,puffy shorts
+몸/보라 털,0,4206,purple fur
+옷/갈색 코르셋,0,4203,brown corset
+모자/학교 모자,0,4201,school hat
+옷/산타 비키니,0,4175,santa bikini
+옷/파란 로브,0,4174,blue robe
+동물/흰 뱀,0,4162,white snake
+옷/분홍 칼라,0,4154,pink collar
+옷/보라 후드티,0,4151,purple hoodie
+소품/가시 달린 초커,0,4130,spiked choker
+옷/무늬 보타이,0,4109,print bowtie
+옷/그라데이션 드레스,0,4103,gradient dress
+옷/파란 망토(클로크),0,4101,blue cloak
+옷/십자가 무늬,0,4076,cross print
+옷/체크무늬 재킷,0,4074,plaid jacket
+양말/골지 양말,0,4065,ribbed socks
+얼굴/파란 혀,0,4053,blue tongue
+옷/회색 보디수트,0,4045,grey bodysuit
+모자/파란 헬멧,0,4039,blue helmet
+소품/노란 초커,0,4039,yellow choker
+옷/후드 달린 로브,0,4030,hooded robe
+머리/곰 머리장식,0,4027,bear hair ornament
+몸/분홍 날개,0,4022,pink wings
+자세/물 총 들기,0,4015,holding water gun
+양말/주황 니삭,0,4010,orange thighhighs
+옷/리본 단 칼라,0,4005,ribbon-trimmed collar
+옷/검은 후드,0,3984,black hood
+옷/털 달린 망토(클로크),0,3979,fur-trimmed cloak
+눈/흰자 없음,0,3969,no sclera
+옷/흰 후드,0,3941,white hood
+얼굴/곱슬 눈썹,0,3920,curly eyebrows
+동물/거북이,0,3916,turtle
+동물/다람쥐,0,3912,squirrel
+옷/보라 세일러복,0,3911,purple serafuku
+소품/동물 가방,0,3906,animal bag
+옷/흰 세일러복,0,3904,white serafuku
+몸/노란 날개,0,3892,yellow wings
+옷/팽팽한 드레스,0,3889,taut dress
+옷/검은 부루마,0,3887,black buruma
+모자/날개 달린 모자,0,3878,winged hat
+옷/프릴 커프스,0,3877,frilled cuffs
+옷/노란 소매,0,3866,yellow sleeves
+소품/금색 암릿,0,3865,gold armlet
+모자/체크무늬 모자,0,3863,plaid hat
+소품/검은 티아라,0,3861,black tiara
+소품/멀티컬러 헤일로,0,3838,multicolored halo
+옷/털 달린 기모노,0,3837,fur-trimmed kimono
+양말/힙하이,0,3824,hiphighs
+옷/옆매듭 레오타드,0,3822,side-tie leotard
+소품/검은 완장,0,3820,black armband
+양말/아가일 팬티스타킹,0,3818,argyle pantyhose
+눈/파란 흰자,0,3801,blue sclera
+양말/노란 양말,0,3791,yellow socks
+옷/털 달린 칼라,0,3788,fur-trimmed collar
+옷/프릴 반바지,0,3774,frilled shorts
+양말/세로줄 팬티스타킹,0,3774,vertical-striped pantyhose
+옷/분홍 세일러 칼라,0,3754,pink sailor collar
+머리/비대칭 옆머리,0,3737,asymmetrical sidelocks
+속옷/회색 스포츠 브라,0,3724,grey sports bra
+소품/별 브로치,0,3724,star brooch
+옷/가죽 벨트,0,3720,leather belt
+옷/꽉 끼는 셔츠,0,3720,tight shirt
+소품/오니 마스크,0,3717,oni mask
+옷/노란 망토,0,3709,yellow cape
+동물/공룡,0,3707,dinosaur
+옷/파란 튜닉,0,3701,blue tunic
+옷/갈색 망토(클로크),0,3700,brown cloak
+옷/물방울무늬 드레스,0,3696,polka dot dress
+소품/보라 밧줄,0,3696,purple rope
+소품/짧은 검,0,3687,short sword
+소품/노란 깃털,0,3686,yellow feathers
+모자/빨간 헬멧,0,3683,red helmet
+옷/퐁퐁한 바지,0,3679,puffy pants
+소품/빨간 꽃잎,0,3673,red petals
+옷/흰 코르셋,0,3670,white corset
+옷/투톤 리본,0,3669,two-tone ribbon
+소품/초록 꽃,0,3664,green flower
+옷/구름 무늬,0,3653,cloud print
+옷/짧은 스웨터,0,3647,cropped sweater
+머리/주황 곱창 머리끈,0,3642,orange scrunchie
+양말/보라 양말,0,3638,purple socks
+동물/거미,0,3623,spider
+옷/멀티컬러 리본,0,3620,multicolored bow
+동물/고래,0,3619,whale
+배경/나무 벽,0,3610,wooden wall
+속옷/스트랩리스 브라,0,3603,strapless bra
+옷/주황 후드티,0,3598,orange hoodie
+옷/갈색 보타이,0,3596,brown bowtie
+소품/스포츠 자동차,0,3595,sports car
+모자/검은 헬멧,0,3590,black helmet
+소품/빨간 마스크,0,3587,red mask
+옷/갈색 앞치마,0,3585,brown apron
+옷/초록 케이프,0,3573,green capelet
+옷/빨간 민소매,0,3565,red tank top
+몸/주황 피부,0,3557,orange skin
+양말/비치는 레그웨어,0,3554,see-through legwear
+옷/라텍스 장갑,0,3553,latex gloves
+옷/줄무늬 기모노,0,3552,striped kimono
+몸/빨간 꼬리,0,3548,red tail
+옷/체크무늬 비키니,0,3542,plaid bikini
+성인/어두운 항문,0,3533,dark anus
+옷/털 달린 반바지,0,3530,fur-trimmed shorts
+옷/투톤 레오타드,0,3529,two-tone leotard
+몸/기계 귀,0,3525,mechanical ears
+옷/핀스트라이프 재킷,0,3524,pinstripe jacket
+옷/망사 장갑,0,3520,fishnet gloves
+옷/찢어진 레오타드,0,3509,torn leotard
+머리/색 있는 앞머리,0,3507,colored bangs
+몸/초록 털,0,3488,green fur
+옷/초록 보디수트,0,3486,green bodysuit
+옷/깃털 단 소매,0,3479,feather-trimmed sleeves
+소품/가시 달린 암릿,0,3467,spiked armlet
+옷/보라 애스콧 타이,0,3465,purple ascot
+머리/금속 머리띠,0,3453,metal hairband
+옷/체크 기모노,0,3417,checkered kimono
+소품/주황 초커,0,3411,orange choker
+옷/핀스트라이프 셔츠,0,3410,pinstripe shirt
+속옷/열린 브라,0,3409,open bra
+옷/세로줄 재킷,0,3408,vertical-striped jacket
+소품/흰 우산,0,3408,white umbrella
+옷/빨간 앞치마,0,3406,red apron
+소품/흰 백합,0,3406,white lily
+속옷/노란 브라,0,3403,yellow bra
+옷/보라 목스카프,0,3394,purple neckerchief
+소품/부서진 헤일로,0,3393,broken halo
+소품/초록 가방,0,3383,green bag
+소품/벗은 부츠,0,3376,unworn boots
+옷/초록 튜닉,0,3374,green tunic
+소품/빨간 십자가,0,3371,red cross
+옷/분홍 캐미솔,0,3369,pink camisole
+소품/분홍 보석,0,3367,pink gem
+소품/해골 귀걸이,0,3366,skull earrings
+속옷/회색 브라,0,3364,grey bra
+소품/벗은 양말,0,3357,unworn socks
+동물/사자,0,3339,lion
+소품/노란 완장,0,3325,yellow armband
+몸/초록 꼬리,0,3324,green tail
+옷/풀린 넥타이,0,3321,undone necktie
+옷/오프숄더 재킷,0,3313,off-shoulder jacket
+머리/투톤 머리띠,0,3309,two-tone hairband
+소품/파란 깃털,0,3308,blue feathers
+동물/원숭이,0,3302,monkey
+옷/체크 넥타이,0,3298,checkered necktie
+옷/검은 손목 커프스,0,3295,black wrist cuffs
+몸/갈색 날개,0,3293,brown wings
+옷/노란 앞치마,0,3287,yellow apron
+옷/분홍 케이프,0,3256,pink capelet
+옷/분홍 원피스 수영복,0,3255,pink one-piece swimsuit
+옷/프릴 세일러 칼라,0,3254,frilled sailor collar
+옷/파란 타바드,0,3252,blue tabard
+자세/초콜릿 들기,0,3251,holding chocolate
+소품/트럭,0,3246,truck
+옷/무늬 재킷,0,3239,print jacket
+옷/분홍 망토,0,3238,pink cape
+얼굴/긴 수염,0,3229,long beard
+신발/투톤 신발,0,3226,two-tone shoes
+배경/열린 창문,0,3223,open window
+옷/칼라 있는 조끼,0,3214,collared vest
+옷/줄무늬 장갑,0,3213,striped gloves
+옷/회색 리본,0,3197,grey ribbon
+머리/회색 머리띠,0,3192,grey hairband
+옷/파란 잠옷,0,3190,blue pajamas
+옷/투톤 보타이,0,3176,two-tone bowtie
+소품/아쿠아 헤일로,0,3164,aqua halo
+신발/교차 끈 신발,0,3149,cross-laced shoes
+몸/주황 꼬리,0,3133,orange tail
+몸/분홍 뿔,0,3129,pink horns
+소품/부서진 하트,0,3127,broken heart
+몸/회색 손톱,0,3104,grey nails
+옷/파란 베일,0,3103,blue veil
+옷/노란 보디수트,0,3099,yellow bodysuit
+옷/교차 끈 소매,0,3094,cross-laced sleeves
+몸/하트 꼬리,0,3091,heart tail
+옷/민소매 코트,0,3083,sleeveless coat
+소품/별 장식,0,3082,star ornament
+눈/초록 눈동자,0,3081,green pupils
+옷/파란 민소매,0,3074,blue tank top
+동물/봉제 상어,0,3068,stuffed shark
+옷/주황 조끼,0,3067,orange vest
+속옷/무늬 브라,0,3067,print bra
+몸/노란 꼬리,0,3061,yellow tail
+양말/털 달린 레그웨어,0,3053,fur-trimmed legwear
+동물/흰 나비,0,3050,white butterfly
+소품/벗은 가방,0,3044,unworn bag
+소품/레이스 초커,0,3037,lace choker
+음식/주스,0,3036,juice
+신발/빨간 샌들,0,3032,red sandals
+옷/투톤 원피스 수영복,0,3024,two-tone one-piece swimsuit
+소품/해골 마스크,0,3022,skull mask
+옷/프릴 레오타드,0,3021,frilled leotard
+신발/멀티컬러 부츠,0,3021,multicolored boots
+옷/짝짝이 소매,0,3018,mismatched sleeves
+머리/줄무늬 머리띠,0,3011,striped hairband
+옷/비치는 재킷,0,3006,see-through jacket
+소품/주황 헤일로,0,2995,orange halo
+옷/초록 벨트,0,2987,green belt
+옷/갈색 후드티,0,2981,brown hoodie
+머리/초록 머리띠,0,2980,green headband
+옷/십자가 타이,0,2979,cross tie
+양말/흰 레깅스,0,2979,white leggings
+얼굴/가짜 콧수염,0,2977,fake mustache
+옷/갈색 소매,0,2976,brown sleeves
+옷/옆트임 기모노,0,2975,sideless kimono
+옷/카모 재킷,0,2972,camouflage jacket
+옷/보라 베일,0,2969,purple veil
+옷/열린 벨트,0,2958,open belt
+옷/오프숄더 비키니,0,2956,off-shoulder bikini
+몸/오버사이즈 날개,0,2953,oversized wings
+옷/민소매 후드티,0,2953,sleeveless hoodie
+모자/아쿠아 모자,0,2952,aqua hat
+옷/회색 민소매,0,2952,grey tank top
+옷/교차 끈 상의,0,2949,cross-laced top
+옷/카모 바지,0,2942,camouflage pants
+옷/회색 비키니,0,2941,grey bikini
+옷/주황 벨트,0,2927,orange belt
+소품/가시 달린 헤일로,0,2925,spiked halo
+양말/아가일 니삭,0,2919,argyle thighhighs
+얼굴/눈썹 없음,0,2915,no eyebrows
+눈/보라 눈동자,0,2906,purple pupils
+옷/가죽 장갑,0,2905,leather gloves
+옷/초록 망토(클로크),0,2904,green cloak
+양말/주황 팬티스타킹,0,2904,orange pantyhose
+동물/돌고래,0,2897,dolphin
+동물/보라 나비,0,2888,purple butterfly
+몸/투명 날개,0,2879,transparent wings
+옷/겹친 셔츠,0,2865,layered shirt
+눈/기계 눈,0,2861,mechanical eyes
+배경/노란 하늘,0,2848,yellow sky
+옷/다중 끈 비키니 상의,0,2846,multi-strapped bikini top
+소품/벗은 비키니 상의,0,2837,unworn bikini top
+머리/보라 곱창 머리끈,0,2822,purple scrunchie
+소품/꽃 목걸이,0,2821,flower necklace
+옷/프릴 애스콧 타이,0,2805,frilled ascot
+배경/분홍 하늘,0,2799,pink sky
+옷/분홍 손목 커프스,0,2789,pink wrist cuffs
+옷/꽉 끼는 드레스,0,2787,tight dress
+속옷/파란 스포츠 브라,0,2785,blue sports bra
+머리/드릴 포니테일,0,2783,drill ponytail
+옷/주황 스웨터,0,2783,orange sweater
+몸/초록 날개,0,2781,green wings
+속옷/얼룩진 팬티,0,2773,stained panties
+소품/벗은 샌들,0,2770,unworn sandals
+소품/나무 검,0,2767,wooden sword
+몸/금속 피부,0,2758,metal skin
+머리/딸기 머리장식,0,2758,strawberry hair ornament
+배경/둥근 테이블,0,2756,round table
+옷/레이스 장갑,0,2748,lace gloves
+옷/분홍 애스콧 타이,0,2746,pink ascot
+옷/리본 단 드레스,0,2745,ribbon-trimmed dress
+옷/세로줄 바지,0,2745,vertical-striped pants
+몸/회색 날개,0,2735,grey wings
+옷/투톤 망토,0,2730,two-tone cape
+자세/리본 들기,0,2724,holding ribbon
+옷/후드 달린 스웨터,0,2719,hooded sweater
+양말/초록 팬티스타킹,0,2716,green pantyhose
+몸/짧은 꼬리,0,2705,short tail
+몸/가시 달린 꼬리,0,2703,spiked tail
+소품/아쿠아 보석,0,2701,aqua gem
+옷/갈색 비키니,0,2698,brown bikini
+옷/투톤 목도리,0,2697,two-tone scarf
+소품/어두운 헤일로,0,2688,dark halo
+옷/꽃무늬 무늬 비키니,0,2683,floral print bikini
+소품/꽃 브로치,0,2679,flower brooch
+신발/주황 부츠,0,2670,orange boots
+옷/파란 후드,0,2666,blue hood
+소품/검은 우산,0,2662,black umbrella
+소품/벗은 장갑,0,2662,unworn gloves
+옷/노란 레오타드,0,2662,yellow leotard
+머리/사탕 머리장식,0,2657,candy hair ornament
+자세/장신구 들기,0,2643,holding jewelry
+자세/편지 들기,0,2634,holding letter
+옷/골지 소매,0,2633,ribbed sleeves
+속옷/아쿠아 팬티,0,2632,aqua panties
+얼굴/검은 아이섀도,0,2632,black eyeshadow
+옷/옆트임 드레스,0,2629,sideless dress
+옷/찢어진 목도리,0,2619,torn scarf
+옷/세로줄 반바지,0,2603,vertical-striped shorts
+소품/기계 연필,0,2598,mechanical pencil
+옷/하이웨이스트 벨트,0,2595,high-waist belt
+옷/거대한 리본,0,2581,huge bow
+옷/투톤 코트,0,2573,two-tone coat
+옷/하트 칼라,0,2570,heart collar
+옷/보라 카디건,0,2569,purple cardigan
+옷/칼라 있는 케이프,0,2566,collared capelet
+옷/투톤 후드티,0,2562,two-tone hoodie
+옷/회색 케이프,0,2558,grey capelet
+배경/나무 의자,0,2558,wooden chair
+속옷/물방울무늬 브라,0,2557,polka dot bra
+옷/개구리 무늬,0,2556,frog print
+성인/십자가 니플 패치,0,2554,cross pasties
+동물/노란 나비,0,2554,yellow butterfly
+소품/주황 장미,0,2551,orange rose
+소품/닌자 마스크,0,2543,ninja mask
+옷/빨간 카디건,0,2539,red cardigan
+머리/뱀 머리,0,2538,snake hair
+옷/프릴 재킷,0,2528,frilled jacket
+모자/멀티컬러 모자,0,2525,multicolored hat
+소품/갈색 초커,0,2517,brown choker
+옷/레이스 달린 치마,0,2516,lace-trimmed skirt
+자세/피자 들기,0,2512,holding pizza
+옷/찢어진 장갑,0,2509,torn gloves
+소품/꽃 초커,0,2506,flower choker
+동물/빛나는 나비,0,2506,glowing butterfly
+옷/빨간 로브,0,2494,red robe
+옷/주황 세일러 칼라,0,2493,orange sailor collar
+소품/부서진 사슬,0,2491,broken chain
+양말/투톤 니삭,0,2484,two-tone thighhighs
+소품/벗은 코트,0,2482,unworn coat
+머리/벚 머리장식,0,2471,cherry hair ornament
+양말/골지 니삭,0,2450,ribbed thighhighs
+옷/회색 망토,0,2449,grey cape
+옷/옆트임 셔츠,0,2442,sideless shirt
+옷/찢어진 재킷,0,2432,torn jacket
+옷/회색 세일러복,0,2430,grey serafuku
+얼굴/짝짝이 눈썹,0,2430,mismatched eyebrows
+옷/검은 반도 브라,0,2426,black bandeau
+몸/큰 귀,0,2419,large ears
+소품/금색 동전,0,2412,gold coin
+옷/프릴 캐미솔,0,2404,frilled camisole
+자세/케이크 들기,0,2404,holding cake
+몸/그려진 귀,0,2395,drawn ears
+옷/물고기 무늬,0,2388,fish print
+옷/아쿠아 장갑,0,2387,aqua gloves
+소품/갈색 헤일로,0,2385,brown halo
+배경/검은 하늘,0,2379,black sky
+소품/동물 해골,0,2376,animal skull
+모자/흰 헬멧,0,2373,white helmet
+소품/십자가 헤일로,0,2371,cross halo
+신발/가죽 부츠,0,2364,leather boots
+소품/레이스 달린 초커,0,2361,lace-trimmed choker
+옷/멀티컬러 기모노,0,2360,multicolored kimono
+옷/파란 캐미솔,0,2357,blue camisole
+옷/망사 소매,0,2347,fishnet sleeves
+배경/둥근 창문,0,2347,round window
+옷/주황 소매,0,2343,orange sleeves
+옷/초록 민소매,0,2332,green tank top
+옷/꽃무늬 무늬 드레스,0,2331,floral print dress
+소품/해골 장식,0,2331,skull ornament
+소품/벗은 드레스,0,2329,unworn dress
+옷/보라 원피스 수영복,0,2326,purple one-piece swimsuit
+모자/투톤 모자,0,2324,two-tone hat
+소품/초록 완장,0,2318,green armband
+소품/수정 귀걸이,0,2315,crystal earrings
+몸/초록 뿔,0,2307,green horns
+머리/금발 브릿지,0,2306,blonde streaks
+소품/마스크 없음,0,2304,no mask
+머리/빛나는 머리,0,2303,glowing hair
+양말/주황 양말,0,2296,orange socks
+머리/줄무늬 머리,0,2293,striped hair
+옷/회색 레오타드,0,2280,grey leotard
+소품/투톤 헤일로,0,2267,two-tone halo
+몸/별 문신,0,2259,star tattoo
+옷/장갑 없음,0,2258,no gloves
+동물/소,0,2255,cow
+눈/초록 흰자,0,2253,green sclera
+옷/분홍 띠,0,2252,pink sash
+소품/유리 병,0,2251,glass bottle
+옷/가죽 바지,0,2248,leather pants
+옷/노란 민소매,0,2243,yellow tank top
+옷/보라 칼라,0,2238,purple collar
+소품/빨간 깃털,0,2231,red feathers
+몸/투톤 뿔,0,2231,two-tone horns
+옷/흰 숄,0,2228,white shawl
+머리/주황 머리띠,0,2219,orange headband
+옷/투톤 바지,0,2206,two-tone pants
+몸/푹신한 꼬리,0,2202,fluffy tail
+옷/초록 카디건,0,2202,green cardigan
+옷/보라 타바드,0,2196,purple tabard
+얼굴/보라 혀,0,2195,purple tongue
+몸/갈색 손톱,0,2192,brown nails
+머리/가시 달린 머리띠,0,2178,spiked hairband
+옷/흰 벙어리장갑,0,2175,white mittens
+눈/짝짝이 흰자,0,2167,mismatched sclera
+신발/파란 샌들,0,2161,blue sandals
+속옷/찢어진 팬티,0,2159,torn panties
+소품/십자가 초커,0,2157,cross choker
+옷/레이스 달린 장갑,0,2157,lace-trimmed gloves
+옷/무늬 후드티,0,2156,print hoodie
+양말/망사 양말,0,2154,fishnet socks
+옷/갈색 레오타드,0,2146,brown leotard
+옷/주황 애스콧 타이,0,2132,orange ascot
+옷/빨간 코르셋,0,2124,red corset
+소품/흰 완장,0,2119,white armband
+머리/수정 머리,0,2115,crystal hair
+옷/주름 반바지,0,2108,pleated shorts
+옷/노란 우비,0,2107,yellow raincoat
+몸/검은 비늘,0,2102,black scales
+옷/털 달린 셔츠,0,2093,fur-trimmed shirt
+몸/빛나는 문신,0,2092,glowing tattoo
+옷/골지 레오타드,0,2089,ribbed leotard
+신발/투톤 부츠,0,2089,two-tone boots
+자세/동전 들기,0,2074,holding coin
+옷/칼라 있는 볼레로,0,2073,collared shrug
+양말/털 달린 니삭,0,2073,fur-trimmed thighhighs
+소품/하트 펜던트,0,2071,heart pendant
+소품/노란 보석,0,2071,yellow gem
+소품/벗은 수영복,0,2070,unworn swimsuit
+옷/민소매 보디수트,0,2069,sleeveless bodysuit
+옷/후드 달린 카디건,0,2068,hooded cardigan
+옷/긴 리본,0,2067,long ribbon
+옷/초록 하카마,0,2066,green hakama
+속옷/주황 팬티,0,2064,orange panties
+배경/금 간 벽,0,2056,cracked wall
+소품/파란 반다나,0,2048,blue bandana
+양말/하이웨이스트 팬티스타킹,0,2047,high-waist pantyhose
+신발/분홍 슬리퍼,0,2046,pink slippers
+자세/해골 들기,0,2032,holding skull
+속옷/갈색 팬티,0,2027,brown panties
+옷/빨간 타바드,0,2026,red tabard
+옷/흰 반도 브라,0,2022,white bandeau
+머리/노란 머리띠,0,2021,yellow headband
+옷/갈색 칼라,0,2020,brown collar
+눈/물결 눈,0,2014,wavy eyes
+옷/투톤 넥타이,0,2008,two-tone necktie
+양말/그라데이션 레그웨어,0,2007,gradient legwear
+옷/파란 손목 커프스,0,2005,blue wrist cuffs
+머리/아쿠아 머리띠,0,1997,aqua hairband
+소품/날개 달린 하트,0,1993,winged heart
+배경/거대한 달,0,1990,huge moon
+양말/투톤 레그웨어,0,1987,two-tone legwear
+옷/빨간 한푸,0,1971,red hanfu
+옷/파란 숄,0,1969,blue shawl
+동물/회색 고양이,0,1968,grey cat
+옷/보라 로브,0,1968,purple robe
+옷/헐렁한 셔츠,0,1966,loose shirt
+머리/초록 곱창 머리끈,0,1965,green scrunchie
+옷/노란 망토(클로크),0,1964,yellow cloak
+옷/검은 베이비돌,0,1959,black babydoll
+옷/검은 슬링샷 수영복,0,1956,black slingshot swimsuit
+옷/후드 달린 드레스,0,1956,hooded dress
+옷/회색 보타이,0,1955,grey bowtie
+옷/주황 민소매,0,1955,orange tank top
+얼굴/거대한 눈썹,0,1951,huge eyebrows
+옷/물방울무늬 셔츠,0,1949,polka dot shirt
+모자/흰 보닛,0,1946,white bonnet
+옷/흰 베이비돌,0,1945,white babydoll
+자세/하트 들기,0,1943,holding heart
+옷/핀스트라이프 드레스,0,1943,pinstripe dress
+몸/그라데이션 뿔,0,1939,gradient horns
+소품/징 박힌 초커,0,1938,studded choker
+양말/노란 팬티스타킹,0,1937,yellow pantyhose
+몸/줄무늬 털,0,1932,striped fur
+옷/주황 망토,0,1931,orange cape
+소품/플라스틱 병,0,1931,plastic bottle
+옷/열린 보디수트,0,1925,open bodysuit
+소품/하트 모양 보석,0,1914,heart-shaped gem
+옷/줄무늬 후드티,0,1912,striped hoodie
+옷/아쿠아 기모노,0,1911,aqua kimono
+옷/흰 나이트가운,0,1908,white nightgown
+소품/수정 공,0,1907,crystal ball
+소품/불타는 검,0,1905,flaming sword
+옷/줄무늬 조끼,0,1895,striped vest
+눈/주황 눈동자,0,1893,orange pupils
+속옷/투톤 스포츠 브라,0,1892,two-tone sports bra
+옷/물방울무늬 치마,0,1888,polka dot skirt
+옷/오프숄더 원피스 수영복,0,1887,off-shoulder one-piece swimsuit
+동물/검은 새,0,1885,black bird
+옷/초록 갑옷,0,1877,green armor
+소품/짝짝이 귀걸이,0,1877,mismatched earrings
+옷/새 무늬,0,1874,bird print
+옷/빨간 벙어리장갑,0,1865,red mittens
+옷/초록 띠,0,1862,green sash
+소품/회색 꽃,0,1860,grey flower
+소품/광선검,0,1860,lightsaber
+옷/무늬 소매,0,1857,print sleeves
+몸/그라데이션 날개,0,1854,gradient wings
+배경/흰 하늘,0,1851,white sky
+양말/광택 있는 레그웨어,0,1850,shiny legwear
+옷/회색 망토(클로크),0,1848,grey cloak
+소품/분홍 우산,0,1842,pink umbrella
+옷/흰 사롱,0,1842,white sarong
+자세/사슬 들기,0,1838,holding chain
+신발/아쿠아 신발,0,1836,aqua shoes
+소품/파란 우산,0,1831,blue umbrella
+옷/파란 점프수트,0,1827,blue jumpsuit
+옷/갈색 띠,0,1826,brown sash
+머리/초록 브릿지,0,1823,green streaks
+소품/꽃 팔찌,0,1822,flower bracelet
+옷/숫자 무늬,0,1822,number print
+옷/투톤 베일,0,1820,two-tone veil
+옷/가죽 갑옷,0,1818,leather armor
+소품/징 박힌 팔찌,0,1814,studded bracelet
+옷/후드 달린 조끼,0,1812,hooded vest
+소품/초록 머릿수건,0,1810,green headscarf
+소품/프릴 완장,0,1807,frilled armband
+양말/라텍스 레그웨어,0,1801,latex legwear
+소품/회색 초커,0,1797,grey choker
+옷/무늬 반바지,0,1792,print shorts
+양말/찢어진 보디스타킹,0,1791,torn bodystocking
+몸/사슴 꼬리,0,1790,deer tail
+옷/분홍 민소매,0,1790,pink tank top
+옷/투톤 기모노,0,1790,two-tone kimono
+몸/긴 뿔,0,1789,long horns
+옷/투톤 스웨터,0,1788,two-tone sweater
+몸/빛나는 날개,0,1787,glowing wings
+옷/젖은 드레스,0,1786,wet dress
+소품/새 마스크,0,1785,bird mask
+옷/레이스 달린 셔츠,0,1780,lace-trimmed shirt
+성인/별 니플 패치,0,1780,star pasties
+소품/멀티컬러 꽃,0,1775,multicolored flower
+옷/흰 잠옷,0,1771,white pajamas
+옷/세로줄 소매,0,1768,vertical-striped sleeves
+몸/멀티컬러 꼬리,0,1762,multicolored tail
+소품/초록 깃털,0,1761,green feathers
+옷/보라 갑옷,0,1758,purple armor
+옷/흰 타바드,0,1750,white tabard
+소품/고양이 가방,0,1748,cat bag
+옷/무늬 하오리,0,1748,print haori
+속옷/빨간 스포츠 브라,0,1743,red sports bra
+옷/세로줄 기모노,0,1743,vertical-striped kimono
+옷/파란 사롱,0,1737,blue sarong
+소품/안대 없음,0,1736,no eyepatch
+옷/무늬 넥타이,0,1732,print necktie
+자세/물고기 들기,0,1730,holding fish
+옷/골지 보디수트,0,1727,ribbed bodysuit
+소품/눈가리개 없음,0,1726,no blindfold
+소품/뱀 귀걸이,0,1720,snake earrings
+옷/세로줄 비키니,0,1717,vertical-striped bikini
+옷/초록 로브,0,1706,green robe
+옷/번개 무늬,0,1702,lightning bolt print
+얼굴/색 있는 치아,0,1699,colored teeth
+옷/줄무늬 코트,0,1695,striped coat
+옷/주황 점프수트,0,1693,orange jumpsuit
+옷/고무 장갑,0,1684,rubber gloves
+옷/초록 원피스 수영복,0,1678,green one-piece swimsuit
+옷/해골 무늬,0,1678,skeleton print
+소품/해골 목걸이,0,1676,skull necklace
+옷/파란 하오리,0,1674,blue haori
+옷/후드 달린 보디수트,0,1667,hooded bodysuit
+속옷/체크무늬 팬티,0,1663,plaid panties
+몸/빛나는 뿔,0,1660,glowing horns
+눈/하트 모양 눈,0,1659,heart-shaped eyes
+옷/초록 애스콧 타이,0,1657,green ascot
+소품/금색 티아라,0,1651,gold tiara
+속옷/다중 끈 팬티,0,1651,multi-strapped panties
+동물/흰 호랑이,0,1651,white tiger
+옷/보라 망토(클로크),0,1650,purple cloak
+옷/멀티컬러 후드티,0,1642,multicolored hoodie
+몸/태양 문신,0,1636,sun tattoo
+머리/분홍 머리띠,0,1634,pink headband
+소품/별 모양 안경,0,1634,star-shaped eyewear
+몸/곰 꼬리,0,1631,bear tail
+옷/광택 있는 수영복,0,1627,shiny swimsuit
+옷/멀티컬러 망토,0,1622,multicolored cape
+몸/날개 달린 하트 문신,0,1619,winged heart tattoo
+옷/물방울무늬 수영복,0,1616,polka dot swimsuit
+자세/열쇠 들기,0,1612,holding key
+자세/목걸이 들기,0,1610,holding necklace
+자세/십자가 들기,0,1608,holding cross
+소품/말굽,0,1608,horseshoe
+몸/용 귀,0,1605,dragon ears
+신발/금색 신발,0,1605,gold shoes
+속옷/아쿠아 브라,0,1602,aqua bra
+소품/흰 꽃잎,0,1601,white petals
+옷/체크 셔츠,0,1600,checkered shirt
+소품/벗은 배낭,0,1598,unworn backpack
+소품/회색 가방,0,1592,grey bag
+옷/회색 앞치마,0,1589,grey apron
+소품/나비 장식,0,1584,butterfly ornament
+옷/멀티컬러 넥타이,0,1581,multicolored necktie
+머리/번개 머리장식,0,1580,lightning bolt hair ornament
+얼굴/초록 아이섀도,0,1579,green eyeshadow
+옷/투톤 반바지,0,1577,two-tone shorts
+소품/프릴 손목밴드,0,1575,frilled wristband
+모자/잎 모자 장식,0,1574,leaf hat ornament
+머리/레이스 달린 머리띠,0,1572,lace-trimmed hairband
+옷/멀티컬러 목도리,0,1572,multicolored scarf
+머리/아쿠아 브릿지,0,1569,aqua streaks
+자세/지도 들기,0,1563,holding map
+옷/핀스트라이프 바지,0,1563,pinstripe pants
+옷/찢어진 코트,0,1563,torn coat
+소품/파란 꽃잎,0,1562,blue petals
+음식/초록 차,0,1555,green tea
+옷/물방울무늬 잠옷,0,1554,polka dot pajamas
+속옷/스포츠 팬티,0,1548,sports panties
+동물/주황 고양이,0,1541,orange cat
+소품/젖은 수건,0,1541,wet towel
+옷/초록 칼라,0,1540,green collar
+몸/투톤 날개,0,1536,two-tone wings
+양말/세로줄 양말,0,1534,vertical-striped socks
+자세/수영복 들기,0,1532,holding swimsuit
+옷/빨간 하오리,0,1532,red haori
+모자/토끼 모자,0,1529,rabbit hat
+옷/흰 튜닉,0,1529,white tunic
+배경/금 간 바닥,0,1521,cracked floor
+소품/프릴 우산,0,1515,frilled umbrella
+속옷/갈색 브라,0,1514,brown bra
+옷/가시 달린 재킷,0,1510,spiked jacket
+머리/체크 머리띠,0,1505,checkered hairband
+양말/한쪽 망사 레그웨어,0,1504,single fishnet legwear
+옷/노란 캐미솔,0,1493,yellow camisole
+옷/금색 벨트,0,1491,gold belt
+음식/딸기 케이크,0,1491,strawberry cake
+옷/빨간 반도 브라,0,1490,red bandeau
+동물/빨간 나비,0,1486,red butterfly
+옷/찢어진 망토(클로크),0,1485,torn cloak
+옷/갈색 목스카프,0,1484,brown neckerchief
+자세/도넛 들기,0,1483,holding donut
+옷/아쿠아 레오타드,0,1481,aqua leotard
+자세/셔츠 들기,0,1477,holding shirt
+몸/흰 비늘,0,1475,white scales
+옷/아가일 스웨터,0,1467,argyle sweater
+옷/보라 하카마,0,1466,purple hakama
+소품/초록 반다나,0,1462,green bandana
+얼굴/갈색 입술,0,1461,brown lips
+옷/아쿠아 반바지,0,1460,aqua shorts
+옷/무늬 스웨터,0,1459,print sweater
+옷/분홍 하카마,0,1457,pink hakama
+소품/날개 달린 헤일로,0,1455,winged halo
+양말/아쿠아 니삭,0,1454,aqua thighhighs
+옷/주황 레오타드,0,1453,orange leotard
+소품/빨간 왕관,0,1453,red crown
+배경/부서진 창문,0,1450,broken window
+소품/벗은 비키니,0,1446,unworn bikini
+신발/날개 달린 신발,0,1444,winged shoes
+소품/벗은 넥타이,0,1435,unworn necktie
+옷/체크무늬 리본,0,1433,plaid ribbon
+소품/검은 반다나,0,1432,black bandana
+자세/보석 들기,0,1432,holding gem
+동물/봉제 펭귄,0,1431,stuffed penguin
+소품/갈색 꽃,0,1429,brown flower
+옷/찢어진 수영복,0,1427,torn swimsuit
+옷/무장한 레오타드,0,1425,armored leotard
+옷/흰 점프수트,0,1424,white jumpsuit
+옷/회색 갑옷,0,1423,grey armor
+옷/스트랩리스 원피스 수영복,0,1423,strapless one-piece swimsuit
+몸/찢어진 날개,0,1420,torn wings
+옷/체크 리본,0,1417,checkered bow
+옷/빨간 숄,0,1411,red shawl
+옷/검은 점프수트,0,1407,black jumpsuit
+모자/검은 보닛,0,1406,black bonnet
+옷/회색 캐미솔,0,1406,grey camisole
+옷/아쿠아 소매,0,1402,aqua sleeves
+옷/레이스 소매,0,1401,lace sleeves
+얼굴/노란 치아,0,1400,yellow teeth
+소품/하트 모양 장식,0,1399,heart-shaped ornament
+양말/교차 끈 레그웨어,0,1398,cross-laced legwear
+소품/고양이 마스크,0,1397,cat mask
+얼굴/아주 긴 혀,0,1396,very long tongue
+옷/교차 끈 치마,0,1394,cross-laced skirt
+자세/브라 들기,0,1394,holding bra
+옷/체크 띠,0,1393,checkered sash
+옷/갈색 벙어리장갑,0,1391,brown mittens
+몸/아쿠아 피부,0,1389,aqua skin
+옷/비치는 사롱,0,1385,see-through sarong
+옷/체크 드레스,0,1383,checkered dress
+몸/돼지 귀,0,1381,pig ears
+옷/검은 멜빵바지,0,1380,black overalls
+소품/보라 가방,0,1379,purple bag
+소품/아쿠아 꽃,0,1375,aqua flower
+옷/털 달린 레오타드,0,1375,fur-trimmed leotard
+옷/줄무늬 잠옷,0,1374,striped pajamas
+자세/밧줄 들기,0,1373,holding rope
+옷/빨간 손목 커프스,0,1370,red wrist cuffs
+동물/파란 새,0,1365,blue bird
+자세/방울 들기,0,1362,holding bell
+몸/나비 문신,0,1361,butterfly tattoo
+속옷/비치는 팬티,0,1361,see-through panties
+옷/주황 코트,0,1360,orange coat
+신발/뾰족한 신발,0,1360,pointy shoes
+동물/코끼리,0,1359,elephant
+몸/주황 뿔,0,1357,orange horns
+모자/초록 헬멧,0,1356,green helmet
+옷/물방울무늬 리본,0,1355,polka dot ribbon
+모자/동물 헬멧,0,1354,animal helmet
+소품/벗은 비키니 하의,0,1354,unworn bikini bottom
+머리/아주 긴 옆머리,0,1347,very long sidelocks
+옷/긴 목도리,0,1345,long scarf
+소품/나비 브로치,0,1338,butterfly brooch
+옷/초록 점프수트,0,1337,green jumpsuit
+옷/노란 세일러 칼라,0,1337,yellow sailor collar
+배경/어두운 구름,0,1333,dark cloud
+신발/분홍 샌들,0,1330,pink sandals
+옷/파란 코르셋,0,1328,blue corset
+머리/물방울무늬 곱창 머리끈,0,1324,polka dot scrunchie
+속옷/딸기 무늬 팬티,0,1320,strawberry print panties
+옷/분리된 후드,0,1318,detached hood
+자세/달걀 들기,0,1318,holding egg
+몸/빨간 비늘,0,1318,red scales
+소품/나비 귀걸이,0,1317,butterfly earrings
+속옷/새틴 팬티,0,1313,satin panties
+소품/흰 반다나,0,1313,white bandana
+동물/봉제 개,0,1312,stuffed dog
+몸/투톤 꼬리,0,1312,two-tone tail
+옷/주황 앞치마,0,1310,orange apron
+소품/벗은 반바지,0,1309,unworn shorts
+옷/갈색 애스콧 타이,0,1308,brown ascot
+몸/초록 비늘,0,1307,green scales
+소품/빛나는 꽃,0,1305,glowing flower
+소품/부서진 마스크,0,1297,broken mask
+옷/금색 칼라,0,1292,gold collar
+얼굴/아주 긴 수염,0,1289,very long beard
+소품/벗은 머리장식,0,1276,unworn hair ornament
+소품/고양이 초커,0,1271,cat choker
+옷/털 달린 비키니,0,1271,fur-trimmed bikini
+옷/아쿠아 바지,0,1265,aqua pants
+옷/투톤 소매,0,1264,two-tone sleeves
+소품/잎 우산,0,1262,leaf umbrella
+옷/빨간 캐미솔,0,1262,red camisole
+머리/꽃 머리띠,0,1261,flower hairband
+자세/개 들기,0,1261,holding dog
+소품/부서진 안경,0,1260,broken eyewear
+소품/벗은 재갈,0,1259,unworn gag
+양말/라텍스 니삭,0,1255,latex thighhighs
+소품/흰 밧줄,0,1250,white rope
+옷/리본 단 비키니,0,1249,ribbon-trimmed bikini
+소품/벗은 장신구,0,1249,unworn jewelry
+동물/갈색 고양이,0,1248,brown cat
+옷/멀티컬러 보타이,0,1247,multicolored bowtie
+소품/초록 장미,0,1246,green rose
+옷/곰 후드,0,1245,bear hood
+옷/노란 원피스 수영복,0,1245,yellow one-piece swimsuit
+옷/부서진 갑옷,0,1244,broken armor
+몸/큰 뿔,0,1244,large horns
+옷/은색 드레스,0,1244,silver dress
+신발/흰 슬리퍼,0,1239,white slippers
+자세/담요 들기,0,1238,holding blanket
+옷/징 박힌 칼라,0,1238,studded collar
+소품/빨간 별,0,1237,red star
+옷/라텍스 레오타드,0,1236,latex leotard
+소품/노란 꽃잎,0,1236,yellow petals
+머리/동물 머리장식,0,1234,animal hair ornament
+옷/등 파인 수영복,0,1231,backless swimsuit
+소품/주황 보석,0,1231,orange gem
+옷/무장한 보디수트,0,1230,armored bodysuit
+소품/분홍 튤립,0,1228,pink tulip
+눈/분홍 흰자,0,1227,pink sclera
+옷/교차 끈 비키니,0,1225,cross-laced bikini
+옷/노란 반도 브라,0,1224,yellow bandeau
+옷/빨간 볼레로,0,1223,red shrug
+옷/팽팽한 레오타드,0,1220,taut leotard
+동물/분홍 나비,0,1215,pink butterfly
+옷/초록 잠옷,0,1211,green pajamas
+옷/후드 달린 볼레로,0,1211,hooded shrug
+소품/그라데이션 헤일로,0,1210,gradient halo
+속옷/분홍 스포츠 브라,0,1209,pink sports bra
+동물/봉제 판다,0,1206,stuffed panda
+양말/검은 힙하이,0,1201,black hiphighs
+모자/호박 모자,0,1197,pumpkin hat
+옷/줄무늬 원피스 수영복,0,1195,striped one-piece swimsuit
+소품/벗은 망토,0,1194,unworn cape
+소품/벗은 목도리,0,1189,unworn scarf
+모자/노란 챙 모자,0,1188,yellow visor cap
+속옷/금색 브라,0,1185,gold bra
+배경/비치는 커튼,0,1184,see-through curtains
+옷/흰 하카마,0,1183,white hakama
+소품/부서진 검,0,1182,broken sword
+옷/회색 애스콧 타이,0,1182,grey ascot
+옷/노란 케이프,0,1182,yellow capelet
+옷/꽃무늬 무늬 치마,0,1181,floral print skirt
+신발/노란 샌들,0,1177,yellow sandals
+옷/파란 볼레로,0,1172,blue shrug
+머리/하트 모양 머리,0,1172,heart-shaped hair
+옷/무늬 바지,0,1170,print pants
+소품/가짜 헤일로,0,1169,fake halo
+자세/양초 들기,0,1169,holding candle
+신발/뾰족한 부츠,0,1169,pointy boots
+소품/갈색 깃털,0,1168,brown feathers
+옷/갈색 로브,0,1168,brown robe
+옷/아쿠아 조끼,0,1166,aqua vest
+얼굴/이빨,0,1166,tooth
+몸/은색 피부,0,1165,silver skin
+양말/분리된 레깅스,0,1164,detached leggings
+소품/잎 귀걸이,0,1162,leaf earrings
+양말/찢어진 양말,0,1161,torn socks
+소품/보라 완장,0,1159,purple armband
+몸/파란 비늘,0,1157,blue scales
+옷/보라 앞치마,0,1155,purple apron
+배경/초록 하늘,0,1153,green sky
+동물/작은 용,0,1153,small dragon
+옷/초록 멜빵바지,0,1150,green overalls
+자세/당근 들기,0,1149,holding carrot
+소품/별 풍선,0,1147,star balloon
+양말/짝짝이 니삭,0,1143,mismatched thighhighs
+옷/보라 민소매,0,1143,purple tank top
+옷/검은 하오리,0,1142,black haori
+소품/벗은 니삭,0,1142,unworn thighhighs
+옷/노란 갑옷,0,1141,yellow armor
+옷/체크무늬 반바지,0,1140,plaid shorts
+눈/회색 흰자,0,1134,grey sclera
+옷/검은 유니타드,0,1133,black unitard
+옷/갈색 세일러복,0,1132,brown serafuku
+속옷/체크무늬 브라,0,1129,plaid bra
+모자/회색 헬멧,0,1128,grey helmet
+자세/병(항아리) 들기,0,1127,holding jar
+옷/검은 나이트가운,0,1126,black nightgown
+자세/깃털 들기,0,1125,holding feather
+머리/새 머리장식,0,1118,bird hair ornament
+옷/가시 달린 벨트,0,1118,spiked belt
+몸/그라데이션 꼬리,0,1115,gradient tail
+속옷/세로줄 팬티,0,1111,vertical-striped panties
+머리/호박 머리장식,0,1107,pumpkin hair ornament
+동물/흰 개,0,1107,white dog
+속옷/노란 스포츠 브라,0,1105,yellow sports bra
+머리/여우 머리장식,0,1095,fox hair ornament
+옷/핀스트라이프 치마,0,1094,pinstripe skirt
+옷/검은 오버스커트,0,1091,black overskirt
+옷/리본 단 셔츠,0,1091,ribbon-trimmed shirt
+옷/물방울무늬 보타이,0,1087,polka dot bowtie
+속옷/주황 브라,0,1086,orange bra
+옷/초록 후드,0,1085,green hood
+몸/십자가 문신,0,1083,cross tattoo
+모자/줄무늬 모자,0,1083,striped hat
+옷/무늬 앞치마,0,1081,print apron
+옷/파란 벙어리장갑,0,1079,blue mittens
+눈/보라 흰자,0,1079,purple sclera
+몸/구름 문신,0,1077,cloud tattoo
+옷/회색 로브,0,1077,grey robe
+옷/그라데이션 치마,0,1075,gradient skirt
+옷/멀티컬러 리본,0,1074,multicolored ribbon
+옷/겹친 장갑,0,1072,layered gloves
+몸/양 꼬리,0,1072,sheep tail
+양말/망사 보디스타킹,0,1071,fishnet bodystocking
+소품/핀,0,1070,pin
+소품/벗은 안대,0,1069,unworn eyepatch
+옷/아쿠아 목도리,0,1064,aqua scarf
+소품/주황 반다나,0,1063,orange bandana
+소품/태양 귀걸이,0,1062,sun earrings
+소품/날개 달린 가방,0,1059,winged bag
+머리/보라 머리띠,0,1055,purple headband
+옷/리본 단 케이프,0,1055,ribbon-trimmed capelet
+옷/세로줄 조끼,0,1055,vertical-striped vest
+옷/무장한 치마,0,1051,armored skirt
+머리/검은 머리 장식,0,1050,black headdress
+자세/쿠키 들기,0,1050,holding cookie
+얼굴/회색 아이섀도,0,1049,grey eyeshadow
+옷/체크무늬 소매,0,1048,plaid sleeves
+소품/노란 마스크,0,1048,yellow mask
+소품/노란 반다나,0,1047,yellow bandana
+옷/프릴 숄,0,1046,frilled shawl
+옷/가시 달린 갑옷,0,1046,spiked armor
+머리/구름 머리장식,0,1042,cloud hair ornament
+옷/주황 띠,0,1039,orange sash
+소품/큰 주사기,0,1038,large syringe
+몸/가짜 발톱,0,1037,fake claws
+옷/그라데이션 기모노,0,1036,gradient kimono
+몸/뱀 문신,0,1036,snake tattoo
+옷/비대칭 바지,0,1035,asymmetrical pants
+음식/주황 주스,0,1035,orange juice
+옷/칼라 있는 레오타드,0,1034,collared leotard
+모자/프릴 보닛,0,1030,frilled bonnet
+모자/찢어진 모자,0,1028,torn hat
+옷/꽃무늬 무늬 셔츠,0,1026,floral print shirt
+머리/머리장식 없음,0,1023,no hair ornament
+옷/흰 하오리,0,1022,white haori
+옷/흰 슬링샷 수영복,0,1022,white slingshot swimsuit
+옷/무늬 목도리,0,1021,print scarf
+소품/투톤 마스크,0,1019,two-tone mask
+옷/레이스 달린 칼라,0,1016,lace-trimmed collar
+옷/핀스트라이프 조끼,0,1016,pinstripe vest
+옷/분홍 부루마,0,1015,pink buruma
+옷/무늬 사롱,0,1015,print sarong
+속옷/하트 무늬 팬티,0,1014,heart print panties
+소품/하트 헤일로,0,1013,heart halo
+눈/주황 흰자,0,1012,orange sclera
+옷/팽팽한 수영복,0,1010,taut swimsuit
+얼굴/초록 혀,0,1009,green tongue
+옷/비치는 원피스 수영복,0,1009,see-through one-piece swimsuit
+옷/회색 원피스 수영복,0,1008,grey one-piece swimsuit
+소품/벗은 바지,0,1008,unworn pants
+옷/초록 세일러복,0,1007,green serafuku
+옷/아쿠아 세일러 칼라,0,1003,aqua sailor collar
+옷/젖은 치마,0,1001,wet skirt
+옷/카모 셔츠,0,999,camouflage shirt
+몸/용 문신,0,999,dragon tattoo
+소품/벗은 고글,0,999,unworn goggles
+동물/봉제 새,0,998,stuffed bird
+배경/유리 문,0,997,glass door
+음식/벚 토마토,0,996,cherry tomato
+몸/그라데이션 손톱,0,994,gradient nails
+옷/노란 잠옷,0,994,yellow pajamas
+옷/갈색 보디수트,0,993,brown bodysuit
+옷/파란 반도 브라,0,989,blue bandeau
+소품/색 있는 눈가리개,0,987,colored blindfold
+몸/거대한 뿔,0,987,huge horns
+속옷/투톤 팬티,0,987,two-tone panties
+양말/비치는 니삭,0,986,see-through thighhighs
+소품/은색 팔찌,0,983,silver bracelet
+옷/검은 뷔스티에,0,982,black bustier
+옷/보라 후드,0,982,purple hood
+옷/갈색 숄,0,980,brown shawl
+양말/레이스 니삭,0,979,lace thighhighs
+소품/분홍 깃털,0,978,pink feathers
+소품/파란 마스크,0,973,blue mask
+머리/주황 브릿지,0,972,orange streaks
+옷/분홍 베이비돌,0,971,pink babydoll
+소품/노란 튤립,0,969,yellow tulip
+옷/비치는 비키니,0,968,see-through bikini
+옷/검은 사롱,0,967,black sarong
+소품/이중 헤일로,0,963,double halo
+모자/해골 모자 장식,0,963,skull hat ornament
+옷/무늬 수영복,0,960,print swimsuit
+소품/노란 우산,0,960,yellow umbrella
+눈/아쿠아 눈동자,0,959,aqua pupils
+몸/아주 긴 귀,0,958,very long ears
+소품/노란 머릿수건,0,958,yellow headscarf
+양말/무늬 양말,0,956,print socks
+몸/짝짝이 날개,0,954,mismatched wings
+옷/후드 달린 셔츠,0,953,hooded shirt
+옷/그라데이션 재킷,0,952,gradient jacket
+옷/보라 캐미솔,0,949,purple camisole
+옷/초록 캐미솔,0,948,green camisole
+신발/가시 달린 부츠,0,948,spiked boots
+옷/체크 리본,0,947,checkered ribbon
+옷/교차 끈 코르셋,0,946,cross-laced corset
+옷/금속 손목 커프스,0,946,metal wrist cuffs
+옷/보라 코르셋,0,945,purple corset
+모자/미니 마녀 모자,0,940,mini witch hat
+옷/태양 무늬,0,939,sun print
+옷/파란 한푸,0,937,blue hanfu
+소품/꽃 바구니,0,937,flower basket
+옷/비치는 숄,0,936,see-through shawl
+머리/가시 달린 머리띠,0,936,spiked headband
+옷/줄무늬 목스카프,0,936,striped neckerchief
+머리/짧은 땋은 머리,0,935,short braid
+옷/갈색 멜빵바지,0,934,brown overalls
+몸/그려진 날개,0,934,drawn wings
+동물/봉제 양,0,933,stuffed sheep
+모자/하트 모자 장식,0,930,heart hat ornament
+소품/벗은 목걸이,0,930,unworn necklace
+옷/무늬 잠옷,0,929,print pajamas
+옷/주름 소매,0,928,pleated sleeves
+머리/곱슬 옆머리,0,927,curly sidelocks
+몸/주황 날개,0,927,orange wings
+옷/패딩 재킷,0,926,padded jacket
+속옷/곰 무늬 팬티,0,924,bear print panties
+배경/유리 테이블,0,923,glass table
+눈/광택 있는 눈,0,922,shiny eyes
+소품/하트 장식,0,920,heart ornament
+소품/주황 고글,0,913,orange goggles
+자세/별 들기,0,912,holding star
+옷/징 박힌 장갑,0,911,studded gloves
+소품/검은 왕관,0,908,black crown
+옷/분리된 바지,0,906,detached pants
+옷/검은 숄,0,902,black shawl
+옷/초록 한푸,0,902,green hanfu
+옷/별 무늬 비키니,0,896,star print bikini
+머리/사과 머리장식,0,893,apple hair ornament
+옷/프릴 조끼,0,892,frilled vest
+옷/멀티컬러 바지,0,892,multicolored pants
+소품/나무 상자,0,892,wooden box
+옷/아쿠아 코트,0,891,aqua coat
+옷/패딩 코트,0,890,padded coat
+모자/가시 달린 헬멧,0,889,spiked helmet
+옷/프릴 베이비돌,0,887,frilled babydoll
+옷/분홍 사롱,0,885,pink sarong
+자세/새 들기,0,882,holding bird
+소품/빨간 튤립,0,882,red tulip
+소품/벗은 슬리퍼,0,881,unworn slippers
+소품/분홍 왕관,0,875,pink crown
+양말/멀티컬러 팬티스타킹,0,873,multicolored pantyhose
+옷/오프숄더 코트,0,873,off-shoulder coat
+소품/보라 깃털,0,873,purple feathers
+옷/등 파인 셔츠,0,872,backless shirt
+소품/흰 튤립,0,872,white tulip
+머리/부서진 하트 머리장식,0,871,broken heart hair ornament
+머리/아쿠아 곱창 머리끈,0,870,aqua scrunchie
+소품/은색 목걸이,0,869,silver necklace
+머리/개 머리장식,0,865,dog hair ornament
+몸/짝짝이 뿔,0,864,mismatched horns
+소품/은색 귀걸이,0,864,silver earrings
+옷/무늬 리본,0,863,print ribbon
+옷/노란 점프수트,0,862,yellow jumpsuit
+옷/빨간 베일,0,860,red veil
+옷/체크 하오리,0,859,checkered haori
+옷/회색 하카마,0,859,grey hakama
+옷/그라데이션 리본,0,857,gradient ribbon
+머리/물결 옆머리,0,856,wavy sidelocks
+옷/회색 멜빵바지,0,855,grey overalls
+소품/빨간 자동차,0,855,red car
+옷/투톤 조끼,0,854,two-tone vest
+몸/검은 발톱,0,848,black claws
+소품/금색 발찌,0,847,gold anklet
+얼굴/긴 눈썹,0,847,long eyebrows
+소품/벗은 보타이,0,846,unworn bowtie
+옷/옆매듭 수영복,0,844,side-tie swimsuit
+몸/투톤 손톱,0,844,two-tone nails
+머리/날개 달린 머리장식,0,843,winged hair ornament
+소품/박쥐 장식,0,842,bat ornament
+옷/줄무늬 벨트,0,842,striped belt
+옷/멀티컬러 갑옷,0,840,multicolored armor
+옷/분홍 세일러복,0,840,pink serafuku
+신발/금색 부츠,0,835,gold boots
+동물/검은 나비,0,833,black butterfly
+모자/니트 모자,0,830,knit hat
+동물/봉제 개구리,0,830,stuffed frog
+옷/빨간 점프수트,0,829,red jumpsuit
+옷/보라 사롱,0,826,purple sarong
+눈/불타는 눈,0,825,flaming eyes
+모자/분홍 헬멧,0,823,pink helmet
+옷/깃털 드레스,0,822,feather dress
+몸/아쿠아 날개,0,819,aqua wings
+옷/노란 슬링샷 수영복,0,817,yellow slingshot swimsuit
+눈/회색 눈동자,0,815,grey pupils
+배경/빨간 태양,0,815,red sun
+옷/노란 멜빵바지,0,812,yellow overalls
+옷/긴 후드티,0,810,long hoodie
+모자/빨간 보닛,0,810,red bonnet
+소품/하트 안대,0,807,heart eyepatch
+양말/물방울무늬 니삭,0,807,polka dot thighhighs
+소품/금 간 마스크,0,806,cracked mask
+소품/벗은 머리띠,0,805,unworn hairband
+옷/아쿠아 스웨터,0,803,aqua sweater
+옷/비대칭 드레스,0,802,asymmetrical dress
+양말/체크 레그웨어,0,799,checkered legwear
+몸/아쿠아 뿔,0,798,aqua horns
+옷/그라데이션 소매,0,798,gradient sleeves
+옷/검은 튜닉,0,797,black tunic
+옷/체크무늬 숄,0,797,plaid shawl
+신발/금색 샌들,0,795,gold sandals
+옷/프릴 띠,0,794,frilled sash
+옷/레이스 칼라,0,792,lace collar
+옷/무늬 보디수트,0,790,print bodysuit
+모자/무늬 모자,0,790,print hat
+소품/팬지,0,789,pansy
+옷/체크무늬 앞치마,0,789,plaid apron
+소품/무늬 안대,0,788,print eyepatch
+옷/아가일 드레스,0,787,argyle dress
+얼굴/아쿠아 입술,0,786,aqua lips
+신발/라텍스 부츠,0,786,latex boots
+옷/금속 장갑,0,786,metal gloves
+옷/열린 점프수트,0,785,open jumpsuit
+양말/투톤 팬티스타킹,0,784,two-tone pantyhose
+옷/비치는 보디수트,0,783,see-through bodysuit
+소품/아쿠아 초커,0,781,aqua choker
+소품/가시 달린 발찌,0,780,spiked anklet
+배경/꽃 침대,0,779,flower bed
+자세/토끼 들기,0,779,holding rabbit
+옷/주황 카디건,0,779,orange cardigan
+소품/보라 꽃잎,0,779,purple petals
+옷/세로줄 코트,0,779,vertical-striped coat
+옷/옆매듭 치마,0,777,side-tie skirt
+속옷/초록 스포츠 브라,0,776,green sports bra
+옷/찢어진 비키니,0,776,torn bikini
+양말/레이스 팬티스타킹,0,775,lace pantyhose
+신발/무늬 부츠,0,775,print boots
+옷/노란 칼라,0,775,yellow collar
+옷/주름 셔츠,0,774,pleated shirt
+머리/물방울무늬 머리띠,0,774,polka dot hairband
+옷/찢어진 기모노,0,772,torn kimono
+양말/검은 보디스타킹,0,770,black bodystocking
+양말/리본 단 양말,0,769,ribbon-trimmed socks
+옷/찢어진 스웨터,0,768,torn sweater
+배경/젖은 바닥,0,768,wet floor
+소품/색 있는 안대,0,767,colored eyepatch
+옷/노란 후드,0,767,yellow hood
+옷/풀린 목스카프,0,765,undone neckerchief
+옷/무지개 비키니,0,762,rainbow bikini
+옷/보라 손목 커프스,0,761,purple wrist cuffs
+신발/아쿠아 부츠,0,760,aqua boots
+옷/갈색 민소매,0,759,brown tank top
+머리/레몬 머리장식,0,759,lemon hair ornament
+소품/털 달린 초커,0,757,fur-trimmed choker
+얼굴/주황 아이섀도,0,757,orange eyeshadow
+머리/무늬 머리띠,0,754,print hairband
+동물/흰 말,0,753,white horse
+옷/옆매듭 드레스,0,752,side-tie dress
+머리/은색 머리띠,0,751,silver hairband
+얼굴/노란 입술,0,751,yellow lips
+옷/보라 튜닉,0,747,purple tunic
+소품/벗은 왕관,0,747,unworn crown
+얼굴/회색 입술,0,745,grey lips
+옷/열린 잠옷,0,743,open pajamas
+옷/물방울무늬 캐미솔,0,743,polka dot camisole
+옷/골지 카디건,0,741,ribbed cardigan
+옷/비대칭 갑옷,0,740,asymmetrical armor
+옷/갈색 하카마,0,739,brown hakama
+자세/뼈 들기,0,737,holding bone
+옷/멀티컬러 반바지,0,734,multicolored shorts
+속옷/비치는 브라,0,731,see-through bra
+옷/옆매듭 셔츠,0,731,side-tie shirt
+양말/체크무늬 양말,0,730,plaid socks
+옷/크리스마스 스웨터,0,729,christmas sweater
+옷/분홍 로브,0,729,pink robe
+신발/털 달린 신발,0,728,fur-trimmed shoes
+소품/금색 장신구,0,728,gold jewelry
+소품/하트 모양 가방,0,727,heart-shaped bag
+옷/줄무늬 민소매,0,726,striped tank top
+소품/파란 머릿수건,0,725,blue headscarf
+소품/음표 귀걸이,0,725,musical note earrings
+양말/아가일 양말,0,724,argyle socks
+얼굴/긴 콧수염,0,724,long mustache
+옷/비치는 장갑,0,724,see-through gloves
+속옷/세로줄 브라,0,724,vertical-striped bra
+소품/빛나는 꽃잎,0,722,glowing petals
+옷/해골 벨트,0,722,skull belt
+옷/아쿠아 망토,0,720,aqua cape
+옷/투톤 케이프,0,720,two-tone capelet
+동물/봉제 고래,0,717,stuffed whale
+얼굴/주황 입술,0,716,orange lips
+소품/빨간 머릿수건,0,716,red headscarf
+옷/팽팽한 보디수트,0,715,taut bodysuit
+소품/빛나는 헤일로,0,714,glowing halo
+신발/빨간 슬리퍼,0,714,red slippers
+동물/노란 새,0,714,yellow bird
+모자/노란 헬멧,0,714,yellow helmet
+소품/꽃 안대,0,712,flower eyepatch
+옷/군용 코트,0,708,military coat
+옷/빨간 튜닉,0,708,red tunic
+동물/초록 나비,0,707,green butterfly
+속옷/보라 스포츠 브라,0,702,purple sports bra
+배경/벚 나무,0,700,cherry tree
+옷/데님 멜빵바지,0,699,denim overalls
+몸/그려진 꼬리,0,699,drawn tail
+소품/흰 자동차,0,699,white car
+머리/비치는 머리,0,698,see-through hair
+소품/은색 암릿,0,697,silver armlet
+소품/벚 귀걸이,0,696,cherry earrings
+배경/나무 문,0,696,wooden door
+옷/무늬 레오타드,0,695,print leotard
+자세/왕관 들기,0,694,holding crown
+소품/열린 상자,0,694,open box
+옷/빨간 사롱,0,694,red sarong
+옷/아쿠아 벨트,0,693,aqua belt
+소품/그려진 하트,0,692,drawn heart
+몸/늑대 발바닥,0,692,wolf paws
+옷/카모 비키니,0,690,camouflage bikini
+옷/빨간 슬링샷 수영복,0,690,red slingshot swimsuit
+자세/반지 들기,0,689,holding ring
+신발/날개 달린 부츠,0,688,winged boots
+신발/회색 샌들,0,685,grey sandals
+옷/주황 타바드,0,685,orange tabard
+배경/부서진 벽,0,684,broken wall
+신발/보라 샌들,0,684,purple sandals
+동물/기린,0,680,giraffe
+배경/멀티컬러 하늘,0,680,multicolored sky
+옷/비치는 베이비돌,0,677,see-through babydoll
+옷/흰 멜빵바지,0,677,white overalls
+모자/갈색 헬멧,0,676,brown helmet
+옷/오프숄더 레오타드,0,676,off-shoulder leotard
+옷/금색 장갑,0,675,gold gloves
+소품/초록 우산,0,675,green umbrella
+자세/샌들 들기,0,675,holding sandals
+옷/주황 케이프,0,674,orange capelet
+옷/회색 칼라,0,673,grey collar
+양말/아쿠아 팬티스타킹,0,672,aqua pantyhose
+옷/체크무늬 코트,0,672,plaid coat
+자세/코트 들기,0,669,holding coat
+옷/라텍스 바지,0,668,latex pants
+소품/회색 장미,0,667,grey rose
+양말/아쿠아 양말,0,666,aqua socks
+소품/주황 가방,0,664,orange bag
+옷/분홍 갑옷,0,663,pink armor
+옷/프릴 코트,0,660,frilled coat
+옷/보라 잠옷,0,660,purple pajamas
+옷/체크무늬 케이프,0,659,plaid capelet
+옷/찢어진 소매,0,659,torn sleeve
+소품/오버사이즈 꽃,0,658,oversized flower
+옷/분홍 후드,0,656,pink hood
+옷/후드 달린 레오타드,0,655,hooded leotard
+소품/비치는 마스크,0,655,see-through mask
+옷/민소매 볼레로,0,655,sleeveless shrug
+옷/털 달린 조끼,0,652,fur-trimmed vest
+옷/코트 없음,0,651,no coat
+소품/회색 깃털,0,647,grey feathers
+신발/검은 슬리퍼,0,646,black slippers
+소품/불타는 해골,0,646,flaming skull
+옷/그라데이션 넥타이,0,646,gradient necktie
+몸/금속 날개,0,646,metal wings
+옷/빨간 멜빵바지,0,646,red overalls
+눈/무지개 눈,0,639,rainbow eyes
+옷/줄무늬 레오타드,0,639,striped leotard
+소품/매달린 등불,0,637,hanging lantern
+얼굴/노란 혀,0,637,yellow tongue
+옷/파란 베이비돌,0,634,blue babydoll
+양말/비치는 팬티스타킹,0,633,see-through pantyhose
+소품/줄무늬 초커,0,633,striped choker
+양말/찢어진 레깅스,0,633,torn leggings
+동물/봉제 물고기,0,631,stuffed fish
+얼굴/가짜 수염,0,629,fake beard
+자세/버섯 들기,0,629,holding mushroom
+옷/아쿠아 후드티,0,627,aqua hoodie
+옷/금색 레오타드,0,627,gold leotard
+머리/수정 머리장식,0,626,crystal hair ornament
+몸/금색 뿔,0,626,gold horns
+옷/분홍 멜빵바지,0,626,pink overalls
+속옷/리본 단 브라,0,626,ribbon-trimmed bra
+옷/나비 무늬 기모노,0,625,butterfly print kimono
+옷/레이스 달린 앞치마,0,625,lace-trimmed apron
+옷/망토 없음,0,625,no cape
+옷/금색 드레스,0,623,gold dress
+소품/토끼 장식,0,623,rabbit ornament
+동물/빨간 판다,0,622,red panda
+몸/점박이 털,0,622,spotted fur
+소품/십자가 펜던트,0,619,cross pendant
+옷/분홍 벙어리장갑,0,619,pink mittens
+몸/금색 손톱,0,617,gold nails
+소품/분홍 완장,0,616,pink armband
+옷/리본 단 리본,0,615,ribbon-trimmed bow
+동물/주황 나비,0,613,orange butterfly
+옷/세로줄 넥타이,0,613,vertical-striped necktie
+양말/물방울무늬 양말,0,612,polka dot socks
+머리/리본 단 머리띠,0,612,ribbon-trimmed hairband
+소품/파란 자동차,0,610,blue car
+소품/나비 목걸이,0,610,butterfly necklace
+소품/해골 브로치,0,610,skull brooch
+신발/바니 슬리퍼,0,609,bunny slippers
+옷/라텍스 볼레로,0,608,latex shrug
+소품/열린 가방,0,608,open bag
+옷/등 파인 보디수트,0,607,backless bodysuit
+소품/흰 보석,0,607,white gem
+옷/초록 부루마,0,605,green buruma
+옷/갈색 후드,0,604,brown hood
+소품/빛나는 보석,0,604,glowing gem
+옷/레이스 달린 리본,0,604,lace-trimmed bow
+옷/빨간 세일러복,0,603,red serafuku
+옷/줄무늬 캐미솔,0,603,striped camisole
+옷/세로줄 잠옷,0,603,vertical-striped pajamas
+양말/물방울무늬 팬티스타킹,0,599,polka dot pantyhose
+양말/줄무늬 레깅스,0,599,striped leggings
+얼굴/노란 아이섀도,0,598,yellow eyeshadow
+머리/기계 머리,0,597,mechanical hair
+소품/검은 머릿수건,0,596,black headscarf
+옷/꽃 단 드레스,0,596,flower-trimmed dress
+옷/분홍 숄,0,596,pink shawl
+옷/칼라 있는 보디수트,0,595,collared bodysuit
+소품/수정 검,0,595,crystal sword
+옷/노란 숄,0,595,yellow shawl
+옷/프릴 가터,0,594,frilled garter
+옷/회색 후드,0,594,grey hood
+동물/로봇 용,0,594,robot dragon
+소품/별 모양 베개,0,594,star-shaped pillow
+옷/무늬 띠,0,593,print sash
+신발/스포츠 샌들,0,593,sports sandals
+옷/회색 띠,0,592,grey sash
+동물/봉제 문어,0,592,stuffed octopus
+동물/봉제 사자,0,591,stuffed lion
+옷/아쿠아 원피스 수영복,0,589,aqua one-piece swimsuit
+옷/카모 반바지,0,589,camouflage shorts
+옷/검은 잠옷,0,588,black pajamas
+소품/파란 왕관,0,587,blue crown
+몸/호랑이 발바닥,0,587,tiger paws
+소품/나무 등불,0,587,wooden lantern
+양말/젖은 팬티스타킹,0,586,wet pantyhose
+옷/헐렁한 비키니,0,585,loose bikini
+소품/무늬 반다나,0,584,print bandana
+소품/벗은 팬티스타킹,0,584,unworn pantyhose
+옷/카모 치마,0,583,camouflage skirt
+옷/비치는 우비,0,583,see-through raincoat
+양말/투톤 양말,0,583,two-tone socks
+옷/풀린 보타이,0,582,undone bowtie
+소품/색 있는 연필,0,581,colored pencil
+옷/체크무늬 세일러 칼라,0,580,plaid sailor collar
+양말/파란 레깅스,0,579,blue leggings
+자세/닻 들기,0,579,holding anchor
+몸/돼지 꼬리,0,578,pig tail
+얼굴/광택 있는 입술,0,578,shiny lips
+소품/물 풍선,0,578,water balloon
+모자/보라 헬멧,0,577,purple helmet
+옷/레이스 달린 비키니,0,576,lace-trimmed bikini
+양말/금색 니삭,0,575,gold thighhighs
+옷/큰 리본,0,575,large ribbon
+옷/분홍 코르셋,0,575,pink corset
+옷/가죽 치마,0,574,leather skirt
+옷/멀티컬러 소매,0,574,multicolored sleeves
+소품/주황 완장,0,574,orange armband
+신발/파란 슬리퍼,0,573,blue slippers
+소품/수정 목걸이,0,573,crystal necklace
+자세/샌드위치 들기,0,573,holding sandwich
+옷/깃털 단 드레스,0,572,feather-trimmed dress
+옷/중국 갑옷,0,570,chinese armor
+옷/초록 코르셋,0,569,green corset
+소품/줄무늬 베개,0,569,striped pillow
+배경/나무 천장,0,569,wooden ceiling
+소품/깃털 목걸이,0,568,feather necklace
+옷/털 달린 로브,0,568,fur-trimmed robe
+머리/갈색 머리띠,0,567,brown headband
+옷/무늬 망토,0,567,print cape
+옷/리본 단 장갑,0,567,ribbon-trimmed gloves
+소품/검은 보석,0,566,black gem
+자세/우리 들기,0,566,holding cage
+모자/나비 모자 장식,0,565,butterfly hat ornament
+옷/히잡,0,564,hijab
+옷/보라 숄,0,563,purple shawl
+옷/세로줄 장갑,0,563,vertical-striped gloves
+음식/검은 차,0,557,black tea
+모자/체크 모자,0,557,checkered hat
+양말/짝짝이 양말,0,556,mismatched socks
+옷/교차 끈 반바지,0,553,cross-laced shorts
+옷/초록 사롱,0,553,green sarong
+옷/세로줄 목도리,0,553,vertical-striped scarf
+옷/분홍 나이트가운,0,551,pink nightgown
+옷/파란 오버스커트,0,549,blue overskirt
+옷/깅엄 체크 앞치마,0,548,gingham apron
+옷/주황 원피스 수영복,0,548,orange one-piece swimsuit
+몸/개 발바닥,0,547,dog paws
+속옷/주황 스포츠 브라,0,547,orange sports bra
+몸/분홍 문신,0,547,pink tattoo
+옷/그라데이션 장갑,0,544,gradient gloves
+신발/초록 샌들,0,542,green sandals
+옷/무지개 무늬,0,542,rainbow print
+옷/갈색 튜닉,0,541,brown tunic
+모자/여우 모자,0,539,fox hat
+속옷/리본 단 팬티,0,539,ribbon-trimmed panties
+머리/고르지 않은 앞머리,0,539,uneven bangs
+옷/노란 로브,0,539,yellow robe
+옷/금속 벨트,0,537,metal belt
+양말/겹친 레그웨어,0,536,layered legwear
+양말/투톤 레깅스,0,534,two-tone leggings
+양말/무장한 레그웨어,0,533,armored legwear
+옷/후드 달린 잠옷,0,532,hooded pajamas
+옷/꽉 끼는 상의,0,531,tight top
+속옷/찢어진 브라,0,531,torn bra
+소품/번개 귀걸이,0,529,lightning bolt earrings
+옷/비치는 캐미솔,0,526,see-through camisole
+옷/검은 벙어리장갑,0,524,black mittens
+양말/멀티컬러 양말,0,524,multicolored socks
+소품/토끼 마스크,0,524,rabbit mask
+옷/찢어진 케이프,0,524,torn capelet
+소품/장난감 자동차,0,523,toy car
+음식/봉제 당근,0,522,stuffed carrot
+소품/벗은 벨트,0,522,unworn belt
+소품/비대칭 안경,0,521,asymmetrical eyewear
+소품/보라 마스크,0,521,purple mask
+옷/풀린 비키니,0,521,undone bikini
+옷/파란 슬링샷 수영복,0,520,blue slingshot swimsuit
+옷/늑대 후드,0,520,wolf hood
+몸/곰 발바닥,0,519,bear paws
+옷/개 후드,0,519,dog hood
+양말/젖은 니삭,0,519,wet thighhighs
+얼굴/금색 치아,0,517,gold teeth
+배경/노란 달,0,517,yellow moon
+자세/부츠 들기,0,516,holding boots
+속옷/골지 팬티,0,516,ribbed panties
+옷/털 달린 벙어리장갑,0,515,fur-trimmed mittens
+옷/꽃무늬 무늬 소매,0,514,floral print sleeves
+옷/물방울무늬 넥타이,0,512,polka dot necktie
+소품/장난감 총,0,512,toy gun
+얼굴/아쿠아 아이섀도,0,509,aqua eyeshadow
+옷/흰 슈미즈,0,508,white chemise
+신발/갈색 슬리퍼,0,507,brown slippers
+옷/칼라 있는 망토(클로크),0,507,collared cloak
+소품/주황 깃털,0,507,orange feathers
+옷/멀티컬러 케이프,0,506,multicolored capelet
+양말/그라데이션 니삭,0,505,gradient thighhighs
+자세/고글 들기,0,505,holding goggles
+소품/긴 검,0,505,long sword
+동물/로봇 개,0,504,robot dog
+소품/벗은 기모노,0,504,unworn kimono
+옷/라텍스 드레스,0,502,latex dress
+소품/해골 초커,0,501,skull choker
+속옷/투톤 브라,0,499,two-tone bra
+속옷/고양이 무늬 팬티,0,498,cat print panties
+소품/아쿠아 장미,0,497,aqua rose
+옷/그라데이션 셔츠,0,497,gradient shirt
+옷/흰 우비,0,497,white raincoat
+옷/아쿠아 카디건,0,496,aqua cardigan
+머리/갈색 곱창 머리끈,0,496,brown scrunchie
+옷/프릴 코르셋,0,496,frilled corset
+옷/무늬 민소매,0,496,print tank top
+옷/줄무늬 앞치마,0,496,striped apron
+옷/열린 망토(클로크),0,495,open cloak
+자세/사탕 지팡이 들기,0,494,holding candy cane
+자세/칼라 들기,0,494,holding collar
+속옷/멀티컬러 팬티,0,494,multicolored panties
+소품/나비 초커,0,493,butterfly choker
+속옷/자수 브라,0,493,embroidered bra
+신발/프릴 부츠,0,493,frilled boots
+동물/봉제 공룡,0,493,stuffed dinosaur
+옷/투톤 망토(클로크),0,493,two-tone cloak
+옷/체크 비키니,0,490,checkered bikini
+소품/분홍 마스크,0,490,pink mask
+옷/체크무늬 칼라,0,490,plaid collar
+동물/거대한 뱀,0,489,giant snake
+옷/물방울무늬 목도리,0,488,polka dot scarf
+옷/찢어진 리본,0,488,torn ribbon
+옷/갈색 갑옷,0,487,brown armor
+속옷/검은 블루머,0,486,black bloomers
+눈/아주 큰 눈,0,486,very big eyes
+옷/아가일 리본,0,484,argyle bow
+옷/은색 비키니,0,484,silver bikini
+옷/소 무늬 소매,0,483,cow print sleeves
+속옷/별 무늬 팬티,0,483,star print panties
+옷/무늬 코트,0,482,print coat
+소품/분홍 베개,0,480,pink pillow
+소품/금색 장미,0,478,golden rose
+모자/곰 모자,0,477,bear hat
+옷/검은 롬퍼,0,477,black romper
+자세/장갑 들기,0,477,holding gloves
+옷/체크 보타이,0,476,checkered bowtie
+소품/빨간 광선검,0,474,red lightsaber
+옷/비치는 바지,0,474,see-through pants
+옷/회색 베일,0,473,grey veil
+소품/나무 지팡이,0,473,wooden staff
+몸/해골 문신,0,471,skull tattoo
+소품/검은 자동차,0,470,black car
+옷/꽃무늬 무늬 띠,0,470,floral print sash
+옷/금속 비키니,0,470,metal bikini
+소품/눈송이 장식,0,469,snowflake ornament
+옷/둥근 칼라,0,468,round collar
+속옷/꽃무늬 무늬 브라,0,467,floral print bra
+머리/점박이 머리,0,467,spotted hair
+머리/줄무늬 머리띠,0,467,striped headband
+옷/찢어진 조끼,0,467,torn vest
+옷/칼라 있는 스웨터,0,465,collared sweater
+옷/아쿠아 애스콧 타이,0,464,aqua ascot
+소품/회색 마스크,0,464,grey mask
+머리/줄무늬 곱창 머리끈,0,463,striped scrunchie
+옷/오버사이즈 재킷,0,462,oversized jacket
+소품/깃털 부채,0,461,feather fan
+옷/보라 슬링샷 수영복,0,461,purple slingshot swimsuit
+옷/털 달린 갑옷,0,460,fur-trimmed armor
+소품/줄무늬 완장,0,460,striped armband
+옷/롤리타 무늬,0,459,lolita print
+소품/투명 가방,0,459,transparent bag
+속옷/검은 티팬티,0,458,black thong
+옷/빨간 잠옷,0,457,red pajamas
+머리/머리 리본 없음,0,456,no hair bow
+동물/보라 고양이,0,456,purple cat
+옷/세로줄 스웨터,0,453,vertical-striped sweater
+동물/흰 늑대,0,453,white wolf
+소품/눈송이 귀걸이,0,452,snowflake earrings
+소품/곰 가방,0,450,bear bag
+소품/투톤 초커,0,450,two-tone choker
+옷/분홍 망토(클로크),0,449,pink cloak
+옷/프릴 나이트가운,0,448,frilled nightgown
+모자/금색 헬멧,0,447,gold helmet
+머리/회색 브릿지,0,445,grey streaks
+옷/주황 칼라,0,445,orange collar
+옷/물방울무늬 목스카프,0,445,polka dot neckerchief
+옷/갈색 캐미솔,0,444,brown camisole
+신발/초록 슬리퍼,0,444,green slippers
+성인/기계 촉수,0,444,mechanical tentacles
+소품/물방울무늬 베개,0,444,polka dot pillow
+소품/토끼 귀걸이,0,444,rabbit earrings
+소품/빨간 고글,0,443,red goggles
+옷/소 후드,0,440,cow hood
+옷/줄무늬 보디수트,0,440,striped bodysuit
+양말/분홍 레깅스,0,439,pink leggings
+배경/검은 태양,0,437,black sun
+동물/봉제 돌고래,0,437,stuffed dolphin
+몸/줄무늬 피부,0,436,striped skin
+모자/개구리 모자,0,435,frog hat
+옷/깃털 단 재킷,0,434,feather-trimmed jacket
+옷/초록 숄,0,434,green shawl
+옷/비대칭 재킷,0,433,asymmetrical jacket
+소품/갈색 장미,0,433,brown rose
+옷/체크 재킷,0,433,checkered jacket
+머리/주황 머리장식,0,432,orange hair ornament
+소품/별 펜던트,0,432,star pendant
+몸/금색 피부,0,431,gold skin
+소품/벗은 갑옷,0,431,unworn armor
+옷/털 달린 바지,0,430,fur-trimmed pants
+옷/분리된 소매 없음,0,430,no detached sleeves
+옷/보라 부루마,0,430,purple buruma
+옷/줄무늬 반도 브라,0,430,striped bandeau
+옷/교차 끈 원피스 수영복,0,429,cross-laced one-piece swimsuit
+신발/기계 부츠,0,429,mechanical boots
+배경/갈색 하늘,0,425,brown sky
+소품/노란 자동차,0,425,yellow car
+소품/은색 반지,0,424,silver ring
+동물/노란 고양이,0,424,yellow cat
+속옷/꽃무늬 무늬 팬티,0,422,floral print panties
+배경/거대한 나무,0,422,giant tree
+몸/뿔 없음,0,421,no horns
+옷/분홍 한푸,0,420,pink hanfu
+신발/가시 달린 신발,0,420,spiked shoes
+몸/수정 뿔,0,417,crystal horns
+머리/물고기 해골 머리장식,0,417,fish skeleton hair ornament
+모자/종이 모자,0,416,paper hat
+옷/깃털 코트,0,414,feather coat
+옷/하트 앞치마,0,414,heart apron
+옷/멀티컬러 목스카프,0,413,multicolored neckerchief
+옷/분홍 점프수트,0,412,pink jumpsuit
+옷/아쿠아 띠,0,411,aqua sash
+모자/미니 산타 모자,0,410,mini santa hat
+옷/해골 칼라,0,410,skull collar
+옷/사선 줄무늬 셔츠,0,409,diagonal-striped shirt
+옷/개 무늬,0,409,dog print
+옷/깅엄 체크 치마,0,409,gingham skirt
+옷/레이스 달린 리본,0,409,lace-trimmed ribbon
+모자/토끼 모자 장식,0,409,rabbit hat ornament
+소품/고양이 장식,0,408,cat ornament
+소품/별 팔찌,0,408,star bracelet
+음식/딸기 우유,0,408,strawberry milk
+옷/주황 볼레로,0,407,orange shrug
+눈/갈색 눈동자,0,406,brown pupils
+자세/주사위 들기,0,406,holding dice
+소품/종이 인형,0,406,paper doll
+머리/무늬 머리띠,0,406,print headband
+모자/파란 보닛,0,405,blue bonnet
+옷/망사 레오타드,0,405,fishnet leotard
+머리/머리띠 없음,0,405,no hairband
+머리/무늬 곱창 머리끈,0,405,print scrunchie
+옷/깅엄 체크 드레스,0,404,gingham dress
+옷/레이스 달린 베일,0,403,lace-trimmed veil
+머리/숫자 머리장식,0,403,number hair ornament
+소품/은색 티아라,0,403,silver tiara
+옷/노란 사롱,0,403,yellow sarong
+옷/회색 점프수트,0,402,grey jumpsuit
+옷/흰 샅바,0,398,white loincloth
+옷/아가일 셔츠,0,397,argyle shirt
+얼굴/색 있는 눈썹,0,397,colored eyebrows
+옷/보라 볼레로,0,397,purple shrug
+얼굴/투톤 수염,0,397,two-tone beard
+소품/부서진 접시,0,396,broken plate
+몸/검은 귀,0,395,black ears
+옷/오프숄더 카디건,0,395,off-shoulder cardigan
+신발/찢어진 부츠,0,395,torn boots
+소품/파란 광선검,0,394,blue lightsaber
+옷/금색 리본,0,394,gold ribbon
+옷/무늬 조끼,0,394,print vest
+자세/머리띠 들기,0,393,holding hairband
+속옷/다중 끈 브라,0,393,multi-strapped bra
+옷/멀티컬러 스웨터,0,392,multicolored sweater
+옷/주황 잠옷,0,391,orange pajamas
+옷/분홍 볼레로,0,390,pink shrug
+소품/딸기 귀걸이,0,390,strawberry earrings
+옷/갑옷 없음,0,389,no armor
+모자/보라 보닛,0,389,purple bonnet
+옷/보라 멜빵바지,0,389,purple overalls
+옷/민소매 점프수트,0,389,sleeveless jumpsuit
+옷/사선 줄무늬 리본,0,388,diagonal-striped ribbon
+소품/주황 튤립,0,388,orange tulip
+동물/분홍 고양이,0,388,pink cat
+옷/교차 끈 레오타드,0,387,cross-laced leotard
+옷/프릴 잠옷,0,387,frilled pajamas
+옷/메이드 레오타드,0,387,maid leotard
+소품/은색 왕관,0,387,silver crown
+성인/봉제 재갈,0,387,stuffed gag
+옷/검은 타바드,0,386,black tabard
+소품/불타는 헤일로,0,386,flaming halo
+옷/보라 한푸,0,385,purple hanfu
+양말/보라 레깅스,0,385,purple leggings
+옷/분리된 망토,0,383,detached cape
+소품/흰 티아라,0,383,white tiara
+모자/소 모자,0,382,cow hat
+옷/레이스 달린 케이프,0,382,lace-trimmed capelet
+모자/핀스트라이프 모자,0,382,pinstripe hat
+소품/금색 헤일로,0,381,gold halo
+소품/분홍 반다나,0,381,pink bandana
+속옷/새틴 브라,0,381,satin bra
+소품/레이스 달린 안대,0,380,lace-trimmed eyepatch
+옷/개구리 후드,0,378,frog hood
+속옷/분홍 블루머,0,378,pink bloomers
+옷/주황 멜빵바지,0,377,orange overalls
+옷/보라 베이비돌,0,377,purple babydoll
+속옷/토끼 무늬 팬티,0,377,rabbit print panties
+소품/벗은 스웨터,0,376,unworn sweater
+옷/비치는 코트,0,375,see-through coat
+소품/노란 왕관,0,374,yellow crown
+옷/초록 하오리,0,373,green haori
+얼굴/물결 눈썹,0,373,wavy eyebrows
+옷/체크 조끼,0,372,checkered vest
+옷/회색 코르셋,0,372,grey corset
+옷/멀티컬러 망토(클로크),0,372,multicolored cloak
+음식/흰 초콜릿,0,372,white chocolate
+옷/주황 갑옷,0,371,orange armor
+옷/퐁퐁한 코트,0,371,puffy coat
+머리/아쿠아 머리띠,0,369,aqua headband
+소품/음표 장식,0,369,musical note ornament
+옷/팽팽한 치마,0,369,taut skirt
+몸/아쿠아 꼬리,0,368,aqua tail
+옷/꽃무늬 드레스,0,368,floral dress
+자세/눈사람 들기,0,368,holding snowman
+옷/분홍 베일,0,368,pink veil
+동물/사과 토끼,0,367,apple rabbit
+옷/아쿠아 튜닉,0,367,aqua tunic
+소품/초록 마스크,0,366,green mask
+옷/레이스 달린 캐미솔,0,364,lace-trimmed camisole
+소품/보라 반다나,0,364,purple bandana
+옷/리본 단 기모노,0,364,ribbon-trimmed kimono
+옷/비대칭 보디수트,0,362,asymmetrical bodysuit
+눈/빛나는 눈동자,0,361,glowing pupils
+머리/초록 머리장식,0,361,green hair ornament
+몸/흉터 없음,0,361,no scar
+옷/비치는 망토,0,360,see-through cape
+소품/벗은 리본,0,360,unworn bow
+옷/흰 한복,0,360,white hanbok
+소품/분홍 밧줄,0,359,pink rope
+옷/찢어진 민소매,0,359,torn tank top
+소품/빛나는 귀걸이,0,357,glowing earrings
+옷/아가일 치마,0,356,argyle skirt
+몸/물고기 문신,0,356,fish tattoo
+옷/리본 단 앞치마,0,356,ribbon-trimmed apron
+몸/빛나는 피부,0,355,glowing skin
+모자/초록 보닛,0,355,green bonnet
+옷/주황 튜닉,0,355,orange tunic
+소품/은색 초커,0,355,silver choker
+몸/가시 달린 날개,0,355,spiked wings
+소품/흰 왕관,0,354,white crown
+옷/니트 스웨터,0,353,knit sweater
+소품/무늬 베개,0,352,print pillow
+소품/십자가 장식,0,351,cross ornament
+옷/회색 숄,0,351,grey shawl
+옷/퐁퐁한 드레스,0,351,puffy dress
+옷/주름 바지,0,350,pleated pants
+신발/은색 신발,0,350,silver shoes
+신발/노란 슬리퍼,0,350,yellow slippers
+소품/하트 화살,0,349,heart arrow
+머리/물방울무늬 머리,0,349,polka dot hair
+몸/빨간 발톱,0,349,red claws
+옷/아쿠아 칼라,0,348,aqua collar
+옷/그라데이션 목스카프,0,348,gradient neckerchief
+옷/징 박힌 재킷,0,348,studded jacket
+얼굴/검은 혀,0,346,black tongue
+몸/비치는 뿔,0,346,see-through horns
+옷/비대칭 셔츠,0,345,asymmetrical shirt
+눈/갈색 흰자,0,345,brown sclera
+옷/깃털 칼라,0,345,feather collar
+옷/초록 반도 브라,0,345,green bandeau
+소품/크리스마스 별,0,344,christmas star
+양말/회색 레깅스,0,344,grey leggings
+동물/달 토끼,0,344,moon rabbit
+옷/초록 타바드,0,342,green tabard
+소품/열린 수건,0,342,open towel
+속옷/갈색 스포츠 브라,0,341,brown sports bra
+머리/개구리 머리띠,0,341,frog headband
+양말/빨간 레깅스,0,340,red leggings
+옷/줄무늬 띠,0,340,striped sash
+모자/새 모자,0,339,bird hat
+몸/금색 문신,0,339,gold tattoo
+소품/금속 팔찌,0,339,metal bracelet
+소품/수정 꽃,0,338,crystal flower
+동물/표범,0,337,leopard
+동물/빨간 뱀,0,337,red snake
+동물/봉제 여우,0,337,stuffed fox
+얼굴/흰 수염,0,337,white beard
+옷/노란 튜닉,0,337,yellow tunic
+소품/천사 조각상,0,336,angel statue
+음식/부서진 달걀,0,336,broken egg
+옷/그라데이션 비키니,0,336,gradient bikini
+얼굴/흰 입술,0,336,white lips
+소품/파란 밧줄,0,335,blue rope
+옷/레이스 달린 기모노,0,335,lace-trimmed kimono
+옷/주황 사롱,0,335,orange sarong
+모자/부서진 헬멧,0,334,broken helmet
+옷/금색 슬링샷 수영복,0,334,gold slingshot swimsuit
+자세/귀 들기,0,334,holding ears
+소품/동물 귀걸이,0,333,animal earrings
+옷/보라 반도 브라,0,333,purple bandeau
+동물/봉제 호랑이,0,333,stuffed tiger
+옷/가죽 반바지,0,332,leather shorts
+소품/종이 사슬,0,332,paper chain
+소품/체크무늬 베개,0,332,plaid pillow
+머리/체크무늬 머리띠,0,331,plaid hairband
+옷/레이스 드레스,0,330,lace dress
+옷/무늬 없음,0,330,no print
+옷/무늬 캐미솔,0,329,print camisole
+옷/찢어진 목스카프,0,329,torn neckerchief
+머리/금색 머리띠,0,328,gold headband
+옷/레이스 셔츠,0,328,lace shirt
+머리/레이스 머리띠,0,327,lace hairband
+몸/태닝 문신,0,327,tan tattoo
+모자/카모 모자,0,326,camouflage hat
+소품/고양이 귀걸이,0,326,cat earrings
+속옷/자수 팬티,0,326,embroidered panties
+옷/레이스 달린 베이비돌,0,326,lace-trimmed babydoll
+소품/불 꽃,0,325,fire flower
+소품/음식 트럭,0,325,food truck
+소품/회색 자동차,0,324,grey car
+자세/머리장식 들기,0,324,holding hair ornament
+옷/찢어진 리본,0,324,torn bow
+소품/꽃 반지,0,323,flower ring
+동물/봉제 닭,0,323,stuffed chicken
+옷/호랑이 후드,0,323,tiger hood
+얼굴/주황 혀,0,322,orange tongue
+양말/핀스트라이프 니삭,0,322,pinstripe thighhighs
+옷/체크무늬 목스카프,0,322,plaid neckerchief
+머리/가시 달린 머리장식,0,322,spiked hair ornament
+소품/별 핀,0,321,star pin
+배경/체크 벽,0,320,checkered wall
+속옷/멀티컬러 브라,0,320,multicolored bra
+옷/분홍 슬링샷 수영복,0,320,pink slingshot swimsuit
+소품/토끼 가방,0,320,rabbit bag
+옷/흰 호랑이 무늬,0,320,white tiger print
+소품/갈색 반다나,0,319,brown bandana
+양말/레이스 달린 양말,0,319,lace-trimmed socks
+몸/보라 비늘,0,319,purple scales
+옷/빨간 베이비돌,0,319,red babydoll
+얼굴/아쿠아 혀,0,318,aqua tongue
+양말/갈색 보디스타킹,0,318,brown bodystocking
+옷/가죽 조끼,0,318,leather vest
+옷/찢어진 넥타이,0,318,torn necktie
+소품/벗은 리본,0,318,unworn ribbon
+옷/새틴 비키니,0,317,satin bikini
+옷/프릴 넥타이,0,316,frilled necktie
+옷/그라데이션 바지,0,316,gradient pants
+자세/클로버 들기,0,316,holding clover
+머리/태양 머리장식,0,316,sun hair ornament
+소품/벗은 눈가리개,0,316,unworn blindfold
+옷/노란 한푸,0,316,yellow hanfu
+옷/초록 베일,0,315,green veil
+옷/흰 오버스커트,0,315,white overskirt
+옷/노란 하오리,0,315,yellow haori
+신발/무장한 신발,0,312,armored shoes
+자세/장식 들기,0,312,holding ornament
+옷/주황 캐미솔,0,312,orange camisole
+소품/부서진 병,0,311,broken bottle
+동물/갈색 개,0,311,brown dog
+동물/갈색 말,0,311,brown horse
+머리/구름 머리,0,311,cloud hair
+옷/물방울무늬 반바지,0,310,polka dot shorts
+소품/군용 트럭,0,309,military truck
+옷/골지 민소매,0,309,ribbed tank top
+머리/금속 머리,0,308,metal hair
+머리/금색 머리 장식,0,307,gold headdress
+옷/주황 후드,0,307,orange hood
+옷/아가일 목도리,0,305,argyle scarf
+몸/박쥐 문신,0,305,bat tattoo
+옷/비대칭 반바지,0,304,asymmetrical shorts
+성인/색 있는 항문,0,304,colored anus
+소품/빛나는 깃털,0,304,glowing feather
+양말/빨간 힙하이,0,302,red hiphighs
+소품/한쪽 편지,0,302,single letter
+몸/노란 비늘,0,302,yellow scales
+소품/무늬 우산,0,301,print umbrella
+소품/벗은 조끼,0,301,unworn vest
+옷/회색 튜닉,0,300,grey tunic
+옷/체크 목스카프,0,299,checkered neckerchief
+소품/투명 공,0,299,transparent ball
+몸/아쿠아 털,0,298,aqua fur
+몸/고양이 발바닥,0,298,cat paw
+몸/동물 귀 없음,0,298,no animal ears
+동물/봉제 말,0,297,stuffed horse
+옷/체크 소매,0,296,checkered sleeves
+신발/그라데이션 부츠,0,296,gradient boots
+옷/투톤 목스카프,0,296,two-tone neckerchief
+옷/아가일 소매,0,295,argyle sleeves
+소품/프릴 팔찌,0,295,frilled bracelet
+옷/노란 핫피,0,295,yellow happi
+옷/비대칭 치마,0,294,asymmetrical skirt
+동물/봉제 늑대,0,294,stuffed wolf
+동물/봉제 용,0,293,stuffed dragon
+옷/흰 네글리제,0,293,white negligee
+동물/파란 고양이,0,292,blue cat
+옷/파란 나이트가운,0,292,blue nightgown
+옷/털 달린 스웨터,0,292,fur-trimmed sweater
+머리/회색 머리띠,0,292,grey headband
+소품/분홍 머릿수건,0,292,pink headscarf
+옷/투톤 민소매,0,292,two-tone tank top
+옷/젖은 반바지,0,292,wet shorts
+옷/흰 뷔스티에,0,292,white bustier
+양말/체크 니삭,0,291,checkered thighhighs
+옷/회색 잠옷,0,291,grey pajamas
+신발/회색 슬리퍼,0,291,grey slippers
+자세/레그웨어 들기,0,291,holding legwear
+소품/투명 부채,0,291,transparent fan
+옷/프릴 바지,0,290,frilled pants
+소품/체크 담요,0,288,checkered blanket
+속옷/털 달린 브라,0,288,fur-trimmed bra
+배경/파란 달,0,287,blue moon
+배경/부서진 달,0,287,broken moon
+소품/초커 없음,0,287,no choker
+옷/무늬 하카마,0,287,print hakama
+양말/그라데이션 팬티스타킹,0,286,gradient pantyhose
+옷/팽팽한 스웨터,0,286,taut sweater
+소품/줄무늬 수건,0,285,striped towel
+옷/노란 손목 커프스,0,285,yellow wrist cuffs
+속옷/라텍스 팬티,0,284,latex panties
+소품/벗은 칼라,0,284,unworn collar
+소품/부서진 컵,0,283,broken cup
+옷/말 무늬,0,283,horse print
+옷/후드 달린 기모노,0,282,hooded kimono
+옷/주황 망토(클로크),0,282,orange cloak
+옷/비 판초,0,282,rain poncho
+소품/줄무늬 손목밴드,0,282,striped wristband
+신발/고양이 슬리퍼,0,281,cat slippers
+속옷/금색 팬티,0,281,gold panties
+옷/물방울무늬 앞치마,0,281,polka dot apron
+옷/옆트임 레오타드,0,281,sideless leotard
+음식/사과 주스,0,280,apple juice
+옷/주황 로브,0,280,orange robe
+옷/그라데이션 망토,0,279,gradient cape
+소품/멀티컬러 장미,0,279,multicolored rose
+소품/벗은 머리핀,0,279,unworn hairclip
+옷/아쿠아 앞치마,0,278,aqua apron
+옷/데님 조끼,0,278,denim vest
+몸/빛나는 꼬리,0,278,glowing tail
+동물/봉제 돼지,0,278,stuffed pig
+옷/교차 끈 장갑,0,277,cross-laced gloves
+옷/사선 줄무늬 치마,0,277,diagonal-striped skirt
+양말/푹신한 레그웨어,0,277,fluffy legwear
+머리/빨간 머리 장식,0,277,red headdress
+몸/가시 달린 뿔,0,277,spiked horns
+옷/줄무늬 손목 커프스,0,277,striped wrist cuffs
+얼굴/회색 혀,0,276,grey tongue
+모자/십자가 모자 장식,0,275,cross hat ornament
+몸/그려진 뿔,0,275,drawn horns
+신발/주황 샌들,0,275,orange sandals
+소품/나무 방패,0,275,wooden shield
+모자/아가일 모자,0,274,argyle hat
+옷/회색 볼레로,0,274,grey shrug
+소품/큰 귀걸이,0,274,large earrings
+옷/인어 드레스,0,274,mermaid dress
+모자/주황 헬멧,0,274,orange helmet
+옷/아쿠아 케이프,0,273,aqua capelet
+옷/무지개 치마,0,273,rainbow skirt
+소품/빛나는 마스크,0,272,glowing mask
+옷/겨울 장갑,0,272,winter gloves
+소품/나무 연필,0,272,wooden pencil
+눈/아쿠아 흰자,0,271,aqua sclera
+옷/프릴 망토,0,271,frilled cape
+옷/라텍스 비키니,0,271,latex bikini
+속옷/줄무늬 스포츠 브라,0,271,striped sports bra
+소품/태양 목걸이,0,271,sun necklace
+눈/비대칭 눈,0,270,asymmetrical eyes
+모자/오버사이즈 모자,0,270,oversized hat
+옷/줄무늬 망토,0,269,striped cape
+옷/깅엄 체크 셔츠,0,268,gingham shirt
+옷/비치는 슬링샷 수영복,0,268,see-through slingshot swimsuit
+옷/체크 앞치마,0,267,checkered apron
+몸/분리된 뿔,0,267,detached horns
+옷/그라데이션 리본,0,267,gradient bow
+소품/귀걸이 없음,0,267,no earrings
+소품/체크무늬 담요,0,267,plaid blanket
+옷/은색 벨트,0,267,silver belt
+소품/나무 컵,0,267,wooden cup
+옷/검은 네글리제,0,266,black negligee
+동물/검은 뱀,0,266,black snake
+옷/분홍 상의,0,266,pink top
+옷/가시 달린 망토,0,266,spiked cape
+동물/검은 말,0,265,black horse
+옷/노란 세일러복,0,265,yellow serafuku
+몸/박쥐 꼬리,0,264,bat tail
+몸/파란 문신,0,263,blue tattoo
+소품/무늬 마스크,0,263,print mask
+신발/무늬 신발,0,263,print shoes
+소품/스포츠 선글라스,0,263,sports sunglasses
+옷/줄무늬 카디건,0,263,striped cardigan
+얼굴/갈색 아이섀도,0,262,brown eyeshadow
+신발/보라 슬리퍼,0,262,purple slippers
+동물/로봇 새,0,262,robot bird
+동물/파란 고래,0,261,blue whale
+옷/갈색 원피스 수영복,0,261,brown one-piece swimsuit
+옷/금색 보타이,0,261,gold bowtie
+몸/수정 꼬리,0,260,crystal tail
+머리/무지개 머리장식,0,260,rainbow hair ornament
+소품/가시 달린 손목밴드,0,260,spiked wristband
+옷/찢어진 로브,0,259,torn robe
+옷/노란 벙어리장갑,0,259,yellow mittens
+동물/검은 개,0,258,black dog
+배경/사과 나무,0,257,apple tree
+옷/라텍스 치마,0,257,latex skirt
+소품/벗은 카디건,0,257,unworn cardigan
+소품/주황 우산,0,256,orange umbrella
+옷/갈색 한푸,0,255,brown hanfu
+옷/목도리 없음,0,255,no scarf
+옷/은색 갑옷,0,255,silver armor
+옷/교차 끈 바지,0,254,cross-laced pants
+옷/금색 리본,0,254,gold bow
+몸/귀 없음,0,254,no ears
+옷/비치는 케이프,0,254,see-through capelet
+옷/자수 드레스,0,253,embroidered dress
+옷/초록 손목 커프스,0,253,green wrist cuffs
+옷/회색 한푸,0,253,grey hanfu
+배경/분홍 달,0,253,pink moon
+옷/꽃 비키니,0,252,flower bikini
+음식/거대한 버섯,0,252,giant mushroom
+옷/금색 코르셋,0,252,gold corset
+옷/부서진 하트 무늬,0,251,broken heart print
+양말/갈색 힙하이,0,251,brown hiphighs
+소품/나비 마스크,0,251,butterfly mask
+옷/보라 하오리,0,251,purple haori
+동물/봉제 오리,0,251,stuffed duck
+옷/세로줄 원피스 수영복,0,251,vertical-striped one-piece swimsuit
+옷/카모 목도리,0,249,camouflage scarf
+음식/크리스마스 케이크,0,249,christmas cake
+옷/교차 끈 재킷,0,249,cross-laced jacket
+자세/알약 들기,0,249,holding pill
+몸/잎 날개,0,249,leaf wings
+옷/조끼 없음,0,249,no vest
+머리/무지개 머리띠,0,249,rainbow hairband
+소품/프릴 발찌,0,248,frilled anklet
+소품/체크 베개,0,247,checkered pillow
+소품/말 마스크,0,247,horse mask
+소품/무늬 가방,0,247,print bag
+옷/줄무늬 케이프,0,247,striped capelet
+옷/세로줄 앞치마,0,247,vertical-striped apron
+눈/그려진 눈,0,246,drawn eyes
+옷/세로줄 리본,0,245,vertical-striped bow
+배경/유리 벽,0,244,glass wall
+옷/갈색 점프수트,0,243,brown jumpsuit
+옷/여우 후드,0,243,fox hood
+옷/프릴 보타이,0,243,frilled bowtie
+소품/회색 우산,0,243,grey umbrella
+양말/레이스 양말,0,243,lace socks
+소품/레몬 귀걸이,0,243,lemon earrings
+옷/골지 수영복,0,243,ribbed swimsuit
+소품/장난감 검,0,243,toy sword
+모자/카모 헬멧,0,242,camouflage helmet
+몸/금색 날개,0,242,golden wings
+몸/회색 비늘,0,242,grey scales
+소품/토끼 초커,0,242,rabbit choker
+옷/여우 무늬,0,241,fox print
+옷/겹친 반바지,0,241,layered shorts
+속옷/금속 브라,0,241,metal bra
+성인/항문 없음,0,241,no anus
+옷/물방울무늬 기모노,0,241,polka dot kimono
+옷/세일러 원피스 수영복,0,240,sailor one-piece swimsuit
+동물/봉제 소,0,240,stuffed cow
+옷/아쿠아 민소매,0,239,aqua tank top
+소품/그려진 왕관,0,238,drawn crown
+동물/초록 새,0,238,green bird
+음식/하트 모양 쿠키,0,238,heart-shaped cookie
+자세/벨트 들기,0,238,holding belt
+옷/무늬 케이프,0,238,print capelet
+얼굴/한쪽 이빨,0,238,single tooth
+옷/금색 망토,0,237,gold cape
+옷/아쿠아 사롱,0,236,aqua sarong
+옷/이중 비키니,0,235,double bikini
+옷/분홍 반도 브라,0,235,pink bandeau
+소품/보라 튤립,0,235,purple tulip
+소품/빨간 목줄,0,235,red leash
+옷/젖은 재킷,0,235,wet jacket
+양말/갈색 레깅스,0,233,brown leggings
+옷/털 달린 보디수트,0,233,fur-trimmed bodysuit
+옷/가죽 비키니,0,233,leather bikini
+소품/금속 안대,0,233,metal eyepatch
+옷/세로줄 레오타드,0,233,vertical-striped leotard
+소품/그라데이션 깃털,0,232,gradient feathers
+모자/분홍 보닛,0,232,pink bonnet
+옷/리본 단 반바지,0,232,ribbon-trimmed shorts
+머리/찢어진 머리 리본,0,232,torn hair ribbon
+옷/초록 볼레로,0,231,green shrug
+소품/아쿠아 깃털,0,230,aqua feathers
+옷/아가일 코트,0,230,argyle coat
+모자/물고기 모자,0,230,fish hat
+옷/깅엄 체크 리본,0,230,gingham bow
+옷/금색 원피스 수영복,0,230,gold one-piece swimsuit
+양말/광택 있는 팬티스타킹,0,230,shiny pantyhose
+옷/리본 단 후드,0,229,ribbon-trimmed hood
+머리/날개 달린 머리띠,0,229,winged hairband
+옷/검은 십자가 타이,0,228,black cross tie
+옷/파란 네글리제,0,228,blue negligee
+옷/보라 벙어리장갑,0,228,purple mittens
+옷/줄무늬 칼라,0,228,striped collar
+소품/회색 왕관,0,227,grey crown
+소품/벗은 후드티,0,227,unworn hoodie
+소품/박쥐 귀걸이,0,226,bat earrings
+옷/칼라 있는 점프수트,0,226,collared jumpsuit
+옷/꽃무늬 무늬 원피스 수영복,0,226,floral print one-piece swimsuit
+옷/헐렁한 바지,0,226,loose pants
+옷/리본 단 코르셋,0,226,ribbon-trimmed corset
+옷/비치는 반바지,0,226,see-through shorts
+옷/젖은 비키니,0,226,wet bikini
+머리/갈색 브릿지,0,225,brown streaks
+옷/빛나는 갑옷,0,225,glowing armor
+옷/스트랩리스 보디수트,0,225,strapless bodysuit
+옷/빨간 십자가 타이,0,224,red cross tie
+옷/스트랩리스 기모노,0,224,strapless kimono
+소품/금색 검,0,223,golden sword
+옷/핀스트라이프 코트,0,223,pinstripe coat
+옷/갈색 잠옷,0,222,brown pajamas
+소품/주황 꽃잎,0,222,orange petals
+속옷/비치는 스포츠 브라,0,222,see-through sports bra
+소품/벗은 앞치마,0,222,unworn apron
+옷/노란 볼레로,0,222,yellow shrug
+음식/하트 모양 케이크,0,221,heart-shaped cake
+옷/큰 벨트,0,221,large belt
+옷/비치는 나이트가운,0,221,see-through nightgown
+옷/투톤 한푸,0,221,two-tone hanfu
+옷/흰 유니타드,0,221,white unitard
+옷/깃털 단 장갑,0,220,feather-trimmed gloves
+소품/갈색 마스크,0,219,brown mask
+자세/베일 들기,0,219,holding veil
+소품/얼음 꽃,0,218,ice flower
+소품/둥근 가방,0,217,round bag
+옷/민소매 튜닉,0,217,sleeveless tunic
+옷/찢어진 앞치마,0,217,torn apron
+옷/찢어진 후드티,0,217,torn hoodie
+옷/아가일 망토,0,216,argyle cape
+소품/검은 밧줄,0,216,black rope
+자세/장난감 총 들기,0,216,holding toy gun
+소품/물방울무늬 우산,0,216,polka dot umbrella
+소품/무늬 수건,0,216,print towel
+소품/박쥐 마스크,0,215,bat mask
+옷/검은 한복,0,215,black hanbok
+옷/기계 장갑,0,214,mechanical gloves
+옷/후드 달린 점프수트,0,213,hooded jumpsuit
+소품/숫자 풍선,0,213,number balloon
+몸/점박이 꼬리,0,213,spotted tail
+소품/아쿠아 가방,0,212,aqua bag
+옷/새틴 드레스,0,212,satin dress
+소품/징 박힌 암릿,0,212,studded armlet
+소품/꽃 헤일로,0,211,flower halo
+옷/무늬 목스카프,0,211,print neckerchief
+옷/체크 바지,0,209,checkered pants
+옷/보라 나이트가운,0,209,purple nightgown
+성인/파란 항문,0,208,blue anus
+몸/은색 손톱,0,208,silver nails
+속옷/체크 팬티,0,207,checkered panties
+소품/하트 반지,0,207,heart ring
+소품/가죽 초커,0,207,leather choker
+옷/긴 넥타이,0,207,long necktie
+옷/비치는 앞치마,0,207,see-through apron
+모자/새 모자 장식,0,206,bird hat ornament
+소품/꽃 핀,0,206,flower pin
+옷/갈색 샅바,0,205,brown loincloth
+옷/깃털 망토,0,205,feather cape
+옷/열린 커프스,0,205,open cuffs
+소품/비치는 수건,0,205,see-through towel
+소품/벗은 사롱,0,205,unworn sarong
+옷/갈색 반도 브라,0,204,brown bandeau
+소품/금속 마스크,0,204,metal mask
+양말/핀스트라이프 팬티스타킹,0,204,pinstripe pantyhose
+소품/벗은 목스카프,0,204,unworn neckerchief
+옷/칼라 있는 잠옷,0,203,collared pajamas
+소품/멀티컬러 우산,0,203,multicolored umbrella
+옷/물방울무늬 소매,0,203,polka dot sleeves
+옷/프릴 민소매,0,202,frilled tank top
+소품/남색 십자가,0,202,navy cross
+옷/은색 보디수트,0,202,silver bodysuit
+자세/뱀 들기,0,201,holding snake
+옷/깃털 소매,0,200,feather sleeves
+모자/눈송이 모자 장식,0,200,snowflake hat ornament
+옷/그라데이션 목도리,0,199,gradient scarf
+몸/얼음 뿔,0,199,ice horns
+옷/잎 치마,0,199,leaf skirt
+양말/주황 레깅스,0,199,orange leggings
+배경/유리 천장,0,198,glass ceiling
+몸/찢어진 피부,0,198,torn skin
+소품/벗은 망토(클로크),0,198,unworn cloak
+자세/재갈 들기,0,197,holding gag
+옷/레이스 달린 나이트가운,0,197,lace-trimmed nightgown
+옷/골지 장갑,0,197,ribbed gloves
+신발/은색 샌들,0,197,silver sandals
+옷/투톤 로브,0,197,two-tone robe
+옷/아쿠아 보디수트,0,196,aqua bodysuit
+모자/고양이 헬멧,0,196,cat helmet
+옷/하이웨이스트 드레스,0,196,high-waist dress
+옷/주황 부루마,0,196,orange buruma
+소품/보라 팬지,0,196,purple pansy
+옷/파란 유니타드,0,195,blue unitard
+머리/회색 곱창 머리끈,0,195,grey scrunchie
+옷/뱀 후드,0,195,snake hood
+소품/찢어진 우산,0,195,torn umbrella
+소품/장난감 로봇,0,195,toy robot
+소품/벗은 머리띠,0,195,unworn headband
+옷/프릴 스웨터,0,194,frilled sweater
+옷/물방울무늬 바지,0,194,polka dot pants
+머리/별 머리띠,0,194,star hairband
+옷/아가일 재킷,0,193,argyle jacket
+소품/박쥐 브로치,0,193,bat brooch
+몸/문신 없음,0,193,no tattoo
+옷/핀스트라이프 리본,0,193,pinstripe bow
+소품/초록 자동차,0,192,green car
+옷/멀티컬러 띠,0,192,multicolored sash
+몸/주황 비늘,0,192,orange scales
+배경/부서진 문,0,191,broken door
+옷/사선 줄무늬 비키니,0,191,diagonal-striped bikini
+옷/레이스 달린 반바지,0,191,lace-trimmed shorts
+소품/초록 광선검,0,190,green lightsaber
+옷/빨간 판초,0,190,red poncho
+소품/갈색 머릿수건,0,189,brown headscarf
+양말/털 달린 양말,0,189,fur-trimmed socks
+소품/회색 완장,0,189,grey armband
+소품/눈송이 초커,0,189,snowflake choker
+속옷/딸기 브라,0,189,strawberry bra
+소품/투톤 우산,0,189,two-tone umbrella
+옷/데님 드레스,0,188,denim dress
+소품/빛나는 하트,0,188,glowing heart
+소품/회색 보석,0,188,grey gem
+옷/회색 벙어리장갑,0,188,grey mittens
+소품/부서진 우산,0,187,broken umbrella
+자세/달 들기,0,187,holding moon
+머리/멀티컬러 곱창 머리끈,0,187,multicolored scrunchie
+옷/체크무늬 기모노,0,187,plaid kimono
+옷/물방울무늬 원피스 수영복,0,187,polka dot one-piece swimsuit
+소품/여우 조각상,0,186,fox statue
+옷/그라데이션 코트,0,186,gradient coat
+옷/초록 슬링샷 수영복,0,186,green slingshot swimsuit
+옷/열린 레오타드,0,186,open leotard
+몸/무지개 날개,0,186,rainbow wings
+옷/리본 단 조끼,0,186,ribbon-trimmed vest
+소품/투톤 꽃,0,186,two-tone flower
+옷/꽃 드레스,0,185,flower dress
+옷/멀티컬러 조끼,0,185,multicolored vest
+소품/무늬 부채,0,185,print fan
+옷/세로줄 보디수트,0,185,vertical-striped bodysuit
+옷/젖은 바지,0,185,wet pants
+얼굴/흰 아이섀도,0,185,white eyeshadow
+옷/날개 달린 소매,0,185,winged sleeves
+옷/검은 슈미즈,0,184,black chemise
+얼굴/부서진 이빨,0,184,broken tooth
+소품/그라데이션 꽃,0,184,gradient flower
+소품/금속 공,0,184,metal ball
+소품/은색 사슬,0,184,silver chain
+옷/꽃무늬 무늬 재킷,0,183,floral print jacket
+소품/멀티컬러 깃털,0,183,multicolored feathers
+속옷/세로줄 스포츠 브라,0,183,vertical-striped sports bra
+옷/검은 가터,0,181,black garter
+자세/안대 들기,0,181,holding eyepatch
+옷/라텍스 상의,0,181,latex top
+옷/가죽 드레스,0,181,leather dress
+옷/빨간 샅바,0,181,red loincloth
+옷/패딩 장갑,0,180,padded gloves
+자세/숄 들기,0,179,holding shawl
+옷/후드 달린 상의,0,179,hooded top
+양말/비치는 보디스타킹,0,179,see-through bodystocking
+옷/투톤 칼라,0,179,two-tone collar
+옷/흰 부루마,0,179,white buruma
+속옷/털 달린 팬티,0,178,fur-trimmed panties
+옷/초록 벙어리장갑,0,178,green mittens
+소품/레이스 달린 눈가리개,0,177,lace-trimmed blindfold
+배경/주황 나무,0,177,orange tree
+몸/분홍 비늘,0,177,pink scales
+옷/아쿠아 잠옷,0,176,aqua pajamas
+옷/검은 샅바,0,176,black loincloth
+옷/가죽 레오타드,0,176,leather leotard
+옷/무장한 코르셋,0,175,armored corset
+옷/열린 핫피,0,175,open happi
+옷/분홍 네글리제,0,175,pink negligee
+옷/핀스트라이프 원피스 수영복,0,175,pinstripe one-piece swimsuit
+옷/칼라 있는 로브,0,174,collared robe
+옷/옆매듭 반바지,0,174,side-tie shorts
+소품/벗은 완장,0,174,unworn armband
+소품/갈색 완장,0,173,brown armband
+옷/체크 망토,0,173,checkered cape
+자세/촉수 들기,0,173,holding tentacle
+옷/오버사이즈 스웨터,0,173,oversized sweater
+옷/무늬 칼라,0,173,print collar
+옷/짧은 카디건,0,172,cropped cardigan
+소품/하트 팔찌,0,172,heart bracelet
+옷/은색 장갑,0,172,silver gloves
+옷/아가일 기모노,0,171,argyle kimono
+소품/투톤 가방,0,171,two-tone bag
+옷/등 파인 기모노,0,170,backless kimono
+옷/카모 민소매,0,170,camouflage tank top
+옷/겹친 수영복,0,170,layered swimsuit
+소품/호박 마스크,0,170,pumpkin mask
+양말/흰 힙하이,0,170,white hiphighs
+소품/날개 달린 검,0,170,winged sword
+속옷/파란 블루머,0,169,blue bloomers
+머리/분홍 머리 장식,0,169,pink headdress
+옷/무늬 타바드,0,169,print tabard
+옷/아쿠아 하오리,0,168,aqua haori
+옷/물방울무늬 재킷,0,168,polka dot jacket
+속옷/호랑이 팬티,0,168,tiger panties
+소품/큰 십자가,0,167,large cross
+속옷/라텍스 브라,0,167,latex bra
+소품/잎 부채,0,167,leaf fan
+소품/눈송이 목걸이,0,167,snowflake necklace
+소품/눈송이 펜던트,0,167,snowflake pendant
+소품/찢어진 마스크,0,167,torn mask
+모자/개 모자,0,166,dog hat
+옷/회색 손목 커프스,0,166,grey wrist cuffs
+옷/긴 벨트,0,166,long belt
+옷/체크무늬 애스콧 타이,0,166,plaid ascot
+옷/골지 캐미솔,0,166,ribbed camisole
+옷/꽃 치마,0,165,flower skirt
+소품/미니 눈사람,0,165,mini snowman
+소품/개 마스크,0,164,dog mask
+양말/꽃무늬 무늬 팬티스타킹,0,164,floral print pantyhose
+소품/금색 마스크,0,164,gold mask
+옷/아쿠아 캐미솔,0,163,aqua camisole
+옷/아쿠아 로브,0,163,aqua robe
+소품/금 간 휴대폰,0,163,cracked phone
+옷/깃털 단 코트,0,163,feather-trimmed coat
+양말/체크무늬 팬티스타킹,0,163,plaid pantyhose
+모자/늑대 모자,0,163,wolf hat
+옷/사탕 무늬,0,162,candy print
+소품/뱀 완장,0,162,snake armband
+옷/투톤 벨트,0,162,two-tone belt
+소품/파란 튤립,0,161,blue tulip
+소품/사탕 병(항아리),0,161,candy jar
+옷/보라 점프수트,0,161,purple jumpsuit
+옷/짧은 망토,0,161,short cape
+옷/팽팽한 반바지,0,161,taut shorts
+옷/찢어진 하카마,0,161,torn hakama
+몸/부서진 뿔,0,160,broken horns
+자세/빵 들기,0,160,holding bread
+옷/레이스 달린 레오타드,0,160,lace-trimmed leotard
+소품/주황 머릿수건,0,160,orange headscarf
+양말/체크무늬 니삭,0,160,plaid thighhighs
+옷/호박 무늬,0,160,pumpkin print
+옷/아쿠아 숄,0,159,aqua shawl
+옷/금색 손목 커프스,0,159,gold wrist cuffs
+옷/토끼 잠옷,0,159,rabbit pajamas
+소품/별 지도,0,159,star map
+옷/투톤 손목 커프스,0,159,two-tone wrist cuffs
+옷/아가일 넥타이,0,158,argyle necktie
+소품/나비 반지,0,158,butterfly ring
+옷/소 무늬 재킷,0,158,cow print jacket
+옷/프릴 하카마,0,158,frilled hakama
+자세/의자 들기,0,158,holding chair
+머리/체크무늬 곱창 머리끈,0,158,plaid scrunchie
+양말/골지 팬티스타킹,0,158,ribbed pantyhose
+옷/풀린 애스콧 타이,0,158,undone ascot
+소품/늑대 마스크,0,158,wolf mask
+옷/프릴 망토(클로크),0,157,frilled cloak
+소품/벗은 소매,0,157,unworn sleeves
+옷/노란 코르셋,0,157,yellow corset
+몸/갈색 비늘,0,156,brown scales
+소품/갈색 우산,0,156,brown umbrella
+옷/꽃 칼라,0,156,flower collar
+옷/주황 반도 브라,0,156,orange bandeau
+소품/그려진 헤일로,0,155,drawn halo
+옷/깃털 무늬,0,155,feather print
+옷/물고기 해골 무늬,0,155,fish skeleton print
+동물/회색 늑대,0,155,grey wolf
+옷/물방울무늬 후드티,0,155,polka dot hoodie
+소품/투톤 깃털,0,155,two-tone feathers
+소품/프릴 안대,0,154,frilled eyepatch
+옷/비치는 리본,0,154,see-through bow
+소품/해골 반지,0,154,skull ring
+눈/짝짝이 눈,0,153,mismatched eyes
+소품/멀티컬러 보석,0,153,multicolored gem
+소품/분홍 담요,0,153,pink blanket
+옷/투톤 갑옷,0,153,two-tone armor
+소품/하트 핀,0,152,heart pin
+소품/새 해골,0,151,bird skull
+옷/나비 무늬 하오리,0,151,butterfly print haori
+모자/중국 모자,0,151,chinese hat
+옷/비치는 기모노,0,151,see-through kimono
+양말/비치는 양말,0,151,see-through socks
+배경/줄무늬 벽,0,151,striped wall
+옷/노란 베일,0,151,yellow veil
+동물/초록 고양이,0,150,green cat
+옷/패딩 망토(클로크),0,150,padded cloak
+옷/핀스트라이프 캐미솔,0,150,pinstripe camisole
+옷/무늬 로브,0,150,print robe
+옷/호박 치마,0,150,pumpkin skirt
+옷/양 후드,0,150,sheep hood
+동물/봉제 거북이,0,150,stuffed turtle
+옷/투톤 띠,0,150,two-tone sash
+머리/파란 머리 장식,0,149,blue headdress
+양말/꽃무늬 무늬 니삭,0,149,floral print thighhighs
+소품/프릴 암릿,0,149,frilled armlet
+자세/분리된 머리 들기,0,149,holding detached hair
+옷/주황 벙어리장갑,0,149,orange mittens
+옷/비치는 민소매,0,149,see-through tank top
+옷/새 후드,0,148,bird hood
+옷/망사 드레스,0,148,fishnet dress
+옷/프릴 네글리제,0,148,frilled negligee
+옷/하트 비키니,0,148,heart bikini
+양말/젖은 양말,0,148,wet socks
+소품/금색 꽃,0,147,gold flower
+옷/노란 하카마,0,147,yellow hakama
+옷/체크 반바지,0,146,checkered shorts
+소품/빛나는 화살,0,146,glowing arrow
+신발/짝짝이 신발,0,146,mismatched shoes
+머리/양 머리장식,0,146,sheep hair ornament
+머리/징 박힌 머리띠,0,146,studded hairband
+옷/갈색 판초,0,145,brown poncho
+옷/망사 베일,0,145,fishnet veil
+옷/겹친 케이프,0,145,layered capelet
+모자/가시 달린 모자,0,145,spiked hat
+옷/가시 달린 셔츠,0,145,spiked shirt
+옷/금색 재킷,0,144,gold jacket
+옷/초록 판초,0,144,green poncho
+양말/멀티컬러 레깅스,0,144,multicolored leggings
+소품/토끼 핀,0,144,rabbit pin
+소품/빨간 베개,0,144,red pillow
+소품/노란 팬지,0,144,yellow pansy
+소품/꽃 발찌,0,143,flower anklet
+모자/빛나는 모자,0,143,glowing hat
+머리/하트 머리띠,0,143,heart hairband
+옷/주황 손목 커프스,0,143,orange wrist cuffs
+옷/옆트임 반바지,0,143,sideless shorts
+옷/투톤 반도 브라,0,143,two-tone bandeau
+소품/아쿠아 완장,0,142,aqua armband
+옷/체크 칼라,0,142,checkered collar
+소품/분홍 자동차,0,142,pink car
+옷/노란 판초,0,142,yellow poncho
+신발/아쿠아 샌들,0,141,aqua sandals
+양말/망사 니하이,0,141,fishnet kneehighs
+양말/라텍스 힙하이,0,141,latex hiphighs
+옷/핀스트라이프 반바지,0,141,pinstripe shorts
+옷/체크무늬 스웨터,0,141,plaid sweater
+양말/무늬 레깅스,0,141,print leggings
+옷/옆매듭 원피스 수영복,0,141,side-tie one-piece swimsuit
+옷/아가일 조끼,0,140,argyle vest
+양말/초록 레깅스,0,140,green leggings
+소품/멀티컬러 초커,0,140,multicolored choker
+소품/종이 풍선,0,140,paper balloon
+소품/보라 머릿수건,0,140,purple headscarf
+속옷/젖은 브라,0,140,wet bra
+동물/아쿠아 나비,0,139,aqua butterfly
+모자/갈색 보닛,0,139,brown bonnet
+양말/칼라 있는 양말,0,139,collared socks
+음식/용 과일,0,139,dragon fruit
+몸/그라데이션 털,0,139,gradient fur
+자세/헤일로 들기,0,139,holding halo
+옷/분홍 하오리,0,139,pink haori
+옷/체크무늬 잠옷,0,139,plaid pajamas
+동물/빨간 새,0,139,red bird
+옷/파란 우비,0,138,blue raincoat
+옷/갈색 손목 커프스,0,138,brown wrist cuffs
+양말/망사 힙하이,0,138,fishnet hiphighs
+옷/물방울무늬 장갑,0,138,polka dot gloves
+옷/프릴 후드,0,137,frilled hood
+자세/배지 들기,0,137,holding badge
+옷/가죽 칼라,0,137,leather collar
+속옷/망사 브라,0,136,fishnet bra
+신발/큰 신발,0,136,large shoes
+소품/빨간 십자가 완장,0,136,red cross armband
+머리/불 머리장식,0,135,fire hair ornament
+속옷/꽃 팬티,0,135,flower panties
+옷/털 달린 판초,0,135,fur-trimmed poncho
+옷/멀티컬러 반도 브라,0,135,multicolored bandeau
+머리/동물 머리띠,0,134,animal hairband
+소품/십자가 브로치,0,134,cross brooch
+옷/줄무늬 하오리,0,134,striped haori
+옷/체크 민소매,0,133,checkered tank top
+옷/털 달린 숄,0,133,fur-trimmed shawl
+소품/회색 머릿수건,0,133,grey headscarf
+옷/하트 리본,0,133,heart ribbon
+소품/가죽 가방,0,133,leather bag
+옷/주황 한푸,0,133,orange hanfu
+옷/세일러 재킷,0,133,sailor jacket
+동물/봉제 원숭이,0,133,stuffed monkey
+옷/물 드레스,0,133,water dress
+눈/분리된 눈,0,132,detached eyes
+음식/악마 과일,0,132,devil fruit
+옷/라텍스 반바지,0,132,latex shorts
+속옷/잎 브라,0,132,leaf bra
+속옷/무늬 스포츠 브라,0,132,print sports bra
+옷/흰 가터,0,132,white garter
+옷/아쿠아 한푸,0,131,aqua hanfu
+옷/프릴 반도 브라,0,131,frilled bandeau
+속옷/하트 브라,0,131,heart bra
+옷/비치는 볼레로,0,131,see-through shrug
+소품/스포츠 병,0,131,sports bottle
+소품/노란 밧줄,0,131,yellow rope
+몸/분리된 귀,0,130,detached ears
+옷/그라데이션 사롱,0,130,gradient sarong
+속옷/노란 블루머,0,130,yellow bloomers
+자세/바지 들기,0,129,holding pants
+배경/보라 달,0,129,purple moon
+소품/벗은 팔찌,0,129,unworn bracelet
+동물/노란 개,0,129,yellow dog
+옷/아가일 바지,0,128,argyle pants
+옷/꽃무늬 무늬 바지,0,128,floral print pants
+소품/달 공,0,128,moon ball
+모자/골지 모자,0,128,ribbed hat
+속옷/꽃 브라,0,127,flower bra
+성인/금색 니플 패치,0,127,gold pasties
+옷/회색 반도 브라,0,127,grey bandeau
+옷/광택 있는 레오타드,0,127,shiny leotard
+배경/찢어진 커튼,0,127,torn curtains
+옷/노란 부루마,0,127,yellow buruma
+모자/벚 모자 장식,0,126,cherry hat ornament
+소품/소 해골,0,126,cow skull
+옷/데님 셔츠,0,126,denim shirt
+옷/깅엄 체크 비키니,0,126,gingham bikini
+옷/무늬 망토(클로크),0,126,print cloak
+소품/토끼 브로치,0,126,rabbit brooch
+옷/흰 히잡,0,126,white hijab
+옷/아쿠아 망토(클로크),0,125,aqua cloak
+옷/찢어진 베일,0,125,torn veil
+소품/벗은 반지,0,125,unworn ring
+소품/물고기 병,0,124,fish bottle
+소품/물고기 귀걸이,0,124,fish earrings
+자세/망토(클로크) 들기,0,124,holding cloak
+동물/로봇 고양이,0,124,robot cat
+몸/호랑이 문신,0,124,tiger tattoo
+소품/부서진 조각상,0,123,broken statue
+소품/사슴 해골,0,123,deer skull
+옷/털 달린 후드티,0,123,fur-trimmed hoodie
+옷/비대칭 비키니,0,122,asymmetrical bikini
+소품/부서진 뼈,0,122,broken bone
+동물/갈색 새,0,122,brown bird
+속옷/교차 끈 팬티,0,122,cross-laced panties
+속옷/망사 팬티,0,122,fishnet panties
+옷/꽃무늬 무늬 사롱,0,122,floral print sarong
+소품/회색 반다나,0,122,grey bandana
+소품/미니 안경,0,122,mini eyewear
+소품/종이 수건,0,122,paper towel
+동물/봉제 뱀,0,122,stuffed snake
+양말/노란 레깅스,0,122,yellow leggings
+음식/빛나는 버섯,0,121,glowing mushroom
+머리/초록 하이라이트,0,121,green highlights
+옷/겹친 애스콧 타이,0,121,layered ascot
+모자/빨간 챙 모자,0,121,red visor cap
+소품/박쥐 목걸이,0,120,bat necklace
+옷/개구리 우비,0,120,frog raincoat
+소품/빛나는 장신구,0,120,glowing jewelry
+자세/시계 들기,0,120,holding clock
+소품/숫자 양초,0,120,number candle
+배경/주황 달,0,120,orange moon
+옷/산타 레오타드,0,120,santa leotard
+속옷/찢어진 스포츠 브라,0,120,torn sports bra
+옷/빛나는 보디수트,0,119,glowing bodysuit
+소품/음표 목걸이,0,119,musical note necklace
+소품/주황 자동차,0,119,orange car
+옷/줄무늬 숄,0,119,striped shawl
+소품/검은 암릿,0,118,black armlet
+배경/닫힌 커튼,0,118,closed curtains
+속옷/리본 단 블루머,0,118,ribbon-trimmed bloomers
+소품/벗은 부루마,0,118,unworn buruma
+소품/벗은 곱창 머리끈,0,118,unworn scrunchie
+소품/초록 왕관,0,117,green crown
+옷/주황 숄,0,117,orange shawl
+동물/투명 나비,0,117,transparent butterfly
+옷/투톤 앞치마,0,117,two-tone apron
+소품/투톤 안경,0,117,two-tone eyewear
+옷/털 달린 손목 커프스,0,116,fur-trimmed wrist cuffs
+소품/금색 총,0,116,golden gun
+성인/짝짝이 니플 패치,0,116,mismatched pasties
+모자/쥐 모자,0,116,mouse hat
+신발/주황 슬리퍼,0,116,orange slippers
+옷/세로줄 띠,0,116,vertical-striped sash
+소품/새 핀,0,115,bird pin
+소품/검은 꽃잎,0,115,black petals
+양말/체크 양말,0,115,checkered socks
+소품/금색 펜던트,0,115,gold pendant
+몸/거대한 귀,0,115,huge ears
+소품/잎 팔찌,0,115,leaf bracelet
+옷/멀티컬러 원피스 수영복,0,115,multicolored one-piece swimsuit
+동물/빨간 고양이,0,115,red cat
+머리/옆트임 앞머리,0,115,sideless bangs
+소품/해골 컵,0,115,skull cup
+옷/소 무늬 앞치마,0,114,cow print apron
+옷/프릴 슈미즈,0,114,frilled chemise
+모자/물방울무늬 모자,0,114,polka dot hat
+소품/토끼 풍선,0,114,rabbit balloon
+동물/로봇 물고기,0,114,robot fish
+옷/비치는 목도리,0,114,see-through scarf
+신발/곰 슬리퍼,0,113,bear slippers
+소품/체크 완장,0,113,checkered armband
+속옷/개구리 무늬 팬티,0,113,frog print panties
+옷/주름 케이프,0,113,pleated capelet
+속옷/빨간 티팬티,0,113,red thong
+옷/프릴 뷔스티에,0,112,frilled bustier
+소품/눈송이 브로치,0,112,snowflake brooch
+소품/벗은 벙어리장갑,0,112,unworn mittens
+옷/체크 무늬,0,111,checkered print
+옷/꽃무늬 무늬 앞치마,0,111,floral print apron
+속옷/프릴 블루머,0,111,frilled bloomers
+얼굴/금색 입술,0,111,gold lips
+옷/스트랩리스 롬퍼,0,111,strapless romper
+옷/투톤 잠옷,0,111,two-tone pajamas
+양말/세로줄 레깅스,0,111,vertical-striped leggings
+옷/짧은 기모노,0,110,cropped kimono
+옷/프릴 볼레로,0,110,frilled shrug
+옷/털 달린 반도 브라,0,110,fur-trimmed bandeau
+옷/주황 하카마,0,110,orange hakama
+옷/핀스트라이프 기모노,0,110,pinstripe kimono
+몸/토끼 문신,0,110,rabbit tattoo
+옷/갈색 타바드,0,109,brown tabard
+소품/불 돌,0,109,fire stone
+소품/불타는 화살,0,109,flaming arrow
+옷/프릴 보디수트,0,109,frilled bodysuit
+자세/사롱 들기,0,109,holding sarong
+옷/멀티컬러 애스콧 타이,0,109,multicolored ascot
+소품/보라 왕관,0,109,purple crown
+옷/팽팽한 바지,0,109,taut pants
+소품/벗은 레오타드,0,109,unworn leotard
+양말/프릴 힙하이,0,108,frilled hiphighs
+옷/초록 베이비돌,0,108,green babydoll
+소품/초록 밧줄,0,108,green rope
+옷/골지 조끼,0,108,ribbed vest
+옷/옆트임 수영복,0,108,sideless swimsuit
+소품/줄무늬 우산,0,108,striped umbrella
+옷/팽팽한 재킷,0,108,taut jacket
+옷/털 달린 점프수트,0,107,fur-trimmed jumpsuit
+옷/빨간 핫피,0,107,red happi
+옷/민소매 로브,0,107,sleeveless robe
+소품/눈송이 헤일로,0,107,snowflake halo
+옷/젖은 기모노,0,107,wet kimono
+속옷/카모 팬티,0,106,camouflage panties
+몸/빛나는 귀,0,106,glowing ears
+옷/멀티컬러 벨트,0,106,multicolored belt
+옷/오프숄더 케이프,0,106,off-shoulder capelet
+옷/무늬 손목 커프스,0,106,print wrist cuffs
+양말/흰 보디스타킹,0,106,white bodystocking
+옷/무장한 칼라,0,105,armored collar
+모자/파란 바이저,0,105,blue visor
+소품/용 장식,0,105,dragon ornament
+옷/메이드 원피스 수영복,0,105,maid one-piece swimsuit
+옷/아쿠아 멜빵바지,0,104,aqua overalls
+몸/꽃 날개,0,104,flower wings
+몸/거대한 발톱,0,104,huge claws
+옷/레이스 달린 손목 커프스,0,104,lace-trimmed wrist cuffs
+소품/미니 티아라,0,104,mini tiara
+동물/고무 닭,0,104,rubber chicken
+옷/찢어진 후드,0,104,torn hood
+소품/부서진 목걸이,0,103,broken necklace
+머리/꽃 머리핀,0,103,flower hairclip
+옷/프릴 베일,0,103,frilled veil
+얼굴/금색 아이섀도,0,103,gold eyeshadow
+옷/비치는 리본,0,103,see-through ribbon
+옷/가시 달린 소매,0,103,spiked sleeves
+소품/줄무늬 반다나,0,103,striped bandana
+옷/투톤 점프수트,0,103,two-tone jumpsuit
+소품/곰 마스크,0,102,bear mask
+모자/파란 챙 모자,0,102,blue visor cap
+머리/갈색 머리 장식,0,102,brown headdress
+머리/교차 끈 머리띠,0,102,cross-laced hairband
+소품/불 트럭,0,102,fire truck
+모자/잎 모자,0,102,leaf hat
+옷/후드 없음,0,102,no hood
+소품/한쪽 팔찌,0,102,single bracelet
+소품/호랑이 백합,0,102,tiger lily
+모자/고양이 모자 장식,0,101,cat hat ornament
+속옷/벚 무늬 팬티,0,101,cherry print panties
+배경/긴 테이블,0,101,long table
+속옷/헐렁한 팬티,0,101,loose panties
+옷/골지 치마,0,101,ribbed skirt
+동물/봉제 코끼리,0,101,stuffed elephant
+옷/찢어진 애스콧 타이,0,101,torn ascot
+옷/프릴 오버스커트,0,100,frilled overskirt
+몸/빛나는 손톱,0,100,glowing nails
+동물/초록 뱀,0,100,green snake
+몸/하트 날개,0,100,heart wings
+옷/라텍스 코르셋,0,100,latex corset
+옷/잎 셔츠,0,100,leaf shirt
+옷/긴 베일,0,100,long veil
+옷/분홍 타바드,0,100,pink tabard
+옷/빨간 나이트가운,0,100,red nightgown
+소품/가시 달린 목걸이,0,100,spiked necklace
+옷/줄무늬 애스콧 타이,0,100,striped ascot
+신발/투톤 샌들,0,100,two-tone sandals
+소품/물고기 해골 귀걸이,0,99,fish skeleton earrings
+소품/무늬 컵,0,99,print cup
+소품/투명 꽃,0,99,transparent flower
+소품/아쿠아 우산,0,98,aqua umbrella
+옷/카모 장갑,0,98,camouflage gloves
+소품/체크 손목밴드,0,98,checkered wristband
+옷/교차 끈 조끼,0,98,cross-laced vest
+옷/가죽 셔츠,0,98,leather shirt
+옷/카디건 없음,0,98,no cardigan
+모자/주황 챙 모자,0,98,orange visor cap
+옷/분홍 오버스커트,0,98,pink overskirt
+옷/빨간 뷔스티에,0,98,red bustier
+모자/태양 모자 장식,0,98,sun hat ornament
+소품/흰 지팡이,0,98,white cane
+소품/흰 연꽃,0,98,white lotus
+옷/천사 레오타드,0,97,angel leotard
+옷/비대칭 코트,0,97,asymmetrical coat
+소품/돼지 마스크,0,97,pig mask
+옷/무늬 후드,0,97,print hood
+모자/딸기 모자 장식,0,97,strawberry hat ornament
+소품/벗은 가짜 동물 귀,0,97,unworn fake animal ears
+옷/흰 판초,0,97,white poncho
+모자/사선 줄무늬 모자,0,96,diagonal-striped hat
+소품/그려진 별,0,96,drawn star
+옷/레이스 달린 재킷,0,96,lace-trimmed jacket
+옷/멀티컬러 볼레로,0,96,multicolored shrug
+옷/핀스트라이프 애스콧 타이,0,96,pinstripe ascot
+옷/체크무늬 원피스 수영복,0,96,plaid one-piece swimsuit
+양말/가시 달린 레그웨어,0,96,spiked legwear
+모자/호랑이 모자,0,96,tiger hat
+동물/갈색 토끼,0,95,brown rabbit
+소품/꽃 암릿,0,95,flower armlet
+옷/꽃 단 치마,0,95,flower-trimmed skirt
+소품/매달린 꽃,0,95,hanging flower
+자세/반바지 들기,0,95,holding shorts
+옷/레이스 리본,0,95,lace ribbon
+속옷/잎 팬티,0,95,leaf panties
+옷/가죽 코트,0,95,leather coat
+옷/다중 끈 드레스,0,95,multi-strapped dress
+소품/한쪽 깃털,0,95,single feather
+옷/가시 달린 커프스,0,95,spiked cuffs
+동물/봉제 올빼미,0,95,stuffed owl
+동물/물 용,0,95,water dragon
+소품/부서진 화살,0,94,broken arrow
+자세/개구리 들기,0,94,holding frog
+소품/레이스 달린 우산,0,94,lace-trimmed umbrella
+옷/핀스트라이프 소매,0,94,pinstripe sleeves
+옷/골지 재킷,0,94,ribbed jacket
+머리/호랑이 머리장식,0,94,tiger hair ornament
+옷/노란 베이비돌,0,94,yellow babydoll
+옷/파란 샅바,0,93,blue loincloth
+옷/갈색 사롱,0,93,brown sarong
+몸/금색 비늘,0,93,gold scales
+자세/눈가리개 들기,0,93,holding blindfold
+자세/후드티 들기,0,93,holding hoodie
+동물/얼음 용,0,93,ice dragon
+몸/긴 꼬리,0,93,long tail
+옷/다중 끈 수영복,0,93,multi-strapped swimsuit
+모자/멀티컬러 헬멧,0,93,multicolored helmet
+모자/음표 모자 장식,0,93,musical note hat ornament
+몸/피부 없음,0,93,no skin
+옷/체크무늬 벨트,0,93,plaid belt
+옷/리본 단 코트,0,93,ribbon-trimmed coat
+신발/은색 부츠,0,93,silver boots
+옷/줄무늬 사롱,0,93,striped sarong
+옷/갈색 하오리,0,92,brown haori
+성인/소 무늬 니플 패치,0,92,cow print pasties
+모자/금 간 헬멧,0,92,cracked helmet
+자세/앞치마 들기,0,92,holding apron
+동물/멀티컬러 고양이,0,92,multicolored cat
+옷/찢어진 반도 브라,0,92,torn bandeau
+모자/투톤 헬멧,0,92,two-tone helmet
+얼굴/흰 혀,0,92,white tongue
+양말/파란 힙하이,0,91,blue hiphighs
+소품/카모 가방,0,91,camouflage bag
+소품/고양이 목걸이,0,91,cat necklace
+속옷/체크 브라,0,91,checkered bra
+모자/용 모자,0,91,dragon hat
+옷/프릴 로브,0,91,frilled robe
+몸/줄무늬 손톱,0,91,striped nails
+동물/봉제 다람쥐,0,91,stuffed squirrel
+동물/흰 용,0,91,white dragon
+소품/고양이 브로치,0,90,cat brooch
+소품/그려진 꽃,0,90,drawn flower
+옷/꽃 단 소매,0,90,flower-trimmed sleeves
+소품/빛나는 지팡이,0,90,glowing staff
+옷/초록 우비,0,90,green raincoat
+속옷/주황 블루머,0,90,orange bloomers
+옷/패딩 조끼,0,90,padded vest
+소품/무지개 초커,0,90,rainbow choker
+옷/호랑이 무늬 비키니,0,90,tiger print bikini
+소품/찢어진 가방,0,90,torn bag
+소품/찢어진 초커,0,90,torn choker
+옷/아가일 보타이,0,89,argyle bowtie
+옷/갈색 볼레로,0,89,brown shrug
+옷/체크 벨트,0,89,checkered belt
+옷/칼라 있는 비키니,0,89,collared bikini
+옷/깃털 케이프,0,89,feather capelet
+소품/금색 완장,0,89,gold armband
+자세/나무 들기,0,89,holding tree
+옷/레이스 치마,0,89,lace skirt
+몸/긴 발톱,0,89,long claws
+속옷/산타 브라,0,89,santa bra
+모자/양 모자,0,89,sheep hat
+소품/투명 검,0,89,transparent sword
+소품/물 돌,0,89,water stone
+모자/흰 챙 모자,0,89,white visor cap
+동물/금색 나비,0,88,golden butterfly
+옷/초록 나이트가운,0,88,green nightgown
+속옷/하이웨이스트 팬티,0,88,high-waist panties
+자세/크리스마스 나무 들기,0,88,holding christmas tree
+소품/종이 왕관,0,88,paper crown
+속옷/빨간 블루머,0,88,red bloomers
+양말/은색 레그웨어,0,88,silver legwear
+머리/사탕 사과 머리장식,0,87,candy apple hair ornament
+옷/교차 끈 스웨터,0,87,cross-laced sweater
+옷/회색 부루마,0,87,grey buruma
+옷/겹친 갑옷,0,87,layered armor
+옷/주황 샅바,0,87,orange loincloth
+옷/빨간 오버스커트,0,87,red overskirt
+옷/비치는 로브,0,87,see-through robe
+몸/비치는 꼬리,0,87,see-through tail
+옷/은색 레오타드,0,87,silver leotard
+동물/장난감 공룡,0,87,toy dinosaur
+소품/나무 접시,0,87,wooden plate
+모자/노란 보닛,0,87,yellow bonnet
+소품/부서진 휴대폰,0,86,broken phone
+옷/갈색 부루마,0,86,brown buruma
+신발/체크 신발,0,86,checkered shoes
+옷/금 간 갑옷,0,86,cracked armor
+옷/사선 줄무늬 목스카프,0,86,diagonal-striped neckerchief
+옷/기계 치마,0,86,mechanical skirt
+옷/쥐 후드,0,86,mouse hood
+몸/보라 귀,0,86,purple ears
+소품/리본 단 초커,0,86,ribbon-trimmed choker
+옷/아주 긴 망토,0,86,very long cape
+옷/카모 드레스,0,85,camouflage dress
+옷/체크 장갑,0,85,checkered gloves
+속옷/얼룩진 브라,0,85,stained bra
+동물/봉제 기린,0,85,stuffed giraffe
+옷/동물 목도리,0,84,animal scarf
+배경/체크 천장,0,84,checkered ceiling
+속옷/소 무늬 팬티,0,84,cow print panties
+옷/프릴 목도리,0,84,frilled scarf
+옷/털 달린 베일,0,84,fur-trimmed veil
+옷/그라데이션 레오타드,0,84,gradient leotard
+동물/회색 나비,0,84,grey butterfly
+자세/귀걸이 들기,0,84,holding earrings
+자세/후드 들기,0,84,holding hood
+머리/머리핀 없음,0,84,no hairclip
+음식/별 모양 쿠키,0,84,star-shaped cookie
+음식/봉제 토마토,0,84,stuffed tomato
+동물/검은 양,0,83,black sheep
+옷/고양이 잠옷,0,83,cat pajamas
+옷/멀티컬러 로브,0,83,multicolored robe
+옷/멀티컬러 세일러 칼라,0,83,multicolored sailor collar
+속옷/멀티컬러 스포츠 브라,0,83,multicolored sports bra
+소품/무늬 완장,0,83,print armband
+얼굴/빨간 치아,0,83,red teeth
+옷/비치는 슈미즈,0,83,see-through chemise
+옷/가시 달린 후드,0,83,spiked hood
+머리/별 모양 머리,0,83,star-shaped hair
+옷/줄무늬 점프수트,0,83,striped jumpsuit
+동물/봉제 게,0,83,stuffed crab
+옷/찢어진 보타이,0,83,torn bowtie
+옷/아가일 비키니,0,82,argyle bikini
+소품/비대칭 마스크,0,82,asymmetrical mask
+속옷/교차 끈 브라,0,82,cross-laced bra
+몸/불타는 뿔,0,82,flaming horns
+동물/멀티컬러 나비,0,82,multicolored butterfly
+소품/가시 달린 방패,0,82,spiked shield
+소품/투톤 완장,0,82,two-tone armband
+신발/동물 신발,0,81,animal shoes
+양말/카모 레그웨어,0,81,camouflage legwear
+옷/용 후드,0,81,dragon hood
+옷/망사 수영복,0,81,fishnet swimsuit
+옷/꽃무늬 무늬 반바지,0,81,floral print shorts
+옷/깅엄 체크 소매,0,81,gingham sleeves
+소품/유리 병(항아리),0,81,glass jar
+머리/겹친 머리,0,81,layered hair
+옷/짧은 앞치마,0,81,short apron
+옷/찢어진 벨트,0,81,torn belt
+소품/찢어진 눈가리개,0,81,torn blindfold
+소품/벗은 블루머,0,81,unworn bloomers
+옷/세로줄 칼라,0,81,vertical-striped collar
+몸/젖은 꼬리,0,81,wet tail
+신발/날개 달린 샌들,0,81,winged sandals
+옷/아가일 망토(클로크),0,80,argyle cloak
+배경/검은 달,0,80,black moon
+옷/체크 코트,0,80,checkered coat
+옷/체크 스웨터,0,80,checkered sweater
+몸/빛나는 흉터,0,80,glowing scar
+옷/그라데이션 후드티,0,80,gradient hoodie
+소품/번개 목걸이,0,80,lightning bolt necklace
+소품/주황 마스크,0,80,orange mask
+소품/종이 꽃,0,80,paper flower
+양말/핀스트라이프 양말,0,80,pinstripe socks
+옷/무늬 반도 브라,0,80,print bandeau
+소품/호박 귀걸이,0,80,pumpkin earrings
+옷/투톤 애스콧 타이,0,80,two-tone ascot
+옷/세로줄 리본,0,80,vertical-striped ribbon
+소품/날개 달린 해골,0,80,winged skull
+옷/카모 후드티,0,79,camouflage hoodie
+소품/빛나는 안경,0,79,glowing glasses
+속옷/회색 스포츠 팬티,0,79,grey sports panties
+옷/레이스 달린 보타이,0,79,lace-trimmed bowtie
+옷/쥐 무늬,0,79,mouse print
+머리/멀티컬러 머리띠,0,79,multicolored headband
+옷/산타 망토,0,79,santa cape
+옷/스트랩리스 점프수트,0,79,strapless jumpsuit
+옷/줄무늬 후드,0,79,striped hood
+옷/아쿠아 후드,0,78,aqua hood
+옷/검은 히잡,0,78,black hijab
+옷/파란 한복,0,78,blue hanbok
+옷/파란 히잡,0,78,blue hijab
+소품/사탕 하트,0,78,candy heart
+옷/털 달린 목도리,0,78,fur-trimmed scarf
+모자/그라데이션 모자,0,78,gradient hat
+옷/레이스 달린 세일러 칼라,0,78,lace-trimmed sailor collar
+음식/분홍 도넛,0,78,pink donut
+소품/체크무늬 가방,0,78,plaid bag
+옷/호박 반바지,0,78,pumpkin shorts
+몸/토끼 발바닥,0,78,rabbit paws
+옷/리본 단 재킷,0,78,ribbon-trimmed jacket
+동물/해골 말,0,78,skeleton horse
+옷/아가일 장갑,0,77,argyle gloves
+소품/부서진 고글,0,77,broken goggles
+소품/용 마스크,0,77,dragon mask
+몸/드릴 뿔,0,77,drill horn
+옷/깃털 치마,0,77,feather skirt
+옷/깃털 단 망토,0,77,feather-trimmed cape
+소품/물고기 장식,0,77,fish ornament
+양말/망사 레깅스,0,77,fishnet leggings
+옷/깅엄 체크 보타이,0,77,gingham bowtie
+옷/깅엄 체크 넥타이,0,77,gingham necktie
+옷/골지 바지,0,77,ribbed pants
+소품/딸기 브로치,0,77,strawberry brooch
+동물/장난감 말,0,77,toy horse
+소품/세로줄 베개,0,77,vertical-striped pillow
+소품/노란 베개,0,77,yellow pillow
+소품/사과 귀걸이,0,76,apple earrings
+소품/파란 팬지,0,76,blue pansy
+옷/파란 판초,0,76,blue poncho
+몸/분리된 꼬리,0,76,detached tail
+동물/빛나는 새,0,76,glowing bird
+머리/머리띠 없음,0,76,no headband
+모자/비치는 모자,0,76,see-through hat
+옷/양 무늬,0,76,sheep print
+몸/노란 발톱,0,76,yellow claws
+옷/노란 타바드,0,76,yellow tabard
+양말/자수 레그웨어,0,75,embroidered legwear
+소품/깃털 초커,0,75,feather choker
+속옷/회색 블루머,0,75,grey bloomers
+옷/회색 하오리,0,75,grey haori
+자세/스웨터 들기,0,75,holding sweater
+옷/무늬 벨트,0,75,print belt
+옷/골지 반도 브라,0,75,ribbed bandeau
+소품/은색 장신구,0,75,silver jewelry
+소품/별 모양 가방,0,75,star-shaped bag
+머리/투톤 머리띠,0,75,two-tone headband
+옷/아쿠아 부루마,0,74,aqua buruma
+몸/부서진 날개,0,74,broken wing
+양말/사선 줄무늬 니삭,0,74,diagonal-striped thighhighs
+음식/금색 달걀,0,74,golden egg
+자세/펜던트 들기,0,74,holding pendant
+속옷/겹친 팬티,0,74,layered panties
+소품/호박 장식,0,74,pumpkin ornament
+소품/무지개 헤일로,0,74,rainbow halo
+옷/찢어진 멜빵바지,0,74,torn overalls
+옷/젖은 부루마,0,74,wet buruma
+옷/젖은 레오타드,0,74,wet leotard
+얼굴/검은 치아,0,73,black teeth
+소품/부서진 방패,0,73,broken shield
+소품/체크 팔찌,0,73,checkered bracelet
+옷/꽃무늬 무늬 리본,0,73,floral print bow
+옷/털 달린 오버스커트,0,73,fur-trimmed overskirt
+옷/털 달린 볼레로,0,73,fur-trimmed shrug
+소품/멀티컬러 티아라,0,73,multicolored tiara
+소품/주황 밧줄,0,73,orange rope
+소품/호박 브로치,0,73,pumpkin brooch
+속옷/보라 블루머,0,73,purple bloomers
+머리/아가일 머리띠,0,72,argyle hairband
+몸/비대칭 귀,0,72,asymmetrical ears
+옷/꽃무늬 무늬 장갑,0,72,floral print gloves
+소품/꽃 우산,0,72,flower umbrella
+머리/얼음 머리,0,72,ice hair
+옷/레이스 베일,0,72,lace veil
+옷/잎 드레스,0,72,leaf dress
+성인/금속 니플 패치,0,72,metal pasties
+옷/멀티컬러 앞치마,0,72,multicolored apron
+소품/보라 광선검,0,72,purple lightsaber
+성인/토끼 니플 패치,0,72,rabbit pasties
+옷/찢어진 타바드,0,72,torn tabard
+소품/벗은 반다나,0,72,unworn bandana
+몸/아쿠아 비늘,0,71,aqua scales
+소품/꽃 풍선,0,71,flower balloon
+속옷/꽃 단 브라,0,71,flower-trimmed bra
+소품/개구리 마스크,0,71,frog mask
+양말/그라데이션 힙하이,0,71,gradient hiphighs
+소품/보라 자동차,0,71,purple car
+옷/세로줄 멜빵바지,0,71,vertical-striped overalls
+소품/흰 담요,0,71,white blanket
+옷/파란 십자가 타이,0,70,blue cross tie
+신발/개 슬리퍼,0,70,dog slippers
+음식/물고기 케이크,0,70,fish cake
+소품/프릴 가방,0,70,frilled bag
+옷/프릴 카디건,0,70,frilled cardigan
+머리/하트 머리띠,0,70,heart headband
+얼굴/멀티컬러 아이섀도,0,70,multicolored eyeshadow
+신발/멀티컬러 샌들,0,70,multicolored sandals
+옷/레오타드 없음,0,70,no leotard
+소품/숫자 귀걸이,0,70,number earrings
+동물/오버사이즈 거미,0,70,oversized spider
+옷/무늬 원피스 수영복,0,70,print one-piece swimsuit
+옷/토끼 리본,0,70,rabbit bow
+옷/골지 반바지,0,70,ribbed shorts
+옷/리본 단 바지,0,70,ribbon-trimmed pants
+소품/별 모양 보석,0,70,star-shaped gem
+음식/봉제 새우,0,70,stuffed shrimp
+옷/찢어진 사롱,0,70,torn sarong
+옷/투톤 볼레로,0,70,two-tone shrug
+옷/등 파인 스웨터,0,69,backless sweater
+옷/갈색 베일,0,69,brown veil
+옷/회색 오버스커트,0,69,grey overskirt
+소품/밝은 총,0,69,light gun
+옷/멀티컬러 잠옷,0,69,multicolored pajamas
+몸/음표 문신,0,69,musical note tattoo
+옷/분홍 슈미즈,0,69,pink chemise
+옷/분홍 히잡,0,69,pink hijab
+소품/태양 장식,0,69,sun ornament
+소품/투톤 손목밴드,0,69,two-tone wristband
+소품/파란 티아라,0,68,blue tiara
+옷/갈색 뷔스티에,0,68,brown bustier
+동물/갈색 나비,0,68,brown butterfly
+속옷/카모 브라,0,68,camouflage bra
+소품/고양이 펜던트,0,68,cat pendant
+모자/물고기 모자 장식,0,68,fish hat ornament
+자세/목스카프 들기,0,68,holding neckerchief
+옷/레이스 달린 수영복,0,68,lace-trimmed swimsuit
+옷/리본 없음,0,68,no ribbon
+옷/분홍 튜닉,0,68,pink tunic
+옷/물방울무늬 베이비돌,0,68,polka dot babydoll
+옷/줄무늬 멜빵바지,0,68,striped overalls
+옷/검은 판초,0,67,black poncho
+속옷/검은 스포츠 팬티,0,67,black sports panties
+소품/소 마스크,0,67,cow mask
+소품/꽃 펜던트,0,67,flower pendant
+몸/금색 발톱,0,67,gold claws
+옷/그라데이션 애스콧 타이,0,67,gradient ascot
+옷/헐렁한 기모노,0,67,loose kimono
+소품/오버사이즈 안경,0,67,oversized eyewear
+옷/물방울무늬 사롱,0,67,polka dot sarong
+얼굴/투톤 눈썹,0,67,two-tone eyebrows
+소품/벗은 니하이,0,67,unworn kneehighs
+모자/검은 챙 모자,0,66,black visor cap
+옷/망사 반바지,0,66,fishnet shorts
+옷/꽃무늬 리본,0,66,floral bow
+옷/프릴 후드티,0,66,frilled hoodie
+얼굴/빛나는 혀,0,66,glowing tongue
+동물/회색 새,0,66,grey bird
+옷/회색 사롱,0,66,grey sarong
+옷/넥타이 없음,0,66,no necktie
+옷/골지 칼라,0,66,ribbed collar
+옷/세로줄 케이프,0,66,vertical-striped capelet
+옷/세로줄 코르셋,0,66,vertical-striped corset
+자세/머리띠 들기,0,65,holding headband
+머리/번개 머리,0,65,lightning hair
+소품/음표 브로치,0,65,musical note brooch
+양말/분홍 힙하이,0,65,pink hiphighs
+소품/무늬 초커,0,65,print choker
+속옷/산타 팬티,0,65,santa panties
+옷/날개 달린 장갑,0,65,winged gloves
+소품/늑대 브로치,0,65,wolf brooch
+소품/검은 목줄,0,64,black leash
+동물/갈색 곰,0,64,brown bear
+속옷/금색 티팬티,0,64,gold thong
+배경/가죽 의자,0,64,leather chair
+소품/분홍 목줄,0,64,pink leash
+옷/핀스트라이프 리본,0,64,pinstripe ribbon
+옷/체크무늬 손목 커프스,0,64,plaid wrist cuffs
+옷/광택 있는 장갑,0,64,shiny gloves
+옷/찢어진 캐미솔,0,64,torn camisole
+옷/아쿠아 손목 커프스,0,63,aqua wrist cuffs
+몸/파란 발톱,0,63,blue claws
+옷/칼라 있는 튜닉,0,63,collared tunic
+옷/깃털 단 레오타드,0,63,feather-trimmed leotard
+옷/레이스 리본,0,63,lace bow
+옷/멀티컬러 민소매,0,63,multicolored tank top
+옷/주황 코르셋,0,63,orange corset
+옷/돼지 무늬,0,63,pig print
+동물/분홍 새,0,63,pink bird
+양말/보라 힙하이,0,63,purple hiphighs
+옷/골지 비키니,0,63,ribbed bikini
+옷/비치는 손목 커프스,0,63,see-through wrist cuffs
+양말/가시 달린 니삭,0,63,spiked thighhighs
+옷/줄무늬 하카마,0,63,striped hakama
+옷/세로줄 망토,0,63,vertical-striped cape
+소품/파란 베개,0,62,blue pillow
+몸/고양이 문신,0,62,cat tattoo
+옷/체크 애스콧 타이,0,62,checkered ascot
+머리/털 달린 머리띠,0,62,fur-trimmed hairband
+얼굴/회색 수염,0,62,grey beard
+자세/띠 들기,0,62,holding sash
+옷/주황 슬링샷 수영복,0,62,orange slingshot swimsuit
+옷/주황 베일,0,62,orange veil
+옷/분홍 한복,0,62,pink hanbok
+모자/리본 단 모자,0,62,ribbon-trimmed hat
+소품/산타 백합,0,62,santa lily
+신발/찢어진 신발,0,62,torn shoes
+소품/벗은 애스콧 타이,0,62,unworn ascot
+소품/벗은 베일,0,62,unworn veil
+옷/아가일 카디건,0,61,argyle cardigan
+옷/카모 망토(클로크),0,61,camouflage cloak
+몸/가짜 뾰족한 귀,0,61,fake pointy ears
+소품/하트 왕관,0,61,heart crown
+옷/레이스 비키니,0,61,lace bikini
+옷/레이스 달린 민소매,0,61,lace-trimmed tank top
+옷/잎 레오타드,0,61,leaf leotard
+소품/잎 목걸이,0,61,leaf necklace
+몸/달 문신,0,61,moon tattoo
+소품/고글 없음,0,61,no goggles
+소품/숫자 안경,0,61,number glasses
+옷/체크무늬 캐미솔,0,61,plaid camisole
+동물/로봇 말,0,61,robot horse
+옷/세일러 레오타드,0,61,sailor leotard
+모자/젖은 모자,0,61,wet hat
+동물/흰 고래,0,61,white whale
+옷/파란 가터,0,60,blue garter
+소품/빛나는 왕관,0,60,glowing crown
+소품/초록 꽃잎,0,60,green petals
+자세/슬리퍼 들기,0,60,holding slippers
+옷/니트 목도리,0,60,knit scarf
+머리/쥐 머리장식,0,60,mouse hair ornament
+옷/멀티컬러 사롱,0,60,multicolored sarong
+옷/앞치마 없음,0,60,no apron
+옷/체크무늬 장갑,0,60,plaid gloves
+머리/보라 머리 장식,0,60,purple headdress
+모자/딸기 모자,0,60,strawberry hat
+양말/찢어진 힙하이,0,60,torn hiphighs
+머리/투톤 곱창 머리끈,0,60,two-tone scrunchie
+몸/새 문신,0,59,bird tattoo
+소품/갈색 팔찌,0,59,brown bracelet
+양말/체크 팬티스타킹,0,59,checkered pantyhose
+소품/초록 베개,0,59,green pillow
+모자/회색 보닛,0,59,grey bonnet
+소품/멀티컬러 손목밴드,0,59,multicolored wristband
+소품/종이 접시,0,59,paper plate
+몸/분홍 발톱,0,59,pink claws
+옷/비치는 후드티,0,59,see-through hoodie
+몸/한쪽 기계 날개,0,59,single mechanical wing
+옷/팽팽한 비키니,0,59,taut bikini
+옷/꽉 끼는 하의,0,59,tight bottoms
+옷/찢어진 점프수트,0,59,torn jumpsuit
+옷/노란 나이트가운,0,59,yellow nightgown
+속옷/아쿠아 스포츠 브라,0,58,aqua sports bra
+몸/곰 발톱,0,58,bear claws
+양말/사선 줄무늬 레그웨어,0,58,diagonal-striped legwear
+옷/꽃무늬 무늬 베일,0,58,floral print veil
+자세/레오타드 들기,0,58,holding leotard
+옷/레이스 달린 애스콧 타이,0,58,lace-trimmed ascot
+옷/라텍스 재킷,0,58,latex jacket
+옷/기계 드레스,0,58,mechanical dress
+소품/쥐 마스크,0,58,mouse mask
+모자/분홍 챙 모자,0,58,pink visor cap
+모자/호박 모자 장식,0,58,pumpkin hat ornament
+옷/무지개 리본,0,58,rainbow ribbon
+머리/짧은 헝클어진 앞머리,0,58,short messy bangs
+옷/가시 달린 드레스,0,58,spiked dress
+옷/투톤 슬링샷 수영복,0,58,two-tone slingshot swimsuit
+옷/세로줄 보타이,0,58,vertical-striped bowtie
+옷/늑대 무늬,0,58,wolf print
+소품/노란 광선검,0,58,yellow lightsaber
+옷/아가일 리본,0,57,argyle ribbon
+모자/박쥐 모자 장식,0,57,bat hat ornament
+옷/파란 뷔스티에,0,57,blue bustier
+얼굴/파란 치아,0,57,blue teeth
+옷/나비 무늬 띠,0,57,butterfly print sash
+옷/카모 코트,0,57,camouflage coat
+소품/빛나는 목걸이,0,57,glowing necklace
+옷/그라데이션 보타이,0,57,gradient bowtie
+옷/그라데이션 스웨터,0,57,gradient sweater
+옷/후드 달린 멜빵바지,0,57,hooded overalls
+옷/간호사 드레스,0,57,nurse dress
+소품/체크무늬 머릿수건,0,57,plaid headscarf
+옷/체크무늬 후드티,0,57,plaid hoodie
+소품/무지개 배지,0,57,rainbow badge
+옷/빨간 가터,0,57,red garter
+옷/리본 단 수영복,0,57,ribbon-trimmed swimsuit
+옷/비치는 카디건,0,57,see-through cardigan
+옷/줄무늬 로브,0,57,striped robe
+소품/장난감 상자,0,57,toy box
+몸/젖은 털,0,57,wet fur
+옷/칼라 있는 앞치마,0,56,collared apron
+옷/데님 앞치마,0,56,denim apron
+옷/물고기 후드,0,56,fish hood
+옷/털 달린 카디건,0,56,fur-trimmed cardigan
+소품/기계 하트,0,56,mechanical heart
+옷/무늬 애스콧 타이,0,56,print ascot
+소품/무늬 공,0,56,print ball
+배경/무늬 커튼,0,56,print curtains
+소품/딸기 가방,0,56,strawberry bag
+소품/동물 해골 장식,0,55,animal skull ornament
+옷/악마 후드,0,55,demon hood
+소품/초록 담요,0,55,green blanket
+옷/라텍스 소매,0,55,latex sleeves
+옷/비치는 후드,0,55,see-through hood
+옷/비치는 오버스커트,0,55,see-through overskirt
+옷/옆트임 스웨터,0,55,sideless sweater
+소품/부서진 지팡이,0,54,broken staff
+모자/나비 모자,0,54,butterfly hat
+옷/교차 끈 앞치마,0,54,cross-laced apron
+소품/용 해골,0,54,dragon skull
+양말/프릴 팬티스타킹,0,54,frilled pantyhose
+배경/유리 바닥,0,54,glass floor
+배경/초록 달,0,54,green moon
+옷/하이웨이스트 비키니,0,54,high-waist bikini
+자세/발바닥 들기,0,54,holding paw
+소품/말 귀걸이,0,54,horse earrings
+신발/레이스 달린 부츠,0,54,lace-trimmed boots
+옷/라텍스 셔츠,0,54,latex shirt
+소품/멀티컬러 가방,0,54,multicolored bag
+옷/오프숄더 반도 브라,0,54,off-shoulder bandeau
+속옷/물방울무늬 블루머,0,54,polka dot bloomers
+옷/무늬 베일,0,54,print veil
+소품/빨간 티아라,0,54,red tiara
+옷/리본 단 손목 커프스,0,54,ribbon-trimmed wrist cuffs
+옷/은색 칼라,0,54,silver collar
+옷/비대칭 원피스 수영복,0,53,asymmetrical one-piece swimsuit
+옷/파란 핫피,0,53,blue happi
+속옷/고양이 브라,0,53,cat bra
+모자/엘프 모자,0,53,elf hat
+배경/프릴 커튼,0,53,frilled curtains
+옷/털 달린 리본,0,53,fur-trimmed bow
+옷/털 달린 잠옷,0,53,fur-trimmed pajamas
+배경/유리 의자,0,53,glass chair
+소품/빛나는 칼,0,53,glowing knife
+자세/팔찌 들기,0,53,holding bracelet
+자세/유령 들기,0,53,holding ghost
+속옷/가죽 브라,0,53,leather bra
+소품/멀티컬러 머릿수건,0,53,multicolored headscarf
+얼굴/입술 없음,0,53,no lips
+동물/주황 새,0,53,orange bird
+소품/체크무늬 수건,0,53,plaid towel
+옷/리본 단 베이비돌,0,53,ribbon-trimmed babydoll
+옷/리본 단 스웨터,0,53,ribbon-trimmed sweater
+양말/옆매듭 레그웨어,0,53,side-tie legwear
+속옷/별 브라,0,53,star bra
+옷/체크 망토(클로크),0,52,checkered cloak
+머리/소 머리장식,0,52,cow hair ornament
+배경/빛나는 나무,0,52,glowing tree
+옷/멀티컬러 점프수트,0,52,multicolored jumpsuit
+옷/분홍 가터,0,52,pink garter
+옷/투명 리본,0,52,transparent ribbon
+옷/풀린 십자가 타이,0,52,undone cross tie
+배경/흰 나무,0,52,white tree
+동물/노란 뱀,0,52,yellow snake
+옷/칼라 있는 기모노,0,51,collared kimono
+소품/십자가 핀,0,51,cross pin
+옷/사슴 무늬,0,51,deer print
+자세/티아라 들기,0,51,holding tiara
+소품/잎 장식,0,51,leaf ornament
+옷/헐렁한 치마,0,51,loose skirt
+옷/베일 없음,0,51,no veil
+모자/열린 모자,0,51,open hat
+머리/돼지 머리장식,0,51,pig hair ornament
+옷/체크무늬 카디건,0,51,plaid cardigan
+소품/보라 베개,0,51,purple pillow
+동물/해골 뱀,0,51,skeleton snake
+옷/별 모양 비키니,0,51,star-shaped bikini
+옷/찢어진 부루마,0,51,torn buruma
+머리/동물 머리,0,50,animal hair
+옷/아쿠아 갑옷,0,50,aqua armor
+모자/아쿠아 헬멧,0,50,aqua helmet
+소품/부서진 해골,0,50,broken skull
+옷/교차 끈 칼라,0,50,cross-laced collar
+머리/용 머리장식,0,50,dragon hair ornament
+옷/프릴 목스카프,0,50,frilled neckerchief
+양말/회색 힙하이,0,50,grey hiphighs
+옷/회색 타바드,0,50,grey tabard
+자세/고무 오리 들기,0,50,holding rubber duck
+옷/오버사이즈 장갑,0,50,oversized gloves
+소품/무늬 종이 부채,0,50,print paper fan
+옷/무늬 숄,0,50,print shawl
+옷/퐁퐁한 칼라,0,50,puffy collar
+소품/가시 달린 공,0,50,spiked ball
+소품/가시 달린 반지,0,50,spiked ring
+머리/찢어진 머리띠,0,50,torn headband
+모자/세로줄 모자,0,50,vertical-striped hat
+소품/흰 광선검,0,50,white lightsaber
+옷/소 무늬 레오타드,0,49,cow print leotard
+소품/금 간 해골,0,49,cracked skull
+동물/빛나는 물고기,0,49,glowing fish
+신발/그라데이션 신발,0,49,gradient shoes
+옷/레이스 손목 커프스,0,49,lace wrist cuffs
+옷/옆매듭 조끼,0,49,side-tie vest
+옷/아주 긴 로브,0,49,very long robe
+동물/날개 달린 고양이,0,49,winged cat
+동물/검은 곰,0,48,black bear
+모자/개구리 모자 장식,0,48,frog hat ornament
+옷/털 달린 벨트,0,48,fur-trimmed belt
+신발/털 달린 샌들,0,48,fur-trimmed sandals
+소품/빛나는 책,0,48,glowing book
+머리/회색 머리 장식,0,48,grey headdress
+자세/머리 장식 들기,0,48,holding headdress
+자세/양 들기,0,48,holding sheep
+옷/미니 보타이,0,48,mini bowtie
+몸/돼지 문신,0,48,pig tattoo
+옷/분홍 우비,0,48,pink raincoat
+소품/체크무늬 우산,0,48,plaid umbrella
+소품/물방울무늬 가방,0,48,polka dot bag
+소품/물방울무늬 담요,0,48,polka dot blanket
+옷/아쿠아 하카마,0,47,aqua hakama
+얼굴/검은 수염,0,47,black beard
+소품/체크 반다나,0,47,checkered bandana
+옷/짧은 코트,0,47,cropped coat
+소품/십자가 팔찌,0,47,cross bracelet
+옷/사슴 후드,0,47,deer hood
+소품/이중 안대,0,47,double eyepatch
+양말/그라데이션 양말,0,47,gradient socks
+소품/하트 모양 병,0,47,heart-shaped bottle
+자세/용 공 들기,0,47,holding dragon ball
+자세/테이블 들기,0,47,holding table
+배경/미니 크리스마스 나무,0,47,mini christmas tree
+옷/체크무늬 사롱,0,47,plaid sarong
+옷/무늬 멜빵바지,0,47,print overalls
+소품/보라 티아라,0,47,purple tiara
+옷/무지개 리본,0,47,rainbow bow
+몸/광택 있는 뿔,0,47,shiny horns
+옷/은색 치마,0,47,silver skirt
+옷/얼룩진 유리 무늬,0,47,stained glass print
+옷/세로줄 하카마,0,47,vertical-striped hakama
+옷/젖은 앞치마,0,47,wet apron
+옷/아쿠아 볼레로,0,46,aqua shrug
+몸/아가일 피부,0,46,argyle skin
+옷/등 파인 비키니 하의,0,46,backless bikini bottom
+소품/검은 튤립,0,46,black tulip
+소품/체크 가방,0,46,checkered bag
+옷/체크 수영복,0,46,checkered swimsuit
+옷/꽃무늬 무늬 레오타드,0,46,floral print leotard
+양말/깅엄 체크 레그웨어,0,46,gingham legwear
+소품/금색 꽃잎,0,46,gold petals
+옷/그라데이션 수영복,0,46,gradient swimsuit
+성인/초록 항문,0,46,green anus
+동물/분홍 개,0,46,pink dog
+옷/체크무늬 망토,0,46,plaid cape
+소품/태양 헤일로,0,46,sun halo
+양말/팽팽한 보디스타킹,0,46,taut bodystocking
+옷/찢어진 튜닉,0,46,torn tunic
+옷/찢어진 유니타드,0,46,torn unitard
+옷/투톤 코르셋,0,46,two-tone corset
+소품/벗은 캐미솔,0,46,unworn camisole
+옷/아주 긴 베일,0,46,very long veil
+소품/노란 담요,0,46,yellow blanket
+옷/파란 롬퍼,0,45,blue romper
+소품/꽃 단 왕관,0,45,flower-trimmed crown
+속옷/초록 블루머,0,45,green bloomers
+모자/하트 모양 보닛,0,45,heart-shaped bonnet
+옷/레이스 달린 띠,0,45,lace-trimmed sash
+속옷/가죽 팬티,0,45,leather panties
+옷/기계 칼라,0,45,mechanical collar
+옷/핀스트라이프 보타이,0,45,pinstripe bowtie
+양말/보라 보디스타킹,0,45,purple bodystocking
+몸/보라 발톱,0,45,purple claws
+옷/보라 네글리제,0,45,purple negligee
+얼굴/빨간 혀,0,45,red tongue
+소품/뱀 마스크,0,45,snake mask
+소품/딸기 장식,0,45,strawberry ornament
+소품/봉제 별,0,45,stuffed star
+옷/투명 리본,0,45,transparent bow
+소품/노란 티아라,0,45,yellow tiara
+소품/파란 검,0,44,blue sword
+소품/갈색 자동차,0,44,brown car
+성인/고양이 니플 패치,0,44,cat pasties
+옷/칼라 있는 원피스 수영복,0,44,collared one-piece swimsuit
+소품/유리 접시,0,44,glass plate
+옷/그라데이션 망토(클로크),0,44,gradient cloak
+모자/초록 챙 모자,0,44,green visor cap
+소품/분홍 검,0,44,pink sword
+옷/주름 기모노,0,44,pleated kimono
+옷/보라 가터,0,44,purple garter
+옷/보라 오버스커트,0,44,purple overskirt
+양말/민소매 보디스타킹,0,44,sleeveless bodystocking
+소품/가시 달린 마스크,0,44,spiked mask
+옷/징 박힌 갑옷,0,44,studded armor
+소품/투톤 반다나,0,44,two-tone bandana
+신발/아쿠아 슬리퍼,0,43,aqua slippers
+옷/망사 볼레로,0,43,fishnet shrug
+성인/음식 재갈,0,43,food gag
+몸/빛나는 발톱,0,43,glowing claws
+옷/그라데이션 반바지,0,43,gradient shorts
+동물/회색 개,0,43,grey dog
+음식/레몬 주스,0,43,lemon juice
+옷/짝짝이 바지,0,43,mismatched pants
+옷/무늬 슬링샷 수영복,0,43,print slingshot swimsuit
+옷/리본 단 가터,0,43,ribbon-trimmed garter
+몸/점박이 피부,0,43,spotted skin
+옷/젖은 장갑,0,43,wet gloves
+동물/나무 물고기,0,43,wooden fish
+배경/금 간 천장,0,42,cracked ceiling
+옷/깃털 단 케이프,0,42,feather-trimmed capelet
+소품/물고기 펜던트,0,42,fish pendant
+옷/꽃무늬 무늬 리본,0,42,floral print ribbon
+옷/금색 치마,0,42,gold skirt
+옷/그라데이션 보디수트,0,42,gradient bodysuit
+소품/회색 티아라,0,42,grey tiara
+배경/하트 모양 구름,0,42,heart-shaped cloud
+옷/레이스 달린 커프스,0,42,lace-trimmed cuffs
+머리/레이스 달린 머리장식,0,42,lace-trimmed hair ornament
+옷/레이스 달린 숄,0,42,lace-trimmed shawl
+몸/잎 문신,0,42,leaf tattoo
+옷/열린 수영복,0,42,open swimsuit
+옷/주황 하오리,0,42,orange haori
+옷/오버사이즈 벨트,0,42,oversized belt
+옷/보라 슈미즈,0,42,purple chemise
+옷/보라 샅바,0,42,purple loincloth
+소품/별 반지,0,42,star ring
+옷/줄무늬 슬링샷 수영복,0,42,striped slingshot swimsuit
+동물/봉제 해파리,0,42,stuffed jellyfish
+몸/호랑이 피부,0,42,tiger skin
+속옷/박쥐 팬티,0,41,bat panties
+소품/곰 귀걸이,0,41,bear earrings
+옷/곰 잠옷,0,41,bear pajamas
+배경/부서진 테이블,0,41,broken table
+옷/십자가 수영복,0,41,cross swimsuit
+옷/데님 비키니,0,41,denim bikini
+옷/사선 줄무늬 드레스,0,41,diagonal-striped dress
+옷/프릴 사롱,0,41,frilled sarong
+머리/초록 머리 장식,0,41,green headdress
+얼굴/초록 치아,0,41,green teeth
+옷/회색 판초,0,41,grey poncho
+옷/레이스 레오타드,0,41,lace leotard
+옷/가죽 보디수트,0,41,leather bodysuit
+소품/기계 검,0,41,mechanical sword
+소품/물방울무늬 수건,0,41,polka dot towel
+성인/보라 항문,0,41,purple anus
+속옷/보라 티팬티,0,41,purple thong
+옷/빨간 롬퍼,0,41,red romper
+옷/광택 있는 치마,0,41,shiny skirt
+옷/줄무늬 망토(클로크),0,41,striped cloak
+소품/찢어진 완장,0,41,torn armband
+옷/투톤 세일러 칼라,0,41,two-tone sailor collar
+소품/벗은 하오리,0,41,unworn haori
+얼굴/아주 긴 콧수염,0,41,very long mustache
+옷/아쿠아 베일,0,40,aqua veil
+소품/사탕 귀걸이,0,40,candy earrings
+속옷/소 무늬 브라,0,40,cow print bra
+옷/교차 끈 케이프,0,40,cross-laced capelet
+소품/수정 장미,0,40,crystal rose
+모자/꽃무늬 무늬 모자,0,40,floral print hat
+옷/꽃 단 비키니,0,40,flower-trimmed bikini
+신발/털 달린 슬리퍼,0,40,fur-trimmed slippers
+동물/거대한 고양이,0,40,giant cat
+소품/하트 모양 꽃잎,0,40,heart-shaped petals
+옷/거대한 보타이,0,40,huge bowtie
+옷/레이스 달린 슈미즈,0,40,lace-trimmed chemise
+옷/헐렁한 목스카프,0,40,loose neckerchief
+옷/패딩 갑옷,0,40,padded armor
+소품/분홍 팬지,0,40,pink pansy
+소품/물방울무늬 반다나,0,40,polka dot bandana
+옷/보라 판초,0,40,purple poncho
+동물/보라 뱀,0,40,purple snake
+모자/빨간 바이저,0,40,red visor
+옷/비치는 샅바,0,40,see-through loincloth
+양말/짧은 레깅스,0,40,short leggings
+옷/은색 원피스 수영복,0,40,silver one-piece swimsuit
+옷/팽팽한 조끼,0,40,taut vest
+양말/아쿠아 레깅스,0,39,aqua leggings
+소품/아가일 베개,0,39,argyle pillow
+옷/아가일 반바지,0,39,argyle shorts
+동물/파란 뱀,0,39,blue snake
+소품/나비 안대,0,39,butterfly eyepatch
+소품/벚 목걸이,0,39,cherry necklace
+자세/소매 들기,0,39,holding sleeve
+소품/잎 돌,0,39,leaf stone
+신발/기계 신발,0,39,mechanical shoes
+소품/열린 해골,0,39,open skull
+모자/주황 보닛,0,39,orange bonnet
+속옷/분홍 티팬티,0,39,pink thong
+옷/빨간 네글리제,0,39,red negligee
+옷/투톤 후드,0,39,two-tone hood
+옷/풀린 치마,0,39,undone skirt
+소품/동물 등불,0,38,animal lantern
+소품/아가일 초커,0,38,argyle choker
+몸/곰 발바닥,0,38,bear paw
+소품/새 귀걸이,0,38,bird earrings
+옷/파란 슈미즈,0,38,blue chemise
+옷/갈색 오버스커트,0,38,brown overskirt
+양말/카모 니삭,0,38,camouflage thighhighs
+머리/곱슬 앞머리,0,38,curly bangs
+소품/가짜 휴대폰,0,38,fake phone
+옷/털 달린 비키니 상의,0,38,fur-trimmed bikini top
+자세/나비 들기,0,38,holding butterfly
+옷/말 후드,0,38,horse hood
+소품/큰 가방,0,38,large bag
+옷/겹친 나이트가운,0,38,layered nightgown
+몸/멀티컬러 귀,0,38,multicolored ears
+옷/무늬 카디건,0,38,print cardigan
+옷/보라 한복,0,38,purple hanbok
+옷/무지개 드레스,0,38,rainbow dress
+옷/산타 후드,0,38,santa hood
+옷/비치는 조끼,0,38,see-through vest
+소품/눈송이 핀,0,38,snowflake pin
+옷/징 박힌 비키니,0,38,studded bikini
+동물/봉제 표범,0,38,stuffed leopard
+옷/아가일 케이프,0,37,argyle capelet
+소품/곰 목걸이,0,37,bear necklace
+모자/사탕 모자 장식,0,37,candy hat ornament
+몸/짧은 꼬리,0,37,cropped tail
+옷/교차 끈 코트,0,37,cross-laced coat
+소품/용 검,0,37,dragon sword
+몸/깃털 꼬리,0,37,feather tail
+옷/꽃무늬 비키니,0,37,floral bikini
+소품/털 달린 왕관,0,37,fur-trimmed crown
+옷/깅엄 체크 리본,0,37,gingham ribbon
+옷/그라데이션 로브,0,37,gradient robe
+옷/초록 히잡,0,37,green hijab
+자세/콧수염 들기,0,37,holding mustache
+소품/가죽 마스크,0,37,leather mask
+옷/멀티컬러 카디건,0,37,multicolored cardigan
+얼굴/멀티컬러 입술,0,37,multicolored lips
+양말/분홍 보디스타킹,0,37,pink bodystocking
+옷/핀스트라이프 멜빵바지,0,37,pinstripe overalls
+옷/주름 망토,0,37,pleated cape
+옷/물방울무늬 스웨터,0,37,polka dot sweater
+동물/보라 새,0,37,purple bird
+소품/토끼 안대,0,37,rabbit eyepatch
+양말/무지개 레그웨어,0,37,rainbow legwear
+속옷/골지 브라,0,37,ribbed bra
+옷/리본 단 망토,0,37,ribbon-trimmed cape
+몸/은색 발톱,0,37,silver claws
+배경/세로줄 벽,0,37,vertical-striped wall
+성인/아쿠아 항문,0,36,aqua anus
+속옷/박쥐 브라,0,36,bat bra
+소품/나비 핀,0,36,butterfly pin
+옷/그려진 리본,0,36,drawn bow
+몸/가짜 흉터,0,36,fake scar
+옷/그라데이션 하카마,0,36,gradient hakama
+배경/매달린 의자,0,36,hanging chair
+소품/말 조각상,0,36,horse statue
+옷/레이스 달린 후드,0,36,lace-trimmed hood
+옷/가죽 앞치마,0,36,leather apron
+양말/보디스타킹 없음,0,36,no bodystocking
+소품/왕관 없음,0,36,no crown
+소품/오버사이즈 배낭,0,36,oversized backpack
+소품/체크무늬 상자,0,36,plaid box
+옷/체크무늬 코르셋,0,36,plaid corset
+옷/체크무늬 띠,0,36,plaid sash
+옷/주름 칼라,0,36,pleated collar
+옷/보라 핫피,0,36,purple happi
+옷/골지 점프수트,0,36,ribbed jumpsuit
+눈/눈송이 눈동자,0,36,snowflake pupils
+소품/가시 달린 사슬,0,36,spiked chain
+옷/세로줄 점프수트,0,36,vertical-striped jumpsuit
+소품/날개 달린 암릿,0,36,winged armlet
+소품/아쿠아 반다나,0,35,aqua bandana
+속옷/아가일 브라,0,35,argyle bra
+소품/새 브로치,0,35,bird brooch
+소품/갈색 보석,0,35,brown gem
+옷/체크 숄,0,35,checkered shawl
+양말/깅엄 체크 양말,0,35,gingham socks
+머리/헝클어진 앞머리,0,35,messy bangs
+옷/짝짝이 손목 커프스,0,35,mismatched wrist cuffs
+눈/멀티컬러 흰자,0,35,multicolored sclera
+옷/보타이 없음,0,35,no bowtie
+소품/분홍 광선검,0,35,pink lightsaber
+음식/무지개 케이크,0,35,rainbow cake
+옷/리본 단 망토(클로크),0,35,ribbon-trimmed cloak
+소품/비치는 풍선,0,35,see-through balloon
+소품/별 안대,0,35,star eyepatch
+소품/태양 펜던트,0,35,sun pendant
+소품/장난감 트럭,0,35,toy truck
+옷/노란 히잡,0,35,yellow hijab
+옷/아쿠아 코르셋,0,34,aqua corset
+옷/갈색 베이비돌,0,34,brown babydoll
+옷/카모 수영복,0,34,camouflage swimsuit
+옷/중국 학교 교복·제복,0,34,chinese school uniform
+옷/소 무늬 보타이,0,34,cow print bowtie
+소품/교차 끈 초커,0,34,cross-laced choker
+속옷/꽃 단 팬티,0,34,flower-trimmed panties
+동물/금색 뱀,0,34,gold snake
+옷/회색 롬퍼,0,34,grey romper
+양말/레이스 달린 팬티스타킹,0,34,lace-trimmed pantyhose
+몸/잎 꼬리,0,34,leaf tail
+몸/긴 동물 귀,0,34,long animal ears
+얼굴/짝짝이 아이섀도,0,34,mismatched eyeshadow
+옷/멀티컬러 칼라,0,34,multicolored collar
+옷/열린 멜빵바지,0,34,open overalls
+옷/돼지 후드,0,34,pig hood
+옷/체크무늬 후드,0,34,plaid hood
+옷/체크무늬 멜빵바지,0,34,plaid overalls
+옷/무늬 갑옷,0,34,print armor
+옷/무늬 점프수트,0,34,print jumpsuit
+옷/보라 뷔스티에,0,34,purple bustier
+옷/빨간 우비,0,34,red raincoat
+옷/골지 볼레로,0,34,ribbed shrug
+속옷/가시 달린 브라,0,34,spiked bra
+소품/징 박힌 발찌,0,34,studded anklet
+소품/벗은 케이프,0,34,unworn capelet
+동물/아쿠아 새,0,33,aqua bird
+배경/부서진 천장,0,33,broken ceiling
+옷/나비 보타이,0,33,butterfly bowtie
+옷/체크 비키니 상의,0,33,checkered bikini top
+몸/수정 피부,0,33,crystal skin
+몸/불타는 귀,0,33,flaming ears
+옷/푹신한 칼라,0,33,fluffy collar
+음식/개구리 달걀,0,33,frog egg
+머리/깅엄 체크 머리띠,0,33,gingham hairband
+옷/깅엄 체크 조끼,0,33,gingham vest
+자세/곱창 머리끈 들기,0,33,holding scrunchie
+옷/다중 끈 캐미솔,0,33,multi-strapped camisole
+배경/체크무늬 커튼,0,33,plaid curtains
+모자/무늬 헬멧,0,33,print helmet
+동물/빨간 말,0,33,red horse
+옷/리본 단 띠,0,33,ribbon-trimmed sash
+옷/비치는 넥타이,0,33,see-through necktie
+옷/짧은 코트,0,33,short coat
+몸/은색 날개,0,33,silver wings
+소품/해골 핀,0,33,skull pin
+얼굴/투톤 아이섀도,0,33,two-tone eyeshadow
+소품/벗은 로브,0,33,unworn robe
+옷/아쿠아 베이비돌,0,32,aqua babydoll
+소품/아쿠아 자동차,0,32,aqua car
+옷/아쿠아 슬링샷 수영복,0,32,aqua slingshot swimsuit
+옷/아가일 띠,0,32,argyle sash
+성인/박쥐 니플 패치,0,32,bat pasties
+소품/부서진 연필,0,32,broken pencil
+소품/물고기 가방,0,32,fish bag
+옷/망사 비키니,0,32,fishnet bikini
+옷/꽃무늬 무늬 코트,0,32,floral print coat
+옷/초록 한복,0,32,green hanbok
+옷/초록 오버스커트,0,32,green overskirt
+자세/똥머리 들기,0,32,holding bun
+옷/레이스 달린 로브,0,32,lace-trimmed robe
+옷/다중 끈 셔츠,0,32,multi-strapped shirt
+소품/체크무늬 반다나,0,32,plaid bandana
+옷/물방울무늬 망토,0,32,polka dot cape
+소품/빨간 부채,0,32,red fan
+소품/빨간 펜던트,0,32,red pendant
+양말/줄무늬 힙하이,0,32,striped hiphighs
+동물/봉제 거미,0,32,stuffed spider
+옷/팽팽한 캐미솔,0,32,taut camisole
+옷/찢어진 샅바,0,32,torn loincloth
+옷/젖은 스웨터,0,32,wet sweater
+몸/날개 달린 꼬리,0,32,winged tail
+옷/아쿠아 세일러복,0,31,aqua serafuku
+옷/카모 비키니 상의,0,31,camouflage bikini top
+옷/카모 소매,0,31,camouflage sleeves
+옷/체크 케이프,0,31,checkered capelet
+옷/칼라 있는 카디건,0,31,collared cardigan
+옷/사선 줄무늬 기모노,0,31,diagonal-striped kimono
+머리/프릴 머리띠,0,31,frilled headband
+소품/거대한 해골,0,31,giant skull
+몸/그라데이션 비늘,0,31,gradient scales
+옷/회색 베이비돌,0,31,grey babydoll
+자세/이빨 들기,0,31,holding tooth
+옷/라텍스 세일러복,0,31,latex serafuku
+성인/잎 니플 패치,0,31,leaf pasties
+몸/번개 문신,0,31,lightning bolt tattoo
+옷/주황 판초,0,31,orange poncho
+소품/무늬 안경,0,31,print eyewear
+옷/보라 히잡,0,31,purple hijab
+소품/빨간 팬지,0,31,red pansy
+옷/리본 단 애스콧 타이,0,31,ribbon-trimmed ascot
+소품/뱀 팔찌,0,31,snake bracelet
+소품/가시 달린 티아라,0,31,spiked tiara
+옷/점박이 치마,0,31,spotted skirt
+모자/징 박힌 모자,0,31,studded hat
+양말/징 박힌 레그웨어,0,31,studded legwear
+소품/봉제 꽃,0,31,stuffed flower
+머리/늑대 머리 장식,0,31,wolf headdress
+모자/아쿠아 보닛,0,30,aqua bonnet
+양말/등 파인 팬티스타킹,0,30,backless pantyhose
+소품/검은 진주,0,30,black pearl
+머리/카모 머리띠,0,30,camouflage hairband
+소품/고양이 해골,0,30,cat skull
+소품/체크 초커,0,30,checkered choker
+배경/가짜 하늘,0,30,fake sky
+소품/빛나는 사슬,0,30,glowing chain
+소품/금색 장미,0,30,gold rose
+소품/얼음 가방,0,30,ice bag
+옷/겹친 칼라,0,30,layered collar
+옷/가죽 코르셋,0,30,leather corset
+옷/주황 롬퍼,0,30,orange romper
+옷/체크무늬 민소매,0,30,plaid tank top
+몸/물방울무늬 손톱,0,30,polka dot nails
+모자/토끼 헬멧,0,30,rabbit helmet
+얼굴/은색 입술,0,30,silver lips
+소품/벗은 메이드 머리 장식,0,30,unworn maid headdress
+옷/세로줄 민소매,0,30,vertical-striped tank top
+소품/아쿠아 마스크,0,29,aqua mask
+속옷/갈색 블루머,0,29,brown bloomers
+옷/나비 리본,0,29,butterfly bow
+옷/수정 무늬,0,29,crystal print
+속옷/개 무늬 팬티,0,29,dog print panties
+동물/프릴 상어,0,29,frilled shark
+옷/털 달린 크롭탑,0,29,fur-trimmed crop top
+소품/금색 방울,0,29,gold bell
+몸/금색 꼬리,0,29,gold tail
+소품/금색 깃털,0,29,golden feathers
+옷/초록 샅바,0,29,green loincloth
+소품/초록 검,0,29,green sword
+옷/큰 칼라,0,29,large collar
+신발/짝짝이 부츠,0,29,mismatched boots
+얼굴/주황 치아,0,29,orange teeth
+소품/종이 검,0,29,paper sword
+옷/무늬 세일러 칼라,0,29,print sailor collar
+동물/비치는 나비,0,29,see-through butterfly
+옷/비치는 커프스,0,29,see-through cuffs
+옷/점박이 리본,0,29,spotted bow
+음식/봉제 바나나,0,29,stuffed banana
+옷/투톤 튜닉,0,29,two-tone tunic
+소품/벗은 스포츠 브라,0,29,unworn sports bra
+소품/늑대 장식,0,29,wolf ornament
+모자/아가일 보닛,0,28,argyle bonnet
+옷/등 파인 재킷,0,28,backless jacket
+동물/검은 용,0,28,black dragon
+옷/나비 드레스,0,28,butterfly dress
+속옷/벚 브라,0,28,cherry bra
+머리/짧은 머리,0,28,cropped hair
+머리/깃털 머리띠,0,28,feather hairband
+모자/금색 모자,0,28,gold hat
+모자/하트 모양 모자,0,28,heart-shaped hat
+옷/레이스 케이프,0,28,lace capelet
+배경/레이스 커튼,0,28,lace curtains
+옷/레이스 달린 망토,0,28,lace-trimmed cape
+양말/라텍스 팬티스타킹,0,28,latex pantyhose
+옷/분홍 유니타드,0,28,pink unitard
+옷/핀스트라이프 비키니,0,28,pinstripe bikini
+몸/플라스틱 피부,0,28,plastic skin
+소품/빨간 동전,0,28,red coin
+옷/리본 단 캐미솔,0,28,ribbon-trimmed camisole
+몸/은색 뿔,0,28,silver horns
+소품/해골 펜던트,0,28,skull pendant
+소품/뱀 반지,0,28,snake ring
+옷/가시 달린 바지,0,28,spiked pants
+음식/별 모양 초콜릿,0,28,star-shaped chocolate
+소품/찢어진 책,0,28,torn book
+옷/투톤 유니타드,0,28,two-tone unitard
+옷/물 소매,0,28,water sleeves
+속옷/젖은 블루머,0,28,wet bloomers
+옷/아쿠아 벙어리장갑,0,27,aqua mittens
+소품/아쿠아 꽃잎,0,27,aqua petals
+옷/갈색 롬퍼,0,27,brown romper
+옷/체크 후드티,0,27,checkered hoodie
+소품/금 간 검,0,27,cracked sword
+신발/데님 부츠,0,27,denim boots
+옷/자수 장갑,0,27,embroidered gloves
+옷/프릴 한푸,0,27,frilled hanfu
+소품/거대한 책,0,27,giant book
+성인/빛나는 항문,0,27,glowing anus
+소품/빛나는 십자가,0,27,glowing cross
+소품/빛나는 방패,0,27,glowing shield
+옷/금색 사롱,0,27,gold sarong
+음식/초록 주스,0,27,green juice
+소품/금속 접시,0,27,metal plate
+소품/달 돌,0,27,moon stone
+소품/목걸이 없음,0,27,no necklace
+옷/체크무늬 레오타드,0,27,plaid leotard
+옷/물방울무늬 보디수트,0,27,polka dot bodysuit
+옷/물방울무늬 케이프,0,27,polka dot capelet
+옷/빨간 히잡,0,27,red hijab
+배경/둥근 침대,0,27,round bed
+옷/비치는 칼라,0,27,see-through collar
+옷/비치는 판초,0,27,see-through poncho
+옷/가시 달린 치마,0,27,spiked skirt
+양말/세로줄 힙하이,0,27,vertical-striped hiphighs
+옷/노란 뷔스티에,0,27,yellow bustier
+속옷/아가일 팬티,0,26,argyle panties
+소품/파란 펜던트,0,26,blue pendant
+소품/파란 알약,0,26,blue pill
+옷/카모 조끼,0,26,camouflage vest
+머리/체크 머리장식,0,26,checkered hair ornament
+옷/사선 줄무늬 목도리,0,26,diagonal-striped scarf
+옷/깅엄 체크 목도리,0,26,gingham scarf
+옷/빛나는 드레스,0,26,glowing dress
+소품/금색 연꽃,0,26,gold lotus
+옷/그라데이션 띠,0,26,gradient sash
+옷/그라데이션 베일,0,26,gradient veil
+모자/말 모자,0,26,horse hat
+양말/니트 팬티스타킹,0,26,knit pantyhose
+옷/레이스 달린 코트,0,26,lace-trimmed coat
+옷/레이스 달린 코르셋,0,26,lace-trimmed corset
+머리/미니 머리 리본,0,26,mini hair bow
+소품/주황 왕관,0,26,orange crown
+옷/패딩 셔츠,0,26,padded shirt
+옷/분홍 뷔스티에,0,26,pink bustier
+옷/핀스트라이프 넥타이,0,26,pinstripe necktie
+소품/체크무늬 완장,0,26,plaid armband
+소품/체크무늬 초커,0,26,plaid choker
+옷/체크무늬 망토(클로크),0,26,plaid cloak
+옷/플라스틱 장갑,0,26,plastic gloves
+옷/물방울무늬 조끼,0,26,polka dot vest
+몸/무늬 뿔,0,26,print horns
+옷/무늬 샅바,0,26,print loincloth
+소품/무늬 장식,0,26,print ornament
+신발/무늬 샌들,0,26,print sandals
+양말/무지개 니삭,0,26,rainbow thighhighs
+소품/빨간 양초,0,26,red candle
+소품/작은 동물 물 병,0,26,small animal water bottle
+소품/뱀 암릿,0,26,snake armlet
+소품/딸기 목걸이,0,26,strawberry necklace
+소품/태양 십자가,0,26,sun cross
+소품/찢어진 수건,0,26,torn towel
+소품/장난감 칼,0,26,toy knife
+옷/젖은 원피스 수영복,0,26,wet one-piece swimsuit
+소품/사과 연필,0,25,apple pencil
+옷/아쿠아 히잡,0,25,aqua hijab
+모자/곰 모자 장식,0,25,bear hat ornament
+옷/검은 우비,0,25,black raincoat
+소품/갈색 베개,0,25,brown pillow
+속옷/카모 스포츠 브라,0,25,camouflage sports bra
+옷/체크 레오타드,0,25,checkered leotard
+속옷/데님 팬티,0,25,denim panties
+머리/가짜 머리,0,25,fake hair
+얼굴/가짜 치아,0,25,fake teeth
+옷/깃털 단 기모노,0,25,feather-trimmed kimono
+옷/꽃무늬 무늬 하카마,0,25,floral print hakama
+신발/프릴 신발,0,25,frilled shoes
+옷/프릴 슬링샷 수영복,0,25,frilled slingshot swimsuit
+옷/프릴 타바드,0,25,frilled tabard
+옷/회색 한복,0,25,grey hanbok
+음식/하트 모양 도넛,0,25,heart-shaped donut
+얼굴/하트 모양 눈썹,0,25,heart-shaped eyebrows
+소품/얼음 돌,0,25,ice stone
+옷/니트 카디건,0,25,knit cardigan
+옷/니트 수영복,0,25,knit swimsuit
+옷/레이스 달린 뷔스티에,0,25,lace-trimmed bustier
+머리/레이스 달린 머리 장식,0,25,lace-trimmed headdress
+음식/레몬 케이크,0,25,lemon cake
+옷/헐렁한 드레스,0,25,loose dress
+얼굴/멀티컬러 치아,0,25,multicolored teeth
+얼굴/치아 없음,0,25,no teeth
+소품/주황 팬지,0,25,orange pansy
+소품/분홍 발찌,0,25,pink anklet
+옷/체크무늬 벙어리장갑,0,25,plaid mittens
+옷/무늬 부루마,0,25,print buruma
+신발/무늬 슬리퍼,0,25,print slippers
+옷/무지개 벨트,0,25,rainbow belt
+속옷/새틴 티팬티,0,25,satin thong
+소품/은색 발찌,0,25,silver anklet
+옷/얼룩진 수영복,0,25,stained swimsuit
+옷/줄무늬 부루마,0,25,striped buruma
+옷/흰 핫피,0,25,white happi
+옷/캐주얼,0,63018,casual
+소품/가시,0,62717,spikes
+효과/숨결,0,62684,breath
+눈/떨어진 연결된 눈,0,46122,disembodied linked eye
+메타/1시간 그림 챌린지,0,45658,one-hour drawing challenge
+모자/토킨,0,45490,tokin hat
+옷/메이드 옷 입음,0,36881,enmaided
+음식/주먹밥,0,9351,onigiri
+소품/마이크 스탠드,0,9349,microphone stand
+인원/여우 소년,0,9337,fox boy
+몸/처진 가슴,0,9334,sagging breasts
+자세/상대 팔에 손,0,9333,hand on another's arm
+머리/사선 앞머리,0,9321,diagonal bangs
+자세/새끼손가락 펴기,0,9320,pinky out
+몸/안쪽 색이 다른 동물 귀,0,9309,colored inner animal ears
+구도/원근,0,9296,perspective
+인원/휴머노이드 로봇,0,9292,humanoid robot
+인원/가족,0,9284,family
+옷/구형 스쿨 수영복,0,9279,old school swimsuit
+자세/음료 들기,0,9276,holding drink
+자세/네 손가락 하트,0,9260,four-finger heart hands
+효과/에너지,0,9224,energy
+몸/젤리 발바닥,0,9222,pawpads
+배경/가을,0,9212,autumn
+인원/다크 엘프,0,9197,dark elf
+효과/다리로 가림,0,9194,convenient leg
+표정/변태 같은 표정,0,9171,pervert
+인원/성별 불명,0,9159,ambiguous gender
+배경/추상 배경,0,9148,abstract background
+소품/체스 말,0,9136,chess piece
+인원/좀비,0,9134,zombie
+몸/V자 지느러미,0,9121,v-fin
+얼굴/애교살,0,9118,aegyo sal
+옷/반쯤 벗음,0,9108,partially undressed
+성인/비키니 하의 젖힘,0,9099,bikini bottom aside
+효과/움찔거림,0,9099,twitching
+상태/깨문 자국,0,9085,bite mark
+동물/까마귀,0,9080,crow
+표정/사악한 웃음,0,9062,evil grin
+표정/얀데레,0,9052,yandere
+소품/삼각형,0,9042,triangle
+메타/엉터리 영어 글자,0,9033,engrish text
+자세/귀 내림,0,9029,ears down
+소품/기둥,0,9011,pole
+양말/부츠 속 니삭,0,8981,thighhighs under boots
+소품/리볼버,0,8980,revolver
+머리/들쭉날쭉 앞머리,0,8971,choppy bangs
+옷/다이아 단추,0,8970,diamond button
+동작/잠에서 깸,0,8969,waking up
+몸/배 문신,0,8959,stomach tattoo
+소품/돈,0,8945,money
+효과/번개,0,8934,lightning
+소품/키보드,0,8931,computer keyboard
+소품/뿔 리본,0,8929,horn ribbon
+인원/복제,0,8922,clone
+자세/상대 머리에 손,0,8921,hand in another's hair
+머리/월계관,0,8916,laurel crown
+옷/고스 패션,0,8908,goth fashion
+소품/목에 두른 수건,0,8891,towel around neck
+성인/혼욕,0,8890,mixed-sex bathing
+성인/자기 엉덩이 움켜쥠,0,8882,grabbing own ass
+시선/동물 바라봄,0,8857,looking at animal
+성인/가슴 들어올리기,0,8847,breast lift
+성인/의심스러운 액체,0,8832,suggestive fluid
+메타/메가진화 포켓몬,0,8827,mega pokemon
+머리/닻 머리장식,0,8826,anchor hair ornament
+음식/포도,0,8821,grapes
+소품/닌텐도 스위치,0,8820,nintendo switch
+소품/여러 귀걸이,0,8800,multiple earrings
+모자/털모자,0,8798,fur hat
+소품/태블릿,0,8796,tablet pc
+인원/모자(엄마와 아들),0,8786,mother and son
+인원/사람들,0,8782,people
+소품/와인병,0,8780,wine bottle
+소품/이어피스,0,8760,earpiece
+배경/왕좌,0,8750,throne
+옷/대비색 칼라,0,8747,contrast collar
+자세/끈 잡기,0,8737,holding strap
+소품/의료용 안대,0,8732,medical eyepatch
+성인/살짝 보이는 음모,0,8729,pubic hair peek
+배경/코타츠,0,8709,kotatsu
+화풍/차분한 색,0,8701,muted colors
+효과/스포트라이트,0,8692,spotlight
+메타/말장난,0,8688,pun
+자세/상대 허리에 손,0,8686,hand on another's waist
+인원/사자 소녀,0,8673,lion girl
+머리/머리 구슬,0,8667,hair beads
+소품/보트,0,8657,boat
+소품/기관총,0,8654,machine gun
+몸/동물 발,0,8647,animal feet
+소품/에너지 검,0,8637,energy sword
+배경/황혼,0,8632,twilight
+배경/문간,0,8606,doorway
+옷/겹쳐 입은 옷,0,8585,layered clothes
+음식/사케,0,8578,sake
+소품/자전거,0,8570,bicycle
+소품/귀 태그,0,8568,ear tag
+구도/필러박스,0,8567,pillarboxed
+소품/장미 꽃잎,0,8561,rose petals
+옷/팔꿈치 보호대,0,8545,elbow pads
+소품/팔걸이,0,8542,arm rest
+소품/구슬 귀걸이,0,8540,sphere earrings
+옷/코트 자락,0,8526,coattails
+메타/앨범 표지,0,8505,album cover
+동작/붓기,0,8495,pouring
+얼굴/코 흉터,0,8491,scar on nose
+옷/양면 재킷,0,8480,two-sided jacket
+자세/상대 팔 잡기,0,8469,holding another's arm
+자세/위를 가리킴,0,8466,pointing up
+소품/막대,0,8463,stick
+몸/꼬리 리본,0,8460,tail ribbon
+소품/가시덤불,0,8459,thorns
+동작/게임하기(비디오),0,8457,playing video games
+모자/뒤로 쓴 모자,0,8455,backwards hat
+동작/옷 입는 중,0,8452,dressing
+배경/사물함,0,8433,locker
+옷/허리에 맨 재킷,0,8429,jacket around waist
+배경/도로 표지판,0,8426,road sign
+인원/아기,0,8398,baby
+자세/단검 들기,0,8398,holding dagger
+얼굴/갈래 눈썹,0,8394,forked eyebrows
+몸/팔털,0,8382,arm hair
+머리/시스루 뱅,0,8379,wispy bangs
+신발/짝짝이 신발,0,8375,asymmetrical footwear
+자세/아이스바 들기,0,8362,holding popsicle
+자세/양손으로 머리 만지기,0,8358,hands in own hair
+자세/상대 가슴에 손,0,8338,hand on another's chest
+상태/손상됨,0,8331,damaged
+인원/군중,0,8325,crowd
+소품/국자,0,8324,ladle
+배경/안락의자,0,8312,armchair
+눈/미친 눈,0,8311,crazy eyes
+소품/석산(꽃),0,8305,spider lily
+인원/남자 메이드,0,8297,male maid
+자세/역수 쥐기,0,8295,reverse grip
+몸/의수,0,8294,prosthetic arm
+옷/꽈배기 니트,0,8292,cable knit
+옷/가슴 커튼,0,8289,breast curtains
+소품/꽂힌 검,0,8287,planted sword
+옷/치마 속 사이클 바지,0,8273,bike shorts under skirt
+몸/터질 듯한 가슴,0,8262,bursting breasts
+옷/한쪽 눈 붕대,0,8256,bandage over one eye
+옷/파워 아머,0,8251,power armor
+동작/칼 뽑기,0,8251,unsheathing
+몸/허벅지 점,0,8246,mole on thigh
+자세/상대 얼굴에 양손,0,8236,hands on another's face
+옷/오링 허벅지 끈,0,8230,o-ring thigh strap
+인원/알비노,0,8228,albino
+음식/대파,0,8223,spring onion
+옷/빨간 테두리,0,8212,red trim
+자세/상대 허벅지에 손,0,8199,hand on another's thigh
+얼굴/부리,0,8191,beak
+메타/로마자 글자,0,8184,romaji text
+효과/비눗방울,0,8176,soap bubbles
+동작/마스크 내림,0,8175,mask pull
+동작/싸움,0,8170,fighting
+소품/톱니바퀴,0,8146,gears
+인원/비인간형 로봇,0,8129,non-humanoid robot
+동작/내다봄,0,8123,peeking out
+소품/배(큰 배),0,8112,ship
+동물/병아리,0,8104,chick
+상태/끼임,0,8101,wedgie
+인원/역트랩,0,8098,reverse trap
+구도/여성 시점,0,8065,female pov
+소품/사무용 의자,0,8059,office chair
+소품/모자 위 고글,0,8055,goggles on headwear
+배경/별똥별,0,8050,shooting star
+소품/시험관,0,8032,test tube
+효과/변신,0,8014,transformation
+구도/어깨 잘림,0,7953,cropped shoulders
+표정/몸 홍조,0,7950,body blush
+몸/가슴 문신,0,7891,breast tattoo
+음식/마카롱,0,7880,macaron
+옷/실크,0,7878,silk
+자세/벤치에 앉음,0,7854,on bench
+자세/팔짱 낀 둘,0,7852,locked arms
+성인/색 있는 음모,0,7851,colored pubic hair
+효과/상상,0,7851,imagining
+음식/껌,0,7824,chewing gum
+상태/립스틱 자국,0,7815,lipstick mark
+몸/겨드랑이 살짝 보임,0,7801,armpit peek
+인원/반인반수,0,7793,taur
+표정/말풍선 꼬불선,0,7784,spoken squiggle
+화풍/노란색 위주,0,7775,yellow theme
+몸/큰 배,0,7774,big belly
+자세/가운뎃손가락,0,7774,middle finger
+옷/가슴 벨트,0,7767,chest belt
+자세/발목 꼬기,0,7761,crossed ankles
+동작/찌르기,0,7749,poking
+몸/구미호 꼬리,0,7746,kyuubi
+인원/새 소녀,0,7740,bird girl
+효과/글리치,0,7737,glitch
+소품/화살통,0,7722,quiver
+몸/사자 꼬리,0,7716,lion tail
+옷/갈색 니트 조끼,0,7714,brown sweater vest
+표정/생각 중,0,7709,thinking
+소품/주황 렌즈 안경,0,7702,orange-tinted eyewear
+효과/죽음,0,7700,death
+옷/붕대 감은 머리,0,7658,bandaged head
+속옷/로우라이즈 팬티,0,7643,lowleg panties
+옷/검은 신부 장갑,0,7641,black bridal gauntlets
+소품/불투명 안경,0,7639,opaque glasses
+소품/수국,0,7636,hydrangea
+배경/물웅덩이,0,7629,puddle
+옷/지뢰계 패션,0,7628,jirai kei
+소품/봉투,0,7622,envelope
+상태/출혈,0,7617,bleeding
+옷/그리스 로마풍 옷,0,7605,greco-roman clothes
+소품/산탄총,0,7605,shotgun
+몸/링 피어싱,0,7604,ring piercing
+소품/돌격 바이저,0,7603,assault visor
+배경/화장실,0,7602,toilet
+눈/X자 눈동자,0,7592,x-shaped pupils
+머리/헤어팟,0,7586,hairpods
+머리/A라인 단발,0,7567,inverted bob
+인원/로봇 소녀,0,7520,robot girl
+옷/성조기 무늬,0,7518,american flag print
+표정/말풍선 느낌물음표,0,7514,spoken interrobang
+자세/사람 위에 누움,0,7504,lying on person
+소품/손목 리본,0,7501,wrist ribbon
+몸/털 많음,0,7493,hairy
+음식/레몬,0,7481,lemon
+소품/펜던트 초커,0,7460,pendant choker
+소품/자물쇠,0,7459,lock
+옷/깊게 파인 네크라인,0,7459,plunging neckline
+몸/날개 팔,0,7437,winged arms
+표정/말풍선 분노 표시,0,7425,spoken anger vein
+자세/붓 들기,0,7421,holding paintbrush
+자세/팔 껴안기,0,7410,arm hug
+인원/무용수,0,7403,dancer
+머리/외줄 브릿지,0,7394,single hair streak
+몸/빨판,0,7381,suction cups
+배경/안개,0,7367,fog
+소품/순록 뿔,0,7366,reindeer antlers
+소품/말굽 장식,0,7361,horseshoe ornament
+머리/당근 머리장식,0,7360,carrot hair ornament
+속옷/브라 살짝 보임,0,7358,bra peek
+자세/손가락 총,0,7358,finger gun
+효과/반사되는 액체,0,7356,reflective liquid
+화풍/알록달록,0,7347,colorful
+옷/고양이 모양 뚫림,0,7343,cat cutout
+효과/파편,0,7342,debris
+상태/색 있는 피,0,7324,colored blood
+상태/몸에 묻은 음식,0,7321,food on body
+배경/거미줄,0,7310,spider web
+옷/비치는 실루엣,0,7300,see-through silhouette
+옷/옷 사이로 나온 꼬리,0,7299,tail through clothes
+동작/노출,0,7282,flashing
+효과/회절 빛살,0,7280,diffraction spikes
+소품/크리스마스 장식,0,7278,christmas ornaments
+메타/색 가이드,0,7270,color guide
+신발/텐구 게타,0,7269,tengu-geta
+소품/머리 위 수건,0,7251,towel on head
+소품/접은 부채,0,7234,folded fan
+자세/상대 허리에 팔,0,7221,arm around another's waist
+소품/원,0,7221,circle
+소품/호스,0,7219,hose
+머리/앞머리 넘김,0,7216,bangs pinned back
+메타/그림 프로그램 화면,0,7207,art program in frame
+옷/우주복,0,7202,spacesuit
+소품/야광봉,0,7199,glowstick
+옷/단추 푼 셔츠,0,7197,unbuttoned shirt
+효과/영주(령주),0,7194,command spell
+소품/빨간 렌즈 안경,0,7193,red-tinted eyewear
+소품/볼트액션,0,7189,bolt action
+소품/조롱박,0,7187,gourd
+자세/W자 팔,0,7176,w arms
+효과/너무 많음,0,7167,too many
+음식/귤,0,7162,mandarin orange
+모자/요리사 모자,0,7137,chef hat
+인원/부자,0,7137,father and son
+소품/삼지창,0,7132,trident
+성인/엉덩이 벌림,0,7131,spread ass
+인원/퓨전,0,7122,fusion
+메타/자막,0,7118,subtitled
+성인/옷 위 결박,0,7111,shibari over clothes
+메타/옷 입은 포켓몬,0,7109,clothed pokemon
+자세/왕좌에 앉음,0,7103,on throne
+머리/흘러내린 머리,0,7102,hair flowing over
+자세/목에 팔,0,7088,arm around neck
+자세/망치 들기,0,7086,holding hammer
+머리/뼈 머리장식,0,7075,bone hair ornament
+옷/과일 무늬,0,7073,fruit print
+소품/목에 건 호루라기,0,7073,whistle around neck
+성인/재치 검열,0,7057,novelty censor
+몸/다리털,0,7049,leg hair
+소품/빛나는 무기,0,7048,glowing weapon
+모자/마법사 모자,0,7043,wizard hat
+자세/깃발 들기,0,7036,holding flag
+메타/초사이어인,0,7036,super saiyan
+소품/바이올린,0,7017,violin
+머리/낮게 묶은 옆머리,0,7008,low-tied sidelocks
+소품/수술용 마스크,0,7007,surgical mask
+머리/삼각 머리장식,0,7003,triangle hair ornament
+소품/우주선,0,6999,spacecraft
+자세/볼 맞대기,0,6975,cheek-to-cheek
+자세/유연함,0,6963,flexible
+효과/물감 튐,0,6963,paint splatter
+옷/하고로모,0,6957,hagoromo
+몸/바디페인팅,0,6955,bodypaint
+음식/파르페,0,6947,parfait
+메타/다른 모습,0,6946,alternate form
+옷/가슴 틀,0,6933,framed breasts
+배경/글자 배경,0,6926,text background
+표정/입술 깨물기,0,6921,biting own lip
+소품/도미노 마스크,0,6919,domino mask
+동작/수영복 당기기,0,6916,one-piece swimsuit pull
+소품/맥주 캔,0,6910,beer can
+몸/기계 다리,0,6898,mechanical legs
+배경/쇼지,0,6898,shouji
+자세/뒤로 들기,0,6895,holding behind back
+소품/피크,0,6880,plectrum
+효과/에가스미(안개),0,6878,egasumi
+소품/조준경,0,6872,scope
+머리/뿔 모양 머리,0,6871,hair horns
+눈/가로 눈동자,0,6871,horizontal pupils
+인원/옷 입은 동물,0,6855,clothed animal
+소품/코안경,0,6854,pince-nez
+소품/드럼,0,6853,drum
+자세/포켓몬 안기,0,6853,holding pokemon
+소품/낚싯대,0,6848,fishing rod
+눈/두꺼운 속눈썹,0,6830,thick eyelashes
+자세/발가락 벌림,0,6828,spread toes
+동작/비키니 상의 들어올림,0,6820,bikini top lift
+소품/티슈 상자,0,6814,tissue box
+인원/양 소녀,0,6807,sheep girl
+소품/총알,0,6805,bullet
+자세/야구 배트 들기,0,6798,holding baseball bat
+옷/오비아게,0,6798,obiage
+속옷/팬티 끈,0,6782,panty straps
+자세/발가락 오므림,0,6780,toe scrunch
+음식/팬케이크,0,6773,pancake
+메타/트위터 로고,0,6771,twitter logo
+머리/높은 옆 포니테일,0,6760,high side ponytail
+몸/혀 피어싱,0,6760,tongue piercing
+음식/컵케이크,0,6745,cupcake
+모자/동물 귀 모자,0,6736,animal ear headwear
+옷/바시티 재킷,0,6716,letterman jacket
+얼굴/가려진 얼굴,0,6712,covered face
+머리/외줄 머리고리,0,6711,single hair ring
+옷/흰 테두리,0,6711,white trim
+동물/갈매기,0,6697,seagull
+표정/오므린 입술,0,6686,puckered lips
+음식/채소,0,6683,vegetable
+표정/흥분,0,6658,aroused
+자세/업기,0,6658,piggyback
+효과/탄막,0,6645,danmaku
+인원/아우라,0,6644,au ra
+동작/입에 문 머리끈,0,6643,hair tie in mouth
+소품/레이피어,0,6637,rapier
+동작/냄새 맡기,0,6626,smelling
+신발/스케이트,0,6624,skates
+자세/볼에 손가락,0,6622,finger to cheek
+자세/시청자 조준,0,6621,aiming at viewer
+옷/고대 이집트풍,0,6617,ancient egyptian
+옷/어깨 스파이크,0,6617,shoulder spikes
+소품/목에 건 고글,0,6616,goggles around neck
+몸/화상 흉터,0,6615,burn scar
+자세/옷 속에 손,0,6615,hand under clothes
+소품/등에 멘 검,0,6615,sword on back
+소품/쿠나이,0,6613,kunai
+자세/컨트롤러 들기,0,6605,holding game controller
+옷/빌려 입은 옷,0,6604,borrowed clothes
+옷/물리법칙 무시 셔츠,0,6581,impossible shirt
+소품/가방 장식,0,6565,bag charm
+몸/귀 모양 흉터,0,6557,notched ear
+옷/한쪽 손가락 없는 장갑,0,6550,single fingerless glove
+자세/곰방대 들기,0,6546,holding smoking pipe
+자세/기댐,0,6536,leaning
+옷/흰 정장,0,6533,white suit
+옷/마이크로 드레스,0,6526,microdress
+옷/터틀넥 원피스,0,6522,turtleneck dress
+소품/라틴 십자가,0,6520,latin cross
+음식/생일 케이크,0,6518,birthday cake
+옷/안대 비키니,0,6514,eyepatch bikini
+효과/어안렌즈,0,6509,fisheye
+자세/클립보드 들기,0,6509,holding clipboard
+배경/도시 불빛,0,6508,city lights
+소품/소울 젬,0,6490,soul gem
+옷/와풍 메이드,0,6480,wa maid
+배경/별자리,0,6462,constellation
+자세/입 가리기(손),0,6462,hand over own mouth
+자세/자기 다리에 손,0,6458,hand on own leg
+인원/하피,0,6458,harpy
+소품/초승달 귀걸이,0,6444,crescent earrings
+구도/여러 4컷 만화,0,6443,multiple 4koma
+동물/동양 용,0,6437,eastern dragon
+동작/수영,0,6432,swimming
+옷/이브닝 드레스,0,6425,evening gown
+동작/키스 후,0,6421,after kiss
+메타/누드 표지,0,6421,nude cover
+동작/던지기,0,6419,throwing
+소품/서류가방,0,6417,briefcase
+상태/베인 상처,0,6415,cuts
+효과/무대 조명,0,6415,stage lights
+소품/메가폰,0,6413,megaphone
+표정/말풍선 캐릭터,0,6412,spoken character
+옷/티백 레오타드,0,6412,thong leotard
+옷/고대 그리스풍 옷,0,6394,ancient greek clothes
+음식/치즈,0,6392,cheese
+소품/리모컨,0,6388,remote control
+소품/플루트,0,6379,flute
+소품/흰 테 안경,0,6364,white-framed eyewear
+소품/시데,0,6362,shide
+배경/반짝이 배경,0,6362,sparkle background
+화풍/초현실,0,6354,surreal
+메타/캐릭터 설정표,0,6347,character profile
+옷/변형 바니걸,0,6346,nontraditional playboy bunny
+장르/특촬,0,6342,tokusatsu
+효과/불씨,0,6334,embers
+효과/붉은 실(운명),0,6325,string of fate
+소품/화분,0,6322,flower pot
+자세/상대 골반에 손,0,6322,hand on another's hip
+음식/사과사탕,0,6319,candy apple
+효과/높은음자리표,0,6318,treble clef
+성인/다리 위 체액,0,6312,cum on legs
+동작/샤워,0,6310,showering
+소품/서예 붓,0,6303,calligraphy brush
+모자/뿔 투구,0,6301,horned helmet
+소품/베이스 기타,0,6299,bass guitar
+인원/아이들끼리,0,6299,kodomo doushi
+옷/잠옷류,0,6297,sleepwear
+옷/소매 리본,0,6297,sleeve bow
+소품/뽑은 칼,0,6289,unsheathed
+성인/벌어짐,0,6288,gaping
+소품/노란 테 안경,0,6288,yellow-framed eyewear
+얼굴/피부 송곳니,0,6284,skin fangs
+음식/찐빵,0,6282,steamed bun
+소품/렌치,0,6275,wrench
+얼굴/콧구멍,0,6274,nostrils
+소품/화장품,0,6267,cosmetics
+음식/초밥,0,6260,sushi
+옷/검은 가터 끈,0,6254,black garter straps
+자세/방아쇠에 손가락,0,6252,finger on trigger
+성인/작은 음경,0,6249,small penis
+자세/크게 벌린 다리,0,6249,wide spread legs
+소품/허벅지 파우치,0,6247,thigh pouch
+옷/거미줄 무늬,0,6244,spider web print
+동작/상대 입에 손가락,0,6236,finger in another's mouth
+옷/깃발 무늬 비키니,0,6222,flag print bikini
+메타/시간 역설,0,9097,time paradox
+몸/가슴 큰 로리,0,9092,oppai loli
+성인/깊은 삽입,0,9082,deep penetration
+몸/짙은 젖꼭지,0,9057,dark nipples
+성인/몸 없는 음경,0,8978,disembodied penis
+메타/골라 보세요,0,8763,take your pick
+옷/도키와다이 교복,0,8596,tokiwadai school uniform
+성인/회음부,0,8442,perineum
+효과/움직이지 않는 무늬,0,8364,unmoving pattern
+자세/상대 어깨에 손,0,8329,hands on another's shoulders
+메타/동서 크로스오버,0,8329,east-west crossover
+메타/유쿠리 시테잇테네,0,8276,yukkuri shiteitte ne
+옷/트레센 운동복,0,8254,tracen training uniform
+몸/엉덩이 보조개,0,8252,dimples of venus
+옷/오토노키자카 교복,0,8227,otonokizaka school uniform
+동물/우산 요괴,0,8191,karakasa obake
+옷/귀살대 제복,0,8149,demon slayer uniform
+몸/가슴 누르기,0,8068,breast suppress
+성인/요도,0,8053,urethra
+인원/변태 여자,0,8048,female pervert
+메타/시리즈 내 크로스오버,0,8030,in-franchise crossover
+성인/동물 음경,0,8027,animal penis
+구도/옆을 향함,0,8023,facing to the side
+몸/젖꼭지 없음,0,8014,no nipples
+성인/벌린 항문,0,8000,spread anus
+성인/얼굴 위 음경,0,7984,penis on face
+표정/가슴 부러워함,0,7804,breast envy
+성인/항문 보임,0,7678,anus peek
+옷/가레그 마크 수도원 제복,0,7656,garreg mach monastery uniform
+표정/음경에 감탄,0,7635,penis awe
+몸/거대한 젖꼭지,0,7582,huge nipples
+성인/도톰한 둔덕,0,7580,fat mons
+인원/꼬마 소년,0,7533,miniboy
+메타/진화 계통,0,7489,evolutionary line
+성인/발기 안 됨,0,7396,flaccid
+옷/칼데아 마스터 제복,0,7260,chaldea master uniform
+성인/두 발 풋잡,0,7045,two-footed footjob
+성인/입에 문 콘돔,0,6968,condom in mouth
+소품/쿠로코테,0,6964,kurokote
+소품/색지,0,6946,shikishi
+소품/에너지 총,0,6909,energy gun
+성인/음부 없음,0,6906,no pussy
+소품/젖꼭지 밴드,0,6889,bandaids on nipples
+메타/2023년,0,6860,2023
+메타/그로,0,6829,guro
+속옷/고양이 란제리,0,6826,cat lingerie
+성인/상대 음경 쥠,0,6783,grabbing another's penis
+성인/음부 체액 자국,0,6767,pussy juice trail
+메타/번호 매김,0,6763,numbered
+메타/상표 흉내,0,6690,brand name imitation
+몸/갈고리 발톱,0,6689,talons
+메타/노래 제목,0,6685,song name
+메타/2024년,0,6673,2024
+소품/하트 오링,0,6645,heart o-ring
+성인/음부 체액 얼룩,0,6638,pussy juice stain
+소품/구멍 재갈,0,6627,wiffle gag
+성인/포켓몬 성애,0,6547,pokephilia
+몸/짝짝이 가슴,0,6520,unaligned breasts
+자세/상대 허벅지 쥠,0,6441,grabbing another's thighs
+성인/장갑 낀 손,0,6441,gloved handjob
+메타/2022년,0,6277,2022
+소품/초승달 핀,0,6208,crescent pin
+소품/창,0,6202,lance
+옷/검은 스웨터 조끼,0,6193,black sweater vest
+소품/연잎,0,6189,lily pad
+모자/경찰 모자,0,6187,police hat
+소품/붕대 감은 목,0,6185,bandaged neck
+소품/고헤이 들기,0,6181,holding gohei
+동작/글쓰기,0,6173,writing
+메타/2025년,0,6167,2025
+자세/고개 젖힘,0,6165,head back
+표정/찌푸림,0,6155,scowl
+메타/여러 크로스오버,0,6154,multiple crossover
+머리/간자시,0,6152,kanzashi
+소품/기타 들기,0,6144,holding guitar
+성인/배 위 사정,0,6144,cum on stomach
+소품/헤드마운트 디스플레이,0,6143,head-mounted display
+동물/라미아,0,6138,lamia
+자세/도움받아 노출,0,6128,assisted exposure
+신발/통굽 신발,0,6126,platform shoes
+몸/불꽃 꼬리,0,6126,flame-tipped tail
+음식/크림,0,6124,cream
+소품/쓰레기통,0,6111,trash can
+동작/쓰다듬기,0,6110,petting
+옷/불가능한 보디슈트,0,6109,impossible bodysuit
+몸/듬성한 음모,0,6104,sparse pubic hair
+얼굴/이마 흉터,0,6102,scar on forehead
+소품/속옷 들기,0,6101,holding underwear
+소품/기차,0,6097,train
+소품/프라이팬,0,6095,frying pan
+소품/휴대용 게임기 들기,0,6093,holding handheld game console
+몸/다람쥐 귀,0,6092,squirrel ears
+모자/진가사,0,6090,jingasa
+눈/치켜뜬 눈,0,6081,upturned eyes
+몸/엄니,0,6076,tusks
+자세/두 손으로,0,6074,two-handed
+소품/칼집 들기,0,6068,holding sheath
+소품/깨진 유리,0,6068,broken glass
+소품/현수막,0,6068,banner
+머리/울프컷,0,6061,wolf cut
+시선/응시,0,6058,staring
+자세/어깨 위,0,6032,on shoulder
+자세/머리 붙잡음,0,6028,head grab
+소품/자루 들기,0,6025,holding sack
+성인/처녀 상실,0,6024,defloration
+옷/옷 속 보디슈트,0,6017,bodysuit under clothes
+동작/운전,0,6009,driving
+소품/삼각 귀걸이,0,6008,triangle earrings
+얼굴/더러운 얼굴,0,6006,dirty face
+소품/피크 들기,0,6002,holding plectrum
+음식/감자튀김,0,6000,french fries
+옷/방탄조끼,0,5997,bulletproof vest
+표정/츤데레,0,5993,tsundere
+소품/스타일러스,0,5989,stylus
+소품/피아노,0,5987,piano
+소품/탄산 캔,0,5985,soda can
+몸/비키니 자국,0,5972,bikini tan
+신발/스트랩 힐,0,5957,strappy heels
+메타/즉시 패배,0,5957,instant loss
+소품/촛대,0,5955,candlestand
+소품/슈퍼 크라운,0,5951,super crown
+음식/모찌,0,5943,mochi
+배경/복도,0,5943,hallway
+옷/월광관 고교 교복,0,5940,gekkoukan high school uniform
+인원/호랑이 소년,0,5935,tiger boy
+옷/동정 킬러 스웨터,0,5927,virgin killer sweater
+효과/빛줄기,0,5927,light trail
+소품/천장 조명,0,5925,ceiling light
+소품/인형극 인형,0,5909,puppet
+얼굴/뾰족한 코,0,5907,pointy nose
+옷/고대 이집트 의상,0,5905,ancient egyptian clothes
+눈/흰 속눈썹,0,5897,white eyelashes
+자세/탁자 위,0,5890,on table
+몸/가려진 복근,0,5887,covered abs
+동작/운동,0,5886,exercising
+배경/비행운,0,5882,contrail
+동물/머리 위 새,0,5881,bird on head
+메타/1컷 만화,0,5876,1koma
+몸/원뿔 뿔,0,5873,cone horns
+메타/인스타그램 아이디,0,5872,instagram username
+효과/푹신함,0,5871,fluffy
+옷/로즈월 저택 메이드복,0,5868,roswaal mansion maid uniform
+소품/장난감,0,5866,toy
+자세/상자 안,0,5860,in box
+소품/젖꼭지 고리,0,5853,nipple rings
+신발/짝짝이 신발,0,5850,mismatched footwear
+옷/직원 유니폼,0,5848,employee uniform
+옷/수영 팬츠,0,5847,swim trunks
+소품/일회용 커피잔,0,5847,disposable coffee cup
+동작/옷 물기,0,5847,clothes in mouth
+소품/팻말 들기,0,5846,holding sign
+자세/떠 있음,0,5841,afloat
+양말/흰 레그워머,0,5840,white leg warmers
+표정/시큰둥,0,5840,unamused
+동작/머리 넘기기,0,5840,tucking hair
+소품/마법사 지팡이,0,5831,mage staff
+머리/클로버 머리장식,0,5826,clover hair ornament
+메타/공식 다른 머리색,0,5825,official alternate hair color
+자세/다리 감기,0,5824,leg lock
+메타/잡지 표지,0,5817,magazine cover
+자세/손 붙잡기,0,5813,hand grab
+효과/에너지 날개,0,5806,energy wings
+배경/스테인드글라스,0,5790,stained glass
+음식/오믈렛,0,5782,omelet
+소품/줄깃발,0,5778,string of flags
+몸/손가락 적음,0,5772,fewer digits
+머리/밴드 머리장식,0,5770,bandaid hair ornament
+옷/유치원복,0,5765,kindergarten uniform
+자세/상대 목에 손,0,5759,hand on another's neck
+양말/한쪽 니하이,0,5747,single kneehigh
+옷/견장,0,5747,shoulder boards
+옷/축구복,0,5738,soccer uniform
+소품/게임기,0,5738,game console
+얼굴/눈물점 무늬,0,5736,teardrop facial mark
+소품/사슬 목줄,0,5723,chain leash
+옷/가슴 사이 끈,0,5718,strap between breasts
+몸/키스마크,0,5716,hickey
+효과/꽃 기호,0,5716,flower symbol
+메타/스크린샷 삽입,0,5714,screenshot inset
+소품/메달,0,5714,medal
+소품/진주 귀걸이,0,5713,pearl earrings
+효과/해 기호,0,5712,sun symbol
+몸/다람쥐 꼬리,0,5703,squirrel tail
+동작/풍선껌 불기,0,5703,blowing bubble gum
+소품/바늘,0,5692,needle
+인원/키 큰 여자,0,5683,tall female
+구도/옆으로,0,5677,sideways
+구도/나란히 세움,0,5677,lineup
+옷/캐릭터 무늬,0,5676,character print
+눈/유난히 크게 뜬 눈,0,5675,unusually open eyes
+동작/기도,0,5672,praying
+소품/플라스크,0,5670,flask
+효과/이모지,0,5664,emoji
+옷/멜빵 반바지,0,5662,suspender shorts
+몸/여러 흉터,0,5661,multiple scars
+표정/걱정,0,5657,worried
+옷/하네오카 교복,0,5646,haneoka school uniform
+효과/떨어지는 깃털,0,5643,falling feathers
+동작/오케이 손짓,0,5638,ok sign
+얼굴/하트 얼굴 무늬,0,5638,heart facial mark
+몸/원숭이 꼬리,0,5630,monkey tail
+효과/회색 테두리,0,5625,grey border
+자세/상대 뒤,0,5625,behind another
+소품/기세루,0,5610,kiseru
+머리/마름모 머리띠,0,5610,diamond hairband
+소품/선풍기,0,5609,electric fan
+메타/콜라주,0,5609,collage
+성인/음핵 자극,0,5607,clitoral stimulation
+옷/니지가사키 교복,0,5604,nijigasaki school uniform
+음식/버블티,0,5603,bubble tea
+자세/묶인 발목,0,5600,bound ankles
+구도/반사 강조,0,5595,reflection focus
+소품/신문,0,5595,newspaper
+소품/삽,0,5594,shovel
+음식/라멘,0,5594,ramen
+동작/냄새 맡기,0,5585,smell
+메타/욕설,0,5585,profanity
+동작/숨기,0,5584,hiding
+성인/펠라 시늉,0,5584,fellatio gesture
+머리/상어 머리장식,0,5582,shark hair ornament
+메타/가짜 폰 화면,0,5582,fake phone screenshot
+소품/파란 테 안경,0,5582,blue-framed eyewear
+양말/다리옷 없음,0,5576,missing legwear
+소품/팔 밴드,0,5568,bandaid on arm
+자세/머리에 손,0,5550,hands on own head
+음식/푸딩,0,5537,pudding
+신발/발바닥 신발,0,5531,paw shoes
+배경/아치,0,5528,arch
+배경/낙서,0,5526,graffiti
+옷/가슴 끈,0,5518,chest strap
+몸/뒤 문신,0,5517,back tattoo
+모자/뿔 달린 모자,0,5516,horned headwear
+효과/콧물,0,5513,snot
+인원/공주,0,5513,princess
+성인/상대 엉덩이에 손,0,5504,hand on another's ass
+메타/2021년,0,5502,2021
+몸/삐져나온 음모,0,5499,stray pubic hair
+소품/조개껍데기,0,5499,seashell
+옷/아란 스웨터,0,5498,aran sweater
+성인/콘돔 들기,0,5486,holding condom
+옷/맞춘 옷,0,5480,matching outfits
+배경/적란운,0,5477,cumulonimbus cloud
+소품/깃펜,0,5475,quill
+옷/무늬 있는 옷,0,5467,patterned clothing
+소품/마스카라,0,5466,mascara
+소품/리본 초커,0,5466,bow choker
+몸/몸 주근깨,0,5459,body freckles
+소품/중국 매듭,0,5443,chinese knot
+소품/스피커,0,5438,speaker
+몸/땅딸 글래머,0,5436,shortstack
+신발/방향타 신발,0,5427,rudder footwear
+동작/머리 꼬기,0,5426,twirling hair
+소품/네잎클로버,0,5422,four-leaf clover
+메타/사용자 인터페이스,0,5415,user interface
+소품/젖꼭지 바,0,5401,nipple bar
+배경/굴뚝,0,5396,smokestack
+옷/료오 교복,0,5395,ryouou school uniform
+소품/드럼 스틱,0,5395,drumsticks
+모자/나이트캡,0,5394,nightcap
+소품/튜브 들기,0,5391,holding swim ring
+옷/노란 테두리,0,5389,yellow trim
+성인/음부 비비기,0,5387,pussyjob
+소품/MP3 플레이어,0,5386,mp3 player
+자세/무릎 위,0,5378,on lap
+모자/청대 관모,0,5372,qingdai guanmao
+머리/아치형 앞머리,0,5368,arched bangs
+소품/전기톱,0,5364,chainsaw
+옷/옆 망토,0,5364,side cape
+소품/이어버드,0,5360,earbuds
+성인/음경 위 사정,0,5360,cum on penis
+몸/긁힌 자국,0,5347,scratches
+소품/시가,0,5344,cigar
+자세/자기 발 내밀기,0,5343,presenting own foot
+메타/요청 삽입,0,5333,request inset
+소품/컴퓨터 마우스,0,5330,computer mouse
+표정/비명,0,5318,screaming
+표정/질투,0,5318,jealous
+소품/머리 위 음식,0,5318,food on head
+성인/꿈틀대는 음경,0,5309,twitching penis
+몸/검은 음모,0,5302,black pubic hair
+동작/수영복 고쳐 입기,0,5302,adjusting swimsuit
+몸/사슴 뿔,0,5293,deer antlers
+소품/얼음,0,5290,ice cube
+자세/펼친 손가락,0,5285,spread fingers
+자세/왼손잡이,0,5280,left-handed
+인원/퍼리끼리,0,5280,furry with furry
+인원/시체,0,5279,corpse
+얼굴/꿰맨 얼굴,0,5278,stitched face
+메타/팬박스 아이디,0,5277,fanbox username
+옷/마름모 구멍,0,5276,diamond cutout
+인원/다람쥐 소녀,0,5275,squirrel girl
+동작/꼬집기,0,5271,pinching
+표정/광기 어린 미소,0,5270,crazy smile
+동작/공격,0,5270,attack
+동작/상대 옷 들추기,0,5269,lifting another's clothes
+소품/수류탄,0,5268,grenade
+인원/슬라임 소녀,0,5256,slime girl
+동작/둘이 하트 손,0,5255,heart hands duo
+소품/불펍 소총,0,5250,bullpup
+소품/눈썹 피어싱,0,5246,eyebrow piercing
+소품/악기 케이스,0,5245,instrument case
+소품/피규어,0,5240,figure
+성인/올라타 파이즈리,0,5239,straddling paizuri
+자세/뒤로 잡힌 팔,0,5237,arm held back
+머리/캐릭터 머리장식,0,5236,character hair ornament
+음식/식빵 한 장,0,5235,bread slice
+몸/탱탱한 가슴,0,5234,perky breasts
+얼굴/일부 그늘진 얼굴,0,5230,partially shaded face
+소품/술병,0,5228,sake bottle
+소품/방독면,0,5223,gas mask
+동작/보는 이 공격,0,5221,attacking viewer
+동작/인형 껴안기,0,5216,hugging doll
+동작/꼭 안기,0,5210,cuddling
+배경/비행갑판,0,5209,flight deck
+소품/부채,0,5208,uchiwa
+신발/통굽 부츠,0,5208,platform boots
+소품/싱크대,0,5206,sink
+효과/쏟아짐,0,5202,spill
+몸/염소 귀,0,5200,goat ears
+자세/상대 다리 잡기,0,5195,holding another's leg
+옷/프릴 비키니,0,5192,ruffle bikini
+효과/블룸,0,5186,bloom
+속옷/팬티 선,0,5176,pantylines
+옷/오링 하의,0,5175,o-ring bottom
+성인/음경에 낀 콘돔,0,5175,condom on penis
+소품/입 가리개,0,5174,mouth veil
+메타/칸 나눈 만화,0,5173,segmented comic
+자세/손에 둘러싸임,0,5168,surrounded by hands
+소품/X자 밴드,0,5167,crossed bandaids
+인원/토끼 소년,0,5165,rabbit boy
+메타/우타이테,0,5162,utaite
+소품/코 피어싱,0,5161,nose piercing
+소품/회색 테 안경,0,5161,grey-framed eyewear
+메타/블러 검열,0,5157,blur censor
+소품/학교 문장,0,5152,school emblem
+동물/금붕어,0,5149,goldfish
+몸/다른 피부색,0,5149,alternate skin color
+소품/러그,0,5148,rug
+소품/구명튜브,0,5145,lifebuoy
+배경/벽돌 쌓기 무늬,0,5142,running bond
+화풍/스크린톤,0,5139,screentones
+몸/핏줄 선 팔,0,5138,veiny arms
+소품/옷걸이,0,5122,clothes hanger
+소품/청진기,0,5120,stethoscope
+동작/승마,0,5111,horseback riding
+동작/눈 비비기,0,5107,rubbing eyes
+몸/빨간 손,0,5106,red hands
+소품/칫솔,0,5104,toothbrush
+배경/이끼,0,5102,moss
+메타/빈칸 검열,0,5102,blank censor
+옷/우라노호시 교복,0,5101,uranohoshi school uniform
+메타/이름이 같은 사물,0,5099,object namesake
+옷/작은 옷,0,5098,undersized clothes
+메타/제목,0,5086,title
+옷/소데,0,5086,sode
+소품/분홍 렌즈 안경,0,5084,pink-tinted eyewear
+메타/주황 테마,0,5079,orange theme
+메타/폰 사진,0,5076,cellphone photo
+동물/비둘기,0,5069,dove
+메타/강간당할 거야 밈,0,5068,you gonna get raped
+성인/오인,0,5056,fivesome
+동작/자기 눈 가림,0,5049,covering own eyes
+모자/파티 모자,0,5035,party hat
+동작/이리 와,0,5030,come hither
+소품/물감,0,5028,paint
+소품/아이스크림 들기,0,5027,holding ice cream
+몸/발굽,0,5022,hooves
+효과/입속 하트,0,5018,heart in mouth
+음식/디저트,0,5006,dessert
+소품/로션,0,5002,lotion
+소품/사다리,0,4995,ladder
+옷/털 목도리,0,4995,fur scarf
+화풍/추상,0,4991,abstract
+인원/아내와 아내,0,4987,wife and wife
+메타/왓슨 크로스,0,4986,watson cross
+효과/햇살 무늬,0,4982,sunburst
+옷/빼 입은 셔츠,0,4979,untucked shirt
+배경/결혼식,0,4974,wedding
+소품/힙색,0,4972,fanny pack
+메타/가린 젖꼭지,0,4969,censored nipples
+소품/카펫,0,4967,carpet
+소품/얼굴 스티커,0,4961,sticker on face
+동작/날리는 키스,0,4959,blowing kiss
+몸/목젖,0,4957,adam's apple
+자세/넥웨어 잡기,0,4955,neckwear grab
+옷/더러운 옷,0,4938,dirty clothes
+인원/오크,0,4933,orc
+자세/상대 머리에 손,0,4931,hands on another's head
+머리/여러 머리핀,0,4925,multiple hairclips
+배경/나무 위,0,4925,in tree
+몸/드러난 엉덩이,0,4925,bare hips
+효과/추위,0,4920,cold
+자세/사슬에 묶임,0,4916,chained
+효과/머리 뒤 후광,0,4913,halo behind head
+자세/발끝 뻗음,0,4910,plantar flexion
+옷/네온 테두리,0,4909,neon trim
+옷/아라비아 의상,0,4906,arabian clothes
+옷/카프리 바지,0,4904,capri pants
+소품/비치타월,0,4901,beach towel
+몸/목 흉터,0,4898,scar on neck
+효과/다른 반사,0,4896,different reflection
+옷/깃털 테두리,0,4893,feather trim
+소품/쌍안경,0,4892,binoculars
+동작/벽쿵,0,4889,kabedon
+효과/오선보,0,4886,musical staff
+소품/대검,0,4856,greatsword
+인원/물고기 소녀,0,4856,fish girl
+배경/무늬 배경,0,4847,patterned background
+소품/수면 안대,0,4846,sleep mask
+효과/불타는,0,4845,burning
+몸/골반뼈,0,4836,hip bones
+화풍/선화 없음,0,4835,no lineart
+옷/리본 비키니,0,4835,bow bikini
+배경/일출,0,4832,sunrise
+머리/넓은 포니테일,0,4829,wide ponytail
+인원/언니 로리,0,4829,onee-loli
+자세/상대 어깨에 기댄 머리,0,4828,head on another's shoulder
+소품/분홍 테 안경,0,4826,pink-framed eyewear
+음식/도시락,0,4825,bento
+소품/보라 렌즈 안경,0,4824,purple-tinted eyewear
+화풍/전통 매체풍,0,4814,faux traditional media
+메타/글자 없는 표지,0,4807,textless cover page
+소품/샤워기,0,4805,shower head
+소품/우주 헬멧,0,4804,space helmet
+몸/메카 맨몸,0,4804,mechabare
+소품/하트 단추,0,4803,heart button
+옷/털코트,0,4800,fur coat
+구도/단체 사진,0,4797,group picture
+자세/구부린 손가락,0,4787,curled fingers
+동작/손가락 핥기,0,4773,licking finger
+소품/패치,0,4771,patch
+메타/가짜 표지,0,4770,fake cover
+옷/해적 의상,0,4765,pirate costume
+얼굴/눈썹 흉터,0,4765,eyebrow cut
+소품/묘비,0,4764,tombstone
+동작/결투,0,4761,duel
+소품/막대 들기,0,4758,holding stick
+옷/성조기 비키니,0,4756,american flag bikini
+성인/사정 후,0,4755,after ejaculation
+소품/탄피,0,4751,shell casing
+소품/전구,0,4749,light bulb
+머리/귀 모양 머리,0,4743,hair ears
+상태/괴물화,0,4740,monsterification
+메타/사진 삽입,0,4736,photo inset
+신발/스틸레토 힐,0,4735,stiletto heels
+소품/우유병,0,4733,milk bottle
+효과/해골 마크,0,4728,skull and crossbones
+옷/한쪽 건틀릿,0,4726,single gauntlet
+몸/유령 꼬리,0,4724,ghost tail
+소품/샴페인 잔,0,4721,champagne flute
+배경/반사되는 바닥,0,4719,reflective floor
+자세/잠긴,0,4717,submerged
+메타/삽입 테두리,0,4716,inset border
+메타/갈색 테마,0,4713,brown theme
+소품/핸들,0,4711,steering wheel
+소품/테 위로 보는 안경,0,4709,over-rim eyewear
+음식/레몬 조각,0,4708,lemon slice
+음식/꼬치,0,4704,skewer
+소품/뒤집개,0,4699,spatula
+몸/표범 귀,0,4694,panther ears
+양말/성조기 양말,0,4691,american flag legwear
+자세/턱에 손가락,0,4685,finger to own chin
+몸/자칼 귀,0,4679,jackal ears
+효과/눈에서 피,0,4677,blood from eyes
+자세/허벅지에 손,0,4676,hands on own thighs
+소품/가위 들기,0,4668,holding scissors
+자세/웅크린 자세,0,4666,fetal position
+자세/근육 자랑,0,4663,flexing
+옷/노란 스웨터 조끼,0,4653,yellow sweater vest
+얼굴/덥수룩한 수염,0,4653,full beard
+소품/탄약,0,4653,ammunition
+소품/얼굴 붕대,0,4650,bandage on face
+소품/소매 밴드,0,4649,sleeve garter
+배경/달빛,0,4643,moonlight
+표정/거짓 미소,0,4643,false smile
+모자/샤코 모자,0,4640,shako cap
+구도/옷 입은 여자와 벗은 여자,0,4639,clothed female nude female
+옷/아스티카시아 교복,0,4635,asticassia school uniform
+소품/여러 팔찌,0,4627,multiple bracelets
+양말/리본 양말,0,4625,bow legwear
+머리/옆 올림 쪽,0,4624,side up bun
+소품/입술 피어싱,0,4612,lip piercing
+표정/닥쳐오는 파멸,0,4612,impending doom
+음식/딸기 쇼트케이크,0,4611,strawberry shortcake
+머리/한쪽 머리 튜브,0,4610,single hair tube
+효과/4분음표,0,4603,quarter note
+소품/안전핀,0,4602,safety pin
+머리/뿔 리본,0,4600,horn bow
+메타/로마 숫자,0,4597,roman numeral
+효과/발화 능력,0,4596,pyrokinesis
+소품/칵테일 잔,0,4583,cocktail glass
+표정/뭐,0,4582,what
+동작/머리 만지작,0,4579,playing with own hair
+소품/추진기,0,4577,thrusters
+소품/유선 전화기,0,4577,corded phone
+몸/바코드 문신,0,4576,barcode tattoo
+소품/천 재갈,0,4567,cloth gag
+옷/하트 마에바리,0,4565,heart maebari
+메타/자파리 기호,0,4564,japari symbol
+배경/매화,0,4556,plum blossoms
+자세/베개 움켜쥠,0,4554,pillow grab
+배경/발코니,0,4552,balcony
+효과/분홍 테두리,0,4550,pink border
+소품/발목 리본,0,4548,ankle ribbon
+메타/데비안아트 아이디,0,4547,deviantart username
+얼굴/염소수염 까칠,0,4546,goatee stubble
+음식/소용돌이 막대사탕,0,4545,swirl lollipop
+소품/스트립 봉,0,4544,stripper pole
+음식/빙수,0,4544,shaved ice
+신발/오픈토 부츠,0,4541,open-toe boots
+메타/5컷 만화,0,4540,5koma
+소품/유노미,0,4530,yunomi
+인원/사촌,0,4528,cousins
+효과/높은 대비,0,4525,high contrast
+자세/상대 배에 손,0,4524,hand on another's stomach
+옷/나나모리 교복,0,4513,nanamori school uniform
+구도/턴어라운드,0,4509,turnaround
+음식/휘핑크림,0,4505,whipped cream
+몸/땀난 겨드랑이,0,4505,sweaty armpits
+소품/물방울 귀걸이,0,4497,teardrop earrings
+소품/부적,0,4492,talisman
+소품/등 뒤로 무기 들기,0,4488,holding weapon behind back
+소품/투구,0,4482,helm
+동작/건네줌,0,4480,giving
+인원/사슴 소녀,0,4480,deer girl
+옷/성조기 드레스,0,4475,american flag dress
+성인/상대 음부 벌림,0,4472,spreading another's pussy
+옷/터틀넥 레오타드,0,4462,turtleneck leotard
+성인/난자,0,4461,ovum
+표정/o3o,0,4460,o3o
+소품/노,0,4455,paddle
+몸/핏줄 선 가슴,0,4446,veiny breasts
+소품/우유갑,0,4445,milk carton
+자세/신발 덜렁,0,4440,shoe dangle
+동작/엿보기,0,4440,peeking
+옷/파란 테두리,0,4440,blue trim
+동물/손 위 새,0,4438,bird on hand
+소품/전투 헬멧,0,4437,combat helmet
+얼굴/뺨 점,0,4435,mole on cheek
+음식/컵라면,0,4435,instant noodles
+옷/함께 입은 옷,0,4427,shared clothes
+동작/장갑 고쳐 끼기,0,4420,adjusting gloves
+소품/안경 끈,0,4419,eyewear strap
+소품/그네,0,4411,swing
+성인/굵은 음경,0,4410,girthy penis
+배경/어둠,0,4409,darkness
+동작/상대 옷 당기기,0,4407,pulling another's clothes
+머리/고양이 귀 머리띠,0,4407,cat ear hairband
+자세/반대 소매에 손,0,4401,hands in opposite sleeves
+모자/필박스 모자,0,4398,pillbox hat
+소품/대걸레,0,4395,mop
+소품/냄비,0,4395,cooking pot
+동물/거대한 동물,0,4394,oversized animal
+몸/기계 손,0,4394,mechanical hands
+화풍/유메카와,0,4393,yume kawaii
+인원/표범 소녀,0,4386,panther girl
+옷/옷에 붙은 부적,0,4385,ofuda on clothes
+몸/주름진 피부,0,4380,wrinkled skin
+몸/호랑이 줄무늬,0,4379,tiger stripes
+옷/풀린 비키니 상의,0,4375,untied bikini top
+소품/거북 등딱지,0,4373,turtle shell
+소품/더플백,0,4373,duffel bag
+효과/녹는,0,4367,melting
+얼굴/별 얼굴 무늬,0,4364,star facial mark
+자세/사람 위에서 잠,0,4363,sleeping on person
+얼굴/양 눈 밑 점,0,4363,mole under each eye
+소품/열쇠구멍,0,4363,keyhole
+배경/자판기,0,4362,vending machine
+메타/파스텔 색감,0,4359,pastel colors
+몸/몸 없는 머리,0,4359,disembodied head
+옷/츠키노모리 교복,0,4358,tsukinomori school uniform
+메타/흰색 테마,0,4357,white theme
+몸/목덜미,0,4353,nape
+효과/파란 테두리,0,4351,blue border
+성인/자궁경부,0,4348,cervix
+옷/엔페라,0,4343,enpera
+성인/거친 섹스,0,4342,rough sex
+소품/파란 렌즈 안경,0,4339,blue-tinted eyewear
+성인/후타와 남자,0,4335,futa with male
+표정/한숨,0,4334,sigh
+인원/다른 3명,0,4330,3others
+속옷/흰 가터벨트,0,4329,white garter straps
+성인/젖꼭지 핥기,0,4327,licking nipple
+소품/안 쓴 헬멧 들기,0,4326,holding unworn helmet
+성인/성인용품 들기,0,4326,holding sex toy
+몸/엉덩이 출렁임,0,4320,ass ripple
+소품/엄지 반지,0,4319,thumb ring
+소품/입에 문 빨대,0,4319,drinking straw in mouth
+음식/계란프라이,0,4312,fried egg
+소품/드론,0,4308,drone
+효과/발자국,0,4300,footprints
+음식/단 음식,0,4296,sweets
+소품/헤드램프,0,4295,headlamp
+배경/카운터,0,4295,counter
+몸/동양 용 뿔,0,4293,eastern dragon horns
+옷/양면 코트,0,4290,two-sided coat
+소품/타로,0,4288,tarot
+몸/아주 긴 손톱,0,4283,very long fingernails
+메타/정사각 4컷 만화,0,4282,square 4koma
+메타/2020년,0,4280,2020
+얼굴/두꺼운 입술,0,4276,thick lips
+얼굴/뻐드렁니,0,4275,buck teeth
+몸/갈라진 혀,0,4272,forked tongue
+성인/음부 밴드,0,4271,bandaid on pussy
+옷/왕자 패션,0,4270,ouji fashion
+몸/사물 머리,0,4269,object head
+머리/불타는 머리,0,4268,fiery hair
+성인/수정,0,4268,fertilization
+소품/거즈,0,4267,gauze
+소품/새장,0,4266,birdcage
+신발/롤러스케이트,0,4264,roller skates
+효과/직사각 후광,0,4264,rectangular halo
+상태/빙의,0,4260,possessed
+구도/거울 셀카,0,4259,mirror selfie
+소품/곡옥 목걸이,0,4258,magatama necklace
+효과/코 방울,0,4251,nose bubble
+옷/트레이닝 바지,0,4248,sweatpants
+동작/상대를 가리킴,0,4247,pointing at another
+소품/채찍 들기,0,4246,holding whip
+소품/가짜 뿔,0,4245,fake antlers
+소품/거꾸로 십자가,0,4244,inverted cross
+옷/하츠보시 학원 교복,0,4244,hatsuboshi gakuen school uniform
+자세/유리에 눌린 가슴,0,4235,breasts on glass
+자세/무릎 위에 손,0,4232,hands on lap
+성인/수면 추행,0,4224,sleep molestation
+소품/자물쇠,0,4220,padlock
+표정/놀림,0,4219,teasing
+자세/난간에 기댐,0,4212,against railing
+성인/손 안 대고 사정,0,4208,handsfree ejaculation
+옷/목 갑옷,0,4206,gorget
+메타/게임 대화창,0,4201,video game dialogue box
+메타/작품 속 장소,0,4200,in-universe location
+성인/양말 풋잡,0,4200,footjob with legwear
+자세/어깨에 짊어짐,0,4196,shoulder carry
+자세/어깨에 메고 나름,0,4195,carrying over shoulder
+효과/세잎 무늬,0,4193,trefoil
+소품/나무망치,0,4192,mallet
+얼굴/콧수염 까칠,0,4191,mustache stubble
+소품/서프보드,0,4190,surfboard
+인원/곰 소녀,0,4189,bear girl
+옷/별자리 무늬,0,4185,constellation print
+자세/끼임,0,4183,stuck
+소품/회한의 막대,0,4181,rod of remorse
+모자/포크파이 모자,0,4179,porkpie hat
+몸/옆구리 근육,0,4176,obliques
+메타/오타,0,4175,typo
+모자/터번,0,4175,turban
+머리/뿔 머리띠,0,4171,horn hairband
+배경/아침,0,4168,morning
+효과/불타는 눈,0,4166,flaming eye
+소품/샹들리에,0,4162,chandelier
+음식/토스트,0,4159,toast
+효과/화려한 테두리,0,4159,ornate border
+구도/머리만,0,4150,head only
+동작/눈 가리기,0,4147,shading eyes
+옷/파라디섬 군복,0,4146,paradis military uniform
+소품/립스틱,0,4146,lipstick tube
+메타/워터마크 너무 많음,0,4145,too many watermarks
+음식/감자칩,0,4143,potato chips
+소품/거품기,0,4137,whisk
+자세/가슴 사이에 머리,0,4136,head between breasts
+성인/포경,0,4132,phimosis
+옷/몬스터볼 무늬,0,4131,poke ball print
+동물/햄스터,0,4131,hamster
+자세/칼자루에 손,0,4130,hand on hilt
+몸/새 다리,0,4121,bird legs
+소품/고정 구속구,0,4120,stationary restraints
+몸/발 없음,0,4118,no feet
+옷/불꽃 무늬,0,4117,flame print
+메타/2차 세계대전,0,4115,world war ii
+음식/바게트,0,4110,baguette
+몸/배 흉터,0,4109,scar on stomach
+눈/링 조명 반사,0,4108,ring light reflection
+자세/앉아서 잠,0,4107,sleeping upright
+옷/홀터 셔츠,0,4106,halter shirt
+메타/나이 변화,0,4103,age progression
+메타/작가 연결,0,4102,creator connection
+자세/꼬리 감기,0,4100,tail wrap
+자세/옷 벗는 동작,0,4099,hadanugi dousa
+인원/하렘,0,4098,harem
+소품/리본 귀걸이,0,4091,bow earrings
+소품/여러 피어싱,0,4086,multiple piercings
+구도/탁자 아래,0,4084,under table
+배경/실제 장소,0,4081,real world location
+동작/도망,0,4079,fleeing
+인원/생물과 의인화,0,4079,creature and personification
+화풍/선 음영,0,4078,linear hatching
+효과/쏟아짐,0,4075,spilling
+옷/팔 갑옷,0,4074,arm armor
+소품/산호,0,4068,coral
+옷/가슴 가림 없음,0,4066,no dickey
+몸/맞은 자국,0,4065,slap mark
+소품/탄약 주머니,0,4065,ammunition pouch
+음식/블루베리,0,4059,blueberry
+옷/레슬링복,0,4051,wrestling outfit
+동작/통화,0,4047,talking on phone
+효과/없어진 후광,0,4047,missing halo
+소품/정육면체,0,4046,cube
+배경/흐린 하늘,0,4044,overcast
+소품/빔 라이플,0,4043,beam rifle
+화풍/사이버펑크,0,4042,cyberpunk
+몸/손 문신,0,4041,hand tattoo
+인원/다른 6명 이상,0,4041,6+others
+옷/맨몸 스웨터,0,4037,naked sweater
+자세/좀비 자세,0,4035,zombie pose
+소품/태엽 열쇠,0,4033,winding key
+소품/붓 들기,0,4030,holding brush
+옷/목 털,0,4029,neck fur
+음식/밥그릇,0,4026,rice bowl
+소품/할로윈 바구니,0,4024,halloween bucket
+인원/고블린,0,4024,goblin
+옷/전술복,0,4019,tactical clothes
+음식/오므라이스,0,4019,omurice
+동작/뺨 꼬집기,0,4015,cheek pinching
+신발/색깔 있는 밑창,0,4011,colored shoe soles
+소품/지우개,0,4010,eraser
+동작/뺨 찌르기,0,4010,cheek poking
+눈/물방울 동공,0,4006,drop-shaped pupils
+표정/기쁨의 눈물,0,4001,happy tears
+소품/다용도 벨트,0,4000,utility belt
+소품/바람 넣는 장난감,0,3999,inflatable toy
+자세/무릎 벌리고 발 모음,0,3998,knees apart feet together
+소품/팩 주스,0,3998,juice box
+음식/크레페,0,3997,crepe
+메타/러시아어 글자,0,3994,russian text
+옷/미라 의상,0,3994,mummy costume
+소품/휘장,0,3992,insignia
+동작/간지럼,0,3989,tickling
+효과/육망성,0,3987,hexagram
+소품/수리검,0,3986,shuriken
+메타/배터리 표시,0,3986,battery indicator
+효과/화성 기호,0,3984,mars symbol
+속옷/검은 남성 속옷,0,3982,black male underwear
+자세/안경에 손,0,3972,hand on eyewear
+효과/분홍 피,0,3965,pink blood
+소품/외눈 메카,0,3965,one-eyed mecha
+소품/유리병,0,3963,vial
+소품/홀스터에 꽂음,0,3954,holstered
+소품/배관,0,3953,industrial pipe
+성인/말 음경,0,3953,horse penis
+소품/손 밴드,0,3949,bandaid on hand
+소품/발목 수갑,0,3949,ankle cuffs
+소품/팔 감싸기,0,3937,arm wrap
+신발/통굽 힐,0,3936,platform heels
+효과/스마일 얼굴,0,3935,smiley face
+소품/전선,0,3934,wire
+소품/무전기,0,3934,walkie-talkie
+소품/기타 케이스,0,3930,guitar case
+효과/창문 그림자,0,3929,window shadow
+자세/물건에 기댐,0,3927,leaning on object
+효과/먼지,0,3927,dust
+소품/스케치북,0,3925,sketchbook
+효과/머리카락 속 피,0,3925,blood in hair
+소품/도쿠리,0,3922,tokkuri
+소품/어깨끈,0,3921,shoulder strap
+머리/뒷목 땋기,0,3921,nape braid
+옷/키타우지 고교 교복,0,3920,kitauji high school uniform
+소품/서랍,0,3917,drawer
+메타/명화 패러디,0,3914,fine art parody
+옷/사슬 갑옷,0,3914,chainmail
+소품/냉장고,0,3913,refrigerator
+머리/땋은 트윈테일,0,3911,braided twintails
+메타/신원 가림,0,3908,censored identity
+소품/지폐,0,3908,banknote
+소품/로켓 발사기,0,3904,rocket launcher
+소품/야자잎,0,3903,palm leaf
+인원/염소 소녀,0,3902,goat girl
+소품/신발끈,0,3900,shoelaces
+옷/불가능한 드레스,0,3898,impossible dress
+인원/메스가키,0,3895,mesugaki
+음식/녹는 아이스바,0,3895,melting popsicle
+동작/합장,0,3894,palms together
+옷/하나사키가와 교복,0,3893,hanasakigawa school uniform
+소품/왕홀,0,3891,scepter
+소품/인더스트리얼 피어싱,0,3891,industrial piercing
+모자/삼각모,0,3884,tricorne
+효과/둥근 테두리,0,3883,round border
+메타/김 검열,0,3882,steam censor
+메타/카메오,0,3882,cameo
+옷/깊은 목선,0,3877,low neckline
+효과/불꽃,0,3874,sparks
+옷/배꼽 위 구멍,0,3868,cutout above navel
+속옷/흰 남성 속옷,0,3867,white male underwear
+배경/잔해,0,3866,rubble
+옷/나오에츠 고교 교복,0,3865,naoetsu high school uniform
+몸/얼굴 멍,0,3865,bruise on face
+옷/제로 슈트,0,3864,zero suit
+옷/불가능한 레오타드,0,3864,impossible leotard
+소품/수납장,0,3862,cabinet
+머리/옆가르마,0,3861,side part
+효과/눈빛 궤적,0,3859,eye trail
+음식/카레,0,3859,curry
+동작/선물 건넴,0,3857,incoming gift
+소품/허벅지 리본,0,3856,thigh ribbon
+성인/음경 노출,0,3854,penis out
+몸/기운 피부,0,3853,patchwork skin
+동작/검지 맞대기,0,3852,index fingers together
+동물/손 위 나비,0,3850,butterfly on hand
+속옷/고양이 귀 팬티,0,3847,cat ear panties
+소품/화환,0,3845,wreath
+성인/큰 고환,0,3842,large testicles
+옷/쿠로모리미네 군복,0,3837,kuromorimine military uniform
+메타/어색한 발,0,3835,bad feet
+메타/정해진 사건,0,3831,canon event
+배경/나무 그늘,0,3823,tree shade
+동작/빙글빙글,0,3823,spinning
+메타/메타 발언,0,3820,fourth wall
+몸/근육질 팔,0,3815,muscular arms
+메타/음모 불일치,0,3815,mismatched pubic hair
+소품/횃불,0,3804,torch
+음식/페이스트리,0,3802,pastry
+신발/접어 신은 부츠,0,3802,fold-over boots
+메타/로켓단,0,3795,team rocket
+효과/색 그림자,0,3793,colored shadow
+메타/다중 그림 챌린지,0,3791,multiple drawing challenge
+옷/저지,0,3786,jersey
+양말/다른 양말,0,3785,alternate legwear
+자세/상대 뺨에 손,0,3782,hands on another's cheeks
+옷/펜슬 드레스,0,3780,pencil dress
+소품/돋보기,0,3779,magnifying glass
+동작/머리 빗기,0,3778,brushing hair
+시선/음식 보기,0,3774,looking at food
+자세/그네 위,0,3773,on swing
+메타/체력 막대,0,3772,health bar
+옷/레이 끈,0,3769,rei no himo
+동작/젖꼭지 가림,0,3768,covering nipples
+소품/블라인드,0,3765,window blinds
+상태/꿈꾸는,0,3763,dreaming
+얼굴/구레나룻 까칠,0,3761,sideburns stubble
+양말/심 있는 스타킹,0,3761,seamed legwear
+소품/이빨 목걸이,0,3758,tooth necklace
+소품/통,0,3758,barrel
+메타/닮은꼴,0,3750,look-alike
+소품/불꽃놀이 막대,0,3749,sparkler
+모자/다른 머리쓰개,0,3747,alternate headwear
+소품/국자 들기,0,3746,holding ladle
+소품/날개 장식,0,3744,wing ornament
+머리/옆 아호게,0,3743,side ahoge
+효과/액체,0,3743,liquid
+성인/남자에게 사정,0,3743,cum on male
+소품/빗,0,3740,comb
+옷/리코리스 제복,0,3737,lycoris uniform
+효과/핏자국,0,3737,blood stain
+소품/잎 들기,0,3729,holding leaf
+소품/열쇠 목걸이,0,3728,key necklace
+몸/사타구니 힘줄,0,3727,groin tendon
+옷/바이커 복장,0,3724,biker clothes
+소품/당근 목걸이,0,3723,carrot necklace
+옷/허리에 맨 스웨터,0,3720,sweater around waist
+메타/리디자인,0,3719,redesign
+메타/스타터 포켓몬 삼형제,0,3716,starter pokemon trio
+배경/스카이라인,0,3711,skyline
+메타/카운트다운,0,3708,countdown
+몸/다리 흉터,0,3706,scar on leg
+소품/트럼펫,0,3705,trumpet
+자세/뒤꿈치 듦,0,3704,heel up
+소품/모자 위 안경,0,3703,eyewear on headwear
+메타/옅은 색감,0,3698,pale colors
+몸/납작한 엉덩이,0,3696,flat ass
+소품/UFO,0,3694,ufo
+신발/발목 끈 묶기,0,3692,ankle lace-up
+동작/자기 입에 손가락,0,3691,finger in own mouth
+소품/수영장 사다리,0,3689,pool ladder
+소품/포커 칩,0,3689,poker chip
+메타/인스타그램 로고,0,3689,instagram logo
+소품/어깨 벨트,0,3688,shoulder belt
+메타/둘이 짝짓는다면,0,3688,if they mated
+효과/물빛 일렁임,0,3685,caustics
+옷/검은 튜브톱,0,3685,black tube top
+효과/에너지 구체,0,3684,energy ball
+옷/헐렁한 옷,0,3683,loose clothes
+얼굴/송곳니 드러냄,0,3681,fangs out
+화풍/복고풍,0,3675,faux retro artstyle
+소품/손목 보호대,0,3672,wrist guards
+배경/나무 울타리,0,3664,wooden fence
+소품/신호등,0,3664,traffic light
+효과/말풍선 땀방울,0,3659,spoken sweatdrop
+소품/물뿌리개,0,3651,watering can
+옷/폴로 셔츠,0,3645,polo shirt
+메타/토끼해,0,3643,year of the rabbit
+소품/알람시계,0,3641,alarm clock
+상태/의식 없음,0,3640,unconscious
+소품/드로잉 태블릿,0,3639,drawing tablet
+옷/떠 있는 망토,0,3634,floating cape
+메타/픽시브 아이디,0,3632,pixiv username
+음식/오렌지 조각,0,3632,orange slice
+효과/전원 기호,0,3630,power symbol
+소품/수도꼭지,0,3626,faucet
+소품/갈색 테 안경,0,3626,brown-framed eyewear
+옷/멜빵 반바지,0,3625,overall shorts
+효과/옷을 통과,0,3623,through clothes
+소품/다리 벨트,0,3623,leg belt
+소품/책상 조명,0,3622,desk lamp
+소품/중지 반지,0,3617,middle ring
+배경/별하늘 배경,0,3615,starry sky background
+자세/계단에 앉음,0,3615,sitting on stairs
+음식/산쇼쿠 당고,0,3615,sanshoku dango
+인원/사자 소년,0,3615,lion boy
+표정/소변 마려움,0,3615,have to pee
+효과/색 있는 말풍선,0,3615,colored speech bubble
+소품/나무 양동이,0,3614,wooden bucket
+소품/호흡 마스크,0,3613,respirator
+머리/붙임머리,0,3613,hair extensions
+소품/목 꽃,0,3612,neck flower
+옷/단추 채운 소맷부리,0,3609,buttoned cuffs
+동작/보는 이에게 먹여줌,0,3608,feeding viewer
+동작/활 당김,0,3607,drawing bow
+옷/전통 수녀복,0,3605,traditional nun
+얼굴/히키마유,0,3605,hikimayu
+얼굴/눈 밑 보석,0,3603,jewel under eye
+소품/메뉴판,0,3598,menu
+소품/팔 칼날,0,3598,arm blade
+성인/과도한 사정,0,3595,excessive cum
+소품/칼라시니코프 소총,0,3589,kalashnikov rifle
+소품/새첼백,0,3586,satchel
+효과/고운 천 강조,0,3585,fine fabric emphasis
+배경/공원 벤치,0,3581,park bench
+소품/불꽃놀이 들기,0,3578,holding fireworks
+효과/트라이포스,0,3577,triforce
+동작/손가락 하트,0,3572,finger heart
+인원/외눈박이,0,3570,cyclops
+옷/한쪽 바짓가랑이,0,3568,single pantsleg
+효과/전기 능력,0,3566,electrokinesis
+옷/찢어진 청바지,0,3561,torn jeans
+소품/태블릿 들기,0,3561,holding tablet pc
+효과/보라 불꽃,0,3557,purple fire
+인원/휴런,0,3556,hyur
+모자/줄무늬 머리쓰개,0,3553,striped headwear
+메타/실사 삽입,0,3551,real life insert
+소품/호랑가시나무,0,3548,holly
+메타/픽시브 ID,0,3547,pixiv id
+메타/색 연결,0,3546,color connection
+옷/아이누 의상,0,3545,ainu clothes
+소품/무한궤도,0,3542,caterpillar tracks
+동작/머리 들어 올림,0,3540,hair lift
+효과/연결된 16분음표,0,3540,beamed sixteenth notes
+메타/2019년,0,3540,2019
+자세/고개 숙임,0,3535,head down
+소품/보드게임,0,3533,board game
+소품/머리빗,0,3531,hair brush
+소품/염주,0,3525,prayer beads
+성인/음경 크기 차이,0,3525,penis size difference
+메타/화구 입장,0,3522,art tools in frame
+소품/마커,0,3520,marker
+소품/전투 도끼,0,3520,battle axe
+자세/자기 다리 잡기,0,3519,holding own leg
+옷/청해파 무늬,0,3516,seigaiha
+속옷/검은 가터벨트,0,3514,black garter belt
+동작/넘어짐,0,3512,tripping
+옷/보디스,0,3511,bodice
+머리/뿔에 걸린 머리카락,0,3510,hair on horn
+옷/다리 갑옷,0,3509,leg armor
+동물/너구리,0,3503,tanuki
+모자/프릴 머리쓰개,0,3502,frilled headwear
+소품/폭탄,0,3502,bomb
+메타/빼빼로 데이,0,3501,pocky day
+메타/생방송,0,3499,livestream
+소품/여러 무기,0,3495,multiple weapons
+옷/남자 플레이보이 바니,0,3491,male playboy bunny
+구도/문간 시점,0,3487,pov doorway
+자세/가슴에 얼굴,0,3477,face to breasts
+화풍/스프라이트,0,3476,sprite
+음식/몸에 묻은 초콜릿,0,3475,chocolate on body
+신발/발목 스트랩,0,3475,ankle strap
+메타/시간 표시,0,3471,timestamp
+옷/흰 튜브톱,0,3470,white tube top
+표정/고통,0,3467,pain
+소품/전투기,0,3467,fighter jet
+소품/소음기,0,3466,suppressor
+소품/가짜 수염,0,3466,fake facial hair
+눈/속 빈 눈,0,3465,solid eyes
+메타/동아시아풍,0,3465,east asian
+자세/액체 위에 섬,0,3464,standing on liquid
+성인/오므린 항문,0,3457,puckered anus
+성인/엉덩이 때리기,0,3454,spanking
+동작/문 열기,0,3451,opening door
+음식/붕어빵,0,3450,taiyaki
+몸/도마뱀 꼬리,0,3450,lizard tail
+모자/코이프,0,3448,coif
+머리/도넛 쪽머리,0,3447,donut hair bun
+소품/십자키,0,3446,d-pad
+성인/발에 사정,0,3444,cum on feet
+소품/비디오카메라,0,3443,video camera
+배경/축제,0,3440,festival
+몸/서양배 체형,0,3439,pear-shaped figure
+동물/어깨 위 새,0,3439,bird on shoulder
+소품/풍경,0,3435,wind chime
+동작/당기기,0,3433,pulling
+동작/손짓,0,3433,beckoning
+배경/우거진,0,3429,overgrown
+인원/할머니,0,3428,old woman
+소품/이어진 피어싱,0,3428,linked piercing
+옷/판금 갑옷,0,3426,plate armor
+메타/호랑이해,0,3422,year of the tiger
+효과/빈 말풍선,0,3421,blank speech bubble
+성인/촉수 구덩이,0,3417,tentacle pit
+동작/말리기,0,3417,drying
+메타/글자만 있는 쪽,0,3416,text-only page
+소품/함께 두른 목도리,0,3416,shared scarf
+소품/휠체어,0,3415,wheelchair
+소품/소매 리본,0,3415,sleeve ribbon
+옷/동물 귀 후드,0,3414,animal ear hood
+모자/벙거지,0,3413,bucket hat
+표정/신남,0,3411,excited
+몸/지행 다리,0,3410,digitigrade
+모자/탐 오 섄터,0,3407,tam o' shanter
+소품/화면,0,3406,screen
+모자/사냥 모자,0,3406,deerstalker
+음식/고구마,0,3404,sweet potato
+소품/잉크,0,3400,ink
+소품/손인형,0,3399,hand puppet
+메타/QR 코드,0,3398,qr code
+성인/콘돔 포장 띠,0,3397,condom packet strip
+효과/브레스,0,3396,breath weapon
+효과/연기 꼬리,0,3392,smoke trail
+머리/일자로 자른 머리,0,3392,blunt tresses
+상태/부풀음,0,3391,inflation
+표정/기진맥진,0,3391,exhausted
+메타/의뢰인 이름,0,3389,commissioner name
+배경/네온 불빛,0,3388,neon lights
+자세/촉수에 붙잡힘,0,3386,grabbed by tentacles
+모자/우샨카,0,3384,ushanka
+상태/퍼리화,0,3382,furrification
+성인/여러 콘돔,0,3380,multiple condoms
+메타/워터마크 격자,0,3378,watermark grid
+옷/저지 메이드,0,3378,jersey maid
+소품/꼬리 방울,0,3373,tail bell
+배경/기둥,0,3373,column
+성인/후타나리 암시,0,3372,implied futanari
+자세/펼친 날개,0,3371,spread wings
+소품/젖꼭지 노리개,0,3370,pacifier
+옷/가슴 트인 스웨터,0,3370,open-chest sweater
+메타/케이팝,0,3370,k-pop
+소품/스트리머,0,3366,streamers
+몸/엉덩이 점,0,3364,mole on ass
+옷/줄무늬 팔 워머,0,3361,striped arm warmers
+옷/삼각 비키니 상의,0,3359,triangle bikini top
+음식/상추,0,3359,lettuce
+몸/과한 음모,0,3359,excessive pubic hair
+소품/손목 리본,0,3358,wrist bow
+메타/변형,0,3355,variations
+옷/독일 전통 의상,0,3355,german clothes
+옷/앞트임,0,3350,front slit
+음식/입에 문 아이스바,0,3344,popsicle in mouth
+상태/꿰뚫림,0,3343,impaled
+신발/신발만 신음,0,3342,naked shoes
+옷/발톱 건틀릿,0,3342,clawed gauntlets
+동작/씹기,0,3339,chewing
+자세/뺨 맞댐,0,3338,cheek press
+옷/배구복,0,3336,volleyball uniform
+구도/벽 너머,0,3335,through wall
+동작/찌르기,0,3335,stab
+동작/봉춤,0,3335,pole dancing
+눈/V자 눈,0,3334,v-shaped eyes
+소품/여러 칼,0,3332,multiple swords
+메타/간접광고,0,3331,product placement
+옷/물색 테두리,0,3328,aqua trim
+배경/등나무,0,3325,wisteria
+소품/별 스티커,0,3325,star sticker
+성인/후타나리 자위,0,3325,futanari masturbation
+소품/네일아트,0,3319,nail art
+효과/칼에 묻은 피,0,3319,blood on knife
+옷/상어 후드,0,3315,shark hood
+소품/초록 테 안경,0,3313,green-framed eyewear
+메타/오리지널 캐릭터와 원작,0,3312,oc x canon
+옷/서클 스커트,0,3312,circle skirt
+속옷/풀린 팬티,0,3311,untied panties
+메타/제 무덤 파기,0,3311,digging your own grave
+소품/동백꽃,0,3310,camellia
+몸/의족,0,3306,prosthetic leg
+머리/모자 사이로 나온 머리,0,3306,hair through headwear
+구도/탁자 맞은편 시점,0,3305,pov across table
+인원/식물 소녀,0,3304,plant girl
+구도/세로 나열,0,3303,column lineup
+소품/철퇴,0,3302,mace
+인원/못생긴 아저씨,0,3301,ugly bastard
+효과/비치는 몸,0,3301,see-through body
+음식/파이,0,3300,pie
+동작/쫓기,0,3298,chasing
+효과/말풍선 속 사물,0,3296,spoken object
+자세/팔꿈치에 걸침,0,3296,elbow carry
+동물/머리 위 포켓몬,0,3295,pokemon on head
+인원/박쥐 소녀,0,3295,bat girl
+성인/손에 사정,0,3294,cum on hands
+소품/다이맥스 밴드,0,3293,dynamax band
+소품/링거,0,3289,intravenous drip
+메타/야오이 암시,0,3289,implied yaoi
+효과/몬스터볼 기호,0,3287,poke ball symbol
+모자/탐험 헬멧,0,3284,pith helmet
+효과/점선,0,3282,dotted line
+옷/사타구니 갑옷,0,3276,crotch plate
+소품/낚싯대 들기,0,3273,holding fishing rod
+메타/어색한 손,0,3273,bad hands
+자세/자기 어깨에 손,0,3272,hand on own shoulder
+소품/나뭇잎 마을 문양,0,3269,konohagakure symbol
+음식/입에 문 빼빼로,0,3267,pocky in mouth
+배경/콘서트,0,3265,concert
+소품/노란 렌즈 안경,0,3264,yellow-tinted eyewear
+모자/모자 뚫고 나온 뿔,0,3263,horns through headwear
+메타/료나,0,3260,ryona
+자세/커튼 움켜쥠,0,3256,curtain grab
+메타/서클 이름,0,3255,circle name
+소품/물약,0,3253,potion
+얼굴/흰 입,0,3251,white mouth
+배경/나뭇잎,0,3251,foliage
+동작/레슬링,0,3247,wrestling
+옷/야소가미 교복,0,3245,yasogami school uniform
+배경/3D 배경,0,3244,3d background
+메타/보이면 알 수 있는,0,3239,when you see it
+음식/거대한 음식,0,3237,oversized food
+동작/머리 손질,0,3237,hairdressing
+동작/낚시,0,3236,fishing
+동작/기습 키스,0,3235,surprise kiss
+머리/십자키 머리장식,0,3232,d-pad hair ornament
+눈/텅 빈 눈,0,3231,hollow eyes
+메타/절묘한 팔 가림,0,3231,convenient arm
+옷/하카마 반바지,0,3230,hakama shorts
+자세/상대 다리에 손,0,3229,hand on another's leg
+소품/그랜드 피아노,0,3229,grand piano
+소품/문장,0,3228,crest
+인원/지미코,0,3227,jimiko
+소품/군함,0,3224,warship
+소품/야자수,0,3223,palms
+소품/꽃봉오리,0,3222,bud
+머리/땋은 옆머리,0,3222,braided sidelocks
+동작/상대 옷 벗기기,0,3220,undressing another
+머리/고리 붙임머리,0,3217,ring hair extensions
+소품/볼로 타이,0,3212,bolo tie
+소품/야구 글러브,0,3210,baseball mitt
+효과/번진 화장,0,3208,runny makeup
+효과/파괴,0,3208,destruction
+자세/어깨 너머 엿봄,0,3206,shoulder peek
+성인/옷 위 자위,0,3204,masturbation through clothes
+소품/귀이개,0,3203,mimikaki
+자세/모자에 손,0,3203,hands on headwear
+동작/동물 안기,0,3203,animal hug
+인원/거미 소녀,0,3201,spider girl
+효과/어두운 기운,0,3200,dark aura
+옷/정장 바지,0,3198,suit pants
+구도/회전 대칭,0,3197,rotational symmetry
+성인/펠라 직전,0,3197,imminent fellatio
+음식/초콜릿 바,0,3196,chocolate bar
+자세/역동적인 자세,0,3194,dynamic pose
+메타/2026년,0,3193,2026
+메타/2018년,0,3191,2018
+메타/성우,0,3190,voice actor
+소품/식탁보,0,3188,tablecloth
+옷/목욕 유카타,0,3183,bath yukata
+소품/슈퍼 로봇,0,3181,super robot
+표정/의기양양,0,3179,doyagao
+자세/자기 목에 손,0,3177,hand on own neck
+자세/허벅지 사이,0,3177,between thighs
+동작/응원,0,3174,cheering
+옷/세로줄 하나,0,3173,single vertical stripe
+소품/비상의 검,0,3169,sword of hisou
+메타/상그비스 페리,0,3169,sangvis ferri
+옷/허리에 맨 카디건,0,3168,cardigan around waist
+소품/보물상자,0,3166,treasure chest
+머리/움직이는 머리카락,0,3166,prehensile hair
+동물/사슴,0,3166,deer
+성인/음부 체액 웅덩이,0,3165,pussy juice puddle
+소품/대물 저격총,0,3165,anti-materiel rifle
+효과/금성 기호,0,3164,venus symbol
+소품/메가폰 들기,0,3164,holding megaphone
+효과/팔에 묻은 피,0,3163,blood on arm
+동작/속삭임,0,3161,whispering
+옷/리틀 버스터즈 교복,0,3159,little busters! school uniform
+메타/두 언어 글자,0,3159,bilingual text
+인원/비에라,0,3158,viera
+몸/표범 꼬리,0,3158,panther tail
+머리/글자 머리장식,0,3158,letter hair ornament
+배경/문,0,3157,gate
+소품/메모장,0,3152,notepad
+자세/어깨에 멘 검,0,3150,sword over shoulder
+메타/실패,0,3148,failure
+머리/해바라기 머리장식,0,3146,sunflower hair ornament
+소품/팔레트,0,3146,paint palette
+소품/시그 자우어,0,3145,sig sauer
+메타/터무니없이 세밀한 구도,0,3143,absurdly detailed composition
+소품/우세크 목걸이,0,3142,usekh collar
+성인/후타와 후타,0,3142,futa with futa
+모자/떠 있는 머리장비,0,3141,floating headgear
+소품/다이빙 마스크,0,3140,diving mask
+효과/메안더 무늬,0,3137,meandros
+옷/성 글로리아나 교복,0,3129,st. gloriana's school uniform
+소품/쓴 휴지,0,3125,used tissue
+메타/그룹 이름,0,3120,group name
+성인/리본 결박,0,3116,ribbon bondage
+인원/곰 소년,0,3116,bear boy
+옷/반소매 재킷,0,3115,short-sleeved jacket
+얼굴/삼각 얼굴 무늬,0,3112,triangle facial mark
+배경/돌담,0,3112,stone wall
+소품/안 입은 재킷 들기,0,3112,holding unworn jacket
+소품/크리스마스 전구,0,3111,christmas lights
+소품/깁슨 레스폴,0,3109,gibson les paul
+자세/나무에 기댐,0,3106,against tree
+소품/브라운관,0,3104,crt
+표정/더블 W,0,3103,double w
+소품/총 멜빵,0,3100,gun sling
+소품/미사일,0,3098,missile
+소품/M4 카빈,0,3098,m4 carbine
+성인/뿜는 모유,0,3096,projectile lactation
+소품/주전자,0,3096,kettle
+소품/경고 테이프,0,3092,caution tape
+효과/불 뿜기,0,3091,breathing fire
+자세/밟힘,0,3087,stepped on
+옷/야가스리 무늬,0,3085,yagasuri
+배경/세로줄 배경,0,3082,vertical-striped background
+소품/스냅 버클,0,3081,snap-fit buckle
+자세/손에 기댄 머리,0,3081,head on hand
+소품/바퀴,0,3076,wheel
+옷/한쪽 가슴 가리개,0,3075,single breast curtain
+눈/토끼 모양 동공,0,3075,rabbit-shaped pupils
+몸/판다 귀,0,3075,panda ears
+메타/공식 다른 색,0,3073,official alternate color
+동작/상대 얼굴 핥기,0,3071,licking another's face
+소품/스타일러스 들기,0,3069,holding stylus
+소품/가슴 리본,0,3069,chest bow
+몸/물건을 잡는 꼬리,0,3068,prehensile tail
+소품/미니 팔괘로,0,3067,mini-hakkero
+옷/기구루미,0,3067,kigurumi
+소품/공책 들기,0,3067,holding notebook
+소품/채소 들기,0,3064,holding vegetable
+옷/유리가오카 여학원 교복,0,3062,yurigaoka girls academy school uniform
+몸/옆 가슴근,0,3061,sidepec
+자세/쓰러짐,0,3060,fallen down
+소품/바이올린 들기,0,3058,holding violin
+옷/검은 팔 워머,0,3058,black arm warmers
+소품/폭죽,0,3056,party popper
+효과/홀로그램 인터페이스,0,3056,holographic interface
+소품/콘 아이스크림 들기,0,3053,holding ice cream cone
+구도/폰 든 보는 이,0,3050,viewer holding phone
+머리/땋은 머리 속 리본,0,3050,ribbon in braid
+몸/척추,0,3046,spine
+메타/가짜 잡지 표지,0,3046,fake magazine cover
+배경/소나무,0,3043,pine tree
+인원/불량학생,0,3043,delinquent
+표정/X X,0,3041,x x
+효과/빨간 테두리,0,3039,red border
+상태/머리를 뚫은 물체,0,3035,object through head
+소품/러브레터,0,3035,love letter
+자세/물속,0,3032,in water
+동작/눈물 닦기,0,3030,wiping tears
+자세/오토바이 위,0,3029,on motorcycle
+동작/이마 키스,0,3029,kissing forehead
+배경/돌바닥,0,3028,stone floor
+소품/잘린 머리,0,3028,severed head
+소품/스트라이커 유닛,0,3027,striker unit
+얼굴/직사각 입,0,3026,rectangular mouth
+음식/케첩,0,3026,ketchup
+몸/입가 흉터,0,3022,scar on mouth
+소품/진주 팔찌,0,3022,pearl bracelet
+동작/머리 부딪힘,0,3022,head bump
+인원/발레리나,0,3022,ballerina
+소품/햄버거 들기,0,3021,holding burger
+메타/게임 화면 삽입,0,3020,game screenshot inset
+소품/에어컨,0,3014,air conditioner
+동물/단순한 새,0,3013,simple bird
+소품/음료 팩 들기,0,3010,holding drink carton
+인원/드워프,0,3010,dwarf
+성인/고환 없음,0,3006,no testicles
+소품/관,0,3000,tube
+소품/개틀링 건,0,3000,gatling gun
+머리/고리 머리장식,0,2999,ring hair ornament
+몸/검은 손,0,2998,black hands
+소품/소풍 바구니,0,2997,picnic basket
+메타/중국어 간체 글자,0,2996,simplified chinese text
+소품/받침접시 들기,0,2991,holding saucer
+메타/가사,0,2986,lyrics
+동작/화장하기,0,2985,applying makeup
+옷/줄 하나,0,2984,single stripe
+배경/포장도로,0,2984,pavement
+속옷/초소형 팬티,0,2983,micro panties
+효과/먼지구름,0,2982,dust cloud
+신발/구두,0,2982,dress shoes
+메타/소해,0,2980,year of the ox
+배경/사선 줄무늬 배경,0,2980,diagonal-striped background
+음식/시럽,0,2976,syrup
+몸/반점,0,2976,birthmark
+소품/휴지,0,2974,tissue
+소품/봉투 들기,0,2973,holding envelope
+머리/표정 있는 머리카락,0,2968,expressive hair
+구도/목줄 쥔 보는 이,0,2964,viewer holding leash
+성인/쓸모없는 콘돔,0,2962,pointless condom
+옷/제4동 고교 교복,0,2962,fourth east high school uniform
+자세/상대 허리에 팔,0,2962,arms around another's waist
+옷/한쪽 끈,0,2961,single strap
+모자/딕시컵 모자,0,2961,dixie cup hat
+얼굴/큰 코,0,2960,large nose
+몸/고래 꼬리,0,2959,cetacean tail
+소품/스케이트보드,0,2958,skateboard
+메타/고양이의 날,0,2957,cat day
+소품/함께 쓴 우산,0,2956,shared umbrella
+소품/손수건,0,2956,handkerchief
+소품/어깨 띠,0,2953,shoulder sash
+얼굴/두꺼운 콧수염,0,2953,thick mustache
+배경/세쓰분,0,2952,setsubun
+자세/나무에 앉음,0,2948,sitting in tree
+메타/공식 일러스트 삽입,0,2947,official art inset
+소품/눈가리개,0,2945,blindfold mask
+동작/턱 쓰다듬기,0,2943,stroking own chin
+소품/접이식 의자,0,2943,folding chair
+배경/얕은 물,0,2939,shallow water
+음식/베리,0,2937,berry
+옷/한쪽 견장,0,2935,single epaulette
+메타/공식 다른 눈 색,0,2933,official alternate eye color
+음식/컵라면,0,2933,instant cup noodles
+소품/은행잎,0,2932,ginkgo leaf
+머리/반묶음 땋기,0,2927,half up half down braid
+메타/커서,0,2927,cursor
+소품/비치볼 들기,0,2926,holding beachball
+표정/c:,0,2925,c:
+배경/베란다,0,2924,veranda
+옷/슈치인 학원 교복,0,2924,shuuchiin academy school uniform
+옷/원지,0,2924,onesie
+옷/갓포기,0,2923,kappougi
+메타/왼쪽에서 오른쪽 만화,0,2920,left-to-right manga
+소품/나기나타,0,2917,naginata
+효과/노란 테두리,0,2915,yellow border
+메타/만화 표지,0,2913,manga cover
+속옷/한쪽 가터 끈,0,2912,single garter strap
+메타/2016년,0,2910,2016
+소품/붕대 감은 가슴,0,2907,bandaged chest
+성인/진동기 선,0,2906,vibrator cord
+구도/대칭,0,2906,symmetry
+몸/처진 토끼 귀,0,2906,lop rabbit ears
+동작/침 뱉기,0,2904,spitting
+소품/체중계,0,2903,weighing scale
+옷/하렘 바지,0,2903,harem pants
+메타/몬스터 에너지,0,2901,monster energy
+소품/호스 들기,0,2900,holding hose
+머리/한쪽 땋은 옆머리,0,2899,single braided sidelock
+소품/라운지 의자,0,2898,lounge chair
+옷/라운드넥,0,2898,crew neck
+자세/의자 위,0,2894,on stool
+메타/하지 말랬잖아,0,2893,told you not to do that
+몸/없는 날개,0,2893,missing wings
+소품/오링 벨트,0,2892,o-ring belt
+옷/주술고전 교복,0,2891,jujutsu tech uniform
+자세/상대 턱 잡기,0,2891,grabbing another's chin
+동물/머리 위 고양이,0,2891,cat on head
+메타/트위터 탈의 게임,0,2889,twitter strip game
+자세/다리 감은 꼬리,0,2887,tail around own leg
+화풍/서부극,0,2887,cowboy western
+소품/깃 장식,0,2884,plume
+소품/목에 건 마스크,0,2883,mask around neck
+메타/트위터 X 로고,0,2878,twitter x logo
+옷/드레스 속 반바지,0,2877,shorts under dress
+자세/머리에 얹은 가슴,0,2875,breasts on head
+메타/2017년,0,2874,2017
+소품/선인장,0,2873,cactus
+자세/자기 꼬리 잡기,0,2872,holding own tail
+몸/눈표범 귀,0,2870,snow leopard ears
+소품/식칼,0,2870,kitchen knife
+소품/어쿠스틱 기타,0,2868,acoustic guitar
+인원/켄타우로스,0,2867,centaur
+소품/고삐,0,2866,reins
+소품/3단 트레이,0,2864,tiered tray
+배경/나무 그루터기,0,2863,tree stump
+옷/오아라이 군복,0,2862,ooarai military uniform
+옷/잠수복,0,2862,diving suit
+자세/자기 엉덩이에 손,0,2860,hands on own ass
+소품/드럼 세트,0,2860,drum set
+효과/레이저,0,2859,laser
+표정/완전 시큰둥,0,2856,completely unamused
+메타/소설 표지,0,2854,novel cover
+옷/가슴 갑옷,0,2854,boobplate
+소품/밧줄 벨트,0,2853,rope belt
+소품/드럼 스틱 들기,0,2848,holding drumsticks
+인원/가족 유대,0,2845,family bonding
+동작/인사,0,2845,bowing
+인원/선생과 학생,0,2844,teacher and student
+메타/무지개 순서,0,2840,rainbow order
+소품/석궁,0,2838,crossbow
+소품/축음기,0,2837,phonograph
+소품/라이터,0,2834,lighter
+메타/2015년,0,2831,2015
+소품/로션 병,0,2826,lotion bottle
+동작/얼굴 닦기,0,2825,wiping face
+옷/유이가오카 교복,0,2823,yuigaoka school uniform
+소품/수류탄 핀,0,2822,grenade pin
+성인/옷 속 벌린 음부,0,2820,spread pussy under clothes
+동작/양치,0,2819,brushing teeth
+소품/텐트,0,2816,tent
+소품/고양이 낚싯대,0,2815,cat teaser
+소품/일자 넥타이,0,2809,square-end necktie
+옷/히카리자카 사립고 교복,0,2807,hikarizaka private high school uniform
+동작/귀 쫑긋,0,2807,ear wiggle
+몸/금빛 음모,0,2805,blonde pubic hair
+메타/지온,0,2803,zeon
+자세/매달림,0,2802,hanging
+몸/없는 꼬리,0,2798,missing tail
+소품/목에 두른 반다나,0,2798,bandana around neck
+옷/사각 목선,0,2797,square neckline
+구도/분할 화면,0,2797,split screen
+구도/사물 강조,0,2797,object focus
+음식/솜사탕,0,2797,cotton candy
+몸/엉덩이 아랫살,0,2796,underbutt
+음식/체크 쿠키,0,2796,checkerboard cookie
+소품/반쪽 가면,0,2792,half mask
+동작/빼빼로 키스,0,2791,pocky kiss
+얼굴/눈 밑 무늬,0,2789,mark under eye
+메타/포켓몬 도감 번호,0,2785,pokedex number
+소품/비누,0,2783,soap
+소품/라이더 벨트,0,2783,rider belt
+자세/이끄는 손,0,2782,guiding hand
+머리/사이드컷,0,2780,sidecut
+몸/장사 허리,0,2779,strongman waist
+자세/음식 속,0,2778,in food
+몸/절지동물 다리,0,2777,arthropod limbs
+음식/아이싱,0,2776,icing
+화풍/원형 자르기,0,2775,circle cut
+자세/바위 위,0,2772,on rock
+자세/겨드랑이에 낌,0,2772,carrying under arm
+동작/머리카락 입에 물기,0,2771,hair in own mouth
+소품/은방울꽃,0,2770,lily of the valley
+모자/사발 모자,0,2770,bowl hat
+자세/손 얹기,0,2765,hand rest
+몸/켄타우로스형,0,2765,centauroid
+옷/라운지웨어,0,2760,loungewear
+메타/절묘한 꼬리 가림,0,2758,convenient tail
+자세/엉덩이 내밀기,0,2755,presenting own ass
+메타/픽시브 로고,0,2755,pixiv logo
+얼굴/초승달 얼굴 무늬,0,2755,crescent facial mark
+배경/벽난로,0,2751,fireplace
+화풍/치비케모,0,2751,chibikemo
+몸/땀난 가슴,0,2750,sweaty breasts
+옷/털 망토,0,2748,fur cape
+몸/큰 손,0,2745,large hands
+소품/악보,0,2741,sheet music
+음식/오이,0,2741,cucumber
+소품/영국 국기,0,2738,union jack
+얼굴/양 눈 밑 무늬,0,2736,mark under both eyes
+효과/무지개 그라데이션,0,2734,rainbow gradient
+성인/거대한 고환,0,2732,huge testicles
+동작/검 뽑기,0,2732,drawing sword
+메타/물색 테마,0,2728,aqua theme
+효과/반짝이는 기운,0,2726,sparkling aura
+눈/전원 기호 동공,0,2726,power symbol-shaped pupils
+몸/동양 용 꼬리,0,2724,eastern dragon tail
+소품/화로,0,2723,stove
+소품/크리스마스 선물,0,2722,christmas present
+배경/해바라기밭,0,2721,sunflower field
+옷/땀에 젖은 옷,0,2720,sweaty clothes
+소품/손전등,0,2720,flashlight
+소품/캐릭터 참,0,2718,character charm
+자세/치켜든 주먹,0,2716,raised fist
+소품/골동품 전화기,0,2716,antique phone
+옷/걷어 올린 바지,0,2715,pants rolled up
+몸/출렁이는 엉덩이,0,2715,bouncing ass
+소품/아날로그 시계,0,2714,analog clock
+자세/상대 손 위에 손,0,2713,hand on another's hand
+소품/통나무,0,2710,log
+성인/가려진 음경,0,2710,covered penis
+메타/잘못하고 있어,0,2708,you're doing it wrong
+소품/꼭두각시 줄,0,2707,puppet strings
+옷/전체 지퍼,0,2706,full-length zipper
+소품/지시봉,0,2704,pointer
+옷/전술 조끼,0,2704,load bearing vest
+자세/자기 이마에 손,0,2704,hand on own forehead
+효과/물 능력,0,2703,hydrokinesis
+소품/음식 모양 귀걸이,0,2702,food-themed earrings
+옷/주반,0,2701,juban
+음식/쌓은 팬케이크,0,2700,pancake stack
+음식/타코야키,0,2698,takoyaki
+음식/뼈 붙은 고기,0,2695,boned meat
+효과/파편,0,2692,shards
+소품/의식용 지팡이,0,2692,ritual baton
+동물/오징어,0,2691,squid
+소품/예스노 베개,0,2690,yes-no pillow
+배경/칠석,0,2690,tanabata
+음식/튀김,0,2689,tempura
+동작/두 손 여우 그림자,0,2686,double fox shadow puppet
+성인/음부 피어싱,0,2685,pussy piercing
+자세/모은 두 손,0,2685,cupping hands
+소품/허리띠,0,2681,waist sash
+자세/이마 맞대기,0,2679,forehead-to-forehead
+옷/성 글로리아나 군복,0,2678,st. gloriana's military uniform
+소품/미늘창,0,2675,halberd
+옷/로켓단 제복,0,2674,team rocket uniform
+동물/무리,0,2674,flock
+동물/어깨 위 포켓몬,0,2671,pokemon on shoulder
+동작/땀 닦기,0,2667,wiping sweat
+자세/물건 위에 앉음,0,2666,sitting on object
+동물/유니콘,0,2665,unicorn
+소품/믹싱볼,0,2664,mixing bowl
+옷/스위트 롤리타,0,2661,sweet lolita
+옷/순록 의상,0,2661,reindeer costume
+소품/마스터 소드,0,2661,master sword
+동물/시바견,0,2660,shiba inu
+효과/남근 상징,0,2658,phallic symbol
+소품/붕대 감은 손목,0,2656,bandaged wrist
+성인/음부 없는 후타,0,2655,futa without pussy
+성인/콘돔 벨트,0,2655,condom belt
+효과/화학 구조식,0,2655,chemical structure
+구도/반쯤 물에 잠긴 샷,0,2654,partially underwater shot
+소품/종이접기,0,2651,origami
+인원/천사와 악마,0,2650,angel and devil
+소품/뾰족한 왕관,0,2644,pointed crown
+얼굴/두꺼운 수염,0,2644,thick beard
+소품/양동이 들기,0,2642,holding bucket
+메타/채팅 기록,0,2642,chat log
+인원/새 소년,0,2642,bird boy
+동작/생물 안기,0,2641,holding creature
+몸/어깨 홍조,0,2640,shoulder blush
+소품/메가스톤,0,2640,mega stone
+성인/음부 내보이기,0,2639,presenting own pussy
+몸/배 점,0,2639,mole on stomach
+배경/반딧불이,0,2639,fireflies
+자세/상대 셔츠 잡기,0,2638,grabbing another's shirt
+동작/아래 눈꺼풀 당기기,0,2634,eyelid pull
+메타/잭오 챌린지,0,2633,jack-o' challenge
+소품/실,0,2632,thread
+동물/로봇 동물,0,2632,robot animal
+성인/윤활제,0,2631,lube
+음식/팝콘,0,2630,popcorn
+소품/일장기,0,2628,japanese flag
+눈/눈 속 꽃,0,2627,flower in eye
+표정/결연함,0,2627,determined
+소품/꼬리 피어싱,0,2626,tail piercing
+소품/방범 벨,0,2625,crime prevention buzzer
+몸/여분의 입,0,2624,extra mouth
+얼굴/X자 입,0,2623,x mouth
+자세/바닥에 손,0,2623,hand on ground
+소품/헬리콥터,0,2622,helicopter
+동작/입 앞 브이,0,2619,v over mouth
+소품/쓰레기 봉투,0,2619,trash bag
+소품/드릴,0,2617,drill
+인원/소 소년,0,2617,cow boy
+눈/겹눈,0,2613,compound eyes
+옷/도키도키 문예부 교복,0,2611,doki doki literature club school uniform
+효과/찰싹 소리,0,2610,plap
+소품/아령,0,2609,dumbbell
+메타/뱀해,0,2608,year of the snake
+음식/수박 조각,0,2608,watermelon slice
+소품/승마 채찍 들기,0,2606,holding riding crop
+속옷/벨트 브라,0,2606,belt bra
+메타/역할 바꾸기,0,2604,role reversal
+소품/얼굴 거즈,0,2601,gauze on face
+음식/라무네,0,2600,ramune
+소품/하고이타,0,2600,hagoita
+동작/뺨 눌림,0,2600,cheek squash
+몸/전신 문신,0,2599,full-body tattoo
+소품/나사,0,2594,screw
+효과/낫과 망치,0,2594,hammer and sickle
+성인/풀패키지 후타나리,0,2593,full-package futanari
+눈/단추 눈,0,2592,button eyes
+인원/뱀 소녀,0,2590,snake girl
+자세/자기 배에 손,0,2589,hands on own stomach
+소품/관,0,2589,coffin
+몸/색 있는 젖꼭지,0,2586,colored nipples
+옷/정강이 보호대,0,2585,shin guards
+옷/거싯,0,2583,gusset
+동작/청소,0,2583,cleaning
+소품/떠 있는 무기,0,2582,floating weapon
+음식/수프,0,2579,soup
+머리/옆 드릴 머리,0,2578,side drill
+머리/마름모 머리장식,0,2578,diamond hair ornament
+소품/금 단추,0,2573,gold buttons
+표정/식탐,0,2573,glutton
+메타/오토봇,0,2572,autobot
+메타/39,0,2569,39
+옷/가로줄 하나,0,2566,single horizontal stripe
+동작/입에 문 리본,0,2565,ribbon in mouth
+인원/하빈,0,2565,harvin
+메타/캐릭터 나이,0,2565,character age
+음식/소시지,0,2563,sausage
+소품/머리 위 꽃,0,2560,flower on head
+옷/초록 스웨터 조끼,0,2559,green sweater vest
+동작/무릎 굽혀 인사,0,2558,curtsey
+옷/리본 테두리 옷,0,2556,ribbon-trimmed clothes
+소품/줄 달린 동전,0,2555,coin on string
+동물/전통 요괴,0,2553,traditional youkai
+성인/정자,0,2553,sperm cell
+옷/겹쳐 입은 셔츠,0,2553,shirt under shirt
+메타/키,0,2552,height
+효과/갈색 테두리,0,2552,brown border
+모자/투톤 머리쓰개,0,2551,two-tone headwear
+메타/가상 졸업 기념,0,2548,virtual graduation commemoration
+옷/신선조,0,2548,shinsengumi
+메타/예,0,2547,yes
+머리/진주 머리장식,0,2547,pearl hair ornament
+동작/하이킥,0,2546,high kick
+상태/우발적 노출,0,2536,accidental exposure
+소품/병원 침대,0,2535,hospital bed
+동작/손등 키스,0,2534,kissing hand
+머리/낮은 옆 포니테일,0,2533,low side ponytail
+성인/보이지 않는 음경,0,2532,invisible penis
+동물/독수리,0,2532,eagle
+성인/착유기,0,2531,milking machine
+성인/여자 셋,0,2530,fff threesome
+옷/미야마스자카 여학원 교복,0,2528,miyamasuzaka girls' academy school uniform
+메타/전면 만화,0,2527,full page comic
+효과/비네팅,0,2526,vignetting
+소품/캐리어,0,2525,rolling suitcase
+동작/셔츠 물기,0,2521,shirt in mouth
+동물/서양 용,0,2520,western dragon
+음식/피자 조각,0,2516,pizza slice
+소품/머리에 붙은 부적,0,2516,ofuda on head
+동물/무릎 위 동물,0,2516,animal on lap
+소품/선크림,0,2515,sunscreen
+배경/모닥불,0,2512,campfire
+효과/바닥의 피,0,2507,blood on ground
+소품/앙크,0,2507,ankh
+소품/꼬리 반지,0,2506,tail ring
+옷/슈카 고교 교복,0,2506,shuka high school uniform
+효과/염동력,0,2504,telekinesis
+동작/손 내밀기,0,2503,offering hand
+소품/불타는 무기,0,2503,flaming weapon
+소품/둥근바닥 플라스크,0,2501,round-bottom flask
+성인/입으로 권유,0,2500,oral invitation
+음식/가슴 위 초콜릿,0,2499,chocolate on breasts
+메타/텀블러 아이디,0,2498,tumblr username
+소품/가시 몽둥이,0,2498,spiked club
+소품/서랍장,0,2497,chest of drawers
+몸/한쪽 맨발,0,2496,single bare foot
+자세/비대칭 쌍수,0,2494,asymmetrical dual wielding
+자세/가슴 사이 팔,0,2494,arm between breasts
+메타/미쿠의 날,0,2493,miku day
+얼굴/긴 코,0,2493,long nose
+소품/탐사봉,0,2493,dowsing rod
+자세/얼굴에,0,2492,in the face
+소품/바 스툴,0,2492,bar stool
+소품/여러 목걸이,0,2491,multiple necklaces
+옷/안치오 교복,0,2490,anzio school uniform
+옷/유에이 교복,0,2489,u.a. school uniform
+소품/스프레이 캔,0,2488,spray can
+몸/재규어 귀,0,2487,jaguar ears
+메타/전후 비교,0,2487,before and after
+메타/용해,0,2486,year of the dragon
+자세/사람 위,0,2483,on person
+옷/나랑하 학원 교복,0,2482,naranja academy school uniform
+음식/탄산음료,0,2481,soda
+소품/뺨 거즈,0,2481,gauze on cheek
+소품/마작 패,0,2480,mahjong tile
+상태/야성,0,2479,feral instincts
+인원/늑대인간,0,2475,werewolf
+옷/군 전투복,0,2474,military combat uniform
+음식/패스트푸드,0,2474,fast food
+소품/나무 상자,0,2471,crate
+소품/바늘 들기,0,2469,holding needle
+소품/지구본,0,2469,globe
+소품/열쇠 귀걸이,0,2467,key earrings
+소품/여행가방 들기,0,2466,holding suitcase
+소품/한쪽 손목 커프스,0,2463,single wrist cuff
+인원/탐정,0,2463,detective
+소품/입에 문 식기,0,2462,utensil in mouth
+성인/자기 몸에 사정,0,2461,cum on self
+옷/쿠사즈리,0,2458,kusazuri
+눈/두족류 눈,0,2456,cephalopod eyes
+옷/제3신도쿄 중학교 교복,0,2455,tokyo-3 middle school uniform
+소품/구부러지는 빨대,0,2452,bendy straw
+소품/뜀틀,0,2451,vaulting horse
+양말/동물 귀 양말,0,2450,animal ear legwear
+효과/룬 문자,0,2444,runes
+소품/찻주전자 들기,0,2444,holding teapot
+메타/골든위크,0,2444,golden week
+머리/일자 옆머리,0,2443,blunt sidelocks
+메타/세부를 짚음,0,2439,pointing out the details
+옷/속옷 없는 기모노,0,2438,naked kimono
+소품/마작,0,2438,mahjong
+효과/포르티시모,0,2436,fortissimo
+옷/집어넣은 바지,0,2434,pants tucked in
+자세/눌려 고정됨,0,2430,pinned
+소품/스쿠터,0,2428,scooter
+동작/박수,0,2428,clapping
+자세/무릎에 손,0,2425,hand on lap
+배경/석등,0,2424,stone lantern
+소품/궁니르,0,2424,spear the gungnir
+자세/양동이 속,0,2421,in bucket
+동작/고백,0,2419,confession
+배경/맑은 하늘,0,2419,clear sky
+모자/아지로가사,0,2419,ajirogasa
+옷/후드 위 재킷,0,2416,jacket over hoodie
+음식/파스타,0,2411,pasta
+옷/키비토 고교 교복,0,2411,kibito high school uniform
+동작/떨림,0,2410,shaking
+동작/발레,0,2410,ballet
+효과/하트 관통 화살,0,2410,arrow through heart
+소품/나뭇가지 들기,0,2409,holding branch
+동작/넥타이 고쳐 매기,0,2409,adjusting necktie
+소품/러버콘,0,2404,traffic cone
+얼굴/볼록한 뺨,0,2403,cheek bulge
+옷/환자복,0,2401,hospital gown
+소품/걸어 둔 안경,0,2400,eyewear hang
+소품/발가락 반지,0,2397,toe ring
+소품/성인물,0,2397,pornography
+소품/뜰채,0,2397,hand net
+효과/녹는 후광,0,2395,melting halo
+옷/풀린 비키니 하의,0,2394,untied bikini bottom
+머리/목덜미 한 가닥,0,2391,lone nape hair
+구도/머리 잘림,0,2391,cropped head
+눈/찡그린 눈,0,2389,squinting
+자세/O자 다리,0,2389,bowlegged pose
+몸/항문 털,0,2389,anal hair
+동작/때리기,0,2387,slapping
+소품/아이폰,0,2387,iphone
+소품/버스터 소드,0,2387,buster sword
+상태/숨이 끊어짐,0,2386,giving up the ghost
+머리/주사위 머리장식,0,2385,dice hair ornament
+몸/체모,0,2385,body hair
+소품/밀,0,2382,wheat
+동작/버둥거림,0,2382,struggling
+모자/물방울무늬 머리쓰개,0,2381,polka dot headwear
+동작/포켓몬 타기,0,2380,riding pokemon
+옷/파란 스웨터 조끼,0,2380,blue sweater vest
+몸/레이맨 팔다리,0,2378,rayman limbs
+메타/만우절,0,2378,april fools
+소품/음양 구슬,0,2376,yin yang orb
+소품/게이밍 의자,0,2375,gaming chair
+머리/눈 위 꽃,0,2371,flower over eye
+동작/아칸베,0,2371,akanbe
+자세/꼬리 잡기,0,2369,tail grab
+메타/후리가나,0,2367,furigana
+소품/구멍 뚫린 동전,0,2366,holed coin
+동작/머리 말리기,0,2366,drying hair
+소품/도마,0,2365,cutting board
+인원/라라펠,0,2363,lalafell
+화풍/검은 윤곽선,0,2362,black outline
+소품/오토바이 헬멧,0,2361,motorcycle helmet
+소품/쿨러,0,2361,cooler
+메타/바니의 날,0,2361,bunny day
+메타/어색한 비율,0,2361,bad proportions
+소품/렌치 들기,0,2360,holding wrench
+몸/머리 여러 개,0,2358,multiple heads
+소품/어뢰 발사관,0,2357,torpedo tubes
+소품/턱끈,0,2357,chinstrap
+얼굴/부푼 볼,0,2356,puffy cheeks
+메타/분할 테마,0,2352,split theme
+배경/용암,0,2352,lava
+눈/점선 눈,0,2352,dashed eyes
+몸/손 흉터,0,2349,scar on hand
+몸/케이블 꼬리,0,2349,cable tail
+표정/체중 신경 씀,0,2348,weight conscious
+동작/기타 연주,0,2348,playing guitar
+몸/처진 귀,0,2348,droopy ears
+소품/종이비행기,0,2347,paper airplane
+소품/나팔꽃,0,2345,morning glory
+표정/멍한 시선,0,2345,blank stare
+옷/뱀파이어 의상,0,2344,vampire costume
+소품/책갈피,0,2344,bookmark
+자세/상대 허벅지에 손,0,2342,hands on another's thighs
+옷/솟은 셔츠,0,2341,tented shirt
+소품/가시 등딱지,0,2341,spiked shell
+옷/분홍 테두리,0,2341,pink trim
+자세/접은 다리,0,2340,legs folded
+소품/오븐 장갑,0,2339,oven mitts
+소품/입체기동장치,0,2338,three-dimensional maneuver gear
+옷/죄수복,0,2337,prison clothes
+옷/분홍 팔 워머,0,2336,pink arm warmers
+얼굴/입 위 점,0,2335,mole above mouth
+소품/목 술 장식,0,2332,neck tassel
+동작/때리기,0,2332,hitting
+소품/홍백 새끼줄,0,2331,kouhaku nawa
+배경/굴뚝,0,2331,chimney
+옷/강시 의상,0,2330,jiangshi costume
+소품/솜사탕 들기,0,2328,holding cotton candy
+몸/족제비 귀,0,2327,weasel ears
+몸/뾰족한 꼬리,0,2327,sharp tail
+음식/에너지 드링크,0,2326,energy drink
+옷/터틀넥 재킷,0,2325,turtleneck jacket
+소품/전기 플러그,0,2325,electric plug
+자세/허벅지 사이 다리,0,2320,leg between thighs
+메타/낚시 썸네일,0,2317,misleading thumbnail
+신발/한쪽 허벅지 부츠,0,2316,single thigh boot
+메타/빛 검열,0,2316,light censor
+옷/Y2K 패션,0,2313,y2k fashion
+소품/톱,0,2312,saw
+동작/위로,0,2312,comforting
+소품/세탁기,0,2311,washing machine
+동작/갸루 브이,0,2309,gyaru v
+소품/에마,0,2309,ema
+효과/육각형,0,2308,hexagon
+소품/추,0,2307,pendulum
+머리/사슬 머리띠,0,2307,chain headband
+옷/치마 리본,0,2304,skirt bow
+몸/이마 문신,0,2304,forehead tattoo
+옷/한쪽 어깨 보호대,0,2303,single shoulder pad
+소품/두꺼운 안경,0,2303,coke-bottle glasses
+옷/트레센 수영복,0,2302,tracen swimsuit
+옷/교차 끈,0,2302,criss-cross straps
+소품/단자쿠,0,2301,tanzaku
+인원/파충류 소녀,0,2297,reptile girl
+소품/바람개비,0,2297,pinwheel
+소품/다루마 인형,0,2297,daruma doll
+소품/HK416,0,2293,h&k hk416
+자세/다리 사이 팔,0,2292,arms between legs
+옷/상어 의상,0,2290,shark costume
+소품/올가미,0,2288,noose
+자세/탁자에 팔꿈치,0,2288,elbows on table
+음식/샴페인,0,2288,champagne
+동작/함께 먹는 음식,0,2287,shared food
+메타/방과후 티타임,0,2287,ho-kago tea time
+소품/학생 가방,0,2286,school briefcase
+옷/검은 테두리,0,2286,black trim
+소품/하트 버클,0,2285,heart-shaped buckle
+동작/하트 속 하트 손,0,2285,heart in heart hands
+옷/양면 드레스,0,2285,two-sided dress
+상태/기계화,0,2283,mechanization
+옷/다리 감개,0,2283,leg wrap
+소품/머리 사슬,0,2282,head chain
+메타/독일어 글자,0,2282,german text
+옷/튜브 드레스,0,2280,tube dress
+메타/시안 디자인,0,2280,prototype design
+옷/회색 스웨터 조끼,0,2280,grey sweater vest
+동작/자기에게 붓기,0,2279,pouring onto self
+옷/장식 많은 의상,0,2279,embellished costume
+메타/도표,0,2279,chart
+동물/괴수,0,2277,kaiju
+옷/회색 정장,0,2277,grey suit
+동작/떨어뜨림,0,2277,dropping
+자세/고타츠 속,0,2276,under kotatsu
+소품/기계,0,2276,machine
+소품/부적 들기,0,2276,holding ofuda
+옷/부족풍,0,2275,tribal
+메타/검은색 테마,0,2274,black theme
+소품/포타라 귀걸이,0,2273,potara earrings
+소품/민들레,0,2272,dandelion
+옷/더플코트,0,2271,duffel coat
+메타/자해,0,2270,self-harm
+소품/배틀 라이플,0,2269,battle rifle
+동물/달팽이,0,2268,snail
+소품/탄산 병,0,2267,soda bottle
+머리/중국식 비녀,0,2264,chinese hairpin
+소품/오다치,0,2263,ootachi
+옷/쿠로모리미네 교복,0,2263,kuromorimine school uniform
+소품/털실,0,2260,yarn
+동작/후드 들추기,0,2259,hoodie lift
+소품/리모컨 들기,0,2257,holding remote control
+신발/오픈토 신발,0,2256,open-toe shoes
+머리/짧은 옆 포니테일,0,2256,short side ponytail
+옷/웻슈트,0,2254,wetsuit
+화풍/아이 그림,0,2248,child's drawing
+옷/누더기 옷,0,2246,patchwork clothes
+소품/플루트 들기,0,2246,holding flute
+효과/매체 관통,0,2245,through medium
+옷/전술 교복,0,2245,tactical school uniform
+소품/자,0,2245,ruler
+효과/물 위 꽃잎,0,2243,petals on liquid
+인원/여러 남장 미소년,0,2243,multiple traps
+배경/벽돌 바닥,0,2242,brick floor
+동작/상대 머리 빗기,0,2241,brushing another's hair
+메타/우마무스메 말 관계,0,2240,umamusume horse relations
+성인/쿠퍼액 뚝뚝,0,2239,precum drip
+메타/낙서 검열,0,2238,scribble censor
+소품/사쿠라 문양,0,2238,sakuramon
+음식/만두,0,2238,dumpling
+자세/옆으로 앉아 탐,0,2236,sidesaddle
+소품/경주 차량,0,2236,race vehicle
+성인/수직 파이즈리,0,2235,perpendicular paizuri
+몸/튀어나온 배꼽,0,2235,outie navel
+구도/바깥에서,0,2232,from outside
+음식/부스러기,0,2230,crumbs
+성인/매듭 음경,0,2229,knotted penis
+자세/자기 팔꿈치에 손,0,2229,hand on own elbow
+소품/하트 에이스,0,2229,ace of hearts
+옷/소매 달린 레오타드,0,2227,sleeved leotard
+메타/홍마관,0,2227,scarlet devil mansion
+소품/분필,0,2226,chalk
+소품/가발,0,2221,wig
+성인/강제 절정,0,2221,forced orgasm
+동작/입 당기기,0,2220,mouth pull
+효과/유리 파편,0,2220,glass shards
+소품/허벅지 밴드,0,2219,bandaid on thigh
+배경/소풍,0,2215,picnic
+옷/묶인 재킷,0,2215,tied jacket
+소품/어뢰 발사기,0,2214,torpedo launcher
+소품/마이크 스탠드 들기,0,2214,holding microphone stand
+소품/초록 렌즈 안경,0,2214,green-tinted eyewear
+효과/심장 박동,0,2213,heartbeat
+옷/음식 테마 옷,0,2212,food-themed clothes
+메타/캐릭터 검열,0,2211,character censor
+인원/관객,0,2211,audience
+몸/뾰족한 발톱,0,2209,sharp toenails
+성인/짙은 음경,0,2209,dark penis
+옷/토모에다 초등학교 교복,0,2208,tomoeda elementary school uniform
+화풍/피규어풍,0,2208,faux figurine
+표정/가슴 신경 씀,0,2205,breast conscious
+자세/유리에 손,0,2204,hand on glass
+동작/엉덩이 흔들기,0,2203,ass shake
+메타/원작보다 근육질,0,2199,more muscular than canon
+동물/열대어,0,2198,tropical fish
+메타/원작 왜곡,0,2198,perversion of canon
+자세/무릎에 팔,0,2198,arm on knee
+소품/시험관 들기,0,2196,holding test tube
+소품/가면 쓴,0,2194,masked
+자세/뻗은 다리,0,2192,outstretched leg
+소품/벽시계,0,2191,wall clock
+성인/끝만,0,2191,just the tip
+소품/대나무 찜기,0,2191,bamboo steamer
+자세/다리 사이 꼬리,0,2187,tail between legs
+배경/음식 노점,0,2187,food stand
+몸/목젖,0,2186,uvula
+소품/비디오 게임,0,2185,video game
+소품/라디오,0,2185,radio
+음식/카레라이스,0,2183,curry rice
+소품/스펀지,0,2181,sponge
+성인/음핵 피어싱,0,2180,clitoral piercing
+성인/후타가 남자에게,0,2178,futa on male
+자세/얼굴에 손가락,0,2178,finger to face
+상태/아픔,0,2177,sick
+효과/빨간 윤곽선,0,2177,red outline
+메타/빌려온 디자인,0,2176,borrowed design
+소품/다이얼 전화기,0,2175,rotary phone
+성인/입속 촉수,0,2174,tentacle in mouth
+옷/흰 웨딩 토시,0,2173,white bridal gauntlets
+음식/선디,0,2172,sundae
+인원/광대,0,2172,jester
+동작/소매 쥐기,0,2171,pinching sleeves
+몸/뾰족한 가슴,0,2170,pointy breasts
+동작/머리 자르기,0,2170,cutting hair
+동작/입에 문 줄기,0,2167,stalk in mouth
+옷/푸르푸르 코트,0,2166,fatui coat
+메타/태국어 글자,0,2165,thai text
+메타/스크린샷 배경,0,2165,screenshot background
+옷/레오타드 엿보임,0,2165,leotard peek
+메타/회색 테마,0,2165,grey theme
+음식/핫도그,0,2164,hot dog
+소품/곡옥 귀걸이,0,2162,magatama earrings
+옷/헐렁한 옷,0,2162,baggy clothes
+머리/액체 머리,0,2161,liquid hair
+메타/필기체,0,2161,cursive
+소품/플레이스테이션 컨트롤러,0,2159,playstation controller
+옷/조개 비키니,0,2156,shell bikini
+모자/케피,0,2156,kepi
+몸/머리 없음,0,2156,headless
+동물/삼색 고양이,0,2155,calico cat
+옷/파란 정장,0,2155,blue suit
+머리/꽃 머리핀,0,2154,flower hairpin
+옷/카고 바지,0,2153,cargo pants
+소품/파일럿 선글라스,0,2153,aviator sunglasses
+효과/피웅덩이,0,2151,pool of blood
+눈/검은 아이라인,0,2151,black eyeliner
+자세/벽에 손,0,2150,hand on wall
+소품/이젤,0,2147,easel
+동작/니삭 당기기,0,2146,thighhighs pull
+성인/음경 엿보임,0,2146,penis peek
+모자/양면 머리쓰개,0,2145,two-sided headwear
+소품/어깨 홀스터,0,2144,shoulder holster
+소품/탄띠,0,2143,ammunition belt
+소품/모래시계,0,2142,hourglass
+소품/잠자리채,0,2142,butterfly net
+소품/두루마리 들기,0,2141,holding scroll
+옷/운동용 레오타드,0,2141,athletic leotard
+옷/스트리트웨어,0,2139,streetwear
+머리/땋은 밑동 포니테일,0,2137,ponytail with braided base
+메타/배드 엔딩,0,2137,bad end
+성인/긴 소음순,0,2136,long labia
+소품/코걸이,0,2135,nose ring
+화풍/디더링,0,2135,dithering
+모자/밀짚 보터 모자,0,2135,boater hat
+머리/송곳니 앞머리,0,2134,fanged bangs
+소품/입 가린 목도리,0,2133,scarf over mouth
+소품/프라이팬 들기,0,2130,holding frying pan
+옷/닻 무늬,0,2130,anchor print
+소품/눈덩이,0,2129,snowball
+동작/손가락 프레임,0,2129,finger frame
+소품/개조 포탑,0,2129,adapted turret
+메타/문자 메시지,0,2128,text messaging
+옷/한쪽 팔 워머,0,2128,single arm warmer
+몸/원숭이 귀,0,2128,monkey ears
+옷/수영복 위 재킷,0,2128,jacket over swimsuit
+자세/자동차 위,0,2127,on car
+동작/모자 살짝 들기,0,2127,hat tip
+옷/래빗 하우스 제복,0,2126,rabbit house uniform
+소품/경찰 배지,0,2126,police badge
+자세/죠죠 포즈,0,2126,jojo pose
+메타/낙서 삽입,0,2125,doodle inset
+소품/식신,0,2122,shikigami
+성인/무표정 섹스,0,2122,emotionless sex
+옷/탄 옷,0,2118,burnt clothes
+소품/냅킨,0,2117,napkin
+양말/검은 레그워머,0,2116,black leg warmers
+자세/공중부양,0,2115,levitation
+인원/염소 소년,0,2114,goat boy
+자세/상대 등에 팔,0,2114,arm around another's back
+메타/인종 페티시,0,2111,race fetishism
+동작/상대 입 막기,0,2110,covering another's mouth
+소품/재갈 하네스,0,2108,gag harness
+소품/노 가면,0,2107,noh mask
+성인/반쯤 벌린 음부,0,2107,half-spread pussy
+자세/엉덩이 받침,0,2106,ass support
+소품/쌓인 종이,0,2104,paper stack
+동작/구자인,0,2104,kuji-in
+메타/칼데아 로고,0,2104,chaldea logo
+얼굴/텅 빈 얼굴,0,2103,void face
+효과/응결,0,2103,condensation
+몸/하이에나 귀,0,2102,hyena ears
+자세/가슴 내밀기,0,2101,presenting own breasts
+옷/방탄복,0,2101,body armor
+머리/자른 앞머리,0,2100,cut bangs
+화풍/손그림,0,2099,tegaki
+옷/스카잔,0,2099,sukajan
+동작/베기,0,2099,slashing
+옷/보라 테두리,0,2099,purple trim
+효과/힘 모으기,0,2098,powering up
+모자/파파하,0,2098,papakha
+소품/가나보,0,2098,kanabou
+소품/스노클,0,2097,snorkel
+자세/상대 엉덩이 옆에 손,0,2095,hands on another's hips
+성인/상대 팬티 속에 손,0,2095,hand in another's panties
+효과/노란 윤곽선,0,2094,yellow outline
+소품/립스틱 들기,0,2090,holding lipstick tube
+메타/회상,0,2090,flashback
+동작/변신,0,2089,henshin
+효과/함께 쓴 말풍선,0,2087,shared speech bubble
+옷/펑크,0,2087,punk
+인원/엘레젠,0,2087,elezen
+옷/떠 있는 목도리,0,2086,floating scarf
+동물/나방,0,2084,moth
+얼굴/광대뼈,0,2084,cheekbones
+소품/메달리온,0,2083,medallion
+몸/굵은 팔,0,2081,thick arms
+소품/곡괭이,0,2080,pickaxe
+소품/마법서,0,2080,grimoire
+소품/포켓몬 카드,0,2079,pokemon card
+소품/약물,0,2075,drugs
+상태/다음 날 아침,0,2074,morning after
+음식/가지,0,2074,eggplant
+소품/부활절 달걀,0,2073,easter egg
+메타/슈퍼 사이어인 1,0,2071,super saiyan 1
+소품/페넌트,0,2070,pennant
+효과/파란 윤곽선,0,2070,blue outline
+동작/균형 잡기,0,2070,balancing
+신발/아이스 스케이트,0,2068,ice skates
+머리/네잎클로버 머리장식,0,2067,four-leaf clover hair ornament
+옷/불가능한 수영복,0,2066,impossible swimsuit
+메타/보컬로이드 어펜드,0,2065,vocaloid append
+소품/깃펜 들기,0,2064,holding quill
+동작/상대에게 손 뻗기,0,2063,reaching towards another
+몸/꿰맨 팔,0,2062,stitched arm
+메타/스페인어 글자,0,2062,spanish text
+동작/스스로 연 상태,0,2062,opened by self
+배경/격자,0,2062,lattice
+소품/크레용,0,2062,crayon
+옷/슈진 학원 교복,0,2060,shuujin academy school uniform
+소품/조개 목걸이,0,2059,shell necklace
+음식/버터,0,2059,butter
+메타/내레이션,0,2058,narration
+메타/세로 스크롤 만화,0,2057,vertical scroll comic
+동작/오르기,0,2057,climbing
+동작/비키니 하의 당기기,0,2057,bikini bottom pull
+옷/옆트임 반바지,0,2056,side slit shorts
+효과/에너지 빔,0,2056,energy beam
+모자/방울 비니,0,2052,pom pom beanie
+소품/떨어진 머리 들기,0,2051,holding detached head
+소품/크레페 들기,0,2051,holding crepe
+메타/연속 컷,0,2050,sequential
+소품/비사문천의 보탑,0,2049,bishamonten's pagoda
+옷/흰 팔 워머,0,2046,white arm warmers
+몸/등지느러미,0,2045,dorsal fin
+음식/칵테일,0,2045,cocktail
+메타/나이 비교,0,2043,age comparison
+소품/손목 붕대,0,2042,wrist wrap
+배경/가득 찬 실내,0,2042,loaded interior
+소품/돈 들기,0,2042,holding money
+옷/도깨비불 무늬,0,2042,hitodama print
+구도/팔 잘림,0,2042,cropped arms
+메타/비교,0,2042,comparison
+소품/하마야,0,2041,hamaya
+인원/양부모와 양자,0,2041,adoptive parent and adoptive child
+소품/아치형 왕관,0,2040,arched crown
+소품/요요,0,2039,yo-yo
+소품/등에 멘 악기 케이스,0,2039,instrument case on back
+메타/만화 표지,0,2039,comic cover
+옷/드러난 주머니,0,2038,exposed pocket
+음식/과자 봉지,0,2038,bag of chips
+소품/M1911,0,2036,m1911
+성인/콘돔 상자,0,2036,condom box
+자세/탁자에 올린 가슴,0,2035,breasts on table
+옷/드레스 속 치마,0,2033,skirt under dress
+옷/아메리카 원주민풍,0,2033,native american
+메타/좋아요와 리트윗,0,2033,like and retweet
+동작/프리다이빙,0,2033,freediving
+신발/군화,0,2033,combat boots
+몸/아가미,0,2031,gills
+옷/UVA 학원 교복,0,2030,uva academy school uniform
+소품/안장,0,2030,saddle
+속옷/앞 후크 브라,0,2028,front-fastening bra
+인원/언데드,0,2027,undead
+메타/이로치와 일반,0,2027,shiny and normal
+소품/뿔 달린 가면,0,2027,horned mask
+인원/광대,0,2026,clown
+몸/눈표범 꼬리,0,2025,snow leopard tail
+소품/사과사탕 들기,0,2025,holding candy apple
+자세/바닥에 두 손,0,2025,hands on ground
+소품/경고 표지판,0,2024,warning sign
+화풍/스팀펑크,0,2024,steampunk
+옷/자수,0,2023,embroidery
+효과/중성 기호,0,2020,androgyne symbol
+성인/흔치 않은 자극,0,2019,uncommon stimulation
+메타/비누 거품 검열,0,2018,soap censor
+효과/피 흘러내림,0,2018,blood drip
+옷/죽은 세계 전선 제복,0,2017,shinda sekai sensen uniform
+옷/귀갑문,0,2017,kikkoumon
+자세/앞으로 끼인 속옷,0,2017,frontal wedgie
+소품/체리색 부케,0,2017,cerise bouquet
+동작/비눗방울 불기,0,2017,blowing bubbles
+음식/꿀,0,2015,honey
+소품/하우치와,0,2015,hauchiwa
+소품/해초,0,2014,seaweed
+동작/푸는 중,0,2013,untying
+메타/페이스북 아이디,0,2013,facebook username
+음식/열대 음료,0,2012,tropical drink
+모자/등에 건 모자,0,2011,hat on back
+소품/탄약 띠,0,2011,bandolier
+몸/듬성한 가슴털,0,2010,sparse chest hair
+모자/한쪽 눈 가린 모자,0,2010,hat over one eye
+소품/장바구니,0,2010,grocery bag
+효과/악마의 열매 능력,0,2010,devil fruit power
+머리/떨어진 아호게,0,2010,detached ahoge
+동작/한쪽 눈 가림,0,2010,covering one eye
+신발/벨트 부츠,0,2009,belt boots
+소품/잉크병,0,2008,inkwell
+옷/드레스 속 셔츠,0,2007,shirt under dress
+옷/사쿠가와 교복,0,2007,sakugawa school uniform
+머리/해파리 컷,0,2007,jellyfish cut
+동작/부채질,0,2007,fanning self
+머리/조개 머리장식,0,2006,shell hair ornament
+배경/보이지 않는 바닥,0,2006,invisible floor
+상태/붙잡힘,0,2005,captured
+몸/어깨 흉터,0,2001,scar on shoulder
+소품/전신 거울,0,2000,full-length mirror
+소품/가시 귀 피어싱,0,1999,spiked ear piercing
+동물/너구리,0,1999,raccoon
+효과/말풍선 속 음식,0,1998,spoken food
+동작/쇼핑,0,1998,shopping
+효과/얼굴에 튄 물감,0,1998,paint splatter on face
+몸/몸에 뚫린 구멍,0,1998,hole on body
+소품/어깨 대포,0,1997,shoulder cannon
+옷/초록 테두리,0,1997,green trim
+몸/맥 꼬리,0,1995,tapir tail
+소품/펌프 액션,0,1995,pump action
+머리/달걀 머리장식,0,1995,egg hair ornament
+옷/정통 롤리타 코디,0,1993,accurate lolita coord
+옷/하이로 드레스,0,1992,high-low dress
+몸/옅은 유륜,0,1991,light areolae
+성인/옷 사이로 새는 체액,0,1989,pussy juice drip through clothes
+음식/감자,0,1989,potato
+소품/드라이버,0,1988,screwdriver
+모자/이각모,0,1988,bicorne
+모자/무늬 머리쓰개,0,1987,print headwear
+소품/대걸레 들기,0,1986,holding mop
+자세/가슴에 기댄 머리,0,1985,head on chest
+소품/망원경,0,1983,telescope
+음식/코코넛,0,1982,coconut
+상태/눈이 먼,0,1982,blind
+소품/철조망,0,1982,barbed wire
+소품/주머니 속 물건,0,1980,object in pocket
+효과/사랑의 기운,0,1980,loving aura
+자세/셔츠 속 손,0,1980,hand under shirt
+소품/모금함,0,1980,donation box
+옷/아사히야마 고교 교복,0,1979,asahiyama high school uniform
+모자/안전모,0,1977,hard hat
+옷/치마 속 바지,0,1976,pants under skirt
+소품/사탕 포장지,0,1976,candy wrapper
+소품/원형 휘장,0,1975,roundel
+소품/모래 조각,0,1974,sand sculpture
+옷/한에리,0,1974,han'eri
+옷/에덴 학원 교복,0,1974,eden academy school uniform
+옷/반바지 속 비키니 하의,0,1972,bikini bottom under shorts
+소품/비틀어 맨 머리띠,0,1971,nejiri hachimaki
+메타/미라크라 파크,0,1971,mira-cra park!
+인원/고슴도치 소년,0,1971,hedgehog boy
+모자/페시네이터,0,1971,fascinator
+소품/매트,0,1970,mat
+표정/지루함,0,1970,bored
+인원/요들,0,1969,yordle
+동물/우주적 공포,0,1968,eldritch abomination
+옷/호무라바라 학원 교복,0,1967,homurabara academy school uniform
+소품/중식도,0,1967,cleaver
+소품/대나무 빗자루,0,1966,bamboo broom
+성인/양말에 사정,0,1964,cum on legwear
+소품/캠코더,0,1963,camcorder
+동작/화장실 사용,0,1962,toilet use
+옷/수영복 덧옷,0,1962,swimsuit cover-up
+몸/엉덩이 엿보임,0,1961,ass peek
+음식/수박바,0,1959,watermelon bar
+성인/음경에서 흐르는 정액,0,1959,cumdrip from penis
+소품/고풍 총기,0,1959,antique firearm
+효과/다리에 묻은 피,0,1958,blood on leg
+소품/경기관총,0,1956,light machine gun
+소품/하트 자물쇠,0,1955,heart-shaped lock
+옷/허벅지 사이 옷,0,1953,clothes between thighs
+소품/CD,0,1953,cd
+소품/손거울,0,1950,hand mirror
+배경/나무 아래,0,1948,under tree
+메타/혼다,0,1947,honda
+상태/사물화,0,1946,objectification
+소품/메신저백,0,1946,messenger bag
+음식/아이스크림 플로트,0,1945,ice cream float
+속옷/트레이닝 브라,0,1944,training bra
+몸/눈물 문신,0,1944,teardrop tattoo
+메타/서브스크라이브스타 아이디,0,1942,subscribestar username
+머리/덩굴 머리카락,0,1942,hair vines
+배경/오로라,0,1942,aurora
+소품/인형 뽑기,0,1941,crane game
+동작/뺨 당기기,0,1941,cheek pull
+효과/분홍 윤곽선,0,1940,pink outline
+소품/반려동물 밥그릇,0,1940,pet bowl
+자세/발등 굽힘,0,1940,dorsiflexion
+인원/텐구,0,1938,tengu
+효과/연기 나는 총구,0,1938,smoking barrel
+소품/이마 밴드,0,1938,bandaid on forehead
+자세/컵 속,0,1937,in cup
+머리/납작한 면발 머리,0,1936,kishimen hair
+소품/방석,0,1934,zabuton
+효과/홀로그램,0,1934,hologram
+구도/나란히 대비,0,1933,juxtaposition
+소품/이탈리아 국기,0,1932,italian flag
+음식/새우튀김,0,1930,shrimp tempura
+옷/사이어인 갑옷,0,1929,saiyan armor
+옷/나이트 레이븐 칼리지 교복,0,1929,night raven college school uniform
+음식/포장 사탕,0,1928,wrapped candy
+음식/적포도주,0,1926,red wine
+소품/화장지,0,1924,toilet paper
+소품/리라,0,1924,lyre
+음식/생선 뼈,0,1924,fish skeleton
+동작/와락 안기,0,1923,glomp
+소품/부러진 무기,0,1922,broken weapon
+소품/사진 들기,0,1921,holding photo
+소품/거울 들기,0,1921,holding mirror
+성인/거대한 음경,0,1921,gigantic penis
+옷/옆 끈 엿보임,0,1920,side-tie peek
+소품/입 피어싱,0,1919,mouth piercing
+몸/팔 점,0,1919,mole on arm
+소품/글록,0,1919,glock
+상태/나이 퇴행,0,1918,age regression
+소품/필통,0,1915,pencil case
+성인/손 안 대고 파이즈리,0,1915,handsfree paizuri
+표정/당황,0,1914,panicking
+소품/걸이 화분,0,1912,hanging plant
+옷/교차 끈 트임,0,1912,cross-laced slit
+소품/헤어드라이어,0,1910,hair dryer
+옷/반쯤 벗은 코트,0,1910,coat partially removed
+인원/다른 4명,0,1910,4others
+옷/빨간 정장,0,1909,red suit
+소품/경주용 자동차,0,1909,racecar
+자세/손바닥 위,0,1909,in palm
+소품/성배,0,1909,chalice
+메타/여러 흑백,0,1907,multiple monochrome
+자세/자전거 위,0,1906,on bicycle
+효과/초록 테두리,0,1906,green border
+상태/보디 호러,0,1906,body horror
+소품/털실 뭉치,0,1902,yarn ball
+소품/날개 브로치,0,1902,wing brooch
+소품/빨래,0,1901,laundry
+배경/은하,0,1901,galaxy
+소품/다른 무기,0,1901,alternate weapon
+성인/가려진 고환,0,1900,covered testicles
+표정/미친 듯,0,1898,crazy
+자세/발에 손,0,1896,hands on feet
+메타/프랑스어 글자,0,1896,french text
+옷/소부 고교 교복,0,1895,sobu high school uniform
+인원/물고기 소년,0,1895,fish boy
+동작/날아차기,0,1894,flying kick
+효과/낮은음자리표,0,1894,bass clef
+효과/흙,0,1893,dirt
+소품/보라 테 안경,0,1892,purple-framed eyewear
+몸/쇄골 점,0,1891,mole on collarbone
+메타/진실,0,1890,truth
+얼굴/빨간 코,0,1890,red nose
+소품/뿔 고리,0,1890,horn ring
+소품/서류가방 들기,0,1890,holding briefcase
+인원/이복 남매,0,1890,half-siblings
+음식/롤케이크,0,1889,swiss roll
+성인/고환 없는 후타,0,1889,futa without balls
+배경/점무늬 배경,0,1889,dotted background
+배경/레슬링 링,0,1885,wrestling ring
+동작/스스로 속옷 끌어올리기,0,1885,self wedgie
+소품/호루스의 눈,0,1885,eye of horus
+음식/옥수수,0,1885,corn
+인원/사람과 동물화,0,1884,person and animalization
+소품/장난감 들기,0,1883,holding toy
+옷/치마 구멍,0,1881,skirt cutout
+배경/헬스장,0,1881,fitness gym
+화풍/아르누보,0,1881,art nouveau
+메타/웨이보 아이디,0,1878,weibo username
+성인/음경 키스,0,1878,kissing penis
+자세/탁자에 손,0,1878,hand on table
+몸/젖꼭지 윤곽,0,1877,nipple indents
+음식/입에 문 막대사탕,0,1877,lollipop in mouth
+소품/허리 리본,0,1876,waist ribbon
+모자/복숭아 모자 장식,0,1876,peach hat ornament
+동물/비둘기,0,1875,pigeon
+모자/귀 달린 모자,0,1873,hat with ears
+소품/돋보기 들기,0,1872,holding magnifying glass
+옷/반소매 스웨터,0,1870,short-sleeved sweater
+속옷/작은 브라 컵,0,1869,undersized breast cup
+소품/프로펠러,0,1869,propeller
+소품/어깨에 멘 우산,0,1868,umbrella over shoulder
+효과/말풍선 속 표정,0,1868,spoken expression
+양말/고양이 귀 양말,0,1868,cat ear legwear
+동작/목 키스,0,1867,kissing neck
+동물/도마뱀,0,1866,lizard
+소품/꼬치 들기,0,1866,holding skewer
+소품/앰프,0,1866,amplifier
+메타/인종 페티시 상징,0,1865,race fetishism symbol
+인원/의붓 남매,0,1865,adoptive siblings
+모자/옆으로 쓴 모자,0,1864,sideways hat
+동작/양궁,0,1864,archery
+메타/2014년,0,1864,2014
+배경/알록달록한 배경,0,1863,colorful background
+자세/머리 위 팔,0,1863,arm above head
+옷/신형 스쿨 수영복,0,1862,new school swimsuit
+성인/입에 삽입,0,1862,mouth insertion
+동작/지퍼 내리기,0,1860,unzipping
+동작/서로 껴안음,0,1860,mutual hug
+머리/튜브 머리장식,0,1859,lifebuoy hair ornament
+눈/충혈된 눈,0,1857,bloodshot eyes
+시선/다리 사이로 봄,0,1856,looking through own legs
+소품/뒤집개 들기,0,1856,holding spatula
+얼굴/오므린 입술,0,1854,pursed lips
+얼굴/그린 수염,0,1854,drawn whiskers
+옷/살아 있는 옷,0,1853,living clothes
+자세/구부정함,0,1853,hunched over
+소품/만화 뼈다귀,0,1853,cartoon bone
+동물/소,0,1850,kine
+성인/사람 칼집,0,1850,human scabbard
+양말/팬티스타킹 위 니삭,0,1848,thighhighs over pantyhose
+음식/간식,0,1848,snack
+몸/악어 꼬리,0,1845,crocodilian tail
+메타/성격 교체,0,1844,personality switch
+소품/헤클러 운트 코흐,0,1844,heckler & koch
+얼굴/꿰맨 입,0,1843,stitched mouth
+자세/유령 포즈,0,1843,ghost pose
+구도/위를 향함,0,1842,facing up
+소품/야광봉 들기,0,1841,holding glowstick
+소품/왕홀 들기,0,1840,holding scepter
+몸/뇌,0,1839,brain
+몸/긴 귓불,0,1837,long earlobes
+옷/반쪽 치마,0,1837,half-skirt
+몸/긴 목,0,1836,long neck
+옷/향림당 텐구 의상,0,1836,kourindou tengu costume
+성인/삼킴,0,1835,vore
+소품/집게,0,1835,tongs
+배경/알록달록한 구름,0,1835,colorful clouds
+메타/상징,0,1833,symbolism
+메타/상품,0,1833,merchandise
+옷/어느 고교 교복,0,1833,a certain high school uniform
+메타/로고 패러디,0,1832,logo parody
+메타/자기 코스프레,0,1831,self cosplay
+메타/성인물 제작,0,1831,pornography production
+동작/뽑으려는 자세,0,1830,ready to draw
+몸/다리 여러 개,0,1829,multiple legs
+눈/아래 속눈썹만,0,1829,lower eyelashes only
+성인/발기한 음핵,0,1829,erect clitoris
+배경/돌계단,0,1828,stone stairs
+동물/반려동물,0,1828,pet
+구도/무릎 잘림,0,1827,knees out of frame
+구도/정면 향함,0,1827,facing ahead
+효과/탄흔,0,1826,bullet hole
+소품/마법사 경전 두루마리,0,1825,sorcerer's sutra scroll
+메타/테두리 없는 칸,0,1825,borderless panels
+소품/AR-15,0,1825,ar-15
+효과/픽셀화,0,1824,pixelated
+몸/창자,0,1824,intestines
+옷/하운즈투스 무늬,0,1824,houndstooth
+구도/아래를 향함,0,1824,facing down
+효과/붕대에 묻은 피,0,1824,blood on bandages
+옷/터틀넥 보디슈트,0,1823,turtleneck bodysuit
+메타/머리색 연결,0,1821,hair color connection
+자세/웅크림,0,1821,curled up
+동작/주문 시전,0,1821,casting spell
+소품/베레타 92,0,1819,beretta 92
+소품/로켓,0,1818,rocket
+동작/앞을 가리킴,0,1818,pointing forward
+동작/역도,0,1817,weightlifting
+모자/중산모,0,1817,bowler hat
+동작/재킷 당기기,0,1816,jacket pull
+음식/한 입 베어 먹은 자국,0,1816,food bite
+소품/테루테루보즈,0,1815,teruterubouzu
+메타/유사색,0,1815,analogous colors
+소품/체크 깃발,0,1814,checkered flag
+양말/웨딩 스타킹,0,1814,bridal legwear
+소품/귀 보호대,0,1813,ear protection
+옷/털 재킷,0,1810,fur jacket
+소품/봉,0,1810,bo staff
+소품/부적,0,1809,amulet
+소품/지갑 체인,0,1808,wallet chain
+소품/포스트잇,0,1807,sticky note
+몸/어깨 점,0,1807,mole on shoulder
+동물/키메라,0,1807,chimera
+메타/디셉티콘,0,1805,decepticon
+모자/튤립 모자,0,1804,tulip hat
+머리/굴뚝 머리장식,0,1804,smokestack hair ornament
+소품/가문 문장,0,1804,family crest
+인원/절지동물 소년,0,1804,arthropod boy
+얼굴/원형 얼굴 무늬,0,1803,circle facial mark
+속옷/흰 가터벨트,0,1802,white garter belt
+표정/눈물 한 방울,0,1802,single tear
+소품/팔 방패,0,1801,arm shield
+소품/삽 들기,0,1800,holding shovel
+인원/신랑,0,1800,groom
+표정/애정 어림,0,1800,affectionate
+소품/커터칼,0,1799,boxcutter
+옷/한쪽 웨딩 토시,0,1797,single bridal gauntlet
+얼굴/땅콩 입,0,1797,peanut mouth
+소품/체온계,0,1795,thermometer
+소품/한쪽 홍조 스티커,0,1795,single blush sticker
+소품/도일리,0,1795,doily
+동작/검지 세움,0,1793,index fingers raised
+메타/오다 우리,0,1792,oda uri
+성인/겨드랑이 핥기,0,1792,licking armpit
+소품/혈액 팩,0,1792,blood bag
+메타/다른 종족,0,1792,alternate species
+자세/상대 어깨에 팔,0,1791,arm on another's shoulder
+성인/음경 위 침,0,1790,saliva on penis
+소품/총검,0,1790,bayonet
+얼굴/빈디,0,1789,bindi
+옷/속바지,0,1787,upshorts
+음식/스파게티,0,1787,spaghetti
+메타/게임 화면 배경,0,1787,game screenshot background
+인원/오빠와 쇼타,0,1786,onii-shota
+성인/눈 위 음경,0,1785,penis over eyes
+소품/젖꼭지 장신구,0,1785,nipple jewelry
+옷/턱받이 칼라,0,1784,bib collar
+옷/집어넣은 스웨터,0,1783,sweater tucked in
+옷/오하시 고교 교복,0,1783,oohashi high school uniform
+머리/귀 곱창밴드,0,1783,ear scrunchie
+소품/마네킹,0,1782,mannequin
+옷/가슴 보호대,0,1782,chest guard
+소품/게시판,0,1782,bulletin board
+옷/핀스트라이프 정장,0,1781,pinstripe suit
+성인/항문 체액,0,1781,anal fluid
+옷/구속복,0,1780,straitjacket
+동작/밀기,0,1780,pushing
+성인/음경 맞닿음,0,1780,penises touching
+메타/2013년,0,1780,2013
+소품/향수병,0,1779,perfume bottle
+인원/투명 인간,0,1779,invisible man
+눈/속눈썹 장식,0,1777,eyelash ornament
+동작/귀 깨물기,0,1777,biting ear
+옷/대마인 슈트,0,1776,taimanin suit
+효과/무한 기호,0,1776,infinity symbol
+배경/구름 위,0,1775,above clouds
+메타/제목 패러디,0,1774,title parody
+옷/레이서백,0,1773,racerback
+자세/난간 위,0,1773,on railing
+자세/무릎에 누움,0,1772,lying on lap
+몸/불타는 뿔,0,1772,fiery horns
+음식/스프링클,0,1767,sprinkles
+인원/갸루오,0,1766,gyaruo
+음식/초콜릿 케이크,0,1766,chocolate cake
+소품/전방 손잡이,0,1764,foregrip
+소품/모자 벨트,0,1763,hat belt
+메타/어색한 원근,0,1763,bad perspective
+성인/음경에 립스틱 자국,0,1762,lipstick mark on penis
+성인/젖꼭지 문지르기,0,1761,nipple rub
+동작/키스 암시,0,1761,implied kiss
+양말/뒤 심 스타킹,0,1761,back-seamed legwear
+소품/무술 띠,0,1760,martial arts belt
+옷/드레스 수영복,0,1759,dress swimsuit
+구도/사타구니 강조,0,1759,crotch focus
+동작/양말 고쳐 신기,0,1759,adjusting legwear
+배경/전쟁,0,1758,war
+배경/성운,0,1757,nebula
+동물/염소,0,1757,goat
+동작/손으로 얼굴 가림,0,1757,facepalm
+메타/중국어 번체 글자,0,1753,traditional chinese text
+자세/물구나무,0,1753,handstand
+자세/바닥에 손,0,1753,hand on floor
+동물/멧돼지,0,1752,boar
+메타/어색한 음식,0,1752,bad food
+소품/젖병,0,1751,baby bottle
+동물/팔 위 동물,0,1750,animal on arm
+소품/봉인의 지팡이,0,1749,fuuin no tsue
+소품/닻 목걸이,0,1749,anchor necklace
+옷/이초 사립고 교복,0,1748,icho private high school uniform
+메타/역사 인물 이름 연결,0,1748,historical name connection
+배경/벽돌,0,1748,brick
+몸/몸 없는 눈,0,1746,disembodied eye
+눈/나비 모양 동공,0,1746,butterfly-shaped pupils
+효과/손자국,0,1745,handprint
+메타/슈퍼 사이어인 4,0,1744,super saiyan 4
+옷/동탄 드레스,0,1742,dongtan dress
+상태/정신 붕괴,0,1740,mind break
+성인/귀두 애무,0,1740,glansjob
+옷/털 숄,0,1739,fur shawl
+옷/패딩 재킷,0,1739,down jacket
+효과/보라 테두리,0,1738,purple border
+동물/비단잉어,0,1738,koi
+소품/칼집,0,1738,knife sheath
+동물/날치,0,1738,flying fish
+몸/거대한 가슴근육,0,1736,huge pectorals
+메타/동그라미 9,0,1736,circled 9
+배경/종말 이후,0,1735,post-apocalypse
+소품/콘센트,0,1735,electrical outlet
+성인/용기 속 정액,0,1735,cum in container
+자세/아이 안음,0,1735,child carry
+신발/인라인 스케이트,0,1734,inline skates
+소품/등 뒤로 검 들기,0,1734,holding sword behind back
+몸/탈모,0,1734,balding
+배경/사우나,0,1733,sauna
+자세/상대 귀에 손,0,1731,hand on another's ear
+동작/입에 문 꽃,0,1729,flower in mouth
+소품/머리 위 다이빙 마스크,0,1729,diving mask on head
+소품/지갑,0,1728,wallet
+동작/옷 찢기,0,1728,tearing clothes
+자세/자기 귀에 손,0,1728,hand on own ear
+효과/흥분 코피,0,1728,aroused nosebleed
+소품/팔 커프스,0,1728,arm cuffs
+모자/주교관,0,1727,mitre
+소품/아랫입술 피어싱,0,1726,labret piercing
+옷/은하 팀 조사병단 제복,0,1726,galaxy team survey corps uniform
+성인/개 음경,0,1726,dog penis
+자세/가슴 사이 얼굴,0,1725,face between breasts
+소품/식물 뿌리,0,1724,plant roots
+자세/함께 묶임,0,1724,bound together
+소품/화필,0,1723,art brush
+동작/두 손가락 경례,0,1722,two-finger salute
+메타/코이시의 날,0,1722,koishi day
+구도/생물 강조,0,1722,creature focus
+소품/지휘봉,0,1721,conductor baton
+소품/스페이드 퀸 기호,0,1720,queen of spades symbol
+옷/빨간 트레이닝복,0,1719,red track suit
+성인/엉덩이 위 음경,0,1719,penis on ass
+자세/발가락 사이,0,1719,between toes
+소품/광대 코,0,1718,clown nose
+효과/얼굴에 립스틱 자국,0,1716,lipstick mark on face
+옷/로우라이즈 바지,0,1714,lowleg pants
+소품/PSP,0,1713,playstation portable
+음식/입에 문 토스트,0,1712,toast in mouth
+화풍/굵은 선화,0,1712,thick lineart
+소품/마네키네코,0,1710,maneki-neko
+옷/호그와트 교복,0,1710,hogwarts school uniform
+신발/풀린 신발끈,0,1708,untied shoelaces
+소품/매다는 등,0,1708,hanging light
+동작/옷 잡아당김,0,1708,clothes tug
+소품/오미쿠지,0,1707,omikuji
+화풍/벤데이 점,0,1707,ben-day dots
+몸/셔츠 위로 나온 살,0,1706,shirt overhang
+속옷/블루머 속 팬티,0,1706,panties under buruma
+메타/지구연방,0,1706,earth federation
+배경/가게 앞,0,1704,storefront
+소품/와키자시,0,1703,wakizashi
+동물/고슴도치,0,1703,hedgehog
+소품/단선,0,1702,tuanshan
+소품/돛대,0,1702,mast
+머리/반 왕관 땋기,0,1702,half crown braid
+배경/단색 배경,0,1701,monochrome background
+메타/방법,0,1700,how to
+머리/뿔에 꽃,0,1699,horn flower
+메타/태그,0,1698,tag
+모자/모자 술,0,1698,hat tassel
+인원/웨이터,0,1697,waiter
+옷/한쪽 무릎 보호대,0,1697,single knee pad
+메타/흑인화된 여자,0,1696,blacked female
+소품/폰 참,0,1694,cellphone charm
+소품/버스,0,1694,bus
+소품/스페이드 에이스,0,1694,ace of spades
+몸/한쪽 맨다리,0,1693,single bare leg
+음식/모찌 늘어짐,0,1693,mochi trail
+옷/장갑 리본,0,1693,glove bow
+음식/멜론,0,1692,melon
+소품/종이학,0,1691,paper crane
+동물/순록,0,1690,reindeer
+옷/반바지 속 사이클 팬츠,0,1690,bike shorts under shorts
+메타/2012년,0,1690,2012
+소품/종이들,0,1689,papers
+소품/미사일 포드,0,1689,missile pod
+자세/탁자에 앉음,0,1688,sitting on table
+소품/선물 가방,0,1688,gift bag
+신발/한쪽 부츠,0,1687,single boot
+음식/가슴 위 음식,0,1686,food on breasts
+성인/자기 팬티 속에 손,0,1684,hand in own panties
+소품/독일 국기,0,1684,german flag
+옷/눈 무늬,0,1684,eye print
+동물/악어류,0,1684,crocodilian
+동작/상대 눈 가림,0,1684,covering another's eyes
+소품/공구,0,1683,tools
+동작/단체 포옹,0,1682,group hug
+음식/푸드 아트,0,1682,food art
+옷/표정 있는 옷,0,1682,expressive clothes
+동작/허리 비비기,0,1681,humping
+동작/도둑질,0,1680,theft
+동작/눈 위에 손,0,1680,hand over eye
+옷/곰 의상,0,1680,bear costume
+소품/신문 들기,0,1679,holding newspaper
+자세/지붕 위,0,1677,on roof
+표정/가학,0,1676,sadism
+메타/따뜻한 색감,0,1675,warm colors
+소품/다윗의 별,0,1675,star of david
+소품/칫솔 들기,0,1675,holding toothbrush
+동작/뿜음,0,1674,spit take
+효과/날리는 종이,0,1674,flying paper
+소품/빈백 의자,0,1674,bean bag chair
+속옷/서포터,0,1671,jockstrap
+속옷/끈 브라,0,1670,string bra
+옷/새틴,0,1668,satin
+표정/피학,0,1666,masochism
+효과/포켓몬 기술,0,1665,pokemon move
+효과/무중력,0,1660,zero gravity
+몸/올빼미 귀 깃,0,1659,owl ears
+소품/리코더,0,1658,recorder
+소품/해먹,0,1658,hammock
+소품/거품기 들기,0,1657,holding whisk
+머리/육각형 머리장식,0,1657,hexagon hair ornament
+소품/그릴,0,1656,grill
+효과/둥근 모서리,0,1655,rounded corners
+동작/TV 보기,0,1654,watching television
+동작/머리 헝클기,0,1654,ruffling hair
+효과/옷에 묻은 물감,0,1654,paint on clothes
+소품/폴라로이드 사진,0,1653,polaroid photo
+동물/거대 괴물,0,1653,giant monster
+성인/코 속 정액,0,1653,cum in nose
+옷/기저귀,0,1652,diaper
+상태/부분 인간화,0,1650,partial humanization
+인원/게루도,0,1650,gerudo
+소품/표,0,1647,ticket
+소품/스펠 카드,0,1647,spell card
+메타/하나만 다름,0,1647,odd one out
+몸/넓은 어깨,0,1647,broad shoulders
+옷/늑대 의상,0,1646,wolf costume
+얼굴/듬성한 까칠 수염,0,1646,sparse stubble
+소품/어린이 수영장,0,1645,wading pool
+음식/스테이크,0,1645,steak
+자세/허리 가로지른 팔,0,1645,arm across waist
+모자/챙 넓은 모자,0,1644,wide brim
+표정/엑스트라 얼굴,0,1644,mob face
+배경/새벽,0,1644,dawn
+배경/도시풍,0,1642,urban
+몸/재규어 꼬리,0,1642,jaguar tail
+소품/귀 사슬,0,1641,ear chain
+소품/안전벨트,0,1640,seatbelt
+인원/붉은 오니,0,1640,red oni
+인원/조라,0,1639,zora
+화풍/사진 같은,0,1639,photorealistic
+표정/영문 모름,0,1639,clueless
+음식/각설탕,0,1637,sugar cube
+몸/맥 귀,0,1636,tapir ears
+소품/죽도,0,1634,shinai
+메타/아디다스,0,1634,adidas
+머리/한쪽 머리 날개,0,1632,single head wing
+인원/여자 고블린,0,1632,female goblin
+옷/퍼프 슬래시 소매,0,1630,puff and slash sleeves
+소품/화장 붓,0,1630,makeup brush
+옷/육각형 무늬,0,1630,hexagon print
+메타/라이몬,0,1629,raimon
+메타/이 로리콘 말더듬이,0,1628,kono lolicon domome
+소품/도토리,0,1627,acorn
+메타/점 없음,0,1626,no mole
+메타/보색,0,1626,complementary colors
+동작/스스로 화장하기,0,1625,applying own makeup
+구도/둘러싸임,0,1624,surrounded
+인원/음양사,0,1624,onmyouji
+동작/보는 이 껴안기,0,1624,hugging viewer
+음식/콩,0,1624,beans
+표정/오해,0,1623,misunderstanding
+속옷/큰 브라 컵,0,1622,oversized breast cup
+메타/가린 글자,0,1622,censored text
+옷/흉갑,0,1621,cuirass
+옷/검은 남성 수영복,0,1621,black male swimwear
+옷/양면 망토(클로크),0,1621,two-sided cloak
+옷/한쪽 다리에 걸린 반바지,0,1617,shorts around one leg
+눈/꽉 찬 원형 동공,0,1616,solid circle pupils
+동물/초코보,0,1616,chocobo
+속옷/가슴 패드,0,1616,breast padding
+메타/자해 흉터,0,1615,self-harm scar
+몸/한쪽 귀 처짐,0,1615,one ear down
+인원/복제 하렘,0,1615,clone harem
+동물/어깨 위 고양이,0,1615,cat on shoulder
+구도/셔츠 아래서 본 모습,0,1614,upshirt
+표정/사랑에 빠짐,0,1612,lovestruck
+메타/돌체스트라,0,1612,dollchestra
+옷/방탄 재킷,0,1611,flak jacket
+동작/상대 입에 손가락,0,1611,finger to another's mouth
+옷/양면 장갑,0,1610,two-sided gloves
+소품/화이트보드,0,1609,whiteboard
+메타/2010년,0,1609,2010
+메타/결속 밴드,0,1608,kessoku band
+소품/금 허벅지 장식,0,1608,gold thighlet
+소품/금 머리띠,0,1608,gold circlet
+화풍/교차 빗금,0,1608,crosshatching
+동작/끌기,0,1607,dragging
+동작/이로 물기,0,1605,teeth hold
+소품/보온병,0,1604,thermos
+소품/머리에 쓴 팬티,0,1604,panties on head
+음식/마시멜로,0,1604,marshmallow
+옷/턱받이,0,1603,bib
+효과/튄 자국,0,1602,splatter
+성인/역방향 펠라,0,1601,reverse fellatio
+옷/아오자이,0,1600,ao dai
+메타/글자 벽,0,1599,wall of text
+소품/방울 귀걸이,0,1599,pom pom earrings
+소품/식물 들기,0,1598,holding plant
+동작/불기,0,1598,blowing
+모자/수영 모자,0,1596,swim cap
+옷/군 예복,0,1594,military dress uniform
+인원/족제비 소녀,0,1593,weasel girl
+동물/페가수스,0,1593,pegasus
+효과/평화 기호,0,1593,peace symbol
+소품/듀얼 디스크,0,1593,duel disk
+몸/목 물린 자국,0,1590,bite mark on neck
+소품/피자 상자,0,1589,pizza box
+동작/캐미솔 들추기,0,1589,camisole lift
+옷/스이메이 학원 교복,0,1587,suimei academy school uniform
+소품/유탄 발사기,0,1587,grenade launcher
+자세/헤드폰에 손,0,1586,hand on headphones
+머리/자연스레 떨어진 머리카락,0,1585,naturally detached hair
+자세/상대 다리 잡기,0,1585,holding another's legs
+몸/갈라진 꼬리,0,1585,forked tail
+소품/닻 초커,0,1585,anchor choker
+얼굴/뺨 표시,0,1583,marking on cheek
+옷/시모키타자와 고교 교복,0,1582,shimokitazawa high school uniform
+동작/장갑 물기,0,1582,biting glove
+몸/흰 음모,0,1581,white pubic hair
+성인/옷 속 자위,0,1581,masturbation under clothes
+자세/머리에 겨눈 총,0,1581,gun to head
+옷/드레스 리본,0,1581,dress ribbon
+소품/로그 포스,0,1580,log pose
+소품/번호판,0,1579,license plate
+동물/벌,0,1579,bee
+눈/눈동자 반사,0,1578,eye reflection
+옷/깅엄 체크 옷,0,1577,gingham clothes
+옷/코트 드레스,0,1575,coat dress
+메타/천사 귀여워,0,1574,tenshi kaiwai
+인원/사이어인,0,1573,saiyan
+소품/짤주머니,0,1573,pastry bag
+효과/손 위에 뜬 물체,0,1573,object floating above hand
+효과/달의 위상,0,1572,moon phases
+동작/머리 모아 쥐기,0,1572,bunching hair
+성인/글로리 월,0,1571,glory wall
+소품/초승달 목걸이,0,1571,crescent necklace
+동물/무당벌레,0,1570,ladybug
+메타/키 비교표,0,1570,height chart
+몸/부족 문신,0,1568,tribal tattoo
+소품/화려한 반지,0,1568,ornate ring
+배경/창턱,0,1566,windowsill
+구도/괴물 강조,0,1566,monster focus
+소품/쇠지렛대,0,1566,crowbar
+소품/줄자,0,1564,tape measure
+소품/잘린 팔다리,0,1564,severed limb
+소품/장대 들기,0,1564,holding pole
+성인/자기 젖꼭지 비틀기,0,1563,tweaking own nipple
+배경/현관,0,1563,porch
+구도/여백,0,1563,negative space
+소품/발목 리본,0,1563,ankle bow
+소품/케첩 병,0,1562,ketchup bottle
+인원/아메스쿠 갸루,0,1562,amesuku gyaru
+배경/폭풍,0,1561,storm
+옷/슬링 비키니 상의,0,1561,sling bikini top
+배경/노래방,0,1561,karaoke
+상태/목욕 후,0,1561,after bathing
+인원/세쌍둥이,0,1560,triplets
+모자/리본 테두리 머리쓰개,0,1559,ribbon-trimmed headwear
+소품/하네츠키,0,1559,hanetsuki
+메타/화이트데이,0,1557,white day
+옷/앞이 트인 옷,0,1557,frontless outfit
+머리/반짝이 머리장식,0,1556,sparkle hair ornament
+소품/하프,0,1556,harp
+옷/고양이 의상,0,1556,cat costume
+성인/자기 항문 벌림,0,1555,spreading own anus
+옷/가로줄 두 줄,0,1555,double horizontal stripe
+몸/가슴에 뚫린 구멍,0,1554,hole in chest
+옷/아리아 컴퍼니 제복,0,1554,aria company uniform
+인원/시이카,0,1553,sheikah
+메타/데시,0,1553,desi
+자세/상대 소매 잡기,0,1551,grabbing another's sleeve
+효과/떠 있는 책,0,1551,floating book
+인원/인어 남자,0,1550,merman
+음식/여러 스쿱,0,1549,multiple scoops
+메타/캐릭터 서명,0,1549,character signature
+효과/헤드업 디스플레이,0,1548,heads-up display
+효과/금 간 유리,0,1548,cracked glass
+소품/빔 캐논,0,1548,beam cannon
+옷/파워 슈트,0,1547,power suit
+소품/모래성,0,1546,sand castle
+소품/못 박은 방망이,0,1546,nail bat
+소품/팔 주머니,0,1546,arm pouch
+인원/오타쿠,0,1545,otaku
+자세/무릎에 팔꿈치,0,1544,elbow on knee
+소품/사슬 묶인 손목,0,1544,chained wrists
+소품/담쟁이,0,1543,ivy
+소품/빼빼로 들기,0,1543,holding pocky
+머리/유령 머리장식,0,1543,ghost hair ornament
+배경/조약돌 길,0,1542,cobblestone
+메타/학대,0,1542,abuse
+메타/2011년,0,1542,2011
+모자/세로줄 머리쓰개,0,1541,vertical-striped headwear
+메타/넷나비,0,1541,netnavi
+옷/분홍 스웨터 조끼,0,1539,pink sweater vest
+몸/더러운 발,0,1539,dirty feet
+소품/프로펠러 전투기,0,1537,propeller fighter
+옷/계속 군복,0,1537,keizoku military uniform
+동작/꼬리 껴안기,0,1537,hugging tail
+소품/초록 돌격 바이저,0,1537,green assault visor
+메타/닛신 컵라면,0,1536,nissin cup noodle
+동작/머리 넘기기,0,1536,hair flip
+효과/복사 능력,0,1536,copy ability
+자세/포즈,0,1535,posing
+표정/어머니 같음,0,1535,motherly
+메타/인세키,0,1535,inseki
+옷/그리폰 앤 크루거 군복,0,1535,griffin & kryuger military uniform
+소품/브라질 국기,0,1535,brazilian flag
+동물/앵무새,0,1534,parrot
+소품/다이아몬드 귀걸이,0,1534,diamond earrings
+동작/놀기,0,1533,playing
+소품/손잡이,0,1532,hand grip
+음식/프라이드치킨,0,1532,fried chicken
+몸/그리스형 발가락,0,1531,greek toe
+신발/신발 꽃 장식,0,1531,footwear flower
+몸/등 흉터,0,1530,scar on back
+동작/스스로 머리 말리기,0,1530,drying own hair
+효과/행복한 기운,0,1529,happy aura
+메타/작은 몸 지배,0,1527,smalldom
+음식/샐러드,0,1526,salad
+성인/펠라 흉내,0,1523,simulated fellatio
+인원/경찰,0,1523,policeman
+몸/완전히 드러난 가슴골,0,1523,full cleavage
+음식/양파,0,1522,onion
+몸/가슴근육 사이,0,1522,between pectorals
+효과/왜곡,0,1521,distortion
+소품/손 붕대,0,1520,hand wraps
+동물/페럿,0,1520,ferret
+효과/컬러 타이머,0,1520,color timer
+소품/닌텐도 DS,0,1519,nintendo ds
+효과/떠 있는 카드,0,1519,floating card
+옷/사타구니 지퍼,0,1519,crotch zipper
+음식/크루아상,0,1519,croissant
+옷/가시 어깨 갑옷,0,1518,spiked pauldrons
+옷/멜빵 치마,0,1517,overall skirt
+머리/여러 색 머리방울,0,1517,multicolored hair bobbles
+소품/현상 수배서,0,1516,wanted poster
+소품/LP 레코드,0,1515,vinyl record
+소품/쇼핑 카트,0,1515,shopping cart
+메타/해시태그,0,1515,hashtag
+인원/군대,0,1515,army
+옷/동정 파괴 스웨터,0,1514,virgin destroyer sweater
+옷/키요스미 교복,0,1514,kiyosumi school uniform
+성인/상대 엉덩이에 손,0,1514,hands on another's ass
+옷/털 망토,0,1513,fur cloak
+머리/동전 머리장식,0,1512,coin hair ornament
+자세/상대 가슴에 손,0,1511,hands on another's chest
+메타/후타 서브,0,1510,futasub
+효과/거품,0,1510,foam
+옷/메타모란 조끼,0,1507,metamoran vest
+옷/와 롤리타,0,1506,wa lolita
+몸/파란 음모,0,1506,blue pubic hair
+모자/눈까지 내린 헬멧,0,1505,helmet over eyes
+소품/무기 상자,0,1503,weapon case
+메타/나치,0,1503,nazi
+음식/얼굴에 묻은 크림,0,1503,cream on face
+몸/족제비 꼬리,0,1502,weasel tail
+음식/파인애플,0,1501,pineapple
+자세/자기 다리 뒤로 잡기,0,1501,holding own legs back
+소품/깨진 거울,0,1501,broken mirror
+자세/뒤돌아 앉음,0,1500,sitting backwards
+음식/어묵,0,1500,kamaboko
+상태/참수,0,1500,decapitation
+소품/아이스투스 에스투스,0,1500,aestus estus
+소품/트로피,0,1499,trophy
+옷/팔꿈치 갑옷,0,1499,couter
+음식/콜라,0,1499,cola
+몸/핏줄 선 손,0,1497,veiny hands
+상태/정사 후 암시,0,1497,implied after sex
+소품/울트라볼,0,1496,ultra ball
+소품/아이팟,0,1496,ipod
+옷/떨어진 단추,0,1495,popped button
+메타/손목 긋기,0,1493,wrist cutting
+구도/소실점,0,1493,vanishing point
+동물/강아지,0,1493,puppy
+소품/크리스마스 양말,0,1493,christmas stocking
+동작/마사지,0,1492,massage
+동작/귀 핥기,0,1491,licking ear
+배경/무덤,0,1491,grave
+소품/국화 문양,0,1490,kikumon
+인원/고슴도치 소녀,0,1489,hedgehog girl
+옷/귀족풍 옷,0,1489,aristocratic clothes
+배경/부스 좌석,0,1488,booth seating
+옷/모피,0,1487,pelt
+동작/부수기,0,1487,breaking
+효과/총구 화염,0,1486,muzzle flash
+소품/게임보이,0,1486,game boy
+동작/아기 안기,0,1485,carrying baby
+인원/소년 샌드위치,0,1485,boy sandwich
+메타/굿 엔딩,0,1483,good end
+메타/트리니티 종합학원 로고,0,1482,trinity general school logo
+자세/난간에 손,0,1482,hand on railing
+동작/손가락 세기,0,1482,finger counting
+자세/탁자에 팔꿈치,0,1482,elbow on table
+동작/피아노 연주,0,1481,playing piano
+소품/비행선,0,1481,airship
+소품/모토유이,0,1479,motoyui
+동작/꼬리로 들기,0,1479,holding with tail
+소품/립글로스,0,1478,lipgloss
+소품/담뱃갑,0,1478,cigarette pack
+인원/마법사,0,1477,wizard
+효과/화면 너머,0,1477,through screen
+머리/별 박힌 머리,0,1477,starry hair
+효과/구멍,0,1477,hole
+옷/사이버 패션,0,1477,cyber fashion
+소품/알약 귀걸이,0,1475,pill earrings
+머리/보석 머리장식,0,1475,gem hair ornament
+소품/차크람,0,1474,chakram
+옷/분홍 트레이닝복,0,1471,pink track suit
+소품/인장,0,1470,seal impression
+모자/삿갓,0,1470,rice hat
+메타/블루스카이 아이디,0,1470,bluesky username
+소품/마테리아,0,1469,materia
+메타/말해,0,1468,year of the horse
+자세/나비 앉기,0,1468,butterfly sitting
+몸/까칠한 음모,0,1467,pubic stubble
+속옷/두두,0,1467,dudou
+인원/원숭이 소년,0,1466,monkey boy
+자세/상대 뿔 잡기,0,1466,holding another's horns
+머리/뒤로 묶은 옆머리,0,1465,sidelocks tied back
+자세/머리에 손,0,1465,hand to head
+동작/코끼리 맞대기,0,1464,noses touching
+몸/머리카락 사이로 보이는 귀,0,1463,ears visible through hair
+소품/붕대 감은 손가락,0,1463,bandaged fingers
+메타/차가운 색감,0,1462,cool colors
+동작/엉덩이 가림,0,1461,covering ass
+속옷/속옷 글씨,0,1460,underwear writing
+메타/DVD 표지,0,1460,dvd cover
+메타/버블티 챌린지,0,1460,bubble tea challenge
+신발/발걸이 신발,0,1459,stirrup footwear
+동물/북극곰,0,1459,polar bear
+음식/위스키,0,1458,whiskey
+배경/엘리베이터,0,1458,elevator
+소품/맥주병,0,1457,beer bottle
+음식/무,0,1456,radish
+옷/나나이로가오카 중학교 교복,0,1456,nanairogaoka middle school uniform
+소품/폴더,0,1456,folder
+머리/접은 머리,0,1456,folded hair
+효과/글리터,0,1455,glitter
+동작/발로 들기,0,1453,holding with feet
+소품/밴,0,1449,van
+자세/상대 허리에 손,0,1449,hands on another's waist
+동작/안절부절,0,1449,fidgeting
+자세/머리 위에 머리,0,1446,head on head
+소품/머리 밴드,0,1446,bandaid on head
+메타/수학,0,1445,math
+머리/부채 머리장식,0,1445,fan hair ornament
+소품/에너지 대포,0,1445,energy cannon
+메타/2009년,0,1445,2009
+동작/재채기,0,1444,sneezing
+효과/녹아내림,0,1444,dissolving
+속옷/신부 란제리,0,1444,bridal lingerie
+성인/인간형에 동물 성기,0,1444,animal genitalia on humanoid
+옷/양면 치마,0,1444,two-sided skirt
+신발/털 부츠,0,1443,fur boots
+효과/별자리,0,1442,zodiac
+표정/배고픔,0,1441,hungry
+몸/동물 머리,0,1441,animal head
+인원/거대한 남자,0,1440,giant male
+소품/메뉴판,0,1438,menu board
+인원/간구로,0,1438,ganguro
+음식/캐릭터 모양 음식,0,1438,character-themed food
+소품/스톱워치,0,1437,stopwatch
+동물/참새,0,1437,sparrow
+인원/이불 유령,0,1437,sheet ghost
+소품/건블레이드,0,1437,gunblade
+눈/사시,0,1437,cross-eyed
+자세/기기,0,1437,crawling
+메타/능력치,0,1436,stats
+음식/멜론빵,0,1436,melon bread
+구도/아이소메트릭,0,1436,isometric
+소품/플라스크 들기,0,1436,holding flask
+배경/은하수,0,1435,milky way
+동작/머리 땋기,0,1435,braiding hair
+몸/꿰맨 몸통,0,1432,stitched torso
+동작/재킷 들추기,0,1431,jacket lift
+자세/자기 다리에 손,0,1429,hands on own legs
+소품/짐볼,0,1428,exercise ball
+소품/오다이바코,0,1427,odaibako
+메타/투명 검열,0,1426,transparent censoring
+효과/머리 김,0,1426,head steam
+옷/프라우다 교복,0,1424,pravda school uniform
+인원/미라,0,1423,mummy
+효과/이마에서 피,0,1423,blood from forehead
+동작/발 간지럼,0,1422,tickling feet
+소품/뒷머리 헤드폰,0,1422,behind-the-head headphones
+옷/토끼 의상,0,1421,rabbit costume
+소품/긴차쿠,0,1421,kinchaku
+동작/두 손 메탈 손짓,0,1420,double \\m/
+메타/오른쪽에서 왼쪽 만화,0,1419,right-to-left comic
+옷/반쯤 집어넣은 셔츠,0,1418,shirt partially tucked in
+구도/옷 입은 남자와 벗은 남자,0,1418,clothed male nude male
+배경/버려진,0,1418,abandoned
+몸/온몸 흉터,0,1417,scars all over
+소품/체스판,0,1416,chessboard
+소품/단도,0,1415,tantou
+음식/얼굴에 붙은 밥풀,0,1415,rice on face
+동작/한쪽 가슴 가림,0,1413,covering one breast
+소품/스키 고글,0,1412,ski goggles
+배경/공중화장실,0,1412,public restroom
+성인/쓴 콘돔 낀 음경,0,1411,used condom on penis
+메타/잉크토버,0,1411,inktober
+메타/크레딧,0,1410,credits
+메타/메모,0,1409,note
+메타/메타,0,1409,meta
+옷/젖꼭지 구멍,0,1408,nipple cutout
+인원/미노타우로스,0,1407,minotaur
+배경/가드레일,0,1407,guard rail
+효과/가슴에 묻은 피,0,1407,blood on chest
+성인/고환 쥐기,0,1404,testicle grab
+옷/판코우,0,1404,pankou
+상태/약에 취함,0,1403,drugged
+소품/가마솥,0,1403,cauldron
+자세/엉덩이 맞대기,0,1403,ass-to-ass
+소품/다리 밴드,0,1402,legband
+동물/머리 위 생물,0,1402,creature on head
+소품/국화,0,1400,chrysanthemum
+옷/무릎 갑옷,0,1399,poleyn
+소품/털 초커,0,1399,fur choker
+소품/구급상자,0,1399,first aid kit
+옷/빅토리아풍,0,1398,victorian
+성인/가슴근육에 사정,0,1397,cum on pectorals
+소품/라이터 들기,0,1396,holding lighter
+옷/원숄더 드레스,0,1395,single-shoulder dress
+동작/지켜줌,0,1395,protecting
+화풍/중세풍,0,1394,medieval
+인원/여장 공,0,1394,josou seme
+인원/스킬라,0,1393,scylla
+동작/머리 긁기,0,1393,scratching head
+옷/보송한 옷,0,1393,fluffy clothes
+몸/양팔다리 절단,0,1393,double amputee
+효과/방사능 기호,0,1392,radiation symbol
+메타/2P,0,1392,player 2
+소품/목 밴드,0,1391,bandaid on neck
+동작/상대 목 핥기,0,1389,licking another's neck
+머리/불가사리 머리장식,0,1388,starfish hair ornament
+소품/별 지팡이,0,1388,star wand
+소품/욱일기,0,1388,rising sun flag
+메타/닛산,0,1387,nissan
+동작/치마 펄럭임,0,1386,skirt flip
+몸/치아 교정기,0,1386,braces
+인원/옷 입은 로봇,0,1385,clothed robot
+소품/나란한 피어싱,0,1382,parallel piercings
+성인/남자 셋,0,1382,mmm threesome
+몸/조스타 반점,0,1380,joestar birthmark
+옷/하라마키,0,1380,haramaki
+소품/산탄 탄피,0,1378,shotgun shell
+소품/야간투시경,0,1378,night vision device
+소품/제트팩,0,1378,jetpack
+동물/딱정벌레,0,1378,beetle
+동작/스포츠 브라 들추기,0,1377,sports bra lift
+음식/군고구마,0,1377,roasted sweet potato
+메타/몬스터볼 테마,0,1376,poke ball theme
+소품/빨랫줄,0,1376,clothesline
+동작/앞치마 들추기,0,1376,apron lift
+동작/반쪽 하트 손,0,1375,half-heart hands
+메타/쥐해,0,1374,year of the rat
+소품/해적 깃발,0,1374,jolly roger
+속옷/뒤 무늬 팬티,0,1374,back-print panties
+동작/장난,0,1373,prank
+배경/유성우,0,1373,meteor shower
+인원/마법 소년,0,1373,magical boy
+동작/작은 사람 들기,0,1373,holding mini person
+소품/손가락 사이 칼,0,1371,knives between fingers
+소품/H&K UMP,0,1371,h&k ump
+메타/여분의 얼굴,0,1371,extra faces
+자세/튜브 위,0,1370,on innertube
+소품/서예 붓 들기,0,1370,holding calligraphy brush
+자세/칼자루에 두 손,0,1370,hands on hilt
+자세/앞뒤로 포개짐,0,1370,front-to-back
+소품/코르크,0,1370,cork
+머리/호랑가시 머리장식,0,1369,holly hair ornament
+몸/알파카 귀,0,1369,alpaca ears
+동물/특이한 탈것,0,1368,unconventional steed
+자세/나뭇가지에 앉음,0,1368,sitting on branch
+옷/라스트 디펜스 학원 교복,0,1367,last defense academy school uniform
+인원/하이에나 소년,0,1367,hyena boy
+동작/골반 천 들추기,0,1366,pelvic curtain lift
+소품/펜더 스트라토캐스터,0,1365,fender stratocaster
+소품/재떨이,0,1365,ashtray
+메타/메타 벽에 기댐,0,1364,against fourth wall
+인원/세일러 전사,0,1363,sailor senshi
+배경/여러 도리이,0,1363,multiple torii
+메타/호요페어,0,1363,hoyofair
+메타/에로 그로,0,1362,ero guro
+소품/고삐 쥐기,0,1361,holding reins
+옷/엠파이어 웨이스트,0,1361,empire waist
+소품/전투용 칼,0,1360,combat knife
+음식/브로콜리,0,1360,broccoli
+성인/숨긴 음경,0,1359,tucked penis
+배경/레드 카펫,0,1359,red carpet
+소품/천개 침대,0,1359,canopy bed
+옷/이모 패션,0,1358,emo fashion
+소품/손목 벨트,0,1357,wrist belt
+메타/평범함을 멋지게,0,1357,mundane made awesome
+옷/가슴골 위 구멍,0,1357,above-cleavage cutout
+소품/쇠공 족쇄,0,1356,ball and chain restraint
+배경/타일 천장,0,1355,tile ceiling
+동작/상대 옷 입혀주기,0,1355,dressing another
+동작/옷 냄새 맡기,0,1354,smelling clothes
+자세/자기 사타구니에 손,0,1354,hand on own crotch
+옷/떠 있는 넥웨어,0,1354,floating neckwear
+머리/밑동 있는 트윈테일,0,1353,twintails with hair base
+얼굴/빠진 이,0,1353,missing tooth
+소품/등에 멘 방패,0,1351,shield on back
+메타/살인,0,1350,murder
+소품/칼레이도스틱,0,1350,kaleidostick
+성인/애무,0,1349,foreplay
+메타/몸 바꾸기,0,1349,body switch
+성인/소변 얼룩,0,1348,pee stain
+속옷/남성 속옷 엿보임,0,1348,male underwear peek
+효과/다른 그림자,0,1348,different shadow
+인원/아라크네,0,1348,arachne
+동물/앙고라 토끼,0,1348,angora rabbit
+인원/눈표범 소녀,0,1347,snow leopard girl
+메타/괴롭힘,0,1347,bullying
+소품/봉래의 옥가지,0,1346,jeweled branch of hourai
+소품/마커 들기,0,1346,holding marker
+소품/음식 포장지,0,1345,food wrapper
+효과/가슴 위 불,0,1345,fire on chest
+옷/고딕 펑크,0,1343,gothic punk
+소품/비누 병,0,1342,soap bottle
+소품/확장 테이프,0,1342,dilation tape
+소품/커프스 단추,0,1341,cuff links
+동작/주먹 인사,0,1340,fist bump
+메타/일본 경찰,0,1339,japan national police
+효과/초록 불꽃,0,1339,green fire
+옷/육상복,0,1338,track uniform
+몸/거대한 팔다리,0,1338,oversized limbs
+동물/수달,0,1338,otter
+소품/오링 하네스,0,1338,o-ring harness
+옷/나뭇잎 마을 닌자복,0,1338,konohagakure shinobi uniform
+소품/베이스 기타 들기,0,1337,holding bass guitar
+동물/아기 오리,0,1336,duckling
+몸/물갈퀴 손,0,1335,webbed hands
+소품/풀린 목 리본,0,1335,undone neck ribbon
+성인/가려진 음부,0,1335,covered pussy
+소품/낫,0,1334,sickle
+소품/고무 보트,0,1334,inflatable raft
+인원/발키리,0,1332,valkyrie
+소품/쇠파이프,0,1332,lead pipe
+동작/비키니 상의 당기기,0,1331,bikini top pull
+소품/머리 위 해골,0,1330,skull on head
+효과/물 위 꽃,0,1330,flower on liquid
+음식/계란말이,0,1328,tamagoyaki
+메타/만자,0,1325,swastika
+소품/그물,0,1325,net
+음식/소프트 아이스크림,0,1324,soft serve
+메타/성격 이탈,0,1324,out of character
+옷/음양 무늬,0,1323,yin yang print
+상태/얼어붙음,0,1323,frozen
+동물/잠자리,0,1323,dragonfly
+동작/어깨 으쓱,0,1321,shrugging
+동작/아호게 흔들기,0,1321,ahoge wag
+옷/서더스 군복,0,1320,saunders military uniform
+소품/목검,0,1320,bokken
+옷/BC 자유 군복,0,1320,bc freedom military uniform
+인원/원숭이 소녀,0,1319,monkey girl
+몸/불타는 날개,0,1319,fiery wings
+소품/메뉴판 들기,0,1318,holding menu
+소품/눈토끼,0,1317,snow rabbit
+배경/후지산,0,1317,mount fuji
+효과/다이맥스,0,1317,dynamax
+자세/엎드림,0,1315,face down
+모자/비행모,0,1315,aviator cap
+얼굴/중간 구레나룻,0,1314,medium sideburns
+옷/치슝루췬,0,1313,qixiong ruqun
+소품/체스,0,1313,chess
+메타/미국,0,1312,united states
+동작/바느질,0,1312,sewing
+소품/온바시라,0,1311,onbashira
+자세/탁자에 기댐,0,1311,leaning on table
+효과/이모티콘,0,1311,emoticon
+음식/동물 모양 음식,0,1311,animal-themed food
+인원/맥 소녀,0,1310,tapir girl
+얼굴/구레나룻 수염,0,1310,mutton chops
+인원/말 소년,0,1310,horse boy
+소품/횃불 들기,0,1308,holding torch
+동작/뺨 긁기,0,1307,scratching cheek
+효과/격자,0,1307,grid
+소품/프랑스 국기,0,1307,french flag
+동작/재킷 벗기,0,1306,removing jacket
+몸/수달 귀,0,1306,otter ears
+배경/촛불,0,1306,candlelight
+동작/스스로 껴안기,0,1305,self hug
+소품/철퇴 들기,0,1305,holding mace
+화풍/서예,0,1303,calligraphy
+옷/장갑 구멍,0,1302,glove cutout
+옷/펭귄 후드,0,1301,penguin hood
+동작/가슴근육 눌림,0,1301,pectoral press
+동작/무릎베개 권유,0,1301,lap pillow invitation
+효과/블랙홀,0,1301,black hole
+음식/소스,0,1300,sauce
+소품/광학 조준경,0,1300,optical sight
+성인/가려진 삽입,0,1300,covered penetration
+자세/도게자,0,1299,dogeza
+동작/서핑,0,1298,surfing
+자세/어깨에 앉음,0,1297,sitting on shoulder
+옷/소매에서 뺀 팔,0,1297,arm out of sleeve
+음식/잼,0,1296,jam
+메타/토요타,0,1295,toyota
+메타/자살,0,1295,suicide
+몸/가슴근육 아랫살,0,1293,underpec
+효과/가슴에 묻은 피,0,1292,blood on breasts
+옷/얼룩진 옷,0,1291,stained clothes
+소품/우유갑 들기,0,1290,holding milk carton
+몸/가려진 가슴근육,0,1290,covered pectorals
+소품/향로,0,1289,incense burner
+소품/물뿌리개 들기,0,1289,holding watering can
+음식/진저브레드맨,0,1289,gingerbread man
+메타/유아 성애,0,1288,toddlercon
+옷/비늘 갑옷,0,1288,scale armor
+머리/행성 머리장식,0,1288,planet hair ornament
+동작/음악 듣기,0,1288,listening to music
+몸/표범 귀,0,1288,leopard ears
+머리/위로 떠오른 머리카락,0,1288,hair floating upwards
+표정/x3,0,1287,x3
+소품/머리 위 종이,0,1287,paper on head
+소품/수직 손잡이,0,1286,vertical foregrip
+동작/자기 뱃살 집기,0,1286,pinching own belly
+동작/목도리 고쳐 매기,0,1286,adjusting scarf
+동물/흰동가리,0,1283,clownfish
+옷/비키니 쇼츠,0,1283,bikini shorts
+눈/넓은 타원 눈,0,1282,wide oval eyes
+소품/아령 들기,0,1282,holding dumbbell
+동물/지네,0,1282,centipede
+소품/수레,0,1282,cart
+배경/광고판,0,1282,billboard
+속옷/반바지 속 팬티,0,1281,panties under shorts
+상태/투명,0,1280,invisible
+옷/후드 트랙 재킷,0,1280,hooded track jacket
+메타/소련,0,1277,soviet
+소품/대파 들기,0,1277,holding spring onion
+인원/여성스러운 소년,0,1277,girly boy
+구도/원형 대형,0,1277,circle formation
+옷/바리아 슈트,0,1276,varia suit
+소품/치마 바구니,0,1276,skirt basket
+소품/곤봉 들기,0,1276,holding club
+자세/상대 트윈테일 잡기,0,1276,grabbing another's twintails
+동작/여럿이 탐,0,1275,multiple riders
+메타/유행어,0,1275,catchphrase
+표정/억지 미소,0,1274,forced smile
+소품/FN P90,0,1274,fn p90
+음식/양배추,0,1274,cabbage
+모자/과일 모자 장식,0,1272,fruit hat ornament
+옷/프릴 끈,0,1272,frilled straps
+소품/스카우터,0,1271,scouter
+소품/안 쓰는 타이어,0,1269,unused tire
+자세/컴퓨터 앞,0,1269,at computer
+머리/다른 머리장식,0,1269,alternate hair ornament
+소품/톤파,0,1268,tonfa
+옷/칸바 여고 교복,0,1267,kanba girls high school uniform
+몸/겨드랑이 점,0,1266,mole on armpit
+모자/뿔 달린 모자,0,1266,horned hat
+소품/구불구불한 빨대,0,1266,crazy straw
+소품/붕대 감은 발,0,1266,bandaged foot
+옷/아카츠키 제복,0,1266,akatsuki uniform
+동물/와이번,0,1265,wyvern
+옷/가린 사타구니,0,1265,covered groin
+음식/베이컨,0,1265,bacon
+메타/네오 지온,0,1264,neo zeon
+효과/립스틱 자국 고리,0,1264,lipstick ring
+옷/가라테복,0,1264,karate gi
+소품/메모장 들기,0,1263,holding notepad
+효과/정체불명 붉은 액체,0,1263,ambiguous red liquid
+성인/음부 위 음경,0,1262,penis on pussy
+소품/자전거 바구니,0,1262,bicycle basket
+동작/끈팬티 옆으로 젖힘,0,1261,thong aside
+몸/옷 너머 보이는 음부 문신,0,1261,pubic tattoo visible through clothes
+동작/데이트,0,1261,dating
+동작/청혼,0,1259,marriage proposal
+소품/연잎,0,1259,lotus leaf
+소품/빨래 바구니,0,1258,laundry basket
+몸/귀 반점,0,1258,ear birthmark
+표정/중2병,0,1258,chuunibyou
+구도/무기 강조,0,1257,weapon focus
+소품/탐조등,0,1257,searchlight
+소품/가장무도회 가면,0,1257,masquerade mask
+몸/갈기,0,1257,mane
+인원/나방 소녀,0,1256,moth girl
+소품/커피포트,0,1256,coffee pot
+동물/작은 동물,0,1255,undersized animal
+옷/보라 스웨터 조끼,0,1255,purple sweater vest
+성인/남자가 후타에게,0,1255,male on futa
+효과/팔괘,0,1254,trigram
+소품/수갑 들기,0,1254,holding handcuffs
+메타/패키지 일러스트,0,1252,box art
+효과/초록 윤곽선,0,1251,green outline
+몸/발가락 틈,0,1250,toe cleavage
+메타/일본,0,1250,japan
+효과/목에 묻은 피,0,1250,blood on neck
+소품/배구 네트,0,1249,volleyball net
+성인/테이프 결박,0,1249,tape bondage
+머리/나사 머리장식,0,1249,screw hair ornament
+소품/MG42,0,1249,mg42
+몸/사지 절단,0,1248,quadruple amputee
+눈/튀어나온 눈,0,1248,bulging eyes
+소품/함께 낀 이어폰,0,1247,shared earphones
+표정/슬픈 미소,0,1247,sad smile
+소품/오비도메,0,1247,obidome
+소품/전자레인지,0,1246,microwave
+소품/출입 금지,0,1246,keep out
+얼굴/눈 위 점,0,1245,mole above eye
+소품/수련,0,1244,water lily flower
+옷/토키사다메 교복,0,1244,tokisadame school uniform
+옷/풍림관 고교 교복,0,1243,fuurinkan high school uniform
+머리/소 귀 머리띠,0,1243,cow ear hairband
+모자/여성 제모,0,1242,female service cap
+옷/헤키호 학원 교복,0,1241,hekiho academy school uniform
+옷/칼라 홀터넥,0,1241,collared halterneck
+자세/물 위에 누움,0,1240,lying on water
+음식/초콜릿 입힌 음식,0,1240,chocolate-covered food
+메타/사고,0,1240,accident
+구도/후타나리 시점,0,1237,futanari pov
+소품/낚싯줄,0,1237,fishing line
+옷/루나 노바 교복,0,1236,luna nova school uniform
+메타/성스러운 5인조,0,1235,holy quintet
+자세/상대 손목 잡기,0,1235,holding another's wrists
+동작/조르기,0,1235,choke hold
+모자/와타보시,0,1234,wataboushi
+옷/데코라,0,1234,decora
+소품/소변기,0,1233,urinal
+옷/허리에 맨 셔츠,0,1233,shirt around waist
+동작/악수,0,1233,handshake
+눈/시계 눈,0,1233,clock eyes
+동작/밀어내기,0,1232,pushing away
+소품/손가락 사이 부적,0,1232,ofuda between fingers
+몸/꿰맨 목,0,1230,stitched neck
+동작/재기,0,1229,measuring
+화풍/헤이세이 레트로,0,1229,heisei retro
+눈/한쪽 기계 눈,0,1228,single mechanical eye
+소품/화승총,0,1228,firelock
+소품/비치 매트,0,1228,beach mat
+소품/목욕 의자,0,1228,bath stool
+몸/나무 뿔,0,1227,tree horns
+동물/장어,0,1227,eel
+옷/발 갑옷,0,1226,sabaton
+성인/반쯤 발기,0,1225,half-erect
+화풍/성적인 치비,0,1224,sexualized chibi
+효과/녹,0,1224,rust
+메타/홀로미스,0,1224,holomyth
+눈/사륜안,0,1223,sharingan
+동작/동시 작업,0,1223,multitasking
+소품/조이콘,0,1223,joy-con
+동작/숨 참기,0,1223,holding breath
+몸/가시,0,1222,spines
+음식/산딸기,0,1222,raspberry
+메타/포켓몬 팀,0,1222,pokemon team
+표정/냥,0,1222,nyan
+소품/프라모델,0,1222,model kit
+성인/짙은 소음순,0,1222,dark labia
+소품/나침반,0,1222,compass
+자세/상대 발 잡기,0,1221,holding another's foot
+소품/황금 사과,0,1221,golden apple
+소품/고사리,0,1221,fern
+소품/크리스마스 리스,0,1221,christmas wreath
+소품/전쟁 망치,0,1220,war hammer
+몸/꼬리 흉터,0,1220,scar on tail
+인원/의붓 남매,0,1219,step-siblings
+자세/주머니에 손,0,1219,hands in pocket
+옷/반쯤 벗은 셔츠,0,1217,shirt partially removed
+머리/날개 머리,0,1217,hair wings
+속옷/초소형 브라,0,1216,micro bra
+몸/엉덩이 문신,0,1216,ass tattoo
+소품/팔 구속대,0,1216,armbinder
+소품/닻 장식,0,1216,anchor ornament
+소품/촛대,0,1215,candelabra
+동작/책 껴안기,0,1214,hugging book
+소품/캔 커피,0,1214,canned coffee
+인원/유령 소녀,0,1213,ghost girl
+동물/새끼 고양이,0,1212,kitten
+소품/쓰레기,0,1211,trash
+효과/빛나는 손,0,1210,glowing hand
+소품/메스,0,1209,scalpel
+동물/어깨 위 생물,0,1209,creature on shoulder
+소품/아케이드 게임기,0,1208,arcade cabinet
+옷/뒤 리본,0,1208,back ribbon
+소품/티 세트,0,1207,tea set
+성인/상대 항문 벌림,0,1207,spreading another's anus
+머리/스페이드 머리장식,0,1207,spade hair ornament
+소품/서프보드 들기,0,1207,holding surfboard
+머리/뿔 사이 머리카락,0,1207,hair between horns
+옷/압박 셔츠,0,1207,compression shirt
+인원/이모와 조카,0,1207,aunt and niece
+옷/무지갯빛 옷,0,1206,iridescent clothes
+동작/추파,0,1206,flirting
+몸/플러그 꼬리,0,1206,electric plug tail
+소품/요석,0,1205,kaname-ishi
+옷/플뢰르 드 라팽 제복,0,1205,fleur de lapin uniform
+소품/반지 목걸이,0,1204,ring necklace
+옷/오다이바 여고 교복,0,1204,odaiba girls high school uniform
+소품/삼각 플라스크,0,1204,erlenmeyer flask
+효과/아래 조명,0,1203,underlighting
+소품/옷걸이 들기,0,1203,holding clothes hanger
+메타/가짜 영상,0,1203,fake video
+인원/모두,0,1203,absolutely everyone
+소품/삼각대,0,1202,tripod
+성인/가슴에 음경,0,1201,penis to breast
+메타/위선,0,1200,hypocrisy
+메타/검로드 아이디,0,1200,gumroad username
+몸/어깨 물린 자국,0,1200,bite mark on shoulder
+소품/얼룩진 시트,0,1199,stained sheets
+속옷/빨간 남성 속옷,0,1199,red male underwear
+소품/경찰차,0,1199,police car
+성인/음경 그림자,0,1199,penis shadow
+동작/짓누르기,0,1198,crushing
+소품/굴레,0,1198,bridle
+옷/위팔 갑옷,0,1197,rerebrace
+효과/주황 테두리,0,1197,orange border
+자세/턱에 두 손,0,1197,hands on own chin
+자세/머리 위로 팔,0,1197,arm over head
+눈/사각 동공,0,1196,square pupils
+옷/원숄더 셔츠,0,1196,single-shoulder shirt
+동작/보는 이 때리기,0,1195,punching viewer
+동작/자기 손가락 물기,0,1195,biting own finger
+소품/평면 TV,0,1194,flat screen tv
+효과/대비,0,1194,contrast
+옷/대비되는 옷깃,0,1193,contrast lapels
+옷/경주 번호표,0,1192,race bib
+소품/기관차,0,1192,locomotive
+효과/액체 후광,0,1191,liquid halo
+몸/염소 꼬리,0,1190,goat tail
+몸/갑각,0,1190,carapace
+상태/전투 손상,0,1190,battle damage
+옷/와그나리아 제복,0,1189,wagnaria uniform
+옷/스타라이트 학원 교복,0,1189,starlight academy school uniform
+효과/달러 기호,0,1189,dollar sign
+동작/자르기,0,1189,cutting
+얼굴/갈라진 턱,0,1189,cleft chin
+동물/아귀,0,1189,anglerfish
+옷/농구 유니폼,0,1188,basketball jersey
+음식/웨하스 스틱,0,1187,wafer stick
+소품/토글 단추,0,1187,toggles
+옷/요토 고교 교복,0,1186,youtou high school uniform
+메타/테마 사물,0,1186,themed object
+소품/노,0,1186,oar
+표정/가오,0,1186,gao
+효과/사각형,0,1185,square
+소품/스마트폰 케이스,0,1185,smartphone case
+몸/보라 음모,0,1185,purple pubic hair
+양말/분홍 레그워머,0,1185,pink leg warmers
+메타/헤로핀,0,1185,heropin
+배경/목욕탕,0,1185,bathhouse
+성인/수음 시늉,0,1184,handjob gesture
+소품/투척용 칼,0,1183,throwing knife
+옷/어깨 보호대,0,1183,shoulder guard
+옷/브라질 국기 무늬,0,1183,brazilian flag print
+메타/L 손,0,1182,l hand
+배경/졸업식,0,1182,graduation
+효과/백합 문장,0,1181,fleur-de-lis
+속옷/브라 컵,0,1181,bust cup
+메타/오징어 부리 스플래툰,0,1180,squidbeak splatoon
+소품/디지털 시계,0,1180,digital clock
+소품/날개 달린 유니콘 인형,0,1179,stuffed winged unicorn
+옷/스웨터 속 셔츠,0,1179,shirt under sweater
+옷/스쿠프넥,0,1179,scoop neck
+옷/패스트푸드 유니폼,0,1179,fast food uniform
+소품/후두 마이크,0,1178,throat microphone
+인원/마술사,0,1178,magician
+동작/뺨에 손가락,0,1178,fingers to cheeks
+배경/차양,0,1178,awning
+동작/동물 타기,0,1177,riding animal
+효과/종이 질감,0,1177,paper texture
+모자/눈을 덮은 모자,0,1176,hat over eyes
+배경/하쿠레이 신사,0,1176,hakurei shrine
+옷/수단,0,1176,cassock
+몸/수북한 가슴털,0,1175,thick chest hair
+눈/그늘 속 눈,0,1175,eyes in shadow
+옷/거미 무늬,0,1174,spider print
+소품/바늘,0,1174,sewing needle
+옷/반바지 속 레깅스,0,1174,leggings under shorts
+자세/상대 등에 손,0,1174,hands on another's back
+효과/나선,0,1173,spiral
+소품/계급장,0,1173,military rank insignia
+소품/키블레이드,0,1173,keyblade
+소품/전기톱 들기,0,1173,holding chainsaw
+화풍/일본화,0,1171,nihonga
+소품/한쪽 눈 가면,0,1171,mask over one eye
+메타/의뢰인 삽입,0,1171,commissioner insert
+소품/국자,0,1170,hishaku
+배경/어두운 방,0,1169,dark room
+소품/청소기,0,1168,vacuum cleaner
+효과/픽셀 하트,0,1168,pixel heart
+인원/여집사,0,1168,female butler
+자세/베개에 얼굴,0,1168,face in pillow
+얼굴/검은 입,0,1168,black mouth
+옷/유메노사키 교복,0,1167,yumenosaki school uniform
+몸/삐져나온 옆살,0,1167,muffin top
+소품/짝짝이 렌즈 안경,0,1167,heterochromatic eyewear
+소품/하트 스티커,0,1167,heart sticker
+음식/과일 컵,0,1167,fruit as cup
+소품/계산대,0,1167,cash register
+상태/강함,0,1166,strong
+소품/쌍안경 들기,0,1165,holding binoculars
+배경/떠 있는 바위,0,1165,floating rock
+옷/개조 교복,0,1164,adapted uniform
+음식/딸기 조각,0,1163,strawberry slice
+성인/가려진 음핵,0,1163,covered clitoris
+몸/가는 다리,0,1162,slim legs
+옷/발자국 무늬,0,1162,paw print pattern
+상태/익사,0,1162,drowning
+성인/용기 속 모유,0,1161,breast milk in container
+소품/천등,0,1160,sky lantern
+옷/사패복,0,1160,shihakusho
+효과/가슴 위 하트,0,1160,heart on chest
+음식/에호마키,0,1160,ehoumaki
+동물/손 위 동물,0,1160,animal on hand
+효과/콧물,0,1159,runny nose
+동물/팔 위 새,0,1159,bird on arm
+옷/끈 두 개 슬립,0,1157,double strap slip
+소품/포커 테이블,0,1156,poker table
+옷/애쉬포드 학원 교복,0,1156,ashford academy school uniform
+동작/엄지 아래로,0,1155,thumbs down
+소품/손목 꽃,0,1154,wrist flower
+옷/표범 무늬 비키니,0,1154,leopard print bikini
+동작/하트 손 실패,0,1154,heart hands failure
+소품/화염방사기,0,1154,flamethrower
+성인/안경에 사정,0,1154,cum on eyewear
+동작/팔 흔들기,0,1153,waving arms
+옷/서머 포켓 교복,0,1153,summer pockets school uniform
+메타/기념일 축하,0,1153,happy anniversary
+소품/깁스,0,1153,cast
+옷/안치오 군복,0,1153,anzio military uniform
+동작/액체 위 걷기,0,1152,walking on liquid
+인원/파충류 소년,0,1152,reptile boy
+상태/얽힘,0,1152,entangled
+소품/변장,0,1152,disguise
+소품/손수레,0,1151,wheelbarrow
+소품/스케치북 들기,0,1151,holding sketchbook
+소품/화분 들기,0,1150,holding flower pot
+소품/지휘봉 들기,0,1149,holding baton
+메타/디자인 추측,0,1149,design speculation
+성인/음부 점,0,1148,mole on pussy
+동작/무술,0,1148,martial arts
+몸/후드 뚫고 나온 귀,0,1148,ears through hood
+몸/꿰맨 다리,0,1147,stitched leg
+효과/날아가는 눈물,0,1147,flying teardrops
+옷/클래식 롤리타,0,1147,classic lolita
+소품/분재,0,1147,bonsai
+자세/가구에 몸 숙임,0,1147,bent over furniture
+소품/Z 세이버,0,1146,z saber
+머리/왕관 머리장식,0,1146,crown hair ornament
+효과/특이한 효과음,0,1145,unconventional sound effect
+소품/여러 허벅지 끈,0,1144,multiple thigh straps
+옷/가리유시 셔츠,0,1144,kariyushi shirt
+소품/빨래집게,0,1144,clothes pin
+인원/아란칼,0,1144,arrancar
+동작/발 구르기,0,1143,stomping
+효과/홀로그램 모니터,0,1143,holographic monitor
+동물/사역마,0,1143,familiar
+소품/보안경,0,1142,safety glasses
+옷/오링 원피스 수영복,0,1142,o-ring one-piece swimsuit
+구도/침대 맞은편 시점,0,1141,pov across bed
+인원/나체주의자,0,1141,nudist
+소품/지시봉 들기,0,1141,holding pointer
+소품/발목 붕대,0,1141,ankle wrap
+인원/너구리 소년,0,1140,raccoon boy
+소품/임신 테스트기,0,1140,pregnancy test
+몸/가슴 물린 자국,0,1140,bite mark on breast
+배경/나무 벤치,0,1139,wooden bench
+동작/목 깨물기,0,1139,biting neck
+옷/대장 하오리,0,1138,taichou haori
+배경/야자나무,0,1138,coconut tree
+음식/고추,0,1138,chili pepper
+소품/가슴 위 물건,0,1137,object on breast
+음식/볶음밥,0,1137,fried rice
+소품/오븐,0,1136,oven
+소품/빗 들기,0,1136,holding comb
+화풍/야미카와,0,1135,yami kawaii
+옷/셔츠 리본,0,1135,shirt bow
+모자/여러 모자,0,1134,multiple hats
+화풍/로우 폴리,0,1134,low poly
+옷/츠와부키 고교 교복,0,1133,tsuwabuki high school uniform
+동작/팬티 고쳐 입기,0,1132,adjusting panties
+소품/스노볼,0,1131,snow globe
+머리/옆 올림 고리,0,1131,side up ring
+동작/탁자에 비비기,0,1129,table humping
+자세/머리 위로 들기,0,1129,holding above head
+표정/우울,0,1129,depressed
+표정/호기심,0,1129,curious
+몸/레서판다 귀,0,1128,red panda ears
+음식/사료,0,1128,pet food
+옷/원피스 끈 수영복,0,1128,one-piece thong
+소품/저울,0,1128,balance scale
+성인/함께 물건 삽입,0,1127,shared object insertion
+동작/손가락 미소,0,1127,fingersmile
+눈/처진 눈,0,1127,downturned eyes
+효과/굴절,0,1126,refraction
+옷/판다 후드,0,1126,panda hood
+인원/범고래 소녀,0,1126,orca girl
+상태/움직일 수 없음,0,1126,immobilization
+눈/여분의 동공,0,1126,extra pupils
+옷/외골격,0,1126,exoskeleton
+소품/오디오 잭,0,1126,audio jack
+동물/고등어 고양이,0,1125,tabby cat
+소품/석궁 들기,0,1125,holding crossbow
+속옷/앞 후크 브라,0,1125,front-hook bra
+머리/쌍아계,0,1124,shuangyaji
+소품/셀카봉,0,1124,selfie stick
+자세/스쿠터 위,0,1124,on scooter
+소품/조이스틱,0,1124,joystick
+소품/갈고리,0,1124,hook
+동작/상대 입을 막은 손,0,1124,hand over another's mouth
+옷/아즈망가 대왕 교복,0,1124,azumanga daioh's school uniform
+효과/트리퀘트라,0,1123,triquetra
+소품/피아노 건반,0,1123,piano keys
+인원/타천사,0,1123,fallen angel
+동물/무릎 위 고양이,0,1123,cat on lap
+양말/발끝 이음새,0,1122,toe seam
+메타/캐릭터와 성별 반전,0,1122,character and genderswap
+자세/A포즈,0,1122,a-pose
+소품/페인트 통,0,1121,paint can
+배경/유럽 건축,0,1121,european architecture
+몸/짙은 유륜,0,1121,dark areolae
+성인/작은 정조대,0,1120,small chastity cage
+효과/화면 불빛,0,1120,screen light
+소품/앨리스의 마법서,0,1120,grimoire of alice
+옷/갈색 정장,0,1120,brown suit
+자세/옆으로 앉음,0,1119,sitting sideways
+음식/자파리만쥬,0,1119,japari bun
+효과/떨어지는 꽃,0,1119,falling flower
+눈/뚫어 낸 속눈썹,0,1119,cutout eyelashes
+메타/흑 대 백,0,1119,black vs white
+몸/겨드랑이 털 엿보임,0,1119,armpit hair peek
+동작/쥐어짜기,0,1118,squeezing
+메타/로리 지배,0,1118,lolidom
+소품/회중시계 들기,0,1118,holding pocket watch
+소품/쇠지렛대 들기,0,1118,holding crowbar
+소품/봉인 밀랍,0,1117,wax seal
+자세/상대 귀 잡기,0,1117,grabbing another's ear
+소품/귀여운 무기,0,1117,cute weapon
+동물/벌레,0,1116,worm
+표정/트롤 페이스,0,1116,troll face
+소품/탬버린,0,1116,tambourine
+구도/하늘 강조,0,1116,sky focus
+몸/상어 지느러미,0,1116,shark fin
+메타/메모스프라이트,0,1116,memosprite
+메타/페이스북 로고,0,1116,facebook logo
+효과/터지는 옷,0,1116,exploding clothes
+동작/옷 입고 비비기,0,1116,dry humping
+효과/코믹한 땀방울,0,1116,comedic sweatdrop
+구도/웅장한 규모,0,1115,grand scale
+소품/펜던트 칼라,0,1114,pendant collar
+소품/닌텐도 3DS,0,1114,nintendo 3ds
+머리/바깥으로 뻗친 앞머리,0,1114,flipped bangs
+몸/뱃살,0,1114,fat rolls
+옷/사야가타 무늬,0,1113,sayagata
+옷/기움프,0,1113,guimpe
+자세/4자 다리 앉기,0,1113,figure four sitting
+몸/불타는 꼬리,0,1113,fiery tail
+소품/첼로,0,1113,cello
+옷/파란 남성 수영복,0,1113,blue male swimwear
+몸/날개 귀,0,1112,wing ears
+소품/물방울 테 안경,0,1112,teardrop-framed glasses
+메타/힘의 연결,0,1112,power connection
+옷/무늬 있는,0,1112,patterned
+소품/4호 전차,0,1112,panzer iv
+효과/심전도,0,1112,cardiogram
+동작/스케이트,0,1111,skating
+몸/표범 꼬리,0,1111,leopard tail
+배경/큰 바위,0,1111,boulder
+메타/음식 이름,0,1110,food name
+메타/카드 패러디,0,1110,card parody
+효과/16분음표,0,1109,sixteenth note
+표정/회상,0,1109,remembering
+소품/공작 깃털,0,1109,peacock feathers
+효과/디지털 분해,0,1109,digital dissolve
+머리/츠마미 간자시,0,1108,tsumami kanzashi
+음식/라임 조각,0,1108,lime slice
+메타/에피소드 번호,0,1108,episode number
+상태/묻힘,0,1108,buried
+몸/갈색 음모,0,1108,brown pubic hair
+자세/탁자에 팔,0,1108,arm on table
+소품/샴푸 병,0,1107,shampoo bottle
+몸/붉은 음모,0,1107,red pubic hair
+소품/졸업장 통,0,1107,diploma tube
+효과/냉기 능력,0,1106,cryokinesis
+인원/벌 소녀,0,1106,bee girl
+동작/입 닦기,0,1105,wiping mouth
+옷/비치는 바니수트,0,1105,translucent bunnysuit
+옷/영원한 광휘,0,1105,luminosite eternelle
+인원/개구리 소녀,0,1104,frog girl
+동물/바퀴벌레,0,1104,cockroach
+소품/너클,0,1104,brass knuckles
+메타/슈퍼 사이어인 블루,0,1103,super saiyan blue
+인원/올빼미 소녀,0,1103,owl girl
+몸/장기,0,1103,organs
+동작/제빵,0,1103,baking
+자세/부복,0,1102,prostration
+인원/왕자,0,1102,prince
+옷/가슴 끈,0,1102,breast strap
+동물/머리카락 있는 동물,0,1102,animal with hair
+효과/정전기,0,1101,static
+눈/가슴의 눈,0,1101,chest eye
+소품/역기,0,1100,weights
+소품/패들 들기,0,1099,holding paddle
+옷/털 비키니,0,1099,fur bikini
+옷/인도 의상,0,1099,asian indian clothes
+동작/묶기,0,1098,tying
+옷/빨간 튜브톱,0,1097,red tube top
+효과/진흙,0,1097,mud
+인원/승무원,0,1096,travel attendant
+소품/허리에 두른 수건,0,1096,towel around waist
+옷/어깨 판,0,1096,shoulder plates
+소품/소풍 돗자리,0,1096,picnic blanket
+음식/훠궈,0,1096,hotpot
+메타/하트 가슴 챌린지,0,1096,heart-shaped boob challenge
+몸/끝이 털 난 꼬리,0,1096,fur-tipped tail
+신발/블록 힐,0,1096,block heels
+자세/욕조 안,0,1095,in bathtub
+동작/하이파이브,0,1095,high five
+효과/회색 윤곽선,0,1095,grey outline
+소품/배트맨 기호,0,1095,batman symbol
+메타/에우고,0,1095,aeug
+소품/등에 멘 총,0,1094,gun on back
+효과/벽에 묻은 피,0,1093,blood on wall
+소품/방울 귀걸이,0,1092,bell earrings
+성인/항문만,0,1092,anal only
+메타/게으르다고 말하지 마,0,1091,don't say "lazy"
+배경/잔해,0,1090,wreckage
+몸/긴 발톱,0,1090,long toenails
+소품/바닥의 옷,0,1090,clothes on floor
+효과/상형문자,0,1089,hieroglyphics
+소품/하트 귀 장식,0,1089,heart ear ornament
+효과/떠 있는 해골,0,1089,floating skull
+소품/주머니 속 펜,0,1087,pen in pocket
+소품/짤주머니 들기,0,1087,holding pastry bag
+소품/어항,0,1086,fish tank
+효과/화염구,0,1086,fireball
+메타/월드와이드 미쿠,0,1085,worldwide miku
+소품/삼각 안경,0,1085,triangular eyewear
+옷/일본 제국 육군,0,1085,imperial japanese army
+눈/사시,0,1083,lazy eye
+배경/풍력 발전기,0,1082,wind turbine
+효과/말풍선 속 쿨쿨,0,1082,spoken zzz
+메타/성별 반전 안 된 캐릭터의 성별 반전,0,1082,genderswap on non-genderswap
+효과/몸에 묻은 물감,0,1081,paint on body
+소품/M16,0,1081,m16
+메타/정액으로 가림,0,1081,censored with cum
+몸/비만,0,1080,obese
+소품/팔레트 들기,0,1080,holding paint palette
+메타/조력 강간,0,1080,assisted rape
+메타/MTU 바이러스,0,1079,mtu virus
+소품/자석,0,1079,magnet
+소품/목에 건 카메라,0,1079,camera around neck
+소품/찬장,0,1078,cupboard
+머리/식물 머리카락,0,1077,plant hair
+동작/마스크 들추기,0,1077,mask lift
+동작/피하기,0,1077,dodging
+메타/동물 성애화,0,1077,animal sexualization
+상태/임신 암시,0,1076,implied pregnancy
+몸/여분의 귀 암시,0,1076,implied extra ears
+옷/동정 킬러 의상,0,1075,virgin killer outfit
+모자/작은 요리사 모자,0,1075,mini chef hat
+소품/형광등,0,1075,fluorescent lamp
+소품/오리발,0,1075,flippers
+음식/토마토 조각,0,1074,tomato slice
+속옷/브라 선,0,1074,bralines
+옷/하늘 무늬,0,1073,sky print
+효과/어두운 조명,0,1073,dim lighting
+소품/전함,0,1073,battleship
+몸/한쪽 기계 손,0,1071,single mechanical hand
+동작/상대 머리 땋기,0,1071,braiding another's hair
+옷/라이몬 축구복,0,1070,raimon soccer uniform
+배경/철창,0,1070,iron bars
+소품/음식 포장,0,1070,food packaging
+옷/흘러내린 멜빵,0,1069,suspenders slip
+소품/디오라마,0,1069,diorama
+소품/텐구 가면,0,1068,tengu mask
+동작/포즈 따라 하기,0,1068,pose imitation
+동물/범고래,0,1068,orca
+성인/산란,0,1068,egg laying
+속옷/파란 남성 속옷,0,1068,blue male underwear
+소품/웍,0,1067,wok
+시선/꽃 보기,0,1067,looking at flowers
+동작/초콜릿 만들기,0,1067,chocolate making
+소품/머리빗 들기,0,1066,holding hair brush
+동작/담요로 덮기,0,1066,covering with blanket
+자세/사람 의자,0,1064,human chair
+효과/소용돌이,0,1063,swirl
+소품/드라이어 들기,0,1063,holding hair dryer
+자세/허벅지 사이 머리,0,1063,head between thighs
+소품/에너지 칼날,0,1063,energy blade
+음식/나루토마키,0,1062,narutomaki
+인원/갓파,0,1062,kappa
+메타/드림 소울,0,1062,dream soul
+소품/데저트 이글,0,1062,desert eagle
+효과/피 후광,0,1062,blood halo
+메타/성 지도,0,1061,sexual coaching
+옷/형광 안전복,0,1061,high-visibility clothing
+자세/상대 무릎에 손,0,1061,hand on another's knee
+소품/가로 피리,0,1060,transverse flute
+옷/체크 옷깃,0,1060,plaid lapels
+메타/이탈리아어 글자,0,1060,italian text
+옷/후리소데 소매,0,1060,furisode sleeves
+성인/여자가 남자에게 애널 핥기,0,1060,female rimming male
+소품/무릎 위 책,0,1060,book on lap
+소품/양각대,0,1060,bipod
+소품/Z 링,0,1059,z-ring
+소품/나무망치 들기,0,1059,holding mallet
+소품/플루메리아,0,1058,plumeria
+인원/엘반,0,1057,elvaan
+동작/겨드랑이 간지럼,0,1056,tickling armpits
+성인/벗은 팬티 내보이기,0,1056,presenting removed panties
+옷/털 소맷부리,0,1056,fur cuffs
+성인/팬티 속 음경,0,1055,penis in panties
+모자/모자 방울,0,1054,hat bell
+소품/걸레,0,1054,cleaning rag
+음식/죽순,0,1054,bamboo shoot
+인원/촉수 소녀,0,1053,tentacle girl
+머리/무늬 있는 머리,0,1052,patterned hair
+음식/머리 위 과일,0,1052,fruit on head
+동작/입 앞 꽃,0,1052,flower over mouth
+자세/무릎에 팔,0,1052,arms on knees
+옷/보일,0,1051,voile
+동물/턱시도 고양이,0,1051,tuxedo cat
+자세/계단 위,0,1051,on stairs
+성인/가슴 핥기,0,1051,licking breast
+효과/희미해짐,0,1051,fading
+자세/상대 등에 팔,0,1051,arms around another's back
+자세/발 달랑,0,1050,foot dangle
+효과/녹아내리는 옷,0,1050,dissolving clothes
+몸/가슴 털 뭉치,0,1050,chest tuft
+소품/광선총,0,1049,ray gun
+효과/카메라 플래시,0,1049,camera flash
+효과/무지갯빛,0,1047,iridescent
+소품/리본 귀걸이,0,1046,ribbon earrings
+메타/모죠,0,1046,mojyo
+양말/앞 심 스타킹,0,1046,front-seamed legwear
+몸/역삼각 체형,0,1045,v-taper
+효과/주사선,0,1045,scanlines
+몸/채찍 자국,0,1044,whip marks
+동작/펄럭임,0,1044,flapping
+옷/지퍼 드레스,0,1043,zipper dress
+효과/투명 테두리,0,1043,transparent border
+효과/거다이맥스,0,1043,gigantamax
+소품/무선 이어폰,0,1042,wireless earphones
+눈/삼각 동공,0,1042,triangle-shaped pupils
+동물/불사조,0,1042,phoenix
+배경/파티,0,1042,party
+머리/가슴 사이 머리카락,0,1042,hair between breasts
+동작/허우적,0,1042,flailing
+배경/무대 커튼,0,1041,stage curtains
+양말/수영복 속 팬티스타킹,0,1041,pantyhose under swimsuit
+자세/배 위,0,1041,on boat
+옷/코사카 키리노 교복,0,1041,kousaka kirino's school uniform
+자세/자기 모자에 손,0,1041,hand on own hat
+메타/평범한 쓰임,0,1040,mundane utility
+동작/주먹 불끈,0,1040,fist pump
+메타/크레딧 쪽,0,1040,credits page
+인원/카우보이,0,1040,cowboy
+자세/자기 발 잡기,0,1039,holding own foot
+소품/오픈카,0,1039,convertible
+자세/엉덩이 눌림,0,1039,ass press
+몸/다른 날개,0,1038,alternate wings
+동물/물고기 떼,0,1037,school of fish
+몸/무릎 홍조,0,1037,knee blush
+메타/페이크몬,0,1037,fakemon
+메타/비주얼 노벨,0,1036,visual novel
+소품/이빨 귀걸이,0,1036,tooth earrings
+소품/가격표,0,1036,price tag
+성인/음경 촉수,0,1036,penis tentacle
+소품/미니건,0,1036,minigun
+동작/상대 화장해주기,0,1036,applying another's makeup
+소품/옷 위 붕대,0,1035,bandages over clothes
+소품/요패,0,1034,yaopei
+동물/쥐가오리,0,1034,manta ray
+메타/브레이커 고르곤,0,1034,breaker gorgon
+메타/멋진 순간 망치기,0,1033,ruining the glorious moment
+옷/미즈 핫피,0,1033,mizu happi
+배경/콘크리트,0,1033,concrete
+옷/칼데아 직원 제복,0,1033,chaldea staff uniform
+옷/캣슈트,0,1033,catsuit
+효과/상서로운 구름,0,1032,xiangyun
+인원/삼촌과 조카,0,1032,uncle and niece
+메타/계절 연결,0,1031,season connection
+동작/상대 머리 만지작,0,1031,playing with another's hair
+성인/자기 음경에 손,0,1031,hand on own penis
+화풍/컬러 트레이스,0,1031,color trace
+메타/스쿠스쿠 하쿠타쿠,0,1030,sukusuku hakutaku
+눈/조준선 동공,0,1030,crosshair pupils
+동물/덩어리,0,1030,blob
+소품/술 상자,0,1030,alcohol carton
+메타/발 반대,0,1029,wrong foot
+구도/발만,0,1029,feet only
+소품/구슬 초커,0,1029,bead choker
+옷/야마부키 고교 교복,0,1028,yamabuki high school uniform
+동작/고개 젓기,0,1028,shaking head
+동물/미믹,0,1028,mimic
+성인/손가락에 묻은 체액,0,1027,pussy juice on fingers
+소품/히스이 몬스터볼,0,1027,hisuian poke ball
+소품/필름,0,1027,film strip
+동작/자기 귀 막기,0,1027,covering own ears
+소품/전차 포탑,0,1026,tank turret
+성인/음경 재기,0,1026,penis measuring
+옷/언더슈트,0,1025,undersuit
+구도/음부 강조,0,1025,pussy focus
+옷/홀터 레오타드,0,1024,halter leotard
+소품/픽업트럭,0,1023,pickup truck
+동작/손가락 빨기,0,1023,finger sucking
+효과/틈새 빛,0,1023,crack of light
+옷/뿔 달린 후드,0,1022,horned hood
+메타/키릴 문자,0,1022,cyrillic
+자세/허리 젖힘,0,1021,sway back
+구도/신발 강조,0,1021,footwear focus
+메타/오류 메시지,0,1021,error message
+효과/탄피 배출,0,1021,casing ejection
+동작/상대 가슴 찌르기,0,1020,poking another's breast
+소품/링거대,0,1020,iv stand
+성인/과도한 음부 체액,0,1020,excessive pussy juice
+옷/교차 끈 구멍,0,1020,cross-laced cutout
+소품/젖꼭지 테이프,0,1019,tape on nipples
+동작/재장전,0,1019,reloading
+소품/머스킷,0,1019,musket
+성인/손 착유,0,1019,hand milking
+자세/탁자에 두 팔,0,1018,arms on table
+머리/판다 머리장식,0,1017,panda hair ornament
+배경/후스마,0,1017,fusuma
+동물/목에 두른 동물,0,1017,animal around neck
+음식/손에 든 음식,0,1016,food on hand
+소품/바벨,0,1016,barbell
+동물/매,0,1015,hawk
+동작/가로질러 스트레칭,0,1015,cross-body stretch
+소품/식료품,0,1014,groceries
+표정/게스 얼굴,0,1014,gesugao
+소품/동전 지갑,0,1014,coin purse
+메타/탈것과 의인화,0,1011,vehicle and personification
+배경/학교 체육관,0,1011,school gym
+메타/라이트 페르소나,0,1011,light persona
+성인/가려진 항문,0,1011,covered anus
+소품/갈색 렌즈 안경,0,1011,brown-tinted eyewear
+메타/탈것 이름,0,1010,vehicle name
+효과/반투명,0,1010,translucent
+메타/레이 노 풀,0,1010,rei no pool
+소품/마라카스,0,1010,maracas
+배경/차선,0,1010,lane line
+몸/거추장스러운 가슴,0,1010,inconvenient breasts
+소품/샤워기 들기,0,1010,holding shower head
+메타/종 연결,0,1009,species connection
+메타/러우 전쟁,0,1009,russo-ukrainian war
+옷/형광 조끼,0,1009,high-visibility vest
+표정/:c,0,1009,:c
+메타/2008년,0,1009,2008
+동작/닦기,0,1008,wiping
+옷/사이난 고교 교복,0,1008,sainan high school uniform
+소품/떠 있는 검,0,1008,floating sword
+성인/옷 위로 번진 정액,0,1008,cum through clothes
+소품/벽등,0,1007,wall lamp
+메타/반복 이미지,0,1007,recurring image
+소품/딸랑이,0,1007,rattle
+얼굴/마름모 얼굴 무늬,0,1007,diamond facial mark
+몸/큐티 마크,0,1007,cutie mark
+소품/바나나 껍질,0,1007,banana peel
+머리/레이더 머리장식,0,1006,radar hair ornament
+효과/분홍 불꽃,0,1006,pink fire
+소품/함께 덮은 담요,0,1005,shared blanket
+동작/굽기,0,1005,grilling
+성인/젖꼭지 맞댐,0,1004,nipple-to-nipple
+소품/협탁,0,1004,nightstand
+메타/아사히 맥주,0,1004,asahi breweries
+소품/타로 카드,0,1003,tarot card
+동작/X자 손가락,0,1001,x fingers
+배경/키 큰 풀,0,1001,tall grass
+소품/갠 옷,0,1001,folded clothes
+소품/수통,0,1001,canteen
+자세/상대 얼굴 잡기,0,1000,grabbing another's face
+몸/공룡 꼬리,0,1000,dinosaur tail`;var na=globalThis.__duskLib?.["src/engine/aistop.js"];if(!na)throw new Error("Dusk 코어에 src/engine/aistop.js가 없어요 — Dusk를 업데이트해 주세요");{let n=["STOP_MSG","__resetAiStop","activeCount","activeTasks","aiTask","describeAi","isStopError","justStopped","onAiChange","stopAll","stopError","trackAi","trackedRunLLM"].filter(e=>!(e in na));if(n.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/engine/aistop.js에 없는 기능: "+n.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{STOP_MSG:tc,__resetAiStop:rc,activeCount:ac,activeTasks:sc,aiTask:oc,describeAi:ic,isStopError:Qt,justStopped:Hs,onAiChange:lc,stopAll:cc,stopError:Js,trackAi:Ws,trackedRunLLM:dc}=na;var g0=["k_euler_ancestral","k_euler","k_dpmpp_2s_ancestral","k_dpmpp_2m","k_dpmpp_sde","k_dpmpp_2m_sde","ddim_v3"],m0=["k_euler_ancestral","k_euler","k_dpmpp_2s_ancestral","k_dpmpp_2m_sde","k_dpmpp_2m","k_dpmpp_sde"],Zt={v5:!1,samplers:g0,vibe:!0,reference:!0,varietyPlus:!0,transparent:!1},ea=n=>({v5:!0,samplers:m0,maxScale:10,maxSteps:50,maxChars:32,tokens:n,vibe:!1,reference:!1,varietyPlus:!1,transparent:!0,forcedNoise:"karras"}),er=[{id:"5-full",label:"V5 Full",gen:"nai-diffusion-5-full",inpaint:"nai-diffusion-5-full-inpainting",...ea(1471)},{id:"5-full-medium",label:"V5 Medium",gen:"nai-diffusion-5-full-medium",inpaint:"nai-diffusion-5-full-medium-inpainting",...ea(1471),noCfgRescale:!0,fixed:{steps:14,sampler:"k_euler_ancestral",uc:"heavy"}},{id:"5-curated",label:"V5 Curated",gen:"nai-diffusion-5-curated",inpaint:"nai-diffusion-4-5-curated-inpainting",...ea(703)},{id:"4-5-full",label:"V4.5 Full",gen:"nai-diffusion-4-5-full",inpaint:"nai-diffusion-4-5-full-inpainting",...Zt},{id:"4-5-curated",label:"V4.5 Curated",gen:"nai-diffusion-4-5-curated",inpaint:"nai-diffusion-4-5-curated-inpainting",...Zt},{id:"4-full",label:"V4 Full",gen:"nai-diffusion-4-full",inpaint:"nai-diffusion-4-full-inpainting",...Zt},{id:"4-curated",label:"V4 Curated",gen:"nai-diffusion-4-curated-preview",inpaint:"nai-diffusion-4-curated-inpainting",...Zt}],Nn=n=>er.find(e=>e.id===n)??er.find(e=>e.id==="4-5-full"),aa={k_euler_ancestral:"Euler Ancestral",k_euler:"Euler",k_dpmpp_2s_ancestral:"DPM++ 2S Ancestral",k_dpmpp_2m:"DPM++ 2M",k_dpmpp_sde:"DPM++ SDE",k_dpmpp_2m_sde:"DPM++ 2M SDE",ddim_v3:"DDIM"},sa=["native","karras","exponential","polyexponential"],_n={portrait:{width:832,height:1216,label:"세로"},landscape:{width:1216,height:832,label:"가로"},square:{width:1024,height:1024,label:"정사각"},small_portrait:{width:512,height:768,label:"작은 세로"},small_landscape:{width:768,height:512,label:"작은 가로"},small_square:{width:640,height:640,label:"작은 정사각"},large_portrait:{width:1024,height:1536,label:"큰 세로"},large_landscape:{width:1536,height:1024,label:"큰 가로"},large_square:{width:1472,height:1472,label:"큰 정사각"},wallpaper_portrait:{width:1088,height:1920,label:"배경화면 세로"},wallpaper_landscape:{width:1920,height:1088,label:"배경화면 가로"}},hc={portrait:_n.portrait,landscape:_n.landscape,square:_n.square},ot=(n,e,t=28)=>n*e<=1024*1024&&t<=28;function we(n,e){let t=a=>Math.max(64,Math.min(2048,Math.round((Number(a)||0)/64)*64));return{width:t(n),height:t(e)}}var f0={"4-5-full":", very aesthetic, masterpiece, no text","4-5-curated":", location, masterpiece, no text, -0.8::feet::, rating:general","4-full":", no text, best quality, very aesthetic, absurdres","4-curated":", rating:general, amazing quality, very aesthetic, absurdres"},b0={standard:"very aesthetic, masterpiece, no text",light:"very aesthetic, amazing quality, no text",none:""},oa={standard:"표준",light:"가벼움",none:"없음"},Gs="nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page",Xs="lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page",Ys="{worst quality}, distracting watermark, unfinished, bad quality, {widescreen}, upscale, {sequence}, {{grandfathered content}}, blurred foreground, chromatic aberration, sketch, everyone, [sketch background], simple, [flat colors], ych (character), outline, multiple scenes, [[horror (theme)]], comic",ta={heavy:Xs,light:"lowres, bad hands, bad anatomy, artistic error, sepia, white haze, worst quality, very displeasing, jpeg artifacts, 0::ai-generated::",humanFocus:Xs+", @_@, mismatched pupils, glowing eyes, bad anatomy",furryFocus:Ys},ia={"5-full":ta,"5-full-medium":ta,"5-curated":ta,"4-5-full":{heavy:Gs,light:"nsfw, lowres, artistic error, scan artifacts, worst quality, bad quality, jpeg artifacts, multiple views, very displeasing, too many watermarks, negative space, blank page",humanFocus:Gs+", @_@, mismatched pupils, glowing eyes, bad anatomy",furryFocus:"nsfw, "+Ys},"4-5-curated":{heavy:"blurry, lowres, upscaled, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, halftone, multiple views, logo, too many watermarks, negative space, blank page",light:"blurry, lowres, upscaled, artistic error, scan artifacts, jpeg artifacts, logo, too many watermarks, negative space, blank page",humanFocus:"blurry, lowres, upscaled, artistic error, film grain, scan artifacts, bad anatomy, bad hands, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, halftone, multiple views, logo, too many watermarks, @_@, mismatched pupils, glowing eyes, negative space, blank page"},"4-full":{heavy:"nsfw, blurry, lowres, error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, multiple views, logo, too many watermarks, white blank page, blank page",light:"nsfw, blurry, lowres, error, worst quality, bad quality, jpeg artifacts, very displeasing, white blank page, blank page"},"4-curated":{heavy:"blurry, lowres, error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, logo, dated, signature, multiple views, gigantic breasts, white blank page, blank page",light:"blurry, lowres, error, worst quality, bad quality, jpeg artifacts, very displeasing, logo, dated, signature"}},Qs={heavy:"강함",light:"약함",humanFocus:"인물 중심",furryFocus:"퍼리 중심",none:"없음"},la=n=>["heavy","light","humanFocus","furryFocus","none"].filter(e=>e==="none"||ia[n]?.[e]!==void 0),ra=(n,e)=>!e||e==="none"?"none":ia[n]?.[e]!==void 0?e:"none",it=(n,e)=>{let t=ra(n,e);return t==="none"?"":ia[n]?.[t]??""};function w0(n,e,t,a=!1){let o=n;if(a&&(o=o?`transparent background, ${o}`:"transparent background"),t==="none")return o;if(Nn(e).v5){let c=b0[t];return c?o?`${o}, ${c}`:c:o}return o+(f0[e]??"")}var k0=(n,e,t)=>{let a=it(e,t);return a?n?`${a}, ${n}`:a:n},y0={heavy:0,light:1,furryFocus:2,humanFocus:3,none:4},v0={none:0,heavy:2,light:3,humanFocus:4,furryFocus:5},x0={standard:1,light:3,none:0};function nr(n){return!n||n.indexOf("::")<0?n:n.replace(/(-?\d*\.?\d+::)([^:]*?)(::)/g,(e,t,a,o)=>{if(!a.trim())return e;let c=a;return/^\d/.test(c)&&(c=" "+c),/\d$/.test(c)&&(c=c+" "),t+c+o})}var j0={model:"4-5-full",sampler:"k_euler_ancestral",steps:28,scale:5,cfgRescale:0,noise:"karras",quality:"standard",ucPreset:"heavy",varietyPlus:!1,transparent:!1,useCoords:!1,legacyUc:!1,normalizeVibes:!0};function De(n){let e={...j0,...n&&typeof n=="object"?n:{}},t=Nn(e.model);e.model=t.id,t.samplers.includes(e.sampler)||(e.sampler="k_euler_ancestral"),e.steps=Math.max(1,Math.min(t.maxSteps??50,Math.round(Number(e.steps)||28))),e.scale=Math.max(0,Math.min(t.maxScale??10,Number(e.scale)||0)),e.cfgRescale=Math.max(0,Math.min(1,Number(e.cfgRescale)||0)),sa.includes(e.noise)||(e.noise="karras"),e.quality in oa||(e.quality="standard"),la(t.id).includes(e.ucPreset)||(e.ucPreset="heavy");for(let a of["varietyPlus","transparent","useCoords","legacyUc","normalizeVibes"])e[a]=!!e[a];return e}function lt({prompt:n,uc:e="",width:t=832,height:a=1216,size:o,seed:c,settings:p,action:s="generate",image:w,mask:x,strength:m=.7,noise:k=0,addOriginal:j=!0,chars:z=[],vibes:_=[],refs:f=[]}={}){let $=String(n??"").trim();if(!$)throw new Error("프롬프트를 적어 주세요");o&&_n[o]&&({width:t,height:a}=_n[o]);let b=De(p),P=Nn(b.model),F=P.v5,R=P.fixed,E=R?R.sampler:b.sampler,O=F?b.quality:b.quality==="none"?"none":"standard",G=F&&P.transparent&&b.transparent,on=nr(w0($,P.id,O,G)),rn=R?R.uc:b.ucPreset,un=R?it(P.id,R.uc):nr(k0(String(e??""),P.id,b.ucPreset)),g=Number.isInteger(c)&&c>0?c>>>0:1+Math.floor(Math.random()*4294967294),yn=T=>({caption:{base_caption:T,char_captions:[]}}),nn;F?(nn={params_version:4,width:t,height:a,noise_schedule:P.forcedNoise,scale:Math.min(b.scale,P.maxScale??b.scale),sampler:E,steps:R?R.steps:Math.min(b.steps,P.maxSteps??b.steps),noise:k,seed:g,n_samples:1,negative_prompt:un,strength:m,characterPrompts:[],use_coords:b.useCoords,cfg_rescale:b.cfgRescale,skip_cfg_above_sigma:null,prefer_brownian:E==="k_euler_ancestral",deliberate_euler_ancestral_bug:!1,tag_hint_qt:x0[O],tag_hint_uc_preset:v0[ra(P.id,rn)],tag_hint_transparent_background:G,v4_prompt:{...yn(on),use_coords:b.useCoords,use_order:!0},v4_negative_prompt:yn(un)},P.noCfgRescale&&delete nn.cfg_rescale):nn={params_version:3,width:t,height:a,noise_schedule:b.noise,controlnet_strength:1,dynamic_thresholding:!1,scale:b.scale,sampler:E,steps:b.steps,noise:k,seed:g,n_samples:1,ucPreset:y0[ra(P.id,b.ucPreset)],negative_prompt:un,strength:m,qualityToggle:O!=="none",characterPrompts:[],use_coords:b.useCoords,legacy:!1,legacy_v3_extend:!1,prefer_brownian:!0,autoSmea:!1,legacy_uc:b.legacyUc,inpaintImg2ImgStrength:m,cfg_rescale:b.cfgRescale,add_original_image:j,normalize_reference_strength_multiple:b.normalizeVibes,skip_cfg_above_sigma:null,v4_prompt:{...yn(on),use_coords:b.useCoords,use_order:!0},v4_negative_prompt:{...yn(un),legacy_uc:b.legacyUc}};let M={input:on,model:s==="infill"?P.inpaint:P.gen,action:s,parameters:nn};F&&(M.use_new_shared_trial=!0),F&&s==="infill"&&(nn.add_original_image=j);let S=(_??[]).filter(T=>T?.image);if(!F&&S.length){nn.reference_image_multiple=S.map(A=>A.image);let T=S.map(A=>Number(A.strength??.6));if(b.normalizeVibes&&T.length>1){let A=T.reduce((J,H)=>J+H,0)||1;T=T.map(J=>J/A)}nn.reference_strength_multiple=T}let q=(f??[]).filter(T=>T?.image);if(!F&&q.length&&(nn.director_reference_images=q.map(T=>T.image),nn.director_reference_descriptions=q.map(T=>({...yn(T.type||"character"),legacy_uc:b.legacyUc})),nn.director_reference_strength_values=q.map(T=>T.strength??.6),nn.director_reference_secondary_strength_values=q.map(T=>1-(T.fidelity??1)),nn.director_reference_information_extracted=q.map(T=>T.info??1)),w&&(nn.image=w),x&&(nn.mask=x),s==="infill"&&(nn.img2img={strength:m,begin_from_sigma:null,noise:0,extra_noise_seed:g,color_correct:!0},E==="ddim_v3"&&(nn.sampler="k_euler_ancestral")),s==="img2img"&&(nn.img2img={strength:m,begin_from_sigma:null,noise:k,extra_noise_seed:g,color_correct:!0}),E==="k_euler_ancestral"&&(nn.deliberate_euler_ancestral_bug=!1),!F&&b.varietyPlus&&!q.length){let T=P.id.startsWith("4-5")?58:P.id.startsWith("4-")?19:0;nn.skip_cfg_above_sigma=T*Math.sqrt(t*a/(832*1216))}let L=(z??[]).map(T=>({prompt:nr(String(T?.prompt??"")),uc:R?"":nr(String(T?.uc??"")),center:b.useCoords&&Number.isFinite(T?.x)?{x:T.x,y:T.y}:{x:.5,y:.5}})).filter(T=>T.prompt.trim()).slice(0,P.maxChars??99);return L.length&&(nn.characterPrompts=L,nn.v4_prompt.caption.char_captions=L.map(T=>({char_caption:T.prompt,centers:[T.center]})),nn.v4_negative_prompt.caption.char_captions=L.map(T=>({char_caption:T.uc,centers:[T.center]}))),M}var ke={"bg-removal":"배경 지우기",lineart:"선화",sketch:"스케치",colorize:"채색",emotion:"표정 바꾸기",declutter:"정리(글자·잡것 지우기)"},Zs=["neutral","happy","sad","angry","scared","surprised","tired","excited","nervous","thinking","confused","shy","disgusted","smug","bored","laughing","irritated","aroused","embarrassed","worried","love","determined","hurt","playful"];function no({method:n,image:e,width:t,height:a,prompt:o="",emotion:c="neutral",defry:p=0}){if(!ke[n])throw new Error("알 수 없는 디렉터 도구예요");let s={image:e,req_type:n,width:t,height:a};return(n==="colorize"||n==="emotion")&&(s.prompt=n==="emotion"?`${c};;${o}`:o,s.defry=p),s}var C0="nai-diffusion-5-curated";function eo(n,e){let t=n*e;if(!(n>0&&e>0)||t>3145728)throw new Error("업스케일은 3,145,728픽셀 이하 그림만 돼요");return t<=1048576?1:t<=1747627?2:t<=2446678?3:4}var to=n=>({image:n,model:C0,declared_blur_sigma:0}),ro=(n,e,t)=>({image:n,model:Nn(t).gen,information_extracted:e});function tr(n,e,{last:t=!1}={}){let a=new DataView(n.buffer,n.byteOffset,n.byteLength);if(n.length<30||a.getUint32(0,!0)!==67324752)throw new Error("받은 파일이 zip이 아니에요");let o=-1;for(let z=n.length-22;z>=Math.max(0,n.length-65557);z--)if(a.getUint32(z,!0)===101010256){o=z;break}let c=0,p=a.getUint16(8,!0),s=a.getUint32(18,!0);if(o>=0){let z=a.getUint16(o+10,!0),_=a.getUint32(o+16,!0);if(_+46>n.length||a.getUint32(_,!0)!==33639248)throw new Error("zip 목록이 깨졌어요");for(let f=0;f<(t?z:1)&&a.getUint32(_,!0)===33639248;f++)p=a.getUint16(_+10,!0),s=a.getUint32(_+20,!0),c=a.getUint32(_+42,!0),_+=46+a.getUint16(_+28,!0)+a.getUint16(_+30,!0)+a.getUint16(_+32,!0)}else if(a.getUint16(6,!0)&8||!s)throw new Error("zip 끝을 찾지 못했어요(받다 끊겼을 수 있어요)");let w=a.getUint16(c+26,!0),x=a.getUint16(c+28,!0),m=c+30+w+x;if(m+s>n.length)throw new Error("zip 내용이 잘렸어요");let k=n.subarray(m,m+s),j=p===0?k.slice():p===8?e(k):null;if(!j)throw new Error(`zip 압축 방식 ${p}은 못 풀어요`);return{name:new TextDecoder().decode(n.subarray(c+30,c+30+w)),data:j}}var rr=n=>n?.[0]===137&&n?.[1]===80&&n?.[2]===78&&n?.[3]===71;function Fe(n){if(!rr(n)||n.length<24)return null;let e=new DataView(n.buffer,n.byteOffset,n.byteLength);return{width:e.getUint32(16),height:e.getUint32(20)}}var ao=["additionalAssets","emotionImages","assets"];function so(n,e,t){let a=String(t??"").trim()||"image",o=new Set(ao.flatMap(c=>(n?.[c]??[]).map(p=>String(p?.[0]??"").toLowerCase())));if(!o.has(a.toLowerCase()))return a;for(let c=2;;c++)if(!o.has(`${a}_${c}`.toLowerCase()))return`${a}_${c}`}function oo(n,e,t,a,o="png"){if(!ao.includes(e))throw new Error(`알 수 없는 에셋 자리예요: ${e}`);let c=e==="emotionImages"?[t,a]:[t,a,o];return{...n,[e]:[...n?.[e]??[],c]}}var le={};l0(le,{MAX_IMAGES:()=>da,MAX_JOBS:()=>go,activeSet:()=>or,addChar:()=>ye,addFolder:()=>Ne,addImage:()=>mt,addScene:()=>ur,addSet:()=>ha,applyCup:()=>Ta,charCover:()=>fa,charFolderOf:()=>kr,charOf:()=>vn,clearPicks:()=>mr,clearReserve:()=>bt,countIn:()=>_0,coverOf:()=>Ce,cupDone:()=>Ma,cupPair:()=>fr,cupPick:()=>Sa,cupRoundLabel:()=>Aa,defaultSets:()=>sr,duplicateChar:()=>lr,duplicateScene:()=>gt,emptyProject:()=>fo,emptySettings:()=>mo,favImages:()=>xa,fileName:()=>br,folderFileName:()=>wr,folderPromptFor:()=>wo,folderTemplateFor:()=>Be,foldersOf:()=>T0,hasFav:()=>oe,imageCount:()=>ma,markSent:()=>Ca,middleFor:()=>Pe,moveChars:()=>ut,moveFolder:()=>cr,moveScene:()=>E0,moveScenesToChar:()=>ya,normalizeProject:()=>Zn,ownPrompt:()=>ve,pathOf:()=>hr,pickCount:()=>Ve,pickedImages:()=>ae,placeFolder:()=>wa,planJobs:()=>ie,removeChar:()=>ga,removeFolder:()=>dr,removeImages:()=>Ke,removeScenes:()=>va,removeSet:()=>ua,renamePieceLib:()=>_a,reorderChars:()=>A0,reorderScenes:()=>ka,reserveAll:()=>Wn,reserveNoFav:()=>ja,reserveSummary:()=>Pa,rowChars:()=>Rn,sceneOf:()=>mn,scenesNoFav:()=>ft,seedFor:()=>$a,setCharCount:()=>ir,setImage:()=>xe,setLoreIds:()=>L0,setMember:()=>ht,setPicks:()=>je,setReserve:()=>Un,setSettings:()=>Ln,setSlots:()=>Ue,setsOf:()=>Dn,sizeFor:()=>_e,sortScenes:()=>gr,sortedImages:()=>ne,startCup:()=>za,stepSeed:()=>yo,switchSet:()=>pa,uniqueSceneName:()=>Re,updateChar:()=>Jn,updateFolder:()=>pt,updateScene:()=>On,updateSet:()=>dt,view:()=>pr,zipDir:()=>wt});var P0=n=>String(n??"").replace(/##[\s\S]*?##/g,""),te=n=>P0(n).replace(/\r\n?|\n/g,",").split(",").map(e=>e.trim()).filter(Boolean);function io(n,e=Math.random){let t=o=>o[Math.min(o.length-1,Math.floor(e()*o.length))],a=o=>{let c="";for(let p=0;p<o.length;p++){if(o[p]!=="{"){c+=o[p];continue}let s=1,w=-1,x=[];for(let m=p+1;m<o.length;m++)if(o[m]==="{")s++;else if(o[m]==="}"){if(--s===0){w=m;break}}else o[m]==="|"&&s===1&&x.push(m);if(w<0){c+=o.slice(p);break}if(!x.length)c+=`{${a(o.slice(p+1,w))}}`;else{let m=[],k=p+1;for(let j of x)m.push(o.slice(k,j)),k=j+1;m.push(o.slice(k,w)),c+=a(t(m).trim())}p=w}return c};return a(String(n??""))}function $0(n,e){let t=e.slice(1,-1),a=t.indexOf(".");if(a<1)throw new Error(`올바르지 않은 조각 문법 "${e}" — <모음.조각> 꼴로 써요`);let o=x=>String(x??"").replace(/\s+/g," ").trim().toLowerCase(),c=o(t.slice(0,a)),p=o(t.slice(a+1)),s=(n??[]).find(x=>x.name===t.slice(0,a))??(n??[]).find(x=>o(x.name)===c||o(x.name).replace(/ /g,"")===c.replace(/ /g,""));if(!s)throw new Error(`없는 조각 모음 "${t.slice(0,a)}"`);let w=s.pieces.find(x=>x.name===t.slice(a+1))??s.pieces.find(x=>o(x.name)===p||o(x.name).replace(/ /g,"")===p.replace(/ /g,""));if(!w)throw new Error(`없는 조각 "${e}"`);return w}var z0=n=>n.length>2&&n[0]==="<"&&n[n.length-1]===">";function ca(n,e,t=Math.random,a=new Set,o={n:0}){if(!z0(n))return[n];if(a.has(n))throw new Error(`조각이 자기 자신을 불러요: ${n}`);if(a.size>=50||++o.n>1e4)throw new Error(`조각이 너무 깊게 겹쳐 있어요: ${n}`);let c=$0(e,n);a.add(n);try{let p=c.prompt??"";if(c.multi){let s=p.split(/\r\n?|\n/).filter(w=>te(w).length);p=s.length?s[Math.min(s.length-1,Math.floor(t()*s.length))]:""}return te(p).flatMap(s=>ca(s,e,t,a,o))}finally{a.delete(n)}}var M0=(n,e,t=Math.random)=>te(n).flatMap(a=>ca(a,e,t)).join(", ");function S0(n,e){let t=[],a=0,o=0,c=0;for(;a<n.length&&o<e.length;)if(c===0){if(n[a]==="|"){c=1,a++;continue}t.push(n[a++])}else{if(e[o]==="|"){c=0,o++;continue}t.push(e[o++])}for(;a<n.length;a++)n[a]!=="|"&&t.push(n[a]);for(;o<e.length;o++)e[o]!=="|"&&t.push(e[o]);return t}var lo=n=>(n??[]).filter(e=>e&&e.on!==!1);function Yn(n){if(!n?.length)return 1;let e=1;for(let t of n)if(e*=lo(t).length,!e)return 0;return e}function co(n,e){let t=[],a=Math.max(0,Math.floor(e));for(let o=(n?.length??0)-1;o>=0;o--){let c=lo(n[o]);if(!c.length)return null;t[o]=c[a%c.length],a=Math.floor(a/c.length)}return t}var po=n=>(n??[]).map(e=>e?.prompt??"").filter(e=>e.trim()).join(", ");function Te({top:n="",own:e="",middle:t="",back:a=""},o=[],c=Math.random){let p=[...te(n),...te(e)],s=[...S0(p,te(t)),...te(a)];return io(s.flatMap(w=>ca(w,o,c)).join(", "),c)}var ct=(n,e=[],t=Math.random)=>io(M0(n,e,t),t);function ho(n){let e=String(n??""),t=[],a=(s,w)=>{if(!s)return;let x=t[t.length-1];x&&x.kind===w?x.text+=s:t.push({text:s,kind:w})},o=/##[\s\S]*?##|-?\d*\.?\d+::[\s\S]*?::|<[^<>\n]+>|\{+[^{}\n]*\}+|\[+[^[\]\n]*\]+|\|/g,c=0,p;for(;p=o.exec(e);){a(e.slice(c,p.index),"text");let s=p[0],w="text";if(s.startsWith("##"))w="comment";else if(s.includes("::")){let x=parseFloat(s);w=x<0?"weight-neg":x<1?"weight-down":"weight-up"}else s[0]==="<"?w="piece":s[0]==="{"?w=s.includes("|")?"random":"brace":s[0]==="["?w="bracket":s==="|"&&(w="pipe");a(s,w),c=p.index+s.length}return a(e.slice(c),"text"),t}var da=300,go=500,gn=(n,e=8e3)=>String(n??"").slice(0,e),Qn=()=>Math.random().toString(36).slice(2,10),Fn=(n,e)=>Number.isFinite(Number(n))?Number(n):e;function mo(){return{top:"",back:"",neg:"",seed:{mode:"random",value:0},size:{mode:"scene",w:832,h:1216},sampling:De(null),chars:[],vibes:[],refs:[],reserveDefault:1}}var sr=()=>({active:"sfw",list:[{id:"sfw",name:"SFW",tpl:""},{id:"nsfw",name:"NSFW",tpl:""}],store:{}});function fo(){return{v:2,settings:mo(),pieces:[],chars:[],folders:[],loreSkip:[],sets:sr()}}function bo(n){return!n||typeof n.path!="string"||!n.path?null:{path:n.path,seed:Number.isFinite(n.seed)?n.seed:null,at:Fn(n.at,0),prompt:gn(n.prompt),rank:Number.isFinite(n.rank)?n.rank:null,fav:!!n.fav,pick:!!n.pick,w:Fn(n.w,0),h:Fn(n.h,0),from:typeof n.from=="string"?n.from.slice(0,20):"",sent:typeof n.sent=="string"?n.sent.slice(0,200):""}}function uo(n){if(!n||typeof n.id!="string"||!n.id)return null;let e=(Array.isArray(n.slots)?n.slots:[]).filter(Array.isArray).map(a=>a.filter(o=>o&&typeof o=="object").map(o=>({prompt:gn(o.prompt),on:o.on!==!1}))),t=(Array.isArray(n.images)?n.images:[]).map(bo).filter(Boolean).slice(0,da);return{id:n.id,name:gn(n.name,80)||"씬",slots:e,size:typeof n.size=="string"?n.size:"",reserve:Math.max(0,Math.min(99,Math.round(Fn(n.reserve,0)))),cover:typeof n.cover=="string"?n.cover:"",memo:gn(n.memo,2e3),images:t}}function Zn(n){let e=fo();if(!n||typeof n!="object")return e;let t=n.v!==2,a=t?{top:n.top,neg:n.neg,size:{mode:n.size&&_n[n.size]?n.size:"scene"}}:n.settings??{},o={top:gn(a.top),back:gn(a.back),neg:gn(a.neg),seed:{mode:["random","fixed","chain"].includes(a.seed?.mode)?a.seed.mode:"random",value:Math.max(0,Math.floor(Fn(a.seed?.value,0)))>>>0},size:{mode:a.size?.mode==="custom"||a.size?.mode==="scene"||_n[a.size?.mode]?a.size.mode:"scene",...we(Fn(a.size?.w,832),Fn(a.size?.h,1216))},sampling:De(a.sampling),chars:(Array.isArray(a.chars)?a.chars:[]).filter(b=>b&&typeof b=="object").slice(0,32).map(b=>({id:typeof b.id=="string"?b.id:Qn(),prompt:gn(b.prompt),uc:gn(b.uc),x:Math.max(.1,Math.min(.9,Fn(b.x,.5))),y:Math.max(.1,Math.min(.9,Fn(b.y,.5))),on:b.on!==!1})),vibes:(Array.isArray(a.vibes)?a.vibes:[]).filter(b=>b&&typeof b.path=="string").slice(0,16).map(b=>({id:typeof b.id=="string"?b.id:Qn(),path:b.path,strength:Math.max(0,Math.min(1,Fn(b.strength,.6))),info:Math.max(0,Math.min(1,Fn(b.info,1))),on:b.on!==!1,enc:b.enc&&typeof b.enc.data=="string"?{model:gn(b.enc.model,40),info:Fn(b.enc.info,1),data:b.enc.data}:null})),refs:(Array.isArray(a.refs)?a.refs:[]).filter(b=>b&&typeof b.path=="string").slice(0,2).map(b=>({id:typeof b.id=="string"?b.id:Qn(),path:b.path,strength:Math.max(0,Math.min(1,Fn(b.strength,.6))),fidelity:Math.max(0,Math.min(1,Fn(b.fidelity,1))),type:["character","style","character&style"].includes(b.type)?b.type:"character&style",on:b.on!==!1})),reserveDefault:Math.max(1,Math.min(20,Math.round(Fn(a.reserveDefault,1))))},c=(Array.isArray(n.pieces)?n.pieces:[]).filter(b=>b&&typeof b.name=="string"&&b.name).map(b=>({name:gn(b.name,40).replace(/[.<>,]/g,""),pieces:(Array.isArray(b.pieces)?b.pieces:[]).filter(P=>P&&typeof P.name=="string"&&P.name).map(P=>({name:gn(P.name,40).replace(/[.<>,]/g,""),prompt:gn(P.prompt),multi:!!P.multi}))})),p=b=>(Array.isArray(b)?b:[]).filter(P=>P&&typeof P.id=="string"&&P.id).map(P=>{let F=(Array.isArray(P.scenes)?P.scenes:[]).map(uo).filter(Boolean);return t&&!P.scenes&&(F=[uo({id:`${P.id}-default`,name:"default",images:P.images??[],cover:P.cover})]),{id:P.id,name:gn(P.name,80)||"이름 없음",en:gn(P.en,80).trim(),prompt:gn(P.prompt),cover:typeof P.cover=="string"&&!t?P.cover:"",scenes:F}}),s=p(n.chars),w=new Set(s.map(b=>b.id)),x=(Array.isArray(n.folders)?n.folders:[]).filter(b=>b&&typeof b.id=="string"&&b.id),m=new Set(x.map(b=>b.id)),k=x.map(b=>({id:b.id,name:gn(b.name,80)||"새 폴더",en:gn(b.en,80).trim(),kind:b.kind==="outfit"||b.kind==="group"?b.kind:"",prompt:gn(b.prompt),tpl:gn(b.tpl,120),lore:gn(b.lore,80),parent:typeof b.parent=="string"&&m.has(b.parent)&&b.parent!==b.id?b.parent:null,members:[...new Set((Array.isArray(b.members)?b.members:[]).filter(P=>w.has(P)))]})),j=new Map(k.map(b=>[b.id,b]));for(let b of k){let P=new Set([b.id]),F=b.parent;for(;F;){if(P.has(F)){b.parent=null;break}P.add(F),F=j.get(F)?.parent??null}}let z=[...new Set((Array.isArray(n.loreSkip)?n.loreSkip:[]).filter(b=>typeof b=="string"&&b))].slice(-500),_=n.sets&&typeof n.sets=="object"?n.sets:null,f=(Array.isArray(_?.list)?_.list:[]).filter(b=>b&&typeof b.id=="string"&&b.id).map(b=>({id:b.id.slice(0,40),name:gn(b.name,30).trim()||"세트",tpl:gn(b.tpl,120)})),$=f.length?{active:f.some(b=>b.id===_.active)?_.active:f[0].id,list:f,store:{}}:sr();for(let b of $.list){let P=_?.store?.[b.id];if(!P||b.id===$.active)continue;let F=p(P.chars),R=new Set(F.map(O=>O.id)),E={};for(let O of k)E[O.id]=[...new Set((Array.isArray(P.members?.[O.id])?P.members[O.id]:[]).filter(G=>R.has(G)))];$.store[b.id]={chars:F,members:E}}return{v:2,settings:o,pieces:c,chars:s,folders:k,loreSkip:z,sets:$}}var Dn=n=>n.sets??sr(),or=n=>{let e=Dn(n);return e.list.find(t=>t.id===e.active)??e.list[0]},ir=(n,e)=>e===Dn(n).active?n.chars.length:Dn(n).store[e]?.chars?.length??0;function pa(n,e,{copy:t=!1,mkId:a=Qn}={}){let o=Dn(n);if(e===o.active||!o.list.some(s=>s.id===e))return n;let c={...o.store,[o.active]:{chars:n.chars,members:Object.fromEntries(n.folders.map(s=>[s.id,s.members]))}},p=c[e]??{chars:[],members:{}};if(delete c[e],t&&!p.chars.length&&n.chars.length){let s=new Map(n.chars.map(w=>[w.id,a()]));p={chars:n.chars.map(w=>({id:s.get(w.id),name:w.name,en:w.en??"",prompt:w.prompt,cover:"",scenes:[{id:a(),name:"default",slots:[],size:"",reserve:0,cover:"",memo:"",images:[]}]})),members:Object.fromEntries(n.folders.map(w=>[w.id,w.members.map(x=>s.get(x)).filter(Boolean)]))}}return{...n,chars:p.chars,folders:n.folders.map(s=>({...s,members:p.members?.[s.id]??[]})),sets:{...o,active:e,store:c}}}function ha(n,{name:e="",tpl:t=""}={},a=Qn){let o=Dn(n),c=a();return{...n,sets:{...o,list:[...o.list,{id:c,name:gn(e,30).trim()||"새 세트",tpl:gn(t,120)}]}}}var dt=(n,e,t)=>{let a=Dn(n);return{...n,sets:{...a,list:a.list.map(o=>o.id===e?{...o,...t.name!=null?{name:gn(t.name,30).trim()||o.name}:{},...t.tpl!=null?{tpl:gn(t.tpl,120)}:{}}:o)}}};function ua(n,e){let t=Dn(n);if(e===t.active||t.list.length<=1)return n;let a={...t.store};return delete a[e],{...n,sets:{...t,list:t.list.filter(o=>o.id!==e),store:a}}}var Ln=(n,e)=>({...n,settings:{...n.settings,...e}});function ye(n,{name:e="",en:t="",prompt:a=""}={},o=Qn){let c=o();return{...n,chars:[...n.chars,{id:c,name:gn(e,80).trim()||"새 캐릭터",en:gn(t,80).trim(),prompt:gn(a),cover:"",scenes:[{id:o(),name:"default",slots:[],size:"",reserve:0,cover:"",memo:"",images:[]}]}]}}var Jn=(n,e,t)=>({...n,chars:n.chars.map(a=>a.id===e?{...a,...t,id:a.id}:a)}),ga=(n,e)=>({...n,chars:n.chars.filter(t=>t.id!==e),folders:n.folders.map(t=>({...t,members:t.members.filter(a=>a!==e)}))});function lr(n,e,t=Qn){let a=n.chars.find(s=>s.id===e);if(!a)return n;let o=t(),c={...structuredClone(a),id:o,name:`${a.name} 사본`,cover:"",scenes:a.scenes.map(s=>({...structuredClone(s),id:t(),images:[],cover:"",reserve:0}))},p=n.chars.findIndex(s=>s.id===e);return{...n,chars:[...n.chars.slice(0,p+1),c,...n.chars.slice(p+1)],folders:n.folders.map(s=>s.members.includes(e)?{...s,members:[...s.members,o]}:s)}}var vn=(n,e)=>n.chars.find(t=>t.id===e)??null,ma=n=>(n?.scenes??[]).reduce((e,t)=>e+t.images.length,0);function fa(n){if(!n)return"";if(n.cover&&n.scenes.some(e=>e.images.some(t=>t.path===n.cover)))return n.cover;for(let e of n.scenes){let t=Ce(e);if(t)return t}return""}function Ne(n,{name:e="",en:t="",kind:a="",parent:o=null,prompt:c="",lore:p=""}={},s=Qn){let w=o&&n.folders.some(x=>x.id===o)?o:null;return{...n,folders:[...n.folders,{id:s(),name:gn(e,80).trim()||"새 폴더",en:gn(t,80).trim(),...p?{lore:gn(p,80)}:{},kind:a==="outfit"||a==="group"?a:"",prompt:gn(c),parent:w,members:[]}]}}function pt(n,e,{name:t,en:a,kind:o,prompt:c,tpl:p}){return{...n,folders:n.folders.map(s=>s.id===e?{...s,...t!=null?{name:gn(t,80).trim()||s.name}:{},...a!=null?{en:gn(a,80).trim()}:{},...o!=null?{kind:o}:{},...c!=null?{prompt:gn(c)}:{},...p!=null?{tpl:gn(p,120)}:{}}:s)}}function wo(n,e){let t=new Map(n.folders.map(c=>[c.id,c])),a=new Set,o=[];for(let c of n.folders){if(!c.members.includes(e))continue;let p=[];for(let s=c;s&&p.length<50;s=s.parent?t.get(s.parent):null)p.unshift(s);for(let s of p)a.has(s.id)||(a.add(s.id),String(s.prompt??"").trim()&&o.push(s.prompt.trim()))}return o.join(", ")}function Be(n,e){let t=new Map(n.folders.map(a=>[a.id,a]));for(let a=t.get(e),o=0;a&&o<50;a=a.parent?t.get(a.parent):null,o++)if(a.tpl)return a.tpl;return""}var ve=(n,e)=>[wo(n,e.id),String(e.prompt??"").trim()].filter(Boolean).join(", "),ba=(n,e)=>{let t=new Set([e]);for(let a=!0;a;){a=!1;for(let o of n.folders)o.parent&&t.has(o.parent)&&!t.has(o.id)&&(t.add(o.id),a=!0)}return t};function cr(n,e,t){if(t&&ba(n,e).has(t))throw new Error("폴더를 자기 안으로 옮길 수 없어요");return{...n,folders:n.folders.map(a=>a.id===e?{...a,parent:t||null}:a)}}var dr=(n,e)=>{let t=ba(n,e),a=n.folders.filter(o=>t.has(o.id)&&o.lore).map(o=>o.lore);return{...n,folders:n.folders.filter(o=>!t.has(o.id)),loreSkip:[...new Set([...n.loreSkip??[],...a])]}};function ht(n,e,t,a){return{...n,folders:n.folders.map(o=>{if(o.id!==e)return o;let c=o.members.includes(t);return a&&!c?{...o,members:[...o.members,t]}:!a&&c?{...o,members:o.members.filter(p=>p!==t)}:o})}}var ko=(n,e,t)=>{let a=t?n.indexOf(t):-1;if(a<0)return null;for(;a<n.length&&e.has(n[a]);)a++;return n[a]??null},ar=(n,e,t)=>{let a=new Set(e),o=e.filter(w=>n.includes(w)),c=n.filter(w=>!a.has(w)),p=ko(n,a,t),s=p?c.indexOf(p):c.length;return[...c.slice(0,s),...o,...c.slice(s)]};function ut(n,e,{from:t=null,to:a=null,before:o=null,copy:c=!1}={}){let p=e.filter(x=>n.chars.some(m=>m.id===x));if(!p.length||a&&!n.folders.some(x=>x.id===a))return n;let s=n.folders,w=n.chars;if(a)s=s.map(x=>{if(x.id===a){let m=x.members.filter(z=>!p.includes(z)),k=x.members.includes(o)?ko(x.members,new Set(p),o):null,j=k&&m.includes(k)?m.indexOf(k):m.length;return{...x,members:[...m.slice(0,j),...p,...m.slice(j)]}}return!c&&t&&x.id===t?{...x,members:x.members.filter(m=>!p.includes(m))}:x});else{!c&&t&&(s=s.map(k=>k.id===t?{...k,members:k.members.filter(j=>!p.includes(j))}:k));let x=ar(w.map(k=>k.id),p,o),m=new Map(w.map(k=>[k.id,k]));w=x.map(k=>m.get(k))}return{...n,folders:s,chars:w}}function A0(n,e,t,a){if(!e){let o=new Map(n.chars.map(c=>[c.id,c]));return{...n,chars:ar(n.chars.map(c=>c.id),t,a).map(c=>o.get(c))}}return{...n,folders:n.folders.map(o=>o.id===e?{...o,members:ar(o.members,t,a)}:o)}}function wa(n,e,t,a=null){let o=cr(n,e,t||null),c=o.folders.find(w=>w.id===e);if(!c)return n;let p=o.folders.filter(w=>w.id!==e),s=a&&a!==e?p.findIndex(w=>w.id===a):-1;if(s<0){let w=p.map((x,m)=>(x.parent??null)===(c.parent??null)?m:-1).filter(x=>x>=0).pop();return{...o,folders:[...p.slice(0,(w??p.length-1)+1),c,...p.slice((w??p.length-1)+1)]}}return{...o,folders:[...p.slice(0,s),c,...p.slice(s)]}}function ka(n,e,t,a){return re(n,e,o=>{let c=new Map(o.map(p=>[p.id,p]));return ar(o.map(p=>p.id),t,a).map(p=>c.get(p))})}function ya(n,e,t,a,{copy:o=!1,mkId:c=Qn}={}){if(e===a)return n;let p=vn(n,e),s=vn(n,a);if(!p||!s)return n;let w=p.scenes.filter(k=>t.includes(k.id));if(!w.length)return n;let x=s,m=w.map(k=>{let j=Re(x,k.name),z=o?{...structuredClone(k),id:c(),name:j,images:[],cover:"",reserve:0}:{...k,name:j};return x={...x,scenes:[...x.scenes,z]},z});return{...n,chars:n.chars.map(k=>k.id===a?x:k.id===e&&!o?{...k,scenes:k.scenes.filter(j=>!t.includes(j.id)),cover:p.cover&&w.some(j=>j.images.some(z=>z.path===p.cover))?"":k.cover}:k)}}var T0=(n,e)=>n.folders.filter(t=>t.members.includes(e));function pr(n,e){let t=new Map(n.chars.map(o=>[o.id,o])),a=n.folders.filter(o=>(o.parent??null)===(e??null));if(!e){let o=new Set(n.folders.flatMap(c=>c.members));return{folders:a,chars:n.chars.filter(c=>!o.has(c.id))}}return{folders:a,chars:(n.folders.find(o=>o.id===e)?.members??[]).map(o=>t.get(o)).filter(Boolean)}}function Rn(n,e){let t=new Map(n.chars.map(o=>[o.id,o])),a=new Set;for(let o of ba(n,e))for(let c of n.folders.find(p=>p.id===o)?.members??[])a.add(c);return[...a].map(o=>t.get(o)).filter(Boolean)}var _0=(n,e)=>Rn(n,e).length;function hr(n,e){let t=new Map(n.folders.map(o=>[o.id,o])),a=[];for(let o=t.get(e);o&&a.length<50;o=o.parent?t.get(o.parent):null)a.unshift(o);return a}var re=(n,e,t)=>Jn(n,e,{scenes:t(vn(n,e)?.scenes??[])});function ur(n,e,{name:t="",prompt:a=""}={},o=Qn){let c={id:o(),name:gn(t,80).trim()||"새 씬",slots:a.trim()?[[{prompt:gn(a),on:!0}]]:[],size:"",reserve:0,cover:"",memo:"",images:[]};return re(n,e,p=>[...p,c])}var On=(n,e,t,a)=>re(n,e,o=>o.map(c=>c.id===t?{...c,...a,id:c.id}:c)),va=(n,e,t)=>{let a=new Set(t);return re(n,e,o=>o.filter(c=>!a.has(c.id)))};function gt(n,e,t,a=Qn){return re(n,e,o=>{let c=o.findIndex(s=>s.id===t);if(c<0)return o;let p={...structuredClone(o[c]),id:a(),name:`${o[c].name} 사본`,images:[],cover:"",reserve:0};return[...o.slice(0,c+1),p,...o.slice(c+1)]})}function E0(n,e,t,a){return re(n,e,o=>{let c=o.findIndex(w=>w.id===t);if(c<0)return o;let p=[...o],[s]=p.splice(c,1);return p.splice(Math.max(0,Math.min(p.length,a)),0,s),p})}var gr=(n,e,t="asc")=>re(n,e,a=>[...a].sort((o,c)=>o.name.localeCompare(c.name,"ko")*(t==="desc"?-1:1))),mn=(n,e,t)=>vn(n,e)?.scenes.find(a=>a.id===t)??null;function Re(n,e){let t=String(e??"").trim()||"새 씬",a=new Set((n?.scenes??[]).map(o=>o.name.toLowerCase()));if(!a.has(t.toLowerCase()))return t;for(let o=2;;o++)if(!a.has(`${t} ${o}`.toLowerCase()))return`${t} ${o}`}var Ue=(n,e,t,a)=>On(n,e,t,{slots:a.map(o=>o.map(c=>({prompt:gn(c.prompt),on:c.on!==!1})))});function mt(n,e,t,a,o=Date.now){let c=mn(n,e,t);return c?On(n,e,t,{images:[bo({...a,at:o()}),...c.images].filter(Boolean).slice(0,da)}):n}function Ke(n,e,t,a){let o=mn(n,e,t),c=new Set(a);if(!o)return n;let p=On(n,e,t,{images:o.images.filter(w=>!c.has(w.path)),cover:c.has(o.cover)?"":o.cover}),s=vn(p,e);return s&&c.has(s.cover)&&(p=Jn(p,e,{cover:""})),p}function xe(n,e,t,a,o){let c=mn(n,e,t);return c?On(n,e,t,{images:c.images.map(p=>p.path===a?{...p,...o,path:p.path}:p)}):n}function je(n,e,t,a,o){let c=mn(n,e,t),p=new Set(a);return c?On(n,e,t,{images:c.images.map(s=>p.has(s.path)?{...s,pick:!!o}:s)}):n}var mr=(n,e,t=null)=>re(n,e,a=>a.map(o=>!t||o.id===t?{...o,images:o.images.map(c=>c.pick?{...c,pick:!1}:c)}:o)),Ve=n=>(n?.images??[]).filter(e=>e.pick).length,xa=(n,e=null)=>(n?.scenes??[]).filter(t=>!e||t.id===e).flatMap(t=>ne(t).filter(a=>a.fav).map(a=>({sid:t.id,name:t.name,path:a.path,sent:a.sent||""}))),oe=n=>(n?.images??[]).some(e=>e.fav),ft=n=>(n?.scenes??[]).filter(e=>!oe(e));function ja(n,e,t){var a=vn(n,e);if(!a)return n;var o=ft(a).map(c=>c.id);return o.length?Wn(n,e,t,o):n}function Ca(n,e,t,a,o){var c=mn(n,e,t);return c?On(n,e,t,{images:c.images.map(p=>p.path===a?{...p,sent:String(o).slice(0,200)}:p)}):n}var ae=(n,e=null)=>(n?.scenes??[]).filter(t=>!e||t.id===e).flatMap(t=>ne(t).filter(a=>a.pick).map(a=>({sid:t.id,name:t.name,path:a.path})));function ne(n){return[...n?.images??[]].sort((e,t)=>(e.rank??1e9)-(t.rank??1e9)||Number(t.fav)-Number(e.fav)||t.at-e.at)}function Ce(n){return n?.images?.length?n.cover&&n.images.some(e=>e.path===n.cover)?n.cover:ne(n)[0].path:""}var Un=(n,e,t,a)=>On(n,e,t,{reserve:Math.max(0,Math.min(99,Math.round(a)))}),Wn=(n,e,t,a=null)=>re(n,e,o=>o.map(c=>!a||a.includes(c.id)?{...c,reserve:Math.max(0,Math.min(99,c.reserve+t))}:c)),bt=(n,e)=>e?re(n,e,t=>t.map(a=>({...a,reserve:0}))):{...n,chars:n.chars.map(t=>({...t,scenes:t.scenes.map(a=>({...a,reserve:0}))}))};function ie(n,e=null){let t=[];for(let a of n.chars)if(!(e&&a.id!==e))for(let o of a.scenes){let c=Yn(o.slots);for(let p=0;p<o.reserve;p++)for(let s=0;s<c;s++){if(t.length>=go)return t;t.push({cid:a.id,sid:o.id,combo:s})}}return t}function Pa(n,e=null){let a=n.chars.filter(o=>!e||o.id===e).flatMap(o=>o.scenes);return{reserved:a.filter(o=>o.reserve>0).length,scenes:a.length,jobs:ie(n,e).length,combos:a.reduce((o,c)=>o+Yn(c.slots),0)}}var Pe=(n,e)=>po(co(n?.slots??[],e)??[]);function yo(n){return n=n>>>0,n^=n<<13,n>>>=0,n^=n>>>17,n^=n<<5,n>>>=0,Math.max(1,n)}function $a(n,e,t=Math.random){let a=n?.value>>>0;if(n?.mode==="fixed"&&a)return a;if(n?.mode==="chain"&&a){let o=a;for(let c=0;c<e;c++)o=yo(o);return o}return 1+Math.floor(t()*4294967294)}function _e(n,e){let t=o=>_n[o]?{width:_n[o].width,height:_n[o].height}:null,a=o=>{let c=/^(\d+)x(\d+)$/.exec(o??"");return c?we(c[1],c[2]):null};return n?.mode==="custom"?we(n.w,n.h):n?.mode&&n.mode!=="scene"?t(n.mode)??t("portrait"):t(e?.size)??a(e?.size)??t("portrait")}function za(n,e=Math.random){let t=[...new Set(n)];for(let a=t.length-1;a>0;a--){let o=Math.floor(e()*(a+1));[t[a],t[o]]=[t[o],t[a]]}return t.length<=1?{players:t,next:[],at:0,size:t.length,ranks:t[0]?{[t[0]]:1}:{},total:t.length,done:!0}:{players:t,next:[],at:0,size:t.length,ranks:{},total:t.length,done:!1}}var Ma=n=>!!n?.done;function fr(n){return n.players.length-n.at>=2?[n.players[n.at],n.players[n.at+1]]:null}function Sa(n,e){let t=fr(n);if(!t)return n;let a=t[e?1:0],o=t[e?0:1],c={...n,next:[...n.next,a],at:n.at+2,ranks:{...n.ranks,[o]:Math.floor(n.size/2)+1}};return q0(c)}function q0(n){if(n.players.length-n.at>=2)return n;let e=n.players.length-n.at===1?[n.players[n.at]]:[],t=[...n.next,...e];return t.length<=1?{...n,players:t,next:[],at:0,size:t.length,ranks:t[0]?{...n.ranks,[t[0]]:1}:n.ranks,done:!0}:{...n,players:t,next:[],at:0,size:t.length}}var Aa=n=>n.done?"끝":n.size<=2?"결승":n.size<=4?"4강":`${n.size}강`;function Ta(n,e,t,a){let o=mn(n,e,t);return o?On(n,e,t,{images:o.images.map(c=>a[c.path]!=null?{...c,rank:a[c.path]}:c)}):n}var br=n=>n?.en||n?.name||"char",wr=n=>n?.en||n?.name||"";function kr(n,e){let t=n.folders.filter(a=>a.members.includes(e));return t.find(a=>a.kind==="outfit")??t[0]??null}var wt=(n,e)=>[wr(kr(n,e?.id)),br(e)].filter(Boolean).join("/"),L0=(n,e)=>({...n,folders:n.folders.map(t=>e[t.id]?{...t,lore:e[t.id]}:t)});function _a(n,e,t){if(t=String(t??"").replace(/[.<>,]/g,"").replace(/\s+/g," ").trim().slice(0,40),!t||t===e||!n.pieces.some(m=>m.name===e))return n;if(n.pieces.some(m=>m.name===t))throw new Error(`‘${t}’ 모음이 이미 있어요`);let a=e.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),o=new RegExp(`<${a}\\.`,"g"),c=m=>typeof m=="string"?m.replace(o,`<${t}.`):m,p=m=>m.map(k=>({...k,prompt:c(k.prompt),scenes:k.scenes.map(j=>({...j,slots:j.slots.map(z=>z.map(_=>({..._,prompt:c(_.prompt)})))}))})),s=n.settings,w=Dn(n),x=Object.fromEntries(Object.entries(w.store??{}).map(([m,k])=>[m,{...k,chars:p(k.chars??[])}]));return{...n,settings:{...s,top:c(s.top),back:c(s.back),neg:c(s.neg),chars:s.chars.map(m=>({...m,prompt:c(m.prompt),uc:c(m.uc)}))},pieces:n.pieces.map(m=>({...m,name:m.name===e?t:m.name,pieces:m.pieces.map(k=>({...k,prompt:c(k.prompt)}))})),folders:n.folders.map(m=>({...m,prompt:c(m.prompt)})),chars:p(n.chars),sets:{...w,store:x}}}var O0="https://image.novelai.net",vo="dusk.sdstudio.token",xo="dusk.sdstudio.presets",jo="dusk.sdstudio.templates",Co="dusk.sdstudio.tokens",Po="dusk.sdstudio.prefs",I0=["https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/data/sdstudio/tags_v5.csv.gz","https://cdn.jsdelivr.net/gh/Pyser08/Dusk-Atelier@main/data/sdstudio/tags_v5.csv.gz","https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/SD-Studio/data/sdstudio/tags_v5.csv.gz"],Ea="dusk.sdstudio.tagsgz",qa="dusk.sdstudio.mirror.",$e=null,kt=null;async function zo(n,e="webp",t=.85){if(e!=="webp"&&e!=="avif")return{data:n,ext:"png",fellBack:!1};let a=await createImageBitmap(new Blob([n],{type:"image/png"})),o=async c=>{if(typeof OffscreenCanvas=="function"){let s=new OffscreenCanvas(a.width,a.height);return s.getContext("2d").drawImage(a,0,0),s.convertToBlob({type:c,quality:t})}let p=Object.assign(document.createElement("canvas"),{width:a.width,height:a.height});return p.getContext("2d").drawImage(a,0,0),new Promise(s=>p.toBlob(s,c,t))};try{let c=await o(`image/${e}`),p=!1,s=e;if((!c||c.type!==`image/${e}`)&&(c=await o("image/webp"),s="webp",p=e==="avif"),!c||c.type!=="image/webp"&&s==="webp")return{data:n,ext:"png",fellBack:!0};let w=new Uint8Array(await c.arrayBuffer());return w.length<n.length?{data:w,ext:s,fellBack:p}:{data:n,ext:"png",fellBack:p}}finally{a.close?.()}}var D0=n=>n?.kind==="module"?`dusk.sdstudio.m.${n.id}`:`dusk.sdstudio.p.${n?.id}`;function He(n){let e="";for(let t=0;t<n.length;t+=32768)e+=String.fromCharCode.apply(null,n.subarray(t,t+32768));return btoa(e)}async function $o(n){if(n instanceof Uint8Array)return n;if(n instanceof ArrayBuffer)return new Uint8Array(n);let e=n?.body;if(e instanceof Uint8Array)return e;if(e instanceof ArrayBuffer)return new Uint8Array(e);if(e&&typeof e.getReader=="function"){let t=e.getReader(),a=[],o=0;for(;;){let{done:s,value:w}=await t.read();if(s)break;a.push(w),o+=w.length}let c=new Uint8Array(o),p=0;for(let s of a)c.set(s,p),p+=s.length;return c}if(typeof n?.arrayBuffer=="function")return new Uint8Array(await n.arrayBuffer());if(typeof n?.text=="function")return new TextEncoder().encode(await n.text());if(typeof e=="string")return new TextEncoder().encode(e);throw new Error("응답을 읽지 못했어요")}function F0(n,e){let t="";try{let a=new TextDecoder().decode(e.subarray(0,2e3));try{t=JSON.parse(a)?.message??a}catch{t=a}}catch{}return n===401?"토큰이 맞지 않아요. 토큰을 다시 넣어 주세요":n===402?"Anlas가 모자라거나 구독이 필요해요":n===429?"요청이 너무 잦아요. 잠시 뒤 다시 해 주세요":`NovelAI 오류 ${n}${t?`: ${String(t).slice(0,200)}`:""}`}function Mo(n){let e="",t=async()=>{try{return await n.getLocalPluginStorage?.()??null}catch{return null}},a=async(m,k,j)=>{if(typeof n.nativeFetch=="function")try{return await n.nativeFetch(m,k)}catch(z){if(typeof fetch!="function")throw z}return fetch(m,{...k,signal:j})},o=()=>n.pluginStorage,c={};async function p(m,k,j){let z=JSON.stringify(k),_=j||Date.now(),f=await t();try{await f?.setItem?.(qa+m,JSON.stringify({t:_,p:k}))}catch{}let $=null;for(let b=0;b<3;b++)try{await o()?.setItem(m,z);let P=null;try{P=await o()?.getItem(m)}catch{}if(P!=null&&(typeof P=="string"?P:JSON.stringify(P))!==z)throw new Error("저장한 내용이 달라요. 이 기기 복사본에는 남아 있어요 — 전체 백업(zip)을 받아 두세요");try{await o()?.setItem(`${m}.t`,String(_))}catch{}return}catch(P){$=P,await new Promise(F=>setTimeout(F,400*(b+1)))}throw $}let s=m=>typeof m=="string"?`dusk.sdstudio.p.${m}`:D0(m),w=m=>Fs(st(m[0]===31&&m[1]===139?at(m):m)+`
+`+Vs),x={to:m=>{let k="";for(let j=0;j<m.length;j+=32768)k+=String.fromCharCode(...m.subarray(j,j+32768));return btoa(k)},from:m=>Uint8Array.from(atob(m),k=>k.charCodeAt(0))};return{tags(){return $e},async loadTags({download:m=!0}={}){return $e||kt||(kt=(async()=>{let k=await t();try{let z=await k?.getItem?.(Ea);if(z)return $e=w(x.from(String(z)))}catch{}if(!m)return null;let j=null;for(let z of I0)try{let _=await a(z,{method:"GET"});if(!_?.ok&&_?.status)throw new Error(`HTTP ${_.status}`);let f=await $o(_);if(f.length<1e5)throw new Error("파일이 너무 작아요");$e=w(f);try{await k?.setItem?.(Ea,x.to(f))}catch{}return $e}catch(_){j=_}throw new Error(`태그 사전을 받지 못했어요: ${j?.message??j}`)})().finally(()=>{kt=null}),kt)},async loadTagsFromBytes(m){$e=w(m);let k=await t();try{let j=m[0]===31&&m[1]===139?m:null;j&&await k?.setItem?.(Ea,x.to(j))}catch{}return $e},keyOf:s,async loadProject(m){let k=s(m),j=b=>b?typeof b=="string"?JSON.parse(b):b:null,z=null,_=0,f=null;try{z=j(await o()?.getItem(k))}catch{z=null}try{_=Number(await o()?.getItem(`${k}.t`))||0}catch{_=0}try{let b=await t();f=j(await b?.getItem?.(qa+k))}catch{f=null}let $=f?.p&&(!z||f.t>_);return Zn($?f.p:z)},async savedAt(m){let k=s(m),j=0,z=0;try{j=Number(await o()?.getItem(`${k}.t`))||0}catch{}try{let f=await(await t())?.getItem?.(qa+k);z=Number((typeof f=="string"?JSON.parse(f):f)?.t)||0}catch{}return Math.max(j,z)},saveProject(m,k,j){let z=s(m),_=c[z]??={busy:null,next:null};if(_.next=k,_.at=j,_.busy)return _.busy;let f=async()=>{let $=null;for(;_.next;){let b=_.next,P=_.at;_.next=null;try{await p(z,b,P),$=null}catch(F){$=F}}if(_.busy=null,$)throw $};return _.busy=f(),_.busy},async loadPresets(){try{let m=await o()?.getItem(xo),k=m?typeof m=="string"?JSON.parse(m):m:[];return Array.isArray(k)?k:[]}catch{return[]}},async savePresets(m){await o()?.setItem(xo,JSON.stringify(m))},async getToken(){let m=await t();try{let k=await m?.getItem?.(vo);if(k)return String(k)}catch{}return e},async setToken(m){e=String(m??"").trim();let k=await t();try{await k?.setItem?.(vo,e)}catch{}},async getLocal(m,k){let j=await t();try{let z=await j?.getItem?.(m);return z?typeof z=="string"?JSON.parse(z):z:k}catch{return k}},async setLocal(m,k){let j=await t();try{await j?.setItem?.(m,JSON.stringify(k))}catch{}},async getPrefs(){return{putSlot:"additionalAssets",nameStyle:"scene",putFormat:"webp",putQuality:.85,dup:"number",keys:{},boost:!1,...await this.getLocal(Po,{})}},async setPrefs(m){let k=await this.getPrefs();await this.setLocal(Po,{...k,...m})},async getTokens(){let m=(await this.getLocal(Co,[])).filter(j=>j&&typeof j.token=="string"&&j.token.trim()),k=await this.getToken();return k&&!m.some(j=>j.token===k)?[{label:"기본",token:k},...m]:m},async setTokens(m){let k=m.map(j=>({label:String(j.label??"").slice(0,30),token:String(j.token??"").trim()})).filter(j=>j.token);await this.setLocal(Co,k),k[0]&&await this.setToken(k[0].token)},async loadTemplates(){try{let m=await o()?.getItem(jo),k=m?typeof m=="string"?JSON.parse(m):m:[];return Array.isArray(k)?k:[]}catch{return[]}},async saveTemplates(m){await o()?.setItem(jo,JSON.stringify(m))},async call(m,k,{signal:j,label:z="sdstudio",zip:_=!0,token:f}={}){if(Hs())throw Js();let $=f||await this.getToken();if(!$)throw new Error("NovelAI 토큰을 먼저 넣어 주세요");let b=Ws(z,j);try{return await b.race((async()=>{let P=await a(`${O0}${m}`,{method:"POST",headers:{Authorization:`Bearer ${$}`,"Content-Type":"application/json",Accept:_?"application/zip":"*/*"},body:JSON.stringify(k)},b.signal),F=await $o(P);if((P?.status??200)>=400)throw new Error(F0(P.status,F));return F})())}finally{b.end()}},async image(m,k){let{data:j}=tr(await this.call("/ai/generate-image",m,k),Xt);if(!rr(j))throw new Error("받은 그림이 PNG가 아니에요");return j},async augment(m,k){return tr(await this.call("/ai/augment-image",m,k),Xt,{last:!0}).data},async upscale(m,k){let{data:j}=tr(await this.call("/ai/upscale",m,k),Xt);if(!rr(j))throw new Error("업스케일 결과가 PNG가 아니에요");return j},async encodeVibe(m,k){return He(await this.call("/ai/encode-vibe",m,{...k,zip:!1}))},async generate(m,k){let j=lt(m);return{data:await this.image(j,{signal:k}),seed:j.parameters.seed}},async saveAsset(m){if(typeof n.saveAsset!="function")throw new Error("이 리스에서는 에셋을 저장할 수 없어요");let k;for(let j=0;j<3;j++){try{let z=await n.saveAsset(m.slice());if(z)return z}catch(z){k=z}await new Promise(z=>setTimeout(z,600*(j+1)))}throw new Error(`에셋을 저장하지 못했어요: ${k?.message??k??"경로 없음"}`)}}}var La=globalThis.__duskLib?.["src/ui/dom.js"];if(!La)throw new Error("Dusk 코어에 src/ui/dom.js가 없어요 — Dusk를 업데이트해 주세요");{let n=["EASE","copyText","download","fadeUp","fmtBytes","fmtWhen","h","motion","pickFiles","reduceMotion","replace","svgFrom","vanish"].filter(e=>!(e in La));if(n.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/ui/dom.js에 없는 기능: "+n.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{EASE:Cc,copyText:Pc,download:ze,fadeUp:$c,fmtBytes:zc,fmtWhen:Mc,h:i,motion:Sc,pickFiles:ee,reduceMotion:Ac,replace:wn,svgFrom:So,vanish:Tc}=La;var Me="dusk_sdstudio";function Oa(n,e){let t=e==="module"?n?.[Me]:n?.extentions?.[Me];return t&&typeof t=="object"&&typeof t.z=="string"&&Number.isFinite(t.t)?t:null}function Ao(n,e,t){if(e==="module")return t?n[Me]=t:delete n[Me],n;let a={...n.extentions??{}};return t?a[Me]=t:delete a[Me],n.extentions=a,n}var Kn=(n,e=8e3)=>String(n??"").slice(0,e),yt=n=>String(n??"").replace(/[.<>,]/g,"").replace(/\s+/g," ").trim().slice(0,40),To=n=>{if(!n||typeof n!="object")return null;let e=yt(n.name??n.description);if(!e||!n.pieces)return null;let t=n.multi&&typeof n.multi=="object"?n.multi:{},o=(Array.isArray(n.pieces)?n.pieces:Object.entries(n.pieces).map(([c,p])=>({name:c,prompt:p,multi:t[c]}))).filter(c=>c&&yt(c.name)).map(c=>({name:yt(c.name),prompt:Kn(c.prompt),multi:!!c.multi}));return{name:e,pieces:o}};function vt(n,e){if(/\.txt$/i.test(n)){let p=String(e).split(/\r?\n/).map(s=>s.trim()).filter(Boolean);if(!p.length)throw new Error("파일이 비어 있어요");return{wild:{name:yt(n.replace(/\.txt$/i,""))||"조각",prompt:p.join(`
+`),multi:p.length>1}}}let t;try{t=JSON.parse(e)}catch{throw new Error("JSON을 읽지 못했어요")}let a=To(t);if(a)return{libs:[a]};let o=t?.library&&typeof t.library=="object"?t.library:t,c=(Array.isArray(o)?o:Object.entries(o??{}).map(([p,s])=>s&&typeof s=="object"?{...s,name:s.name??p}:null)).map(To).filter(Boolean);if(!c.length)throw new Error("조각 모음 JSON이 아니에요");return{libs:c}}var Eo=(n,e)=>{if(!e.has(n))return n;for(let t=2;;t++)if(!e.has(`${n}_${t}`))return`${n}_${t}`};function xt(n,e){let t=[...n??[]],a=new Set(t.map(c=>c.name)),o=[];for(let c of e){let p=Eo(c.name,a);a.add(p),o.push(p),t.push({...c,name:p})}return{pieces:t,names:o}}function yr(n,e,t="wildcards"){let a=yt(t)||"wildcards",o=(n??[]).map(s=>({...s,pieces:[...s.pieces]})),c=o.find(s=>s.name===a);c||(c={name:a,pieces:[]},o.push(c));let p=Eo(e.name,new Set(c.pieces.map(s=>s.name)));return c.pieces.push({name:p,prompt:e.prompt,multi:e.multi}),{pieces:o,group:a,name:p}}function qo(n){return JSON.stringify({version:1,name:n.name,pieces:n.pieces.map(e=>({name:e.name,prompt:e.prompt,multi:!!e.multi}))},null,1)}function Ia(n){let e;try{e=JSON.parse(n)}catch{throw new Error("JSON을 읽지 못했어요")}let t=Array.isArray(e?.presets)?e.presets:Array.isArray(e)?e:null;if(!t)throw new Error("캐릭터 프리셋 파일이 아니에요");return t.filter(a=>a&&typeof a=="object").map(a=>({name:Kn(a.name,80).trim()||"캐릭터",prompt:Kn(a.characterPrompt??a.prompt)}))}function B0(n){let e={};if(!(n?.[0]===137&&n[1]===80))return e;let t=c=>(n[c]<<24|n[c+1]<<16|n[c+2]<<8|n[c+3])>>>0,a=new TextDecoder("latin1"),o=new TextDecoder;for(let c=8;c+12<=n.length;){let p=t(c),s=String.fromCharCode(n[c+4],n[c+5],n[c+6],n[c+7]),w=n.subarray(c+8,c+8+p);if(s==="tEXt"||s==="iTXt"){let x=w.indexOf(0),m=a.decode(w.subarray(0,x));if(s==="tEXt")e[m]=o.decode(w.subarray(x+1));else if(!w[x+1]){let k=w.indexOf(0,x+3)+1;k=w.indexOf(0,k)+1,e[m]=o.decode(w.subarray(k))}}if(s==="IEND")break;c+=12+p}return e}var _o=(...n)=>n.map(e=>String(e??"").trim()).filter(Boolean).join(", ");function Lo(n){let e=B0(n),t=null,a=null;try{t=e.Comment?JSON.parse(e.Comment):null}catch{}try{a=e.SDStudio?.startsWith("v1:")?JSON.parse(e.SDStudio.slice(3)):null}catch{}let o=a?.promptSource;if(o&&typeof o.frontPrompt=="string")return{top:_o(o.frontPrompt,o.extraPrompt,o.characterPrompt),middle:Kn(o.middlePrompt),back:_o(o.backgroundPrompt,o.backPrompt),neg:Kn(t?.uc??t?.negative_prompt),seed:Number.isFinite(t?.seed)?t.seed:null,split:!0};let c=t?.prompt??e.Description;return typeof c!="string"?null:{top:Kn(c),middle:"",back:"",neg:Kn(t?.uc??t?.negative_prompt),seed:Number.isFinite(t?.seed)?t.seed:null,split:!1}}function Da(n,e={}){let t=n?.preset??n??{},a={...e.sampling??{}};Number.isFinite(t.steps)&&(a.steps=t.steps),Number.isFinite(t.promptGuidance)&&(a.scale=t.promptGuidance),Number.isFinite(t.cfgRescale)&&(a.cfgRescale=t.cfgRescale),typeof t.sampling=="string"&&(a.sampler=t.sampling),typeof t.noiseSchedule=="string"&&(a.noise=t.noiseSchedule);for(let c of["varietyPlus","useCoords"])typeof t[c]=="boolean"&&(a[c]=t[c]);let o={top:Kn(t.frontPrompt),back:Kn(t.backPrompt),neg:Kn(t.uc),sampling:a};return Array.isArray(t.characterPrompts)&&t.characterPrompts.length&&(o.chars=t.characterPrompts.filter(c=>c&&typeof c=="object").map(c=>({prompt:Kn(c.prompt),uc:Kn(c.uc),x:Number(c.position?.x)||.5,y:Number(c.position?.y)||.5,on:c.enabled!==!1}))),{name:Kn(n?.name,80).trim()||"SDStudio 프리셋",at:Number(n?.updatedAt)||Date.now(),settings:o}}function Fa(n,e){let t;try{t=typeof n=="string"?JSON.parse(n):n}catch{throw new Error("JSON을 읽지 못했어요")}let a=Array.isArray(t?.presets)?t.presets:Array.isArray(t)?t:null;if(!a)throw new Error("글로벌 프리셋 파일이 아니에요");return a.filter(o=>o&&(!o.workflowType||/^SDImageGen/.test(o.workflowType))).map(o=>Da(o,e))}function vr(n,e){let t=[...n??[]],a=new Set(t.map(c=>c.name)),o=[];for(let c of e){let p=c.name;for(let s=2;a.has(p);s++)p=`${c.name} ${s}`;a.add(p),o.push(p),t.push({...c,name:p})}return{list:t,names:o}}var R0="dusk-sds-thumbs",Na="t",Oo=12e3,xr=null;function U0(){return xr||(xr=new Promise(n=>{try{let e=indexedDB.open(R0,1);e.onupgradeneeded=()=>e.result.createObjectStore(Na),e.onsuccess=()=>n(e.result),e.onerror=()=>n(null)}catch{n(null)}}),xr)}var jr=async(n,e)=>{let t=await U0();return t?new Promise(a=>{try{let o=t.transaction(Na,n),c=e(o.objectStore(Na));o.oncomplete=()=>a(c?.result??null),o.onerror=()=>a(null),o.onabort=()=>a(null)}catch{a(null)}}):null},Do=n=>jr("readonly",e=>e.get(n)),K0=0;async function Ba(n,e){if(!(!e||e.size>400*1024)&&(await jr("readwrite",t=>t.put(e,n)),++K0%200===0)){let t=await jr("readonly",a=>a.count());t>Oo&&await jr("readwrite",a=>{let o=a.openCursor(),c=t-Oo+500;return o.onsuccess=()=>{let p=o.result;p&&c-- >0&&(p.delete(),p.continue())},o})}}var Io=2500,jt=null;async function Ra(){if(jt!==null)return jt;try{let n=await navigator.storage?.getDirectory?.();jt=n?await n.getDirectoryHandle("dusk-sds-img",{create:!0}):!1}catch{jt=!1}return jt}var Fo=n=>encodeURIComponent(n).replace(/%/g,"_").slice(0,200);async function Ua(n){let e=await Ra();if(!e)return null;try{let t=await(await e.getFileHandle(Fo(n))).getFile();return t.size?new Uint8Array(await t.arrayBuffer()):null}catch{return null}}var V0=0;async function Ka(n,e){let t=await Ra();if(!(!t||!e?.length)){try{let a=await t.getFileHandle(Fo(n),{create:!0});if(a.createWritable){let o=await a.createWritable();await o.write(e),await o.close()}else return}catch{return}++V0%100===0&&H0().catch(()=>{})}}async function H0(){let n=await Ra();if(!n)return;let e=[];for await(let[t,a]of n.entries())if(a.kind==="file")try{e.push([t,(await a.getFile()).lastModified])}catch{}if(!(e.length<=Io)){e.sort((t,a)=>t[1]-a[1]);for(let[t]of e.slice(0,e.length-Io+200))await n.removeEntry(t).catch(()=>{})}}async function Va(n,e=320){let t=n instanceof Blob?n:new Blob([n],{type:"image/png"});if(typeof createImageBitmap!="function")return t;try{let a=await createImageBitmap(t),o=Math.min(1,e/Math.max(a.width,a.height)),c=Math.max(1,Math.round(a.width*o)),p=Math.max(1,Math.round(a.height*o)),s;if(typeof OffscreenCanvas=="function"){let w=new OffscreenCanvas(c,p);w.getContext("2d").drawImage(a,0,0,c,p),s=await w.convertToBlob({type:"image/webp",quality:.8})}else{let w=document.createElement("canvas");w.width=c,w.height=p,w.getContext("2d").drawImage(a,0,0,c,p),s=await new Promise(x=>w.toBlob(x,"image/webp",.8))}return a.close?.(),s??t}catch{return t}}function No(n,e,{concurrency:t=6}={}){let a=new Set,o=0,c=()=>{for(;o<t&&a.size;){let s=a.values().next().value;a.delete(s),s.isConnected&&(o++,e(s.dataset.path).then(w=>{w?(s.src=w,s.dataset.loaded="1"):s.dataset.failed="1"}).catch(()=>{s.dataset.failed="1"}).finally(()=>{o--,c()}))}},p=typeof IntersectionObserver=="function"?new IntersectionObserver(s=>{for(let w of s)w.isIntersecting?(p.unobserve(w.target),a.add(w.target)):a.delete(w.target);c()},{root:n,rootMargin:"600px 0px"}):null;return{observe(s){p?p.observe(s):(a.add(s),c())},disconnect(){p?.disconnect(),a.clear()}}}function Ha(n,e,t,{first:a=120,step:o=160,root:c=null,onCount:p}={}){let s=0,w=document.createElement("div");w.style.cssText="grid-column:1/-1;height:1px";let x=()=>{let k=Math.min(e.length,s+(s?o:a)),j=document.createDocumentFragment();for(;s<k;s++)j.appendChild(t(e[s],s));n.insertBefore(j,w),p?.(s),s>=e.length&&(m?.disconnect(),w.remove())};n.appendChild(w);let m=typeof IntersectionObserver=="function"&&e.length>a?new IntersectionObserver(k=>{k.some(j=>j.isIntersecting)&&x()},{root:c,rootMargin:"800px 0px"}):null;if(x(),m&&s<e.length)m.observe(w);else if(s<e.length)for(;s<e.length;)x();return n}var ce="head",Cr=(n,e)=>`c:${n}:${e}`;function Ja(n){let e=n.sets??{active:"sfw",list:[],store:{}},t=new Map,a={},o=(s,w)=>{a[s]=w.map(x=>x.id);for(let x of w)t.set(Cr(s,x.id),JSON.stringify(x))};o(e.active,n.chars??[]);let c={};for(let[s,w]of Object.entries(e.store??{}))o(s,w.chars??[]),c[s]={members:w.members??{}};let p={v:n.v??2,settings:n.settings,pieces:n.pieces,folders:n.folders,loreSkip:n.loreSkip??[],sets:{active:e.active,list:e.list,store:c},order:a};return t.set(ce,JSON.stringify(p)),t}function Bo(n){let e=n(ce);if(!e)return null;let t=JSON.parse(e),a=[],o=w=>(t.order?.[w]??[]).map(x=>{let m=n(Cr(w,x));if(!m)return a.push(Cr(w,x)),null;try{return JSON.parse(m)}catch{return a.push(Cr(w,x)),null}}).filter(Boolean),c=t.sets??{},p={};for(let[w,x]of Object.entries(c.store??{}))p[w]={chars:o(w),members:x.members??{}};return{project:{v:t.v,settings:t.settings,pieces:t.pieces,folders:t.folders,loreSkip:t.loreSkip,chars:o(c.active),sets:{active:c.active,list:c.list,store:p}},missing:a}}function Wa(n,e){let t=[],a=[];for(let[o,c]of e)n?.get(o)!==c&&t.push([o,c]);if(n)for(let o of n.keys())e.has(o)||a.push(o);return{puts:t,dels:a}}var Ro="dusk.mem.sds.",Uo=n=>String(n).replace(/[^A-Za-z0-9._:@-]/g,e=>`_${e.charCodeAt(0).toString(16)}_`);function Ko({name:n="dusk-sds-proj",idb:e=globalThis.indexedDB}={}){let t=null,a=()=>t??=new Promise((c,p)=>{if(!e)return p(new Error("IndexedDB를 쓸 수 없어요"));let s=e.open(n,1);s.onupgradeneeded=()=>s.result.createObjectStore("r"),s.onsuccess=()=>c(s.result),s.onerror=()=>p(s.error??new Error("IndexedDB를 열지 못했어요"))}),o=c=>IDBKeyRange.bound(`${c}`,`${c}￿`);return{async load(c){let p=await a();return new Promise((s,w)=>{let x=new Map,m=p.transaction("r","readonly"),k=m.objectStore("r").openCursor(o(c));k.onsuccess=()=>{let j=k.result;j&&(x.set(String(j.key).slice(c.length+1),j.value),j.continue())},m.oncomplete=()=>s(x.size?x:null),m.onerror=()=>w(m.error)})},async write(c,p,s){let w=await a();return new Promise((x,m)=>{let k=w.transaction("r","readwrite"),j=k.objectStore("r");for(let[z,_]of p)j.put(_,`${c}${z}`);for(let z of s)j.delete(`${c}${z}`);k.oncomplete=()=>x(),k.onerror=()=>m(k.error??new Error("IndexedDB에 쓰지 못했어요")),k.onabort=()=>m(k.error??new Error("IndexedDB 쓰기가 취소됐어요"))})}}}function Vo({local:n,host:e,cellar:t=null,now:a=()=>Date.now(),hostEvery:o=6e4,cellarEvery:c=3e3,log:p=()=>{},timers:s=globalThis}={}){let w=new Map,x=($,b)=>{let P=w.get($);return P||w.set($,P={target:b,prev:null,hostDirty:!1,hostTimer:null,cellarKeys:new Set,cellarTimer:null,latest:null,lastT:0,err:null}),P},m=($,b)=>{let P=JSON.parse($.get(ce));return P.t=b,$.set(ce,JSON.stringify(P)),$},k=$=>{try{return Number(JSON.parse($.get(ce)).t)||0}catch{return 0}};async function j($){if(!t||!await t.ready())return null;let b=`${Ro}${Uo($)}.`,P=await t.list(b);if(!P?.length)return null;let F=new Map;for(let R of P){let E=await t.get(R.key);E!=null&&F.set(R.key.slice(b.length),E)}return F.has(ce)?F:null}async function z($){let b=w.get($);if(!(!b?.hostDirty||!b.latest)){b.hostDirty=!1;try{await e.save(b.target,b.latest,b.lastT)}catch(P){throw b.hostDirty=!0,b.err=P,p("플러그인 저장소 보관본 실패",P?.message??P),P}}}async function _($){let b=w.get($);if(!b?.cellarKeys.size||!b.prev||!t||!await t.ready().catch(()=>!1))return;let P=[...b.cellarKeys];b.cellarKeys.clear();let F=`${Ro}${Uo($)}.`;P.sort((E,O)=>(E===ce)-(O===ce));let R=P.map(E=>b.prev.has(E)?{op:"put",key:F+E,value:b.prev.get(E)}:{op:"del",key:F+E});try{for(let E=0;E<R.length;){let O=E,G=0;for(;O<R.length&&O-E<50&&(O===E||G+(R[O].value?.length??0)<4e6);)G+=R[O].value?.length??0,O++;let on=await t.batch(R.slice(E,O)),rn=P.slice(E,O).filter((un,g)=>!on?.[g]?.ok);if(rn.length)throw new Error(`Cellar가 ${rn.length}개를 받지 않았어요`);E=O}}catch(E){for(let O of P)b.cellarKeys.add(O);p("Cellar 올리기 실패 — 다음에 다시",E?.message??E)}}let f=($,b,P,F)=>{$[b]||($[b]=s.setTimeout(()=>{$[b]=null,P().catch(()=>{})},F))};return{async open($,b){let P=x(b,$),F=[];try{let E=await n.load(b);E&&F.push({src:"local",recs:E,t:k(E)})}catch(E){p("기기 저장소 읽기 실패",E?.message??E)}try{let E=await e.load($);E?.project&&F.push({src:"host",project:E.project,t:E.t||0})}catch(E){p("플러그인 저장소 읽기 실패",E?.message??E)}try{let E=await j(b);E&&F.push({src:"cellar",recs:E,t:k(E)})}catch(E){p("Cellar 읽기 실패",E?.message??E)}let R={local:0,cellar:1,host:2};F.sort((E,O)=>O.t-E.t||R[E.src]-R[O.src]);for(let E of F){let O=E.project,G=[];if(E.recs){let rn=Bo(un=>E.recs.get(un)??null);if(!rn)continue;O=rn.project,G=rn.missing}if(G.length&&F.indexOf(E)<F.length-1){p(`${E.src}에 캐릭터 기록 ${G.length}개가 빠져 있어 다음 저장본으로`);continue}O=Zn(O);let on=m(Ja(O),E.t||a());if(E.src!=="local")try{let rn=Wa(F.find(un=>un.src==="local")?.recs??null,on);await n.write(b,rn.puts,rn.dels)}catch(rn){p("기기 저장소 채우기 실패",rn?.message??rn)}if(P.prev=on,P.latest=O,P.lastT=E.t,E.src!=="cellar"&&t){let rn=F.find(un=>un.src==="cellar");if(!rn||rn.t<E.t){for(let un of on.keys())P.cellarKeys.add(un);f(P,"cellarTimer",()=>_(b),c)}}return{project:O,source:E.src,missing:G,t:E.t}}return{project:Zn(null),source:"none",missing:[],t:0}},save($,b,P){let F=x(b,$),R=()=>this._save(F,b,P);return F.chain=(F.chain??Promise.resolve()).then(R,R),F.chain},async _save($,b,P){let F=Math.max(a(),$.lastT+1),R=m(Ja(P),F),E=Wa($.prev,R);await n.write(b,E.puts,E.dels),$.prev=R,$.latest=P,$.lastT=F;for(let[O]of E.puts)$.cellarKeys.add(O);for(let O of E.dels)$.cellarKeys.add(O);return $.hostDirty=!0,f($,"hostTimer",()=>z(b),o),t&&f($,"cellarTimer",()=>_(b),c),{written:E.puts.length,deleted:E.dels.length,t:F}},async flush($){let b=w.get($);b&&(b.hostTimer&&(s.clearTimeout(b.hostTimer),b.hostTimer=null),b.cellarTimer&&(s.clearTimeout(b.cellarTimer),b.cellarTimer=null),await Promise.allSettled([z($),_($)]))},pending($){let b=w.get($);return{host:!!b?.hostDirty,cellar:b?.cellarKeys.size??0}}}}var J0="[소속] ";var W0=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4),Je=n=>n?.extentions?.da_folder?.id||null;function Ho(n,e,t=W0){let a=(Array.isArray(n)?n:[]).filter(k=>Je(k)),o=new Map(e.folders.filter(k=>k.lore).map(k=>[k.lore,k.id])),c=new Set(e.loreSkip??[]),p=new Set(a.map(Je)),s=a.filter(k=>!o.has(Je(k))&&!c.has(Je(k))),w=[...e.folders],x=0,m=(k,j)=>{let z=String(k.comment??"").trim(),_=z.startsWith(J0.trim())||!!k.extentions?.da_folder?.aff,f=z.replace(/^\[소속\]\s*/,"").trim()||"새 폴더",$=t();w.push({id:$,name:f,en:"",kind:_?"group":"",prompt:"",tpl:"",lore:Je(k),parent:j,members:[]}),o.set(Je(k),$),x++};for(;s.length;){let k=[];for(let j of s){let z=j.extentions?.da_parent||null;!z||!p.has(z)||c.has(z)?m(j,null):o.has(z)?m(j,o.get(z)):k.push(j)}if(k.length===s.length){k.forEach(j=>m(j,null));break}s=k}return{project:x?{...e,folders:w}:e,added:x}}var $r="dusk-sdstudio-backup.json",Jo="dusk-sdstudio-backup";function zr(n){let e=new Set;return(function t(a){if(Array.isArray(a)){a.forEach(t);return}a&&typeof a=="object"&&(typeof a.path=="string"&&a.path&&e.add(a.path),Object.values(a).forEach(t))})(n),e}function Pr(n,e){if(typeof n=="string")return e.has(n)?e.get(n):n;if(Array.isArray(n))return n.map(t=>Pr(t,e));if(n&&typeof n=="object"){let t={};for(let a of Object.keys(n))t[a]=Pr(n[a],e);return t}return n}function Wo(n,e,t={}){return{format:Jo,v:1,at:Date.now(),title:String(t.title??""),project:Pr(n,e)}}function Go(n){return!n||n.format!==Jo||!n.project||typeof n.project!="object"?null:{project:n.project,title:String(n.title??""),at:Number(n.at)||0,entries:[...zr(n.project)]}}function Xo(n,e){let t=new Set([...zr(n)].filter(o=>!e.has(o))),a=o=>{if(Array.isArray(o))return o.filter(c=>!(c&&typeof c=="object"&&typeof c.path=="string"&&t.has(c.path))).map(a);if(o&&typeof o=="object"){let c={};for(let p of Object.keys(o))c[p]=a(o[p]);return c}return o};return Pr(a(n),e)}var Ga=globalThis.__duskLib?.["src/engine/safety.js"];if(!Ga)throw new Error("Dusk 코어에 src/engine/safety.js가 없어요 — Dusk를 업데이트해 주세요");{let n=["Busy","backupSnapshot","isGenerating","restoreFromBackup"].filter(e=>!(e in Ga));if(n.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/engine/safety.js에 없는 기능: "+n.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{Busy:Nc,backupSnapshot:Bc,isGenerating:Xa,restoreFromBackup:Rc}=Ga;var de=(n,e=8e3)=>String(n??"").slice(0,e),X0=()=>Math.random().toString(36).slice(2,10),Ct=n=>(Array.isArray(n)?n:[]).filter(Array.isArray).map(e=>e.filter(t=>t&&typeof t=="object").map(t=>({prompt:de(t.prompt),on:t.on!==!1&&t.enabled!==!1}))),Mr=n=>(Array.isArray(n)?n:[]).filter(e=>e&&typeof e.name=="string"&&e.name).map(e=>({name:de(e.name,40).replace(/[.<>,]/g,""),pieces:(Array.isArray(e.pieces)?e.pieces:[]).filter(t=>t&&typeof t.name=="string"&&t.name).map(t=>({name:de(t.name,40).replace(/[.<>,]/g,""),prompt:de(t.prompt),multi:!!t.multi}))}));function Yo(n,e,t=[]){return{v:1,name:de(e,80).trim()||`${n.name} 씬`,scenes:n.scenes.map(a=>({name:a.name,slots:Ct(a.slots),size:a.size||""})),pieces:Mr(t)}}var Qo=n=>JSON.stringify({format:"dusk-sdstudio-template",v:1,name:n.name,scenes:n.scenes,pieces:n.pieces??[]},null,1);function Y0(n){if(n?.resolution&&n.resolution!=="custom"&&_n[n.resolution])return n.resolution;if(n?.resolutionWidth&&n?.resolutionHeight){let e=we(n.resolutionWidth,n.resolutionHeight);return`${e.width}x${e.height}`}return""}function Pt(n){if(n?.format==="dusk-sdstudio-template")return{v:1,name:de(n.name,80)||"가져온 템플릿",scenes:(Array.isArray(n.scenes)?n.scenes:[]).filter(o=>o&&o.name).map(o=>({name:de(o.name,80),slots:Ct(o.slots),size:typeof o.size=="string"?o.size:""})),pieces:Mr(n.pieces)};let e=n?.type==="sdstudio-scene-template"?n.session:n?.scenes&&typeof n.scenes=="object"?n:null;if(!e||typeof e.scenes!="object")throw new Error("SDStudio 씬 템플릿이나 Dusk 템플릿 파일이 아니에요");let t=Object.entries(e.scenes).filter(([,o])=>o&&typeof o=="object").map(([o,c])=>({name:de(c.name||o,80),slots:Ct(c.slots),size:Y0(c)})),a=Mr(Object.values(e.library??{}));return{v:1,name:de(n.name??e.name,80)||"가져온 템플릿",scenes:t,pieces:a}}var Zo=n=>!n.scenes.length||n.scenes.length===1&&!n.scenes[0].images.length&&!n.scenes[0].slots.some(e=>e.some(t=>t.prompt.trim())),Sr=(n,e)=>e.filter(t=>{let a=vn(n,t);return a&&!Zo(a)});function Q0(n,e){let t=(n??[]).map(a=>({...a,pieces:[...a.pieces]}));for(let a of Mr(e)){let o=t.find(c=>c.name===a.name);if(!o){t.push(a);continue}for(let c of a.pieces)o.pieces.some(p=>p.name===c.name)||o.pieces.push(c)}return t}function pe(n,e,t,a="merge",o=X0){let c={chars:0,added:0,kept:0,removed:0,updated:0},p=w=>({id:o(),name:w.name,slots:Ct(w.slots),size:w.size||"",reserve:0,cover:"",memo:"",images:[]}),s={...n,pieces:Q0(n.pieces,t.pieces)};for(let w of e){let x=vn(s,w);if(!x)continue;c.chars++;let m=Zo(x)?"replace":a,k=new Map(x.scenes.map(z=>[z.name.toLowerCase(),z])),j;if(m==="merge"){j=[...x.scenes];for(let z of t.scenes)k.has(z.name.toLowerCase())?c.kept++:(j.push(p(z)),c.added++)}else{let z=new Set(t.scenes.map(_=>_.name.toLowerCase()));c.removed+=x.scenes.filter(_=>!z.has(_.name.toLowerCase())).length,j=t.scenes.map(_=>{let f=k.get(_.name.toLowerCase());return f?(c.updated++,{...f,slots:Ct(_.slots),size:_.size||""}):(c.added++,p(_))})}s=Jn(s,w,{scenes:j})}return{project:s,stats:c}}function ni({limit:n=60,mergeMs:e=700,now:t=()=>Date.now()}={}){let a=[],o=[],c=-1/0,p=!1;return{push(s,{typing:w=!1}={}){let x=t();w&&p&&x-c<=e&&a.length||(a.push(s),a.length>n&&a.shift()),c=x,p=w,o=[]},undo(s){return a.length?(o.push(s),p=!1,a.pop()):null},redo(s){return o.length?(a.push(s),p=!1,o.pop()):null},canUndo:()=>a.length>0,canRedo:()=>o.length>0,clear(){a=[],o=[],c=-1/0,p=!1}}}var Ya={run:"생성 시작·멈추기",toggleLeft:"프롬프트 에디터 열고 닫기",undo:"되돌리기",redo:"다시하기",put:"고른 그림 봇에 바로 넣기",selectAll:"모두 고르기",search:"검색",newItem:"새 캐릭터·씬",cup:"이미지 월드컵",reserve:"고른 씬 1장 예약",choose:"대표 고르기",putFav:"즐겨찾기 확인하고 봇에 넣기",remove:"고른 것 지우기(캐릭터·씬·그림)",unpick:"고르기 모두 풀기",mode1:"씬 모드",mode2:"갤러리 모드",mode3:"검색 모드",mode4:"비교 모드",mode5:"동시편집",help:"도움말"},Qa={run:"Mod+Enter",toggleLeft:"F1",undo:"Mod+Z",redo:"Mod+Shift+Z",put:"Mod+B",selectAll:"Mod+A",search:"Mod+F",newItem:"N",cup:"W",reserve:"R",choose:"C",putFav:"Mod+Shift+B",remove:"Delete",unpick:"Mod+Shift+A",mode1:"1",mode2:"2",mode3:"3",mode4:"4",mode5:"5",help:"F2"},$t=(n=globalThis.navigator)=>/Mac|iPhone|iPad|iPod/i.test(n?.userAgentData?.platform??n?.platform??n?.userAgent??""),nl=new Set(["Control","Shift","Alt","Meta","OS","AltGraph","CapsLock","Fn"]);function el(n){let e=/^Key([A-Z])$/.exec(n.code??"")??/^Digit(\d)$/.exec(n.code??"");return e?e[1]:n.key===" "?"Space":n.key.length===1?n.key.toUpperCase():n.key}function Ar(n,e=$t()){if(!n?.key||nl.has(n.key))return null;let t=el(n),a=[];return(e?n.metaKey:n.ctrlKey)&&a.push("Mod"),e&&n.ctrlKey&&a.push("Ctrl"),!e&&n.metaKey&&a.push("Meta"),n.altKey&&a.push("Alt"),n.shiftKey&&(t.length>1||a.length)&&a.push("Shift"),a.push(t),a.join("+")}var tl={Mod:"⌘",Ctrl:"⌃",Alt:"⌥",Shift:"⇧",Enter:"↩",Escape:"⎋",Backspace:"⌫",Delete:"⌦",ArrowLeft:"←",ArrowRight:"→",ArrowUp:"↑",ArrowDown:"↓",Space:"Space"},rl={Mod:"Ctrl",Meta:"Win",ArrowLeft:"←",ArrowRight:"→",ArrowUp:"↑",ArrowDown:"↓"};function Tr(n,e=$t()){if(!n)return"";let t=n.split("+");return e?t.map(a=>tl[a]??a).join(""):t.map(a=>rl[a]??a).join("+")}function Za(n,{v:e=2}={}){let t={...Qa};for(let[a,o]of Object.entries(n&&typeof n=="object"?n:{}))!(a in Ya)||typeof o!="string"||(t[a]=(e<2?o.replace(/^Ctrl\+/,"Mod+"):o).slice(0,40));return t}function ns(n,e,t){let a={...n};if(t)for(let o of Object.keys(a))a[o]===t&&o!==e&&(a[o]="");return a[e]=t||"",a}var ei=(n,e)=>e?Object.keys(n).find(t=>n[t]===e)??null:null,ti=n=>/^(Mod|Ctrl|Alt|Meta)\+/.test(n??"")||/^F\d+$/.test(n??"");var ri=`
+.sds{position:absolute;inset:0;z-index:25;display:flex;flex-direction:row;overflow:hidden;background:var(--rb-win);color:var(--rb-text);animation:rb-in .15s ease-out}
+.sds *{box-sizing:border-box}
+.sds-rail{width:44px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;background:var(--rb-surf);border-right:var(--rb-bw,1px) solid var(--rb-line2)}
+.sds-rail .tab{writing-mode:vertical-rl;letter-spacing:.2em;font-weight:800;font-size:13px;padding:10px 0;border:0;background:none;color:var(--rb-sub);cursor:pointer;border-radius:var(--rb-r1)}
+.sds-rail .tab[aria-pressed=true]{color:var(--rb-acc-text);background:var(--rb-sel-bg)}
+.sds-rail .key{font-size:10px;color:var(--rb-mute);font-weight:700}
+.sds-left{width:380px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;background:var(--rb-surf);border-right:var(--rb-bw,1px) solid var(--rb-line2)}
+.sds-left[hidden]{display:none}
+.sds-left-head{display:flex;align-items:center;gap:8px;padding:14px 16px 8px}
+.sds-left-head b{font-size:16px;font-weight:800}
+.sds-left-body{flex:1;min-height:0;overflow:auto;padding:4px 16px 16px;display:flex;flex-direction:column;gap:14px}
+.sds-groups{display:flex;justify-content:center;gap:22px;padding:0 16px 10px}
+.sds-group{display:flex;flex-direction:column;align-items:center;gap:4px}
+.sds-group>small{font-size:10.5px;font-weight:700;color:var(--rb-sub);letter-spacing:.02em}
+.sds-group>div{display:flex;gap:6px}
+.sds-ib{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--rb-r1);border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-surf2);color:var(--rb-text);cursor:pointer;padding:0;flex-shrink:0}
+.sds-ib:disabled{opacity:.4;cursor:default}
+.sds-ib.on,.sds-ib[aria-pressed=true]{background:var(--rb-acc-grad);color:var(--rb-on-acc);border-color:transparent}
+.sds-ib.danger{color:var(--rb-danger)}
+@media (hover:hover){.sds-ib:not(:disabled):hover{border-color:var(--rb-acc);color:var(--rb-acc-text)}.sds-ib.on:hover,.sds-ib[aria-pressed=true]:hover{color:var(--rb-on-acc)}}
+.sds-lbl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;margin-bottom:6px}
+.sds-help{width:16px;height:16px;border-radius:50%;border:1px solid var(--rb-line3);font-size:10px;line-height:14px;text-align:center;color:var(--rb-sub);cursor:help;background:none;padding:0}
+.sds-pa{position:relative;border-radius:var(--rb-r2);border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-win)}
+.sds-pa:focus-within{border-color:var(--rb-acc);box-shadow:0 0 0 3px var(--rb-focus)}
+.sds-pa>pre,.sds-pa>textarea{margin:0;padding:10px 12px;font:inherit;font-size:13.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;letter-spacing:normal}
+.sds-pa>pre{position:absolute;inset:0;overflow:hidden;pointer-events:none;color:var(--rb-text)}
+.sds-pa>textarea{position:relative;display:block;width:100%;min-height:72px;max-height:340px;resize:vertical;border:0;background:transparent;color:transparent;caret-color:var(--rb-text);outline:none}
+.sds-pa>textarea::placeholder{color:var(--rb-mute)}
+.sds-pa .k-weight-up,.sds-pa .k-brace{background:color-mix(in srgb,#ff4d73 30%,transparent);box-shadow:inset 0 -2px 0 #ff4d73;border-radius:3px}
+.sds-pa .k-brace{font-weight:800}
+.sds-pa .k-weight-down,.sds-pa .k-bracket{background:color-mix(in srgb,#3d8bff 30%,transparent);box-shadow:inset 0 -2px 0 #3d8bff;border-radius:3px}
+.sds-pa .k-weight-neg{background:color-mix(in srgb,#9a9a9a 28%,transparent);text-decoration:line-through;text-decoration-color:#ff4d73;border-radius:3px}
+.sds-pa .k-piece{background:var(--rb-teal-soft);border-radius:3px}
+.sds-pa .k-random{background:var(--rb-warn-soft);border-radius:3px}
+.sds-pa .k-comment{color:var(--rb-mute);font-style:italic}
+.sds-pa .k-pipe{color:var(--rb-acc-text);font-weight:800}
+.sds-row{display:flex;gap:8px;align-items:center;min-width:0}
+.sds-row>*{min-width:0}
+.sds-sel,.sds-in{height:40px;border-radius:var(--rb-r2);border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-win);color:var(--rb-text);padding:0 12px;font:inherit;font-size:14px}
+.sds-sel:focus,.sds-in:focus{outline:none;border-color:var(--rb-acc);box-shadow:0 0 0 3px var(--rb-focus)}
+.sds-sel.acc{background:var(--rb-sel-bg);color:var(--rb-acc-text);font-weight:700;text-align:center}
+.sds-bar{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;border-radius:var(--rb-r2);border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-win);color:var(--rb-text);font:inherit;font-size:14px;font-weight:700;cursor:pointer;width:100%;text-align:left}
+.sds-bar>.t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sds-bar small{color:var(--rb-sub);font-weight:600}
+.sds-bar.fill{background:var(--rb-acc-soft);color:var(--rb-acc-text);border-color:transparent}
+@media (hover:hover){.sds-bar:hover{border-color:var(--rb-acc)}}
+.sds-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.sds-top{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-surf);flex-wrap:wrap;min-height:58px}
+.sds-top .ttl{display:flex;align-items:center;gap:8px;min-width:0}
+.sds-top .ttl b{font-size:17px;font-weight:800;white-space:nowrap}
+.sds-pill{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--rb-sel-bg);color:var(--rb-acc-text);font-size:12px;font-weight:800;white-space:nowrap}
+.sds-modes{flex:1;display:flex;justify-content:center;gap:4px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.sds-modes button{border:0;background:none;color:var(--rb-sub);font:inherit;font-size:14px;font-weight:700;padding:8px 14px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.sds-modes button[aria-selected=true]{color:var(--rb-text);border-bottom-color:var(--rb-acc)}
+.sds-modes button:disabled{opacity:.35;cursor:default}
+.sds-tools{display:flex;align-items:flex-end;gap:18px;padding:8px 16px 10px;border-bottom:var(--rb-bw,1px) solid var(--rb-line2);overflow-x:auto;scrollbar-width:thin;flex-shrink:0}
+.sds-tools .sp{flex:1}
+.sds-tools{align-items:center;gap:8px;overflow:visible;flex-wrap:wrap;position:relative;z-index:40}
+.sds-dd{position:relative}
+.sds-ddt{height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border-radius:var(--rb-r1);border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-surf2);color:var(--rb-text);font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.sds-ddt:disabled{opacity:.4;cursor:default}
+.sds-ddt.danger{color:var(--rb-danger)}
+.sds-ddt[aria-expanded=true]{border-color:var(--rb-acc);color:var(--rb-acc-text)}
+.sds-dd>.sds-ddt:not(:has(span)){width:34px;padding:0;justify-content:center}
+@media (hover:hover){.sds-ddt:not(:disabled):hover{border-color:var(--rb-acc);color:var(--rb-acc-text)}}
+.sds-ddp{position:absolute;top:calc(100% + 6px);left:0;z-index:30;min-width:240px;max-width:min(340px,90vw);padding:6px;border-radius:var(--rb-r2);border:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-win);box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:2px}
+.sds-ddp[hidden]{display:none}
+.sds-tools .sp~* .sds-ddp,.sds-tools .sp~.sds-dd .sds-ddp{left:auto;right:0}
+.sds-mi{display:flex;align-items:center;gap:10px;width:100%;min-height:34px;padding:6px 10px;border:0;border-radius:var(--rb-r1);background:none;color:var(--rb-text);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.sds-mi>span{flex:1;min-width:0}
+.sds-mi>small{color:var(--rb-sub);font-size:11.5px}
+.sds-mi:disabled{opacity:.4;cursor:default}
+.sds-mi.danger{color:var(--rb-danger)}
+.sds-mi.on>svg{color:var(--rb-acc-text)}
+@media (hover:hover){.sds-mi:not(:disabled):hover{background:var(--rb-surf2)}}
+.sds-mi.sds-zoom{cursor:default}
+.sds-mi.sds-zoom input{flex:1;min-width:80px}
+.sds-msep{height:1px;margin:4px 6px;background:var(--rb-line2)}
+.sds-ghead{grid-column:1/-1;margin-top:10px}
+.sds-selc{font-weight:800;font-size:13px;padding:0 6px}
+@media (max-width:600px){.sds-tools{flex-wrap:nowrap;gap:6px;padding:8px 10px}.sds-tools>.sds-dd>.sds-ddt>span,.sds-tools>.sds-dd>.sds-ddt>svg:last-child:not(:first-child),.sds-tools>.sds-ddt>span{display:none}.sds-tools>.sds-dd>.sds-ddt,.sds-tools>.sds-ddt{width:34px;padding:0;justify-content:center}.sds-tools .rb-btn{padding:0 10px}}
+.sds-setbar{display:flex;justify-content:flex-end;padding:6px 16px;border-bottom:var(--rb-bw,1px) solid var(--rb-line2);flex-shrink:0}
+.sds-sets{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.sds-zoom{display:flex;align-items:center;gap:8px}
+.sds-zoom input{width:120px;accent-color:var(--rb-acc)}
+.sds-zoom span{font-size:12px;color:var(--rb-sub);width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.sds-body{flex:1;min-height:0;overflow:auto;padding:16px 20px 28px;display:flex;flex-direction:column;gap:16px;position:relative}
+.sds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--sds-card,180px),1fr));gap:14px}
+.sds-card{position:relative;padding:0;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);overflow:hidden;background:var(--rb-surf2);cursor:pointer;aspect-ratio:2/3;width:100%;color:var(--rb-text);display:block;text-align:left}
+.sds-card>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.sds-card .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--rb-mute)}
+.sds-card .cap{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:6px;padding:20px 12px 9px;background:linear-gradient(transparent,rgba(0,0,0,.66));color:#fff;font-size:14px;font-weight:700}
+.sds-card .cap .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sds-card .cap .c{opacity:.9;font-variant-numeric:tabular-nums}
+.sds-card .cap .pk{height:20px;padding:0 7px;border-radius:999px;background:var(--rb-acc-grad);color:var(--rb-on-acc);font-size:11.5px;font-weight:800;display:inline-flex;align-items:center}
+.sds.nonames .sds-card .cap .n{visibility:hidden}
+.sds-card .rsv{position:absolute;top:8px;right:8px;height:22px;padding:0 8px;border-radius:999px;background:var(--rb-acc-grad);color:var(--rb-on-acc);font-size:12px;font-weight:800;display:flex;align-items:center}
+.sds-card .chk{position:absolute;top:8px;left:8px;width:24px;height:24px;border-radius:7px;background:var(--rb-win);border:1px solid var(--rb-line3);display:flex;align-items:center;justify-content:center;color:var(--rb-on-acc);opacity:0;transition:opacity .12s}
+.sds-card[aria-selected=true] .chk,.sds-card:focus-visible .chk{opacity:1}
+.sds-card[aria-selected=true]{border-color:var(--rb-acc);box-shadow:0 0 0 2px var(--rb-acc)}
+.sds-card[aria-selected=true] .chk{background:var(--rb-acc-grad);border:0}
+.sds-card .rsvbtn{position:absolute;top:8px;right:8px;z-index:2;height:24px;padding:0 9px;border-radius:999px;display:flex;align-items:center;gap:4px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.sds-card .favmark{position:absolute;top:38px;right:8px;z-index:2;height:22px;padding:0 8px;border-radius:999px;display:flex;align-items:center;gap:3px;background:#f5c518;color:#3a2a00;font-size:12px;font-weight:800;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.sds-card .favmark svg{fill:currentColor}
+.sds-card .rsvbtn.on{background:var(--rb-acc-grad);color:var(--rb-on-acc)}
+.sds-card .rsvbtn:hover{filter:brightness(1.15)}
+.sds-card .badges{position:absolute;top:8px;right:8px;display:flex;gap:4px}
+.sds-card .badge{height:22px;min-width:22px;padding:0 6px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:11.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.sds-card .quick{position:absolute;left:8px;right:8px;bottom:44px;display:flex;gap:6px;justify-content:flex-end;opacity:0;transition:opacity .12s}
+@media (hover:hover){.sds-card:hover .chk,.sds-card:hover .quick{opacity:1}.sds-card:hover{border-color:var(--rb-acc)}}
+.sds-card .quick button{height:26px;padding:0 9px;border-radius:999px;border:0;background:rgba(0,0,0,.6);color:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.sds-frow{border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r3);background:var(--rb-surf);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.sds-frow .hd{display:flex;align-items:center;gap:8px}
+.sds-frow .hd>button.open{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:none;border:0;padding:0;color:var(--rb-text);cursor:pointer;text-align:left;font:inherit}
+.sds-frow .strip{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.sds-frow .strip .sds-card{width:var(--sds-row,132px);flex-shrink:0}
+.sds-card.cur,.sds-frow.cur{border-color:var(--rb-acc);box-shadow:0 0 0 2px var(--rb-acc)}
+.sds-dragging .dragging{opacity:.45}
+.sds-card.drop-before::after,.sds-card.drop-after::after{content:"";position:absolute;top:0;bottom:0;width:6px;background:var(--rb-acc);z-index:3}
+.sds-card.drop-before::after{left:0}.sds-card.drop-after::after{right:0}
+.sds-frow.drop-into,.sds-grid.drop-into,.sds-rootdrop.drop-into,.sds-crumbs .rb-chip.drop-into,.sds-tray .rb-chip.drop-into{outline:2px solid var(--rb-acc);outline-offset:1px;background:var(--rb-sel-bg,var(--rb-surf2))}
+.sds-frow.drop-before{box-shadow:0 -4px 0 var(--rb-acc)}.sds-frow.drop-after{box-shadow:0 4px 0 var(--rb-acc)}
+.sds-frow{position:relative}
+[data-drop-hint]::before{content:attr(data-drop-hint);position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:5;padding:3px 10px;border-radius:999px;background:var(--rb-acc-grad);color:var(--rb-on-acc);font-size:12px;font-weight:800;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.sds-crumbs .rb-chip{position:relative}
+.sds-frow .sds-frow{background:var(--rb-surf2)}
+.sds-subrows{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.sds-subrows>.sds-frow{flex:1 1 auto;min-width:min(100%,260px);max-width:100%;box-sizing:border-box}
+.sds-toprows{gap:14px}
+.sds-frow.folded{padding-top:9px;padding-bottom:9px}
+.sds-subrows>.sds-frow.folded{flex:0 1 auto}
+.sds-subrows>.sds-frow .strip{max-width:100%}
+.sds-subf.drop-into{outline:2px solid var(--rb-acc);outline-offset:1px}
+.sds-rootdrop{display:none;border:2px dashed var(--rb-line3);border-radius:var(--rb-r3);padding:16px;text-align:center;color:var(--rb-sub);font-size:13px}
+.sds-dragging .sds-rootdrop{display:block}
+.sds-tray{display:none;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border:2px dashed var(--rb-line3);border-radius:var(--rb-r3);position:sticky;bottom:0;background:var(--rb-win);margin-top:6px}
+.sds-drag-scene .sds-tray{display:flex}
+.sds-prog{display:flex;align-items:center;gap:10px;min-width:220px;flex:1;max-width:520px}
+.sds-prog .bar{flex:1;height:8px;border-radius:999px;background:var(--rb-surf2);overflow:hidden;border:1px solid var(--rb-line2)}
+.sds-prog .bar i{display:block;height:100%;background:var(--rb-acc-grad);transition:width .3s}
+.sds-qerr{padding:8px 16px;background:color-mix(in srgb,var(--rb-danger) 16%,transparent);border-bottom:var(--rb-bw,1px) solid var(--rb-danger);color:var(--rb-text);font-size:13px;font-weight:700;line-height:1.45;white-space:normal;word-break:break-word;flex-shrink:0}
+.sds-qerr[hidden]{display:none}
+.sds-prog .t{font-size:12px;font-weight:700;color:var(--rb-sub);white-space:nowrap;font-variant-numeric:tabular-nums}
+.sds-pa{position:relative}
+.sds-ac{position:absolute;left:0;right:0;top:100%;margin-top:6px;z-index:40;background:var(--rb-surf);border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.35);padding:4px;max-height:280px;overflow:auto;scrollbar-width:thin}
+.sds-ac .it{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:center;column-gap:10px;padding:6px 10px;border-radius:8px;cursor:pointer;line-height:1.35}
+.sds-ac .it.on{background:var(--rb-sel-bg,var(--rb-surf2))}
+.sds-ac .it:hover:not(.on){background:var(--rb-surf2)}
+.sds-ac .it.dl{display:block;font-size:13px;color:var(--rb-acc-text,var(--rb-acc));font-weight:600;padding:9px 10px}
+.sds-ac .dot{width:8px;height:8px;border-radius:50%;background:var(--rb-mute)}
+.sds-ac .dot.c1{background:#e8a33d}.sds-ac .dot.c3{background:#b48cf2}.sds-ac .dot.c4{background:#4fc3a1}.sds-ac .dot.c5{background:#e06c75}
+.sds-ac .tx{min-width:0;display:flex;flex-direction:column}
+.sds-ac .w{font-size:13.5px;font-weight:600;color:var(--rb-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sds-ac .r{font-size:11.5px;color:var(--rb-sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sds-ac .f{font-size:11.5px;color:var(--rb-mute);font-variant-numeric:tabular-nums}
+.sds-ac .ft{display:flex;gap:10px;justify-content:flex-end;padding:5px 10px 3px;border-top:1px solid var(--rb-line2);margin-top:3px;font-size:11px;color:var(--rb-mute)}
+.sds-artlist{display:flex;flex-direction:column;gap:4px;max-height:52vh;overflow:auto;margin-top:8px}
+.sds-artlist .it{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px}
+.sds-artlist .it:hover{background:var(--rb-surf2)}
+.sds-artlist .w{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.sds-artlist small{margin-top:6px}
+.sds-crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sds-sec{display:flex;align-items:center;gap:8px;min-height:30px}
+.sds-sec b{font-size:14px}
+.sds-sec .sp{flex:1}
+.sds-empty{border:1px dashed var(--rb-line3);border-radius:var(--rb-r3);padding:32px 18px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center;color:var(--rb-sub)}
+.sds-empty b{color:var(--rb-text);font-size:15px}
+.sds-run{display:flex;align-items:center;gap:8px}
+.sds-queue{height:36px;padding:0 14px;border-radius:999px;border:0;font:inherit;font-weight:800;font-size:13.5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--rb-acc-grad);color:var(--rb-on-acc)}
+.sds-queue.stop{background:var(--rb-danger);color:#fff}
+.sds-queue:disabled{opacity:.45;cursor:default}
+.sds-slots{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;align-items:flex-start}
+.sds-slot{width:260px;flex-shrink:0;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);background:var(--rb-surf);padding:10px;display:flex;flex-direction:column;gap:8px}
+.sds-slot .hd{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--rb-sub)}
+.sds-piece{display:flex;gap:6px;align-items:flex-start}
+.sds-piece .sds-pa{flex:1}
+.sds-piece .sds-pa>textarea{min-height:44px}
+.sds-piece.off .sds-pa{opacity:.45}
+.sds-over{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;background:var(--rb-backdrop);backdrop-filter:blur(4px)}
+.sds-lb{flex:1;min-height:0;display:flex;background:var(--rb-win)}
+.sds-ch{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--rb-win)}
+.sds-ch .stage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;background:var(--rb-surf2)}
+.sds-ch .stage img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.sds-ch .nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:0;background:rgba(0,0,0,.45);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sds-ch-star{position:absolute;top:12px;right:14px;font-size:26px;color:#f5c542;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.sds-ch-strip{display:flex;gap:8px;padding:10px 12px;overflow-x:auto;overflow-y:hidden;border-top:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-surf);flex-shrink:0}
+.sds-ch-th{position:relative;flex:0 0 auto;width:84px;height:110px;padding:0;border:2px solid transparent;border-radius:var(--rb-r1);overflow:hidden;background:var(--rb-surf2);cursor:pointer}
+.sds-ch-th img{width:100%;height:100%;object-fit:cover;display:block}
+.sds-ch-th.on{border-color:var(--rb-acc)}
+.sds-ch-th .n{position:absolute;left:4px;bottom:3px;font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.sds-ch-th .f{position:absolute;right:4px;top:2px;font-size:14px;color:#f5c542;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.sds-ch-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-top:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-surf);flex-shrink:0}
+.sds-card .nofav{position:absolute;left:6px;bottom:30px;font-size:11px;font-weight:800;padding:1px 6px;border-radius:999px;background:var(--rb-danger);color:#fff}
+.sds-exp-list{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto}
+.sds-exp-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:var(--rb-r1);background:var(--rb-surf2);font-size:13px}
+.sds-exp-row img{width:40px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0}
+.sds-exp-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.sds-exp-row .st{font-size:11.5px;font-weight:800;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.sds-exp-row .st.new{background:var(--rb-acc);color:#fff}.sds-exp-row .st.dup{background:#d98a1f;color:#fff}.sds-exp-row .st.sent{background:var(--rb-line2);color:var(--rb-sub)}
+.sds-lb .stage{flex:1;min-width:0;position:relative;display:flex;align-items:center;justify-content:center;background:var(--rb-surf2)}
+.sds-lb .stage img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.sds-lb .nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:0;background:rgba(0,0,0,.45);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sds-lb .info{width:340px;flex-shrink:0;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px;border-left:var(--rb-bw,1px) solid var(--rb-line2);background:var(--rb-surf)}
+.sds-lb .info pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit;font-size:12.5px;color:var(--rb-sub);background:var(--rb-win);border-radius:var(--rb-r1);padding:8px 10px;max-height:180px;overflow:auto}
+.sds-acts{display:flex;flex-wrap:wrap;gap:6px}
+.sds-cup{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--rb-win)}
+.sds-cup .pair{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px}
+.sds-cup .pair button{border:2px solid var(--rb-line2);border-radius:var(--rb-r3);background:var(--rb-surf2);cursor:pointer;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:0}
+.sds-cup .pair button img{max-width:100%;max-height:100%;object-fit:contain}
+@media (hover:hover){.sds-cup .pair button:hover{border-color:var(--rb-acc)}}
+.sds-cmp{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));align-items:start}
+.sds-cmp figure{margin:0;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);overflow:hidden;background:var(--rb-surf2)}
+.sds-cmp figure img{width:100%;display:block}
+.sds-cmp figcaption{padding:6px 10px;font-size:12px;color:var(--rb-sub);display:flex;gap:8px;align-items:center}
+.sds-table{width:100%;border-collapse:collapse;font-size:13px}
+.sds-table th,.sds-table td{padding:6px 8px;border-bottom:1px solid var(--rb-line2);text-align:left;vertical-align:top}
+.sds-table th{color:var(--rb-sub);font-weight:700;font-size:12px}
+.sds-paint{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;background:var(--rb-surf2);overflow:auto}
+.sds-paint canvas{display:block;touch-action:none;max-width:100%;max-height:100%}
+@media (max-width:760px){
+  .sds{flex-direction:column}
+  .sds-rail{width:auto;height:auto;flex-direction:row;padding:6px 10px;border-right:0;border-bottom:var(--rb-bw,1px) solid var(--rb-line2)}
+  .sds-rail .tab{writing-mode:horizontal-tb;padding:4px 10px;letter-spacing:0}
+  .sds-left{width:auto;max-height:46%;border-right:0;border-bottom:var(--rb-bw,1px) solid var(--rb-line2)}
+  .sds-modes{justify-content:flex-start}
+  .sds-modes button{padding:8px 10px;font-size:13px}
+  .sds-top .ttl b{font-size:15px}
+  .sds-body{padding:12px}
+  .sds-lb{flex-direction:column}.sds-lb .info{width:auto;max-height:45%;border-left:0;border-top:var(--rb-bw,1px) solid var(--rb-line2)}
+  .sds-cup .pair{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+}
+@media (prefers-reduced-motion:reduce){.sds{animation:none}}
+`;function si(n=document){let e=n.getElementById("rb-sds-style");e?.textContent!==ri&&(e||(e=n.createElement("style"),e.id="rb-sds-style",n.head.appendChild(e)),e.textContent=ri)}var ai={calPlus:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M12 13v5M9.5 15.5h5"/>',calX:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M10 14l4 4M14 14l-4 4"/>',file:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 12v6M9 15h6"/>',copy:'<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',swap:'<path d="M4 8h14l-4-4M20 16H6l4 4"/>',trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',exportBot:'<path d="M4 4h10v16H4z"/><path d="M14 12h7M18 9l3 3-3 3"/>',exportAll:'<path d="M4 4h9v5H4zM4 11h9v9H4z"/><path d="M14 12h7M18 9l3 3-3 3"/>',zip:'<path d="M6 3h9l4 4v14H6z"/><path d="M10 3v2M10 7v2M10 11v2M9 15h2v3H9z"/>',expand:'<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/>',sortAsc:'<path d="M7 4v16M3 16l4 4 4-4M14 6h7M14 12h5M14 18h3"/>',sortDesc:'<path d="M7 20V4M3 8l4-4 4 4M14 6h3M14 12h5M14 18h7"/>',clip:'<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6"/>',film:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',importIn:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M12 11v7M9 15l3 3 3-3"/>',list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17h.01"/>',gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',copies:'<rect x="3" y="3" width="13" height="13" rx="2"/><path d="M8 21h11a2 2 0 0 0 2-2V8"/>',puzzle:'<path d="M10 3h4v3a2 2 0 1 0 4 0V3h3v7h-3a2 2 0 1 0 0 4h3v7h-7v-3a2 2 0 1 0-4 0v3H3v-7h3a2 2 0 1 0 0-4H3V3h7z"/>',warn:'<path d="M12 3 2 21h20zM12 10v5M12 18h.01"/>',save:'<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-6h8v6"/>',load:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M12 18v-7M9 14l3-3 3 3"/>',person:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/>',chevL:'<path d="M15 18l-6-6 6-6"/>',chevD:'<path d="M6 9l6 6 6-6"/>',chevR:'<path d="M9 18l6-6-6-6"/>',lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',trophy:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/>',star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/>',wand:'<path d="M15 4V2M15 10V8M11 6h2M17 6h2M4 20 14 10M18 13v2M17 14h2"/>',up2:'<path d="M7 17 17 7M9 7h8v8"/><rect x="3" y="3" width="18" height="18" rx="2"/>',brush:'<path d="M18 2l4 4-10 10-4-4zM8 12l-4 4a3 3 0 0 0 0 4c1 1 3 1 4 0l4-4"/>',play:'<path d="M7 4l13 8-13 8z"/>',stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',plus:'<path d="M12 5v14M5 12h14"/>',minus:'<path d="M5 12h14"/>',x:'<path d="M6 6l12 12M18 6 6 18"/>',back:'<path d="M15 18l-6-6 6-6"/>',folder:'<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',folderPlus:'<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM12 10v6M9 13h6"/>',check:'<path d="M5 12l5 5L20 7"/>',sparkle:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',download:'<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',upload:'<path d="M12 20V9"/><path d="m7 14 5-5 5 5"/><path d="M5 4h14"/>',edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',dice:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01"/>',layers:'<path d="m12 3 9 5-9 5-9-5zM3 13l9 5 9-5"/>',compare:'<rect x="3" y="4" width="8" height="16" rx="1.5"/><rect x="13" y="4" width="8" height="16" rx="1.5"/>',undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',redo:'<path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/>',sliders:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',keyboard:'<rect x="2" y="6" width="20" height="13" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 15h10"/>',template:'<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><path d="M17 13v8M13 17h8"/>',bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'},al=new Set(["play","stop","more"]);function sn(n,e=18){let t=ai[n]??ai.help;return So(`<svg xmlns="http://www.w3.org/2000/svg" width="${e}" height="${e}" viewBox="0 0 24 24" fill="${al.has(n)?"currentColor":"none"}" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${t}</svg>`)}var zt=null,oi=n=>{zt=n};function sl(n,e,t){let a=i("div",{class:"sds-ac",role:"listbox",hidden:!0});n.appendChild(a);let o=[],c=0,p=null,s=!1,w=()=>{a.hidden=!0,o=[]},x=z=>{let _=o[z];if(!_)return;let f=Ks(e.value,e.selectionStart,_.tag);e.value=f.text,e.setSelectionRange(f.caret,f.caret),w(),t()},m=()=>{a.replaceChildren(...o.map((z,_)=>i("div",{class:["it",_===c&&"on"],role:"option","aria-selected":String(_===c),title:Ds[z.cat]??"",onMousedown:f=>{f.preventDefault(),x(_)}},i("span",{class:`dot c${z.cat}`,"aria-hidden":"true"}),i("span",{class:"tx"},i("span",{class:"w"},z.tag),z.tag!==z.word?i("span",{class:"r"},z.word.includes("/")?z.word.split("/").join(" › "):z.word):null),i("span",{class:"f"},Yt(z.freq)))),i("div",{class:"ft","aria-hidden":"true"},i("span",null,"↑↓ 고르기"),i("span",null,"Enter·Tab 넣기"),i("span",null,"Esc 닫기"))),a.hidden=!o.length},k=()=>{a.replaceChildren(i("div",{class:"it dl",onMousedown:async z=>{if(z.preventDefault(),!s){s=!0,a.firstChild.textContent="태그 사전 받는 중… (약 2MB, 한 번만)";try{await zt.load(),s=!1,j()}catch(_){s=!1,a.firstChild.textContent=`${_?.message??_} — 설정에서 파일로 불러올 수 있어요`}}}},"태그 자동완성 쓰기 — 사전 받기(약 2MB, 처음 한 번)")),a.hidden=!1},j=()=>{if(!zt?.enabled?.())return w();let z=Zr(e.value,e.selectionStart);if(z.word.trim().length<2||e.selectionStart!==e.selectionEnd)return w();let _=zt.get();if(!_)return zt.offered?.()?w():k();o=Us(_,z.word,8),c=0,m()};e.addEventListener("input",()=>{clearTimeout(p),p=setTimeout(j,70)}),e.addEventListener("keydown",z=>{a.hidden||!o.length||(z.key==="ArrowDown"||z.key==="ArrowUp"?(z.preventDefault(),c=(c+(z.key==="ArrowDown"?1:-1)+o.length)%o.length,m()):(z.key==="Enter"||z.key==="Tab")&&!z.shiftKey&&!z.ctrlKey&&!z.metaKey?(z.preventDefault(),z.stopPropagation(),x(c)):z.key==="Escape"&&(z.preventDefault(),z.stopPropagation(),w()))}),e.addEventListener("blur",()=>setTimeout(w,120))}function Vn({value:n="",onInput:e,rows:t=4,placeholder:a="",id:o,label:c}){let p=i("pre",{"aria-hidden":"true"}),s=i("textarea",{rows:t,placeholder:a,id:o,spellcheck:"false","aria-label":c});s.value=n;let w=()=>{p.replaceChildren(...ho(s.value).map(m=>m.kind==="text"?document.createTextNode(m.text):i("span",{class:`k-${m.kind}`},m.text)),document.createTextNode(`
+`)),p.scrollTop=s.scrollTop};s.addEventListener("input",()=>{w(),e?.(s.value)}),s.addEventListener("scroll",()=>{p.scrollTop=s.scrollTop}),new(globalThis.ResizeObserver??class{observe(){}})(()=>{p.style.height=`${s.offsetHeight}px`}).observe(s),w();let x=i("div",{class:"sds-pa"},p,s);return x.textarea=s,sl(x,s,()=>{w(),e?.(s.value)}),x}var ii=n=>i("button",{type:"button",class:"sds-help",title:n,"aria-label":n,onClick:e=>e.preventDefault()},"?"),Bn=(n,e,t,{on:a=!1,danger:o=!1,id:c,disabled:p=!1}={})=>i("button",{type:"button",class:["sds-ib",a&&"on",o&&"danger"],title:e,"aria-label":e,id:c,disabled:p,onClick:t},sn(n,18)),We=(n,e,t)=>i("label",{class:"sds-lbl",for:t},n,e?ii(e):null);function li(n,e){let t=n.proj,a=t.settings,o=n.curChar(),c=(P,F=!1)=>{n.set(Ln(n.proj,P)),F&&n.paintLeft(),n.paintTop()},p=[];p.push(i("div",null,We("상위 프롬프트","모든 그림 맨 앞에 붙어요. | 를 넣으면 그 자리에 씬 조합이 들어가요. <모음.조각>으로 조각을 불러요.","sds-top"),Vn({id:"sds-top",value:a.top,rows:5,placeholder:"예: masterpiece, best quality, |, white background",label:"상위 프롬프트",onInput:P=>c({top:P})}))),o&&p.push(i("div",null,We(`${o.name} 외형 프롬프트`,"이 캐릭터의 생김새·복장. 상위 프롬프트 뒤에 붙어요.","sds-own"),Vn({id:"sds-own",value:o.prompt,rows:4,placeholder:"예: 1boy, cat ears, black hair, black hoodie",label:"외형 프롬프트",onInput:P=>{n.set(Jn(n.proj,o.id,{prompt:P}))}}))),p.push(i("div",null,We("하위 프롬프트","씬 조합 뒤, 맨 끝에 붙어요.","sds-back"),Vn({id:"sds-back",value:a.back,rows:4,placeholder:"예: 2::white background::, cat tail",label:"하위 프롬프트",onInput:P=>c({back:P})}))),p.push(i("div",null,We("네거티브 프롬프트","피할 것. 샘플링 설정의 네거티브 프리셋이 앞에 붙어요.","sds-neg"),Vn({id:"sds-neg",value:a.neg,rows:4,placeholder:"예: text, logo, watermark",label:"네거티브 프롬프트",onInput:P=>c({neg:P})})));let s=i("input",{class:"sds-in",id:"sds-seed",inputmode:"numeric",placeholder:"비우면 랜덤",value:a.seed.value?String(a.seed.value):"",style:"flex:1",onChange:P=>{let F=Math.max(0,Math.floor(Number(P.target.value)||0))>>>0;c({seed:{...n.proj.settings.seed,value:F,mode:F&&n.proj.settings.seed.mode==="random"?"fixed":n.proj.settings.seed.mode}},!0)}}),w=i("label",{title:"시드 잠금(고정)",style:"display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--rb-sub)"},sn("lock",14),i("input",{type:"checkbox",id:"sds-seedlock",checked:a.seed.mode!=="random",onChange:P=>c({seed:{...n.proj.settings.seed,mode:P.target.checked?"fixed":"random"}},!0)})),x=i("select",{class:"sds-sel acc",id:"sds-seedmode",style:"flex:1",onChange:P=>c({seed:{...n.proj.settings.seed,mode:P.target.value}},!0)},...[["random","완전 랜덤"],["fixed","시드 고정"],["chain","장마다 이어서"]].map(([P,F])=>i("option",{value:P,selected:a.seed.mode===P},F)));p.push(i("div",null,We("시드"),i("div",{class:"sds-row"},s,w,x)));let m=a.size,k=_e(m,n.curScene()),j=i("select",{class:"sds-sel",id:"sds-size",style:"flex:1",onChange:P=>{let F=P.target.value,R=_n[F];c({size:{...n.proj.settings.size,mode:F,...R?{w:R.width,h:R.height}:{}}},!0)}},i("option",{value:"scene",selected:m.mode==="scene"},"각 씬의 설정대로"),...Object.entries(_n).map(([P,F])=>i("option",{value:P,selected:m.mode===P},`${F.label} ${F.width}×${F.height}${ot(F.width,F.height)?"":" · Anlas"}`)),i("option",{value:"custom",selected:m.mode==="custom"},"직접 입력")),z=(P,F)=>i("input",{class:"sds-in",inputmode:"numeric",value:String(F),style:"width:76px;text-align:center",disabled:m.mode!=="custom","aria-label":P==="w"?"가로":"세로",onChange:R=>{let E=we(P==="w"?R.target.value:n.proj.settings.size.w,P==="h"?R.target.value:n.proj.settings.size.h);c({size:{...n.proj.settings.size,w:E.width,h:E.height}},!0)}});p.push(i("div",null,We("이미지 사이즈","‘각 씬의 설정대로’면 씬마다 정한 크기(없으면 세로)로 만들어요. 1024×1024를 넘거나 스텝이 28을 넘으면 Anlas가 들어요."),i("div",{class:"sds-row"},j,z("w",k.width),i("span",{style:"color:var(--rb-sub)"},"×"),z("h",k.height))));let _=Nn(a.sampling.model),f=a.chars.filter(P=>P.on&&P.prompt.trim()).length;p.push(i("div",{class:"sds-row"},i("button",{type:"button",class:"sds-bar",id:"sds-chars",onClick:()=>n.dlg.charPrompts()},i("span",{class:"t"},"캐릭터 프롬프트"),i("small",null,f?`${f}명`:"")),Bn("person","캐릭터 프롬프트 편집",()=>n.dlg.charPrompts()),Bn("puzzle","조각 모음",()=>n.dlg.pieces()))),p.push(i("button",{type:"button",class:"sds-bar",id:"sds-sampling",onClick:()=>n.dlg.sampling()},i("span",{class:"t"},"샘플링/모델 설정"),i("small",null,`${_.label} · ${a.sampling.steps}스텝`),sn("chevR",16)));let $=a.vibes.filter(P=>P.on).length;p.push(i("button",{type:"button",class:"sds-bar fill",id:"sds-vibe",disabled:!1,onClick:()=>n.dlg.vibes()},i("span",{class:"t"},"바이브 이미지"),i("small",null,_.vibe?a.vibes.length?`${$}/${a.vibes.length} 켜짐`:"":"V5는 못 써요")));let b=a.refs.filter(P=>P.on).length;p.push(i("div",{class:"sds-row",style:"gap:10px"},i("span",{style:"font-size:13px;font-weight:800;white-space:nowrap"},"레퍼런스 설정: ",i("span",{style:"color:var(--rb-acc-text)"},`(${b}/2 활성화)`)),i("span",{class:"sds-in",style:"flex:1;display:flex;align-items:center;color:var(--rb-sub);font-size:13px;overflow:hidden;white-space:nowrap"},b?a.refs.filter(P=>P.on).map(P=>({character:"캐릭터",style:"그림체","character&style":"캐릭터+그림체"})[P.type]).join(", "):_.reference?"활성화된 이미지 없음":"V5는 못 써요"),i("button",{type:"button",class:"rb-btn primary sm",id:"sds-ref",onClick:()=>n.dlg.refs()},"편집"))),wn(e,...p)}function ci(n){return[i("div",{class:"sds-left-head"},i("b",null,"프롬프트 에디터"),ii(`이 봇(모듈)의 그림 설정이에요. 바뀐 내용은 바로 저장되고 ${n.keyLabel("undo")}로 되돌려요.`),i("span",{style:"flex:1"}),i("button",{type:"button",class:"sds-ib",title:"접기","aria-label":"프롬프트 에디터 접기",style:"border:0;background:none",onClick:()=>n.toggleLeft(!1)},sn("chevL",18))),i("div",{class:"sds-groups"},i("div",{class:"sds-group"},i("small",null,"도구"),i("div",null,Bn("puzzle","조각 모음",()=>n.dlg.pieces(),{id:"sds-pieces"}),Bn("warn","문제 확인(없는 조각·빈 프롬프트·Anlas)",()=>n.dlg.check(),{id:"sds-check"}),Bn("brush","작가 태그 고르기(그림체)",()=>n.dlg.artists(),{id:"sds-artists"}))),i("div",{class:"sds-group"},i("small",null,"프리셋"),i("div",null,Bn("save","지금 설정을 프리셋으로 저장",()=>n.dlg.savePreset(),{on:!0,id:"sds-psave"}),Bn("load","프리셋 불러오기",e=>n.dlg.loadPreset(e.currentTarget),{id:"sds-pload"}))))]}function Ee(n,{label:e,onChange:t,disabled:a}={}){let o=Gt(n,{label:e,disabled:a,onChange:(c,p)=>{Wt(p,c),t?.(c,p)}});return i("label",{class:"sds-sw",style:"display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600"},o,e?i("span",null,e):null)}var En=(n,e,...t)=>i("div",{class:"rb-dialog",role:"dialog","aria-modal":"true","aria-label":n,style:`max-width:${e??520}px;max-height:calc(100vh - 32px);overflow:auto`},i("h3",{class:"rb-h3"},n),...t),Mt=n=>{for(let e of n.children)e.style.flexShrink="0";return n},Cn=(n,...e)=>i("div",{style:"display:flex;flex-direction:column;gap:6px"},i("span",{class:"rb-label"},n),...e),_r=(n,{min:e,max:t,step:a=1,id:o,onChange:c})=>{let p=i("input",{type:"number",class:"rb-input",value:String(n),min:e,max:t,step:a,id:o,style:"width:110px"});return p.addEventListener("change",()=>c(Number(p.value))),p},St=(n,e,t,a)=>i("select",{class:"rb-input",id:a,onChange:o=>t(o.target.value)},...n.map(([o,c])=>i("option",{value:o,selected:o===e},c)));function di(n){let e=n.ctx.win,t=M=>{n.set(Ln(n.proj,{sampling:De({...n.proj.settings.sampling,...M})})),n.paintLeft()},a=(M,S,q,L)=>i("div",{style:"display:flex;flex-direction:column;gap:3px"},Ee(M,{label:S,onChange:L}),i("span",{class:"rb-muted",style:"font-size:12px;white-space:normal;line-height:1.5"},q));async function o(){let M=i("div",{style:"display:flex;flex-direction:column;gap:14px"}),S=()=>{let q=n.proj.settings.sampling,L=Nn(q.model),T=ot(832,1216,q.steps);wn(M,Cn("모델",St(er.map(A=>[A.id,A.label]),q.model,A=>{t({model:A}),S()},"sds-model")),Cn("샘플러",L.fixed?i("span",{class:"rb-muted"},`${aa[L.fixed.sampler]} (이 모델은 고정)`):St(L.samplers.map(A=>[A,aa[A]]),q.sampler,A=>{t({sampler:A}),S()},"sds-sampler")),i("div",{style:"display:flex;gap:14px;flex-wrap:wrap"},Cn("스텝",L.fixed?i("span",{class:"rb-muted"},`${L.fixed.steps} (고정)`):_r(q.steps,{min:1,max:L.maxSteps??50,id:"sds-steps",onChange:A=>{t({steps:A}),S()}})),Cn("프롬프트 가이던스",_r(q.scale,{min:0,max:L.maxScale??10,step:.1,id:"sds-scale",onChange:A=>t({scale:A})})),L.noCfgRescale?null:Cn("CFG 리스케일",_r(q.cfgRescale,{min:0,max:1,step:.02,onChange:A=>t({cfgRescale:A})}))),T?i("span",{class:"rb-muted",style:"white-space:normal"},"28스텝 이하·1024×1024 이하면 Opus 무료예요."):i("span",{style:"color:var(--rb-warn);font-size:13px;white-space:normal"},"28스텝을 넘으면 Anlas가 들어요."),Cn("노이즈 스케줄",L.v5?i("span",{class:"rb-muted"},"karras (V5는 고정)"):St(sa.map(A=>[A,A]),q.noise,A=>t({noise:A}))),Cn("품질 태그",L.v5?Tn(Object.entries(oa),q.quality,A=>t({quality:A}),"품질 태그"):Tn([["standard","켬"],["none","끔"]],q.quality==="none"?"none":"standard",A=>t({quality:A}),"품질 태그")),Cn("네거티브 프리셋",St(la(q.model).map(A=>[A,Qs[A]]),q.ucPreset,A=>{t({ucPreset:A}),S()},"sds-ucpreset"),it(q.model,q.ucPreset)?i("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},it(q.model,q.ucPreset)):null),L.varietyPlus?a(q.varietyPlus,"Variety+ (구도 다양하게)","초반 단계의 가이던스를 줄여서 같은 프롬프트도 구도·표정이 더 다양하게 나와요. 결과가 너무 비슷할 때 켜요.",A=>t({varietyPlus:A})):null,L.transparent?a(q.transparent,"투명 배경","배경을 투명하게 그려 달라고 요청하고 ‘transparent background’ 태그를 붙여요. 누끼가 필요한 에셋에 써요.",A=>t({transparent:A})):null,a(q.useCoords,"캐릭터 위치 쓰기","캐릭터 프롬프트에서 정한 자리(가운데·왼쪽·오른쪽…)를 모델에 알려요. 끄면 자리는 모델이 알아서 정해요. 캐릭터 프롬프트를 쓸 때만 뜻이 있어요.",A=>t({useCoords:A})),L.v5&&!L.vibe?null:i("details",{style:"border:1px solid var(--rb-line2);border-radius:var(--rb-r2);padding:8px 12px"},i("summary",{style:"cursor:pointer;font-weight:700;font-size:13px"},"고급 (거의 안 건드려요)"),i("div",{style:"display:flex;flex-direction:column;gap:12px;margin-top:10px"},L.v5?null:a(q.legacyUc,"옛 네거티브 방식(legacy UC)","네거티브 프롬프트를 예전 방식으로 처리해요. 예전에 그린 그림을 똑같이 다시 뽑고 싶을 때만 켜요.",A=>t({legacyUc:A})),L.vibe?a(q.normalizeVibes,"바이브 세기 합을 1로 맞추기","바이브를 여러 장 쓸 때 세기를 합이 1이 되게 나눠요. 끄면 각 바이브의 세기가 그대로 들어가요.",A=>t({normalizeVibes:A})):null))),Mt(M)};S(),await Pn(e,q=>En("샘플링/모델 설정",520,M,i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>q(!0)})))),n.paintLeft()}async function c(){let M=i("div",{style:"display:flex;flex-direction:column;gap:12px"}),S=L=>{n.set(Ln(n.proj,{chars:L}))},q=()=>{let L=n.proj.settings,T=Nn(L.sampling.model),A=L.chars;wn(M,i("span",{class:"rb-muted",style:"white-space:normal"},"한 그림에 여러 인물을 그릴 때 인물마다 프롬프트를 따로 적어요(NAI 캐릭터 프롬프트). 위치를 쓰려면 샘플링 설정에서 ‘캐릭터 위치 쓰기’를 켜요."),...A.map((J,H)=>{let N=U=>S(n.proj.settings.chars.map((Q,fn)=>fn===H?{...Q,...U}:Q)),D=L.sampling.useCoords?St([.1,.3,.5,.7,.9].flatMap(U=>[.1,.3,.5,.7,.9].map(Q=>[`${Q},${U}`,`${"ABCDE"[Math.round((Q-.1)/.2)]}${Math.round((U-.1)/.2)+1}`])),`${J.x},${J.y}`,U=>{let[Q,fn]=U.split(",").map(Number);N({x:Q,y:fn})}):null;return i("div",{class:"rb-card",style:"padding:12px;display:flex;flex-direction:column;gap:8px;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2)"},i("div",{style:"display:flex;align-items:center;gap:8px"},i("b",{style:"flex:1"},`캐릭터 ${H+1}`),D,Ee(J.on,{label:"켜기",onChange:U=>N({on:U})}),B("",{size:"sm",kind:"ghost",icon:"trash",title:"지우기",onClick:()=>{S(n.proj.settings.chars.filter((U,Q)=>Q!==H)),q()}})),Vn({value:J.prompt,rows:3,placeholder:"예: girl, cat ears, black hoodie",label:`캐릭터 ${H+1} 프롬프트`,onInput:U=>N({prompt:U})}),i("input",{class:"rb-input",value:J.uc,placeholder:"이 인물 네거티브(선택)",onChange:U=>N({uc:U.target.value})}))}),B("캐릭터 더하기",{icon:"plus",id:"sds-char-add",disabled:A.length>=(T.maxChars??6),onClick:()=>{S([...n.proj.settings.chars,{id:Math.random().toString(36).slice(2,10),prompt:"",uc:"",x:.5,y:.5,on:!0}]),q()}})),Mt(M)};q(),await Pn(e,L=>En("캐릭터 프롬프트",560,M,i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>L(!0)})))),n.paintLeft()}async function p(){let M=0,S=i("div",{style:"display:flex;flex-direction:column;gap:6px;min-width:150px"}),q=i("div",{style:"flex:1;min-width:0;display:flex;flex-direction:column;gap:10px"}),L=H=>String(H??"").replace(/[.<>,]/g,"").replace(/\s+/g," ").trim().slice(0,40),T=H=>n.set({...n.proj,pieces:H}),A=()=>{let H=n.proj.pieces;M>=H.length&&(M=Math.max(0,H.length-1)),wn(S,...H.map((U,Q)=>i("button",{type:"button",class:"rb-chip","aria-pressed":Q===M?"true":"false",onClick:()=>{M=Q,A()}},`${U.name} ${U.pieces.length}`)),B("모음 더하기",{size:"sm",icon:"plus",id:"sds-lib-add",onClick:async()=>{let U=L(await Xn(e,{title:"조각 모음 이름",label:"이름(점·꺾쇠·쉼표·띄어쓰기 없이)",placeholder:"예: 옷"}));!U||H.some(Q=>Q.name===U)||(T([...n.proj.pieces,{name:U,pieces:[]}]),M=n.proj.pieces.length-1,A())}}),B("파일에서 가져오기",{size:"sm",icon:"upload",id:"sds-lib-import",title:"SDStudio 조각 모음 .json(한 모음·전역 조각 백업·프로젝트) 또는 와일드카드 .txt",onClick:()=>J()}));let N=H[M];if(!N){wn(q,i("span",{class:"rb-muted",style:"white-space:normal"},"조각은 자주 쓰는 프롬프트 묶음이에요. 프롬프트에 <모음.조각>으로 넣으면 펼쳐져요. ‘여러 줄’ 조각은 줄 하나를 무작위로 골라요."));return}let D=U=>T(n.proj.pieces.map((Q,fn)=>fn===M?{...Q,...U}:Q));wn(q,i("div",{style:"display:flex;gap:8px;align-items:center"},i("b",{style:"flex:1"},`<${N.name}.…>`),B("이름 바꾸기",{size:"sm",kind:"ghost",icon:"edit",id:"sds-lib-rename",title:"프롬프트 속 <옛 이름.조각>도 함께 바뀌어요",onClick:async()=>{let U=L(await Xn(e,{title:"조각 모음 이름",label:"새 이름(점·꺾쇠·쉼표·띄어쓰기 없이)",value:N.name}));if(!(!U||U===N.name)){try{n.set(_a(n.proj,N.name,U)),n.paintLeft(),n.toast(`‘${U}’으로 바꿨어요. 프롬프트의 <${N.name}.…>도 고쳤어요`)}catch(Q){n.toast(Q?.message??String(Q),{error:!0})}A()}}}),B("내보내기",{size:"sm",kind:"ghost",icon:"download",title:"SDStudio에서도 읽는 .json",onClick:()=>ze(`${N.name}.json`,qo(N),"application/json")}),B("모음 지우기",{size:"sm",kind:"danger",onClick:async()=>{await zn(e,{title:`‘${N.name}’ 모음을 지울까요?`,body:"이 모음을 부르는 프롬프트는 오류가 나요.",ok:"지우기",danger:!0})&&(T(n.proj.pieces.filter((U,Q)=>Q!==M)),A())}})),...N.pieces.map((U,Q)=>{let fn=en=>D({pieces:n.proj.pieces[M].pieces.map((kn,Mn)=>Mn===Q?{...kn,...en}:kn)});return i("div",{style:"display:flex;flex-direction:column;gap:6px;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);padding:10px"},i("div",{style:"display:flex;gap:8px;align-items:center"},i("input",{class:"rb-input",value:U.name,style:"flex:1","aria-label":"조각 이름",onChange:en=>{let kn=L(en.target.value);kn&&fn({name:kn}),A()}}),Ee(U.multi,{label:"여러 줄",onChange:en=>fn({multi:en})}),B("",{size:"sm",kind:"ghost",icon:"trash",title:"조각 지우기",onClick:()=>{D({pieces:n.proj.pieces[M].pieces.filter((en,kn)=>kn!==Q)}),A()}})),Vn({value:U.prompt,rows:3,label:`조각 ${U.name}`,onInput:en=>fn({prompt:en})}))}),B("조각 더하기",{icon:"plus",id:"sds-piece-add",onClick:()=>{let U="조각";for(let Q=2;N.pieces.some(fn=>fn.name===U);Q++)U=`조각${Q}`;D({pieces:[...N.pieces,{name:U,prompt:"",multi:!1}]}),A()}})),Mt(q)};async function J(){let H=await ee({accept:".json,.txt,application/json,text/plain",multiple:!0});for(let N of H??[])try{let D=vt(N.name,await N.text());if(D.libs){let U=xt(n.proj.pieces,D.libs);n.set({...n.proj,pieces:U.pieces}),M=n.proj.pieces.length-1,n.toast(`조각 모음 ${U.names.join(", ")}을 가져왔어요`)}else{let U=n.proj.pieces[M]?.name,Q=yr(n.proj.pieces,D.wild,U||"wildcards");n.set({...n.proj,pieces:Q.pieces}),M=n.proj.pieces.findIndex(fn=>fn.name===Q.group),n.toast(`<${Q.group}.${Q.name}> 조각으로 가져왔어요`)}}catch(D){n.toast(`${N.name}: ${D?.message??D}`,{error:!0})}A()}A(),await Pn(e,H=>En("조각 모음",760,i("div",{style:"display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start"},S,q),i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>H(!0)})))),n.paintLeft()}async function s(){let[M]=await ee({accept:"image/png,image/jpeg,image/webp"});if(!M)return null;let S=new Uint8Array(await M.arrayBuffer()),q=await n.sd.saveAsset(S);return n.remember(q,S),q}async function w(){let M=i("div",{style:"display:flex;flex-direction:column;gap:12px"}),S=L=>n.set(Ln(n.proj,{vibes:L})),q=()=>{let L=n.proj.settings,T=Nn(L.sampling.model);wn(M,T.vibe?i("span",{class:"rb-muted",style:"white-space:normal"},"그림의 분위기·그림체를 따라 그려요. 처음 쓰는 그림(또는 정보량을 바꾼 그림)은 NovelAI가 한 번 분석해요(Anlas 2)."):i("div",{class:"rb-note warn",style:"white-space:normal"},"V5 모델은 바이브를 쓸 수 없어요. 샘플링/모델 설정에서 V4.5·V4를 고르면 켜져요."),i("div",{style:"display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px"},...L.vibes.map((A,J)=>{let H=N=>S(n.proj.settings.vibes.map((D,U)=>U===J?{...D,...N}:D));return i("div",{style:"display:flex;flex-direction:column;gap:6px;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);padding:8px"},i("div",{class:"sds-card",style:"aspect-ratio:1/1;cursor:default"},n.thumb(A.path,{now:!0})),Ee(A.on,{label:"켜기",onChange:N=>H({on:N})}),i("label",{class:"rb-muted",style:"font-size:12px"},`세기 ${A.strength.toFixed(2)}`),i("input",{type:"range",min:0,max:1,step:.01,value:A.strength,onChange:N=>{H({strength:Number(N.target.value)}),q()}}),i("label",{class:"rb-muted",style:"font-size:12px"},`정보량 ${A.info.toFixed(2)}`),i("input",{type:"range",min:.01,max:1,step:.01,value:A.info,onChange:N=>{H({info:Number(N.target.value),enc:null}),q()}}),B("빼기",{size:"sm",kind:"ghost",icon:"trash",onClick:()=>{S(n.proj.settings.vibes.filter((N,D)=>D!==J)),q()}}))})),B("그림 더하기",{icon:"plus",id:"sds-vibe-add",onClick:async()=>{try{let A=await s();A&&(S([...n.proj.settings.vibes,{id:Math.random().toString(36).slice(2,10),path:A,strength:.6,info:1,on:!0,enc:null}]),q())}catch(A){n.toast(A?.message??String(A),{error:!0})}}})),Mt(M)};q(),await Pn(e,L=>En("바이브 이미지",640,M,i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>L(!0)})))),n.paintLeft()}async function x(){let M=i("div",{style:"display:flex;flex-direction:column;gap:12px"}),S=L=>n.set(Ln(n.proj,{refs:L})),q=()=>{let L=n.proj.settings,T=Nn(L.sampling.model);wn(M,T.reference?i("span",{class:"rb-muted",style:"white-space:normal"},"고른 그림의 캐릭터·그림체를 따라 그려요(캐릭터 레퍼런스, 최대 2장). 장당 Anlas가 들 수 있어요."):i("div",{class:"rb-note warn",style:"white-space:normal"},"V5 모델은 레퍼런스를 쓸 수 없어요. V4.5를 골라 주세요."),...L.refs.map((A,J)=>{let H=N=>S(n.proj.settings.refs.map((D,U)=>U===J?{...D,...N}:D));return i("div",{style:"display:flex;gap:12px;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);padding:10px;align-items:flex-start"},i("div",{class:"sds-card",style:"width:110px;cursor:default;flex-shrink:0"},n.thumb(A.path,{now:!0})),i("div",{style:"flex:1;display:flex;flex-direction:column;gap:8px"},Tn([["character","캐릭터"],["style","그림체"],["character&style","둘 다"]],A.type,N=>H({type:N}),"레퍼런스 종류"),i("label",{class:"rb-muted",style:"font-size:12px"},`세기 ${A.strength.toFixed(2)}`),i("input",{type:"range",min:0,max:1,step:.01,value:A.strength,onChange:N=>{H({strength:Number(N.target.value)}),q()}}),i("label",{class:"rb-muted",style:"font-size:12px"},`충실도 ${A.fidelity.toFixed(2)}`),i("input",{type:"range",min:0,max:1,step:.01,value:A.fidelity,onChange:N=>{H({fidelity:Number(N.target.value)}),q()}}),i("div",{style:"display:flex;gap:8px"},Ee(A.on,{label:"켜기",onChange:N=>H({on:N})}),B("빼기",{size:"sm",kind:"ghost",icon:"trash",onClick:()=>{S(n.proj.settings.refs.filter((N,D)=>D!==J)),q()}}))))}),B("그림 더하기",{icon:"plus",id:"sds-ref-add",disabled:L.refs.length>=2,onClick:async()=>{try{let A=await s();A&&(S([...n.proj.settings.refs,{id:Math.random().toString(36).slice(2,10),path:A,strength:.6,fidelity:1,type:"character&style",on:!0}]),q())}catch(A){n.toast(A?.message??String(A),{error:!0})}}})),Mt(M)};q(),await Pn(e,L=>En("레퍼런스 설정",560,M,i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>L(!0)})))),n.paintLeft()}let m=["top","back","neg","sampling","size","seed","chars"];async function k(){let M=await Xn(e,{title:"프리셋 저장",label:"이름",placeholder:"예: 하얀 배경 고양이 화풍"});if(!M?.trim())return;let S=(await n.sd.loadPresets()).filter(L=>L.name!==M.trim()),q=n.proj.settings;await n.sd.savePresets([...S,{name:M.trim(),at:Date.now(),settings:Object.fromEntries(m.map(L=>[L,structuredClone(q[L])]))}]),n.toast(`프리셋 ‘${M.trim()}’을 저장했어요`)}async function j(M){let S=await n.sd.loadPresets();if(!S.length){n.toast("저장한 프리셋이 없어요. 왼쪽 위 저장 버튼으로 만들어요.");return}In(e,M,[...S.map(q=>({label:q.name,icon:"preset",onClick:async()=>{await zn(e,{title:`‘${q.name}’을 불러올까요?`,body:"상위·하위·네거티브 프롬프트와 시드·크기·샘플링·캐릭터 프롬프트가 바뀌어요. 캐릭터·씬·그림은 그대로예요.",ok:"불러오기"})&&(n.set(Zn({...n.proj,settings:{...n.proj.settings,...q.settings}})),n.paint(),n.toast(`‘${q.name}’을 불러왔어요`))}})),"sep",{label:"프리셋 지우기…",icon:"trash",danger:!0,onClick:async()=>{let q=await Xn(e,{title:"지울 프리셋 이름",label:`있는 것: ${S.map(L=>L.name).join(", ")}`});q&&(await n.sd.savePresets(S.filter(L=>L.name!==q.trim())),n.toast("지웠어요"))}}])}async function z(){let M=[],S=n.proj,q=S.settings;await n.sd.getToken()||M.push(["warn","NovelAI 토큰이 없어요. 설정(톱니)에서 넣어요."]);for(let T of S.chars)for(let A of T.scenes){if(!Yn(A.slots)){M.push(["warn",`${T.name} › ${A.name}: 켜진 조각이 없는 슬롯이 있어 그릴 수 없어요.`]);continue}try{let J=Te({top:q.top,own:ve(S,T),middle:Pe(A,0),back:q.back},S.pieces);te(J).length||M.push(["warn",`${T.name} › ${A.name}: 프롬프트가 비었어요.`])}catch(J){M.push(["err",`${T.name} › ${A.name}: ${J.message}`])}}try{ct(q.neg,S.pieces)}catch(T){M.push(["err",`네거티브: ${T.message}`])}let L=S.chars.flatMap(T=>T.scenes.map(A=>[T,A,_e(q.size,A)])).filter(([,,T])=>!ot(T.width,T.height,q.sampling.steps));L.length&&M.push(["info",`Anlas가 드는 크기·스텝인 씬 ${L.length}개(1024×1024·28스텝 넘음).`]),await Pn(e,T=>En("문제 확인",560,M.length?i("div",{style:"display:flex;flex-direction:column;gap:6px"},...M.map(([A,J])=>i("div",{class:`rb-note ${A}`,style:"white-space:normal"},J))):i("div",{class:"rb-note info"},"문제가 없어요."),i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>T(!0)}))))}async function _(){let M=(S,...q)=>i("div",null,i("b",null,S),...q.map(L=>i("p",{style:"margin:4px 0 0;white-space:normal;color:var(--rb-sub)"},L)));await Pn(e,S=>En("에셋 제작 도움말",620,M("흐름","캐릭터 카드를 만들고 → 캐릭터를 열어 씬(표정·포즈)을 만들고 → 씬마다 예약하고 → 위 ‘생성’을 누르면 차례로 그려요. 고른 그림을 봇의 감정 이미지·추가 에셋(모듈은 모듈 에셋)으로 넣어요."),M("프롬프트","최종 = 상위 + 외형 + 씬 조합 + 하위. 상위에 | 를 넣으면 그 자리에 씬 조합이 들어가요. ##주석##은 지워지고, {a|b}는 하나를 골라요. <모음.조각>은 조각 모음에서 펼쳐요."),M("씬 조합","씬은 슬롯(열) 여러 개로 되어 있고 슬롯마다 켜진 조각 하나씩 골라 조합해요. 예약 1장 = 조합 전부를 한 장씩."),M("모드","씬 모드: 카드로 보기 · 갤러리 모드: 모든 그림 · 검색 모드: 이름·프롬프트 찾기 · 비교 모드: 그림 여러 장 나란히 · 동시편집: 여러 씬 프롬프트를 한 번에."),M("그림","그림을 누르면 크게 보고, 즐겨찾기·대표·변형·인페인트·업스케일·디렉터 도구(배경 지우기 등)를 써요. 이미지 월드컵으로 순위를 매기면 1위가 대표가 돼요."),M("폴더","캐릭터·소속으로 캐릭터를 묶어요. 폴더 안에 폴더, 한 캐릭터를 여러 폴더에 넣을 수 있어요. 카드를 고른 뒤 ‘폴더에 넣기’나 카드 메뉴로 넣어요."),M("보낼 그림 고르기·바로 넣기",`그림 카드 왼쪽 위 체크(또는 ${$t()?"⌘":"Ctrl"}+클릭)로 보낼 그림을 골라요. 고른 것은 씬을 옮기거나 다시 열어도 남고, 씬 카드에 ✓수로 보여요. ‘고른 그림 바로 넣기’(${n.keyLabel("put")})를 누르면 고른 그림만 씬 이름으로 봇에 들어가요. 자리·형식(WebP·AVIF)·같은 이름 처리는 설정에서, 알림의 ‘되돌리기’로 바로 취소해요.`),M("템플릿","씬 구성을 템플릿으로 저장하고 다른 캐릭터에 적용해요. SDStudio 씬 템플릿 파일(.json)도 가져와요. 맨 위에서 적용하면 모든 캐릭터, 폴더 안에서는 그 폴더의 캐릭터, 캐릭터 안에서는 그 캐릭터에 들어가요. 씬이 이미 있으면 합칠지 바꿀지 골라요."),M("되돌리기·단축키",`${n.keyLabel("undo")} 되돌리기, ${n.keyLabel("redo")} 다시하기(봇에 넣은 것은 알림의 되돌리기로). 단축키는 설정 → 단축키 설정에서 바꿔요. 맥은 ⌘ 기준이에요.`),M("부스트 모드","설정에서 켜고 토큰을 여러 개 넣으면 동시에 그려요. 한 기기에서 여러 계정을 쓰면 NovelAI 제재 대상이 될 수 있어요."),M("씬 세트(SFW·NSFW·+)","도구 줄 ‘보기’ 아래 버튼으로 세트를 바꿔요. 폴더 구조는 모든 세트가 함께 쓰고, 캐릭터 카드·그림은 세트마다 따로예요. 세트마다 씬 프리셋(저장된 씬 템플릿, 리스 전체에서 공유)을 정해 두면 새 캐릭터가 그 씬으로 시작해요. 봇 데이터는 넣기 전까지 안 바뀌어요. 우클릭으로 이름·프리셋·지우기."),M("로어북 폴더 가져오기","봇·모듈 로어북의 Dusk 폴더·[소속] 구조를 에셋 제작 폴더로 가져와요. 열 때 새 폴더가 있으면 물어보고(설정에서 ‘자동’으로 바꿀 수 있어요), 에셋 제작에서 바꾼 것은 로어북에 적지 않아요. 여기서 지운 폴더는 다시 가져오지 않아요."),M("저장","그림은 만들자마자 리스 에셋 저장소에 저장되고, 이 화면 목록에서 빼도 저장소 파일은 남아요. 작업 묶음은 봇·모듈마다 따로 저장돼요."),i("div",{class:"btns"},B("튜토리얼 다시 보기",{kind:"ghost",id:"sds-help-tut",onClick:()=>{S(!0),setTimeout(()=>f(),0)}}),B("닫기",{kind:"primary",onClick:()=>S(!0)}))))}async function f(){let M=await n.sd.getPrefs(),S=A=>i("p",{style:"margin:6px 0 0;white-space:normal;color:var(--rb-sub)"},A),q=(A,J,H)=>B(A,{size:"sm",id:J,onClick:H}),L=[()=>[i("b",null,"1. 로어북 폴더 가져오기"),S("봇·모듈 로어북의 Dusk 폴더·[소속] 구조를 에셋 제작 폴더로 가져와요(로어북 → 에셋 제작 한쪽만, 로어북은 바뀌지 않아요). ‘물어보기’면 열 때 새 폴더가 있을 때 묻고, ‘자동’이면 묻지 않고 가져와요. 나중에 설정에서 바꿀 수 있어요."),Tn([["off","물어보기(기본)"],["on","자동"]],M.loreSync?"on":"off",async A=>{let J=A==="on";await n.sd.setPrefs({loreSync:J}),n.prefs.loreSync=J,M.loreSync=J},"로어북 폴더 가져오기"),i("div",{class:"btns",style:"justify-content:flex-start"},B("지금 가져오기",{size:"sm",id:"sds-tut-lore",onClick:()=>n.syncLore?.({ask:!1})}))],()=>[i("b",null,"2. 원본 SDStudio에서 옮겨 오기"),S("SDStudio의 백업(.tar)이나 프로젝트 .json을 가져오면 캐릭터·씬·조각 모음이 들어와요. 씬 템플릿 파일만 있다면 다음 단계에서 가져와요."),i("div",{class:"btns",style:"justify-content:flex-start"},q("SDStudio 백업 가져오기…","sds-tut-backup",()=>n.tut?.importBackup?.()))],()=>[i("b",null,"3. 씬 프리셋(SFW·NSFW)"),S("도구 줄 ‘보기’ 아래의 [SFW] [NSFW] [+]가 씬 세트예요. 세트마다 씬 프리셋(씬 템플릿)을 정해 두면 새 캐릭터가 그 씬으로 시작하고, 프리셋은 리스 전체에 저장돼 다른 봇에서도 써요. 폴더는 세트끼리 공유하고 캐릭터 카드는 세트마다 따로예요."),i("div",{class:"btns",style:"justify-content:flex-start;flex-wrap:wrap"},q("씬 템플릿 파일 가져오기…","sds-tut-tpl",()=>n.tut?.importTemplate?.()),...Dn(n.proj).list.slice(0,4).map(A=>q(`${A.name} 프리셋 고르기`,`sds-tut-set-${A.id}`,J=>n.tut?.pickSetTpl?.(J.currentTarget,A.id))))],()=>[i("b",null,"4. 저장과 백업"),S("작업은 플러그인 저장소·이 기기 사본·봇 안 사본에 함께 저장되고, 열 때 가장 최근 것을 써요. 봇 안 사본은 카드를 배포할 땐 방패 버튼으로 꺼요(코어 내보내기는 이 칸을 빼요)."),S("‘이미지·관리’의 zip은 그림만, ‘프로젝트 전체 백업’은 설정과 그림을 모두 담아요. 복원은 백업 가져오기로 해요.")]],T=0;await Pn(e,A=>{let J=i("div",{id:"sds-tut-body"}),H=i("div",{class:"btns"}),N=()=>{wn(J,...L[T]()),wn(H,i("span",{class:"rb-muted",style:"margin-right:auto"},`${T+1} / ${L.length}`),T?B("이전",{kind:"ghost",onClick:()=>{T--,N()}}):B("건너뛰기",{kind:"ghost",id:"sds-tut-skip",onClick:()=>A(!0)}),T<L.length-1?B("다음",{kind:"primary",id:"sds-tut-next",onClick:()=>{T++,N()}}):B("시작하기",{kind:"primary",id:"sds-tut-done",onClick:()=>A(!0)}))};return N(),En("에셋 제작 시작하기",560,J,H)}),await n.sd.setPrefs({tutorialDone:!0}),n.prefs.tutorialDone=!0}async function $({force:M=!1}={}){if(!M&&await n.sd.getToken())return!0;let S=i("input",{type:"password",class:"rb-input",placeholder:"pst-…",autocomplete:"off",id:"sds-token","data-autofocus":""});return await Pn(e,L=>(S.addEventListener("keydown",T=>{T.key==="Enter"&&S.value.trim()&&L(!0)}),En("NovelAI 토큰",460,i("span",{class:"rb-muted",style:"white-space:normal"},"NovelAI → 계정 설정 → 영구 API 토큰(pst-…)을 넣어요. 이 기기에만 저장되고 다른 곳으로 보내지 않아요."),S,i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>L(!1)}),B("저장",{kind:"primary",id:"sds-token-ok",onClick:()=>S.value.trim()&&L(!0)})))))&&S.value.trim()?(await n.sd.setToken(S.value.trim()),!0):!1}async function b(){let M=await n.sd.getPrefs(),S=!!await n.sd.getToken(),q=n.target.kind==="module"?[["assets","모듈 에셋"]]:[["additionalAssets","추가 에셋"],["emotionImages","감정 이미지"]],L=i("span",{class:"rb-muted"},`품질 ${Math.round(M.putQuality*100)}`),T=i("div",{style:"display:flex;flex-direction:column;gap:6px"}),A=async()=>{let N=await n.sd.getTokens();wn(T,...N.map((D,U)=>i("div",{style:"display:flex;gap:8px;align-items:center"},i("span",{style:"flex:1"},`${D.label||`토큰 ${U+1}`} · …${D.token.slice(-4)}`),B("빼기",{size:"sm",kind:"ghost",onClick:async()=>{await n.sd.setTokens(N.filter((Q,fn)=>fn!==U)),A()}}))),B("토큰 더하기",{size:"sm",icon:"plus",id:"sds-token-add",onClick:async()=>{let D=await P("부스트 모드 토큰 더하기");D&&(await n.sd.setTokens([...N,{label:`계정 ${N.length+1}`,token:D}]),A())}}))};A();let J=i("div",{id:"sds-boost"}),H=()=>wn(J,Tn([["off","끔"],["on","켬"]],n.prefs.boost?"on":"off",async N=>{let D=N==="on";if(D&&!await zn(e,{title:"부스트 모드를 켤까요?",body:"한 기기에서 여러 NovelAI 계정으로 동시에 그리는 것은 NovelAI 정책상 제재·계정 정지 대상이 될 수 있어요. 모든 책임은 사용하는 사람에게 있어요(SDStudio 원본 안내와 같음).",ok:"알고 켜기",danger:!0})){H();return}await n.sd.setPrefs({boost:D}),n.prefs.boost=D,n.paintTop(),H()},"부스트 모드"));H(),await Pn(e,N=>En("설정",560,Cn("NovelAI 토큰",i("div",{style:"display:flex;gap:8px;align-items:center"},i("span",{class:"rb-muted",style:"flex:1"},S?"저장됨(이 기기)":"없음"),B(S?"바꾸기":"넣기",{size:"sm",onClick:()=>{N(!0),$({force:!0})}}))),i("b",null,"태그 자동완성"),i("div",{style:"display:flex;flex-direction:column;gap:8px"},Ee(!!M.loreSync,{label:"로어북 폴더를 묻지 않고 가져오기(끄면 열 때 새 폴더가 있으면 물어봐요. 에셋 제작 → 로어북으로는 적지 않아요)",onChange:async D=>{await n.sd.setPrefs({loreSync:D}),n.prefs.loreSync=D,D&&n.syncLore?.()}}),Ee(M.tags!==!1,{label:"프롬프트 칸에서 태그 자동완성",onChange:async D=>{await n.sd.setPrefs({tags:D}),n.prefs.tags=D}}),i("span",{class:"rb-muted",style:"font-size:12px;white-space:normal"},`${n.sd.tags()?`사전 ${n.sd.tags().size.toLocaleString()}개 있음`:"사전 없음 — 프롬프트를 칠 때 받기를 권해요(약 2MB, 처음 한 번)"} · 두 글자부터 · ↑↓로 고르고 Enter·Tab으로 넣기 · 한글(예: 긴 머리)로도 찾아요. 사전: SDStudio(MIT).`),i("div",{style:"display:flex;gap:8px;flex-wrap:wrap"},B("지금 받기",{size:"sm",id:"sds-tags-dl",onClick:async()=>{try{let D=await n.sd.loadTags();n.toast(`태그 ${D.size.toLocaleString()}개`)}catch(D){n.toast(D?.message??String(D),{error:!0})}}}),B("파일에서 불러오기(.csv/.csv.gz)",{size:"sm",onClick:async()=>{let[D]=await ee({accept:".csv,.gz,text/csv,application/gzip"});if(D)try{let U=await n.sd.loadTagsFromBytes(new Uint8Array(await D.arrayBuffer()));n.toast(`태그 ${U.size.toLocaleString()}개를 불러왔어요`)}catch(U){n.toast(`불러오지 못했어요: ${U?.message??U}`,{error:!0})}}}))),i("b",null,"봇에 넣기"),q.length>1?Cn("바로 넣을 자리",Tn(q,M.putSlot||q[0][0],async D=>{await n.sd.setPrefs({putSlot:D}),n.prefs.putSlot=D},"바로 넣을 자리")):null,Cn("넣을 때 형식(용량 줄이기)",Tn([["png","원본 PNG"],["webp","WebP"],["avif","AVIF"]],M.putFormat,async D=>{await n.sd.setPrefs({putFormat:D}),n.prefs.putFormat=D},"넣을 때 형식"),L,i("input",{type:"range",min:.5,max:1,step:.01,value:M.putQuality,onInput:D=>{L.textContent=`품질 ${Math.round(D.target.value*100)}`},onChange:async D=>{let U=Number(D.target.value);await n.sd.setPrefs({putQuality:U}),n.prefs.putQuality=U}}),i("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},"AVIF를 못 만드는 브라우저면 WebP로 넣어요. 바꾼 것이 더 크면 원본 그대로 넣어요.")),Cn("넣을 때 에셋 이름",Tn([["scene","씬"],["us","폴더_캐릭터_씬.확장자"],["dot","폴더.캐릭터.씬.확장자"]],M.nameStyle??"scene",async D=>{await n.sd.setPrefs({nameStyle:D}),n.prefs.nameStyle=D},"에셋 이름"),i("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},"폴더 = 그 캐릭터가 든 캐릭터 폴더(없으면 첫 폴더, 폴더가 없으면 빼요). 예: 아비도스_호시노_smile.webp")),Cn("같은 이름이 이미 있으면",Tn([["number","번호 붙여 더하기"],["replace","그림 바꾸기"]],M.dup,async D=>{await n.sd.setPrefs({dup:D}),n.prefs.dup=D},"같은 이름")),i("b",null,"부스트 모드(여러 계정으로 동시에 그리기)"),J,i("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},"켜면 아래 토큰 수만큼(최대 4) 동시에 그려요. 토큰은 이 기기에만 저장돼요."),T,i("b",null,"그 밖"),Cn("‘모두 예약’ 장 수",_r(n.proj.settings.reserveDefault,{min:1,max:20,id:"sds-rdef",onChange:D=>{n.set(Ln(n.proj,{reserveDefault:Math.max(1,Math.min(20,Math.round(D)||1))})),n.paintTools()}})),B("단축키 설정…",{icon:"zap",id:"sds-keys",onClick:()=>{N(!0),F()}}),i("span",{class:"rb-muted",style:"white-space:normal"},"그림은 만들 때 바로 리스 에셋 저장소에 저장돼요. 목록에서 빼도 파일은 남아요."),i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>N(!0)}))))}async function P(M){let S=i("input",{type:"password",class:"rb-input",placeholder:"pst-…",autocomplete:"off","data-autofocus":""});return await Pn(e,L=>En(M,440,S,i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>L(!1)}),B("더하기",{kind:"primary",onClick:()=>S.value.trim()&&L(!0)}))))?S.value.trim():""}async function F(){let M={...n.keys},S=null,q=i("div",{style:"display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center"}),L=()=>wn(q,...Object.entries(Ya).flatMap(([J,H])=>[i("span",null,H),i("button",{type:"button",class:"rb-chip","aria-pressed":String(S===J),dataset:{action:J},style:"min-width:120px;justify-content:center",onClick:()=>{S=J,L()}},S===J?"키를 누르세요…":Tr(M[J])||"없음")])),T=J=>{if(!S)return;if(J.preventDefault(),J.stopPropagation(),J.key==="Escape"){S=null,L();return}if(J.key==="Backspace"||J.key==="Delete"){M=ns(M,S,""),S=null,L();return}let H=Ar(J);H&&(M=ns(M,S,H),S=null,L())};e.ownerDocument.addEventListener("keydown",T,!0),L();let A=await Pn(e,J=>En("단축키 설정",520,i("span",{class:"rb-muted",style:"white-space:normal"},`줄을 누르고 새 키를 눌러요. 지우려면 Backspace. 다른 동작과 겹치면 그쪽은 비워져요.${$t()?" 맥은 ⌘가 주 보조키예요(⌃ Control·⌥ Option도 따로 쓸 수 있어요).":""}`),q,i("div",{class:"btns"},B("기본값",{kind:"ghost",onClick:()=>{M={...Qa},L()}}),B("취소",{kind:"ghost",onClick:()=>J(!1)}),B("저장",{kind:"primary",id:"sds-keys-save",onClick:()=>J(!0)}))));e.ownerDocument.removeEventListener("keydown",T,!0),A&&(n.keys=M,await n.sd.setPrefs({keys2:M}),n.paintTools(),n.toast("단축키를 저장했어요"))}async function R(M,S){let q="merge";return O.textContent=E.merge,Pn(e,L=>En(`‘${S}’ 템플릿 적용`,500,i("span",{class:"rb-muted",style:"white-space:normal"},`씬이 이미 있는 캐릭터가 ${M}명이에요. 어떻게 할까요? (처음 상태인 캐릭터는 그냥 템플릿 씬으로 채워요)`),Tn([["merge","합치기"],["replace","바꾸기"]],q,T=>{q=T,O.textContent=E[T]},"적용 방식"),O,i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>L(null)}),B("적용",{kind:"primary",id:"sds-tpl-ok",onClick:()=>L(q)}))))}var E={merge:"있는 씬은 그대로 두고, 템플릿에만 있는 씬을 뒤에 더해요.",replace:"씬 목록을 템플릿대로 바꿔요. 이름이 같은 씬은 프롬프트만 바뀌고 그림은 남아요. 템플릿에 없는 씬은 빠져요(되돌리기 가능)."},O=i("span",{style:"white-space:normal;font-size:13px"},E.merge);async function G({apply:M}){let S=i("div",{style:"display:flex;flex-direction:column;gap:8px"}),q=async()=>{let T=await n.sd.loadTemplates();wn(S,...T.length?T.map((A,J)=>i("div",{style:"display:flex;gap:8px;align-items:center;border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r2);padding:8px 10px"},i("div",{style:"flex:1;min-width:0;display:flex;flex-direction:column"},i("b",null,A.name),i("span",{class:"rb-muted",style:"font-size:12px;white-space:normal"},`씬 ${A.scenes.length}개 · ${A.scenes.slice(0,6).map(H=>H.name).join(", ")}${A.scenes.length>6?" …":""}`)),B("적용",{size:"sm",kind:"primary",onClick:async()=>{L?.(!0),await M(A)}}),B("",{size:"sm",kind:"ghost",icon:"edit",title:"이름 바꾸기",onClick:async()=>{let H=await Xn(e,{title:"템플릿 이름",label:"이름",value:A.name});H?.trim()&&(T[J]={...A,name:H.trim()},await n.sd.saveTemplates(T),q())}}),B("",{size:"sm",kind:"ghost",icon:"download",title:"파일로 내보내기",onClick:()=>ze(`${A.name}.dusk-template.json`,Qo(A),"application/json")}),B("",{size:"sm",kind:"ghost",icon:"trash",title:"지우기",onClick:async()=>{await zn(e,{title:`‘${A.name}’ 템플릿을 지울까요?`,ok:"지우기",danger:!0})&&(T.splice(J,1),await n.sd.saveTemplates(T),q())}}))):[i("span",{class:"rb-muted",style:"white-space:normal"},"저장한 템플릿이 없어요. 캐릭터를 연 뒤 ‘씬을 템플릿으로 저장’하거나 SDStudio 씬 템플릿 파일을 가져와요.")])},L=null;await q(),await Pn(e,T=>(L=T,En("템플릿 관리",620,S,i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>T(!0)})))))}async function on({count:M}){let S=n.target.kind==="module"?[["assets","모듈 에셋"]]:[["additionalAssets","추가 에셋"],["emotionImages","감정 이미지"]],q=S.some(A=>A[0]===n.prefs.putSlot)?n.prefs.putSlot:S[0][0],L=n.prefs.dup??"number",T=i("input",{class:"rb-input",id:"sds-put-name",placeholder:"비우면 씬 이름"});return Pn(e,A=>En(`고른 그림 ${M}장을 넣을까요?`,480,i("span",{class:"rb-muted",style:"white-space:normal"},`고른 그림만 넣어요. 형식은 설정대로(${{png:"원본 PNG",webp:"WebP",avif:"AVIF"}[n.prefs.putFormat]??"WebP"}) 바꿔요.`),S.length>1?Cn("넣을 자리",Tn(S,q,J=>{q=J},"넣을 자리")):null,Cn("이름",T),Cn("같은 이름이 이미 있으면",Tn([["number","번호 붙여 더하기"],["replace","그림 바꾸기"]],L,J=>{L=J},"같은 이름")),i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>A(null)}),B("넣기",{kind:"primary",id:"sds-put-ok",onClick:()=>A({slot:q,name:T.value.trim(),dup:L})}))))}async function rn({rows:M,names:S,title:q="즐겨찾기를 봇에 넣기"}){let L=n.target.kind==="module"?[["assets","모듈 에셋"]]:[["additionalAssets","추가 에셋"],["emotionImages","감정 이미지"]],T=L.some(kn=>kn[0]===n.prefs.putSlot)?n.prefs.putSlot:L[0][0],A=n.prefs.dup??"number",J=M.map(()=>!0),H=i("div",{class:"sds-exp-list",id:"sds-exp-list"}),N=i("span",{class:"rb-muted",style:"white-space:normal;font-size:12.5px"}),D=null,U=kn=>{let Mn=S[T]??new Set,Hn=kn.nameFor(T).toLowerCase();return kn.it.sent&&Mn.has(kn.it.sent.toLowerCase())?["sent","이미 넣음"]:Mn.has(Hn)?["dup",A==="replace"?"바꿈":"같은 이름 있음 → 번호"]:["new","새로"]};M.forEach((kn,Mn)=>{U(kn)[0]!=="new"&&(J[Mn]=!1)});let Q=()=>{let kn={new:0,dup:0,sent:0};wn(H,...M.map((Hn,se)=>{let[Gn,pn]=U(Hn);return J[se]&&kn[Gn]++,i("label",{class:"sds-exp-row",dataset:{st:Gn}},i("input",{type:"checkbox",checked:J[se],"aria-label":`${Hn.nameFor(T)} 넣기`,onChange:qr=>{J[se]=qr.target.checked,Q()}}),n.thumb(Hn.it.path,{now:!0}),i("span",{class:"nm",title:Hn.nameFor(T)},Hn.nameFor(T),i("small",{class:"rb-muted",style:"display:block;font-weight:500"},Hn.label)),i("span",{class:["st",Gn]},pn))}));let Mn=J.filter(Boolean).length;N.textContent=`넣을 그림 ${Mn}장 · 새로 ${kn.new} · 같은 이름 ${kn.dup}${kn.sent?` · 이미 넣은 것 ${kn.sent}`:""} — 형식은 설정대로(${{png:"원본 PNG",webp:"WebP",avif:"AVIF"}[n.prefs.putFormat]??"WebP"}), 이름 끝 확장자는 바뀔 수 있어요.`,D&&(D.disabled=!Mn,D.lastChild.textContent=`${Mn}장 넣기`)},fn=kn=>{J.fill(kn),Q()},en=()=>{M.forEach((kn,Mn)=>{J[Mn]=U(kn)[0]!=="sent"}),Q()};return Pn(e,kn=>(D=B("넣기",{kind:"primary",id:"sds-exp-ok",onClick:()=>{let Mn=J.flatMap((Hn,se)=>Hn?[se]:[]);Mn.length&&kn({idx:Mn,slot:T,dup:A})}}),Q(),En(q,620,L.length>1?Cn("넣을 자리",Tn(L,T,Mn=>{T=Mn,en()},"넣을 자리")):null,Cn("같은 이름이 이미 있으면",Tn([["number","번호 붙여 더하기"],["replace","그림 바꾸기"]],A,Mn=>{A=Mn,Q()},"같은 이름")),i("div",{class:"sds-row",style:"gap:6px;flex-wrap:wrap"},B("모두",{size:"sm",kind:"ghost",onClick:()=>fn(!0)}),B("안 넣은 것만",{size:"sm",kind:"ghost",id:"sds-exp-unsent",onClick:en}),B("모두 풀기",{size:"sm",kind:"ghost",onClick:()=>fn(!1)})),H,N,i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>kn(null)}),D))))}async function un({projs:M,hasImages:S}){let q=M.map(()=>!0),L=M.reduce((D,U)=>D+U.favCount,0),T=S?L?"fav":"all":"none",A=i("div",{class:"sds-exp-list",id:"sds-bk-list"}),J=i("span",{class:"rb-muted",style:"white-space:normal;font-size:12.5px"}),H=null,N=()=>{wn(A,...M.map((Q,fn)=>i("label",{class:"sds-exp-row"},i("input",{type:"checkbox",checked:q[fn],"aria-label":`${Q.name} 가져오기`,onChange:en=>{q[fn]=en.target.checked,N()}}),i("span",{class:"nm",title:Q.name},Q.name,i("small",{class:"rb-muted",style:"display:block;font-weight:500"},[Q.folder&&`폴더 ${Q.folder}`,`씬 ${Q.tpl.scenes.length}`,S&&`그림 ${Q.count}`,S&&`즐겨찾기 ${Q.favCount}`].filter(Boolean).join(" · "))))));let D=M.filter((Q,fn)=>q[fn]),U=T==="none"?0:D.reduce((Q,fn)=>Q+(T==="all"?fn.count:fn.favCount),0);J.textContent=`캐릭터 ${D.length}명으로 가져와요${U?` · 그림 ${U}장`:""}. 폴더는 같은 이름 폴더에 넣고, 같은 이름 캐릭터가 있으면 번호를 붙여요. 상위·제외 프롬프트는 비어 있을 때만 채워요.`,H&&(H.disabled=!D.length,H.lastChild.textContent=`${D.length}명 가져오기`)};return Pn(e,D=>(H=B("가져오기",{kind:"primary",id:"sds-bk-ok",onClick:()=>{let U=q.flatMap((Q,fn)=>Q?[fn]:[]);U.length&&D({idx:U,mode:T})}}),N(),En("SDStudio 백업 가져오기",600,i("span",{class:"rb-muted",style:"white-space:normal;font-size:12.5px"},"SDStudio 프로젝트 하나가 캐릭터 하나가 돼요. 씬 구성·조각·앞쪽 프롬프트(외형)를 가져오고, 그림은 리스 에셋 저장소에 저장해요."),S?Cn("그림",Tn([["fav","즐겨찾기만"],["all","모두"],["none","그림 없이"]],T,U=>{T=U,N()},"가져올 그림")):i("span",{class:"rb-muted",style:"font-size:12.5px"},"이 파일에는 그림이 없어 씬 구성만 가져와요."),A,J,i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>D(null)}),H))))}function g({title:M,name:S="",en:q="",ok:L="만들기"}){let T=i("input",{type:"text",class:"rb-input",value:S,placeholder:"예: 시로코","data-autofocus":"",id:"sds-cname"}),A=i("input",{type:"text",class:"rb-input",value:q,placeholder:"예: shiroko (비우면 표기 이름 사용)",id:"sds-cen"}),J=()=>({name:T.value.trim(),en:A.value.trim().replace(/[\\/:*?"<>|]/g,"_")});return Pn(e,H=>{for(let N of[T,A])N.addEventListener("keydown",D=>{D.key==="Enter"&&T.value.trim()&&H(J())});return En(M,420,Cn("표기 이름(화면·로어북)",T),Cn("영어 이름(이미지 내보내기·에셋 이름)",A),i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>H(null)}),B(L,{kind:"primary",id:"sds-cok",onClick:()=>T.value.trim()&&H(J())})))})}function yn({title:M,name:S="",en:q="",kind:L="",prompt:T="",ok:A="만들기"}){let J=L,H=i("input",{type:"text",class:"rb-input",value:q,placeholder:"예: swimsuit — 비우면 폴더 이름",id:"sds-fen"}),N=i("textarea",{class:"rb-input",rows:3,id:"sds-fprompt",placeholder:"예: school uniform, halo — 이 폴더(안의 폴더 포함) 캐릭터 프롬프트 앞에 붙어요"},T),D=()=>({name:U.value.trim(),en:H.value.trim(),kind:J,prompt:N.value}),U=i("input",{type:"text",class:"rb-input",value:S,placeholder:"예: 수영복 / 아비도스","data-autofocus":"",id:"sds-fname"});return Pn(e,Q=>{for(let fn of[U,H])fn.addEventListener("keydown",en=>{en.key==="Enter"&&U.value.trim()&&Q(D())});return En(M,460,Cn("표기 이름(화면·로어북)",U),Cn("영어 이름(이미지 내보내기·에셋 이름)",H),Cn("무엇으로 묶나요",Tn([["outfit","캐릭터"],["group","소속"],["","그 밖"]],J,fn=>{J=fn},"폴더 종류")),Cn("폴더 프롬프트",N,i("span",{class:"rb-muted",style:"font-size:12px;white-space:normal"},"상위 폴더 프롬프트 → 하위 폴더 프롬프트 → 캐릭터 외형 순으로 이어져요.")),i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>Q(null)}),B(A,{kind:"primary",id:"sds-fok",onClick:()=>U.value.trim()&&Q(D())})))})}async function nn(){let M=n.sd.tags();if(!M)try{M=await n.sd.loadTags()}catch(D){n.toast(`${D?.message??D} — 설정 → 태그 자동완성에서 파일로 불러올 수 있어요`,{error:!0});return}let S=()=>n.prefs.artistFav??[],q=async D=>{n.prefs.artistFav=D,await n.sd.setPrefs({artistFav:D})},L=i("input",{class:"rb-input",type:"search",id:"sds-art-q",placeholder:"작가 이름 찾기(두 글자부터)","data-autofocus":""}),T=i("div",{class:"sds-artlist",id:"sds-art-list"}),A=D=>new RegExp(`(^|,)\\s*artist:${D.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}\\s*(,|$)`,"i").test(n.proj.settings.top??""),J=D=>{let U=String(n.proj.settings.top??"").replace(/\s*,?\s*$/,"");n.set(Ln(n.proj,{top:A(D)?U:`${U}${U?", ":""}artist:${D}`})),n.paintLeft(),N()},H=(D,U)=>i("div",{class:"it"},i("button",{type:"button",class:["sds-ib",S().includes(D)&&"on"],title:"자주 쓰는 작가","aria-label":"자주 쓰는 작가",onClick:async()=>{await q(S().includes(D)?S().filter(Q=>Q!==D):[...S(),D]),N()}},sn("star",16)),i("span",{class:"w"},D),U!=null?i("span",{class:"rb-muted",style:"font-size:12px"},Yt(U)):null,B(A(D)?"넣음":"넣기",{size:"sm",kind:A(D)?"ghost":"primary",disabled:A(D),onClick:()=>J(D)})),N=()=>{let D=L.value.trim(),U=D.length>=2?(()=>{let Q=[],fn=Ie(D);for(let en=0;en<M.size&&Q.length<400;en++)M.cats[en]===1&&!M.redirs[en]&&M.keys[en].includes(fn)&&Q.push(en);return Q.sort((en,kn)=>M.freqs[kn]-M.freqs[en]).slice(0,40)})():[];wn(T,S().length?i("small",{class:"rb-muted"},"자주 쓰는 작가"):null,...S().map(Q=>H(Q,null)),D.length>=2?i("small",{class:"rb-muted"},U.length?`찾은 작가 ${U.length}`:"없어요"):i("small",{class:"rb-muted"},"이름을 두 글자 이상 쳐요. 넣으면 상위 프롬프트 끝에 artist:이름 으로 붙어요."),...U.map(Q=>H(M.words[Q],M.freqs[Q])))};L.addEventListener("input",()=>N()),N(),await Pn(e,D=>En("작가 태그(그림체)",520,L,T,i("div",{class:"btns"},B("닫기",{kind:"primary",onClick:()=>D()}))))}return{artists:nn,sampling:o,charPrompts:c,pieces:p,vibes:w,refs:x,savePreset:k,loadPreset:j,check:z,help:_,token:$,settings:b,put:on,exportPreview:rn,backupImport:un,folderDialog:yn,charNames:g,keysDialog:F,templateChoice:R,templateManager:G,tutorial:f}}function ol(n,{label:e,onChange:t,disabled:a}={}){let o=Gt(n,{label:e,disabled:a,onChange:(c,p)=>{Wt(p,c),t?.(c,p)}});return i("label",{class:"sds-sw",style:"display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600"},o,e?i("span",null,e):null)}var pi=async(n,e,t)=>{try{await navigator.clipboard.writeText(String(e)),n.toast(`${t}을 복사했어요`)}catch{n.toast("복사하지 못했어요",{error:!0})}};function es(n,e,t=0){let a=Math.max(0,Math.min(e.length-1,t)),o=null,c=i("img",{alt:"크게 보기",id:"sds-lb-img"}),p=i("div",{class:"stage"},c),s=i("aside",{class:"info",id:"sds-lb-info"}),w=i("button",{type:"button",class:"nav",style:"left:12px","aria-label":"이전 그림",onClick:()=>z(-1)},sn("chevL",22)),x=i("button",{type:"button",class:"nav",style:"right:12px","aria-label":"다음 그림",onClick:()=>z(1)},sn("chevR",22));p.append(w,x);let m=i("div",{class:"rb-full-head",style:"min-height:52px"}),k=i("div",{class:"sds-over",role:"dialog","aria-label":"그림 크게 보기",id:"sds-lightbox",tabIndex:-1},m,i("div",{class:"sds-lb"},p,s)),j=()=>{o&&URL.revokeObjectURL(o),k.remove(),n.paintBody()},z=R=>{e.length&&(a=(a+R+e.length)%e.length,$())},_=()=>e[a],f=()=>{let R=_(),E=mn(n.proj,R.cid,R.sid);return{it:R,sc:E,c:vn(n.proj,R.cid),im:E?.images.find(O=>O.path===R.path)}};async function $(){let{it:R,sc:E,c:O,im:G}=f();if(!G)return e.splice(a,1),e.length?(a=Math.min(a,e.length-1),$()):j();w.hidden=x.hidden=e.length<2,wn(m,i("button",{type:"button",class:"rb-icon-btn","aria-label":"닫기",onClick:j},sn("x",20)),i("div",{class:"ttl"},i("small",null,`${O.name} › ${E.name}`),i("b",null,`${a+1} / ${e.length}`)));let on=Ce(E)===G.path&&!!E.cover,rn=(un,g,yn,nn={})=>B(un,{size:"sm",icon:g,...nn,onClick:yn});wn(s,i("div",{style:"display:flex;gap:8px;align-items:center"},i("button",{type:"button",class:["sds-ib",G.fav&&"on"],id:"sds-lb-fav",title:"즐겨찾기 (F)","aria-pressed":String(G.fav),onClick:()=>b()},sn("star",18)),i("b",{style:"flex:1"},G.rank?`${G.rank}위`:G.fav?"즐겨찾기":""),G.from?i("span",{class:"rb-badge"},{img2img:"변형",infill:"인페인트",upscale:"업스케일"}[G.from]??ke[G.from]??G.from):null),i("div",{class:"sds-acts"},rn(G.pick?"고름 ✓":"보낼 그림으로 고르기","check",()=>{n.togglePick(R),$()},{id:"sds-lb-pick",kind:G.pick?"primary":""}),rn("이 그림만 봇에 넣기","download",()=>n.quickPut([{path:G.path,name:E.name,cid:R.cid,sid:R.sid}]),{id:"sds-lb-put"}),rn("넣는 방법…","sliders",()=>n.putPaths([{path:G.path,name:E.name,cid:R.cid,sid:R.sid}])),rn(on?"씬 대표":"씬 대표로","check",()=>{n.set(On(n.proj,R.cid,R.sid,{cover:G.path})),$()},{disabled:on}),rn("캐릭터 대표로","character",()=>{n.set(Jn(n.proj,R.cid,{cover:G.path})),n.toast("캐릭터 카드 대표로 했어요")})),i("div",{class:"sds-acts"},rn("변형","refresh",()=>F("img2img")),rn("인페인트","brush",()=>dl(n,R,G)),rn("업스케일","size",()=>F("upscale")),rn("디렉터 도구","sparkle",un=>In(n.ctx.win,un.currentTarget,Object.entries(ke).map(([g,yn])=>({label:yn,onClick:()=>F(g)}))))),i("div",{class:"sds-acts"},rn("비교에 넣기","split",()=>{n.addCompare(R),n.toast("비교 모드에 넣었어요")}),rn("이 시드로 고정","zap",()=>{G.seed&&(n.set(Ln(n.proj,{seed:{mode:"fixed",value:G.seed}})),n.paintLeft(),n.toast(`시드 ${G.seed}로 고정했어요`))},{disabled:!G.seed}),rn("내려받기","download",async()=>ze(`${O.name}_${E.name}_${a+1}.png`,new Blob([await n.bytes(G.path)],{type:"image/png"}))),rn("목록에서 빼기","trash",()=>P(),{kind:"danger"})),i("div",{style:"display:flex;gap:8px;align-items:center;font-size:13px"},i("span",{class:"rb-muted"},"시드"),i("b",{style:"flex:1"},G.seed??"-"),G.seed?B("복사",{size:"sm",kind:"ghost",onClick:()=>pi(n,G.seed,"시드")}):null),G.w?i("div",{class:"rb-muted",style:"font-size:13px"},`${G.w}×${G.h}`):null,G.prompt?i("div",{style:"display:flex;flex-direction:column;gap:6px"},i("div",{style:"display:flex;align-items:center"},i("span",{class:"rb-label",style:"flex:1"},"프롬프트"),B("복사",{size:"sm",kind:"ghost",onClick:()=>pi(n,G.prompt,"프롬프트")})),i("pre",null,G.prompt)):null);for(let un of s.children)un.style.flexShrink="0";k.contains(document.activeElement)||k.focus({preventScroll:!0});try{let un=await n.url(G.path);if(_()?.path!==G.path){URL.revokeObjectURL(un);return}o&&URL.revokeObjectURL(o),o=un,c.src=un}catch{c.removeAttribute("src")}}function b(){let{it:R,im:E}=f();n.set(xe(n.proj,R.cid,R.sid,E.path,{fav:!E.fav})),$(),n.paintBody?.()}async function P(){let{it:R}=f();if(await zn(n.ctx.win,{title:"목록에서 뺄까요?",body:"이 화면 목록에서만 빠져요. 리스 에셋 저장소 파일과 이미 봇에 넣은 에셋은 그대로예요.",ok:"빼기",danger:!0})){if(n.set(Ke(n.proj,R.cid,R.sid,[R.path])),e.splice(a,1),!e.length)return j();a=Math.min(a,e.length-1),$()}}async function F(R){let{it:E,sc:O,im:G}=f(),on=R==="img2img"?await il(n,G,O):R==="upscale"?await ll(n,G):ke[R]?await cl(n,R):null;if(!on)return;let rn=await n.derive(E,R,on);rn&&(e.splice(a,0,{cid:E.cid,sid:E.sid,path:rn}),$())}k.addEventListener("keydown",R=>{n.ctx.win.querySelector(".rb-modal, .rb-menu")||(R.key==="Escape"?(R.stopPropagation(),j()):R.key==="ArrowLeft"?z(-1):R.key==="ArrowRight"?z(1):R.key==="f"||R.key==="F"?b():R.key==="Delete"&&P())}),n.el.appendChild(k),k.focus(),$()}async function il(n,e,t){let a=.7,o=0,c=Vn({value:e.prompt||"",rows:4,label:"변형 프롬프트"}),p=i("span",{class:"rb-muted"},`세기 ${a}`),s=i("span",{class:"rb-muted"},`노이즈 ${o}`);return Pn(n.ctx.win,w=>i("div",{class:"rb-dialog",role:"dialog","aria-label":"변형",style:"max-width:520px"},i("h3",{class:"rb-h3"},"이미지 변형(img2img)"),i("span",{class:"rb-muted",style:"white-space:normal"},`이 그림을 바탕으로 다시 그려요. 결과는 ‘${t.name}’ 씬에 더해져요.`),i("span",{class:"rb-label"},"프롬프트"),c,p,i("input",{type:"range",min:.01,max:.99,step:.01,value:a,onInput:x=>{a=Number(x.target.value),p.textContent=`세기 ${a}`}}),s,i("input",{type:"range",min:0,max:.99,step:.01,value:o,onInput:x=>{o=Number(x.target.value),s.textContent=`노이즈 ${o}`}}),i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>w(null)}),B("변형",{kind:"primary",id:"sds-i2i-ok",onClick:()=>w({strength:a,noise:o,prompt:c.textarea.value})}))))}async function ll(n,e){let t=null;try{let a=Fe(await n.bytes(e.path));t=eo(a.width,a.height)}catch(a){return n.toast(a?.message??String(a),{error:!0}),null}return await zn(n.ctx.win,{title:"2배로 키울까요?",body:`NovelAI 업스케일은 Anlas ${t}가 들어요(서버가 최종 결정). 결과는 같은 씬에 더해져요.`,ok:"업스케일"})?{}:null}async function cl(n,e){if(e!=="colorize"&&e!=="emotion")return await zn(n.ctx.win,{title:`${ke[e]}`,body:"NovelAI 디렉터 도구로 이 그림을 바꿔요. 결과는 같은 씬에 더해져요. Anlas가 들 수 있어요.",ok:"하기"})?{}:null;let t="happy",a=0,o=i("input",{class:"rb-input",placeholder:e==="emotion"?"더할 말(선택)":"예: red hair, blue eyes"});return Pn(n.ctx.win,c=>i("div",{class:"rb-dialog",role:"dialog","aria-label":ke[e],style:"max-width:480px"},i("h3",{class:"rb-h3"},ke[e]),e==="emotion"?i("select",{class:"rb-input",id:"sds-emotion",onChange:p=>{t=p.target.value}},...Zs.map(p=>i("option",{value:p,selected:p===t},p))):null,o,i("span",{class:"rb-label"},"약하게(0~5)"),Tn([0,1,2,3,4,5].map(p=>[String(p),String(p)]),"0",p=>{a=Number(p)},"약하게"),i("div",{class:"btns"},B("취소",{kind:"ghost",onClick:()=>c(null)}),B("하기",{kind:"primary",onClick:()=>c({emotion:t,prompt:o.value,defry:a})}))))}async function dl(n,e,t){let a=await n.bytes(t.path),o=Fe(a)??{width:t.w||832,height:t.h||1216},c=new Image,p=URL.createObjectURL(new Blob([a],{type:"image/png"}));await new Promise(G=>{c.onload=G,c.onerror=G,c.src=p});let s=i("canvas",{width:o.width,height:o.height,id:"sds-inpaint-canvas",style:"cursor:crosshair"}),w=Object.assign(document.createElement("canvas"),{width:o.width,height:o.height}),x=s.getContext("2d"),m=w.getContext("2d"),k=64,j=!1,z=1,_=!0,f=!1,$=null,b=()=>{x.clearRect(0,0,o.width,o.height),x.drawImage(c,0,0,o.width,o.height),x.globalAlpha=.45,x.drawImage(w,0,0),x.globalAlpha=1},P=G=>{let on=s.getBoundingClientRect();return{x:(G.clientX-on.left)*(o.width/on.width),y:(G.clientY-on.top)*(o.height/on.height)}},F=(G,on)=>{m.globalCompositeOperation=j?"destination-out":"source-over",m.strokeStyle="#ff3b6b",m.lineWidth=k,m.lineCap="round",m.beginPath(),m.moveTo(G.x,G.y),m.lineTo(on.x,on.y),m.stroke(),b()};s.addEventListener("pointerdown",G=>{f=!0,$=P(G),s.setPointerCapture?.(G.pointerId),F($,$)}),s.addEventListener("pointermove",G=>{if(!f)return;let on=P(G);F($,on),$=on}),s.addEventListener("pointerup",()=>{f=!1}),b();let R=Vn({value:t.prompt||"",rows:3,label:"인페인트 프롬프트"}),E=i("span",{class:"rb-muted"},`붓 ${k}`),O=await new Promise(G=>{let on=i("div",{class:"sds-over",role:"dialog","aria-label":"인페인트",id:"sds-inpaint"},i("div",{class:"rb-full-head"},i("button",{type:"button",class:"rb-icon-btn","aria-label":"닫기",onClick:()=>{on.remove(),G(null)}},sn("x",20)),i("div",{class:"ttl"},i("small",null,"인페인트"),i("b",null,"다시 그릴 곳을 칠해요"))),i("div",{class:"sds-lb"},i("div",{class:"sds-paint"},s),i("aside",{class:"info"},E,i("input",{type:"range",min:8,max:256,value:k,onInput:rn=>{k=Number(rn.target.value),E.textContent=`붓 ${k}`}}),Tn([["paint","칠하기"],["erase","지우개"]],"paint",rn=>{j=rn==="erase"},"붓"),B("칠한 것 모두 지우기",{size:"sm",kind:"ghost",onClick:()=>{m.clearRect(0,0,o.width,o.height),b()}}),i("span",{class:"rb-label"},"프롬프트"),R,i("span",{class:"rb-label"},"세기"),i("input",{type:"range",min:.01,max:1,step:.01,value:z,onInput:rn=>{z=Number(rn.target.value)}}),ol(_,{label:"칠하지 않은 곳은 그대로 두기",onChange:rn=>{_=rn}}),B("인페인트",{kind:"primary",id:"sds-inpaint-ok",onClick:async()=>{let rn=Object.assign(document.createElement("canvas"),{width:o.width,height:o.height}),un=rn.getContext("2d");un.fillStyle="#000",un.fillRect(0,0,o.width,o.height);let g=Object.assign(document.createElement("canvas"),{width:o.width,height:o.height}),yn=g.getContext("2d");yn.drawImage(w,0,0),yn.globalCompositeOperation="source-in",yn.fillStyle="#fff",yn.fillRect(0,0,o.width,o.height),un.drawImage(g,0,0);let nn=await new Promise(M=>rn.toBlob(M,"image/png"));on.remove(),G({mask:new Uint8Array(await nn.arrayBuffer()),prompt:R.textarea.value,strength:z,keep:_})}}))));for(let rn of on.querySelector(".info").children)rn.style.flexShrink="0";n.el.appendChild(on)});URL.revokeObjectURL(p),O&&await n.derive(e,"infill",O)}async function Ge(n,e,t){let a=mn(n.proj,e,t);if(!a||a.images.length<2){n.toast("그림이 2장 이상 있어야 해요");return}let o=za(a.images.map(j=>j.path)),c=[],p=i("div",{class:"rb-full-head"}),s=i("div",{class:"pair"}),w=i("div",{class:"sds-over",role:"dialog","aria-label":"이미지 월드컵",id:"sds-cup",tabIndex:-1},p,i("div",{class:"sds-cup"},s,i("div",{class:"rb-muted",style:"text-align:center;padding:0 0 14px"},"더 마음에 드는 쪽을 눌러요 · ← → 키"))),x=j=>{for(let z of c)URL.revokeObjectURL(z);w.remove(),j&&n.paintBody()},m=j=>{o=Sa(o,j),k()};async function k(){if(Ma(o))return n.set(On(Ta(n.proj,e,t,o.ranks),e,t,{cover:Object.keys(o.ranks).find(b=>o.ranks[b]===1)??""})),n.toast("순위를 매겼어요. 1위가 씬 대표가 됐어요"),x(!0);let[j,z]=fr(o),_=o.at/2+1,f=Math.floor(o.players.length/2);wn(p,i("button",{type:"button",class:"rb-icon-btn","aria-label":"그만하기",onClick:()=>x(!1)},sn("x",20)),i("div",{class:"ttl"},i("small",null,`이미지 월드컵 · ${a.name}`),i("b",null,`${Aa(o)} ${_}/${f}`)));let $=async(b,P)=>{let F=i("button",{type:"button","aria-label":P?"오른쪽 고르기":"왼쪽 고르기",class:"sds-cup-pick",onClick:()=>m(P)});try{let R=await n.url(b);c.push(R),F.append(i("img",{src:R,alt:""}))}catch{}return F};wn(s,await $(j,0),await $(z,1)),w.contains(document.activeElement)||w.focus({preventScroll:!0})}w.addEventListener("keydown",j=>{j.key==="Escape"?(j.stopPropagation(),x(!1)):j.key==="ArrowLeft"?m(0):j.key==="ArrowRight"&&m(1)}),n.el.appendChild(w),w.focus(),k()}function ts(n,e,{start:t=0,onlyNoFav:a=!1}={}){let o=a,c=0,p=0,s=null,w=e.filter(nn=>mn(n.proj,nn.cid,nn.sid)?.images.length),x=()=>w.filter(nn=>{let M=mn(n.proj,nn.cid,nn.sid);return M?.images.length&&(!o||!oe(M)||nn===m)}),m=w[t]??null,k=i("img",{alt:"후보 그림",id:"sds-ch-img"}),j=i("button",{type:"button",class:"nav",style:"left:12px","aria-label":"이전 후보",onClick:()=>on(-1)},sn("chevL",22)),z=i("button",{type:"button",class:"nav",style:"right:12px","aria-label":"다음 후보",onClick:()=>on(1)},sn("chevR",22)),_=i("span",{class:"sds-ch-star","aria-hidden":"true"},"★"),f=i("div",{class:"stage"},k,_,j,z),$=i("div",{class:"rb-full-head",style:"min-height:52px"}),b=i("div",{class:"sds-ch-strip rb-scroll",id:"sds-ch-strip"}),P=i("div",{class:"sds-ch-acts"}),F=i("div",{class:"sds-over",role:"dialog","aria-label":"대표 고르기",id:"sds-chooser",tabIndex:-1},$,i("div",{class:"sds-ch"},f,b,P)),R=()=>{s&&URL.revokeObjectURL(s),F.remove(),n.paint()},E=()=>x(),O=()=>{let M=E()[c];return M?{x:M,sc:mn(n.proj,M.cid,M.sid),c:vn(n.proj,M.cid)}:null},G=()=>{let nn=O();return nn?ne(nn.sc):[]};function on(nn){let M=G().length;M&&(p=(p+nn+M)%M,yn())}function rn(nn){let M=E();if(!M.length)return;c=Math.max(0,Math.min(M.length-1,c+nn)),m=M[c],p=0;let S=E();c=Math.max(0,S.indexOf(m)),yn()}function un(nn){let M=O(),S=G()[p];!M||!S||(n.set(xe(n.proj,M.x.cid,M.x.sid,S.path,{fav:nn??!S.fav})),p=Math.max(0,G().findIndex(q=>q.path===S.path)),yn())}function g(){let nn=G()[p];if(!nn)return;nn.fav||un(!0);let M=E(),S=M.indexOf(m);if(S>=M.length-1){n.toast("마지막 씬이에요");return}m=M[S+1],p=0,c=Math.max(0,E().indexOf(m)),yn()}async function yn(){let nn=E();if(!nn.length)return n.toast(o?"즐겨찾기 없는 씬이 없어요":"그림이 있는 씬이 없어요"),R();(!m||!nn.includes(m))&&(m=nn[Math.min(c,nn.length-1)]),c=nn.indexOf(m);let{x:M,sc:S,c:q}=O(),L=ne(S);p=Math.max(0,Math.min(p,L.length-1));let T=L[p],A=L.filter(H=>H.fav).length,J=w.filter(H=>{let N=mn(n.proj,H.cid,H.sid);return N&&!oe(N)}).length;if(wn($,i("button",{type:"button",class:"rb-icon-btn","aria-label":"닫기",onClick:R},sn("x",20)),i("div",{class:"ttl"},i("small",null,`씬 ${c+1} / ${nn.length} · 즐겨찾기 없는 씬 ${J}`),i("b",{id:"sds-ch-title"},`${q.name} › ${S.name}`)),i("span",{class:"sp",style:"flex:1"}),i("label",{class:"sds-sw",style:"display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer"},i("input",{type:"checkbox",id:"sds-ch-only",checked:o,onChange:H=>{o=H.target.checked,yn()}}),"즐겨찾기 없는 씬만")),_.hidden=!T?.fav,j.hidden=z.hidden=L.length<2,wn(b,...L.map((H,N)=>i("button",{type:"button",class:["sds-ch-th",N===p&&"on",H.fav&&"fav"],"aria-label":`후보 ${N+1}${H.fav?" 즐겨찾기":""}`,"aria-pressed":String(N===p),onClick:()=>{p=N,yn()},onDblclick:()=>{p=N,un()}},n.thumb(H.path,{now:!0}),i("span",{class:"n"},String(N+1)),H.fav?i("span",{class:"f"},"★"):null))),b.querySelector(".on")?.scrollIntoView?.({block:"nearest",inline:"nearest"}),wn(P,i("span",{class:"rb-muted",style:"font-size:12px"},`후보 ${p+1} / ${L.length} · 즐겨찾기 ${A}`),i("span",{class:"sp",style:"flex:1"}),B("이전 씬",{size:"sm",icon:"chevL",id:"sds-ch-prev",disabled:c<=0,onClick:()=>rn(-1)}),B(T?.fav?"즐겨찾기 풀기 (F)":"즐겨찾기 (F)",{size:"sm",icon:"sparkle",id:"sds-ch-fav",kind:T?.fav?"primary":"",onClick:()=>un()}),B("이걸로 정하고 다음 씬 (Enter)",{size:"sm",kind:"primary",icon:"check",id:"sds-ch-next",onClick:()=>g()}),B("다음 씬",{size:"sm",icon:"chevR",id:"sds-ch-skip",disabled:c>=nn.length-1,onClick:()=>rn(1)})),(!F.contains(document.activeElement)||document.activeElement===F)&&F.focus({preventScroll:!0}),!T){k.removeAttribute("src");return}try{let H=await n.url(T.path);if(G()[p]?.path!==T.path){URL.revokeObjectURL(H);return}s&&URL.revokeObjectURL(s),s=H,k.src=H}catch{k.removeAttribute("src")}}return F.addEventListener("keydown",nn=>{if(n.ctx.win.querySelector(".rb-modal, .rb-menu")||/^(INPUT|SELECT|TEXTAREA)$/.test(nn.target?.tagName??"")&&nn.target.type!=="checkbox")return;let M=nn.key;if(M==="Escape"){nn.stopPropagation(),R();return}let q={ArrowLeft:()=>on(-1),ArrowRight:()=>on(1),ArrowUp:()=>rn(-1),ArrowDown:()=>rn(1),PageUp:()=>rn(-1),PageDown:()=>rn(1),Enter:()=>g(),f:()=>un(),F:()=>un()}[M]??(/^[1-9]$/.test(M)?()=>{let L=Number(M)-1;L<G().length&&(p=L,yn())}:null);q&&(nn.preventDefault(),nn.stopPropagation(),q())}),n.el.appendChild(F),F.focus(),yn(),{close:R}}var hi=new TextDecoder,Xe=(n,e,t)=>{let a=e;for(;a<e+t&&n[a];)a++;return hi.decode(n.subarray(e,a))},pl=(n,e,t)=>parseInt(Xe(n,e,t).trim()||"0",8)||0,hl=/\.(png|webp|jpe?g|avif)$/i;async function rs(n,e){let t=[],a=0,o=null,c=null;for(;a+512<=e;){let p=await n(a,512);if(p.every(z=>z===0))break;let s=pl(p,124,12),w=String.fromCharCode(p[156]||48),x=a+512,m=Xe(p,0,100),k=Xe(p,257,6),j=k.startsWith("ustar")?Xe(p,345,155):"";if(j&&(m=`${j}/${m}`),w==="L")o=Xe(await n(x,s),0,s);else if(w==="x"){let z=hi.decode(await n(x,s));c={};for(let _ of z.split(`
+`)){let f=/^\d+ ([^=]+)=(.*)$/.exec(_);f&&(c[f[1]]=f[2])}}else w==="g"||(c?.path?m=c.path:o&&(m=o),(w==="0"||w==="\0"||w==="7")&&t.push({name:m.replace(/^\.\//,""),off:x,size:s}),o=null,c=null);a=x+Math.ceil(s/512)*512}return t}var as=n=>n.length>=262&&Xe(n,257,5)==="ustar";async function ui(n,e){let t=new Set(n.map(s=>s.name)),a=null;t.has("_backup.json")?a=await e("_backup.json").catch(()=>null):t.has("_folder.json")&&(a=await e("_folder.json").catch(()=>null));let o=n.filter(s=>/(^|\/)project\.json$/.test(s.name)).map(s=>s.name.slice(0,-12)),c=s=>{if(a?.type==="sdstudio-folder-backup")return a.folder||"";let w=(a?.projects??[]).find(x=>x&&(x.name===s||x===s));return(w&&typeof w=="object"?w.folder:"")||""},p=[];for(let s of o){let w;try{w=await e(`${s}project.json`)}catch{continue}if(!w||typeof w.scenes!="object")continue;let x=String(w.name||s.replace(/\/$/,"").split("/").pop()||"SDStudio").slice(0,80);p.push(ss(w,{name:x,folder:c(s.replace(/\/$/,""))||c(x),root:s,files:n}))}return p}function ss(n,{name:e=n?.name||"SDStudio",folder:t="",root:a="",files:o=[]}={}){let c=n.selectedWorkflow?.workflowType||"SDImageGen",p=n.selectedWorkflow?.presetName,s=n.presets?.[c]??n.presets?.SDImageGen??[],w=(Array.isArray(s)?s.find(_=>_?.name===p)??s[0]:null)??{},x=Pt(n);x.scenes=x.scenes.filter((_,f)=>(Object.values(n.scenes)[f]?.type??"scene")==="scene");let m={},k=0,j=0,z=new Map;for(let _ of o){if(!_.name.startsWith(`${a}outs/`)||!hl.test(_.name))continue;let f=_.name.slice(`${a}outs/`.length),$=f.lastIndexOf("/");if($<0)continue;let b=f.slice(0,$),P=f.slice($+1);z.has(b)||z.set(b,[]),z.get(b).push({file:P,entry:_.name})}for(let[_,f]of Object.entries(n.scenes??{})){if(!f||f.type&&f.type!=="scene")continue;let $=String(f.name||_),b=z.get($)??[],P=new Set((f.mains??[]).map(E=>String(E).split("/").pop())),F=(f.imageMap??[]).map(E=>String(E).split("/").pop()),R=E=>{let O=F.indexOf(E);return O<0?1e9:O};b.sort((E,O)=>R(E.file)-R(O.file)||E.file.localeCompare(O.file)),m[$]=b.map(E=>({...E,fav:P.has(E.file)})),k+=b.length,j+=m[$].filter(E=>E.fav).length}return{name:e,folder:String(t||""),prompt:String(w.frontPrompt??""),back:String(w.backPrompt??""),neg:String(w.uc??""),tpl:x,images:m,count:k,favCount:j}}function gi(n,e,{mode:t="fav"}={},a){let o=n,c=[],p=new Set(n.chars.map(x=>x.name)),s=x=>{if(!p.has(x))return p.add(x),x;let m=2;for(;p.has(`${x} ${m}`);)m++;return p.add(`${x} ${m}`),`${x} ${m}`};for(let x of e){o=a?ye(o,{name:s(x.name),prompt:x.prompt},a):ye(o,{name:s(x.name),prompt:x.prompt});let m=o.chars[o.chars.length-1];if(x.tpl.scenes.length&&(o=pe(o,[m.id],x.tpl,"replace",a).project),x.folder){let j=o.folders.find(z=>z.name===x.folder&&!z.parent);j||(o=a?Ne(o,{name:x.folder},a):Ne(o,{name:x.folder}),j=o.folders[o.folders.length-1]),o=ut(o,[m.id],{to:j.id})}if(t==="none")continue;let k=vn(o,m.id);for(let j of k.scenes)(x.images[j.name]??[]).filter(_=>t==="all"||_.fav).forEach((_,f)=>c.push({cid:m.id,sid:j.id,entry:_.entry,fav:_.fav,order:f}))}let w=e[0];if(w){let x=o.settings,m={};!String(x.back??"").trim()&&w.back.trim()&&(m.back=w.back),!String(x.neg??"").trim()&&w.neg.trim()&&(m.neg=w.neg),Object.keys(m).length&&(o=Ln(o,m))}return{project:o,jobs:c}}var os=globalThis.__duskLib?.["src/vendor/fflate-full.js"];if(!os)throw new Error("Dusk 코어에 src/vendor/fflate-full.js가 없어요 — Dusk를 업데이트해 주세요");{let n=["Decompress","strFromU8","strToU8","unzipSync","zipSync"].filter(e=>!(e in os));if(n.length)throw new Error("Dusk 본체가 이 애드온보다 오래됐어요(src/vendor/fflate-full.js에 없는 기능: "+n.slice(0,3).join(", ")+") — Dusk를 업데이트해 주세요")}var{Decompress:Pd,strFromU8:$d,strToU8:zd,unzipSync:mi,zipSync:Md}=os;var fi=[["scene","씬 모드"],["gallery","갤러리 모드"],["search","검색 모드"],["compare","비교 모드"],["bulk","동시편집"]],gl={outfit:"캐릭터",group:"소속"},ml=[["default",""],["smile","smile"],["happy","happy, smile, open mouth"],["laughing","laughing, closed eyes"],["angry","angry, v-shaped eyebrows"],["sad","sad, frown"],["crying","crying, tears"],["surprised","surprised, open mouth, wide-eyed"],["shy","shy, blush, looking away"],["embarrassed","embarrassed, blush, sweat"],["confused","confused, head tilt"],["thinking","thinking, hand on own chin"],["sleepy","sleepy, half-closed eyes"],["smug","smug, smirk"],["scared","scared, trembling"],["disgusted","disgusted"],["determined","determined, clenched hand"],["bored","bored, half-closed eyes"],["excited","excited, sparkle"],["love","heart-shaped pupils, blush"]],Er=new Map;async function is(n,e,t){if(!e?.id||e.kind!=="module"&&e.kind!=="character")return;si();let a=`${e.kind}:${e.id}`;if(Er.has(a)){let r=Er.get(a);return r.reopen(),r}let o="";if(e.kind==="module")o=(await n.svc.load({fresh:!0})).entries.find(r=>r.module.id===e.id)?.module?.name??"";else{let r=await n.api.getCharacterFromIndex(e.index);if(!r||r.chaId!==e.id)throw new Error("봇을 찾지 못했어요. 목록을 새로 고친 뒤 다시 해 주세요");o=r.name}let c=t.keyOf(e),p=n.state.sdsStore??=typeof indexedDB<"u"?Vo({local:Ko(),host:{save:(r,l,d)=>t.saveProject(r,l,d),load:async r=>({project:await t.loadProject(r),t:await t.savedAt(r)})},log:(...r)=>console.warn("[Dusk 에셋 제작 저장]",...r)}):null,s,w=0;if(p){let r=await p.open(e,c);s=r.project,w=r.t,r.missing.length&&setTimeout(()=>n.toast(`저장본에서 캐릭터 ${r.missing.length}명을 찾지 못했어요. 전체 백업(zip)이 있으면 가져와 주세요`,{error:!0,seconds:12}),500)}else s=await t.loadProject(e),w=await t.savedAt(e);let x=`dusk.sdstudio.nobot.${e.kind}:${e.id}`,m=!await t.getLocal(x,!1),k=0,j=!1,z=r=>{let l="";for(let d=0;d<r.length;d+=32768)l+=String.fromCharCode(...r.subarray(d,d+32768));return btoa(l)},_=async()=>e.kind==="module"?(await n.svc.load({fresh:!0})).entries.find(r=>r.module.id===e.id)?.module:await n.api.getCharacterFromIndex(e.index).then(r=>r?.chaId===e.id?r:null);try{let r=Oa(await _(),e.kind);r&&(k=r.t,r.t>w&&(s=Zn(JSON.parse(st(at(Uint8Array.from(atob(r.z),l=>l.charCodeAt(0)))))),n.toast("봇에 저장된 더 최근 설정으로 열었어요",{seconds:5})))}catch{}let f=(n.state.sdstudio??={})[`${e.kind}:${e.id}`]??={folder:null,charId:null,sceneId:null,mode:"scene",zoom:41,names:!0,left:(n.win.clientWidth||innerWidth)>760,q:"",compare:[],slotsOpen:!0};f.folder&&!s.folders.some(r=>r.id===f.folder)&&(f.folder=null),f.charId&&!vn(s,f.charId)&&(f.charId=null,f.sceneId=null),f.sceneId&&!mn(s,f.charId,f.sceneId)&&(f.sceneId=null);let $=new Set,b=new Map,P=new Map,F=null,R=null,E=null,O={running:!1,done:0,total:0,ctl:null,workers:1},G=ni(),on=await t.getPrefs(),rn=!1;oi({get:()=>t.tags(),enabled:()=>on.tags!==!1,offered:()=>rn,load:async()=>{rn=!0;let r=n.toast("태그 사전 받는 중…",{seconds:120});try{let l=await t.loadTags();return n.toast(`태그 ${l.size.toLocaleString()}개를 받았어요`),l}finally{r?.close?.()}}}),t.loadTags({download:!1}).catch(()=>{});let un={root:n.root?.getAttribute("style")??null,win:n.win.getAttribute("style")??null};n.root&&(n.root.style.padding="0"),Object.assign(n.win.style,{maxWidth:"none",maxHeight:"none",width:"100%",height:"100%",borderRadius:"0",border:"0"}),n.api.showContainer?.("fullscreen")?.catch?.(()=>{});let g={ctx:n,target:e,sd:t,st:f,sel:$,title:o,P:le,prefs:on,keys:on.keys2?Za(on.keys2):Za(on.keys,{v:1}),keyLabel:r=>Tr(g.keys[r])||"단축키 없음",get proj(){return s},set(r,{undo:l=!0}={}){l&&r!==s&&G.push(s,{typing:globalThis.event?.type==="input"}),s=r,clearTimeout(F),F=setTimeout(()=>g.persist(),500)},undo(){let r=G.undo(s);if(!r){g.toast("되돌릴 것이 없어요");return}s=r,M()},redo(){let r=G.redo(s);if(!r){g.toast("다시 할 것이 없어요");return}s=r,M()},persist(){clearTimeout(F),j=!0;let r=l=>{Date.now()-(g._saveErrAt??0)<3e4||(g._saveErrAt=Date.now(),n.toast(`저장하지 못했어요: ${l?.message??l}`,{error:!0}))};return p?p.save(e,c,s).catch(l=>(console.warn("[Dusk 에셋 제작 저장] 기기 저장 실패",l),t.saveProject(e,s).catch(r))):t.saveProject(e,s).catch(r)},toast:(r,l)=>n.toast(r,l),curChar:()=>f.charId?vn(s,f.charId):null,curScene:()=>f.charId&&f.sceneId?mn(s,f.charId,f.sceneId):null,remember(r,l){b.set(r,l),b.size>24&&b.delete(b.keys().next().value),P.has(r)||P.set(r,URL.createObjectURL(new Blob([l],{type:"image/png"}))),Va(l).then(d=>Ba(r,d)).catch(()=>{}),Ka(r,l)},async bytes(r){if(b.has(r))return b.get(r);let l=await Ua(r);if(l||(l=await n.assets.read(r,{prio:100}),l&&Ka(r,l)),!l)throw new Error("그림을 읽지 못했어요");return b.size>24&&b.delete(b.keys().next().value),b.set(r,l),l},async url(r){return URL.createObjectURL(new Blob([await g.bytes(r)],{type:"image/png"}))},thumb(r,{now:l=!1}={}){let d=i("img",{alt:"",loading:"lazy",dataset:{path:r,ext:"png"}});return P.has(r)?d.src=P.get(r):l?nn(r).then(h=>{h&&(d.src=h)}).catch(()=>{}):R?.observe(d),d},addCompare(r){f.compare=[...f.compare.filter(l=>l.path!==r.path),r].slice(-4)},toggleLeft(r=!f.left){f.left=r,A.hidden=!r,q.setAttribute("aria-pressed",String(r))},paint(){g.paintLeft(),g.paintTop(),g.paintTools(),g.paintBody()},paintLeft(){li(g,T)},paintTop:en,paintTools:pn,paintBody:X,putPaths:Ut,derive:n0,quickPut:me},yn=new Map;function nn(r){if(P.has(r))return Promise.resolve(P.get(r));if(yn.has(r))return yn.get(r);let l=(async()=>{let d=await Do(r);if(!d){let u=await Ua(r);if(!u&&(u=await n.assets.read(r,{prio:10}),!u))return null;d=await Va(u),Ba(r,d)}let h=URL.createObjectURL(d);return P.set(r,h),h})().finally(()=>yn.delete(r));return yn.set(r,l),l}function M(){f.charId&&!vn(s,f.charId)&&(f.charId=null,f.sceneId=null),f.sceneId&&!mn(s,f.charId,f.sceneId)&&(f.sceneId=null),f.folder&&!s.folders.some(r=>r.id===f.folder)&&(f.folder=null),$.clear(),clearTimeout(F),F=setTimeout(()=>g.persist(),300),g.paint()}g.dlg=di(g);let S=i("div",{class:"rb-full sds",role:"dialog","aria-label":"에셋 제작",id:"rb-sd-studio",tabIndex:-1});g.el=S,S.__sds=g;let q=i("button",{type:"button",class:"tab","aria-pressed":String(f.left),title:"프롬프트 에디터 열고 닫기 (F1)",onClick:()=>g.toggleLeft()},"프롬프트"),L=i("nav",{class:"sds-rail","aria-label":"옆 칸"},i("span",{class:"key"},"F1"),q),T=i("div",{class:"sds-left-body rb-scroll",id:"sds-left"}),A=i("aside",{class:"sds-left",hidden:!f.left,"aria-label":"프롬프트 에디터"},...ci(g),T),J=i("div",{class:"sds-top",id:"sds-topbar"}),H=i("div",{class:"sds-tools",id:"sds-tools",role:"toolbar","aria-label":"도구"}),N=i("div",{class:"sds-body rb-scroll",id:"sds-body"});N.addEventListener("contextmenu",r=>{r.target.closest(".sds-card,.sds-frow,input,textarea,select,button")||(r.preventDefault(),qi(r.target.closest("div")??N))}),N.addEventListener("click",r=>{f.focus&&!r.target.closest(".sds-card,.sds-frow,.rb-chip,button,input,select,textarea,label")&&Tt(null)});let D=i("div",{class:"sds-setbar"}),U=i("div",{class:"sds-qerr",id:"sds-qerr",role:"alert",hidden:!0}),Q=()=>{let r=O.running&&O.retry&&O.lastErr;U.hidden=!r,r&&(U.textContent=`다시 시도 ${O.retry}번째 — ${O.lastErr}`)},fn=i("div",{class:"sds-main"},J,U,H,D,N);S.append(L,A,fn),n.win.appendChild(S);function en(){let r=g.curChar(),l=Pa(s,r?.id??null),d=O.running?i("button",{type:"button",class:"sds-queue stop",id:"sds-run",onPointerdown:h=>{h.button===0&&Jr()},onClick:()=>Jr()},sn("stop",14),`멈추기 ${O.done}/${O.total}`):O.stopping?i("button",{type:"button",class:"sds-queue stop",id:"sds-run",disabled:!0},sn("stop",14),"멈추는 중…"):i("button",{type:"button",class:"sds-queue",id:"sds-run",disabled:!ie(s).length,title:g.prefs.boost?"부스트 모드: 토큰 여러 개로 동시에 그려요":"예약된 씬을 차례로 그려요",onClick:()=>Kt()},sn(g.prefs.boost?"bolt":"play",14),`${g.prefs.boost?"부스트 ":""}생성${ie(s).length?` ${ie(s).length}장`:""}`);wn(J,i("button",{type:"button",class:"sds-ib",style:"border:0;background:none","aria-label":f.sceneId||f.charId||f.folder||f.mode!=="scene"?"위로":"에셋 제작 닫기",title:f.sceneId||f.charId||f.folder?"한 단계 위로":"닫기",id:"sds-close",onClick:()=>se()},sn("back",20)),i("div",{class:"ttl"},i("b",null,r?"씬 갤러리":"캐릭터 갤러리"),r?i("span",{class:"sds-pill",id:"sds-combos"},`조합 ${l.combos}개`):i("span",{class:"sds-pill"},`캐릭터 ${s.chars.length}명`),i("span",{class:"sds-pill",id:"sds-reserved"},`예약된 씬 ${l.reserved}/${l.scenes}`)),i("div",{class:"sds-modes",role:"tablist","aria-label":"모드"},...fi.map(([h,u])=>i("button",{type:"button",role:"tab","aria-selected":String(f.mode===h),disabled:h==="bulk"&&!r,dataset:{mode:h},onClick:()=>Gn(h)},h==="scene"&&!r?"캐릭터 모드":u))),O.running?Hn():null,i("div",{class:"sds-run"},d,B("도움말",{size:"sm",icon:"help",onClick:()=>g.dlg.help()}),Bn("x","에셋 제작 닫기(플러그인 화면으로)",()=>Vt(),{id:"sds-quit"})))}let kn=r=>{let l=Math.max(0,Math.round(r/1e3)),d=Math.floor(l/3600),h=Math.floor(l%3600/60),u=l%60;return d?`${d}시간 ${h}분`:h?`${h}분 ${u}초`:`${u}초`};function Mn(){let r=O.total?Math.floor(O.done/O.total*100):0,l=O.total-O.done,d=Date.now()-O.t0,h=O.done?d/O.done*l:null;return`${r}% · ${O.done}/${O.total}장 · 남은 ${l}장 · ${h==null?"예상 시간 재는 중":`약 ${kn(h)} 남음`}${O.retry?` · 다시 시도 ${O.retry}번째`:""}`}function Hn(){let r=O.total?O.done/O.total*100:0;return i("div",{class:"sds-prog",id:"sds-prog",role:"progressbar","aria-valuemin":"0","aria-valuemax":"100","aria-valuenow":String(Math.floor(r))},i("div",{class:"bar"},i("i",{style:`width:${r.toFixed(1)}%`})),i("span",{class:"t"},Mn()))}function se(){if(f.mode!=="scene"&&f.mode!=="bulk")return Gn("scene");if(f.sceneId)return Ze(null);if(f.charId)return ge(null);if(f.folder){f.folder=s.folders.find(r=>r.id===f.folder)?.parent??null,f.focus=null,$.clear(),en(),pn(),X();return}Vt()}function Gn(r){f.mode=r,$.clear(),f.sceneId&&r!=="scene"&&(f.sceneId=null),en(),pn(),X()}S.addEventListener("click",r=>{r.target.closest?.(".sds-dd")||Lr()});function pn(){let r=g.curChar(),l=g.curScene(),d=s.settings.reserveDefault,h=$.size,u=!r&&f.focus?.kind==="char"?vn(s,f.focus.id):null,v=!r&&f.focus?.kind==="folder"?s.folders.find(Z=>Z.id===f.focus.id):null,C=Nt(),I=Cs().length,K=Bt().reduce((Z,cn)=>Z+ft(cn).length,0),tn=Dn(s);wn(D,i("div",{class:"sds-sets",id:"sds-sets",role:"group","aria-label":"씬 세트"},...tn.list.map(Z=>{let cn=B(Z.name,{size:"sm",kind:Z.id===tn.active?"primary":"ghost",id:`sds-set-${Z.id}`,title:`${Z.name} 세트${Z.tpl?` · 씬 프리셋 ‘${Z.tpl}’`:""} — 우클릭: 이름·프리셋·지우기`,onClick:()=>$i(Z.id)});return cn.addEventListener("contextmenu",An=>{An.preventDefault(),An.stopPropagation(),Mi(cn,Z.id)}),cn}),B("",{size:"sm",kind:"ghost",icon:"plus",id:"sds-set-add",title:"새 씬 세트",onClick:()=>zi()})));let y=(Z,cn,An,{id:fe,disabled:Ae=!1,danger:be=!1,on:tt=!1,hint:rt="",title:Wr}={})=>i("button",{type:"button",class:["sds-mi",be&&"danger",tt&&"on"],id:fe,disabled:Ae,title:Wr||rt||cn,onClick:o0=>{Lr(),An(o0)}},sn(Z,16),i("span",null,cn),rt?i("small",null,rt):null),W=()=>i("div",{class:"sds-msep"}),V=(Z,cn,An,{id:fe,primary:Ae=!1}={})=>{let be=i("div",{class:"sds-ddp",role:"menu",hidden:!0},...An.filter(Boolean)),tt=i("button",{type:"button",class:["sds-ddt",Ae&&"pri"],id:fe,title:Z||void 0,"aria-haspopup":"menu","aria-expanded":"false",onClick:rt=>{rt.stopPropagation();let Wr=be.hidden;Lr(),Wr&&(be.hidden=!1,tt.setAttribute("aria-expanded","true"),qr(be))}},cn?sn(cn,16):null,Z?i("span",null,Z):null,Z?sn("chevD",14):null);return Z||tt.setAttribute("aria-label",fe==="sds-more"?"더 보기":"메뉴"),i("div",{class:"sds-dd"},tt,be)},Y=i("div",{class:"sds-mi sds-zoom"},sn("eye",16),i("span",null,"카드 크기"),i("input",{type:"range",min:10,max:100,value:f.zoom,"aria-label":"카드 크기",id:"sds-zoom",onClick:Z=>Z.stopPropagation(),onInput:Z=>{f.zoom=Number(Z.target.value),ls(),Z.target.nextSibling.textContent=`${f.zoom}%`}}),i("span",null,`${f.zoom}%`)),dn=l?ae(r,l.id).map(Z=>({...Z,cid:r.id})):C,xn=()=>y("upload",`고른 그림 바로 넣기${dn.length?` ${dn.length}장`:""}`,()=>me(dn),{id:l?"sds-put-sel":r?"sds-put-picked":"sds-put-all",disabled:!dn.length,hint:g.keyLabel("put"),title:`고른 그림 ${dn.length}장 봇에 바로 넣기 (${g.keyLabel("put")})`}),hn=[y("importIn","SDStudio·Dusk 백업 가져오기",()=>Se(),{id:"sds-import-backup"}),y("importIn","다른 원본 파일 가져오기…",Z=>Hi(Z.currentTarget.closest(".sds-dd")??Z.currentTarget),{id:"sds-import-menu"}),y("template",r?"템플릿 적용·관리(이 캐릭터)":f.folder?"템플릿 적용·관리(이 폴더)":"템플릿 적용·관리(모두)",Z=>Qi(Z.currentTarget.closest(".sds-dd")??Z.currentTarget),{id:"sds-tpl"}),y("importIn","씬 템플릿 가져와 적용",()=>Rt(),{id:"sds-tpl-import"}),r&&!l?y("save","이 캐릭터 씬을 템플릿으로 저장",()=>zs(r),{id:"sds-tpl-save"}):null,W(),y("zip","그림 zip으로 내보내기",Z=>Oi(Z.currentTarget.closest(".sds-dd")??Z.currentTarget),{id:"sds-zip"}),r?null:y("download","프로젝트 전체 백업(zip)",()=>Ui(),{id:"sds-fullbackup"}),r&&!l?y("clip","씬 프롬프트 복사",()=>ys(r,h?[...$]:null)):null],ln=[xn(),y("redo","다시하기",()=>g.redo(),{id:"sds-redo",disabled:!G.canRedo(),hint:g.keyLabel("redo")}),y("eye",f.names?"카드 이름 숨기기":"카드 이름 보이기",()=>{f.names=!f.names,S.classList.toggle("nonames",!f.names),pn()},{id:"sds-names",on:f.names}),Y,W(),r?null:y("shield",m?"봇에도 설정 저장 중(끄기)":"봇에 설정 저장 꺼짐(켜기)",()=>t0(),{id:"sds-botsave",on:m}),y("gear","설정",()=>g.dlg.settings(),{id:"sds-settings"})],jn=()=>B(`봇에 넣기${I?` ${I}`:""}`,{kind:"primary",icon:"upload",id:"sds-put-fav",title:`즐겨찾기 ${I}장을 확인하고 봇에 넣어요 (${g.curChar()?"이 캐릭터":f.folder?"이 폴더":"전체"}) · ${g.keyLabel("putFav")}`,disabled:!I,onClick:()=>Kr()}),an,bn,Sn=Bn("undo",`되돌리기 (${g.keyLabel("undo")})`,()=>g.undo(),{disabled:!G.canUndo(),id:"sds-undo"}),$n=i("button",{type:"button",class:"sds-ddt",id:"sds-choose",title:"대표 고르기 — 씬마다 후보를 넘기며 ★ (←/→ · F · Enter)",onClick:()=>Vr()},sn("star",16),i("span",null,"대표 고르기")),qn=Bn("search","검색",()=>{Gn("search"),N.querySelector("#sds-q")?.focus()},{on:f.mode==="search"});if(h&&!l){let Z=[...$];an=[i("span",{class:"sds-selc"},`${h}개 고름`),...r?[i("button",{type:"button",class:"sds-ddt",id:"sds-rsv-all",onClick:()=>{g.set(Wn(s,r.id,d,Z)),en(),X()}},sn("calPlus",16),i("span",null,`${d}장씩 예약`)),i("button",{type:"button",class:"sds-ddt",onClick:()=>{for(let cn of $)g.set(gt(s,r.id,cn));$.clear(),X()}},sn("copy",16),i("span",null,"복제")),h===1?i("button",{type:"button",class:"sds-ddt",onClick:()=>Ge(g,r.id,Z[0])},sn("trophy",16),i("span",null,"월드컵")):null,i("button",{type:"button",class:"sds-ddt",onClick:()=>ys(r,Z)},sn("clip",16),i("span",null,"프롬프트 복사")),i("button",{type:"button",class:"sds-ddt danger",onClick:()=>Dt(Z)},sn("trash",16),i("span",null,"지우기"))]:[i("button",{type:"button",class:"sds-ddt",id:"sds-rsv-selchars",title:"고른 캐릭터의 모든 씬을 예약",onClick:()=>{let cn=s;for(let An of Z)cn=Wn(cn,An,d);g.set(cn),en(),X(),g.toast(`캐릭터 ${Z.length}명의 모든 씬을 ${d}장씩 예약했어요`)}},sn("calPlus",16),i("span",null,`${d}장씩 예약`)),i("button",{type:"button",class:"sds-ddt",title:"고른 캐릭터 예약 비우기",onClick:()=>{let cn=s;for(let An of Z)cn=bt(cn,An);g.set(cn),en(),X()}},sn("calX",16),i("span",null,"예약 비우기")),i("button",{type:"button",class:"sds-ddt",onClick:()=>{for(let cn of $)g.set(lr(s,cn));$.clear(),X()}},sn("copy",16),i("span",null,"복제")),i("button",{type:"button",class:"sds-ddt",disabled:!s.folders.length,onClick:cn=>ks(cn.currentTarget,Z)},sn("swap",16),i("span",null,"폴더에 넣기·빼기")),i("button",{type:"button",class:"sds-ddt danger",onClick:()=>Ot(Z)},sn("trash",16),i("span",null,"지우기"))],Bn("x","고르기 풀기",()=>{$.clear(),pn(),X()})].filter(Boolean),bn=[jn(C,"sds-put-all")]}else if(!r)an=[Sn,V("새로 만들기","plus",[y("file","새 캐릭터",()=>Lt(),{id:"sds-addchar"}),y("folderPlus","폴더",()=>Rr(),{id:"sds-addfolder"})],{id:"sds-dd-new"}),V("예약","calPlus",[...u?[y("calPlus",`‘${u.name}’ 씬 모두 ${d}장씩 예약`,()=>{g.set(Wn(s,u.id,d)),en(),X()},{id:"sds-rsv-focus"})]:[],...v?[y("calPlus",`‘${v.name}’ 안 캐릭터 ${Rn(s,v.id).length}명 ${d}장씩 예약`,()=>{let Z=s;for(let cn of Rn(s,v.id))Z=Wn(Z,cn.id,d);g.set(Z),en(),X()},{id:"sds-rsv-focus"})]:[],y("calPlus",f.folder?`이 폴더 캐릭터 모두 ${d}장씩 예약`:`모든 캐릭터 ${d}장씩 예약`,()=>{let Z=s;for(let cn of f.folder?Rn(s,f.folder):s.chars)Z=Wn(Z,cn.id,d);g.set(Z),en(),X()},{id:"sds-rsv-all"}),y("bolt",`즐겨찾기 없는 씬만 ${d}장씩 (${K}개)`,()=>Ps(),{id:"sds-rsv-nofav",disabled:!K}),y("calX","예약 모두 비우기",()=>{g.set(bt(s,null)),en(),X()},{id:"sds-rsv-clear"})],{id:"sds-dd-rsv"}),$n,V("가져오기·내보내기","importIn",hn,{id:"sds-dd-io"})],bn=[qn,jn(C,"sds-put-all"),V("","more",ln,{id:"sds-more"})];else if(l){let Z=ae(r,l.id).map(An=>({...An,cid:r.id})),cn=Z.map(An=>An.path);an=[Sn,V("예약","calPlus",[y("calPlus","이 씬 1장 예약",()=>{g.set(Un(s,r.id,l.id,l.reserve+1)),en(),X()},{id:"sds-rsv-one"}),y("calX","이 씬 예약 비우기",()=>{g.set(Un(s,r.id,l.id,0)),en(),X()})],{id:"sds-dd-rsv"}),$n,V(cn.length?`고른 그림 ${cn.length}`:"그림","image",[y("check","모두 고르기",()=>{g.set(je(s,r.id,l.id,l.images.map(An=>An.path),!0),{undo:!1}),pn(),X()}),y("x","고르기 풀기",()=>{g.set(mr(s,r.id,l.id),{undo:!1}),pn(),X()},{id:"sds-unpick",disabled:!cn.length}),y("star","고른 그림 즐겨찾기 켜기·풀기",()=>{let An=!cn.every(Ae=>l.images.find(be=>be.path===Ae)?.fav),fe=s;for(let Ae of cn)fe=xe(fe,r.id,l.id,Ae,{fav:An});g.set(fe),pn(),X()},{id:"sds-fav",disabled:!cn.length}),y("compare","고른 그림 비교",()=>{for(let An of cn)g.addCompare({cid:r.id,sid:l.id,path:An});Gn("compare")},{disabled:cn.length<2}),y("trophy","이미지 월드컵",()=>Ge(g,r.id,l.id),{id:"sds-cup-btn",disabled:l.images.length<2}),y("sliders","넣는 방법 고르고 넣기…",()=>Ut(Z),{id:"sds-put-sel-opt",disabled:!cn.length}),W(),y("trash","고른 그림 목록에서 빼기",()=>Ai(r.id,l.id,cn),{danger:!0,disabled:!cn.length})],{id:"sds-dd-img"}),V("가져오기·내보내기","importIn",hn,{id:"sds-dd-io"})],bn=[qn,jn(Z,"sds-put-sel"),V("","more",[y("copy","씬 복제",()=>{g.set(gt(s,r.id,l.id)),g.toast("씬을 복제했어요")}),y("trash","이 씬 지우기",()=>Dt([l.id]),{danger:!0}),W(),...ln],{id:"sds-more"})]}else{let Z=ae(r).map(cn=>({...cn,cid:r.id}));an=[Sn,V("새로 만들기","plus",[y("file","새 씬",()=>It(),{id:"sds-addscene"}),y("layers","감정 세트(없는 것만)",()=>ws(),{id:"sds-emoset"})],{id:"sds-dd-new"}),V("예약","calPlus",[y("calPlus",`모든 씬 ${d}장씩 예약`,()=>{g.set(Wn(s,r.id,d)),en(),X()},{id:"sds-rsv-all"}),y("bolt",`즐겨찾기 없는 씬만 ${d}장씩 (${K}개)`,()=>Ps(),{id:"sds-rsv-nofav",disabled:!K}),y("calX","이 캐릭터 예약 비우기",()=>{g.set(bt(s,r.id)),en(),X()},{id:"sds-rsv-clear"})],{id:"sds-dd-rsv"}),$n,V("가져오기·내보내기","importIn",hn,{id:"sds-dd-io"})],bn=[qn,jn(Z,"sds-put-picked"),V("","more",[y("sliders","고른 그림 넣는 방법 고르고 넣기…",()=>Ut(Z),{id:"sds-put-picked-opt",disabled:!Z.length}),y("x","그림 고르기 모두 풀기",()=>{g.set(mr(s,r.id),{undo:!1}),pn(),X()},{id:"sds-unpick-all",disabled:!Z.length}),y("sortAsc","씬 이름순 ↑",()=>{g.set(gr(s,r.id,"asc")),X()}),y("sortDesc","씬 이름순 ↓",()=>{g.set(gr(s,r.id,"desc")),X()}),W(),...ln],{id:"sds-more"})]}wn(H,...an,i("span",{class:"sp"}),...bn)}function qr(r){r.style.left="",r.style.right="";let l=H.getBoundingClientRect(),d=r.getBoundingClientRect();d.left<l.left?(r.style.left="0",r.style.right="auto"):d.right>Math.min(l.right,innerWidth)&&(r.style.left="auto",r.style.right="0")}function Lr(){for(let r of S.querySelectorAll(".sds-ddp"))r.hidden||(r.hidden=!0,r.previousSibling?.setAttribute("aria-expanded","false"))}let ls=()=>{S.style.setProperty("--sds-card",`${Math.round(90+f.zoom*2.6)}px`),S.style.setProperty("--sds-row",`${Math.round(80+f.zoom*1.6)}px`)},cs=(r,l,d=0)=>i("span",{class:"cap"},i("span",{class:"n"},r),d?i("span",{class:"pk",title:`봇에 보낼 그림 ${d}장 고름`},`✓${d}`):null,i("span",{class:"c"},String(l))),At=()=>i("span",{class:"chk","aria-hidden":"true"},sn("check",14)),qe=(r,l)=>f.focus?.kind===r&&f.focus.id===l;function Tt(r,l){if(f.focus=l?{kind:r,id:l}:null,S.querySelectorAll(".sds-card.cur,.sds-frow.cur").forEach(d=>d.classList.remove("cur")),l){let d=r==="folder"?".sds-frow.sds-folder":`.sds-${r}`;for(let h of N.querySelectorAll(d))h.dataset.id===l&&h.classList.add("cur")}g.curChar()||pn()}function ds(r,l,d,h){return r.addEventListener("click",u=>{if(!u.target.closest(".quick")){if(u.target.closest(".chk")||u.ctrlKey||u.metaKey||u.shiftKey||$.size&&f.mode!=="scene"){$.has(l)?$.delete(l):$.add(l),r.setAttribute("aria-selected",String($.has(l))),pn();return}if(h==="scene"){$.has(l)&&$.size===1?$.clear():($.clear(),$.add(l));for(let v of N.querySelectorAll(".sds-scene"))v.setAttribute("aria-selected",String($.has(v.dataset.id)));pn();return}if(h){qe(h,l)||Tt(h,l);return}d()}}),h&&r.addEventListener("dblclick",u=>{u.target.closest(".quick")||($.clear(),d())}),r.setAttribute("aria-selected",String($.has(l))),h&&r.classList.toggle("cur",qe(h,l)),r}let Ye={cur:null},Or=["drop-before","drop-after","drop-into"],ps=()=>{Ye.cur=null;for(let r of S.querySelectorAll(".dragging,.drop-before,.drop-after,.drop-into"))r.classList.remove("dragging",...Or),delete r.dataset.dropHint;S.classList.remove("sds-dragging","sds-drag-scene")};function _t(r,l){r.draggable=!0,r.addEventListener("dragstart",d=>{d.stopPropagation(),Ye.cur=l(),d.dataTransfer.effectAllowed="copyMove";try{d.dataTransfer.setData("text/plain","sds")}catch{}r.classList.add("dragging"),S.classList.add("sds-dragging"),Ye.cur.kind==="scene"&&S.classList.add("sds-drag-scene")}),r.addEventListener("dragend",ps)}function he(r,{mode:l,ok:d,run:h,hint:u}){let v=(C,I)=>{let K=l(I);if(K==="into")return"into";let tn=r.getBoundingClientRect(),y=K==="x"?(C.clientX-tn.left)/(tn.width||1):(C.clientY-tn.top)/(tn.height||1);return K==="y3"?y<.25?"before":y>.75?"after":"into":y<.5?"before":"after"};r.addEventListener("dragover",C=>{let I=Ye.cur;if(!I||!d(I))return;C.preventDefault(),C.stopPropagation(),C.dataTransfer.dropEffect=C.altKey?"copy":"move";let K=v(C,I);r.classList.remove(...Or),r.classList.add("drop-"+K),u?r.dataset.dropHint=u(I,K,C.altKey):delete r.dataset.dropHint}),r.addEventListener("dragleave",C=>{r.contains(C.relatedTarget)||(r.classList.remove(...Or),delete r.dataset.dropHint)}),r.addEventListener("drop",C=>{let I=Ye.cur;if(!I||!d(I))return;C.preventDefault(),C.stopPropagation();let K=v(C,I),tn=C.altKey;ps(),h(I,K,tn)})}let hs=r=>$.has(r)&&$.size>1?[...$]:[r],Ir=(r,l)=>{let d=r.findIndex(h=>h.id===l);return d<0?null:r[d+1]?.id??null},bi=(r,l)=>{if(!l)return null;let d=[l],h=new Set;for(;d.length;){let u=d.shift();if(!h.has(u)){if(h.add(u),s.folders.find(v=>v.id===u)?.members.includes(r))return u;for(let v of s.folders)v.parent===u&&d.push(v.id)}}return l},Qe=()=>{en(),pn(),X()};function Le(r,l,d,h){g.set(ut(s,r.ids,{from:r.from,to:l,before:d,copy:!!l&&h})),$.clear(),Qe()}function Et(r,l,d){try{g.set(wa(s,r,l,d)),Qe()}catch(h){g.toast(h?.message??String(h),{error:!0})}}function us(r,l){return he(r,{mode:()=>"into",ok:d=>d.kind==="char"||d.kind==="folder"&&d.id!==l,hint:d=>l?`‘${s.folders.find(h=>h.id===l)?.name}’(으)로`:d.kind==="char"?"폴더에서 빼기":"맨 위로",run:(d,h,u)=>d.kind==="char"?Le(d,l,null,u):Et(d.id,l,null)}),r}let Dr=(r,l,d)=>{let h=fa(r),u=r.scenes.reduce((C,I)=>C+I.reserve,0),v=i("button",{type:"button",class:"sds-card sds-char",dataset:{id:r.id},title:r.name},h?g.thumb(h):i("span",{class:"ph"},sn("person",34)),At(),u?i("span",{class:"rsv"},`예약 ${u}`):null,cs(r.name,ma(r),ae(r).length));return v.addEventListener("contextmenu",C=>{C.preventDefault(),_i(v,r)}),l!==void 0&&(_t(v,()=>({kind:"char",ids:hs(r.id),from:bi(r.id,l)})),he(v,{mode:()=>"x",ok:C=>C.kind==="char"&&!(C.ids.length===1&&C.ids[0]===r.id),run:(C,I,K)=>Le(C,l,I==="before"?r.id:Ir(d,r.id),K)})),ds(v,r.id,()=>ge(r.id,l),"char")},gs=(r,l,d)=>{let h=Ce(l),u=i("button",{type:"button",class:"sds-card sds-scene",dataset:{id:l.id},title:l.name},h?g.thumb(h):i("span",{class:"ph"},sn("image",30)),At(),i("span",{class:"rsvbtn"+(l.reserve?" on":""),role:"button",tabindex:"0",id:`sds-rsv-${l.id}`,title:l.reserve?`예약 ${l.reserve}장 — 누르면 1장 더`:"1장 예약",onClick:v=>{v.stopPropagation(),g.set(Un(s,r.id,l.id,l.reserve+1)),en(),X()}},sn("calPlus",14),l.reserve?`+${l.reserve}`:"예약"),l.images.length&&!oe(l)?i("span",{class:"nofav",title:"아직 즐겨찾기가 없어요"},"★ 없음"):null,oe(l)?i("span",{class:"favmark",title:"즐겨찾기를 정한 씬"},sn("star",12),`${l.images.filter(v=>v.fav).length}`):null,i("span",{class:"quick"},l.reserve?i("button",{type:"button",title:"예약 하나 빼기",onClick:v=>{v.stopPropagation(),g.set(Un(s,r.id,l.id,l.reserve-1)),en(),X()}},"−1"):null),cs(l.name,l.images.length,Ve(l)));return u.addEventListener("contextmenu",v=>{v.preventDefault(),Li(u,r,l)}),d&&(_t(u,()=>({kind:"scene",cid:r.id,ids:hs(l.id)})),he(u,{mode:()=>"x",ok:v=>v.kind==="scene"&&v.cid===r.id&&!(v.ids.length===1&&v.ids[0]===l.id),run:(v,C)=>{g.set(ka(s,r.id,v.ids,C==="before"?l.id:Ir(d,l.id))),$.clear(),Qe()}})),ds(u,l.id,()=>Ze(l.id),"scene")},ms=(r,l,d,h)=>{let u=i("button",{type:"button",class:"sds-card sds-img",dataset:{path:l.path},title:l.seed?`시드 ${l.seed}`:""},g.thumb(l.path),At(),i("span",{class:"badges"},l.rank?i("span",{class:"badge"},`${l.rank}위`):null,l.fav?i("span",{class:"badge"},"★"):null),i("span",{class:"quick",style:"bottom:10px"},i("button",{type:"button",title:"이 그림을 봇에 바로 넣기",class:"sds-qput",onClick:v=>{v.stopPropagation(),me([{path:l.path,name:mn(s,r.cid,r.sid)?.name??"image",cid:r.cid,sid:r.sid}])}},"넣기")));return u.setAttribute("aria-selected",String(!!l.pick)),u.addEventListener("click",v=>{v.target.closest(".quick")||Fr(r)}),u.addEventListener("dblclick",v=>{v.target.closest(".quick")||es(g,d,h)}),u.addEventListener("contextmenu",v=>{v.preventDefault(),Ei(u,r,d,h)}),u};function Fr(r,l){let d=mn(s,r.cid,r.sid)?.images.find(h=>h.path===r.path);d&&(g.set(je(s,r.cid,r.sid,[r.path],l??!d.pick),{undo:!1}),pn(),X())}g.togglePick=Fr;let fs=new Map,bs=(r,l)=>({root:N,first:Math.max(l,fs.get(r)??0),step:200,onCount:d=>fs.set(r,d)}),Oe=(...r)=>i("div",{class:"sds-grid"},...r),ue=(r,l,...d)=>i("div",{class:"sds-sec"},i("b",null,r),l!=null?i("span",{class:"rb-muted"},String(l)):null,i("span",{class:"sp"}),...d),qt=(r,l,...d)=>i("div",{class:"sds-empty"},i("b",null,r),i("span",{style:"white-space:normal"},l),...d);function wi(){let r=g.curChar(),l=g.curScene(),d=(u,v,C)=>i("button",{type:"button",class:"rb-chip","aria-pressed":String(v),onClick:C},u),h=[us(d("전체",!f.folder&&!r,()=>{f.folder=null,ge(null)}),null)];for(let u of hr(s,f.folder))h.push(i("span",{class:"rb-muted"},"›"),us(d(u.name,u.id===f.folder&&!r,()=>{f.folder=u.id,ge(null)}),u.id));return r&&h.push(i("span",{class:"rb-muted"},"›"),d(r.name,!l,()=>Ze(null))),l&&h.push(i("span",{class:"rb-muted"},"›"),d(l.name,!0,()=>{})),f.folder&&!r&&h.push(i("button",{type:"button",class:"rb-icon-btn","aria-label":"폴더 메뉴",onClick:u=>Ft(u.currentTarget,f.folder)},sn("more",18))),i("nav",{class:"sds-crumbs",id:"sds-crumbs","aria-label":"위치"},...h)}function X(){let r=N.scrollTop;R?.disconnect(),R=No(N,nn),ls(),S.classList.toggle("nonames",!f.names);let l=g.curChar(),d=g.curScene(),h=[wi()];f.mode==="compare"?h.push(...Ci()):f.mode==="search"?h.push(...ji(l)):f.mode==="gallery"?h.push(...xi(l)):f.mode==="bulk"&&l?h.push(...Pi(l)):d?h.push(...vi(l,d)):l?h.push(...yi(l)):h.push(...ki()),wn(N,...h),N.scrollTop=r,(n.win.scrollLeft||n.win.scrollTop)&&(n.win.scrollLeft=0,n.win.scrollTop=0)}function bl(r){let l=Rn(s,r.id).length,d=s.folders.filter(u=>u.parent===r.id).length,h=i("button",{type:"button",class:"sds-card sds-subf",dataset:{id:r.id},title:r.name},i("span",{class:"ph",style:"flex-direction:column;gap:6px;color:var(--rb-acc)"},sn("folder",34),i("span",{class:"rb-muted",style:"font-size:12px"},`${l}명${d?` · 폴더 ${d}`:""}`)),i("span",{class:"cap"},i("span",{class:"n"},r.name)));return h.classList.toggle("cur",qe("folder",r.id)),h.addEventListener("click",()=>{qe("folder",r.id)||(Tt("folder",r.id),h.classList.add("cur"))}),h.addEventListener("dblclick",()=>{f.focus=null,f.folder=r.id,$.clear(),pn(),X()}),h.addEventListener("contextmenu",u=>{u.preventDefault(),Ft(h,r.id)}),_t(h,()=>({kind:"folder",id:r.id})),he(h,{mode:()=>"into",ok:u=>u.kind==="char"||u.kind==="folder"&&u.id!==r.id,hint:(u,v,C)=>u.kind==="char"?`‘${r.name}’ 안에 ${C?"복사":"넣기"}`:`‘${r.name}’ 안으로`,run:(u,v,C)=>u.kind==="char"?Le(u,r.id,null,C):Et(u.id,r.id,null)}),h}function ki(){if(!s.chars.length&&!s.folders.length)return[qt("이 "+(e.kind==="module"?"모듈":"봇")+"에 들어갈 캐릭터를 만들어요","캐릭터를 열어 씬(표정·포즈)을 만들고 예약하면 SDStudio처럼 차례로 그려요. 캐릭터·소속은 폴더로 묶어요.",B("새 캐릭터",{kind:"primary",icon:"plus",onClick:()=>Lt()}))];let r=pr(s,f.folder),l=(u,v=0)=>{let C=Rn(s,u.id),I=(u.members??[]).map(Y=>vn(s,Y)).filter(Boolean),K=v<8?s.folders.filter(Y=>Y.parent===u.id):[],tn=K.length,y=(f.folded??=[]).includes(u.id),W=i("button",{type:"button",class:"rb-icon-btn sds-fold","aria-label":y?"펼치기":"접기","aria-expanded":String(!y),title:y?"펼치기":"접기",onClick:Y=>{Y.stopPropagation(),f.folded=y?f.folded.filter(dn=>dn!==u.id):[...f.folded,u.id],X()}},i("span",{style:`display:flex;transition:transform .15s;transform:rotate(${y?-90:0}deg)`},sn("chevD",16))),V=i("div",{class:["sds-frow sds-folder",y&&"folded"],dataset:{id:u.id}},i("div",{class:"hd"},W,i("button",{type:"button",class:"open sds-fopen",onClick:()=>{qe("folder",u.id)||Tt("folder",u.id)},onDblclick:()=>{f.focus=null,f.folder=u.id,$.clear(),pn(),X()}},i("span",{style:"color:var(--rb-acc);display:flex"},sn("folder",18)),i("b",{style:"font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"},u.name),u.kind?i("span",{class:"rb-badge"},gl[u.kind]):null,u.tpl?i("span",{class:"rb-badge",title:"새 캐릭터에 적용할 기본 템플릿"},`템플릿 ${u.tpl}`):null,i("span",{class:"rb-muted"},`${C.length}명${tn?` · 폴더 ${tn}`:""}`),i("span",{style:"color:var(--rb-mute);display:flex"},sn("chevR",16))),i("button",{type:"button",class:"rb-icon-btn","aria-label":"폴더 메뉴",onClick:Y=>Ft(Y.currentTarget,u.id)},sn("more",18))),y?null:I.length?i("div",{class:"strip"},...I.map(Y=>Dr(Y,u.id,I))):K.length?null:i("span",{class:"rb-muted",style:"white-space:normal"},"비어 있어요. 캐릭터 카드나 폴더를 여기로 끌어다 놓아요."),!y&&K.length?i("div",{class:"sds-subrows"},...K.map(Y=>l(Y,v+1))):null);return V.classList.toggle("cur",qe("folder",u.id)),V.querySelector(".hd").addEventListener("contextmenu",Y=>{Y.preventDefault(),Y.stopPropagation(),Ft(Y.currentTarget,u.id)}),_t(V.querySelector(".hd"),()=>({kind:"folder",id:u.id})),he(V,{mode:Y=>Y.kind==="folder"?"y3":"into",ok:Y=>Y.kind==="char"||Y.kind==="folder"&&Y.id!==u.id,hint:(Y,dn,xn)=>Y.kind==="char"?`‘${u.name}’ 안에 ${xn?"복사":"넣기"}${Y.ids.length>1?` (${Y.ids.length}명)`:""}`:dn==="into"?`‘${u.name}’ 안으로`:`‘${u.name}’ ${dn==="before"?"위":"아래"}에 놓기`,run:(Y,dn,xn)=>{if(Y.kind==="char")return Le(Y,u.id,null,xn);if(dn==="into")return Et(Y.id,u.id,null);let hn=s.folders.filter(ln=>(ln.parent??null)===(u.parent??null)&&ln.id!==Y.id);Et(Y.id,u.parent??null,dn==="before"?u.id:Ir(hn,u.id))}}),V},d=r.folders.map(u=>l(u)),h=d.length?[i("div",{class:"sds-subrows sds-toprows"},...d)]:[];if(r.chars.length){let u=Oe(...r.chars.map(v=>Dr(v,f.folder,r.chars)));he(u,{mode:()=>"into",ok:v=>v.kind==="char",run:(v,C,I)=>Le(v,f.folder,null,I)}),h.push(ue(f.folder?"캐릭터":d.length?"폴더 없는 캐릭터":"캐릭터",r.chars.length),u)}else if(f.folder&&!d.length)h.push(i("span",{class:"rb-muted"},"이 폴더에 바로 든 캐릭터가 없어요. 캐릭터 카드를 끌어다 놓을 수 있어요."));else if(d.length){let u=i("div",{class:"sds-rootdrop"},f.folder?"여기에 놓으면 이 폴더 바로 아래로 와요":"여기에 놓으면 폴더에서 빠져요");he(u,{mode:()=>"into",ok:v=>v.kind==="char",run:v=>Le(v,f.folder,null,!1)}),h.push(u)}return s.chars.length&&h.push(i("span",{class:"rb-muted",style:"font-size:12px;white-space:normal"},"카드·폴더를 끌어서 옮겨요 · 폴더에 놓으면 들어가고, 위 경로(전체 › …)에 놓으면 그 위치로 가요 · Alt/⌥를 누르고 놓으면 복사(여러 폴더에 걸치기)")),h}function yi(r){if(!r.scenes.length)return[qt("씬이 없어요","씬은 표정·포즈 하나예요. 이름이 그대로 감정 이미지 이름이 돼요.",B("새 씬",{kind:"primary",icon:"plus",onClick:()=>It()}),B("감정 세트 더하기",{icon:"sparkle",onClick:()=>ws()}))];let l=s.chars.filter(u=>u.id!==r.id),d=l.length?i("div",{class:"sds-tray"},i("span",{class:"rb-muted",style:"font-size:12px"},"다른 캐릭터로(Alt/⌥ 복사)"),...l.map(u=>{let v=i("span",{class:"rb-chip",role:"button"},u.name);return he(v,{mode:()=>"into",ok:C=>C.kind==="scene"&&C.cid===r.id,run:(C,I,K)=>{g.set(ya(s,r.id,C.ids,u.id,{copy:K})),$.clear(),Qe()}}),v})):null,h=r.scenes.filter(u=>u.images.length&&!oe(u)).length;return[ue("씬",r.scenes.length,h?i("button",{type:"button",class:"sds-pill",id:"sds-nofav-pill",title:"즐겨찾기 없는 씬부터 대표 고르기",style:"cursor:pointer;border:0",onClick:()=>Vr({onlyNoFav:!0})},`★ 없는 씬 ${h}`):null,i("span",{class:"rb-muted",style:"font-size:12px"},"눌러서 고르고, 더블클릭하면 열려요 · 끌어서 순서 바꾸기 · Ctrl/⌘·체크로 여러 개 고르기")),Oe(...r.scenes.map(u=>gs(r,u,r.scenes))),d]}function vi(r,l){let d=Yn(l.slots),h=i("input",{class:"sds-in",value:l.name,id:"sds-sname","aria-label":"씬 이름",style:"font-weight:800;min-width:160px;flex:1",onChange:hn=>{let ln=hn.target.value.trim();ln&&ln!==l.name&&(g.set(On(s,r.id,l.id,{name:Re({scenes:r.scenes.filter(jn=>jn.id!==l.id)},ln)})),X())}}),u=i("select",{class:"sds-sel","aria-label":"씬 크기",id:"sds-ssize",onChange:hn=>{g.set(On(s,r.id,l.id,{size:hn.target.value})),nt()}},i("option",{value:"",selected:!l.size},"크기: 세로(기본)"),...Object.entries(_n).map(([hn,ln])=>i("option",{value:hn,selected:l.size===hn},`${ln.label} ${ln.width}×${ln.height}`))),v=i("div",{class:"sds-row",style:"gap:4px"},Bn("minus","예약 하나 빼기",()=>{g.set(Un(s,r.id,l.id,l.reserve-1)),en(),X()},{disabled:!l.reserve}),i("span",{class:"sds-pill",id:"sds-srsv"},`예약 ${l.reserve}`),Bn("plus","1장 예약",()=>{g.set(Un(s,r.id,l.id,l.reserve+1)),en(),X()},{id:"sds-srsv-plus"})),C=hn=>{g.set(Ue(s,r.id,l.id,hn))},I=i("div",{class:"sds-slots",id:"sds-slots"}),K=i("pre",{class:"rb-muted",id:"sds-preview",style:"margin:0;white-space:pre-wrap;word-break:break-word;font:inherit;font-size:12.5px;background:var(--rb-win);border-radius:var(--rb-r1);padding:8px 10px"}),tn=()=>{let hn=s.settings,ln=vn(s,r.id),jn=mn(s,r.id,l.id);try{K.textContent=Yn(jn.slots)?Te({top:hn.top,own:ve(s,ln),middle:Pe(jn,0),back:hn.back},s.pieces,()=>0):"켜진 조각이 없는 슬롯이 있어 그릴 수 없어요.",K.style.color=""}catch(an){K.textContent=an.message,K.style.color="var(--rb-danger)"}},y=()=>{let hn=mn(s,r.id,l.id).slots;wn(I,...hn.map((ln,jn)=>i("div",{class:"sds-slot"},i("div",{class:"hd"},i("span",{style:"flex:1"},`슬롯 ${jn+1}`),i("button",{type:"button",class:"rb-icon-btn","aria-label":"슬롯 지우기",onClick:()=>{C(hn.filter((an,bn)=>bn!==jn)),y(),tn(),V()}},sn("x",14))),...ln.map((an,bn)=>i("div",{class:["sds-piece",an.on===!1&&"off"]},i("input",{type:"checkbox",checked:an.on!==!1,title:"켜기","aria-label":"조각 켜기",style:"margin-top:12px",onChange:Sn=>{C(mn(s,r.id,l.id).slots.map(($n,qn)=>qn!==jn?$n:$n.map((Z,cn)=>cn!==bn?Z:{...Z,on:Sn.target.checked}))),y(),tn(),V()}}),Vn({value:an.prompt,rows:2,label:`슬롯 ${jn+1} 조각 ${bn+1}`,onInput:Sn=>{C(mn(s,r.id,l.id).slots.map(($n,qn)=>qn!==jn?$n:$n.map((Z,cn)=>cn!==bn?Z:{...Z,prompt:Sn}))),tn()}}),i("button",{type:"button",class:"rb-icon-btn","aria-label":"조각 지우기",onClick:()=>{C(mn(s,r.id,l.id).slots.map((Sn,$n)=>$n!==jn?Sn:Sn.filter((qn,Z)=>Z!==bn))),y(),tn(),V()}},sn("trash",14)))),B("조각 더하기",{size:"sm",icon:"plus",onClick:()=>{C(mn(s,r.id,l.id).slots.map((an,bn)=>bn!==jn?an:[...an,{prompt:"",on:!0}])),y(),V()}}))),i("button",{type:"button",class:"sds-slot",id:"sds-addslot",style:"align-items:center;justify-content:center;min-height:120px;cursor:pointer;color:var(--rb-sub);font:inherit;font-weight:700",onClick:()=>{C([...mn(s,r.id,l.id).slots,[{prompt:"",on:!0}]]),y(),tn(),V()}},sn("plus",22),"슬롯 더하기"))},W=i("span",{class:"sds-pill"}),V=()=>{W.textContent=`조합 ${Yn(mn(s,r.id,l.id).slots)}개`,en()};y(),tn(),V();let Y=ne(l),dn=Y.map(hn=>({cid:r.id,sid:l.id,path:hn.path}));return[i("section",{class:"sds-frow",id:"sds-scene-edit"},i("div",{class:"sds-row",style:"flex-wrap:wrap"},h,u,v,W,B("지금 1장",{size:"sm",kind:"primary",icon:"sparkle",id:"sds-gen-one",disabled:O.running||!d,onClick:()=>{g.set(Un(s,r.id,l.id,l.reserve+1)),Kt()}})),i("details",{open:f.slotsOpen,onToggle:hn=>{f.slotsOpen=hn.target.open}},i("summary",{style:"cursor:pointer;font-weight:800;font-size:13px;margin-bottom:8px"},"씬 프롬프트 조합"),i("div",{style:"display:flex;flex-direction:column;gap:8px"},i("span",{class:"rb-muted",style:"white-space:normal;font-size:12px"},"슬롯마다 켜진 조각 하나씩 골라 조합해요. 예약 1장 = 조합 전부. 최종 = 상위 + 외형 + 이 조합 + 하위."),I,i("span",{class:"rb-label"},"미리보기(첫 조합)"),K))),ue("이미지",Y.length,Y.length?i("span",{class:"rb-muted",style:"font-size:12px"},"누르면 크게 · 체크로 고르기"):null),Y.length?Ha(Oe(),Y,(hn,ln)=>ms(dn[ln],hn,dn,ln),bs(`s:${l.id}`,120)):qt("아직 그림이 없어요","예약하고 위의 ‘생성’을 누르거나 ‘지금 1장’을 눌러요.")]}function xi(r){let d=(r?[r]:f.folder?Rn(s,f.folder):s.chars).flatMap(y=>y.scenes.flatMap(W=>ne(W).map(V=>({it:{cid:y.id,sid:W.id,path:V.path},im:V,sc:W,cc:y}))));if(!d.length)return[qt("그림이 없어요","씬을 예약하고 ‘생성’을 누르면 여기에 모여요.")];let h=d.map(y=>y.it),u=d.filter(y=>y.im.pick),v=y=>{let W=s;for(let V of d)!!V.im.pick!==y&&(W=je(W,V.it.cid,V.it.sid,[V.it.path],y));g.set(W,{undo:!1}),pn(),X()},C=[i("div",{class:"sds-row sds-bulkbar",id:"sds-gbulk",style:"flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:4;background:var(--rb-win);padding:6px 0"},i("span",{class:"sds-pill"},`그림 ${d.length}장 · 고름 ${u.length}`),B("모두 고르기",{size:"sm",id:"sds-g-all",onClick:()=>v(!0)}),B("고르기 풀기",{size:"sm",id:"sds-g-none",disabled:!u.length,onClick:()=>v(!1)}),B(`고른 ${u.length}장 봇에 넣기`,{size:"sm",kind:"primary",id:"sds-g-put",disabled:!u.length,onClick:()=>me(u.map(y=>({cid:y.it.cid,sid:y.it.sid,path:y.it.path,name:y.sc.name})))}),B(`고른 ${u.length}장 목록에서 빼기`,{size:"sm",kind:"danger",id:"sds-g-del",disabled:!u.length,onClick:()=>Br(u.map(y=>y.it))}),i("span",{class:"rb-muted",style:"font-size:12px"},"한 번 누르면 고르기 · 두 번 누르면 크게 보기"))],I=[],K=0,tn=null;for(let y of d)y.sc!==tn&&(tn=y.sc,I.push({head:r?y.sc.name:`${y.cc.name} › ${y.sc.name}`,n:y.sc.images.length})),I.push({x:y,i:K++});return C.push(Ha(i("div",{class:"sds-grid sds-ggrid"}),I,y=>y.head?i("div",{class:"sds-ghead"},ue(y.head,y.n)):ms(y.x.it,y.x.im,h,y.i),bs(`g:${r?.id??f.folder??""}`,150))),C}function ji(r){let l=i("input",{class:"sds-in",id:"sds-q",type:"search",placeholder:r?"씬 이름·프롬프트 찾기":"캐릭터 이름·외형 프롬프트 찾기",value:f.q,style:"width:100%",onInput:u=>{f.q=u.target.value;let v=h();wn(d,...v)}}),d=i("div",{style:"display:flex;flex-direction:column;gap:12px"}),h=()=>{let u=f.q.trim().toLowerCase();if(!u)return[i("span",{class:"rb-muted"},"찾을 말을 적어요.")];if(r){let C=r.scenes.filter(I=>I.name.toLowerCase().includes(u)||I.slots.some(K=>K.some(tn=>tn.prompt.toLowerCase().includes(u))));return C.length?[ue("찾은 씬",C.length),Oe(...C.map(I=>gs(r,I)))]:[i("span",{class:"rb-muted"},"없어요.")]}let v=s.chars.filter(C=>C.name.toLowerCase().includes(u)||C.prompt.toLowerCase().includes(u)||C.scenes.some(I=>I.name.toLowerCase().includes(u)));return v.length?[ue("찾은 캐릭터",v.length),Oe(...v.map(Dr))]:[i("span",{class:"rb-muted"},"없어요.")]};return wn(d,...h()),setTimeout(()=>l.focus(),0),[l,d]}function Ci(){let r=f.compare.filter(u=>mn(s,u.cid,u.sid)?.images.some(v=>v.path===u.path));f.compare=r;let l=[ue("비교",r.length,r.length?B("비우기",{size:"sm",kind:"ghost",onClick:()=>{f.compare=[],X()}}):null)];r.length<2&&l.push(i("span",{class:"rb-muted",style:"white-space:normal"},"그림을 2~4장 넣으면 나란히 보여요. 아래 그림을 누르거나, 크게 보기에서 ‘비교에 넣기’를 눌러요.")),r.length&&l.push(i("div",{class:"sds-cmp",id:"sds-cmp"},...r.map(u=>{let v=i("img",{alt:""});g.url(u.path).then(K=>{v.src=K}).catch(()=>{});let C=mn(s,u.cid,u.sid),I=C.images.find(K=>K.path===u.path);return i("figure",null,v,i("figcaption",null,i("span",{style:"flex:1"},`${vn(s,u.cid).name} › ${C.name}${I?.seed?` · ${I.seed}`:""}`),i("button",{type:"button",class:"rb-icon-btn","aria-label":"비교에서 빼기",onClick:()=>{f.compare=f.compare.filter(K=>K.path!==u.path),X()}},sn("x",14))))})));let d=g.curChar(),h=(d?[d]:s.chars).flatMap(u=>u.scenes.flatMap(v=>v.images.map(C=>({cid:u.id,sid:v.id,path:C.path})))).slice(0,120);return h.length&&l.push(ue("고르기",h.length),Oe(...h.map(u=>{let v=f.compare.some(I=>I.path===u.path);return i("button",{type:"button",class:"sds-card","aria-selected":String(v),onClick:()=>{v?f.compare=f.compare.filter(I=>I.path!==u.path):g.addCompare(u),X()}},g.thumb(u.path),At())}))),l}function Pi(r){let l=r.scenes.map(y=>y.id),d=i("input",{type:"checkbox","aria-label":"모두 고르기",checked:l.length&&l.every(y=>$.has(y)),onChange:y=>{y.target.checked?l.forEach(W=>$.add(W)):$.clear(),X(),pn()}}),h=()=>r.scenes.filter(y=>$.has(y.id)),u=i("input",{class:"sds-in",placeholder:"넣을 태그 / 찾을 말",id:"sds-bulk-text",style:"flex:1;min-width:160px"}),v=i("input",{class:"sds-in",placeholder:"바꿀 말",id:"sds-bulk-rep",style:"flex:1;min-width:120px"}),C=y=>{let W=h();if(!W.length){g.toast("씬을 먼저 골라요");return}let V=s;for(let Y of W)V=Ue(V,r.id,Y.id,y(mn(V,r.id,Y.id).slots));g.set(V),X(),g.toast(`씬 ${W.length}개를 바꿨어요`)},I=(y,W)=>[y,W].filter(V=>V&&V.trim()).join(", "),K=i("div",{class:"sds-frow"},i("b",null,`고른 씬 ${h().length}개에 한꺼번에`),i("div",{class:"sds-row",style:"flex-wrap:wrap"},u,v),i("div",{class:"sds-acts"},B("앞에 넣기",{size:"sm",id:"sds-bulk-front",onClick:()=>{let y=u.value.trim();y&&C(W=>W.length?W.map((V,Y)=>Y?V:V.map(dn=>({...dn,prompt:I(y,dn.prompt)}))):[[{prompt:y,on:!0}]])}}),B("뒤에 넣기",{size:"sm",onClick:()=>{let y=u.value.trim();y&&C(W=>W.length?W.map((V,Y)=>Y!==W.length-1?V:V.map(dn=>({...dn,prompt:I(dn.prompt,y)}))):[[{prompt:y,on:!0}]])}}),B("찾아 바꾸기",{size:"sm",onClick:()=>{let y=u.value;y&&C(W=>W.map(V=>V.map(Y=>({...Y,prompt:Y.prompt.split(y).join(v.value)}))))}}),B("예약 +1",{size:"sm",onClick:()=>{g.set(Wn(s,r.id,1,h().map(y=>y.id))),en(),X()}}),i("select",{class:"sds-sel","aria-label":"크기 한꺼번에",onChange:y=>{if(!y.target.value)return;let W=s;for(let V of h())W=On(W,r.id,V.id,{size:y.target.value==="base"?"":y.target.value});g.set(W),X()}},i("option",{value:""},"크기 한꺼번에…"),i("option",{value:"base"},"세로(기본)"),...Object.entries(_n).map(([y,W])=>i("option",{value:y},W.label))))),tn=r.scenes.map(y=>i("tr",null,i("td",null,i("input",{type:"checkbox",checked:$.has(y.id),"aria-label":`${y.name} 고르기`,onChange:W=>{W.target.checked?$.add(y.id):$.delete(y.id),pn()}})),i("td",null,i("input",{class:"sds-in",value:y.name,style:"width:140px;height:34px",onChange:W=>{let V=W.target.value.trim();V&&g.set(On(s,r.id,y.id,{name:Re({scenes:vn(s,r.id).scenes.filter(Y=>Y.id!==y.id)},V)}))}})),i("td",{style:"min-width:260px"},y.slots.length===1&&y.slots[0].length===1?Vn({value:y.slots[0][0].prompt,rows:1,label:`${y.name} 프롬프트`,onInput:W=>g.set(Ue(s,r.id,y.id,[[{...y.slots[0][0],prompt:W}]]))}):i("span",{class:"rb-muted",style:"white-space:normal"},y.slots.length?`슬롯 ${y.slots.length}개 · 조합 ${Yn(y.slots)}개`:"(조합 없음)")),i("td",null,y.size?_n[y.size]?.label??y.size:"기본"),i("td",null,String(y.reserve)),i("td",null,String(y.images.length))));return[K,i("div",{style:"overflow:auto"},i("table",{class:"sds-table",id:"sds-bulk"},i("thead",null,i("tr",null,i("th",null,d),i("th",null,"씬"),i("th",null,"프롬프트"),i("th",null,"크기"),i("th",null,"예약"),i("th",null,"그림"))),i("tbody",null,...tn)))]}function ge(r,l){f.focus=null,r&&l!==void 0&&(l===null||s.folders.some(d=>d.id===l))&&(f.folder=l),f.charId=r,f.sceneId=null,$.clear(),f.mode==="bulk"&&!r&&(f.mode="scene"),g.paint(),N.scrollTop=0}function Ze(r){f.focus=null,f.sceneId=r,$.clear(),r&&(f.mode="scene"),en(),pn(),X(),nt(),N.scrollTop=0}let nt=()=>g.paintLeft();async function Lt(){let r=await g.dlg.charNames({title:"새 캐릭터",name:s.chars.length?"":o});if(!r)return;let l=ye(s,r),d=l.chars.at(-1).id,h=f.focus?.kind==="folder"&&s.folders.some(C=>C.id===f.focus.id)?f.focus.id:f.folder;h&&(l=ht(l,h,d,!0));let u=h?Be(l,h):"",v=u||or(l)?.tpl||"";if(v){let C=(await t.loadTemplates()).find(I=>I.name===v);C&&(l=pe(l,[d],C,"replace").project,g.toast(`${u?"폴더 기본 템플릿":"씬 프리셋"} ‘${v}’을 적용했어요`))}g.set(l),f.focus={kind:"char",id:d},Qe();for(let C of N.querySelectorAll(".sds-char"))if(C.dataset.id===d){C.scrollIntoView({block:"nearest",inline:"nearest"});break}}async function $i(r){let l=Dn(s),d=l.list.find(v=>v.id===r);if(!d||r===l.active)return;let h=!1;!ir(s,r)&&s.chars.length&&(h=await zn(n.win,{title:`‘${d.name}’ 세트가 비어 있어요`,body:`지금 캐릭터 ${s.chars.length}명(이름·외형·폴더 소속)을 가져와 ${d.tpl?`씬 프리셋 ‘${d.tpl}’으로`:"빈 씬으로"} 시작할까요? 그림·씬은 따라가지 않아요.`,ok:"가져오기",cancel:"빈 세트로"}));let u=pa(s,r,{copy:h});if(h&&d.tpl){let v=(await t.loadTemplates()).find(C=>C.name===d.tpl);v&&(u=pe(u,u.chars.map(C=>C.id),v,"replace").project)}g.set(u),f.charId=null,f.sceneId=null,f.focus=null,$.clear(),g.paint(),g.toast(`‘${d.name}’ 세트로 바꿨어요`)}async function zi(){let r=await Xn(n.win,{title:"새 씬 세트",label:"이름",placeholder:"예: 수영복",ok:"만들기"});if(!r?.trim())return;g.set(ha(s,{name:r.trim()})),pn();let l=Dn(s).list.at(-1);(await t.loadTemplates()).length&&await Nr(n.win.querySelector(`#sds-set-${l.id}`),l.id)}async function Nr(r,l){let d=await t.loadTemplates(),h=Dn(s).list.find(u=>u.id===l);if(h){if(!d.length)return g.toast("저장된 씬 템플릿이 없어요. 템플릿 → 가져오기나 ‘템플릿으로 저장’을 먼저 해요");In(n.win,r??N,[...d.map(u=>({label:`${u.name===h.tpl?"✓ ":""}${u.name}`,icon:"list",onClick:()=>{g.set(dt(s,l,{tpl:u.name})),pn(),g.toast(`‘${h.name}’ 세트의 새 캐릭터는 ‘${u.name}’ 씬으로 시작해요`)}})),...h.tpl?["sep",{label:"씬 프리셋 없애기",icon:"x",onClick:()=>{g.set(dt(s,l,{tpl:""})),pn()}}]:[]])}}function Mi(r,l){let d=Dn(s),h=d.list.find(u=>u.id===l);h&&In(n.win,r,[{label:"이름 바꾸기",icon:"edit",onClick:async()=>{let u=await Xn(n.win,{title:"세트 이름",label:"이름",value:h.name});u?.trim()&&(g.set(dt(s,l,{name:u})),pn())}},{label:h.tpl?`씬 프리셋: ${h.tpl}`:"씬 프리셋 고르기…",icon:"list",onClick:()=>Nr(r,l)},...h.tpl&&l===d.active?[{label:"씬 프리셋을 이 세트 캐릭터 모두에 적용",icon:"sparkle",onClick:()=>Si(h)}]:[],"sep",{label:"세트 지우기",icon:"trash",danger:!0,onClick:async()=>{if(!(d.list.length<=1)){if(l===d.active)return g.toast("지금 쓰는 세트는 지울 수 없어요. 다른 세트로 바꾼 뒤 지워요");await zn(n.win,{title:`‘${h.name}’ 세트를 지울까요?`,body:`이 세트의 캐릭터 ${ir(s,l)}명과 그림 목록이 빠져요. 리스 에셋 저장소 파일은 남아요.`,ok:"지우기",danger:!0})&&(g.set(ua(s,l)),pn())}}}])}async function Si(r){let l=(await t.loadTemplates()).find(v=>v.name===r.tpl);if(!l)return g.toast("그 템플릿이 없어요",{error:!0});let d=s.chars.map(v=>v.id);if(!d.length)return;let h=Sr(s,d),u="merge";h.length&&(u=await g.dlg.templateChoice(h.length,l.name),!u)||(g.set(pe(s,d,l,u).project),en(),X(),g.toast(`‘${l.name}’을 ${d.length}명에 적용했어요`))}async function Ot(r){if(!r.length||!await zn(n.win,{title:`캐릭터 ${r.length}명을 지울까요?`,body:"씬·프롬프트·그림 목록이 지워져요. 리스 에셋 저장소 파일과 이미 넣은 에셋은 그대로예요.",ok:"지우기",danger:!0}))return;let l=s;for(let d of r)l=ga(l,d);g.set(l),$.clear(),en(),pn(),X()}async function It(){let r=g.curChar(),l=await Xn(n.win,{title:"새 씬",label:"이름(감정 이미지 이름이 돼요)",ok:"만들기",placeholder:"예: angry"});l?.trim()&&(g.set(ur(s,r.id,{name:Re(r,l),prompt:l.trim()})),en(),X())}function ws(){let r=g.curChar(),l=new Set(r.scenes.map(u=>u.name.toLowerCase())),d=s,h=0;for(let[u,v]of ml)l.has(u)||(d=ur(d,r.id,{name:u,prompt:v}),h++);g.set(d),en(),X(),g.toast(h?`감정 씬 ${h}개를 더했어요`:"이미 다 있어요")}async function Dt(r){let l=g.curChar();!r.length||!await zn(n.win,{title:`씬 ${r.length}개를 지울까요?`,body:"조합·그림 목록이 지워져요. 리스 에셋 저장소 파일은 그대로예요.",ok:"지우기",danger:!0})||(g.set(va(s,l.id,r)),$.clear(),r.includes(f.sceneId)&&(f.sceneId=null),en(),pn(),X())}async function Br(r){if(!r.length||!await zn(n.win,{title:`${r.length}장을 목록에서 뺄까요?`,body:"이 화면 목록에서만 빠져요. 리스 에셋 저장소 파일과 이미 넣은 에셋은 그대로예요.",ok:"빼기",danger:!0}))return;let l=s;for(let d of r)l=Ke(l,d.cid,d.sid,[d.path]);g.set(l),$.clear(),pn(),X()}async function Ai(r,l,d){!d.length||!await zn(n.win,{title:`${d.length}장을 목록에서 뺄까요?`,body:"이 화면 목록에서만 빠져요. 리스 에셋 저장소 파일과 이미 넣은 에셋은 그대로예요.",ok:"빼기",danger:!0})||(g.set(Ke(s,r,l,d)),$.clear(),pn(),X())}async function Rr(r=f.folder){let l=await g.dlg.folderDialog({title:r?"안에 폴더 만들기":"폴더 만들기"});l&&(g.set(Ne(s,{...l,parent:r})),pn(),X())}async function Ti(r,l){let d=await t.loadTemplates();if(!d.length)return g.toast("저장된 템플릿이 없어요. 캐릭터 안에서 ‘템플릿으로 저장’하거나 가져오기를 먼저 해요");In(n.win,r,[...d.map(h=>({label:`${h.name===l.tpl?"✓ ":""}${h.name}`,icon:"folder",onClick:()=>{g.set(pt(s,l.id,{tpl:h.name})),X(),g.toast(`이제 ‘${l.name}’(안의 폴더 포함)에 만드는 캐릭터는 ‘${h.name}’으로 시작해요`)}})),...l.tpl?["sep",{label:"기본 템플릿 없애기",icon:"x",onClick:()=>{g.set(pt(s,l.id,{tpl:""})),X()}}]:[]])}function Ft(r,l){let d=s.folders.find(h=>h.id===l);d&&In(n.win,r,[{label:"이름·종류·프롬프트 바꾸기",icon:"edit",onClick:async()=>{let h=await g.dlg.folderDialog({title:"폴더 바꾸기",name:d.name,en:d.en??"",kind:d.kind,prompt:d.prompt??"",ok:"저장"});h&&(g.set(pt(s,l,h)),X())}},{label:"안에 폴더 만들기",icon:"folderPlus",onClick:()=>Rr(l)},{label:d.tpl?`기본 템플릿: ${d.tpl}`:"기본 템플릿 정하기…",icon:"folder",onClick:()=>Ti(r,d)},...Be(s,l)?[{label:"기본 템플릿을 안의 캐릭터 모두에 적용",icon:"folder",onClick:async()=>{let h=(await t.loadTemplates()).find(I=>I.name===Be(s,l));if(!h)return g.toast("그 템플릿이 없어요",{error:!0});let u=Rn(s,l).map(I=>I.id);if(!u.length)return;let v=Sr(s,u),C="merge";v.length&&(C=await g.dlg.templateChoice(v.length,h.name),!C)||(g.set(pe(s,u,h,C).project),en(),X(),g.toast(`‘${h.name}’을 ${u.length}명에 적용했어요`))}}]:[],...d.parent?[{label:"맨 위로 꺼내기",icon:"up",onClick:()=>{g.set(cr(s,l,null)),X()}}]:[],"sep",{label:"폴더 지우기",icon:"trash",danger:!0,onClick:async()=>{await zn(n.win,{title:`‘${d.name}’ 폴더를 지울까요?`,body:"안의 폴더도 함께 지워져요. 캐릭터와 그림은 남아요.",ok:"지우기",danger:!0})&&(g.set(dr(s,l)),f.folder&&!s.folders.some(h=>h.id===f.folder)&&(f.folder=null),pn(),X())}}])}function ks(r,l){In(n.win,r,s.folders.map(d=>{let h=l.every(u=>d.members.includes(u));return{label:`${h?"✓ ":""}${hr(s,d.id).map(u=>u.name).join(" › ")}`,icon:"folder",onClick:()=>{let u=s;for(let v of l)u=ht(u,d.id,v,!h);g.set(u),X(),g.toast(h?"폴더에서 뺐어요":"폴더에 넣었어요")}}}))}function _i(r,l){In(n.win,r,[{label:"열기",icon:"chevron",onClick:()=>ge(l.id)},{label:"이름 바꾸기",icon:"edit",onClick:async()=>{let d=await g.dlg.charNames({title:"이름 바꾸기",name:l.name,en:l.en??"",ok:"바꾸기"});d?.name&&(g.set(Jn(s,l.id,d)),X(),en())}},{label:"복제",icon:"split",onClick:()=>{g.set(lr(s,l.id)),X()}},...s.folders.length?[{label:"폴더에 넣기·빼기",icon:"folder",onClick:()=>ks(r,[l.id])}]:[],"sep",{label:"지우기",icon:"trash",danger:!0,onClick:()=>Ot([l.id])}])}function Ei(r,l,d,h){let u=mn(s,l.cid,l.sid),v=u?.images.find(C=>C.path===l.path);v&&In(n.win,r,[{label:"크게 보기",icon:"eye",onClick:()=>es(g,d,h)},{label:v.pick?"보낼 그림에서 빼기":"보낼 그림으로 고르기",icon:"check",onClick:()=>Fr(l)},{label:v.fav?"즐겨찾기 풀기":"즐겨찾기",icon:"sparkle",onClick:()=>{g.set(xe(s,l.cid,l.sid,l.path,{fav:!v.fav})),X()}},{label:"씬 대표로",icon:"image",onClick:()=>{g.set(On(s,l.cid,l.sid,{cover:l.path})),X()}},{label:"캐릭터 대표로",icon:"image",onClick:()=>{g.set(Jn(s,l.cid,{cover:l.path})),g.toast("캐릭터 카드 대표로 했어요")}},{label:"이 그림만 봇에 넣기",icon:"exportBot",onClick:()=>me([{...l,name:u.name}])},{label:"넣는 방법 고르고 넣기…",icon:"sliders",onClick:()=>Ut([{...l,name:u.name}])},"sep",{label:"목록에서 빼기",icon:"trash",danger:!0,onClick:()=>Br([l])}])}function qi(r){let l=g.curChar();In(n.win,r,l?[{label:"새 씬",icon:"plus",onClick:()=>It()},{label:"모든 씬 1장씩 예약",icon:"calPlus",onClick:()=>{g.set(Wn(s,l.id,1)),en(),X()}},{label:"위로",icon:"back",onClick:()=>se()}]:[{label:"새 캐릭터",icon:"plus",onClick:()=>Lt()},{label:f.folder?"안에 폴더 만들기":"폴더 만들기",icon:"folderPlus",onClick:()=>Rr()},{label:"SDStudio 백업 가져오기…",icon:"upload",onClick:()=>Se()},...f.folder?[{label:"위로",icon:"back",onClick:()=>se()}]:[]])}function Li(r,l,d){In(n.win,r,[{label:"열기",icon:"chevron",onClick:()=>Ze(d.id)},{label:"1장 예약",icon:"plus",onClick:()=>{g.set(Un(s,l.id,d.id,d.reserve+1)),en(),X()}},{label:"예약 비우기",icon:"x",onClick:()=>{g.set(Un(s,l.id,d.id,0)),en(),X()}},{label:"이미지 월드컵",icon:"zap",onClick:()=>Ge(g,l.id,d.id)},...d.images.length?[{label:"여기서 대표 고르기",icon:"sparkle",onClick:()=>{let h=l.scenes.filter(u=>u.images.length).map(u=>({cid:l.id,sid:u.id}));ts(g,h,{start:Math.max(0,h.findIndex(u=>u.sid===d.id))})}}]:[],{label:"복제",icon:"split",onClick:()=>{g.set(gt(s,l.id,d.id)),X()}},"sep",{label:"지우기",icon:"trash",danger:!0,onClick:()=>Dt([d.id])}])}async function ys(r,l){let d=s.settings,h=r.scenes.filter(u=>!l||l.includes(u.id)).map(u=>{try{return`${u.name}: ${Te({top:d.top,own:ve(s,r),middle:Pe(u,0),back:d.back},s.pieces,()=>0)}`}catch(v){return`${u.name}: (${v.message})`}});try{await navigator.clipboard.writeText(h.join(`
+`)),g.toast("프롬프트를 복사했어요")}catch{g.toast("복사하지 못했어요",{error:!0})}}function Oi(r){let l=g.curChar(),d=g.curScene();In(n.win,r,[...d?[{label:Ve(d)?`고른 그림 ${Ve(d)}장`:`이 씬 그림 ${d.images.length}장`,icon:"download",onClick:()=>Ur((Ve(d)?ae(l,d.id).map(h=>h.path):d.images.map(h=>h.path)).map((h,u)=>[`${wt(s,l)}/${d.name}_${u+1}.png`,h]))}]:[],{label:"씬 대표 그림만",icon:"download",onClick:()=>Ur((l?[l]:s.chars).flatMap(h=>h.scenes.filter(u=>Ce(u)).map(u=>[`${wt(s,h)}/${u.name}.png`,Ce(u)])))},{label:"모든 그림",icon:"download",onClick:()=>Ur((l?[l]:s.chars).flatMap(h=>h.scenes.flatMap(u=>ne(u).map((v,C)=>[`${wt(s,h)}/${u.name}_${C+1}.png`,v.path]))))}])}async function Ur(r){if(!r.length){g.toast("내려받을 그림이 없어요");return}let l=n.toast(`zip 만드는 중 0/${r.length}`,{seconds:600});try{let d={},h=new Set,u=0;for(let[v,C]of r){let I=v.replace(/[\\:*?"<>|]/g,"_");for(let tn=2;h.has(I);tn++)I=v.replace(/\.png$/,`_${tn}.png`);h.add(I),d[I]=[await g.bytes(C),{level:0}];let K=n.win.querySelector(".rb-toasts .rb-toast:last-child span");K&&(K.textContent=`zip 만드는 중 ${++u}/${r.length}`)}ze(`${o||"에셋"}-에셋제작.zip`,new Blob([Qr(d)],{type:"application/zip"}))}catch(d){n.toast(`zip을 만들지 못했어요: ${d?.message??d}`,{error:!0})}finally{l?.close?.()}}let Ii={emotionImages:"감정 이미지",additionalAssets:"추가 에셋",assets:"모듈 에셋"},vs=r=>r>=1048576?`${(r/1048576).toFixed(1)}MB`:`${Math.max(1,Math.round(r/1024))}KB`;function Di(r,l,d,h,u,v,C,I){let K=r[l]??[],tn=String(d).toLowerCase(),y=K.findIndex(V=>String(V?.[0]).toLowerCase()===tn);if(v==="replace"&&y>=0&&!C.has(tn))return C.add(tn),I?.push(K[y][0]),{...r,[l]:K.map((V,Y)=>Y===y?l==="emotionImages"?[V[0],h]:[V[0],h,u]:V)};let W=so(r,l,d);return C.add(W.toLowerCase()),I?.push(W),oo(r,l,W,h,u)}var Fi=r=>wr(kr(s,r));function xs(r,l){let d=g.prefs.nameStyle??"scene";if(d==="scene"||!r.cid)return r.name;let h=vn(s,r.cid),u=d==="dot"?".":"_";return[Fi(r.cid),h&&br(h),r.name].filter(Boolean).join(u)+(l?`.${l}`:"")}function Nt(){let r=g.curChar();return(r?[r]:f.folder?Rn(s,f.folder):s.chars).flatMap(d=>ae(d).map(h=>({...h,cid:d.id})))}let js=r=>e.kind==="module"?r==="assets":r==="emotionImages"||r==="additionalAssets",Ni=r=>js(r)?r:js(g.prefs.putSlot)?g.prefs.putSlot:e.kind==="module"?"assets":"additionalAssets",Bt=()=>{let r=g.curChar();return r?[r]:f.folder?Rn(s,f.folder):s.chars};function Cs(){let r=g.curChar(),l=g.curScene();return(r?[r]:Bt()).flatMap(d=>xa(d,l&&d===r?l.id:null).map(h=>({...h,cid:d.id})))}async function Bi(){let r;e.kind==="module"?r=(await n.svc.load({fresh:!0})).entries.find(d=>d.module.id===e.id)?.module:r=await n.api.getCharacterFromIndex(e.index);let l={};for(let d of["assets","additionalAssets","emotionImages"])l[d]=new Set((r?.[d]??[]).map(h=>String(h?.[0]??"").toLowerCase()));return l}async function Kr(r=Cs()){if(r=r.filter(v=>v?.path),!r.length){g.toast("즐겨찾기한 그림이 없어요. 그림에서 ★(F)를 눌러요");return}let l;try{l=await Bi()}catch(v){n.toast(`봇을 읽지 못했어요: ${v?.message??v}`,{error:!0});return}let d=(g.prefs.putFormat??"webp")==="png"?"png":g.prefs.putFormat??"webp",h=r.map(v=>({it:v,label:`${vn(s,v.cid)?.name??""} › ${v.name}`,nameFor:()=>xs(v,d)})),u=await g.dlg.exportPreview({rows:h,names:l});u&&await me(u.idx.map(v=>r[v]),{slot:u.slot,dup:u.dup})}g.exportFav=Kr;function Vr({onlyNoFav:r=!1}={}){let l=g.curChar(),d=g.curScene(),u=Bt().flatMap(C=>C.scenes.map(I=>({cid:C.id,sid:I.id}))).filter(C=>mn(s,C.cid,C.sid)?.images.length);if(!u.length){g.toast("그림이 있는 씬이 없어요. 먼저 예약하고 생성해요");return}let v=d?Math.max(0,u.findIndex(C=>C.cid===l.id&&C.sid===d.id)):0;ts(g,u,{start:v,onlyNoFav:r})}function Ps(){let r=s.settings.reserveDefault,l=s,d=0;for(let h of Bt())d+=ft(h).length,l=ja(l,h.id,r);if(!d){g.toast("즐겨찾기 없는 씬이 없어요");return}g.set(l),en(),X(),g.toast(`즐겨찾기 없는 씬 ${d}개에 ${r}장씩 예약했어요`)}async function me(r,l={}){if(r=r.filter(K=>K?.path),!r.length){g.toast("보낼 그림을 먼저 골라요(그림 왼쪽 위 체크)");return}let d=Ni(l.slot),h=l.dup??g.prefs.dup,u=g.prefs.putFormat??"webp",v=g.prefs.putQuality??.85,C=n.toast(`넣는 중 0/${r.length}`,{seconds:600}),I=()=>n.win.querySelector(".rb-toasts .rb-toast:last-child span");try{let K=new Array(r.length),tn=0,y=0,W=!1,V=0,Y=0,dn=async()=>{for(;tn<r.length;){let an=tn++,bn=r[an];if(u==="png")K[an]={path:bn.path,ext:"png"};else{let $n=await g.bytes(bn.path),qn=await zo($n,u,v);W||=qn.fellBack,V+=$n.length,Y+=qn.data.length,K[an]=qn.ext==="png"?{path:bn.path,ext:"png"}:{path:await t.saveAsset(qn.data),ext:qn.ext}}let Sn=I();Sn&&(Sn.textContent=`넣는 중 ${++y}/${r.length}`)}};await Promise.all([dn(),dn(),dn()]);let xn=null,hn=[];await Ms(an=>{xn=structuredClone(an[d]??[]),hn.length=0;let bn=new Set,Sn=an;return r.forEach(($n,qn)=>{Sn=Di(Sn,d,l.name||xs($n,K[qn].ext),K[qn].path,K[qn].ext,h,bn,hn)}),Sn});let ln=s;r.forEach((an,bn)=>{an.cid&&an.sid&&(ln=je(ln,an.cid,an.sid,[an.path],!1),hn[bn]&&(ln=Ca(ln,an.cid,an.sid,an.path,hn[bn])))}),ln!==s&&g.set(ln,{undo:!1}),C?.close?.();let jn=u!=="png"&&V?` · ${vs(V)} → ${vs(Y)}`:"";n.toast(`${Ii[d]}에 ${r.length}장 넣었어요${jn}`,{seconds:8,action:{label:"되돌리기",run:async()=>{try{await Ms(an=>({...an,[d]:xn})),n.toast("넣기를 되돌렸어요")}catch(an){n.toast(`되돌리지 못했어요: ${an?.message??an}`,{error:!0})}}}}),W&&n.toast("이 브라우저는 AVIF를 만들 수 없어 WebP(또는 원본)로 넣었어요"),$.clear(),pn(),X()}catch(K){C?.close?.(),n.toast(`넣지 못했어요: ${K?.message??K}`,{error:!0})}}function Ri(){let r=g.curChar();if(r)return{ids:[r.id],label:`‘${r.name}’`};if(f.folder){let l=Rn(s,f.folder).map(d=>d.id);return{ids:l,label:`‘${s.folders.find(d=>d.id===f.folder)?.name}’ 폴더의 캐릭터 ${l.length}명`}}return{ids:s.chars.map(l=>l.id),label:`모든 캐릭터 ${s.chars.length}명`}}async function Hr(r){let l=Ri();if(!l.ids.length){g.toast("적용할 캐릭터가 없어요. 먼저 캐릭터를 만들어요");return}let d=Sr(s,l.ids),h="merge";if(d.length&&(h=await g.dlg.templateChoice(d.length,r.name),!h))return;let u=pe(s,l.ids,r,h);g.set(u.project),en(),pn(),X(),g.paintLeft(),n.toast(`‘${r.name}’을 ${l.label}에 적용했어요 · 더함 ${u.stats.added} · 바뀜 ${u.stats.updated}${u.stats.removed?` · 빠짐 ${u.stats.removed}`:""}`,{seconds:8,action:{label:"되돌리기",run:()=>g.undo()}})}async function $s(r){let l=await t.loadTemplates(),d=l.findIndex(h=>h.name===r.name);d>=0?l[d]=r:l.push(r),await t.saveTemplates(l)}async function Ui(){g.persist(),et({force:!0});let r=[...zr(s)],l=n.toast(`백업 만드는 중 0/${r.length}`,{seconds:3600});try{let d={},h=new Map,u=0,v=0;for(let C of r){try{let I=await g.bytes(C),K=(/\.(png|webp|jpe?g|avif)$/i.exec(C)?.[1]??"png").toLowerCase(),tn=`img/${String(h.size+1).padStart(5,"0")}.${K}`;h.set(C,tn),d[tn]=[I,{level:0}]}catch{v++}if(++u%10===0){let I=n.win.querySelector(".rb-toasts .rb-toast:last-child span");I&&(I.textContent=`백업 만드는 중 ${u}/${r.length}`),await new Promise(K=>setTimeout(K))}}d[$r]=[Yr(JSON.stringify(Wo(s,h,{title:o}))),{level:6}],ze(`${o||"에셋"}-프로젝트백업.zip`,new Blob([Qr(d)],{type:"application/zip"})),n.toast(`백업을 내려받았어요(그림 ${h.size}장${v?`, 못 읽은 ${v}장 빠짐`:""})`,{seconds:8,error:!!v})}catch(d){n.toast(`백업을 만들지 못했어요: ${d?.message??d}`,{error:!0})}finally{l?.close?.()}}async function Ki(r,l){let d=Go(l);if(!d)throw new Error("백업 파일이 올바르지 않아요");if(!await zn(n.win,{title:"이 백업으로 지금 프로젝트를 바꿀까요?",body:`캐릭터 ${d.project.chars?.length??0}명, 그림 ${d.entries.length}장. 지금 내용은 되돌리기로 돌아올 수 있어요.`,ok:"바꾸기"}))return;let h=n.toast(`그림 가져오는 중 0/${d.entries.length}`,{seconds:3600}),u=new Map,v=0,C=0,I=async()=>{for(;v<d.entries.length;){let tn=d.entries[v++];try{u.set(tn,await t.saveAsset(await r.get(tn)))}catch{}let y=n.win.querySelector(".rb-toasts .rb-toast:last-child span");y&&(y.textContent=`그림 가져오는 중 ${++C}/${d.entries.length}`)}};try{await Promise.all([I(),I(),I()])}finally{h?.close?.()}let K=d.entries.length-u.size;g.set(Zn(Xo(d.project,u))),f.folder=null,ge(null),n.toast(`백업을 불러왔어요(그림 ${u.size}장${K?`, 못 가져온 ${K}장 빠짐`:""})`,{seconds:8,action:{label:"되돌리기",run:()=>g.undo()},error:!!K})}async function Vi(r){let l=new Uint8Array(await r.slice(0,512).arrayBuffer());if(l[0]===123||/\.json$/i.test(r.name)){let h=JSON.parse(await r.text());return{files:[],projs:[ss(h,{name:h.name||r.name.replace(/\.json$/i,"")})],read:null}}if(as(l)){let h=async(I,K)=>new Uint8Array(await r.slice(I,I+K).arrayBuffer()),u=await rs(h,r.size),v=new Map(u.map(I=>[I.name,I]));return{files:u,get:async I=>{let K=v.get(I);if(!K)throw new Error(`${I}이 없어요`);return h(K.off,K.size)}}}let d=new Uint8Array(await r.arrayBuffer());if(d[0]===31&&d[1]===139&&(d=at(d)),as(d.subarray(0,512))){let u=await rs(async(C,I)=>d.subarray(C,C+I),d.length),v=new Map(u.map(C=>[C.name,C]));return{files:u,get:async C=>{let I=v.get(C);if(!I)throw new Error(`${C}이 없어요`);return d.subarray(I.off,I.off+I.size)}}}if(d[0]===80&&d[1]===75){let h=mi(d);return{files:Object.keys(h).filter(v=>!v.endsWith("/")).map(v=>({name:v})),get:async v=>{if(!h[v])throw new Error(`${v}이 없어요`);return h[v]}}}throw new Error("SDStudio 백업(.tar)이나 프로젝트 파일(.json)이 아니에요")}function Hi(r){In(n.win,r,[{label:"SDStudio 백업·프로젝트(.tar·.json) / Dusk 전체 백업(.zip)",icon:"upload",onClick:()=>Se()},{label:"씬 템플릿(.json)",icon:"upload",onClick:()=>Rt()},{label:"조각 모음(.json) · 와일드카드(.txt)",icon:"upload",onClick:()=>Ji()},{label:"캐릭터 프리셋(.json) → 캐릭터 카드",icon:"upload",onClick:()=>Gi()},{label:"글로벌 프리셋(.json·백업 .tar) → 프리셋",icon:"upload",onClick:()=>Wi()},{label:"프로젝트 템플릿 백업(.tar) → 씬 템플릿·프리셋",icon:"upload",onClick:()=>Se()},{label:"PNG 메타데이터 → 프롬프트",icon:"upload",onClick:()=>Xi()}])}async function Ji(){let r=await ee({accept:".json,.txt,application/json,text/plain",multiple:!0});for(let l of r??[])try{let d=vt(l.name,await l.text());if(d.libs){let h=xt(s.pieces,d.libs);g.set({...s,pieces:h.pieces}),g.toast(`조각 모음 ${h.names.join(", ")}을 가져왔어요`)}else{let h=yr(s.pieces,d.wild);g.set({...s,pieces:h.pieces}),g.toast(`<${h.group}.${h.name}> 조각으로 가져왔어요`)}}catch(d){g.toast(`${l.name}: ${d?.message??d}`,{error:!0})}nt()}async function Wi(){let[r]=await ee({accept:".json,.tar,application/json,application/x-tar"});if(r){if(/\.tar$/i.test(r.name))return Se(r);try{let l=Fa(await r.text(),s.settings),d=vr(await t.loadPresets(),l);await t.savePresets(d.list),g.toast(`프리셋 ${l.length}개를 가져왔어요 — 왼쪽 위 프리셋 불러오기에서 골라요`)}catch(l){g.toast(l?.message??String(l),{error:!0})}}}async function Gi(){let[r]=await ee({accept:".json,application/json"});if(!r)return;let l;try{l=Ia(await r.text())}catch(I){return g.toast(I?.message??String(I),{error:!0})}if(!l.length)return g.toast("캐릭터 프리셋이 없어요");let d=s,h=f.folder,u=[];for(let I of l){d=ye(d,{name:I.name,prompt:I.prompt});let K=d.chars.at(-1).id;u.push(K),h&&(d=ht(d,h,K,!0))}let v=h&&Be(d,h)||or(d)?.tpl||"",C=v?(await t.loadTemplates()).find(I=>I.name===v):null;C&&(d=pe(d,u,C,"replace").project),g.set(d),en(),X(),g.toast(`캐릭터 ${l.length}명을 만들었어요(외형 프롬프트 포함)`)}async function Xi(){let[r]=await ee({accept:"image/png"});if(!r)return;let l=Lo(new Uint8Array(await r.arrayBuffer()));if(!l)return g.toast("이 PNG에는 프롬프트 메타데이터가 없어요",{error:!0});let d=g.curScene(),h=g.curChar(),u=l.split&&l.middle&&d&&await zn(n.win,{title:"씬 프롬프트도 바꿀까요?",body:`이 그림의 씬 부분(${l.middle.slice(0,80)})을 지금 씬 ‘${d.name}’에 넣어요.`,ok:"씬에도 넣기",cancel:"상위·하위만"}),v=Ln(s,{top:l.top,back:l.split?l.back:s.settings.back,neg:l.neg||s.settings.neg});l.split&&l.middle&&!u&&(v=Ln(v,{back:[l.middle,l.back].filter(Boolean).join(", ")})),u&&(v=Ue(v,h.id,d.id,[[{prompt:l.middle,on:!0}]])),g.set(v),nt(),X(),g.toast(l.split?"SDStudio 메타데이터로 상위·하위·네거티브를 채웠어요":"그림 프롬프트를 상위 프롬프트에, 네거티브를 네거티브에 넣었어요")}async function Se(r){let l=r??(await ee({accept:".tar,.zip,.json,.gz,application/x-tar,application/json,application/zip"}))[0];if(!l)return;let d,h,u=n.toast("백업을 읽는 중…",{seconds:600});try{if(d=await Vi(l),d.get&&d.files.some(an=>an.name===$r)){u?.close?.(),await Ki(d,JSON.parse(st(await d.get($r))));return}h=d.projs??await ui(d.files,async an=>JSON.parse(new TextDecoder().decode(await d.get(an))))}catch(an){u?.close?.(),n.toast(`읽지 못했어요: ${an?.message??an}`,{error:!0});return}u?.close?.();let v=d.get?await Yi(d):"";if(!h.length&&v)return;if(!h.length){n.toast("백업 안에서 SDStudio 프로젝트를 찾지 못했어요",{error:!0});return}let C=await g.dlg.backupImport({projs:h,hasImages:!!d.get&&h.some(an=>an.count)});if(!C)return;let I=C.idx.map(an=>h[an]),{project:K,jobs:tn}=gi(s,I,{mode:d.get?C.mode:"none"});if(g.set(K),f.folder=null,ge(null),!tn.length){n.toast(`캐릭터 ${I.length}명을 가져왔어요`,{seconds:8,action:{label:"되돌리기",run:()=>g.undo()}});return}let y=n.toast(`그림 가져오는 중 0/${tn.length}`,{seconds:3600}),W=()=>n.win.querySelector(".rb-toasts .rb-toast:last-child span"),V=0,Y=0,dn=0,xn=[],hn=Date.now(),ln=()=>{if(!xn.length)return;let an=s;for(let bn of xn)an=mt(an,bn.cid,bn.sid,{path:bn.path,fav:bn.fav},()=>bn.at);xn=[],g.set(an,{undo:!1})},jn=async()=>{for(;V<tn.length;){let an=tn[V++];try{let Sn=await d.get(an.entry),$n=await t.saveAsset(Sn);xn.push({...an,path:$n,at:hn-an.order})}catch{dn++}Y++,xn.length>=20&&(ln(),X());let bn=W();bn&&(bn.textContent=`그림 가져오는 중 ${Y}/${tn.length}`)}};await Promise.all([jn(),jn(),jn()]),ln(),g.persist(),y?.close?.(),g.paint(),n.toast(`캐릭터 ${I.length}명 · 그림 ${tn.length-dn}장을 가져왔어요${dn?` (못 읽은 그림 ${dn}장)`:""}`,{seconds:10})}g.importBackup=Se;async function Yi(r){let l=y=>r.files.find(W=>W.name===y||W.name===`__settings__/${y}`||W.name.endsWith(`/__settings__/${y}`))?.name,d=async y=>new TextDecoder().decode(await r.get(y)),h=[],u=l("global_pieces.json"),v=l("global_presets.json"),C=l("global_character_presets.json"),I=l("project_templates.json");if(!u&&!v&&!C&&!I||!await zn(n.win,{title:"전역 설정도 가져올까요?",body:[u&&"전역 조각 모음",v&&"글로벌(그림체) 프리셋",C&&"캐릭터 프리셋(→ 캐릭터 카드)",I&&"프로젝트 템플릿(→ 씬 템플릿·프리셋)"].filter(Boolean).join(" · ")+"이 들어 있어요. 같은 이름은 번호를 붙여 더해요.",ok:"가져오기",cancel:"건너뛰기"}))return"";try{if(u){let y=vt("g.json",await d(u));if(y.libs){let W=xt(s.pieces,y.libs);g.set({...s,pieces:W.pieces}),h.push(`조각 모음 ${W.names.length}개`)}}}catch(y){n.toast(`전역 조각: ${y?.message??y}`,{error:!0})}try{if(v){let y=Fa(await d(v),s.settings),W=vr(await t.loadPresets(),y);await t.savePresets(W.list),h.push(`프리셋 ${y.length}개`)}}catch(y){n.toast(`글로벌 프리셋: ${y?.message??y}`,{error:!0})}try{if(C){let y=Ia(await d(C)),W=s;for(let V of y)W=ye(W,{name:V.name,prompt:V.prompt});g.set(W),h.push(`캐릭터 ${y.length}명`)}}catch(y){n.toast(`캐릭터 프리셋: ${y?.message??y}`,{error:!0})}try{if(I){let y=JSON.parse(await d(I)),W=Array.isArray(y?.templates)?y.templates:[],V=await t.loadTemplates(),Y=await t.loadPresets(),dn=0;for(let xn of W)if(xn?.name){try{let hn=Pt({name:xn.name,scenes:xn.scenes??[]}),ln=hn.name;for(let jn=2;V.some(an=>an.name===ln);jn++)ln=`${hn.name} ${jn}`;V.push({...hn,name:ln}),dn++}catch{}xn.preset&&(Y=vr(Y,[Da({name:xn.name,preset:xn.preset},s.settings)]).list)}await t.saveTemplates(V),await t.savePresets(Y),h.push(`프로젝트 템플릿 ${dn}개`)}}catch(y){n.toast(`프로젝트 템플릿: ${y?.message??y}`,{error:!0})}nt(),X();let tn=h.join(" · ");return tn&&n.toast(`가져왔어요: ${tn}`,{seconds:8}),tn}async function Rt(){let[r]=await ee({accept:"application/json,.json"});if(!r)return;let l;try{l=Pt(JSON.parse(await r.text()))}catch(d){n.toast(`읽지 못했어요: ${d?.message??d}`,{error:!0});return}if(!l.scenes.length){n.toast("씬이 없는 템플릿이에요",{error:!0});return}await $s(l),await Hr(l)}async function zs(r){let l=await Xn(n.win,{title:"씬을 템플릿으로 저장",label:"템플릿 이름(같은 이름은 바뀌어요)",value:`${r.name} 씬`,ok:"저장"});l?.trim()&&(await $s(Yo(r,l.trim(),s.pieces)),n.toast(`템플릿 ‘${l.trim()}’을 저장했어요(씬 ${r.scenes.length}개)`))}async function Qi(r){let l=await t.loadTemplates(),d=g.curChar();In(n.win,r,[...l.map(h=>({label:`${h.name} 적용 (씬 ${h.scenes.length})`,icon:"preset",onClick:()=>Hr(h)})),...l.length?["sep"]:[],{label:"파일에서 가져와 적용(SDStudio·Dusk)…",icon:"upload",onClick:()=>Rt()},...d?[{label:"이 캐릭터 씬을 템플릿으로 저장",icon:"plus",onClick:()=>zs(d)}]:[],{label:"템플릿 관리…",icon:"list",onClick:()=>g.dlg.templateManager({apply:Hr})}])}async function Ms(r){if(e.kind==="module"){let d=(await n.svc.load({fresh:!0})).entries.find(u=>u.module.id===e.id)?.module;if(!d)throw new Error("모듈을 찾지 못했어요");let h=r(structuredClone(d));await n.svc.run("update",e.id,{assets:h.assets}),n.state.modDirty=!0;return}let l=await n.api.getCharacterFromIndex(e.index);if(!l||l.chaId!==e.id)throw new Error("봇을 찾지 못했어요");if(Xa(l))throw new Error("봇이 응답을 생성하는 중이에요. 끝난 뒤 다시 해 주세요");await n.api.setCharacterToIndex(e.index,r(l)),n.state.charsDirty=!0}async function Ut(r){if(!r.length)return;let l=await g.dlg.put({count:r.length});l&&await me(r,l)}async function Ss(r){let l=Nn(r),d=[];if(!l.vibe)return d;for(let h of s.settings.vibes.filter(u=>u.on)){let u=h.enc&&h.enc.model===r&&h.enc.info===h.info?h.enc.data:null;u||(u=await t.encodeVibe(ro(He(await g.bytes(h.path)),h.info,r),{signal:O.ctl?.signal,label:"sdstudio:vibe"}),g.set(Ln(s,{vibes:s.settings.vibes.map(v=>v.id===h.id?{...v,enc:{model:r,info:h.info,data:u}}:v)}),{undo:!1})),d.push({image:u,strength:h.strength})}return d}async function As(r){if(!Nn(r).reference)return[];let l=[];for(let d of s.settings.refs.filter(h=>h.on))l.push({image:await fl(await g.bytes(d.path)),strength:d.strength,fidelity:d.fidelity,type:d.type,info:1});return l}async function Zi(r,l,d){let h=vn(s,r.cid),u=mn(s,r.cid,r.sid),v=s.settings;if(!h||!u)return;let C,I;try{C=Te({top:v.top,own:ve(s,h),middle:Pe(u,r.combo),back:v.back},s.pieces),I=ct(v.neg,s.pieces)}catch(Y){let dn=new Error(`${h.name} · ${u.name} 프롬프트 오류: ${Y?.message??Y}`);throw dn.fatal=!0,dn.at={cid:h.id,sid:u.id},dn}let{width:K,height:tn}=_e(v.size,u),y=lt({prompt:C,uc:I,width:K,height:tn,seed:$a(v.seed,l),settings:v.sampling,chars:v.chars.filter(Y=>Y.on),vibes:await Ss(v.sampling.model),refs:await As(v.sampling.model)}),W=await t.image(y,{signal:O.ctl?.signal,token:d}),V=await t.saveAsset(W);g.remember(V,W),g.set(mt(s,h.id,u.id,{path:V,seed:y.parameters.seed,prompt:C,w:K,h:tn}),{undo:!1})}async function Kt(){if(O.running||O.stopping)return;let r=ie(s);if(!r.length){g.toast("예약된 씬이 없어요. 씬 카드의 +1이나 위 예약 버튼을 눌러요.");return}if(!await g.dlg.token())return;let l=g.prefs.boost?(await t.getTokens()).slice(0,4):[],d=l.length>=2?l.map(y=>y.token):[void 0];Object.assign(O,{running:!0,done:0,total:r.length,ctl:new AbortController,workers:d.length,t0:Date.now(),retry:0}),t.setPrefs({resume:!0}).catch(()=>{});let h=null;try{h=await navigator.wakeLock?.request("screen")}catch{}let u=setInterval(()=>{let y=S.querySelector("#sds-prog .t");y&&(y.textContent=Mn()),Q()},1e3);en(),X();let v=new Map,C=null,I=0,K=async y=>{for(;O.running&&!C&&I<r.length;){let W=I++,V=r[W],Y=!1;for(let hn=0;O.running&&!C;hn++)try{await Zi(V,W,y),Y=!0,O.retry=0,O.lastErr="";break}catch(ln){if(Qt(ln)||!O.running){C??=ln;break}if(ln?.fatal){C??=ln,O.running=!1,O.ctl?.abort();break}if(/토큰|401|402|403|Unauthorized|Anlas|구독/i.test(ln?.message??"")){C??=ln,O.running=!1,O.ctl?.abort();break}if(/NovelAI 오류 4(?!29)\d\d/.test(ln?.message??"")){C??=ln,O.running=!1,O.ctl?.abort();break}O.lastErr=String(ln?.message??ln).slice(0,300),O.retry=hn+1,en(),Q();let jn=Math.min(6e4,[3e3,6e3,15e3,3e4][hn]??6e4);await new Promise(an=>{let bn=O.ctl?.signal,Sn=setTimeout($n,jn);function $n(){clearTimeout(Sn),bn?.removeEventListener?.("abort",$n),an()}bn?.addEventListener?.("abort",$n),bn?.aborted&&$n()})}if(!Y)break;O.done++;let dn=mn(s,V.cid,V.sid),xn=(v.get(V.sid)??0)+1;v.set(V.sid,xn),dn&&xn%Math.max(1,Yn(dn.slots))===0&&g.set(Un(s,V.cid,V.sid,dn.reserve-1),{undo:!1}),Date.now()-(O.savedAt??0)>3e3&&(O.savedAt=Date.now(),g.persist()),S.hidden||(en(),X())}};await Promise.all(d.map(K)),clearInterval(u);try{await h?.release()}catch{}t.setPrefs({resume:!1}).catch(()=>{});let tn=O.done;Object.assign(O,{running:!1,stopping:!1,ctl:null,workers:1,retry:0,lastErr:""}),Q(),await g.persist(),en(),pn(),X(),C&&!Qt(C)?(n.toast(`그리다 멈췄어요(${tn}장 완료): ${C?.message??C}`,{error:!0,seconds:15,...C.at?{action:{label:"그 씬 열기",run:()=>{f.charId=C.at.cid,f.sceneId=C.at.sid,f.mode="scene",g.paint()}}}:{}}),/토큰/.test(C?.message??"")&&g.dlg.token({force:!0})):n.toast(C?`멈췄어요. ${tn}장 만들었어요`:`${tn}장 다 그렸어요${d.length>1?` (부스트 ${d.length}줄)`:""}`),S.hidden&&_s()}function Jr(){O.running&&(O.running=!1,O.stopping=!0,O.ctl?.abort(),en(),n.toast("멈추는 중이에요 — 지금 그리는 장만 끝나면 멈춰요"))}async function n0(r,l,d){let h=mn(s,r.cid,r.sid),u=h?.images.find(K=>K.path===r.path),v=vn(s,r.cid);if(!u||!await g.dlg.token())return null;let C={img2img:"변형",infill:"인페인트",upscale:"업스케일"}[l]??"디렉터 도구",I=n.toast(`${C} 하는 중…`,{seconds:600});try{let K=await g.bytes(u.path),tn=He(K),y=Fe(K)??{width:u.w,height:u.h},W=s.settings,V,Y=u.prompt;if(l==="img2img"||l==="infill"){Y=d.prompt?.trim()||u.prompt||Te({top:W.top,own:ve(s,v),middle:Pe(h,0),back:W.back},s.pieces);let hn=lt({prompt:Y,uc:ct(W.neg,s.pieces),width:y.width,height:y.height,settings:W.sampling,action:l,image:tn,mask:l==="infill"?He(d.mask):void 0,strength:d.strength,noise:d.noise??0,addOriginal:d.keep??!0,chars:W.chars.filter(ln=>ln.on),vibes:await Ss(W.sampling.model),refs:l==="img2img"?await As(W.sampling.model):[]});V=await t.image(hn,{label:`sdstudio:${l}`})}else l==="upscale"?V=await t.upscale(to(tn),{label:"sdstudio:upscale"}):V=await t.augment(no({method:l,image:tn,width:y.width,height:y.height,prompt:d.prompt??"",emotion:d.emotion,defry:d.defry??0}),{label:`sdstudio:${l}`});let dn=await t.saveAsset(V);g.remember(dn,V);let xn=Fe(V)??y;return g.set(mt(s,r.cid,r.sid,{path:dn,seed:null,prompt:Y,w:xn.width,h:xn.height,from:l}),{undo:!1}),n.toast(`${C}한 그림을 더했어요`),dn}catch(K){return Qt(K)||n.toast(`${C}하지 못했어요: ${K?.message??K}`,{error:!0}),null}finally{I?.close?.()}}async function Ts({ask:r=!1}={}){try{let l=await _();if(!l)return;let d=l[e.kind==="module"?"lorebook":"globalLore"]??[],h=Ho(d,s);if(!h.added)return;if(r){let u=h.project.folders.filter(v=>!s.folders.some(C=>C.id===v.id)).map(v=>v.name);if(!await zn(n.win,{title:`로어북 폴더 ${h.added}개를 가져올까요?`,body:`${u.slice(0,8).join(", ")}${u.length>8?" …":""} — 봇 로어북의 Dusk 폴더·[소속] 구조대로 에셋 제작 폴더를 만들어요. 에셋 제작에서 바꿔도 로어북은 그대로예요.`,ok:"가져오기",cancel:"나중에"}))return}s=h.project,g.persist(),pn(),X(),n.toast(`로어북 폴더 ${h.added}개를 가져왔어요`)}catch(l){n.toast(`로어북 폴더를 읽지 못했어요: ${l?.message??l}`,{error:!0})}}g.syncLore=Ts;async function et({force:r=!1,remove:l=!1}={}){if(!(!l&&(!m||!j&&!r)))try{let d=l?null:{t:Date.now(),z:z(Os(Yr(JSON.stringify(s))))};if(e.kind==="module")await n.svc.run("update",e.id,{[Me]:d??void 0});else{let h=await n.api.getCharacterFromIndex(e.index);if(!h||h.chaId!==e.id||Xa(h))return;if(!l&&Oa(h,"character")?.t>Math.max(k,await t.savedAt(e))){n.toast("봇 안 설정이 더 최근이라 덮어쓰지 않았어요(다른 기기에서 고친 듯해요)",{error:!0});return}await n.api.setCharacterToIndex(e.index,Ao(h,"character",d))}j=!1,d&&(k=d.t)}catch(d){(r||l)&&n.toast(`봇에 저장하지 못했어요: ${d?.message??d}`,{error:!0})}}let e0=setInterval(()=>{S.hidden||et()},18e4);async function t0(){if(m){if(!await zn(n.win,{title:"봇에 저장을 끌까요?",body:"봇 안에 넣어 둔 에셋 제작 설정을 지워요. 리스에서 카드를 그대로 내보내 배포할 때 쓰세요. 설정은 플러그인 저장소·이 기기 복사본에 그대로 남아요.",ok:"끄고 지우기"}))return;m=!1,await t.setLocal(x,!0),await et({remove:!0}),g.toast("봇에서 지웠어요. 배포가 끝나면 다시 켜 주세요")}else m=!0,await t.setLocal(x,!1),await et({force:!0}),g.toast("봇에도 저장해요");pn()}function Vt(){if(g.persist(),et(),p?.flush(c),r0(),O.running){S.hidden=!0,n.toast(`창을 닫아도 계속 그려요(${O.done}/${O.total}). 다시 ‘에셋 제작’을 누르면 이어서 보여요`,{seconds:8});return}_s()}function r0(){n.root&&(un.root==null?n.root.removeAttribute("style"):n.root.setAttribute("style",un.root)),un.win==null?n.win.removeAttribute("style"):n.win.setAttribute("style",un.win)}function a0(){un.root=n.root?.getAttribute("style")??null,un.win=n.win.getAttribute("style")??null,n.root&&(n.root.style.padding="0"),Object.assign(n.win.style,{maxWidth:"none",maxHeight:"none",width:"100%",height:"100%",borderRadius:"0",border:"0"}),n.api.showContainer?.("fullscreen")?.catch?.(()=>{}),S.isConnected||n.win.appendChild(S),S.hidden=!1,g.paint(),S.focus()}function _s(){clearInterval(e0),clearTimeout(E),Er.delete(a),document.removeEventListener("keydown",qs),removeEventListener?.("focus",Jt),document.removeEventListener?.("visibilitychange",Jt),document.removeEventListener?.("visibilitychange",Ht),removeEventListener?.("pagehide",Ht),R?.disconnect();for(let r of P.values())URL.revokeObjectURL(r);S.remove()}async function s0(r){let l=g.curChar(),d=g.curScene();if(r==="run")return O.running?Jr():Kt();if(r==="toggleLeft")return g.toggleLeft();if(r==="undo")return g.undo();if(r==="redo")return g.redo();if(r==="help")return g.dlg.help();if(r==="search")return Gn("search");if(/^mode[1-5]$/.test(r)){let h=fi[Number(r[4])-1][0];(h!=="bulk"||l)&&Gn(h);return}if(r==="choose")return Vr();if(r==="putFav")return Kr();if(r==="put")return me(d?ae(l,d.id).map(h=>({...h,cid:l.id})):Nt());if(r==="unpick"){let h=Nt(),u=s;for(let v of h)u=je(u,v.cid,v.sid,[v.path],!1);$.clear(),f.focus=null,g.set(u,{undo:!1}),pn(),X();return}if(r==="remove"){if(f.mode==="gallery"||d){let h=d?ae(l,d.id).map(u=>({...u,cid:l.id})):Nt();if(h.length)return Br(h)}if($.size)return l?Dt([...$]):Ot([...$]);if(f.focus?.kind==="char")return Ot([f.focus.id]);if(f.focus?.kind==="folder"){let h=s.folders.find(u=>u.id===f.focus.id);h&&await zn(n.win,{title:`‘${h.name}’ 폴더를 지울까요?`,body:"안의 폴더도 함께 지워져요. 캐릭터와 그림은 남아요.",ok:"지우기",danger:!0})&&(g.set(dr(s,h.id)),f.focus=null,pn(),X())}return}if(r==="selectAll"&&f.mode==="gallery")return S.querySelector("#sds-g-all")?.click();if(r==="selectAll"){if(d){g.set(je(s,l.id,d.id,d.images.map(h=>h.path),!0),{undo:!1}),pn(),X();return}(l?l.scenes.map(h=>h.id):pr(s,f.folder).chars.map(h=>h.id)).forEach(h=>$.add(h)),pn(),X();return}if(r==="newItem")return l?It():Lt();if(r==="cup")return d?Ge(g,l.id,d.id):l&&$.size===1?Ge(g,l.id,[...$][0]):void 0;if(r==="reserve"){if(d)g.set(Un(s,l.id,d.id,d.reserve+1));else if(l&&$.size)g.set(Wn(s,l.id,1,[...$]));else return;en(),X()}}let Es=r=>{if(n.win.querySelector(".rb-modal, .rb-menu")||S.querySelector(".sds-over"))return;let l=/^(INPUT|TEXTAREA|SELECT)$/.test(r.target?.tagName??"");if(r.key==="Escape"){if(l&&r.target.value){r.target.blur();return}r.stopPropagation(),$.size?($.clear(),pn(),X()):f.mode!=="scene"?Gn("scene"):f.sceneId?Ze(null):f.charId?ge(null):Vt();return}let d=Ar(r),h=ei(g.keys,d);h&&(l&&(!ti(d)||h==="undo"||h==="redo"||h==="selectAll")||(r.preventDefault(),r.stopPropagation(),s0(h)))};S.addEventListener("keydown",Es);let Ht=()=>{(document.visibilityState==="hidden"||event?.type==="pagehide")&&(g.persist(),p?.flush(c))};document.addEventListener("visibilitychange",Ht),addEventListener?.("pagehide",Ht);let qs=r=>{if(S.hidden||!S.isConnected||S.contains(r.target))return;let l=r.target;l&&l!==document.body&&l!==document.documentElement||Es(r)};document.addEventListener("keydown",qs),g.paint(),S.focus(),on.tutorialDone&&setTimeout(()=>Ts({ask:!on.loreSync}),300),g.tut={importBackup:()=>Se(),importTemplate:()=>Rt(),pickSetTpl:(r,l)=>Nr(r,l)},on.tutorialDone||setTimeout(()=>g.dlg.tutorial?.(),400);let Ls={el:S,close:Vt,S:g,reopen:a0};Er.set(a,Ls),addEventListener?.("pagehide",()=>g.persist()),document.addEventListener?.("visibilitychange",()=>{document.visibilityState==="hidden"&&g.persist()});let Jt=()=>{!S.hidden&&S.isConnected&&document.visibilityState!=="hidden"&&n.api.showContainer?.("fullscreen")?.catch?.(()=>{})};return addEventListener?.("focus",Jt),document.addEventListener?.("visibilitychange",Jt),on.resume&&ie(s).length&&n.toast(`지난번에 그리다 멈췄어요. 남은 ${ie(s).length}장을 이어 그릴까요?`,{seconds:30,action:{label:"이어 그리기",run:()=>Kt()}}),Ls}async function fl(n){let e=URL.createObjectURL(new Blob([n]));try{let t=new Image;await new Promise((j,z)=>{t.onload=j,t.onerror=z,t.src=e});let a=t.width/t.height,[o,c]=a<.83?[1024,1536]:a>1.2?[1536,1024]:[1472,1472],p=Object.assign(document.createElement("canvas"),{width:o,height:c}),s=p.getContext("2d");s.fillStyle="#000",s.fillRect(0,0,o,c);let w=Math.min(o/t.width,c/t.height),x=t.width*w,m=t.height*w;s.drawImage(t,(o-x)/2,(c-m)/2,x,m);let k=await new Promise(j=>p.toBlob(j,"image/png"));return He(new Uint8Array(await k.arrayBuffer()))}finally{URL.revokeObjectURL(e)}}async function ap(n,e){let t=e.ext;if(!t)throw new Error("Dusk가 애드온 자리(ext)를 지원하지 않아요 — Dusk를 업데이트해 주세요");let a=Mo(n),o=t.add("slot","editor.actions",(c,p)=>!p?.id||p.kind==="character"&&!Number.isInteger(p.index)?null:B("에셋 제작",{size:"sm",kind:"primary",icon:"sparkle",id:"rb-sd-make",onClick:()=>is(c,p,a).catch(s=>c.toast(s?.message??String(s),{error:!0}))}));return{deactivate(){o()}}}export{ap as activate};
