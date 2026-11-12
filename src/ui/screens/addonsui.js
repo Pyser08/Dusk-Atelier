@@ -41,28 +41,32 @@ export function addonBox(ctx) {
     ]);
   }
 
+  // 2.1.5 박스형: 애드온 하나 = 작은 카드(이름·상태 칩·스위치 / 설명 두 줄 / 버전·작동 / 버튼). 긴 목록 대신 격자로 한눈에.
+  const CHIP = { available: "new", update: "upd", installed: "on", off: "off", "needs-core": "warn" };
+  const SHORT = { available: "받기 전", update: "새 버전", installed: "켜짐", off: "꺼짐", "needs-core": "코어 업데이트 필요" };
+  const tile = ({ id, custom, name, desc, chip, chipText, chipTitle, meta, sw, acts, on }) => h("div", { class: ["rb-addon-tile", on && "is-on"], dataset: { addon: id, ...(custom ? { custom: "1" } : {}) } },
+    h("div", { class: "rb-addon-tt" }, h("b", { title: name }, name), h("span", { class: "sp" }), sw),
+    h("div", { class: "rb-addon-sub" }, chipText ? h("span", { class: `rb-addon-chip c-${chip}`, title: chipTitle ?? chipText }, chipText) : null, meta ? h("small", { class: "rb-addon-meta" }, meta) : null),
+    desc ? h("p", { class: "rb-addon-desc", title: desc }, desc) : null,
+    acts.some(Boolean) ? h("div", { class: "rb-addon-acts" }, ...acts) : null);
   const officialRow = (a, idx, core) => {
     const cur = idx[a.id], st = rowState(a, cur, core), on = !!cur && cur.on !== false, going = !!A.installing?.(a.id);
-    const info = [cur ? `v${cur.version}` : `v${a.version}`, STATE[st], cur?.pendingRestart ? "새로고침하면 새 버전이 적용돼요" : "", cur?.rolledBack ? `v${cur.rolledBack}에서 오류가 나 되돌렸어요` : "", cur?.error ? `오류: ${cur.error}` : "", cur && on ? (A.running(a.id) ? "작동 중" : "멈춤") : ""].filter(Boolean).join(" · ");
-    return h("div", { class: "rb-srow", dataset: { addon: a.id } },
-      h("span", { class: "t" }, a.name, h("small", null, `${a.desc ? a.desc + " " : ""}${info}`)),
-      h("span", { class: "rb-addon-acts" },
+    const meta = [cur ? `v${cur.version}` : `v${a.version}`, cur?.pendingRestart ? "새로고침하면 새 버전이 적용돼요" : "", cur?.rolledBack ? `v${cur.rolledBack}에서 오류가 나 되돌렸어요` : "", cur?.error ? `오류: ${cur.error}` : "", cur && on ? (A.running(a.id) ? "작동 중" : "멈춤") : ""].filter(Boolean).join(" · ");
+    return tile({ id: a.id, name: a.name, desc: a.desc, chip: CHIP[st] ?? "off", chipText: SHORT[st] ?? STATE[st], chipTitle: STATE[st], meta, on: cur && on,
+      sw: cur ? switchEl(on, { label: `${a.name} 켜기`, onChange: (v) => busy(() => A.setOn(a.id, v)) }) : null,
+      acts: [
         going ? h("small", { class: "rb-muted" }, cur ? "업데이트하는 중…" : "받는 중…") : null,
         !going && !cur && st === "available" ? btn("받기", { size: "sm", kind: "primary", onClick: getting(a.id) }) : null,
         !going && st === "update" ? btn("업데이트", { size: "sm", kind: "primary", onClick: getting(a.id) }) : null,
         cur && on ? openBtn(a.id, false) : null,
-        cur ? switchEl(on, { label: `${a.name} 켜기`, onChange: (v) => busy(() => A.setOn(a.id, v)) }) : null,
-        cur ? btn("지우기", { size: "sm", onClick: () => busy(() => A.remove(a.id)) }) : null));
+        cur ? btn("지우기", { size: "sm", onClick: () => busy(() => A.remove(a.id)) }) : null] });
   };
   const customRow = (a) => {
     const on = a.on !== false;
-    const info = [`v${a.version}`, a.author ? `만든 사람 ${a.author}` : "", a.error ? `오류: ${a.error}` : on ? (A.runningCustom(a.id) ? "작동 중" : "멈춤") : "꺼져 있어요"].filter(Boolean).join(" · ");
-    return h("div", { class: "rb-srow", dataset: { addon: `custom-${a.id}`, custom: "1" } },
-      h("span", { class: "t" }, a.name, h("small", null, `${a.desc ? a.desc + " " : ""}${info}`)),
-      h("span", { class: "rb-addon-acts" },
-        on ? openBtn(a.id, true) : null,
-        switchEl(on, { label: `${a.name} 켜기`, onChange: (v) => busy(() => A.setCustomOn(a.id, v)) }),
-        iconBtn("more", `${a.name} 메뉴`, { onClick: (e) => customMenu(e.currentTarget, a) })));
+    const meta = [`v${a.version}`, a.author ? `만든 사람 ${a.author}` : "", a.error ? `오류: ${a.error}` : on ? (A.runningCustom(a.id) ? "작동 중" : "멈춤") : "꺼져 있어요"].filter(Boolean).join(" · ");
+    return tile({ id: `custom-${a.id}`, custom: true, name: a.name, desc: a.desc, chip: a.error ? "warn" : on ? "on" : "off", chipText: a.error ? "오류" : on ? "켜짐" : "꺼짐", meta, on,
+      sw: switchEl(on, { label: `${a.name} 켜기`, onChange: (v) => busy(() => A.setCustomOn(a.id, v)) }),
+      acts: [on ? openBtn(a.id, true) : null, iconBtn("more", `${a.name} 메뉴`, { onClick: (e) => customMenu(e.currentTarget, a) })] });
   };
 
   async function paint() {
@@ -84,7 +88,7 @@ export function addonBox(ctx) {
         h("h3", { class: "rb-addon-cath" }, cat.name, h("small", null, String(items.length))),
         cat.id === "custom" ? h("p", { class: "rb-muted rb-addon-note", id: "rb-addon-custom-note" }, CUSTOM_NOTE) : null,
         cat.id === "custom" && !items.length ? h("p", { class: "rb-muted rb-addon-empty" }, "아직 없어요. 오른쪽 위 ‘불러오기’로 파일을 넣거나 ‘만들기’로 AI와 함께 만들어요.") : null,
-        ...items.map((a) => (a.custom ? customRow(a) : officialRow(a, idx, core))))),
+        items.length ? h("div", { class: "rb-addon-grid" }, ...items.map((a) => (a.custom ? customRow(a) : officialRow(a, idx, core)))) : null)),
       err ? h("p", { class: "rb-muted" }, `업데이트 확인 실패: ${err}`) : null,
       h("div", { class: "rb-addon-foot" }, allBtn, btn("업데이트 확인", { size: "sm", id: "rb-addon-check", onClick: () => busy(async () => { const r = await A.check({ force: true, fresh: true }); ctx.toast(r.error ? `확인 실패: ${r.error}` : r.updates.length ? `${r.updates.length}개 업데이트했어요` : "모두 최신이에요"); }) })));
   }

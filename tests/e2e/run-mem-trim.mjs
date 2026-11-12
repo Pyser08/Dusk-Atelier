@@ -12,8 +12,8 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99 }) }, { memory: true, host: true }));
   await page.waitForTimeout(400);
   await page.evaluate(() => __app.ctx.go("memory")); await page.waitForTimeout(700);
-  const order = await page.evaluate(() => { const t = document.querySelector("#rb-mem-tokens"), row = [...document.querySelectorAll(".rb-mem-options .rb-srow")].find((e) => e.textContent.includes("요약된 옛 대화 빼고 보내기")), k = document.querySelector("#rb-mem-trimkeep"); return !!t && !!row && !!k && !!(t.compareDocumentPosition(row) & 4) && !!(row.compareDocumentPosition(k) & 4); });
-  ok(`[${tag}] 기억 넣기 토큰 아래에 '빼고 보내기'·'남길 최근 턴'`, order);
+  const order = await page.evaluate(() => { const t = document.querySelector("#rb-mem-tokens"), row = [...document.querySelectorAll(".rb-mem-options .rb-srow")].find((e) => e.textContent.includes("요약된 옛 대화 빼고 보내기")), k = document.querySelector("#rb-mem-trimkeep"); const rows = [...document.querySelectorAll(".rb-mem-options .rb-srow")]; return !!t && !!row && !!k && !!(row.compareDocumentPosition(t) & 4) && !!(t.compareDocumentPosition(k) & 4) && rows[rows.length - 1] === k && !rows.some((e) => e.textContent.includes("리수폿 일괄 사용")); });
+  ok(`[${tag}] '빼고 보내기' 아래 맨 끝에 토큰·남길 최근 턴, 리수폿 일괄 없음`, order);
   const row = page.locator(".rb-mem-options .rb-srow", { hasText: "요약된 옛 대화 빼고 보내기" });
   ok(`[${tag}] 기본 꺼짐`, (await row.locator("[role=switch]").getAttribute("aria-checked")) === "false");
   await row.locator("[role=switch]").click(); await page.waitForTimeout(500);

@@ -1,7 +1,7 @@
 import { parseStatus as parseStoryStatus } from "./engine/storytime.js";
 import { createAddons } from "./data/addons.js";
 import { LIB as ADDON_LIB } from "./addonlib.gen.js";
-import { startHostUpdateToast } from './ui/hostupdate.js';
+import { startHostUpdateToast, clearStaleUpdateToast } from './ui/hostupdate.js';
 import { createDbCache, WRITE_RE } from './data/dbcache.js';
 import { createHookBus } from './data/hookbus.js';
 import { createHostGate } from './data/hostgate.js';
@@ -294,7 +294,7 @@ async function start() {
   refreshPersonaHandlers().catch(() => {
   });
   // 새 버전이 있으면 메인 화면 오른쪽 위에 작은 알림 (켜질 때 한 번, 업데이트 알림을 끄면 안 띄움)
-  setTimeout(async () => { if (await noticeOn()) startHostUpdateToast(api, { version: VERSION, log: (m) => console.log(`[${TITLE}] ${m}`) }).catch(() => {}); }, 4000);
+  setTimeout(async () => { if (!await noticeOn()) return; await clearStaleUpdateToast(api).catch(() => {}); startHostUpdateToast(api, { version: VERSION, log: (m) => console.log(`[${TITLE}] ${m}`) }).catch(() => {}); }, 4000);
   (async () => {
     const data = await loadPresets(api);
     const device = isMobileDevice() ? "mobile" : "desktop";

@@ -1208,12 +1208,26 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-addon-cat+.rb-addon-cat{margin-top:8px}
 .rb-addon-cath{margin:4px 0 2px;font-size:12.5px;font-weight:700;color:var(--rb-mute);display:flex;align-items:center;gap:6px;letter-spacing:.02em}
 .rb-addon-cath small{font-weight:600;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--rb-line2);color:var(--rb-sub)}
-.rb-addon-cat>.rb-srow:last-child{border-bottom:0}
+.rb-addon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:4px}
+.rb-addon-tile{display:flex;flex-direction:column;gap:6px;min-width:0;padding:12px 12px 10px;border:1px solid var(--rb-line);border-radius:14px;background:var(--rb-surf2);transition:border-color .15s}
+.rb-addon-tile.is-on{border-color:color-mix(in srgb,var(--rb-accent) 45%,var(--rb-line))}
+.rb-addon-tt{display:flex;align-items:center;gap:6px;min-width:0}
+.rb-addon-tt b{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rb-addon-tt .sp{flex:1}
+.rb-addon-chip{flex:none;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--rb-line2);color:var(--rb-sub);white-space:nowrap}
+.rb-addon-chip.c-on{background:color-mix(in srgb,var(--rb-ok) 20%,transparent);color:var(--rb-ok)}
+.rb-addon-chip.c-new,.rb-addon-chip.c-upd{background:color-mix(in srgb,var(--rb-accent) 22%,transparent);color:var(--rb-accent)}
+.rb-addon-chip.c-warn{background:var(--rb-warn-soft);color:var(--rb-warn)}
+.rb-addon-desc{margin:0;font-size:12.5px;line-height:1.5;color:var(--rb-sub);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rb-addon-sub{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.rb-addon-meta{font-size:11.5px;color:var(--rb-mute);line-height:1.4}
+.rb-addon-tile .rb-addon-acts{margin-top:auto;justify-content:flex-start;padding-top:2px}
 .rb-addon-note,.rb-addon-empty{margin:2px 0 6px;font-size:12.5px;line-height:1.55}
 .rb-addon-empty{padding:10px 12px;border-radius:12px;border:1px dashed var(--rb-line)}
 .rb-addon-acts{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
 .rb-addon-foot{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:4px}
-@media (max-width:560px){.rb-addonbox .rb-srow{flex-wrap:wrap}.rb-addonbox .rb-srow .t{flex-basis:100%}.rb-addon-acts{width:100%}}
+@media (max-width:560px){.rb-addon-grid{grid-template-columns:1fr 1fr;gap:8px}.rb-addon-tile{padding:10px}}
+@media (max-width:380px){.rb-addon-grid{grid-template-columns:1fr}}
 .rb-amk{max-width:560px;max-height:calc(100vh - 40px);overflow:auto}
 .rb-amk-step{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;border:var(--rb-bw,1px) solid var(--rb-line2)}
 .rb-amk-row{display:flex;gap:8px;flex-wrap:wrap}

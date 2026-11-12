@@ -48,6 +48,8 @@ export function parseWriterRun(prompt) {
     batch: { index: man.batch_contract?.index ?? 1, total: man.batch_contract?.total ?? 1 },
     peopleOn: man.people_profile_enabled !== false, npcOn: man.npc_relationship_enabled !== false,
     missingProfiles: new Set(man.missing_people_profile_contract?.refs ?? []),
+    // 2.1.5: 리수폿 검증은 retrieval 후보·고른 인물(tracking) 각각에 변경이나 대상별 no_canonical_change를 요구한다 → 다 채우려고 읽어 둔다
+    reviewRefs: [...new Set([...(man.retrieval_candidate_review?.refs ?? []), ...(man.tracking_review?.refs ?? [])])].filter((r) => typeof r === "string" && writable.has(r)),
   };
 }
 
@@ -66,11 +68,23 @@ export function cardOf(doc) {
   }).filter(([, v]) => v));
 }
 
+// 2.1.5: 사고 출력이 켜진 모델은 <Thoughts>…</Thoughts>(provider-manager)·<think>…</think>를 본문 앞에 붙인다.
+// 생각 글을 지우고, {"lines":…} 객체가 첫 줄이 아니어도 찾아 그 JSON만 남긴다(못 찾으면 생각 글만 지운 글).
+export function stripThoughts(raw) {
+  let t = String(raw ?? "").replace(/<(Thoughts|think|thinking|reasoning)>[\s\S]*?<\/\1>/gi, "").replace(/^[\s\S]*?<\/(?:Thoughts|think|thinking|reasoning)>/i, "").trim();
+  if (/^[[{]/.test(t.replace(/^```(?:json)?\s*/i, ""))) return t;
+  const at = t.search(/\{\s*"lines"\s*:/);
+  if (at < 0) return t;
+  const end = t.lastIndexOf("}");
+  const body = end > at ? t.slice(at, end + 1) : t.slice(at);
+  try { JSON.parse(body); return body; } catch { return t; }
+}
+
 // call(messages) → 원문. 형식이 틀리면 종류에 맞게 다시 묻는다(빈 답·잘림·형식). 끝내 안 되면 던진다.
 // 3.0.8: 호출층(llm-client)은 빈 응답을 예외(code empty-model-response)로 던진다 — 추론만 하다 끝난 경우라 다시 묻는다(다른 오류는 그대로 던짐).
 // tries: 최대 호출 횟수(1단계 3, 인물 2 — 추론 모델이 실패할 때마다 수만 토큰을 쓰므로 인물 단계는 한 번만 다시 묻는다).
 async function ask(call, msgs, parse, { minimal = null, tries = 3 } = {}) {
-  const once = async (m) => { try { return await call(m); } catch (e) { if (e?.code === "empty-model-response") return ""; throw e; } };
+  const once = async (m) => { try { return stripThoughts(await call(m)); } catch (e) { if (e?.code === "empty-model-response") return ""; throw e; } };
   let raw = await once(msgs);
   for (let k = 0; k < tries; k++) {
     const got = parse(raw);
@@ -231,6 +245,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
     }, { tries: 2 });
   };
   const list = source.trim().length >= 40 ? targets.slice(0, cap) : [];
+  const capped = source.trim().length >= 40 ? targets.slice(cap).map((t) => t.name) : [];   // 2.1.5: 인원 상한으로 이번엔 묻지 않은 인물(envelope에서 '변화 없음'으로 채운다)
   const canGroup = group && typeof linesStage2Group === "function" && typeof splitGroupReply === "function";
   for (let i = 0; i < list.length;) {
     const chunk = canGroup ? list.slice(i, i + GROUP_MAX) : [list[i]];
@@ -250,7 +265,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
     else if (switched) { auto.streak = (auto.streak ?? 0) + 1; if (auto.streak >= 2) { auto.hold = 10; auto.streak = 0; } }
     else if (people.length) auto.streak = 0;
   }
-  return { stage1, people, known, source, lightAuto, skipped };
+  return { stage1, people, known, source, lightAuto, skipped, capped };
 }
 
 // ── ③ 줄 → 리수폿 응답(envelope) ──
@@ -400,6 +415,16 @@ export function buildEnvelope(run, rec) {
     const e = entry(doc, "core.identity", [], `${base}${base ? " · " : ""}현재 상태: ${st.v}`, `상태 변화: ${st.q}`);
     if (e) docs.push({ document_ref: doc.ref, operation: "update", type: "character", title: null, aliases_add: [], aliases_remove: [], tags_add: [], tags_remove: [], event_context: null, entries: [e] });
   }
+  // 2.1.5: 리수폿이 검토하라고 준 인물(retrieval 후보·고른 인물)과 인원 상한으로 묻지 않은 인물 중 아직 다루지 않은 쓰기 가능 문서마다
+  // 대상별 no_canonical_change를 남긴다 — 하나라도 빠지면 리수폿이 기록 전체를 거절했다('retrieval candidate 검토가 누락').
+  const covered = new Set([...docs.map((d) => d.document_ref), ...metricOps.map((x) => x.document_ref), ...peopleOps.map((x) => x.document_ref), ...issues.map((x) => x.document_ref)].filter(Boolean));
+  const cappedRefs = new Set((rec.capped ?? []).map((nm) => refOf.get(nk(nm))).filter(Boolean));
+  const writableRefs = new Set(run.docs.filter((d) => d.writable).map((d) => d.ref));
+  for (const ref of [...cappedRefs, ...(run.reviewRefs ?? [])]) {
+    if (covered.has(ref) || !(writableRefs.has(ref) || (run.reviewRefs ?? []).includes(ref))) continue;
+    covered.add(ref);
+    issues.push({ code: "no_canonical_change", document_ref: ref, detail: cappedRefs.has(ref) ? "Dusk 기록기: 인원 상한으로 이번엔 묻지 않음" : "Dusk 기록기: 이번 장면에 등장하지 않음" });
+  }
   if (!docs.length && !metricOps.length && !peopleOps.length && !issues.length) issues.push({ code: "no_canonical_change", document_ref: null, detail: "Dusk 기록기: 이번 응답에서 인물 카드에 남길 변화 없음" });
   return { schema_version: 1, request_ref: run.requestRef, documents: docs, metric_ops: metricOps, people_ops: peopleOps, issues };
 }
@@ -448,7 +473,7 @@ export function parseGaugeLines(raw) {
 }
 
 export function parseLinesLoose(raw) {
-  const t = String(raw ?? "").replace(/```[a-z]*/gi, "").trim();
+  const t = stripThoughts(raw).replace(/```[a-z]*/gi, "").trim();
   if (/^[[{]/.test(t)) { try { const acc = []; const walk = (v) => { if (typeof v === "string") acc.push(...v.split(/\r?\n/)); else if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v === "object") Object.values(v).forEach(walk); }; walk(JSON.parse(t)); return acc; } catch { /* 줄로 읽는다 */ } }
   return t.split(/\r?\n/);
 }

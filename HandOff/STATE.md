@@ -1137,3 +1137,14 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 2. **씬 프리셋 버튼**: 툴바 '즐겨찾기 넣기'·'보기' 아래 줄에 [SFW] [NSFW] [+]. 프리셋 = 씬 세트(씬 이름·프롬프트 묶음)만. 누르면 그 세트로 전환해 SFW/NSFW 그림을 편하게 생성(봇 데이터는 안 바뀜). 폴더 구조(소속·캐릭터 폴더)는 세트와 무관하게 프로젝트에서 공유, 캐릭터 카드는 공유 안 함. '+'로 새 세트. 기본 씬 프리셋은 리스 전체(플러그인 저장소)에 저장해 다른 봇에서도 씀. 기존 '씬 템플릿'과의 관계 정리 필요(재사용 권장).
 3. **로어북 연동 양방향**(설정 loreSync 켰을 때): 봇·모듈 로어북에서 만든 Dusk 폴더/[소속] 폴더 구조를 에셋 제작 폴더로 가져옴(소속→group, 하위 구조 유지, lore id로 연결). 지우기는 양쪽 다 전파 안 함.
 4. **애드온 튜토리얼**(첫 실행·도움말에서): 로어북 연동 켜기/끄기(기본 끔) 선택, 원본 SDStudio 백업 가져오기 안내, 씬 프리셋(SFW/NSFW) 가져오기·고르기, 봇 안 저장·전체 백업 설명.
+
+## 2026-11-12 오후 — 애드온 박스형·기억 화면 정리·기록기 버그 4건 (커밋됨, 버전·CHANGELOG 안 바꿈)
+- 홈 애드온 상자: 줄 목록 → 카드 격자(`addonsui.js` tile, `.rb-addon-grid/.rb-addon-tile/.rb-addon-chip`). 상태 칩은 짧은 말(받기 전·새 버전·켜짐·꺼짐·코어 업데이트 필요, 긴 말은 title). e2e run-addons-ui 문구 맞춤.
+- 기억 홈(`mhome.js`): 리수폿 일괄 사용 줄 삭제(리수폿 화면에 있음), 기억 넣기 토큰·남길 최근 턴을 카드 맨 아래로. 안내서 memory.html 고침, e2e run-mem-trim 순서 맞춤.
+- 기록기(`engine/recorder.js`, **장기기억 애드온에 들어가므로 애드온 배포해야 사용자에게 적용**):
+  1) parseWriterRun이 retrieval_candidate_review·tracking_review refs를 `run.reviewRefs`로 읽고, buildEnvelope 끝에서 안 다룬 후보마다 no_canonical_change("이번 장면에 등장하지 않음").
+  2) `stripThoughts`: <Thoughts>/<think> 블록 제거 + 첫 줄이 아닌 {"lines":…} 찾기. ask()의 모든 응답과 parseLinesLoose에 적용.
+  4) recordTurn이 인원 상한으로 잘린 인물을 `capped`로 돌려주고 envelope에서 "인원 상한으로 이번엔 묻지 않음".
+  시험: tests/recorder-review.test.js(실제 리수폿 검증 통과 확인 포함).
+- 3) 업데이트 알림이 업데이트 후 남는 문제: 켜질 때 `clearStaleUpdateToast`로 남은 알림 제거(main.js, 업데이트 알림이 켜져 있을 때만). tests/updatenotice.test.js.
+- 남은 일: [ ] 에로싱크·리수폿을 {{user}}에게도 쓰는 토글 — 범위 확인 중(사용자 답 대기). [ ] 코어(2.1.5?)·장기기억 애드온 배포는 사용자 지시 시.

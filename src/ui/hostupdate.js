@@ -76,6 +76,17 @@ export async function showHostUpdateToast(api, v, { version }) {
   setTimeout(close, SHOW_MS);
   return true;
 }
+// 2.1.5: 알림이 떠 있는 채로 플러그인을 업데이트하면 예전 플러그인의 닫기·자동 내림이 함께 사라져 알림이 화면에 남았다(눌러도 안 지워짐).
+// 켜질 때마다(새 버전이 없어도·알림을 꺼 둬도) 남은 알림을 먼저 지운다.
+export async function clearStaleUpdateToast(api) {
+  if (typeof api.getRootDocument !== "function") return 0;
+  if (typeof api.requestPluginPermission === "function" && !await api.requestPluginPermission("mainDom")) return 0;
+  const root = await api.getRootDocument();
+  if (!root) return 0;
+  let n = 0;
+  for (let i = 0; i < 5; i++) { const old = await root.querySelector('[x-dusk-update-toast="1"]'); if (!old) break; await old.remove(); n++; }
+  return n;
+}
 export async function startHostUpdateToast(api, { version, log = () => {} }) {
   if (!version || version === "dev") return;
   const v = await latestVersion(api);

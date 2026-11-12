@@ -19,14 +19,14 @@ for (const mobile of [false, true]) {
   await page.evaluate(() => { const a = window.__api; a.registerButton = async (o) => { (window.__btns ??= []).push(o.name); return "b1"; }; a.unregisterUIPart = () => { window.__btns = (window.__btns ?? []).slice(0, -1); }; });
   await page.evaluate(() => window.__app.ctx.go("home")); await page.waitForTimeout(500);
   const row = page.locator("[data-addon=hello]");
-  ok(`[${tag}] 애드온 카드에 시험 애드온이 보임`, (await row.count()) === 1 && /받을 수 있어요/.test(await row.textContent()), await page.locator("#rb-addons").textContent().catch(() => ""));
+  ok(`[${tag}] 애드온 카드에 시험 애드온이 보임`, (await row.count()) === 1 && /받기 전/.test(await row.textContent()), await page.locator("#rb-addons").textContent().catch(() => ""));
   await row.getByRole("button", { name: "받기" }).click(); await page.waitForTimeout(500);
-  ok(`[${tag}] 받기 → 켜져 있어요 · 작동 중`, /켜져 있어요/.test(await row.textContent()) && /작동 중/.test(await row.textContent()), await row.textContent());
+  ok(`[${tag}] 받기 → 켜짐 · 작동 중`, /켜짐/.test(await row.textContent()) && /작동 중/.test(await row.textContent()), await row.textContent());
   ok(`[${tag}] 애드온이 채팅 메뉴 버튼을 등록`, (await page.evaluate(() => window.__btns)).includes("Dusk 애드온 시험"));
   await row.locator("[role=switch]").click(); await page.waitForTimeout(400);
-  ok(`[${tag}] 끄기 → 꺼져 있어요, 버튼 해제`, /꺼져 있어요/.test(await row.textContent()) && !(await page.evaluate(() => window.__btns)).length, await row.textContent());
+  ok(`[${tag}] 끄기 → 꺼짐, 버튼 해제`, /꺼짐/.test(await row.textContent()) && !(await page.evaluate(() => window.__btns)).length, await row.textContent());
   await row.getByRole("button", { name: "지우기" }).click(); await page.waitForTimeout(400);
-  ok(`[${tag}] 지우기 → 다시 받을 수 있어요`, /받을 수 있어요/.test(await row.textContent()));
+  ok(`[${tag}] 지우기 → 다시 받을 수 있어요`, /받기 전/.test(await row.textContent()));
   await page.getByRole("button", { name: "업데이트 확인" }).click(); await page.waitForTimeout(400);
   const sc = () => page.evaluate(() => { const n = [...document.querySelectorAll(".rb-main,.rb-main .rb-scroll")].sort((a, b) => b.scrollHeight - a.scrollHeight)[0]; return { top: n.scrollTop, id: (n.__tid ??= Math.random()) }; });
   for (const aid of ["hello", "chattheme"]) {
