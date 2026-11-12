@@ -23,7 +23,7 @@
   - 작업 묶음을 head(설정·조각·폴더·세트 목록·캐릭터 순서)와 캐릭터 기록 `c:<세트>:<id>`로 쪼갬. 저장은 지난 저장과 다른 기록만.
   - ① 기기 IndexedDB `dusk-sds-proj`(키 `<작업키>\u0001<조각>`, 한 거래로 다 되거나 다 안 되거나) — 화면은 이것만 기다림, 저장은 한 줄로(chain). 실패하면 플러그인 저장소에 바로(예전 방식).
   - ② 플러그인 저장소 통째 보관본: 1분에 한 번·닫을 때·탭 숨길 때(pagehide·visibilitychange). saveProject(target, p, at)로 기기 저장 시각을 그대로 적음.
-  - ③ Cellar(mem 기능 있으면): 바뀐 기록만 3초 모아 `/cellar/mem/batch`, 키 `dusk.mem.sds.<작업키>.<조각>`(옛 Cellar KEY_RE 그대로 통과), 캐릭터 먼저·head 마지막, 50개·4MB씩, 실패는 남겨 두고 다음에.
+  - ③ (뺌 — 사용자 결정 20시 40분, 어댑터 코드도 지움. store는 cellar 인자를 받을 수 있게만 남김) Cellar(mem 기능 있으면): 바뀐 기록만 3초 모아 `/cellar/mem/batch`, 키 `dusk.mem.sds.<작업키>.<조각>`(옛 Cellar KEY_RE 그대로 통과), 캐릭터 먼저·head 마지막, 50개·4MB씩, 실패는 남겨 두고 다음에.
   - 열 때: 기기·Cellar·보관본 중 head.t 최신(같으면 기기 → Cellar → 보관본). 캐릭터 기록이 빠진 저장본은 건너뛰고 다음 것(마지막이면 알림). 고른 것이 기기가 아니면 기기를 채움. 봇 안 사본과의 비교도 이 t로.
   - 그림 원본 캐시 OPFS `dusk-sds-img`(최대 2500, lastModified 오래된 것부터 정리, createWritable 없으면 안 씀) — S.bytes·썸네일 만들기가 먼저 봄, 새로 그린 그림은 바로 넣음. 썸네일은 IndexedDB `dusk-sds-thumbs` 그대로.
   - 시험: unit sdstudio-projsplit(3)·sdstudio-store(8, 가짜 기기·보관본·Cellar), 실제 Cellar 서버(cellar-start --role-server)에 붙여 저장→새 기기에서 Cellar로 복원→지우기 반영 수동 확인. e2e 시험 페이지를 localhost(route)로 바꿔 IndexedDB·OPFS가 실제로 돌게 함(about:blank는 막힘) — 저장 블록(기기 바로·보관본 미룸·닫으면 보관본·기기 지워도 복원·다시 채움)·OPFS 원본 확인 추가, 136 통과. npm test 1504.

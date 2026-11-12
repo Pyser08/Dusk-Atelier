@@ -8,7 +8,7 @@ import { zipSync, strToU8, strFromU8, gzipSync } from "../../../vendor/fflate.js
 import * as BD from "../../../engine/sdstudio/botdata.js";
 import { parsePieceFile, addPieceLibs, addWildcard, parseCharPresets, readPngPrompt, parseGlobalPresets, addPresets, presetFromSD } from "../../../engine/sdstudio/imports.js";
 import { getThumb, putThumb, makeThumb, createLazy, chunkedAppend, getOrig, putOrig } from "./thumbs.js";
-import { createProjectStore, createIdbBackend, createCellarAdapter } from "../../../data/sdsstore.js";
+import { createProjectStore, createIdbBackend } from "../../../data/sdsstore.js";
 import { pullLore } from "../../../engine/sdstudio/loresync.js";
 import * as FB from "../../../engine/sdstudio/fullbackup.js";
 import { isStopError } from "../../../engine/aistop.js";
@@ -44,9 +44,9 @@ export async function openAssetStudio(ctx, target, sd) {
   let title = "";
   if (target.kind === "module") title = (await ctx.svc.load({ fresh: true })).entries.find((e) => e.module.id === target.id)?.module?.name ?? "";
   else { const c = await ctx.api.getCharacterFromIndex(target.index); if (!c || c.chaId !== target.id) throw new Error("봇을 찾지 못했어요. 목록을 새로 고친 뒤 다시 해 주세요"); title = c.name; }
-  // 저장: 기기(IndexedDB) 바로 + 플러그인 저장소 보관본 1분 + Cellar(있으면) — data/sdsstore.js
+  // 저장: 기기(IndexedDB) 바로 + 플러그인 저장소 보관본 1분 — data/sdsstore.js (Cellar 연동은 뺌, 사용자 결정)
   const pk = sd.keyOf(target);
-  const PS = (ctx.state.sdsStore ??= (typeof indexedDB !== "undefined" ? createProjectStore({ local: createIdbBackend(), host: { save: (t, p, at) => sd.saveProject(t, p, at), load: async (t) => ({ project: await sd.loadProject(t), t: await sd.savedAt(t) }) }, cellar: createCellarAdapter(ctx.api), log: (...a) => console.warn("[Dusk 에셋 제작 저장]", ...a) }) : null));
+  const PS = (ctx.state.sdsStore ??= (typeof indexedDB !== "undefined" ? createProjectStore({ local: createIdbBackend(), host: { save: (t, p, at) => sd.saveProject(t, p, at), load: async (t) => ({ project: await sd.loadProject(t), t: await sd.savedAt(t) }) }, log: (...a) => console.warn("[Dusk 에셋 제작 저장]", ...a) }) : null));
   let proj, savedT = 0;
   if (PS) {
     const r = await PS.open(target, pk);
@@ -1535,7 +1535,7 @@ export async function openAssetStudio(ctx, target, sd) {
     runAction(act);
   };
   el.addEventListener("keydown", onKey);
-  // 탭을 가리거나 닫을 때: 보관본·Cellar를 지금
+  // 탭을 가리거나 닫을 때: 보관본을 지금
   const flushHidden = () => { if (document.visibilityState === "hidden" || event?.type === "pagehide") { S.persist(); PS?.flush(pk); } };
   document.addEventListener("visibilitychange", flushHidden); addEventListener?.("pagehide", flushHidden);
   // 메뉴를 닫거나 빈 곳을 누른 뒤 포커스가 body로 빠져도 단축키(⌘A 등)가 듣게

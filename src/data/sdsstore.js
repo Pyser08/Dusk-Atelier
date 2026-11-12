@@ -1,11 +1,10 @@
 // 에셋 제작 작업 저장 — 빠르고 잃지 않게 세 곳에.
 // ① 이 기기 IndexedDB: 캐릭터 단위로 바뀐 것만, 한 거래(다 되거나 다 안 되거나)로 바로. 화면은 이것만 기다린다.
 // ② 리스 플러그인 저장소: 통째 보관본을 1분에 한 번(그리고 닫을 때). 브라우저 데이터를 지워도 여기서 되살린다.
-// ③ Dusk Cellar(켜져 있고 기억 저장 기능이 있으면): 바뀐 캐릭터만 3초 모아 올림. 키 dusk.mem.sds.<작업키>.<조각> — 옛 Cellar도 받는 이름.
+// ③ (선택, 지금은 안 씀) cellar 어댑터를 넘기면 바뀐 캐릭터만 3초 모아 올림. 키 dusk.mem.sds.<작업키>.<조각>.
 // 열 때: 세 곳에서 저장 시각(t)이 가장 늦은 것. 고른 것이 ①이 아니면 ①을 그걸로 채운다.
 import { splitProject, joinProject, diffRecords, HEAD } from "../engine/sdstudio/projsplit.js";
 import { normalizeProject } from "../engine/sdstudio/project.js";
-import { loadCellarUrl, probeCellar, cellarRequest } from "./cellar.js";
 
 export var CELLAR_PREFIX = "dusk.mem.sds.";
 var safe = (s) => String(s).replace(/[^A-Za-z0-9._:@-]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
@@ -145,24 +144,3 @@ export function createProjectStore({ local, host, cellar = null, now = () => Dat
   };
 }
 
-// Dusk Cellar 어댑터 — 기억 저장 기능(mem)이 있는 Cellar가 켜져 있을 때만. 1분마다 다시 확인.
-export function createCellarAdapter(api, { now = () => Date.now() } = {}) {
-  let conn = null, checkedAt = 0, checking = null;
-  const enc = encodeURIComponent;
-  const req = async (path, opts) => { const r = await cellarRequest(api, conn, path, opts); if (r.status !== 200) throw new Error(r.json?.error ?? `응답 ${r.status}`); return r.json; };
-  return {
-    async ready() {
-      if (now() - checkedAt < 60000) return !!conn;
-      if (checking) return checking;
-      checking = (async () => {
-        try { const st = await probeCellar(api, await loadCellarUrl(api)); conn = st?.ok && st.features?.includes("mem") ? { url: st.url, via: st.via } : null; }
-        catch { conn = null; }
-        checkedAt = now(); checking = null; return !!conn;
-      })();
-      return checking;
-    },
-    async batch(ops) { try { return (await req("/cellar/mem/batch", { method: "POST", body: { ops }, timeout: 30e3 })).results; } catch (e) { checkedAt = 0; throw e; } },
-    async list(prefix) { return (await req("/cellar/mem?prefix=" + enc(prefix), { timeout: 30e3 })).items ?? []; },
-    async get(key) { const j = await req("/cellar/mem/" + enc(key), { timeout: 30e3 }); return j?.value ?? j?.item?.value ?? null; }
-  };
-}
