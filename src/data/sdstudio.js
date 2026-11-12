@@ -96,6 +96,23 @@ export function createSdStudio(api) {
     return fetch(url, { ...init, signal });
   };
   const store = () => api.pluginStorage;
+  const saveQ = {};
+  async function writeProject(k, p) {
+    const json = JSON.stringify(p), t = Date.now();
+    const s = await local();
+    try { await s?.setItem?.(MIRROR + k, JSON.stringify({ t, p })); } catch { /* 기기 저장 공간 부족 — 복사본만 건너뜀 */ }
+    let err = null;
+    for (let i = 0; i < 3; i++) {   // 호스트 저장이 가끔 늦거나 실패 — 세 번까지
+      try {
+        await store()?.setItem(k, json);
+        let back = null; try { back = await store()?.getItem(k); } catch { /* 읽기 실패는 통과 */ }
+        if (back != null && (typeof back === "string" ? back : JSON.stringify(back)) !== json) throw new Error("저장한 내용이 달라요. 이 기기 복사본에는 남아 있어요 — 전체 백업(zip)을 받아 두세요");
+        try { await store()?.setItem(`${k}.t`, String(t)); } catch { /* 시각만 못 적음 */ }
+        return;
+      } catch (e) { err = e; await new Promise((r) => setTimeout(r, 400 * (i + 1))); }
+    }
+    throw err;
+  }
   const keyOf = (target) => (typeof target === "string" ? `dusk.sdstudio.p.${target}` : projectKey(target));
   const gzToDb = (gz) => parseTagDb(strFromU8(gz[0] === 0x1f && gz[1] === 0x8b ? gunzipSync(gz) : gz) + "\n" + KO_EXTRA);   // 한글 이름 보충을 덧붙임
   const b64 = { to: (u) => { let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); }, from: (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0)) };
@@ -149,14 +166,23 @@ export function createSdStudio(api) {
       try { const s = await local(); const v = await s?.getItem?.(MIRROR + k); tm = Number((typeof v === "string" ? JSON.parse(v) : v)?.t) || 0; } catch { /* 없음 */ }
       return Math.max(ta, tm);
     },
-    async saveProject(target, p) {
-      const k = keyOf(target), json = JSON.stringify(p), t = Date.now();
-      const s = await local();
-      try { await s?.setItem?.(MIRROR + k, JSON.stringify({ t, p })); } catch { /* 기기 저장 공간 부족 — 복사본만 건너뜀 */ }
-      await store()?.setItem(k, json);
-      try { await store()?.setItem(`${k}.t`, String(t)); } catch { /* 시각만 못 적음 */ }
-      let back = null; try { back = await store()?.getItem(k); } catch { /* 읽기 실패는 아래에서 */ }
-      if (back != null && (typeof back === "string" ? back : JSON.stringify(back)) !== json) throw new Error("저장한 내용이 달라요. 이 기기 복사본에는 남아 있어요 — 전체 백업(zip)을 받아 두세요");
+    // 저장은 한 줄로(겹치면 앞 저장의 '다시 읽어 확인'이 뒤 저장 내용을 보고 '달라요'로 오인함). 기다리는 사이 또 오면 마지막 것만 저장.
+    saveProject(target, p) {
+      const k = keyOf(target);
+      const q = (saveQ[k] ??= { busy: null, next: null });
+      q.next = p;
+      if (q.busy) return q.busy;
+      const run = async () => {
+        let lastErr = null;
+        while (q.next) {
+          const cur = q.next; q.next = null;
+          try { await writeProject(k, cur); lastErr = null; } catch (e) { lastErr = e; }
+        }
+        q.busy = null;
+        if (lastErr) throw lastErr;
+      };
+      q.busy = run();
+      return q.busy;
     },
     async loadPresets() { try { const v = await store()?.getItem(PRESET_KEY); const a = v ? (typeof v === "string" ? JSON.parse(v) : v) : []; return Array.isArray(a) ? a : []; } catch { return []; } },
     async savePresets(list) { await store()?.setItem(PRESET_KEY, JSON.stringify(list)); },

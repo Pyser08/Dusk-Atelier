@@ -498,6 +498,16 @@ const sceneCard = (page, name) => page.locator("#sds-body .sds-scene", { has: pa
     await page.click("#sds-bk-ok"); await page.waitForTimeout(1200);
     const got = await page.evaluate(() => { const p = document.querySelector("#rb-sd-studio").__sds.proj, c = p.chars.find((x) => x.name === "시로코"); return c && { prompt: c.prompt, scenes: c.scenes.map((s) => [s.name, s.images.length, s.images.filter((i) => i.fav).length]), folder: p.folders.find((f) => f.members.includes(c.id))?.name }; });
     ok("백업 → 캐릭터·씬·즐겨찾기 그림·폴더", JSON.stringify(got) === JSON.stringify({ prompt: "white hair", scenes: [["웃음", 1, 1]], folder: "아비도스" }), JSON.stringify(got)); }
+  { // 원본 전체 백업의 __settings__(전역 조각·글로벌 프리셋·프로젝트 템플릿)만 든 tar
+    const bytes = tar([["_backup.json", JSON.stringify({ type: "sdstudio-full-backup", version: 1, projects: [] })],
+      ["__settings__/global_pieces.json", JSON.stringify({ "hair style": { version: 1, name: "hair style", pieces: [{ name: "long hair", prompt: "very long hair" }] } })],
+      ["__settings__/global_presets.json", JSON.stringify({ version: 1, presets: [{ name: "화풍X", workflowType: "SDImageGen", preset: { frontPrompt: "artist:x", backPrompt: "", uc: "lowres", steps: 20 } }] })],
+      ["project_templates.json", JSON.stringify({ version: 1, templates: [{ name: "템플릿X", preset: null, scenes: [{ name: "웃음", slots: [[{ prompt: "smile" }]] }] }] })]]);
+    await page.evaluate((b) => { document.querySelector("#rb-sd-studio").__sds.importBackup(new File([new Uint8Array(b)], "full.tar")); }, [...bytes]);
+    await page.waitForTimeout(500);
+    await page.locator(".rb-modal .rb-dialog button", { hasText: "가져오기" }).last().click(); await page.waitForTimeout(800);
+    const r = await page.evaluate(async () => { const S = document.querySelector("#rb-sd-studio").__sds; return { lib: S.proj.pieces.some((l) => l.name === "hair style" && l.pieces[0].name === "long hair"), pre: (await S.sd.loadPresets()).some((x) => x.name === "화풍X" && x.settings.top === "artist:x"), tpl: (await S.sd.loadTemplates()).some((t) => t.name === "템플릿X" && t.scenes[0].name === "웃음") }; });
+    ok("원본 전체 백업 설정 → 조각 모음(띄어쓰기 유지)·프리셋·씬 템플릿", r.lib && r.pre && r.tpl, JSON.stringify(r)); }
   ok("오류 없음(대표 고르기)", !errs.length, errs.join(";"));
   await page.close(); }
 

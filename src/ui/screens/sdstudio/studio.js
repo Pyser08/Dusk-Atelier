@@ -6,7 +6,7 @@ import { h, replace, download, pickFiles } from "../../dom.js";
 import { btn, openMenu, promptDialog, confirmDialog } from "../../kit.js";
 import { zipSync, strToU8, strFromU8, gzipSync } from "../../../vendor/fflate.js";
 import * as BD from "../../../engine/sdstudio/botdata.js";
-import { parsePieceFile, addPieceLibs, addWildcard, parseCharPresets, readPngPrompt } from "../../../engine/sdstudio/imports.js";
+import { parsePieceFile, addPieceLibs, addWildcard, parseCharPresets, readPngPrompt, parseGlobalPresets, addPresets, presetFromSD } from "../../../engine/sdstudio/imports.js";
 import { syncLore, pullLore } from "../../../engine/sdstudio/loresync.js";
 import { newFolderEntry } from "../editor.js";
 import * as FB from "../../../engine/sdstudio/fullbackup.js";
@@ -84,7 +84,7 @@ export async function openAssetStudio(ctx, target, sd) {
     set(next, { undo = true } = {}) { if (next?.folders !== proj?.folders && S.prefs?.loreSync) { clearTimeout(loreT); loreT = setTimeout(() => syncLoreNow(), 1200); } if (undo && next !== proj) { hist.push(proj, { typing: globalThis.event?.type === "input" }); } proj = next; clearTimeout(saveT); saveT = setTimeout(() => S.persist(), 500); },
     undo() { const prev = hist.undo(proj); if (!prev) { S.toast("되돌릴 것이 없어요"); return; } proj = prev; afterJump(); },
     redo() { const nx = hist.redo(proj); if (!nx) { S.toast("다시 할 것이 없어요"); return; } proj = nx; afterJump(); },
-    persist() { clearTimeout(saveT); botDirty = true; return sd.saveProject(target, proj).catch((e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true })); },
+    persist() { clearTimeout(saveT); botDirty = true; return sd.saveProject(target, proj).catch((e) => { if (Date.now() - (S._saveErrAt ?? 0) < 30000) return; S._saveErrAt = Date.now(); ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true }); }); },
     toast: (t, o) => ctx.toast(t, o),
     curChar: () => (st.charId ? P.charOf(proj, st.charId) : null),
     curScene: () => (st.charId && st.sceneId ? P.sceneOf(proj, st.charId, st.sceneId) : null),
@@ -1051,6 +1051,8 @@ export async function openAssetStudio(ctx, target, sd) {
       { label: "씬 템플릿(.json)", icon: "upload", onClick: () => importTemplate() },
       { label: "조각 모음(.json) · 와일드카드(.txt)", icon: "upload", onClick: () => importPiecesFile() },
       { label: "캐릭터 프리셋(.json) → 캐릭터 카드", icon: "upload", onClick: () => importCharPresets() },
+      { label: "글로벌 프리셋(.json·백업 .tar) → 프리셋", icon: "upload", onClick: () => importGlobalPresetsFile() },
+      { label: "프로젝트 템플릿 백업(.tar) → 씬 템플릿·프리셋", icon: "upload", onClick: () => importBackup() },
       { label: "PNG 메타데이터 → 프롬프트", icon: "upload", onClick: () => importPngPrompt() }
     ]);
   }
@@ -1064,6 +1066,13 @@ export async function openAssetStudio(ctx, target, sd) {
       } catch (e) { S.toast(`${f.name}: ${e?.message ?? e}`, { error: true }); }
     }
     paintLeft();
+  }
+  async function importGlobalPresetsFile() {
+    const [f] = await pickFiles({ accept: ".json,.tar,application/json,application/x-tar" });
+    if (!f) return;
+    if (/\.tar$/i.test(f.name)) return importBackup(f);
+    try { const add = parseGlobalPresets(await f.text(), proj.settings); const x = addPresets(await sd.loadPresets(), add); await sd.savePresets(x.list); S.toast(`프리셋 ${add.length}개를 가져왔어요 — 왼쪽 위 프리셋 불러오기에서 골라요`); }
+    catch (e) { S.toast(e?.message ?? String(e), { error: true }); }
   }
   async function importCharPresets() {
     const [f] = await pickFiles({ accept: ".json,application/json" });
@@ -1102,6 +1111,8 @@ export async function openAssetStudio(ctx, target, sd) {
       projs = arc.projs ?? await BK.findProjects(arc.files, async (n) => JSON.parse(new TextDecoder().decode(await arc.get(n))));
     } catch (e) { t0?.close?.(); ctx.toast(`읽지 못했어요: ${e?.message ?? e}`, { error: true }); return; }
     t0?.close?.();
+    const extra = arc.get ? await importSettingsFrom(arc) : "";   // 전체 백업의 전역 조각·글로벌 프리셋·캐릭터 프리셋, 글로벌 프리셋 백업
+    if (!projs.length && extra) return;
     if (!projs.length) { ctx.toast("백업 안에서 SDStudio 프로젝트를 찾지 못했어요", { error: true }); return; }
     const r = await S.dlg.backupImport({ projs, hasImages: !!arc.get && projs.some((x) => x.count) });
     if (!r) return;
@@ -1130,6 +1141,35 @@ export async function openAssetStudio(ctx, target, sd) {
     ctx.toast(`캐릭터 ${chosen.length}명 · 그림 ${jobs.length - fail}장을 가져왔어요${fail ? ` (못 읽은 그림 ${fail}장)` : ""}`, { seconds: 10 });
   }
   S.importBackup = importBackup;
+  // tar 안의 전역 설정 파일(원본 전체 백업 __settings__/…, 글로벌 프리셋 백업 global_presets.json) → 조각 모음·프리셋·캐릭터 카드
+  async function importSettingsFrom(arc) {
+    const find = (n) => arc.files.find((x) => x.name === n || x.name === `__settings__/${n}` || x.name.endsWith(`/__settings__/${n}`))?.name;
+    const read = async (n) => new TextDecoder().decode(await arc.get(n));
+    const done = [];
+    const gp = find("global_pieces.json"), pr = find("global_presets.json"), cp = find("global_character_presets.json"), pt = find("project_templates.json");
+    if (!gp && !pr && !cp && !pt) return "";
+    const want = await confirmDialog(ctx.win, { title: "전역 설정도 가져올까요?", body: [gp && "전역 조각 모음", pr && "글로벌(그림체) 프리셋", cp && "캐릭터 프리셋(→ 캐릭터 카드)", pt && "프로젝트 템플릿(→ 씬 템플릿·프리셋)"].filter(Boolean).join(" · ") + "이 들어 있어요. 같은 이름은 번호를 붙여 더해요.", ok: "가져오기", cancel: "건너뛰기" });
+    if (!want) return "";
+    try { if (gp) { const r = parsePieceFile("g.json", await read(gp)); if (r.libs) { const x = addPieceLibs(proj.pieces, r.libs); S.set({ ...proj, pieces: x.pieces }); done.push(`조각 모음 ${x.names.length}개`); } } } catch (e) { ctx.toast(`전역 조각: ${e?.message ?? e}`, { error: true }); }
+    try { if (pr) { const add = parseGlobalPresets(await read(pr), proj.settings); const x = addPresets(await sd.loadPresets(), add); await sd.savePresets(x.list); done.push(`프리셋 ${add.length}개`); } } catch (e) { ctx.toast(`글로벌 프리셋: ${e?.message ?? e}`, { error: true }); }
+    try { if (cp) { const list = parseCharPresets(await read(cp)); let next = proj; for (const x of list) next = P.addChar(next, { name: x.name, prompt: x.prompt }); S.set(next); done.push(`캐릭터 ${list.length}명`); } } catch (e) { ctx.toast(`캐릭터 프리셋: ${e?.message ?? e}`, { error: true }); }
+    try {
+      if (pt) {
+        const j = JSON.parse(await read(pt)), list = Array.isArray(j?.templates) ? j.templates : [];
+        const tpls = await sd.loadTemplates(); let presets = await sd.loadPresets(), n = 0;
+        for (const t of list) {
+          if (!t?.name) continue;
+          try { const tp = T.parseTemplateFile({ name: t.name, scenes: t.scenes ?? [] }); let nm = tp.name; for (let i = 2; tpls.some((x) => x.name === nm); i++) nm = `${tp.name} ${i}`; tpls.push({ ...tp, name: nm }); n++; } catch { /* 씬 없는 템플릿 */ }
+          if (t.preset) presets = addPresets(presets, [presetFromSD({ name: t.name, preset: t.preset }, proj.settings)]).list;
+        }
+        await sd.saveTemplates(tpls); await sd.savePresets(presets); done.push(`프로젝트 템플릿 ${n}개`);
+      }
+    } catch (e) { ctx.toast(`프로젝트 템플릿: ${e?.message ?? e}`, { error: true }); }
+    paintLeft(); paintBody();
+    const msg = done.join(" · ");
+    if (msg) ctx.toast(`가져왔어요: ${msg}`, { seconds: 8 });
+    return msg;
+  }
   async function importTemplate() {
     const [f] = await pickFiles({ accept: "application/json,.json" });
     if (!f) return;

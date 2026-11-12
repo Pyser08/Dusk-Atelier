@@ -85,3 +85,32 @@ export function readPngPrompt(bytes) {
   if (typeof prompt !== "string") return null;
   return { top: str(prompt), middle: "", back: "", neg: str(nai?.uc ?? nai?.negative_prompt), seed: Number.isFinite(nai?.seed) ? nai.seed : null, split: false };
 }
+
+// 글로벌 프리셋(그림체 프리셋) — global_presets.json { version, presets:[{ name, workflowType, preset:{ frontPrompt, backPrompt, uc, steps, promptGuidance, cfgRescale, sampling, noiseSchedule, characterPrompts, varietyPlus, useCoords } }] }
+// → 우리 프리셋 [{ name, at, settings:{ top, back, neg, sampling, chars } }] (이미지 생성 계열만)
+export function presetFromSD(entry, base = {}) {
+  const pre = entry?.preset ?? entry ?? {};
+  const samp = { ...(base.sampling ?? {}) };
+  if (Number.isFinite(pre.steps)) samp.steps = pre.steps;
+  if (Number.isFinite(pre.promptGuidance)) samp.scale = pre.promptGuidance;
+  if (Number.isFinite(pre.cfgRescale)) samp.cfgRescale = pre.cfgRescale;
+  if (typeof pre.sampling === "string") samp.sampler = pre.sampling;
+  if (typeof pre.noiseSchedule === "string") samp.noise = pre.noiseSchedule;
+  for (const k of ["varietyPlus", "useCoords"]) if (typeof pre[k] === "boolean") samp[k] = pre[k];
+  const settings = { top: str(pre.frontPrompt), back: str(pre.backPrompt), neg: str(pre.uc), sampling: samp };
+  if (Array.isArray(pre.characterPrompts) && pre.characterPrompts.length) settings.chars = pre.characterPrompts.filter((c) => c && typeof c === "object").map((c) => ({ prompt: str(c.prompt), uc: str(c.uc), x: Number(c.position?.x) || 0.5, y: Number(c.position?.y) || 0.5, on: c.enabled !== false }));
+  return { name: str(entry?.name, 80).trim() || "SDStudio 프리셋", at: Number(entry?.updatedAt) || Date.now(), settings };
+}
+export function parseGlobalPresets(text, base) {
+  let j;
+  try { j = typeof text === "string" ? JSON.parse(text) : text; } catch { throw new Error("JSON을 읽지 못했어요"); }
+  const list = Array.isArray(j?.presets) ? j.presets : Array.isArray(j) ? j : null;
+  if (!list) throw new Error("글로벌 프리셋 파일이 아니에요");
+  return list.filter((e) => e && (!e.workflowType || /^SDImageGen/.test(e.workflowType))).map((e) => presetFromSD(e, base));
+}
+// 같은 이름은 이름 2로 더함
+export function addPresets(have, add) {
+  const out = [...(have ?? [])], used = new Set(out.map((x) => x.name)), names = [];
+  for (const p of add) { let n = p.name; for (let i = 2; used.has(n); i++) n = `${p.name} ${i}`; used.add(n); names.push(n); out.push({ ...p, name: n }); }
+  return { list: out, names };
+}

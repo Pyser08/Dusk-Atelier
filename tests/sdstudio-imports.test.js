@@ -55,3 +55,15 @@ test("띄어쓰기 든 조각 이름: 가져와도 그대로, 띄어쓰기를 �
   assert.match(buildPrompt({ top: "<hair style.long hair>", own: "", middle: [], back: "" }, libs, () => 0), /very long hair/);
   assert.match(buildPrompt({ top: "<hairstyle.longhair>", own: "", middle: [], back: "" }, libs, () => 0), /very long hair/);
 });
+import { parseGlobalPresets, addPresets } from "../src/engine/sdstudio/imports.js";
+test("글로벌 프리셋 → 우리 프리셋(프롬프트·샘플링·캐릭터 프롬프트), 이미지 생성 계열만", () => {
+  const j = { version: 1, presets: [
+    { name: "화풍", workflowType: "SDImageGen", preset: { frontPrompt: "artist:a", backPrompt: "detailed", uc: "lowres", steps: 23, promptGuidance: 6, sampling: "k_euler", noiseSchedule: "karras", characterPrompts: [{ prompt: "girl", uc: "", position: { x: 0.3, y: 0.5 } }] } },
+    { name: "변형", workflowType: "SDI2I", preset: {} }] };
+  const r = parseGlobalPresets(JSON.stringify(j), { sampling: { model: "4-5-full" } });
+  assert.equal(r.length, 1);
+  assert.equal(r[0].settings.top, "artist:a"); assert.equal(r[0].settings.neg, "lowres");
+  assert.equal(r[0].settings.sampling.steps, 23); assert.equal(r[0].settings.sampling.scale, 6); assert.equal(r[0].settings.sampling.model, "4-5-full");
+  assert.equal(r[0].settings.chars[0].x, 0.3);
+  assert.deepEqual(addPresets([{ name: "화풍" }], r).names, ["화풍 2"]);
+});
