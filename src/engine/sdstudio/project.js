@@ -14,7 +14,8 @@ var num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
 export function emptySettings() {
   return { top: "", back: "", neg: "", seed: { mode: "random", value: 0 }, size: { mode: "scene", w: 832, h: 1216 }, sampling: normalizeSampling(null), chars: [], vibes: [], refs: [], reserveDefault: 1 };
 }
-export function emptyProject() { return { v: 2, settings: emptySettings(), pieces: [], chars: [], folders: [] }; }
+export var defaultSets = () => ({ active: "sfw", list: [{ id: "sfw", name: "SFW", tpl: "" }, { id: "nsfw", name: "NSFW", tpl: "" }], store: {} });
+export function emptyProject() { return { v: 2, settings: emptySettings(), pieces: [], chars: [], folders: [], loreSkip: [], sets: defaultSets() }; }
 
 function normImage(i) {
   if (!i || typeof i.path !== "string" || !i.path) return null;
@@ -42,18 +43,63 @@ export function normalizeProject(x) {
     reserveDefault: Math.max(1, Math.min(20, Math.round(num(st.reserveDefault, 1))))
   };
   const pieces = (Array.isArray(x.pieces) ? x.pieces : []).filter((l) => l && typeof l.name === "string" && l.name).map((l) => ({ name: str(l.name, 40).replace(/[.<>,]/g, ""), pieces: (Array.isArray(l.pieces) ? l.pieces : []).filter((p) => p && typeof p.name === "string" && p.name).map((p) => ({ name: str(p.name, 40).replace(/[.<>,]/g, ""), prompt: str(p.prompt), multi: !!p.multi })) }));
-  const chars = (Array.isArray(x.chars) ? x.chars : []).filter((c) => c && typeof c.id === "string" && c.id).map((c) => {
+  const normChars = (list) => (Array.isArray(list) ? list : []).filter((c) => c && typeof c.id === "string" && c.id).map((c) => {
     let scenes = (Array.isArray(c.scenes) ? c.scenes : []).map(normScene).filter(Boolean);
     if (v1 && !c.scenes) scenes = [normScene({ id: `${c.id}-default`, name: "default", images: c.images ?? [], cover: c.cover })];
     return { id: c.id, name: str(c.name, 80) || "이름 없음", en: str(c.en, 80).trim(), prompt: str(c.prompt), cover: typeof c.cover === "string" && !v1 ? c.cover : "", scenes };
   });
+  const chars = normChars(x.chars);
   const charIds = new Set(chars.map((c) => c.id));
   const raw = (Array.isArray(x.folders) ? x.folders : []).filter((f) => f && typeof f.id === "string" && f.id);
   const fIds = new Set(raw.map((f) => f.id));
-  const folders = raw.map((f) => ({ id: f.id, name: str(f.name, 80) || "새 폴더", kind: f.kind === "outfit" || f.kind === "group" ? f.kind : "", prompt: str(f.prompt), tpl: str(f.tpl, 120), lore: str(f.lore, 80), parent: typeof f.parent === "string" && fIds.has(f.parent) && f.parent !== f.id ? f.parent : null, members: [...new Set((Array.isArray(f.members) ? f.members : []).filter((m) => charIds.has(m)))] }));
+  const folders = raw.map((f) => ({ id: f.id, name: str(f.name, 80) || "새 폴더", en: str(f.en, 80).trim(), kind: f.kind === "outfit" || f.kind === "group" ? f.kind : "", prompt: str(f.prompt), tpl: str(f.tpl, 120), lore: str(f.lore, 80), parent: typeof f.parent === "string" && fIds.has(f.parent) && f.parent !== f.id ? f.parent : null, members: [...new Set((Array.isArray(f.members) ? f.members : []).filter((m) => charIds.has(m)))] }));
   const byId = new Map(folders.map((f) => [f.id, f]));
   for (const f of folders) { const seen = new Set([f.id]); let p = f.parent; while (p) { if (seen.has(p)) { f.parent = null; break; } seen.add(p); p = byId.get(p)?.parent ?? null; } }
-  return { v: 2, settings, pieces, chars, folders };
+  // 로어북 가져오기에서 뺄 로어북 폴더 id(에셋 제작에서 지운 연결 폴더 — 다시 가져오지 않게)
+  const loreSkip = [...new Set((Array.isArray(x.loreSkip) ? x.loreSkip : []).filter((v) => typeof v === "string" && v))].slice(-500);
+  // 씬 세트(SFW·NSFW·…): 폴더 구조는 공유, 캐릭터 카드와 폴더 소속은 세트마다 따로. 지금 세트의 것은 chars·members에, 나머지는 store에
+  const sx = x.sets && typeof x.sets === "object" ? x.sets : null;
+  const list = (Array.isArray(sx?.list) ? sx.list : []).filter((t) => t && typeof t.id === "string" && t.id).map((t) => ({ id: t.id.slice(0, 40), name: str(t.name, 30).trim() || "세트", tpl: str(t.tpl, 120) }));
+  const sets = list.length ? { active: list.some((t) => t.id === sx.active) ? sx.active : list[0].id, list, store: {} } : defaultSets();
+  for (const t of sets.list) {
+    const raw = sx?.store?.[t.id];
+    if (!raw || t.id === sets.active) continue;
+    const cs = normChars(raw.chars), ids = new Set(cs.map((c) => c.id)), members = {};
+    for (const f of folders) members[f.id] = [...new Set((Array.isArray(raw.members?.[f.id]) ? raw.members[f.id] : []).filter((m) => ids.has(m)))];
+    sets.store[t.id] = { chars: cs, members };
+  }
+  return { v: 2, settings, pieces, chars, folders, loreSkip, sets };
+}
+
+// ── 씬 세트 ──
+export var setsOf = (p) => p.sets ?? defaultSets();
+export var activeSet = (p) => { const s = setsOf(p); return s.list.find((t) => t.id === s.active) ?? s.list[0]; };
+export var setCharCount = (p, id) => (id === setsOf(p).active ? p.chars.length : setsOf(p).store[id]?.chars?.length ?? 0);
+// 세트 바꾸기. copy: 옮겨 갈 세트가 비어 있으면 지금 세트의 캐릭터(이름·영어 이름·외형·폴더 소속)를 새 id로 가져옴 — 씬은 비움(UI가 세트 템플릿을 적용)
+export function switchSet(p, to, { copy = false, mkId = newId } = {}) {
+  const S = setsOf(p);
+  if (to === S.active || !S.list.some((t) => t.id === to)) return p;
+  const store = { ...S.store, [S.active]: { chars: p.chars, members: Object.fromEntries(p.folders.map((f) => [f.id, f.members])) } };
+  let load = store[to] ?? { chars: [], members: {} };
+  delete store[to];
+  if (copy && !load.chars.length && p.chars.length) {
+    const map = new Map(p.chars.map((c) => [c.id, mkId()]));
+    load = { chars: p.chars.map((c) => ({ id: map.get(c.id), name: c.name, en: c.en ?? "", prompt: c.prompt, cover: "", scenes: [{ id: mkId(), name: "default", slots: [], size: "", reserve: 0, cover: "", memo: "", images: [] }] })),
+      members: Object.fromEntries(p.folders.map((f) => [f.id, f.members.map((m) => map.get(m)).filter(Boolean)])) };
+  }
+  return { ...p, chars: load.chars, folders: p.folders.map((f) => ({ ...f, members: load.members?.[f.id] ?? [] })), sets: { ...S, active: to, store } };
+}
+export function addSet(p, { name = "", tpl = "" } = {}, mkId = newId) {
+  const S = setsOf(p), id = mkId();
+  return { ...p, sets: { ...S, list: [...S.list, { id, name: str(name, 30).trim() || "새 세트", tpl: str(tpl, 120) }] } };
+}
+export var updateSet = (p, id, patch) => { const S = setsOf(p); return { ...p, sets: { ...S, list: S.list.map((t) => (t.id === id ? { ...t, ...(patch.name != null ? { name: str(patch.name, 30).trim() || t.name } : {}), ...(patch.tpl != null ? { tpl: str(patch.tpl, 120) } : {}) } : t)) } }; };
+// 지금 쓰는 세트는 못 지움(먼저 다른 세트로). 그 세트의 캐릭터·그림 목록도 함께 빠짐(에셋 파일은 남음)
+export function removeSet(p, id) {
+  const S = setsOf(p);
+  if (id === S.active || S.list.length <= 1) return p;
+  const store = { ...S.store }; delete store[id];
+  return { ...p, sets: { ...S, list: S.list.filter((t) => t.id !== id), store } };
 }
 
 // ── 설정 ──
@@ -85,12 +131,12 @@ export function charCover(c) {
 }
 
 // ── 폴더 ──
-export function addFolder(p, { name = "", kind = "", parent = null, prompt = "" } = {}, mkId = newId) {
+export function addFolder(p, { name = "", en = "", kind = "", parent = null, prompt = "", lore = "" } = {}, mkId = newId) {
   const par = parent && p.folders.some((f) => f.id === parent) ? parent : null;
-  return { ...p, folders: [...p.folders, { id: mkId(), name: str(name, 80).trim() || "새 폴더", kind: kind === "outfit" || kind === "group" ? kind : "", prompt: str(prompt), parent: par, members: [] }] };
+  return { ...p, folders: [...p.folders, { id: mkId(), name: str(name, 80).trim() || "새 폴더", en: str(en, 80).trim(), ...(lore ? { lore: str(lore, 80) } : {}), kind: kind === "outfit" || kind === "group" ? kind : "", prompt: str(prompt), parent: par, members: [] }] };
 }
-export function updateFolder(p, id, { name, kind, prompt, tpl }) {
-  return { ...p, folders: p.folders.map((f) => (f.id === id ? { ...f, ...(name != null ? { name: str(name, 80).trim() || f.name } : {}), ...(kind != null ? { kind } : {}), ...(prompt != null ? { prompt: str(prompt) } : {}), ...(tpl != null ? { tpl: str(tpl, 120) } : {}) } : f)) };
+export function updateFolder(p, id, { name, en, kind, prompt, tpl }) {
+  return { ...p, folders: p.folders.map((f) => (f.id === id ? { ...f, ...(name != null ? { name: str(name, 80).trim() || f.name } : {}), ...(en != null ? { en: str(en, 80).trim() } : {}), ...(kind != null ? { kind } : {}), ...(prompt != null ? { prompt: str(prompt) } : {}), ...(tpl != null ? { tpl: str(tpl, 120) } : {}) } : f)) };
 }
 // 캐릭터 외형 프롬프트 앞에 붙는 폴더 프롬프트: 그 캐릭터가 든 폴더마다 맨 위 조상부터 차례로(같은 폴더는 한 번)
 export function folderPromptFor(p, cid) {
@@ -119,7 +165,10 @@ export function moveFolder(p, id, parent) {
   if (parent && descendants(p, id).has(parent)) throw new Error("폴더를 자기 안으로 옮길 수 없어요");
   return { ...p, folders: p.folders.map((f) => (f.id === id ? { ...f, parent: parent || null } : f)) };
 }
-export var removeFolder = (p, id) => { const gone = descendants(p, id); return { ...p, folders: p.folders.filter((f) => !gone.has(f.id)) }; };
+export var removeFolder = (p, id) => {
+  const gone = descendants(p, id), skip = p.folders.filter((f) => gone.has(f.id) && f.lore).map((f) => f.lore);
+  return { ...p, folders: p.folders.filter((f) => !gone.has(f.id)), loreSkip: [...new Set([...(p.loreSkip ?? []), ...skip])] };
+};
 export function setMember(p, folderId, charId, on) {
   return { ...p, folders: p.folders.map((f) => {
     if (f.id !== folderId) return f;
@@ -369,4 +418,13 @@ export function applyCup(p, cid, sid, ranks) {
 
 // 내보내기용 이름: 영어 이름이 있으면 그것, 없으면 표기 이름
 export var fileName = (c) => (c?.en || c?.name || "char");
+// 폴더 내보내기 이름(에셋 이름·zip 경로): 영어 이름 → 표기 이름. 로어북 연동은 늘 표기 이름
+export var folderFileName = (f) => (f?.en || f?.name || "");
+// 캐릭터가 든 캐릭터 폴더(kind outfit, 없으면 첫 폴더)
+export function charFolderOf(p, cid) {
+  const fs = p.folders.filter((f) => f.members.includes(cid));
+  return fs.find((f) => f.kind === "outfit") ?? fs[0] ?? null;
+}
+// zip 안 경로: 캐릭터 폴더(영어 이름)/캐릭터(영어 이름)
+export var zipDir = (p, c) => [folderFileName(charFolderOf(p, c?.id)), fileName(c)].filter(Boolean).join("/");
 export var setLoreIds = (p, ids) => ({ ...p, folders: p.folders.map((f) => (ids[f.id] ? { ...f, lore: ids[f.id] } : f)) });

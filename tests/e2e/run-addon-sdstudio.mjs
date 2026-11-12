@@ -50,6 +50,7 @@ async function boot(width, height, { mac = false } = {}) {
     api.saveAsset = async (d) => { const p = `assets/${++window.__saved}.png`; window.__assetBytes[p] = d; return p; };
     api.readImage = async (p) => window.__assetBytes[p] ?? null;
     if (typeof api.getLocalPluginStorage !== "function") { const local = {}; api.getLocalPluginStorage = async () => ({ getItem: async (k) => local[k] ?? null, setItem: async (k, v) => { local[k] = v; } }); }
+    { const ls = await api.getLocalPluginStorage(); if (!(await ls.getItem("dusk.sdstudio.prefs"))) await ls.setItem("dusk.sdstudio.prefs", JSON.stringify({ tutorialDone: true })); }   // 첫 실행 튜토리얼은 따로 시험
     window.__h = await window.__sd.activate(api, { ext: window.__app.ctx.ext, app: window.__app.ctx, toast: () => {} });
   });
   return { page, errs };

@@ -38,3 +38,35 @@ export function syncLore(lorebook, proj, { newFolder } = {}) {
   }
   return { lorebook: list, ids, changed };
 }
+
+// 로어북 → 에셋 제작(양방향의 가져오는 쪽). 아직 연결 안 된 Dusk 폴더([소속] 포함)를 폴더로 만든다.
+// [소속] → kind "group", 하위 구조(da_parent) 유지, lore = 로어북 폴더 id로 연결.
+// 이미 연결된 폴더의 이름·위치는 에셋 제작 쪽이 기준(syncLore가 로어북에 맞춤). 에셋 제작에서 지운 폴더(loreSkip)는 다시 안 가져옴.
+export function pullLore(lorebook, proj, mkId = rid) {
+  const all = (Array.isArray(lorebook) ? lorebook : []).filter((e) => fid(e));
+  const linked = new Map(proj.folders.filter((f) => f.lore).map((f) => [f.lore, f.id]));
+  const skip = new Set(proj.loreSkip ?? []);
+  const known = new Set(all.map(fid));
+  let todo = all.filter((e) => !linked.has(fid(e)) && !skip.has(fid(e)));
+  const folders = [...proj.folders];
+  let added = 0;
+  const make = (e, parent) => {
+    const raw = String(e.comment ?? "").trim(), aff = raw.startsWith(AFF.trim()) || !!e.extentions?.da_folder?.aff;
+    const name = raw.replace(/^\[소속\]\s*/, "").trim() || "새 폴더";
+    const id = mkId();
+    folders.push({ id, name, en: "", kind: aff ? "group" : "", prompt: "", tpl: "", lore: fid(e), parent, members: [] });
+    linked.set(fid(e), id); added++;
+  };
+  while (todo.length) {
+    const next = [];
+    for (const e of todo) {
+      const par = e.extentions?.da_parent || null;
+      if (!par || !known.has(par) || skip.has(par)) make(e, null);
+      else if (linked.has(par)) make(e, linked.get(par));
+      else next.push(e);
+    }
+    if (next.length === todo.length) { next.forEach((e) => make(e, null)); break; }   // 고리 — 맨 위로
+    todo = next;
+  }
+  return { project: added ? { ...proj, folders } : proj, added };
+}

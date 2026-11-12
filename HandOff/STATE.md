@@ -1,5 +1,13 @@
 # 현재 상태 — SD-Studio 브랜치 (2.1.0 끝 e194dd9에서 분기)
 
+## 최근 세션 (2026-11-12 10시 반 — 에셋 제작 다음 작업 명세 1~4, 미커밋·미푸시: 세션에 push 권한 없음)
+- 1 캐릭터 폴더 영어 이름: 폴더 `en`(project.js normalize·addFolder·updateFolder), `folderFileName`·`charFolderOf`·`zipDir`. 폴더 대화상자에 영어 이름 칸(#sds-fen). 에셋 이름(charFolderName)·zip 경로(`폴더영어/캐릭터영어/…`)에 영어 이름, 로어북 연동은 표기 이름.
+- 2 씬 세트: `proj.sets = { active, list:[{id,name,tpl}], store:{세트id:{chars, members}} }`(기본 SFW·NSFW). 폴더는 공유, 캐릭터 카드·폴더 소속은 세트마다(지금 세트는 chars·members, 나머지는 store). switchSet(copy = 빈 세트에 캐릭터 이름·외형·소속만 새 id로)·addSet·updateSet·removeSet(지금 세트는 못 지움). 세트의 씬 프리셋 = 기존 ‘씬 템플릿’(dusk.sdstudio.templates, 리스 전체) 이름 재사용. 도구 줄 아래 `.sds-setbar`에 [SFW][NSFW][+], 우클릭 메뉴(이름·프리셋·모두에 적용·지우기). 새 캐릭터는 폴더 기본 템플릿 → 없으면 세트 프리셋. 예약·큐는 지금 세트만 돎.
+- 3 로어북 연동 양방향: loresync `pullLore` — 연결 안 된 Dusk 폴더·[소속]을 폴더로(소속→group, da_parent 구조 유지, lore id 연결, 고리는 맨 위). 이미 연결된 것의 이름·위치는 에셋 제작 기준. 지운 폴더의 lore id는 `proj.loreSkip`에 남겨 다시 안 가져옴. syncLoreNow: 열 때(loreSync 켰으면)·폴더 바뀔 때 pull → push. **버그 고침**: 봇 쪽 push가 syncLore를 두 번 불러 기록한 lore id와 실제 로어북 id가 어긋났음 → 한 번만 계산.
+- 4 튜토리얼 `dlg.tutorial`(4단계: 로어북 연동 끔/켬 · SDStudio 백업 가져오기 · 씬 템플릿 가져오기/세트 프리셋 고르기 · 저장·백업), 첫 실행(prefs.tutorialDone 없을 때)과 도움말 ‘튜토리얼 다시 보기’. 도움말에 씬 세트·로어북 연동 절.
+- 시험: unit `tests/sdstudio-sets.test.js`(4) → npm test 1474 pass / 1 fail(pot-port, 원래 실패). build·check 동일함, build-addons --check 동일. e2e run-addon-sdstudio 117 통과(튜토리얼은 e2e에서 tutorialDone으로 건너뜀 — 세트·튜토리얼 e2e는 아직 없음).
+- 남은 일: [ ] 사용자 제보 ‘씬 예약 버튼이 제대로 안 나옴’ — e2e 사진에선 정상, 실기기 화면 확인 필요 [ ] 세트·튜토리얼 e2e [ ] 애드온 배포(minCore 2.1.4) 지시 대기
+
 ## 최근 세션 (2026-11-11 22시 — v2.1.4 계속: 보조 호출 내역 + 장기기억 보조 토큰 줄이기, 장기기억 애드온 0.2.8)
 - 제보 확정: 숫자는 **보조 모델**(메인 버텍스 아르곤, 보조 버텍스 제미나이 3 플래시, 둘 다 추론 low), 턴당 입력 약 12만·출력 약 3만. 켠 애드온: 장기기억·관계도·기억카드·Erosync. (1.9.2 때 보조 약 7만 = 리수폿 Writer 지침 약 3만 + Director 약 2만 + 데이터)
 - **보조 호출 장부** `engine/auxlog.js`(globalThis.__duskAux — 애드온은 import 없이 `globalThis.__duskAux?.note?.()`): 적는 곳 ① `aistop.trackedRunLLM`(api.runLLMModel — 이름 = 열린 aiTask, otherAx = ‘Erosync·애드온’, mode model = ‘플러그인의 메인 모델 호출’, 글자 수 어림) ② `runai` 내 API·Dusk 프로바이더 길(어림) ③ `memoryturn.stageCall`이 onUsage를 받은 경우(직접 연결 = 공급자 실제 토큰, 리스 길은 ①이 적음). turninfo가 메인 요청부터 다음 메인 요청 전까지의 호출을 rec.side(작업별 n·in·out·est)로 묶고 callHtml ‘보조 호출’ 줄 + 접힌 줄 ‘보조 N회’. Erosync 자체 직접 제공자(리스 안 거침)는 아직 안 잡힘.

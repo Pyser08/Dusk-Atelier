@@ -59,6 +59,8 @@ export var CSS = `
 .sds-modes button:disabled{opacity:.35;cursor:default}
 .sds-tools{display:flex;align-items:flex-end;gap:18px;padding:8px 16px 10px;border-bottom:var(--rb-bw,1px) solid var(--rb-line2);overflow-x:auto;scrollbar-width:thin;flex-shrink:0}
 .sds-tools .sp{flex:1}
+.sds-setbar{display:flex;justify-content:flex-end;padding:6px 16px;border-bottom:var(--rb-bw,1px) solid var(--rb-line2);flex-shrink:0}
+.sds-sets{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .sds-zoom{display:flex;align-items:center;gap:8px}
 .sds-zoom input{width:120px;accent-color:var(--rb-acc)}
 .sds-zoom span{font-size:12px;color:var(--rb-sub);width:34px;text-align:right;font-variant-numeric:tabular-nums}

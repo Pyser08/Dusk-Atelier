@@ -6,7 +6,7 @@ import { h, replace, download, pickFiles } from "../../dom.js";
 import { btn, openMenu, promptDialog, confirmDialog } from "../../kit.js";
 import { zipSync, strToU8, strFromU8, gzipSync } from "../../../vendor/fflate.js";
 import * as BD from "../../../engine/sdstudio/botdata.js";
-import { syncLore } from "../../../engine/sdstudio/loresync.js";
+import { syncLore, pullLore } from "../../../engine/sdstudio/loresync.js";
 import { newFolderEntry } from "../editor.js";
 import * as FB from "../../../engine/sdstudio/fullbackup.js";
 import { isStopError } from "../../../engine/aistop.js";
@@ -131,7 +131,8 @@ export async function openAssetStudio(ctx, target, sd) {
   const bodyEl = h("div", { class: "sds-body rb-scroll", id: "sds-body" });
   bodyEl.addEventListener("contextmenu", (e) => { if (e.target.closest(".sds-card,.sds-frow,input,textarea,select,button")) return; e.preventDefault(); bodyMenu(e.target.closest("div") ?? bodyEl); });
   bodyEl.addEventListener("click", (e) => { if (st.focus && !e.target.closest(".sds-card,.sds-frow,.rb-chip,button,input,select,textarea,label")) setFocus(null); });
-  const mainEl = h("div", { class: "sds-main" }, topEl, toolsEl, bodyEl);
+  const setsEl = h("div", { class: "sds-setbar" });
+  const mainEl = h("div", { class: "sds-main" }, topEl, toolsEl, setsEl, bodyEl);
   el.append(rail, leftEl, mainEl);
   ctx.win.appendChild(el);
 
@@ -190,6 +191,12 @@ export async function openAssetStudio(ctx, target, sd) {
         btn(`즐겨찾기 넣기${favN ? ` ${favN}장` : ""}`, { icon: "sparkle", id: "sds-put-fav", title: "즐겨찾기한 그림을 확인하고 봇에 넣어요(이름·같은 이름·이미 넣은 것 미리 보기)", disabled: !favN, onClick: () => exportFav() })),
       group("보기", ib("eye", st.names ? "이름 숨기기" : "이름 보이기", () => { st.names = !st.names; el.classList.toggle("nonames", !st.names); paintTools(); }, { on: st.names, id: "sds-names" }),
         h("div", { class: "sds-zoom" }, h("input", { type: "range", min: 10, max: 100, value: st.zoom, "aria-label": "카드 크기", id: "sds-zoom", onInput: (e) => { st.zoom = Number(e.target.value); applyZoom(); e.target.nextSibling.textContent = `${st.zoom}%`; } }), h("span", null, `${st.zoom}%`)))];
+    // 씬 세트(프리셋) 줄: 즐겨찾기 넣기·보기 아래
+    const SS = P.setsOf(proj);
+    const setRow = h("div", { class: "sds-sets", id: "sds-sets", role: "group", "aria-label": "씬 세트" },
+      ...SS.list.map((t) => { const b = btn(t.name, { size: "sm", kind: t.id === SS.active ? "primary" : "ghost", id: `sds-set-${t.id}`, title: `${t.name} 세트${t.tpl ? ` · 씬 프리셋 ‘${t.tpl}’` : ""} — 우클릭: 이름·프리셋·지우기`, onClick: () => changeSet(t.id) }); b.addEventListener("contextmenu", (e) => { e.preventDefault(); e.stopPropagation(); setMenu(b, t.id); }); return b; }),
+      btn("", { size: "sm", kind: "ghost", icon: "plus", id: "sds-set-add", title: "새 씬 세트", onClick: () => addSetFlow() }));
+    replace(setsEl, setRow);
     const undoG = group("되돌리기", ib("undo", "되돌리기", () => S.undo(), { disabled: !hist.canUndo(), id: "sds-undo" }), ib("redo", "다시하기", () => S.redo(), { disabled: !hist.canRedo(), id: "sds-redo" }));
     const tplG = group("템플릿", ib("template", c ? "템플릿 적용·관리(이 캐릭터)" : st.folder ? "템플릿 적용·관리(이 폴더의 캐릭터 모두)" : "템플릿 적용·관리(모든 캐릭터)", (e) => templateMenu(e.currentTarget), { id: "sds-tpl" }),
       ib("importIn", c ? "SDStudio·Dusk 씬 템플릿 가져와 이 캐릭터에 적용" : st.folder ? "씬 템플릿 가져와 이 폴더의 캐릭터 모두에 적용" : "씬 템플릿 가져와 모든 캐릭터에 적용", () => importTemplate(), { id: "sds-tpl-import" }),
@@ -626,15 +633,67 @@ export async function openAssetStudio(ctx, target, sd) {
     const id = next.chars.at(-1).id;
     const into = st.focus?.kind === "folder" && proj.folders.some((f) => f.id === st.focus.id) ? st.focus.id : st.folder;   // 폴더를 골라 둔 채면 그 폴더 안에
     if (into) next = P.setMember(next, into, id, true);
-    const tplName = into ? P.folderTemplateFor(next, into) : "";
+    const fTpl = into ? P.folderTemplateFor(next, into) : "", tplName = fTpl || P.activeSet(next)?.tpl || "";
     if (tplName) {
       const tpl = (await sd.loadTemplates()).find((t) => t.name === tplName);
-      if (tpl) { next = T.applyTemplate(next, [id], tpl, "replace").project; S.toast(`폴더 기본 템플릿 ‘${tplName}’을 적용했어요`); }
+      if (tpl) { next = T.applyTemplate(next, [id], tpl, "replace").project; S.toast(`${fTpl ? "폴더 기본 템플릿" : "씬 프리셋"} ‘${tplName}’을 적용했어요`); }
     }
     S.set(next);
     st.focus = { kind: "char", id };   // 만든 캐릭터는 열지 않고 테두리만 켜 둔다
     afterMove();
     for (const n of bodyEl.querySelectorAll(".sds-char")) if (n.dataset.id === id) { n.scrollIntoView({ block: "nearest", inline: "nearest" }); break; }
+  }
+  // ── 씬 세트(SFW·NSFW·+): 폴더는 공유, 캐릭터 카드는 세트마다. 세트의 씬 프리셋 = 저장된 씬 템플릿(리스 전체) 이름 ──
+  async function changeSet(id) {
+    const SS = P.setsOf(proj), t = SS.list.find((x) => x.id === id);
+    if (!t || id === SS.active) return;
+    let copy = false;
+    if (!P.setCharCount(proj, id) && proj.chars.length) copy = await confirmDialog(ctx.win, { title: `‘${t.name}’ 세트가 비어 있어요`, body: `지금 캐릭터 ${proj.chars.length}명(이름·외형·폴더 소속)을 가져와 ${t.tpl ? `씬 프리셋 ‘${t.tpl}’으로` : "빈 씬으로"} 시작할까요? 그림·씬은 따라가지 않아요.`, ok: "가져오기", cancel: "빈 세트로" });
+    let next = P.switchSet(proj, id, { copy });
+    if (copy && t.tpl) { const tpl = (await sd.loadTemplates()).find((x) => x.name === t.tpl); if (tpl) next = T.applyTemplate(next, next.chars.map((c) => c.id), tpl, "replace").project; }
+    S.set(next); st.charId = null; st.sceneId = null; st.focus = null; sel.clear();
+    S.paint(); S.toast(`‘${t.name}’ 세트로 바꿨어요`);
+  }
+  async function addSetFlow() {
+    const name = await promptDialog(ctx.win, { title: "새 씬 세트", label: "이름", placeholder: "예: 수영복", ok: "만들기" });
+    if (!name?.trim()) return;
+    S.set(P.addSet(proj, { name: name.trim() })); paintTools();
+    const t = P.setsOf(proj).list.at(-1);
+    if ((await sd.loadTemplates()).length) await pickSetTpl(ctx.win.querySelector(`#sds-set-${t.id}`), t.id);
+  }
+  async function pickSetTpl(anchor, id) {
+    const list = await sd.loadTemplates(), t = P.setsOf(proj).list.find((x) => x.id === id);
+    if (!t) return;
+    if (!list.length) return S.toast("저장된 씬 템플릿이 없어요. 템플릿 → 가져오기나 ‘템플릿으로 저장’을 먼저 해요");
+    openMenu(ctx.win, anchor ?? bodyEl, [
+      ...list.map((x) => ({ label: `${x.name === t.tpl ? "✓ " : ""}${x.name}`, icon: "list", onClick: () => { S.set(P.updateSet(proj, id, { tpl: x.name })); paintTools(); S.toast(`‘${t.name}’ 세트의 새 캐릭터는 ‘${x.name}’ 씬으로 시작해요`); } })),
+      ...(t.tpl ? ["sep", { label: "씬 프리셋 없애기", icon: "x", onClick: () => { S.set(P.updateSet(proj, id, { tpl: "" })); paintTools(); } }] : [])
+    ]);
+  }
+  function setMenu(anchor, id) {
+    const SS = P.setsOf(proj), t = SS.list.find((x) => x.id === id);
+    if (!t) return;
+    openMenu(ctx.win, anchor, [
+      { label: "이름 바꾸기", icon: "edit", onClick: async () => { const n = await promptDialog(ctx.win, { title: "세트 이름", label: "이름", value: t.name }); if (n?.trim()) { S.set(P.updateSet(proj, id, { name: n })); paintTools(); } } },
+      { label: t.tpl ? `씬 프리셋: ${t.tpl}` : "씬 프리셋 고르기…", icon: "list", onClick: () => pickSetTpl(anchor, id) },
+      ...(t.tpl && id === SS.active ? [{ label: "씬 프리셋을 이 세트 캐릭터 모두에 적용", icon: "sparkle", onClick: () => applySetTpl(t) }] : []),
+      "sep",
+      { label: "세트 지우기", icon: "trash", danger: true, onClick: async () => {
+        if (SS.list.length <= 1) return;
+        if (id === SS.active) return S.toast("지금 쓰는 세트는 지울 수 없어요. 다른 세트로 바꾼 뒤 지워요");
+        if (!await confirmDialog(ctx.win, { title: `‘${t.name}’ 세트를 지울까요?`, body: `이 세트의 캐릭터 ${P.setCharCount(proj, id)}명과 그림 목록이 빠져요. 리스 에셋 저장소 파일은 남아요.`, ok: "지우기", danger: true })) return;
+        S.set(P.removeSet(proj, id)); paintTools();
+      } }
+    ]);
+  }
+  async function applySetTpl(t) {
+    const tpl = (await sd.loadTemplates()).find((x) => x.name === t.tpl);
+    if (!tpl) return S.toast("그 템플릿이 없어요", { error: true });
+    const ids = proj.chars.map((c) => c.id);
+    if (!ids.length) return;
+    const need = T.needsChoice(proj, ids); let mode = "merge";
+    if (need.length) { mode = await S.dlg.templateChoice(need.length, tpl.name); if (!mode) return; }
+    S.set(T.applyTemplate(proj, ids, tpl, mode).project); paintTop(); paintBody(); S.toast(`‘${tpl.name}’을 ${ids.length}명에 적용했어요`);
   }
   async function removeChars(ids) {
     if (!ids.length || !await confirmDialog(ctx.win, { title: `캐릭터 ${ids.length}명을 지울까요?`, body: "씬·프롬프트·그림 목록이 지워져요. 리스 에셋 저장소 파일과 이미 넣은 에셋은 그대로예요.", ok: "지우기", danger: true })) return;
@@ -689,7 +748,7 @@ export async function openAssetStudio(ctx, target, sd) {
     const f = proj.folders.find((x) => x.id === id);
     if (!f) return;
     openMenu(ctx.win, anchor, [
-      { label: "이름·종류·프롬프트 바꾸기", icon: "edit", onClick: async () => { const r = await S.dlg.folderDialog({ title: "폴더 바꾸기", name: f.name, kind: f.kind, prompt: f.prompt ?? "", ok: "저장" }); if (r) { S.set(P.updateFolder(proj, id, r)); paintBody(); } } },
+      { label: "이름·종류·프롬프트 바꾸기", icon: "edit", onClick: async () => { const r = await S.dlg.folderDialog({ title: "폴더 바꾸기", name: f.name, en: f.en ?? "", kind: f.kind, prompt: f.prompt ?? "", ok: "저장" }); if (r) { S.set(P.updateFolder(proj, id, r)); paintBody(); } } },
       { label: "안에 폴더 만들기", icon: "folderPlus", onClick: () => addFolder(id) },
       { label: f.tpl ? `기본 템플릿: ${f.tpl}` : "기본 템플릿 정하기…", icon: "folder", onClick: () => pickFolderTpl(anchor, f) },
       ...(P.folderTemplateFor(proj, id) ? [{ label: "기본 템플릿을 안의 캐릭터 모두에 적용", icon: "folder", onClick: async () => { const tpl = (await sd.loadTemplates()).find((t) => t.name === P.folderTemplateFor(proj, id)); if (!tpl) return S.toast("그 템플릿이 없어요", { error: true }); const ids = P.rowChars(proj, id).map((c) => c.id); if (!ids.length) return; const need = T.needsChoice(proj, ids); let mode = "merge"; if (need.length) { mode = await S.dlg.templateChoice(need.length, tpl.name); if (!mode) return; } S.set(T.applyTemplate(proj, ids, tpl, mode).project); paintTop(); paintBody(); S.toast(`‘${tpl.name}’을 ${ids.length}명에 적용했어요`); } }] : []),
@@ -765,9 +824,9 @@ export async function openAssetStudio(ctx, target, sd) {
   function zipMenu(anchor) {
     const c = S.curChar(), sc = S.curScene();
     openMenu(ctx.win, anchor, [
-      ...(sc ? [{ label: P.pickCount(sc) ? `고른 그림 ${P.pickCount(sc)}장` : `이 씬 그림 ${sc.images.length}장`, icon: "download", onClick: () => zipOut((P.pickCount(sc) ? P.pickedImages(c, sc.id).map((x) => x.path) : sc.images.map((i) => i.path)).map((p, i) => [`${c.name}/${sc.name}_${i + 1}.png`, p])) }] : []),
-      { label: "씬 대표 그림만", icon: "download", onClick: () => zipOut((c ? [c] : proj.chars).flatMap((cc) => cc.scenes.filter((s2) => P.coverOf(s2)).map((s2) => [`${P.fileName(cc)}/${s2.name}.png`, P.coverOf(s2)]))) },
-      { label: "모든 그림", icon: "download", onClick: () => zipOut((c ? [c] : proj.chars).flatMap((cc) => cc.scenes.flatMap((s2) => P.sortedImages(s2).map((im, i) => [`${P.fileName(cc)}/${s2.name}_${i + 1}.png`, im.path])))) }
+      ...(sc ? [{ label: P.pickCount(sc) ? `고른 그림 ${P.pickCount(sc)}장` : `이 씬 그림 ${sc.images.length}장`, icon: "download", onClick: () => zipOut((P.pickCount(sc) ? P.pickedImages(c, sc.id).map((x) => x.path) : sc.images.map((i) => i.path)).map((p, i) => [`${P.zipDir(proj, c)}/${sc.name}_${i + 1}.png`, p])) }] : []),
+      { label: "씬 대표 그림만", icon: "download", onClick: () => zipOut((c ? [c] : proj.chars).flatMap((cc) => cc.scenes.filter((s2) => P.coverOf(s2)).map((s2) => [`${P.zipDir(proj, cc)}/${s2.name}.png`, P.coverOf(s2)]))) },
+      { label: "모든 그림", icon: "download", onClick: () => zipOut((c ? [c] : proj.chars).flatMap((cc) => cc.scenes.flatMap((s2) => P.sortedImages(s2).map((im, i) => [`${P.zipDir(proj, cc)}/${s2.name}_${i + 1}.png`, im.path])))) }
     ]);
   }
   async function zipOut(entries) {
@@ -796,10 +855,7 @@ export async function openAssetStudio(ctx, target, sd) {
     return withAsset(x, slot, nm, path, ext);
   }
   // 에셋 이름: 설정(넣을 때 에셋 이름) — scene = 씬 이름, us = 폴더_캐릭터_씬.확장자, dot = 폴더.캐릭터.씬.확장자
-  function charFolderName(cid) {
-    const fs = proj.folders.filter((f) => f.members.includes(cid));
-    return (fs.find((f) => f.kind === "outfit") ?? fs[0])?.name ?? "";
-  }
+  var charFolderName = (cid) => P.folderFileName(P.charFolderOf(proj, cid));
   function assetName(it, ext) {
     const style = S.prefs.nameStyle ?? "scene";
     if (style === "scene" || !it.cid) return it.name;
@@ -1187,18 +1243,22 @@ export async function openAssetStudio(ctx, target, sd) {
       const field = target.kind === "module" ? "lorebook" : "globalLore";
       const cur = await readBot();
       if (!cur) return;
-      const r = syncLore(cur[field] ?? [], proj, { newFolder: (name, list, o) => newFolderEntry(name, list, o) });
+      const lore = cur[field] ?? [];
+      // 1) 로어북에서 새로 만든 Dusk 폴더·[소속] 폴더 → 에셋 제작 폴더로
+      const pulled = pullLore(lore, proj);
+      if (pulled.added) { proj = pulled.project; S.persist(); paintTools(); paintBody(); ctx.toast(`로어북 폴더 ${pulled.added}개를 가져왔어요`); }
+      // 2) 에셋 제작 폴더 → 로어북(같은 목록에서 한 번만 계산해 id가 어긋나지 않게)
+      const r = syncLore(lore, proj, { newFolder: (name, list, o) => newFolderEntry(name, list, o) });
       if (r.changed) {
         if (target.kind === "module") await ctx.svc.run("update", target.id, { lorebook: r.lorebook });
         else {
-          const b = await ctx.api.getCharacterFromIndex(target.index);
-          if (!b || b.chaId !== target.id || isGenerating(b)) return;
-          await ctx.api.setCharacterToIndex(target.index, { ...b, globalLore: syncLore(b.globalLore ?? [], proj, { newFolder: (name, list, o) => newFolderEntry(name, list, o) }).lorebook });
+          if (isGenerating(cur)) return;
+          await ctx.api.setCharacterToIndex(target.index, { ...cur, globalLore: r.lorebook });
         }
         if (target.kind === "module") ctx.state.modDirty = true; else ctx.state.charsDirty = true;
       }
       if (Object.keys(r.ids).length) { proj = P.setLoreIds(proj, r.ids); S.persist(); }
-    } catch (e) { ctx.toast(`로어북에 폴더를 적지 못했어요: ${e?.message ?? e}`, { error: true }); }
+    } catch (e) { ctx.toast(`로어북 폴더를 맞추지 못했어요: ${e?.message ?? e}`, { error: true }); }
   }
   S.syncLore = syncLoreNow;
   // 봇(모듈) 안에도 저장 — 무겁지 않게 닫을 때·3분마다·백업할 때만
@@ -1297,6 +1357,10 @@ export async function openAssetStudio(ctx, target, sd) {
   });
   S.paint();
   el.focus();
+  if (prefs.loreSync) setTimeout(() => syncLoreNow(), 300);
+  S.tut = { importBackup: () => importBackup(), importTemplate: () => importTemplate(), pickSetTpl: (a, id) => pickSetTpl(a, id) };
+  if (!prefs.tutorialDone) setTimeout(() => S.dlg.tutorial?.(), 400);   // 처음 한 번
+   // 열 때 로어북에서 새로 만든 폴더 가져오기
   const live = { el, close, S, reopen };
   LIVE.set(liveKey, live);
   addEventListener?.("pagehide", () => S.persist());

@@ -234,8 +234,41 @@ export function createDialogs(S) {
       sec("템플릿", "씬 구성을 템플릿으로 저장하고 다른 캐릭터에 적용해요. SDStudio 씬 템플릿 파일(.json)도 가져와요. 맨 위에서 적용하면 모든 캐릭터, 폴더 안에서는 그 폴더의 캐릭터, 캐릭터 안에서는 그 캐릭터에 들어가요. 씬이 이미 있으면 합칠지 바꿀지 골라요."),
       sec("되돌리기·단축키", `${S.keyLabel("undo")} 되돌리기, ${S.keyLabel("redo")} 다시하기(봇에 넣은 것은 알림의 되돌리기로). 단축키는 설정 → 단축키 설정에서 바꿔요. 맥은 ⌘ 기준이에요.`),
       sec("부스트 모드", "설정에서 켜고 토큰을 여러 개 넣으면 동시에 그려요. 한 기기에서 여러 계정을 쓰면 NovelAI 제재 대상이 될 수 있어요."),
+      sec("씬 세트(SFW·NSFW·+)", "도구 줄 ‘보기’ 아래 버튼으로 세트를 바꿔요. 폴더 구조는 모든 세트가 함께 쓰고, 캐릭터 카드·그림은 세트마다 따로예요. 세트마다 씬 프리셋(저장된 씬 템플릿, 리스 전체에서 공유)을 정해 두면 새 캐릭터가 그 씬으로 시작해요. 봇 데이터는 넣기 전까지 안 바뀌어요. 우클릭으로 이름·프리셋·지우기."),
+      sec("로어북 연동", "설정에서 켜면(기본 끔) 폴더가 봇·모듈 로어북 폴더로 만들어지고, 로어북에서 만든 Dusk 폴더·[소속] 폴더도 여기로 가져와요. 지우기는 어느 쪽으로도 전해지지 않아요."),
       sec("저장", "그림은 만들자마자 리스 에셋 저장소에 저장되고, 이 화면 목록에서 빼도 저장소 파일은 남아요. 작업 묶음은 봇·모듈마다 따로 저장돼요."),
-      h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => done(true) }))));
+      h("div", { class: "btns" }, btn("튜토리얼 다시 보기", { kind: "ghost", id: "sds-help-tut", onClick: () => { done(true); setTimeout(() => tutorial(), 0); } }), btn("닫기", { kind: "primary", onClick: () => done(true) }))));
+  }
+
+  // 처음 열 때(그리고 도움말에서) 보는 튜토리얼. 단계: 로어북 연동 → SDStudio 백업 → 씬 프리셋 → 저장·백업
+  async function tutorial() {
+    const pf = await S.sd.getPrefs();
+    const p = (t) => h("p", { style: "margin:6px 0 0;white-space:normal;color:var(--rb-sub)" }, t);
+    const act = (label, id, fn) => btn(label, { size: "sm", id, onClick: fn });
+    const pages = [
+      () => [h("b", null, "1. 로어북 연동"), p("폴더(캐릭터·소속)를 봇·모듈 로어북 폴더로도 만들고, 로어북에서 만든 Dusk 폴더·[소속] 폴더를 여기로 가져와요. 지우기는 양쪽 다 전해지지 않아요. 나중에 설정에서 바꿀 수 있어요."),
+        segmented([["off", "끄기(기본)"], ["on", "켜기"]], pf.loreSync ? "on" : "off", async (v) => { const on = v === "on"; await S.sd.setPrefs({ loreSync: on }); S.prefs.loreSync = on; pf.loreSync = on; if (on) S.syncLore?.(); }, "로어북 연동")],
+      () => [h("b", null, "2. 원본 SDStudio에서 옮겨 오기"), p("SDStudio의 백업(.tar)이나 프로젝트 .json을 가져오면 캐릭터·씬·조각 모음이 들어와요. 씬 템플릿 파일만 있다면 다음 단계에서 가져와요."),
+        h("div", { class: "btns", style: "justify-content:flex-start" }, act("SDStudio 백업 가져오기…", "sds-tut-backup", () => S.tut?.importBackup?.()))],
+      () => [h("b", null, "3. 씬 프리셋(SFW·NSFW)"), p("도구 줄 ‘보기’ 아래의 [SFW] [NSFW] [+]가 씬 세트예요. 세트마다 씬 프리셋(씬 템플릿)을 정해 두면 새 캐릭터가 그 씬으로 시작하고, 프리셋은 리스 전체에 저장돼 다른 봇에서도 써요. 폴더는 세트끼리 공유하고 캐릭터 카드는 세트마다 따로예요."),
+        h("div", { class: "btns", style: "justify-content:flex-start;flex-wrap:wrap" }, act("씬 템플릿 파일 가져오기…", "sds-tut-tpl", () => S.tut?.importTemplate?.()),
+          ...P.setsOf(S.proj).list.slice(0, 4).map((t) => act(`${t.name} 프리셋 고르기`, `sds-tut-set-${t.id}`, (e) => S.tut?.pickSetTpl?.(e.currentTarget, t.id))))],
+      () => [h("b", null, "4. 저장과 백업"), p("작업은 플러그인 저장소·이 기기 사본·봇 안 사본에 함께 저장되고, 열 때 가장 최근 것을 써요. 봇 안 사본은 카드를 배포할 땐 방패 버튼으로 꺼요(코어 내보내기는 이 칸을 빼요)."),
+        p("‘이미지·관리’의 zip은 그림만, ‘프로젝트 전체 백업’은 설정과 그림을 모두 담아요. 복원은 백업 가져오기로 해요.")]
+    ];
+    let i = 0;
+    await modal(win, (done) => {
+      const body = h("div", { id: "sds-tut-body" }), nav = h("div", { class: "btns" });
+      const paint = () => {
+        replace(body, ...pages[i]());
+        replace(nav, h("span", { class: "rb-muted", style: "margin-right:auto" }, `${i + 1} / ${pages.length}`),
+          i ? btn("이전", { kind: "ghost", onClick: () => { i--; paint(); } }) : btn("건너뛰기", { kind: "ghost", id: "sds-tut-skip", onClick: () => done(true) }),
+          i < pages.length - 1 ? btn("다음", { kind: "primary", id: "sds-tut-next", onClick: () => { i++; paint(); } }) : btn("시작하기", { kind: "primary", id: "sds-tut-done", onClick: () => done(true) }));
+      };
+      paint();
+      return dialog("에셋 제작 시작하기", 560, body, nav);
+    });
+    await S.sd.setPrefs({ tutorialDone: true }); S.prefs.tutorialDone = true;
   }
 
   async function token({ force = false } = {}) {
@@ -443,14 +476,15 @@ export function createDialogs(S) {
         h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(null) }), btn(ok, { kind: "primary", id: "sds-cok", onClick: () => nIn.value.trim() && done(val()) })));
     });
   }
-  function folderDialog({ title, name = "", kind = "", prompt = "", ok = "만들기" }) {
+  function folderDialog({ title, name = "", en = "", kind = "", prompt = "", ok = "만들기" }) {
     let k = kind;
+    const eIn = h("input", { type: "text", class: "rb-input", value: en, placeholder: "예: swimsuit — 비우면 폴더 이름", id: "sds-fen" });
     const pIn = h("textarea", { class: "rb-input", rows: 3, id: "sds-fprompt", placeholder: "예: school uniform, halo — 이 폴더(안의 폴더 포함) 캐릭터 프롬프트 앞에 붙어요" }, prompt);
-    const val = () => ({ name: input.value.trim(), kind: k, prompt: pIn.value });
+    const val = () => ({ name: input.value.trim(), en: eIn.value.trim(), kind: k, prompt: pIn.value });
     const input = h("input", { type: "text", class: "rb-input", value: name, placeholder: "예: 수영복 / 아비도스", "data-autofocus": "", id: "sds-fname" });
     return modal(win, (done) => {
-      input.addEventListener("keydown", (e) => { if (e.key === "Enter" && input.value.trim()) done(val()); });
-      return dialog(title, 460, field("폴더 이름", input), field("무엇으로 묶나요", segmented([["outfit", "캐릭터"], ["group", "소속"], ["", "그 밖"]], k, (v) => { k = v; }, "폴더 종류")),
+      for (const x of [input, eIn]) x.addEventListener("keydown", (e) => { if (e.key === "Enter" && input.value.trim()) done(val()); });
+      return dialog(title, 460, field("표기 이름(화면·로어북)", input), field("영어 이름(이미지 내보내기·에셋 이름)", eIn), field("무엇으로 묶나요", segmented([["outfit", "캐릭터"], ["group", "소속"], ["", "그 밖"]], k, (v) => { k = v; }, "폴더 종류")),
         field("폴더 프롬프트", pIn, h("span", { class: "rb-muted", style: "font-size:12px;white-space:normal" }, "상위 폴더 프롬프트 → 하위 폴더 프롬프트 → 캐릭터 외형 순으로 이어져요.")),
         h("div", { class: "btns" }, btn("취소", { kind: "ghost", onClick: () => done(null) }), btn(ok, { kind: "primary", id: "sds-fok", onClick: () => input.value.trim() && done(val()) })));
     });
@@ -486,5 +520,5 @@ export function createDialogs(S) {
     await modal(win, (done) => dialog("작가 태그(그림체)", 520, q, list, h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => done() }))));
   }
 
-  return { artists, sampling, charPrompts, pieces, vibes, refs, savePreset, loadPreset, check, help, token, settings, put, exportPreview, backupImport, folderDialog, charNames, keysDialog, templateChoice, templateManager };
+  return { artists, sampling, charPrompts, pieces, vibes, refs, savePreset, loadPreset, check, help, token, settings, put, exportPreview, backupImport, folderDialog, charNames, keysDialog, templateChoice, templateManager, tutorial };
 }
