@@ -1170,3 +1170,8 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 ## 2026-11-12 17시 — 상자 여백 정리 + v2.1.6 코어 릴리스 (사용자 지시)
 - 여백 0이라 내용이 테두리에 붙던 상자: styles.js `.rb-discover{padding:14px 16px}`, `.rb-mem-chg{padding…;flex column;gap 8}`(aitools·writerui·mergeui 비교 상자, 코어 CSS라 코어만으로 적용). gaugeui.js 제안 상자 2개 `pad`, 목록 줄 인라인 padding → **장기기억 애드온 배포 때 적용**(아직 배포 안 함).
 - 확인: npm test(실패 0)·build·check 동일함·e2e run-discover. 다른 화면 눈 확인은 못 함.
+
+## 2026-11-12 17시 반 — 봇 업데이트 뒤 옛 버전 Lua 트리거가 남는 버그 (코어, 미릴리스)
+- 원인: 트리거는 comment로 짝짓고 이름 바뀜 감지는 내용 해시가 같을 때만 → comment(버전)·코드가 함께 바뀐 Lua가 따로 놂. 기록 없으면 unknownExtra가 '기존 유지'로 남고, 기록 있으면 남은 옛 것이 mineAdded(keep)로 계속 남음. 옛 것이 앞에 있어 먼저 실행됨.
+- 고침: characterUpdateMerge.ts — `isLuaTrigger`·`luaStem`(버전 표기 제거). 짝 없는 Lua끼리 이름 줄기가 같으면(아니면 하나씩만 남을 때) 교체로 짝지음(기록 있으면 기록에 있는 제작자 것만). mineAdded 옛 Lua는 새 버전에 같은 줄기 Lua가 있으면 keep false. tideplan.js keepSet: '기존 유지'에서 Lua 트리거 제외. characterUpdate.ts 요약 `luaTriggers`, legacy.js 요약에 2개 이상이면 `#rv-lua-warn` 경고, 체크박스 문구에 트리거 추가. 안내서 manage.html.
+- 시험: tests/tideplan-lua.test.js. 업데이트 화면 e2e는 없음(눈 확인 못 함).

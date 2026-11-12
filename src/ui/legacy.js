@@ -522,6 +522,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
       row("book", "로어북", pills(sum.lore)),
       sum.regex.added.length + sum.regex.removed.length + sum.regex.changed.length ? row("code", "정규식", pills({ added: sum.regex.added.length, removed: sum.regex.removed.length, changed: sum.regex.changed.length })) : "",
       sum.triggersChanged ? row("zap", "트리거", `<i class="pl chg">바뀜</i>`) : "",
+      sum.luaTriggers > 1 ? `<div class="warn" id="rv-lua-warn">업데이트 뒤 <b>Lua 트리거가 ${sum.luaTriggers}개</b> 남아요. 옛 버전 Lua가 섞여 있으면 순서대로 함께 돌아 새 버전 출력이 망가질 수 있어요. ‘자세히 보기’에서 트리거 항목을 확인해 주세요.</div>` : "",
       a && a.added + a.removed + a.changed ? row("image", "에셋", `${pills(a)}<span class="muted">${a.from} → ${a.to}개</span>`) : "",
       sum.others.length ? row("sliders", "설정", names(sum.others, lf, 5)) : "",
       sum.chats ? row("message", "채팅", `<i class="pl ok">${ic("check", 12)} ${sum.chats}개 그대로</i>`) : ""
@@ -536,7 +537,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
     const sum2 = sum && { ...sum, lore: asCounts(sum.lore) };
     const head = `<div id="rv-sum">${summaryHtml(plan, keep, sum2, fieldLabel, ui.open)}</div>
             ${plan.hasBase ? "" : `<div class="warn">처음 받았을 때의 기록이 없어 <b>지금 내용과 새 버전만</b> 비교합니다. 직접 고친 내용도 새 버전으로 바뀔 수 있어요. 이번 업데이트부터 기록이 남아, 다음 업데이트부터는 내 수정을 구분해 지킵니다.</div>
-              <label class="chk"><input type="checkbox" id="keep" ${keepExistingOnly ? "checked" : ""}><span>새 버전에 없는 기존 로어북·에셋 유지<br><span class="muted">직접 추가한 항목을 지킵니다. 제작자가 지운 항목도 남을 수 있습니다.</span></span></label>`}`;
+              <label class="chk"><input type="checkbox" id="keep" ${keepExistingOnly ? "checked" : ""}><span>새 버전에 없는 기존 로어북·에셋·트리거 유지<br><span class="muted">직접 추가한 항목을 지킵니다. 제작자가 지운 항목도 남을 수 있습니다. Lua 트리거는 옛 버전이 남으면 새 버전과 겹쳐 돌아서 지키지 않아요.</span></span></label>`}`;
     const rxNote = regexAutoNote(plan) ? `<div class="muted" style="margin-top:8px">${esc(regexAutoNote(plan))}</div>` : "";
     if (!plan.items.length) return `${head}${rxNote}<div class="muted" style="margin-top:8px">${rxNote ? "그 밖에 바뀌는 항목은 없어요." : "바뀌는 항목이 없어요."}</div>`;
     const conflicts = plan.items.filter((it) => groupOf(it) === "conflict").length;
@@ -1740,7 +1741,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
   }
   function keepBox(on) {
     return `<label class="chk"><input type="checkbox" id="keep" ${on ? "checked" : ""}>
-          <span>새 버전에 없는 기존 로어북·에셋 유지<br><span class="muted">직접 추가한 항목을 지킵니다. 작성자가 지운 항목도 남을 수 있습니다.</span></span></label>`;
+          <span>새 버전에 없는 기존 로어북·에셋·트리거 유지<br><span class="muted">직접 추가한 항목을 지킵니다. 작성자가 지운 항목도 남을 수 있습니다. Lua 트리거는 옛 버전이 남으면 새 버전과 겹쳐 돌아서 지키지 않아요.</span></span></label>`;
   }
   function notes(incoming, lowLevelNew, uploads) {
     return [

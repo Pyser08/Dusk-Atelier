@@ -139,6 +139,8 @@ export interface CharacterUpdateSummary {
     lore: ListDiff
     regex: ListDiff
     triggersChanged: boolean
+    /** Dusk: 업데이트 결과의 Lua 트리거 수(둘 이상이면 옛 버전이 남았을 수 있어 경고) */
+    luaTriggers?: number
     /** Assets pair up by name; `changed` = same name, different file. */
     assets: { from: number, to: number, added: number, removed: number, changed: number }
     chats: number
@@ -251,6 +253,7 @@ export function summarizeCharacterUpdate(current: character, incoming: character
         lore,
         regex,
         triggersChanged: 'triggerscript' in fields && !same(current.triggerscript, fields.triggerscript),
+        luaTriggers: ((fields.triggerscript ?? current.triggerscript ?? []) as any[]).filter((t) => Array.isArray(t?.effect) && t.effect.some((e: any) => e?.type === 'triggerlua')).length,
         assets: {
             from: currentAssets.length,
             to: toAssets.length,

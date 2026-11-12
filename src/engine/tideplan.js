@@ -3,7 +3,7 @@
 // - 모듈: 모듈 필드를 카드 필드 이름으로 옮겨 같은 판단 로직을 쓴다 (RisuTide moduleUpdate와 같은 방식)
 // - 기준(base)은 지문(해시)만 저장한다. 의미는 "마지막으로 받은 제작자 파일".
 import { KEPT_FIELDS, isCredentialKey, isUnsafeCardKey, sanitizeCardValue, summarizeCharacterUpdate } from '../tide/characterUpdate.ts';
-import { applyUpdatePlan, assetContentId, fingerprintCard, isFingerprintV1, planCharacterUpdate } from '../tide/characterUpdateMerge.ts';
+import { applyUpdatePlan, assetContentId, fingerprintCard, isFingerprintV1, isLuaTrigger, planCharacterUpdate } from '../tide/characterUpdateMerge.ts';
 import { greetingRemap } from '../tide/characterUpdateGreetings.ts';
 import { wordDiff } from '../tide/characterMerge/wordDiff.ts';
 
@@ -94,7 +94,8 @@ export function keepSet(plan, choices, keepExistingOnly) {
   const keep = new Set();
   for (const it of plan.items) {
     const c = choices.get(it.id);
-    const def = it.keepByDefault || (!plan.hasBase && keepExistingOnly && it.kind === "unknownExtra");
+    // Lua 트리거는 '기존 유지'에서 뺀다: 옛 버전 코드가 남으면 새 버전보다 먼저 돌아 출력을 망가뜨린다(11-12 제보)
+    const def = it.keepByDefault || (!plan.hasBase && keepExistingOnly && it.kind === "unknownExtra" && !(it.unit === "trigger" && isLuaTrigger(it.current)));
     if (c ? c === "cur" : def) keep.add(it.id);
   }
   return keep;

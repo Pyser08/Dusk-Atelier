@@ -229,6 +229,14 @@ function classify(b: string | undefined, c: string | undefined, n: string | unde
     }
     return null
 }
+export function isLuaTrigger(item: unknown): boolean {
+    const effect = (item as any)?.effect
+    return Array.isArray(effect) && effect.some((e: any) => e?.type === 'triggerlua')
+}
+/** 버전·날짜 표기를 뺀 이름 줄기(…v1.4.3 runtime → … runtime) */
+export function luaStem(label: string): string {
+    return label.replace(/\bv?\d+(?:\.\d+)+[a-z0-9-]*/gi, '').replace(/\s+/g, ' ').trim().toLowerCase()
+}
 function indexed(p: Pair[]): Map<string, Pair> { return new Map(p.map((x) => [x.id, x])) }
 
 export function planCharacterUpdate(args: { current: CardFields; incomingFields: CardFields; base: CardFingerprintV1 | null; contentIdOf?: ContentIdOf }): UpdatePlan {
@@ -315,6 +323,23 @@ export function planCharacterUpdate(args: { current: CardFields; incomingFields:
                 count(incomingLabels, n.label, 1)
             } else if (candidates.length) { ambiguous.add(n); candidates.forEach(c => ambiguous.add(c)) }
         }
+        // Dusk: Lua 트리거는 comment에 버전이 붙어(…v1.4.3 runtime → …v1.5.0 runtime) 이름·코드가 함께 바뀐다.
+        // 옛 것과 새 것이 따로 남으면 옛 코드가 먼저 돌아 새 버전 출력을 망가뜨리므로, 짝 없는 Lua끼리 같은 항목의 교체로 본다.
+        if (spec.unit === 'trigger') {
+            const renamed = new Set(renames.map(([n]) => n))
+            const freeN = np.filter(n => isLuaTrigger(n.item) && !renamed.has(n) && !ambiguous.has(n) && !currentLabels.has(n.label) && !baseLabels.has(n.label))
+            // 기록이 있으면 제작자 것(기록에 있는 이름)만 바꾼다 — 사용자가 직접 넣은 Lua는 지킨다
+            const freeC = cp.filter(c => isLuaTrigger(c.item) && !ambiguous.has(c) && !incomingLabels.get(c.label) && (!hasBase || baseLabels.has(c.label)))
+            const link = (n: Pair, c: Pair) => {
+                renames.push([n, n.label]); count(incomingLabels, n.label, -1); n.label = c.label; count(incomingLabels, n.label, 1)
+                freeN.splice(freeN.indexOf(n), 1); freeC.splice(freeC.indexOf(c), 1)
+            }
+            for (const n of [...freeN]) {
+                const sameN = freeN.filter(x => luaStem(x.label) === luaStem(n.label)), sameC = freeC.filter(c => luaStem(c.label) === luaStem(n.label))
+                if (sameN.length === 1 && sameC.length === 1) link(n, sameC[0])
+            }
+            if (freeN.length === 1 && freeC.length === 1) link(freeN[0], freeC[0])
+        }
         const bMap = alignPairs(spec.unit, bpairs, cp, np)
         for (const [n, label] of renames) n.label = label
         if (hasBase && ['lore', 'regex', 'trigger'].includes(spec.unit)) {
@@ -334,6 +359,8 @@ export function planCharacterUpdate(args: { current: CardFields; incomingFields:
         for (const id of ids) {
             const c = cm.get(id), n = nm.get(id), b = bMap.get(id)
             const result = ambiguous.has(c!) || ambiguous.has(n!) ? { kind: 'conflict' as const, keep: false } : classify(b, c?.hash, n?.hash, hasBase)
+            // Dusk: 예전 업데이트에서 남아 버린 옛 버전 Lua(기록에 없음)는 새 버전에 같은 이름 줄기의 Lua가 있으면 기본으로 지운다
+            if (result && result.kind === 'mineAdded' && spec.unit === 'trigger' && c && !n && isLuaTrigger(c.item) && np.some(x => isLuaTrigger(x.item) && luaStem(x.label) === luaStem(c.label))) result.keep = false
             if (result) items.push({ id, unit: spec.unit, label: ambiguous.has(c!) || ambiguous.has(n!) ? `ambiguous:${(c ?? n)?.label ?? id}` : c && n && mediaRenames.has(n) && c.label !== n.label ? `${c.label} → ${n.label}` : (c ?? n)?.label ?? id, kind: result.kind, keepByDefault: result.keep, ...(ambiguous.has(c!) || ambiguous.has(n!) ? { mineChanged: hasBase && b !== undefined && c?.hash !== b } : {}), ...(c ? { current: clone(c.item) } : {}), ...(n ? { incoming: clone(n.item) } : {}) })
             else if ((c && n && c.label !== n.label) || (hasBase && c && n && c.hash === b && n.hash !== b)
                 || (n && !c && b === undefined) || (hasBase && !n && b !== undefined && (!c || c.hash === b))) {
