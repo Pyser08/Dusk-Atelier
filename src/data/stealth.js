@@ -19,42 +19,42 @@ var MONO = `"JetBrains Mono", "Cascadia Code", "D2Coding", Consolas, monospace`;
 export var PRESETS = {
   claude: {
     label: "클로드", desc: "클로드 앱: 왼쪽 사이드바(최근 항목=채팅 목록), 둥근 입력창, 작업 줄",
-    font: SANS, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "claude", mob: "box",
+    font: `"Anthropic Sans", "Styrene B", ${SANS}`, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "claude", mob: "box",
     light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f3f3f3", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#666666", dim: "#787878", line: "#ebebeb", line2: "#cecece", cbg: "#f3f2ee", cline: "#e2e0d8", cfg: "#2f6fb5", mi: "#ffffff", mline: "#e3e2dc", mb: "#f0efea", ms: "#c96442", msf: "#ffffff", mic: "#3d3d3a" },
     dark: { bg: "#1a1a1a", side: "#1f1f1f", bubble: "#2b2b2b", inputBg: "#262626", fg: "#ececec", fg2: "#a0a0a0", dim: "#8c8c8c", line: "#2e2e2e", line2: "#3d3d3d", cbg: "#272727", cline: "#3a3a3a", cfg: "#7ba7e0", mi: "#20201e", mline: "#30302e", mb: "#313131", ms: "#c46141", msf: "#ffffff", mic: "#ececec" },
     labels: { title: "", sub: "", tool: "명령어 13개 실행함", model: "Sonnet 5.5 낮음   자동", note: "Claude는 AI이며 실수할 수 있습니다.", left: "", think: "✻  Thinking…", user: "", plan: "Pro" }
   },
   claudecode: {
     label: "클로드 코드", desc: "클로드 앱의 Code 탭: 세션 목록 사이드바, 작업 입력창, 하단 모델 줄",
-    font: SANS, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "code", extra: "code", mob: "box",
+    font: `"Anthropic Sans", "Styrene B", ${SANS}`, accent: "#d97757", radius: 16, input: 24, width: 820, shell: "code", extra: "code", mob: "box",
     light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f3f3f3", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#666666", dim: "#787878", line: "#ebebeb", line2: "#cecece", cbg: "#f3f2ee", cline: "#e2e0d8", cfg: "#2f6fb5", mi: "#ffffff", mline: "#e3e2dc", mb: "#f0efea", ms: "#c96442", msf: "#ffffff", mic: "#3d3d3a" },
     dark: { bg: "#1a1a1a", side: "#1f1f1f", bubble: "#2b2b2b", inputBg: "#262626", fg: "#ececec", fg2: "#a0a0a0", dim: "#8c8c8c", line: "#2e2e2e", line2: "#3d3d3d", cbg: "#272727", cline: "#3a3a3a", cfg: "#7ba7e0", mi: "#20201e", mline: "#30302e", mb: "#313131", ms: "#c46141", msf: "#ffffff", mic: "#ececec" },
     labels: { title: "", sub: "", tool: "파일 3개 읽음, 결제 흐름 검색함", model: "Opus   매우 높음", note: "", left: "자동", think: "✻  Thinking…", user: "", plan: "Pro" }
   },
   gpt: {
     label: "GPT", desc: "흑백, 오른쪽 회색 말풍선, 알약 모양 입력창",
-    font: SANS, accent: "#0d0d0d", radius: 18, input: 28, width: 760, sidebar: "gpt", extra: "gpt", mob: { m: 32, h: 46, pl: 5, pr: 8, send: 30, gap: 14, tp: 6, icon: 24, stroke: 2 },
+    font: `"OpenAI Sans", "Söhne", ${SANS}`, accent: "#0d0d0d", radius: 18, input: 28, width: 760, sidebar: "gpt", extra: "gpt", mob: { m: 32, h: 46, pl: 5, pr: 8, send: 30, gap: 14, tp: 6, icon: 24, stroke: 2 },
     light: { bg: "#ffffff", side: "#f9f9f9", bubble: "#f4f4f4", inputBg: "#f4f4f4", fg: "#0d0d0d", fg2: "#5d5d5d", dim: "#8f8f8f", line: "#ececec", line2: "#d9d9d9", cbg: "#ececec", cline: "transparent", cfg: "#0d0d0d", mi: "#ffffff", mline: "transparent", mb: "transparent", ms: "#ff7f66", msf: "#ffffff", mic: "#0d0d0d" },
     dark: { bg: "#212121", side: "#171717", bubble: "#303030", inputBg: "#303030", fg: "#ececec", fg2: "#b4b4b4", dim: "#8e8e8e", line: "#2f2f2f", line2: "#424242", cbg: "#424242", cline: "transparent", cfg: "#ececec", mi: "#303030", mline: "transparent", mb: "transparent", ms: "#ff7f66", msf: "#ffffff", mic: "#ececec" },
     labels: { title: "", sub: "", model: "GPT  ⌄", tool: "", think: "생각하는 중…", plan: "Plus" }
   },
   codex: {
     label: "코덱스", desc: "코덱스 앱: 왼쪽 아이콘 줄 + 사이드바(최근 채팅), 둥근 사각 입력창, 오른쪽 말풍선",
-    font: SANS, accent: "#ececec", radius: 18, input: 22, width: 820, sidebar: "codex", terminal: false,
+    font: `"OpenAI Sans", "Söhne", ${SANS}`, accent: "#ececec", radius: 18, input: 22, width: 820, sidebar: "codex", terminal: false,
     light: { bg: "#ffffff", side: "#f7f7f7", bubble: "#f0f0f0", inputBg: "#ffffff", fg: "#1a1a1a", fg2: "#5f5f5f", dim: "#8a8a8a", line: "#e8e8e8", line2: "#d0d0d0", cbg: "#f0f0f0", cline: "#e0e0e0", cfg: "#1a1a1a" },
     dark: { bg: "#181818", side: "#202020", bubble: "#2f2f2f", inputBg: "#262626", fg: "#ececec", fg2: "#a8a8a8", dim: "#8a8a8a", line: "#2a2a2a", line2: "#3a3a3a", cbg: "#2f2f2f", cline: "#3a3a3a", cfg: "#ececec" },
     labels: { title: "", sub: "", model: "6 Luna Medium  ⌄", tool: "", think: "생각하는 중…", plan: "" }
   },
   gemini: {
     label: "제미나이", desc: "연한 파랑 배경, 큰 알약 입력창, 그라데이션 인사",
-    font: `"Google Sans", "Product Sans", ${SANS}`, accent: "#4285f4", radius: 20, input: 32, width: 800, sidebar: "gemini", mob: { m: 19, h: 75, pl: 20, pr: 19, send: 37, gap: 9, tp: 14, icon: 26, stroke: 1.8 },
+    font: `"Google Sans", "Google Sans Flex", "Google Sans Text", ${SANS}`, fontUrl: "https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@300..700&display=swap", accent: "#4285f4", radius: 20, input: 32, width: 800, sidebar: "gemini", mob: { m: 19, h: 75, pl: 20, pr: 19, send: 37, gap: 9, tp: 14, icon: 26, stroke: 1.8 },
     light: { bg: "#ffffff", side: "#f0f4f9", bubble: "#e9eef6", inputBg: "#f0f4f9", fg: "#1f1f1f", fg2: "#444746", dim: "#747775", line: "#e3e3e3", line2: "#c4c7c5", cbg: "#e9eef6", cline: "transparent", cfg: "#1f1f1f", mi: "#ffffff", mline: "transparent", mb: "transparent", ms: "#9ed2ff", msf: "#000000", mic: "#1f1f1f" },
     dark: { bg: "#131314", side: "#1e1f20", bubble: "#282a2c", inputBg: "#1e1f20", fg: "#e3e3e3", fg2: "#c4c7c5", dim: "#8e918f", line: "#2d2f31", line2: "#444746", cbg: "#2b2c2f", cline: "transparent", cfg: "#e3e3e3", mi: "#1e1f20", mline: "transparent", mb: "transparent", ms: "#9ed2ff", msf: "#062e6f", mic: "#e3e3e3" },
     labels: { title: "", sub: "", model: "Gemini 자동 모드  ⌄", tool: "", think: "생각하는 중…", plan: "" }
   },
   deepseek: {
     label: "딥시크", desc: "파란 포인트, 깔끔한 말풍선, 접힌 '생각 과정' 줄",
-    font: SANS, accent: "#4d6bfe", radius: 14, input: 18, width: 780, sidebar: "deepseek",
+    font: `"DeepSeek-CJK-patch", Inter, ${SANS}`, fontUrl: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap", accent: "#4d6bfe", radius: 14, input: 18, width: 780, sidebar: "deepseek",
     light: { bg: "#ffffff", side: "#f9fafb", bubble: "#eff6ff", inputBg: "#f3f4f6", fg: "#0f1115", fg2: "#4b5563", dim: "#8b919a", line: "#eceef1", line2: "#d4d8de", cbg: "#ececec", cline: "transparent", cfg: "#0f1115" },
     dark: { bg: "#1b1c1f", side: "#141517", bubble: "#26282d", inputBg: "#292a2e", fg: "#e8eaed", fg2: "#a0a4ab", dim: "#7a7f87", line: "#2a2c30", line2: "#3b3d43", cbg: "#33353a", cline: "transparent", cfg: "#e8eaed" },
     labels: { title: "", sub: "", model: "깊은 생각  ·  검색", tool: "✓ 깊이 생각함 (소요 12초)", think: "생각하는 중…", plan: "" }
@@ -112,8 +112,11 @@ var vars = (p, c, scheme) => Object.entries({
 }).map(([k, v]) => `  --st-${k}: ${v};`).join("\n");
 
 // 따옴표("…"·'…', 리스 mark risu-mark=quote*)는 그 앱의 인라인 코드처럼 상자로(사용자 지정 11-12, 예전 '・ 줄'을 바꿈). 색은 --st-cbg·--st-cline·--st-cfg
-export var quoteBoxCss = () => `.st-body .chattext mark[risu-mark^="quote"] { display: inline; font-family: var(--st-mono) !important; font-size: .88em !important; color: var(--st-cfg) !important; background: var(--st-cbg) !important; border: 1px solid var(--st-cline); border-radius: 6px; padding: .1em .4em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-.st-body .chattext mark[risu-mark^="quote"] * { font: inherit !important; color: inherit !important; background: none !important; }`;
+// 봇 CSS가 따옴표에 줄(왼쪽 막대·block)을 그리는 경우가 있어(사용자 화면 11-12) 더 센 선택자로 덮고 앞뒤 장식도 끈다
+var QSEL = 'body .st-body mark[risu-mark^="quote"][risu-mark]';
+export var quoteBoxCss = () => `${QSEL} { display: inline !important; font-family: var(--st-mono) !important; font-size: .88em !important; font-weight: 400 !important; color: var(--st-cfg) !important; background: var(--st-cbg) !important; border: 1px solid var(--st-cline) !important; border-radius: 6px !important; padding: .1em .4em !important; margin: 0 !important; box-shadow: none !important; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+${QSEL}::before, ${QSEL}::after { content: none !important; display: none !important; }
+${QSEL} * { font: inherit !important; color: inherit !important; background: none !important; border: 0 !important; padding: 0 !important; margin: 0 !important; display: inline !important; }`;
 
 // 휴대폰 입력창(사진 11-12, 클로드·클로드 코드·GPT·제미나이). 리스 줄: [스티커?] 글 칸 · (보내기|멈춤) · 메뉴(마지막 칸).
 // 메뉴 칸 = '+' 버튼, 그 ::after = 마이크(장식), ::before = 안내 글(클로드). 보내기 = 강조색 동그라미 + ↑.
@@ -125,9 +128,10 @@ export function splitModel(label) {
   return m && m[1] ? [m[1], m[2]] : [t, ""];
 }
 function mobileInputCss(P, L) {
-  const S = "div:has(> .text-input-area)", menu = `${S} > :last-child:is(div, button):not(.text-input-area):not(.button-icon-send):not(:has(.loadmove))`;
+  const S = "div:has(> .text-input-area)", menu = `${S} > :is(div, button):not(.text-input-area):not(.button-icon-send):not(:has(.loadmove)):has(svg)`;
   const send = `${S} > .button-icon-send.button-icon-send`, stop = `${S} > div:has(> .loadmove)`;
-  const hideIco = `${S} > :not(.text-input-area) > svg { display: none !important; }`;
+  const hideIco = `${S} > :not(.text-input-area) > svg { display: none !important; }
+  ${S} > :is(div, span):empty { display: none !important; }`;   // 빈 칸(판마다 붙는 자리)은 자리를 차지하지 않게
   if (P.mob === "box") {
     const [m1, m2] = splitModel(L.model);
     const pill = "flex: none; position: static; order: 2; height: 34px; line-height: 34px; padding: 0; font-size: 15px; white-space: pre; background: var(--st-mb); pointer-events: none;";
@@ -210,6 +214,8 @@ export function buildStealth(id, opts = {}) {
   ${P.shell && L.note ? `div:has(> .text-input-area)::before { content: "${cssText(L.note)}"; position: absolute; left: 6px; top: -24px; bottom: auto; color: var(--st-dim); font-size: 12.5px; white-space: nowrap; pointer-events: none; }` : ""}`}
 }`;
   const css = [
+    // 앱 공식 글꼴(사용자 지정 11-12): 공개된 글꼴(구글 산스 플렉스·Inter)은 구글 폰트에서 받아 오고, 공개 안 된 글꼴(Anthropic Sans·OpenAI Sans)은 기기에 있으면 쓰고 없으면 시스템 글꼴. @import는 맨 앞이어야 한다
+    P.fontUrl && !opts.minimal ? `@import url("${P.fontUrl}");` : "",
     `/* Dusk Stealth · ${P.label} */`,
     `${root}\n  --st-accent: ${P.accent};\n  --st-font: ${P.font};\n  --st-mono: ${MONO};\n  --st-r: ${P.radius}px;\n  --st-ri: ${P.input}px;\n  --st-w: ${P.width}px;\n}`,
     darkBlock,

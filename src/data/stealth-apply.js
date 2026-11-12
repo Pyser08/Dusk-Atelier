@@ -103,6 +103,7 @@ export async function runDiagnosis(api) {
   const target = await detectTarget(doc, api).catch(() => null);
   info.layout = await layoutTrace(doc).catch((e) => [`배치 추적 실패: ${e?.message ?? e}`]);
   info.fold = await foldTrace(doc).catch((e) => [`접힘 추적 실패: ${e?.message ?? e}`]);
+  info.fold.push(...await inputTrace(doc).catch((e) => [`입력창 추적 실패: ${e?.message ?? e}`]));
   return { counts, db: info, target: target ? (TARGETS[target]?.label ?? target) : null, lines: diagnose(counts, info) };
 }
 
@@ -138,5 +139,22 @@ export async function foldTrace(doc, max = 4) {
   }
   const smalls = await items('[x-st-m="s"], [x-st-m="S"]');   // 작다고 본 그림의 잰 크기(앞 6개) — 맨 끝에
   if (smalls.length) out.push(`작게 본 크기: ${(await Promise.all(smalls.slice(0, 6).map(async (el) => (await el.getAttribute?.("x-st-sz")?.catch?.(() => null)) ?? "?"))).join(", ")}`);
+  return out;
+}
+
+// 입력창·따옴표 추적(0.3.49): 리스 입력 줄의 칸 순서·크기, 사용자 말풍선 안 따옴표가 무슨 요소인지(봇 CSS가 따옴표를 바꾸는지)
+export async function inputTrace(doc) {
+  const name = async (el) => { const tag = String(await el?.nodeName?.().catch(() => "") ?? "").toLowerCase(); const cls = String(await el?.getClassName?.().catch(() => "") ?? "").trim().replace(/\s+/g, ".").slice(0, 60); return `${tag}${cls ? "." + cls : ""}`; };
+  const kids = async (el) => { const l = await el?.getChildren?.().catch(() => null) ?? await el?.querySelectorAll?.(":scope > *").catch(() => null); const n = typeof l?.length === "function" ? await l.length() : l?.length ?? 0; const out = []; for (let i = 0; i < n; i++) out.push(typeof l.at === "function" ? await l.at(i) : l[i]); return out; };
+  const out = ["입력창 추적:"];
+  const ta = await doc.querySelector(".text-input-area");
+  const row = ta ? await ta.getParent?.().catch(() => null) : null;
+  if (!row) out.push("입력 줄을 못 찾았어요");
+  else {
+    out.push(`줄 ${await name(row)}`);
+    for (const k of (await kids(row)).slice(0, 8)) { const r = await k.getBoundingClientRect?.().catch(() => null); out.push(`- ${await name(k)} ${r ? `${Math.round(r.width)}×${Math.round(r.height)}` : "?"}`); }
+  }
+  const q = await doc.querySelector(".st-user .chattext mark, .st-user .chattext blockquote, .st-user .chattext q");
+  out.push(q ? `사용자 따옴표: ${await name(q)} · 부모 ${await name(await q.getParent?.().catch(() => null))}` : "사용자 말풍선에 mark·인용 요소 없음");
   return out;
 }

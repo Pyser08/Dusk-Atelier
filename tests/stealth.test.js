@@ -489,8 +489,8 @@ test("GPT 모양(docs/STEALTH.md 7-1): 사이드바·발 두 줄 Plus·위 줄 �
   // 따옴표는 모든 모양에서 인라인 코드 상자(11-12, 예전 ・ 줄 대신)
   for (const id of ["claude", "claudecode", "gpt", "codex", "gemini", "deepseek"]) {
     const c = buildStealth(id).css;
-    assert.match(c, /mark\[risu-mark\^="quote"\] \{ display: inline; font-family: var\(--st-mono\)[^}]*background: var\(--st-cbg\)/, id + ": 따옴표 상자");
-    assert.ok(!c.includes('mark[risu-mark^="quote"]::before') && /--st-cbg: /.test(c), id + ": ・ 줄 없음·상자 색 있음");
+    assert.match(c, /mark\[risu-mark\^="quote"\]\[risu-mark\] \{ display: inline !important; font-family: var\(--st-mono\)[^}]*background: var\(--st-cbg\)/, id + ": 따옴표 상자");
+    assert.ok(!c.includes('mark[risu-mark^="quote"]::before { content: "') && /--st-cbg: /.test(c), id + ": ・ 줄 없음·상자 색 있음");
   }
   const els = [{ a: {} }, { a: {} }].map((n) => ({ n, setAttribute: async (k, v) => { n.a[k] = v; } }));
   assert.equal(await markThinking({ querySelectorAll: async () => els }, () => 0.5), 2);

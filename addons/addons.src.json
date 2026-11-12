@@ -9,5 +9,5 @@
   { "id": "protlink", "name": "ProtLink+", "category": "manage", "version": "0.1.2", "minCore": "2.0.0", "hooks": false, "desc": "Proton Drive 공유 링크를 캐릭터·모듈·플러그인에 연결해 두고, 새 파일이 올라오면 알려 주고 받아서 업데이트로 넘겨요." },
   { "id": "widgets", "name": "위젯", "category": "look", "version": "0.1.2", "minCore": "2.0.0", "hooks": false, "desc": "음악·사진·시계·최근 대화·메모·D-day·타이머 등을 한 화면에 모은 위젯 홈을 써요." }
   ,{ "id": "modcompat", "name": "모듈 호환", "category": "manage", "version": "0.1.4", "minCore": "2.1.0", "hooks": true, "desc": "봇이 어떻게 만들어졌든 켜 둔 모듈의 이미지가 그 봇 이미지와 같은 모양으로 나오게 해요. 봇 정규식이 모듈 이미지를 지우지 못하게 지키고, 모델에게 모듈 인물·표정 이름을 알려 줘요." }
-  ,{ "id": "stealth", "name": "더스크 스텔스", "category": "look", "version": "0.3.48", "minCore": "2.0.0", "hooks": false, "desc": "리스 채팅을 클로드·GPT·코덱스·제미나이·딥시크 같은 다른 AI 채팅 앱처럼 보이게 꾸며요. 끄면 원래 모양으로 되돌려요." }
+  ,{ "id": "stealth", "name": "더스크 스텔스", "category": "look", "version": "0.3.49", "minCore": "2.0.0", "hooks": false, "desc": "리스 채팅을 클로드·GPT·코덱스·제미나이·딥시크 같은 다른 AI 채팅 앱처럼 보이게 꾸며요. 끄면 원래 모양으로 되돌려요." }
 ] }
