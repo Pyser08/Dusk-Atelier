@@ -5,6 +5,7 @@ import { h, replace, download, pickFiles } from "../dom.js";
 import { btn, switchEl, iconBtn, openMenu, confirmDialog, note } from "../kit.js";
 import { rowState, groupByCategory } from "../../engine/addons.js";
 import { openAddonMaker, confirmCustomImport } from "./addonmaker.js";
+import { TABS } from "../tabs.js";
 
 const STATE = { available: "받을 수 있어요", update: "새 버전이 있어요", installed: "켜져 있어요", off: "꺼져 있어요", "needs-core": "Dusk를 먼저 업데이트해야 해요" };
 export const CUSTOM_NOTE = "직접 만들거나 받은 애드온이에요. 만든 애드온은 자유롭게 공유할 수 있어요. 괜찮은 기능은 Dusk 개발자가 제작자에게 공식 기능으로 넣고 싶다고 요청할 수도 있어요.";
@@ -22,7 +23,13 @@ export function addonBox(ctx) {
     ctx.toast(bad.length ? `${r.length - bad.length}개 받았어요 · 실패 ${bad.map((x) => `${x.id}(${x.error})`).join(", ")}` : `${r.length}개 모두 받았어요`, bad.length ? { error: true } : undefined);
     await paint();
   };
-  const openBtn = (id, custom) => { const pg = A.page?.(id, custom); return pg ? btn("열기", { size: "sm", onClick: () => pg.open() }) : null; };
+  // 열기: 애드온이 따로 연 창(page)이 있으면 그 창, 없으면 그 애드온이 만든 탭(tabs.js addon:)으로 간다(2.1.5)
+  const openBtn = (id, custom) => {
+    const pg = A.page?.(id, custom);
+    if (pg) return btn("열기", { size: "sm", onClick: () => pg.open() });
+    const tab = custom ? null : TABS.find((t) => t.addon === id);
+    return tab ? btn("열기", { size: "sm", title: `‘${tab.label}’ 탭으로`, onClick: () => ctx.go(tab.id) }) : null;
+  };
 
   // 커스텀 애드온 불러오기: 파일 고르기 → 안내 → 확인 → 넣기
   async function importFile() {
@@ -51,7 +58,7 @@ export function addonBox(ctx) {
     acts.some(Boolean) ? h("div", { class: "rb-addon-acts" }, ...acts) : null);
   const officialRow = (a, idx, core) => {
     const cur = idx[a.id], st = rowState(a, cur, core), on = !!cur && cur.on !== false, going = !!A.installing?.(a.id);
-    const meta = [cur ? `v${cur.version}` : `v${a.version}`, cur?.pendingRestart ? "새로고침하면 새 버전이 적용돼요" : "", cur?.rolledBack ? `v${cur.rolledBack}에서 오류가 나 되돌렸어요` : "", cur?.error ? `오류: ${cur.error}` : "", cur && on ? (A.running(a.id) ? "작동 중" : "멈춤") : ""].filter(Boolean).join(" · ");
+    const meta = [cur ? (st === "update" ? `v${cur.version} → v${a.version}` : `v${cur.version}`) : `v${a.version}`, cur?.pendingRestart ? "새로고침하면 새 버전이 적용돼요" : "", cur?.rolledBack ? `v${cur.rolledBack}에서 오류가 나 되돌렸어요` : "", cur?.error ? `오류: ${cur.error}` : "", cur && on ? (A.running(a.id) ? "작동 중" : "멈춤") : ""].filter(Boolean).join(" · ");
     return tile({ id: a.id, name: a.name, desc: a.desc, chip: CHIP[st] ?? "off", chipText: SHORT[st] ?? STATE[st], chipTitle: STATE[st], meta, on: cur && on,
       sw: cur ? switchEl(on, { label: `${a.name} 켜기`, onChange: (v) => busy(() => A.setOn(a.id, v)) }) : null,
       acts: [
@@ -83,14 +90,19 @@ export function addonBox(ctx) {
     const err = A.lastError();
     const todo = list.filter((a) => !A.installing?.(a.id) && ["available", "update"].includes(rowState(a, idx[a.id], core))).map((a) => a.id);
     const allBtn = todo.length > 1 ? btn(`모두 받기·업데이트 (${todo.length})`, { size: "sm", kind: "primary", id: "rb-addon-all", onClick: getAll(todo) }) : null;
+    // 2.1.5: 받기·업데이트 버튼과 ‘업데이트’ 묶음(새 버전이 있는 애드온)을 맨 위로
+    const isUpd = (a) => !a.custom && rowState(a, idx[a.id], core) === "update";
+    const upd = list.filter(isUpd);
+    const cats = upd.length ? groups.map((g) => ({ ...g, items: g.items.filter((a) => !isUpd(a)) })).filter((g) => g.items.length || g.cat.id === "custom") : groups;
+    const catBox = (cat, items) => h("div", { class: ["rb-addon-cat", cat.id === "custom" && "is-custom", cat.id === "update" && "is-update"], dataset: { cat: cat.id } },
+      h("h3", { class: "rb-addon-cath" }, cat.name, h("small", null, String(items.length))),
+      cat.id === "custom" ? h("p", { class: "rb-muted rb-addon-note", id: "rb-addon-custom-note" }, CUSTOM_NOTE) : null,
+      cat.id === "custom" && !items.length ? h("p", { class: "rb-muted rb-addon-empty" }, "아직 없어요. 오른쪽 위 ‘불러오기’로 파일을 넣거나 ‘만들기’로 AI와 함께 만들어요.") : null,
+      items.length ? h("div", { class: "rb-addon-grid" }, ...items.map((a) => (a.custom ? customRow(a) : officialRow(a, idx, core)))) : null);
     replace(body,
-      ...groups.map(({ cat, items }) => h("div", { class: ["rb-addon-cat", cat.id === "custom" && "is-custom"], dataset: { cat: cat.id } },
-        h("h3", { class: "rb-addon-cath" }, cat.name, h("small", null, String(items.length))),
-        cat.id === "custom" ? h("p", { class: "rb-muted rb-addon-note", id: "rb-addon-custom-note" }, CUSTOM_NOTE) : null,
-        cat.id === "custom" && !items.length ? h("p", { class: "rb-muted rb-addon-empty" }, "아직 없어요. 오른쪽 위 ‘불러오기’로 파일을 넣거나 ‘만들기’로 AI와 함께 만들어요.") : null,
-        items.length ? h("div", { class: "rb-addon-grid" }, ...items.map((a) => (a.custom ? customRow(a) : officialRow(a, idx, core)))) : null)),
-      err ? h("p", { class: "rb-muted" }, `업데이트 확인 실패: ${err}`) : null,
-      h("div", { class: "rb-addon-foot" }, allBtn, btn("업데이트 확인", { size: "sm", id: "rb-addon-check", onClick: () => busy(async () => { const r = await A.check({ force: true, fresh: true }); ctx.toast(r.error ? `확인 실패: ${r.error}` : r.updates.length ? `${r.updates.length}개 업데이트했어요` : "모두 최신이에요"); }) })));
+      h("div", { class: "rb-addon-foot rb-addon-bar" }, err ? h("small", { class: "rb-muted" }, `업데이트 확인 실패: ${err}`) : null, allBtn, btn("업데이트 확인", { size: "sm", icon: "refresh", id: "rb-addon-check", onClick: () => busy(async () => { const r = await A.check({ force: true, fresh: true }); ctx.toast(r.error ? `확인 실패: ${r.error}` : r.updates.length ? `${r.updates.length}개 업데이트했어요` : "모두 최신이에요"); }) })),
+      upd.length ? catBox({ id: "update", name: "업데이트" }, upd) : null,
+      ...cats.map(({ cat, items }) => catBox(cat, items)));
   }
   paint();
   // 켜고 끄기·시작이 끝나면(다른 곳에서 바뀌어도) 다시 그린다. 상자가 화면에서 빠지면 구독도 끊는다.

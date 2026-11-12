@@ -1162,3 +1162,6 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - **0.3.52**: 진단(포켓리스) — 입력 줄 = [button(+ 자리) 34] [textarea] [button.composer-expand-btn 0×0] [button.order-2 보내기]. 0.3.51의 '첫 아이콘 버튼만 +'가 맞음. 사용자 따옴표는 봇 정규식 div.x-risu-regex-quote-block("…")·x-risu-regex-thought-block('…') → thought도 상자 대상에 추가.
 - **0.3.53**: '…'(quote2 mark·thought-block) 상자는 강조색 쪽 글자색으로 구분.
 - **0.3.54**: 포켓리스 '채팅 키우기'(.composer-expand-btn)를 모델 알약 모양으로(누르면 키우기), 없으면 예전처럼 상자 ::before/::after 알약. 클로드·클로드 코드·GPT·제미나이 입력창 버튼 모양을 PC에도 적용(760 밖으로, PC는 본문 폭 가운데). 안내 글 ::before는 휴대폰만. :has 개수 시험은 이 묶음(주석 '입력창 버튼 모양')을 뺌.
+
+## 2026-11-12 16시 — 홈 애드온 상자: 맨 위 받기·업데이트 줄 + ‘업데이트’ 묶음 + 탭 열기 (코어, 미릴리스)
+- addonsui.js paint: 맨 위 `.rb-addon-bar`(실패 문구·모두 받기·업데이트 확인), 그다음 새 버전 있는 애드온만 모은 `data-cat=update` 묶음(원래 분류에선 뺌, 카드에 `v옛 → v새`). openBtn은 page가 없으면 tabs.js `addon:` 탭으로 `ctx.go`(protlink·memory·cards·manage 등). e2e: tests/e2e/run-addons-top.mjs.

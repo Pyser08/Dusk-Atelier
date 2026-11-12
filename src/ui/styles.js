@@ -1208,6 +1208,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-addon-cat+.rb-addon-cat{margin-top:8px}
 .rb-addon-cath{margin:4px 0 2px;font-size:12.5px;font-weight:700;color:var(--rb-mute);display:flex;align-items:center;gap:6px;letter-spacing:.02em}
 .rb-addon-cath small{font-weight:600;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--rb-line2);color:var(--rb-sub)}
+.rb-addon-foot.rb-addon-bar{justify-content:flex-end;margin:0 0 6px;padding-top:0;border-top:0}
+.rb-addon-cat.is-update .rb-addon-cath{color:var(--rb-accent)}
 .rb-addon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:4px}
 .rb-addon-tile{display:flex;flex-direction:column;gap:6px;min-width:0;padding:12px 12px 10px;border:1px solid var(--rb-line);border-radius:14px;background:var(--rb-surf2);transition:border-color .15s}
 .rb-addon-tile.is-on{border-color:color-mix(in srgb,var(--rb-accent) 45%,var(--rb-line))}
