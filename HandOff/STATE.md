@@ -6,6 +6,13 @@
 - **탭 하나 = 세션 하나.** 사용자가 탭별 변경안을 주면 그 세션에서: 목업(PC 1280·모바일 390) → 사용자 확인 → 구현 → e2e.
 - 버전(package.json·CHANGELOG 새 섹션)은 지시 있을 때만.
 
+## ▶ 다음 세션에서 이어갈 것 (11-14 기준)
+- **1번 홈까지 끝**(커밋 ac0907e 이후 문서 정리 커밋). 다음은 **2번 기억**: memory-home·memory·relmap·cocoa·cards — 목업(PC 1280·모바일 390) → 확인 → 구현 → e2e.
+- 쓸 수 있는 것: 유리 카드 `.rb-gcard`/`.rb-gcell`, 섹션 색 `--sec-k`·`.sec-memory`(분홍보라), 팝업 `--rb-pop-bg`, 테마 22종(밝은·어두운 판). 지침 차이는 `UI-GLASS.md` 맨 위 ‘구현 현황’.
+- CHANGELOG에 `## 2.2.0 (작업 중 · 미릴리스)` 섹션을 넣어 둠(사용자 요청으로 문서 반영). 버전(package.json)은 그대로 2.1.9 — 올리기·릴리스는 지시 대기.
+- 실기기(RisuBard·PocketRisu·RisuAI) 확인 아직: 위젯 끌기, 테마 색감·블러 성능, 탭 빠른 이동, 태블릿 레일.
+- 원래 있던 실패(홈 작업과 무관): npm test 3(pot-port·watch-light·GitHub 태그), e2e look 2·hubs 1·run-info 2·run-app 중간 멈춤, run-memed 불안정.
+
 ## 세션 순서와 범위 (TASK-MAP: 메뉴·탭 = src/ui/tabs.js, src/ui/app.js)
 | # | 세션 | 대상(tabs.js id) | 상태 |
 |---|---|---|---|
@@ -33,7 +40,7 @@
 - 1번: `src/ui/homegrid.js`(배치 계산: 크기 범위 WIDGET_SIZES·DEFAULT_LAYOUT 6/2칸·settle·snap, 시험 `tests/homegrid.test.js` 7) + `screens/homegridui.js`(그리기·포인터 끌기·모서리 크기·키보드) + `screens/homegridcss.js` + `screens/home.js` 전면. 저장 `prefs.ui.homeGrid[6|2]`, 못 보이는 위젯(채팅 없음→숫자, 추천 없음, 관리 숨김)의 자리는 저장값에 남김. 꾸미기 중에만 끌기(touch-action:none).
 - 시험: npm test 1507 pass / 3 fail(pot-port·watch-light·GitHub 릴리스 태그 — 변경 전에도 같음). build·check 동일함(v2.1.9). e2e 새 `run-home-grid` 31 통과, smoke·home-memall·home-turn·home-fair·home-dice·onboard·discover 통과, hubs 1 실패·look 2 실패는 변경 전에도 같은 실패. run-hubs 홈 숫자 기대값을 모바일 3→4, `.rb-hdo-sm`→`.rb-hgrid2`로 고침.
 - 미확인: 실기기(RisuBard·PocketRisu·RisuAI) 터치 끌기·성능, 밝은 모드(글래스 안 붙음 — 예전 모양).
-- CHANGELOG 초안(버전 정할 때 넣기): 홈이 새로워졌어요(위젯) / 홈 꾸미기(끌기·크기·숨기기·기본 배치로, PC·모바일 따로) / 글래스 화면·가벼운 화면.
+- CHANGELOG: 2.2.0(작업 중) 섹션에 반영함.
 - 안내서: start.html(홈 꾸미기), look.html(글래스·가벼운 화면) 수정.
 
 ## 사이드바 개편 (11-13, 0번 이어서)

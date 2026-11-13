@@ -1,5 +1,12 @@
 # UI-GLASS — 글래스 스타일 개편 지침
 
+> **구현 현황(2.2.0, 11-14)**: 0번(공통 기반)·1번(홈) 끝. 실제 구현이 이 문서와 다른 점:
+> - 카드 바탕 토큰은 `--rb-glass-bg`(기존 `--rb-glass`는 블러 값이라 이름 유지). 어두운 카드 = `color-mix(바탕 88%+흰색) 50%`(진한 빛 번짐 위 대비 4.5:1 확보), 안쪽 칸 흰 .08, 보조 글자 .84.
+> - 테마는 6종이 아니라 **22종**(`src/ui/glassthemes.js`), 기본 `dusk` = ‘Dusk 황혼’. 밝은 판도 있음(밝기 ‘밝게’ → `.rb-glass-light`).
+> - 테마 고르기는 **꾸미기 탭 맨 위 ‘글래스 테마’ 카드**(설정 → 화면이 아님). 색을 직접 고르면 ‘내 강조색’(gtheme `mine`).
+> - 가벼운 화면(`.rb-lite`): 꾸미기 → 모양 더 고르기 스위치, PocketRisu·RisuBard UA 자동, `prefers-reduced-transparency`.
+> - 공통 클래스 `.rb-gcard`(유리 카드)·`.rb-gcell`(안쪽 칸), 팝업은 `--rb-pop-bg`. 다른 탭 세션은 이것과 섹션 색(`--sec-k`, `.sec-memory/manage/work`)을 쓰면 됨.
+
 Dusk Atelier 화면을 **"화려하지만 직관적인"** 글래스모피즘 스타일로 바꿀 때 따르는 규칙이에요.
 견본: `dusk-home-glass.html`(홈), `dusk-home-glass-colors.html`(색상 6종).
 이번 개편은 **배치와 모양을 함께** 새로 짜요. 배치가 `UI-STYLE.md`와 부딪히면 이 문서를 따라요.

@@ -5,8 +5,10 @@
 | 작업 | 먼저 읽을 파일 |
 |---|---|
 | 앱 진입·훅 등록 | `src/main.js` |
-| 메뉴·탭 구성 | `src/ui/tabs.js`, `src/ui/app.js` |
-| 홈 화면 | `src/ui/screens/home.js` |
+| 메뉴·탭 구성 | `src/ui/tabs.js`, `src/ui/app.js`(사이드바 섹션 접기·레일·⋯ 메뉴·위쪽 메뉴 알약·모바일 탭바·검색 칸 옮겨 붙이기), 모양 `src/ui/navcss.js`, e2e `tests/e2e/run-nav.mjs` |
+| 홈 화면 | `src/ui/screens/home.js`(위젯 내용), 격자 `src/ui/homegrid.js`(배치 계산)·`src/ui/screens/homegridui.js`(끌기·크기)·`homegridcss.js`, 둘러보기 `src/ui/screentours.js`, e2e `run-home-grid.mjs` |
+| 글래스 화면·테마 | `src/ui/glasscss.js`(토큰·유리 카드·팝업·밝은 판), `src/ui/glassthemes.js`(22종), 적용 `app.js` applyTheme, 고르기 `src/ui/lookparts.js`·`screens/settings.js`, 시험 `tests/glassthemes.test.js`·e2e `run-glass-theme.mjs` |
+| 탭 이동 경합(늦게 끝난 화면) | `src/ui/staleguard.js`, `src/ui/dom.js` clear, e2e `run-tab-race.mjs` |
 | 위젯 홈(켜고 끄기·수명) | `src/data/widgethome.js`, 설정 카드 `src/ui/screens/devtools.js` `widgetHomeCard`, 테스트 `tests/widgethome-ctrl.test.js` |
 | 위젯 홈 화면·자동 열기·음악·배치 | `src/widgethome/home.js`(원본 view.js), `src/widgethome/lib/*.cjs`, `style.js`, 테스트 `tests/widgethome-*.test.cjs`, e2e `tests/e2e/run-widgethome.mjs` |
 | 프로바이더(요청 만들기·해독·키·사슬·예산) | `src/engine/provider/*`(순수), `src/data/provider/runner.js`·`index.js`, 테스트 `tests/provider-*.test.js` |
