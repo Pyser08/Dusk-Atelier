@@ -48,7 +48,7 @@ export function applyCycleReportObject(obj, scope) {
       applied++;
     } else if (doc) {
       // 이번 턴에 바뀐 칸이 없는 인물: 같은 제목의 create를 보내면 리수폿이 기존 문서 갱신으로 바꾼다(redirectDuplicateCreates).
-      docs.push({ document_ref: `new:cycle-${applied}-${k}`, operation: "create", type: "character", title: doc.title, aliases_add: [], aliases_remove: [], tags_add: [], tags_remove: [], event_context: null, entries: [markerEntry(lines.join("\n"))] });
+      docs.push({ document_ref: `new:cycle-${applied}-${String(doc.id).replace(/[^A-Za-z0-9_-]/g, "_")}`, operation: "create", type: "character", title: doc.title, aliases_add: [], aliases_remove: [], tags_add: [], tags_remove: [], event_context: null, entries: [markerEntry(lines.join("\n"))] });
       applied++;
     }
   }

@@ -28,16 +28,16 @@ export function storyDateFromText(text, previous = '') {
   lines.forEach((line, index) => {
     const status = line.trim().length <= 80 || /[\[\]【】|]/.test(line);
     const full = [...line.matchAll(CYCLE_FULL_DATE)];
-    for (const m of full) if (cycleValidDate(+m[1], +m[2], +m[3])) found.push({ iso: cycleIsoDate(+m[1], +m[2], +m[3]), status, index });
+    for (const m of full) if (cycleValidDate(+m[1], +m[2], +m[3])) found.push({ iso: cycleIsoDate(+m[1], +m[2], +m[3]), status, index, full: true });
     if (full.length) return;
     for (const m of line.matchAll(CYCLE_MONTH_DAY)) {
-      const base = /^\d{4}/.exec(previous)?.[0]; if (!base) continue;
+      const base = /^\d{4}/.exec(previous)?.[0] || '2000';
       let y = +base; if (!cycleValidDate(y, +m[1], +m[2])) continue;
       let iso = cycleIsoDate(y, +m[1], +m[2]); if (cycleDayNumber(iso) < cycleDayNumber(previous) - 180) iso = cycleIsoDate(++y, +m[1], +m[2]);
       found.push({ iso, status, index });
     }
   });
-  const usable = found.filter(item => !previous || (cycleDayNumber(item.iso) >= cycleDayNumber(previous) && cycleDayNumber(item.iso) <= cycleDayNumber(previous) + 366));
+  const usable = found.filter(item => !previous || (item.full && previous.startsWith('2000-')) || (cycleDayNumber(item.iso) >= cycleDayNumber(previous) && cycleDayNumber(item.iso) <= cycleDayNumber(previous) + 366));
   const pick = usable.find(item => item.status) || usable[0];
   return pick ? pick.iso : '';
 }

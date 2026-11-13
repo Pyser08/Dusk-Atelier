@@ -161,5 +161,35 @@
   "why": "위 패치의 import",
   "from": "import { automaticRecordExpired } from '../../engine/pot/wiki-retention.js';",
   "to": "import { automaticRecordExpired, latestAssistantIndex } from '../../engine/pot/wiki-retention.js';"
+ },
+ {
+  "file": "src/engine/pot/relationship-mode.js",
+  "why": "서사관계 전용 + 인지 '켬'에서 월경·임신 구획(cycle.state)도 정리 노트에 넣기(settingdeps 판정과 맞춤, 11-13 제보)",
+  "from": "if(perceptionMode==='on')return value==='core.current_state'||",
+  "to": "if(perceptionMode==='on')return value==='core.current_state'||value==='cycle.state'||"
+ },
+ {
+  "file": "src/engine/pot/cycle-tracking.js",
+  "why": "연도 있는 날짜 표시(임시 연도 기준일을 실제 연도로 옮길 때 씀)",
+  "from": "found.push({ iso: cycleIsoDate(+m[1], +m[2], +m[3]), status, index });",
+  "to": "found.push({ iso: cycleIsoDate(+m[1], +m[2], +m[3]), status, index, full: true });"
+ },
+ {
+  "file": "src/engine/pot/cycle-tracking.js",
+  "why": "기준 날짜가 없으면 연도 없는 날짜를 임시 연도 2000(윤년)으로 읽어 첫 기준일을 잡기(11-13 제보)",
+  "from": "const base = /^\\d{4}/.exec(previous)?.[0]; if (!base) continue;",
+  "to": "const base = /^\\d{4}/.exec(previous)?.[0] || '2000';"
+ },
+ {
+  "file": "src/engine/pot/cycle-tracking.js",
+  "why": "임시 연도(2000) 뒤에 연도 있는 날짜가 나오면 그 날짜로 옮겨 가기",
+  "from": "found.filter(item => !previous || (",
+  "to": "found.filter(item => !previous || (item.full && previous.startsWith('2000-')) || ("
+ },
+ {
+  "file": "src/data/pot/main-wiki-hook.js",
+  "why": "프리셋이 사용자 입력 뒤에 user 블록을 둬도 요청 안에 DB 실제 입력이 있으면 그것을 현재 입력으로(11-13 제보)",
+  "from": "formattedCompact.includes(actualCompact)))),",
+  "to": "formattedCompact.includes(actualCompact))||evidence.matched===true)),"
  }
 ]

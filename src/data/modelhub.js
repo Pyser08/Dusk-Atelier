@@ -3,9 +3,10 @@
 import { LocalKeyStore } from "./pot/local-keys.js";
 import { callWriterModel, testModelConnection, providerModelList, copilotLoginStep } from "./pot/llm-client.js";
 import { setCustomRunner, duskPickFor } from "../engine/runai.js";
-import { defaultCfg, normalizeCfg, presetOf, pickFor, toPrompt, fromReply, emptyUsage, addUsage } from "../engine/modelcfg.js";
+import { defaultCfg, normalizeCfg, presetOf as rawPresetOf, withDefaultBaseUrl, pickFor, toPrompt, fromReply, emptyUsage, addUsage } from "../engine/modelcfg.js";
 
 const CFG_KEY = "dusk.models.v1", USAGE_KEY = "dusk.models.usage.v1";
+const presetOf = (cfg, id) => withDefaultBaseUrl(rawPresetOf(cfg, id));
 const state = new WeakMap(); // api → { keys, cfg, usage }
 
 const parse = (raw) => { try { return raw ? (typeof raw === "string" ? JSON.parse(raw) : raw) : null; } catch { return null; } };
