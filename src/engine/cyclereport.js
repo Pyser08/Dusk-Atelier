@@ -7,9 +7,9 @@ export const CYCLE_FIELD = "cycle_report";
 
 export const CYCLE_FIELD_PROMPT = "\n\n# Cycle report (Dusk, separate field — required while cycle tracking is on)\n" +
   "Besides the report lines above, ALWAYS add one extra top-level key `cycle_report` to your single JSON object, even when you write no core.current_state entry. " +
-  "List EVERY clearly adult woman who appears in source:rp this turn: [{\"name\": \"<her wiki title>\", \"adult\": true, \"sex\": [{\"partner\": \"<man>\", \"contraception\": \"used\"|\"none\"}], \"known\": false, \"birth\": false}]. " +
+  "List EVERY woman who appears in source:rp this turn: [{\"name\": \"<her wiki title>\", \"adult\": true, \"sex\": [{\"partner\": \"<man>\", \"contraception\": \"used\"|\"none\"}], \"known\": false, \"birth\": false}]. " +
   "`sex` lists only vaginal intercourse with a man shown in this turn (contraception \"used\" only when the RP clearly shows it). `known` = she learns this turn that she is pregnant; `birth` = she gives birth this turn. " +
-  "Use [] when no adult woman appears. Never list anyone who is not clearly an adult woman. Every other field stays exactly as specified.";
+  "Every other field stays exactly as specified.";
 
 const key = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
 const clean = (v, n = 60) => String(v ?? "").replace(/[\r\n|]+/g, " ").trim().slice(0, n);
