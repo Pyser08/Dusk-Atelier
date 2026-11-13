@@ -1,3 +1,36 @@
+# 현재 상태 — 2.2.0 브랜치 (main fd5fd34, v2.1.9 머지 뒤 분기 · 2026-11-13)
+
+## 목표: 글래스 UI 개편 — 배치 갈아엎기 → 새 테마
+- 기준 문서: `HandOff/UI-GLASS.md` (배치가 UI-STYLE.md와 부딪히면 UI-GLASS 우선). 견본 html(dusk-home-glass*.html)은 저장소에 없음 — 필요하면 사용자에게 받기.
+- 기존 테마는 유지하고 글래스 테마 6종(dusk·night·sakura·aurora·sunset·mono)을 추가.
+- **탭 하나 = 세션 하나.** 사용자가 탭별 변경안을 주면 그 세션에서: 목업(PC 1280·모바일 390) → 사용자 확인 → 구현 → e2e.
+- 버전(package.json·CHANGELOG 새 섹션)은 지시 있을 때만.
+
+## 세션 순서와 범위 (TASK-MAP: 메뉴·탭 = src/ui/tabs.js, src/ui/app.js)
+| # | 세션 | 대상(tabs.js id) | 상태 |
+|---|---|---|---|
+| 0 | 공통 기반 | styles.js 글래스 토큰(기존 --rb-* 이름 유지), 배경(stage)·유리 카드 공통 클래스, 탭 틀(app.js) | [ ] 사용자 변경안 대기 |
+| 1 | 홈 | home | [ ] |
+| 2 | 기억 | memory-home, memory, relmap, cocoa, cards | [ ] |
+| 3 | 작업실 | work-home, provider, look, stealth, aibot, personabuilder, tools, dev | [ ] |
+| 4 | 관리 | manage-home, characters, modules, plugins, protlink | [ ] |
+| 5 | 설정 | settings (+ 테마 선택 UI, '가벼운 화면' 저사양 모드) | [ ] |
+| 6 | 마무리 | 6테마 대비 확인, 전 화면 PC·모바일 e2e, CHANGELOG·안내서 | [ ] |
+
+- 0번은 1번 세션 안에서 같이 해도 됨(홈 변경안을 받을 때 결정).
+- 테마 토큰·테마 선택 UI는 배치가 끝난 뒤(UI-GLASS §9의 4번). 배치 세션 동안은 기본 더스크 값만.
+
+## 세션마다 지킬 것
+- 기능을 빼지 않기: 옮긴 기능은 이 표 아래 '기능 이동 기록'에 "어디 → 어디"로 남기기.
+- `?` 도움말·바로가기·'처음 둘러보기' 유지. 카드 안쪽 여백 18px 20px / 모바일 16px(QUALITY 박스 여백 규칙).
+- 애드온 화면(addon 붙은 탭)은 애드온 쪽 코드도 함께 확인.
+- 마칠 때: npm test → build → check("동일함") → 관련 e2e, 이 표 상태 갱신.
+
+## 기능 이동 기록
+(아직 없음)
+
+---
+
 # 현재 상태 — perf/startup 브랜치 (main 9acdc8c, v2.1.7에서 분기 · 2026-11-12)
 
 ## 목표: 데이터가 많은 순정 호스트에서 빠릿빠릿하게 (봇·모듈 삭제 없이, 호스트 패치 없이)
