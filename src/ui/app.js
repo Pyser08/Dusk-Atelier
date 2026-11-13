@@ -269,7 +269,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const searchLabel = h("label", { class: "rb-search" }, icon("search", 16), searchInput, h("span", { class: "rb-kbd", "aria-hidden": "true" }, "/"));
   const phTools = h("div", { class: "rb-ph-tools" }, searchLabel, findBtn, helpBtn);
   const placeSearch = (parent, before = null) => {
-    if (!parent || searchLabel.parentNode === parent) return;
+    if (!parent || searchLabel.parentNode === parent || !parent.isConnected) return;   // 늦게 끝난 낡은 화면(붙지 않은 자리)이 칸을 가져가지 못하게
     // 다시 그리기로 칸이 잠깐 빠졌다 돌아오면 포커스가 사라지므로, 방금(1.5초 안) 적고 있었으면 다시 포커스
     const had = doc.activeElement === searchInput || Date.now() - lastTyped < 1500;
     const a = searchInput.selectionStart ?? searchInput.value.length, b = searchInput.selectionEnd ?? a;

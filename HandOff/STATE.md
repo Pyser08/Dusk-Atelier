@@ -80,6 +80,9 @@
 - 팝업 더 비치게: 어두운 판 `--rb-pop-bg` 84%→66%, 밝은 판 흰 .84→.68, 뒤 막 옅게.
 - 시험: run-nav 37(홈 가운데 칸·찾기 결과 위 칸 포커스·누른 뒤 떼면 접힘), run-addons-ui 48 모두 통과(스크롤 시험도 이번엔 통과).
 - 사이드바 고침(11-14 늦게): ① 애드온이 늦게 켜지면 메뉴 링크만 보이고 섹션 제목(관리 등)은 숨은 채라 창을 다시 열어야 했음 → `refreshTabs()` 끝에서 `paintSecs()`(위쪽 메뉴 섹션 알약도 refreshTabs에서). e2e run-nav ‘애드온이 늦게 켜지면…’(coreOnly로 시작 후 svc 추가, 고치기 전 실패 확인). ② 탭이 바뀌면 손으로 펼친 섹션을 닫고 그 탭의 섹션만 펼침(`navTabSeen`, 홈이면 모두 닫힘). run-nav 39 통과.
+- **탭 이동 중 얼어붙음 고침(11-14)**: 원인 = 탭 A(캐릭터 등)를 불러오는 중 B로 가면, 늦게 끝난 A가 `replace(ctx.main)` → `dom.js clear()`의 `while (firstChild) removeChild` 를 도는데 낡은 화면 보호(staleguard)가 removeChild를 무시해 무한 반복(CDP로 멈춘 스택 확인: drawCharacters→replace→clear). 고침 = 지운 자식이 그대로면 멈춤. 같은 꼴의 반복문은 저장소에 이것 하나뿐(검색 확인). 함께: 늦게 끝난 홈이 검색 칸을 화면에 없는 자리로 가져가지 않게 `placeSearch`에서 `parent.isConnected` 확인.
+- 시험: unit `tests/staleguard.test.js` ‘낡은 화면의 replace()는 얼지 않고…’(고치기 전 시간 초과 확인), e2e 새 `run-tab-race`(느린 API로 6가지 탭 이동 + 홈→다른 탭 검색 칸 + 이동 뒤 클릭, 고치기 전 ‘페이지 응답 없음’ 확인) 9 통과. npm test 1554/3(원래 실패).
+- 참고: **run-memed는 원래 불안정**(같은 코드로 32/32/21/5개 — 고치기 전에도 같음, ‘사실확실성’ select 시간 초과). 따로 볼 것.
 - **홈(1번) 끝.** 다음은 2번 기억.
 
 ## 기능 이동 기록
