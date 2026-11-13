@@ -147,11 +147,12 @@ export function deepMenu(run) {
 export const CYCLE_STAGE1 = [
   "",
   "",
-  "Cycle tracking is on — ALSO write these lines, only for characters who are women and appear in newest:",
-  "woman|Name      every woman who appears in newest (one line each)",
+  "Cycle tracking is on — ALSO write these lines, only for characters who are clearly adult women and appear in newest:",
+  "woman|Name      every clearly adult woman who appears in newest (one line each)",
   "sex|Name|male partner|used or none      only vaginal intercourse with a man shown in newest; used only when contraception is clearly shown",
   "pregnant|Name      she learns in newest that she is pregnant",
   "birth|Name      she gives birth in newest",
+  "Never write these lines for anyone who is not clearly an adult woman.",
 ].join("\n");
 // 원문 → cycle_report 목록 [{name, adult, sex:[{partner, contraception}], known, birth}]
 export function cycleFrom(raw, known = []) {
