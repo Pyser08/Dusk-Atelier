@@ -3,6 +3,7 @@
 // 고급(고급 모드): 직접 색(바탕·카드·글자·사이드바, 대비 자동 맞춤) · 강조 색 쓰는 곳 · 메뉴 위치 · 줄 간격 · 확대율 · 고대비 · 테마 스튜디오 · 기본값으로.
 import { h, replace } from '../dom.js';
 import { advFold, btn, optionCards, pageHead, segmented, toggleRow } from '../kit.js';
+import { glassThemeInput } from '../glassthemes.js';
 import { DEFAULT_THEME, DENSITIES, LAYOUTS, ZOOM_MIN, ZOOM_MAX, contrastOf, normalizeTheme, parseThemeCode, pickLook, themeCode, themeVars } from '../theme.js';
 import { lookParts, sizeOf, SIZE_CHOICES } from '../lookparts.js';
 
@@ -46,8 +47,10 @@ export function renderSettings(ctx) {
   const sample = h("div", { class: "rb-prev-sample" }, h("span", { class: "rb-prev-btn" }, "버튼"), h("span", { class: "rb-prev-chip" }, "칩"), h("span", { class: "rb-prev-sw", "aria-hidden": "true" }));
   const prevSeg = segmented([["now", "지금"], ["light", "밝게"], ["dark", "어둡게"]], "now", (v) => { prevMode = v === "now" ? null : v; paintPreview(); }, "미리보기 밝기");
   const prev = h("div", { class: "rb-card bordered rb-look-prev", "aria-label": "미리보기" }, h("span", { class: "cap" }, "미리보기"), ...bubbles, sample, prevSeg);
+  // 글래스 화면이면 고른 글래스 테마 색으로 계산(창과 같은 색)
+  const tvars = (m) => { const n = normalizeTheme(theme); return themeVars(n.skin === "glass" && n.contrast !== "high" ? glassThemeInput(n, m) : theme, m); };
   const paintPreview = () => {
-    const r = themeVars(theme, prevMode ?? ctx.state.mode);
+    const r = tvars(prevMode ?? ctx.state.mode);
     for (const [k, v] of Object.entries(r.vars)) prev.style.setProperty(k, v);
     prev.style.colorScheme = r.scheme;
     prev.classList.add("is-scoped");
@@ -133,7 +136,7 @@ export function renderSettings(ctx) {
     zoomLabel.textContent = `${theme.zoom}%`;
     if (Number(zoomRange.value) !== theme.zoom) zoomRange.value = String(theme.zoom);
     accUseSeg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", b.dataset.v === theme.accUse ? "true" : "false"));
-    const r = themeVars(theme, ctx.state.mode);
+    const r = tvars(ctx.state.mode);
     const fgName = r.vars["--rb-on-acc"] === "#ffffff" ? "흰 글자" : "검은 글자";
     const body = contrastOf(r.vars["--rb-text"], r.vars["--rb-win"]);
     contrastNote.textContent = `버튼 글자색은 자동으로 정해요. 지금: ${fgName} · 대비 ${r.onAccentRatio.toFixed(1)}:1` + (r.onAccentRatio < 4.5 ? " — 낮아요. 색을 조금 더 진하게 하면 잘 읽혀요." : "") + ` · 본문 글자 대비 ${body.toFixed(1)}:1` + (theme.cText || theme.cBg ? " (읽기 어려우면 자동으로 맞춰 줘요)" : "");
@@ -148,6 +151,7 @@ export function renderSettings(ctx) {
     "div",
     { class: "rb-mem2-main rb-look-pick" },
     pageHead("플러그인 꾸미기", { sub: "누르면 바로 바뀌고 자동으로 저장돼요.", back: fromSettings ? { label: "설정으로 돌아가기", onClick: () => ctx.go("settings") } : ctx.prefs.ui?.experimental ? { label: "도구로 돌아가기", onClick: () => ctx.go("tools") } : void 0 }),
+    card("글래스 테마", h("small", { class: "rb-muted" }, "빛 번짐 배경과 유리 카드의 색이에요. 밝기(밝게·어둡게)에 맞춰 밝은 판·어두운 판으로 바뀌어요."), parts.glass),
     card("테마 묶음", parts.sets),
     card("강조 색", parts.accents),
     card("그라데이션", parts.grads),

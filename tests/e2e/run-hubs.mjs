@@ -14,9 +14,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   await page.waitForTimeout(600);
   const vis = (sel) => page.evaluate((s) => [...document.querySelectorAll(s)].filter((e) => e.offsetParent).length, sel);
   const nav = async (label) => { await page.evaluate((l) => [...document.querySelectorAll(".rb-nav a, .rb-tabbar a")].filter((a) => a.offsetParent).find((a) => a.textContent.trim().startsWith(l)).click(), label); await page.waitForTimeout(600); };
-  ok(`[${tag}] 홈 상태 카드 숫자 ${tag === "PC" ? 4 : 3}칸`, (await vis(".rb-hnum")) === (tag === "PC" ? 4 : 3), String(await vis(".rb-hnum")));
+  ok(`[${tag}] 홈 숫자 위젯 4칸(2.2.0)`, (await vis(".rb-hnum")) === 4, String(await vis(".rb-hnum")));
   ok(`[${tag}] 저장된 기억 숫자 = 6`, (await page.locator(".rb-hnum b").first().textContent()) === "6");
-  ok(`[${tag}] 바로가기 작은 4칸`, (await vis(".rb-hdo-sm .rb-htile")) === 4);
+  ok(`[${tag}] 바로가기 위젯 4칸`, (await vis(".rb-hgrid2 .rb-htile")) === 4);
   ok(`[${tag}] 이어서 하기 칩(인물 위키 2 · 분석 · 가져오기)`, (await page.locator(".rb-hcont .rb-chip").allTextContents()).join("|") === "호시노 인물 위키|시로코 인물 위키|지난 대화 분석|봇·모듈 가져오기", (await page.locator(".rb-hcont .rb-chip").allTextContents()).join("|"));
   ok(`[${tag}] 빠른 설정 토글 유지 + 처음 둘러보기 유지`, (await page.locator(".rb-story-helper [role=switch]").count()) >= 2 && (await page.locator(".rb-story-helper #rb-dice-row").count()) === 1 && (await page.locator("#rb-home-tour").count()) === 1);
   await page.locator(".rb-hcont .rb-chip", { hasText: "시로코 인물 위키" }).click(); await page.waitForTimeout(700);

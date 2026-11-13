@@ -9,12 +9,12 @@
 ## 세션 순서와 범위 (TASK-MAP: 메뉴·탭 = src/ui/tabs.js, src/ui/app.js)
 | # | 세션 | 대상(tabs.js id) | 상태 |
 |---|---|---|---|
-| 0 | 공통 기반 | styles.js 글래스 토큰(기존 --rb-* 이름 유지), 배경(stage)·유리 카드 공통 클래스, 탭 틀(app.js) | [ ] 사용자 변경안 대기 |
-| 1 | 홈 | home | [ ] |
+| 0 | 공통 기반 | styles.js 글래스 토큰(기존 --rb-* 이름 유지), 배경(stage)·유리 카드 공통 클래스, 탭 틀(app.js) | [x] 11-13 (아래 기록) |
+| 1 | 홈 | home | [x] 11-14 끝(F안·사이드바·위쪽 메뉴·모바일 탭바·테마 22종). 실기기 미확인 |
 | 2 | 기억 | memory-home, memory, relmap, cocoa, cards | [ ] |
 | 3 | 작업실 | work-home, provider, look, stealth, aibot, personabuilder, tools, dev | [ ] |
 | 4 | 관리 | manage-home, characters, modules, plugins, protlink | [ ] |
-| 5 | 설정 | settings (+ 테마 선택 UI, '가벼운 화면' 저사양 모드) | [ ] |
+| 5 | 설정 | settings (+ 테마 선택 UI, '가벼운 화면' 저사양 모드) | [ ] 테마 선택·가벼운 화면은 11-14에 꾸미기 탭에 먼저 넣음(아래) — 설정 탭 배치만 남음 |
 | 6 | 마무리 | 6테마 대비 확인, 전 화면 PC·모바일 e2e, CHANGELOG·안내서 | [ ] |
 
 - 0번은 1번 세션 안에서 같이 해도 됨(홈 변경안을 받을 때 결정).
@@ -26,8 +26,54 @@
 - 애드온 화면(addon 붙은 탭)은 애드온 쪽 코드도 함께 확인.
 - 마칠 때: npm test → build → check("동일함") → 관련 e2e, 이 표 상태 갱신.
 
+## 0·1번 기록 (11-13)
+- 목업: `docs/mockups/glass-1-home.html`(A~E안), `docs/mockups/glass-1-home-f.html`(**채택 F안**: 사이드 레일 + 포커스 머리 + 스냅 위젯 격자).
+- 0번: `src/ui/glasscss.js` GLASS_CSS. `.rb-win.rb-skin-glass`일 때만(app.js applyTheme: theme.skin==="glass" && 보통 대비 && 어두운 scheme). **기존 `--rb-glass`는 블러 값이라 카드 바탕 토큰은 `--rb-glass-bg`**(UI-GLASS 표의 `--rb-glass`와 이름 다름). 배경 바탕 `--rb-gbg = var(--rb-win)`(고른 테마 바탕색 유지, run-look 테마 묶음 시험 때문), 빛 번짐은 `--rb-acc-a/b`에서 만듦 → 테마 6종 토큰은 아직(§9-4). 공통 클래스 `.rb-gcard`·`.rb-gcell`. 레일은 기존 왼쪽 메뉴(.rb-nav)를 유리 카드로, 모바일은 기존 아래 탭바.
+- 저사양: `.rb-lite` = theme.lite 또는 UA에 pocket|bard, + `prefers-reduced-transparency`. theme.js에 `skin`("glass"|"classic", 기본 glass)·`lite` 추가, 꾸미기 → 모양 더 고르기에 ‘글래스 화면’·‘가벼운 화면’ 스위치(lookparts.js). 5번 설정 세션에서 설정 탭으로 옮길지 결정.
+- 1번: `src/ui/homegrid.js`(배치 계산: 크기 범위 WIDGET_SIZES·DEFAULT_LAYOUT 6/2칸·settle·snap, 시험 `tests/homegrid.test.js` 7) + `screens/homegridui.js`(그리기·포인터 끌기·모서리 크기·키보드) + `screens/homegridcss.js` + `screens/home.js` 전면. 저장 `prefs.ui.homeGrid[6|2]`, 못 보이는 위젯(채팅 없음→숫자, 추천 없음, 관리 숨김)의 자리는 저장값에 남김. 꾸미기 중에만 끌기(touch-action:none).
+- 시험: npm test 1507 pass / 3 fail(pot-port·watch-light·GitHub 릴리스 태그 — 변경 전에도 같음). build·check 동일함(v2.1.9). e2e 새 `run-home-grid` 31 통과, smoke·home-memall·home-turn·home-fair·home-dice·onboard·discover 통과, hubs 1 실패·look 2 실패는 변경 전에도 같은 실패. run-hubs 홈 숫자 기대값을 모바일 3→4, `.rb-hdo-sm`→`.rb-hgrid2`로 고침.
+- 미확인: 실기기(RisuBard·PocketRisu·RisuAI) 터치 끌기·성능, 밝은 모드(글래스 안 붙음 — 예전 모양).
+- CHANGELOG 초안(버전 정할 때 넣기): 홈이 새로워졌어요(위젯) / 홈 꾸미기(끌기·크기·숨기기·기본 배치로, PC·모바일 따로) / 글래스 화면·가벼운 화면.
+- 안내서: start.html(홈 꾸미기), look.html(글래스·가벼운 화면) 수정.
+
+## 사이드바 개편 (11-13, 0번 이어서)
+- 목업 `docs/mockups/glass-0-sidebar.html`(지금·1~5안·추천). 사용자 선택: **1(섹션 접기)+2(섹션 색)+3(아래 정리)+4(레일)**.
+- app.js 사이드바: `.rb-nav-lab` 대신 섹션 제목 버튼 `.rb-nav-sec.sec-<section>`(aria-expanded) + `.rb-nav-group`(접힘=max-height 0, 링크는 DOM에 남음). 펼친 섹션 저장 `prefs.ui.navOpen`, 지금 섹션은 늘 펼침(paintSecs, render마다). 보일 탭 없는 섹션은 제목 숨김.
+- 아래 칸: `.rb-nav-mini`(끌어다 놓기 · 버전) + ⋯ `.rb-nav-menu`(메뉴 위치 layoutSeg · `#rb-nav-pin` 늘 펼침 · 변경 기록 · 끌어다 놓기 안내). 밖 클릭·Esc로 닫힘(Esc는 창 닫기로 안 번지게 stopPropagation).
+- 레일: `.rb-navwrap` 안에 nav. 761px 이상·`.rb-nav-pinned` 아닐 때 68px, 올리거나 포커스하면 216px로 본문 위에 덮어 펼침. 늘 펼침 = `prefs.ui.navPinned`. CSS `src/ui/navcss.js`. 글래스 여백은 `--nav-pl/--nav-pb`.
+- 머리 로고 아래 ‘for RisuBard’ 없앰.
+- **위쪽 메뉴(.rb-lay-top)도 맞춤**: 홈 + 섹션 알약 3개(`.rb-topsec.sec-*`, topLinks `section:*`, 누르면 섹션 개요) · 탭별 링크는 DOM에 남기고 CSS로 숨김 · 섹션 메뉴는 안쪽 화면에서 칩 줄(moreNav, 데스크톱 위쪽 메뉴일 때만 보임, 개요에선 숨김) · 메뉴 위치 분할 버튼은 오른쪽 ⋯(`.rb-top-more`/`.rb-top-menu`) 안 → 글래스에서 글자와 겹치던 것 없앰. run-nav에 위쪽 시험 6개 추가(24 통과).
+- **모바일 맞춤**: 아래 탭바 = 섹션 색 동그라미 아이콘(`.rb-tabbar .sec-*`, 지금 탭은 색 그라데이션+빛), 글래스에선 떠 있는 유리 바. 지금 섹션 색 변수 `--sec-k`(render에서 `win.dataset.sec`) → 칩 줄 지금 칩 테두리·빛. 홈 머리: 모바일은 제목 왼쪽 정렬, ‘홈 꾸미기’는 같은 줄 오른쪽(homegridcss 미디어 쿼리 — NAV_CSS가 HOMEGRID_CSS보다 앞이라 홈 규칙은 homegridcss에 둘 것). e2e run-nav 25·run-home-grid 32.
+- run-home-grid가 한 번 1개 실패 후 다시 두 번 모두 통과 — 타이밍 흔들림 의심, 다시 보이면 확인.
+- 시험: e2e 새 `run-nav` 18 통과. run-app ‘묶음 라벨’ 기대값을 새 구조로 바꿈(run-app은 원래 다른 곳 TypeError로 중간에 멈춤 — 변경 전과 같음). cards·manage·onboard·work·memed·addon-aibuild·home-grid·smoke·home-memall·discover 통과, hubs 1·look 2 실패는 원래 실패. npm test 1507/3(원래 실패), check 동일함.
+- 미확인: 터치 태블릿(761px 이상, 올리기 없음)에서 레일 — 아이콘 탭으로 이동은 되지만 이름은 포커스 때만 보임. 실기기 확인 필요.
+
+## 글래스 테마 6종 + 밝은 판 (11-14)
+- `src/ui/glassthemes.js`: GLASS_THEMES(dusk·night·sakura·aurora·sunset·mono, 어두운 판=UI-GLASS 표, 밝은 판=새로 정함) · `glassThemeInput`(themeVars에 a·b·cBg를 그 테마 값으로 → 기존 --rb-* 토큰을 그대로 계산) · `glassExtraVars`(--rb-gb1~4 빛 번짐, --rb-gtint, --rb-gglow; 'mine'이면 비움 → CSS가 강조색에서 만듦).
+- theme.js `gtheme`(기본 dusk, 'mine' 허용). app.js applyTheme: 글래스면 밝은·어두운 모드 모두 적용, 밝으면 `.rb-glass-light`, `win.dataset.gtheme`. 고대비면 글래스 끔.
+- glasscss.js: 어두운 카드 = `color-mix(바탕 88%+흰색) 50%`(진한 빛 번짐 위 대비 확보), 안쪽 칸 흰 .08, 보조 글자 .84. 밝은 판 토큰 블록(.rb-glass-light: 하얀 .58 카드·#1f1a33 글자). 홈 제목·숫자 그라데이션은 밝은 판에서 글자색→강조 글자색.
+- 대비 시험 `tests/glassthemes.test.js`(14): 6종×2판 × 바탕·빛 번짐 4개 위 카드·안쪽 칸에서 본문·보조 4.5:1 이상.
+- 꾸미기 탭 맨 위 ‘글래스 테마’ 카드(lookparts `parts.glass`, `.rb-gpick` 7개). 테마 묶음·강조 색·그라데이션·직접 색을 바꾸면 gtheme='mine'(lookparts set 래퍼).
+- 정리: 홈 화면 둘러보기 단계 고침(.rb-hdo → 기능 찾기·바로가기 위젯·홈 꾸미기 단계, 대상은 :has 없이), 안 쓰는 예전 홈 CSS(rb-home2·rb-home3·rb-hbody·rb-hmain·rb-hrec-head·rb-home-tourrow) 지움. 애드온 위젯은 애드온 상자 자체 제목·여백 사용.
+- 시험: npm test 1521/3(원래 실패), check 동일함. e2e 새 run-glass-theme 19, run-nav 25, run-home-grid 34(둘러보기 대상 시험 추가), smoke·onboard·manage·work·cards·memed·home-*·discover·addon-aibuild·addon-chattheme 통과. look 2·hubs 1 원래 실패. **addons-ui: ‘스크롤 그대로’ PC chattheme 1개 새로 실패**(hello는 원래 PC·모바일 실패) — 위젯 배치는 안 바뀜, 애드온 위젯이 높이 고정이라 안쪽 스크롤 때문으로 보임. 애드온 위젯 높이를 내용에 맞추는 안을 검토할 것.
+- CHANGELOG 초안 추가: 글래스 테마 22종(기본 ‘Dusk 황혼’, 밝은·어두운 판), 밝은 모드에서도 글래스, 색을 직접 고르면 ‘내 강조색’.
+
+## 글래스 테마 22종 (11-14 이어서)
+- 기본 `dusk` = **‘Dusk 황혼’**으로 다시 정함(보랏빛 하늘 + 지평선 주황·분홍: acc #ff9a76, acc2 #b07cff, 바탕 #171028 / 밝은 판 #fbf3f4). 노을(sunset)은 붉은 쪽으로 구분.
+- 추가 16종(glassthemes.js 표에서 생성: 강조·강조2·셋째 빛·어두운/밝은 바탕 → 빛 번짐·tint 자동): 라벤더·깊은 바다·숲·로즈 골드·코랄·체리·은하·네온·모카·얼음·와인·복숭아·레몬·말차·한밤·보랏빛 새벽. theme.js gtheme 허용 목록은 GLASS_IDS에서.
+- 대비 시험 46개(22종×2판 + 정리) 모두 통과.
+- 고침: 꾸미기 미리보기가 글래스 테마 색을 따르게(settings.js tvars), 접힌 레일에서 메뉴 아이콘이 줄어 안 보이던 것(`.rb-nav a>svg{flex:none}`), 강조 색 버튼을 다시 눌러도 ‘내 강조색’으로.
+- 시험: npm test 1553/3(원래 실패), check 동일함, run-glass-theme 23(새 테마·미리보기 추가). 나머지는 위와 같음(look 2·hubs 1·addons-ui PC 스크롤 2).
+
+## 애드온 위젯 높이 (11-14)
+- 애드온 위젯은 `autoH`: 내용 높이에 맞춰 줄 수를 자동 조절(homegridui fitAuto, ResizeObserver, 최대 12줄, 저장 안 함). 꾸미기에서 높이를 바꿔도 내용에 다시 맞춰짐(폭만 의미 있음).
+- addons-ui: chattheme·모바일 hello 스크롤 시험 통과, **PC hello 1개만 실패**(변경 전에도 PC·모바일 hello 실패). 홈 작업 끝 — 남은 건 실기기 확인.
+
 ## 기능 이동 기록
-(아직 없음)
+- 사이드바 맨 아래 ‘메뉴 위치(왼쪽/위쪽)’ 분할 버튼·‘v… · 변경 기록’·끌어다 놓기 안내 → 아래 한 줄 + ⋯ 메뉴 안(위쪽 바의 분할 버튼은 그대로).
+- 홈 ‘장기 기억’ 상태 카드의 숫자 4칸 → 숫자 위젯 4개(n1~n4). 모바일에서도 ‘확인할 것’ 보임(숨기기 가능).
+- 홈 바로가기 4칸·최근 기록·빠른 설정·이어서 하기·추천(기능 맛보기)·애드온 상자 → 각각 위젯.
+- 홈 ‘설정’ 바닥 버튼(예전 코드에서도 화면에 안 붙어 있었음)은 없앰 — 설정은 머리 줄 톱니·레일에 그대로.
 
 ---
 

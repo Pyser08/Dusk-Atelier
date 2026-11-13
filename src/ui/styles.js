@@ -2,6 +2,9 @@ import { PROB_CSS } from './probpick.js';
 import { RELMAP_CSS } from './screens/relmap/css.js';
 import { SIZE_CSS } from './screens/sizemeter/css.js';
 import { PROVIDER_CSS } from './screens/provider/css.js';
+import { GLASS_CSS } from './glasscss.js';
+import { NAV_CSS } from './navcss.js';
+import { HOMEGRID_CSS } from './screens/homegridcss.js';
 export var FONT_LINK = "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap";
 export var CSS2 = `
 *{box-sizing:border-box}
@@ -356,7 +359,6 @@ button.rb-srow{width:100%;background:none;border-top:0;border-left:0;border-righ
 .rb-range:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(--rb-acc-soft)}.rb-range:focus-visible::-moz-range-thumb{box-shadow:0 0 0 4px var(--rb-acc-soft)}
 .rb-range:disabled{opacity:.45;cursor:not-allowed}
 .rb-empty{padding:44px 20px;text-align:center;color:var(--rb-mute);font-size:13px;line-height:1.7}.rb-empty-card{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:420px;margin:0 auto}.rb-empty-card .ico{width:56px;height:56px;border-radius:18px;background:var(--rb-acc-soft);color:var(--rb-acc-text);display:flex;align-items:center;justify-content:center}.rb-empty-card b{font-size:16px;color:var(--rb-text)}.rb-empty-card p{margin:0;word-break:keep-all}.rb-tour-card{position:absolute;z-index:80;width:min(340px,calc(100% - 24px));display:flex;flex-direction:column;gap:12px;padding:18px 18px 16px;border-radius:var(--rb-r4);background:var(--rb-win);border:var(--rb-bw,1px) solid var(--rb-line3);box-shadow:var(--rb-shadow);animation:rb-in .15s ease-out}
-.rb-home-tourrow{display:flex;justify-content:center;margin-top:10px}
 .rb-tour-card.center{left:50%;top:50%;transform:translate(-50%,-50%);width:min(400px,calc(100% - 24px))}
 .rb-tour-card .head{display:flex;align-items:center;gap:10px}
 .rb-tour-card .ico{width:40px;height:40px;border-radius:13px;background:var(--rb-acc-soft);color:var(--rb-acc-text);display:flex;align-items:center;justify-content:center;flex:none}
@@ -549,7 +551,7 @@ select.rb-input{appearance:auto}
   .rb-brand small{display:none}
   .rb-head{padding:0 12px;gap:8px;height:56px}
   .rb-head .rb-btn .lbl{display:none}.rb-head .rb-btn{width:44px;padding:0}
-  .rb-nav,.rb-topnav{display:none !important}
+  .rb-nav,.rb-topnav,.rb-navwrap{display:none !important}
   .rb-in-more .rb-morenav{display:flex;gap:8px;padding:10px 16px 4px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
   .rb-morenav .rb-chip{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px}
   .rb-morenav .rb-chip[aria-pressed=true]{background:var(--rb-text);color:var(--rb-win);border-color:var(--rb-text)}
@@ -1011,10 +1013,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-usage{margin:6px 0 0;padding-left:18px;font-size:12px}.rb-mem-formula{font-size:12px;margin:4px 0 0}
 @media (prefers-reduced-motion:no-preference){.rb-mem-flowstep i{transition:background .2s,box-shadow .2s}}
 
-.rb-home2{gap:18px;padding:22px 24px 36px}
 .rb-hhead{display:flex;align-items:center;gap:12px}.rb-hhead .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.rb-hhead small{font-size:12px;font-weight:700;color:var(--rb-sub)}
 .rb-hhead h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rb-hbody{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px;align-items:start}.rb-hmain{display:flex;flex-direction:column;gap:20px;min-width:0}
 .rb-hstats{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 .rb-hstats .rb-hall{flex:none;display:inline-flex;align-items:center;margin-left:auto}
 .rb-hstat-memory .lab{min-height:36px}.rb-hstat-memory .rb-status{min-height:76px}
@@ -1059,28 +1059,8 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 @media (hover:hover){.rb-thanks-sec .rb-cr:hover{transform:none;box-shadow:none}}
 
 /* 홈 바로가기: 실제 앱에서 사용하는 CSS2에 적용 */
-.rb-home2 .rb-hdo{margin-top:18px}
-.rb-home2 .rb-hdo>h2{margin:0 0 12px;font-size:14px;font-weight:700;letter-spacing:.02em;color:var(--rb-sub)}
-.rb-home2 .rb-hgrid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px}
-.rb-home2 .rb-htile{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:14px;min-width:0;min-height:96px;padding:18px;border:1px solid var(--rb-line2);border-radius:18px;background:linear-gradient(145deg,var(--rb-surf),var(--rb-win));color:var(--rb-text);text-align:left;box-shadow:0 3px 12px rgba(0,0,0,.045);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
-.rb-home2 .rb-htile:hover{transform:translateY(-2px);border-color:var(--rb-acc);box-shadow:0 8px 22px rgba(0,0,0,.09)}
-.rb-home2 .rb-htile:focus-visible{outline:2px solid var(--rb-acc);outline-offset:2px}
-.rb-home2 .rb-htile>.ico{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border-radius:15px;background:var(--rb-acc-soft);color:var(--rb-acc-text)}
-.rb-home2 .rb-htile>.t{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
-.rb-home2 .rb-htile>.t>b{font-size:15px;font-weight:750;line-height:1.25}
-.rb-home2 .rb-htile>.t>small{display:block;font-size:12px;line-height:1.45;color:var(--rb-sub);white-space:normal}
-@media(max-width:760px){.rb-home2 .rb-hgrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px}.rb-home2 .rb-htile{flex-direction:row;justify-content:flex-start;min-height:88px;padding:13px;gap:10px;border-radius:15px}.rb-home2 .rb-htile>.ico{flex-basis:40px;width:40px;height:40px;border-radius:12px}.rb-home2 .rb-htile>.t{align-items:flex-start}.rb-home2 .rb-htile>.t>b{font-size:14px}.rb-home2 .rb-htile>.t>small{font-size:11px}}
 
 /* 홈 이야기 도우미: 실제 스위치가 button.rb-switch인 구조를 기준으로 폭을 분리 */
-.rb-home2 .rb-hbody,.rb-home2 .rb-hmain,.rb-home2 .rb-hrecent{min-width:0;max-width:100%}
-.rb-home2 .rb-hrecent{width:100%}
-.rb-home2 .rb-story-helper{display:flex;flex-direction:column;width:100%;min-width:0;max-width:100%;box-sizing:border-box;overflow:visible;padding:8px 16px 8px}
-.rb-home2 .rb-story-helper>.h{max-width:100%;overflow-wrap:anywhere}
-.rb-home2 .rb-story-helper .rb-srow{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:4px;width:100%;min-width:0;max-width:100%;box-sizing:border-box}
-.rb-home2 .rb-story-helper .rb-srow>.t{display:flex;flex-direction:column;flex:initial;min-width:0;width:auto;max-width:100%;overflow-wrap:anywhere}
-.rb-home2 .rb-story-helper .rb-srow .t small{display:block;min-width:0;width:auto;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal}
-.rb-home2 .rb-story-helper .rb-srow>button.rb-switch{justify-self:end;flex:none;width:66px;min-width:66px;max-width:66px}
-@media(max-width:560px){.rb-home2 .rb-story-helper{padding-left:12px;padding-right:12px}.rb-home2 .rb-story-helper .rb-srow{column-gap:8px}.rb-home2 .rb-story-helper .rb-srow>.t{font-size:13px}.rb-home2 .rb-story-helper .rb-srow .t small{font-size:11.5px}}
 
 /* 페르소나 AI 대화: ChatGPT식 비모달 플로팅 패널 */
 .rb-pb-chat-fab{position:absolute!important;right:24px;bottom:22px;z-index:60;border-radius:999px!important;box-shadow:0 5px 18px rgba(0,0,0,.2)}
@@ -1185,19 +1165,11 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mine-name i{width:18px;height:18px;border-radius:50%;flex:none}
 .rb-textlink{border:0;background:none;color:var(--rb-mute);text-decoration:underline;font-size:12px;cursor:pointer;padding:2px 4px}
 /* 1.8.3 홈(목업 1): 상태 카드 + 숫자, 작은 바로가기 4칸, 이어서 하기 칩, 최근 기록·빠른 설정 */
-.rb-home3 .rb-hstats{padding:14px 16px;gap:12px}
-.rb-home3 .rb-hstats .rb-status{border:0;padding:0;background:none;min-height:0;box-shadow:none}
-.rb-home3 .rb-hstat-memory .rb-status{min-height:0}
 .rb-hnums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .rb-hnum{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:var(--rb-r2);background:var(--rb-surf2)}
 .rb-hnum b{font-size:20px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}.rb-hnum small{font-size:12px;color:var(--rb-sub)}
 .rb-hnum.only-pc{display:none}
 @media (min-width:1001px){.rb-hnums{grid-template-columns:repeat(4,minmax(0,1fr))}.rb-hnum.only-pc{display:flex}}
-.rb-home3 .rb-hdo-sm .rb-hgrid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px}
-.rb-home3 .rb-hdo-sm .rb-htile{flex-direction:column!important;justify-content:center!important;align-items:center;text-align:center;min-height:76px!important;padding:10px 6px!important;gap:6px!important;border-radius:var(--rb-r3)!important}
-.rb-home3 .rb-hdo-sm .rb-htile>.ico{flex:0 0 36px!important;width:36px!important;height:36px!important;border-radius:11px!important}
-.rb-home3 .rb-hdo-sm .rb-htile>.t{align-items:center!important}.rb-home3 .rb-hdo-sm .rb-htile>.t>small{display:none!important}.rb-home3 .rb-hdo-sm .rb-htile>.t>b{font-size:13px!important}
-.rb-home3 .rb-hdo{margin-top:0}
 .rb-hcont h2{margin:0 0 8px;font-size:14px;font-weight:700;color:var(--rb-sub)}
 .rb-hcont .rb-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0}
 .rb-addonbox{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
@@ -1239,10 +1211,6 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-amk-msg{margin:0;font-size:12.5px;min-height:1em}
 .rb-addon-page{display:flex;flex-direction:column;gap:12px;padding-top:8px}
 .rb-addon-card{padding:14px 16px}
-.rb-hrec-head{display:flex;align-items:center;justify-content:space-between;width:100%}
-.rb-home3 .rb-hrecent>h2,.rb-hrec-head h2{margin:0;font-size:14px;font-weight:700;color:var(--rb-sub)}
-.rb-home3 .rb-hrecent>h2{margin-top:8px}
-.rb-home3 .rb-hrec{padding:10px 14px;align-items:center}
 /* 1.8.3 개요(목업 1) */
 .rb-win.rb-on-hub .rb-morenav{display:none!important}
 .rb-hub{display:flex;flex-direction:column;gap:14px;padding:18px 22px 28px;max-width:760px}
@@ -1531,4 +1499,4 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-wk-row{border-radius:var(--rb-r3)}
 .rb-scroll::-webkit-scrollbar-thumb{border-radius:var(--rb-pill,999px)}
 @media (prefers-reduced-motion:reduce){.rb-btn,.rb-card,.rb-pcard,.rb-wk-row,.rb-wk2-who{transition:none!important;transform:none!important}}
-`+PROB_CSS+RELMAP_CSS+PROVIDER_CSS+SIZE_CSS;
+`+PROB_CSS+RELMAP_CSS+PROVIDER_CSS+SIZE_CSS+GLASS_CSS+NAV_CSS+HOMEGRID_CSS;
