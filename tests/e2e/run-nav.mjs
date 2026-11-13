@@ -54,6 +54,30 @@ ok("위쪽: 홈 + 섹션 알약 3개만 보임(겹치는 분할 버튼 없음)",
   ok("위쪽 ⋯ 메뉴 Esc로 닫힘(창은 그대로)", !(await page.locator(".rb-top-menu").isVisible()) && await page.locator(".rb-win").isVisible());
   await page.locator(".rb-top-more").click(); await page.locator(".rb-top-menu .rb-layseg button[data-v=left]").click(); await page.waitForTimeout(300);
 ok("다시 왼쪽", await page.locator(".rb-navwrap").isVisible());
+// 홈으로 오면 펼쳐 둔 섹션이 닫힘
+await page.locator(".rb-nav .rb-nav-more").click().catch(() => {}); await page.keyboard.press("Escape");
+await page.evaluate(() => window.__app.ctx.go("modules")); await page.waitForTimeout(400);
+await page.hover(".rb-nav"); await page.locator(".rb-nav-sec.sec-memory").click(); await page.waitForTimeout(300);
+await page.evaluate(() => window.__app.ctx.go("home")); await page.waitForTimeout(500);
+ok("홈으로 오면 사이드바 섹션이 모두 닫힘 + 저장", (await page.locator(".rb-nav-sec[aria-expanded=true]").count()) === 0 && ((await ui()).navOpen ?? []).length === 0);
+// 기능 찾기: 모든 탭 오른쪽 위
+for (const tab of ["home", "memory", "cocoa", "tools", "settings"]) {
+  await page.evaluate((t) => window.__app.ctx.go(t), tab); await page.waitForTimeout(400);
+  const v = await page.evaluate(() => { const i = document.querySelector(".rb-ph-tools .rb-search input"); return i && i.offsetParent ? i.getAttribute("aria-label") : null; });
+  ok(`기능 찾기 칸이 오른쪽 위에 보임(${tab})`, v === "기능 찾기", String(v));
+}
+await page.locator(".rb-ph-tools .rb-search input").fill("테마"); await page.waitForTimeout(500);
+ok("다른 탭에서 기능 찾기에 적으면 홈의 기능 찾기 목록으로", await page.evaluate(() => window.__app.ctx.state.tab === "home" && window.__app.ctx.state.search === "테마"));
+await page.locator(".rb-ph-tools .rb-search input").fill(""); await page.waitForTimeout(300);
+await page.evaluate(() => window.__app.ctx.go("modules")); await page.waitForTimeout(400);
+ok("목록 검색이 있는 탭(모듈): 목록 검색 칸 + ? 옆 기능 찾기 단추", (await page.locator(".rb-ph-tools .rb-search input").getAttribute("aria-label")) === "검색" && await page.locator("#rb-find-btn").isVisible());
+await page.locator("#rb-find-btn").click(); await page.waitForTimeout(500);
+ok("기능 찾기 단추 → 홈 + 칸에 포커스", await page.evaluate(() => window.__app.ctx.state.tab === "home" && document.activeElement === document.querySelector(".rb-ph-tools .rb-search input")));
+// 팝업도 유리
+page.evaluate(() => window.__app.ctx.confirmAnywhere({ title: "확인", body: "유리 팝업 시험" })); await page.waitForTimeout(300);
+const pop = await page.evaluate(() => { const d = document.querySelector(".rb-dialog"); if (!d) return null; const c = getComputedStyle(d); return { bf: c.backdropFilter, bg: c.backgroundColor }; });
+ok("대화상자도 유리(블러·반투명)", !!pop && /blur/.test(pop.bf) && /rgba|color\(/.test(pop.bg), JSON.stringify(pop));
+await page.keyboard.press("Escape"); await page.waitForTimeout(200);
 await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(400);
 ok("모바일: 사이드바 없음 · 아래 탭바", !(await page.locator(".rb-navwrap").isVisible()) && await page.locator(".rb-tabbar").isVisible());
 await page.evaluate(() => [...document.querySelectorAll(".rb-tabbar a")].find((a) => a.textContent.includes("관리")).click()); await page.waitForTimeout(600);

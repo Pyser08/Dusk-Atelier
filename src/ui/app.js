@@ -54,6 +54,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const searchInput = h("input", { type: "search", placeholder: "검색", "aria-label": "검색" });
   let searchTimer = null;
   searchInput.addEventListener("input", (e) => {
+    // 기능 찾기 칸(목록 검색이 없는 탭)에서 적으면 홈의 기능 찾기 목록으로 간다
+    if (state.findMode && state.tab !== "home" && e.target.value.trim()) { const q = e.target.value; go("home"); state.search = q; searchInput.value = q; searchInput.focus(); }
     state.search = e.target.value;
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => ctx.refresh(), 120);
@@ -253,11 +255,13 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const crumb = h("div", { class: "rb-crumb", "aria-label": "현재 위치" });
   const phDesc = h("div", { class: "rb-ph-desc" });
   const helpBtn = iconBtn("help", "이 화면 설명", { boxed: true, id: "rb-help-btn", onClick: () => toggleHelp() });
+  // 목록 검색이 있는 탭에서도 기능 찾기는 ? 옆 단추로(누르면 홈의 기능 찾기 칸)
+  const findBtn = iconBtn("sparkle", "기능 찾기", { boxed: true, id: "rb-find-btn", onClick: () => { go("home"); setTimeout(() => searchInput.focus(), 0); } });
   const pagehead = h(
     "div",
     { class: "rb-pagehead" },
     h("div", { class: "rb-ph-text" }, crumb, phDesc),
-    h("div", { class: "rb-ph-tools" }, h("label", { class: "rb-search" }, icon("search", 16), searchInput, h("span", { class: "rb-kbd", "aria-hidden": "true" }, "/")), helpBtn)
+    h("div", { class: "rb-ph-tools" }, h("label", { class: "rb-search" }, icon("search", 16), searchInput, h("span", { class: "rb-kbd", "aria-hidden": "true" }, "/")), findBtn, helpBtn)
   );
   const col = h("div", { class: "rb-col" }, moreHost, pagehead, main);
   navWrap.append(nav);
@@ -482,6 +486,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     win.classList.toggle("rb-on-hub", String(state.tab).endsWith("-home"));
     const activeSection = TABS.find((t) => t.id === state.tab)?.section;
     win.dataset.sec = activeSection ?? "home";   // 섹션 색(칩 줄·탭바)
+    // 홈으로 오면 사이드바에 펼쳐 둔 섹션을 모두 닫는다
+    if (state.tab === "home" && navOpen.size) { navOpen.clear(); prefs.saveUi?.({ navOpen: [] })?.catch?.(() => {}); }
     replace(moreHost, moreNav(TABS.filter((t) => t.section === activeSection && !tabHidden(t, prefs.ui) && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
     for (const links of [navLinks, topLinks, barLinks]) for (const [id, a] of links) {
       const activeTab = TABS.find((t) => t.id === state.tab);
@@ -507,8 +513,12 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     paintLay(); paintSecs(); paintPin();
     const inHist = state.tab === "settings" && state.sub === "history";
     const showSearch = inHist || ["modules", "plugins", "characters"].includes(state.tab);
-    searchInput.placeholder = inHist ? "기록에서 이름 찾기" : SEARCH[state.tab] ?? "검색";
+    // 2.2.0 오른쪽 위 검색 칸: 목록 검색이 있는 탭은 그 검색, 나머지 탭(홈 포함)은 '기능 찾기'(적으면 홈의 기능 찾기 목록으로)
+    searchInput.placeholder = inHist ? "기록에서 이름 찾기" : showSearch ? SEARCH[state.tab] ?? "검색" : "기능 찾기 (예: 테마, 생리, API)";
+    searchInput.setAttribute("aria-label", showSearch ? "검색" : "기능 찾기");
+    state.findMode = !showSearch;
     win.classList.toggle("rb-nosearch", !showSearch);
+    findBtn.hidden = !showSearch;
     win.classList.toggle("rb-is-home", state.tab === "home");
     paintHead();
     replace(detail3);

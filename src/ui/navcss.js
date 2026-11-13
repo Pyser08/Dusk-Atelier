@@ -104,4 +104,10 @@ export var NAV_CSS = `
 .rb-gpick i.mine{background:var(--rb-acc-grad)}
 .rb-gpick[aria-pressed=true]{color:var(--rb-text);font-weight:700;border-color:var(--rb-sel-ring);box-shadow:0 0 0 1px var(--rb-sel-ring)}
 @media (hover:hover){.rb-gpick:hover{color:var(--rb-text);border-color:var(--rb-line3)}}
+
+/* 기능 찾기: 모든 탭 오른쪽 위(? 옆). 홈에서도 머리 줄을 보이되 위치 글자는 숨김 */
+.rb-win .rb-nosearch .rb-ph-tools .rb-search,.rb-nosearch .rb-ph-tools .rb-search{display:flex}
+.rb-is-home .rb-pagehead{display:flex}
+.rb-is-home .rb-ph-text{visibility:hidden}
+@media (max-width:760px){.rb-is-home .rb-ph-text{display:none}.rb-is-home .rb-ph-tools{width:100%}}
 `;

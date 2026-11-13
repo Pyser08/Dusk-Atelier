@@ -17,7 +17,7 @@ export var WIDGET_SIZES = {
   qs: { min: [2, 2], max: [3, 5] },
   cont: { min: [2, 1], max: [6, 2] },
   disc: { min: [2, 1], max: [6, 2] },
-  add: { min: [2, 2], max: [6, 12] }   // 높이는 내용에 맞춤(autoH)
+  add: { min: [2, 2], max: [6, 60] }   // 높이는 내용에 맞춤(autoH) — 잘리지 않게 넉넉히
 };
 
 var row = (a) => ({ id: a[0], x: a[1], y: a[2], w: a[3], h: a[4] });

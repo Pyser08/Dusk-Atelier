@@ -1,4 +1,4 @@
-// 홈 (2.2.0 F안): 포커스 머리(지금 열린 채팅·장기 기억 줄·찾기 칸·홈 꾸미기) → 위젯 격자 → 처음 둘러보기.
+// 홈 (2.2.0 F안): 포커스 머리(지금 열린 채팅·장기 기억 줄·홈 꾸미기 — 기능 찾기는 오른쪽 위 공통 칸) → 위젯 격자 → 처음 둘러보기.
 // 위젯 = 바로가기 4 · 숫자 4 · 최근 기록 · 빠른 설정 · 이어서 하기 · 추천 · 애드온. 배치는 prefs.ui.homeGrid[칸 수].
 // 위젯 안 요소의 클래스·id(rb-htile·rb-hnum·rb-hrecent·rb-hcont·rb-home-*)는 예전 그대로(둘러보기·e2e가 씀).
 import { renderFeatureFind } from "./featurefind.js";
@@ -89,13 +89,11 @@ export async function renderHome(ctx) {
   const titleEl = h("h1", null, bar("min(240px,60%)", 22));
   const headEl = h("div", { class: "rb-hhead", "aria-busy": "true" }, h("div", { class: "t" }, h("small", null, "지금 열린 채팅"), titleEl));
   const statusEl = h("section", { class: "rb-hstats", "aria-label": "장기 기억 상태", "aria-busy": "true" }, bar("min(320px,70%)"));
-  const focusSearch = () => { const i = ctx.main.closest(".rb-win")?.querySelector(".rb-search input"); if (i) i.focus(); };
-  const cmd = h("button", { type: "button", class: "rb-hcmd", id: "rb-home-find", onClick: focusSearch }, icon("search", 18), h("span", null, "무엇을 할까요? 기능 찾기…"), h("span", { class: "rb-kbd", "aria-hidden": "true" }, "/"));
   const notice = !ctx.prefs.advanced && ctx.prefs.ui?.tourDone && !ctx.prefs.ui?.simpleNoticeDone ? simpleNotice(ctx, redraw) : null;
   const foot = h("div", { class: "rb-home-foot" },
     h("button", { type: "button", class: "rb-btn ghost sm", id: "rb-home-tour", onClick: () => openTour(ctx) }, icon("help", 14), "처음 둘러보기"),
     h("button", { type: "button", class: "rb-btn ghost sm", onClick: () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록") }, icon("history", 14), `v${ctx.version} · 새로 바뀐 점`));
-  replace(host, h("div", { class: "rb-hfocus" }, editBtn, headEl, statusEl, cmd), notice, tray, G.el, foot);
+  replace(host, h("div", { class: "rb-hfocus" }, editBtn, headEl, statusEl), notice, tray, G.el, foot);
   G.draw();
 
   // 추천(기능 맛보기): 있으면 위젯을 보인다

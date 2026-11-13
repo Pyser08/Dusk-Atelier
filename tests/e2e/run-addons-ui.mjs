@@ -19,6 +19,8 @@ for (const mobile of [false, true]) {
   await page.evaluate(() => { const a = window.__api; a.registerButton = async (o) => { (window.__btns ??= []).push(o.name); return "b1"; }; a.unregisterUIPart = () => { window.__btns = (window.__btns ?? []).slice(0, -1); }; });
   await page.evaluate(() => window.__app.ctx.go("home")); await page.waitForTimeout(500);
   const row = page.locator("[data-addon=hello]");
+  await page.waitForTimeout(400);
+  ok(`[${tag}] 홈 애드온 위젯이 내용을 다 담음(잘리지 않음, 2.2.0)`, await page.evaluate(() => { const w = document.querySelector(".rb-hw[data-w=add]"); return !w || w.querySelector(".rb-hadd").offsetHeight <= w.clientHeight + 1; }));
   ok(`[${tag}] 애드온 카드에 시험 애드온이 보임`, (await row.count()) === 1 && /받기 전/.test(await row.textContent()), await page.locator("#rb-addons").textContent().catch(() => ""));
   await row.getByRole("button", { name: "받기" }).click(); await page.waitForTimeout(500);
   ok(`[${tag}] 받기 → 켜짐 · 작동 중`, /켜짐/.test(await row.textContent()) && /작동 중/.test(await row.textContent()), await row.textContent());

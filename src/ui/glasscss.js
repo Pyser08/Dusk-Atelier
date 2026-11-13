@@ -66,4 +66,15 @@ export var GLASS_CSS = `
 .rb-glass-light .rb-hw-rm{background:rgba(31,26,51,.55)}
 .rb-skin-glass.rb-glass-light.rb-lite{--rb-glass-bg:color-mix(in srgb,var(--rb-gbg) 70%,white 30%);--rb-glass-2:color-mix(in srgb,var(--rb-gbg) 90%,black 4%)}
 @media (prefers-reduced-transparency: reduce){.rb-win.rb-skin-glass.rb-glass-light{--rb-glass-bg:color-mix(in srgb,var(--rb-gbg) 70%,white 30%)}}
+
+/* 팝업·대화상자·메뉴·시트·둘러보기 카드·가져오기 창도 유리(블러 조금 더 · 바탕은 더 진하게 — 글자 읽기 우선) */
+.rb-win.rb-skin-glass{--rb-pop-bg:color-mix(in srgb,color-mix(in srgb,var(--rb-gbg) 90%,white) 84%,transparent);--rb-pop-back:color-mix(in srgb,var(--rb-gbg) 50%,transparent)}
+.rb-win.rb-skin-glass.rb-glass-light{--rb-pop-bg:rgba(255,255,255,.84);--rb-pop-back:rgba(40,30,70,.22)}
+.rb-skin-glass :is(.rb-dialog,.rb-wn,.rb-menu,.rb-bsheet,.rb-tour-card,.rb-nav-menu),.rb-skin-glass #rbu-overlay .win{background:var(--rb-pop-bg);border:1px solid var(--rb-glass-line);
+  box-shadow:0 20px 50px rgba(0,0,0,.35),var(--rb-glass-hi);backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%)}
+.rb-skin-glass.rb-glass-light :is(.rb-dialog,.rb-wn,.rb-menu,.rb-bsheet,.rb-tour-card,.rb-nav-menu),.rb-skin-glass.rb-glass-light #rbu-overlay .win{box-shadow:0 20px 50px rgba(60,40,100,.18),var(--rb-glass-hi)}
+.rb-skin-glass :is(.rb-modal,.rb-bsheet-back),.rb-skin-glass #rbu-overlay{background:var(--rb-pop-back);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.rb-skin-glass.rb-lite{--rb-pop-bg:color-mix(in srgb,var(--rb-gbg) 92%,white 8%)}
+.rb-skin-glass.rb-glass-light.rb-lite{--rb-pop-bg:#fff}
+.rb-skin-glass.rb-lite :is(.rb-dialog,.rb-wn,.rb-menu,.rb-bsheet,.rb-tour-card,.rb-nav-menu,.rb-modal,.rb-bsheet-back),.rb-skin-glass.rb-lite #rbu-overlay,.rb-skin-glass.rb-lite #rbu-overlay .win{backdrop-filter:none;-webkit-backdrop-filter:none}
 `;
