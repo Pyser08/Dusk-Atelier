@@ -9,7 +9,7 @@ const st = (icon, title, text, ...target) => ({ icon, title, text, target });
 export const SCREEN_TOURS = {
   home: [
     st("brain", "지금 상태", "지금 열린 채팅의 장기 기억 상태예요. 켜져 있는지, 기록이 쌓이고 있는지 보여 줘요.", ".rb-hstats"),
-    st("search", "기능 찾기", "하고 싶은 일을 적으면 그 기능이 있는 곳을 찾아 줘요. 어느 화면에서든 오른쪽 위에 있어요. 키보드에서는 / 를 눌러도 돼요.", ".rb-ph-tools .rb-search"),
+    st("search", "기능 찾기", "하고 싶은 일을 적으면 그 기능이 있는 곳을 찾아 줘요. 다른 화면에서는 오른쪽 위 ? 옆에 있어요. 키보드에서는 / 를 눌러도 돼요.", "#rb-home-find"),
     st("upload", "바로가기", "하고 싶은 일을 골라요. ‘가져오기’는 봇·모듈 파일을 불러오고, 기억·관리·작업실은 기능을 모아 둔 곳이에요.", ".rb-hw[data-w=imp]", ".rb-hw[data-w=mem]"),
     st("history", "최근 기록", "최근에 쌓인 인물 기록이에요. 누가 무엇을 했는지 한눈에 볼 수 있어요.", ".rb-hrecent"),
     st("sliders", "홈 꾸미기", "위젯을 끌어 옮기고 모서리로 크기를 바꿔요. 안 쓰는 위젯은 숨기고, ‘기본 배치로’로 되돌릴 수 있어요.", "#rb-home-edit"),

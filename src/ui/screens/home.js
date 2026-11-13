@@ -32,7 +32,14 @@ export async function renderHome(ctx) {
   const host = h("div", { class: "rb-home rb-home4 rb-scroll" });
   replace(ctx.main, host);
   // 기능 찾기: 위 검색창에 낱말을 적으면 홈 대신 찾은 기능 목록을 보여 준다(지우면 홈으로).
-  if (String(ctx.state.search ?? "").trim()) return renderFeatureFind(ctx, host, ctx.state.search);
+  if (String(ctx.state.search ?? "").trim()) {
+    // 찾기 결과 위에도 같은 칸을 둬서 이어서 적을 수 있게(포커스 유지)
+    const top = h("div", { class: "rb-hfind rb-hfind-top", id: "rb-home-find" });
+    renderFeatureFind(ctx, host, ctx.state.search);
+    host.prepend(top);
+    ctx.mountSearch?.(top);
+    return;
+  }
   const redraw = () => renderHome(ctx);
 
   // ── 위젯: 모양을 먼저 만들고 읽은 정보는 나중에 채운다(바로가기는 처음부터 누를 수 있음) ──
@@ -89,12 +96,15 @@ export async function renderHome(ctx) {
   const titleEl = h("h1", null, bar("min(240px,60%)", 22));
   const headEl = h("div", { class: "rb-hhead", "aria-busy": "true" }, h("div", { class: "t" }, h("small", null, "지금 열린 채팅"), titleEl));
   const statusEl = h("section", { class: "rb-hstats", "aria-label": "장기 기억 상태", "aria-busy": "true" }, bar("min(320px,70%)"));
+  // 기능 찾기 칸: 앱의 검색 칸을 여기(가운데)로 옮겨 붙인다(다른 탭에선 오른쪽 위로 돌아감)
+  const findSlot = h("div", { class: "rb-hfind", id: "rb-home-find" });
   const notice = !ctx.prefs.advanced && ctx.prefs.ui?.tourDone && !ctx.prefs.ui?.simpleNoticeDone ? simpleNotice(ctx, redraw) : null;
   const foot = h("div", { class: "rb-home-foot" },
     h("button", { type: "button", class: "rb-btn ghost sm", id: "rb-home-tour", onClick: () => openTour(ctx) }, icon("help", 14), "처음 둘러보기"),
     h("button", { type: "button", class: "rb-btn ghost sm", onClick: () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록") }, icon("history", 14), `v${ctx.version} · 새로 바뀐 점`));
-  replace(host, h("div", { class: "rb-hfocus" }, editBtn, headEl, statusEl), notice, tray, G.el, foot);
+  replace(host, h("div", { class: "rb-hfocus" }, editBtn, headEl, statusEl, findSlot), notice, tray, G.el, foot);
   G.draw();
+  ctx.mountSearch?.(findSlot);
 
   // 추천(기능 맛보기): 있으면 위젯을 보인다
   const fillDisc = () => discoverCard(ctx, { onChange: fillDisc }).then((c) => { replace(discEl, ...(c ? [c] : [])); if (avail.disc !== !!c) { avail.disc = !!c; G.setAvail(availIds()); } }).catch(() => {});

@@ -68,8 +68,8 @@ export var GLASS_CSS = `
 @media (prefers-reduced-transparency: reduce){.rb-win.rb-skin-glass.rb-glass-light{--rb-glass-bg:color-mix(in srgb,var(--rb-gbg) 70%,white 30%)}}
 
 /* 팝업·대화상자·메뉴·시트·둘러보기 카드·가져오기 창도 유리(블러 조금 더 · 바탕은 더 진하게 — 글자 읽기 우선) */
-.rb-win.rb-skin-glass{--rb-pop-bg:color-mix(in srgb,color-mix(in srgb,var(--rb-gbg) 90%,white) 84%,transparent);--rb-pop-back:color-mix(in srgb,var(--rb-gbg) 50%,transparent)}
-.rb-win.rb-skin-glass.rb-glass-light{--rb-pop-bg:rgba(255,255,255,.84);--rb-pop-back:rgba(40,30,70,.22)}
+.rb-win.rb-skin-glass{--rb-pop-bg:color-mix(in srgb,color-mix(in srgb,var(--rb-gbg) 88%,white) 66%,transparent);--rb-pop-back:color-mix(in srgb,var(--rb-gbg) 36%,transparent)}
+.rb-win.rb-skin-glass.rb-glass-light{--rb-pop-bg:rgba(255,255,255,.68);--rb-pop-back:rgba(40,30,70,.18)}
 .rb-skin-glass :is(.rb-dialog,.rb-wn,.rb-menu,.rb-bsheet,.rb-tour-card,.rb-nav-menu),.rb-skin-glass #rbu-overlay .win{background:var(--rb-pop-bg);border:1px solid var(--rb-glass-line);
   box-shadow:0 20px 50px rgba(0,0,0,.35),var(--rb-glass-hi);backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%)}
 .rb-skin-glass.rb-glass-light :is(.rb-dialog,.rb-wn,.rb-menu,.rb-bsheet,.rb-tour-card,.rb-nav-menu),.rb-skin-glass.rb-glass-light #rbu-overlay .win{box-shadow:0 20px 50px rgba(60,40,100,.18),var(--rb-glass-hi)}

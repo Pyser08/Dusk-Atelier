@@ -27,6 +27,9 @@ await page.locator(".rb-nav-sec.sec-manage").click(); await page.waitForTimeout(
 ok("섹션 제목 누르면 펼침 + 저장", (await page.locator(".rb-nav-sec.sec-manage").getAttribute("aria-expanded")) === "true" && (await ui()).navOpen?.includes("manage"));
 await page.locator(".rb-nav a[data-tab=modules]").click(); await page.waitForTimeout(600);
 ok("메뉴 눌러 이동 · 그 섹션 펼침 · 섹션 색 띠", (await page.locator(".rb-nav a[data-tab=modules]").getAttribute("aria-current")) === "page" && await page.locator(".rb-nav-sec.sec-manage.here").count() === 1);
+await page.mouse.move(900, 500); await page.waitForTimeout(350);
+ok("메뉴를 누른 뒤에도 마우스를 떼면 접힘(호버 때만 펼침)", (await navW()) < 90, String(await navW()));
+await page.hover(".rb-nav"); await page.waitForTimeout(300);
 await page.locator(".rb-nav-sec.sec-manage").click(); await page.waitForTimeout(300);
 ok("지금 섹션은 눌러도 펼친 채", (await page.locator(".rb-nav-sec.sec-manage").getAttribute("aria-expanded")) === "true" && !(await ui()).navOpen?.includes("manage"));
 ok("접힌 섹션 메뉴도 남아 있음(기억 → 코코아 이동 가능)", (await page.locator(".rb-nav a[data-tab=cocoa]").count()) === 1);
@@ -61,18 +64,21 @@ await page.hover(".rb-nav"); await page.locator(".rb-nav-sec.sec-memory").click(
 await page.evaluate(() => window.__app.ctx.go("home")); await page.waitForTimeout(500);
 ok("홈으로 오면 사이드바 섹션이 모두 닫힘 + 저장", (await page.locator(".rb-nav-sec[aria-expanded=true]").count()) === 0 && ((await ui()).navOpen ?? []).length === 0);
 // 기능 찾기: 모든 탭 오른쪽 위
-for (const tab of ["home", "memory", "cocoa", "tools", "settings"]) {
+await page.evaluate(() => window.__app.ctx.go("home")); await page.waitForTimeout(400);
+ok("홈: 기능 찾기 칸은 가운데(오른쪽 위 머리 줄 없음)", await page.evaluate(() => { const i = document.querySelector("#rb-home-find .rb-search input"); return !!i && !!i.offsetParent && !document.querySelector(".rb-pagehead").offsetParent; }));
+for (const tab of ["memory", "cocoa", "tools", "settings"]) {
   await page.evaluate((t) => window.__app.ctx.go(t), tab); await page.waitForTimeout(400);
   const v = await page.evaluate(() => { const i = document.querySelector(".rb-ph-tools .rb-search input"); return i && i.offsetParent ? i.getAttribute("aria-label") : null; });
   ok(`기능 찾기 칸이 오른쪽 위에 보임(${tab})`, v === "기능 찾기", String(v));
 }
 await page.locator(".rb-ph-tools .rb-search input").fill("테마"); await page.waitForTimeout(500);
 ok("다른 탭에서 기능 찾기에 적으면 홈의 기능 찾기 목록으로", await page.evaluate(() => window.__app.ctx.state.tab === "home" && window.__app.ctx.state.search === "테마"));
-await page.locator(".rb-ph-tools .rb-search input").fill(""); await page.waitForTimeout(300);
+{ const st = await page.evaluate(() => ({ ff: !!document.querySelector("#rb-ff"), slot: !!document.querySelector("#rb-home-find .rb-search input"), act: document.activeElement?.tagName + "." + document.activeElement?.className })); ok("홈 찾기 결과 위에도 같은 칸(이어서 적기)", st.ff && st.slot && st.act.startsWith("INPUT"), JSON.stringify(st)); }
+await page.locator(".rb-search input").fill(""); await page.waitForTimeout(300);
 await page.evaluate(() => window.__app.ctx.go("modules")); await page.waitForTimeout(400);
 ok("목록 검색이 있는 탭(모듈): 목록 검색 칸 + ? 옆 기능 찾기 단추", (await page.locator(".rb-ph-tools .rb-search input").getAttribute("aria-label")) === "검색" && await page.locator("#rb-find-btn").isVisible());
 await page.locator("#rb-find-btn").click(); await page.waitForTimeout(500);
-ok("기능 찾기 단추 → 홈 + 칸에 포커스", await page.evaluate(() => window.__app.ctx.state.tab === "home" && document.activeElement === document.querySelector(".rb-ph-tools .rb-search input")));
+ok("기능 찾기 단추 → 홈 가운데 칸에 포커스", await page.evaluate(() => window.__app.ctx.state.tab === "home" && document.activeElement === document.querySelector("#rb-home-find .rb-search input")));
 // 팝업도 유리
 page.evaluate(() => window.__app.ctx.confirmAnywhere({ title: "확인", body: "유리 팝업 시험" })); await page.waitForTimeout(300);
 const pop = await page.evaluate(() => { const d = document.querySelector(".rb-dialog"); if (!d) return null; const c = getComputedStyle(d); return { bf: c.backdropFilter, bg: c.backgroundColor }; });

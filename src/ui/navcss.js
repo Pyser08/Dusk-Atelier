@@ -41,17 +41,17 @@ export var NAV_CSS = `
 .rb-nav-menu-lab{font-size:11px;color:var(--rb-mute);padding:2px 10px 4px}
 .rb-nav-menu .rb-layseg{margin:0 6px 6px;align-self:flex-start}
 .rb-nav-menu-tip{font-size:11.5px;color:var(--rb-mute);padding:6px 10px 2px;white-space:normal;line-height:1.5}
-/* 레일(늘 펼침이 아닐 때): 아이콘만, 올리거나 포커스하면 내용 위로 펼침 */
+/* 레일(늘 펼침이 아닐 때): 아이콘만, 마우스를 올린 동안만 내용 위로 펼침(떼면 접힘). 키보드로 들어오면 .rb-nav-kbd */
 @media (min-width:761px){
   .rb-win:not(.rb-nav-pinned) .rb-navwrap{width:calc(68px + var(--nav-pl,0px))}
   .rb-win:not(.rb-nav-pinned) .rb-nav{position:absolute;top:0;bottom:var(--nav-pb,0px);left:var(--nav-pl,0px);width:68px;z-index:30;padding:14px 10px;transition:width .18s ease,box-shadow .18s}
-  .rb-win:not(.rb-nav-pinned) .rb-nav:hover,.rb-win:not(.rb-nav-pinned) .rb-nav:focus-within{width:216px;box-shadow:var(--rb-shadow)}
-  .rb-win:not(.rb-nav-pinned) .rb-nav:not(:hover):not(:focus-within) :is(a>span,a>small,.rb-nav-sec .t,.rb-nav-sec .chev,.rb-nav-mini .t,.rb-nav-more){opacity:0;pointer-events:none}
-  .rb-win:not(.rb-nav-pinned) .rb-nav:not(:hover):not(:focus-within) .rb-nav-group{margin-left:0;padding-left:0;border-left-color:transparent}
-  .rb-win:not(.rb-nav-pinned) .rb-nav:not(:hover):not(:focus-within) .rb-nav-group a{padding:0 14px;box-shadow:none}
-  .rb-win:not(.rb-nav-pinned) .rb-nav:not(:hover):not(:focus-within) .rb-nav-mini{background:none;padding:6px 7px}
+  .rb-win:not(.rb-nav-pinned) .rb-nav:hover{width:216px;box-shadow:var(--rb-shadow)}
+  .rb-win:not(.rb-nav-pinned) .rb-nav:not(:hover) :is(a>span,a>small,.rb-nav-sec .t,.rb-nav-sec .chev,.rb-nav-mini .t,.rb-nav-more){opacity:0;pointer-events:none}
+  .rb-win:not(.rb-nav-pinned) .rb-nav:not(:hover) .rb-nav-group{margin-left:0;padding-left:0;border-left-color:transparent}
+  .rb-win:not(.rb-nav-pinned) .rb-nav:not(:hover) .rb-nav-group a{padding:0 14px;box-shadow:none}
+  .rb-win:not(.rb-nav-pinned) .rb-nav:not(:hover) .rb-nav-mini{background:none;padding:6px 7px}
   .rb-win.rb-calm:not(.rb-nav-pinned) .rb-nav{transition:none}
-  .rb-skin-glass:not(.rb-nav-pinned) .rb-nav:hover,.rb-skin-glass:not(.rb-nav-pinned) .rb-nav:focus-within{background:color-mix(in srgb,var(--rb-gbg) 80%,transparent)}
+  .rb-skin-glass:not(.rb-nav-pinned) .rb-nav:hover{background:color-mix(in srgb,var(--rb-gbg) 80%,transparent)}
 }
 
 /* 위쪽 메뉴(.rb-lay-top): 홈 + 섹션 알약(색) · 섹션 메뉴는 아래 칩 줄 · ⋯ 메뉴 */
@@ -105,9 +105,14 @@ export var NAV_CSS = `
 .rb-gpick[aria-pressed=true]{color:var(--rb-text);font-weight:700;border-color:var(--rb-sel-ring);box-shadow:0 0 0 1px var(--rb-sel-ring)}
 @media (hover:hover){.rb-gpick:hover{color:var(--rb-text);border-color:var(--rb-line3)}}
 
-/* 기능 찾기: 모든 탭 오른쪽 위(? 옆). 홈에서도 머리 줄을 보이되 위치 글자는 숨김 */
-.rb-win .rb-nosearch .rb-ph-tools .rb-search,.rb-nosearch .rb-ph-tools .rb-search{display:flex}
-.rb-is-home .rb-pagehead{display:flex}
-.rb-is-home .rb-ph-text{visibility:hidden}
-@media (max-width:760px){.rb-is-home .rb-ph-text{display:none}.rb-is-home .rb-ph-tools{width:100%}}
+/* 기능 찾기: 홈은 가운데(포커스 머리 안), 다른 탭은 오른쪽 위(? 옆) */
+.rb-nosearch .rb-ph-tools .rb-search{display:flex}
+.rb-hfind{width:min(560px,100%)}
+.rb-hfind-top{margin:6px auto 4px}
+.rb-hfind .rb-search{width:100%;max-width:none;height:48px;padding:0 18px;font-size:15px;background:var(--rb-glass-bg,var(--rb-surf));border:1px solid var(--rb-glass-line,var(--rb-line2));box-shadow:var(--rb-glass-hi,none)}
+
+@media (min-width:761px){
+  .rb-win:not(.rb-nav-pinned) .rb-nav.rb-nav-kbd{width:216px;box-shadow:var(--rb-shadow)}
+  .rb-win:not(.rb-nav-pinned) .rb-nav.rb-nav-kbd :is(a>span,a>small,.rb-nav-sec .t,.rb-nav-sec .chev,.rb-nav-mini .t,.rb-nav-more){opacity:1;pointer-events:auto}
+}
 `;

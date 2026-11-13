@@ -53,7 +53,9 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   doc.body.appendChild(root);
   const searchInput = h("input", { type: "search", placeholder: "검색", "aria-label": "검색" });
   let searchTimer = null;
+  let lastTyped = 0;
   searchInput.addEventListener("input", (e) => {
+    lastTyped = Date.now();
     // 기능 찾기 칸(목록 검색이 없는 탭)에서 적으면 홈의 기능 찾기 목록으로 간다
     if (state.findMode && state.tab !== "home" && e.target.value.trim()) { const q = e.target.value; go("home"); state.search = q; searchInput.value = q; searchInput.focus(); }
     state.search = e.target.value;
@@ -243,6 +245,11 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const navWrap = h("div", { class: "rb-navwrap" });
   const paintPin = () => win.classList.toggle("rb-nav-pinned", prefs.ui?.navPinned === true);
   let navMenuOpen = false;
+  // 레일: 마우스를 떼면 접히므로 ⋯ 메뉴도 닫는다. 키보드(Tab)로 들어오면 펼치고, 나가면 접는다
+  nav.addEventListener("mouseleave", () => { shutNavMenu?.(); nav.classList.remove("rb-nav-kbd"); });
+  nav.addEventListener("keyup", (e) => { if (e.key === "Tab") nav.classList.add("rb-nav-kbd"); });
+  nav.addEventListener("focusout", (e) => { if (!nav.contains(e.relatedTarget)) nav.classList.remove("rb-nav-kbd"); });
+  nav.addEventListener("pointerdown", () => nav.classList.remove("rb-nav-kbd"));
   // ⋯ 메뉴 밖을 누르거나 Esc면 닫는다
   const shutNavMenu = () => { if (!navMenuOpen) return; navMenuOpen = false; navFoot.querySelector(".rb-nav-menu")?.setAttribute("hidden", ""); navFoot.querySelector(".rb-nav-more")?.setAttribute("aria-expanded", "false"); };
   win.addEventListener("click", (e) => { if (!e.target.closest?.(".rb-nav-foot")) shutNavMenu(); });
@@ -257,11 +264,22 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const helpBtn = iconBtn("help", "이 화면 설명", { boxed: true, id: "rb-help-btn", onClick: () => toggleHelp() });
   // 목록 검색이 있는 탭에서도 기능 찾기는 ? 옆 단추로(누르면 홈의 기능 찾기 칸)
   const findBtn = iconBtn("sparkle", "기능 찾기", { boxed: true, id: "rb-find-btn", onClick: () => { go("home"); setTimeout(() => searchInput.focus(), 0); } });
+  // 검색 칸 하나를 홈(가운데 '기능 찾기')과 다른 탭(오른쪽 위 ? 옆)이 함께 쓴다 — 옮겨 붙일 때 입력 중이면 포커스·커서 유지
+  const searchLabel = h("label", { class: "rb-search" }, icon("search", 16), searchInput, h("span", { class: "rb-kbd", "aria-hidden": "true" }, "/"));
+  const phTools = h("div", { class: "rb-ph-tools" }, searchLabel, findBtn, helpBtn);
+  const placeSearch = (parent, before = null) => {
+    if (!parent || searchLabel.parentNode === parent) return;
+    // 다시 그리기로 칸이 잠깐 빠졌다 돌아오면 포커스가 사라지므로, 방금(1.5초 안) 적고 있었으면 다시 포커스
+    const had = doc.activeElement === searchInput || Date.now() - lastTyped < 1500;
+    const a = searchInput.selectionStart ?? searchInput.value.length, b = searchInput.selectionEnd ?? a;
+    parent.insertBefore(searchLabel, before);
+    if (had) { searchInput.focus(); try { searchInput.setSelectionRange(a, b); } catch { /* type=search 일부 브라우저 */ } }
+  };
   const pagehead = h(
     "div",
     { class: "rb-pagehead" },
     h("div", { class: "rb-ph-text" }, crumb, phDesc),
-    h("div", { class: "rb-ph-tools" }, h("label", { class: "rb-search" }, icon("search", 16), searchInput, h("span", { class: "rb-kbd", "aria-hidden": "true" }, "/")), findBtn, helpBtn)
+    phTools
   );
   const col = h("div", { class: "rb-col" }, moreHost, pagehead, main);
   navWrap.append(nav);
@@ -519,6 +537,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     state.findMode = !showSearch;
     win.classList.toggle("rb-nosearch", !showSearch);
     findBtn.hidden = !showSearch;
+    if (state.tab !== "home") placeSearch(phTools, findBtn);   // 홈이 가운데로 가져갔던 칸을 되돌림
     win.classList.toggle("rb-is-home", state.tab === "home");
     paintHead();
     replace(detail3);
@@ -614,6 +633,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const ctx = {
     api,
     confirmAnywhere,
+    // 홈이 검색 칸(기능 찾기)을 자기 자리에 붙인다
+    mountSearch: (slot) => placeSearch(slot),
     prefs,
     svc,
     assets,

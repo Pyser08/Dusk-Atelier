@@ -18,8 +18,8 @@ for (const [tag, vp, cols] of [["PC", { width: 1280, height: 860 }, 6], ["모바
   const saved = () => page.evaluate((c) => JSON.parse(__api.store["rbm:ui:v1"] ?? "{}").homeGrid?.[c] ?? null, cols).catch(() => null);
   ok(`[${tag}] 글래스 화면 켜짐(어두운 모드)`, await page.evaluate(() => document.querySelector(".rb-win").classList.contains("rb-skin-glass")));
   if (tag === "모바일") ok("[모바일] ‘홈 꾸미기’가 제목과 같은 줄 오른쪽(빈 줄 없음)", await page.evaluate(() => { const e = document.querySelector("#rb-home-edit").getBoundingClientRect(), t = document.querySelector(".rb-hfocus .rb-hhead").getBoundingClientRect(); return e.top < t.bottom && e.left > t.left + t.width / 2; }));
-  ok(`[${tag}] 홈 화면 둘러보기 단계가 가리키는 칸이 모두 있음`, await page.evaluate(() => [".rb-hstats", ".rb-ph-tools .rb-search", ".rb-hw[data-w=imp]", ".rb-hrecent", "#rb-home-edit", "#rb-home-tour", "#rb-help-btn"].every((q) => document.querySelector(q))));
-  ok(`[${tag}] 포커스 머리: 제목·장기 기억 줄·찾기 칸·꾸미기 버튼`, await page.evaluate(() => !!document.querySelector(".rb-hfocus .rb-hhead h1") && !!document.querySelector(".rb-hfocus .rb-hstat-memory") && !!document.querySelector(".rb-ph-tools .rb-search input") && !!document.querySelector("#rb-home-edit")));
+  ok(`[${tag}] 홈 화면 둘러보기 단계가 가리키는 칸이 모두 있음`, await page.evaluate(() => [".rb-hstats", "#rb-home-find .rb-search", ".rb-hw[data-w=imp]", ".rb-hrecent", "#rb-home-edit", "#rb-home-tour", "#rb-help-btn"].every((q) => document.querySelector(q))));
+  ok(`[${tag}] 포커스 머리: 제목·장기 기억 줄·찾기 칸·꾸미기 버튼`, await page.evaluate(() => !!document.querySelector(".rb-hfocus .rb-hhead h1") && !!document.querySelector(".rb-hfocus .rb-hstat-memory") && !!document.querySelector("#rb-home-find .rb-search input") && !!document.querySelector("#rb-home-edit")));
   let L = await boxes();
   ok(`[${tag}] 위젯 ${L.length}개 겹치지 않음`, L.length >= 11 && noOverlap(L), JSON.stringify(L.map((b) => b.id)));
   // 꾸미기 전에는 끌어도 안 움직이고 바로가기는 눌린다
