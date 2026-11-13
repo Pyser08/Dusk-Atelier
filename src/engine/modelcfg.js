@@ -90,3 +90,19 @@ export function potModels(cfg) {
   const stages = Object.fromEntries(STAGES.map((s) => [s, picks[s] && cfg.stages[s].mode === "dedicated" ? { mode: "dedicated", preset: presetOf(cfg, cfg.stages[s].presetId) } : { mode: "shared" }]));
   return { useRisuSubmodel: false, shared, stages };
 }
+
+// 주소 칸을 비운 '내 API' 프리셋은 공급자 기본 주소로 부른다(화면 안내 "비우면 기본 주소"). Custom·Vertex는 기본 주소가 없다.
+const DEFAULT_BASE_URL = {
+  openrouter: "https://openrouter.ai/api/v1", copilot: "https://api.githubcopilot.com", openai: "https://api.openai.com/v1",
+  google: "https://generativelanguage.googleapis.com/v1beta/openai", claude: "https://api.anthropic.com/v1",
+  deepseek: "https://api.deepseek.com", ollama: "https://ollama.com/v1", llmgateway: "https://api.llmgateway.io/v1",
+};
+export function withDefaultBaseUrl(preset) {
+  if (!preset || String(preset.baseUrl ?? "").trim() || !DEFAULT_BASE_URL[preset.provider]) return preset;
+  return { ...preset, baseUrl: DEFAULT_BASE_URL[preset.provider] };
+}
+// 쉬운 설정의 '내 API' 저장값. 주소 칸이 없는 공급자는 고급 설정에서 넣은 주소를 지우지 않는다(공급자가 바뀌면 비움).
+export function easyApiPatch(prev, { provider, model, url = "", needsUrl = false }) {
+  const keep = prev?.provider === provider ? String(prev?.baseUrl ?? "") : "";
+  return { provider, model: String(model ?? "").trim(), baseUrl: needsUrl ? String(url ?? "").trim() : keep };
+}

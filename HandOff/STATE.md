@@ -1215,3 +1215,9 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 
 - [x] 장기기억 애드온 0.2.11 배포(11-12 17시 반, 사용자 지시): 게이지 상자 여백. 다른 애드온은 빌드물 변화 없음.
 - ⚠ publish-addons.mjs를 돌리니 버전 그대로인 aibuild·cards·chattheme·provider 빌드물과 미배포 sdstudio.js까지 실림 → addons 브랜치를 손으로 되돌려 memory만 남김(2b1edad). **publish-addons 쓰지 말 것**(원인 미확인, 같은 버전인데 빌드 해시가 다름).
+
+## 버그리포트 대응 (11-13, perf/startup에서 작업)
+- [x] 내 API Base URL: 빈 주소 → 공급자 기본 주소(`modelcfg.withDefaultBaseUrl`, modelhub의 presetOf가 적용). 쉬운 설정 saveApi가 주소를 지우던 것 → `easyApiPatch`(같은 공급자면 유지). 시험 tests/modelhub.test.js 2개 추가(고치기 전 실패 확인). v2.1.9·장기기억 애드온 0.2.12로 올림(배포 안 함: 태그 푸시·publish-addons 미실행).
+- [x] 나머지 4건(시험 tests/bugreport-1113.test.js 4개, 고치기 전 4개 실패 확인): ① pot-patches relationship-mode 'on'에 cycle.state ② pot-patches cycle-tracking: 기준일 없으면 임시 연도 2000, 연도 있는 날짜(full) 나오면 2000- 기준에서 옮겨 감 ③ 원인은 Dusk `cyclereport.js`가 `new:cycle-N-<한글이름>` 참조를 만들어 new: ASCII 검증에서 제안 전체가 거부 → 문서 ID(ASCII 정리)로 ④ pot-patches main-wiki-hook: `databaseMatched`에 `evidence.matched` 추가(경고 표시는 안 함). 재생성 `node tools/pot-split.mjs`, --check 0개.
+- e2e는 Playwright 브라우저(chromium_headless_shell-1254) 미설치로 못 돌림. ④는 훅 단위 시험이 없어 소스 확인 시험만 있음.
+- 참고: npm test 기존 실패 3개(pot-port, watch-light, GitHub 릴리스 태그 네트워크)는 이번 변경 전에도 실패.

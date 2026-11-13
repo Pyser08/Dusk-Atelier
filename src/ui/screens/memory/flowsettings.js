@@ -11,7 +11,7 @@ import { advancedModel } from "./modeladv.js";
 import { healDeps, depState } from "../../../engine/settingdeps.js";
 import { LEVELS, FEATURE_CARDS, applyLevel, levelOf, levelPatch, summaryOf, needsOf } from "../../../engine/trackpreset.js";
 import { getCfg, saveCfg, keyStore, testPreset, listModels, getUsage, resetUsage } from "../../../data/modelhub.js";
-import { addPreset, updatePreset, removePreset, presetOf, STAGES, STAGE_LABEL } from "../../../engine/modelcfg.js";
+import { addPreset, updatePreset, removePreset, presetOf, easyApiPatch, STAGES, STAGE_LABEL } from "../../../engine/modelcfg.js";
 
 const PROVIDERS = [["openai", "OpenAI"], ["claude", "Claude"], ["google", "Google"], ["deepseek", "DeepSeek"], ["openrouter", "OpenRouter"], ["ollama", "Ollama"], ["custom", "직접 입력(OpenAI 호환)"]];
 const NEEDS_URL = new Set(["ollama", "custom"]);
@@ -86,9 +86,9 @@ export async function flowSections(ctx, host, { redraw }) {
     const out = h("div", { class: "rb-muted", role: "status" });
     const saveApi = async () => {
       let c = await getCfg(ctx.api);
-      const over = { provider: prov.value, model: model.value.trim(), baseUrl: NEEDS_URL.has(prov.value) ? url.value.trim() : "" };
-      if (!over.model) throw new Error("모델 이름을 적어 주세요.");
       let id = c.easy.presetId;
+      const over = easyApiPatch(id ? presetOf(c, id) : null, { provider: prov.value, model: model.value, url: url.value, needsUrl: NEEDS_URL.has(prov.value) });
+      if (!over.model) throw new Error("모델 이름을 적어 주세요.");
       if (id && presetOf(c, id)) c = updatePreset(c, id, { ...presetOf(c, id), ...over });
       else { const r = addPreset(c, "내 API", over.model, over); c = r.cfg; id = r.id; }
       if (key.value.trim()) await keys.set(prov.value, key.value.trim());

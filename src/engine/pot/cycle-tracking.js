@@ -28,16 +28,16 @@ export function storyDateFromText(text, previous = '') {
   lines.forEach((line, index) => {
     const status = line.trim().length <= 80 || /[\[\]【】|]/.test(line);
     const full = [...line.matchAll(CYCLE_FULL_DATE)];
-    for (const m of full) if (cycleValidDate(+m[1], +m[2], +m[3])) found.push({ iso: cycleIsoDate(+m[1], +m[2], +m[3]), status, index });
+    for (const m of full) if (cycleValidDate(+m[1], +m[2], +m[3])) found.push({ iso: cycleIsoDate(+m[1], +m[2], +m[3]), status, index, full: true });
     if (full.length) return;
     for (const m of line.matchAll(CYCLE_MONTH_DAY)) {
-      const base = /^\d{4}/.exec(previous)?.[0]; if (!base) continue;
+      const base = /^\d{4}/.exec(previous)?.[0] || '2000';
       let y = +base; if (!cycleValidDate(y, +m[1], +m[2])) continue;
       let iso = cycleIsoDate(y, +m[1], +m[2]); if (cycleDayNumber(iso) < cycleDayNumber(previous) - 180) iso = cycleIsoDate(++y, +m[1], +m[2]);
       found.push({ iso, status, index });
     }
   });
-  const usable = found.filter(item => !previous || (cycleDayNumber(item.iso) >= cycleDayNumber(previous) && cycleDayNumber(item.iso) <= cycleDayNumber(previous) + 366));
+  const usable = found.filter(item => !previous || (item.full && previous.startsWith('2000-')) || (cycleDayNumber(item.iso) >= cycleDayNumber(previous) && cycleDayNumber(item.iso) <= cycleDayNumber(previous) + 366));
   const pick = usable.find(item => item.status) || usable[0];
   return pick ? pick.iso : '';
 }
@@ -137,11 +137,11 @@ export function nextCycleState(previous, report, date, { rate = 1, random = Math
 const CYCLE_WRITER = [
   '[MENSTRUAL CYCLE · REPORT LINES]',
   'The user switched on cycle tracking. The program keeps each woman\'s cycle, decides by chance whether she becomes pregnant, and counts the pregnancy stages. You only report what the RP shows, as extra lines at the very end of that woman\'s core.current_state entry text. The program removes these lines before saving.',
-  '- When you write core.current_state for a woman who is clearly an adult, add the line: CYCLE: adult woman',
+  '- When you write core.current_state for a woman, add the line: CYCLE: adult woman',
   '- When the RP shows this woman having vaginal intercourse with a man in this turn, write her core.current_state and add one line per partner: SEX: <partner name> | contraception: used   (only when the RP clearly shows contraception) or SEX: <partner name> | contraception: none   (in every other case, including when contraception is not mentioned).',
   '- When she learns in this turn that she is pregnant: PREGNANCY KNOWN',
   '- When she gives birth in this turn: BIRTH',
-  'Never add these lines for anyone who is not clearly an adult woman. Do not decide yourself whether she is pregnant and do not invent cycle days or due dates; the program does that. Other characters learning about a pregnancy is ordinary knowledge and goes to core.knowledge as usual.',
+  'Do not decide yourself whether she is pregnant and do not invent cycle days or due dates; the program does that. Other characters learning about a pregnancy is ordinary knowledge and goes to core.knowledge as usual.',
 ].join('\n');
 const CYCLE_DIRECTOR = [
   '[MENSTRUAL CYCLE · PROGRAM RECORD]',

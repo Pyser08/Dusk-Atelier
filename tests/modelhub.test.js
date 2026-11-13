@@ -77,3 +77,25 @@ test("runAI custom: 없는 프리셋·기존 보조 모델 경로", async () => 
   const api = mockApi();
   await assert.rejects(() => runAI(api, [{ role: "user", content: "x" }], { mode: "custom", presetId: "none" }), /프리셋/);
 });
+
+test("내 API: 주소를 비우면 공급자 기본 주소로 호출(OpenRouter·Google)", async () => {
+  for (const [provider, host] of [["openrouter", /openrouter\.ai\/api\/v1\/chat\/completions$/], ["google", /generativelanguage\.googleapis\.com\/v1beta\/openai\/chat\/completions$/]]) {
+    const api = mockApi();
+    const a = addPreset(await getCfg(api), "내 API", "m-1", { provider, baseUrl: "" });
+    await saveCfg(api, { ...a.cfg, easy: { kind: "api", presetId: a.id } });
+    const ks = await keyStore(api); await ks.set(provider, "k-test");
+    const out = await runAI(api, [{ role: "user", content: "안녕" }], { mode: "custom", presetId: a.id });
+    assert.equal(out, "안녕하세요");
+    assert.match(api.calls.find((x) => x.url).url, host);
+    assert.notEqual((await testPreset(api, a.id)).ok, false);
+  }
+});
+
+test("쉬운 설정 저장이 고급 설정의 주소를 지우지 않음", async () => {
+  const { easyApiPatch } = await import("../src/engine/modelcfg.js");
+  const prev = { provider: "openrouter", model: "a", baseUrl: "https://my.proxy/v1" };
+  assert.equal(easyApiPatch(prev, { provider: "openrouter", model: " b ", url: "" }).baseUrl, "https://my.proxy/v1");
+  assert.equal(easyApiPatch(prev, { provider: "google", model: "b" }).baseUrl, "");
+  assert.equal(easyApiPatch(prev, { provider: "custom", model: "b", url: " https://x/v1 ", needsUrl: true }).baseUrl, "https://x/v1");
+  assert.equal(easyApiPatch(null, { provider: "openrouter", model: " b " }).model, "b");
+});
