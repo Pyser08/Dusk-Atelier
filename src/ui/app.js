@@ -155,6 +155,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   // 2.2.0 사이드바: 섹션 제목을 눌러 접고 펴기(지금 섹션은 늘 펼침) · 섹션 색 · 아이콘만 보이는 레일(올리면 펼침, 핀으로 고정)
   let currentSection = null, navGroup = null;
   const navSecs = /* @__PURE__ */ new Map();
+  let navTabSeen = null;   // 마지막으로 그린 탭(탭이 바뀔 때만 손으로 펼친 섹션을 닫음)
   const navOpen = new Set(Array.isArray(prefs.ui?.navOpen) ? prefs.ui.navOpen : []);
   const paintSecs = () => {
     const act = TABS.find((t) => t.id === state.tab)?.section;
@@ -466,6 +467,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     // 모바일 아래 탭바: 보일 탭이 하나도 없는 묶음(예: 관리 애드온·ProtLink+가 다 없을 때 '관리')은 숨긴다
     for (const section of SECTION_IDS) { const live = TABS.some((t) => t.section === section && !t.mobileOnly && !tabHidden(t, prefs.ui) && (!t.dev || prefs.ui?.devMode)); const tb = topLinks.get(`section:${section}`); if (tb) tb.hidden = !live; }
     for (const section of SECTION_IDS) { const b = barLinks.get(`section:${section}`); if (b) b.hidden = !TABS.some((t) => t.section === section && !t.mobileOnly && !tabHidden(t, prefs.ui) && (!t.dev || prefs.ui?.devMode)); }
+    paintSecs();   // 애드온이 늦게 켜져도 섹션 제목(관리 등)이 바로 보이게
     if (state.tab === "provider" && !prefs.ui?.experimental) go("tools");
     win.classList.toggle("rb-has-dev", on);
     if (!on && state.tab === "dev") go("tools");
@@ -504,8 +506,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     win.classList.toggle("rb-on-hub", String(state.tab).endsWith("-home"));
     const activeSection = TABS.find((t) => t.id === state.tab)?.section;
     win.dataset.sec = activeSection ?? "home";   // 섹션 색(칩 줄·탭바)
-    // 홈으로 오면 사이드바에 펼쳐 둔 섹션을 모두 닫는다
-    if (state.tab === "home" && navOpen.size) { navOpen.clear(); prefs.saveUi?.({ navOpen: [] })?.catch?.(() => {}); }
+    // 다른 탭으로 옮기면 사이드바는 그 탭이 든 섹션만 펼친다(손으로 펼쳐 둔 다른 섹션은 닫음, 홈이면 모두 닫힘)
+    if (state.tab !== navTabSeen) { navTabSeen = state.tab; if (navOpen.size) { navOpen.clear(); prefs.saveUi?.({ navOpen: [] })?.catch?.(() => {}); } }
     replace(moreHost, moreNav(TABS.filter((t) => t.section === activeSection && !tabHidden(t, prefs.ui) && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
     for (const links of [navLinks, topLinks, barLinks]) for (const [id, a] of links) {
       const activeTab = TABS.find((t) => t.id === state.tab);

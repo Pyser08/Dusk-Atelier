@@ -31,7 +31,12 @@ await page.mouse.move(900, 500); await page.waitForTimeout(350);
 ok("메뉴를 누른 뒤에도 마우스를 떼면 접힘(호버 때만 펼침)", (await navW()) < 90, String(await navW()));
 await page.hover(".rb-nav"); await page.waitForTimeout(300);
 await page.locator(".rb-nav-sec.sec-manage").click(); await page.waitForTimeout(300);
-ok("지금 섹션은 눌러도 펼친 채", (await page.locator(".rb-nav-sec.sec-manage").getAttribute("aria-expanded")) === "true" && !(await ui()).navOpen?.includes("manage"));
+ok("지금 섹션은 눌러도 펼친 채", (await page.locator(".rb-nav-sec.sec-manage").getAttribute("aria-expanded")) === "true");
+// 다른 탭으로 가면 그 탭이 든 섹션만 펼침(손으로 펼친 기억 섹션은 닫힘)
+await page.hover(".rb-nav"); await page.locator(".rb-nav-sec.sec-memory").click(); await page.waitForTimeout(250);
+await page.evaluate(() => window.__app.ctx.go("tools")); await page.waitForTimeout(500);
+ok("다른 탭(도구)으로 가면 그 섹션(작업실)만 펼침", await page.evaluate(() => [...document.querySelectorAll(".rb-nav-sec[aria-expanded=true]")].map((b) => b.dataset.section).join(",")) === "work");
+await page.evaluate(() => window.__app.ctx.go("modules")); await page.waitForTimeout(500);
 ok("접힌 섹션 메뉴도 남아 있음(기억 → 코코아 이동 가능)", (await page.locator(".rb-nav a[data-tab=cocoa]").count()) === 1);
 await page.locator(".rb-nav .rb-nav-more").click(); await page.waitForTimeout(200);
 ok("⋯ 메뉴: 위치 · 늘 펼침 · 변경 기록", await page.locator(".rb-nav .rb-nav-menu").isVisible() && (await page.locator(".rb-nav .rb-nav-menu .rb-layseg button").count()) === 2 && (await page.locator("#rb-nav-pin").count()) === 1);
@@ -88,6 +93,18 @@ await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeo
 ok("모바일: 사이드바 없음 · 아래 탭바", !(await page.locator(".rb-navwrap").isVisible()) && await page.locator(".rb-tabbar").isVisible());
 await page.evaluate(() => [...document.querySelectorAll(".rb-tabbar a")].find((a) => a.textContent.includes("관리")).click()); await page.waitForTimeout(600);
 ok("모바일 탭바: 지금 탭(관리) 아이콘이 섹션 색으로 빛남", await page.evaluate(() => { const a = document.querySelector(".rb-tabbar a.sec-manage"); return a.getAttribute("aria-current") === "page" && getComputedStyle(a.querySelector(".ci")).backgroundImage.includes("gradient"); }));
+// 애드온이 늦게 켜져도(관리 애드온) 사이드바 섹션 제목·아이콘이 바로 생김
+{
+  const p2 = await (await browser.newContext({ viewport: { width: 1280, height: 860 } })).newPage(); p2.setDefaultTimeout(5000);
+  p2.on("pageerror", (e) => errs.push(e.message));
+  await p2.setContent("<!doctype html><body style='margin:0'></body>"); await p2.addScriptTag({ content: r.outputFiles[0].text });
+  await p2.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ tourDone: true, tourVer: 99, simpleNoticeDone: true }) }, { coreOnly: true }));
+  await p2.waitForTimeout(600);
+  const before = await p2.evaluate(() => ({ svc: !!window.__app.ctx.ext.get("svc", "manage"), hidden: document.querySelector(".rb-nav-sec.sec-manage").hidden }));
+  await p2.evaluate(() => window.__app.ctx.ext.add("svc", "manage", {})); await p2.waitForTimeout(400);
+  ok("애드온이 늦게 켜지면 사이드바·위쪽 섹션이 바로 생김(다시 열지 않아도)", !before.svc && before.hidden && await p2.evaluate(() => !document.querySelector(".rb-nav-sec.sec-manage").hidden && !document.querySelector(".rb-topsec.sec-manage").hidden), JSON.stringify(before));
+  await p2.close();
+}
 ok("오류 없음", !errs.length, errs.join(";"));
 await browser.close();
 process.exit(out.every(Boolean) ? 0 : 1);
