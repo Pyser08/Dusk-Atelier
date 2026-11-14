@@ -15,6 +15,7 @@ import { buildGenerateBody, buildAugmentBody, buildUpscaleBody, buildEncodeVibeB
 import { buildPrompt, buildNegative, combinationCount, toPARR } from "../../../engine/sdstudio/prompt.js";
 import * as P from "../../../engine/sdstudio/project.js";
 import { toB64, fromB64, convertImage } from "../../../data/sdstudio.js";
+import { createCellarSd } from "../../../data/cellarsd.js";
 import * as T from "../../../engine/sdstudio/template.js";
 import { createHistory } from "../../../engine/sdstudio/history.js";
 import { normalizeKeys, comboOf, actionOf, typingSafe, keyLabel } from "../../../engine/sdstudio/keys.js";
@@ -59,7 +60,8 @@ export async function openAssetStudio(ctx, target, sd) {
   const sel = new Set();
   const bytesCache = new Map(), thumbUrls = new Map();
   let saveT = null, lazy = null, loreT = null;
-  const q = { running: false, done: 0, total: 0, ctl: null, workers: 1 };
+  const q = { running: false, done: 0, total: 0, ctl: null, workers: 1, cellar: null };
+  const cs = ctx.cellar ? createCellarSd(ctx.api, { cellar: ctx.cellar }) : null;   // 2.2.0: Cellar가 있으면 Cellar가 대신 그림
   const hist = createHistory();
   const prefs = await sd.getPrefs();
   let tagOffered = false;
@@ -90,7 +92,8 @@ export async function openAssetStudio(ctx, target, sd) {
     remember(path, data) { bytesCache.set(path, data); if (!thumbUrls.has(path)) thumbUrls.set(path, URL.createObjectURL(new Blob([data], { type: "image/png" }))); },
     async bytes(path) {
       if (bytesCache.has(path)) return bytesCache.get(path);
-      const d = await ctx.assets.read(path, { prio: 100 });
+      let d = await ctx.assets.read(path, { prio: 100 }).catch(() => null);
+      if (!d && cs) d = await cs.image(q.cellar ?? await cs.available(), path);   // Cellar가 그렸지만 리스에 아직 못 넣은 그림
       if (!d) throw new Error("그림을 읽지 못했어요");
       if (bytesCache.size > 24) bytesCache.delete(bytesCache.keys().next().value);
       bytesCache.set(path, d);
@@ -979,12 +982,20 @@ export async function openAssetStudio(ctx, target, sd) {
           else {
             const src = await S.bytes(it.path), conv = await convertImage(src, fmt, quality);
             fell ||= conv.fellBack; before += src.length; after += conv.data.length;
-            out[i] = conv.ext === "png" ? { path: it.path, ext: "png" } : { path: await sd.saveAsset(conv.data), ext: conv.ext };
+            // Cellar가 있으면 변환만 하고 나중에 한꺼번에 넣는다(아래), 없으면 한 장씩 저장
+            out[i] = conv.ext === "png" ? { path: it.path, ext: "png" } : useBulk ? { data: conv.data, ext: conv.ext } : { path: await sd.saveAsset(conv.data), ext: conv.ext };
           }
           const sp = span(); if (sp) sp.textContent = `넣는 중 ${++done}/${items.length}`;
         }
       };
+      const useBulk = fmt !== "png" && !!cs && items.length > 1 && !!(await ctx.cellar?.status?.().catch(() => null))?.features?.includes("assets");
       await Promise.all([work(), work(), work()]);
+      const pend = out.map((o, i) => (o.data ? i : -1)).filter((i) => i >= 0);
+      if (pend.length) {
+        const sp = span(); if (sp) sp.textContent = `Cellar로 ${pend.length}장 한 번에 넣는 중…`;
+        let keys = null; try { keys = await cs.putAssets(pend.map((i) => out[i])); } catch { keys = null; }
+        for (let n = 0; n < pend.length; n++) { const i = pend[n]; out[i] = { path: keys?.[n] ?? await sd.saveAsset(out[i].data), ext: out[i].ext }; }   // 못 쓰면 한 장씩
+      }
       let prevSlot = null; const names = [];
       await withTarget((tg) => { prevSlot = structuredClone(tg[slot] ?? []); names.length = 0; const used = new Set(); let x = tg; items.forEach((it, i) => { x = putOne(x, slot, opt.name || assetName(it, out[i].ext), out[i].path, out[i].ext, dup, used, names); }); return x; });
       let unpick = proj;   // 보낸 그림은 고르기를 풀어 다시 보내지 않게 · 넣은 이름은 기록(다음에 '이미 넣음')
@@ -1281,25 +1292,93 @@ export async function openAssetStudio(ctx, target, sd) {
     for (const r of proj.settings.refs.filter((x) => x.on)) out.push({ image: await letterbox(await S.bytes(r.path)), strength: r.strength, fidelity: r.fidelity, type: r.type, info: 1 });
     return out;
   }
-  async function generateJob(job, k, token) {
+  // 한 장의 NovelAI 요청 본문(+ 결과를 붙일 자리). 씬이 사라졌으면 null
+  async function bodyFor(job, k) {
     const c = P.charOf(proj, job.cid), sc = P.sceneOf(proj, job.cid, job.sid), s = proj.settings;
-    if (!c || !sc) return;
+    if (!c || !sc) return null;
     let prompt, uc;
     try { prompt = buildPrompt({ top: s.top, own: P.ownPrompt(proj, c), middle: P.middleFor(sc, job.combo), back: s.back }, proj.pieces); uc = buildNegative(s.neg, proj.pieces); }
     catch (e) { const er = new Error(`${c.name} · ${sc.name} 프롬프트 오류: ${e?.message ?? e}`); er.fatal = true; er.at = { cid: c.id, sid: sc.id }; throw er; }   // 다시 해도 같으니 바로 멈춤
     const { width, height } = P.sizeFor(s.size, sc);
     const body = buildGenerateBody({ prompt, uc, width, height, seed: P.seedFor(s.seed, k), settings: s.sampling,
       chars: s.chars.filter((x) => x.on), vibes: await vibesFor(s.sampling.model), refs: await refsFor(s.sampling.model) });
-    const data = await sd.image(body, { signal: q.ctl?.signal, token });
+    return { body, meta: { cid: c.id, sid: sc.id, seed: body.parameters.seed, prompt, w: width, h: height } };
+  }
+  async function generateJob(job, k, token) {
+    const b = await bodyFor(job, k);
+    if (!b) return;
+    const data = await sd.image(b.body, { signal: q.ctl?.signal, token });
     const path = await sd.saveAsset(data);
     S.remember(path, data);
-    S.set(P.addImage(proj, c.id, sc.id, { path, seed: body.parameters.seed, prompt, w: width, h: height }), { undo: false });
+    const m = b.meta;
+    S.set(P.addImage(proj, m.cid, m.sid, { path, seed: m.seed, prompt: m.prompt, w: m.w, h: m.h }), { undo: false });
+  }
+
+  // ── Cellar가 대신 그리기(2.2.0) ── 예약을 Cellar에 넘기고, 결과(이미 리스 에셋에 들어간 경로)를 씬에 붙인다.
+  // 창·앱을 닫아도 Cellar는 계속 그린다. 다시 열면 prefs.cellarRun으로 이어서 결과를 받는다.
+  const runKey = () => (typeof target === "string" ? target : `${target.kind}:${target.id}`);
+  async function runQueueCellar(conn, jobs) {
+    const tokens = S.prefs.boost ? (await sd.getTokens()).slice(0, 4).map((t) => t.token) : [];
+    if (!tokens.length) tokens.push(await sd.getToken());
+    const run = { id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, key: runKey(), since: 0, total: jobs.length, per: {} };
+    Object.assign(q, { running: true, done: 0, total: jobs.length, ctl: new AbortController(), workers: tokens.length, t0: Date.now(), retry: 0, cellar: conn });
+    paintTop(); paintBody();
+    try {
+      run.since = (await cs.status(conn, Number.MAX_SAFE_INTEGER)).last ?? 0;   // 이번 예약 앞의 결과는 받지 않는다
+      const list = [];
+      for (let k = 0; k < jobs.length; k++) { const b = await bodyFor(jobs[k], k); if (b) list.push({ id: `${run.id}:${k}`, body: b.body, meta: { ...b.meta, run: run.id } }); }
+      await cs.enqueue(conn, list, tokens);
+      // 예약은 Cellar로 넘어갔으니 여기서 비운다(창을 닫았다 열어도 두 번 보내지 않게). 그림이 오면 씬에 붙는다
+      let nx = proj; for (const j of jobs) { const sc = P.sceneOf(nx, j.cid, j.sid); if (sc?.reserve) nx = P.setReserve(nx, j.cid, j.sid, 0); }
+      S.set(nx, { undo: false }); await S.persist();
+      await sd.setPrefs({ cellarRun: run, resume: false });
+      S.prefs.cellarRun = run;
+    } catch (e) {
+      Object.assign(q, { running: false, cellar: null, ctl: null });
+      paintTop(); paintBody();
+      ctx.toast(`Cellar에 그리기를 맡기지 못했어요: ${e?.message ?? e}`, { error: true, seconds: 12 });
+      return;
+    }
+    followCellar(conn, run);
+  }
+  async function followCellar(conn, run) {
+    Object.assign(q, { running: true, cellar: conn, total: run.total, ctl: q.ctl ?? new AbortController() });
+    let fails = 0;
+    const tick = async () => {
+      if (!q.cellar) return;
+      let st;
+      try { st = await cs.status(conn, run.since); fails = 0; }
+      catch (e) { if (++fails >= 10) { endFollow(`Cellar와 연결이 끊겼어요: ${e?.message ?? e}. Cellar는 계속 그리고 있을 수 있어요 — 다시 열면 이어서 받아요`, true); return; } return later(); }
+      const mine = st.results.filter((r) => r.meta?.run === run.id);
+      let nx = proj;
+      for (const r of mine) { const m = r.meta; nx = P.addImage(nx, m.cid, m.sid, { path: r.path, seed: m.seed, prompt: m.prompt, w: m.w, h: m.h }); }
+      if (st.results.length) run.since = st.last;
+      if (mine.length) { q.done = Math.min(run.total, q.done + mine.length); S.set(nx, { undo: false }); sd.setPrefs({ cellarRun: run }).catch(() => {}); if (!el.hidden) { paintTop(); paintBody(); } }
+      if (mine.some((r) => !r.inRisu)) cs.sync(conn).catch(() => {});
+      q.retry = st.retry; q.lastErr = st.error || st.risuError || ""; paintQErr();
+      if (st.fatal) return endFollow(`Cellar가 그리다 멈췄어요(${q.done}장 완료): ${st.fatal.error}`, true);
+      if (!st.running && !st.queued) return endFollow(`${q.done}장 다 그렸어요 (Cellar${q.workers > 1 ? ` · 부스트 ${q.workers}줄` : ""})`);
+      later();
+    };
+    const later = () => { q.pollT = setTimeout(tick, 2000); };
+    tick();
+  }
+  async function endFollow(msg, error = false) {
+    clearTimeout(q.pollT);
+    Object.assign(q, { running: false, stopping: false, ctl: null, cellar: null, workers: 1, retry: 0, lastErr: "" });
+    S.prefs.cellarRun = null; await sd.setPrefs({ cellarRun: null }).catch(() => {});
+    await S.persist();
+    paintQErr(); paintTop(); paintTools(); paintBody();
+    ctx.toast(msg, error ? { error: true, seconds: 15 } : undefined);
+    if (el.hidden) finish();
   }
   async function runQueue() {
     if (q.running || q.stopping) return;
     const jobs = P.planJobs(proj);
     if (!jobs.length) { S.toast("예약된 씬이 없어요. 씬 카드의 +1이나 위 예약 버튼을 눌러요."); return; }
     if (!await S.dlg.token()) return;
+    const conn = S.prefs.cellarGen !== false && cs ? await cs.available() : null;
+    if (conn) return runQueueCellar(conn, jobs);
     const tokens = S.prefs.boost ? (await sd.getTokens()).slice(0, 4) : [];
     const lanes = tokens.length >= 2 ? tokens.map((t) => t.token) : [undefined];   // 부스트: 토큰마다 한 줄씩 동시에
     Object.assign(q, { running: true, done: 0, total: jobs.length, ctl: new AbortController(), workers: lanes.length, t0: Date.now(), retry: 0 });
@@ -1348,7 +1427,9 @@ export async function openAssetStudio(ctx, target, sd) {
     else ctx.toast(err ? `멈췄어요. ${done}장 만들었어요` : `${done}장 다 그렸어요${lanes.length > 1 ? ` (부스트 ${lanes.length}줄)` : ""}`);
     if (el.hidden) finish();   // 닫아 둔 채 다 그렸으면 이제 정리
   }
-  function stopQueue() { if (!q.running) return; q.running = false; q.stopping = true; q.ctl?.abort(); paintTop(); ctx.toast("멈추는 중이에요 — 지금 그리는 장만 끝나면 멈춰요"); }
+  function stopQueue() {
+    if (q.cellar) { const c = q.cellar; ctx.toast("Cellar에 멈추라고 했어요 — 지금 그리는 장만 끝나면 멈춰요"); cs.stop(c).then(() => setTimeout(() => endFollow(`멈췄어요. ${q.done}장 만들었어요`), 3000)).catch((e) => ctx.toast(`멈추지 못했어요: ${e?.message ?? e}`, { error: true })); return; }
+    if (!q.running) return; q.running = false; q.stopping = true; q.ctl?.abort(); paintTop(); ctx.toast("멈추는 중이에요 — 지금 그리는 장만 끝나면 멈춰요"); }
   // 변형·인페인트·업스케일·디렉터 도구 → 같은 씬에 더함. 만든 경로를 돌려준다
   async function derive(it, kind, opts) {
     const sc = P.sceneOf(proj, it.cid, it.sid), im = sc?.images.find((x) => x.path === it.path), c = P.charOf(proj, it.cid);
@@ -1509,8 +1590,10 @@ export async function openAssetStudio(ctx, target, sd) {
   // 창 포커스를 잃었다 돌아오면 호스트가 사이드바를 다시 꺼내므로, 열려 있는 동안 전체 화면을 다시 요청한다
   const refull = () => { if (!el.hidden && el.isConnected && document.visibilityState !== "hidden") ctx.api.showContainer?.("fullscreen")?.catch?.(() => {}); };
   addEventListener?.("focus", refull); document.addEventListener?.("visibilitychange", refull);
+  // Cellar가 그리던 중이면 이어서 결과를 받는다(창·앱을 닫았다 다시 연 경우)
+  if (prefs.cellarRun?.key === runKey() && cs) cs.available().then((c) => { if (c && !q.running) followCellar(c, prefs.cellarRun); }).catch(() => {});
   // 지난번에 그리다 끊겼으면 이어 그리기
-  if (prefs.resume && P.planJobs(proj).length) ctx.toast(`지난번에 그리다 멈췄어요. 남은 ${P.planJobs(proj).length}장을 이어 그릴까요?`, { seconds: 30, action: { label: "이어 그리기", run: () => runQueue() } });
+  else if (prefs.resume && P.planJobs(proj).length) ctx.toast(`지난번에 그리다 멈췄어요. 남은 ${P.planJobs(proj).length}장을 이어 그릴까요?`, { seconds: 30, action: { label: "이어 그리기", run: () => runQueue() } });
   return live;
 }
 
