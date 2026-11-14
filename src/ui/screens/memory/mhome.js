@@ -223,12 +223,6 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     h("span", { class: "t" }, "인물 관계도", h("small", null, npcN ? `인물 ${npcN}명의 거리와 관계를 한눈에 봐요.` : "인물이 쌓이면 거리와 관계를 한눈에 볼 수 있어요.")),
     h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
 
-  const recent = recentOf(folder);
-  const recBox = h("section", { class: "rb-card bordered rb-mem-recentbox" }, h("div", { class: "rb-mem-rechead" }, h("b", null, "최근 기록"), recent.length ? h("button", { type: "button", class: "rb-textlink", onClick: () => openDetail() }, "전체 보기") : null),
-    h("ul", { class: "rb-mem-reclist rb-mem-recent" }, recent.length
-      ? recent.map((r) => h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("div", null, h("b", null, r.who), " ", r.act), h("div", { class: "rb-muted" }, at(r.at))), gradeBadge(r.g)))
-      : h("li", { class: "rb-muted" }, "아직 쌓인 기록이 없어요.")));
-
   const { memorySettings, memOptions } = await settingsCards(ctx, M, idx, redraw, cur, sw);
 
   // ── 고급: 한 줄씩 접은 묶음. PC에서는 기억 방식을 접지 않고 오른쪽 맨 위에 둔다 ──
@@ -248,13 +242,13 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   // 2.2.0 B안: 상태·분석은 늘 위, 아래는 [한눈에 · 기록 · 옵션 · 설정] 칸. 리수폿·Erosync는 옵션 칸.
   const recAll = recentOf(folder, 12);
   const recFull = h("section", { class: "rb-card bordered rb-mem-recentbox rb-mem-recfull" }, h("div", { class: "rb-mem-rechead" }, h("b", null, "최근 기록"), recAll.length ? h("button", { type: "button", class: "rb-textlink", onClick: () => openDetail() }, "전체 보기") : null),
-    h("ul", { class: "rb-mem-reclist" }, recAll.length
+    h("ul", { class: "rb-mem-reclist rb-mem-recent" }, recAll.length
       ? recAll.map((r) => h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("div", null, h("b", null, r.who), " ", r.act), h("div", { class: "rb-muted" }, at(r.at))), gradeBadge(r.g)))
       : h("li", { class: "rb-muted" }, "아직 쌓인 기록이 없어요.")));
-  const TABS4 = [["glance", "한눈에"], ["rec", "기록"], ["opt", "옵션"]];
+  const TABS4 = [["glance", "한눈에"], ["opt", "옵션"]];
   const panels = {
-    glance: h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, shortcuts, recBox), h("div", { class: "rb-mem4-col" }, meRow, mapRow)),
-    rec: h("div", { class: "rb-mem4-col" }, recFull, h("div", { class: "rb-mem4-acts" }, btn("인물 위키", { icon: "character", onClick: () => openDetail("people") }), btn("기록 보기", { icon: "list", onClick: () => openDetail("scenes") }))),
+    // 기록 칸은 없앰: 한눈에 위쪽 = 바로가기 | 나·관계도, 아래 = 최근 기록(12건) 전체 폭
+    glance: h("div", { class: "rb-mem4-col" }, h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, shortcuts), h("div", { class: "rb-mem4-col" }, meRow, mapRow)), recFull),
     opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memorySettings)), advEl),
   };
   const { tabs: tabRow, panels: panelEls } = memTabs(m, TABS4, panels);
