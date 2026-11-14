@@ -7,6 +7,10 @@
 > - 가벼운 화면(`.rb-lite`): 꾸미기 → 모양 더 고르기 스위치, PocketRisu·RisuBard UA 자동, `prefers-reduced-transparency`.
 > - 공통 클래스 `.rb-gcard`(유리 카드)·`.rb-gcell`(안쪽 칸), 팝업은 `--rb-pop-bg`. 다른 탭 세션은 이것과 섹션 색(`--sec-k`, `.sec-memory/manage/work`)을 쓰면 됨.
 
+> **라이트바 컨셉(2.2.0, 11-14 사용자 지시 — 이후 모든 화면 디자인에 적용)**: 카드·타일·위젯 왼쪽에 **기능 색 빛 막대**(4px, 위아래 14px 띄움, `border-radius:0 4px 4px 0`, 기능 색 세로 그라데이션 + `box-shadow:0 0 10px <색>`)를 둔다. 아이콘은 **둥근 네모(12px) + 기능 색 얇은 테두리·옅은 빛**(속은 색 10%). 강조 버튼은 테두리형(강조색 14% 바탕 + 60% 테두리 + 옅은 빛). 가벼운 화면(`.rb-lite`)에선 빛(box-shadow)만 끈다.
+> - 색: 분홍 `#e98bd6`(기억·장기 기억·옵션) · 파랑 `#6f9dff`(관계도·관리·설정) · 민트 `#3fcfa6`(코코아·작업실·기록) · 주황 `#ff8a5c`(카드·가져오기·이어서) · 초록 `#5fe0a8`(상태 켜짐) · 노랑 `#f5c451`(추천).
+> - 구현 예: 기억 개요 `.rb-mtile`, 장기 기억 `.rb-mem4` 카드(memhubcss.js), 홈 위젯 `.rb-hw::before`(homegridcss.js). 목업 `docs/mockups/glass-2-memory-hub2.html` 6번.
+
 Dusk Atelier 화면을 **"화려하지만 직관적인"** 글래스모피즘 스타일로 바꿀 때 따르는 규칙이에요.
 견본: `dusk-home-glass.html`(홈), `dusk-home-glass-colors.html`(색상 6종).
 이번 개편은 **배치와 모양을 함께** 새로 짜요. 배치가 `UI-STYLE.md`와 부딪히면 이 문서를 따라요.

@@ -75,4 +75,14 @@ export var HOMEGRID_CSS = `
   .rb-hw{padding:12px}
   .rb-hw .rb-hnum b{font-size:24px}
 }
+
+/* 2.2.0 라이트바(디자인 컨셉, UI-GLASS §라이트바): 위젯 왼쪽에 기능 색 빛 막대 */
+.rb-hw{--lb:#c48bff;--lbg:linear-gradient(180deg,#ff8ec6,#8a7bff)}
+.rb-hw::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--lbg);box-shadow:0 0 10px var(--lb);pointer-events:none;z-index:1}
+.rb-hw[data-w=imp],.rb-hw[data-w=cont]{--lb:#ff8a5c;--lbg:linear-gradient(180deg,#ffb36b,#ff7a59)}
+.rb-hw[data-w=mem],.rb-hw[data-w^=n]{--lb:#e98bd6;--lbg:linear-gradient(180deg,#ff8ec6,#8a7bff)}
+.rb-hw[data-w=man],.rb-hw[data-w=qs]{--lb:#6f9dff;--lbg:linear-gradient(180deg,#7fd4ff,#5b8cff)}
+.rb-hw[data-w=wrk],.rb-hw[data-w=rec]{--lb:#3fcfa6;--lbg:linear-gradient(180deg,#6ff0c4,#38b6a0)}
+.rb-hw[data-w=disc]{--lb:#f5c451;--lbg:linear-gradient(180deg,#ffe08a,#f5b84a)}
+.rb-lite .rb-hw::before{box-shadow:none}
 `;
