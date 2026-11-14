@@ -14,6 +14,7 @@ import { erosyncConfigCard } from "./erosyncconfig.js";
 import { erosyncPromptsCard } from "./erosyncprompts.js";
 import { erosyncBehindCard } from "./erosyncbehind.js";
 import { analysisLine } from "./erosynceditor.js";
+import { erosyncTurnCard } from "./erosyncturnui.js";
 import { clearErosyncFlow } from "./memoryfileui.js";
 import { scanOriginalErosync } from "../../../data/erosyncmigrate.js";
 import { flowSections } from "./flowsettings.js";
@@ -36,11 +37,11 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
 
   const analysisCard = () => {
     const line = analysisLine(ctx, () => {});
-    const run = btn("전체 캐릭터 분석", { kind: "primary", id: "rb-erosync-analyze", disabled: !live, onClick: () => line.start("full", "") });
-    const pick = btn("인물 골라서 분석", { id: "rb-erosync-analyze-pick", disabled: !live, onClick: async () => { const ids = await pickLoreEntries(ctx); if (ids?.length) line.start("lore", ids); } });
+    const run = btn("전체 인물로 만들기", { kind: "primary", id: "rb-erosync-analyze", disabled: !live, onClick: () => line.start("full", "") });
+    const pick = btn("인물 골라서 만들기", { id: "rb-erosync-analyze-pick", disabled: !live, onClick: async () => { const ids = await pickLoreEntries(ctx); if (ids?.length) line.start("lore", ids); } });
     line.watch();
-    return h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync-analysis" }, h("h3", null, "인물 분석"),
-      p("지금 열린 채팅의 인물을 AI로 분석해 성향 값을 만들어요. 전부 분석하면 AI 호출이 많이 들어가니, 필요한 인물만 골라서 분석할 수도 있어요. 이미 분석한 한 명만 다시 하려면 인물 위키의 NSFW 탭을 쓰세요."),
+    return h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync-analysis" }, h("h3", null, "출발값 만들기"),
+      p("처음 한 번, 로어북·캐릭터 카드로 인물의 출발값을 만들어요. 그다음부터는 위 ‘매 턴 계산’이 대화에 맞춰 고쳐요. ‘전체’는 자료 길이만큼 AI 호출이 들어가니(로어북이 길면 수십 번), 필요한 인물만 골라서 만드는 걸 권해요. 한 명만 다시 하려면 인물 위키의 NSFW 탭을 쓰세요."),
       live ? h("div", { class: "rb-mem-sact" }, run, pick) : p("Erosync를 켜면 분석할 수 있어요."), line.el);
   };
   const dataCard = () => {
@@ -64,8 +65,8 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
         erosyncConfigCard(ctx, "act"), typeof er?.behind === "function" ? erosyncBehindCard(ctx) : null,
         typeof er?.undoScene === "function" ? erosyncUndoCard(ctx) : null, typeof er?.presets === "function" ? erosyncPresetCard(ctx, redraw) : null];
     },
-    // 분석·관리: 인물 분석(분석 설정) → 결과 검토 → 프롬프트 → 저장된 값
-    manage: () => [analysisCard(), erosyncConfigCard(ctx, "ana"), typeof er?.review === "function" ? erosyncReviewCard(ctx) : null, erosyncPromptsCard(ctx), dataCard()]
+    // 분석·관리: 매 턴 계산 → 출발값 만들기(분석 설정) → 결과 검토 → 프롬프트 → 저장된 값
+    manage: () => [erosyncTurnCard(ctx), analysisCard(), erosyncConfigCard(ctx, "ana"), typeof er?.review === "function" ? erosyncReviewCard(ctx) : null, erosyncPromptsCard(ctx), dataCard()]
   };
   const show = (k) => { m.eroTab = k; replace(paneHost, ...(panes[k]?.() ?? []).filter(Boolean)); };
   const seg = segmented(TABS, tab, show, "Erosync 항목");

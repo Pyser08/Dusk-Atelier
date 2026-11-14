@@ -30,7 +30,7 @@
 | 모듈 호환(모듈 이미지가 봇 이미지처럼) | `src/engine/modcompat.js`(태그 모양 학습·등록부·지키기·그리기, 순수), `src/engine/modcompatprompt.js`(모델 안내), `src/data/modcompat.js`(훅·캐시·진단), `src/ui/screens/modcompat.js`, `addons/modcompat/index.js` — 전부 애드온 전용 |
 | AI로 봇 만들기 | `src/ui/screens/aibuild.js`, `src/ui/screens/newbot.js` |
 | 테마 빌더/꾸미기 | `src/ui/screens/themebuilder.js`, `src/ui/screens/chattheme.js`, `src/ui/theme.js` |
-| Erosync(NSFW 장면 강화, 격리 이식) | `src/erosync/erosync.js`(본체, 원본 그대로·고치지 말고 비교만), `src/data/erosync.js`(켜기/끄기), `src/ui/screens/memory/erosyncui.js`(기억 설정 카드) · 위키/관계도 연동: `src/engine/erosyncview.js`, `src/ui/screens/memory/erosyncwiki.js`(+`personv2.js`), `src/ui/screens/relmap.js`(Erosync 층 칩) |
+| Erosync(NSFW 장면 강화, 격리 이식) | `src/erosync/erosync.js`(본체, 원본 그대로·고치지 말고 비교만), `src/data/erosync.js`(켜기/끄기), `src/ui/screens/memory/erosyncui.js`(기억 설정 카드) · 매 턴 계산: `src/erosync/turnupdate.js`, `src/data/erosyncturn.js`, `src/ui/screens/memory/erosyncturnui.js`(HandOff/EROSYNC-TURN.md) · 위키/관계도 연동: `src/engine/erosyncview.js`, `src/ui/screens/memory/erosyncwiki.js`(+`personv2.js`), `src/ui/screens/relmap.js`(Erosync 층 칩) |
 | 플러그인 탭·DA Interop | `src/data/plugins.js`, `src/data/interopSnippet.js`, `src/ui/screens/plugins.js` |
 | 플러그인 코드 수정(Cellar가 대신 고침, RisuBard) | `src/data/cellarplugins.js`, `src/ui/screens/pluginedit.js`, `src/ui/screens/plugins.js`(행 메뉴), Cellar 저장소 `plugins.cjs` |
 | 플러그인 매니저 기능(켜기/끄기·별칭·순서·삭제·등록·중복·백업복원·프리셋·메타·스토리지 편집) | `src/data/pluginmgr.js`, `storagemgr.js`, `ui/screens/pluginmgr.js`, `storageedit.js`, `plugins.js`, Cellar `plugins.cjs` mutate | tests/pluginmgr·storagemgr, e2e run-pluginmgr |

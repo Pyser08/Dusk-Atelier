@@ -19,6 +19,15 @@
 - 스크롤 깜빡임 수정(11-14): 스크롤 안 카드(.rb-card·.rb-gcard·홈 위젯) backdrop-filter 제거, 시험 tests/glassscroll.test.js. 3번부터 새 카드도 블러 쓰지 말 것.
 - 원래 있던 실패(홈 작업과 무관): npm test 3(pot-port·watch-light·GitHub 태그), e2e look 2·hubs 1·run-info 2·run-app 중간 멈춤, run-memed 불안정.
 
+## Erosync 매 턴 계산 (11-15 구현)
+- 설계: HandOff/EROSYNC-TURN.md. 구현: 엔진 연결부 erosync.js duskTurnUpdate(profiles.turn, 원본 AXIS/SEX_AXIS 정의로 기준 글) + 순수 로직 src/erosync/turnupdate.js, 턴 갱신기 src/data/erosyncturn.js(설정 dusk.erosync.turn, 기록 dusk.erosync.turnlog), 기록기 알림 memoryturn.js tellTurn/onTurn, 애드온 연결 addons/erosync/index.js(ctx.erosyncTurn), 카드 src/ui/screens/memory/erosyncturnui.js. 테스트 tests/erosync-turn.test.js.
+- 남은 것: 실제 채팅에서 동작 확인 안 함. 목표·경쟁은 매 턴 계산 대상 아님(장면 디렉터가 매 턴 다룸). 출발값 없는 인물은 건너뜀(카드에 이름 표시). 리수폿 기록(예전) 모드에선 알림 없음. 새 카드 e2e 없음.
+- 기존 e2e run-erosync-ui ‘더보기 메뉴’ 2건은 이전부터 실패.
+
+## Erosync 자동 재분석 (11-15)
+- src/erosync/autorefresh.js(새): risu+Dusk runAI면 취소 가능 판정, 고쳐진 자료 이어 붙이기. erosync.js 자동 재분석은 knownPeopleOnly로 아는 인물만(인물 찾기 필요 시 EROSYNC_AUTO_NEEDS_FULL → manual_pending needs_full). 테스트 tests/erosync-autorefresh.test.js.
+- 장기기억 자동 기록은 원인 미확정: 사용자에게 자동 기록 상태 문구 받아서 이어 볼 것(auto-wiki.js 113·114줄 건너뜀 조건 후보).
+
 ## 세션 순서와 범위 (TASK-MAP: 메뉴·탭 = src/ui/tabs.js, src/ui/app.js)
 | # | 세션 | 대상(tabs.js id) | 상태 |
 |---|---|---|---|
