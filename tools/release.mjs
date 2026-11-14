@@ -62,7 +62,9 @@ if (remoteTag) {
       git(["commit", "-q", "--no-edit"], dir);
     }
     // 합친 결과가 빌드와 같은지 한 번 더(다른 브랜치 내용이 섞였을 때를 위해)
-    execFileSync("node", ["tools/build.mjs", "--check"], { cwd: dir, stdio: "inherit" });
+    const nm = path.join(root, "node_modules");
+    if (fs.existsSync(nm) && !fs.existsSync(path.join(dir, "node_modules"))) fs.symlinkSync(nm, path.join(dir, "node_modules"), "dir");
+    try { execFileSync("node", ["tools/build.mjs", "--check"], { cwd: dir, stdio: "inherit" }); } catch { fail("main에 합친 결과가 빌드와 달라요. 합치기 전 브랜치에서 npm run build 뒤 커밋했는지 확인해 주세요."); }
     const head = git(["rev-parse", "HEAD"], dir);
     if (dry) {
       console.log(`(미리 보기) main ← ${head.slice(0, 7)}, 태그 ${tag}`);
