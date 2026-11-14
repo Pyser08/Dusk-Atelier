@@ -2,7 +2,6 @@
 import { h, replace } from "../../dom.js";
 import { clearErosyncFlow } from "./memoryfileui.js";
 import { btn, confirmDialog } from "../../kit.js";
-import { AI_MODES } from "../../../engine/merge.js";
 import { diagText } from "../../../engine/memorydiag.js";
 import { fail, askRefresh } from "./common.js";
 import { builders, renderGlobalSettings } from "./settings.js";
@@ -15,14 +14,7 @@ export function advancedGroups(ctx, { cur, idx, redraw }) {
   const last = M.injector?.lastRequest?.(), man = last?.manifest;
   const bot = idx.bots[cur.chaId] ?? { ignore: [] };
 
-  // 분석 모델
-  const mode = h("select", { class: "rb-input", "aria-label": "분석 모델" }, AI_MODES.map(([v, l]) => h("option", { value: v, selected: (S.model.mode ?? "memory") === v }, l)));
-  const sid = h("input", { class: "rb-input", placeholder: "모델 ID", value: S.model.staticModel ?? "", "aria-label": "모델 ID", style: S.model.mode === "static" ? "" : "display:none" });
-  const saveModel = () => save((s) => { s.model = { mode: mode.value, ...(mode.value === "static" ? { staticModel: sid.value.trim() } : {}) }; });
-  mode.addEventListener("change", saveModel); sid.addEventListener("change", saveModel);
-  // 자동 기록 시점 (리수폿 화면이 자기 값을 따로 갖는다)
-  const confirmSel = h("select", { class: "rb-input", "aria-label": "자동 기록 시점", onChange: (e) => save((s) => { s.confirm = e.target.value; }) },
-    [["next", "다음 입력을 보낼 때 (권장)"], ["now", "응답을 받은 직후"]].map(([v, l]) => h("option", { value: v, selected: (S.confirm === "now" ? "now" : "next") === v }, l)));
+  // 2.2.0: 분석 모델·자동 기록 시점·응답 대기 시간은 세부 설정의 ‘분석’ 칸과 겹쳐서 여기서 뺐다(같은 값)
   const ignIn = h("input", { class: "rb-input", placeholder: "제외할 이름 추가 후 Enter", "aria-label": "제외할 이름", onKeydown: (e) => {
     if (e.key !== "Enter" || !e.target.value.trim()) return;
     const v = e.target.value.trim();
@@ -49,10 +41,7 @@ export function advancedGroups(ctx, { cur, idx, redraw }) {
   return [
     { id: "track", title: "자동 기록 · 인물 추적", sub: `제외할 이름 ${(bot.ignore ?? []).length}개`, kids: [trackingHost,
       section(["이 봇에서 기록하지 않을 이름", "bot"], h("div", { class: "rb-mem-chats" }, (bot.ignore ?? []).map((n) => h("button", { type: "button", class: "rb-chip", title: "눌러서 제거", onClick: () => M.store.updateIndex((i) => { i.bots[cur.chaId].ignore = i.bots[cur.chaId].ignore.filter((x) => x !== n); }).then(redraw) }, n, " ✕")), ignIn))] },
-    { id: "store", title: "저장·기록 · 대화에 넣기", sub: "분석 시점·모델·넣는 항목·로어", kids: [
-      section("저장·기록", h("label", { class: "rb-mem-field" }, h("span", null, "자동 기록 시점"), confirmSel),
-        h("label", { class: "rb-mem-field" }, h("span", null, "분석 모델"), mode, sid),
-        num("응답 대기 시간(초)", () => S.modelTimeoutSec ?? 600, (s, v) => { s.modelTimeoutSec = Math.max(10, v); }, { min: 10, max: 3600, step: 10 })),
+    { id: "store", title: "대화에 넣기", sub: "넣는 항목·로어", kids: [
       section("대화에 넣기", sw("기억을 대화에 넣기", S.inject.on !== false, (s, v) => { s.inject.on = v; }),
         sw("장부 넣기 (열린 항목·관계 변화·지식 경계)", S.inject.plus !== false, (s, v) => { s.inject.plus = v; }),
         sw("인물 관점·내면·기대 불일치 넣기 (토큰이 늘 수 있어요)", S.inject.stage3 !== false, (s, v) => { s.inject.stage3 = v; })),  // 사람다운 기억·감정 식음·거짓말 추적은 간단 모드 '기억 옵션'에만 둔다

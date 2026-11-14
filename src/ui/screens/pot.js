@@ -77,7 +77,7 @@ export function advancedPot(ctx, env, cur, idx, redraw) {
   const sec = (title, ...kids) => h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, title), ...kids);
   return [
     sec("저장·기록", sel("저장 위치", ps.backend ?? "auto", [["auto", "자동"], ["local", "플러그인"], ["bardwiki", "BardWiki"]], (v) => savePs({ backend: v })),
-      sel("자동 기록 시점", potConfirm(S), [["next", "다음 입력을 보낼 때 (권장)"], ["now", "응답을 받은 직후"]], (v) => savePs({ confirm: v }))),
+      sel("인물 위키 기록 시점", potConfirm(S), [["next", "다음 입력을 보낼 때 (권장)"], ["now", "응답을 받은 직후"]], (v) => savePs({ confirm: v }))),
     sec("롤백 충돌 안내", conflictBox(env) ?? h("p", { class: "rb-muted" }, "겹친 기록이 없어요.")),
     sec("자동 기록 되돌리기", h("p", { class: "rb-muted" }, "위키가 바뀐 기록을 보고 되돌려요."), h("div", { class: "rb-mem-sact" }, btn("되돌리기 기록 열기", { icon: "history", onClick: () => openWikiLog(env).catch(fail(ctx)) })))
   ];
