@@ -97,3 +97,16 @@ test("셀러를 끄면 네트워크 요청을 아예 보내지 않는다", async
   await saveCellarEnabled(api, true);
   assert.equal((await createCellar(api).status()).ok, true);
 });
+
+test("한 번 연결된 뒤에는 연속 3번 실패해야 '없음'(그 전엔 연결됨·다시 확인 중)", async () => {
+  let t = 0, up = true;
+  const api = { storage: store(), nativeFetch: async () => (up ? res(200, { name: "dusk-cellar", version: "0.2.0" }) : res(502, {})) };
+  const c = createCellar(api, { now: () => t });
+  assert.equal((await c.status()).ok, true);
+  up = false;
+  const a = await c.status({ fresh: true }); assert.equal(a.ok, true); assert.equal(a.retrying, true);
+  t += 6000; const b = await c.status(); assert.equal(b.ok, true, "다시 확인 중엔 5초마다 확인하되 아직 연결됨");
+  t += 6000; const d = await c.status(); assert.equal(d.ok, false, "세 번째 실패에서 없음");
+  up = true; t += 60e3;
+  const e = await c.status(); assert.equal(e.ok, true); assert.equal(e.retrying, undefined);
+});

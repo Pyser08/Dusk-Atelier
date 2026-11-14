@@ -13,8 +13,8 @@ import { cellarRequest } from "./cellar.js";
 export const FLAG_KEY = "dusk.cellar.mem";
 export const QUEUE_KEY = "dusk.cellar.queue";
 export const REMOTE_PREFIX = "dusk.mem.v3.f.";
-const READ_TIMEOUT = 4000, WRITE_TIMEOUT = 15000;
-const OFFLINE_AFTER = 2, RETRY_MS = 30e3;
+const READ_TIMEOUT = 10000, WRITE_TIMEOUT = 20000;   // 2.2.0: 프록시를 거치는 느린 기기에서 끊김으로 잘못 보지 않게 늘림
+const OFFLINE_AFTER = 3, RETRY_MS = 15e3;   // 2.2.0: 연속 3번 실패해야 끊김, 다시 시도는 15초 뒤
 const QUEUE_WARN = 8 * 1024 * 1024;
 const BATCH_BYTES = 2 * 1024 * 1024;
 
