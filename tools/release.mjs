@@ -31,7 +31,8 @@ if (!top?.startsWith(`## ${tag}`)) fail(`CHANGELOG.md 맨 위가 "## ${tag}"가 
 if (branch === "HEAD") fail("브랜치가 아닌 곳(detached)이에요.");
 
 step("시험: npm test");
-run("npm", ["test", "--silent"]);
+try { const out = execFileSync("npm", ["test", "--silent"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 256 << 20 }); console.log(out.split("\n").filter((l) => /^# (pass|fail)/.test(l)).join("\n")); }
+catch (e) { console.error(String(e.stdout ?? "").split("\n").filter((l) => /^not ok|^# (pass|fail)/.test(l)).join("\n")); fail("시험이 실패했어요."); }
 step("본체 빌드 확인");
 run("node", ["tools/build.mjs", "--check"]);
 step("애드온 빌드 확인");
