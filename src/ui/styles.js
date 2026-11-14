@@ -5,6 +5,7 @@ import { PROVIDER_CSS } from './screens/provider/css.js';
 import { GLASS_CSS } from './glasscss.js';
 import { NAV_CSS } from './navcss.js';
 import { HOMEGRID_CSS } from './screens/homegridcss.js';
+import { MEMHUB_CSS } from './screens/memhubcss.js';
 export var FONT_LINK = "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap";
 export var CSS2 = `
 *{box-sizing:border-box}
@@ -1499,4 +1500,4 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-wk-row{border-radius:var(--rb-r3)}
 .rb-scroll::-webkit-scrollbar-thumb{border-radius:var(--rb-pill,999px)}
 @media (prefers-reduced-motion:reduce){.rb-btn,.rb-card,.rb-pcard,.rb-wk-row,.rb-wk2-who{transition:none!important;transform:none!important}}
-`+PROB_CSS+RELMAP_CSS+PROVIDER_CSS+SIZE_CSS+GLASS_CSS+NAV_CSS+HOMEGRID_CSS;
+`+PROB_CSS+RELMAP_CSS+PROVIDER_CSS+SIZE_CSS+GLASS_CSS+NAV_CSS+HOMEGRID_CSS+MEMHUB_CSS;

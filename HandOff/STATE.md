@@ -7,6 +7,7 @@
 - 버전(package.json·CHANGELOG 새 섹션)은 지시 있을 때만.
 
 ## ▶ 다음 세션에서 이어갈 것 (11-14 기준)
+- **2번 기억 진행 중**: 개요 끝(아래 ‘기억 개요’). 다음은 장기 기억 화면 — 목업 `docs/mockups/glass-2-memory.html`의 A안/B안 중 사용자 선택부터. 그다음 관계도·코코아·카드(같은 목업 파일).
 - **1번 홈까지 끝**(커밋 ac0907e 이후 문서 정리 커밋). 다음은 **2번 기억**: memory-home·memory·relmap·cocoa·cards — 목업(PC 1280·모바일 390) → 확인 → 구현 → e2e.
 - 쓸 수 있는 것: 유리 카드 `.rb-gcard`/`.rb-gcell`, 섹션 색 `--sec-k`·`.sec-memory`(분홍보라), 팝업 `--rb-pop-bg`, 테마 22종(밝은·어두운 판). 지침 차이는 `UI-GLASS.md` 맨 위 ‘구현 현황’.
 - CHANGELOG에 `## 2.2.0 (작업 중 · 미릴리스)` 섹션을 넣어 둠(사용자 요청으로 문서 반영). 버전(package.json)은 그대로 2.1.9 — 올리기·릴리스는 지시 대기.
@@ -18,7 +19,7 @@
 |---|---|---|---|
 | 0 | 공통 기반 | styles.js 글래스 토큰(기존 --rb-* 이름 유지), 배경(stage)·유리 카드 공통 클래스, 탭 틀(app.js) | [x] 11-13 (아래 기록) |
 | 1 | 홈 | home | [x] 11-14 끝(F안·사이드바·위쪽 메뉴·모바일 탭바·테마 22종). 실기기 미확인 |
-| 2 | 기억 | memory-home, memory, relmap, cocoa, cards | [ ] |
+| 2 | 기억 | memory-home, memory, relmap, cocoa, cards | [~] 개요(memory-home) 끝 11-14 · 장기 기억·관계도·코코아·카드 남음 |
 | 3 | 작업실 | work-home, provider, look, stealth, aibot, personabuilder, tools, dev | [ ] |
 | 4 | 관리 | manage-home, characters, modules, plugins, protlink | [ ] |
 | 5 | 설정 | settings (+ 테마 선택 UI, '가벼운 화면' 저사양 모드) | [ ] 테마 선택·가벼운 화면은 11-14에 꾸미기 탭에 먼저 넣음(아래) — 설정 탭 배치만 남음 |
@@ -1324,3 +1325,9 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - [x] 나머지 4건(시험 tests/bugreport-1113.test.js 4개, 고치기 전 4개 실패 확인): ① pot-patches relationship-mode 'on'에 cycle.state ② pot-patches cycle-tracking: 기준일 없으면 임시 연도 2000, 연도 있는 날짜(full) 나오면 2000- 기준에서 옮겨 감 ③ 원인은 Dusk `cyclereport.js`가 `new:cycle-N-<한글이름>` 참조를 만들어 new: ASCII 검증에서 제안 전체가 거부 → 문서 ID(ASCII 정리)로 ④ pot-patches main-wiki-hook: `databaseMatched`에 `evidence.matched` 추가(경고 표시는 안 함). 재생성 `node tools/pot-split.mjs`, --check 0개.
 - e2e는 Playwright 브라우저(chromium_headless_shell-1254) 미설치로 못 돌림. ④는 훅 단위 시험이 없어 소스 확인 시험만 있음.
 - 참고: npm test 기존 실패 3개(pot-port, watch-light, GitHub 릴리스 태그 네트워크)는 이번 변경 전에도 실패.
+
+## 기억 개요 (11-14, 2번 세션 1/5)
+- 목업: `docs/mockups/glass-2-memory.html`(5화면 초안), `glass-2-memory-hub.html`(배치 4안, 안 씀), `glass-2-memory-hub2.html`(디자인 6판 — **채택 6번: 왼쪽 색띠 + 약한 네온**, 선 아이콘).
+- 구현: `src/ui/screens/sectionhome.js` drawMemory(section==='memory'일 때만) — 상태 줄 `.rb-mhub-stat`(+`.rb-hubstat`, 채팅 이름·켜짐·기억 수·‘지난 대화 분석’→memory 탭의 #rb-mem-analyze로) → 타일 `.rb-hubrow.rb-mtile.k-<id>`(바로가기·옛 시험 호환 위해 rb-hubrow 유지, 칩=저장 N건/인물 N명) → 최근 기록 `.rb-mhub-rec`(mhome.js `recentOf` export, 4건). CSS `src/ui/screens/memhubcss.js`(MEMHUB_CSS, styles.js 끝에 붙임). 관리·작업실 개요는 예전 그대로.
+- PC에서는 memory-home이 mobileOnly라 위쪽 메뉴 섹션 알약으로만 열림(그대로).
+- 시험: npm test 1554/3(원래 실패), check 동일함. run-hubs 기억 개요 기대값을 새 구조로 바꿈 → 전부 통과(이전 실패 1개도 해소). cards·memed 32·nav·home-grid·smoke·glass-theme·dupes 통과. 실기기 미확인.

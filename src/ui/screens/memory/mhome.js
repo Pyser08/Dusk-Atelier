@@ -15,7 +15,7 @@ import { maybeAskBardWiki } from "./modebar.js";
 
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
 
-function recentOf(folder, n = 3) {
+export function recentOf(folder, n = 3) {
   const rows = [];
   for (const p of Object.values(folder?.people ?? {})) for (const r of p.records ?? []) if (!r.orphan) rows.push({ who: p.name, ms: r.at_ms ?? 0, at: r.at, act: r.act, g: r.g });
   return rows.sort((a, b) => b.ms - a.ms).slice(0, n);

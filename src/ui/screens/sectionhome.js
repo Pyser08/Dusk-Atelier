@@ -6,6 +6,7 @@ import { statusCard } from '../kit.js';
 import { TABS, SECTION_NAMES, tabHidden } from '../tabs.js';
 import { usageOf } from '../../engine/memoryusage.js';
 import { dbRead } from '../../data/dbcache.js';
+import { recentOf } from './memory/mhome.js';
 
 // 목록 줄의 한 줄 요약 (개수는 읽을 수 있을 때만 붙인다)
 var LINE = {
@@ -23,9 +24,10 @@ async function readCounts(ctx, section) {
       const cur = await ctx.memory.switches.currentChat();
       if (!cur) return { cur: null };
       const [sw, folder] = await Promise.all([ctx.memory.switches.state(cur.chaId), ctx.memory.store.getFolder(cur.chaId, cur.chatId).catch(() => null)]);
-      return { cur, on: !!sw?.memory?.on, total: usageOf(folder).total };
+      const people = Object.values(folder?.people ?? {});
+      return { cur, on: !!sw?.memory?.on, total: usageOf(folder).total, people: people.length, recent: recentOf(folder, 4), name: [cur.botName || '이름 없는 봇', cur.chatName ? ` · ${cur.chatName}` : ''].join('') };
     });
-    if (out._mem?.cur) out.memory = `${out._mem.total}건`;
+    if (out._mem?.cur) { out.memory = `저장 ${out._mem.total}건`; out.relmap = `인물 ${out._mem.people}명`; }
   }
   if (section === "manage") {
     await safe("_db", () => dbRead(ctx.api, ["characters", "modules", "plugins"]));
@@ -52,6 +54,7 @@ export async function renderSectionHome(ctx) {
   replace(ctx.main, host);
   const token = ctx.state.tab;
   const draw = (counts) => {
+    if (section === 'memory') return drawMemory(ctx, listHost, tabs, counts);
     const row = (t) => h('button', { type: 'button', class: 'rb-hubrow', onClick: () => ctx.go(t.id), 'aria-label': t.label, dataset: { tab: t.id } },
       h('span', { class: 'ico' }, icon(t.icon, 20)),
       h('span', { class: 't' }, h('b', null, t.label), h('small', null, [LINE[t.id] ?? t.card ?? '', counts[t.id] !== undefined ? ` · ${counts[t.id]}${typeof counts[t.id] === 'number' ? '개' : ''}` : ''].join(''))),
@@ -69,4 +72,25 @@ export async function renderSectionHome(ctx) {
   draw({});
   const counts = await readCounts(ctx, section);
   if (ctx.state.tab === token && host.isConnected) draw(counts);
+}
+
+// 2.2.0 기억 개요(6번 안): 상태 줄 → 기능 타일 2×2 → 최근 기록. 타일은 .rb-hubrow를 유지(바로가기·시험 호환).
+var MDESC = { memory: "응답마다 인물별 기억을 쌓고 필요할 때 꺼내요.", relmap: "인물 사이 거리·관계를 한눈에 봐요.", cocoa: "정리 노트·기록하기에 붙는 스킬.", cards: "기억을 카드로 만들어 새 봇으로 이어 가요." };
+function drawMemory(ctx, listHost, tabs, counts) {
+  const m = counts._mem;
+  const goAnalyze = () => { ctx.go('memory'); setTimeout(() => ctx.win?.querySelector?.('#rb-mem-analyze')?.scrollIntoView?.({ block: 'center' }), 600); };
+  const stat = h('section', { class: ['rb-mhub-stat', 'rb-hubstat', !(m?.cur && m.on) && 'off'] },
+    h('span', { class: 'dot', 'aria-hidden': 'true' }),
+    m?.cur ? h('span', { class: 'who' }, m.name || '지금 채팅') : null,
+    h('span', { class: 'line' }, !m ? '기억 상태를 읽는 중이에요.' : !m.cur ? '채팅을 열면 기억 상태가 보여요.' : `장기 기억 ${m.on ? '사용 중' : '꺼짐'} · 기억 ${m.total}건`),
+    m?.cur ? h('button', { type: 'button', class: 'rb-mhub-go', onClick: goAnalyze }, '지난 대화 분석') : null);
+  const tile = (t) => h('button', { type: 'button', class: ['rb-hubrow', 'rb-mtile', `k-${t.id}`], onClick: () => ctx.go(t.id), 'aria-label': t.label, dataset: { tab: t.id } },
+    h('span', { class: 'ico' }, icon(t.icon, 20)),
+    h('span', { class: 't' }, h('b', null, t.label), counts[t.id] !== undefined ? h('span', { class: 'chip' }, String(counts[t.id])) : null, h('small', null, MDESC[t.id] ?? LINE[t.id] ?? t.card ?? '')),
+    h('span', { class: 'go', 'aria-hidden': 'true' }, icon('chevron', 16)));
+  const rec = m?.recent?.length ? h('section', { class: 'rb-mhub-rec' },
+    h('div', { class: 'head' }, h('b', null, '최근 기록'), h('button', { type: 'button', class: 'rb-textlink', onClick: () => ctx.go('memory') }, '전체 보기')),
+    h('ul', null, m.recent.map((r) => h('li', null, h('span', { class: 'who' }, r.who), h('span', { class: 't' }, r.act ?? ''))))) : null;
+  listHost.closest?.('.rb-hub')?.classList.add('rb-mhub');
+  replace(listHost, stat, h('div', { class: 'rb-mhub-tiles' }, tabs.map(tile)), rec);
 }

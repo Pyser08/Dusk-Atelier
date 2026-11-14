@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>글래스 기억 섹션</title>
+<style>
+:root{
+  --rb-bg:#171028;--rb-blob1:rgba(255,154,118,.45);--rb-blob2:rgba(176,124,255,.55);--rb-blob3:rgba(255,142,198,.4);--rb-blob4:rgba(120,90,255,.4);
+  --rb-acc:#ff9a76;--rb-acc2:#b07cff;--rb-tint:#ffd6e6;--rb-glow:rgba(255,154,118,.5);
+  --sec-k:#d98cff;--sec-grad:linear-gradient(135deg,#ff8ec6,#8a7bff);
+  --rb-acc-grad:linear-gradient(90deg,var(--rb-acc),var(--rb-acc2));
+  --rb-glass:color-mix(in srgb,#171028 88%,#fff 12%);--rb-glass-2:rgba(255,255,255,.08);--rb-glass-line:rgba(255,255,255,.2);
+  --rb-glass-hi:inset 0 1px 0 rgba(255,255,255,.22);--rb-glass-shadow:0 8px 30px rgba(0,0,0,.25);--rb-glass-blur:blur(22px) saturate(140%);
+  --rb-text:#f2f0fa;--rb-sub:rgba(255,255,255,.84);--rb-mute:rgba(255,255,255,.62);--rb-line:rgba(255,255,255,.10);
+  --rb-r2:15px;--rb-r3:20px;--rb-r4:22px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#0b0816;color:var(--rb-text);font:14px/1.5 "Pretendard",system-ui,sans-serif;padding:20px 16px}
+h1,h2,h3{margin:0}
+.bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:0 0 10px}
+.bar button{padding:7px 14px;border-radius:999px;border:1px solid #444;background:#1b1530;color:#ddd;font:inherit;cursor:pointer}
+.bar button.on{background:var(--sec-grad);color:#fff;border:0}
+.cap{color:#bbb;font-size:13px;margin:0 auto 14px;max-width:1100px;text-align:center}
+.wrap{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.frame{border-radius:var(--rb-r4);overflow:hidden;border:1px solid #333}
+.pc{width:1280px;max-width:100%}.mo{width:390px}
+.stage{background:radial-gradient(40% 50% at 12% 18%,var(--rb-blob1),transparent 70%),radial-gradient(45% 55% at 88% 78%,var(--rb-blob2),transparent 70%),radial-gradient(35% 40% at 70% 8%,var(--rb-blob3),transparent 70%),radial-gradient(40% 45% at 30% 95%,var(--rb-blob4),transparent 70%),var(--rb-bg);padding:22px;display:flex;gap:16px;min-height:780px}
+.glass{background:color-mix(in srgb,var(--rb-glass) 50%,transparent);-webkit-backdrop-filter:var(--rb-glass-blur);backdrop-filter:var(--rb-glass-blur);border:1px solid var(--rb-glass-line);border-radius:var(--rb-r3);box-shadow:var(--rb-glass-shadow),var(--rb-glass-hi)}
+.cell{background:var(--rb-glass-2);border-radius:var(--rb-r2)}
+.pad{padding:18px 20px}
+/* 레일 */
+.rail{width:68px;flex:none;display:flex;flex-direction:column;gap:6px;padding:14px 10px;align-items:center}
+.ri{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:13px;color:var(--rb-sub)}
+.ri.sec{background:var(--sec-grad);color:#fff}.ri.on{background:var(--rb-glass-2);outline:1px solid var(--sec-k);box-shadow:0 0 12px rgba(217,140,255,.45)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px}
+/* 머리 */
+.crumb{display:flex;align-items:center;gap:10px;color:var(--rb-mute);font-size:13px}
+.crumb b{color:var(--rb-text)}
+.head{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.head h1{font-size:26px;background:linear-gradient(90deg,#fff,var(--rb-tint));-webkit-background-clip:text;color:transparent}
+.head .sp{flex:1}
+.q{width:34px;height:34px;border-radius:50%;border:1px solid var(--rb-glass-line);display:grid;place-items:center;color:var(--rb-sub)}
+.chiprow{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:5px 12px;border-radius:999px;background:var(--rb-glass-2);font-size:12.5px;color:var(--rb-sub);white-space:nowrap}
+.chip.on{color:#fff;box-shadow:inset 0 0 0 1px var(--sec-k),0 0 10px rgba(217,140,255,.35)}
+.seg{display:inline-flex;padding:4px;border-radius:999px;gap:2px}
+.seg span{padding:6px 16px;border-radius:999px;font-size:13px;color:var(--rb-sub)}
+.seg span.on{background:var(--sec-grad);color:#fff;box-shadow:0 0 12px rgba(217,140,255,.45)}
+.dot{width:9px;height:9px;border-radius:50%;background:#5fe0a8;box-shadow:0 0 8px #5fe0a8;flex:none}
+.sw{display:inline-block;width:42px;height:24px;border-radius:999px;background:rgba(255,255,255,.22);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff}
+.sw.on{background:var(--rb-acc-grad);box-shadow:0 0 12px var(--rb-glow)}.sw.on::after{left:21px}
+.num b{display:block;font-size:30px;line-height:1.1;background:linear-gradient(180deg,#fff,var(--rb-tint));-webkit-background-clip:text;color:transparent}
+.num{padding:12px 14px}.num small{color:var(--rb-mute);font-size:12px}
+.meter{height:8px;border-radius:9px;display:flex;overflow:hidden;background:rgba(255,255,255,.12)}
+.meter i{display:block}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--rb-mute)}
+.leg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.cta{padding:12px 18px;border-radius:999px;background:var(--rb-acc-grad);color:#fff;font-weight:700;text-align:center;box-shadow:0 0 18px var(--rb-glow);white-space:nowrap}
+.btn{padding:7px 14px;border-radius:999px;background:var(--rb-glass-2);border:1px solid var(--rb-glass-line);font-size:13px;white-space:nowrap}
+.ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:700;flex:none;background:var(--sec-grad)}
+.ico.o{background:linear-gradient(135deg,#ffb36b,#ff7a59)}.ico.b{background:linear-gradient(135deg,#7fd4ff,#5b8cff)}.ico.m{background:linear-gradient(135deg,#6ff0c4,#38b6a0)}
+.ttl{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.ttl small{font-weight:400;color:var(--rb-mute);font-size:12px}
+.mut{color:var(--rb-mute);font-size:12.5px}
+.row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rb-line);font-size:13px}
+.row:last-child{border:0}.row .t{flex:1;min-width:0}
+.tag{font-size:11px;padding:1px 7px;border-radius:6px;background:var(--rb-glass-2);color:var(--rb-sub)}
+.who{font-size:11.5px;padding:2px 8px;border-radius:999px;background:rgba(217,140,255,.18);color:#f1d9ff;white-space:nowrap}
+.grid{display:grid;gap:16px}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.tile{display:flex;gap:12px;align-items:flex-start;padding:16px 18px}
+.tile .t b{display:block;font-size:15px}
+.new{background:var(--rb-acc-grad);color:#fff;font-size:11px;padding:1px 8px;border-radius:999px}
+/* 관계도 */
+.graph{position:relative;overflow:hidden;min-height:520px}
+.graph svg{position:absolute;inset:0;width:100%;height:100%}
+.float{position:absolute;padding:8px;display:flex;gap:6px;flex-wrap:wrap}
+.sheet{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+/* 카드 */
+.mcard{aspect-ratio:3/4;padding:14px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;position:relative;overflow:hidden}
+.mcard::before{content:"";position:absolute;inset:0;background:linear-gradient(160deg,rgba(255,142,198,.35),rgba(138,123,255,.25) 60%,transparent);z-index:-1}
+.mcard.add{border-style:dashed;align-items:center;justify-content:center;color:var(--rb-sub);aspect-ratio:3/4}
+/* 탭바(모바일) */
+.mo .stage{flex-direction:column-reverse;padding:14px 16px 0;min-height:844px}
+.mo .rail{width:auto;flex-direction:row;justify-content:space-around;padding:8px;border-radius:var(--rb-r3) var(--rb-r3) 0 0;position:sticky;bottom:0}
+.mo .head h1{font-size:21px}
+.mo .pad{padding:16px}
+.mo .grid{grid-template-columns:1fr!important}
+.mo .hide-mo{display:none!important}
+.pc .hide-pc{display:none!important}
+.mo .graph{min-height:340px}
+.mo .scroll-x{overflow-x:auto;flex-wrap:nowrap}
+.note{font-size:12px;color:#c9b8ff;border:1px dashed #6b5aa8;border-radius:10px;padding:6px 10px;background:rgba(40,30,70,.6)}
+</style></head><body>
+<div class="bar" id="bar"></div>
+<p class="cap" id="cap"></p>
+<div class="wrap" id="wrap"></div>
+<script>
+const rail = (on) => `<nav class="rail glass">${["홈","기","관","작","설"].map((t,i)=>`<div class="ri ${i===1?"sec":""}">${t}</div>`).join("")}<div style="height:6px"></div>${["장","도","코","카"].map((t,i)=>`<div class="ri hide-mo ${i===on?"on":""}">${t}</div>`).join("")}</nav>`;
+const head = (crumb, title, sub, right = "") => `<div class="crumb hide-mo">⌂ 홈 › 기억 › <b>${crumb}</b></div>
+<div class="head"><div><h1>${title}</h1><div class="mut">${sub}</div></div><span class="sp"></span>${right}<span class="q">?</span></div>`;
+const chips = (on) => `<div class="chiprow scroll-x hide-pc">${["개요","장기 기억","관계도","코코아","기억 카드"].map((t,i)=>`<span class="chip ${i===on?"on":""}">${t}</span>`).join("")}</div>`;
+const recs = [["호시노","선생님에게 잔소리를 들었다","#8","D"],["시로코","호시노를 걱정했다","#7","A"],["호시노","복도에서 낮잠을 잤다","#7","C"],["시로코","선생님과 함께 순찰을 나가기로 했다","#6","B"],["시로코","교실에서 선생님을 기다렸다","#5","A"]];
+const recList = (n=5) => recs.slice(0,n).map(r=>`<div class="row"><span class="who">${r[0]}</span><span class="t">${r[1]}</span><span class="tag">${r[2]}</span><span class="tag">${r[3]}</span></div>`).join("");
+const status = (big) => `<section class="glass pad" style="display:flex;flex-direction:column;gap:14px">
+  <div style="display:flex;align-items:center;gap:10px"><span class="dot"></span><div style="flex:1;min-width:0"><b style="color:#7ff0bd">사용 중</b><div class="mut">시로코 · 교실 이야기 · 마지막 요청 09:17 · 기억 3건을 넣었어요</div></div><span class="sw on"></span></div>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:10px">${[["6","저장된 기록"],["3","이번에 넣음"],["4","미처리"]].map(n=>`<div class="cell num"><b>${n[0]}</b><small>${n[1]}</small></div>`).join("")}</div>
+  <div class="meter"><i style="width:50%;background:#5fe0a8"></i><i style="width:17%;background:#ff9a76"></i><i style="width:33%;background:#77708c"></i></div>
+  <div class="leg"><span><i style="background:#5fe0a8"></i>넣음 3</span><span><i style="background:#ff9a76"></i>요약에 반영됨 1</span><span><i style="background:#77708c"></i>관련 없음 2</span><span><i style="background:#f5c451"></i>예산 제한 0</span></div>
+  ${big?`<div class="cta">✦ 지난 대화 분석 · 미처리 4개</div>`:""}
+</section>`;
+const shortcuts = `<section class="grid" style="grid-template-columns:repeat(4,1fr);gap:10px">${[["인","인물 위키"],["≡","기록 보기"],["▣","카드로 만들기"],["⇄","다른 채팅"]].map(s=>`<div class="glass" style="padding:12px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:600"><span class="ico" style="width:32px;height:32px">${s[0]}</span>${s[1]}</div>`).join("")}</section>`;
+const links = `<section class="glass pad" style="padding-top:8px;padding-bottom:8px">${[["나","나에 대한 기억","다른 인물들이 나를 어떻게 보고 부르는지 모아 봐요."],["관","인물 관계도","인물 2명의 거리와 관계를 한눈에 봐요."],["폿","리수폿","인물 위키를 자동으로 쌓아요. 설정·자동 기록·고급."]].map(l=>`<div class="row"><span class="ico" style="width:32px;height:32px;border-radius:50%">${l[0]}</span><span class="t"><b>${l[1]}</b><div class="mut">${l[2]}</div></span>›</div>`).join("")}</section>`;
+const opts = `<section class="glass pad"><div class="ttl">기억 옵션 <small>사람다운 기억</small></div>${[["관계 진도·호칭·말투·둘만의 추억","on"],["감정이 시간이 지나면 식어요","on"],["거짓말·오해 추적",""],["요약된 옛 대화 빼고 보내기","on"],["지난 대화 분석에 함께 기록",""]].map(o=>`<div class="row"><span class="t">${o[0]}</span><span class="sw ${o[1]}"></span></div>`).join("")}
+<div class="row"><span class="t">기억 넣기 토큰<div class="mut">목표 1200 · 상한 3000 · 남길 최근 턴 6</div></span><span class="btn">조절</span></div></section>`;
+const settings = `<section class="glass pad" style="padding-top:8px;padding-bottom:8px"><div class="row"><span class="t"><b>기억·리수폿 프롬프트</b><div class="mut">앞·중간·뒤에 덧붙일 프롬프트</div></span>›</div><div class="row"><span class="t"><b>임베딩 (의미 검색)</b><div class="mut">뜻이 비슷한 기억 찾기 · 꺼짐</div></span>›</div><div class="row"><span class="t mut">고급 모드에서 더 보기</span>›</div></section>`;
+const recent = (n) => `<section class="glass pad"><div class="ttl">최근 기록 <small>전체 보기 ›</small></div>${recList(n)}</section>`;
+
+const S = {
+ hub: { name: "0 · 기억 개요", cap: "기억 개요(모바일 전용 → PC에서도 섹션 알약 누르면 이 화면). 지금 채팅 상태를 맨 위 한 줄로, 기능 4개를 큰 유리 타일로. 타일마다 지금 상태 한 줄(살아 있는 숫자).",
+  body: () => `${head("개요","기억","인물 기억·관계·스킬·카드를 한곳에서")}${chips(0)}
+  <section class="glass pad" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="dot"></span><b>시로코 · 교실 이야기</b><span class="mut" style="flex:1">장기 기억 사용 중 · 기억 3건을 넣었어요</span><span class="cta" style="padding:8px 16px">지난 대화 분석 4</span></section>
+  <div class="grid" style="grid-template-columns:repeat(2,1fr)">
+   ${[["장","장기 기억","저장 6 · 미처리 4","응답마다 인물별 기억을 쌓고 필요할 때 꺼내요.",""],["관","인물 관계도","인물 2명 · 이번 턴 1명","거리·관계를 한눈에 봐요.","b"],["코","코코아","스킬 0개 · 꺼짐","정리 노트·기록하기에 붙는 스킬.","m"],["카","기억 카드","만든 카드 0장","기억을 카드로 만들어 새 봇으로.","o"]].map(t=>`<div class="glass tile"><span class="ico ${t[4]}">${t[0]}</span><span class="t" style="flex:1"><b>${t[1]}</b><span class="chip" style="display:inline-block;margin:4px 0">${t[2]}</span><div class="mut">${t[3]}</div></span>›</div>`).join("")}
+  </div>
+  ${recent(4)}` },
+ memA: { name: "1 · 장기 기억 A안", cap: "A안 · 두 단: 왼쪽 = 상태·분석·최근 기록(지금 일어나는 것), 오른쪽 = 바로가기·옵션·설정(바꾸는 것). 분석 버튼은 상태 카드 안으로. 모바일은 한 줄로 쌓되 순서 그대로.",
+  body: () => `${head("장기 기억","장기 기억","응답마다 인물별 기억을 쌓고, 필요할 때 꺼내 써요.")}${chips(1)}
+  <div class="grid" style="grid-template-columns:1.15fr 1fr;align-items:start">
+   <div class="col">${status(true)}${recent(5)}</div>
+   <div class="col">${shortcuts}${links}${opts}${settings}</div>
+  </div>` },
+ memB: { name: "1 · 장기 기억 B안", cap: "B안 · 상태 카드는 늘 위에 고정, 아래는 [한눈에 · 기록 · 옵션 · 설정] 칸 나누기. 스크롤이 짧아지고 모바일에서 특히 편함. 기능 위치는 칸 이름으로 찾음(기능 찾기도 그대로 연결).",
+  body: () => `${head("장기 기억","장기 기억","응답마다 인물별 기억을 쌓고, 필요할 때 꺼내 써요.")}${chips(1)}
+  ${status(true)}
+  <div><span class="glass seg"><span class="on">한눈에</span><span>기록</span><span>옵션</span><span>설정</span></span></div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;align-items:start"><div class="col">${shortcuts}${recent(4)}</div><div class="col">${links}</div></div>
+  <div class="note">‘옵션’ 칸 = 기억 옵션 스위치·토큰 / ‘설정’ 칸 = 프롬프트·임베딩·고급 / ‘기록’ 칸 = 최근 기록 전체·인물 위키</div>` },
+ rel: { name: "2 · 인물 관계도", cap: "관계도 · 그래프를 큰 유리 캔버스로, 보기 단추·범례는 캔버스 위에 떠 있는 유리 알약. 오른쪽 패널 = 검색·이번 턴·선택한 인물 위키·호감도 순. 모바일은 그래프 아래로 패널이 붙는 시트.",
+  body: () => `${head("인물 관계도","인물 관계도","시로코 · 교실 이야기")}${chips(2)}
+  <div class="grid" style="grid-template-columns:1fr 320px;align-items:stretch">
+   <section class="glass graph">
+    <svg viewBox="0 0 600 520" preserveAspectRatio="xMidYMid meet"><g fill="none" stroke="rgba(255,255,255,.18)"><ellipse cx="300" cy="270" rx="250" ry="150"/><ellipse cx="300" cy="270" rx="180" ry="108"/><ellipse cx="300" cy="270" rx="110" ry="66"/></g>
+     <line x1="300" y1="270" x2="210" y2="160" stroke="#ff9ec8" stroke-width="3"/><line x1="300" y1="270" x2="400" y2="350" stroke="#8ac7ff" stroke-width="1.5" stroke-dasharray="4 4"/>
+     <circle cx="300" cy="270" r="16" fill="url(#g)"/><defs><radialGradient id="g"><stop offset="0" stop-color="#ffd0b0"/><stop offset="1" stop-color="#b07cff"/></radialGradient></defs>
+     <circle cx="210" cy="160" r="11" fill="#d9b8ff" stroke="#fff" stroke-width="2"/><circle cx="400" cy="350" r="10" fill="#9a90b8"/>
+     <g fill="#fff" font-size="13" text-anchor="middle"><text x="300" y="302">선생님</text><text x="210" y="190">호시노</text><text x="400" y="378">시로코</text></g></svg>
+    <div class="float" style="left:10px;top:10px"><span class="chip glass on">정면으로 보기</span><span class="chip glass">이번 턴 등장 강조</span></div>
+    <div class="float" style="right:10px;top:10px"><span class="q glass">?</span></div>
+    <div class="float" style="left:10px;bottom:10px"><span class="chip glass">● 따뜻한 관계</span><span class="chip glass">● 차가운 관계</span><span class="chip glass">┅ 풀리지 않은 갈등</span><span class="chip glass hide-mo">굵기 = 강도</span></div>
+   </section>
+   <section class="glass sheet"><div class="cell" style="padding:9px 14px;color:var(--rb-mute)">⌕ 인물 이름 검색</div>
+    <div class="ttl" style="font-size:13px">이번 턴 등장 · 1명</div><div class="chiprow"><span class="chip on">호시노</span></div>
+    <div class="cell" style="padding:12px 14px"><b>호시노</b> <span class="who">호감 50</span><div class="mut" style="margin-top:4px">선생님을 귀찮아하지만 걱정한다. 복도에서 자주 낮잠.</div><div class="mut" style="margin-top:6px">위키 열기 ›</div></div>
+    <div class="ttl" style="font-size:13px">호감도 순</div>${["시로코","호시노"].map(n=>`<div class="row"><span class="t">${n}</span><span class="mut">호감 50</span></div>`).join("")}
+   </section></div>` },
+ cocoa: { name: "3 · 코코아", cap: "코코아 · 머리에 켜기 스위치·상태 한 줄, 아래 스킬 목록을 유리 카드 격자로(켜짐 = 빛, ··· 메뉴). 빈 상태는 가운데 안내 + 세 가지 시작 방법 타일.",
+  body: () => `${head("코코아","코코아","스킬 0개 중 0개 사용 중 · 따로 AI를 부르지 않아요",`<span class="mut hide-mo">코코아 기능</span><span class="sw"></span>`)}${chips(3)}
+  <div class="note">코코아 기능이 꺼져 있어서 지금은 아무것도 붙지 않아요. — 스위치 옆 경고 띠(꺼졌을 때만)</div>
+  <section class="glass pad" style="display:flex;flex-direction:column;gap:14px"><div class="ttl">내 스킬 0개 <span style="display:flex;gap:8px"><span class="btn">AI로 만들기</span><span class="btn">가져오기</span></span></div>
+   <div style="text-align:center;padding:16px 0"><b>아직 스킬 세트가 없어요</b><div class="mut">줄을 누르면 열어서 고쳐요. ··· 에 ZIP·JSON 내보내기, 삭제.</div></div>
+   <div class="grid" style="grid-template-columns:repeat(3,1fr)">${[["m","AI로 만들기","설명만 쓰면 스킬 세트를 만들어요"],["b","ZIP·JSON 가져오기","받은 파일을 그대로"],["o","코코아전트에서 옮기기","예전 설정 한 번에"]].map(t=>`<div class="cell tile"><span class="ico ${t[0]}">✦</span><span class="t"><b>${t[1]}</b><div class="mut">${t[2]}</div></span></div>`).join("")}</div></section>
+  <div class="note">스킬이 있을 때: 같은 자리에 2~3열 카드(이름·붙는 곳 칩·켜기 스위치····).</div>
+  <div class="mut">고급 모드에서 더 보기 ›</div>` },
+ cards: { name: "4 · 기억 카드", cap: "기억 카드 · 인물 고르기를 머리 오른쪽 알약으로, ‘만든 카드/새로 만들기’ 칸 나누기는 섹션 색. 만든 카드는 세로 3:4 유리 카드 갤러리(빈 상태는 마스코트 + 버튼 2개 그대로).",
+  body: () => `${head("기억 카드","기억 카드","기억을 카드 한 장으로 만들고, 그 카드로 새 봇을 이어 가요.",`<span class="glass" style="display:flex;align-items:center;gap:10px;padding:6px 8px 6px 6px;border-radius:999px"><span class="ico o" style="width:30px;height:30px;border-radius:50%">시</span><span><b style="font-size:13px">시로코</b><div class="mut" style="font-size:11px">교실 이야기 · 기억 8개</div></span><span class="btn" style="padding:4px 10px">바꾸기</span></span>`)}${chips(4)}
+  <div><span class="glass seg"><span class="on">만든 카드</span><span>새로 만들기</span></span></div>
+  <div class="grid" style="grid-template-columns:repeat(5,1fr)" id="cg">${[["시로코","순찰 약속","8"],["호시노","낮잠 동료","5"]].map(c=>`<div class="glass mcard"><span class="new" style="position:absolute;top:12px;left:12px">새로</span><b>${c[0]}</b><div class="mut">${c[1]} · 기억 ${c[2]}개</div></div>`).join("")}<div class="glass mcard add">＋ 카드 만들기</div></div>
+  <div class="note">카드 0장일 때는 지금처럼 마스코트 + ‘카드 만들기’·‘만드는 법 보기’를 가운데에.</div>
+  <div class="mut">고급 모드에서 더 보기 ›</div>` },
+};
+let cur = "hub";
+function draw(){
+  bar.innerHTML = Object.entries(S).map(([k,v])=>`<button data-k="${k}" class="${k===cur?"on":""}">${v.name}</button>`).join("");
+  cap.textContent = S[cur].cap;
+  const on = {hub:-1,memA:0,memB:0,rel:1,cocoa:2,cards:3}[cur];
+  wrap.innerHTML = ["pc","mo"].map(f=>`<div><p class="cap">${f==="pc"?"PC 1280":"모바일 390"}</p><div class="frame ${f}"><div class="stage">${rail(on)}<div class="main">${S[cur].body()}</div></div></div></div>`).join("");
+  wrap.querySelectorAll(".mo #cg").forEach(e=>e.style.gridTemplateColumns="repeat(2,1fr)");
+  wrap.querySelectorAll(".mo .grid[style*='repeat(4']").forEach(e=>e.style.cssText+=";grid-template-columns:repeat(4,1fr)!important");
+  wrap.querySelectorAll(".mo .grid[style*='repeat(3,1fr);gap:10px']").forEach(e=>e.style.cssText+=";grid-template-columns:repeat(3,1fr)!important");
+}
+bar.onclick = (e)=>{ const k=e.target.dataset.k; if(k){cur=k;draw();} };
+draw();
+</script>
+</body></html>

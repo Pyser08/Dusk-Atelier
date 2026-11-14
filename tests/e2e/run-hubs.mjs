@@ -24,7 +24,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   await nav("홈");
   if (tag === "모바일") {
     await nav("기억");
-    ok(`[모바일] 기억 개요: 상태 카드 + 목록 3줄, 위 칩 줄 숨김`, (await vis(".rb-hubstat")) === 1 && (await vis(".rb-hubrow")) === 3 && (await vis(".rb-morenav")) === 0);
+    ok(`[모바일] 기억 개요(2.2.0): 상태 줄 + 기능 타일 + 최근 기록, 위 칩 줄 숨김`, (await vis(".rb-mhub-stat")) === 1 && (await vis(".rb-mtile")) >= 3 && (await vis(".rb-mhub-rec")) === 1 && (await vis(".rb-morenav")) === 0, `stat ${await vis(".rb-mhub-stat")} tile ${await vis(".rb-mtile")} rec ${await vis(".rb-mhub-rec")} chip ${await vis(".rb-morenav")}`);
     await nav("작업실");
     ok(`[모바일] 작업실 개요: 큰 카드 2 + 더 보기 3줄`, (await vis(".rb-hubbig")) === 2 && (await vis(".rb-hubrow")) === 3);
     await nav("관리");
