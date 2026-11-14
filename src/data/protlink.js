@@ -23,7 +23,7 @@ export function normLink(l) {
 }
 // 화면·위젯에 보여 줄 요약(주소·비밀번호는 넣지 않는다)
 export function summary(l) {
-  return { id: l.id, name: l.name, kind: l.kind, target: l.target, fileCount: l.files.length, pending: l.pending.map((f) => f.name), checkedAt: l.checkedAt, error: l.error, update: l.pending.length > 0 };
+  return { id: l.id, name: l.name, kind: l.kind, target: l.target, fileCount: l.files.length, pending: l.pending.map((f) => f.name), checkedAt: l.checkedAt, addedAt: l.addedAt, error: l.error, update: l.pending.length > 0 };
 }
 const newId = () => `pl-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const loadDriver = async (api) => { const m = await import("../protlink/protlink.js"); return m.loadProtLinkDriver(api); };

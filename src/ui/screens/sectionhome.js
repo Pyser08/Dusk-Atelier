@@ -36,6 +36,13 @@ async function readCounts(ctx, section) {
     if (Array.isArray(db?.characters)) out.characters = db.characters.length;
     if (Array.isArray(db?.modules)) out.modules = db.modules.length;
     if (Array.isArray(db?.plugins)) out.plugins = db.plugins.length;
+    out._names = {
+      characters: (db?.characters ?? []).filter((c) => c && !c.trashTime).map((c) => ({ n: c.name ?? "", d: c.creator ? `제작자 ${c.creator}` : "" })),
+      modules: (db?.modules ?? []).map((m) => ({ n: m?.name ?? "", d: (m?.description ?? "").slice(0, 60) })),
+      plugins: (db?.plugins ?? []).map((p) => ({ n: p?.displayName || p?.name || "", d: p?.version ? `v${p.version}` : "" }))
+    };
+    if (ctx.protlink?.on?.()) await safe("_pl", async () => (await ctx.protlink.list()).items);
+    if (Array.isArray(out._pl)) { out.protlink = out._pl.length; out._plNew = out._pl.filter((x) => x.update).length; }
   }
   return out;
 }
@@ -56,6 +63,7 @@ export async function renderSectionHome(ctx) {
   const draw = (counts) => {
     if (section === 'memory') return drawMemory(ctx, listHost, tabs, counts);
     if (section === 'work') return drawWork(ctx, listHost, tabs);
+    if (section === 'manage') return drawManage(ctx, listHost, tabs, counts);
     const row = (t) => h('button', { type: 'button', class: 'rb-hubrow', onClick: () => ctx.go(t.id), 'aria-label': t.label, dataset: { tab: t.id } },
       h('span', { class: 'ico' }, icon(t.icon, 20)),
       h('span', { class: 't' }, h('b', null, t.label), h('small', null, [LINE[t.id] ?? t.card ?? '', counts[t.id] !== undefined ? ` · ${counts[t.id]}${typeof counts[t.id] === 'number' ? '개' : ''}` : ''].join(''))),
@@ -97,4 +105,45 @@ function drawMemory(ctx, listHost, tabs, counts) {
       : h('p', { class: 'rb-mhub-empty' }, !m ? '불러오는 중이에요.' : m.cur ? '아직 쌓인 기록이 없어요. 기억을 켜고 대화하면 여기에 모여요.' : '채팅을 열면 그 채팅의 최근 기록이 보여요.'));
   listHost.closest?.('.rb-hub')?.classList.add('rb-mhub');
   replace(listHost, stat, h('div', { class: 'rb-mhub-tiles' }, tabs.map(tile)), rec);
+}
+
+// 2.2.0 관리 개요(4번: 통합 검색 + 숫자 타일): 위 검색창은 캐릭터·모듈·플러그인 이름을 함께 찾고, 결과를 누르면 그 탭에서 검색한 채로 열어요.
+// 타일은 .rb-hubrow를 유지(바로가기·시험 호환). 검색창은 다시 그리지 않아 한글 조합이 끊기지 않는다.
+var MANDESC = { characters: "폴더로 정리하고 에셋·로어북 다듬기", modules: "켜고 끄고 순서 정하기", plugins: "모아 보고 업데이트 확인", protlink: "Proton Drive 링크로 새 파일 받기" };
+var MANUNIT = { characters: "명", modules: "개", plugins: "개", protlink: "개" };
+function drawManage(ctx, listHost, tabs, counts) {
+  listHost.closest?.('.rb-hub')?.classList.add('rb-manhub');
+  const st = (ctx.state.manHub ??= { q: "" });
+  const old = listHost.querySelector('#rb-man-search');
+  const res = old ? listHost.querySelector('#rb-man-results') : h('div', { class: 'rb-manres', id: 'rb-man-results', role: 'list' });
+  const input = old ?? h('input', { class: 'rb-input rb-mansearch', id: 'rb-man-search', type: 'search', placeholder: '캐릭터·모듈·플러그인 한 번에 찾기', value: st.q, 'aria-label': '관리 통합 검색', autocomplete: 'off' });
+  const open = (tab, q) => { ctx.state.searchNext = q; ctx.go(tab); };
+  const paint = () => {
+    const q = st.q.trim().toLowerCase();
+    if (!q) return replace(res);
+    const names = counts._names;
+    if (!names) return replace(res, h('p', { class: 'rb-muted' }, '목록을 읽는 중이에요.'));
+    const hits = [];
+    for (const k of ['characters', 'modules', 'plugins']) for (const x of names[k] ?? []) if (`${x.n} ${x.d}`.toLowerCase().includes(q)) hits.push([k, x]);
+    replace(res, hits.length ? hits.slice(0, 30).map(([k, x]) => h('button', { type: 'button', class: ['rb-manhit', `k-${k}`], role: 'listitem', onClick: () => open(k, x.n) },
+      h('span', { class: 'ico', 'aria-hidden': 'true' }, icon(TABS.find((t) => t.id === k)?.icon ?? 'box', 16)),
+      h('span', { class: 't' }, h('b', null, x.n || '(이름 없음)'), x.d ? h('small', null, x.d) : null),
+      h('span', { class: 'kind' }, TABS.find((t) => t.id === k)?.label ?? k)))
+      : h('p', { class: 'rb-muted', style: 'margin:4px 2px' }, '찾는 항목이 없어요.'));
+  };
+  input.oninput = (e) => { st.q = input.value; if (!e.isComposing) paint(); };
+  input.oncompositionend = () => { st.q = input.value; paint(); };
+  input.onkeydown = (e) => { if (e.key === 'Enter' && !e.isComposing) res.querySelector('button')?.click(); };
+  const tile = (t) => {
+    const n = counts[t.id];
+    const warn = t.id === 'protlink' && counts._plNew ? `새 파일 ${counts._plNew}` : null;
+    return h('button', { type: 'button', class: ['rb-hubrow', 'rb-mantile', `k-${t.id}`], onClick: () => ctx.go(t.id), 'aria-label': t.label, dataset: { tab: t.id } },
+      h('span', { class: 'hd' }, h('span', { class: 'ico' }, icon(t.icon, 20)), h('b', null, t.label), h('span', { class: 'go', 'aria-hidden': 'true' }, icon('chevron', 16))),
+      h('span', { class: 'big' }, n === undefined ? '–' : String(n), n === undefined ? null : h('small', null, MANUNIT[t.id] ?? '개')),
+      h('small', { class: 'd' }, MANDESC[t.id] ?? t.card ?? ''),
+      warn ? h('span', { class: 'warn' }, warn) : null);
+  };
+  if (old) { replace(listHost.querySelector('.rb-mantiles'), ...tabs.map(tile)); paint(); return; }
+  replace(listHost, h('section', { class: 'rb-manbar' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, icon('search', 18)), input), res, h('div', { class: 'rb-mantiles' }, tabs.map(tile)));
+  paint();
 }

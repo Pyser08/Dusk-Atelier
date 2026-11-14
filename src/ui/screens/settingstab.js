@@ -56,7 +56,10 @@ export async function renderSettingsTab(ctx) {
   );
 
   // 기본 설정은 먼저 보여 주고, 고급 설정 데이터는 뒤에서 불러와요.
-  const shell = h("div", { class: "rb-scroll rb-mem2", "data-page": "settings" },
+  // 2.2.0(5번 A): 왼쪽 목차(모바일은 위 칩 줄) — 카드는 모두 그대로 두고, 목차를 누르면 그 카드로 이동·강조
+  const toc = h("nav", { class: "rb-settoc", "aria-label": "설정 목차" });
+  const shell = h("div", { class: "rb-scroll rb-mem2 rb-set2", "data-page": "settings" },
+    toc,
     h("div", { class: ["rb-mem2-grid", adv && "has-adv"] },
       main,
       adv ? h("div", { class: "rb-mem2-side" }, h("div", { class: "rb-card bordered" }, h("span", { class: "h" }, "고급 설정"), h("span", { class: "rb-muted" }, "불러오는 중…"))) : null
@@ -64,6 +67,7 @@ export async function renderSettingsTab(ctx) {
   );
   const advSide = shell.querySelector(".rb-mem2-side");
   replace(ctx.main, shell);
+  paintToc(shell, toc);
 
 
   // ── 고급 영역 ──
@@ -141,6 +145,25 @@ export async function renderSettingsTab(ctx) {
   }
   // 고급은 점선 '고급' 칸 없이 묶음 카드를 그대로 오른쪽 열에 둔다
   if (advSide) replace(advSide, ...(adv ? advBlocks : [advFold(ctx, "settings", true)]));
+  paintToc(shell, toc);
+}
+
+var TOC_ICON = { "화면": "eye", "서버": "network", "애드온": "plugin", "백업": "download", "도움말": "info", "이야기 도우미": "sparkle", "로어북 · 채팅 메뉴": "book", "정리 · 기록": "refresh" };
+function paintToc(shell, toc) {
+  if (!toc.isConnected) return;
+  const cards = [...shell.querySelectorAll(".rb-mem2-grid .rb-scard")].filter((c) => c.querySelector(":scope > .h")?.textContent?.trim());
+  const items = cards.map((c, i) => {
+    const t = c.querySelector(":scope > .h").textContent.trim();
+    c.dataset.toc = String(i);
+    return h("button", { type: "button", class: "rb-settoc-i", dataset: { toc: String(i) }, onClick: () => {
+      toc.querySelectorAll(".on").forEach((x) => x.classList.remove("on"));
+      toc.querySelector(`[data-toc="${i}"]`)?.classList.add("on");
+      c.scrollIntoView({ block: "start", behavior: "smooth" });
+      c.classList.remove("rb-toc-hit"); void c.offsetWidth; c.classList.add("rb-toc-hit");
+    } }, h("span", { class: "ico", "aria-hidden": "true" }, icon(TOC_ICON[t] ?? "sliders", 16)), h("span", null, t));
+  });
+  replace(toc, ...items);
+  items[0]?.classList.add("on");
 }
 
 // ── Dusk Cellar (선택 서버) ── 줄 하나: 오른쪽에 상태(확인 중 → 연결됨 vX / 없음). 누르면 상태·주소·다시 확인.

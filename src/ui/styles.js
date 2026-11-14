@@ -7,6 +7,7 @@ import { NAV_CSS } from './navcss.js';
 import { HOMEGRID_CSS } from './screens/homegridcss.js';
 import { MEMHUB_CSS } from './screens/memhubcss.js';
 import { WORKHUB_CSS } from './screens/workhubcss.js';
+import { MANAGEHUB_CSS } from './screens/managehubcss.js';
 import { GLANCE_CSS } from './screens/provider/glance.js';
 import { AIBOT_CSS } from './screens/aibot.js';
 import { MEMTHEME_CSS } from './screens/memthemecss.js';
@@ -1504,4 +1505,4 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-wk-row{border-radius:var(--rb-r3)}
 .rb-scroll::-webkit-scrollbar-thumb{border-radius:var(--rb-pill,999px)}
 @media (prefers-reduced-motion:reduce){.rb-btn,.rb-card,.rb-pcard,.rb-wk-row,.rb-wk2-who{transition:none!important;transform:none!important}}
-`+PROB_CSS+RELMAP_CSS+PROVIDER_CSS+SIZE_CSS+GLASS_CSS+NAV_CSS+HOMEGRID_CSS+MEMHUB_CSS+MEMTHEME_CSS+WORKHUB_CSS+GLANCE_CSS+AIBOT_CSS;
+`+PROB_CSS+RELMAP_CSS+PROVIDER_CSS+SIZE_CSS+GLASS_CSS+NAV_CSS+HOMEGRID_CSS+MEMHUB_CSS+MEMTHEME_CSS+WORKHUB_CSS+MANAGEHUB_CSS+GLANCE_CSS+AIBOT_CSS;

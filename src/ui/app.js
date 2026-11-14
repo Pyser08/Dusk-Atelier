@@ -436,9 +436,10 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     const leaving = tab !== state.tab || sub !== state.sub;
     if (leaving) stashPane();
     if (tab !== state.tab || (sub === "history") !== (state.sub === "history") || (tab === "home" && state.search)) {   // 홈 기능 찾기에서 홈 안 기능(애드온)으로 갈 때도 검색을 비운다
-      state.search = "";
-      searchInput.value = "";
+      state.search = state.searchNext ?? "";   // 2.2.0: 관리 개요 통합 검색 결과는 검색어를 들고 넘어간다
+      searchInput.value = state.search;
     }
+    state.searchNext = null;
     if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsBg = true;
     if (tab === "characters") state.charOrderStale = true;
     if (tab === "provider" && !prefs.ui?.experimental) {

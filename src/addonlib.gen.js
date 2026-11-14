@@ -228,56 +228,57 @@ import * as m225 from "./ui/screens/homestate.js";
 import * as m226 from "./ui/screens/infocard.js";
 import * as m227 from "./ui/screens/loredusk.js";
 import * as m228 from "./ui/screens/lorelog.js";
-import * as m229 from "./ui/screens/memhubcss.js";
-import * as m230 from "./ui/screens/memory/chatload.js";
-import * as m231 from "./ui/screens/memory/common.js";
-import * as m232 from "./ui/screens/memory/hypamodal.js";
-import * as m233 from "./ui/screens/memory/setup.js";
-import * as m234 from "./ui/screens/memory/skillchat.js";
-import * as m235 from "./ui/screens/memory/skills.js";
-import * as m236 from "./ui/screens/memory/username.js";
-import * as m237 from "./ui/screens/memthemecss.js";
-import * as m238 from "./ui/screens/modlinks.js";
-import * as m239 from "./ui/screens/modules.js";
-import * as m240 from "./ui/screens/newbot.js";
-import * as m241 from "./ui/screens/patchui.js";
-import * as m242 from "./ui/screens/placeholder.js";
-import * as m243 from "./ui/screens/presets.js";
-import * as m244 from "./ui/screens/promptstab.js";
-import * as m245 from "./ui/screens/provider/css.js";
-import * as m246 from "./ui/screens/provider/glance.js";
-import * as m247 from "./ui/screens/provider/ui.js";
-import * as m248 from "./ui/screens/relmap/css.js";
-import * as m249 from "./ui/screens/roulettepop.js";
-import * as m250 from "./ui/screens/sectionhome.js";
-import * as m251 from "./ui/screens/settings.js";
-import * as m252 from "./ui/screens/settingstab.js";
-import * as m253 from "./ui/screens/sizemeter.js";
-import * as m254 from "./ui/screens/sizemeter/css.js";
-import * as m255 from "./ui/screens/tools.js";
-import * as m256 from "./ui/screens/updsettings.js";
-import * as m257 from "./ui/screens/workhome.js";
-import * as m258 from "./ui/screens/workhubcss.js";
-import * as m259 from "./ui/screens/workshoplink.js";
-import * as m260 from "./ui/screentours.js";
-import * as m261 from "./ui/scrollguard.js";
-import * as m262 from "./ui/sortable.js";
-import * as m263 from "./ui/staleguard.js";
-import * as m264 from "./ui/styles.js";
-import * as m265 from "./ui/tabs.js";
-import * as m266 from "./ui/theme.js";
-import * as m267 from "./ui/themekit.js";
-import * as m268 from "./ui/toast.js";
-import * as m269 from "./ui/tooltip.js";
-import * as m270 from "./ui/tour.js";
-import * as m271 from "./ui/undo.js";
-import * as m272 from "./ui/watch.js";
-import * as m273 from "./ui/whatsnew.js";
-import * as m274 from "./vendor/fflate-full.js";
-import * as m275 from "./vendor/fflate.js";
-import * as m276 from "./vendor/msgpackr.js";
-import * as m277 from "./vendor/noble.js";
-import * as m278 from "./vendor/re2js.js";
+import * as m229 from "./ui/screens/managehubcss.js";
+import * as m230 from "./ui/screens/memhubcss.js";
+import * as m231 from "./ui/screens/memory/chatload.js";
+import * as m232 from "./ui/screens/memory/common.js";
+import * as m233 from "./ui/screens/memory/hypamodal.js";
+import * as m234 from "./ui/screens/memory/setup.js";
+import * as m235 from "./ui/screens/memory/skillchat.js";
+import * as m236 from "./ui/screens/memory/skills.js";
+import * as m237 from "./ui/screens/memory/username.js";
+import * as m238 from "./ui/screens/memthemecss.js";
+import * as m239 from "./ui/screens/modlinks.js";
+import * as m240 from "./ui/screens/modules.js";
+import * as m241 from "./ui/screens/newbot.js";
+import * as m242 from "./ui/screens/patchui.js";
+import * as m243 from "./ui/screens/placeholder.js";
+import * as m244 from "./ui/screens/presets.js";
+import * as m245 from "./ui/screens/promptstab.js";
+import * as m246 from "./ui/screens/provider/css.js";
+import * as m247 from "./ui/screens/provider/glance.js";
+import * as m248 from "./ui/screens/provider/ui.js";
+import * as m249 from "./ui/screens/relmap/css.js";
+import * as m250 from "./ui/screens/roulettepop.js";
+import * as m251 from "./ui/screens/sectionhome.js";
+import * as m252 from "./ui/screens/settings.js";
+import * as m253 from "./ui/screens/settingstab.js";
+import * as m254 from "./ui/screens/sizemeter.js";
+import * as m255 from "./ui/screens/sizemeter/css.js";
+import * as m256 from "./ui/screens/tools.js";
+import * as m257 from "./ui/screens/updsettings.js";
+import * as m258 from "./ui/screens/workhome.js";
+import * as m259 from "./ui/screens/workhubcss.js";
+import * as m260 from "./ui/screens/workshoplink.js";
+import * as m261 from "./ui/screentours.js";
+import * as m262 from "./ui/scrollguard.js";
+import * as m263 from "./ui/sortable.js";
+import * as m264 from "./ui/staleguard.js";
+import * as m265 from "./ui/styles.js";
+import * as m266 from "./ui/tabs.js";
+import * as m267 from "./ui/theme.js";
+import * as m268 from "./ui/themekit.js";
+import * as m269 from "./ui/toast.js";
+import * as m270 from "./ui/tooltip.js";
+import * as m271 from "./ui/tour.js";
+import * as m272 from "./ui/undo.js";
+import * as m273 from "./ui/watch.js";
+import * as m274 from "./ui/whatsnew.js";
+import * as m275 from "./vendor/fflate-full.js";
+import * as m276 from "./vendor/fflate.js";
+import * as m277 from "./vendor/msgpackr.js";
+import * as m278 from "./vendor/noble.js";
+import * as m279 from "./vendor/re2js.js";
 export const LIB = {
   "src/data/addcharacter.js": m0,
   "src/data/addons.js": m1,
@@ -508,54 +509,55 @@ export const LIB = {
   "src/ui/screens/infocard.js": m226,
   "src/ui/screens/loredusk.js": m227,
   "src/ui/screens/lorelog.js": m228,
-  "src/ui/screens/memhubcss.js": m229,
-  "src/ui/screens/memory/chatload.js": m230,
-  "src/ui/screens/memory/common.js": m231,
-  "src/ui/screens/memory/hypamodal.js": m232,
-  "src/ui/screens/memory/setup.js": m233,
-  "src/ui/screens/memory/skillchat.js": m234,
-  "src/ui/screens/memory/skills.js": m235,
-  "src/ui/screens/memory/username.js": m236,
-  "src/ui/screens/memthemecss.js": m237,
-  "src/ui/screens/modlinks.js": m238,
-  "src/ui/screens/modules.js": m239,
-  "src/ui/screens/newbot.js": m240,
-  "src/ui/screens/patchui.js": m241,
-  "src/ui/screens/placeholder.js": m242,
-  "src/ui/screens/presets.js": m243,
-  "src/ui/screens/promptstab.js": m244,
-  "src/ui/screens/provider/css.js": m245,
-  "src/ui/screens/provider/glance.js": m246,
-  "src/ui/screens/provider/ui.js": m247,
-  "src/ui/screens/relmap/css.js": m248,
-  "src/ui/screens/roulettepop.js": m249,
-  "src/ui/screens/sectionhome.js": m250,
-  "src/ui/screens/settings.js": m251,
-  "src/ui/screens/settingstab.js": m252,
-  "src/ui/screens/sizemeter.js": m253,
-  "src/ui/screens/sizemeter/css.js": m254,
-  "src/ui/screens/tools.js": m255,
-  "src/ui/screens/updsettings.js": m256,
-  "src/ui/screens/workhome.js": m257,
-  "src/ui/screens/workhubcss.js": m258,
-  "src/ui/screens/workshoplink.js": m259,
-  "src/ui/screentours.js": m260,
-  "src/ui/scrollguard.js": m261,
-  "src/ui/sortable.js": m262,
-  "src/ui/staleguard.js": m263,
-  "src/ui/styles.js": m264,
-  "src/ui/tabs.js": m265,
-  "src/ui/theme.js": m266,
-  "src/ui/themekit.js": m267,
-  "src/ui/toast.js": m268,
-  "src/ui/tooltip.js": m269,
-  "src/ui/tour.js": m270,
-  "src/ui/undo.js": m271,
-  "src/ui/watch.js": m272,
-  "src/ui/whatsnew.js": m273,
-  "src/vendor/fflate-full.js": m274,
-  "src/vendor/fflate.js": m275,
-  "src/vendor/msgpackr.js": m276,
-  "src/vendor/noble.js": m277,
-  "src/vendor/re2js.js": m278
+  "src/ui/screens/managehubcss.js": m229,
+  "src/ui/screens/memhubcss.js": m230,
+  "src/ui/screens/memory/chatload.js": m231,
+  "src/ui/screens/memory/common.js": m232,
+  "src/ui/screens/memory/hypamodal.js": m233,
+  "src/ui/screens/memory/setup.js": m234,
+  "src/ui/screens/memory/skillchat.js": m235,
+  "src/ui/screens/memory/skills.js": m236,
+  "src/ui/screens/memory/username.js": m237,
+  "src/ui/screens/memthemecss.js": m238,
+  "src/ui/screens/modlinks.js": m239,
+  "src/ui/screens/modules.js": m240,
+  "src/ui/screens/newbot.js": m241,
+  "src/ui/screens/patchui.js": m242,
+  "src/ui/screens/placeholder.js": m243,
+  "src/ui/screens/presets.js": m244,
+  "src/ui/screens/promptstab.js": m245,
+  "src/ui/screens/provider/css.js": m246,
+  "src/ui/screens/provider/glance.js": m247,
+  "src/ui/screens/provider/ui.js": m248,
+  "src/ui/screens/relmap/css.js": m249,
+  "src/ui/screens/roulettepop.js": m250,
+  "src/ui/screens/sectionhome.js": m251,
+  "src/ui/screens/settings.js": m252,
+  "src/ui/screens/settingstab.js": m253,
+  "src/ui/screens/sizemeter.js": m254,
+  "src/ui/screens/sizemeter/css.js": m255,
+  "src/ui/screens/tools.js": m256,
+  "src/ui/screens/updsettings.js": m257,
+  "src/ui/screens/workhome.js": m258,
+  "src/ui/screens/workhubcss.js": m259,
+  "src/ui/screens/workshoplink.js": m260,
+  "src/ui/screentours.js": m261,
+  "src/ui/scrollguard.js": m262,
+  "src/ui/sortable.js": m263,
+  "src/ui/staleguard.js": m264,
+  "src/ui/styles.js": m265,
+  "src/ui/tabs.js": m266,
+  "src/ui/theme.js": m267,
+  "src/ui/themekit.js": m268,
+  "src/ui/toast.js": m269,
+  "src/ui/tooltip.js": m270,
+  "src/ui/tour.js": m271,
+  "src/ui/undo.js": m272,
+  "src/ui/watch.js": m273,
+  "src/ui/whatsnew.js": m274,
+  "src/vendor/fflate-full.js": m275,
+  "src/vendor/fflate.js": m276,
+  "src/vendor/msgpackr.js": m277,
+  "src/vendor/noble.js": m278,
+  "src/vendor/re2js.js": m279
 };

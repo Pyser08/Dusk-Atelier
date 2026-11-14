@@ -55,7 +55,8 @@ export function gripDrag({ grip, row: row2, root: rootArg, scroller: scrollerArg
     const doc = row2.ownerDocument, win = doc.defaultView;
     const host = root.closest(".rb-win") ?? root.closest(".rb-full") ?? doc.body;
     const r = row2.getBoundingClientRect(), hr = host.getBoundingClientRect();
-    const dy = ev.clientY - r.top;
+    const dy = ev.clientY - r.top, dx = ev.clientX - r.left;
+    const grid = !!root.closest?.(".rb-chargal") || root.classList?.contains("rb-chargal");
     const ghost = row2.cloneNode(true);
     Object.assign(ghost.style, {
       position: "absolute",
@@ -104,11 +105,11 @@ export function gripDrag({ grip, row: row2, root: rootArg, scroller: scrollerArg
       const both = el.hasAttribute("data-drop-row") && el.hasAttribute("data-drop-folder");
       const rel = (y - rr.top) / Math.max(1, rr.height);
       const isRow = both ? rel < 0.28 || rel > 0.72 : el.hasAttribute("data-drop-row");
-      const after = isRow && (both ? rel > 0.72 : y > rr.top + rr.height / 2);
+      const after = isRow && (both ? rel > 0.72 : grid ? x > rr.left + rr.width / 2 : y > rr.top + rr.height / 2);
       if (target?.el === el && target.after === after) return;
       clear2();
       target = { el, prev: el.style.boxShadow, isRow, after, id: el.getAttribute("data-drop-row"), folder: el.getAttribute("data-drop-folder") };
-      el.style.boxShadow = isRow ? after ? "inset 0 -3px 0 var(--rb-acc-text)" : "inset 0 3px 0 var(--rb-acc-text)" : "inset 0 0 0 2px var(--rb-sel-ring)";
+      el.style.boxShadow = isRow && grid ? (after ? "inset -3px 0 0 var(--rb-acc-text)" : "inset 3px 0 0 var(--rb-acc-text)") : isRow ? after ? "inset 0 -3px 0 var(--rb-acc-text)" : "inset 0 3px 0 var(--rb-acc-text)" : "inset 0 0 0 2px var(--rb-sel-ring)";
     };
     const tick = () => {
       raf = 0;
@@ -127,6 +128,7 @@ export function gripDrag({ grip, row: row2, root: rootArg, scroller: scrollerArg
       e.preventDefault();
       lastY = e.clientY;
       ghost.style.top = `${e.clientY - dy - hr.top}px`;
+      if (grid) ghost.style.left = `${e.clientX - dx - hr.left}px`;
       pick(e.clientX, e.clientY);
       if (!raf) raf = win.requestAnimationFrame(tick);
     };

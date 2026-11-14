@@ -7,7 +7,9 @@
 - 버전(package.json·CHANGELOG 새 섹션)은 지시 있을 때만.
 
 ## ▶ 다음 세션에서 이어갈 것 (11-14 기준)
-- **4번 관리·5번 설정 목업 초안**: `docs/mockups/glass-4-5-manage-settings.html`(탭 6개 × 4안, PC·모바일). 사용자 선택 대기 → 구현.
+- **4번 관리·5번 설정 끝(11-15)**: 목업 `glass-4-5-manage-settings.html`에서 고른 안 — 개요 C검색+A타일, 캐릭터 B(갤러리·게이지 `prefs.ui.charCard`·목록 전환 `charView`), 모듈 A(CSS 카운터 번호·`.rb-modexp` 펼침, PC 비개발 모드만), 플러그인 A(`.rb-plcat` 색띠 카드), ProtLink A + 오른쪽 타임라인(`.rb-pl-tl`, summary에 addedAt 추가·이 창 받기 기록 `state.plLog`), 설정 A(`.rb-settoc` 목차 → 카드로 스크롤). CSS `src/ui/screens/managehubcss.js`. 통합 검색 결과는 `state.searchNext`로 검색어를 들고 탭 이동(app.js go). 갤러리 끌기는 sortable.js grid 축(좌우). e2e 새 `run-manage-glass` 22.
+- **다음: 캐릭터·모듈 편집 화면 목업** `docs/mockups/glass-4-editor.html`(각 3안) — 사용자 선택 대기 → 구현.
+- 애드온 dist(manage·protlink) 내용이 바뀌었지만 애드온 버전은 안 올림(지시 대기).
 - **3번 작업실 끝**(커밋 전). 다음은 **4번 관리**(manage-home·characters·modules·plugins·protlink) — 목업(탭마다 맞춤 4안, 통일 금지) → 확인 → 구현. 3번 구현은 아래 ‘3번 기록’.
 - **2번 기억 진행 중**: 개요·장기 기억 끝(아래). 다음은 관계도 → 코코아 → 카드. 목업 초안은 `docs/mockups/glass-2-memory.html`, 디자인은 6번(색띠+약한 네온, 선 아이콘)으로 맞춰 다시 목업 → 확인 → 구현.
 - **1번 홈까지 끝**(커밋 ac0907e 이후 문서 정리 커밋). 다음은 **2번 기억**: memory-home·memory·relmap·cocoa·cards — 목업(PC 1280·모바일 390) → 확인 → 구현 → e2e.
@@ -24,8 +26,8 @@
 | 1 | 홈 | home | [x] 11-14 끝(F안·사이드바·위쪽 메뉴·모바일 탭바·테마 22종). 실기기 미확인 |
 | 2 | 기억 | memory-home, memory, relmap, cocoa, cards | [x] 11-14 끝(개요·장기 기억·인물 위키·NSFW 설정·관계도·코코아·카드). 실기기 미확인 |
 | 3 | 작업실 | work-home, provider, look, stealth, aibot, personabuilder, tools, dev | [x] 11-14 끝(목업 glass-3-work-final 조합). 실기기 미확인 |
-| 4 | 관리 | manage-home, characters, modules, plugins, protlink | [ ] |
-| 5 | 설정 | settings (+ 테마 선택 UI, '가벼운 화면' 저사양 모드) | [ ] 테마 선택·가벼운 화면은 11-14에 꾸미기 탭에 먼저 넣음(아래) — 설정 탭 배치만 남음 |
+| 4 | 관리 | manage-home, characters, modules, plugins, protlink | [x] 11-15 끝. 편집 화면 목업 대기, 실기기 미확인 |
+| 5 | 설정 | settings (+ 테마 선택 UI, '가벼운 화면' 저사양 모드) | [x] 11-15 왼쪽 목차. 테마 선택·가벼운 화면은 꾸미기 탭에 있음 |
 | 6 | 마무리 | 6테마 대비 확인, 전 화면 PC·모바일 e2e, CHANGELOG·안내서 | [ ] |
 
 - 0번은 1번 세션 안에서 같이 해도 됨(홈 변경안을 받을 때 결정).

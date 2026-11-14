@@ -10,8 +10,8 @@
       "hooks": false,
       "desc": "캐릭터를 폴더로 정리하고 에셋·로어북을 다듬고, 모듈을 켜고 끄고 연결하고, 플러그인 새 버전을 확인해요. 가져오기는 이 애드온 없이도 돼요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/manage.js",
-      "sha256": "51ea3effa5826c0dcb6670c0fa35b8f3105dfec14297b7bb025533d08501ea23",
-      "size": 79162
+      "sha256": "e1924ce1a6e1594d86d62b0d95f8582f3b68f13103c7d01165746eb26d63eb79",
+      "size": 79258
     },
     {
       "id": "provider",
@@ -100,8 +100,8 @@
       "hooks": false,
       "desc": "Proton Drive 공유 링크를 캐릭터·모듈·플러그인에 연결해 두고, 새 파일이 올라오면 알려 주고 받아서 업데이트로 넘겨요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/protlink.js",
-      "sha256": "df05b1b87856f885ef6793196cd1baddd15a841db6a1279d5b4d5462575db661",
-      "size": 971685
+      "sha256": "b6b04e56532b131ebdf3e6aaaf4fc75f792528058da8124eb8cf76fa6121f2d2",
+      "size": 972914
     },
     {
       "id": "widgets",

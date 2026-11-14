@@ -28,8 +28,8 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
     await nav("작업실");
     ok(`[모바일] 작업실 개요(2.2.0): 하는 일별 묶음 + 최근·고정`, (await vis(".rb-wgroups .rb-wgroup")) >= 3 && (await vis(".rb-wgroups .rb-hubrow")) >= 5 && (await vis(".rb-wgroup.k-recent")) === 1 && (await vis(".rb-wgroup.k-pin")) === 1);
     await nav("관리");
-    ok(`[모바일] 관리 개요: 개수 표시`, /· \d+개/.test(await page.locator(".rb-hubrow", { hasText: "캐릭터" }).textContent()));
-    await page.locator(".rb-hubrow", { hasText: /^모듈/ }).click(); await page.waitForTimeout(500);
+    ok(`[모바일] 관리 개요: 개수 표시`, /\d+\s*명/.test(await page.locator(".rb-mantile.k-characters .big").textContent()));
+    await page.locator(".rb-hubrow", { hasText: /^모듈/ }).first().click(); await page.waitForTimeout(500);
     ok(`[모바일] 안쪽 화면에서는 위 칩 줄 보임`, (await vis(".rb-morenav")) === 1);
   }
   await page.close();
