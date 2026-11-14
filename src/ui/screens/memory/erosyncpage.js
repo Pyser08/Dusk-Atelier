@@ -16,6 +16,7 @@ import { erosyncBehindCard } from "./erosyncbehind.js";
 import { analysisLine } from "./erosynceditor.js";
 import { clearErosyncFlow } from "./memoryfileui.js";
 import { scanOriginalErosync } from "../../../data/erosyncmigrate.js";
+import { flowSections } from "./flowsettings.js";
 
 // 2.2.0: 수위·동작·비하인드 → ‘장면·수위’, 분석·검토·프롬프트·데이터 → ‘분석·관리’(예전 탭 값은 새 탭으로 이어 줌)
 export const TABS = [["home", "개요"], ["scene", "장면·수위"], ["manage", "분석·관리"]];
@@ -55,9 +56,14 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
       h("li", null, "인물 관계도 → ‘Erosync 목표·경쟁만 보기’: 목표 화살표와 경쟁선")));
   const panes = {
     home: () => [homeExtra()],
-    // 장면·수위: 얼마나(수위·집착 방지·프리셋) → 어떻게 움직일지(동작·되돌리기) → 뒤에서 남는 기록(비하인드)
-    scene: () => [erosyncLevelCard(ctx), typeof er?.setGuard === "function" ? erosyncGuardCard(ctx) : null, typeof er?.presets === "function" ? erosyncPresetCard(ctx, redraw) : null,
-      erosyncConfigCard(ctx, "act"), typeof er?.undoScene === "function" ? erosyncUndoCard(ctx) : null, typeof er?.behind === "function" ? erosyncBehindCard(ctx) : null],
+    // 장면·수위(사용자 순서): 수위(+집착 방지) → 성인 항목(인물 위키 설정에서 옮김) → 동작 → 비하인드 → 장면 되돌리기 → 프리셋
+    scene: () => {
+      const adult = h("div", { id: "rb-erosync-adult", style: "display:contents" });
+      if (ctx.memory?.flow) flowSections(ctx, adult, { redraw, part: "adult" }).catch(() => {});
+      return [erosyncLevelCard(ctx), typeof er?.setGuard === "function" ? erosyncGuardCard(ctx) : null, adult,
+        erosyncConfigCard(ctx, "act"), typeof er?.behind === "function" ? erosyncBehindCard(ctx) : null,
+        typeof er?.undoScene === "function" ? erosyncUndoCard(ctx) : null, typeof er?.presets === "function" ? erosyncPresetCard(ctx, redraw) : null];
+    },
     // 분석·관리: 인물 분석(분석 설정) → 결과 검토 → 프롬프트 → 저장된 값
     manage: () => [analysisCard(), erosyncConfigCard(ctx, "ana"), typeof er?.review === "function" ? erosyncReviewCard(ctx) : null, erosyncPromptsCard(ctx), dataCard()]
   };

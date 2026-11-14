@@ -38,8 +38,8 @@ export function advancedGroups(ctx, { cur, idx, redraw }) {
   const loadMore = () => { if (!loaded) { loaded = true; renderGlobalSettings(ctx, detailHost, { redraw, bare: true }).catch(fail(ctx)); } };
 
   // 자동 기록·인물 추적·리수폿 고급 설정은 장기 기억 → 리수폿 화면으로 옮겼다(2.0.0)
-  const trackingHost = h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "자동 기록 · 인물 추적"), h("p", { class: "rb-muted" }, "리수폿 화면으로 옮겼어요."),
-    h("div", { class: "rb-mem-sact" }, btn("리수폿 화면 열기", { onClick: () => { const m = ctx.state.mem ??= {}; m.page = "pot"; m.potTab = "track"; redraw(); } })));
+  const trackingHost = h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "자동 기록 · 인물 추적"), h("p", { class: "rb-muted" }, "인물 위키 설정 → 고급 탭으로 옮겼어요."),
+    h("div", { class: "rb-mem-sact" }, btn("인물 위키 설정 열기", { onClick: () => { const m = ctx.state.mem ??= {}; m.page = "pot"; m.potTab = "adv"; redraw(); } })));
   const diag = section("진단", h("div", { class: "rb-muted rb-mem-diag" }, diagText(M.runner?.session?.() ?? {})),
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 넣은 기억 보기"), man
         ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `넣음 (약 ${man.tokens} 토큰)` : "넣지 않음"}`),

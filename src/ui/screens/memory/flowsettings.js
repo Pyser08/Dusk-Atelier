@@ -18,14 +18,14 @@ const NEEDS_URL = new Set(["ollama", "custom"]);
 const fmt = (n) => Number(n ?? 0).toLocaleString();
 
 const GK = { "무엇을 기억할까요?": "level", "기억 방식": "mode", "AI 모델": "model" };
-export async function flowSections(ctx, host, { redraw, part = "all" }) {   // 2.2.0 part: "basic"(설정 탭, 고급 모드 칸 없음) · "adv"(고급 탭, 세부 기능 늘 보임)
+export async function flowSections(ctx, host, { redraw, part = "all" }) {   // 2.2.0 part: "basic"(설정 탭: 고급 모드·AI 모델·성인 항목 없음) · "adv"(고급 탭) · "adult"(NSFW 설정 장면·수위 탭)
   const M = ctx.memory;
   if (!M.flow) return replace(host);
   const st = tracked(ctx, await M.flow.settings()), blocked = st.status().blocked;
   const idx = await M.store.getIndex(), flow = idx.settings.flow ?? {};
   const apply = () => M.flow.apply().catch(fail(ctx));
   const sec = (title, desc, ...kids) => h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, title, scopeChip("all"), GK[title] ? guideBtn(ctx, GK[title], { redraw }) : null), desc ? h("p", { class: "rb-muted" }, desc) : null, ...kids);
-  if (blocked) return replace(host, sec("기억 설정", null, note("warn", "저장된 리수폿 설정을 읽지 못했어요. 원본은 그대로 보관돼 있어요. 설정 가져오기를 다시 해 보거나 개발자에게 알려 주세요.")));
+  if (blocked) return replace(host, sec("기억 설정", null, note("warn", "저장된 인물 위키 설정을 읽지 못했어요. 원본은 그대로 보관돼 있어요. 설정 가져오기를 다시 해 보거나 개발자에게 알려 주세요.")));
 
   // ---- 1) 추적 수준 + 기능 카드
   const featHost = h("div", { class: "rb-mem-feats" }), lvHost = h("div");
@@ -149,6 +149,7 @@ export async function flowSections(ctx, host, { redraw, part = "all" }) {   // 2
     return h("div", { class: "rb-note warn", id: "rb-mem-cycle-state", role: "status" }, `아직 동작하지 않아요 · 필요한 설정: ${d.missing.map((m) => m.label).join(" · ")} `, btn("함께 켜기", { size: "sm", onClick: () => ed(() => {}) }));
   }
   paintAdult();
+  if (part === "adult") return replace(host, adultHost);   // 2.2.0: 성인 항목은 NSFW 설정 → 장면·수위 탭에서 보인다
 
   // ---- 4) 가져오기·관리
   const importBtn = btn("리수폿 데이터 가져오기", { icon: "upload", onClick: async () => {
@@ -178,7 +179,7 @@ export async function flowSections(ctx, host, { redraw, part = "all" }) {   // 2
   replace(host,
     sec("무엇을 기억할까요?", "수준을 고르면 아래 카드가 같이 바뀌어요. 바로 저장되고 다음 응답부터 적용돼요.", lvHost, featHost),
     sec("기억 방식", null, modeHost),
-    adultHost,
+    part === "basic" ? null : adultHost,
     part === "basic" ? null : sec("AI 모델", "기록과 정리를 맡길 모델이에요. 모르겠으면 ‘리스 보조 모델’로 두세요.", cfgHost, modelAdv),
     sec("가져오기", "기존에 쓰던 리수폿의 백업 파일(.json)을 불러와요. 인물 문서와 설정만 받고, API 키는 받지 않아요.", importBtn),
     part === "basic" ? null : h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "고급 모드"), advSw), part === "basic" ? null : advHost);

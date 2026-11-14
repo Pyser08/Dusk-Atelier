@@ -383,7 +383,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
 { const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
   const page = await boot(ctx, {}, { memory: true, story: true, mods: true });
   await go(page, "설정"); await page.waitForTimeout(500);
-  ok("[프롬프트] 설정(간단 모드)에 '기억·리수폿 프롬프트' 줄이 바로 보임", (await page.locator("#rb-set-prompts").count()) === 1);
+  ok("[프롬프트] 설정(간단 모드)에 '기억·인물 위키 프롬프트' 줄이 바로 보임", (await page.locator("#rb-set-prompts").count()) === 1);
   await page.locator("#rb-set-prompts").click(); await page.waitForTimeout(600);
   ok("[프롬프트] 화면 열림 · 새 프롬프트·파일에서 불러오기 버튼", (await page.locator("#rb-pr-new").count()) === 1 && (await page.locator("#rb-pr-import").count()) === 1);
   await page.locator("#rb-pr-new").click(); await page.waitForTimeout(500);

@@ -45,7 +45,7 @@ export const FEATURES = [
   { t: "Erosync 검토 (성향 변화 후보)", k: "후보 반영 검토", path: `${E} › 검토`, tab: "memory", mem: ero("review"), addon: "erosync" },
   { t: "Erosync 프롬프트 · 비하인드 · 데이터", k: "지시문 뒷이야기 내보내기", path: `${E} › 프롬프트 / 비하인드 / 데이터`, tab: "memory", mem: ero("prompt"), addon: "erosync" },
   // 설정·도구
-  { t: "기억·리수폿 프롬프트", k: "기본 프롬프트 지침 수정", path: "설정 › 기억·리수폿 프롬프트", tab: "settings", sub: "prompts" },
+  { t: "기억·인물 위키 프롬프트", k: "기본 프롬프트 지침 수정", path: "설정 › 기억·인물 위키 프롬프트", tab: "settings", sub: "prompts" },
   { t: "플러그인 꾸미기 (색·테마)", k: "색 테마 다크 라이트 모양 글꼴", path: "설정 › 플러그인 꾸미기", tab: "settings", sub: "theme" },
   { t: "업데이트 설정", k: "자동 업데이트 버전 알림", path: "설정 › 업데이트 설정", tab: "settings", sub: "updset" },
   { t: "설정 정리", k: "초기화 지우기 저장소 청소", path: "설정 › 설정 정리", tab: "settings", sub: "cleanup" },

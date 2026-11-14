@@ -130,5 +130,5 @@ export async function openChatInfo(env) {
     row("관찰자 모드", h("span", null, s.observerModeEnabled ? "켜짐" : "꺼짐")),
     row("이 채팅 추가 프롬프트", chatPrompts.length ? h("ul", null, chatPrompts.map((p) => h("li", null, p.name || p.text.slice(0, 30)))) : h("span", { class: "rb-muted" }, "없어요")),
     live ? null : note("warn", "리스에서 이 채팅을 열면 위키·페르소나·프롬프트도 보여요."),
-    h("p", { class: "rb-muted" }, "바꾸려면 설정(고급 모드)에서 고쳐요.")));
+    h("p", { class: "rb-muted" }, "바꾸려면 이 고급 탭 위쪽의 세부 기능에서 고쳐요.")));
 }

@@ -31,7 +31,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   const srow = (title, sub, onClick, extra = {}) => h("button", { type: "button", class: "rb-srow", onClick, ...extra }, h("span", { class: "t" }, title, h("small", null, sub)), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
   const memorySettings = h("section", { class: "rb-card bordered rb-scard rb-mem-integrated-settings" },
     h("span", { class: "h" }, "설정"),
-    srow("기억·리수폿 프롬프트", "앞·중간·뒤에 덧붙일 프롬프트", () => ctx.go("settings", "prompts")),
+    srow("기억·인물 위키 프롬프트", "앞·중간·뒤에 덧붙일 프롬프트", () => ctx.go("settings", "prompts")),
     srow("임베딩 (의미 검색)", embedLine, () => { if (M.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, { "data-tour": "mem-embed" }));
 
   // 기억 옵션 3개(고급 모드 '대화에 넣기'와 같은 설정)
@@ -47,7 +47,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
   // 요약된 옛 대화 빼고 보내기(2.0.1): 하이파처럼 전체 문맥을 줄인다. 기본 꺼짐
   memOptions.append(orow("요약된 옛 대화 빼고 보내기", "장기 기억에 이미 정리된 옛 대화는 모델에 보내지 않아 전체 토큰이 줄어요. 최근 대화와 아직 정리 안 된 대화는 그대로 보내요.", inj.trimOld === true, (o, v) => { o.trimOld = v; }));
-  memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 리수폿 위키 기록과 Erosync도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
+  memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 인물 위키와 NSFW(Erosync) 값도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
   // 숫자 칸(기억 넣기 토큰·남길 최근 턴)은 맨 아래(2.1.5). 리수폿 일괄 사용은 리수폿 화면에 있어 여기선 뺐다.
   memOptions.append(h("div", { class: "rb-srow rb-mem-tokens", id: "rb-mem-tokens" }, h("span", { class: "t" }, "기억 넣기 토큰", h("small", null, "응답마다 넣는 기억의 양이에요. 목표만큼 채우고, 중요한 게 많으면 상한까지 늘어나요.")),
     h("div", { class: "rb-mem-tokpair", style: "display:flex;gap:8px;flex-wrap:wrap" },
@@ -69,14 +69,14 @@ function memHead() {
 function potRow(ctx, m, redraw) {
   return h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-pot", "data-tour": "mem-pot", onClick: () => { m.page = "pot"; redraw(); } },
     h("span", { class: "rb-mem-av rb-me-av sm", "aria-hidden": "true" }, icon("book", 18)),
-    h("span", { class: "t" }, "인물 위키 설정", h("small", null, "리수폿으로 인물 위키를 자동으로 쌓아요. 무엇을 얼마나 자세히 기억할지(추적 수준·기능 카드), 어떤 AI로 기록할지, 자동 기록 시점과 고급 설정을 여기서 바꿔요.")),
+    h("span", { class: "t" }, "인물 위키 설정", h("small", null, "응답마다 인물 위키를 자동으로 쌓아요. 무엇을 얼마나 자세히 기억할지(추적 수준·기능 카드)는 ‘설정’ 탭, 기록에 쓸 AI 모델·인물 추적·저장 위치·되돌리기는 ‘고급’ 탭에서 바꿔요.")),
     h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
 }
 function erosyncRow(ctx, m, redraw) {
   if (!ctx.erosync) return null;
   return h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-erosync", onClick: () => { m.page = "erosync"; redraw(); } },
     h("span", { class: "rb-mem-av rb-me-av sm", "aria-hidden": "true" }, icon("shield", 18)),
-    h("span", { class: "t" }, "NSFW 설정", h("small", null, `${ctx.erosync.on() ? "켜져 있어요." : "꺼져 있어요."} Erosync가 인물마다 성향·관계·목표를 읽어 두고, 다음 응답의 장면 계획을 요청에 넣어요. 켜기·user에게도 적용·관찰 수준을 여기서 바꿔요.`)),
+    h("span", { class: "t" }, "NSFW 설정", h("small", null, `${ctx.erosync.on() ? "켜져 있어요." : "꺼져 있어요."} Erosync가 인물마다 성향·관계·목표를 읽어 두고, 다음 응답의 장면 계획을 요청에 넣어요. 켜기·user에게도 적용은 위에서, 수위·동작은 ‘장면·수위’, 인물 분석·프롬프트는 ‘분석·관리’ 탭에서 바꿔요.`)),
     h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
 }
 

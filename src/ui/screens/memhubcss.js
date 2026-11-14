@@ -131,8 +131,8 @@ export var MEMHUB_CSS = `
 /* 인물 위키 설정(.rb-pot-page)·NSFW 설정(.rb-ero-page): 라이트바 컨셉. 큰 카드 = 초록(상태), 나머지 카드 = 화면 색 막대,
    카드 제목 앞 작은 색 막대, 칸 고르기는 장기 기억 칸 단추와 같은 네온, 카드 속 카드는 옅게 */
 .rb-pot-page{--k:#6f9dff}.rb-ero-page{--k:#ff6b9a}
-:is(.rb-pot-page,.rb-ero-page)>.rb-card,:is(.rb-pot-page,.rb-ero-page)>div>.rb-card,:is(.rb-pot-page,.rb-ero-page)>div>section.rb-card{position:relative;padding-left:24px!important}
-:is(.rb-pot-page,.rb-ero-page)>.rb-card::before,:is(.rb-pot-page,.rb-ero-page)>div>.rb-card::before{content:"";position:absolute;left:0;top:14px;width:4px;height:36px;border-radius:0 4px 4px 0;background:var(--k);box-shadow:0 0 10px var(--k);pointer-events:none}
+:is(.rb-pot-page,.rb-ero-page)>.rb-card,:is(.rb-pot-page,.rb-ero-page)>div>.rb-card,:is(.rb-pot-page,.rb-ero-page)>div>section.rb-card,#rb-erosync-adult>.rb-card{position:relative;padding-left:24px!important}
+:is(.rb-pot-page,.rb-ero-page)>.rb-card::before,:is(.rb-pot-page,.rb-ero-page)>div>.rb-card::before,#rb-erosync-adult>.rb-card::before{content:"";position:absolute;left:0;top:14px;width:4px;height:36px;border-radius:0 4px 4px 0;background:var(--k);box-shadow:0 0 10px var(--k);pointer-events:none}
 :is(#rb-pot-hero,#rb-erosync){--k:#5fe0a8}
 :is(.rb-pot-page,.rb-ero-page) .rb-card>h3{display:flex;align-items:center;gap:8px;font-size:15px}
 :is(.rb-pot-page,.rb-ero-page) .rb-card .rb-card{background:color-mix(in srgb,var(--rb-text) 3%,transparent)!important;box-shadow:none!important;border:1px solid var(--rb-line2)!important;padding-left:14px!important}

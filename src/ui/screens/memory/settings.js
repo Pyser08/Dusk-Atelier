@@ -81,7 +81,7 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false, b
     caps.analyze ? regexSection(ctx, { S, save, sw, section }) : null,
     caps.analyze ? section("HypaPlus에서 가져오기", h("p", { class: "rb-muted" }, "HypaPlus에 쌓은 기억을 장면·인물 기록으로 옮겨요. HypaPlus와는 동시에 쓸 수 없어요."), btn("HypaPlus 가져오기", { onClick: () => openHypaModal(ctx, {}) })) : null,
     caps.inject || caps.analyze ? section("기억 넣기",   // 켜기·확장 넣기 스위치는 고급 '대화에 넣기'에만 둔다
-      h("p", { class: "rb-muted" }, "목표·상한 토큰은 장기 기억 홈의 ‘기억 옵션’에 있어요."),
+      h("p", { class: "rb-muted" }, "목표·상한 토큰은 장기 기억 → 설정 칸의 ‘기억 옵션’에 있어요."),
       num("기억 넣기 시작 턴", () => S.inject.fromTurn, (s, v) => { s.inject.fromTurn = Math.max(1, v); }, { min: 1, max: 50 }), num("이야기 요약 토큰", () => S.inject.eventTokens, (s, v) => { s.inject.eventTokens = v; }, { min: 0, max: 4000 }),
       num("오래된 D·C 잊기(메시지 수, 0=끔)", () => S.inject.forgetAfter ?? 150, (s, v) => { s.inject.forgetAfter = v; }, { max: 5000, step: 10 }),
       num("최근 메시지 겹침 제외(개)", () => S.inject.recentSkip, (s, v) => { s.inject.recentSkip = v; }, { max: 40 }),
@@ -94,8 +94,8 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false, b
     if (loaded) return; loaded = true;
     if (backend.id !== "local" || !potOn(S)) return;
     // 리수폿 설정(수준·기능·방식·성인·모델·가져오기·고급)은 장기 기억 → 리수폿 화면의 '설정' 탭으로 옮겼다(2.0.0)
-    replace(flowHost, h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "리수폿 설정"), h("p", { class: "rb-muted" }, "추적 수준·기능 카드·AI 모델·가져오기는 리수폿 화면의 ‘설정’ 탭에 있어요."),
-      h("div", { class: "rb-mem-sact" }, btn("리수폿 설정 열기", { onClick: () => { const mm = mem(ctx); mm.page = "pot"; mm.potTab = "settings"; ctx.go?.("memory"); redraw(); } }))));
+    replace(flowHost, h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "인물 위키 설정"), h("p", { class: "rb-muted" }, "추적 수준·기능 카드·가져오기는 인물 위키 설정의 ‘설정’ 탭, AI 모델은 ‘고급’ 탭에 있어요."),
+      h("div", { class: "rb-mem-sact" }, btn("인물 위키 설정 열기", { onClick: () => { const mm = mem(ctx); mm.page = "pot"; mm.potTab = "settings"; ctx.go?.("memory"); redraw(); } }))));
     if (M.flow) (async () => { try { const st = await M.flow.settings(); if (!st.status().blocked) replace(shareHost, shareSection(ctx, tracked(ctx, st), { apply: () => M.flow.apply().catch(fail(ctx)), redraw })); } catch { /* 흐름 설정을 못 읽으면 공유 칸만 뺀다 */ } })();
   };
   const tools = h("div", { class: "rb-mem-tools" });
