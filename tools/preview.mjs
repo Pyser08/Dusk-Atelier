@@ -9,7 +9,7 @@ writeFileSync(".preview/index.html", `<!doctype html><meta charset=utf-8><meta n
 new EventSource("/esbuild").addEventListener("change", () => location.reload());
 const q = new URLSearchParams(location.search), adv = q.get("adv") === "1";
 const ui = { promptIntroDone: true, tourDone: true, tourVer: 99, onboardDone: true, uiMode: adv ? "advanced" : "simple", theme: { mode: q.get("light") === "1" ? "light" : "dark" } };
-window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify(ui) }, { memory: true, story: true, mods: true, cards: true, noChat: q.get("chat") === "0" })
+window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify(ui) }, { memory: true, story: true, mods: true, cards: true, noChat: q.get("chat") === "0", host: true, erosync: q.get("ero") !== "0", erosyncOn: q.get("eroon") === "1" })
   .then(() => { const t = q.get("tab"); if (t) setTimeout(() => __app.ctx.go(t), 500); });
 // 미리보기 전용: 오른쪽 위 ‘채팅 켬/끔’ 단추(지금 탭을 유지한 채 다시 불러온다)
 const chatOn = q.get("chat") !== "0", tg = document.createElement("button");
@@ -22,4 +22,4 @@ const ctx = await context({ entryPoints: { app: "tests/e2e/app.entry.js" }, bund
   define: { __VERSION__: '"preview"', __CHANGELOG__: '""' }, alias: { fflate: process.cwd() + "/src/vendor/fflate.js" }, loader: { ".json": "json" } });
 await ctx.watch();
 await ctx.serve({ servedir: ".preview", port });
-console.log(`미리보기: http://localhost:${port}/  (옵션: ?chat=0 채팅 없음 · ?adv=1 고급 모드 · ?light=1 밝게 · ?tab=memory)`);
+console.log(`미리보기: http://localhost:${port}/  (옵션: ?chat=0 채팅 없음 · ?adv=1 고급 모드 · ?light=1 밝게 · ?tab=memory · ?ero=0 Erosync 빼기 · ?eroon=1 Erosync 켠 채로)`);

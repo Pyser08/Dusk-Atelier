@@ -6,6 +6,7 @@ import { activate as widgetsAddon } from "../../addons/widgets/index.js";
 import { activate as manageAddon } from "../../addons/manage/index.js";
 import { activate as memoryAddon } from "../../addons/memory/index.js";
 import { activate as cardsAddon } from "../../addons/cards/index.js";
+import { activate as erosyncAddon } from "../../addons/erosync/index.js";
 import { activate as protlinkAddon } from "../../addons/protlink/index.js";
 import { activate as providerAddon } from "../../addons/provider/index.js";
 import { activate as stealthAddon } from "../../addons/stealth/index.js";
@@ -179,6 +180,12 @@ window.bootApp = async (seed, opts = {}) => {
     if (app.ctx.protlink) { app.ctx.protlinkForTest = app.ctx.protlink; await protlinkAddon(api, actx); }
     else { app.ctx.ext.add("tab", "protlink", _rp); app.ctx.ext.add("svc", "protlink", { on: () => false, list: async () => ({ ok: false, items: [] }), lastError: () => "", targets: async () => [] }); }
     if (app.ctx.memory) { app.ctx.memoryForTest = app.ctx.memory; await memoryAddon(api, actx); await cardsAddon(api, actx); }
+    // opts.erosync: 실제 Erosync 애드온(미리보기용). ctx.erosync는 본체(main.js)처럼 svc에서 읽는다. AI 호출은 가짜 호스트라 실패해도 화면은 뜬다.
+    if (opts.erosync && app.ctx.memory) {
+      if (opts.erosyncOn) await api.pluginStorage.setItem("dusk.erosync.on", "true");
+      Object.defineProperty(app.ctx, "erosync", { configurable: true, get: () => app.ctx.ext.get("svc", "erosync") ?? null });
+      await erosyncAddon(api, actx).catch((e) => console.warn("Erosync 시작 실패", e));
+    }
     else {
       app.ctx.ext.add("tab", "memory", _rm); app.ctx.ext.add("tab", "relmap", _rr); app.ctx.ext.add("tab", "cards", _rc);
       app.ctx.ext.add("svc", "memory", {}); app.ctx.ext.add("svc", "cards", {}); app.ctx.ext.add("svc", "memoryui", { tracked: () => null, STAGE_NAMES: {} });
