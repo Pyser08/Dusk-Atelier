@@ -12,6 +12,8 @@ const dry = process.argv.includes("--dry");
 const git = (args, cwd = root) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 execFileSync("node", ["tools/build-addons.mjs", "--check"], { cwd: root, stdio: "inherit" });   // 빌드 결과가 소스와 같은지 먼저 확인
 const src = git(["rev-parse", "--short", "HEAD"]);
+// 지난번에 멈춰 남은 임시 작업 폴더가 addons 브랜치를 붙잡고 있으면 새로 꺼낼 수 없어서 먼저 치운다
+try { git(["worktree", "prune"]); for (const b of git(["worktree", "list", "--porcelain"]).split("\n\n")) if (/\nbranch refs\/heads\/addons$/m.test(b)) git(["worktree", "remove", "--force", b.split("\n")[0].slice(9)]); } catch { /* 없으면 그대로 */ }
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dusk-addons-"));
 try {
   try { git(["fetch", "--depth=1", "origin", "addons"]); git(["worktree", "add", "--force", dir, "FETCH_HEAD"]); git(["checkout", "-B", "addons"], dir); }
