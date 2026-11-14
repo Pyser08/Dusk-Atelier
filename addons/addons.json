@@ -10,8 +10,8 @@
       "hooks": false,
       "desc": "캐릭터를 폴더로 정리하고 에셋·로어북을 다듬고, 모듈을 켜고 끄고 연결하고, 플러그인 새 버전을 확인해요. 가져오기는 이 애드온 없이도 돼요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/manage.js",
-      "sha256": "0849d5f8a9216f098faad35a340316968ba927278e68fa310106b8c1b40d1071",
-      "size": 79135
+      "sha256": "51ea3effa5826c0dcb6670c0fa35b8f3105dfec14297b7bb025533d08501ea23",
+      "size": 79162
     },
     {
       "id": "provider",
@@ -58,8 +58,8 @@
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "5df3e3401d561ef3a6a533229b6aca8445da612b2a9024c583639f98fe7b5b1b",
-      "size": 1620022
+      "sha256": "08264ec7009040b3e8e0f684cb3b7a9d7bd518e59d83ce5e5fb46fca51da3423",
+      "size": 1621605
     },
     {
       "id": "cards",

@@ -15,9 +15,9 @@ const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
 // glasscss.js 값과 같게
 const mixWhite = (rgb, w) => rgb.map((v) => v * (1 - w) + 255 * w);
 const cardOf = (mode, bg, under) => mode === "dark"
-  ? over(`rgba(${mixWhite(bg, 0.12).join(",")},.5)`, under)   // color-mix(바탕 88% + 흰색) 50%
-  : over("rgba(255,255,255,.58)", under);
-const INNER = { dark: "rgba(255,255,255,.08)", light: "rgba(40,28,70,.055)" };
+  ? over(`rgba(${mixWhite(bg, 0.12).join(",")},.62)`, under)   // color-mix(바탕 88% + 흰색) 62%
+  : over("rgba(255,255,255,.72)", under);
+const INNER = { dark: "rgba(255,255,255,.1)", light: "rgba(40,28,70,.055)" };
 const TEXT = { dark: "#f2f0fa", light: "#1f1a33" };
 const SUB = { dark: "rgba(255,255,255,.84)", light: "rgba(31,26,51,.74)" };
 

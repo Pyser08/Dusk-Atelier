@@ -25,6 +25,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 설정 탭: 추적 수준(AI 모델은 고급 탭)`, /무엇을 기억할까요/.test(await page.locator(".rb-pot-pane").textContent()), (await page.locator(".rb-pot-pane").textContent()).slice(0, 120));
   await tab("고급");
   ok(`[${tag}] 고급 탭: 인물 추적 + 저장·되돌리기(2.2.0 합침)`, /AI 모델/.test(await page.locator(".rb-pot-pane .rb-card > h3").first().textContent()) && /새 인물 자동 추적/.test(await page.locator(".rb-pot-pane").textContent()) && /되돌리기/.test(await page.locator(".rb-pot-pane").textContent()));
+  ok(`[${tag}] 고급 탭에 ‘자동 기록 세부’ 없음(2.2.0 장기 기억 설정으로 옮김)`, !/자동 기록 세부/.test(await page.locator(".rb-pot-pane").textContent()));
   await page.locator("#rb-mem-pot .rb-phead [aria-label='장기 기억으로']").first().click(); await page.waitForTimeout(700);
   ok(`[${tag}] 장기 기억으로 돌아가기`, (await page.locator("#rb-mem-go-pot").count()) === 1);
   // 열린 채팅이 없을 때도 리수폿 화면이 열려야 한다(예전: "a.nodes is not iterable")
@@ -34,6 +35,18 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 켜기 스위치 없음(2.2.0, 인물 위키는 늘 씀)`, (await page.locator("#rb-pot-hero [role=switch]").count()) === 0);
   await page.locator("#rb-mem-pot .rb-seg button", { hasText: "설정" }).click(); await page.waitForTimeout(1200);
   ok(`[${tag}] 열린 채팅 없음: 설정 탭`, /무엇을 기억할까요/.test(await page.locator(".rb-pot-pane").textContent()), (await page.locator(".rb-pot-pane").textContent()).slice(0, 100));
+  await page.evaluate(() => { const m = __app.ctx.state.mem; m.page = "home"; __app.ctx.go("memory"); }); await page.waitForTimeout(1500);
+  ok(`[${tag}] 장기 기억 설정: 임베딩 아래 ‘자동 기록 세부’ 줄`, await page.evaluate(() => { const r = document.querySelector("#rb-mem-writer-row"); return !!r && /임베딩/.test(r.previousElementSibling?.textContent ?? ""); }));
+  ok(`[${tag}] 기억 옵션: ‘기억 넣기 토큰’ 바로 밑 ‘자동 기록 입력 예산’`, await page.evaluate(() => { const r = document.querySelector("#rb-mem-wbudget"); return !!r && !r.hidden && r.previousElementSibling?.id === "rb-mem-tokens"; }));
+  await page.evaluate(() => { let e = document.querySelector("#rb-mem-writer-row"); while (e) { if (e.tagName === "DETAILS") e.open = true; e = e.parentElement; } });
+  await page.locator("#rb-mem-writer-row").click(); await page.waitForTimeout(500);
+  ok(`[${tag}] 줄을 누르면 자동 기록 세부 창(입력 예산은 없음)`, /장면 정리의 역할/.test(await page.locator("#rb-mem-writer").textContent()) && !/입력 예산/.test(await page.locator("#rb-mem-writer").textContent()));
+  await page.locator("#rb-mem-writer button", { hasText: "사실만 전달" }).click(); await page.waitForTimeout(500);
+  ok(`[${tag}] 창에서 바꾼 값이 저장됨(장면 정리 역할)`, (await page.evaluate(async () => (await __app.ctx.memory.flow.settings()).rawSnapshot().directorRole)) === "facts");
+  await page.locator("#rb-mem-writer button", { hasText: "닫기" }).click(); await page.waitForTimeout(200);
+  await page.evaluate(() => { let e = document.querySelector("#rb-mem-wbudget"); while (e) { if (e.tagName === "DETAILS") e.open = true; e = e.parentElement; } });
+  await page.locator("#rb-mem-wbudget input").fill("64000"); await page.locator("#rb-mem-wbudget input").press("Tab"); await page.waitForTimeout(400);
+  ok(`[${tag}] 입력 예산 바꾸면 저장됨`, (await page.evaluate(async () => (await __app.ctx.memory.flow.settings()).rawSnapshot().writerInputBudgetTokens)) === 64000);
   ok(`[${tag}] 오류 없음`, !errs.length, errs.join(";"));
   await page.close();
 }

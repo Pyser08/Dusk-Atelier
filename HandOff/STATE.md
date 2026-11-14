@@ -7,6 +7,7 @@
 - 버전(package.json·CHANGELOG 새 섹션)은 지시 있을 때만.
 
 ## ▶ 다음 세션에서 이어갈 것 (11-14 기준)
+- **4번 관리·5번 설정 목업 초안**: `docs/mockups/glass-4-5-manage-settings.html`(탭 6개 × 4안, PC·모바일). 사용자 선택 대기 → 구현.
 - **3번 작업실 끝**(커밋 전). 다음은 **4번 관리**(manage-home·characters·modules·plugins·protlink) — 목업(탭마다 맞춤 4안, 통일 금지) → 확인 → 구현. 3번 구현은 아래 ‘3번 기록’.
 - **2번 기억 진행 중**: 개요·장기 기억 끝(아래). 다음은 관계도 → 코코아 → 카드. 목업 초안은 `docs/mockups/glass-2-memory.html`, 디자인은 6번(색띠+약한 네온, 선 아이콘)으로 맞춰 다시 목업 → 확인 → 구현.
 - **1번 홈까지 끝**(커밋 ac0907e 이후 문서 정리 커밋). 다음은 **2번 기억**: memory-home·memory·relmap·cocoa·cards — 목업(PC 1280·모바일 390) → 확인 → 구현 → e2e.
@@ -32,6 +33,7 @@
 
 ## 세션마다 지킬 것
 - 기능을 빼지 않기: 옮긴 기능은 이 표 아래 '기능 이동 기록'에 "어디 → 어디"로 남기기.
+- **기능 찾기도 같이 고치기(사용자 지시 11-14)**: 탭·기능이 새로 생기거나 이름·자리가 바뀌면 `src/engine/featurefind.js` FEATURES(path·tab·sub·mem·find)를 고치고 `node tests/e2e/run-featurefind.mjs`(모든 항목이 실제 자리·제목으로 가는지)를 돌린다.
 - `?` 도움말·바로가기·'처음 둘러보기' 유지. 카드 안쪽 여백 18px 20px / 모바일 16px(QUALITY 박스 여백 규칙).
 - 애드온 화면(addon 붙은 탭)은 애드온 쪽 코드도 함께 확인.
 - 마칠 때: npm test → build → check("동일함") → 관련 e2e, 이 표 상태 갱신.
@@ -114,7 +116,12 @@
 - 고침: `composing`(compositionstart/end) 동안은 state.search만 갱신, 확정(compositionend) 뒤 `runSearch`. 기능 찾기로 홈에 올 때 `state.findFrom` 기억 → 칸을 비우면 그 탭으로, 다른 곳으로 가면(go 홈 외) 잊음.
 - 시험: 새 e2e `tests/e2e/run-search-ime.mjs`(CDP imeSetComposition으로 실제 조합, PC·모바일 16) — 고치기 전 4 실패 확인. 실제 맥 한글 입력기에서는 마지막 음절이 확정될 때(다음 글자·띄어쓰기·포커스 이동) 결과가 바뀜(조합 중엔 한 음절 늦음). 실기기 미확인.
 
+## 가독성·기능 찾기 점검 (11-14)
+- 글래스 카드 덮는 정도: 어두운 `--rb-glass-bg` 50→62%, 안쪽 칸 .08→.1, 보조 글자 .84→.88·.6→.66 / 밝은 카드 .58→.72, 보조 .74→.8·.6→.64(glasscss.js). tests/glassthemes.test.js 모델 값도 같이(22종 대비 통과).
+- 기능 찾기 18개가 옛 자리였음 → featurefind.js 고침(POTA=인물 위키 고급, MSET=장기 기억 설정 탭 memTab:"opt", NSFW 설정 eroTab scene/manage, 성인 항목은 NSFW 설정 → 장면·수위). 새 e2e `tests/e2e/run-featurefind.mjs`(58 항목, 홈 애드온은 addons 부팅에서) 모두 통과.
+
 ## 기능 이동 기록
+- 인물 위키 설정 → 고급 ‘자동 기록 세부’ → 장기 기억 설정 카드 ‘임베딩(의미 검색)’ 아래 줄 `#rb-mem-writer-row` → 창 `#rb-mem-writer`(mhome.js openWriterDetails, 내용은 advanced.js `writerDetails`). ‘자동 기록 입력 예산’만 기억 옵션 ‘기억 넣기 토큰’(#rb-mem-tokens) 바로 밑 `#rb-mem-wbudget`(writerInputBudgetTokens, 인물 위키 설정을 읽을 수 있을 때만). e2e run-potpage에 위치·창·저장 확인. 참고: tests/cellarupdate.test.js 188~190 가끔 실패(타이밍, 무관), erosync-ui ‘더보기 메뉴 파일 내보내기’ 2 실패는 원래부터.
 - 작업실 개요: 큰 카드 2 + 더 보기 목록 → 하는 일별 묶음 4 + 최근·고정.
 - AI로 봇 만들기: 메뉴 누르면 바로 만들기 → 세 단계 화면에서 고른 뒤 시작.
 - 꾸미기 ‘기본값으로’(고급 안) → 접는 목록 맨 아래 ‘처음 값으로 되돌리기’(확인 창). 내 테마 카드(오른쪽) → 접는 목록 ‘내 테마’.
@@ -1389,3 +1396,8 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 인물 위키 설정의 ‘성인 항목’ → NSFW 설정 장면·수위 탭(flowSections part "adult"). 순서: 수위 · 집착 방지 · 성인 항목 · 동작 · 비하인드 · 장면 되돌리기 · 프리셋.
 - **2번 기억 세션: 5화면 모두 끝(디자인). 남은 것 실기기 확인.** 다음은 3번 작업실.
 - (11-14) 중복 확인: 장기 기억 고급에서 ‘저장·기록’(분석 모델·자동 기록 시점·응답 대기 시간)이 세부 설정 ‘분석’ 칸과 같은 값이라 madv에서 뺌(묶음 이름 ‘대화에 넣기’). 인물 위키 고급의 기록 시점은 따로 저장되는 값이라 이름을 ‘인물 위키 기록 시점’으로 구분. 나머지 이름 겹침은 같은 칸의 글자·스위치 이름 또는 다른 기능(NSFW ‘분석’)이라 그대로.
+
+## Cellar 연동 (11-14, 이 세션)
+- Cellar 리스 분리(Cellar fcb0f8a) · 연결 안정화·예약 복원(780e0f6) · 그림 생성: `src/data/cellarsd.js`(available·enqueue(공통 값 base로)·status·stop·sync·image·putAssets) + `ui/screens/sdstudio/studio.js` runQueueCellar/followCellar/endFollow(prefs.cellarRun으로 이어받기, 예약은 넘길 때 0으로), quickPut 변환본은 Cellar /cellar/assets로 50장씩. Cellar e11b5b2(`sdgen.cjs`).
+- 확인 못 함: 실제 NovelAI 호출, 실기기(RisuBard·PocketRisu·RisuAI). sdstudio 애드온 dist는 addons.src.json에 없어 다시 빌드 안 함(배포 보류 그대로).
+- e2e run-addon-sdstudio: 변경 전후 같음(58 통과, Ctrl+B 보내기 등 4개 원래 실패).

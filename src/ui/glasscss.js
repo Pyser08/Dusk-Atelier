@@ -13,14 +13,14 @@ export var GLASS_CSS = `
   --rb-glow:var(--rb-gglow,color-mix(in srgb,var(--rb-acc-a) 55%,transparent));
   --rb-tint:var(--rb-gtint,color-mix(in srgb,var(--rb-acc-a) 30%,#fff));
   --rb-ghost-line:rgba(255,255,255,.3);
-  /* 카드 = 바탕색(흰빛 12%)을 50%로 덮음 — 진한 빛 번짐 위에서도 글자 대비 4.5:1 이상(tests/glassthemes.test.js) */
-  --rb-glass-bg:color-mix(in srgb,color-mix(in srgb,var(--rb-gbg) 88%,white) 50%,transparent);
-  --rb-glass-2:rgba(255,255,255,.08);
+  /* 카드 = 바탕색(흰빛 12%)을 62%로 덮음(2.2.0 가독성: 50→62) — 진한 빛 번짐 위에서도 글자 대비 4.5:1 이상(tests/glassthemes.test.js) */
+  --rb-glass-bg:color-mix(in srgb,color-mix(in srgb,var(--rb-gbg) 88%,white) 62%,transparent);
+  --rb-glass-2:rgba(255,255,255,.1);
   --rb-glass-line:rgba(255,255,255,.22);
   --rb-glass-hi:inset 0 1px 0 rgba(255,255,255,.25);
   --rb-glass-shadow:0 8px 30px rgba(0,0,0,.25);
   --rb-glass-blur:blur(22px) saturate(140%);
-  --rb-text:#f2f0fa;--rb-sub:rgba(255,255,255,.84);--rb-mute:rgba(255,255,255,.6);
+  --rb-text:#f2f0fa;--rb-sub:rgba(255,255,255,.88);--rb-mute:rgba(255,255,255,.66);
   --rb-surf:var(--rb-glass-bg);--rb-surf2:var(--rb-glass-2);--rb-hover:rgba(255,255,255,.12);
   --rb-line:rgba(255,255,255,.14);--rb-line2:rgba(255,255,255,.16);--rb-line3:rgba(255,255,255,.26);
   background:
@@ -51,12 +51,12 @@ export var GLASS_CSS = `
 
 /* 밝은 모드 글래스: 옅은 바탕 + 하얀 반투명 카드 + 어두운 글자 */
 .rb-win.rb-skin-glass.rb-glass-light{
-  --rb-glass-bg:rgba(255,255,255,.58);
+  --rb-glass-bg:rgba(255,255,255,.72);
   --rb-glass-2:rgba(40,28,70,.055);
   --rb-glass-line:rgba(255,255,255,.85);
   --rb-glass-hi:inset 0 1px 0 rgba(255,255,255,.9);
   --rb-glass-shadow:0 8px 28px rgba(60,40,100,.12);
-  --rb-text:#1f1a33;--rb-sub:rgba(31,26,51,.74);--rb-mute:rgba(31,26,51,.6);
+  --rb-text:#1f1a33;--rb-sub:rgba(31,26,51,.8);--rb-mute:rgba(31,26,51,.64);
   --rb-hover:rgba(31,26,51,.06);
   --rb-line:rgba(31,26,51,.10);--rb-line2:rgba(31,26,51,.10);--rb-line3:rgba(31,26,51,.18);
   --rb-ghost-line:rgba(31,26,51,.25);

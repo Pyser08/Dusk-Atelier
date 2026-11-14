@@ -3,7 +3,7 @@ import { maybePromptIntro } from '../promptstab.js';
 // 오른쪽(PC)·아래(모바일): (PC 고급) 기억 방식 바로 보임 → 설정 한 줄 목록 → 고급 묶음(한 줄씩 접음).
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
-import { advFold, btn, confirmDialog, emptyState, note, openMenu, pageHead, progressBar, statusCard, switchEl, setSwitch } from "../../kit.js";
+import { advFold, btn, confirmDialog, emptyState, modal, note, openMenu, pageHead, progressBar, statusCard, switchEl, setSwitch } from "../../kit.js";
 import { injectReasonText } from "../../../engine/memoryinject.js";
 import { USAGE_KINDS, injectLine, usageOf, recentOf } from "../../../engine/memoryusage.js";
 import { mem, fail, gradeBadge, at } from "./common.js";
@@ -11,6 +11,8 @@ import { renderModeBar } from "./modebar.js";
 import { advancedGroups } from "./madv.js";
 import { organizeAdv } from "./advorganize.js";
 import { builders, renderGlobalSettings } from "./settings.js";
+import { tracked, scopeChip } from "./settingstools.js";
+import { writerDetails } from "./advanced.js";
 import { openEmbedModal } from "./embedmodal.js";
 import { maybeAskBardWiki } from "./modebar.js";
 
@@ -32,7 +34,9 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   const memorySettings = h("section", { class: "rb-card bordered rb-scard rb-mem-integrated-settings" },
     h("span", { class: "h" }, "설정"),
     srow("기억·인물 위키 프롬프트", "앞·중간·뒤에 덧붙일 프롬프트", () => ctx.go("settings", "prompts")),
-    srow("임베딩 (의미 검색)", embedLine, () => { if (M.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, { "data-tour": "mem-embed" }));
+    srow("임베딩 (의미 검색)", embedLine, () => { if (M.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, { "data-tour": "mem-embed" }),
+    // 2.2.0 자동 기록 세부(인물 위키 설정 값): 임베딩 아래 줄 → 누르면 창으로
+    M.flow ? srow("자동 기록 세부", "장면 정리 역할 · 최근 대화 턴 · 서사관계 전용 모드", () => openWriterDetails(ctx).catch(fail(ctx)), { id: "rb-mem-writer-row" }) : null);
 
   // 기억 옵션 3개(고급 모드 '대화에 넣기'와 같은 설정)
   const { S, save, num } = builders(ctx, idx, redraw, "");
@@ -53,6 +57,17 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     h("div", { class: "rb-mem-tokpair", style: "display:flex;gap:8px;flex-wrap:wrap" },
       num("목표(최소)", () => inj.targetTokens ?? 2000, (s, v) => { s.inject ??= {}; s.inject.targetTokens = v; if ((s.inject.capTokens ?? 0) < v) s.inject.capTokens = v; }, { min: 200, max: 8000, step: 100 }),
       num("상한(최대)", () => inj.capTokens ?? 8000, (s, v) => { s.inject ??= {}; s.inject.capTokens = Math.max(v, s.inject.targetTokens ?? 0); }, { min: 200, max: 12000, step: 100 }))));
+  // 2.2.0 자동 기록 입력 예산(인물 위키 설정 값 writerInputBudgetTokens)은 ‘기억 넣기 토큰’ 바로 밑. 인물 위키 설정을 읽을 수 있을 때만 보인다.
+  const budgetRow = h("div", { class: "rb-srow rb-mem-wbudget", id: "rb-mem-wbudget", hidden: true });
+  memOptions.append(budgetRow);
+  if (M.flow) (async () => {
+    const st = tracked(ctx, await M.flow.settings());
+    if (st.status().blocked) return;
+    const inp = h("input", { class: "rb-input", type: "number", min: 1000, max: 1000000, step: 1000, value: st.rawSnapshot().writerInputBudgetTokens ?? 48000, "aria-label": "자동 기록 입력 예산(토큰)", style: "width:120px",
+      onChange: (e) => { const n = Math.min(1000000, Math.max(1000, Math.round(Number(e.target.value) || 48000))); e.target.value = n; try { st.update((x) => { x.writerInputBudgetTokens = n; }); } catch (er) { fail(ctx)(er); } } });
+    replace(budgetRow, h("span", { class: "t" }, "자동 기록 입력 예산", h("small", null, "인물 위키 자동 기록이 한 번에 읽는 글의 양(토큰)이에요. 기본값이면 충분해요.")), inp);
+    budgetRow.hidden = false;
+  })().catch(() => {});
   memOptions.append(h("div", { class: "rb-srow rb-mem-trimkeep", id: "rb-mem-trimkeep" }, h("span", { class: "t" }, "남길 최근 턴", h("small", null, "‘요약된 옛 대화 빼고 보내기’를 켰을 때 이만큼의 최근 대화(내 말 기준)는 늘 그대로 보내요.")),
     num("턴", () => inj.trimKeep ?? 20, (s, v) => { s.inject ??= {}; s.inject.trimKeep = v; }, { min: 4, max: 200, step: 1 })));
 
@@ -268,4 +283,15 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     tabRow, ...panelEls);
   replace(host, h("div", { class: "rb-mem3 rb-mem4-wrap" }, main));
   // 1.8.3: 임베딩 안내 창은 자동으로 띄우지 않는다(시작 안내 3단계에서 설정, 필요하면 설정 줄의 '임베딩'에서)
+}
+
+// 2.2.0 자동 기록 세부 창(장기 기억 → 설정 → 임베딩 아래 줄)
+async function openWriterDetails(ctx) {
+  const st = tracked(ctx, await ctx.memory.flow.settings());
+  if (st.status().blocked) return ctx.toast("인물 위키 설정을 읽지 못했어요.", { error: true });
+  await modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": "자동 기록 세부", id: "rb-mem-writer", style: "width:min(620px,94vw);max-height:86vh;overflow:auto" },
+    h("h3", { class: "rb-h3" }, "자동 기록 세부", scopeChip("all")),
+    h("p", { class: "rb-muted" }, "기본값이면 충분해요. 바꾸면 바로 저장되고 다음 응답부터 적용돼요."),
+    writerDetails(ctx, st),
+    h("div", { class: "btns" }, btn("닫기", { kind: "primary", onClick: () => done(null) }))));
 }
