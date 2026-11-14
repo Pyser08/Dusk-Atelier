@@ -1,7 +1,8 @@
 // 2.2.0 기억 개요(6번 안): 상태 줄 → 기능 타일 2×2(왼쪽 색띠 + 약한 네온 아이콘) → 최근 기록.
 // 글래스가 아니어도 같은 배치, 빛·색띠는 기능 색(--k)만 쓴다. 가벼운 화면에선 빛을 끈다.
 export var MEMHUB_CSS = `
-.rb-mhub{max-width:1100px}
+.rb-hub.rb-mhub{max-width:none}
+.rb-mhub-empty{color:var(--rb-sub);font-size:13px;padding:6px 0}
 .rb-mhub-stat{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 18px;border-radius:16px;position:relative}
 .rb-mhub-stat::before{content:"";width:4px;align-self:stretch;border-radius:4px;background:var(--k,#5fe0a8);box-shadow:0 0 10px var(--k,#5fe0a8)}
 .rb-mhub-stat.off{--k:var(--rb-mute,#888)}

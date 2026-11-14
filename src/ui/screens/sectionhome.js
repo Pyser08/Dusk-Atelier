@@ -82,14 +82,17 @@ function drawMemory(ctx, listHost, tabs, counts) {
     h('span', { class: 'dot', 'aria-hidden': 'true' }),
     m?.cur ? h('span', { class: 'who' }, m.name || '지금 채팅') : null,
     h('span', { class: 'line' }, !m ? '기억 상태를 읽는 중이에요.' : !m.cur ? '채팅을 열면 기억 상태가 보여요.' : `장기 기억 ${m.on ? '사용 중' : '꺼짐'} · 기억 ${m.total}건`),
-    m?.cur ? h('button', { type: 'button', class: 'rb-mhub-go', onClick: goAnalyze }, '지난 대화 분석') : null);
+    m?.cur ? h('button', { type: 'button', class: 'rb-mhub-go', onClick: goAnalyze }, '지난 대화 분석')
+      : m ? h('button', { type: 'button', class: 'rb-mhub-go', onClick: () => { if (ctx.state.mem) ctx.state.mem.page = 'bots'; ctx.go('memory'); } }, '다른 채팅 보기') : null);
   const tile = (t) => h('button', { type: 'button', class: ['rb-hubrow', 'rb-mtile', `k-${t.id}`], onClick: () => ctx.go(t.id), 'aria-label': t.label, dataset: { tab: t.id } },
     h('span', { class: 'ico' }, icon(t.icon, 20)),
     h('span', { class: 't' }, h('b', null, t.label), counts[t.id] !== undefined ? h('span', { class: 'chip' }, String(counts[t.id])) : null, h('small', null, MDESC[t.id] ?? LINE[t.id] ?? t.card ?? '')),
     h('span', { class: 'go', 'aria-hidden': 'true' }, icon('chevron', 16)));
-  const rec = m?.recent?.length ? h('section', { class: 'rb-mhub-rec' },
-    h('div', { class: 'head' }, h('b', null, '최근 기록'), h('button', { type: 'button', class: 'rb-textlink', onClick: () => ctx.go('memory') }, '전체 보기')),
-    h('ul', null, m.recent.map((r) => h('li', null, h('span', { class: 'who' }, r.who), h('span', { class: 't' }, r.act ?? ''))))) : null;
+  // 최근 기록은 늘 자리를 둔다(채팅이 없거나 아직 없으면 안내 한 줄)
+  const rec = h('section', { class: 'rb-mhub-rec' },
+    h('div', { class: 'head' }, h('b', null, '최근 기록'), m?.recent?.length ? h('button', { type: 'button', class: 'rb-textlink', onClick: () => ctx.go('memory') }, '전체 보기') : null),
+    m?.recent?.length ? h('ul', null, m.recent.map((r) => h('li', null, h('span', { class: 'who' }, r.who), h('span', { class: 't' }, r.act ?? ''))))
+      : h('p', { class: 'rb-mhub-empty' }, !m ? '불러오는 중이에요.' : m.cur ? '아직 쌓인 기록이 없어요. 기억을 켜고 대화하면 여기에 모여요.' : '채팅을 열면 그 채팅의 최근 기록이 보여요.'));
   listHost.closest?.('.rb-hub')?.classList.add('rb-mhub');
   replace(listHost, stat, h('div', { class: 'rb-mhub-tiles' }, tabs.map(tile)), rec);
 }
