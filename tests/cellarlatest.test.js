@@ -28,5 +28,8 @@ test("최신이거나 Cellar가 없거나 확인 실패면 아무것도 안 한�
 test("GitHub 최신 릴리스 태그를 읽는다", async () => {
   const api = { nativeFetch: async (u, o) => { assert.equal(o.method, "GET"); return { status: 200, json: async () => ({ tag_name: "v0.3.1" }) }; } };
   assert.equal(await latestCellarVersion(api), "0.3.1");
-  assert.equal(await latestCellarVersion({ nativeFetch: async () => ({ status: 404, json: async () => ({}) }) }), null);
+  // 대체 경로(전역 fetch)가 실제 네트워크로 나가지 않게 막고 본다
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ status: 404, json: async () => ({}) });
+  try { assert.equal(await latestCellarVersion({ nativeFetch: async () => ({ status: 404, json: async () => ({}) }) }), null); } finally { globalThis.fetch = realFetch; }
 });

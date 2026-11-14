@@ -5,103 +5,103 @@
       "id": "manage",
       "name": "캐릭터·모듈·플러그인 관리",
       "category": "manage",
-      "version": "0.1.2",
-      "minCore": "2.0.0",
+      "version": "0.1.3",
+      "minCore": "2.2.0",
       "hooks": false,
       "desc": "캐릭터를 폴더로 정리하고 에셋·로어북을 다듬고, 모듈을 켜고 끄고 연결하고, 플러그인 새 버전을 확인해요. 가져오기는 이 애드온 없이도 돼요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/manage.js",
-      "sha256": "0849d5f8a9216f098faad35a340316968ba927278e68fa310106b8c1b40d1071",
-      "size": 79135
+      "sha256": "830787b3c1dc288bbb79b64390de9cf16d3441c437697dc6a0dede70849b2adb",
+      "size": 79258
     },
     {
       "id": "provider",
       "name": "프로바이더 (실험)",
       "category": "lab",
-      "version": "0.2.3",
-      "minCore": "2.0.0",
+      "version": "0.2.4",
+      "minCore": "2.2.0",
       "hooks": true,
       "desc": "리스 모델 목록에 ‘Dusk 자동’과 내 프로필을 등록하고, API 키 보관·모델 고르기·리스 도구 확인을 해요. 설정 → 실험 기능을 켜야 써요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/provider.js",
-      "sha256": "2ead2f30ce8c5f32acfa0feb3ba514e3fe73e4a95da83006525d363261ff0ed9",
-      "size": 151940
+      "sha256": "57cda1954fd93c5b36b03ae39309508e85b87a65d167382306498b3827285e82",
+      "size": 148719
     },
     {
       "id": "chattheme",
       "name": "채팅 테마 만들기",
       "category": "make",
-      "version": "0.1.1",
-      "minCore": "2.0.0",
+      "version": "0.1.2",
+      "minCore": "2.2.0",
       "hooks": false,
       "desc": "채팅 테마 빌더·테마 스튜디오로 내 채팅 테마를 만들고 주고받아요. 만든 테마는 이 애드온이 없어도 계속 적용돼요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/chattheme.js",
-      "sha256": "b92568e20576ff1b6bfee75bd4617510af9574c10164bac7c182161e25651ba4",
+      "sha256": "034a1e6c02667d13956904ae71e454b9cac7b2dd35bc41417bd058b00208b535",
       "size": 89685
     },
     {
       "id": "aibuild",
       "name": "AI로 봇·페르소나 만들기",
       "category": "make",
-      "version": "0.1.4",
-      "minCore": "2.0.0",
+      "version": "0.1.5",
+      "minCore": "2.2.0",
       "hooks": true,
       "desc": "말로 요청해 봇·모듈을 만들고 고치는 AI 창·AI로 제작 탭, AI로 페르소나 만들기를 써요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/aibuild.js",
-      "sha256": "4cc2b35b1d157a72a84e3b5922143cb119f769199c104a5df625f08ad7f59b13",
-      "size": 227982
+      "sha256": "3cda0da85a70af2b1a5a4a9104eb68978fc0857b825da544dce0901628774ab1",
+      "size": 229353
     },
     {
       "id": "memory",
       "name": "장기기억·관계도",
       "category": "memory",
-      "version": "0.2.12",
-      "minCore": "2.1.4",
+      "version": "0.2.13",
+      "minCore": "2.2.0",
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "575ec5f4022b2d7bb1c93379baefff60344de2cd1dd7c9eb9e3d5b7dc6c7d174",
-      "size": 1615202
+      "sha256": "afeb34e4b97bcbf7b8c41b003f8b5a3d71d7721a8f898881de1c854edcb2234b",
+      "size": 1625158
     },
     {
       "id": "cards",
       "name": "기억카드",
       "category": "memory",
-      "version": "0.1.1",
-      "minCore": "2.0.0",
+      "version": "0.1.2",
+      "minCore": "2.2.0",
       "hooks": false,
       "requires": [
         "memory"
       ],
       "desc": "장기 기억으로 카드를 만들고 꾸미고, 그 카드로 새 봇을 이어 가요. 장기기억·관계도 애드온이 필요해요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/cards.js",
-      "sha256": "37de19a02ae39fcd2c7da970e1649b598fc3eb01a2d7651b192a2c21e928ad64",
+      "sha256": "257efa275b40275a0ac1b0d26ee8ea1939ae9ac01c847612b531e389949a9983",
       "size": 661452
     },
     {
       "id": "erosync",
       "name": "Erosync",
       "category": "memory",
-      "version": "0.1.4",
-      "minCore": "2.0.0",
+      "version": "0.1.5",
+      "minCore": "2.2.0",
       "hooks": true,
       "requires": [
         "memory"
       ],
       "desc": "NSFW 장면 강화 — 인물 성향·목표를 읽어 다음 응답의 장면 계획을 넣어요. 장기기억·관계도 애드온이 필요해요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/erosync.js",
-      "sha256": "2ed23350c1755fda9a870d925c2a19a1499ce7d14f2771ee1a4f7a75e6c8d430",
-      "size": 852865
+      "sha256": "c7735753b55b55b03aa964b159594f9af08408e0eff06a97dc7693a1a91afe44",
+      "size": 861696
     },
     {
       "id": "protlink",
       "name": "ProtLink+",
       "category": "manage",
-      "version": "0.1.2",
-      "minCore": "2.0.0",
+      "version": "0.1.3",
+      "minCore": "2.2.0",
       "hooks": false,
       "desc": "Proton Drive 공유 링크를 캐릭터·모듈·플러그인에 연결해 두고, 새 파일이 올라오면 알려 주고 받아서 업데이트로 넘겨요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/protlink.js",
-      "sha256": "df05b1b87856f885ef6793196cd1baddd15a841db6a1279d5b4d5462575db661",
-      "size": 971685
+      "sha256": "20e966cea0594184e95624184d88087795d34b7e7a8a8f4b5349af2c95e2cedf",
+      "size": 972914
     },
     {
       "id": "widgets",
@@ -131,13 +131,13 @@
       "id": "stealth",
       "name": "더스크 스텔스",
       "category": "look",
-      "version": "0.3.54",
-      "minCore": "2.0.0",
+      "version": "0.3.55",
+      "minCore": "2.2.0",
       "hooks": false,
       "desc": "리스 채팅을 클로드·GPT·코덱스·제미나이·딥시크 같은 다른 AI 채팅 앱처럼 보이게 꾸며요. 끄면 원래 모양으로 되돌려요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/stealth.js",
-      "sha256": "05c79644f78c222afa40124cb653473e2c089ff43cc50252822889ea6865144b",
-      "size": 92391
+      "sha256": "fbb44a20edba09a1b7f9d3e407c205e2365685164bc1d006dcf1dc34b4d56c1f",
+      "size": 93364
     }
   ]
 }

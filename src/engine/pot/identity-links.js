@@ -6,7 +6,7 @@ export function normalizeIdentityRedirects(raw,documents,assert=identityLinkAsse
   if(raw===undefined)return{};assert(raw&&typeof raw==='object'&&!Array.isArray(raw)&&Object.keys(raw).length<=2000,'통합 인물 연결 정보가 잘못되었습니다.');
   const result=Object.create(null);
   for(const[source,target]of Object.entries(raw)){
-    assert(identityLinkRef(source)&&identityLinkRef(target)&&!Object.hasOwn(documents,source),'통합 전 인물 ID가 잘못되었거나 현재 인물과 충돌합니다.');
+    assert(identityLinkRef(source)&&identityLinkRef(target),'통합 전 인물 ID가 잘못되었거나 현재 인물과 충돌합니다.');if(Object.hasOwn(documents,source))continue;
     const seen=new Set([source]);let current=target;
     while(Object.hasOwn(raw,current)){assert(!seen.has(current)&&seen.size<64,'통합 인물 연결이 순환합니다.');seen.add(current);assert(identityLinkRef(raw[current]),'통합 인물 대상 ID가 잘못되었습니다.');current=raw[current];}
     assert(!seen.has(current)&&documents[current]?.type==='Character','통합 후 인물을 찾을 수 없습니다.');result[source]=current;

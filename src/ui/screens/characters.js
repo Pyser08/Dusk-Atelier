@@ -152,7 +152,10 @@ async function drawCharacters(ctx) {
   const list = srt(st.chars, (c) => c).filter((c) => !q || c.name.toLowerCase().includes(q) || String(c.creator ?? "").toLowerCase().includes(q));
   ctx.setNavCount("characters", st.chars.length);
   if (!st.charSel || !st.chars.some((c) => c.chaId === st.charSel)) st.charSel = list[0]?.chaId ?? null;
-  const box = h("div", { class: "rb-list rb-scroll", role: "listbox", "aria-label": "캐릭터 목록", style: "padding-top:12px" });
+  // 2.2.0(4번 B): 기본은 카드 갤러리(게이지로 카드 크기), 옆 버튼으로 목록 보기. 줄 DOM은 같고 모양만 CSS로 바꾼다(끌기·폴더·여러 개 고르기 그대로).
+  const gallery = (ctx.prefs.ui?.charView ?? "grid") !== "list";
+  const cardPx = Math.min(260, Math.max(110, Number(ctx.prefs.ui?.charCard) || 160));
+  const box = h("div", { class: ["rb-list rb-scroll", gallery && "rb-chargal"], role: "listbox", "aria-label": "캐릭터 목록", style: `padding-top:12px;--cg:${cardPx}px` });
   const lazy = ctx.assets.lazy(box);
   const byId = new Map(st.chars.map((c) => [c.chaId, c]));
   const collapsed = ctx.prefs.meta.charFoldersCollapsed ?? {};
@@ -325,6 +328,15 @@ async function drawCharacters(ctx) {
   // '선택 끝'을 바로 누를 수 있게: 선택 중일 때만 버튼으로 보인다
   const pickEnd = filtering ? null : btn("선택 끝", { size: "sm", icon: "check", id: "rb-pick-toggle", onClick: () => mu.setMode(false) });
   if (pickEnd) pickEnd.hidden = !mu.active;
+  const sizeIn = gallery ? h("input", { type: "range", class: "rb-cgsize", id: "rb-char-size", min: "110", max: "260", step: "10", value: String(cardPx), "aria-label": "카드 크기", title: "카드 크기" }) : null;
+  sizeIn?.addEventListener("input", () => box.style.setProperty("--cg", `${sizeIn.value}px`));
+  sizeIn?.addEventListener("change", () => ctx.prefs.saveUi({ charCard: Number(sizeIn.value) }).catch(() => {}));
+  const viewBtn = iconBtn(gallery ? "list" : "grid", gallery ? "목록으로 보기" : "카드로 보기", { id: "rb-char-view", onClick: () => {
+    ctx.prefs.saveUi({ charView: gallery ? "list" : "grid" }).catch(() => {});
+    if (ctx.prefs.ui) ctx.prefs.ui.charView = gallery ? "list" : "grid";
+    renderCharacters(ctx);
+  } });
+  const viewBox = h("div", { class: "rb-charview" }, sizeIn, viewBtn);
   const makeRow = ctx.isMobile() ? h("div", { class: "rb-chips", style: "flex-wrap:nowrap;overflow:visible" }, aiBot, newBot, h("div", { class: "rb-spacer" }), toolMore) : null;
   replace(ctx.main, h(
     "div",
@@ -337,9 +349,10 @@ async function drawCharacters(ctx) {
       renderCharacters(ctx);
     } }) : null,
     h("div", { class: "rb-spacer" }),
+    viewBox,
     pickEnd,
     ...ctx.isMobile() ? [] : [aiBot, newBot, toolMore]
-  ), makeRow, sortTray, bar, box, h("p", { class: "rb-muted rb-list-hint" }, "줄의 ··· 에서 ‘AI로 다듬기’·에셋 관리·폴더로 옮기기 등을 해요."));
+  ), makeRow, sortTray, bar, box, h("p", { class: "rb-muted rb-list-hint" }, gallery ? "카드의 ··· 에서 ‘AI로 다듬기’·에셋 관리·폴더로 옮기기 등을 해요. 게이지로 카드 크기를 바꿔요." : "줄의 ··· 에서 ‘AI로 다듬기’·에셋 관리·폴더로 옮기기 등을 해요."));
   // 지금 열린 채팅의 봇에 '지금 채팅' 라벨(늦게 와도 그 줄에만 붙인다)
   ctx.memory?.switches?.currentChat?.().then((cur) => {
     const row = cur && box.querySelector(`.rb-row[data-id="${CSS.escape(String(cur.chaId))}"] .ttl`);

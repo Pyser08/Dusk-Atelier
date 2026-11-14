@@ -65,8 +65,8 @@ test("digest replaces old D/C records but A/B stay", () => {
 });
 test("insertBlock inserts before last user, replaces an existing block, no mutation", () => {
   const msgs = [{ role: "system", content: "sys" }, { role: "user", content: "a" }, { role: "assistant", content: "b" }, { role: "user", content: "c" }];
-  const a = insertBlock(msgs, MARKER + "] one"); assert.equal(a.length, 5); assert.equal(a[3].content, MARKER + "] one"); assert.equal(msgs.length, 4);
-  const b = insertBlock(a, MARKER + "] two"); assert.equal(b.length, 5); assert.equal(b.filter((m) => m.content.startsWith(MARKER)).length, 1);
+  const a = insertBlock(msgs, MARKER + "] one", "beforeLastUser"); assert.equal(a.length, 5); assert.equal(a[3].content, MARKER + "] one"); assert.equal(msgs.length, 4);
+  const b = insertBlock(a, MARKER + "] two", "beforeLastUser"); assert.equal(b.length, 5); assert.equal(b.filter((m) => m.content.startsWith(MARKER)).length, 1);
   assert.equal(insertBlock(msgs, MARKER + "]", "afterSystem")[1].content, MARKER + "]");
 });
 test("lore fallback upsert is idempotent and removable", () => {
@@ -96,7 +96,7 @@ test("injector hook: modifies only the request copy and ignores non-model types"
   assert.equal(await api.rep(req, "model"), req, "no folder → unchanged");
   await store.updateFolder("c", "t", (f) => { f.cursor = { at: 1 }; f.scenes.push({ id: "s", sum: "장면", facts: [], who: [] }); });
   const out = await api.rep(req, "model");
-  assert.equal(out.length, 2); assert.match(out[0].content, /Current scene: 장면/); assert.equal(req.length, 1);
+  assert.equal(out.length, 2); assert.match(out[1].content, /Current scene: 장면/);  // 기본 위치 end: 맨 뒤 assert.equal(req.length, 1);
   assert.equal(await api.rep(req, "memory"), req);
   assert.equal(inj.lastRequest().injected, true);
   await store.updateFolder("c", "t", (f) => { f.cursor = null; });  // 마지막 분석 응답을 리롤한 직후 상태

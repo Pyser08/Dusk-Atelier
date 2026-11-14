@@ -29,13 +29,17 @@ for (const [dir, list] of [['engine', manifest.engine], ['data', manifest.data]]
 
 // 원본 번들을 같은 realm에서 실행하되, startPlugin 대신 최상위 선언을 꺼내 온다.
 async function loadOriginal() {
-  const names = Object.keys(ported).filter((n) => n !== 'default');
+  // 이식 쪽에만 새로 더한 이름(원본에 없는 것)은 빼고 꺼낸다 — 없는 이름을 넣으면 원본 실행이 ReferenceError로 멈춘다
+  const names = Object.keys(ported).filter((n) => n !== 'default' && new RegExp(`\\b(function\\*?|class|const|let|var)\\s+${n}\\b`).test(original));
   const code = original.replace(/try \{ await startPlugin\([\s\S]*$/, `globalThis.__potOriginal = { ${names.join(', ')} };\n})();`);
   await vm.runInThisContext(code, { filename: 'risupot_v2_3_0.js' });
   const o = globalThis.__potOriginal; delete globalThis.__potOriginal;
   return o;
 }
 const orig = original ? await loadOriginal() : {};
+// 패치(tools/pot-patches.json)로 Dusk 쪽에서 새로 더하거나 값을 바꾼 이름 — 원본과 같을 수 없으니 대조에서 뺀다(패치 목록이 곧 차이 목록)
+const PATCH_TO = JSON.parse(fs.readFileSync(path.join(root, 'tools/pot-patches.json'), 'utf8')).map((p) => p.to).join('\n');
+const DUSK_CHANGED = new Set(Object.keys(ported).filter((n) => original && (!(n in orig) || new RegExp(`\\b${n}\\b`).test(PATCH_TO))));
 
 // 같은 난수·시각으로 두 쪽을 실행
 function seeded(fn) {
@@ -65,13 +69,13 @@ function shape(v, seen = new WeakSet()) {
 }
 
 test('이식 모듈이 원본의 최상위 선언을 빠짐없이 같은 이름으로 내보냄', { skip }, () => {
-  const missing = Object.keys(ported).filter((n) => !(n in orig) || orig[n] === undefined && ported[n] !== undefined);
+  const missing = Object.keys(ported).filter((n) => !DUSK_CHANGED.has(n)).filter((n) => !(n in orig) || orig[n] === undefined && ported[n] !== undefined);
   assert.deepEqual(missing, []);
 });
 
 test('상수·데이터 값이 원본과 같음', { skip }, () => {
   for (const [n, v] of Object.entries(ported)) {
-    if (typeof v === 'function') continue;
+    if (typeof v === 'function' || DUSK_CHANGED.has(n)) continue;
     assert.deepEqual(shape(v), shape(orig[n]), n);
   }
 });
@@ -82,7 +86,7 @@ const unpatch = (text) => PATCHES.reduce((t, p) => t.split(p.to).join(p.from), t
 const HISTORY = /^\s*\/\/ (?:(?:Release|Local|PersonaName|[A-Z][A-Za-z]*) )?V\d+\b.*$\n?/gm; // tools/pot-split.mjs와 같은 규칙
 test('함수 본문이 원본과 같음 (주석 이력만 제거)', { skip }, () => {
   for (const [n, v] of Object.entries(ported)) {
-    if (typeof v !== 'function') continue;
+    if (typeof v !== 'function' || DUSK_CHANGED.has(n)) continue;
     assert.equal(unpatch(String(v)), String(orig[n]).replace(HISTORY, ''), n);
   }
 });
@@ -102,7 +106,7 @@ test('모든 엔진 함수가 같은 입력에 같은 결과·같은 오류 (블
   for (const [n, { dir, mod }] of Object.entries(modules)) {
     if (dir !== 'engine') continue;
     for (const [name, fn] of Object.entries(mod)) {
-      if (typeof fn !== 'function' || /^class\s/.test(String(fn))) continue;
+      if (typeof fn !== 'function' || /^class\s/.test(String(fn)) || DUSK_CHANGED.has(name)) continue;
       for (const args of SAMPLES) {
         const a = await outcome(() => fn(...structuredClone(args)));
         const b = await outcome(() => orig[name](...structuredClone(args)));

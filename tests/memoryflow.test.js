@@ -47,7 +47,7 @@ test("전체 흐름: 새 필드 포함 분석 → 저장 → 주입(임베딩 �
   const block = out.find((m) => String(m.content).startsWith("[Dusk Memory"));
   assert.ok(block, "요청에 [Dusk Memory] 블록이 들어가야 한다");
   assert.match(block.content, /비밀/);
-  assert.equal(out.at(-1).role, "user", "마지막은 user");
+  assert.equal(out.at(-1), block, "기본 위치 end: 블록이 맨 뒤"); assert.equal(out.at(-2).role, "user");
   const pv = await inj.preview(); assert.ok(pv.injected && pv.raw);
 });
 test("전체 흐름: 임베딩 켬(가짜 서버)·끔·실패 모두 주입이 막히지 않는다", async () => {

@@ -1,3 +1,4 @@
+import { GLASS_IDS } from './glassthemes.js';
 import { alpha, contrast, ensureContrast, isHex, lightnessOf, mixHex, onAccent, withLightness } from './color.js';
 import { ACCENTS, DIRECTIONS, EDGE_V, FONTS, GRADIENTS, ICONW_V, LINEH_V, ROUND_PX, THEME_SETS, VISUAL_KEYS } from './themekit.js';
 
@@ -10,7 +11,8 @@ export var DEFAULT_THEME = {
   v: 2, preset: "coral", a: "#cc4b2e", b: "#b93e22", mode: "auto", contrast: "normal", layout: "left", density: "roomy", size: "m",
   // 1.8.3 꾸미기 확장 (없으면 아래 기본값 = 예전과 똑같은 모습)
   set: "", grad: "", dir: "d", round: "normal", shadowLv: "soft", edge: "normal", font: "base", weight: "normal", lineH: "normal", iconW: "normal",
-  motion: "normal", pattern: "none", bgGrad: false, glass: false, cBg: "", cCard: "", cText: "", cSide: "", accUse: "all", mine: [], useLight: "", useDark: ""
+  motion: "normal", pattern: "none", bgGrad: false, glass: false, cBg: "", cCard: "", cText: "", cSide: "", accUse: "all", mine: [], useLight: "", useDark: "",
+  skin: "glass", lite: false, gtheme: "dusk"   // 2.2.0 글래스 화면(어두운 모드에서만)·가벼운 화면(블러 끔)
 };
 // 1.7.0: 'home'(홈 카드) 메뉴 위치는 새 홈 화면이 대신하므로 없앴다. 예전 저장값 home은 left로 옮긴다.
 export var LAYOUTS = [["left", "왼쪽 메뉴"], ["top", "위쪽 메뉴"]];
@@ -179,6 +181,9 @@ function normalizeLook(out) {
   out.pattern = oneOf(out.pattern, ["none", "dots", "grid", "paper"], "none");
   out.bgGrad = out.bgGrad === true;
   out.glass = out.glass === true;
+  out.skin = out.skin === "classic" ? "classic" : "glass";
+  out.lite = out.lite === true;
+  out.gtheme = GLASS_IDS.includes(out.gtheme) ? out.gtheme : "dusk";
   out.accUse = out.accUse === "btn" ? "btn" : "all";
   for (const k of ["cBg", "cCard", "cText", "cSide"]) out[k] = hexOr(out[k]);
   out.mine = (Array.isArray(out.mine) ? out.mine : []).filter((m) => m && typeof m === "object" && String(m.name ?? "").trim() && m.theme && typeof m.theme === "object").slice(0, 12).map((m, i) => ({ id: String(m.id ?? "m" + i).slice(0, 32), name: String(m.name).trim().slice(0, 24), theme: pickLook(m.theme) }));

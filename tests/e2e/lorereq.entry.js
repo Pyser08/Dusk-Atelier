@@ -1,9 +1,10 @@
 // v1.6.8: AI 창 '이번 요청에 포함할 로어북' — 75개 항목 모바일 겹침·스크롤 시험용 진입점
 import { openEditorCore } from "../../src/ui/screens/editor.js";
+import { aibuildExt } from "./aibuild-ext.js";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const store = new Map();
 export async function setup() {
-  const ctx = { win: document.body, toast: () => {}, prefs: {}, api: {
+  const ctx = { ext: aibuildExt, win: document.body, toast: () => {}, prefs: {}, api: {
     pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => void store.set(k, v) },
     getDatabase: async () => ({ plugins: [] }),
     runLLMModel: async () => ({ type: "success", result: "{}" }) } };

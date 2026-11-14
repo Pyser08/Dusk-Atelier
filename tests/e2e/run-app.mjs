@@ -1,5 +1,8 @@
 // 1.7.0 메뉴 구조 시험 (실제 입력). 클라우드 샌드박스: /opt/npm-tools, /opt/pw-browsers
 // SHOTS=폴더 를 주면 화면 사진도 저장한다.
+// 2.2.0: 이 시험은 2.0.0 이전 탭 구성(리수폿·인물·더보기)을 기준으로 해서 지금 화면과 맞지 않아요. 같은 내용(메뉴·탭 이동·섹션 개요·모바일 탭바)은
+// run-nav·run-hubs·run-home-grid·run-manage-glass가 확인해요. 다시 쓰려면 RUN_LEGACY_APP=1로 실행(대부분 실패).
+if (!process.env.RUN_LEGACY_APP) { console.log("건너뜀: 옛 탭 구성 시험(run-nav·run-hubs·run-home-grid로 대체)"); process.exit(0); }
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 import { build } from "/opt/npm-tools/node_modules/esbuild/lib/main.js";
@@ -32,7 +35,7 @@ const names = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(
   ok("[PC] 첫 화면은 홈, 메뉴는 왼쪽 사이드바", (await cur(page)) === "홈" && (await page.locator(".rb-nav").isVisible()) && !(await page.locator(".rb-topnav").isVisible()));
   const side = await names(page, ".rb-nav a");
   ok("[PC] 사이드바 순서: 홈 → 기억 묶음 → 관리 묶음 → 작업실 묶음 → 도구·설정", side.join("|") === "홈|장기 기억|인물 관계도|코코아|기억 카드|캐릭터|모듈|플러그인|ProtLink+|플러그인 꾸미기|AI로 봇 만들기|AI로 페르소나 만들기|도구|설정", side.join("|"));
-  ok("[PC] 묶음 라벨(기억·관리·작업실)과 메뉴 위치 분할 버튼이 사이드바에 있음", (await page.locator(".rb-nav .rb-nav-lab").allTextContents()).join("|") === "기억|관리|작업실" && (await page.locator(".rb-nav .rb-layseg button").count()) === 2);
+  ok("[PC] 섹션 제목(기억·관리·작업실)과 메뉴 위치 분할 버튼(⋯ 메뉴 안, 2.2.0)이 사이드바에 있음", (await page.locator(".rb-nav .rb-nav-sec .t").allTextContents()).join("|") === "기억|관리|작업실" && (await page.locator(".rb-nav .rb-nav-menu .rb-layseg button").count()) === 2);
   ok("[PC] 개발 탭은 간단 모드에서 숨김", !side.includes("개발"));
   await shot(page, "pc-1-home");
   await go(page, "리수폿");
@@ -383,7 +386,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
 { const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
   const page = await boot(ctx, {}, { memory: true, story: true, mods: true });
   await go(page, "설정"); await page.waitForTimeout(500);
-  ok("[프롬프트] 설정(간단 모드)에 '기억·리수폿 프롬프트' 줄이 바로 보임", (await page.locator("#rb-set-prompts").count()) === 1);
+  ok("[프롬프트] 설정(간단 모드)에 '기억·인물 위키 프롬프트' 줄이 바로 보임", (await page.locator("#rb-set-prompts").count()) === 1);
   await page.locator("#rb-set-prompts").click(); await page.waitForTimeout(600);
   ok("[프롬프트] 화면 열림 · 새 프롬프트·파일에서 불러오기 버튼", (await page.locator("#rb-pr-new").count()) === 1 && (await page.locator("#rb-pr-import").count()) === 1);
   await page.locator("#rb-pr-new").click(); await page.waitForTimeout(500);

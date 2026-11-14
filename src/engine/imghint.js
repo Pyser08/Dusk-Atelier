@@ -32,6 +32,7 @@ export function buildHint({ idx, state, present }) {
   const head = [
     HINT_MARK,
     "Image tags must use the exact asset names below — never invent, translate, abbreviate or merge them. One keyword per tag.",
+    "Never add a file extension (.png, .webp, .jpg) unless the asset name itself has one.",
     "Choose by what the character is doing right now: NSFW action > interaction > emotion > default.",
     "The state below only shows what your last tags were. If the action or its stage changed, switch to the matching tag; if it ended, go back to an emotion tag.",
     "Keep each character's current outfit unless the story clearly changes their clothes. If the action keyword you need exists only in another outfit, use that outfit.",

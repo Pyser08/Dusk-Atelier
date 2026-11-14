@@ -11,7 +11,7 @@ test("‘생리’로 찾으면 월경·임신 기록과 그 위치가 나온다
 
 test("띄어쓰기·가운뎃점이 달라도 찾는다", () => {
   assert.equal(findFeatures("월경 임신")[0].t, "월경·임신 기록");
-  assert.equal(findFeatures("서사 관계")[0].t, "서사관계 전용 모드");
+  assert.equal(findFeatures("서사 관계")[0].t, "서사관계 전용 모드 · 자동 기록 세부");
   assert.ok(findFeatures("api 키").some((f) => /AI 모델/.test(f.t)));
 });
 

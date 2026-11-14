@@ -1,3 +1,160 @@
+# 현재 상태 — 2.2.0 브랜치 (main fd5fd34, v2.1.9 머지 뒤 분기 · 2026-11-13)
+
+## 목표: 글래스 UI 개편 — 배치 갈아엎기 → 새 테마
+- 기준 문서: `HandOff/UI-GLASS.md` (배치가 UI-STYLE.md와 부딪히면 UI-GLASS 우선). 견본 html(dusk-home-glass*.html)은 저장소에 없음 — 필요하면 사용자에게 받기.
+- 기존 테마는 유지하고 글래스 테마 6종(dusk·night·sakura·aurora·sunset·mono)을 추가.
+- **탭 하나 = 세션 하나.** 사용자가 탭별 변경안을 주면 그 세션에서: 목업(PC 1280·모바일 390) → 사용자 확인 → 구현 → e2e.
+- 버전(package.json·CHANGELOG 새 섹션)은 지시 있을 때만.
+
+## ▶ 다음 세션에서 이어갈 것 (11-15 기준)
+- **v2.2.0 배포 준비 끝(11-15)**: package.json 2.2.0, CHANGELOG `## v2.2.0`, 바뀐 애드온 9개 끝자리 올림 + minCore 2.2.0(manage 0.1.3·provider 0.2.4·chattheme 0.1.2·aibuild 0.1.5·memory 0.2.13·cards 0.1.2·erosync 0.1.5·protlink 0.1.3·stealth 0.3.55). widgets·modcompat은 배포본과 같아 그대로.
+- **배포는 `npm run release` 한 번**(tools/release.mjs): 시험·빌드 확인 → 브랜치 푸시 → main에 합침(worktree, README 충돌은 main 쪽) → main·태그 v2.2.0 푸시(release.yml이 릴리스) → 애드온 배포. `npm run release -- --dry`로 미리 보기. 태그가 이미 있으면 애드온만.
+- 원래 실패 정리: npm test 0 실패(pot-port: 패치로 바꾼 이름은 대조 제외·월경 문구 패치 등록 / watch-light: test 명령에 --experimental-strip-types / cellarlatest: 전역 fetch 막음). e2e editor-ai·lorereq(aibuild 애드온 자리 tests/e2e/aibuild-ext.js), info(접힘 기억을 누를 때 바로 저장), look(모서리 20px). run-app은 옛 탭 구성이라 건너뜀(RUN_LEGACY_APP=1).
+- 6번: 테마 대비는 tests/glassthemes.test.js(전 테마 × 밝은·어두운 4.5:1)로 확인. 실기기 확인은 아직.
+- **4번 관리·5번 설정 끝(11-15)**: 목업 `glass-4-5-manage-settings.html`에서 고른 안 — 개요 C검색+A타일, 캐릭터 B(갤러리·게이지 `prefs.ui.charCard`·목록 전환 `charView`), 모듈 A(CSS 카운터 번호·`.rb-modexp` 펼침, PC 비개발 모드만), 플러그인 A(`.rb-plcat` 색띠 카드), ProtLink A + 오른쪽 타임라인(`.rb-pl-tl`, summary에 addedAt 추가·이 창 받기 기록 `state.plLog`), 설정 A(`.rb-settoc` 목차 → 카드로 스크롤). CSS `src/ui/screens/managehubcss.js`. 통합 검색 결과는 `state.searchNext`로 검색어를 들고 탭 이동(app.js go). 갤러리 끌기는 sortable.js grid 축(좌우). e2e 새 `run-manage-glass` 22.
+- **편집 화면 B안 끝(11-15)**: 목업 `glass-4-editor.html` B. editor.js — 목록 `itemTone()` 색띠 + `toneLegend()` 색 설명(로어북·정규식·트리거), 폴더 줄 `.k-folder`, 탭 개수(0은 흐리게)·탭별 경고 `!N`(검증 결과 tab별), 바뀐 곳·검증 버튼은 `.rb-statusbar` 오른쪽, foldCard에 `f-<key>` 색 점, 모듈은 `cfg.headExtra`(켜짐 스위치·연결 설정 #rb-edit-links). 레일이 편집 창 위로 올라오던 것 `.rb-win:has(.rb-full) .rb-nav{z-index:24}`. CSS는 managehubcss.js 끝.
+- 애드온 dist(manage·protlink) 내용이 바뀌었지만 애드온 버전은 안 올림(지시 대기).
+- **3번 작업실 끝**(커밋 전). 다음은 **4번 관리**(manage-home·characters·modules·plugins·protlink) — 목업(탭마다 맞춤 4안, 통일 금지) → 확인 → 구현. 3번 구현은 아래 ‘3번 기록’.
+- **2번 기억 진행 중**: 개요·장기 기억 끝(아래). 다음은 관계도 → 코코아 → 카드. 목업 초안은 `docs/mockups/glass-2-memory.html`, 디자인은 6번(색띠+약한 네온, 선 아이콘)으로 맞춰 다시 목업 → 확인 → 구현.
+- **1번 홈까지 끝**(커밋 ac0907e 이후 문서 정리 커밋). 다음은 **2번 기억**: memory-home·memory·relmap·cocoa·cards — 목업(PC 1280·모바일 390) → 확인 → 구현 → e2e.
+- 쓸 수 있는 것: 유리 카드 `.rb-gcard`/`.rb-gcell`, 섹션 색 `--sec-k`·`.sec-memory`(분홍보라), 팝업 `--rb-pop-bg`, 테마 22종(밝은·어두운 판). 지침 차이는 `UI-GLASS.md` 맨 위 ‘구현 현황’.
+- CHANGELOG에 `## 2.2.0 (작업 중 · 미릴리스)` 섹션을 넣어 둠(사용자 요청으로 문서 반영). 버전(package.json)은 그대로 2.1.9 — 올리기·릴리스는 지시 대기.
+- 실기기(RisuBard·PocketRisu·RisuAI) 확인 아직: 위젯 끌기, 테마 색감·블러 성능, 탭 빠른 이동, 태블릿 레일.
+- 스크롤 깜빡임 수정(11-14): 스크롤 안 카드(.rb-card·.rb-gcard·홈 위젯) backdrop-filter 제거, 시험 tests/glassscroll.test.js. 3번부터 새 카드도 블러 쓰지 말 것.
+- 원래 있던 실패(홈 작업과 무관): npm test 3(pot-port·watch-light·GitHub 태그), e2e look 2·hubs 1·run-info 2·run-app 중간 멈춤, run-memed 불안정.
+
+## 버그 제보 3건 (11-15, tests/report-1115.test.js)
+- 위키 반쯤 통합: identityRedirects의 원본 문서가 documents에 남으면 normalizeIdentityRedirects가 던져 위키 로드 실패→writeBlocked. pot 패치(tools/pot-patches.json 마지막)로 그 연결만 건너뜀. 위키 점검에서 따로 알리는 것·분기 채팅 위키 이어받기 안내는 아직.
+- 응답 아래 표시: lorelog.js midKey(30% 지점 32자)를 turninfo·lorelog 기록에 추가, matchRecord가 mid로도 찾음. 이매진 동시 생성 요청이 pending을 바꾸는 경우(주사위 붙는 시점)는 실기기 미확인.
+- .webp: imgtagfix readTags의 raw를 실제 에셋 이름 태그로, imghint에 확장자 금지 문장.
+
+## Erosync 매 턴 계산 (11-15 구현)
+- 설계: HandOff/EROSYNC-TURN.md. 구현: 엔진 연결부 erosync.js duskTurnUpdate(profiles.turn, 원본 AXIS/SEX_AXIS 정의로 기준 글) + 순수 로직 src/erosync/turnupdate.js, 턴 갱신기 src/data/erosyncturn.js(설정 dusk.erosync.turn, 기록 dusk.erosync.turnlog), 기록기 알림 memoryturn.js tellTurn/onTurn, 애드온 연결 addons/erosync/index.js(ctx.erosyncTurn), 카드 src/ui/screens/memory/erosyncturnui.js. 테스트 tests/erosync-turn.test.js.
+- 남은 것: 실제 채팅에서 동작 확인 안 함. 목표·경쟁은 매 턴 계산 대상 아님(장면 디렉터가 매 턴 다룸). 출발값 없는 인물은 건너뜀(카드에 이름 표시). 리수폿 기록(예전) 모드에선 알림 없음. 새 카드 e2e 없음.
+- 기존 e2e run-erosync-ui ‘더보기 메뉴’ 2건은 이전부터 실패.
+
+## Erosync 자동 재분석 (11-15)
+- src/erosync/autorefresh.js(새): risu+Dusk runAI면 취소 가능 판정, 고쳐진 자료 이어 붙이기. erosync.js 자동 재분석은 knownPeopleOnly로 아는 인물만(인물 찾기 필요 시 EROSYNC_AUTO_NEEDS_FULL → manual_pending needs_full). 테스트 tests/erosync-autorefresh.test.js.
+- 장기기억 자동 기록은 원인 미확정: 사용자에게 자동 기록 상태 문구 받아서 이어 볼 것(auto-wiki.js 113·114줄 건너뜀 조건 후보).
+
+## 세션 순서와 범위 (TASK-MAP: 메뉴·탭 = src/ui/tabs.js, src/ui/app.js)
+| # | 세션 | 대상(tabs.js id) | 상태 |
+|---|---|---|---|
+| 0 | 공통 기반 | styles.js 글래스 토큰(기존 --rb-* 이름 유지), 배경(stage)·유리 카드 공통 클래스, 탭 틀(app.js) | [x] 11-13 (아래 기록) |
+| 1 | 홈 | home | [x] 11-14 끝(F안·사이드바·위쪽 메뉴·모바일 탭바·테마 22종). 실기기 미확인 |
+| 2 | 기억 | memory-home, memory, relmap, cocoa, cards | [x] 11-14 끝(개요·장기 기억·인물 위키·NSFW 설정·관계도·코코아·카드). 실기기 미확인 |
+| 3 | 작업실 | work-home, provider, look, stealth, aibot, personabuilder, tools, dev | [x] 11-14 끝(목업 glass-3-work-final 조합). 실기기 미확인 |
+| 4 | 관리 | manage-home, characters, modules, plugins, protlink | [x] 11-15 끝. 편집 화면 목업 대기, 실기기 미확인 |
+| 5 | 설정 | settings (+ 테마 선택 UI, '가벼운 화면' 저사양 모드) | [x] 11-15 왼쪽 목차. 테마 선택·가벼운 화면은 꾸미기 탭에 있음 |
+| 6 | 마무리 | 6테마 대비 확인, 전 화면 PC·모바일 e2e, CHANGELOG·안내서 | [x] 11-15 간단히(대비 시험·전체 e2e). 실기기 미확인 |
+
+- 0번은 1번 세션 안에서 같이 해도 됨(홈 변경안을 받을 때 결정).
+- 테마 토큰·테마 선택 UI는 배치가 끝난 뒤(UI-GLASS §9의 4번). 배치 세션 동안은 기본 더스크 값만.
+
+## 세션마다 지킬 것
+- 기능을 빼지 않기: 옮긴 기능은 이 표 아래 '기능 이동 기록'에 "어디 → 어디"로 남기기.
+- **기능 찾기도 같이 고치기(사용자 지시 11-14)**: 탭·기능이 새로 생기거나 이름·자리가 바뀌면 `src/engine/featurefind.js` FEATURES(path·tab·sub·mem·find)를 고치고 `node tests/e2e/run-featurefind.mjs`(모든 항목이 실제 자리·제목으로 가는지)를 돌린다.
+- `?` 도움말·바로가기·'처음 둘러보기' 유지. 카드 안쪽 여백 18px 20px / 모바일 16px(QUALITY 박스 여백 규칙).
+- 애드온 화면(addon 붙은 탭)은 애드온 쪽 코드도 함께 확인.
+- 마칠 때: npm test → build → check("동일함") → 관련 e2e, 이 표 상태 갱신.
+
+## 0·1번 기록 (11-13)
+- 목업: `docs/mockups/glass-1-home.html`(A~E안), `docs/mockups/glass-1-home-f.html`(**채택 F안**: 사이드 레일 + 포커스 머리 + 스냅 위젯 격자).
+- 0번: `src/ui/glasscss.js` GLASS_CSS. `.rb-win.rb-skin-glass`일 때만(app.js applyTheme: theme.skin==="glass" && 보통 대비 && 어두운 scheme). **기존 `--rb-glass`는 블러 값이라 카드 바탕 토큰은 `--rb-glass-bg`**(UI-GLASS 표의 `--rb-glass`와 이름 다름). 배경 바탕 `--rb-gbg = var(--rb-win)`(고른 테마 바탕색 유지, run-look 테마 묶음 시험 때문), 빛 번짐은 `--rb-acc-a/b`에서 만듦 → 테마 6종 토큰은 아직(§9-4). 공통 클래스 `.rb-gcard`·`.rb-gcell`. 레일은 기존 왼쪽 메뉴(.rb-nav)를 유리 카드로, 모바일은 기존 아래 탭바.
+- 저사양: `.rb-lite` = theme.lite 또는 UA에 pocket|bard, + `prefers-reduced-transparency`. theme.js에 `skin`("glass"|"classic", 기본 glass)·`lite` 추가, 꾸미기 → 모양 더 고르기에 ‘글래스 화면’·‘가벼운 화면’ 스위치(lookparts.js). 5번 설정 세션에서 설정 탭으로 옮길지 결정.
+- 1번: `src/ui/homegrid.js`(배치 계산: 크기 범위 WIDGET_SIZES·DEFAULT_LAYOUT 6/2칸·settle·snap, 시험 `tests/homegrid.test.js` 7) + `screens/homegridui.js`(그리기·포인터 끌기·모서리 크기·키보드) + `screens/homegridcss.js` + `screens/home.js` 전면. 저장 `prefs.ui.homeGrid[6|2]`, 못 보이는 위젯(채팅 없음→숫자, 추천 없음, 관리 숨김)의 자리는 저장값에 남김. 꾸미기 중에만 끌기(touch-action:none).
+- 시험: npm test 1507 pass / 3 fail(pot-port·watch-light·GitHub 릴리스 태그 — 변경 전에도 같음). build·check 동일함(v2.1.9). e2e 새 `run-home-grid` 31 통과, smoke·home-memall·home-turn·home-fair·home-dice·onboard·discover 통과, hubs 1 실패·look 2 실패는 변경 전에도 같은 실패. run-hubs 홈 숫자 기대값을 모바일 3→4, `.rb-hdo-sm`→`.rb-hgrid2`로 고침.
+- 미확인: 실기기(RisuBard·PocketRisu·RisuAI) 터치 끌기·성능, 밝은 모드(글래스 안 붙음 — 예전 모양).
+- CHANGELOG: 2.2.0(작업 중) 섹션에 반영함.
+- 안내서: start.html(홈 꾸미기), look.html(글래스·가벼운 화면) 수정.
+
+## 사이드바 개편 (11-13, 0번 이어서)
+- 목업 `docs/mockups/glass-0-sidebar.html`(지금·1~5안·추천). 사용자 선택: **1(섹션 접기)+2(섹션 색)+3(아래 정리)+4(레일)**.
+- app.js 사이드바: `.rb-nav-lab` 대신 섹션 제목 버튼 `.rb-nav-sec.sec-<section>`(aria-expanded) + `.rb-nav-group`(접힘=max-height 0, 링크는 DOM에 남음). 펼친 섹션 저장 `prefs.ui.navOpen`, 지금 섹션은 늘 펼침(paintSecs, render마다). 보일 탭 없는 섹션은 제목 숨김.
+- 아래 칸: `.rb-nav-mini`(끌어다 놓기 · 버전) + ⋯ `.rb-nav-menu`(메뉴 위치 layoutSeg · `#rb-nav-pin` 늘 펼침 · 변경 기록 · 끌어다 놓기 안내). 밖 클릭·Esc로 닫힘(Esc는 창 닫기로 안 번지게 stopPropagation).
+- 레일: `.rb-navwrap` 안에 nav. 761px 이상·`.rb-nav-pinned` 아닐 때 68px, 올리거나 포커스하면 216px로 본문 위에 덮어 펼침. 늘 펼침 = `prefs.ui.navPinned`. CSS `src/ui/navcss.js`. 글래스 여백은 `--nav-pl/--nav-pb`.
+- 머리 로고 아래 ‘for RisuBard’ 없앰.
+- **위쪽 메뉴(.rb-lay-top)도 맞춤**: 홈 + 섹션 알약 3개(`.rb-topsec.sec-*`, topLinks `section:*`, 누르면 섹션 개요) · 탭별 링크는 DOM에 남기고 CSS로 숨김 · 섹션 메뉴는 안쪽 화면에서 칩 줄(moreNav, 데스크톱 위쪽 메뉴일 때만 보임, 개요에선 숨김) · 메뉴 위치 분할 버튼은 오른쪽 ⋯(`.rb-top-more`/`.rb-top-menu`) 안 → 글래스에서 글자와 겹치던 것 없앰. run-nav에 위쪽 시험 6개 추가(24 통과).
+- **모바일 맞춤**: 아래 탭바 = 섹션 색 동그라미 아이콘(`.rb-tabbar .sec-*`, 지금 탭은 색 그라데이션+빛), 글래스에선 떠 있는 유리 바. 지금 섹션 색 변수 `--sec-k`(render에서 `win.dataset.sec`) → 칩 줄 지금 칩 테두리·빛. 홈 머리: 모바일은 제목 왼쪽 정렬, ‘홈 꾸미기’는 같은 줄 오른쪽(homegridcss 미디어 쿼리 — NAV_CSS가 HOMEGRID_CSS보다 앞이라 홈 규칙은 homegridcss에 둘 것). e2e run-nav 25·run-home-grid 32.
+- run-home-grid가 한 번 1개 실패 후 다시 두 번 모두 통과 — 타이밍 흔들림 의심, 다시 보이면 확인.
+- 시험: e2e 새 `run-nav` 18 통과. run-app ‘묶음 라벨’ 기대값을 새 구조로 바꿈(run-app은 원래 다른 곳 TypeError로 중간에 멈춤 — 변경 전과 같음). cards·manage·onboard·work·memed·addon-aibuild·home-grid·smoke·home-memall·discover 통과, hubs 1·look 2 실패는 원래 실패. npm test 1507/3(원래 실패), check 동일함.
+- 미확인: 터치 태블릿(761px 이상, 올리기 없음)에서 레일 — 아이콘 탭으로 이동은 되지만 이름은 포커스 때만 보임. 실기기 확인 필요.
+
+## 글래스 테마 6종 + 밝은 판 (11-14)
+- `src/ui/glassthemes.js`: GLASS_THEMES(dusk·night·sakura·aurora·sunset·mono, 어두운 판=UI-GLASS 표, 밝은 판=새로 정함) · `glassThemeInput`(themeVars에 a·b·cBg를 그 테마 값으로 → 기존 --rb-* 토큰을 그대로 계산) · `glassExtraVars`(--rb-gb1~4 빛 번짐, --rb-gtint, --rb-gglow; 'mine'이면 비움 → CSS가 강조색에서 만듦).
+- theme.js `gtheme`(기본 dusk, 'mine' 허용). app.js applyTheme: 글래스면 밝은·어두운 모드 모두 적용, 밝으면 `.rb-glass-light`, `win.dataset.gtheme`. 고대비면 글래스 끔.
+- glasscss.js: 어두운 카드 = `color-mix(바탕 88%+흰색) 50%`(진한 빛 번짐 위 대비 확보), 안쪽 칸 흰 .08, 보조 글자 .84. 밝은 판 토큰 블록(.rb-glass-light: 하얀 .58 카드·#1f1a33 글자). 홈 제목·숫자 그라데이션은 밝은 판에서 글자색→강조 글자색.
+- 대비 시험 `tests/glassthemes.test.js`(14): 6종×2판 × 바탕·빛 번짐 4개 위 카드·안쪽 칸에서 본문·보조 4.5:1 이상.
+- 꾸미기 탭 맨 위 ‘글래스 테마’ 카드(lookparts `parts.glass`, `.rb-gpick` 7개). 테마 묶음·강조 색·그라데이션·직접 색을 바꾸면 gtheme='mine'(lookparts set 래퍼).
+- 정리: 홈 화면 둘러보기 단계 고침(.rb-hdo → 기능 찾기·바로가기 위젯·홈 꾸미기 단계, 대상은 :has 없이), 안 쓰는 예전 홈 CSS(rb-home2·rb-home3·rb-hbody·rb-hmain·rb-hrec-head·rb-home-tourrow) 지움. 애드온 위젯은 애드온 상자 자체 제목·여백 사용.
+- 시험: npm test 1521/3(원래 실패), check 동일함. e2e 새 run-glass-theme 19, run-nav 25, run-home-grid 34(둘러보기 대상 시험 추가), smoke·onboard·manage·work·cards·memed·home-*·discover·addon-aibuild·addon-chattheme 통과. look 2·hubs 1 원래 실패. **addons-ui: ‘스크롤 그대로’ PC chattheme 1개 새로 실패**(hello는 원래 PC·모바일 실패) — 위젯 배치는 안 바뀜, 애드온 위젯이 높이 고정이라 안쪽 스크롤 때문으로 보임. 애드온 위젯 높이를 내용에 맞추는 안을 검토할 것.
+- CHANGELOG 초안 추가: 글래스 테마 22종(기본 ‘Dusk 황혼’, 밝은·어두운 판), 밝은 모드에서도 글래스, 색을 직접 고르면 ‘내 강조색’.
+
+## 글래스 테마 22종 (11-14 이어서)
+- 기본 `dusk` = **‘Dusk 황혼’**으로 다시 정함(보랏빛 하늘 + 지평선 주황·분홍: acc #ff9a76, acc2 #b07cff, 바탕 #171028 / 밝은 판 #fbf3f4). 노을(sunset)은 붉은 쪽으로 구분.
+- 추가 16종(glassthemes.js 표에서 생성: 강조·강조2·셋째 빛·어두운/밝은 바탕 → 빛 번짐·tint 자동): 라벤더·깊은 바다·숲·로즈 골드·코랄·체리·은하·네온·모카·얼음·와인·복숭아·레몬·말차·한밤·보랏빛 새벽. theme.js gtheme 허용 목록은 GLASS_IDS에서.
+- 대비 시험 46개(22종×2판 + 정리) 모두 통과.
+- 고침: 꾸미기 미리보기가 글래스 테마 색을 따르게(settings.js tvars), 접힌 레일에서 메뉴 아이콘이 줄어 안 보이던 것(`.rb-nav a>svg{flex:none}`), 강조 색 버튼을 다시 눌러도 ‘내 강조색’으로.
+- 시험: npm test 1553/3(원래 실패), check 동일함, run-glass-theme 23(새 테마·미리보기 추가). 나머지는 위와 같음(look 2·hubs 1·addons-ui PC 스크롤 2).
+
+## 애드온 위젯 높이 (11-14)
+- 애드온 위젯은 `autoH`: 내용 높이에 맞춰 줄 수를 자동 조절(homegridui fitAuto, ResizeObserver, 최대 60줄, 저장 안 함). 꾸미기에서 높이를 바꿔도 내용에 다시 맞춰짐(폭만 의미 있음).
+- addons-ui: chattheme·모바일 hello 스크롤 시험 통과, **PC hello 1개만 실패**(변경 전에도 PC·모바일 hello 실패). 홈 작업 끝 — 남은 건 실기기 확인.
+
+## 홈 마무리 (11-14)
+- 홈으로 오면 사이드바에 펼쳐 둔 섹션을 모두 닫음(render에서 navOpen 비우고 저장).
+- 팝업 글래스: `.rb-dialog`·`.rb-wn`(변경 기록)·`.rb-menu`·`.rb-bsheet`·`.rb-tour-card`·⋯ 메뉴·가져오기 창(`#rbu-overlay .win`)을 `--rb-pop-bg`(어두운 판 84% 덮기 / 밝은 판 흰 .84) + 블러 28px, 뒤 막(.rb-modal 등)은 `--rb-pop-back` + 블러 6px. 가벼운 화면은 블러 끔·불투명.
+- 기능 찾기: 모든 탭 오른쪽 위(? 옆). 목록 검색이 없는 탭은 그 칸이 ‘기능 찾기’(적으면 홈의 기능 찾기 목록으로, `state.findMode`), 목록 검색이 있는 탭(캐릭터·모듈·플러그인·기록)은 그 검색 + `#rb-find-btn`(✦) 단추. 홈도 머리 줄을 보이고(위치 글자만 숨김), 홈 가운데 찾기 칸(#rb-home-find)은 없앰 — 둘러보기 대상은 `.rb-ph-tools .rb-search`.
+- 모바일 애드온 잘림: 애드온 위젯 최대 높이 12→60줄(내용 1785px 잘리던 것).
+- 시험: run-nav 35(홈 섹션 닫힘·기능 찾기 5개 탭·모듈 단추·대화상자 유리 추가), run-home-grid 34(끌기 시험을 스크롤과 무관하게), run-addons-ui에 ‘애드온 위젯이 내용을 다 담음’ 추가(47 통과, 모바일 hello 스크롤 1개 실패 — 원래 실패 항목). run-info 2 실패는 2.2.0 시작(70e64ec)에서도 같은 실패.
+- (사용자 정정) 기능 찾기: **홈은 가운데(포커스 머리 안 `#rb-home-find`), 다른 탭만 오른쪽 위 ? 옆.** 검색 칸 하나(`searchLabel`)를 옮겨 붙임: 홈 render가 `ctx.mountSearch(slot)`, 다른 탭 render가 `placeSearch(phTools, findBtn)`. 다시 그리기로 칸이 빠졌다 붙어도 1.5초 안에 적고 있었으면 포커스·커서 유지(`lastTyped`). 찾기 결과 화면 위에도 같은 칸. 홈 머리 줄(.rb-pagehead)은 다시 숨김.
+- 사이드바 레일: **마우스를 올린 동안만** 펼침(:focus-within 제거 — 눌러도 떼면 접힘), 떼면 ⋯ 메뉴도 닫힘. 키보드(Tab)로 들어오면 `.rb-nav-kbd`로 펼침.
+- 팝업 더 비치게: 어두운 판 `--rb-pop-bg` 84%→66%, 밝은 판 흰 .84→.68, 뒤 막 옅게.
+- 시험: run-nav 37(홈 가운데 칸·찾기 결과 위 칸 포커스·누른 뒤 떼면 접힘), run-addons-ui 48 모두 통과(스크롤 시험도 이번엔 통과).
+- 사이드바 고침(11-14 늦게): ① 애드온이 늦게 켜지면 메뉴 링크만 보이고 섹션 제목(관리 등)은 숨은 채라 창을 다시 열어야 했음 → `refreshTabs()` 끝에서 `paintSecs()`(위쪽 메뉴 섹션 알약도 refreshTabs에서). e2e run-nav ‘애드온이 늦게 켜지면…’(coreOnly로 시작 후 svc 추가, 고치기 전 실패 확인). ② 탭이 바뀌면 손으로 펼친 섹션을 닫고 그 탭의 섹션만 펼침(`navTabSeen`, 홈이면 모두 닫힘). run-nav 39 통과.
+- **탭 이동 중 얼어붙음 고침(11-14)**: 원인 = 탭 A(캐릭터 등)를 불러오는 중 B로 가면, 늦게 끝난 A가 `replace(ctx.main)` → `dom.js clear()`의 `while (firstChild) removeChild` 를 도는데 낡은 화면 보호(staleguard)가 removeChild를 무시해 무한 반복(CDP로 멈춘 스택 확인: drawCharacters→replace→clear). 고침 = 지운 자식이 그대로면 멈춤. 같은 꼴의 반복문은 저장소에 이것 하나뿐(검색 확인). 함께: 늦게 끝난 홈이 검색 칸을 화면에 없는 자리로 가져가지 않게 `placeSearch`에서 `parent.isConnected` 확인.
+- 시험: unit `tests/staleguard.test.js` ‘낡은 화면의 replace()는 얼지 않고…’(고치기 전 시간 초과 확인), e2e 새 `run-tab-race`(느린 API로 6가지 탭 이동 + 홈→다른 탭 검색 칸 + 이동 뒤 클릭, 고치기 전 ‘페이지 응답 없음’ 확인) 9 통과. npm test 1554/3(원래 실패).
+- 참고: **run-memed는 원래 불안정**(같은 코드로 32/32/21/5개 — 고치기 전에도 같음, ‘사실확실성’ select 시간 초과). 따로 볼 것.
+- **홈(1번) 끝.** 다음은 2번 기억.
+
+## 3번 기록 (11-14)
+- 목업: `docs/mockups/glass-3-work.html`(탭마다 맞춤 4안), `glass-3-work-final.html`(채택 조합: 개요 C보강+D(검색 뺌) · 프로바이더 B+D · 꾸미기 B+C · 스텔스 A · 봇 A · 페르소나=페르소나 공방 구성 Dusk식 · 도구 A · 개발=지금 UI 보충).
+- 개요 `screens/workhome.js`(묶음 WORK_GROUPS, 최근 `prefs.ui.recentTabs`(app.js noteVisit에서 작업실 탭만) · 고정 `prefs.ui.workPins`, 줄은 `.rb-hubrow[data-tab]` 유지), CSS `screens/workhubcss.js`(작업실 전체 CSS 모음: 개요·꾸미기 갤러리·접는 목록·스텔스·도구 타일·개발 카드).
+- 프로바이더 `screens/provider/glance.js` ‘한눈에’ 탭(기본 탭, 연결이 없으면 ‘연결’로). 용도 표는 `effectiveProfile`(지정→보조→메인), 14일 막대는 기존 사용량 기록 `summarize(by:"d")` → 새 저장 없음.
+- 꾸미기 `screens/settings.js`: 갤러리 `#rb-look-gallery`(8개 + 더 보기 `.all`), 접는 줄 `.rb-lacc`(#rb-look-light 기본 열림 · #rb-look-color · #rb-look-shape · #rb-look-mine). PC 미리보기는 오른쪽 sticky(styles.js 격자 자리 고정).
+- 스텔스 `stealth.js`: 큰 미리보기(프리셋 light/dark 색으로 그림) + ‹ › + 모양 칩(`[data-preset]` 유지, 켜져 있으면 바로 반영). 적용 버튼 없이 토글 유지(run-stealth-ui 규칙).
+- AI로 봇 만들기 `screens/aibot.js`(+순수 `aibotsteps.js`): 새 화면. app.js의 go("aibot") 즉시 만들기 가로채기 삭제 → 화면에서 고른 뒤 createBotAndEdit/openCharEditor/startWorkshop.
+- 페르소나 `personabuilder.js`: 로직 그대로, 오른쪽 순서 시트 미리보기 → 레버 → 현재 채팅, 카드 라이트바(기능 색별).
+- 도구 `tools.js`: 줄 → 타일(`.rb-toolrow.rb-tooltile`, id 유지). 개발 `dev.js`: `.rb-devcard` 라이트바, 목록 줄 ‘기준 날짜/기준 없음’ 배지, 배포 기준 카드에 바뀐 곳 앞 4곳(`.rb-dev-diff`).
+- 아이콘 `pin` 추가. 애드온 dist(aibuild·provider·stealth·memory) 다시 빌드 — addonlib.gen.js 바뀜 → 배포 때 해당 애드온 minCore 확인 필요(버전 지시 대기).
+- 시험: npm test 1562 pass / 3 fail(원래 그 3개). 새 `tests/workhome.test.js` 6. e2e smoke·hubs·home-grid·provider·glass-theme·stealth-ui·addon-aibuild·work·dev-slot·addons-ui·addon-chattheme·discover·onboard 통과, look 2 · persona 4 · persona-sop 2 실패는 원래 파일로도 같음. 고친 e2e: run-provider·run-look·run-glass-theme·run-addon-aibuild·run-hubs(새 구조에 맞춤).
+- 미확인: 실기기 3종, 개발 ‘바뀐 곳 미리보기’ 실제 화면(기준+변경 데이터로는 안 봄), tabperf(출력 없음).
+- 작업 중 다른 곳에서 바뀐 파일(이 세션이 안 건드림): src/data/memorystore.js · src/engine/memoryinject.js · screens/memory/settings*.js · tests/memory*.test.js.
+
+## 검색창 한글·취소 수정 (11-14)
+- 원인: app.js 검색 input 처리기가 IME 조합 중에도 홈 이동(go)·값 다시 넣기·다시 그리기(placeSearch가 칸을 옮김)를 해서 조합이 깨짐(‘ㅇ아안안ㄴ녀녕녕’). 다른 탭→기능 찾기→홈 뒤 원래 탭을 기억하지 않았음.
+- 고침: `composing`(compositionstart/end) 동안은 state.search만 갱신, 확정(compositionend) 뒤 `runSearch`. 기능 찾기로 홈에 올 때 `state.findFrom` 기억 → 칸을 비우면 그 탭으로, 다른 곳으로 가면(go 홈 외) 잊음.
+- 시험: 새 e2e `tests/e2e/run-search-ime.mjs`(CDP imeSetComposition으로 실제 조합, PC·모바일 16) — 고치기 전 4 실패 확인. 실제 맥 한글 입력기에서는 마지막 음절이 확정될 때(다음 글자·띄어쓰기·포커스 이동) 결과가 바뀜(조합 중엔 한 음절 늦음). 실기기 미확인.
+
+## 가독성·기능 찾기 점검 (11-14)
+- 글래스 카드 덮는 정도: 어두운 `--rb-glass-bg` 50→62%, 안쪽 칸 .08→.1, 보조 글자 .84→.88·.6→.66 / 밝은 카드 .58→.72, 보조 .74→.8·.6→.64(glasscss.js). tests/glassthemes.test.js 모델 값도 같이(22종 대비 통과).
+- 기능 찾기 18개가 옛 자리였음 → featurefind.js 고침(POTA=인물 위키 고급, MSET=장기 기억 설정 탭 memTab:"opt", NSFW 설정 eroTab scene/manage, 성인 항목은 NSFW 설정 → 장면·수위). 새 e2e `tests/e2e/run-featurefind.mjs`(58 항목, 홈 애드온은 addons 부팅에서) 모두 통과.
+
+## 기능 이동 기록
+- 인물 위키 설정 → 고급 ‘자동 기록 세부’ → 장기 기억 설정 카드 ‘임베딩(의미 검색)’ 아래 줄 `#rb-mem-writer-row` → 창 `#rb-mem-writer`(mhome.js openWriterDetails, 내용은 advanced.js `writerDetails`). ‘자동 기록 입력 예산’만 기억 옵션 ‘기억 넣기 토큰’(#rb-mem-tokens) 바로 밑 `#rb-mem-wbudget`(writerInputBudgetTokens, 인물 위키 설정을 읽을 수 있을 때만). e2e run-potpage에 위치·창·저장 확인. 참고: tests/cellarupdate.test.js 188~190 가끔 실패(타이밍, 무관), erosync-ui ‘더보기 메뉴 파일 내보내기’ 2 실패는 원래부터.
+- 작업실 개요: 큰 카드 2 + 더 보기 목록 → 하는 일별 묶음 4 + 최근·고정.
+- AI로 봇 만들기: 메뉴 누르면 바로 만들기 → 세 단계 화면에서 고른 뒤 시작.
+- 꾸미기 ‘기본값으로’(고급 안) → 접는 목록 맨 아래 ‘처음 값으로 되돌리기’(확인 창). 내 테마 카드(오른쪽) → 접는 목록 ‘내 테마’.
+- 스텔스 모양 카드 6장 → 큰 미리보기 + 모양 칩.
+- 프로바이더: 첫 탭 ‘연결’ → ‘한눈에’(연결 없으면 ‘연결’).
+- 기능 찾기: 홈은 가운데 칸 그대로, 다른 탭은 오른쪽 위 ? 옆(목록 검색 탭은 ✦ 단추).
+- 사이드바 맨 아래 ‘메뉴 위치(왼쪽/위쪽)’ 분할 버튼·‘v… · 변경 기록’·끌어다 놓기 안내 → 아래 한 줄 + ⋯ 메뉴 안(위쪽 바의 분할 버튼은 그대로).
+- 홈 ‘장기 기억’ 상태 카드의 숫자 4칸 → 숫자 위젯 4개(n1~n4). 모바일에서도 ‘확인할 것’ 보임(숨기기 가능).
+- 홈 바로가기 4칸·최근 기록·빠른 설정·이어서 하기·추천(기능 맛보기)·애드온 상자 → 각각 위젯.
+- 홈 ‘설정’ 바닥 버튼(예전 코드에서도 화면에 안 붙어 있었음)은 없앰 — 설정은 머리 줄 톱니·레일에 그대로.
+
+---
+
 # 현재 상태 — perf/startup 브랜치 (main 9acdc8c, v2.1.7에서 분기 · 2026-11-12)
 
 ## 목표: 데이터가 많은 순정 호스트에서 빠릿빠릿하게 (봇·모듈 삭제 없이, 호스트 패치 없이)
@@ -1221,3 +1378,46 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - [x] 나머지 4건(시험 tests/bugreport-1113.test.js 4개, 고치기 전 4개 실패 확인): ① pot-patches relationship-mode 'on'에 cycle.state ② pot-patches cycle-tracking: 기준일 없으면 임시 연도 2000, 연도 있는 날짜(full) 나오면 2000- 기준에서 옮겨 감 ③ 원인은 Dusk `cyclereport.js`가 `new:cycle-N-<한글이름>` 참조를 만들어 new: ASCII 검증에서 제안 전체가 거부 → 문서 ID(ASCII 정리)로 ④ pot-patches main-wiki-hook: `databaseMatched`에 `evidence.matched` 추가(경고 표시는 안 함). 재생성 `node tools/pot-split.mjs`, --check 0개.
 - e2e는 Playwright 브라우저(chromium_headless_shell-1254) 미설치로 못 돌림. ④는 훅 단위 시험이 없어 소스 확인 시험만 있음.
 - 참고: npm test 기존 실패 3개(pot-port, watch-light, GitHub 릴리스 태그 네트워크)는 이번 변경 전에도 실패.
+
+## 기억 개요 (11-14, 2번 세션 1/5)
+- 목업: `docs/mockups/glass-2-memory.html`(5화면 초안), `glass-2-memory-hub.html`(배치 4안, 안 씀), `glass-2-memory-hub2.html`(디자인 6판 — **채택 6번: 왼쪽 색띠 + 약한 네온**, 선 아이콘).
+- 구현: `src/ui/screens/sectionhome.js` drawMemory(section==='memory'일 때만) — 상태 줄 `.rb-mhub-stat`(+`.rb-hubstat`, 채팅 이름·켜짐·기억 수·‘지난 대화 분석’→memory 탭의 #rb-mem-analyze로) → 타일 `.rb-hubrow.rb-mtile.k-<id>`(바로가기·옛 시험 호환 위해 rb-hubrow 유지, 칩=저장 N건/인물 N명) → 최근 기록 `.rb-mhub-rec`(mhome.js `recentOf` export, 4건). CSS `src/ui/screens/memhubcss.js`(MEMHUB_CSS, styles.js 끝에 붙임). 관리·작업실 개요는 예전 그대로.
+- PC에서는 memory-home이 mobileOnly라 위쪽 메뉴 섹션 알약으로만 열림(그대로).
+- 시험: npm test 1554/3(원래 실패), check 동일함. run-hubs 기억 개요 기대값을 새 구조로 바꿈 → 전부 통과(이전 실패 1개도 해소). cards·memed 32·nav·home-grid·smoke·glass-theme·dupes 통과. 실기기 미확인.
+
+## 장기 기억 B안 (11-14, 2번 세션 2/5)
+- 목업 `docs/mockups/glass-2-memory-main.html`(A 두 단·B 칸 나누기·C 목차) → **B 채택 + 리수폿은 옵션 칸으로**(사용자).
+- `mhome.js` renderMemoryHome(채팅 있을 때): 상태 카드·분석 버튼·진행 막대는 위 고정 → `.rb-mem4-tabs`(#rb-mem-tab-glance/rec/opt/set, 고른 칸 `m.memTab`에 기억) → 칸 패널 `[data-memtab]`(안 고른 칸은 hidden, DOM엔 남음).
+  - 한눈에: 바로가기·최근 기록 3 | 나에 대한 기억·인물 관계도. 기록: 최근 기록 12 + 인물 위키·기록 보기 버튼. 옵션: 기억 옵션(토큰 포함) | 리수폿·Erosync 줄. 설정: 예전 오른쪽(프롬프트·임베딩, 고급 모드면 기억 방식·고급 묶음 `.rb-mem4-set`).
+  - 채팅 없을 때도 같은 칸 나누기(한눈에=빈 화면 안내·옵션·설정, 기록 칸 없음). 공통 함수 memTabs. CSS는 memhubcss.js 아래쪽(`.rb-mem4*`, 카드 색띠).
+- 화면 둘러보기(screentours memory:home) 리수폿·옵션·세부 기능 단계를 칸 단추로 가리키게 바꿈. **임베딩 안내(embeddingguide, [data-tour=mem-embed])는 설정 칸이 닫혀 있으면 대상이 숨겨져 건너뛸 수 있음 — 필요하면 안내 시작 때 설정 칸 열기.**
+- 시험: npm test 1554/3(원래 실패), check 동일함. e2e memed 32(고급은 설정 칸 클릭 후 확인으로 수정)·erosync-ui(옵션 칸 클릭 추가; 더보기 메뉴 2개는 원래 실패)·discover·potpage·relmap·username·hubs·cards·smoke·dupes·me·home-memall 통과. run-app 107줄 `.rb-mem-options` 확인은 run-app이 원래 중간에 멈춰 못 봄.
+- **(11-14 추가) 장기 기억 화면은 장기기억 애드온(addons/dist/memory.js)에 들어감** — 본체 빌드만으론 안 바뀜. `node tools/build-addons.mjs`로 다시 빌드함(memory 0.2.12 그대로 → **기기에 받게 하려면 버전 올림 + publish-addons 필요, 사용자 지시 대기**). recentOf는 core가 mhome을 끌어오지 않게 `src/engine/memoryusage.js`로 옮김(안 옮기면 core가 2.7MB로 커짐). addonlib.gen.js 재생성(2.2.0 core 전용 모듈 glasscss·homegrid·navcss·memhubcss 등 추가 — 애드온은 안 씀, minCore 그대로 둠).
+- (11-14) 개요 아이콘 grid. PC 사이드바엔 개요 안 넣음(사용자). 개요는 폭 제한 없음, 채팅 없을 때 ‘다른 채팅 보기’·최근 기록 자리 안내. 사이드바 아이콘 34/20px, 장기 기억 아이콘 네모 네온형. 시험판은 `node tools/custom-addon.mjs memory cards erosync` → test-addons/.
+- (11-14) **라이트바 컨셉** 확정(UI-GLASS 맨 위). 홈은 내용 카드(최근 기록·빠른 설정·이어서 하기·추천)와 위 장기 기억 상태 칸에만 라이트바(바로가기·숫자 칸엔 없음 — 사용자 ‘막 넣지 말고 어울리게’). 남은 기억 화면(관계도·코코아·카드)·3~5번 세션도 이 컨셉으로 목업.
+- (11-14) 사이드바 섹션·홈 아이콘과 홈 바로가기 4칸 아이콘을 네온 선형으로(navcss·homegridcss, 지금 섹션은 더 밝게). run-nav 아이콘 기대값 수정.
+- (11-14) 모바일 탭바도 네온 아이콘, 아이콘 속 색 더 채움(60%→30%).
+- (11-14) 장기 기억 **설정 칸 → 옵션 칸으로 합침**(칸: 한눈에·기록·옵션). 옵션 칸 = 기억 옵션 | 리수폿·Erosync·프롬프트/임베딩 + (고급 모드) ‘고급: 기록·기억 넣기 세부 설정’(madv store+more 합침)·진단·위험 구역. **기억 방식(modeHost) 화면에서 뺌**(renderModeBar는 저장소 맞추기용으로 계속 호출), **자동 기록·인물 추적 묶음 뺌**(리수폿에 있음 — 봇별 ‘기록하지 않을 이름’도 같이 빠짐, 리수폿에 같은 기능 있는지 확인 필요). 장기 기억 폭 제한 없앰. memed 시험 수정.
+- (11-14) 장기 기억 기록 칸 없앰(칸: 한눈에·옵션). 한눈에 아래에 최근 기록 12건을 전체 폭으로.
+- (11-14) 한눈에 위쪽: 바로가기 4칸 | ‘인물’(나에 대한 기억·인물 관계도) 넓은 칸 2개, 높이 맞춤(.rb-mem4-top).
+- (11-14) 채팅 없을 때 옵션 칸 고급: renderGlobalSettings `bare` 모드(설정 찾기·모드 표시·변경 이력·리수폿 안내·프리셋 공유 없이 ‘기록·기억 넣기 세부 설정’ 내용만). 채팅 있을 때 고급 묶음의 세부 설정도 bare. 모바일 홈 바로가기 4칸 안쪽 스크롤 없앰.
+- **실시간 미리보기**: `node tools/preview.mjs`(또는 .claude/launch.json ‘preview’) → http://localhost:5178/?chat=0&adv=1&light=1&tab=memory. 소스 고치면 자동 새로고침(e2e 가짜 호스트, `bootApp` opts.noChat 추가). 결과물 .preview/(gitignore). 오른쪽 위 ‘채팅 켬/끔’ 단추로 지금 탭 유지한 채 전환. Erosync 실제 애드온도 켬(opts.erosync, 요청 훅은 opts.host 가짜) — ?eroon=1이면 켠 상태로 시작, ?ero=0이면 뺌.
+- (11-14) 옵션 칸 고급 묶음 디자인: 묶음 왼쪽 라이트바(파랑 세부 설정·민트 진단·빨강 위험), 안쪽 칸은 카드 대신 구분선 + 제목 색 막대(memhubcss).
+- (11-14) 고급 세부 설정 보기 정리: `src/ui/screens/memory/advorganize.js` organizeAdv — 칸들을 주제 3묶음(기록·분석 / 대화에 넣기 / 저장소·가져오기)으로 옮기고 칸마다 접힌 한 줄(제목+설명). 내용·코드는 그대로 옮겨 담기만, 늦게 붙는 칸도 MutationObserver로 정리.
+- (11-14) 장기 기억 칸 이름 ‘옵션’→‘설정’(id는 opt 그대로). 설정 칸: ‘리수폿’ 줄 → **인물 위키 설정**, ‘Erosync’ 줄 → **NSFW 설정**(설명 길게, 오른쪽 열이 왼쪽 기억 옵션과 같은 높이, 모바일은 이 둘이 위로).
+- 인물 위키 설정 화면(potpage): 화면 글자 ‘리수폿’ → ‘인물 위키’(pot.js·autotrackingbox·trackui·writerui·conflictui 포함, 주석 제외). **켜기 스위치 없앰 — 열 때 꺼져 있으면 setPotAll(true)로 켬**. 칸 = 개요·설정·고급(고급 = 예전 자동 기록 + 고급 합침). NSFW 설정 화면 머리 ‘NSFW 설정’.
+- 두 화면 라이트바 디자인(memhubcss 끝: .rb-pot-page 파랑·.rb-ero-page 분홍, 큰 카드 초록, 칸 고르기 네온). run-potpage 기대값 수정.
+- npm test 통과 수가 1551/1554로 왔다 갔다 함(실패는 늘 같은 3개) — 흔들리는 시험 확인 필요.
+- (11-14) 인물 위키 설정: 설정 탭의 ‘고급 모드’ 스위치 없앰 → 그 세부 기능(advancedGlobal·advancedModel)은 고급 탭에 늘 보임(flowSections part "basic"/"adv"). 고급 탭 = 세부 기능(채팅 없어도) + 인물 추적·저장·되돌리기(채팅 있을 때).
+- (11-14) NSFW 설정 탭 8개 → 3개: 개요 · 장면·수위(수위·집착 방지·프리셋·동작·장면 되돌리기·비하인드) · 분석·관리(인물 분석·분석 설정·성격 변화 검토·프롬프트·데이터). 예전 m.eroTab 값은 새 탭으로 이어 줌(OLD_TAB). run-erosync-ui 탭 이름 수정.
+- 인물 위키 설정 ‘AI 모델’ 칸은 설정 탭에서 빼고 고급 탭 맨 위(모델 고르기 + 세부).
+- (11-14) 설명 문구 정리: 바뀐 UI·이름에 맞게(리수폿→인물 위키 설정, ‘검토’ 탭→분석·관리, 기억 옵션 위치, 프롬프트 이름 ‘기억·인물 위키 프롬프트’ 등). 외부 리수폿 플러그인·예전 ‘리수폿 기록’ 방식을 가리키는 말은 그대로.
+- 관계도(.rb-rm 파랑)·코코아(.rb-skills 민트)·기억 카드(.rb-cards2 주황) 라이트바 디자인: 새 `src/ui/screens/memthemecss.js`(styles.js 끝). 코코아는 한 단 배치.
+- 인물 위키 설정의 ‘성인 항목’ → NSFW 설정 장면·수위 탭(flowSections part "adult"). 순서: 수위 · 집착 방지 · 성인 항목 · 동작 · 비하인드 · 장면 되돌리기 · 프리셋.
+- **2번 기억 세션: 5화면 모두 끝(디자인). 남은 것 실기기 확인.** 다음은 3번 작업실.
+- (11-14) 중복 확인: 장기 기억 고급에서 ‘저장·기록’(분석 모델·자동 기록 시점·응답 대기 시간)이 세부 설정 ‘분석’ 칸과 같은 값이라 madv에서 뺌(묶음 이름 ‘대화에 넣기’). 인물 위키 고급의 기록 시점은 따로 저장되는 값이라 이름을 ‘인물 위키 기록 시점’으로 구분. 나머지 이름 겹침은 같은 칸의 글자·스위치 이름 또는 다른 기능(NSFW ‘분석’)이라 그대로.
+
+## Cellar 연동 (11-14, 이 세션)
+- Cellar 리스 분리(Cellar fcb0f8a) · 연결 안정화·예약 복원(780e0f6) · 그림 생성: `src/data/cellarsd.js`(available·enqueue(공통 값 base로)·status·stop·sync·image·putAssets) + `ui/screens/sdstudio/studio.js` runQueueCellar/followCellar/endFollow(prefs.cellarRun으로 이어받기, 예약은 넘길 때 0으로), quickPut 변환본은 Cellar /cellar/assets로 50장씩. Cellar e11b5b2(`sdgen.cjs`).
+- 확인 못 함: 실제 NovelAI 호출, 실기기(RisuBard·PocketRisu·RisuAI). sdstudio 애드온 dist는 addons.src.json에 없어 다시 빌드 안 함(배포 보류 그대로).
+- e2e run-addon-sdstudio: 변경 전후 같음(58 통과, Ctrl+B 보내기 등 4개 원래 실패).

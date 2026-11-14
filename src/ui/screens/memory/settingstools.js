@@ -100,7 +100,7 @@ export function previewBox(ctx) {
       if (!r.ok) return replace(out, note("warn", r.why));
       if (!r.injected) return replace(out, h("p", { class: "rb-muted" }, `지금은 아무것도 들어가지 않아요${injectReasonText(r.reason) ? ` — ${injectReasonText(r.reason)}` : ""}.`));
       const m = r.manifest ?? {};
-      replace(out, h("p", null, h("b", null, `약 ${estimateTokens(r.text).toLocaleString()} 토큰`), h("span", { class: "rb-muted" }, ` · 위치: ${r.position === "beforeLastUser" ? "마지막 내 말 앞" : r.position}`)),
+      replace(out, h("p", null, h("b", null, `약 ${estimateTokens(r.text).toLocaleString()} 토큰`), h("span", { class: "rb-muted" }, ` · 위치: ${({ end: "맨 뒤", beforeLastUser: "마지막 내 말 앞", afterSystem: "시스템 프롬프트 뒤" })[r.position] ?? r.position}`)),
         h("ul", { class: "rb-mem-reclist" }, [...(m.included ?? []).map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...(m.excluded ?? []).map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))),
         h("details", null, h("summary", null, "들어갈 글 전체"), h("pre", { class: "rb-mem-pre" }, r.text)),
         h("p", { class: "rb-muted" }, "위키 기억(관련 인물 찾기·장면 정리)은 요청 직전에 AI가 골라서, 여기엔 Dusk 기억 블록만 보여요."));
@@ -130,5 +130,5 @@ export async function openChatInfo(env) {
     row("관찰자 모드", h("span", null, s.observerModeEnabled ? "켜짐" : "꺼짐")),
     row("이 채팅 추가 프롬프트", chatPrompts.length ? h("ul", null, chatPrompts.map((p) => h("li", null, p.name || p.text.slice(0, 30)))) : h("span", { class: "rb-muted" }, "없어요")),
     live ? null : note("warn", "리스에서 이 채팅을 열면 위키·페르소나·프롬프트도 보여요."),
-    h("p", { class: "rb-muted" }, "바꾸려면 설정(고급 모드)에서 고쳐요.")));
+    h("p", { class: "rb-muted" }, "바꾸려면 이 고급 탭 위쪽의 세부 기능에서 고쳐요.")));
 }

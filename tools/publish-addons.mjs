@@ -12,7 +12,10 @@ const dry = process.argv.includes("--dry");
 const git = (args, cwd = root) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 execFileSync("node", ["tools/build-addons.mjs", "--check"], { cwd: root, stdio: "inherit" });   // 빌드 결과가 소스와 같은지 먼저 확인
 const src = git(["rev-parse", "--short", "HEAD"]);
+// 지난번에 멈춰 남은 임시 작업 폴더가 addons 브랜치를 붙잡고 있으면 새로 꺼낼 수 없어서 먼저 치운다
+try { git(["worktree", "prune"]); for (const b of git(["worktree", "list", "--porcelain"]).split("\n\n")) if (/\nbranch refs\/heads\/addons$/m.test(b)) git(["worktree", "remove", "--force", b.split("\n")[0].slice(9)]); } catch { /* 없으면 그대로 */ }
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dusk-addons-"));
+const cleanup = () => { try { git(["worktree", "remove", "--force", dir]); } catch { fs.rmSync(dir, { recursive: true, force: true }); } };
 try {
   try { git(["fetch", "--depth=1", "origin", "addons"]); git(["worktree", "add", "--force", dir, "FETCH_HEAD"]); git(["checkout", "-B", "addons"], dir); }
   catch { git(["worktree", "add", "--force", "--detach", dir]); git(["checkout", "--orphan", "addons"], dir); git(["rm", "-rf", "--quiet", "."], dir); }
@@ -35,14 +38,14 @@ try {
   fs.writeFileSync(path.join(dir, "README.md"), "# Dusk Atelier 애드온 배포 브랜치\n\n빌드 결과만 있어요. 소스는 본체 저장소의 `addons/`이고, `node tools/publish-addons.mjs`로 올려요. 직접 고치지 마세요.\n");
   git(["add", "-A"], dir);
   const changed = git(["status", "--porcelain"], dir);
-  if (!changed) { console.log("바뀐 애드온이 없어요."); process.exit(0); }
+  if (!changed) { console.log("바뀐 애드온이 없어요."); cleanup(); process.exit(0); }
   console.log(changed);
-  if (dry) { console.log("(--dry) 올리지 않았어요."); process.exit(0); }
+  if (dry) { console.log("(--dry) 올리지 않았어요."); cleanup(); process.exit(0); }
   git(["commit", "-q", "-m", `Publish add-ons from ${src}`], dir);
   git(["push", "-q", "origin", "addons"], dir);
   console.log(`addons 브랜치에 올렸어요 (소스 ${src}).`);
   // jsDelivr는 브랜치 주소를 오래 기억해서 목록 모듈만 비우도록 요청한다(실패해도 괜찮아요: 파일은 내용 주소라 영향 없음)
   try { const r = await fetch("https://purge.jsdelivr.net/gh/Pyser08/Dusk-Atelier@addons/addons/addons.json.mjs"); console.log(`jsDelivr 목록 갱신 요청: ${r.status}`); } catch { console.log("jsDelivr 목록 갱신 요청은 못 보냈어요(몇 시간 뒤 자동 반영)."); }
 } finally {
-  try { git(["worktree", "remove", "--force", dir]); } catch { fs.rmSync(dir, { recursive: true, force: true }); }
+  cleanup();
 }

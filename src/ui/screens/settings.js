@@ -2,7 +2,10 @@
 // 누르는 즉시 적용·자동 저장. PC는 왼쪽에 고르는 곳, 오른쪽에 미리보기·내 테마(고정).
 // 고급(고급 모드): 직접 색(바탕·카드·글자·사이드바, 대비 자동 맞춤) · 강조 색 쓰는 곳 · 메뉴 위치 · 줄 간격 · 확대율 · 고대비 · 테마 스튜디오 · 기본값으로.
 import { h, replace } from '../dom.js';
-import { advFold, btn, optionCards, pageHead, segmented, toggleRow } from '../kit.js';
+import { advFold, btn, confirmDialog, optionCards, pageHead, segmented, toggleRow } from '../kit.js';
+import { icon } from '../icons.js';
+import { FONTS, MODES, THEME_SETS } from '../themekit.js';
+import { glassTheme, glassThemeInput } from '../glassthemes.js';
 import { DEFAULT_THEME, DENSITIES, LAYOUTS, ZOOM_MIN, ZOOM_MAX, contrastOf, normalizeTheme, parseThemeCode, pickLook, themeCode, themeVars } from '../theme.js';
 import { lookParts, sizeOf, SIZE_CHOICES } from '../lookparts.js';
 
@@ -19,6 +22,7 @@ export function renderSettings(ctx) {
   let theme = normalizeTheme(prefs.ui.theme);
   let saveTimer = null;
   let prevMode = null; // null = 지금 밝기 그대로
+  let paintVals = () => {};
   const saved = h("span", { class: "rb-muted", "aria-live": "polite", style: "font-size:12.5px;min-height:18px" });
   const persist = () => {
     clearTimeout(saveTimer);
@@ -46,8 +50,10 @@ export function renderSettings(ctx) {
   const sample = h("div", { class: "rb-prev-sample" }, h("span", { class: "rb-prev-btn" }, "버튼"), h("span", { class: "rb-prev-chip" }, "칩"), h("span", { class: "rb-prev-sw", "aria-hidden": "true" }));
   const prevSeg = segmented([["now", "지금"], ["light", "밝게"], ["dark", "어둡게"]], "now", (v) => { prevMode = v === "now" ? null : v; paintPreview(); }, "미리보기 밝기");
   const prev = h("div", { class: "rb-card bordered rb-look-prev", "aria-label": "미리보기" }, h("span", { class: "cap" }, "미리보기"), ...bubbles, sample, prevSeg);
+  // 글래스 화면이면 고른 글래스 테마 색으로 계산(창과 같은 색)
+  const tvars = (m) => { const n = normalizeTheme(theme); return themeVars(n.skin === "glass" && n.contrast !== "high" ? glassThemeInput(n, m) : theme, m); };
   const paintPreview = () => {
-    const r = themeVars(theme, prevMode ?? ctx.state.mode);
+    const r = tvars(prevMode ?? ctx.state.mode);
     for (const [k, v] of Object.entries(r.vars)) prev.style.setProperty(k, v);
     prev.style.colorScheme = r.scheme;
     prev.classList.add("is-scoped");
@@ -133,30 +139,52 @@ export function renderSettings(ctx) {
     zoomLabel.textContent = `${theme.zoom}%`;
     if (Number(zoomRange.value) !== theme.zoom) zoomRange.value = String(theme.zoom);
     accUseSeg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", b.dataset.v === theme.accUse ? "true" : "false"));
-    const r = themeVars(theme, ctx.state.mode);
+    const r = tvars(ctx.state.mode);
     const fgName = r.vars["--rb-on-acc"] === "#ffffff" ? "흰 글자" : "검은 글자";
     const body = contrastOf(r.vars["--rb-text"], r.vars["--rb-win"]);
     contrastNote.textContent = `버튼 글자색은 자동으로 정해요. 지금: ${fgName} · 대비 ${r.onAccentRatio.toFixed(1)}:1` + (r.onAccentRatio < 4.5 ? " — 낮아요. 색을 조금 더 진하게 하면 잘 읽혀요." : "") + ` · 본문 글자 대비 ${body.toFixed(1)}:1` + (theme.cText || theme.cBg ? " (읽기 어려우면 자동으로 맞춰 줘요)" : "");
     parts.modeNote.textContent = parts.modeNote.textContent + (theme.mode === "auto" ? ` (지금 RisuAI: ${ctx.state.risuScheme === "light" ? "라이트" : "다크"})` : "");
     paintPreview();
     paintMine();
+    paintVals();
   }
 
   const fromSettings = ctx.state.tab === "settings";
-  const card = (title, ...kids) => h("section", { class: "rb-card bordered rb-lcard" }, h("span", { class: "h" }, title), ...kids);
+  // 2.2.0 3번 목업 B+C: 위에 글래스 테마 갤러리(크게) → 아래 접는 목록(줄 오른쪽에 지금 값). 미리보기는 PC 오른쪽 그대로.
+  const glassName = () => glassTheme(theme.gtheme)?.name ?? "내 강조색";
+  const vLight = h("span", { class: "v" }), vColor = h("span", { class: "v" }), vShape = h("span", { class: "v" }), vMine = h("span", { class: "v" });
+  const acc = (id, ic, title, v, kids, open = false) => h("details", { class: "rb-lacc", id, open },
+    h("summary", null, h("span", { class: "ico", "aria-hidden": "true" }, icon(ic, 18)), h("span", { class: "t" }, title), v, h("span", { class: "chev", "aria-hidden": "true" }, icon("down", 16))),
+    h("div", { class: "rb-lacc-b" }, ...kids));
+  const galName = h("small", { class: "rb-muted" });
+  const gallery = h("section", { class: "rb-card bordered rb-lcard rb-look-gal", id: "rb-look-gallery" },
+    h("div", { class: "rb-look-galh" }, h("span", { class: "h" }, "글래스 테마"), galName),
+    h("small", { class: "rb-muted" }, "빛 번짐 배경과 유리 카드의 색이에요. 밝기(밝게·어둡게)에 맞춰 밝은 판·어두운 판으로 바뀌어요."), parts.glass,
+    h("div", { class: "rb-look-galmore" }, btn(`${parts.glass.children.length - 8}가지 더 보기`, { size: "sm", kind: "ghost", icon: "down", onClick: (e) => { const all = gallery.classList.toggle("all"); e.currentTarget.lastChild.textContent = all ? "접기" : `${parts.glass.children.length - 8}가지 더 보기`; } })));
+  mineCard.removeAttribute("id");
+  const list = h("section", { class: "rb-card bordered rb-lcard rb-look-list" },
+    acc("rb-look-light", "sun", "밝기 · 글자 크기", vLight, [field("밝기", parts.modeSeg, parts.modeNote), field("글자 크기", parts.sizeSeg)], true),
+    acc("rb-look-color", "palette", "테마 묶음 · 강조 색 · 그라데이션", vColor, [field("테마 묶음", parts.sets), field("강조 색", parts.accents), field("그라데이션", parts.grads)]),
+    acc("rb-look-shape", "brush", "모양 · 글꼴", vShape, [parts.shape({ full: true })]),
+    acc("rb-look-mine", "sparkle", "내 테마", vMine, [...mineCard.childNodes].slice(1)),
+    h("div", { class: "rb-look-reset" }, h("span", { class: "rb-muted" }, "처음 값으로 되돌리기"), btn("되돌리기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "꾸미기를 처음 값으로 되돌릴까요?", body: "저장한 내 테마는 남아요.", ok: "되돌리기" })) update({ ...DEFAULT_THEME, mine: theme.mine }); } })));
+  paintVals = () => {
+    galName.textContent = `지금: ${glassName()}`;
+    vLight.textContent = `${(MODES.find(([v]) => v === theme.mode) ?? [, "자동"])[1]} · 글자 ${(SIZE_CHOICES.find(([v]) => Number(v) === theme.zoom) ?? [, `${theme.zoom}%`])[1]}`;
+    replace(vColor, h("i", { class: "sw", style: { background: `linear-gradient(135deg, ${theme.a}, ${theme.b})` } }), THEME_SETS.find((s) => s.id === theme.set)?.name ?? "직접 고름");
+    vShape.textContent = `글꼴 ${FONTS.find((x) => x.id === theme.font)?.name ?? "기본"}`;
+    vMine.textContent = theme.mine.length ? `${theme.mine.length}개` : "없음";
+  };
   const pick = h(
     "div",
     { class: "rb-mem2-main rb-look-pick" },
     pageHead("플러그인 꾸미기", { sub: "누르면 바로 바뀌고 자동으로 저장돼요.", back: fromSettings ? { label: "설정으로 돌아가기", onClick: () => ctx.go("settings") } : ctx.prefs.ui?.experimental ? { label: "도구로 돌아가기", onClick: () => ctx.go("tools") } : void 0 }),
-    card("테마 묶음", parts.sets),
-    card("강조 색", parts.accents),
-    card("그라데이션", parts.grads),
-    card("밝기 · 글자 크기", field("밝기", parts.modeSeg, parts.modeNote), field("글자 크기", parts.sizeSeg)),
-    h("section", { class: "rb-card bordered rb-lcard" }, h("details", { class: "rb-morefold", id: "rb-look-shape" }, h("summary", null, "모양 · 글꼴 더 고르기"), parts.shape({ full: true }))),
+    gallery,
+    list,
     ...(ctx.ext?.render("slot", "look.mine", ctx) ?? []),   // 애드온: 내 채팅 테마 만들기
     saved
   );
-  const side = h("div", { class: "rb-look-side" }, prev, mineCard);
+  const side = h("div", { class: "rb-look-side" }, prev);
   const adv = advFold(
     ctx,
     "look",
@@ -169,7 +197,6 @@ export function renderSettings(ctx) {
       hcRow,
       ...(ctx.ext?.render("slot", "look.adv", ctx) ?? []),   // 애드온: 테마 스튜디오
       h("p", { class: "rb-adv-note" }, "모듈 이름 색과 폴더 색은 모듈 목록에서 각 모듈의 ⋯ 메뉴로 바꿔요."),
-      h("div", { style: "display:flex;gap:10px;flex-wrap:wrap" }, btn("기본값으로", { onClick: () => update({ ...DEFAULT_THEME, mine: theme.mine }) }))
     ] : [true]
   );
   replace(ctx.main, h("div", { class: "rb-scroll rb-mem2", "data-page": "look" }, h("div", { class: "rb-look-grid" }, pick, side, adv ? h("div", { class: "rb-look-adv" }, adv) : null)));

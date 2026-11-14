@@ -196,7 +196,8 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
 }
 
 const textOf = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => typeof p === "string" ? p : p?.text ?? "").join("\n") : String(c ?? "");
-// messages 사본에 블록을 삽입(이미 있으면 교체). position: "beforeLastUser" | "afterSystem"
+// messages 사본에 블록을 삽입(이미 있으면 교체). position: "end" | "beforeLastUser" | "afterSystem"
+// end(2.2.0 기본): 최종 프롬프트 맨 뒤. 끝에 어시스턴트 미리 채우기(prefill)가 있으면 그 앞에 넣어 이어 쓰기를 깨지 않는다.
 // v1.8.1 자리표시자: 프롬프트(프리셋·로어북 등)에 [Dusk.memory]를 적어 두면 그 자리에 블록이 들어간다.
 // 첫 번째로 찾은 곳만 채우고 나머지는 지운다. 블록이 비어도 글자가 새지 않게 지운다. 원본 요청은 바꾸지 않는다.
 export const PLACEHOLDER = "[Dusk.memory]";
@@ -211,13 +212,14 @@ function fillPlaceholder(list, text) {
   });
   return { out, found, filled };
 }
-export function insertBlock(messages, text, position = "beforeLastUser") {
+export function insertBlock(messages, text, position = "end") {
   const list = (Array.isArray(messages) ? messages : []).filter((m) => !(m?.role === "system" && textOf(m.content).startsWith(MARKER)));
   const ph = fillPlaceholder(list, text);
   if (ph.found) return ph.out;  // 자리표시자가 있으면 위치 설정보다 우선
   const block = { role: "system", content: text };
   let at;
-  if (position === "afterSystem") { at = 0; while (at < list.length && list[at]?.role === "system") at++; }
+  if (position === "end") { at = list.length; while (at > 0 && list[at - 1]?.role === "assistant") at--; if (at === 0) at = list.length; }
+  else if (position === "afterSystem") { at = 0; while (at < list.length && list[at]?.role === "system") at++; }
   else { at = -1; for (let i = list.length - 1; i >= 0; i--) if (list[i]?.role === "user") { at = i; break; } if (at < 0) at = list.length; }
   return [...list.slice(0, at), block, ...list.slice(at)];
 }
