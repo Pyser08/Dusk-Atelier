@@ -118,4 +118,30 @@ export var MEMHUB_CSS = `
 .rb-mem4 .rb-mem-sub.is-lore[open]>summary::after{transform:translateY(-50%) rotate(90deg)}
 .rb-mem4 .rb-mem-sub.is-lore>:not(summary){margin:12px 16px}
 .rb-lite .rb-mem4 .rb-mem-sub[open]{box-shadow:none}
+
+/* 옵션 칸 위쪽: 오른쪽(인물 위키 설정·NSFW 설정·프롬프트)이 왼쪽 기억 옵션과 같은 높이 — 두 줄 카드가 남는 높이를 나눠 가짐 */
+@media (min-width:761px){.rb-mem4-optrow{align-items:stretch}.rb-mem4-optrow>.rb-mem4-col>.rb-mem-options{height:100%;box-sizing:border-box}}
+.rb-mem4-side .rb-me-entry{flex:1 1 0;align-items:center;padding:16px 18px;min-height:96px;margin:0}
+.rb-mem4-side .rb-me-entry .t{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:15px}
+.rb-mem4-side .rb-me-entry .t small{font-weight:400;font-size:12.5px;line-height:1.55;color:var(--rb-sub)}
+.rb-mem4-side .rb-me-entry .go{align-self:center}
+.rb-mem4-side>.rb-mem-integrated-settings{flex:none}
+@media (max-width:760px){.rb-mem4-optrow>.rb-mem4-side{order:-1}.rb-mem4-side .rb-me-entry{min-height:0;flex:none}}
+
+/* 인물 위키 설정(.rb-pot-page)·NSFW 설정(.rb-ero-page): 라이트바 컨셉. 큰 카드 = 초록(상태), 나머지 카드 = 화면 색 막대,
+   카드 제목 앞 작은 색 막대, 칸 고르기는 장기 기억 칸 단추와 같은 네온, 카드 속 카드는 옅게 */
+.rb-pot-page{--k:#6f9dff}.rb-ero-page{--k:#ff6b9a}
+:is(.rb-pot-page,.rb-ero-page)>.rb-card,:is(.rb-pot-page,.rb-ero-page)>div>.rb-card,:is(.rb-pot-page,.rb-ero-page)>div>section.rb-card{position:relative;padding-left:24px!important}
+:is(.rb-pot-page,.rb-ero-page)>.rb-card::before,:is(.rb-pot-page,.rb-ero-page)>div>.rb-card::before{content:"";position:absolute;left:0;top:14px;width:4px;height:36px;border-radius:0 4px 4px 0;background:var(--k);box-shadow:0 0 10px var(--k);pointer-events:none}
+:is(#rb-pot-hero,#rb-erosync){--k:#5fe0a8}
+:is(.rb-pot-page,.rb-ero-page) .rb-card>h3{display:flex;align-items:center;gap:8px;font-size:15px}
+:is(.rb-pot-page,.rb-ero-page) .rb-card .rb-card{background:color-mix(in srgb,var(--rb-text) 3%,transparent)!important;box-shadow:none!important;border:1px solid var(--rb-line2)!important;padding-left:14px!important}
+:is(.rb-pot-page,.rb-ero-page) .rb-card .rb-card::before{display:none}
+:is(.rb-pot-page,.rb-ero-page) .rb-card .rb-card>h3::before{content:"";width:3px;height:14px;border-radius:3px;background:var(--k);flex:none}
+:is(.rb-pot-page,.rb-ero-page) .rb-muted{line-height:1.55}
+:is(.rb-pot-page,.rb-ero-page) .rb-seg{border-radius:999px;padding:4px;gap:2px;border:1px solid var(--rb-line2);background:var(--rb-card,transparent)}
+:is(.rb-pot-page,.rb-ero-page) .rb-seg button{border-radius:999px;border:0;background:none;color:var(--rb-sub);font-size:13px;padding:7px 14px}
+:is(.rb-pot-page,.rb-ero-page) .rb-seg button[aria-checked=true]{color:var(--rb-text);font-weight:700;background:color-mix(in srgb,var(--k) 16%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--k) 60%,transparent),0 0 10px color-mix(in srgb,var(--k) 28%,transparent)}
+.rb-lite :is(.rb-pot-page,.rb-ero-page) .rb-card::before,.rb-lite :is(.rb-pot-page,.rb-ero-page) .rb-seg button{box-shadow:none!important}
+@media (max-width:760px){:is(.rb-pot-page,.rb-ero-page)>.rb-card,:is(.rb-pot-page,.rb-ero-page)>div>.rb-card{padding-left:20px!important}}
 `;

@@ -1351,3 +1351,7 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - **실시간 미리보기**: `node tools/preview.mjs`(또는 .claude/launch.json ‘preview’) → http://localhost:5178/?chat=0&adv=1&light=1&tab=memory. 소스 고치면 자동 새로고침(e2e 가짜 호스트, `bootApp` opts.noChat 추가). 결과물 .preview/(gitignore). 오른쪽 위 ‘채팅 켬/끔’ 단추로 지금 탭 유지한 채 전환. Erosync 실제 애드온도 켬(opts.erosync, 요청 훅은 opts.host 가짜) — ?eroon=1이면 켠 상태로 시작, ?ero=0이면 뺌.
 - (11-14) 옵션 칸 고급 묶음 디자인: 묶음 왼쪽 라이트바(파랑 세부 설정·민트 진단·빨강 위험), 안쪽 칸은 카드 대신 구분선 + 제목 색 막대(memhubcss).
 - (11-14) 고급 세부 설정 보기 정리: `src/ui/screens/memory/advorganize.js` organizeAdv — 칸들을 주제 3묶음(기록·분석 / 대화에 넣기 / 저장소·가져오기)으로 옮기고 칸마다 접힌 한 줄(제목+설명). 내용·코드는 그대로 옮겨 담기만, 늦게 붙는 칸도 MutationObserver로 정리.
+- (11-14) 장기 기억 칸 이름 ‘옵션’→‘설정’(id는 opt 그대로). 설정 칸: ‘리수폿’ 줄 → **인물 위키 설정**, ‘Erosync’ 줄 → **NSFW 설정**(설명 길게, 오른쪽 열이 왼쪽 기억 옵션과 같은 높이, 모바일은 이 둘이 위로).
+- 인물 위키 설정 화면(potpage): 화면 글자 ‘리수폿’ → ‘인물 위키’(pot.js·autotrackingbox·trackui·writerui·conflictui 포함, 주석 제외). **켜기 스위치 없앰 — 열 때 꺼져 있으면 setPotAll(true)로 켬**. 칸 = 개요·설정·고급(고급 = 예전 자동 기록 + 고급 합침). NSFW 설정 화면 머리 ‘NSFW 설정’.
+- 두 화면 라이트바 디자인(memhubcss 끝: .rb-pot-page 파랑·.rb-ero-page 분홍, 큰 카드 초록, 칸 고르기 네온). run-potpage 기대값 수정.
+- npm test 통과 수가 1551/1554로 왔다 갔다 함(실패는 늘 같은 3개) — 흔들리는 시험 확인 필요.

@@ -69,14 +69,14 @@ function memHead() {
 function potRow(ctx, m, redraw) {
   return h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-pot", "data-tour": "mem-pot", onClick: () => { m.page = "pot"; redraw(); } },
     h("span", { class: "rb-mem-av rb-me-av sm", "aria-hidden": "true" }, icon("book", 18)),
-    h("span", { class: "t" }, "리수폿", h("small", null, "인물 위키를 자동으로 쌓아요. 설정·자동 기록·고급을 여기서 바꿔요.")),
+    h("span", { class: "t" }, "인물 위키 설정", h("small", null, "리수폿으로 인물 위키를 자동으로 쌓아요. 무엇을 얼마나 자세히 기억할지(추적 수준·기능 카드), 어떤 AI로 기록할지, 자동 기록 시점과 고급 설정을 여기서 바꿔요.")),
     h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
 }
 function erosyncRow(ctx, m, redraw) {
   if (!ctx.erosync) return null;
   return h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-erosync", onClick: () => { m.page = "erosync"; redraw(); } },
     h("span", { class: "rb-mem-av rb-me-av sm", "aria-hidden": "true" }, icon("shield", 18)),
-    h("span", { class: "t" }, "Erosync", h("small", null, ctx.erosync.on() ? "켜져 있어요. 설정을 열어 봐요." : "NSFW 장면 강화. 켜고 설정할 수 있어요.")),
+    h("span", { class: "t" }, "NSFW 설정", h("small", null, `${ctx.erosync.on() ? "켜져 있어요." : "꺼져 있어요."} Erosync가 인물마다 성향·관계·목표를 읽어 두고, 다음 응답의 장면 계획을 요청에 넣어요. 켜기·user에게도 적용·관찰 수준을 여기서 바꿔요.`)),
     h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
 }
 
@@ -111,11 +111,11 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
         h("details", { class: ["rb-card", "bordered", "rb-mem-grp"], dataset: { g: "store" } }, h("summary", null, h("span", { class: "t" }, h("b", null, "고급: 기록·기억 넣기 세부 설정"), h("small", null, "저장소·분석·넣기·임베딩·가져오기")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))), h("div", { class: "rb-mem-foldbody" }, body))));
     }
     // 2.2.0: 채팅이 없어도 같은 칸 나누기(한눈에·옵션·설정). 기록 칸은 채팅이 있어야 해서 뺀다.
-    const empty = emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요. 옵션·설정은 채팅 없이도 바꿀 수 있어요.",
+    const empty = emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요. 설정은 채팅 없이도 바꿀 수 있어요.",
       actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] });
-    const { tabs: tabRow, panels: panelEls } = memTabs(m, [["glance", "한눈에"], ["opt", "옵션"]], {
+    const { tabs: tabRow, panels: panelEls } = memTabs(m, [["glance", "한눈에"], ["opt", "설정"]], {
       glance: h("div", { class: "rb-mem4-col" }, empty),
-      opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memorySettings)), ctx.prefs.advanced ? gHost : advFold(ctx, "memory", true)),
+      opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two rb-mem4-optrow" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col rb-mem4-side" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memorySettings)), ctx.prefs.advanced ? gHost : advFold(ctx, "memory", true)),
     });
     return replace(host, h("div", { class: "rb-mem3 rb-mem4-wrap" }, h("div", { class: "rb-mem2-main rb-mem4" }, memHead(ctx, redraw), tabRow, ...panelEls)));
   }
@@ -253,12 +253,12 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     h("ul", { class: "rb-mem-reclist rb-mem-recent" }, recAll.length
       ? recAll.map((r) => h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("div", null, h("b", null, r.who), " ", r.act), h("div", { class: "rb-muted" }, at(r.at))), gradeBadge(r.g)))
       : h("li", { class: "rb-muted" }, "아직 쌓인 기록이 없어요.")));
-  const TABS4 = [["glance", "한눈에"], ["opt", "옵션"]];
+  const TABS4 = [["glance", "한눈에"], ["opt", "설정"]];
   const panels = {
     // 기록 칸은 없앰: 한눈에 위쪽 = 바로가기 | 나·관계도, 아래 = 최근 기록(12건) 전체 폭
     // 나·관계도는 바로가기와 같은 칸 모양(조금 더 넓게, 설명 읽기)
     glance: h("div", { class: "rb-mem4-col" }, h("div", { class: "rb-mem4-top" }, shortcuts, h("section", { class: "rb-mem4-wide", "aria-label": "인물" }, h("h2", null, "인물"), h("div", { class: "rb-mem4-widegrid" }, meRow, mapRow))), recFull),
-    opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memorySettings)), advEl),
+    opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two rb-mem4-optrow" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col rb-mem4-side" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memorySettings)), advEl),
   };
   const { tabs: tabRow, panels: panelEls } = memTabs(m, TABS4, panels);
   const main = h("div", { class: "rb-mem2-main rb-mem4" },

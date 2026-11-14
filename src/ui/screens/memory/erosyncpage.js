@@ -66,7 +66,7 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
   const tabs = h("div", { style: "overflow-x:auto;padding-bottom:2px", id: "rb-erosync-tabs" }, seg);
   const hero = erosyncSection(ctx, () => {});
   replace(host, h("div", { class: "rb-me rb-ero-page", style: "display:grid;gap:12px" },
-    pageHead("Erosync", { back }),
+    pageHead("NSFW 설정", { back }),
     scan?.found && tab === "home" ? p(scanLine(scan), "rb-erosync-found-top") : null,
     hero, tabs, paneHost));
   show(tab);

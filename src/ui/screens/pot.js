@@ -13,7 +13,7 @@ import { openTracking } from "./memory/trackui.js";
 import { potConfirm } from "../../engine/memoryswitch.js";
 
 const hhmm = (iso) => { const t = Date.parse(iso); return t ? new Date(t).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false }) : ""; };
-const REASON = { "pot-mode-off": "리수폿 기능이 꺼져 있어요.", "flow-off": "리수폿이 꺼져 있어요.", "bot-off": "이 채팅에서는 꺼 두었어요." };
+const REASON = { "pot-mode-off": "인물 위키 기능이 꺼져 있어요.", "flow-off": "인물 위키가 꺼져 있어요.", "bot-off": "이 채팅에서는 꺼 두었어요." };
 
 export async function renderPot(ctx) {
   const host = h("div", { class: "rb-mem2 rb-scroll", "data-page": "pot" });
@@ -31,17 +31,17 @@ export async function potOverview(ctx, redraw) {
 }
 async function draw(ctx, host, redraw, { bare = false } = {}) {
   const M = ctx.memory;
-  if (!M) return replace(host, pageHead("리수폿"), h("div", { class: "rb-empty" }, "리수폿 기능이 아직 준비되지 않았어요. 플러그인을 다시 불러와 주세요."));
+  if (!M) return replace(host, pageHead("인물 위키"), h("div", { class: "rb-empty" }, "인물 위키 기능이 아직 준비되지 않았어요. 플러그인을 다시 불러와 주세요."));
   const cur = await M.switches.currentChat();
-  if (!cur) return replace(host, pageHead("리수폿", { sub: "기억과 별도로 켜고 꺼요" }), emptyState({ icon: "book", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 위키를 보여 줘요." }));
+  if (!cur) return replace(host, pageHead("인물 위키", { sub: "기억과 별도로 켜고 꺼요" }), emptyState({ icon: "book", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 위키를 보여 줘요." }));
   const { env, err } = await memoryEnv(ctx, { botId: cur.chaId, chatIndex: cur.ti, redraw });
-  if (!env) return replace(host, pageHead("리수폿"), h("div", { class: "rb-empty" }, err === "chat" ? "이 봇에는 채팅이 아직 없어요." : "봇을 찾지 못했어요."));
+  if (!env) return replace(host, pageHead("인물 위키"), h("div", { class: "rb-empty" }, err === "chat" ? "이 봇에는 채팅이 아직 없어요." : "봇을 찾지 못했어요."));
   const { idx, folder } = env, st = await M.switches.state(cur.chaId), pot = st.pot;
   const wiki = folder.wiki, docs = Object.values(wiki?.documents ?? {}).filter((d) => d?.type === "Character");
   const rt = M.flow?.runtime?.(), ast = (() => { try { return rt?.auto?.status?.() ?? null; } catch { return null; } })();
   const lastAt = wiki?.automation?.lastStatus?.at;
 
-  const setOn = async (v) => { try { await M.switches.setPot(cur.chaId, v); if (v) maybePromptIntro(ctx); ctx.toast(v ? "모든 채팅에서 리수폿을 켰어요. 다음 응답부터 위키가 쌓여요." : "모든 채팅에서 리수폿을 껐어요."); } catch (e) { fail(ctx)(e); } redraw(); };
+  const setOn = async (v) => { try { await M.switches.setPot(cur.chaId, v); if (v) maybePromptIntro(ctx); ctx.toast(v ? "모든 채팅에서 인물 위키를 켰어요. 다음 응답부터 위키가 쌓여요." : "모든 채팅에서 인물 위키를 껐어요."); } catch (e) { fail(ctx)(e); } redraw(); };
   let status;
   if (!pot.on) status = statusCard("off", REASON[pot.reason] ?? "꺼져 있어요.", { label: "켜기", kind: "primary", onClick: () => setOn(true) });
   else if (ast?.phase === "failed") status = statusCard("err", "마지막 자동 기록이 실패했어요. 다음 응답에서 다시 해요.");
@@ -62,7 +62,7 @@ async function draw(ctx, host, redraw, { bare = false } = {}) {
       : h("p", { class: "rb-muted" }, "아직 위키 인물이 없어요. 응답이 쌓이면 생겨요."));
 
   const main = h("div", { class: "rb-mem2-main" },
-    pageHead("리수폿", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"} · 기억과 별도로 켜고 꺼요`, sw: { on: pot.on, text: pot.on ? "켜짐" : "꺼짐", label: "리수폿 켜기", onChange: (v) => setOn(v) } }),
+    pageHead("인물 위키", { sub: `${cur.botName || "이름 없는 캐릭터"} · ${cur.chatName || "이 채팅"} · 기억과 별도로 켜고 꺼요`, sw: { on: pot.on, text: pot.on ? "켜짐" : "꺼짐", label: "인물 위키 켜기", onChange: (v) => setOn(v) } }),
     status, actions, perChar);
   if (bare) return { nodes: [actions, perChar], status, env, cur, idx, pot, setOn };   // 장기 기억 → 리수폿 화면: 상태는 위 큰 카드로
   const adv = advFold(ctx, "pot", ...(ctx.prefs.advanced ? advancedPot(ctx, env, cur, idx, redraw) : [true]));
