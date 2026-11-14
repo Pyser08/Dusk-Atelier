@@ -89,4 +89,33 @@ export var MEMHUB_CSS = `
 .rb-mem4 .rb-mem-grp .rb-input{min-height:40px}
 .rb-lite .rb-mem4 .rb-mem-grp::before,.rb-lite .rb-mem4 .rb-mem-grp .rb-mem-sec>h3::before{box-shadow:none}
 @media (max-width:760px){.rb-mem4 .rb-mem-grp>summary{padding:12px 14px 12px 20px}.rb-mem4 .rb-mem-grp .rb-mem-foldbody{padding:4px 14px 10px 20px}}
+
+/* 세부 설정 주제 묶음 + 접힌 한 줄 칸 */
+.rb-mem4 .rb-mem-cats{display:flex;flex-direction:column;gap:18px;padding:8px 0 4px}
+.rb-mem4 .rb-mem-cat{--k:#6f9dff}.rb-mem4 .rb-mem-cat.c-rec{--k:#e98bd6}.rb-mem4 .rb-mem-cat.c-inj{--k:#3fcfa6}.rb-mem4 .rb-mem-cat.c-store{--k:#ff8a5c}
+.rb-mem4 .rb-mem-cat[hidden]{display:none}
+.rb-mem4 .rb-mem-cat>h4{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:13px;font-weight:700;color:var(--rb-sub)}
+.rb-mem4 .rb-mem-cat>h4 .ci{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,color-mix(in srgb,var(--k) 60%,transparent),color-mix(in srgb,var(--k) 30%,transparent));border:1px solid color-mix(in srgb,var(--k) 60%,transparent);color:color-mix(in srgb,var(--k) 25%,#fff)}
+.rb-mem4 .rb-mem-catlist{display:flex;flex-direction:column;gap:6px}
+.rb-mem4 .rb-mem-sub{position:relative;border:1px solid var(--rb-line2);border-radius:12px;background:color-mix(in srgb,var(--rb-text) 3%,transparent);overflow:hidden}
+.rb-mem4 .rb-mem-sub::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--k);opacity:.85}
+.rb-mem4 .rb-mem-sub>summary{display:flex;align-items:center;gap:10px;padding:11px 14px 11px 16px;cursor:pointer;list-style:none}
+.rb-mem4 .rb-mem-sub>summary::-webkit-details-marker{display:none}
+.rb-mem4 .rb-mem-sub>summary .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.rb-mem4 .rb-mem-sub>summary b{font-size:14px}.rb-mem4 .rb-mem-sub>summary small{font-size:12px;color:var(--rb-mute)}
+.rb-mem4 .rb-mem-sub>summary .go{color:var(--rb-mute);transition:transform .15s}
+.rb-mem4 .rb-mem-sub[open]>summary .go{transform:rotate(90deg)}
+.rb-mem4 .rb-mem-sub[open]{border-color:color-mix(in srgb,var(--k) 45%,transparent);box-shadow:0 0 12px color-mix(in srgb,var(--k) 15%,transparent)}
+.rb-mem4 .rb-mem-sub[open]>summary{border-bottom:1px solid var(--rb-line2)}
+@media (hover:hover){.rb-mem4 .rb-mem-sub>summary:hover{background:var(--rb-hover)}}
+.rb-mem4 .rb-mem-grp .rb-mem-sub>.rb-mem-sec{padding:14px 16px!important;border-top:0!important}
+.rb-mem4 .rb-mem-grp .rb-mem-sub>.rb-mem-sec>h3{display:none}
+.rb-mem4 .rb-mem-sub.is-lore{background:color-mix(in srgb,var(--rb-text) 3%,transparent)!important;box-shadow:none}
+.rb-mem4 .rb-mem-sub.is-lore{padding:0!important}
+.rb-mem4 .rb-mem-sub.is-lore>summary{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:11px 40px 11px 16px;position:relative}
+.rb-mem4 .rb-mem-sub.is-lore>summary small{font-size:12px;color:var(--rb-mute)}
+.rb-mem4 .rb-mem-sub.is-lore>summary::after{content:"›";position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--rb-mute);font-size:18px;transition:transform .15s}
+.rb-mem4 .rb-mem-sub.is-lore[open]>summary::after{transform:translateY(-50%) rotate(90deg)}
+.rb-mem4 .rb-mem-sub.is-lore>:not(summary){margin:12px 16px}
+.rb-lite .rb-mem4 .rb-mem-sub[open]{box-shadow:none}
 `;

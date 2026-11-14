@@ -9,6 +9,7 @@ import { USAGE_KINDS, injectLine, usageOf, recentOf } from "../../../engine/memo
 import { mem, fail, gradeBadge, at } from "./common.js";
 import { renderModeBar } from "./modebar.js";
 import { advancedGroups } from "./madv.js";
+import { organizeAdv } from "./advorganize.js";
 import { builders, renderGlobalSettings } from "./settings.js";
 import { openEmbedModal } from "./embedmodal.js";
 import { maybeAskBardWiki } from "./modebar.js";
@@ -105,6 +106,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     if (ctx.prefs.advanced) {
       const body = h("div");
       await renderGlobalSettings(ctx, body, { redraw, bare: true }).catch(() => {});
+      organizeAdv(body);
       gHost.append(h("section", { class: "rb-mem-folds", "aria-label": "고급" }, h("h3", { class: "rb-h3" }, "고급"),
         h("details", { class: ["rb-card", "bordered", "rb-mem-grp"], dataset: { g: "store" } }, h("summary", null, h("span", { class: "t" }, h("b", null, "고급: 기록·기억 넣기 세부 설정"), h("small", null, "저장소·분석·넣기·임베딩·가져오기")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))), h("div", { class: "rb-mem-foldbody" }, body))));
     }
@@ -241,6 +243,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     const gs = advancedGroups(ctx, { cur, idx, redraw }), by = Object.fromEntries(gs.map((g) => [g.id, g]));
     const merged = { id: "store", title: "고급: 기록·기억 넣기 세부 설정", sub: "분석 시점·모델·넣는 항목·로어·추적 수준·기능 카드", kids: [...(by.store?.kids ?? []), ...(by.more?.kids ?? [])], onOpen: by.more?.onOpen };
     advEl = h("section", { class: "rb-mem-folds", "aria-label": "고급" }, h("h3", { class: "rb-h3" }, "고급"), ...[merged, by.diag, by.danger].filter(Boolean).map(fold));
+    const sb = advEl.querySelector(".rb-mem-grp[data-g=store] .rb-mem-foldbody"); if (sb) organizeAdv(sb);
   } else advEl = advFold(ctx, "memory", true);
   void modeHost; void wide;
 
