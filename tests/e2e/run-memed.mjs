@@ -49,8 +49,9 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   await page.waitForTimeout(300);
   await page.locator(".rb-seg[aria-label='화면 모드'] button", { hasText: "고급" }).click(); await page.waitForTimeout(300);
   await goMem(page); await page.waitForTimeout(800);
+  await page.locator("#rb-mem-tab-set").click(); await page.waitForTimeout(200);   // 2.2.0: 고급은 '설정' 칸
   // 1.8.3(목업 3): 고급 내용은 한 줄씩 접은 묶음. 기록 편집기는 '진단 · 기억 데이터 편집' 묶음 안, PC는 기억 방식이 오른쪽 맨 위에 바로 보인다.
-  ok(`[편집기 ${tag}] 고급 모드: 편집기는 '진단 · 기억 데이터 편집' 묶음 안${tag === "PC" ? " · 기억 방식은 접지 않고 오른쪽 맨 위" : ""}`, await page.evaluate((pc) => { const g = document.querySelector(".rb-mem-grp[data-g=diag]"), e = g?.querySelector(".rb-mem-ed:not(.rb-mem-lore)"), mb = document.querySelector(".rb-mem-modebar"); return !!e && (!pc || (!!mb && !mb.closest("details") && mb.closest(".rb-mem2-side")?.firstElementChild?.contains(mb))); }, tag === "PC"));
+  ok(`[편집기 ${tag}] 고급 모드: 편집기는 '진단 · 기억 데이터 편집' 묶음 안${tag === "PC" ? " · 기억 방식은 접지 않고 설정 칸 맨 위" : ""}`, await page.evaluate((pc) => { const g = document.querySelector(".rb-mem-grp[data-g=diag]"), e = g?.querySelector(".rb-mem-ed:not(.rb-mem-lore)"), mb = document.querySelector(".rb-mem-modebar"); return !!e && (!pc || (!!mb && !mb.closest("details") && mb.closest(".rb-mem4-set")?.firstElementChild?.contains(mb))); }, tag === "PC"));
   await page.locator(".rb-mem-grp[data-g=diag] > summary").click(); await page.waitForTimeout(200);
   await page.locator(".rb-mem-ed:not(.rb-mem-lore) > summary").click(); await page.waitForTimeout(700);
   ok(`[편집기 ${tag}] 기록 탭: 인물 그룹과 기록 카드`, (await page.locator(".rb-mem-edperson").count()) === 2 && (await page.locator(".rb-mem-edrec").count()) >= 2);

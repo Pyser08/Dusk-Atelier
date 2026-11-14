@@ -32,4 +32,23 @@ export var MEMHUB_CSS = `
 .rb-skin-glass .rb-mhub-stat,.rb-skin-glass .rb-hubrow.rb-mtile,.rb-skin-glass .rb-mhub-rec{background:var(--rb-glass-bg);border-color:var(--rb-glass-line,rgba(255,255,255,.2))}
 .rb-lite .rb-mtile::before,.rb-lite .rb-mhub-stat::before,.rb-lite .rb-hubrow.rb-mtile .ico,.rb-lite .rb-mhub-go{box-shadow:none}
 @media (max-width:760px){.rb-mhub-tiles{gap:12px}.rb-hubrow.rb-mtile{flex-direction:column;gap:8px;padding:14px 14px 14px 18px}.rb-mtile .go{display:none}.rb-mhub-stat{padding:12px 16px}.rb-mhub-rec{padding:16px}}
+
+/* 2.2.0 장기 기억 B안: 상태 위 고정 + 칸 나누기, 카드 왼쪽 색띠(초록=상태, 민트=기록, 분홍=옵션, 파랑=설정) */
+.rb-mem4-wrap{max-width:1100px}
+.rb-mem4{display:flex;flex-direction:column;gap:14px;min-width:0}
+.rb-mem4-tabs{display:inline-flex;align-self:flex-start;gap:2px;padding:4px;border-radius:999px;border:1px solid var(--rb-line2);background:var(--rb-card,transparent);max-width:100%;overflow-x:auto}
+.rb-mem4-tab{padding:7px 16px;border:0;border-radius:999px;background:none;color:var(--rb-sub);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.rb-mem4-tab[aria-selected=true]{color:var(--rb-text);font-weight:700;background:color-mix(in srgb,#e98bd6 14%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,#e98bd6 60%,transparent),0 0 10px color-mix(in srgb,#e98bd6 28%,transparent)}
+.rb-mem4-tab:focus-visible{outline:2px solid #e98bd6;outline-offset:2px}
+.rb-mem4-two{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.rb-mem4-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.rb-mem4-acts{display:flex;gap:8px;flex-wrap:wrap}
+.rb-mem4 [hidden]{display:none!important}
+.rb-mem4 .rb-mem-statuscard,.rb-mem4 .rb-mem-recentbox,.rb-mem4 .rb-mem-options,.rb-mem4 .rb-mem-integrated-settings{position:relative;padding-left:24px}
+.rb-mem4 .rb-mem-statuscard::before,.rb-mem4 .rb-mem-recentbox::before,.rb-mem4 .rb-mem-options::before,.rb-mem4 .rb-mem-integrated-settings::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--k);box-shadow:0 0 10px var(--k)}
+.rb-mem4 .rb-mem-statuscard{--k:#5fe0a8}.rb-mem4 .rb-mem-recentbox{--k:#3fcfa6}.rb-mem4 .rb-mem-options{--k:#e98bd6}.rb-mem4 .rb-mem-integrated-settings{--k:#6f9dff}
+.rb-mem4 .rb-me-entry .rb-me-av{background:color-mix(in srgb,#c48bff 10%,transparent);border:1px solid color-mix(in srgb,#c48bff 55%,transparent);color:#d9b0ff;box-shadow:0 0 8px color-mix(in srgb,#c48bff 30%,transparent)}
+.rb-mem4 .rb-bigbtn{color:var(--rb-acc-text,var(--rb-text));background:color-mix(in srgb,var(--rb-acc) 14%,transparent);border:1px solid color-mix(in srgb,var(--rb-acc) 60%,transparent);box-shadow:0 0 10px color-mix(in srgb,var(--rb-acc) 30%,transparent)}
+.rb-lite .rb-mem4 *::before,.rb-lite .rb-mem4-tab,.rb-lite .rb-mem4 .rb-bigbtn,.rb-lite .rb-mem4 .rb-me-av{box-shadow:none!important}
+@media (max-width:760px){.rb-mem4-two{grid-template-columns:1fr}.rb-mem4-tabs{align-self:stretch;justify-content:space-between}.rb-mem4-tab{flex:1;padding:7px 8px}}
 `;

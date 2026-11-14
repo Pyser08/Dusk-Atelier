@@ -243,10 +243,29 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     ];
   } else side.push(advFold(ctx, "memory", true));
 
-  const main = h("div", { class: "rb-mem2-main" },
+  // 2.2.0 B안: 상태·분석은 늘 위, 아래는 [한눈에 · 기록 · 옵션 · 설정] 칸. 리수폿·Erosync는 옵션 칸.
+  const recAll = recentOf(folder, 12);
+  const recFull = h("section", { class: "rb-card bordered rb-mem-recentbox rb-mem-recfull" }, h("div", { class: "rb-mem-rechead" }, h("b", null, "최근 기록"), recAll.length ? h("button", { type: "button", class: "rb-textlink", onClick: () => openDetail() }, "전체 보기") : null),
+    h("ul", { class: "rb-mem-reclist" }, recAll.length
+      ? recAll.map((r) => h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("div", null, h("b", null, r.who), " ", r.act), h("div", { class: "rb-muted" }, at(r.at))), gradeBadge(r.g)))
+      : h("li", { class: "rb-muted" }, "아직 쌓인 기록이 없어요.")));
+  const TABS4 = [["glance", "한눈에"], ["rec", "기록"], ["opt", "옵션"], ["set", "설정"]];
+  const panels = {
+    glance: h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, shortcuts, recBox), h("div", { class: "rb-mem4-col" }, meRow, mapRow)),
+    rec: h("div", { class: "rb-mem4-col" }, recFull, h("div", { class: "rb-mem4-acts" }, btn("인물 위키", { icon: "character", onClick: () => openDetail("people") }), btn("기록 보기", { icon: "list", onClick: () => openDetail("scenes") }))),
+    opt: h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw))),
+    set: h("div", { class: "rb-mem4-col rb-mem4-set" }, ...side),
+  };
+  if (!panels[m.memTab]) m.memTab = "glance";
+  const tabBtns = TABS4.map(([k, l]) => h("button", { type: "button", role: "tab", id: `rb-mem-tab-${k}`, class: "rb-mem4-tab", "aria-selected": String(m.memTab === k), onClick: () => pick(k) }, l));
+  const pick = (k) => { m.memTab = k; tabBtns.forEach((b, i) => b.setAttribute("aria-selected", String(TABS4[i][0] === k))); for (const [id, el] of Object.entries(panels)) el.hidden = id !== k; };
+  for (const [id, el] of Object.entries(panels)) { el.setAttribute("role", "tabpanel"); el.dataset.memtab = id; el.hidden = id !== m.memTab; }
+  const main = h("div", { class: "rb-mem2-main rb-mem4" },
     memHead(ctx, redraw),
-    statusBox, bigAct, prog, shortcuts, meRow, mapRow, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memOptions, recBox,
-    !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null);
-  replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" }, main, h("div", { class: "rb-mem2-side" }, ...side)));
+    statusBox, bigAct, prog,
+    !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null,
+    h("div", { class: "rb-mem4-tabs", role: "tablist", "aria-label": "장기 기억 칸" }, ...tabBtns),
+    ...Object.values(panels));
+  replace(host, h("div", { class: "rb-mem3 rb-mem4-wrap" }, main));
   // 1.8.3: 임베딩 안내 창은 자동으로 띄우지 않는다(시작 안내 3단계에서 설정, 필요하면 설정 줄의 '임베딩'에서)
 }

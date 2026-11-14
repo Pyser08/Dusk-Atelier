@@ -7,7 +7,7 @@
 - 버전(package.json·CHANGELOG 새 섹션)은 지시 있을 때만.
 
 ## ▶ 다음 세션에서 이어갈 것 (11-14 기준)
-- **2번 기억 진행 중**: 개요 끝(아래 ‘기억 개요’). 다음은 장기 기억 화면 — 목업 `docs/mockups/glass-2-memory.html`의 A안/B안 중 사용자 선택부터. 그다음 관계도·코코아·카드(같은 목업 파일).
+- **2번 기억 진행 중**: 개요·장기 기억 끝(아래). 다음은 관계도 → 코코아 → 카드. 목업 초안은 `docs/mockups/glass-2-memory.html`, 디자인은 6번(색띠+약한 네온, 선 아이콘)으로 맞춰 다시 목업 → 확인 → 구현.
 - **1번 홈까지 끝**(커밋 ac0907e 이후 문서 정리 커밋). 다음은 **2번 기억**: memory-home·memory·relmap·cocoa·cards — 목업(PC 1280·모바일 390) → 확인 → 구현 → e2e.
 - 쓸 수 있는 것: 유리 카드 `.rb-gcard`/`.rb-gcell`, 섹션 색 `--sec-k`·`.sec-memory`(분홍보라), 팝업 `--rb-pop-bg`, 테마 22종(밝은·어두운 판). 지침 차이는 `UI-GLASS.md` 맨 위 ‘구현 현황’.
 - CHANGELOG에 `## 2.2.0 (작업 중 · 미릴리스)` 섹션을 넣어 둠(사용자 요청으로 문서 반영). 버전(package.json)은 그대로 2.1.9 — 올리기·릴리스는 지시 대기.
@@ -19,7 +19,7 @@
 |---|---|---|---|
 | 0 | 공통 기반 | styles.js 글래스 토큰(기존 --rb-* 이름 유지), 배경(stage)·유리 카드 공통 클래스, 탭 틀(app.js) | [x] 11-13 (아래 기록) |
 | 1 | 홈 | home | [x] 11-14 끝(F안·사이드바·위쪽 메뉴·모바일 탭바·테마 22종). 실기기 미확인 |
-| 2 | 기억 | memory-home, memory, relmap, cocoa, cards | [~] 개요(memory-home) 끝 11-14 · 장기 기억·관계도·코코아·카드 남음 |
+| 2 | 기억 | memory-home, memory, relmap, cocoa, cards | [~] 개요·장기 기억 끝 11-14 · 관계도·코코아·카드 남음 |
 | 3 | 작업실 | work-home, provider, look, stealth, aibot, personabuilder, tools, dev | [ ] |
 | 4 | 관리 | manage-home, characters, modules, plugins, protlink | [ ] |
 | 5 | 설정 | settings (+ 테마 선택 UI, '가벼운 화면' 저사양 모드) | [ ] 테마 선택·가벼운 화면은 11-14에 꾸미기 탭에 먼저 넣음(아래) — 설정 탭 배치만 남음 |
@@ -1331,3 +1331,11 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 구현: `src/ui/screens/sectionhome.js` drawMemory(section==='memory'일 때만) — 상태 줄 `.rb-mhub-stat`(+`.rb-hubstat`, 채팅 이름·켜짐·기억 수·‘지난 대화 분석’→memory 탭의 #rb-mem-analyze로) → 타일 `.rb-hubrow.rb-mtile.k-<id>`(바로가기·옛 시험 호환 위해 rb-hubrow 유지, 칩=저장 N건/인물 N명) → 최근 기록 `.rb-mhub-rec`(mhome.js `recentOf` export, 4건). CSS `src/ui/screens/memhubcss.js`(MEMHUB_CSS, styles.js 끝에 붙임). 관리·작업실 개요는 예전 그대로.
 - PC에서는 memory-home이 mobileOnly라 위쪽 메뉴 섹션 알약으로만 열림(그대로).
 - 시험: npm test 1554/3(원래 실패), check 동일함. run-hubs 기억 개요 기대값을 새 구조로 바꿈 → 전부 통과(이전 실패 1개도 해소). cards·memed 32·nav·home-grid·smoke·glass-theme·dupes 통과. 실기기 미확인.
+
+## 장기 기억 B안 (11-14, 2번 세션 2/5)
+- 목업 `docs/mockups/glass-2-memory-main.html`(A 두 단·B 칸 나누기·C 목차) → **B 채택 + 리수폿은 옵션 칸으로**(사용자).
+- `mhome.js` renderMemoryHome(채팅 있을 때): 상태 카드·분석 버튼·진행 막대는 위 고정 → `.rb-mem4-tabs`(#rb-mem-tab-glance/rec/opt/set, 고른 칸 `m.memTab`에 기억) → 칸 패널 `[data-memtab]`(안 고른 칸은 hidden, DOM엔 남음).
+  - 한눈에: 바로가기·최근 기록 3 | 나에 대한 기억·인물 관계도. 기록: 최근 기록 12 + 인물 위키·기록 보기 버튼. 옵션: 기억 옵션(토큰 포함) | 리수폿·Erosync 줄. 설정: 예전 오른쪽(프롬프트·임베딩, 고급 모드면 기억 방식·고급 묶음 `.rb-mem4-set`).
+  - 채팅 없을 때 화면은 예전 그대로. CSS는 memhubcss.js 아래쪽(`.rb-mem4*`, 카드 색띠).
+- 화면 둘러보기(screentours memory:home) 리수폿·옵션·세부 기능 단계를 칸 단추로 가리키게 바꿈. **임베딩 안내(embeddingguide, [data-tour=mem-embed])는 설정 칸이 닫혀 있으면 대상이 숨겨져 건너뛸 수 있음 — 필요하면 안내 시작 때 설정 칸 열기.**
+- 시험: npm test 1554/3(원래 실패), check 동일함. e2e memed 32(고급은 설정 칸 클릭 후 확인으로 수정)·erosync-ui(옵션 칸 클릭 추가; 더보기 메뉴 2개는 원래 실패)·discover·potpage·relmap·username·hubs·cards·smoke·dupes·me·home-memall 통과. run-app 107줄 `.rb-mem-options` 확인은 run-app이 원래 중간에 멈춰 못 봄.
