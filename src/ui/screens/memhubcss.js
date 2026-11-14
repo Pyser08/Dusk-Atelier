@@ -57,4 +57,16 @@ export var MEMHUB_CSS = `
 .rb-mem4 .rb-bigbtn{color:var(--rb-acc-text,var(--rb-text));background:color-mix(in srgb,var(--rb-acc) 14%,transparent);border:1px solid color-mix(in srgb,var(--rb-acc) 60%,transparent);box-shadow:0 0 10px color-mix(in srgb,var(--rb-acc) 30%,transparent)}
 .rb-lite .rb-mem4 *::before,.rb-lite .rb-mem4-tab,.rb-lite .rb-mem4 .rb-bigbtn,.rb-lite .rb-mem4 .rb-me-av{box-shadow:none!important}
 @media (max-width:760px){.rb-mem4-two{grid-template-columns:1fr}.rb-mem4-tabs{align-self:stretch;justify-content:space-between}.rb-mem4-tab{flex:1;padding:7px 8px}}
+
+/* 한눈에 위쪽: 바로가기 4칸 | 나·관계도 넓은 칸 2개(같은 높이, 아이콘 위 + 제목·설명) */
+.rb-mem4-top{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,3fr);gap:14px;align-items:stretch}
+.rb-mem4-wide{display:flex;flex-direction:column;min-width:0}
+.rb-mem4-wide h2{margin:0 0 8px;font-size:14px;font-weight:700;color:var(--rb-sub)}
+.rb-mem4-widegrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1}
+.rb-mem4-widegrid .rb-me-entry{flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:6px;min-height:76px;height:100%;padding:10px 14px;margin:0;text-align:left;position:relative}
+.rb-mem4-widegrid .rb-me-entry .t{display:flex;flex-direction:column;gap:2px;font-weight:700;font-size:13px}
+.rb-mem4-widegrid .rb-me-entry .t small{font-weight:400;font-size:12px;color:var(--rb-sub);line-height:1.4}
+.rb-mem4-widegrid .rb-me-entry .go{position:absolute;right:10px;top:12px}
+.rb-mem4-top .rb-mem-short{display:flex;flex-direction:column;min-width:0}.rb-mem4-top .rb-mem-short .rb-hgrid{flex:1}.rb-mem4-top .rb-mem-short .rb-htile{height:100%}
+@media (max-width:760px){.rb-mem4-top{grid-template-columns:1fr}}
 `;

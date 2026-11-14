@@ -248,7 +248,8 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   const TABS4 = [["glance", "한눈에"], ["opt", "옵션"]];
   const panels = {
     // 기록 칸은 없앰: 한눈에 위쪽 = 바로가기 | 나·관계도, 아래 = 최근 기록(12건) 전체 폭
-    glance: h("div", { class: "rb-mem4-col" }, h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, shortcuts), h("div", { class: "rb-mem4-col" }, meRow, mapRow)), recFull),
+    // 나·관계도는 바로가기와 같은 칸 모양(조금 더 넓게, 설명 읽기)
+    glance: h("div", { class: "rb-mem4-col" }, h("div", { class: "rb-mem4-top" }, shortcuts, h("section", { class: "rb-mem4-wide", "aria-label": "인물" }, h("h2", null, "인물"), h("div", { class: "rb-mem4-widegrid" }, meRow, mapRow))), recFull),
     opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memorySettings)), advEl),
   };
   const { tabs: tabRow, panels: panelEls } = memTabs(m, TABS4, panels);
