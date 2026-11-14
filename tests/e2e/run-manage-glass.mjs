@@ -39,6 +39,13 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
     await page.locator(".rb-row .name").first().click(); await page.waitForTimeout(200);
     ok(`[${tag}] 줄 누르면 동작 펼침`, (await vis(".rb-modexp .rb-btn")) === 6);
     await shot("mods");
+    await page.locator(".rb-row .rb-rowedit").first().click(); await page.waitForTimeout(900);
+    ok(`[${tag}] 모듈 편집: 머리 줄 켜짐 스위치·연결 설정`, (await vis(".rb-full .rb-edhead-mod .rb-switch")) === 1 && (await vis("#rb-edit-links")) === 1);
+    ok(`[${tag}] 편집: 바뀐 곳·검증은 아래 상태 줄`, (await page.locator(".rb-statusbar .rb-btn").count()) >= 1);
+    await page.locator(".rb-full .rb-tabs [role=tab]", { hasText: "로어북" }).click(); await page.waitForTimeout(400);
+    ok(`[${tag}] 편집: 로어북 색 설명`, (await vis(".rb-full .rb-tonelegend span")) >= 5);
+    await shot("editor");
+    await page.keyboard.press("Escape"); await page.locator(".rb-full-head .rb-icon-btn").first().click().catch(() => {}); await page.waitForTimeout(500);
   }
   await open("플러그인");
   ok(`[${tag}] 플러그인 카테고리 카드`, (await vis(".rb-plcat > summary .n")) >= 1);

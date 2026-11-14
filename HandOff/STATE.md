@@ -8,7 +8,7 @@
 
 ## ▶ 다음 세션에서 이어갈 것 (11-14 기준)
 - **4번 관리·5번 설정 끝(11-15)**: 목업 `glass-4-5-manage-settings.html`에서 고른 안 — 개요 C검색+A타일, 캐릭터 B(갤러리·게이지 `prefs.ui.charCard`·목록 전환 `charView`), 모듈 A(CSS 카운터 번호·`.rb-modexp` 펼침, PC 비개발 모드만), 플러그인 A(`.rb-plcat` 색띠 카드), ProtLink A + 오른쪽 타임라인(`.rb-pl-tl`, summary에 addedAt 추가·이 창 받기 기록 `state.plLog`), 설정 A(`.rb-settoc` 목차 → 카드로 스크롤). CSS `src/ui/screens/managehubcss.js`. 통합 검색 결과는 `state.searchNext`로 검색어를 들고 탭 이동(app.js go). 갤러리 끌기는 sortable.js grid 축(좌우). e2e 새 `run-manage-glass` 22.
-- **다음: 캐릭터·모듈 편집 화면 목업** `docs/mockups/glass-4-editor.html`(각 3안) — 사용자 선택 대기 → 구현.
+- **편집 화면 B안 끝(11-15)**: 목업 `glass-4-editor.html` B. editor.js — 목록 `itemTone()` 색띠 + `toneLegend()` 색 설명(로어북·정규식·트리거), 폴더 줄 `.k-folder`, 탭 개수(0은 흐리게)·탭별 경고 `!N`(검증 결과 tab별), 바뀐 곳·검증 버튼은 `.rb-statusbar` 오른쪽, foldCard에 `f-<key>` 색 점, 모듈은 `cfg.headExtra`(켜짐 스위치·연결 설정 #rb-edit-links). 레일이 편집 창 위로 올라오던 것 `.rb-win:has(.rb-full) .rb-nav{z-index:24}`. CSS는 managehubcss.js 끝.
 - 애드온 dist(manage·protlink) 내용이 바뀌었지만 애드온 버전은 안 올림(지시 대기).
 - **3번 작업실 끝**(커밋 전). 다음은 **4번 관리**(manage-home·characters·modules·plugins·protlink) — 목업(탭마다 맞춤 4안, 통일 금지) → 확인 → 구현. 3번 구현은 아래 ‘3번 기록’.
 - **2번 기억 진행 중**: 개요·장기 기억 끝(아래). 다음은 관계도 → 코코아 → 카드. 목업 초안은 `docs/mockups/glass-2-memory.html`, 디자인은 6번(색띠+약한 네온, 선 아이콘)으로 맞춰 다시 목업 → 확인 → 구현.

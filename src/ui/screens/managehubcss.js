@@ -104,4 +104,25 @@ export var MANAGEHUB_CSS = `
 @media (max-width:760px){.rb-set2{grid-template-columns:minmax(0,1fr);gap:12px}.rb-settoc{position:static;flex-direction:row;overflow-x:auto;scrollbar-width:none;padding:6px}.rb-settoc-i{padding:7px 12px}}
 .rb-lite .rb-mantile .ico,.rb-lite .rb-plcat::before,.rb-lite .rb-pl-tl::before,.rb-lite .rb-pl-tl li::before{box-shadow:none}
 @media (prefers-reduced-motion:reduce){.rb-toc-hit{animation:none}}
+/* 편집기(B안): 목록 색띠 + 색 설명 · 탭 개수/경고 · 묶음 카드 · 상태 줄 */
+.rb-item[class*=" k-"]{position:relative;padding-left:14px}
+.rb-item[class*=" k-"]::before{content:"";position:absolute;left:3px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--kc);box-shadow:0 0 6px var(--kc)}
+.rb-folder.k-folder{position:relative}
+.k-always{--kc:#5fe0a8}.k-key{--kc:#6f9dff}.k-prob{--kc:#f5c451}.k-rule{--kc:#3fcfa6}.k-folder{--kc:#b07cff}.k-off{--kc:#7d8597}
+.k-out{--kc:#6f9dff}.k-in{--kc:#ff8a5c}.k-disp{--kc:#e98bd6}.k-req{--kc:#f5c451}.k-lua{--kc:#b07cff}
+.rb-tonelegend{display:flex;flex-wrap:wrap;gap:4px 12px;padding:8px 10px 4px;border-top:1px solid var(--rb-line);font-size:11.5px;color:var(--rb-sub);flex:none}
+.rb-tonelegend span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.rb-tonelegend i{width:3px;height:12px;border-radius:3px;background:var(--kc);box-shadow:0 0 5px var(--kc)}
+.rb-tabs button small.zero{opacity:.35}
+.rb-tabs button small.rb-tabwarn{opacity:1;color:#f5c451;font-weight:700;padding:0 6px;border-radius:999px;background:color-mix(in srgb,#f5c451 14%,transparent)}
+.rb-fold{position:relative}
+.rb-full .rb-fold{border-radius:14px}
+.rb-fold > summary::before{content:"";width:8px;height:8px;border-radius:3px;flex:none;margin-right:0;background:var(--fc,#6f9dff);box-shadow:0 0 6px var(--fc,#6f9dff);align-self:center}
+.rb-fold.f-lore-basic{--fc:#6f9dff}.rb-fold.f-lore-cond{--fc:#f5c451}.rb-fold.f-lore-adv{--fc:#9aa3b5}
+.rb-statusbar .rb-chg{font-size:11.5px;padding:1px 9px;border-radius:999px;color:#ffb36b;border:1px solid color-mix(in srgb,#ff8a5c 50%,transparent)}
+/* 편집 창(z 25)이 열려 있으면 접힌 레일(z 30)이 그 위로 올라오지 않게 */
+.rb-win:has(.rb-full) .rb-nav{z-index:24 !important}
+.rb-edhead-mod{display:inline-flex;align-items:center;gap:8px;flex:none}
+@media (max-width:760px){.rb-edhead-mod .rb-btn{display:none}}
+.rb-lite .rb-item[class*=" k-"]::before,.rb-lite .rb-tonelegend i,.rb-lite .rb-fold > summary::before{box-shadow:none}
 `;
