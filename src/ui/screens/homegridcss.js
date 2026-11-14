@@ -76,13 +76,13 @@ export var HOMEGRID_CSS = `
   .rb-hw .rb-hnum b{font-size:24px}
 }
 
-/* 2.2.0 라이트바(디자인 컨셉, UI-GLASS §라이트바): 위젯 왼쪽에 기능 색 빛 막대 */
-.rb-hw{--lb:#c48bff;--lbg:linear-gradient(180deg,#ff8ec6,#8a7bff)}
-.rb-hw::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--lbg);box-shadow:0 0 10px var(--lb);pointer-events:none;z-index:1}
-.rb-hw[data-w=imp],.rb-hw[data-w=cont]{--lb:#ff8a5c;--lbg:linear-gradient(180deg,#ffb36b,#ff7a59)}
-.rb-hw[data-w=mem],.rb-hw[data-w^=n]{--lb:#e98bd6;--lbg:linear-gradient(180deg,#ff8ec6,#8a7bff)}
-.rb-hw[data-w=man],.rb-hw[data-w=qs]{--lb:#6f9dff;--lbg:linear-gradient(180deg,#7fd4ff,#5b8cff)}
-.rb-hw[data-w=wrk],.rb-hw[data-w=rec]{--lb:#3fcfa6;--lbg:linear-gradient(180deg,#6ff0c4,#38b6a0)}
+/* 2.2.0 라이트바(UI-GLASS 맨 위): 내용 카드(최근 기록·빠른 설정·이어서 하기·추천)와 위 상태 칸에만.
+   바로가기 칸은 아이콘 색, 숫자 칸은 숫자가 이미 강조라 막대를 두지 않는다(한 화면에 강조 한 종류). */
+.rb-hw:is([data-w=rec],[data-w=qs],[data-w=cont],[data-w=disc])::before,.rb-hfocus .rb-hstat-memory .rb-status::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:0 3px 3px 0;background:var(--lbg);box-shadow:0 0 8px color-mix(in srgb,var(--lb) 70%,transparent);pointer-events:none;z-index:1}
+.rb-hw[data-w=rec]{--lb:#3fcfa6;--lbg:linear-gradient(180deg,#6ff0c4,#38b6a0)}
+.rb-hw[data-w=qs]{--lb:#6f9dff;--lbg:linear-gradient(180deg,#7fd4ff,#5b8cff)}
+.rb-hw[data-w=cont]{--lb:#ff8a5c;--lbg:linear-gradient(180deg,#ffb36b,#ff7a59)}
 .rb-hw[data-w=disc]{--lb:#f5c451;--lbg:linear-gradient(180deg,#ffe08a,#f5b84a)}
-.rb-lite .rb-hw::before{box-shadow:none}
+.rb-hfocus .rb-hstat-memory .rb-status{position:relative;--lb:#5fe0a8;--lbg:#5fe0a8}
+.rb-lite .rb-hw::before,.rb-lite .rb-hfocus .rb-hstat-memory .rb-status::before{box-shadow:none}
 `;
