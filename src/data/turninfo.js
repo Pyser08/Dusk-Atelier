@@ -3,7 +3,7 @@
 // · 응답(output): 응답 앞부분 열쇠를 붙여 저장, 첫 글자·마지막 글자 시각으로 시간을 잰다
 // · 화면(display): 열쇠가 맞는 응답 아래에 접는 블록을 붙인다 (저장된 채팅은 건드리지 않음)
 // RisuBard(bardWiki 있음)에서는 쓰지 않는다. 훅 안에서는 오래 기다리지 않는다(HOST-COMPAT 3-3).
-import { headKey, tailKey, matchRecord } from "../engine/lorelog.js";
+import { headKey, tailKey, midKey, matchRecord } from "../engine/lorelog.js";
 import { onAux, mergeSide } from "../engine/auxlog.js";
 import { parseRollMarks } from "../engine/fairplay.js";
 import { estimateTokens, diceHtml, callHtml, fmtSec, fmtTokens, prefixInfo, cacheLine, promptParts } from "../engine/turninfo.js";
@@ -113,7 +113,7 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
   }
   function commit(rec, head, text) {
     rec.id = `${rec.at.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-    rec.head = head; rec.tail = tailKey(text);
+    rec.head = head; rec.tail = tailKey(text); rec.mid = midKey(text);
     const d = diceSource?.(); if (d && d.at >= rec.at - 2000) rec.dice = { rolls: d.rolls, cuts: d.cuts, mode: d.mode };
     recs.push(rec); if (recs.length > MAX_RECS) recs.splice(0, recs.length - MAX_RECS);
   }
@@ -126,7 +126,7 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
       if (!rec.firstAt) rec.firstAt = t;
       rec.lastAt = t; rec.outTok = estimateTokens(text);
       if (!rec.id) commit(rec, head, text);
-      else if (head.startsWith(rec.head) || rec.head.startsWith(head)) { rec.head = head; rec.tail = tailKey(text); }
+      else if (head.startsWith(rec.head) || rec.head.startsWith(head)) { rec.head = head; rec.tail = tailKey(text); rec.mid = midKey(text); }
       else return text;
       clearTimeout(quiet); quiet = setTimeout(settle, quietMs); save();
     } catch (e) { log("응답 기록 실패", e?.message ?? e); }

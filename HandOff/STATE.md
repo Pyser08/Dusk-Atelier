@@ -6,7 +6,11 @@
 - **탭 하나 = 세션 하나.** 사용자가 탭별 변경안을 주면 그 세션에서: 목업(PC 1280·모바일 390) → 사용자 확인 → 구현 → e2e.
 - 버전(package.json·CHANGELOG 새 섹션)은 지시 있을 때만.
 
-## ▶ 다음 세션에서 이어갈 것 (11-14 기준)
+## ▶ 다음 세션에서 이어갈 것 (11-15 기준)
+- **v2.2.0 배포 준비 끝(11-15)**: package.json 2.2.0, CHANGELOG `## v2.2.0`, 바뀐 애드온 9개 끝자리 올림 + minCore 2.2.0(manage 0.1.3·provider 0.2.4·chattheme 0.1.2·aibuild 0.1.5·memory 0.2.13·cards 0.1.2·erosync 0.1.5·protlink 0.1.3·stealth 0.3.55). widgets·modcompat은 배포본과 같아 그대로.
+- **배포는 `npm run release` 한 번**(tools/release.mjs): 시험·빌드 확인 → 브랜치 푸시 → main에 합침(worktree, README 충돌은 main 쪽) → main·태그 v2.2.0 푸시(release.yml이 릴리스) → 애드온 배포. `npm run release -- --dry`로 미리 보기. 태그가 이미 있으면 애드온만.
+- 원래 실패 정리: npm test 0 실패(pot-port: 패치로 바꾼 이름은 대조 제외·월경 문구 패치 등록 / watch-light: test 명령에 --experimental-strip-types / cellarlatest: 전역 fetch 막음). e2e editor-ai·lorereq(aibuild 애드온 자리 tests/e2e/aibuild-ext.js), info(접힘 기억을 누를 때 바로 저장), look(모서리 20px). run-app은 옛 탭 구성이라 건너뜀(RUN_LEGACY_APP=1).
+- 6번: 테마 대비는 tests/glassthemes.test.js(전 테마 × 밝은·어두운 4.5:1)로 확인. 실기기 확인은 아직.
 - **4번 관리·5번 설정 끝(11-15)**: 목업 `glass-4-5-manage-settings.html`에서 고른 안 — 개요 C검색+A타일, 캐릭터 B(갤러리·게이지 `prefs.ui.charCard`·목록 전환 `charView`), 모듈 A(CSS 카운터 번호·`.rb-modexp` 펼침, PC 비개발 모드만), 플러그인 A(`.rb-plcat` 색띠 카드), ProtLink A + 오른쪽 타임라인(`.rb-pl-tl`, summary에 addedAt 추가·이 창 받기 기록 `state.plLog`), 설정 A(`.rb-settoc` 목차 → 카드로 스크롤). CSS `src/ui/screens/managehubcss.js`. 통합 검색 결과는 `state.searchNext`로 검색어를 들고 탭 이동(app.js go). 갤러리 끌기는 sortable.js grid 축(좌우). e2e 새 `run-manage-glass` 22.
 - **편집 화면 B안 끝(11-15)**: 목업 `glass-4-editor.html` B. editor.js — 목록 `itemTone()` 색띠 + `toneLegend()` 색 설명(로어북·정규식·트리거), 폴더 줄 `.k-folder`, 탭 개수(0은 흐리게)·탭별 경고 `!N`(검증 결과 tab별), 바뀐 곳·검증 버튼은 `.rb-statusbar` 오른쪽, foldCard에 `f-<key>` 색 점, 모듈은 `cfg.headExtra`(켜짐 스위치·연결 설정 #rb-edit-links). 레일이 편집 창 위로 올라오던 것 `.rb-win:has(.rb-full) .rb-nav{z-index:24}`. CSS는 managehubcss.js 끝.
 - 애드온 dist(manage·protlink) 내용이 바뀌었지만 애드온 버전은 안 올림(지시 대기).
@@ -18,6 +22,11 @@
 - 실기기(RisuBard·PocketRisu·RisuAI) 확인 아직: 위젯 끌기, 테마 색감·블러 성능, 탭 빠른 이동, 태블릿 레일.
 - 스크롤 깜빡임 수정(11-14): 스크롤 안 카드(.rb-card·.rb-gcard·홈 위젯) backdrop-filter 제거, 시험 tests/glassscroll.test.js. 3번부터 새 카드도 블러 쓰지 말 것.
 - 원래 있던 실패(홈 작업과 무관): npm test 3(pot-port·watch-light·GitHub 태그), e2e look 2·hubs 1·run-info 2·run-app 중간 멈춤, run-memed 불안정.
+
+## 버그 제보 3건 (11-15, tests/report-1115.test.js)
+- 위키 반쯤 통합: identityRedirects의 원본 문서가 documents에 남으면 normalizeIdentityRedirects가 던져 위키 로드 실패→writeBlocked. pot 패치(tools/pot-patches.json 마지막)로 그 연결만 건너뜀. 위키 점검에서 따로 알리는 것·분기 채팅 위키 이어받기 안내는 아직.
+- 응답 아래 표시: lorelog.js midKey(30% 지점 32자)를 turninfo·lorelog 기록에 추가, matchRecord가 mid로도 찾음. 이매진 동시 생성 요청이 pending을 바꾸는 경우(주사위 붙는 시점)는 실기기 미확인.
+- .webp: imgtagfix readTags의 raw를 실제 에셋 이름 태그로, imghint에 확장자 금지 문장.
 
 ## Erosync 매 턴 계산 (11-15 구현)
 - 설계: HandOff/EROSYNC-TURN.md. 구현: 엔진 연결부 erosync.js duskTurnUpdate(profiles.turn, 원본 AXIS/SEX_AXIS 정의로 기준 글) + 순수 로직 src/erosync/turnupdate.js, 턴 갱신기 src/data/erosyncturn.js(설정 dusk.erosync.turn, 기록 dusk.erosync.turnlog), 기록기 알림 memoryturn.js tellTurn/onTurn, 애드온 연결 addons/erosync/index.js(ctx.erosyncTurn), 카드 src/ui/screens/memory/erosyncturnui.js. 테스트 tests/erosync-turn.test.js.
@@ -37,7 +46,7 @@
 | 3 | 작업실 | work-home, provider, look, stealth, aibot, personabuilder, tools, dev | [x] 11-14 끝(목업 glass-3-work-final 조합). 실기기 미확인 |
 | 4 | 관리 | manage-home, characters, modules, plugins, protlink | [x] 11-15 끝. 편집 화면 목업 대기, 실기기 미확인 |
 | 5 | 설정 | settings (+ 테마 선택 UI, '가벼운 화면' 저사양 모드) | [x] 11-15 왼쪽 목차. 테마 선택·가벼운 화면은 꾸미기 탭에 있음 |
-| 6 | 마무리 | 6테마 대비 확인, 전 화면 PC·모바일 e2e, CHANGELOG·안내서 | [ ] |
+| 6 | 마무리 | 6테마 대비 확인, 전 화면 PC·모바일 e2e, CHANGELOG·안내서 | [x] 11-15 간단히(대비 시험·전체 e2e). 실기기 미확인 |
 
 - 0번은 1번 세션 안에서 같이 해도 됨(홈 변경안을 받을 때 결정).
 - 테마 토큰·테마 선택 UI는 배치가 끝난 뒤(UI-GLASS §9의 4번). 배치 세션 동안은 기본 더스크 값만.

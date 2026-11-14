@@ -110,13 +110,16 @@ function squashedOf(text) {   // (export 안 함: 애드온이 코어 export 이
 }
 export const headKey = (text) => squashedOf(text).slice(0, 60);
 export const tailKey = (text) => { const t = squashedOf(text); return t.length > 40 ? t.slice(-40) : ""; };
+// 가운데 열쇠(2.2.0): 다른 플러그인(이매진 동시 생성 등)이 응답 끝에 붙인 데이터를 화면에선 지우고, 앞부분도 표시 정규식이 바꾸면
+// 머리·꼬리 둘 다 못 맞춘다. 글의 30% 지점 32자를 하나 더 둬서 찾는다.
+export const midKey = (text) => { const t = squashedOf(text); if (t.length < 160) return ""; const at = Math.floor(t.length * 0.3); return t.slice(at, at + 32); };
 export function matchRecord(recs, text) {
   const t = squashedOf(text);
   if (t.length < 4) return null;
   for (let i = recs.length - 1; i >= 0; i--) {
     const r = recs[i];
     if (!r.head || r.head.length < 4) continue;
-    if (t.includes(r.head) || (r.tail && t.includes(r.tail)) || (r.head.length > 24 && t.includes(r.head.slice(0, 24)))) return r;
+    if (t.includes(r.head) || (r.tail && t.includes(r.tail)) || (r.mid && t.includes(r.mid)) || (r.head.length > 24 && t.includes(r.head.slice(0, 24)))) return r;
   }
   return null;
 }

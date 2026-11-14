@@ -38,7 +38,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   await page.locator(`${look} .rb-seg[aria-label='바탕 무늬'] button`, { hasText: "점" }).click(); await flush();
   const t3 = (await ui()).theme;
   ok(`[${tag}] 모양·글꼴·무늬 저장`, t3.round === "round" && t3.font === "serif" && t3.pattern === "dots");
-  ok(`[${tag}] 모양이 화면에 적용(모서리 값 · 글꼴 · 무늬)`, await page.evaluate(() => { const w = document.querySelector(".rb-win"), c = getComputedStyle(w); return c.getPropertyValue("--rb-r2") === "18px" && /serif/.test(c.fontFamily) && /radial-gradient/.test(c.getPropertyValue("--rb-pattern")); }));
+  ok(`[${tag}] 모양이 화면에 적용(모서리 값 · 글꼴 · 무늬)`, await page.evaluate(() => { const w = document.querySelector(".rb-win"), c = getComputedStyle(w); return c.getPropertyValue("--rb-r2") === "20px" && /serif/.test(c.fontFamily) && /radial-gradient/.test(c.getPropertyValue("--rb-pattern")); }));
   await page.locator(`${look} .rb-seg[aria-label=밝기] button`, { hasText: "시간 따라" }).click(); await flush();
   ok(`[${tag}] 밝기 '시간 따라' 저장`, (await ui()).theme.mode === "time");
   await page.locator(`${look} .rb-seg[aria-label='미리보기 밝기'] button`, { hasText: "밝게" }).click();

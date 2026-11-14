@@ -1,5 +1,8 @@
 // 1.7.0 메뉴 구조 시험 (실제 입력). 클라우드 샌드박스: /opt/npm-tools, /opt/pw-browsers
 // SHOTS=폴더 를 주면 화면 사진도 저장한다.
+// 2.2.0: 이 시험은 2.0.0 이전 탭 구성(리수폿·인물·더보기)을 기준으로 해서 지금 화면과 맞지 않아요. 같은 내용(메뉴·탭 이동·섹션 개요·모바일 탭바)은
+// run-nav·run-hubs·run-home-grid·run-manage-glass가 확인해요. 다시 쓰려면 RUN_LEGACY_APP=1로 실행(대부분 실패).
+if (!process.env.RUN_LEGACY_APP) { console.log("건너뜀: 옛 탭 구성 시험(run-nav·run-hubs·run-home-grid로 대체)"); process.exit(0); }
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 import { build } from "/opt/npm-tools/node_modules/esbuild/lib/main.js";

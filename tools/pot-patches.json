@@ -191,5 +191,23 @@
   "why": "프리셋이 사용자 입력 뒤에 user 블록을 둬도 요청 안에 DB 실제 입력이 있으면 그것을 현재 입력으로(11-13 제보)",
   "from": "formattedCompact.includes(actualCompact)))),",
   "to": "formattedCompact.includes(actualCompact))||evidence.matched===true)),"
+ },
+ {
+  "file": "src/engine/pot/cycle-tracking.js",
+  "why": "월경 보고 줄 문구(11-13 '버그제거' 커밋 45207e7의 사용자 수정 유지)",
+  "from": "'- When you write core.current_state for a woman who is clearly an adult, add the line: CYCLE: adult woman',",
+  "to": "'- When you write core.current_state for a woman, add the line: CYCLE: adult woman',"
+ },
+ {
+  "file": "src/engine/pot/cycle-tracking.js",
+  "why": "위와 같음(45207e7)",
+  "from": "  'Never add these lines for anyone who is not clearly an adult woman. Do not decide yourself",
+  "to": "  'Do not decide yourself"
+ },
+ {
+  "file": "src/engine/pot/identity-links.js",
+  "why": "인물 이름 바꾸기·통합이 반만 적용돼 원본 인물 문서가 남아 있으면 연결만 버리고 계속 읽기(전에는 위키 전체를 못 읽고 쓰기가 막혔음). 남은 두 문서는 인물 통합으로 다시 합치면 됨",
+  "from": "assert(identityLinkRef(source)&&identityLinkRef(target)&&!Object.hasOwn(documents,source),'통합 전 인물 ID가 잘못되었거나 현재 인물과 충돌합니다.');",
+  "to": "assert(identityLinkRef(source)&&identityLinkRef(target),'통합 전 인물 ID가 잘못되었거나 현재 인물과 충돌합니다.');if(Object.hasOwn(documents,source))continue;"
  }
 ]
