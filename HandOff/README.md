@@ -7,8 +7,8 @@
 | 저장소 | 작업 브랜치 | 비고 |
 |---|---|---|
 | Dusk-Atelier | `2.2.0` | (2026-11-13 신설, main fd5fd34에서 분기) 글래스 UI 개편 — 탭별 배치 갈아엎기 → 새 테마 6종. 기준 `HandOff/UI-GLASS.md`, 세션 계획은 그 브랜치 STATE.md 맨 위 |
-| Dusk-Atelier | `SD-Studio` | v2.1.7 코어 릴리스(11-12, 봇 업데이트 뒤 옛 Lua 트리거 남는 버그. 장기기억 애드온 0.2.11 배포). 에셋 제작(sdstudio) 애드온은 아직 배포 안 함 — 이어서 할 일은 SD-Studio의 STATE.md 맨 아래 |
-| Dusk-Atelier | `2.1.9` | (2026-11-13, perf/startup 3e12169에서 분기) v2.1.9·장기기억 애드온 0.2.12 — 버그리포트 5건 수정(내 API 기본 주소, 서사관계 모드 월경·임신 구획, 연도 없는 날짜, 한글 이름 주기 보고, 프리셋 user 블록). **배포 전**(태그·애드온 배포 안 함). 자세한 건 그 브랜치 STATE.md 맨 아래 |
+| Dusk-Atelier | `SD-Studio` | v2.1.7 코어 릴리스(11-12, 봇 업데이트 뒤 옛 Lua 트리거 남는 버그. 장기기억 애드온 0.2.11 배포). 에셋 제작(sdstudio) 애드온 0.3.1 배포함(11-13). 단 main `addons/addons.src.json`엔 아직 없음 — 다음 publish 전에 넣을 것 — 이어서 할 일은 SD-Studio의 STATE.md 맨 아래 |
+| Dusk-Atelier | `2.1.9` | (2026-11-13, perf/startup 3e12169에서 분기) v2.1.9·장기기억 애드온 0.2.12 — 버그리포트 5건 수정(내 API 기본 주소, 서사관계 모드 월경·임신 구획, 연도 없는 날짜, 한글 이름 주기 보고, 프리셋 user 블록). **배포함**(v2.1.9 태그, 장기기억 애드온 0.2.12는 11-14 addons 브랜치에 단독 배포 d608c9c). 자세한 건 그 브랜치 STATE.md 맨 아래 |
 | Dusk-Atelier | `perf/startup` | (2026-11-12 신설, main v2.1.7에서 분기) 데이터 많은 환경 속도 개선 — 시작·Dusk 열기·감시의 전체 읽기 줄이기. 진단·할 일은 그 브랜치 STATE.md 맨 위 |
 | Dusk-Cellar | `feat/0.1.0` | 기억 저장소(`/cellar/mem`) — Atelier 쪽 연동은 위 Atelier 브랜치에서 작업 |
 
