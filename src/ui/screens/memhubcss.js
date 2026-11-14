@@ -23,7 +23,7 @@ export var MEMHUB_CSS = `
 .rb-mtile.k-relmap{--k:#6f9dff;--kg:linear-gradient(180deg,#7fd4ff,#5b8cff)}
 .rb-mtile.k-cocoa{--k:#3fcfa6;--kg:linear-gradient(180deg,#6ff0c4,#38b6a0)}
 .rb-mtile.k-cards{--k:#ff8a5c;--kg:linear-gradient(180deg,#ffb36b,#ff7a59)}
-.rb-mhub-rec{padding:16px 20px}
+.rb-mhub-rec{padding:16px 20px;border:1px solid var(--rb-line2);border-radius:16px;background:var(--rb-card,transparent)}
 .rb-mhub-rec .head{display:flex;align-items:center;margin-bottom:4px}.rb-mhub-rec .head b{flex:1}
 .rb-mhub-rec ul{list-style:none;margin:0;padding:0}
 .rb-mhub-rec li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--rb-line2);font-size:13px}

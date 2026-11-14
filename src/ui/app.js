@@ -175,7 +175,9 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const homeT = TABS.find((t) => t.id === "home");
   const SEC_ICON = { memory: "brain", manage: "module", work: "tools" };
   for (const t of TABS) {
-    if (t.mobileOnly) continue;
+    // 2.2.0: 기억 개요는 PC 사이드바에도(섹션 맨 위 ‘개요’). 다른 개요와 위쪽 메뉴는 그대로(섹션 알약이 개요로 감)
+    const sideOnly = t.id === "memory-home";
+    if (t.mobileOnly && !sideOnly) continue;
     if (t.section && t.section !== currentSection) {
       currentSection = t.section;
       const sec = currentSection;
@@ -190,6 +192,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     navLinks.set(t.id, a);
     if (t === homeT) a.classList.add("rb-nav-home");
     (t.section && navGroup ? navGroup : nav).appendChild(a);
+    if (sideOnly) continue;
     const c = mkLink(t, 16, false);
     c.appendChild(h("small"));
     topLinks.set(t.id, c);
