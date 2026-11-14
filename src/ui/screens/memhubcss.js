@@ -69,4 +69,24 @@ export var MEMHUB_CSS = `
 .rb-mem4-widegrid .rb-me-entry .go{position:absolute;right:10px;top:12px}
 .rb-mem4-top .rb-mem-short{display:flex;flex-direction:column;min-width:0}.rb-mem4-top .rb-mem-short .rb-hgrid{flex:1}.rb-mem4-top .rb-mem-short .rb-htile{height:100%}
 @media (max-width:760px){.rb-mem4-top{grid-template-columns:1fr}}
+
+/* 고급 묶음(옵션 칸): 라이트바 컨셉 + 읽기 쉽게. 묶음 = 왼쪽 빛 막대(파랑 설정·민트 진단·빨강 위험),
+   안쪽 칸은 카드 대신 구분선으로 나눠 카드 속 카드를 없애고, 칸 제목에 작은 색 막대 */
+.rb-mem4 .rb-mem-grp{position:relative;--k:#6f9dff;overflow:hidden}
+.rb-mem4 .rb-mem-grp[data-g=diag]{--k:#3fcfa6}.rb-mem4 .rb-mem-grp.is-danger{--k:#ff6b7a}
+.rb-mem4 .rb-mem-grp::before{content:"";position:absolute;left:0;top:14px;width:4px;height:36px;border-radius:0 4px 4px 0;background:var(--k);box-shadow:0 0 10px var(--k)}
+.rb-mem4 .rb-mem-grp>summary{padding:14px 18px 14px 24px}
+.rb-mem4 .rb-mem-grp>summary b{font-size:15px}
+.rb-mem4 .rb-mem-grp[open]>summary{border-bottom:1px solid var(--rb-line2)}
+.rb-mem4 .rb-mem-grp .rb-mem-foldbody{padding:4px 20px 12px 24px;gap:0}
+.rb-mem4 .rb-mem-grp .rb-mem-advbody{display:flex;flex-direction:column}
+.rb-mem4 .rb-mem-grp .rb-mem-sec{background:none!important;border:0!important;box-shadow:none!important;border-radius:0;padding:16px 0;gap:12px;border-top:1px solid var(--rb-line2)!important}
+.rb-mem4 .rb-mem-grp .rb-mem-foldbody>.rb-mem-sec:first-child,.rb-mem4 .rb-mem-grp .rb-mem-advbody>.rb-mem-sec:first-child{border-top:0!important}
+.rb-mem4 .rb-mem-grp .rb-mem-sec>h3{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--rb-text);letter-spacing:.01em}
+.rb-mem4 .rb-mem-grp .rb-mem-sec>h3::before{content:"";width:3px;height:14px;border-radius:3px;background:var(--k);box-shadow:0 0 6px color-mix(in srgb,var(--k) 60%,transparent);flex:none}
+.rb-mem4 .rb-mem-grp .rb-mem-field>span{font-weight:500;font-size:12.5px;color:var(--rb-sub)}
+.rb-mem4 .rb-mem-grp .rb-muted,.rb-mem4 .rb-mem-grp p{line-height:1.55}
+.rb-mem4 .rb-mem-grp .rb-input{min-height:40px}
+.rb-lite .rb-mem4 .rb-mem-grp::before,.rb-lite .rb-mem4 .rb-mem-grp .rb-mem-sec>h3::before{box-shadow:none}
+@media (max-width:760px){.rb-mem4 .rb-mem-grp>summary{padding:12px 14px 12px 20px}.rb-mem4 .rb-mem-grp .rb-mem-foldbody{padding:4px 14px 10px 20px}}
 `;

@@ -1349,3 +1349,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - (11-14) 한눈에 위쪽: 바로가기 4칸 | ‘인물’(나에 대한 기억·인물 관계도) 넓은 칸 2개, 높이 맞춤(.rb-mem4-top).
 - (11-14) 채팅 없을 때 옵션 칸 고급: renderGlobalSettings `bare` 모드(설정 찾기·모드 표시·변경 이력·리수폿 안내·프리셋 공유 없이 ‘기록·기억 넣기 세부 설정’ 내용만). 채팅 있을 때 고급 묶음의 세부 설정도 bare. 모바일 홈 바로가기 4칸 안쪽 스크롤 없앰.
 - **실시간 미리보기**: `node tools/preview.mjs`(또는 .claude/launch.json ‘preview’) → http://localhost:5178/?chat=0&adv=1&light=1&tab=memory. 소스 고치면 자동 새로고침(e2e 가짜 호스트, `bootApp` opts.noChat 추가). 결과물 .preview/(gitignore). 오른쪽 위 ‘채팅 켬/끔’ 단추로 지금 탭 유지한 채 전환. Erosync 실제 애드온도 켬(opts.erosync, 요청 훅은 opts.host 가짜) — ?eroon=1이면 켠 상태로 시작, ?ero=0이면 뺌.
+- (11-14) 옵션 칸 고급 묶음 디자인: 묶음 왼쪽 라이트바(파랑 세부 설정·민트 진단·빨강 위험), 안쪽 칸은 카드 대신 구분선 + 제목 색 막대(memhubcss).
