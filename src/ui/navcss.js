@@ -26,6 +26,14 @@ export var NAV_CSS = `
 .rb-nav a.rb-nav-home svg{width:28px;height:28px;padding:6px;border-radius:9px;color:#fff;background:linear-gradient(135deg,#ffd27a,#ff9a5c);flex:none}
 .rb-nav a.rb-nav-home{padding:0 8px;gap:10px}
 .rb-nav a.rb-nav-home[aria-current=page] svg{color:#fff}
+/* 2.2.0: 사이드바 아이콘 크게(섹션·홈 34px, 하위 탭 20px) */
+.rb-nav .ci,.rb-nav a.rb-nav-home svg{width:34px;height:34px;border-radius:11px}
+.rb-nav .ci svg{width:20px;height:20px}
+.rb-nav a.rb-nav-home svg{padding:7px}
+.rb-nav-sec,.rb-nav a.rb-nav-home{min-height:44px}
+.rb-nav-group{margin-left:24px}
+.rb-nav-group a{height:38px}
+.rb-nav-group a svg{width:20px;height:20px}
 /* 아래 한 줄 + ⋯ 메뉴 */
 .rb-nav-foot{margin-top:auto;position:relative;padding-top:10px}
 .rb-nav-mini{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 8px;border-radius:var(--rb-r2);background:var(--rb-hover);font-size:12px;color:var(--rb-mute);white-space:nowrap}

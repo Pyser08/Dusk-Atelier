@@ -47,7 +47,12 @@ export var MEMHUB_CSS = `
 .rb-mem4 .rb-mem-statuscard,.rb-mem4 .rb-mem-recentbox,.rb-mem4 .rb-mem-options,.rb-mem4 .rb-mem-integrated-settings{position:relative;padding-left:24px}
 .rb-mem4 .rb-mem-statuscard::before,.rb-mem4 .rb-mem-recentbox::before,.rb-mem4 .rb-mem-options::before,.rb-mem4 .rb-mem-integrated-settings::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--k);box-shadow:0 0 10px var(--k)}
 .rb-mem4 .rb-mem-statuscard{--k:#5fe0a8}.rb-mem4 .rb-mem-recentbox{--k:#3fcfa6}.rb-mem4 .rb-mem-options{--k:#e98bd6}.rb-mem4 .rb-mem-integrated-settings{--k:#6f9dff}
-.rb-mem4 .rb-me-entry .rb-me-av{background:color-mix(in srgb,#c48bff 10%,transparent);border:1px solid color-mix(in srgb,#c48bff 55%,transparent);color:#d9b0ff;box-shadow:0 0 8px color-mix(in srgb,#c48bff 30%,transparent)}
+/* 아이콘: 둥근 네모 + 기능 색 얇은 테두리·옅은 빛(목업 6번). 바로가기·한 줄 카드 공통 */
+.rb-mem4 .rb-mem-short .rb-htile .ico,.rb-mem4 .rb-me-entry .rb-mem-av.rb-me-av{--k:#c48bff;width:38px;height:38px;border-radius:12px;background:color-mix(in srgb,var(--k) 10%,transparent)!important;border:1px solid color-mix(in srgb,var(--k) 55%,transparent);color:var(--k)!important;box-shadow:0 0 8px color-mix(in srgb,var(--k) 35%,transparent)}
+.rb-mem4 #rb-mem-go-wiki .ico,.rb-mem4 #rb-mem-go-me .rb-me-av{--k:#e98bd6}
+.rb-mem4 #rb-mem-go-detail .ico,.rb-mem4 #rb-mem-go-relmap .rb-me-av{--k:#6f9dff}
+.rb-mem4 #rb-mem-go-cards .ico,.rb-mem4 #rb-mem-go-erosync .rb-me-av{--k:#ff8a5c}
+.rb-mem4 #rb-mem-go-bots .ico,.rb-mem4 #rb-mem-go-pot .rb-me-av{--k:#3fcfa6}
 .rb-mem4 .rb-bigbtn{color:var(--rb-acc-text,var(--rb-text));background:color-mix(in srgb,var(--rb-acc) 14%,transparent);border:1px solid color-mix(in srgb,var(--rb-acc) 60%,transparent);box-shadow:0 0 10px color-mix(in srgb,var(--rb-acc) 30%,transparent)}
 .rb-lite .rb-mem4 *::before,.rb-lite .rb-mem4-tab,.rb-lite .rb-mem4 .rb-bigbtn,.rb-lite .rb-mem4 .rb-me-av{box-shadow:none!important}
 @media (max-width:760px){.rb-mem4-two{grid-template-columns:1fr}.rb-mem4-tabs{align-self:stretch;justify-content:space-between}.rb-mem4-tab{flex:1;padding:7px 8px}}
