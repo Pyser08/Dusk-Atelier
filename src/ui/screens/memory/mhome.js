@@ -79,6 +79,15 @@ function erosyncRow(ctx, m, redraw) {
     h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
 }
 
+// 2.2.0 B안 칸 단추 + 패널. 고른 칸은 m.memTab에 기억(없는 칸이면 첫 칸).
+function memTabs(m, list, panels) {
+  const cur = list.some(([k]) => k === m.memTab) ? m.memTab : list[0][0];   // 채팅 없을 때 '기록'을 골라 뒀어도 기억은 그대로 둔다
+  const btns = list.map(([k, l]) => h("button", { type: "button", role: "tab", id: `rb-mem-tab-${k}`, class: "rb-mem4-tab", "aria-selected": String(cur === k), onClick: () => pick(k) }, l));
+  const pick = (k) => { m.memTab = k; btns.forEach((b, i) => b.setAttribute("aria-selected", String(list[i][0] === k))); for (const [id, el] of Object.entries(panels)) el.hidden = id !== k; };
+  for (const [id, el] of Object.entries(panels)) { el.setAttribute("role", "tabpanel"); el.dataset.memtab = id; el.hidden = id !== cur; }
+  return { tabs: h("div", { class: "rb-mem4-tabs", role: "tablist", "aria-label": "장기 기억 칸" }, ...btns), panels: Object.values(panels) };
+}
+
 export async function renderMemoryHome(ctx, host, { redraw }) {
   const m = mem(ctx), M = ctx.memory;
   // 열린 채팅 확인(호스트 왕복)을 안내·모드 막대 읽기와 동시에 시작한다(1.8.3 속도). 위치가 같으면 직전 값을 바로 쓴다.
@@ -94,12 +103,15 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     const { memorySettings, memOptions } = await settingsCards(ctx, M, idx0, redraw);
     const gHost = h("div");
     if (ctx.prefs.advanced) await renderGlobalSettings(ctx, gHost, { redraw, panel: true }).catch(() => {});
-    return replace(host, h("div", { class: "rb-mem2-grid has-adv rb-mem3" },
-      h("div", { class: "rb-mem2-main" }, memHead(ctx, redraw),
-        emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요. 아래 설정은 채팅 없이도 바꿀 수 있어요.",
-          actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] }),
-        potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memOptions),
-      h("div", { class: "rb-mem2-side" }, memorySettings, ctx.prefs.advanced ? gHost : advFold(ctx, "memory", true))));
+    // 2.2.0: 채팅이 없어도 같은 칸 나누기(한눈에·옵션·설정). 기록 칸은 채팅이 있어야 해서 뺀다.
+    const empty = emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요. 옵션·설정은 채팅 없이도 바꿀 수 있어요.",
+      actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] });
+    const { tabs: tabRow, panels: panelEls } = memTabs(m, [["glance", "한눈에"], ["opt", "옵션"], ["set", "설정"]], {
+      glance: h("div", { class: "rb-mem4-col" }, empty),
+      opt: h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw))),
+      set: h("div", { class: "rb-mem4-col rb-mem4-set" }, memorySettings, ctx.prefs.advanced ? gHost : advFold(ctx, "memory", true)),
+    });
+    return replace(host, h("div", { class: "rb-mem3 rb-mem4-wrap" }, h("div", { class: "rb-mem2-main rb-mem4" }, memHead(ctx, redraw), tabRow, ...panelEls)));
   }
   // 채팅 본문은 느릴 수 있으므로 화면을 먼저 그리고, 백필 분석용 데이터는 백그라운드에서 읽는다.
   const cacheKey = `${cur.chaId}:${cur.chatId}:${cur.ci}:${cur.ti}`;
@@ -250,16 +262,12 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     opt: h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw))),
     set: h("div", { class: "rb-mem4-col rb-mem4-set" }, ...side),
   };
-  if (!panels[m.memTab]) m.memTab = "glance";
-  const tabBtns = TABS4.map(([k, l]) => h("button", { type: "button", role: "tab", id: `rb-mem-tab-${k}`, class: "rb-mem4-tab", "aria-selected": String(m.memTab === k), onClick: () => pick(k) }, l));
-  const pick = (k) => { m.memTab = k; tabBtns.forEach((b, i) => b.setAttribute("aria-selected", String(TABS4[i][0] === k))); for (const [id, el] of Object.entries(panels)) el.hidden = id !== k; };
-  for (const [id, el] of Object.entries(panels)) { el.setAttribute("role", "tabpanel"); el.dataset.memtab = id; el.hidden = id !== m.memTab; }
+  const { tabs: tabRow, panels: panelEls } = memTabs(m, TABS4, panels);
   const main = h("div", { class: "rb-mem2-main rb-mem4" },
     memHead(ctx, redraw),
     statusBox, bigAct, prog,
     !caps.analyze ? note("warn", "이 저장소에서는 분석을 BardWiki가 해요. 기록 보기만 쓸 수 있어요.") : null,
-    h("div", { class: "rb-mem4-tabs", role: "tablist", "aria-label": "장기 기억 칸" }, ...tabBtns),
-    ...Object.values(panels));
+    tabRow, ...panelEls);
   replace(host, h("div", { class: "rb-mem3 rb-mem4-wrap" }, main));
   // 1.8.3: 임베딩 안내 창은 자동으로 띄우지 않는다(시작 안내 3단계에서 설정, 필요하면 설정 줄의 '임베딩'에서)
 }

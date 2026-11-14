@@ -1336,7 +1336,7 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 목업 `docs/mockups/glass-2-memory-main.html`(A 두 단·B 칸 나누기·C 목차) → **B 채택 + 리수폿은 옵션 칸으로**(사용자).
 - `mhome.js` renderMemoryHome(채팅 있을 때): 상태 카드·분석 버튼·진행 막대는 위 고정 → `.rb-mem4-tabs`(#rb-mem-tab-glance/rec/opt/set, 고른 칸 `m.memTab`에 기억) → 칸 패널 `[data-memtab]`(안 고른 칸은 hidden, DOM엔 남음).
   - 한눈에: 바로가기·최근 기록 3 | 나에 대한 기억·인물 관계도. 기록: 최근 기록 12 + 인물 위키·기록 보기 버튼. 옵션: 기억 옵션(토큰 포함) | 리수폿·Erosync 줄. 설정: 예전 오른쪽(프롬프트·임베딩, 고급 모드면 기억 방식·고급 묶음 `.rb-mem4-set`).
-  - 채팅 없을 때 화면은 예전 그대로. CSS는 memhubcss.js 아래쪽(`.rb-mem4*`, 카드 색띠).
+  - 채팅 없을 때도 같은 칸 나누기(한눈에=빈 화면 안내·옵션·설정, 기록 칸 없음). 공통 함수 memTabs. CSS는 memhubcss.js 아래쪽(`.rb-mem4*`, 카드 색띠).
 - 화면 둘러보기(screentours memory:home) 리수폿·옵션·세부 기능 단계를 칸 단추로 가리키게 바꿈. **임베딩 안내(embeddingguide, [data-tour=mem-embed])는 설정 칸이 닫혀 있으면 대상이 숨겨져 건너뛸 수 있음 — 필요하면 안내 시작 때 설정 칸 열기.**
 - 시험: npm test 1554/3(원래 실패), check 동일함. e2e memed 32(고급은 설정 칸 클릭 후 확인으로 수정)·erosync-ui(옵션 칸 클릭 추가; 더보기 메뉴 2개는 원래 실패)·discover·potpage·relmap·username·hubs·cards·smoke·dupes·me·home-memall 통과. run-app 107줄 `.rb-mem-options` 확인은 run-app이 원래 중간에 멈춰 못 봄.
 - **(11-14 추가) 장기 기억 화면은 장기기억 애드온(addons/dist/memory.js)에 들어감** — 본체 빌드만으론 안 바뀜. `node tools/build-addons.mjs`로 다시 빌드함(memory 0.2.12 그대로 → **기기에 받게 하려면 버전 올림 + publish-addons 필요, 사용자 지시 대기**). recentOf는 core가 mhome을 끌어오지 않게 `src/engine/memoryusage.js`로 옮김(안 옮기면 core가 2.7MB로 커짐). addonlib.gen.js 재생성(2.2.0 core 전용 모듈 glasscss·homegrid·navcss·memhubcss 등 추가 — 애드온은 안 씀, minCore 그대로 둠).
