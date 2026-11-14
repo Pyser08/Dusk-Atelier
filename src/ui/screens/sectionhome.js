@@ -6,6 +6,7 @@ import { statusCard } from '../kit.js';
 import { TABS, SECTION_NAMES, tabHidden } from '../tabs.js';
 import { usageOf, recentOf } from '../../engine/memoryusage.js';
 import { dbRead } from '../../data/dbcache.js';
+import { drawWork } from './workhome.js';
 
 // 목록 줄의 한 줄 요약 (개수는 읽을 수 있을 때만 붙인다)
 var LINE = {
@@ -54,6 +55,7 @@ export async function renderSectionHome(ctx) {
   const token = ctx.state.tab;
   const draw = (counts) => {
     if (section === 'memory') return drawMemory(ctx, listHost, tabs, counts);
+    if (section === 'work') return drawWork(ctx, listHost, tabs);
     const row = (t) => h('button', { type: 'button', class: 'rb-hubrow', onClick: () => ctx.go(t.id), 'aria-label': t.label, dataset: { tab: t.id } },
       h('span', { class: 'ico' }, icon(t.icon, 20)),
       h('span', { class: 't' }, h('b', null, t.label), h('small', null, [LINE[t.id] ?? t.card ?? '', counts[t.id] !== undefined ? ` · ${counts[t.id]}${typeof counts[t.id] === 'number' ? '개' : ''}` : ''].join(''))),

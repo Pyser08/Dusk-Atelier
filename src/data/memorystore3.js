@@ -34,10 +34,18 @@ export function createMemoryStoreV3(api, { storage } = {}) {
     return ent.p;
   };
   const get = async (k) => parse(await rawGet(k));
+  const sizeMB = (str) => (str.length * 2 / 1048576).toFixed(2);  // 브라우저 저장소 기준(UTF-16) 대략값
   const set = async (k, v) => {
     raws.delete(k);
     // 일부 호스트는 실패를 throw 대신 false로 알린다 → 저장 실패로 처리(버그 1: 실패를 성공으로 보고 계속 진행하던 문제)
-    try { const r = await ps.setItem(k, JSON.stringify(v)); if (r === false) throw new Error("저장소에 쓰지 못했어요(용량 부족 또는 권한)."); return r; } finally { raws.delete(k); }
+    // 실패하면 어떤 키가 얼마나 컸는지 같이 알린다(장편에서 용량 한도 제보를 바로 판단하려고).
+    const body = JSON.stringify(v);
+    const sized = (why) => Object.assign(new Error(`${why} — ${k} 약 ${sizeMB(body)}MB`), { key: k, bytes: body.length * 2 });
+    try {
+      let r; try { r = await ps.setItem(k, body); } catch (e) { throw sized(`저장소에 쓰지 못했어요: ${e?.message ?? e}`); }
+      if (r === false) throw sized("저장소에 쓰지 못했어요(용량 부족 또는 권한)");
+      return r;
+    } finally { raws.delete(k); }
   };
   const rm = (k) => { raws.delete(k); return ps.removeItem(k); };
 

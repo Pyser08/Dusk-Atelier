@@ -7,11 +7,13 @@
 - 버전(package.json·CHANGELOG 새 섹션)은 지시 있을 때만.
 
 ## ▶ 다음 세션에서 이어갈 것 (11-14 기준)
+- **3번 작업실 끝**(커밋 전). 다음은 **4번 관리**(manage-home·characters·modules·plugins·protlink) — 목업(탭마다 맞춤 4안, 통일 금지) → 확인 → 구현. 3번 구현은 아래 ‘3번 기록’.
 - **2번 기억 진행 중**: 개요·장기 기억 끝(아래). 다음은 관계도 → 코코아 → 카드. 목업 초안은 `docs/mockups/glass-2-memory.html`, 디자인은 6번(색띠+약한 네온, 선 아이콘)으로 맞춰 다시 목업 → 확인 → 구현.
 - **1번 홈까지 끝**(커밋 ac0907e 이후 문서 정리 커밋). 다음은 **2번 기억**: memory-home·memory·relmap·cocoa·cards — 목업(PC 1280·모바일 390) → 확인 → 구현 → e2e.
 - 쓸 수 있는 것: 유리 카드 `.rb-gcard`/`.rb-gcell`, 섹션 색 `--sec-k`·`.sec-memory`(분홍보라), 팝업 `--rb-pop-bg`, 테마 22종(밝은·어두운 판). 지침 차이는 `UI-GLASS.md` 맨 위 ‘구현 현황’.
 - CHANGELOG에 `## 2.2.0 (작업 중 · 미릴리스)` 섹션을 넣어 둠(사용자 요청으로 문서 반영). 버전(package.json)은 그대로 2.1.9 — 올리기·릴리스는 지시 대기.
 - 실기기(RisuBard·PocketRisu·RisuAI) 확인 아직: 위젯 끌기, 테마 색감·블러 성능, 탭 빠른 이동, 태블릿 레일.
+- 스크롤 깜빡임 수정(11-14): 스크롤 안 카드(.rb-card·.rb-gcard·홈 위젯) backdrop-filter 제거, 시험 tests/glassscroll.test.js. 3번부터 새 카드도 블러 쓰지 말 것.
 - 원래 있던 실패(홈 작업과 무관): npm test 3(pot-port·watch-light·GitHub 태그), e2e look 2·hubs 1·run-info 2·run-app 중간 멈춤, run-memed 불안정.
 
 ## 세션 순서와 범위 (TASK-MAP: 메뉴·탭 = src/ui/tabs.js, src/ui/app.js)
@@ -20,7 +22,7 @@
 | 0 | 공통 기반 | styles.js 글래스 토큰(기존 --rb-* 이름 유지), 배경(stage)·유리 카드 공통 클래스, 탭 틀(app.js) | [x] 11-13 (아래 기록) |
 | 1 | 홈 | home | [x] 11-14 끝(F안·사이드바·위쪽 메뉴·모바일 탭바·테마 22종). 실기기 미확인 |
 | 2 | 기억 | memory-home, memory, relmap, cocoa, cards | [x] 11-14 끝(개요·장기 기억·인물 위키·NSFW 설정·관계도·코코아·카드). 실기기 미확인 |
-| 3 | 작업실 | work-home, provider, look, stealth, aibot, personabuilder, tools, dev | [ ] |
+| 3 | 작업실 | work-home, provider, look, stealth, aibot, personabuilder, tools, dev | [x] 11-14 끝(목업 glass-3-work-final 조합). 실기기 미확인 |
 | 4 | 관리 | manage-home, characters, modules, plugins, protlink | [ ] |
 | 5 | 설정 | settings (+ 테마 선택 UI, '가벼운 화면' 저사양 모드) | [ ] 테마 선택·가벼운 화면은 11-14에 꾸미기 탭에 먼저 넣음(아래) — 설정 탭 배치만 남음 |
 | 6 | 마무리 | 6테마 대비 확인, 전 화면 PC·모바일 e2e, CHANGELOG·안내서 | [ ] |
@@ -93,7 +95,31 @@
 - 참고: **run-memed는 원래 불안정**(같은 코드로 32/32/21/5개 — 고치기 전에도 같음, ‘사실확실성’ select 시간 초과). 따로 볼 것.
 - **홈(1번) 끝.** 다음은 2번 기억.
 
+## 3번 기록 (11-14)
+- 목업: `docs/mockups/glass-3-work.html`(탭마다 맞춤 4안), `glass-3-work-final.html`(채택 조합: 개요 C보강+D(검색 뺌) · 프로바이더 B+D · 꾸미기 B+C · 스텔스 A · 봇 A · 페르소나=페르소나 공방 구성 Dusk식 · 도구 A · 개발=지금 UI 보충).
+- 개요 `screens/workhome.js`(묶음 WORK_GROUPS, 최근 `prefs.ui.recentTabs`(app.js noteVisit에서 작업실 탭만) · 고정 `prefs.ui.workPins`, 줄은 `.rb-hubrow[data-tab]` 유지), CSS `screens/workhubcss.js`(작업실 전체 CSS 모음: 개요·꾸미기 갤러리·접는 목록·스텔스·도구 타일·개발 카드).
+- 프로바이더 `screens/provider/glance.js` ‘한눈에’ 탭(기본 탭, 연결이 없으면 ‘연결’로). 용도 표는 `effectiveProfile`(지정→보조→메인), 14일 막대는 기존 사용량 기록 `summarize(by:"d")` → 새 저장 없음.
+- 꾸미기 `screens/settings.js`: 갤러리 `#rb-look-gallery`(8개 + 더 보기 `.all`), 접는 줄 `.rb-lacc`(#rb-look-light 기본 열림 · #rb-look-color · #rb-look-shape · #rb-look-mine). PC 미리보기는 오른쪽 sticky(styles.js 격자 자리 고정).
+- 스텔스 `stealth.js`: 큰 미리보기(프리셋 light/dark 색으로 그림) + ‹ › + 모양 칩(`[data-preset]` 유지, 켜져 있으면 바로 반영). 적용 버튼 없이 토글 유지(run-stealth-ui 규칙).
+- AI로 봇 만들기 `screens/aibot.js`(+순수 `aibotsteps.js`): 새 화면. app.js의 go("aibot") 즉시 만들기 가로채기 삭제 → 화면에서 고른 뒤 createBotAndEdit/openCharEditor/startWorkshop.
+- 페르소나 `personabuilder.js`: 로직 그대로, 오른쪽 순서 시트 미리보기 → 레버 → 현재 채팅, 카드 라이트바(기능 색별).
+- 도구 `tools.js`: 줄 → 타일(`.rb-toolrow.rb-tooltile`, id 유지). 개발 `dev.js`: `.rb-devcard` 라이트바, 목록 줄 ‘기준 날짜/기준 없음’ 배지, 배포 기준 카드에 바뀐 곳 앞 4곳(`.rb-dev-diff`).
+- 아이콘 `pin` 추가. 애드온 dist(aibuild·provider·stealth·memory) 다시 빌드 — addonlib.gen.js 바뀜 → 배포 때 해당 애드온 minCore 확인 필요(버전 지시 대기).
+- 시험: npm test 1562 pass / 3 fail(원래 그 3개). 새 `tests/workhome.test.js` 6. e2e smoke·hubs·home-grid·provider·glass-theme·stealth-ui·addon-aibuild·work·dev-slot·addons-ui·addon-chattheme·discover·onboard 통과, look 2 · persona 4 · persona-sop 2 실패는 원래 파일로도 같음. 고친 e2e: run-provider·run-look·run-glass-theme·run-addon-aibuild·run-hubs(새 구조에 맞춤).
+- 미확인: 실기기 3종, 개발 ‘바뀐 곳 미리보기’ 실제 화면(기준+변경 데이터로는 안 봄), tabperf(출력 없음).
+- 작업 중 다른 곳에서 바뀐 파일(이 세션이 안 건드림): src/data/memorystore.js · src/engine/memoryinject.js · screens/memory/settings*.js · tests/memory*.test.js.
+
+## 검색창 한글·취소 수정 (11-14)
+- 원인: app.js 검색 input 처리기가 IME 조합 중에도 홈 이동(go)·값 다시 넣기·다시 그리기(placeSearch가 칸을 옮김)를 해서 조합이 깨짐(‘ㅇ아안안ㄴ녀녕녕’). 다른 탭→기능 찾기→홈 뒤 원래 탭을 기억하지 않았음.
+- 고침: `composing`(compositionstart/end) 동안은 state.search만 갱신, 확정(compositionend) 뒤 `runSearch`. 기능 찾기로 홈에 올 때 `state.findFrom` 기억 → 칸을 비우면 그 탭으로, 다른 곳으로 가면(go 홈 외) 잊음.
+- 시험: 새 e2e `tests/e2e/run-search-ime.mjs`(CDP imeSetComposition으로 실제 조합, PC·모바일 16) — 고치기 전 4 실패 확인. 실제 맥 한글 입력기에서는 마지막 음절이 확정될 때(다음 글자·띄어쓰기·포커스 이동) 결과가 바뀜(조합 중엔 한 음절 늦음). 실기기 미확인.
+
 ## 기능 이동 기록
+- 작업실 개요: 큰 카드 2 + 더 보기 목록 → 하는 일별 묶음 4 + 최근·고정.
+- AI로 봇 만들기: 메뉴 누르면 바로 만들기 → 세 단계 화면에서 고른 뒤 시작.
+- 꾸미기 ‘기본값으로’(고급 안) → 접는 목록 맨 아래 ‘처음 값으로 되돌리기’(확인 창). 내 테마 카드(오른쪽) → 접는 목록 ‘내 테마’.
+- 스텔스 모양 카드 6장 → 큰 미리보기 + 모양 칩.
+- 프로바이더: 첫 탭 ‘연결’ → ‘한눈에’(연결 없으면 ‘연결’).
 - 기능 찾기: 홈은 가운데 칸 그대로, 다른 탭은 오른쪽 위 ? 옆(목록 검색 탭은 ✦ 단추).
 - 사이드바 맨 아래 ‘메뉴 위치(왼쪽/위쪽)’ 분할 버튼·‘v… · 변경 기록’·끌어다 놓기 안내 → 아래 한 줄 + ⋯ 메뉴 안(위쪽 바의 분할 버튼은 그대로).
 - 홈 ‘장기 기억’ 상태 카드의 숫자 4칸 → 숫자 위젯 4개(n1~n4). 모바일에서도 ‘확인할 것’ 보임(숨기기 가능).

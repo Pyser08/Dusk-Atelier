@@ -33,8 +33,9 @@ import { renderHome } from './screens/home.js';
 import { installScrollGuard } from './scrollguard.js';
 import { createExt } from './ext.js';
 import { renderSectionHome } from './screens/sectionhome.js';
-import { createBotAndEdit } from './screens/newbot.js';
+import { renderAiBot } from './screens/aibot.js';
 import { BASE_IDS, SEARCH, SECTION_IDS, SECTION_NAMES, TABS, subLabel, tabHidden, setAddonCheck } from './tabs.js';
+import { pushRecent } from './screens/workhome.js';
 
 export function createApp(api, { legacy, version, onPersonaChanged }) {
   const doc = document;
@@ -54,14 +55,25 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const searchInput = h("input", { type: "search", placeholder: "검색", "aria-label": "검색" });
   let searchTimer = null;
   let lastTyped = 0;
+  // 2.2.0 한글 조합 중에는 글자만 적어 두고(다시 그리기·화면 이동이 조합을 깨서 ‘안ㄴ녀녕’처럼 겹쳤다), 음절이 확정되면 찾는다.
+  let composing = false;
+  const runSearch = (q) => {
+    // 다른 탭에서 기능 찾기로 홈에 왔다가 칸을 비우면 원래 탭으로 돌아간다
+    if (!q.trim() && state.tab === "home" && state.findFrom) { const f = state.findFrom; state.findFrom = null; state.search = ""; go(f.tab, f.sub); return; }
+    // 기능 찾기 칸(목록 검색이 없는 탭)에서 적으면 홈의 기능 찾기 목록으로 간다
+    if (state.findMode && state.tab !== "home" && q.trim()) { const from = { tab: state.tab, sub: state.sub }; go("home"); state.findFrom = from; state.search = q; searchInput.value = q; if (doc.activeElement !== searchInput) searchInput.focus(); }
+    state.search = q;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => { if (!composing) ctx.refresh(); }, 120);
+  };
   searchInput.addEventListener("input", (e) => {
     lastTyped = Date.now();
-    // 기능 찾기 칸(목록 검색이 없는 탭)에서 적으면 홈의 기능 찾기 목록으로 간다
-    if (state.findMode && state.tab !== "home" && e.target.value.trim()) { const q = e.target.value; go("home"); state.search = q; searchInput.value = q; searchInput.focus(); }
     state.search = e.target.value;
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => ctx.refresh(), 120);
+    if (composing || e.isComposing) return;
+    runSearch(e.target.value);
   });
+  searchInput.addEventListener("compositionstart", () => { composing = true; });
+  searchInput.addEventListener("compositionend", () => { composing = false; setTimeout(() => { if (!composing) runSearch(searchInput.value); }, 0); });
   // 새 버전 알림: 열 때 업데이트 주소의 머리말(앞 512바이트)만 읽어 버전을 비교한다
   const UPDATE_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js";
   const UPDATE_HOW = "RisuAI 설정 → 플러그인에서 Dusk Atelier 옆 초록색 + 버튼을 누르면 업데이트돼요.";
@@ -402,8 +414,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     }
   }
   function go(tab, sub = null) {
+    if (tab !== "home") state.findFrom = null;   // 기능 찾기에서 고른 곳으로 가거나 다른 데로 옮기면 ‘원래 탭으로’는 잊는다
     if (tab !== state.tab || sub !== state.sub) win.__scrollGuard?.markNav();   // 화면 이동만 맨 위에서 시작(다시 그리기는 위치 유지)
-    if (tab === "aibot") { if (ctx.ext.get("svc", "aibuild")) createBotAndEdit(ctx, { tab: "ai" }); return; }
     if (tab === "tools" && sub === "personabuilder") { tab = "personabuilder"; sub = null; }
     // 기록은 설정 탭 안으로 옮겼다 (1.6.1, 그전엔 도구). 예전 go("history")·go("tools","history") 호출도 그대로 동작
     if (tab === "history" || tab === "tools" && sub === "history") {
@@ -487,8 +499,10 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   let renderToken = 0;
   // 기능 맛보기용: 가 본 화면(탭, 장기 기억은 'memory:페이지')을 모아 둔다. 잠깐 뒤 한 번에 저장.
   let visitTimer = null;
+  let recentTimer = null;
   function noteVisit() {
     const key = state.tab === "memory" ? `memory:${state.mem?.page || "home"}` : state.tab;
+    if (prefs.ui && TABS.find((t) => t.id === state.tab)?.section === "work") { prefs.ui.recentTabs = pushRecent(prefs.ui.recentTabs, state.tab); clearTimeout(recentTimer); recentTimer = setTimeout(() => { prefs.saveUi?.({ recentTabs: prefs.ui.recentTabs }).catch?.(() => {}); }, 800); }
     const have = prefs.ui?.visited ?? [];
     if (!key || have.includes(key)) return;
     if (prefs.ui) prefs.ui.visited = [...have, key].slice(-60);
@@ -553,7 +567,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome,      cocoa: renderCocoaTab, look: renderSettings,   presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? ctx.ext.get("tab", state.tab) ?? renderPlaceholder;   // 애드온 탭(AI로 페르소나 만들기 등)
+    const screen = { home: renderHome, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, aibot: renderAiBot,      cocoa: renderCocoaTab, look: renderSettings,   presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? ctx.ext.get("tab", state.tab) ?? renderPlaceholder;   // 애드온 탭(AI로 페르소나 만들기 등)
     // 장기기억을 쓰는 화면은 기억 시작이 끝난 뒤 그린다(새로고침 직후 먹통 방지). 최대 20초, 넘으면 그냥 그린다.
     const needsMem = ["memory-home"].includes(state.tab) || ctx.ext.get("needsMemory", state.tab);
     const waitMem = needsMem && ctx.memory?.isReady && !ctx.memory.isReady()

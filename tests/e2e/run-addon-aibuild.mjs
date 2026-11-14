@@ -29,7 +29,9 @@ const text = (page) => page.evaluate(() => document.body.innerText);
   ok("애드온: 작업실에 AI로 봇·페르소나 만들기", /AI로 봇 만들기/.test(t) && /AI로 페르소나 만들기/.test(t), t.slice(0, 300));
   await go(page, "characters"); ok("애드온: 캐릭터에 AI로 봇 만들기 버튼", /AI로 봇 만들기/.test(await text(page)));
   await go(page, "personabuilder"); ok("애드온: 페르소나 빌더 열림", /페르소나/.test(await page.evaluate(() => document.querySelector(".rb-main").innerText)));
-  await go(page, "aibot"); await page.waitForTimeout(1500);
+  await go(page, "aibot"); await page.waitForTimeout(400);
+  ok("애드온: AI로 봇 만들기 → 세 단계 화면", await page.evaluate(() => document.querySelectorAll(".rb-aib-step").length === 3 && !!document.querySelector("#rb-aib-go")));
+  await page.fill(".rb-aib-card input[aria-label='봇 이름']", "검은 숲"); await page.click("#rb-aib-go"); await page.waitForTimeout(1500);
   ok("애드온: AI로 봇 만들기 → 편집기 'AI로 제작' 탭", await page.evaluate(() => /AI로 제작/.test(document.body.innerText)));
   ok("애드온: 오류 없음", !errs.length, errs.join(";")); await page.close(); }
 { const { page, errs } = await boot(true);

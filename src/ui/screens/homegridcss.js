@@ -23,7 +23,7 @@ export var HOMEGRID_CSS = `
 .rb-hgrid2.editing{background-image:linear-gradient(var(--rb-line) 1px,transparent 1px),linear-gradient(90deg,var(--rb-line) 1px,transparent 1px);background-size:var(--hw-ux) var(--hw-uy);border-radius:12px}
 .rb-hw{position:absolute;display:flex;flex-direction:column;min-width:0;overflow:auto;border-radius:var(--rb-r3);padding:14px 16px;
   background:var(--rb-glass-bg,var(--rb-surf));border:1px solid var(--rb-glass-line,var(--rb-line2));box-shadow:var(--rb-glass-shadow,var(--rb-shadow-card)),var(--rb-glass-hi,0 0 0 transparent);
-  backdrop-filter:var(--rb-glass-blur,none);-webkit-backdrop-filter:var(--rb-glass-blur,none);transition:left .18s,top .18s,width .18s,height .18s;scrollbar-width:thin}
+  transition:left .18s,top .18s,width .18s,height .18s;scrollbar-width:thin}
 .rb-calm .rb-hw{transition:none}
 .rb-hgrid2.editing .rb-hw{cursor:grab;touch-action:none;outline:1px dashed var(--rb-line3);outline-offset:-5px;user-select:none}
 .rb-hgrid2.editing .rb-hw:focus-visible{outline:3px solid var(--rb-focus)}

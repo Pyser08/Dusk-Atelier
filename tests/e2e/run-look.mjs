@@ -17,6 +17,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   const look = ".rb-mem2[data-page=look]";
   const ui = () => page.evaluate(() => JSON.parse(__api.store["rbm:ui:v1"] ?? "{}"));
   const flush = () => page.waitForTimeout(500);
+  // 2.2.0 접는 목록: 색·내 테마 칸을 열어 둔다(모양·글꼴은 아래에서 summary 클릭으로 연다)
+  await page.evaluate((s) => { for (const id of ["rb-look-color", "rb-look-mine"]) document.querySelector(`${s} #${id}`).open = true; }, look);
+  ok(`[${tag}] 꾸미기: 테마 갤러리 + 접는 목록 4줄`, (await page.locator(`${look} #rb-look-gallery .rb-gpick`).count()) > 10 && (await page.locator(`${look} .rb-lacc`).count()) === 4);
   ok(`[${tag}] 테마 묶음 12 + 아무거나`, (await page.locator(`${look} .rb-setpick`).count()) === 13);
   ok(`[${tag}] 강조 색 18 · 그라데이션 없음+8`, (await page.locator(`${look} .rb-accgroup:nth-child(-n+3) .rb-accpick`).count()) === 18 && (await page.locator(`${look} .rb-grads, ${look} .rb-lfield .rb-accpick[aria-label$='그라데이션']`).count()) === 8);
   ok(`[${tag}] 밝기 4칸 · 글자 크기 4칸`, (await page.locator(`${look} .rb-seg[aria-label=밝기] button`).allTextContents()).join("|") === "자동|밝게|어둡게|시간 따라" && (await page.locator(`${look} .rb-seg[aria-label='글자 크기'] button`).allTextContents()).join("|") === "작게|보통|크게|아주 크게");

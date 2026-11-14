@@ -18,6 +18,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 860 }], ["모바일", { w
   ok(`[${tag}] 기본: 글래스·Dusk 황혼·어두운 판`, w.glass && !w.light && w.g === "dusk" && /radial-gradient/.test(w.img), JSON.stringify(w));
   await page.evaluate(() => window.__app.ctx.go("look")); await page.waitForTimeout(400);
   const look = ".rb-mem2[data-page=look]";
+  await page.evaluate((s) => { document.querySelector(`${s} #rb-look-gallery`)?.classList.add("all"); const c = document.querySelector(`${s} #rb-look-color`); if (c) c.open = true; }, look);   // 2.2.0 갤러리 더 보기·색 칸 열기
   ok(`[${tag}] 꾸미기: 글래스 테마 23개(22종 + 내 강조색), 기본 Dusk 황혼 눌림`, (await page.locator(`${look} .rb-gpick`).count()) === 23 && (await page.locator(`${look} .rb-gpick[aria-pressed=true]`).getAttribute("data-id")) === "dusk");
   await page.locator(`${look} .rb-gpick[data-id=aurora]`).click(); await page.waitForTimeout(400);
   w = await win();

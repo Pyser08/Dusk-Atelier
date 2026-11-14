@@ -100,7 +100,7 @@ export function previewBox(ctx) {
       if (!r.ok) return replace(out, note("warn", r.why));
       if (!r.injected) return replace(out, h("p", { class: "rb-muted" }, `지금은 아무것도 들어가지 않아요${injectReasonText(r.reason) ? ` — ${injectReasonText(r.reason)}` : ""}.`));
       const m = r.manifest ?? {};
-      replace(out, h("p", null, h("b", null, `약 ${estimateTokens(r.text).toLocaleString()} 토큰`), h("span", { class: "rb-muted" }, ` · 위치: ${r.position === "beforeLastUser" ? "마지막 내 말 앞" : r.position}`)),
+      replace(out, h("p", null, h("b", null, `약 ${estimateTokens(r.text).toLocaleString()} 토큰`), h("span", { class: "rb-muted" }, ` · 위치: ${({ end: "맨 뒤", beforeLastUser: "마지막 내 말 앞", afterSystem: "시스템 프롬프트 뒤" })[r.position] ?? r.position}`)),
         h("ul", { class: "rb-mem-reclist" }, [...(m.included ?? []).map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...(m.excluded ?? []).map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))),
         h("details", null, h("summary", null, "들어갈 글 전체"), h("pre", { class: "rb-mem-pre" }, r.text)),
         h("p", { class: "rb-muted" }, "위키 기억(관련 인물 찾기·장면 정리)은 요청 직전에 AI가 골라서, 여기엔 Dusk 기억 블록만 보여요."));

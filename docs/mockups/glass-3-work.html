@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>글래스 작업실</title>
+<style>
+:root{
+  --bg:#0f1426;--b1:rgba(95,212,255,.42);--b2:rgba(63,207,166,.42);--b3:rgba(176,124,255,.38);--b4:rgba(255,154,118,.32);
+  --acc:#5fd4ff;--acc2:#3fcfa6;--tint:#d6f6ff;
+  --secg:linear-gradient(135deg,#5fd4ff,#3fcfa6);
+  --glass:color-mix(in srgb,#0f1426 46%,transparent);--cell:rgba(255,255,255,.08);--line:rgba(255,255,255,.2);
+  --text:#f2f5fa;--sub:rgba(255,255,255,.84);--mute:rgba(255,255,255,.62);--rl:rgba(255,255,255,.1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#070a14;color:var(--text);font:14px/1.5 "Pretendard",system-ui,sans-serif;padding:20px 16px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:0 0 10px}
+.bar button{padding:7px 14px;border-radius:999px;border:1px solid #3a4258;background:#141a2c;color:#ddd;font:inherit;cursor:pointer}
+.bar button.on{background:var(--secg);color:#05121a;border:0;font-weight:700}
+.cap{color:#bbb;font-size:13px;margin:0 auto 14px;max-width:1100px;text-align:center}
+.wrap{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.frame{border-radius:22px;overflow:hidden;border:1px solid #333}
+.pc{width:1280px;max-width:100%}.mo{width:390px}
+.lbl{color:#999;font-size:12px;text-align:center;margin:0 0 6px}
+.stage{background:radial-gradient(40% 50% at 12% 18%,var(--b1),transparent 70%),radial-gradient(45% 55% at 88% 78%,var(--b2),transparent 70%),radial-gradient(35% 40% at 70% 8%,var(--b3),transparent 70%),radial-gradient(40% 45% at 30% 95%,var(--b4),transparent 70%),var(--bg);padding:22px;display:flex;gap:16px;min-height:820px}
+.mo .stage{padding:14px 14px 0;flex-direction:column;min-height:844px;gap:12px}
+/* 카드: 스크롤 안 카드는 블러 없음(깜빡임 수정 규칙) */
+.gl{background:var(--glass);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.22);position:relative}
+.pad{padding:18px 20px}.mo .pad{padding:16px}
+.rail{width:68px;flex:none;display:flex;flex-direction:column;gap:6px;padding:14px 10px;align-items:center;border-radius:20px;backdrop-filter:blur(22px)}
+.ri{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--sub)}
+.ri.on{background:var(--secg);color:#05121a;box-shadow:0 0 14px rgba(95,212,255,.5)}
+.ri.sub{width:34px;height:34px}.ri.sub.cur{color:var(--acc);background:rgba(95,212,255,.12);border:1px solid rgba(95,212,255,.5)}
+.rsep{width:28px;height:1px;background:var(--rl);margin:4px 0}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px}
+.mo .main{gap:12px;padding-bottom:84px}
+.mut{color:var(--mute);font-size:12.5px}
+.head{display:flex;align-items:flex-end;gap:12px}.sp{flex:1}
+.ttl{font-size:26px;font-weight:800;background:linear-gradient(90deg,#fff,var(--tint));-webkit-background-clip:text;color:transparent;text-shadow:0 0 14px rgba(95,212,255,.35)}
+.mo .ttl{font-size:21px}
+.crumb{font-size:12px;color:var(--mute)}
+.q{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--sub);flex:none;font-weight:700}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.chip{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--cell);font-size:12px;color:var(--sub);white-space:nowrap}
+.chips .chip{padding:6px 13px;font-size:12.5px;cursor:pointer}.chips .on{color:#fff;box-shadow:inset 0 0 0 1px var(--acc),0 0 10px rgba(95,212,255,.35)}
+.c1{--c:#5fd4ff;--cg:linear-gradient(180deg,#7fe0ff,#4a9dff)}.c2{--c:#3fcfa6;--cg:linear-gradient(180deg,#6ff0c4,#38b6a0)}.c3{--c:#b07cff;--cg:linear-gradient(180deg,#d2a6ff,#8a7bff)}.c4{--c:#ff8a5c;--cg:linear-gradient(180deg,#ffb36b,#ff7a59)}.c5{--c:#ffd166;--cg:linear-gradient(180deg,#ffe08a,#f5b43c)}.c6{--c:#ff7eb6;--cg:linear-gradient(180deg,#ff9ccc,#e8609c)}
+.band{padding-left:24px}
+.band::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--cg);box-shadow:0 0 10px var(--c)}
+.ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;background:color-mix(in srgb,var(--c,#5fd4ff) 10%,transparent);border:1px solid color-mix(in srgb,var(--c,#5fd4ff) 55%,transparent);color:var(--c,#5fd4ff);box-shadow:0 0 8px color-mix(in srgb,var(--c,#5fd4ff) 35%,transparent)}
+.ico.s{width:32px;height:32px;border-radius:10px}
+.ico svg,.ri svg{width:19px;height:19px}
+.cta{display:inline-block;text-align:center;padding:10px 18px;border-radius:999px;font-weight:700;color:#d6f6ff;background:color-mix(in srgb,var(--acc) 14%,transparent);border:1px solid color-mix(in srgb,var(--acc) 60%,transparent);box-shadow:0 0 10px color-mix(in srgb,var(--acc) 30%,transparent);white-space:nowrap;cursor:pointer}
+.btn{display:inline-block;padding:6px 14px;border-radius:999px;background:var(--cell);border:1px solid var(--line);font-size:12.5px;white-space:nowrap}
+.btn.warn{border-color:rgba(255,120,120,.5);color:#ffb3b3}
+.dot{width:9px;height:9px;border-radius:50%;background:#5fe0a8;box-shadow:0 0 8px #5fe0a8;flex:none;display:inline-block}
+.dot.off{background:#777;box-shadow:none}.dot.warn{background:#ffd166;box-shadow:0 0 8px #ffd166}
+.sw{display:inline-block;width:40px;height:23px;border-radius:999px;background:rgba(255,255,255,.2);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:50%;background:#fff}
+.sw.on{background:color-mix(in srgb,#5fe0a8 30%,transparent);box-shadow:0 0 10px rgba(95,224,168,.45)}.sw.on::after{left:20px;background:#5fe0a8}
+.seg{display:inline-flex;border-radius:999px;background:var(--cell);padding:3px;gap:2px}
+.seg span{padding:4px 11px;border-radius:999px;font-size:12px;color:var(--sub);white-space:nowrap}.seg .on{background:rgba(95,212,255,.2);color:#fff;box-shadow:inset 0 0 0 1px rgba(95,212,255,.6)}
+.val{font-size:12.5px;color:var(--sub);padding:5px 12px;border-radius:10px;background:var(--cell);white-space:nowrap}
+.val::after{content:" ▾";color:var(--mute)}
+.meter{width:120px;height:7px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden;flex:none}.meter i{display:block;height:100%;background:var(--secg)}
+.slider{width:140px;height:5px;border-radius:9px;background:rgba(255,255,255,.15);position:relative;flex:none}.slider i{position:absolute;left:0;top:0;bottom:0;background:var(--secg);border-radius:9px}.slider b{position:absolute;top:-6px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 0 8px var(--acc)}
+.row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--rl)}
+.row:first-child{border-top:0}
+.rt{flex:1;min-width:0}.rn{font-weight:650}.rd{font-size:12.5px;color:var(--mute);overflow:hidden;text-overflow:ellipsis}
+.mo .rd{white-space:normal}
+.sh{display:flex;align-items:center;gap:12px;margin-bottom:6px}.sh h3{margin:0;font-size:15.5px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.mo .g2,.mo .g3,.mo .g4{grid-template-columns:1fr}
+.mo .g2.keep{grid-template-columns:1fr 1fr}
+.stat{display:flex;gap:10px;flex-wrap:wrap}.st{padding:10px 14px;border-radius:12px;background:var(--cell);min-width:96px}.st b{display:block;font-size:19px}.st span{font-size:12px;color:var(--mute)}
+.mo .st{flex:1;min-width:80px;padding:8px 10px}.mo .st b{font-size:16px}
+.hero{display:flex;gap:18px;align-items:center}
+.mo .hero{flex-direction:column;align-items:stretch;gap:12px}
+.hero .big{width:64px;height:64px;border-radius:18px}.hero .big svg{width:30px;height:30px}
+.htt{font-size:20px;font-weight:800}
+.md{display:flex;gap:16px;align-items:flex-start}.md>.lst{width:300px;flex:none}.md>.det{flex:1;min-width:0}
+.mo .md{flex-direction:column}.mo .md>.lst{width:100%}
+.li{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer}.li.on{background:rgba(95,212,255,.12);box-shadow:inset 0 0 0 1px rgba(95,212,255,.45)}
+.li .rn{font-size:13.5px}
+.tile{padding:14px;border-radius:14px;background:var(--cell);display:flex;flex-direction:column;gap:8px;min-height:104px}
+.tile .rn{font-size:13.5px}
+.mo .tiles{grid-template-columns:1fr 1fr}
+.sws{display:flex;gap:8px;flex-wrap:wrap}.swt{width:52px;height:52px;border-radius:14px;border:2px solid transparent;position:relative}.swt.on{border-color:#fff;box-shadow:0 0 12px var(--acc)}.swt small{position:absolute;bottom:-17px;left:0;right:0;text-align:center;font-size:10.5px;color:var(--mute);white-space:nowrap}
+.mo .swt{width:44px;height:44px}
+.chat{border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:12.5px}
+.bub{max-width:80%;padding:8px 11px;border-radius:14px}
+.field{display:flex;flex-direction:column;gap:5px;padding:10px 0;border-top:1px solid var(--rl)}.field:first-child{border-top:0}
+.fl{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub);font-weight:650}
+.fi{background:rgba(0,0,0,.22);border:1px solid var(--rl);border-radius:10px;padding:8px 11px;font-size:13px;color:var(--sub);min-height:36px}
+.ai{font-size:11.5px;padding:2px 9px;border-radius:999px;border:1px solid rgba(176,124,255,.6);color:#d9c3ff;margin-left:auto}
+.step{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--rl)}.step:first-child{border-top:0}
+.num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:800;background:var(--cell);flex:none}.num.on{background:var(--secg);color:#05121a}.num.ok{background:rgba(95,224,168,.25);color:#5fe0a8}
+.opt{padding:12px;border-radius:14px;background:var(--cell);border:1px solid transparent}.opt.on{border-color:rgba(95,212,255,.7);box-shadow:0 0 10px rgba(95,212,255,.25)}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:72px;display:flex;justify-content:space-around;align-items:center;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(22px);border-top:1px solid var(--line);font-size:10.5px;color:var(--mute)}
+.tabbar div{display:flex;flex-direction:column;align-items:center;gap:3px}.tabbar svg{width:20px;height:20px}.tabbar .on{color:var(--acc)}
+.mo .stage{position:relative}
+.foot{font-size:12px;color:var(--mute);text-align:center}
+.tag{font-size:11px;padding:1px 8px;border-radius:999px;background:rgba(95,212,255,.14);color:var(--acc);border:1px solid rgba(95,212,255,.4);white-space:nowrap}
+.tag.g{background:rgba(95,224,168,.14);color:#5fe0a8;border-color:rgba(95,224,168,.4)}.tag.o{background:rgba(255,209,102,.12);color:#ffd166;border-color:rgba(255,209,102,.4)}.tag.p{background:rgba(176,124,255,.14);color:#d2a6ff;border-color:rgba(176,124,255,.45)}
+.note{font-size:12.5px;color:#ffe3a3;background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.35);border-radius:12px;padding:9px 12px}
+/* 탭별 맞춤 안 */
+.flow{display:grid;grid-template-columns:1fr 34px 1fr 34px 1fr;align-items:stretch;gap:0}
+.flow .arr{display:grid;place-items:center;color:var(--acc);font-size:20px;text-shadow:0 0 8px var(--acc)}
+.mo .flow{grid-template-columns:1fr}.mo .flow .arr{transform:rotate(90deg);height:26px}
+.node{padding:10px 12px;border-radius:12px;background:var(--cell);margin-top:8px;font-size:13px;border:1px solid transparent}.node.on{border-color:rgba(95,212,255,.6);box-shadow:0 0 10px rgba(95,212,255,.2)}
+.node small{display:block;color:var(--mute);font-size:11.5px}
+table.mx{width:100%;border-collapse:collapse;font-size:13px}table.mx th{text-align:left;font-weight:600;color:var(--mute);font-size:12px;padding:6px 8px;border-bottom:1px solid var(--rl)}table.mx td{padding:10px 8px;border-bottom:1px solid var(--rl)}
+.mo table.mx .hm{display:none}
+.wiz{display:flex;gap:6px;margin-bottom:14px}.wiz div{flex:1;height:5px;border-radius:9px;background:rgba(255,255,255,.14)}.wiz .on{background:var(--secg);box-shadow:0 0 8px var(--acc)}
+.wizl{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin:-8px 0 12px}.wizl .on{color:#fff;font-weight:700}
+.prev{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:linear-gradient(135deg,rgba(255,154,118,.35),rgba(176,124,255,.4)),#171028;padding:12px;display:flex;gap:10px;min-height:250px}
+.prev .pr{width:34px;border-radius:10px;background:rgba(255,255,255,.1)}.prev .pm{flex:1;display:flex;flex-direction:column;gap:8px}.prev .pc2{border-radius:10px;background:rgba(255,255,255,.1);padding:8px 10px;font-size:12px}
+.mood{padding:14px;border-radius:14px;cursor:pointer;min-height:110px;display:flex;flex-direction:column;justify-content:flex-end;border:1px solid var(--line)}.mood.on{box-shadow:0 0 0 2px #fff,0 0 14px var(--acc)}
+.acc{border-top:1px solid var(--rl);padding:12px 0}.acc:first-child{border-top:0}.acch{display:flex;align-items:center;gap:12px;font-weight:650}.accb{padding:6px 0 0 44px}
+.big-prev{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;gap:10px}.big-prev .nav{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:18px}
+.dots{display:flex;gap:6px;justify-content:center;margin-top:10px}.dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.3)}.dots i.on{background:var(--acc);width:20px;border-radius:9px}
+.check{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--rl)}.check:first-child{border-top:0}.cb{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);display:grid;place-items:center;font-size:12px;flex:none}.cb.on{background:rgba(95,224,168,.25);border-color:#5fe0a8;color:#5fe0a8}
+.prompt{display:flex;gap:10px;align-items:flex-end}.prompt .fi{flex:1;min-height:84px;font-size:14px}
+.msg{display:flex;gap:10px;margin:10px 0}.msg .bubble{padding:10px 13px;border-radius:14px;background:var(--cell);font-size:13px;max-width:85%}.msg.me{justify-content:flex-end}.msg.me .bubble{background:rgba(95,212,255,.15);border:1px solid rgba(95,212,255,.35)}
+.gen{padding:14px;border-radius:14px;min-height:130px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;border:1px solid var(--line)}
+.reel{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.mo .reel{grid-template-columns:1fr 1fr}
+.rl{border-radius:14px;background:rgba(0,0,0,.28);border:1px solid var(--line);padding:10px;text-align:center;font-size:12.5px;position:relative;min-height:120px;display:flex;flex-direction:column;gap:6px}.rl .w{font-size:14px;font-weight:700;color:#fff;flex:1;display:grid;place-items:center}.rl.lock{border-color:#ffd166;box-shadow:0 0 10px rgba(255,209,102,.3)}
+.lever{width:56px;flex:none;display:flex;flex-direction:column;align-items:center;gap:6px}.lever .stick{width:6px;height:120px;border-radius:6px;background:linear-gradient(#ddd,#888)}.lever .ball{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff9ccc,#e8609c);box-shadow:0 0 14px #ff7eb6}
+.pcard{border-radius:18px;padding:18px;background:linear-gradient(160deg,rgba(176,124,255,.3),rgba(95,212,255,.15));border:1px solid var(--line)}
+.ava{width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,#3a2b7a,#ff7eb6);display:grid;place-items:center;font-size:28px;font-weight:800}
+.qa{padding:12px 14px;border-radius:14px;background:var(--cell);display:flex;gap:10px;align-items:center}.qa .rn{font-size:13.5px}
+.search{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:14px;background:rgba(0,0,0,.25);border:1px solid var(--line);color:var(--mute)}
+.kbd{font-size:11px;padding:1px 6px;border-radius:6px;border:1px solid var(--line);color:var(--mute)}
+.tl{position:relative;padding-left:22px}.tl::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--rl)}
+.tli{position:relative;padding:8px 0 12px}.tli::before{content:"";position:absolute;left:-19px;top:13px;width:10px;height:10px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc)}.tli.p::before{background:#d2a6ff;box-shadow:0 0 8px #d2a6ff}
+.diff{font:12px/1.6 ui-monospace,monospace;border-radius:10px;background:rgba(0,0,0,.3);padding:8px 10px}.diff .a{color:#7ef0b8}.diff .d{color:#ff9b9b}
+.ide{display:grid;grid-template-columns:240px 1fr 260px;gap:16px}.mo .ide{grid-template-columns:1fr}
+.tree div{padding:5px 8px;border-radius:8px;font-size:13px}.tree .on{background:rgba(95,212,255,.12)}.tree .in{padding-left:24px;color:var(--sub)}
+</style></head><body>
+<div class="bar" id="tabs"></div>
+<div class="bar" id="vars"></div>
+<p class="cap" id="cap"></p>
+<div class="wrap">
+  <div><p class="lbl">PC 1280</p><div class="frame pc"><div class="stage" id="pc"></div></div></div>
+  <div><p class="lbl">모바일 390</p><div class="frame mo"><div class="stage" id="mo"></div></div></div>
+</div>
+<script>
+/* ---------- 아이콘(선) ---------- */
+const P={
+ tools:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+ network:'<circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5v4M12 11.5 6.5 17M12 11.5l5.5 5.5"/>',
+ palette:'<path d="M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-1.2-1-1.4-1-2.4 0-.9.7-1.5 1.6-1.5H17a4 4 0 0 0 4-4c0-4.7-4-8.5-9-8.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/>',
+ mask:'<path d="M3 7c3-1.5 6-1.5 9 0 3-1.5 6-1.5 9 0v4c0 4-4 7-9 7s-9-3-9-7z"/><path d="M7.5 11h2M14.5 11h2"/>',
+ sparkle:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
+ character:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/>',
+ code:'<path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/>',
+ sliders:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+ home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+ brain:'<path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V5a3 3 0 0 0-3-1zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/>',
+ box:'<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
+ key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>',
+ layers:'<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+ route:'<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/>',
+ chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+ type:'<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>',
+ eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+ undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
+ file:'<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/>',
+ preset:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5"/>',
+ image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
+ book:'<path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/>',
+ size:'<path d="M3 20h18M6 20V10M11 20V6M16 20v-8M21 20V4"/>',
+ info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+ download:'<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>',
+ history:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 3"/>',
+ broom:'<path d="M14 3 9 13M5 13h9l1 8H4z"/>',
+ heart:'<path d="M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-3 4.5 4.5 0 0 1 8 3c0 6-8 11-8 11z"/>',
+ flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+ patch:'<path d="M8 3h8v6l-4 3-4-3zM8 21h8v-6l-4-3-4 3z"/>',
+ note:'<path d="M5 3h10l4 4v14H5z"/><path d="M9 11h6M9 15h6"/>',
+ bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ dice:'<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="15" r="1"/><circle cx="15" cy="9" r="1"/><circle cx="9" cy="15" r="1"/>',
+ copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+ globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>'
+};
+const I=(n)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${P[n]||P.info}</svg>`;
+const ico=(n,c,s)=>`<div class="ico ${s?'s':''} ${c||''}">${I(n)}</div>`;
+
+/* ---------- 조각 ---------- */
+const sw=(on)=>`<span class="sw ${on?'on':''}"></span>`;
+const seg=(a,i)=>`<span class="seg">${a.map((t,k)=>`<span class="${k===i?'on':''}">${t}</span>`).join('')}</span>`;
+const val=(t)=>`<span class="val">${t}</span>`;
+const btn=(t,w)=>`<span class="btn ${w?'warn':''}">${t}</span>`;
+const meter=(p)=>`<span class="meter"><i style="width:${p}%"></i></span>`;
+const slider=(p)=>`<span class="slider"><i style="width:${p}%"></i><b style="left:calc(${p}% - 8px)"></b></span>`;
+const tag=(t,k)=>`<span class="tag ${k||''}">${t}</span>`;
+const row=(r)=>`<div class="row">${r.i?ico(r.i,r.c,1):''}<div class="rt"><div class="rn">${r.n}${r.t?' '+r.t:''}</div>${r.d?`<div class="rd">${r.d}</div>`:''}</div>${r.x||''}</div>`;
+
+/* ---------- 탭 데이터: 실제 기능 항목 ---------- */
+const THEMES=[['Dusk 황혼','#ff9a76,#b07cff'],['나이트 다이어리','#1d2440,#8a7bff'],['벚꽃','#ffb3cf,#ff7eb6'],['오로라','#5fd4ff,#3fcfa6'],['노을','#ffb36b,#ff5f6d'],['은하','#3a2b7a,#b07cff'],['네온','#ff3cac,#2b86c5'],['숲','#2f6b4f,#9ad18b']];
+const swatches=(n)=>`<div class="sws" style="padding-bottom:18px">${THEMES.slice(0,n||8).map((t,k)=>`<div class="swt ${k===0?'on':''}" style="background:linear-gradient(135deg,${t[1]})"><small>${t[0]}</small></div>`).join('')}<div class="swt" style="display:grid;place-items:center;background:var(--cell);font-size:12px;color:var(--mute)">+14<small>더 보기</small></div></div>`;
+const chatPrev=(k)=>{const s={claude:['#f5f0e8','#2b2925','#e9e2d5','#c96442'],gpt:['#ffffff','#1f1f1f','#f1f1f1','#10a37f'],gem:['#f8fafd','#1f1f1f','#e9eef6','#4b8cf5'],dusk:['#151a2c','#eef','#26304a','#5fd4ff']}[k];
+ return `<div class="chat" style="background:${s[0]};color:${s[1]}"><div class="bub" style="align-self:flex-end;background:${s[2]}">오늘 숲 속 오두막에 도착했어.</div><div class="bub" style="padding-left:0">문을 열자 장작 타는 냄새가 났다. 리아는 젖은 망토를 벗으며…</div><div style="margin-top:4px;border-radius:12px;border:1px solid ${s[3]};padding:7px 10px;opacity:.8">메시지 입력…</div></div>`;};
+
+const TABS={
+ 'work-home':{label:'개요',icon:'tools',crumb:'작업실',desc:'프로바이더·AI 봇 제작·도구·설정을 모았어요.',
+  hero:{i:'tools',t:'작업실',d:'자주 여는 기능과 지금 상태를 한눈에 봐요.',stat:[['2','연결'],['3','프로필'],['꺼짐','스텔스'],['8','도구']],cta:'Dusk 자동 켜짐'},
+  sec:[
+   {c:'c1',i:'network',t:'프로바이더',d:'키·모델·용도별 설정',x:tag('켜짐','g'),rows:[{i:'key',n:'연결 2개',d:'Anthropic · OpenRouter',x:'<span class="dot"></span>'},{i:'layers',n:'프로필 3개',d:'기본 대화 · 번역 · 기억 요약'},{i:'chart',n:'이번 달 사용',d:'$4.20 / $10',x:meter(42)}]},
+   {c:'c3',i:'palette',t:'꾸미기',d:'테마·밝기·글자',rows:[{i:'palette',n:'Dusk 황혼',d:'글래스 · 어둡게',x:btn('바꾸기')},{i:'mask',n:'더스크 스텔스',d:'다른 AI 앱 모양',x:tag('꺼짐')}]},
+   {c:'c6',i:'sparkle',t:'AI로 만들기',d:'봇·페르소나',rows:[{i:'sparkle',n:'AI로 봇 만들기',d:'최근 원고: 「검은 숲의 마녀」',x:btn('이어서')},{i:'character',n:'AI로 페르소나 만들기',d:'양식 4개 · 프리셋 2개',x:btn('열기')}]},
+   {c:'c2',i:'tools',t:'도구',d:'자주 쓰는 도구',rows:[{i:'preset',n:'프리셋'},{i:'book',n:'로어북 로그'},{i:'size',n:'용량 측정',d:'지난 측정 94MB'},{i:'download',n:'전체 백업·복원',d:'마지막 백업 3일 전',x:tag('3일','o')}]},
+   {c:'c5',i:'sliders',t:'설정',d:'화면 모드·백업·업데이트',rows:[{i:'sliders',n:'화면 모드',x:seg(['간단','고급'],0)},{i:'download',n:'업데이트',d:'v2.1.9 · 최신',x:'<span class="dot"></span>'}]},
+   {c:'c4',i:'code',t:'개발',d:'개발자 모드에서만 보여요',x:tag('개발자','p'),rows:[{i:'box',n:'개발 목록',d:'봇 2 · 모듈 3'},{i:'flag',n:'체크포인트',d:'어제 22:10'}]}
+  ]},
+ provider:{label:'프로바이더',icon:'network',crumb:'작업실 › 프로바이더',desc:'리스의 모델 목록에 Dusk를 더해요. 키·모델·용도별 설정을 한곳에서 관리해요.',
+  hero:{i:'network',t:'프로바이더 사용',d:'리스 모델 목록에 ‘Dusk 자동’이 있어요.',stat:[['2','연결'],['3','프로필'],['$4.20','이번 달'],['218','오늘 요청']],cta:'켜짐',sw:1},
+  sec:[
+   {c:'c1',i:'key',t:'연결(키)',d:'키는 이 기기에만 저장돼요',x:btn('＋ 연결 추가'),rows:[{i:'key',n:'Anthropic',d:'sk-ant-••••a1f · 응답 0.9초',x:'<span class="dot"></span>'},{i:'globe',n:'OpenRouter',d:'sk-or-••••7c2 · 크레딧 $11.3',x:'<span class="dot"></span>'},{i:'globe',n:'Google Gemini',d:'키 확인 실패 — 다시 넣어 주세요',x:'<span class="dot warn"></span>'}]},
+   {c:'c3',i:'layers',t:'프로필(모델·생각·캐시)',d:'용도마다 다른 프로필',x:btn('＋ 프로필 추가'),rows:[{i:'layers',n:'기본 대화',d:'Anthropic · claude-sonnet · 생각 중간 · 캐시 켜짐',t:tag('기본')},{i:'layers',n:'번역',d:'Gemini · flash · 생각 끔'},{i:'layers',n:'기억 요약',d:'Anthropic · haiku · 캐시 켜짐'}]},
+   {c:'c2',i:'route',t:'용도별 배정',d:'Dusk 기능이 어떤 프로필을 쓸지',rows:[{n:'채팅 응답',x:val('기본 대화')},{n:'번역',x:val('번역')},{n:'장기 기억·인물 위키',x:val('기억 요약')},{n:'감정·코코아',x:val('기본 대화')}]},
+   {c:'c5',i:'chart',t:'예산·사용량',d:'넘으면 알려 주거나 멈춰요',rows:[{n:'이번 달',d:'$4.20 / $10.00',x:meter(42)},{n:'넘으면',x:seg(['알림','멈춤'],0)},{n:'사슬(실패 시 다음 연결)',d:'Anthropic → OpenRouter',x:sw(1)}]}
+  ]},
+ look:{label:'플러그인 꾸미기',icon:'palette',crumb:'작업실 › 플러그인 꾸미기',desc:'색·밝기·글자 크기를 골라요. 바로 바뀌어요.',
+  hero:{i:'palette',t:'Dusk 황혼',d:'글래스 화면 · 어둡게 · 글자 보통',stat:[['22','테마'],['글래스','화면'],['100%','확대']],cta:'처음 값으로'},
+  sec:[
+   {c:'c3',i:'palette',t:'테마',d:'누르면 바로 바뀌어요',html:()=>swatches()},
+   {c:'c5',i:'sun',t:'밝기·강조색',rows:[{n:'밝기',x:seg(['어둡게','밝게','기기 따라'],0)},{n:'강조색',d:'테마 색 대신 내 색으로',x:'<span style="display:flex;gap:6px">'+['#5fd4ff','#ff9a76','#b07cff','#5fe0a8'].map((c,k)=>`<i style="width:22px;height:22px;border-radius:50%;background:${c};${k===0?'box-shadow:0 0 0 2px #fff':''}"></i>`).join('')+'</span>'},{n:'대비',x:seg(['보통','높게'],0)}]},
+   {c:'c1',i:'type',t:'글자',rows:[{n:'글자 크기',d:'15px',x:slider(45)},{n:'글꼴',x:val('Pretendard')},{n:'줄 간격',x:seg(['좁게','보통','넓게'],1)}]},
+   {c:'c2',i:'layers',t:'화면',rows:[{n:'글래스 화면',d:'유리 카드와 빛 번짐',x:sw(1)},{n:'가벼운 화면',d:'흐림을 꺼서 느린 기기를 빠르게',x:sw(0)},{n:'메뉴 위치',t:tag('고급','p'),x:seg(['왼쪽','위쪽'],0)},{n:'밀도·확대율',t:tag('고급','p'),x:val('보통 · 100%')}]}
+  ]},
+ stealth:{label:'더스크 스텔스',icon:'mask',crumb:'작업실 › 더스크 스텔스',desc:'리스 채팅을 클로드·GPT 같은 다른 AI 앱처럼 꾸며요.',
+  hero:{i:'mask',t:'지금 꺼져 있어요',d:'모양을 고르고 켜면 리스 커스텀 CSS·채팅 HTML에 적용돼요. 끄면 켜기 전 값으로 돌아가요.',stat:[['4','모양'],['백업 있음','원래 값']],cta:'켜기'},
+  sec:[
+   {c:'c4',i:'mask',t:'모양 고르기',d:'미리 보기로 확인해요',html:(m)=>`<div class="grid ${m?'g2 keep':'g4'}">${[['claude','클로드'],['gpt','GPT'],['gem','제미나이'],['dusk','더스크 기본']].map((s,k)=>`<div class="opt ${k===0?'on':''}">${chatPrev(s[0])}<div class="rn" style="margin-top:8px;font-size:13px">${s[1]}</div></div>`).join('')}</div>`},
+   {c:'c1',i:'sliders',t:'세부 옵션',rows:[{n:'입력창 모양도 바꾸기',x:sw(1)},{n:'캐릭터 아바타 숨기기',x:sw(0)},{n:'글꼴',x:val('앱 기본')},{n:'탭 제목·아이콘',d:'브라우저 탭에 보이는 이름',x:sw(0)}]},
+   {c:'c5',i:'undo',t:'되돌리기',rows:[{i:'undo',n:'원래 테마로 되돌리기',d:'켜기 전 커스텀 CSS·채팅 HTML 백업 · 11-12 21:40',x:btn('되돌리기')}]}
+  ]},
+ aibot:{label:'AI로 봇 만들기',icon:'sparkle',crumb:'작업실 › AI로 봇 만들기',desc:'AI 제작 화면으로 새 봇을 만들어요.',
+  hero:{i:'sparkle',t:'새 봇 만들기',d:'새 봇을 만든 뒤 AI 제작 화면을 열어요.',stat:[['1','진행 중'],['5','지난 원고']],cta:'AI 제작 화면 열기'},
+  sec:[
+   {c:'c6',i:'sparkle',t:'세 단계',html:()=>`<div class="step"><span class="num ok">✓</span><div class="rt"><div class="rn">봇 이름</div><div class="fi" style="margin-top:6px">검은 숲의 마녀</div></div></div><div class="step"><span class="num on">2</span><div class="rt"><div class="rn">어떻게 시작할까요</div><div class="grid g3" style="margin-top:8px;gap:8px">${[['plus','빈 봇','처음부터'],['copy','기존 봇 복제','캐릭터 고르기'],['file','봇빌더 원고','가져오기']].map((o,k)=>`<div class="opt ${k===0?'on':''}">${ico(o[0],'c6',1)}<div class="rn" style="margin-top:6px;font-size:13px">${o[1]}</div><div class="rd">${o[2]}</div></div>`).join('')}</div></div></div><div class="step"><span class="num">3</span><div class="rt"><div class="rn">AI 제작 화면 열기</div><div class="rd">설명·첫 메시지·로어북을 AI와 함께 채워요</div></div></div>`},
+   {c:'c1',i:'history',t:'최근 원고',rows:[{i:'file',n:'검은 숲의 마녀',d:'오늘 14:02 · 설명 · 첫 메시지',x:btn('이어서')},{i:'file',n:'항구 도시 탐정',d:'11-11 · 로어북 12',x:btn('이어서')},{i:'file',n:'기숙사 룸메이트',d:'11-08 · 완성',t:tag('완성','g')}]},
+   {c:'c3',i:'route',t:'제작 설정',rows:[{n:'AI 프로필',x:val('기본 대화')},{n:'로어북 더스크화',d:'로어북을 Dusk 규칙에 맞게 다듬기',x:sw(1)},{n:'봇빌더 연동',d:'DA Interop',x:'<span class="dot"></span>'}]}
+  ]},
+ personabuilder:{label:'AI로 페르소나 만들기',icon:'character',crumb:'작업실 › AI로 페르소나 만들기',desc:'양식과 AI를 이용해 페르소나를 만들어요.',
+  hero:{i:'character',t:'기본 양식',d:'양식을 고르고 AI로 전체 또는 일부를 채워요.',stat:[['4','양식'],['2','AI 프리셋'],['6','칸']],cta:'레버 당기기 (전부 돌리기)'},
+  sec:[
+   {c:'c6',i:'file',t:'양식',d:'칸 구성을 골라요',x:btn('＋ 양식'),rows:[{i:'file',n:'기본 양식',d:'이름·나이·외모·성격·말투·배경',t:tag('기본')},{i:'file',n:'NAI 태그',d:'외모를 태그로 · 이미지용'},{i:'file',n:'SOP 3단계',d:'핵심 → 디테일 → 비교',t:tag('애드온','p')},{i:'file',n:'내 양식',d:'폴더 2개 · 8칸'}]},
+   {c:'c3',i:'character',t:'내용',d:'칸마다 AI로 채우기',x:btn('번역 같이 보기'),html:()=>[['이름','하윤'],['나이·외모','24살 · 짧은 흑발, 왼쪽 눈 밑 점'],['성격','무심한 척하지만 정이 많음'],['말투','반말, 짧게 끊어 말함'],['배경','항구 도시의 야간 약사']].map(f=>`<div class="field"><div class="fl">${f[0]}<span class="ai">AI ⟳</span></div><div class="fi">${f[1]}</div></div>`).join('')},
+   {c:'c1',i:'bolt',t:'AI 프리셋',rows:[{i:'bolt',n:'기본 프리셋',d:'기본 대화 프로필 · 자연스럽게',x:val('사용 중')},{i:'bolt',n:'짧고 강렬하게',d:'번역 프로필'},{n:'번역도 받기',x:sw(0)}]},
+   {c:'c2',i:'copy',t:'저장·공유',rows:[{i:'copy',n:'공유 코드 복사 / 가져오기',x:btn('복사')},{i:'download',n:'파일로 백업 / 가져오기',x:btn('백업')},{i:'undo',n:'덮어쓰기 전 백업 보기',x:btn('보기')}]}
+  ]},
+ tools:{label:'도구',icon:'tools',crumb:'작업실 › 도구',desc:'프리셋·로어북 로그·용량 측정 같은 도구 모음이에요.',
+  hero:{i:'tools',t:'자주 쓰는 도구',d:'줄을 누르면 그 도구가 열려요.',stat:[['8','도구'],['3일 전','백업'],['94MB','용량']],cta:'빠른 백업'},
+  sec:[
+   {c:'c2',i:'tools',t:'자주 쓰는 도구',rows:[{i:'palette',n:'플러그인 꾸미기',d:'색·밝기·글자 크기·글꼴 바꾸기'},{i:'preset',n:'프리셋',d:'모듈 조합을 저장하고 공유해요'},{i:'image',n:'에셋 태그 고치기',d:'열린 채팅의 틀린 이미지 태그를 고쳐요'},{i:'book',n:'로어북 로그',d:'응답에 들어간 로어북 보기'},{i:'size',n:'용량 측정',d:'봇·모듈·플러그인 용량과 느려지는 원인 찾기'},{i:'info',n:'.risum 인스펙터',d:'모듈 파일 안을 열어 봐요'},{i:'download',n:'전체 백업·복원',d:'설정과 데이터를 저장·복원'},{i:'history',n:'기록·되돌리기',d:'봇·모듈 변경을 되돌려요'}]},
+   {c:'c4',i:'broom',t:'설정 정리',d:'골라서 초기화해요',x:btn('정리 실행',1),rows:[{n:'정렬 순서 초기화',x:sw(0)},{n:'프리셋 초기화',x:sw(0)},{n:'페르소나·캐릭터 연결 초기화',x:sw(0)},{n:'모듈 목록 폴더·이름 색 지우기',x:sw(0)},{n:'에셋 폴더 정보 지우기',x:sw(0)}]},
+   {c:'c5',i:'key',t:'저수준 접근',d:'확인 · 복구',rows:[{i:'box',n:'꺼진 모듈 모두 켜기',x:btn('켜기')},{i:'file',n:'pluginCustomStorage',d:'15.7MB · 기억·카드·스킬의 바탕',x:btn('보기')}]},
+   {c:'c6',i:'heart',t:'도움 주신 분들',d:'스페셜 땡스',html:()=>`<div class="chips" style="flex-wrap:wrap">${['봇빌더','페르소나 공방','유미 프로바이더','클로드 은신 테마','모드 매니저','RisuMeter','HypaPlus','cocoA(gent!)','ProtLink+','Risupot','위젯 홈'].map(n=>`<span class="chip">${n}</span>`).join('')}</div>`}
+  ]},
+ dev:{label:'개발',icon:'code',crumb:'작업실 › 개발',desc:'프로젝트 점검과 릴리즈를 돕는 개발자용 도구예요.',
+  hero:{i:'code',t:'개발 목록',d:'설정 → 개발자 모드를 켠 사람에게만 보여요.',stat:[['2','봇'],['3','모듈'],['어제','체크포인트']],cta:'체크포인트 저장'},
+  sec:[
+   {c:'c4',i:'box',t:'개발 목록',x:btn('＋ 새 봇 / 모듈'),rows:[{i:'character',n:'검은 숲의 마녀',d:'봇 · 바뀐 곳 4 · 배포 기준과 다름',t:tag('변경','o')},{i:'character',n:'항구 도시 탐정',d:'봇 · 배포 기준과 같음',t:tag('같음','g')},{i:'box',n:'Dusk 상태창',d:'모듈 · 정규식 6 · 트리거 2',t:tag('변경','o')},{i:'box',n:'날씨 로어북',d:'모듈 · 로어북 31'},{i:'box',n:'NSFW 필터',d:'모듈 · 정규식 3'}]},
+   {c:'c1',i:'flag',t:'체크포인트·배포 기준',rows:[{i:'flag',n:'어제 22:10',d:'봇 2 · 모듈 3',x:btn('되돌리기')},{i:'flag',n:'11-12 18:03',d:'배포 기준',t:tag('기준','p')},{n:'지금 상태를 배포 기준으로',x:btn('기준 정하기')}]},
+   {c:'c3',i:'download',t:'내보내기',rows:[{i:'file',n:'봇 카드 .charx'},{i:'file',n:'.risum 전체 / 모듈 .json'},{i:'file',n:'로어북·정규식·트리거 (.json)'}]},
+   {c:'c2',i:'patch',t:'패치·메모',rows:[{i:'patch',n:'파일 두 개로 패치…',d:'이전 → 이후 차이만 적용'},{i:'note',n:'메모',d:'도구 → 기록에 보여요',x:btn('쓰기')}]}
+  ]}
+};
+const ORDER=['work-home','provider','look','stealth','aibot','personabuilder','tools','dev'];
+
+/* ---------- 공통 틀 ---------- */
+const rail=(cur)=>`<div class="gl rail">${['home','brain','tools','box','sliders'].map((n,k)=>`<div class="ri ${k===2?'on':''}">${I(n)}</div>`).join('')}<div class="rsep"></div>${ORDER.slice(1).map(id=>`<div class="ri sub ${id===cur?'cur':''}" title="${TABS[id].label}">${I(TABS[id].icon)}</div>`).join('')}</div>`;
+const tabbar=()=>`<div class="tabbar">${[['home','홈'],['brain','기억'],['tools','작업실'],['box','관리'],['sliders','설정']].map((t,k)=>`<div class="${k===2?'on':''}">${I(t[0])}${t[1]}</div>`).join('')}</div>`;
+const header=(t,m)=>`<div class="head"><div><div class="crumb">${t.crumb}</div><div class="ttl">${t.label}</div>${m?'':`<div class="mut">${t.desc}</div>`}</div><span class="sp"></span>${m?'':btn('기능 찾기 ⌕')}<span class="q">?</span></div>`;
+const subchips=(cur)=>`<div class="chips">${ORDER.map(id=>`<span class="chip ${id===cur?'on':''}" data-t="${id}">${TABS[id].label}</span>`).join('')}</div>`;
+const secBody=(s,m)=>s.html?s.html(m):s.rows.map(row).join('');
+const secHead=(s)=>`<div class="sh">${ico(s.i,s.c)}<div class="rt"><h3>${s.t}</h3>${s.d?`<div class="mut">${s.d}</div>`:''}</div>${s.x||''}</div>`;
+const card=(s,m)=>`<div class="gl pad band ${s.c}">${secHead(s)}${secBody(s,m)}</div>`;
+const heroCard=(t,m,big)=>{const h=t.hero;return `<div class="gl pad band c1"><div class="hero">${big?`<div class="ico big c1">${I(h.i)}</div>`:''}<div class="rt"><div class="htt">${h.t}</div><div class="mut">${h.d}</div></div><div class="stat">${h.stat.map(s=>`<div class="st"><b>${s[0]}</b><span>${s[1]}</span></div>`).join('')}</div>${h.sw?`<div style="display:flex;align-items:center;gap:10px"><span class="rn">${h.cta}</span>${sw(1)}</div>`:`<span class="cta">${h.cta}</span>`}</div></div>`;};
+
+/* ---------- 탭별 맞춤 4안 ---------- */
+const S=(id,k)=>TABS[id].sec[k];
+const box=(c,inner,cls)=>`<div class="gl pad band ${c} ${cls||''}">${inner}</div>`;
+const plain=(inner,cls)=>`<div class="gl pad ${cls||''}">${inner}</div>`;
+const H=(i,c,t,d,x)=>`<div class="sh">${ico(i,c)}<div class="rt"><h3>${t}</h3>${d?`<div class="mut">${d}</div>`:''}</div>${x||''}</div>`;
+const stats=(a)=>`<div class="stat">${a.map(s=>`<div class="st"><b>${s[0]}</b><span>${s[1]}</span></div>`).join('')}</div>`;
+const tiles=(a,cols)=>`<div class="grid tiles ${cols||'g4'}">${a.map(t=>`<div class="tile">${ico(t[0],t[1])}<div class="rn">${t[2]}</div><div class="rd">${t[3]||''}</div>${t[4]?`<div>${t[4]}</div>`:''}</div>`).join('')}</div>`;
+const wiz=(labels,cur)=>`<div class="wiz">${labels.map((_,k)=>`<div class="${k<=cur?'on':''}"></div>`).join('')}</div><div class="wizl">${labels.map((l,k)=>`<span class="${k===cur?'on':''}">${k+1}. ${l}</span>`).join('')}</div>`;
+const navBtns=(a,b)=>`<div style="display:flex;justify-content:space-between;margin-top:14px">${btn(a)}<span class="cta">${b}</span></div>`;
+const cta=(t,blk)=>`<span class="cta" ${blk?'style="display:block"':''}>${t}</span>`;
+
+const VV={
+'work-home':[
+ {n:'런처 타일',cap:'앱 서랍처럼 큰 아이콘 타일. 각 타일 아래에 지금 상태 한 줄(켜짐·3일 전 등). 처음 온 사람도 바로 눌러 들어가요.',
+  r:m=>plain(`${H('tools','c1','작업실','눌러서 바로 열어요')}`+tiles([['network','c1','프로바이더','연결 2 · 프로필 3',tag('켜짐','g')],['palette','c3','플러그인 꾸미기','Dusk 황혼'],['mask','c4','더스크 스텔스','꺼짐',tag('꺼짐')],['sparkle','c6','AI로 봇 만들기','원고 1개 진행 중',tag('이어서','o')],['character','c6','AI로 페르소나','양식 4'],['tools','c2','도구','8개'],['sliders','c5','설정','간단 모드'],['code','c4','개발','봇 2 · 모듈 3',tag('개발자','p')]],m?'g2 keep':'g4'))},
+ {n:'확인할 것 + 바로가기',cap:'위에 “지금 손봐야 할 것”(키 실패·백업 오래됨·예산)을 먼저, 아래에 바로가기. 문제가 있을 때 찾아오는 사람에게 맞아요.',
+  r:m=>box('c5',H('flag','c5','확인할 것','3개')+[{i:'key',c:'c4',n:'Gemini 키 확인 실패',d:'번역 프로필이 이 연결을 써요',x:btn('고치기')},{i:'download',c:'c5',n:'백업한 지 3일',d:'마지막 전체 백업 11-11',x:btn('빠른 백업')},{i:'chart',c:'c1',n:'이번 달 예산 42%',d:'$4.20 / $10',x:meter(42)}].map(row).join(''))+`<div class="grid ${m?'g2 keep':'g4'}">${[['network','c1','프로바이더'],['palette','c3','꾸미기'],['mask','c4','스텔스'],['sparkle','c6','봇 만들기'],['character','c6','페르소나'],['tools','c2','도구'],['sliders','c5','설정'],['code','c4','개발']].map(t=>`<div class="gl pad" style="display:flex;align-items:center;gap:10px">${ico(t[0],t[1],1)}<b style="font-size:13.5px">${t[2]}</b></div>`).join('')}</div>`},
+ {n:'하는 일별 묶음',cap:'기능을 “만들기 / 꾸미기 / 연결 / 손보기” 네 무리로 나눠요. 이름을 몰라도 하고 싶은 일로 찾아가요.',
+  r:m=>`<div class="grid ${m?'':'g4'}">${[['c6','sparkle','만들기','새 봇·페르소나',[['sparkle','AI로 봇 만들기','원고 1 진행 중'],['character','AI로 페르소나','양식 4']]],['c3','palette','꾸미기','Dusk와 리스 모양',[['palette','플러그인 꾸미기','Dusk 황혼'],['mask','더스크 스텔스','꺼짐']]],['c1','network','연결','AI 모델과 키',[['network','프로바이더','켜짐 · $4.20'],['sliders','설정','업데이트 최신']]],['c2','tools','손보기','백업·용량·기록',[['tools','도구','8개'],['code','개발','개발자 모드']]]].map(g=>box(g[0],H(g[1],g[0],g[2],g[3])+g[4].map(x=>row({i:x[0],c:g[0],n:x[1],d:x[2],x:'<span class="mut">›</span>'})).join(''))).join('')}</div>`},
+ {n:'검색 + 최근',cap:'맨 위 큰 검색 칸(기능·설정 이름까지 찾음) + 최근 연 것 + 고정한 것. 자주 쓰는 사람이 가장 빨라요.',
+  r:m=>plain(`<div class="search">⌕ <span style="flex:1">기능이나 설정 이름 찾기 — 예: 백업, 키, 글자 크기</span><span class="kbd">/</span></div>`)+`<div class="grid ${m?'':'g2'}">${box('c1',H('history','c1','최근 연 것')+[{i:'network',n:'프로바이더',d:'5분 전 · 프로필 ‘번역’ 수정'},{i:'size',n:'용량 측정',d:'어제'},{i:'sparkle',n:'AI로 봇 만들기',d:'오늘 14:02 · 검은 숲의 마녀'}].map(row).join(''))}${box('c5',H('flag','c5','고정','길게 눌러 고정·순서 바꾸기')+[{i:'download',n:'전체 백업·복원'},{i:'book',n:'로어북 로그'},{i:'palette',n:'플러그인 꾸미기'}].map(row).join(''))}</div>`+plain(`<div class="mut" style="margin-bottom:8px">전체</div><div class="chips" style="flex-wrap:wrap">${ORDER.slice(1).map(id=>`<span class="chip">${TABS[id].label}</span>`).join('')}</div>`)}
+],
+provider:[
+ {n:'흐름도 (키 → 프로필 → 용도)',cap:'세 칸이 화살표로 이어져요. 어떤 기능이 어떤 키를 타고 나가는지 한눈에. 칸을 누르면 그 줄이 강조돼요(번역 선택 상태).',
+  r:m=>heroCard(TABS.provider,m,false)+plain(`<div class="flow"><div>${H('key','c1','연결(키)','',btn('＋'))}<div class="node">Anthropic<small>••••a1f · 0.9초</small></div><div class="node">OpenRouter<small>크레딧 $11.3</small></div><div class="node on">Google Gemini <span class="dot warn"></span><small>키 확인 실패</small></div></div><div class="arr">→</div><div>${H('layers','c3','프로필','',btn('＋'))}<div class="node">기본 대화<small>sonnet · 생각 중간 · 캐시</small></div><div class="node on">번역<small>gemini flash</small></div><div class="node">기억 요약<small>haiku · 캐시</small></div></div><div class="arr">→</div><div>${H('route','c2','용도')}<div class="node">채팅 응답</div><div class="node on">번역</div><div class="node">장기 기억·인물 위키</div><div class="node">감정·코코아</div></div></div>`)+`<div class="note">번역이 실패한 키(Gemini)를 쓰고 있어요. 사슬이 켜져 있어 OpenRouter로 넘어가요.</div>`},
+ {n:'용도 표',cap:'용도마다 한 줄: 프로필·모델·생각·캐시·이번 달 비용을 표로. 바꿀 것만 칸에서 바로 고쳐요. 설정이 익숙한 사람용.',
+  r:m=>`<div class="gl pad" style="display:flex;align-items:center;gap:12px"><b>프로바이더 사용</b>${sw(1)}<span class="sp"></span><span class="mut">이번 달</span>${meter(42)}<b>$4.20</b><span class="mut">/ $10</span></div>`+box('c2',H('route','c2','용도별 설정','칸을 눌러 바꿔요')+`<table class="mx"><tr><th>용도</th><th>프로필</th><th class="hm">모델</th><th class="hm">생각</th><th class="hm">캐시</th><th class="hm">이번 달</th></tr>${[['채팅 응답','기본 대화','claude-sonnet','중간',1,'$3.10'],['번역','번역','gemini-flash','끔',0,'$0.22'],['장기 기억','기억 요약','claude-haiku','끔',1,'$0.71'],['감정·코코아','기본 대화','claude-sonnet','중간',1,'$0.17']].map(r=>`<tr><td><b>${r[0]}</b></td><td>${val(r[1])}</td><td class="hm">${r[2]}</td><td class="hm">${r[3]}</td><td class="hm">${sw(r[4])}</td><td class="hm">${r[5]}</td></tr>`).join('')}</table>`)+`<div class="grid ${m?'':'g2'}">${card(S('provider',0),m)}${card(S('provider',3),m)}</div>`},
+ {n:'처음 설정 단계',cap:'키 넣기 → 프로필 → 용도 → 확인 네 단계 마법사. 연결이 없을 때 이 화면으로 시작하고, 다 하면 A/B 같은 보통 화면으로 바뀌어요.',
+  r:m=>plain(wiz(['키 넣기','프로필','용도 배정','확인'],1)+H('layers','c3','2. 어떤 모델을 쓸까요?','나중에 프로필을 더 만들 수 있어요')+`<div class="grid ${m?'':'g3'}" style="gap:10px">${[['빠르고 싼','haiku · 생각 끔','요약·번역에 좋아요'],['균형','sonnet · 생각 중간','대부분 여기서 시작'],['깊게','opus · 생각 많이','긴 롤플·복잡한 설정']].map((o,k)=>`<div class="opt ${k===1?'on':''}"><div class="rn">${o[0]}</div><div class="rd">${o[1]}</div><div class="mut" style="margin-top:6px">${o[2]}</div></div>`).join('')}</div>`+row({n:'프롬프트 캐시',d:'같은 앞부분을 다시 보내지 않아 싸고 빨라요',x:sw(1)})+row({n:'프로필 이름',x:val('기본 대화')})+navBtns('이전','다음: 용도 배정'))},
+ {n:'프로필 카드 + 사용량',cap:'프로필을 큰 카드로(모델·생각·캐시 스위치가 카드 안에), 오른쪽은 사용량 그래프·예산. 비용을 신경 쓰는 사람에게 맞아요.',
+  r:m=>`<div class="md"><div class="det"><div class="grid ${m?'':'g3'}">${[['기본 대화','claude-sonnet','중간',1,'채팅 · 감정'],['번역','gemini-flash','끔',0,'번역'],['기억 요약','claude-haiku','끔',1,'장기 기억']].map((p,k)=>box(['c1','c3','c2'][k],`<div class="rn" style="font-size:15px">${p[0]} ${k===0?tag('기본'):''}</div><div class="rd">${p[1]}</div>`+row({n:'생각',x:seg(['끔','중간','많이'],['끔','중간','많이'].indexOf(p[2]))})+row({n:'캐시',x:sw(p[3])})+`<div class="mut" style="margin-top:6px">쓰는 곳: ${p[4]}</div>`)).join('')}${plain(`<div style="display:grid;place-items:center;min-height:150px;color:var(--mute)">＋ 프로필 추가</div>`)}</div></div><div class="lst" style="${m?'':'width:320px'}">${box('c5',H('chart','c5','사용량','이번 달')+`<div style="display:flex;align-items:flex-end;gap:5px;height:90px;margin:8px 0">${[20,35,28,50,44,62,30,70,55,40,66,48,58,42].map(h=>`<i style="flex:1;height:${h}%;border-radius:4px 4px 0 0;background:var(--secg);opacity:.85"></i>`).join('')}</div>`+row({n:'$4.20 / $10',x:meter(42)})+row({n:'넘으면',x:seg(['알림','멈춤'],0)}))}${box('c1',H('key','c1','연결','',btn('＋'))+S('provider',0).rows.map(r=>row({...r,i:null})).join(''))}</div></div>`}
+],
+look:[
+ {n:'실시간 미리보기',cap:'왼쪽 조절, 오른쪽에 Dusk 창 축소판이 바로 바뀌어요. 바꾸는 즉시 결과를 보니 고르기 쉬워요.',
+  r:m=>`<div class="md"><div class="lst" style="${m?'':'width:420px'}">${box('c3',H('palette','c3','테마')+swatches(m?5:7))}${box('c1',S('look',1).rows.map(row).join('')+S('look',2).rows.slice(0,2).map(row).join(''))}</div><div class="det">${plain(`<div class="mut" style="margin-bottom:8px">미리보기</div><div class="prev"><div class="pr"></div><div class="pm"><div class="pc2"><b>장기 기억</b><br>정리된 기억 128 · 확인할 것 2</div><div class="pc2">인물 위키 · 하윤 · 리아</div><div class="pc2" style="flex:1">글자 15px · 줄 간격 보통 · Pretendard</div></div></div>`)}${box('c2',S('look',3).rows.map(row).join(''))}</div></div>`},
+ {n:'테마 갤러리',cap:'테마를 큰 카드(배경 빛 번짐 그대로)로 넓게. 고른 뒤 아래 줄에서 밝기·글자만 손봐요. 색 고르는 게 주목적인 사람에게.',
+  r:m=>plain(`${H('palette','c3','테마 22가지','누르면 바로 바뀌어요',`<span class="chips"><span class="chip on">전체</span><span class="chip">어두운</span><span class="chip">밝은</span></span>`)}<div class="grid ${m?'g2 keep':'g4'}">${THEMES.map((t,k)=>`<div class="mood ${k===0?'on':''}" style="background:linear-gradient(135deg,${t[1]})"><b>${t[0]}</b><span style="font-size:11.5px;opacity:.8">${k%2?'밝은 판 있음':'어둡게 · 밝게'}</span></div>`).join('')}</div>`)+plain(`<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center"><span class="rn">밝기</span>${seg(['어둡게','밝게','기기 따라'],0)}<span class="rn">글자</span>${slider(45)}<span class="sp"></span>${btn('글자·화면 더 보기 ⌄')}</div>`)},
+ {n:'접는 목록',cap:'테마·밝기·글자·화면·고급을 한 줄씩, 누르면 펼쳐요. 지금 값이 줄 오른쪽에 보여 무엇이 바뀌었는지 알기 쉬워요. 모바일에 가장 편해요.',
+  r:m=>plain([['palette','c3','테마','Dusk 황혼',1,()=>swatches(m?5:8)],['sun','c5','밝기·강조색','어둡게 · 하늘색',0],['type','c1','글자','15px · Pretendard',0],['layers','c2','화면','글래스 켜짐 · 가벼운 꺼짐',0],['sliders','c4','고급','메뉴 왼쪽 · 보통 · 100%',0]].map(a=>`<div class="acc"><div class="acch">${ico(a[0],a[1],1)}<span class="rt">${a[2]}</span><span class="mut">${a[3]}</span><span class="mut">${a[4]?'⌃':'⌄'}</span></div>${a[4]?`<div class="accb">${a[5]()}${row({n:'처음 값으로',x:btn('되돌리기')})}</div>`:''}</div>`).join(''))},
+ {n:'분위기 한 번에',cap:'“밤에 읽기·밝은 낮·가볍게·크게 보기” 같은 묶음을 누르면 테마·밝기·글자·화면이 한꺼번에 맞춰져요. 세부는 아래에서 조금만.',
+  r:m=>plain(H('sparkle','c6','분위기 고르기','한 번에 여러 값을 맞춰요')+`<div class="grid ${m?'g2 keep':'g4'}">${[['밤에 읽기','어둡게 · 은하 · 글자 15',THEMES[5][1],1],['밝은 낮','밝게 · 벚꽃 · 글자 15',THEMES[2][1]],['가볍게','흐림 끔 · 단색',THEMES[1][1]],['크게 보기','글자 18 · 높은 대비',THEMES[3][1]]].map(o=>`<div class="mood ${o[3]?'on':''}" style="background:linear-gradient(135deg,${o[2]})"><b>${o[0]}</b><span style="font-size:11.5px;opacity:.85">${o[1]}</span></div>`).join('')}</div>`)+`<div class="grid ${m?'':'g3'}">${box('c3',H('palette','c3','테마')+val('은하'))}${box('c1',H('type','c1','글자 크기')+slider(45))}${box('c5',H('sun','c5','밝기')+seg(['어둡게','밝게','자동'],0))}</div>`}
+],
+stealth:[
+ {n:'큰 미리보기 넘기기',cap:'모양 하나를 크게 보여 주고 좌우로 넘겨요. 아래 켜기 버튼 하나. 가장 단순해서 처음 쓰는 사람에게 좋아요.',
+  r:m=>plain(`<div style="text-align:center;margin-bottom:10px"><b style="font-size:17px">클로드</b> <span class="mut">· 1 / 4</span></div><div class="big-prev"><span class="nav">‹</span>${chatPrev('claude')}<span class="nav">›</span></div><div class="dots"><i class="on"></i><i></i><i></i><i></i></div><div style="display:flex;justify-content:center;gap:10px;margin-top:16px;align-items:center"><span class="dot off"></span><span class="mut">지금 꺼짐</span>${cta('이 모양으로 켜기')}</div>`)+box('c1',S('stealth',1).rows.slice(0,2).map(row).join('')+row({i:'undo',n:'원래 테마로 되돌리기',d:'켜기 전 값 백업 있음',x:btn('되돌리기')}))},
+ {n:'전·후 비교',cap:'왼쪽 지금 리스 화면, 오른쪽 바뀐 모습을 나란히. 위에서 모양 칩을 고르면 오른쪽만 바뀌어요. 무엇이 바뀌는지 걱정하는 사람에게.',
+  r:m=>plain(`<div class="chips" style="margin-bottom:12px">${['클로드','GPT','제미나이','더스크 기본'].map((t,k)=>`<span class="chip ${k===1?'on':''}">${t}</span>`).join('')}</div><div class="grid ${m?'':'g2'}"><div><div class="mut" style="margin-bottom:6px">지금</div>${chatPrev('dusk')}</div><div><div class="mut" style="margin-bottom:6px">켜면</div>${chatPrev('gpt')}</div></div><div class="note" style="margin-top:12px">켜면 리스 설정의 커스텀 CSS·채팅 HTML이 바뀌어요. 지금 값은 백업돼요.</div><div style="display:flex;justify-content:flex-end;margin-top:12px">${cta('GPT 모양으로 켜기')}</div>`)},
+ {n:'켜기 순서 체크',cap:'고르기 → 옵션 → 백업 확인 → 켜기를 체크 목록으로. 되돌릴 수 있다는 걸 단계에서 보여 줘 안심하고 켜요.',
+  r:m=>`<div class="md"><div class="det">${plain(H('mask','c4','켜기 전에','차례대로 확인해요')+[[1,'모양 고르기','클로드'],[1,'세부 옵션','입력창도 바꾸기 · 아바타 그대로'],[1,'지금 테마 백업','커스텀 CSS 3.1KB · 채팅 HTML 없음'],[0,'켜기','리스 설정에 적용']].map(c=>`<div class="check"><span class="cb ${c[0]?'on':''}">${c[0]?'✓':''}</span><div class="rt"><div class="rn">${c[1]}</div><div class="rd">${c[2]}</div></div>${c[0]?btn('바꾸기'):cta('켜기')}</div>`).join(''))}</div><div class="lst" style="${m?'':'width:360px'}">${plain(`<div class="mut" style="margin-bottom:6px">미리보기</div>`+chatPrev('claude'))}</div></div>`},
+ {n:'한 줄 스위치판',cap:'켜짐 스위치 + 모양 칩 + 옵션 스위치만 촘촘하게. 이미 써 본 사람이 빠르게 켜고 끄는 용도. 미리보기는 작게.',
+  r:m=>box('c4',`<div style="display:flex;align-items:center;gap:12px">${ico('mask','c4')}<div class="rt"><div class="rn" style="font-size:16px">더스크 스텔스</div><div class="rd">꺼짐 · 마지막 사용 클로드</div></div>${sw(0)}</div><div class="chips" style="margin:14px 0 4px">${['클로드','GPT','제미나이','더스크 기본'].map((t,k)=>`<span class="chip ${k===0?'on':''}">${t}</span>`).join('')}</div>`+S('stealth',1).rows.map(row).join('')+row({i:'undo',n:'원래 테마로 되돌리기',x:btn('되돌리기')}))+`<div style="${m?'':'max-width:420px'}">${chatPrev('claude')}</div>`}
+],
+aibot:[
+ {n:'세 단계 마법사',cap:'이름 → 시작 방식 → 제작 화면 열기. 한 화면에 한 단계만, 진행 막대로 어디인지 보여요.',
+  r:m=>plain(wiz(['봇 이름','시작 방식','제작 화면'],1)+H('sparkle','c6','어떻게 시작할까요?','「검은 숲의 마녀」')+`<div class="grid ${m?'':'g3'}" style="gap:10px">${[['plus','빈 봇','처음부터 AI와 채워요'],['copy','기존 봇 복제','캐릭터를 골라 바탕으로'],['file','봇빌더 원고','원고를 가져와 이어서']].map((o,k)=>`<div class="opt ${k===0?'on':''}">${ico(o[0],'c6',1)}<div class="rn" style="margin-top:8px">${o[1]}</div><div class="rd">${o[2]}</div></div>`).join('')}</div>`+row({n:'AI 프로필',x:val('기본 대화')})+row({n:'로어북 더스크화',x:sw(1)})+navBtns('이전','다음: 제작 화면 열기'))},
+ {n:'원고 보관함',cap:'만들던 원고가 카드로 쌓이고, 맨 앞이 ‘새로 만들기’. 여러 봇을 오가며 만드는 사람에게. 카드에 진행도 표시.',
+  r:m=>plain(H('file','c6','내 원고','5개',`<span class="chips"><span class="chip on">진행 중</span><span class="chip">완성</span></span>`)+`<div class="grid ${m?'g2 keep':'g4'}"><div class="gen" style="border-style:dashed;align-items:center;justify-content:center;color:var(--acc)">＋<b>새 봇 만들기</b></div>${[['검은 숲의 마녀','오늘 14:02',60,'#3a2b7a,#b07cff'],['항구 도시 탐정','11-11',35,'#1d2440,#5fd4ff'],['기숙사 룸메이트','11-08',100,'#ffb3cf,#ff7eb6'],['사막의 상인','11-02',15,'#ffb36b,#ff5f6d']].map(c=>`<div class="gen" style="background:linear-gradient(160deg,${c[3]})"><b>${c[0]}</b><span style="font-size:11.5px;opacity:.85">${c[1]} · ${c[2]===100?'완성':'설명·첫 메시지'}</span><span class="meter" style="width:100%"><i style="width:${c[2]}%"></i></span></div>`).join('')}</div>`)+box('c3',S('aibot',2).rows.map(row).join(''))},
+ {n:'한 줄로 시작',cap:'“어떤 봇을 원해요?” 입력칸 하나 + 예시 칩. 적고 누르면 새 봇을 만들고 제작 화면에 그 문장을 넘겨요. 가장 빠른 시작.',
+  r:m=>plain(`<div class="htt" style="margin-bottom:4px">어떤 봇을 만들까요?</div><div class="mut" style="margin-bottom:12px">한두 문장이면 돼요. 나머지는 제작 화면에서 AI와 채워요.</div><div class="prompt"><div class="fi">숲 속 오두막에 사는 무심한 마녀. 사용자를 귀찮아하지만 약초를 가르쳐 줌. 판타지, 느린 전개.</div>${cta('만들기 ✦')}</div><div class="chips" style="flex-wrap:wrap;margin-top:12px">${['판타지 모험','현대 일상','추리','학원','SF 함선','TRPG 진행자'].map(t=>`<span class="chip">${t}</span>`).join('')}</div>`)+`<div class="grid ${m?'':'g2'}">${box('c1',H('history','c1','최근 원고')+S('aibot',1).rows.slice(0,2).map(row).join(''))}${box('c3',H('route','c3','시작 방식')+row({n:'바탕',x:seg(['빈 봇','복제','원고'],0)})+row({n:'AI 프로필',x:val('기본 대화')}))}</div>`},
+ {n:'장르 틀 고르기',cap:'장르별 시작 틀(설명 구성·로어북 뼈대가 미리 들어감)을 갤러리로. 무엇을 써야 할지 막막한 사람에게.',
+  r:m=>plain(H('layers','c6','시작 틀','틀을 고르면 칸 구성이 미리 들어가요')+`<div class="grid ${m?'g2 keep':'g3'}">${[['판타지','세계관·종족·마법 로어북','#3a2b7a,#b07cff'],['현대 일상','인물 관계·장소','#ffb3cf,#ff7eb6'],['추리','사건·단서·용의자','#1d2440,#5fd4ff'],['TRPG 진행자','규칙·주사위·상태창','#2f6b4f,#9ad18b'],['SF','함선·기술·세력','#2b86c5,#3fcfa6'],['빈 틀','칸 없이 시작','#333,#555']].map((g,k)=>`<div class="gen ${k===0?'on':''}" style="background:linear-gradient(160deg,${g[2]});${k===0?'box-shadow:0 0 0 2px #fff':''}"><b>${g[0]}</b><span style="font-size:11.5px;opacity:.85">${g[1]}</span></div>`).join('')}</div>`)+plain(`<div style="display:flex;gap:10px;align-items:center">${ico('sparkle','c6',1)}<div class="fi" style="flex:1">봇 이름</div>${cta('판타지 틀로 만들기')}</div>`)}
+],
+personabuilder:[
+ {n:'세 칸 편집기',cap:'왼쪽 양식 목록, 가운데 칸 편집(칸마다 AI ⟳), 오른쪽 AI 프리셋·저장. 양식을 자주 바꾸는 사람에게. 모바일은 위아래.',
+  r:m=>`<div class="ide" style="grid-template-columns:${m?'1fr':'230px 1fr 250px'}">${box('c6',H('file','c6','양식','',btn('＋'))+`<div class="tree">${['기본 양식','NAI 태그','SOP 3단계','내 양식'].map((t,k)=>`<div class="${k===0?'on':''}">${t}</div>`).join('')}<div class="in">› 폴더: 외모</div><div class="in">› 폴더: 관계</div></div>`)}${box('c3',H('character','c3','하윤','기본 양식 · 6칸',btn('번역 같이 보기'))+S('personabuilder',1).html())}${box('c1',H('bolt','c1','AI')+row({n:'프리셋',x:val('기본')})+row({n:'번역도 받기',x:sw(0)})+`<div style="margin:10px 0">${cta('빈 칸만 채우기',1)}</div>`+row({n:'공유 코드',x:btn('복사')})+row({n:'파일 백업',x:btn('백업')}))}</div>`},
+ {n:'레버 당기기',cap:'칸이 슬롯 릴처럼 나란히, 레버를 당기면 잠그지 않은 칸만 새로 돌려요(🔒 잠금). 아이디어가 없을 때 재미있게 뽑는 방식.',
+  r:m=>plain(`<div style="display:flex;gap:14px;align-items:center"><div class="rt">${H('dice','c6','레버 당기기','잠근 칸은 그대로, 나머지만 새로 뽑아요')}<div class="reel">${[['이름','하윤',1],['나이','24'],['외모','짧은 흑발 · 눈 밑 점'],['성격','무심하지만 다정',1],['말투','짧게 끊는 반말']].map(r=>`<div class="rl ${r[2]?'lock':''}"><span class="mut">${r[0]}</span><span class="w">${r[1]}</span><span style="font-size:11.5px">${r[2]?'🔒 잠금':'잠그기'}</span></div>`).join('')}</div></div>${m?'':'<div class="lever"><div class="ball"></div><div class="stick"></div><span class="mut">당기기</span></div>'}</div>${m?`<div style="margin-top:12px">${cta('레버 당기기 (전부 돌리기)',1)}</div>`:''}<div class="chips" style="margin-top:12px"><span class="chip">양식: 기본</span><span class="chip">프리셋: 기본</span><span class="chip">릴 빼기 / 넣기</span></div>`)+box('c3',H('character','c3','배경','긴 칸은 아래에서')+`<div class="fi">항구 도시의 야간 약사. 낮에는 잠만 잔다.</div>`)},
+ {n:'완성 카드 미리보기',cap:'오른쪽에 완성된 페르소나 카드(리스에 들어갈 모습), 왼쪽에서 칸을 고치면 바로 반영. 결과물을 보며 만드는 사람에게.',
+  r:m=>`<div class="md"><div class="det">${box('c3',H('character','c3','칸 편집','기본 양식',btn('양식 ⌄'))+S('personabuilder',1).html())}</div><div class="lst" style="${m?'':'width:340px'}"><div class="pcard"><div style="display:flex;gap:14px;align-items:center"><div class="ava">하</div><div><div class="htt">하윤</div><div class="mut">24 · 야간 약사</div></div></div><div style="margin:14px 0;font-size:13px;line-height:1.7;color:var(--sub)">짧은 흑발에 왼쪽 눈 밑 점. 무심한 척하지만 정이 많고, 반말로 짧게 끊어 말한다. 항구 도시의 야간 약국을 지킨다.</div><div class="chips" style="flex-wrap:wrap">${['#무심','#다정','#밤','#항구'].map(t=>`<span class="chip">${t}</span>`).join('')}</div></div><div style="margin-top:12px;display:flex;gap:8px">${cta('페르소나로 저장')}${btn('공유 코드')}</div></div></div>`},
+ {n:'SOP 3단계',cap:'핵심 → 디테일 → 비교 세 단계로 AI가 차례로 다듬어요(애드온 SOP). 마지막 단계에서 두 버전을 나란히 보고 고름.',
+  r:m=>plain(wiz(['핵심','디테일','비교'],2)+H('layers','c6','3. 어느 쪽이 좋아요?','칸마다 골라 섞을 수 있어요')+`<div class="grid ${m?'':'g2'}">${[['A안','짧은 흑발, 무심한 반말. 밤에만 약국을 연다.'],['B안','늘 졸린 눈, 말끝을 흐림. 낮엔 항구에서 고양이 밥을 준다.']].map((o,k)=>`<div class="opt ${k===0?'on':''}"><div class="rn">${o[0]} ${k===0?tag('고름','g'):''}</div><div class="rd" style="white-space:normal;margin-top:6px">${o[1]}</div></div>`).join('')}</div>`+row({n:'NAI 태그',d:'black hair, short hair, mole under eye, pharmacist',x:btn('복사')})+navBtns('이전','A안으로 완성'))}
+],
+tools:[
+ {n:'아이콘 타일',cap:'도구 8개를 큰 타일로. 타일에 마지막 사용·상태(백업 3일 전, 용량 94MB). 아래에 설정 정리·저수준은 따로 접어 둬요.',
+  r:m=>plain(tiles([['palette','c3','플러그인 꾸미기','Dusk 황혼'],['preset','c1','프리셋','저장 4'],['image','c6','에셋 태그 고치기','열린 채팅'],['book','c2','로어북 로그','최근 응답 12'],['size','c5','용량 측정','94MB · 어제'],['info','c1','.risum 인스펙터',''],['download','c2','전체 백업·복원','3일 전',tag('3일','o')],['history','c3','기록·되돌리기','변경 23']],m?'g2 keep':'g4'))+`<div class="grid ${m?'':'g2'}">${plain(row({i:'broom',c:'c4',n:'설정 정리',d:'정렬·프리셋·연결 초기화',x:'⌄'}))}${plain(row({i:'key',c:'c5',n:'저수준 접근',d:'꺼진 모듈 켜기 · 저장소 보기',x:'⌄'}))}</div>`},
+ {n:'분류별 목록',cap:'보기 / 고치기 / 백업·되돌리기 / 정리 네 묶음. 같은 성격끼리 모여 있어 무엇을 할지 알면 찾기 쉬워요.',
+  r:m=>`<div class="grid ${m?'':'g2'}">${[['c2','eye','살펴보기',[['book','로어북 로그','응답에 들어간 로어북'],['size','용량 측정','느려지는 원인'],['info','.risum 인스펙터','모듈 파일 안']]],['c6','image','고치기',[['image','에셋 태그 고치기','틀린 이미지 태그'],['palette','플러그인 꾸미기','색·글자'],['preset','프리셋','모듈 조합']]],['c1','download','백업·되돌리기',[['download','전체 백업·복원','마지막 3일 전'],['history','기록·되돌리기','변경 23']]],['c4','broom','정리',[['broom','설정 정리','골라서 초기화'],['key','저수준 접근','꺼진 모듈 켜기']]]].map(g=>box(g[0],H(g[1],g[0],g[2])+g[3].map(x=>row({i:x[0],n:x[1],d:x[2],x:'<span class="mut">›</span>'})).join(''))).join('')}</div>`+plain(`<div class="mut">도움 주신 분들 · 봇빌더 · 페르소나 공방 · 유미 프로바이더 · 클로드 은신 테마 · RisuMeter · HypaPlus · cocoA ·  ›</div>`)},
+ {n:'이럴 땐 여기로',cap:'“리스가 느려요”, “이미지가 깨져요” 같은 상황 질문으로 도구를 안내해요. 도구 이름을 모르는 사람에게 가장 쉬워요.',
+  r:m=>plain(H('info','c5','무엇이 필요해요?','상황을 누르면 맞는 도구가 열려요')+`<div class="grid ${m?'':'g2'}" style="gap:10px">${[['size','리스가 느려요','용량 측정'],['image','채팅 이미지가 깨져요','에셋 태그 고치기'],['book','로어북이 들어갔는지 궁금해요','로어북 로그'],['history','모듈을 잘못 바꿨어요','기록·되돌리기'],['download','다른 기기로 옮기고 싶어요','전체 백업·복원'],['preset','모듈 조합을 저장하고 싶어요','프리셋'],['info','.risum 파일이 뭔지 보고 싶어요','.risum 인스펙터'],['broom','목록 순서·색이 꼬였어요','설정 정리']].map(q=>`<div class="qa">${ico(q[0],'c2',1)}<div class="rt"><div class="rn">${q[1]}</div><div class="rd">→ ${q[2]}</div></div></div>`).join('')}</div>`)},
+ {n:'검색 + 자주 쓴 순',cap:'검색 칸 + 많이 쓴 순서로 정렬된 한 줄 목록(사용 횟수 표시). 오른쪽에 빠른 백업 카드. 자주 쓰는 사람이 가장 빨라요.',
+  r:m=>`<div class="md"><div class="det">${plain(`<div class="search" style="margin-bottom:10px">⌕ <span style="flex:1">도구 찾기</span><span class="kbd">/</span></div>`+[['download','전체 백업·복원',14],['book','로어북 로그',11],['size','용량 측정',7],['history','기록·되돌리기',5],['preset','프리셋',4],['image','에셋 태그 고치기',2],['info','.risum 인스펙터',1],['palette','플러그인 꾸미기',1]].map(t=>row({i:t[0],n:t[1],x:`<span class="mut">${t[2]}회</span>`})).join(''))}</div><div class="lst" style="${m?'':'width:300px'}">${box('c2',H('download','c2','빠른 백업','3일 전')+`<div style="margin-top:8px">${cta('지금 백업',1)}</div>`)}${box('c4',H('broom','c4','설정 정리')+`<div class="mut">5개 항목</div>`)}</div></div>`}
+],
+dev:[
+ {n:'프로젝트 표',cap:'개발 봇·모듈을 표로: 종류·바뀐 곳·배포 기준과 같은지·바로 내보내기. 여러 개를 관리하는 개발자용.',
+  r:m=>plain(H('box','c4','개발 목록','봇 2 · 모듈 3',btn('＋ 새 봇 / 모듈'))+`<table class="mx"><tr><th>이름</th><th class="hm">종류</th><th>상태</th><th class="hm">바뀐 곳</th><th></th></tr>${[['검은 숲의 마녀','봇','변경',4],['항구 도시 탐정','봇','같음',0],['Dusk 상태창','모듈','변경',8],['날씨 로어북','모듈','같음',0],['NSFW 필터','모듈','같음',0]].map(r=>`<tr><td><b>${r[0]}</b></td><td class="hm">${r[1]}</td><td>${tag(r[2],r[2]==='변경'?'o':'g')}</td><td class="hm">${r[3]||'—'}</td><td style="text-align:right">${btn('내보내기')}</td></tr>`).join('')}</table>`)+`<div class="grid ${m?'':'g2'}">${card(S('dev',1),m)}${card(S('dev',3),m)}</div>`},
+ {n:'체크포인트 타임라인',cap:'저장한 체크포인트가 시간순 줄로, 각 점에서 무엇이 바뀌었는지 짧은 차이를 보여요. 되돌리기·배포 기준 정하기가 쉬워요.',
+  r:m=>`<div class="md"><div class="det">${plain(H('flag','c1','체크포인트','',cta('지금 저장'))+`<div class="tl">${[['지금','저장 안 한 변경 · 봇 1 · 모듈 1','',`<div class="diff"><div class="a">+ 정규식 ‘상태창 줄바꿈’</div><div class="d">- 트리거 ‘날씨 갱신’ 조건</div></div>`],['어제 22:10','메모: 상태창 색 수정','',''],['11-12 18:03','배포 기준','p',''],['11-10 09:41','첫 저장','','']].map(t=>`<div class="tli ${t[2]}"><div style="display:flex;gap:8px;align-items:center"><b>${t[0]}</b>${t[2]?tag('배포 기준','p'):''}<span class="sp"></span>${t[0]==='지금'?'':btn('되돌리기')}</div><div class="rd">${t[1]}</div>${t[3]}</div>`).join('')}</div>`)}</div><div class="lst" style="${m?'':'width:300px'}">${box('c4',H('box','c4','대상')+S('dev',0).rows.slice(0,3).map(r=>row({...r,i:null,d:null})).join(''))}${box('c2',row({i:'note',n:'메모',x:btn('쓰기')}))}</div></div>`},
+ {n:'파일 트리 3칸',cap:'왼쪽 봇·모듈 트리(로어북·정규식·트리거 펼침), 가운데 바뀐 내용, 오른쪽 내보내기·패치. 코드 편집기에 익숙한 사람에게.',
+  r:m=>`<div class="ide">${box('c4',H('box','c4','트리')+`<div class="tree"><div>▾ 검은 숲의 마녀</div><div class="in">로어북 31</div><div class="in on">정규식 6 ●</div><div class="in">트리거 2</div><div>▸ 항구 도시 탐정</div><div>▾ Dusk 상태창</div><div class="in">정규식 6 ●</div><div>▸ 날씨 로어북</div></div>`)}${plain(H('patch','c1','정규식 · 바뀐 곳 2','배포 기준과 비교')+`<div class="diff"><div>  find: /\\[상태\\](.*)/</div><div class="d">- replace: &lt;div&gt;$1&lt;/div&gt;</div><div class="a">+ replace: &lt;div class="st"&gt;$1&lt;/div&gt;</div><div class="a">+ flag: g</div></div>`+row({n:'이 변경 되돌리기',x:btn('되돌리기')}))}${box('c3',H('download','c3','내보내기')+[{n:'.charx'},{n:'.risum / .json'},{n:'로어북·정규식·트리거'},{n:'파일 두 개로 패치…'}].map(r=>row({...r,x:'<span class="mut">›</span>'})).join(''))}</div>`},
+ {n:'배포 점검 순서',cap:'점검 → 체크포인트 → 배포 기준 → 내보내기를 체크 목록으로. 릴리즈 전에 빠뜨리지 않게 해 줘요.',
+  r:m=>plain(H('flag','c4','배포 준비','검은 숲의 마녀',val('대상 바꾸기'))+[[1,'점검','깨진 정규식·빈 로어북 없음'],[1,'체크포인트 저장','오늘 15:20'],[0,'배포 기준으로 정하기','지금 상태를 다음 비교의 기준으로'],[0,'내보내기','.charx · 2.4MB']].map(c=>`<div class="check"><span class="cb ${c[0]?'on':''}">${c[0]?'✓':''}</span><div class="rt"><div class="rn">${c[1]}</div><div class="rd">${c[2]}</div></div>${c[0]?tag('끝','g'):btn(c[1].split(' ')[0])}</div>`).join(''))+box('c2',row({i:'note',n:'릴리즈 메모',d:'도구 → 기록에 보여요',x:btn('쓰기')}))}
+]};
+
+/* ---------- 공통 틀 그리기 ---------- */
+let cur='work-home',vk=0;
+const draw=()=>{
+ const t=TABS[cur],v=VV[cur][vk];
+ document.getElementById('tabs').innerHTML=ORDER.map(id=>`<button class="${id===cur?'on':''}" data-t="${id}">${TABS[id].label}</button>`).join('');
+ document.getElementById('vars').innerHTML=VV[cur].map((x,k)=>`<button class="${k===vk?'on':''}" data-v="${k}">${'ABCD'[k]} ${x.n}</button>`).join('');
+ document.getElementById('cap').textContent=v.cap;
+ document.getElementById('pc').innerHTML=rail(cur)+`<div class="main">${header(t,0)}${v.r(0)}<div class="foot">? 도움말 · 기능 찾기 · 처음 둘러보기 유지 · 스크롤 안 카드는 흐림 없음</div></div>`;
+ document.getElementById('mo').innerHTML=`<div class="main">${header(t,1)}${subchips(cur)}${v.r(1)}</div>${tabbar()}`;
+};
+document.addEventListener('click',e=>{const b=e.target.closest('.bar [data-t],.bar [data-v],#mo .chips [data-t]');if(!b)return;
+ if(b.dataset.t){cur=b.dataset.t;vk=0}else vk=+b.dataset.v;draw();});
+draw();
+</script>
+</body></html>

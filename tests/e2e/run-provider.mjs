@@ -12,7 +12,7 @@ const browser = await chromium.launch(), errs = [];
   await page.waitForTimeout(500);
   await page.evaluate(() => __app.ctx.go("work-home")); await page.waitForTimeout(300);
   const vis0 = (sel) => page.evaluate((s) => [...document.querySelectorAll(s)].filter((e) => e.offsetParent).length, sel);
-  ok("[꺼짐] 작업실에 프로바이더 없음 + 꾸미기가 큰 카드", (await vis0('[data-tab="provider"]')) === 0 && (await vis0('.rb-hubbig[data-tab="look"]')) === 1);
+  ok("[꺼짐] 작업실에 프로바이더 없음 + 꾸미기 줄", (await vis0('[data-tab="provider"]')) === 0 && (await vis0('.rb-wgroup [data-tab="look"]')) === 1);
   await page.evaluate(() => __app.ctx.go("provider")); await page.waitForTimeout(300);
   ok("[꺼짐] 프로바이더로 직접 가도 작업실 개요로 돌아옴", (await vis0(".rb-prov")) === 0);
   await page.evaluate(() => __app.ctx.go("tools")); await page.waitForTimeout(300);
@@ -30,7 +30,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
   const hasGo = await page.evaluate(() => !!(window.__app || window.app));
   if (!hasGo) { ok(`[${tag}] 앱 핸들`, false, "bootApp이 app을 노출하지 않음"); await page.close(); continue; }
   await go("work-home"); await page.waitForTimeout(300);
-  ok(`[${tag}] 작업실 큰 카드에 프로바이더`, (await vis('.rb-hubbig[data-tab="provider"]')) === 1);
+  ok(`[${tag}] 작업실 연결 묶음에 프로바이더`, (await vis('.rb-wgroup [data-tab="provider"]')) === 1);
   ok(`[${tag}] 작업실 목록에 꾸미기 없음`, (await vis('[data-tab="look"]')) === 0);
   await go("tools"); await page.waitForTimeout(300);
   ok(`[${tag}] 도구에 ‘플러그인 꾸미기’ 행`, (await vis("#rb-tool-look")) === 1);

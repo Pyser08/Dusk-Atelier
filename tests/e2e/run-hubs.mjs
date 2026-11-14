@@ -26,7 +26,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { w
     await nav("기억");
     ok(`[모바일] 기억 개요(2.2.0): 상태 줄 + 기능 타일 + 최근 기록, 위 칩 줄 숨김`, (await vis(".rb-mhub-stat")) === 1 && (await vis(".rb-mtile")) >= 3 && (await vis(".rb-mhub-rec")) === 1 && (await vis(".rb-morenav")) === 0, `stat ${await vis(".rb-mhub-stat")} tile ${await vis(".rb-mtile")} rec ${await vis(".rb-mhub-rec")} chip ${await vis(".rb-morenav")}`);
     await nav("작업실");
-    ok(`[모바일] 작업실 개요: 큰 카드 2 + 더 보기 3줄`, (await vis(".rb-hubbig")) === 2 && (await vis(".rb-hubrow")) === 3);
+    ok(`[모바일] 작업실 개요(2.2.0): 하는 일별 묶음 + 최근·고정`, (await vis(".rb-wgroups .rb-wgroup")) >= 3 && (await vis(".rb-wgroups .rb-hubrow")) >= 5 && (await vis(".rb-wgroup.k-recent")) === 1 && (await vis(".rb-wgroup.k-pin")) === 1);
     await nav("관리");
     ok(`[모바일] 관리 개요: 개수 표시`, /· \d+개/.test(await page.locator(".rb-hubrow", { hasText: "캐릭터" }).textContent()));
     await page.locator(".rb-hubrow", { hasText: /^모듈/ }).click(); await page.waitForTimeout(500);

@@ -35,14 +35,14 @@ export var GLASS_CSS = `
   backdrop-filter:var(--rb-glass-blur);-webkit-backdrop-filter:var(--rb-glass-blur)}
 .rb-skin-glass .rb-nav a[aria-current=page],.rb-skin-glass .rb-nav a.on{background:var(--rb-glass-2);color:var(--rb-text)}
 .rb-skin-glass .rb-tabbar{background:color-mix(in srgb,var(--rb-gbg) 70%,transparent);border-top:1px solid var(--rb-glass-line);backdrop-filter:var(--rb-glass-blur);-webkit-backdrop-filter:var(--rb-glass-blur)}
-.rb-skin-glass .rb-card{background:var(--rb-glass-bg);box-shadow:var(--rb-glass-shadow),var(--rb-glass-hi);backdrop-filter:var(--rb-glass-blur);-webkit-backdrop-filter:var(--rb-glass-blur)}
+.rb-skin-glass .rb-card{background:var(--rb-glass-bg);box-shadow:var(--rb-glass-shadow),var(--rb-glass-hi)}/* 스크롤 안 카드는 블러 없음(스크롤 깜빡임) */
 .rb-skin-glass .rb-card.bordered{border-color:var(--rb-glass-line)}
 .rb-skin-glass .rb-card .rb-card{backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;background:var(--rb-glass-2)}
 .rb-skin-glass [role=switch][aria-checked=true]{box-shadow:0 0 12px var(--rb-glow)}
 .rb-skin-glass .rb-search{background:var(--rb-glass-bg);border-color:var(--rb-glass-line)}
 /* 공통 유리 카드 클래스(다른 탭 세션에서도 씀) */
 .rb-gcard{background:var(--rb-glass-bg,var(--rb-surf));border:1px solid var(--rb-glass-line,var(--rb-line2));border-radius:var(--rb-r3);padding:18px 20px;
-  box-shadow:var(--rb-glass-shadow,var(--rb-shadow-card)),var(--rb-glass-hi,0 0 0 transparent);backdrop-filter:var(--rb-glass-blur,none);-webkit-backdrop-filter:var(--rb-glass-blur,none)}
+  box-shadow:var(--rb-glass-shadow,var(--rb-shadow-card)),var(--rb-glass-hi,0 0 0 transparent)}
 .rb-gcell{background:var(--rb-glass-2,var(--rb-surf2));border-radius:var(--rb-r2)}
 @media(max-width:760px){.rb-gcard{padding:16px}}
 /* 가벼운 화면 */
