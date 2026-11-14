@@ -35,7 +35,7 @@ export var MEMHUB_CSS = `
 @media (max-width:760px){.rb-mhub-tiles{gap:12px}.rb-hubrow.rb-mtile{flex-direction:column;gap:8px;padding:14px 14px 14px 18px}.rb-mtile .go{display:none}.rb-mhub-stat{padding:12px 16px}.rb-mhub-rec{padding:16px}}
 
 /* 2.2.0 장기 기억 B안: 상태 위 고정 + 칸 나누기, 카드 왼쪽 색띠(초록=상태, 민트=기록, 분홍=옵션, 파랑=설정) */
-.rb-mem4-wrap{max-width:1100px}
+.rb-mem4-wrap,.rb-mem3.rb-mem4-wrap{max-width:none}
 .rb-mem4{display:flex;flex-direction:column;gap:14px;min-width:0}
 .rb-mem4-tabs{display:inline-flex;align-self:flex-start;gap:2px;padding:4px;border-radius:999px;border:1px solid var(--rb-line2);background:var(--rb-card,transparent);max-width:100%;overflow-x:auto}
 .rb-mem4-tab{padding:7px 16px;border:0;border-radius:999px;background:none;color:var(--rb-sub);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}

@@ -106,10 +106,9 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     // 2.2.0: 채팅이 없어도 같은 칸 나누기(한눈에·옵션·설정). 기록 칸은 채팅이 있어야 해서 뺀다.
     const empty = emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요. 옵션·설정은 채팅 없이도 바꿀 수 있어요.",
       actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] });
-    const { tabs: tabRow, panels: panelEls } = memTabs(m, [["glance", "한눈에"], ["opt", "옵션"], ["set", "설정"]], {
+    const { tabs: tabRow, panels: panelEls } = memTabs(m, [["glance", "한눈에"], ["opt", "옵션"]], {
       glance: h("div", { class: "rb-mem4-col" }, empty),
-      opt: h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw))),
-      set: h("div", { class: "rb-mem4-col rb-mem4-set" }, memorySettings, ctx.prefs.advanced ? gHost : advFold(ctx, "memory", true)),
+      opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memorySettings)), ctx.prefs.advanced ? gHost : advFold(ctx, "memory", true)),
     });
     return replace(host, h("div", { class: "rb-mem3 rb-mem4-wrap" }, h("div", { class: "rb-mem2-main rb-mem4" }, memHead(ctx, redraw), tabRow, ...panelEls)));
   }
@@ -236,18 +235,15 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   const wide = (ctx.win?.ownerDocument?.defaultView?.innerWidth ?? 1280) >= 1000;
   const fold = (g) => h("details", { class: ["rb-card", "bordered", "rb-mem-grp", g.danger && "is-danger"], dataset: { g: g.id }, onToggle: (e) => { if (e.target.open) g.onOpen?.(); } },
     h("summary", null, h("span", { class: "t" }, h("b", null, g.title), h("small", null, g.sub)), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))), h("div", { class: "rb-mem-foldbody" }, ...g.kids));
-  let side = [memorySettings];
+  // 2.2.0: 설정 칸을 옵션 칸으로 합침. 기억 방식은 플러그인 기본(화면에서 뺌, renderModeBar는 저장소 맞추기만),
+  // 자동 기록·인물 추적은 리수폿에 있어 뺌, 저장·기록·대화에 넣기 + 세부 설정은 ‘고급: 기록·기억 넣기 세부 설정’ 하나로.
+  let advEl;
   if (ctx.prefs.advanced) {
-    const groups = advancedGroups(ctx, { cur, idx, redraw });
-    const modeLabel = modeHost.querySelector(".rb-mem-mbrow small")?.textContent?.replace(/^지금:\s*/, "") ?? "";
-    side = [
-      wide ? modeHost : null,
-      memorySettings,
-      h("section", { class: "rb-mem-folds", "aria-label": "고급" }, h("h3", { class: "rb-h3" }, "고급"),
-        !wide ? fold({ id: "mode", title: "기억 방식", sub: modeLabel, kids: [modeHost] }) : null,
-        ...groups.map(fold))
-    ];
-  } else side.push(advFold(ctx, "memory", true));
+    const gs = advancedGroups(ctx, { cur, idx, redraw }), by = Object.fromEntries(gs.map((g) => [g.id, g]));
+    const merged = { id: "store", title: "고급: 기록·기억 넣기 세부 설정", sub: "분석 시점·모델·넣는 항목·로어·추적 수준·기능 카드", kids: [...(by.store?.kids ?? []), ...(by.more?.kids ?? [])], onOpen: by.more?.onOpen };
+    advEl = h("section", { class: "rb-mem-folds", "aria-label": "고급" }, h("h3", { class: "rb-h3" }, "고급"), ...[merged, by.diag, by.danger].filter(Boolean).map(fold));
+  } else advEl = advFold(ctx, "memory", true);
+  void modeHost; void wide;
 
   // 2.2.0 B안: 상태·분석은 늘 위, 아래는 [한눈에 · 기록 · 옵션 · 설정] 칸. 리수폿·Erosync는 옵션 칸.
   const recAll = recentOf(folder, 12);
@@ -255,12 +251,11 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     h("ul", { class: "rb-mem-reclist" }, recAll.length
       ? recAll.map((r) => h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("div", null, h("b", null, r.who), " ", r.act), h("div", { class: "rb-muted" }, at(r.at))), gradeBadge(r.g)))
       : h("li", { class: "rb-muted" }, "아직 쌓인 기록이 없어요.")));
-  const TABS4 = [["glance", "한눈에"], ["rec", "기록"], ["opt", "옵션"], ["set", "설정"]];
+  const TABS4 = [["glance", "한눈에"], ["rec", "기록"], ["opt", "옵션"]];
   const panels = {
     glance: h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, shortcuts, recBox), h("div", { class: "rb-mem4-col" }, meRow, mapRow)),
     rec: h("div", { class: "rb-mem4-col" }, recFull, h("div", { class: "rb-mem4-acts" }, btn("인물 위키", { icon: "character", onClick: () => openDetail("people") }), btn("기록 보기", { icon: "list", onClick: () => openDetail("scenes") }))),
-    opt: h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw))),
-    set: h("div", { class: "rb-mem4-col rb-mem4-set" }, ...side),
+    opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memorySettings)), advEl),
   };
   const { tabs: tabRow, panels: panelEls } = memTabs(m, TABS4, panels);
   const main = h("div", { class: "rb-mem2-main rb-mem4" },
