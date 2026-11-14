@@ -34,6 +34,16 @@ export var NAV_CSS = `
 .rb-nav-group{margin-left:24px}
 .rb-nav-group a{height:38px}
 .rb-nav-group a svg{width:20px;height:20px}
+/* 2.2.0 네온 선 아이콘: 속은 옅게, 테두리·아이콘에 기능 색 빛(목업 glass-2-memory-hub2 6번). 지금 섹션은 조금 더 밝게 */
+.rb-nav .sec-memory,.rb-nav a.rb-nav-home{--k:#e98bd6}
+.rb-nav a.rb-nav-home{--k:#ffb36b}
+.rb-nav .sec-manage{--k:#6f9dff}
+.rb-nav .sec-work{--k:#3fcfa6}
+.rb-nav .ci,.rb-nav a.rb-nav-home svg{background:color-mix(in srgb,var(--k) 10%,transparent);border:1px solid color-mix(in srgb,var(--k) 60%,transparent);color:var(--k);box-shadow:0 0 8px color-mix(in srgb,var(--k) 35%,transparent);box-sizing:border-box}
+.rb-nav .ci svg{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--k) 70%,transparent))}
+.rb-nav-sec.here .ci,.rb-nav a.rb-nav-home[aria-current=page] svg{background:color-mix(in srgb,var(--k) 20%,transparent);border-color:var(--k);box-shadow:0 0 14px color-mix(in srgb,var(--k) 55%,transparent)}
+.rb-nav a.rb-nav-home[aria-current=page] svg{color:var(--k)}
+.rb-lite .rb-nav .ci,.rb-lite .rb-nav a.rb-nav-home svg{box-shadow:none}.rb-lite .rb-nav .ci svg{filter:none}
 /* 아래 한 줄 + ⋯ 메뉴 */
 .rb-nav-foot{margin-top:auto;position:relative;padding-top:10px}
 .rb-nav-mini{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 8px;border-radius:var(--rb-r2);background:var(--rb-hover);font-size:12px;color:var(--rb-mute);white-space:nowrap}

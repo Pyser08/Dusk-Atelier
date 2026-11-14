@@ -17,7 +17,7 @@ const navW = () => page.evaluate(() => Math.round(document.querySelector(".rb-na
 await page.mouse.move(700, 400);
 ok("레일: 처음엔 아이콘만(좁음)", (await navW()) < 90, String(await navW()));
 ok("‘for RisuBard’ 없음", !(await page.locator(".rb-brand").textContent()).includes("RisuBard"));
-ok("섹션 3개 · 섹션 색 아이콘", (await page.locator(".rb-nav-sec").count()) === 3 && await page.evaluate(() => getComputedStyle(document.querySelector(".rb-nav-sec.sec-memory .ci")).backgroundImage.includes("gradient")));
+ok("섹션 3개 · 섹션 색 네온 아이콘(2.2.0: 테두리·아이콘이 섹션 색)", (await page.locator(".rb-nav-sec").count()) === 3 && await page.evaluate(() => { const c = getComputedStyle(document.querySelector(".rb-nav-sec.sec-memory .ci")); return c.borderTopStyle === "solid" && c.color === "rgb(233, 139, 214)"; }));
 ok("홈에서는 섹션이 모두 접힘", (await page.locator(".rb-nav-sec[aria-expanded=true]").count()) === 0);
 await page.hover(".rb-nav"); await page.waitForTimeout(300);
 ok("올리면 펼침", (await navW()) > 200, String(await navW()));

@@ -966,6 +966,16 @@ textarea.rb-input.area{height:auto;min-height:84px;padding:10px 14px;line-height
 .rb-nav-group{margin-left:24px}
 .rb-nav-group a{height:38px}
 .rb-nav-group a svg{width:20px;height:20px}
+/* 2.2.0 네온 선 아이콘: 속은 옅게, 테두리·아이콘에 기능 색 빛(목업 glass-2-memory-hub2 6번). 지금 섹션은 조금 더 밝게 */
+.rb-nav .sec-memory,.rb-nav a.rb-nav-home{--k:#e98bd6}
+.rb-nav a.rb-nav-home{--k:#ffb36b}
+.rb-nav .sec-manage{--k:#6f9dff}
+.rb-nav .sec-work{--k:#3fcfa6}
+.rb-nav .ci,.rb-nav a.rb-nav-home svg{background:color-mix(in srgb,var(--k) 10%,transparent);border:1px solid color-mix(in srgb,var(--k) 60%,transparent);color:var(--k);box-shadow:0 0 8px color-mix(in srgb,var(--k) 35%,transparent);box-sizing:border-box}
+.rb-nav .ci svg{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--k) 70%,transparent))}
+.rb-nav-sec.here .ci,.rb-nav a.rb-nav-home[aria-current=page] svg{background:color-mix(in srgb,var(--k) 20%,transparent);border-color:var(--k);box-shadow:0 0 14px color-mix(in srgb,var(--k) 55%,transparent)}
+.rb-nav a.rb-nav-home[aria-current=page] svg{color:var(--k)}
+.rb-lite .rb-nav .ci,.rb-lite .rb-nav a.rb-nav-home svg{box-shadow:none}.rb-lite .rb-nav .ci svg{filter:none}
 /* 아래 한 줄 + ⋯ 메뉴 */
 .rb-nav-foot{margin-top:auto;position:relative;padding-top:10px}
 .rb-nav-mini{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 8px;border-radius:var(--rb-r2);background:var(--rb-hover);font-size:12px;color:var(--rb-mute);white-space:nowrap}
@@ -1100,10 +1110,12 @@ textarea.rb-input.area{height:auto;min-height:84px;padding:10px 14px;line-height
 .rb-hw .rb-htile .t{display:flex;flex-direction:column;min-width:0}
 .rb-hw .rb-htile small{color:var(--rb-mute);font-size:12px}
 .rb-skin-glass .rb-htile .ico{color:#fff}
-.rb-skin-glass .rb-htile.tone-1 .ico{background:linear-gradient(135deg,#ffb36b,#ff7a59)}
-.rb-skin-glass .rb-htile.tone-2 .ico{background:linear-gradient(135deg,#ff8ec6,#8a7bff)}
-.rb-skin-glass .rb-htile.tone-3 .ico{background:linear-gradient(135deg,#7fd4ff,#5b8cff)}
-.rb-skin-glass .rb-htile.tone-4 .ico{background:linear-gradient(135deg,#6ff0c4,#38b6a0)}
+.rb-htile.tone-1{--k:#ff8a5c}.rb-htile.tone-2{--k:#e98bd6}.rb-htile.tone-3{--k:#6f9dff}.rb-htile.tone-4{--k:#3fcfa6}
+/* 2.2.0 바로가기 아이콘: 네온 선(속 옅게 + 기능 색 테두리·아이콘 빛) */
+.rb-hw .rb-htile[class*=tone-] .ico{background:color-mix(in srgb,var(--k) 10%,transparent)!important;border:1px solid color-mix(in srgb,var(--k) 60%,transparent);color:var(--k)!important;box-shadow:0 0 10px color-mix(in srgb,var(--k) 35%,transparent)}
+.rb-hw .rb-htile[class*=tone-] .ico svg{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--k) 70%,transparent))}
+@media (hover:hover){.rb-hw .rb-htile[class*=tone-]:hover .ico{border-color:var(--k);box-shadow:0 0 16px color-mix(in srgb,var(--k) 55%,transparent)}}
+.rb-lite .rb-hw .rb-htile .ico{box-shadow:none}.rb-lite .rb-hw .rb-htile .ico svg{filter:none}
 @media (hover:hover){.rb-hgrid2:not(.editing) .rb-hw:has(.rb-htile):hover{border-color:var(--rb-sel-ring)}}
 /* 숫자 위젯 */
 .rb-hw .rb-hnum{height:100%;display:flex;flex-direction:column;justify-content:center;background:none;padding:0}

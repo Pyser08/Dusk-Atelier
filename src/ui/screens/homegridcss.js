@@ -44,10 +44,12 @@ export var HOMEGRID_CSS = `
 .rb-hw .rb-htile .t{display:flex;flex-direction:column;min-width:0}
 .rb-hw .rb-htile small{color:var(--rb-mute);font-size:12px}
 .rb-skin-glass .rb-htile .ico{color:#fff}
-.rb-skin-glass .rb-htile.tone-1 .ico{background:linear-gradient(135deg,#ffb36b,#ff7a59)}
-.rb-skin-glass .rb-htile.tone-2 .ico{background:linear-gradient(135deg,#ff8ec6,#8a7bff)}
-.rb-skin-glass .rb-htile.tone-3 .ico{background:linear-gradient(135deg,#7fd4ff,#5b8cff)}
-.rb-skin-glass .rb-htile.tone-4 .ico{background:linear-gradient(135deg,#6ff0c4,#38b6a0)}
+.rb-htile.tone-1{--k:#ff8a5c}.rb-htile.tone-2{--k:#e98bd6}.rb-htile.tone-3{--k:#6f9dff}.rb-htile.tone-4{--k:#3fcfa6}
+/* 2.2.0 바로가기 아이콘: 네온 선(속 옅게 + 기능 색 테두리·아이콘 빛) */
+.rb-hw .rb-htile[class*=tone-] .ico{background:color-mix(in srgb,var(--k) 10%,transparent)!important;border:1px solid color-mix(in srgb,var(--k) 60%,transparent);color:var(--k)!important;box-shadow:0 0 10px color-mix(in srgb,var(--k) 35%,transparent)}
+.rb-hw .rb-htile[class*=tone-] .ico svg{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--k) 70%,transparent))}
+@media (hover:hover){.rb-hw .rb-htile[class*=tone-]:hover .ico{border-color:var(--k);box-shadow:0 0 16px color-mix(in srgb,var(--k) 55%,transparent)}}
+.rb-lite .rb-hw .rb-htile .ico{box-shadow:none}.rb-lite .rb-hw .rb-htile .ico svg{filter:none}
 @media (hover:hover){.rb-hgrid2:not(.editing) .rb-hw:has(.rb-htile):hover{border-color:var(--rb-sel-ring)}}
 /* 숫자 위젯 */
 .rb-hw .rb-hnum{height:100%;display:flex;flex-direction:column;justify-content:center;background:none;padding:0}
