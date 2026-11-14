@@ -39,10 +39,10 @@ export var NAV_CSS = `
 .rb-nav a.rb-nav-home{--k:#ffb36b}
 .rb-nav .sec-manage{--k:#6f9dff}
 .rb-nav .sec-work{--k:#3fcfa6}
-.rb-nav .ci,.rb-nav a.rb-nav-home svg{background:color-mix(in srgb,var(--k) 10%,transparent);border:1px solid color-mix(in srgb,var(--k) 60%,transparent);color:var(--k);box-shadow:0 0 8px color-mix(in srgb,var(--k) 35%,transparent);box-sizing:border-box}
+.rb-nav .ci,.rb-nav a.rb-nav-home svg{background:linear-gradient(135deg,color-mix(in srgb,var(--k) 38%,transparent),color-mix(in srgb,var(--k) 14%,transparent));border:1px solid color-mix(in srgb,var(--k) 60%,transparent);color:color-mix(in srgb,var(--k) 45%,#fff);box-shadow:0 0 8px color-mix(in srgb,var(--k) 35%,transparent);box-sizing:border-box}
 .rb-nav .ci svg{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--k) 70%,transparent))}
-.rb-nav-sec.here .ci,.rb-nav a.rb-nav-home[aria-current=page] svg{background:color-mix(in srgb,var(--k) 20%,transparent);border-color:var(--k);box-shadow:0 0 14px color-mix(in srgb,var(--k) 55%,transparent)}
-.rb-nav a.rb-nav-home[aria-current=page] svg{color:var(--k)}
+.rb-nav-sec.here .ci,.rb-nav a.rb-nav-home[aria-current=page] svg{background:linear-gradient(135deg,color-mix(in srgb,var(--k) 55%,transparent),color-mix(in srgb,var(--k) 25%,transparent));border-color:var(--k);box-shadow:0 0 14px color-mix(in srgb,var(--k) 55%,transparent)}
+.rb-nav a.rb-nav-home[aria-current=page] svg{color:color-mix(in srgb,var(--k) 45%,#fff)}
 .rb-lite .rb-nav .ci,.rb-lite .rb-nav a.rb-nav-home svg{box-shadow:none}.rb-lite .rb-nav .ci svg{filter:none}
 /* 아래 한 줄 + ⋯ 메뉴 */
 .rb-nav-foot{margin-top:auto;position:relative;padding-top:10px}
