@@ -39,10 +39,10 @@ export var NAV_CSS = `
 .rb-nav a.rb-nav-home{--k:#ffb36b}
 .rb-nav .sec-manage{--k:#6f9dff}
 .rb-nav .sec-work{--k:#3fcfa6}
-.rb-nav .ci,.rb-nav a.rb-nav-home svg{background:linear-gradient(135deg,color-mix(in srgb,var(--k) 38%,transparent),color-mix(in srgb,var(--k) 14%,transparent));border:1px solid color-mix(in srgb,var(--k) 60%,transparent);color:color-mix(in srgb,var(--k) 45%,#fff);box-shadow:0 0 8px color-mix(in srgb,var(--k) 35%,transparent);box-sizing:border-box}
+.rb-nav .ci,.rb-nav a.rb-nav-home svg{background:linear-gradient(135deg,color-mix(in srgb,var(--k) 60%,transparent),color-mix(in srgb,var(--k) 30%,transparent));border:1px solid color-mix(in srgb,var(--k) 60%,transparent);color:color-mix(in srgb,var(--k) 25%,#fff);box-shadow:0 0 8px color-mix(in srgb,var(--k) 35%,transparent);box-sizing:border-box}
 .rb-nav .ci svg{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--k) 70%,transparent))}
-.rb-nav-sec.here .ci,.rb-nav a.rb-nav-home[aria-current=page] svg{background:linear-gradient(135deg,color-mix(in srgb,var(--k) 55%,transparent),color-mix(in srgb,var(--k) 25%,transparent));border-color:var(--k);box-shadow:0 0 14px color-mix(in srgb,var(--k) 55%,transparent)}
-.rb-nav a.rb-nav-home[aria-current=page] svg{color:color-mix(in srgb,var(--k) 45%,#fff)}
+.rb-nav-sec.here .ci,.rb-nav a.rb-nav-home[aria-current=page] svg{background:linear-gradient(135deg,color-mix(in srgb,var(--k) 78%,transparent),color-mix(in srgb,var(--k) 45%,transparent));border-color:var(--k);box-shadow:0 0 14px color-mix(in srgb,var(--k) 55%,transparent)}
+.rb-nav a.rb-nav-home[aria-current=page] svg{color:color-mix(in srgb,var(--k) 25%,#fff)}
 .rb-lite .rb-nav .ci,.rb-lite .rb-nav a.rb-nav-home svg{box-shadow:none}.rb-lite .rb-nav .ci svg{filter:none}
 /* 아래 한 줄 + ⋯ 메뉴 */
 .rb-nav-foot{margin-top:auto;position:relative;padding-top:10px}
@@ -101,16 +101,20 @@ export var NAV_CSS = `
 .rb-skin-glass .rb-morenav .rb-chip[aria-pressed=true] svg{color:var(--sec-k,var(--rb-acc-text))}
 /* 모바일 아래 탭바: 섹션 색 동그라미, 지금 탭은 그 색으로 빛남 */
 .rb-tabbar .sec-home{--k:#ffb36b;--k-grad:linear-gradient(135deg,#ffd27a,#ff9a5c)}
-.rb-tabbar .sec-memory{--k:#c48bff;--k-grad:linear-gradient(135deg,#ff8ec6,#8a7bff)}
-.rb-tabbar .sec-manage{--k:#6aaeff;--k-grad:linear-gradient(135deg,#7fd4ff,#5b8cff)}
-.rb-tabbar .sec-work{--k:#4fd6b0;--k-grad:linear-gradient(135deg,#6ff0c4,#38b6a0)}
+.rb-tabbar .sec-memory{--k:#e98bd6;--k-grad:linear-gradient(135deg,#ff8ec6,#8a7bff)}
+.rb-tabbar .sec-manage{--k:#6f9dff;--k-grad:linear-gradient(135deg,#7fd4ff,#5b8cff)}
+.rb-tabbar .sec-work{--k:#3fcfa6;--k-grad:linear-gradient(135deg,#6ff0c4,#38b6a0)}
 @media (max-width:760px){
   .rb-tabbar{height:72px;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
   .rb-tabbar a{gap:3px;border-radius:16px;margin:0 3px}
   .rb-tabbar a .ci{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;color:var(--rb-sub);background:var(--rb-hover);transition:background .15s,box-shadow .15s,color .15s}
   .rb-tabbar a[aria-current=page]{color:var(--rb-text)}
   .rb-tabbar a[aria-current=page]::before{display:none}
-  .rb-tabbar a[aria-current=page] .ci{color:#fff;background:var(--k-grad);box-shadow:0 0 14px color-mix(in srgb,var(--k) 55%,transparent)}
+  /* 2.2.0 네온 아이콘: 사이드바와 같은 모양, 지금 탭은 더 밝게 */
+  .rb-tabbar a .ci{background:linear-gradient(135deg,color-mix(in srgb,var(--k) 60%,transparent),color-mix(in srgb,var(--k) 30%,transparent));border:1px solid color-mix(in srgb,var(--k) 60%,transparent);color:color-mix(in srgb,var(--k) 25%,#fff);box-shadow:0 0 8px color-mix(in srgb,var(--k) 35%,transparent);box-sizing:border-box}
+  .rb-tabbar a .ci svg{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--k) 70%,transparent))}
+  .rb-tabbar a[aria-current=page] .ci{background:linear-gradient(135deg,color-mix(in srgb,var(--k) 78%,transparent),color-mix(in srgb,var(--k) 45%,transparent));border-color:var(--k);box-shadow:0 0 14px color-mix(in srgb,var(--k) 55%,transparent)}
+  .rb-lite .rb-tabbar a .ci svg{filter:none}.rb-lite .rb-tabbar a .ci{box-shadow:none}
   .rb-lite .rb-tabbar a[aria-current=page] .ci{box-shadow:none}
   .rb-skin-glass .rb-tabbar{margin:0 10px 10px;border:1px solid var(--rb-glass-line);border-radius:22px;background:color-mix(in srgb,var(--rb-gbg) 62%,transparent);box-shadow:var(--rb-glass-shadow),var(--rb-glass-hi)}
 }

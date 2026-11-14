@@ -14,7 +14,7 @@ export var MEMHUB_CSS = `
 .rb-hubrow.rb-mtile{position:relative;align-items:flex-start;gap:12px;padding:16px 18px 16px 22px;border:1px solid var(--rb-line2);border-radius:16px;background:var(--rb-card,transparent);overflow:hidden;transition:border-color .15s,box-shadow .15s}
 .rb-hubrow.rb-mtile:last-child{border-bottom:1px solid var(--rb-line2)}
 .rb-mtile::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--kg);box-shadow:0 0 10px var(--k)}
-.rb-hubrow.rb-mtile .ico{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--k) 38%,transparent),color-mix(in srgb,var(--k) 14%,transparent));border:1px solid color-mix(in srgb,var(--k) 55%,transparent);color:color-mix(in srgb,var(--k) 45%,#fff);box-shadow:0 0 8px color-mix(in srgb,var(--k) 35%,transparent)}
+.rb-hubrow.rb-mtile .ico{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--k) 60%,transparent),color-mix(in srgb,var(--k) 30%,transparent));border:1px solid color-mix(in srgb,var(--k) 55%,transparent);color:color-mix(in srgb,var(--k) 25%,#fff);box-shadow:0 0 8px color-mix(in srgb,var(--k) 35%,transparent)}
 .rb-mtile .t b{font-size:15px}
 .rb-mtile .chip{align-self:flex-start;margin:2px 0;padding:2px 10px;border-radius:999px;background:var(--rb-hover);font-size:12px;color:var(--rb-sub)}
 .rb-mtile .go{align-self:center}
@@ -49,7 +49,7 @@ export var MEMHUB_CSS = `
 .rb-mem4 .rb-mem-statuscard::before,.rb-mem4 .rb-mem-recentbox::before,.rb-mem4 .rb-mem-options::before,.rb-mem4 .rb-mem-integrated-settings::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--k);box-shadow:0 0 10px var(--k)}
 .rb-mem4 .rb-mem-statuscard{--k:#5fe0a8}.rb-mem4 .rb-mem-recentbox{--k:#3fcfa6}.rb-mem4 .rb-mem-options{--k:#e98bd6}.rb-mem4 .rb-mem-integrated-settings{--k:#6f9dff}
 /* 아이콘: 둥근 네모 + 기능 색 얇은 테두리·옅은 빛(목업 6번). 바로가기·한 줄 카드 공통 */
-.rb-mem4 .rb-mem-short .rb-htile .ico,.rb-mem4 .rb-me-entry .rb-mem-av.rb-me-av{--k:#c48bff;width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--k) 38%,transparent),color-mix(in srgb,var(--k) 14%,transparent))!important;border:1px solid color-mix(in srgb,var(--k) 55%,transparent);color:color-mix(in srgb,var(--k) 45%,#fff)!important;box-shadow:0 0 8px color-mix(in srgb,var(--k) 35%,transparent)}
+.rb-mem4 .rb-mem-short .rb-htile .ico,.rb-mem4 .rb-me-entry .rb-mem-av.rb-me-av{--k:#c48bff;width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--k) 60%,transparent),color-mix(in srgb,var(--k) 30%,transparent))!important;border:1px solid color-mix(in srgb,var(--k) 55%,transparent);color:color-mix(in srgb,var(--k) 25%,#fff)!important;box-shadow:0 0 8px color-mix(in srgb,var(--k) 35%,transparent)}
 .rb-mem4 #rb-mem-go-wiki .ico,.rb-mem4 #rb-mem-go-me .rb-me-av{--k:#e98bd6}
 .rb-mem4 #rb-mem-go-detail .ico,.rb-mem4 #rb-mem-go-relmap .rb-me-av{--k:#6f9dff}
 .rb-mem4 #rb-mem-go-cards .ico,.rb-mem4 #rb-mem-go-erosync .rb-me-av{--k:#ff8a5c}
