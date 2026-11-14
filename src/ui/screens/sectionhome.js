@@ -4,9 +4,8 @@ import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
 import { statusCard } from '../kit.js';
 import { TABS, SECTION_NAMES, tabHidden } from '../tabs.js';
-import { usageOf } from '../../engine/memoryusage.js';
+import { usageOf, recentOf } from '../../engine/memoryusage.js';
 import { dbRead } from '../../data/dbcache.js';
-import { recentOf } from './memory/mhome.js';
 
 // 목록 줄의 한 줄 요약 (개수는 읽을 수 있을 때만 붙인다)
 var LINE = {

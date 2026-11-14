@@ -26,3 +26,10 @@ export function injectLine(last, hhmm, reasonText) {
   if (last.injected) return `마지막 요청 ${hhmm} · 기억 ${n}건을 넣었어요`;
   return `마지막 요청 ${hhmm} · 넣지 않았어요${reasonText ? ` (${reasonText})` : ""}`;
 }
+
+// 최근 기록 n건(인물 이름·행동·턴·등급), 시각 역순. 기억 화면·기억 개요가 같이 쓴다.
+export function recentOf(folder, n = 3) {
+  const rows = [];
+  for (const p of Object.values(folder?.people ?? {})) for (const r of p.records ?? []) if (!r.orphan) rows.push({ who: p.name, ms: r.at_ms ?? 0, at: r.at, act: r.act, g: r.g });
+  return rows.sort((a, b) => b.ms - a.ms).slice(0, n);
+}

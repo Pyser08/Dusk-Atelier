@@ -5,7 +5,7 @@ import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { advFold, btn, confirmDialog, emptyState, note, openMenu, pageHead, progressBar, statusCard, switchEl, setSwitch } from "../../kit.js";
 import { injectReasonText } from "../../../engine/memoryinject.js";
-import { USAGE_KINDS, injectLine, usageOf } from "../../../engine/memoryusage.js";
+import { USAGE_KINDS, injectLine, usageOf, recentOf } from "../../../engine/memoryusage.js";
 import { mem, fail, gradeBadge, at } from "./common.js";
 import { renderModeBar } from "./modebar.js";
 import { advancedGroups } from "./madv.js";
@@ -14,12 +14,6 @@ import { openEmbedModal } from "./embedmodal.js";
 import { maybeAskBardWiki } from "./modebar.js";
 
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
-
-export function recentOf(folder, n = 3) {
-  const rows = [];
-  for (const p of Object.values(folder?.people ?? {})) for (const r of p.records ?? []) if (!r.orphan) rows.push({ who: p.name, ms: r.at_ms ?? 0, at: r.at, act: r.act, g: r.g });
-  return rows.sort((a, b) => b.ms - a.ms).slice(0, n);
-}
 
 export function usageCard(u) {
   if (!u.total) return h("section", { class: "rb-card rb-mem-usage" }, h("b", null, "저장된 기록"), h("p", { class: "rb-muted" }, "아직 쌓인 기록이 없어요."));
