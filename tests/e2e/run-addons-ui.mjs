@@ -4,7 +4,7 @@ import { manifestWithHello } from "./hello-fixture.mjs";
 import fs from "node:fs";
 import { build } from "/opt/npm-tools/node_modules/esbuild/lib/main.js";
 const { chromium } = createRequire("/opt/npm-tools/node_modules/")("playwright");
-const r = await build({ entryPoints: ["tests/e2e/app.entry.js"], bundle: true, write: false, format: "iife", platform: "browser", logLevel: "error", define: { __VERSION__: '"2.0.0"', __CHANGELOG__: '""' }, alias: { fflate: process.cwd() + "/src/vendor/fflate.js" }, loader: { ".json": "json" } });
+const r = await build({ entryPoints: ["tests/e2e/app.entry.js"], bundle: true, write: false, format: "iife", platform: "browser", logLevel: "error", define: { __VERSION__: '"2.2.0"', __CHANGELOG__: '""' }, alias: { fflate: process.cwd() + "/src/vendor/fflate.js" }, loader: { ".json": "json" } });
 const manifest = manifestWithHello();
 const files = { manifest, ...Object.fromEntries(JSON.parse(manifest).addons.map((a) => [a.url, fs.readFileSync(`addons/dist/${a.id}.js`, "utf8")])) };
 const out = [], ok = (n, c, x = "") => { out.push(c); console.log((c ? "✔ " : "✘ ") + n + (c ? "" : "  → " + x)); };
