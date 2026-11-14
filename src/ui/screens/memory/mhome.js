@@ -102,7 +102,12 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     const idx0 = await M.store.getIndex();
     const { memorySettings, memOptions } = await settingsCards(ctx, M, idx0, redraw);
     const gHost = h("div");
-    if (ctx.prefs.advanced) await renderGlobalSettings(ctx, gHost, { redraw, panel: true }).catch(() => {});
+    if (ctx.prefs.advanced) {
+      const body = h("div");
+      await renderGlobalSettings(ctx, body, { redraw, bare: true }).catch(() => {});
+      gHost.append(h("section", { class: "rb-mem-folds", "aria-label": "고급" }, h("h3", { class: "rb-h3" }, "고급"),
+        h("details", { class: ["rb-card", "bordered", "rb-mem-grp"], dataset: { g: "store" } }, h("summary", null, h("span", { class: "t" }, h("b", null, "고급: 기록·기억 넣기 세부 설정"), h("small", null, "저장소·분석·넣기·임베딩·가져오기")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))), h("div", { class: "rb-mem-foldbody" }, body))));
+    }
     // 2.2.0: 채팅이 없어도 같은 칸 나누기(한눈에·옵션·설정). 기록 칸은 채팅이 있어야 해서 뺀다.
     const empty = emptyState({ icon: "brain", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 기억을 보여 줘요. 옵션·설정은 채팅 없이도 바꿀 수 있어요.",
       actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] });

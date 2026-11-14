@@ -35,7 +35,7 @@ function recordBox(M) {
 }
 
 // ---- 전체 설정: 기억 탭 메인 화면(봇 목록 위)에 접이식으로 둔다. 모든 봇에 공통 적용.
-export async function renderGlobalSettings(ctx, host, { redraw, panel = false }) {
+export async function renderGlobalSettings(ctx, host, { redraw, panel = false, bare = false }) {
   const m = mem(ctx), M = ctx.memory, idx = await M.store.getIndex();
   const backend = M.backend(idx.settings), caps = M.capabilities(backend.id);
   const { S, save, num, sw, section } = builders(ctx, idx, redraw);
@@ -101,6 +101,11 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
   const tools = h("div", { class: "rb-mem-tools" });
   const body = h("div", { class: "rb-mem-foldbody" }, h("div", { class: "rb-mem-modeline" }, h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), h("span", { class: "rb-muted" }, backend.reason)), tools, flowHost, shareHost, adv);
   tools.append(searchBox(body), btn("설정 변경 이력", { size: "sm", onClick: () => openSettingsHistory(ctx, { apply: () => M.flow?.apply?.(), redraw }).catch(fail(ctx)) }));
+  if (bare) {
+    // 2.2.0 장기 기억 옵션 칸: 설정 찾기·모드 표시·변경 이력·리수폿 안내·프리셋 공유 없이 ‘기록·기억 넣기 세부 설정’ 내용만
+    loadHeavy();
+    return replace(host, h("div", { class: "rb-mem-advbody" }, ...[...adv.children].filter((e) => e.tagName !== "SUMMARY")));
+  }
   if (panel) {
     // 넓은 화면: 설정을 오른쪽(가운데) 칸에 크게 펼친다.
     loadHeavy();

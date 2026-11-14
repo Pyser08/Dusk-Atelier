@@ -81,6 +81,7 @@ window.bootApp = async (seed, opts = {}) => {
   if (!opts.onboard) { const ui = JSON.parse(seed["rbm:ui:v1"] ?? "{}"); ui.onboardDone ??= true; ui.onboardVer ??= 99; seed = { ...seed, "rbm:ui:v1": JSON.stringify(ui) }; }
   const api = fakeApi(seed, !!opts.story, !!opts.mods);
   delete api.store.__bard;
+  if (opts.noChat) { api.getCurrentCharacterIndex = async () => -1; api.getCurrentChatIndex = async () => -1; }   // 열린 채팅 없음(미리보기·시험)
   const errors = (window.__errors = []);
   window.addEventListener("error", (e) => errors.push(e.message));
   window.addEventListener("unhandledrejection", (e) => errors.push(String(e.reason?.message ?? e.reason)));

@@ -1145,6 +1145,11 @@ textarea.rb-input.area{height:auto;min-height:84px;padding:10px 14px;line-height
   .rb-hfocus .rb-hhead .t{align-items:flex-start}
   .rb-hedit{position:absolute;top:2px;right:0;order:0;align-self:auto;padding:4px 10px;font-size:12px}
   .rb-hw{padding:12px}
+  /* 바로가기 4칸: 위젯 여백은 버튼이 맡고 안쪽 스크롤이 생기지 않게(아이콘 36px) */
+  .rb-hw:is([data-w=imp],[data-w=mem],[data-w=man],[data-w=wrk]){padding:0;overflow:hidden}
+  .rb-hw[data-size="1x1"] .rb-htile{padding:6px;gap:5px;box-sizing:border-box;min-height:0}
+  .rb-hw[data-size="1x1"] .rb-htile .ico{width:36px;height:36px;border-radius:11px}
+  .rb-hw[data-size="1x1"] .rb-htile b{font-size:13px}
   .rb-hw .rb-hnum b{font-size:24px}
 }
 
