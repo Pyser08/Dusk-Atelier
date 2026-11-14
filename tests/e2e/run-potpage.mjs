@@ -22,9 +22,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] ‘이 채팅에서 사용’ 문구 없음`, !/이 채팅에서 사용/.test(await page.locator("#rb-mem-pot").textContent()));
   const tab = async (n) => { await page.locator("#rb-mem-pot .rb-seg button", { hasText: n }).click(); await page.waitForTimeout(900); };
   await tab("설정");
-  ok(`[${tag}] 설정 탭: 추적 수준·AI 모델`, /무엇을 기억할까요/.test(await page.locator(".rb-pot-pane").textContent()), (await page.locator(".rb-pot-pane").textContent()).slice(0, 120));
+  ok(`[${tag}] 설정 탭: 추적 수준(AI 모델은 고급 탭)`, /무엇을 기억할까요/.test(await page.locator(".rb-pot-pane").textContent()), (await page.locator(".rb-pot-pane").textContent()).slice(0, 120));
   await tab("고급");
-  ok(`[${tag}] 고급 탭: 인물 추적 + 저장·되돌리기(2.2.0 합침)`, /새 인물 자동 추적/.test(await page.locator(".rb-pot-pane").textContent()) && /되돌리기/.test(await page.locator(".rb-pot-pane").textContent()));
+  ok(`[${tag}] 고급 탭: 인물 추적 + 저장·되돌리기(2.2.0 합침)`, /AI 모델/.test(await page.locator(".rb-pot-pane .rb-card > h3").first().textContent()) && /새 인물 자동 추적/.test(await page.locator(".rb-pot-pane").textContent()) && /되돌리기/.test(await page.locator(".rb-pot-pane").textContent()));
   await page.locator("#rb-mem-pot .rb-phead [aria-label='장기 기억으로']").first().click(); await page.waitForTimeout(700);
   ok(`[${tag}] 장기 기억으로 돌아가기`, (await page.locator("#rb-mem-go-pot").count()) === 1);
   // 열린 채팅이 없을 때도 리수폿 화면이 열려야 한다(예전: "a.nodes is not iterable")

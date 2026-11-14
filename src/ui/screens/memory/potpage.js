@@ -22,7 +22,7 @@ export async function renderMemoryPot(ctx, host, { redraw }) {
     h("h3", null, "인물 위키 (자동 기록)"),   // 2.2.0: 켜기 스위치는 뺌(인물 위키는 늘 쓰는 기능 — 사용자)
     stateBox,
     h("p", { class: "rb-muted", style: "white-space:normal;margin:0" }, "응답이 끝날 때마다 등장한 인물의 성격·관계·최근 일을 인물별 위키 문서로 정리해 두고, 다음 응답에서 관련된 인물만 골라 넣어요. 무엇을 얼마나 자세히 기억할지는 ‘설정’ 탭에서 정해요."),
-    h("p", { class: "rb-muted", style: "white-space:normal;margin:0" }, "AI 호출: 응답마다 정리용으로 1~3번 더 들어가요. ‘설정’ 탭에서 쓸 모델을 고를 수 있어요."));
+    h("p", { class: "rb-muted", style: "white-space:normal;margin:0" }, "AI 호출: 응답마다 정리용으로 1~3번 더 들어가요. ‘고급’ 탭에서 쓸 모델을 고를 수 있어요."));
   const seg = segmented(POT_TABS, tab, (v) => { m.potTab = v; redraw(); }, "인물 위키 항목");
   const tabs = h("div", { style: "overflow-x:auto;padding-bottom:2px", id: "rb-pot-tabs" }, seg);
   const pane = h("div", { class: "rb-pot-pane", style: "display:grid;gap:12px", "data-pot-tab": tab }, loading("불러오는 중", { rows: 3 }));
@@ -39,8 +39,8 @@ export async function renderMemoryPot(ctx, host, { redraw }) {
     h("ul", { class: "rb-muted", style: "white-space:normal;padding-left:18px;margin:0" },
       h("li", null, "인물 위키: 인물마다 쌓인 문서 · 직접 고치기 · AI로 빈칸 채우기·요약 정리"),
       h("li", null, "인물 관계도: 위키의 관계를 선으로 · 가운데가 나"),
-      h("li", null, "설정 탭: 무엇을 얼마나 자세히 기억할지 · 쓸 AI 모델"),
-      h("li", null, "고급 탭: 세부 기능(추가 프롬프트·모델 세부·실행 기록) · 새 인물 자동 추적 · 저장 위치 · 되돌리기")));
+      h("li", null, "설정 탭: 무엇을 얼마나 자세히 기억할지 · 기억 방식"),
+      h("li", null, "고급 탭: AI 모델 · 세부 기능(추가 프롬프트·실행 기록) · 새 인물 자동 추적 · 저장 위치 · 되돌리기")));
   if (tab === "home") return replace(pane, ...(ov.nodes ?? []), guide);
   // 설정(무엇을 기억할지·AI 모델 등)은 전체 설정이라 채팅이 없어도 바꾼다
   if (tab === "settings") {

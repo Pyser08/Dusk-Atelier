@@ -1,4 +1,4 @@
-// 장기 기억 → Erosync 화면: 위에 상태·켜기, 아래에 탭(개요·수위·동작·분석·프롬프트·비하인드·데이터).
+// 장기 기억 → NSFW 설정(Erosync) 화면: 위에 상태·켜기, 아래에 탭 3개(2.2.0: 개요 · 장면·수위 · 분석·관리).
 // 인물 값은 인물 위키의 NSFW 탭에서 보고 고친다.
 import { pickLoreEntries } from "./erosyncpick.js";
 import { h, replace } from "../../dom.js";
@@ -17,7 +17,9 @@ import { analysisLine } from "./erosynceditor.js";
 import { clearErosyncFlow } from "./memoryfileui.js";
 import { scanOriginalErosync } from "../../../data/erosyncmigrate.js";
 
-export const TABS = [["home", "개요"], ["safety", "수위"], ["act", "동작"], ["ana", "분석"], ["review", "검토"], ["prompt", "프롬프트"], ["behind", "비하인드"], ["data", "데이터"]];
+// 2.2.0: 수위·동작·비하인드 → ‘장면·수위’, 분석·검토·프롬프트·데이터 → ‘분석·관리’(예전 탭 값은 새 탭으로 이어 줌)
+export const TABS = [["home", "개요"], ["scene", "장면·수위"], ["manage", "분석·관리"]];
+const OLD_TAB = { safety: "scene", act: "scene", behind: "scene", ana: "manage", review: "manage", prompt: "manage", data: "manage" };
 export const scanLine = (s) => !s?.found ? "" : `원래 Erosync에서 쓰던 기록을 찾았어요 — 인물 프로필 ${s.profiles}개${s.canListSessions ? ` · 채팅 기록 ${s.sessions}개` : ""}${s.botSettings ? ` · 봇별 설정 ${s.botSettings}개` : ""}. 같은 저장 공간을 쓰니 따로 옮길 필요 없이 켜면 그대로 이어져요. 원래 플러그인은 끄고 쓰세요.`;
 const p = (t, id) => h("p", { class: "rb-muted", style: "white-space:normal;margin:0", id }, t);
 
@@ -26,6 +28,7 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
   const back = { label: "장기 기억으로", onClick: () => { m.page = "home"; redraw(); } };
   await er?.loadGuard?.().catch(() => {});
   const scan = await scanOriginalErosync(ctx.api).catch(() => null);
+  if (OLD_TAB[m.eroTab]) m.eroTab = OLD_TAB[m.eroTab];
   const tab = TABS.some(([k]) => k === m.eroTab) ? m.eroTab : "home";
   const live = !!(er?.on() && er?.isRunning());
   const paneHost = h("div", { class: "rb-ero-pane", style: "display:grid;gap:12px" });
@@ -52,17 +55,14 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
       h("li", null, "인물 관계도 → ‘Erosync 목표·경쟁만 보기’: 목표 화살표와 경쟁선")));
   const panes = {
     home: () => [homeExtra()],
-    safety: () => [erosyncLevelCard(ctx), typeof er?.setGuard === "function" ? erosyncGuardCard(ctx) : null, typeof er?.presets === "function" ? erosyncPresetCard(ctx, redraw) : null],
-    act: () => [erosyncConfigCard(ctx, "act"), typeof er?.undoScene === "function" ? erosyncUndoCard(ctx) : null],
-    ana: () => [analysisCard(), erosyncConfigCard(ctx, "ana")],
-    review: () => [typeof er?.review === "function" ? erosyncReviewCard(ctx) : null],
-    prompt: () => [erosyncPromptsCard(ctx)],
-    behind: () => [erosyncBehindCard(ctx)],
-    data: () => [dataCard()]
+    // 장면·수위: 얼마나(수위·집착 방지·프리셋) → 어떻게 움직일지(동작·되돌리기) → 뒤에서 남는 기록(비하인드)
+    scene: () => [erosyncLevelCard(ctx), typeof er?.setGuard === "function" ? erosyncGuardCard(ctx) : null, typeof er?.presets === "function" ? erosyncPresetCard(ctx, redraw) : null,
+      erosyncConfigCard(ctx, "act"), typeof er?.undoScene === "function" ? erosyncUndoCard(ctx) : null, typeof er?.behind === "function" ? erosyncBehindCard(ctx) : null],
+    // 분석·관리: 인물 분석(분석 설정) → 결과 검토 → 프롬프트 → 저장된 값
+    manage: () => [analysisCard(), erosyncConfigCard(ctx, "ana"), typeof er?.review === "function" ? erosyncReviewCard(ctx) : null, erosyncPromptsCard(ctx), dataCard()]
   };
   const show = (k) => { m.eroTab = k; replace(paneHost, ...(panes[k]?.() ?? []).filter(Boolean)); };
   const seg = segmented(TABS, tab, show, "Erosync 항목");
-  seg.style.minWidth = "520px";   // 좁은 화면에서는 줄이 옆으로 밀리고 글자는 한 줄로 유지
   const tabs = h("div", { style: "overflow-x:auto;padding-bottom:2px", id: "rb-erosync-tabs" }, seg);
   const hero = erosyncSection(ctx, () => {});
   replace(host, h("div", { class: "rb-me rb-ero-page", style: "display:grid;gap:12px" },
