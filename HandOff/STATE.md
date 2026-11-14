@@ -1355,3 +1355,4 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - 인물 위키 설정 화면(potpage): 화면 글자 ‘리수폿’ → ‘인물 위키’(pot.js·autotrackingbox·trackui·writerui·conflictui 포함, 주석 제외). **켜기 스위치 없앰 — 열 때 꺼져 있으면 setPotAll(true)로 켬**. 칸 = 개요·설정·고급(고급 = 예전 자동 기록 + 고급 합침). NSFW 설정 화면 머리 ‘NSFW 설정’.
 - 두 화면 라이트바 디자인(memhubcss 끝: .rb-pot-page 파랑·.rb-ero-page 분홍, 큰 카드 초록, 칸 고르기 네온). run-potpage 기대값 수정.
 - npm test 통과 수가 1551/1554로 왔다 갔다 함(실패는 늘 같은 3개) — 흔들리는 시험 확인 필요.
+- (11-14) 인물 위키 설정: 설정 탭의 ‘고급 모드’ 스위치 없앰 → 그 세부 기능(advancedGlobal·advancedModel)은 고급 탭에 늘 보임(flowSections part "basic"/"adv"). 고급 탭 = 세부 기능(채팅 없어도) + 인물 추적·저장·되돌리기(채팅 있을 때).

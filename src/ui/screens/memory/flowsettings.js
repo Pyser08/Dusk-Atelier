@@ -18,7 +18,7 @@ const NEEDS_URL = new Set(["ollama", "custom"]);
 const fmt = (n) => Number(n ?? 0).toLocaleString();
 
 const GK = { "무엇을 기억할까요?": "level", "기억 방식": "mode", "AI 모델": "model" };
-export async function flowSections(ctx, host, { redraw }) {
+export async function flowSections(ctx, host, { redraw, part = "all" }) {   // 2.2.0 part: "basic"(설정 탭, 고급 모드 칸 없음) · "adv"(고급 탭, 세부 기능 늘 보임)
   const M = ctx.memory;
   if (!M.flow) return replace(host);
   const st = tracked(ctx, await M.flow.settings()), blocked = st.status().blocked;
@@ -166,13 +166,19 @@ export async function flowSections(ctx, host, { redraw }) {
     replace(advSw, toggleRow("고급 모드", "리수폿에서 온 세부 기능을 모두 보여 줘요. 처음이면 꺼 두세요. 꺼도 설정값은 그대로 남아요.", on, async (v) => { await M.store.updateIndex((i) => { i.settings.flow = { ...(i.settings.flow ?? {}), advanced: v }; }); await apply(); redraw(); }));
     if (on) { await advancedGlobal(ctx, advHost, { redraw, st, apply }); await advancedModel(ctx, modelAdv, { apply, repaint: () => { paintModel(); paintAdv(); } }); } else { replace(advHost); replace(modelAdv); }
   };
-  paintAdv().catch(fail(ctx));
+  if (part === "adv") {
+    // 인물 위키 설정 → 고급 탭: 고급 모드 스위치 없이 세부 기능(추가 프롬프트·Hypa·Copilot/Vertex·실행 기록…)과 모델 세부를 늘 보인다
+    await advancedGlobal(ctx, advHost, { redraw, st, apply }).catch(fail(ctx));
+    await advancedModel(ctx, modelAdv, { apply, repaint: () => { paintModel(); } }).catch(fail(ctx));
+    return replace(host, sec("AI 모델 세부", "기록·정리 모델의 세부 설정이에요.", modelAdv), advHost);
+  }
+  if (part !== "basic") paintAdv().catch(fail(ctx));
 
   replace(host,
     sec("무엇을 기억할까요?", "수준을 고르면 아래 카드가 같이 바뀌어요. 바로 저장되고 다음 응답부터 적용돼요.", lvHost, featHost),
     sec("기억 방식", null, modeHost),
     adultHost,
-    sec("AI 모델", "기록과 정리를 맡길 모델이에요. 모르겠으면 ‘리스 보조 모델’로 두세요.", cfgHost, modelAdv),
+    sec("AI 모델", "기록과 정리를 맡길 모델이에요. 모르겠으면 ‘리스 보조 모델’로 두세요.", cfgHost, part === "basic" ? null : modelAdv),
     sec("가져오기", "기존에 쓰던 리수폿의 백업 파일(.json)을 불러와요. 인물 문서와 설정만 받고, API 키는 받지 않아요.", importBtn),
-    h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "고급 모드"), advSw), advHost);
+    part === "basic" ? null : h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "고급 모드"), advSw), part === "basic" ? null : advHost);
 }

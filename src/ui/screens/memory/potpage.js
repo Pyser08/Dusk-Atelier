@@ -40,14 +40,15 @@ export async function renderMemoryPot(ctx, host, { redraw }) {
       h("li", null, "인물 위키: 인물마다 쌓인 문서 · 직접 고치기 · AI로 빈칸 채우기·요약 정리"),
       h("li", null, "인물 관계도: 위키의 관계를 선으로 · 가운데가 나"),
       h("li", null, "설정 탭: 무엇을 얼마나 자세히 기억할지 · 쓸 AI 모델"),
-      h("li", null, "고급 탭: 새 인물 자동 추적 · 저장 위치 · 자동 기록 시점 · 되돌리기")));
+      h("li", null, "고급 탭: 세부 기능(추가 프롬프트·모델 세부·실행 기록) · 새 인물 자동 추적 · 저장 위치 · 되돌리기")));
   if (tab === "home") return replace(pane, ...(ov.nodes ?? []), guide);
   // 설정(무엇을 기억할지·AI 모델 등)은 전체 설정이라 채팅이 없어도 바꾼다
   if (tab === "settings") {
     replace(pane, loading("불러오는 중", { rows: 3 }));
-    return flowSections(ctx, pane, { redraw }).catch(fail(ctx));
+    return flowSections(ctx, pane, { redraw, part: "basic" }).catch(fail(ctx));
   }
-  if (!env) return replace(pane, note("info", "고급 설정은 채팅마다 달라서, 채팅을 열면 쓸 수 있어요."));
-  // 고급 = 예전 ‘자동 기록’(인물 추적) + ‘고급’(저장·기록 시점·되돌리기)
-  return replace(pane, await autoTrackingBox(env, { noAdvanced: true }), ...advancedPot(ctx, env, cur, idx, redraw));
+  // 고급 = 세부 기능(예전 설정 탭 ‘고급 모드’, 늘 보임) + 예전 ‘자동 기록’(인물 추적) + ‘고급’(저장·기록 시점·되돌리기, 채팅마다)
+  const globalAdv = h("div", { class: "rb-pot-advglobal", style: "display:grid;gap:12px" }, loading("불러오는 중", { rows: 2 }));
+  replace(pane, globalAdv, ...(env ? [await autoTrackingBox(env, { noAdvanced: true }), ...advancedPot(ctx, env, cur, idx, redraw)] : [note("info", "인물 추적·저장 위치·되돌리기는 채팅마다 달라서, 채팅을 열면 여기에 보여요.")]));
+  return flowSections(ctx, globalAdv, { redraw, part: "adv" }).catch(fail(ctx));
 }
