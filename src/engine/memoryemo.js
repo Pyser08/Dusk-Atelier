@@ -33,7 +33,8 @@ export function validateEmo(obj) {
 // 미설정 태그는 올라갈 때만 0에서 시작해 시작한다(내려가는 변화만 있으면 '없음 0'으로 시작).
 // smooth: 약한 신호(±1)는 같은 방향으로 두 번 쌓여야 한 칸 움직이고(반대 신호는 쌓인 것을 지운다), ±2 이상의 큰 사건은 바로 반영한다.
 // 약한 모델이 장면마다 관계를 오락가락 판단해도 게이지가 흔들리지 않게 한다.
-export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = false } = {}) {
+// ceilingOf(from, to) → 이 쌍의 관계 진도로 AI가 올릴 수 있는 애정·신뢰 상한(2.2.4 게이지 조화). 사용자가 정한 값은 낮추지 않는다.
+export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = false, ceilingOf = null } = {}) {
   folder.emo ??= {};
   const src = srcOf(anchor);
   let changed = 0;
@@ -50,7 +51,8 @@ export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = fals
         else { (pair.pend ??= {})[tag] = d; continue; }
       }
       const before = pair.tags[tag];
-      const v = clampG((before ?? 0) + d);
+      let v = clampG((before ?? 0) + d);
+      if (d > 0 && ceilingOf && (tag === "affection" || tag === "trust")) { const cap = ceilingOf(e.from, e.to); if (Number.isFinite(cap) && v > cap) v = Math.max(before ?? 0, cap); }   // 진도보다 앞서 가지 않게
       if (v === before) continue;
       prev[tag] = before ?? null; next[tag] = v; pair.tags[tag] = v; changed++;
     }

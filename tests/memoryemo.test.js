@@ -112,3 +112,11 @@ test("호환: emo·keys가 없는 구버전 폴더와 분석 결과도 그대로
   assert.equal(r.emo, 0); assert.equal(f.emo?.length, undefined);
   assert.equal(buildBlock({ scenes: [], people: {}, emo: undefined }, {}).text, "");
 });
+test("2.2.4 게이지 조화: 관계 진도 상한보다 애정이 앞서 가지 않고, 사용자가 정한 값은 낮추지 않는다", () => {
+  const f = {};
+  applyEmo(f, [E({ affection: 3 }), E({ affection: 3 })], A(2), 0, { ceilingOf: () => 5 });
+  assert.equal(f.emo["미나>하루"].tags.affection, 5);
+  setTag(f, "미나", "하루", "affection", 8);
+  applyEmo(f, [E({ affection: 2 })], A(3), 0, { ceilingOf: () => 5 });
+  assert.equal(f.emo["미나>하루"].tags.affection, 8, "직접 정한 8은 그대로, 더 올리지만 않는다");
+});

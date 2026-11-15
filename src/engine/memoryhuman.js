@@ -91,11 +91,18 @@ export function stageOf(folder, a, b, now) {
   for (const r of Object.values(folder?.rels ?? {})) if (pair(r.from, r.to)) evidence += (r.items ?? []).filter((i) => !i.orphan).length;
   if (Object.values(folder?.talk ?? {}).some((t) => pair(t.from, t.to) && t.tone === "casual")) evidence += 2;
   // 근거는 '처음 봄'만 벗겨 준다. '친한 사이' 이상은 여전히 함께한 장면 수와 감정으로만 오른다.
-  const stage = shared + evidence <= 1 && warmth < 3 ? "just met" : shared < 5 || warmth < 4 ? "acquaintances" : warmth < 7 ? "close" : "very close";
+  // 2.2.4 게이지 조화: 감정이 아주 깊으면(7+) 장면 3개로도 '친한 사이', 적대·두려움이 애정·신뢰보다 크면 '친한 사이' 이상으로 올리지 않는다
+  let hostile = 0;
+  for (const p of Object.values(folder?.emo ?? {})) { const pf = key(p.from), pt = key(p.to); if ((pf === ka && pt === kb) || (pf === kb && pt === ka)) { const t = effectiveTags(p, now); hostile = Math.max(hostile, t.hostility ?? 0, t.fear ?? 0); } }
+  let stage = shared + evidence <= 1 && warmth < 3 ? "just met" : (shared < 5 && !(shared >= 3 && warmth >= 7)) || warmth < 4 ? "acquaintances" : warmth < 7 ? "close" : "very close";
+  if (hostile > warmth && (stage === "close" || stage === "very close")) stage = "acquaintances";
   const floor = folder?.start?.[[ka, kb].sort().join("|")]?.level;   // 본문이 '이미 아는 사이'라고 밝힌 경우의 바닥
   const RANK = ["just met", "acquaintances", "close", "very close"], min = floor === "close" ? 2 : floor === "friendly" ? 1 : 0;
   return { stage: RANK[Math.max(RANK.indexOf(stage), min)], shared, warmth };
 }
+// 관계 진도별 AI가 올릴 수 있는 애정·신뢰 상한(감정이 진도보다 훨씬 앞서 가지 않게). 진도가 오르면 상한도 오른다.
+export const STAGE_CEILING = Object.freeze({ "just met": 5, acquaintances: 7, close: 9, "very close": 10 });
+export const stageCeiling = (folder, a, b, now) => STAGE_CEILING[stageOf(folder, a, b, now).stage] ?? 10;
 export function stageLines(folder, names, now, limit = 3) {
   const list = [...new Map((names ?? []).filter(Boolean).map((n) => [key(n), n])).values()], out = [];
   for (let i = 0; i < list.length && out.length < limit; i++) for (let j = i + 1; j < list.length && out.length < limit; j++) {
