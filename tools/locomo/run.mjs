@@ -153,6 +153,9 @@ async function qa() {
     const folder = await loadReconciled(store, character.chaId, chatKeyOf(chatObj), chatObj.message), fid = folderIdOf(character.chaId, chatKeyOf(chatObj));
     const n = Object.values(folder.people).reduce((a, p) => a + p.records.length, 0) + (folder.scenes ?? []).filter((s) => !s.orphan).length;
     for (let k = 0; k < 20; k++) { const m = await embedder.scores(fid, folder, "warmup " + k, { budgetMs: 120000 }); if (m && m.size >= n) break; }
+    chatObj.message = [...messages, { role: "user", data: "원문 임베딩 준비용 질문입니다. 지난 대화에서 있었던 일" }];
+    for (let k = 0; k < 8; k++) await injector.compose({ character, chat: chatObj }, { mark: false });   // 원문 조각 벡터(한 번에 256개)
+    chatObj.message = messages.slice();
     saveKv(); console.log("임베딩 준비 끝", embedder.status().lastError || "");
   }
   console.log(`최근 대화: ${recent.length}/${messages.length}개 메시지(약 ${RECENT_TOKENS} 토큰)`);

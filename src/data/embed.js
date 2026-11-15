@@ -101,6 +101,39 @@ export function createEmbedder(api, { log = (...a) => console.log("[Dusk 임베�
       return out.size ? out : sem;
     } catch (e) { lastError = "재정렬 건너뜀: " + String(e?.message ?? e).slice(0, 80); return sem; } finally { clearTimeout(timer); }
   }
+  // 2.2.2 원문 조각 의미 점수: items [{id, h, t}]. 없는 벡터는 한 번에 최대 256개까지 만들고(나머지는 다음 요청에), 있는 것만 점수를 돌려준다.
+  async function rawScores(fid, items, queryText, { budgetMs = null } = {}) {
+    await load(); if (!isReady(cfg, !!key) || !items?.length || !String(queryText ?? "").trim()) return null;
+    const q = String(queryText).slice(-1200), qh = hashText(q), b = await bucket(fid);
+    const need = [...new Map(items.filter((x) => !b.v[x.h]).map((x) => [x.h, x])).values()].slice(0, 256), qv = qcache.get(qh);
+    const jobKey = fid + ":raw:" + qh + ":" + need.length;
+    let work = pending.get(jobKey);
+    if (!work && (need.length || !qv)) {
+      work = (async () => {
+        const [qs, ds] = await Promise.all([qv ? [] : embed([q], { type: "query" }), need.length ? embed(need.map((x) => x.t), { type: "document" }) : []]);
+        if (!qv) { qcache.set(qh, unpack(pack(qs[0]))); if (qcache.size > 20) qcache.delete(qcache.keys().next().value); }
+        need.forEach((x, i) => { b.v[x.h] = pack(ds[i]); });
+        if (need.length) await wr(VEC_PREFIX + fid, b);
+      })().catch((e) => log("원문 임베딩 건너뜀:", e?.message ?? e)).finally(() => pending.delete(jobKey));
+      pending.set(jobKey, work);
+    }
+    if (work) { const ms = budgetMs ?? cfg.timeoutMs; await Promise.race([work, new Promise((r) => setTimeout(r, ms))]); }
+    const qvec = qcache.get(qh); if (!qvec) return null;
+    const m = new Map(); for (const x of items) { const v = b.v[x.h] && unpack(b.v[x.h]); if (v) m.set(x.id, cosine(qvec, v)); }
+    return m.size ? m : null;
+  }
+  // 2.2.2 일반 재정렬: docs [{id, t}] → Map(id → 0~1). 꺼져 있거나 실패하면 null
+  async function rerankTexts(queryText, docs, { timeoutMs } = {}) {
+    await load(); if (!cfg.rerank || !key || !/voyageai\.com/i.test(cfg.url) || (docs?.length ?? 0) < 2) return null;
+    const ac = new AbortController(), timer = setTimeout(() => ac.abort(), timeoutMs ?? cfg.timeoutMs);
+    try {
+      const res = await api.nativeFetch("https://api.voyageai.com/v1/rerank", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + key }, body: JSON.stringify({ query: String(queryText).slice(-1200), documents: docs.map((d) => d.t), model: cfg.rerankModel }), signal: ac.signal });
+      if (!res?.ok) throw new Error(`HTTP ${res?.status}`);
+      const j = await res.json(), out = new Map();
+      for (const d of j?.data ?? []) if (docs[d.index] && Number.isFinite(d.relevance_score)) out.set(docs[d.index].id, d.relevance_score);
+      return out.size ? out : null;
+    } catch (e) { lastError = "재정렬 건너뜀: " + String(e?.message ?? e).slice(0, 80); return null; } finally { clearTimeout(timer); }
+  }
   async function clear() { vecs.clear(); qcache.clear(); const s = await store(); try { for (const k of await (s.keys?.() ?? [])) if (String(k).startsWith(VEC_PREFIX)) await s.removeItem(k); } catch { /* 일부만 지워져도 모델이 바뀌면 자동 무시 */ } }
-  return { load, status, keyValue: () => key, save, test, embed, scores, rerank, clear, cfg: () => cfg };
+  return { load, status, keyValue: () => key, save, test, embed, scores, rerank, rawScores, rerankTexts, clear, cfg: () => cfg };
 }

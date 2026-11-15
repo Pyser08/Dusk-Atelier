@@ -7,6 +7,7 @@ import { loadReconciled } from "./memoryload.js";
 import { folderIdOf } from "./memorystore.js";
 import { chatKeyOf } from "../engine/chatkey.js";
 import { trimCovered } from "../engine/historytrim.js";
+import { buildChunks, lexScores, rrf, assemble, RAW_TITLE } from "../engine/rawrecall.js";
 
 // onRequest: 메인 모델 요청 직전에 부른다(기다리지 않음). 러너가 '다음 입력 때 직전 응답 확정'을 시작하는 데 쓴다.
 // 2.2.2 의미 검색 질의: 사용자의 마지막 말이 중심이다(직전 응답까지 섞으면 질문의 뜻이 흐려진다). 말이 아주 짧으면 직전 응답 끝부분을 조금 붙인다.
@@ -53,11 +54,34 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     try { if (embedder && idx.settings.inject.plus !== false) sem = await embedder.scores(folderIdOf(character.chaId, chatKeyOf(chat)), folder, semQuery(msgs, idx.settings.inject.semQueryMin ?? 40)); if (sem && embedder.rerank) sem = await embedder.rerank(folder, semQuery(msgs, idx.settings.inject.semQueryMin ?? 40), sem); } catch { sem = null; }
     const built = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus, storyNow: now, sem, semMin: embedder?.cfg().minSim });
     if (built.manifest && sem) built.manifest.sem = sem.size;
+    // 2.2.2 원문 회상: 임베딩이 켜져 있으면 지난 대화 원문에서 지금 글과 관련 있는 조각을 날짜와 함께 덧붙인다(요약 기억이 놓친 사실을 받친다).
+    if (built.text && embedder && idx.settings.inject.raw !== false && idx.settings.inject.plus !== false) {
+      try { const r = await rawRecall(folder, msgs, character, chat, semQuery(msgs, idx.settings.inject.semQueryMin ?? 40), idx.settings.inject); if (r) { built.text += "\n" + r.text; if (built.manifest) { built.manifest.included.push({ kind: "raw", tokens: r.tokens, count: r.count }); built.manifest.tokens = (built.manifest.tokens ?? 0) + r.tokens; } } } catch (e) { log("원문 회상 건너뜀", e?.message ?? e); }
+    }
     const raw = built.text, manifest = built.manifest;
     const text = applyLore(raw, folder?.lore);  // 주입 로어 편집(줄 수정·숨김·내 로어)
     if (manifest && text !== raw) manifest.tokens = loreTokens(text);
     if (mark && text && idx.settings.inject.plus !== false && manifest?.recordIds?.length) markUsed(character, chat, manifest.recordIds, msgs.length);
     return { text, raw, manifest, position: idx.settings.inject.position, reason: text ? "" : "empty", coveredAt: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : -1, trim: idx.settings.inject.trimOld === true ? Math.max(4, Number(idx.settings.inject.trimKeep) || 20) : 0 };
+  }
+  async function rawRecall(folder, msgs, character, chat, query, s) {
+    if (!String(query ?? "").trim()) return null;
+    const skip = Math.max(0, Number(s.rawSkip ?? 20)), lastUser = (() => { for (let i = msgs.length - 1; i >= 0; i--) if (isUserMessage(msgs[i])) return i; return -1; })();
+    const upto = Math.max(0, Math.min(lastUser >= 0 ? lastUser : msgs.length, msgs.length - skip));   // 요청에 그대로 실리는 최근 대화·지금 말은 뺀다
+    if (upto < 4) return null;
+    const scenes = (folder?.scenes ?? []).filter((x) => !x.orphan && Number.isInteger(x.at)).sort((a, b) => a.at - b.at);
+    const dateOf = (mi) => { const sc = scenes.find((x) => x.at >= mi) ?? scenes.at(-1); return sc?.when ? String(sc.when).replace(/\s+/g, " ").slice(0, 40) : ""; };
+    const list = []; for (let i = 0; i < upto; i++) { const t = extractMessageText(msgs[i]); if (t.trim()) list.push({ text: t, who: isUserMessage(msgs[i]) ? "{{user}}" : String(character?.name ?? "{{char}}"), mi: i }); }
+    const chunks = buildChunks(list, dateOf);
+    if (!chunks.length) return null;
+    const fid = folderIdOf(character.chaId, chatKeyOf(chat));
+    const sem = await embedder.rawScores(fid, chunks, query).catch(() => null);
+    const fused = rrf([sem, lexScores(chunks, query)]);
+    let ranked = [...fused].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+    const rr = await embedder.rerankTexts(query, ranked.slice(0, Number(s.rawRerankTop ?? 24)).map((id) => ({ id, t: chunks[id].t }))).catch(() => null);
+    if (rr) ranked = [...[...rr].sort((a, b) => b[1] - a[1]).map(([id]) => id), ...ranked.filter((id) => !rr.has(id))];
+    const out = assemble(chunks, ranked, { tokens: Number(s.rawTokens ?? 1000), neighbor: Number(s.rawNeighbor ?? 1), maxPicks: Number(s.rawPicks ?? 8) });
+    return out.lines.length ? { text: [RAW_TITLE, ...out.lines].join("\n"), tokens: out.tokens, count: out.lines.length } : null;
   }
   async function beforeRequest(messages, type, { focus = null } = {}) {
     try {
