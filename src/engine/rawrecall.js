@@ -46,16 +46,17 @@ export function rrf(lists, { k = 60, top = 80 } = {}) {
   return acc;
 }
 // 고른 조각(순위순) + 앞뒤 이웃을 예산 안에서 모아 시간순 줄로. 같은 날짜가 이어지면 날짜는 한 번만 쓴다.
-export function assemble(chunks, rankedIds, { tokens = 1000, neighbor = 1, maxPicks = 8 } = {}) {
-  const byId = new Map(chunks.map((c) => [c.id, c])), take = new Set(); let used = 0, picks = 0;
+export function assemble(chunks, rankedIds, { tokens = 1000, neighbor = 1, maxPicks = 8, perDate = 0 } = {}) {
+  const byId = new Map(chunks.map((c) => [c.id, c])), take = new Set(), perD = new Map(); let used = 0, picks = 0;   // perDate>0: 같은 날짜에서 고르는 조각 수 제한(여러 세션에서 골고루)
   const cost = (id) => estimateTokens(byId.get(id)?.t ?? "") + 4;
   for (const id of rankedIds) {
     if (picks >= maxPicks) break;
+    const dk = byId.get(id)?.date ?? ""; if (perDate > 0 && dk && (perD.get(dk) ?? 0) >= perDate) continue;
     const group = [id]; for (let d = 1; d <= neighbor; d++) group.push(id - d, id + d);
     const add = group.filter((x) => byId.has(x) && !take.has(x)), need = add.reduce((s, x) => s + cost(x), 0);
     if (!add.includes(id) && take.has(id)) continue;
     if (used + need > tokens) { if (!take.has(id) && used + cost(id) <= tokens) { take.add(id); used += cost(id); picks++; } continue; }
-    for (const x of add) take.add(x); used += need; picks++;
+    for (const x of add) take.add(x); used += need; picks++; if (dk) perD.set(dk, (perD.get(dk) ?? 0) + 1);
   }
   const ids = [...take].sort((a, b) => a - b), lines = []; let lastDate = null, lastId = -9;
   for (const id of ids) { const c = byId.get(id); const head = c.date && c.date !== lastDate ? `[${c.date}] ` : (id !== lastId + 1 ? "… " : ""); lines.push(`- ${head}${c.t}`); lastDate = c.date || lastDate; lastId = id; }

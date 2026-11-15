@@ -160,6 +160,23 @@ async function qa() {
   }
   console.log(`최근 대화: ${recent.length}/${messages.length}개 메시지(약 ${RECENT_TOKENS} 토큰)`);
   const qs = sample.qa.filter((q) => q.category !== 5).slice(0, LIMIT);   // 5 = adversarial(정답 없음), 관례대로 뺀다
+  if (args.hitOnly === "1") {   // 답변·채점 없이: 정답 근거 대사가 블록에 들어갔는지만 센다
+    const byDia = new Map(messages.map((m) => [m.chatId, m.data.replace(/^\([^)]*\)\s*/, "")]));
+    const norm = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
+    const res = []; let tok = 0;
+    for (const q of qs) {
+      chatObj.message = [...messages, { role: "user", data: q.question }];
+      const c = await injector.compose({ character, chat: chatObj }, { mark: false }); const mem = norm(c?.text ?? ""); tok += c?.manifest?.tokens ?? 0;
+      const evs = (q.evidence ?? []).map((e) => norm(byDia.get(String(e).trim()))).filter(Boolean);
+      const hit = evs.filter((t) => mem.includes(t.slice(0, 25)) || mem.includes(t.slice(-25))).length;
+      res.push({ q: q.question, category: q.category, n: evs.length, hit });
+    }
+    const full = res.filter((r) => r.n && r.hit === r.n).length, any = res.filter((r) => r.hit > 0).length, withEv = res.filter((r) => r.n).length;
+    const byCat = {}; for (const [k, n] of Object.entries({ 1: "multi-hop", 2: "temporal", 3: "open-domain", 4: "single-hop" })) { const rs = res.filter((r) => String(r.category) === k && r.n); byCat[n] = rs.length ? +(100 * rs.filter((r) => r.hit === r.n).length / rs.length).toFixed(1) : null; }
+    const out = { conv: CONV, n: withEv, allEvidence: +(100 * full / withEv).toFixed(1), anyEvidence: +(100 * any / withEv).toFixed(1), byCategory: byCat, avgTokens: Math.round(tok / qs.length) };
+    fs.writeFileSync(path.join(OUT, `hit-${CONV}.json`), JSON.stringify({ ...out, rows: res }));
+    console.log(JSON.stringify(out)); return;
+  }
   const rows = await pool(qs, async (q, k) => {
     const question = { role: "user", data: q.question, speaker: A };
     const base = MEM_ONLY ? [{ role: "system", content: sysMem }, { role: "user", content: `${A}: ${q.question}` }] : [{ role: "system", content: sysPrompt }, ...toApi(recent), { role: "user", content: `${A}: ${q.question}` }];
