@@ -38,6 +38,7 @@ export function renameDoc(folder, doc, name) {
   doc.aliases = [...(doc.aliases ?? []).filter((a) => keyOf(a) !== keyOf(name)), ...(have.has(keyOf(old)) ? [] : [old])];
   doc.title = name;
   const prof = folder.wiki?.people?.profiles?.[doc.id]; if (prof) prof.name = name;
+  if (folder.wiki) folder.wiki.revision = (Number(folder.wiki.revision) || 0) + 1;   // 위키 자동 기록이 들고 있는 사본도 다시 읽게(안 그러면 옛 이름으로 되돌린다)
   return true;
 }
 // 이미 합쳐진 상태 고치기: 인물 이름과 다른 제목(별칭)으로 이어진 문서를 인물 이름으로 맞춘다. 반환: 고친 [{from, to}]

@@ -1,5 +1,6 @@
 // 분석 결과를 폴더에 반영하는 순수 함수.
 import { isCollectiveName } from "./collective.js";
+import { alignDocTitles } from "./peoplemerge.js";
 import { gradeResponse, findDuplicate, gradeRank } from "./memorygrade.js";
 import { applyRel, applyOpen, reinforce } from "./memoryplus.js";
 import { mergeWhen } from "./storydate.js";
@@ -64,6 +65,7 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
   folder.runs = (folder.runs ?? 0) + 1;
   folder.cursor = { ...anchor };
   noteTension(folder, tBefore); clearHints(folder);  // 7-4: 감정 태그가 새로 어긋나면 자기 감정 기록을 유도
+  if (folder.wiki?.documents) { try { out.renamed = alignDocTitles(folder); } catch { /* 이름 맞추기 실패는 기록에 영향 없음 */ } }   // 2.2.2 이름 통일(장기 기억 기준)
   if (!folder.emoConvOff && folder.wiki?.documents) convertAffinity(folder, Object.values(folder.wiki.documents).filter((d) => d?.type === "Character"), "{{user}}", now);  // 위키 호감도 → 애정 태그(처음 한 번씩)
   // 분석을 마친 응답 해시(일괄 분석 건너뛰기용). 개수 제한 대신 reconcile이 지금 채팅에 없는 해시를 걷어 내서 채팅 길이만큼만 남는다.
   const cov = covered ?? [anchor.h];

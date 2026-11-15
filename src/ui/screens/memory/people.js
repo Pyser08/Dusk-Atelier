@@ -1,4 +1,5 @@
 import { memoryFileItems } from "./memoryfileui.js";
+import { withMemoryAffinity } from "../../../engine/identity.js";
 import { trustBadges } from "../../../engine/memoryedit.js";
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
@@ -150,7 +151,7 @@ export function personDetail(env, host, key, embedded = false) {
   const refresh = () => embedded ? personDetail(env, host, key, true) : env.redraw();
   m.spage ??= 1;
   const all = visibleRecords(p);
-  const doc = findDoc(env.folder.wiki, p), state = stateOf(doc), tl = timelineOf(env.folder, p, doc), counts = countsOf(tl);
+  const doc = findDoc(env.folder.wiki, p), state = doc ? withMemoryAffinity(stateOf(doc), env.folder, doc, p) : stateOf(doc), tl = timelineOf(env.folder, p, doc), counts = countsOf(tl);
   m.tlFilter ??= "all";
   // 관계도·나에 대한 기억·홈에서 바로 들어오면 grades·search가 아직 없어 화면이 비고 오류가 났다(인물 카드를 눌러 들어올 때만 채워졌음)
   if (!Array.isArray(m.grades)) m.grades = []; if (typeof m.search !== "string") m.search = "";

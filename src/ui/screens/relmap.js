@@ -12,6 +12,7 @@ import { mem } from "./memory/common.js";
 import { createRelMapCanvas } from "./relmap/canvas.js";
 import { eroLoad } from "./memory/erosyncwiki.js";
 import { eroRelmapData } from "../../engine/erosyncview.js";
+import { nameIndex } from "../../engine/identity.js";
 
 const sigOf = (m) => `${m.nowAt}|${m.nodes.map((n) => `${n.id}:${n.aff}:${n.imp}:${n.records}`).join(",")}|${m.edges.map((e) => `${e.id}:${e.w}:${e.items.length}`).join(",")}`;
 const HELP = [["가운데", "{{user}}"], ["거리", "호감도가 높을수록 가까이"], ["높이", "지금 대화에서 중요할수록 위로"], ["방향", "같은 소속끼리 한쪽으로 (소속이 없으면 고르게)"], ["선 색", "따뜻한 관계는 붉게, 차가운 관계는 파랗게"], ["굵기", "관계의 강도"], ["점선", "풀리지 않은 갈등·오해가 있는 관계"], ["빛남", "최근에 바뀐 관계"], ["모양", "점선 빈 원은 실종, ?는 정체 불명"], ["조작", "누르면 확대, 두 번 누르면 위키로, 끌면 회전, 휠·두 손가락으로 확대·축소"]];
@@ -98,11 +99,12 @@ function buildView(ctx, win, cur, key, data, uname) {
   const turnBtn = chip("이번 턴 등장 강조", { pressed: true, onClick: () => { hl = !hl; ctrl.setHighlight(hl); syncBtns(); } });
   let spin = true, hl = true;
   // Erosync 목표·경쟁만 보기(Erosync가 켜져 있을 때만 버튼이 보인다). 같은 화면에서 Erosync 층만 남긴다.
-  let eroOn = false, eroSnap = null;
+  let eroOn = false, eroSnap = null, aliasIdx = null;
+  ctx.memory.store.getFolder(cur.chaId, cur.chatId).then((f) => { aliasIdx = nameIndex(f, (n) => String(n ?? "").trim().toLowerCase().replace(/\s+/g, "")); }).catch(() => {});   // 2.2.2: Erosync 인물을 장기 기억 이름·별칭으로 찾는다
   const legendDefault = [...legendEl.childNodes];
   const eroLegend = [h("span", null, h("i", { style: "border-color:var(--rb-rose)" }), "목표 (노리는 쪽 → 대상)"), h("span", null, h("i", { style: "border-color:var(--rb-blue);border-top-style:dashed" }), "경쟁"), h("span", null, "굵기 = 우선도·세기")];
   const applyEro = () => {
-    const mapped = eroOn ? eroRelmapData(data0, eroSnap) : data0;
+    const mapped = eroOn ? eroRelmapData(data0, eroSnap, aliasIdx) : data0;
     ctrl.setData(mapped); buildFilters(); curSel = null; ctrl.select(null);
     legendEl.replaceChildren(...(eroOn ? eroLegend : legendDefault));
     syncBtns(); paint();
@@ -110,7 +112,7 @@ function buildView(ctx, win, cur, key, data, uname) {
   const eroBtn = ctx.erosync?.isRunning?.() ? chip("Erosync 목표·경쟁만 보기", { onClick: async () => {
     if (eroOn) { eroOn = false; applyEro(); return; }
     eroSnap = await eroLoad(ctx);
-    const probe = eroSnap ? eroRelmapData(data0, eroSnap) : null;
+    const probe = eroSnap ? eroRelmapData(data0, eroSnap, aliasIdx) : null;
     if (!probe || probe.empty) { toast(eroSnap ? `Erosync 목표·경쟁이 없거나, 위키에 없는 인물이에요${probe?.missing ? ` (${probe.missing}명)` : ""}.` : "Erosync 값을 읽지 못했어요. 이 채팅에서 한 턴 이상 진행했는지 확인해 주세요."); return; }
     eroOn = true; applyEro();
     if (probe.missing) toast(`위키에 없는 인물 ${probe.missing}명은 빠졌어요.`);

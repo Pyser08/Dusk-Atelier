@@ -1,4 +1,5 @@
 // 인물 화면 + 인물 상세 (1.7.0 4단계, 계획 §3.4): 위키의 인물 문서를 보고 다듬는다. 스위치 = 이 채팅의 인물 추적(새 인물도 자동 기록).
+import { withMemoryAffinity } from "../../engine/identity.js";
 import { h, replace } from "../dom.js";
 import { icon } from "../icons.js";
 import { actionRow, advFold, badge, btn, emptyState, pageHead, promptDialog } from "../kit.js";
@@ -56,7 +57,7 @@ async function draw(ctx, host, redraw) {
   const shown = docs.filter((d) => !q || [d.title, ...(d.aliases ?? [])].some((n) => String(n).toLowerCase().includes(q)));
   const open = (id) => { m.pid = id; redraw(); };
   const card = (d) => {
-    const s = stateOf(d), aff = s.meters.find((x) => x.slotId === "affinity.score"), gap = gapsOf(wiki, d).metrics.length > 0;
+    const s = withMemoryAffinity(stateOf(d), env.folder, d), aff = s.meters.find((x) => x.slotId === "affinity.score"), gap = gapsOf(wiki, d).metrics.length > 0;
     return h("button", { type: "button", class: ["rb-pcard", d.id === m.pid && "is-active"], "aria-pressed": d.id === m.pid ? "true" : "false", onClick: () => open(d.id) },
       avatar(d.title), h("span", { class: "txt" }, h("span", { class: "name" }, d.title, gap ? badge("수치 비어 있음", "warn") : null), h("span", { class: "meta" }, summaryOf(wiki, d) || "아직 요약이 없어요"), aff ? h("span", { class: "rb-mem-meter" }, h("span", { class: "l" }, "호감도"), gauge(aff), h("span", { class: "v" }, String(aff.value))) : null));
   };
@@ -78,7 +79,7 @@ async function draw(ctx, host, redraw) {
 
 function personDetail(env, doc, { back, redraw }) {
   if (!doc) return h("div", { class: "rb-empty" }, "인물을 찾지 못했어요.");
-  const { ctx } = env, wiki = env.folder.wiki, s = stateOf(doc), prof = wiki?.people?.profiles?.[doc.id];
+  const { ctx } = env, wiki = env.folder.wiki, s = withMemoryAffinity(stateOf(doc), env.folder, doc), prof = wiki?.people?.profiles?.[doc.id];
   const person = Object.values(env.folder.people ?? {}).find((p) => findDoc(wiki, p)?.id === doc.id) ?? { name: doc.title, aliases: doc.aliases ?? [] };
   const keys = [...(doc.sections ?? []).map((x) => sectionPinKey(x.id)), ...(doc.metrics ?? []).map((x) => metricPinKey(x.id))];
   const pinned = keys.length > 0 && keys.every((k) => isPinned(wiki, doc.id, k)), paused = isPaused(env.idx.bots?.[env.bot.id]?.ignore, person);
