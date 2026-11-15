@@ -41,7 +41,7 @@ export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = fals
     const k = key(e.from) + ">" + key(e.to), pair = folder.emo[k] ??= { from: e.from, to: e.to, tags: {}, log: [] };
     const prev = {}, next = {};
     for (let [tag, d] of Object.entries(e.t)) {
-      if (pair.lock?.[tag]) continue;  // 사용자가 정한 태그는 자동 갱신하지 않는다
+      if (pair.lock?.[tag]) { delete pair.lock[tag]; if (!Object.keys(pair.lock).length) delete pair.lock; }   // 2.2.4: 사용자가 고친 값은 출발점 — 이후엔 대화에 따라 AI가 이어서 바꾼다(예전 잠금도 풀어 준다)
       if (smooth) {
         const pend = pair.pend?.[tag] ?? 0;
         if (Math.abs(d) >= 2) { if (pend) delete pair.pend[tag]; }
@@ -62,14 +62,14 @@ export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = fals
   return changed;
 }
 
-// 사용자 직접 수정(위키 인라인 편집용): 값을 정하고 그 태그를 잠근다. null이면 '미설정'으로 되돌린다.
+// 사용자 직접 수정(위키 인라인 편집용): 값을 정한다(2.2.4부터 잠그지 않음 — 다음 응답부터 이 값에서 AI가 이어서 판단). null이면 '미설정'으로 되돌린다.
 export function setTag(folder, from, to, tag, value, now = Date.now()) {
   if (!EMO_TAGS.includes(tag)) return null;
   folder.emo ??= {};
   const k = key(from) + ">" + key(to), pair = folder.emo[k] ??= { from, to, tags: {}, log: [] };
   const before = pair.tags[tag] ?? null;
   if (value == null) { delete pair.tags[tag]; if (pair.lock) { delete pair.lock[tag]; if (!Object.keys(pair.lock).length) delete pair.lock; } }
-  else { pair.tags[tag] = clampG(value); pair.lock = { ...(pair.lock ?? {}), [tag]: true }; }
+  else { pair.tags[tag] = clampG(value); if (pair.lock) { delete pair.lock[tag]; if (!Object.keys(pair.lock).length) delete pair.lock; } }
   pair.log.push({ t: { [tag]: pair.tags[tag] ?? null }, from: { [tag]: before }, why: "user", at: null, at_ms: now });
   return pair;
 }

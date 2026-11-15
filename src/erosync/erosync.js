@@ -23990,10 +23990,11 @@ Constraint: {{constraint}}
       if (!profile) { if (person?.name) unmatched.push(String(person.name)); continue; }
       if (profile.locked || targets.some(t => t.id === profile.id)) continue;
       const base = uiProfileViewOf(profile, context, null).base || {}, ov = isPlainObject(profile.userOverrides) ? profile.userOverrides : {};
-      const own = keys.filter(k => !(k in ov) && !(k === 'eroticInterest' && ov.eroticInterest));
+      // 2.2.4: 사용자가 고친 값(userOverrides)도 출발점으로 넘긴다. 예전엔 고친 항목을 빼서 영원히 그 값이었다
+      const own = keys.slice();
       if (!own.length) continue;
       targets.push({ id: profile.id, name: profile.name, aliases: profile.aliases || [], memory: truncate(person.memory || '', 1200), own,
-        values: Object.fromEntries(keys.map(k => [k, turnValueOf(base, k)])) });
+        values: Object.fromEntries(keys.map(k => [k, turnValueOf((k in ov) || (k === 'eroticInterest' && ov.eroticInterest) ? ov : base, k)])) });
     }
     if (!targets.length || !String(rp).trim()) return { ok: true, changed: [], unmatched };
     const guard = createRequestGuard(Math.max(30000, providerAttemptLimitMs(resolveRoleProfile(config, 'profile')) * 2), 'dusk turn update');
@@ -24018,6 +24019,7 @@ Constraint: {{constraint}}
             if (k === 'eroticInterest') next.eroticInterest = { ...(isPlainObject(next.eroticInterest) ? next.eroticInterest : {}), level: v }; else next[k] = v;
           }
           Object.assign(profile, current, { baseProfile: normalizeEroticProfile(next), updatedAt: new Date().toISOString() });
+          if (isPlainObject(profile.userOverrides)) { const uo = { ...profile.userOverrides }; for (const k of Object.keys(after)) delete uo[k]; profile.userOverrides = uo; }   // AI가 이어서 바꾼 항목은 고친 표시를 푼다
           saveProfileVariant(profile, variantKey, { label: current.variantLabel || variantKey, activationSignature: profile.variants?.[variantKey]?.activationSignature || '', sourceHash: current.sourceHash, sourceDocumentIds: current.sourceDocumentIds });
           done.push({ id, name: profile.name, before, after, reason: parsed[id].reason });
         }

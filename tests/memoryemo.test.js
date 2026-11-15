@@ -36,11 +36,12 @@ test("게이지: 미설정≠0, 올라갈 때 0에서 시작, 0~10으로 제한,
   assert.equal(applyEmo(f, [E({ trust: 2 })], A(5), 500), 0, "이미 최대면 변화 없음");
   assert.equal(f.emo["미나>하루"].log.length, 4);
 });
-test("잠금: 사용자가 정한 태그는 자동 갱신하지 않고, null이면 미설정으로 되돌린다", () => {
+test("2.2.4 사용자가 정한 값은 출발점: 다음 응답부터 AI 변화량이 그 값에서 이어지고, null이면 미설정으로 되돌린다", () => {
   const f = {};
   setTag(f, "미나", "하루", "trust", 7);
+  assert.equal(f.emo["미나>하루"].lock, undefined, "잠그지 않는다");
   applyEmo(f, [E({ trust: -3, respect: 2 })], A(2));
-  assert.equal(f.emo["미나>하루"].tags.trust, 7); assert.equal(f.emo["미나>하루"].tags.respect, 2);
+  assert.ok(f.emo["미나>하루"].tags.trust < 7, "고친 값에서 이어서 내려간다"); assert.equal(f.emo["미나>하루"].tags.respect, 2);
   setTag(f, "미나", "하루", "trust", null);
   assert.equal(f.emo["미나>하루"].tags.trust, undefined); assert.equal(f.emo["미나>하루"].lock, undefined);
   assert.equal(setTag(f, "a", "b", "bogus", 1), null);

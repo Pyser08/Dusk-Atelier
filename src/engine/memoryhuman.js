@@ -28,7 +28,7 @@ export function effectiveTags(pair, now) {
   const out = {};
   for (const [tag, v] of Object.entries(pair?.tags ?? {})) {
     out[tag] = v;
-    if (v == null || !COOL_HALF[tag] || pair.lock?.[tag] || !Number.isFinite(now)) continue;
+    if (v == null || !COOL_HALF[tag] || !Number.isFinite(now)) continue;   // 2.2.4: 고친 값도 시간이 지나면 식는다(출발점일 뿐)
     const base = lastRealChange(pair, tag);
     if (!base || now <= base.at) continue;
     const floor = Math.round(base.v * COOL_FLOOR[tag]);

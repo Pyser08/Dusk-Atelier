@@ -16,9 +16,9 @@ test("hot feelings cool with distance from the last real change; trust and respe
   assert.equal(later.trust, 2); assert.equal(later.respect, 6);
   assert.ok(effectiveTags(p, 10 + 2000).hostility >= 2, "a grudge never fully disappears (floor)");
 });
-test("locked tags and pairs without a dated change never cool; materializing logs 'cooled' once per drop", () => {
+test("2.2.4 old locks no longer freeze cooling; pairs without a dated change never cool; materializing logs 'cooled' once per drop", () => {
   const locked = pair({ hostility: 8 }, [{ t: { hostility: 8 }, at: 0 }]); locked.lock = { hostility: true };
-  assert.equal(effectiveTags(locked, 500).hostility, 8);
+  assert.ok(effectiveTags(locked, 500).hostility < 8, "고친 값도 시간이 지나면 식는다");
   assert.equal(effectiveTags(pair({ fear: 7 }, [{ t: { fear: 7 }, at: null }]), 500).fear, 7);
   const folder = { emo: { "a>b": pair({ hostility: 8 }, [{ t: { hostility: 8 }, from: {}, why: "x", at: 0 }]) } };
   assert.equal(coolEmo(folder, 160), 1);
