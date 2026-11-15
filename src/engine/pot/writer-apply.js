@@ -4,7 +4,7 @@ import { ensureOverviewInSections } from './character-overview.js';
 import { CYCLE_HEADING, CYCLE_SLOT, formatCycleBody, isCycleSection, nextCycleState, parseCycleBody, takeCycleMarkers } from './cycle-tracking.js';
 import { applyMetricOperations } from './metric-engine.js';
 import { preservePeoplePins } from './people-pins.js';
-import { applyPeopleOperations } from './people-profile.js';
+import { applyPeopleOperations, reviewPersonCandidate, PERSONALITY_AXES } from './people-profile.js';
 import { applySpeechSign } from './speech-variety.js';
 import { redirectDuplicateCreates } from '../pot-dedupe.js';
 import { createWikiDocument, makeWikiId, normalizeWikiScope, updateWikiDocument } from './wiki-schema.js';
@@ -62,5 +62,8 @@ export function applyWriterProposalAtomic(scope,proposal,contract,options={}){
   const historyOptions={now,sectionIdFactory,requestRef:proposal.request_ref,batchRef,historyIdFactory:options.historyIdFactory};
   for(const[documentId,draft]of drafts){if(!draft.touched)continue;const stableId=ref=>refToId[ref]||(next.documents[ref]||drafts.has(ref)?ref:null),sectionLinks=draft.input.sections.flatMap(section=>(section.provenance?.links||[]).map(stableId).filter(Boolean)),metricLinks=(draft.input.metrics||[]).flatMap(metric=>metric.targetRefs.filter(ref=>ref!=='actor:user').map(stableId).filter(Boolean)),links=unique([...(draft.input.links||[]),...sectionLinks,...metricLinks]);const input={...draft.input,links};next=draft.operation==='create'?createWikiDocument(next,input,historyOptions):updateWikiDocument(next,documentId,input,historyOptions);}
   const peopleResult=applyPeopleOperations(normalizeWikiScope(next),proposal.people_ops,{refToId,contributionRef:contract.peopleContributionRef||contract.contributionRef||proposal.request_ref,now});
-  return{scope:normalizeWikiScope(preservePeoplePins(scope,peopleResult.scope)),refToId,batchRef,metricReport,peopleReport:peopleResult.report,cycleRolls};
+  let peopleScope=peopleResult.scope;
+  // 2.2.4: 기본 성격 6축 후보가 '검토 대기'(근거 4개·장면 3곳 이상)가 되면 바로 반영한다 — 사람이 승인하기 전엔 막대가 움직이지 않았다
+  if(contract.autoApprovePersonality!==false)for(const c of Object.values(peopleScope.people?.candidates||{})){if(c?.status!=='review'||!PERSONALITY_AXES.includes(c.axis))continue;try{peopleScope=reviewPersonCandidate(peopleScope,c.id,'approve',{now});}catch{/* 고정핀 등 */}}
+  return{scope:normalizeWikiScope(preservePeoplePins(scope,peopleScope)),refToId,batchRef,metricReport,peopleReport:peopleResult.report,cycleRolls};
 }

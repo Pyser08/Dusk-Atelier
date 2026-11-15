@@ -285,6 +285,8 @@ export function exactQuote(q, source) {
 }
 // 기본정보 안의 예전 '현재 상태:' 부분을 뗀다(줄바꿈이 공백으로 바뀌어 저장돼도)
 export const stripState = (t) => String(t ?? "").replace(/\s*(?:·\s*)?현재 상태\s*:[^·\n]*/g, "").trim();
+const TRAIT_AXES = { initiative: "relationalInitiative", direct: "expressionDirectness", expressive: "emotionalExpressiveness", guarded: "guardedness", impulsive: "impulsivity", persistent: "relationshipPersistence" };
+const TRAIT_LABEL = { relationalInitiative: "관계 주도성", expressionDirectness: "표현 직접성", emotionalExpressiveness: "감정 표현", guardedness: "경계심", impulsivity: "충동성", relationshipPersistence: "관계 지속성" };
 const LIKE_STEP = { 1: 1, 2: 3, 3: 5, "-1": -2, "-2": -4, "-3": -10 };
 // 정책에 있는 값 중 원하는 값과 부호가 같고 가장 가까운 것
 function nearest(values, want) {
@@ -400,6 +402,14 @@ export function buildEnvelope(run, rec) {
       const list = (v) => String(v ?? "").split(/[,，、/]/).map((x) => x.trim()).filter(Boolean).slice(0, 5);
       peopleOps.push({ document_ref: p.ref, operation: "init", summary: cut(prof[0], 200), core_traits: list(prof[1]), values: list(prof[2]), emotion_expression: "미확인", defense_response: "미확인", intimacy_style: "미확인",
         axes: { relationalInitiative: 50, expressionDirectness: 50, emotionalExpressiveness: 50, guardedness: 50, impulsivity: 50, relationshipPersistence: 50 }, evidence_refs: ["source:rp"], reason: "Dusk 기록기: 처음 등장한 인물의 기본 성격", sexual_desire: { text: "미확인", evidence_refs: [] }, paraphilia: { text: "미확인", evidence_refs: [] } });
+    }
+    // 2.2.4 기본 성격 6축: 예전엔 처음 만들 때 50으로 넣고 끝이라 막대가 움직이지 않았다
+    const hasProfile = (!p.isNew && !run.missingProfiles?.has?.(p.ref)) || peopleOps.some((o) => o.operation === "init" && o.document_ref === p.ref);
+    if (run.peopleOn && hasProfile) for (const f of L("trait").map((x) => x.f).slice(0, 2)) {
+      const axis = TRAIT_AXES[String(f[0] ?? "").trim().toLowerCase()], up = /^(up|\+|increase)/i.test(String(f[1] ?? "").trim());
+      const q = exactQuote(f[3], src); if (!axis || !q) continue;
+      const n = coerceInt(f[2], 1, 3, 1);
+      peopleOps.push({ document_ref: p.ref, operation: "observe", axis, direction: up ? "increase" : "decrease", pattern: `${TRAIT_LABEL[axis]} ${up ? "높아지는" : "낮아지는"} 모습`, strength: [30, 60, 90][n - 1], confidence: 70, scene_key: String(run.requestRef ?? "").slice(0, 160) || "scene", evidence_refs: ["source:rp"], evidence_quote: q, reason: `${p.name}: 이번 응답에서 ${TRAIT_LABEL[axis]}이(가) ${up ? "높게" : "낮게"} 드러남` });
     }
     if (p.isNew) {
       docs.push({ document_ref: p.ref, operation: "create", type: "character", title: p.name, aliases_add: [], aliases_remove: [], tags_add: [], tags_remove: [], event_context: null, entries });

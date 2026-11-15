@@ -65,6 +65,7 @@ function stage2Rules(N, { light, beliefs, wiki, extraLines }) {
   if (wiki) r.push(`know|a fact ${N} learned in newest`, `call|Other|how ${N} addresses Other|formal or casual`);
   else r.push(`call|Other|how ${N} addresses Other|formal or casual      (only when first seen or changed)`);
   r.push("attr|category|key|value|condition      lasting fact only; category: pref rel job home belief look trait status; max 3");
+  if (wiki) r.push(`trait|initiative or direct or expressive or guarded or impulsive or persistent|up or down|1-3|exact quote      a personality tendency of ${N} that newest clearly shows (takes the lead · speaks plainly · shows feelings · keeps a guard up · acts on impulse · holds on to relationships); max 2`);
   r.push("keys|word1,word2,word3      concrete objects, places or topics a later scene would mention");
   if (wiki && !light) r.push(`view|how ${N} now judges {{user}}, one sentence`, `secret|what ${N} hides|from whom`, `habit|a lasting behaviour pattern of ${N} (seen more than once)`, `npc|Other character (not {{user}})|emotion1, emotion2|short reason`);
   if (wiki && !light && extraLines.length) r.push("", `Deeper record about ${N} — only when newest clearly shows it; each line replaces the stored one:`, ...extraLines);
