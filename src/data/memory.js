@@ -1,4 +1,5 @@
 // 장기기억 조립: 저장소·러너·주입·BardWiki 백엔드를 묶고, 선택된 백엔드에 따라 훅을 등록한다.
+import { reconcile } from "../engine/memoryreconcile.js";
 import { DEFAULT_PROMPT_BLOCKS } from "./memory-default-prompts.js";
 import { createMemoryStoreV3 as createMemoryStore } from "./memorystore3.js";
 import { createMemoryRunner } from "./memoryrunner.js";
@@ -97,5 +98,5 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
     const cur = await switches.currentChat({ fresh: true }).catch(() => null), sc = cur ? { characterId: cur.chaId, chatKey: cur.chatId } : {};
     return { front: customPromptPlain(s, "memory", sc, "front"), middle: customPromptPlain(s, "memory", sc, "middle"), back: customPromptPlain(s, "memory", sc, "back") };
   }
-  return { store, cellar, remote, userPrompts, gauge, link, cards, runner, injector, embedder, prep, hypa, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, stop, ready, isReady: () => readyDone || !readyP, active: () => active };
+  return { reconcile, store, cellar, remote, userPrompts, gauge, link, cards, runner, injector, embedder, prep, hypa, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, stop, ready, isReady: () => readyDone || !readyP, active: () => active };
 }

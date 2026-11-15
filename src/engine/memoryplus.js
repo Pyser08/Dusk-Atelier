@@ -3,6 +3,8 @@ import { similarity } from "./memorygrade.js";
 import { extractMessageText, hashText } from "./chattext.js";
 import { srcOf } from "./memoryreconcile.js";
 import { addSource } from "./memorytrust.js";
+import { isClosed, openItems } from "./openitems.js";
+export { isClosed, openItems };
 
 const cut = (v, n) => String(v ?? "").trim().slice(0, n);
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
@@ -83,8 +85,6 @@ export function applyOpen(folder, open, anchor, now = Date.now()) {
   return { added, closed };
 }
 // 닫힘 판정: 버린 분석이 닫은 항목(closedOrphan)은 열린 것으로 본다. 고아 항목(orphan)은 어느 쪽에도 들지 않는다.
-export const isClosed = (x) => !!x.closed && !x.closedOrphan;
-export const openItems = (folder, { closed = false } = {}) => (folder.open ?? []).filter((x) => !x.orphan && isClosed(x) === closed);
 // 분석 입력에 넣을 열린 항목(모델이 id로 닫는다)
 export const openForPrompt = (folder, n = 24) => openItems(folder).slice(-n).map((x) => ({ id: x.id, kind: x.kind, text: x.text }));
 

@@ -1195,7 +1195,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-addon-tile{display:flex;flex-direction:column;gap:6px;min-width:0;padding:12px 12px 10px;border:1px solid var(--rb-line);border-radius:14px;background:var(--rb-surf2);transition:border-color .15s}
 .rb-addon-tile.is-on{border-color:color-mix(in srgb,var(--rb-accent) 45%,var(--rb-line))}
 .rb-addon-tt{display:flex;align-items:center;gap:6px;min-width:0}
-.rb-addon-tt b{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rb-addon-tt b{font-size:13.5px;font-weight:700;min-width:0;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.35}
 .rb-addon-tt .sp{flex:1}
 .rb-addon-chip{flex:none;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--rb-line2);color:var(--rb-sub);white-space:nowrap}
 .rb-addon-chip.c-on{background:color-mix(in srgb,var(--rb-ok) 20%,transparent);color:var(--rb-ok)}
@@ -1209,8 +1209,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-addon-empty{padding:10px 12px;border-radius:12px;border:1px dashed var(--rb-line)}
 .rb-addon-acts{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
 .rb-addon-foot{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:4px}
-@media (max-width:560px){.rb-addon-grid{grid-template-columns:1fr 1fr;gap:8px}.rb-addon-tile{padding:10px}}
-@media (max-width:380px){.rb-addon-grid{grid-template-columns:1fr}}
+@media (max-width:600px){.rb-addon-grid{grid-template-columns:1fr;gap:8px}.rb-addon-tile{padding:10px 12px}.rb-addon-desc{-webkit-line-clamp:unset;display:block;overflow:visible}}   /* 2.2.4 모바일: 두 칸이면 이름·설명이 잘렸다 → 한 칸, 이름 줄바꿈, 설명 전부 */
 .rb-amk{max-width:560px;max-height:calc(100vh - 40px);overflow:auto}
 .rb-amk-step{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;border:var(--rb-bw,1px) solid var(--rb-line2)}
 .rb-amk-row{display:flex;gap:8px;flex-wrap:wrap}

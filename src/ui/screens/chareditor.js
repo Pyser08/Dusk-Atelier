@@ -7,7 +7,7 @@ import { h } from '../dom.js';
 import { btn, iconBtn, segmented } from '../kit.js';
 import { codeEditor } from '../codeedit.js';
 import { icon } from '../icons.js';
-import { estimateTokens } from '../../engine/memoryinject.js';
+import { estimateTokens } from '../../engine/tokens.js';
 import { createGreetingManager } from './greetings.js';
 import { openEditorCore, validateModule } from './editor.js';
 import { patchSavedChar } from './characters.js';

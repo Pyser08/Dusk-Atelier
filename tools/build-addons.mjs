@@ -53,6 +53,7 @@ for (const a of src.addons) {
   } };
   const r = await build({ ...common, entryPoints: [path.join(root, "addons", a.id, "index.js")], format: "esm", target: "es2022", legalComments: "none", minify: true, define, plugins: [lib], metafile: true });
   shared.forEach((x) => usedLib.add(x));
+  if (process.env.DUMP_META) fs.writeFileSync(path.join(process.env.DUMP_META, `${a.id}.json`), JSON.stringify(Object.keys(r.metafile.inputs)));
   const code = `/* Dusk Atelier 애드온 ${a.id} v${a.version} — 소스: addons/${a.id} (${a.id === "protlink" ? "GPL-3.0-or-later" : "Dusk Atelier 라이선스, 저장소 LICENSE"}) */\n` + r.outputFiles[0].text;
   const file = path.join(dist, `${a.id}.js`);
   if (check) same &&= fs.existsSync(file) && fs.readFileSync(file, "utf8") === code;
@@ -64,7 +65,10 @@ for (const a of src.addons) {
 // 2) 코어가 넘겨 줄 모듈 목록: 코어에 든 모듈 전부(2.0.0). 애드온이 나중에 새 코어 모듈을 써도 코어를 다시 내지 않아도 되게.
 //    (예전: 애드온이 지금 쓰는 것만 → 새로 쓰면 옛 코어에서 "코어에 ○○가 없어요")
 //    코어 진입점·이 목록 자신·바깥 패키지(node_modules)는 뺀다.
-const libs = [...new Set([...usedLib, ...[...coreSet].filter((f) => /^src\//.test(f) && /\.(js|ts)$/.test(f) && !/^src\/(main\.js|addonlib\.gen\.js)$/.test(f))])].sort();
+// 2.2.4: 기억 엔진은 이제 애드온 안에 들어간다(고치면 애드온만 올리면 됨). 다만 이미 깔린 예전 애드온(memory ≤0.2.16·cards ≤0.1.3)이
+//   새 코어에서 자동 업데이트되기 전 한 번 켜질 때 이 모듈들을 코어에서 찾으므로, 당분간 코어도 계속 넘겨 준다(새 애드온은 쓰지 않음).
+const LEGACY_LIB = ["collective", "gauge", "memoryemo", "memoryhuman", "memoryinject", "memoryinner", "memorykeys", "memorylines", "memoryplus", "memoryprompt", "memoryreconcile", "memorytrust", "regress", "embed"].map((n) => `src/engine/${n}.js`);
+const libs = [...new Set([...LEGACY_LIB, ...usedLib, ...[...coreSet].filter((f) => /^src\//.test(f) && /\.(js|ts)$/.test(f) && !/^src\/(main\.js|addonlib\.gen\.js)$/.test(f))])].sort();
 const libCode = `// 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어 모듈을 이름으로 넘겨 준다.\n${libs.map((f, i) => `import * as m${i} from ${JSON.stringify("./" + f.replace(/^src\//, ""))};`).join("\n")}\nexport const LIB = {\n${libs.map((f, i) => `  ${JSON.stringify(f)}: m${i}`).join(",\n")}\n};\n`;
 const json = JSON.stringify(out, null, 2) + "\n", mf = path.join(root, "addons/addons.json");
 if (check) {

@@ -4,7 +4,6 @@ import { userLabel } from './username.js';
 import { modal } from '../../kit.js';
 import { loadCharacters } from '../../../data/modules.js';
 import { emptyFolder } from '../../../data/memorystore.js';
-import { reconcile } from '../../../engine/memoryreconcile.js';
 
 export const mem = (ctx) => ctx.state.mem ??= { view: "bots", botId: "", chatIndex: 0, tab: "people", personKey: "", grades: [], search: "", personSearch: "", sort: "time", sceneDesc: true, page: 1, bots: null, showHidden: false, compose: null };
 export const fail = (ctx) => (e) => ctx.toast(e?.message ?? String(e), { error: true, seconds: 8 });
@@ -35,7 +34,7 @@ export async function loadFolder(ctx, bot, chatItem) {
     return { folder: f ? M.bardwiki.withGrades(f) : emptyFolder(bot.id, chatItem.id), snapshot: !!f?.snapshot, live, missing: !f, backend, idx };
   }
   const f = await M.store.getFolder(bot.id, chatItem.id) ?? emptyFolder(bot.id, chatItem.id);
-  reconcile(f, msgs);  // 화면용 사본: 저장하지 않는다
+  M.reconcile?.(f, msgs);  // 화면용 사본: 저장하지 않는다(2.2.4: 기억 애드온이 준 정리기 — 코어에 기억 엔진을 넣지 않으려고)
   return { folder: f, snapshot: false, live: true, backend, idx };
 }
 export const visibleRecords = (p) => (p.records ?? []).filter((r) => !r.orphan);

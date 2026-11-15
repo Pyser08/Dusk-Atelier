@@ -132,6 +132,7 @@ export var NAV_CSS = `
 .rb-hfind{width:min(560px,100%)}
 .rb-hfind-top{margin:6px auto 4px}
 .rb-hfind .rb-search{width:100%;max-width:none;height:48px;padding:0 18px;font-size:15px;background:var(--rb-glass-bg,var(--rb-surf));border:1px solid var(--rb-glass-line,var(--rb-line2));box-shadow:var(--rb-glass-hi,none)}
+.rb-ph-tools .rb-search{background:var(--rb-glass-bg,var(--rb-surf));border:1px solid var(--rb-glass-line,var(--rb-line2));box-shadow:var(--rb-glass-hi,none);padding:0 16px}   /* 2.2.4 다른 탭 검색 칸도 홈 기능 찾기 칸과 같은 모양 */
 
 @media (min-width:761px){
   .rb-win:not(.rb-nav-pinned) .rb-nav.rb-nav-kbd{width:216px;box-shadow:var(--rb-shadow)}

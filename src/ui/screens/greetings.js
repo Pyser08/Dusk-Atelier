@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { btn, iconBtn, openMenu, segmented } from '../kit.js';
 import { codeEditor } from '../codeedit.js';
 import { gripDrag } from '../sortable.js';
-import { estimateTokens } from '../../engine/memoryinject.js';
+import { estimateTokens } from '../../engine/tokens.js';
 import { KIND_LABEL, toItems, applyToDraft, addItem, duplicateItem, removeItem, restoreItem, moveItem, makeMain, setKind, summary, filterItems, neighbor } from '../../engine/greetings.js';
 
 const CSS = `

@@ -12,7 +12,7 @@ import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, load
 import { gripDrag } from '../sortable.js';
 import { entryPicker } from '../entrypicker.js';
 import { sortLoreByName } from '../../engine/lorelist.js';
-import { estimateTokens } from '../../engine/memoryinject.js';
+import { estimateTokens } from '../../engine/tokens.js';
 import { reload } from './modules.js';
 import { attachUndo } from '../undo.js';
 import { openRoulette } from './roulettepop.js';
