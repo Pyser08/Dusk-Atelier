@@ -1,7 +1,7 @@
 // v1.7.1 임베딩 호출·저장. 설정과 키는 이 기기의 로컬 저장소에만 둔다(백업·공유 내보내기에 안 들어감).
 // 실패·지연은 조용히 건너뛰고 기존 검색키 방식으로 이어 간다(채팅을 막지 않는다).
 import { hashText } from "../engine/chattext.js";
-import { DEFAULT_EMBED, normCfg, buildRequest, parseResponse, pack, unpack, cosine, isReady, recordText, isContextual } from "../engine/embed.js";
+import { DEFAULT_EMBED, normCfg, buildRequest, parseResponse, pack, unpack, cosine, isReady, recordText, sceneText, isContextual } from "../engine/embed.js";
 
 const CFG_KEY = "dusk.embed.cfg.v1", VEC_PREFIX = "dusk.embed.vec.v1.", BATCH = 32, MAX_NEW = 96;
 
@@ -61,6 +61,7 @@ export function createEmbedder(api, { log = (...a) => console.log("[Dusk 임베�
     await load(); if (!isReady(cfg, !!key) || !String(queryText ?? "").trim()) return null;
     const q = String(queryText).slice(-1200), qh = hashText(q), b = await bucket(fid);
     const items = []; for (const p of Object.values(folder?.people ?? {})) for (const r of p.records ?? []) if (!r.orphan && r.valid !== false) { const t = recordText(p, r); items.push({ id: r.id, h: hashText(t), t, pk: p.name }); }
+    for (const sc of folder?.scenes ?? []) if (!sc.orphan && sc.id && sc.sum) { const t = sceneText(sc); items.push({ id: sc.id, h: hashText(t), t, pk: "\u0000scenes" }); }   // 2.2.2: 장면도 의미로 고른다
     const need = [...new Map(items.filter((x) => !b.v[x.h]).map((x) => [x.h, x])).values()].slice(0, MAX_NEW);
     const qv = qcache.get(qh);
     const jobKey = fid + ":" + qh + ":" + need.length;

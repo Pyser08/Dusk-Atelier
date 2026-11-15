@@ -53,4 +53,5 @@ export function cosine(a, b) {
 // 유사도 → 점수 배율: 기준(minSim) 아래는 1배, 위로 갈수록 최대 3배.
 export const semBoost = (sim, minSim = 0.32) => sim == null || sim < minSim ? 1 : 1 + Math.min(2, (sim - minSim) * 6);
 export const semHit = (sim, minSim = 0.32) => sim != null && sim >= minSim + 0.08;
+export const sceneText = (sc) => [sc?.when, sc?.sum, ...(sc?.facts ?? []), sc?.place].filter(Boolean).join(" / ").slice(0, 400);
 export const recordText = (person, rec) => `${person?.name ?? ""}: ${rec?.act ?? ""}`.trim().slice(0, 300);

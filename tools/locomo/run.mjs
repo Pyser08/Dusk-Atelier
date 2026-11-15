@@ -146,7 +146,7 @@ async function qa() {
   if (embedder) {   // 답하기 전에 기록 벡터를 미리 다 만든다(한 번에 96개씩)
     const { loadReconciled } = await import("../../src/data/memoryload.js"); const { folderIdOf } = await import("../../src/data/memorystore.js"); const { chatKeyOf } = await import("../../src/engine/chatkey.js");
     const folder = await loadReconciled(store, character.chaId, chatKeyOf(chatObj), chatObj.message), fid = folderIdOf(character.chaId, chatKeyOf(chatObj));
-    const n = Object.values(folder.people).reduce((a, p) => a + p.records.length, 0);
+    const n = Object.values(folder.people).reduce((a, p) => a + p.records.length, 0) + (folder.scenes ?? []).filter((s) => !s.orphan).length;
     for (let k = 0; k < 20; k++) { const m = await embedder.scores(fid, folder, "warmup " + k, { budgetMs: 120000 }); if (m && m.size >= n) break; }
     saveKv(); console.log("임베딩 준비 끝", embedder.status().lastError || "");
   }
