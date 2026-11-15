@@ -6,7 +6,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((a, v, i, all) => (
 const DIR = args.dir, JUDGE = args.judge ?? "google/gemini-3.8-flash", TIER = args.tier ?? "flex", FIELD = args.field ?? "plugin", CONC = Number(args.conc ?? 8);
 const KEY = process.env.OPENROUTER_API_KEY || "proxy-injected";
 let cost = 0;
-const judgePrompt = (q, gold, ans) => [{ role: "user", content: `You are grading an answer to a question about a long conversation.\nQuestion: ${q}\nGold answer: ${gold}\nGenerated answer: ${ans}\n\nBe generous: if the generated answer refers to the same thing as the gold answer (same meaning, date expressed differently but same time period, etc.), it is CORRECT. Otherwise WRONG.\nReply with exactly one word: CORRECT or WRONG.` }];
+const judgePrompt = (q, gold, ans, who = null) => [{ role: "user", content: `You are grading an answer to a question about a long conversation${who ? ` between ${who.a} and ${who.b}` : ""}.\nQuestion: ${q}\nGold answer: ${gold}\nGenerated answer: ${ans}\n\n${who ? `The answer was written by ${who.b}, so "I", "me", "my", "we", "나", "내", "우리" in it refer to ${who.b}.\n` : ""}Grade generously, like the standard LoCoMo judge:\n- CORRECT if it refers to the same thing as the gold answer (same entity, event or fact), even if worded differently, in another language or format, or with extra detail.\n- Dates: CORRECT if it names the same day or the same period the gold describes (e.g. "the Sunday before 2023-05-25" vs "2023-05-21").\n- Lists: CORRECT if it covers most of the gold items and does not contradict them.\n- WRONG if it contradicts the gold, names a different thing, or misses the main point.\nReply with exactly one word: CORRECT or WRONG.` }];
 async function judge(msgs) {
   for (let k = 0; ; k++) {
     try {
@@ -18,8 +18,12 @@ async function judge(msgs) {
   }
 }
 const rows = [];
-for (const f of fs.readdirSync(DIR).filter((x) => /^qa-\d+\.json$/.test(x))) rows.push(...JSON.parse(fs.readFileSync(path.join(DIR, f), "utf8")));
+for (const f of fs.readdirSync(DIR).filter((x) => /^qa-\d+\.json$/.test(x))) {
+  const c = f.match(/\d+/)[0], kf = path.join(DIR, `ko-${c}.json`), conv = fs.existsSync(kf) ? JSON.parse(fs.readFileSync(kf, "utf8")).conversation : null;
+  const who = conv ? { a: conv.speaker_a, b: conv.speaker_b } : null;
+  rows.push(...JSON.parse(fs.readFileSync(path.join(DIR, f), "utf8")).map((r) => ({ ...r, who })));
+}
 let next = 0; const ok = new Array(rows.length);
-await Promise.all(Array.from({ length: CONC }, async () => { while (next < rows.length) { const i = next++; ok[i] = await judge(judgePrompt(rows[i].q, rows[i].gold, rows[i][FIELD])); } }));
+await Promise.all(Array.from({ length: CONC }, async () => { while (next < rows.length) { const i = next++; ok[i] = await judge(judgePrompt(rows[i].q, rows[i].gold, rows[i][FIELD], rows[i].who)); } }));
 const C = { 1: "multi-hop", 2: "temporal", 3: "open-domain", 4: "single-hop" }, acc = (f) => { const rs = rows.map((r, i) => [r, ok[i]]).filter(([r]) => f(r)); return rs.length ? +(100 * rs.filter(([, o]) => o).length / rs.length).toFixed(1) : null; };
 console.log(JSON.stringify({ dir: path.basename(DIR), field: FIELD, judge: JUDGE, n: rows.length, overall: acc(() => true), byCategory: Object.fromEntries(Object.entries(C).map(([k, n]) => [n, acc((r) => String(r.category) === k)])), cost: +cost.toFixed(4) }));

@@ -134,15 +134,15 @@ async function record() {
 
 // ---- 2단계: 질문 답변 두 쪽 + 채점 ----
 const tok = (s) => Math.ceil(String(s).length / 4);
-const sysMem = LANG === "ko" ? `너는 ${B}이고 ${A}와 대화하고 있어. 아래 기억 블록은 지금까지 둘의 대화에 대한 너의 기억이야. ${A}가 지난 대화에 대해 질문하면 기억 블록만 근거로 짧게(몇 단어) 답해. 이름과 날짜는 정확히. 모르면 가장 그럴듯한 답을 해.` : `You are ${B}, chatting with ${A}. The memory block below is your memory of your past conversations. Answer ${A}'s question in a short phrase using only that memory, with exact names and dates. If unsure, give your best guess.`;
-const sysPrompt = `You are ${B}, chatting with ${A}. The conversation so far is below. ${A} now asks you a question about things that happened in your past conversations. Answer in a short phrase (a few words), with exact names and dates when relevant. If you do not know, give your best guess.`;
+const sysMem = LANG === "ko" ? `너는 ${B}이고 ${A}와 대화하고 있어. 아래 기억 블록은 지금까지 둘의 대화에 대한 너의 기억이야. ${A}가 지난 대화에 대해 질문하면 기억 블록만 근거로 짧게(몇 단어) 답해. "나" 대신 이름을 써서 3인칭으로, 이름과 날짜는 정확히. 모르면 가장 그럴듯한 답을 해.` : `You are ${B}, chatting with ${A}. The memory block below is your memory of your past conversations. Answer ${A}'s question in a short phrase using only that memory, with exact names and dates. If unsure, give your best guess.`;
+const sysPrompt = `You are ${B}, chatting with ${A}. The conversation so far is below. ${A} now asks you a question about things that happened in your past conversations. Answer in a short phrase (a few words) in the third person using names (not "I"), with exact names and dates when relevant. If you do not know, give your best guess.`;
 function recentMessages() {
   const out = []; let used = 0;
   for (let i = messages.length - 1; i >= 0; i--) { const t = tok(messages[i].data) + 4; if (used + t > RECENT_TOKENS) break; out.unshift(messages[i]); used += t; }
   return out;
 }
 const toApi = (list) => list.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: `${m.speaker}: ${m.data}` }));
-const judgePrompt = (q, gold, ans) => [{ role: "user", content: `You are grading an answer to a question about a long conversation.\nQuestion: ${q}\nGold answer: ${gold}\nGenerated answer: ${ans}\n\nBe generous: if the generated answer refers to the same thing as the gold answer (same meaning, date expressed differently but same time period, etc.), it is CORRECT. Otherwise WRONG.\nReply with exactly one word: CORRECT or WRONG.` }];
+const judgePrompt = (q, gold, ans, who = null) => [{ role: "user", content: `You are grading an answer to a question about a long conversation${who ? ` between ${who.a} and ${who.b}` : ""}.\nQuestion: ${q}\nGold answer: ${gold}\nGenerated answer: ${ans}\n\n${who ? `The answer was written by ${who.b}, so "I", "me", "my", "we", "나", "내", "우리" in it refer to ${who.b}.\n` : ""}Grade generously, like the standard LoCoMo judge:\n- CORRECT if it refers to the same thing as the gold answer (same entity, event or fact), even if worded differently, in another language or format, or with extra detail.\n- Dates: CORRECT if it names the same day or the same period the gold describes (e.g. "the Sunday before 2023-05-25" vs "2023-05-21").\n- Lists: CORRECT if it covers most of the gold items and does not contradict them.\n- WRONG if it contradicts the gold, names a different thing, or misses the main point.\nReply with exactly one word: CORRECT or WRONG.` }];
 async function pool(items, fn) { const res = new Array(items.length); let next = 0; await Promise.all(Array.from({ length: CONC }, async () => { while (next < items.length) { const k = next++; res[k] = await fn(items[k], k); } })); return res; }
 
 async function qa() {
@@ -169,7 +169,7 @@ async function qa() {
     const ONLY_BASE = args.baseOnly === "1";   // --baseOnly: 플러그인 없는 쪽만(천장 측정: --recent 1000000 과 함께)
     const [a0, a1] = await Promise.all([chat("main", MAIN, base, { maxTokens: 2000, tier: MAIN_TIER }), ONLY_BASE ? Promise.resolve("") : chat("main", MAIN, withMem, { maxTokens: 2000, tier: MAIN_TIER })]);
     const jt = args.judgeTier ?? (JUDGE === MAIN ? MAIN_TIER : null);   // --judgeTier flex
-    const [j0, j1] = await Promise.all([chat("judge", JUDGE, judgePrompt(q.question, q.answer, a0), { maxTokens: 1000, tier: jt }), ONLY_BASE ? Promise.resolve("WRONG") : chat("judge", JUDGE, judgePrompt(q.question, q.answer, a1), { maxTokens: 1000, tier: jt })]);
+    const [j0, j1] = await Promise.all([chat("judge", JUDGE, judgePrompt(q.question, q.answer, a0, { a: A, b: B }), { maxTokens: 1000, tier: jt }), ONLY_BASE ? Promise.resolve("WRONG") : chat("judge", JUDGE, judgePrompt(q.question, q.answer, a1, { a: A, b: B }), { maxTokens: 1000, tier: jt })]);
     const ok = (s) => /CORRECT/i.test(s) && !/WRONG/i.test(s);
     if ((k + 1) % 20 === 0) console.log(`  질문 ${k + 1}/${qs.length}`);
     return { q: q.question, gold: String(q.answer), category: q.category, evidence: q.evidence, noPlugin: a0, plugin: a1, okNo: ok(j0), okMem: ok(j1), memTokens: c?.manifest?.tokens ?? 0, memReason: c?.reason ?? "", memText: c?.text ?? "" };
