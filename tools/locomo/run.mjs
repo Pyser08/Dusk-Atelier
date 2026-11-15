@@ -101,7 +101,7 @@ const api = {
   getLocalPluginStorage: async () => api.pluginStorage, nativeFetch: (u, o) => fetch(u, o)
 };
 const store = createMemoryStore(api);
-await store.updateIndex((i) => { i.settings.minChars = MIN_CHARS; i.settings.confirm = "now"; });
+await store.updateIndex((i) => { i.settings.minChars = MIN_CHARS; i.settings.confirm = "now"; if (args.inject) Object.assign(i.settings.inject, JSON.parse(args.inject)); });   // --inject '{"recallTokens":1500}' 로 주입 설정 시험
 const quiet = (...a) => { if (process.env.DEBUG) console.log("[dusk]", ...a); };
 const runner = createMemoryRunner(api, { store, log: quiet, notify: () => {}, call: (msgs) => chat("aux", AUX, msgs, { maxTokens: 12000 }) });
 const embedder = EMBED ? createEmbedder(api, { log: quiet }) : null;
@@ -163,7 +163,7 @@ async function qa() {
     const [j0, j1] = await Promise.all([chat("judge", JUDGE, judgePrompt(q.question, q.answer, a0), { maxTokens: 1000, tier: jt }), chat("judge", JUDGE, judgePrompt(q.question, q.answer, a1), { maxTokens: 1000, tier: jt })]);
     const ok = (s) => /CORRECT/i.test(s) && !/WRONG/i.test(s);
     if ((k + 1) % 20 === 0) console.log(`  질문 ${k + 1}/${qs.length}`);
-    return { q: q.question, gold: String(q.answer), category: q.category, evidence: q.evidence, noPlugin: a0, plugin: a1, okNo: ok(j0), okMem: ok(j1), memTokens: c?.manifest?.tokens ?? 0, memReason: c?.reason ?? "" };
+    return { q: q.question, gold: String(q.answer), category: q.category, evidence: q.evidence, noPlugin: a0, plugin: a1, okNo: ok(j0), okMem: ok(j1), memTokens: c?.manifest?.tokens ?? 0, memReason: c?.reason ?? "", memText: c?.text ?? "" };
   });
   const CAT = { 1: "multi-hop", 2: "temporal", 3: "open-domain", 4: "single-hop" };
   const summary = { conv: CONV, lang: LANG, memOnly: MEM_ONLY, embed: EMBED, main: `${MAIN} (${MAIN_TIER})`, aux: AUX, judge: JUDGE, recentTokens: RECENT_TOKENS, n: rows.length, byCategory: {}, cost: { aux: progress.cost.aux, main: cost.main, judge: cost.judge }, usage: { aux: progress.usage.aux, main: usage.main, judge: usage.judge } };

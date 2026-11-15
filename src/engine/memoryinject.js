@@ -116,7 +116,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   const pastCap = settings.pastTokens ?? 200;
   if (pastCap > 0 && recentText) {
     const older = scenes.slice(0, Math.max(0, scenes.length - 1 - evLines.length));
-    const picked = sem ? semScenes(older, sem, semMin, settings.semPastTokens ?? 500) : pastScenes(older, recentText, pastCap);   // 2.2.2: 임베딩이 있으면 의미가 가까운 옛 장면을 더 많이
+    const picked = sem ? semScenes(older, sem, semMin, settings.semPastTokens ?? 500, { max: settings.semPastMax ?? 8 }) : pastScenes(older, recentText, pastCap);   // 2.2.2: 임베딩이 있으면 의미가 가까운 옛 장면을 더 많이
     if (picked.lines.length) { lines.push("Earlier, relevant to now:", ...picked.lines); manifest.included.push({ kind: "past", tokens: picked.tokens, count: picked.lines.length }); }
   }
   let used = estimateTokens(lines.join("\n")); manifest.included.push(...(cur ? [{ kind: "scene", id: cur.id, tokens: used }] : []));
@@ -184,7 +184,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     for (const p of Object.values(folder.people ?? {})) { if ((p.ctx ?? "auto") === "never") continue; for (const r of p.records ?? []) { const v = sem.get(r.id); if (v != null && v >= semMin && injectable(r) && !shown.has(r.id)) rows.push({ p, r, v }); } }
     rows.sort((a, b) => b.v - a.v);
     const capR = settings.recallTokens ?? 700, keep = []; let n = estimateTokens(RECALL_TITLE);
-    for (const x of rows) { const t = `- ${dateOf(x.r)}${x.p.name}: ${oneLine(x.r.act)}`, k = estimateTokens(t); if (n + k > capR || used + n + k + 4 > cap) continue; keep.push({ t, at: x.r.at ?? 0, id: x.r.id }); n += k; if (keep.length >= 16) break; }
+    for (const x of rows) { const t = `- ${dateOf(x.r)}${x.p.name}: ${oneLine(x.r.act)}`, k = estimateTokens(t); if (n + k > capR || used + n + k + 4 > cap) continue; keep.push({ t, at: x.r.at ?? 0, id: x.r.id }); n += k; if (keep.length >= (settings.recallMax ?? 16)) break; }
     if (keep.length) { keep.sort((a, b) => a.at - b.at); lines.push(RECALL_TITLE, ...keep.map((x) => x.t)); used += n; manifest.included.push({ kind: "recall", tokens: n, count: keep.length }); manifest.recordIds.push(...keep.map((x) => x.id)); }
   }
   if (plus) {  // v1.6.2: 열린 항목 · 관계 변화량 · 지식 경계 · 원문 발췌. 각각 자기 예산 안에서 줄 단위로, 전체 상한을 넘으면 통째로 뺀다.
