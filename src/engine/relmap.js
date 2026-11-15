@@ -85,6 +85,14 @@ export function buildRelMap(folder, { max = RM.MAX_NODES } = {}) {
       items: items.slice(-3).reverse().map((i) => [i.at != null ? `#${i.at + 1}` : "", cut(i.d, 80)])
     });
   }
+  // 2.2.4 오래가는 관계(남매·연인 등): 있는 선은 이름으로 쓰고, 변화 기록이 없는 두 사람도 선으로 잇는다
+  const tieOf = (x, y) => Object.values(folder?.ties ?? {}).find((t) => (key(t.a) === x && key(t.b) === y) || (key(t.a) === y && key(t.b) === x));
+  for (const e of edges) { const t = tieOf(e.a, e.b); if (t) e.label = cut(t.kind, 14); }
+  for (const t of Object.values(folder?.ties ?? {})) {
+    const a = key(t.a), b = key(t.b); if (!keep.has(a) || !keep.has(b) || a === b || edges.some((e) => (e.a === a && e.b === b) || (e.a === b && e.b === a))) continue;
+    edges.push({ id: `${a}~${b}`, k: `tie:${a}>${b}`, a, b, w: 0.3, s: 0.35, sp: 0, rc: 0, label: cut(t.kind, 14), items: [[t.at != null ? `#${t.at + 1}` : "", `${t.b}: ${t.a}의 ${t.kind}`]] });
+  }
+  for (const n of nodes) { const t = tieOf(key(USER), n.id); if (t) n.uLabel = `${cut(t.kind, 10)} · ${n.uLabel}`; }
   return { nodes, edges, nowAt, empty: !nodes.length };
 }
 

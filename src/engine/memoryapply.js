@@ -2,7 +2,7 @@
 import { isCollectiveName } from "./collective.js";
 import { alignDocTitles } from "./peoplemerge.js";
 import { gradeResponse, findDuplicate, gradeRank } from "./memorygrade.js";
-import { applyRel, applyOpen, reinforce } from "./memoryplus.js";
+import { applyRel, applyOpen, reinforce, applyTies } from "./memoryplus.js";
 import { mergeWhen } from "./storydate.js";
 import { isTombed } from "./memorydelete.js";
 import { applyEmo, emoForPrompt, convertAffinity } from "./memoryemo.js";
@@ -56,6 +56,7 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
     out.records++;
   }
   out.rel = applyRel(folder, result?.rel, anchor, now);
+  out.ties = applyTies(folder, result?.ties, anchor, now);   // 2.2.4 오래가는 관계
   const tBefore = tensionKeys(folder);
   if (cool && anchor?.at != null) out.cooled = coolEmo(folder, anchor.at, now);   // v1.8.3: 시간이 지나 식은 감정을 먼저 반영(변화량이 식은 값에 더해지게)
   out.emo = applyEmo(folder, result?.emo, anchor, now, { smooth, ceilingOf: smooth ? (a, b) => stageCeiling(folder, a, b, anchor?.at ?? 0) : null });   // 2.2.4 게이지 조화(단계별 분석 켠 기본 경로)

@@ -7,7 +7,7 @@ import { effectiveTags, returnGap, earlierIds, fading, stageLines, talkLines, bo
 import { keyHits, keyBoost } from "./memorykeys.js";
 import { semBoost, semHit } from "./embed.js";
 import { povLines, innerLines, expLines } from "./memoryinner.js";
-import { lastTouch, strength, forgotten, knowLines, openLines, relLines, sourceLines, currentStoryTime } from "./memoryplus.js";
+import { lastTouch, strength, forgotten, knowLines, openLines, relLines, sourceLines, currentStoryTime, tieLines } from "./memoryplus.js";
 
 export const MARKER = "[Dusk Memory";
 export const HEADER = "[Dusk Memory — story so far. Newer facts win; recent messages take priority.]";
@@ -224,6 +224,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
       add("self", "Inner states (own view vs likely real reason; the reason is only inferred):", innerLines(Object.values(folder.people ?? {}).filter((p) => (p.ctx ?? "auto") !== "never"), { relevant: rel.size ? rel : null }), settings.selfTokens ?? 140);
       add("exp", "Expectation gaps between characters:", expLines(folder, { relevant: rel.size ? rel : null }), settings.expTokens ?? 140);
     }
+    add("ties", "Relationships (who is what to whom):", tieLines(folder, rel.size ? rel : null), settings.tieTokens ?? 120);
     add("rel", "Relationship shifts (recent):", relLines(folder, { relevant: rel.size ? rel : null }), settings.relTokens ?? 140);
     add("know", "Knowledge limits (who knows what):", knowLines(Object.values(folder.people ?? {}).filter((p) => (p.ctx ?? "auto") !== "never")), settings.knowTokens ?? 160);
     if (messages) { const src = sourceLines(folder, messages, { limit: settings.srcCount ?? 2 }); add("src", "Source lines (verbatim from the story):", src.map((x) => x.line), settings.srcTokens ?? 300); manifest.recordIds.push(...src.map((x) => x.id)); }
