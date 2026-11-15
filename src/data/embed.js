@@ -83,24 +83,6 @@ export function createEmbedder(api, { log = (...a) => console.log("[Dusk 임베�
     const m = new Map(); for (const x of items) { const v = b.v[x.h] && unpack(b.v[x.h]); if (v) m.set(x.id, cosine(qvec, v)); }
     return m.size ? m : null;
   }
-  // 2.2.2 재정렬(보야지 rerank): 의미 점수 상위 후보를 질문과 함께 다시 읽혀 순서를 정한다. 후보 밖은 빼고, 후보는 재정렬 점수로 바꾼다
-  // (기존 기준값을 넘도록 minSim + 0.6×점수). 실패하면 원래 점수를 그대로 돌려준다.
-  async function rerank(folder, queryText, sem, { timeoutMs } = {}) {
-    await load(); if (!sem?.size || !cfg.rerank || !key || !/voyageai\.com/i.test(cfg.url)) return sem;
-    const texts = new Map();
-    for (const p of Object.values(folder?.people ?? {})) for (const r of p.records ?? []) if (sem.has(r.id)) texts.set(r.id, recordText(p, r));
-    for (const sc of folder?.scenes ?? []) if (sem.has(sc.id)) texts.set(sc.id, sceneText(sc));
-    const cands = [...sem.entries()].filter(([id]) => texts.has(id)).sort((a, b) => b[1] - a[1]).slice(0, cfg.rerankTop).map(([id]) => id);
-    if (cands.length < 3) return sem;
-    const ac = new AbortController(), timer = setTimeout(() => ac.abort(), timeoutMs ?? cfg.timeoutMs);
-    try {
-      const res = await api.nativeFetch("https://api.voyageai.com/v1/rerank", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + key }, body: JSON.stringify({ query: String(queryText).slice(-1200), documents: cands.map((id) => texts.get(id)), model: cfg.rerankModel }), signal: ac.signal });
-      if (!res?.ok) throw new Error(`HTTP ${res?.status}`);
-      const j = await res.json(), out = new Map();
-      for (const d of j?.data ?? []) { const id = cands[d.index]; if (id != null && Number.isFinite(d.relevance_score)) out.set(id, cfg.minSim + 0.6 * d.relevance_score); }
-      return out.size ? out : sem;
-    } catch (e) { lastError = "재정렬 건너뜀: " + String(e?.message ?? e).slice(0, 80); return sem; } finally { clearTimeout(timer); }
-  }
   // 2.2.2 원문 조각 의미 점수: items [{id, h, t}]. 없는 벡터는 한 번에 최대 256개까지 만들고(나머지는 다음 요청에), 있는 것만 점수를 돌려준다.
   async function rawScores(fid, items, queryText, { budgetMs = null } = {}) {
     await load(); if (!isReady(cfg, !!key) || !items?.length || !String(queryText ?? "").trim()) return null;
@@ -122,18 +104,6 @@ export function createEmbedder(api, { log = (...a) => console.log("[Dusk 임베�
     const m = new Map(); for (const x of items) { const v = b.v[x.h] && unpack(b.v[x.h]); if (v) m.set(x.id, cosine(qvec, v)); }
     return m.size ? m : null;
   }
-  // 2.2.2 일반 재정렬: docs [{id, t}] → Map(id → 0~1). 꺼져 있거나 실패하면 null
-  async function rerankTexts(queryText, docs, { timeoutMs } = {}) {
-    await load(); if (!cfg.rerank || !key || !/voyageai\.com/i.test(cfg.url) || (docs?.length ?? 0) < 2) return null;
-    const ac = new AbortController(), timer = setTimeout(() => ac.abort(), timeoutMs ?? cfg.timeoutMs);
-    try {
-      const res = await api.nativeFetch("https://api.voyageai.com/v1/rerank", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + key }, body: JSON.stringify({ query: String(queryText).slice(-1200), documents: docs.map((d) => d.t), model: cfg.rerankModel }), signal: ac.signal });
-      if (!res?.ok) throw new Error(`HTTP ${res?.status}`);
-      const j = await res.json(), out = new Map();
-      for (const d of j?.data ?? []) if (docs[d.index] && Number.isFinite(d.relevance_score)) out.set(docs[d.index].id, d.relevance_score);
-      return out.size ? out : null;
-    } catch (e) { lastError = "재정렬 건너뜀: " + String(e?.message ?? e).slice(0, 80); return null; } finally { clearTimeout(timer); }
-  }
   async function clear() { vecs.clear(); qcache.clear(); const s = await store(); try { for (const k of await (s.keys?.() ?? [])) if (String(k).startsWith(VEC_PREFIX)) await s.removeItem(k); } catch { /* 일부만 지워져도 모델이 바뀌면 자동 무시 */ } }
-  return { load, status, keyValue: () => key, save, test, embed, scores, rerank, rawScores, rerankTexts, clear, cfg: () => cfg };
+  return { load, status, keyValue: () => key, save, test, embed, scores, rawScores, clear, cfg: () => cfg };
 }

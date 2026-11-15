@@ -162,14 +162,14 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       let boost = false; const roomy = preset && Number(preset.maxTokens) > 0 ? { ...preset, maxTokens: Math.min(16384, Math.max(Number(preset.maxTokens), Math.round(Number(preset.maxTokens) * 1.5))) } : preset;
       const call = async (msgs) => { try { return await stageCall(a, k, boost ? roomy : preset, recorderText(msgs, { front, back }), { ...opts, stageLabel: "Writer Dusk" }); } catch (e) { if (e?.code === "empty-model-response" && cutByLimit(e)) boost = true; throw e; } };
       // 묶음 결과가 리수폿 검증에서 떨어진 응답은 받아 둔 결과를 버리고 가벼운 지침으로 새로 기록한다(예전: 리수폿 Writer 전체 지침으로 다시 기록 — 약 3만 토큰)
-      const fresh = potNext.has(fullKeyOf(run, s0)) && s0.potFallback !== true;
+      const fresh = potNext.has(fullKeyOf(run, s0));
       const light = s0.light === true || fresh, beliefs = s0.inject?.beliefs === true;
       while (recCache.size > 4) recCache.delete(recCache.keys().next().value);
       // 같은 응답을 다시 기록하라고 불리면(앞선 시도가 저장 전에 끊김 등) 받아 둔 결과를 다시 쓴다 — 보조 모델을 또 부르지 않는다
       const fullKey = fullKeyOf(run, s0);
       // 이 응답의 기록기 결과가 리수폿 검증에서 떨어졌으면 같은 결과를 또 내지 않는다: 기본은 가벼운 지침으로 새로 기록,
       // '실패하면 예전 리수폿 기록으로 대신'을 켰을 때만 예전 리수폿 기록으로 넘긴다
-      if (potNext.has(fullKey)) { potNext.delete(fullKey); recDone.delete(fullKey); if (s0.potFallback === true) return null; }
+      if (potNext.has(fullKey)) { potNext.delete(fullKey); recDone.delete(fullKey); }
       lastKey = fullKey;
       let rec = fresh ? null : recDone.get(fullKey);
       if (rec) retryHits++;
@@ -197,7 +197,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
         if (out != null) return out;
         if (failed) {
           const message = String(failed?.message ?? failed).slice(0, 200);
-          const fallback = ((await store.getIndex()).settings ?? {}).potFallback === true;
+          const fallback = false;   // 2.2.2 '예전 리수폿 기록으로 대신' 설정 없앰(늘 꺼짐)
           lastRecord = { at: Date.now(), error: message, ...(fallback ? { fallback: "risupot" } : {}) };
           if (!fallback) { recorderFailed = true; log("Dusk 기록기 실패(예전 리수폿 기록으로 대신하지 않음)", message); throw Object.assign(new Error(`Dusk 기록기 실패 — ${message}`), { code: "dusk-recorder-failed" }); }
           log("Dusk 기록기 실패 → 예전 리수폿 기록으로 대신", message);
@@ -291,7 +291,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
           names: (ctx.documents ?? []).flatMap((d) => [d.title, ...(d.aliases ?? [])]),
           query: [ctx.currentUser, ...(ctx.recentChat ?? []).map((m) => m.text)].join("\n"),
           messageCount: msgs.length, messages: msgs,
-          settings: { tokens: idx.settings.flow?.recallTokens ?? 700, plus: idx.settings.inject?.plus !== false, forgetAfter: idx.settings.inject?.forgetAfter ?? 150 }
+          settings: { tokens: idx.settings.flow?.recallTokens ?? 700, plus: idx.settings.inject?.plus !== false, forgetAfter: 150 }
         });
         lastTurn = { ...(lastTurn ?? {}), recall: { at: Date.now(), people: r.people, tokens: r.tokens } };
         return mergeMemory(memory, r);

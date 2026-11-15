@@ -110,7 +110,7 @@ await store.updateIndex((i) => { i.settings.minChars = MIN_CHARS; i.settings.con
 const quiet = (...a) => { if (process.env.DEBUG) console.log("[dusk]", ...a); };
 const runner = createMemoryRunner(api, { store, log: quiet, notify: () => {}, call: (msgs) => chat("aux", AUX, msgs, { maxTokens: 32000 }) });
 const embedder = EMBED ? createEmbedder(api, { log: quiet }) : null;
-if (embedder) await embedder.save({ on: true, key: "proxy-injected", timeoutMs: 20000, rerank: args.rerank === "1" });   // --rerank: 보야지 재정렬 켜기
+if (embedder) await embedder.save({ on: true, key: "proxy-injected", timeoutMs: 20000 });
 const injector = createMemoryInjector(api, { store, log: quiet, embedder });
 
 const progressFile = path.join(OUT, `progress-${CONV}.json`);
@@ -202,12 +202,5 @@ async function qa() {
   console.log(JSON.stringify(summary, null, 1));
 }
 
-if (PHASE === "profile" || args.profile === "1") {   // 기존 기록으로 인물 프로필을 만든다(보조 모델)
-  const { chatKeyOf } = await import("../../src/engine/chatkey.js");
-  await store.updateIndex((i) => { i.settings.inject.profile = true; });
-  for (let k = 0; k < 12; k++) { const n = await runner.profileIfNeeded(character.chaId, chatKeyOf(chatObj), {}, { force: true }); console.log(`프로필 ${k + 1}회: ${n}명`); if (!n) break; }
-  progress.cost.aux += cost.aux; usage.aux.forEach((v, k) => (progress.usage.aux[k] += v)); cost.aux = 0; usage.aux = [0, 0, 0];
-  saveKv(); fs.writeFileSync(progressFile, JSON.stringify(progress)); console.log("프로필 비용(누적 보조)", progress.cost.aux.toFixed(4));
-}
 if (PHASE === "record" || PHASE === "all") await record();
 if (PHASE === "qa" || PHASE === "all") await qa();

@@ -6,7 +6,6 @@ import { emoLines, hasEmo } from "./memoryemo.js";
 import { effectiveTags, returnGap, earlierIds, fading, stageLines, talkLines, bondLines, beliefLines, riftLines, faceLines } from "./memoryhuman.js";
 import { keyHits, keyBoost } from "./memorykeys.js";
 import { semBoost, semHit } from "./embed.js";
-import { profileLines, PROFILE_TITLE } from "./memoryprofile.js";
 import { povLines, innerLines, expLines } from "./memoryinner.js";
 import { lastTouch, strength, forgotten, knowLines, openLines, relLines, sourceLines, currentStoryTime } from "./memoryplus.js";
 
@@ -66,7 +65,6 @@ function sceneLine(s, cap) {
 
 const RECALL_TITLE = "Relevant past moments (dated):";
 const wordSet = (s) => new Set(String(s ?? "").toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 2));
-const overlap = (a, b) => { if (!a.size || !b.size) return 0; let n = 0; for (const w of a) if (b.has(w)) n++; return n / Math.min(a.size, b.size); };
 // 2.2.2 임베딩 점수가 있을 때: 오래된 장면을 의미가 가까운 순으로 예산 안에서 고르고, 날짜와 함께 시간순으로 돌려준다.
 export function semScenes(older, sem, semMin, capTokens, { max = 8 } = {}) {
   const scored = older.map((sc, i) => ({ sc, i, v: sem.get(sc.id) })).filter((x) => x.v != null && x.v >= semMin).sort((a, b) => b.v - a.v);
@@ -109,7 +107,6 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   else if (plus && cur && !cur.when && currentStoryTime(folder)) lines.push(`Story time (last known): ${oneLine(currentStoryTime(folder))}`);
   // Story so far: 이전 장면을 최신부터 이벤트 예산 안에서 채우고 시간순으로 출력(통째로만 포함)
   // 2.2.2: 임베딩 점수가 있으면 같은 예산을 나눠 쓴다 — 최근 장면은 흐름을 이을 만큼(recentEventTokens)만, 나머지는 지금 글과 의미가 가까운 옛 장면.
-  const recallAt = lines.length;   // 2.2.2: recallFirst=true면 관련 기억 칸을 이 자리에 넣는다(시험에서 손해라 기본은 맨 뒤)
   const evCap = settings.eventTokens ?? 2000, evRows = []; let evUsed = 0;
   const lineOf = (s, withFacts) => "- " + (s.when ? `[${oneLine(s.when)}] ` : "") + oneLine(s.sum) + (withFacts && (s.facts ?? []).length ? " — " + s.facts.map(oneLine).join("; ") : "") + (s.place ? ` (${s.place})` : "");
   const prev = scenes.slice(0, -1), recentCap = sem ? Math.min(evCap, settings.recentEventTokens ?? 700) : evCap;
@@ -150,7 +147,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     if (mode === "auto" && !rel) { manifest.excluded.push({ kind: "person", name: p.name, tokens: 0, reason: "not-relevant" }); continue; }
     const group = mode === "always" ? 0 : rel;
     const age = (r) => r.at == null ? 50 : Math.max(0, messageCount - (plus ? lastTouch(r) : r.at));
-    const recs = (p.records ?? []).filter((r) => injectable(r) && (r.at == null || r.at < messageCount - skip) && !(p.digest && !p.digestStale && r.digested && (r.g === "D" || r.g === "C")) && !(plus && forgotten(r, messageCount, settings.forgetAfter ?? 150)));
+    const recs = (p.records ?? []).filter((r) => injectable(r) && (r.at == null || r.at < messageCount - skip) && !(p.digest && !p.digestStale && r.digested && (r.g === "D" || r.g === "C")) && !(plus && forgotten(r, messageCount, 150)));
     const scored = recs.map((r) => ({ r, s: (GRADE_WEIGHT[r.g] ?? 1) * Math.pow(0.97, age(r)) * (plus ? strength(r) : 1) * (plus ? keyBoost(keyHits(r, folder, recent)) * semBoost(sem?.get(r.id), semMin) : 1) + (r.pin ? 50 : 0) })).sort((a, b) => b.s - a.s);
     const top = scored.slice(0, 5);
     if (plus && sem) {  // 의미가 아주 비슷한 기록은 등급이 낮아도 자리를 얻는다(인물당 최대 2개, 고정 기록은 밀어내지 않음)
@@ -159,7 +156,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     }
     const dg = p.digest && !p.digestStale ? p.digest : "";  // 재요약 대기 중인 digest는 넣지 않음
     if (!top.length && !dg) continue;
-    const earlier = human ? earlierIds(p) : null, fadeAt = settings.forgetAfter ?? 150;
+    const earlier = human ? earlierIds(p) : null, fadeAt = 150;
     const tag = (r) => (earlier?.has(r.id) ? "(earlier) " : "") + (human && fading(r, messageCount, fadeAt) ? "(vague) " : "");   // 변화 이전 기록 · 흐릿해진 사소한 기록
     const moments = top.sort((a, b) => (a.r.at ?? -1) - (b.r.at ?? -1)).map((x) => `(${x.r.g}) ${tag(x.r)}${dateOf(x.r)}${oneLine(x.r.act)}${trustTag(x.r)}${changeNote(x.r)}`);
     const gap = human && rel ? returnGap(p, scenes, messageCount) : 0;   // 오랜만에 다시 나온 인물
@@ -193,12 +190,6 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     chars.push(text); used += tokens; manifest.included.push({ kind: "person", name: c.name, tokens, group: c.group }); manifest.recordIds.push(...ids); included.add(norm(c.name));
   }
   if (chars.length) lines.push("Characters (current state):", ...chars);
-  if (settings.profile === true) {   // 2.2.2 인물 프로필: 지금 글에 이름이 나오거나 장면에 있는 인물(없으면 프로필 있는 모두)
-    const withP = Object.values(folder.people ?? {}).filter((p) => p.profile?.items?.length && (p.ctx ?? "auto") !== "never");
-    const named = withP.filter((p) => [p.name, ...(p.aliases ?? [])].map(norm).some((n) => n && (recent.includes(n) || inScene.has(n))));
-    const pr = profileLines(named.length ? named : withP, settings.profileTokens ?? 500);
-    if (pr.lines.length && used + pr.tokens <= cap) { lines.push(PROFILE_TITLE, ...pr.lines); used += pr.tokens; manifest.included.push({ kind: "profile", tokens: pr.tokens, count: pr.lines.length }); }
-  }
   if (plus && sem) {   // 2.2.2: 지금 글과 의미가 가까운 기록을 인물 구분 없이 날짜와 함께(인물당 5개 제한에 걸려 빠지던 사실)
     const shown = new Set(manifest.recordIds), rows = [];
     for (const p of Object.values(folder.people ?? {})) { if ((p.ctx ?? "auto") === "never") continue; for (const r of p.records ?? []) { const v = sem.get(r.id); if (v != null && v >= semMin && injectable(r) && !shown.has(r.id)) rows.push({ p, r, v }); } }
@@ -206,9 +197,8 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     if (kw > 0 && qWords.size) for (const x of rows) { let hit = 0; for (const w of wordSet(x.r.act)) if (w.length >= 2 && qWords.has(w)) hit++; x.v += kw * Math.min(3, hit); }
     rows.sort((a, b) => b.v - a.v);
     const capR = settings.recallTokens ?? 700, keep = []; let n = estimateTokens(RECALL_TITLE);
-    const picked = [];   // 거의 같은 말을 반복하는 기록은 건너뛴다(다양한 사실이 들어가게)
-    for (const x of rows) { const t = `- ${dateOf(x.r)}${x.p.name}: ${oneLine(x.r.act)}`, k = estimateTokens(t); if (n + k > capR || used + n + k + 4 > cap) continue; const w = wordSet(x.r.act); if (settings.recallDedupe && picked.some((o) => overlap(o, w) >= settings.recallDedupe)) continue; picked.push(w);   /* 비슷한 기록 건너뛰기: 기본 꺼짐(시험에서 손해) */ keep.push({ t, at: x.r.at ?? 0, id: x.r.id }); n += k; if (keep.length >= (settings.recallMax ?? 16)) break; }
-    if (keep.length) { keep.sort((a, b) => a.at - b.at); lines.splice(settings.recallFirst === true ? recallAt : lines.length, 0, RECALL_TITLE, ...keep.map((x) => x.t)); used += n; manifest.included.push({ kind: "recall", tokens: n, count: keep.length }); manifest.recordIds.push(...keep.map((x) => x.id)); }
+    for (const x of rows) { const t = `- ${dateOf(x.r)}${x.p.name}: ${oneLine(x.r.act)}`, k = estimateTokens(t); if (n + k > capR || used + n + k + 4 > cap) continue; keep.push({ t, at: x.r.at ?? 0, id: x.r.id }); n += k; if (keep.length >= (settings.recallMax ?? 16)) break; }
+    if (keep.length) { keep.sort((a, b) => a.at - b.at); lines.push(RECALL_TITLE, ...keep.map((x) => x.t)); used += n; manifest.included.push({ kind: "recall", tokens: n, count: keep.length }); manifest.recordIds.push(...keep.map((x) => x.id)); }
   }
   if (plus) {  // v1.6.2: 열린 항목 · 관계 변화량 · 지식 경계 · 원문 발췌. 각각 자기 예산 안에서 줄 단위로, 전체 상한을 넘으면 통째로 뺀다.
     const rel = new Set([...included, ...inScene]);

@@ -399,7 +399,7 @@ test("다시 요청(메인 모델이 끊겨 같은 말을 다시 보냄): 고르
   assert.equal(again.length, 0, "다시 요청 때 보조 호출: " + again.map((c) => c.kind).join(","));
 });
 
-test("2.1.4: Dusk 기록기가 끝내 실패해도 기본은 리수폿 Writer 전체 지침을 다시 보내지 않는다(실패·다시 시도) · 설정을 켜면 예전처럼 대신 기록", async () => {
+test("2.1.4: Dusk 기록기가 끝내 실패해도 기본은 리수폿 Writer 전체 지침을 다시 보내지 않는다(실패·다시 시도) · 2.2.2: 옛 설정(potFallback)이 남아 있어도 대신하지 않는다", async () => {
   for (const fallback of [false, true]) {
     const h = harness({ model: { other: (rec) => /You are the memory recorder/.test(rec.prompt) ? "죄송하지만 형식을 못 맞추겠어요" : undefined } });
     h.recorder = "dusk";
@@ -409,9 +409,8 @@ test("2.1.4: Dusk 기록기가 끝내 실패해도 기본은 리수폿 Writer �
     assert.ok(await until(async () => !!h.mem.flow.lastRecord()?.error), "기록기 실패가 남음");
     await wait(300);
     const writer = h.calls.filter((c) => /Writer output guide/.test(c.prompt)).length;
-    if (fallback) assert.ok(writer >= 1, "켜면 예전 리수폿 기록으로 대신");
-    else assert.equal(writer, 0, "기본은 큰 지침을 보내지 않는다");
-    assert.equal(h.mem.flow.lastRecord().fallback, fallback ? "risupot" : undefined);
+    assert.equal(writer, 0, "큰 지침을 보내지 않는다(설정을 없앴다)");
+    assert.equal(h.mem.flow.lastRecord().fallback, undefined);
   }
 });
 

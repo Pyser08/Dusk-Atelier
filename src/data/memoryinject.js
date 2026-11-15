@@ -6,9 +6,8 @@ import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
 import { folderIdOf } from "./memorystore.js";
 import { chatKeyOf } from "../engine/chatkey.js";
-import { hashText } from "../engine/chattext.js";
 import { trimCovered } from "../engine/historytrim.js";
-import { buildChunks, lexScores, rrf, assemble, subQueries, RAW_TITLE } from "../engine/rawrecall.js";
+import { buildChunks, lexScores, rrf, assemble, RAW_TITLE } from "../engine/rawrecall.js";
 
 // onRequest: 메인 모델 요청 직전에 부른다(기다리지 않음). 러너가 '다음 입력 때 직전 응답 확정'을 시작하는 데 쓴다.
 // 2.2.2 의미 검색 질의: 사용자의 마지막 말이 중심이다(직전 응답까지 섞으면 질문의 뜻이 흐려진다). 말이 아주 짧으면 직전 응답 끝부분을 조금 붙인다.
@@ -52,7 +51,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     const rx = prep ? await prep.entriesFor(character, chat) : [];  // v1.8.1 정규식 전처리: 임베딩·키워드 질의 글에서 군더더기 제거
     const tail = msgs.slice(-2).map((m) => rx.length ? prep.apply(extractMessageText(m), rx) : extractMessageText(m)).join("\n");
     let sem = null;  // 임베딩이 켜져 있으면 의미 유사도로 기억 고르기를 돕는다(실패하면 기존 방식 그대로)
-    try { if (embedder && idx.settings.inject.plus !== false) sem = await embedder.scores(folderIdOf(character.chaId, chatKeyOf(chat)), folder, semQuery(msgs, idx.settings.inject.semQueryMin ?? 40)); if (sem && embedder.rerank && idx.settings.inject.rerankRecords !== false) sem = await embedder.rerank(folder, semQuery(msgs, idx.settings.inject.semQueryMin ?? 40), sem); } catch { sem = null; }
+    try { if (embedder && idx.settings.inject.plus !== false) sem = await embedder.scores(folderIdOf(character.chaId, chatKeyOf(chat)), folder, semQuery(msgs, idx.settings.inject.semQueryMin ?? 40)); } catch { sem = null; }
     const built = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus, storyNow: now, sem, semMin: embedder?.cfg().minSim });
     if (built.manifest && sem) built.manifest.sem = sem.size;
     // 2.2.2 원문 회상: 임베딩이 켜져 있으면 지난 대화 원문에서 지금 글과 관련 있는 조각을 날짜와 함께 덧붙인다(요약 기억이 놓친 사실을 받친다).
@@ -74,20 +73,11 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     const dateOf = (mi) => { const sc = scenes.find((x) => x.at >= mi) ?? scenes.at(-1); return sc?.when ? String(sc.when).replace(/\s+/g, " ").slice(0, 40) : ""; };
     const list = []; for (let i = 0; i < upto; i++) { const t = extractMessageText(msgs[i]); if (t.trim()) list.push({ text: t, who: isUserMessage(msgs[i]) ? "{{user}}" : String(character?.name ?? "{{char}}"), mi: i }); }
     const chunks = buildChunks(list, dateOf);
-    // 2.2.2 rawContext: 임베딩할 때만 조각 앞에 [날짜 / 그 장면 요약]을 붙인다(짧은 말도 무슨 이야기인지 알게). 보여 주는 글은 그대로
-    const topicOf = (mi) => { const sc = scenes.find((x) => x.at >= mi) ?? scenes.at(-1); return sc?.sum ? String(sc.sum).replace(/\s+/g, " ").slice(0, 80) : ""; };
-    const embedItems = s.rawContext ? chunks.map((c) => { const e = `[${[c.date, topicOf(c.mi)].filter(Boolean).join(" / ")}] ${c.t}`; return { id: c.id, t: e, h: hashText(e, 600) }; }) : chunks;
-    if (!chunks.length) return null;
     const fid = folderIdOf(character.chaId, chatKeyOf(chat));
-    // 2.2.2 rawMulti: 질문을 몇 갈래(이름 뺀 질문·핵심 낱말)로 나눠 각각 의미 순위를 내고 합친다(여러 근거가 필요한 질문)
-    const names = [String(character?.name ?? ""), ...Object.values(folder?.people ?? {}).map((p) => p?.name)].filter((n) => n && n !== "{{user}}");
-    const qs = s.rawMulti ? subQueries(query, names) : [query];
-    const sems = []; for (const qq of qs) sems.push(await embedder.rawScores(fid, embedItems, qq).catch(() => null));
-    const fused = rrf([...sems, lexScores(chunks, query)]);
+    const sem = await embedder.rawScores(fid, chunks, query).catch(() => null);
+    const fused = rrf([sem, lexScores(chunks, query)]);
     let ranked = [...fused].sort((a, b) => b[1] - a[1]).map(([id]) => id);
-    const rr = await embedder.rerankTexts(query, ranked.slice(0, Number(s.rawRerankTop ?? 24)).map((id) => ({ id, t: chunks[id].t }))).catch(() => null);
-    if (rr) ranked = [...[...rr].sort((a, b) => b[1] - a[1]).map(([id]) => id), ...ranked.filter((id) => !rr.has(id))];
-    const out = assemble(chunks, ranked, { tokens: Number(s.rawTokens ?? 1500), neighbor: Number(s.rawNeighbor ?? 1), maxPicks: Number(s.rawPicks ?? 12), perDate: Number(s.rawPerDate ?? 0), dates: s.rawDates === true });
+    const out = assemble(chunks, ranked, { tokens: Number(s.rawTokens ?? 1500), neighbor: Number(s.rawNeighbor ?? 1), maxPicks: Number(s.rawPicks ?? 12), perDate: Number(s.rawPerDate ?? 0) });
     return out.lines.length ? { text: [RAW_TITLE, ...out.lines].join("\n"), tokens: out.tokens, count: out.lines.length } : null;
   }
   async function beforeRequest(messages, type, { focus = null } = {}) {

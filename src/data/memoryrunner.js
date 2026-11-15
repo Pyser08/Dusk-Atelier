@@ -20,7 +20,6 @@ import { openForPrompt } from "../engine/memoryplus.js";
 import { emoForPrompt } from "../engine/memoryemo.js";
 import { hintsForPrompt } from "../engine/memoryinner.js";
 import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engine/memorydigest.js";
-import { needsProfile, profileTargets, profileMessages, applyProfile } from "../engine/memoryprofile.js";
 import { loadUserNames } from "./usernames.js";
 import { memoryState } from "../engine/memoryswitch.js";
 import { chatKeyOf, legacyChatKeyOf } from "../engine/chatkey.js";
@@ -162,7 +161,6 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     await bump(chaId, (b) => { b.fails = 0; b.lastRunAt = Date.now(); b.notified = true; });
     await status({ processed: (idx.status.processed ?? 0) + 1, lastSuccessAt: Date.now(), lastError: "" });
     digestIfNeeded(chaId, chatId, modelOf(idx.settings)).catch((e) => log("digest 실패", e?.message ?? e));
-    if (idx.settings?.inject?.profile === true) profileIfNeeded(chaId, chatId, modelOf(idx.settings)).catch((e) => log("프로필 실패", e?.message ?? e));
     try { await afterAnalyze?.(charIndex, chatIndex); } catch (e) { log("후처리 실패", e?.message ?? e); }
     if (firstTime) notify("이 봇의 장기 기억 자동 기록을 시작했어요 (기억 탭에서 끌 수 있어요)");
     return out;
@@ -182,21 +180,6 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     return true;
   }
 
-  // 2.2.2 인물 프로필: 새 기록이 PROFILE_STEP개 쌓인 인물을 골라 프로필에 합친다(force면 조금이라도 있으면). 호출은 큐 밖, 반영만 큐 안.
-  async function profileIfNeeded(chaId, chatId, model, { force = false, step } = {}) {
-    const f = await store.getFolder(chaId, chatId); if (!f) return 0;
-    const whenById = new Map((f.scenes ?? []).map((s) => [s.id, s.when]));
-    const whenOf = (r) => r.when || (r.sit && whenById.get(r.sit)) || "";
-    let n = 0;
-    for (const pk of Object.keys(f.people ?? {})) {
-      const p = f.people[pk]; if (!(force ? profileTargets(p).length : needsProfile(p, step))) continue;
-      const targets = profileTargets(p).slice(0, 50);   // 한 번에 너무 많으면 추론 모델이 생각만 하다 끝난다
-      const raw = await run(profileMessages(p, targets, whenOf), model);
-      await store.updateFolder(chaId, chatId, (folder) => { const q = folder.people[pk]; if (q) applyProfile(q, targets, raw); });
-      n++;
-    }
-    return n;
-  }
   async function latestAiIndex(charIndex, chatIndex) {
     const chat = await api.getChatFromIndex(charIndex, chatIndex);
     const ai = aiIndexes(chat?.message ?? []); return ai.at(-1) ?? -1;
@@ -238,7 +221,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   async function schedule(kind = "output") {
     if (Date.now() - schedCache.at > 3000) {
       const idx = await store.getIndex().catch(() => null);
-      schedCache = { at: Date.now(), confirm: confirmOf(idx) === "next", ms: Math.max(0, Number(idx?.settings?.debounceSec ?? 4) * 1000) };
+      schedCache = { at: Date.now(), confirm: confirmOf(idx) === "next", ms: Math.max(0, Number(idx?.settings?.debounceSec ?? 4) * 1000) };   // 화면 설정은 없앰(기본 4초). 시험은 짧은 값을 넣어 쓴다
     }
     if ((kind === "confirm") !== schedCache.confirm) return;
     clearTimeout(timer); dirty = true; lastKind = kind;
@@ -372,6 +355,6 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     };
   }
 
-  return { start, onOutput, confirmNext, tick, analyzeAt, prepareLatest, profileIfNeeded, analyzeLatest: async (ci, ti) => { const i = await latestAiIndex(ci, ti); if (i < 0) throw new Error("분석할 AI 응답이 없어요."); return analyzeAt(ci, ti, [i], { manual: true }); },
+  return { start, onOutput, confirmNext, tick, analyzeAt, prepareLatest, analyzeLatest: async (ci, ti) => { const i = await latestAiIndex(ci, ti); if (i < 0) throw new Error("분석할 AI 응답이 없어요."); return analyzeAt(ci, ti, [i], { manual: true }); },
     planBackfill, backfill, resumeServer, digestIfNeeded, session: () => ({ ...session }), isStarted: () => started, stop: () => clearTimeout(timer) };
 }
