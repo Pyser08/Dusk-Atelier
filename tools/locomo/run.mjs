@@ -26,15 +26,18 @@ fs.mkdirSync(OUT, { recursive: true });
 // ---- OpenRouter ----
 const cost = { aux: 0, main: 0, judge: 0 }, usage = { aux: [0, 0, 0], main: [0, 0, 0], judge: [0, 0, 0] };
 const flat = (c) => (typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => p?.text ?? "").join("") : String(c ?? ""));
+const AUX_PROVIDER = args.auxProvider ? { order: args.auxProvider.split(","), quantizations: ["fp8", "bf16", "fp16", "unknown"], allow_fallbacks: false } : null;   // --auxProvider deepinfra : 보조 모델 제공자 고정(fp8 이상)
+const providers = {};
 async function chat(kind, model, messages, { maxTokens = 8000, tier = null } = {}) {
   const body = { model, messages: messages.map((m) => ({ role: m.role === "char" ? "assistant" : m.role, content: flat(m.content) })), max_tokens: maxTokens, usage: { include: true } };
   if (tier) body.service_tier = tier;
+  if (kind === "aux" && AUX_PROVIDER) body.provider = AUX_PROVIDER;
   for (let k = 0; ; k++) {
     try {
       const r = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${KEY}` }, body: JSON.stringify(body), signal: AbortSignal.timeout(300000) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || j.error) throw new Error(`${r.status} ${JSON.stringify(j.error ?? j).slice(0, 300)}`);
-      const u = j.usage ?? {};
+      const u = j.usage ?? {}; const pk = `${kind}:${j.provider ?? "?"}`; providers[pk] = (providers[pk] ?? 0) + 1;
       cost[kind] += Number(u.cost ?? 0); usage[kind][0] += u.prompt_tokens ?? 0; usage[kind][1] += u.completion_tokens ?? 0; usage[kind][2]++;
       const text = j.choices?.[0]?.message?.content ?? "";
       if (!text && k < 4) throw new Error("empty content");
@@ -124,6 +127,7 @@ async function record() {
     saveKv(); fs.writeFileSync(progressFile, JSON.stringify(progress));
     if (++n % 10 === 0) console.log(`  기록 ${i + 1}/${messages.length}  보조 비용 $${progress.cost.aux.toFixed(4)}  ${Math.round((Date.now() - t0) / 1000)}초  ${JSON.stringify(results)}`);
   }
+  console.log("제공자:", JSON.stringify(providers));
   console.log(`기록 끝: ${JSON.stringify(results)}  보조 합계 $${progress.cost.aux.toFixed(4)}  토큰 in ${progress.usage.aux[0]} / out ${progress.usage.aux[1]} / 호출 ${progress.usage.aux[2]}`);
 }
 
