@@ -190,7 +190,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     let n = 0;
     for (const pk of Object.keys(f.people ?? {})) {
       const p = f.people[pk]; if (!(force ? profileTargets(p).length : needsProfile(p, step))) continue;
-      const targets = profileTargets(p).slice(0, 120);
+      const targets = profileTargets(p).slice(0, 50);   // 한 번에 너무 많으면 추론 모델이 생각만 하다 끝난다
       const raw = await run(profileMessages(p, targets, whenOf), model);
       await store.updateFolder(chaId, chatId, (folder) => { const q = folder.people[pk]; if (q) applyProfile(q, targets, raw); });
       n++;
