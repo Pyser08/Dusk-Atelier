@@ -199,7 +199,7 @@ async function analyzeLines(call, input, { onWarn = () => {}, light = false, max
     return j && (Array.isArray(j.people) || j.scene) ? j : null;
   }, { minimal: LINES_STAGE1_MIN });
   const merged = { ...overview, people: (overview.people ?? []).map((e) => ({ ...e })), emo: [], talk: [], rift: [], bond: [], belief: [], start: [] };
-  const targets = merged.people.filter((e) => e.name && Math.max(Number(e.p) || 0, Number(e.s) || 0, Number(e.r) || 0) >= 1).slice(0, cap);
+  const targets = merged.people.filter((e) => e.name && !e.extra && Math.max(Number(e.p) || 0, Number(e.s) || 0, Number(e.r) || 0) >= 1).slice(0, cap);
   let lite = light;
   if (newest.length >= SHORT) for (const t of targets) {
     const mine = (arr) => (arr ?? []).filter((x) => JSON.stringify(x).includes(t.name));

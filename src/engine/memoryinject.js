@@ -64,6 +64,8 @@ function sceneLine(s, cap) {
 
 
 const RECALL_TITLE = "Relevant past moments (dated):";
+const wordSet = (s) => new Set(String(s ?? "").toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 2));
+const overlap = (a, b) => { if (!a.size || !b.size) return 0; let n = 0; for (const w of a) if (b.has(w)) n++; return n / Math.min(a.size, b.size); };
 // 2.2.2 임베딩 점수가 있을 때: 오래된 장면을 의미가 가까운 순으로 예산 안에서 고르고, 날짜와 함께 시간순으로 돌려준다.
 export function semScenes(older, sem, semMin, capTokens, { max = 8 } = {}) {
   const scored = older.map((sc, i) => ({ sc, i, v: sem.get(sc.id) })).filter((x) => x.v != null && x.v >= semMin).sort((a, b) => b.v - a.v);
@@ -105,18 +107,28 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   if (storyNow) lines.push(`Story time (now): ${oneLine(storyNow)}`); // 이야기 시간 설정이 켜져 있으면 그 값이 기준
   else if (plus && cur && !cur.when && currentStoryTime(folder)) lines.push(`Story time (last known): ${oneLine(currentStoryTime(folder))}`);
   // Story so far: 이전 장면을 최신부터 이벤트 예산 안에서 채우고 시간순으로 출력(통째로만 포함)
-  const evCap = settings.eventTokens ?? 2000, evLines = []; let evUsed = 0;
-  for (const s of scenes.slice(0, -1).reverse()) {
-    const t = "- " + (s.when ? `[${oneLine(s.when)}] ` : "") + oneLine(s.sum) + (s.place ? ` (${s.place})` : ""), n = estimateTokens(t);   // 2.2.2: 장면 날짜도 넣는다(언제 일인지 답할 수 있게)
-    if (evUsed + n > evCap) { manifest.excluded.push({ kind: "event", name: oneLine(s.sum).slice(0, 20), tokens: n, reason: "budget" }); break; }
-    evLines.unshift(t); evUsed += n;
+  // 2.2.2: 임베딩 점수가 있으면 같은 예산을 나눠 쓴다 — 최근 장면은 흐름을 이을 만큼(recentEventTokens)만, 나머지는 지금 글과 의미가 가까운 옛 장면.
+  const evCap = settings.eventTokens ?? 2000, evRows = []; let evUsed = 0;
+  const lineOf = (s, withFacts) => "- " + (s.when ? `[${oneLine(s.when)}] ` : "") + oneLine(s.sum) + (withFacts && (s.facts ?? []).length ? " — " + s.facts.map(oneLine).join("; ") : "") + (s.place ? ` (${s.place})` : "");
+  const prev = scenes.slice(0, -1), recentCap = sem ? Math.min(evCap, settings.recentEventTokens ?? 700) : evCap;
+  let k = prev.length - 1;
+  for (; k >= 0; k--) {
+    const t = lineOf(prev[k], false), n = estimateTokens(t);
+    if (evUsed + n > recentCap) { if (!sem) manifest.excluded.push({ kind: "event", name: oneLine(prev[k].sum).slice(0, 20), tokens: n, reason: "budget" }); break; }
+    evRows.push({ i: k, t }); evUsed += n;
   }
-  if (evLines.length) { lines.push("Story so far:", ...evLines); manifest.included.push({ kind: "events", tokens: evUsed, count: evLines.length }); }
-  // 예산 때문에 빠진 오래된 장면 중, 지금 대화와 관련 있는 것만 골라 짧게 넣는다(질문에 따라 과거 사건을 불러오는 BardWiki 방식의 가벼운 판).
+  let semCount = 0;
+  if (sem && k >= 0) {
+    const older = prev.slice(0, k + 1).map((sc, i) => ({ sc, i, v: sem.get(sc.id) })).filter((x) => x.v != null && x.v >= semMin).sort((x, y) => y.v - x.v);
+    for (const x of older) { const t = lineOf(x.sc, true), n = estimateTokens(t); if (evUsed + n > evCap) continue; evRows.push({ i: x.i, t }); evUsed += n; semCount++; }
+  }
+  evRows.sort((x, y) => x.i - y.i);
+  const evLines = evRows.map((x) => x.t);
+  if (evLines.length) { lines.push("Story so far:", ...evLines); manifest.included.push({ kind: "events", tokens: evUsed, count: evLines.length, ...(semCount ? { relevant: semCount } : {}) }); }
+  // 예산 때문에 빠진 오래된 장면 중, 지금 대화와 관련 있는 것만 골라 짧게 넣는다(질문에 따라 과거 사건을 불러오는 BardWiki 방식의 가벼운 판). 임베딩이 있으면 위에서 이미 골랐다.
   const pastCap = settings.pastTokens ?? 200;
-  if (pastCap > 0 && recentText) {
-    const older = scenes.slice(0, Math.max(0, scenes.length - 1 - evLines.length));
-    const picked = sem ? semScenes(older, sem, semMin, settings.semPastTokens ?? 500, { max: settings.semPastMax ?? 8 }) : pastScenes(older, recentText, pastCap);   // 2.2.2: 임베딩이 있으면 의미가 가까운 옛 장면을 더 많이
+  if (!sem && pastCap > 0 && recentText) {
+    const older = scenes.slice(0, Math.max(0, scenes.length - 1 - evLines.length)), picked = pastScenes(older, recentText, pastCap);
     if (picked.lines.length) { lines.push("Earlier, relevant to now:", ...picked.lines); manifest.included.push({ kind: "past", tokens: picked.tokens, count: picked.lines.length }); }
   }
   let used = estimateTokens(lines.join("\n")); manifest.included.push(...(cur ? [{ kind: "scene", id: cur.id, tokens: used }] : []));
@@ -184,7 +196,8 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     for (const p of Object.values(folder.people ?? {})) { if ((p.ctx ?? "auto") === "never") continue; for (const r of p.records ?? []) { const v = sem.get(r.id); if (v != null && v >= semMin && injectable(r) && !shown.has(r.id)) rows.push({ p, r, v }); } }
     rows.sort((a, b) => b.v - a.v);
     const capR = settings.recallTokens ?? 700, keep = []; let n = estimateTokens(RECALL_TITLE);
-    for (const x of rows) { const t = `- ${dateOf(x.r)}${x.p.name}: ${oneLine(x.r.act)}`, k = estimateTokens(t); if (n + k > capR || used + n + k + 4 > cap) continue; keep.push({ t, at: x.r.at ?? 0, id: x.r.id }); n += k; if (keep.length >= (settings.recallMax ?? 16)) break; }
+    const picked = [];   // 거의 같은 말을 반복하는 기록은 건너뛴다(다양한 사실이 들어가게)
+    for (const x of rows) { const t = `- ${dateOf(x.r)}${x.p.name}: ${oneLine(x.r.act)}`, k = estimateTokens(t); if (n + k > capR || used + n + k + 4 > cap) continue; const w = wordSet(x.r.act); if (settings.recallDedupe && picked.some((o) => overlap(o, w) >= settings.recallDedupe)) continue; picked.push(w);   /* 비슷한 기록 건너뛰기: 기본 꺼짐(시험에서 손해) */ keep.push({ t, at: x.r.at ?? 0, id: x.r.id }); n += k; if (keep.length >= (settings.recallMax ?? 16)) break; }
     if (keep.length) { keep.sort((a, b) => a.at - b.at); lines.push(RECALL_TITLE, ...keep.map((x) => x.t)); used += n; manifest.included.push({ kind: "recall", tokens: n, count: keep.length }); manifest.recordIds.push(...keep.map((x) => x.id)); }
   }
   if (plus) {  // v1.6.2: 열린 항목 · 관계 변화량 · 지식 경계 · 원문 발췌. 각각 자기 예산 안에서 줄 단위로, 전체 상한을 넘으면 통째로 뺀다.

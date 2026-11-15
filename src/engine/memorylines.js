@@ -14,7 +14,7 @@ const CORE_RULES = [
   "- Use the exact spelling from `known` for existing characters. The player is always {{user}}.",
   "- Someone whose `state` in `known` says dead/gone cannot act now unless the newest text clearly shows them back — then write a state line for it.",
   "- Write in the SAME language as `newest` (English text → English, Korean text → Korean). Never translate. Keep every field short.",
-  "- Turn relative times into absolute dates from the story date (`storyDate`, dates in the text, previousScene time): \"yesterday\" on 2023-05-08 → \"2023-05-07\"; \"last week\" → \"the week before 2023-05-08\". Never store bare \"yesterday\", \"어제\", \"two weeks ago\".",
+  "- Anchor relative times on the story date (`storyDate`, dates in the text, previousScene time). Exact only when certain: \"yesterday\" on 2023-05-08 → \"2023-05-07\". Otherwise keep the phrase with its anchor: \"last Tuesday\" → \"the Tuesday before 2023-07-20\", \"last week\" → \"the week before 2023-05-08\", \"지난주 화요일\" → \"2023-07-20 직전 화요일\". Never store a bare \"yesterday\", \"어제\" or \"two weeks ago\".",
   "- Record the FACTS people reveal (events, plans, places, people, objects, dates, preferences), not conversational moves. Bad: \"asked how her week was\", \"praised the painting\". Good: \"ran a charity race for mental health on 2023-05-20\"."
 ].join("\n");
 
@@ -31,6 +31,8 @@ export const LINES_STAGE1 = [
   "   Always write exactly one scene line. yes = place, people present or the situation changed versus previousScene.",
   "3. who|Name|what they did or said that matters (<=60 chars)|0-3",
   "   0 trivial, 1 matters in this scene, 2 matters later, 3 permanent. One line per character who acted. Skip background figures.",
+  "   fact|Name|another distinct fact about that person from newest (<=80 chars)|0-3",
+  "   Use fact lines when newest reveals more than one thing worth remembering about someone (names, places, items, plans, dates, likes, history) — max 3 per person.",
   "4. rel|A|B|what changed between them (<=40 chars)|+ or - or 0",
   "5. open|a new promise, plan, secret or unanswered question (<=60 chars)",
   "6. close|id from openItems that newest resolved, kept or made pointless",
@@ -282,6 +284,13 @@ export function fromStage1(lines, { known = [], source = "", openIds = null } = 
       const [p, s, r] = importanceToAxes(f[2]);
       seen.add(nk(name));
       raw.people.push({ name, act, p, s, r });
+    } else if (tag === "fact") {   // 2.2.2: 같은 인물의 추가 사실(인물당 3개). 세부 호출 대상은 아니다
+      const name = canonName(f[0], known);
+      if (!name || (name !== "{{user}}" && !inText(name, source) && !known.some((p) => nk(p.name) === nk(name)))) continue;
+      const act = (f[1] ?? "").slice(0, 80), cnt = raw.people.filter((e) => e.extra && nk(e.name) === nk(name)).length;
+      if (!act || cnt >= 3 || raw.people.some((e) => nk(e.name) === nk(name) && e.act === act)) continue;
+      const [p, s, r] = importanceToAxes(f[1 + 1]);
+      raw.people.push({ name, act, p, s, r, extra: true });
     } else if (tag === "rel" && raw.rel.length < 4) {
       const from = targetName(f[0], known, source), to = targetName(f[1], known, source), d = (f[2] ?? "").slice(0, 40);
       if (from && to && nk(from) !== nk(to) && d) raw.rel.push({ from, to, d, dir: /^[+\-0]$/.test((f[3] ?? "").trim()) ? f[3].trim() : "0" });
