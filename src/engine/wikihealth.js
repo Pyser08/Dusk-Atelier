@@ -2,6 +2,7 @@
 // 리스바드 BardWiki의 '건강도'(끊어진 링크·연결 없음)와 같은 생각 — 진단만 하고 자동으로 고치지는 않는다.
 import { duplicateGroups } from "./peopledupe.js";
 import { mergeEntries } from "./peoplemerge.js";
+import { findDoc } from "./personview.js";
 
 export function diagnoseWiki(folder, { visible } = {}) {
   const docs = Object.values(folder?.wiki?.documents ?? {}).filter(Boolean);
@@ -12,5 +13,8 @@ export function diagnoseWiki(folder, { visible } = {}) {
   const unlinked = mergeEntries(folder, visible ? { visible } : {}).filter((e) => !e.pk && e.docId).map((e) => e.name);
   const broken = [];
   for (const d of docs) for (const l of d.links ?? []) if (!ids.has(l) && !titles.has(String(l).trim().toLowerCase())) broken.push(`${d.title} → ${l}`);
-  return { documents: docs.length, characters: chars.length, duplicates, empty, unlinked, broken, ok: !duplicates.length && !empty.length && !broken.length };
+  // 2.2.2: 인물 이름과 다른 제목(별칭)으로 이어진 문서 — 합치기 뒤 위키와 관계도가 서로 다른 이름을 보이던 원인
+  const kk = (t) => String(t ?? "").trim().toLowerCase().replace(/\s+/g, "");
+  const misnamed = Object.values(folder?.people ?? {}).filter((p) => p && (!visible || visible(p))).map((p) => ({ p, d: findDoc(folder.wiki, p) })).filter(({ p, d }) => d && kk(d.title) !== kk(p.name)).map(({ p, d }) => ({ person: p.name, doc: d.title }));
+  return { documents: docs.length, characters: chars.length, duplicates, empty, unlinked, broken, misnamed, ok: !duplicates.length && !empty.length && !broken.length && !misnamed.length };
 }
