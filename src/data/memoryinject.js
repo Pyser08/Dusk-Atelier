@@ -56,7 +56,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     if (built.manifest && sem) built.manifest.sem = sem.size;
     // 2.2.2 원문 회상: 임베딩이 켜져 있으면 지난 대화 원문에서 지금 글과 관련 있는 조각을 날짜와 함께 덧붙인다(요약 기억이 놓친 사실을 받친다).
     if (built.text && embedder && idx.settings.inject.raw !== false && idx.settings.inject.plus !== false) {
-      try { const r = await rawRecall(folder, msgs, character, chat, semQuery(msgs, idx.settings.inject.rawQueryMin ?? idx.settings.inject.semQueryMin ?? 40), idx.settings.inject); if (r) { built.text += "\n" + r.text; if (built.manifest) { built.manifest.included.push({ kind: "raw", tokens: r.tokens, count: r.count }); built.manifest.tokens = (built.manifest.tokens ?? 0) + r.tokens; } } } catch (e) { log("원문 회상 건너뜀", e?.message ?? e); }
+      try { const r = await rawRecall(folder, msgs, character, chat, semQuery(msgs, idx.settings.inject.rawQueryMin ?? 0), idx.settings.inject); if (r) { built.text += "\n" + r.text; if (built.manifest) { built.manifest.included.push({ kind: "raw", tokens: r.tokens, count: r.count }); built.manifest.tokens = (built.manifest.tokens ?? 0) + r.tokens; } } } catch (e) { log("원문 회상 건너뜀", e?.message ?? e); }
     }
     const raw = built.text, manifest = built.manifest;
     const text = applyLore(raw, folder?.lore);  // 주입 로어 편집(줄 수정·숨김·내 로어)
@@ -80,7 +80,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     let ranked = [...fused].sort((a, b) => b[1] - a[1]).map(([id]) => id);
     const rr = await embedder.rerankTexts(query, ranked.slice(0, Number(s.rawRerankTop ?? 24)).map((id) => ({ id, t: chunks[id].t }))).catch(() => null);
     if (rr) ranked = [...[...rr].sort((a, b) => b[1] - a[1]).map(([id]) => id), ...ranked.filter((id) => !rr.has(id))];
-    const out = assemble(chunks, ranked, { tokens: Number(s.rawTokens ?? 1000), neighbor: Number(s.rawNeighbor ?? 1), maxPicks: Number(s.rawPicks ?? 8), perDate: Number(s.rawPerDate ?? 0) });
+    const out = assemble(chunks, ranked, { tokens: Number(s.rawTokens ?? 1500), neighbor: Number(s.rawNeighbor ?? 1), maxPicks: Number(s.rawPicks ?? 12), perDate: Number(s.rawPerDate ?? 0) });
     return out.lines.length ? { text: [RAW_TITLE, ...out.lines].join("\n"), tokens: out.tokens, count: out.lines.length } : null;
   }
   async function beforeRequest(messages, type, { focus = null } = {}) {
