@@ -2,6 +2,7 @@
 // 리수폿 기능과 Dusk 기능을 구분 없이 "무엇을 기억하나"로 보여 준다. 저장 버튼 없이 바로 저장, 다음 턴부터 적용.
 import { noteEdits, DUSK_FOLLOW } from "../../../engine/defaultfollow.js";
 import { h, replace, pickFiles } from "../../dom.js";
+import { defHint } from "../../defhint.js";
 import { btn, switchEl, setSwitch, segmented, optionCards, toggleRow, note, confirmDialog } from "../../kit.js";
 import { scopeChip, tracked } from "./settingstools.js";
 import { fail } from "./common.js";
@@ -49,7 +50,7 @@ export async function flowSections(ctx, host, { redraw, part = "all" }) {   // 2
       needs.map((n) => h("div", { class: "rb-note warn" }, n.label, " ", btn("켜기", { size: "sm", onClick: () => edit((s) => n.fix(s)) }))),
       body ? h("details", { class: "rb-mem-man" }, h("summary", null, "세부 설정"), body, btn("기본값으로", { size: "sm", onClick: () => edit((s) => { s.features[c.id] = { ...levelPatch("basic")[c.id], enabled: s.features[c.id].enabled }; }) })) : null);
   };
-  const numRow = (label, v, set, { min = 0, max = 5, step = 1 } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("input", { class: "rb-input", type: "number", min, max, step, value: v, onChange: (e) => { const raw = Number(e.target.value); const n = Math.min(max, Math.max(min, Number.isFinite(raw) ? Math.round(raw * 100) / 100 : min)); set(n); } }));
+  const numRow = (label, v, set, { min = 0, max = 5, step = 1, def } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label, defHint(def)), h("input", { class: "rb-input", type: "number", min, max, step, value: v, onChange: (e) => { const raw = Number(e.target.value); const n = Math.min(max, Math.max(min, Number.isFinite(raw) ? Math.round(raw * 100) / 100 : min)); set(n); } }));
   // 원본 ‘새 사건 예시’ 계산식: 호감·음란 기본 +3, 의심 기본 +2에 증가 승수를 곱한다(기존 총점에는 곱하지 않는다).
   const rateText = (id, f) => { const base = id === "suspicion" ? 2 : 3, inc = f.increase ?? 1; return `새 사건 예시 +${base} × ${inc} → +${Number((base * inc).toFixed(4))} 반영 · 기존 총점에는 곱하지 않아요.`; };
   const detailRows = (c, f, edit) => {
@@ -57,13 +58,13 @@ export async function flowSections(ctx, host, { redraw, part = "all" }) {   // 2
     if (c.detail === "numbers") return h("div", null,
       toggleRow("숫자 표시", "점수를 숫자로도 보여 줘요.", f.numbers === true, (v) => set("numbers", v)),
       f.numbers === true ? h("div", null,
-        h("div", { class: "rb-mem-grid" }, numRow("증가 승수 ×", f.increase ?? 1, (n) => set("increase", n), { min: 0, max: 10, step: 0.25 }), numRow("감소 승수 ×", f.decrease ?? 1, (n) => set("decrease", n), { min: 0, max: 10, step: 0.25 })),
+        h("div", { class: "rb-mem-grid" }, numRow("증가 승수 ×", f.increase ?? 1, (n) => set("increase", n), { min: 0, max: 10, step: 0.25, def: 1 }), numRow("감소 승수 ×", f.decrease ?? 1, (n) => set("decrease", n), { min: 0, max: 10, step: 0.25, def: 1 })),
         h("p", { class: "rb-muted rb-mem-formula" }, rateText(c.id, f)))
         : h("p", { class: "rb-muted rb-mem-formula" }, "정성 판단만 적용해요. 보관된 점수는 쓰지 않아요."));
     if (c.detail === "register") return h("div", null,
       h("div", { class: "rb-mem-field" }, h("span", null, "말투가 바뀌면"), segmented([["ask", "확인 후 적용"], ["auto", "자동 적용"]], f.change ?? "ask", (v) => set("change", v), "말투 변경")),
       h("div", { class: "rb-mem-field" }, h("span", null, "말투 다변화"), segmented([["off", "끔"], ["on", "켬"]], f.variety === "off" || !f.variety ? "off" : "on", (v) => set("variety", v === "off" ? "off" : "on"), "말투 다변화")),
-      numRow("조짐 횟수", f.signLimit ?? 3, (n) => set("signLimit", n), { min: 1, max: 10 }));
+      numRow("조짐 횟수", f.signLimit ?? 3, (n) => set("signLimit", n), { min: 1, max: 10, def: 3 }));
     if (c.detail === "perception") return h("div", { class: "rb-mem-field" }, h("span", null, "정체·비밀 인식"), segmented([["off", "끔"], ["light", "라이트"], ["on", "켬"]], f.mode ?? "on", (v) => set("mode", v), "인식"));
     return null;
   };
@@ -130,7 +131,7 @@ export async function flowSections(ctx, host, { redraw, part = "all" }) {   // 2
     const snap = st.rawSnapshot(), op = snap.features.openness ?? {}, desire = snap.sexualDesireEnabled === true, cycle = op.cycle === true;
     const ed = (fn) => { const added = save(fn); paintAdult(); if (added.length || !snap.features.openness?.cycle !== !st.rawSnapshot().features.openness?.cycle) paintAdv().catch(() => {}); };
     const rate = Number(op.cycleRate ?? 1);
-    const rateLabel = h("b", null, `×${rate}`);
+    const rateLabel = h("b", null, `×${rate}`, defHint("×1"));
     const slider = h("input", { type: "range", class: "rb-range", min: 0.5, max: 3, step: 0.1, value: rate, "aria-label": "임신 확률 배수", onInput: (e) => { rateLabel.textContent = `×${Number(e.target.value)}`; }, onChange: (e) => ed((s) => { s.features.openness.cycleRate = Math.min(3, Math.max(0.5, Number(e.target.value) || 1)); }) });
     replace(adultHost, sec("성인 항목 (기본 꺼짐)", "성인 인물의 욕구·월경·임신을 따라가요. 켜지 않으면 아무것도 기록하지 않아요.",
       toggleRow("욕구 기록", "성인 항목이에요. 월경·임신 기록의 바탕이 돼요.", desire, (v) => ed((s) => { s.sexualDesireEnabled = v; if (!v) s.features.openness.cycle = false; })),

@@ -40,6 +40,8 @@ const orig = original ? await loadOriginal() : {};
 // 패치(tools/pot-patches.json)로 Dusk 쪽에서 새로 더하거나 값을 바꾼 이름 — 원본과 같을 수 없으니 대조에서 뺀다(패치 목록이 곧 차이 목록)
 const PATCH_TO = JSON.parse(fs.readFileSync(path.join(root, 'tools/pot-patches.json'), 'utf8')).map((p) => p.to).join('\n');
 const DUSK_CHANGED = new Set(Object.keys(ported).filter((n) => original && (!(n in orig) || new RegExp(`\\b${n}\\b`).test(PATCH_TO))));
+// 자동 기록 입력 예산 기본값을 48000 → 96000으로 올린 패치(2.2.0) — 기본값을 읽는 함수도 원본과 같을 수 없다
+for (const n of ['WRITER_INPUT_BUDGET_DEFAULT', 'writerInputBudgetTokens']) if (n in ported) DUSK_CHANGED.add(n);
 
 // 같은 난수·시각으로 두 쪽을 실행
 function seeded(fn) {

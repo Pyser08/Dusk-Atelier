@@ -4,6 +4,7 @@ import { openRecovery } from "./recovery.js";
 import { openWikiLog } from "./wikilog.js";
 import { scopeChip, tracked } from "./settingstools.js";
 import { h, replace, pickFiles } from "../../dom.js";
+import { defHint } from "../../defhint.js";
 import { btn, switchEl, setSwitch, segmented, toggleRow, note, confirmDialog } from "../../kit.js";
 import { fail } from "./common.js";
 import { healDeps, lockedBy } from "../../../engine/settingdeps.js";
@@ -11,7 +12,7 @@ import { HYPA_REFERENCE_MAX_ITEMS } from "../../../engine/pot/hypa-reference.js"
 import { wikiRetentionStatus, WIKI_RETENTION_MAX } from "../../../engine/pot/wiki-retention.js";
 import { RELATIONSHIP_HISTORY_MAX, relationshipHistoryLimit } from "../../../engine/pot/relationship-history.js";
 
-const num = (label, v, set, { min = 0, max = 200, step = 1 } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("input", { class: "rb-input", type: "number", min, max, step, value: v, onChange: (e) => { set(Math.min(max, Math.max(min, Math.round(Number(e.target.value) || 0)))); } }));
+const num = (label, v, set, { min = 0, max = 200, step = 1, def } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label, defHint(def)), h("input", { class: "rb-input", type: "number", min, max, step, value: v, onChange: (e) => { set(Math.min(max, Math.max(min, Math.round(Number(e.target.value) || 0)))); } }));
 const sec = (title, desc, ...kids) => { const [t, k = "all"] = Array.isArray(title) ? title : [title]; return h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, t, k ? scopeChip(k) : null), desc ? h("p", { class: "rb-muted" }, desc) : null, ...kids); };
 export const STAGE_NAMES = { router: "관련 인물 찾기", director: "장면 정리", writer: "자동 기록" };
 
@@ -39,7 +40,7 @@ export async function advancedGlobal(ctx, host, { redraw, st, apply }) {
         segmented([["off", "안 남김"], ["errors", "오류만"], ["all", "전부"]], s.traceRecordingMode ?? "errors", (v) => ed((x) => { x.traceRecordingMode = v; }), "실행 기록")),
       sec("리스 기본 메모리 참고 (Hypa)", "Dusk 기억이 대신하므로 보통은 꺼 두세요. 리스의 Hypa 요약을 같이 참고하고 싶을 때만 켜요.",
         segmented([["off", "안 씀"], ["hypa", "Hypa"], ["hypaplus", "Hypa+"]], s.hypaPlusReferenceEnabled ? "hypaplus" : s.hypaReferenceEnabled ? "hypa" : "off", (v) => ed((x) => { x.hypaReferenceEnabled = v === "hypa"; x.hypaPlusReferenceEnabled = v === "hypaplus"; }), "Hypa 참고"),
-        num("참고할 항목 수", s.directorMemoryLimit ?? 16, (n) => ed((x) => { x.directorMemoryLimit = n; }), { min: 0, max: HYPA_REFERENCE_MAX_ITEMS })),
+        num("참고할 항목 수", s.directorMemoryLimit ?? 16, (n) => ed((x) => { x.directorMemoryLimit = n; }), { min: 0, max: HYPA_REFERENCE_MAX_ITEMS, def: 16 })),
       transfer(ctx, st, redraw, apply),
     ];
     replace(host, adv);
@@ -121,9 +122,9 @@ function aiRefs(s, ed, live) {
   const set = (patch) => ed((x) => { x.manualAIReferencesByScope = { ...(x.manualAIReferencesByScope ?? {}), [key]: { ...cur, ...patch } }; });
   const hypaOn = s.hypaReferenceEnabled || s.hypaPlusReferenceEnabled;
   return sec(["직접 AI 작성 때 참고할 것 (이 채팅)", "chat"], "인물 AI 작성·다시 정리처럼 직접 누르는 AI 기능이 최근 대화를 얼마나 볼지 정해요.",
-    num("최근 대화 턴 수", cur.recentTurns, (n) => set({ recentTurns: n }), { min: 0, max: 200 }),
+    num("최근 대화 턴 수", cur.recentTurns, (n) => set({ recentTurns: n }), { min: 0, max: 200, def: 2 }),
     hypaOn ? h("div", { class: "rb-mem-field" }, h("span", null, "리스 기본 메모리"), segmented([["off", "안 씀"], ["hypa", "Hypa"], ["hypaplus", "Hypa+"]], cur.memorySource, (v) => set({ memorySource: v }), "기억 종류")) : null,
-    hypaOn && cur.memorySource !== "off" ? num("참고 항목 수", cur.memoryLimit, (n) => set({ memoryLimit: n }), { min: 0, max: HYPA_REFERENCE_MAX_ITEMS }) : null);
+    hypaOn && cur.memorySource !== "off" ? num("참고 항목 수", cur.memoryLimit, (n) => set({ memoryLimit: n }), { min: 0, max: HYPA_REFERENCE_MAX_ITEMS, def: 16 }) : null);
 }
 
 // 이 채팅 위키의 보관 개수(관계 이력 · 변경 이력 · 자동 기록 활동). 플러그인 저장소의 위키 범위를 직접 고친다.
@@ -133,9 +134,9 @@ function retention(env) {
   let st; try { st = wikiRetentionStatus(wiki); } catch { return null; }
   const save = (fn, ok) => ctx.memory.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { f.wiki = fn(f.wiki); }).then(() => { ctx.toast(ok); env.redraw(); }).catch(fail(ctx));
   return sec(["보관 개수 (이 채팅)", "chat"], "너무 많이 쌓이면 오래된 것부터 정리돼요. 줄이면 다음 정리 때 반영돼요.",
-    num(`관계 이력 (지금 ${relationshipHistoryLimit(wiki)}개 보관)`, relationshipHistoryLimit(wiki), (n) => save((w) => ({ ...w, relationshipHistoryLimit: Math.max(1, n) }), "관계 이력 보관 개수를 바꿨어요."), { min: 1, max: RELATIONSHIP_HISTORY_MAX }),
-    num(`변경 이력 (지금 ${st.history.count}/${st.history.limit})`, st.history.limit, (n) => save((w) => ({ ...w, recordRetention: { ...(w.recordRetention ?? {}), history: Math.max(1, n) } }), "변경 이력 보관 개수를 바꿨어요."), { min: 1, max: WIKI_RETENTION_MAX }),
-    num(`자동 기록 활동 (지금 ${st.activity.count}/${st.activity.limit})`, st.activity.limit, (n) => save((w) => ({ ...w, recordRetention: { ...(w.recordRetention ?? {}), activity: Math.max(1, n) } }), "자동 기록 활동 보관 개수를 바꿨어요."), { min: 1, max: WIKI_RETENTION_MAX }));
+    num(`관계 이력 (지금 ${relationshipHistoryLimit(wiki)}개 보관)`, relationshipHistoryLimit(wiki), (n) => save((w) => ({ ...w, relationshipHistoryLimit: Math.max(1, n) }), "관계 이력 보관 개수를 바꿨어요."), { min: 1, max: RELATIONSHIP_HISTORY_MAX, def: 4 }),
+    num(`변경 이력 (지금 ${st.history.count}/${st.history.limit})`, st.history.limit, (n) => save((w) => ({ ...w, recordRetention: { ...(w.recordRetention ?? {}), history: Math.max(1, n) } }), "변경 이력 보관 개수를 바꿨어요."), { min: 1, max: WIKI_RETENTION_MAX, def: 60 }),
+    num(`자동 기록 활동 (지금 ${st.activity.count}/${st.activity.limit})`, st.activity.limit, (n) => save((w) => ({ ...w, recordRetention: { ...(w.recordRetention ?? {}), activity: Math.max(1, n) } }), "자동 기록 활동 보관 개수를 바꿨어요."), { min: 1, max: WIKI_RETENTION_MAX, def: 30 }));
 }
 
 // 2.2.0 ‘자동 기록 세부’는 인물 위키 설정 → 고급이 아니라 장기 기억 → 설정(기록·기억 넣기 세부)에 둔다(settings.js).
@@ -146,7 +147,7 @@ export function writerDetails(ctx, st) {
     const ed = (fn) => { try { st.update((x) => { fn(x); healDeps(x); }); } catch (e) { fail(ctx)(e); } paint(); };
     const lock = lockedBy("relationshipPerceptionMode", s);
     const sw = (title, text, key) => toggleRow(title, text, s[key] === true, (v) => ed((x) => { x[key] = v; }));
-    const stageCtx = h("div", { class: "rb-mem-grid" }, ["router", "director", "writer"].map((k) => num(`${STAGE_NAMES[k]} · 최근 대화 턴`, s.stageContext?.[k] ?? 2, (n) => ed((x) => { x.stageContext[k] = n; }), { min: 0, max: 200 })));
+    const stageCtx = h("div", { class: "rb-mem-grid" }, ["router", "director", "writer"].map((k) => num(`${STAGE_NAMES[k]} · 최근 대화 턴`, s.stageContext?.[k] ?? 2, (n) => ed((x) => { x.stageContext[k] = n; }), { min: 0, max: 200, def: 2 })));
     replace(host,
       sec("자동 기록 세부", "기본값이면 충분해요. 바꾸면 다음 응답부터 적용돼요.",
         h("div", { class: "rb-mem-field" }, h("span", null, "장면 정리의 역할"), segmented([["directing", "연출 지시"], ["facts", "사실만 전달"]], s.directorRole ?? "directing", (v) => ed((x) => { x.directorRole = v; }), "장면 정리 역할")),

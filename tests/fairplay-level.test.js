@@ -5,9 +5,9 @@ import { createFairPlay, DICE_LEVEL_KEY, DICE_CUTS_KEY, DICE_COUNT_KEY, loadDice
 
 const mem = () => { const store = new Map(); return { store, api: { pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => void store.set(k, v) }, addRisuReplacer: async () => {} } }; };
 
-test("강도 3단계: 보통은 예전 값(20·50·75·95) 그대로, 약하게<보통<강하게", () => {
+test("강도 3단계: 보통은 성공 확률 95·75·45·20%(극악 20%), 약하게<보통<강하게", () => {
   assert.deepEqual(DICE_LEVEL_IDS, ["weak", "normal", "strong"]);
-  assert.deepEqual(DICE_LEVELS.normal, { easy: 20, normal: 50, hard: 75, extreme: 95 });
+  assert.deepEqual(DICE_LEVELS.normal, { easy: 6, normal: 26, hard: 56, extreme: 81 });
   assert.deepEqual(DEFAULT_CUTS, DICE_LEVELS.normal);
   for (const k of ["easy", "normal", "hard", "extreme"]) { assert.ok(DICE_LEVELS.weak[k] < DICE_LEVELS.normal[k]); assert.ok(DICE_LEVELS.normal[k] < DICE_LEVELS.strong[k]); }
 });
@@ -26,8 +26,8 @@ test("resolveDice: 프리셋은 개수 3, custom은 저장한 수치·개수", (
 test("지침에 난이도 수치와 굴림 개수가 들어가고, 기본은 예전 문장 그대로", () => {
   const d = makeDice([{ role: "user", content: "x" }], "reinterpret", () => 0, { cuts: DICE_LEVELS.strong, count: 5 });
   assert.equal(d.rolls.length, 5); assert.deepEqual(d.cuts, DICE_LEVELS.strong);
-  const t = diceRules(d); assert.ok(t.includes("easy 30, normal 60, hard 85, extreme 98"));
-  assert.ok(buildFairText({ rolls: [1, 2, 3], mode: "respect", hint: false }).includes("easy 20, normal 50, hard 75, extreme 95"));
+  const t = diceRules(d); assert.ok(t.includes("easy 11, normal 39, hard 69, extreme 89"));
+  assert.ok(buildFairText({ rolls: [1, 2, 3], mode: "respect", hint: false }).includes("easy 6, normal 26, hard 56, extreme 81"));
 });
 test("훅: 강도·직접 수치 저장, 요청에 반영, 기본 보통", async () => {
   const { store, api } = mem(); let n = 0;
@@ -35,12 +35,25 @@ test("훅: 강도·직접 수치 저장, 요청에 반영, 기본 보통", async
   const m = [{ role: "system", content: "S" }, { role: "user", content: "그를 협박한다" }];
   await f.start(); await f.set(true); await f.setDice(true);
   assert.equal(f.diceLevel(), "normal");
-  assert.ok((await f.beforeRequest(m, "model"))[1].content.includes("easy 20, normal 50, hard 75, extreme 95"));
+  assert.ok((await f.beforeRequest(m, "model"))[1].content.includes("easy 6, normal 26, hard 56, extreme 81"));
   await f.setDiceLevel("strong"); assert.equal(store.get(DICE_LEVEL_KEY), "strong");
-  assert.ok((await f.beforeRequest(m, "model"))[1].content.includes("easy 30, normal 60, hard 85, extreme 98"));
+  assert.ok((await f.beforeRequest(m, "model"))[1].content.includes("easy 11, normal 39, hard 69, extreme 89"));
   await f.setDiceCustom({ easy: 10, normal: 40, hard: 65, extreme: 90 }, 4);
   assert.equal(f.diceLevel(), "custom"); assert.equal(store.get(DICE_LEVEL_KEY), "custom"); assert.equal(store.get(DICE_COUNT_KEY), "4");
   assert.deepEqual(JSON.parse(store.get(DICE_CUTS_KEY)), { easy: 10, normal: 40, hard: 65, extreme: 90 });
   const r4 = await f.beforeRequest(m, "model"); assert.ok(r4[1].content.includes("easy 10, normal 40, hard 65, extreme 90")); assert.ok(/Dice \(1-100\), use in order: \d+, \d+, \d+, \d+(\n|$)/.test(r4[2].content));
   const g = createFairPlay(api); await g.start(); assert.equal(g.diceLevel(), "custom"); assert.equal(await loadDiceLevel(api), "custom");
+});
+
+test("2.2.0: 보통 성공 확률 쉬움 95·보통 75·어려움 45·극악 20%(굴림 ≥ 수치 → 101 − 수치 %)", async () => {
+  const { successPct, cutFromPct } = await import("../src/engine/fairplay.js");
+  assert.deepEqual(["easy", "normal", "hard", "extreme"].map((k) => successPct(DICE_LEVELS.normal[k])), [95, 75, 45, 20]);
+  assert.equal(successPct(81), 20); assert.equal(cutFromPct(20), 81);
+  let wins = 0; for (let r = 1; r <= 100; r++) if (r >= DICE_LEVELS.normal.extreme) wins++;
+  assert.equal(wins, 20);
+});
+test("2.2.0: 직접 입력은 성공 확률(%) 기준 — 쉬움 ≥ 보통 ≥ 어려움 ≥ 극악", async () => {
+  const { parseCustom } = await import("../src/ui/dicedetail.js");
+  assert.deepEqual(parseCustom({ easy: 95, normal: 75, hard: 45, extreme: 20, count: 3 }), { cuts: { easy: 6, normal: 26, hard: 56, extreme: 81 }, count: 3 });
+  assert.ok(parseCustom({ easy: 20, normal: 45, hard: 75, extreme: 95, count: 3 }).error);
 });

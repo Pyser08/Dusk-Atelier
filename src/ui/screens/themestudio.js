@@ -2,6 +2,7 @@
 import { h, replace, download, pickFiles } from '../dom.js';
 import { btn, iconBtn, note, segmented, confirmDialog, promptDialog, openMenu, modal, switchEl } from '../kit.js';
 import { icon } from '../icons.js';
+import { defHint } from '../defhint.js';
 import { codeEditor } from '../codeedit.js';
 import {
   TARGETS, TOKENS, loadThemes, saveThemes, newTheme, duplicateTheme, copyTokensTo, compileCss, lintCss, lintHtml,
@@ -297,7 +298,7 @@ export async function renderThemeStudio(ctx) {
       touch();
     } }));
     const out = h("output", null, v + f.unit);
-    return h("label", { class: "rb-ts-field" }, h("span", null, f.label), h("input", { type: "range", min: f.min, max: f.max, step: f.step, value: v, onInput: (e) => {
+    return h("label", { class: "rb-ts-field" }, h("span", null, f.label, f.def === undefined ? null : defHint(f.def, f.unit)), h("input", { type: "range", min: f.min, max: f.max, step: f.step, value: v, onInput: (e) => {
       cur.tokens[f.k] = Number(e.target.value);
       out.textContent = e.target.value + f.unit;
       touch();

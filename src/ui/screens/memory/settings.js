@@ -2,6 +2,7 @@ import { h, replace } from "../../dom.js";
 import { openEmbedModal } from "./embedmodal.js";
 import { regexSection } from "./regexui.js";
 import { openHypaModal } from "./hypamodal.js";
+import { defHint } from "../../defhint.js";
 import { btn, switchEl, setSwitch, confirmDialog, progressBar, loading } from "../../kit.js";
 import { AI_MODES } from "../../../engine/merge.js";
 import { getCfg as getModelCfg } from "../../../data/modelhub.js";
@@ -15,7 +16,7 @@ import { noteEdits, DUSK_FOLLOW } from "../../../engine/defaultfollow.js";
 export function builders(ctx, idx, redraw, kind = "all") {
   const M = ctx.memory, S = idx.settings;
   const save = (fn) => M.store.updateIndex((i) => { const before = structuredClone(i.settings); fn(i.settings, i); i.settings.edited = noteEdits(before, i.settings, i.settings.edited, DUSK_FOLLOW); i.settingsHistory = pushHist(i.settingsHistory, "dusk", before, i.settings); }).then(() => redraw()).catch(fail(ctx));
-  const num = (label, get, set, { min = 0, max = 99999, step = 1 } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label), h("input", { class: "rb-input", type: "number", min, max, step, value: get(), onChange: (e) => { const v = Math.min(max, Math.max(min, Number(e.target.value) || 0)); save((s) => set(s, v)); } }));
+  const num = (label, get, set, { min = 0, max = 99999, step = 1, def } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label, defHint(def)), h("input", { class: "rb-input", type: "number", min, max, step, value: get(), onChange: (e) => { const v = Math.min(max, Math.max(min, Number(e.target.value) || 0)); save((s) => set(s, v)); } }));
   const sw = (label, on, set) => h("div", { class: "rb-mem-field row" }, h("span", null, label), switchEl(on, { label, onChange: (v, el) => { setSwitch(el, v); save((s) => set(s, v)); } }));
   const section = (title, ...kids) => { const [t, k = kind] = Array.isArray(title) ? title : [title]; return h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, t, k ? scopeChip(k) : null), ...kids); };
   return { M, S, save, num, sw, section };
@@ -61,11 +62,11 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false, b
       sw("기록기가 실패하면 예전 리수폿 기록으로 대신 (토큰 많이 씀)", S.potFallback === true, (s, v) => { s.potFallback = v; }),
       h("p", { class: "rb-muted" }, "끄면(기본) Dusk 기록기가 끝내 실패한 응답은 ‘다시 시도’ 알림만 띄워요. 켜면 예전처럼 리수폿 기록(지침만 약 3만 토큰)으로 한 번 더 기록해서 실패는 줄지만 그 응답의 보조 토큰이 크게 늘어요."),
       recordBox(M),
-      num("보조 모델 제한시간(초, 기본 600)", () => S.modelTimeoutSec ?? 600, (s, v) => { s.modelTimeoutSec = Math.max(10, v); }, { min: 10, max: 3600, step: 10 }),
+      num("보조 모델 제한시간(초)", () => S.modelTimeoutSec ?? 600, (s, v) => { s.modelTimeoutSec = Math.max(10, v); }, { min: 10, max: 3600, step: 10, def: 600 }),
       h("label", { class: "rb-mem-field" }, h("span", null, "자동 기록 시점"), h("select", { class: "rb-input", "aria-label": "자동 기록 시점", onChange: (e) => save((s) => { s.confirm = e.target.value; s.potStore = { ...(s.potStore ?? {}), confirm: e.target.value }; }) }, [["next", "다음 입력을 보낼 때 (권장)"], ["now", "응답을 받은 직후"]].map(([v, l]) => h("option", { value: v, selected: (S.confirm === "now" ? "now" : "next") === v }, l)))),
       h("p", { class: "rb-muted" }, "‘다음 입력을 보낼 때’는 내가 다음 말을 보내는 순간 직전 응답을 확정해서 기록해요. 리롤하거나 고치는 중인 응답은 기록하지 않아서 되돌릴 일이 거의 없어요. 대신 마지막 응답은 다음 말을 보낼 때까지 기록되지 않아요."),
-      num("디바운스(초)", () => S.debounceSec, (s, v) => { s.debounceSec = v; }, { max: 60 }), num("기록 시작 턴(1=첫 응답부터)", () => S.startTurn ?? 1, (s, v) => { s.startTurn = Math.max(1, v); }, { min: 1, max: 50 }), num("N턴마다 분석", () => S.everyN, (s, v) => { s.everyN = Math.max(1, v); }, { min: 1, max: 20 }),
-      num("짧은 응답 기준(글자)", () => S.minChars, (s, v) => { s.minChars = v; }, { max: 2000 }), num("인물당 기록 상한", () => S.personCap, (s, v) => { s.personCap = Math.max(20, v); }, { min: 20, max: 2000 }),
+      num("디바운스(초)", () => S.debounceSec, (s, v) => { s.debounceSec = v; }, { max: 60, def: 4 }), num("기록 시작 턴(1=첫 응답부터)", () => S.startTurn ?? 1, (s, v) => { s.startTurn = Math.max(1, v); }, { min: 1, max: 50, def: 1 }), num("N턴마다 분석", () => S.everyN, (s, v) => { s.everyN = Math.max(1, v); }, { min: 1, max: 20, def: 1 }),
+      num("짧은 응답 기준(글자)", () => S.minChars, (s, v) => { s.minChars = v; }, { max: 2000, def: 120 }), num("인물당 기록 상한", () => S.personCap, (s, v) => { s.personCap = Math.max(20, v); }, { min: 20, max: 2000, def: 300 }),
       sw("로어북에 있는 인물만 새로 기록", S.loreOnly !== false, (s, v) => { s.loreOnly = v; }),
       h("p", { class: "rb-muted" }, "켜 두면 봇 이름·설명이나 로어북(캐릭터·채팅·모듈)에 이름이 나오는 인물만 위키에 새로 만들어요. 지나가는 점원 같은 엑스트라는 만들지 않아요. 이미 위키에 있는 인물은 그대로 기록하고, 로어북이 비어 있는 봇에서는 막지 않아요."),
       sw("가벼운 모델 모드", S.light === true, (s, v) => { s.light = v; }),
@@ -83,9 +84,9 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false, b
     caps.analyze ? section("HypaPlus에서 가져오기", h("p", { class: "rb-muted" }, "HypaPlus에 쌓은 기억을 장면·인물 기록으로 옮겨요. HypaPlus와는 동시에 쓸 수 없어요."), btn("HypaPlus 가져오기", { onClick: () => openHypaModal(ctx, {}) })) : null,
     caps.inject || caps.analyze ? section("기억 넣기",   // 켜기·확장 넣기 스위치는 고급 '대화에 넣기'에만 둔다
       h("p", { class: "rb-muted" }, "목표·상한 토큰은 장기 기억 → 설정 칸의 ‘기억 옵션’에 있어요."),
-      num("기억 넣기 시작 턴", () => S.inject.fromTurn, (s, v) => { s.inject.fromTurn = Math.max(1, v); }, { min: 1, max: 50 }), num("이야기 요약 토큰", () => S.inject.eventTokens, (s, v) => { s.inject.eventTokens = v; }, { min: 0, max: 4000 }),
-      num("오래된 D·C 잊기(메시지 수, 0=끔)", () => S.inject.forgetAfter ?? 150, (s, v) => { s.inject.forgetAfter = v; }, { max: 5000, step: 10 }),
-      num("최근 메시지 겹침 제외(개)", () => S.inject.recentSkip, (s, v) => { s.inject.recentSkip = v; }, { max: 40 }),
+      num("기억 넣기 시작 턴", () => S.inject.fromTurn, (s, v) => { s.inject.fromTurn = Math.max(1, v); }, { min: 1, max: 50, def: 1 }), num("이야기 요약 토큰", () => S.inject.eventTokens, (s, v) => { s.inject.eventTokens = v; }, { min: 0, max: 4000, def: 2000 }),
+      num("오래된 D·C 잊기(메시지 수, 0=끔)", () => S.inject.forgetAfter ?? 150, (s, v) => { s.inject.forgetAfter = v; }, { max: 5000, step: 10, def: 150 }),
+      num("최근 메시지 겹침 제외(개)", () => S.inject.recentSkip, (s, v) => { s.inject.recentSkip = v; }, { max: 40, def: 8 }),
       h("label", { class: "rb-mem-field" }, h("span", null, "삽입 위치"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.inject.position = e.target.value; }) }, [["end", "맨 뒤 (권장)"], ["beforeLastUser", "마지막 사용자 메시지 앞"], ["afterSystem", "시스템 프롬프트 뒤"]].map(([v, l]) => h("option", { value: v, selected: S.inject.position === v }, l)))),
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 들어간 기억 보기"), man ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `넣음 (약 ${man.tokens} 토큰)` : "넣지 않음"}`),
         h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요.")), potOn(S) ? previewBox(ctx) : null) : null);

@@ -1,12 +1,12 @@
 // Dusk 2.2.0: Erosync 매 턴 계산(HandOff/EROSYNC-TURN.md). 장기기억 기록기가 턴을 기록하면(flow.onTurn) 그 턴의 인물만
 // Erosync 엔진(profile "turn")에 넘겨 변화분 1번 호출로 분석값을 갱신한다. 설정·기록은 pluginStorage에.
 export const TURN_KEY = "dusk.erosync.turn", TURN_LOG_KEY = "dusk.erosync.turnlog", TURN_LOG_MAX = 30;
-export const TURN_DEFAULT = Object.freeze({ on: false, groups: ["axes", "sexual"] });
+export const TURN_DEFAULT = Object.freeze({ on: true, groups: ["axes", "sexual"] });
 
 export function normalizeTurnSettings(v) {
   const s = v && typeof v === "object" ? v : {};
   const groups = (Array.isArray(s.groups) ? s.groups : TURN_DEFAULT.groups).filter((g) => g === "axes" || g === "sexual");
-  return { on: s.on === true, groups: [...new Set(groups)] };
+  return { on: s.on === undefined ? TURN_DEFAULT.on : s.on === true, groups: [...new Set(groups)] };
 }
 
 export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Date.now() }) {

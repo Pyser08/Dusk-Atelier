@@ -15,9 +15,12 @@ export const FAIR_TEXT = `${HEAD}\n${OUTCOME}\n${TAIL}`;
 // ── 코드 주사위 ──
 export const DICE_COUNT = 3;
 export const DICE_MODES = ["reinterpret", "respect"];
-// 강도(1.8.3): 난이도 커트라인(쉬움·보통·어려움·극악). 보통 = 예전 값 그대로. 숫자가 클수록 성공하기 어려워 '내 편'이 덜 들어요.
+// 강도(1.8.3): 난이도 커트라인(쉬움·보통·어려움·극악). 숫자가 클수록 성공하기 어려워 '내 편'이 덜 들어요.
 export const DICE_LEVEL_IDS = ["weak", "normal", "strong"];
-export const DICE_LEVELS = { weak: { easy: 10, normal: 35, hard: 60, extreme: 85 }, normal: { easy: 20, normal: 50, hard: 75, extreme: 95 }, strong: { easy: 30, normal: 60, hard: 85, extreme: 98 } };
+// 2.2.0: 기본 성공 확률을 크게 올림. 보통 = 쉬움 95% · 보통 75% · 어려움 45% · 극악 20%(굴림 ≥ 수치면 성공 → 성공 확률 = 101 − 수치 %).
+export const DICE_LEVELS = { weak: { easy: 3, normal: 13, hard: 36, extreme: 71 }, normal: { easy: 6, normal: 26, hard: 56, extreme: 81 }, strong: { easy: 11, normal: 39, hard: 69, extreme: 89 } };
+export const successPct = (cut) => Math.min(100, Math.max(1, 101 - Math.round(Number(cut))));
+export const cutFromPct = (pct) => 101 - Math.round(Number(pct));
 export const DEFAULT_CUTS = DICE_LEVELS.normal;
 const CUT_KEYS = ["easy", "normal", "hard", "extreme"];
 export const MAX_DICE = 6;

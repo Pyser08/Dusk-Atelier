@@ -46,5 +46,5 @@ test("② 캐시 깨짐 알림: 앞부분이 절반도 안 같으면 알림(호�
 });
 test("주사위 결과 표시: 응답에 판정 표식이 있으면 실제 행동·난이도·판정을 보여 준다", () => {
   const html = diceHtml({ dice: { rolls: [62, 80, 5], cuts: { easy: 20, normal: 50, hard: 75, extreme: 95 } } }, [{ act: "설득", diff: "hard", roll: 62, result: "fail" }]);
-  assert.ok(html.includes("설득") && html.includes("어려움") && html.includes("75"));
+  assert.ok(html.includes("설득") && html.includes("어려움") && html.includes("성공 26%"));
 });

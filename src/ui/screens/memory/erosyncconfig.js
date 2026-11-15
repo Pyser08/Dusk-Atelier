@@ -11,6 +11,8 @@ export const NUMS = [
   ["maxActorsPerTurn", "한 턴에 움직이는 인물", 1, 10, "한 번의 장면 판단에 넣는 인물 수 상한"],
   ["recentMessages", "읽는 최근 메시지", 4, 40, "장면 판단이 읽는 최근 메시지 수"]
 ];
+// 화면에 ‘기본 N’으로 보여 줄 Erosync 엔진의 기본값(DEFAULT_CONFIG 기준)
+export const NUM_DEFAULTS = { frequency: 55, autonomy: 70, goalPersistence: 70, cooldownTurns: 2, maxActorsPerTurn: 2, recentMessages: 14 };
 export const TOGGLES = [
   ["progressiveFollowUp", "점진 분석", "응답이 끝날 때마다 장면 인물을 한 명씩 이어서 분석해요"],
   ["autoVerifyCharacters", "인물 자동 검증", "분석한 인물이 맞는지 자동으로 확인해요"],
@@ -32,7 +34,7 @@ export function erosyncConfigCard(ctx, group = "") {
       h("p", { class: "rb-muted", style: "white-space:normal;margin:0" }, "이 기기에만 저장돼요. 값을 바꾸면 다음 응답부터 반영돼요."),
       ...(group === "ana" ? [] : [choiceField({ id: "rb-erosync-mode", label: "동작 방식", hint: "평소엔 ‘보통’. ‘검증’은 장면이 잘 움직이는지 볼 때만 써요.", options: MODES, value: v.mode, onChange: (val) => save({ mode: val }) })]),
       ...(group === "ana" ? [] : NUMS).map(([key, label, lo, hi, hint]) => { const top = key === "maxActorsPerTurn" ? Math.min(hi, max) : hi;
-        return sliderField({ id: `rb-erosync-c-${key}`, label, hint, value: v[key], min: lo, max: top, onCommit: (n) => save({ [key]: n }) }); }),
+        return sliderField({ id: `rb-erosync-c-${key}`, label, hint, value: v[key], min: lo, max: top, def: NUM_DEFAULTS[key], onCommit: (n) => save({ [key]: n }) }); }),
       ...(group === "act" ? [] : TOGGLES).map(([key, label, hint]) => toggleField({ id: `rb-erosync-t-${key}`, label, hint, on: v[key] === true, onChange: (on) => save({ [key]: on }) })),
       ...(group === "act" ? [] : [choiceField({ id: "rb-erosync-dev", label: "성격 변화 반영", hint: "대화가 쌓이며 인물의 성향 값이 바뀌는 걸 얼마나 쉽게 반영할지예요. 직접 고친 값은 바뀌지 않아요.", options: DEV_MODES, value: v.developmentMode, onChange: (val) => save({ developmentMode: val }) })]));
   }

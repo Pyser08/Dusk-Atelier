@@ -38,7 +38,7 @@ export function erosyncTurnCard(ctx) {
       } })));
     const rows = log.slice(0, 8).map((c) => h("li", null, h("b", null, c.name), ` · ${turnChangeText(c)}`, c.reason ? h("small", { class: "rb-muted", style: "display:block" }, c.reason) : null));
     replace(body,
-      toggleField({ label: "매 턴 계산 켜기", hint: "장기기억 자동 기록이 켜져 있어야 해요", id: "rb-erosync-turn-on", on: s.on, onChange: async (v) => { await T.save({ on: v }); void draw(); } }),
+      toggleField({ label: "매 턴 계산 켜기", hint: "기본 켜짐 · 장기기억 자동 기록이 켜져 있어야 해요", id: "rb-erosync-turn-on", on: s.on, onChange: async (v) => { await T.save({ on: v }); void draw(); } }),
       s.on ? groups : null,
       p(statusText(T.status(), T.attached(), memOn), "rb-erosync-turn-status"),
       log.length ? h("div", { id: "rb-erosync-turn-log" }, h("b", null, "최근 바뀐 값"),
