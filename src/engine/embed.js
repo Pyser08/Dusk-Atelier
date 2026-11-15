@@ -5,7 +5,7 @@ const num = (v, d, lo, hi) => { const n = Number(v); return Number.isFinite(n) ?
 
 export function normCfg(c) {
   const x = c && typeof c === "object" ? c : {};
-  return { on: x.on === true, url: String(x.url ?? DEFAULT_EMBED.url).trim().slice(0, 300), model: String(x.model ?? DEFAULT_EMBED.model).trim().slice(0, 100), timeoutMs: num(x.timeoutMs, 4000, 1000, 20000), minSim: num(x.minSim, 0.32, 0.1, 0.8) };
+  return { on: x.on === true, url: String(x.url ?? DEFAULT_EMBED.url).trim().slice(0, 300), model: String(x.model ?? DEFAULT_EMBED.model).trim().slice(0, 100), timeoutMs: num(x.timeoutMs, 4000, 1000, 20000), minSim: num(x.minSim, 0.32, 0.1, 0.8), rerank: x.rerank === true, rerankModel: String(x.rerankModel ?? "rerank-2.5").trim().slice(0, 100), rerankTop: num(x.rerankTop, 60, 10, 200) };
 }
 // 주소 끝이 /embeddings가 아니면 붙인다(OpenAI 호환: .../v1 → .../v1/embeddings).
 export function endpointOf(url) {

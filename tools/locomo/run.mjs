@@ -108,7 +108,7 @@ await store.updateIndex((i) => { i.settings.minChars = MIN_CHARS; i.settings.con
 const quiet = (...a) => { if (process.env.DEBUG) console.log("[dusk]", ...a); };
 const runner = createMemoryRunner(api, { store, log: quiet, notify: () => {}, call: (msgs) => chat("aux", AUX, msgs, { maxTokens: 12000 }) });
 const embedder = EMBED ? createEmbedder(api, { log: quiet }) : null;
-if (embedder) await embedder.save({ on: true, key: "proxy-injected", timeoutMs: 60000 });
+if (embedder) await embedder.save({ on: true, key: "proxy-injected", timeoutMs: 20000, rerank: args.rerank === "1" });   // --rerank: 보야지 재정렬 켜기
 const injector = createMemoryInjector(api, { store, log: quiet, embedder });
 
 const progressFile = path.join(OUT, `progress-${CONV}.json`);
