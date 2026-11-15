@@ -44,7 +44,10 @@ export function openFeature(ctx, f) {
 
 export function renderFeatureFind(ctx, host, q) {
   const has = (id) => !!ctx.ext?.get?.("svc", id);
-  const rows = findFeatures(q, [...FEATURES, ...tabFeatures(ctx.prefs.ui)], { has });
+  // 2.2.4 애드온 목록(이름·설명)도 찾는다 — 받기 전 애드온도 홈 애드온 칸으로 데려간다
+  let addonItems = [];
+  try { addonItems = (ctx.addons?.manifest?.() ?? []).map((a) => ({ t: `${a.name} (애드온)`, k: `${a.desc ?? ""} ${a.id} addon 애드온`, path: "홈 › 애드온", tab: "home", find: "애드온" })); } catch { /* 목록 없음 */ }
+  const rows = findFeatures(q, [...FEATURES, ...tabFeatures(ctx.prefs.ui), ...addonItems], { has });
   const row = (f) => h("button", { type: "button", class: ["rb-card", "bordered", "rb-srow", "rb-me-entry", "rb-ff-row", f.off && "off"], onClick: () => openFeature(ctx, f) },
     h("span", { class: "t" }, h("b", null, f.t), h("small", null, f.path, f.adv ? " · 고급 모드" : "", f.off ? " · 애드온 꺼짐" : "")), icon("chevron", 16));
   replace(host, h("section", { class: "rb-ff", id: "rb-ff", "aria-label": "기능 찾기 결과" },

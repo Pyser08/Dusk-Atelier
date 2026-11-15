@@ -1,7 +1,7 @@
 // 사용자 정의 게이지(v1.8.1): 순수 로직. 정의(캐릭터별) · 현재값(채팅×인물별) · 변경 이력(채팅별)을 따로 둔다.
 //  · 정의: idx.gauges[chaId].defs[]   · 값/이력: folder.gauge = { vals:{defId:{personKey:{v,name}}}, log:[묶음], run:n }
 //  · 게이지끼리 연동(참조) 계산은 없다. 값은 코드가 범위를 지키고, 모델은 변화량(정수)만 낸다.
-import { srcOf } from "./memoryreconcile.js";
+import { srcOf } from "./memsrc.js";
 
 export const EVERY_TURNS = 8;          // 자동 갱신 주기(AI 응답 기준)
 export const LOG_CAP = 100;            // 채팅별 변경 이력 최대 건수

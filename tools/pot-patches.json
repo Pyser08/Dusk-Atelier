@@ -215,5 +215,23 @@
   "why": "자동 기록 입력 예산 기본값 48000 → 96000(Dusk 2.2.0, 사용자 지시)",
   "from": "WRITER_INPUT_BUDGET_DEFAULT=48000;",
   "to": "WRITER_INPUT_BUDGET_DEFAULT=96000;"
+ },
+ {
+  "file": "src/engine/pot/writer-proposal.js",
+  "why": "성격 관찰(observe) 중 쓸 수 없는 것만 빼고 나머지 묶음은 살림(Dusk 2.2.4)",
+  "from": "  validationUnit=null;\n\n  const seenPeople=new Set(),",
+  "to": "  validationUnit=null;\n\n  // 2.2.4: 성격 관찰(observe)은 보조 정보라, 쓸 수 없는 대상(고정 키워드 범위 밖·기본 성격 없음)이거나 인용이 본문에 없으면 그 관찰만 뺀다(예전엔 batch 전체가 거절됐다)\n  if(Array.isArray(value.people_ops))value.people_ops=value.people_ops.filter(op=>{if(!record(op)||op.operation!=='observe'||['sexual_desire','paraphilia'].includes(op.axis))return true;const ref=op.document_ref,init=value.people_ops.some(x=>x!==op&&record(x)&&x.operation==='init'&&x.document_ref===ref);if(!fixedOwnerAllowed(ref))return false;if(!(contract.peopleCatalog?.[ref]||init))return false;const q=typeof op.evidence_quote==='string'?op.evidence_quote:'';return manualImport||(op.evidence_refs||[]).some(r=>typeof contract.sourceCatalog?.[r]?.content==='string'&&evidenceContains(contract.sourceCatalog[r].content,q));});\n  const seenPeople=new Set(),"
+ },
+ {
+  "file": "src/engine/pot/writer-apply.js",
+  "why": "기본 성격 6축 검토 대기 후보 자동 반영(Dusk 2.2.4)",
+  "from": "import { applyPeopleOperations } from './people-profile.js';",
+  "to": "import { applyPeopleOperations, reviewPersonCandidate, PERSONALITY_AXES } from './people-profile.js';"
+ },
+ {
+  "file": "src/engine/pot/writer-apply.js",
+  "why": "기본 성격 6축 검토 대기 후보 자동 반영(Dusk 2.2.4)",
+  "from": "  return{scope:normalizeWikiScope(preservePeoplePins(scope,peopleResult.scope)),refToId,batchRef,metricReport,peopleReport:peopleResult.report,cycleRolls};",
+  "to": "  let peopleScope=peopleResult.scope;\n  // 2.2.4: 기본 성격 6축 후보가 '검토 대기'(근거 4개·장면 3곳 이상)가 되면 바로 반영한다 — 사람이 승인하기 전엔 막대가 움직이지 않았다\n  if(contract.autoApprovePersonality!==false)for(const c of Object.values(peopleScope.people?.candidates||{})){if(c?.status!=='review'||!PERSONALITY_AXES.includes(c.axis))continue;try{peopleScope=reviewPersonCandidate(peopleScope,c.id,'approve',{now});}catch{/* 고정핀 등 */}}\n  return{scope:normalizeWikiScope(preservePeoplePins(scope,peopleScope)),refToId,batchRef,metricReport,peopleReport:peopleResult.report,cycleRolls};"
  }
 ]

@@ -28,6 +28,16 @@ export function eroInfoCard(ctx, card, person) {
   return card("Erosync 성향", [h("div", { class: "rb-wk2-nums" }, rows), h("small", { class: "rb-muted" }, "AI가 읽은 값에서 고친 곳은 옅은 막대로 원래 값을 보여 줘요. 성적 항목은 NSFW 탭에 있어요.")], fix(ctx), "rb-wk2-ero");
 }
 
+// 2.2.4 세부 항목: 선호·좋아하는/싫어하는 체위·유혹 방식·성적 농담·최근 행동(값이 있는 것만)
+const LEVEL = (n) => !Number.isFinite(n) ? "" : n >= 70 ? "자주" : n >= 40 ? "가끔" : "드물게";
+function eroDetailRows(d) {
+  if (!d) return [];
+  const chips = (title, list) => list?.length ? h("div", { class: "rb-wk2-ero-row" }, h("small", { class: "rb-muted" }, title), h("div", { class: "rb-wk2-chips" }, list.map((x) => h("span", { class: "rb-wk2-chip" }, x)))) : null;
+  const style = (title, o) => o && (o.styles?.length || o.situations?.length) ? h("div", { class: "rb-wk2-ero-row" }, h("small", { class: "rb-muted" }, `${title}${LEVEL(o.frequency) ? ` · ${LEVEL(o.frequency)}` : ""}${Number.isFinite(o.directness) ? ` · 직접성 ${o.directness}` : ""}`),
+    o.styles?.length ? h("div", { class: "rb-wk2-chips" }, o.styles.map((x) => h("span", { class: "rb-wk2-chip" }, x))) : null, o.situations?.length ? h("small", { class: "rb-muted" }, `주로: ${o.situations.join(" · ")}`) : null) : null;
+  return [chips("선호·성향", d.prefs), chips("좋아하는 체위", d.likes), chips("싫어하는 체위", d.dislikes), style("유혹 방식", d.seduction), style("성적 농담", d.humor),
+    d.lastAction ? h("div", { class: "rb-wk2-ero-row" }, h("small", { class: "rb-muted" }, "최근 행동"), h("p", { class: "rb-wk2-p" }, d.lastAction)) : null].filter(Boolean);
+}
 // NSFW 탭: 성적 항목(성적 관심·선호 등) + 직접 고치기·AI 값으로·다시 분석. Erosync가 켜져 있고 이름이 맞는 인물에게만.
 export function eroNsfwCard(ctx, card, person, redraw) {
   const ad = eroAdult(person), ax = eroAxes(person);
@@ -42,6 +52,7 @@ export function eroNsfwCard(ctx, card, person, redraw) {
     btn("프로필 가져오기", { size: "sm", id: "rb-ero-import", title: "내보낸 파일로 이 인물의 직접 고친 값과 태그를 덮어써요", onClick: () => importProfile(ctx, person, redraw) }));
   const rows = ad ? [h("div", { class: "rb-wk2-nums" }, ad.rows.map((r) => bar(r.label, r.value)),
     ad.pref ? h("small", { class: "rb-muted" }, `끌리는 상대 · 여성 ${ad.pref.f}% · 남성 ${ad.pref.m}% · 그 외 ${ad.pref.x}%`) : null)] : [h("small", { class: "rb-muted" }, "성적 항목이 아직 없어요.")];
+  rows.push(...eroDetailRows(person.detail));
   return card("Erosync 성적 항목", [...rows, person.overridden ? h("small", { class: "rb-muted" }, "직접 고친 값이 있어요. AI가 다시 분석해도 고친 값이 우선이에요.") : null, act, line.el], null, "rb-wk2-ero");
 }
 

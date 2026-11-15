@@ -39,6 +39,18 @@ export const FEATURES = [
   { t: "기억 넣기 토큰 · 남길 최근 턴", k: "주입 토큰 예산 inject 요약된 옛 대화 빼기 trim", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "기억 넣기", addon: "memory" },
   { t: "나에 대한 기억", k: "user 페르소나 내 정보 감정", path: `${M} › 나에 대한 기억`, tab: "memory", mem: { page: "me" }, addon: "memory" },
   { t: "다른 채팅의 기억 보기", k: "봇별 기억 채팅 목록 인물 위키", path: `${M} › 다른 채팅`, tab: "memory", mem: { page: "bots" }, addon: "memory" },
+  // 2.2.4 기능 찾기 보강: 자주 찾는 기억 기능
+  { t: "임베딩 (의미 검색)", k: "embedding 의미 검색 voyage 보야지 벡터 뜻 비슷한 기억 원문 회상 raw recall api 키", path: `${M} › 설정 › 임베딩`, tab: "memory", mem: MSET, find: "임베딩", addon: "memory" },
+  { t: "원문 회상 (지난 대화 원문 조각)", k: "raw recall 원문 회상 지난 대화 정확한 날짜 사소한 사실 임베딩", path: `${M} › 설정 › 임베딩`, tab: "memory", mem: MSET, find: "임베딩", addon: "memory" },
+  { t: "사람다운 기억", k: "관계 진도 호칭 말투 추억 human", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "사람다운 기억", addon: "memory" },
+  { t: "감정이 시간이 지나면 식어요", k: "식음 냉각 cooling 적대 두려움 애정 감정 감소", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "감정이 시간이", addon: "memory" },
+  { t: "거짓말·오해 추적", k: "거짓말 오해 믿음 belief 잘못 믿는", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "거짓말", addon: "memory" },
+  { t: "요약된 옛 대화 빼고 보내기", k: "토큰 줄이기 trim 옛 대화 요약 하이파처럼 문맥 줄이기", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "요약된 옛 대화", addon: "memory" },
+  { t: "지난 대화 분석에 함께 기록 · Erosync도", k: "백필 backfill 인물 위키 함께 erosync 성향 분석", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "지난 대화 분석에", addon: "memory" },
+  { t: "인물 위키 (인물·상황·시간선)", k: "인물 위키 wiki 문서 인물 정보 상황 시간선 타임라인 장면 기록 보기 성격 기본 성격 6축 호감 관계 진도 감정", path: `${M} › 채팅 고르기 › 기록 보기`, tab: "memory", mem: { page: "home" }, addon: "memory" },
+  { t: "인물 관계도", k: "관계도 relationship map 관계 그래프 연결 누가 누구 남매 연인 erosync 보기", path: "장기 기억 › 인물 관계도", tab: "relmap", addon: "memory" },
+  { t: "같은 인물 합치기 · 위키 점검", k: "합치기 중복 같은 이름 별칭 merge 되돌리기 위키 점검 문서 이름 맞추기 빈 문서", path: `${M} › 인물 › 더보기`, tab: "memory", mem: { page: "home" }, addon: "memory" },
+  { t: "에로 위키 (Erosync 인물 값)", k: "에로 위키 erosync 성향 선호 체위 유혹 성적 농담 최근 행동 nsfw 인물 값", path: `${E}`, tab: "memory", mem: ero("manage"), addon: "erosync" },
   // Erosync
   { t: "Erosync 매 턴 계산", k: "nsfw 성향 매턴 턴마다 자동 갱신 계산 변화 장기기억", path: `${E} › 분석·관리 › 매 턴 계산`, tab: "memory", mem: ero("manage"), find: "매 턴 계산", addon: "erosync" },
   { t: "Erosync 출발값 만들기 (전체 · 골라서)", k: "nsfw 성향 분석 캐릭터 분석 인물 분석 선택 로어북 골라 출발값", path: `${E} › 분석·관리 › 출발값 만들기`, tab: "memory", mem: ero("manage"), find: "출발값 만들기", addon: "erosync" },
@@ -60,11 +72,30 @@ export const FEATURES = [
 ];
 
 const norm = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/[\s·\-_/()]+/g, "");
+// 2.2.4 초성 검색: "ㅇㅂㄷ" → 임베딩. 조합 중인 끝 글자("이" → 임)도 맞게, 마지막 음절은 초성+중성까지만 비교한다
+const CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+const choOf = (s) => [...s].map((c) => { const n = c.charCodeAt(0) - 0xac00; return n >= 0 && n < 11172 ? CHO[Math.floor(n / 588)] : c; }).join("");
+const isCho = (w) => /^[ㄱ-ㅎ]+$/.test(w);
+const openSyl = (c) => { const n = c.charCodeAt(0) - 0xac00; return n >= 0 && n < 11172 && n % 28 === 0; };   // 받침 없는 음절(뒤에 받침이 붙을 수 있음)
+function hit(text, w) {
+  w = w.replace(/[\u1100-\u1112]/g, (c) => CHO[c.charCodeAt(0) - 0x1100]);   // NFKC가 바꾼 초성(ᄋ)을 다시 ㅇ으로
+  if (text.includes(w)) return true;
+  if (isCho(w)) return choOf(text).includes(w);
+  const last = w.at(-1);
+  if (w.length >= 1 && openSyl(last)) {   // "이" → "임"·"인"… : 앞부분은 그대로, 끝 음절은 받침 무시
+    const head = w.slice(0, -1), base = last.charCodeAt(0);
+    for (let i = text.indexOf(head); i >= 0 && i + head.length < text.length; i = text.indexOf(head, i + 1)) {
+      const c = text.charCodeAt(i + head.length) - base;
+      if (c >= 0 && c < 28) return true;
+    }
+  }
+  return false;
+}
 const words = (q) => String(q ?? "").normalize("NFKC").toLowerCase().split(/[\s,]+/).map((w) => w.replace(/[·\-_/()]+/g, "")).filter(Boolean);
 
 // q의 모든 낱말이 이름·다른 말·위치 어딘가에 들어 있는 항목. 이름에 든 것이 먼저, 그다음 다른 말, 위치 순.
 // opts.has(addonId): 그 애드온이 켜져 있는지(없으면 전부 보임). 꺼진 애드온의 기능은 off:true로 표시해 맨 뒤에 둔다.
-export function findFeatures(q, list = FEATURES, { has = null, limit = 12 } = {}) {
+export function findFeatures(q, list = FEATURES, { has = null, limit = 20 } = {}) {
   const ws = words(q);
   if (!ws.length) return [];
   const out = [];
@@ -75,6 +106,9 @@ export function findFeatures(q, list = FEATURES, { has = null, limit = 12 } = {}
       if (t.includes(w)) score += t.startsWith(w) ? 5 : 4;
       else if (k.includes(w)) score += 2;
       else if (p.includes(w)) score += 1;
+      else if (hit(t, w)) score += 3;
+      else if (hit(k, w)) score += 1.5;
+      else if (hit(p, w)) score += 0.5;
       else { ok = false; break; }
     }
     if (!ok) continue;

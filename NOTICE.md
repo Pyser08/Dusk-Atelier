@@ -1,14 +1,15 @@
 # NOTICE — 함께 들어 있는 외부 코드와 라이선스
 
-Dusk Atelier 자체는 **GNU Affero General Public License v3.0 (AGPL-3.0)** 입니다. 소스: https://github.com/Pyser08/Dusk-Atelier
+Dusk Atelier 자체는 **소스 공개 · 허락제 라이선스**입니다(LICENSE 참고, v2.2.4부터. v2.2.3까지 배포된 사본은 AGPL-3.0). 소스: https://github.com/Pyser08/Dusk-Atelier
+아래 외부 코드·라이브러리는 각자의 라이선스를 따르며, Dusk Atelier 라이선스가 그 조건을 바꾸지 않습니다.
 
 아래는 번들에 함께 들어 있는 외부 코드의 고지입니다. 봇빌더(v0.3.2, 원작자 허락) 번들에서 가져온 것은 원문 고지를 그대로 옮겼습니다.
-RisuBard 프리셋 해석 코드는 GPL-3.0이며, GPLv3 제13조에 따라 AGPL-3.0과 결합해 배포할 수 있습니다.
+RisuBard 프리셋 해석 코드는 원작자의 허락을 받아 Dusk Atelier 라이선스로 함께 배포합니다(원본 RisuBard 저장소의 코드는 원래 라이선스 GPL-3.0을 따릅니다).
 fflate 0.8.2 (MIT, https://github.com/101arrowz/fflate)는 기존 번들과 같은 버전입니다.
 위젯 홈(src/widgethome/)은 PocketRisu 위젯 홈 v1.0.34(제작자 본인 제공)을 이 저장소로 옮긴 것입니다. 그 안의 design.js(시계·달력·할 일 도우미)는 원본 주석에 ‘Butter Home v8에서 옮김’이라고 적혀 있어, 해당 코드의 라이선스는 제작자 확인이 필요합니다.
 Erosync(src/erosync/)는 Erosync V0.9.1(원작자에게 제공받음)을 Dusk 안에서 켜고 끌 수 있게 감싼 것입니다. 본문은 원본 그대로이고 바뀐 곳은 파일 머리 주석에 적었습니다.
 
-ProtLink+(src/protlink/)는 ProtLink+ v1.0.0(원작자에게 제공받음)에서 Proton Drive에 연결하는 부분(공유 링크 열기·비밀번호·폴더 훑기·파일 받기)만 그대로 가져온 것입니다. 링크 목록·연결·업데이트 확인·화면은 Dusk 방식으로 새로 만들었습니다. 원문은 GPL-3.0-or-later(PocketRisu/RisuAI/RisuTide 코드 포함)이며 GPLv3 제13조에 따라 AGPL-3.0과 결합해 배포합니다. 함께 들어 있는 패키지(@aws-crypto/sha256-js Apache-2.0, @protontech/crypto GPL-3.0, @protontech/openpgp LGPL-3.0+ 등)의 고지 전문은 src/protlink/NOTICES.txt에 원문 그대로 있습니다.
+ProtLink+(src/protlink/)는 ProtLink+ v1.0.0(원작자에게 제공받음)에서 Proton Drive에 연결하는 부분(공유 링크 열기·비밀번호·폴더 훑기·파일 받기)만 그대로 가져온 것입니다. 링크 목록·연결·업데이트 확인·화면은 Dusk 방식으로 새로 만들었습니다. 원문은 GPL-3.0-or-later(PocketRisu/RisuAI/RisuTide 코드 포함)이며 GPLv3 제13조에 따라 AGPL-3.0과 결합해 배포합니다. 함께 들어 있는 패키지(@aws-crypto/sha256-js Apache-2.0, @protontech/crypto GPL-3.0, @protontech/openpgp LGPL-3.0+ 등)의 고지 전문은 src/protlink/NOTICES.txt에 원문 그대로 있습니다. **ProtLink+ 애드온(src/protlink/, addons/protlink, addons/dist/protlink.js)은 이 GPL 라이브러리 때문에 GNU GPL-3.0-or-later로 배포되며, Dusk Atelier 라이선스가 적용되지 않습니다.**
 
 Dusk 프로바이더(src/data/provider/, src/engine/provider/, addons/provider/)는 Yumi Provider Manager v1.19.3(원작자 허락)의 기능과 일부 코드를 참고·가져와 보완합니다. 가져온 부분은 해당 파일 머리 주석에 출처를 적습니다.
 
@@ -90,7 +91,7 @@ SOFTWARE.
 
 Preset adapters: adapted from RisuBard promptV2.ts, util.ts, parser/parser.svelte.ts, process/infunctions.ts and preset wire format at commit e5412a4878ae3a0073ffce8e06aed8f288dd9c53.
 Upstream: https://github.com/rpaddict/RisuBard (copyright upstream contributors; GPL-3.0).
-Workshop(봇빌더) distribution license: GPL-3.0-only. Dusk Atelier에 합쳐진 부분은 GPLv3 §13에 따라 AGPL-3.0으로 함께 배포한다. 대응 소스: https://github.com/Pyser08/Dusk-Atelier (src/dev/aibuild).
+Workshop(봇빌더): 원작자에게서 프로젝트를 넘겨받아 Dusk Atelier 라이선스로 배포한다(넘겨받기 전 배포본은 GPL-3.0-only). 대응 소스: https://github.com/Pyser08/Dusk-Atelier (src/dev/aibuild).
 Changes: independent DOM UI, local workshop context and bounded CBS subset/RPN arithmetic with local variable bindings; no host stores or Svelte components. Tests include pinned upstream pure-function excerpts for differential verification; these fixtures are not bundled.
 
 msgpackr license:

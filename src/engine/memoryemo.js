@@ -33,7 +33,8 @@ export function validateEmo(obj) {
 // 미설정 태그는 올라갈 때만 0에서 시작해 시작한다(내려가는 변화만 있으면 '없음 0'으로 시작).
 // smooth: 약한 신호(±1)는 같은 방향으로 두 번 쌓여야 한 칸 움직이고(반대 신호는 쌓인 것을 지운다), ±2 이상의 큰 사건은 바로 반영한다.
 // 약한 모델이 장면마다 관계를 오락가락 판단해도 게이지가 흔들리지 않게 한다.
-export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = false } = {}) {
+// ceilingOf(from, to) → 이 쌍의 관계 진도로 AI가 올릴 수 있는 애정·신뢰 상한(2.2.4 게이지 조화). 사용자가 정한 값은 낮추지 않는다.
+export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = false, ceilingOf = null } = {}) {
   folder.emo ??= {};
   const src = srcOf(anchor);
   let changed = 0;
@@ -41,7 +42,7 @@ export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = fals
     const k = key(e.from) + ">" + key(e.to), pair = folder.emo[k] ??= { from: e.from, to: e.to, tags: {}, log: [] };
     const prev = {}, next = {};
     for (let [tag, d] of Object.entries(e.t)) {
-      if (pair.lock?.[tag]) continue;  // 사용자가 정한 태그는 자동 갱신하지 않는다
+      if (pair.lock?.[tag]) { delete pair.lock[tag]; if (!Object.keys(pair.lock).length) delete pair.lock; }   // 2.2.4: 사용자가 고친 값은 출발점 — 이후엔 대화에 따라 AI가 이어서 바꾼다(예전 잠금도 풀어 준다)
       if (smooth) {
         const pend = pair.pend?.[tag] ?? 0;
         if (Math.abs(d) >= 2) { if (pend) delete pair.pend[tag]; }
@@ -50,7 +51,8 @@ export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = fals
         else { (pair.pend ??= {})[tag] = d; continue; }
       }
       const before = pair.tags[tag];
-      const v = clampG((before ?? 0) + d);
+      let v = clampG((before ?? 0) + d);
+      if (d > 0 && ceilingOf && (tag === "affection" || tag === "trust")) { const cap = ceilingOf(e.from, e.to); if (Number.isFinite(cap) && v > cap) v = Math.max(before ?? 0, cap); }   // 진도보다 앞서 가지 않게
       if (v === before) continue;
       prev[tag] = before ?? null; next[tag] = v; pair.tags[tag] = v; changed++;
     }
@@ -62,14 +64,14 @@ export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = fals
   return changed;
 }
 
-// 사용자 직접 수정(위키 인라인 편집용): 값을 정하고 그 태그를 잠근다. null이면 '미설정'으로 되돌린다.
+// 사용자 직접 수정(위키 인라인 편집용): 값을 정한다(2.2.4부터 잠그지 않음 — 다음 응답부터 이 값에서 AI가 이어서 판단). null이면 '미설정'으로 되돌린다.
 export function setTag(folder, from, to, tag, value, now = Date.now()) {
   if (!EMO_TAGS.includes(tag)) return null;
   folder.emo ??= {};
   const k = key(from) + ">" + key(to), pair = folder.emo[k] ??= { from, to, tags: {}, log: [] };
   const before = pair.tags[tag] ?? null;
   if (value == null) { delete pair.tags[tag]; if (pair.lock) { delete pair.lock[tag]; if (!Object.keys(pair.lock).length) delete pair.lock; } }
-  else { pair.tags[tag] = clampG(value); pair.lock = { ...(pair.lock ?? {}), [tag]: true }; }
+  else { pair.tags[tag] = clampG(value); if (pair.lock) { delete pair.lock[tag]; if (!Object.keys(pair.lock).length) delete pair.lock; } }
   pair.log.push({ t: { [tag]: pair.tags[tag] ?? null }, from: { [tag]: before }, why: "user", at: null, at_ms: now });
   return pair;
 }

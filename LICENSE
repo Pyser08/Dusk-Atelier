@@ -1,14 +1,50 @@
-GNU AFFERO GENERAL PUBLIC LICENSE
-Version 3, 19 November 2007
+Dusk Atelier 라이선스 (소스 공개 · 허락제)
+Copyright (c) Dusk Atelier 저작권자 (https://github.com/Pyser08/Dusk-Atelier). All rights reserved.
 
-Dusk Atelier is licensed under the GNU Affero General Public License, version 3
-(AGPL-3.0-only). The full license text is published by the Free Software
-Foundation: https://www.gnu.org/licenses/agpl-3.0.txt
+이 라이선스는 v2.2.4 이후 배포본과 이 저장소의 현재 코드에 적용됩니다.
+v2.2.3까지 GNU AGPL-3.0으로 이미 배포된 사본은 그 배포 당시의 라이선스를 따릅니다.
 
-NOTE FOR THE MAINTAINER: the canonical full text could not be fetched from the
-build sandbox. Replace this file with the unmodified official text
-(GitHub: Add file -> Create new file -> name it LICENSE -> "Choose a license
-template" -> GNU Affero General Public License v3.0) so that GitHub and other
-tools recognise the license.
+1. 허용하는 것 (따로 허락받지 않아도 돼요)
+   - 개인 사용: 공식 배포본(GitHub 릴리스·Dusk 애드온 목록)을 RisuAI 등에 설치해 쓰기
+   - 열람·분석: 소스 코드를 읽고 분석하기. 사람이 직접 읽는 것과 AI 도구(코딩 도우미·챗봇 등)에
+     코드를 넣어 분석하게 하는 것 모두 포함해요.
+   - 버그 제보·개선 제안: 문제를 설명하거나 고칠 방법을 제안하기 위해 필요한 만큼 코드 일부를
+     인용하기 (이 저장소의 이슈·풀 리퀘스트, 저작권자에게 보내는 글, 공개 게시판의 버그 제보 글)
+   - 저작권자에게 기여: 이 저장소에 풀 리퀘스트를 보내기 (보낸 기여물은 이 라이선스로 배포되는 데
+     동의한 것으로 봐요)
 
-Third-party notices: see NOTICE.md.
+2. 저작권자의 서면 허락이 있어야 하는 것
+   - 재배포: 원본이든 일부든 배포본·소스를 다른 곳에 올리거나 나눠 주기 (파일 공유, 미러, 재업로드,
+     다른 플러그인·모듈·봇에 넣어 배포하기 포함)
+   - 개조본 배포·공개: 고친 코드나 고친 배포본을 남에게 주거나 공개하기
+   - 다른 프로젝트에 포함: 코드의 전부 또는 의미 있는 일부를 다른 소프트웨어에 옮겨 쓰기
+   - 판매·유료 제공: 배포본이나 개조본을 돈을 받고 팔거나 유료 서비스에 넣기
+   - 저작권·라이선스 표시를 지우거나 바꾸기
+   개인이 자기 기기에서만 쓰려고 고치는 것은 막지 않지만, 고친 것을 남에게 주거나 공개하려면
+   허락이 필요해요.
+
+3. 허락받는 방법
+   이 저장소의 이슈(https://github.com/Pyser08/Dusk-Atelier/issues) 또는 저작권자가 안내한 연락처로
+   무엇을 어디에 어떻게 쓰려는지 알려 주세요. 허락은 저작권자가 서면(글)으로 준 범위에서만 유효해요.
+
+4. 함께 들어 있는 외부 코드
+   NOTICE.md에 적은 외부 코드와 라이브러리는 각자의 라이선스를 따릅니다. 특히 ProtLink+ 애드온
+   (src/protlink/, addons/protlink, addons/dist/protlink.js)은 GPL-3.0 라이브러리를 포함하므로
+   GNU GPL-3.0-or-later로 배포됩니다.
+
+5. 보증 없음
+   이 소프트웨어는 "있는 그대로" 제공되며, 명시적이든 묵시적이든 어떤 보증도 하지 않습니다.
+   이 소프트웨어를 써서 생긴 손해에 대해 저작권자는 책임지지 않습니다.
+
+---------------------------------------------------------------------------------------------------
+Dusk Atelier License (source-available, permission required) — English summary
+- Allowed without permission: personal use of official releases; reading and analyzing the source,
+  including feeding the code to AI tools for analysis; quoting code as needed for bug reports and
+  improvement suggestions; contributing pull requests to this repository.
+- Requires written permission from the copyright holder: redistribution (whole or part), distributing
+  or publishing modified versions, incorporating the code into other projects, selling or offering it
+  as a paid service, removing or altering copyright/license notices.
+- Copies released up to v2.2.3 under AGPL-3.0 remain under that license.
+- Third-party components listed in NOTICE.md keep their own licenses; the ProtLink+ add-on is
+  distributed under GPL-3.0-or-later.
+- Provided "AS IS", without warranty of any kind.

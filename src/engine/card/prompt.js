@@ -1,5 +1,5 @@
 // 카드 생성·연결·에셋 고르기 프롬프트와 응답 정규화. 순수 함수.
-import { parseJson } from "../memoryprompt.js";
+import { parseJson } from "../jsonparse.js";
 import { tagCatalog, normalizeTags, calcStats } from "./tags.js";
 import { tagCountOf, MEMORY_LABEL, MEMORY_LIMIT, normGrade } from "./grade.js";
 import { GRADES } from "../memorygrade.js";

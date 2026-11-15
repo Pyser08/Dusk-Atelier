@@ -203,5 +203,5 @@ node tools/build.mjs --check   # 빌드 결과가 저장소의 dusk_atelier.js�
 - **모드 매니저** (risu-mod-manager, 노예였던것님) — 모듈 호환 애드온을 만들 때 모듈의 로어북·정규식을 섹션별로 나눠 합치는 방식을 참고했어요. 코드는 가져오지 않고 Dusk Atelier에 맞게 새로 썼어요.
 
 ## 라이선스
-Dusk Atelier는 **GNU Affero General Public License v3.0 (AGPL-3.0)** 입니다. 소스는 이 저장소(`src/`)입니다. 이 프로그램은 어떠한 보증도 없이 배포됩니다.
+Dusk Atelier는 **소스 공개 · 허락제 라이선스**입니다([LICENSE](LICENSE)). 누구나 공식 배포본을 설치해 쓰고, 소스(`src/`)를 읽고 분석할 수 있어요 — 사람이 읽든 AI 도구로 분석하든 괜찮아요. **재배포, 개조본 배포·공개, 다른 프로젝트에 넣기, 판매**는 저작권자의 서면 허락이 필요해요. 허락은 [이슈](https://github.com/Pyser08/Dusk-Atelier/issues)로 요청해 주세요. v2.2.3까지 AGPL-3.0으로 배포된 사본은 그 라이선스를 따르고, ProtLink+ 애드온(GPL-3.0 라이브러리 포함)은 GPL-3.0-or-later입니다. 이 프로그램은 어떠한 보증도 없이 배포됩니다.
 번들에 함께 들어 있는 외부 코드(RE2JS·fflate·msgpackr·@noble·RPack 매핑)와 RisuBard 프리셋 해석 코드의 고지는 [NOTICE.md](NOTICE.md)에 있습니다. 라이선스 대조 결과는 [docs/LICENSE-AUDIT-v1.6.7.md](docs/LICENSE-AUDIT-v1.6.7.md)에 있습니다.

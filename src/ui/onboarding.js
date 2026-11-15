@@ -10,7 +10,7 @@ import { lookParts } from './lookparts.js';
 import { TOUR_VER } from './tour.js';
 import { memoryGlobalOn } from '../engine/memoryswitch.js';
 import { LEVELS } from '../engine/trackpreset.js';
-import { DEFAULT_EMBED } from '../engine/embed.js';
+import { DEFAULT_EMBED } from '../engine/tokens.js';
 import { potInstalled } from '../engine/firstrun.js';
 import { loadFairOn, loadDiceOn, DICE_KEY } from '../data/fairplay.js';
 import { diceRow } from './dicedetail.js';

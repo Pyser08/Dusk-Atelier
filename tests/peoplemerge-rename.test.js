@@ -29,3 +29,10 @@ test("이미 합쳐져 옛 이름으로 남은 문서는 alignDocTitles로 인�
   assert.deepEqual(fixed, [{ from: "시라유키 린", to: "린" }]);
   assert.equal(f.wiki.documents.d1.title, "린");
 });
+
+test("문서 이름 맞추기는 {{user}}를 건드리지 않는다(페르소나 이름 별칭으로 남의 문서를 잡지 않게)", () => {
+  const f = { people: { "{{user}}": { name: "{{user}}", aliases: ["하루"], records: [] } },
+    wiki: { documents: { d9: { id: "d9", type: "Character", title: "하루", aliases: [], sections: [], metrics: [] } } } };
+  assert.deepEqual(alignDocTitles(f), []);
+  assert.equal(f.wiki.documents.d9.title, "하루");
+});

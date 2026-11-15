@@ -49,7 +49,8 @@ function fix(item, idx) {
 }
 
 // 출처 {chatId(메시지 id), hash, at}. 앵커 {at, mid, h}에서 만든다. 해시가 없으면 출처 없음(undefined).
-export const srcOf = (anchor) => anchor?.h ? { chatId: anchor.mid ?? null, hash: anchor.h, at: anchor.at ?? null } : undefined;
+import { srcOf } from "./memsrc.js";
+export { srcOf };
 const hasSrc = (s) => !!s?.hash;
 // 출처 응답이 지금 채팅에 살아 있는가. 위치가 바뀌었으면 src.at도 고친다.
 function srcAlive(src, idx) {

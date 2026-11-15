@@ -1,6 +1,6 @@
 {
   "name": "dusk-atelier",
-  "version": "2.2.3",
+  "version": "2.2.4",
   "description": "RisuAI 플러그인 Dusk Atelier — 모듈·봇 관리와 인물별 장기기억",
   "private": true,
   "type": "module",
@@ -16,5 +16,5 @@
     "acorn": "^8.18.0",
     "eslint-scope": "^9.1.2"
   },
-  "license": "AGPL-3.0-only"
+  "license": "SEE LICENSE IN LICENSE"
 }

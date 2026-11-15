@@ -65,7 +65,16 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     if (state.findMode && state.tab !== "home" && q.trim()) { const from = { tab: state.tab, sub: state.sub }; go("home"); state.findFrom = from; state.search = q; searchInput.value = q; if (doc.activeElement !== searchInput) searchInput.focus(); }
     state.search = q;
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => { if (!composing) ctx.refresh(); }, 120);
+    // 2.2.4: 목록 탭(캐릭터·모듈·플러그인)은 다시 그리기가 무거워, 음절 사이에 그리면 모바일 키보드(천지인 등)의 조합이 끊겨 'ㅇㅣㅁ'처럼 갈라졌다
+    //   → 입력이 멈춘 뒤에만 그린다(홈 기능 찾기는 가벼워 그대로 빠르게)
+    const wait = state.tab === "home" ? 120 : 380;
+    const fire = () => {
+      if (composing) return;
+      const left = wait - (Date.now() - lastTyped);
+      if (left > 20) { searchTimer = setTimeout(fire, left); return; }
+      ctx.refresh();
+    };
+    searchTimer = setTimeout(fire, wait);
   };
   searchInput.addEventListener("input", (e) => {
     lastTyped = Date.now();
@@ -73,7 +82,9 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     if (composing || e.isComposing) return;
     runSearch(e.target.value);
   });
-  searchInput.addEventListener("compositionstart", () => { composing = true; });
+  searchInput.addEventListener("compositionstart", () => { composing = true; lastTyped = Date.now(); });
+  searchInput.addEventListener("compositionupdate", () => { lastTyped = Date.now(); });
+  searchInput.addEventListener("keydown", () => { lastTyped = Date.now(); });
   searchInput.addEventListener("compositionend", () => { composing = false; setTimeout(() => { if (!composing) runSearch(searchInput.value); }, 0); });
   // 새 버전 알림: 열 때 업데이트 주소의 머리말(앞 512바이트)만 읽어 버전을 비교한다
   const UPDATE_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js";

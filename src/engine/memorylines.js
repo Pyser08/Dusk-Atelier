@@ -33,6 +33,8 @@ export const LINES_STAGE1 = [
   "   0 trivial, 1 matters in this scene, 2 matters later, 3 permanent. One line per character who acted. Skip background figures.",
   "   Last field = when the event itself happened, ONLY if it differs from the scene's story date (past or planned events): \"2023-05-07\", \"the week before 2023-06-09\", \"2022\", \"next month (from 2023-04-03)\". Leave it empty otherwise.",
   "4. rel|A|B|what changed between them (<=40 chars)|+ or - or 0",
+  "   tie|A|B|what B is to A (<=24 chars: sister, girlfriend, boss, childhood friend, rival, master)",
+  "   Write a tie line whenever newest states or clearly shows a lasting relationship between two people (family, romance, work, school, rivalry) — even if nothing changed. Use {{user}} for the player.",
   "5. open|a new promise, plan, secret or unanswered question (<=60 chars)",
   "6. close|id from openItems that newest resolved, kept or made pointless",
   "7. new|Name|who they are in one line (role, relation) — only for characters missing from `known`",
@@ -65,6 +67,7 @@ function stage2Rules(N, { light, beliefs, wiki, extraLines }) {
   if (wiki) r.push(`know|a fact ${N} learned in newest`, `call|Other|how ${N} addresses Other|formal or casual`);
   else r.push(`call|Other|how ${N} addresses Other|formal or casual      (only when first seen or changed)`);
   r.push("attr|category|key|value|condition      lasting fact only; category: pref rel job home belief look trait status; max 3");
+  if (wiki) r.push(`trait|initiative or direct or expressive or guarded or impulsive or persistent|up or down|1-3|exact quote      a personality tendency of ${N} that newest clearly shows (takes the lead · speaks plainly · shows feelings · keeps a guard up · acts on impulse · holds on to relationships); max 2`);
   r.push("keys|word1,word2,word3      concrete objects, places or topics a later scene would mention");
   if (wiki && !light) r.push(`view|how ${N} now judges {{user}}, one sentence`, `secret|what ${N} hides|from whom`, `habit|a lasting behaviour pattern of ${N} (seen more than once)`, `npc|Other character (not {{user}})|emotion1, emotion2|short reason`);
   if (wiki && !light && extraLines.length) r.push("", `Deeper record about ${N} — only when newest clearly shows it; each line replaces the stored one:`, ...extraLines);
@@ -144,7 +147,7 @@ function targetName(raw, known, source) {
 
 // ── 줄 해석 ──
 const SEP = /[|｜¦]/;
-const TAGS = new Set(["scene", "who", "rel", "open", "trust", "attr", "keys", "to", "call", "feel", "rift", "bond", "belief", "start", "state", "close", "new", "like", "now", "know", "view", "secret", "habit", "npc", "id", "first", "profile", "deep", "suspect", "clue", "react", "lewd", "taste"]);
+const TAGS = new Set(["scene", "who", "rel", "open", "trust", "attr", "keys", "to", "call", "feel", "rift", "bond", "belief", "start", "state", "close", "new", "like", "now", "know", "view", "secret", "habit", "npc", "id", "first", "profile", "deep", "suspect", "clue", "react", "lewd", "taste", "tie", "trait", "fact"])   // 2.2.4: tie(오래가는 관계)·trait(성격 관찰) — 목록에 없으면 줄이 버려진다;
 const ALIAS = { 장면: "scene", 인물: "who", 사람: "who", 관계변화: "rel", 관계: "rel", 떡밥: "open", 확신: "trust", 속성: "attr", 키워드: "keys", 태도: "to", 호칭: "call", 속마음: "feel", 갈등: "rift", 추억: "bond", 오해: "belief", 사전관계: "start", person: "who", scene_summary: "scene", 상태: "state", 해결: "close", 새인물: "new", 호감: "like", 지금관계: "now", 알게됨: "know", 평가: "view", 비밀: "secret", 습관: "habit", 첫인상: "first" };
 // 원문 → [{tag, f:[필드…]}]. 코드펜스·번호·글머리표·"tag:" 꼴을 너그럽게 받는다.
 // JSON만 내도록 묶인 모델(예: DeepSeek 생각 끔 = json_object 강제)이 {"lines":["scene|…"]}처럼 보내도 줄로 풀어 쓴다.
@@ -292,6 +295,9 @@ export function fromStage1(lines, { known = [], source = "", openIds = null } = 
       if (!act || cnt >= 3 || raw.people.some((e) => nk(e.name) === nk(name) && e.act === act)) continue;
       const [p, s, r] = importanceToAxes(f[1 + 1]);
       raw.people.push({ name, act, p, s, r, extra: true });
+    } else if (tag === "tie" && (raw.ties ??= []).length < 6) {   // 2.2.4 오래가는 관계(남매·연인·상사 등)
+      const a = targetName(f[0], known, source), b = targetName(f[1], known, source), kind = (f[2] ?? "").trim().slice(0, 24);
+      if (a && b && nk(a) !== nk(b) && kind) raw.ties.push({ a, b, kind });
     } else if (tag === "rel" && raw.rel.length < 4) {
       const from = targetName(f[0], known, source), to = targetName(f[1], known, source), d = (f[2] ?? "").slice(0, 40);
       if (from && to && nk(from) !== nk(to) && d) raw.rel.push({ from, to, d, dir: /^[+\-0]$/.test((f[3] ?? "").trim()) ? f[3].trim() : "0" });

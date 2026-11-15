@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 test("애드온 번들은 코어 모듈에 필요한 이름이 없으면 업데이트 안내로 멈춘다", () => {
   const code = fs.readFileSync("addons/dist/memory.js", "utf8");
-  assert.match(code, /currentState/);
+  assert.match(code, /extractMessageText/);   // 2.2.4: 기억 엔진은 애드온에 들어가고 공용 모듈(chattext 등) 이름을 확인한다
   assert.match(code, /업데이트해 주세요/);
   assert.match(code, /없는 기능/, "빠진 이름을 확인하는 문구");
 });

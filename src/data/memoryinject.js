@@ -71,10 +71,12 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     if (upto < 4) return null;
     const scenes = (folder?.scenes ?? []).filter((x) => !x.orphan && Number.isInteger(x.at)).sort((a, b) => a.at - b.at);
     const dateOf = (mi) => { const sc = scenes.find((x) => x.at >= mi) ?? scenes.at(-1); return sc?.when ? String(sc.when).replace(/\s+/g, " ").slice(0, 40) : ""; };
-    const list = []; for (let i = 0; i < upto; i++) { const t = extractMessageText(msgs[i]); if (t.trim()) list.push({ text: t, who: isUserMessage(msgs[i]) ? "{{user}}" : String(character?.name ?? "{{char}}"), mi: i }); }
+    const from = Math.max(0, upto - Math.max(200, Number(s.rawMaxMessages ?? 3000)));   // 아주 긴 채팅은 최근 3000개 메시지까지만 조각낸다(모바일 계산량)
+    const list = []; for (let i = from; i < upto; i++) { const t = extractMessageText(msgs[i]); if (t.trim()) list.push({ text: t, who: isUserMessage(msgs[i]) ? "{{user}}" : String(character?.name ?? "{{char}}"), mi: i }); }
     const chunks = buildChunks(list, dateOf);
     const fid = folderIdOf(character.chaId, chatKeyOf(chat));
-    const sem = await embedder.rawScores(fid, chunks, query).catch(() => null);
+    // 응답을 오래 붙잡지 않는다: 원문 벡터가 아직 없으면 1.5초만 기다리고(그 사이 만든 만큼만 쓴다) 나머지는 뒤에서 계속 만든다
+    const sem = await embedder.rawScores(fid, chunks, query, { budgetMs: Number(s.rawBudgetMs ?? 1500) }).catch(() => null);
     const fused = rrf([sem, lexScores(chunks, query)]);
     let ranked = [...fused].sort((a, b) => b[1] - a[1]).map(([id]) => id);
     const out = assemble(chunks, ranked, { tokens: Number(s.rawTokens ?? 1500), neighbor: Number(s.rawNeighbor ?? 1), maxPicks: Number(s.rawPicks ?? 12), perDate: Number(s.rawPerDate ?? 0) });

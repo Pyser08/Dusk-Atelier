@@ -768,7 +768,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-advfold>summary::-webkit-details-marker{display:none}.rb-mem-advfold>summary::before{content:"고급";font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--rb-text);color:var(--rb-win)}
 .rb-mem-advfold>summary::after{content:"▾";margin-left:auto;font-size:16px;color:var(--rb-sub)}.rb-mem-advfold[open]>summary::after{content:"▴"}
 .rb-mem-advfold>*:not(summary){margin-left:14px;margin-right:14px}.rb-mem-advfold[open]{padding-bottom:12px}
-.rb-mem-navtabs{position:sticky;top:-12px;z-index:3;background:var(--rb-win);padding-top:8px;margin-top:-8px}
+.rb-mem-navtabs{position:relative;z-index:3;background:none}   /* 2.2.4: 고정 배경(창 색) 상자가 글래스 테마에서 짙은 사각형으로 보였다 → 배경 없이 */
 .rb-mem-anchor{scroll-margin-top:64px;display:flex;flex-direction:column;gap:10px;padding-top:6px}.rb-mem-anchor+.rb-mem-anchor{border-top:1px solid var(--rb-line2);margin-top:18px;padding-top:18px}
 .rb-mem-anchortitle{margin:0;font-size:18px}.rb-mem-anchor-body{min-width:0}
 .rb-wk-headwrap{display:flex;flex-direction:column;gap:10px}.rb-wk-auto{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.rb-wk-auto .rb-note{flex:1;min-width:220px;margin:0}
@@ -823,6 +823,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-wk2-ch{display:flex;align-items:center;gap:8px;min-width:0}.rb-wk2-ch b{font-size:15px}
 .rb-wk2-p{margin:0;line-height:1.75;color:var(--rb-text)}
 .rb-wk2-chips{display:flex;flex-wrap:wrap;gap:6px}.rb-wk2-chip{font-size:12.5px;padding:4px 10px;border-radius:999px;background:var(--rb-surf2)}.rb-wk2-chip small{color:var(--rb-mute)}
+.rb-wk2-ero-row{display:grid;gap:4px;margin-top:8px}
 .rb-wk2-chg{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 12px;align-items:center}.rb-wk2-chg small{color:var(--rb-mute)}.rb-wk2-chg s{color:var(--rb-mute)}.rb-wk2-chg .arr{font-style:normal;color:var(--rb-acc);margin:0 6px}
 .rb-wk2-glance{display:flex;flex-direction:column;gap:6px}
 .rb-wk2-gl{display:grid;grid-template-columns:auto minmax(56px,1fr) minmax(0,140px) 72px;align-items:center;gap:10px;padding:6px;border:0;border-radius:var(--rb-r2);background:transparent;color:var(--rb-text);font:inherit;text-align:left;cursor:pointer}
@@ -1194,7 +1195,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-addon-tile{display:flex;flex-direction:column;gap:6px;min-width:0;padding:12px 12px 10px;border:1px solid var(--rb-line);border-radius:14px;background:var(--rb-surf2);transition:border-color .15s}
 .rb-addon-tile.is-on{border-color:color-mix(in srgb,var(--rb-accent) 45%,var(--rb-line))}
 .rb-addon-tt{display:flex;align-items:center;gap:6px;min-width:0}
-.rb-addon-tt b{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rb-addon-tt b{font-size:13.5px;font-weight:700;min-width:0;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.35}
 .rb-addon-tt .sp{flex:1}
 .rb-addon-chip{flex:none;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--rb-line2);color:var(--rb-sub);white-space:nowrap}
 .rb-addon-chip.c-on{background:color-mix(in srgb,var(--rb-ok) 20%,transparent);color:var(--rb-ok)}
@@ -1208,8 +1209,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-addon-empty{padding:10px 12px;border-radius:12px;border:1px dashed var(--rb-line)}
 .rb-addon-acts{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
 .rb-addon-foot{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:4px}
-@media (max-width:560px){.rb-addon-grid{grid-template-columns:1fr 1fr;gap:8px}.rb-addon-tile{padding:10px}}
-@media (max-width:380px){.rb-addon-grid{grid-template-columns:1fr}}
+@media (max-width:600px){.rb-addon-grid{grid-template-columns:1fr;gap:8px}.rb-addon-tile{padding:10px 12px}.rb-addon-desc{-webkit-line-clamp:unset;display:block;overflow:visible}}   /* 2.2.4 모바일: 두 칸이면 이름·설명이 잘렸다 → 한 칸, 이름 줄바꿈, 설명 전부 */
 .rb-amk{max-width:560px;max-height:calc(100vh - 40px);overflow:auto}
 .rb-amk-step{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;border:var(--rb-bw,1px) solid var(--rb-line2)}
 .rb-amk-row{display:flex;gap:8px;flex-wrap:wrap}

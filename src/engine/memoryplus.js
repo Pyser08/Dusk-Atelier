@@ -3,6 +3,8 @@ import { similarity } from "./memorygrade.js";
 import { extractMessageText, hashText } from "./chattext.js";
 import { srcOf } from "./memoryreconcile.js";
 import { addSource } from "./memorytrust.js";
+import { isClosed, openItems } from "./openitems.js";
+export { isClosed, openItems };
 
 const cut = (v, n) => String(v ?? "").trim().slice(0, n);
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
@@ -19,7 +21,26 @@ export function validatePlus(obj) {
   const o = obj?.open ?? {};
   const add = (Array.isArray(o.add) ? o.add : []).map((x) => ({ text: cut(x?.text, 80), kind: OPEN_KINDS[x?.kind] ? x.kind : "question", who: names(x?.who, 4) })).filter((x) => x.text).slice(0, 3);
   const close = names(o.close, 3);
-  return { rel, open: { add, close } };
+  const ties = (Array.isArray(obj?.ties) ? obj.ties : []).map((x) => ({ a: cut(x?.a, 60), b: cut(x?.b, 60), kind: cut(x?.kind, 24) })).filter((x) => x.a && x.b && x.kind && x.a !== x.b).slice(0, 6);
+  return { rel, open: { add, close }, ...(ties.length ? { ties } : {}) };
+}
+// 2.2.4 오래가는 관계: 두 사람(방향 있음 a→b)마다 최신 관계 하나. 반환: 바뀐 수
+const tkey = (a, b) => String(a).toLowerCase().replace(/\s+/g, "") + ">" + String(b).toLowerCase().replace(/\s+/g, "");
+export function applyTies(folder, ties, anchor, now = Date.now()) {
+  let n = 0;
+  for (const t of ties ?? []) {
+    folder.ties ??= {};
+    const k = tkey(t.a, t.b), old = folder.ties[k];
+    if (old?.kind === t.kind) { old.at = anchor?.at ?? old.at; continue; }
+    folder.ties[k] = { a: t.a, b: t.b, kind: t.kind, at: anchor?.at ?? null, at_ms: now, ...(old ? { was: old.kind } : {}) }; n++;
+  }
+  return n;
+}
+// 블록 줄: 지금 관련 인물이 낀 관계만(최근 것 먼저)
+export function tieLines(folder, names, limit = 8) {
+  const set = new Set([...(names ?? [])].map((n) => String(n).toLowerCase().replace(/\s+/g, "")));
+  return Object.values(folder?.ties ?? {}).filter((t) => !set.size || set.has(String(t.a).toLowerCase().replace(/\s+/g, "")) || set.has(String(t.b).toLowerCase().replace(/\s+/g, "")))
+    .sort((x, y) => (y.at ?? -1) - (x.at ?? -1)).slice(0, limit).map((t) => `- ${t.b} is ${t.a}'s ${t.kind}`);
 }
 
 // ── 반영 ──
@@ -64,8 +85,6 @@ export function applyOpen(folder, open, anchor, now = Date.now()) {
   return { added, closed };
 }
 // 닫힘 판정: 버린 분석이 닫은 항목(closedOrphan)은 열린 것으로 본다. 고아 항목(orphan)은 어느 쪽에도 들지 않는다.
-export const isClosed = (x) => !!x.closed && !x.closedOrphan;
-export const openItems = (folder, { closed = false } = {}) => (folder.open ?? []).filter((x) => !x.orphan && isClosed(x) === closed);
 // 분석 입력에 넣을 열린 항목(모델이 id로 닫는다)
 export const openForPrompt = (folder, n = 24) => openItems(folder).slice(-n).map((x) => ({ id: x.id, kind: x.kind, text: x.text }));
 

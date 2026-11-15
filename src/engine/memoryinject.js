@@ -7,7 +7,7 @@ import { effectiveTags, returnGap, earlierIds, fading, stageLines, talkLines, bo
 import { keyHits, keyBoost } from "./memorykeys.js";
 import { semBoost, semHit } from "./embed.js";
 import { povLines, innerLines, expLines } from "./memoryinner.js";
-import { lastTouch, strength, forgotten, knowLines, openLines, relLines, sourceLines, currentStoryTime } from "./memoryplus.js";
+import { lastTouch, strength, forgotten, knowLines, openLines, relLines, sourceLines, currentStoryTime, tieLines } from "./memoryplus.js";
 
 export const MARKER = "[Dusk Memory";
 export const HEADER = "[Dusk Memory — story so far. Newer facts win; recent messages take priority.]";
@@ -18,7 +18,8 @@ export function stateLines(folder, max = 12) {
   rows.sort((a, b) => Number(isGoneState(b.v)) - Number(isGoneState(a.v)) || (b.at ?? -1) - (a.at ?? -1));
   return rows.slice(0, max).map((r) => `- ${r.name}: ${oneLine(r.v)}${isGoneState(r.v) ? " — cannot appear, act or speak now unless the story explicitly brings them back" : ""}`);
 }
-export const estimateTokens = (t) => { const s = String(t ?? ""); const ko = (s.match(/[\u3131-\u318e\uac00-\ud7a3\u3040-\u30ff\u4e00-\u9fff]/g) ?? []).length; return Math.ceil(ko / 1.5 + (s.length - ko) / 4); };
+import { estimateTokens } from "./tokens.js";
+export { estimateTokens };
 const norm = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 const oneLine = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
 
@@ -42,16 +43,7 @@ export function injectVerdict(folder, settings, userTurns) {
   return { ok: true, reason: "" };
 }
 export const shouldInject = (folder, settings, userTurns) => injectVerdict(folder, settings, userTurns).ok;
-const REASON_TEXT = {
-  "backend-off": "기억 저장소가 꺼져 있어요",
-  "inject-off": "주입이 꺼져 있어요",
-  "bot-off": "이 봇의 기억이 꺼져 있어요",
-  "no-folder": "이 채팅에 저장된 기억이 아직 없어요",
-  "before-start-turn": "시작 턴 전이에요",
-  "no-memory": "남은 기억이 없어요(분석 기준 응답이 사라졌거나 아직 기록 전이에요)",
-  "empty": "이번 요청에 맞게 고른 내용이 없어요(관련 없음 또는 예산 제한)"
-};
-export const injectReasonText = (reason) => REASON_TEXT[reason] ?? "";
+export { injectReasonText } from "./tokens.js";
 
 function sceneLine(s, cap) {
   const place = s.place ? ` (${s.place})` : "", when = s.when ? ` [${oneLine(s.when)}]` : "";
@@ -224,6 +216,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
       add("self", "Inner states (own view vs likely real reason; the reason is only inferred):", innerLines(Object.values(folder.people ?? {}).filter((p) => (p.ctx ?? "auto") !== "never"), { relevant: rel.size ? rel : null }), settings.selfTokens ?? 140);
       add("exp", "Expectation gaps between characters:", expLines(folder, { relevant: rel.size ? rel : null }), settings.expTokens ?? 140);
     }
+    add("ties", "Relationships (who is what to whom):", tieLines(folder, rel.size ? rel : null), settings.tieTokens ?? 120);
     add("rel", "Relationship shifts (recent):", relLines(folder, { relevant: rel.size ? rel : null }), settings.relTokens ?? 140);
     add("know", "Knowledge limits (who knows what):", knowLines(Object.values(folder.people ?? {}).filter((p) => (p.ctx ?? "auto") !== "never")), settings.knowTokens ?? 160);
     if (messages) { const src = sourceLines(folder, messages, { limit: settings.srcCount ?? 2 }); add("src", "Source lines (verbatim from the story):", src.map((x) => x.line), settings.srcTokens ?? 300); manifest.recordIds.push(...src.map((x) => x.id)); }
