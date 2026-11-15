@@ -7,6 +7,15 @@ const ws = (s) => String(s ?? "").replace(/\s+/g, " ").trim();
 // 비교용: 공백·기호를 빼고 소문자로
 export const squash = (s) => String(s ?? "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
 
+// {{user}}가 든 줄: 리스가 활성 페르소나 이름으로 렌더하므로 우리가 아는 이름과 다를 수 있다 → 믿을 수 없는 줄. 대조에서 맨 뒤로 미룬다.
+const USER_MARK = "\uE000";
+export function riskyLines(content, names = {}) {
+  let t = cbsLite(bodyOf(content), { ...names, user: USER_MARK });
+  for (let i = 0; i < 6 && /\{\{[^{}]*\}\}/.test(t); i++) t = t.replace(/\{\{[^{}]*\}\}/g, "\n");
+  const user = names.user ?? "";
+  return new Set(t.split("\n").filter((l) => l.includes(USER_MARK)).map((l) => ws(l.split(USER_MARK).join(user))));
+}
+
 // 프롬프트에 그대로 남는 줄만 고른다: CBS 태그를 걷고, 짧은 줄은 뺀다
 export function probeLines(content, names = {}) {
   let t = cbsLite(bodyOf(content), names);
@@ -16,7 +25,9 @@ export function probeLines(content, names = {}) {
     const all = ws(t);
     return all.length >= 4 ? [all] : [];
   }
-  return lines.sort((a, b) => b.length - a.length).slice(0, 3);
+  const sorted = lines.sort((a, b) => b.length - a.length), risky = riskyLines(content, names);
+  const solid = sorted.filter((l) => !risky.has(l));
+  return (solid.length ? solid : sorted).slice(0, 3);   // 믿을 줄이 있으면 그 줄로만, {{user}} 줄뿐이면 그대로
 }
 
 // 본문의 모든 의미 있는 줄(긴 순). 비슷한 로어북끼리 겹치는 줄과 이 항목만의 줄을 가르는 데 쓴다.
@@ -57,7 +68,10 @@ export function detectInPrompt(tagged, promptText, { names, duskFired = {} } = {
     const ls = linesOf.get(e) ?? [];
     const own = ls.filter((l) => lineCount.get(l) === 1);
     let hit;
-    if (own.length) hit = own.slice(0, 3).some((p) => hay.includes(p)); // 이 항목만의 줄이 있으면 그 줄로만 판단
+    if (own.length) {
+      const risky = riskyLines(e.content, names), solid = own.filter((l) => !risky.has(l));
+      hit = (solid.length ? solid : own).slice(0, 3).some((p) => hay.includes(p)); // 이 항목만의 줄이 있으면 그 줄로만 판단(믿을 줄이 먼저)
+    }
     else {
       const probes = probeLines(e.content, names);
       hit = probes.length > 0 && probes.every((p) => hay.includes(p)); // 전부 겹치는 줄뿐이면 모두 들어 있어야

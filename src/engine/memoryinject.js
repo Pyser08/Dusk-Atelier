@@ -81,7 +81,7 @@ export function pastScenes(older, recentText, capTokens, { max = 2 } = {}) {
 // ctx: {messageCount, recentText, settings:{targetTokens,capTokens,sceneTokens,recentSkip}}
 export function buildBlock(folder, { messageCount = 0, recentText = "", settings = {}, messages = null, focus = null, storyNow = "", sem = null, semMin = 0.32 } = {}) {
   const target = settings.targetTokens ?? 2000, cap = settings.capTokens ?? 8000, sceneCap = settings.sceneTokens ?? 300, skip = settings.recentSkip ?? 8;
-  const manifest = { included: [], excluded: [], tokens: 0, recordIds: [] }, plus = settings.plus !== false;
+  const manifest = { included: [], excluded: [], tokens: 0, recordIds: [], trimmedIds: [] }, plus = settings.plus !== false;
   const human = plus && settings.human !== false, cool = settings.cool !== false;   // v1.8.3 사람다운 기억(관계 진도·재등장·이전·흐려짐·호칭·추억) · 감정 식기
   const scenes = (folder.scenes ?? []).filter((s) => !s.orphan);
   const cur = scenes.at(-1);
@@ -156,6 +156,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
         if (used + k + 4 <= limit) { fit = { text: t, tokens: k, ids: rest.map((x) => x.id) }; break; }
       }
       if (!fit) { manifest.excluded.push({ kind: "person", name: c.name, tokens: c.tokens, reason: "budget" }); continue; }
+      for (const id of c.ids) if (!fit.ids.includes(id)) manifest.trimmedIds.push(id);   // 예산에 맞추려고 뺀 기록(기억 화면 '예산 제한'으로 센다)
       ({ text, tokens, ids } = fit);
     }
     if (!chars.length) used += headTok;   // 제목 줄도 전체 상한에 센다(뒤 칸들이 상한을 넘지 않게)

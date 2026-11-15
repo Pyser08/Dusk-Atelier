@@ -3,6 +3,7 @@
 //   (리스 버전에 따라 이 훅이 없으면 출력 때 키·Dusk 규칙으로 추정한다)
 // · 응답이 나오면(output): 응답 앞부분을 열쇠로 기록에 붙여 저장한다
 // · 화면에 그릴 때(display): 열쇠가 맞는 응답 아래에 '📖 로어북 N개' 접는 버튼을 붙인다 (저장된 채팅은 건드리지 않음)
+import { primaryUserName } from "./usernames.js";
 import { detectInPrompt, estimateUsed, headKey, tailKey, midKey, loreButtonHtml, matchRecord } from '../engine/lorelog.js';
 import { loadLoreSettings } from './lorerules.js';
 import { noteStreamChunk } from './genstate.js';
@@ -53,8 +54,9 @@ export function createLoreLog(api, { loreRuntime, above = null, quietMs = 1500, 
     for (const e of chat?.localLore ?? []) tagged.push({ entry: e, src: "채팅" });
     let user = "";
     try {
-      const db = await api.getDatabase(["modules", "enabledModules", "username"]);
-      user = db?.username ?? "";
+      const db = await api.getDatabase(["modules", "enabledModules", "username", "personas", "selectedPersona"]);
+      // 리스는 프롬프트의 {{user}}를 활성 페르소나(채팅에 묶인 것이 먼저) 이름으로 렌더한다 — 전역 username만 쓰면 이름이 다를 때 그 줄을 못 찾는다
+      user = primaryUserName(db, chat);
       const ids = new Set([...(db?.enabledModules ?? []), ...(ch?.modules ?? []), ...(chat?.modules ?? [])]);
       for (const m of db?.modules ?? []) {
         if (!ids.has(m.id)) continue;

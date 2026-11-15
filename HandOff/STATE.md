@@ -7,6 +7,7 @@
 - 버전(package.json·CHANGELOG 새 섹션)은 지시 있을 때만.
 
 ## ▶ 다음 세션에서 이어갈 것 (11-15 기준)
+- **11-15 제보 3건 수정(2.1.9/memory 0.2.12 제보)**: ① `cyclereport.js` applyCycleReport(Object)에 opts `{done, label}` — 한 인물은 한 Writer 묶음에서만 합성(같은 label 재시도는 다시), memoryturn.js `cycleScope(label)`이 batch 1에서 비움. ② `memoryusage.js` usageOf — excluded는 reason budget(또는 reason 없는 옛 기록)만 예산 제한, never·not-relevant는 관련 없음, `memoryinject.js` manifest.trimmedIds(예산에 맞추려고 뺀 기록 id)는 예산 제한. ③ `data/lorelog.js` gather가 primaryUserName(db, chat)으로 {{user}} 치환 + `engine/lorelog.js` riskyLines — {{user}} 줄은 대조에서 뒤로. 시험: cyclereport(+4)·memoryusage(+3)·memoryinject(+2)·lorelog-detect(+2)·lorelog-persona(새). memory 애드온은 0.2.13(미배포)에 포함.
 - **v2.2.0 배포 준비 끝(11-15)**: package.json 2.2.0, CHANGELOG `## v2.2.0`, 바뀐 애드온 9개 끝자리 올림 + minCore 2.2.0(manage 0.1.3·provider 0.2.4·chattheme 0.1.2·aibuild 0.1.5·memory 0.2.13·cards 0.1.2·erosync 0.1.5·protlink 0.1.3·stealth 0.3.55). widgets·modcompat은 배포본과 같아 그대로.
 - **배포는 `npm run release` 한 번**(tools/release.mjs): 시험·빌드 확인 → 브랜치 푸시 → main에 합침(worktree, README 충돌은 main 쪽) → main·태그 v2.2.0 푸시(release.yml이 릴리스) → 애드온 배포. `npm run release -- --dry`로 미리 보기. 태그가 이미 있으면 애드온만.
 - 원래 실패 정리: npm test 0 실패(pot-port: 패치로 바꾼 이름은 대조 제외·월경 문구 패치 등록 / watch-light: test 명령에 --experimental-strip-types / cellarlatest: 전역 fetch 막음). e2e editor-ai·lorereq(aibuild 애드온 자리 tests/e2e/aibuild-ext.js), info(접힘 기억을 누를 때 바로 저장), look(모서리 20px). run-app은 옛 탭 구성이라 건너뜀(RUN_LEGACY_APP=1).

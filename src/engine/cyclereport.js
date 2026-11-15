@@ -29,7 +29,11 @@ export function cycleLines(item) {
 const markerEntry = (text) => ({ operation: "upsert", entry_ref: null, slot_id: "core.current_state", target_refs: [], context_key: null, label: "", assertion: "fact", text, evidence_refs: ["source:rp"], links: [], reason: "cycle report" });
 
 // obj: Writer 응답 객체, scope: 위키 사본(snapshot). 반환: {obj, applied}
-export function applyCycleReportObject(obj, scope) {
+// opts.done(Map 문서→묶음 이름)·opts.label: 한 턴이 Writer 묶음 여러 개로 나뉘어도 한 인물은 한 묶음에서만 붙인다(2.1.9 제보).
+// 묶음마다 보고 전원을 다시 붙이면 같은 인물이 같은 합성 참조(new:cycle-0-…)를 또 받아 '같은 새 문서 참조를 다시 쓸 수 없음' 검사에 걸리고,
+// 표식 줄(SEX 등)도 묶음 수만큼 겹쳐 적용된다. 같은 묶음 이름으로 다시 부르면(재시도) 그 묶음 몫은 다시 붙인다.
+export function applyCycleReportObject(obj, scope, opts = {}) {
+  const done = opts.done instanceof Map ? opts.done : null, label = String(opts.label ?? "");
   if (!obj || typeof obj !== "object" || Array.isArray(obj) || !Object.hasOwn(obj, CYCLE_FIELD)) return { obj, applied: 0 };
   const { [CYCLE_FIELD]: list, ...rest } = obj;
   const docs = Array.isArray(rest.documents) ? rest.documents.map((d) => ({ ...d, entries: Array.isArray(d?.entries) ? [...d.entries] : [] })) : [];
@@ -40,6 +44,11 @@ export function applyCycleReportObject(obj, scope) {
     const lines = cycleLines(item), k = key(item?.name);
     if (!lines.length || !k) continue;
     const doc = wikiDocs.find((d) => names(d).includes(k));
+    if (done) {
+      const id = doc ? String(doc.id) : `n:${k}`, owner = done.get(id);
+      if (owner !== undefined && owner !== label) continue;
+      done.set(id, label);
+    }
     const change = docs.find((c) => [c.title, ...(c.aliases_add ?? [])].map(key).includes(k) || (doc && c.document_ref === doc.id));
     if (change) {
       const cur = change.entries.find((e) => e?.slot_id === "core.current_state" && typeof e.text === "string");
@@ -55,8 +64,8 @@ export function applyCycleReportObject(obj, scope) {
   return { obj: { ...rest, documents: docs }, applied };
 }
 
-export function applyCycleReport(raw, scope, parse = JSON.parse) {
+export function applyCycleReport(raw, scope, parse = JSON.parse, opts = {}) {
   let obj; try { obj = parse(raw); } catch { return { raw, applied: 0 }; }
-  const r = applyCycleReportObject(obj, scope);
+  const r = applyCycleReportObject(obj, scope, opts);
   return r.obj === obj ? { raw, applied: 0 } : { raw: JSON.stringify(r.obj), applied: r.applied };
 }

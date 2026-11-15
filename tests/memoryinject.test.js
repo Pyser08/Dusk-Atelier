@@ -170,3 +170,16 @@ test("요약된 옛 대화 빼고 보내기: 켜면 분석된 옛 대화만 요�
   assert.equal(out.length, req.length - 16 + 1);
   assert.equal(out[0].content, "sys");
 });
+
+// 2.1.9 제보: 예산 때문에 일부만 깎인 기록은 manifest.trimmedIds에 남겨 '예산 제한'으로 센다(예전엔 관련 없음으로 셌다).
+test("예산에 맞추려고 덜 중요한 순간을 뺀 기록은 trimmedIds에 남는다", () => {
+  const people = { 가: { name: "가", ctx: "always", records: [1, 2, 3, 4, 5].map((i) => rec(i, "A", "가".repeat(50))) } };
+  const { manifest } = buildBlock(folder(people), { messageCount: 200, settings: { targetTokens: 90, capTokens: 130, sceneTokens: 0 } });
+  assert.ok(manifest.recordIds.length > 0 && manifest.recordIds.length < 5);
+  assert.deepEqual([...manifest.trimmedIds].sort(), ["r1", "r2", "r3", "r4", "r5"].filter((id) => !manifest.recordIds.includes(id)).sort());
+});
+test("예산이 넉넉하면 trimmedIds는 비어 있다", () => {
+  const people = { 가: { name: "가", ctx: "always", records: [rec(1, "A", "짧은 기록")] } };
+  const { manifest } = buildBlock(folder(people), { messageCount: 200, settings: {} });
+  assert.deepEqual(manifest.trimmedIds, []);
+});
