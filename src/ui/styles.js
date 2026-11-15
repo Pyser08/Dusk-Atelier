@@ -823,6 +823,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-wk2-ch{display:flex;align-items:center;gap:8px;min-width:0}.rb-wk2-ch b{font-size:15px}
 .rb-wk2-p{margin:0;line-height:1.75;color:var(--rb-text)}
 .rb-wk2-chips{display:flex;flex-wrap:wrap;gap:6px}.rb-wk2-chip{font-size:12.5px;padding:4px 10px;border-radius:999px;background:var(--rb-surf2)}.rb-wk2-chip small{color:var(--rb-mute)}
+.rb-wk2-ero-row{display:grid;gap:4px;margin-top:8px}
 .rb-wk2-chg{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 12px;align-items:center}.rb-wk2-chg small{color:var(--rb-mute)}.rb-wk2-chg s{color:var(--rb-mute)}.rb-wk2-chg .arr{font-style:normal;color:var(--rb-acc);margin:0 6px}
 .rb-wk2-glance{display:flex;flex-direction:column;gap:6px}
 .rb-wk2-gl{display:grid;grid-template-columns:auto minmax(56px,1fr) minmax(0,140px) 72px;align-items:center;gap:10px;padding:6px;border:0;border-radius:var(--rb-r2);background:transparent;color:var(--rb-text);font:inherit;text-align:left;cursor:pointer}

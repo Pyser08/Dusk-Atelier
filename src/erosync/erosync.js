@@ -23654,6 +23654,11 @@ Constraint: {{constraint}}
             axes: v.axes, interest: v.interest, sexual: v.sexual, motive: v.motive, pref: v.pref,
             overridden: isPlainObject(profile.userOverrides) && Object.keys(profile.userOverrides).length > 0,
             verdict: v.verdict?.status || '',
+            // 2.2.4: 인물 위키 NSFW 칸을 채울 세부 항목(선호·체위·유혹·성적 농담·최근 행동)
+            detail: (() => { const e = isPlainObject(v.effective) ? v.effective : {}, lab = (x) => typeof x === 'string' ? x : (x?.label || x?.name || x?.text || ''), sty = (o) => isPlainObject(o) ? { frequency: o.frequency ?? null, directness: o.directness ?? null, styles: (o.styles || []).map(lab).filter(Boolean).slice(0, 6), situations: (o.typicalSituations || []).map(lab).filter(Boolean).slice(0, 5) } : null;
+              const pos = Array.isArray(e.positionPreferences) ? e.positionPreferences : [];
+              return { prefs: (e.sexualPreferences || []).map(lab).filter(Boolean).slice(0, 14), likes: pos.filter((p) => p?.preference === 'preferred').map(lab).filter(Boolean).slice(0, 8), dislikes: pos.filter((p) => p?.preference === 'disliked').map(lab).filter(Boolean).slice(0, 8),
+                seduction: sty(e.seduction), humor: sty(e.sexualHumor), lastAction: truncate(session?.actorStates?.[v.profileId]?.lastObservedAction?.summary || '', 200) }; })(),
           });
         });
         const alive = (g) => !['complete', 'abandon'].includes(g?.status);
