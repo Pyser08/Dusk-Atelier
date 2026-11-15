@@ -17,6 +17,13 @@ const wikiDocs = (w) => Object.keys(w?.documents ?? {}).length;
 // 채팅 기억 폴더(dusk.mem.v3.f.*)만 서버로 보낸다(1.8.3).
 export function createMemoryStoreV3(api, { storage } = {}) {
   const ps = storage ?? api.pluginStorage;
+  // 웹 리스는 막 켰을 때 'Failed to load plugin storage index'로 읽기가 잠깐 실패할 수 있다. 잠깐 쉬고 두 번 더 읽어 본다.
+  const readRetry = async (k) => {
+    for (let n = 0; ; n++) {
+      try { return await ps.getItem(k); }
+      catch (e) { if (n >= 2) throw e; await new Promise((r) => setTimeout(r, n ? 1200 : 400)); }
+    }
+  };
   let chain = Promise.resolve();
   const serial = (fn) => { const run = chain.then(fn, fn); chain = run.then(() => {}, () => {}); return run; };
   // 원문(문자열) 짧은 캐시(v1.8.3, 홈·기억 탭 속도): 인덱스와 채팅 기억 폴더를 같은 화면에서 여러 번 읽던 것을 한 번으로.
@@ -28,7 +35,7 @@ export function createMemoryStoreV3(api, { storage } = {}) {
     const hit = raws.get(k);
     if (hit && Date.now() - hit.t < RAW_TTL) return hit.p;
     const ent = { t: Date.now(), p: null };
-    ent.p = Promise.resolve(ps.getItem(k)).then((r) => { if (typeof r !== "string" && raws.get(k) === ent) raws.delete(k); return r; }, (e) => { if (raws.get(k) === ent) raws.delete(k); throw e; });
+    ent.p = readRetry(k).then((r) => { if (typeof r !== "string" && raws.get(k) === ent) raws.delete(k); return r; }, (e) => { if (raws.get(k) === ent) raws.delete(k); throw e; });
     raws.delete(k); raws.set(k, ent);
     while (raws.size > RAW_MAX) raws.delete(raws.keys().next().value);
     return ent.p;
