@@ -168,7 +168,7 @@ async function qa() {
     const withMem = c?.text ? insertBlock(base, c.text, c.position ?? "end") : base;
     const ONLY_BASE = args.baseOnly === "1";   // --baseOnly: 플러그인 없는 쪽만(천장 측정: --recent 1000000 과 함께)
     const [a0, a1] = await Promise.all([chat("main", MAIN, base, { maxTokens: 2000, tier: MAIN_TIER }), ONLY_BASE ? Promise.resolve("") : chat("main", MAIN, withMem, { maxTokens: 2000, tier: MAIN_TIER })]);
-    const jt = JUDGE === MAIN ? MAIN_TIER : null;
+    const jt = args.judgeTier ?? (JUDGE === MAIN ? MAIN_TIER : null);   // --judgeTier flex
     const [j0, j1] = await Promise.all([chat("judge", JUDGE, judgePrompt(q.question, q.answer, a0), { maxTokens: 1000, tier: jt }), ONLY_BASE ? Promise.resolve("WRONG") : chat("judge", JUDGE, judgePrompt(q.question, q.answer, a1), { maxTokens: 1000, tier: jt })]);
     const ok = (s) => /CORRECT/i.test(s) && !/WRONG/i.test(s);
     if ((k + 1) % 20 === 0) console.log(`  질문 ${k + 1}/${qs.length}`);
