@@ -74,6 +74,8 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
     // ── 지금 값 읽기(이미 쓰던 사람은 지금 설정이 미리 골라진다) ──
     async function loadMem() {
       if (s.mem || !M) return s.mem;
+      // 웹 리스는 장기기억 준비(저장소 읽기)가 늦다. 준비 전에 읽으면 멈출 수 있어 앱과 같이 잠깐 기다린다.
+      if (M.isReady && !M.isReady()) await Promise.race([M.ready().catch(() => {}), sleep(20000)]);
       const idx = await M.store.getIndex();
       const { readMemorySetup } = await import('./screens/memory/setup.js');
       const base = await readMemorySetup(ctx).catch(() => ({ kind: "risuai", provider: "openai", model: "", baseUrl: "", key: "", level: "basic" }));
@@ -278,12 +280,16 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
       ];
     }
 
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const timeout = (p, ms) => Promise.race([p, sleep(ms).then(() => { throw new Error("응답이 없어요"); })]);
     let drawTok = 0;
     async function go(i) {
       if (s.step === 4 && i !== 4) { try { await saveMem(); } catch (e) { fail(e); } }
       // 6단계(가져오기)에 찾은 게 없으면 자동으로 넘어간다
       if (i === 6) { const f = await loadFound(); if (!f.hypa && !f.cocoa && !f.pot) i = s.step > 6 ? 5 : 7; }
       s.step = i;
+      const nx = host.querySelector("#rb-onb-next");
+      if (nx) { nx.disabled = true; nx.textContent = "불러오는 중…"; }
       await draw();
     }
     async function draw() {
@@ -303,7 +309,10 @@ export function openOnboarding(ctx, { step = 0 } = {}) {
             btn("설정하고 시작하기", { kind: "primary", id: "rb-onb-start", onClick: () => go(1) }))));
       }
       const [kicker, title, sub] = TITLES[i];
-      const body = i === 7 ? await summary() : await stepBody(i);
+      // 단계 내용을 못 그리면(웹에서 저장소 읽기 실패·지연 등) 예전엔 조용히 멈춰 ‘다음’이 안 먹었다. 이제 알림을 띄우고 넘어갈 수 있게 한다.
+      let body;
+      try { body = await timeout(i === 7 ? summary() : stepBody(i), 25000); }
+      catch (e) { body = [note("err", `이 단계를 불러오지 못했어요 (${e?.message ?? e}). ‘다음’이나 ‘건너뛰기’로 넘어가고, 나중에 설정에서 다시 고를 수 있어요.`)]; }
       if (tok !== drawTok) return;
       const split = body && !Array.isArray(body);
       const steps = h("ol", { class: "rb-onb-steps", "aria-label": "단계" }, STEPS.map((t, k) => h("li", { class: k + 1 < i ? "done" : k + 1 === i ? "on" : "", "aria-current": k + 1 === i ? "step" : null },
