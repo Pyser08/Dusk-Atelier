@@ -12,7 +12,15 @@ export function fullAndGiven(a, b) {
   if (HANGUL.test(long) && HANGUL.test(short) && short.length >= 2 && long.length - short.length <= 2 && long.endsWith(short)) return true;
   const wa = String(a ?? "").trim().split(/\s+/), wb = String(b ?? "").trim().split(/\s+/);
   const [many, one] = wa.length > wb.length ? [wa, wb] : [wb, wa];
-  return one.length === 1 && many.length === 2 && key(one[0]).length >= 3 && key(many[0]) === key(one[0]);
+  if (one.length === 1 && many.length === 2 && key(one[0]).length >= 3 && key(many[0]) === key(one[0])) return true;
+  // 2.2.4 일본식 '성 이름'(하나오카 유즈 · 유즈): 이름(끝 토큰)만 부른 경우. 성만 부른 경우는 duplicateGroups에서 그 성이 한 사람일 때만
+  return one.length === 1 && many.length === 2 && key(one[0]).length >= 2 && key(many[1]) === key(one[0]);
+}
+// 성만 부른 이름(텐도)이 '텐도 ○○'인 사람 딱 한 명과 겹치는가 — 같은 성 가족(텐도 아리스·텐도 유즈)은 합치지 않는다
+function surnameOnly(short, all) {
+  const ks = key(short); if (String(short ?? "").trim().split(/\s+/).length !== 1 || ks.length < 2) return null;
+  const hits = all.filter((e) => { const w = String(e.name ?? "").trim().split(/\s+/); return w.length === 2 && key(w[0]) === ks; });
+  return hits.length === 1 ? hits[0] : null;
 }
 
 // 항목 목록 → 중복 묶음 [[entry, entry, ...], ...]. 각 묶음의 첫 항목이 '남길 인물'이다.
@@ -26,6 +34,7 @@ export function duplicateGroups(folder, { visible } = {}) {
     if (!ka || !kb) continue;
     if (ka === kb || nick(a).has(kb) || nick(b).has(ka) || fullAndGiven(a.name, b.name)) parent[find(j)] = find(i);
   }
+  for (let i = 0; i < items.length; i++) { const h = surnameOnly(items[i].name, items); if (h) parent[find(i)] = find(items.indexOf(h)); }
   const groups = new Map();
   items.forEach((e, i) => { const r = find(i); groups.set(r, [...(groups.get(r) ?? []), e]); });
   const size = (e) => (docOf(e)?.sections?.length ?? 0) + (e.pk ? 1 : 0);

@@ -14,6 +14,7 @@ export function normalizeUserNames(result, names = []) {
     ...(Array.isArray(result.people) ? { people: result.people.map((p) => ({ ...p, name: fix(p?.name), ...(p?.know ? { know: arr(p.know) } : {}) })) } : {}),
     ...(Array.isArray(result.rel) ? { rel: result.rel.map((x) => ({ ...x, from: fix(x?.from), to: fix(x?.to) })) } : {}),
     ...(Array.isArray(result.emo) ? { emo: result.emo.map((x) => ({ ...x, from: fix(x?.from), to: fix(x?.to) })) } : {}),
+    ...(Array.isArray(result.ties) ? { ties: result.ties.map((x) => ({ ...x, a: fix(x?.a), b: fix(x?.b) })).filter((x) => key(x.a) !== key(x.b)) } : {}),   // 2.2.4 관계 기록도
     ...(result.scene?.who ? { scene: { ...result.scene, who: arr(result.scene.who) } } : {})
   };
 }

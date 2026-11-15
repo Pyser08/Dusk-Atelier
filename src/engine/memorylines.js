@@ -12,6 +12,7 @@ const CORE_RULES = [
   "- Write facts, not impressions. Bad: \"분위기가 묘해졌다\". Good: \"민지가 {{user}}의 고백을 거절했다\".",
   "- Never invent people, motives, times or places. If the text does not show it, leave it out.",
   "- Use the exact spelling from `known` for existing characters. The player is always {{user}}.",
+  "- If the text calls a known character by surname only, given name only, a nickname or with an honorific (-san, -chan, -kun, -sama, -senpai, 씨, 쨩, 선배…), write their full `known` name — never create a second person for the same character.",
   "- Someone whose `state` in `known` says dead/gone cannot act now unless the newest text clearly shows them back — then write a state line for it.",
   "- Write in the SAME language as `newest` (English text → English, Korean text → Korean). Never translate. Keep every field short.",
   "- Anchor relative times on the story date (`storyDate`, dates in the text, previousScene time). Exact only when certain: \"yesterday\" on 2023-05-08 → \"2023-05-07\". Otherwise keep the phrase with its anchor: \"last Tuesday\" → \"the Tuesday before 2023-07-20\", \"last week\" → \"the week before 2023-05-08\", \"지난주 화요일\" → \"2023-07-20 직전 화요일\". Never store a bare \"yesterday\", \"어제\" or \"two weeks ago\".",
@@ -208,12 +209,25 @@ export function canonName(name, known = [], extra = []) {
     const part = known.filter((p) => { const t = toks(p.name); return t.length > 1 && t.includes(k); });
     if (part.length === 1) return part[0].name;
     if (part.length > 1) return n.slice(0, 60);
+    // 2.2.4 띄어쓰기 없는 성+이름(텐도아리스·天童アリス): 이름(끝부분)만 부르면 같은 사람. 앞부분(성)만으로는 다른 이름과 헷갈려 맞추지 않는다
+    if (k.length >= 2 && !part.length) {
+      const tail = known.filter((p) => { const pn = nk(p.name); return toks(p.name).length === 1 && pn.length >= k.length + 2 && pn.endsWith(k); });   // 성은 2글자 이상(아리스·리스처럼 한 글자 차이는 다른 사람일 수 있음)
+      if (tail.length === 1) return tail[0].name;
+      const head = known.filter((p) => { const pn = nk(p.name); return toks(p.name).length === 1 && pn.length >= 2 && k.length >= pn.length + 2 && k.endsWith(pn); });
+      if (head.length === 1) return head[0].name;   // 반대로 새 이름이 '성+기존 이름'
+    }
   } else if (toks(n).length > 1) {
     const whole = known.filter((p) => toks(p.name).length === 1 && toks(n).includes(nk(p.name)));
     if (whole.length === 1) return whole[0].name;
+    // 2.2.4 성·이름이 따로 두 사람으로 쌓여 있으면(텐도 / 아리스) 마지막 토큰(이름) 쪽을 고른다 — 관계도에 셋째 사람이 생기지 않게
+    if (whole.length === 2) { const last = toks(n).at(-1), firstTok = toks(n)[0]; const g = whole.find((p) => nk(p.name) === last) ?? whole.find((p) => nk(p.name) === firstTok); if (g) return g.name; }
   }
   // 호칭 꼬리(님·씨 등)를 뗀 값이 기존 이름과 같으면 그쪽으로
-  const stripped = k.replace(/(님|씨|군|양|선배|쌤|선생|선생님|공|교수님)$/, "");
+  const stripped = k.replace(/(선생님|교수님|선배님|센빠이|센파이|센세|사마|님|씨|군|양|선배|쌤|선생|공|쨩|짱|상|쿤|언니|오빠|누나|형|-?san|-?chan|-?kun|-?sama|-?senpai)$/i, "");   // 2.2.4 일본식 호칭(쨩·상·쿤·사마·센빠이) 포함
+  if (stripped !== k && stripped.length >= 2) {   // 호칭을 뗀 이름으로 성만·이름만 맞추기도 한 번 더(아리스쨩 → 텐도 아리스)
+    const base = String(n).replace(/\s*(선생님|교수님|선배님|센빠이|센파이|센세|사마|님|씨|군|양|선배|쌤|선생|공|쨩|짱|상|쿤|언니|오빠|누나|형|-?san|-?chan|-?kun|-?sama|-?senpai)$/i, "").trim();
+    if (base && base !== n) { const c2 = canonName(base, known, extra); if (known.some((p) => nk(p.name) === nk(c2))) return c2; }
+  }
   if (stripped !== k && stripped.length >= 2) for (const c of pool) if (nk(c) === stripped) return known.find((p) => nk(p.name) === stripped || (p.aliases ?? []).some((a) => nk(a) === stripped))?.name ?? c;
   if (k.length >= 3) {   // 한 글자 오타: 후보가 딱 한 명일 때만
     const near = known.filter((p) => [p.name, ...(p.aliases ?? [])].some((c) => { const ck = nk(c); return ck.length >= 3 && Math.abs(ck.length - k.length) <= 1 && dist1(ck, k); }));
