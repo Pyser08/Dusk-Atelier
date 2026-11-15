@@ -6,6 +6,7 @@ import { emoLines, hasEmo } from "./memoryemo.js";
 import { effectiveTags, returnGap, earlierIds, fading, stageLines, talkLines, bondLines, beliefLines, riftLines, faceLines } from "./memoryhuman.js";
 import { keyHits, keyBoost } from "./memorykeys.js";
 import { semBoost, semHit } from "./embed.js";
+import { profileLines, PROFILE_TITLE } from "./memoryprofile.js";
 import { povLines, innerLines, expLines } from "./memoryinner.js";
 import { lastTouch, strength, forgotten, knowLines, openLines, relLines, sourceLines, currentStoryTime } from "./memoryplus.js";
 
@@ -192,6 +193,12 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     chars.push(text); used += tokens; manifest.included.push({ kind: "person", name: c.name, tokens, group: c.group }); manifest.recordIds.push(...ids); included.add(norm(c.name));
   }
   if (chars.length) lines.push("Characters (current state):", ...chars);
+  if (settings.profile === true) {   // 2.2.2 인물 프로필: 지금 글에 이름이 나오거나 장면에 있는 인물(없으면 프로필 있는 모두)
+    const withP = Object.values(folder.people ?? {}).filter((p) => p.profile?.items?.length && (p.ctx ?? "auto") !== "never");
+    const named = withP.filter((p) => [p.name, ...(p.aliases ?? [])].map(norm).some((n) => n && (recent.includes(n) || inScene.has(n))));
+    const pr = profileLines(named.length ? named : withP, settings.profileTokens ?? 500);
+    if (pr.lines.length && used + pr.tokens <= cap) { lines.push(PROFILE_TITLE, ...pr.lines); used += pr.tokens; manifest.included.push({ kind: "profile", tokens: pr.tokens, count: pr.lines.length }); }
+  }
   if (plus && sem) {   // 2.2.2: 지금 글과 의미가 가까운 기록을 인물 구분 없이 날짜와 함께(인물당 5개 제한에 걸려 빠지던 사실)
     const shown = new Set(manifest.recordIds), rows = [];
     for (const p of Object.values(folder.people ?? {})) { if ((p.ctx ?? "auto") === "never") continue; for (const r of p.records ?? []) { const v = sem.get(r.id); if (v != null && v >= semMin && injectable(r) && !shown.has(r.id)) rows.push({ p, r, v }); } }

@@ -201,5 +201,12 @@ async function qa() {
   console.log(JSON.stringify(summary, null, 1));
 }
 
+if (PHASE === "profile" || args.profile === "1") {   // 기존 기록으로 인물 프로필을 만든다(보조 모델)
+  const { chatKeyOf } = await import("../../src/engine/chatkey.js");
+  await store.updateIndex((i) => { i.settings.inject.profile = true; });
+  for (let k = 0; k < 4; k++) { const n = await runner.profileIfNeeded(character.chaId, chatKeyOf(chatObj), {}, { force: true }); console.log(`프로필 ${k + 1}회: ${n}명`); if (!n) break; }
+  progress.cost.aux += cost.aux; usage.aux.forEach((v, k) => (progress.usage.aux[k] += v)); cost.aux = 0; usage.aux = [0, 0, 0];
+  saveKv(); fs.writeFileSync(progressFile, JSON.stringify(progress)); console.log("프로필 비용(누적 보조)", progress.cost.aux.toFixed(4));
+}
 if (PHASE === "record" || PHASE === "all") await record();
 if (PHASE === "qa" || PHASE === "all") await qa();
