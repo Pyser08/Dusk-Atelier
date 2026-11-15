@@ -946,7 +946,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-who{display:flex;gap:6px;flex-wrap:wrap}.rb-mem-who .rb-mem-av{width:22px;height:22px;font-size:11px;box-shadow:none}
 .rb-mem-sact{display:flex;gap:8px;flex-wrap:wrap}
 .rb-mem-sec{padding:14px;display:flex;flex-direction:column;gap:10px}.rb-mem-sec h3{margin:0;font-size:14px}
-.rb-mem-field{display:flex;flex-direction:column;gap:4px;font-size:13px}.rb-mem-field.row{flex-direction:row;align-items:center;justify-content:space-between}.rb-mem-field>span{font-weight:600;color:var(--rb-sub)}
+.rb-def{margin-left:6px;font-weight:500;font-size:11.5px;opacity:.7;white-space:nowrap}.rb-mem-field{display:flex;flex-direction:column;gap:4px;font-size:13px}.rb-mem-field.row{flex-direction:row;align-items:center;justify-content:space-between}.rb-mem-field>span{font-weight:600;color:var(--rb-sub)}
 .rb-mem-range{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.rb-mem-range label{display:flex;gap:6px;align-items:center}.rb-mem-range input{width:110px}
 .rb-mem-check{display:flex;gap:8px;align-items:center;font-size:13px;min-height:36px}
 .rb-mem-flowsteps{display:flex;gap:6px;flex-wrap:wrap;list-style:none;margin:0;padding:0;font-size:12px}.rb-mem-flowsteps li{padding:5px 10px;border-radius:999px;background:var(--rb-surf2);color:var(--rb-mute)}

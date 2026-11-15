@@ -3,13 +3,13 @@
 import { h, replace } from './dom.js';
 import { btn, iconBtn, modal, note, segmented, switchEl } from './kit.js';
 import { icon } from './icons.js';
-import { DICE_LEVELS, MAX_DICE, resolveDice } from '../engine/fairplay.js';
+import { DICE_LEVELS, MAX_DICE, resolveDice, successPct, cutFromPct } from '../engine/fairplay.js';
 import { DICE_LEVEL_KEY, DICE_CUTS_KEY, DICE_COUNT_KEY, DICE_MODE_KEY, loadDiceMode, loadDiceLevel, loadDiceCustom, loadDiceLog, clearDiceLog } from '../data/fairplay.js';
 import { diceStats, judgeRoll, VERDICTS } from '../engine/turninfo.js';
 
 export const LEVEL_LABEL = { weak: "약하게", normal: "보통", strong: "강하게", custom: "직접 입력" };
 const CUT_LABEL = [["easy", "쉬움"], ["normal", "보통"], ["hard", "어려움"], ["extreme", "극악"]];
-const cutsLine = (c) => CUT_LABEL.map(([k, t]) => `${t} ${c[k]}`).join(" · ");
+const cutsLine = (c) => CUT_LABEL.map(([k, t]) => `${t} ${successPct(c[k])}%`).join(" · ");
 
 async function saveLevel(ctx, level) {
   if (ctx.fairPlay) return ctx.fairPlay.setDiceLevel(level);
@@ -21,11 +21,11 @@ async function saveCustom(ctx, cuts, count) {
   await ctx.api.pluginStorage.setItem(DICE_COUNT_KEY, String(count));
   return ctx.api.pluginStorage.setItem(DICE_LEVEL_KEY, "custom");
 }
-// 직접 입력 검사: 1~100 정수, 쉬움 ≤ 보통 ≤ 어려움 ≤ 극악, 굴림 1~6개
+// 직접 입력 검사: 성공 확률 1~100(%) 정수, 쉬움 ≥ 보통 ≥ 어려움 ≥ 극악, 굴림 1~6개. 저장은 굴림 수치(101 − %)로 한다.
 export function parseCustom(raw) {
   const cuts = {};
-  for (const [k] of CUT_LABEL) { const n = Number(raw[k]); if (!Number.isInteger(n) || n < 1 || n > 100) return { error: "난이도 수치는 1~100 사이 정수로 넣어 주세요." }; cuts[k] = n; }
-  if (!(cuts.easy <= cuts.normal && cuts.normal <= cuts.hard && cuts.hard <= cuts.extreme)) return { error: "쉬움 ≤ 보통 ≤ 어려움 ≤ 극악 순서가 되게 넣어 주세요." };
+  for (const [k] of CUT_LABEL) { const n = Number(raw[k]); if (!Number.isInteger(n) || n < 1 || n > 100) return { error: "성공 확률은 1~100 사이 정수(%)로 넣어 주세요." }; cuts[k] = cutFromPct(n); }
+  if (!(cuts.easy <= cuts.normal && cuts.normal <= cuts.hard && cuts.hard <= cuts.extreme)) return { error: "성공 확률이 쉬움 ≥ 보통 ≥ 어려움 ≥ 극악 순서가 되게 넣어 주세요." };
   const count = Number(raw.count);
   if (!Number.isInteger(count) || count < 1 || count > MAX_DICE) return { error: `주사위 개수는 1~${MAX_DICE} 사이 정수로 넣어 주세요.` };
   return { cuts, count };
@@ -53,14 +53,14 @@ export async function openDiceDetail(ctx, st, { setOn, fail = () => {} }) {
       try { if (ctx.fairPlay) await ctx.fairPlay.setDiceMode(v); else await ctx.api.pluginStorage.setItem(DICE_MODE_KEY, v); } catch (e) { fail(e); }
     }, "내가 결과까지 적었을 때");
     const inputs = {}; let advBox = null, msg = null;
-    const fill = () => { const r = resolveDice(st.level, custom.cuts, custom.count); for (const [k] of CUT_LABEL) inputs[k].value = r.cuts[k]; inputs.count.value = r.count; };
+    const fill = () => { const r = resolveDice(st.level, custom.cuts, custom.count); for (const [k] of CUT_LABEL) inputs[k].value = successPct(r.cuts[k]); inputs.count.value = r.count; };
     if (adv) {
       const mk = (key, label, attrs) => { inputs[key] = h("input", { class: "rb-input", type: "number", inputmode: "numeric", "aria-label": label, ...attrs }); return h("label", null, label, inputs[key]); };
       msg = h("div", { class: "rb-dice-msg" });
       advBox = h("section", { class: "lv" },
-        h("span", { class: "l" }, "직접 입력 · 이기려면 굴림이 수치 이상이어야 해요"),
+        h("span", { class: "l" }, "직접 입력 · 난이도별 성공 확률(%) · 기본(보통) 쉬움 95 · 보통 75 · 어려움 45 · 극악 20"),
         h("div", { class: "rb-dice-grid" },
-          ...CUT_LABEL.map(([k, t]) => mk(k, `${t} 수치`, { min: 1, max: 100 })),
+          ...CUT_LABEL.map(([k, t]) => mk(k, `${t} 성공 확률(%)`, { min: 1, max: 100 })),
           mk("count", "주사위 개수", { min: 1, max: MAX_DICE })),
         msg,
         btn("직접 입력 적용", { size: "sm", onClick: async () => {

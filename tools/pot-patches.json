@@ -209,5 +209,11 @@
   "why": "인물 이름 바꾸기·통합이 반만 적용돼 원본 인물 문서가 남아 있으면 연결만 버리고 계속 읽기(전에는 위키 전체를 못 읽고 쓰기가 막혔음). 남은 두 문서는 인물 통합으로 다시 합치면 됨",
   "from": "assert(identityLinkRef(source)&&identityLinkRef(target)&&!Object.hasOwn(documents,source),'통합 전 인물 ID가 잘못되었거나 현재 인물과 충돌합니다.');",
   "to": "assert(identityLinkRef(source)&&identityLinkRef(target),'통합 전 인물 ID가 잘못되었거나 현재 인물과 충돌합니다.');if(Object.hasOwn(documents,source))continue;"
+ },
+ {
+  "file": "src/engine/pot/writer-input-budget.js",
+  "why": "자동 기록 입력 예산 기본값 48000 → 96000(Dusk 2.2.0, 사용자 지시)",
+  "from": "WRITER_INPUT_BUDGET_DEFAULT=48000;",
+  "to": "WRITER_INPUT_BUDGET_DEFAULT=96000;"
  }
 ]

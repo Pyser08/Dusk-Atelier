@@ -1422,3 +1422,11 @@ HypaPlus v1.0.9에서 쓸 만한 것만 우리 방식으로 새로 구현(코드
 - Cellar 리스 분리(Cellar fcb0f8a) · 연결 안정화·예약 복원(780e0f6) · 그림 생성: `src/data/cellarsd.js`(available·enqueue(공통 값 base로)·status·stop·sync·image·putAssets) + `ui/screens/sdstudio/studio.js` runQueueCellar/followCellar/endFollow(prefs.cellarRun으로 이어받기, 예약은 넘길 때 0으로), quickPut 변환본은 Cellar /cellar/assets로 50장씩. Cellar e11b5b2(`sdgen.cjs`).
 - 확인 못 함: 실제 NovelAI 호출, 실기기(RisuBard·PocketRisu·RisuAI). sdstudio 애드온 dist는 addons.src.json에 없어 다시 빌드 안 함(배포 보류 그대로).
 - e2e run-addon-sdstudio: 변경 전후 같음(58 통과, Ctrl+B 보내기 등 4개 원래 실패).
+
+## 2026-11-15 릴리스 뒤 수정 (v2.2.0 이후, 미배포·미커밋)
+- Erosync 매 턴 계산 기본 켜짐(`erosyncturn.js` TURN_DEFAULT.on=true, 저장값 없을 때만; 끈 사람은 그대로).
+- 자동 기록 입력 예산 기본 48000→96000: `tools/pot-patches.json` 패치 + `node tools/pot-split.mjs`(직접 고치지 말 것), mhome 입력 칸, pot-port 시험은 예외로 뺌.
+- 유저 편향 주사위: 보통 성공 확률 쉬움95·보통75·어려움45·극악20%(수치 6/26/56/81, 성공 확률 = 101−수치). 약하게 98/88/65/30, 강하게 90/62/32/12. 화면·직접 입력·결과 표시 모두 % 기준(저장은 수치 그대로). 안내서 story.html·site widgets.js 반영.
+- 조절 수치 옆 ‘기본 N’: `src/ui/defhint.js`(+`.rb-def`), sliderField `def`. 장기기억 설정·고급·인물 위키 흐름, 프로바이더, AI 제작 설정, 테마 스튜디오, Erosync 동작·집착 방지에 적용. 못 한 곳: 모델 세부(온도 등)·스테이블 디퓨전 스튜디오 슬라이더·모듈/로어북 편집 칸(애드온 설정 아님).
+- 애드온 빌드물은 바뀌었지만 버전은 그대로(사용자 지시 없음) → 기기에서 받으려면 애드온 버전 올림 + 배포 필요.
+- 시험: npm test 1614/0, build·check 동일함, e2e home-fair·memed·erosync·featurefind 통과(erosync-ui 더보기 메뉴 2개는 원래 실패).

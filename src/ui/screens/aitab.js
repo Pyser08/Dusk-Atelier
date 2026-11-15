@@ -3,6 +3,7 @@
 // 요청을 보내고 수정안을 보는 곳은 우측 하단 AI 창(5단계에서 다듬음)이고, 여기는 '무엇을 어떻게 보낼지'를 준비하는 곳이다.
 import { h, replace } from '../dom.js';
 import { badge, btn, iconBtn, modal, note, segmented, toggleRow } from '../kit.js';
+import { DEFAULT_SETTINGS as AI_DEFAULTS } from '../../dev/aibuild/store.js';
 import { decodePreset } from '../../dev/aibuild/preset-format.js';
 import { toggleDefinitions, BLOCK_TYPES } from '../../dev/aibuild/preset-engine.js';
 import { activeModules, moduleOptions, readInstalledModules, selectInstalledModules } from '../../dev/aibuild/modules.js';
@@ -289,10 +290,11 @@ export function renderAiTab(ctx, { build, openPopup, state = {} }) {
     const set = async (patch) => { try { await build.setSettings(patch); } catch (e) { fail(e); } };
     const modelSeg = segmented([['submodel', '보조 모델'], ['model', '메인 모델']], s.model, (v) => set({ model: v }), '모델');
     const num = (key, min, max, unit) => {
+      const defv = AI_DEFAULTS[key];
       const el = h('input', { class: 'rb-input', type: 'number', min: String(min), max: String(max), style: 'max-width:200px' });
       el.value = String(s[key]);
       el.addEventListener('change', () => { const v = Number(el.value); if (!(v >= min && v <= max)) { el.value = String(s[key]); return fail(new Error(`${min.toLocaleString()}~${max.toLocaleString()} 사이 숫자를 넣어 주세요`)); } set({ [key]: v }); });
-      return h('div', { style: 'display:flex;gap:8px;align-items:center' }, el, h('span', { class: 'rb-muted' }, unit));
+      return h('div', { style: 'display:flex;gap:8px;align-items:center' }, el, h('span', { class: 'rb-muted' }, unit), defv === undefined ? null : h('small', { class: 'rb-def' }, `기본 ${defv.toLocaleString('ko-KR')}${unit}`));
     };
     return [
       card('모델', '리스에 설정해 둔 모델을 써요. 보조 모델이 더 싸고 빨라요.', modelSeg),

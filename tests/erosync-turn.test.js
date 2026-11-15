@@ -43,6 +43,8 @@ test("턴 갱신기: 꺼져 있으면 부르지 않고, 켜면 그 턴 인물을
   const { api, m } = fakeApi(), calls = [];
   const t = createErosyncTurn(api, { erosync: erosyncWith({ ok: true, changed: [{ id: "p1", name: "앨리스", before: { initiative: 40 }, after: { initiative: 50 }, reason: "먼저 말을 걺" }], unmatched: ["밥"] }, calls), now: () => 7 });
   const info = { key: "k1", rp: "턴", people: [{ name: "앨리스", memory: "" }] };
+  assert.equal(normalizeTurnSettings(undefined).on, true);   // 2.2.0부터 기본 켜짐
+  await t.save({ on: false });
   assert.equal(await t.onTurn(info), null); assert.equal(calls.length, 0);
   await t.save({ on: true, groups: ["axes"] });
   assert.deepEqual(JSON.parse(m.get(TURN_KEY)), { on: true, groups: ["axes"] });
@@ -71,7 +73,7 @@ test("턴 갱신기: 흐름에 붙고 떼기", () => {
 
 test("설정 정리: 모르는 항목은 버린다", () => {
   assert.deepEqual(normalizeTurnSettings({ on: "yes", groups: ["axes", "x", "axes"] }), { on: false, groups: ["axes"] });
-  assert.deepEqual(normalizeTurnSettings(null), { on: false, groups: ["axes", "sexual"] });
+  assert.deepEqual(normalizeTurnSettings(null), { on: true, groups: ["axes", "sexual"] });
 });
 
 test("연결: 기록기 알림·엔진 연결부·애드온 붙이기", () => {

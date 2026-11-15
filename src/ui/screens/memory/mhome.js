@@ -10,6 +10,7 @@ import { mem, fail, gradeBadge, at } from "./common.js";
 import { renderModeBar } from "./modebar.js";
 import { advancedGroups } from "./madv.js";
 import { organizeAdv } from "./advorganize.js";
+import { defHint } from "../../defhint.js";
 import { builders, renderGlobalSettings } from "./settings.js";
 import { tracked, scopeChip } from "./settingstools.js";
 import { writerDetails } from "./advanced.js";
@@ -55,17 +56,17 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   // 숫자 칸(기억 넣기 토큰·남길 최근 턴)은 맨 아래(2.1.5). 리수폿 일괄 사용은 리수폿 화면에 있어 여기선 뺐다.
   memOptions.append(h("div", { class: "rb-srow rb-mem-tokens", id: "rb-mem-tokens" }, h("span", { class: "t" }, "기억 넣기 토큰", h("small", null, "응답마다 넣는 기억의 양이에요. 목표만큼 채우고, 중요한 게 많으면 상한까지 늘어나요.")),
     h("div", { class: "rb-mem-tokpair", style: "display:flex;gap:8px;flex-wrap:wrap" },
-      num("목표(최소)", () => inj.targetTokens ?? 2000, (s, v) => { s.inject ??= {}; s.inject.targetTokens = v; if ((s.inject.capTokens ?? 0) < v) s.inject.capTokens = v; }, { min: 200, max: 8000, step: 100 }),
-      num("상한(최대)", () => inj.capTokens ?? 8000, (s, v) => { s.inject ??= {}; s.inject.capTokens = Math.max(v, s.inject.targetTokens ?? 0); }, { min: 200, max: 12000, step: 100 }))));
+      num("목표(최소)", () => inj.targetTokens ?? 2000, (s, v) => { s.inject ??= {}; s.inject.targetTokens = v; if ((s.inject.capTokens ?? 0) < v) s.inject.capTokens = v; }, { min: 200, max: 8000, step: 100, def: 2000 }),
+      num("상한(최대)", () => inj.capTokens ?? 8000, (s, v) => { s.inject ??= {}; s.inject.capTokens = Math.max(v, s.inject.targetTokens ?? 0); }, { min: 200, max: 12000, step: 100, def: 8000 }))));
   // 2.2.0 자동 기록 입력 예산(인물 위키 설정 값 writerInputBudgetTokens)은 ‘기억 넣기 토큰’ 바로 밑. 인물 위키 설정을 읽을 수 있을 때만 보인다.
   const budgetRow = h("div", { class: "rb-srow rb-mem-wbudget", id: "rb-mem-wbudget", hidden: true });
   memOptions.append(budgetRow);
   if (M.flow) (async () => {
     const st = tracked(ctx, await M.flow.settings());
     if (st.status().blocked) return;
-    const inp = h("input", { class: "rb-input", type: "number", min: 1000, max: 1000000, step: 1000, value: st.rawSnapshot().writerInputBudgetTokens ?? 48000, "aria-label": "자동 기록 입력 예산(토큰)", style: "width:120px",
-      onChange: (e) => { const n = Math.min(1000000, Math.max(1000, Math.round(Number(e.target.value) || 48000))); e.target.value = n; try { st.update((x) => { x.writerInputBudgetTokens = n; }); } catch (er) { fail(ctx)(er); } } });
-    replace(budgetRow, h("span", { class: "t" }, "자동 기록 입력 예산", h("small", null, "인물 위키 자동 기록이 한 번에 읽는 글의 양(토큰)이에요. 기본값이면 충분해요.")), inp);
+    const inp = h("input", { class: "rb-input", type: "number", min: 1000, max: 1000000, step: 1000, value: st.rawSnapshot().writerInputBudgetTokens ?? 96000, "aria-label": "자동 기록 입력 예산(토큰)", style: "width:120px",
+      onChange: (e) => { const n = Math.min(1000000, Math.max(1000, Math.round(Number(e.target.value) || 96000))); e.target.value = n; try { st.update((x) => { x.writerInputBudgetTokens = n; }); } catch (er) { fail(ctx)(er); } } });
+    replace(budgetRow, h("span", { class: "t" }, "자동 기록 입력 예산", defHint(96000, "토큰"), h("small", null, "인물 위키 자동 기록이 한 번에 읽는 글의 양(토큰)이에요. 기본값이면 충분해요.")), inp);
     budgetRow.hidden = false;
   })().catch(() => {});
   memOptions.append(h("div", { class: "rb-srow rb-mem-trimkeep", id: "rb-mem-trimkeep" }, h("span", { class: "t" }, "남길 최근 턴", h("small", null, "‘요약된 옛 대화 빼고 보내기’를 켰을 때 이만큼의 최근 대화(내 말 기준)는 늘 그대로 보내요.")),
