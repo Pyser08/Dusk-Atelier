@@ -3,6 +3,7 @@
 import { estimateTokens } from "./provider/tokens.js";
 
 export const PROFILE_STEP = 20, PROFILE_MAX_ITEMS = 60;
+export const PROFILE_LABEL = { act: "activities", own: "owned/made", place: "places", people: "people & pets", work: "work/study", like: "likes", event: "events" };
 export const PROFILE_CATS = { act: "activities & hobbies", own: "things owned, bought or made", place: "places visited or lived", people: "family, friends, pets", work: "work, study, goals", like: "likes & dislikes", event: "life events & experiences" };
 const CAT_KEYS = Object.keys(PROFILE_CATS);
 const live = (r) => r && !r.orphan && r.valid !== false && String(r.act ?? "").trim();
@@ -47,13 +48,16 @@ export function applyProfile(person, targets, raw, now = Date.now()) {
 // 블록 줄: "- 이름 — 활동: 도예(2023-05), 캠핑 / 가진 것: …" (예산 안에서 항목 단위로)
 export function profileLines(people, capTokens = 500) {
   const lines = []; let used = 0;
-  for (const p of people) {
-    const items = p.profile?.items ?? []; if (!items.length) continue;
-    const by = new Map(); for (const x of items) { if (!by.has(x.c)) by.set(x.c, []); by.get(x.c).push(x.w ? `${x.v}(${x.w})` : x.v); }
-    const parts = CAT_KEYS.filter((k) => by.has(k)).map((k) => `${PROFILE_CATS[k].split(" ")[0]}: ${by.get(k).join(", ")}`);
-    let line = `- ${p.name} — ${parts.join(" / ")}`;
-    while (estimateTokens(line) + used > capTokens && parts.length > 1) { parts.pop(); line = `- ${p.name} — ${parts.join(" / ")}`; }
-    const k = estimateTokens(line); if (used + k > capTokens) break;
+  const list = people.filter((p) => p.profile?.items?.length), per = list.length ? Math.floor(capTokens / list.length) : 0;
+  for (const p of list) {
+    // 인물마다 예산을 나눠 쓰고, 넘치면 항목 단위로 줄인다(분류 하나에 몰려 있어도 통째로 빠지지 않게). 최근 항목을 먼저 남긴다.
+    const items = [...p.profile.items].reverse(), keep = [];
+    const render = (xs) => { const by = new Map(); for (const x of xs) { if (!by.has(x.c)) by.set(x.c, []); by.get(x.c).push(x.w ? `${x.v}(${x.w})` : x.v); } return `- ${p.name} — ${CAT_KEYS.filter((k) => by.has(k)).map((k) => `${PROFILE_LABEL[k]}: ${by.get(k).join(", ")}`).join(" / ")}`; };
+    const room = Math.max(per, 80);
+    for (const x of items) { keep.push(x); if (estimateTokens(render(keep)) > room) { keep.pop(); break; } }
+    if (!keep.length) continue;
+    const line = render(keep.reverse()), k = estimateTokens(line);
+    if (used + k > capTokens) break;
     lines.push(line); used += k;
   }
   return { lines, tokens: used };
