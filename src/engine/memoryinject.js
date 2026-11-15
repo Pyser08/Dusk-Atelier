@@ -135,7 +135,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   let used = estimateTokens(lines.join("\n")); manifest.included.push(...(cur ? [{ kind: "scene", id: cur.id, tokens: used }] : []));
 
   const whenById = new Map(scenes.map((s) => [s.id, s.when]));
-  const dateOf = (r) => { const w = r.sit && whenById.get(r.sit); return w ? `[${oneLine(w)}] ` : ""; };   // 2.2.2: 기록이 속한 장면의 날짜
+  const dateOf = (r) => { const w = r.sit && whenById.get(r.sit); if (r.when) return `[${oneLine(r.when)}${w ? `; told ${oneLine(w)}` : ""}] `; return w ? `[${oneLine(w)}] ` : ""; };   // 2.2.2: 일어난 때가 따로 있으면 그것과 말한 날을 함께   // 2.2.2: 기록이 속한 장면의 날짜
   const recent = norm(recentText), inScene = new Set((cur?.who ?? []).map(norm));
   const focused = new Set((focus ?? []).map(norm));  // v1.6.4: 리수폿이 이번 턴에 고른 인물은 장면에 있는 것처럼 다룬다
   const cands = [];

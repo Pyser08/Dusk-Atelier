@@ -46,7 +46,7 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
     if (isTombed(folder, pk, e.act)) continue;  // 사용자가 지운 기록은 다시 만들지 않음
     const dup = findDuplicate(person.records, e.act, e.g);
     if (dup) { reinforce(dup.dup, anchor); mergeTrust(dup.dup, e); if (important && takeSelf(dup.dup, e.self, dup.dup.g)) { out.self++; clearHints(folder, person.name); } if (e.keys?.length) dup.dup.keys = [...new Set([...(dup.dup.keys ?? []), ...e.keys])].slice(0, 4); if (e.know?.length && !dup.dup.know) dup.dup.know = e.know; if (dup.upgrade && !dup.dup.user) { dup.dup.g = e.g; dup.dup.score = Math.max(dup.dup.score ?? 0, e.score); out.upgraded++; } continue; }
-    const nr = { id: rid("r"), ...anchor, act: e.act, g: e.g, score: e.score, p: e.p, s: e.s, r: e.r, sit, user: false, pin: false, at_ms: now, orphan: false, ...(e.know?.length ? { know: e.know } : {}), ...(e.keys?.length ? { keys: e.keys } : {}), ...trustFields(e, anchor) };
+    const nr = { id: rid("r"), ...anchor, act: e.act, g: e.g, score: e.score, p: e.p, s: e.s, r: e.r, sit, user: false, pin: false, at_ms: now, orphan: false, ...(e.when ? { when: e.when } : {}), ...(e.know?.length ? { know: e.know } : {}), ...(e.keys?.length ? { keys: e.keys } : {}), ...trustFields(e, anchor) };
     const cr = resolveConflicts(person.records, nr, { now });  // 같은 속성의 옛 기록과 비교(변화·조건부·모순·보류)
     out.conflicts.push(...cr.verdicts.map((v) => ({ ...v, person: person.name, id: nr.id })));
     if (cr.alerts.length) { out.alerts.push(...cr.alerts.map((a) => ({ ...a, person: person.name }))); folder.alerts = [...(folder.alerts ?? []), ...cr.alerts.map((a) => ({ ...a, person: person.name, at_ms: now }))].slice(-20); }

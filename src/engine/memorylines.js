@@ -29,8 +29,9 @@ export const LINES_STAGE1 = [
   "   A lasting change of condition: died, went missing, left, badly hurt, recovered, captured, freed, married, pregnant, changed name or job. This overrides everything recorded before. Quote = 4-30 characters copied exactly from newest.",
   "2. scene|what happened, 1-2 sentences of concrete facts (who did what, what was revealed)|place|story date (absolute)|yes or no",
   "   Always write exactly one scene line. yes = place, people present or the situation changed versus previousScene.",
-  "3. who|Name|what they did or said that matters (<=60 chars)|0-3",
+  "3. who|Name|what they did or said that matters (<=60 chars)|0-3|when it happened",
   "   0 trivial, 1 matters in this scene, 2 matters later, 3 permanent. One line per character who acted. Skip background figures.",
+  "   Last field = when the event itself happened, ONLY if it differs from the scene's story date (past or planned events): \"2023-05-07\", \"the week before 2023-06-09\", \"2022\", \"next month (from 2023-04-03)\". Leave it empty otherwise.",
   "4. rel|A|B|what changed between them (<=40 chars)|+ or - or 0",
   "5. open|a new promise, plan, secret or unanswered question (<=60 chars)",
   "6. close|id from openItems that newest resolved, kept or made pointless",
@@ -42,6 +43,7 @@ export const LINES_STAGE1 = [
   "scene|민지가 방에서 {{user}}에게 오빠의 죽음을 털어놓았다|민지의 방|저녁|yes",
   "state|민준|사망|민준 오빠는 그날 죽었어",
   "who|민지|오빠가 죽은 사실을 털어놓고 울었다|3",
+  "who|{{user}}|작년 여름 민준과 마지막으로 바다에 갔다고 말했다|2|2022년 여름",
   "who|{{user}}|민지를 안아 줬다|2",
   "rel|민지|{{user}}|서로 의지하게 됨|+",
   "open|민준을 죽인 범인은 아직 모른다",
@@ -281,7 +283,8 @@ export function fromStage1(lines, { known = [], source = "", openIds = null } = 
       if (!act) continue;
       const [p, s, r] = importanceToAxes(f[2]);
       seen.add(nk(name));
-      raw.people.push({ name, act, p, s, r });
+      const when = (f[3] ?? "").trim().slice(0, 40);   // 2.2.2: 일이 실제로 일어난 때(장면 날짜와 다를 때만)
+      raw.people.push({ name, act, p, s, r, ...(when ? { when } : {}) });
     } else if (tag === "fact") {   // 2.2.2: 같은 인물의 추가 사실(인물당 3개). 세부 호출 대상은 아니다
       const name = canonName(f[0], known);
       if (!name || (name !== "{{user}}" && !inText(name, source) && !known.some((p) => nk(p.name) === nk(name)))) continue;
