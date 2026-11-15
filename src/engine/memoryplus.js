@@ -30,16 +30,20 @@ export function applyTies(folder, ties, anchor, now = Date.now()) {
   let n = 0;
   for (const t of ties ?? []) {
     folder.ties ??= {};
-    const k = tkey(t.a, t.b), old = folder.ties[k];
-    if (old?.kind === t.kind) { old.at = anchor?.at ?? old.at; continue; }
-    folder.ties[k] = { a: t.a, b: t.b, kind: t.kind, at: anchor?.at ?? null, at_ms: now, ...(old ? { was: old.kind } : {}) }; n++;
+    const k = tkey(t.a, t.b), old = folder.ties[k], src = srcOf(anchor);
+    if (old && !old.orphan && old.kind === t.kind) { old.at = anchor?.at ?? old.at; continue; }
+    // 출처 응답(src)을 남겨 리롤·삭제 때 되돌린다. 바뀌기 전 관계(was)는 출처가 사라지면 다시 보인다.
+    const prev = old && !old.orphan ? old : old?.prev ?? null;
+    folder.ties[k] = { a: t.a, b: t.b, kind: t.kind, at: anchor?.at ?? null, at_ms: now, ...(src ? { src } : {}), ...(prev ? { prev: { kind: prev.kind, at: prev.at ?? null, at_ms: prev.at_ms ?? null, ...(prev.src ? { src: prev.src } : {}) } } : {}) }; n++;
   }
   return n;
 }
 // 블록 줄: 지금 관련 인물이 낀 관계만(최근 것 먼저)
+// 지금 유효한 관계: 출처가 사라진(리롤·삭제) 관계는 그 전 관계로, 전 관계도 없으면 뺀다
+export const liveTies = (folder) => Object.values(folder?.ties ?? {}).map((t) => !t.orphan ? t : t.prev && !t.prevOrphan ? { a: t.a, b: t.b, ...t.prev } : null).filter((t) => t && t.a && t.b && t.kind);
 export function tieLines(folder, names, limit = 8) {
   const set = new Set([...(names ?? [])].map((n) => String(n).toLowerCase().replace(/\s+/g, "")));
-  return Object.values(folder?.ties ?? {}).filter((t) => !set.size || set.has(String(t.a).toLowerCase().replace(/\s+/g, "")) || set.has(String(t.b).toLowerCase().replace(/\s+/g, "")))
+  return liveTies(folder).filter((t) => !set.size || set.has(String(t.a).toLowerCase().replace(/\s+/g, "")) || set.has(String(t.b).toLowerCase().replace(/\s+/g, "")))
     .sort((x, y) => (y.at ?? -1) - (x.at ?? -1)).slice(0, limit).map((t) => `- ${t.b} is ${t.a}'s ${t.kind}`);
 }
 

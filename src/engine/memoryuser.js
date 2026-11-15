@@ -59,6 +59,8 @@ function relinkWith(folder, set, to, hit) {
   const newer = (a, b) => ((b.at_ms ?? 0) >= (a.at_ms ?? 0) ? b : a);
   folder.emo = rekey(folder.emo, set, ["from", "to"], (x) => pair(x.from, x.to), (keep, add) => ({ ...keep, tags: { ...add.tags, ...keep.tags }, log: [...(add.log ?? []), ...(keep.log ?? [])] }), to, hit);
   folder.talk = rekey(folder.talk, set, ["from", "to"], (x) => pair(x.from, x.to), newer, to, hit);
+  folder.ties = rekey(folder.ties, set, ["a", "b"], (x) => pair(x.a, x.b), newer, to, hit);   // 2.2.4 오래가는 관계도 새 이름으로
+  if (folder.ties) for (const [k, t] of Object.entries(folder.ties)) if (key(t.a) === key(t.b)) delete folder.ties[k];   // 합치고 나니 자기 자신과의 관계면 버린다
   folder.rels = rekey(folder.rels, set, ["from", "to"], (x) => pair(x.from, x.to), (keep, add) => ({ ...keep, items: [...(add.items ?? []), ...(keep.items ?? [])] }), to, hit);
   folder.faces = rekey(folder.faces, set, ["who", "to"], (x) => pair(x.who, x.to), newer, to, hit);
   folder.start = rekey(folder.start, set, ["a", "b"], (x) => [key(x.a), key(x.b)].sort().join("|"), (keep, add) => (keep.level === "close" || add.level !== "close" ? keep : add), to, hit);   // 처음부터 알던 사이: 더 가까운 단계를 남긴다

@@ -116,6 +116,10 @@ export function reconcile(folder, messages) {
     return !!g && g.o === g.n;
   };
   for (const p of Object.values(folder.rels ?? {})) for (const x of p.items ?? []) x.orphan = dead(x.src, x.at_ms);
+  for (const t of Object.values(folder.ties ?? {})) {   // 2.2.4 오래가는 관계: 출처 응답이 사라지면 그 전 관계로(memoryplus.liveTies)
+    if (hasSrc(t.src)) { if (dead(t.src)) t.orphan = true; else delete t.orphan; }
+    if (t.prev && hasSrc(t.prev.src)) { if (dead(t.prev.src)) t.prevOrphan = true; else delete t.prevOrphan; }
+  }
   for (const x of folder.open ?? []) {
     x.orphan = dead(x.src, x.at_ms);
     // 버린 분석이 닫은 떡밥은 다시 연다(되돌릴 수 있게 closed는 두고 표시만 한다).

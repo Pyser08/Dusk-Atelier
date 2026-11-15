@@ -3,6 +3,7 @@
 // 새 필드가 없어도 그려지게 기본 모양을 쓰고, 나중에 person.faction · person.status가 생기면 그대로 반영한다.
 import { pairView, nowOf } from "./memoryhuman.js";
 import { STAGE_LABEL, USER } from "./memoryuser.js";
+import { liveTies } from "./memoryplus.js";
 
 export const RM = Object.freeze({ RMIN: 70, RMAX: 300, HH: 120, MIN_GAP: 34, MAX_NODES: 40 });
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
@@ -86,13 +87,15 @@ export function buildRelMap(folder, { max = RM.MAX_NODES } = {}) {
     });
   }
   // 2.2.4 오래가는 관계(남매·연인 등): 있는 선은 이름으로 쓰고, 변화 기록이 없는 두 사람도 선으로 잇는다
-  const tieOf = (x, y) => Object.values(folder?.ties ?? {}).find((t) => (key(t.a) === x && key(t.b) === y) || (key(t.a) === y && key(t.b) === x));
+  const ties = liveTies(folder);   // 리롤·삭제로 출처가 사라진 관계는 빼고(그 전 관계로)
+  const tieOf = (x, y) => ties.find((t) => key(t.a) === x && key(t.b) === y) ?? ties.find((t) => key(t.a) === y && key(t.b) === x);
   for (const e of edges) { const t = tieOf(e.a, e.b); if (t) e.label = cut(t.kind, 14); }
-  for (const t of Object.values(folder?.ties ?? {})) {
+  for (const t of ties) {
     const a = key(t.a), b = key(t.b); if (!keep.has(a) || !keep.has(b) || a === b || edges.some((e) => (e.a === a && e.b === b) || (e.a === b && e.b === a))) continue;
     edges.push({ id: `${a}~${b}`, k: `tie:${a}>${b}`, a, b, w: 0.3, s: 0.35, sp: 0, rc: 0, label: cut(t.kind, 14), items: [[t.at != null ? `#${t.at + 1}` : "", `${t.b}: ${t.a}의 ${t.kind}`]] });
   }
-  for (const n of nodes) { const t = tieOf(key(USER), n.id); if (t) n.uLabel = `${cut(t.kind, 10)} · ${n.uLabel}`; }
+  // 나와의 관계: 'A에게 B는 kind'라서, 내가 A인 관계(그 인물이 나의 kind)를 먼저 쓰고, 반대 방향만 있으면 '나는 kind'로 보인다
+  for (const n of nodes) { const t = tieOf(key(USER), n.id); if (t) n.uLabel = `${key(t.a) === key(USER) ? cut(t.kind, 10) : `나는 ${cut(t.kind, 8)}`} · ${n.uLabel}`; }
   return { nodes, edges, nowAt, empty: !nodes.length };
 }
 

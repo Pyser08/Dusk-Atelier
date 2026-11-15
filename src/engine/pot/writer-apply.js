@@ -65,5 +65,7 @@ export function applyWriterProposalAtomic(scope,proposal,contract,options={}){
   let peopleScope=peopleResult.scope;
   // 2.2.4: 기본 성격 6축 후보가 '검토 대기'(근거 4개·장면 3곳 이상)가 되면 바로 반영한다 — 사람이 승인하기 전엔 막대가 움직이지 않았다
   if(contract.autoApprovePersonality!==false)for(const c of Object.values(peopleScope.people?.candidates||{})){if(c?.status!=='review'||!PERSONALITY_AXES.includes(c.axis))continue;try{peopleScope=reviewPersonCandidate(peopleScope,c.id,'approve',{now});}catch{/* 고정핀 등 */}}
+  // 반영한 후보는 보관 이름으로 옮겨, 다음 관찰이 새 후보로 다시 쌓이게 한다(같은 축·방향이 한 번만 움직이던 것). 축·방향마다 최근 4개만 남긴다
+  if(contract.autoApprovePersonality!==false&&peopleScope.people?.candidates){const cs={...peopleScope.people.candidates},stamp=String(now||Date.now()).replace(/[^0-9]/g,'').slice(-14)||String(Date.now());let moved=false;for(const[id,c]of Object.entries(cs)){if(c?.status!=='approved'||!PERSONALITY_AXES.includes(c.axis)||id.includes('#done'))continue;const nid=`${id}#done${stamp}`;cs[nid]={...c,id:nid};delete cs[id];moved=true;const old=Object.keys(cs).filter(k=>k.startsWith(`${id}#done`)).sort();for(const k of old.slice(0,Math.max(0,old.length-4)))delete cs[k];}if(moved)peopleScope={...peopleScope,people:{...peopleScope.people,candidates:cs}};}
   return{scope:normalizeWikiScope(preservePeoplePins(scope,peopleScope)),refToId,batchRef,metricReport,peopleReport:peopleResult.report,cycleRolls};
 }

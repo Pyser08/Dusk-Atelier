@@ -36,7 +36,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.locator(".rb-me-dlg input[aria-label='애정']").fill("9");
   await page.locator("#rb-me-save").click(); await page.waitForTimeout(600);
   const ed = await page.evaluate(async () => { const x = await __app.ctx.memory.store.getFolder("c1", "t1"); return { talk: x.talk["시로코>{{user}}"], emo: x.emo["시로코>{{user}}"] }; });
-  ok(`[${tag}] 고치기: 호칭·감정 저장되고 잠김`, ed.talk?.call === "쌤" && ed.talk?.lock === true && ed.emo?.tags?.affection === 9 && ed.emo?.lock?.affection === true, JSON.stringify(ed));
+  ok(`[${tag}] 고치기: 호칭 잠김·감정은 출발점(2.2.4 잠그지 않음)`, ed.talk?.call === "쌤" && ed.talk?.lock === true && ed.emo?.tags?.affection === 9 && !ed.emo?.lock?.affection, JSON.stringify(ed));
   ok(`[${tag}] 고친 값이 카드에 바로`, /쌤/.test(await page.locator(".rb-me-card[data-who='시로코']").textContent()));
   ok(`[${tag}] 가로 넘침 없음`, await page.evaluate(() => { const el = document.querySelector(".rb-me"); return el.scrollWidth <= el.clientWidth + 1; }));
   // 주사위 기록
