@@ -25,7 +25,7 @@ function buildOpenAI(conn, p, msgs, o) {
   if (!reasoning || effort === "none") { body.temperature = s.temperature; body.top_p = s.topP; body.frequency_penalty = s.frequencyPenalty; body.presence_penalty = s.presencePenalty; }
   body.seed = s.seed; body.stop = s.stop;
   if (s.maxTokens) body[reasoning ? "max_completion_tokens" : "max_tokens"] = s.maxTokens;
-  if (effort) { if (conn.kind === "openrouter") body.reasoning = { effort }; else body.reasoning_effort = effort; }
+  if (effort) { if (conn.kind === "openrouter") body.reasoning = effort === "none" ? { enabled: false } : { effort }; else body.reasoning_effort = effort; }   // 2.2.2: 오픈라우터는 enabled:false여야 추론이 확실히 꺼진다
   if (p.verbosity) body.verbosity = p.verbosity;
   if (p.tier && p.tier !== "auto") body.service_tier = p.tier;
   if (p.cache?.openai && p.cache.openai !== "off") body.prompt_cache_retention = p.cache.openai;

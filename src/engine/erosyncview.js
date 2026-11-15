@@ -73,14 +73,14 @@ const clampTo = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // Dusk 관계도 데이터(buildRelMap 결과)에서 Erosync 목표·경쟁에 걸린 인물만 남기고, 선을 Erosync 것으로 바꾼다.
 // 위키 인물과는 이름·별칭으로 맞추고, 못 맞춘 Erosync 인물 수는 missing으로 알려 준다. {{user}} 선은 그리지 않는다(noUser).
-export function eroRelmapData(data, snap) {
+export function eroRelmapData(data, snap, aliases = null) {   // aliases: 장기 기억 이름·별칭 → 노드 id(identity.nameIndex)
   const out = { ...(data ?? {}), nodes: [], edges: [], noUser: true, ero: true, missing: 0, empty: true };
   if (!eroReady(snap) || !arr(data?.nodes).length) return out;
   const byKey = new Map(data.nodes.map((n) => [n.id, n]));
   const nodeOf = (id) => {
     const p = arr(snap.people).find((x) => x.id === id);
     if (!p) return null;
-    for (const nm of [p.name, ...arr(p.aliases)]) { const n = byKey.get(keyOf(nm)); if (n) return n; }
+    for (const nm of [p.name, ...arr(p.aliases)]) { const n = byKey.get(keyOf(nm)) ?? byKey.get(aliases?.get(keyOf(nm))); if (n) return n; }
     return null;
   };
   const seen = new Set(), missing = new Set();

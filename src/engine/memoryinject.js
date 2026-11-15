@@ -63,6 +63,20 @@ function sceneLine(s, cap) {
 }
 
 
+const RECALL_TITLE = "Relevant past moments (dated):";
+const wordSet = (s) => new Set(String(s ?? "").toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 2));
+// 2.2.2 임베딩 점수가 있을 때: 오래된 장면을 의미가 가까운 순으로 예산 안에서 고르고, 날짜와 함께 시간순으로 돌려준다.
+export function semScenes(older, sem, semMin, capTokens, { max = 8 } = {}) {
+  const scored = older.map((sc, i) => ({ sc, i, v: sem.get(sc.id) })).filter((x) => x.v != null && x.v >= semMin).sort((a, b) => b.v - a.v);
+  const out = []; let used = 0;
+  for (const x of scored) {
+    const t = "- " + (x.sc.when ? `[${oneLine(x.sc.when)}] ` : "") + oneLine(x.sc.sum) + ((x.sc.facts ?? []).length ? " — " + x.sc.facts.map(oneLine).join("; ") : ""), n = estimateTokens(t);
+    if (used + n > capTokens) continue;
+    out.push({ i: x.i, t }); used += n; if (out.length >= max) break;
+  }
+  out.sort((a, b) => a.i - b.i);
+  return { lines: out.map((x) => x.t), tokens: used };
+}
 // 오래된 장면 중 지금 글과 겹치는 낱말이 많은 순으로 최대 2개. 겹침이 없으면 넣지 않는다. 시간순으로 돌려준다.
 export function pastScenes(older, recentText, capTokens, { max = 2 } = {}) {
   const hay = norm(recentText);
@@ -92,21 +106,34 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   if (storyNow) lines.push(`Story time (now): ${oneLine(storyNow)}`); // 이야기 시간 설정이 켜져 있으면 그 값이 기준
   else if (plus && cur && !cur.when && currentStoryTime(folder)) lines.push(`Story time (last known): ${oneLine(currentStoryTime(folder))}`);
   // Story so far: 이전 장면을 최신부터 이벤트 예산 안에서 채우고 시간순으로 출력(통째로만 포함)
-  const evCap = settings.eventTokens ?? 2000, evLines = []; let evUsed = 0;
-  for (const s of scenes.slice(0, -1).reverse()) {
-    const t = "- " + oneLine(s.sum) + (s.place ? ` (${s.place})` : ""), n = estimateTokens(t);
-    if (evUsed + n > evCap) { manifest.excluded.push({ kind: "event", name: oneLine(s.sum).slice(0, 20), tokens: n, reason: "budget" }); break; }
-    evLines.unshift(t); evUsed += n;
+  // 2.2.2: 임베딩 점수가 있으면 같은 예산을 나눠 쓴다 — 최근 장면은 흐름을 이을 만큼(recentEventTokens)만, 나머지는 지금 글과 의미가 가까운 옛 장면.
+  const evCap = settings.eventTokens ?? 2000, evRows = []; let evUsed = 0;
+  const lineOf = (s, withFacts) => "- " + (s.when ? `[${oneLine(s.when)}] ` : "") + oneLine(s.sum) + (withFacts && (s.facts ?? []).length ? " — " + s.facts.map(oneLine).join("; ") : "") + (s.place ? ` (${s.place})` : "");
+  const prev = scenes.slice(0, -1), recentCap = sem ? Math.min(evCap, settings.recentEventTokens ?? 700) : evCap;
+  let k = prev.length - 1;
+  for (; k >= 0; k--) {
+    const t = lineOf(prev[k], false), n = estimateTokens(t);
+    if (evUsed + n > recentCap) { if (!sem) manifest.excluded.push({ kind: "event", name: oneLine(prev[k].sum).slice(0, 20), tokens: n, reason: "budget" }); break; }
+    evRows.push({ i: k, t }); evUsed += n;
   }
-  if (evLines.length) { lines.push("Story so far:", ...evLines); manifest.included.push({ kind: "events", tokens: evUsed, count: evLines.length }); }
-  // 예산 때문에 빠진 오래된 장면 중, 지금 대화와 관련 있는 것만 골라 짧게 넣는다(질문에 따라 과거 사건을 불러오는 BardWiki 방식의 가벼운 판).
+  let semCount = 0;
+  if (sem && k >= 0) {
+    const older = prev.slice(0, k + 1).map((sc, i) => ({ sc, i, v: sem.get(sc.id) })).filter((x) => x.v != null && x.v >= semMin).sort((x, y) => y.v - x.v);
+    for (const x of older) { const t = lineOf(x.sc, true), n = estimateTokens(t); if (evUsed + n > evCap) continue; evRows.push({ i: x.i, t }); evUsed += n; semCount++; }
+  }
+  evRows.sort((x, y) => x.i - y.i);
+  const evLines = evRows.map((x) => x.t);
+  if (evLines.length) { lines.push("Story so far:", ...evLines); manifest.included.push({ kind: "events", tokens: evUsed, count: evLines.length, ...(semCount ? { relevant: semCount } : {}) }); }
+  // 예산 때문에 빠진 오래된 장면 중, 지금 대화와 관련 있는 것만 골라 짧게 넣는다(질문에 따라 과거 사건을 불러오는 BardWiki 방식의 가벼운 판). 임베딩이 있으면 위에서 이미 골랐다.
   const pastCap = settings.pastTokens ?? 200;
-  if (pastCap > 0 && recentText) {
+  if (!sem && pastCap > 0 && recentText) {
     const older = scenes.slice(0, Math.max(0, scenes.length - 1 - evLines.length)), picked = pastScenes(older, recentText, pastCap);
     if (picked.lines.length) { lines.push("Earlier, relevant to now:", ...picked.lines); manifest.included.push({ kind: "past", tokens: picked.tokens, count: picked.lines.length }); }
   }
   let used = estimateTokens(lines.join("\n")); manifest.included.push(...(cur ? [{ kind: "scene", id: cur.id, tokens: used }] : []));
 
+  const whenById = new Map(scenes.map((s) => [s.id, s.when]));
+  const dateOf = (r) => { const w = r.sit && whenById.get(r.sit); if (r.when) return `[${oneLine(r.when)}${w ? `; told ${oneLine(w)}` : ""}] `; return w ? `[${oneLine(w)}] ` : ""; };   // 2.2.2: 일어난 때가 따로 있으면 그것과 말한 날을 함께   // 2.2.2: 기록이 속한 장면의 날짜
   const recent = norm(recentText), inScene = new Set((cur?.who ?? []).map(norm));
   const focused = new Set((focus ?? []).map(norm));  // v1.6.4: 리수폿이 이번 턴에 고른 인물은 장면에 있는 것처럼 다룬다
   const cands = [];
@@ -120,7 +147,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     if (mode === "auto" && !rel) { manifest.excluded.push({ kind: "person", name: p.name, tokens: 0, reason: "not-relevant" }); continue; }
     const group = mode === "always" ? 0 : rel;
     const age = (r) => r.at == null ? 50 : Math.max(0, messageCount - (plus ? lastTouch(r) : r.at));
-    const recs = (p.records ?? []).filter((r) => injectable(r) && (r.at == null || r.at < messageCount - skip) && !(p.digest && !p.digestStale && r.digested && (r.g === "D" || r.g === "C")) && !(plus && forgotten(r, messageCount, settings.forgetAfter ?? 150)));
+    const recs = (p.records ?? []).filter((r) => injectable(r) && (r.at == null || r.at < messageCount - skip) && !(p.digest && !p.digestStale && r.digested && (r.g === "D" || r.g === "C")) && !(plus && forgotten(r, messageCount, 150)));
     const scored = recs.map((r) => ({ r, s: (GRADE_WEIGHT[r.g] ?? 1) * Math.pow(0.97, age(r)) * (plus ? strength(r) : 1) * (plus ? keyBoost(keyHits(r, folder, recent)) * semBoost(sem?.get(r.id), semMin) : 1) + (r.pin ? 50 : 0) })).sort((a, b) => b.s - a.s);
     const top = scored.slice(0, 5);
     if (plus && sem) {  // 의미가 아주 비슷한 기록은 등급이 낮아도 자리를 얻는다(인물당 최대 2개, 고정 기록은 밀어내지 않음)
@@ -129,9 +156,9 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     }
     const dg = p.digest && !p.digestStale ? p.digest : "";  // 재요약 대기 중인 digest는 넣지 않음
     if (!top.length && !dg) continue;
-    const earlier = human ? earlierIds(p) : null, fadeAt = settings.forgetAfter ?? 150;
+    const earlier = human ? earlierIds(p) : null, fadeAt = 150;
     const tag = (r) => (earlier?.has(r.id) ? "(earlier) " : "") + (human && fading(r, messageCount, fadeAt) ? "(vague) " : "");   // 변화 이전 기록 · 흐릿해진 사소한 기록
-    const moments = top.sort((a, b) => (a.r.at ?? -1) - (b.r.at ?? -1)).map((x) => `(${x.r.g}) ${tag(x.r)}${oneLine(x.r.act)}${trustTag(x.r)}${changeNote(x.r)}`);
+    const moments = top.sort((a, b) => (a.r.at ?? -1) - (b.r.at ?? -1)).map((x) => `(${x.r.g}) ${tag(x.r)}${dateOf(x.r)}${oneLine(x.r.act)}${trustTag(x.r)}${changeNote(x.r)}`);
     const gap = human && rel ? returnGap(p, scenes, messageCount) : 0;   // 오랜만에 다시 나온 인물
     const stNow = currentState(p), stTag = stNow?.v ? ` [${oneLine(stNow.v)}]` : "";
     const mk = (ms, withDg) => `- ${p.name}${stTag}${gap ? ` (back after ~${gap} messages away)` : ""}: ${[withDg && dg ? oneLine(dg) : "", ms.length ? "Key moments: " + ms.join(", ") : ""].filter(Boolean).join(" / ")}`;
@@ -163,6 +190,16 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     chars.push(text); used += tokens; manifest.included.push({ kind: "person", name: c.name, tokens, group: c.group }); manifest.recordIds.push(...ids); included.add(norm(c.name));
   }
   if (chars.length) lines.push("Characters (current state):", ...chars);
+  if (plus && sem) {   // 2.2.2: 지금 글과 의미가 가까운 기록을 인물 구분 없이 날짜와 함께(인물당 5개 제한에 걸려 빠지던 사실)
+    const shown = new Set(manifest.recordIds), rows = [];
+    for (const p of Object.values(folder.people ?? {})) { if ((p.ctx ?? "auto") === "never") continue; for (const r of p.records ?? []) { const v = sem.get(r.id); if (v != null && v >= semMin && injectable(r) && !shown.has(r.id)) rows.push({ p, r, v }); } }
+    const qWords = wordSet(recentText), kw = settings.recallKeyword ?? 0.04;   // 2.2.2: 의미 점수에 낱말 일치를 조금 더한다(이름·장소·물건은 낱말이 더 정확)
+    if (kw > 0 && qWords.size) for (const x of rows) { let hit = 0; for (const w of wordSet(x.r.act)) if (w.length >= 2 && qWords.has(w)) hit++; x.v += kw * Math.min(3, hit); }
+    rows.sort((a, b) => b.v - a.v);
+    const capR = settings.recallTokens ?? 700, keep = []; let n = estimateTokens(RECALL_TITLE);
+    for (const x of rows) { const t = `- ${dateOf(x.r)}${x.p.name}: ${oneLine(x.r.act)}`, k = estimateTokens(t); if (n + k > capR || used + n + k + 4 > cap) continue; keep.push({ t, at: x.r.at ?? 0, id: x.r.id }); n += k; if (keep.length >= (settings.recallMax ?? 16)) break; }
+    if (keep.length) { keep.sort((a, b) => a.at - b.at); lines.push(RECALL_TITLE, ...keep.map((x) => x.t)); used += n; manifest.included.push({ kind: "recall", tokens: n, count: keep.length }); manifest.recordIds.push(...keep.map((x) => x.id)); }
+  }
   if (plus) {  // v1.6.2: 열린 항목 · 관계 변화량 · 지식 경계 · 원문 발췌. 각각 자기 예산 안에서 줄 단위로, 전체 상한을 넘으면 통째로 뺀다.
     const rel = new Set([...included, ...inScene]);
     const add = (kind, title, rows, capTokens) => {

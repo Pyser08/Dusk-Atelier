@@ -61,12 +61,15 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     if (!character || !chat) throw new Error("캐릭터 또는 채팅을 찾지 못했어요.");
     const chaId = String(character.chaId ?? charIndex), chatId = chatKeyOf(chat, chatIndex);
     if (chatId !== legacyChatKeyOf(chat, chatIndex)) await store.adoptFolder?.(chaId, legacyChatKeyOf(chat, chatIndex), chatId).catch(() => {});
-    const messages = chat.message ?? [], last = group.at(-1), m = messages[last];
+    const messages = chat.message ?? [];
+    // 2.2.2: 응답 하나를 기록할 때 바로 앞 사용자 말(최대 3개)도 새 내용에 함께 넣는다. 사용자가 말한 사실·계획·날짜가 기록에서 빠지던 문제.
+    if (group.length === 1 && !isUserMessage(messages[group[0]])) { const pre = []; for (let k = group[0] - 1; k >= 0 && pre.length < 3 && isUserMessage(messages[k]); k--) if (extractMessageText(messages[k]).trim()) pre.unshift(k); if (pre.length) group = [...pre, group[0]]; }
+    const last = group.at(-1), m = messages[last];
     const rx = prep ? await prep.entriesFor(character, chat) : [];
     const text = group.map((i) => group.length > 1 ? line(messages[i], i, 3000, rx) : clean(messages[i], rx).trim()).join("\n\n");
     const h = messageIdentity(m), anchor = { at: last, mid: messageIdOf(m), h };
     const idx = await store.getIndex(), bot = idx.bots[chaId] ?? { on: true, ignore: [] };
-    return { character, chat, chaId, chatId, messages, last, text, h, anchor, idx, bot, rx };
+    return { character, chat, chaId, chatId, messages, last, text, h, anchor, idx, bot, rx, group };
   }
   // 자동 기록 조건. 문자열이면 기록하지 않는 이유, null이면 기록 대상.
   function gate(g, manual) {
@@ -102,12 +105,13 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     if (gate(g, false)) return null;
     const existing = await loadReconciled(store, g.chaId, g.chatId, g.messages);  // 옛 장면·떡밥이 새 요약에 섞이지 않게 먼저 대조
     if (existing?.cursor?.h === g.h && existing.cursor.at === g.last) return null;
-    return { h: g.h, ignore: [...(g.bot.ignore ?? [])], input: inputOf(g, existing, [i]) };
+    return { h: g.h, ignore: [...(g.bot.ignore ?? [])], input: inputOf(g, existing, g.group) };
   }
 
   // 한 메시지(또는 묶음)를 분석해 반영. group: 같은 입력에 합칠 메시지 인덱스들(마지막이 앵커).
   async function analyzeAt(charIndex, chatIndex, group, { signal, manual = false, redo = false, shared = null } = {}) {
     const g = await gather(charIndex, chatIndex, group, shared);
+    group = g.group;   // 앞 사용자 말이 붙었을 수 있다
     const { character, chat, chaId, chatId, messages, last, text, h, anchor, idx, bot } = g;
     const why = gate(g, manual); if (why) return why;
     const existing = await loadReconciled(store, chaId, chatId, messages);  // 옛 장면·떡밥이 새 요약에 섞이지 않게 먼저 대조
@@ -217,7 +221,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   async function schedule(kind = "output") {
     if (Date.now() - schedCache.at > 3000) {
       const idx = await store.getIndex().catch(() => null);
-      schedCache = { at: Date.now(), confirm: confirmOf(idx) === "next", ms: Math.max(0, Number(idx?.settings?.debounceSec ?? 4) * 1000) };
+      schedCache = { at: Date.now(), confirm: confirmOf(idx) === "next", ms: Math.max(0, Number(idx?.settings?.debounceSec ?? 4) * 1000) };   // 화면 설정은 없앰(기본 4초). 시험은 짧은 값을 넣어 쓴다
     }
     if ((kind === "confirm") !== schedCache.confirm) return;
     clearTimeout(timer); dirty = true; lastKind = kind;

@@ -3,7 +3,7 @@
 import { h, replace } from "../../dom.js";
 import { btn, modal, note, confirmDialog } from "../../kit.js";
 import { fail } from "./common.js";
-import { mergeEntries, planEntryMerge, applyEntryMerge, duskMerge } from "../../../engine/peoplemerge.js";
+import { mergeEntries, planEntryMerge, applyEntryMerge, duskMerge, alignDocTitles } from "../../../engine/peoplemerge.js";
 import { duplicateGroups, mergeAllDuplicates } from "../../../engine/peopledupe.js";
 import { diagnoseWiki } from "../../../engine/wikihealth.js";
 
@@ -102,10 +102,17 @@ export async function openWikiHealth(env, people) {
   const r = diagnoseWiki(env.folder, { visible: (p) => shown.has(p) });
   const rows = [["문서", `${r.documents}개 (인물 ${r.characters}명)`], ["같은 이름", r.duplicates.length ? r.duplicates.slice(0, 8).map((x) => `${x.name} ×${x.count}`).join(", ") + (r.duplicates.length > 8 ? ` 외 ${r.duplicates.length - 8}` : "") : "없음"],
     ["내용 없는 인물 문서", r.empty.length ? r.empty.slice(0, 8).join(", ") + (r.empty.length > 8 ? ` 외 ${r.empty.length - 8}` : "") : "없음"],
+    ["인물 이름과 다른 제목의 문서", r.misnamed.length ? r.misnamed.slice(0, 6).map((x) => `${x.person} ← ‘${x.doc}’`).join(", ") + (r.misnamed.length > 6 ? ` 외 ${r.misnamed.length - 6}` : "") : "없음"],
     ["Dusk 기록과 이어지지 않은 문서", r.unlinked.length ? `${r.unlinked.length}개` : "없음"], ["끊어진 연결", r.broken.length ? r.broken.slice(0, 5).join(", ") + (r.broken.length > 5 ? ` 외 ${r.broken.length - 5}` : "") : "없음"]];
   const again = await modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(560px,96vw);max-height:90vh;overflow:auto" },
     h("h3", null, "위키 점검"), r.ok ? note("info", "눈에 띄는 문제가 없어요.") : null,
     h("div", { style: "display:flex;flex-direction:column;gap:8px;margin:10px 0" }, rows.map(([k, v]) => h("div", null, h("small", { class: "rb-muted" }, k), h("div", null, v)))),
-    h("div", { class: "rb-dialog-actions" }, r.duplicates.length ? btn("같은 이름 한 번에 합치기", { kind: "primary", onClick: () => done(true) }) : null, btn("닫기", { onClick: () => done(null) }))));
+    h("div", { class: "rb-dialog-actions" }, r.misnamed.length ? btn("문서 이름을 인물 이름으로 맞추기", { onClick: () => done("align") }) : null, r.duplicates.length ? btn("같은 이름 한 번에 합치기", { kind: "primary", onClick: () => done(true) }) : null, btn("닫기", { onClick: () => done(null) }))));
+  if (again === "align") {   // 2.2.2: 합치기 뒤 옛 이름으로 남은 문서를 인물 이름으로(옛 이름은 별칭으로). 위키 호감도와 관계도가 같은 인물을 가리키게 된다
+    let fixed = [];
+    await ctx.memory.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { fixed = alignDocTitles(f); });
+    ctx.toast(fixed.length ? `${fixed.length}개 문서 이름을 맞췄어요: ${fixed.slice(0, 3).map((x) => `${x.from} → ${x.to}`).join(", ")}` : "맞출 문서가 없어요.");
+    return env.redraw();
+  }
   if (again) await mergeSameNames(env, people);
 }

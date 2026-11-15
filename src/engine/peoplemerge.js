@@ -31,6 +31,26 @@ export function duskMerge(f, ka, kb) {
   relinkNames(f, [pb.name, ...(pb.aliases ?? [])], pa.name);  // 버그 2: 관계·감정 기록이 합친 이름으로 남아 관계도에 둘 다 보이던 문제
 }
 
+// 문서 제목을 새 이름으로(옛 제목은 별칭으로). 위키 프로필 이름도 같이 맞춘다.
+export function renameDoc(folder, doc, name) {
+  if (!doc || !name || keyOf(doc.title) === keyOf(name)) return false;
+  const old = doc.title, have = new Set([name, ...(doc.aliases ?? [])].map(keyOf));
+  doc.aliases = [...(doc.aliases ?? []).filter((a) => keyOf(a) !== keyOf(name)), ...(have.has(keyOf(old)) ? [] : [old])];
+  doc.title = name;
+  const prof = folder.wiki?.people?.profiles?.[doc.id]; if (prof) prof.name = name;
+  if (folder.wiki) folder.wiki.revision = (Number(folder.wiki.revision) || 0) + 1;   // 위키 자동 기록이 들고 있는 사본도 다시 읽게(안 그러면 옛 이름으로 되돌린다)
+  return true;
+}
+// 이미 합쳐진 상태 고치기: 인물 이름과 다른 제목(별칭)으로 이어진 문서를 인물 이름으로 맞춘다. 반환: 고친 [{from, to}]
+export function alignDocTitles(folder) {
+  const out = [];
+  for (const p of Object.values(folder?.people ?? {})) {
+    const d = findDoc(folder.wiki, p); if (!d || keyOf(d.title) === keyOf(p.name)) continue;
+    if (Object.values(folder.wiki?.documents ?? {}).some((x) => x !== d && x?.type === "Character" && keyOf(x.title) === keyOf(p.name))) continue;   // 같은 이름 문서가 따로 있으면 합치기로 해결
+    const from = d.title; if (renameDoc(folder, d, p.name)) { relinkNames(folder, [from], p.name); out.push({ from, to: p.name }); }
+  }
+  return out;
+}
 const sameEntry = (a, b) => a.id === b.id || (a.pk && a.pk === b.pk);
 const twoDocs = (a, b) => a.docId && b.docId && a.docId !== b.docId;
 
@@ -52,6 +72,9 @@ export function applyEntryMerge(folder, keep, src, plan, choices = {}) {
     p.aliases = [...(p.aliases ?? []), ...list.filter((n) => n && !have.has(keyOf(n)) && have.add(keyOf(n)))];
   };
   const kp = folder.people?.[keep.pk], sp = folder.people?.[src.pk];
+  // 2.2.2 버그: 남길 인물에 문서가 없고 합칠 인물에만 문서가 있으면, 그 문서가 옛 이름으로 남아 인물 화면이 옛 이름으로 바뀌고
+  // (별칭으로 문서를 찾음) 위키 호감도와 관계도가 서로 다른 이름을 가리켰다 → 문서를 남길 인물 이름으로 바꿔 남길 인물의 문서로 만든다.
+  if (!kd && sd && kp) renameDoc(folder, sd, kp.name);
   if (kp && sp) duskMerge(folder, keep.pk, src.pk);
   else if (kp) addAliases(keep.pk, [src.name, ...names(sd)]);          // 합칠 쪽이 문서뿐: 이름을 별칭으로 남겨 이후 분석이 같은 인물로 이어지게
   else if (sp) addAliases(src.pk, [keep.name, ...names(kd)]);          // 남길 쪽이 문서뿐: 남은 문서와 인물을 별칭으로 잇는다

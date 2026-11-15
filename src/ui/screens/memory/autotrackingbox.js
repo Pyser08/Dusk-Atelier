@@ -32,8 +32,7 @@ export async function autoTrackingBox(env, { noAdvanced = false } = {}) {
   } }, h("summary", null, "인물 위키 고급 설정"), adv);
   return h("section", { class: "rb-card rb-mem-sec rb-wk-integrated" },
     h("h3", null, "자동 기록 · 인물 추적"),
-    h("div", { class: "rb-mem-shead" }, h("b", null, "새 인물 자동 추적"), h("span", { style: "flex:1" }),
-      switchEl(trackOn, { label: "새 인물 자동 추적", onChange: (v, el) => { setSwitch(el, v); setTrack(v); } })),
+    h("p", { class: "rb-muted" }, `새 인물 자동 추적: ${trackOn ? "켜짐" : "꺼짐"} (인물 화면 위쪽 스위치에서 바꿔요)`),   // 2.2.2 같은 스위치가 두 곳에 있어 하나로
     h("div", { class: "rb-mem-sact" }, btn("지금 기록", { onClick: () => openWriter(env).catch(fail(ctx)) }), btn("추적 인물 고르기", { onClick: () => openTracking(env).catch(fail(ctx)) })),
     conflictBox(env),
     h("details", { class: "rb-mem-man" }, h("summary", null, `캐릭터별 위키 사용 · ${docs.length}명`),

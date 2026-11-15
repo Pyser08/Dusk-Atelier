@@ -56,8 +56,8 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   // 숫자 칸(기억 넣기 토큰·남길 최근 턴)은 맨 아래(2.1.5). 리수폿 일괄 사용은 리수폿 화면에 있어 여기선 뺐다.
   memOptions.append(h("div", { class: "rb-srow rb-mem-tokens", id: "rb-mem-tokens" }, h("span", { class: "t" }, "기억 넣기 토큰", h("small", null, "응답마다 넣는 기억의 양이에요. 목표만큼 채우고, 중요한 게 많으면 상한까지 늘어나요.")),
     h("div", { class: "rb-mem-tokpair", style: "display:flex;gap:8px;flex-wrap:wrap" },
-      num("목표(최소)", () => inj.targetTokens ?? 2000, (s, v) => { s.inject ??= {}; s.inject.targetTokens = v; if ((s.inject.capTokens ?? 0) < v) s.inject.capTokens = v; }, { min: 200, max: 8000, step: 100, def: 2000 }),
-      num("상한(최대)", () => inj.capTokens ?? 8000, (s, v) => { s.inject ??= {}; s.inject.capTokens = Math.max(v, s.inject.targetTokens ?? 0); }, { min: 200, max: 12000, step: 100, def: 8000 }))));
+      num("목표(최소)", () => inj.targetTokens ?? 2000, (s, v) => { s.inject ??= {}; s.inject.targetTokens = v; if ((s.inject.capTokens ?? 0) < v) s.inject.capTokens = v; }, { min: 200, max: 100000, step: 100, def: 2000 }),
+      num("상한(최대)", () => inj.capTokens ?? 8000, (s, v) => { s.inject ??= {}; s.inject.capTokens = Math.max(v, s.inject.targetTokens ?? 0); }, { min: 200, max: 100000, step: 100, def: 8000 }))));
   // 2.2.0 자동 기록 입력 예산(인물 위키 설정 값 writerInputBudgetTokens)은 ‘기억 넣기 토큰’ 바로 밑. 인물 위키 설정을 읽을 수 있을 때만 보인다.
   const budgetRow = h("div", { class: "rb-srow rb-mem-wbudget", id: "rb-mem-wbudget", hidden: true });
   memOptions.append(budgetRow);
