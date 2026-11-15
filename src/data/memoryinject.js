@@ -6,6 +6,7 @@ import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
 import { folderIdOf } from "./memorystore.js";
 import { chatKeyOf } from "../engine/chatkey.js";
+import { hashText } from "../engine/chattext.js";
 import { trimCovered } from "../engine/historytrim.js";
 import { buildChunks, lexScores, rrf, assemble, subQueries, RAW_TITLE } from "../engine/rawrecall.js";
 
@@ -73,12 +74,15 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     const dateOf = (mi) => { const sc = scenes.find((x) => x.at >= mi) ?? scenes.at(-1); return sc?.when ? String(sc.when).replace(/\s+/g, " ").slice(0, 40) : ""; };
     const list = []; for (let i = 0; i < upto; i++) { const t = extractMessageText(msgs[i]); if (t.trim()) list.push({ text: t, who: isUserMessage(msgs[i]) ? "{{user}}" : String(character?.name ?? "{{char}}"), mi: i }); }
     const chunks = buildChunks(list, dateOf);
+    // 2.2.2 rawContext: 임베딩할 때만 조각 앞에 [날짜 / 그 장면 요약]을 붙인다(짧은 말도 무슨 이야기인지 알게). 보여 주는 글은 그대로
+    const topicOf = (mi) => { const sc = scenes.find((x) => x.at >= mi) ?? scenes.at(-1); return sc?.sum ? String(sc.sum).replace(/\s+/g, " ").slice(0, 80) : ""; };
+    const embedItems = s.rawContext ? chunks.map((c) => { const e = `[${[c.date, topicOf(c.mi)].filter(Boolean).join(" / ")}] ${c.t}`; return { id: c.id, t: e, h: hashText(e, 600) }; }) : chunks;
     if (!chunks.length) return null;
     const fid = folderIdOf(character.chaId, chatKeyOf(chat));
     // 2.2.2 rawMulti: 질문을 몇 갈래(이름 뺀 질문·핵심 낱말)로 나눠 각각 의미 순위를 내고 합친다(여러 근거가 필요한 질문)
     const names = [String(character?.name ?? ""), ...Object.values(folder?.people ?? {}).map((p) => p?.name)].filter((n) => n && n !== "{{user}}");
     const qs = s.rawMulti ? subQueries(query, names) : [query];
-    const sems = []; for (const qq of qs) sems.push(await embedder.rawScores(fid, chunks, qq).catch(() => null));
+    const sems = []; for (const qq of qs) sems.push(await embedder.rawScores(fid, embedItems, qq).catch(() => null));
     const fused = rrf([...sems, lexScores(chunks, query)]);
     let ranked = [...fused].sort((a, b) => b[1] - a[1]).map(([id]) => id);
     const rr = await embedder.rerankTexts(query, ranked.slice(0, Number(s.rawRerankTop ?? 24)).map((id) => ({ id, t: chunks[id].t }))).catch(() => null);
