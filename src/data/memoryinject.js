@@ -7,7 +7,7 @@ import { loadReconciled } from "./memoryload.js";
 import { folderIdOf } from "./memorystore.js";
 import { chatKeyOf } from "../engine/chatkey.js";
 import { trimCovered } from "../engine/historytrim.js";
-import { buildChunks, lexScores, rrf, assemble, RAW_TITLE } from "../engine/rawrecall.js";
+import { buildChunks, lexScores, rrf, assemble, subQueries, RAW_TITLE } from "../engine/rawrecall.js";
 
 // onRequest: 메인 모델 요청 직전에 부른다(기다리지 않음). 러너가 '다음 입력 때 직전 응답 확정'을 시작하는 데 쓴다.
 // 2.2.2 의미 검색 질의: 사용자의 마지막 말이 중심이다(직전 응답까지 섞으면 질문의 뜻이 흐려진다). 말이 아주 짧으면 직전 응답 끝부분을 조금 붙인다.
@@ -75,12 +75,15 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     const chunks = buildChunks(list, dateOf);
     if (!chunks.length) return null;
     const fid = folderIdOf(character.chaId, chatKeyOf(chat));
-    const sem = await embedder.rawScores(fid, chunks, query).catch(() => null);
-    const fused = rrf([sem, lexScores(chunks, query)]);
+    // 2.2.2 rawMulti: 질문을 몇 갈래(이름 뺀 질문·핵심 낱말)로 나눠 각각 의미 순위를 내고 합친다(여러 근거가 필요한 질문)
+    const names = [String(character?.name ?? ""), ...Object.values(folder?.people ?? {}).map((p) => p?.name)].filter((n) => n && n !== "{{user}}");
+    const qs = s.rawMulti ? subQueries(query, names) : [query];
+    const sems = []; for (const qq of qs) sems.push(await embedder.rawScores(fid, chunks, qq).catch(() => null));
+    const fused = rrf([...sems, lexScores(chunks, query)]);
     let ranked = [...fused].sort((a, b) => b[1] - a[1]).map(([id]) => id);
     const rr = await embedder.rerankTexts(query, ranked.slice(0, Number(s.rawRerankTop ?? 24)).map((id) => ({ id, t: chunks[id].t }))).catch(() => null);
     if (rr) ranked = [...[...rr].sort((a, b) => b[1] - a[1]).map(([id]) => id), ...ranked.filter((id) => !rr.has(id))];
-    const out = assemble(chunks, ranked, { tokens: Number(s.rawTokens ?? 1500), neighbor: Number(s.rawNeighbor ?? 1), maxPicks: Number(s.rawPicks ?? 12), perDate: Number(s.rawPerDate ?? 0) });
+    const out = assemble(chunks, ranked, { tokens: Number(s.rawTokens ?? 1500), neighbor: Number(s.rawNeighbor ?? 1), maxPicks: Number(s.rawPicks ?? 12), perDate: Number(s.rawPerDate ?? 0), dates: s.rawDates === true });
     return out.lines.length ? { text: [RAW_TITLE, ...out.lines].join("\n"), tokens: out.tokens, count: out.lines.length } : null;
   }
   async function beforeRequest(messages, type, { focus = null } = {}) {
